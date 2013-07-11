@@ -127,22 +127,30 @@ void HttpResp::buildCommonHeaders()
 {
     char achDateTime[60];
     char * p = s_sCommonHeaders;
-    memcpy( p, "Server: ", 8 );
-    p += 8;
-    memcpy( p, HttpServerVersion::getVersion(),
-            HttpServerVersion::getVersionLen() );
-    p += HttpServerVersion::getVersionLen();
-    
+    if( HttpServerVersion::getVersionLen() )
+    {
+      memcpy( p, "Server: ", 8 );
+      p += 8;
+      memcpy( p, HttpServerVersion::getVersion(),
+              HttpServerVersion::getVersionLen() );
+      p += HttpServerVersion::getVersionLen();
+      memcpy( p, "\r\n", 2 );
+      p += 2;
+    }
     p += safe_snprintf( p, sizeof( s_sCommonHeaders ) - ( p - s_sCommonHeaders ),
-            "\r\n" "Date: %s\r\n" "Accept-Ranges: bytes\r\n",
+            "Date: %s\r\n" "Accept-Ranges: bytes\r\n",
             DateTime::getRFCTime( DateTime::s_curTime, achDateTime ) );
     s_iCommonHeaderLen = p - s_sCommonHeaders - RANGE_HEADER_LEN;
 }
 
 void HttpResp::updateDateHeader()
 {
-    char * pDateValue = &s_sCommonHeaders[ 10 + 6 +
-                    HttpServerVersion::getVersionLen()];
+    int vLen = HttpServerVersion::getVersionLen();
+
+    if ( vLen > 0 )
+        vLen += 10;
+
+    char * pDateValue = &s_sCommonHeaders[ 6 + vLen];
     DateTime::getRFCTime( DateTime::s_curTime, pDateValue);
     *(pDateValue + RFC_1123_TIME_LEN) = '\r';
 }
