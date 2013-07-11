@@ -28,6 +28,7 @@
 #include <http/httplog.h>
 #include <http/httpresourcemanager.h>
 #include <http/httpvhost.h>
+#include <http/ntwkiolinkpool.h>
 #include <http/smartsettings.h>
 #include <http/vhostmap.h>
 #include <socket/coresocket.h>
@@ -362,8 +363,8 @@ int HttpListener::batchAddConn( struct conn_data * pBegin,
     }
     if ( n <= 0 )
         return 0;
-    HttpConnection* pConns[CONN_BATCH_SIZE];
-    int ret = HttpConnPool::getConnections( pConns, n);
+    NtwkIOLink* pConns[CONN_BATCH_SIZE];
+    int ret = NtwkIoLinkPool::get( pConns, n);
     pCur = pBegin;
     if ( ret <= 0 )
     {
@@ -380,8 +381,8 @@ int HttpListener::batchAddConn( struct conn_data * pBegin,
         }
         return -1;
     }
-    HttpConnection** pConnEnd = &pConns[ret];
-    HttpConnection** pConnCur = pConns;
+    NtwkIOLink** pConnEnd = &pConns[ret];
+    NtwkIOLink** pConnCur = pConns;
     VHostMap * pMap;
     int flag = HttpGlobals::getMultiplexer()->getFLTag();
     while( pCur < pEnd )
@@ -390,7 +391,7 @@ int HttpListener::batchAddConn( struct conn_data * pBegin,
         if ( fd != -1 )
         {
             assert( pConnCur < pConnEnd );
-            HttpConnection * pConn = *pConnCur;
+            NtwkIOLink * pConn = *pConnCur;
 
             if ( m_pSubIpMap )
             {
@@ -424,7 +425,7 @@ int HttpListener::batchAddConn( struct conn_data * pBegin,
     }
     if ( pConnCur < pConnEnd )
     {
-        HttpConnPool::recycle( pConnCur, pConnEnd - pConnCur);
+        NtwkIoLinkPool::recycle( pConnCur, pConnEnd - pConnCur);
     }
 
     return 0;
@@ -456,7 +457,7 @@ int HttpListener::addConnection( struct conn_data * pCur, int *iCount )
         --(*iCount);
         return 0;
     }
-    HttpConnection* pConn = HttpConnPool::getConnection();
+    NtwkIOLink* pConn = NtwkIoLinkPool::get();
     if ( !pConn )
     {
         ERR_NO_MEM( "HttpConnPool::getConnection()" );
@@ -476,7 +477,7 @@ int HttpListener::addConnection( struct conn_data * pCur, int *iCount )
     pConn->setRemotePort( ntohs( ((sockaddr_in *)(pCur->achPeerAddr))->sin_port) );
     if ( pConn->setLink( pCur->fd, pCur->pInfo, pMap->getSSLContext() ) )
     {
-        HttpConnPool::recycle( pConn );
+        NtwkIoLinkPool::recycle( pConn );
         close( fd );
         --(*iCount);
         return -1;

@@ -20,11 +20,11 @@
 
 
 #include <edio/inputstream.h>
-#include <http/httpiolink.h>
 #include <http/httpreq.h>
 #include <http/httpresp.h>
 #include <util/linkedobj.h>
-
+#include <http/ntwkiolink.h>
+#include <http/hiostream.h>
 
 class ReqHandler;
 class VHostMap;
@@ -34,13 +34,24 @@ class ExtWorker;
 class VMemBuf;
 class GzipBuf;
 class SSIScript;
+class NtwkIOLink;
 
-class HttpConnection : public HttpIOLink, public InputStream
-{
-    
-    AutoStr2              m_logID;
-    LOG4CXX_NS::Logger  * m_pLogger;
-    
+enum  httpConState {
+    HCS_WAITING,
+    HCS_READING,
+    HCS_READING_BODY,
+    HCS_EXT_AUTH,
+    HCS_THROTTLING,
+    HCS_PROCESSING,
+    HCS_REDIRECT,
+    HCS_WRITING,
+    HCS_AIO_PENDING,
+    HCS_AIO_COMPLETE,
+    HCS_COMPLETE,
+};
+
+class HttpConnection : public HioStreamHandler
+{    
     HttpReq               m_request;
     HttpResp              m_response;
     
@@ -52,16 +63,16 @@ class HttpConnection : public HttpIOLink, public InputStream
     off_t                 m_lDynBodySent;
     int                   m_iRespBodyCacheOffset;
     
-    VMemBuf             * m_pRespCache;
+    VMemBuf             * m_pRespBodyBuf;
     GzipBuf             * m_pGzipBuf;
 
     long                  m_lReqTime;
     int32_t               m_iReqTimeMs;
 
     unsigned short        m_iReqServed;
-    unsigned short        m_iRemotePort;
-    int                   m_iLogIdBuilt;
     //int                   m_accessGranted;
+    httpConState          m_iState;
+    NtwkIOLink          * m_pNtwkIOLink;
 
     HttpConnection( const HttpConnection& rhs );
     void operator=( const HttpConnection& rhs );
@@ -74,8 +85,13 @@ class HttpConnection : public HttpIOLink, public InputStream
 
     void cleanUpHandler();
     void nextRequest();
-    void closeConnection( int cancel = 0);
+    int  updateClientInfoFromProxyHeader( const char * pProxyHeader );
+    
+public:
+    void closeConnection();
     void recycle();
+    
+private:   
     int checkAuthorizer( const HttpHandler * pHandler );
     int assignHandler( const HttpHandler * pHandler );
     int readReqBody( char * pBuf, int size );
@@ -86,7 +102,9 @@ class HttpConnection : public HttpIOLink, public InputStream
     int readToHeaderBuf();
     void sendHttpError( const char * pAdditional );
     int detectTimeout();
-
+    
+    int sendSpdyHeaders();
+    
     //int cacheWrite( const char * pBuf, int size );
     //int writeRespBuf();
 
@@ -105,21 +123,47 @@ class HttpConnection : public HttpIOLink, public InputStream
                     const AuthRequired * pRequired, int resume);
 
     void logAccess( int cancelled );
+    int  detectKeepAliveTimeout( int delta );
+    int  detectConnectionTimeout( int delta );
     
-protected:
-
+    
 public:
-
+    NtwkIOLink * getNtwkIOLink() const      {   return m_pNtwkIOLink;   }
+    void setNtwkIOLink( NtwkIOLink * p )    {   m_pNtwkIOLink = p;      }
+    //below are wrapper functions
+    SSLConnection* getSSL()     {   return m_pNtwkIOLink->getSSL();  }
+    bool isSSL() const          {   return m_pNtwkIOLink->isSSL();  }
+    const char * getPeerAddrString() const {    return m_pNtwkIOLink->getPeerAddrString();  }
+    int getPeerAddrStrLen() const   {   return m_pNtwkIOLink->getPeerAddrStrLen();   }
+    const struct sockaddr * getPeerAddr() const {   return m_pNtwkIOLink->getPeerAddr(); }
+    
+    void suspendRead()          {    getStream()->suspendRead();        };
+    void continueRead()         {    getStream()->continueRead();       };
+    void suspendWrite()         {    getStream()->suspendWrite();       };
+    void continueWrite()        {    getStream()->continueWrite();      };
+    void switchWriteToRead()    {    getStream()->switchWriteToRead();  };
+    
+    void suspendEventNotify()   {    m_pNtwkIOLink->suspendEventNotify(); };
+    void resumeEventNotify()    {    m_pNtwkIOLink->resumeEventNotify(); };
+    void tryRead()              {    m_pNtwkIOLink->tryRead();          };
+    off_t getBytesRecv() const  {   return getStream()->getBytesRecv();    }
+    off_t getBytesSent() const  {   return getStream()->getBytesSent();    }
+    ClientInfo * getClientInfo() const {    return m_pNtwkIOLink->getClientInfo();  }
+    
+    httpConState getState() const       {   return m_iState;    }
+    void setState( httpConState state ) {   m_iState = state;   }
+    int getServerAddrStr( char * pBuf, int len );
+    int isAlive();
+    
+public:
     void setupChunkOS(int nobuffer);
 
     HttpConnection();
     ~HttpConnection();
 
-
-    void setRemotePort( unsigned short port )
-    {   m_iRemotePort = port;   m_iLogIdBuilt = 0;  }
+        
     unsigned short getRemotePort() const
-    {   return m_iRemotePort;       }
+    {   return m_pNtwkIOLink->getRemotePort();   };
 
     void setVHostMap( const VHostMap* pMap )
     {   m_iReqServed = 0;
@@ -147,6 +191,7 @@ public:
     int onReadEx();
     int onWriteEx();
     int onInitConnected();
+    int onCloseEx();
 
     int redirect( const char * pNewURL, int len, int alloc = 0 );
     int getHandler( const char * pURI, ReqHandler* &pHandler );
@@ -157,23 +202,9 @@ public:
     int  onTimerEx();
 
     //void accessGranted()    {   m_accessGranted = 1;  }
-    void changeHandler()
-    {
-        setState( HC_REDIRECT );
-    }
-
-    void setLogger( LOG4CXX_NS::Logger* pLogger )
-    {   m_pLogger = pLogger;    }
-    LOG4CXX_NS::Logger* getLogger() const
-    {   return m_pLogger;   }
+    void changeHandler() {    setState( HCS_REDIRECT ); };
     
-    const char * buildLogId();
-    const char *  getLogId()
-    {   
-        if ( m_iLogIdBuilt )
-            return m_logID.c_str();
-        return buildLogId();
-    }
+    //const char * buildLogId();
 
     void httpError( int code, const char * pAdditional = NULL)
     {   m_request.setStatusCode( code );
@@ -204,7 +235,7 @@ public:
     int prepareDynRespHeader( int complete, int nobuffer );
     int setupDynRespBodyBuf( int &iRespState );
     GzipBuf * getGzipBuf() const    {   return m_pGzipBuf;  }
-    VMemBuf * getRespCache() const  {   return m_pRespCache; }
+    VMemBuf * getRespCache() const  {   return m_pRespBodyBuf; }
     off_t getDynBodySent() const    {   return m_lDynBodySent; }
     int processModSecRules( int phase );
     int flushDynBody( int nobuff );
@@ -217,8 +248,13 @@ public:
     int flushDynBodyChunk();
     //int writeConnStatus( char * pBuf, int bufLen );  
 
+    void resetResp()
+    {   getResp()->reset( (RespHeader::FORMAT)getStream()->getProtocol() ); }
     
-
+    LOG4CXX_NS::Logger* getLogger() const   {   return getStream()->getLogger();   }
+    
+    const char * getLogId() {   return getStream()->getLogId();     }
+    
 };
 
 #endif

@@ -198,6 +198,9 @@
    slash. */
 #undef LSTAT_FOLLOWS_SLASHED_SYMLINK
 
+/* Define if need spdy feature */
+#undef LS_ENABLE_SPDY
+
 /* Define to 1 if assertions should be disabled. */
 #undef NDEBUG
 

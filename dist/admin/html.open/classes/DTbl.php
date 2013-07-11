@@ -204,11 +204,13 @@ class DTbl
 		else if (count($this->_dattrs) == 1) {
 			$av = array_values($this->_dattrs);
 			$a0 = $av[0];
-			$dhelp_item = DATTR_HELP::GetInstance()->GetItem($a0->_helpKey);
-			if($dhelp_item != NULL) {
-				$is_blocked = $a0->blockedVersion();
-				$version = $is_blocked? $a0->_version: 0;
-				$table_help = '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;' . $dhelp_item->render($a0->_helpKey, $version);
+			if ($a0->_inputType == 'textarea1') {
+				$dhelp_item = DATTR_HELP::GetInstance()->GetItem($a0->_helpKey);
+				if($dhelp_item != NULL) {
+					$is_blocked = $a0->blockedVersion();
+					$version = $is_blocked? $a0->_version: 0;
+					$table_help = '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;' . $dhelp_item->render($a0->_helpKey, $version);
+				}
 			}
 			
 		}
@@ -474,7 +476,7 @@ class DTbl
 		$is_blocked = $attr->blockedVersion();
 		$version = $is_blocked? $attr->_version: 0;
 		if ( $attr->_type == 'sel1' ) {
-			$this->populate_sel1_options($disp->_info, $data, $attr);
+			$attr->populate_sel1_options($disp->_info, $data);
 		}
 
 		$buf = '<tr class="xtbl_value">';
@@ -552,7 +554,7 @@ class DTbl
 		$is_blocked = $attr->blockedVersion();
 		$version = $is_blocked? $attr->_version: 0;
 		if ( $attr->_type == 'sel1' ) {
-			$this->populate_sel1_options($info, $data, $attr);
+			$attr->populate_sel1_options($info, $data);
 		}
 
 		$buf = '<tr class="xtbl_value">';
@@ -690,7 +692,7 @@ class DTbl
 			}
 			else {
 				if ( $attr->_type == 'sel1' ) {
-					$this->populate_sel1_options($disp->_info, $data, $attr);
+					$attr->populate_sel1_options($disp->_info, $data);
 				}
 				if ($attr->_key == $this->_holderIndex) {
 					$buf .= ($attr->toHtml($data[$attr->_key], $indexActionLink));
@@ -704,40 +706,6 @@ class DTbl
 		$buf .= '</tr>'."\n";
 
 		echo $buf;
-	}
-
-	public function populate_sel1_options($info, &$data, $attr)
-	{
-		$options = array();
-		if ( $attr->_allowNull ) {
-			$options[''] = '';
-		}
-		foreach( $attr->_minVal as $loc ) 
-		{
-			$d = $info;
-			$locs = explode(':', $loc);
-			foreach ( $locs as $l )
-			{
-				if ( substr($l, 0, 2) == '$$' )
-				{ //$$type!fcgi
-					$t = strpos($l, '!');
-					$tag = substr($l, 2, $t-2);
-					$tag0 = substr($l, $t+1);
-					if (isset($data[$tag]) && $data[$tag]->HasVal()) {
-						$l = $data[$tag]->GetVal();
-					}
-					else {
-						$l = $tag0;
-					}
-				}
-
-				$d = &$d[$l]; //here everything breaks
-			}
-			if ( isset($d) ) {
-				$options = $options + $d;
-			}
-		}
-		$attr->_maxVal = $options;
 	}
 
 

@@ -88,7 +88,7 @@ inline int buildStaticFileHeaders( HttpResp * pResp, StaticFileData * pData )
 #include <http/httpglobals.h>
 #define READ_BUF_SIZE 8192
 
-static int cacheSend( HttpConnection* pConn, StaticFileData * pData, off_t remain )
+static int cacheSend( HttpConnection* pConn, StaticFileData * pData, int remain )
 {
     const char * pBuf;
     off_t written;
@@ -130,29 +130,29 @@ static int cacheSend( HttpConnection* pConn, StaticFileData * pData, off_t remai
     return ( remain > 0 );
 }
 
-static int cacheSend( HttpConnection* pConn, off_t written,
-            const char * pPrefixBuf, int &prefixLen )
-{
-    StaticFileData* pData = pConn->getReq()->getStaticFileData();
-    long len = (written < READ_BUF_SIZE)? written : READ_BUF_SIZE ;
-    const char * pBuf;
-    pBuf = pData->getECache()->getCacheData(
-            pData->getCurPos(), written, HttpGlobals::g_achBuf, len );
-    if ( written <= 0 )
-    {
-        return -1;
-    }
-    IOVec iov;
-    iov.append( pPrefixBuf, prefixLen );
-    iov.append( pBuf, written );
-    int total = prefixLen + written;
-    written = pConn->writeRespBodyv( iov, total );
-    if ( written - prefixLen > 0 )
-        pData->incCurPos( written - prefixLen );
-    else
-        prefixLen = written;
-    return ( pData->getRemain() > 0 );
-}
+// static int cacheSend( HttpConnection* pConn, int written,
+//             const char * pPrefixBuf, int &prefixLen )
+// {
+//     StaticFileData* pData = pConn->getReq()->getStaticFileData();
+//     long len = (written < READ_BUF_SIZE)? written : READ_BUF_SIZE ;
+//     const char * pBuf;
+//     pBuf = pData->getECache()->getCacheData(
+//             pData->getCurPos(), written, HttpGlobals::g_achBuf, len );
+//     if ( written <= 0 )
+//     {
+//         return -1;
+//     }
+//     IOVec iov;
+//     iov.append( pPrefixBuf, prefixLen );
+//     iov.append( pBuf, written );
+//     int total = prefixLen + written;
+//     written = pConn->writeRespBodyv( iov, total );
+//     if ( written - prefixLen > 0 )
+//         pData->incCurPos( written - prefixLen );
+//     else
+//         prefixLen = written;
+//     return ( pData->getRemain() > 0 );
+// }
 
 static int addExpiresHeader( HttpResp * pResp, StaticFileCacheData * pData,
             const ExpiresCtrl *pExpires )
@@ -172,22 +172,15 @@ static int addExpiresHeader( HttpResp * pResp, StaticFileCacheData * pData,
     default:
         return 0;
     }
-    AutoBuf & buf = pResp->getOutputBuf();
-    int avail = buf.available();
-    if ( avail < 35 + 22 + RFC_1123_TIME_LEN )
-    {
-        if ( buf.grow( 35 + 22 + RFC_1123_TIME_LEN ) == -1 )
-            return SC_500;
-        avail = buf.available();
-    }
-    int n = safe_snprintf( buf.end(), buf.available(),
-              "Cache-Control: max-age=%d\r\n"
-              "Expires: ", age );
-    buf.used( n );
-    DateTime::getRFCTime( expire, buf.end() );
-    buf.used( RFC_1123_TIME_LEN );
-    buf.append( '\r' );
-    buf.append( '\n' );
+    
+    char sTemp[RFC_1123_TIME_LEN + 1] = {0};
+    HttpRespHeaders & buf = pResp->getHeaders();
+    buf.add(HttpHeader::H_CACHE_CTRL, "Cache-Control", 13, "max-age=", 8);
+    int n = safe_snprintf(sTemp, RFC_1123_TIME_LEN, "%d", age);
+    buf.appendLastVal("Cache-Control", 13, sTemp, n);
+
+    DateTime::getRFCTime( expire, sTemp );
+    buf.add(HttpHeader::H_EXPIRES, "Expires", 7, sTemp, RFC_1123_TIME_LEN);
     return 0;
 }
 
@@ -208,7 +201,7 @@ static int processFlvStream( HttpConnection * pConn, off_t start )
     {
         HttpResp * pResp = pConn->getResp();
         pECache->incRef();
-        pResp->reset();
+        pConn->resetResp();
         pResp->prepareHeaders( pReq, 0 );
 
         pResp->iovAppend( pData->getCache()->getHeaderBuf(),
@@ -219,7 +212,6 @@ static int processFlvStream( HttpConnection * pConn, off_t start )
         pResp->setContentLen( pData->getECache()->getFileSize() - 
                             start + FLV_HEADER_LEN );
         pResp->appendContentLenHeader();
-        pResp->endHeader();
         pResp->finalizeHeader( pReq->getVersion(), pReq->getStatusCode());
         pResp->appendExtra( FLV_HEADER, FLV_HEADER_LEN );
         pResp->written( FLV_HEADER_LEN );
@@ -277,11 +269,10 @@ int calcMoovContentLen( HttpConnection * pConn, off_t &contentLen )
         }
     }
 
-    static char mdat_header64[16] = { 0, 0, 0, 1, 'm', 'd', 'a', 't' };
+    //static char mdat_header64[16] = { 0, 0, 0, 1, 'm', 'd', 'a', 't' };
     uint64_t mdat_start;
     uint64_t mdat_size;
     int      mdat_64bit;
-    uint32_t * pLen32;
 
     ret= get_mdat(
                 pECache->getfd(),
@@ -445,7 +436,7 @@ int processH264Stream( HttpConnection * pConn, double start )
     moov_data->start_time = start;
 
     pECache->incRef();
-    pConn->getResp()->reset();
+    pConn->resetResp();
 
     off_t contentLen = 0;
     if ( calcMoovContentLen( pConn, contentLen ) == -1 )
@@ -459,7 +450,7 @@ int processH264Stream( HttpConnection * pConn, double start )
     pConn->setupRespCache();
     //pConn->getReq()->setVersion( HTTP_1_0 );
     pConn->getReq()->keepAlive( 0 );
-    pConn->getResp()->getOutputBuf().append( "Content-Type: video/mp4\r\n", 25 );
+    pConn->getResp()->getHeaders().add(HttpHeader::H_CONTENT_TYPE,  "Content-Type", 12, "video/mp4", 9 );
     pConn->prepareDynRespHeader(0, 2 );
 
 
@@ -606,7 +597,7 @@ int StaticFileHandler::process( HttpConnection * pConn, const HttpHandler * pHan
             pReq->smartKeepAlive( pCache->getMimeType()->getMIME()->c_str() );
         if ( !isSSI ) //Xuedong Add for SSI
         {
-            pResp->reset();
+            pConn->resetResp();
             pResp->prepareHeaders( pReq, RANGE_HEADER_LEN );
             switch( code )
             {
@@ -632,7 +623,6 @@ int StaticFileHandler::process( HttpConnection * pConn, const HttpHandler * pHan
                     pResp->addGzipEncodingHeader();
                 }
             }
-            pResp->endHeader();
             pResp->finalizeHeader( pReq->getVersion(), pReq->getStatusCode());
         } //Xuedong Add for SSI Start
         else
@@ -729,13 +719,8 @@ static int buildRangeHeaders( HttpConnection* pConn, HttpRange& range )
     StaticFileData * pData1 = pConn->getReq()->getStaticFileData();
     StaticFileCacheData * pData = pData1->getCache();
     int bodyLen;
-    AutoBuf & buf = pResp->getOutputBuf();
-
-    if ( buf.available() < 80 )
-    {
-        if ( buf.grow( 80 ) == -1 )
-            return SC_500;
-    }
+    HttpRespHeaders & buf = pResp->getHeaders();
+    
     if ( range.count() == 1 )
     {
         pResp->iovAppend( pData->getHeaderBuf(), pData->getHeaderLen() );
@@ -743,10 +728,13 @@ static int buildRangeHeaders( HttpConnection* pConn, HttpRange& range )
         int ret = range.getContentOffset( 0, begin, end );
         if ( ret )
             return SC_500;
-        ret = range.getContentRangeString( 0, buf.end(), 80 );
+        
+        char sTemp[8192];
+        ret = range.getContentRangeString( 0, sTemp, 8191 );
         if ( ret == -1 )
             return SC_500;
-        buf.used( ret );
+        buf.add(HttpHeader::H_CONTENT_RANGE, "Content-Range", 13, sTemp, ret);
+        
         bodyLen = end - begin;
         pData1->setCurPos( begin );
         pData1->setCurEnd( end );
@@ -755,9 +743,8 @@ static int buildRangeHeaders( HttpConnection* pConn, HttpRange& range )
     {
         pResp->iovAppend( pData->getHeaderBuf(), pData->getValidateHeaderLen() );
         range.beginMultipart();
-        buf.used(
-            safe_snprintf( buf.end(), 80, "Content-Type: multipart/byteranges; boundary=%s\r\n",
-                range.getBoundary() ) );
+        buf.add(HttpHeader::H_CONTENT_RANGE, "Content-Range", 13, "multipart/byteranges; boundary=", 31);
+        buf.appendLastVal("Content-Range", 13, range.getBoundary(), strlen(range.getBoundary()) );
         bodyLen = range.getMultipartBodyLen( pData->getMimeType()->getMIME() );
     }
     pResp->setContentLen( bodyLen );
@@ -769,7 +756,7 @@ static int buildRangeHeaders( HttpConnection* pConn, HttpRange& range )
 
 static int sendMultipart( HttpConnection * pConn, HttpRange& range )
 {
-    off_t iRemain;
+    long iRemain;
     int  ret = 0;
     StaticFileData* pData = pConn->getReq()->getStaticFileData();
     while( true )
@@ -850,27 +837,16 @@ static int processRange( HttpConnection * pConn, HttpReq * pReq, const char *pRa
         delete range;
         if ( ret == SC_416 )  //Range unsatisfiable
         {
-            AutoBuf &buf = pConn->getResp()->getOutputBuf();
-            if ( buf.capacity() < 60 )
-            {
-                if ( buf.grow( 60 ) )
-                    return SC_500;
-            }
+            HttpRespHeaders &buf = pConn->getResp()->getHeaders();
+            buf.add(HttpHeader::H_CONTENT_RANGE, "Content-Range", 13, "bytes */", 8);
             
             int n;
+            char sTemp[32] = {0};
             if ( sizeof( off_t ) == 8 )
-            {
-                n = safe_snprintf( buf.end(), buf.size(),
-                    "Content-Range: bytes */%lld\r\n",
-                    (long long)pData->getCache()->getFileSize());
-            }
+                n = safe_snprintf( sTemp, 31, "%lld", (long long)pData->getCache()->getFileSize());
             else
-            {
-                n = safe_snprintf( buf.end(), buf.size(),
-                    "Content-Range: bytes */%ld\r\n",
-                    (long)pData->getCache()->getFileSize());
-            }
-            buf.used( n );
+                n = safe_snprintf( sTemp, 31, "%ld", (long)pData->getCache()->getFileSize());
+            buf.appendLastVal("Content-Range", 13, sTemp, n);
         }
     }
     else
@@ -883,10 +859,9 @@ static int processRange( HttpConnection * pConn, HttpReq * pReq, const char *pRa
         {
             HttpResp * pResp = pConn->getResp();
             pECache->incRef();
-            pResp->reset();
+            pConn->resetResp();
             pResp->prepareHeaders( pReq, RANGE_HEADER_LEN );
             ret = buildRangeHeaders( pConn, *range);
-            pResp->endHeader();
             pResp->finalizeHeader( pReq->getVersion(), pReq->getStatusCode());
             if ( !ret )
             {

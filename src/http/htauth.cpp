@@ -36,7 +36,7 @@
 #include <time.h>
 #include <unistd.h>
 #include <util/ssnprintf.h>
-
+#include "http/httprespheaders.h"
 
 HTAuth::HTAuth()
     : m_pName( NULL )
@@ -86,33 +86,26 @@ int HTAuth::buildWWWAuthHeader( const char * pName )
         if ( m_authHeader )
         {
             m_authHeaderLen = safe_snprintf( m_authHeader, len,
-                    "WWW-Authenticate: Basic realm=\"%s\"\r\n", pName );
+                    "Basic realm=\"%s\"", pName );
             return 0;
         }
     }
     return -1;
 }
 
-int HTAuth::addWWWAuthHeader( AutoBuf &buf ) const
+int HTAuth::addWWWAuthHeader( HttpRespHeaders &buf ) const
 {
     if ( m_iAuthType & AUTH_BASIC )
-    {
-        buf.append( m_authHeader, m_authHeaderLen);
-        return 0;
-    }
+        buf.add(-1, "WWW-Authenticate", 16, m_authHeader, m_authHeaderLen);
     else if ( m_iAuthType & AUTH_DIGEST )
     {
-        if ( buf.available() < 256 )
-            if ( buf.grow( 256 ) == -1 )
-                return -1;
-        //FIXME: add digest header
-        int iBufLen = safe_snprintf( buf.end(), buf.available(),
-                    "WWW-Authenticate: Digest realm=\"%s\" nonce=\"%lu\"\r\n",
+        char sTemp[256] = {0};
+        int n = safe_snprintf( sTemp, 255, "Digest realm=\"%s\" nonce=\"%lu\"\r\n",
                     m_authHeader, time(NULL) );
-        buf.used( iBufLen );
-        return 0;
+        
+        buf.add(-1, "WWW-Authenticate", 16, sTemp, n);
     }
-    return -1;
+    return 0;
 }
 
 #define MAX_PASSWD_LEN      128
@@ -179,13 +172,9 @@ int HTAuth::digestAuth( HttpConnection * pConn, const char * pAuthorization,
     const char *    username = NULL;
     int             username_len;
     const char *    realm = NULL;
-    int             realm_len;
     const char *    nonce = NULL;
-    int             nonce_len;
     const char *    requri = NULL;
-    int             requri_len;
     const char *    resp_digest = NULL;
-    int             resp_digest_len;
     const char * p = pAuthorization;
     const char * pEnd = p + size;
     const char * pNameEnd;
@@ -237,23 +226,18 @@ int HTAuth::digestAuth( HttpConnection * pConn, const char * pAuthorization,
         else if ( strncasecmp( pNameBegin, "realm", 5 ) == 0 )
         {
             realm = pValueBegin;
-            realm_len = pValueEnd - pValueBegin;
         }
         else if ( strncasecmp( pNameBegin, "nonce", 5 ) == 0 )
         {
             nonce = pValueBegin;
-            nonce_len = pValueEnd - pValueBegin;
-            
         }
         else if ( strncasecmp( pNameBegin, "uri", 3 ) == 0 )
         {
             requri = pValueBegin;
-            requri_len = pValueEnd - pValueBegin;
         }
         else if ( strncasecmp( pNameBegin, "response", 8 ) == 0 )
         {
             resp_digest = pValueBegin;
-            resp_digest_len = pValueEnd - pValueBegin;
         }
         else if ( strncasecmp( pNameBegin, "nc", 2 ) == 0 )
         {

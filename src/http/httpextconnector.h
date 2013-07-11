@@ -143,7 +143,6 @@ public:
     {   return (m_iState & (HEC_FWD_REQ_HEADER|HEC_FWD_REQ_BODY));  }
     int getRespBodyLen() const {   return m_iRespBodyLen;   }
     int flushResp();
-    int  convertFileBackedToInMemory();
 };
 
 #endif

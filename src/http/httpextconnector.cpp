@@ -277,21 +277,6 @@ int HttpExtConnector::processRespBodyData( int inplace, const char * pBuf, int l
 
 int HttpExtConnector::extInputReady()
 {
-    //    int ret;
-    //    char * pCache;
-    //    size_t iCacheSize;
-    //    while( true )
-    //    {
-        //        pCache = m_pRespCache->getWriteBuffer( iCacheSize );
-        //        ret = getProcessor()->readResp( pCache, iCacheSize );
-        //        if ( ret > 0 )
-        //        {
-            //            m_pRespCache->writeUsed( ret );
-            //        }
-            //        if ( (size_t)ret < iCacheSize )
-            //            break;
-            //    }
-            //    getHttpConn()->continueWrite();
             return 0;
             
 }
@@ -536,6 +521,7 @@ int  HttpExtConnector::tryRecover()
             {
                 ExtWorker * pWorker = pLB->selectWorker(m_pHttpConn, this);
                 if ( D_ENABLED( DL_LESS ) )
+                {
                     if ( pWorker )
                     {
                         LOG_D(( "[%s] [LB] retry worker: [%s]",
@@ -545,6 +531,7 @@ int  HttpExtConnector::tryRecover()
                     {
                         LOG_D(( "[%s] [LB] Backup worker is unavailable." ));
                     }
+                }
                 setWorker( pWorker );
                 if ( D_ENABLED( DL_LESS ) )
                     LOG_D(( "[%s] trying to recover from connection problem, attempt: #%d!",
@@ -620,6 +607,7 @@ int HttpExtConnector::sendReqBody()
     VMemBuf * pVMemBuf = pReq->getBodyBuf();
     size_t size;
     char * pBuf;
+    int count = 0;
     while(( (pBuf = pVMemBuf->getReadBuffer(size)) != NULL )&&( size > 0 ))
     {
         int written = getProcessor()->sendReqBody(pBuf, size );
@@ -632,7 +620,7 @@ int HttpExtConnector::sendReqBody()
             LOG_D(( getLogger(),
                 "[%s] processor sent request body %d bytes, total sent: %d\n",
                             getLogId(), written, m_iReqBodySent ));
-        if ( written != (int)size )
+        if (( written != (int)size )||( ++count == 10 ))
         {
             if ( written != -1 )
                 getProcessor()->continueWrite();
@@ -736,11 +724,6 @@ void HttpExtConnector::dump()
                 "left in buffer: %ld, attempts: %d."
         , getLogId(), m_iState, m_iReqBodySent, m_pHttpConn->getResp()->getContentLen(), m_pHttpConn->getDynBodySent(),
         (m_pHttpConn->getRespCache())?m_pHttpConn->getRespCache()->writeBufSize():0, getAttempts() ));    
-//     LOG_INFO(( getLogger(), "[%s] HttpExtConnector state: %d, "
-//                 "request body sent: %d, response body size: %d, response body sent:%d, "
-//                 "left in buffer: %ld, attempts: %d."
-//         , getLogId(), m_iState, m_iReqBodySent, m_iRespBodyLen, m_iRespBodySent,
-//         (m_pRespCache)?m_pRespCache->writeBufSize():0, getAttempts() ));
     if ( m_pProcessor )
     {
         m_pProcessor->dump();
@@ -755,34 +738,15 @@ int HttpExtConnector::dumpAborted()
     return ( m_pProcessor != NULL);
 }
 
-#include <util/accessdef.h>
 
 int HttpExtConnector::isAlive()
 {
-    char ch;
-    HttpConnection * pConn = getHttpConn();
-    pConn->resumeEventNotify();
-    if (( !::recv( pConn->getfd(), &ch, 1, MSG_PEEK ) )||
-        ( pConn->getClientInfo()->getAccess() == AC_BLOCK ))
-    {
-        pConn->setPeerShutdown( IO_PEER_ERR );
-        pConn->setState( HC_CLOSING );
-        pConn->continueWrite();
-        return 0;
-    }
-    return 1;
+    return getHttpConn()->isAlive();
 }
 
 void HttpExtConnector::setHttpError( int error )
 {
     errResponse( error, NULL );
-}
-
-int  HttpExtConnector::convertFileBackedToInMemory()
-{
-    if ( m_pHttpConn->getRespCache())
-        return m_pHttpConn->getRespCache()->convertFileBackedToInMemory();
-    return -1;
 }
 
 

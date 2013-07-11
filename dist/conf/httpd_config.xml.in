@@ -136,11 +136,11 @@
         <totalMMapCacheSize>40M</totalMMapCacheSize>
         <useSendfile>1</useSendfile>
         <SSLCryptoDevice>null</SSLCryptoDevice>
-        <maxReqURLLen>4096</maxReqURLLen>
-        <maxReqHeaderSize>8192</maxReqHeaderSize>
-        <maxReqBodySize>10M</maxReqBodySize>
-        <maxDynRespHeaderSize>4K</maxDynRespHeaderSize>
-        <maxDynRespSize>1M</maxDynRespSize>
+        <maxReqURLLen>8192</maxReqURLLen>
+        <maxReqHeaderSize>16380</maxReqHeaderSize>
+        <maxReqBodySize>2047M</maxReqBodySize>
+        <maxDynRespHeaderSize>8192</maxDynRespHeaderSize>
+        <maxDynRespSize>2047M</maxDynRespSize>
         <enableDynGzipCompress>1</enableDynGzipCompress>
         <gzipCompressLevel>6</gzipCompressLevel>
         <enableGzipCompress>1</enableGzipCompress>

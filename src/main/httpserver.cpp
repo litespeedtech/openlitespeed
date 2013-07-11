@@ -19,6 +19,7 @@
 
 #include <edio/multiplexer.h>
 #include <extensions/registry/extappregistry.h>
+#include <extensions/extworker.h>
 
 #include <http/accesslog.h>
 #include <http/adns.h>
@@ -73,6 +74,9 @@
 #define STATUS_FILE         DEFAULT_TMP_DIR "/.status"
 #define FILEMODE            0644
 
+#include "sslpp/sslocspstapling.h"
+
+
 static int s_achPid[256];
 static int s_curPid = 0;
 
@@ -100,7 +104,8 @@ void HttpServer::cleanPid()
 {
     int pid;
     sigset_t newmask, oldmask;
-
+    ExtWorker * pWorker;
+    
     sigemptyset( &newmask);
     sigaddset( &newmask, SIGCHLD );
     if ( sigprocmask( SIG_BLOCK, &newmask, &oldmask ) < 0 )
@@ -111,7 +116,9 @@ void HttpServer::cleanPid()
         pid = s_achPid[--s_curPid];
         if ( D_ENABLED( DL_LESS ) )
             LOG_D(( "Remove pid: %d", pid ));
-        PidRegistry::remove( pid );
+        pWorker = PidRegistry::remove( pid );
+        if ( pWorker )
+            pWorker->removePid( pid );
     }
     sigprocmask( SIG_SETMASK, &oldmask, NULL );
 
@@ -150,6 +157,7 @@ private:
         ExtAppRegistry::init();
         HttpGlobals::setHttpMime( &m_httpMime );
         m_serverContext.allocateInternal();
+        HttpResp::buildCommonHeaders();
         
 #ifdef  USE_CARES
         Adns::init();
@@ -192,19 +200,8 @@ private:
                                 const char *pKeyFile, const char * pCAFile, const char * pCAPath,
                                 const char * pCiphers, int certChain, int cv, int renegProtect );
     
-    int setupSSLContext( VHostMap * pVHostMap, const char *pCertFile,
-                    const char *pKeyFile, const char * pCAFile, const char * pCAPath,
-                    const char * pCiphers, int certChain, int cv, int renegProtect = 1 );
-
-    int setupSSLContext( HttpListener *pListener, const char *pCertFile,
-                 const char *pKeyFile, const char * pCAFile,
-                 const char * pCAPath,
-                 const char * pCiphers, int certChain, int cv, int renegProtect = 1);
-
     HttpListener* addSSLListener( const char * pName, const char * pAddr,
-                 const char * pCertFile, const char * pKeyFile,
-                 const char * pCAFile, const char * pCAPath,
-                 const char * pCiphers, int certChain = 0 , int cv = 0, int renegProtect = 1);
+                                  SSLContext * pSSL );
 
     int removeListener( const char * pName );
 
@@ -323,7 +320,6 @@ int HttpServerImpl::start()
     m_pid = getpid();
     DateTime::s_curTime = time( NULL );
     HttpSignals::init(sigchild);
-    HttpResp::buildCommonHeaders();
     HttpCgiTool::buildServerEnv();
     if ( isServerOk() == -1 )
         return -1;
@@ -425,7 +421,7 @@ int HttpServerImpl::generateProcessReport( int fd )
     char * p = achBuf;
     p += safe_snprintf( p, &achBuf[4096] - p, "VERSION: LiteSpeed Web Server/%s/%s\n",
                     "Open",
-                    VERSION  );
+                    PACKAGE_VERSION  );
     p += safe_snprintf( p, &achBuf[4096] - p, "UPTIME:" );
     
     if ( days )
@@ -533,68 +529,27 @@ HttpListener * HttpServerImpl::addListener( const char * pName, const char * pAd
     return pListener;
 }
 
-int HttpServerImpl::setupSSLContext( VHostMap * pVHostMap, const char *pCertFile,
-                                     const char *pKeyFile, const char * pCAFile, const char * pCAPath,
-                                     const char * pCiphers, int certChain, int cv, int renegProtect )
-{
-    SSLContext* pContext = HttpServerImpl::newSSLContext( 
-            pVHostMap->getSSLContext(), pCertFile,
-            pKeyFile, pCAFile, pCAPath, pCiphers, certChain, cv, renegProtect );
-    if ( pContext )
-    {
-        pVHostMap->setSSLContext( pContext );
-        if ( pContext->initSNI( pVHostMap ) == -1 )
-        {
-            LOG_WARN(( "[SSL] TLS extension is not available in openssl library on this server, "
-                      "server name indication is disabled, you will not able to use use per vhost"
-                      " SSL certificates sharing one IP. Please upgrade your OpenSSL lib if you want to use this feature."
-             ));
-            
-        }
-        return 0;
-    }
-    else
-        return -1;
-}
 
 
-int HttpServerImpl::setupSSLContext( HttpListener *pListener, const char *pCertFile,
-                    const char *pKeyFile, const char * pCAFile, const char * pCAPath,
-                    const char * pCiphers, int certChain, int cv, int renegProtect )
-{
-    return setupSSLContext( pListener->getVHostMap(), pCertFile,
-                    pKeyFile, pCAFile, pCAPath, pCiphers, certChain, cv, renegProtect );
-}
+HttpListener* HttpServerImpl::addSSLListener( const char * pName, const char * pAddr, SSLContext * pSSL )
 
-
-HttpListener* HttpServerImpl::addSSLListener( const char * pName, const char * pAddr,
-                    const char * pCertFile, const char * pKeyFile,
-                    const char * pCAFile, const char * pCAPath,
-                    const char * pCiphers,
-                    int certChain , int cv, int renegProtect )
 {
     HttpListener* pListener = NULL;
-    if (!(( pName == NULL )
-        ||(pCertFile == NULL)||( pKeyFile == NULL )))
+    if ( !pSSL )
+        return NULL;
+    pListener = addListener( pName, pAddr );
+    if ( !pListener )
+        return NULL;
+    pListener->getVHostMap()->setSSLContext( pSSL );
+    if ( pSSL->initSNI( pListener->getVHostMap() ) == -1 )
     {
-        pListener = addListener( pName, pAddr );
-        if ( pListener != NULL )
-        {
-            if ( setupSSLContext( pListener, pCertFile,
-                                pKeyFile, pCAFile, pCAPath, pCiphers, certChain, cv, renegProtect ) == -1 )
-            {
-                m_listeners.remove( pListener );
-                if ( pListener->getVHostMap()->getRef() > 0 )
-                    m_toBeReleasedListeners.add( pListener );
-                else
-                {
-                    pListener->stop();
-                    delete pListener;
-                }
-                pListener = NULL;
-            }
-        }
+        LOG_WARN(( "[SSL] TLS extension is not available in openssl library on this server, "
+                    "server name indication is disabled, you will not able to use use per vhost"
+                    " SSL certificates sharing one IP. Please upgrade your OpenSSL lib if you want to use this feature."
+            ));
+        
     }
+   
     return pListener;
 }
 
@@ -1097,9 +1052,10 @@ int HttpServerImpl::initSampleServer()
     if ( addListener( "*:3080" ) == 0 )
     {
     }
-    addSSLListener( "*:1443", "*:1443",
-                 achBuf1, achBuf, NULL, NULL,
-                 "ALL:!ADH:!EXPORT56:RC4+RSA:+HIGH:+MEDIUM:+SSLv2:+EXP" );
+    SSLContext * pSSL = newSSLContext( NULL, achBuf1, achBuf, NULL, NULL,
+                 "ALL:!ADH:!EXPORT56:RC4+RSA:+HIGH:+MEDIUM:+SSLv2:+EXP" , 0, 0, 0 );
+    addSSLListener( "*:1443", "*:1443", pSSL );
+                 
 
     HttpVHost * pVHost = new HttpVHost( "vhost1" );
     HttpVHost * pVHost2 = new HttpVHost( "vhost2" );
@@ -1336,13 +1292,13 @@ int HttpServer::test_main( )
     printf( "sizeof( HttpConnection ) = %d, \n"
             "sizeof( HttpReq ) = %d, \n"
             "sizeof( HttpResp ) = %d, \n"
-            "sizeof( HttpIOLink ) = %d, \n"
+            "sizeof( NtwkIOLink ) = %d, \n"
             "sizeof( HttpVHost ) = %d, \n"
             "sizeof( LogTracker ) = %d, \n",
             sizeof( HttpConnection ),
             sizeof( HttpReq ),
             sizeof( HttpResp ),
-            sizeof( HttpIOLink ),
+            sizeof( NtwkIOLink ),
             sizeof( HttpVHost ),
             sizeof( LogTracker ) );
     HttpFetch fetch;
@@ -1385,34 +1341,10 @@ HttpListener* HttpServer::addListener( const char * pName, const char * pAddr )
 }
 
 HttpListener* HttpServer::addSSLListener( const char * pName,
-            const char * pAddr, const char * pCertFile,
-            const char * pKeyFile, const char * pCAFile,
-            const char * pCAPath,
-            const char * pCiphers, int certChain, int cv )
+            const char * pAddr, SSLContext * pCtx )
 {
-    return m_impl->addSSLListener( pName, pAddr,
-            pCertFile, pKeyFile, pCAFile, pCAPath, pCiphers, certChain, cv );
+    return m_impl->addSSLListener( pName, pAddr, pCtx );
 }
-
-int HttpServer::setupSSLContext( HttpListener *pListener, const char *pCertFile,
-                        const char *pKeyFile, const char * pCAFile,
-                        const char * pCAPath,
-                        const char * pCiphers, int certChain, int cv)
-{
-    return m_impl->setupSSLContext( pListener, pCertFile, pKeyFile, pCAFile, pCAPath,
-                                    pCiphers, certChain, cv);
-}
-
-
-int HttpServer::setupSSLContext( VHostMap *pMap, const char *pCertFile,
-                        const char *pKeyFile, const char * pCAFile,
-                        const char * pCAPath,
-                        const char * pCiphers, int certChain, int cv)
-{
-    return m_impl->setupSSLContext( pMap, pCertFile, pKeyFile, pCAFile, pCAPath,
-                                    pCiphers, certChain, cv);
-}
-
 
 int HttpServer::removeListener( const char * pName )
 {
@@ -1689,7 +1621,7 @@ SSLContext * HttpServerImpl::newSSLContext( SSLContext * pContext, const char *p
             delete pNewContext;
         }
         else if ( (pCAFile || pCAPath) &&
-                !pNewContext->setCALocation( pCAFile, pCAPath, cv ) )
+            !pNewContext->setCALocation( pCAFile, pCAPath, cv ) )        
         {
             LOG_ERR(( "[SSL] Failed to setup Certificate Authority "
                       "Certificate File: '%s', Path: '%s', SSL error: %s",

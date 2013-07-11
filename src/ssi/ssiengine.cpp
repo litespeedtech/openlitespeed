@@ -74,7 +74,7 @@ int SSIEngine::startExecute( HttpConnection * pConn,
         pRuntime->init();
         pRuntime->initConfig( pReq->getSSIConfig() );
         pReq->setSSIRuntime( pRuntime );
-        pConn->getResp()->reset();
+        pConn->getResp()->reset(RespHeader::REGULAR);
         //pConn->getResp()->prepareHeaders( pReq );
         //pConn->setupChunkOS( 0 );
         HttpCgiTool::processContentType( pReq, pConn->getResp(), 
@@ -281,7 +281,6 @@ int SSIEngine::processFileAttr( HttpConnection * pConn, SSIComponent * pComponen
 
 int SSIEngine::processSubReq( HttpConnection * pConn, SubstItem *pItem )
 {
-    char achBuf1[8192];
     char achBuf[40960];
     char * p;
     int len;

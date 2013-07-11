@@ -214,7 +214,7 @@ int SUExec::checkLScgid( const char * path )
 }
 
 static char sDefaultPath[] = "PATH=/bin:/usr/bin:/usr/local/bin";
-static char sLVE[] = "LVE_ENABLE=1";
+//static char sLVE[] = "LVE_ENABLE=1";
 
 int SUExec::suEXEC( const char * pServerRoot, int * pfd, int listenFd,
                  char * const * pArgv, char * const * env, const RLimits * pLimits )
@@ -385,10 +385,6 @@ int send_fd(int fd, int sendfd)
 int SUExec::cgidSuEXEC( const char * pServerRoot, int * pfd, int listenFd,
                  char * const * pArgv, char * const * env, const RLimits * pLimits )
 {
-    char *pEnv[3];
-    char achExec[2048];
-    char sockAddr[256];
-    int ret;
     int pid = -1;
     while( 1 )
     {
@@ -404,24 +400,17 @@ int SUExec::cgidSuEXEC( const char * pServerRoot, int * pfd, int listenFd,
             break;
         ++env;
     }
-    pEnv[0] = sDefaultPath;
 #ifdef _HAS_LVE_
     if (( HttpGlobals::s_pCgid->getLVE() )&&(m_req.getCgidReq()->m_uid ))
     {
         sLVE[11] = HttpGlobals::s_pCgid->getLVE() + '0';
-        pEnv[1] = sLVE;
-        pEnv[2] = 0;
     }
-    else
-        pEnv[1] = 0;
-#else
-    pEnv[1] = 0;
 #endif
 
     int fdReq = -1;
 
 
-    ret = CoreSocket::connect( 
+    CoreSocket::connect( 
             HttpGlobals::s_pCgid->getConfig().getServerAddr(), 0,
             &fdReq, 1 );
         

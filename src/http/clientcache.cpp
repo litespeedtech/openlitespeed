@@ -27,7 +27,6 @@
 #include <util/accessdef.h>
 #include <util/autobuf.h>
 #include <util/objpool.h>
-
 #include <util/staticobj.h>
 
 #include <unistd.h>

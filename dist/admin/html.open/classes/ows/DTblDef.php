@@ -25,7 +25,7 @@ class DTblDef
 		{
 			$funcname = 'add_' . $tblId;
 			if (!method_exists($this, $funcname))
-				die('invalid tid');
+				die("invalid tid $tblId");
 			$this->$funcname($tblId);
 		}
 		return $this->_tblDef[$tblId];
@@ -127,6 +127,8 @@ class DTblDef
 									'NOTICE'=>'NOTICE', 'INFO'=>'INFO', 'DEBUG'=>'DEBUG');
 		$this->_options['updateInterval'] = array( 86400=>'Daily', 604800=>'Weekly', 2592000=>'Monthly' );
 
+		$this->_options['sslversion'] = array('1'=>'SSL v3.0', '2'=>'TLS v1.0', '4'=>'TLS v1.1', '8'=>'TLS v1.2');
+				
 		$ipv6 = array();
 		if ( $_SERVER['LSWS_IPV6_ADDRS'] != '' )
 		{
@@ -244,7 +246,7 @@ class DTblDef
 			'memHardLimit' => new DAttr('memHardLimit', 'uint', 'Memory Hard Limit (bytes)', 'text', true, 0),
 			'procSoftLimit' => new DAttr('procSoftLimit', 'uint', 'Process Soft Limit', 'text', true, 0),
 			'procHardLimit' => new DAttr('procHardLimit', 'uint', 'Process Hard Limit','text', true, 0),
-
+		    'ssl_renegProtection' => new DAttr('renegProtection', 'bool', 'SSL Renegotiation Protection', 'radio'),
 			'l_vhost' => new DAttr('vhost', 'sel1', 'Virtual Host', 'select', false, array('VHS') ),
 			'l_domain' => new DAttr('domain', 'domain', 'Domains', 'text', false, NULL, NULL, $this->_options['text_size'], 1, 'domainName'),
 			'tp_templateFile' => new DAttr('templateFile', 'filetp', 'Template File', 'text', false, 2, 'rwc', $this->_options['text_size']),
@@ -292,9 +294,7 @@ class DTblDef
 			'ctx_rewrite:enable' => new DAttr('rewrite:enable', 'bool', 'Enable Rewrite', 'radio', true, NULL, NULL, NULL, 0, 'enableRewrite'),
 			'ctx_rewrite:inherit' => new DAttr('rewrite:inherit', 'bool', 'Rewrite Inherit', 'radio', true, NULL, NULL, NULL, 0, 'rewriteInherit'),
 			'ctx_rewrite:base' => new DAttr('rewrite:base', 'uri', 'Rewrite Base', 'text', true, NULL, NULL, $this->_options['text_size'], 0, 'rewriteBase'),
-			'ctx_rewrite:rules' => new DAttr('rewrite:rules',
-			'cust', 'Rewrite Rules', 'textarea1', true, NULL,
-			NULL, 'rows="6" cols="60" wrap=off', 0, 'rewriteRules'),
+			'ctx_rewrite:rules' => new DAttr('rewrite:rules', 'cust', 'Rewrite Rules', 'textarea1', true, NULL, NULL, 'rows="6" cols="60" wrap=off', 0, 'rewriteRules'),
 			'railsEnv' => new DAttr('railsEnv', 'sel', 'Run-time Mode', 'select', true, 0, $this->_options['railsEnv']),
 
 			'geoipDBFile' => new DAttr( 'geoipDBFile', 'filep', 'DB File Path', 'text', false, 2, 'r', $this->_options['text_size']), 
@@ -635,19 +635,6 @@ class DTblDef
 		$this->_tblDef[$id]->setAttr($attrs, 'railsDefaults', 'railsDefaults');
 		$this->_tblDef[$id]->_helpKey = 'TABLErailsDefault';
 	}
-
-	protected function add_S_RAILS_HOSTING($id)
-	{
-		$this->_tblDef[$id] = new DTbl($id, 'Rack/Rails Shared Hosting');
-		$attrs = array(
-			new DAttr('enableRailsHosting', 'bool', 'Enable Shared Hosting', 'radio', true),
-			new DAttr('railsAppLimit', 'uint', 'Max Apps per Account', 'text', true, 0, 20),
-			new DAttr('rubyProcLimit', 'uint', 'Max Ruby Processes per Account', 'text', true, 0, 100) 
-		);
-		$this->_tblDef[$id]->setAttr($attrs, 'railsDefaults', 'railsDefaults');
-		$this->_tblDef[$id]->_helpKey = 'TABLErailsHosting';
-	}
-
 
 	protected function add_A_SECAC($id)
 	{
@@ -1563,6 +1550,32 @@ class DTblDef
 		$this->_tblDef[$id]->_helpKey = 'TABLEredirectContext';
 	}
 
+	protected function add_VH_WEBSOCKET_TOP($id)
+	{
+		$align = array('left', 'left', 'center');
+		$this->_tblDef[$id] = new DTbl($id, 'Web Socket Proxy Setup', 1, 'VH_WEBSOCKET', $align, 'web_link');
+
+		$attrs = array(
+			new DAttr('uri', 'cust', 'URI'),
+			new DAttr('address', 'cust', 'Address'),
+			new DAttr('action', 'action', 'Action', NULL, false, 'VH_WEBSOCKET', 'Ed'));
+		$this->_tblDef[$id]->setAttr($attrs, 'websocket');
+		$this->_tblDef[$id]->setRepeated('uri');
+	}
+
+	protected function add_VH_WEBSOCKET($id)
+	{
+		$this->_tblDef[$id] = new DTbl($id, 'Web Socket Definition', 2);
+
+		$attrs = array(
+			$this->_attrs['ctx_uri']->dup(NULL,NULL,'wsuri'),
+			$this->_attrs['ext_address']->dup(NULL, NULL, 'wsaddr'),
+			$this->_attrs['note'],
+			);
+		$this->_tblDef[$id]->setAttr($attrs, 'websocket', 'websocketList:websocket');
+		$this->_tblDef[$id]->setRepeated('uri');
+	}
+	
 
 	protected function add_TP_TOP($id)
 	{
@@ -1916,86 +1929,9 @@ class DTblDef
 		$this->_tblDef[$id]->_helpKey = 'TABLEvirtualHostMapping';
 	}
 
-	protected function add_L_CERT($id)
+	protected function add_L_SSL_CERT($id)
 	{
 		$this->_tblDef[$id] = new DTbl($id, 'SSL Private Key & Certificate');
-		$clientVerify =	new DAttr('clientVerify', 'sel', 'Client Verification', 'select', true, NULL, 
-			array(
-				'0'=>'none',
-				'1'=>'optional',
-				'2'=>'require',
-				'3'=>'optional_no_ca'
-				 ));
-
-		$verifyDepth = new DAttr('verifyDepth', 'uint', 'Verify Depth', 'text', true, 0, 100);
-		$crlPath = new DAttr('crlPath', 'cust', 'Client Revocation Path', 'text', true, 2, '', $this->_options['text_size']);
-		$crlFile = new DAttr('crlFile', 'cust', 'Client Revocation File', 'text', true, 2, '', $this->_options['text_size']);
-		
-		$attrs = array(
-			new DAttr('keyFile', 'cust', 'Private Key File', 'text', false, 2, '', $this->_options['text_size']),
-			new DAttr('certFile', 'cust', 'Certificate File', 'text', false, 2, '', $this->_options['text_size']),
-			new DAttr('certChain', 'bool', 'Chained Certificate', 'radio'),
-			new DAttr('CACertPath', 'cust', 'CA Certificate Path', 'text', true, 2, '', $this->_options['text_size']),
-			new DAttr('CACertFile', 'cust', 'CA Certificate File', 'text', true, 2, '', $this->_options['text_size']),
-
-			$clientVerify, 
-		    $verifyDepth,
-		    $crlPath,
-		    $crlFile,
-		    
-		    new DAttr('renegProtection', 'bool', 'SSL Renegotiation Protection', 'radio'),
-		);
-		$this->_tblDef[$id]->setAttr($attrs);
-		$this->_tblDef[$id]->_helpKey = 'TABLEsslSetting';
-	}
-
-	protected function add_VH_SSL_CERT($id)
-	{
-		$this->_tblDef[$id] = new DTbl($id, 'SSL Private Key & Certificate for Virtual Host');
-		$clientVerify =	new DAttr('clientVerify', 'sel', 'Client Verification', 'select', true, NULL, 
-			array(
-				'0'=>'none',
-				'1'=>'optional',
-				'2'=>'require',
-				'3'=>'optional_no_ca'
-				 ));
-
-		$verifyDepth = new DAttr('verifyDepth', 'uint', 'Verify Depth', 'text', true, 0, 100);
-		$crlPath = new DAttr('crlPath', 'cust', 'Client Revocation Path', 'text', true, 3, '', $this->_options['text_size']);
-		$crlFile = new DAttr('crlFile', 'cust', 'Client Revocation File', 'text', true, 3, '', $this->_options['text_size']);
-		
-		$attrs = array(
-			new DAttr('keyFile', 'cust', 'Private Key File', 'text', true, 3, '', $this->_options['text_size']),
-			new DAttr('certFile', 'cust', 'Certificate File', 'text', true, 3, '', $this->_options['text_size']),
-			new DAttr('certChain', 'bool', 'Chained Certificate', 'radio'),
-			new DAttr('CACertPath', 'cust', 'CA Certificate Path', 'text', true, 3, '', $this->_options['text_size']),
-			new DAttr('CACertFile', 'cust', 'CA Certificate File', 'text', true, 3, '', $this->_options['text_size']),
-
-			$clientVerify, 
-		    $verifyDepth,
-		    $crlPath,
-		    $crlFile,
-		    new DAttr('renegProtection', 'bool', 'SSL Renegotiation Protection', 'radio'),
-		);
-
-		$this->_tblDef[$id]->setAttr($attrs, 'vhssl', 'vhssl');
-		$this->_tblDef[$id]->_helpKey = 'TABLEsslSetting';
-	}
-	
-	protected function add_TP_SSL_CERT($id)
-	{
-		$this->_tblDef[$id] = new DTbl($id, 'SSL Private Key & Certificate for Virtual Host');
-		$clientVerify =	new DAttr('clientVerify', 'sel', 'Client Verification', 'select', true, NULL, 
-			array(
-				'0'=>'none',
-				'1'=>'optional',
-				'2'=>'require',
-				'3'=>'optional_no_ca'
-				 ));
-
-		$verifyDepth = new DAttr('verifyDepth', 'uint', 'Verify Depth', 'text', true, 0, 100);
-		$crlPath = new DAttr('crlPath', 'cust', 'Client Revocation Path', 'text', true, NULL, '', $this->_options['text_size']);
-		$crlFile = new DAttr('crlFile', 'cust', 'Client Revocation File', 'text', true, NULL, '', $this->_options['text_size']);
 		
 		$attrs = array(
 			new DAttr('keyFile', 'cust', 'Private Key File', 'text', true, NULL, '', $this->_options['text_size']),
@@ -2003,41 +1939,92 @@ class DTblDef
 			new DAttr('certChain', 'bool', 'Chained Certificate', 'radio'),
 			new DAttr('CACertPath', 'cust', 'CA Certificate Path', 'text', true, NULL, '', $this->_options['text_size']),
 			new DAttr('CACertFile', 'cust', 'CA Certificate File', 'text', true, NULL, '', $this->_options['text_size']),
-
-			$clientVerify, 
-		    $verifyDepth,
-		    $crlPath,
-		    $crlFile,
-		    new DAttr('renegProtection', 'bool', 'SSL Renegotiation Protection', 'radio'),
-		);
-
-		$this->_tblDef[$id]->setAttr($attrs, 'vhssl', 'vhssl');
-		$this->_tblDef[$id]->_helpKey = 'TABLEsslSetting';
+		    );
+		$this->_tblDef[$id]->setAttr($attrs);
+		$this->_tblDef[$id]->_helpKey = 'TABLEsslCert';
+	}
+	
+	protected function add_VH_SSL_CERT($id)
+	{
+		$this->_tblDef[$id] = $this->DupTblDef('L_SSL_CERT', $id,  'SSL Private Key & Certificate for Virtual Host');
+		$this->_tblDef[$id]->setDataLoc('vhssl', 'vhssl');
 	}
 	
 	protected function add_L_SSL($id)
 	{
 		$this->_tblDef[$id] = new DTbl($id, 'SSL Protocol');
-		$this->_tblDef[$id]->_cols = 1;
+		
+		$attrs = array(
+			new DAttr('sslProtocol', 'checkboxOr', 'SSL Protocol Version', 'checkboxgroup', TRUE, NULL, $this->_options['sslversion']),
+			new DAttr_SSLCipher('ciphers', 'sslcipher', 'Encryption Level', 'cust', TRUE),
+		);
 
-		$attrs = array( new DAttr('ciphers', 'cust', '') );
 		$this->_tblDef[$id]->setAttr($attrs);
-
-		$this->_tblDef[$id]->_customizedScript = array(
-			'../config/listenerSSL.php', '../config/listenerSSL1.php');
 	}
-
+	
 	protected function add_VH_SSL_SSL($id)
 	{
-		$this->_tblDef[$id] = new DTbl($id, 'Virtual Host SSL Protocol');
-		$this->_tblDef[$id]->_cols = 1;
-
-		$attrs = array( new DAttr('ciphers', 'cust', '') );
-		$this->_tblDef[$id]->setAttr($attrs, 'vhssl', 'vhssl');
-
-		$this->_tblDef[$id]->_customizedScript = array(
-			'../config/listenerSSL.php', '../config/listenerSSL1.php');
+		$this->_tblDef[$id] = $this->DupTblDef('L_SSL', $id,  'Virtual Host SSL Protocol');
+		$this->_tblDef[$id]->setDataLoc('vhssl', 'vhssl');
+	}
 	
+	protected function add_L_SSL_FEATURE($id)
+	{
+		$this->_tblDef[$id] = new DTbl($id, 'Security & Features');
+		
+		$attrs = array(
+			$this->_attrs['ssl_renegProtection'],
+		    new DAttr('enableSpdy',	'checkboxOr', 'Enable SPDY', 'checkboxgroup', true, NULL, array('1'=>'SPDY/2', '2'=>'SPDY/3', '0'=>'None')),
+		    );
+		$this->_tblDef[$id]->setAttr($attrs);
+	}
+	
+	protected function add_VH_SSL_FEATURE($id)
+	{
+		$this->_tblDef[$id] = new DTbl($id, 'Security');
+		
+		$attrs = array($this->_attrs['ssl_renegProtection']);
+
+		$this->_tblDef[$id]->setAttr($attrs, 'vhssl', 'vhssl');
+	}
+	
+	protected function add_L_SSL_OCSP($id)
+	{
+		$this->_tblDef[$id] = new DTbl($id, 'OCSP Stapling');
+		
+		$attrs = array(
+		    new DAttr('enableStapling', 'bool', 'Enable OCSP Stapling', 'radio', true),
+		    new DAttr('ocspRespMaxAge', 'uint', 'OCSP Response Max Age (secs)', 'text', true, -1, NULL),
+		    new DAttr('ocspResponder', 'httpurl', 'OCSP Responder', 'text', true, NULL, NULL, $this->_options['text_size']),
+		    new DAttr('ocspCACerts', 'cust', 'OCSP CA Certificates', 'text', true, NULL, '', $this->_options['text_size']),
+		    );
+		$this->_tblDef[$id]->setAttr($attrs);
+	}
+	
+	protected function add_VH_SSL_OCSP($id)
+	{
+		$this->_tblDef[$id] = $this->DupTblDef('L_SSL_OCSP', $id);
+		$this->_tblDef[$id]->setDataLoc('vhssl', 'vhssl');
+	}
+	
+	protected function add_L_SSL_CLIENT_VERIFY($id)
+	{
+		$this->_tblDef[$id] = new DTbl($id, 'Client Verification');
+		
+		$attrs = array(
+			new DAttr('clientVerify', 'sel', 'Client Verification', 'select', true, NULL, 
+						array('0'=>'none','1'=>'optional','2'=>'require','3'=>'optional_no_ca' )),
+		    new DAttr('verifyDepth', 'uint', 'Verify Depth', 'text', true, 0, 100),
+		    new DAttr('crlPath', 'cust', 'Client Revocation Path', 'text', true, 2, '', $this->_options['text_size']),
+		    new DAttr('crlFile', 'cust', 'Client Revocation File', 'text', true, 2, '', $this->_options['text_size']),
+		    );
+		$this->_tblDef[$id]->setAttr($attrs);
+	}
+		
+	protected function add_VH_SSL_CLIENT_VERIFY($id)
+	{
+		$this->_tblDef[$id] = $this->DupTblDef('L_SSL_CLIENT_VERIFY', $id);
+		$this->_tblDef[$id]->setDataLoc('vhssl', 'vhssl');
 	}
 	
 	

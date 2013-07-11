@@ -53,7 +53,7 @@ class CLIENT
 
 
 		if(!array_key_exists('lbvalid',$_SESSION)) {
-			$_SESSION['lbsecret'] = FALSE;
+			$_SESSION['lbvalid'] = FALSE;
 		}
 
 		if(!array_key_exists('lbtimeout',$_SESSION)) {

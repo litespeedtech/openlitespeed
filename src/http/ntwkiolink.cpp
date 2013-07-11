@@ -15,65 +15,111 @@
 *    You should have received a copy of the GNU General Public License       *
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
-#include "httpiolink.h"
+#include "ntwkiolink.h"
 
 #include <edio/multiplexer.h>
 #include <http/connlimitctrl.h>
 #include <http/datetime.h>
 #include <http/httpglobals.h>
 #include <http/httplog.h>
-#include <socket/gsockaddr.h>
-#include <sslpp/sslconnection.h>
-#include <sslpp/sslcontext.h>
-#include <sslpp/sslerror.h>
-#include <util/accessdef.h>
-#include <util/iovec.h>
+#include <http/httpconnpool.h>
+#include <http/httpconnection.h>
+#include <http/ntwkiolinkpool.h>
 
-#include <assert.h>
-#include <errno.h>
-#include <stdio.h>
-#include <string.h>
+#include <spdy/spdyconnection.h>
+
+#include <socket/gsockaddr.h>
 #include <sys/poll.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/uio.h>
 #include <unistd.h>
+#include <assert.h>
+#include <errno.h>
+#include <stdio.h>
+#include <string.h>
+
+#include <sslpp/sslconnection.h>
+#include <sslpp/sslcontext.h>
+#include <sslpp/sslerror.h>
+
+#include <util/accessdef.h>
+#include <util/iovec.h>
+#include "util/ssnprintf.h"
 
 #define IO_THROTTLE_READ    8
 #define IO_THROTTLE_WRITE   16
 #define IO_COUNTED          32
 
+//#define SPDY_PLAIN_DEV     
 
-HttpIOLink::HttpIOLink()
+NtwkIOLink::NtwkIOLink()
 {
 }
 
-HttpIOLink::~HttpIOLink()
+NtwkIOLink::~NtwkIOLink()
 {
 }
 
-int HttpIOLink::write( const char * pBuf, int size )
+int NtwkIOLink::write( const char * pBuf, int size )
 {
     IOVec iov( pBuf, size );
     return writev( iov, size );
 }
 
-void HttpIOLink::enableThrottle( int enable )
+void NtwkIOLink::enableThrottle( int enable )
 {
     if ( enable )
-        s_pCur_fn_list_list = &HttpIOLink::s_fn_list_list_throttle;
+        s_pCur_fn_list_list = &NtwkIOLink::s_fn_list_list_throttle;
     else
-        s_pCur_fn_list_list = &HttpIOLink::s_fn_list_list_normal;
+        s_pCur_fn_list_list = &NtwkIOLink::s_fn_list_list_normal;
 }
 
-
-int HttpIOLink::setLink( int fd, ClientInfo * pInfo, SSLContext * pSSLContext )
+int NtwkIOLink::setupHandler( HiosProtocol verSpdy )
 {
+    HioStreamHandler * pHandler;
+#ifdef SPDY_PLAIN_DEV
+    if ( !isSSL() && (verSpdy == HIOS_PROTO_HTTP) )
+        verSpdy = HIOS_PROTO_SPDY2;
+#endif
+    setProtocol( verSpdy );
+    if ( verSpdy != HIOS_PROTO_HTTP )
+    {
+        SpdyConnection * pConn = new SpdyConnection();
+        if ( !pConn )
+            return -1;
+        setLogIdBuild( 0 );
+        pConn->init( verSpdy );
+        pHandler = pConn;
+    }
+    else
+    {
+        HttpConnection * pConn = HttpConnPool::getConnection();
+        if ( !pConn )
+            return -1;
+        pConn->setNtwkIOLink( this );
+        pHandler = pConn;
+    }
+
+    pHandler->assignStream( this );    
+    pHandler->onInitConnected();
+    return 0;
+    
+}
+
+int NtwkIOLink::setLink( int fd, ClientInfo * pInfo, SSLContext * pSSLContext )
+{
+    HioStream::reset();
     setfd( fd );
     m_pClientInfo = pInfo;
     setActiveTime( DateTime::s_curTime );
-    m_iWant = HIO_WANT_READ;
+    setState( HIOS_CONNECTED );
+    setHandler( NULL );
     memset( &m_iInProcess, 0, (char *)(&m_ssl + 1) - (char *)(&m_iInProcess) );
+    ++HttpGlobals::s_iIdleConns;
+    m_tmToken = HttpGlobals::s_tmToken;
+    if ( HttpGlobals::getMultiplexer()->add( this, POLLIN|POLLHUP|POLLERR ) == -1 )
+        return -1;
     //set ssl context
     if ( pSSLContext )
     {
@@ -94,32 +140,17 @@ int HttpIOLink::setLink( int fd, ClientInfo * pInfo, SSLContext * pSSLContext )
     else
     {
         setNoSSL();
+        setupHandler( HIOS_PROTO_HTTP );
+        
     }
     pInfo->incConn();
-        if ( D_ENABLED( DL_LESS ))
-                LOG_D(( getLogger(), "[%s] concurrent conn: %d",
-                         getLogId(), pInfo->getConns() ));
-    onInitConnected();
-    ++HttpGlobals::s_iIdleConns;
-    m_tmToken = HttpGlobals::s_tmToken;
-    return HttpGlobals::getMultiplexer()->add( this, POLLIN|POLLHUP|POLLERR );
+    if ( D_ENABLED( DL_LESS ))
+         LOG_D(( getLogger(), "[%s] concurrent conn: %d",
+                 getLogId(), pInfo->getConns() ));
+    return 0;
 }
 
-int HttpIOLink::getServerAddrStr( char * pBuf, int len )
-{
-    char achAddr[128];
-    socklen_t addrlen = 128;
-    if ( getsockname( getfd(), (struct sockaddr *) achAddr, &addrlen ) == -1 )
-    {
-        return 0;
-    }
-    if ( GSockAddr::ntop( (struct sockaddr *)achAddr, pBuf, len ) == NULL )
-        return 0;
-    return strlen( pBuf );
-}
-
-
-void HttpIOLink::ignoreReadBuf()
+void NtwkIOLink::drainReadBuf()
 {
     //clear the inbound data buffer
     char achDiscard[4096];
@@ -132,7 +163,7 @@ void HttpIOLink::ignoreReadBuf()
         closeSocket();
 }
 
-void HttpIOLink::tryRead()
+void NtwkIOLink::tryRead()
 {
     char ch;
     if ( ::recv( getfd(), &ch, 1, MSG_PEEK ) == 1 )
@@ -141,13 +172,13 @@ void HttpIOLink::tryRead()
     }
 }
 
-int HttpIOLink::handleEvents( short evt )
+int NtwkIOLink::handleEvents( short evt )
 {
     register int event = evt;
     if ( D_ENABLED( DL_MEDIUM ))
-            LOG_D(( getLogger(), "[%s] HttpIOLink::handleEvents() events=%d!",
+            LOG_D(( getLogger(), "[%s] NtwkIOLink::handleEvents() events=%d!",
                 getLogId(), event ));
-    if ( m_iState == HC_SHUTDOWN )
+    if ( getState() == HIOS_SHUTDOWN )
     {
         if ( event & (POLLHUP|POLLERR) )
         {
@@ -158,10 +189,10 @@ int HttpIOLink::handleEvents( short evt )
             //resetRevent( POLLIN | POLLOUT );
             if ( event & POLLIN )
             {
-                if ( !(m_iPeerShutdown & IO_HTTP_ERR) )
-                    ignoreReadBuf();
-                else
+                if ( getFlag( HIO_FLAG_ABORT | HIO_FLAG_PEER_SHUTDOWN )  )
                     HttpGlobals::getMultiplexer()->suspendRead( this );
+                else
+                    drainReadBuf();
             }
         }
         return 0;
@@ -173,11 +204,9 @@ int HttpIOLink::handleEvents( short evt )
     }
     if ( event & (POLLHUP | POLLERR ))
     {
-        m_iPeerShutdown |= IO_PEER_HUP;
+        setFlag( HIO_FLAG_PEER_SHUTDOWN, 1 );
         m_iInProcess = 0;
-        if ( m_iState == HC_WAITING )
-            --HttpGlobals::s_iIdleConns;
-        closeConnection();
+        doClose();
         return 0;
     }
     if ( event & POLLOUT )
@@ -185,27 +214,41 @@ int HttpIOLink::handleEvents( short evt )
         (*m_pFnList->m_onWrite_fn)( this );
     }
     m_iInProcess = 0;
-    if ( m_iState >= HC_CLOSING )
+    if ( getState() >= HIOS_CLOSING )
     {
-        closeConnection();
+        doClose();
     }
     return 0;
 }
 
+void NtwkIOLink::doClose()
+{
+    if ( getHandler() )
+    {
+        if ( isReadyToRelease() )
+        {
+            getHandler()->recycle();
+            setHandler( NULL );
+        }
+        else 
+            getHandler()->onCloseEx();
+    }
+    close();
+}
 
-void HttpIOLink::suspendRead()
+void NtwkIOLink::suspendRead()
 {
     if ( D_ENABLED( DL_LESS ))
-        LOG_D(( getLogger(), "[%s] HttpIOLink::suspendRead()...", getLogId() ));
+        LOG_D(( getLogger(), "[%s] NtwkIOLink::suspendRead()...", getLogId() ));
     if ( !(( isSSL() )&&( m_ssl.wantRead())) )
         HttpGlobals::getMultiplexer()->suspendRead( this );
 }
 
-void HttpIOLink::continueRead()
+void NtwkIOLink::continueRead()
 {
     if ( D_ENABLED( DL_LESS ))
-        LOG_D(( getLogger(), "[%s] HttpIOLink::continueRead()...", getLogId() ));
-    m_iWant |= HIO_WANT_READ;
+        LOG_D(( getLogger(), "[%s] NtwkIOLink::continueRead()...", getLogId() ));
+    setFlag( HIO_FLAG_WANT_READ, 1 );
     if (( allowRead()))
     {
         if ( D_ENABLED( DL_LESS ))
@@ -214,20 +257,22 @@ void HttpIOLink::continueRead()
     }
 }
 
-void HttpIOLink::suspendWrite()
+void NtwkIOLink::suspendWrite()
 {
     if ( D_ENABLED( DL_LESS ))
-        LOG_D(( getLogger(), "[%s] HttpIOLink::suspendWrite()...", getLogId() ));
-    m_iWant &= ~HIO_WANT_WRITE;
+        LOG_D(( getLogger(), "[%s] NtwkIOLink::suspendWrite()...", getLogId() ));
+    setFlag( HIO_FLAG_WANT_WRITE, 0 );
     if ( !(( isSSL() )&&( m_ssl.wantWrite())) )
         HttpGlobals::getMultiplexer()->suspendWrite(this);
 }
 
-void HttpIOLink::continueWrite()
+void NtwkIOLink::continueWrite()
 {
     if ( D_ENABLED( DL_LESS ))
-        LOG_D(( getLogger(), "[%s] HttpIOLink::continueWrite()...", getLogId() ));
-    m_iWant |= HIO_WANT_WRITE;
+        LOG_D(( getLogger(), "[%s] NtwkIOLink::continueWrite()...", getLogId() ));
+    if( getFlag( HIO_FLAG_WANT_WRITE ) )
+        return;
+    setFlag( HIO_FLAG_WANT_WRITE, 1 );
     if ( allowWrite() )
     {
         if ( D_ENABLED( DL_LESS ))
@@ -240,9 +285,10 @@ void HttpIOLink::continueWrite()
     }
 }
 
-void HttpIOLink::switchWriteToRead()
+void NtwkIOLink::switchWriteToRead()
 {
-    m_iWant = HIO_WANT_READ;
+    setFlag( HIO_FLAG_WANT_READ, 1 );
+    setFlag( HIO_FLAG_WANT_WRITE, 0 );
     HttpGlobals::getMultiplexer()->switchWriteToRead( this );
 }
 
@@ -251,36 +297,43 @@ void HttpIOLink::switchWriteToRead()
 // SSL
 ///////////////////////////////////////////////////////////////////////
 
-void HttpIOLink::updateSSLEvent()
+void NtwkIOLink::updateSSLEvent()
 {
-    if ( wantWrite() )
+    if ( isWantWrite() )
+    {
+        dumpState( "updateSSLEvent", "CW" );
         HttpGlobals::getMultiplexer()->continueWrite( this );
-    if ( wantRead() )
+    }
+    if ( isWantRead() )
+    {
+        dumpState( "updateSSLEvent", "CR" );
         HttpGlobals::getMultiplexer()->continueRead( this );
+    }
 }
 
 
-void HttpIOLink::checkSSLReadRet( int ret )
+void NtwkIOLink::checkSSLReadRet( int ret )
 {
     if ( ret > 0 )
     {
-        m_lBytesRead += ret;
+        bytesRecv( ret );
         HttpGlobals::s_lSSLBytesRead += ret;
         setActiveTime( DateTime::s_curTime );
-        updateSSLEvent();
+        //updateSSLEvent();
     }
     else if ( !ret )
     {
-        if ( m_ssl.wantRead() )
-            HttpGlobals::getMultiplexer()->switchWriteToRead( this );
         if ( m_ssl.wantWrite() )
-            HttpGlobals::getMultiplexer()->switchReadToWrite( this );
+        {
+            dumpState( "checkSSLReadRet", "CW" );
+            HttpGlobals::getMultiplexer()->continueWrite( this );
+        }
     }
-    else if ( m_iState != HC_SHUTDOWN )
-        m_iState = HC_CLOSING;
+    else if ( getState() != HIOS_SHUTDOWN )
+        setState( HIOS_CLOSING );
 }
 
-int HttpIOLink::readExSSL( HttpIOLink* pThis, char * pBuf, int size )
+int NtwkIOLink::readExSSL( NtwkIOLink* pThis, char * pBuf, int size )
 {
     int ret;
     assert( pBuf );
@@ -292,7 +345,7 @@ int HttpIOLink::readExSSL( HttpIOLink* pThis, char * pBuf, int size )
     return ret;
 }
 
-int HttpIOLink::writevExSSL( HttpIOLink * pThis, IOVec &vector, int total )
+int NtwkIOLink::writevExSSL( NtwkIOLink * pThis, IOVec &vector, int total )
 {
     int ret = 0;
 
@@ -336,7 +389,7 @@ int HttpIOLink::writevExSSL( HttpIOLink * pThis, IOVec &vector, int total )
         written = pThis->m_ssl.write( pBuf, bufSize );
         if ( written > 0 )
         {
-            pThis->m_lBytesSent += written;
+            pThis->bytesSent( written );
             HttpGlobals::s_lSSLBytesWritten += written;
             pThis->setActiveTime( DateTime::s_curTime );
             ret += written;
@@ -348,64 +401,93 @@ int HttpIOLink::writevExSSL( HttpIOLink * pThis, IOVec &vector, int total )
         }
         else if ( !written )
         {
-            pThis->setSSLAgain();
+            if ( pThis->m_ssl.wantRead() )
+                HttpGlobals::getMultiplexer()->continueRead( pThis );
+            //pThis->setSSLAgain();
             break;
         }
-        else if ( pThis->m_iState != HC_SHUTDOWN )
+        else if ( pThis->getState() != HIOS_SHUTDOWN )
         {
-            pThis->m_iState = HC_CLOSING;
+            pThis->setState( HIOS_CLOSING );
             return -1;
         }
     }
     return ret;
 }
 
-void HttpIOLink::setSSLAgain()
+void NtwkIOLink::setSSLAgain()
 {
-    if ( m_ssl.wantRead() )
-        HttpGlobals::getMultiplexer()->switchWriteToRead( this );
-    if ( m_ssl.wantWrite() )
-        HttpGlobals::getMultiplexer()->switchReadToWrite( this );
+    if ( m_ssl.wantRead() || getFlag( HIO_FLAG_WANT_READ ) )
+    {
+        dumpState( "setSSLAgain", "CR" );
+        HttpGlobals::getMultiplexer()->continueRead( this );
+    }
+    else
+    {
+        dumpState( "setSSLAgain", "SR" );
+        HttpGlobals::getMultiplexer()->suspendRead( this );
+    }
+    
+    if ( m_ssl.wantWrite() || getFlag( HIO_FLAG_WANT_WRITE ) )
+    {
+        dumpState( "setSSLAgain", "CW" );
+        HttpGlobals::getMultiplexer()->continueWrite( this );
+    }
+    else
+    {
+        dumpState( "setSSLAgain", "SW" );
+        HttpGlobals::getMultiplexer()->suspendWrite( this );
+    }    
 }
 
-int HttpIOLink::flushSSL()
+int NtwkIOLink::flush()
 {
     if ( D_ENABLED( DL_LESS ))
-        LOG_D(( getLogger(), "[%s] HttpIOLink::flushSSL()...", getLogId() ));
+        LOG_D(( getLogger(), "[%s] NtwkIOLink::flush...", getLogId() ));
+    if ( !isSSL() )
+        return 0;
     int ret;
     switch( ( ret = getSSL()->flush() ))
     {
     case 0:
-        setSSLAgain();
-        continueWrite();
+        if ( m_ssl.wantRead() )
+        {   
+            dumpState( "flush", "CR" );
+            HttpGlobals::getMultiplexer()->continueRead( this );
+        }
+        else
+        {
+            dumpState( "flush", "CW" );
+            HttpGlobals::getMultiplexer()->continueRead( this );
+        }
         return 1;
     case 1:
         return 0;
     case -1:
-        m_iState = HC_CLOSING;
+        setState( HIOS_CLOSING );
         break;
     }
     return ret;
 }
 
-int HttpIOLink::onWriteSSL( HttpIOLink * pThis )
+int NtwkIOLink::onWriteSSL( NtwkIOLink * pThis )
 {
-    if ( !pThis->m_ssl.wantWrite() )
+    pThis->dumpState( "onWriteSSL", "none" );
+    if ( pThis->m_ssl.wantWrite() )
     {
-        int last = pThis->m_ssl.lastRead();
-        if ( !pThis->m_ssl.isConnected()||( last ))
+        if ( !pThis->m_ssl.isConnected()||( pThis->m_ssl.lastRead() ))
         {
             pThis->SSLAgain();
-//            if (( !pThis->m_ssl.isConnected() )||(last ))
-                return 0;
+            return 0;
         }
     }
     return pThis->doWrite();
 }
 
 
-int HttpIOLink::onReadSSL( HttpIOLink * pThis )
+int NtwkIOLink::onReadSSL( NtwkIOLink * pThis )
 {
+    pThis->dumpState( "onReadSSL", "none" );
     if ( pThis->m_ssl.wantRead() )
     {
         int last = pThis->m_ssl.lastWrite();
@@ -420,7 +502,7 @@ int HttpIOLink::onReadSSL( HttpIOLink * pThis )
 }
 
 
-int HttpIOLink::closeSSL( HttpIOLink * pThis )
+int NtwkIOLink::closeSSL( NtwkIOLink * pThis )
 {
     if ( D_ENABLED( DL_LESS ))
         LOG_D(( pThis->getLogger(), "[%s] Shutting down SSL ...", pThis->getLogId() ));
@@ -437,11 +519,11 @@ int HttpIOLink::closeSSL( HttpIOLink * pThis )
 ///////////////////////////////////////////////////////////////////////
 
 
-int HttpIOLink::close_( HttpIOLink * pThis )
+int NtwkIOLink::close_( NtwkIOLink * pThis )
 {
-    pThis->m_iState = HC_SHUTDOWN;
+    pThis->setState( HIOS_SHUTDOWN );
 
-    if ( pThis->m_iPeerShutdown & (IO_PEER_ERR | IO_PEER_HUP) )
+    if ( pThis->getFlag( HIO_FLAG_PEER_SHUTDOWN | HIO_FLAG_ABORT ) )
         pThis->closeSocket();
     else
     {
@@ -464,7 +546,7 @@ int HttpIOLink::close_( HttpIOLink * pThis )
     return -1;
 }
 
-void HttpIOLink::closeSocket()
+void NtwkIOLink::closeSocket()
 {
     if ( getfd() == -1 )
         return;
@@ -489,15 +571,25 @@ void HttpIOLink::closeSocket()
     //printf( "socket: %d closed\n", getfd() );
     ::close( getfd() );
     setfd( -1 );
-    recycle();
+    if ( getHandler() )
+    {
+        getHandler()->recycle();
+        setHandler( NULL );
+    }
+    //recycle itself.
+    if ( D_ENABLED( DL_LESS ))
+        LOG_D(( getLogger(), "[%s] Recycle NtwkIoLink", getLogId() ));
+    NtwkIoLinkPool::recycle( this );
 }
 
-int HttpIOLink::onRead( HttpIOLink * pThis )
+int NtwkIOLink::onRead( NtwkIOLink * pThis )
 {
-    return pThis->onReadEx();
+    if ( pThis->getHandler() )
+        return pThis->getHandler()->onReadEx();
+    return -1;
 }
 
-int HttpIOLink::onWrite(HttpIOLink *pThis )
+int NtwkIOLink::onWrite(NtwkIOLink *pThis )
 {   return pThis->doWrite();   }
 
 
@@ -510,21 +602,18 @@ static int matchToken( int token )
 }
 
 
-void HttpIOLink::onTimer_( HttpIOLink * pThis )
+void NtwkIOLink::onTimer_( NtwkIOLink * pThis )
 {
     if ( matchToken( pThis->m_tmToken ) )
     {
         if ( pThis->detectClose() )
             return;
-        if ( pThis->getState() == HC_THROTTLING )
-        {
-            pThis->onWriteEx();
-        }
-        pThis->onTimerEx();
+        if (pThis->getHandler())
+            pThis->getHandler()->onTimerEx();
     }
 }
 
-int HttpIOLink::checkReadRet( int ret, int size )
+int NtwkIOLink::checkReadRet( int ret, int size )
 {
     //Note: read return 0 means TCP receive FIN, the other side shutdown the write
     //       side of the socket, should leave it alone. Should get other signals
@@ -536,20 +625,20 @@ int HttpIOLink::checkReadRet( int ret, int size )
         resetRevent( POLLIN );
     if ( ret > 0 )
     {
-        m_lBytesRead += ret;
+        bytesRecv( ret );
         HttpGlobals::s_lBytesRead += ret;
         setActiveTime( DateTime::s_curTime );
     }
     else if ( ret == 0 )
     {
-        if ( m_iState != HC_SHUTDOWN )
+        if ( getState() != HIOS_SHUTDOWN )
         {
             if ( D_ENABLED( DL_LESS ))
                 LOG_D(( getLogger(), "[%s] End of stream detected, CLOSING!",
                     getLogId() ));
            //have the connection closed quickly
-            m_iPeerShutdown |= IO_PEER_HUP;
-            m_iState = HC_CLOSING;
+            setFlag( HIO_FLAG_PEER_SHUTDOWN, 1 );
+            setState( HIOS_CLOSING );
         }
         ret = -1;
     }
@@ -569,8 +658,8 @@ int HttpIOLink::checkReadRet( int ret, int size )
             ret = 0;
             break;
         default:
-            if ( m_iState != HC_SHUTDOWN )
-                m_iState = HC_CLOSING;
+            if ( getState() != HIOS_SHUTDOWN )
+                setState( HIOS_CLOSING );
             if ( D_ENABLED( DL_LESS ))
                 LOG_D(( getLogger(), "[%s] read error: %s\n",
                         getLogId(), strerror( errno ) ));
@@ -582,7 +671,7 @@ int HttpIOLink::checkReadRet( int ret, int size )
 
 }
 
-int HttpIOLink::readEx( HttpIOLink* pThis, char * pBuf, int size )
+int NtwkIOLink::readEx( NtwkIOLink* pThis, char * pBuf, int size )
 {
     int ret;
     assert( pBuf );
@@ -600,7 +689,7 @@ int HttpIOLink::readEx( HttpIOLink* pThis, char * pBuf, int size )
 #if defined(__FreeBSD__ ) || defined(__NetBSD__) || defined(__OpenBSD__) 
 
 #include <sys/uio.h>
-int HttpIOLink::sendfileEx( IOVec &vector, int headerTotal, int fdSrc, off_t off, size_t size )
+int NtwkIOLink::sendfileEx( IOVec &vector, int headerTotal, int fdSrc, off_t off, size_t size )
 {
     struct sf_hdtr hdtr;
     struct sf_hdtr * pHeader;
@@ -631,7 +720,7 @@ int HttpIOLink::sendfileEx( IOVec &vector, int headerTotal, int fdSrc, off_t off
 
 #if defined(sun) || defined(__sun)
 
-int HttpIOLink::sendfileEx( IOVec &vector, int headerTotal, int fdSrc, off_t off, size_t size )
+int NtwkIOLink::sendfileEx( IOVec &vector, int headerTotal, int fdSrc, off_t off, size_t size )
 {
    
     int n = 0 ;
@@ -675,7 +764,7 @@ int HttpIOLink::sendfileEx( IOVec &vector, int headerTotal, int fdSrc, off_t off
     defined(__gnu_linux__)||defined(HPUX) ||\
     defined(sun) || defined(__sun)
 
-int HttpIOLink::sendfile( IOVec &iov, int &headerTotal, int fdSrc, off_t off, size_t size )
+int NtwkIOLink::sendfile( IOVec &iov, int &headerTotal, int fdSrc, off_t off, size_t size )
 {
     int len = 0;
     int written;
@@ -751,7 +840,7 @@ int HttpIOLink::sendfile( IOVec &iov, int &headerTotal, int fdSrc, off_t off, si
 
 #else
 
-int HttpIOLink::sendfile( IOVec &iov, int &headerTotal, int fdSrc, off_t off, size_t size )
+int NtwkIOLink::sendfile( IOVec &iov, int &headerTotal, int fdSrc, off_t off, size_t size )
 {
     int len = 0;
     ThrottleControl * pCtrl = getThrottleCtrl();
@@ -816,7 +905,7 @@ int HttpIOLink::sendfile( IOVec &iov, int &headerTotal, int fdSrc, off_t off, si
 #endif 
 
 
-int HttpIOLink::writevEx( HttpIOLink * pThis, IOVec &vector, int total )
+int NtwkIOLink::writevEx( NtwkIOLink * pThis, IOVec &vector, int total )
 {
     int len = ::writev( pThis->getfd(), vector.get(), vector.len() );
     len = pThis->checkWriteRet( len, total );
@@ -840,7 +929,14 @@ int HttpIOLink::writevEx( HttpIOLink * pThis, IOVec &vector, int total )
 }
 
 
-int HttpIOLink::checkWriteRet( int len, int size )
+int NtwkIOLink::sendHeaders( IOVec &vector, int headerCount )
+{
+    assert( "Should not be called." == NULL );
+    return -1;
+}
+
+
+int NtwkIOLink::checkWriteRet( int len, int size )
 {
     if ( len < size )
         resetRevent( POLLOUT );
@@ -848,7 +944,7 @@ int HttpIOLink::checkWriteRet( int len, int size )
         setRevent( POLLOUT );
     if ( len > 0 )
     {
-        m_lBytesSent += len;
+        bytesSent( len );
         HttpGlobals::s_lBytesWritten += len;
         setActiveTime( DateTime::s_curTime );
     }
@@ -864,10 +960,10 @@ int HttpIOLink::checkWriteRet( int len, int size )
             len = 0;
             break;
         default:
-            if ( m_iState != HC_SHUTDOWN )
+            if ( getState() != HIOS_SHUTDOWN )
             {
-                m_iState = HC_CLOSING;
-                setPeerShutdown( IO_PEER_ERR );
+                setState( HIOS_CLOSING );
+                setFlag( HIO_FLAG_ABORT, 1 );
             }
             if ( D_ENABLED( DL_LESS ))
                 LOG_D(( getLogger(), "[%s] write error: %s\n",
@@ -879,20 +975,25 @@ int HttpIOLink::checkWriteRet( int len, int size )
     return len;
 }
 
-int HttpIOLink::detectClose()
+int NtwkIOLink::detectClose()
 {
-    if (( getState() >= HC_THROTTLING )&&
-        ( getState() != HC_WRITING ))
+    if ( getState() == HIOS_SHUTDOWN )
+    {
+        if ( D_ENABLED( DL_MEDIUM ) )
+            LOG_D((getLogger(), "[%s] Shutdown time out!", getLogId() ));
+        closeSocket();
+    }        
+    else if ( getState() == HIOS_CONNECTED ) 
     {
         char ch;
-        if ( !::recv( getfd(), &ch, 1, MSG_PEEK ) )
+        if ( ( getClientInfo()->getAccess() == AC_BLOCK ) ||
+             (::recv( getfd(), &ch, 1, MSG_PEEK ) == 0 ) )
         {
             if ( D_ENABLED( DL_LESS ))
                 LOG_D(( getLogger(), "[%s] peer connection close detected!\n", getLogId() ));
             //have the connection closed faster
-            setPeerShutdown( IO_PEER_ERR );
-
-            closeConnection( 1 );
+            setFlag( HIO_FLAG_PEER_SHUTDOWN, 1 );
+            doClose();
             return 1;
         }
     }
@@ -903,12 +1004,12 @@ int HttpIOLink::detectClose()
 // Throttle
 ///////////////////////////////////////////////////////////////////////
 
-int HttpIOLink::onReadT( HttpIOLink * pThis )
+int NtwkIOLink::onReadT( NtwkIOLink * pThis )
 {
     return pThis->doReadT();
 }
 
-int HttpIOLink::onWriteT( HttpIOLink *pThis )
+int NtwkIOLink::onWriteT( NtwkIOLink *pThis )
 {
     if ( pThis->allowWrite() )
         return pThis->doWrite();
@@ -917,7 +1018,22 @@ int HttpIOLink::onWriteT( HttpIOLink *pThis )
     return 0;
 }
 
-void HttpIOLink::onTimer_T( HttpIOLink * pThis )
+void NtwkIOLink::dumpState(const char * pFuncName, const char * action)
+{
+    if ( D_ENABLED( DL_MORE ))
+        LOG_D(( getLogger(),  "[%s] %s(), %s, wantRead: %d, wantWrite: %d,"
+                        " allowWrite: %d, allowRead: %d,"
+                        " m_ssl.wantRead: %d, m_ssl.wantWrite: %d, "
+                        " m_ssl.lastRead: %d, m_ssl.lastWrite: %d",
+                getLogId(),  pFuncName, action, isWantRead(), isWantWrite(),
+                allowWrite(), allowRead(), 
+                m_ssl.wantRead(), m_ssl.wantWrite(),
+                m_ssl.lastRead(), m_ssl.lastWrite()
+              ));
+    
+}
+
+void NtwkIOLink::onTimer_T( NtwkIOLink * pThis )
 {
     if ( matchToken( pThis->m_tmToken ) )
     {
@@ -926,39 +1042,39 @@ void HttpIOLink::onTimer_T( HttpIOLink * pThis )
 //                    pThis->getLogId(), pThis->m_tmToken, HttpGlobals::s_tmToken ));
         if ( pThis->detectClose() )
             return;
-        if ( pThis->getState() == HC_THROTTLING )
-        {
-            pThis->onWriteEx();
-        }
 //            if ( D_ENABLED( DL_MORE ))
 //                LOG_D(( pThis->getLogger(),  "[%s] output avail:%d. state: %d \n",
 //                        pThis->getLogId(),
 //                        pThis->getClientInfo()->getThrottleCtrl().getOSQuota(),
 //                        pThis->getState() ));
-        if ( pThis->allowWrite() && pThis->wantWrite() )
+        if ( pThis->allowWrite() && pThis->isWantWrite() )
         {
             //pThis->doWrite();
             //if (  pThis->allowWrite() && pThis->wantWrite() )
+            pThis->dumpState( "onTimer_T", "CW" );
             HttpGlobals::getMultiplexer()->continueWrite( pThis );
         }
-        if ( pThis->allowRead() && pThis->wantRead() )
+        if ( pThis->allowRead() && pThis->isWantRead() )
         {
-            if ( pThis->m_iState != HC_WAITING )
-                pThis->doReadT();
-            if ( pThis->allowRead() && pThis->wantRead() )
+            //if ( pThis->getState() != HCS_WAITING )
+            //    pThis->doReadT();
+            //if ( pThis->allowRead() && pThis->wantRead() )
+            pThis->dumpState( "onTimer_T", "CR" );
                 HttpGlobals::getMultiplexer()->continueRead( pThis );
         }
-        pThis->onTimerEx();
+        if ( pThis->getHandler() )
+            pThis->getHandler()->onTimerEx();
     }
 }
 
 
-int HttpIOLink::readExT( HttpIOLink* pThis, char * pBuf, int size )
+int NtwkIOLink::readExT( NtwkIOLink* pThis, char * pBuf, int size )
 {
     ThrottleControl * pTC = pThis->getThrottleCtrl();
     int iQuota = pTC->getISQuota();
     if ( iQuota <= 0 )
     {
+        pThis->dumpState( "readExT", "SR" );
         HttpGlobals::getMultiplexer()->suspendRead( pThis );
         return 0;
     }
@@ -973,6 +1089,7 @@ int HttpIOLink::readExT( HttpIOLink* pThis, char * pBuf, int size )
 //        ::write( 1, pBuf, ret );
         if ( !pTC->getISQuota() )
         {
+            pThis->dumpState( "readExT", "SR" );
             HttpGlobals::getMultiplexer()->suspendRead( pThis );
         }
     }
@@ -981,13 +1098,14 @@ int HttpIOLink::readExT( HttpIOLink* pThis, char * pBuf, int size )
 
 
 
-int HttpIOLink::writevExT( HttpIOLink * pThis, IOVec &vector, int total )
+int NtwkIOLink::writevExT( NtwkIOLink * pThis, IOVec &vector, int total )
 {
     int len = 0;
     ThrottleControl * pCtrl = pThis->getThrottleCtrl();
     int Quota = pCtrl->getOSQuota();
     if ( Quota <= 0 )
     {
+        pThis->dumpState( "writevExT", "SW" );
         HttpGlobals::getMultiplexer()->suspendWrite( pThis );
         return 0;
     }
@@ -1006,6 +1124,7 @@ int HttpIOLink::writevExT( HttpIOLink * pThis, IOVec &vector, int total )
     if (Quota - len < 10 )
     {
         pCtrl->useOSQuota(  Quota );
+        pThis->dumpState( "writevExT", "SW" );
         HttpGlobals::getMultiplexer()->suspendWrite( pThis );
     }
     else
@@ -1021,7 +1140,7 @@ int HttpIOLink::writevExT( HttpIOLink * pThis, IOVec &vector, int total )
 ///////////////////////////////////////////////////////////////////////
 
 
-//void HttpIOLink::onTimerSSL_T( HttpIOLink * pThis )
+//void NtwkIOLink::onTimerSSL_T( NtwkIOLink * pThis )
 //{
 //    if ( pThis->detectClose() )
 //        return;
@@ -1036,40 +1155,42 @@ int HttpIOLink::writevExT( HttpIOLink * pThis, IOVec &vector, int total )
 //    pThis->onTimerEx();
 //}
 
-void HttpIOLink::onTimerSSL_T( HttpIOLink * pThis )
+void NtwkIOLink::onTimerSSL_T( NtwkIOLink * pThis )
 {
     if ( matchToken( pThis->m_tmToken ) )
     {
         if ( pThis->detectClose() )
             return;
-        if ( pThis->getState() == HC_THROTTLING )
-        {
-            pThis->onWriteEx();
-        }
         if ( pThis->allowWrite() && ( pThis->m_ssl.wantWrite() ))
             onWriteSSL_T( pThis );
         if ( pThis->allowRead() && ( pThis->m_ssl.wantRead() ))
             onReadSSL_T( pThis );
-        if ( pThis->allowWrite() && pThis->wantWrite() )
+        if ( pThis->allowWrite() && pThis->isWantWrite() )
         {
             pThis->doWrite();
-            if (  pThis->allowWrite() && pThis->wantWrite() )
+            if (  pThis->allowWrite() && pThis->isWantWrite() )
+            {
+                pThis->dumpState( "onTimerSSL_T", "CW" );
                 HttpGlobals::getMultiplexer()->continueWrite( pThis );
+            }
         }
-        if ( pThis->allowRead() && pThis->wantRead() )
+        if ( pThis->allowRead() && pThis->isWantRead() )
         {
-            if ( pThis->m_iState != HC_WAITING )
-                pThis->doReadT();
-            if ( pThis->allowRead() && pThis->wantRead() )
+            //if ( pThis->getState() != HCS_WAITING )
+            //    pThis->doReadT();
+            //if ( pThis->allowRead() && pThis->wantRead() )
+                pThis->dumpState( "onTimerSSL_T", "CR" );
                 HttpGlobals::getMultiplexer()->continueRead( pThis );
         }
-        pThis->onTimerEx();
+        if ( pThis->getHandler() )
+            pThis->getHandler()->onTimerEx();
     }
 }
 
 
-int HttpIOLink::onReadSSL_T( HttpIOLink * pThis )
+int NtwkIOLink::onReadSSL_T( NtwkIOLink * pThis )
 {
+    //pThis->dumpState( "onReadSSL_t", "none" );
     if ( pThis->m_ssl.wantRead() )
     {
         int last = pThis->m_ssl.lastWrite();
@@ -1083,9 +1204,10 @@ int HttpIOLink::onReadSSL_T( HttpIOLink * pThis )
     return pThis->doReadT();
 }
 
-int HttpIOLink::onWriteSSL_T( HttpIOLink * pThis )
+int NtwkIOLink::onWriteSSL_T( NtwkIOLink * pThis )
 {
-    if ( !pThis->m_ssl.wantWrite() )
+    //pThis->dumpState( "onWriteSSL_T", "none" );
+    if ( pThis->m_ssl.wantWrite() )
     {
         int last = pThis->m_ssl.lastRead();
         if ( !pThis->m_ssl.isConnected()||( last ))
@@ -1117,7 +1239,7 @@ static char s_errUseSSL[] =
     "Powered By LiteSpeed Web Server<br />\n"
     "<a href='http://www.litespeedtech.com'><i>http://www.litespeedtech.com</i></a>\n"
     "</body></html>\n";
-int HttpIOLink::acceptSSL()
+int NtwkIOLink::acceptSSL()
 {
     int ret = m_ssl.accept();
     if ( ret == 1 )
@@ -1129,7 +1251,9 @@ int HttpIOLink::acceptSSL()
             &&( m_pClientInfo->incSslNewConn() > 
                  (HttpGlobals::s_iConnsPerClientHardLimit << 1) ))
         {
-            LOG_WARN(( getLogger(), "[%s] [SSL] too many new SSL connections: %d, possible SSL negociation based attack, block!", getLogId(), m_pClientInfo->getSslNewConn() ));
+            LOG_WARN(( getLogger(), "[%s] [SSL] too many new SSL connections: %d, "
+                        "possible SSL negociation based attack, block!", getLogId(),
+                        m_pClientInfo->getSslNewConn() ));
             m_pClientInfo->setOverLimitTime( DateTime::s_curTime );
             m_pClientInfo->setAccess( AC_BLOCK );
         }
@@ -1146,7 +1270,7 @@ int HttpIOLink::acceptSSL()
     return ret;
 }
 
-int HttpIOLink::SSLAgain()
+int NtwkIOLink::SSLAgain()
 {
     if ( D_ENABLED( DL_LESS ))
         LOG_D(( getLogger(), "[%s] [SSL] SSLAgain()!\n", getLogId() ));
@@ -1158,9 +1282,15 @@ int HttpIOLink::SSLAgain()
         break;
     case SSLConnection::ACCEPTING:
         ret = acceptSSL();
-        if ( ret == 0 )
+        if ( ret == 1 )
         {
-            setState( HC_READING );
+            unsigned int spdyVer = m_ssl.getSpdyVersion();
+            if ( spdyVer > HIOS_PROTO_SPDY3 )
+            {
+                LOG_ERR(( getLogger(), "[%s] bad SPDY version: %d, use HTTP", getLogId(), spdyVer ));
+                spdyVer = HIOS_PROTO_HTTP;
+            }
+            setupHandler( (HiosProtocol)spdyVer );
         }
         break;
     case SSLConnection::SHUTDOWN:
@@ -1168,27 +1298,29 @@ int HttpIOLink::SSLAgain()
         break;
     case SSLConnection::CONNECTED:
         if ( m_ssl.lastRead() )
-            return onReadEx();
+        {
+            if ( getHandler() )
+                return getHandler()->onReadEx();
+            else
+                return -1;
+        }
         if ( m_ssl.lastWrite() )
             return doWrite();
     }
     switch( ret )
     {
     case 0:
-        if ( m_ssl.wantRead() )
-            HttpGlobals::getMultiplexer()->switchWriteToRead( this );
-        if ( m_ssl.wantWrite() )
-            HttpGlobals::getMultiplexer()->switchReadToWrite( this );
+        setSSLAgain();
         break;
     case -1:
-        closeConnection();
+        doClose();
         break;
     }
     return ret;
 
 }
 
-int HttpIOLink::readExSSL_T( HttpIOLink* pThis, char * pBuf, int size )
+int NtwkIOLink::readExSSL_T( NtwkIOLink* pThis, char * pBuf, int size )
 {
     ThrottleControl * pTC = pThis->getThrottleCtrl();
     int iQuota = pTC->getISQuota();
@@ -1216,7 +1348,7 @@ int HttpIOLink::readExSSL_T( HttpIOLink* pThis, char * pBuf, int size )
 }
 
 
-int HttpIOLink::writevExSSL_T( HttpIOLink * pThis, IOVec &vector, int total )
+int NtwkIOLink::writevExSSL_T( NtwkIOLink * pThis, IOVec &vector, int total )
 {
     ThrottleControl * pCtrl = pThis->getThrottleCtrl();
     int Quota = pCtrl->getOSQuota();
@@ -1282,7 +1414,7 @@ int HttpIOLink::writevExSSL_T( HttpIOLink * pThis, IOVec &vector, int total )
                 pThis->getLogId(), bufSize, written ));
         if ( written > 0 )
         {
-            pThis->m_lBytesSent += written;
+            pThis->bytesSent( written );
             HttpGlobals::s_lSSLBytesWritten += written;
             pThis->m_iSslLastWrite = 0;
             pThis->setActiveTime( DateTime::s_curTime );
@@ -1299,12 +1431,12 @@ int HttpIOLink::writevExSSL_T( HttpIOLink * pThis, IOVec &vector, int total )
             pThis->setSSLAgain();
             break;
         }
-        else if ( pThis->m_iState != HC_SHUTDOWN )
+        else if ( pThis->getState() != HIOS_SHUTDOWN )
         {
             if ( D_ENABLED( DL_MORE ))
                 LOG_D(( "[%s] SSL error: %s, mark connection to be closed",
                     pThis->getLogId(), SSLError().what() ));
-            pThis->m_iState = HC_CLOSING;
+            pThis->setState( HIOS_CLOSING );
             return -1;
         }
     }
@@ -1322,7 +1454,7 @@ int HttpIOLink::writevExSSL_T( HttpIOLink * pThis, IOVec &vector, int total )
     return ret;
 }
 
-void HttpIOLink::suspendEventNotify()
+void NtwkIOLink::suspendEventNotify()
 {
     if ( !HttpGlobals::s_iMultiplexerType )
     {
@@ -1332,7 +1464,7 @@ void HttpIOLink::suspendEventNotify()
     }
 }
 
-void HttpIOLink::resumeEventNotify()
+void NtwkIOLink::resumeEventNotify()
 {
     if ( !HttpGlobals::s_iMultiplexerType )
     {
@@ -1342,7 +1474,7 @@ void HttpIOLink::resumeEventNotify()
     }
 }
 
-void HttpIOLink::changeClientInfo( ClientInfo * pInfo )
+void NtwkIOLink::changeClientInfo( ClientInfo * pInfo )
 {
     if ( pInfo == m_pClientInfo )
         return;
@@ -1351,5 +1483,17 @@ void HttpIOLink::changeClientInfo( ClientInfo * pInfo )
     m_pClientInfo = pInfo;
 }
 
+static const char * s_pProtoString[] = { "", ":SPDY2", ":SPDY3"   };
+const char * NtwkIOLink::buildLogId()
+{
+    AutoStr2 & id = getIdBuf();
 
+    int len ;
+    char * p = id.buf();
+    len = safe_snprintf( id.buf(), MAX_LOGID_LEN, "%s:%hu%s",  
+                            m_pClientInfo->getAddrString(), getRemotePort(), s_pProtoString[ (int)getProtocol() ] );
+    id.setLen( len );
+    p += len;
 
+    return id.c_str();
+}

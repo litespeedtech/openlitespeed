@@ -103,6 +103,7 @@ public:
     void set( const in6_addr* addr, const in_port_t port, uint32_t flowinfo = 0 );
     int set( const char * pURL, int tag );
     int set( int family, const char * pURL, int tag = 0 );
+    int setHttpUrl ( const char *pHttpUrl, const int len );
     int parseAddr( const char * pString );
     /** return the address in string format. */
     static const char * ntop( const struct sockaddr * pAddr, char * pBuf, int len );

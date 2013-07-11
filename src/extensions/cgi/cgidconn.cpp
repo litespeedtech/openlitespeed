@@ -244,7 +244,6 @@ int CgidConn::buildSSIExecHeader()
 {
     static unsigned int s_id = 0;
     HttpConnection * pConn = getConnector()->getHttpConn();
-    lscgid_req * pHeader = m_req.getCgidReq();
     HttpReq * pReq = pConn->getReq();
     const char * pReal;
     const AutoStr2 * psChroot;
@@ -309,7 +308,6 @@ int CgidConn::buildReqHeader()
 {
     static unsigned int s_id = 0;
     HttpConnection * pConn = getConnector()->getHttpConn();
-    lscgid_req * pHeader = m_req.getCgidReq();
     HttpReq * pReq = pConn->getReq();
     const char * pQueryString = pReq->getQueryString();
     const char * pQsEnd = pReq->getQueryString() + pReq->getQueryStringLen();
@@ -343,7 +341,6 @@ int CgidConn::buildReqHeader()
         ret = 0;
     }
     int priority = ((CgidWorker *)getWorker())->getConfig().getPriority();
-    int pathLen = realPath->len();
     m_req.buildReqHeader( uid, gid, priority, pChroot, ret, pReal,
                 pReq->getRealPath()->len(),
                 ((CgidWorker *)getWorker())->getConfig().getRLimits() );

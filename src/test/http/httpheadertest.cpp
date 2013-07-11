@@ -16,9 +16,10 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #ifdef RUN_TEST
-
+#include <stdio.h>
 #include "httpheadertest.h"
 #include <http/httpheader.h>
+#include <http/httprespheaders.h>
 #include <util/autobuf.h>
 
 #include <stdlib.h>
@@ -245,6 +246,231 @@ TEST(benchmarkLookup)
     {
         HttpHeader::getIndex( s_pHeaders[ rand() % size ] );
     }
+}
+
+#include <socket/gsockaddr.h>
+void DisplayHeader(IOVec io, int format, short count)
+{
+    IOVec::iterator it;
+    unsigned char *p = NULL;
+    for (it = io.begin(); it != io.end(); ++it)
+    {
+        p = (unsigned char *)it->iov_base;
+        for (unsigned int i=0; i<it->iov_len; ++i)
+        {
+            if (format  != 0)
+                printf("%02X ",p[i]);
+            else
+                printf("%c",p[i]);
+        }
+    }
+    printf("\r\nCount = %d\r\n======================================================\r\n", count);
+    
+    if (format != 0)
+    {
+        AutoBuf buf;
+        for (it = io.begin(); it != io.end(); ++it)
+        {
+            buf.append( (const char *)it->iov_base, it->iov_len);
+        }
+        
+        if (format ==  1)
+        {
+            char *p = buf.begin();
+            short *tempNumS;
+            short tempNum;
+            
+            for (int j=0; j<count; ++j)
+            {
+                tempNumS = (short *)p;
+                tempNum = ntohs(*tempNumS);
+                p += 2;
+                for (int n=0; n<tempNum; ++n){
+                    printf("%c", *(p + n));
+                }
+                printf(": ");
+                p += tempNum;
+                
+                tempNumS = (short *)p;
+                tempNum = ntohs(*tempNumS);
+                p += 2;
+                for (int n=0; n<tempNum; ++n){
+                    if (*(p + n) != 0)
+                        printf("%c", *(p + n));
+                    else
+                        printf("\r\n\t");
+                }
+                printf("\r\n");
+                p += tempNum;
+            }
+        }
+        else
+        {
+            char *p = buf.begin();
+            int32_t *tempNumS;
+            int32_t tempNum;
+            
+            for (int j=0; j<count; ++j)
+            {
+                tempNumS = (int32_t *)p;
+                tempNum = ntohl(*tempNumS);
+                p += 4;
+                for (int n=0; n<tempNum; ++n){
+                    printf("%c", *(p + n));
+                }
+                printf(": ");
+                p += tempNum;
+                
+                tempNumS = (int32_t *)p;
+                tempNum = ntohl(*tempNumS);
+                p += 4;
+                for (int n=0; n<tempNum; ++n){
+                    if (*(p + n) != 0)
+                        printf("%c", *(p + n));
+                    else
+                        printf("\r\n\t");
+                }
+                printf("\r\n");
+                p += tempNum;
+            }
+        }
+        
+        printf("\r\n*******************************************************************\r\n\r\n");
+        
+    }
+    
+}
+    
+
+TEST (respHeaders)
+{
+    HttpRespHeaders h;
+    IOVec io;
+    char *pVal = NULL;
+    int valLen = 0;
+        
+    for (int kk=0; kk<3; ++kk)
+    {
+        h.reset((RespHeader::FORMAT)kk);
+        h.add(HttpHeader::H_SERVER, "Server", 6, "My_Server", 9);
+        h.add(HttpHeader::H_HOST, "Host", 4, "My_Host", 7);
+        h.add(HttpHeader::H_ACCEPT_RANGES, "Accept-Ranges", strlen("Accept-Ranges"), "bytes", 5);
+        h.add(HttpHeader::H_DATE, "Date", 4, "Thu, 16 May 2013 20:32:23 GMT", strlen("Thu, 16 May 2013 20:32:23 GMT"));
+        h.add(-1, "X-Powered-By", strlen("X-Powered-By"), "PHP/5.3.24", strlen("PHP/5.3.24"));
+        io.clear();     h.getHeaders(&io);     DisplayHeader(io, kk, h.getTotalCount());
+        CHECK(h.getCount() == 5);
+        CHECK(h.getTotalCount() == 5);
+            
+        //Add h again to io, 5 + 5 = 1-0
+        h.getHeaders(&io);
+        h.setUnmanagedHeadersCount(5);
+        DisplayHeader(io, kk, h.getTotalCount());
+        CHECK(h.getCount() == 5);
+        CHECK(h.getTotalCount() == 10);
+            
+   
+        h.reset((RespHeader::FORMAT)kk);
+        h.add(HttpHeader::H_SERVER, "Server", 6, "My_Server", 9);
+        h.add(HttpHeader::H_HOST, "Host", 4, "My_Host", 7);
+        h.add(HttpHeader::H_ACCEPT_RANGES, "Accept-Ranges", strlen("Accept-Ranges"), "bytes", 5);
+        h.add(HttpHeader::H_DATE, "Date", 4, "Thu, 16 May 2013 20:32:23 GMT", strlen("Thu, 16 May 2013 20:32:23 GMT"));
+        h.add(-1, "X-Powered-By", strlen("X-Powered-By"), "PHP/5.3.24", strlen("PHP/5.3.24"));
+        h.del(HttpHeader::H_HOST);
+        io.clear();     h.getHeaders(&io);     DisplayHeader(io, kk, h.getTotalCount());
+        CHECK(h.getTotalCount() == 4);
+    
+    
+        h.del("X-Powered-By", strlen("X-Powered-By"));
+        io.clear();     h.getHeaders(&io);     DisplayHeader(io, kk, h.getTotalCount());
+        CHECK(h.getTotalCount() == 3);
+    
+        h.add(HttpHeader::H_SERVER, "Server", 6, "YY_Server", 9);
+        io.clear();     h.getHeaders(&io);     DisplayHeader(io, kk, h.getTotalCount());
+        CHECK(h.getTotalCount() == 3);
+
+    
+        h.add(HttpHeader::H_SERVER, "Server", 6, "XServer", 7);
+        io.clear();     h.getHeaders(&io);     DisplayHeader(io, kk, h.getTotalCount());
+        CHECK(h.getTotalCount() == 3);
+        
+        h.add(HttpHeader::H_DATE, "Date", 4, "Thu, 16 May 2099 20:32:23 GMT", strlen("Thu, 16 May 2013 20:32:23 GMT"));
+        h.add(-1, "X-Powered-By", strlen("X-Powered-By"), "PHP/9.9.99", strlen("PHP/5.3.24"));
+        io.clear();     h.getHeaders(&io);     DisplayHeader(io, kk, h.getTotalCount());
+        CHECK(h.getTotalCount() == 4);
+
+        
+        h.add(HttpHeader::H_ALLOW, "Allow", 5, "*.*", 3);
+        h.appendLastVal("Allow", 5, "; .zip; .rar", strlen("; .zip; .rar"));
+        h.appendLastVal("Allow", 5, "; .exe; .flv", strlen("; .zip; .rar"));
+        io.clear();     h.getHeaders(&io);     DisplayHeader(io, kk, h.getTotalCount());
+        CHECK(h.getTotalCount() == 5);  
+    
+        
+        h.add(HttpHeader::H_SET_COOKIE, "Set-Cookie", strlen("Set-Cookie"),
+              "lsws_uid=a; expires=Mon, 13 May 2013 14:10:51 GMT; path=/",
+              strlen("lsws_uid=a; expires=Mon, 13 May 2013 14:10:51 GMT; path=/"),
+              RespHeader::APPEND);
+        
+        h.add(HttpHeader::H_SET_COOKIE, "Set-Cookie", strlen("Set-Cookie"),
+              "lsws_pass=b; expires=Mon, 13 May 2013 14:10:51 GMT; path=/",
+              strlen("lsws_pass=b; expires=Mon, 13 May 2013 14:10:51 GMT; path=/"),
+              RespHeader::APPEND);
+        
+        h.add(-1, "testBreak", 9, "----", 4);
+        
+        h.add(HttpHeader::H_SET_COOKIE, "Set-Cookie", strlen("Set-Cookie"),
+              "lsws_uid=c; expires=Mon, 13 May 2013 14:10:51 GMT; path=/",
+              strlen("lsws_uid=c; expires=Mon, 13 May 2013 14:10:51 GMT; path=/"),
+              RespHeader::APPEND);
+        io.clear();     h.getHeaders(&io);     DisplayHeader(io, kk, h.getTotalCount());
+        CHECK(h.getTotalCount() == 7);  
+        
+
+        h.getHeader("Date", 4, &pVal, valLen); CHECK (memcmp(pVal, "Thu, 16 May 2099 20:32:23 GMT", valLen) == 0);
+        h.getHeader("Allow", 5,&pVal, valLen); CHECK (memcmp(pVal, "*.*; .zip; .rar; .exe; .flv", valLen) == 0);
+    
+        h.addNoCheckExptSpdy("MytestHeader: TTTTTTTTTTTT\r\nMyTestHeaderii: IIIIIIIIIIIIIIIIIIIII\r\n", 
+                    strlen("MytestHeader: TTTTTTTTTTTT\r\nMyTestHeaderii: IIIIIIIIIIIIIIIIIIIII\r\n"));
+        if ( kk == 0)
+            CHECK(h.getTotalCount() == 5); 
+        else
+        {
+            CHECK(h.getTotalCount() == 7); 
+            h.getHeader("MytestHeader", strlen("MytestHeader"), &pVal, valLen); 
+            CHECK (memcmp(pVal, "TTTTTTTTTTTT", valLen) == 0);
+        }
+        
+        //Same name, but since no check,  will be appended directly. But SPDY, will check and parse it.
+        h.addNoCheckExptSpdy("MytestHeader: TTTTTTTTTTTT3\r\n", 
+                    strlen("MytestHeader: TTTTTTTTTTTT3\r\n"));
+        if ( kk == 0)
+            CHECK(h.getTotalCount() == 5); 
+        else
+        {
+            CHECK(h.getTotalCount() == 7); 
+            h.getHeader("MytestHeader", strlen("MytestHeader"), &pVal, valLen); 
+            CHECK (memcmp(pVal, "TTTTTTTTTTTT3", valLen) == 0);
+        }  
+        
+        h.endHeader();
+        io.clear();
+        h.addStatusLine(&io, 0, SC_404);
+        h.getHeaders(&io);    
+        if ( kk == 0)
+            CHECK(h.getTotalCount() == 5); 
+        else
+        {
+            h.getHeader("Status", strlen("Status"), &pVal, valLen); 
+            CHECK (memcmp(pVal, "404", valLen) == 0);
+            CHECK(h.getTotalCount() == 9); 
+        }
+        
+        DisplayHeader(io, kk, h.getTotalCount());
+    }
+
+    
+    printf("Finshed httpheader.\n\n");
+    
 }
 
 }

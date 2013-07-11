@@ -24,7 +24,7 @@
 
 TEST(HttpBufTest_test)
 {
-    HttpBuf buf;
+    AutoBuf buf;
     CHECK( 0 == buf.size() );
     CHECK( 0 < buf.capacity() );
     CHECK( 0 == buf.reserve(0) );

@@ -41,22 +41,17 @@ int   HttpResp::getProtocolLen() const
 
 
 HttpResp::HttpResp()
-    : m_iLogAccess( 0 )
-    , m_iHeaderTotalLen( 0 )
-    , m_iSetCookieLen( 0 )
+    : m_iHeaderTotalLen( 0 )
+    , m_iLogAccess( 0 )
 {
-    reset();
 }
 HttpResp::~HttpResp()
 {
 }
 
-void HttpResp::reset()
+void HttpResp::reset(RespHeader::FORMAT format)
 {
-    if (m_iSetCookieLen && !m_iSetCookieOffset)
-        m_outputBuf.resize( m_iSetCookieLen );
-    else
-        m_outputBuf.clear();
+    m_outputBuf.reset(format);
     m_iovec.clear();
     memset( &m_lEntityLength, 0,
             (char *)((&m_iHeaderTotalLen) + 1) - (char*)&m_lEntityLength );
@@ -71,80 +66,45 @@ void HttpResp::addLocationHeader( const HttpReq * pReq )
     int need = len + 25;
     if ( *pLocation == '/' )
         need += pReq->getHeaderLen( HttpHeader::H_HOST );
-    if ( m_outputBuf.available() < need  )
-        if ( m_outputBuf.grow( need ) )
-            return;
-    m_outputBuf.appendNoCheck( "Location: ", 10 );
+    m_outputBuf.add(HttpHeader::H_LOCATION, "Location", 8, "", 0);
     if ( *pLocation == '/' )
     {
         const char * pHost = pReq->getHeader( HttpHeader::H_HOST );
-        m_outputBuf.appendNoCheck( getProtocol(), getProtocolLen() );
-        m_outputBuf.appendNoCheck( pHost, pReq->getHeaderLen( HttpHeader::H_HOST ) );
+        m_outputBuf.appendLastVal( "Location", 8, getProtocol(), getProtocolLen() );
+        m_outputBuf.appendLastVal( "Location", 8, pHost, pReq->getHeaderLen( HttpHeader::H_HOST ) );
     }
-    m_outputBuf.appendNoCheck( pLocation, pReq->getLocationLen() );
-    m_outputBuf.append( '\r' );
-    m_outputBuf.append( '\n' );
-}
-/*
-#define WWW_AUTH_MAX_LEN 1024
-void HttpResp::addWWWAuthHeader( const HttpReq * pReq )
-{
-    int size = WWW_AUTH_MAX_LEN;
-    const char * pAuthHeader;
-    char achAuth[WWW_AUTH_MAX_LEN + 1 ];
-    pAuthHeader = pReq->getWWWAuthHeader( achAuth, size );
-    if ( pAuthHeader )
-    {
-        //if ( ret == WWW_AUTH_MAX_LEN )
-        //{
-            //FIXME: max size reached
-        //}
-        if ( m_outputBuf.available() < size + 10  )
-            if ( m_outputBuf.grow( size + 10 ) )
-                return;
-        m_outputBuf.appendNoCheck( pAuthHeader, size );
-    }
-}
-*/
-
-int  HttpResp::safeAppend( const char * pBuf, int len )
-{
-    if ( m_outputBuf.available() < len + 10  )
-        if ( m_outputBuf.grow( len + 10 ) )
-            return -1;
-    char * p = m_outputBuf.end();
-    const char * pSrc = pBuf;
-    for( int i = 0; i < len ; ++i )
-        p[i] = pSrc[i];
+    m_outputBuf.appendLastVal( "Location", 8, pLocation, pReq->getLocationLen() );
     
-    //memmove( m_outputBuf.end(), pBuf, len );
-    m_outputBuf.append( pBuf, len );
-    return 0;
+}
+
+void  HttpResp::iovAppend( const char * pBuf, int len )
+{
+    m_outputBuf.addNoCheckExptSpdy(pBuf, len );
 }
 
 
 void HttpResp::buildCommonHeaders()
 {
-    char achDateTime[60];
-    char * p = s_sCommonHeaders;
-    memcpy( p, "Server: ", 8 );
-    p += 8;
-    memcpy( p, HttpServerVersion::getVersion(),
-            HttpServerVersion::getVersionLen() );
-    p += HttpServerVersion::getVersionLen();
-    
-    p += safe_snprintf( p, sizeof( s_sCommonHeaders ) - ( p - s_sCommonHeaders ),
-            "\r\n" "Date: %s\r\n" "Accept-Ranges: bytes\r\n",
-            DateTime::getRFCTime( DateTime::s_curTime, achDateTime ) );
-    s_iCommonHeaderLen = p - s_sCommonHeaders - RANGE_HEADER_LEN;
+    for ( int i = 0; i < 3; ++i )
+    {
+        s_CommonHeaders[i].reset((RespHeader::FORMAT)i);
+        s_CommonHeaders[i].add(HttpHeader::H_SERVER, "Server", 6, HttpServerVersion::getVersion(), HttpServerVersion::getVersionLen());
+        updateDateHeader(i + 1);
+        s_CommonHeaders[i].add(HttpHeader::H_ACCEPT_RANGES, "Accept-Ranges", 13, "bytes", 5);
+    }
 }
 
-void HttpResp::updateDateHeader()
+void HttpResp::updateDateHeader(int index)
 {
-    char * pDateValue = &s_sCommonHeaders[ 10 + 6 +
-                    HttpServerVersion::getVersionLen()];
-    DateTime::getRFCTime( DateTime::s_curTime, pDateValue);
-    *(pDateValue + RFC_1123_TIME_LEN) = '\r';
+    char achDateTime[60];    
+    DateTime::getRFCTime(DateTime::s_curTime, achDateTime);
+    if (index == 0)
+    {
+        for ( int i = 0; i < 3; ++i )
+            s_CommonHeaders[i].add(HttpHeader::H_DATE, "Date", 4, achDateTime, strlen(achDateTime));
+    }
+    else
+        s_CommonHeaders[index - 1].add(HttpHeader::H_DATE, "Date", 4, achDateTime, strlen(achDateTime));
 }
 
 
@@ -153,14 +113,23 @@ void HttpResp::updateDateHeader()
 
 void HttpResp::prepareHeaders( const HttpReq * pReq, int rangeHeaderLen ) 
 {
-    iovAppend( s_sCommonHeaders, s_iCommonHeaderLen + rangeHeaderLen);
-    if ( pReq->isKeepAlive() )
+    HttpRespHeaders *pRespHeaders = NULL;
+    int idFormat = m_outputBuf.getFormat();
+    pRespHeaders = &s_CommonHeaders[idFormat];
+        
+    pRespHeaders->getHeaders(&m_iovec);
+    m_outputBuf.setUnmanagedHeadersCount(pRespHeaders->getCount());
+
+    if ( m_outputBuf.getFormat() == RespHeader::REGULAR )
     {
-        if ( pReq->getVersion() != HTTP_1_1 )
-            iovAppend( s_sKeepAliveHeader, KEEP_ALIVE_HEADER_LEN );
+        if ( pReq->isKeepAlive() )
+        {
+            if ( pReq->getVersion() != HTTP_1_1 )
+                iovAppend( s_sKeepAliveHeader, KEEP_ALIVE_HEADER_LEN );
+        }
+        else
+            iovAppend( s_sConnCloseHeader, sizeof( s_sConnCloseHeader ) - 1 );
     }
-    else
-        iovAppend( s_sConnCloseHeader, sizeof( s_sConnCloseHeader ) - 1 );
     if ( pReq->getAuthRequired() )
         pReq->addWWWAuthHeader( m_outputBuf );
     if ( pReq->getLocationOff() )
@@ -170,50 +139,39 @@ void HttpResp::prepareHeaders( const HttpReq * pReq, int rangeHeaderLen )
     const AutoBuf * pExtraHeaders = pReq->getExtraHeaders();
     if ( pExtraHeaders )
     {
-        m_outputBuf.append( pExtraHeaders->begin(), pExtraHeaders->size() );
+        m_outputBuf.addNoCheckExptSpdy( pExtraHeaders->begin(), pExtraHeaders->size() );
     }
 }
 
 void HttpResp::appendContentLenHeader()
 {
-    if ( m_outputBuf.available() < 70 )
-    {
-        if ( m_outputBuf.grow( 70 ) )
-            return;
-    }
-    int n = safe_snprintf( m_outputBuf.end(), 60,
-            "Content-Length: %ld\r\n", m_lEntityLength );
-    m_outputBuf.used( n );
+    static char sLength[44] = {0};
+    int n = safe_snprintf( sLength, 43, "%ld", m_lEntityLength );
+    m_outputBuf.add(HttpHeader::H_CONTENT_LENGTH, "Content-Length", 
+                    14, sLength, n);
 }
 
-
+void HttpResp::finalizeHeader( int ver, int code)
+{
+    //addStatusLine will add HTTP/1.1 to front of m_iovec when regular format
+    //              will add version: HTTP/1.1 status: 2XX (etc) to m_outputBuf when SPDY format
+    //              *** Be careful about this difference ***
+    m_outputBuf.addStatusLine(&m_iovec, ver, code);
+    m_outputBuf.endHeader();
+    m_outputBuf.getHeaders(&m_iovec);
+    
+    
+    
+    int bufSize = m_iovec.bytes();
+    m_iHeaderLeft += bufSize;
+    m_iHeaderTotalLen = m_iHeaderLeft;
+}
+    
 int HttpResp::appendHeader( const char * pName, int nameLen,
                         const char * pValue, int valLen )
 {
-    if ( m_outputBuf.available() < nameLen + valLen + 6 )
-    {
-        if ( m_outputBuf.grow( nameLen + valLen + 6 ) == -1 )
-            return -1;
-    }
-    m_outputBuf.appendNoCheck( pName, nameLen );
-    m_outputBuf.append( ':' );
-    m_outputBuf.append( ' ' );
-    m_outputBuf.appendNoCheck( pValue, valLen );
-    m_outputBuf.append( '\r' );
-    m_outputBuf.append( '\n' );
-    return 0;
-}
-
-int HttpResp::appendHeaderLine( const char * pLineBegin, const char * pLineEnd )
-{
-    if ( m_outputBuf.available() < pLineEnd - pLineBegin + 4 )
-    {
-        if ( m_outputBuf.grow( pLineEnd - pLineBegin + 4 ) == -1 )
-            return -1;
-    }
-    m_outputBuf.appendNoCheck( pLineBegin, pLineEnd - pLineBegin );
-    m_outputBuf.append( '\r' );
-    m_outputBuf.append( '\n' );
+    //FIXME: -1 all right?
+    m_outputBuf.add(-1, pName, nameLen, pValue, valLen, RespHeader::APPEND);
     return 0;
 }
 
@@ -227,74 +185,36 @@ int HttpResp::appendHeaderLine( const char * pLineBegin, const char * pLineEnd )
 
 int HttpResp::appendLastMod( long tmMod )
 {
-    if ( m_outputBuf.available() < RFC_1123_TIME_LEN + 21 )
-    {
-        if ( m_outputBuf.grow( RFC_1123_TIME_LEN + 21 ) == -1 )
-            return -1;
-    }
-    m_outputBuf.append( "Last-Modified: ", 15 );
-    DateTime::getRFCTime( tmMod, m_outputBuf.end() );
-    m_outputBuf.used( RFC_1123_TIME_LEN );
-    m_outputBuf.append( '\r' );
-    m_outputBuf.append( '\n' );
+    static char sTimeBuf[RFC_1123_TIME_LEN + 1] = {0};
+    DateTime::getRFCTime( tmMod, sTimeBuf );
+    m_outputBuf.add(HttpHeader::H_LAST_MODIFIED, "Last-Modified", 13,
+                    sTimeBuf, RFC_1123_TIME_LEN );
     return 0;
 }
+
 int HttpResp::addCookie( const char * pName, const char * pVal,
                  const char * path, const char * domain, int expires,
                  int secure, int httponly )
 {
     if ( !pName || !pVal || !domain )
         return -1;
-    if ( !m_iSetCookieLen )
-        m_outputBuf.clear();
-    int len = strlen( pName )+ strlen( pVal ) + strlen( domain ) +
-            path? strlen( path ): 1;
-    if ( m_outputBuf.available() < len + 150 )
-    {
-        if ( m_outputBuf.grow( len + 150 ) == -1 )
-            return -1;
-    }
-
-    int n = snprintf( m_outputBuf.end(), m_outputBuf.available(), "Set-Cookie: %s=%s; path=%s; domain=%s",
+    
+    char sBuf[8192] = {0};
+    snprintf( sBuf, 8191, "%s=%s; path=%s; domain=%s",
                         pName, pVal, path? path:"/", domain );
-    m_outputBuf.used( n );
     if ( expires )
     {
-        m_outputBuf.append( "; expires=" );
+        strcat(sBuf, "; expires=" );
         long t = DateTime::s_curTime + expires * 60;
-        DateTime::getRFCTime( t, m_outputBuf.end() );
-        m_outputBuf.used( RFC_1123_TIME_LEN );
+        DateTime::getRFCTime( t, sBuf + strlen(sBuf) );
     }
     if ( secure )
-        m_outputBuf.append( "; secure" );
+        strcat(sBuf, "; secure" );
     if ( httponly )
-        m_outputBuf.append( "; HttpOnly" );
-    m_outputBuf.append( '\r' );
-    m_outputBuf.append( '\n' );
-    m_iSetCookieLen = m_outputBuf.size();
+        strcat(sBuf, "; HttpOnly" );
+    
+    m_outputBuf.add(HttpHeader::H_SET_COOKIE, "Set-Cookie", 10, sBuf, strlen(sBuf), RespHeader::APPEND);
     return 0;
 }
 
-void HttpResp::setCookieHeaderLen( int len )
-{
-    if ( !m_iSetCookieLen )
-    {
-        m_iSetCookieOffset = m_outputBuf.size();
-        m_iSetCookieLen = len;
-        return;
-    }
-    int moveBytes = m_outputBuf.size() - ( m_iSetCookieOffset + m_iSetCookieLen );
-    
-    if ( moveBytes > 0 )
-    {
-        char achBuf[65535];
-        assert( moveBytes < 65535 );
-        memmove( achBuf, m_outputBuf.end() - moveBytes, moveBytes );
-        memmove( m_outputBuf.end() - m_iSetCookieLen, 
-                m_outputBuf.getPointer( m_iSetCookieOffset ), m_iSetCookieLen );
-        memmove( m_outputBuf.getPointer( m_iSetCookieOffset ), achBuf, moveBytes );
-        m_iSetCookieOffset = m_outputBuf.size() - m_iSetCookieLen ;
-    }
-    m_iSetCookieLen += len;
-}
 

@@ -98,7 +98,7 @@ void VMemBuf::deallocate()
     {
         if ( m_fd != -1)
         {
-            int ret = ::close( m_fd );
+            ::close( m_fd );
             m_fd = -1;
         }
         unlink( m_sFileName.c_str() );
@@ -144,7 +144,7 @@ int VMemBuf::shrinkBuf( long size )
         size = 0;
     if (( m_type == VMBUF_FILE_MAP )&&( m_fd != -1 ))
     {
-        if ( m_curTotalSize > size )
+        if ( m_curTotalSize > (unsigned long) size )
             ftruncate( m_fd, size );
     }
     BlockBuf * pBuf;
@@ -202,7 +202,7 @@ int VMemBuf::reinit(int TargetSize)
     {
         if (( TargetSize < 1024 * 1024 )&&
             ( s_iMaxAnonMapBlocks - s_iCurAnonMapBlocks > s_iMaxAnonMapBlocks / 5 )&&
-            ( TargetSize < (s_iMaxAnonMapBlocks - s_iCurAnonMapBlocks) * s_iBlockSize ))
+            ( (unsigned int) TargetSize < (s_iMaxAnonMapBlocks - s_iCurAnonMapBlocks) * s_iBlockSize ))
         {
             deallocate();
             if ( set( VMBUF_ANON_MAP , getBlockSize() ) == -1 )
@@ -264,7 +264,7 @@ void VMemBuf::reset()
 BlockBuf * VMemBuf::getAnonMapBlock(int size)
 {
     BlockBuf *pBlock;
-    if ( size == s_iBlockSize )
+    if ( ( unsigned int )size == s_iBlockSize )
     {
         if ( !s_pAnonPool->empty() )
         {
@@ -443,6 +443,7 @@ int VMemBuf::set(const char * pFileName, int size)
             perror( "Failed to open temp file for swapping" );
             return -1;
         }
+        
         fcntl( m_fd, F_SETFD, FD_CLOEXEC );
 
     }
@@ -817,7 +818,6 @@ int VMemBuf::copyToFile( size_t startOff, size_t len,
         if ( ftruncate( fd, destSize ) == -1 )
             return -1;
     }
-    off_t curSize = st.st_size;
     BlockBuf destBlock;
     char * pPos = mapTmpBlock( fd, destBlock, destStartOff, PROT_WRITE );
     int ret = 0;

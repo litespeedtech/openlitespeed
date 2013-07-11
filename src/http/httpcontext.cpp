@@ -34,20 +34,20 @@
 #include <util/pool.h>
 #include <util/stringlist.h>
 #include <util/stringtool.h>
-
 #include <ctype.h>
 #include <errno.h>
 #include <stdio.h>
 #include <string.h>
 #include <util/ssnprintf.h>
 
+
 CtxInt HttpContext::s_defaultInternal =
 {   NULL, NULL, NULL, NULL, NULL, NULL,
-    NULL, NULL, NULL, NULL, NULL, NULL } ;
+    NULL, NULL, NULL, NULL, NULL, NULL,
+    NULL, } ;
 
 HttpContext::HttpContext()
     : m_iConfigBits( 0 )
-    , m_iConfigBits2( 0 )
     , m_pURIMatch( NULL )
     , m_pMatchList( NULL )
     , m_pFilesMatchStr( NULL )
@@ -57,10 +57,11 @@ HttpContext::HttpContext()
     , m_bAllowBrowse( BIT_ALLOW_BROWSE | BIT_INCLUDES | BIT_INCLUDES_NOEXEC )
     , m_redirectCode( -1 )
     , m_iSetUidMode( 0 )
-    , m_iChrootMode( 0 )
-    , m_iEnableRewrite( REWRITE_INHERIT_ON )
+    , m_iConfigBits2( 0 )
     , m_iRewriteEtag( 0 )
     , m_iSecRules( 0 )
+    , m_iChrootMode( 0 )
+    , m_iEnableRewrite( REWRITE_INHERIT_ON )
 //    , m_iFilesMatchCtx( 0 )
     , m_iCacheable( 1 )
     , m_lHTALastMod( 0 )
@@ -131,7 +132,7 @@ void HttpContext::releaseHTAConf()
 
 
 int HttpContext::set( const char * pURI, const char * pLocation,
-            const HttpHandler * pHandler, bool allowBrowse, int regex)
+            const HttpHandler * pHandler, bool browse, int regex)
 {
     if (( pURI == NULL ))
         return EINVAL;
@@ -177,11 +178,7 @@ int HttpContext::set( const char * pURI, const char * pLocation,
     }
     m_sContextURI.setLen( len );
     m_pHandler = pHandler;
-    if(allowBrowse)
-        m_bAllowBrowse |= BIT_ALLOW_BROWSE;
-    else
-        m_bAllowBrowse &= (~BIT_ALLOW_BROWSE);
-    //m_bAllowBrowse = allowBrowse;
+    allowBrowse(browse);
     return 0;
 }
 
@@ -897,5 +894,14 @@ void HttpContext::setPHPConfig( PHPConfig * pConfig )
 void HttpContext::getAAAData( struct AAAData & data ) const
 {
     memmove( &data, &m_pInternal->m_pHTAuth, sizeof( AAAData ) );
+}
+
+void HttpContext::setGSockAddr(GSockAddr &gsockAddr)
+{
+    if ( !allocateInternal() )
+    {
+        m_pInternal->m_GSockAddr = gsockAddr;
+        m_iConfigBits |= BIT_GSOCKADDR;
+    }
 }
 

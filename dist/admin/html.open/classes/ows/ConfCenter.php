@@ -340,7 +340,7 @@ class ConfCenter
 		foreach ( $index as $i )
 		{
 			$attr = &$tbl->_dattrs[$i];
-			if ( !is_a($attr,"DAttr") || $attr->_FDE[2] == 'N' || $attr->blockedVersion())
+			if ( $attr == NULL || $attr->bypassSavePost()) 
 				continue;
 			$data[$attr->_key] = $extractData[$attr->_key];
 		}
@@ -348,10 +348,6 @@ class ConfCenter
 		if ( strncmp('VH_CTX', $tbl->_id, 6) == 0 && $oldRef == NULL )
 		{
 			$data['order'] = new CVal(count($data0));
-		}
-		elseif ( strpos($tbl->_id, 'L_GENERAL') !== FALSE )
-		{
-			$this->GetValidator()->CheckListener($data);
 		}
 		elseif ( $tbl->_id == 'VH_BASE')
 		{

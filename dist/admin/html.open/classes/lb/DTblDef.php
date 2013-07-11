@@ -1341,15 +1341,15 @@ class DTblDef
 	protected function add_L_SSL($id)
 	{
 		$this->_tblDef[$id] = new DTbl($id, 'SSL Protocol');
-		$this->_tblDef[$id]->_cols = 1;
+		
+		$attrs = array(
+			new DAttr('sslProtocol', 'checkboxOr', 'SSL Protocol Version', 'checkboxgroup', FALSE, NULL, $this->_options['sslversion']),
+			new DAttr_SSLCipher('ciphers', 'sslcipher', 'Encryption Level', 'cust', FALSE),
+		);
 
-		$attrs = array( new DAttr('ciphers', 'cust', '') );
 		$this->_tblDef[$id]->setAttr($attrs);
-
-		$this->_tblDef[$id]->_customizedScript = array(
-			'../config/listenerSSL.php', '../config/listenerSSL1.php');
 	}
-
+	
 	protected function add_ADMIN_L_TOP($id)
 	{
 		$align = array('center', 'center', 'center', 'center', 'center');

@@ -108,6 +108,8 @@ public:
                                  const char * pEnd, char searched );
     static int str_off_t( char * pBuf, int len, off_t val );
     static int unescapeQuote( char * pBegin, char * pEnd, int ch );
+    
+    static void getMd5(const char *src, int len, unsigned char * dstBin);
 };
 
 #endif

@@ -19,15 +19,14 @@
 #define BASE64_H
 
 
-
 class Base64
 {
 public:
-    static const unsigned char s_decodeTable[128];
-	Base64();
-	~Base64();
+	Base64() {};
+	~Base64() {};
     static int decode( const char * encoded, int encodeLen, char * decoded );
-
+    static int encode( const char *decoded, int decodedLen, char * encoded );
+    static int encode_length(int len) { return (((len + 2) / 3) * 4); };
 };
 
 #endif

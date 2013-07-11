@@ -28,6 +28,7 @@ class AutoBuf;
 class HttpConnection;
 class StringList;
 class UserDir;
+class HttpRespHeaders;
 
 class HTAuth
 {
@@ -63,7 +64,7 @@ public:
     const UserDir* getUserDir() const   {   return m_pUserDir;              }
 
     //const AuthUser * getUser( const char * pUser, int userLen ) const;
-    int addWWWAuthHeader( AutoBuf& buf ) const ;
+    int addWWWAuthHeader( HttpRespHeaders& buf ) const ;
     int basicAuth( HttpConnection * pConn, const char * pAuthorization,
                 int headerLen, char * pAuthUser, int bufLen,
                 const AuthRequired * pRequired  ) const;

@@ -87,4 +87,12 @@ AutoStr2::AutoStr2( const AutoStr2 & rhs)
 int AutoStr2::setStr( const char * pStr )
 {   return setStr( pStr, strlen( pStr ) );   }
 
+void AutoStr2::append( const char * str, const int len )
+{
+    m_iStrLen += len;
+    char *p = resizeBuf(m_iStrLen + 1);
+    memcpy(p + m_iStrLen - len, str, len );
+    *(p + m_iStrLen) = 0;
+}
+
 

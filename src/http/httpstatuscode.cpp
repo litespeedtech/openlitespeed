@@ -33,7 +33,6 @@ StatusCode::StatusCode( int code, const char * pStatus,
         status_size = strlen( pStatus );
         if ( message )
         {
-            m_message = message;
             char achBuf[2048];
             char * p = achBuf;
             char * pEnd = p + 2048;
@@ -51,33 +50,31 @@ StatusCode::StatusCode( int code, const char * pStatus,
             p += safe_snprintf( p, pEnd -p, "</body></html>\n" );
 
             m_iBodySize = p - achBuf;
-            m_pHtml = (char *)malloc( m_iBodySize + 160 );
-            if ( !m_pHtml )
+            m_pHeaderBody = (char *)malloc( m_iBodySize + 160 );
+            if ( !m_pHeaderBody )
                 m_iBodySize =0;
             else
             {
                 int n;
                 if ( code >= SC_307 )
                 {
-                    n = safe_snprintf( m_pHtml, 159,
+                    n = safe_snprintf( m_pHeaderBody, 159,
                         "Cache-Control: private, no-cache, max-age=0\r\n"
                         "Pragma: no-cache\r\n"
                         "Content-Type: text/html\r\n"
-                        "Content-Length: %d\r\n"
-                        "\r\n",
+                        "Content-Length: %d\r\n",
                         m_iBodySize );
                     
                 }
                 else
                 {
-                    n = safe_snprintf( m_pHtml, 79,
+                    n = safe_snprintf( m_pHeaderBody, 79,
                         "Content-Type: text/html\r\n"
-                        "Content-Length: %d\r\n"
-                        "\r\n",
+                        "Content-Length: %d\r\n",
                         m_iBodySize );
                 }
-                memcpy( m_pHtml + n, achBuf, m_iBodySize + 1 );
-                m_iTotalSize = m_iBodySize + n;
+                m_iHeaderSize = n;
+                memcpy( m_pHeaderBody + n, achBuf, m_iBodySize + 1 );
             }
         }
     }
@@ -85,8 +82,8 @@ StatusCode::StatusCode( int code, const char * pStatus,
 
 StatusCode::~StatusCode()
 {
-    if ( m_pHtml )
-        free( m_pHtml );
+    if ( m_pHeaderBody )
+        free( m_pHeaderBody );
 }
 
 int HttpStatusCode::codeToIndex( const char * code )

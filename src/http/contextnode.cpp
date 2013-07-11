@@ -59,10 +59,12 @@ void ContextNode::setContextUpdateParent( HttpContext* pContext, int noRedirect 
         pOldParent = getParentContext();
     setChildrenParentContext( pOldParent, pNewParent, noRedirect );
     if ( pContext )
+    {
         if ( m_pContext )
             pContext->setParent( m_pContext->getParent() );
         else
             pContext->setParent( getParentContext() );
+    }
     m_pContext = pContext;
 
 }

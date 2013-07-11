@@ -20,6 +20,7 @@
 #include <util/stringlist.h>
 #include <ctype.h>
 #include <string.h>
+#include <openssl/md5.h>
 
 StringTool::StringTool(){
 }
@@ -556,5 +557,11 @@ int StringTool::unescapeQuote( char * pBegin, char * pEnd, int ch )
     return n;
 }
 
-
+void StringTool::getMd5(const char *src, int len, unsigned char * dstBin)
+{
+    MD5_CTX ctx;
+    MD5_Init( &ctx );
+    MD5_Update( &ctx, src, len);
+    MD5_Final( dstBin, &ctx );
+}
 

@@ -365,17 +365,19 @@ void PidRegistry::add( pid_t pid, ExtWorker * pApp, long tm )
         s_pSimpleList->add( pid, getpid(), pApp );
 }
 
-void PidRegistry::remove( pid_t pid)
+ExtWorker * PidRegistry::remove( pid_t pid)
 {
+    ExtWorker * pWorker = NULL;
     if ( s_pSimpleList )
     {
-        ExtWorker * pWorker = s_pSimpleList->remove( pid );
+        pWorker = s_pSimpleList->remove( pid );
         s_pidList()->remove( pid );
-        if ( pWorker )
-            pWorker->removePid( pid );
     }
+    return pWorker;
     
 }
+
+    
 
 void PidRegistry::setSimpleList( PidSimpleList * pList )
 {

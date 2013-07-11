@@ -334,8 +334,6 @@ int HttpUtil::escapeHtml(const char *pSrc, const char * pSrcEnd, char * pDest, i
 {
     char * pBegin = pDest;
     char * pEnd = pDest + n - 6;
-    int i, j;
-    char *x;
     char ch;
     while( (pSrc < pSrcEnd )&&(ch = *pSrc)&&( pDest < pEnd ) )
     {

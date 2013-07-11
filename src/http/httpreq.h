@@ -26,7 +26,7 @@
 #include <http/staticfiledata.h>
 #include <http/httpstatuscode.h>
 #include <util/autostr.h>
-#include <log4cxx/ilog.h>
+#include <util/logtracker.h>
 
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -79,6 +79,8 @@ class SSIRuntime;
 class SSIConfig;
 class VHostMap;
 class VMemBuf;
+class HttpRespHeaders;
+
 
 typedef struct
 {
@@ -153,11 +155,13 @@ private:
     int                 m_iMatchedLen;
     struct stat         m_fileStat;
     int                 m_iScriptNameLen;
-    key_value_pair           * m_urls;
+    key_value_pair    * m_urls;
     int                 m_code;
     int                 m_iLocationLen;
-    LOG4CXX_NS::ILog  * m_pILog;
+    LogTracker        * m_pILog;
 
+    int                 m_upgradeProto;
+    
     HttpReq( const HttpReq& rhs ) ;
     void operator=( const HttpReq& rhs );
 
@@ -246,6 +250,12 @@ public:
         HEADER_ERROR_INVALID
     };
 
+    enum
+    {
+        UPD_PROTO_NONE = 0,
+        UPD_PROTO_WEBSOCKET = 1,
+    };
+        
     explicit HttpReq();
     ~HttpReq();
 
@@ -254,7 +264,7 @@ public:
     void reset();
     void reset2();
 
-    void setILog( LOG4CXX_NS::ILog * pILog ){   m_pILog = pILog;        }
+    void setILog( LogTracker * pILog ){   m_pILog = pILog;        }
     LOG4CXX_NS::Logger* getLogger() const   {   return m_pILog->getLogger();    }
     const char *  getLogId()                {   return m_pILog->getLogId();     }
     
@@ -291,6 +301,8 @@ public:
     int   getPathInfoLen() const        {   return m_iPathInfoLen;  }
     int   getQueryStringLen() const     {   return m_curURL.valLen; }
 
+    int   isWebsocket() const           {   return ((UPD_PROTO_WEBSOCKET == m_upgradeProto) ? 1 : 0); }
+ 
     //request header
 
     const char * getHeader( size_t index ) const
@@ -381,7 +393,7 @@ public:
     void clearLocation()
     {   m_iLocationOff = m_iLocationLen = 0;    }
     
-    int  addWWWAuthHeader( AutoBuf &buf ) const;
+    int  addWWWAuthHeader( HttpRespHeaders &buf ) const;
     const AuthRequired* getAuthRequired() const {   return m_pAuthRequired; }
     
     //void matchContext();

@@ -40,10 +40,9 @@ class CLIENT
 	function init() {
 		global $_SESSION;
 
-		session_name($this->type . 'WEBUI'); // to prevent conflicts with other app sessions
+		$oldname = session_name($this->type . 'WEBUI'); // to prevent conflicts with other app sessions
 		session_start();
-
-
+		
 		if(!array_key_exists('secret',$_SESSION)) {
 			$_SESSION['secret'] = 'litespeedrocks';
 		}
@@ -54,7 +53,7 @@ class CLIENT
 
 
 		if(!array_key_exists('valid',$_SESSION)) {
-			$_SESSION['secret'] = FALSE;
+			$_SESSION['valid'] = FALSE;
 		}
 
 		if(!array_key_exists('timeout',$_SESSION)) {
@@ -71,7 +70,7 @@ class CLIENT
 		$this->timeout = &$_SESSION['timeout'];
 		$this->token = $_SESSION['token'];
 
-		if($this->valid == TRUE) {
+		if($this->valid) {
 			
 			if (array_key_exists('lastaccess',$_SESSION)) {
 
@@ -97,7 +96,6 @@ class CLIENT
 	function store($uid, $pass) {
 		setcookie($this->id_field, $uid, 0, "/");
 		setcookie($this->pass_field, $pass, 0, "/");
-
 	}
 
 	function setTimeout($timeout) {
@@ -110,7 +108,6 @@ class CLIENT
 	}
 
 	function clear() {
-
 		$this->valid = FALSE;
 		session_destroy();
 		session_unset();
@@ -118,7 +115,6 @@ class CLIENT
 		setcookie($this->id_field, "a", $outdated, "/");
 		setcookie($this->pass_field, "b", $outdated, "/");
 		setcookie(session_name(), "b", $outdated, "/");
-
 	}
 
 

@@ -84,7 +84,8 @@ private:
     int configVHSecurity( HttpVHost* pVHost, const XmlNode* pVhConfNode );
     int configVHIndexFile( HttpVHost* pVHost, const XmlNode* pVhConfNode );
     void configVHChrootMode( HttpVHost * pVHost, const XmlNode * pNode );
-
+    int configVHWebsocketList( HttpVHost* pVHost, const XmlNode* pVhConfNode );
+    
     const HttpHandler * getHandler( const HttpVHost * pVHost,
                         const char * pType, const char * pHandler );
     const HttpHandler * getHandler( const HttpVHost * pVHost, const XmlNode * pNode );
@@ -122,6 +123,8 @@ private:
     HttpContext * configContext( HttpVHost * pVHost, const char * pUri, int type,
                 const char * pLocation, const char * pHandler,
                 int allowBrowse );
+    
+    int configWebsocket( HttpVHost * pVHost, const XmlNode* pWebsocketNode );
     int configContext( HttpVHost * pVHost, const XmlNode* pContextNode );
     int configContextMime( HttpContext * pContext,
                     const XmlNode * pContextNode );
@@ -184,8 +187,12 @@ private:
     int denyAccessFiles( HttpVHost * pVHost, const char * pFile, int regex );
     
     int offsetChroot( char * dest, const char *path );
+    int configIpToGeo( const XmlNode * pNode );
+
     struct passwd * getUGid( const char * pUser, const char * pGroup,
                                                 gid_t &gid );
+    void configCRL( const XmlNode *pNode, SSLContext * pSSL );
+    int configStapling( const XmlNode* pNode, SSLContext *pSSL,  const char* pCAFile, char* pachCert);
     
     HttpServer    * m_pServer;
     HttpVHost     * m_pCurVHost;
@@ -227,6 +234,7 @@ public:
         , m_vhDomain( "" )
         , m_vhAliases( "" )
         , m_pRoot(NULL)
+        , m_sPlainconfPath ( "" )
         , m_sAutoIndexURI( "/_autoindex/default.php" )
         , m_iCrashGuard( 2 )
         , m_enableCoreDump( 0 )
@@ -236,7 +244,6 @@ public:
         , m_sUser( "nobody" )
         , m_sGroup( "nobody" )
         , m_iRailsEnv( 1 )
-        , m_sPlainconfPath ( "" )
         {};
 
     ~HttpServerBuilder();

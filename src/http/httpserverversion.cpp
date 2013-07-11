@@ -17,7 +17,8 @@
 *****************************************************************************/
 #include "httpserverversion.h"
 
-const char HttpServerVersion::s_pVersion[] = "LiteSpeed Open";
+
+const char HttpServerVersion::s_pVersion[] = "LiteSpeed/" PACKAGE_VERSION " Open";
 
 int        HttpServerVersion::s_iVersionLen = 9; //sizeof( s_pVersion ) - 1;
 

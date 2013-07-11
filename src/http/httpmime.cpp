@@ -467,7 +467,7 @@ void MIMEMap::removeMIME( MIMESetting * pMIME )
 {
     char * p;
     iterator iter = findSubMap( (char *)pMIME->getMIME()->c_str(), p );
-    if ( iter = end() )
+    if ( iter == end() )
         return;
     iter.second()->remove( p + 1 );
 }

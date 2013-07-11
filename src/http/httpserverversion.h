@@ -18,9 +18,7 @@
 #ifndef HTTPSERVERVERSION_H
 #define HTTPSERVERVERSION_H
 
-
-
-#define VERSION "1.0"
+#include <config.h>
 
 class HttpServerVersion
 {

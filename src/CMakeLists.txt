@@ -4,10 +4,10 @@ cmake_minimum_required(VERSION 2.8)
 ##########################################################################################
 #If you want to link libUnitTest++, just un-comment out the following commands
 #AND YOU NEED TO INSTALL it to the directory /src/test/unittest-cpp/UnitTest++/
-#add_definitions(-DRUN_TEST)
-#add_custom_target(Name ALL COMMAND make WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/src/test/unittest-cpp/UnitTest++)
-#set_directory_properties(PROPERTIES  ADDITIONAL_MAKE_CLEAN_FILES "${PROJECT_SOURCE_DIR}/src/test/unittest-cpp/UnitTest++/libUnitTest++.a")
-#set(libUnitTest  libUnitTest++.a)
+add_definitions(-DRUN_TEST)
+add_custom_target(Name ALL COMMAND make WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/src/test/unittest-cpp/UnitTest++)
+set_directory_properties(PROPERTIES  ADDITIONAL_MAKE_CLEAN_FILES "${PROJECT_SOURCE_DIR}/src/test/unittest-cpp/UnitTest++/libUnitTest++.a")
+set(libUnitTest  libUnitTest++.a)
 ##########################################################################################
 
 
@@ -17,7 +17,8 @@ cmake_minimum_required(VERSION 2.8)
 
 #INCLUDE( ${PROJECT_SOURCE_DIR}/CMakeModules/common.cmake)
 
-#add_subdirectory(test)
+add_subdirectory(test)
+add_subdirectory(spdy)
 add_subdirectory(edio)
 add_subdirectory(socket)
 add_subdirectory(util)
@@ -86,19 +87,26 @@ SET(util_STAT_SRCS
    test/util/base64test.cpp
    test/util/logfiletest.cpp
    test/util/stringmaptest.cpp
+   test/util/httpfetchtest.cpp
+)
+
+SET(spdy_STAT_SRCS
+   test/spdy/spdyzlibfiltertest.cpp
+   test/spdy/spdyconnectiontest.cpp
+   test/spdy/dummiostream.cpp
 )
 link_directories(/usr/local/lib ${PROJECT_SOURCE_DIR}/src/test/unittest-cpp/UnitTest++)
 
-add_executable(openlitespeed ${openlitespeed_SRCS} ${edio_STAT_SRCS} ${extensions_STAT_SRCS} ${http_STAT_SRCS} ${socket_STAT_SRCS} ${util_STAT_SRCS})
+add_executable(openlitespeed ${openlitespeed_SRCS} ${edio_STAT_SRCS} 
+    ${extensions_STAT_SRCS} ${http_STAT_SRCS} ${socket_STAT_SRCS} 
+    ${util_STAT_SRCS} ${spdy_STAT_SRCS})
 
 
-target_link_libraries(openlitespeed main ssi http ssi registry cgi fcgi jk extensions lsapi proxy edio  log4cxx socket sslpp util misc sysinfo GeoIP pthread dl ${libUnitTest} )
+target_link_libraries(openlitespeed main spdy ssi http ssi registry cgi fcgi jk extensions lsapi proxy edio  log4cxx socket sslpp util misc sysinfo GeoIP pthread dl ${libUnitTest} )
 
 install(TARGETS openlitespeed DESTINATION bin)
 
 
 ########### install files ###############
-
-
 
 

@@ -68,7 +68,7 @@ SET(http_STAT_SRCS
    reqhandler.cpp
    httpvhost.cpp
    httpresourcemanager.cpp
-   httpiolink.cpp
+   ntwkiolink.cpp
    httpmethod.cpp
    httpver.cpp
    httpstatuscode.cpp
@@ -83,6 +83,10 @@ SET(http_STAT_SRCS
    iptogeo.cpp
    moov.cpp
    #requestvars.cpp
+   hiostream.cpp 
+   httprespheaders.cpp
+   ntwkiolinkpool.cpp
+   l4handler.cpp
 )
 
 add_library(http STATIC ${http_STAT_SRCS})

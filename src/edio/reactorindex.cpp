@@ -69,7 +69,7 @@ void ReactorIndex::timerExec()
     {
         if ( m_pIndexes[i] )
         {
-            if ( m_pIndexes[i]->getfd() == i )
+            if ( m_pIndexes[i]->getfd() == (int)i )
                 m_pIndexes[i]->onTimer();
             else
             {

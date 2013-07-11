@@ -138,6 +138,7 @@ public:
     virtual int addNewProcess() {   return 0;           }
     virtual int startOnDemond(int force ) {   return 0;           }
     virtual int runOnStartUp()  {   return 0;           }
+    virtual void detectDiedPid() {}
     bool canStop()
     {
         return m_connPool.getTotalConns() == m_connPool.getFreeConns();

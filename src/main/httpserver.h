@@ -64,20 +64,7 @@ public:
     int start();
     int shutdown();
     HttpListener* addListener( const char * pName, const char * pAddr );
-    HttpListener* addSSLListener( const char * pName, const char * pAddr,
-                        const char * pCertFile,
-                        const char * pKeyFile,
-                        const char * pCAFile, const char * pCAPath,
-                        const char * pCiphers = NULL,
-                        int certChain = 0, int cv = 0 );
-    int setupSSLContext( HttpListener *pListener, const char *pCertFile,
-                        const char *pKeyFile, const char * pCAFile,
-                        const char * pCAPath, const char * pCiphers = NULL,
-                        int certChain = 0, int cv = 0);
-    int setupSSLContext( VHostMap *pMap, const char *pCertFile,
-                        const char *pKeyFile, const char * pCAFile,
-                        const char * pCAPath, const char * pCiphers = NULL,
-                        int certChain = 0, int cv = 0 );
+    HttpListener* addSSLListener( const char * pName, const char * pAddr, SSLContext *pSSL );
     SSLContext * newSSLContext( SSLContext * pContext, const char *pCertFile,
                     const char *pKeyFile, const char * pCAFile, const char * pCAPath,
                     const char * pCiphers, int certChain, int cv, int renegProtect );

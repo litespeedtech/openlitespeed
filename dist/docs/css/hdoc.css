@@ -90,7 +90,7 @@ ol li, ul li {
     FONT-WEIGHT: bold; FONT-SIZE: 14px; COLOR: #FFFFFF; BACKGROUND-COLOR: #555; background-image:linear-gradient(#666666,#555555); border-top-left-radius: 3px; border-top-right-radius: 3px;
 }
 .ht-label {
-	FONT-WEIGHT: bold; COLOR: #666699; FONT-SIZE: 13px;
+	FONT-WEIGHT: bold; COLOR: #555; FONT-SIZE: 13px;
 }
 
 .label-title {
@@ -146,23 +146,23 @@ ol li, ul li {
 .cmd {
     PADDING-LEFT: 10px; PADDING-RIGHT: 10px; COLOR: #006600; 
 }
-.tag { COLOR: #339999; FONT-WEIGHT: bold }
+.tag { COLOR: #116789; FONT-WEIGHT: bold }
 .val { COLOR: #000000; FONT-WEIGHT: bold }
 
-.tagI { COLOR: #339999; FONT-WEIGHT: bold }
-.tagI A { COLOR: #339999; TEXT-DECORATION: none }
-.tagI A:visited { COLOR: #339999 }
-.tagI A:hover { COLOR: #339999; TEXT-DECORATION: underline }
+.tagI { COLOR: #116789; FONT-WEIGHT: bold }
+.tagI A { COLOR: #116789; TEXT-DECORATION: none }
+.tagI A:visited { COLOR: #116789 }
+.tagI A:hover { COLOR: #ee9126; TEXT-DECORATION: underline }
 
-.tagP { COLOR: #339999; FONT-WEIGHT: bold }
-.tagP A { COLOR: #339999; TEXT-DECORATION: none }
-.tagP A:visited { COLOR: #339999 }
-.tagP A:hover { COLOR: #339999; TEXT-DECORATION: underline }
+.tagP { COLOR: #116789; FONT-WEIGHT: bold }
+.tagP A { COLOR: #116789; TEXT-DECORATION: none }
+.tagP A:visited { COLOR: #116789 }
+.tagP A:hover { COLOR: #ee9126; TEXT-DECORATION: underline }
 
-.tagQ { COLOR: #339999; FONT-WEIGHT: bold }
-.tagQ A { COLOR: #339999; TEXT-DECORATION: none }
-.tagQ A:visited { COLOR: #339999 }
-.tagQ A:hover { COLOR: #339999; TEXT-DECORATION: underline }
+.tagQ { COLOR: #116789; FONT-WEIGHT: bold }
+.tagQ A { COLOR: #116789; TEXT-DECORATION: none }
+.tagQ A:visited { COLOR: #116789 }
+.tagQ A:hover { COLOR: #ee9126; TEXT-DECORATION: underline }
 
 .copyright {
 	FONT-SIZE: 11px; COLOR: #999999; TEXT-ALIGN: center; border-top: 1px solid #ddd; padding-top: 20px; 

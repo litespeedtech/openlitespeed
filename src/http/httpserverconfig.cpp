@@ -26,8 +26,8 @@ HttpServerConfig::HttpServerConfig()
     : m_iMaxURLLen( DEFAULT_URL_LEN + 20 )
     , m_iMaxHeaderBufLen( DEFAULT_REQ_HEADER_BUF_LEN )
     , m_iMaxReqBodyLen( DEFAULT_REQ_BODY_LEN )
-    , m_iMaxDynRespHeaderLen( DEFAULT_DYN_RESP_HEADER_LEN )
     , m_iMaxDynRespLen( DEFAULT_DYN_RESP_LEN )
+    , m_iMaxDynRespHeaderLen( DEFAULT_DYN_RESP_HEADER_LEN )
     , m_iMaxKeepAliveRequests( 100 )
     , m_iSmartKeepAlive( 0 )
     , m_iUseSendfile( 0 )
@@ -71,13 +71,13 @@ void HttpServerConfig::setMaxHeaderBufLen( int len )
         m_iMaxHeaderBufLen = len ;
 }
 
-void HttpServerConfig::setMaxReqBodyLen( int len )
+void HttpServerConfig::setMaxReqBodyLen( int64_t len )
 {
     if (( len >= 4096 )&&( len <= MAX_REQ_BODY_LEN ))
         m_iMaxReqBodyLen = len ;
 }
 
-void HttpServerConfig::setMaxDynRespLen( int len )
+void HttpServerConfig::setMaxDynRespLen( int64_t len )
 {
     if (( len >= 4096 )&&( len <= MAX_DYN_RESP_LEN ))
         m_iMaxDynRespLen = len ;

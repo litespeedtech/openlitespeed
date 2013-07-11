@@ -29,9 +29,9 @@ class HttpServerConfig
         
     int32_t     m_iMaxURLLen;
     int32_t     m_iMaxHeaderBufLen;
-    int32_t     m_iMaxReqBodyLen;
+    int64_t     m_iMaxReqBodyLen;
+    int64_t     m_iMaxDynRespLen;
     int32_t     m_iMaxDynRespHeaderLen;
-    int32_t     m_iMaxDynRespLen;
     int16_t     m_iMaxKeepAliveRequests;
     int8_t      m_iSmartKeepAlive;
     int8_t      m_iUseSendfile;
@@ -99,8 +99,8 @@ public:
 
     void setMaxURLLen( int len );
     void setMaxHeaderBufLen( int len );
-    void setMaxReqBodyLen( int len );
-    void setMaxDynRespLen( int len );
+    void setMaxReqBodyLen( int64_t len );
+    void setMaxDynRespLen( int64_t len );
     void setMaxDynRespHeaderLen( int len );
     
     int32_t getMaxURLLen() const            {   return m_iMaxURLLen;        }

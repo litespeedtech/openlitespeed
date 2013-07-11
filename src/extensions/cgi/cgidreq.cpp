@@ -16,7 +16,7 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "cgidreq.h"
-#include <openssl/md5.h>
+#include <util/stringtool.h>
 #include <openssl/rand.h>
 #include <util/rlimits.h>
 
@@ -190,10 +190,7 @@ int CgidReq::finalize( int req_id, const char * pSecret, int type )
 
     RAND_pseudo_bytes( pHeader->m_nonce, 16 );
     memmove( pHeader->m_md5, pSecret, 16 );
-    MD5_CTX md5_ctx;
-    MD5_Init( &md5_ctx );
-    MD5_Update( &md5_ctx, pHeader, sizeof( lscgid_req ) );
-    MD5_Final( pHeader->m_md5, &md5_ctx );
+    StringTool::getMd5( (const char *)pHeader, sizeof( lscgid_req ), pHeader->m_md5 );
     return 0;
 }
 

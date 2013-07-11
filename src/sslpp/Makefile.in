@@ -69,7 +69,7 @@ libsslpp_a_AR = $(AR) $(ARFLAGS)
 libsslpp_a_LIBADD =
 am_libsslpp_a_OBJECTS = sslengine.$(OBJEXT) sslcert.$(OBJEXT) \
 	sslerror.$(OBJEXT) sslconnection.$(OBJEXT) \
-	sslcontext.$(OBJEXT)
+	sslcontext.$(OBJEXT) sslocspstapling.$(OBJEXT)
 libsslpp_a_OBJECTS = $(am_libsslpp_a_OBJECTS)
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)/src
 depcomp = $(SHELL) $(top_srcdir)/depcomp
@@ -203,7 +203,7 @@ top_srcdir = @top_srcdir@
 noinst_LIBRARIES = libsslpp.a
 INCLUDES = -I$(top_srcdir)/src
 libsslpp_a_METASOURCES = AUTO
-libsslpp_a_SOURCES = sslengine.cpp sslcert.cpp sslerror.cpp sslconnection.cpp sslcontext.cpp 
+libsslpp_a_SOURCES = sslengine.cpp sslcert.cpp sslerror.cpp sslconnection.cpp sslcontext.cpp sslocspstapling.cpp 
 all: all-am
 
 .SUFFIXES:
@@ -257,6 +257,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sslcontext.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sslengine.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sslerror.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sslocspstapling.Po@am__quote@
 
 .cpp.o:
 @am__fastdepCXX_TRUE@	$(CXXCOMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<

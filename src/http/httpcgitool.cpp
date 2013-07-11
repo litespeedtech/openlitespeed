@@ -118,14 +118,12 @@ int HttpCgiTool::processHeaderLine( HttpExtConnector * pExtConn, const char * pL
                 if ( strncmp( p, "charset=", 8 ) == 0 )
                     break;
             }
-            AutoBuf& buf = pResp->getOutputBuf();
-            if ( buf.available() < pLineEnd - pLineBegin + pCharset->len() + 4 )
-            {
-                buf.grow( pLineEnd - pLineBegin + pCharset->len() + 4 );
-            }
-            buf.appendNoCheck( pLineBegin, pLineEnd - pLineBegin );
-            buf.appendNoCheck( pCharset->c_str(), pCharset->len() );
-            buf.appendNoCheck( "\r\n", 2 );
+            HttpRespHeaders& buf = pResp->getHeaders();
+            AutoStr2 str = "";
+            str.append( pLineBegin, pLineEnd - pLineBegin );
+            str.append( pCharset->c_str(), pCharset->len() );
+            str.append( "\r\n", 2 );
+            buf.addNoCheckExptSpdy(str.c_str(), str.len());
         }
         return 0;
     case HttpHeader::H_CONTENT_ENCODING:
@@ -197,7 +195,8 @@ int HttpCgiTool::processHeaderLine( HttpExtConnector * pExtConn, const char * pL
         }
         return 0;
     }
-    return pResp->appendHeaderLine( pLineBegin, pLineEnd );
+    assert( pKeyEnd );
+    return pResp->appendHeader( pLineBegin, pKeyEnd - pLineBegin, pValue, pLineEnd - pValue );
 }
 
 int HttpCgiTool::parseRespHeader( HttpExtConnector * pExtConn,
@@ -618,22 +617,14 @@ int HttpCgiTool::processContentType( HttpReq * pReq, HttpResp* pResp,
                 if ( strncmp( p, "charset=", 8 ) == 0 )
                     break;
             }
-            AutoBuf& buf = pResp->getOutputBuf();
-            if ( buf.available() < valLen + pCharset->len() + 18 ) 
-            {
-                buf.grow( valLen + pCharset->len() + 18 );
-            }
-            buf.appendNoCheck( "Content-Type: ", 14 );
-            int offset = buf.size();
-            buf.appendNoCheck( pValue, valLen );
-            buf.appendNoCheck( pCharset->c_str(), pCharset->len() );
-            buf.appendNoCheck( "\r\n", 2 );
-            pResp->setContentTypeHeaderInfo( offset, buf.size() - 2 - offset );
+            HttpRespHeaders& buf = pResp->getHeaders();
+            buf.add(HttpHeader::H_CONTENT_TYPE, "Content-Type", 12, pValue, valLen);
+            buf.appendLastVal( "Content-Type", 12, pCharset->c_str(), pCharset->len() );
         }
         return 0;
     }
     while( 0 );
-    pResp->setContentTypeHeaderInfo( pResp->getOutputBuf().size() + 14, valLen );
+    
     return pResp->appendHeader( "Content-Type", 12, pValue, valLen );
 }
 

@@ -25,21 +25,36 @@
 
 #define MAX_LOGID_LEN   127
   
-class LogTracker : public LOG4CXX_NS::ILog
+class LogTracker 
 {
-    AutoStr2            m_logID;
+    AutoStr2            m_logId;
     LOG4CXX_NS::Logger* m_pLogger;
+    int                 m_iLogIdBuilt;
+    
 public: 
     LogTracker();
     ~LogTracker();
     
-    AutoStr2& getIDBuf()             {   return m_logID;     }
-    const char * getLogId() const    {   return m_logID.c_str();  }
-    const char * getLogId()          {   return m_logID.c_str();  }
+    AutoStr2& getIdBuf()             {   return m_logId;     }
+    //const char * getLogId() const    
+    //{      
+    //return m_logID.c_str();  }
+    const char * getLogId()          
+    {   
+        if ( m_iLogIdBuilt )
+            return m_logId.c_str();
+        m_iLogIdBuilt = 1;
+        return buildLogId();
+    }
     
     LOG4CXX_NS::Logger* getLogger() const   {   return m_pLogger;   }
     void setLogger( LOG4CXX_NS::Logger* pLogger)
     {   m_pLogger = pLogger;    }
+    
+    void setLogIdBuild( int n )     {   m_iLogIdBuilt = n;      }
+    int  isLogIdBuilt() const       {   return m_iLogIdBuilt;   }
+    virtual const char * buildLogId() = 0;
+    
 };
 
 #endif

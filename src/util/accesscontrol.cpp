@@ -532,7 +532,6 @@ int AccessControl::insSubNetControl( in_addr_t subNet,
                                         int allowed )
 {
     SubNetNode* pCur = m_pRoot;
-    SubNetNode* pNext;
 /*
     while ( ( pNext = pCur->matchNode( subNet ) ) != NULL )
     {
@@ -549,7 +548,7 @@ int AccessControl::insSubNetControl( in_addr_t subNet,
     return 0;
 }
 
-static char s_maskbits[8] = { 0x00, 0x80, 0xC0, 0xE0, 0xF0, 0xF8, 0xFC, 0xFE };
+static unsigned char s_maskbits[8] = { 0x00, 0x80, 0xC0, 0xE0, 0xF0, 0xF8, 0xFC, 0xFE };
 int AccessControl::parseNetmask( const char * netMask, int maxbits, void *pMask )
 {
     char * pEnd;

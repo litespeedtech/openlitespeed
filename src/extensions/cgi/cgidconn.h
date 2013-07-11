@@ -63,8 +63,7 @@ public:
     virtual int  flush();
     virtual void cleanUp();
     virtual void dump();
-    virtual int writeConnStatus( char * pBuf, int len )
-    {}
+    virtual int writeConnStatus( char * pBuf, int len ) { return 0; }
     //{   return ExtConn::writeConnStatus( pBuf, len );   }
 
     virtual int sendReqHeader();

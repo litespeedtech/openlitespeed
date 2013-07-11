@@ -28,7 +28,7 @@ inline int safe_snprintf(char *str, size_t size, const char *format, ...)
     int ret = vsnprintf(str, size, format, ap);
     va_end( ap );
     
-    if (ret > size)
+    if ( ( unsigned int )ret > size)
         ret = size;
     
     return ret;

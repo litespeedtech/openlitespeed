@@ -22,6 +22,7 @@
 #include <util/autobuf.h>
 #include <http/httpstatusline.h>
 #include <util/iovec.h>
+#include <http/httprespheaders.h>
 
 #define RANGE_HEADER_LEN    22
 
@@ -30,20 +31,18 @@ class HttpReq;
 class HttpResp
 {
 private:
-    static char     s_sCommonHeaders[128];
-    static int      s_iCommonHeaderLen;
+    static HttpRespHeaders     s_CommonHeaders[3];
     static char     s_sKeepAliveHeader[25];
     static char     s_sConnCloseHeader[20];
     static char     s_chunked[29];
     static char     s_sGzipEncodingHeader[48];
 
     IOVec           m_iovec;
-    AutoBuf         m_outputBuf;
+    HttpRespHeaders         m_outputBuf;
+    
 
     long            m_lEntityLength;
     long            m_lEntityFinished;
-    int             m_iContentTypeStarts;
-    int             m_iContentTypeLen;    
     int             m_iHeaderLeft;
     int             m_iSetCookieOffset;
     int             m_iSetCookieLen;
@@ -60,7 +59,7 @@ public:
     explicit HttpResp();
     ~HttpResp();
 
-    void reset();
+    void reset(RespHeader::FORMAT format);
 //    {
 //        m_outputBuf.clear();
 //        m_iovec.clear();
@@ -76,12 +75,8 @@ public:
 
     void prepareHeaders( const HttpReq * pReq, int rangeHeaderLen = 0 );
     void appendContentLenHeader();
-    int  safeAppend( const char * pBuf, int len );
 
-    void endHeader()   {    m_outputBuf.append( '\r' );
-                            m_outputBuf.append( '\n' );     }
-
-    AutoBuf& getOutputBuf()
+    HttpRespHeaders& getHeaders()
     {   return m_outputBuf;  }
 
     void setContentLen( long len )      {   m_lEntityLength = len;  }
@@ -99,7 +94,7 @@ public:
     {   return (m_lEntityLength == -1); }
 
     static void buildCommonHeaders();
-    static void updateDateHeader();
+    static void updateDateHeader(int index = 0);    //0 means all, and 1, 2 and 3 mean the (index -1) one
 
     const char * getProtocol() const;
     int   getProtocolLen() const;
@@ -107,25 +102,14 @@ public:
     void setSSL( int ssl )
     {   m_iSSL = (ssl != 0 );   }
 
-    void finalizeHeader( int ver, int code)
-    {
-        const StatusLineString& statusLine =
-            HttpStatusLine::getStatusLine( ver, code );
-        m_iovec.push_front( statusLine.get(), statusLine.getLen() );
-        int bufSize = m_outputBuf.size();
-        m_iHeaderLeft += statusLine.getLen() + bufSize;
-        if ( bufSize )
-            m_iovec.append( m_outputBuf.begin(), bufSize );
-        m_iHeaderTotalLen = m_iHeaderLeft;
-    }
+    void finalizeHeader( int ver, int code);
+    
     IOVec& getIov()    {   return m_iovec;  }
-    void iovAppend( const char * pBuf, int len )
-    {
-        safeAppend( pBuf, len );
-    }
+    void iovAppend( const char * pBuf, int len );
     
     void appendExtra( const char * pBuf, int len )
-    {   m_iovec.append( pBuf, len );
+    {   //m_iovec.append( pBuf, len );
+        m_outputBuf.addNoCheckExptSpdy(pBuf, len );
         m_iHeaderTotalLen += len; m_iHeaderLeft += len; }
 
     void addGzipEncodingHeader()
@@ -138,33 +122,19 @@ public:
         iovAppend( s_chunked, sizeof( s_chunked )- 1 );
     }
 
-    int appendHeaderLine( const char * pLineBegin, const char * pLineEnd );
-
     int& getHeaderLeft()            {   return m_iHeaderLeft;   }
     void setHeaderLeft( int len )   {   m_iHeaderLeft = len;    }
 
     long getTotalLen() const    {   return m_lEntityFinished + m_iHeaderTotalLen;   }
     int  getHeaderSent() const      {   return m_iHeaderTotalLen - m_iHeaderLeft;   }
     int  getHeaderTotal() const     {   return m_iHeaderTotalLen;   }    
-    const char * getContentTypeHeader(int &len )
-    {
-        if ( !m_iContentTypeStarts )
-            return NULL;
-        len = m_iContentTypeLen;
-        return m_outputBuf.begin() + m_iContentTypeStarts;
-    }  
-    void setContentTypeHeaderInfo( int offset, int len )
-    {
-        m_iContentTypeStarts = offset;
-        m_iContentTypeLen = len;
-    }    
+    const char * getContentTypeHeader(int &len )  {    return m_outputBuf.getContentTypeHeader(len);  }
+       
     int  appendLastMod( long tmMod );
     int addCookie( const char * pName, const char * pVal,
                  const char * path, const char * domain, int expires,
                  int secure, int httponly );  
-    void setCookieHeaderLen( int len );    
-    void clearSetCookieLen()    
-    {   m_iSetCookieOffset = 0;     m_iSetCookieLen = 0;    }    
+        
 };
 
 #endif

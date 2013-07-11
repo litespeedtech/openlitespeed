@@ -95,7 +95,6 @@ class DTblDef
 		$this->_options['ext_respBuffer'] = array('0'=>'No', '1'=>'Yes',
 												  '2'=>'No for Non-Parsed-Header (NPH)');
 
-
 		$this->_options['vh_uidmode'] = array( 0=>'Server UID', 1=>'CGI File UID', 2=>'DocRoot UID');
 		$this->_options['chrootmode'] = array( 0=>'Same as Server', 1=>'Virtual Host Root', 2=>'Customized Chroot Path');
 
@@ -130,6 +129,8 @@ class DTblDef
 									'NOTICE'=>'NOTICE', 'INFO'=>'INFO', 'DEBUG'=>'DEBUG');
 		$this->_options['updateInterval'] = array( 86400=>'Daily', 604800=>'Weekly', 2592000=>'Monthly' );
 
+		$this->_options['sslversion'] = array('1'=>'SSL v3.0', '2'=>'TLS v1.0'); //, '4'=>'TLS v1.1', '8'=>'TLS v1.2');
+		
 		$ipv6 = array();
 		if ( $_SERVER['LSWS_IPV6_ADDRS'] != '' )
 		{
@@ -180,7 +181,6 @@ class DTblDef
 								  "/^[A-z0-9_\-]+$/", 'comma-separated list, allowed character[A-z0-9_\-]', $this->_options['text_size'], 1),
 			'fileName2' => new DAttr('fileName', 'file0', 'File Name', 'text', false, 2, 'r', $this->_options['text_size']),
 			'fileName3' => new DAttr('fileName', 'file0', 'File Name', 'text', true, 3, 'r', $this->_options['text_size']),
-
 
 			'rollingSize' => new DAttr('rollingSize', 'uint', 'Rolling Size (bytes)', 'text', true, NULL, NULL, NULL, NULL, 'log_rollingSize'),
 			'keepDays' => new DAttr('keepDays', 'uint', 'Keep Days', 'text', true, 0, NULL, NULL, 0, 'accessLog_keepDays'),
@@ -297,9 +297,7 @@ class DTblDef
 			'ctx_rewrite:enable' => new DAttr('rewrite:enable', 'bool', 'Enable Rewrite', 'radio', true, NULL, NULL, NULL, 0, 'enableRewrite'),
 			'ctx_rewrite:inherit' => new DAttr('rewrite:inherit', 'bool', 'Rewrite Inherit', 'radio', true, NULL, NULL, NULL, 0, 'rewriteInherit'),
 			'ctx_rewrite:base' => new DAttr('rewrite:base', 'uri', 'Rewrite Base', 'text', true, NULL, NULL, $this->_options['text_size'], 0, 'rewriteBase'),
-			'ctx_rewrite:rules' => new DAttr('rewrite:rules',
-			'cust', 'Rewrite Rules', 'textarea1', true, NULL,
-			NULL, 'rows="6" cols="60" wrap=off', 0, 'rewriteRules'),
+			'ctx_rewrite:rules' => new DAttr('rewrite:rules', 'cust', 'Rewrite Rules', 'textarea1', true, NULL, NULL, 'rows="6" cols="60" wrap=off', 0, 'rewriteRules'),
 			'railsEnv' => new DAttr('railsEnv', 'sel', 'Run-time Mode', 'select', true, 0, $this->_options['railsEnv']),
 
 			'geoipDBFile' => new DAttr( 'geoipDBFile', 'filep', 'DB File Path', 'text', false, 2, 'r', $this->_options['text_size']), 
@@ -2339,8 +2337,8 @@ class DTblDef
 		$crlFile->_version = 1;
 		
 		$attrs = array(
-			new DAttr('keyFile', 'cust', 'Private Key File', 'text', false, 2, '', $this->_options['text_size']),
-			new DAttr('certFile', 'cust', 'Certificate File', 'text', false, 2, '', $this->_options['text_size']),
+			new DAttr('keyFile', 'cust', 'Private Key File', 'text', true, 2, '', $this->_options['text_size']),
+			new DAttr('certFile', 'cust', 'Certificate File', 'text', true, 2, '', $this->_options['text_size']),
 			new DAttr('certChain', 'bool', 'Chained Certificate', 'radio'),
 			new DAttr('CACertPath', 'cust', 'CA Certificate Path', 'text', true, 2, '', $this->_options['text_size']),
 			new DAttr('CACertFile', 'cust', 'CA Certificate File', 'text', true, 2, '', $this->_options['text_size']),
@@ -2433,28 +2431,45 @@ class DTblDef
 	protected function add_L_SSL($id)
 	{
 		$this->_tblDef[$id] = new DTbl($id, 'SSL Protocol');
-		$this->_tblDef[$id]->_cols = 1;
+		
+		$attrs = array(
+			new DAttr('sslProtocol', 'checkboxOr', 'SSL Protocol Version', 'checkboxgroup', TRUE, NULL, $this->_options['sslversion']),
+			new DAttr_SSLCipher('ciphers', 'sslcipher', 'Encryption Level', 'cust', TRUE),
+		);
 
-		$attrs = array( new DAttr('ciphers', 'cust', '') );
 		$this->_tblDef[$id]->setAttr($attrs);
-
-		$this->_tblDef[$id]->_customizedScript = array(
-			'../config/listenerSSL.php', '../config/listenerSSL1.php');
+		$this->_tblDef[$id]->_helpKey = 'TABLEsslSetting';
 	}
-
+	
 	protected function add_VH_SSL_SSL($id)
 	{
 		$this->_tblDef[$id] = new DTbl($id, 'Virtual Host SSL Protocol');
-		$this->_tblDef[$id]->_cols = 1;
+		$attrs = array(
+			new DAttr('sslProtocol', 'checkboxOr', 'Protocol Version', 'checkboxgroup', true, NULL, $this->_options['sslversion']),
+			new DAttr_SSLCipher('ciphers', 'sslcipher', 'Encryption Level', 'cust', TRUE),
+		);
 
-		$attrs = array( new DAttr('ciphers', 'cust', '') );
 		$this->_tblDef[$id]->setAttr($attrs, 'vhssl', 'vhssl');
-
-		$this->_tblDef[$id]->_customizedScript = array(
-			'../config/listenerSSL.php', '../config/listenerSSL1.php');
-	
 	}
 	
+	protected function add_L_SSL_OCSP($id)
+	{
+		$this->_tblDef[$id] = new DTbl($id, 'OCSP Stapling');
+		
+		$attrs = array(
+		    new DAttr('enableStapling', 'bool', 'Enable OCSP Stapling', 'radio', true),
+		    new DAttr('ocspRespMaxAge', 'uint', 'OCSP Response Max Age (secs)', 'text', true, -1, NULL),
+		    new DAttr('ocspResponder', 'httpurl', 'OCSP Responder', 'text', true, NULL, NULL, $this->_options['text_size']),
+		    new DAttr('ocspCACerts', 'cust', 'OCSP CA Certificates', 'text', true, NULL, '', $this->_options['text_size']),
+		    );
+		$this->_tblDef[$id]->setAttr($attrs);
+	}
+	
+	protected function add_VH_SSL_OCSP($id)
+	{
+		$this->_tblDef[$id] = $this->DupTblDef('L_SSL_OCSP', $id);
+		$this->_tblDef[$id]->setDataLoc('vhssl', 'vhssl');
+	}
 	
 	protected function add_ADMIN_PHP($id)
 	{

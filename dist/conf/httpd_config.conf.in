@@ -63,11 +63,11 @@ tuning{
     AIOBlockSize                 4 
     fileETag                     28 
     SSLCryptoDevice              null 
-    maxReqURLLen                 4096 
-    maxReqHeaderSize             8192 
-    maxReqBodySize               10M 
-    maxDynRespHeaderSize         4K 
-    maxDynRespSize               1M 
+    maxReqURLLen                 8192 
+    maxReqHeaderSize             16380 
+    maxReqBodySize               2047M 
+    maxDynRespHeaderSize         8192 
+    maxDynRespSize               2047M 
     enableGzipCompress           1 
     enableDynGzipCompress        1 
     gzipCompressLevel            6 

@@ -134,7 +134,7 @@ int CgidWorker::spawnCgid( int fd, char * pData, const char *secret )
     const char * pChroot = "";
     if ( HttpGlobals::s_psChroot )
         pChroot = HttpGlobals::s_psChroot->c_str();
-    int n = snprintf( pData, 255, "uds:/%s%s", pChroot,
+    snprintf( pData, 255, "uds:/%s%s", pChroot,
             getConfig().getServerAddrUnixSock() );
     pid = fork();
     //in child

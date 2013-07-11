@@ -20,6 +20,7 @@
 #include "base64test.h"
 #include <util/base64.h>
 
+#include <stdio.h>
 #include <string.h>
 #include "test/unittest-cpp/UnitTest++/src/UnitTest++.h"
 
@@ -30,6 +31,17 @@ TEST( Base64Test_test)
     const char * pResult = "Aladdin:open sesame";
     CHECK( -1 != Base64::decode( pEncoded, 50, achDecoded ) );
     CHECK( 0 == strcmp( pResult, achDecoded ) );
+    
+    const char *pDecoded = "Aladdin:open sesame";
+    char achEncoded[50];
+    unsigned int len = Base64::encode(pDecoded, strlen(pDecoded), achEncoded);
+    achEncoded[len] = 0;
+    printf("%s\n", achEncoded);
+    
+    CHECK (len == strlen(pEncoded));
+    CHECK (0 == memcmp(achEncoded, pEncoded, len));
+    
+    
 }
 
 #endif

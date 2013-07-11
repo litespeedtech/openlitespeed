@@ -20,19 +20,23 @@
 
 
 #include <sys/stat.h>
-
+#include <util/autostr.h>
 typedef struct ssl_st SSL;
 typedef struct ssl_ctx_st SSL_CTX;
 
+class SslOcspStapling;
 
 class SSLContext
 {
 private:
     SSL_CTX*    m_pCtx;
     short       m_iMethod;
-    short       m_iRenegProtect;
-    struct stat  m_stKey;
-    struct stat  m_stCert;
+    char        m_iRenegProtect;
+    char        m_iEnableSpdy;
+    struct stat m_stKey;
+    struct stat m_stCert;
+    
+    SslOcspStapling * m_pStapling;
     
     SSLContext( const SSLContext& rhs ) {}
     void operator=( const SSLContext& rhs ) {}
@@ -40,41 +44,45 @@ private:
     void release();
     int init( int method = SSL_ALL);
     static int seedRand(int len);
+    void updateProtocol( int method );
 
 public:
     enum
     {
-        SSL_v2,
-        SSL_v3,
-        SSL_TLSv1,
-        SSL_ALL
+        SSL_v3      = 1,
+        SSL_TLSv1   = 2,
+        SSL_TLSv11  = 4,
+        SSL_TLSv12  = 8,
+        SSL_ALL     = 15
     };
     enum
     {
         FILETYPE_PEM,
         FILETYPE_ASN1
     };
+
     explicit SSLContext( int method = SSL_ALL );
     ~SSLContext();
     SSL_CTX* get() const    {   return m_pCtx;  }
     SSL* newSSL();
-    bool setKeyCertificateFile( const char * pKeyCertFile, int iType,
+    int setKeyCertificateFile( const char * pKeyCertFile, int iType,
                                int chained );
-    bool setKeyCertificateFile( const char * pKeyFile, int iKeyType,
+    int setKeyCertificateFile( const char * pKeyFile, int iKeyType,
                                const char * pCertFile, int iCertType,
                                int chained );
-    bool setCertificateFile( const char * pFile, int type, int chained );
-    bool setCertificateChainFile( const char * pFile );
-    bool setPrivateKeyFile( const char * pFile, int type );
-    bool checkPrivateKey();
+    int setCertificateFile( const char * pFile, int type, int chained );
+    int setCertificateChainFile( const char * pFile );
+    int setPrivateKeyFile( const char * pFile, int type );
+    int checkPrivateKey();
     long setOptions( long options );
     long setSessionCacheMode( long mode );
+    void setProtocol( int method );
     void setRenegProtect( int p )   {   m_iRenegProtect = p;    }
-    bool setCipherList( const char * pList );
-    bool setCALocation( const char * pCAFile, const char * pCAPath, int cv );
+    int  setCipherList( const char * pList );
+    int  setCALocation( const char * pCAFile, const char * pCAPath, int cv );
 
-    bool isKeyFileChanged( const char * pKeyFile ) const;
-    bool isCertFileChanged( const char * pCertFile ) const;
+    int  isKeyFileChanged( const char * pKeyFile ) const;
+    int  isCertFileChanged( const char * pCertFile ) const;
 
     int initSNI( void * param );
 
@@ -88,5 +96,10 @@ public:
                     int len, char * decrypted, int bufLen );
     void setClientVerify( int mode, int depth);
     int addCRL( const char * pCRLFile, const char * pCRLPath);
+    int enableSpdy( int level );
+    int getEnableSpdy() const   {   return m_iEnableSpdy;   } 
+    SslOcspStapling * getpStapling () {  return m_pStapling; }
+    void setpStapling (SslOcspStapling * pSslOcspStapling) {  m_pStapling = pSslOcspStapling;}
+    int initStapling();
 };
 #endif

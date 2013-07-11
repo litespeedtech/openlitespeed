@@ -22,7 +22,6 @@
 #include <extensions/fcgi/fcgistarter.h>
 #include <extensions/registry/extappregistry.h>
 
-#include <http/clientinfo.h>
 #include <http/datetime.h>
 #include <http/httpconnection.h>
 #include <http/httpreq.h>
@@ -304,16 +303,16 @@ void AccessLog::customLog( HttpConnection* pConn )
                 }
                 break;
             case REF_CONN_STATE:
-                if ( pConn->isConnCanceled() )
+                if ( pConn->getStream()->isAborted() )
                 {
                     m_buf.append( 'X' );
                 }
-                else if ( pConn->isClosing() )
+                else if ( pConn->getReq()->isKeepAlive() )
                 {
-                    m_buf.append( '-' );
+                    m_buf.append( '+' );
                 }
                 else
-                    m_buf.append( '+' );
+                    m_buf.append( '-' );
                 break;
             case REF_COOKIE_VAL:
             case REF_ENV:
@@ -520,8 +519,8 @@ void AccessLog::log( HttpConnection* pConn )
     HttpResp* pResp = pConn->getResp();
     const char * pUser = pReq->getAuthUser();
     long contentWritten = pResp->getBodySent();
-    const ClientInfo * pInfo = pConn->getClientInfo();
-    const char * pAddr = pInfo->getHostName();
+    char * pAddr;
+    char achTemp[100];
     pResp->needLogAccess( 0 );
     if ( m_iPipedLog )
     {
@@ -534,16 +533,10 @@ void AccessLog::log( HttpConnection* pConn )
     
     if ( m_pCustomFormat )
         return customLog( pConn );
-    
-    if (( pAddr )&&( *pAddr ))
-    {
-        n = pInfo->getHostNameLen();
-    }
-    else
-    {
-        pAddr = pInfo->getAddrString();
-        n = pInfo->getAddrStrLen();
-    }
+ 
+    pAddr = achTemp;
+    n = RequestVars::getReqVar( pConn, REF_REMOTE_HOST, pAddr, sizeof( achTemp )  );
+
     m_buf.appendNoCheck( pAddr, n );
     if ( ! *pUser )
     {

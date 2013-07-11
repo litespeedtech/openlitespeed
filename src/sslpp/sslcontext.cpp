@@ -29,78 +29,10 @@
 #include <sys/time.h>
 #include <sys/types.h>
 #include <unistd.h>
-
+#include <config.h>
+#include "sslocspstapling.h"
 //#include "http/vhostmap.h"
 
-
-
-static const SSL_METHOD* getMethod( int iMethod )
-{
-    switch( iMethod )
-    {
-    //case SSLContext::SSL_v2:
-    //    return SSLv2_method();
-    case SSLContext::SSL_v3:
-        return SSLv3_method();
-    case SSLContext::SSL_TLSv1:
-        return TLSv1_method();
-    case SSLContext::SSL_ALL:
-    default:
-        return SSLv23_method();
-    }
-}
-
-/*
-static SSL_METHOD* getServerMethod( int iMethod )
-{
-    switch( iMethod )
-    {
-    case SSL_Context::SSL_v2:
-        meth = SSLv2_server_method();
-        break;
-    case SSL_Context::SSL_v3:
-        meth = SSLv3_server_method();
-        break;
-    case SSL_Context::SSL_TLSv1:
-        meth = TLSv1_server_method();
-        break;
-    case SSL_Context::SSL_all:
-    default:
-        meth = SSLv23_server_method();
-    }
-}
-
-static SSL_METHOD* getClientMethod( int iMethod )
-{
-    switch( iMethod )
-    {
-    case SSL_Context::SSL_v2:
-        meth = SSLv2_client_method();
-        break;
-    case SSL_Context::SSL_v3:
-        meth = SSLv3_client_method();
-        break;
-    case SSL_Context::SSL_TLSv1:
-        meth = TLSv1_client_method();
-        break;
-    case SSL_Context::SSL_all:
-    default:
-        meth = SSLv23_client_method();
-    }
-}
-int SSLContext::initServer( int iMethod)
-{
-    SSL_METHOD * meth;
-    if ( s_pCtx == NULL )
-    {
-        SSL_load_error_strings();
-        SSLeay_add_ssl_algorithms();
-        meth = getServerMethod( iMethod );
-        s_pCtx = SSL_CTX_new (meth);
-    }
-}
-SSL_MODE_ENABLE_PARTIAL_WRITE
-*/
 
 long SSLContext::setOptions( long options )
 {
@@ -178,50 +110,78 @@ static void SSLConnection_ssl_info_cb( const SSL *pSSL, int where, int ret)
     }
 }
 
+void SSLContext::setProtocol( int method )
+{
+    if ( method == m_iMethod )
+        return;
+    if ( ( method & SSL_ALL ) == 0 )
+        return;
+    m_iMethod = method;
+    updateProtocol( method );
+}
+
+
+void SSLContext::updateProtocol( int method )
+{
+    setOptions( SSL_OP_NO_SSLv2 );
+    if ( !(method & SSL_v3) )
+        setOptions( SSL_OP_NO_SSLv3 );
+    if ( !(method & SSL_TLSv1 ) ) 
+        setOptions( SSL_OP_NO_TLSv1 );
+#ifdef SSL_OP_NO_TLSv1_1
+    if ( !(method & SSL_TLSv11 ) )
+        setOptions( SSL_OP_NO_TLSv1_1 );
+#endif
+#ifdef SSL_OP_NO_TLSv1_2
+    if ( !(method & SSL_TLSv12 ) )
+        setOptions( SSL_OP_NO_TLSv1_2 );
+#endif
+}
 
 int SSLContext::init( int iMethod )
 {
-    if ( m_pCtx == NULL )
+    if ( m_pCtx != NULL )
+        return 0;
+    SSL_METHOD * meth;
+    if ( initSSL() )
+        return -1;
+    m_iMethod = iMethod;
+    m_iEnableSpdy = 0;
+    meth = (SSL_METHOD *)SSLv23_method();
+    m_pCtx = SSL_CTX_new (meth);
+    if ( m_pCtx )
     {
-        SSL_METHOD * meth;
-        if ( initSSL() )
-            return -1;
-        m_iMethod = iMethod;
-        meth = (SSL_METHOD*)getMethod( iMethod );
-        m_pCtx = SSL_CTX_new (meth);
-        if ( m_pCtx )
-        {
 #ifdef SSL_OP_NO_COMPRESSION
-            /* OpenSSL >= 1.0 only */
-            SSL_CTX_set_options(m_pCtx, SSL_OP_NO_COMPRESSION);
+        /* OpenSSL >= 1.0 only */
+        SSL_CTX_set_options(m_pCtx, SSL_OP_NO_COMPRESSION);
 #endif
-            setOptions( SSL_OP_SINGLE_DH_USE|SSL_OP_ALL );
-            //setOptions( SSL_OP_NO_SSLv2 );
-            setOptions( SSL_OP_NO_SSLv2 );
+        setOptions( SSL_OP_SINGLE_DH_USE|SSL_OP_ALL );
+        //setOptions( SSL_OP_NO_SSLv2 );
+        updateProtocol( iMethod );
 
-            setOptions( SSL_OP_CIPHER_SERVER_PREFERENCE);
+        setOptions( SSL_OP_CIPHER_SERVER_PREFERENCE);
 
-            SSL_CTX_set_mode( m_pCtx, SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER );
-            if ( m_iRenegProtect )
-            {
-                setOptions( SSL_OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION );
-                SSL_CTX_set_info_callback( m_pCtx, SSLConnection_ssl_info_cb );
-            }
-            return 0;
-        }
-        else
+        SSL_CTX_set_mode( m_pCtx, SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER );
+        if ( m_iRenegProtect )
         {
-            //FIXME: log ssl error
-            return -1;
+            setOptions( SSL_OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION );
+            SSL_CTX_set_info_callback( m_pCtx, SSLConnection_ssl_info_cb );
         }
+        return 0;
     }
-    return 0;
+    else
+    {
+        //FIXME: log ssl error
+        return -1;
+    }
 }
 
 SSLContext::SSLContext( int iMethod )
     : m_pCtx( NULL )
     , m_iMethod( iMethod )
     , m_iRenegProtect( 1 )
+    , m_iEnableSpdy( 0 )
+    , m_pStapling( NULL )
 {
 }
 SSLContext::~SSLContext()
@@ -238,6 +198,8 @@ void SSLContext::release()
         m_pCtx = NULL;
         SSL_CTX_free( pCtx );
     }
+    if ( m_pStapling )
+        delete m_pStapling;
 }
 
 
@@ -261,57 +223,60 @@ static int translateType( int type )
     }
 }
 
-static bool isFileChanged( const char * pFile, const struct stat &stOld )
+static int isFileChanged( const char * pFile, const struct stat &stOld )
 {
     struct stat st;
     if ( ::stat( pFile, &st ) == -1 )
-        return false;
+        return 0;
     return ((st.st_size != stOld.st_size)||
             (st.st_ino != stOld.st_ino )||
             (st.st_mtime != stOld.st_mtime ));
 }
 
-bool SSLContext::isKeyFileChanged( const char * pKeyFile ) const
+int SSLContext::isKeyFileChanged( const char * pKeyFile ) const
 {
     return isFileChanged( pKeyFile, m_stKey );
 }
-bool SSLContext::isCertFileChanged( const char * pCertFile ) const
+
+int SSLContext::isCertFileChanged( const char * pCertFile ) const
 {
     return isFileChanged( pCertFile, m_stCert );
 }
 
-bool SSLContext::setKeyCertificateFile( const char * pFile, int iType, int chained )
+int SSLContext::setKeyCertificateFile( const char * pFile, int iType, int chained )
 {
     return setKeyCertificateFile( pFile, iType, pFile, iType, chained );
 }
 
-bool SSLContext::setKeyCertificateFile( const char * pKeyFile, int iKeyType,
+int SSLContext::setKeyCertificateFile( const char * pKeyFile, int iKeyType,
                                         const char * pCertFile, int iCertType,
                                         int chained )
 {
     if ( !setCertificateFile( pCertFile, iCertType, chained ) )
-        return false;
+        return 0;
     if ( !setPrivateKeyFile( pKeyFile, iKeyType ) )
-        return false;
-    return  SSL_CTX_check_private_key( m_pCtx ) == 1;
+        return 0;
+    return  SSL_CTX_check_private_key( m_pCtx );
 }
 
-bool SSLContext::setCertificateFile( const char * pFile, int type, int chained )
+int SSLContext::setCertificateFile( const char * pFile, int type, int chained )
 {
     if ( !pFile )
-        return false;
+        return 0;
     ::stat( pFile, &m_stCert );
     if ( init( m_iMethod ) )
-        return false;
+        return 0;
+
+   // m_sCertfile.setStr( pFile );
     if ( chained )
-        return SSL_CTX_use_certificate_chain_file( m_pCtx, pFile ) == 1;
+        return SSL_CTX_use_certificate_chain_file( m_pCtx, pFile );
     else
         return SSL_CTX_use_certificate_file( m_pCtx, pFile,
-            translateType( type ) ) == 1;
+            translateType( type ) );
 }
 
 
-bool SSLContext::setCertificateChainFile( const char * pFile )
+int SSLContext::setCertificateChainFile( const char * pFile )
 {
     BIO *bio;
     X509 *x509;
@@ -320,46 +285,56 @@ bool SSLContext::setCertificateChainFile( const char * pFile )
     int n;
 
     if ((bio = BIO_new(BIO_s_file_internal())) == NULL)
-        return -1;
+        return 0;
     if (BIO_read_filename(bio, pFile) <= 0) {
         BIO_free(bio);
-        return -1;
+        return 0;
     }
     pExtraCerts=m_pCtx->extra_certs;
-    if ( pExtraCerts != NULL) {
+    if ( pExtraCerts != NULL) 
+    {
         sk_X509_pop_free((STACK_OF(X509) *)pExtraCerts, X509_free);
         m_pCtx->extra_certs = NULL;
     }
     n = 0;
-    while ((x509 = PEM_read_bio_X509(bio, NULL, NULL, NULL)) != NULL) {
-        if (!SSL_CTX_add_extra_chain_cert(m_pCtx, x509)) {
+    while ((x509 = PEM_read_bio_X509(bio, NULL, NULL, NULL)) != NULL) 
+    {
+        if (!SSL_CTX_add_extra_chain_cert(m_pCtx, x509)) 
+        {
             X509_free(x509);
             BIO_free(bio);
-            return -1;
+            return 0;
         }
         n++;
     }
-    if ((err = ERR_peek_error()) > 0) {
+    if ((err = ERR_peek_error()) > 0) 
+    {
         if (!(   ERR_GET_LIB(err) == ERR_LIB_PEM
-              && ERR_GET_REASON(err) == PEM_R_NO_START_LINE)) {
+              && ERR_GET_REASON(err) == PEM_R_NO_START_LINE)) 
+        {
             BIO_free(bio);
-            return -1;
+            return 0;
         }
         while (ERR_get_error() > 0) ;
     }
+    //m_sCertfile.setStr( pFile );
     BIO_free(bio);
     return n > 0;
 }
 
 
 
-bool SSLContext::setCALocation( const char * pCAFile, const char * pCAPath, int cv )
+int SSLContext::setCALocation( const char * pCAFile, const char * pCAPath, int cv )
 {
+    int ret; 
     if ( init( m_iMethod ) )
-        return false;
-    int ret = SSL_CTX_load_verify_locations(m_pCtx, pCAFile, pCAPath);
+        return -1;
+    ret = SSL_CTX_load_verify_locations(m_pCtx, pCAFile, pCAPath);
     if ( (ret != 0) && cv )
     {
+
+        //m_sCAfile.setStr( pCAFile );
+        
         ret = SSL_CTX_set_default_verify_paths( m_pCtx );
         STACK_OF(X509_NAME) *pCAList = NULL;
         if ( pCAFile ) 
@@ -382,29 +357,29 @@ bool SSLContext::setCALocation( const char * pCAFile, const char * pCAPath, int 
             SSL_CTX_set_client_CA_list( m_pCtx, pCAList );
     }
 
-    return ret != 0;
+    return ret;
 }
 
-bool SSLContext::setPrivateKeyFile( const char * pFile, int type )
+int SSLContext::setPrivateKeyFile( const char * pFile, int type )
 {
     if ( !pFile )
-        return false;
+        return 0;
     ::stat( pFile, &m_stKey );
     if ( init( m_iMethod ) )
-        return false;
+        return 0;
     return SSL_CTX_use_PrivateKey_file( m_pCtx, pFile,
-            translateType( type ) ) == 1;
+            translateType( type ) );
 }
 
-bool SSLContext::checkPrivateKey()
+int SSLContext::checkPrivateKey()
 {
     if ( m_pCtx )
-        return SSL_CTX_check_private_key( m_pCtx ) == 1;
+        return SSL_CTX_check_private_key( m_pCtx );
     else
-        return false;
+        return 0;
 }
 
-bool SSLContext::setCipherList( const char * pList )
+int SSLContext::setCipherList( const char * pList )
 {
     if ( m_pCtx )
     {
@@ -419,10 +394,10 @@ bool SSLContext::setCipherList( const char * pList )
             pList = cipher;
         }
 
-        return SSL_CTX_set_cipher_list( m_pCtx, pList ) == 1;
+        return SSL_CTX_set_cipher_list( m_pCtx, pList );
     }
     else
-        return false;
+        return 0;
 }
 
 
@@ -647,14 +622,12 @@ int SSLContext::initSNI( void * param )
 #ifdef SSL_TLSEXT_ERR_OK
     SSL_CTX_set_tlsext_servername_callback( m_pCtx, SSLConnection_ssl_servername_cb );
     SSL_CTX_set_tlsext_servername_arg( m_pCtx, param );
+    
     return 0;
 #else
     return -1;
 #endif
 }
-
-
-
 
 /*!
     \fn SSLContext::setClientVerify( int mode, int depth)
@@ -703,3 +676,67 @@ int SSLContext::addCRL( const char * pCRLFile, const char * pCRLPath)
     X509_STORE_set_flags(store, X509_V_FLAG_CRL_CHECK | X509_V_FLAG_CRL_CHECK_ALL);
     return 0;
 }
+
+
+#ifdef LS_ENABLE_SPDY
+static const char * NEXT_PROTO_STRING[3] = 
+{
+    "\x06spdy/2\x08http/1.1\x08http/1.0",
+    "\x06spdy/3\x08http/1.1\x08http/1.0",
+    "\x06spdy/3\x06spdy/2\x08http/1.1\x08http/1.0" 
+};
+
+static int NEXT_PROTO_STRING_LEN[3] =
+{
+    25, 25, 32
+};
+
+//static const char NEXT_PROTO_STRING[] = "\x06spdy/2\x08http/1.1\x08http/1.0";
+
+static int SSLConnection_ssl_npn_advertised_cb(SSL *pSSL, const unsigned char **out, 
+                                 unsigned int *outlen, void *arg)
+{
+    SSLContext * pCtx = (SSLContext *)arg;
+    *out = (const unsigned char *)NEXT_PROTO_STRING[ pCtx->getEnableSpdy() - 1 ];
+    *outlen = NEXT_PROTO_STRING_LEN[ pCtx->getEnableSpdy() - 1 ];
+    return SSL_TLSEXT_ERR_OK;
+}
+
+
+int SSLContext::enableSpdy( int level )
+{
+    m_iEnableSpdy = ( level & 3 );
+    if ( m_iEnableSpdy == 0 )
+        return 0;
+#ifdef TLSEXT_TYPE_next_proto_neg
+    SSL_CTX_set_next_protos_advertised_cb(m_pCtx, SSLConnection_ssl_npn_advertised_cb, this);
+#else
+    #error "Openssl version is too low (openssl 1.0.1 or higher is required)!!!"
+#endif
+    return 0;
+}
+
+#else
+    int SSLContext::enableSpdy( int level )
+    {
+        return -1;
+    }
+
+#endif
+
+
+static int sslCertificateStatus_cb(SSL *ssl, void *data)
+{
+    SslOcspStapling* pStapling = (SslOcspStapling*)data;
+    return pStapling->callback( ssl );
+}
+
+int SSLContext::initStapling()
+{
+    if ( m_pStapling->init(m_pCtx) == -1 )
+        return -1;
+    SSL_CTX_set_tlsext_status_cb(m_pCtx, sslCertificateStatus_cb);
+    SSL_CTX_set_tlsext_status_arg(m_pCtx, m_pStapling);    
+    return 0;
+}
+
