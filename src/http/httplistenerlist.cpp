@@ -298,7 +298,6 @@ int HttpListenerList::writeStatusReport( int fd )
 {
     iterator iter;
     iterator iterEnd = end();
-    char achBuf[1024];
     for( iter = begin(); iter != iterEnd; ++iter )
     {
         if ( (*iter)->writeStatusReport( fd ) == -1 )

@@ -24,6 +24,7 @@
 #include <errno.h>
 #include <string.h>
 #include <assert.h>
+#include <config.h>
 
 static const char * s_pErrInvldSSL = "Invalid Parameter, SSL* ssl is null\n";
 
@@ -146,6 +147,7 @@ int SSLConnection::flush()
     BIO * pBIO = SSL_get_wbio( m_ssl );
     if ( !pBIO )
         return 0;
+    m_iWant = 0;
     int ret = BIO_flush( pBIO );
     if ( ret != 1 )   //1 means BIO_flush succeed.
     {
@@ -195,6 +197,7 @@ int SSLConnection::accept()
     int ret = SSL_accept( m_ssl );
     if ( ret == 1 )
     {
+        //printf("%d\n", getSpdyVersion());
         m_iStatus = CONNECTED;
         return ret;
     }
@@ -274,6 +277,26 @@ SSL_SESSION * SSLConnection::getSession() const
 
 const char * SSLConnection::getVersion() const
 {   return SSL_get_version( m_ssl );        }
+
+int SSLConnection::getSpdyVersion()
+{
+    int v = 0;
+    
+#ifdef LS_ENABLE_SPDY
+#ifdef TLSEXT_TYPE_next_proto_neg
+    const char * NEXT_PROTO_NEGOTIATED_PREFIX = "spdy/";
+    unsigned int             len;
+    const unsigned char     *data;
+    SSL_get0_next_proto_negotiated(m_ssl, &data, &len);
+    if (len > strlen(NEXT_PROTO_NEGOTIATED_PREFIX) && 
+        strncasecmp((const char *)data, NEXT_PROTO_NEGOTIATED_PREFIX, strlen(NEXT_PROTO_NEGOTIATED_PREFIX)) == 0) {
+        v = data[strlen(NEXT_PROTO_NEGOTIATED_PREFIX)] - '0' -1;
+        return v;
+    }
+#endif
+#endif
+    return v;
+}
 
 int SSLConnection::getSessionIdLen( SSL_SESSION * s )
 {   return s->session_id_length;     }

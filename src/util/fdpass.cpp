@@ -165,7 +165,7 @@ int test_fdpass()
         close( fd );
         int n = 0;
         int fd1;
-        int ret = FDPass::read_fd( intercommfds[0], &n, sizeof( int ), &fd1 );
+        FDPass::read_fd( intercommfds[0], &n, sizeof( int ), &fd1 );
         printf( "recv fd: %d, n: %d\n", fd1, n );
         if ( fd1 != -1 )
             return 0;

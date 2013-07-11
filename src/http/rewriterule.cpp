@@ -34,11 +34,11 @@
 static const char * s_pCurLine          = NULL;
 static const char * s_pLogId            = NULL;
 static LOG4CXX_NS::Logger *  s_pLogger  = NULL;
-static void parse_error( const char * pError )
-{
-    LOG_ERR(( s_pLogger, "[%s] rewrite: %s while parsing: %s",
-                    s_pLogId, pError, s_pCurLine ));
-}
+// static void parse_error( const char * pError )
+// {
+//     LOG_ERR(( s_pLogger, "[%s] rewrite: %s while parsing: %s",
+//                     s_pLogId, pError, s_pCurLine ));
+// }
 
 void RewriteRule::setLogger( LOG4CXX_NS::Logger * pLogger, const char * pId)
 {

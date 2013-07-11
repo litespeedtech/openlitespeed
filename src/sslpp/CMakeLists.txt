@@ -9,6 +9,7 @@ SET(sslpp_STAT_SRCS
    sslerror.cpp
    sslconnection.cpp
    sslcontext.cpp
+   sslocspstapling.cpp
    ../http/requestvars.cpp
 )
 

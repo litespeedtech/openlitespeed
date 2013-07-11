@@ -738,8 +738,6 @@ int RewriteEngine::expandEnv( const RewriteRule * pRule, HttpConnection * pConn 
     const char * pKeyEnd;
     const char * pValue;
     const char * pValEnd;
-    char achCacheCtrl[REWRITE_BUF_SIZE];
-    int ccLen = 0;
     int len = REWRITE_BUF_SIZE;
     char achBuf[REWRITE_BUF_SIZE];
     if ( !pEnv )

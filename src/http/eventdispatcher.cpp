@@ -184,7 +184,7 @@ static inline void processTimerNew()
     gettimeofday( &tv, NULL );
 
     //FIXME: debug code
-    int n = tv.tv_usec / ( 1000000 / TIMER_PRECISION );
+    //int n = tv.tv_usec / ( 1000000 / TIMER_PRECISION );
     
     DateTime::s_curTime = tv.tv_sec;
     DateTime::s_curTimeMS = tv.tv_usec;
@@ -193,7 +193,13 @@ static inline void processTimerNew()
     if ( HttpGlobals::s_tmToken != HttpGlobals::s_tmPrevToken )
     {   
         if ( HttpGlobals::s_tmToken < HttpGlobals::s_tmPrevToken )
+        {
+            if ( getppid() == 1 )
+            {   
+                HttpSignals::setSigStop();
+            }
             HttpServer::getInstance().onTimer();
+        }
         HttpGlobals::getMultiplexer()->timerExecute();
         HttpGlobals::getConnLimitCtrl()->checkWaterMark();
         //LOG_D(( "processTimer()" ));

@@ -98,7 +98,13 @@ int Pcregex::compile(const char * regex, int options, int matchLimit, int recurs
     m_regex = pcre_compile(regex, options, &error, &erroffset, NULL);
     if (m_regex == NULL)
         return -1;
-    m_extra = pcre_study(m_regex, PCRE_STUDY_JIT_COMPILE, &error);
+    m_extra = pcre_study(m_regex, 
+#if defined( _USE_PCRE_JIT_)&&!defined(__sparc__) && !defined(__sparc64__) && defined( PCRE_CONFIG_JIT )
+                         PCRE_STUDY_JIT_COMPILE, 
+#else
+                         0,
+#endif
+                         &error);
     if ( matchLimit > 0 )
     {
         m_extra->match_limit = matchLimit;

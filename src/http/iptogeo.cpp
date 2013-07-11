@@ -75,7 +75,7 @@ const char * GeoInfo::getGeoEnv( const char * pEnvName )
         if ( strcasecmp( pEnvName, "CODE" ) == 0 )
         {
         
-            if ( (m_countryId > 0) && (m_countryId < sizeof( GeoIP_country_name ) / sizeof( const char *) ))
+            if ( (m_countryId > 0) && ( (unsigned int)m_countryId < sizeof( GeoIP_country_name ) / sizeof( const char *) ))
             {
                 return GeoIP_country_code[m_countryId];
             }
@@ -90,14 +90,14 @@ const char * GeoInfo::getGeoEnv( const char * pEnvName )
         }
         else if ( strcasecmp( pEnvName, "NAME" ) == 0 )
         {
-            if ( (m_countryId > 0) && (m_countryId < sizeof( GeoIP_country_name ) / sizeof( const char *) ))
+            if ( (m_countryId > 0) && ( (unsigned int)m_countryId < sizeof( GeoIP_country_name ) / sizeof( const char *) ))
                 return GeoIP_country_name[m_countryId];
             else if ( m_pCity )
                 return m_pCity->country_name;
         }
         else if ( strcasecmp( pEnvName, "CONTINENT" ) == 0 )
         {
-            if ( (m_countryId > 0) && (m_countryId < sizeof( GeoIP_country_name ) / sizeof( const char *) ))
+            if ( (m_countryId > 0) && ( (unsigned int)m_countryId < sizeof( GeoIP_country_name ) / sizeof( const char *) ))
             {
                 return GeoIP_country_continent[ m_countryId ];
             }
@@ -120,7 +120,7 @@ const char * GeoInfo::getGeoEnv( const char * pEnvName )
     }
     else if ( strcasecmp( pEnvName, "CONTINENT_CODE" ) == 0 )
     {
-        if ( (m_countryId > 0) && (m_countryId < sizeof( GeoIP_country_name ) / sizeof( const char *) ))
+        if ( ( m_countryId > 0) && ( (unsigned int)m_countryId < sizeof( GeoIP_country_name ) / sizeof( const char *) ))
         {
             return GeoIP_country_continent[m_countryId];
         }
@@ -175,7 +175,7 @@ int GeoInfo::addGeoEnv( IEnv * pEnv )
     int count = 0;
     const char * pStr;
     int len;
-    if ( (m_countryId > 0) && (m_countryId < sizeof( GeoIP_country_name ) / sizeof( const char *) ))
+    if ( (m_countryId > 0) && ( (unsigned int)m_countryId < sizeof( GeoIP_country_name ) / sizeof( const char *) ))
     {
         pStr = GeoIP_country_name[m_countryId];
         pEnv->add( "GEOIP_COUNTRY_CODE", 18, GeoIP_country_code[m_countryId], 2 );

@@ -259,8 +259,8 @@ static plainconfKeywords sKeywords[] = {
         {"vhroot",        ""},
         {"vhtemplate",        ""},
         {"virtualhost",        ""},
+        {"websocket",        ""},
         {"workingdir",        ""},
-
 
 };
 

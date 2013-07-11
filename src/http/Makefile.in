@@ -95,12 +95,14 @@ am_libhttp_a_OBJECTS = moduserdir.$(OBJEXT) contextnode.$(OBJEXT) \
 	vhostmap.$(OBJEXT) eventdispatcher.$(OBJEXT) \
 	staticfilehandler.$(OBJEXT) reqhandler.$(OBJEXT) \
 	httpvhost.$(OBJEXT) httpresourcemanager.$(OBJEXT) \
-	httpiolink.$(OBJEXT) httpmethod.$(OBJEXT) httpver.$(OBJEXT) \
+	ntwkiolink.$(OBJEXT) httpmethod.$(OBJEXT) httpver.$(OBJEXT) \
 	httpstatuscode.$(OBJEXT) httpstatusline.$(OBJEXT) \
 	httpheader.$(OBJEXT) smartsettings.$(OBJEXT) \
 	datetime.$(OBJEXT) httplistener.$(OBJEXT) httpresp.$(OBJEXT) \
 	httpreq.$(OBJEXT) httpconnection.$(OBJEXT) moov.$(OBJEXT) \
-	iptogeo.$(OBJEXT)
+	iptogeo.$(OBJEXT) hiostream.$(OBJEXT) \
+	httprespheaders.$(OBJEXT) ntwkiolinkpool.$(OBJEXT) \
+	l4handler.$(OBJEXT)
 libhttp_a_OBJECTS = $(am_libhttp_a_OBJECTS)
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)/src
 depcomp = $(SHELL) $(top_srcdir)/depcomp
@@ -245,9 +247,10 @@ denieddir.cpp httpserverconfig.cpp httpextconnector.cpp statusurlmap.cpp context
 httpsignals.cpp handlertype.cpp handlerfactory.cpp httputil.cpp staticfilecachedata.cpp staticfilecache.cpp \
 cacheelement.cpp httpcache.cpp chunkoutputstream.cpp chunkinputstream.cpp httplog.cpp httpmime.cpp \
 staticfiledata.cpp httpcontext.cpp httpserverversion.cpp vhostmap.cpp eventdispatcher.cpp staticfilehandler.cpp \
-reqhandler.cpp httpvhost.cpp httpresourcemanager.cpp httpiolink.cpp httpmethod.cpp httpver.cpp \
+reqhandler.cpp httpvhost.cpp httpresourcemanager.cpp ntwkiolink.cpp httpmethod.cpp httpver.cpp \
 httpstatuscode.cpp httpstatusline.cpp httpheader.cpp smartsettings.cpp datetime.cpp \
-httplistener.cpp httpresp.cpp httpreq.cpp httpconnection.cpp moov.cpp iptogeo.cpp
+httplistener.cpp httpresp.cpp httpreq.cpp httpconnection.cpp moov.cpp iptogeo.cpp \
+hiostream.cpp httprespheaders.cpp ntwkiolinkpool.cpp l4handler.cpp
 
 
 ####### kdevelop will overwrite this part!!! (end)############
@@ -320,6 +323,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/expiresctrl.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/handlerfactory.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/handlertype.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/hiostream.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/hotlinkctrl.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/htauth.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/htpasswd.Po@am__quote@
@@ -332,7 +336,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/httpglobals.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/httphandler.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/httpheader.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/httpiolink.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/httplistener.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/httplistenerlist.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/httplog.Po@am__quote@
@@ -343,6 +346,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/httpreq.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/httpresourcemanager.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/httpresp.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/httprespheaders.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/httpserverconfig.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/httpserverversion.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/httpsignals.Po@am__quote@
@@ -353,8 +357,11 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/httpvhost.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/httpvhostlist.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/iptogeo.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/l4handler.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/moduserdir.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/moov.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ntwkiolink.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ntwkiolinkpool.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/phpconfig.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pipeappender.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/reqhandler.Po@am__quote@

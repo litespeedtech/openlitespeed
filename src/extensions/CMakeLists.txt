@@ -23,6 +23,7 @@ SET(extensions_STAT_SRCS
    extworker.cpp
    extconn.cpp
    extworkerconfig.cpp
+   l4conn.cpp
 )
 
 add_library(extensions STATIC ${extensions_STAT_SRCS})

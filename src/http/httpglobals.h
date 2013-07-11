@@ -94,6 +94,7 @@ public:
     static int                    s_children;
     static int                    s_503Errors;
     static int                    s_503AutoFix;
+    static int                    s_useProxyHeader;
 
     static int                    s_tmPrevToken;
     static int                    s_tmToken;

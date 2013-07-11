@@ -67,8 +67,8 @@ AR = ar
 ARFLAGS = cru
 libutil_a_AR = $(AR) $(ARFLAGS)
 libutil_a_LIBADD =
-am_libutil_a_OBJECTS = httpfetch.$(OBJEXT) ni_fio.$(OBJEXT) \
-	linkobjpool.$(OBJEXT) pidfile.$(OBJEXT) \
+am_libutil_a_OBJECTS = httpfetch.$(OBJEXT) httpfetchdriver.$(OBJEXT) \
+	ni_fio.$(OBJEXT) linkobjpool.$(OBJEXT) pidfile.$(OBJEXT) \
 	hashdatacache.$(OBJEXT) keydata.$(OBJEXT) tlinklist.$(OBJEXT) \
 	rlimits.$(OBJEXT) duplicable.$(OBJEXT) gfactory.$(OBJEXT) \
 	fdpass.$(OBJEXT) pcregex.$(OBJEXT) autostr.$(OBJEXT) \
@@ -223,7 +223,7 @@ top_srcdir = @top_srcdir@
 noinst_LIBRARIES = libutil.a
 INCLUDES = -I$(top_srcdir)/src
 libutil_a_METASOURCES = AUTO
-libutil_a_SOURCES = httpfetch.cpp ni_fio.c linkobjpool.cpp pidfile.cpp \
+libutil_a_SOURCES = httpfetch.cpp httpfetchdriver.cpp ni_fio.c linkobjpool.cpp pidfile.cpp \
   hashdatacache.cpp keydata.cpp tlinklist.cpp rlimits.cpp duplicable.cpp gfactory.cpp fdpass.cpp \
   pcregex.cpp autostr.cpp staticobj.cpp pool.cpp hashstringmap.cpp \
   ghash.cpp emailsender.cpp guardedapp.cpp crashguard.cpp \
@@ -306,6 +306,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/hashdatacache.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/hashstringmap.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/httpfetch.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/httpfetchdriver.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/iconnection.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/iovec.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/keydata.Po@am__quote@

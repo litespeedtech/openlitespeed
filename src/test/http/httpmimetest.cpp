@@ -32,6 +32,7 @@ TEST( HttpMimeTest_runTest)
     const char* pNewType;
     const char* pOldType2 ;
     const char* pNewType2;
+    int ret; 
     char achBuf[256];
     char * p = getcwd( achBuf, 256 );
     strcat( achBuf, "/serverroot" );
@@ -40,7 +41,10 @@ TEST( HttpMimeTest_runTest)
 
  //   CHECK(m.loadMime("/proj/httpd/httpd/serverroot/conf/m2")!=0);
     strcpy( pEnd, "/conf/m2" );
-    CHECK(m.loadMime(achBuf) == 0 );
+    ret = m.loadMime(achBuf);
+    CHECK( ret == 0 );
+    if ( ret != 0 )
+        return;
     //printf( "m.getFileMime(\"as/dadf/abc.doc\") return %s\n", m.getFileMime("as/dadf/abc.doc"));
     CHECK(strcmp(m.getFileMime("as/dadf/abc.doc")->getMIME()->c_str(),
                 "application/msword") == 0 );

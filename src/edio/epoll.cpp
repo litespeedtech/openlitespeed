@@ -258,7 +258,7 @@ int epoll::waitAndProcessEvents( int iTimeoutMilliSec )
         if ( fd != -1 )
         {
             EventReactor * pReactor = m_reactorIndex.get( fd );
-            if ( pReactor && (pReactor->getAssignedRevent() == p->events ) )
+            if ( pReactor && (pReactor->getAssignedRevent() == (int)p->events ) )
             {
                 if ( p->events & POLLHUP )
                     pReactor->incHupCounter();

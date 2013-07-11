@@ -16,10 +16,11 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "httpfetch.h"
-
 #include <socket/coresocket.h>
+#include <socket/gsockaddr.h>
 #include <util/vmembuf.h>
 #include <util/ni_fio.h>
+#include <util/ssnprintf.h>
 
 #include <ctype.h>
 #include <errno.h>
@@ -29,7 +30,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <util/ssnprintf.h>
+
+static int HttpFetchCounter = 0;
 
 HttpFetch::HttpFetch()
     : m_fdHttp( -1 )
@@ -43,23 +45,35 @@ HttpFetch::HttpFetch()
     , m_reqBodyLen( 0 )
     , m_connTimeout( 20 )
     , m_pRespContentType( NULL )
+    , m_psProxyServerAddr( NULL )
     , m_pProxyServerAddr( NULL )
     , m_callback( NULL )
+    , m_pHttpFetchDriver( NULL )
+    , m_iTimeoutSec ( -1 )
+    , m_iReqInited ( 0 )
+    , m_iEnableDebug( 0 )
 {
+    m_pLogger = Logger::getRootLogger();
+    m_iLoggerId = HttpFetchCounter ++;
+    //m_pLogger->debug( "HttpFetch[%d]::HttpFetch()", getLoggerId() );
 }
 
 HttpFetch::~HttpFetch()
 {
-    if ( m_fdHttp != -1 )
-        close( m_fdHttp );
+    stopDriver();
+    closeConnection();
     if ( m_pBuf )
         delete m_pBuf;
     if ( m_pReqBuf )
         free( m_pReqBuf );
     if ( m_pRespContentType )
         free( m_pRespContentType );
+    if (m_psProxyServerAddr)
+        free( m_psProxyServerAddr );
     if ( m_pProxyServerAddr )
-        free( m_pProxyServerAddr );
+        delete m_pProxyServerAddr;
+    if ( m_pHttpFetchDriver )
+        delete m_pHttpFetchDriver;
 }
 
 void HttpFetch::releaseResult()
@@ -95,6 +109,7 @@ void HttpFetch::reset()
     m_reqSent       = 0;
     m_reqHeaderLen  = 0;
     m_reqBodyLen    = 0;
+    m_iReqInited    = 0;
 }
 
 int HttpFetch::allocateBuf( const char * pSaveFile )
@@ -108,19 +123,27 @@ int HttpFetch::allocateBuf( const char * pSaveFile )
     if ( !m_pBuf )
         return -1;
     if ( pSaveFile )
+    {
         ret = m_pBuf->set( pSaveFile, 8192 );
+        if ( ret == 0 && m_iEnableDebug )
+            m_pLogger->debug( "HttpFetch[%d]::allocateBuf File %s created.", getLoggerId(), pSaveFile );
+    }
     else
         ret = m_pBuf->set( VMBUF_ANON_MAP, 8192 );
     return ret;
     
 }
 
-int HttpFetch::startReq( const char * pURL, int nonblock, 
-            const char * pBody, int bodyLen, const char * pSaveFile,
-            const char * pContentType, const char * addrServer )
+int HttpFetch::intiReq(const char * pURL, const char * pBody, int bodyLen, 
+                       const char * pSaveFile, const char * pContentType)
 {
+    if (m_iReqInited)
+        return 0;
+    m_iReqInited = 1;
+    
     if ( m_fdHttp != -1 )
         return -1;
+    
     m_pReqBody = pBody;
     if ( m_pReqBody )
     {
@@ -134,9 +157,50 @@ int HttpFetch::startReq( const char * pURL, int nonblock,
         if ( buildReq( "GET", pURL ) == -1 )
             return -1;
     }
+    
     if ( allocateBuf( pSaveFile ) == -1 )
         return -1;
-    return startProcessReq( nonblock, addrServer );
+    
+    if ( m_iEnableDebug )
+        m_pLogger->debug( "HttpFetch[%d]::intiReq url=%s", getLoggerId(), pURL );
+    return 0;
+}
+
+int HttpFetch::startReq( const char * pURL, int nonblock, int enableDriver,
+            const char * pBody, int bodyLen, const char * pSaveFile,
+            const char * pContentType, const char * addrServer )
+{
+    if ( intiReq(pURL, pBody, bodyLen,pSaveFile, pContentType) != 0)
+        return -1;
+    
+    if ( m_pProxyServerAddr )
+        return startReq( pURL, nonblock, enableDriver, pBody, bodyLen, pSaveFile,
+                     pContentType, *m_pProxyServerAddr );
+
+    GSockAddr server;
+    if ( addrServer == NULL)
+        addrServer = m_achHost;
+    if ( 0 != server.set( addrServer, NO_ANY |DO_NSLOOKUP))
+        return -1;
+    
+    return startReq( pURL, nonblock, enableDriver, pBody, bodyLen,
+                     pSaveFile, pContentType, server );
+}
+
+int HttpFetch::startReq( const char * pURL, int nonblock, int enableDriver,
+            const char * pBody, int bodyLen, const char * pSaveFile,
+            const char * pContentType, const GSockAddr & sockAddr )
+{
+    if ( intiReq(pURL, pBody, bodyLen,pSaveFile, pContentType) != 0)
+        return -1;
+    
+    if (enableDriver)
+        m_pHttpFetchDriver = new HttpFetchDriver( this );
+    
+    if ( m_pProxyServerAddr )
+        return startProcessReq( nonblock, *m_pProxyServerAddr );
+    else
+        return startProcessReq( nonblock, sockAddr );
 }
 
 int HttpFetch::buildReq( const char * pMethod, const char * pURL, const char * pContentType )
@@ -188,25 +252,24 @@ int HttpFetch::buildReq( const char * pMethod, const char * pURL, const char * p
         strcat( m_achHost, ":80" );
     m_reqHeaderLen += 2;
     m_reqSent = 0;
+    if ( m_iEnableDebug )
+        m_pLogger->debug( "HttpFetch[%d]::buildReq Host=%s [0]", getLoggerId(), m_achHost );
     return 0;
     
 }
 
-int HttpFetch::startProcessReq( int nonblock, const char * pAddr)
+int HttpFetch::startProcessReq( int nonblock, const GSockAddr & sockAddr )
 {
     m_reqState = 0;
-    if ( m_fdHttp != -1 )
-        close( m_fdHttp );
-    int iFLTag = 0;
-        iFLTag = O_NONBLOCK;
-    if ( m_pProxyServerAddr )
-        pAddr = m_pProxyServerAddr;
-    if ( !pAddr )
-        pAddr = m_achHost;
-    int ret = CoreSocket::connect( pAddr, iFLTag, &m_fdHttp, 1 );
+
+    if ( m_iEnableDebug )
+        m_pLogger->debug( "HttpFetch[%d]::startProcessReq sockAddr=%s", getLoggerId(), sockAddr.toString() );
+    int ret = CoreSocket::connect( sockAddr, O_NONBLOCK, &m_fdHttp );
     if ( m_fdHttp == -1 )
         return -1;
     ::fcntl( m_fdHttp, F_SETFD, FD_CLOEXEC );
+    startDriver();
+    
     if ( !nonblock )
     {
         fd_set          readfds;
@@ -243,6 +306,9 @@ int HttpFetch::startProcessReq( int nonblock, const char * pAddr)
     }
     else
         m_reqState = 1; //connecting
+        
+    if ( m_iEnableDebug )
+        m_pLogger->debug( "HttpFetch[%d]::startProcessReq ret=%d state=%d", getLoggerId(), ret, m_reqState );
     return 0;
 }
 
@@ -278,6 +344,9 @@ int HttpFetch::sendReq()
         ret = ::nio_write( m_fdHttp, m_pReqBuf + m_reqSent,
                         m_reqHeaderLen - m_reqSent );
         //write( 1, m_pReqBuf + m_reqSent, m_reqHeaderLen - m_reqSent );
+        if ( m_iEnableDebug )
+            m_pLogger->debug( "HttpFetch[%d]::sendReq::nio_write fd=%d len=%d [%d - %d] ret=%d", getLoggerId(), m_fdHttp,
+                           m_reqHeaderLen - m_reqSent, m_reqHeaderLen, m_reqSent, ret );
         if ( ret > 0 )
             m_reqSent += ret;
         else if ( ret == -1 )
@@ -391,17 +460,9 @@ int HttpFetch::recvResp()
     char achBuf[8192];
     while( m_statusCode != -1 )
     {
-        fd_set          readfds;
-        struct timeval  timeout;
-        FD_ZERO( &readfds );
-        FD_SET( m_fdHttp, &readfds );
-        timeout.tv_sec = m_connTimeout; timeout.tv_usec = 0;
-        if ((ret = select(m_fdHttp+1, &readfds, &readfds, NULL, &timeout)) != 1 )
-        {
-            endReq( -1 );
-            return -1;
-        }
         ret = ::nio_read( m_fdHttp, achBuf, 8192 );
+        if ( m_iEnableDebug )
+            m_pLogger->debug( "HttpFetch[%d]::recvResp fd=%d ret=%d", getLoggerId(), m_fdHttp, ret );
         if ( ret == 0 )
         {
             if ( m_respBodyLen == -1 )
@@ -551,13 +612,45 @@ int HttpFetch::process()
 void HttpFetch::setProxyServerAddr( const char * pAddr )
 {
     if ( m_pProxyServerAddr )
-    {
-        free( m_pProxyServerAddr );
-        m_pProxyServerAddr = NULL;
-    }
+        delete  m_pProxyServerAddr;
+
     if ( pAddr )
-        m_pProxyServerAddr = strdup( pAddr );
+    {
+        m_pProxyServerAddr = new GSockAddr();
+        m_pProxyServerAddr->set( pAddr, NO_ANY | DO_NSLOOKUP );
+        if ( m_iEnableDebug )
+            m_pLogger->debug( "HttpFetch[%d]::setProxyServerAddr %s", getLoggerId(), pAddr);
+        if (m_psProxyServerAddr)
+            free( m_psProxyServerAddr );
+        m_psProxyServerAddr = strdup( pAddr );
+    }
 }
 
+void HttpFetch::closeConnection()
+{
+    if ( m_fdHttp != -1 )
+    {
+        if ( m_iEnableDebug )
+            m_pLogger->debug( "HttpFetch[%d]::closeConnection fd=%d ", getLoggerId(), m_fdHttp);
+        close( m_fdHttp );
+        m_fdHttp = -1;
+    }
+}
 
+void HttpFetch::startDriver()
+{
+    if (m_pHttpFetchDriver)
+    {
+        m_pHttpFetchDriver->setfd(m_fdHttp);
+        m_pHttpFetchDriver->start();
+    }
+}
+
+void HttpFetch::stopDriver()
+{
+    if (m_pHttpFetchDriver)
+    {
+        m_pHttpFetchDriver->stop();
+    }
+}
 

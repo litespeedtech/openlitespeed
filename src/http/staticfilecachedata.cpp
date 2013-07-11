@@ -40,6 +40,7 @@
 #include <unistd.h>
 #include <utime.h>
 #include <util/ssnprintf.h>
+#include "http/httprespheaders.h"
 
 static size_t   s_iMaxInMemCacheSize = 4096;
 static size_t   s_iMaxMMapCacheSize = 256 * 1024;
@@ -676,10 +677,7 @@ int StaticFileCacheData::buildGzipPath()
 {
     unsigned char achHash[MD5_DIGEST_LENGTH];
     char achPath[4096];
-    MD5_CTX md5_ctx;
-    MD5_Init( &md5_ctx );
-    MD5_Update( &md5_ctx, m_real.c_str(), m_real.len() );
-    MD5_Final( achHash, &md5_ctx );
+    StringTool::getMd5(m_real.c_str(), m_real.len(), achHash);
     struct stat st;
     int n = snprintf( achPath, 4096, "%s/%x/%x/", s_gzipCachePath, achHash[0]>>4, achHash[0]&0xf );
     if (( nio_stat( achPath, &st ) == -1 )&&( errno == ENOENT ))
@@ -769,7 +767,6 @@ int StaticFileCacheData::readyCacheData(
     int ret;
     if (( compress )&&(m_pMimeType->getExpires()->compressable() ))
     {
-        char * p = pFileName + m_real.len();
         ret = readyGziped();
         if ( ret == 0 )
         {

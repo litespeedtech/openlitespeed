@@ -55,9 +55,7 @@ if($timedout == 1 || $logoff  == 1) {
 		$msg = 'You have logged off.';
 	}
 }
-
-
-if($client->isValid()) {
+else if($client->isValid()) {
 	header('location:/index.php');
 	exit();
 }
@@ -91,7 +89,7 @@ if ($userid != null) {
 		$client->store(PMA_blowfish_encrypt($userid, $secretKey0), PMA_blowfish_encrypt($pass, $secretKey1));
 		$client->updateAccessTime();
 		$client->valid  = TRUE;
-
+		
 		header('location:/index.php');
 		exit();
 	}

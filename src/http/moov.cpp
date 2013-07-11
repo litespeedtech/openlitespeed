@@ -1377,7 +1377,7 @@ static int calc_new_moov_diff(moov_t * moov_box, float start_time, float end_tim
     mdat_end_offset = 0;
     max_duration = 0;
 
-    for(i=0;i < moov_box->track_num;i++)
+    for(i=0;i < (unsigned int)moov_box->track_num;i++)
     {
         //time to sampleStart, sampleEnd, chunkStart, chunkEnd
         t1 = moov_box->trak[i].mdia.mdhd.TimeScale * start_time;
@@ -1425,7 +1425,7 @@ static int calc_new_moov_diff(moov_t * moov_box, float start_time, float end_tim
     moov_box->header.ExtendedSize -= 4+8*3;
 
     mdat_start_offset = moov_box->trak[0].mdia.minf.stbl.stco_co64.firstChunkOffset;
-    for(i=1;i<moov_box->track_num;i++)
+    for(i=1; i < (unsigned int)moov_box->track_num; i++)
     {
         t = moov_box->trak[i].mdia.minf.stbl.stco_co64.firstChunkOffset;
         if(t < mdat_start_offset)
@@ -1958,7 +1958,7 @@ static int moov_write_chunk(moov_data_t    * moov_data, moov_t * moov_box)
     acc_pre=0;
     acc = moov_box->header.length + moov_box->mvhd.header.ExtendedSize;
 
-    for(i=0;i < moov_box->track_num; i++)
+    for(i=0;i < (unsigned int)moov_box->track_num; i++)
     {
         trak = & moov_box->trak[i];
         stbl = & trak->mdia.minf.stbl;

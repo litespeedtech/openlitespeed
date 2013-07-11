@@ -22,7 +22,7 @@
 #include <util/autostr.h>
 #include <http/expiresctrl.h>
 #include <http/httphandler.h>
-
+#include "socket/gsockaddr.h"
 #include <stddef.h>
 
 class AccessControl;
@@ -40,7 +40,6 @@ class URIMatch;
 class StatusUrlMap;
 class AutoBuf;
 class SSIConfig;
-
 
 #define UID_SERVER          0
 #define UID_FILE            1
@@ -86,6 +85,8 @@ class SSIConfig;
 #define BIT_FILES_MATCH     (1<<25)
 #define BIT_EXTRA_HEADER    (1<<26)
 #define BIT_GEO_IP          (1<<28)
+#define BIT_GSOCKADDR       (1<<29)
+
 
 #define BIT_RAILS_CONTEXT       (1<<6)
 
@@ -151,6 +152,7 @@ typedef struct _CTX_INT
     ContextList         * m_pFilesMatchList;
     AutoBuf             * m_pExtraHeader;
     SSIConfig           * m_pSSIConfig;
+    GSockAddr             m_GSockAddr;
 } CtxInt;
 
 class HttpContext
@@ -234,9 +236,15 @@ public:
     
     const HttpHandler * getHandler() const      {   return m_pHandler;  }
 
-    char allowBrowse() const            {   return m_bAllowBrowse;      }
-    void allowBrowse( int browse )      {   m_bAllowBrowse = browse;    }
-
+    char allowBrowse() const            {   return (m_bAllowBrowse & BIT_ALLOW_BROWSE);      }
+    void allowBrowse( int browse )      
+    {
+        if(browse)
+            m_bAllowBrowse |= BIT_ALLOW_BROWSE;
+        else
+            m_bAllowBrowse &= (~BIT_ALLOW_BROWSE);
+    }
+     
     ExpiresCtrl& getExpires()               {   return m_expires;   }
     const ExpiresCtrl& getExpires() const   {   return m_expires;   }
     
@@ -374,6 +382,9 @@ public:
     int setExtraHeaders( const char * pLogId, const char * pHeaders, int len );
     const AutoBuf * getExtraHeaders() const
     {   return m_pInternal->m_pExtraHeader;     }
+    
+    const GSockAddr *getGSockAddr() const { return &m_pInternal->m_GSockAddr;   }
+    void setGSockAddr(GSockAddr &gsockAddr);
     
     void setGeoIP( int a )
     {   if ( a )

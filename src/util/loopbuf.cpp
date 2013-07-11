@@ -138,7 +138,7 @@ int LoopBuf::pop_front( int size )
         errno = EINVAL;
         return -1;
     }
-    if (size )
+    if ( size )
     {
         int len = this->size() ;
         if ( size >= len )
@@ -148,7 +148,9 @@ int LoopBuf::pop_front( int size )
         }
         else
         {
-            m_pHead = m_pBuf + ( m_pHead - m_pBuf + size ) % m_iCapacity ;
+            m_pHead += size;
+            if ( m_pHead >= m_pBufEnd )
+                m_pHead -= m_iCapacity;
         }
     }
     return size;
@@ -181,8 +183,13 @@ int LoopBuf::pop_back( int size )
 
 void LoopBuf::used(int size)
 {
-    assert( size <= available() );
-    m_pEnd = m_pBuf + ( m_pEnd - m_pBuf + size ) % m_iCapacity ;
+    register int avail = available();
+    if ( size > avail )
+        size = avail;
+
+    m_pEnd += size;
+    if ( m_pEnd >= m_pBufEnd )
+        m_pEnd -= m_iCapacity ;
 }
 
 int LoopBuf::contiguous() const
@@ -194,7 +201,7 @@ int LoopBuf::contiguous() const
 }
 
 
-void LoopBuf::iov_insert( IOVec &vect )
+void LoopBuf::iov_insert( IOVec &vect ) const
 {
     int size = this->size();
     if ( size > 0 )
@@ -212,7 +219,7 @@ void LoopBuf::iov_insert( IOVec &vect )
     }
 }
 
-void LoopBuf::iov_append( IOVec &vect )
+void LoopBuf::iov_append( IOVec &vect ) const
 {
     int size = this->size();
     if ( size > 0 )
@@ -255,3 +262,16 @@ int LoopBuf::guarantee(int size)
         return 0;
     return reserve(size + this->size() + 1);
 }
+
+void LoopBuf::update( int offset, const char * pBuf, int size )
+{
+    char * p = getPointer( offset );
+    const char * pEnd = pBuf + size;
+    while( pBuf < pEnd )
+    {
+        *p++ = *pBuf++;
+        if ( p == m_pBufEnd )
+            p = m_pBuf;
+    }
+}
+

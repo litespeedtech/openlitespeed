@@ -454,6 +454,7 @@ int ExtWorker::generateRTReport( int fd, const char * pTypeName )
     char * p;
     char achBuf[4096];
     p = achBuf;
+    detectDiedPid();
     m_connPool.for_each_conn( onConnTimer );
     m_reqStats.finalizeRpt();
     int inUseConn = m_connPool.getTotalConns() - m_connPool.getFreeConns();

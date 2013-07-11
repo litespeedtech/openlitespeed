@@ -117,6 +117,7 @@ void LocalWorker::cleanStopPids( )
                 if (( kill(  pid, 0 ) == -1 )&&( errno == ESRCH ))
                 {
                     m_pidListStop->erase( iterDel );
+                    PidRegistry::remove( pid );
                     continue;
                 }
                 if ( delta > KILL_TIMEOUT )
@@ -142,6 +143,27 @@ void LocalWorker::cleanStopPids( )
                 }
             }
         }
+    }
+}
+
+void LocalWorker::detectDiedPid()
+{
+    PidList::iterator iter;
+    for( iter = m_pidList->begin(); iter != m_pidList->end(); )
+    {
+        pid_t pid = (pid_t)(long)iter->first();
+        if (( kill( pid, 0 ) == -1 )&& (errno == ESRCH ))
+        {
+            LOG_INFO(( "Process with PID: %d is dead ", pid ));
+            PidList::iterator iterNext = m_pidList->next( iter );
+            m_pidList->erase( iter );
+            PidRegistry::remove( pid );
+
+            iter = iterNext;
+
+        }
+        else
+            iter = m_pidList->next( iter );
     }
 }
 
@@ -281,65 +303,65 @@ int LocalWorker::getCurInstances() const
 // }
 
 
-static int workerSUExec( LocalWorkerConfig& config, int fd )
-{
-    const HttpVHost * pVHost = config.getVHost();
-    if (( !HttpGlobals::s_pSUExec )||( !pVHost ))
-        return -1;
-    int mode = pVHost->getRootContext().getSetUidMode();
-    if ( mode != UID_DOCROOT )
-        return -1;
-    uid_t uid = pVHost->getUid();
-    gid_t gid = pVHost->getGid();
-    if (( uid == HttpGlobals::s_uid )&&
-        ( gid == HttpGlobals::s_gid ))
-        return -1;
-    
-    if (( uid < HttpGlobals::s_uidMin )||
-        ( gid < HttpGlobals::s_gidMin ))
-    {
-        LOG_INFO(( "[VHost:%s] Fast CGI [%s]: suExec access denied,"
-                    " UID or GID of VHost document root is smaller "
-                    "than minimum UID, GID configured. ", pVHost->getName(),
-                    config.getName() ));
-        return -1;
-    }
-    const char * pChroot = NULL;
-    int chrootLen = 0;
-//    if ( HttpGlobals::s_psChroot )
-//    {
-//        pChroot = HttpGlobals::s_psChroot->c_str();
-//        chrootLen = HttpGlobals::s_psChroot->len();
-//    }
-    char achBuf[4096];
-    memccpy( achBuf, config.getCommand(), 0, 4096 );
-    char * argv[256];
-    char * pDir ;
-    SUExec::buildArgv( achBuf, &pDir, argv, 256 );
-    if ( pDir )
-        *(argv[0]-1) = '/';
-    else
-        pDir = argv[0];
-    HttpGlobals::s_pSUExec->prepare( uid, gid, config.getPriority(),
-          pChroot, chrootLen,
-          pDir, strlen( pDir ), config.getRLimits() );
-    int rfd = -1;
-    int pid = HttpGlobals::s_pSUExec->suEXEC( HttpGlobals::s_pServerRoot, &rfd, fd, argv,
-                config.getEnv()->get(), NULL );
-//    if ( pid != -1)
-//    {
-//        char achBuf[2048];
-//        int ret;
-//        while( ( ret = read( rfd, achBuf, 2048 )) > 0 )
-//        {
-//            write( 2, achBuf, ret );
-//        }
-//    }
-    if ( rfd != -1 )
-        close( rfd );
-
-    return pid;
-}
+// static int workerSUExec( LocalWorkerConfig& config, int fd )
+// {
+//     const HttpVHost * pVHost = config.getVHost();
+//     if (( !HttpGlobals::s_pSUExec )||( !pVHost ))
+//         return -1;
+//     int mode = pVHost->getRootContext().getSetUidMode();
+//     if ( mode != UID_DOCROOT )
+//         return -1;
+//     uid_t uid = pVHost->getUid();
+//     gid_t gid = pVHost->getGid();
+//     if (( uid == HttpGlobals::s_uid )&&
+//         ( gid == HttpGlobals::s_gid ))
+//         return -1;
+//     
+//     if (( uid < HttpGlobals::s_uidMin )||
+//         ( gid < HttpGlobals::s_gidMin ))
+//     {
+//         LOG_INFO(( "[VHost:%s] Fast CGI [%s]: suExec access denied,"
+//                     " UID or GID of VHost document root is smaller "
+//                     "than minimum UID, GID configured. ", pVHost->getName(),
+//                     config.getName() ));
+//         return -1;
+//     }
+//     const char * pChroot = NULL;
+//     int chrootLen = 0;
+// //    if ( HttpGlobals::s_psChroot )
+// //    {
+// //        pChroot = HttpGlobals::s_psChroot->c_str();
+// //        chrootLen = HttpGlobals::s_psChroot->len();
+// //    }
+//     char achBuf[4096];
+//     memccpy( achBuf, config.getCommand(), 0, 4096 );
+//     char * argv[256];
+//     char * pDir ;
+//     SUExec::buildArgv( achBuf, &pDir, argv, 256 );
+//     if ( pDir )
+//         *(argv[0]-1) = '/';
+//     else
+//         pDir = argv[0];
+//     HttpGlobals::s_pSUExec->prepare( uid, gid, config.getPriority(),
+//           pChroot, chrootLen,
+//           pDir, strlen( pDir ), config.getRLimits() );
+//     int rfd = -1;
+//     int pid = HttpGlobals::s_pSUExec->suEXEC( HttpGlobals::s_pServerRoot, &rfd, fd, argv,
+//                 config.getEnv()->get(), NULL );
+// //    if ( pid != -1)
+// //    {
+// //        char achBuf[2048];
+// //        int ret;
+// //        while( ( ret = read( rfd, achBuf, 2048 )) > 0 )
+// //        {
+// //            write( 2, achBuf, ret );
+// //        }
+// //    }
+//     if ( rfd != -1 )
+//         close( rfd );
+// 
+//     return pid;
+// }
 
 int LocalWorker::workerExec( LocalWorkerConfig& config, int fd )
 {
@@ -359,9 +381,9 @@ int LocalWorker::workerExec( LocalWorkerConfig& config, int fd )
         {
             uid = config.getUid();
             gid = config.getGid();
-            if ( uid == -1 )
+            if ( (int)uid == -1 )
                 uid = HttpGlobals::s_uid;
-            if  ( gid == -1 )
+            if  ( (int)gid == -1 )
                 gid = HttpGlobals::s_gid;
         }
     }

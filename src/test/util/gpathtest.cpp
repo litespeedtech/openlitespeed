@@ -29,7 +29,6 @@
 TEST(GPathTest_test)
 {
     char buf[256];
-    int n;
     char * pBufEnd = &buf[256];
     strcpy(buf, "/b/./");
     CHECK(GPath::clean(buf)==0);
@@ -81,7 +80,7 @@ TEST(GPathTest_test)
     
     strcpy( buf, curPath);
     strcat( buf, "/serverroot/wwwroot/index.html" );
-    n = GPath::checkSymLinks( buf, buf + strlen( buf ), pBufEnd, buf, 0 );
+    GPath::checkSymLinks( buf, buf + strlen( buf ), pBufEnd, buf, 0 );
 //    CHECK( n == -1 );
     
 //     char * p = getcwd( buf, 256 );

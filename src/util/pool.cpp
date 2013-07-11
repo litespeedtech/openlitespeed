@@ -135,8 +135,6 @@ Pool::reallocate(void* p,
                        size_t old_sz,
                        size_t new_sz)
 {
-    void* result;
-    size_t copy_sz;
     old_sz = roundUp(old_sz);
     new_sz = roundUp(new_sz);
     if (old_sz == new_sz) return(p);

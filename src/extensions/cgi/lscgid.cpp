@@ -22,7 +22,7 @@
 #endif
 
 #include "lscgid.h"
-#include <openssl/md5.h>
+#include <util/stringtool.h>
 
 #include <dlfcn.h>
 #include <errno.h>
@@ -496,15 +496,12 @@ static int process_req_data( lscgid_t * cgi_req )
 
 static int process_req_header( lscgid_t *cgi_req )
 {
-    MD5_CTX md5ctx;
     char achMD5[16];
     int totalBufLen;
     memmove( achMD5, cgi_req->m_data.m_md5, 16 );
     memmove( cgi_req->m_data.m_md5, s_pSecret, 16 );
-    MD5_Init( &md5ctx );
-    MD5_Update( &md5ctx, (unsigned char *)&cgi_req->m_data,
-                sizeof( lscgid_req ) );
-    MD5_Final( cgi_req->m_data.m_md5, &md5ctx);
+    StringTool::getMd5((const char *)&cgi_req->m_data,
+                sizeof( lscgid_req ), cgi_req->m_data.m_md5);
     if ( memcmp( cgi_req->m_data.m_md5, achMD5, 16 ) != 0 )
     {
         s_pError = "lscgid: request validation failed!";
@@ -512,7 +509,7 @@ static int process_req_header( lscgid_t *cgi_req )
     }
     totalBufLen = cgi_req->m_data.m_szData + sizeof( char * ) *
                 (cgi_req->m_data.m_nargv + cgi_req->m_data.m_nenv);
-    if ( totalBufLen < sizeof( s_sDataBuf ) )
+    if ( (unsigned int)totalBufLen < sizeof( s_sDataBuf ) )
     {
         cgi_req->m_pBuf = s_sDataBuf;
     }
@@ -661,7 +658,6 @@ static int new_conn( int fd )
 static int run(int fdServerSock)
 {
     int ret;
-    long tmBegin = time( NULL );
     struct pollfd pfd;
     pfd.fd = fdServerSock;
     pfd.events = POLLIN;

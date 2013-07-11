@@ -95,7 +95,9 @@ public:
     SSL_SESSION * getSession() const;
 
     const char * getVersion() const;
-
+    
+    int getSpdyVersion();
+    
     static int getSessionIdLen( SSL_SESSION * s );
     static const unsigned char * getSessionId( SSL_SESSION * s );
     static int getCipherBits( const SSL_CIPHER * pCipher, int *algkeysize );

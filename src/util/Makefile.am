@@ -4,7 +4,7 @@ noinst_LIBRARIES = libutil.a
 INCLUDES = -I$(top_srcdir)/src
 libutil_a_METASOURCES = AUTO
 
-libutil_a_SOURCES = httpfetch.cpp ni_fio.c linkobjpool.cpp pidfile.cpp \
+libutil_a_SOURCES = httpfetch.cpp httpfetchdriver.cpp ni_fio.c linkobjpool.cpp pidfile.cpp \
   hashdatacache.cpp keydata.cpp tlinklist.cpp rlimits.cpp duplicable.cpp gfactory.cpp fdpass.cpp \
   pcregex.cpp autostr.cpp staticobj.cpp pool.cpp hashstringmap.cpp \
   ghash.cpp emailsender.cpp guardedapp.cpp crashguard.cpp \

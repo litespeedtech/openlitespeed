@@ -15,9 +15,12 @@ denieddir.cpp httpserverconfig.cpp httpextconnector.cpp statusurlmap.cpp context
 httpsignals.cpp handlertype.cpp handlerfactory.cpp httputil.cpp staticfilecachedata.cpp staticfilecache.cpp \
 cacheelement.cpp httpcache.cpp chunkoutputstream.cpp chunkinputstream.cpp httplog.cpp httpmime.cpp \
 staticfiledata.cpp httpcontext.cpp httpserverversion.cpp vhostmap.cpp eventdispatcher.cpp staticfilehandler.cpp \
-reqhandler.cpp httpvhost.cpp httpresourcemanager.cpp httpiolink.cpp httpmethod.cpp httpver.cpp \
+reqhandler.cpp httpvhost.cpp httpresourcemanager.cpp ntwkiolink.cpp httpmethod.cpp httpver.cpp \
 httpstatuscode.cpp httpstatusline.cpp httpheader.cpp smartsettings.cpp datetime.cpp \
-httplistener.cpp httpresp.cpp httpreq.cpp httpconnection.cpp moov.cpp iptogeo.cpp
+httplistener.cpp httpresp.cpp httpreq.cpp httpconnection.cpp moov.cpp iptogeo.cpp \
+hiostream.cpp httprespheaders.cpp ntwkiolinkpool.cpp l4handler.cpp
+
+
 
 
 ####### kdevelop will overwrite this part!!! (end)############

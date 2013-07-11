@@ -99,6 +99,7 @@ HttpReq::HttpReq( )
     m_pSSIRuntime = NULL;
     ::memset( m_commonHeaderLen, 0,
               (char *)(&m_iLocationOff + 1) - (char *)m_commonHeaderLen );
+    m_upgradeProto = UPD_PROTO_NONE;
 }
 
 HttpReq::~HttpReq()
@@ -184,6 +185,7 @@ int HttpReq::processHeader()
                 return SC_414;
             }
         }
+
         return ret;
     }
     else
@@ -195,6 +197,8 @@ int HttpReq::processHeader()
 
 const HttpVHost * HttpReq::matchVHost()
 {
+    if ( !m_pVHostMap )
+        return NULL;
     m_pVHost = m_pVHostMap->getDedicated();
     if ( !m_pVHost )
     {
@@ -231,7 +235,6 @@ int HttpReq::RemoveSpace(const char **pCur, const char *pBEnd)
 }
 int HttpReq::processRequestLine()
 {
-    static int PrStatus = 0;
     int result =0;
     register const char *pCur = m_headerBuf.begin() + m_iReqHeaderBufFinished;
     register const char *pBEnd = m_headerBuf.end();
@@ -388,7 +391,7 @@ int HttpReq::GetReqURI(const char *pCur, const char *pBEnd )
 
 int HttpReq::GetReqHost(const char* pCur, const char *pBEnd)
 {
-    bool bNoHost = false, bHostDone = false;
+    bool bNoHost = false;
     if (( *pCur == '/' )||( *pCur == '%' ))
         bNoHost = true;
     if(!bNoHost)
@@ -498,6 +501,12 @@ int HttpReq::processHeaderLines()
                 pCurHeader->keyLen = SkipSpace( pMark, pLineBegin) - pLineBegin;
                 pCurHeader->valOff = pTemp - m_headerBuf.begin();
                 pCurHeader->valLen = pTemp1 - pTemp;
+                
+                if ( pCurHeader->keyLen == 7 && strncasecmp(pLineBegin, "Upgrade", 7) == 0 &&
+                    pCurHeader->valLen == 9 && strncasecmp(pTemp, "websocket", 9) == 0 )
+                {
+                    m_upgradeProto = UPD_PROTO_WEBSOCKET;
+                }
             }
         }
         pLineBegin = pLineEnd + 1;
@@ -1570,7 +1579,6 @@ int HttpReq::processPath( const char * pURI, int uriLen, char * pBuf,
 {
     int ret;
     char * p;
-    struct stat stFP;
     ret = SC_404;
     //find the first valid file or directory
     p = pEnd;
@@ -1834,7 +1842,7 @@ int HttpReq::checkPathInfo( const char * pURI, int iURILen, int &pathLen,
 
 
 
-int HttpReq::addWWWAuthHeader( AutoBuf &buf ) const
+int HttpReq::addWWWAuthHeader( HttpRespHeaders &buf ) const
 {
     if ( m_pHTAuth )
         return m_pHTAuth->addWWWAuthHeader( buf );

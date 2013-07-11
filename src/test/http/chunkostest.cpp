@@ -45,7 +45,7 @@ public:
     }
     int writev( IOVec& iov, int total )
     {
-        return OutputStream::writev( iov );        
+        return OutputStream::writevToWrite( iov );        
     }
    
     void clearCache()

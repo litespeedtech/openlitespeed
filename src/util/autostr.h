@@ -78,6 +78,7 @@ public:
     int setStr( const char * pStr );
     int setStr( const char * pStr, int len )
     {   m_iStrLen = len; return AutoStr::setStr( pStr, len );   }
+    void append( const char * str, const int len );
 };
 
 static inline int operator==( const AutoStr& s1, const char * s2 )

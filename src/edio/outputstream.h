@@ -30,6 +30,7 @@ public:
     virtual int writev( IOVec& vector, int total ) = 0;
     virtual int flush() = 0;
     virtual int close() = 0;
+    int writevToWrite( IOVec& vector );
 
 };
 

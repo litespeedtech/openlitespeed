@@ -37,24 +37,16 @@ public:
     ~AutoBuf();
     int available() const { return m_pBufEnd - m_pEnd; }
 
-    char * begin() { return m_pBuf; }
-    char * end()   { return m_pEnd; }
-    const char * begin() const { return m_pBuf; }
-    const char * end() const   { return m_pEnd; }
+    char * begin() const { return m_pBuf; }
+    char * end() const  { return m_pEnd; }
 
-    char * getPointer( int offset )             { return m_pBuf + offset; }
-    const char * getPointer( int offset ) const { return m_pBuf + offset; }
+    char * getPointer( int offset ) const  { return m_pBuf + offset; }
 
     void used( int size )   {   m_pEnd += size;     }
     void clear()            {   m_pEnd = m_pBuf;    }
 
     int capacity() const    {   return m_pBufEnd - m_pBuf; }
     int size()   const      {   return m_pEnd - m_pBuf;   }
-
-    char * inc( char * &pCh ) const
-    {   return ++pCh;       }
-    const char* inc( const char * &pCh) const
-    {   return ++pCh;       }
 
     int reserve( int size )  {   return allocate( size );    }
     void resize( int size )  {   m_pEnd = m_pBuf + size;    }

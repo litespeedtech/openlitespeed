@@ -82,7 +82,7 @@ public:
     static void setSimpleList( PidSimpleList * pList );
 
     static void add( pid_t pid, ExtWorker * pApp, long tm );
-    static void remove( pid_t pid);
+    static ExtWorker * remove( pid_t pid);
     static void markToStop( pid_t pid, int kill_type );
 
 };

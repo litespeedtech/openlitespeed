@@ -216,22 +216,29 @@ class DUtil
 	public static function array_string_keys($input) 
 	{
 		$output = array();
-		foreach($input as $k => $v) {
-			$output[] = (string)$k;
+		if ($input != NULL && is_array($input)) {
+			foreach($input as $k => $v) {
+				$output[] = (string)$k;
+			}
 		}
 		return $output;
 			
 	}
 	
-	public static function dbg_out($tag, &$obj)
+	public static function dbg_out($tag, &$obj, $visible=TRUE)
 	{
-		echo "<!-- $tag --\n";
-		var_dump($obj);
-		echo "-->\n";
+		if ($visible) 
+			echo "<pre> $tag \n" . print_r($obj, TRUE) . "\n</pre>";
+		else 
+			echo "<!-- $tag --\n" . print_r($obj, TRUE) . "-->\n";
 	}
-	public static function dbg_tag($tag)
+	
+	public static function dbg_tag($tag, $visible=TRUE)
 	{
-		echo "<!-- $tag -->\n";
+		if ($visible)
+			echo "<pre>$tag \n</pre>";
+		else
+			echo "<!-- $tag -->\n";
 	}
 
  

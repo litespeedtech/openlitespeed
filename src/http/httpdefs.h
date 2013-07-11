@@ -28,9 +28,9 @@
 
 #define THROTTLE_UNIT           4096
 #define MAX_REQ_HEADER_BUF_LEN  (8192*2 - HEADER_BUF_PAD)
-#define MAX_REQ_BODY_LEN        (1024 * 1024 * 1024)
-#define MAX_DYN_RESP_LEN        1024 * 1024 * 1024
-#define MAX_DYN_RESP_HEADER_LEN 8192
+#define MAX_REQ_BODY_LEN        (LONG_MAX - 1)
+#define MAX_DYN_RESP_LEN        LONG_MAX
+#define MAX_DYN_RESP_HEADER_LEN 65536
 
 #define DEFAULT_URL_LEN             2048
 #define DEFAULT_REQ_HEADER_BUF_LEN  8192

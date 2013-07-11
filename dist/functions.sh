@@ -595,9 +595,12 @@ buildConfigFiles()
 {
 
 #sed -e "s/%ADMIN_PORT%/$ADMIN_PORT/" -e "s/%PHP_FCGI_PORT%/$ADMIN_PHP_PORT/" "$LSINSTALL_DIR/admin/conf/admin_config.xml.in" > "$LSINSTALL_DIR/admin/conf/admin_config.xml"
-    if [ $# -eq 1 ]; then  
+    
+    if [ "x${SSL_HOSTNAME}" != "x" ] ; then
+        echo "SSL host is [${SSL_HOSTNAME}], use adminSSL"
         sed -e "s/%ADMIN_PORT%/$ADMIN_PORT/" -e "s/%SSL_HOSTNAME%/$SSL_HOSTNAME/" "$LSINSTALL_DIR/admin/conf/admin_config_ssl.xml.in" > "$LSINSTALL_DIR/admin/conf/admin_config.xml"
     else
+        echo "SSL host is [${SSL_HOSTNAME}], No adminssl"
         sed -e "s/%ADMIN_PORT%/$ADMIN_PORT/" "$LSINSTALL_DIR/admin/conf/admin_config.xml.in" > "$LSINSTALL_DIR/admin/conf/admin_config.xml"
     fi
     
@@ -888,7 +891,7 @@ installation()
         rm -rf "$LSWS_HOME/admin/html.$VERSION"
     fi
 
-    util_mkdir "$SDIR_OWN" $DIR_MOD admin bin docs fcgi-bin php lib logs docs/css docs/img admin/logs add-ons share share/autoindex share/autoindex/icons admin/fcgi-bin admin/html.$VERSION admin/misc 
+    util_mkdir "$SDIR_OWN" $DIR_MOD admin bin docs fcgi-bin php lib logs docs/css docs/img admin/logs add-ons share share/autoindex share/autoindex/icons admin/fcgi-bin admin/html.$VERSION admin/misc tmp tmp/ocspcache 
     util_mkdir "$CONF_OWN" $SDIR_MOD conf conf/cert conf/templates admin/conf admin/tmp phpbuild
     util_mkdir "$SDIR_OWN" $SDIR_MOD admin/cgid admin/cgid/secret
     chgrp  $WS_GROUP $LSWS_HOME/admin/tmp $LSWS_HOME/admin/cgid

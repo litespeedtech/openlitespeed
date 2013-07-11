@@ -69,7 +69,7 @@ configRuby
 
 
 #Comment out the below two lines
-echo "Target_Dir:$LSWS_HOME" "User:"$WS_USER "Group:$WS_GROUP" Admin:$ADMIN_USER Password:$PASS_ONE LSINSTALL_DIR:$LSINSTALL_DIR  END
+echo "Target_Dir:$LSWS_HOME User:$WS_USER Group:$WS_GROUP Admin:$ADMIN_USER Password:$PASS_ONE LSINSTALL_DIR:$LSINSTALL_DIR AdminSSL:$7 END"
 
 echo
 echo -e "\033[38;5;148mInstalling, please wait...\033[39m"
@@ -77,13 +77,16 @@ echo
 
 
 
-if [ "$7" = "yes" ] ; then
+if [ "x$7" = "xyes" ] ; then
+    echo "Admin SSL enabled!"
     gen_selfsigned_cert ../adminssl.conf
     cp $LSINSTALL_DIR/${SSL_HOSTNAME}.crt $LSINSTALL_DIR/admin/conf/${SSL_HOSTNAME}.crt
     cp $LSINSTALL_DIR/${SSL_HOSTNAME}.key $LSINSTALL_DIR/admin/conf/${SSL_HOSTNAME}.key
+else
+    echo "Admin SSL disabled!"
 fi
 
-buildConfigFiles ${SSL_HOSTNAME}
+buildConfigFiles
 installation
 
 rm $LSWS_HOME/bin/lshttpd

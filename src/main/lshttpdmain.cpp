@@ -262,7 +262,6 @@ void LshttpdMain::onGuardTimer()
 
 int LshttpdMain::processAdminCmd( char * pCmd, char * pEnd, int &apply )
 {
-    char *p;
     if ( strncasecmp( pCmd, "reload:", 7 ) == 0 )
     {
         apply = 1;
@@ -470,8 +469,6 @@ int LshttpdMain::processAdminBuffer( char * p, char * pEnd )
 
 void LshttpdMain::writeSysStats()
 {
-    static char achPath[] = "PATH=/bin:/usr/bin";
-    int pid;
     char achStatsFile[256] = "";
     char achTmpStatsFile[256];
     if ( HttpGlobals::s_psChroot )
@@ -485,10 +482,12 @@ void LshttpdMain::writeSysStats()
     int fd  = open( achTmpStatsFile, O_WRONLY | O_CREAT, 0644 );
     if ( fd == -1 )
         LOG_ERR(( "Failed to create system statistic report file: %s", achTmpStatsFile ));
-    writeProcessData( fd );
-    close( fd );
-    rename( achTmpStatsFile, achStatsFile );
-
+    else
+    {
+        writeProcessData( fd );
+        close( fd );
+        rename( achTmpStatsFile, achStatsFile );
+    }
 }
 
 void LshttpdMain::writeProcessData( int fd )
@@ -930,7 +929,6 @@ int LshttpdMain::init(int argc, char * argv[])
 
 int LshttpdMain::main( int argc, char * argv[] )
 {
-    int ret;
     argv0 = argv[0];
 
     VMemBuf::initAnonPool();
@@ -943,7 +941,7 @@ int LshttpdMain::main( int argc, char * argv[] )
 
         allocatePidTracker();
         m_pServer->initAdns();
-        ret = m_pServer->test_main( );
+        m_pServer->test_main( );
     }
     else
 #endif
@@ -1132,7 +1130,7 @@ int LshttpdMain::cleanUp( int pid, char * pBB )
 int LshttpdMain::checkRestartReq( )
 {
     ChildProc * pProc;
-    LinkedObj * pPrev = m_childrenList.head();
+//    LinkedObj * pPrev = m_childrenList.head();
     pProc = (ChildProc *)m_childrenList.begin();
     while( pProc )
     {
@@ -1158,7 +1156,7 @@ int LshttpdMain::checkRestartReq( )
             gracefulRestart();
             return 0;
         }
-        pPrev = pProc;
+//        pPrev = pProc;
         pProc = (ChildProc *)pProc->next();
     }
     return 0;
@@ -1392,21 +1390,21 @@ void LshttpdMain::processSignal()
         LOG_NOTICE(( "SIGTERM received, stop server..."));
         s_iRunning = 0;
     }
-    if ( HttpSignals::gotSigUsr1() )
+    if ( HttpSignals::gotSigUsr1() || HttpSignals::gotSigHup() )
     {
         LOG_NOTICE(( "Server Restart Request via Signal..."));
         gracefulRestart();
     }
-    if ( HttpSignals::gotSigHup() )
-    {
-        LOG_NOTICE(( "SIGHUP received, Reloading configuration file..."));
-        if ( reconfig() == -1)
-        {
-            s_iRunning = 0;
-            return;
-        }
-        applyChanges();
-    }
+//     if ( HttpSignals::gotSigHup() )
+//     {
+//         LOG_NOTICE(( "SIGHUP received, Reloading configuration file..."));
+//         if ( reconfig() == -1)
+//         {
+//             s_iRunning = 0;
+//             return;
+//         }
+//         applyChanges();
+//     }
     if ( HttpSignals::gotSigChild() )
         waitChildren();
     HttpSignals::resetEvents();

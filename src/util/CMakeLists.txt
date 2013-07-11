@@ -10,6 +10,7 @@ add_subdirectory(sysinfo)
 ########### next target ###############
 
 SET(util_STAT_SRCS
+   httpfetchdriver.cpp
    httpfetch.cpp
    ni_fio.c
    linkobjpool.cpp
@@ -82,6 +83,7 @@ add_library(util STATIC ${util_STAT_SRCS})
 #
 #SUBDIRS = stl misc sysinfo 
 #
-#EXTRA_DIST = daemonize.cpp daemonize.h pcutil.cpp pcutil.h base64.cpp base64.h tsingleton.cpp tsingleton.h stringtool.cpp stringtool.h loopbuf.cpp loopbuf.h signalutil.cpp signalutil.h accesscontrol.cpp accesscontrol.h iovec.cpp iovec.h xmlnode.cpp xmlnode.h env.cpp env.h poolalloc.cpp poolalloc.h gstring.cpp gstring.h logtracker.cpp logtracker.h gpath.h gpath.cpp objpool.cpp objpool.h linkedobj.cpp linkedobj.h ienv.h gpointerlist.cpp gpointerlist.h refcounter.cpp refcounter.h semaphore.cpp semaphore.h stringlist.cpp stringlist.h blockbuf.cpp blockbuf.h vmembuf.cpp vmembuf.h gzipbuf.cpp gzipbuf.h connpool.cpp connpool.h dlinkqueue.cpp dlinkqueue.h iconnection.cpp iconnection.h crashguard.cpp crashguard.h guardedapp.cpp guardedapp.h emailsender.cpp emailsender.h ghash.cpp ghash.h hashstringmap.cpp hashstringmap.h pool.cpp pool.h swap.h staticobj.cpp staticobj.h autostr.cpp autostr.h pcregex.cpp pcregex.h fdpass.cpp fdpass.h gfactory.cpp gfactory.h duplicable.cpp duplicable.h rlimits.cpp rlimits.h mysleep.h mysleep.c tlinklist.cpp tlinklist.h keydata.cpp keydata.h hashdatacache.cpp hashdatacache.h pidfile.cpp pidfile.h linkobjpool.cpp linkobjpool.h accessdef.h ni_fio.h ni_fio.c httpfetch.cpp httpfetch.h 
+#EXTRA_DIST = daemonize.cpp daemonize.h pcutil.cpp pcutil.h base64.cpp base64.h tsingleton.cpp tsingleton.h stringtool.cpp stringtool.h loopbuf.cpp loopbuf.h signalutil.cpp signalutil.h accesscontrol.cpp accesscontrol.h iovec.cpp iovec.h xmlnode.cpp xmlnode.h env.cpp env.h poolalloc.cpp poolalloc.h gstring.cpp gstring.h logtracker.cpp logtracker.h gpath.h gpath.cpp objpool.cpp objpool.h linkedobj.cpp linkedobj.h ienv.h gpointerlist.cpp gpointerlist.h refcounter.cpp refcounter.h semaphore.cpp semaphore.h stringlist.cpp stringlist.h blockbuf.cpp blockbuf.h vmembuf.cpp vmembuf.h gzipbuf.cpp gzipbuf.h connpool.cpp connpool.h dlinkqueue.cpp dlinkqueue.h iconnection.cpp iconnection.h crashguard.cpp crashguard.h guardedapp.cpp guardedapp.h emailsender.cpp emailsender.h ghash.cpp ghash.h hashstringmap.cpp hashstringmap.h pool.cpp pool.h swap.h staticobj.cpp staticobj.h autostr.cpp autostr.h pcregex.cpp pcregex.h fdpass.cpp fdpass.h gfactory.cpp gfactory.h duplicable.cpp duplicable.h rlimits.cpp rlimits.h mysleep.h
+#     mysleep.c tlinklist.cpp tlinklist.h keydata.cpp keydata.h hashdatacache.cpp hashdatacache.h pidfile.cpp pidfile.h linkobjpool.cpp linkobjpool.h accessdef.h ni_fio.h ni_fio.c httpfetch.cpp httpfetch.h 
 #
 ######## kdevelop will overwrite this part!!! (end)############

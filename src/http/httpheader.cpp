@@ -178,7 +178,13 @@ size_t HttpHeader::getRespHeaderIndex( const char * pHeader )
             idx = CGI_STATUS;
         else if ( strncasecmp( pHeader, "erver", 5 ) == 0 )
             idx = H_SERVER;
-        
+        else if ( strncasecmp( pHeader, "et-cookie", 9 ) == 0 )
+        {
+            if ( *(pHeader + 9) == '2' )
+                idx = H_SET_COOKIE2;
+            else
+                idx = H_SET_COOKIE;
+        }
         break;
     case 't':
         if ( strncasecmp( pHeader, "ransfer-encoding", 16 ) == 0 )

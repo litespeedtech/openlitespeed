@@ -17,7 +17,7 @@
 *****************************************************************************/
 #include <util/base64.h>
 
-const unsigned char Base64::s_decodeTable[128] =
+static const unsigned char s_decodeTable[128] =
 {
     255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,  /* 00-0F */
     255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,  /* 10-1F */
@@ -29,12 +29,9 @@ const unsigned char Base64::s_decodeTable[128] =
     41,42,43,44,45,46,47,48,49,50,51,255,255,255,255,255            /* 70-7F */
 };
 
-
-Base64::Base64(){
-}
-Base64::~Base64(){
-}
-
+static const unsigned char s_encodeTable[] =
+            "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+            
 int Base64::decode( const char * encoded, int size, char * decoded )
 {
     register const char * pEncoded = encoded;
@@ -74,4 +71,42 @@ int Base64::decode( const char * encoded, int size, char * decoded )
     return pDecoded - (unsigned char *)decoded;
 }
 
+int Base64::encode( const char *decoded, int size, char * encoded )
+{
+    register const unsigned char * pDecoded = (const unsigned char *)decoded;
+    register const unsigned char * pEnd = (const unsigned char *)decoded + size ;    
+    register char * pEncoded = encoded;
+    register unsigned char ch;
+    
+    size %= 3;
+    pEnd -= size;
 
+    while ( pEnd > pDecoded ) 
+    {
+        *pEncoded++ = s_encodeTable[( ( ch = *pDecoded++ ) >> 2 ) & 0x3f];
+        *pEncoded++ = s_encodeTable[(( ch & 0x03 ) << 4 ) | ( *pDecoded >> 4 )];
+        ch = *pDecoded++;
+        *pEncoded++ = s_encodeTable[(( ch & 0x0f ) << 2 ) | ( *pDecoded >> 6 )];
+        *pEncoded++ = s_encodeTable[ *pDecoded++ & 0x3f];
+    }
+
+    if ( size > 0 )
+    {
+        *pEncoded++ = s_encodeTable[( (ch = *pDecoded++) >> 2 ) & 0x3f];
+
+        if (size == 1)
+        {
+            *pEncoded++ = s_encodeTable[( ch & 0x03 ) << 4];
+            *pEncoded++ = '=';
+
+        }
+        else
+        {
+            *pEncoded++ = s_encodeTable[(( ch & 0x03 ) << 4) | ( *pDecoded >> 4 )];
+            *pEncoded++ = s_encodeTable[( *pDecoded & 0x0f ) << 2];
+        }
+        *pEncoded++ = '=';
+    }
+
+    return pEncoded - encoded;
+}

@@ -72,16 +72,16 @@ am_libextensions_a_OBJECTS = loadbalancer.$(OBJEXT) \
 	pidlist.$(OBJEXT) iprocessortimer.$(OBJEXT) \
 	httpextprocessor.$(OBJEXT) extrequest.$(OBJEXT) \
 	extworker.$(OBJEXT) extconn.$(OBJEXT) \
-	extworkerconfig.$(OBJEXT) lscgid.$(OBJEXT) suexec.$(OBJEXT) \
-	cgidreq.$(OBJEXT) cgidconfig.$(OBJEXT) cgidworker.$(OBJEXT) \
-	cgidconn.$(OBJEXT) fcgienv.$(OBJEXT) fcgiappconfig.$(OBJEXT) \
-	fcgiapp.$(OBJEXT) fcginamevaluepair.$(OBJEXT) \
-	fcgiconnection.$(OBJEXT) fcgirecord.$(OBJEXT) \
-	jkajp13.$(OBJEXT) jworker.$(OBJEXT) jworkerconfig.$(OBJEXT) \
-	jconn.$(OBJEXT) proxyconfig.$(OBJEXT) proxyworker.$(OBJEXT) \
-	proxyconn.$(OBJEXT) extappregistry.$(OBJEXT) \
-	lsapiworker.$(OBJEXT) lsapireq.$(OBJEXT) lsapiconn.$(OBJEXT) \
-	lsapiconfig.$(OBJEXT)
+	extworkerconfig.$(OBJEXT) l4conn.$(OBJEXT) lscgid.$(OBJEXT) \
+	suexec.$(OBJEXT) cgidreq.$(OBJEXT) cgidconfig.$(OBJEXT) \
+	cgidworker.$(OBJEXT) cgidconn.$(OBJEXT) fcgienv.$(OBJEXT) \
+	fcgiappconfig.$(OBJEXT) fcgiapp.$(OBJEXT) \
+	fcginamevaluepair.$(OBJEXT) fcgiconnection.$(OBJEXT) \
+	fcgirecord.$(OBJEXT) jkajp13.$(OBJEXT) jworker.$(OBJEXT) \
+	jworkerconfig.$(OBJEXT) jconn.$(OBJEXT) proxyconfig.$(OBJEXT) \
+	proxyworker.$(OBJEXT) proxyconn.$(OBJEXT) \
+	extappregistry.$(OBJEXT) lsapiworker.$(OBJEXT) \
+	lsapireq.$(OBJEXT) lsapiconn.$(OBJEXT) lsapiconfig.$(OBJEXT)
 libextensions_a_OBJECTS = $(am_libextensions_a_OBJECTS)
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)/src
 depcomp = $(SHELL) $(top_srcdir)/depcomp
@@ -216,7 +216,7 @@ noinst_LIBRARIES = libextensions.a
 INCLUDES = -I$(top_srcdir)/src
 libextensions_a_METASOURCES = AUTO
 libextensions_a_SOURCES = loadbalancer.cpp localworkerconfig.cpp localworker.cpp pidlist.cpp iprocessortimer.cpp httpextprocessor.cpp \
-  extrequest.cpp extworker.cpp extconn.cpp extworkerconfig.cpp \
+  extrequest.cpp extworker.cpp extconn.cpp extworkerconfig.cpp l4conn.cpp \
   cgi/lscgid.cpp cgi/suexec.cpp cgi/cgidreq.cpp cgi/cgidconfig.cpp cgi/cgidworker.cpp cgi/cgidconn.cpp \
   fcgi/fcgienv.cpp fcgi/fcgiappconfig.cpp fcgi/fcgiapp.cpp fcgi/fcginamevaluepair.cpp fcgi/fcgiconnection.cpp fcgi/fcgirecord.cpp \
   jk/jkajp13.cpp jk/jworker.cpp jk/jworkerconfig.cpp jk/jconn.cpp \
@@ -293,6 +293,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/jkajp13.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/jworker.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/jworkerconfig.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/l4conn.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/loadbalancer.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/localworker.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/localworkerconfig.Po@am__quote@

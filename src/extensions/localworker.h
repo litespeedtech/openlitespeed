@@ -44,6 +44,7 @@ public:
     int     startOnDemond( int force);
 
     void    cleanStopPids();
+    void detectDiedPid();
 
     void setfd( int fd )            {   m_fdApp = fd;       }
     int getfd() const               {   return m_fdApp;     }

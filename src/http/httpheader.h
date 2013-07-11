@@ -87,7 +87,12 @@ public:
         H_SERVER,
         H_VARY,
         H_WWW_AUTHENTICATE,
+        H_SET_COOKIE,
+        H_SET_COOKIE2,
         CGI_STATUS,
+        H_LITESPEED_LOCATION,
+        H_CONTENT_DISPOSITION,
+        H_LITESPEED_CACHE_CONTROL,
         H_HEADER_END
     };
     static size_t getIndex( const char * pHeader );

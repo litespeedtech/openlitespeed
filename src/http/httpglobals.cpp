@@ -40,6 +40,10 @@ ClientCache            HttpGlobals::s_clients( 1000 );
 #include <http/httpconnpool.h>
 HttpConnPool::Pool  HttpConnPool::s_pool( 20, 20 );
 
+#include <http/ntwkiolink.h>
+#include <http/ntwkiolinkpool.h>
+NtwkIoLinkPool::Pool  NtwkIoLinkPool::s_pool( 20, 20 );
+
 #include <http/clientinfo.h>
 int HttpGlobals::s_iConnsPerClientSoftLimit = INT_MAX;
 int HttpGlobals::s_iOverLimitGracePeriod = 10;
@@ -62,61 +66,61 @@ long HttpGlobals::s_lSSLBytesWritten = 0;
 int  HttpGlobals::s_iIdleConns = 0;
 ReqStats HttpGlobals::s_reqStats;
 
-#include <http/httpiolink.h>
-class HttpIOLink::fn_list HttpIOLink::s_normal
+#include <http/ntwkiolink.h>
+class NtwkIOLink::fn_list NtwkIOLink::s_normal
 (
-    HttpIOLink::readEx,
-    HttpIOLink::writevEx,
-    HttpIOLink::onWrite,
-    HttpIOLink::onRead,
-    HttpIOLink::close_,
-    HttpIOLink::onTimer_
+    NtwkIOLink::readEx,
+    NtwkIOLink::writevEx,
+    NtwkIOLink::onWrite,
+    NtwkIOLink::onRead,
+    NtwkIOLink::close_,
+    NtwkIOLink::onTimer_
 );
 
-class HttpIOLink::fn_list HttpIOLink::s_normalSSL
+class NtwkIOLink::fn_list NtwkIOLink::s_normalSSL
 (
-    HttpIOLink::readExSSL,
-    HttpIOLink::writevExSSL,
-    HttpIOLink::onWriteSSL,
-    HttpIOLink::onReadSSL,
-    HttpIOLink::closeSSL,
-    HttpIOLink::onTimer_
+    NtwkIOLink::readExSSL,
+    NtwkIOLink::writevExSSL,
+    NtwkIOLink::onWriteSSL,
+    NtwkIOLink::onReadSSL,
+    NtwkIOLink::closeSSL,
+    NtwkIOLink::onTimer_
 );
 
-class HttpIOLink::fn_list HttpIOLink::s_throttle 
+class NtwkIOLink::fn_list NtwkIOLink::s_throttle 
 (
-    HttpIOLink::readExT,
-    HttpIOLink::writevExT,
-    HttpIOLink::onWriteT,
-    HttpIOLink::onReadT,
-    HttpIOLink::close_,
-    HttpIOLink::onTimer_T
+    NtwkIOLink::readExT,
+    NtwkIOLink::writevExT,
+    NtwkIOLink::onWriteT,
+    NtwkIOLink::onReadT,
+    NtwkIOLink::close_,
+    NtwkIOLink::onTimer_T
 );
 
-class HttpIOLink::fn_list HttpIOLink::s_throttleSSL
+class NtwkIOLink::fn_list NtwkIOLink::s_throttleSSL
 (
-    HttpIOLink::readExSSL_T,
-    HttpIOLink::writevExSSL_T,
-    HttpIOLink::onWriteSSL_T,
-    HttpIOLink::onReadSSL_T,
-    HttpIOLink::closeSSL,
-    HttpIOLink::onTimerSSL_T
+    NtwkIOLink::readExSSL_T,
+    NtwkIOLink::writevExSSL_T,
+    NtwkIOLink::onWriteSSL_T,
+    NtwkIOLink::onReadSSL_T,
+    NtwkIOLink::closeSSL,
+    NtwkIOLink::onTimerSSL_T
 );
 
-class HttpIOLink::fn_list_list   HttpIOLink::s_fn_list_list_normal 
+class NtwkIOLink::fn_list_list   NtwkIOLink::s_fn_list_list_normal 
 (
-    &HttpIOLink::s_normal,
-    &HttpIOLink::s_normalSSL
+    &NtwkIOLink::s_normal,
+    &NtwkIOLink::s_normalSSL
 );
 
-class HttpIOLink::fn_list_list   HttpIOLink::s_fn_list_list_throttle
+class NtwkIOLink::fn_list_list   NtwkIOLink::s_fn_list_list_throttle
 (
-    &HttpIOLink::s_throttle,
-    &HttpIOLink::s_throttleSSL
+    &NtwkIOLink::s_throttle,
+    &NtwkIOLink::s_throttleSSL
 );
 
-class HttpIOLink::fn_list_list  *HttpIOLink::s_pCur_fn_list_list =
-    &HttpIOLink::s_fn_list_list_normal;
+class NtwkIOLink::fn_list_list  *NtwkIOLink::s_pCur_fn_list_list =
+    &NtwkIOLink::s_fn_list_list_normal;
 
 #include <http/httpserverconfig.h>
 HttpServerConfig HttpServerConfig::s_config;
@@ -167,7 +171,7 @@ int HttpHeader::s_iHeaderLen[H_HEADER_END+1] =
     6, 14, 15, 15, 13, 10, 12, 14, 6, 7, 4, 6, 7, 10, //user-agent
     13,17, 8, 13, 8, 19, 10, 5, 15, 3, 17, 2, 6, 12, 19, 4,  //date
     7, 7, 7, 5, 16, 16, 16, 11, 13, 7, 13, //last-modified
-    0,0,0,8,0,16,0,6,0,0,6,0
+    13,3,4,8,18,16,11,6,4,16,10,11,6,20,19,25,0
 };
 
 
@@ -185,18 +189,23 @@ SSIEngine                s_ssiHandler;
 StaticFileCache        HttpGlobals::s_staticFileCache( 1000 );
 
 #include <http/httpresp.h>
-char HttpResp::s_sCommonHeaders[128];
-int HttpResp::s_iCommonHeaderLen = 16;
-char HttpResp::s_sKeepAliveHeader[25] =
-    "Connection: Keep-Alive\r\n";
+HttpRespHeaders     HttpResp::s_CommonHeaders[3];
 
+// char HttpResp::s_sKeepAliveHeader[2][25] =   
+//     { "Connection: Keep-Alive\r\n", "\x00\x0A""Connection\x00\x0A""Keep-Alive"};
+// char HttpResp::s_sConnCloseHeader[2][20] = 
+//     {"Connection: close\r\n", "\x00\x0A""Connection\x00\x05""close"};
+// char HttpResp::s_chunked[2][29] = 
+//     {"Transfer-Encoding: chunked\r\n", "\x00\x11""Transfer-Encoding\x00\x07""chunked"};
+// char HttpResp::s_sGzipEncodingHeader[2][48] = 
+//     {"Content-Encoding: gzip\r\nVary: Accept-Encoding\r\n",
+//      "\x00\x10""Content-Encoding\x00\x04""gzip\x00\x04""Vary\x00\x0F""Accept-Encoding"};
+char HttpResp::s_sKeepAliveHeader[25] = "Connection: Keep-Alive\r\n";
 char HttpResp::s_sConnCloseHeader[20] = "Connection: close\r\n";
 char HttpResp::s_chunked[29] = "Transfer-Encoding: chunked\r\n";
+char HttpResp::s_sGzipEncodingHeader[48] = "Content-Encoding: gzip\r\nVary: Accept-Encoding\r\n";
 
-char HttpResp::s_sGzipEncodingHeader[48] = "Content-Encoding: gzip\r\n"
-                                           "Vary: Accept-Encoding\r\n";
 
-                                           
 #include <http/httpver.h>
 #include <http/httpstatuscode.h>
 
@@ -463,6 +472,7 @@ int    HttpGlobals::s_dnsLookup = 1;
 int    HttpGlobals::s_children = 1;
 int    HttpGlobals::s_503Errors = 0;
 int    HttpGlobals::s_503AutoFix = 1;
+int    HttpGlobals::s_useProxyHeader = 0;
 
 int  HttpGlobals::s_rubyProcLimit = 10;
 int  HttpGlobals::s_railsAppLimit = 1;

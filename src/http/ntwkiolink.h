@@ -21,52 +21,31 @@
 
 
 #include <edio/eventreactor.h>
-#include <edio/outputstream.h>
 #include <http/clientinfo.h>
+#include <http/hiostream.h>
 
 #include <sslpp/sslconnection.h>
 #include <util/logtracker.h>
+#include <spdy/spdyprotocol.h>
 
 #include <sys/types.h>
 
-#define IO_PEER_HUP 1
-#define IO_PEER_ERR 2
 #define IO_HTTP_ERR 4
 
+class VHostMap;
 class SSLConnection;
 class SSLContext;
 struct sockaddr;
 
-enum
-{
-    HC_WAITING,
-    HC_READING,
-    HC_READING_BODY,
-    HC_EXT_AUTH,
-    HC_THROTTLING,
-    HC_PROCESSING,
-    HC_REDIRECT,
-    HC_WRITING,
-    HC_AIO_PENDING,
-    HC_AIO_COMPLETE,
-    HC_COMPLETE,
-    HC_SHUTDOWN,
-    HC_CLOSING
-};
 
-#define HIO_WANT_READ   1
-#define HIO_WANT_WRITE  2
-
-
-class HttpIOLink : public EventReactor, public OutputStream
-                 , public LOG4CXX_NS::ILog
+class NtwkIOLink : public EventReactor, public HioStream
 {
 private:
-    typedef int (*writev_fn)( HttpIOLink* pThis, IOVec &vector, int total );
-    typedef int (*read_fn)( HttpIOLink* pThis, char *pBuf, int size );
-    typedef int (*onRW_fn)( HttpIOLink * pThis );
-    typedef void (*onTimer_fn)( HttpIOLink * pThis );
-    typedef int (*close_fn)( HttpIOLink * pThis);
+    typedef int (*writev_fn)( NtwkIOLink* pThis, IOVec &vector, int total );
+    typedef int (*read_fn)( NtwkIOLink* pThis, char *pBuf, int size );
+    typedef int (*onRW_fn)( NtwkIOLink * pThis );
+    typedef void (*onTimer_fn)( NtwkIOLink * pThis );
+    typedef int (*close_fn)( NtwkIOLink * pThis);
     class fn_list
     {
     public:
@@ -112,29 +91,25 @@ private:
 
 
     ClientInfo        * m_pClientInfo;
+    const VHostMap    * m_pVHostMap;
     long                m_lActiveTime;
+    unsigned short      m_iRemotePort;
 
-    char                m_iWant;
     char                m_iInProcess;
     char                m_iPeerShutdown;
-    char                m_iState;
     int                 m_tmToken;
     int                 m_iSslLastWrite;
-    off_t               m_lBytesRead;
-    off_t               m_lBytesSent;
     SSLConnection       m_ssl;
 
     class fn_list     * m_pFnList;
 
-    HttpIOLink( const HttpIOLink& rhs );
-    void operator=( const HttpIOLink& rhs );
+    NtwkIOLink( const NtwkIOLink& rhs );
+    void operator=( const NtwkIOLink& rhs );
 
-    bool wantRead() const
-    {   return m_iWant & HIO_WANT_READ;     }
     int doRead()
     {
-        if ( wantRead() )
-            return onReadEx();
+        if ( isWantRead() )
+            return getHandler()->onReadEx();
         else
             suspendRead();
         return 0;
@@ -142,14 +117,14 @@ private:
 
     int doReadT()
     {
-        if ( wantRead() )
+        if ( isWantRead() )
         {
             if ( allowRead() )
-                return onReadEx();
+                return getHandler()->onReadEx();
             else
             {
                 suspendRead();
-                m_iWant |= HIO_WANT_READ;
+                setFlag( HIO_FLAG_WANT_READ, 1 );
             }
         }
         else
@@ -159,8 +134,14 @@ private:
 
     int doWrite()
     {
-        if ( m_iWant & HIO_WANT_WRITE )
-            return onWriteEx();
+        if ( isWantWrite() )
+            return getHandler()->onWriteEx();
+        else
+        {
+            suspendWrite();
+            if ( isSSL() )
+                flush();
+        }
         return 0;
     }
 
@@ -168,66 +149,76 @@ private:
     int checkReadRet( int ret, int size );
     void setSSLAgain();
 
-    static int writevEx     ( HttpIOLink* pThis, IOVec &vector, int total );
-    static int writevExT    ( HttpIOLink* pThis, IOVec &vector, int total );
-    static int writevExSSL  ( HttpIOLink* pThis, IOVec &vector, int total );
-    static int writevExSSL_T( HttpIOLink* pThis, IOVec &vector, int total );
+    static int writevEx     ( NtwkIOLink* pThis, IOVec &vector, int total );
+    static int writevExT    ( NtwkIOLink* pThis, IOVec &vector, int total );
+    static int writevExSSL  ( NtwkIOLink* pThis, IOVec &vector, int total );
+    static int writevExSSL_T( NtwkIOLink* pThis, IOVec &vector, int total );
 
-    static int readEx       ( HttpIOLink* pThis, char * pBuf, int size );
-    static int readExT      ( HttpIOLink* pThis, char * pBuf, int size );
-    static int readExSSL    ( HttpIOLink* pThis, char * pBuf, int size );
-    static int readExSSL_T  ( HttpIOLink* pThis, char * pBuf, int size );
+    static int readEx       ( NtwkIOLink* pThis, char * pBuf, int size );
+    static int readExT      ( NtwkIOLink* pThis, char * pBuf, int size );
+    static int readExSSL    ( NtwkIOLink* pThis, char * pBuf, int size );
+    static int readExSSL_T  ( NtwkIOLink* pThis, char * pBuf, int size );
 
-    static int onReadSSL( HttpIOLink * pThis );
-    static int onReadSSL_T( HttpIOLink * pThis );
-    static int onReadT( HttpIOLink *pThis );
-    static int onRead(HttpIOLink *pThis );
+    static int onReadSSL( NtwkIOLink * pThis );
+    static int onReadSSL_T( NtwkIOLink * pThis );
+    static int onReadT( NtwkIOLink *pThis );
+    static int onRead(NtwkIOLink *pThis );
 
-    static int onWriteSSL( HttpIOLink * pThis );
-    static int onWriteSSL_T( HttpIOLink * pThis );
-    static int onWriteT( HttpIOLink *pThis );
-    static int onWrite(HttpIOLink *pThis );
+    static int onWriteSSL( NtwkIOLink * pThis );
+    static int onWriteSSL_T( NtwkIOLink * pThis );
+    static int onWriteT( NtwkIOLink *pThis );
+    static int onWrite(NtwkIOLink *pThis );
 
-    static int close_( HttpIOLink * pThis );
-    static int closeSSL( HttpIOLink * pThis );
-    static void onTimer_T( HttpIOLink * pThis );
-    static void onTimer_( HttpIOLink * pThis );
-    static void onTimerSSL_T( HttpIOLink * pThis );
+    static int close_( NtwkIOLink * pThis );
+    static int closeSSL( NtwkIOLink * pThis );
+    static void onTimer_T( NtwkIOLink * pThis );
+    static void onTimer_( NtwkIOLink * pThis );
+    static void onTimerSSL_T( NtwkIOLink * pThis );
 
-    void ignoreReadBuf();
+    void drainReadBuf();
         
     bool allowWrite() const
     {   return m_pClientInfo->allowWrite();  }
     
-    int  detectClose();
     int write( const char * pBuf, int size );
     int sendfileEx( IOVec &vector, int total, int fdSrc, off_t off, size_t size );
     int my_sendfileEx( int fdSrc, off_t off, size_t size );
     
     void updateSSLEvent();
     void checkSSLReadRet( int ret );
+    
+    int setupHandler( HiosProtocol verSpdy );
+    void doClose();
 
-    virtual int onReadEx() = 0;
-    virtual int onWriteEx() = 0;
-    virtual void closeConnection( int canceled = 0 ) = 0;
-    virtual int onTimerEx() = 0;
-    virtual int onInitConnected() = 0;
-    virtual void recycle() = 0;
+    void dumpState(const char * pFuncName, const char * action);
 
-protected:
+public:
+    void setRemotePort( unsigned short port )
+    {   
+        m_iRemotePort = port;
+        setLogIdBuild( 0 );  
+    };
+    
+    unsigned short getRemotePort() const  {   return m_iRemotePort;       };
+        
+    int sendHeaders( IOVec &vector, int headerCount );
+    
+    const char * buildLogId();
+    
+public:
     void closeSocket();
     bool allowRead() const
     {   return m_pClientInfo->allowRead();   }
-    char wantWrite() const    {   return m_iWant & HIO_WANT_WRITE;    }
     void setActiveTime( long lTime )
     {   m_lActiveTime = lTime;              }
     int close()     {   return (*m_pFnList->m_close_fn)( this );      }
+    int  detectClose();
 
 public:
 
 
-    HttpIOLink();
-    virtual ~HttpIOLink();
+    NtwkIOLink();
+    ~NtwkIOLink();
 
     char inProcess() const    {   return m_iInProcess;    }
 
@@ -237,15 +228,12 @@ public:
     // Output stream interfaces
     bool canHold( int size )    {   return allowWrite();        }
 
-    void setPeerShutdown( int s) {    m_iPeerShutdown |= s;  }
-    int  isConnCanceled()   {   return m_iPeerShutdown & IO_PEER_ERR;  }
-    
     int writev( IOVec &vector, int total )
     {   return (*m_pFnList->m_writev_fn)( this, vector, total );    }
     
     int sendfile( IOVec &vector, int &total, int fdSrc, off_t off, size_t size );
     
-    int flush()     {   return 0;   }
+    int flush();
 
     void setNoSSL() {   m_pFnList = s_pCur_fn_list_list->m_pNoSSL;    }
     
@@ -262,7 +250,6 @@ public:
     
     int SSLAgain();
     int acceptSSL();
-    int flushSSL();
 
     
     int setLink( int fd, ClientInfo * pInfo, SSLContext * pSSLContext );
@@ -281,7 +268,7 @@ public:
     //Event driven IO interface
     int handleEvents( short event );
 
-    void setNotWantRead()   {   m_iWant &= ~HIO_WANT_READ;  }
+    void setNotWantRead()   {   setFlag( HIO_FLAG_WANT_READ, 0 );  }
     void suspendRead();
     void continueRead();
     void suspendWrite();
@@ -304,12 +291,8 @@ public:
     {   return m_pClientInfo;               }
     ThrottleControl* getThrottleCtrl() const
     {   return  &( m_pClientInfo->getThrottleCtrl() );  }
-    char getState() const
-    {   return m_iState;    }
-    void setState( char state )
-    {   m_iState = state;   }
     int isClosing() const
-    {   return m_iState >= HC_SHUTDOWN;     }
+    {   return getState() >= HIOS_SHUTDOWN;     }
     static void enableThrottle( int enable );
     int isThrottle() const
     {   return m_pFnList->m_onTimer_fn != onTimer_; }
@@ -317,14 +300,11 @@ public:
     void resumeEventNotify();
 
     void tryRead();
+    
+    void tobeClosed() { setState(HIOS_CLOSING);  }
 
-    int getServerAddrStr( char * pBuf, int len );
-
-    off_t getBytesRead() const  {   return m_lBytesRead;    }
-    void resetBytesRead()       {   m_lBytesRead = 0;       }
-
-    off_t getBytesSent() const  {   return m_lBytesSent;    }
-    void resetBytesSent()       {   m_lBytesSent = 0;       }
+    void setVHostMap( const VHostMap* pMap ){   m_pVHostMap = pMap;     }
+    const VHostMap * getVHostMap() const    {   return m_pVHostMap;     }
     
 };
 

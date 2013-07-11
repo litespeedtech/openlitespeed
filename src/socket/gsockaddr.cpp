@@ -129,6 +129,54 @@ const char * parseURL( const char * pURL, int* domain )
     return pURL;
 }
 
+//Only deal with "http://" and "https://" cases
+//ie: "http://www.litespeedtech.com/about-litespeed-technologies-inc.html"
+//    "http://www.litespeedtech.com"
+int GSockAddr::setHttpUrl ( const char *pHttpUrl, const int len )
+{
+    const char *httpurl = pHttpUrl;
+    char url[1024] = {0};
+    const char *p, *q;
+    int endPos = 0;
+    int iHttps = 0;
+    
+    if ( ((*httpurl++ | 0x20) != 'h') ||
+         ((*httpurl++ | 0x20) != 't') ||
+         ((*httpurl++ | 0x20) != 't') ||
+         ((*httpurl++ | 0x20) != 'p') )
+        return -1;
+        
+    if ( (*httpurl | 0x20) == 's' )
+    {
+        iHttps = 1;
+        ++httpurl;
+    }
+        
+    if ( *httpurl == ':' )
+        p = httpurl + 3;
+    else
+        return -1;
+    
+    q = strchr ( p, '/' );
+    if ( q )
+        endPos = q - p;
+    else
+        endPos = pHttpUrl + len - p;
+    
+    memcpy(url, p, endPos);
+    url[endPos] = 0;
+    
+    //If not contain ":", add it and default port
+    if ( strchr(url, ':') == NULL )
+    {
+        if ( iHttps )
+            memcpy( url + endPos, ":443\0", 5);
+        else
+            memcpy( url + endPos, ":80\0", 4);
+    }
+    
+    return set(url, NO_ANY | DO_NSLOOKUP);
+}
 
 int GSockAddr::set( const char * pURL, int tag )
 {

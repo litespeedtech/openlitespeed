@@ -54,7 +54,7 @@ class CLIENT
 
 
 		if(!array_key_exists('valid',$_SESSION)) {
-			$_SESSION['secret'] = FALSE;
+			$_SESSION['valid'] = FALSE;
 		}
 
 		if(!array_key_exists('timeout',$_SESSION)) {

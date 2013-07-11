@@ -101,7 +101,7 @@ class ConfValidation
 				$listener['keyFile']->SetErr(NULL);
 			}
 		} else {
-			$tids = array('L_CERT');
+			$tids = array('L_SSL_CERT');
 			$this->validateElement($tids, $listener);
 		}
 	}
@@ -396,41 +396,11 @@ class ConfValidation
 	}
 	
 	private function chkPostTbl_L_SSL(&$d)
-	{
-		/* array( 'SSLv3' => ' ', 'TLSv1' => ' ',
-		'HIGH' => ' ', 'MEDIUM' => ' ', 'LOW' => ' ',
-		'EXPORT56' => ' ', 'EXPORT40' => ' ', 'eNULL' => ' ');*/
-		$ciphers = '';
-
-		if (isset($_POST['ck1'])) {
-			$ciphers .= 'SSLv3:';
-		}
-		if (isset($_POST['ck2'])) {
-			$ciphers .= 'TLSv1:';
-		}
-		if (isset($_POST['ck3'])) {
-			$ciphers .= 'HIGH:';
-		}
-		if (isset($_POST['ck4'])) {
-			$ciphers .= 'MEDIUM:';
-		}
-		if (isset($_POST['ck5'])) {
-			$ciphers .= 'LOW:';
-		}
-		if (isset($_POST['ck6'])) {
-			$ciphers .= 'EXPORT56:';
-		}
-		if (isset($_POST['ck7'])) {
-			$ciphers .= 'EXPORT40:';
-		}
-		if ($ciphers == '') {
-			$d['ciphers'] = new CVal('', 'Need to select at least one');
+	{	// validate inside attr
+		if ($d['ciphers']->HasErr())
 			return -1;
-		}
-
-		$ciphers .= '!aNULL:!MD5:!SSLv2:!eNULL:!EDH';
-		$d['ciphers'] = new CVal($ciphers);
-		return 1;
+		else
+			return 1;
 	}
 
 	private function chkPostTbl_VH_SSL_SSL(&$d)
@@ -500,7 +470,7 @@ class ConfValidation
 
 		$chktype = array('uint', 'name', 'vhname', 'sel','sel1','sel2',
 		'bool','file','filep','file0','file1', 'filetp', 'path',
-		'uri','expuri','url', 'email', 'dir', 'addr', 'parse');
+		'uri','expuri','url', 'httpurl', 'email', 'dir', 'addr', 'parse');
 		
 		if ( !in_array($attr->_type, $chktype) )	{
 			// not checked type ('domain', 'subnet'
@@ -846,6 +816,16 @@ class ConfValidation
 		return 1;
 	}
 
+	private function chkAttr_httpurl($attr, $cval)
+	{
+		$val = $cval->GetVal();
+		if (strncmp( $val, 'http://', 7 ) != 0 ) {
+			$cval->SetErr('Http URL must start with "http://"');
+			return -1;
+		}
+		return 1;
+	}
+	
 	private function chkAttr_email($attr, $cval)
 	{
 		$err = '';
@@ -871,7 +851,7 @@ class ConfValidation
 		} elseif ( preg_match("/^UDS:\/\/.+/i", $cval->GetVal()) ) {
 			return 1;
 		} else {
-			$cval->SetErr('invalid address: correct syntax is "IPV4_address:port" or UDS://path');
+			$cval->SetErr('invalid address: correct syntax is "IPV4|IPV6_address:port" or UDS://path');
 			return -1;
 		}
 	}

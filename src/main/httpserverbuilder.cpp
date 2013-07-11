@@ -26,7 +26,7 @@
 #include <http/hotlinkctrl.h>
 #include <http/htauth.h>
 #include <http/htpasswd.h>
-#include <http/httpiolink.h>
+#include <http/ntwkiolink.h>
 #include <http/httpcontext.h>
 #include <http/httpdefs.h>
 #include <http/httpglobals.h>
@@ -37,6 +37,7 @@
 #include <http/httpserverversion.h>
 #include <http/httpstatuscode.h>
 #include <http/httpvhost.h>
+#include <http/iptogeo.h>
 #include <http/phpconfig.h>
 #include <http/platforms.h>
 #include <http/rewriterule.h>
@@ -84,13 +85,13 @@
 #include <http/httpglobals.h>
 
 #include "plainconf.h"
-
+#include "sslpp/sslocspstapling.h"
 #define MAX_URI_LEN  1024
 
 static const char * MISSING_TAG = "[%s] missing <%s>";
 static const char * MISSING_TAG_IN = "[%s] missing <%s> in <%s>";
 static const char * INVAL_TAG = "[%s] <%s> is invalid: %s";
-static const char * INVAL_TAG_IN = "[%s] invalid tag <%s> within <%s>!";
+//static const char * INVAL_TAG_IN = "[%s] invalid tag <%s> within <%s>!";
 static const char * INVAL_PATH = "[%s] Path for %s is invalid: %s";
 static const char * INACCESSIBLE_PATH = "[%s] Path for %s is not accessible: %s";
 
@@ -188,23 +189,23 @@ static long long getLongValue( const XmlNode * pNode, const char * pTag,
 }
 
 
-static const char * getAccessFileName( const XmlNode * pNode, const char * pDefault )
-{
-    const char * pValue = pNode->getChildValue( "accessFileName" );
-    if ( !pValue )
-        return pDefault;
-    else
-    {
-        if (( *pValue != '.' )||( strchr( pValue, '/' ))|| strlen( pValue ) > 14 )
-        {
-            LOG_WARN(( "[%s] Access File Name must be less than 14 characters long, "
-                       "start with '.' and not contain '/', use default name.",
-                       getLogId() ));
-            return pDefault;
-        }
-    }
-    return pValue;
-}
+// static const char * getAccessFileName( const XmlNode * pNode, const char * pDefault )
+// {
+//     const char * pValue = pNode->getChildValue( "accessFileName" );
+//     if ( !pValue )
+//         return pDefault;
+//     else
+//     {
+//         if (( *pValue != '.' )||( strchr( pValue, '/' ))|| strlen( pValue ) > 14 )
+//         {
+//             LOG_WARN(( "[%s] Access File Name must be less than 14 characters long, "
+//                        "start with '.' and not contain '/', use default name.",
+//                        getLogId() ));
+//             return pDefault;
+//         }
+//     }
+//     return pValue;
+// }
 
 static void initExpires( const XmlNode * pExpires, ExpiresCtrl * pCtrl,
                          const ExpiresCtrl * pDefault, HttpContext * pContext )
@@ -781,8 +782,6 @@ static HttpContext * addContext( HttpVHost * pVHost, int match,
     }
 }
 
-
-
 HttpContext * HttpServerBuilder::configContext( HttpVHost * pVHost,
         const char * pUri, int type, const char * pLocation, const char * pHandler,
         int allowBrowse )
@@ -1068,7 +1067,6 @@ static int getRedirectCode( const XmlNode * pContextNode, int &code,
     }
     return 0;
 }
-
 
 
 int HttpServerBuilder::configContext( HttpVHost * pVHost, const XmlNode* pContextNode )
@@ -1475,13 +1473,10 @@ int HttpServerBuilder::testDomainMod()
 }
 #endif
 
-
-
-
 int HttpServerBuilder::configVHContextList( HttpVHost* pVHost,
         const XmlNode* pVhConfNode )
 {
-    HttpContext *pRootContext =
+//    HttpContext *pRootContext =
         pVHost->addContext( "/", HandlerType::HT_NULL,
                             pVHost->getDocRoot()->c_str(), NULL, 1 );
 //    pRootContext->setAutoIndex( pVHost->getRootContext().isAutoIndexOn() );
@@ -1506,6 +1501,52 @@ int HttpServerBuilder::configVHContextList( HttpVHost* pVHost,
 //        LOG_NOTICE(( "[%s] no context configuration.",
 //                getLogId() ));
     pVHost->contextInherit();
+    return 0;
+}
+
+int HttpServerBuilder::configWebsocket( HttpVHost * pVHost, const XmlNode* pWebsocketNode )
+{
+    const char *pUri = getTag(pWebsocketNode, "uri");
+    const char *pAddress = getTag(pWebsocketNode, "address");
+    char achVPath[MAX_PATH_LEN];
+    char achRealPath[MAX_PATH_LEN];
+    if ( pUri == NULL || pAddress == NULL )
+        return -1;
+    
+    HttpContext* pContext = pVHost->getContext( pUri, 0 );
+    if ( pContext == NULL )
+    {
+        strcpy(achVPath, "$DOC_ROOT" );
+        strcat(achVPath, pUri);
+        getAbsoluteFile( achRealPath, achVPath);
+        pContext = pVHost->addContext( pUri, HandlerType::HT_NULL, achRealPath, NULL, 1 );
+        if ( pContext == NULL )
+            return -1;
+    }
+    
+    GSockAddr gsockAddr;
+    gsockAddr.parseAddr( pAddress );
+    pContext->setGSockAddr(gsockAddr);
+    return 0;
+}
+
+int HttpServerBuilder::configVHWebsocketList( HttpVHost* pVHost,
+        const XmlNode* pVhConfNode )
+{
+    const XmlNode* p0 = pVhConfNode->getChild("websocketlist");
+    if ( p0 == NULL )
+        p0 = pVhConfNode;
+
+    const XmlNodeList* pList = p0->getChildren( "websocket");
+    if ( pList )
+    {
+        XmlNodeList::const_iterator iter;
+        for ( iter = pList->begin(); iter != pList->end(); ++iter )
+        {
+            configWebsocket( pVHost, *iter );
+        }
+    }
+
     return 0;
 }
 
@@ -2198,7 +2239,7 @@ int HttpServerBuilder::configVhost( HttpVHost* pVHost,
     pRootContext->inherit( NULL );
 
     configVHContextList( pVHost, pVhConfNode );
-
+    configVHWebsocketList( pVHost, pVhConfNode );
 
     return 0;
 }
@@ -2542,7 +2583,7 @@ int HttpServerBuilder::addListener(  const XmlNode* pNode, int isAdmin )
         const char * pSecure = pNode->getChildValue( "secure" );
         if ( pSecure )
             secure = atoi( pSecure );
-        HttpListener * pListener;
+        HttpListener * pListener = NULL;
         if ( secure == 0 )
         {
             pListener = m_pServer->addListener(pName, pAddr);
@@ -2555,76 +2596,14 @@ int HttpServerBuilder::addListener(  const XmlNode* pNode, int isAdmin )
         }
         else
         {
-            const char* pCertFile = getTag( pNode,  "certFile" );
-            if ( !pCertFile )
-            {
-                break;
-            }
-            const char* pKeyFile = getTag( pNode, "keyFile" );
-            if ( !pKeyFile )
-            {
-                break;
-            }
-            char achCert[MAX_PATH_LEN];
-            if ( getValidFile(achCert, pCertFile, "certificate file" ) != 0 )
-                break;
-            char achKey[MAX_PATH_LEN];
-            if ( getValidFile(achKey, pKeyFile, "key file") != 0 )
-                break;
-            const char * pCiphers = pNode->getChildValue( "ciphers" );
-            if ( !pCiphers )
-            {
-                pCiphers = "ALL:!ADH:!EXPORT56:RC4+RSA:+HIGH:+MEDIUM:+SSLv2:+EXP";
-            }
-            const char * pCAPath = pNode->getChildValue( "CACertPath" );
-            const char * pCAFile = pNode->getChildValue( "CACertFile" );
-            char achCAFile[MAX_PATH_LEN];
-            char achCAPath[MAX_PATH_LEN];
-            if ( pCAPath )
-            {
-                if ( getValidPath( achCAPath, pCAPath, "CA Certificate path" ) != 0 )
-                    break;
-                pCAPath = achCAPath;
-            }
-            if ( pCAFile )
-            {
-                if ( getValidFile( achCAFile, pCAFile, "CA Certificate file" ) != 0 )
-                    break;
-                pCAFile = achCAFile;
-            }
-            int cv = getLongValue( pNode, "clientVerify", 0, 3, 0 );
-
-            pListener = m_pServer->addSSLListener(pName, pAddr, achCert,
-                                                  achKey, pCAFile, pCAPath, pCiphers, getLongValue( pNode, "certChain", 0, 1, 0 ), (cv!=0)  );
+            SSLContext * pSSLCtx = newSSLContext( pNode );
+            if ( pSSLCtx )
+                pListener = m_pServer->addSSLListener(pName, pAddr, pSSLCtx );
             if ( pListener == NULL )
             {
                 LOG_ERR(( "[%s] failed to start SSL listener on address %s!",
                           getLogId(), pAddr ));
                 break;
-            }
-            if ( cv > 0 )
-            {
-                SSLContext * pSSL = pListener->getVHostMap()->getSSLContext();
-                if ( pSSL )
-                {
-                    pSSL->setClientVerify( cv, getLongValue( pNode, "verifyDepth", 1, INT_MAX, 1 ) );
-                    pCAPath = pNode->getChildValue( "crlPath" );
-                    pCAFile = pNode->getChildValue( "crlFile" );
-                    if ( pCAPath )
-                    {
-                        if ( getValidPath( achCAPath, pCAPath, "CRL path" ) != 0 )
-                            break;
-                        pCAPath = achCAPath;
-                    }
-                    if ( pCAFile )
-                    {
-                        if ( getValidFile( achCAFile, pCAFile, "CRL file" ) != 0 )
-                            break;
-                        pCAFile = achCAFile;
-                    }
-                    if ( pCAPath || pCAFile )
-                        pSSL->addCRL( achCAFile, achCAPath );
-                }
             }
         }
         if ( HttpGlobals::s_children > 1 )
@@ -3092,7 +3071,7 @@ int HttpServerBuilder::addExtProcessor(  const XmlNode* pNode, const HttpVHost *
                 struct passwd * pw = getUGid( pUser, pGroup, gid );
                 if ( pw )
                 {
-                    if ( gid == -1 )
+                    if ( (int)gid == -1 )
                         gid = pw->pw_gid;
                     if ((iType != EA_LOGGER)&&( ( pw->pw_uid < HttpGlobals::s_uidMin )||
                         ( gid < HttpGlobals::s_gidMin )))
@@ -3764,7 +3743,7 @@ int HttpServerBuilder::initSecurity(  const XmlNode* pRoot )
     {
         setThrottleLimit( ThrottleControl::getDefault(), pNode1,
                           ThrottleControl::getDefault() );
-        HttpIOLink::enableThrottle( (ThrottleControl::getDefault()->getOutputLimit() != INT_MAX) );
+        NtwkIOLink::enableThrottle( (ThrottleControl::getDefault()->getOutputLimit() != INT_MAX) );
         HttpGlobals::getClientCache()->resetThrottleLimit();
         HttpGlobals::s_iConnsPerClientSoftLimit =
             getLongValue( pNode1, "softLimit", 1, INT_MAX, INT_MAX);
@@ -3863,6 +3842,11 @@ int HttpServerBuilder::initServerBasic2(  const XmlNode* pRoot )
                        " in the response header.", getLogId() ));
         }
 
+        HttpServer::getInstance().getServerContext().setGeoIP(
+            getLongValue( pRoot, "enableIpGeo", 0, 1, 0 ) );
+
+        HttpGlobals::s_useProxyHeader = getLongValue( pRoot, "useIpInProxyHeader", 0, 2, 0 );
+        
         denyAccessFiles( NULL, ".ht*", 0 );
 
 
@@ -4286,6 +4270,44 @@ void HttpServerBuilder::enableCoreDump()
 #endif
 }
 
+int HttpServerBuilder::configIpToGeo( const XmlNode * pNode )
+{
+    const XmlNodeList* pList = pNode->getChildren( "geoipDB");
+    if (( !pList )||( pList->size() == 0 ))
+        return 0;
+    IpToGeo * pIpToGeo = new IpToGeo();
+    if ( !pIpToGeo )
+        return -1;
+    XmlNodeList::const_iterator iter;
+    int succ = 0;
+    for ( iter = pList->begin(); iter != pList->end(); ++iter )
+    {
+        XmlNode * p = *iter;
+        const char * pFile = p->getChildValue( "geoipDBFile" );
+        char achBufFile[MAX_PATH_LEN];
+
+        if (( !pFile )||
+            ( getValidFile(achBufFile, pFile, "GeoIP DB") != 0 ))
+        {
+            continue;
+        }
+        
+        if ( pIpToGeo->setGeoIpDbFile( achBufFile, p->getChildValue( "geoipDBCache" ) ) == 0 )
+            succ = 1;
+    }
+    if ( succ )
+    {
+        HttpGlobals::s_pIpToGeo = pIpToGeo;
+    }
+    else
+    {
+        delete pIpToGeo;
+        LOG_WARN(( "Failed to setup a valid GeoIP DB file, Geolocation is disable!" ));
+    }
+    return 0;
+}
+
+
 int HttpServerBuilder::configServer( int reconfig )
 {
     int ret;
@@ -4365,6 +4387,13 @@ int HttpServerBuilder::configServer( int reconfig )
                 configScriptHandler2( NULL, pList, NULL );
         }
     }
+
+    p0 = m_pRoot->getChild( "ipToGeo" );
+    if ( p0 )
+    {
+        configIpToGeo( p0 );
+    }
+    
     initAccessLog( *m_pServer, m_pRoot, 1 );
     initVHosts( m_pRoot);
     initListenerVHostMap(  m_pRoot, NULL );
@@ -4551,7 +4580,6 @@ LocalWorker * HttpServerBuilder::configRailsApp(
             int maxConns, const char * pRailsEnv, int maxIdle, const Env * pEnv,
             int runOnStart, const char * pRubyPath )
 {
-    int  ret ;
     char achFileName[MAX_PATH_LEN];
     const char * pRailsRunner = m_sRailsRunner.c_str();
 
@@ -4729,7 +4757,6 @@ HttpContext * HttpServerBuilder::configRailsContext(
             int maxConns, const char * pRailsEnv, int maxIdle, const Env * pEnv, const char * pRubyPath )
 {
     char achFileName[MAX_PATH_LEN];
-    char achURI[MAX_URI_LEN];
 
     if ( !m_railsDefault )
         return NULL;
@@ -4773,44 +4800,44 @@ LocalWorker * getPHPHandler( const char * pSuffix )
 }
 
 
-static int addPHPSuExec( HttpVHost * pVHost, int maxConn,
-                         char * pSuffix, LocalWorker * pProto )
-{
-    LocalWorker * pWorker;
-    char achAppName[1024];
-    char achName[MAX_PATH_LEN];
-    safe_snprintf( achAppName, 1024, "%sSu%s:", pVHost->getName(), pSuffix );
-
-    pWorker = (LocalWorker *)ExtAppRegistry::getApp( EA_LSAPI, achAppName );
-    if ( !pWorker )
-    {
-        pWorker = (LocalWorker *)ExtAppRegistry::addApp( EA_LSAPI, achAppName );
-        if ( !pWorker )
-            return 0;
-        safe_snprintf( achName, MAX_PATH_LEN, "uds://tmp/lshttpd/%s_Su%s.sock",
-                  pVHost->getName(), pSuffix );
-        pWorker->setURL( achName );
-        LocalWorkerConfig& config = pWorker->getConfig();
-
-        config.setAppPath( pProto->getConfig().getCommand() );
-        config.setBackLog( pProto->getConfig().getBackLog() );
-        config.setSelfManaged( 0 );
-        config.setMaxConns( maxConn );
-        config.setKeepAliveTimeout( pProto->getConfig().getKeepAliveTimeout() );
-        config.setPersistConn( 1 );
-        config.setTimeout( pProto->getConfig().getTimeout() );
-        config.setRetryTimeout( pProto->getConfig().getRetryTimeout() );
-        config.setBuffering( pProto->getConfig().getBuffering() );
-        config.setPriority( pProto->getConfig().getPriority() );
-        config.setMaxIdleTime( 300 );
-        config.setRLimits(  pProto->getConfig().getRLimits() );
-        config.clearEnv();
-        config.addEnv( NULL );
-        config.setVHost( pVHost );
-    }
-    setPHPHandler( &pVHost->getRootContext(), pWorker, pSuffix );
-    return 0;
-}
+// static int addPHPSuExec( HttpVHost * pVHost, int maxConn,
+//                          char * pSuffix, LocalWorker * pProto )
+// {
+//     LocalWorker * pWorker;
+//     char achAppName[1024];
+//     char achName[MAX_PATH_LEN];
+//     safe_snprintf( achAppName, 1024, "%sSu%s:", pVHost->getName(), pSuffix );
+// 
+//     pWorker = (LocalWorker *)ExtAppRegistry::getApp( EA_LSAPI, achAppName );
+//     if ( !pWorker )
+//     {
+//         pWorker = (LocalWorker *)ExtAppRegistry::addApp( EA_LSAPI, achAppName );
+//         if ( !pWorker )
+//             return 0;
+//         safe_snprintf( achName, MAX_PATH_LEN, "uds://tmp/lshttpd/%s_Su%s.sock",
+//                   pVHost->getName(), pSuffix );
+//         pWorker->setURL( achName );
+//         LocalWorkerConfig& config = pWorker->getConfig();
+// 
+//         config.setAppPath( pProto->getConfig().getCommand() );
+//         config.setBackLog( pProto->getConfig().getBackLog() );
+//         config.setSelfManaged( 0 );
+//         config.setMaxConns( maxConn );
+//         config.setKeepAliveTimeout( pProto->getConfig().getKeepAliveTimeout() );
+//         config.setPersistConn( 1 );
+//         config.setTimeout( pProto->getConfig().getTimeout() );
+//         config.setRetryTimeout( pProto->getConfig().getRetryTimeout() );
+//         config.setBuffering( pProto->getConfig().getBuffering() );
+//         config.setPriority( pProto->getConfig().getPriority() );
+//         config.setMaxIdleTime( 300 );
+//         config.setRLimits(  pProto->getConfig().getRLimits() );
+//         config.clearEnv();
+//         config.addEnv( NULL );
+//         config.setVHost( pVHost );
+//     }
+//     setPHPHandler( &pVHost->getRootContext(), pWorker, pSuffix );
+//     return 0;
+// }
 
 
 HttpContext * HttpServerBuilder::importWebApp( HttpVHost * pVHost,
@@ -5014,7 +5041,7 @@ int HttpServerBuilder::initAdmin(  const XmlNode * pNode )
     pFcgiApp->getConfig().addEnv( "PHP_FCGI_MAX_REQUESTS=1000" );
     snprintf( achPHPBin, MAX_PATH_LEN, "LSWS_EDITION=LiteSpeed Web Server/%s/%s",
               "Open",
-              VERSION  );
+              PACKAGE_VERSION  );
     pFcgiApp->getConfig().addEnv( achPHPBin );
     RLimits limits;
     limits.setDataLimit( 500*1024*1024, 500*1024*1024 );
@@ -5095,7 +5122,7 @@ int HttpServerBuilder::initAdmin(  const XmlNode * pNode )
         strcpy( achPHPBin, m_achVhRoot );
         strcat( achPHPBin, "html/" );
         pVHostAdmin->setDocRoot( achPHPBin );
-        HttpContext * pCtx = pVHostAdmin->addContext( "/", HandlerType::HT_NULL, achPHPBin, NULL, 1 );
+        pVHostAdmin->addContext( "/", HandlerType::HT_NULL, achPHPBin, NULL, 1 );
 
         getAbsoluteFile( achRootPath, "$SERVER_ROOT/docs/" );
         HttpContext * pDocs = pVHostAdmin->addContext( "/docs/",
@@ -5218,34 +5245,72 @@ void HttpServerBuilder::setServerRoot( const char * pRoot )
     m_sServerRoot = pRoot;
     HttpGlobals::s_pServerRoot = m_sServerRoot.c_str();
 }
+
+void HttpServerBuilder::configCRL( const XmlNode *pNode, SSLContext * pSSL )
+{
+    char achCrlFile[MAX_PATH_LEN];
+    char achCrlPath[MAX_PATH_LEN];
+    const char * pCrlPath;
+    const char * pCrlFile;
+    pCrlPath = pNode->getChildValue( "crlPath" );
+    pCrlFile = pNode->getChildValue( "crlFile" );
+    if ( pCrlPath )
+    {
+        if ( getValidPath( achCrlPath, pCrlPath, "CRL path" ) != 0 )
+            return;
+        pCrlPath = achCrlPath;
+    }
+    if ( pCrlFile )
+    {
+        if ( getValidFile( achCrlFile, pCrlFile, "CRL file" ) != 0 )
+            return;
+        pCrlFile = achCrlFile;
+    }
+    if ( pCrlPath || pCrlFile )
+        pSSL->addCRL( achCrlFile, achCrlPath );
+    
+}
+
 SSLContext * HttpServerBuilder::newSSLContext( const XmlNode* pNode )
 {
+    char achCert[MAX_PATH_LEN];
+    char achKey [MAX_PATH_LEN];
+    char achCAFile[MAX_PATH_LEN];
+    char achCAPath[MAX_PATH_LEN];
+    
+    const char* pCertFile;
+    const char* pKeyFile;
+    const char * pCiphers;
+    const char * pCAPath;
+    const char * pCAFile;
+    
+    SSLContext * pSSL;
+    int protocol;
+    int enableSpdy;
+    
+    int cv;
 
-    const char* pCertFile = getTag( pNode,  "certFile" );
+    pCertFile = getTag( pNode,  "certFile" );
     if ( !pCertFile )
     {
         return NULL;
     }
-    const char* pKeyFile = getTag( pNode, "keyFile" );
+    pKeyFile = getTag( pNode, "keyFile" );
     if ( !pKeyFile )
     {
         return NULL;
     }
-    char achCert[MAX_PATH_LEN];
     if ( getValidFile(achCert, pCertFile, "certificate file" ) != 0 )
         return NULL;
-    char achKey[MAX_PATH_LEN];
     if ( getValidFile(achKey, pKeyFile, "key file") != 0 )
         return NULL;
-    const char * pCiphers = pNode->getChildValue( "ciphers" );
+    pCiphers = pNode->getChildValue( "ciphers" );
     if ( !pCiphers )
     {
         pCiphers = "ALL:!ADH:!EXPORT56:RC4+RSA:+HIGH:+MEDIUM:!SSLv2:+EXP";
     }
-    const char * pCAPath = pNode->getChildValue( "CACertPath" );
-    const char * pCAFile = pNode->getChildValue( "CACertFile" );
-    char achCAFile[MAX_PATH_LEN];
-    char achCAPath[MAX_PATH_LEN];
+    pCAPath = pNode->getChildValue( "CACertPath" );
+    pCAFile = pNode->getChildValue( "CACertFile" );
     if ( pCAPath )
     {
         if ( getValidPath( achCAPath, pCAPath, "CA Certificate path" ) != 0 )
@@ -5258,8 +5323,10 @@ SSLContext * HttpServerBuilder::newSSLContext( const XmlNode* pNode )
             return NULL;
         pCAFile = achCAFile;
     }
-    int cv = 0;
-    SSLContext * pSSL = m_pServer->newSSLContext(NULL, achCert,
+    
+    cv = getLongValue( pNode, "clientVerify", 0, 3, 0 );
+
+    pSSL = m_pServer->newSSLContext(NULL, achCert,
         achKey, pCAFile, pCAPath, pCiphers, getLongValue( pNode, "certChain", 0, 1, 0 ), (cv!=0),
         getLongValue( pNode, "regenProtection", 0, 1, 1 )  );
     if ( pSSL == NULL )
@@ -5269,5 +5336,56 @@ SSLContext * HttpServerBuilder::newSSLContext( const XmlNode* pNode )
         return NULL;
     }
 
+    protocol = getLongValue( pNode, "sslProtocol", 1, 15, 15 );
+    pSSL->setProtocol( protocol );
+    
+    enableSpdy = getLongValue( pNode, "enableSpdy", 0, 3, 3 );
+    if ( enableSpdy )
+        if ( -1 == pSSL->enableSpdy( enableSpdy ))
+            LOG_ERR(( "[%s] SPDY can't be enabled [try to set to %d].", getLogId(), enableSpdy ));
+
+    if ( cv )
+    {
+        pSSL->setClientVerify( cv, getLongValue( pNode, "verifyDepth", 1, INT_MAX, 1 ) );
+        configCRL( pNode, pSSL );
+    }
+    
+    int enableStapling = getLongValue( pNode, "enableStapling", 0, 1, 0 );
+    if (( enableStapling ) && (pCertFile != NULL))
+        configStapling( pNode, pSSL, pCAFile, achCert);
     return pSSL;
+}
+
+int HttpServerBuilder::configStapling( const XmlNode* pNode, SSLContext *pSSL,  const char* pCAFile, char* pachCert)
+{
+    SslOcspStapling* pSslOcspStapling = pSSL->getpStapling();
+    if ( pSslOcspStapling == NULL )
+    {
+        pSslOcspStapling = new SslOcspStapling;
+        pSSL->setpStapling ( pSslOcspStapling ) ; 
+        pSslOcspStapling->setCertFile ( pachCert );
+        if ( pCAFile )
+            pSslOcspStapling->setCAFile( pCAFile );
+        pSslOcspStapling->setRespMaxAge( getLongValue( pNode, "ocspRespMaxAge", 60, 360000, 3600 ) );
+        const char* pResponder = pNode->getChildValue( "ocspResponder" );
+        if ( pResponder )
+            pSslOcspStapling->setOcspResponder ( pResponder );
+        if (pSSL->initStapling() == -1)
+        {
+            LOG_ERR(( "[%s] OCSP Stapling can't be enabled [%s].", getLogId(), getStaplingErrMsg() ));
+            return -1;
+        }
+        const char* pCombineCAfile = pNode->getChildValue( "ocspCACerts" );
+        char CombineCAfile[MAX_PATH_LEN];
+        if ( pCombineCAfile )
+        {
+            if ( getValidFile( CombineCAfile, pCombineCAfile, "Combine CA file" ) != 0 )
+                return 0;
+            pCombineCAfile = CombineCAfile;
+            
+            pSslOcspStapling->setCombineCAfile ( pCombineCAfile );
+        }
+        return 0;
+    }   
+    return 0;
 }

@@ -70,7 +70,7 @@ TEST(Test_httprangetest)
     CHECK( range.getContentRangeString( 4, crs, 38 ) == 37);
     CHECK( strcmp( crs, "Content-Range: bytes 1999-1999/2000\r\n" ) == 0 );
     CHECK( range.getContentRangeString( 5, crs, 30 ) == 29);
-    CHECK( strcmp( crs, "Content-Range: bytes *\/2000\r\n" ) == 0 );
+    CHECK( strcmp( crs, "Content-Range: bytes */2000\r\n" ) == 0 );
     CHECK( range.getContentRangeString( 4, crs, 37 ) == -1);
     CHECK( range.getContentRangeString( 5, crs, 29 ) == -1);
 

@@ -407,8 +407,6 @@ static int ServerVarNameLen[REF_EXT_COUNT] =
     7, 10, 8, 10, 13, 12, 13, 22 
 };
 
-static const char * s_isHttps[2] = { "off", "on" };
-
 const char * RequestVars::getVarNameStr( int var_id, int &len )
 {
     var_id -= REF_BEGIN;
@@ -704,7 +702,7 @@ int RequestVars::getReqVar( HttpConnection * pConn, int type, char * &pValue, in
         i = pReq->getURILen();
         return i;
     case REF_BYTES_IN:
-        i = StringTool::str_off_t( pValue, bufLen, pConn->getBytesRead() );
+        i = StringTool::str_off_t( pValue, bufLen, pConn->getBytesRecv() );
         return i;
     case REF_BYTES_OUT:
         i = StringTool::str_off_t( pValue, bufLen, pConn->getBytesSent() );

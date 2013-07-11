@@ -21,6 +21,7 @@
 
 
 #include <assert.h>
+#include <stddef.h>
 
 enum
 {
@@ -89,13 +90,14 @@ enum
 
 class StatusCode
 {
-public:
+    friend class HttpStatusCode;
+    
     const char * m_status;
     int          status_size;
-    const char * m_message;
-    char       * m_pHtml;
-    int          m_iTotalSize;
+    char       * m_pHeaderBody;
+    int          m_iHeaderSize;    
     int          m_iBodySize;
+public:
     
     StatusCode( int code, const char * pStatus, const char * body );
     ~StatusCode();
@@ -181,13 +183,9 @@ public:
     {
         return getCodeString( m_iCode );
     }
-    const char * getMessage() const
-    {
-        return getMessage( m_iCode );
-    }
     const char * getHtml() const
     {
-        return getHtml( m_iCode );
+        return getRealHtml( m_iCode );
     }
 
     static const char * getCodeString( http_sc_t code )
@@ -198,27 +196,22 @@ public:
     {
         return s_pSC[code].status_size;
     }
-    static const char * getHtml( http_sc_t code )
+    static const char * getHeaders( http_sc_t code )
     {
-        return s_pSC[code].m_pHtml;
+        return s_pSC[code].m_pHeaderBody;
+    }
+    static int getHeadersLen( http_sc_t code )
+    {
+        return s_pSC[code].m_iHeaderSize;
     }
     static const char * getRealHtml( http_sc_t code )
     {
-        return (s_pSC[code].m_pHtml)?s_pSC[code].m_pHtml + 
-            s_pSC[code].m_iTotalSize - s_pSC[code].m_iBodySize
-                : s_pSC[code].m_pHtml;
+        return (s_pSC[code].m_pHeaderBody)?s_pSC[code].m_pHeaderBody + 
+            s_pSC[code].m_iHeaderSize : NULL;
     }    
     static int getBodyLen( http_sc_t code )
     {
         return s_pSC[code].m_iBodySize;
-    }
-    static int getTotalLen( http_sc_t code )
-    {
-        return s_pSC[code].m_iTotalSize;
-    }
-    static const char * getMessage( http_sc_t code )
-    {
-        return s_pSC[code].m_message;
     }
 
     static int codeToIndex( const char * code );

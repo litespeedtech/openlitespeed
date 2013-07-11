@@ -23,6 +23,7 @@
   
 #include <stddef.h>
 #include <string.h>
+#include <sys/types.h>
 
 typedef int (*gpl_for_each_fn)( void *);
 
@@ -41,7 +42,7 @@ public:
     GPointerList();
     explicit GPointerList( size_t initSize );
     ~GPointerList();
-    size_t size() const     {   return m_pEnd - m_pStore;   }
+    ssize_t size() const     {   return m_pEnd - m_pStore;   }
     bool empty() const      {   return m_pEnd == m_pStore;  }
     bool full() const       {   return m_pEnd == m_pStoreEnd;   }
     size_t capacity() const {   return m_pStoreEnd - m_pStore;  }

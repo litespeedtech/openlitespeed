@@ -122,7 +122,6 @@ int Expression::appendRegex( const char * pBegin, int len, int flag )
 
 int Expression::parse( const char * pBegin, const char * pEnd )
 {
-    int type = ExprToken::EXP_STRING;
     char achBuf[ 10240];
     char * p = achBuf;
     char quote = 0;
@@ -540,7 +539,8 @@ int SSIScript::parseAttrs( int cmd, const char * pBegin, const char * pEnd )
             attr = SSI_ENC_NONE;
             for( ; attr <= SSI_ENC_ENTITY; attr++ )
             {
-                if ( strncasecmp( s_SSI_Attrs[attr], pValue, valLen ) == 0 )
+                if (( strncasecmp( s_SSI_Attrs[attr], pValue, valLen ) == 0 )
+                    &&( s_SSI_Attrs_len[attr] == valLen ))
                 {
                     break;
                 }
@@ -703,7 +703,7 @@ int SSIScript::parse_ssi_directive( const char * pBegin, const char * pEnd )
     if ( pBegin >= pEnd )
         return 0;
     int cmd = 1;
-    for( ; cmd < sizeof( s_SSI_Cmd ) / sizeof( const char * ); cmd++ )
+    for( ; cmd < (int)( sizeof( s_SSI_Cmd ) / sizeof( const char * )); cmd++ )
     {
         if ( strncasecmp( s_SSI_Cmd[cmd], pBegin, 
                             s_SSI_Cmd_len[cmd] ) == 0 )
@@ -863,7 +863,6 @@ int SSIScript::processSSIFile( SSITagConfig * pConfig, int fd )
 
 int SSIScript::parse( SSITagConfig * pConfig, const char * pScriptPath )
 {
-    struct stat st;
     int fd;
     int ret;
     fd = nio_open( pScriptPath, O_RDONLY, 0644 );

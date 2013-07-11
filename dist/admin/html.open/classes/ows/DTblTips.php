@@ -136,15 +136,13 @@ class DTblTips
 			$tips[] = 'You can choose only one virtual host to handle all unspecified domains, put "*" in domains.';
 			$tips[] = 'If you have not set up the virtual host you want to map, you can skip this step and come back later';
 		}
-		elseif ( $tid == 'L_CERT' )
+		elseif ( $tid == 'L_SSL_CERT' )
 		{
-			$tips[] = '"secure" checkbox on General:Address Settings needs to be enabled.';
-			$tips[] = 'File path can be absolute path or relative to $SERVER_ROOT.';
+			$tips[] = '"secure" checkbox on Listener General - Address Settings needs to be enabled.';
 		}
 		elseif ( $tid == 'L_SSL')
 		{
-			$tips[] = '"secure" checkbox on General:Address Settings needs to be enabled.';
-			$tips[] = 'For SSL versions and encryption levels, please select all you want to accept.';
+			$tips[] = '"secure" checkbox on Listener General - Address Settings needs to be enabled.';
 		}
 		elseif ( $tid == 'VH_REALM_SEL' )
 		{

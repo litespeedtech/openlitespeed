@@ -57,6 +57,9 @@ class HttpListener : public EventReactor, public LogTracker
     int checkAccess( struct conn_data * pData );
     int setSockAttr( int fd, GSockAddr &addr );
     VHostMap * getSubMap( int fd );
+
+protected:
+    virtual const char * buildLogId() { return NULL; };
     
 public:
     explicit HttpListener( const char * pName, const char * pAddr );

@@ -262,11 +262,12 @@ int HttpRange::parse( const char * pRange )
     return 0;
 }
 
+//Content-Range: 
 int HttpRange::getContentRangeString( int n, char * pBuf, int len ) const
 {
     char * pBegin = pBuf;
     int ret;
-    ret = safe_snprintf( pBuf, len, "%s", "Content-Range: bytes " );
+    ret = safe_snprintf( pBuf, len, "%s", "bytes " );
     pBuf += ret;
     len -= ret;
     ret = 0;
@@ -277,7 +278,7 @@ int HttpRange::getContentRangeString( int n, char * pBuf, int len ) const
         if ( m_lEntityLen == -1 )
             return -1;
         else
-            ret = safe_snprintf( pBuf, len, "*/%ld\r\n", m_lEntityLen );
+            ret = safe_snprintf( pBuf, len, "*/%ld", m_lEntityLen );
     }
     else
     {
@@ -289,15 +290,13 @@ int HttpRange::getContentRangeString( int n, char * pBuf, int len ) const
             return -1;
         if ( m_lEntityLen >= 0 )
         {
-            ret = safe_snprintf( pBuf, len, "%ld\r\n", m_lEntityLen );
+            ret = safe_snprintf( pBuf, len, "%ld", m_lEntityLen );
         }
         else
         {
             if ( len > 4 )
             {
                 *pBuf++ = '*';
-                *pBuf++ = '\r';
-                *pBuf++ = '\n';
                 *pBuf = 0;
             }
             else

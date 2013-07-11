@@ -16,18 +16,29 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include <http/httpconnection.h>
+#include <stdio.h>
+#include <sys/poll.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <arpa/inet.h>
+#include <errno.h>
+#include <inttypes.h>
+#include <netinet/in.h>
+#include <netinet/in_systm.h>
+#include <socket/gsockaddr.h>
 
 #include <extensions/cgi/lscgiddef.h>
 #include <extensions/extworker.h>
 #include <extensions/registry/extappregistry.h>
-
 #include <http/chunkinputstream.h>
 #include <http/chunkoutputstream.h>
+#include <http/clientcache.h>
 #include <http/connlimitctrl.h>
-#include <http/eventdispatcher.h>
 #include <http/datetime.h>
-#include <http/handlertype.h>
+#include <http/eventdispatcher.h>
 #include <http/handlerfactory.h>
+#include <http/handlertype.h>
 #include <http/htauth.h>
 #include <http/httpconnpool.h>
 #include <http/httpglobals.h>
@@ -36,43 +47,31 @@
 #include <http/httpresourcemanager.h>
 #include <http/httpserverconfig.h>
 #include <http/httpvhost.h>
+#include <http/ntwkiolink.h>
 #include <http/reqhandler.h>
 #include <http/rewriteengine.h>
 #include <http/smartsettings.h>
-#include <http/userdir.h>
-#include <http/vhostmap.h>
-
 #include <http/staticfilecache.h>
 #include <http/staticfilecachedata.h>
+#include <http/userdir.h>
+#include <http/vhostmap.h>
 #include <ssi/ssiengine.h>
 #include <ssi/ssiruntime.h>
 #include <ssi/ssiscript.h>
-
 #include <util/accesscontrol.h>
 #include <util/accessdef.h>
+#include <util/gzipbuf.h>
+#include <util/ssnprintf.h>
 #include <util/vmembuf.h>
 
-#include <errno.h>
-#include <inttypes.h>
-#include <arpa/inet.h>
-#include <netinet/in_systm.h>
-#include <netinet/in.h>
-#include <stdio.h>
-#include <sys/poll.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <unistd.h>
-#include <util/ssnprintf.h>
-
-
-#include <util/gzipbuf.h>
+#include "http/l4handler.h"
+#include "extensions/l4conn.h"
 
 HttpConnection::HttpConnection()
 {
     ::memset( &m_pChunkIS, 0, (char *)(&m_iReqServed + 1) - (char *)&m_pChunkIS );
-    m_logID.resizeBuf( MAX_LOGID_LEN + 1 );
-    m_logID.buf()[MAX_LOGID_LEN] = 0;
-    m_request.setILog( this );
+    m_pNtwkIOLink = NULL;
+    m_iState = HCS_WAITING;
 }
 
 HttpConnection::~HttpConnection()
@@ -83,22 +82,28 @@ int HttpConnection::onInitConnected()
 {
     m_lReqTime = DateTime::s_curTime;
     m_iReqTimeMs = DateTime::s_curTimeMS;
-    m_response.setSSL( isSSL() );
+    if ( m_pNtwkIOLink )
+    {
+        m_response.setSSL( m_pNtwkIOLink->isSSL() );
+        setVHostMap( m_pNtwkIOLink->getVHostMap() );
+    }
+    setState( HCS_READING );
+    getStream()->setFlag( HIO_FLAG_WANT_READ, 1 );
+    m_request.setILog( getStream() );
     return 0;
 }
 
 
+
+/*
 const char * HttpConnection::buildLogId()
 {
-    AutoStr2 & id = m_logID;
-//    int n = len + 32;
-//    if ( !id.resizeBuf( n ) )
-//        return;
+    AutoStr2 & id = getStream()->getIdBuf();
     int len ;
     char * p = id.buf();
     char * pEnd = p + MAX_LOGID_LEN;
-    len = safe_snprintf( id.buf(), MAX_LOGID_LEN, "%s:%hu-",  
-                getPeerAddrString(), m_iRemotePort );
+    len = safe_snprintf( id.buf(), MAX_LOGID_LEN, "%s-",  
+                getStream()->getLogId() );
     id.setLen( len );
     p += len;
     len = safe_snprintf( p, pEnd - p, "%hu", m_iReqServed );
@@ -108,9 +113,9 @@ const char * HttpConnection::buildLogId()
     {
         safe_snprintf( p, pEnd - p, "#%s", pVHost->getName() );
     }
-    m_iLogIdBuilt = 1;
     return id.c_str();
 }
+*/
 
 #include <netinet/in_systm.h>
 #include <netinet/tcp.h>
@@ -135,8 +140,9 @@ void HttpConnection::logAccess( int cancelled )
         else
             m_response.needLogAccess( 0 );
     }
-    else
-        HttpLog::logAccess( NULL, 0, this );
+    else 
+        if ( m_pNtwkIOLink )
+            HttpLog::logAccess( NULL, 0, this );
 
 }
 
@@ -146,8 +152,7 @@ void HttpConnection::nextRequest()
     if ( D_ENABLED( DL_LESS ))
         LOG_D(( getLogger(), "[%s] HttpConnection::nextRequest()!",
             getLogId() ));
-    if ( isSSL() )
-        getSSL()->flush();        
+    getStream()->flush();        
     if ( m_pHandler )
     {
         HttpGlobals::s_reqStats.incReqProcessed();
@@ -175,13 +180,7 @@ void HttpConnection::nextRequest()
         if ( D_ENABLED( DL_LESS ))
             LOG_D(( getLogger(), "[%s] Non-KeepAlive, CLOSING!",
                 getLogId() ));
-        if ( !inProcess() )
-            closeConnection();
-        else
-            setState( HC_CLOSING );
-        //setState( HC_CLOSING );
-        //if ( !inProcess() )
-        //    continueWrite();
+        closeConnection();
     }
     else
     {
@@ -189,14 +188,14 @@ void HttpConnection::nextRequest()
         ++m_iReqServed;
         m_lReqTime = DateTime::s_curTime;
         m_iReqTimeMs = DateTime::s_curTimeMS;
-        switchWriteToRead();
-        if ( m_iLogIdBuilt )
+        getStream()->switchWriteToRead();
+        if ( getStream()->isLogIdBuilt() )
         {
-            safe_snprintf( m_logID.buf() +
-                 m_logID.len(), 10, "%hu", m_iReqServed );
+            safe_snprintf( getStream()->getIdBuf().buf() +
+                 getStream()->getIdBuf().len(), 10, "%hu", m_iReqServed );
         }
         m_request.reset2();
-        if ( m_pRespCache )
+        if ( m_pRespBodyBuf )
             releaseRespCache();        
         if ( m_pGzipBuf )
             releaseGzipBuf();
@@ -205,14 +204,13 @@ void HttpConnection::nextRequest()
             if ( D_ENABLED( DL_LESS ))
                 LOG_D(( getLogger(), "[%s] Pending data in header buffer, set state to READING!",
                     getLogId() ));
-            setState( HC_READING );
-            setActiveTime( m_lReqTime );
+            setState( HCS_READING );
             //if ( !inProcess() )
                 processPending( 0 );
         }
         else
         {
-            setState( HC_WAITING );
+            setState( HCS_WAITING );
             ++HttpGlobals::s_iIdleConns;
         }
     }
@@ -230,7 +228,7 @@ int HttpConnection::read( char * pBuf, int size )
         m_request.pendingDataProcessed( len );
         return len;
     }
-    return HttpIOLink::read( pBuf, size );
+    return getStream()->read( pBuf, size );
 }
 
 int HttpConnection::readv( struct iovec *vector, size_t count)
@@ -266,7 +264,7 @@ int HttpConnection::processReqBody()
     int ret = m_request.prepareReqBodyBuf();
     if ( ret )
         return ret;
-    setState( HC_READING_BODY );
+    setState( HCS_READING_BODY );
     if ( m_request.isChunked() )
     {
         setupChunkIS();
@@ -281,7 +279,7 @@ void HttpConnection::setupChunkIS()
     assert ( m_pChunkIS == NULL );
     {
         m_pChunkIS = HttpGlobals::getResManager()->getChunkInputStream();
-        m_pChunkIS->setStream( this );
+        m_pChunkIS->setStream( getStream() );
         m_pChunkIS->open();
     }
 }
@@ -367,7 +365,7 @@ int HttpConnection::readReqBody()
         m_pChunkIS = NULL;
         m_request.tranEncodeToContentLen();
     }
-    //suspendRead();
+    suspendRead();
     ret = processURI( 0 );
     return ret;
 
@@ -385,7 +383,7 @@ int HttpConnection::readReqBody( char * pBuf, int size )
         int toRead = m_request.getBodyRemain();
         if ( toRead > size )
             toRead = size ;
-        len = HttpIOLink::read( pBuf, toRead );
+        len = getStream()->read( pBuf, toRead );
     }
     return len;
 }
@@ -406,7 +404,7 @@ int HttpConnection::readToHeaderBuf()
         if ( avail > 2048 )
             avail = 2048;
         char * pBuf = headerBuf.end();
-        sz = HttpIOLink::read( pBuf,
+        sz = getStream()->read( pBuf,
                             avail );
         if ( sz > 0 )
         {
@@ -457,7 +455,7 @@ int HttpConnection::readToHeaderBuf()
 
 void HttpConnection::processPending( int ret )
 {
-    if (( getState() != HC_READING )||
+    if (( getState() != HCS_READING )||
         ( m_request.pendingHeaderDataLen() < 2 ))
         return;
     if ( D_ENABLED( DL_LESS ))
@@ -469,22 +467,76 @@ void HttpConnection::processPending( int ret )
     }
     ret = m_request.processHeader();
     if ( ret == 1 )
+    {
         if ( isSSL() )
             ret = readToHeaderBuf();
         else
             return;
+    }
     if (( !ret )&&( m_request.getStatus() == HttpReq::HEADER_OK ))
         ret = processNewReq();
-    if (( ret )&&( getState() < HC_SHUTDOWN ))
+    if (( ret )&&( getStream()->getState() < HIOS_SHUTDOWN ))
     {
         httpError( ret );
     }
 
 }
 
+int HttpConnection::updateClientInfoFromProxyHeader( const char * pProxyHeader )
+{
+    char achIP[128];
+    int len = m_request.getHeaderLen( HttpHeader::H_X_FORWARDED_FOR );
+    char * p = (char *)memchr( pProxyHeader, ',', len );
+    if ( p )
+        len = p - pProxyHeader;
+    if (( len <= 0 )||( len > 16 ))
+    {
+        //error, not a valid IPv4 address
+        return 0;
+    }
+    
+    memmove( achIP, pProxyHeader, len );
+    achIP[len] = 0;
+    struct sockaddr_in addr;
+    memset( &addr, 0, sizeof( sockaddr_in ) );
+    addr.sin_family = AF_INET;
+    addr.sin_addr.s_addr = inet_addr( achIP );
+    if ( addr.sin_addr.s_addr == INADDR_BROADCAST )
+    {
+        //Failed to parse the address string to IPv4 address
+        return 0;
+    }
+    ClientInfo * pInfo = HttpGlobals::getClientCache()
+                ->getClientInfo( (struct sockaddr *)&addr );
+    if ( pInfo )
+    {
+        if ( pInfo->checkAccess() )
+        {
+            //Access is denied
+            return SC_403;
+        }
+    }
+    m_request.addEnv( "PROXY_REMOTE_ADDR", 17, 
+                getPeerAddrString(), getPeerAddrStrLen() );
+
+    m_pNtwkIOLink->changeClientInfo( pInfo );
+    return 0;
+}
 
 int HttpConnection::processNewReq()
 {
+    int ret;
+    if ((HttpGlobals::s_useProxyHeader == 1)||
+        ((HttpGlobals::s_useProxyHeader == 2)&&( getClientInfo()->getAccess() == AC_TRUST )))
+    {
+        const char * pProxyHeader = m_request.getHeader( HttpHeader::H_X_FORWARDED_FOR );
+        if ( *pProxyHeader )
+        {
+            ret = updateClientInfoFromProxyHeader( pProxyHeader );
+            if ( ret )
+                return ret;
+        }
+    }
     m_lReqTime = DateTime::s_curTime;
     m_iReqTimeMs = DateTime::s_curTimeMS;
     m_response.needLogAccess(1);
@@ -502,25 +554,45 @@ int HttpConnection::processNewReq()
         }
         return SC_404;
     }
-    setLogger( pVHost->getLogger() );
-    if ( m_iLogIdBuilt )
+    getStream()->setLogger( pVHost->getLogger() );
+    if ( getStream()->isLogIdBuilt() )
     {
-        AutoStr2 &id = m_logID;
-        register char * p = id.buf() + id.len() + 1;
+        AutoStr2 &id = getStream()->getIdBuf();
+        register char * p = id.buf() + id.len();
         while( *p && *p != '#' )
             ++p;
         *p++ = '#';
         memccpy( p, pVHost->getName(), 0, id.buf() + MAX_LOGID_LEN - p );
     }
 
-    int ret = m_request.processNewReqData(getPeerAddr());
+    ret = m_request.processNewReqData(getPeerAddr());
     if ( ret )
     {
         return ret;
     }
-    if ((isThrottle())&&( getClientInfo()->getAccess() != AC_TRUST ))
-        getThrottleCtrl()->adjustLimits( pVHost->getThrottleLimits() );
-    if ( m_request.isKeepAlive() )
+    
+    if ( m_request.isWebsocket() )
+    {
+        HttpContext* pContext = pVHost->getContext(m_request.getURI(), 0);
+        LOG_D ((getLogger(), "[%s] VH: web socket, name: [%s] URI: [%s]", getLogId(), pVHost->getName(), m_request.getURI() )); 
+        const char tmp[sizeof(GSockAddr) + 1] = {0};
+        if ( pContext && memcmp((char*)pContext->getGSockAddr(), tmp, sizeof(GSockAddr)) != 0 ) 
+        {
+            L4Handler *pL4Handler = new L4Handler();
+            pL4Handler->assignStream(this->m_pNtwkIOLink);
+            pL4Handler->init(m_request, pContext->getGSockAddr());
+            LOG_D ((getLogger(), "[%s] VH: %s web socket !!!", getLogId(), pVHost->getName() ));
+            return 0;
+            //DO NOT release pL4Handler, it will be releaseed itself.
+        }
+    }
+    
+    
+    if ((m_pNtwkIOLink->isThrottle())&&( m_pNtwkIOLink->getClientInfo()->getAccess() != AC_TRUST ))
+        m_pNtwkIOLink->getThrottleCtrl()->adjustLimits( pVHost->getThrottleLimits() );
+    if ( getStream()->isSpdy() )
+        m_request.keepAlive( 0 );
+    else if ( m_request.isKeepAlive() )
     {
         if ( m_iReqServed >= pVHost->getMaxKAReqs() )
         {
@@ -539,7 +611,7 @@ int HttpConnection::processNewReq()
                         ", keep-alive off.",
                         getLogId()));
         }
-        else if ( getClientInfo()->getOverLimitTime() )
+        else if ( m_pNtwkIOLink->getClientInfo()->getOverLimitTime() )
         {
             m_request.keepAlive( false );
             if ( D_ENABLED( DL_LESS ) )
@@ -564,7 +636,7 @@ int HttpConnection::processNewReq()
     }
     else
     {
-        //suspendRead();
+        suspendRead();
         return processURI( 0 );
     }
 }
@@ -625,7 +697,7 @@ int HttpConnection::checkAuthorizer( const HttpHandler * pHandler )
     int ret = assignHandler( pHandler );
     if ( ret )
         return ret;
-    setState( HC_EXT_AUTH );
+    setState( HCS_EXT_AUTH );
     return m_pHandler->process( this, pHandler );
 }
 
@@ -657,8 +729,6 @@ int HttpConnection::processURI( int resume )
     const HttpVHost * pVHost = m_request.getVHost();
     int ret;
     int proceed = 1;
-    int isCached = 0;
-    const HttpContext * pContext;
     if ( !resume )
     {
         //virtual host level URL rewrite
@@ -670,8 +740,6 @@ int HttpConnection::processURI( int resume )
             ret = HttpGlobals::s_RewriteEngine.
             processRuleSet( pVHost->getRootContext().getRewriteRules(), this,
                             NULL, NULL );
-            if ( getState() == HC_CLOSING )
-                return 0;
             
             if ( ret == -3 )  //rewrite happens
             {
@@ -794,7 +862,7 @@ DO_AUTH:
                                    getLogId(), ret1));
                         if ( ret1 == -1 ) //processing authentication
                         {
-                            setState(HC_EXT_AUTH );
+                            setState(HCS_EXT_AUTH );
                             return 0;
                         }
                         return ret1;
@@ -821,7 +889,7 @@ DO_AUTH:
     case 0:         //ok
         return handlerProcess( m_request.getHttpHandler() );
     case -1:        //processing authentication
-        setState(HC_EXT_AUTH );
+        setState(HCS_EXT_AUTH );
         return 0;
     default:        //error
         return ret;
@@ -877,8 +945,7 @@ int HttpConnection::getParsedScript( SSIScript * &pScript )
 int HttpConnection::startServerParsed()
 {
     SSIScript * pScript = NULL;
-    int ret;
-    ret = getParsedScript( pScript );
+    getParsedScript( pScript );
     if ( !pScript )
         return SC_500;
 
@@ -940,7 +1007,7 @@ int HttpConnection::handlerProcess( const HttpHandler * pHandler )
     int ret = assignHandler(m_request.getHttpHandler() );
     if ( ret )
         return ret;
-    setState( HC_PROCESSING );
+    setState( HCS_PROCESSING );
     //PORT_FIXME: turn off for now
     //pTC->incReqProcessed( m_pHandler->getType() == HandlerType::HT_DYNAMIC );
     
@@ -1007,7 +1074,7 @@ int HttpConnection::assignHandler( const HttpHandler * pHandler )
         }
         else
         {
-            m_response.reset();
+            resetResp();
         }       
         
         const char * pType = HandlerType::getHandlerTypeString( handlerType );
@@ -1018,10 +1085,10 @@ int HttpConnection::assignHandler( const HttpHandler * pHandler )
                  getLogId(), pType ));
         }
 
-        if ( m_iLogIdBuilt )
+        if ( getStream()->isLogIdBuilt() )
         {
-            AutoStr2 &id = m_logID;
-            register char * p = id.buf() + id.len() + 1;
+            AutoStr2 &id = getStream()->getIdBuf();
+            register char * p = id.buf() + id.len();
             while( *p && *p != ':' )
                 ++p;
 
@@ -1044,13 +1111,27 @@ int HttpConnection::assignHandler( const HttpHandler * pHandler )
 }
 
 
+int HttpConnection::sendSpdyHeaders()
+{
+    if ( m_response.getHeaderLeft() )
+    {
+        getStream()->sendHeaders( m_response.getIov(), m_response.getHeaders().getTotalCount() );
+        m_response.getIov().clear();
+        m_response.setHeaderLeft( 0 );
+    }
+    return 0;    
+}
+
 
 
 int HttpConnection::beginWrite()
 {
     //int nodelay = 0;
     //::setsockopt( getfd(), IPPROTO_TCP, TCP_NODELAY, &nodelay, sizeof( int ) );
-    setState( HC_WRITING );
+    setState( HCS_WRITING );
+    if (getStream()->isSpdy() )
+        sendSpdyHeaders();
+    
     if (( sendBody() )||(m_response.getBodySent() < 0 ))
     {
         return doWrite();
@@ -1081,7 +1162,7 @@ void HttpConnection::sendHttpError( const char * pAdditional )
             SSIEngine::printError( this, NULL );
         }
         continueWrite();
-        setState( HC_COMPLETE );
+        setState( HCS_COMPLETE );
         return;
     }    
     if ( (m_request.getStatus() != HttpReq::HEADER_OK )
@@ -1089,7 +1170,6 @@ void HttpConnection::sendHttpError( const char * pAdditional )
         || m_request.getBodyRemain() > 0  )
     {
         m_request.keepAlive( false );
-        setPeerShutdown( IO_HTTP_ERR );
     }
     // Let HEAD request follow the errordoc URL, the status code could be changed
     //if ( sendBody() )
@@ -1148,7 +1228,7 @@ void HttpConnection::sendHttpError( const char * pAdditional )
         }
         */
     }
-    setState( HC_WRITING );
+    setState( HCS_WRITING );
     buildErrorResponse( pAdditional );
     writeComplete();
     HttpGlobals::s_reqStats.incReqProcessed();
@@ -1174,7 +1254,7 @@ int HttpConnection::buildErrorResponse( const char * errMsg )
         return 0;
     }  
     
-    m_response.reset();
+    resetResp();
     m_response.prepareHeaders( &m_request );
     //register int errCode = m_request.getStatusCode();
     register unsigned int ver = m_request.getVersion();
@@ -1190,19 +1270,24 @@ int HttpConnection::buildErrorResponse( const char * errMsg )
     }
     if ( sendBody() )
     {
-        const char * pHtml = HttpStatusCode::getHtml( errCode );
+        const char * pHtml = HttpStatusCode::getRealHtml( errCode );
         if ( pHtml )
         {
             int len = HttpStatusCode::getBodyLen( errCode );
             m_response.setContentLen( len );
-            m_response.safeAppend( pHtml, HttpStatusCode::getTotalLen( errCode ));
+            m_response.iovAppend( HttpStatusCode::getHeaders( errCode ), HttpStatusCode::getHeadersLen( errCode ));
             m_response.finalizeHeader( ver, errCode);
+            if ( getStream()->isSpdy() )
+                sendSpdyHeaders();
+            m_response.getIov().append( pHtml, len );
             m_response.written( len );
+            m_response.setHeaderLeft( len );
             return 0;
         }
     }
-    m_response.endHeader();
     m_response.finalizeHeader( ver, errCode);
+    if ( getStream()->isSpdy() )
+        sendSpdyHeaders();
     return 0;
 }
 
@@ -1218,12 +1303,11 @@ int HttpConnection::onReadEx()
     int ret = 0;
     switch(  getState() )
     {
-    case HC_WAITING:
-        setActiveTime( DateTime::s_curTime );
+    case HCS_WAITING:
         --HttpGlobals::s_iIdleConns;
-        setState( HC_READING );
-        //fall through;
-    case HC_READING:
+        setState( HCS_READING );
+        //fall through;    
+    case HCS_READING:
         ret = readToHeaderBuf();
         if ( D_ENABLED( DL_LESS ))
         {
@@ -1243,14 +1327,14 @@ int HttpConnection::onReadEx()
         if ( !ret )
             return 0;
         break;
-    case HC_READING_BODY:
+    case HCS_READING_BODY:
         ret = readReqBody();
         break;
     default:
         suspendRead();
         return 0;
     }
-    if (( ret )&&( getState() < HC_SHUTDOWN ))
+    if (( ret )&&( getStream()->getState() < HIOS_SHUTDOWN ))
     {
         httpError( ret );
     }
@@ -1285,7 +1369,7 @@ int HttpConnection::flush()
         {
             IOVec & iov = m_response.getIov();
             int total = m_response.getHeaderLeft();
-            int written = HttpIOLink::writev( iov, total );
+            int written = getStream()->writev( iov, total );
             if ( written >= total )
             {
                 m_response.setHeaderLeft( 0 );
@@ -1301,11 +1385,7 @@ int HttpConnection::flush()
             }
         }
     }
-    if ( isSSL() )
-    {
-        return flushSSL();
-    }
-    return 0;
+    return getStream()->flush();
 }
 
 void HttpConnection::writeComplete()
@@ -1314,14 +1394,15 @@ void HttpConnection::writeComplete()
     {
         if ( m_pChunkOS )
         {
-            m_pChunkOS->close( m_response.getIov(),
-                m_response.getHeaderLeft() );
+            if ( getStream()->isSpdy() )
+                sendSpdyHeaders();
+            m_pChunkOS->close( m_response.getIov(), m_response.getHeaderLeft() );
             m_response.setHeaderLeft( 0 );
         }
     }
     if ( flush() == 0 )
     {
-        if ( getState() == HC_WRITING )
+        if ( getState() == HCS_WRITING )
         {
             nextRequest();
         }
@@ -1329,7 +1410,7 @@ void HttpConnection::writeComplete()
     else
     {
         continueWrite();
-        setState( HC_COMPLETE );
+        setState( HCS_COMPLETE );
     }
 }
 
@@ -1352,10 +1433,10 @@ int HttpConnection::doWrite(int aioSent )
             if ( D_ENABLED( DL_LESS ))
                 LOG_D(( getLogger(), "[%s] Handler write error, CLOSING!",
                     getLogId() ));
-            setState( HC_CLOSING );
+            getStream()->setState( HIOS_CLOSING );
         }
     }
-    else if ( m_pRespCache )
+    else if ( m_pRespBodyBuf )
     {
         if ( m_response.getHeaderTotal() )
         {
@@ -1374,7 +1455,7 @@ int HttpConnection::doWrite(int aioSent )
         }
         else if ( ret == -1 )
         {
-            setState( HC_CLOSING );
+            getStream()->setState( HIOS_CLOSING );
         }
         
     }
@@ -1387,30 +1468,28 @@ int HttpConnection::onWriteEx()
     int ret = 0;
     switch( getState() )
     {
-    case HC_THROTTLING:
-        if ( getClientInfo()->getThrottleCtrl().allowProcess(m_pHandler->getType()) )
+    case HCS_THROTTLING:
+        if ( m_pNtwkIOLink->getClientInfo()->getThrottleCtrl().allowProcess(m_pHandler->getType()) )
         {
-            setState( HC_PROCESSING );
-            getClientInfo()->getThrottleCtrl().incReqProcessed(m_pHandler->getType());
+            setState( HCS_PROCESSING );
+            m_pNtwkIOLink->getClientInfo()->getThrottleCtrl().incReqProcessed(m_pHandler->getType());
             ret = m_pHandler->process( this, m_request.getHttpHandler() );
-            if (( ret )&&( getState() < HC_SHUTDOWN ))
+            if (( ret )&&( getStream()->getState() < HIOS_SHUTDOWN ))
             {
                 httpError( ret );
             }
         }
         break;
-    case HC_WRITING:
+    case HCS_WRITING:
         doWrite();
         break;
-    case HC_COMPLETE:
+    case HCS_COMPLETE:
         if ( flush() == 0 )
             nextRequest();
         return 0;
-    case HC_CLOSING:
-        return 0;
     default:
         suspendWrite();
-        if ( getState() == HC_REDIRECT )
+        if ( getState() == HCS_REDIRECT )
         {
             const char * pLocation = m_request.getLocation();
             if ( *pLocation )
@@ -1422,7 +1501,7 @@ int HttpConnection::onWriteEx()
                 {
                     SSIEngine::printError( this, NULL );
                     continueWrite();
-                    setState( HC_COMPLETE );
+                    setState( HCS_COMPLETE );
                     return 0;
                 }                
                 m_request.setStatusCode( ret );
@@ -1448,12 +1527,28 @@ void HttpConnection::cleanUpHandler()
     pHandler->cleanUp( this );
 }
 
-void HttpConnection::closeConnection( int cancelled )
+
+int HttpConnection::onCloseEx()
 {
+    closeConnection();
+    return 0;
+}
+
+
+void HttpConnection::closeConnection( )
+{
+    if ( getStream()->getState() == HIOS_CLOSING )
+        getStream()->setState( HIOS_CLOSING );
+    if ( getStream()->isReadyToRelease() )
+        return;
+    //FIXME: could be double counted in here. 
+    //if ( getState() == HCS_WAITING )
+    //    --HttpGlobals::s_iIdleConns;
+    
     m_request.keepAlive( 0 );
     if ( m_response.shouldLogAccess() )
     {
-        logAccess( cancelled );
+        logAccess( getStream()->getFlag( HIO_FLAG_PEER_SHUTDOWN ) );
     }
     
     if ( m_pHandler )
@@ -1476,7 +1571,7 @@ void HttpConnection::closeConnection( int cancelled )
         m_pChunkOS->reset();
         releaseChunkOS();
     }
-    if ( m_pRespCache )
+    if ( m_pRespBodyBuf )
         releaseRespCache();    
     
     if ( m_pGzipBuf )
@@ -1487,12 +1582,14 @@ void HttpConnection::closeConnection( int cancelled )
         HttpGlobals::getResManager()->recycle( m_pChunkIS );
         m_pChunkIS = NULL;
     }
-            
-    close();
+    getStream()->handlerReadyToRelease();
+    getStream()->close();
 }
 
 void HttpConnection::recycle()
 {
+    if ( D_ENABLED( DL_MORE ))
+        LOG_D(( getLogger(), "[%s] HttpConnection::recycle()\n", getLogId() ));
     if ( m_response.shouldLogAccess() )
     {
         LOG_WARN(( "[%s] Request has not been logged into access log, "
@@ -1505,16 +1602,18 @@ void HttpConnection::recycle()
 void HttpConnection::setupChunkOS(int nobuffer)
 {
     m_response.setContentLen( -1 );
+    if ( !m_request.isKeepAlive() )
+        return;
     if (( m_request.getVersion() == HTTP_1_1 )&&( nobuffer != 2 ))
     {
         m_response.appendChunked();
         if ( D_ENABLED( DL_LESS ))
             LOG_D(( getLogger(), "[%s] use CHUNKED encoding!",
                     getLogId() ));
-            if ( m_pChunkOS )
-                releaseChunkOS();
-            m_pChunkOS = HttpGlobals::getResManager()->getChunkOutputStream();
-        m_pChunkOS->setStream( this, &m_response.getIov() );
+        if ( m_pChunkOS )
+            releaseChunkOS();
+        m_pChunkOS = HttpGlobals::getResManager()->getChunkOutputStream();
+        m_pChunkOS->setStream( getStream(), &m_response.getIov() );
         m_pChunkOS->open();
         if ( !nobuffer )
             m_pChunkOS->setBuffering( 1 );
@@ -1539,7 +1638,8 @@ void HttpConnection::setBuffering( int s )
 int HttpConnection::writeRespBodySendFile( int fdFile, off_t offset, size_t size )
 {
     int& headerTotal = m_response.getHeaderLeft();
-    int written = sendfile( m_response.getIov(), headerTotal,
+    
+    int written = getStream()->sendfile( m_response.getIov(), headerTotal,
                             fdFile, offset, size );
     if ( written > 0 )
         m_response.written( written );
@@ -1561,8 +1661,13 @@ int HttpConnection::writeRespBodyPlain(
 {
     int written;
     //printf( "HttpConnection::writeRespBody()!\n" );
+    if ( getStream()->isSpdy() )
+    {
+        return getStream()->write( pBuf, size );
+    }
+    
     iov.append( pBuf, size );
-    written = HttpIOLink::writev( iov, headerTotal + size );
+    written = getStream()->writev( iov, headerTotal + size );
     if ( headerTotal > 0 )
     {
         if ( written >= headerTotal )
@@ -1615,7 +1720,7 @@ int HttpConnection::writeRespBodyv( IOVec &vector, int total )
         IOVec & iov = m_response.getIov();
         iov.append( vector );
         total += totalHeader;
-        written = HttpIOLink::writev( iov, total );
+        written = getStream()->writev( iov, total );
         iov.pop_back(vector.len());
         if ( written >= totalHeader )
         {
@@ -1634,7 +1739,7 @@ int HttpConnection::writeRespBodyv( IOVec &vector, int total )
         }
     }
     else
-        written = HttpIOLink::writev( vector, total );
+        written = getStream()->writev( vector, total );
     if ( written > 0 )
         m_response.written( written );
     return written;
@@ -1657,11 +1762,101 @@ static char s_errTimeout[] =
 //    "<a href='http://www.litespeedtech.com'><i>http://www.litespeedtech.com</i></a>\n"
     "</body></html>\n";
 
+int HttpConnection::detectKeepAliveTimeout( int delta )
+{
+    register const HttpServerConfig& config = HttpServerConfig::getInstance();
+    int c = 0;
+    if ( delta >= config.getKeepAliveTimeout() )
+    {
+        if ( D_ENABLED( DL_MEDIUM ) )
+            LOG_D((getLogger(),
+                "[%s] Keep-alive timeout, close!",
+                getLogId() ));
+        c = 1;
+    }
+    else if (( delta > 2)&&(m_iReqServed != 0 ))
+    {
+        if ( HttpGlobals::getConnLimitCtrl()->getConnOverflow() )
+        {
+            if ( D_ENABLED( DL_MEDIUM ) )
+                LOG_D((getLogger(),
+                    "[%s] Connections over flow, close connection!",
+                    getLogId() ));
+            c = 1;
+            
+        }
+        else if ((int)m_pNtwkIOLink->getClientInfo()->getConns() >
+                (HttpGlobals::s_iConnsPerClientSoftLimit >> 1 ) )
+        {
+            if ( D_ENABLED( DL_MEDIUM ) )
+                LOG_D((getLogger(),
+                    "[%s] Connections is over the limit, close!",
+                    getLogId() ));
+            c = 1;
+        }
+    }
+    if ( c )
+    {
+        --HttpGlobals::s_iIdleConns;
+        getStream()->close();
+    }
+    return c;
+}
+
+int HttpConnection::detectConnectionTimeout( int delta )
+{
+    register const HttpServerConfig& config = HttpServerConfig::getInstance();
+    if ( DateTime::s_curTime > m_pNtwkIOLink->getActiveTime() +
+        config.getConnTimeout() )
+    {
+        if ( m_pNtwkIOLink->getfd() != m_pNtwkIOLink->getPollfd()->fd )
+            LOG_ERR(( getLogger(),
+                "[%s] BUG: fd %d does not match fd %d in pollfd!",
+                getLogId(), m_pNtwkIOLink->getfd(), m_pNtwkIOLink->getPollfd()->fd ));
+//            if ( D_ENABLED( DL_MEDIUM ) )
+        if (( m_response.getBodySent() == 0 )|| !m_pNtwkIOLink->getEvents() )
+        {
+            LOG_INFO((getLogger(),
+                "[%s] Connection idle time: %ld while in state: %d watching for event: %d,"
+                "close!",
+                getLogId(), DateTime::s_curTime - m_pNtwkIOLink->getActiveTime(), getState(), m_pNtwkIOLink->getEvents() ));
+            m_request.dumpHeader();
+            if ( m_pHandler )
+                m_pHandler->dump();
+            if ( getState() == HCS_READING_BODY )
+            {
+                LOG_INFO((getLogger(),
+                    "[%s] Request body size: %d, received: %d.",
+                    getLogId(), m_request.getContentLength(),
+                    m_request.getContentFinished() ));
+            }
+        }
+        if (( getState() == HCS_PROCESSING )&&m_response.getBodySent() == 0 )
+        {
+            IOVec iov;
+            iov.append( s_errTimeout, sizeof( s_errTimeout ) - 1 );
+            getStream()->writev( iov, sizeof( s_errTimeout ) - 1 );
+        }
+        else
+            getStream()->setAbortedFlag();
+        closeConnection();
+        return 1;
+    }
+    else
+        return 0;
+}
+
+int HttpConnection::isAlive()
+{
+    if ( getStream()->isSpdy() )
+        return 1;
+    return !m_pNtwkIOLink->detectClose();
+    
+}
+
 
 int HttpConnection::detectTimeout()
 {
-    register int c = 0;
-    register const HttpServerConfig& config = HttpServerConfig::getInstance();
 //    if ( D_ENABLED( DL_MEDIUM ) )
 //        LOG_D((getLogger(),
 //            "[%s] HttpConnection::detectTimeout() ",
@@ -1669,117 +1864,23 @@ int HttpConnection::detectTimeout()
     int delta = DateTime::s_curTime - m_lReqTime;
     switch(getState() )
     {
-    case HC_WAITING:
-        if ( delta >= config.getKeepAliveTimeout() )
-        {
-            if ( D_ENABLED( DL_MEDIUM ) )
-                LOG_D((getLogger(),
-                    "[%s] Keep-alive timeout, close!",
-                    getLogId() ));
-            c = 1;
-        }
-        else if (( delta > 2)&&(m_iReqServed != 0 ))
-        {
-            if ( HttpGlobals::getConnLimitCtrl()->getConnOverflow() )
-            {
-                if ( D_ENABLED( DL_MEDIUM ) )
-                    LOG_D((getLogger(),
-                        "[%s] Connections over flow, close connection!",
-                        getLogId() ));
-                c = 1;
-                
-            }
-            else if ((int)getClientInfo()->getConns() >
-                    (HttpGlobals::s_iConnsPerClientSoftLimit >> 1 ) )
-            {
-                if ( D_ENABLED( DL_MEDIUM ) )
-                    LOG_D((getLogger(),
-                        "[%s] Connections is over the limit, close!",
-                        getLogId() ));
-                c = 1;
-            }
-        }
-        if ( c )
-        {
-            --HttpGlobals::s_iIdleConns;
-            setPeerShutdown( IO_PEER_ERR );
-            setState( HC_CLOSING );
-            close();
-        }
-        return c;
-    case HC_SHUTDOWN:
-        if ( delta > 1 )
-        {
-            if ( D_ENABLED( DL_MEDIUM ) )
-                LOG_D((getLogger(), "[%s] Shutdown time out!", getLogId() ));
-            closeSocket();
-        }
-        return 1;
-    case HC_CLOSING:
-        closeConnection();
-        return 1;
-    case HC_READING:
-    case HC_READING_BODY:
-        if (!( getEvents() & POLLIN ) && allowRead())
-        {
-            LOG_WARN(( getLogger(), "[%s] Oops! POLLIN is turned off for this HTTP connection "
-                        "while reading request, turn it on, this should never happen!", getLogId() ));
-            continueRead();
-        }
+    case HCS_WAITING:
+        return detectKeepAliveTimeout( delta );
+    case HCS_READING:
+    case HCS_READING_BODY:
         //fall through
     default:
-
-//        if ( getClientInfo()->getAccess() == AC_BLOCK )
-//        {
-//            LOG_INFO(( "[%s] Connection limit violation, access is denied, "
-//                       "close existing connection!", getLogId() ));
-//            setPeerShutdown( IO_PEER_ERR );
-//            closeConnection();
-//            return 1;
-//        }
-
-        if ( DateTime::s_curTime > getActiveTime() +
-            config.getConnTimeout() )
-        {
-            if ( getfd() != getPollfd()->fd )
-                LOG_ERR(( getLogger(),
-                    "[%s] BUG: fd %d does not match fd %d in pollfd!",
-                    getLogId(), getfd(), getPollfd()->fd ));
-//            if ( D_ENABLED( DL_MEDIUM ) )
-            if (( m_response.getBodySent() == 0 )|| !getEvents() )
-            {
-                LOG_INFO((getLogger(),
-                    "[%s] Connection idle time: %ld while in state: %d watching for event: %d,"
-                    "close!",
-                    getLogId(), DateTime::s_curTime - getActiveTime(), getState(), getEvents() ));
-                m_request.dumpHeader();
-                if ( m_pHandler )
-                    m_pHandler->dump();
-                if ( getState() == HC_READING_BODY )
-                {
-                    LOG_INFO((getLogger(),
-                        "[%s] Request body size: %d, received: %d.",
-                        getLogId(), m_request.getContentLength(),
-                        m_request.getContentFinished() ));
-                }
-            }
-            if (( getState() == HC_PROCESSING )&&m_response.getBodySent() == 0 )
-            {
-                IOVec iov;
-                iov.append( s_errTimeout, sizeof( s_errTimeout ) - 1 );
-                HttpIOLink::writev( iov, sizeof( s_errTimeout ) - 1 );
-            }
-            else
-                setPeerShutdown( IO_PEER_ERR );
-            closeConnection();
-            return 1;
-        }
+        return detectConnectionTimeout( delta);
     }
     return 0;
 }
 
 int HttpConnection::onTimerEx( )
 {
+    if ( getState() ==  HCS_THROTTLING)
+    {
+        onWriteEx();
+    }
     if ( detectTimeout() )
         return 1;
     if ( m_pHandler )
@@ -1789,10 +1890,10 @@ int HttpConnection::onTimerEx( )
 
 void HttpConnection::releaseRespCache()
 {
-    if ( m_pRespCache )
+    if ( m_pRespBodyBuf )
     {
-        HttpGlobals::getResManager()->recycle( m_pRespCache );
-        m_pRespCache = NULL;
+        HttpGlobals::getResManager()->recycle( m_pRespBodyBuf );
+        m_pRespBodyBuf = NULL;
     }
 }
 int HttpConnection::sendDynBody()
@@ -1800,7 +1901,7 @@ int HttpConnection::sendDynBody()
     while( true )
     {
         size_t toWrite;
-        char * pBuf = m_pRespCache->getReadBuffer( toWrite );
+        char * pBuf = m_pRespBodyBuf->getReadBuffer( toWrite );
         
         if ( toWrite > 0 )
         {
@@ -1812,7 +1913,7 @@ int HttpConnection::sendDynBody()
                     len = allowed;
                 if ( len <= 0 )
                 {
-                    m_pRespCache->readUsed( toWrite );
+                    m_pRespBodyBuf->readUsed( toWrite );
                     continue;
                 }
             }
@@ -1827,7 +1928,7 @@ int HttpConnection::sendDynBody()
                 m_lDynBodySent += ret;
                 if ( ret >= len )
                     ret = toWrite;
-                m_pRespCache->readUsed( ret );
+                m_pRespBodyBuf->readUsed( ret );
                 if ( ret < len )
                 {
                     continueWrite();
@@ -1853,10 +1954,10 @@ int HttpConnection::sendDynBody()
 
 int HttpConnection::setupRespCache()
 {
-    if ( !m_pRespCache )
+    if ( !m_pRespBodyBuf )
     {
-        m_pRespCache = HttpGlobals::getResManager()->getVMemBuf();
-        if ( !m_pRespCache )
+        m_pRespBodyBuf = HttpGlobals::getResManager()->getVMemBuf();
+        if ( !m_pRespBodyBuf )
         {
             LOG_ERR(( getLogger(), "[%s] Failed to obtain VMemBuf, current pool size: %d,"
                             "capacity: %d.",
@@ -1864,7 +1965,7 @@ int HttpConnection::setupRespCache()
                         HttpGlobals::getResManager()->getVMemBufPoolCapacity() ));
             return -1;
         }
-        if ( m_pRespCache->reinit(
+        if ( m_pRespBodyBuf->reinit(
                 m_response.getContentLen() ) )
         {
             LOG_ERR(( getLogger(), "[%s] Failed to initialize VMemBuf, response body len: %ld.", getLogId(), m_response.getContentLen() ));
@@ -1901,7 +2002,7 @@ int HttpConnection::setupGzipFilter()
 
 int HttpConnection::setupGzipBuf( int type )
 {
-    if ( m_pRespCache )
+    if ( m_pRespBodyBuf )
     {
         if ( D_ENABLED( DL_LESS ) )
             LOG_D(( getLogger(), "[%s] %s response body!",
@@ -1921,7 +2022,7 @@ int HttpConnection::setupGzipBuf( int type )
                 releaseGzipBuf();
             }
         }
-        m_iRespBodyCacheOffset = m_pRespCache->getCurWOffset();
+        m_iRespBodyCacheOffset = m_pRespBodyBuf->getCurWOffset();
         if ( !m_pGzipBuf )
         {
             if (type == GzipBuf::GZIP_DEFLATE)
@@ -1931,7 +2032,7 @@ int HttpConnection::setupGzipBuf( int type )
         }
         if ( m_pGzipBuf )
         {
-            m_pGzipBuf->setCompressCache( m_pRespCache );
+            m_pGzipBuf->setCompressCache( m_pRespBodyBuf );
             if (( m_pGzipBuf->init( type,
                     HttpServerConfig::getInstance().getCompressLevel() ) == 0 )&&
                 ( m_pGzipBuf->beginStream() == 0 ))
@@ -1982,8 +2083,8 @@ int HttpConnection::appendDynBody( int inplace, const char * pBuf, int len )
     {
         if ( inplace )
         {
-            if ( m_pRespCache )
-                m_pRespCache->writeUsed( len );
+            if ( m_pRespBodyBuf )
+                m_pRespBodyBuf->writeUsed( len );
         }
         else
             ret = appendRespCache( pBuf, len );
@@ -1999,7 +2100,7 @@ int HttpConnection::appendRespCache( const char * pBuf, int len )
     size_t iCacheSize;
     while( len > 0 )
     {
-        pCache = m_pRespCache->getWriteBuffer( iCacheSize );
+        pCache = m_pRespBodyBuf->getWriteBuffer( iCacheSize );
         if ( pCache )
         {
             int ret = len;
@@ -2010,7 +2111,7 @@ int HttpConnection::appendRespCache( const char * pBuf, int len )
             memmove( pCache, pBuf, ret );
             pBuf += ret;
             len -= ret;
-            m_pRespCache->writeUsed( ret );
+            m_pRespBodyBuf->writeUsed( ret );
         }
         else
         {
@@ -2023,7 +2124,7 @@ int HttpConnection::appendRespCache( const char * pBuf, int len )
 
 int HttpConnection::shouldSuspendReadingResp()
 {
-    return m_pRespCache->getCurWBlkPos() >= 2048 * 1024; 
+    return m_pRespBodyBuf->getCurWBlkPos() >= 2048 * 1024; 
 }
 
 void HttpConnection::resetRespBodyBuf()
@@ -2034,8 +2135,8 @@ void HttpConnection::resetRespBodyBuf()
             m_pGzipBuf->resetCompressCache();
         else
         {
-            m_pRespCache->rewindReadBuf();
-            m_pRespCache->rewindWriteBuf();
+            m_pRespBodyBuf->rewindReadBuf();
+            m_pRespBodyBuf->rewindWriteBuf();
         }
     }
 }
@@ -2048,7 +2149,7 @@ static char achOverBodyLimitError[] =
 int HttpConnection::checkRespSize( int nobuffer )
 {
     int ret = 0;
-    int curLen = m_pRespCache->writeBufSize();
+    int curLen = m_pRespBodyBuf->writeBufSize();
     if ((nobuffer&&(curLen > 0))||(curLen > 1460 ))
     {
         if ( curLen > HttpServerConfig::getInstance().getMaxDynRespLen() )
@@ -2076,7 +2177,7 @@ int HttpConnection::checkRespSize( int nobuffer )
         }
         else
         {
-            setState( HC_WRITING );
+            setState( HCS_WRITING );
             //sendResp();
             continueWrite();
         }
@@ -2115,7 +2216,7 @@ int HttpConnection::endDynResp( int cacheable )
         else
         {
             //sendResp();
-            setState( HC_WRITING );
+            setState( HCS_WRITING );
             continueWrite();
         }
     }
@@ -2133,8 +2234,6 @@ int HttpConnection::prepareDynRespHeader( int complete, int nobuffer )
     m_response.getIov().clear();
     if ( sendBody() )
     {
-        if ( getGzipBuf() && (getGzipBuf()->getType() == GzipBuf::GZIP_DEFLATE) )
-            m_response.addGzipEncodingHeader();
         if (( complete )&&(( getRespCache()->writeBufSize() > 0 )||
               m_response.getContentLen() == 0))
         {
@@ -2151,9 +2250,10 @@ int HttpConnection::prepareDynRespHeader( int complete, int nobuffer )
         {
             setupChunkOS( nobuffer );
         }
+        if ( getGzipBuf() && (getGzipBuf()->getType() == GzipBuf::GZIP_DEFLATE) )
+            m_response.addGzipEncodingHeader();
     }
     m_response.prepareHeaders( &m_request );
-    m_response.endHeader();
     m_response.finalizeHeader( m_request.getVersion(), m_request.getStatusCode());
     return 0;
 }
@@ -2306,3 +2406,23 @@ int HttpConnection::execExtCmd( const char * pCmd, int len )
 // 
 // }
 
+int HttpConnection::getServerAddrStr( char * pBuf, int len )
+{
+    char achAddr[128];
+    socklen_t addrlen = 128;
+    if ( getsockname( m_pNtwkIOLink->getfd(), (struct sockaddr *) achAddr, &addrlen ) == -1 )
+    {
+        return 0;
+    }
+    
+    if (( AF_INET6 == ((struct sockaddr *)achAddr)->sa_family )&&
+        ( IN6_IS_ADDR_V4MAPPED( &((struct sockaddr_in6 *)achAddr)->sin6_addr )) )
+    {
+        ((struct sockaddr *)achAddr)->sa_family = AF_INET;
+        ((struct sockaddr_in *)achAddr)->sin_addr.s_addr = *((in_addr_t *)&achAddr[20]);
+    }
+    
+    if ( GSockAddr::ntop( (struct sockaddr *)achAddr, pBuf, len ) == NULL )
+        return 0;
+    return strlen( pBuf );
+}

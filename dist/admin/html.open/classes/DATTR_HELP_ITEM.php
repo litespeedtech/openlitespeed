@@ -12,7 +12,7 @@ class DATTR_HELP_ITEM
 		
 		$this->name = $name;
 		$this->desc = $desc;
-		$this->tips = $tips;
+		$this->tips = str_replace('<br>', '<br/>', $tips);
 		$this->syntax = $syntax;
 		$this->example = $example;
 	}
@@ -21,7 +21,7 @@ class DATTR_HELP_ITEM
 	function render($key, $blocked_version=0) 
 	{ 
 		$key = str_replace(array(':','_'), '', $key );
-		$buf = '<img class="xtip-hover-' . $key . '" src="/static/images/icons/info.gif">' 
+		$buf = '<img class="xtip-hover-' . $key . '" src="/static/images/icons/help.png">' 
 			. '<div id="xtip-note-' . $key . '" class="snp-mouseoffset notedefault"><b>' 
 			. $this->name
 			. '</b>' ;
@@ -39,27 +39,22 @@ class DATTR_HELP_ITEM
 			. $this->desc
 			. '<br><br>';
 		if ($this->syntax) {
-			$buf .= 'Syntax: ' 
+			$buf .= '<strong>Syntax:</strong> ' 
 				. $this->syntax
 				. '<br><br>';
 		}
 		if ($this->example) {
-			$buf .= 'Example: ' 
+			$buf .= '<strong>Example:</strong> ' 
 				. $this->example
 				. '<br><br>';
 		}
 		if ($this->tips) {
-			$buf .= 'Tip(s):<ul type=circle>';
-			if (strpos($this->tips, '<br>') !== FALSE) {
-				$tips = explode('<br>', $this->tips);
-				foreach($tips as $ti) {
-					$ti = trim($ti);
-					if ($ti != '')
-						$buf .= '<li>' . $ti . '</li>';	
-				}
-			}
-			else {
-				$buf .= '<li>' . $this->tips . '</li>';
+			$buf .= '<strong>Tip(s):</strong><ul type=circle>';
+			$tips = explode('<br/>', $this->tips);
+			foreach($tips as $ti) {
+				$ti = trim($ti);
+				if ($ti != '')
+					$buf .= '<li>' . $ti . '</li>';	
 			}
 			$buf .= '</ul>';
 		}
