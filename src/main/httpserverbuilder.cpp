@@ -3855,12 +3855,17 @@ int HttpServerBuilder::initServerBasic2(  const XmlNode* pRoot )
         if ( pURI )
             m_sAutoIndexURI.setStr( pURI );
 
-        int sv = getLongValue( pRoot, "showVersionNumber", 0, 1, 0 );
-        HttpServerVersion::hideDetail( !sv );
-        if ( !sv )
+        int sv = getLongValue( pRoot, "showVersionNumber", 0, 2, 0 );
+        HttpServerVersion::hideDetail( sv );
+        if ( 0 == sv )
         {
             LOG_INFO(( "[%s] For better obscurity, server version number is hidden"
                        " in the response header.", getLogId() ));
+        }
+        if ( 2 == sv )
+        {
+            LOG_INFO(( "[%s] For better obscurity, server header is hidden.",
+                       getLogId(), sv ));
         }
 
         denyAccessFiles( NULL, ".ht*", 0 );

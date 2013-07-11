@@ -23,9 +23,11 @@ int        HttpServerVersion::s_iVersionLen = 9; //sizeof( s_pVersion ) - 1;
 
 void HttpServerVersion::hideDetail( int hide )
 {
-    if ( hide )
+    if ( !hide )
         s_iVersionLen = 9;
+    else if ( 2 == hide )
+       s_iVersionLen = 0;
     else
-        s_iVersionLen = sizeof( s_pVersion ) - 1;
+       s_iVersionLen = sizeof( s_pVersion ) - 1;
 }
 
