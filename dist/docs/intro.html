@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+  <title>Open LiteSpeed Web Server Users' Manual - Introduction</title>
+  <meta name="description" content="Open LiteSpeed Web Server Users' Manual." />  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="shortcut icon" href="img/favicon.ico" />
+  <link rel="stylesheet" type="text/css" href="css/hdoc.css">
+</head>
+<body>
+<div class="wrapper">
+<div class="nav-bar"><ul class="nav-bar"><li>&#171 <a href="license.html">License</a></li><li><a href="index.html">Home</a></li><li><a href="install.html">Installation</a> &#187;</li></ul></div>
+
+<h1>Introduction</h1>
+
+<h3>Overview</h3>
+<p>LiteSpeed Web Server is a high performance, secure, easy-to-use web server.
+It can handle thousands of concurrent connections with a small memory footprint. 
+Its security features also make it much less vulnerable to various attacks.
+</p>
+
+
+<h3>Basic Features</h3>
+
+<ul>
+  <li><p><strong>HTTP/1.1</strong></p>
+	  <ul>
+	    <li>Chunked transfer encoding</li>
+	    <li>Basic authentication (password file and LDAP backend)</li>
+	    <li>Entity tag</li>
+	    <li>Single and multiple ranges requests</li>
+	    <li>Static/dynamic response compression (gzip)</li>
+		<li>Apache-compatible URL rewrite</li>
+		<li>IPv6 support</li>
+	    <li>Apache mod_geoip compatible geotargeting support</li>
+	  </ul>
+  </li>
+  <li><p><strong>Dynamic Content Generation</strong></p>
+  <p>LiteSpeed Web Server supports the following dynamic content generation methods:</p>
+	  <ul>
+	    <li>CGI/1.1 with suEXEC</li>
+	    <li>Fast CGI with suEXEC</li>
+		<li>PHP with suEXEC through LiteSpeed PHP SAPI (top-of-the-line PHP performance with a mod_php equivalent feature set)
+	    <li>JSP/servlets (interface with AJP v1.3 compatible backend servlet engine)</li>
+		<li>Proxy (interface with any web server/application server that supports HTTP protocol)</li>
+		<li>Ruby on Rails with suEXEC through Ruby LSAPI module (best-in-class performance, easy deployment, supports dynamic spawning)
+	  </ul>
+  </li>
+  <li><p><strong>Virtual Hosting</strong></p>
+    <ul>
+		<li>Supports IP-based and name-based virtual hosting</li>
+		<li>Virtual host templates make virtual hosting configuration easy</li>
+	</ul>
+   </li>
+</ul>
+
+<h3>Security</h3>
+	<p>LiteSpeed Web Server provides the following security features:</p>
+	<ul>
+	  <li><strong>SSL</strong>
+	  <p>Supports SSLv3/TLSv1. <i>This product includes software developed by the OpenSSL Project
+	  for use in the OpenSSL Toolkit (http://www.openssl.org/)</i></p></li>
+	
+	  <li><strong>IP Level Throttling</strong>
+	  <p>Network bandwidth and request rate for a single IP address can be limited
+	  regardless of the number of connections. </p></li>
+	  
+	  <li><strong>Comprehensive Connection Accounting</strong>
+	  <p>Comprehensive control of concurrent connections allowed from a single IP address.</p></li>
+	  
+	  <li><strong>Access Control</strong>
+	  <p>Access control rules can be set at server, virtual host, and per-directory (context) 
+	  levels.</p> </li>
+	  
+	  <li><strong>External Application Shield</strong>
+	  <p>LiteSpeed Web Server shields CGI, Fast CGI and servlet engines from talking directly 
+	  to web clients to ensure maximum reliability and performance. </p></li>
+	  
+	  <li><strong>CGI Resources Consumption Limit</strong>
+	  <p>LiteSpeed Web Server prevents bad CGI scripts from overloading the server by 
+	  limiting the system resources CGI applications can consume.</p></li>
+	  
+	  <li><strong>DoS Attack Prevention</strong>
+	  <p>LiteSpeed Web Server is much less vulnerable to HTTP Denial of Service(DoS) 
+	  and Distributed Denial of Service (DDoS) attacks thanks to IP-level throttling, 
+	  connection accounting, and its outstanding performance and scalability. </p></li>
+	</ul>
+
+<h3>Reliability</h3>
+	<p>LiteSpeed Web Server recovers from crashes instantly. LiteSpeed Web Server also runs completely in user space.
+	Thus the server can easily switch between different versions without affecting the reliability of the operating system.
+	</p>
+	<p>CGI, Fast CGI and Servlet engine run in their standalone processes, the
+reliability of web server is not affected by the quality of third party software.</p>
+
+<h3>User Friendly</h3>
+	<ul>
+		<li>No need to build the executable yourself.</li>
+		<li>Easy to install.</li>
+		<li>Easy to control and configure through the WebAdmin interface.</li>
+		<li>Sets up PHP and PHP accelerators automatically.</li>
+		<li>Applies most changes without restarting the server.</li>
+	</ul>
+
+
+
+<footer class="copyright">Copyright &copy; 2013. <a href="http://www.litespeedtech.com">Lite Speed Technologies Inc.</a> All rights reserved.</footer>
+</div>
+</body>
+</html>
+
+

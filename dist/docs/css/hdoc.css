@@ -1,0 +1,212 @@
+body,td,a,p{font-family: sans-serif;}
+
+body {
+	color: #222; font-size: 13px;
+}
+
+
+.wrapper {
+	width: 960px; margin: 0 auto; background-color: #FFFFFF;
+}
+
+h1 {
+	font-size: 15pt;
+	border-bottom: 1px solid #ddd;
+}
+
+h2 {
+	font-size: 13pt;
+}
+
+h3 {
+	font-size: 12pt;
+}
+
+h4 {
+	font-size: 14px;
+}
+
+h1,h2,h3 {
+	margin: 20px 0 10px 0;
+	font-weight: 700;
+}
+
+ol {
+	display: block;
+	list-style-type: decimal;
+}
+
+ol li, ul li {
+	margin: 0.5em 0 0.5em 0;
+}
+
+.toctop li A { COLOR: #116789; TEXT-DECORATION: none }
+.toctop li A:visited { COLOR: #116789; TEXT-DECORATION: none }
+.toctop li A:hover{ COLOR: #ee9126; TEXT-DECORATION: none }
+
+.helpitem {
+	display: block;
+	margin: 20px 0 10px 0;
+	position: relative;	
+}
+
+.toc-row {
+	display: inline; width: 720px;
+	border: 0 solid #07a;
+	border-width: 1px 0 0 0;
+	padding: 2px 0 0 0;
+	margin: 0 0 10px 0;
+	position: relative;	
+}
+
+.toc-row header {
+	color: #116789;	font-size: 14px; font-weight: bold;
+}
+
+.toc-row header a {
+	color: #116789;	
+}
+
+.toc-row a:hover { color: #ee9126; TEXT-DECORATION: none}
+
+.toc-row p a{
+	color: #222; TEXT-DECORATION: none	
+}
+
+.toc-row p {
+	color: #aaa;	
+}
+
+.toc {
+	display: block; padding: 20px 20px 20px 20px; width: 720px; BACKGROUND-COLOR: #f8f8f8;
+}
+
+
+.ht {
+    BACKGROUND-COLOR: transparent; FONT-SIZE: 13px; COLOR: #555;
+}
+
+.ht-title {
+    FONT-WEIGHT: bold; FONT-SIZE: 14px; COLOR: #FFFFFF; BACKGROUND-COLOR: #555; background-image:linear-gradient(#666666,#555555); border-top-left-radius: 3px; border-top-right-radius: 3px;
+}
+.ht-label {
+	FONT-WEIGHT: bold; COLOR: #666699; FONT-SIZE: 13px;
+}
+
+.label-title {
+    FONT-WEIGHT: bold; FONT-SIZE: 12pt; COLOR: #9999CC; TEXT-ALIGN: center; VIRTICAL-ALIGN: text-top !important
+}
+.label-title1 {
+    FONT-WEIGHT: bold; FONT-SIZE: 12pt; COLOR: #9999CC; VIRTICAL-ALIGN: text-top !important
+}
+
+.intro {
+    FONT-SIZE: 13px; TEXT-ALIGN: left;
+}
+.tbl-content {
+    FONT-WEIGHT: bold; FONT-SIZE: 13px; 
+}
+.tbl-content1 table{
+     border-collapse:collapse;  
+}
+
+.tbl-content1 td{
+    PADDING-LEFT: 10px; PADDING-RIGHT: 10px; FONT-SIZE: 9pt; TEXT-ALIGN: left;
+}
+
+.tbl-content1 A { COLOR: #003399;  }
+.tbl-content1 A:visited { COLOR: #003399 }
+.tbl-content1 A:hover{ COLOR: #3333CC; TEXT-DECORATION: none }
+
+.tbl-content2 {
+    PADDING-LEFT: 20px; FONT-SIZE: 14px; TEXT-ALIGN: left; line-height:20px;
+}
+
+.tbl-content2 A { COLOR: #003399; TEXT-DECORATION: none }
+.tbl-content2 A:visited { COLOR: #003399; TEXT-DECORATION: none }
+.tbl-content2 A:hover{ COLOR: #3333FF; TEXT-DECORATION: underline }
+ 
+.tbl-content-lead {
+	COLOR:#003399; FONT-WEIGHT: bold; BACKGROUND-COLOR: #EFEFEF;
+}
+.tbl-content-lead A { COLOR:#003399 }
+.tbl-content-lead A:visited { COLOR:#003399 }
+.tbl-content-lead A:hover{ COLOR: #3333CC; TEXT-DECORATION: none }
+.tbl-content-lead1 {
+	COLOR:#003399; FONT-WEIGHT: bold
+}
+
+.top { FONT-SIZE: 11px; TEXT-ALIGN: right; }
+.top A {COLOR: #FFFFFF; }
+.top A:visited{COLOR: #FFFFFF; }
+
+.eg {
+    PADDING-LEFT: 20px; PADDING-RIGHT: 20px; BACKGROUND-COLOR: #EFEFEF;
+}
+.cmd {
+    PADDING-LEFT: 10px; PADDING-RIGHT: 10px; COLOR: #006600; 
+}
+.tag { COLOR: #339999; FONT-WEIGHT: bold }
+.val { COLOR: #000000; FONT-WEIGHT: bold }
+
+.tagI { COLOR: #339999; FONT-WEIGHT: bold }
+.tagI A { COLOR: #339999; TEXT-DECORATION: none }
+.tagI A:visited { COLOR: #339999 }
+.tagI A:hover { COLOR: #339999; TEXT-DECORATION: underline }
+
+.tagP { COLOR: #339999; FONT-WEIGHT: bold }
+.tagP A { COLOR: #339999; TEXT-DECORATION: none }
+.tagP A:visited { COLOR: #339999 }
+.tagP A:hover { COLOR: #339999; TEXT-DECORATION: underline }
+
+.tagQ { COLOR: #339999; FONT-WEIGHT: bold }
+.tagQ A { COLOR: #339999; TEXT-DECORATION: none }
+.tagQ A:visited { COLOR: #339999 }
+.tagQ A:hover { COLOR: #339999; TEXT-DECORATION: underline }
+
+.copyright {
+	FONT-SIZE: 11px; COLOR: #999999; TEXT-ALIGN: center; border-top: 1px solid #ddd; padding-top: 20px; 
+}
+.copyright1 {
+	FONT-SIZE: 11px; COLOR: #999999; border-top: 1px solid #ddd; padding-top: 20px; 
+}
+.copyright A{
+    COLOR: #333399; TEXT-DECORATION: none
+}
+.copyright A:visited{
+    COLOR: #333399; TEXT-DECORATION: none
+}
+.copyright A:hover{
+    COLOR: #3333CC; TEXT-DECORATION: underline
+}
+.ct {
+    FONT-SIZE: 13px; COLOR: #000000; 
+}
+.label1 {
+    FONT-SIZE: 13px; FONT-WEIGHT: bold; COLOR: #000000; 
+}
+.label2 {
+    FONT-SIZE: 11pt; FONT-WEIGHT: bold; COLOR: #000000; 
+}
+.label-blue {
+    FONT-SIZE: 12pt; FONT-WEIGHT: bold; COLOR: #003399; 
+}
+
+
+.nav-bar {  BACKGROUND-COLOR: #555555; COLOR: #FFFFFF; font-size: 12px; margin: 0.6em 0 4em 0; text-align: center;}
+.nav-bar a { color: #FFFFFF; text-decoration: none; }
+.nav-bar a:hover { text-decoration: underline; }
+.nav-bar a visited { color: #FFFFFF }
+.nav-bar li { display: inline; margin: 0 1.3em; text-align: center; }
+
+.qa-title {
+    FONT-WEIGHT: bold; FONT-SIZE: 14px; COLOR: #000000;
+}
+
+.qa{
+    PADDING-LEFT: 15px; FONT-SIZE: 13px; 
+}
+.qa-top { FONT-SIZE: 12px; TEXT-ALIGN: right; FONT-WEIGHT: normal;}
+.qa-top A {COLOR: #6B6D6B; }
+.qa-top A:visited{COLOR: #6B6D6B; }
+

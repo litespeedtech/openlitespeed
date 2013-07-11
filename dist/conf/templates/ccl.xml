@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<virtualHostTemplate>
+  <vhRoot>$SERVER_ROOT/$VH_NAME/</vhRoot>
+  <configFile>$SERVER_ROOT/conf/$VH_NAME.xml</configFile>
+  <allowSymbolLink>1</allowSymbolLink>
+  <enableScript>1</enableScript>
+  <restrained>1</restrained>
+  <setUIDMode>0</setUIDMode>
+  <chrootMode>0</chrootMode>
+
+  <virtualHostConfig>
+    <docRoot>$VH_ROOT/html/</docRoot>
+    <enableGzip>1</enableGzip>
+    <adminEmails></adminEmails>
+    <logging>
+      <log>
+        <useServer>1</useServer>
+
+      </log>
+      <accessLog>
+        <useServer>0</useServer>
+        <fileName>$SERVER_ROOT/logs/$VH_NAME.access.log</fileName>
+        <logReferer>1</logReferer>
+        <logUserAgent>1</logUserAgent>
+        <rollingSize>100M</rollingSize>
+        <keepDays>30</keepDays>
+        <compressArchive>1</compressArchive>
+      </accessLog>
+    </logging>
+    <awstats>
+      <updateMode>0</updateMode>
+      <workingDir>$VH_ROOT/awstats</workingDir>
+      <awstatsURI>/awstats/</awstatsURI>
+      <siteDomain>localhost</siteDomain>
+      <siteAliases>127.0.0.1 localhost</siteAliases>
+      <updateInterval>86400</updateInterval>
+      <updateOffset>0</updateOffset>
+    </awstats>
+    <index>
+      <useServer>0</useServer>
+      <indexFiles>index.html</indexFiles>
+      <autoIndex>0</autoIndex>
+      <autoIndexURI>/_autoindex/default.php</autoIndexURI>
+    </index>
+    <htAccess>
+      <allowOverride>0</allowOverride>
+      <accessFileName>.htaccess</accessFileName>
+    </htAccess>
+    <frontPage>
+      <enable>0</enable>
+      <disableAdmin>0</disableAdmin>
+      <domainNames></domainNames>
+    </frontPage>
+    <expires>
+      <enableExpires>1</enableExpires>
+      <expiresDefault></expiresDefault>
+    </expires>
+    <security>
+      <general>
+        <enableContextAC>0</enableContextAC>
+      </general>
+      <hotlinkCtrl>
+        <enableHotlinkCtrl>0</enableHotlinkCtrl>
+        <suffixes>gif, jpeg, jpg</suffixes>
+        <allowDirectAccess>1</allowDirectAccess>
+        <redirectUri></redirectUri>
+        <onlySelf>1</onlySelf>
+        <allowedHosts></allowedHosts>
+      </hotlinkCtrl>
+      <realmList>
+      </realmList>
+      <accessControl>
+        <allow>*</allow>
+        <deny></deny>
+      </accessControl>
+    </security>
+    <contextList>
+      <context>
+        <uri>/cgi-bin/</uri>
+        <type>cgi</type>
+        <location>$VH_ROOT/cgi-bin/</location>
+        <allowBrowse>1</allowBrowse>
+      </context>
+    </contextList>
+    <scriptHandlerList>
+    </scriptHandlerList>
+    <customErrorPages>
+    </customErrorPages>
+    <rewrite>
+      <enable>0</enable>
+      <logLevel>0</logLevel>
+      <rules>RewriteCond %{HTTP_USER_AGENT}  ^NameOfBadRobot
+  RewriteRule ^/nospider/         -   [F]</rules>
+    </rewrite>
+  </virtualHostConfig>
+</virtualHostTemplate>

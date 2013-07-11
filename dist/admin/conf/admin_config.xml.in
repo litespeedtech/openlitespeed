@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<adminConfig>
+    <listenerList>
+        <listener>
+            <name>adminListener</name>
+            <address>*:%ADMIN_PORT%</address>
+            <secure>0</secure>
+        </listener>
+    </listenerList>
+	<enableCoreDump>1</enableCoreDump>
+    <sessionTimeout>3600</sessionTimeout>
+    <security>
+        <accessControl>
+            <allow>ALL</allow>
+            <deny></deny>
+        </accessControl>
+    </security>
+    <logging>
+         <log>
+             <useServer>0</useServer>
+             <fileName>$VH_ROOT/logs/error.log</fileName>
+             <rollingSize>10M</rollingSize>
+             <logLevel>INFO</logLevel>
+         </log>
+         <accessLog>
+             <useServer>0</useServer>
+             <fileName>$VH_ROOT/logs/access.log</fileName>
+             <keepDays>90</keepDays>
+             <rollingSize>10M</rollingSize>
+             <logReferer>1</logReferer>
+             <logUserAgent>1</logUserAgent>
+         </accessLog>
+    </logging>
+     
+</adminConfig>

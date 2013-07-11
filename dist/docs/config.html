@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+  <title>Open LiteSpeed Web Server Users' Manual - Configuration</title>
+  <meta name="description" content="Open LiteSpeed Web Server Users' Manual." />  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="shortcut icon" href="img/favicon.ico" />
+  <link rel="stylesheet" type="text/css" href="css/hdoc.css">
+</head>
+<body>
+<div class="wrapper">
+<div class="nav-bar"><ul class="nav-bar"><li>&#171 <a href="security.html">Security</a></li><li><a href="index.html">Home</a></li><li><a href="ServerStat_Help.html">Service Manager</a> &#187;</li></ul></div>
+
+<h1>Configuration</h1>
+
+<h3>Table of Contents</h3>
+<div>
+<ul class="toctop">
+<li><a href="#con">Concepts</a>
+<ul><li><a href="#vh">Virtual Host</a></li>
+	<li><a href="#l">Listener</a></li>
+	<li><a href="#map">Listener to Virtual Host Mapping</a></li>
+</ul></li>
+<li>Configuration Settings
+<ul>
+<li><a href="ServGeneral_Help.html">Server General</a></li>
+<li><a href="ServTuning_Help.html">Server Tuning</a></li>
+<li><a href="ServSecurity_Help.html">Server Security</a></li>
+<li><a href="ExtApp_Help.html">External Apps</a></li>
+<li><a href="ScriptHandler_Help.html">Script Handler</a></li>
+<li><a href="Rails_Help.html">Rails Defaults</a></li>
+<li><a href="Listeners_Help.html">Listeners</a></li>
+<li><a href="Templates_Help.html">Templates</a></li>
+<li><a href="VirtualHosts_Help.html">Virtual Host List</a></li>
+<li><a href="VHGeneral_Help.html">Virtual Host General</a></li>
+<li><a href="VHSecurity_Help.html">Virtual Host Security</a></li>
+<li><a href="Rewrite_Help.html">Rewrite</a></li>
+<li><a href="Context_Help.html">Context</a></li>
+<li><a href="AdminGeneral_Help.html">Admin Server</a></li>
+<li><a href="AdminListener_Help.html">Admin Listeners</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<section>
+<a name="con"></a><h3>Concepts</h3>
+
+<p>Here are some basic concepts you should know before going into the detail of the configuration.</p>
+
+<a name="vh"></a><h3>Virtual Hosts</h3>
+
+<p>LiteSpeed web server can host multiple web sites (virtual hosts) with one server instance.</p> 
+
+<p>Traditionally, virtual hosts are classified into two types: IP-based virtual hosts and 
+  name-based virtual hosts. 
+  IP-based virtual hosts are web sites that have their own unique IP addresses. Name-based 
+  virtual hosts are web sites that are distinguished by their domain name and 
+  thus may share an IP address with other sites. There is no clear 
+  distinction between these two categories in LiteSpeed 
+  Web Server. IP-based virtual hosts are considered just a special kind of
+  name-based virtual host. Both of them can be easily configured, or even mixed 
+  together.</p>
+<p>Unlike other web servers, LiteSpeed Web Server does not have a default web site.
+  Every web site is configured as a virtual host even if only one web site is hosted.</p> 
+
+<a name="l"></a><h3>Listeners</h3>
+
+<p>In LiteSpeed Web Server, a listener is a server socket that listens on a
+  specific IP address and TCP port. If you imagine the web server as a building, the listeners are 
+  the doors (each with its own IP address and port).
+  Clients (browsers) have to go through a door (a listener) to submit their requests.</p>
+  
+<p>For each listener, an IP address and a port number need to be specified. 
+  IP address can be any valid local IP address, or you can set a wildcard IP
+  (*) that refers to all available IP addresses on that machine. 
+  A port is an integer between 0 and 65535. 
+  The default port for HTTP is 80 and 443 for HTTPS. 
+  Other ports can be used, though,  on UNIX machines, only the super user &quot;root&quot; 
+  has permission to use ports below 1024.</p>
+  
+<p>Only one listener is allowed for each IP and port combination.
+  Thus, if a listener is configured to one port with the wildcard IP address,
+  you cannot configure another listener to the same port, even if you specify 
+  a particular IP. For example, if there are multiple IP addresses on the web 
+  server machine, and HTTP traffic needs to be allowed on port 8080 for all 
+  IP addresses, this can be configured in two ways: set up one
+  listener using the wildcard IP (*) and port 8080, or set up multiple
+  listeners, one for each IP, all listening to port 8080. These two methods 
+  cannot be mixed on a single port.</p>
+    
+<p>There are two types of listeners in LiteSpeed Web Server: plain and secure 
+  (SSL). Each secure listener requires a paired SSL private key and SSL certificate. 
+  The private key can be generated with an SSL toolkit like 
+  OpenSSL. The SSL certificate can be self-signed or obtained from 
+  an SSL certificate issuer like VeriSign or Thawte. You can share the same private 
+  key and certificate pair among multiple listeners. </p>    
+
+<a name="map"></a><h3>Listener to Virtual Host Mapping</h3>
+
+<p>LiteSpeed's Listener to Virtual Host Mapping provides extra flexibility, allowing you 
+  to:</p>
+<ul>
+<li>map one listener to one virtual host.</li>
+<li>map one listener to different virtual hosts for different domain names.</li>
+<li>map multiple listeners to the same virtual host.</li>
+<li>map multiple listeners to multiple virtual hosts depending on their domain names.</li>
+</ul>
+
+<p>In Listener to Virtual Host Mapping, every listener has a virtual host lookup table 
+  with key-value pairs that specify a domain name (key) for 
+  a particular virtual host (value).</p>
+
+<p>When a browser tries to retrieve a web page from a web server, it first uses a DNS lookup to 
+find the IP address associated with that domain name. It then sends a request to establish a 
+TCP connection with the web server on a specific IP and port. If there is a listener assigned 
+to that IP and port, a connection is established. The browser then sends an HTTP 
+  request, which includes, in the header, the domain name of the web site being accessed. 
+ The web server checks the lookup table associated with that listener for the domain name 
+ in the request. If a match is found, the request is routed to the virtual host for processing.</p>
+
+<p>In order to make a virtual host accessible through a specific listener, you must
+make sure that:</p>
+<ol>
+	<li>DNS is configured properly to map the domain name of the web site to the
+IP used by that listener. How to configure DNS is beyond the scope of this document.</li>
+    <li>A mapping to the virtual host for that domain name exists in the listener's 
+      lookup table.</li>
+</ol>
+
+<p>A catchall virtual host can be specified for one listener with the wild card domain name 
+    "*". When the server cannot find a matching virtual host, the request will be routed 
+    to the catchall virtual host. If there is no such catchall virtual host configured, 
+    the web server will return error code 404.</p>
+
+
+</section>
+
+<footer class="copyright">Copyright &copy; 2013. <a href="http://www.litespeedtech.com">Lite Speed Technologies Inc.</a> All rights reserved.</footer>
+</div>
+
+</body>
+</html>

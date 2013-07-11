@@ -1,0 +1,99 @@
+###########################################
+#	EXTENSION_NAME = {EXTENSION_NAME}
+#	EXTENSION_SRC = {EXTENSION_SRC}
+#	EXTRACT_METHOD = {EXTRACT_METHOD}
+#	EXTENSION_DIR = {EXTENSION_DIR}
+#	EXTENSION_DOWNLOAD_URL = {EXTENSION_DOWNLOAD_URL}
+###########################################
+
+echo "============================================================="
+main_msg "Preparing source code for building {EXTENSION_NAME} Extension"
+echo "============================================================="
+echo ""
+
+echo "Changing to build directory {PHP_BUILD_DIR}" 
+cd {PHP_BUILD_DIR}
+check_errs $? "Could not get into build directory"
+
+if [ -e "{EXTENSION_SRC}" ] ; then
+	main_msg "{EXTENSION_SRC} already downloaded, use the saved copy."
+	NEW_DOWNLOAD=N
+else
+	main_msg "Retrieving {EXTENSION_NAME} extension source archive {EXTENSION_DOWNLOAD_URL}" 
+	{DL_METHOD} {EXTENSION_SRC} {EXTENSION_DOWNLOAD_URL}
+	check_errs $? "Fail to retrieve {EXTENSION_NAME} extension source archive"
+	echo ""
+	NEW_DOWNLOAD=Y
+fi
+
+echo "Changing to build directory php-{PHP_VERSION}" 
+cd php-{PHP_VERSION}
+check_errs $? "Could not get into build directory"
+
+echo "Copying {EXTENSION_NAME} extension source archive" 
+cp ../{EXTENSION_SRC} .
+check_errs $? "Could not copy"
+
+main_msg "Extracting {EXTENSION_NAME} extension source archive: {EXTRACT_METHOD} {EXTENSION_SRC}" 
+{EXTRACT_METHOD} {EXTENSION_SRC}
+
+if [ "$?" -ne "0" ] ; then
+	# remove bad copy
+	rm -f {EXTENSION_SRC} ../{EXTENSION_SRC}
+	check_errs $? "Fail to remove bad copy {EXTENSION_SRC}"
+
+	if [ $NEW_DOWNLOAD = "Y" ] ; then
+		check_errs 1 "Could not extract {EXTENSION_NAME} extension source archive"
+	else
+		main_msg "Failed to extract existing copy. try download again."
+	
+		main_msg "Retrieving {EXTENSION_NAME} extension source archive {EXTENSION_DOWNLOAD_URL}" 
+		{DL_METHOD} ../{EXTENSION_SRC} {EXTENSION_DOWNLOAD_URL}
+		check_errs $? "Fail to retrieve {EXTENSION_NAME} extension source archive"
+		NEW_DOWNLOAD=Y
+	
+		cp ../{EXTENSION_SRC} .
+		check_errs $? "Could not copy"
+	
+		main_msg "Extracting {EXTENSION_NAME} extension source archive: {EXTRACT_METHOD} {EXTENSION_SRC}" 
+		{EXTRACT_METHOD} {EXTENSION_SRC}
+		
+		if [ "$?" -ne "0" ] ; then
+			# remove bad copy
+			rm -f {EXTENSION_SRC} ../{EXTENSION_SRC}
+			check_errs $? "Fail to remove bad copy {EXTENSION_SRC}"
+
+			check_errs 1 "Could not extract {EXTENSION_NAME} extension source archive"
+		fi
+		
+		if [ "{EXTENSION_NAME}" = "eAccelerator" ] ; then
+			echo "  .. Special handling for eAccelerator: do not use spin lock, buggy"
+			echo "     set mm_sem_spinlock=no and mm_sem_ipc=no in config.m4"
+			cd {EXTENSION_DIR}
+			cp config.m4 config.m4.orig
+		    sed -e 's/mm_sem_spinlock=yes/mm_sem_spinlock=no/' -e 's/mm_sem_ipc=yes/mm_sem_ipc=no/' config.m4.orig > config.m4
+			if [ "$?" -ne "0" ] ; then
+				echo "   sed command error, please try to modify config.m4 manually to avoid using spinlock"
+				# continue, do not abort here
+			fi
+		fi
+	fi
+else
+	if [ "{EXTENSION_NAME}" = "eAccelerator" ] ; then
+		echo "  .. Special handling for eAccelerator: do not use spin lock, buggy"
+		echo "     set mm_sem_spinlock=no and mm_sem_ipc=no in config.m4"
+		cd {EXTENSION_DIR}
+		cp config.m4 config.m4.orig
+	    sed -e 's/mm_sem_spinlock=yes/mm_sem_spinlock=no/' -e 's/mm_sem_ipc=yes/mm_sem_ipc=no/' config.m4.orig > config.m4
+		if [ "$?" -ne "0" ] ; then
+			echo "   sed command error, please try to modify config.m4 manually to avoid using spinlock"
+			# continue, do not abort here
+		fi
+	fi
+	
+fi
+
+
+echo "============================================================="
+main_msg "Finished gathering source code for building {EXTENSION_NAME} extension"
+echo "============================================================="

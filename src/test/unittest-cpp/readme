@@ -1,0 +1,5 @@
+If you need to run the test cases, you may want to define RUN_TEST in the makefiles before compiling.
+And then you need to download UnitTest++ and extract to this directory.
+Then there should be a file src/test/unittest-cpp/UnitTest++/src/UnitTest++.h which will be used.
+You will easily find the UnitTest++ source code by google. ^_^
+

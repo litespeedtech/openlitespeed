@@ -1,0 +1,78 @@
+/*****************************************************************************
+*    Open LiteSpeed is an open source HTTP server.                           *
+*    Copyright (C) 2013  LiteSpeed Technologies, Inc.                        *
+*                                                                            *
+*    This program is free software: you can redistribute it and/or modify    *
+*    it under the terms of the GNU General Public License as published by    *
+*    the Free Software Foundation, either version 3 of the License, or       *
+*    (at your option) any later version.                                     *
+*                                                                            *
+*    This program is distributed in the hope that it will be useful,         *
+*    but WITHOUT ANY WARRANTY; without even the implied warranty of          *
+*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the            *
+*    GNU General Public License for more details.                            *
+*                                                                            *
+*    You should have received a copy of the GNU General Public License       *
+*    along with this program. If not, see http://www.gnu.org/licenses/.      *
+*****************************************************************************/
+#ifndef XMLNODE_H
+#define XMLNODE_H
+
+
+
+#include <stdio.h>
+#include <util/gpointerlist.h>
+
+class XmlNodeImpl;
+class XmlNode;
+class Attr;
+
+class XmlNodeList : public TPointerList<XmlNode>
+{
+public:
+    explicit XmlNodeList( int n )
+        : TPointerList<XmlNode>( n )
+        {}
+    XmlNodeList() {}
+};
+
+
+class AttrMap;
+class XmlNode
+{
+private:
+    XmlNode( const XmlNode& rhs ) {}
+    void operator=( const XmlNode& rhs ) {}
+    XmlNodeImpl * m_impl;
+
+public: 
+    XmlNode();
+    ~XmlNode();
+
+    int init(const char* name, const char** attr);
+    int addChild(const char* name, XmlNode* pChild);
+    const XmlNode* getChild(const char* name) const;
+    XmlNode* getChild(const char* name);
+    const XmlNodeList * getChildren(const char* name ) const;
+    int getAllChildren(XmlNodeList& list) const;
+    int getAllChildren(XmlNodeList& list);
+    const char* getChildValue( const char *name ) const;
+    const char* getAttr(const char* name) const;
+    const AttrMap * getAllAttr() const;
+    const char* getName() const;
+    const char* getValue() const;
+    int setValue(const char* value, int len);
+    XmlNode * getParent() const;
+    int xmlOutput(FILE* fd, int depth) const;
+};
+
+class XmlTreeBuilder
+{
+public:
+    XmlTreeBuilder(){};
+    ~XmlTreeBuilder(){};
+
+    XmlNode* parse(const char* fileName, char * pErrBuf, int errBufLen);
+};
+    
+#endif

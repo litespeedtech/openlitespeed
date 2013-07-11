@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+  <title>Open LiteSpeed Web Server Users' Manual - Administration Console Settings</title>
+  <meta name="description" content="Open LiteSpeed Web Server Users' Manual - Administration Console Settings." />  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="shortcut icon" href="img/favicon.ico" />
+  <link rel="stylesheet" type="text/css" href="css/hdoc.css">
+</head>
+<body>
+<div class="wrapper">
+<div class="nav-bar"><ul class="nav-bar"><li>&#171 <a href="Context_Help.html">Context</a></li><li><a href="config.html">Configuration</a></li><li><a href="AdminListener_Help.html">Admin Listeners</a> &#187;</li></ul></div>
+
+
+<h1>Administration Console Settings</h1><p> Admin Server is a special virtual host dedicated to the WebAdmin console.  
+
+It is very important to make sure Admin Server is securely protected either by only allowing  
+
+access from the administrator's machines or by using an encrypted SSL connection. 
+
+</p>
+<h4>Table of Contents</h4><section class="toc"><section class="toc-row"><header>General</header><p><a href="#enableCoreDump">Enable Core Dump</a>&nbsp;|&nbsp;<a href="#consoleSessionTimeout">Session Timeout (secs)</a>&nbsp;|&nbsp;</p></section>
+<section class="toc-row"><header>Virtual Host Log</header><p><a href="#logUseServer">Use Server Log</a>&nbsp;|&nbsp;<a href="#log_fileName">File Name</a>&nbsp;|&nbsp;<a href="#vhlog_logLevel">Log Level</a>&nbsp;|&nbsp;<a href="#log_rollingSize">Rolling Size</a>&nbsp;|&nbsp;</p></section>
+<section class="toc-row"><header>Access Log</header><p><a href="#aclogUseServer">Log Control</a>&nbsp;|&nbsp;<a href="#accessLog_fileName">File Name</a>&nbsp;|&nbsp;<a href="#accessLog_pipedLogger">Piped Logger</a>&nbsp;|&nbsp;<a href="#accessLog_logFormat">Log Format</a>&nbsp;|&nbsp;<a href="#accessLog_logHeader">Log Headers</a>&nbsp;|&nbsp;<a href="#log_rollingSize">Rolling Size</a>&nbsp;|&nbsp;<a href="#accessLog_keepDays">Keep Days</a>&nbsp;|&nbsp;<a href="#accessLog_bytesLog">Bytes Log</a>&nbsp;|&nbsp;<a href="#accessLog_compressArchive">Compress Archive</a>&nbsp;|&nbsp;</p></section>
+<section class="toc-row"><header><a href="#vhAccessControl">Access Control</a></header><p><a href="#vhaccessControl_allow">Allowed List</a>&nbsp;|&nbsp;<a href="#accessControl_deny">Denied List</a>&nbsp;|&nbsp;</p></section>
+<section class="toc-row"><header>Web Admin Users</header><p><a href="#adminUser">Admin User</a>&nbsp;|&nbsp;</p></section>
+</section>
+<section><div class="helpitem">
+<a name="enableCoreDump"></a><table width="90%" class="ht" border="0" cellpadding="5" cellspacing="0">
+<tr class="ht-title"><td><table width="100%" border="0" cellpadding="0" cellspacing="0"><tr><td class="ht-title">Enable Core Dump</td><td class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="img/top.gif"></a></td></tr></table></td></tr>
+<tr><td><span class="ht-label">Description: </span> Specifies whether to enable core dump when the server is started by "root" user. 
+For most modern Unix systems, processes that change user ID or group ID are not allowed to 
+dump a core file for security reasons. However, it is much easier to identify root 
+cause of a problem with a core dump. This option only works on Linux kernel 2.4 and up.  
+Solaris users should use the <span class="cmd">coreadm</span> command to control this feature.
+</td></tr>
+<tr><td><span class="ht-label">Syntax: </span>Select from radio box</td></tr>
+<tr><td><span class="ht-label">Tips: </span>[Security] Only enable this when you see <span class="val">no core file created</span> in  
+the server log file. Disable it immediately after producing the core file.  
+Please submit a bug report when a core dump has been created.</td></tr>
+</table></div>
+<div class="helpitem">
+<a name="consoleSessionTimeout"></a><table width="90%" class="ht" border="0" cellpadding="5" cellspacing="0">
+<tr class="ht-title"><td><table width="100%" border="0" cellpadding="0" cellspacing="0"><tr><td class="ht-title">Session Timeout (secs)</td><td class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="img/top.gif"></a></td></tr></table></td></tr>
+<tr><td><span class="ht-label">Description: </span> Customize the session timeout length of WebAdmin console. 
+The default is 60 seconds if no value is set.
+</td></tr>
+<tr><td><span class="ht-label">Syntax: </span>Integer number</td></tr>
+<tr><td><span class="ht-label">Tips: </span>[Security] Set a proper value for production use, usually less than 300 seconds.</td></tr>
+</table></div>
+<div class="helpitem">
+<a name="logUseServer"></a><table width="90%" class="ht" border="0" cellpadding="5" cellspacing="0">
+<tr class="ht-title"><td><table width="100%" border="0" cellpadding="0" cellspacing="0"><tr><td class="ht-title">Use Server Log</td><td class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="img/top.gif"></a></td></tr></table></td></tr>
+<tr><td><span class="ht-label">Description: </span> Specifies whether to put log messages from this virtual host into the server 
+log file instead of creating its own log file.
+</td></tr>
+<tr><td><span class="ht-label">Syntax: </span>Select from radio box</td></tr>
+</table></div>
+<div class="helpitem">
+<a name="log_fileName"></a><table width="90%" class="ht" border="0" cellpadding="5" cellspacing="0">
+<tr class="ht-title"><td><table width="100%" border="0" cellpadding="0" cellspacing="0"><tr><td class="ht-title">File Name</td><td class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="img/top.gif"></a></td></tr></table></td></tr>
+<tr><td><span class="ht-label">Description: </span> Specifies the path for the log file. 
+</td></tr>
+<tr><td><span class="ht-label">Syntax: </span>File name which can be an absolute path or relative to $SERVER_ROOT.</td></tr>
+<tr><td><span class="ht-label">Tips: </span>[Performance] Place the log file on a separate disk.</td></tr>
+</table></div>
+<div class="helpitem">
+<a name="vhlog_logLevel"></a><table width="90%" class="ht" border="0" cellpadding="5" cellspacing="0">
+<tr class="ht-title"><td><table width="100%" border="0" cellpadding="0" cellspacing="0"><tr><td class="ht-title">Log Level</td><td class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="img/top.gif"></a></td></tr></table></td></tr>
+<tr><td><span class="ht-label">Description: </span> Specifies the level of logging. Available levels (from high to low) are <span class="val">ERROR</span>, 
+<span class="val">WARNING</span>, <span class="val">NOTICE</span>, <span class="val">INFO</span>, and <span class="val">DEBUG</span>. 
+Only messages with a level higher than or equal to the current setting will be logged. 
+If you want to set it to DEBUG</span>, you must set the server log level to <span class="val">DEBUG</span> as well. 
+The level of debugging is controlled solely at the server level by <span class="tagI"><a href="ServGeneral_Help.html#log_debugLevel">Debug Level</a></span>.
+</td></tr>
+<tr><td><span class="ht-label">Syntax: </span>Select from drop down list</td></tr>
+<tr><td><span class="ht-label">Tips: </span>[Performance] Unless <span class="tagI"><a href="ServGeneral_Help.html#log_debugLevel">Debug Level</a></span> is set to a level
+other than <span class="val">NONE</span>, <span class="val">DEBUG</span> log level does not have any
+performance impact and is recommended.</td></tr>
+<tr><td><span class="ht-label">See Also: </span><span class="tagI"><a href="ServGeneral_Help.html#log_debugLevel">Debug Level</a></span></td></tr>
+</table></div>
+<div class="helpitem">
+<a name="log_rollingSize"></a><table width="90%" class="ht" border="0" cellpadding="5" cellspacing="0">
+<tr class="ht-title"><td><table width="100%" border="0" cellpadding="0" cellspacing="0"><tr><td class="ht-title">Rolling Size</td><td class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="img/top.gif"></a></td></tr></table></td></tr>
+<tr><td><span class="ht-label">Description: </span> Specifies when the current log file needs to be rolled over, also known as log rotation. 
+When the file size is over the rollover limit, the active log file will be renamed 
+to log_name.mm_dd_yyyy(.sequence) in the same directory and a new active log file will be created.
+The actual size of the rotated log file once it is created will sometimes be a little bigger than 
+this size limit. Set to <span class="val">0</span> to disable log rotation. 
+</td></tr>
+<tr><td><span class="ht-label">Syntax: </span>Integer number</td></tr>
+<tr><td><span class="ht-label">Tips: </span>Append "K", "M", "G" to the number for kilo-, mega- and giga- bytes.</td></tr>
+</table></div>
+<div class="helpitem">
+<a name="aclogUseServer"></a><table width="90%" class="ht" border="0" cellpadding="5" cellspacing="0">
+<tr class="ht-title"><td><table width="100%" border="0" cellpadding="0" cellspacing="0"><tr><td class="ht-title">Log Control</td><td class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="img/top.gif"></a></td></tr></table></td></tr>
+<tr><td><span class="ht-label">Description: </span> Specifies where to write the access log. There are three options: 
+1. Write to the server's access log; 2. Create an access log for this virtual host; 3. Disable access logging.
+</td></tr>
+<tr><td><span class="ht-label">Syntax: </span>Select from drop down list</td></tr>
+</table></div>
+<div class="helpitem">
+<a name="accessLog_fileName"></a><table width="90%" class="ht" border="0" cellpadding="5" cellspacing="0">
+<tr class="ht-title"><td><table width="100%" border="0" cellpadding="0" cellspacing="0"><tr><td class="ht-title">File Name</td><td class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="img/top.gif"></a></td></tr></table></td></tr>
+<tr><td><span class="ht-label">Description: </span> Specifies the file name of the access log file. 
+</td></tr>
+<tr><td><span class="ht-label">Syntax: </span>File name which can be an absolute path or relative to $SERVER_ROOT.</td></tr>
+<tr><td><span class="ht-label">Tips: </span>[Performance] Put access log file on a separate disk.</td></tr>
+</table></div>
+<div class="helpitem">
+<a name="accessLog_pipedLogger"></a><table width="90%" class="ht" border="0" cellpadding="5" cellspacing="0">
+<tr class="ht-title"><td><table width="100%" border="0" cellpadding="0" cellspacing="0"><tr><td class="ht-title">Piped Logger</td><td class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="img/top.gif"></a></td></tr></table></td></tr>
+<tr><td><span class="ht-label">Description: </span> Specifies the external application that will receive the access log
+data sent by LiteSpeed through a pipe on its STDIN stream (file handle is 0). 
+When this field is specified, the access log will be sent only to the logger 
+application and not the access log file specified in previous entry. <br>
+
+The logger application must be defined in <span class="tagP"><a href="ExtApp_Help.html">External Application</a></span> section first. 
+Server-level access logging can only use an external logger application 
+defined at the server level. Virtual host-level access logging can only use
+a logger application defined at the virtual host level.<br>
+
+The logger process is spawned in the same way as other external 
+(CGI/FastCGI/LSAPI) processes. This means it will execute as the 
+user ID specified in the virtual host's <span class="tagI"><a href="VirtualHosts_Help.html#setUidMode">ExtApp Set UID Mode</a></span> 
+settings and will never run on behalf of a privileged user. <br>
+
+LiteSpeed web server performs simple load balancing among multiple logger 
+applications if more than one instance of a logger application is configured. 
+LiteSpeed server always attempts to keep the number of logger applications 
+as low as possible. Only when one logger application fails to process access 
+log entries in time will the server attempt to spawn another instance of 
+the logger application. <br>
+
+If a logger crashes, the web server will start another instance but the 
+log data in the stream buffer will be lost. It is possible to lose log 
+data if external loggers cannot keep up with the speed and volume of the log stream.
+</td></tr>
+<tr><td><span class="ht-label">Syntax: </span>Select from drop down list</td></tr>
+</table></div>
+<div class="helpitem">
+<a name="accessLog_logFormat"></a><table width="90%" class="ht" border="0" cellpadding="5" cellspacing="0">
+<tr class="ht-title"><td><table width="100%" border="0" cellpadding="0" cellspacing="0"><tr><td class="ht-title">Log Format</td><td class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="img/top.gif"></a></td></tr></table></td></tr>
+<tr><td><span class="ht-label">Description: </span>  Specifies the log format for the access
+log. When log format is set, it will override the <span class="tagI"><a href="#accessLog_logHeader">Log Headers</a></span>
+setting. 
+
+</td></tr>
+<tr><td><span class="ht-label">Syntax: </span>String. The syntax of log format is compatible with Apache 2.0's custom 
+<a href="http://httpd.apache.org/docs/2.0/mod/mod_log_config.html#formats" target="_blank">log format</a>.</td></tr>
+<tr><td><span class="ht-label">Example: </span>Common Log Format (CLF)<br>
+    "%h %l %u %t \"%r\" %>s %b"<br>
+Common Log Format with Virtual Host<br>
+    "%v %h %l %u %t \"%r\" %>s %b"<br>
+NCSA extended/combined log format<br>
+    "%h %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\" <br>
+Log cookie value of Foobar
+    "%{Foobar}C"</td></tr>
+<tr><td><span class="ht-label">See Also: </span><span class="tagI"><a href="#accessLog_logHeader">Log Headers</a></span></td></tr>
+</table></div>
+<div class="helpitem">
+<a name="accessLog_logHeader"></a><table width="90%" class="ht" border="0" cellpadding="5" cellspacing="0">
+<tr class="ht-title"><td><table width="100%" border="0" cellpadding="0" cellspacing="0"><tr><td class="ht-title">Log Headers</td><td class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="img/top.gif"></a></td></tr></table></td></tr>
+<tr><td><span class="ht-label">Description: </span> Specifies whether to log HTTP request headers: <span class="val">Referer</span>,
+<span class="val">UserAgent</span>, and <span class="val">Host</span>.
+</td></tr>
+<tr><td><span class="ht-label">Syntax: </span>Select from checkbox</td></tr>
+<tr><td><span class="ht-label">Tips: </span>[Performance] Turn this off if you do not need these headers in the access log.</td></tr>
+<tr><td><span class="ht-label">See Also: </span><span class="tagI"><a href="#accessLog_logFormat">Log Format</a></span></td></tr>
+</table></div>
+<div class="helpitem">
+<a name="accessLog_keepDays"></a><table width="90%" class="ht" border="0" cellpadding="5" cellspacing="0">
+<tr class="ht-title"><td><table width="100%" border="0" cellpadding="0" cellspacing="0"><tr><td class="ht-title">Keep Days</td><td class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="img/top.gif"></a></td></tr></table></td></tr>
+<tr><td><span class="ht-label">Description: </span> Specifies how many days the access log file will be kept on disk. 
+Only rotated log files older than specified number of days will be deleted. The current 
+log file will not be touched regardless how many days' data it contains. 
+If you do not want to auto-delete stale and very old log files,
+set this value to <span class="val">0</span>.
+</td></tr>
+<tr><td><span class="ht-label">Syntax: </span>Integer number</td></tr>
+</table></div>
+<div class="helpitem">
+<a name="accessLog_bytesLog"></a><table width="90%" class="ht" border="0" cellpadding="5" cellspacing="0">
+<tr class="ht-title"><td><table width="100%" border="0" cellpadding="0" cellspacing="0"><tr><td class="ht-title">Bytes Log</td><td class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="img/top.gif"></a></td></tr></table></td></tr>
+<tr><td><span class="ht-label">Description: </span> Specifies the path to the bandwidth bytes log file. When
+specified, a cPanel compatible bandwidth log will be created. This will log 
+the total bytes transferred for a request including both the request and reply body.
+</td></tr>
+<tr><td><span class="ht-label">Syntax: </span>File name which can be an absolute path or relative to $SERVER_ROOT.</td></tr>
+<tr><td><span class="ht-label">Tips: </span>[Performance] Put the log file on a separate disk.</td></tr>
+</table></div>
+<div class="helpitem">
+<a name="accessLog_compressArchive"></a><table width="90%" class="ht" border="0" cellpadding="5" cellspacing="0">
+<tr class="ht-title"><td><table width="100%" border="0" cellpadding="0" cellspacing="0"><tr><td class="ht-title">Compress Archive</td><td class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="img/top.gif"></a></td></tr></table></td></tr>
+<tr><td><span class="ht-label">Description: </span> Specifies whether to compress rotated log files in order to save disk space.
+</td></tr>
+<tr><td><span class="ht-label">Syntax: </span>Select from radio box</td></tr>
+<tr><td><span class="ht-label">Tips: </span>Log files are highly compressible and this is recommended to reduce disk usage for old logs.</td></tr>
+</table></div>
+<div class="helpitem">
+<a name="vhAccessControl"></a><table width="90%" class="ht" border="0" cellpadding="5" cellspacing="0">
+<tr class="ht-title"><td><table width="100%" border="0" cellpadding="0" cellspacing="0"><tr><td class="ht-title">Access Control</td><td class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="img/top.gif"></a></td></tr></table></td></tr>
+<tr><td><span class="ht-label">Description: </span>Specifies what sub-networks and/or IP addresses can access this virtual host 
+
+in addition to server-level access control. This virtual host setting does NOT override 
+
+the server setting. Whether to block/allow an IP is determined by the combination 
+
+of the allowed list and denied list. If you want to block only certain IPs or sub-networks, 
+
+put <span class="val">*</span> or <span class="val">ALL</span> in the allowed list and list the blocked IPs or 
+
+sub-networks in the denied list. If you want to only allow certain IPs or sub-networks, 
+
+put <span class="val">*</span> or <span class="val">ALL</span> in the denied list and list the allowed IPs or 
+
+sub-networks in the allowed list. The setting of the smallest scope that fits for 
+
+an IP will be used to determine whether to block or allow access.</td></tr>
+</table></div>
+<div class="helpitem">
+<a name="vhaccessControl_allow"></a><table width="90%" class="ht" border="0" cellpadding="5" cellspacing="0">
+<tr class="ht-title"><td><table width="100%" border="0" cellpadding="0" cellspacing="0"><tr><td class="ht-title">Allowed List</td><td class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="img/top.gif"></a></td></tr></table></td></tr>
+<tr><td><span class="ht-label">Description: </span> Specifies the list of IPs or sub-networks allowed.
+</td></tr>
+<tr><td><span class="ht-label">Syntax: </span>Comma-delimited list of IP addresses or sub-networks. <span class="val">*</span> or <span class="val">ALL</span> are allowed.  
+Sub-networks can be written as <span class="val">192.168.1.0/255.255.255.0</span>, <span class="val">192.168.1</span> or <span class="val">192.168.1.*</span>.</td></tr>
+</table></div>
+<div class="helpitem">
+<a name="accessControl_deny"></a><table width="90%" class="ht" border="0" cellpadding="5" cellspacing="0">
+<tr class="ht-title"><td><table width="100%" border="0" cellpadding="0" cellspacing="0"><tr><td class="ht-title">Denied List</td><td class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="img/top.gif"></a></td></tr></table></td></tr>
+<tr><td><span class="ht-label">Description: </span> Specifies the list of IPs or sub-networks disallowed.
+</td></tr>
+<tr><td><span class="ht-label">Syntax: </span>Comma delimited list of IP addresses or sub-networks. 
+<span class="val">*</span> or <span class="val">ALL</span> are accepted.</td></tr>
+<tr><td><span class="ht-label">Example: </span>Sub-networks: 
+<span class="val">192.168.1.0/255.255.255.0</span>, <span class="val">192.168.1.0/24</span>, <span class="val">192.168.1</span> or
+<span class="val">192.168.1.*</span>. <br>
+IPv6 addresses: <span class="val">::1</span> or <span class="val">[::1]</span> <br> 
+IPv6 subnets: <span class="val">3ffe:302:11:2:20f:1fff:fe29:717c/64</span> or 
+<span class="val">[3ffe:302:11:2:20f:1fff:fe29:717c]/64</span>.</td></tr>
+</table></div>
+<div class="helpitem">
+<a name="adminUser"></a><table width="90%" class="ht" border="0" cellpadding="5" cellspacing="0">
+<tr class="ht-title"><td><table width="100%" border="0" cellpadding="0" cellspacing="0"><tr><td class="ht-title">Admin User</td><td class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="img/top.gif"></a></td></tr></table></td></tr>
+<tr><td><span class="ht-label">Description: </span> Change the user name and password for WebAdmin Console. 
+The old password has to be entered and verified in order to save the changes.  
+</td></tr>
+<tr><td><span class="ht-label">Tips: </span>If you forget the admin password, you cannot change it from the
+WebAdmin console. Please use the following command from shell instead:
+<span class="cmd">[your install dir]/admin/misc/admpass.sh</span></td></tr>
+</table></div>
+</section><footer class="copyright">Copyright &copy; 2013. <a href="http://www.litespeedtech.com">Lite Speed Technologies Inc.</a> All rights reserved.</footer>
+				</div>
+				</body>
+				</html>

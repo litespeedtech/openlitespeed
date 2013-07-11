@@ -1,0 +1,51 @@
+###########################################
+#	PHP_VERSION = {PHP_VERSION}
+#	PHP_USR = {PHP_USR}
+#	PHP_BUILD_DIR = {PHP_BUILD_DIR}
+#	INSTALL_DIR = {INSTALL_DIR}
+#
+#	EXTENSION_NAME = {EXTENSION_NAME}
+#	EXTENSION_DIR = {EXTENSION_DIR}
+#	EXTENSION_EXTRA_CONFIG = {EXTENSION_EXTRA_CONFIG}
+###########################################
+
+echo ""
+echo "=============================================="
+main_msg "Start building {EXTENSION_NAME} Extension"
+echo "=============================================="
+echo `date`
+echo ""
+
+main_msg "Changing to build directory {PHP_BUILD_DIR}/php-{PHP_VERSION}/{EXTENSION_DIR}" 
+cd {PHP_BUILD_DIR}/php-{PHP_VERSION}/{EXTENSION_DIR}
+check_errs $? "Could not get into build directory"
+
+main_msg "Running PHPize for {EXTENSION_NAME} extension" 
+{INSTALL_DIR}/bin/phpize 
+check_errs $? "Could not run PHPize for {EXTENSION_NAME}"
+
+main_msg "Configuring {EXTENSION_NAME} extension build" 
+./configure {EXTENSION_EXTRA_CONFIG} --with-php-config={INSTALL_DIR}/bin/php-config
+check_errs $? "Could not configure {EXTENSION_NAME} extension build"
+
+main_msg "Compiling {EXTENSION_NAME} extension" 
+make
+check_errs $? "Could not compile {EXTENSION_NAME} extension"
+
+main_msg "Installing {EXTENSION_NAME} extension" 
+make install
+check_errs $? "Could not install {EXTENSION_NAME} extension"
+
+if [  "x$INST_USER" = "xroot" ]; then
+    echo "chown -R {PHP_USR}:{PHP_USR} {PHP_BUILD_DIR}/php-{PHP_VERSION}/{EXTENSION_DIR} "
+	chown -R {PHP_USR}:{PHP_USR} {PHP_BUILD_DIR}/php-{PHP_VERSION}/{EXTENSION_DIR} 
+	check_errs $? "Could not chown to {PHP_USR} for direcotry {PHP_BUILD_DIR}/php-{PHP_VERSION}/{EXTENSION_DIR}"
+fi
+
+echo ""
+echo "=============================================="
+main_msg "{EXTENSION_NAME} extension build complete"
+echo "=============================================="
+echo `date`
+echo ""
+	

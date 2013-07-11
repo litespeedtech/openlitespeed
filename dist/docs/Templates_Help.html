@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+  <title>Open LiteSpeed Web Server Users' Manual - Virtual Host Templates</title>
+  <meta name="description" content="Open LiteSpeed Web Server Users' Manual - Virtual Host Templates." />  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="shortcut icon" href="img/favicon.ico" />
+  <link rel="stylesheet" type="text/css" href="css/hdoc.css">
+</head>
+<body>
+<div class="wrapper">
+<div class="nav-bar"><ul class="nav-bar"><li>&#171 <a href="Listeners_Help.html">Listeners</a></li><li><a href="config.html">Configuration</a></li><li><a href="VirtualHosts_Help.html">Virtual Host List</a> &#187;</li></ul></div>
+
+
+<h1>Virtual Host Templates</h1><p> Virtual host templates make it easy to create many new virtual
+
+hosts with similar configurations. <br>
+
+Each template contains a template configuration file, a list of mapped listeners,
+
+and a list of member virtual hosts.
+
+<br>
+
+To add a template-based virtual host, the administrator only needs to
+
+add a member with a unique virtual host name and a
+
+qualified domain name to the template member list.
+
+Lister-to-virtual host mapping will be added automatically for 
+
+all listeners in the template's mapped listener list. <br>
+
+<br>
+
+Later on, if you need to customize the configuration for a particular
+
+virtual host, just "instantiate" that member virtual host and a
+
+standalone virtual host configuration will be created automatically.
+
+Even when setting up a customized virtual host,
+
+a template can still be a convenient starting point.
+
+ 
+
+</p>
+<h4>Table of Contents</h4><section class="toc"><section class="toc-row"><header>General</header><p><a href="#templateName">Name</a>&nbsp;|&nbsp;<a href="#templateFile">Template File</a>&nbsp;|&nbsp;<a href="#mappedListeners">Mapped Listeners</a>&nbsp;|&nbsp;</p></section>
+<section class="toc-row"><header>Member Virtual Hosts</header><p><a href="#templateVHName">Name</a>&nbsp;|&nbsp;<a href="#templateVHDomain">Domain</a>&nbsp;|&nbsp;<a href="#templateVHAliases">Aliases</a>&nbsp;|&nbsp;<a href="#memberVHRoot">Member Virtual Host Root</a>&nbsp;|&nbsp;</p></section>
+<section class="toc-row"><header>Template Settings</header><p><a href="#templateVHRoot">Default Virtual Host Root</a>&nbsp;|&nbsp;<a href="#templateFileRef">File Name Used In Template</a>&nbsp;|&nbsp;</p></section>
+</section>
+<section><div class="helpitem">
+<a name="templateName"></a><table width="90%" class="ht" border="0" cellpadding="5" cellspacing="0">
+<tr class="ht-title"><td><table width="100%" border="0" cellpadding="0" cellspacing="0"><tr><td class="ht-title">Name</td><td class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="img/top.gif"></a></td></tr></table></td></tr>
+<tr><td><span class="ht-label">Description: </span> A unique name for the template.
+</td></tr>
+</table></div>
+<div class="helpitem">
+<a name="templateFile"></a><table width="90%" class="ht" border="0" cellpadding="5" cellspacing="0">
+<tr class="ht-title"><td><table width="100%" border="0" cellpadding="0" cellspacing="0"><tr><td class="ht-title">Template File</td><td class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="img/top.gif"></a></td></tr></table></td></tr>
+<tr><td><span class="ht-label">Description: </span> Specifies the path to the configuration file of this template. 
+File must locate within $SERVER_ROOT/conf/templates/ with a ".xml" file name.
+If the file you designate does not exist, after you try to save the template 
+and error will appear with the link "CLICK TO CREATE". This link will generate 
+a new empty template file. When you delete the template, the entry will be 
+removed from your configurations, but the actual template config file will not be deleted.  
+</td></tr>
+<tr><td><span class="ht-label">Syntax: </span>path</td></tr>
+</table></div>
+<div class="helpitem">
+<a name="mappedListeners"></a><table width="90%" class="ht" border="0" cellpadding="5" cellspacing="0">
+<tr class="ht-title"><td><table width="100%" border="0" cellpadding="0" cellspacing="0"><tr><td class="ht-title">Mapped Listeners</td><td class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="img/top.gif"></a></td></tr></table></td></tr>
+<tr><td><span class="ht-label">Description: </span> Specifies the names of all listeners that this template maps
+to. A listener-to-virtual host mapping for this template's
+member virtual hosts will be added to the listeners specified in this field. 
+This mapping will map listeners to virtual hosts based on the domain names 
+and aliases stipulated in the member virtual hosts' individual configurations. 
+</td></tr>
+<tr><td><span class="ht-label">Syntax: </span>comma-separated list</td></tr>
+</table></div>
+<div class="helpitem">
+<a name="templateVHName"></a><table width="90%" class="ht" border="0" cellpadding="5" cellspacing="0">
+<tr class="ht-title"><td><table width="100%" border="0" cellpadding="0" cellspacing="0"><tr><td class="ht-title">Name</td><td class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="img/top.gif"></a></td></tr></table></td></tr>
+<tr><td><span class="ht-label">Description: </span> A unique name for this virtual host. This name must be unique among all 
+template member virtual hosts and standalone virtual hosts. Inside a directory 
+path configuration, this name can be referenced by the variable <span class="val">$VH_NAME</span>.<br>
+If a standalone virtual host with the same name is also configured, then
+the member virtual host configuration will be ignored.
+</td></tr>
+</table></div>
+<div class="helpitem">
+<a name="templateVHDomain"></a><table width="90%" class="ht" border="0" cellpadding="5" cellspacing="0">
+<tr class="ht-title"><td><table width="100%" border="0" cellpadding="0" cellspacing="0"><tr><td class="ht-title">Domain</td><td class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="img/top.gif"></a></td></tr></table></td></tr>
+<tr><td><span class="ht-label">Description: </span> Specifies the main domain name for this member virtual host. 
+If left blank, the virtual host name will be used. This should
+be a fully qualified domain name, but you can use an IP address as well. 
+It is recommended to append <span class="val">:<port></span> for web sites not on port 80. 
+For configurations containing domain names, this domain can be referenced 
+with variable <span class="val">$VH_DOMAIN</span>. <br> 
+This domain name will be used in the following situations:
+<ol>
+  <li>To match the hostname in the Host header when processing a
+  request.</li>
+  <li>To populate the domain name configurations for add-ons 
+  like FrontPage or AWstats.</li>
+ <li>To configure listener-to-virtual host mappings based on the virtual host template.</li>
+</ol>
+</td></tr>
+<tr><td><span class="ht-label">Syntax: </span>domain name</td></tr>
+</table></div>
+<div class="helpitem">
+<a name="templateVHAliases"></a><table width="90%" class="ht" border="0" cellpadding="5" cellspacing="0">
+<tr class="ht-title"><td><table width="100%" border="0" cellpadding="0" cellspacing="0"><tr><td class="ht-title">Aliases</td><td class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="img/top.gif"></a></td></tr></table></td></tr>
+<tr><td><span class="ht-label">Description: </span> Specifies alternate names for the virtual host. All possible
+hostnames and IP addresses should be added to this list. The wildcard characters
+<span class="val">*</span> and <span class="val">?</span> are allowed in the name.
+Append <span class="val">:<port></span> for web sites not on port 80. <br> 
+Aliases will be used in the following situations:
+<ol>
+  <li>To match the hostname in the Host header when processing a
+  request.</li>
+  <li>To populate domain name/alias configurations for add-ons 
+  like FrontPage or AWstats.</li>
+  <li>To configure listener-to-virtual host mappings based on the virtual host template.</li>
+</ol>
+
+</td></tr>
+<tr><td><span class="ht-label">Syntax: </span>Comma-separated list of domain names.</td></tr>
+</table></div>
+<div class="helpitem">
+<a name="memberVHRoot"></a><table width="90%" class="ht" border="0" cellpadding="5" cellspacing="0">
+<tr class="ht-title"><td><table width="100%" border="0" cellpadding="0" cellspacing="0"><tr><td class="ht-title">Member Virtual Host Root</td><td class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="img/top.gif"></a></td></tr></table></td></tr>
+<tr><td><span class="ht-label">Description: </span> Specifies the root directory of this virtual host. If left
+blank, the default virtual host root for this template will be used. <br>
+Note: This is <b>NOT</b> the document root. It is recommended to place 
+all files related to the virtual host (like virtual host configuration, 
+log files, html files, CGI scripts, etc.) under this directory.  
+Virtual host root can be referred to as $VH_ROOT. 
+</td></tr>
+<tr><td><span class="ht-label">Syntax: </span>path</td></tr>
+</table></div>
+<div class="helpitem">
+<a name="templateVHRoot"></a><table width="90%" class="ht" border="0" cellpadding="5" cellspacing="0">
+<tr class="ht-title"><td><table width="100%" border="0" cellpadding="0" cellspacing="0"><tr><td class="ht-title">Default Virtual Host Root</td><td class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="img/top.gif"></a></td></tr></table></td></tr>
+<tr><td><span class="ht-label">Description: </span> Specifies the default root directory for member virtual hosts using this template. 
+Variable <span class="val">$VH_NAME</span> must appear in the path. This will allow each member template 
+to be automatically assigned a separate root directory based on its name. 
+</td></tr>
+<tr><td><span class="ht-label">Syntax: </span>path</td></tr>
+</table></div>
+<div class="helpitem">
+<a name="templateFileRef"></a><table width="90%" class="ht" border="0" cellpadding="5" cellspacing="0">
+<tr class="ht-title"><td><table width="100%" border="0" cellpadding="0" cellspacing="0"><tr><td class="ht-title">File Name Used In Template</td><td class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="img/top.gif"></a></td></tr></table></td></tr>
+<tr><td><span class="ht-label">Description: </span> Specifies a path for the file to be used for member virtual hosts.  
+Variable <span class="val">$VH_NAME</span> or <span class="val">$VH_ROOT</span> must appear in the path so 
+each member virtual host will have its own file.
+</td></tr>
+<tr><td><span class="ht-label">Syntax: </span>string</td></tr>
+</table></div>
+</section><footer class="copyright">Copyright &copy; 2013. <a href="http://www.litespeedtech.com">Lite Speed Technologies Inc.</a> All rights reserved.</footer>
+				</div>
+				</body>
+				</html>

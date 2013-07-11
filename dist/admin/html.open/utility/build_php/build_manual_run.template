@@ -1,0 +1,29 @@
+#!/bin/sh
+
+###########################################
+#	Please manually run this script after preparation finished successfully.
+#	You can monitor the log output from web console.
+#	You need to run as root or with root privilege in order to install into system directory.
+#
+#	INSTALL_SCRIPT = {INSTALL_SCRIPT}	
+#	LOG_FILE = {LOG_FILE}
+#	PROGRESS_F = {PROGRESS_F}
+#	PHP_VERSION = {PHP_VERSION}
+#	PHP_BUILD_DIR = {PHP_BUILD_DIR}
+#	PHP_USR = {PHP_USR}
+###########################################
+
+echo "Manually running installation script: {INSTALL_SCRIPT}"
+echo "Running at background with command:"
+echo "{INSTALL_SCRIPT} 1> {LOG_FILE} 2>&1"
+
+{INSTALL_SCRIPT} 1> {LOG_FILE} 2>&1
+
+INST_USER=`id`
+INST_USER=`expr "$INST_USER" : 'uid=.*(\(.*\)) gid=.*'`
+
+if [  "x$INST_USER" = "xroot" ]; then
+    echo "chown -R {PHP_USR}:{PHP_USR} {PHP_BUILD_DIR}/php-{PHP_VERSION}"
+    chown -R {PHP_USR}:{PHP_USR} {PHP_BUILD_DIR}/php-{PHP_VERSION} 
+fi
+
