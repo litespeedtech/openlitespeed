@@ -51,7 +51,7 @@ class DPageDef
 				'SERV_LOG', 'SERV_ACLOG', 'SERV_INDEX',
 				'SERV_EXPIRES',
 				'A_GEOIP', 
-				'SERV_TUNING_CONN', 'SERV_TUNING_REQ', 'SERV_TUNING_GZIP',
+				'SERV_TUNING_OS', 'SERV_TUNING_CONN', 'SERV_TUNING_REQ', 'SERV_TUNING_STATIC', 'SERV_TUNING_GZIP',
 				'SERV_SEC_FILE', 'SERV_SEC_CONN', 'SERV_SEC_CGI',
 				'SERV_SEC_DENY',
 				'A_SECAC', 'A_EXT_SEL',	'A_SCRIPT',
@@ -135,7 +135,7 @@ class DPageDef
 
 		$page = new DPage('serv', 'tuning', 'Tuning',
 						  'Server Tuning Settings',
-						  array('SERV_TUNING_CONN', 'SERV_TUNING_REQ', 'SERV_TUNING_GZIP'));
+						  array( 'SERV_TUNING_OS', 'SERV_TUNING_CONN', 'SERV_TUNING_REQ', 'SERV_TUNING_STATIC', 'SERV_TUNING_GZIP',));
 		$page->_helpLink = 'ServTuning_Help.html';
 		$this->_pageDef['serv'][$page->_id] = $page;
 

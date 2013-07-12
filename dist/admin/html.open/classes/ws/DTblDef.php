@@ -526,9 +526,9 @@ class DTblDef
 
 	}
 
-	protected function add_SERV_TUNING_CONN($id)
+	protected function add_SERV_TUNING_OS($id)
 	{
-		$this->_tblDef[$id] = new DTbl($id, 'Connection');
+		$this->_tblDef[$id] = new DTbl($id, 'OS Optimization');
 
 		$ssloptions = array( 'null' => '(built-in) OpenSSL internal engine',
 				     'auto' => '(auto) Automatically use available devices',
@@ -549,21 +549,22 @@ class DTblDef
 				    'kqueue'  => 'kqueue (FreeBSD/Mac OS X)',
 				    'devpoll' => 'devpoll (Solaris)');
 		
-		$aioblock_options = array( '1' => '128K',
-					   '2' => '256K',
-					   '3' => '512K',
-					   '4' => '1M',
-					   '5' => '2M',
-					   '6' => '4M',
-					   '7' => '8M');
-		$etag_options = array( '4'=>'iNode', '8'=>'Modified Time', '16'=>'Size');
-
 		$sslDevice = new DAttr('SSLCryptoDevice', 'sel', 'SSL Hardware Accelerator', 'select', true, 0, $ssloptions);
 		$sslDevice->_version = 1;
-		$useAIO = new DAttr('useAIO', 'sel', 'Use Asynchronized disk I/O (AIO)', 'select', true, NULL, array('0'=>'No', '1'=>'Yes', '2'=>'Keep File Mapped (64 bit OS)') );
-		$aioBlockSize = new DAttr('AIOBlockSize', 'sel', 'AIO Block Size', 'select', true, 0, $aioblock_options);
 		
-		
+		$attrs = array(
+			new DAttr('eventDispatcher', 'sel', 'I/O Event Dispatcher', 'select', true, 0, $edoptions),
+			new DAttr('ramDiskPath', 'path', 'RAM Disk Path', 'text', true, 1, 'rw', $this->_options['text_size']),
+			$sslDevice
+			);
+			
+		$this->_tblDef[$id]->setAttr($attrs, 'tuning', 'tuning');
+	}
+
+	protected function add_SERV_TUNING_CONN($id)
+	{
+		$this->_tblDef[$id] = new DTbl($id, 'Connection');
+
 		$attrs = array(
 			new DAttr('maxConnections', 'uint', 'Max Connections', 'text', false, 1),
 			new DAttr('maxSSLConnections', 'uint', 'Max SSL Connections', 'text', false, 0),
@@ -573,21 +574,36 @@ class DTblDef
 			new DAttr('keepAliveTimeout', 'uint', 'Keep-Alive Timeout (secs)', 'text', false, 0, 60),
 			new DAttr('sndBufSize', 'uint', 'Send Buffer Size (bytes)', 'text', false, 0, 65535),
 			new DAttr('rcvBufSize', 'uint', 'Receive Buffer Size (bytes)', 'text', false, 0, 65535),
-			new DAttr('eventDispatcher', 'sel', 'I/O Event Dispatcher', 'select', true, 0, $edoptions),
+			);
+			
+		$this->_tblDef[$id]->setAttr($attrs, 'tuning', 'tuning');
+	}
+	
+	protected function add_SERV_TUNING_STATIC($id)
+	{
+		$this->_tblDef[$id] = new DTbl($id, 'Static File Delivery Optimization');
+
+		$aioblock_options = array( '1' => '128K', '2' => '256K', '3' => '512K',
+					   '4' => '1M', '5' => '2M', '6' => '4M', '7' => '8M');
+		
+		$etag_options = array( '4'=>'iNode', '8'=>'Modified Time', '16'=>'Size');
+		
+		$useAIO_options = array('0'=>'No', '1'=>'Yes', '2'=>'Keep File Mapped (64 bit OS)');
+
+		$attrs = array(
 			new DAttr('maxCachedFileSize', 'uint', 'Max Cached Small File Size (bytes)', 'text', false, 0, 16384),
 			new DAttr('totalInMemCacheSize', 'uint', 'Total Small File Cache Size (bytes)', 'text', false, 0),
 			new DAttr('maxMMapFileSize', 'uint', 'Max MMAP File Size (bytes)', 'text', false, 0),
 			new DAttr('totalMMapCacheSize', 'uint', 'Total MMAP Cache Size (bytes)', 'text', false, 0),
 			new DAttr('useSendfile', 'bool', 'Use sendfile()', 'radio'),
-			$useAIO,
-			$aioBlockSize,
+			new DAttr('useAIO', 'sel', 'Use Asynchronized disk I/O (AIO)', 'select', true, NULL, $useAIO_options ),
+			new DAttr('AIOBlockSize', 'sel', 'AIO Block Size', 'select', true, 0, $aioblock_options),
 			new DAttr('fileETag', 'checkboxOr', 'File ETag', 'checkboxgroup', true, 28, $etag_options),
-			$sslDevice
 			);
 			
 		$this->_tblDef[$id]->setAttr($attrs, 'tuning', 'tuning');
 	}
-
+	
 	protected function add_SERV_TUNING_REQ($id)
 	{
 		$this->_tblDef[$id] = new DTbl($id, 'Request/Response');

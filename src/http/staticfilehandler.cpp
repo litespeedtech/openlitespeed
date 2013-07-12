@@ -76,9 +76,9 @@ inline int buildStaticFileHeaders( HttpResp * pResp, StaticFileData * pData )
     pData->setCurPos( 0 );
     pData->setCurEnd( pData->getECache()->getFileSize() );
     pResp->setContentLen( pData->getECache()->getFileSize() );
-    pResp->iovAppend( pData->getCache()->getHeaderBuf(),
+    pResp->parseAdd( pData->getCache()->getHeaderBuf(),
                       pData->getCache()->getHeaderLen() );
-    pResp->iovAppend( pData->getECache()->getCLHeader().c_str(),
+    pResp->parseAdd( pData->getECache()->getCLHeader().c_str(),
                       pData->getECache()->getCLHeader().len() );
     return 0;
 }
@@ -174,13 +174,13 @@ static int addExpiresHeader( HttpResp * pResp, StaticFileCacheData * pData,
     }
     
     char sTemp[RFC_1123_TIME_LEN + 1] = {0};
-    HttpRespHeaders & buf = pResp->getHeaders();
-    buf.add(HttpHeader::H_CACHE_CTRL, "Cache-Control", 13, "max-age=", 8);
+    HttpRespHeaders & buf = pResp->getRespHeaders();
+    buf.add(HttpRespHeaders::H_CACHE_CTRL, "Cache-Control", 13, "max-age=", 8);
     int n = safe_snprintf(sTemp, RFC_1123_TIME_LEN, "%d", age);
     buf.appendLastVal("Cache-Control", 13, sTemp, n);
 
     DateTime::getRFCTime( expire, sTemp );
-    buf.add(HttpHeader::H_EXPIRES, "Expires", 7, sTemp, RFC_1123_TIME_LEN);
+    buf.add(HttpRespHeaders::H_EXPIRES, "Expires", 7, sTemp, RFC_1123_TIME_LEN);
     return 0;
 }
 
@@ -204,7 +204,7 @@ static int processFlvStream( HttpConnection * pConn, off_t start )
         pConn->resetResp();
         pResp->prepareHeaders( pReq, 0 );
 
-        pResp->iovAppend( pData->getCache()->getHeaderBuf(),
+        pResp->parseAdd( pData->getCache()->getHeaderBuf(),
                           pData->getCache()->getHeaderLen() );
         
         pData->setCurPos( start );
@@ -450,7 +450,7 @@ int processH264Stream( HttpConnection * pConn, double start )
     pConn->setupRespCache();
     //pConn->getReq()->setVersion( HTTP_1_0 );
     pConn->getReq()->keepAlive( 0 );
-    pConn->getResp()->getHeaders().add(HttpHeader::H_CONTENT_TYPE,  "Content-Type", 12, "video/mp4", 9 );
+    pConn->getResp()->getRespHeaders().add(HttpRespHeaders::H_CONTENT_TYPE,  "Content-Type", 12, "video/mp4", 9 );
     pConn->prepareDynRespHeader(0, 2 );
 
 
@@ -602,7 +602,7 @@ int StaticFileHandler::process( HttpConnection * pConn, const HttpHandler * pHan
             switch( code )
             {
             case SC_304:
-                pResp->iovAppend( pData->getCache()->getHeaderBuf(),
+                pResp->parseAdd( pData->getCache()->getHeaderBuf(),
                         pData->getCache()->getETagHeaderLen() );
                 break;
             case SC_200:
@@ -719,11 +719,11 @@ static int buildRangeHeaders( HttpConnection* pConn, HttpRange& range )
     StaticFileData * pData1 = pConn->getReq()->getStaticFileData();
     StaticFileCacheData * pData = pData1->getCache();
     int bodyLen;
-    HttpRespHeaders & buf = pResp->getHeaders();
+    HttpRespHeaders & buf = pResp->getRespHeaders();
     
     if ( range.count() == 1 )
     {
-        pResp->iovAppend( pData->getHeaderBuf(), pData->getHeaderLen() );
+        pResp->parseAdd( pData->getHeaderBuf(), pData->getHeaderLen() );
         long begin, end;
         int ret = range.getContentOffset( 0, begin, end );
         if ( ret )
@@ -733,7 +733,7 @@ static int buildRangeHeaders( HttpConnection* pConn, HttpRange& range )
         ret = range.getContentRangeString( 0, sTemp, 8191 );
         if ( ret == -1 )
             return SC_500;
-        buf.add(HttpHeader::H_CONTENT_RANGE, "Content-Range", 13, sTemp, ret);
+        buf.add(HttpRespHeaders::H_CONTENT_RANGE, "Content-Range", 13, sTemp, ret);
         
         bodyLen = end - begin;
         pData1->setCurPos( begin );
@@ -741,9 +741,9 @@ static int buildRangeHeaders( HttpConnection* pConn, HttpRange& range )
     }
     else
     {
-        pResp->iovAppend( pData->getHeaderBuf(), pData->getValidateHeaderLen() );
+        pResp->parseAdd( pData->getHeaderBuf(), pData->getValidateHeaderLen() );
         range.beginMultipart();
-        buf.add(HttpHeader::H_CONTENT_RANGE, "Content-Range", 13, "multipart/byteranges; boundary=", 31);
+        buf.add(HttpRespHeaders::H_CONTENT_RANGE, "Content-Range", 13, "multipart/byteranges; boundary=", 31);
         buf.appendLastVal("Content-Range", 13, range.getBoundary(), strlen(range.getBoundary()) );
         bodyLen = range.getMultipartBodyLen( pData->getMimeType()->getMIME() );
     }
@@ -837,8 +837,8 @@ static int processRange( HttpConnection * pConn, HttpReq * pReq, const char *pRa
         delete range;
         if ( ret == SC_416 )  //Range unsatisfiable
         {
-            HttpRespHeaders &buf = pConn->getResp()->getHeaders();
-            buf.add(HttpHeader::H_CONTENT_RANGE, "Content-Range", 13, "bytes */", 8);
+            HttpRespHeaders &buf = pConn->getResp()->getRespHeaders();
+            buf.add(HttpRespHeaders::H_CONTENT_RANGE, "Content-Range", 13, "bytes */", 8);
             
             int n;
             char sTemp[32] = {0};

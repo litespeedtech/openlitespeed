@@ -20,10 +20,14 @@
 
 
 #include <util/autostr.h>
+#include <util/ssnprintf.h>
 
 #include <limits.h>
+#include <stdarg.h>
 #include <stddef.h>
 #include <sys/types.h>
+
+
 
 class AccessControl;
 class CgidWorker;
@@ -53,23 +57,120 @@ class XmlNodeList;
 #define MAX_PATH_LEN                4096
 
 
-class HttpServerBuilder {
-private:
+class LogIdTracker
+{
+    static char  s_sLogId[128];
+    static int   s_iIdLen;
+    
+    AutoStr m_sOldId;
+public:
+    LogIdTracker( const char * pNewId )
+    {
+        m_sOldId = getLogId();
+        setLogId( pNewId );
+    }
+    LogIdTracker()
+    {
+        m_sOldId = getLogId();
+    }
+    ~LogIdTracker()
+    {
+        setLogId( m_sOldId.c_str() );
+    }
+    static const char * getLogId()
+    {   return s_sLogId;    }
+    
+    static void setLogId( const char * pId )
+    {
+        strncpy( s_sLogId, pId, sizeof( s_sLogId ) - 1 );
+        s_sLogId[ sizeof( s_sLogId ) - 1 ] = 0;
+        s_iIdLen = strlen( s_sLogId ); 
+    }
+    
+    static void appendLogId( const char * pId )
+    {
+        strncpy( s_sLogId + s_iIdLen, pId, sizeof( s_sLogId ) -1 - s_iIdLen );
+        s_sLogId[ sizeof( s_sLogId ) - 1 ] = 0;
+        s_iIdLen += strlen( s_sLogId + s_iIdLen );
+    }
+};
 
-    static XmlNode* parseFile(const char* configFilePath, const char* rootTag);
-    int getRootPath( const char *&pRoot, const char *&pFile );
+class ConfigCtx
+{
+public:
+    
+    explicit ConfigCtx( ConfigCtx * &pParent, const char * pAppendId1 = NULL, const char * pAppendId2 = NULL )
+        : m_pVHost(  NULL )
+        , m_pContext( NULL )
+        , m_pParent( pParent )
+        , m_pStackPointer( &pParent )
+    {
+        if ( m_pParent )
+        {
+            m_pVHost  = m_pParent->m_pVHost;
+            m_pContext = m_pParent->m_pContext;
+            pParent = this;
+        }
+        if ( pAppendId1 )
+        {
+            m_logIdTracker.appendLogId( ":" );
+            m_logIdTracker.appendLogId( pAppendId1 );
+        }
+        if ( pAppendId2 )
+        {
+            m_logIdTracker.appendLogId( ":" );
+            m_logIdTracker.appendLogId( pAppendId2 );
+        }
+    }
+    ~ConfigCtx()    
+    {
+        *m_pStackPointer = m_pParent; 
+    }
+
+    void vlog( int level, const char * pFmt, va_list args );
+    void log_error( const char * pFmt, ... );
+    void log_warn( const char * pFmt, ... );
+    void log_notice( const char * pFmt, ... );
+    void log_info( const char * pFmt, ... );
+    void log_debug( const char * pFmt, ... );
+    
+    void setVHost( HttpVHost * pVHost )
+    {   m_pVHost = pVHost;      }
+    
+    void setContext( HttpContext * pContext )
+    {   m_pContext = pContext;  }
+    
+    HttpVHost * getVHost() const        {   return m_pVHost;    }    
+    HttpContext * getContext() const    {   return m_pContext;  }
+    const char * getTag( const XmlNode * pNode, const char * pName );
+    long long getLongValue( const XmlNode * pNode, const char * pTag,
+            long long min, long long max, long long def, int base = 10 );
+    int getRootPath ( const char *&pRoot, const char *&pFile );
+    int expandVariable( const char * pValue, char * pBuf, int bufLen,
+                        int allVariable = 0 );
+    int getAbsolute( char * dest, const char * path, int pathOnly );
     int getAbsoluteFile(char* dest, const char* file);
-    int getAbsolutePath(char* dest, const char* path);
+    int getAbsolutePath(char* dest, const char* path);    
     int getLogFilePath( char * pBuf, const XmlNode * pNode );
     int getValidFile(char * dest, const char * file, const char * desc );
     int getValidPath(char * dest, const char * path, const char * desc );
     int getValidChrootPath(char * dest, const char * path, const char * desc );
-    int expandDomainNames( const char *pDomainNames, 
-                    char * achDomains, int len, char dilemma = ',' );
-    int expandVariable( const char * pValue, char * pBuf, int bufLen,
-                        int allVariable = 0 );
     char * getExpandedTag( const XmlNode * pNode,
-                    const char * pName, char *pBuf, int bufLen );
+                    const char * pName, char *pBuf, int bufLen );    
+    int expandDomainNames( const char *pDomainNames, 
+                    char * achDomains, int len, char dilemma = ',' );    
+private:
+    LogIdTracker    m_logIdTracker;
+    HttpVHost     * m_pVHost;
+    HttpContext   * m_pContext; 
+    ConfigCtx     * m_pParent;
+    ConfigCtx    ** m_pStackPointer;
+};
+
+class HttpServerBuilder {
+private:
+
+    static XmlNode* parseFile(const char* configFilePath, const char* rootTag, ConfigCtx* pctxAdmin);
 
     // virtual host
     int configChroot();
@@ -192,10 +293,9 @@ private:
     struct passwd * getUGid( const char * pUser, const char * pGroup,
                                                 gid_t &gid );
     void configCRL( const XmlNode *pNode, SSLContext * pSSL );
-    int configStapling( const XmlNode* pNode, SSLContext *pSSL,  const char* pCAFile, char* pachCert);
     
     HttpServer    * m_pServer;
-    HttpVHost     * m_pCurVHost;
+    ConfigCtx     * m_pCurConfigCtx;
     AutoStr2        m_sVhName;
     char            m_achVhRoot[MAX_PATH_LEN];
     AutoStr2        m_vhDomain;
@@ -230,7 +330,7 @@ private:
 public:
     HttpServerBuilder(HttpServer * pServer )
         : m_pServer( pServer )
-        , m_pCurVHost( NULL )
+        , m_pCurConfigCtx( NULL )
         , m_vhDomain( "" )
         , m_vhAliases( "" )
         , m_pRoot(NULL)
@@ -247,7 +347,7 @@ public:
         {};
 
     ~HttpServerBuilder();
-    int getAbsolute( char * dest, const char * path, int pathOnly );
+    //int getAbsolute( char * dest, const char * path, int pathOnly );
     void releaseConfigXmlTree();
     int initServer( int reconfig = 0 );
     int loadConfigFile( const char * pConfigFile = NULL);
@@ -291,6 +391,15 @@ public:
 
     const char * getGDBPath() const     {   return m_gdbPath.c_str();   }
     Env * getAdminEnv() const           {   return m_pAdminEnv;         }
+    
+    const char * getVHRoot() const      {   return m_achVhRoot;     }
+    const AutoStr2 * getVhName() const     {   return &m_sVhName;      }
+    const AutoStr2 * getvhDomain() const   {   return &m_vhDomain;     }
+    const AutoStr2 * getvhAliases() const  {   return &m_vhAliases;    }       
+    const int  getChrootlen() const     {   return m_sChroot.len(); }
+    ConfigCtx   * getCurConfigCtx()     {   return m_pCurConfigCtx; }
+
+    
     SSLContext * newSSLContext( const XmlNode* pNode );
 
     LocalWorker * configRailsApp(

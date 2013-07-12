@@ -1770,13 +1770,16 @@ int HttpReq::checkSymLink( int follow, char * pBuf, char * &p, char * pBegin )
 }
 
 
-
 int HttpReq::checkPathInfo( const char * pURI, int iURILen, int &pathLen,
                             short &scriptLen, short &pathInfoLen,
                             const HttpContext * pContext )
 {
     if ( !pContext )
+    {
         pContext = m_pVHost->bestMatch( pURI );
+        if ( !pContext )
+            pContext = &m_pVHost->getRootContext();
+    }
     int contextLen = pContext->getURILen();
     char * pBuf = HttpGlobals::g_achBuf;
     if ( pContext->getHandlerType() >= HandlerType::HT_FASTCGI )
@@ -1794,8 +1797,11 @@ int HttpReq::checkPathInfo( const char * pURI, int iURILen, int &pathLen,
         pathLen += contextLen;
         return 0;
     }
-    pathLen = translate( pURI, iURILen, pContext,
-                         pBuf, G_BUF_SIZE - 1 );
+    if ( m_iMatchedLen > 0 )
+        pathLen = m_iMatchedLen;
+    else
+        pathLen = translate( pURI, iURILen, pContext,
+                    pBuf, G_BUF_SIZE - 1 );
     if ( pathLen == -1 )
     {
         return -1;
@@ -1805,41 +1811,46 @@ int HttpReq::checkPathInfo( const char * pURI, int iURILen, int &pathLen,
     if ( *pURI == '/' )
         pBegin += pContext->getURILen() - 1;
     //find the first valid file or directory
-    char * p = pEnd;
+    char * p = NULL;
+    char * p1 = pEnd;
+    char * pTest;
     int ret;
+    
     do
     {
-        while(( p > pBegin )&&( *(p - 1) == '/' ))
-            --p;
-        *p = 0;
+        pTest = p1;
+        while(( pTest > pBegin )&&( *(pTest - 1) == '/' ))
+            --pTest;
+        *pTest = 0;
         ret = nio_stat( pBuf, &m_fileStat );
 
-        if ( p!= pEnd )
-            *p = '/';
+        if ( pTest != pEnd )
+            *pTest = '/';
         if ( ret != -1 )
         {
+            if ( S_ISREG( m_fileStat.st_mode ) )
+                p = pTest;
             break;
         }
-        while(( --p > pBegin )&&( *p != '/' ))
+        p1 = p = pTest;
+        while(( --p1 > pBegin )&&( *p1 != '/' ))
             ;
-    } while( p > pBegin );
-    if ( p != pEnd )
+    }while( p1 > pBegin );
+    if ( !p )
+        p = pTest;
+    // set PATH_INFO and SCRIPT_NAME
+    pathInfoLen = (pEnd - p);
+    int orgURILen = getOrgURILen();
+    if ( pathInfoLen < orgURILen )
     {
-        // set PATH_INFO and SCRIPT_NAME
-        pathInfoLen = (pEnd - p);
-        int orgURILen = getOrgURILen();
-        if ( pathInfoLen < orgURILen )
+        if ( strncmp( getOrgURI() + orgURILen - pathInfoLen, p, pathInfoLen ) == 0 )
         {
-            if ( strncmp( getOrgURI() + orgURILen - pathInfoLen, p, pathInfoLen ) == 0 )
-            {
-                scriptLen = getURILen() - pathInfoLen;
-            }
+            scriptLen = getURILen() - pathInfoLen;
         }
     }
-    //pathLen = p - pBuf;
+    pathLen = p - pBuf;
     return 0;
 }
-
 
 
 int HttpReq::addWWWAuthHeader( HttpRespHeaders &buf ) const

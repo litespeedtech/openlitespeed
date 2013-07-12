@@ -142,65 +142,6 @@ size_t HttpHeader::getIndex2( const char * pHeader )
 }
 
 
-size_t HttpHeader::getRespHeaderIndex( const char * pHeader )
-{
-    register size_t idx = H_HEADER_END;
-
-    switch( *pHeader++ | 0x20 )
-    {
-    case 'c':
-        if ( strncasecmp( pHeader, "onnection", 9 ) == 0 )
-            idx = H_CONNECTION;
-        else if ( strncasecmp( pHeader, "ontent-type", 11) == 0 )
-            idx = H_CONTENT_TYPE;
-        else if ( strncasecmp( pHeader, "ontent-length", 13 ) == 0 )
-            idx = H_CONTENT_LENGTH;
-        else if ( strncasecmp( pHeader, "ontent-encoding", 15 ) == 0 )
-            idx = H_CONTENT_ENCODING;
-        else if ( strncasecmp( pHeader, "ache-control", 12 ) == 0 )
-            idx = H_CACHE_CTRL;
-        break;
-    case 'd':
-        if ( strncasecmp( pHeader, "ate", 3 ) == 0 )
-                idx = H_DATE;
-        break;
-    case 'k':
-        if ( strncasecmp( pHeader, "eep-alive", 9 ) == 0 )
-            idx = H_KEEP_ALIVE;
-        break;
-    case 'l':
-        if ( strncasecmp( pHeader, "ocation", 7 ) == 0 )
-            idx = H_LOCATION;
-        break;
-    case 's':
-//    "script-control",
-        if ( strncasecmp( pHeader, "tatus", 5 ) == 0 )
-            idx = CGI_STATUS;
-        else if ( strncasecmp( pHeader, "erver", 5 ) == 0 )
-            idx = H_SERVER;
-        else if ( strncasecmp( pHeader, "et-cookie", 9 ) == 0 )
-        {
-            if ( *(pHeader + 9) == '2' )
-                idx = H_SET_COOKIE2;
-            else
-                idx = H_SET_COOKIE;
-        }
-        break;
-    case 't':
-        if ( strncasecmp( pHeader, "ransfer-encoding", 16 ) == 0 )
-            idx = H_TRANSFER_ENCODING;
-        break;
-    case 'p':
-        if ( strncasecmp( pHeader, "ragma", 5 ) == 0 )
-            idx = H_PRAGMA;
-        else if ( strncasecmp( pHeader, "roxy-connection", 15 ) == 0 )
-            idx = H_PROXY_CONNECTION;
-        break;
-        
-    }
-    return idx;
-    
-}
 
 /*
 class HttpBuf;

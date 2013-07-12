@@ -23,7 +23,8 @@
 #include <stddef.h>
 #include <time.h>
 #include <limits.h>
-
+class XmlNode;
+class ConfigCtx;
 class ThrottleUnit
 {
     int     m_iLimit;
@@ -69,6 +70,8 @@ public:
     int getOutputLimit() const      {   return m_iOutput;       }
     int getStaticReqLimit() const   {   return m_iStaticReq;    }
     int getDynReqLimit() const      {   return m_iDynReq;       }
+    void config( const XmlNode * pNode1, const ThrottleLimits * pDefault, 
+                             ConfigCtx* pcurrentCtx);
 };
 
 

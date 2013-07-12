@@ -30,22 +30,29 @@ class HttpReq;
 
 class HttpResp
 {
-private:
-    static HttpRespHeaders     s_CommonHeaders[3];
+public:
+    static char     s_sCommonHeaders[66];
     static char     s_sKeepAliveHeader[25];
     static char     s_sConnCloseHeader[20];
     static char     s_chunked[29];
     static char     s_sGzipEncodingHeader[48];
 
+    static header_st       m_commonHeaders[3];
+    static header_st       m_gzipHeaders[2];
+    static header_st       m_keepaliveHeader;
+    static header_st       m_chunkedHeader;
+    static header_st       m_concloseHeader;
+    static int             m_commonHeadersCount;
+    
+
+private:    
     IOVec           m_iovec;
-    HttpRespHeaders         m_outputBuf;
+    HttpRespHeaders         m_respHeaders;
     
 
     long            m_lEntityLength;
     long            m_lEntityFinished;
     int             m_iHeaderLeft;
-    int             m_iSetCookieOffset;
-    int             m_iSetCookieLen;
     int             m_iHeaderTotalLen;
     short           m_iSSL;
     short           m_iLogAccess;
@@ -76,8 +83,8 @@ public:
     void prepareHeaders( const HttpReq * pReq, int rangeHeaderLen = 0 );
     void appendContentLenHeader();
 
-    HttpRespHeaders& getHeaders()
-    {   return m_outputBuf;  }
+    HttpRespHeaders& getRespHeaders()
+    {   return m_respHeaders;  }
 
     void setContentLen( long len )      {   m_lEntityLength = len;  }
     long getContentLen() const          {   return m_lEntityLength; }
@@ -94,7 +101,7 @@ public:
     {   return (m_lEntityLength == -1); }
 
     static void buildCommonHeaders();
-    static void updateDateHeader(int index = 0);    //0 means all, and 1, 2 and 3 mean the (index -1) one
+    static void updateDateHeader();
 
     const char * getProtocol() const;
     int   getProtocolLen() const;
@@ -105,21 +112,23 @@ public:
     void finalizeHeader( int ver, int code);
     
     IOVec& getIov()    {   return m_iovec;  }
-    void iovAppend( const char * pBuf, int len );
+    void parseAdd( const char * pBuf, int len );
     
     void appendExtra( const char * pBuf, int len )
-    {   //m_iovec.append( pBuf, len );
-        m_outputBuf.addNoCheckExptSpdy(pBuf, len );
-        m_iHeaderTotalLen += len; m_iHeaderLeft += len; }
+    {
+        m_respHeaders.parseAdd(pBuf, len, RespHeader::APPEND );
+        m_iHeaderTotalLen += len; 
+        m_iHeaderLeft += len; 
+    }
 
     void addGzipEncodingHeader()
     {
-        iovAppend( s_sGzipEncodingHeader, 47 );
+        m_respHeaders.add( HttpResp::m_gzipHeaders, 2);
     }
     
     void appendChunked()
     {
-        iovAppend( s_chunked, sizeof( s_chunked )- 1 );
+        m_respHeaders.add( &HttpResp::m_chunkedHeader, 1);
     }
 
     int& getHeaderLeft()            {   return m_iHeaderLeft;   }
@@ -128,7 +137,7 @@ public:
     long getTotalLen() const    {   return m_lEntityFinished + m_iHeaderTotalLen;   }
     int  getHeaderSent() const      {   return m_iHeaderTotalLen - m_iHeaderLeft;   }
     int  getHeaderTotal() const     {   return m_iHeaderTotalLen;   }    
-    const char * getContentTypeHeader(int &len )  {    return m_outputBuf.getContentTypeHeader(len);  }
+    const char * getContentTypeHeader(int &len )  {    return m_respHeaders.getContentTypeHeader(len);  }
        
     int  appendLastMod( long tmMod );
     int addCookie( const char * pName, const char * pVal,

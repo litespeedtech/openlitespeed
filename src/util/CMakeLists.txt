@@ -60,6 +60,7 @@ SET(util_STAT_SRCS
    pcutil.cpp
    daemonize.cpp
    autobuf.cpp
+   configentry.cpp 
 )
 
 add_library(util STATIC ${util_STAT_SRCS})

@@ -141,25 +141,25 @@ TEST(testLookup)
     };
     static int respHeaderIndex[] =
     {
-        HttpHeader::H_CONTENT_TYPE,
-        HttpHeader::H_CONTENT_LENGTH,
-        HttpHeader::H_CONTENT_ENCODING,
-        HttpHeader::H_CACHE_CTRL,
-        HttpHeader::H_LOCATION,
-        HttpHeader::H_PRAGMA,
-        HttpHeader::CGI_STATUS,
-        HttpHeader::H_TRANSFER_ENCODING,
-        HttpHeader::H_PROXY_CONNECTION,
-        HttpHeader::H_SERVER
+        HttpRespHeaders::H_CONTENT_TYPE,
+        HttpRespHeaders::H_CONTENT_LENGTH,
+        HttpRespHeaders::H_CONTENT_ENCODING,
+        HttpRespHeaders::H_CACHE_CTRL,
+        HttpRespHeaders::H_LOCATION,
+        HttpRespHeaders::H_PRAGMA,
+        HttpRespHeaders::CGI_STATUS,
+        HttpRespHeaders::H_TRANSFER_ENCODING,
+        HttpRespHeaders::H_PROXY_CONNECTION,
+        HttpRespHeaders::H_SERVER
     };
     size = sizeof( respHeaders ) / sizeof( char * );
     for( i = 0; i < size; i++ )
     {
         //printf( "%s\n", respHeaders[i] );
-        int index = HttpHeader::getRespHeaderIndex( respHeaders[i] );
+        HttpRespHeaders::HEADERINDEX index = HttpRespHeaders::getRespHeaderIndex( respHeaders[i] );
         CHECK( index == respHeaderIndex[i] );
         CHECK( (int)strlen( respHeaders[i] ) ==
-                    HttpHeader::getHeaderStringLen( index ) );
+                    HttpRespHeaders::getHeaderStringLen( index ) );
     }    
 }
 
@@ -352,120 +352,108 @@ TEST (respHeaders)
     for (int kk=0; kk<3; ++kk)
     {
         h.reset((RespHeader::FORMAT)kk);
-        h.add(HttpHeader::H_SERVER, "Server", 6, "My_Server", 9);
-        h.add(HttpHeader::H_HOST, "Host", 4, "My_Host", 7);
-        h.add(HttpHeader::H_ACCEPT_RANGES, "Accept-Ranges", strlen("Accept-Ranges"), "bytes", 5);
-        h.add(HttpHeader::H_DATE, "Date", 4, "Thu, 16 May 2013 20:32:23 GMT", strlen("Thu, 16 May 2013 20:32:23 GMT"));
-        h.add(-1, "X-Powered-By", strlen("X-Powered-By"), "PHP/5.3.24", strlen("PHP/5.3.24"));
-        io.clear();     h.getHeaders(&io);     DisplayHeader(io, kk, h.getTotalCount());
-        CHECK(h.getCount() == 5);
-        CHECK(h.getTotalCount() == 5);
-            
-        //Add h again to io, 5 + 5 = 1-0
-        h.getHeaders(&io);
-        h.setUnmanagedHeadersCount(5);
-        DisplayHeader(io, kk, h.getTotalCount());
-        CHECK(h.getCount() == 5);
-        CHECK(h.getTotalCount() == 10);
+        h.add(HttpRespHeaders::H_SERVER, "Server", 6, "My_Server", 9);
+        h.add(HttpRespHeaders::H_ACCEPT_RANGES, "Accept-Ranges", strlen("Accept-Ranges"), "bytes", 5);
+        h.add(HttpRespHeaders::H_DATE, "Date", 4, "Thu, 16 May 2013 20:32:23 GMT", strlen("Thu, 16 May 2013 20:32:23 GMT"));
+        h.add(HttpRespHeaders::H_X_POWERED_BY, "X-Powered-By", strlen("X-Powered-By"), "PHP/5.3.24", strlen("PHP/5.3.24"));
+        io.clear();     h.getHeaders(&io);     DisplayHeader(io, kk, h.getCount());
+        CHECK(h.getCount() == 4);
             
    
         h.reset((RespHeader::FORMAT)kk);
-        h.add(HttpHeader::H_SERVER, "Server", 6, "My_Server", 9);
-        h.add(HttpHeader::H_HOST, "Host", 4, "My_Host", 7);
-        h.add(HttpHeader::H_ACCEPT_RANGES, "Accept-Ranges", strlen("Accept-Ranges"), "bytes", 5);
-        h.add(HttpHeader::H_DATE, "Date", 4, "Thu, 16 May 2013 20:32:23 GMT", strlen("Thu, 16 May 2013 20:32:23 GMT"));
-        h.add(-1, "X-Powered-By", strlen("X-Powered-By"), "PHP/5.3.24", strlen("PHP/5.3.24"));
-        h.del(HttpHeader::H_HOST);
-        io.clear();     h.getHeaders(&io);     DisplayHeader(io, kk, h.getTotalCount());
-        CHECK(h.getTotalCount() == 4);
+        h.add(HttpRespHeaders::H_SERVER, "Server", 6, "My_Server", 9);
+        h.add(HttpRespHeaders::H_ACCEPT_RANGES, "Accept-Ranges", strlen("Accept-Ranges"), "bytes", 5);
+        h.add(HttpRespHeaders::H_DATE, "Date", 4, "Thu, 16 May 2013 20:32:23 GMT", strlen("Thu, 16 May 2013 20:32:23 GMT"));
+        h.add(HttpRespHeaders::H_X_POWERED_BY, "X-Powered-By", strlen("X-Powered-By"), "PHP/5.3.24", strlen("PHP/5.3.24"));
+        h.del(HttpRespHeaders::H_DATE);
+        io.clear();     h.getHeaders(&io);     DisplayHeader(io, kk, h.getCount());
+        CHECK(h.getCount() == 3);
     
     
         h.del("X-Powered-By", strlen("X-Powered-By"));
-        io.clear();     h.getHeaders(&io);     DisplayHeader(io, kk, h.getTotalCount());
-        CHECK(h.getTotalCount() == 3);
+        io.clear();     h.getHeaders(&io);     DisplayHeader(io, kk, h.getCount());
+        CHECK(h.getCount() == 2);
     
-        h.add(HttpHeader::H_SERVER, "Server", 6, "YY_Server", 9);
-        io.clear();     h.getHeaders(&io);     DisplayHeader(io, kk, h.getTotalCount());
-        CHECK(h.getTotalCount() == 3);
+        h.add(HttpRespHeaders::H_SERVER, "Server", 6, "YY_Server", 9);
+        io.clear();     h.getHeaders(&io);     DisplayHeader(io, kk, h.getCount());
+        CHECK(h.getCount() == 2);
 
     
-        h.add(HttpHeader::H_SERVER, "Server", 6, "XServer", 7);
-        io.clear();     h.getHeaders(&io);     DisplayHeader(io, kk, h.getTotalCount());
-        CHECK(h.getTotalCount() == 3);
+        h.add(HttpRespHeaders::H_SERVER, "Server", 6, "XServer", 7);
+        io.clear();     h.getHeaders(&io);     DisplayHeader(io, kk, h.getCount());
+        CHECK(h.getCount() == 2);
         
-        h.add(HttpHeader::H_DATE, "Date", 4, "Thu, 16 May 2099 20:32:23 GMT", strlen("Thu, 16 May 2013 20:32:23 GMT"));
-        h.add(-1, "X-Powered-By", strlen("X-Powered-By"), "PHP/9.9.99", strlen("PHP/5.3.24"));
-        io.clear();     h.getHeaders(&io);     DisplayHeader(io, kk, h.getTotalCount());
-        CHECK(h.getTotalCount() == 4);
+        h.add(HttpRespHeaders::H_DATE, "Date", 4, "Thu, 16 May 2099 20:32:23 GMT", strlen("Thu, 16 May 2013 20:32:23 GMT"));
+        h.add(HttpRespHeaders::H_X_POWERED_BY, "X-Powered-By", strlen("X-Powered-By"), "PHP/9.9.99", strlen("PHP/5.3.24"));
+        io.clear();     h.getHeaders(&io);     DisplayHeader(io, kk, h.getCount());
+        CHECK(h.getCount() == 4);
 
         
-        h.add(HttpHeader::H_ALLOW, "Allow", 5, "*.*", 3);
+        h.add(HttpRespHeaders::H_UNKNOWN, "Allow", 5, "*.*", 3);
         h.appendLastVal("Allow", 5, "; .zip; .rar", strlen("; .zip; .rar"));
         h.appendLastVal("Allow", 5, "; .exe; .flv", strlen("; .zip; .rar"));
-        io.clear();     h.getHeaders(&io);     DisplayHeader(io, kk, h.getTotalCount());
-        CHECK(h.getTotalCount() == 5);  
+        io.clear();     h.getHeaders(&io);     DisplayHeader(io, kk, h.getCount());
+        CHECK(h.getCount() == 5);  
     
         
-        h.add(HttpHeader::H_SET_COOKIE, "Set-Cookie", strlen("Set-Cookie"),
+        h.add(HttpRespHeaders::H_SET_COOKIE, "Set-Cookie", strlen("Set-Cookie"),
               "lsws_uid=a; expires=Mon, 13 May 2013 14:10:51 GMT; path=/",
               strlen("lsws_uid=a; expires=Mon, 13 May 2013 14:10:51 GMT; path=/"),
               RespHeader::APPEND);
         
-        h.add(HttpHeader::H_SET_COOKIE, "Set-Cookie", strlen("Set-Cookie"),
+        h.add(HttpRespHeaders::H_SET_COOKIE, "Set-Cookie", strlen("Set-Cookie"),
               "lsws_pass=b; expires=Mon, 13 May 2013 14:10:51 GMT; path=/",
               strlen("lsws_pass=b; expires=Mon, 13 May 2013 14:10:51 GMT; path=/"),
               RespHeader::APPEND);
         
-        h.add(-1, "testBreak", 9, "----", 4);
+        h.add(HttpRespHeaders::H_UNKNOWN, "testBreak", 9, "----", 4);
         
-        h.add(HttpHeader::H_SET_COOKIE, "Set-Cookie", strlen("Set-Cookie"),
+        h.add(HttpRespHeaders::H_SET_COOKIE, "Set-Cookie", strlen("Set-Cookie"),
               "lsws_uid=c; expires=Mon, 13 May 2013 14:10:51 GMT; path=/",
               strlen("lsws_uid=c; expires=Mon, 13 May 2013 14:10:51 GMT; path=/"),
               RespHeader::APPEND);
-        io.clear();     h.getHeaders(&io);     DisplayHeader(io, kk, h.getTotalCount());
-        CHECK(h.getTotalCount() == 7);  
+        io.clear();     h.getHeaders(&io);     DisplayHeader(io, kk, h.getCount());
+        CHECK(h.getCount() == 7);  
         
 
         h.getHeader("Date", 4, &pVal, valLen); CHECK (memcmp(pVal, "Thu, 16 May 2099 20:32:23 GMT", valLen) == 0);
         h.getHeader("Allow", 5,&pVal, valLen); CHECK (memcmp(pVal, "*.*; .zip; .rar; .exe; .flv", valLen) == 0);
     
-        h.addNoCheckExptSpdy("MytestHeader: TTTTTTTTTTTT\r\nMyTestHeaderii: IIIIIIIIIIIIIIIIIIIII\r\n", 
-                    strlen("MytestHeader: TTTTTTTTTTTT\r\nMyTestHeaderii: IIIIIIIIIIIIIIIIIIIII\r\n"));
-        if ( kk == 0)
-            CHECK(h.getTotalCount() == 5); 
-        else
-        {
-            CHECK(h.getTotalCount() == 7); 
-            h.getHeader("MytestHeader", strlen("MytestHeader"), &pVal, valLen); 
-            CHECK (memcmp(pVal, "TTTTTTTTTTTT", valLen) == 0);
-        }
+        h.parseAdd("MytestHeader: TTTTTTTTTTTT\r\nMyTestHeaderii: IIIIIIIIIIIIIIIIIIIII\r\n", 
+                    strlen("MytestHeader: TTTTTTTTTTTT\r\nMyTestHeaderii: IIIIIIIIIIIIIIIIIIIII\r\n"), RespHeader::REPLACE);
+ 
+        CHECK(h.getCount() == 9); 
+        h.getHeader("MytestHeader", strlen("MytestHeader"), &pVal, valLen); 
+        CHECK (memcmp(pVal, "TTTTTTTTTTTT", valLen) == 0);
         
         //Same name, but since no check,  will be appended directly. But SPDY, will check and parse it.
-        h.addNoCheckExptSpdy("MytestHeader: TTTTTTTTTTTT3\r\n", 
-                    strlen("MytestHeader: TTTTTTTTTTTT3\r\n"));
-        if ( kk == 0)
-            CHECK(h.getTotalCount() == 5); 
-        else
-        {
-            CHECK(h.getTotalCount() == 7); 
-            h.getHeader("MytestHeader", strlen("MytestHeader"), &pVal, valLen); 
-            CHECK (memcmp(pVal, "TTTTTTTTTTTT3", valLen) == 0);
-        }  
+        h.parseAdd("MytestHeader: TTTTTTTTTTTT3\r\n", 
+                    strlen("MytestHeader: TTTTTTTTTTTT3\r\n"), RespHeader::REPLACE);
+
+        CHECK(h.getCount() == 9); 
+        h.getHeader("MytestHeader", strlen("MytestHeader"), &pVal, valLen); 
+        CHECK (memcmp(pVal, "TTTTTTTTTTTT3", valLen) == 0);
         
-        h.endHeader();
         io.clear();
-        h.addStatusLine(&io, 0, SC_404);
+        h.addStatusLine(0, SC_404);
         h.getHeaders(&io);    
+        
         if ( kk == 0)
-            CHECK(h.getTotalCount() == 5); 
-        else
+            CHECK(h.getCount() == 9); 
+        else if ( kk == 1)
         {
             h.getHeader("Status", strlen("Status"), &pVal, valLen); 
             CHECK (memcmp(pVal, "404", valLen) == 0);
-            CHECK(h.getTotalCount() == 9); 
+            CHECK(h.getCount() == 11); 
+        }
+        else
+        {
+            h.getHeader(":Status", strlen(":Status"), &pVal, valLen); 
+            CHECK (memcmp(pVal, "404", valLen) == 0);
+            CHECK(h.getCount() == 11); 
         }
         
-        DisplayHeader(io, kk, h.getTotalCount());
+        DisplayHeader(io, kk, h.getCount());
     }
 
     

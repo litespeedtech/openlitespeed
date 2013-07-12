@@ -27,6 +27,9 @@
 #define CONFIG_COMPRESS 2
 #define CONFIG_HANDLER  4
 #define CONFIG_IMAGE    8
+
+class XmlNode;
+class HttpContext;
   
 class ExpiresCtrl
 {
@@ -53,6 +56,8 @@ public:
     void    clearBit( char bit )    {   m_iBits &= ~bit;        }
         
     int     parse( const char * pConfig );
+    int     config( const XmlNode * pExpires, const ExpiresCtrl * pDefault, 
+                    HttpContext * pContext );
     
 private:
     char    m_iEnabled;
@@ -61,5 +66,21 @@ private:
     char    m_iBits;
     int     m_iAge;
 };
+
+class ExpiresCtrlConfig
+{
+private:
+    ExpiresCtrl * m_pDefault;
+    HttpContext * m_pContext;
+    
+public:
+    ExpiresCtrlConfig( ExpiresCtrl * pDefault, HttpContext * pContext )
+        : m_pDefault( pDefault )
+        , m_pContext( pContext )
+        {}
+    int operator()( ExpiresCtrl * pCtrl, const XmlNode * pNode ) ;
+
+};
+
 
 #endif

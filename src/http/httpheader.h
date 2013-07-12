@@ -93,11 +93,13 @@ public:
         H_LITESPEED_LOCATION,
         H_CONTENT_DISPOSITION,
         H_LITESPEED_CACHE_CONTROL,
+        
+        H_HTTP_VERSION,
         H_HEADER_END
     };
     static size_t getIndex( const char * pHeader );
     static size_t getIndex2( const char * pHeader );
-    static size_t getRespHeaderIndex( const char * pHeader );
+    
     
 private:
     static int s_iHeaderLen[H_HEADER_END+1];

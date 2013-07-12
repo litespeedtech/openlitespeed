@@ -1226,10 +1226,10 @@ int NtwkIOLink::onWriteSSL_T( NtwkIOLink * pThis )
 }
 
 static char s_errUseSSL[] =
-//    "HTTP/1.0 200 OK\r\n"
-//    "Cache-Control: private, no-cache, max-age=0\r\n"
-//    "Pragma: no-cache\r\n"
-//    "Connection: Close\r\n\r\n"
+    "HTTP/1.0 200 OK\r\n"
+    "Cache-Control: private, no-cache, max-age=0\r\n"
+    "Pragma: no-cache\r\n"
+    "Connection: Close\r\n\r\n"
     "<html><head><title>400 Bad Request</title></head><body>\n"
     "<h2>HTTPS is required</h2>\n"
     "<p>This is an SSL protected page, please use the HTTPS scheme instead of "

@@ -26,6 +26,8 @@
 #include <string.h>
 #include <util/ssnprintf.h>
 
+#include <limits.h>
+
 #define BUF_SIZE 1024
 
 class Attr
@@ -213,6 +215,50 @@ const char* XmlNode::getChildValue( const char *name ) const
         return pNode->getValue();
     return NULL;
 }
+
+static long long getLongValue( const char * pValue, int base = 10 )
+{
+    long long l = strlen( pValue );
+    long long m = 1;
+    char ch = *( pValue + l - 1 );
+    if (  ch == 'G' || ch == 'g' )
+    {
+        m = 1024 * 1024 * 1024;
+    }
+    else if (  ch == 'M' || ch == 'm' )
+    {
+        m = 1024 * 1024;
+    }
+    else if ( ch == 'K' || ch == 'k' )
+    {
+        m = 1024;
+    }
+    return strtoll(pValue, (char **)NULL, base) * m;
+}
+
+
+long long XmlNode::getLongValue( const char * pTag,
+            long long min, long long max, long long def, int base) const
+{
+    const char * pValue = getChildValue( pTag );
+    long long val;
+    if ( !pValue )
+        return def;
+    val = ::getLongValue( pValue, base );
+    if (( max == INT_MAX )&&( val > max ))
+        val = max;
+    if (((min != LLONG_MIN)&&(val < min))||
+        ((max != LLONG_MAX)&&(val > max )) )
+    {
+        //LOG_WARN(( "[%s] invalid value of <%s>:%s, use default=%ld",
+        //        getLogId(), pTag, pValue, def ));
+        return def;
+    }
+
+    return val;
+
+}
+
 
 XmlNode* XmlNode::getChild(const char* name)
 {
