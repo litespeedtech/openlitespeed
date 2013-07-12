@@ -123,9 +123,14 @@ else
         else
             $DLCMD $LSWS_HOME/admin/fcgi-bin/admin_php http://www.litespeedtech.com/packages/lsphp5_bin/x86_64/lsphp5
         fi
-        if [ -f "$LSWS_HOME/admin/fcgi-bin/admin_php" ] ; then
+        
+        if [ $? = 0 ] ; then 
             HASADMINPHP=y
         fi
+        
+#        if [ -f  "$LSWS_HOME/admin/fcgi-bin/admin_php" ] ; then
+#            HASADMINPHP=y
+#        fi
     fi
 fi
 

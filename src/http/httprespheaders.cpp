@@ -18,7 +18,6 @@
 #include "http/httprespheaders.h"
 #include <arpa/inet.h>
 #include <http/httpver.h>
-#include <http/httpstatusline.h>
 #include <socket/gsockaddr.h>
 
 /*******************************************************************************
@@ -46,12 +45,10 @@ void HttpRespHeaders::reset(RespHeader::FORMAT format)
     m_hasHole = 0;
     m_iHeaderCount = 0;
     m_buf.clear();
-    memset(m_KVPairindex, 0xFF, HttpHeader::H_HEADER_END);
+    memset(m_KVPairindex, 0xFF, H_HEADER_END);
     memset(m_sKVPair.buf(), 0, m_sKVPair.len());
     m_hLastHeaderKVPairIndex = -1;
-    m_iExtraBufOff = -1;
-    m_iExtraBufLen = 0;
-    m_iUnmanagedHeadersCount = 0;
+    m_pStatusLine = NULL;
 }
 
 void HttpRespHeaders::incKVPairs(int num)
@@ -98,7 +95,8 @@ inline void appendNetInt(AutoBuf &buf, int n, int bytesNum)
     }
 }
 
-int HttpRespHeaders::appendHeader(key_value_pair *pKv, const char * pName, unsigned int nameLen, const char * pVal, unsigned int valLen)
+int HttpRespHeaders::appendHeader(key_value_pair *pKv, const char * pName, unsigned int nameLen, 
+                                  const char * pVal, unsigned int valLen, RespHeader::ADD_METHOD method)
 {
     /*******************************************************************
     *  About Append in regular header
@@ -107,6 +105,8 @@ int HttpRespHeaders::appendHeader(key_value_pair *pKv, const char * pName, unsig
     * End, key: set-cookie, Val: "123\r\nset-cookie: 4567 "
     * In this way, we will store set-cookie in one place of kvlist
     ******************************************************************/
+    if (method == RespHeader::REPLACE)
+        memset(pKv, 0, sizeof(key_value_pair));
     
     //Will insert a "\0" between new value and old value when spdy
     if ( m_buf.available() < (int)(pKv->valLen + nameLen * 2 + valLen + 8 + 2) )
@@ -157,35 +157,52 @@ int HttpRespHeaders::appendHeader(key_value_pair *pKv, const char * pName, unsig
     return 0;
 }
 
-//replace_or_append: 0 replace,1 append    
-int HttpRespHeaders::add( int headerIndex, const char * pName, unsigned int nameLen, const char * pVal, unsigned int valLen, RespHeader::ADD_METHOD method )
+
+void HttpRespHeaders::verifyHeaderLength(HEADERINDEX headerIndex, const char * pName, unsigned int nameLen)
 {
-    assert (headerIndex < HttpHeader::H_HEADER_END);
-    assert ( nameLen > 0 );
-    
-    int count = m_iHeaderCount;
-    int kvOrderNum = count;
-    key_value_pair *pKv = NULL;
-    
-    //-1 menas unkonw, check if it is already in our index list
-    //if we do know it is NOT in, we can bypass this for-loop step
-    if ( headerIndex == -1 )
+#ifndef NDEBUG    
+    assert ( headerIndex == getRespHeaderIndex(pName) );
+    if ( getFormat() != RespHeader::SPDY3 || *pName != ':' )
     {
-        int ret = getHeaderIndex(pName, nameLen);
-        if ( ret != -1)
-            kvOrderNum = ret;
+        assert ( (int)nameLen == getHeaderStringLen(headerIndex) );
     }
     else
     {
-        if (m_KVPairindex[headerIndex] != 0xFF)
-            kvOrderNum = m_KVPairindex[headerIndex];
+        assert ( (int)nameLen - 1 == getHeaderStringLen(headerIndex) );
+    }
+#endif
+}
+
+//replace_or_append: 0 replace,1 append    
+int HttpRespHeaders::add( HEADERINDEX headerIndex, const char * pName, unsigned int nameLen, const char * pVal, unsigned int valLen, RespHeader::ADD_METHOD method )
+{
+    assert (headerIndex < H_HEADER_END);
+    assert ( nameLen > 0 );
+    
+    int kvOrderNum = -1;
+    key_value_pair *pKv = NULL;
+    
+    //if unkonw, check if it is already in our index list
+    if ( headerIndex == H_UNKNOWN )
+        headerIndex = getRespHeaderIndex( pName );
+    
+    if ( headerIndex == H_HEADER_END ) // || headerIndex == H_UNKNOWN )
+    {
+        int ret = getHeaderKvOrder(pName, nameLen);
+        if ( ret != -1)
+            kvOrderNum = ret;
         else
-        {
-            m_KVPairindex[headerIndex] = kvOrderNum;
-        }
+            kvOrderNum = m_iHeaderCount;
+    }
+    else
+    {
+        verifyHeaderLength(headerIndex,  pName, nameLen);
+        if (m_KVPairindex[headerIndex] == 0xFF)
+            m_KVPairindex[headerIndex] = m_iHeaderCount;
+        kvOrderNum = m_KVPairindex[headerIndex];
     }
 
-    if ( kvOrderNum == count )
+    if ( kvOrderNum == m_iHeaderCount )
     {
         //Add a new header not inside before
         if (getFreeSpaceCount() == 0)
@@ -215,14 +232,14 @@ int HttpRespHeaders::add( int headerIndex, const char * pName, unsigned int name
             m_hasHole = 1;
         }
 
-        return appendHeader(pKv, pName, nameLen, pVal, valLen);
+        return appendHeader(pKv, pName, nameLen, pVal, valLen, method);
     }
 }
 
 //This will only append value to the last item
 int HttpRespHeaders::appendLastVal(const char * pName, int nameLen, const char * pVal, int valLen)
 {
-    if (m_hLastHeaderKVPairIndex == -1 && valLen <= 0)
+    if (m_hLastHeaderKVPairIndex == -1 || valLen <= 0)
         return -1;
     
     assert( m_hLastHeaderKVPairIndex < m_iHeaderCount );
@@ -266,6 +283,22 @@ int HttpRespHeaders::appendLastVal(const char * pName, int nameLen, const char *
     return 0;
 }
 
+int HttpRespHeaders::add( header_st *headerArray, int size, RespHeader::ADD_METHOD method )
+{
+    int ret = 0;
+    for (int i=0; i<size; ++i) 
+    {
+        if ( 0 != add(headerArray[i].index, headerArray[i].name, headerArray[i].nameLen,
+                        headerArray[i].val, headerArray[i].valLen, method))
+        {
+            ret = -1;
+            break;
+        }
+    }
+    
+    return ret;
+}
+
 void HttpRespHeaders::delAndMove(int kvOrderNum)
 {
     if (kvOrderNum == -1)
@@ -281,7 +314,7 @@ void HttpRespHeaders::delAndMove(int kvOrderNum)
     //need to empty this section for later using won't mess up
     memset(pKvLastPos, 0, sizeof(key_value_pair));
     
-    for (int i=0; i<HttpHeader::H_HEADER_END; ++i)
+    for (int i=0; i<H_HEADER_END; ++i)
     {
         if (m_KVPairindex[i] == m_iHeaderCount- 1)
         {
@@ -299,13 +332,19 @@ void HttpRespHeaders::delAndMove(int kvOrderNum)
 int HttpRespHeaders::del( const char * pName, int nameLen )
 {
     assert (nameLen > 0);
-    int kvOrderNum = getHeaderIndex(pName, nameLen);;
-    delAndMove(kvOrderNum);
+    size_t idx = getRespHeaderIndex(pName);
+    if (idx == H_HEADER_END)
+    {
+        int kvOrderNum = getHeaderKvOrder(pName, nameLen);
+        delAndMove(kvOrderNum);
+    }
+    else
+        del ((HEADERINDEX)idx);
     return 0;
 }
  
 //del() will make some {0,0,0,0} kvpair in the list and make hole
-int HttpRespHeaders::del( int headerIndex )
+int HttpRespHeaders::del( HEADERINDEX headerIndex )
 {
     if (headerIndex < 0)
         return -1;
@@ -320,6 +359,9 @@ int HttpRespHeaders::del( int headerIndex )
 
 void HttpRespHeaders::getHeaders(IOVec *io)
 {
+     if (m_headerFormat == RespHeader::REGULAR && m_pStatusLine) 
+        io->push_front(m_pStatusLine->get(), m_pStatusLine->getLen());
+    
     if (m_hasHole == 0)
     {
         if (m_buf.size() > 0)
@@ -336,28 +378,28 @@ void HttpRespHeaders::getHeaders(IOVec *io)
             else
                 io->appendCombine(m_buf.begin() + pKv->keyOff, pKv->keyLen + pKv->valLen + 8);
         }
-        
-        //deal with the extra buffer "...................\r\n\r\n"
-        if ( m_headerFormat == RespHeader::REGULAR && m_iExtraBufOff != -1)
-            io->appendCombine(m_buf.begin() + m_iExtraBufOff, m_iExtraBufLen);
     }
+    
+    //Only for those normal header (have status code) need add \r\n
+    if (m_headerFormat == RespHeader::REGULAR && m_pStatusLine) 
+       io->append("\r\n", 2);
 }
 
-void HttpRespHeaders::addStatusLine(IOVec *io, int ver, int code)
+void HttpRespHeaders::addStatusLine(int ver, int code)
 {
     const StatusLineString& statusLine = HttpStatusLine::getStatusLine( ver, code );
     
     if (m_headerFormat == RespHeader::REGULAR)
-        io->push_front( statusLine.get(), statusLine.getLen() );
+        m_pStatusLine = &statusLine;
     else if (m_headerFormat == RespHeader::SPDY2)
     {
-        add(-1, "status", 6, statusLine.get() + 9, 3);
-        add(-1, "version", 7, statusLine.get(), 8);
+        add(HttpRespHeaders::CGI_STATUS, "status", 6, statusLine.get() + 9, 3);
+        add(HttpRespHeaders::H_HTTP_VERSION, "version", 7, statusLine.get(), 8);
     }
     else
     {
-        add(-1, ":status", 7, statusLine.get() + 9, 3);
-        add(-1, ":version", 8, statusLine.get(), 8);
+        add(HttpRespHeaders::CGI_STATUS, ":status", 7, statusLine.get() + 9, 3);
+        add(HttpRespHeaders::H_HTTP_VERSION, ":version", 8, statusLine.get(), 8);
     }
 }
 
@@ -375,69 +417,45 @@ char *HttpRespHeaders::getContentTypeHeader(int &len)
     return getVal(pKv);
 }
 
-void HttpRespHeaders::endHeader()
-{
-    if (m_headerFormat == RespHeader::REGULAR)
-    {
-        if (m_iExtraBufOff == -1)
-            m_iExtraBufOff = m_buf.size();
-            
-        m_buf.append("\r\n", 2);
-        m_iExtraBufLen += 2;
-    }
-}
-
-
 //The below calling will not maintance the kvpaire when regular case
-void HttpRespHeaders::addNoCheckExptSpdy(const char * pStr, int len )
+void HttpRespHeaders::parseAdd(const char * pStr, int len, RespHeader::ADD_METHOD method )
 {
-    if (m_headerFormat == RespHeader::REGULAR)
+    //When SPDY format, we need to parse it and add one by one
+    const char *pName = NULL;
+    int nameLen = 0;
+    const char *pVal = NULL;
+    int valLen = 0;
+    
+    const char *pBEnd = pStr + len;
+    const char *pMark = NULL;
+    const char *pLineEnd= NULL;
+    const char* pLineBegin  = pStr;
+    
+    while((pLineEnd  = ( const char *)memchr(pLineBegin, '\n', pBEnd - pLineBegin )) != NULL)
     {
-        if (m_iExtraBufOff == -1)
-            m_iExtraBufOff = m_buf.size();
-        
-        m_buf.append(pStr, len);
-        m_iExtraBufLen += len;
-    }
-    else
-    {
-        //When SPDY format, we need to parse it and add one by one
-        const char *pName = NULL;
-        int nameLen = 0;
-        const char *pVal = NULL;
-        int valLen = 0;
-        
-        const char *pBEnd = pStr + len;
-        const char *pMark = NULL;
-        const char *pLineEnd= NULL;
-        const char* pLineBegin  = pStr;
-        
-        while((pLineEnd  = ( const char *)memchr(pLineBegin, '\n', pBEnd - pLineBegin )) != NULL)
+        pMark = ( const char *)memchr(pLineBegin, ':', pLineEnd - pLineBegin);
+        if(pMark != NULL)
         {
-            pMark = ( const char *)memchr(pLineBegin, ':', pLineEnd - pLineBegin);
-            if(pMark != NULL)
-            {
-                pName = pLineBegin;
-                nameLen = pMark - pLineBegin; //Should - 1 to remove the ':' position
-                pVal = pMark + 2;
-                if (*pVal == ' ')
-                    ++ pVal;
-                valLen = pLineEnd - pVal;
-                if (*(pLineEnd - 1) == '\r')
-                    -- valLen;
-                
-                //This way, all the value use APPEND as default
-                add(-1, pName, nameLen, pVal, valLen, RespHeader::APPEND);
-            }
+            pName = pLineBegin;
+            nameLen = pMark - pLineBegin; //Should - 1 to remove the ':' position
+            pVal = pMark + 2;
+            if (*pVal == ' ')
+                ++ pVal;
+            valLen = pLineEnd - pVal;
+            if (*(pLineEnd - 1) == '\r')
+                -- valLen;
             
-            pLineBegin = pLineEnd + 1;
-            if (pBEnd <= pLineBegin + 1)
-                break;
+            //This way, all the value use APPEND as default
+            add(H_UNKNOWN, pName, nameLen, pVal, valLen, method);
         }
+        
+        pLineBegin = pLineEnd + 1;
+        if (pBEnd <= pLineBegin + 1)
+            break;
     }
 }
 
-int HttpRespHeaders::getHeaderIndex(const char *pName, unsigned int nameLen)
+int HttpRespHeaders::getHeaderKvOrder(const char *pName, unsigned int nameLen)
 {
     int index = -1;
     key_value_pair *pKv = NULL;
@@ -456,17 +474,127 @@ int HttpRespHeaders::getHeaderIndex(const char *pName, unsigned int nameLen)
     return index;
 }
 
+int HttpRespHeaders::_getHeader(int kvOrderNum, char **pVal, int &valLen)
+{
+    if (kvOrderNum == -1)
+        return -1;
+     
+    key_value_pair *pKv = getKVPair(kvOrderNum);
+    *pVal = getVal(pKv);
+    valLen = pKv->valLen;
+    return 0;
+}
+
+int  HttpRespHeaders::getHeader(HEADERINDEX index, char **pVal, int &valLen)
+{
+    int kvOrderNum = -1;
+    if (m_KVPairindex[index] != 0xFF)
+        kvOrderNum = m_KVPairindex[index];
+    
+    return _getHeader( kvOrderNum, pVal, valLen);
+}
 
 int HttpRespHeaders::getHeader(const char *pName, int nameLen, char **pVal, int &valLen)
 {
-    int kvOrderNum = getHeaderIndex(pName, nameLen);
-    if ( -1 != kvOrderNum )
+    HEADERINDEX idx = getRespHeaderIndex(pName);
+    if (idx != H_HEADER_END)
+        return getHeader(idx, pVal, valLen);
+       
+    int kvOrderNum = getHeaderKvOrder(pName, nameLen);
+    return _getHeader( kvOrderNum, pVal, valLen);
+}
+
+HttpRespHeaders::HEADERINDEX HttpRespHeaders::getRespHeaderIndex( const char * pHeader )
+{
+    register HEADERINDEX idx = H_HEADER_END;
+
+    switch( *pHeader++ | 0x20 )
     {
-        key_value_pair *pKv = getKVPair(kvOrderNum);
-        *pVal = getVal(pKv);
-        valLen = pKv->valLen;
-        return 0;
+    case 'a':
+        if ( strncasecmp( pHeader, "ccept-ranges", 12 ) == 0 )
+            idx = H_ACCEPT_RANGES;
+        break;        
+    case 'c':
+        if ( strncasecmp( pHeader, "onnection", 9 ) == 0 )
+            idx = H_CONNECTION;
+        else if ( strncasecmp( pHeader, "ontent-type", 11) == 0 )
+            idx = H_CONTENT_TYPE;
+        else if ( strncasecmp( pHeader, "ontent-length", 13 ) == 0 )
+            idx = H_CONTENT_LENGTH;
+        else if ( strncasecmp( pHeader, "ontent-encoding", 15 ) == 0 )
+            idx = H_CONTENT_ENCODING;
+        else if ( strncasecmp( pHeader, "ontent-range", 12 ) == 0 )
+            idx = H_CONTENT_RANGE;
+        else if ( strncasecmp( pHeader, "ontent-disposition", 18 ) == 0 )
+            idx = H_CONTENT_DISPOSITION;
+        else if ( strncasecmp( pHeader, "ache-control", 12 ) == 0 )
+            idx = H_CACHE_CTRL;
+        break;
+    case 'd':
+        if ( strncasecmp( pHeader, "ate", 3 ) == 0 )
+                idx = H_DATE;
+        break;
+    case 'e':
+        if ( strncasecmp( pHeader, "tag", 3 ) == 0 )
+                idx = H_ETAG;
+        else if ( strncasecmp( pHeader, "xpires", 6 ) == 0 )
+                idx = H_EXPIRES;
+        break;
+    case 'k':
+        if ( strncasecmp( pHeader, "eep-alive", 9 ) == 0 )
+            idx = H_KEEP_ALIVE;
+        break;
+    case 'l':
+        if ( strncasecmp( pHeader, "ast-modified", 12 ) == 0 )
+            idx = H_LAST_MODIFIED;
+        else if ( strncasecmp( pHeader, "ocation", 7 ) == 0 )
+            idx = H_LOCATION;
+        else if ( strncasecmp( pHeader, "itespeed-location", 17 ) == 0 )
+            idx = H_LITESPEED_LOCATION;
+        else if ( strncasecmp( pHeader, "itespeed-cache-control", 22 ) == 0 )
+            idx = H_LITESPEED_CACHE_CONTROL;
+        break;
+    case 'p':
+        if ( strncasecmp( pHeader, "ragma", 5 ) == 0 )
+            idx = H_PRAGMA;
+        else if ( strncasecmp( pHeader, "roxy-connection", 15 ) == 0 )
+            idx = H_PROXY_CONNECTION;
+        break;
+    case 's':
+        if ( strncasecmp( pHeader, "erver", 5 ) == 0 )
+            idx = H_SERVER;
+        else if ( strncasecmp( pHeader, "et-cookie", 9 ) == 0 )
+            idx = H_SET_COOKIE;
+        else if ( strncasecmp( pHeader, "tatus", 5 ) == 0 )
+            idx = CGI_STATUS;
+        break;
+    case 't':
+        if ( strncasecmp( pHeader, "ransfer-encoding", 16 ) == 0 )
+            idx = H_TRANSFER_ENCODING;
+        break;
+    case 'v':
+        if ( strncasecmp( pHeader, "ary", 3 ) == 0 )
+            idx = H_VARY;
+        else if ( strncasecmp( pHeader, "ersion", 6 ) == 0 )
+            idx = H_HTTP_VERSION;
+        break;
+    case 'w':
+        if ( strncasecmp( pHeader, "ww-authenticate", 15 ) == 0 )
+            idx = H_WWW_AUTHENTICATE;
+        break;
+    case 'x':
+        if ( strncasecmp( pHeader, "-powered-by", 11 ) == 0 )
+            idx = H_X_POWERED_BY;
+        break;
+    case ':': //only SPDY 3
+        if ( strncasecmp( pHeader, "status", 6 ) == 0 )
+            idx = CGI_STATUS;
+        else if ( strncasecmp( pHeader, "version", 7 ) == 0 )
+            idx = H_HTTP_VERSION;
+        break;
+        
+    default:
+        break;
     }
-    else
-        return -1;
+    return idx;    
 }

@@ -33,7 +33,8 @@
 #include <sys/types.h>
 
 class HttpFetch;
-
+class ConfigCtx;
+class XmlNode;
 class SslOcspStapling
 {
 public:
@@ -51,6 +52,8 @@ public:
     void updateRespData(OCSP_RESPONSE *pResponse);
     int getRequestData(unsigned char *pReqData);
     void setCertFile( const char* Certfile );
+    int config( const XmlNode *pNode, SSLContext *pSSL,  
+                        const char *pCAFile, char *pachCert, ConfigCtx* pcurrentCtx );
     
     void setOcspResponder( const char* url )    {   m_sOcspResponder.setStr( url );     }
     void setCombineCAfile( const char* CAfile ) {   m_sCombineCAfile.setStr( CAfile );  }

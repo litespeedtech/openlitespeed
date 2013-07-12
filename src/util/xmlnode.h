@@ -61,6 +61,9 @@ public:
     const AttrMap * getAllAttr() const;
     const char* getName() const;
     const char* getValue() const;
+    long long getLongValue( const char * pTag,
+            long long min, long long max, long long def, int base = 10 ) const ;
+    
     int setValue(const char* value, int len);
     XmlNode * getParent() const;
     int xmlOutput(FILE* fd, int depth) const;

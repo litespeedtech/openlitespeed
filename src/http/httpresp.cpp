@@ -23,6 +23,9 @@
 #include "httpserverversion.h"
 #include <stdio.h>
 #include <util/ssnprintf.h>
+#include <assert.h>
+#include <http/httpheader.h>
+#include <http/httprespheaders.h>
 
 static const char * s_protocol[] =
 {
@@ -39,7 +42,6 @@ int   HttpResp::getProtocolLen() const
     return 7 + m_iSSL;
 }
 
-
 HttpResp::HttpResp()
     : m_iHeaderTotalLen( 0 )
     , m_iLogAccess( 0 )
@@ -51,13 +53,11 @@ HttpResp::~HttpResp()
 
 void HttpResp::reset(RespHeader::FORMAT format)
 {
-    m_outputBuf.reset(format);
+    m_respHeaders.reset(format);
     m_iovec.clear();
     memset( &m_lEntityLength, 0,
             (char *)((&m_iHeaderTotalLen) + 1) - (char*)&m_lEntityLength );
-    //m_iLogAccess = 0;
 }
-
 
 void HttpResp::addLocationHeader( const HttpReq * pReq )
 {
@@ -66,72 +66,101 @@ void HttpResp::addLocationHeader( const HttpReq * pReq )
     int need = len + 25;
     if ( *pLocation == '/' )
         need += pReq->getHeaderLen( HttpHeader::H_HOST );
-    m_outputBuf.add(HttpHeader::H_LOCATION, "Location", 8, "", 0);
+    m_respHeaders.add(HttpRespHeaders::H_LOCATION, "Location", 8, "", 0);
     if ( *pLocation == '/' )
     {
         const char * pHost = pReq->getHeader( HttpHeader::H_HOST );
-        m_outputBuf.appendLastVal( "Location", 8, getProtocol(), getProtocolLen() );
-        m_outputBuf.appendLastVal( "Location", 8, pHost, pReq->getHeaderLen( HttpHeader::H_HOST ) );
+        m_respHeaders.appendLastVal( "Location", 8, getProtocol(), getProtocolLen() );
+        m_respHeaders.appendLastVal( "Location", 8, pHost, pReq->getHeaderLen( HttpHeader::H_HOST ) );
     }
-    m_outputBuf.appendLastVal( "Location", 8, pLocation, pReq->getLocationLen() );
-    
+    m_respHeaders.appendLastVal( "Location", 8, pLocation, pReq->getLocationLen() );
 }
 
-void  HttpResp::iovAppend( const char * pBuf, int len )
+void  HttpResp::parseAdd( const char * pBuf, int len )
 {
-    m_outputBuf.addNoCheckExptSpdy(pBuf, len );
+    m_respHeaders.parseAdd(pBuf, len, RespHeader::APPEND );
 }
-
 
 void HttpResp::buildCommonHeaders()
 {
-    for ( int i = 0; i < 3; ++i )
-    {
-        s_CommonHeaders[i].reset((RespHeader::FORMAT)i);
-        s_CommonHeaders[i].add(HttpHeader::H_SERVER, "Server", 6, HttpServerVersion::getVersion(), HttpServerVersion::getVersionLen());
-        updateDateHeader(i + 1);
-        s_CommonHeaders[i].add(HttpHeader::H_ACCEPT_RANGES, "Accept-Ranges", 13, "bytes", 5);
-    }
+    HttpResp::m_commonHeaders[0].index    = HttpRespHeaders::H_DATE;
+    HttpResp::m_commonHeaders[0].name     = HttpResp::s_sCommonHeaders;
+    HttpResp::m_commonHeaders[0].nameLen  = 4;
+    HttpResp::m_commonHeaders[0].val      = HttpResp::s_sCommonHeaders + 6;
+    HttpResp::m_commonHeaders[0].valLen   = 29;
+    
+    HttpResp::m_commonHeaders[1].index    = HttpRespHeaders::H_ACCEPT_RANGES;
+    HttpResp::m_commonHeaders[1].name     = HttpResp::s_sCommonHeaders + 37;
+    HttpResp::m_commonHeaders[1].nameLen  = 13;
+    HttpResp::m_commonHeaders[1].val      = HttpResp::s_sCommonHeaders + 52;
+    HttpResp::m_commonHeaders[1].valLen   = 5;
+
+    HttpResp::m_commonHeaders[2].index    = HttpRespHeaders::H_SERVER;
+    HttpResp::m_commonHeaders[2].name     = HttpResp::s_sCommonHeaders + 59;
+    HttpResp::m_commonHeaders[2].nameLen  = 6;
+    HttpResp::m_commonHeaders[2].val      = HttpServerVersion::getVersion();
+    HttpResp::m_commonHeaders[2].valLen   = HttpServerVersion::getVersionLen();
+
+        
+    HttpResp::m_gzipHeaders[0].index    = HttpRespHeaders::H_CONTENT_ENCODING;
+    HttpResp::m_gzipHeaders[0].name     = HttpResp::s_sGzipEncodingHeader;
+    HttpResp::m_gzipHeaders[0].nameLen  = 16;
+    HttpResp::m_gzipHeaders[0].val      = HttpResp::s_sGzipEncodingHeader + 18;
+    HttpResp::m_gzipHeaders[0].valLen   = 4;
+    
+    HttpResp::m_gzipHeaders[1].index    = HttpRespHeaders::H_VARY;
+    HttpResp::m_gzipHeaders[1].name     = HttpResp::s_sGzipEncodingHeader + 24;
+    HttpResp::m_gzipHeaders[1].nameLen  = 4;
+    HttpResp::m_gzipHeaders[1].val      = HttpResp::s_sCommonHeaders + 30;
+    HttpResp::m_gzipHeaders[1].valLen   = 15;
+    
+    HttpResp::m_keepaliveHeader.index    = HttpRespHeaders::H_CONNECTION;
+    HttpResp::m_keepaliveHeader.name     = HttpResp::s_sKeepAliveHeader;
+    HttpResp::m_keepaliveHeader.nameLen  = 10;
+    HttpResp::m_keepaliveHeader.val      = HttpResp::s_sKeepAliveHeader + 12;
+    HttpResp::m_keepaliveHeader.valLen   = 10;
+    
+    HttpResp::m_concloseHeader.index    = HttpRespHeaders::H_CONNECTION;
+    HttpResp::m_concloseHeader.name     = HttpResp::s_sConnCloseHeader;
+    HttpResp::m_concloseHeader.nameLen  = 10;
+    HttpResp::m_concloseHeader.val      = HttpResp::s_sConnCloseHeader + 12;
+    HttpResp::m_concloseHeader.valLen   = 5;
+    
+    HttpResp::m_chunkedHeader.index    = HttpRespHeaders::H_TRANSFER_ENCODING;
+    HttpResp::m_chunkedHeader.name     = HttpResp::s_chunked;
+    HttpResp::m_chunkedHeader.nameLen  = 17;
+    HttpResp::m_chunkedHeader.val      = HttpResp::s_chunked + 19;
+    HttpResp::m_chunkedHeader.valLen   = 7;
+
+    updateDateHeader();
 }
 
-void HttpResp::updateDateHeader(int index)
+void HttpResp::updateDateHeader()
 {
     char achDateTime[60];    
     DateTime::getRFCTime(DateTime::s_curTime, achDateTime);
-    if (index == 0)
-    {
-        for ( int i = 0; i < 3; ++i )
-            s_CommonHeaders[i].add(HttpHeader::H_DATE, "Date", 4, achDateTime, strlen(achDateTime));
-    }
-    else
-        s_CommonHeaders[index - 1].add(HttpHeader::H_DATE, "Date", 4, achDateTime, strlen(achDateTime));
+    assert(strlen(achDateTime) == 29);
+    memcpy(HttpResp::s_sCommonHeaders + 6, achDateTime, 29);
 }
-
-
-#define KEEP_ALIVE_HEADER_LEN 24
 
 
 void HttpResp::prepareHeaders( const HttpReq * pReq, int rangeHeaderLen ) 
 {
-    HttpRespHeaders *pRespHeaders = NULL;
-    int idFormat = m_outputBuf.getFormat();
-    pRespHeaders = &s_CommonHeaders[idFormat];
-        
-    pRespHeaders->getHeaders(&m_iovec);
-    m_outputBuf.setUnmanagedHeadersCount(pRespHeaders->getCount());
+    
+    m_respHeaders.add(HttpResp::m_commonHeaders, HttpResp::m_commonHeadersCount);
 
-    if ( m_outputBuf.getFormat() == RespHeader::REGULAR )
+    if ( m_respHeaders.getFormat() == RespHeader::REGULAR )
     {
         if ( pReq->isKeepAlive() )
         {
             if ( pReq->getVersion() != HTTP_1_1 )
-                iovAppend( s_sKeepAliveHeader, KEEP_ALIVE_HEADER_LEN );
+                m_respHeaders.add( &HttpResp::m_keepaliveHeader, 1);
         }
         else
-            iovAppend( s_sConnCloseHeader, sizeof( s_sConnCloseHeader ) - 1 );
+            m_respHeaders.add( &HttpResp::m_concloseHeader, 1);
     }
     if ( pReq->getAuthRequired() )
-        pReq->addWWWAuthHeader( m_outputBuf );
+        pReq->addWWWAuthHeader( m_respHeaders );
     if ( pReq->getLocationOff() )
     {
         addLocationHeader( pReq );
@@ -139,7 +168,7 @@ void HttpResp::prepareHeaders( const HttpReq * pReq, int rangeHeaderLen )
     const AutoBuf * pExtraHeaders = pReq->getExtraHeaders();
     if ( pExtraHeaders )
     {
-        m_outputBuf.addNoCheckExptSpdy( pExtraHeaders->begin(), pExtraHeaders->size() );
+        m_respHeaders.parseAdd( pExtraHeaders->begin(), pExtraHeaders->size(), RespHeader::APPEND );
     }
 }
 
@@ -147,7 +176,7 @@ void HttpResp::appendContentLenHeader()
 {
     static char sLength[44] = {0};
     int n = safe_snprintf( sLength, 43, "%ld", m_lEntityLength );
-    m_outputBuf.add(HttpHeader::H_CONTENT_LENGTH, "Content-Length", 
+    m_respHeaders.add(HttpRespHeaders::H_CONTENT_LENGTH, "Content-Length", 
                     14, sLength, n);
 }
 
@@ -156,9 +185,8 @@ void HttpResp::finalizeHeader( int ver, int code)
     //addStatusLine will add HTTP/1.1 to front of m_iovec when regular format
     //              will add version: HTTP/1.1 status: 2XX (etc) to m_outputBuf when SPDY format
     //              *** Be careful about this difference ***
-    m_outputBuf.addStatusLine(&m_iovec, ver, code);
-    m_outputBuf.endHeader();
-    m_outputBuf.getHeaders(&m_iovec);
+    m_respHeaders.addStatusLine(ver, code);
+    m_respHeaders.getHeaders(&m_iovec);
     
     
     
@@ -170,8 +198,7 @@ void HttpResp::finalizeHeader( int ver, int code)
 int HttpResp::appendHeader( const char * pName, int nameLen,
                         const char * pValue, int valLen )
 {
-    //FIXME: -1 all right?
-    m_outputBuf.add(-1, pName, nameLen, pValue, valLen, RespHeader::APPEND);
+    m_respHeaders.add(HttpRespHeaders::H_UNKNOWN, pName, nameLen, pValue, valLen, RespHeader::APPEND);
     return 0;
 }
 
@@ -187,7 +214,7 @@ int HttpResp::appendLastMod( long tmMod )
 {
     static char sTimeBuf[RFC_1123_TIME_LEN + 1] = {0};
     DateTime::getRFCTime( tmMod, sTimeBuf );
-    m_outputBuf.add(HttpHeader::H_LAST_MODIFIED, "Last-Modified", 13,
+    m_respHeaders.add(HttpRespHeaders::H_LAST_MODIFIED, "Last-Modified", 13,
                     sTimeBuf, RFC_1123_TIME_LEN );
     return 0;
 }
@@ -213,7 +240,7 @@ int HttpResp::addCookie( const char * pName, const char * pVal,
     if ( httponly )
         strcat(sBuf, "; HttpOnly" );
     
-    m_outputBuf.add(HttpHeader::H_SET_COOKIE, "Set-Cookie", 10, sBuf, strlen(sBuf), RespHeader::APPEND);
+    m_respHeaders.add(HttpRespHeaders::H_SET_COOKIE, "Set-Cookie", 10, sBuf, strlen(sBuf), RespHeader::APPEND);
     return 0;
 }
 

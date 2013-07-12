@@ -174,6 +174,13 @@ int HttpHeader::s_iHeaderLen[H_HEADER_END+1] =
     13,3,4,8,18,16,11,6,4,16,10,11,6,20,19,25,0
 };
 
+int HttpRespHeaders::s_iHeaderLen[H_HEADER_END+1] =
+{
+    13, 10, 12, 14, 16, 13, 19, 13, //cache-control
+    4, 4, 7, 10, 13, 8, 18, 23, //litespeed-cache-control
+    6, 16, 6, 10, 6, 17, 4, 16, 12, //x-powered-by
+    7, 0
+};
 
 #include <http/denieddir.h>
 DeniedDir            HttpGlobals::s_deniedDir;
@@ -189,21 +196,18 @@ SSIEngine                s_ssiHandler;
 StaticFileCache        HttpGlobals::s_staticFileCache( 1000 );
 
 #include <http/httpresp.h>
-HttpRespHeaders     HttpResp::s_CommonHeaders[3];
 
-// char HttpResp::s_sKeepAliveHeader[2][25] =   
-//     { "Connection: Keep-Alive\r\n", "\x00\x0A""Connection\x00\x0A""Keep-Alive"};
-// char HttpResp::s_sConnCloseHeader[2][20] = 
-//     {"Connection: close\r\n", "\x00\x0A""Connection\x00\x05""close"};
-// char HttpResp::s_chunked[2][29] = 
-//     {"Transfer-Encoding: chunked\r\n", "\x00\x11""Transfer-Encoding\x00\x07""chunked"};
-// char HttpResp::s_sGzipEncodingHeader[2][48] = 
-//     {"Content-Encoding: gzip\r\nVary: Accept-Encoding\r\n",
-//      "\x00\x10""Content-Encoding\x00\x04""gzip\x00\x04""Vary\x00\x0F""Accept-Encoding"};
 char HttpResp::s_sKeepAliveHeader[25] = "Connection: Keep-Alive\r\n";
 char HttpResp::s_sConnCloseHeader[20] = "Connection: close\r\n";
 char HttpResp::s_chunked[29] = "Transfer-Encoding: chunked\r\n";
 char HttpResp::s_sGzipEncodingHeader[48] = "Content-Encoding: gzip\r\nVary: Accept-Encoding\r\n";
+char HttpResp::s_sCommonHeaders[66] = "Date: Tue, 09 Jul 2013 13:43:01 GMT\r\nAccept-Ranges: bytes\r\nServer";
+int             HttpResp::m_commonHeadersCount = 3;
+header_st       HttpResp::m_commonHeaders[3];
+header_st       HttpResp::m_gzipHeaders[2];
+header_st       HttpResp::m_keepaliveHeader;
+header_st       HttpResp::m_chunkedHeader;
+header_st       HttpResp::m_concloseHeader;
 
 
 #include <http/httpver.h>

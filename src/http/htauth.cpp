@@ -96,14 +96,14 @@ int HTAuth::buildWWWAuthHeader( const char * pName )
 int HTAuth::addWWWAuthHeader( HttpRespHeaders &buf ) const
 {
     if ( m_iAuthType & AUTH_BASIC )
-        buf.add(-1, "WWW-Authenticate", 16, m_authHeader, m_authHeaderLen);
+        buf.add(HttpRespHeaders::H_WWW_AUTHENTICATE, "WWW-Authenticate", 16, m_authHeader, m_authHeaderLen);
     else if ( m_iAuthType & AUTH_DIGEST )
     {
         char sTemp[256] = {0};
         int n = safe_snprintf( sTemp, 255, "Digest realm=\"%s\" nonce=\"%lu\"\r\n",
                     m_authHeader, time(NULL) );
         
-        buf.add(-1, "WWW-Authenticate", 16, sTemp, n);
+        buf.add(HttpRespHeaders::H_WWW_AUTHENTICATE, "WWW-Authenticate", 16, sTemp, n);
     }
     return 0;
 }

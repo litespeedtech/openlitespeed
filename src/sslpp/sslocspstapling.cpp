@@ -16,13 +16,13 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include <sslpp/sslocspstapling.h>
-
+#include "main/httpserverbuilder.h"
 #include <http/httpglobals.h>
 #include <util/base64.h>
 #include <util/httpfetch.h>
 #include <util/vmembuf.h>
 #include <util/stringtool.h>
-
+#include <util/xmlnode.h>
 #include <openssl/crypto.h>
 #include <openssl/err.h>
 #include <openssl/evp.h>
@@ -487,4 +487,41 @@ void SslOcspStapling::setCertFile( const char* Certfile )
     m_sRespfile.setStr( RespFile );
     strcat(RespFile, ".tmp");
     m_sRespfileTmp.setStr( RespFile );
+}
+int SslOcspStapling::config( const XmlNode *pNode, SSLContext *pSSL,  
+                             const char *pCAFile, char *pachCert, ConfigCtx* pcurrentCtx )
+{
+    pSSL->setpStapling( this ) ;
+    setCertFile( pachCert );
+
+    if ( pCAFile )
+        setCAFile( pCAFile );
+
+    setRespMaxAge( pcurrentCtx->getLongValue( pNode, "ocspRespMaxAge", 60, 360000, 3600 ) );
+    const char *pResponder = pNode->getChildValue( "ocspResponder" );
+
+    if ( pResponder )
+        setOcspResponder( pResponder );
+
+    if ( pSSL->initStapling() == -1 )
+    {
+        pcurrentCtx->log_error( "OCSP Stapling can't be enabled [%s].", getStaplingErrMsg() );
+        return -1;
+    }
+
+    const char *pCombineCAfile = pNode->getChildValue( "ocspCACerts" );
+
+    char CombineCAfile[MAX_PATH_LEN];
+
+    if ( pCombineCAfile )
+    {
+        if ( pcurrentCtx->getValidFile( CombineCAfile, pCombineCAfile, "Combine CA file" ) != 0 )
+            return 0;
+
+        pCombineCAfile = CombineCAfile;
+
+        setCombineCAfile( pCombineCAfile );
+    }
+
+    return 0; 
 }

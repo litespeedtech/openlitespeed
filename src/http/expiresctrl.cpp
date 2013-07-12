@@ -156,3 +156,66 @@ void ExpiresCtrl::copyExpires( const ExpiresCtrl & rhs )
     m_iAge = rhs.m_iAge;
 }
 
+#include <util/xmlnode.h>
+#include <http/httpcontext.h>
+
+int ExpiresCtrl::config( const XmlNode * pExpires, const ExpiresCtrl * pDefault, 
+                    HttpContext * pContext )
+{
+    const char * pValue;
+    if ( !pDefault )
+        pDefault = this;
+    pValue = pExpires->getChildValue( "enableExpires" );
+    char enabled = pDefault->isEnabled();
+    if ( pValue )
+    {
+        enabled = pExpires->getLongValue( "enableExpires" , 0, 1, enabled );
+        if ( pContext )
+            pContext->setConfigBit( BIT_ENABLE_EXPIRES, 1 );
+    }
+    enable( enabled );
+    pValue = pExpires->getChildValue( "expiresDefault" );
+    if ( pValue )
+    {
+        parse( pValue );
+        if ( pContext )
+            pContext->setConfigBit( BIT_EXPIRES_DEFAULT, 1 );
+    }
+    else
+    {
+        setBase( pDefault->getBase() );
+        setAge( pDefault->getAge() );
+    }
+    return 0;
+}
+
+int ExpiresCtrlConfig::operator()( ExpiresCtrl * pCtrl, const XmlNode * pExpires )
+{
+    const char * pValue;
+    if ( !m_pDefault )
+        m_pDefault = pCtrl;
+    pValue = pExpires->getChildValue( "enableExpires" );
+    char enabled = m_pDefault->isEnabled();
+    if ( pValue )
+    {
+        enabled = pExpires->getLongValue( "enableExpires" , 0, 1, enabled );
+        if ( m_pContext )
+            m_pContext->setConfigBit( BIT_ENABLE_EXPIRES, 1 );
+    }
+    pCtrl->enable( enabled );
+    pValue = pExpires->getChildValue( "expiresDefault" );
+    if ( pValue )
+    {
+        pCtrl->parse( pValue );
+        if ( m_pContext )
+            m_pContext->setConfigBit( BIT_EXPIRES_DEFAULT, 1 );
+    }
+    else
+    {
+        pCtrl->setBase( m_pDefault->getBase() );
+        pCtrl->setAge( m_pDefault->getAge() );
+    }
+    return 0;
+    
+}
+

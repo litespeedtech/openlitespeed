@@ -143,9 +143,7 @@ void HttpConnection::logAccess( int cancelled )
     else 
         if ( m_pNtwkIOLink )
             HttpLog::logAccess( NULL, 0, this );
-
 }
-
 
 void HttpConnection::nextRequest()
 {
@@ -1115,7 +1113,7 @@ int HttpConnection::sendSpdyHeaders()
 {
     if ( m_response.getHeaderLeft() )
     {
-        getStream()->sendHeaders( m_response.getIov(), m_response.getHeaders().getTotalCount() );
+        getStream()->sendHeaders( m_response.getIov(), m_response.getRespHeaders().getCount() );
         m_response.getIov().clear();
         m_response.setHeaderLeft( 0 );
     }
@@ -1275,7 +1273,7 @@ int HttpConnection::buildErrorResponse( const char * errMsg )
         {
             int len = HttpStatusCode::getBodyLen( errCode );
             m_response.setContentLen( len );
-            m_response.iovAppend( HttpStatusCode::getHeaders( errCode ), HttpStatusCode::getHeadersLen( errCode ));
+            m_response.parseAdd( HttpStatusCode::getHeaders( errCode ), HttpStatusCode::getHeadersLen( errCode ));
             m_response.finalizeHeader( ver, errCode);
             if ( getStream()->isSpdy() )
                 sendSpdyHeaders();
@@ -1290,8 +1288,6 @@ int HttpConnection::buildErrorResponse( const char * errMsg )
         sendSpdyHeaders();
     return 0;
 }
-
-
 
 int HttpConnection::onReadEx()
 {

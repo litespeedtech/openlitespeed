@@ -34,4 +34,14 @@ inline int safe_snprintf(char *str, size_t size, const char *format, ...)
     return ret;
 }
 
+inline int safe_vsnprintf(char *str, size_t size, const char *format, va_list args )
+{
+    int ret = vsnprintf(str, size, format, args );
+    
+    if ( ( unsigned int )ret > size)
+        ret = size;
+    
+    return ret;
+}
+
 #endif //__SAFE_SNPRINTF__

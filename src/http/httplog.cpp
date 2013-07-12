@@ -297,6 +297,16 @@ void HttpLog::info( const char * fmt, ... )
     }
 }
 
+void HttpLog::log( int level, const char * fmt, ... )
+{
+    va_list ap;
+    va_start( ap, fmt );
+    logger()->vlog( level,  fmt, ap );
+    va_end( ap );
+    
+}
+
+
 void HttpLog::error( Logger * pLogger, const char * fmt, ... )
 {
     if ( !pLogger )

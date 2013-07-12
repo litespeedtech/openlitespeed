@@ -16,7 +16,8 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "throttlecontrol.h"
-
+#include "main/httpserverbuilder.h"
+#include <http/httpdefs.h>
 #include <assert.h>
 
 
@@ -28,3 +29,54 @@ void ThrottleControl::resetQuotas()
     m_req[1].reset();
 }
 
+void ThrottleLimits::config( const XmlNode * pNode1, const ThrottleLimits * pDefault, 
+                             ConfigCtx* pcurrentCtx)
+{
+    int outlimit = -1;
+    int inlimit = -1;
+    if (( pDefault == this )||( pDefault->getOutputLimit() != INT_MAX ))
+    {
+        outlimit = pcurrentCtx->getLongValue( pNode1, "outBandwidth", -1, INT_MAX, -1);
+        inlimit = pcurrentCtx->getLongValue( pNode1, "inBandwidth", -1, INT_MAX, -1);
+        if ( inlimit == -1 )
+            inlimit = outlimit;
+        if ( outlimit < 0 )
+            outlimit = inlimit = pcurrentCtx->getLongValue( pNode1, "throttleLimit", 0, INT_MAX, -1);
+        if (( outlimit > 0 )&&( outlimit < INT_MAX - THROTTLE_UNIT ))
+        {
+            outlimit =
+                (( outlimit + THROTTLE_UNIT - 1 ) / THROTTLE_UNIT) * THROTTLE_UNIT;
+            if ( inlimit < INT_MAX - 1024 )
+                inlimit = ( inlimit + 1023 ) & ~1023;
+        }
+        if ( outlimit == -1 )
+        {
+            if ( pDefault != this )
+            {
+                outlimit = pDefault->getOutputLimit();
+                inlimit = pDefault->getInputLimit();
+            }
+            else
+            {
+                outlimit = INT_MAX;
+                inlimit = INT_MAX;
+            }
+        }
+    }
+    if ( outlimit <= 0 )
+        outlimit = INT_MAX;
+    if ( inlimit <= 0 )
+        inlimit = INT_MAX;
+    m_iOutput = outlimit;
+    m_iInput = inlimit;
+    int limit = pcurrentCtx->getLongValue( pNode1, "dynReqPerSec", 0, INT_MAX,
+                              pDefault->getDynReqLimit() );
+    if ( limit == 0 )
+        limit = INT_MAX;
+    m_iDynReq = limit;
+    limit = pcurrentCtx->getLongValue( pNode1, "staticReqPerSec", 0, INT_MAX,
+                          pDefault->getStaticReqLimit() );
+    if ( limit == 0 )
+        limit = INT_MAX;
+    m_iStaticReq = limit; 
+}

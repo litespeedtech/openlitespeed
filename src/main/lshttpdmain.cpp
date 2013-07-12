@@ -85,6 +85,7 @@ LshttpdMain::LshttpdMain()
 {
     m_pServer = &HttpServer::getInstance();
     m_pBuilder = new HttpServerBuilder( m_pServer );
+    HttpGlobals::s_pBuilder = m_pBuilder;
 }
 LshttpdMain::~LshttpdMain()
 {
@@ -879,12 +880,12 @@ int LshttpdMain::init(int argc, char * argv[])
     {
         char achBuf[8192];
 
-        m_pBuilder->getAbsolute( achBuf, RTREPORT_FILE, 0 );
+        m_pBuilder->getCurConfigCtx()->getAbsolute( achBuf, RTREPORT_FILE, 0 );
         ::unlink( achBuf );
         if ( HttpGlobals::s_psChroot )
         {
             PidFile pidfile;
-            m_pBuilder->getAbsolute( achBuf, PID_FILE, 0 );
+            m_pBuilder->getCurConfigCtx()->getAbsolute( achBuf, PID_FILE, 0 );
             pidfile.writePidFile( achBuf, m_pid);
         }
     }
