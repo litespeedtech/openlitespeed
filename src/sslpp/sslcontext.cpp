@@ -389,7 +389,12 @@ int SSLContext::setCipherList( const char * pList )
         {
             //snprintf( cipher, 4095, "RC4:%s", pList );
             //strcpy( cipher, "ALL:HIGH:!aNULL:!SSLV2:!eNULL" );
-            strcpy( cipher, "RC4:HIGH:!aNULL:!MD5:!SSLv2:!eNULL:!EDH:!LOW:!EXPORT56:!EXPORT40" );
+#if OPENSSL_VERSION_NUMBER >= 0x10001000L
+            strcpy( cipher, "ECDHE-RSA-AES128-SHA256:AES128-GCM-SHA256:RC4:HIGH:!MD5:!aNULL:!EDH" );
+
+#else
+            strcpy( cipher, "RC4:HIGH:!aNULL:!MD5:!EDH" );
+#endif
             //strcpy( cipher, "RC4:-EXP:-SSLv2:-ADH" );
             pList = cipher;
         }

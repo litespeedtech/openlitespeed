@@ -3186,7 +3186,7 @@ void HttpServerBuilder::initExtAppConfig( const XmlNode *pNode, ExtWorkerConfig 
 
         RLimits limits;
         limits = *m_pRLimits;
-        limits.setCPULimit( 0, 0 );
+        limits.setCPULimit( RLIM_INFINITY, RLIM_INFINITY ); 
         initRLimits( pNode, &limits, m_pCurConfigCtx );
         pLWConfig->setRLimits( &limits );
         Env *pEnv = pLWConfig->getEnv();

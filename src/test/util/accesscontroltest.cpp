@@ -22,6 +22,20 @@
 #include <util/accesscontrol.h>
 #include "test/unittest-cpp/UnitTest++/src/UnitTest++.h"
 
+TEST( AccessControlTest_testOverlap)
+{
+    AccessControl ac;
+    ac.addSubNetControl("198.0.0.0/8", AC_DENY);
+    CHECK( ac.hasAccess( "198.255.0.1" ) == AC_DENY );
+    CHECK( ac.hasAccess( "198.0.0.1" ) == AC_DENY );
+    ac.addSubNetControl("198.0.0.0/13", AC_DENY);
+    int ret = ac.hasAccess( "198.255.0.1" );
+    CHECK( ret == AC_DENY );
+    ret = ac.hasAccess( "198.0.0.1" );
+    CHECK( ret == AC_DENY );
+}
+
+
 TEST( AccessControlTest_test)
 {
     AccessControl ac;
