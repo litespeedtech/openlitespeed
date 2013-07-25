@@ -215,11 +215,13 @@ SubNetNode* SubNetNode::insertChild(SubNetNode * pNode  )
                 delete pNode;
                 return *iter;
             }
-            else 
+            else if (( (*iter)->m_mask & pNode->m_mask ) == pNode->m_mask )
             {
                 pNode->m_children.push_back( *iter );
                 m_children.erase(iter);
             }
+            else
+                return (*iter)->insertChild( pNode );
         }
         else if ( (pNode->m_id & (*iter)->m_mask ) == (*iter)->m_id )
         {

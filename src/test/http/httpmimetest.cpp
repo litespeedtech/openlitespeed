@@ -35,7 +35,7 @@ TEST( HttpMimeTest_runTest)
     int ret; 
     char achBuf[256];
     char * p = getcwd( achBuf, 256 );
-    strcat( achBuf, "/serverroot" );
+    strcat( achBuf, "/../../src/test/serverroot" );
     CHECK( p != NULL );
     char * pEnd = p + strlen( p );
 

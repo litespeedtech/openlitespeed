@@ -385,6 +385,7 @@ int HttpReq::GetReqURI(const char *pCur, const char *pBEnd )
         m_reqBuf.used(n);
     else
         return SC_400;
+    m_reqBuf.append( '\0' );
     m_curURL.keyLen = n;
     return 0;
 }

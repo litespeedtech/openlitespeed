@@ -29,7 +29,7 @@ TEST( XmlNodeTest_test)
     char achError[1024];
     char achBuf[256];
     getcwd( achBuf, 256 );
-    strcat( achBuf, "/serverroot/conf/myconfig.xml" );
+    strcat( achBuf, "/../../src/test/serverroot/conf/myconfig.xml" );
 
     XmlTreeBuilder builder;
     XmlNode* pRoot = builder.parse(achBuf, achError, 1024);
