@@ -45,17 +45,18 @@ class SSIConfig;
 #define UID_FILE            1
 #define UID_DOCROOT         2
 
-#define CHROOT_SERVER       0
-#define CHROOT_VHROOT       1
-#define CHROOT_PATH         2
+#define UID_MASK            3
 
-#define REWRITE_OFF         0
-#define REWRITE_ON          1
-#define REWRITE_INHERIT     2
-#define REWRITE_INHERIT_ON  3
-#define REWRITE_MASK        3
+#define CHROOT_SERVER       0
+#define CHROOT_VHROOT       4
+#define CHROOT_PATH         8
+
+#define CHROOT_MASK         12
 
 #define CTX_GEOIP_ON        16
+#define ENABLE_SCRIPT       32
+#define CHANG_UID_ONLY      64
+#define USE_CANONICAL       128
 
 #define BIT_FORCE_TYPE      (1<<0)
 #define BIT_AUTH            (1<<1)
@@ -84,11 +85,15 @@ class SSIConfig;
 #define BIT_AUTH_REQ        (1<<24)
 #define BIT_FILES_MATCH     (1<<25)
 #define BIT_EXTRA_HEADER    (1<<26)
+#define BIT_ENABLE_SCRIPT   (1<<27)
 #define BIT_GEO_IP          (1<<28)
 #define BIT_GSOCKADDR       (1<<29)
 
 
-#define BIT_RAILS_CONTEXT       (1<<6)
+#define REWRITE_OFF         0
+#define REWRITE_ON          1
+#define REWRITE_INHERIT     2
+#define REWRITE_MASK        3
 
 #define ETAG_NONE           0
 #define ETAG_INODE          4
@@ -106,8 +111,10 @@ class SSIConfig;
 #define BIT_INCLUDES            (1<<4)
 #define BIT_INCLUDES_NOEXEC     (1<<5)
 #define BIT_XBIT_HACK_FULL      (1<<7)
+#define BIT_URI_CACHEABLE       (1<<8)
 
 #define BIT_RAILS_CONTEXT       (1<<6)
+
 
 /**********************************************************************
 *   m_sContextURI: is the root URI the context starts
@@ -179,11 +186,7 @@ class HttpContext
     char                m_iSetUidMode;
     short               m_iConfigBits2;
     unsigned char       m_iRewriteEtag;
-    char                m_iSecRules;    
-    char                m_iChrootMode;
-    char                m_iEnableRewrite;
     char                m_iDummy;
-    char                m_iCacheable;
     long                m_lHTALastMod;
     AutoStr2            * m_pRewriteBase;
     RewriteRuleList     * m_pRewriteRules;
@@ -222,8 +225,8 @@ public:
     int  allocateInternal();
     void releaseHTAConf();
 
-    void setCacheable( int c )      {   m_iCacheable = c;       }
-    char isCacheable() const        {   return m_iCacheable;    }
+    void setCacheable( int c )      {   setConfigBit2( BIT_URI_CACHEABLE, c );  }
+    short isCacheable() const       {   return m_iConfigBits2 & BIT_URI_CACHEABLE; }
     
     const char * getLocation() const {   return m_sLocation.c_str();    }
     int getLocationLen() const       {   return m_sLocation.len();      }
@@ -311,27 +314,40 @@ public:
     int allowSetUID() const
     {   return m_iConfigBits & BIT_ALLOW_SETUID;    }
 
-    void setUidMode( int a )        {   m_iSetUidMode = a;
-                                        m_iConfigBits |= BIT_SUEXEC;   }
-    char getSetUidMode() const      {   return m_iSetUidMode;       }
+    void setUidMode( int a )
+    {   m_iSetUidMode = (m_iSetUidMode & ~UID_MASK)| (a & UID_MASK);
+        m_iConfigBits |= BIT_SUEXEC;                                            }
+    char getSetUidMode() const      {   return m_iSetUidMode & UID_MASK;        }
 
-    void setChrootMode( int a )     {   m_iChrootMode = a;
-                                        m_iConfigBits |= BIT_CHROOT;}
-    char getChrootMode() const      {   return m_iChrootMode;       }
+    void setChrootMode( int a )
+    {   m_iSetUidMode = (m_iSetUidMode & ~CHROOT_MASK) | (a & CHROOT_MASK);
+        m_iConfigBits |= BIT_CHROOT;                                            }
+    char getChrootMode() const      {   return m_iSetUidMode & CHROOT_MASK;     }
+
+    void setChangeUidOnly()         {   m_iSetUidMode |= CHANG_UID_ONLY;        }
+    char changeUidOnly() const      {   return m_iSetUidMode & CHANG_UID_ONLY;  }
+    
+    void enableScript( int a )
+    {   m_iSetUidMode = (m_iSetUidMode & ~ENABLE_SCRIPT)|( (a)?ENABLE_SCRIPT:0 ); 
+        m_iConfigBits |= BIT_ENABLE_SCRIPT;     }
+    int  isScriptEnabled() const    {   return m_iSetUidMode & ENABLE_SCRIPT;   }
+    
     const MIMESetting * determineMime( const char * pSuffix,
                                         char * pMimeType ) const;
 
-    void setRailsContext()          {   m_iSecRules |= BIT_RAILS_CONTEXT;   }
-    char isRailsContext() const     {   return m_iSecRules & BIT_RAILS_CONTEXT;   }
+    void setRailsContext()          {   setConfigBit2( BIT_RAILS_CONTEXT, 1 );   }
+    char isRailsContext() const     {   return m_iConfigBits2 & BIT_RAILS_CONTEXT;   }
 
     const AutoStr2 * getRewriteBase() const
     {   return (m_pRewriteBase)?m_pRewriteBase:&m_sContextURI;  }
     void setRewriteBase( const char * p );
     
-//     void enableRewrite( int a )     {   m_iEnableRewrite = a;
-//                                         m_iConfigBits |= BIT_REWRITE_ENGINE;    }
-    char rewriteEnabled() const     {   return m_iEnableRewrite;    }
+    void enableRewrite( int a )     {   m_iRewriteEtag = 
+                                ( m_iRewriteEtag & ~REWRITE_MASK )|(a & REWRITE_MASK);
+                                        m_iConfigBits |= BIT_REWRITE_ENGINE;    }
+    unsigned char rewriteEnabled() const     {   return m_iRewriteEtag & REWRITE_MASK;    }
     void setRewriteInherit( int a ) {   setConfigBit( BIT_REWRITE_INHERIT, a ); }
+    int  isRewriteInherit() const   {   return m_iConfigBits & BIT_REWRITE_INHERIT; }
     
     RewriteRuleList * getRewriteRules() const
     {   return m_pRewriteRules;                     }
@@ -404,14 +420,11 @@ public:
     int hasRewriteConfig() const
     {   return  m_iConfigBits & (BIT_REWRITE_ENGINE | BIT_REWRITE_RULE 
                                 | BIT_REWRITE_INHERIT );        }                    
-     short getConfigBits2() const     {   return m_iConfigBits2;   }
-     
-    void enableRewrite( int a )     {   m_iEnableRewrite = a;
-                                        m_iRewriteEtag = 
-                                ( m_iRewriteEtag & ~REWRITE_MASK )|(a & REWRITE_MASK);
-                                        m_iConfigBits |= BIT_REWRITE_ENGINE;    }
 
-    int  isRewriteInherit() const   {   return m_iConfigBits & BIT_REWRITE_INHERIT; }
+    void setConfigBit2( short bit, int enable )
+    {   m_iConfigBits2 = (m_iConfigBits2 & (~bit) ) |((enable)? bit : 0); }
+    short getConfigBits2() const     {   return m_iConfigBits2;   }
+     
 
     void setFileEtag( int a )       {   m_iRewriteEtag = 
                                 ( m_iRewriteEtag & ~ETAG_MASK )|(a & ETAG_MASK);

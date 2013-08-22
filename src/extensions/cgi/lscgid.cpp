@@ -719,7 +719,9 @@ static void sigchild( int sig )
         if ( WIFSIGNALED( status[1] ))
         {
             int sig_num = WTERMSIG( status[1] );
-            fprintf( stderr, "Cgid: Child process with pid: %d was killed by signal: %d, core dump: %d\n", 
+            if ( sig_num != 15 )
+            {
+                fprintf( stderr, "Cgid: Child process with pid: %d was killed by signal: %d, core dump: %d\n", 
                                 status[0], sig_num,
 #ifdef WCOREDUMP
                                 WCOREDUMP( status[1] )
@@ -727,7 +729,8 @@ static void sigchild( int sig )
                                 -1
 #endif
 
- );
+                );
+            }
         }
         //fprintf( stderr, "reape child %d: status: %d\n", pid, status );
     }

@@ -60,7 +60,6 @@ HttpFetch::HttpFetch()
 
 HttpFetch::~HttpFetch()
 {
-    stopDriver();
     closeConnection();
     if ( m_pBuf )
         delete m_pBuf;
@@ -93,11 +92,7 @@ void HttpFetch::releaseResult()
 
 void HttpFetch::reset()
 {
-    if ( m_fdHttp != -1 )
-    {
-        close( m_fdHttp );
-        m_fdHttp = -1;
-    }
+    closeConnection();
     if ( m_pReqBuf )
     {
         free( m_pReqBuf );
@@ -279,8 +274,7 @@ int HttpFetch::startProcessReq( int nonblock, const GSockAddr & sockAddr )
         timeout.tv_sec = m_connTimeout; timeout.tv_usec = 0;
         if ((ret = select(m_fdHttp+1, &readfds, &readfds, NULL, &timeout)) != 1 )
         {
-            close( m_fdHttp );
-            m_fdHttp = -1;
+            closeConnection();
             return -1;
         }
         else
@@ -572,8 +566,7 @@ int HttpFetch::endReq( int res )
     }
     if ( m_fdHttp != -1 )
     {
-        close( m_fdHttp );
-        m_fdHttp = -1;
+        closeConnection();
     }
     if ( m_callback != NULL )
         (*m_callback)( m_callbackArg, this );
@@ -634,6 +627,7 @@ void HttpFetch::closeConnection()
             m_pLogger->debug( "HttpFetch[%d]::closeConnection fd=%d ", getLoggerId(), m_fdHttp);
         close( m_fdHttp );
         m_fdHttp = -1;
+        stopDriver();
     }
 }
 
@@ -651,6 +645,7 @@ void HttpFetch::stopDriver()
     if (m_pHttpFetchDriver)
     {
         m_pHttpFetchDriver->stop();
+        m_pHttpFetchDriver->setfd( -1 );
     }
 }
 

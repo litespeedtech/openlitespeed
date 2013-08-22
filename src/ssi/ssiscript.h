@@ -230,6 +230,8 @@ public:
     void setStatusCode(int code )   {   m_iParserState = code;      }
     int  getStatusCode() const      {   return m_iParserState;      }
 
+    long getLastMod() const         {   return m_lModify;           }
+
     static int testParse();
 
 private: 

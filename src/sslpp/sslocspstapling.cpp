@@ -171,7 +171,7 @@ int SslOcspStapling::init(SSL_CTX* pSslCtx)
         if ( (st.st_mtime + 30) <= CurTime.tv_sec )
             unlink( m_sRespfileTmp.c_str() );   
     }
-    SSL_CTX_set_default_verify_paths( m_pCtx );
+    //SSL_CTX_set_default_verify_paths( m_pCtx );
 
     pCert = load_cert( m_sCertfile.c_str() );
     if ( pCert == NULL )
@@ -183,7 +183,9 @@ int SslOcspStapling::init(SSL_CTX* pSslCtx)
     if ( ( getCertId( pCert ) == 0 ) && ( getResponder( pCert ) == 0 ))
     {
         m_addrResponder.setHttpUrl(m_sOcspResponder.c_str(), m_sOcspResponder.len());
-        iResult = update();
+        iResult = 0;
+        //update();
+        
     }
     X509_free( pCert );
     return iResult;
@@ -217,6 +219,10 @@ int SslOcspStapling::getResponder(X509* pCert)
 {
     char                    *pUrl;
     X509                    *pCAt;
+    STACK_OF(X509)          *pXchain; 
+    int                     i;
+    int                     n;
+    
 #if OPENSSL_VERSION_NUMBER >= 0x10000003L
     STACK_OF(OPENSSL_STRING)  *strResp;
 #else
@@ -227,6 +233,18 @@ int SslOcspStapling::getResponder(X509* pCert)
         return 0;
     }
     strResp = X509_get1_ocsp( pCert );
+    if ( strResp == NULL )
+    {
+        pXchain = m_pCtx->extra_certs;
+        n = sk_X509_num(pXchain);
+        for ( i = 0; i < n; i++ )
+        {
+            pCert = sk_X509_value(pXchain, i);
+            strResp = X509_get1_ocsp( pCert );
+            if ( strResp )
+                break;
+        }
+    }
     if (strResp == NULL)
     {
         if ( m_sCAfile.c_str() == NULL)
@@ -358,7 +376,7 @@ int SslOcspStapling::certVerify(OCSP_RESPONSE *pResponse, OCSP_BASICRESP *pBasic
     struct stat         st;
     
     pXchain = m_pCtx->extra_certs;
-    if ( OCSP_basic_verify(pBasicResp, pXchain, pXstore, OCSP_TRUSTOTHER) == 1 ) 
+    if ( OCSP_basic_verify(pBasicResp, pXchain, pXstore, OCSP_NOVERIFY) == 1 ) 
     {
         if ( (m_pCertId != NULL)  
              && (OCSP_resp_find_status(pBasicResp, m_pCertId, &n, 
@@ -488,40 +506,26 @@ void SslOcspStapling::setCertFile( const char* Certfile )
     strcat(RespFile, ".tmp");
     m_sRespfileTmp.setStr( RespFile );
 }
-int SslOcspStapling::config( const XmlNode *pNode, SSLContext *pSSL,  
+int SslOcspStapling::config( const XmlNode *pNode, SSL_CTX *pSSL,  
                              const char *pCAFile, char *pachCert, ConfigCtx* pcurrentCtx )
 {
-    pSSL->setpStapling( this ) ;
     setCertFile( pachCert );
 
     if ( pCAFile )
         setCAFile( pCAFile );
 
     setRespMaxAge( pcurrentCtx->getLongValue( pNode, "ocspRespMaxAge", 60, 360000, 3600 ) );
-    const char *pResponder = pNode->getChildValue( "ocspResponder" );
 
+    const char *pResponder = pNode->getChildValue( "ocspResponder" );
     if ( pResponder )
         setOcspResponder( pResponder );
 
-    if ( pSSL->initStapling() == -1 )
+    if ( init( pSSL ) == -1 )
     {
         pcurrentCtx->log_error( "OCSP Stapling can't be enabled [%s].", getStaplingErrMsg() );
         return -1;
     }
 
-    const char *pCombineCAfile = pNode->getChildValue( "ocspCACerts" );
-
-    char CombineCAfile[MAX_PATH_LEN];
-
-    if ( pCombineCAfile )
-    {
-        if ( pcurrentCtx->getValidFile( CombineCAfile, pCombineCAfile, "Combine CA file" ) != 0 )
-            return 0;
-
-        pCombineCAfile = CombineCAfile;
-
-        setCombineCAfile( pCombineCAfile );
-    }
 
     return 0; 
 }

@@ -428,7 +428,7 @@ int RewriteEngine::processCond( const RewriteCond * pCond, HttpConnection *pConn
     else
     {
         pTest = buildString( pCond->getTestStringFormat(),
-                                      pConn, m_pFreeBuf, len );
+                                      pConn, m_pFreeBuf, len, 1, 1 );
         m_pLastCondStr = pCond->getTestStringFormat();
         m_pLastTestStr = pTest;
         m_lastTestStrLen = len;

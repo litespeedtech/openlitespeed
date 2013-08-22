@@ -385,7 +385,9 @@ int SSLContext::setCipherList( const char * pList )
     {
         char cipher[4096];
 
-        if ( strncasecmp( pList, "ALL:", 4 ) == 0 )
+        if ( (strncasecmp( pList, "ALL:", 4 ) == 0 )
+            ||(strncasecmp( pList, "SSLv3:", 6 ) == 0 )
+            ||(strncasecmp( pList, "TLSv1:", 6 ) == 0 ))
         {
             //snprintf( cipher, 4095, "RC4:%s", pList );
             //strcpy( cipher, "ALL:HIGH:!aNULL:!SSLV2:!eNULL" );
@@ -736,12 +738,22 @@ static int sslCertificateStatus_cb(SSL *ssl, void *data)
     return pStapling->callback( ssl );
 }
 
-int SSLContext::initStapling()
+#include <util/xmlnode.h>
+
+int SSLContext::configStapling(const XmlNode *pNode,  
+                             const char *pCAFile, char *pachCert, ConfigCtx* pcurrentCtx)
 {
-    if ( m_pStapling->init(m_pCtx) == -1 )
+    SslOcspStapling *pSslOcspStapling = new SslOcspStapling;
+
+    if (pSslOcspStapling->config(pNode, m_pCtx, pCAFile, pachCert, pcurrentCtx) == -1)
+    {
+        delete pSslOcspStapling;
         return -1;
+    }
+    setStapling( pSslOcspStapling ) ;
+
     SSL_CTX_set_tlsext_status_cb(m_pCtx, sslCertificateStatus_cb);
     SSL_CTX_set_tlsext_status_arg(m_pCtx, m_pStapling);    
-    return 0;
-}
 
+    return 0; 
+}

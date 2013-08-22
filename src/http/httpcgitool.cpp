@@ -87,6 +87,8 @@ int HttpCgiTool::processHeaderLine( HttpExtConnector * pExtConn, const char * pL
     switch( index )
     {
     case HttpRespHeaders::H_CONTENT_TYPE:
+        if ( pReq->getStatusCode() == SC_304 )
+            return 0;
         p = (char *)memchr( pValue, ';', pLineEnd - pValue );
         if ( pReq->gzipAcceptable() )
         {

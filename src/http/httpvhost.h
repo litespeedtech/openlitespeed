@@ -204,8 +204,10 @@ public:
 
     void serverEnabled( int enable)     {   setFeature( VH_SERVER_ENABLE, enable ); }
     
-    void enableScript( int enable )     {   setFeature( VH_ENABLE_SCRIPT, enable ); }
-    int  isScriptEnabled() const        {   return m_iFeatures & VH_ENABLE_SCRIPT;  }
+    //void enableScript( int enable )     {   setFeature( VH_ENABLE_SCRIPT, enable ); }
+    //int  isScriptEnabled() const        {   return m_iFeatures & VH_ENABLE_SCRIPT;  }
+    void enableScript( int enable )     {   m_rootContext.enableScript( enable ); }
+    int  isScriptEnabled() const        {   return m_rootContext.isScriptEnabled();  }
 
     void followSymLink( int follow )
     {   m_iFeatures = (m_iFeatures & (~VH_SYM_CTRL) ) | (follow & VH_SYM_CTRL); }

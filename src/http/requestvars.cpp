@@ -26,6 +26,9 @@
 #include <http/platforms.h>
 #include <http/httputil.h>
 
+#include <ssi/ssiruntime.h>
+#include <ssi/ssiscript.h>
+
 #include <util/pcregex.h>
 #include <util/stringtool.h>
 
@@ -719,7 +722,14 @@ int RequestVars::getReqVar( HttpConnection * pConn, int type, char * &pValue, in
         time_t mtime = DateTime::s_curTime;
         struct tm * tm;
         if ( type == REF_LAST_MODIFIED )
-            mtime = pReq->getFileStat().st_mtime;
+        {
+            if ( pReq->getSSIRuntime() && pReq->getSSIRuntime()->getCurrentScript() )
+            {
+                mtime = pReq->getSSIRuntime()->getCurrentScript()->getLastMod();
+            }
+            else
+                mtime = pReq->getFileStat().st_mtime;
+        }
         if ( type == REF_DATE_GMT )
             tm = gmtime( &mtime );
         else

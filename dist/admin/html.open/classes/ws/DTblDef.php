@@ -287,7 +287,7 @@ class DTblDef
 										array('ext:servlet'), NULL, NULL, 0, 'servletEngine'),
 			'ctx_realm' => new DAttr('realm', 'sel1', 'Realm', 'select', true, array('realms')),
 			'ctx_authName' => new DAttr('authName', 'name', 'Authentication Name', 'text'),
-			'ctx_required' => new DAttr('required', 'cust', 'Required', 'text'),
+			'ctx_required' => new DAttr('required', 'cust', 'Require (Authorized Users/Groups)', 'text'),
 			'ctx_allow' => new DAttr('accessControl:allow', 'subnet', 'Access Allowed', 'textarea', true, NULL, NULL, 'rows="3" cols="60"', 1, 'accessAllowed'),
 			'ctx_deny' => new DAttr('accessControl:deny', 'subnet', 'Access Denied', 'textarea', true, NULL, NULL, 'rows="3" cols="60"', 1, 'accessDenied'),
 			'ctx_authorizer' => new DAttr('authorizer', 'sel1', 'Authorizer', 'select', true,
@@ -664,7 +664,7 @@ class DTblDef
 
 	protected function add_SERV_SEC_CGI($id)
 	{
-		$this->_tblDef[$id] = new DTbl($id, 'External Application Resource');
+		$this->_tblDef[$id] = new DTbl($id, 'CGI Settings');
 
 		$attrs = array(
 			new DAttr('cgidSock', 'addr', 'CGI Daemon Socket', 'text', true, NULL, NULL, $this->_options['text_size']),
@@ -682,6 +682,7 @@ class DTblDef
 			$this->_attrs['procHardLimit']
 			);
 		$this->_tblDef[$id]->setAttr($attrs, 'sec:cgi', 'security:CGIRLimit');
+		$this->_tblDef[$id]->_helpKey = 'TABLEcgiResource';
 	}
 
 	protected function add_SERV_SEC_CONN($id)
