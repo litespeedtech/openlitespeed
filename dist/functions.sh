@@ -280,7 +280,6 @@ EOF
 
 
 # generate password file
-
 		ENCRYPT_PASS=`"$LSINSTALL_DIR/admin/fcgi-bin/admin_php" -q "$LSINSTALL_DIR/admin/misc/htpasswd.php" $PASS_ONE`
 		echo "$ADMIN_USER:$ENCRYPT_PASS" > "$LSINSTALL_DIR/admin/conf/htpasswd"
 
