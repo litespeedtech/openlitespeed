@@ -905,7 +905,14 @@ int LsapiConn::readStderrStream()
                 packetLen       = ret;
                 m_iPacketLeft  -= ret;
             }
-            if ( pHEC )
+
+            if (( packetLen == 8 )&& !m_iPacketLeft 
+                && ( m_respHeader.m_packetLen.m_iLen == 16 ) 
+                && ( memcmp( achBuf, "\0PID", 4 ) == 0 ) )
+            {
+                //ignore this packet for now.
+            }
+            else if ( pHEC )
                 pHEC->processErrData( pBuf, packetLen );
             else
             {

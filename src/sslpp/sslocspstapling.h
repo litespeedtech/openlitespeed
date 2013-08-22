@@ -19,15 +19,13 @@
 
 #ifndef SSLOCSPSTAPLING_H
 #define SSLOCSPSTAPLING_H
-#include <sslpp/sslcontext.h>
-#include <sslpp/sslconnection.h>
 #include <socket/gsockaddr.h>
 #include <util/autostr.h>
 
 #include <openssl/x509.h>
 #include <openssl/ocsp.h>
 
-#include <stdint.h>
+#include <inttypes.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/types.h>
@@ -52,11 +50,10 @@ public:
     void updateRespData(OCSP_RESPONSE *pResponse);
     int getRequestData(unsigned char *pReqData);
     void setCertFile( const char* Certfile );
-    int config( const XmlNode *pNode, SSLContext *pSSL,  
+    int config( const XmlNode *pNode, SSL_CTX *pSSL,  
                         const char *pCAFile, char *pachCert, ConfigCtx* pcurrentCtx );
     
     void setOcspResponder( const char* url )    {   m_sOcspResponder.setStr( url );     }
-    void setCombineCAfile( const char* CAfile ) {   m_sCombineCAfile.setStr( CAfile );  }
     void setCAFile( const char* CAfile )        {   m_sCAfile.setStr( CAfile );         }
     void setRespMaxAge( const int iMaxAge )     {   m_iocspRespMaxAge = iMaxAge;        }  
     void setRespfile( const char* Respfile )    {   m_sRespfile.setStr( Respfile );     }    
@@ -71,7 +68,6 @@ private:
     AutoStr2    m_sCertfile;
     AutoStr2    m_sCAfile; 
     AutoStr2    m_sOcspResponder; 
-    AutoStr2    m_sCombineCAfile; 
     AutoStr2    m_sRespfile; 
     AutoStr2    m_sRespfileTmp; 
     int         m_iocspRespMaxAge;  

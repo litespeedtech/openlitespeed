@@ -863,12 +863,18 @@ int SSIScript::processSSIFile( SSITagConfig * pConfig, int fd )
 
 int SSIScript::parse( SSITagConfig * pConfig, const char * pScriptPath )
 {
+    struct stat st;
     int fd;
     int ret;
     fd = nio_open( pScriptPath, O_RDONLY, 0644 );
     if ( fd != -1 )
     {
         m_sPath.setStr( pScriptPath );
+        if ( fstat( fd, &st ) == 0 )
+        {
+            m_lModify = st.st_mtime;
+            m_lSize = st.st_size;
+        }
         ret = processSSIFile( pConfig, fd );
         close( fd );
         return ret;

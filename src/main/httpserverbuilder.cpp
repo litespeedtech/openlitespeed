@@ -2185,8 +2185,9 @@ int HttpServerBuilder::configVHIndexFile( HttpVHost *pVHost,
     pVHost->setAutoIndexURI( ( pUSTag ) ? pUSTag : m_sAutoIndexURI.c_str() );
 
     char achURI[] = "/_autoindex/";
-    configContext( pVHost, achURI , HandlerType::HT_NULL,
+    HttpContext *pContext = configContext( pVHost, achURI , HandlerType::HT_NULL,
                    "$SERVER_ROOT/share/autoindex/", NULL, 1 );
+    pContext->enableScript( 1 );
     return 0;
 }
 
@@ -5983,7 +5984,7 @@ SSLContext *HttpServerBuilder::newSSLContext( const XmlNode *pNode )
 
     if ( enableSpdy )
         if ( -1 == pSSL->enableSpdy( enableSpdy ) )
-            m_pCurConfigCtx->log_error( "SPDY can't be enabled [try to set to %d].", enableSpdy );
+            m_pCurConfigCtx->log_error( "SPDY can't be enabled [failed to set to %d].", enableSpdy );
 
     if ( cv )
     {
@@ -5994,16 +5995,19 @@ SSLContext *HttpServerBuilder::newSSLContext( const XmlNode *pNode )
     if ( ( m_pCurConfigCtx->getLongValue( pNode, "enableStapling", 0, 1, 0 )) 
         && ( pCertFile != NULL ) )
     {
-        if ( pSSL->getpStapling() == NULL )
+        if ( pSSL->getStapling() == NULL )
         {
-            SslOcspStapling *pSslOcspStapling = new SslOcspStapling;
-            if (pSslOcspStapling->config(pNode, pSSL, pCAFile, achCert, m_pCurConfigCtx) != -1)
-                m_pCurConfigCtx->log_info( "Enable OCSP Stapling successful!");
-            else
+            const char *pCombineCAfile = pNode->getChildValue( "ocspCACerts" );
+            char CombineCAfile[MAX_PATH_LEN];
+            if ( pCombineCAfile )
             {
-                delete pSslOcspStapling;
-                pSSL->setpStapling(NULL);
+                if ( m_pCurConfigCtx->getValidFile( CombineCAfile, pCombineCAfile, "Combine CA file" ) != 0 )
+                    return 0;
+                pSSL->setCertificateChainFile( CombineCAfile );
             }
+            if ( pSSL->configStapling(pNode, pCAFile, achCert, m_pCurConfigCtx) == 0 )
+                 m_pCurConfigCtx->log_info( "Enable OCSP Stapling successful!");
+
         }
     }
     return pSSL;

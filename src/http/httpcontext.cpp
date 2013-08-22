@@ -53,17 +53,12 @@ HttpContext::HttpContext()
     , m_pFilesMatchStr( NULL )
     , m_pHandler( NULL )
     , m_pInternal( NULL )
-    //, m_bAllowBrowse( 1 )
     , m_bAllowBrowse( BIT_ALLOW_BROWSE | BIT_INCLUDES | BIT_INCLUDES_NOEXEC )
     , m_redirectCode( -1 )
-    , m_iSetUidMode( 0 )
-    , m_iConfigBits2( 0 )
+    , m_iSetUidMode( ENABLE_SCRIPT )
+    , m_iConfigBits2( BIT_URI_CACHEABLE )
     , m_iRewriteEtag( 0 )
-    , m_iSecRules( 0 )
-    , m_iChrootMode( 0 )
-    , m_iEnableRewrite( REWRITE_INHERIT_ON )
 //    , m_iFilesMatchCtx( 0 )
-    , m_iCacheable( 1 )
     , m_lHTALastMod( 0 )
     , m_pRewriteBase( NULL )
     , m_pRewriteRules( NULL )
@@ -614,25 +609,35 @@ void HttpContext::inherit(const HttpContext * pRootContext )
         setConfigBit( BIT_ALLOW_SETUID,
                     m_pParent->m_iConfigBits & BIT_ALLOW_SETUID);
     }
+    if ( m_pParent->m_iSetUidMode & CHANG_UID_ONLY )
+        m_iSetUidMode |= CHANG_UID_ONLY;
+        
     if ( !(m_iConfigBits & BIT_SUEXEC ) )
     {
-        m_iSetUidMode = m_pParent->m_iSetUidMode;
+        m_iSetUidMode = (m_iSetUidMode & ~UID_MASK)|
+                        (m_pParent->m_iSetUidMode & UID_MASK);
     }
     if ( !(m_iConfigBits & BIT_CHROOT ) )
     {
-        m_iChrootMode = m_pParent->m_iChrootMode;
+        m_iSetUidMode = (m_iSetUidMode & ~CHROOT_MASK) |
+                        ( m_pParent->m_iSetUidMode & CHROOT_MASK);
     }
-
-    if ( !(m_iConfigBits & BIT_REWRITE_ENGINE) )
+    if ( !(m_iConfigBits & BIT_GEO_IP ) )
     {
-        m_iEnableRewrite = ( m_pParent->m_iEnableRewrite | REWRITE_INHERIT );
+        m_iSetUidMode = (m_iSetUidMode & ~CTX_GEOIP_ON) |
+                        ( m_pParent->m_iSetUidMode & CTX_GEOIP_ON);
     }
-    //Start----------Xuedong Copy following code from litespeed and replace "pParent->" with "m_pParent->"
+    if ( !(m_iConfigBits & BIT_ENABLE_SCRIPT ) )
+    {
+        m_iSetUidMode = (m_iSetUidMode & ~ENABLE_SCRIPT) |
+                        ( m_pParent->m_iSetUidMode & ENABLE_SCRIPT);
+    }
+    
     if ( !(m_iConfigBits & BIT_REWRITE_ENGINE) )
     {
         m_iRewriteEtag = (m_iRewriteEtag & ~REWRITE_MASK) |
                     (( m_pParent->m_iRewriteEtag | REWRITE_INHERIT ) & REWRITE_MASK);
-    }    
+    }
     if ( !(m_iConfigBits2 & BIT_FILES_ETAG ) )
     {
         m_iRewriteEtag = (m_iRewriteEtag & ~ETAG_MASK) |
@@ -645,10 +650,10 @@ void HttpContext::inherit(const HttpContext * pRootContext )
             int tag = m_pParent->m_iRewriteEtag & ETAG_ALL;
             int mask = (m_iRewriteEtag & ETAG_MOD_ALL) >> 3;
             int val = ( m_iRewriteEtag & ETAG_ALL ) & mask;
-            m_iRewriteEtag = ((tag & ~mask ) | val )|(m_iRewriteEtag & ETAG_MOD_ALL);
+            m_iRewriteEtag = (m_iRewriteEtag & ~ETAG_MASK)
+                    |((tag & ~mask ) | val )|(m_iRewriteEtag & ETAG_MOD_ALL);
         }
     }
-    ////End----------Xuedong Copy following code from litespeed and replace "pParent->" with "m_pParent->"
     
     
     

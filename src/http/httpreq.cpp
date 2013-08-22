@@ -1301,11 +1301,11 @@ int HttpReq::processMime( const char * pSuffix )
         if ( D_ENABLED( DL_LESS ))
             LOG_D(( getLogger(), "[%s] Find handler [%s] for [.%s]",
                     getLogId(), m_pHttpHandler->getName(), pSuffix?pSuffix:"" ));
-        if ( !m_pVHost->isScriptEnabled() )
+        if ( !m_pContext->isScriptEnabled() )
         {
             LOG_INFO(( getLogger(), "[%s] Scripting is disabled for "
-                       "VHost [%s], access denied.", getLogId(),
-                       m_pVHost->getName() ));
+                       "VHost [%s], context [%s] access denied.", getLogId(),
+                       m_pVHost->getName(), m_pContext->getURI() ));
             return SC_403;
         }
     }
