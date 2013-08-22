@@ -141,9 +141,10 @@ else
     chmod "$EXEC_MOD" "$LSWS_HOME/admin/fcgi-bin/admin_php"
 fi
 
-ENCRYPT_PASS=`"$LSWS_HOME/admin/fcgi-bin/admin_php" -q "$LSWS_HOME/admin/misc/htpasswd.php" $PASS_ONE`
-echo "$ADMIN_USER:$ENCRYPT_PASS" > "$LSWS_HOME/admin/conf/htpasswd"
-
+if [ ! -f "$LSWS_HOME/admin/conf/htpasswd" ] ; then
+    ENCRYPT_PASS=`"$LSWS_HOME/admin/fcgi-bin/admin_php" -q "$LSWS_HOME/admin/misc/htpasswd.php" $PASS_ONE`
+    echo "$ADMIN_USER:$ENCRYPT_PASS" > "$LSWS_HOME/admin/conf/htpasswd"
+fi
 
 
 if [ -f "$LSWS_HOME/fcgi-bin/lsphp" ]; then
