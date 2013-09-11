@@ -400,6 +400,11 @@ int ProxyConn::processResp()
             {
                 setupChunkIS();
             }
+            else if (!(respState & HEC_RESP_CONT_LEN ))
+            {
+                m_iRespBodySize = INT_MAX;
+            }
+
             m_pBufBegin = pBuf;
             m_pBufEnd = pBuf + len;
             if ( D_ENABLED( DL_MEDIUM ) )

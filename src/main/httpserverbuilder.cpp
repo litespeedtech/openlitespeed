@@ -1506,6 +1506,12 @@ int HttpServerBuilder::configVHBasics( HttpVHost *pVHost, const XmlNode *pVhConf
     }
 
     pVHost->setAdminEmails( pAdminEmails );
+    
+    const char *pSpdyAdHeader = pVhConfNode->getChildValue( "spdyAdHeader" );
+    if ( !pSpdyAdHeader )
+        pSpdyAdHeader = "";
+    pVHost->setSpdyAdHeader( pSpdyAdHeader );
+    
 
     return 0;
 
@@ -3621,8 +3627,8 @@ int HttpServerBuilder::initTuning( const XmlNode *pRoot )
     }
 
     //connections
-    m_pServer->setMaxConns( m_pCurConfigCtx->getLongValue( pNode, "maxConnections", 1, 65535, 400 ) );
-    m_pServer->setMaxSSLConns( m_pCurConfigCtx->getLongValue( pNode, "maxSSLConnections", 0, 65535, 100 ) );
+    m_pServer->setMaxConns( m_pCurConfigCtx->getLongValue( pNode, "maxConnections", 1, 1000000, 2000 ) );
+    m_pServer->setMaxSSLConns( m_pCurConfigCtx->getLongValue( pNode, "maxSSLConnections", 0, 1000000, 1000 ) );
     HttpListener::setSockSendBufSize(
         m_pCurConfigCtx->getLongValue( pNode, "sndBufSize", 0, 256 * 1024, 0 ) );
     HttpListener::setSockRecvBufSize(

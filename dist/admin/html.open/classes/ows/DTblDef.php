@@ -266,6 +266,7 @@ class DTblDef
 			'vh_maxKeepAliveReq' => new DAttr('maxKeepAliveReq', 'uint', 'Max Keep-Alive Requests', 'text', true, 0, 32767, NULL, 0, 'vhMaxKeepAliveReq'),
 			'vh_smartKeepAlive' => new DAttr('smartKeepAlive', 'bool', 'Smart Keep-Alive', 'radio', true, NULL, NULL, NULL, 0, 'vhSmartKeepAlive'),
 			'vh_enableGzip' => new DAttr('enableGzip', 'bool', 'Enable GZIP Compression', 'radio'),
+			'vh_spdyAdHeader' => new DAttr('spdyAdHeader', 'parse', 'SPDY Advertisement', 'text', true, "/^\d+:npn-spdy\/[23]$/", 'required format: ssl_port:npn-spdy/version like 443:npn-spdy/3', $this->_options['text_size']),			
 			'vh_allowSymbolLink' => new DAttr('allowSymbolLink', 'sel', 'Follow Symbolic Link', 'select', true, 0, $this->_options['symbolLink']),
 			'vh_enableScript' => new DAttr('enableScript', 'bool', 'Enable Scripts/ExtApps', 'radio', false),
 			'vh_restrained' => new DAttr('restrained', 'bool', 'Restrained', 'radio', false),
@@ -963,7 +964,8 @@ class DTblDef
 			new DAttr('docRoot', 'path', 'Document Root', 'text', false, 3, '', $this->_options['text_size']),//no validation, maybe suexec owner
 			$this->_attrs['adminEmails'],
 			$this->_attrs['vh_enableGzip'],
-			$this->_attrs['enableIpGeo']
+			$this->_attrs['enableIpGeo'],
+			$this->_attrs['vh_spdyAdHeader']
 			);
 		$this->_tblDef[$id]->setAttr($attrs, 'general');
 	}
@@ -1675,9 +1677,10 @@ class DTblDef
 			$this->_attrs['vh_maxKeepAliveReq'],
 			$this->_attrs['vh_smartKeepAlive'],
 			$this->_attrs['tp_vrFile']->dup('docRoot', 'Document Root', NULL),
+			$this->_attrs['adminEmails'],
 			$this->_attrs['vh_enableGzip'],
 			$this->_attrs['enableIpGeo'],
-			$this->_attrs['adminEmails']
+			$this->_attrs['vh_spdyAdHeader']
 			);
 // to do: need check path contain VH variable.
 		$this->_tblDef[$id]->setAttr($attrs, 'general');
@@ -1704,9 +1707,10 @@ class DTblDef
 		$this->_tblDef[$id] = new DTbl($id);
 		$attrs = array(
 			$this->_attrs['tp_vrFile']->dup('docRoot', 'Document Root', NULL),
+			$this->_attrs['adminEmails'],
 			$this->_attrs['vh_enableGzip'],
 			$this->_attrs['enableIpGeo'],
-			$this->_attrs['adminEmails']
+			$this->_attrs['vh_spdyAdHeader']
 			);
 		$this->_tblDef[$id]->setAttr($attrs, 'general');
 	}

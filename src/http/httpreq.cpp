@@ -2072,6 +2072,16 @@ void HttpReq::dumpHeader()
 {
     const char * pBegin = getOrgReqLine();
     char * pEnd = (char *)pBegin + getOrgReqLineLen();
+    if ( m_iHeaderStatus == HEADER_REQUEST_LINE ) 
+        return;
+    if ( pEnd >= m_headerBuf.begin() + m_iReqHeaderBufFinished )
+    {
+        pEnd = m_headerBuf.begin() + m_iReqHeaderBufFinished;
+        if ( pEnd >= m_headerBuf.begin() + m_headerBuf.capacity() )
+            pEnd = m_headerBuf.begin() + m_headerBuf.capacity() - 1;
+    }
+    if ( pEnd < pBegin )
+        pEnd = (char *)pBegin;
     *pEnd = 0;
     LOG_INFO(( getLogger(), "[%s] Content len: %d, Request line: \n%s", getLogId(),
                m_lEntityLength, pBegin ));

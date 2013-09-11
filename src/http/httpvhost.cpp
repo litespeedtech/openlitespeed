@@ -225,6 +225,7 @@ HttpVHost::HttpVHost( const char * pHostName )
     , m_pRewriteMaps( NULL )
     , m_pSSLCtx( NULL )
     , m_pSSITagConfig( NULL )
+    , m_sSpdyAdHeader( "" )
 {
     char achBuf[10] = "/";
     m_rootContext.set( achBuf, "/nON eXIST",

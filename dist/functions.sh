@@ -280,9 +280,10 @@ EOF
 
 
 # generate password file
-		ENCRYPT_PASS=`"$LSINSTALL_DIR/admin/fcgi-bin/admin_php" -q "$LSINSTALL_DIR/admin/misc/htpasswd.php" $PASS_ONE`
-		echo "$ADMIN_USER:$ENCRYPT_PASS" > "$LSINSTALL_DIR/admin/conf/htpasswd"
-
+        if [ ! -f  "$LSINSTALL_DIR/admin/conf/htpasswd" ] ; then
+            ENCRYPT_PASS=`"$LSINSTALL_DIR/admin/fcgi-bin/admin_php" -q "$LSINSTALL_DIR/admin/misc/htpasswd.php" $PASS_ONE`
+            echo "$ADMIN_USER:$ENCRYPT_PASS" > "$LSINSTALL_DIR/admin/conf/htpasswd"
+        fi
 	fi
 
 }
@@ -890,9 +891,10 @@ installation()
         rm -rf "$LSWS_HOME/admin/html.$VERSION"
     fi
 
-    util_mkdir "$SDIR_OWN" $DIR_MOD admin bin docs fcgi-bin php lib logs docs/css docs/img admin/logs add-ons share share/autoindex share/autoindex/icons admin/fcgi-bin admin/html.$VERSION admin/misc tmp tmp/ocspcache 
+    util_mkdir "$SDIR_OWN" $DIR_MOD admin bin docs fcgi-bin php lib logs docs/css docs/img admin/logs add-ons share share/autoindex share/autoindex/icons admin/fcgi-bin admin/html.$VERSION admin/misc tmp  
     util_mkdir "$CONF_OWN" $SDIR_MOD conf conf/cert conf/templates admin/conf admin/tmp phpbuild
     util_mkdir "$SDIR_OWN" $SDIR_MOD admin/cgid admin/cgid/secret
+    util_mkdir "$DIR_OWN" $SDIR_MOD tmp/ocspcache
     chgrp  $WS_GROUP $LSWS_HOME/admin/tmp $LSWS_HOME/admin/cgid
     chmod  g+x $LSWS_HOME/admin/tmp $LSWS_HOME/admin/cgid
     chown  $CONF_OWN $LSWS_HOME/admin/tmp/sess_* 1>/dev/null 2>&1

@@ -1274,7 +1274,8 @@ int HttpConnection::buildErrorResponse( const char * errMsg )
             int len = HttpStatusCode::getBodyLen( errCode );
             m_response.setContentLen( len );
             m_response.parseAdd( HttpStatusCode::getHeaders( errCode ), HttpStatusCode::getHeadersLen( errCode ));
-            m_response.finalizeHeader( ver, errCode);
+            m_response.finalizeHeader( ver, errCode, m_request.getVHost());
+            
             if ( getStream()->isSpdy() )
                 sendSpdyHeaders();
             m_response.getIov().append( pHtml, len );
@@ -1283,7 +1284,7 @@ int HttpConnection::buildErrorResponse( const char * errMsg )
             return 0;
         }
     }
-    m_response.finalizeHeader( ver, errCode);
+    m_response.finalizeHeader( ver, errCode, m_request.getVHost() );
     if ( getStream()->isSpdy() )
         sendSpdyHeaders();
     return 0;
@@ -2250,7 +2251,7 @@ int HttpConnection::prepareDynRespHeader( int complete, int nobuffer )
             m_response.addGzipEncodingHeader();
     }
     m_response.prepareHeaders( &m_request );
-    m_response.finalizeHeader( m_request.getVersion(), m_request.getStatusCode());
+    m_response.finalizeHeader( m_request.getVersion(), m_request.getStatusCode(), m_request.getVHost() );
     return 0;
 }
 

@@ -75,7 +75,7 @@ class DPageDef
 		$pages = array();
 		$pages[] = new DFileSect(
 			array(
-				'VH_GENERAL', 'VH_LOG',	'VH_ACLOG',	'VH_INDXF',	'VH_ERRPG',
+				'VH_GENERAL', 'VH_LOG', 'VH_ACLOG', 'VH_INDXF', 'VH_ERRPG',
 				'A_SCRIPT',	'VH_EXPIRES',
 				'A_SECAC', 'VH_REALM_SEL',
 				'A_EXT_SEL', 'VH_CTX_SEL',

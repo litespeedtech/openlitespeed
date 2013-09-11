@@ -5,8 +5,8 @@ m4_include(ax_lib_expat.m4)
 
 dnl Process this file with autoconf to produce a configure script.
 AC_PREREQ([2.69])
-AC_INIT([openlitespeed],[1.2.4],[info@litespeedtech.com],[openlitespeed],[http://www.litespeedtech.com/])
-AM_INIT_AUTOMAKE([1.2.4 foreign no-define ])
+AC_INIT([openlitespeed],[1.2.5],[info@litespeedtech.com],[openlitespeed],[http://www.litespeedtech.com/])
+AM_INIT_AUTOMAKE([1.2.5 foreign no-define ])
 
 AM_CONFIG_HEADER(src/config.h:src/config.h.in)
 
@@ -96,11 +96,24 @@ AC_ARG_ENABLE([debug],
                     CFLAGS="-g -O3"
                     CXXFLAGS="-g -O3"
                 fi
-                echo "OPENLSWS_DEBUG='$OPENLSWS_DEBUG'  CFLAGS='$CFLAGS'"
+                echo "OPENLSWS_DEBUG='$OPENLSWS_DEBUG'"
                 ], [])
+                
+AC_ARG_ENABLE([profiling],
+              [AC_HELP_STRING([--enable-profiling],
+                              [Enable cpu profiling (profiling is disabled by default)])],
+              [OPENLSWS_PROF="$enableval"
+                if test "$OPENLSWS_PROF" = "yes" ; then 
+                    CFLAGS="$CFLAGS -pg"
+                    CXXFLAGS="$CXXFLAGS -pg"
+                fi
+                echo "OPENLSWS_PROF='$OPENLSWS_PROF'"
+                ], [])                
+                
 CFLAGS="$CFLAGS -fstack-protector"
 CXXFLAGS="$CXXFLAGS -fstack-protector"
-                
+echo "Final CFLAGS='$CFLAGS' CXXFLAGS='$CXXFLAGS'"
+
 AC_ARG_ENABLE([rpath],
               [AC_HELP_STRING([--disable-rpath], 
                               [Disable rpath (It is 'no' by default)])],

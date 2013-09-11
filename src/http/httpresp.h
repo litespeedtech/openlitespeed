@@ -23,7 +23,7 @@
 #include <http/httpstatusline.h>
 #include <util/iovec.h>
 #include <http/httprespheaders.h>
-
+#include <http/httpvhost.h>
 #define RANGE_HEADER_LEN    22
 
 class HttpReq;
@@ -109,7 +109,7 @@ public:
     void setSSL( int ssl )
     {   m_iSSL = (ssl != 0 );   }
 
-    void finalizeHeader( int ver, int code);
+    void finalizeHeader( int ver, int code, const HttpVHost *vhost );
     
     IOVec& getIov()    {   return m_iovec;  }
     void parseAdd( const char * pBuf, int len );

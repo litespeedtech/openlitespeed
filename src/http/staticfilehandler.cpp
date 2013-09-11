@@ -212,7 +212,7 @@ static int processFlvStream( HttpConnection * pConn, off_t start )
         pResp->setContentLen( pData->getECache()->getFileSize() - 
                             start + FLV_HEADER_LEN );
         pResp->appendContentLenHeader();
-        pResp->finalizeHeader( pReq->getVersion(), pReq->getStatusCode());
+        pResp->finalizeHeader( pReq->getVersion(), pReq->getStatusCode(), pReq->getVHost() );
         pResp->appendExtra( FLV_HEADER, FLV_HEADER_LEN );
         pResp->written( FLV_HEADER_LEN );
         ret = pConn->beginWrite();
@@ -406,6 +406,7 @@ int processH264Stream( HttpConnection * pConn, double start )
     int ret = pData->getCache()->readyCacheData( pECache, 0 );
     if ( ret )
         return ret;
+    pECache->incRef();
     unsigned char * mini_moov = NULL;
     uint32_t mini_moov_size;
     mini_moov = pData->getCache()->getMiniMoov();
@@ -435,7 +436,6 @@ int processH264Stream( HttpConnection * pConn, double start )
     moov_data->remaining_bytes = 1;  //first call
     moov_data->start_time = start;
 
-    pECache->incRef();
     pConn->resetResp();
 
     off_t contentLen = 0;
@@ -623,7 +623,7 @@ int StaticFileHandler::process( HttpConnection * pConn, const HttpHandler * pHan
                     pResp->addGzipEncodingHeader();
                 }
             }
-            pResp->finalizeHeader( pReq->getVersion(), pReq->getStatusCode());
+            pResp->finalizeHeader( pReq->getVersion(), pReq->getStatusCode(), pReq->getVHost());
         } //Xuedong Add for SSI Start
         else
         {
@@ -862,7 +862,7 @@ static int processRange( HttpConnection * pConn, HttpReq * pReq, const char *pRa
             pConn->resetResp();
             pResp->prepareHeaders( pReq, RANGE_HEADER_LEN );
             ret = buildRangeHeaders( pConn, *range);
-            pResp->finalizeHeader( pReq->getVersion(), pReq->getStatusCode());
+            pResp->finalizeHeader( pReq->getVersion(), pReq->getStatusCode(), pReq->getVHost());
             if ( !ret )
             {
                 ret = pConn->beginWrite();

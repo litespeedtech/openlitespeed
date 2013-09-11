@@ -111,7 +111,7 @@ void HttpResp::buildCommonHeaders()
     HttpResp::m_gzipHeaders[1].index    = HttpRespHeaders::H_VARY;
     HttpResp::m_gzipHeaders[1].name     = HttpResp::s_sGzipEncodingHeader + 24;
     HttpResp::m_gzipHeaders[1].nameLen  = 4;
-    HttpResp::m_gzipHeaders[1].val      = HttpResp::s_sCommonHeaders + 30;
+    HttpResp::m_gzipHeaders[1].val      = HttpResp::s_sGzipEncodingHeader + 30;
     HttpResp::m_gzipHeaders[1].valLen   = 15;
     
     HttpResp::m_keepaliveHeader.index    = HttpRespHeaders::H_CONNECTION;
@@ -180,15 +180,19 @@ void HttpResp::appendContentLenHeader()
                     14, sLength, n);
 }
 
-void HttpResp::finalizeHeader( int ver, int code)
+void HttpResp::finalizeHeader( int ver, int code, const HttpVHost *vhost )
 {
     //addStatusLine will add HTTP/1.1 to front of m_iovec when regular format
     //              will add version: HTTP/1.1 status: 2XX (etc) to m_outputBuf when SPDY format
     //              *** Be careful about this difference ***
     m_respHeaders.addStatusLine(ver, code);
+    if ( vhost )
+    {
+       const AutoStr2& str = vhost->getSpdyAdHeader();
+        if( !m_iSSL && str.len() > 0 )
+            appendHeader("Alternate-Protocol", 18, str.c_str(), str.len());
+    }
     m_respHeaders.getHeaders(&m_iovec);
-    
-    
     
     int bufSize = m_iovec.bytes();
     m_iHeaderLeft += bufSize;

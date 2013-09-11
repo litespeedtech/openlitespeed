@@ -11,24 +11,14 @@ define ('DEFAULT_INSTALL_DIR', $_SERVER['LS_SERVER_ROOT'].'lsphp'); // actual di
 
 $PHP_VER = array('5'=>
 		 array(
-		 	'5.5.2',
-		 	'5.5.1',
-		 	'5.5.0',
-		 	'5.4.18',
-		 	'5.4.17',
-		 	'5.4.16',
-		 	'5.4.15',
-			'5.4.14',
-		 	'5.4.13',
-			'5.4.12',
+		 	'5.5.3',
+		 	'5.4.19',
 		 	'5.3.27',
-			'5.2.17',
-			'5.2.9',
-			'5.1.6'),
+			'5.2.17'),
 		 '4'=>
-		 array('4.4.9',
-		       '4.4.8'));
-
+		 array('4.4.9'));
+		 
+		 
 define ('LSAPI_VERSION', '6.3');
 define ('SUHOSIN_VERSION', '0.9.33');
 define ('APC_VERSION', '3.1.9');
