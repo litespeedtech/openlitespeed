@@ -148,6 +148,8 @@ int get_mini_moov(int fd,                    //in - video file descriptor
                 mdat_box = worker_box;
                 break;
         }
+        if ( worker_box.header.ExtendedSize <= 0 )
+            return -1;
         pos += worker_box.header.ExtendedSize;
     }
 

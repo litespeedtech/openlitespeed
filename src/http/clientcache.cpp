@@ -231,6 +231,7 @@ static int resetQuotas( GHash::iterator iter )
     ClientInfo * pInfo = ((ClientInfo *)iter->second());
     if ( !pInfo )
         return 0;
+    pInfo->setSslNewConn( 0 );
     pInfo->getThrottleCtrl().resetQuotas();
     register time_t tm = pInfo->getOverLimitTime();
     if ( tm )

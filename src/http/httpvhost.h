@@ -126,6 +126,8 @@ private:
     RewriteMapList    * m_pRewriteMaps;
     SSLContext        * m_pSSLCtx;
     SSITagConfig      * m_pSSITagConfig;
+    AutoStr2            m_sSpdyAdHeader;
+    
     HttpVHost( const HttpVHost& rhs );
     void operator=( const HttpVHost& rhs );
 public:
@@ -330,6 +332,9 @@ public:
 
     SSLContext * getSSLContext() const
     {   return m_pSSLCtx;           }    
+    
+    void setSpdyAdHeader(const char *sHeader)   {       m_sSpdyAdHeader = sHeader;      }
+    const AutoStr2& getSpdyAdHeader() const         {       return m_sSpdyAdHeader; }
 };
 
 

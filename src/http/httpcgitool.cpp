@@ -177,7 +177,11 @@ int HttpCgiTool::processHeaderLine( HttpExtConnector * pExtConn, const char * pL
         {
             long lContentLen = strtol( pValue, NULL, 10 );
             if (( lContentLen >= 0 )&&( lContentLen != LONG_MAX ))
+            {
                 pResp->setContentLen( lContentLen );
+                status |= HEC_RESP_CONT_LEN;
+                pReq->orContextState( RESP_CONT_LEN_SET );
+            }
         }
         //fall through
     case HttpRespHeaders::H_KEEP_ALIVE:

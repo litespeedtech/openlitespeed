@@ -102,10 +102,19 @@ int HttpUtil::unescape( char * pDest, int& uriLen,
             register char x1, x2;
             x1 = *pSrc++;
             if (!isxdigit(x1))
-                    return -1;
+            {
+                *p++ = '%';
+                c = x1;
+                break;
+            }
             x2 = *pSrc++;
             if (!isxdigit(x2))
-                    return -1;
+            {
+                *p++ = '%';
+                *p++ = x1;
+                c = x2;
+                break;
+            }
             c = (hexdigit(x1) << 4) + hexdigit(x2);
             break;
         }
