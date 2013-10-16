@@ -61,8 +61,8 @@ class DPageDef
 				));
 
 		$pages[] = new DFileSect(
-			array('L_GENERAL', 'L_VHMAP', 'L_CERT', 'L_SSL', 'L_SSL_OCSP'),
-			'listenerList:listener', 'listeners', 'name' );
+			array('L_GENERAL', 'L_VHMAP', 'L_SSL_CERT', 'L_SSL', 'L_SSL_FEATURE', 'L_SSL_OCSP', 'L_SSL_CLIENT_VERIFY'),
+			'listenerList:listener', 'listeners', 'name' );		
 
 		$pages[] = new DFileSect(
 			array('TP', 'TP_MEMBER'),
@@ -82,7 +82,7 @@ class DPageDef
 				'A_CACHE_POLICY',
 				'A_EXT_SEL', 'VH_CTX_SEL',
 				'VH_REWRITE_CTRL', 'VH_REWRITE_MAP', 'VH_REWRITE_RULE',
-				'VH_SSL_CERT', 'VH_SSL_SSL', 'VH_SSL_OCSP',
+				'VH_SSL_CERT', 'VH_SSL_SSL', 'VH_SSL_FEATURE', 'VH_SSL_OCSP', 'VH_SSL_CLIENT_VERIFY',
 				'VH_FRONTPG', 'VH_AWSTATS'
 				));
 		$this->_fileDef['vh'] = &$pages;
@@ -102,7 +102,7 @@ class DPageDef
 				'A_CACHE_POLICY',
 				'TP_EXT_SEL', 'VH_CTX_SEL',
 				'VH_REWRITE_CTRL', 'VH_REWRITE_MAP', 'VH_REWRITE_RULE',
-				'TP_SSL_CERT', 'VH_SSL_SSL', 'VH_SSL_OCSP', 
+				'VH_SSL_CERT', 'VH_SSL_SSL', 'VH_SSL_FEATURE', 'VH_SSL_OCSP', 'VH_SSL_CLIENT_VERIFY',
 				'VH_FRONTPG', 'TP_AWSTATS'),
 			'virtualHostConfig');
 
@@ -116,7 +116,7 @@ class DPageDef
 			array('ADMIN_PHP', 'VH_LOG', 'VH_ACLOG', 'A_SECAC'));
 
 		$pages[] = new DFileSect(
-			array('ADMIN_L_GENERAL', 'L_CERT', 'L_SSL'),
+			array('ADMIN_L_GENERAL', 'L_SSL_CERT', 'L_SSL', 'L_SSL_FEATURE', 'L_SSL_CLIENT_VERIFY'),
 			'listenerList:listener', 'listeners', 'name' );
 
 		$this->_fileDef['admin'] = &$pages;
@@ -206,7 +206,7 @@ class DPageDef
 
 		$page = new DPage('sl', 'lsecure', 'SSL',
 						  'Listener SSL Settings',
-						  array('L_CERT', 'L_SSL', 'L_SSL_OCSP'));
+						  array('L_SSL_CERT', 'L_SSL', 'L_SSL_FEATURE', 'L_SSL_OCSP', 'L_SSL_CLIENT_VERIFY'));
 		$page->_helpLink = 'Listeners_Help.html';
 		$this->_pageDef['sl'][$page->_id] = $page;
 
@@ -301,11 +301,11 @@ class DPageDef
 
 		$page = new DPage('vh', 'vhssl', 'SSL',
 						  'Virtual Host SSL Settings',
-						  array('VH_SSL_CERT', 'VH_SSL_SSL', 'VH_SSL_OCSP'));
+						  array('VH_SSL_CERT', 'VH_SSL_SSL', 'VH_SSL_FEATURE', 'VH_SSL_OCSP', 'VH_SSL_CLIENT_VERIFY'));
 		$page->_helpLink = 'Listeners_Help.html';
 		$this->_pageDef['vh'][$page->_id] = $page;
 		$this->_pageDef['tp'][$page->_id] = $page;
-		
+
 		$page = new DPage('vh', 'addons', 'Add-ons',
 						  'Virtual Host Add-ons Settings',
 						  array('VH_FRONTPG', 'VH_AWSTATS'));
@@ -344,9 +344,9 @@ class DPageDef
 
 		$page = new DPage('al', 'lsecure', 'SSL',
 						  'Listener SSL Settings',
-						  array('L_CERT', 'L_SSL'));
+						  array('L_SSL_CERT', 'L_SSL', 'L_SSL_FEATURE', 'L_SSL_CLIENT_VERIFY'));
 		$page->_helpLink = 'AdminListener_Help.html';
-		$this->_pageDef['al'][$page->_id] = $page;
+		$this->_pageDef['al'][$page->_id] = $page;		
 
 		$types = array_keys($this->_pageDef);
 		foreach ( $types as $type )

@@ -339,12 +339,12 @@ class ConfCenter
 		{
 			$data['order'] = new CVal(count($data0));
 		}
-		elseif ( $tbl->_id == 'VH_BASE')
+		elseif ( in_array($tbl->_id, array('VH_BASE','TP','L_GENERAL','ADMIN_L_GENERAL')) )
 		{
 			$oldRef = $disp->_name;
 			$newRef = $data['name']->GetVal();
 		}
-
+		
 		$this->checkRefresh($tbl->_id, 's', $oldRef, $newRef, $disp);
 	}
 
@@ -479,6 +479,17 @@ class ConfCenter
 		$this->_disp->init();
 		
 	}
+	
+	private function changeName_TP($oldName, $newName)
+	{
+		$this->_serv->_data['tpTop'][$newName] = $this->_serv->_data['tpTop'][$oldName];
+		unset($this->_serv->_data['tpTop'][$oldName]);
+		$this->_disp->_mid = "tp_$newName";
+		$this->_disp->_name = $newName;
+		$this->_curOne->_id = $newName;
+		$this->_disp->init();
+		
+	}	
 
 	private function changeName_L($oldName, $newName)
 	{
@@ -488,7 +499,7 @@ class ConfCenter
 			$tns = array_keys($this->_serv->_data['tpTop']);
 			foreach ( $tns as $tn )
 			{
-				$tl = &$this->_serv->_data['tpTop'][$tn]['listeners'];
+				$tl = $this->_serv->_data['tpTop'][$tn]['listeners'];
 				$vals = DUtil::splitMultiple($tl->GetVal());
 				foreach( $vals as $i=>$v )
 				{
@@ -497,9 +508,13 @@ class ConfCenter
 				}
 				$tl->SetVal(implode(', ', $vals));
 			}
-
 		}
-	}
+		$this->_serv->_data['listeners'][$newName] = $this->_serv->_data['listeners'][$oldName];
+		$this->_disp->_mid = "sl_$newName";
+		$this->_disp->_name = $newName;
+		$this->_curOne->_id = $newName;
+		$this->_disp->init();		
+	}	
 
 	private function changeName_EXT($oldName, $newName)
 	{
@@ -651,27 +666,18 @@ class ConfCenter
 			return;
 		}
 
-		$menuTids = array('L_GENERAL1', 'L_GENERAL', 'ADMIN_L_GENERAL1', 'ADMIN_L_GENERAL', 'VH_TOP_D', 'VH_BASE', 'TP1');
 		$isExt = (strncmp($tid, 'A_EXT', 5) == 0) || (strncmp($tid, 'TP_EXT', 6) == 0);
 		$isRealm = (strncmp($tid, 'VH_REALM', 8)==0) || (strncmp($tid, 'TP_REALM', 8)==0);
 
-		if ( in_array($tid, $menuTids) )
-		{
-			$this->genMenuInfo();
-		}
-		elseif ( $isExt || $isRealm ) {
-			$this->refreshInfo();
-		}
-		else
-			return;
-
 		if ( $act == 's' && $oldRef != NULL && $oldRef != $newRef )
 		{
-			if ( $tid == 'VH_BASE' )
-			{
+			if ( $tid == 'VH_BASE' ) {
 				$this->changeName_VH($oldRef, $newRef);
 			}
-			elseif ( $tid == 'L_GENERAL1' || $tid == 'ADMIN_L_GENERAL1' ) {
+			elseif ( $tid == 'TP' ) {
+				$this->changeName_VH($oldRef, $newRef);
+			}
+			elseif ( $tid == 'L_GENERAL' || $tid == 'ADMIN_L_GENERAL' ) {
 				$this->changeName_L($oldRef, $newRef);
 			}
 			elseif ( $isExt ) {
@@ -681,7 +687,17 @@ class ConfCenter
 				$this->changeName_REALM($oldRef, $newRef);
 			}
 		}
-	}
+		
+		$menuTids = array('L_GENERAL1', 'L_GENERAL', 'ADMIN_L_GENERAL1', 'ADMIN_L_GENERAL', 'VH_TOP_D', 'VH_BASE', 'TP1');
+		if ( in_array($tid, $menuTids) ) // for add or remove count in menu
+		{
+			$this->genMenuInfo();
+		}
+		elseif ( $isExt || $isRealm ) {
+			$this->refreshInfo();
+		}
+		
+	}	
 
 	private function &doAction($disp)
 	{

@@ -140,15 +140,16 @@ private:
     int                 m_iAuthUserOff;
     const HTAuth      * m_pHTAuth;
     const AuthRequired* m_pAuthRequired;
+    SSIRuntime        * m_pSSIRuntime;
     int                 m_envIdxOff;
     int                 m_iHostOff;
     int                 m_iHostLen;
     int                 m_iPathInfoOff;
     int                 m_iPathInfoLen;
+    int                 m_iNewHostLen;
     int                 m_iLocationOff;
 
     // The following member need not to be initialized
-    SSIRuntime        * m_pSSIRuntime;
     const AutoStr2    * m_pRealPath;
     AutoStr2            m_sRealPathStore;
     int                 m_iMatchedOff;
@@ -158,6 +159,7 @@ private:
     key_value_pair    * m_urls;
     int                 m_code;
     int                 m_iLocationLen;
+    int                 m_iNewHostOff;
     LogTracker        * m_pILog;
 
     int                 m_upgradeProto;
@@ -284,6 +286,16 @@ public:
 
     const char * getURI() const
     {   return m_reqBuf.getPointer( m_curURL.keyOff);   }
+    
+    void setNewHost( const char * pInfo, int len) 
+    {
+        m_iNewHostLen = len;
+        m_iNewHostOff = dupString( pInfo, m_iNewHostLen );
+    }
+
+    int getNewHostLen() const   {   return m_iNewHostLen;       }
+    const char * getNewHost() const {   return m_reqBuf.getPointer( m_iNewHostOff );   }
+    
     const char * getPathInfo() const
     {   return m_reqBuf.getPointer( m_iPathInfoOff );   }
 
@@ -337,6 +349,8 @@ public:
     int getOrgReqLineLen() const        {   return m_reqLineLen;        }
     int getOrgReqURLLen() const         {   return m_reqURLLen;         }
 
+    const char * encodeReqLine( int &len );
+    
     const char * getAuthUser() const
     {   return m_reqBuf.getPointer( m_iAuthUserOff );   }
 

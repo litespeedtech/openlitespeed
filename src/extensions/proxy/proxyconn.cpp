@@ -29,6 +29,7 @@
 #include <sys/socket.h>
 
 static char s_achForwardHttps[] = "X-Forwarded-Proto: https\r\n";
+static char s_achForwardHost[] = "X-Forwarded-Host: ";
 
 ProxyConn::ProxyConn()
 {
@@ -87,6 +88,7 @@ int ProxyConn::sendReqHeader()
     //remove the trailing "\r\n" before adding our headers
     const char * pBegin = pReq->getOrgReqLine();
     m_iTotalPending = pReq->getHttpHeaderLen();
+    int newReqLineLen = 0;
     int headerLen = 17;
     char * pExtraHeader = &m_extraHeader[23];
     const char * pForward = pReq->getHeader( HttpHeader::H_X_FORWARDED_FOR );
@@ -139,8 +141,53 @@ int ProxyConn::sendReqHeader()
             m_iTotalPending = p - pBegin;
         }
     }
-    m_iovec.append( pBegin, m_iTotalPending );
     
+    //reconstruct request line if URL has been rewritten
+    if ( pReq->getRedirects() > 0 )
+    {
+        const char * pReqLine = pReq->encodeReqLine( newReqLineLen );
+        if ( newReqLineLen > 0 )
+        {
+            m_iovec.append( pReqLine, newReqLineLen );
+            pBegin += pReq->getOrgReqLineLen() - 9;
+            m_iTotalPending -= pReq->getOrgReqLineLen() - 9;
+        }
+        
+    }
+
+    int newHostLen = pReq->getNewHostLen();
+    char * pHost = ( char *)pReq->getHeader( HttpHeader::H_HOST );
+    int hostLen = pReq->getHeaderLen( HttpHeader::H_HOST );
+    if ( newHostLen > 0 )
+    {
+        if ( *pHost )
+        {
+            m_iovec.append( pBegin, pHost - pBegin );
+            m_iovec.append( pReq->getNewHost(), newHostLen );
+            m_iovec.append( pHost+hostLen, pBegin + m_iTotalPending - pHost - hostLen );
+            m_iTotalPending += (newHostLen - hostLen);
+        }
+        else
+        {
+            m_iovec.append( pBegin, m_iTotalPending );
+            m_iovec.append( "Host: ", 6 );
+            m_iovec.append( pReq->getNewHost(), newHostLen );
+            m_iovec.append( "\r\n", 2 );
+            m_iTotalPending += newHostLen + 8;
+        }
+    }
+    else
+        m_iovec.append( pBegin, m_iTotalPending );
+    m_iTotalPending += newReqLineLen;
+
+    if ( hostLen )
+    {
+        m_iovec.append( s_achForwardHost, sizeof( s_achForwardHost ) - 1 );
+        m_iovec.append( pHost, hostLen );
+        m_iovec.append( "\r\n", 2 );
+        m_iTotalPending += hostLen + sizeof( s_achForwardHost ) + 1 ;
+    }
+   
     if ( pConn->isSSL() )
     {
         m_iovec.append( s_achForwardHttps, sizeof( s_achForwardHttps ) - 1 );

@@ -1,12 +1,22 @@
 body,td,a,p{font-family: sans-serif;}
 
 body {
-	color: #222; font-size: 13px;
+	color: #333; font-size: 13px; background-color: #FFFFFF; 
 }
 
 
-.wrapper {
-	width: 960px; margin: 0 auto; background-color: #FFFFFF;
+.pagewrapper {
+	width: 960px; margin: 0 auto; display:block; padding: 10px 0 50px 0;
+}
+
+.sidetree {
+	width: 200px;  padding: 10px; border: 0;
+	background-color: #fafafa;
+	float: left;
+}
+
+.contentwrapper {
+	margin-left:240px;margin-bottom:50px;
 }
 
 h1 {
@@ -37,12 +47,16 @@ ol {
 }
 
 ol li, ul li {
-	margin: 0.5em 0 0.5em 0;
+	margin: 7px 0;
 }
 
-.toctop li A { COLOR: #116789; TEXT-DECORATION: none }
-.toctop li A:visited { COLOR: #116789; TEXT-DECORATION: none }
-.toctop li A:hover{ COLOR: #ee9126; TEXT-DECORATION: none }
+.sidetree ul { list-style-type: none; padding:5px; margin:0; }
+.sidetree ul .level2 { list-style-type: square; padding: 0 0 0 25px; margin:0;  }
+.sidetree .current a, .sidetree .current a:visited {color:#d50;font-weight:bold;}
+.sidetree a, .toctop A {TEXT-DECORATION: none }
+
+.sidetree h3 a, .sidetree h3 a:visited, .toctop A, .toctop A:visited  { COLOR: #0081c1; }
+.toctop A:hover{ COLOR: #d50; }
 
 .helpitem {
 	display: block;
@@ -51,7 +65,7 @@ ol li, ul li {
 }
 
 .toc-row {
-	display: inline; width: 720px;
+	display: inline; width: 100%;
 	border: 0 solid #07a;
 	border-width: 1px 0 0 0;
 	padding: 2px 0 0 0;
@@ -60,25 +74,22 @@ ol li, ul li {
 }
 
 .toc-row header {
-	color: #116789;	font-size: 14px; font-weight: bold;
+	color: #555; font-size: 14px; font-weight: bold;
 }
 
-.toc-row header a {
-	color: #116789;	
+.toc-row header a, .toc-row p a {
+	color: #0081c1;	TEXT-DECORATION: none;
 }
 
-.toc-row a:hover { color: #ee9126; TEXT-DECORATION: none}
+.toc-row a:hover { color: #d50; TEXT-DECORATION: none}
 
-.toc-row p a{
-	color: #222; TEXT-DECORATION: none	
-}
 
 .toc-row p {
 	color: #aaa;	
 }
 
 .toc {
-	display: block; padding: 20px 20px 20px 20px; width: 720px; BACKGROUND-COLOR: #f8f8f8;
+	display: block; padding: 20px 20px 20px 20px; BACKGROUND-COLOR: #fafafa;
 }
 
 
@@ -87,126 +98,62 @@ ol li, ul li {
 }
 
 .ht-title {
-    FONT-WEIGHT: bold; FONT-SIZE: 14px; COLOR: #FFFFFF; BACKGROUND-COLOR: #555; background-image:linear-gradient(#666666,#555555); border-top-left-radius: 3px; border-top-right-radius: 3px;
+    FONT-WEIGHT: bold; FONT-SIZE: 14px; COLOR: #FFFFFF; BACKGROUND-COLOR: #555; background-image:linear-gradient(#888,#666);
 }
 .ht-label {
 	FONT-WEIGHT: bold; COLOR: #555; FONT-SIZE: 13px;
 }
-
-.label-title {
-    FONT-WEIGHT: bold; FONT-SIZE: 12pt; COLOR: #9999CC; TEXT-ALIGN: center; VIRTICAL-ALIGN: text-top !important
-}
-.label-title1 {
-    FONT-WEIGHT: bold; FONT-SIZE: 12pt; COLOR: #9999CC; VIRTICAL-ALIGN: text-top !important
-}
-
-.intro {
-    FONT-SIZE: 13px; TEXT-ALIGN: left;
-}
-.tbl-content {
-    FONT-WEIGHT: bold; FONT-SIZE: 13px; 
-}
-.tbl-content1 table{
-     border-collapse:collapse;  
-}
-
-.tbl-content1 td{
-    PADDING-LEFT: 10px; PADDING-RIGHT: 10px; FONT-SIZE: 9pt; TEXT-ALIGN: left;
-}
-
-.tbl-content1 A { COLOR: #003399;  }
-.tbl-content1 A:visited { COLOR: #003399 }
-.tbl-content1 A:hover{ COLOR: #3333CC; TEXT-DECORATION: none }
-
-.tbl-content2 {
-    PADDING-LEFT: 20px; FONT-SIZE: 14px; TEXT-ALIGN: left; line-height:20px;
-}
-
-.tbl-content2 A { COLOR: #003399; TEXT-DECORATION: none }
-.tbl-content2 A:visited { COLOR: #003399; TEXT-DECORATION: none }
-.tbl-content2 A:hover{ COLOR: #3333FF; TEXT-DECORATION: underline }
  
-.tbl-content-lead {
-	COLOR:#003399; FONT-WEIGHT: bold; BACKGROUND-COLOR: #EFEFEF;
-}
-.tbl-content-lead A { COLOR:#003399 }
-.tbl-content-lead A:visited { COLOR:#003399 }
-.tbl-content-lead A:hover{ COLOR: #3333CC; TEXT-DECORATION: none }
-.tbl-content-lead1 {
-	COLOR:#003399; FONT-WEIGHT: bold
-}
 
-.top { FONT-SIZE: 11px; TEXT-ALIGN: right; }
-.top A {COLOR: #FFFFFF; }
-.top A:visited{COLOR: #FFFFFF; }
+.top { FONT-SIZE: 11px; TEXT-ALIGN: right; float:right;}
+.top A, .top A:visited {COLOR: #FFFFFF; }
 
-.eg {
-    PADDING-LEFT: 20px; PADDING-RIGHT: 20px; BACKGROUND-COLOR: #EFEFEF;
-}
+
 .cmd {
-    PADDING-LEFT: 10px; PADDING-RIGHT: 10px; COLOR: #006600; 
+  padding: 0 3px 2px;
+  font-family: Monaco, Menlo, Consolas, "Courier New", monospace;
+  font-size: 12px;
+  color: #d14;
+  background-color: #f7f7f9;
+  border: 1px solid #e1e1e8;
+  white-space: nowrap;
+  -webkit-border-radius: 3px;
+  -moz-border-radius: 3px;
+  border-radius: 3px;
 }
-.tag { COLOR: #116789; FONT-WEIGHT: bold }
-.val { COLOR: #000000; FONT-WEIGHT: bold }
 
-.tagI { COLOR: #116789; FONT-WEIGHT: bold }
-.tagI A { COLOR: #116789; TEXT-DECORATION: none }
-.tagI A:visited { COLOR: #116789 }
-.tagI A:hover { COLOR: #ee9126; TEXT-DECORATION: underline }
+.tag {
+  padding: 0 3px 2px;
+  font-size: 12px;
+  color: #fff;
+  background-color: #0081c1;
+  white-space: nowrap;
+  -webkit-border-radius: 3px;
+  -moz-border-radius: 3px;
+  border-radius: 3px;
+}
 
-.tagP { COLOR: #116789; FONT-WEIGHT: bold }
-.tagP A { COLOR: #116789; TEXT-DECORATION: none }
-.tagP A:visited { COLOR: #116789 }
-.tagP A:hover { COLOR: #ee9126; TEXT-DECORATION: underline }
+.val { COLOR: #222; FONT-WEIGHT: bold }
+.tagI, .tagP{ COLOR: #0081c1; FONT-WEIGHT: bold }
+.tagI A, .tagI A:visited, .tagP A, .tagP A:visited  { COLOR: #0081c1; TEXT-DECORATION: none }
+.tagI A:hover, .tagP A:hover  { COLOR: #d50; TEXT-DECORATION: underline }
 
-.tagQ { COLOR: #116789; FONT-WEIGHT: bold }
-.tagQ A { COLOR: #116789; TEXT-DECORATION: none }
-.tagQ A:visited { COLOR: #116789 }
-.tagQ A:hover { COLOR: #ee9126; TEXT-DECORATION: underline }
 
 .copyright {
-	FONT-SIZE: 11px; COLOR: #999999; TEXT-ALIGN: center; border-top: 1px solid #ddd; padding-top: 20px; 
+	FONT-SIZE: 11px; COLOR: #999999; TEXT-ALIGN: center; border-top: 1px solid #ddd; padding-top: 20px; display:block;
 }
-.copyright1 {
-	FONT-SIZE: 11px; COLOR: #999999; border-top: 1px solid #ddd; padding-top: 20px; 
-}
-.copyright A{
-    COLOR: #333399; TEXT-DECORATION: none
-}
-.copyright A:visited{
+.copyright A, .copyright A:visited{
     COLOR: #333399; TEXT-DECORATION: none
 }
 .copyright A:hover{
     COLOR: #3333CC; TEXT-DECORATION: underline
 }
-.ct {
-    FONT-SIZE: 13px; COLOR: #000000; 
-}
-.label1 {
-    FONT-SIZE: 13px; FONT-WEIGHT: bold; COLOR: #000000; 
-}
-.label2 {
-    FONT-SIZE: 11pt; FONT-WEIGHT: bold; COLOR: #000000; 
-}
-.label-blue {
-    FONT-SIZE: 12pt; FONT-WEIGHT: bold; COLOR: #003399; 
-}
 
 
-.nav-bar {  BACKGROUND-COLOR: #555555; COLOR: #FFFFFF; font-size: 12px; margin: 0.6em 0 4em 0; text-align: center;}
-.nav-bar a { color: #FFFFFF; text-decoration: none; }
-.nav-bar a:hover { text-decoration: underline; }
-.nav-bar a visited { color: #FFFFFF }
-.nav-bar li { display: inline; margin: 0 1.3em; text-align: center; }
-
-.qa-title {
-    FONT-WEIGHT: bold; FONT-SIZE: 14px; COLOR: #000000;
-}
-
-.qa{
-    PADDING-LEFT: 15px; FONT-SIZE: 13px; 
-}
-.qa-top { FONT-SIZE: 12px; TEXT-ALIGN: right; FONT-WEIGHT: normal;}
-.qa-top A {COLOR: #6B6D6B; }
-.qa-top A:visited{COLOR: #6B6D6B; }
+.nav-bar { height:18px; width: 100%; BACKGROUND-COLOR: #888; COLOR: #FFFFFF; font-size: 12px; padding: 5px; margin-bottom: 50px;}
+.nav-bar a, .nav-bar a visited { color: #FFFFFF; text-decoration: none; }
+.nav-bar a:hover {TEXT-DECORATION: underline}
+.nav-bar .prev {text-align: left; float: left; width: 33%;}
+.nav-bar .center {text-align: center; float: left; width: 33%;}
+.nav-bar .next {text-align: right; float: right; width: 33%;}
 

@@ -9,7 +9,10 @@ add_custom_target(Name ALL COMMAND make WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/
 set_directory_properties(PROPERTIES  ADDITIONAL_MAKE_CLEAN_FILES "${PROJECT_SOURCE_DIR}/src/test/unittest-cpp/UnitTest++/libUnitTest++.a")
 set(libUnitTest  libUnitTest++.a)
 ##########################################################################################
+execute_process( COMMAND getconf LFS_CFLAGS
+            OUTPUT_VARIABLE  LFS_CFLAGS )
 
+add_definitions( ${LFS_CFLAGS} )
 
 #FIND_LIBRARY(CPPUNIT_LIBRARY NAMES cppunit
 #                          PATHS /usr/lib /lib /usr/local/lib /usr/share/lib /opt/lib /opt/share/lib /var/lib /usr/lib64 /lib64 /usr/local/lib64 /usr/share/lib64 /opt/lib64 /opt/share/lib64 /var/lib64

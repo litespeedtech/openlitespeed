@@ -1,1 +1,61 @@
-<!DOCTYPE html> <head>   <meta charset="utf-8" />   <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />   <title>Open LiteSpeed Web Server Users' Manual - Web Socket Proxy</title>   <meta name="description" content="Open LiteSpeed Web Server Users' Manual - Web Socket Proxy." />     <meta name="viewport" content="width=device-width, initial-scale=1.0" />   <link rel="shortcut icon" href="img/favicon.ico" />   <link rel="stylesheet" type="text/css" href="css/hdoc.css"> </head> <body> <div class="wrapper"> <div class="nav-bar"><ul class="nav-bar"><li>&#171 <a href="Context_Help.html">Context</a></li><li><a href="config.html">Configuration</a></li><li><a href="AdminGeneral_Help.html">Administration Console Settings</a> &#187;</li></ul></div>   <h1>Web Socket Proxy</h1><p><a href="http://en.wikipedia.org/wiki/WebSocket">WebSocket</a> is  a protocol that can be used instead of HTTP to deliver real-time, bidirectional  communication over the Internet. Starting with version 1.1.1, OpenLiteSpeed supports  WebSocket backends through the use of WebSocket proxies. These proxies send the WebSocket  communication to the appropriate backend stipulated in the <span class="tagI"><a href="#wsaddr">Address</a></span> field.</p><h4>Table of Contents</h4><section class="toc"><section class="toc-row"><header>Web Socket Proxy</header><p><a href="#wsuri">URI</a>&nbsp;|&nbsp;<a href="#wsaddr">Address</a>&nbsp;|&nbsp;</p></section> </section><section><div class="helpitem"><a name="wsuri"></a><table width="90%" class="ht" border="0" cellpadding="5" cellspacing="0"> <tr class="ht-title"><td><table width="100%" border="0" cellpadding="0" cellspacing="0"><tr><td class="ht-title">URI</td><td class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="img/top.gif"></a></td></tr></table></td></tr> <tr><td><span class="ht-label">Description: </span>Specifies the URI(s) that will use this WebSocket backend. Traffic to  this URI will only be forwarded to the WebSocket backend when it contains  a WebSocket upgrade request. <br/><br/>Traffic without this upgrade request will automatically be forwarded to the  Context that this URI belongs to. If no Context exists for this URI,  LSWS will treat this traffic as though it is accessing a static context with  the location <span class="val">$DOC_ROOT/URI</span>.</td></tr> <tr><td><span class="ht-label">Syntax: </span>The URI can be a plain URI (starting with "/") or a Perl-compatible  regular expression URI (starting with "exp:"). If a plain URI ends with a "/",  then this WebSocket backend will include all sub-URIs under this URI.</td></tr> <tr><td><span class="ht-label">Example: </span>Using the WebSocket proxy in conjunction with a Context  allows you to serve different kinds of traffic in different ways  on the same page, thus optimizing performance. You can send WebSocket  traffic to the WebSocket backend, while setting up a static context so  that LSWS can serve the page's static content, or an LSAPI context so LSWS  will serve PHP content (both of which LSWS does more efficiently  than the WebSocket backend).</td></tr> </table></div><div class="helpitem"><a name="wsaddr"></a><table width="90%" class="ht" border="0" cellpadding="5" cellspacing="0"> <tr class="ht-title"><td><table width="100%" border="0" cellpadding="0" cellspacing="0"><tr><td class="ht-title">Address</td><td class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="img/top.gif"></a></td></tr></table></td></tr> <tr><td><span class="ht-label">Description: </span>A unique socket address used by the WebSocket backend.  IPv4 sockets, IPv6 sockets, and Unix Domain Sockets (UDS) are supported.  IPv4 and IPv6 sockets can be used for communication over the network.  UDS can only be used when the WebSocket backend resides on the same machine as the server.</td></tr> <tr><td><span class="ht-label">Syntax: </span>IPv4 or IPV6 address:port or UDS://path</td></tr> <tr><td><span class="ht-label">Example: </span>127.0.0.1:5434 <br/>UDS://tmp/lshttpd/php.sock.</td></tr> <tr><td><span class="ht-label">Tips: </span>[Security] If the WebSocket backend runs on the same machine,  UDS is preferred. If you have to use an IPv4 or IPv6 socket,  set the IP address to localhost or 127.0.0.1, so the WebSocket backend  is inaccessible from other machines.<br/>[Performance] Unix Domain Sockets generally provide higher performance than IPv4 or IPv6 sockets.</td></tr> </table></div></section><footer class="copyright">Copyright &copy; 2013. <a href="http://www.litespeedtech.com">Lite Speed Technologies Inc.</a> All rights reserved.</footer> 				</div> 				</body> 				</html>
+<!DOCTYPE html>
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+  <title>Open LiteSpeed Web Server Users' Manual - Web Socket Proxy</title>
+  <meta name="description" content="Open LiteSpeed Web Server Users' Manual - Web Socket Proxy." />  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="shortcut icon" href="img/favicon.ico" />
+  <link rel="stylesheet" type="text/css" href="css/hdoc.css">
+</head>
+<body>
+<div class="pagewrapper"><div class="sidetree">
+<h3>OpenLiteSpeed Web Server <a href="index.html"> Users' Manual</a></h3>
+<h5>Version 1.2 Rev. 2 </h5>
+<hr/>
+<div>
+<ul class="toctop">
+<li><a href="license.html">License</a></li>
+<li><a href="intro.html">Introduction</a></li>
+<li><a href="install.html">Installation</a></li>
+<li><a href="admin.html">Administration</a>
+	<ul class="level2"><li><a href="ServerStat_Help.html">Service Manager</a></li></ul></li>
+<li><a href="security.html">Security</a></li>
+<li><a href="config.html">Configurations</a>
+	<ul class="level2">
+	<li><a href="ServGeneral_Help.html">Server General</a></li>
+	<li><a href="ServTuning_Help.html">Server Tuning</a></li>
+	<li><a href="ServSecurity_Help.html">Server Security</a></li>
+	<li><a href="ExtApp_Help.html">External Apps</a></li>
+	<li><a href="ScriptHandler_Help.html">Script Handler</a></li>
+	<li><a href="Rails_Help.html">Rack/Rails Settings</a></li>
+	<li><a href="Listeners_Help.html">Listeners</a></li>
+	<li><a href="Templates_Help.html">Templates</a></li>
+	<li><a href="VirtualHosts_Help.html">Virtual Host List</a></li>
+	<li><a href="VHGeneral_Help.html">Virtual Host General</a></li>
+	<li><a href="VHSecurity_Help.html">Virtual Host Security</a></li>
+	<li><a href="Rewrite_Help.html">Rewrite</a></li>
+	<li><a href="Context_Help.html">Context</a></li>
+	<li><span class="current"><a href="VHWebSocket_Help.html">Web Socket Proxy</a></span></li>
+	<li><a href="AdminGeneral_Help.html">Admin Server</a></li>
+	<li><a href="AdminListener_Help.html">Admin Listeners</a></li>	
+	</ul>
+</li>
+</ul>
+</div></div>
+<div class="contentwrapper"><div class="nav-bar"><div class="prev">&#171 <a href="Context_Help.html">Context</a></div><div class="center"><a href="config.html">Configuration</a></div><div class="next"><a href="AdminGeneral_Help.html">Administration Console Settings</a> &#187;</div></div>
+<h1>Web Socket Proxy</h1><p><a href="http://en.wikipedia.org/wiki/WebSocket">WebSocket</a> is 
+a protocol that can be used instead of HTTP to deliver real-time, bidirectional 
+communication over the Internet. Starting with version 1.1.1, OpenLiteSpeed supports 
+WebSocket backends through the use of WebSocket proxies. These proxies send the WebSocket 
+communication to the appropriate backend stipulated in the {ITEM=wsaddr} field.</p>
+<h4>Table of Contents</h4><section class="toc"><section class="toc-row"><header>Web Socket Proxy</header><p>
+<a href="#wsuri">URI</a>&nbsp;|&nbsp;<a href="#wsaddr">Address</a>&nbsp;|&nbsp;</p></section>
+</section>
+<section><div class="helpitem"><a name="wsuri"></a><table width="100%" class="ht" border="0" cellpadding="5" cellspacing="0"> <tr class="ht-title"><td><div>URI<span class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="img/top.gif"></a></span></div></td></tr> <tr><td><span class="ht-label">Description: </span>Specifies the URI(s) that will use this WebSocket backend. Traffic to  this URI will only be forwarded to the WebSocket backend when it contains  a WebSocket upgrade request. <br/><br/> Traffic without this upgrade request will automatically be forwarded to the  Context that this URI belongs to. If no Context exists for this URI,  LSWS will treat this traffic as though it is accessing a static context with  the location <span class="val">$DOC_ROOT/URI</span>.</td></tr> <tr><td><span class="ht-label">Syntax: </span>The URI can be a plain URI (starting with "/") or a Perl-compatible  regular expression URI (starting with "exp:"). If a plain URI ends with a "/",  then this WebSocket backend will include all sub-URIs under this URI.</td></tr> <tr><td><span class="ht-label">Example: </span>Using the WebSocket proxy in conjunction with a Context  allows you to serve different kinds of traffic in different ways  on the same page, thus optimizing performance. You can send WebSocket  traffic to the WebSocket backend, while setting up a static context so  that LSWS can serve the page's static content, or an LSAPI context so LSWS  will serve PHP content (both of which LSWS does more efficiently  than the WebSocket backend).</td></tr> </table> </div>
+<div class="helpitem"><a name="wsaddr"></a><table width="100%" class="ht" border="0" cellpadding="5" cellspacing="0"> <tr class="ht-title"><td><div>Address<span class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="img/top.gif"></a></span></div></td></tr> <tr><td><span class="ht-label">Description: </span>A unique socket address used by the WebSocket backend.  IPv4 sockets, IPv6 sockets, and Unix Domain Sockets (UDS) are supported.  IPv4 and IPv6 sockets can be used for communication over the network.  UDS can only be used when the WebSocket backend resides on the same machine as the server.</td></tr> <tr><td><span class="ht-label">Syntax: </span>IPv4 or IPV6 address:port or UDS://path</td></tr> <tr><td><span class="ht-label">Example: </span>127.0.0.1:5434 <br/> UDS://tmp/lshttpd/php.sock.</td></tr> <tr><td><span class="ht-label">Tips: </span>[Security] If the WebSocket backend runs on the same machine,  UDS is preferred. If you have to use an IPv4 or IPv6 socket,  set the IP address to localhost or 127.0.0.1, so the WebSocket backend  is inaccessible from other machines.<br/> [Performance] Unix Domain Sockets generally provide higher performance than IPv4 or IPv6 sockets.</td></tr> </table> </div>
+</section>
+</div><footer class="copyright">Copyright &copy; 2013. <a href="http://www.litespeedtech.com">Lite Speed Technologies Inc.</a> All rights reserved.</footer>
+				</div>
+				</body>
+				</html>

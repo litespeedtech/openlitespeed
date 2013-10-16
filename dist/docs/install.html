@@ -3,15 +3,47 @@
   <meta charset="utf-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
   <title>Open LiteSpeed Web Server Users' Manual - Installation</title>
-  <meta name="description" content="Open LiteSpeed Web Server Users' Manual." />  
+  <meta name="description" content="Open LiteSpeed Web Server Users' Manual - Installation." />  
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="shortcut icon" href="img/favicon.ico" />
   <link rel="stylesheet" type="text/css" href="css/hdoc.css">
 </head>
 <body>
-<div class="wrapper">
-<div class="nav-bar"><ul class="nav-bar"><li>&#171 <a href="intro.html">Introduction</a></li><li><a href="index.html">Home</a></li><li><a href="admin.html">Administration</a> &#187;</li></ul></div>
-
+<div class="pagewrapper"><div class="sidetree">
+<h3>OpenLiteSpeed Web Server <a href="index.html"> Users' Manual</a></h3>
+<h5>Version 1.2 Rev. 2 </h5>
+<hr/>
+<div>
+<ul class="toctop">
+<li><a href="license.html">License</a></li>
+<li><a href="intro.html">Introduction</a></li>
+<li><span class="current"><a href="install.html">Installation</a></span></li>
+<li><a href="admin.html">Administration</a>
+	<ul class="level2"><li><a href="ServerStat_Help.html">Service Manager</a></li></ul></li>
+<li><a href="security.html">Security</a></li>
+<li><a href="config.html">Configurations</a>
+	<ul class="level2">
+	<li><a href="ServGeneral_Help.html">Server General</a></li>
+	<li><a href="ServTuning_Help.html">Server Tuning</a></li>
+	<li><a href="ServSecurity_Help.html">Server Security</a></li>
+	<li><a href="ExtApp_Help.html">External Apps</a></li>
+	<li><a href="ScriptHandler_Help.html">Script Handler</a></li>
+	<li><a href="Rails_Help.html">Rack/Rails Settings</a></li>
+	<li><a href="Listeners_Help.html">Listeners</a></li>
+	<li><a href="Templates_Help.html">Templates</a></li>
+	<li><a href="VirtualHosts_Help.html">Virtual Host List</a></li>
+	<li><a href="VHGeneral_Help.html">Virtual Host General</a></li>
+	<li><a href="VHSecurity_Help.html">Virtual Host Security</a></li>
+	<li><a href="Rewrite_Help.html">Rewrite</a></li>
+	<li><a href="Context_Help.html">Context</a></li>
+	<li><a href="VHWebSocket_Help.html">Web Socket Proxy</a></li>
+	<li><a href="AdminGeneral_Help.html">Admin Server</a></li>
+	<li><a href="AdminListener_Help.html">Admin Listeners</a></li>	
+	</ul>
+</li>
+</ul>
+</div></div>
+<div class="contentwrapper"><div class="nav-bar"><div class="prev">&#171 <a href="intro.html">Introduction</a></div><div class="center"><a href="index.html">Home</a></div><div class="next"><a href="admin.html">Administration</a> &#187;</div></div>
 <h1>Installation/Uninstallation</h1>
 
 <h3>Minimum system requirements</h3>
@@ -116,10 +148,7 @@ XXXX is a port number. If the port is available, the command will produce no out
 	<li>Stop OpenLiteSpeed if it is running: [your_install_dir]/bin/lswsctrl stop</li>
 	<li>Remove the install directory: rm -rf [your_install_dir]
 </ol>
-
-
-<footer class="copyright">Copyright &copy; 2013. <a href="http://www.litespeedtech.com">Lite Speed Technologies Inc.</a> All rights reserved.</footer>
-</div>
-</body>
-</html>
-
+</div><footer class="copyright">Copyright &copy; 2013. <a href="http://www.litespeedtech.com">Lite Speed Technologies Inc.</a> All rights reserved.</footer>
+				</div>
+				</body>
+				</html>

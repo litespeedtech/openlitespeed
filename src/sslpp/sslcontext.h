@@ -104,5 +104,7 @@ public:
     void setStapling (SslOcspStapling * pSslOcspStapling) {  m_pStapling = pSslOcspStapling;}
     int configStapling(const XmlNode *pNode,  
                        const char *pCAFile, char *pachCert, ConfigCtx* pcurrentCtx);
+    int  initECDH();
+    int  initDH( const char * pFile );
 };
 #endif

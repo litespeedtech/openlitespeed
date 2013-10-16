@@ -1393,7 +1393,7 @@ int NtwkIOLink::writevExSSL_T( NtwkIOLink * pThis, IOVec &vector, int total )
                 memmove( pCurEnd, pBuf, bufSize );
                 pCurEnd += bufSize;
                 ++vect;
-                if (( vect < pEnd )&&( ret + ( pCurEnd - pBuf ) < Quota ))
+                if (( vect < pEnd )&&( ret + ( pCurEnd - achBuf ) < Quota ))
                     continue;
             }
             pBuf = achBuf;
