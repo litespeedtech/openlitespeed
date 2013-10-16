@@ -1,1 +1,71 @@
-<!DOCTYPE html> <head>   <meta charset="utf-8" />   <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />   <title>Open LiteSpeed Web Server Users' Manual - Script Handler</title>   <meta name="description" content="Open LiteSpeed Web Server Users' Manual - Script Handler." />     <meta name="viewport" content="width=device-width, initial-scale=1.0" />   <link rel="shortcut icon" href="img/favicon.ico" />   <link rel="stylesheet" type="text/css" href="css/hdoc.css"> </head> <body> <div class="wrapper"> <div class="nav-bar"><ul class="nav-bar"><li>&#171 <a href="ExtApp_Help.html">External Application</a></li><li><a href="config.html">Configuration</a></li><li><a href="Rails_Help.html">Rack/Rails Settings</a> &#187;</li></ul></div>   <h1>Script Handler</h1><p>LiteSpeed Web Server supports all scripting languages including  Perl, PHP, Ruby, Python, Java, etc. Scripts written in these different  languages must be brought to the appropriate external application to be processed.  LiteSpeed Web Server uses script handlers to decide which external application a  script should go to. These script handlers map files to external applications by  using the file suffix. (Actually, the suffix is used to determine a MIME  type which is then mapped to the external application.) External applications  must be set up in the <span class="tagP"><a href="ExtApp_Help.html">External Application</a></span> tab before they can be selected for  use in a script handler.<br/><br/>You can set up script handler at the server or virtual host level. Server-level script handlers apply to all virtual hosts unless overridden in virtual host level.  Virtual host-level script handlers only apply within that virtual host.</p><h4>Table of Contents</h4><section class="toc"><section class="toc-row"><header>Script Handler Settings</header><p><a href="#suffix">Suffix</a>&nbsp;|&nbsp;<a href="#shType">Type</a>&nbsp;|&nbsp;<a href="#shHandlerName">Handler Name</a>&nbsp;|&nbsp;</p></section> </section><section><div class="helpitem"><a name="suffix"></a><table width="90%" class="ht" border="0" cellpadding="5" cellspacing="0"> <tr class="ht-title"><td><table width="100%" border="0" cellpadding="0" cellspacing="0"><tr><td class="ht-title">Suffix</td><td class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="img/top.gif"></a></td></tr></table></td></tr> <tr><td><span class="ht-label">Description: </span>Specifies the script file suffixes that will be handled by this  script handler. Suffixes must be unique.</td></tr> <tr><td><span class="ht-label">Syntax: </span>Comma delimited list with period "." character prohibited.</td></tr> <tr><td><span class="ht-label">Tips: </span>The server will automatically add a special MIME type ("application/x-httpd-[suffix]") for the first  suffix in the list. For example, MIME type "application/x-httpd-php53" will be added  for suffix "php53". Suffixes after the first need to set up in the <span class="tagI"><a href="#mime">MIME Settings</a></span> settings.<br/>Though we list suffixes in this field, the script handlers use MIME types, not suffixes,  to decide which scripts to handle. <br/>[Performance & Security] Only specify the suffixes you really need.</td></tr> </table></div><div class="helpitem"><a name="shType"></a><table width="90%" class="ht" border="0" cellpadding="5" cellspacing="0"> <tr class="ht-title"><td><table width="100%" border="0" cellpadding="0" cellspacing="0"><tr><td class="ht-title">Type</td><td class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="img/top.gif"></a></td></tr></table></td></tr> <tr><td><span class="ht-label">Description: </span>Specifies the type of external application that processes these script files.   Available types are: <span class="val">CGI</span>, <span class="val">FastCGI</span>, <span class="val">Web Server</span>, <span class="val">LSAPI app</span>, <span class="val">Load balancer</span>, or <span class="val">Servlet Engine</span>.  For FastCGI, Web Server and Servlet Engine, a <span class="tagI"><a href="#shHandlerName">Handler Name</a></span> needs to be specified.  This is an external application name as predefined in the <span class="tagP"><a href="ExtApp_Help.html">External Application</a></span> section.</td></tr> <tr><td><span class="ht-label">Syntax: </span>Select from drop down list</td></tr> </table></div><div class="helpitem"><a name="shHandlerName"></a><table width="90%" class="ht" border="0" cellpadding="5" cellspacing="0"> <tr class="ht-title"><td><table width="100%" border="0" cellpadding="0" cellspacing="0"><tr><td class="ht-title">Handler Name</td><td class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="img/top.gif"></a></td></tr></table></td></tr> <tr><td><span class="ht-label">Description: </span>Specifies the name of the external application that processes the script files  when the handler type is FastCGI, Web Server, LSAPI, Load Balancer, or Servlet Engine.</td></tr> <tr><td><span class="ht-label">Syntax: </span>Select from drop down list</td></tr> </table></div></section><footer class="copyright">Copyright &copy; 2013. <a href="http://www.litespeedtech.com">Lite Speed Technologies Inc.</a> All rights reserved.</footer> 				</div> 				</body> 				</html>
+<!DOCTYPE html>
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+  <title>Open LiteSpeed Web Server Users' Manual - Script Handler</title>
+  <meta name="description" content="Open LiteSpeed Web Server Users' Manual - Script Handler." />  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="shortcut icon" href="img/favicon.ico" />
+  <link rel="stylesheet" type="text/css" href="css/hdoc.css">
+</head>
+<body>
+<div class="pagewrapper"><div class="sidetree">
+<h3>OpenLiteSpeed Web Server <a href="index.html"> Users' Manual</a></h3>
+<h5>Version 1.2 Rev. 2 </h5>
+<hr/>
+<div>
+<ul class="toctop">
+<li><a href="license.html">License</a></li>
+<li><a href="intro.html">Introduction</a></li>
+<li><a href="install.html">Installation</a></li>
+<li><a href="admin.html">Administration</a>
+	<ul class="level2"><li><a href="ServerStat_Help.html">Service Manager</a></li></ul></li>
+<li><a href="security.html">Security</a></li>
+<li><a href="config.html">Configurations</a>
+	<ul class="level2">
+	<li><a href="ServGeneral_Help.html">Server General</a></li>
+	<li><a href="ServTuning_Help.html">Server Tuning</a></li>
+	<li><a href="ServSecurity_Help.html">Server Security</a></li>
+	<li><a href="ExtApp_Help.html">External Apps</a></li>
+	<li><span class="current"><a href="ScriptHandler_Help.html">Script Handler</a></span></li>
+	<li><a href="Rails_Help.html">Rack/Rails Settings</a></li>
+	<li><a href="Listeners_Help.html">Listeners</a></li>
+	<li><a href="Templates_Help.html">Templates</a></li>
+	<li><a href="VirtualHosts_Help.html">Virtual Host List</a></li>
+	<li><a href="VHGeneral_Help.html">Virtual Host General</a></li>
+	<li><a href="VHSecurity_Help.html">Virtual Host Security</a></li>
+	<li><a href="Rewrite_Help.html">Rewrite</a></li>
+	<li><a href="Context_Help.html">Context</a></li>
+	<li><a href="VHWebSocket_Help.html">Web Socket Proxy</a></li>
+	<li><a href="AdminGeneral_Help.html">Admin Server</a></li>
+	<li><a href="AdminListener_Help.html">Admin Listeners</a></li>	
+	</ul>
+</li>
+</ul>
+</div></div>
+<div class="contentwrapper"><div class="nav-bar"><div class="prev">&#171 <a href="ExtApp_Help.html">External Application</a></div><div class="center"><a href="config.html">Configuration</a></div><div class="next"><a href="Rails_Help.html">Rack/Rails Settings</a> &#187;</div></div>
+<h1>Script Handler</h1><p>LiteSpeed Web Server supports all scripting languages including 
+Perl, PHP, Ruby, Python, Java, etc. Scripts written in these different 
+languages must be brought to the appropriate external application to be processed. 
+LiteSpeed Web Server uses script handlers to decide which external application a 
+script should go to. These script handlers map files to external applications by 
+using the file suffix. (Actually, the suffix is used to determine a MIME 
+type which is then mapped to the external application.) External applications 
+must be set up in the {PAGE= ExtApp_Help} tab before they can be selected for 
+use in a script handler.
+
+
+You can set up script handler at the server or virtual host level. Server-level
+script handlers apply to all virtual hosts unless overridden in virtual host level. 
+Virtual host-level script handlers only apply within that virtual host.</p>
+<h4>Table of Contents</h4><section class="toc"><section class="toc-row"><header>Script Handler Settings</header><p>
+<a href="#suffix">Suffix</a>&nbsp;|&nbsp;<a href="#shType">Type</a>&nbsp;|&nbsp;<a href="#shHandlerName">Handler Name</a>&nbsp;|&nbsp;</p></section>
+</section>
+<section><div class="helpitem"><a name="suffix"></a><table width="100%" class="ht" border="0" cellpadding="5" cellspacing="0"> <tr class="ht-title"><td><div>Suffix<span class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="img/top.gif"></a></span></div></td></tr> <tr><td><span class="ht-label">Description: </span>Specifies the script file suffixes that will be handled by this  script handler. Suffixes must be unique.</td></tr> <tr><td><span class="ht-label">Syntax: </span>Comma delimited list with period "." character prohibited.</td></tr> <tr><td><span class="ht-label">Tips: </span>The server will automatically add a special MIME type ("application/x-httpd-[suffix]") for the first  suffix in the list. For example, MIME type "application/x-httpd-php53" will be added  for suffix "php53". Suffixes after the first need to set up in the <span class="tagI"><a href="#mime">MIME Settings</a></span> settings.<br/> Though we list suffixes in this field, the script handlers use MIME types, not suffixes,  to decide which scripts to handle. <br/> [Performance & Security] Only specify the suffixes you really need.</td></tr> </table> </div>
+<div class="helpitem"><a name="shType"></a><table width="100%" class="ht" border="0" cellpadding="5" cellspacing="0"> <tr class="ht-title"><td><div>Type<span class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="img/top.gif"></a></span></div></td></tr> <tr><td><span class="ht-label">Description: </span>Specifies the type of external application that processes these script files.   Available types are: <span class="val">CGI</span>, <span class="val">FastCGI</span>, <span class="val">Web Server</span>, <span class="val">LSAPI app</span>, <span class="val">Load balancer</span>, or <span class="val">Servlet Engine</span>.  For FastCGI, Web Server and Servlet Engine, a <span class="tagI"><a href="#shHandlerName">Handler Name</a></span> needs to be specified.  This is an external application name as predefined in the <span class="tagP"><a href="ExtApp_Help.html">External Application</a></span> section.</td></tr> <tr><td><span class="ht-label">Syntax: </span>Select from drop down list</td></tr> </table> </div>
+<div class="helpitem"><a name="shHandlerName"></a><table width="100%" class="ht" border="0" cellpadding="5" cellspacing="0"> <tr class="ht-title"><td><div>Handler Name<span class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="img/top.gif"></a></span></div></td></tr> <tr><td><span class="ht-label">Description: </span>Specifies the name of the external application that processes the script files  when the handler type is FastCGI, Web Server, LSAPI, Load Balancer, or Servlet Engine.</td></tr> <tr><td><span class="ht-label">Syntax: </span>Select from drop down list</td></tr> </table> </div>
+</section>
+</div><footer class="copyright">Copyright &copy; 2013. <a href="http://www.litespeedtech.com">Lite Speed Technologies Inc.</a> All rights reserved.</footer>
+				</div>
+				</body>
+				</html>

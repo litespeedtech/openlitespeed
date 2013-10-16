@@ -1258,12 +1258,12 @@ int HttpConnection::buildErrorResponse( const char * errMsg )
     register unsigned int ver = m_request.getVersion();
     if (( errCode < 0 )||( errCode >= SC_END ))
     {
-        LOG_ERR(( "[%s] invalid HTTP status code: %d!", errCode ));
+        LOG_ERR(( "[%s] invalid HTTP status code: %d!", getLogId(), errCode ));
         errCode = SC_500;
     }
     if ( ver > HTTP_1_0 )
     {
-        LOG_ERR(( "[%s] invalid HTTP version: %d!", ver ));
+        LOG_ERR(( "[%s] invalid HTTP version: %d!", getLogId(), ver ));
         ver = HTTP_1_1;
     }
     if ( sendBody() )

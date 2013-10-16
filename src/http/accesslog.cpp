@@ -339,7 +339,7 @@ void AccessLog::customLog( HttpConnection* pConn )
                         pBuf= m_buf.end();
                         
                         n = RequestVars::getReqVar( pConn, pItem->m_itemId, pBuf, m_buf.available() );
-                        if ( n )
+                        if ( n > 0 )
                         {
                             if ( pBuf != m_buf.end() )
                                 appendStrNoQuote( pBuf, n );

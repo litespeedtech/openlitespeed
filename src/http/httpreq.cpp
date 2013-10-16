@@ -2276,6 +2276,33 @@ char HttpReq::isGeoIpOn() const
     return (m_pContext)?m_pContext->isGeoIpOn():0;
 }
 
+const char * HttpReq::encodeReqLine( int &len )
+{
+    const char * pURI = getURI();
+    int uriLen = getURILen();
+    int start = m_reqBuf.size();
+    int maxLen = uriLen * 3 + 16 + getQueryStringLen();
+    if ( m_reqBuf.available() < maxLen )
+        if ( m_reqBuf.reserve( start + maxLen + 10 ) == -1 )
+            return NULL;
+    char * p = m_reqBuf.getPointer( start );
+    memmove( p, HttpMethod::get( m_method ), HttpMethod::getLen( m_method ));
+    p += HttpMethod::getLen(m_method);
+    *p++ = ' ';
+    //p = escape_uri( p, pURI, uriLen );
+    memmove( p, pURI, uriLen );
+    p += uriLen;
+    if ( getQueryStringLen() > 0 )
+    {
+        *p++ = '?';
+        memmove( p, getQueryString(), getQueryStringLen() );
+        p+= getQueryStringLen();
+    }
+    len = p - m_reqBuf.end();
+    return m_reqBuf.end();
+}
+
+
 int HttpReq::getDecodedOrgReqURI( char * &pValue )
 {
     if ( m_iRedirects > 0 )

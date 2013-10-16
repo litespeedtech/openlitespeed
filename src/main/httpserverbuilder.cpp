@@ -5986,6 +5986,27 @@ SSLContext *HttpServerBuilder::newSSLContext( const XmlNode *pNode )
     protocol = m_pCurConfigCtx->getLongValue( pNode, "sslProtocol", 1, 15, 15 );
     pSSL->setProtocol( protocol );
 
+    int enableDH = m_pCurConfigCtx->getLongValue( pNode, "enableECDHE", 0, 1, 1 );
+    if ( enableDH )
+        pSSL->initECDH();
+    enableDH = m_pCurConfigCtx->getLongValue( pNode, "enableDHE", 0, 1, 0 );
+    if ( enableDH )
+    {
+        const char * pDHParam = pNode->getChildValue( "DHParam" );
+        if ( pDHParam )
+        {
+            if ( m_pCurConfigCtx->getValidPath( achCAPath, pDHParam, "DH Parameter file" ) != 0 )
+            {
+                m_pCurConfigCtx->log_warn( "invalid path for DH paramter: %s, ignore and use built-in DH parameter!",
+                    pDHParam );
+                
+                pDHParam = NULL;
+            }
+            pDHParam = achCAPath;
+        }
+        pSSL->initDH( pDHParam );
+    }
+
     enableSpdy = m_pCurConfigCtx->getLongValue( pNode, "enableSpdy", 0, 3, 3 );
 
     if ( enableSpdy )

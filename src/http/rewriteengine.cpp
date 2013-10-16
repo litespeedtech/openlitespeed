@@ -787,16 +787,16 @@ int RewriteEngine::expandEnv( const RewriteRule * pRule, HttpConnection * pConn 
 //                         pConn->getLogId() ));
 //                pConn->getReq()->orContextState( NO_CONN_TIMEOUT );
 //            }
-//            else if (( pRule->getAction() == RULE_ACTION_PROXY)&&
-//                    ( strcasecmp( pKey, "Proxy-Host" ) == 0 ))
-//            {
-//                pConn->getReq()->setNewHost( pValue, 
-//                        pValEnd - pValue );
-//                if ( m_logLevel > 4 )
-//                    LOG_INFO(( pConn->getLogger(),
-//                        "[%s] [REWRITE] Set Proxy Host header to: '%s' ",
-//                    pConn->getLogId(), pKey, pValue ));
-//            }
+            else if (( pRule->getAction() == RULE_ACTION_PROXY)&&
+                    ( strcasecmp( pKey, "Proxy-Host" ) == 0 ))
+            {
+                pConn->getReq()->setNewHost( pValue, 
+                        pValEnd - pValue );
+                if ( m_logLevel > 4 )
+                    LOG_INFO(( pConn->getLogger(),
+                        "[%s] [REWRITE] Set Proxy Host header to: '%s' ",
+                    pConn->getLogId(), pKey, pValue ));
+            }
             else if ( strcasecmp( pKey, "no-gzip" ) == 0 )
             {
                 if ( strncmp( pValue, "0", 1 ) != 0 )

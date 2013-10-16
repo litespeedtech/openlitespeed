@@ -138,6 +138,93 @@ void SSLContext::updateProtocol( int method )
 #endif
 }
 
+static DH * s_pDH1024 = NULL;
+
+
+/*
+-----BEGIN DH PARAMETERS-----
+MIGHAoGBALgPB5cuGaCX/AxfsOApWEZ+8PTkY5aeRImkDvq6XNjG/slJfPxREEyD
+IN/caV2MzgE24AirvYKAzij24hSZmRIfWxcHn3NLfpD5LOdOk1t+GcaTivCILxmh
+1pkfHj0949REDcZFxVYMxIpxlwvgYOxYpDfLzsA8mnkJqKmWpNqzAgEC
+-----END DH PARAMETERS-----
+*/
+static unsigned char dh1024_p[] = 
+{
+    0xB8,0x0F,0x07,0x97,0x2E,0x19,0xA0,0x97,0xFC,0x0C,0x5F,0xB0,
+    0xE0,0x29,0x58,0x46,0x7E,0xF0,0xF4,0xE4,0x63,0x96,0x9E,0x44,
+    0x89,0xA4,0x0E,0xFA,0xBA,0x5C,0xD8,0xC6,0xFE,0xC9,0x49,0x7C,
+    0xFC,0x51,0x10,0x4C,0x83,0x20,0xDF,0xDC,0x69,0x5D,0x8C,0xCE,
+    0x01,0x36,0xE0,0x08,0xAB,0xBD,0x82,0x80,0xCE,0x28,0xF6,0xE2,
+    0x14,0x99,0x99,0x12,0x1F,0x5B,0x17,0x07,0x9F,0x73,0x4B,0x7E,
+    0x90,0xF9,0x2C,0xE7,0x4E,0x93,0x5B,0x7E,0x19,0xC6,0x93,0x8A,
+    0xF0,0x88,0x2F,0x19,0xA1,0xD6,0x99,0x1F,0x1E,0x3D,0x3D,0xE3,
+    0xD4,0x44,0x0D,0xC6,0x45,0xC5,0x56,0x0C,0xC4,0x8A,0x71,0x97,
+    0x0B,0xE0,0x60,0xEC,0x58,0xA4,0x37,0xCB,0xCE,0xC0,0x3C,0x9A,
+    0x79,0x09,0xA8,0xA9,0x96,0xA4,0xDA,0xB3,
+};
+
+static DH * getTmpDhParam()
+{
+    unsigned char dh1024_g[] = { 0x02 };
+    if ( s_pDH1024 )
+        return s_pDH1024;
+
+    if ((s_pDH1024=DH_new()) != NULL)
+    {
+        s_pDH1024->p=BN_bin2bn(dh1024_p,sizeof(dh1024_p),NULL);
+        s_pDH1024->g=BN_bin2bn(dh1024_g,sizeof(dh1024_g),NULL);
+        if ((s_pDH1024->p == NULL) || (s_pDH1024->g == NULL))
+        {
+            DH_free(s_pDH1024);
+            s_pDH1024 = NULL;
+        }
+    }
+    return s_pDH1024;
+}
+
+int SSLContext::initDH( const char * pFile )
+{
+    DH *pDH = NULL;
+    if ( pFile )
+    {
+        BIO *bio;
+        if ((bio = BIO_new_file(pFile, "r")) != NULL)
+        {
+            pDH = PEM_read_bio_DHparams(bio, NULL, NULL, NULL);
+            BIO_free(bio);
+        }
+    }
+    if ( !pDH )
+    {
+        pDH = getTmpDhParam();
+        if ( !pDH )
+            return -1;
+    }
+    SSL_CTX_set_tmp_dh( m_pCtx, pDH );
+    if ( pDH != s_pDH1024 )
+        DH_free( pDH ); 
+    SSL_CTX_set_options( m_pCtx, SSL_OP_SINGLE_DH_USE);
+    return 0;
+}
+
+int SSLContext::initECDH()
+{
+#if OPENSSL_VERSION_NUMBER >= 0x10001000L
+#ifndef OPENSSL_NO_ECDH
+    EC_KEY *ecdh; 
+    ecdh = EC_KEY_new_by_curve_name(NID_X9_62_prime256v1); 
+    if (ecdh == NULL)
+        return -1;
+    SSL_CTX_set_tmp_ecdh(m_pCtx,ecdh); 
+    EC_KEY_free(ecdh);
+
+    SSL_CTX_set_options(m_pCtx, SSL_OP_SINGLE_ECDH_USE);
+
+#endif
+#endif
+    return 0;
+}
+
 int SSLContext::init( int iMethod )
 {
     if ( m_pCtx != NULL )
@@ -167,6 +254,8 @@ int SSLContext::init( int iMethod )
             setOptions( SSL_OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION );
             SSL_CTX_set_info_callback( m_pCtx, SSLConnection_ssl_info_cb );
         }
+        //initECDH();
+
         return 0;
     }
     else

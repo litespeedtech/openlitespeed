@@ -127,8 +127,6 @@ class DTblDef
 									'NOTICE'=>'NOTICE', 'INFO'=>'INFO', 'DEBUG'=>'DEBUG');
 		$this->_options['updateInterval'] = array( 86400=>'Daily', 604800=>'Weekly', 2592000=>'Monthly' );
 
-		$this->_options['sslversion'] = array('1'=>'SSL v3.0', '2'=>'TLS v1.0', '4'=>'TLS v1.1', '8'=>'TLS v1.2');
-				
 		$ipv6 = array();
 		if ( $_SERVER['LSWS_IPV6_ADDRS'] != '' )
 		{
@@ -1361,6 +1359,7 @@ class DTblDef
 			$this->_attrs['note'],
 			$this->_attrs['railsEnv'],
 			new DAttr('maxConns', 'uint', 'Max Connections', 'text', true, 1, 2000),
+			$this->_attrs['ext_env'],
 			$this->_attrs['enableExpires'],
 			$this->_attrs['expiresDefault'],
 			$this->_attrs['expiresByType'],
@@ -1975,10 +1974,14 @@ class DTblDef
 	protected function add_L_SSL($id)
 	{
 		$this->_tblDef[$id] = new DTbl($id, 'SSL Protocol');
+		$sslversion = array('1'=>'SSL v3.0', '2'=>'TLS v1.0', '4'=>'TLS v1.1', '8'=>'TLS v1.2');
 		
 		$attrs = array(
-			new DAttr('sslProtocol', 'checkboxOr', 'SSL Protocol Version', 'checkboxgroup', TRUE, NULL, $this->_options['sslversion']),
-			new DAttr_SSLCipher('ciphers', 'sslcipher', 'Encryption Level', 'cust', TRUE),
+			new DAttr('sslProtocol', 'checkboxOr', 'SSL Protocol Version', 'checkboxgroup', TRUE, NULL, $sslversion),
+			new DAttr('ciphers', 'cust', 'Ciphers', 'text', true, NULL, '', $this->_options['text_size']),
+			new DAttr('enableECDHE', 'bool', 'Enable ECDH Key Exchange', 'radio', true),
+			new DAttr('enableDHE', 'bool', 'Enable DH Key Exchange', 'radio', true),
+			new DAttr('DHParam', 'cust', 'DH Parameter', 'text', true, NULL, '', $this->_options['text_size']),			
 		);
 
 		$this->_tblDef[$id]->setAttr($attrs);
