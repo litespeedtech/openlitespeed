@@ -278,19 +278,22 @@ SSL_SESSION * SSLConnection::getSession() const
 const char * SSLConnection::getVersion() const
 {   return SSL_get_version( m_ssl );        }
 
+static const char NPN_SPDY_PREFIX[] = { 's', 'p', 'd', 'y', '/' };
 int SSLConnection::getSpdyVersion()
 {
     int v = 0;
     
 #ifdef LS_ENABLE_SPDY
 #ifdef TLSEXT_TYPE_next_proto_neg
-    const char * NEXT_PROTO_NEGOTIATED_PREFIX = "spdy/";
     unsigned int             len;
     const unsigned char     *data;
     SSL_get0_next_proto_negotiated(m_ssl, &data, &len);
-    if (len > strlen(NEXT_PROTO_NEGOTIATED_PREFIX) && 
-        strncasecmp((const char *)data, NEXT_PROTO_NEGOTIATED_PREFIX, strlen(NEXT_PROTO_NEGOTIATED_PREFIX)) == 0) {
-        v = data[strlen(NEXT_PROTO_NEGOTIATED_PREFIX)] - '0' -1;
+    if (len > sizeof( NPN_SPDY_PREFIX ) && 
+        strncasecmp((const char *)data, NPN_SPDY_PREFIX, sizeof( NPN_SPDY_PREFIX ) ) == 0) 
+    {
+        v = data[ sizeof( NPN_SPDY_PREFIX ) ] - '1';
+        if (( v == 2 )&&( len >= 8 )&&( data[6] == '.')&&( data[7] == '1')) 
+             v = 3;
         return v;
     }
 #endif

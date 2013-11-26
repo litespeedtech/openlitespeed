@@ -210,7 +210,7 @@ int KQueuer::waitAndProcessEvents( int iTimeoutMilliSec )
                 {
                     if ( pBegin->data != ENOENT )
                     {
-                        fprintf( stderr, "kevent() error, fd: %d, error: %d, filter: %d flags: %04X\n", pReactor->getfd(), pBegin->data, pBegin->filter, pBegin->flags );
+                        fprintf( stderr, "kevent() error, fd: %d, error: %d, filter: %d flags: %04X\n", pReactor->getfd(), (int)pBegin->data, pBegin->filter, pBegin->flags );
                     }
                     //revent = POLLERR;
                     continue;
@@ -269,7 +269,7 @@ int KQueuer::waitAndProcessEvents( int iTimeoutMilliSec )
                 //wil get this if modify event after socket closed, new socket created with the same file descriptor
                 if ( pBegin->flags & EV_ERROR )  
                 {
-                    fprintf( stderr, "kevent(), mismatch handler, fd: %d, error: %d, filter: %d flags: %04X\n", pReactor->getfd(), pBegin->data, pBegin->filter, pBegin->flags );
+                    fprintf( stderr, "kevent(), mismatch handler, fd: %d, error: %d, filter: %d flags: %04X\n", pReactor->getfd(), (int)pBegin->data, pBegin->filter, pBegin->flags );
                     //if ( (int)pBegin->data != EBADF )
                     //    close( (int)pBegin->ident );
                 }

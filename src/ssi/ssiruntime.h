@@ -36,7 +36,7 @@ public:
     ~SSIRuntime();
 
     void init()
-    {   m_pCurScript = &m_stack[-1];   }
+    {   m_pCurScript = &m_stack[0] -1;   }
 
     int  push( SSIScript *pScript )
     {
@@ -50,14 +50,14 @@ public:
     }
 
     void pop()
-    {   if ( m_pCurScript > &m_stack[-1] )
+    {   if ( m_pCurScript > &m_stack[0] -1 )
             -- m_pCurScript;
     }
     int  full()
     {   return m_pCurScript >= &m_stack[SSI_STACK_SIZE];    }
 
     int  done()
-    {   return m_pCurScript == &m_stack[-1];    }
+    {   return m_pCurScript == &m_stack[0] -1;    }
 
     int initConfig( SSIConfig * pConfig );
 

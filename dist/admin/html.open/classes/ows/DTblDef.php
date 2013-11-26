@@ -543,7 +543,7 @@ class DTblDef
 			new DAttr('gzipCompressLevel', 'uint', 'Compression Level (Dynamic Content)', 'text', true, 1, 9),
 			new DAttr('compressibleTypes', 'parse', 'Compressible Types', 'textarea', true, $parseFormat, $parseHelp, 'rows="5" cols="50"', 1),
 			new DAttr('gzipAutoUpdateStatic', 'bool', 'Auto Update Static File', 'radio'),
-			new DAttr('gzipCacheDir', 'cust', 'Static GZIP Cache Directory', 'text', false, 1, 'rw', $this->_options['text_size']),
+			new DAttr('gzipCacheDir', 'cust', 'Static GZIP Cache Directory', 'text', true, 1, 'rw', $this->_options['text_size']),
 
 			new DAttr('gzipStaticCompressLevel', 'uint', 'Compression Level (Static File)', 'text', true, 1, 9),
 			new DAttr('gzipMaxFileSize', 'uint', 'Max Static File Size (bytes)', 'text', true, '1K'),

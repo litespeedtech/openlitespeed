@@ -37,11 +37,17 @@ struct ifi_info * parse_proc_net()
     {
         return NULL;
     }
-    int ret = nio_read( fd, achBuf, sizeof( achBuf ) - 1 );
+    int ret, total = 0;
+    while( (ret = nio_read( fd, &achBuf[total], sizeof( achBuf ) - total - 1 )) > 0 )
+    {
+        total += ret;
+        if ( total >= (int)sizeof( achBuf ) - 1 )
+            break;
+    }
     nio_close( fd );
     
     struct sockaddr_in6 addr;
-    char * pEnd = &achBuf[ret];
+    char * pEnd = &achBuf[total];
     char * pLineEnd;
     char * p = achBuf;
     *pEnd = 0;

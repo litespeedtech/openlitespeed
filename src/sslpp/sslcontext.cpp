@@ -778,13 +778,13 @@ int SSLContext::addCRL( const char * pCRLFile, const char * pCRLPath)
 static const char * NEXT_PROTO_STRING[3] = 
 {
     "\x06spdy/2\x08http/1.1\x08http/1.0",
-    "\x06spdy/3\x08http/1.1\x08http/1.0",
-    "\x06spdy/3\x06spdy/2\x08http/1.1\x08http/1.0" 
+    "\x08spdy/3.1\x06spdy/3\x08http/1.1\x08http/1.0",
+    "\x08spdy/3.1\x06spdy/3\x06spdy/2\x08http/1.1\x08http/1.0" 
 };
 
 static int NEXT_PROTO_STRING_LEN[3] =
 {
-    25, 25, 32
+    25, 34, 41
 };
 
 //static const char NEXT_PROTO_STRING[] = "\x06spdy/2\x08http/1.1\x08http/1.0";

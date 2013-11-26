@@ -146,14 +146,14 @@ private:
     int                 m_iHostLen;
     int                 m_iPathInfoOff;
     int                 m_iPathInfoLen;
+    const AutoStr2    * m_pRealPath;
+    int                 m_iMatchedLen;
     int                 m_iNewHostLen;
     int                 m_iLocationOff;
 
     // The following member need not to be initialized
-    const AutoStr2    * m_pRealPath;
     AutoStr2            m_sRealPathStore;
     int                 m_iMatchedOff;
-    int                 m_iMatchedLen;
     struct stat         m_fileStat;
     int                 m_iScriptNameLen;
     key_value_pair    * m_urls;

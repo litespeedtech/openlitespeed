@@ -129,7 +129,7 @@ void HttpContext::releaseHTAConf()
 int HttpContext::set( const char * pURI, const char * pLocation,
             const HttpHandler * pHandler, bool browse, int regex)
 {
-    if (( pURI == NULL ))
+    if ( pURI == NULL )
         return EINVAL;
     if ( strncasecmp( pURI, "exp:", 4 ) == 0 )
     {

@@ -4,8 +4,8 @@ Project(openlitespeed)
 INCLUDE( ${PROJECT_SOURCE_DIR}/CMakeModules/common.cmake)
 
 set(openlitespeed_MAJOR_VERSION 1)
-set(openlitespeed_MINOR_VERSION 1)
-set(openlitespeed_PATCH_VERSION 0)
+set(openlitespeed_MINOR_VERSION 2)
+set(openlitespeed_PATCH_VERSION 7)
 set(openlitespeed_VERSION
   ${FOOBAR_MAJOR_VERSION}.${FOOBAR_MINOR_VERSION}.${FOOBAR_PATCH_VERSION})
 

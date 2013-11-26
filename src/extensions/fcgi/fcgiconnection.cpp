@@ -784,7 +784,7 @@ int FcgiConnection::begin()
         pRec->header, FCGI_BEGIN_REQUEST, m_iId, 8 );
     register unsigned short role = getWorker()->getRole();
     pRec->body.roleB0 = role & 0xff;
-    pRec->body.roleB1 = ( role >> 8 ) && 0xff;
+    pRec->body.roleB1 = ( role >> 8 ) & 0xff;
     pRec->body.flags = getWorker()->getConfigPointer()->isPersistConn() & 0xff;
     m_iovec.clear();
     m_iCurStreamHeader = sizeof( FCGI_BeginRequestRecord );

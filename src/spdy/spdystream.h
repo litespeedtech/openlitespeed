@@ -36,7 +36,7 @@ public:
     ~SpdyStream();
     
     int init(uint32_t StreamID,
-             int Priority, SpdyConnection* pSpdyCnn, uint8_t Spdy_Flags, HioStreamHandler * pHandler );
+             int Priority, SpdyConnection* pSpdyConn, uint8_t Spdy_Flags, HioStreamHandler * pHandler );
     int onInitConnected();    
 
     int getPriority() const 
@@ -79,7 +79,7 @@ public:
     int isFlowCtrl() const          {   return getFlag( HIO_FLAG_FLOWCTRL );    }
     
     int32_t getWindowOut() const    {   return m_iWindowOut;    }
-    void adjWindowOut( int32_t n  ) {   m_iWindowOut += n;      }
+    int adjWindowOut( int32_t n  );
 
     int32_t getWindowIn() const     {   return m_iWindowIn;     }
     void adjWindowIn( int32_t n  )  {   m_iWindowIn += n;       }
@@ -91,6 +91,9 @@ public:
         return m_bufIn.append(pData, len);
     }
 
+    int getDataFrameSize( int wanted );
+
+    
     void appendInputData( char ch )
     {
         return m_bufIn.append( ch );
@@ -114,10 +117,9 @@ protected:
 private:
     uint32_t    m_uiStreamID;
     int         m_iPriority;
-    int         m_iBytesAllowSend;
     int32_t     m_iWindowOut;
     int32_t     m_iWindowIn;
-    SpdyConnection* m_pSpdyCnn;
+    SpdyConnection* m_pSpdyConn;
     LoopBuf     m_bufIn;
 };
 

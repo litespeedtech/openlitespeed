@@ -443,7 +443,7 @@ int HttpCgiTool::buildCommonEnv( IEnv * pEnv, HttpConnection * pConn )
         char achTranslated[10240];
         m =  pReq->translatePath( pReq->getPathInfo(), n,
                         achTranslated, sizeof( achTranslated ) );
-        if ( m != -1 );
+        if ( m != -1 )
         {
             pEnv->add( "PATH_TRANSLATED", 15, achTranslated, m );
             ++count;

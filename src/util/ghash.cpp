@@ -191,7 +191,7 @@ void GHash::clear()
     if ( n != (int)m_size )
     {
         fprintf( stderr, "GHash::clear() error: n=%d, m_size=%d!\n",
-                    n, m_size );
+                    n, (int)m_size );
     }
     ::memset( m_table, 0, sizeof( HashElem* ) * m_capacity );
     m_size = 0;
