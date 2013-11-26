@@ -86,7 +86,7 @@ inline int buildStaticFileHeaders( HttpResp * pResp, StaticFileData * pData )
 
 
 #include <http/httpglobals.h>
-#define READ_BUF_SIZE 8192
+#define READ_BUF_SIZE 16384
 
 static int cacheSend( HttpConnection* pConn, StaticFileData * pData, int remain )
 {

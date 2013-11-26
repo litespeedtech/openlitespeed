@@ -188,6 +188,7 @@ private:
     void checkSSLReadRet( int ret );
     
     int setupHandler( HiosProtocol verSpdy );
+    int sslSetupHandler();
     void doClose();
 
     void dumpState(const char * pFuncName, const char * action);

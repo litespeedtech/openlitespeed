@@ -85,10 +85,10 @@
             <runOnStartUp></runOnStartUp>
             <extMaxIdleTime></extMaxIdleTime>
             <priority>0</priority>
-            <memSoftLimit>450M</memSoftLimit>
-            <memHardLimit>500M</memHardLimit>
-            <procSoftLimit>300</procSoftLimit>
-            <procHardLimit>400</procHardLimit>
+            <memSoftLimit>2047M</memSoftLimit>
+            <memHardLimit>2047M</memHardLimit>
+            <procSoftLimit>400</procSoftLimit>
+            <procHardLimit>500</procHardLimit>
         </extProcessor>
     </extProcessorList>
     <scriptHandlerList>
@@ -114,10 +114,10 @@
     <runOnStartUp>1</runOnStartUp>
     <extMaxIdleTime>300</extMaxIdleTime>
     <priority>3</priority>
-    <memSoftLimit>550M</memSoftLimit>
-    <memHardLimit>600M</memHardLimit>
-    <procSoftLimit>300</procSoftLimit>
-    <procHardLimit>400</procHardLimit>
+    <memSoftLimit>2047M</memSoftLimit>
+    <memHardLimit>2047M</memHardLimit>
+    <procSoftLimit>400</procSoftLimit>
+    <procHardLimit>500</procHardLimit>
   </railsDefaults>
 
     <tuning>

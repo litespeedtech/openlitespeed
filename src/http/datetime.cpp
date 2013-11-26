@@ -222,7 +222,7 @@ char * DateTime::getLogTime( time_t lTime, char * pBuf, int bGMT )
     static char lastTimeStr[40];
     static long lastTime = 0;
     //static bool lastGMT = 0;
-    if (( lastTime == lTime )
+    if ( lastTime == lTime 
         //&&( lastGMT == bGMT )
         )
     {

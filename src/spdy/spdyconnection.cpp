@@ -61,9 +61,12 @@ SpdyConnection::SpdyConnection()
         , m_uiGoAwayId( 0 )
         , m_mapStream( 50, int_hash, int_comp )        
         , m_flag( 0 )
-        , m_iServerInitWindowSize( 5*1024*1024 )
+        , m_iCurDataOutWindow( SPDY_FCW_INIT_SIZE )
+        , m_iCurInBytesToUpdate( 0 )
+        , m_iDataInWindow( SPDY_FCW_INIT_SIZE )
+        , m_iStreamInInitWindowSize( 5*1024*1024 )
         , m_iServerMaxStreams( 500 )
-        , m_iClientInitWindowSize( 65536 )
+        , m_iStreamOutInitWindowSize( SPDY_FCW_INIT_SIZE )
         , m_iClientMaxStreams( 100 )
         , m_tmIdleBegin( 0 )
 {
@@ -71,14 +74,15 @@ SpdyConnection::SpdyConnection()
 
 int SpdyConnection::init( HiosProtocol ver )
 {
+    m_iCurDataOutWindow = SPDY_FCW_INIT_SIZE;
     m_deflator.init( 0, ver );
     m_inflator.init( 1, ver );
     m_uiLastStreamID = 0;
     m_bVersion = ver + 1;
     if ( ver == HIOS_PROTO_SPDY3 )
-        m_iClientInitWindowSize = 65536;
+        m_iStreamOutInitWindowSize = SPDY_FCW_INIT_SIZE;
     else
-        m_iClientInitWindowSize = 1024 * 1024 * 1024;   //For SPDY2, there is no flow control, set it to a large value
+        m_iStreamOutInitWindowSize = 1024 * 1024 * 1024;   //For SPDY2, there is no flow control, set it to a large value
     m_iServerMaxStreams = 500;
     m_iClientMaxStreams = 100;
     
@@ -94,7 +98,12 @@ int SpdyConnection::onInitConnected()
     m_state = HIOS_CONNECTED;
     setOS( getStream() );
     getStream()->continueRead();
-    sendSettings(m_iServerMaxStreams, m_iServerInitWindowSize);
+    //sendSettings(m_iServerMaxStreams, m_iStreamInInitWindowSize);
+    if ( isFlowCtrl() )
+    {
+        //sendWindowUpdateFrame( 0, SPDY_FCW_INIT_SIZE );
+        //m_iDataInWindow += SPDY_FCW_INIT_SIZE;
+    }
     return 0;
 }
 
@@ -150,6 +159,12 @@ int SpdyConnection::onReadEx2()
                     break;
                 m_bufInput.moveTo((char*)m_pcurrentSpdyHeader, 8);
                 m_iCurrentFrameRemain = m_pcurrentSpdyHeader->getLength();
+                if ( D_ENABLED( DL_LESS ) )
+                {
+                    if ( !m_pcurrentSpdyHeader->isControlFrame() )
+                        LOG_D(( getLogger(), "[%s] DATA frame, size: %d", getLogId(), 
+                                m_iCurrentFrameRemain ));
+                }        
             }
             if ( m_pcurrentSpdyHeader->isControlFrame() )
             {
@@ -172,6 +187,19 @@ int SpdyConnection::onReadEx2()
                     m_iCurrentFrameRemain = -8;
             }
         }
+
+        if ( isFlowCtrl()&&
+            ( m_iDataInWindow / 2 < m_iCurInBytesToUpdate ))
+        {
+            if ( D_ENABLED( DL_LESS ) )
+            {
+                LOG_D(( getLogger(), "[%s] bytes received for WINDOW_UPDATE: %d", 
+                        getLogId(), m_iDataInWindow ));
+            }        
+            sendWindowUpdateFrame( 0, m_iCurInBytesToUpdate );
+            m_iCurInBytesToUpdate = 0;
+        }
+
     }
     return 0;
 }
@@ -245,54 +273,44 @@ void SpdyConnection::printLogMsg( SpdyFrameHeader* pHeader )
 
 int SpdyConnection::processSettingFrame( SpdyFrameHeader * pHeader )
 {//process each setting ID/value pair
-    static char cpTemp[100];
     static const char* cpEntryNames[] = 
         {   "",
-            "SPDY_SETTINGS_UPLOAD_BANDWIDTH = ",
-            "SPDY_SETTINGS_DOWNLOAD_BANDWIDTH = ",
-            "SPDY_SETTINGS_ROUND_TRIP_TIME = ",
-            "SPDY_SETTINGS_MAX_CONCURRENT_STREAMS = ", 
-            "SPDY_SETTINGS_CURRENT_CWND = ",
-            "SPDY_SETTINGS_DOWNLOAD_RETRANS_RATE = ",
-            "SPDY_SETTINGS_INITIAL_WINDOW_SIZE = " };              
+            "SETTINGS_UPLOAD_BANDWIDTH",
+            "SETTINGS_DOWNLOAD_BANDWIDTH",
+            "SETTINGS_ROUND_TRIP_TIME",
+            "SETTINGS_MAX_CONCURRENT_STREAMS", 
+            "SETTINGS_CURRENT_CWND",
+            "SETTINGS_DOWNLOAD_RETRANS_RATE",
+            "SETTINGS_INITIAL_WINDOW_SIZE" };              
     uint32_t iEntryID, iEntryValue;
     SpdySettingPairs settingPairs;
     unsigned char ucEntryFlags;    
     int iEntries = pHeader->getHboData( 0 );
-    unsigned char ucflags = pHeader->getFlags();
     if ( m_iCurrentFrameRemain != 8 * iEntries )
     {
         LOG_INFO(( getLogger(), "[%s] bad SETTING frame, frame size does not match, ignore.",
                         getLogId() ));          
         return 0;
     }
-    if ( D_ENABLED( DL_LESS ) )
-    {
-        snprintf( cpTemp, 100, "SPDY SETTINGS: Version:%d, Flags:%d, Number of Entries:%d\n", 
-              m_bVersion, ucflags, iEntries);
-        m_bufInflate.clear();
-        m_bufInflate.append(cpTemp);
-     }
     
 
     for( int i = 0; i < iEntries; i++)
     {
         m_bufInput.moveTo( (char*)&settingPairs, 8);
-        if ( m_bVersion == 3 )
+        if ( m_bVersion == 2 )
             settingPairs.swapID();
         ucEntryFlags = settingPairs.getFlags();
         iEntryID = settingPairs.getID();
         iEntryValue = settingPairs.getValue();
         if ( D_ENABLED( DL_LESS ) )
         {
-            m_bufInflate.append(cpEntryNames[iEntryID]);
-            sprintf( cpTemp, "%d, Flags=%d\n", iEntryValue, ucEntryFlags);  
-            m_bufInflate.append(cpTemp);
+            LOG_D(( getLogger(), "[%s] %s(%d) value: %d, Flags=%d", getLogId(), 
+                    (iEntryID < 8)?cpEntryNames[iEntryID]:"INVALID", iEntryID, iEntryValue, ucEntryFlags));
         }        
         switch( iEntryID )
         {
         case SPDY_SETTINGS_INITIAL_WINDOW_SIZE:
-            m_iClientInitWindowSize = iEntryValue ;
+            m_iStreamOutInitWindowSize = iEntryValue ;
             break;
         case SPDY_SETTINGS_MAX_CONCURRENT_STREAMS:
             m_iClientMaxStreams = iEntryValue ;
@@ -302,12 +320,8 @@ int SpdyConnection::processSettingFrame( SpdyFrameHeader * pHeader )
         }        
     }
     m_iCurrentFrameRemain = 0;
-    if ( D_ENABLED( DL_LESS ) )
-    {
-        m_bufInflate.append( '\0' );
-        LOG_D(( getLogger(), "[%s] %s",
-                        getLogId(), m_bufInflate.begin() ) );          
-    }
+    
+    sendSettings(m_iServerMaxStreams, m_iStreamInInitWindowSize);
     return 0;
 }
 
@@ -315,22 +329,23 @@ int SpdyConnection::processWindowUpdateFrame( SpdyFrameHeader * pHeader )
 {
     int32_t id = pHeader->getHboData(0);
     int32_t delta = pHeader->getHboData(1);
-    StreamobjpMap::iterator it = m_mapStream.find(( void* ) id );
+    StreamMap::iterator it;
+    if (( id == 0 )&&( isFlowCtrl() ))
+    {
+        m_iCurDataOutWindow += delta;
+        if ( D_ENABLED( DL_LESS ) )
+        {
+             LOG_D(( getLogger(), "[%s] session WINDOW_UPDATE: %d, window size: %d ",
+                            getLogId(), delta, m_iCurDataOutWindow ) );          
+        }
+        return 0;
+    }
+    it = m_mapStream.find(( void* )(long)id );
     if ( it != m_mapStream.end() ) 
     {
         SpdyStream * pStream = it.second();
-        int32_t current = pStream->getWindowOut();
-        if ( pStream->isFlowCtrl() )
-        {
-            pStream->adjWindowOut( delta );
-            if (( current >= 0 )&&( pStream->getWindowOut() < 0 ))
-            {
-                //window overflow
-                resetStream( it, SPDY_RST_STREAM_FLOW_CONTROL_ERROR );
-            }
-            else if (( pStream->isWantWrite() )&& ( pStream->getWindowOut() > 0 ))
-                getStream()->continueWrite();
-        }
+        if ( pStream->adjWindowOut( delta ) == -1 )
+            resetStream( it, SPDY_RST_STREAM_FLOW_CONTROL_ERROR );
     }
     return 0;
 }
@@ -338,7 +353,7 @@ int SpdyConnection::processWindowUpdateFrame( SpdyFrameHeader * pHeader )
 
 int SpdyConnection::processRstFrame( SpdyFrameHeader* pHeader )
 {
-    StreamobjpMap::iterator it = m_mapStream.find(( void* ) pHeader->getHboData(0) );
+    StreamMap::iterator it = m_mapStream.find(( void* )(long)pHeader->getHboData(0) );
     if ( it == m_mapStream.end() )
         return 0;
     SpdyStream* pSpdyStream = it.second();
@@ -355,6 +370,9 @@ void SpdyConnection::skipRemainData()
         len = m_iCurrentFrameRemain;
     m_bufInput.pop_front( len );
     m_iCurrentFrameRemain -= len;
+    
+    if ( isFlowCtrl() )
+        m_iCurInBytesToUpdate += len;
 }
 
 int SpdyConnection::processDataFrame( SpdyFrameHeader* pHeader )
@@ -386,6 +404,8 @@ int SpdyConnection::processDataFrame( SpdyFrameHeader* pHeader )
         pSpdyStream->appendReqData( m_bufInput.begin(), len,
                               m_iCurrentFrameRemain ? 0 : pHeader->getFlags() );
         m_bufInput.pop_front( len );
+        if ( isFlowCtrl() )
+            m_iCurInBytesToUpdate += len;
     }
         
     if ( isSpdy3() && !pSpdyStream->isPeerShutdown() )
@@ -395,11 +415,11 @@ int SpdyConnection::processDataFrame( SpdyFrameHeader* pHeader )
             LOG_D(( getLogger(), "[%s] processDataFrame() ID: %d, input window size: %d ",
                     getLogId(), streamID, pSpdyStream->getWindowIn() ) );
         }
-
-        if ( pSpdyStream->getWindowIn() < m_iServerInitWindowSize / 2 )
+        
+        if ( pSpdyStream->getWindowIn() < m_iStreamInInitWindowSize / 2 )
         {
-            sendWindowUpdateFrame( streamID, m_iServerInitWindowSize / 2 );
-            pSpdyStream->adjWindowIn( m_iServerInitWindowSize / 2 );
+            sendWindowUpdateFrame( streamID, m_iStreamInInitWindowSize / 2 );
+            pSpdyStream->adjWindowIn( m_iStreamInInitWindowSize / 2 );
         }
     }
     return 0;
@@ -413,7 +433,7 @@ int SpdyConnection::processSynStreamFrame(SpdyFrameHeader* pHeader )
     int priority;
     SpdyStream* pStream;
     uint32_t id = pHeader->getHboData( 0 );
-    if ( m_flag & SPDY_CNN_FLAG_GOAWAY )
+    if ( m_flag & SPDY_CONN_FLAG_GOAWAY )
     {
         return 0;
     }
@@ -653,7 +673,7 @@ SpdyStream* SpdyConnection::getNewStream( uint32_t uiStreamID, int iPriority, ui
     pConn->setNtwkIOLink( pLink );
     pStream = new SpdyStream();
     //pStream = SpdyStreamPool::getSpdyStream();
-    m_mapStream.insert(( void* )uiStreamID, pStream );
+    m_mapStream.insert(( void* )(long)uiStreamID, pStream );
     if ( D_ENABLED( DL_MORE ) )
     {
         LOG_D(( getLogger(), "[%s] getNewStream(), ID: %d, stream map size: %d ",
@@ -669,14 +689,14 @@ SpdyStream* SpdyConnection::getNewStream( uint32_t uiStreamID, int iPriority, ui
 
 void SpdyConnection::recycleStream( uint32_t uiStreamID )
 {
-    StreamobjpMap::iterator it = m_mapStream.find(( void* ) uiStreamID );
+    StreamMap::iterator it = m_mapStream.find(( void* )(long) uiStreamID );
     if ( it == m_mapStream.end() )
         return;
     recycleStream( it );
 }
 
 
-void SpdyConnection::recycleStream( StreamobjpMap::iterator it )
+void SpdyConnection::recycleStream( StreamMap::iterator it )
 {
     SpdyStream* pSpdyStream = it.second();
     m_mapStream.erase( it );
@@ -704,11 +724,6 @@ int SpdyConnection::appendCtrlFrameHeader( SpdyFrameType type, uint8_t len )
     s_achFrameHeader[7] = len;
     
     getBuf()->append( (char*)s_achFrameHeader, 8 );
-    if ( D_ENABLED( DL_MORE ) )
-    {
-        LOG_D(( getLogger(), "[%s] send %s, len: %d"
-                , getLogId(), getFrameName( type ), len ) );
-    }
     
     return 0;
 }
@@ -721,6 +736,11 @@ int SpdyConnection::sendFrame8Bytes( SpdyFrameType type, uint32_t uiVal1, uint32
     appendNbo4Bytes( getBuf(), uiVal1 );
     appendNbo4Bytes( getBuf(), uiVal2 );
     flush();
+    if ( D_ENABLED( DL_MORE ) )
+    {
+        LOG_D(( getLogger(), "[%s] send %s frame, stream: %d, value: %d"
+                , getLogId(), getFrameName( type ), uiVal1, uiVal2 ) );
+    }
     return 0;
 }
 
@@ -730,6 +750,11 @@ int SpdyConnection::sendFrame4Bytes( SpdyFrameType type, uint32_t uiVal1 )
     appendCtrlFrameHeader( type, 4 );
     appendNbo4Bytes( getBuf(), uiVal1 );
     flush();
+    if ( D_ENABLED( DL_MORE ) )
+    {
+        LOG_D(( getLogger(), "[%s] send %s frame, value: %d"
+                , getLogId(), getFrameName( type ), uiVal1 ) );
+    }
     return 0;
 }
 
@@ -773,14 +798,33 @@ int SpdyConnection::sendSettings(uint32_t uiMaxStreamNum, uint32_t uiWindowSize)
         appendNbo4Bytes( getBuf(), uiMaxStreamNum );
         append4Bytes( getBuf(), cWindowSizeV3 );
         appendNbo4Bytes( getBuf(), uiWindowSize );
+        if ( D_ENABLED( DL_MORE ) )
+        {
+            LOG_D(( getLogger(), 
+                    "[%s] send SETTING frame, MAX_CONCURRENT_STREAMS: %d,"
+                    "  INITIAL_WINDOW_SIZE: %d"
+                    , getLogId(), uiMaxStreamNum, uiWindowSize ) );
+        }
     }
     else
     {
         appendCtrlFrameHeader( SPDY_FRAME_SETTINGS, 12 );
         getBuf()->append(cMaxStreamNumV2, 8 );    
         appendNbo4Bytes( getBuf(), uiMaxStreamNum );
+        if ( D_ENABLED( DL_MORE ) )
+        {
+            LOG_D(( getLogger(), 
+                    "[%s] send SETTING frame, MAX_CONCURRENT_STREAMS: %d,"
+                     , getLogId(), uiMaxStreamNum ) );
+        }
     }
-    flush();
+    if ( isFlowCtrl() )
+    {
+        sendWindowUpdateFrame( 0, SPDY_FCW_INIT_SIZE );
+        m_iDataInWindow += SPDY_FCW_INIT_SIZE;
+    }
+    else
+        flush();
     return 0;
 }
 
@@ -804,7 +848,7 @@ int SpdyConnection::processPingFrame( SpdyFrameHeader * pHeader )
     msec += ( CurTime.tv_usec - m_timevalPing.tv_usec ) / 1000;
     if ( D_ENABLED( DL_MORE ) )
     {
-        LOG_D(( getLogger(), "[%s] Received Ping, ID=%d, Round trip "
+        LOG_D(( getLogger(), "[%s] Received PING, ID=%d, Round trip "
                 "times=%d milli-seconds", getLogId(), m_uiLastPingID, msec ) );
     }
     return 0;
@@ -817,7 +861,7 @@ int SpdyConnection::append400BadReqReply( uint32_t uiStreamID )
 
 SpdyStream* SpdyConnection::findStream( uint32_t uiStreamID )
 {
-    StreamobjpMap::iterator it = m_mapStream.find(( void* ) uiStreamID );
+    StreamMap::iterator it = m_mapStream.find(( void* )(long)uiStreamID );
     if ( it == m_mapStream.end() )
         return NULL;
     return it.second();
@@ -848,7 +892,7 @@ int SpdyConnection::onCloseEx()
 int SpdyConnection::onTimerEx()
 {
     int result = 0;
-    if ( m_flag & SPDY_CNN_FLAG_GOAWAY )
+    if ( m_flag & SPDY_CONN_FLAG_GOAWAY )
         result = releaseAllStream();
     else
         result = timerRoutine();
@@ -858,7 +902,7 @@ int SpdyConnection::onTimerEx()
 
 int SpdyConnection::processGoAwayFrame( SpdyFrameHeader * pHeader )
 {
-    m_flag |= ( short )SPDY_CNN_FLAG_GOAWAY;
+    m_flag |= ( short )SPDY_CONN_FLAG_GOAWAY;
 
     onCloseEx();
     return true;
@@ -890,7 +934,7 @@ int SpdyConnection::sendGoAwayFrame(SpdyGoAwayStatus status )
 
 int SpdyConnection::releaseAllStream()
 {
-    StreamobjpMap::iterator itn, it = m_mapStream.begin();
+    StreamMap::iterator itn, it = m_mapStream.begin();
     for ( ; it != m_mapStream.end(); )
     {
         itn = m_mapStream.next( it );
@@ -903,7 +947,7 @@ int SpdyConnection::releaseAllStream()
 
 int SpdyConnection::timerRoutine()
 {
-    StreamobjpMap::iterator itn, it = m_mapStream.begin();
+    StreamMap::iterator itn, it = m_mapStream.begin();
     for ( ; it != m_mapStream.end(); )
     {
         itn = m_mapStream.next( it );
@@ -989,7 +1033,7 @@ int SpdyConnection::sendRespHeaders( IOVec &vector, int iheaderCount, uint32_t u
     getBuf()->update(( headerOffset + 4 ), (char*)&temp32, 4 );        //Length
     if ( D_ENABLED( DL_MORE ) )
     {
-        LOG_D(( getLogger(), "[%s] Append_Respons_Header() successfull, "
+        LOG_D(( getLogger(), "[%s] sent SYN_REPLY for "
                 "StreamID=%lu, total=%d\n", getLogId(), uiStreamID, total ) );
     }
     return total;
@@ -1063,7 +1107,7 @@ void SpdyConnection::resetStream( SpdyStream * pStream, SpdyRstErrorCode code )
 
 }
 
-void SpdyConnection::resetStream( StreamobjpMap::iterator it, SpdyRstErrorCode code )
+void SpdyConnection::resetStream( StreamMap::iterator it, SpdyRstErrorCode code )
 {
     sendRstFrame( it.second()->getStreamID(), code ); 
     recycleStream( it );

@@ -29,7 +29,7 @@
 SpdyStream::SpdyStream()
         :m_uiStreamID(0)
         ,m_iPriority(0)
-        ,m_pSpdyCnn(NULL)
+        ,m_pSpdyConn(NULL)
 {
 }
 
@@ -40,14 +40,14 @@ const char * SpdyStream::buildLogId()
     AutoStr2 & id = getIdBuf();
     
     len = safe_snprintf( id.buf(), MAX_LOGID_LEN, "%s-%d",
-                         m_pSpdyCnn->getStream()->getLogId(), m_uiStreamID );
+                         m_pSpdyConn->getStream()->getLogId(), m_uiStreamID );
     id.setLen( len );
     return id.c_str();
 }
 
 
 int SpdyStream::init(uint32_t StreamID, 
-                     int Priority, SpdyConnection* pSpdyCnn, uint8_t flags, HioStreamHandler * pHandler )
+                     int Priority, SpdyConnection* pSpdyConn, uint8_t flags, HioStreamHandler * pHandler )
 {
     HioStream::reset();
     pHandler->assignStream( this );
@@ -58,11 +58,10 @@ int SpdyStream::init(uint32_t StreamID,
 
     m_bufIn.clear();
     m_uiStreamID  = StreamID;
-    m_iBytesAllowSend = SPDY_MAX_DATAFRAM_SIZE;
-    m_iWindowOut = pSpdyCnn->getClientInitWindowSize();
-    m_iWindowIn = pSpdyCnn->getServerInitWindowSize();
+    m_iWindowOut = pSpdyConn->getStreamOutInitWindowSize();
+    m_iWindowIn = pSpdyConn->getStreamInInitWindowSize();
     m_iPriority = Priority;
-    m_pSpdyCnn = pSpdyCnn;
+    m_pSpdyConn = pSpdyConn;
     if ( D_ENABLED( DL_LESS ))
     {
         LOG_D(( getLogger(), "[%s] SpdyStream::init(), id: %d. ",
@@ -142,7 +141,7 @@ void SpdyStream:: continueWrite()
                 getLogId() ));
     }
     setFlag(HIO_FLAG_WANT_WRITE, 1);
-    m_pSpdyCnn->continueWrite();
+    m_pSpdyConn->continueWrite();
     
 }
 void SpdyStream::onTimer()
@@ -152,8 +151,6 @@ void SpdyStream::onTimer()
 
 int SpdyStream::sendFin()
 {
-    char achHeader[8];
-    
     if ( getState() == HIOS_SHUTDOWN )
         return 0;
     
@@ -164,9 +161,8 @@ int SpdyStream::sendFin()
         LOG_D(( getLogger(), "[%s] SpdyStream::sendFin()",
                 getLogId() ));
     }
-    buildDataFrameHeader( achHeader, 0 );
-    m_pSpdyCnn->cacheWrite( achHeader, sizeof( achHeader ) );
-    m_pSpdyCnn->flush();
+    m_pSpdyConn->sendFinFrame( m_uiStreamID );
+    m_pSpdyConn->flush();
     return 0;
 }
 
@@ -179,13 +175,13 @@ int SpdyStream::close()
     sendFin();
     setFlag( HIO_FLAG_WANT_WRITE, 1 );
     setState(HIOS_DISCONNECTED);
-    m_pSpdyCnn->continueWrite();
+    m_pSpdyConn->continueWrite();
     //if (getHandler())
     //{
     //    getHandler()->recycle();
     //    setHandler( NULL );
     //}
-    //m_pSpdyCnn->recycleStream( m_uiStreamID );
+    //m_pSpdyConn->recycleStream( m_uiStreamID );
     return 0;
 }
 
@@ -200,23 +196,49 @@ int SpdyStream::flush()
     return 0;
 }
 
+int SpdyStream::getDataFrameSize( int wanted )
+{
+    if (( m_pSpdyConn->isOutBufFull() )||
+        ( 0 >= m_iWindowOut ))
+    {
+        setFlag( HIO_FLAG_BUFF_FULL|HIO_FLAG_WANT_WRITE, 1 );
+        m_pSpdyConn->continueWrite();
+        return 0;
+    }
+
+    if ( wanted > m_iWindowOut )
+        wanted = m_iWindowOut;
+    if ( m_pSpdyConn->isFlowCtrl() && ( wanted > m_pSpdyConn->getCurDataOutWindow() ))
+        wanted = m_pSpdyConn->getCurDataOutWindow();
+    if ( wanted > SPDY_MAX_DATAFRAM_SIZE ) 
+        wanted = SPDY_MAX_DATAFRAM_SIZE;
+    return wanted;
+}
+
 int SpdyStream::writev( IOVec &vector, int total )
 {
-    int totalSended = 0;
-    IOVec::iterator it;
+    int size;
+    int ret; 
     if ( getState()==HIOS_DISCONNECTED )
         return -1;
     if (getFlag( HIO_FLAG_BUFF_FULL) )
         return 0;
-    
-    it = vector.begin();
-    for (; it != vector.end(); it++)
+    size = getDataFrameSize( total );
+    if ( size <= 0 )
+        return 0;
+    if ( size < total )
     {
-        totalSended  += write( (char*)(it->iov_base), it->iov_len) ;
-        if (getFlag( HIO_FLAG_BUFF_FULL) )
-            return totalSended;
+        //adjust vector
+        IOVec iov( vector );
+        total = iov.shrinkTo( size, 0 );
+        ret = sendData( &iov, size );
     }
-    return totalSended;
+    else
+        ret = sendData( &vector, size );
+    if ( ret == -1 )
+        return -1;
+    return size;
+    
 }
 
 int SpdyStream::write( const char * buf, int len )
@@ -225,17 +247,9 @@ int SpdyStream::write( const char * buf, int len )
     int allowed;
     if ( getState() == HIOS_DISCONNECTED )
         return -1;
-    if (( m_pSpdyCnn->isOutBufFull() )||
-        ( 0 >= m_iBytesAllowSend ))
-    {
-        setFlag( HIO_FLAG_BUFF_FULL|HIO_FLAG_WANT_WRITE, 1 );
-        m_pSpdyCnn->continueWrite();
+    allowed = getDataFrameSize( len );
+    if ( allowed <= 0 )
         return 0;
-    }
-    
-    allowed = m_iBytesAllowSend;
-    if ( len < allowed )
-        allowed = len;
 
     iov.append( buf, allowed );
     if ( sendData( &iov, allowed ) == -1 )
@@ -253,19 +267,16 @@ int SpdyStream::onWrite()
         LOG_D(( getLogger(), "[%s] SpdyStream::onWrite()",
                 getLogId() ));
     }
-    if ( m_pSpdyCnn->isOutBufFull() )
+    if ( m_pSpdyConn->isOutBufFull() )
         return 0;
-    m_iBytesAllowSend = SPDY_MAX_DATAFRAM_SIZE;
-    if ( m_iBytesAllowSend > m_iWindowOut )
-        m_iBytesAllowSend = m_iWindowOut;
-    if ( m_iBytesAllowSend <= 0 )
+    if ( m_iWindowOut <= 0 )
         return 0;
     setFlag( HIO_FLAG_BUFF_FULL, 0 );
 
     if ( isWantWrite() )
         getHandler()->onWriteEx();
     if ( isWantWrite() )
-        m_pSpdyCnn->continueWrite();
+        m_pSpdyConn->continueWrite();
     return 0;
 }
 
@@ -284,7 +295,8 @@ int SpdyStream::sendData( IOVec * pIov, int total )
     int ret;
     buildDataFrameHeader( achHeader, total );
     pIov->push_front( achHeader, 8 );
-    ret = m_pSpdyCnn->cacheWritev( *pIov );
+    ret = m_pSpdyConn->cacheWritev( *pIov );
+    pIov->pop_front( 1 );
     if ( D_ENABLED( DL_LESS ))
     {
         LOG_D(( getLogger(), "[%s] SpdyStream::sendData(), total: %d, ret: %d",
@@ -296,11 +308,13 @@ int SpdyStream::sendData( IOVec * pIov, int total )
         return -1;
     }
     bytesSent( total );
-    m_iBytesAllowSend -= total;
+    m_pSpdyConn->dataFrameSent( total );
     if ( isFlowCtrl() )
+    {
         m_iWindowOut -= total;
-    if ( m_iBytesAllowSend <= 0 )
-        setFlag( HIO_FLAG_BUFF_FULL, 1 );
+        if ( m_iWindowOut <= 0 )
+            setFlag( HIO_FLAG_BUFF_FULL, 1 );
+    }
     return total;
 }
 
@@ -309,8 +323,29 @@ int SpdyStream::sendHeaders( IOVec &vector, int headerCount )
 {
     if ( getState() == HIOS_DISCONNECTED )
         return -1;
-    m_pSpdyCnn->move2ReponQue(this);
-    return m_pSpdyCnn->sendRespHeaders(vector, headerCount, m_uiStreamID);
+    m_pSpdyConn->move2ReponQue(this);
+    return m_pSpdyConn->sendRespHeaders(vector, headerCount, m_uiStreamID);
+}
+
+int SpdyStream::adjWindowOut( int32_t n  )
+{
+    if ( isFlowCtrl() )
+    {
+        m_iWindowOut += n;      
+        if ( D_ENABLED( DL_LESS ) )
+        {
+             LOG_D(( getLogger(), "[%s] stream WINDOW_UPDATE: %d, window size: %d ",
+                            getLogId(), n, m_iWindowOut ) );          
+        }
+        if ( m_iWindowOut < 0 )
+        {
+            //window overflow
+            return -1;
+        }
+        else if ( isWantWrite() )
+            continueWrite();
+    }
+    return 0;
 }
 
 

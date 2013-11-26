@@ -16,21 +16,25 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "spdyprotocol.h"
+
+static const char* s_sFrameName[] = { 
+    "DATA",
+    "SYN_STREAM",
+    "SYN_REPLY",
+    "RST_STREAM",
+    "SETTINGS",
+    "NOOP",
+    "PING",
+    "GOAWAY",
+    "HEADERS",
+    "WINDOW_UPDATE",
+    "CREDENTIAL"
+}; 
+
 const char* getFrameName(unsigned char bframeType)
 {
-    static const char* pbyt[] = { "DATA",
-                            "SYN_STREAM",
-                            "SYN_REPLY",
-                            "RST_STREAM",
-                            "SETTINGS",
-                            "NOOP",
-                            "PING",
-                            "GOAWAY",
-                            "HEADERS",
-                            "WINDOW_UPDATE",
-                            "RCREDENTIAL"}; 
    if ( bframeType <= SPDY_FRAME_LAST_CONTROL_TYPE )
-       return pbyt[bframeType];
+       return s_sFrameName[bframeType];
    return "UNKONWN"; 
 }
 

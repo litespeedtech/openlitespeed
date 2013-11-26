@@ -82,13 +82,17 @@ int NtwkIOLink::setupHandler( HiosProtocol verSpdy )
     if ( !isSSL() && (verSpdy == HIOS_PROTO_HTTP) )
         verSpdy = HIOS_PROTO_SPDY2;
 #endif
-    setProtocol( verSpdy );
     if ( verSpdy != HIOS_PROTO_HTTP )
     {
         SpdyConnection * pConn = new SpdyConnection();
         if ( !pConn )
             return -1;
         setLogIdBuild( 0 );
+        if ( verSpdy == HIOS_PROTO_SPDY31 )
+        {
+            verSpdy = HIOS_PROTO_SPDY3;
+            pConn->enableSessionFlowCtrl();
+        }
         pConn->init( verSpdy );
         pHandler = pConn;
     }
@@ -100,6 +104,8 @@ int NtwkIOLink::setupHandler( HiosProtocol verSpdy )
         pConn->setNtwkIOLink( this );
         pHandler = pConn;
     }
+
+    setProtocol( verSpdy );
 
     pHandler->assignStream( this );    
     pHandler->onInitConnected();
@@ -1270,6 +1276,22 @@ int NtwkIOLink::acceptSSL()
     return ret;
 }
 
+int NtwkIOLink::sslSetupHandler()
+{
+    unsigned int spdyVer = m_ssl.getSpdyVersion();
+    if ( spdyVer >= HIOS_PROTO_MAX )
+    {
+        LOG_ERR(( getLogger(), "[%s] bad SPDY version: %d, use HTTP", getLogId(), spdyVer ));
+        spdyVer = HIOS_PROTO_HTTP;
+    }
+    else
+    {
+        if ( D_ENABLED( DL_LESS ))
+            LOG_D(( getLogger(), "[%s] Next Protocol Negociation result: %s\n", getLogId(), getProtocolName( (HiosProtocol)spdyVer ) ));
+    }
+    return setupHandler( (HiosProtocol)spdyVer );
+}
+
 int NtwkIOLink::SSLAgain()
 {
     if ( D_ENABLED( DL_LESS ))
@@ -1284,13 +1306,7 @@ int NtwkIOLink::SSLAgain()
         ret = acceptSSL();
         if ( ret == 1 )
         {
-            unsigned int spdyVer = m_ssl.getSpdyVersion();
-            if ( spdyVer > HIOS_PROTO_SPDY3 )
-            {
-                LOG_ERR(( getLogger(), "[%s] bad SPDY version: %d, use HTTP", getLogId(), spdyVer ));
-                spdyVer = HIOS_PROTO_HTTP;
-            }
-            setupHandler( (HiosProtocol)spdyVer );
+            sslSetupHandler();
         }
         break;
     case SSLConnection::SHUTDOWN:

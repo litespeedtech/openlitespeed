@@ -89,7 +89,7 @@ void LocalWorker::moveToStopList()
 
 void LocalWorker::moveToStopList( int pid)
 {
-    PidList::iterator iter = m_pidList->find( (void *)pid );
+    PidList::iterator iter = m_pidList->find( (void *)(long)pid );
     if ( iter != m_pidList->end() )
     {
         killProcess( pid );

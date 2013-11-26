@@ -212,28 +212,28 @@ class SpdySettingPairs
     union
     {
         unsigned char m_b[4];
-        uint32_t      m_uiTemp;
+        uint32_t      m_ui;
         
-    } m_un1;
+    } m_unFlagId;
     uint32_t      m_uiValue;
     
 public: 
     void swapID()
     {
         unsigned char ch;
-        ch = m_un1.m_b[0];
-        m_un1.m_b[0] = m_un1.m_b[3];
-        m_un1.m_b[3] = ch;
-        ch = m_un1.m_b[1];
-        m_un1.m_b[1] = m_un1.m_b[2];
-        m_un1.m_b[2] = ch;
+        ch = m_unFlagId.m_b[0];
+        m_unFlagId.m_b[0] = m_unFlagId.m_b[3];
+        m_unFlagId.m_b[3] = ch;
+        ch = m_unFlagId.m_b[1];
+        m_unFlagId.m_b[1] = m_unFlagId.m_b[2];
+        m_unFlagId.m_b[2] = ch;
     }
-    unsigned char getFlags() const { return m_un1.m_b[0]; }
-    uint32_t getValue() const { return htonl(m_uiValue); }
-    uint32_t getID() const  { return ( htonl(m_un1.m_uiTemp) & 0xFFFFFF); }
+    unsigned char getFlags() const { return m_unFlagId.m_b[0]; }
+    uint32_t getValue() const { return ntohl(m_uiValue); }
+    uint32_t getID() const  { return ( ntohl(m_unFlagId.m_ui) & 0xFFFFFF); }
 };
 
 #define SPDY_MAX_DATAFRAM_SIZE    65536
-
+#define SPDY_FCW_INIT_SIZE        65536
 
 #endif // SPDYPROTOCOL_H

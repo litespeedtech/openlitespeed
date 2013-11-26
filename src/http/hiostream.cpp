@@ -18,6 +18,20 @@
 
 #include "hiostream.h"
 
+static const char* s_sProtoName[] = { 
+    "HTTP/1.x",
+    "SPDY/2",
+    "SPDY/3",
+    "SPDY/3.1"
+}; 
+
+const char * HioStream::getProtocolName( HiosProtocol proto )
+{
+    if ( proto >= HIOS_PROTO_MAX )
+        return "UNKNOWN";
+    return s_sProtoName[proto];
+}
+
 
 HioStream::~HioStream()
 {

@@ -39,7 +39,9 @@ enum HiosProtocol
 {
     HIOS_PROTO_HTTP  = 0,
     HIOS_PROTO_SPDY2 = 1,
-    HIOS_PROTO_SPDY3 = 2
+    HIOS_PROTO_SPDY3 = 2,
+    HIOS_PROTO_SPDY31 = 3,
+    HIOS_PROTO_MAX 
 };
 
 #define HIO_FLAG_PEER_SHUTDOWN      (1<<0)
@@ -121,6 +123,8 @@ public:
     off_t getBytesSent() const  {   return m_lBytesSent;    }
     
     short isPeerShutdown() const {  return m_iFlag & HIO_FLAG_PEER_SHUTDOWN;    }
+    
+    static const char * getProtocolName( HiosProtocol proto );
     
 private:
     HioStream(const HioStream& other);

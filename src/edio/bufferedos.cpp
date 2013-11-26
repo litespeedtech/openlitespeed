@@ -44,7 +44,7 @@ int BufferedOS::writeEx( const char * pBuf, int size, int avoidCache )
     if ( m_buf.empty() )
     {
         ret = m_pOS->write( pBuf, size );
-        if ( ret >= avoidCache )
+        if (( ret < size )&&( ret >= avoidCache ))
         {
             ret = m_buf.cache( pBuf, size, ret );
         }

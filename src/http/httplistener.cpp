@@ -117,18 +117,18 @@ int HttpListener::assign( int fd, struct sockaddr * pAddr )
     char achAddr[128];
     if (( addr.family() == AF_INET )&&( addr.getV4()->sin_addr.s_addr == INADDR_ANY ))
     {
-        snprintf( achAddr, 128, "*:%hu", addr.getPort() );
+        snprintf( achAddr, 128, "*:%hu", (short)addr.getPort() );
     }
     else if (( addr.family() == AF_INET6 )&&( IN6_IS_ADDR_UNSPECIFIED ( &addr.getV6()->sin6_addr ) ))
     {
-        snprintf( achAddr, 128, "[::]:%hu", addr.getPort() );
+        snprintf( achAddr, 128, "[::]:%hu", (short)addr.getPort() );
     }
     else
         addr.toString( achAddr, 128 );
     LOG_NOTICE(( "Recovering server socket: [%s]", achAddr ));
     m_pMapVHost->setAddrStr( achAddr );
     if (( addr.family() == AF_INET6 )&&( IN6_IS_ADDR_UNSPECIFIED ( &addr.getV6()->sin6_addr ) ))
-        snprintf( achAddr, 128, "[ANY]:%hu", addr.getPort() );
+        snprintf( achAddr, 128, "[ANY]:%hu", (short)addr.getPort() );
     setName( achAddr );
     return setSockAttr( fd, addr );
 }

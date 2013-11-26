@@ -26,8 +26,10 @@
 #include "http/hiostream.h"
 #include <sys/time.h>
 
+#include <limits.h>
 
-#define SPDY_CNN_FLAG_GOAWAY           (1<<0)
+#define SPDY_CONN_FLAG_GOAWAY           (1<<0)
+#define SPDY_CONN_FLAG_FLOW_CTRL        (1<<1)
 
 #define SPDY_STREAM_PRIORITYS          8
 
@@ -51,7 +53,7 @@ public:
     int onWriteEx();
 
     int isOutBufFull() const
-    {   return getBuf()->size() >= SPDY_MAX_DATAFRAM_SIZE; }
+    {   return ((m_iCurDataOutWindow <= 0 )||(getBuf()->size() >= SPDY_MAX_DATAFRAM_SIZE)); }
 
     int flush();
     
@@ -81,11 +83,14 @@ public:
     void continueWrite()
     {   getStream()->continueWrite();   }
 
-    int32_t getServerInitWindowSize() const
-    {   return m_iServerInitWindowSize;    }
+    int32_t getStreamInInitWindowSize() const
+    {   return m_iStreamInInitWindowSize;    }
 
-    int32_t getClientInitWindowSize() const
-    {   return m_iClientInitWindowSize;    }
+    int32_t getStreamOutInitWindowSize() const
+    {   return m_iStreamOutInitWindowSize;    }
+    
+    int32_t getCurDataOutWindow() const
+    {   return m_iCurDataOutWindow;         }
 
     int appendPing(uint32_t uiStreamID)
     {   return sendFrame4Bytes( SPDY_FRAME_PING, uiStreamID );  }
@@ -100,11 +105,32 @@ public:
     {
         return sendFrame8Bytes( SPDY_FRAME_RST_STREAM, uiStreamID, code );
     }
+    int sendFinFrame( uint32_t uiStreamID )
+    {
+        char achHeader[8];
+        *(uint32_t *)achHeader = htonl( uiStreamID );
+        achHeader[4] = 1;
+        achHeader[5] = 0;
+        achHeader[6] = 0;
+        achHeader[7] = 0;
+        return cacheWrite( achHeader, sizeof( achHeader ) );
+    }
+
+    void dataFrameSent( int bytes )
+    {   
+        if ( isFlowCtrl() )
+            m_iCurDataOutWindow -= bytes;
+    }
+    
+    
+    void enableSessionFlowCtrl()    {   m_flag |= SPDY_CONN_FLAG_FLOW_CTRL;  }
+    short isFlowCtrl() const    {   return m_flag & SPDY_CONN_FLAG_FLOW_CTRL;  }
+    
     void recycleStream( uint32_t uiStreamID );
     static void replaceZero( char* pValue, int ilength );
                                 
 private:
-    typedef THash< SpdyStream* > StreamobjpMap;
+    typedef THash< SpdyStream* > StreamMap;
     
     SpdyStream* findStream(uint32_t uiStreamID);
     int releaseAllStream();
@@ -134,19 +160,18 @@ private:
     int doGoAway(SpdyGoAwayStatus status);
     int append400BadReqReply(uint32_t uiStreamID);
     void resetStream( SpdyStream * pStream, SpdyRstErrorCode code );
-    void resetStream( StreamobjpMap::iterator it, SpdyRstErrorCode code );
+    void resetStream( StreamMap::iterator it, SpdyRstErrorCode code );
 
     int  appendCtrlFrameHeader(SpdyFrameType type, uint8_t len );
     int  sendFrame8Bytes( SpdyFrameType type, uint32_t uiVal1, uint32_t uiVal2 );
     int  sendFrame4Bytes( SpdyFrameType type, uint32_t uiVal1 );
 
-    void recycleStream( StreamobjpMap::iterator it );
+    void recycleStream( StreamMap::iterator it );
     int isSpdy3() const     {   return (m_bVersion == 3);    }
     void logDeflateInflateError( int n, int iDeflate );
     int appendReqHeaders(SpdyStream* arg1, int arg2);
     int extractCompressedData();
     void skipRemainData();
-   
     
 private:
     LoopBuf         m_bufInput;
@@ -162,14 +187,18 @@ private:
     NameValuePair   m_NameValuePairList[100];
     NameValuePair   m_NameValuePairListReqline[3];
     DLinkQueue      m_dqueStreamRespon[SPDY_STREAM_PRIORITYS];
-    StreamobjpMap   m_mapStream;
+    StreamMap       m_mapStream;
     short           m_state;
     short           m_flag;
     char            m_bVersion;
+    
+    int32_t         m_iCurDataOutWindow;
+    int32_t         m_iCurInBytesToUpdate;
+    int32_t         m_iDataInWindow;
 
-    int32_t         m_iServerInitWindowSize;
+    int32_t         m_iStreamInInitWindowSize;
     int32_t         m_iServerMaxStreams;
-    int32_t         m_iClientInitWindowSize;
+    int32_t         m_iStreamOutInitWindowSize;
     int32_t         m_iClientMaxStreams;
     int32_t         m_tmIdleBegin;
     int32_t         m_SpdyHeaderMem[10];
