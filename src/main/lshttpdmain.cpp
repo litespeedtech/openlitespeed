@@ -812,6 +812,23 @@ void LshttpdMain::changeOwner()
     chown( DEFAULT_SWAP_DIR, HttpGlobals::s_uid, HttpGlobals::s_gid );
 }
 
+void LshttpdMain::removeOldRtreport()
+{
+    char achBuf[8192];
+    int i = 1;
+    int ret, len;
+    m_pBuilder->getCurConfigCtx()->getAbsolute( achBuf, RTREPORT_FILE, 0 );
+    len = strlen( achBuf );
+    while( 1 )
+    {
+        ret = ::unlink( achBuf );
+        if ( ret == -1 )
+            break;
+        ++i;
+        achBuf[len] = '.';
+        snprintf( &achBuf[len+1],sizeof( achBuf ) - len -1, "%d", i );
+    };
+}
 
 int LshttpdMain::init(int argc, char * argv[])
 {
@@ -877,11 +894,10 @@ int LshttpdMain::init(int argc, char * argv[])
         fprintf( stderr, "[ERROR] Fatal error in configuration, shutdown!\n" );
         return ret;
     }
+    removeOldRtreport();
     {
         char achBuf[8192];
 
-        m_pBuilder->getCurConfigCtx()->getAbsolute( achBuf, RTREPORT_FILE, 0 );
-        ::unlink( achBuf );
         if ( HttpGlobals::s_psChroot )
         {
             PidFile pidfile;
@@ -1275,11 +1291,11 @@ void LshttpdMain::gracefulRestart()
         int fd = HttpGlobals::getStdErrLogger()->getStdErr();
         if ( fd != 2 )
             close( fd );
-        int len = getFullPath( "bin/lshttpd", achCmd, 1024 );
-        achCmd[len - 8] = 0;
+        int len = getFullPath( "bin/litespeed", achCmd, 1024 );
+        achCmd[len - 10] = 0;
         chdir( achCmd );
-        achCmd[len - 8] = '/';
-        if ( execl( achCmd, "lshttpd", NULL  ) )
+        achCmd[len - 10] = '/';
+        if ( execl( achCmd, "litespeed", NULL  ) )
         {
             LOG_ERR(( "Failed to start new instance of LiteSpeed Web server!" ));
         }

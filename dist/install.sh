@@ -90,7 +90,7 @@ buildConfigFiles
 installation
 
 rm $LSWS_HOME/bin/lshttpd
-ln -sf $LSWS_HOME/bin/openlitespeed $LSWS_HOME/bin/lshttpd
+ln -sf ./openlitespeed $LSWS_HOME/bin/lshttpd
 
 
 # detect download method

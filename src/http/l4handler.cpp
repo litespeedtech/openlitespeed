@@ -116,13 +116,33 @@ int L4Handler::onWriteEx()
     return 0;
 }
 
-int L4Handler::init(HttpReq &req, const GSockAddr *pGSockAddr)
+int L4Handler::init(HttpReq &req, const GSockAddr *pGSockAddr, const char *pIP, int iIpLen)
 {
     int ret = m_pL4conn->init(pGSockAddr);
     if (ret != 0)
         return ret;
     
-    m_pL4conn->getBuf()->append(req.getOrgReqLine(), req.getHttpHeaderLen());
+    int hasSlashR = 1; //"\r\n"" or "\n"
+    LoopBuf *pBuff = m_pL4conn->getBuf();
+    pBuff->append(req.getOrgReqLine(), req.getHttpHeaderLen());
+    char *pBuffEnd = pBuff->end();
+    assert(pBuffEnd[-1] == '\n');
+    if (pBuffEnd[-2] == 'n')
+        hasSlashR = 0;
+    else
+    {
+        assert(pBuffEnd[-2] == '\r');
+    }
+    
+    pBuff->used( -1 * hasSlashR - 1);
+    pBuff->append("X-Forwarded-For", 15);
+    pBuff->append(": ", 2);
+    pBuff->append(pIP, iIpLen);
+    if (hasSlashR)
+        pBuff->append("\r\n\r\n", 4);
+    else
+        pBuff->append("\n\n", 2);
+    
     continueRead();
     if ( D_ENABLED( DL_LESS ) )
     {

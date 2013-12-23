@@ -106,6 +106,7 @@ class LshttpdMain
     void parseOpt( int argc, char *argv[] );
     char * allocateBlackBoard();
     int allocatePidTracker();
+    void removeOldRtreport();
 
     void deallocateBlackBoard( char * pBuf );
 

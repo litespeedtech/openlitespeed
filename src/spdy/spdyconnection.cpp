@@ -1097,6 +1097,8 @@ void SpdyConnection::recycle()
         LOG_D(( getLogger(), "[%s] SpdyConnection::recycle()",
                 getLogId() ));
     }
+    if ( !m_mapStream.empty() ) 
+        releaseAllStream();
     delete this;
 }
 

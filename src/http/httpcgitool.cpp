@@ -133,8 +133,9 @@ int HttpCgiTool::processHeaderLine( HttpExtConnector * pExtConn, const char * pL
         pReq->andGzip( ~GZIP_ENABLED );
         break;
     case HttpRespHeaders::H_LOCATION:
-        if ( pReq->getStatusCode() != SC_200 )
+        if ( (status & HEC_RESP_PROXY ) || (pReq->getStatusCode() != SC_200 ))
             break;
+    case HttpRespHeaders::H_LITESPEED_LOCATION:
         if ( *pValue != '/' )
         {
             //set status code to 307
@@ -142,7 +143,19 @@ int HttpCgiTool::processHeaderLine( HttpExtConnector * pExtConn, const char * pL
         }
         else
         {
-            pReq->setLocation( pValue, pLineEnd - pValue );
+            if (( pReq->getStatusCode() == SC_404 )||
+                ( index == HttpRespHeaders::H_LITESPEED_LOCATION ))
+                pReq->setStatusCode( SC_200 ); 
+            if ( index == HttpRespHeaders::H_LITESPEED_LOCATION )
+            {
+                char ch = *pLineEnd;
+                *((char *)pLineEnd) = 0; 
+                pReq->locationToUrl( pValue, pLineEnd - pValue );
+                *((char *)pLineEnd) = ch;
+            }
+            else
+                pReq->setLocation( pValue, pLineEnd - pValue );
+            status |= HEC_RESP_LOC_SET;
             return 0;
         }
         break;
