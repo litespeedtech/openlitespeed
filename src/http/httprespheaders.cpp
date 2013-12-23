@@ -549,8 +549,6 @@ HttpRespHeaders::HEADERINDEX HttpRespHeaders::getRespHeaderIndex( const char * p
             idx = H_LAST_MODIFIED;
         else if ( strncasecmp( pHeader, "ocation", 7 ) == 0 )
             idx = H_LOCATION;
-        else if ( strncasecmp( pHeader, "itespeed-location", 17 ) == 0 )
-            idx = H_LITESPEED_LOCATION;
         else if ( strncasecmp( pHeader, "itespeed-cache-control", 22 ) == 0 )
             idx = H_LITESPEED_CACHE_CONTROL;
         break;
@@ -585,6 +583,8 @@ HttpRespHeaders::HEADERINDEX HttpRespHeaders::getRespHeaderIndex( const char * p
     case 'x':
         if ( strncasecmp( pHeader, "-powered-by", 11 ) == 0 )
             idx = H_X_POWERED_BY;
+        else if ( strncasecmp( pHeader, "-litespeed-location", 19 ) == 0 )
+            idx = H_LITESPEED_LOCATION;
         break;
     case ':': //only SPDY 3
         if ( strncasecmp( pHeader, "status", 6 ) == 0 )

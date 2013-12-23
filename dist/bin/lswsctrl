@@ -166,11 +166,11 @@ restart()
     if [ $RUNNING -eq 0 ]; then
 
         echo "LSWS does not restart properly, check port 7080" >> $RESTART_LOG
-        log7080
+        #log7080
         killall -9 $EXECUTABLE
         sleep 1
         echo "check port 7080 after kill all $EXECUTABLE processes " >> $RESTART_LOG
-        log7080
+        #log7080
         start
     fi
         

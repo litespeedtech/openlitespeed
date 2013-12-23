@@ -1330,6 +1330,27 @@ int HttpReq::processMime( const char * pSuffix )
     return 0;
 }
 
+int HttpReq::locationToUrl( const char * pLocation, int len )
+{
+    char achURI[8192];
+    const HttpContext * pNewCtx;
+    pNewCtx = m_pVHost->matchLocation( pLocation );
+    if ( pNewCtx )
+    {
+        int n = snprintf( achURI, 8192, "%s%s", pNewCtx->getURI(),
+                        pLocation + pNewCtx->getLocationLen() );
+        pLocation = achURI;
+        len = n;
+        if ( D_ENABLED( DL_MORE ))
+             LOG_D(( getLogger(), "[%s] File [%s] has been mapped to URI: [%s] , "
+                                  " via context: [%s]", getLogId(), pLocation,
+                                  achURI, pNewCtx->getURI() ));
+    }
+    setLocation( pLocation, len );
+    return 0;
+}
+
+
 int HttpReq::postRewriteProcess( const char * pURI, int len )
 {
     //if is rewriten to file path, reverse lookup context from file path

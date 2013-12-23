@@ -107,8 +107,6 @@ private:
     int                 m_reqURLLen;
 
     const MIMESetting * m_pMimeType;
-    const HttpContext * m_pContext;
-    const HttpHandler * m_pHttpHandler;
     int                 m_iHttpHeaderEnd;
 
 
@@ -129,8 +127,10 @@ private:
     long                m_lEntityFinished;
     short               m_iRedirects;
     short               m_iContextState;
+    const HttpHandler * m_pHttpHandler;
 
     //const HttpContext * m_pHTAContext;
+    const HttpContext * m_pContext;
     const HttpContext * m_pFMContext;
     VMemBuf           * m_pReqBodyBuf;
     HttpRange         * m_pRange;
@@ -556,7 +556,10 @@ public:
         return m_iMatchedLen ;
     }   
     void stripRewriteBase( const HttpContext * pCtx, 
-            const char * &m_pSourceURL, int &m_sourceURLLen );    
+            const char * &m_pSourceURL, int &m_sourceURLLen );   
+    
+    int locationToUrl( const char * pLocation, int len );
+    
     int internalRedirectURI( const char * pURI, int len, int resetPathInfo = 1, int no_escape=1);
 //     void setErrorPage( )                {   m_iContextState |= IS_ERROR_PAGE;       }
 //     int  redirect( const char * pURL, int len, int alloc = 0 );

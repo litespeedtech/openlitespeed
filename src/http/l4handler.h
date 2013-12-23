@@ -32,7 +32,7 @@ public:
     L4Handler();
     ~L4Handler() {};
 
-    int  init(HttpReq &req, const GSockAddr *pGSockAddr);
+    int  init(HttpReq &req, const GSockAddr *pGSockAddr, const char *pIP, int iIpLen);
     
     LoopBuf*    getBuf()            {   return m_buf;  }
     void        continueRead()      {   getStream()->continueRead();   }

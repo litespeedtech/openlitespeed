@@ -578,7 +578,7 @@ int HttpConnection::processNewReq()
         {
             L4Handler *pL4Handler = new L4Handler();
             pL4Handler->assignStream(this->m_pNtwkIOLink);
-            pL4Handler->init(m_request, pContext->getGSockAddr());
+            pL4Handler->init(m_request, pContext->getGSockAddr(), getPeerAddrString(), getPeerAddrStrLen());
             LOG_D ((getLogger(), "[%s] VH: %s web socket !!!", getLogId(), pVHost->getName() ));
             return 0;
             //DO NOT release pL4Handler, it will be releaseed itself.
@@ -1259,6 +1259,7 @@ int HttpConnection::buildErrorResponse( const char * errMsg )
     if (( errCode < 0 )||( errCode >= SC_END ))
     {
         LOG_ERR(( "[%s] invalid HTTP status code: %d!", getLogId(), errCode ));
+        m_request.setStatusCode( SC_500 );
         errCode = SC_500;
     }
     if ( ver > HTTP_1_0 )

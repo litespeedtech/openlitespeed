@@ -20,7 +20,7 @@ add_definitions( ${LFS_CFLAGS} )
 
 #INCLUDE( ${PROJECT_SOURCE_DIR}/CMakeModules/common.cmake)
 
-add_subdirectory(test)
+#add_subdirectory(test)
 add_subdirectory(spdy)
 add_subdirectory(edio)
 add_subdirectory(socket)
