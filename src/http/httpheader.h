@@ -77,6 +77,7 @@ public:
         H_LAST_MODIFIED,
 
         // response-header
+        /*
         H_ACCEPT_RANGES,
         H_AGE,
         H_ETAG,
@@ -95,6 +96,7 @@ public:
         H_LITESPEED_CACHE_CONTROL,
         
         H_HTTP_VERSION,
+        */
         H_HEADER_END
     };
     static size_t getIndex( const char * pHeader );

@@ -115,10 +115,9 @@ int NtwkIOLink::setupHandler( HiosProtocol verSpdy )
 
 int NtwkIOLink::setLink( int fd, ClientInfo * pInfo, SSLContext * pSSLContext )
 {
-    HioStream::reset();
+    HioStream::reset( DateTime::s_curTime );
     setfd( fd );
     m_pClientInfo = pInfo;
-    setActiveTime( DateTime::s_curTime );
     setState( HIOS_CONNECTED );
     setHandler( NULL );
     memset( &m_iInProcess, 0, (char *)(&m_ssl + 1) - (char *)(&m_iInProcess) );

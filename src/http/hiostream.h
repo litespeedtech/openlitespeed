@@ -18,6 +18,7 @@
 #ifndef HIOSTREAM_H
 #define HIOSTREAM_H
 
+#include <inttypes.h>
 #include <sys/types.h>
 #include <edio/inputstream.h>
 #include <edio/outputstream.h>
@@ -62,6 +63,7 @@ class HioStream : public InputStream, public OutputStream, public LogTracker
     char                m_iState;
     char                m_iProtocol;
     short               m_iFlag;
+    uint32_t            m_tmLastActive;
     
 public:
     HioStream()
@@ -71,6 +73,7 @@ public:
         , m_iState( HIOS_DISCONNECTED )
         , m_iProtocol( HIOS_PROTO_HTTP )
         , m_iFlag( 0 )
+        , m_tmLastActive( 0 )
     {}
     virtual ~HioStream();
     
@@ -88,8 +91,11 @@ public:
     virtual void onTimer() = 0;
     //virtual uint32_t GetStreamID() = 0;
     
-    void reset()
-    {   memset( &m_pHandler, 0, (char*)(&m_iFlag+1) - (char *)&m_pHandler );     }
+    void reset( int32_t timeStamp )
+    {
+        memset( &m_pHandler, 0, (char*)(&m_iFlag+1) - (char *)&m_pHandler );
+        m_tmLastActive = timeStamp;
+    }
         
     HioStreamHandler * getHandler() const   {   return m_pHandler;  }
     void setHandler( HioStreamHandler * p ) {   m_pHandler = p;     }
@@ -121,6 +127,11 @@ public:
 
     off_t getBytesRecv() const  {   return m_lBytesRecv;    }
     off_t getBytesSent() const  {   return m_lBytesSent;    }
+
+    void setActiveTime( uint32_t lTime )
+    {   m_tmLastActive = lTime;              }
+    uint32_t getActiveTime() const
+    {   return m_tmLastActive;               }
     
     short isPeerShutdown() const {  return m_iFlag & HIO_FLAG_PEER_SHUTDOWN;    }
     

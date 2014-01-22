@@ -112,7 +112,8 @@ public:
     void finalizeHeader( int ver, int code, const HttpVHost *vhost );
     
     IOVec& getIov()    {   return m_iovec;  }
-    void parseAdd( const char * pBuf, int len );
+    void parseAdd( const char * pBuf, int len )
+    {    m_respHeaders.parseAdd(pBuf, len, RespHeader::APPEND );    }
     
     void appendExtra( const char * pBuf, int len )
     {
