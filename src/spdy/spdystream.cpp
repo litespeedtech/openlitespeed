@@ -20,8 +20,9 @@
 
 #include "spdyconnection.h"
 
-#include <util/ssnprintf.h>
+#include <http/datetime.h>
 #include <http/httplog.h>
+#include <util/ssnprintf.h>
 #include <util/iovec.h>
 
 
@@ -49,7 +50,7 @@ const char * SpdyStream::buildLogId()
 int SpdyStream::init(uint32_t StreamID, 
                      int Priority, SpdyConnection* pSpdyConn, uint8_t flags, HioStreamHandler * pHandler )
 {
-    HioStream::reset();
+    HioStream::reset( DateTime::s_curTime );
     pHandler->assignStream( this );
     setLogIdBuild( 0 );
 
@@ -119,6 +120,9 @@ int SpdyStream::read( char * buf, int len )
             return -1; //EOF (End of File) There is no more data need to be read
         }
     }
+    if ( ReadCount > 0 )
+        setActiveTime( DateTime::s_curTime );
+
     return ReadCount;
 }
 
@@ -307,6 +311,8 @@ int SpdyStream::sendData( IOVec * pIov, int total )
         setFlag( HIO_FLAG_ABORT, 1 );
         return -1;
     }
+
+    setActiveTime( DateTime::s_curTime );
     bytesSent( total );
     m_pSpdyConn->dataFrameSent( total );
     if ( isFlowCtrl() )

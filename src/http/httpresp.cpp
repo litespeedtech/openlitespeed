@@ -76,11 +76,6 @@ void HttpResp::addLocationHeader( const HttpReq * pReq )
     m_respHeaders.appendLastVal( "Location", 8, pLocation, pReq->getLocationLen() );
 }
 
-void  HttpResp::parseAdd( const char * pBuf, int len )
-{
-    m_respHeaders.parseAdd(pBuf, len, RespHeader::APPEND );
-}
-
 void HttpResp::buildCommonHeaders()
 {
     HttpResp::m_commonHeaders[0].index    = HttpRespHeaders::H_DATE;

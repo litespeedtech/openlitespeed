@@ -173,7 +173,7 @@ void HttpConnection::nextRequest()
     }    
     
     
-    if ( !m_request.isKeepAlive())
+    if ( !m_request.isKeepAlive() || getStream()->isSpdy() )
     {
         if ( D_ENABLED( DL_LESS ))
             LOG_D(( getLogger(), "[%s] Non-KeepAlive, CLOSING!",
@@ -524,6 +524,8 @@ int HttpConnection::updateClientInfoFromProxyHeader( const char * pProxyHeader )
 int HttpConnection::processNewReq()
 {
     int ret;
+    if ( getStream()->isSpdy() )
+        m_request.keepAlive( 0 );
     if ((HttpGlobals::s_useProxyHeader == 1)||
         ((HttpGlobals::s_useProxyHeader == 2)&&( getClientInfo()->getAccess() == AC_TRUST )))
     {
@@ -588,9 +590,7 @@ int HttpConnection::processNewReq()
     
     if ((m_pNtwkIOLink->isThrottle())&&( m_pNtwkIOLink->getClientInfo()->getAccess() != AC_TRUST ))
         m_pNtwkIOLink->getThrottleCtrl()->adjustLimits( pVHost->getThrottleLimits() );
-    if ( getStream()->isSpdy() )
-        m_request.keepAlive( 0 );
-    else if ( m_request.isKeepAlive() )
+    if ( m_request.isKeepAlive() )
     {
         if ( m_iReqServed >= pVHost->getMaxKAReqs() )
         {
@@ -1804,7 +1804,7 @@ int HttpConnection::detectKeepAliveTimeout( int delta )
 int HttpConnection::detectConnectionTimeout( int delta )
 {
     register const HttpServerConfig& config = HttpServerConfig::getInstance();
-    if ( DateTime::s_curTime > m_pNtwkIOLink->getActiveTime() +
+    if ( DateTime::s_curTime > getStream()->getActiveTime() +
         config.getConnTimeout() )
     {
         if ( m_pNtwkIOLink->getfd() != m_pNtwkIOLink->getPollfd()->fd )
@@ -1817,7 +1817,7 @@ int HttpConnection::detectConnectionTimeout( int delta )
             LOG_INFO((getLogger(),
                 "[%s] Connection idle time: %ld while in state: %d watching for event: %d,"
                 "close!",
-                getLogId(), DateTime::s_curTime - m_pNtwkIOLink->getActiveTime(), getState(), m_pNtwkIOLink->getEvents() ));
+                getLogId(), DateTime::s_curTime - getStream()->getActiveTime(), getState(), m_pNtwkIOLink->getEvents() ));
             m_request.dumpHeader();
             if ( m_pHandler )
                 m_pHandler->dump();

@@ -3,11 +3,11 @@ openlitespeed_SOURCES = httpdtest.cpp main.cpp
 openlitespeed_LDADD =  ./main/libmain.a ./http/libhttp.a ./spdy/libspdy.a \
         ./extensions/libextensions.a ./log4cxx/liblog4cxx.a \
         ./socket/libsocket.a ./sslpp/libsslpp.a  ./ssi/libssi.a ./edio/libedio.a ./util/libutil.a \
-        -lexpat -lssl -lz -lcrypto -lpcre -lGeoIP
+        $(EXPAT_LDFLAGS) $(OPENSSL_LIBS) $(PCRE_LIBS) -lGeoIP -lz 
 
 
-
-AM_LDFLAGS = -L/usr/lib
+AM_CPPFLAGS = $(PCRE_CFLAGS) $(OPENSSL_INCLUDES) $(EXPAT_CFLAGS)
+AM_LDFLAGS = -L/usr/lib $(OPENSSL_LDFLAGS)
 INCLUDES = -I$(top_srcdir)/src 
 SUBDIRS =  socket util http spdy sslpp ssi extensions log4cxx main edio
 

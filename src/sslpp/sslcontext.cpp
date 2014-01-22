@@ -44,6 +44,18 @@ long SSLContext::setSessionCacheMode( long mode )
     return SSL_CTX_set_session_cache_mode( m_pCtx, mode );
 }
 
+/* default to 1024*20 = 20K */
+long SSLContext::setSessionCacheSize( long size )
+{
+    return SSL_CTX_sess_set_cache_size( m_pCtx, size );
+}
+
+/* default to 300 */
+long SSLContext::setSessionTimeout( long timeout )
+{
+    return SSL_CTX_set_timeout( m_pCtx, timeout );
+}
+
 int SSLContext::seedRand(int len)
 {
     static int fd = open( "/dev/urandom", O_RDONLY|O_NONBLOCK );
@@ -248,7 +260,16 @@ int SSLContext::init( int iMethod )
 
         setOptions( SSL_OP_CIPHER_SERVER_PREFERENCE);
 
-        SSL_CTX_set_mode( m_pCtx, SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER );
+        //increase defaults
+        setSessionTimeout( 100800 ); 
+        setSessionCacheSize ( 1024 * 40 ); 
+
+        
+        SSL_CTX_set_mode( m_pCtx, SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER
+#ifdef SSL_MODE_RELEASE_BUFFERS
+            |SSL_MODE_RELEASE_BUFFERS
+#endif
+        );
         if ( m_iRenegProtect )
         {
             setOptions( SSL_OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION );
@@ -777,14 +798,14 @@ int SSLContext::addCRL( const char * pCRLFile, const char * pCRLPath)
 #ifdef LS_ENABLE_SPDY
 static const char * NEXT_PROTO_STRING[3] = 
 {
-    "\x06spdy/2\x08http/1.1\x08http/1.0",
-    "\x08spdy/3.1\x06spdy/3\x08http/1.1\x08http/1.0",
-    "\x08spdy/3.1\x06spdy/3\x06spdy/2\x08http/1.1\x08http/1.0" 
+    "\x06spdy/2\x08http/1.1",
+    "\x08spdy/3.1\x06spdy/3\x08http/1.1",
+    "\x08spdy/3.1\x06spdy/3\x06spdy/2\x08http/1.1" 
 };
 
 static int NEXT_PROTO_STRING_LEN[3] =
 {
-    25, 34, 41
+    16, 25, 32
 };
 
 //static const char NEXT_PROTO_STRING[] = "\x06spdy/2\x08http/1.1\x08http/1.0";

@@ -92,7 +92,6 @@ private:
 
     ClientInfo        * m_pClientInfo;
     const VHostMap    * m_pVHostMap;
-    long                m_lActiveTime;
     unsigned short      m_iRemotePort;
 
     char                m_iInProcess;
@@ -210,8 +209,6 @@ public:
     void closeSocket();
     bool allowRead() const
     {   return m_pClientInfo->allowRead();   }
-    void setActiveTime( long lTime )
-    {   m_lActiveTime = lTime;              }
     int close()     {   return (*m_pFnList->m_close_fn)( this );      }
     int  detectClose();
 
@@ -286,8 +283,6 @@ public:
     //void stopThrottleTimer();
     //void startThrottleTimer();
 
-    long getActiveTime() const
-    {   return m_lActiveTime;               }
     ClientInfo * getClientInfo() const
     {   return m_pClientInfo;               }
     ThrottleControl* getThrottleCtrl() const

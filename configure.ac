@@ -5,8 +5,8 @@ m4_include(ax_lib_expat.m4)
 
 dnl Process this file with autoconf to produce a configure script.
 AC_PREREQ([2.69])
-AC_INIT([openlitespeed],[1.2.8],[info@litespeedtech.com],[openlitespeed],[http://www.litespeedtech.com/])
-AM_INIT_AUTOMAKE([1.2.8 foreign no-define ])
+AC_INIT([openlitespeed],[1.2.9],[info@litespeedtech.com],[openlitespeed],[http://www.litespeedtech.com/])
+AM_INIT_AUTOMAKE([1.2.9 foreign no-define ])
 
 AM_CONFIG_HEADER(src/config.h:src/config.h.in)
 
@@ -172,10 +172,10 @@ AC_FUNC_ERROR_AT_LINE
 AC_FUNC_FORK
 AC_FUNC_FSEEKO
 AC_FUNC_LSTAT_FOLLOWS_SLASHED_SYMLINK
-AC_FUNC_MALLOC
+#AC_FUNC_MALLOC disable due to this replacing malloc() with non-existing rpl_malloc() issue on some systems
 AC_FUNC_MMAP
 AC_FUNC_REALLOC
-AC_CHECK_FUNCS(bzero dup2 ftruncate getcwd gethostbyaddr gethostbyname gettimeofday inet_ntoa localtime_r memchr memmove memset mkdir munmap select socket strcasecmp strchr strcspn strdup strerror strncasecmp strpbrk strrchr strspn strstr strtol)
+AC_CHECK_FUNCS(malloc bzero dup2 ftruncate getcwd gethostbyaddr gethostbyname gettimeofday inet_ntoa localtime_r memchr memmove memset mkdir munmap select socket strcasecmp strchr strcspn strdup strerror strncasecmp strpbrk strrchr strspn strstr strtol)
 
 AC_CONFIG_FILES(Makefile
                 src/Makefile
