@@ -17,7 +17,7 @@ class Service
 	var $adminL = array();
 	var $vhosts = array();
 	var $serv = array();
-	
+
 
 	function __construct() {
 		$this->FNAME = '/tmp/lshttpd/.admin';
@@ -168,7 +168,7 @@ class Service
 		}
 	}
 
-	
+
 	function checkLastMod()
 	{
 		clearstatcache();
@@ -193,7 +193,7 @@ class Service
 		$client->changed = FALSE;
 		$this->issueCmd();
 	}
-	
+
 
 	function vhostControl()
 	{
@@ -243,7 +243,7 @@ class Service
 		socket_shutdown( $sock, 1 );
 		return $sock;
 	}
-	
+
 	function issueCmd()
 	{
 		$commandline = '';
@@ -257,10 +257,10 @@ class Service
 			socket_close( $sock );
 			return (( $res > 0 )&&(strncasecmp( $buffer, 'OK', 2 ) == 0 ));
 		}
-		else 
+		else
 			return FALSE;
 	}
-	
+
 	public static function retrieveCommandData($cmd)
 	{
 		$sock = Service::getCommandSocket($cmd);
@@ -281,9 +281,9 @@ class Service
 			socket_close( $sock );
 		}
 		return $buffer;
-		
+
 	}
-	
+
 
 	function isPending()
 	{
@@ -304,9 +304,9 @@ class Service
 		if ( $level == NULL )
 			$level = 'I';
 		if (!in_array($level, array('E', 'W', 'N', 'I', 'D'))) {
-			return NULL;	 
+			return NULL;
 		}
-		
+
 		$data['level'] = $level;
 
 		$fd = fopen($data['filename'], 'r');
@@ -328,17 +328,17 @@ class Service
 
 		$searchFrom = (int) DUtil::getGoodVal(DUtil::grab_input("get",'searchFrom'));
 
-		if ( isset($_GET['end_x']) )
+		if ( isset($_GET['end']) )
 		{
 			$searchFrom = $endpos;
 		}
 		else
 		{
-			if ( isset($_GET['prev_x']) )
+			if ( isset($_GET['prev']) )
 				$searchFrom -= $searchSize;
-			elseif ( isset($_GET['next_x']) )
+			elseif ( isset($_GET['next']) )
 				$searchFrom += $searchSize;
-			elseif ( isset($_GET['begin_x']) )
+			elseif ( isset($_GET['begin']) )
 				$searchFrom = 0;
 
 			if ( $searchFrom < 0 )
@@ -409,6 +409,7 @@ class Service
 
 	}
 
+
 	function &getLog($data)
 	{
 		$newlineTag = '[ERR[WAR[NOT[INF[DEB';
@@ -418,7 +419,7 @@ class Service
 		$fd = fopen($data['filename'], 'r');
 		if ( !$fd )
 		{
-			echo '<tr><td class="message_error" colspan=3>Failed read server log file from '.$data['filename'].'</td></tr>';
+			echo '<tr><td class="message_error" colspan=3>Failed to read server log from file '.$data['filename'].'</td></tr>';
 			exit;
 		}
 		$endpos = $data['endPos'];
@@ -461,18 +462,12 @@ class Service
 					$start = 1;
 					$line ++;
 					$style = 'log_' . $b25;
-					$result .= '<tr><td class="'. $style . '0">'. substr($buffer, 0, 23);
-					$result .= '</td><td class="'. $style . '1">';
+					$result .= '<tr><td class="col_time '. $style . '0">'. substr($buffer, 0, 23);
+					$result .= '</td><td class="col_level '. $style . '1">';
 					$i = strpos($buffer, ']', 24);
 					$result .= ( substr($buffer, 25, $i - 25) );
-					$result .= '</td><td class="'. $style . '2">';
+					$result .= '</td><td class="col_mesg '. $style . '2">';
 					$result .= htmlspecialchars( substr($buffer, $i+2) );
-					if ( ++$cutline > 350 )
-					{
-						$cutline = 0;
-						echo $result;
-						$result = '';
-					}
 				}
 			}
 			elseif ( $start )
@@ -510,7 +505,7 @@ class Service
 		}
 		return $this->serverLog;
 	}
-	
+
 	function loadParam(&$holder, $line)
 	{
 		$t = preg_split('/[\s,:]/', $line, -1, PREG_SPLIT_NO_EMPTY);
@@ -526,8 +521,8 @@ class Service
 			}
 		}
 	}
-	
-	public static function GetLoadAvg() 
+
+	public static function GetLoadAvg()
 	{
 		$load_avg = 'N/A';
 		$UPTIME = '';
@@ -544,7 +539,7 @@ class Service
 				++$pos;
 			$load_avg = trim(substr($UPTIME, $pos ));
 		}
-		return $load_avg;		
+		return $load_avg;
 	}
 
 }

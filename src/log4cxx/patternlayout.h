@@ -37,7 +37,7 @@ public:
     ~PatternLayout() {}
     static int init();
     virtual Duplicable * dup( const char * pName );
-    virtual int format( LoggingEvent * pEvent, va_list args );
+    virtual int format( LoggingEvent * pEvent, char * pBuf, int len);
 };
 
 END_LOG4CXX_NS

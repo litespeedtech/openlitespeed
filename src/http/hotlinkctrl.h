@@ -23,6 +23,8 @@
 #include <util/autostr.h>
 
 class Pcregex;
+class XmlNode;
+class ConfigCtx;
 
 class HotlinkCtrl
 {
@@ -50,6 +52,7 @@ public:
     int  setRegex( const char * pRegex );
     int  setSuffixes( const char * suffix );
     int  allowed( const char * pRef, int len )  const;
+    int config( const XmlNode *pNode );
 };
 
 #endif

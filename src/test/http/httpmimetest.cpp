@@ -25,6 +25,8 @@
 #include <stdio.h>
 #include "test/unittest-cpp/UnitTest++/src/UnitTest++.h"
 
+#include <http/httpglobals.h>
+
 TEST( HttpMimeTest_runTest)
 {
     HttpMime m;
@@ -34,8 +36,8 @@ TEST( HttpMimeTest_runTest)
     const char* pNewType2;
     int ret; 
     char achBuf[256];
-    char * p = getcwd( achBuf, 256 );
-    strcat( achBuf, "/../../src/test/serverroot" );
+    char * p = achBuf;
+    strcpy( p, HttpGlobals::s_pServerRoot );
     CHECK( p != NULL );
     char * pEnd = p + strlen( p );
 

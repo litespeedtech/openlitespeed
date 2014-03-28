@@ -19,7 +19,7 @@
 #define REQHANDLER_H
 
 
-class HttpConnection;
+class HttpSession;
 class HttpContext;
 class HttpHandler;
 class ReqHandler
@@ -31,10 +31,10 @@ class ReqHandler
 public:
     ReqHandler(): m_iType( 1 )  {};
     virtual ~ReqHandler()       {};
-    virtual int process( HttpConnection* pConn, const HttpHandler * pHandler ) = 0;
-    virtual int onWrite( HttpConnection* pConn, int aioSent = 0) = 0;
-    virtual int cleanUp( HttpConnection* pConn ) = 0;
-    virtual int onRead( HttpConnection* pConn )
+    virtual int process( HttpSession* pSession, const HttpHandler * pHandler ) = 0;
+    virtual int onWrite( HttpSession* pSession ) = 0;
+    virtual int cleanUp( HttpSession* pSession ) = 0;
+    virtual int onRead( HttpSession* pSession )
         {   return 0;   }
     virtual void abortReq()     {};
     virtual bool notAllowed( int Method ) const;

@@ -3,7 +3,8 @@ cmake_minimum_required(VERSION 2.8)
 
 ########### next target ###############
 
-SET(registry_STAT_SRCS
+SET(registry_STAT_SRCS 
+   railsappconfig.cpp
    extappregistry.cpp
 )
 

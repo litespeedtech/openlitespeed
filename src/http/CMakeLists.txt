@@ -28,7 +28,6 @@ SET(http_STAT_SRCS
    htauth.cpp
    userdir.cpp
    authuser.cpp
-   httpconnpool.cpp
    httplistenerlist.cpp
    httpvhostlist.cpp
    htpasswd.cpp
@@ -59,7 +58,7 @@ SET(http_STAT_SRCS
    chunkinputstream.cpp
    httplog.cpp
    httpmime.cpp
-   staticfiledata.cpp
+   sendfileinfo.cpp
    httpcontext.cpp
    httpserverversion.cpp
    vhostmap.cpp
@@ -75,17 +74,15 @@ SET(http_STAT_SRCS
    httpstatusline.cpp
    httpheader.cpp
    smartsettings.cpp
-   datetime.cpp
    httplistener.cpp
    httpresp.cpp
    httpreq.cpp
-   httpconnection.cpp
+   httpsession.cpp
    iptogeo.cpp
    moov.cpp
    #requestvars.cpp
    hiostream.cpp 
    httprespheaders.cpp
-   ntwkiolinkpool.cpp
    l4handler.cpp
 )
 

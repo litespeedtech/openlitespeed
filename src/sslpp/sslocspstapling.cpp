@@ -16,9 +16,9 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include <sslpp/sslocspstapling.h>
-#include "main/httpserverbuilder.h"
-#include <http/httpglobals.h>
+
 #include <util/base64.h>
+#include <util/configctx.h>
 #include <util/httpfetch.h>
 #include <util/vmembuf.h>
 #include <util/stringtool.h>
@@ -39,6 +39,9 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
+
+const char* SslOcspStapling::s_pRespTempPath = "/tmp/ocspcache/";
+int   SslOcspStapling::s_iRespTempPathLen = 15;
 
 static AutoStr2 s_ErrMsg = "";
 const char* getStaplingErrMsg(){ return s_ErrMsg.c_str(); }
@@ -159,7 +162,6 @@ int SslOcspStapling::init(SSL_CTX* pSslCtx)
 {
     int             iResult;
     X509*           pCert;
-    struct timeval  CurTime;
     struct stat     st;
     m_pCtx = pSslCtx;
     pCert = NULL;
@@ -167,8 +169,7 @@ int SslOcspStapling::init(SSL_CTX* pSslCtx)
     
     if ( ::stat( m_sRespfileTmp.c_str(), &st ) == 0 )  
     {
-        gettimeofday( &CurTime, NULL );
-        if ( (st.st_mtime + 30) <= CurTime.tv_sec )
+        if ( (st.st_mtime + 30) <= time( NULL ) )
             unlink( m_sRespfileTmp.c_str() );   
     }
     //SSL_CTX_set_default_verify_paths( m_pCtx );
@@ -194,13 +195,11 @@ int SslOcspStapling::init(SSL_CTX* pSslCtx)
 int SslOcspStapling::update()
 {
 
-    struct timeval CurTime;
     struct stat st;
 
-    gettimeofday( &CurTime, NULL );
     if ( ::stat( m_sRespfile.c_str(), &st ) == 0 )
     {
-        if ( (st.st_mtime + m_iocspRespMaxAge) > CurTime.tv_sec )
+        if ( (st.st_mtime + m_iocspRespMaxAge) > time( NULL ) )
         {
             if ( m_RespTime != st.st_mtime )
             {
@@ -492,29 +491,34 @@ void SslOcspStapling::setCertFile( const char* Certfile )
 {
     char RespFile[4096];
     unsigned char md5[16];
-    char md5Str[35] = {0};
+    char * p;
     m_sCertfile.setStr( Certfile );  
+    //strcat(RespFile, HttpGlobals::s_pServerRoot);
+    //strcat(RespFile, "/tmp/ocspcache/R");
+    strcpy(RespFile, s_pRespTempPath );
+    p = &RespFile[s_iRespTempPathLen];
+    *p++ = 'R';
     StringTool::getMd5(Certfile, strlen(Certfile), md5);
-    StringTool::hexEncode((const char *)md5, 16, md5Str); 
-    md5Str[32] = 0;
-    RespFile[0] = 0;
-    strcat(RespFile, HttpGlobals::s_pServerRoot);
-    strcat(RespFile, "/tmp/ocspcache/R");
-    strcat(RespFile, md5Str);
-    strcat(RespFile, ".rsp");
-    m_sRespfile.setStr( RespFile );
-    strcat(RespFile, ".tmp");
-    m_sRespfileTmp.setStr( RespFile );
+    StringTool::hexEncode((const char *)md5, 16, p); 
+    p += 32;
+        
+    strcpy(p , ".rsp");
+    p += 4;
+    m_sRespfile.setStr( RespFile, p - RespFile );
+    strcpy(p, ".tmp");
+    p += 3;
+    m_sRespfileTmp.setStr( RespFile, p - RespFile );
 }
+
 int SslOcspStapling::config( const XmlNode *pNode, SSL_CTX *pSSL,  
-                             const char *pCAFile, char *pachCert, ConfigCtx* pcurrentCtx )
+                             const char *pCAFile, char *pachCert )
 {
     setCertFile( pachCert );
 
     if ( pCAFile )
         setCAFile( pCAFile );
 
-    setRespMaxAge( pcurrentCtx->getLongValue( pNode, "ocspRespMaxAge", 60, 360000, 3600 ) );
+    setRespMaxAge( ConfigCtx::getCurConfigCtx()->getLongValue( pNode, "ocspRespMaxAge", 60, 360000, 3600 ) );
 
     const char *pResponder = pNode->getChildValue( "ocspResponder" );
     if ( pResponder )
@@ -522,10 +526,9 @@ int SslOcspStapling::config( const XmlNode *pNode, SSL_CTX *pSSL,
 
     if ( init( pSSL ) == -1 )
     {
-        pcurrentCtx->log_error( "OCSP Stapling can't be enabled [%s].", getStaplingErrMsg() );
+        ConfigCtx::getCurConfigCtx()->log_error( "OCSP Stapling can't be enabled [%s].", getStaplingErrMsg() );
         return -1;
     }
-
 
     return 0; 
 }

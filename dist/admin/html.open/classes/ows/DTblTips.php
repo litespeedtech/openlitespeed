@@ -114,7 +114,7 @@ class DTblTips
 		}
 		elseif ( $tid == 'A_SCRIPT')
 		{
-			$tips[] = 'Script handler can be a CGI, a FCGI app, a Servlet engine, or a proxy to Web server.';
+			$tips[] = 'Script handler can be a CGI, a FCGI app, a module handler, a Servlet engine, or a proxy to Web server.';
 			$tips[] = 'Except CGI, other handlers need to be predefined in "External App" section.';
 			$tips[] = 'If the web site supports php or jsp, please set up here.';
 		}
@@ -165,6 +165,7 @@ class DTblTips
 			$tips[] = 'CGI context can be used to specify a directory only contains CGI scripts.';
 			$tips[] = 'Redirect context can set up an internal or external redirect URI.';
 			$tips[] = 'Rack/Rails context is specifically used for Rack/Rails application';
+			$tips[] = 'Module handler context is a mount point of hander type modules.';
 
 		}
 		if ( substr($tid, 0, -1) == 'VH_CTX' )
@@ -294,7 +295,7 @@ class DTblTips
 		{
 			$tips[] = 'You need to know the old password in order to change it.';
 			$tips[] = 'If you forget the admin password, you cannot change it from here for security reason. Please use the following command from shell:
-[your install dir]/admin/misc/admpass.sh. This script will override all the user ids and reset to one admin user'; 
+[your install dir]/admin/misc/admpass.sh. This script will override all the user ids and reset to one admin user';
 		}
 		return $tips;
 	}

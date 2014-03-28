@@ -7,7 +7,7 @@ class BuildOptions
 	private $batch_id;
 	private $validated = FALSE;
 
-	
+
 	private $vals = array(
 			'OptionVersion' => OPTION_VERSION,
 			'PHPVersion' => '',
@@ -21,8 +21,10 @@ class BuildOptions
 			'AddOnEAccelerator' => FALSE,
 			'AddOnXCache' => FALSE,
 			'AddOnMemCache' => FALSE,
-			'AddOnMemCached' => FALSE);
-	
+			'AddOnMemCached' => FALSE,
+			'AddonOPcache' => FALSE
+	);
+
 
 	function __construct($version="")
 	{
@@ -35,39 +37,39 @@ class BuildOptions
 
 	function SetValue($name, $val)
 	{
-		$this->vals[$name] = $val;	
+		$this->vals[$name] = $val;
 	}
-	
+
 	function GetValue($name)
 	{
-		return $this->vals[$name];	
+		return $this->vals[$name];
 	}
-	
-	function GetBatchId() 
+
+	function GetBatchId()
 	{
 		return $this->batch_id;
 	}
-	
+
 	function SetType($optionsType)
 	{
 		$this->type = $optionsType;
 	}
-	
+
 	function GetType()
 	{
 		return $this->type;
 	}
-	
+
 	function IsValidated()
 	{
-		return $this->validated;	
+		return $this->validated;
 	}
-	
+
 	function SetValidated($isValid)
 	{
-		$this->validated = $isValid;	
+		$this->validated = $isValid;
 	}
-	
+
 	function setVersion($version)
 	{
 		global $PHP_VER;
@@ -96,6 +98,7 @@ class BuildOptions
 		$this->vals['AddOnXCache'] = FALSE;
 		$this->vals['AddOnMemCache'] = FALSE;
 		$this->vals['AddOnMemCached'] = FALSE;
+		$this->vals['AddOnOPcache'] = FALSE;
 
 		$this->type = 'DEFAULT';
 		$this->validated = TRUE;
@@ -115,7 +118,7 @@ class BuildOptions
 			}
 		}
 		return NULL;
-	
+
 
 	}
 
@@ -126,11 +129,11 @@ class BuildOptions
 		}
 
 		$saved_val = $this->vals;
-		
+
 		$saved_val['ConfigParam'] = trim(preg_replace("/ ?'--(prefix=|enable-suhosin)[^ ]*' */", ' ', $saved_val['ConfigParam']));
-			
+
 		$serialized_str = serialize($saved_val);
-		
+
 		$filename = LAST_CONF . $this->base_ver . '.options2';
 		return file_put_contents($filename, $serialized_str);
 	}
@@ -151,7 +154,8 @@ class BuildOptions
 		$addon_eacc = $this->vals['AddOnEAccelerator'] ? 'true':'false';
 		$addon_xcache = $this->vals['AddOnXCache'] ? 'true':'false';
 		$addon_memcache = $this->vals['AddOnMemCache'] ? 'true':'false';
-		
+		$addon_opcache = $this->vals['AddOnOPcache'] ? 'true':'false';
+
 		$loc = 'document.buildphp';
 		$buf = "onClick=\"$loc.path_env.value='{$this->vals['ExtraPathEnv']}';
 		$loc.installPath.value = '{$this->vals['InstallPath']}';
@@ -162,10 +166,11 @@ class BuildOptions
 		$loc.addonEAccelerator.checked = $addon_eacc;
 		$loc.addonXCache.checked = $addon_xcache;
 		$loc.addonMemCache.checked = $addon_memcache;
+		$loc.addonOPcache.checked = $addon_opcache;
 		if ($loc.addonSuhosin != null)
 			$loc.addonSuhosin.checked = $addon_suhosin;
 		\"";
-			
+
 		return $buf;
 	}
 }
@@ -200,17 +205,17 @@ class BuildCheck
 		//else illegal
 
 	}
-	
+
 	public function GetNextStep()
 	{
 		return $this->next_step;
 	}
-	
+
 	public function GetCurrentStep()
 	{
 		return $this->cur_step;
 	}
-	
+
 	public function is_suhosin_supported($php_version)
 	{
 		// check & match configured php versions
@@ -246,7 +251,7 @@ class BuildCheck
 				}
 			}
 		}
-		
+
 		//bash mesg
 		$OS=`uname`;
 		if ( strpos($OS,'FreeBSD') !== FALSE )	{
@@ -256,7 +261,7 @@ class BuildCheck
 				return FALSE;
 			}
 		}
-		
+
 
 		if ( $found ) {
 			$this->next_step = 2;
@@ -274,14 +279,14 @@ class BuildCheck
 		$php_version = DUtil::grab_input('ANY','version');
 
 		// only if illegal action, will have err
-		if ( !$this->validate_php_version($php_version) ) { 
+		if ( !$this->validate_php_version($php_version) ) {
 			$this->next_step = 0;
 			return FALSE;
 		}
 		$this->pass_val['php_version'] = $php_version;
 
 		$options = new BuildOptions($php_version);
-		
+
 		$options->SetValue('ExtraPathEnv', DUtil::grab_input('ANY','path_env'));
 		$options->SetValue('InstallPath', DUtil::grab_input('ANY','installPath'));
 		$compilerFlags = DUtil::grab_input('ANY','compilerFlags');
@@ -289,7 +294,7 @@ class BuildCheck
 		//set the input even it has error, so user can modify
 		$options->SetValue('ConfigParam', $configParams);
 		$options->SetValue('CompilerFlags', $compilerFlags);
-		
+
 		$options->SetValue('AddOnSuhosin', (NULL != DUtil::grab_input('ANY','addonSuhosin')));
 		$options->SetValue('AddOnMailHeader',  (NULL != DUtil::grab_input('ANY','addonMailHeader')));
 		$options->SetValue('AddOnAPC', (NULL != DUtil::grab_input('ANY','addonAPC')));
@@ -297,22 +302,23 @@ class BuildCheck
 		$options->SetValue('AddOnXCache', (NULL != DUtil::grab_input('ANY','addonXCache')));
 		$options->SetValue('AddOnMemCache', (NULL != DUtil::grab_input('ANY','addonMemCache')));
 		$options->SetValue('AddOnMemCached', (NULL != DUtil::grab_input('ANY','addonMemCached')));
-		
+		$options->SetValue('AddOnOPcache', (NULL != DUtil::grab_input('ANY','addonOPcache')));
+
 		// can be real input err
 		$v1 = $this->validate_extra_path_env($options->GetValue('ExtraPathEnv'));
 		$v2 = $this->validate_install_path($options->GetValue('InstallPath'));
 		$v3 = $this->validate_complier_flags($compilerFlags);
 		$v4 = $this->validate_config_params($configParams);
-			
+
 		if (!$v1 || !$v2 || !$v3 || !$v4) {
 			$options->SetType('INPUT');
-			
+
 			$options->SetValidated(FALSE);
 			$this->pass_val['input_options'] = $options;
 			$this->next_step = 2;
 			return FALSE;
 		}
-		
+
 		$foundSuhosin = strpos($configParams, '--enable-suhosin');
 		if ($options->GetValue('AddOnSuhosin') && $foundSuhosin === FALSE ) {
 			$configParams .= " '--enable-suhosin'";
@@ -324,29 +330,29 @@ class BuildCheck
 		if (strpos($configParams, '--with-litespeed') === FALSE) {
 			$configParams .= " '--with-litespeed'";
 		}
-			
+
 		$configParams = "'--prefix=" . $options->GetValue('InstallPath') . "' " . $configParams;
 		$options->SetValue('ConfigParam', escapeshellcmd($configParams));
 		$options->SetValue('CompilerFlags', escapeshellcmd($compilerFlags));
-		
-			
+
+
 		$options->SetType('BUILD');
 		$options->SetValidated(TRUE);
 		$this->pass_val['build_options'] = $options;
 		$this->next_step = 3;
 		return TRUE;
 	}
-	
+
 	private function validate_step3()
 	{
 		global $_SESSION;
-		
+
 		if (!isset($_SESSION['progress_file'])) {
 			echo "missing progress file";
 			return FALSE;
 		}
 		$progress_file = $_SESSION['progress_file'];
-		
+
 		if (!isset($_SESSION['log_file'])) {
 			echo "missing log file";
 			return FALSE;
@@ -362,13 +368,13 @@ class BuildCheck
 			echo "missing manual script";
 			return FALSE;
 		}
-		
+
 		$php_version = DUtil::grab_input('ANY', 'php_version');
 		if ($php_version == '') {
 			echo "missing php_version";
 			return FALSE;
 		}
-		
+
 		$this->pass_val['php_version'] = $php_version;
 		$this->pass_val['progress_file'] = $progress_file;
 		$this->pass_val['log_file'] = $log_file;
@@ -432,7 +438,7 @@ class BuildCheck
 			$this->pass_val['err']['installPath'] = 'Illegal characters found.';
 			return FALSE;
 		}
-		
+
 		//parent exists.
 		if (!is_dir($path)) {
 			if (is_file($path)) {
@@ -457,12 +463,12 @@ class BuildCheck
 
 		return TRUE;
 	}
-	
+
 	private function validate_complier_flags(&$cflags)
 	{
 		if ($cflags === '')
-			return TRUE;	
-	
+			return TRUE;
+
 		if (preg_match('/([;&"|#$?`])/', $cflags)) {
 			if (strpos($cflags, '"') !== FALSE)
 				$this->pass_val['err']['compilerFlags'] = 'Please use single quote to replace double-quotes';
@@ -476,7 +482,7 @@ class BuildCheck
 		$a = str_replace("\n", ' ', $cflags);
 		$a = trim($a) . ' '; // need trailing space to match
 		$FLAGS = 'CFLAGS|CPPFLAGS|CXXFLAGS|LDFLAGS';
-		while (strlen($a) > 0) 
+		while (strlen($a) > 0)
 		{
 		    $m = NULL;
 		    if (preg_match("/^($FLAGS)=[^'^\"^ ]+\s+/", $a, $matches)) {
@@ -498,14 +504,14 @@ class BuildCheck
 				$this->pass_val['err']['compilerFlags'] = "invalid flag options starting at $pe";
 				return FALSE;
 		    }
-		}		    
+		}
 		if (!empty($flag)) {
 		    $cflags = implode(' ', $flag);
 		}
-		else 
+		else
 			$cflags = '';
 		return TRUE;
-				
+
 	}
 
 	private function validate_config_params(&$config_params)
@@ -522,7 +528,7 @@ class BuildCheck
 		$params = array();
 		$a = str_replace("\n", ' ', $config_params);
 		$a = trim($a) . ' ';
-		while (strlen($a) > 0) 
+		while (strlen($a) > 0)
 		{
 		    $m = NULL;
 		    if (preg_match("/^'--[a-zA-Z_\-0-9]+=[^=^'^;]+'\s+/", $a, $matches)) {
@@ -558,14 +564,14 @@ class BuildCheck
 				return FALSE;
 		    }
 		}
-		
+
 		if (empty($params)) {
 			$this->pass_val['err']['configureParams'] = 'parameters cannot be empty.';
 			return FALSE;
 		}
-		
+
 		$options = implode(' ', $params);
-		
+
 		$config_params = $options;
 		return TRUE;
 	}
@@ -582,7 +588,7 @@ class BuildTool
 	var $log_file;
 	var $suhosin_patch_url;
 	var $extension_used;
-	
+
 	var $build_prepare_script = NULL;
 	var $build_install_script = NULL;
 	var $build_manual_run_script = NULL;
@@ -609,7 +615,7 @@ class BuildTool
 		$this->build_prepare_script = BUILD_DIR . '/buildphp_' . $this->options->GetBatchId() . '.prep.sh';
 		$this->build_install_script = BUILD_DIR . '/buildphp_' . $this->options->GetBatchId() . '.install.sh';
 		$this->build_manual_run_script = BUILD_DIR . '/buildphp_manual_run.sh';
-		
+
 		if (file_exists($this->progress_file)) {
 			$error = "Please do not use the browser refresh, back and forward buttons on the PHP build pages. Current batch is in progress.";
 			return FALSE;
@@ -619,7 +625,7 @@ class BuildTool
 			$error = "ERROR: Unable to detect download method (install curl, fetch, or wget)";
 			return FALSE;
 		}
-		
+
 		$this->initDownloadUrl();
 		return TRUE;
 	}
@@ -643,7 +649,7 @@ class BuildTool
 				$dlmethod = "wget -nv -O";
 			}
 		}
-		
+
 		if ( $dlmethod == '' )
 		{
 			if ( (exec('PATH=$path_env:/bin:/usr/bin:/usr/local/bin curl', $o, $status)||1) && $status <= 2) {
@@ -659,7 +665,7 @@ class BuildTool
 		$this->dlmethod = $dlmethod;
 		return TRUE;
 	}
-	
+
 	function initDownloadUrl()
 	{
 		// SUHOSIN_PATCH_URL
@@ -684,7 +690,7 @@ class BuildTool
 		}
 		elseif ($php_version == '5.3.10') {
 			$this->suhosin_patch_url = 'http://download.suhosin.org/suhosin-patch-5.3.9-0.9.10.patch.gz';
-		}		
+		}
 		elseif ($php_version == '5.2.17') {
 			$this->suhosin_patch_url = 'http://download.suhosin.org/suhosin-patch-5.2.16-0.9.7.patch.gz';
 		}
@@ -696,20 +702,20 @@ class BuildTool
 		$ext['{EXTENSION_SRC}'] = $ver .'.tgz';
 		$ext['{EXTENSION_DOWNLOAD_URL}'] = 'http://download.suhosin.org/' . $ver . '.tgz';
 		$ext['{EXTRACT_METHOD}'] = 'tar -zxf';
-		$ext['{EXTENSION_EXTRA_CONFIG}'] = '';		
+		$ext['{EXTENSION_EXTRA_CONFIG}'] = '';
 
 		$this->ext_options['Suhosin'] = $ext;
-		
+
 		$ext = array('{EXTENSION_NAME}' => 'APC');
 		$ver = 'APC-' . APC_VERSION;
 		$ext['{EXTENSION_DIR}'] = $ver;
 		$ext['{EXTENSION_SRC}'] = $ver . '.tgz';
 		$ext['{EXTENSION_DOWNLOAD_URL}'] = 'http://pecl.php.net/get/'. $ver . '.tgz';
 		$ext['{EXTRACT_METHOD}'] = 'tar -zxf';
-		$ext['{EXTENSION_EXTRA_CONFIG}'] = '--enable-apc';		
+		$ext['{EXTENSION_EXTRA_CONFIG}'] = '--enable-apc';
 
 		$this->ext_options['APC'] = $ext;
-		
+
 		$ext = array('{EXTENSION_NAME}' => 'eAccelerator');
 		// determin ea version
 		if ($php_version >= '5.2') {
@@ -725,17 +731,17 @@ class BuildTool
 		// $ext['{EXTENSION_DOWNLOAD_URL}'] = 'http://bart.eaccelerator.net/source/' . $ver . '/' . $sver . '.tar.bz2';
 		$ext['{EXTENSION_DOWNLOAD_URL}'] = 'http://www.litespeedtech.com/packages/eaccelerator/' . $sver . '.tar.bz2';
 		$ext['{EXTRACT_METHOD}'] = 'tar -jxf';
-		$ext['{EXTENSION_EXTRA_CONFIG}'] = '--enable-eaccelerator=shared --without-eaccelerator-use-inode';		
+		$ext['{EXTENSION_EXTRA_CONFIG}'] = '--enable-eaccelerator=shared --without-eaccelerator-use-inode';
 
 		$this->ext_options['eAccelerator'] = $ext;
-		
+
 		$ext = array('{EXTENSION_NAME}' => 'XCache');
 		$ver = 'xcache-' . XCACHE_VERSION;
 		$ext['{EXTENSION_DIR}'] = $ver;
 		$ext['{EXTENSION_SRC}'] = $ver . '.tar.gz';
 		$ext['{EXTENSION_DOWNLOAD_URL}'] = 'http://xcache.lighttpd.net/pub/Releases/' . XCACHE_VERSION . '/' . $ver . '.tar.gz';
 		$ext['{EXTRACT_METHOD}'] = 'tar -zxf';
-		$ext['{EXTENSION_EXTRA_CONFIG}'] = '--enable-xcache';		
+		$ext['{EXTENSION_EXTRA_CONFIG}'] = '--enable-xcache';
 
 		$this->ext_options['XCache'] = $ext;
 
@@ -746,9 +752,9 @@ class BuildTool
 		$ext['{EXTENSION_DOWNLOAD_URL}'] = 'http://pecl.php.net/get/'. $ver . '.tgz';
 		$ext['{EXTRACT_METHOD}'] = 'tar -zxf';
 		$ext['{EXTENSION_EXTRA_CONFIG}'] = '--enable-memcache';
-				
+
 		$this->ext_options['MemCache'] = $ext;
-		
+
 //		$ext = array('{EXTENSION_NAME}' => 'MemCached');
 //		$ver = 'memcached-' . MEMCACHED_VERSION;
 //		$ext['{EXTENSION_DIR}'] = $ver;
@@ -756,29 +762,41 @@ class BuildTool
 //		$ext['{EXTENSION_DOWNLOAD_URL}'] = 'http://pecl.php.net/get/'. $ver . '.tgz';
 //		$ext['{EXTRACT_METHOD}'] = 'tar -zxf';
 //		$ext['{EXTENSION_EXTRA_CONFIG}'] = '--enable-memcached';
-//				
+//
 //		$this->ext_options['MemCached'] = $ext;
-		
+
+		$ext = array('{EXTENSION_NAME}' => 'OPcache');
+		$ver = 'zendopcache-' . OPCACHE_VERSION;
+		$ext['{EXTENSION_DIR}'] = $ver;
+		$ext['{EXTENSION_SRC}'] = $ver . '.tgz';
+		$ext['{EXTENSION_DOWNLOAD_URL}'] = 'http://pecl.php.net/get/'. $ver . '.tgz';
+		$ext['{EXTRACT_METHOD}'] = 'tar -zxf';
+		$ext['{EXTENSION_EXTRA_CONFIG}'] = '--enable-opcache';
+
+		$this->ext_options['OPcache'] = $ext;
 	}
 
 	public static function getExtensionNotes($extensions)
 	{
 		$ocname = array();
 		if (strpos($extensions, 'APC') !== FALSE) {
-			$ocname[] = 'APC';					
+			$ocname[] = 'APC';
 		}
 		if (strpos($extensions, 'eAccelerator') !== FALSE) {
-			$ocname[] = 'eAccelerator';	
+			$ocname[] = 'eAccelerator';
 		}
 		if (strpos($extensions, 'XCache') !== FALSE) {
-			$ocname[] = 'XCache';	
+			$ocname[] = 'XCache';
 		}
-		
+		if (strpos($extensions, 'OPcache') !== FALSE) {
+			$ocname[] = 'OPcache';
+		}
+
 		if (count($ocname) == 0) {
-			return ''; 
+			return '';
 		}
 		$notes = '<li>To enable the opcode cache, please make sure the following is added to
-				 your php.ini configuration file. In addition, you may need to check the log detail to 
+				 your php.ini configuration file. In addition, you may need to check the log detail to
 				 determine the directory where your extensions are installed and add the directory to the
 				 extensions path in your php.ini configuration file.<br />';
 		$notes1 = '';
@@ -812,27 +830,44 @@ eaccelerator.compress_level="9"
 ;				APC
 ;				=================
 				extension=apc.so
-				
+
 				';
 			}
-			
+
 			if ($ocn == 'XCache') {
 				$notes1 .= '
 ;				=================
 ;				XCache
 ;				=================
 				extension=xcache.so
-				
+
+				';
+			}
+
+			if ($ocn == 'OPcache') {
+				$notes1 .= '
+;				=================
+;				Zend OPcache
+;				=================
+				zend_extension=opcache.so
+
+opcache.memory_consumption=128
+opcache.interned_strings_buffer=8
+opcache.max_accelerated_files=4000
+opcache.revalidate_freq=60
+opcache.fast_shutdown=1
+opcache.enable_cli=1
+
 				';
 			}
 		}
 		$notes .= nl2br($notes1);
-		$notes .= '</li>';	
-	
+		$notes .= '</li>';
+
 		return $notes;
 	}
 
-	
+
 	function generate_script(&$error)
 	{
 		if ($this->progress_file == NULL) {
@@ -861,7 +896,7 @@ eaccelerator.compress_level="9"
 
 		$search = array_keys($params);
 		$replace = array_values($params);
-		
+
 		//common header
 		$template_file = 'build_common.template';
 		$template = file_get_contents($template_file);
@@ -872,8 +907,8 @@ eaccelerator.compress_level="9"
 		$template_script = str_replace($search, $replace, $template);
 		$prepare_script = $template_script;
 		$install_script = $template_script;
-		
-		
+
+
 		// prepare php
 		$template_file = 'build_prepare.template';
 		$template = file_get_contents($template_file);
@@ -883,7 +918,7 @@ eaccelerator.compress_level="9"
 		}
 		$template_script = str_replace($search, $replace, $template);
 		$prepare_script .= $template_script;
-		
+
 		// install php
 		$template_file2 = 'build_install.template';
 		$template2 = file_get_contents($template_file2);
@@ -893,7 +928,7 @@ eaccelerator.compress_level="9"
 		}
 		$template_script2 = str_replace($search, $replace, $template2);
 		$install_script .= $template_script2;
-		
+
 		//prepare extension
 		$template_file = 'build_prepare_ext.template';
 		$template = file_get_contents($template_file);
@@ -901,7 +936,7 @@ eaccelerator.compress_level="9"
 			$error = 'failed to read file: ' . $template_file;
 			return false;
 		}
-		
+
 		//install extension
 		$template_file2 = 'build_install_ext.template';
 		$template2 = file_get_contents($template_file2);
@@ -909,7 +944,7 @@ eaccelerator.compress_level="9"
 			$error = 'failed to read file: ' . $template_file2;
 			return false;
 		}
-		
+
 		$extList = array();
 		if ($this->options->GetValue('AddOnSuhosin')) {
 			$extList[] = 'Suhosin';
@@ -929,6 +964,9 @@ eaccelerator.compress_level="9"
 //		if ($this->options->GetValue('AddOnMemCached')) {
 //			$extList[] = 'MemCached';
 //		}
+		if ($this->options->GetValue('AddOnOPcache')) {
+			$extList[] = 'OPcache';
+		}
 		foreach ($extList as $extName) {
 			$newparams = array_merge($params, $this->ext_options[$extName]);
 			$search = array_keys($newparams);
@@ -941,10 +979,10 @@ eaccelerator.compress_level="9"
 		$this->extension_used = implode('.', $extList);
 
 		$prepare_script .= 'main_msg "**PREPARE_DONE**"' . "\n";
-		$install_script .= 'main_msg "**COMPLETE**"' . "\n"; 
-		
+		$install_script .= 'main_msg "**COMPLETE**"' . "\n";
+
 		if ( file_put_contents($this->build_prepare_script, $prepare_script) === FALSE) {
-			
+
 			$error = 'Failed to create build prepare script: ' . $this->build_prepare_script;
 			return false;
 		}
@@ -955,7 +993,7 @@ eaccelerator.compress_level="9"
 		}
 
 		if ( file_put_contents($this->build_install_script, $install_script) === FALSE) {
-			
+
 			$error = 'Failed to create build install script: ' . $this->build_install_script;
 			return false;
 		}
@@ -964,7 +1002,7 @@ eaccelerator.compress_level="9"
 			$error = 'Failed to chmod for ' . $this->build_install_script;
 			return false;
 		}
-		
+
 		// final manual run script
 		$template_file = 'build_manual_run.template';
 		$template = file_get_contents($template_file);
@@ -974,7 +1012,7 @@ eaccelerator.compress_level="9"
 		}
 		$template_script = str_replace($search, $replace, $template);
 		if ( file_put_contents($this->build_manual_run_script, $template_script) === FALSE) {
-			
+
 			$error = 'Failed to create manual install script: ' . $this->build_manual_run_script;
 			return false;
 		}
@@ -983,12 +1021,11 @@ eaccelerator.compress_level="9"
 			$error = 'Failed to chmod for ' . $this->build_manual_run_script;
 			return false;
 		}
-		
-		
+
+
 		return true;
 	}
-	
-	
+
+
 }
 
-?>

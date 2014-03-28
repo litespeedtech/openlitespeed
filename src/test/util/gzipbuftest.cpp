@@ -37,7 +37,7 @@ TEST( GzipBufTest_testGzipFile)
 
     gzBuf.setCompressCache( &gzFile );
     CHECK( 0 == gzBuf.beginStream() );
-    CHECK( 0 == gzBuf.write( achBuf, 8192 ) );
+    CHECK( 8192 == gzBuf.write( achBuf, 8192 ) );
     CHECK( 0 == gzBuf.endStream() );
     gzFile.exactSize();
     gzFile.close();
@@ -48,7 +48,7 @@ TEST( GzipBufTest_testGzipFile)
 
     CHECK( 0 == gzBuf.beginStream() );
     for( int i = 1; i < 1024; ++i )
-        CHECK( 0 == gzBuf.write( achBuf+ 4096 - i / 2, i ) );
+        CHECK( i == gzBuf.write( achBuf+ 4096 - i / 2, i ) );
     CHECK( 0 == gzBuf.endStream() );
     gzFile.exactSize();
     gzFile.close();
@@ -62,7 +62,7 @@ TEST( GzipBufTest_testGzipFile)
     for( int i = 1; i < 20000; ++i )
     {
         num = rand();
-        CHECK( 0 == gzBuf.write( (char *)&num, 4 ) );
+        CHECK( 4 == gzBuf.write( (char *)&num, 4 ) );
     }
     //printf( "before end stream, filesize=%d\n", gzFile.getCurFileSize() );
     CHECK( 0 == gzBuf.endStream() );

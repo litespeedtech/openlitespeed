@@ -83,7 +83,8 @@ public:
 
     void appendCombine( const void *pBuf, size_t size )
     {
-        if ( pBuf == (char *)((m_pEnd-1)->iov_base) + (m_pEnd-1)->iov_len )
+        if ( m_pBegin != m_pEnd && 
+	    pBuf == (char *)((m_pEnd-1)->iov_base) + (m_pEnd-1)->iov_len )
             (m_pEnd - 1)->iov_len += size;
         else
             append( pBuf, size );

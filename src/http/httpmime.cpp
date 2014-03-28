@@ -19,12 +19,13 @@
 #include <http/httplog.h>
 #include <http/httphandler.h>
 #include <http/handlerfactory.h>
+#include <http/httpglobals.h>
 #include <util/gpointerlist.h>
 #include <util/hashstringmap.h>
 #include <util/stringlist.h>
 #include <util/stringtool.h>
-
-
+#include <util/xmlnode.h>
+#include "util/configctx.h"
 #include <assert.h>
 #include <ctype.h>
 #include <errno.h>
@@ -1015,6 +1016,103 @@ int HttpMime::addMimeHandler( const char * pSuffix, char * pMime, const HttpHand
     }
     updateMIME( pMime, HttpMime::setHandler, (void *)pHdlr, pParent );
     return 0;
+}
+int HttpMime::configScriptHandler1( HttpVHost *pVHost,
+        const XmlNodeList *pList, HttpMime *pHttpMime )
+{
+    ConfigCtx currentCtx( "scripthandler" );
+    XmlNodeList::const_iterator iter;
+
+    for( iter = pList->begin(); iter != pList->end(); ++iter )
+    {
+        XmlNode *pNode = *iter;
+        char *pSuffix = ( char * ) pNode->getChildValue( "suffix" );
+
+        if ( !pSuffix || !*pSuffix || strchr( pSuffix, '.' ) )
+        {
+            currentCtx.log_errorInvalTag( "suffix", pSuffix );
+        }
+        const HttpHandler *pHdlr = HandlerFactory::getHandler( pNode );
+        addMimeHandler(pHdlr, ( char * ) pNode->getChildValue( "mime" ), pHttpMime, 
+                              pSuffix );
+    }
+    return 0;
+}
+int HttpMime::configScriptHandler2( HttpVHost *pVHost,
+        const XmlNodeList *pList, HttpMime *pHttpMime )
+{
+    ConfigCtx currentCtx( "scripthandler", "add" );
+    XmlNodeList::const_iterator iter;
+
+    for( iter = pList->begin(); iter != pList->end(); ++iter )
+    {
+        const char *value = ( char * )( *iter )->getValue();
+        const char *pSuffixByTab = strchr( value, '\t' );
+        const char *pSuffixBySpace = strchr( value, ' ' );
+        const char *suffix  = NULL;
+
+        if ( pSuffixByTab == NULL && pSuffixBySpace == NULL )
+        {
+            currentCtx.log_errorInvalTag( "ScriptHandler", value );
+            continue;
+        }
+        else
+            if ( pSuffixByTab == NULL )
+                suffix = pSuffixBySpace;
+            else
+                if ( pSuffixBySpace == NULL )
+                    suffix = pSuffixByTab;
+                else
+                    suffix = ( ( pSuffixByTab > pSuffixBySpace ) ? pSuffixBySpace : pSuffixByTab );
+
+        const char *type = strchr( value, ':' );
+
+        if ( suffix == NULL || type == NULL || strchr( suffix, '.' ) || type > suffix )
+        {
+            currentCtx.log_errorInvalTag( "suffix", suffix );
+            continue;
+
+        }
+
+        ++ suffix; //should all spaces be handled here?? Now only one white space handled.
+
+        char pType[256] = {0};
+        memcpy( pType, value, type - value );
+
+        char handler[256] = {0};
+        memcpy( handler, type + 1, suffix - type - 2 );
+
+        char achHandler[256] = {0};
+
+        if ( currentCtx.expandVariable( handler, achHandler, 256 ) < 0 )
+        {
+            currentCtx.log_notice( "add String is too long for scripthandler, value: %s", handler );
+            continue;
+        }
+
+        const HttpHandler *pHdlr = HandlerFactory::getHandler( pType, achHandler );
+        addMimeHandler(pHdlr, NULL, pHttpMime, suffix );
+    }
+
+    return 0;
+}
+void HttpMime::addMimeHandler(const HttpHandler *pHdlr, char *pMime, HttpMime *pHttpMime, 
+                              const char *pSuffix )
+{
+    if ( !pHdlr )
+    {
+        ConfigCtx::getCurConfigCtx()->log_error( "use static file handler for suffix [%s]", pSuffix );
+        pHdlr = HandlerFactory::getInstance( 0, NULL );
+    }
+    HttpMime *pParent = NULL;
+
+    if ( pHttpMime )
+        pParent = HttpGlobals::getMime();
+    else
+        pHttpMime = HttpGlobals::getMime();
+
+    pHttpMime->addMimeHandler( pSuffix, pMime,
+                                pHdlr, pParent, LogIdTracker::getLogId() );
 }
 
 

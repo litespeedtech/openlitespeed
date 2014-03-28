@@ -14,6 +14,7 @@ libutil_a_SOURCES = httpfetch.cpp httpfetchdriver.cpp ni_fio.c linkobjpool.cpp p
   gpath.cpp logtracker.cpp gstring.cpp poolalloc.cpp env.cpp \
   xmlnode.cpp iovec.cpp accesscontrol.cpp signalutil.cpp \
   loopbuf.cpp stringtool.cpp tsingleton.cpp base64.cpp pcutil.cpp daemonize.cpp mysleep.c \
-   misc/profiletime.cpp  sysinfo/nicdetect.cpp sysinfo/systeminfo.cpp autobuf.cpp
+   misc/profiletime.cpp sysinfo/partitioninfo.cpp sysinfo/nicdetect.cpp sysinfo/systeminfo.cpp autobuf.cpp \
+   configentry.cpp configctx.cpp logidtracker.cpp datetime.cpp
  
 ####### kdevelop will overwrite this part!!! (end)############

@@ -23,9 +23,9 @@
 #include <extensions/lsapi/lsapiconfig.h>
 #include <extensions/registry/extappregistry.h>
 
-#include <http/datetime.h>
+#include <util/datetime.h>
 #include <http/httpcgitool.h>
-#include <http/httpconnection.h>
+#include <http/httpsession.h>
 #include <http/httpextconnector.h>
 #include <http/httpdefs.h>
 #include <http/httpglobals.h>
@@ -162,7 +162,7 @@ int LsapiConn::doWrite()
 
 int LsapiConn::sendReqHeader()
 {
-    int ret = m_lsreq.buildReq( getConnector()->getHttpConn(), &m_iTotalPending );
+    int ret = m_lsreq.buildReq( getConnector()->getHttpSession(), &m_iTotalPending );
     if ( ret )
     {
         LOG_INFO(( getLogger(),
@@ -659,7 +659,7 @@ int LsapiConn::processRespHeader( char * pEnd, int &status )
                 code = HttpStatusCode::codeToIndex( m_respInfo.m_status );
                 if ( code != -1 )
                 {
-                    getConnector()->getHttpConn()->getReq()->updateNoRespBodyByStatus( code );
+                    getConnector()->getHttpSession()->getReq()->updateNoRespBodyByStatus( code );
                 }
             }
         }
@@ -711,7 +711,7 @@ int LsapiConn::processRespHeader( char * pEnd, int &status )
                 ++m_iCurRespHeader;
             }
             status |= HttpReq::HEADER_OK;
-            getConnector()->respHeaderDone( 0 );
+            getConnector()->respHeaderDone();
         }
         ++m_respState;       
     }

@@ -47,8 +47,7 @@ public:
     void * getUData() const
     {   return m_pUserData;     }
     virtual Duplicable * dup( const char * pName );
-    virtual int format( LoggingEvent * pEvent, va_list args );
-    static int defaultFormat( LoggingEvent * pEvent, va_list args );
+    virtual int format( LoggingEvent * pEvent, char * pBuf, int len );
     
 };
 

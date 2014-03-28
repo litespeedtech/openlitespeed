@@ -27,6 +27,8 @@
 //class HttpReq;
 class IEnv;
 class IpToGeo;
+class XmlNodeList;
+class ConfigCtx;
 
 class GeoInfo
 {
@@ -66,6 +68,7 @@ public:
     int lookUp( uint32_t addr, GeoInfo * pInfo );
     int lookUp( const char * pIP, GeoInfo * pInfo );
     int lookUpV6( in6_addr addr, GeoInfo * pInfo );
+    int config( const XmlNodeList *pList );
     
 private:
 

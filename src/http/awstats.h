@@ -24,6 +24,8 @@
 #define AWS_DYNAMIC 2
 
 class HttpVHost;
+class ConfigCtx;
+class XmlNode;
 
 class Awstats
 {
@@ -58,6 +60,8 @@ public:
     const char * getWorkingDir() const      {   return m_sWorkingDir.c_str();   }
     const char * getSiteDomain() const      {   return m_sSiteDomain.c_str();   }
     int  getInterval() const                {   return m_iUpdateInterval;       }
+    void config(HttpVHost *pVHost, int val, char* achBuf, const XmlNode *pAwNode, 
+           char* iconURI, const char* vhDomain, int vhAliasesLen );
     
 };
 

@@ -53,6 +53,7 @@ public:
     {   return writevEx( vector, 0 );       }
     
     virtual int write( const char * pBuf, int size );
+    virtual int writev( const struct iovec * vector, int len );
     virtual int writev( IOVec &vector );
     virtual int writev( IOVec &vector, int total )
     {   return writev( vector );    }

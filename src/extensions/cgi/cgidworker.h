@@ -52,6 +52,7 @@ public:
     static int checkRestartCgid( const char * pServerRoot, const char * pChroot,
                         int priority, int switchToLscgid = 0 );
     static int getCgidPid();
+    int config( const XmlNode *pNode1 );
 };
 
 #endif

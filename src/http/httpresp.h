@@ -23,37 +23,23 @@
 #include <http/httpstatusline.h>
 #include <util/iovec.h>
 #include <http/httprespheaders.h>
-#include <http/httpvhost.h>
+
 #define RANGE_HEADER_LEN    22
+#define LSI_RESP_BODY_SIZE_UNKNOWN -1
 
 class HttpReq;
 
 class HttpResp
 {
 public:
-    static char     s_sCommonHeaders[66];
-    static char     s_sKeepAliveHeader[25];
-    static char     s_sConnCloseHeader[20];
-    static char     s_chunked[29];
-    static char     s_sGzipEncodingHeader[48];
-
-    static header_st       m_commonHeaders[3];
-    static header_st       m_gzipHeaders[2];
-    static header_st       m_keepaliveHeader;
-    static header_st       m_chunkedHeader;
-    static header_st       m_concloseHeader;
-    static int             m_commonHeadersCount;
     
 
 private:    
-    IOVec           m_iovec;
     HttpRespHeaders         m_respHeaders;
     
 
-    long            m_lEntityLength;
-    long            m_lEntityFinished;
-    int             m_iHeaderLeft;
-    int             m_iHeaderTotalLen;
+    off_t           m_lEntityLength;
+    off_t           m_lEntityFinished;
     short           m_iSSL;
     short           m_iLogAccess;
     
@@ -66,33 +52,38 @@ public:
     explicit HttpResp();
     ~HttpResp();
 
-    void reset(RespHeader::FORMAT format);
+    void reset();
 //    {
 //        m_outputBuf.clear();
 //        m_iovec.clear();
 //        memset( &m_iGotDate, 0,
 //                (char *)((&m_iHeaderLeft) + 1) - (char*)&m_iGotDate );
 //    }
-    void resetHeaderLen()
-    {   m_iHeaderTotalLen = 0; }    
+
 
     int appendHeader( const char * pName, int nameLen,
                         const char * pValue, int valLen );
     void addLocationHeader( const HttpReq * pReq);
 
-    void prepareHeaders( const HttpReq * pReq, int rangeHeaderLen = 0 );
+    void prepareHeaders( const HttpReq * pReq, int addAcceptRange = 0 );
     void appendContentLenHeader();
 
     HttpRespHeaders& getRespHeaders()
     {   return m_respHeaders;  }
 
-    void setContentLen( long len )      {   m_lEntityLength = len;  }
-    long getContentLen() const          {   return m_lEntityLength; }
+    void setContentLen( off_t len )     {   m_lEntityLength = len;  }
+    off_t getContentLen() const         {   return m_lEntityLength; }
 
     void written( long len )            {   m_lEntityFinished += len;    }
-    long getBodySent() const            {   return m_lEntityFinished; }
+    off_t getBodySent() const           {   return m_lEntityFinished; }
 
-    int  replySent() const              {   return m_iHeaderTotalLen > m_iHeaderLeft;   }
+    //int  replySent()
+    //{ 
+        //FIXME
+        //assert("replySent fixme..." == NULL);
+    //    return 1;//m_iHeaderTotalLen > m_respHeaders.getHeaderLeft();   
+        
+    //}
 
     void needLogAccess( short n )       {   m_iLogAccess = n;       }
     short shouldLogAccess() const       {   return m_iLogAccess;    }
@@ -100,8 +91,6 @@ public:
     bool isChunked() const
     {   return (m_lEntityLength == -1); }
 
-    static void buildCommonHeaders();
-    static void updateDateHeader();
 
     const char * getProtocol() const;
     int   getProtocolLen() const;
@@ -109,35 +98,24 @@ public:
     void setSSL( int ssl )
     {   m_iSSL = (ssl != 0 );   }
 
-    void finalizeHeader( int ver, int code, const HttpVHost *vhost );
+    //IOVec& getIov()    {   return m_respHeaders.getIOVec();  }
+    int parseAdd( const char * pBuf, int len )
+    {   return m_respHeaders.parseAdd(pBuf, len, LSI_HEADER_ADD );    }
     
-    IOVec& getIov()    {   return m_iovec;  }
-    void parseAdd( const char * pBuf, int len )
-    {    m_respHeaders.parseAdd(pBuf, len, RespHeader::APPEND );    }
-    
-    void appendExtra( const char * pBuf, int len )
-    {
-        m_respHeaders.parseAdd(pBuf, len, RespHeader::APPEND );
-        m_iHeaderTotalLen += len; 
-        m_iHeaderLeft += len; 
-    }
-
     void addGzipEncodingHeader()
     {
-        m_respHeaders.add( HttpResp::m_gzipHeaders, 2);
+        m_respHeaders.addGzipEncodingHeader();
     }
     
     void appendChunked()
     {
-        m_respHeaders.add( &HttpResp::m_chunkedHeader, 1);
+        m_respHeaders.appendChunked();
     }
 
-    int& getHeaderLeft()            {   return m_iHeaderLeft;   }
-    void setHeaderLeft( int len )   {   m_iHeaderLeft = len;    }
 
-    long getTotalLen() const    {   return m_lEntityFinished + m_iHeaderTotalLen;   }
-    int  getHeaderSent() const      {   return m_iHeaderTotalLen - m_iHeaderLeft;   }
-    int  getHeaderTotal() const     {   return m_iHeaderTotalLen;   }    
+
+    off_t getTotalLen()    {   return m_lEntityFinished + m_respHeaders.getTotalLen();   }
+    //int  isRespHeaderBuilt()      {   return m_respHeaders.isRespHeadersBuilt();   }    
     const char * getContentTypeHeader(int &len )  {    return m_respHeaders.getContentTypeHeader(len);  }
        
     int  appendLastMod( long tmMod );

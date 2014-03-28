@@ -36,7 +36,7 @@ class ByteRange;
 class HttpRange
 {
     HttpRangeList m_list;
-    long    m_lEntityLen;
+    off_t   m_lEntityLen;
     int     m_iCurRange;
     char    m_boundary[20];
     char    m_partHeaderBuf[MAX_PART_HEADER_LEN];
@@ -47,30 +47,30 @@ class HttpRange
     void makeBoundaryString();
 
 public: 
-    explicit HttpRange( long entityLen = -1 );
+    explicit HttpRange( off_t entityLen = -1 );
     ~HttpRange() {}
     
     int  count() const;
     int  parse( const char * pRange );
     int  getContentRangeString( int n, char * pBuf, int len ) const;
-    int  getContentOffset( int n, long& begin, long& end ) const;
+    int  getContentOffset( int n, off_t& begin, off_t& end ) const;
     void clear();
-    void setContentLen( long entityLen )    { m_lEntityLen = entityLen; }
+    void setContentLen( off_t entityLen )    { m_lEntityLen = entityLen; }
     void beginMultipart();
     
     const char * getBoundary() const
     {   return m_boundary;  }
     
-    long getPartLen( int n, int iMimeTypeLen ) const;
+    off_t getPartLen( int n, int iMimeTypeLen ) const;
     int  getPartHeader( int n, const char * pMimeType, char* buf, int size ) const;
     int  getPartHeader( const char * pMimeType, char* buf, int size ) const
     {   return getPartHeader( m_iCurRange, pMimeType, buf, size );      }
 
-    long getMultipartBodyLen( const AutoStr2 * pMimeType ) const;
+    off_t getMultipartBodyLen( const AutoStr2 * pMimeType ) const;
     
     bool more() const;
     void next() {   ++m_iCurRange;  }
-    int  getContentOffset( long& begin, long& end ) const;
+    int  getContentOffset( off_t& begin, off_t& end ) const;
     int  getPartHeaderLen() const   {   return m_pPartHeaderEnd - m_pCurHeaderPos;  }
     void partHeaderSent( int &len )
     {

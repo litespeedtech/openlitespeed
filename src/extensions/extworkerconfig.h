@@ -26,6 +26,8 @@
 
 class HttpVHost;
 class GSockAddr;
+class XmlNode;
+class ConfigCtx;
 class ExtWorkerConfig
 {
     AutoStr     m_sURL;
@@ -130,6 +132,7 @@ public:
     {   m_sPhprc.setStr( pRC, len );        }
     const AutoStr2& getPhprc() const
     {   return m_sPhprc;    }
+    void config( const XmlNode *pNode );
     
 };
 

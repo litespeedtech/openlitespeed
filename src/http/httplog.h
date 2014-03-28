@@ -22,12 +22,15 @@
 
 #include <log4cxx/nsdefs.h>
 
+#include <stdarg.h>
+
+
 BEGIN_LOG4CXX_NS
 class Logger;
 END_LOG4CXX_NS
 
 class AccessLog;
-class HttpConnection;
+class HttpSession;
 
 enum
 {
@@ -49,11 +52,12 @@ class HttpLog
     ~HttpLog();
 public:
     static void init();
-    static int logAccess( const char * pVHost, int len, HttpConnection* pConn );
+    static int logAccess( const char * pVHost, int len, HttpSession* pSession );
     static void error_num( int __errnum, const char * __file,
                         unsigned int __line, const char * __function );
     static void error_detail( const char * __errstr, const char * __file,
                         unsigned int __line, const char * __function );
+    static void vlog( int level, const char * format, va_list args );
     static void log( int level, const char * fmt, ... );
     static void error( const char * fmt, ... );
     static void warn( const char * fmt, ... );
@@ -63,6 +67,8 @@ public:
 
     static void errmem( const char * pSource );
 
+    static void vlog( LOG4CXX_NS::Logger * pLogger, int level, const char * format, va_list args, int no_linefeed );
+    static void lograw( LOG4CXX_NS::Logger * pLogger, const char * pBuf, int len );
     static void log( LOG4CXX_NS::Logger * pLogger, int level,
                 const char * fmt, ... );
     static void error( LOG4CXX_NS::Logger * pLogger, const char * fmt, ... );

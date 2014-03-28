@@ -28,9 +28,9 @@ public:
     StaticFileHandler();
     ~StaticFileHandler();
     virtual const char * getName() const;
-    virtual int process( HttpConnection* pConn, const HttpHandler * pHandler );
-    virtual int onWrite( HttpConnection* pConn, int aioSent );
-    virtual int cleanUp( HttpConnection* pConn );
+    virtual int process( HttpSession* pSession, const HttpHandler * pHandler );
+    virtual int onWrite( HttpSession* pSession );
+    virtual int cleanUp( HttpSession* pSession );
     virtual bool notAllowed( int Method ) const;
 
 };

@@ -74,7 +74,7 @@ public:
 
     char * _Charalloc(size_type _Size)
     {
-        return (char *)m_pPool->allocate( _Size );
+        return m_pPool->allocate( _Size );
     }
 
 

@@ -17,7 +17,7 @@
 *****************************************************************************/
 #include "userdir.h"
 #include <http/authuser.h>
-#include <http/datetime.h>
+#include <util/datetime.h>
 #include <http/htpasswd.h>
 #include <http/httpstatuscode.h>
 #include <util/pool.h>
@@ -58,12 +58,12 @@ void UserDir::setName( const char * pName )
     m_pName = g_pool.dupstr( pName );
 }
 
-const AuthUser * UserDir::getUserIfMatchGroup( HttpConnection * pConn, const char * pUser,
+const AuthUser * UserDir::getUserIfMatchGroup( HttpSession *pSession, const char * pUser,
             int userLen, const StringList *pReqGroups, int * ready )
 {
     if ( !pReqGroups )
         return NULL;
-    AuthUser * pData = (AuthUser *)getUser( pConn, pUser, userLen, ready );
+    AuthUser * pData = (AuthUser *)getUser( pSession, pUser, userLen, ready );
     if ( pData && pData->getGroups() )
     {
         StringList::const_iterator iter = pReqGroups->begin();
@@ -80,7 +80,7 @@ const AuthUser * UserDir::getUserIfMatchGroup( HttpConnection * pConn, const cha
         StringList::const_iterator iter = pReqGroups->begin();
         while( iter != pReqGroups->end() )
         {
-            pGroup = ( const AuthGroup *)(getGroup( pConn,
+            pGroup = ( const AuthGroup *)(getGroup( pSession,
                             (*iter)->c_str(), (*iter)->len(), ready ));
             if ( pGroup )
             {
@@ -115,7 +115,7 @@ void UserDir::setGroupCache( HashDataCache * pCache )
     m_pCacheGroup = pCache;
 }
 
-const AuthUser * UserDir::getRequiredUser( HttpConnection * pConn, const char * pUser, int userLen,
+const AuthUser * UserDir::getRequiredUser( HttpSession *pSession, const char * pUser, int userLen,
                 const AuthRequired * pRequired, int * ready )
 {
     int type = AuthRequired::REQ_DEFAULT;
@@ -129,9 +129,9 @@ const AuthUser * UserDir::getRequiredUser( HttpConnection * pConn, const char * 
             return NULL;
         //fall through
     case AuthRequired::REQ_DEFAULT:
-        return getUser( pConn, pUser, userLen, ready );
+        return getUser( pSession, pUser, userLen, ready );
     case AuthRequired::REQ_GROUP:
-        return getUserIfMatchGroup( pConn, pUser, userLen,
+        return getUserIfMatchGroup( pSession, pUser, userLen,
                     pRequired->getList(), ready );
 
     case AuthRequired::REQ_FILE_OWNER:
@@ -143,7 +143,7 @@ const AuthUser * UserDir::getRequiredUser( HttpConnection * pConn, const char * 
 }
 
 
-const AuthUser * UserDir::getUser( HttpConnection * pConn, HashDataCache * pCache,
+const AuthUser * UserDir::getUser( HttpSession *pSession, HashDataCache * pCache,
                         const char * pKey, int len, int* ready )
 {
     AuthUser * pUser;
@@ -168,7 +168,7 @@ const AuthUser * UserDir::getUser( HttpConnection * pConn, HashDataCache * pCach
             }
         }
     }
-    pUser = getUserFromStore( pConn, pCache, pKey, len, ready );
+    pUser = getUserFromStore( pSession, pCache, pKey, len, ready );
     if ( *ready == -1 )
         return NULL;
     if ( *ready > 0 )
@@ -191,7 +191,7 @@ const AuthUser * UserDir::getUser( HttpConnection * pConn, HashDataCache * pCach
 
 }
 
-const StringList* UserDir::getGroup( HttpConnection * pConn, HashDataCache * pCache, const char * pKey,
+const StringList* UserDir::getGroup( HttpSession *pSession, HashDataCache * pCache, const char * pKey,
                         int len, int* ready )
 {
     AuthGroup * pGroup;
@@ -216,7 +216,7 @@ const StringList* UserDir::getGroup( HttpConnection * pConn, HashDataCache * pCa
             }
         }
     }
-    pGroup = getGroupFromStore( pConn, pCache, pKey, len, ready );
+    pGroup = getGroupFromStore( pSession, pCache, pKey, len, ready );
     if ( *ready == -1 )
         return NULL;
     if ( *ready > 0 )
@@ -269,12 +269,12 @@ static int verifySHA( const char * pStored, const char * pPasswd, int seeded )
     return memcmp( m, pStored, SHA_DIGEST_LENGTH );
 }
 
-int UserDir::authenticate( HttpConnection * pConn, const char * pUserName, int len,
+int UserDir::authenticate( HttpSession *pSession, const char * pUserName, int len,
                       const char * pPasswd, int encryptMethod,
                       const AuthRequired * pRequired )
 {
     int ready = 0;
-    const AuthUser * pUser = getRequiredUser( pConn, pUserName, len, pRequired, &ready );
+    const AuthUser * pUser = getRequiredUser( pSession, pUserName, len, pRequired, &ready );
     if ( ready != 0 )
         return ready;
     if ( !pUser || !pUser->isExist() )

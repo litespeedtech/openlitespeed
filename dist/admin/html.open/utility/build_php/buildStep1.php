@@ -1,10 +1,10 @@
 <?
 if (!defined('LEGAL')) return;
-echo '<h2>' . TITLE . '</h2>';
+echo '<h2 class="bottom_bar">' . TITLE . '</h2>';
 
 if ( isset($check->pass_val['err']['bash'])) {
-	echo '<div class="panel_error" align=left><span class="gui_error">' 
-		. $check->pass_val['err']['bash'] 
+	echo '<div class="panel_error" align=left><span class="gui_error">'
+		. $check->pass_val['err']['bash']
 		. '</span></div>';
 }
 
@@ -30,22 +30,23 @@ $buf = '';
 foreach($basevers as $base_ver) {
 
 	$versions = $PHP_VER[$base_ver];
-	
+
 	$buf .= '<tr class="xtbl_value"><td class="xtbl_label">PHP ' . $base_ver . '</td><td class="icon"></td><td>';
-		
+
 	$buf .= '<select name="php_version'. $base_ver . '">';
 	foreach( $versions as $o ) {
 		$buf .= "<option value=\"$o\">$o</option>";
 	}
 	$buf .= '</select>&nbsp;&nbsp;&nbsp;&nbsp;';
-	
+
 	$buf .=	'<input type="submit" name="build' . $base_ver . '" value="Next">'
 			. "</td></tr>\n";
-	
+
 }
-		
+
 echo $buf;
-		
+
 ?>
 </table>
 </form>
+<p class="field_note">Note: If you want to use a version not listed here, you can manually update the settings in /usr/local/lsws/admin/html/utility/build_php/buildconf.inc.php.</p>

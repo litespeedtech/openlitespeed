@@ -435,15 +435,9 @@ int RewriteCond::parseCondPattern( const char * &pRuleStr, const char *pEnd )
     }
     if ( argBegin >= argEnd )
         return -1;
-    const char * strBegin;
-    ret = StringTool::parseNextArg( argBegin, argEnd, strBegin, argEnd, pError );
-    if ( ret )
-    {
-        if ( pError )
-            HttpLog::parse_error( s_pCurLine,  pError );
-        return -1;
-    }
-    m_pattern.setStr(strBegin, argEnd - strBegin );
+    while(( argBegin < argEnd )&&isspace( *argBegin ))
+        ++argBegin;
+    m_pattern.setStr(argBegin, argEnd - argBegin );
     return 0;
 }
 

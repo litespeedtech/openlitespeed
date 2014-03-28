@@ -56,7 +56,7 @@ int DummySpdyConnStream::onInitConnected()
     return 0;
 }
 
-int DummySpdyConnStream::sendHeaders( IOVec &vector, int headerCount )
+int DummySpdyConnStream::sendRespHeaders( )
 {
     //TODO: 
     return -1;

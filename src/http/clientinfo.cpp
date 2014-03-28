@@ -17,7 +17,7 @@
 *****************************************************************************/
 #include "clientinfo.h"
 #include <http/iptogeo.h>
-#include <http/datetime.h>
+#include <util/datetime.h>
 #include <http/httpglobals.h>
 #include <http/httplog.h>
 #include <util/pool.h>

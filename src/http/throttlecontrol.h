@@ -71,7 +71,7 @@ public:
     int getStaticReqLimit() const   {   return m_iStaticReq;    }
     int getDynReqLimit() const      {   return m_iDynReq;       }
     void config( const XmlNode * pNode1, const ThrottleLimits * pDefault, 
-                             ConfigCtx* pcurrentCtx);
+                             ConfigCtx* pCurrentCtx);
 };
 
 

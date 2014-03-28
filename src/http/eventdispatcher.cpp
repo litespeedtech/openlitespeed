@@ -19,7 +19,7 @@
 #include <edio/multiplexer.h>
 #include <edio/multiplexerfactory.h>
 #include <http/adns.h>
-#include <http/datetime.h>
+#include <util/datetime.h>
 #include <http/httpdefs.h>
 #include <http/httpglobals.h>
 #include <http/httplog.h>
@@ -30,6 +30,7 @@
 #include <string.h>
 #include <sys/time.h>
 #include <unistd.h>
+#include <lsiapi/modulemanager.h>
 
 int highPriorityTask();
 
@@ -101,7 +102,7 @@ static void processTimer()
     //LOG_D(( "processTimer()" ));
     
     DateTime::s_curTime = tv.tv_sec;
-    DateTime::s_curTimeMS = tv.tv_usec;
+    DateTime::s_curTimeUs = tv.tv_usec;
     HttpGlobals::s_tmPrevToken = HttpGlobals::s_tmToken;
     HttpGlobals::s_tmToken = tv.tv_usec / ( 1000000 / TIMER_PRECISION );
     if ( HttpGlobals::s_tmToken < HttpGlobals::s_tmPrevToken )
@@ -187,7 +188,7 @@ static inline void processTimerNew()
     //int n = tv.tv_usec / ( 1000000 / TIMER_PRECISION );
     
     DateTime::s_curTime = tv.tv_sec;
-    DateTime::s_curTimeMS = tv.tv_usec;
+    DateTime::s_curTimeUs = tv.tv_usec;
     HttpGlobals::s_tmPrevToken = HttpGlobals::s_tmToken;
     HttpGlobals::s_tmToken = tv.tv_usec / ( 1000000 / TIMER_PRECISION );
     if ( HttpGlobals::s_tmToken != HttpGlobals::s_tmPrevToken )
@@ -204,6 +205,8 @@ static inline void processTimerNew()
         HttpGlobals::getConnLimitCtrl()->checkWaterMark();
         //LOG_D(( "processTimer()" ));
     }
+    
+    ModuleManager::getInstance().OnTimer100msec();
 }
 
 

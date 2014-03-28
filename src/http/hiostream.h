@@ -27,6 +27,7 @@
 class IOVec;
 
 class HioStreamHandler;
+class HttpRespHeaders;
 
 enum HioState 
 {
@@ -64,7 +65,7 @@ class HioStream : public InputStream, public OutputStream, public LogTracker
     char                m_iProtocol;
     short               m_iFlag;
     uint32_t            m_tmLastActive;
-    
+        
 public:
     HioStream()
         : m_pHandler( NULL )
@@ -77,11 +78,11 @@ public:
     {}
     virtual ~HioStream();
     
-    virtual int sendfile( IOVec &vector, int &total, int fdSrc, off_t off, size_t size ) = 0;
+    virtual int sendfile( int fdSrc, off_t off, size_t size ) = 0;
     virtual int readv( struct iovec *vector, size_t count ) 
     {       return -1;      }
     
-    virtual int sendHeaders( IOVec &vector, int headerCount ) = 0;
+    virtual int sendRespHeaders( HttpRespHeaders * pHeaders ) = 0;
     
     virtual void suspendRead()  = 0;
     virtual void continueRead() = 0;
@@ -136,6 +137,7 @@ public:
     short isPeerShutdown() const {  return m_iFlag & HIO_FLAG_PEER_SHUTDOWN;    }
     
     static const char * getProtocolName( HiosProtocol proto );
+    
     
 private:
     HioStream(const HioStream& other);

@@ -29,6 +29,7 @@
 #define LOG_USERAGENT   2
 #define LOG_VHOST       4
 
+#include <sys/types.h>
 
 #include <log4cxx/nsdefs.h>
 
@@ -38,7 +39,7 @@ class AppenderManager;
 END_LOG4CXX_NS
 
 struct CustomFormat;
-class HttpConnection;
+class HttpSession;
 class AccessLog  
 {
     LOG4CXX_NS::Appender        * m_pAppender;
@@ -52,15 +53,15 @@ class AccessLog
 
     int appendStr( const char * pStr, int len);
     void appendStrNoQuote( const char * pStr, int len );
-    void customLog( HttpConnection* pConn );
+    void customLog( HttpSession* pSession );
     
 public: 
     explicit AccessLog(const char * pPath);
     AccessLog();
     ~AccessLog();
     int init( const char * pName, int pipe );
-    void log( HttpConnection* pConn );
-    void log( const char * pVHostName, int len, HttpConnection* pConn );
+    void log( HttpSession* pSession );
+    void log( const char * pVHostName, int len, HttpSession* pSession );
     void flush();
 
     void accessLogReferer( int referer );
@@ -81,6 +82,8 @@ public:
     const char * getLogPath() const;
     int  reopenExist();
 
+    void closeNonPiped();
+    void setRollingSize( off_t size );
     int  setCustomLog( const char * pFmt );
     
 };

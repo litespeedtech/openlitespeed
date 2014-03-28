@@ -17,11 +17,12 @@
 *****************************************************************************/
 #include "clientcache.h"
 #include "clientinfo.h"
-#include "datetime.h"
+#include "util/datetime.h"
 #include "httplog.h"
 #include "httpglobals.h"
 #include <http/iptogeo.h>
 #include <socket/gsockaddr.h>
+#include <lsiapi/lsiapi.h>
 
 #include <util/accesscontrol.h>
 #include <util/accessdef.h>
@@ -117,6 +118,12 @@ ClientInfo * ClientCache::del( const struct sockaddr * pAddr )
     return NULL;
 }
 
+void ClientCache::recycle( ClientInfo * pInfo )
+{
+    LsiapiBridge::releaseModuleData( LSI_MODULE_DATA_IP, pInfo->getModuleData() );
+    s_pool()->recycle( pInfo );
+    
+}
 
 void ClientCache::clean( Cache * pCache )
 {

@@ -1,0 +1,8 @@
+If you can't run "make" to build cache.so, try "make clean" first and then "make".
+If still does not work, try "gmake" instead of "make" please.
+
+About how to config the cache module, please refer to
+http://open.litespeedtech.com/mediawiki/index.php/Help:Modules:Cache
+
+Thanks and enjoy.
+

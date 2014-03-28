@@ -100,6 +100,7 @@ openlitespeed_DEPENDENCIES = ./main/libmain.a ./http/libhttp.a \
 	./spdy/libspdy.a ./extensions/libextensions.a \
 	./log4cxx/liblog4cxx.a ./socket/libsocket.a ./sslpp/libsslpp.a \
 	./ssi/libssi.a ./edio/libedio.a ./util/libutil.a \
+	./lsiapi/liblsiapi.a $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1)
 openlitespeed_LINK = $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) \
@@ -221,6 +222,7 @@ CXXFLAGS = @CXXFLAGS@
 CYGPATH_W = @CYGPATH_W@
 DEFS = @DEFS@
 DEPDIR = @DEPDIR@
+DL_LIB_OPTION = @DL_LIB_OPTION@
 ECHO_C = @ECHO_C@
 ECHO_N = @ECHO_N@
 ECHO_T = @ECHO_T@
@@ -314,14 +316,14 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 openlitespeed_SOURCES = httpdtest.cpp main.cpp
 openlitespeed_LDADD = ./main/libmain.a ./http/libhttp.a ./spdy/libspdy.a \
-        ./extensions/libextensions.a ./log4cxx/liblog4cxx.a \
-        ./socket/libsocket.a ./sslpp/libsslpp.a  ./ssi/libssi.a ./edio/libedio.a ./util/libutil.a \
-        $(EXPAT_LDFLAGS) $(OPENSSL_LIBS) $(PCRE_LIBS) -lGeoIP -lz 
+        ./extensions/libextensions.a ./log4cxx/liblog4cxx.a ./socket/libsocket.a \
+        ./sslpp/libsslpp.a  ./ssi/libssi.a ./edio/libedio.a ./util/libutil.a ./lsiapi/liblsiapi.a \
+        $(EXPAT_LDFLAGS) $(OPENSSL_LIBS) $(PCRE_LIBS) -lGeoIP -lz -lexpat $(DL_LIB_OPTION)
 
 AM_CPPFLAGS = $(PCRE_CFLAGS) $(OPENSSL_INCLUDES) $(EXPAT_CFLAGS)
 AM_LDFLAGS = -L/usr/lib $(OPENSSL_LDFLAGS)
 INCLUDES = -I$(top_srcdir)/src 
-SUBDIRS = socket util http spdy sslpp ssi extensions log4cxx main edio
+SUBDIRS = socket util http spdy sslpp ssi extensions log4cxx main edio lsiapi
 
 # the library search path.
 openlitespeed_LDFLAGS = $(all_libraries)

@@ -20,6 +20,7 @@
 #include "xmlnodetest.h"
 #include <util/xmlnode.h>
 #include <unistd.h>
+#include <http/httpglobals.h>
 #include "test/unittest-cpp/UnitTest++/src/UnitTest++.h"
 
 
@@ -28,8 +29,10 @@ TEST( XmlNodeTest_test)
 {
     char achError[1024];
     char achBuf[256];
-    getcwd( achBuf, 256 );
-    strcat( achBuf, "/../../src/test/serverroot/conf/myconfig.xml" );
+    char * p = achBuf;
+    strcpy( p, HttpGlobals::s_pServerRoot );
+    CHECK( p != NULL );
+    strcat( achBuf, "/conf/myconfig.xml" );
 
     XmlTreeBuilder builder;
     XmlNode* pRoot = builder.parse(achBuf, achError, 1024);

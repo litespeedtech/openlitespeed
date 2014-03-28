@@ -18,7 +18,8 @@
 #include "hotlinkctrl.h"
 
 #include <util/pcregex.h>
-
+#include "util/configctx.h"
+#include <util/xmlnode.h>
 #include <pcreposix.h>
 #include <string.h>
 
@@ -84,5 +85,45 @@ int  HotlinkCtrl::setRegex( const char * pRegex )
     return ret;
 
 }
+int HotlinkCtrl::config( const XmlNode *pNode )
+{
+    if ( setSuffixes( pNode->getChildValue( "suffixes" ) ) <= 0 )
+    {
+        ConfigCtx::getCurConfigCtx()->log_error( "no suffix is configured, disable hotlink protection." );
+        return -1;
+    }
 
+    setDirectAccess( ConfigCtx::getCurConfigCtx()->getLongValue( pNode, "allowDirectAccess", 0, 1, 0 ) );
+    const char *pRedirect = pNode->getChildValue( "redirectUri" );
+
+    if ( pRedirect )
+        setRedirect( pRedirect );
+
+    int self = ConfigCtx::getCurConfigCtx()->getLongValue( pNode, "onlySelf", 0, 1, 0 );
+
+    if ( !self )
+    {
+        char achBuf[4096];
+        const char *pValue = pNode->getChildValue( "allowedHosts" );
+
+        if ( pValue )
+        {
+            ConfigCtx::getCurConfigCtx()->expandDomainNames( pValue, achBuf, 4096, ',' );
+            pValue = achBuf;
+        }
+
+        int ret = setHosts( pValue );
+        int ret2 = setRegex( pNode->getChildValue( "matchedHosts" ) );
+
+        if ( ( ret <= 0 ) &&
+                ( ret2 < 0 ) )
+        {
+            ConfigCtx::getCurConfigCtx()->log_warn( "no valid host is configured, only self"
+                                       " reference is allowed." );
+            self = 1;
+        }
+    }
+    setOnlySelf( self );
+    return 0;
+}
 

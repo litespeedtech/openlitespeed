@@ -65,7 +65,7 @@
 #define REF_TIME_SEC        138
 #define REF_TIME_WDAY       139
 #define REF_SCRIPT_NAME     140
-#define REF_CUR_URI         141
+#define REF_CUR_REWRITE_URI 141
 #define REF_REQ_BASENAME    142
 #define REF_SCRIPT_UID      143
 #define REF_SCRIPT_GID      144
@@ -75,15 +75,15 @@
 #define REF_SCRIPT_BASENAME 148
 #define REF_SCRIPT_URI      149
 #define REF_ORG_REQ_URI     150
-#define REF_HTTPS           151
+#define REF_ORG_QS          151
+#define REF_HTTPS           152
 
-#define REF_REQ_TIME_MS     152
 #define REF_DUMMY           153
 #define REF_PID             154
 #define REF_STATUS_CODE     155
 #define REF_STRFTIME        156
 #define REF_REQ_TIME_SEC    157
-#define REF_URL_PATH        158    //no query string part
+#define REF_CUR_URI         158    //no query string part
 #define REF_CONN_STATE      159
 #define REF_BYTES_IN        160
 #define REF_BYTES_OUT       161
@@ -97,21 +97,22 @@
 #define REF_DOCUMENT_URI    168
 #define REF_LAST_MODIFIED   169
 #define REF_QS_UNESCAPED    170
+#define REF_REQ_TIME_MS     171
 
-#define REF_EXT_END         171
+#define REF_EXT_END         172
 
 #define REF_BEGIN           110
-#define REF_END             152
+#define REF_END             153
 #define REF_COUNT           (REF_END - REF_BEGIN)
 #define REF_EXT_COUNT       (REF_EXT_END - REF_BEGIN)
 
-#define REF_RESP_CONTENT_TYPE       171
-#define REF_RESP_CONTENT_LENGTH     172
-#define REF_RESP_BODY               173
-#define REF_MATCHED_VAR             174
+#define REF_RESP_CONTENT_TYPE       172
+#define REF_RESP_CONTENT_LENGTH     173
+#define REF_RESP_BODY               174
+#define REF_MATCHED_VAR             175
 
 
-class HttpConnection;
+class HttpSession;
 class HttpReq;
 
 class MapRefItem;
@@ -193,28 +194,34 @@ public:
     static int parseBuiltIn( const char * pVar, int len, int ext = 0);
     static int parseHttpHeader( const char * pName, int len, const char * &pHeaderName, int &headerLen );
 
-    static int getReqVar( HttpConnection * pConn, int type, char * &pValue, int bufLen);
+    static int getReqVar( HttpSession *pSession, int type, char * &pValue, int bufLen);
+    static int getReqVar2( HttpSession *pSession, int type, char * &pValue, int bufLen); 
+  
     static const char * getUnknownHeader( HttpReq * pReq, const char * pName,
                                         int nameLen, int &headerLen);
     static const char * getHeaderString( int iIndex );
     static const char * getCookieValue( HttpReq * pReq, const char * pCookieName,
                                         int nameLen, int &idLen );
     static int getCookieCount( HttpReq * pReq );
-    static const char * getEnv( HttpConnection * pConn, const char * pKey,
+    static const char * getEnv( HttpSession *pSession, const char * pKey,
                                 int keyLen, int &valLen );
 
-    static int getSubstValue( const SubstItem * pItem, HttpConnection *pConn,
+    static int getSubstValue( const SubstItem * pItem, HttpSession *pSession,
                         char * &pValue, int bufLen );
 
-    static int appendSubst( const SubstItem * pItem, HttpConnection *pConn,
+    static int appendSubst( const SubstItem * pItem, HttpSession *pSession,
                         char * &pBegin, int len, int noDupSlash,
                         const RegexResult * pRegRes, const char * pTmFmt = NULL );
 
-    static char * buildString( const SubstFormat * pFormat, HttpConnection * pConn,
+    static char * buildString( const SubstFormat * pFormat, HttpSession *pSession,
                           char * pBuf, int &len, int noDupSlash, const RegexResult * pRegRes,
                           const char * pTmFmt = NULL );
 
     static const char * getVarNameStr( int var_id, int &len );
+
+    static int setEnv( HttpSession* pSession, const char * pName, int nameLen, 
+                        const char * pValue, int valLen );
+    
 };
 
 #endif

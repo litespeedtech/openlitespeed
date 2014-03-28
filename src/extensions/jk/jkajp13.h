@@ -130,7 +130,7 @@
 #define AJP_RESP_WWW_AUTHENTICATE    0xA00B
 #define AJP_RESP_HEADERS_NUM          11
 
-class HttpConnection;
+class HttpSession;
 
 class JWorker;
 
@@ -140,7 +140,7 @@ class JkAjp13 {
 public: 
 	JkAjp13();
 	~JkAjp13();
-    static int buildReq( HttpConnection * pConn, char * &p, char * pEnd );
+    static int buildReq( HttpSession *pSession, char * &p, char * pEnd );
     static int buildWorkerHeader( JWorker * pWorker, char * &p, char * pEnd );
     static void buildAjpHeader( char * pBuf, int size );
     static void buildAjpReqBodyHeader( char * pBuf, int size );

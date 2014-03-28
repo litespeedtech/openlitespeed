@@ -24,6 +24,10 @@
   
 class ExtWorker;
 class ExtAppMap;
+class XmlNode;
+class ConfigCtx;
+class RLimits;
+class HttpVHost;
 
 class ExtAppSubRegistry
 {
@@ -57,6 +61,8 @@ public:
 
 class ExtAppRegistry
 {
+private:
+    static RLimits       * s_pRLimits;
 public:
     static ExtWorker * newWorker( int type, const char * pName );
     static ExtWorker * addApp( int type, const char * pName );
@@ -71,6 +77,11 @@ public:
     static void init();
     static void shutdown();
     static int generateRTReport( int fd );
+    static ExtWorker * configExtApp( const XmlNode *pNode, int configUserGroup );
+    static int configLoadBalacner( const XmlNode *pNode, const HttpVHost *pVHost );
+    static int configExtApps( const XmlNode *pRoot, const HttpVHost *pVHost );
+    static RLimits* getRLimits()    {   return s_pRLimits;  }
+    static void setRLimits(RLimits *pRLimits)   {   s_pRLimits = pRLimits;  }
 };
 
 class PidSimpleList;

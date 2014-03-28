@@ -2,8 +2,8 @@
 
 $state = DUtil::getGoodVal(DUtil::grab_input("get","state"));
 
-if($state == "restarted") {
-	echo XUI::message("Server Restarted",ucwords(strtolower($product->product))." has been gracefully restarted.","success");
+if($state == 'restarted') {
+	echo GUIBase::message('',ucwords(strtolower($product->product))." has been gracefully restarted.","success");
 	$product->refreshVersion();
 }
 
@@ -14,36 +14,36 @@ $product_info = ucwords(strtolower($product->product)) . ' - Version ' . (strtol
 <h2><?echo $product_info;?></h2>
 
 
-<table width="100%" class=xtbl border="0" cellpadding="5" cellspacing="1">
-<tr class=xtbl_header><td class=xtbl_title colspan=3><?echo $service->serv['name'] . ' ( PID = ' . $service->serv['pid'] . ')';?></td></tr>
+<table width="100%" class="xtbl" border="0" cellpadding="5" cellspacing="1">
+<tr class="xtbl_header"><td class="xtbl_title" colspan="3"><?echo $service->serv['name'] . ' ( PID = ' . $service->serv['pid'] . ')';?></td></tr>
 <tr>
 	<td class="xtbl_label">Apply Changes / Graceful Restart</td>
-	<td class="icon"><a href="javascript:go('restart','')"><img alt="Apply Changes / Graceful Restart" title="Apply Changes / Graceful Restart" src="/static/images/icons/refresh.gif"></a></td>
+	<td class="xtbl_value icon"><a href="javascript:go('restart','')"><img alt="Apply Changes / Graceful Restart" title="Apply Changes / Graceful Restart" src="/static/images/icons/refresh.gif"></a></td>
 	<td class="xtbl_label">Server Log Viewer</td>
-	<td class="icon"><a href="/service/serviceMgr.php?vl=1"><img alt="Server Log Viewer" title="Server Log Viewer" src="/static/images/icons/record.gif"></a></td>
+	<td class="xtbl_value icon"><a href="/service/serviceMgr.php?vl=1"><img alt="Server Log Viewer" title="Server Log Viewer" src="/static/images/icons/record.gif"></a></td>
 </tr>
 
 <tr>
 	<td class="xtbl_label">Toggle Debug Logging</td>
-	<td class="icon"><a href="javascript:toggle()"><img alt="Toggle Debug Logging" title="Toggle Debug Logging" src="/static/images/icons/refresh.gif"></a></td>
+	<td class="xtbl_value icon"><a href="javascript:toggle()"><img alt="Toggle Debug Logging" title="Toggle Debug Logging" src="/static/images/icons/debug.gif"></a></td>
 	<td class="xtbl_label">Real-Time Statistics</td>
-	<td class="icon"><a href="/service/serviceMgr.php?vl=2"><img alt="Real-Time Statistics" title="Real-Time Statistics" src="/static/images/icons/report.gif"></a></td>
+	<td class="xtbl_value icon"><a href="/service/serviceMgr.php?vl=2"><img alt="Real-Time Statistics" title="Real-Time Statistics" src="/static/images/icons/report.gif"></a></td>
 </tr>
 </table>
 
 
-		<table width="100%" class=xtbl border="0" cellpadding="5" cellspacing="1">
-			<tr class=xtbl_header><td colspan="5" class=xtbl_title>Listeners</td></tr>
+		<table width="100%" class="xtbl" border="0" cellpadding="5" cellspacing="1">
+			<tr class="xtbl_header"><td colspan="5" class="xtbl_title">Listeners</td></tr>
 			<tr class="xtbl_title2"><td>&nbsp;</td><td>Status</td><td>Name</td><td>Address</td><td>Virtual Host Mappings</td></tr>
 <?
 foreach( $service->listeners as $name=>$l )
 {
 	echo '<tr class="xtbl_value"><td class=icon><img src="/static/images/icons/link.gif"></td>'."\n";
 	if(strtoupper($l['status']) == "RUNNING") {
-		echo "<td width=25 class=status_running>";
+		echo '<td width="25" class="status_running">';
 	}
 	else {
-		echo "<td width=25 class=status_stopped>";
+		echo '<td width="25" class="status_stopped">';
 	}
 
 	echo $l['status'].'</td>';
@@ -72,8 +72,8 @@ foreach( $service->listeners as $name=>$l )
 ?>
 		</table>
 
-		<table width="100%" class=xtbl border="0" cellpadding="5" cellspacing="1">
-			<tr class=xtbl_header><td colspan="4" class=xtbl_title>Virtual Hosts</td></tr>
+		<table width="100%" class="xtbl" border="0" cellpadding="5" cellspacing="1">
+			<tr class="xtbl_header"><td colspan="4" class="xtbl_title">Virtual Hosts</td></tr>
 			<tr class="xtbl_label">
 				<td>&nbsp;</td><td>Status</td><td width="120">Name</td><td>Actions</td>
 			</tr>
@@ -81,27 +81,27 @@ foreach( $service->listeners as $name=>$l )
 sort($vhName);
 foreach( $vhName as $vh )
 {
-	echo '<tr class=xtbl_value><td class=icon><img src="/static/images/icons/web.gif"></td>';
+	echo '<tr class="xtbl_value"><td class="icon"><img src="/static/images/icons/web.gif"></td>';
 	$value =  $service->vhosts[$vh];
 	$canStart = 0;
 	$canStop = 1;
 	$canRestart = 1;
-	
+
 	if ( $value{1} == 'A' ) { //in config, but in status
 		$canStop = 0;
 		$canStart = 0;
 		$canRestart = 0;
-		echo '<td width=25 nowrap class=status_problem>Restart Required';
+		echo '<td width="25" nowrap class="status_problem">Restart Required';
 	}
 	else if ( $value{0} == 1 ) { // active, default case
-		echo '<td width=25 class=status_running>Running';
+		echo '<td width="25" class="status_running">Running';
 	}
 	else {
 		$canStart = 1;
 		$canStop = 0;
 		$canRestart = 0;
-		echo '<td width=25 class=status_stopped>Stopped';
-	}	
+		echo '<td width="25" class="status_stopped">Stopped';
+	}
 
 	echo '</td>';
 	echo '<td >' . $vh . '</td>';
@@ -119,6 +119,6 @@ foreach( $vhName as $vh )
 }
 ?>
         </table>
-        
+
 
 

@@ -24,39 +24,55 @@
 #include <sys/uio.h>
 #include <util/ssnprintf.h>
 
-static const char* s_CRLF = "\r\n" ;
 static const char* s_CHUNK_END = "0\r\n\r\n";
 
 ChunkOutputStream::ChunkOutputStream()
     : m_pOS( NULL )
-    , m_pIov( NULL )
     , m_iCurSize( 0 )
     , m_iBuffering( 0 )
+    , m_iSendFileLeft( 0 )
     , m_iTotalPending( 0 )
 {
+    m_iov.clear();
 }
 
 ChunkOutputStream::~ChunkOutputStream()
 {}
 
-
-int ChunkOutputStream::buildIovec( IOVec& iovec, const char * pBuf, int size )
+int ChunkOutputStream::buildChunkHeader( int size )
 {
-    int total = safe_snprintf( m_headerBuf,
-                    CHUNK_HEADER_SIZE, "%x\r\n", size + m_iCurSize );
-    iovec.append( m_headerBuf, total );
+    int total = snprintf( m_headerBuf,
+                    CHUNK_HEADER_SIZE, "%x\r\n", size );
+    m_iov.append( m_headerBuf, total );
+    return total;
+}
+
+int ChunkOutputStream::buildIovec( const char * pBuf, int size )
+{
+    int total = buildChunkHeader( size + m_iCurSize );
     if ( m_iCurSize )
     {
-        iovec.append( m_bufChunk, m_iCurSize );
+        m_iov.append( m_bufChunk, m_iCurSize );
         total += m_iCurSize;
+        m_iCurSize = 0;
     }
     if ( pBuf )
     {
-        iovec.append( (void *)pBuf, size );
+        m_iov.append( (void *)pBuf, size );
         total += size;
     }
-    iovec.append( s_CRLF, 2 );
-    return total + 2;
+    if (pBuf || size == 0)
+    {
+        m_iov.append( "\r\n", 2 );
+        total += 2;
+    }
+    return total;
+}
+
+void ChunkOutputStream::appendCRLF()
+{
+    m_iov.append( "\r\n", 2 );
+    m_iTotalPending += 2;
 }
 
 int ChunkOutputStream::fillChunkBuf( const char * pBuf, int size )
@@ -67,61 +83,11 @@ int ChunkOutputStream::fillChunkBuf( const char * pBuf, int size )
 }
 
 
-int ChunkOutputStream::chunkedWrite( IOVec &iov, int &headerTotal,
-                            const char * pBuf, int size)
+int ChunkOutputStream::chunkedWrite( const char * pBuf, int size)
 {
     //printf( "****ChunkOutputStream::chunkedWrite()\n" );
-    IOVec::iterator iter = iov.end();
-    int bytes = buildIovec( iov, pBuf, size );
-    int total = bytes + headerTotal;
-    int ret = m_pOS->writev( iov, total );
-    assert( m_iCurSize == 0 );
-    if ( ret >= total )
-    {
-        iov.clear();
-        headerTotal = 0;
-        m_iCurSize = 0;
-        return size;
-    }
-    else if ( ret >= 0 )
-    {
-        if( ret >= headerTotal )
-        {
-            if ( ret == headerTotal )
-            {
-                iov.clear();
-            }
-            else
-            {
-                ret -= headerTotal;
-                m_iTotalPending = bytes - ret;
-                iov.setBegin( iter );
-                iov.finish( ret );
-                m_pLastBufBegin = pBuf;
-                m_iLastBufLen = size;
-            }
-            headerTotal = 0;
-        }
-        else
-        {
-            if ( ret )
-            {
-                headerTotal -= ret;
-                iov.finish( ret );
-            }
-            iov.setEnd( iter );
-        }
-        return 0;
-    }
-    else
-        iov.setEnd( iter );
-    return ret;
-}
 
-int ChunkOutputStream::chunkedWrite( IOVec &iov, const char * pBuf, int size)
-{
-    //printf( "****ChunkOutputStream::chunkedWrite()\n" );
-    m_iTotalPending = buildIovec( iov, pBuf, size );
+    m_iTotalPending = buildIovec( pBuf, size );
     int ret = flush2();
     switch( ret )
     {
@@ -137,15 +103,13 @@ int ChunkOutputStream::chunkedWrite( IOVec &iov, const char * pBuf, int size)
     }
 }
 
-int ChunkOutputStream::write( IOVec& iov, int &headerTotal,
-                              const char * pBuf, int size )
+int ChunkOutputStream::write( const char * pBuf, int size )
 {
     //printf( "****ChunkOutputStream::write()\n" );
     int ret, left = size;
     if (( pBuf == NULL )||( size <= 0 ))
         return 0;
     assert( m_pOS != NULL );
-    assert( m_pIov == &iov );
     if ( m_iTotalPending )
     {
         ret = flush2();
@@ -170,17 +134,15 @@ int ChunkOutputStream::write( IOVec& iov, int &headerTotal,
             chunkSize = MAX_CHUNK_SIZE - m_iCurSize;
         else
             chunkSize = left;
-        if ( headerTotal )
-            ret = chunkedWrite( iov, headerTotal, pBuf, chunkSize );
-        else
+        
+        
+        if ((m_iBuffering)&&( chunkSize + m_iCurSize < CHUNK_BUFSIZE ))
         {
-            if ((m_iBuffering)&&( chunkSize + m_iCurSize < CHUNK_BUFSIZE ))
-            {
-                ret = fillChunkBuf( pBuf, chunkSize );
-                return size;
-            }
-            ret = chunkedWrite( iov, pBuf, chunkSize );
+            ret = fillChunkBuf( pBuf, chunkSize );
+            return size;
         }
+        ret = chunkedWrite( pBuf, chunkSize );
+        
         if ( ret > 0 )
         {
             left -= ret;
@@ -202,14 +164,15 @@ int ChunkOutputStream::write( IOVec& iov, int &headerTotal,
 void ChunkOutputStream::reset()
 {
     memset( &m_iCurSize, 0, (char *)&m_iLastBufLen - (char*)&m_iCurSize );
+    m_iov.clear();
 }
 
 int ChunkOutputStream::flush2()
 {
-    int ret = m_pOS->writev( *m_pIov, m_iTotalPending );
+    int ret = m_pOS->writev( m_iov, m_iTotalPending );
     if ( ret >= m_iTotalPending )
     {
-        m_pIov->clear();
+        m_iov.clear();
         m_iCurSize = 0;
         m_iTotalPending = 0;
         return 0;
@@ -219,7 +182,7 @@ int ChunkOutputStream::flush2()
         if ( ret )
         {
             m_iTotalPending -= ret;
-            m_pIov->finish( ret );
+            m_iov.finish( ret );
         }
         return 1;
     }
@@ -228,17 +191,26 @@ int ChunkOutputStream::flush2()
 
 int ChunkOutputStream::close()
 {
-    IOVec iov;
-    return close( iov, 0 );
-}
-
-int ChunkOutputStream::close( IOVec &iov, int total)
-{
     if ( m_iCurSize > 0 )
     {
-        m_iTotalPending += buildIovec( *m_pIov, NULL, 0 );
+        m_iTotalPending += buildIovec( NULL, 0 );
     }
-    m_iTotalPending += total + 5;
-    m_pIov->append( s_CHUNK_END, 5 );
+    m_iTotalPending += 5;
+    m_iov.append( s_CHUNK_END, 5 );
     return flush2();
+}
+
+void ChunkOutputStream::buildSendFileChunk( int size )
+{
+    if ( size > MAX_CHUNK_SIZE )
+        size = MAX_CHUNK_SIZE;
+    
+    if ( m_iCurSize > 0 )
+    {
+        m_iTotalPending += buildIovec( NULL, size );
+    }
+    else
+        m_iTotalPending += buildChunkHeader( size );
+    m_iSendFileLeft = size;
+    
 }

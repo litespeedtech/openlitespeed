@@ -36,15 +36,18 @@ http_method_t HttpMethod::parse2( const char * pMethod )
         break;
         
     case 'P':
-        switch( *(pMethod+1) & ~0x20 )
+        switch( *(pMethod+2) & ~0x20 )
         {
-        case 'U':
+        case 'T':
             method = HTTP_PUT;
             break;
-        case 'O':
+        case 'R':
+            method = HTTP_PURGE;
+            break;
+        case 'S':
             method = HTTP_POST;
             break;
-        case 'R':
+        case 'O':
             if ( 'F' == (*(pMethod+4 ) & ~0x20 ) )
                 method = DAV_PROPFIND;
             else
@@ -106,7 +109,10 @@ http_method_t HttpMethod::parse2( const char * pMethod )
         break;
         
     case 'R':
-        method = DAV_REPORT;
+        if (( *(pMethod+2) & ~0x20 ) == 'F' )
+            method = HTTP_REFRESH;
+        else
+            method = DAV_REPORT;
         break;
         
     case 'S':

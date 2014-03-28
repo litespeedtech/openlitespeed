@@ -21,7 +21,7 @@
 
 #include <extensions/registry/extappregistry.h>
 #include <extensions/cgi/suexec.h>
-#include <http/datetime.h>
+#include <util/datetime.h>
 #include <http/httpglobals.h>
 #include <http/httplog.h>
 #include <http/httpvhost.h>
@@ -32,6 +32,7 @@
 #include <util/env.h>
 #include <util/ni_fio.h>
 #include <util/stringtool.h>
+#include "util/configctx.h"
 
 #include <errno.h>
 #include <signal.h>
@@ -54,7 +55,7 @@ LocalWorker::LocalWorker()
 }
 
 LocalWorkerConfig& LocalWorker::getConfig() const
-{   return *(dynamic_cast<LocalWorkerConfig *>(getConfigPointer()));  }
+{   return *(static_cast<LocalWorkerConfig *>(getConfigPointer()));  }
 
 
 LocalWorker::~LocalWorker()
@@ -548,6 +549,29 @@ int LocalWorker::startWorker( )
         }
     }
     return (i==0)?-1:0;
+}
+void LocalWorker::configRlimit(RLimits* pRLimits, const XmlNode *pNode )
+{
+    if ( !pNode )
+        return;
+
+    pRLimits->setProcLimit(
+        ConfigCtx::getCurConfigCtx()->getLongValue( pNode, "procSoftLimit", 0, INT_MAX, 0 ),
+        ConfigCtx::getCurConfigCtx()->getLongValue( pNode, "procHardLimit", 0, INT_MAX, 0 ) );
+
+    pRLimits->setCPULimit(
+        ConfigCtx::getCurConfigCtx()->getLongValue( pNode, "CPUSoftLimit", 0, INT_MAX, 0 ),
+        ConfigCtx::getCurConfigCtx()->getLongValue( pNode, "CPUHardLimit", 0, INT_MAX, 0 ) );
+    long memSoft = ConfigCtx::getCurConfigCtx()->getLongValue( pNode, "memSoftLimit", 0, INT_MAX, 0 );
+    long memHard = ConfigCtx::getCurConfigCtx()->getLongValue( pNode, "memHardLimit", 0, INT_MAX, 0 );
+
+    if ( ( memSoft & ( memSoft < 1024 * 1024 ) ) ||
+            ( memHard & ( memHard < 1024 * 1024 ) ) )
+    {
+        ConfigCtx::getCurConfigCtx()->log_error( "Memory limit is too low with %ld/%ld", memSoft, memHard );
+    }
+    else
+        pRLimits->setDataLimit( memSoft, memHard );      
 }
 
 

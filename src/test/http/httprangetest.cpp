@@ -32,7 +32,7 @@ TEST(Test_httprangetest)
     CHECK( range.parse( psRange ) == 0 );
     CHECK( range.count() == 5 );
 
-    long b, e;
+    off_t b, e;
     CHECK( range.getContentOffset( 0, b, e ) == 0 );
     CHECK( b == 0 );
     CHECK( e == 1 );
@@ -60,32 +60,32 @@ TEST(Test_httprangetest)
     CHECK( partLen == len + 2000 - 1234 );    
 
     CHECK( range.getContentRangeString( 0, crs, 99 ) > 0);
-    CHECK( strcmp( crs, "bytes 0-0/2000" ) == 0 );
+    CHECK( strcmp( crs, "Content-Range: bytes 0-0/2000\r\n" ) == 0 );
     CHECK( range.getContentRangeString( 1, crs, 99 ) > 0);
-    CHECK( strcmp( crs, "bytes 1234-1999/2000" ) == 0 );
+    CHECK( strcmp( crs, "Content-Range: bytes 1234-1999/2000\r\n" ) == 0 );
     CHECK( range.getContentRangeString( 2, crs, 99 ) > 0);
-    CHECK( strcmp( crs, "bytes 1990-1999/2000" ) == 0 );
+    CHECK( strcmp( crs, "Content-Range: bytes 1990-1999/2000\r\n" ) == 0 );
     CHECK( range.getContentRangeString( 3, crs, 99 ) > 0);
-    CHECK( strcmp( crs, "bytes 10-1999/2000" ) == 0 );
-    CHECK( range.getContentRangeString( 4, crs, 21 ) > 0);
-    CHECK( strcmp( crs, "bytes 1999-1999/2000" ) == 0 );
-    CHECK( range.getContentRangeString( 5, crs, 13 ) > 0);
-    CHECK( strcmp( crs, "bytes */2000" ) == 0 );
-    CHECK( range.getContentRangeString( 4, crs, 20 ) == -1);
-    CHECK( range.getContentRangeString( 5, crs, 12 ) == -1);
+    CHECK( strcmp( crs, "Content-Range: bytes 10-1999/2000\r\n" ) == 0 );
+    CHECK( range.getContentRangeString( 4, crs, 38 ) > 0);
+    CHECK( strcmp( crs, "Content-Range: bytes 1999-1999/2000\r\n" ) == 0 );
+    CHECK( range.getContentRangeString( 5, crs, 30 ) > 0);
+    CHECK( strcmp( crs, "Content-Range: bytes */2000\r\n" ) == 0 );
+    CHECK( range.getContentRangeString( 4, crs, 37 ) == -1);
+    CHECK( range.getContentRangeString( 5, crs, 29 ) == -1);
 
 
     range.setContentLen( -1 );
     CHECK( range.getContentRangeString( 0, crs, 99 ) > 0);
-    CHECK( strcmp( crs, "bytes 0-0/*" ) == 0 );
+    CHECK( strcmp( crs, "Content-Range: bytes 0-0/*\r\n" ) == 0 );
     CHECK( range.getContentRangeString( 1, crs, 99 ) > 0);
-    CHECK( strcmp( crs, "bytes 1234-1999/*" ) == 0 );
+    CHECK( strcmp( crs, "Content-Range: bytes 1234-1999/*\r\n" ) == 0 );
     CHECK( range.getContentRangeString( 2, crs, 99 ) > 0);
-    CHECK( strcmp( crs, "bytes 1990-1999/*" ) == 0 );
+    CHECK( strcmp( crs, "Content-Range: bytes 1990-1999/*\r\n" ) == 0 );
     CHECK( range.getContentRangeString( 3, crs, 99 ) > 0);
-    CHECK( strcmp( crs, "bytes 10-1999/*" ) == 0 );
+    CHECK( strcmp( crs, "Content-Range: bytes 10-1999/*\r\n" ) == 0 );
     CHECK( range.getContentRangeString( 4, crs, 38 ) > 0);
-    CHECK( strcmp( crs, "bytes 1999-1999/*" ) == 0 );
+    CHECK( strcmp( crs, "Content-Range: bytes 1999-1999/*\r\n" ) == 0 );
     
     const char * psInSatified = "bytes=2000-2000,4423-123495";
     range.setContentLen( 2000 );

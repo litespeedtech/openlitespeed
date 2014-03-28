@@ -38,17 +38,14 @@ Duplicable * Layout::dup( const char * pName )
     return new Layout( pName );
 }
 
-int Layout::format( LoggingEvent * pEvent, va_list args )
+int Layout::format( LoggingEvent * pEvent, char * pBuf, int len )
 {
-    return defaultFormat( pEvent, args );
+    if ( pEvent->m_iMessageLen < len )
+        len = pEvent->m_iMessageLen;
+    memcpy( pBuf, pEvent->m_pMessageBuf, len );
+    return len;
+            
 }
-int Layout::defaultFormat( LoggingEvent * pEvent, va_list args )
-{
-    return pEvent->m_iRMessageLen = vsnprintf(
-            pEvent->m_pMessageBuf, pEvent->m_bufLen,
-            pEvent->m_format, args );
-}
-
 
 END_LOG4CXX_NS
 

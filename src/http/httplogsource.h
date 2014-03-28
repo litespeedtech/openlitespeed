@@ -21,8 +21,15 @@
 #include <sys/types.h>
 
 class AccessLog;
+class AutoStr;
+class ConfigCtx;
+class XmlNode;
+
+
 class HttpLogSource
 {
+private:
+    static AutoStr  s_sDefaultAccessLogFormat;
 public: 
     HttpLogSource() {};
     virtual ~HttpLogSource() {};
@@ -34,6 +41,14 @@ public:
     virtual void setBytesLogFilePath( const char * pFileName, long rollingSize ) {}
     virtual void enableAccessLog( int size ) {}
     virtual AccessLog* getAccessLog() const = 0;
+    int initAccessLog( const XmlNode *pNode,
+                                      off_t *pRollingSize );
+    int initAccessLog( const XmlNode *pRoot,
+                                      int setDebugLevel );
+    int initErrorLog2( const XmlNode *pNode,
+                                      int setDebugLevel );
+    int initErrorLog( const XmlNode *pRoot,
+                                     int setDebugLevel );
 };
 
 #endif

@@ -19,17 +19,25 @@
 #include "handlertype.h"
 #include "httpextconnector.h"
 #include "staticfilehandler.h"
+#include <lsiapi/modulehandler.h>
+#include "lsiapi/modulemanager.h"
 
 #include <extensions/extworker.h>
 #include <extensions/registry/extappregistry.h>
 
+#include <http/httpvhost.h>
+#include <http/httplog.h>
 #include <util/objpool.h>
+#include "util/configctx.h"
+#include <util/xmlnode.h>
+
 #include <stdio.h>
 
 #include "ssi/ssiengine.h"
 extern StaticFileHandler        s_staticFileHandler;
 extern RedirectHandler          s_redirectHandler;
 extern SSIEngine                s_ssiHandler;
+extern ModuleHandler           s_ModuleHandler;
 
 typedef ObjPool<HttpExtConnector>   ExtConnectorPool;
 static ExtConnectorPool             s_extConnectorPool( 0, 10 );
@@ -41,6 +49,8 @@ ReqHandler* HandlerFactory::getHandler( int type )
     {
     case HandlerType::HT_STATIC:
         return &s_staticFileHandler;
+    case HandlerType::HT_MODULE:
+        return &s_ModuleHandler;
     case HandlerType::HT_REDIRECT:
         return NULL;
     case HandlerType::HT_CGI:
@@ -63,6 +73,8 @@ void HandlerFactory::recycle( HttpExtConnector * pHandler )
 
 const HttpHandler * HandlerFactory::getInstance( int type, const char * pName )
 {
+    ModuleManager::iterator iter;
+    
     switch( type )
     {
     case HandlerType::HT_STATIC:
@@ -71,6 +83,14 @@ const HttpHandler * HandlerFactory::getInstance( int type, const char * pName )
         return &s_ssiHandler;        
     case HandlerType::HT_REDIRECT:
         return &s_redirectHandler;
+    case HandlerType::HT_MODULE:
+        iter = ModuleManager::getInstance().find(pName);
+        if ( iter != ModuleManager::getInstance().end() &&
+            ((LsiModule*)iter.second())->getModule()->_handler)
+            return iter.second();
+        else
+            return NULL;
+        
     case HandlerType::HT_CGI:
         pName = "lscgid";
     case HandlerType::HT_FASTCGI:
@@ -86,3 +106,30 @@ const HttpHandler * HandlerFactory::getInstance( int type, const char * pName )
     return NULL;
 }
 
+const HttpHandler *HandlerFactory::getHandler(
+        const char *pType, const char *pHandler )
+{
+    int role = HandlerType::ROLE_RESPONDER;
+    int type = HandlerType::getHandlerType( pType, role );
+
+    if ( ( type == HandlerType::HT_END ) ||
+            ( type == HandlerType::HT_JAVAWEBAPP ) ||
+            ( type == HandlerType::HT_RAILS ) )
+    {
+        ConfigCtx::getCurConfigCtx()->log_error( "Invalid External app type:[%s]" , pType );
+        return NULL;
+    }
+
+    const HttpHandler *pHdlr = HandlerFactory::getInstance( type, pHandler );
+    
+    return pHdlr;
+}
+
+const HttpHandler *HandlerFactory::getHandler( const XmlNode *pNode )
+{
+    const char *pType = pNode->getChildValue( "type" );
+
+    char achHandler[256];
+    const char *pHandler = ConfigCtx::getCurConfigCtx()->getExpandedTag( pNode, "handler", achHandler, 256 );
+    return getHandler( pType, pHandler );
+}

@@ -50,17 +50,17 @@ class DPageDef
 				'SERV_PROCESS', 'SERV_GENERAL',
 				'SERV_LOG', 'SERV_ACLOG', 'SERV_INDEX',
 				'SERV_EXPIRES',
-				'A_GEOIP', 
+				'A_GEOIP',
 				'SERV_TUNING_OS', 'SERV_TUNING_CONN', 'SERV_TUNING_REQ', 'SERV_TUNING_STATIC', 'SERV_TUNING_GZIP',
 				'SERV_SEC_FILE', 'SERV_SEC_CONN', 'SERV_SEC_CGI',
 				'SERV_SEC_DENY',
 				'A_SECAC', 'A_EXT_SEL',	'A_SCRIPT',
-				'S_RAILS',
+				'S_RAILS', 'SERV_MODULE',
 				'VH_TOP_D', 'SERVICE_SUSPENDVH'
 				));
 
 		$pages[] = new DFileSect(
-			array('L_GENERAL', 'L_VHMAP', 'L_SSL_CERT', 'L_SSL', 'L_SSL_FEATURE', 'L_SSL_OCSP', 'L_SSL_CLIENT_VERIFY'),
+			array('L_GENERAL', 'L_VHMAP', 'L_SSL_CERT', 'L_SSL', 'L_SSL_FEATURE', 'L_SSL_OCSP', 'L_SSL_CLIENT_VERIFY', 'L_MODULE'),
 			'listenerList:listener', 'listeners', 'name' );
 
 		$pages[] = new DFileSect(
@@ -81,7 +81,8 @@ class DPageDef
 				'A_EXT_SEL', 'VH_CTX_SEL',
 				'VH_REWRITE_CTRL', 'VH_REWRITE_MAP', 'VH_REWRITE_RULE',
 				'VH_SSL_CERT', 'VH_SSL_SSL', 'VH_SSL_FEATURE', 'VH_SSL_OCSP', 'VH_SSL_CLIENT_VERIFY',
-				'VH_WEBSOCKET'));
+				'VH_WEBSOCKET', 'VH_MODULE'));
+
 		$this->_fileDef['vh'] = &$pages;
 	}
 
@@ -94,12 +95,12 @@ class DPageDef
 		$pages[] = new DFileSect(
 			array(
 				'TP_GENERAL2', 'TP_LOG',	'TP_ACLOG',	'VH_INDXF',	'VH_ERRPG',
-				'A_SCRIPT',	'VH_EXPIRES', 
+				'A_SCRIPT',	'VH_EXPIRES',
 				'A_SECAC', 'TP_REALM_SEL',
 				'TP_EXT_SEL', 'VH_CTX_SEL',
 				'VH_REWRITE_CTRL', 'VH_REWRITE_MAP', 'VH_REWRITE_RULE',
 				'VH_SSL_CERT', 'VH_SSL_SSL', 'VH_SSL_FEATURE', 'VH_SSL_OCSP', 'VH_SSL_CLIENT_VERIFY',
-				'VH_WEBSOCKET'),
+				'VH_WEBSOCKET', 'VH_MODULE'),
 			'virtualHostConfig');
 
 		$this->_fileDef['tp'] = &$pages;
@@ -159,9 +160,15 @@ class DPageDef
 		$this->_pageDef['serv'][$page->_id] = $page;
 
 		$page = new DPage('serv', 'railsDefaults', 'Rack/Rails',
-						  'Rack/Rails Settings', 
+						  'Rack/Rails Settings',
 						  array('S_RAILS'));
 		$page->_helpLink = 'Rails_Help.html';
+		$this->_pageDef['serv'][$page->_id] = $page;
+
+		$page = new DPage('serv', 'modules', 'Modules',
+						  'External Modules',
+						  array('SERV_MODULE_TOP'));
+		$page->_helpLink = 'Modules_Help.html';
 		$this->_pageDef['serv'][$page->_id] = $page;
 
 		$page = new DPage('tptop', 'tpTop', 'Virtual Host Templates',
@@ -194,6 +201,12 @@ class DPageDef
 		$page->_helpLink = 'Listeners_Help.html';
 		$this->_pageDef['sl'][$page->_id] = $page;
 
+		$page = new DPage('sl', 'modules', 'Modules',
+				'External Modules',
+				array('L_MODULE_TOP'));
+		$page->_helpLink = 'Modules_Help.html';
+		$this->_pageDef['sl'][$page->_id] = $page;
+
 		$page = new DPage('tp', 'member', 'Template',
 						  'Template Settings',
 						  array('TP', 'TP_MEMBER_TOP'));
@@ -221,10 +234,10 @@ class DPageDef
 		$page = new DPage('vh', 'base', 'Basic',
 						  'Virtual Host Base',
 						  array('VH_BASE', 'VH_BASE_CONNECTION','VH_BASE_SECURITY', 'VH_BASE_THROTTLE'));
-						  
+
 		$page->_helpLink = 'VHGeneral_Help.html';
 		$this->_pageDef['vh'][$page->_id] = $page;
-		
+
 		$page = new DPage('vh', 'general', 'General',
 						  'Virtual Host General Settings',
 						  array('VH_GENERAL', 'VH_INDXF', 'VH_ERRPG_TOP', 'VH_EXPIRES'));
@@ -275,14 +288,21 @@ class DPageDef
 		$page->_helpLink = 'Listeners_Help.html';
 		$this->_pageDef['vh'][$page->_id] = $page;
 		$this->_pageDef['tp'][$page->_id] = $page;
-		
+
 		$page = new DPage('vh', 'websocket', 'Web Socket Proxy',
 						  'Web Socket Proxy Settings',
 						  array('VH_WEBSOCKET_TOP'));
 		$page->_helpLink = 'Websocket_Help.html';
 		$this->_pageDef['vh'][$page->_id] = $page;
 		$this->_pageDef['tp'][$page->_id] = $page;
-				
+
+		$page = new DPage('vh', 'modules', 'Modules',
+				'External Modules',
+				array('VH_MODULE_TOP'));
+		$page->_helpLink = 'Modules_Help.html';
+		$this->_pageDef['vh'][$page->_id] = $page;
+		$this->_pageDef['tp'][$page->_id] = $page;
+
 		$page = new DPage('admin', 'general', 'General',
 						  'Web Admin Settings',
 						  array('ADMIN_PHP', 'VH_LOG', 'VH_ACLOG'));

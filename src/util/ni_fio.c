@@ -15,7 +15,7 @@
 *    You should have received a copy of the GNU General Public License       *
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
-#include <util/ni_fio.h>
+#include "ni_fio.h"
 #include <errno.h>
 #include <fcntl.h>
 #include <sys/stat.h>

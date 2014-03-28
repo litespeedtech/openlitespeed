@@ -24,7 +24,7 @@
 #include <util/hashdatacache.h>
 
 class AutoStr2;
-class HttpConnection;
+class HttpSession;
 
 class AuthRequired
 {
@@ -79,30 +79,30 @@ public:
     HashDataCache * getUserCache()  {   return m_pCacheUser;    }
     HashDataCache * getGroupCache() {   return m_pCacheGroup;   }
     
-    virtual int authenticate( HttpConnection * pConn, const char * pUser, int nameLen,
+    virtual int authenticate( HttpSession *pSession, const char * pUser, int nameLen,
                       const char * pPasswd, int encryptMethod,
                       const AuthRequired * pRequired );
     
-    virtual AuthUser * getUserFromStore( HttpConnection * pConn, HashDataCache * pCache,
+    virtual AuthUser * getUserFromStore( HttpSession *pSession, HashDataCache * pCache,
                         const char * pUser, int len, int *ready ) = 0;
-    virtual AuthGroup* getGroupFromStore( HttpConnection * pConn, HashDataCache * pCache,
+    virtual AuthGroup* getGroupFromStore( HttpSession *pSession, HashDataCache * pCache,
                         const char * pGroup, int len, int *ready ) = 0;
 
-    const AuthUser * getRequiredUser( HttpConnection * pConn, const char * pUser, int userLen,
+    const AuthUser * getRequiredUser( HttpSession *pSession, const char * pUser, int userLen,
                      const AuthRequired * pRequired, int *ready );
 
-    const AuthUser * getUserIfMatchGroup( HttpConnection * pConn, const char * pUser, int userLen,
+    const AuthUser * getUserIfMatchGroup( HttpSession *pSession, const char * pUser, int userLen,
                                 const StringList *m_pReqGroups, int *ready );
 
-    const AuthUser * getUser( HttpConnection * pConn,
+    const AuthUser * getUser( HttpSession *pSession,
                         const char * pUser, int len, int* ready )
-    {   return getUser( pConn, m_pCacheUser, pUser, len, ready );   }
-    const StringList* getGroup( HttpConnection * pConn,
+    {   return getUser( pSession, m_pCacheUser, pUser, len, ready );   }
+    const StringList* getGroup( HttpSession *pSession,
                         const char * pGroup, int len, int* ready )
-    {   return getGroup( pConn, m_pCacheGroup, pGroup, len, ready );    }
-    virtual const AuthUser * getUser( HttpConnection * pConn, HashDataCache * pCache,
+    {   return getGroup( pSession, m_pCacheGroup, pGroup, len, ready );    }
+    virtual const AuthUser * getUser( HttpSession *pSession, HashDataCache * pCache,
                         const char * pUser, int len, int* ready );
-    virtual const StringList* getGroup( HttpConnection * pConn, HashDataCache * pCache,
+    virtual const StringList* getGroup( HttpSession *pSession, HashDataCache * pCache,
                         const char * pGroup, int len, int* ready );
 
     virtual const char * getUserStoreURI() = 0;
@@ -122,17 +122,17 @@ public:
     PlainFileUserDir();
     ~PlainFileUserDir();
 
-//    virtual int authenticate( HttpConnection * pConn, const char * pUser, int nameLen,
+//    virtual int authenticate( HttpSession * pSession, const char * pUser, int nameLen,
 //                      const char * pPasswd, int encryptMethod,
 //                      AuthRequired * pRequired );
 
-    AuthUser * getUserFromStore( HttpConnection * pConn, HashDataCache * pCache,
+    AuthUser * getUserFromStore( HttpSession *pSession, HashDataCache * pCache,
                 const char * pUser, int len, int *ready )
     {
         return (AuthUser *)m_pUserStore->getDataFromStore( pUser, len );
     }
 
-    AuthGroup * getGroupFromStore( HttpConnection * pConn, HashDataCache * pCache,
+    AuthGroup * getGroupFromStore( HttpSession *pSession, HashDataCache * pCache,
                     const char * pGroup, int len, int *ready )
     {
         if ( !m_pGroupStore )

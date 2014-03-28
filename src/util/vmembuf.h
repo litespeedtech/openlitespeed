@@ -119,6 +119,8 @@ public:
     int  close();
     int  copyToFile( size_t startOff, size_t len, 
                             int fd, size_t destStartOff );
+    const char * getTempFileName()  {    return m_sFileName.c_str();    }
+        
 
     int convertFileBackedToInMemory();
     static void initAnonPool();

@@ -16,7 +16,7 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include <http/staticfilecachedata.h>
-#include <http/datetime.h>
+#include <util/datetime.h>
 #include <http/httpheader.h>
 #include <http/httplog.h>
 #include <http/httpmime.h>
@@ -41,6 +41,7 @@
 #include <utime.h>
 #include <util/ssnprintf.h>
 #include "http/httprespheaders.h"
+#include <lsiapi/lsiapi.h>
 
 static size_t   s_iMaxInMemCacheSize = 4096;
 static size_t   s_iMaxMMapCacheSize = 256 * 1024;
@@ -163,39 +164,41 @@ void FileCacheDataEx::release()
             free( m_pCache );
         }
         break;
-    default:
-        if ( m_fd != -1 )
-        {
-            close( m_fd );
-            m_fd = -1;
-        }
     }
+    closefd();
     memset( &m_iStatus, 0,
             (char *)(&m_pCache + 1) - (char *)&m_iStatus );
 }
 
 void FileCacheDataEx::closefd()
 {
-    close( m_fd );
-    m_fd = -1;
+    if ( m_fd != -1 )
+    {
+        close( m_fd );
+        m_fd = -1;
+    }
 }
 
 
 int FileCacheDataEx::readyData(const char * pPath)
 {
-    int fd;
-    int ret = openFile( pPath, fd );
-    if ( ret )
-        return ret;
+    int ret;
+    if ( m_fd == -1 )
+    {
+        ret = openFile( pPath, m_fd );
+        if ( ret )
+            return ret;
+        fcntl( m_fd, F_SETFD, FD_CLOEXEC );
+    }
     if ( (size_t)m_lSize < s_iMaxInMemCacheSize )
     {
         ret = allocateCache( m_lSize );
         if ( ret == 0 )
         {
-            ret = nio_read( fd, m_pCache, m_lSize );
+            ret = nio_read( m_fd, m_pCache, m_lSize );
             if ( ret == m_lSize )
             {
-                close( fd );
+                closefd();
                 return 0;
             }
             else
@@ -208,7 +211,7 @@ int FileCacheDataEx::readyData(const char * pPath)
             &&((size_t)m_lSize + s_iCurTotalMMAPCache < s_iMaxTotalMMAPCache ))
     {
         m_pCache = (char *)mmap( 0, m_lSize, PROT_READ,
-                MAP_PRIVATE, fd, 0 );
+                MAP_PRIVATE, m_fd, 0 );
         s_iCurTotalMMAPCache += m_lSize;
         if ( D_ENABLED( DL_MORE ))
             LOG_D(( "[MMAP] Map %p to file:%s", m_pCache, pPath ));
@@ -219,12 +222,10 @@ int FileCacheDataEx::readyData(const char * pPath)
         else
         {
             setStatus( MMAPED );
-            close( fd );
+            closefd();
             return 0;
         }
     }
-    setfd( fd );
-    fcntl( fd, F_SETFD, FD_CLOEXEC );
     return 0;
 }
 
@@ -261,10 +262,6 @@ const char * FileCacheDataEx::getCacheData(
 
 }
 
-
-
-
-
 StaticFileCacheData::StaticFileCacheData()
 {
     memset( &m_pMimeType, 0,
@@ -273,13 +270,12 @@ StaticFileCacheData::StaticFileCacheData()
 
 StaticFileCacheData::~StaticFileCacheData()
 {
+    LsiapiBridge::releaseModuleData( LSI_MODULE_DATA_FILE, getModuleData());
     if ( m_pGziped )
         delete m_pGziped;
     if ( m_pSSIScript )
         delete m_pSSIScript;    
 }
-
-
 
 int StaticFileCacheData::testMod( HttpReq * pReq )
 {
@@ -365,7 +361,6 @@ int StaticFileCacheData::testUnMod( HttpReq * pReq )
     return 0;
 }
 
-
 int StaticFileCacheData::buildFixedHeaders( int etag )
 {
     int size = 6 + 30 + 17 + RFC_1123_TIME_LEN
@@ -438,22 +433,29 @@ int  FileCacheDataEx::buildCLHeader( bool gziped )
     return 0;
 }
 
-
-int StaticFileCacheData::build( const AutoStr2 &path, const struct stat& fileStat , int etag)
+int StaticFileCacheData::buildHeaders( const MIMESetting * pMIME,
+            const AutoStr2 * pCharset, short etag )
 {
-    m_fileData.setFileStat( fileStat );
-    char * pReal = m_real.resizeBuf( path.len() + 6 );
-    if ( !pReal )
-        return -1;
-    strcpy( pReal, path.c_str() );
-    m_real.setLen( path.len() );
-    memmove( pReal + path.len() + 1, "lsz\0\0", 5 );
-    //int ret = buildFixedHeaders();
-    int ret = buildFixedHeaders(etag);
+    int ret;
+    m_pMimeType = pMIME;
+    m_pCharset = pCharset;
+    ret = buildFixedHeaders( etag );
     if ( ret )
         return ret;
     ret = m_fileData.buildCLHeader( false );
     return ret;
+}
+
+
+
+int StaticFileCacheData::build( int fd, const char *  pPath, int pathLen, const struct stat& fileStat)
+{
+    m_fileData.setfd( fd );
+    m_fileData.setFileStat( fileStat );
+    m_real.setStr( pPath, pathLen );
+    if ( !m_real.c_str() )
+        return -1;
+    return 0;
 }
 
 
@@ -771,10 +773,12 @@ int StaticFileCacheData::readyCacheData(
         if ( ret == 0 )
         {
             pECache = m_pGziped;
+            pECache->incRef();
             return 0;
         }
     }
     pECache = &m_fileData;
+    pECache->incRef();
     if (( m_fileData.isCached() ||
         ( m_fileData.getfd() != -1 )))
         return 0;

@@ -2,7 +2,7 @@
 
 class DUtil
 {
-	
+
 	public static function object_sort(&$array_data, $column, $direction, $type) {
                 // get a list of columns
                 $columns = array();
@@ -11,7 +11,7 @@ class DUtil
                    $columns[$key]  = $row->$column;
 
                 }
-                
+
                 array_multisort($columns, $direction, $type, $array_data);
 	}
 
@@ -59,7 +59,7 @@ class DUtil
 		}
 
 		switch($type) {
-			case "int":	
+			case "int":
 				return (int) $temp;
 				break;
 			case "float":
@@ -96,7 +96,7 @@ class DUtil
 			}
 		}
 		return $o;
-	}	
+	}
 
 	public static function getGoodVal($val)
 	{
@@ -180,7 +180,7 @@ class DUtil
 			foreach ( $datalocs as $loc )
 			{
 				$r = strpos($loc, '!$');
-				
+
 				if ( $r > 0 )
 				{
 					$a = substr($loc, $r+2);
@@ -195,25 +195,26 @@ class DUtil
 		return $data;
 	}
 
-	public static function getSubTid(&$subTbls, &$data)
+	public static function getSubTid($subTbls, $data)
 	{
 		$key = $subTbls[0];
-
 		if ( !isset($data[$key]) )
 			return NULL;
-		$key = $data[$key]->GetVal();
-		if ( !isset($subTbls[$key]) )
+
+		$newkey = $data[$key]->GetVal();
+		if ( ($newkey == '0') || !isset($subTbls[$newkey]) ) {
 			return $subTbls[1];
+		}
 		else
-			return $subTbls[$key];
+			return $subTbls[$newkey];
 	}
-	
+
 	public static function splitMultiple($val)
 	{
 		return preg_split("/, /", $val, -1, PREG_SPLIT_NO_EMPTY);
-	}	
+	}
 
-	public static function array_string_keys($input) 
+	public static function array_string_keys($input)
 	{
 		$output = array();
 		if ($input != NULL && is_array($input)) {
@@ -222,17 +223,17 @@ class DUtil
 			}
 		}
 		return $output;
-			
+
 	}
-	
+
 	public static function dbg_out($tag, &$obj, $visible=TRUE)
 	{
-		if ($visible) 
+		if ($visible)
 			echo "<pre> $tag \n" . print_r($obj, TRUE) . "\n</pre>";
-		else 
+		else
 			echo "<!-- $tag --\n" . print_r($obj, TRUE) . "-->\n";
 	}
-	
+
 	public static function dbg_tag($tag, $visible=TRUE)
 	{
 		if ($visible)
@@ -241,5 +242,5 @@ class DUtil
 			echo "<!-- $tag -->\n";
 	}
 
- 
+
 }

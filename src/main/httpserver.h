@@ -37,7 +37,7 @@ class HttpListener;
 class GSockAddr;
 class AutoStr2;
 class HttpContext;
-class HttpConnection;
+class HttpSession;
 class LogFile;
 class AccessControl;
 class FcgiApp;
@@ -45,8 +45,10 @@ class ExtWorker;
 class StringList;
 class ScriptHandlerMap;
 class SSLContext;
-class HttpServerBuilder;
+class HttpConfigLoader;
 class VHostMap;
+class XmlNode;
+class ConfigCtx;
 
 class HttpServer : public TSingleton<HttpServer>, public HttpLogSource
 {
@@ -64,10 +66,6 @@ public:
     int start();
     int shutdown();
     HttpListener* addListener( const char * pName, const char * pAddr );
-    HttpListener* addSSLListener( const char * pName, const char * pAddr, SSLContext *pSSL );
-    SSLContext * newSSLContext( SSLContext * pContext, const char *pCertFile,
-                    const char *pKeyFile, const char * pCAFile, const char * pCAPath,
-                    const char * pCiphers, int certChain, int cv, int renegProtect );
     int removeListener( const char * pName );
     HttpListener* getListener( const char * pName ) const ;
 
@@ -76,9 +74,9 @@ public:
     int removeVHost( const char *pName );
     HttpVHost* getVHost( const char * pName ) const;
 
-    int mapListenerToVHost( HttpListener * pListener,
-                            const char * pKey,
-                            const char * pVHostName );
+//     int mapListenerToVHost( HttpListener * pListener,
+//                             const char * pKey,
+//                             const char * pVHostName );
     int mapListenerToVHost( const char * pListenerName,
                             const char * pKey,
                             const char * pVHostName );
@@ -90,8 +88,6 @@ public:
     int allocatePidTracker();
                                 
     AccessControl* getAccessCtrl() const;
-    void setMaxConns( int32_t conns );
-    void setMaxSSLConns( int32_t conns );
     int  getVHostCounts() const;
     void beginConfig();
     void endConfig( int error );
@@ -104,7 +100,6 @@ public:
     void setBlackBoard( char * pBuf );
     void passListeners();
     void recoverListeners();
-    void recycleContext( HttpContext * pContext );
 
     int  initMultiplexer( const char * pType );
     int  reinitMultiplexer();
@@ -116,22 +111,23 @@ public:
 
     const AutoStr2 * getErrDocUrl( int statusCode ) const;
     void releaseAll();
-//    int importWebApp( HttpVHost * pVHost, const char * contextUri,
-//                        const char* appPath, const char * pWorkerName,
-//                        const char * pRealm = NULL);
-
     virtual void setLogLevel( const char * pLevel );
     virtual int setAccessLogFile( const char * pFileName, int pipe );
     virtual int setErrorLogFile( const char * pFileName );
     virtual void setErrorLogRollingSize( off_t size, int keep_days );
     virtual AccessLog* getAccessLog() const;
     const StringList * getIndexFileList() const;
-    int  test_main();
+    int  test_main( const char * pArgv0);
     void generateStatusReport();
     int  authAdminReq( char * pAuth );
     HttpContext& getServerContext();
-
     static void cleanPid();
+    int configServerBasics( int reconfig, const XmlNode *pRoot);
+    int configServer( int reconfig, XmlNode *pRoot);
+    int changeUserChroot( );
+//    void reconfigVHost( char *pVHostName, XmlNode* pRoot );
+    void setServerRoot( const char *pRoot );
+    int initServer( XmlNode* pRoot, int &iReleaseXmlTree, int reconfig = 0 );
     
 };
 

@@ -52,16 +52,17 @@ public:
     {   return m_uiStreamID;    }
     
     int write( const char * buf, int len );
+    int writev( const struct iovec * vec, int count );
     int writev( IOVec &vector, int total );
 
-    int sendfile( IOVec &vector, int &total, int fdSrc, off_t off, size_t size )
+    int sendfile( int fdSrc, off_t off, size_t size )
     {
         return 0;
     };
     void switchWriteToRead() {};
 
     int flush();
-    int sendHeaders( IOVec &vector, int headerCount );
+    int sendRespHeaders( HttpRespHeaders * pHeaders );
 
     void suspendRead() 
     {   setFlag(HIO_FLAG_WANT_READ, 0);     }

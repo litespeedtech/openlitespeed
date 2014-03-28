@@ -275,3 +275,49 @@ void LoopBuf::update( int offset, const char * pBuf, int size )
     }
 }
 
+char *LoopBuf::search( int offset, const char *accept, int acceptLen )
+{
+    register char *pSplitEnd, *pSplitStart, *ptr = NULL, *pIter = this->getPointer( offset );
+    register const char *pAcceptPtr = accept;
+    int iMiss = 0;
+    if ( acceptLen > this->size() )
+        return NULL;
+    if ( pIter <= this->m_pEnd )
+        return (char *)memmem( pIter, this->m_pEnd - pIter, accept, acceptLen );
+    
+    if ( acceptLen <= this->m_pBufEnd - pIter )
+    {
+        if ( ( ptr = (char *)memmem( pIter, this->m_pBufEnd - pIter, accept, acceptLen ) ) != NULL )
+            return ptr;
+        pIter = this->m_pBufEnd - (acceptLen - 1);
+    }
+    pSplitStart = pIter;
+    
+    if ( acceptLen > this->m_pEnd - this->m_pBuf )
+        pSplitEnd = this->m_pEnd;
+    else
+        pSplitEnd = this->m_pBuf + (acceptLen - 1);
+    
+    while( ( pIter > this->m_pEnd) || (pAcceptPtr != accept) )
+    {
+        if ( *pIter == *pAcceptPtr )
+        {
+            if ( pAcceptPtr == accept )
+                ptr = pIter;
+            if ( ++pAcceptPtr - accept == acceptLen )
+                return ptr;
+        }
+        else
+        {
+            pAcceptPtr = accept;
+            pIter = pSplitStart + iMiss++;
+        }
+        if ( ++pIter >= this->m_pBufEnd )
+            pIter = this->m_pBuf;
+    }
+    return (char *)memmem( this->m_pBuf, this->m_pEnd - this->m_pBuf, accept, acceptLen );
+}
+
+
+
+

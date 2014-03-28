@@ -22,14 +22,16 @@ class DPage
 
 	public function PrintHtml(&$confData, $disp)
 	{
-
+		$viewTags = 'vbsDdBCiI';
+		$editTags = 'eEaScn';
+		$isEdit = ( strpos($editTags, $disp->_act) !== FALSE );
 
 		if ( $disp->_act == 'd' || $disp->_act == 'i' )
 			$this->printActionConfirm($disp);
 
 		if ( $disp->_err != NULL )
 		{
-			echo XUI::message("",$disp->_err,"error");
+			echo GUIBase::message("",$disp->_err,"error");
 		}
 
 		$tblDef = DTblDef::GetInstance();
@@ -63,7 +65,6 @@ class DPage
 			{
 				$d = DUtil::locateData($confData, $tbl->_dataLoc, $disp->_ref);
 			}
-
 			if ( $tbl->_holderIndex != NULL )
 			{
 				if ( $disp->_act == 'e' || $disp->_act == 'E' || $disp->_act == 'a')
@@ -71,16 +72,26 @@ class DPage
 					$disp->_info['holderIndex'] = is_array($d)? array_keys($d):NULL;
 					$disp->_info['holderIndex_cur'] = $ref;
 				}
-				if ( !$isExtract && $ref != NULL )
+				if ( !$isExtract && $ref != NULL && substr($ti, -3) != 'TOP')
 					$d = &$d[$ref];
 			}
 			else
 				$disp->_info['holderIndex'] = NULL;
 
 
-			echo "<table width=100%><tr><td>";
-			$tbl->PrintHtml($d, $ref, $disp);
-			echo "</td></tr></table>";
+			echo "<div>";
+			$tbl->PrintHtml($d, $ref, $disp, $isEdit);
+			echo "</div>";
+
+			if ($isEdit == FALSE && $tbl->_linkedTbls != NULL && isset($tbl->_linkedTbls['disp'])) {
+				foreach($tbl->_linkedTbls['disp'] as $lti) {
+					$linkedtbl = $tblDef->GetTblDef($lti);
+					$dlinked = DUtil::locateData($d, $linkedtbl->_dataLoc);
+					echo "<div>";
+					$linkedtbl->PrintHtml($dlinked, $ref, $disp, FALSE);
+					echo "</div>";
+				}
+			}
 
 		}
 

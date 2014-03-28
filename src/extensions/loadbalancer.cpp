@@ -56,7 +56,7 @@ int LoadBalancer::workerLoadCompare( ExtWorker * pWorker, ExtWorker * pSelect )
 }
 
 
-ExtWorker * LoadBalancer::selectWorker(HttpConnection * pConn, ExtRequest * pExtReq )
+ExtWorker * LoadBalancer::selectWorker(HttpSession *pSession, ExtRequest * pExtReq )
 {
     ExtWorker * pWorker, *pSelected = NULL;
     int select = 0;

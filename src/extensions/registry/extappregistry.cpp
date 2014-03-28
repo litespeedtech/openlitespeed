@@ -17,13 +17,21 @@
 *****************************************************************************/
 #include "extappregistry.h"
 #include <extensions/extworker.h>
+#include <extensions/localworkerconfig.h>
 #include <http/handlertype.h>
 #include <http/httpglobals.h>
-
+#include <http/handlerfactory.h>
+#include <util/configctx.h>
+#include <util/stringlist.h>
+#include <util/stringtool.h>
 #include <util/hashstringmap.h>
+#include <util/xmlnode.h>
+#include <util/rlimits.h>
+#include <socket/gsockaddr.h>
+#include <unistd.h>
 
 static ExtWorker * newWorker( int type, const char * pName );
-
+RLimits* ExtAppRegistry::s_pRLimits = NULL;
 class ExtAppMap : public HashStringMap< ExtWorker* >
 {
 public:
@@ -75,7 +83,6 @@ ExtWorker * ExtAppSubRegistry::addWorker( int type, const char * pName )
             pApp = newWorker( type, pName );
         if ( pApp )
         {
-            pApp->setMultiplexer( HttpGlobals::getMultiplexer() );
             m_pRegistry->insert( pApp->getName(), pApp );
         }
         return pApp;
@@ -344,6 +351,297 @@ int ExtAppRegistry::generateRTReport( int fd )
             s_registry[i]()->generateRTReport( fd, i );
     }
     return 0;
+}
+
+ExtWorker * ExtAppRegistry::configExtApp( const XmlNode *pNode, int configUserGroup )
+{
+    int iType;
+    int role;
+    char achAddress[128];
+    GSockAddr addr;
+    char achName[256];
+    const char *pName;
+    const char *pType;
+    const char *pUri;
+    char buf[MAX_PATH_LEN];
+    int iAutoStart = 0;
+    const char *pPath = NULL;
+    ExtWorker *pWorker = NULL;
+    ExtWorkerConfig *pConfig = NULL;
+    int len = 0;
+    if ( HttpGlobals::s_psChroot )
+    len = HttpGlobals::s_psChroot->len();
+    if ( strncasecmp( pNode->getName(), "extProcessor", 12 ) != 0 )
+    {
+        return NULL;
+    }
+
+    pName = ConfigCtx::getCurConfigCtx()->getExpandedTag( pNode, "name", achName, 256 );
+    if ( pName == NULL )
+    {
+        return NULL;
+    }
+
+    ConfigCtx currentCtx( pName );
+
+    pType = ConfigCtx::getCurConfigCtx()->getTag( pNode, "type" );
+    if ( !pType )
+        return NULL;
+
+    iType = HandlerType::getHandlerType( pType, role );
+    if ( ( iType < HandlerType::HT_FASTCGI ) ||
+            ( iType >= HandlerType::HT_END ) )
+    {
+        currentCtx.log_error( "unknown external processor <type>: %s", pType );
+        return NULL;
+    }
+
+    if ( HandlerType::HT_LOADBALANCER == iType )
+        return NULL;
+
+    iType -= HandlerType::HT_CGI;
+
+    pUri = ConfigCtx::getCurConfigCtx()->getExpandedTag( pNode, "address", achAddress, 128 );
+    if ( ( pUri == NULL ) && ( iType != HandlerType::HT_LOGGER ) )
+    {
+        return NULL;
+    }
+
+    if ( addr.set( pUri, NO_ANY ) )
+    {
+        currentCtx.log_error( "failed to set socket address %s!", pUri );
+        return NULL;
+    }
+
+    if ( ( iType == EA_FCGI ) || ( iType == EA_LOGGER ) || ( iType == EA_LSAPI ) )
+    {
+        if ( iType == EA_LOGGER )
+            iAutoStart = 1;
+        else
+        {
+            iAutoStart = ConfigCtx::getCurConfigCtx()->getLongValue( pNode, "autoStart", 0, 1, 0 );
+        }
+
+        pPath = pNode->getChildValue( "path" );
+
+        if ( ( iAutoStart ) && ( ( !pPath || !*pPath ) ) )
+        {
+            currentCtx.log_errorMissingTag( "path" );
+            return NULL;
+        }
+
+        if ( iAutoStart )
+        {
+            if ( ConfigCtx::getCurConfigCtx()->getAbsoluteFile( buf, pPath ) != 0 )
+                return NULL;
+
+            char *pCmd = buf;
+            char *p = ( char * ) StringTool::strNextArg( pCmd );
+
+            if ( p )
+                *p = 0;
+
+            if ( access( pCmd, X_OK ) == -1 )
+            {
+                currentCtx.log_error( "invalid path - %s, "
+                                      "it cannot be started by Web server!", buf );
+                return NULL;
+            }
+
+            if ( p )
+                *p = ' ';
+
+            if ( pCmd != buf )
+                buf[len] = *buf;
+
+            pPath = &buf[len];
+        }
+    }
+    pWorker = addApp( iType, pName );
+
+    if ( !pWorker )
+    {
+        currentCtx.log_error( "failed to add external processor!" );
+        return NULL;
+    }
+    pConfig = pWorker->getConfigPointer();
+    assert( pConfig );
+
+    if ( pUri )
+        if ( pWorker->setURL( pUri ) )
+        {
+            currentCtx.log_error( "failed to set socket address to %s!", pName );
+            return NULL;
+        }
+
+    pWorker->setRole( role );
+
+    pConfig->config( pNode );
+
+    if ( !iAutoStart )
+    {
+        pConfig->getEnv()->add( 0, 0, 0, 0 );
+        return pWorker;
+    }
+    
+    LocalWorker *pApp = static_cast<LocalWorker *>( pWorker );
+
+    if ( pApp )
+    {
+        LocalWorkerConfig &config = pApp->getConfig();
+        config.setAppPath( pPath );
+        config.setStartByServer( iAutoStart );
+
+        config.config( pNode );
+
+        
+        if ( configUserGroup )
+        {
+            config.configExtAppUserGroup(  pNode, iType );
+
+        }
+    }
+
+    return pWorker;
+
+}
+
+int ExtAppRegistry::configLoadBalacner( const XmlNode *pNode, const HttpVHost *pVHost )
+{
+    if ( strncasecmp( pNode->getName(), "extProcessor", 12 ) != 0 )
+    {
+        return 1;
+    }
+
+    char achName[256];
+    const char *pName = ConfigCtx::getCurConfigCtx()->getExpandedTag( pNode, "name", achName, 256 );
+
+    if ( pName == NULL )
+    {
+        return 1;
+    }
+
+    ConfigCtx currentCtx( pName );
+
+    const char *pType = ConfigCtx::getCurConfigCtx()->getTag( pNode, "type" );
+
+    if ( !pType )
+        return 1;
+
+    int iType;
+    int role;
+    iType = HandlerType::getHandlerType( pType, role );
+
+    if ( HandlerType::HT_LOADBALANCER != iType )
+        return 1;
+
+    iType -= HandlerType::HT_CGI;
+
+    LoadBalancer *pLB;
+
+    pLB = ( LoadBalancer * ) addApp( iType, pName );
+
+    if ( !pLB )
+    {
+        currentCtx.log_error( "failed to add load balancer!" );
+        return 1;
+    }
+    else
+    {
+        pLB->clearWorkerList();
+
+        if ( pVHost )
+        {
+            pLB->getConfigPointer()->setVHost( pVHost );
+        }
+
+        const char *pWorkers = pNode->getChildValue( "workers" );
+
+        if ( pWorkers )
+        {
+            StringList workerList;
+            workerList.split( pWorkers, pWorkers + strlen( pWorkers ), "," );
+            StringList::const_iterator iter;
+
+            for( iter = workerList.begin(); iter != workerList.end(); ++iter )
+            {
+                const char *pType = ( *iter )->c_str();
+                char *pName = ( char * ) strstr( pType, "::" );
+
+                if ( !pName )
+                {
+                    currentCtx.log_error( "invalid worker syntax [%s].", pType );
+                    continue;
+                }
+
+                *pName = 0;
+                pName += 2;
+                iType = HandlerType::getHandlerType( pType, role );
+
+                if ( ( iType == HandlerType::HT_LOADBALANCER ) ||
+                        ( iType == HandlerType::HT_LOGGER ) ||
+                        ( iType < HandlerType::HT_CGI ) )
+                {
+                    currentCtx.log_error( "invalid handler type [%s] for load balancer worker.", pType );
+                    continue;
+                }
+
+                const ExtWorker *pWorker = static_cast<const ExtWorker *>(HandlerFactory::getHandler( pType, pName ));
+
+                if ( pWorker )
+                {
+                    if (pWorker->getConfigPointer()->getVHost() != pVHost )
+                    {
+                        currentCtx.log_error( "Access to handler [%s:%s] is denied!",
+                                        pType, pName );
+                        continue;
+                    }
+                }
+
+                if ( pWorker )
+                    pLB->addWorker( ( ExtWorker * ) pWorker );
+            }
+        }
+    }
+
+    return 0;
+
+}
+
+int ExtAppRegistry::configExtApps( const XmlNode *pRoot, const HttpVHost *pVHost )
+{
+    const XmlNode *pNode = pRoot->getChild( "extProcessorList" );
+
+    if ( !pNode )
+        pNode = pRoot;
+
+    XmlNodeList list;
+    int c = pNode->getAllChildren( list );
+    int add = 0 ;
+    XmlNode *pExtAppNode;
+
+    for( int i = 0 ; i < c ; ++ i )
+    {
+        pExtAppNode = list[i];
+        ExtWorker * pWorker = configExtApp( pExtAppNode, pVHost!= NULL );
+        if ( pWorker != NULL )
+        {
+            if ( pVHost )
+                pWorker->getConfigPointer()->setVHost( pVHost );
+            ++add ;
+        }
+    }
+
+    for( int i = 0 ; i < c ; ++ i )
+    {
+        pExtAppNode = list[i];
+
+        if ( configLoadBalacner( pExtAppNode, pVHost ) == 0 )
+            ++add ;
+    }
+
+    return 0;
+
 }
 
 #include <unistd.h> 

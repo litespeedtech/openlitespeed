@@ -20,6 +20,7 @@
 
 
 #include <http/throttlecontrol.h>
+#include <lsiapi/lsimoduledata.h>
 #include <util/autostr.h>
 
 struct sockaddr;
@@ -30,6 +31,7 @@ class ClientInfo
     AutoStr2    m_sAddr;
     AutoStr2    m_sHostName;
     GeoInfo   * m_pGeoInfo;
+    LsiModuleData   m_moduleData;
     
     size_t      m_iConns;
     time_t      m_tmOverLimit;
@@ -96,6 +98,7 @@ public:
     GeoInfo * allocateGeoInfo();
     GeoInfo * getGeoInfo() const        {   return m_pGeoInfo;      }
     
+    LsiModuleData* getModuleData()      {   return &m_moduleData;   }
 };
 
 #endif

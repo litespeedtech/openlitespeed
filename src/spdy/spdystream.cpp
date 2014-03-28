@@ -20,7 +20,7 @@
 
 #include "spdyconnection.h"
 
-#include <http/datetime.h>
+#include <util/datetime.h>
 #include <http/httplog.h>
 #include <util/ssnprintf.h>
 #include <util/iovec.h>
@@ -245,6 +245,13 @@ int SpdyStream::writev( IOVec &vector, int total )
     
 }
 
+int SpdyStream::writev( const struct iovec * vec, int count )
+{
+    IOVec iov( vec, count );
+    return writev( iov.get(), iov.bytes() );
+}
+
+
 int SpdyStream::write( const char * buf, int len )
 {
     IOVec iov;
@@ -325,12 +332,13 @@ int SpdyStream::sendData( IOVec * pIov, int total )
 }
 
 
-int SpdyStream::sendHeaders( IOVec &vector, int headerCount )
+int SpdyStream::sendRespHeaders( HttpRespHeaders * pHeaders )
 {
     if ( getState() == HIOS_DISCONNECTED )
         return -1;
+    
     m_pSpdyConn->move2ReponQue(this);
-    return m_pSpdyConn->sendRespHeaders(vector, headerCount, m_uiStreamID);
+    return m_pSpdyConn->sendRespHeaders(pHeaders, m_uiStreamID);
 }
 
 int SpdyStream::adjWindowOut( int32_t n  )

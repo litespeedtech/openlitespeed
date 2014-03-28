@@ -23,7 +23,7 @@
 #include <util/iovec.h>
 #include <extensions/lsapi/lsapidef.h>
 
-class HttpConnection;
+class HttpSession;
 class HttpReq;
 class LsapiEnv;
 struct lsapi_packet_header;
@@ -33,8 +33,8 @@ class LsapiReq
     AutoBuf     m_bufReq;
     IOVec     * m_pIovec;
 
-    int appendEnv( LsapiEnv * pEnv, HttpConnection * pConn );
-    int appendSpecialEnv( LsapiEnv * pEnv, HttpConnection * pConn, 
+    int appendEnv( LsapiEnv * pEnv, HttpSession *pSession );
+    int appendSpecialEnv( LsapiEnv * pEnv, HttpSession *pSession, 
                     struct lsapi_req_header * pHeader );
     int appendHttpHeaderIndex( HttpReq * pReq, int cntUnknown );
     int dumpReq( char * pFile );
@@ -46,7 +46,7 @@ public:
 
     static int addEnv( AutoBuf * pAutoBuf, const char *name,
                 size_t nameLen, const char *value, size_t valLen );
-    int buildReq( HttpConnection * pConn, int * totalLen );
+    int buildReq( HttpSession *pSession, int * totalLen );
     static void buildPacketHeader( struct lsapi_packet_header * pHeader, 
                                 char type, int len )
     {

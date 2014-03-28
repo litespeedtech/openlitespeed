@@ -38,18 +38,21 @@ int SystemInfo::getPageSize()
 unsigned long long SystemInfo::maxOpenFile( unsigned long long max)
 {
     struct  rlimit rl;
-    int     iMaxOpenFiles = 0;
+    unsigned long long iMaxOpenFiles = 0;
     if ( getrlimit( RLIMIT_NOFILE, &rl ) == 0 )
     {
         iMaxOpenFiles = rl.rlim_cur;
-        if (( max <= rl.rlim_max ) || getuid() )
-            rl.rlim_cur = rl.rlim_max;
-        else
-            rl.rlim_cur = rl.rlim_max = max;
-        //if ( rl.rlim_cur == RLIM_INFINITY )
-        //    rl.rlim_cur = 4096;
-        if ( setrlimit( RLIMIT_NOFILE, &rl ) == 0 )
-            iMaxOpenFiles = rl.rlim_cur;
+        if (( rl.rlim_cur != RLIM_INFINITY )&&( max > rl.rlim_cur ))
+        {
+            if (( max <= rl.rlim_max ) || getuid() )
+                rl.rlim_cur = rl.rlim_max;
+            else
+                rl.rlim_cur = rl.rlim_max = max;
+            //if ( rl.rlim_cur == RLIM_INFINITY )
+            //    rl.rlim_cur = 4096;
+            if ( setrlimit( RLIMIT_NOFILE, &rl ) == 0 )
+                iMaxOpenFiles = rl.rlim_cur;
+        }
     }
     return iMaxOpenFiles;
 }

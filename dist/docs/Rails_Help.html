@@ -3,7 +3,7 @@
   <meta charset="utf-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
   <title>Open LiteSpeed Web Server Users' Manual - Rack/Rails Settings</title>
-  <meta name="description" content="Open LiteSpeed Web Server Users' Manual - Rack/Rails Settings." />  
+  <meta name="description" content="Open LiteSpeed Web Server Users' Manual - Rack/Rails Settings." />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="shortcut icon" href="img/favicon.ico" />
   <link rel="stylesheet" type="text/css" href="css/hdoc.css">
@@ -11,7 +11,7 @@
 <body>
 <div class="pagewrapper"><div class="sidetree">
 <h3>OpenLiteSpeed Web Server <a href="index.html"> Users' Manual</a></h3>
-<h5>Version 1.2 Rev. 2 </h5>
+<h5>Version 1.3 Rev. 1 </h5>
 <hr/>
 <div>
 <ul class="toctop">
@@ -29,6 +29,7 @@
 	<li><a href="ExtApp_Help.html">External Apps</a></li>
 	<li><a href="ScriptHandler_Help.html">Script Handler</a></li>
 	<li><span class="current"><a href="Rails_Help.html">Rack/Rails Settings</a></span></li>
+	<li><a href="Module_Help.html">Module Configuration</a></li>
 	<li><a href="Listeners_Help.html">Listeners</a></li>
 	<li><a href="Templates_Help.html">Templates</a></li>
 	<li><a href="VirtualHosts_Help.html">Virtual Host List</a></li>
@@ -43,7 +44,7 @@
 </li>
 </ul>
 </div></div>
-<div class="contentwrapper"><div class="nav-bar"><div class="prev">&#171 <a href="ScriptHandler_Help.html">Script Handler</a></div><div class="center"><a href="config.html">Configuration</a></div><div class="next"><a href="Listeners_Help.html">Listeners</a> &#187;</div></div>
+<div class="contentwrapper"><div class="nav-bar"><div class="prev">&#171 <a href="ScriptHandler_Help.html">Script Handler</a></div><div class="center"><a href="config.html">Configuration</a></div><div class="next"><a href="Module_Help.html">Module Configuration</a> &#187;</div></div>
 <h1>Rack/Rails Settings</h1><h4>Table of Contents</h4><section class="toc"><section class="toc-row"><header><a href="#railsDefault">Ruby Rack/Rails Settings</a></header><p>
 <a href="#rubyBin">Ruby Path</a>&nbsp;|&nbsp;<a href="#railsEnv">Run-Time Mode</a>&nbsp;|&nbsp;<a href="#maxConns">Max Connections</a>&nbsp;|&nbsp;<a href="#env">Environment</a>&nbsp;|&nbsp;<a href="#initTimeout">Initial Request Timeout</a>&nbsp;|&nbsp;<a href="#retryTimeout">Retry Timeout</a>&nbsp;|&nbsp;<a href="#pcKeepAliveTimeout">Keep Alive Timeout</a>&nbsp;|&nbsp;<a href="#respBuffer">Response Buffering</a>&nbsp;|&nbsp;<a href="#extMaxIdleTime">Max Idle Time</a>&nbsp;|&nbsp;<a href="#backlog">Back Log</a>&nbsp;|&nbsp;<a href="#runOnStartUp">Run On Start Up</a>&nbsp;|&nbsp;<a href="#extAppPriority">Priority</a>&nbsp;|&nbsp;<a href="#memSoftLimit">Memory Soft Limit</a>&nbsp;|&nbsp;<a href="#memHardLimit">Memory Hard Limit</a>&nbsp;|&nbsp;<a href="#procSoftLimit">Process Soft Limit</a>&nbsp;|&nbsp;<a href="#procHardLimit">Process Hard Limit</a>&nbsp;|&nbsp;</p></section>
 </section>
@@ -65,7 +66,7 @@
 <div class="helpitem"><a name="procSoftLimit"></a><table width="100%" class="ht" border="0" cellpadding="5" cellspacing="0"> <tr class="ht-title"><td><div>Process Soft Limit<span class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="img/top.gif"></a></span></div></td></tr> <tr><td><span class="ht-label">Description: </span>Limits the total number of processes that can be created on behalf of a user. All existing processes will be counted against this limit, not just new processes to be started.  If the limit is set to <span class="val">10</span>, and there are more than 10 processes running under one user, then no new process can be started by the web server for that user (through suEXEC). <br/><br/> The main purpose of this limit is to prevent "fork bomb" attacks or excessive usage, not to impose a limit on normal usage.  Make sure to leave enough head room. This can be set at the server level or at an   individual external application level. The server-level limit will be used if it is not set at an individual application level. The operating system's default setting will be used if this value is <span class="val">0</span> or absent at both levels.</td></tr> <tr><td><span class="ht-label">Syntax: </span>Integer number</td></tr> <tr><td><span class="ht-label">Example: </span>[Attention] All processes run under the same user ID at server level will be counted against this limit.  Do not over adjust this limit. Doing so may cause 503 errors if a user needs to create many processes.</td></tr> </table> </div>
 <div class="helpitem"><a name="procHardLimit"></a><table width="100%" class="ht" border="0" cellpadding="5" cellspacing="0"> <tr class="ht-title"><td><div>Process Hard Limit<span class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="img/top.gif"></a></span></div></td></tr> <tr><td><span class="ht-label">Description: </span>Much the same as <span class="tagI"><a href="#procSoftLimit">Process Soft Limit</a></span>, except the soft limit can be raised up to the hard limit from within a user process. The hard limit can be set at the server level or at an   individual external application level. The server-level limit will be used if it is not set at an individual application level.    The operating system's default value will be used if the value is absent at both levels or set to <span class="val">0</span>.</td></tr> <tr><td><span class="ht-label">Syntax: </span>Integer number</td></tr> </table> </div>
 </section>
-</div><footer class="copyright">Copyright &copy; 2013. <a href="http://www.litespeedtech.com">Lite Speed Technologies Inc.</a> All rights reserved.</footer>
+</div><footer class="copyright">Copyright &copy; 2013-2014. <a href="http://www.litespeedtech.com">Lite Speed Technologies Inc.</a> All rights reserved.</footer>
 				</div>
 				</body>
 				</html>

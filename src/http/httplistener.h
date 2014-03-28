@@ -24,6 +24,8 @@
 #include <util/logtracker.h>
 
 #include <sys/types.h>
+#include <lsiapi/lsiapi.h>
+#include <lsiapi/modulemanager.h>
 
 class HttpVHost;
 class SSLContext;
@@ -32,11 +34,12 @@ class ClientInfo;
 class GSockAddr;
 
 class SubIpMap;
-
+class HttpServerImpl;
 
 
 class HttpListener : public EventReactor, public LogTracker
 {
+    friend class HttpServerImpl;
     static int32_t      m_iSockSendBufSize;
     static int32_t      m_iSockRecvBufSize;
     
@@ -47,6 +50,9 @@ class HttpListener : public EventReactor, public LogTracker
     short               m_iAdmin;
     short               m_isSSL;
     unsigned int        m_iBinding;
+    
+    ModuleConfig m_moduleConfig;
+    IolinkSessionHooks  m_iolinkSessionHooks;
         
     HttpListener( const HttpListener& rhs );
     void operator=( const HttpListener& rhs );
@@ -58,6 +64,7 @@ class HttpListener : public EventReactor, public LogTracker
     int setSockAttr( int fd, GSockAddr &addr );
     VHostMap * getSubMap( int fd );
 
+    
 protected:
     virtual const char * buildLogId() { return NULL; };
     
@@ -114,6 +121,10 @@ public:
     int addDefaultVHost( HttpVHost * pVHost );
 
     int writeStatusReport( int fd );
+    int mapDomainList(HttpVHost * pVHost, const char * pDomains);
+    
+    IolinkSessionHooks  *getSessionHooks() {  return &m_iolinkSessionHooks;    }
+    ModuleConfig *getModuleConfig()         { return &m_moduleConfig;   }
 };
 
 #endif

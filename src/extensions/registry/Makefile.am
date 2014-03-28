@@ -5,7 +5,7 @@ INCLUDES = -I$(top_srcdir)/src -I$(all_includes)
 
 libregistry_a_METASOURCES = AUTO
 
-libregistry_a_SOURCES = extappregistry.cpp 
+libregistry_a_SOURCES = extappregistry.cpp railsappconfig.cpp
 
 
 EXTRA_DIST = extappregistry.cpp extappregistry.h 

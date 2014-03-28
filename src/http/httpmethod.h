@@ -55,6 +55,8 @@ public:
         DAV_MKACTIVITY,
         DAV_BIND,
         DAV_SEARCH,
+        HTTP_PURGE,
+        HTTP_REFRESH,
         HTTP_METHOD_END
     };
 

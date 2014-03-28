@@ -40,8 +40,6 @@ SSLConnection::SSLConnection( SSL* ssl)
     , m_iStatus( DISCONNECTED )
     , m_iWant( 0)
 {
-    if ( !m_ssl )
-        throw SSLError(s_pErrInvldSSL);
 }
 
 SSLConnection::SSLConnection( SSL* ssl, int fd )
@@ -49,10 +47,7 @@ SSLConnection::SSLConnection( SSL* ssl, int fd )
     , m_iStatus( DISCONNECTED )
     , m_iWant( 0)
 {
-    if ( !m_ssl )
-        throw SSLError(s_pErrInvldSSL);
-    if ( SSL_set_fd( m_ssl, fd ) == 0 )
-        throw SSLError();
+    SSL_set_fd( m_ssl, fd );
 }
 
 SSLConnection::SSLConnection( SSL* ssl, int rfd, int wfd )
@@ -60,11 +55,8 @@ SSLConnection::SSLConnection( SSL* ssl, int rfd, int wfd )
     , m_iStatus( DISCONNECTED )
     , m_iWant( 0)
 {
-    if ( !m_ssl )
-        throw SSLError(s_pErrInvldSSL);
-    if (( SSL_set_rfd( m_ssl, rfd ) == 0 )||
-        ( SSL_set_wfd( m_ssl, wfd ) == 0 ))
-        throw SSLError();
+    SSL_set_rfd( m_ssl, rfd );
+    SSL_set_wfd( m_ssl, wfd );
 }
 
 SSLConnection::~SSLConnection()
@@ -129,6 +121,8 @@ int SSLConnection::write( const char * pBuf, int len )
 {
     assert( m_ssl );
     m_iWant = 0;
+    if (len <= 0)
+        return 0;
     int ret = SSL_write( m_ssl, pBuf, len );
     if ( ret > 0 )
     {
@@ -208,7 +202,6 @@ int SSLConnection::accept()
 int SSLConnection::checkError( int ret)
 {
     int err = SSL_get_error( m_ssl, ret );
-    //printf( "SSLError:%s\n", SSLError(err).what() );
     switch( err )
     {
     case SSL_ERROR_WANT_READ:
@@ -221,6 +214,7 @@ int SSLConnection::checkError( int ret)
         return 0;
     default:
         errno = EIO;
+        //printf( "SSLError:%s\n", SSLError(err).what() );
     }
     return -1;
 }

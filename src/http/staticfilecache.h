@@ -21,21 +21,23 @@
 
 #include <http/httpcache.h>
 
-class HttpReq;
 class StaticFileCacheData;
-class MIMESetting;
+class FileCacheDataEx;
 
 class StaticFileCache : public HttpCache
 {
     CacheElement* allocElement();
     void recycle( CacheElement* pElement );
-    int  newCache( const HttpReq * pReq,
-         const MIMESetting *pMime, StaticFileCacheData *&pData );
+    int  newCache( const char * pPath, int pathLen, 
+                   const struct stat& fileStat, int fd, 
+                   StaticFileCacheData *&pData );
 public:
     StaticFileCache( int initSize );
     ~StaticFileCache();
 
-    int getCacheElement( HttpReq* pReq, StaticFileCacheData* &pData );
+    int getCacheElement( const char * pPath, int pathLen, 
+                         const struct stat& fileStat, int fd, 
+                         StaticFileCacheData* &pData, FileCacheDataEx *  &pECache );
     void returnCacheElement( StaticFileCacheData* pElement );
 };
 

@@ -41,26 +41,26 @@ Duplicable * PatternLayout::dup( const char * pName )
 }
 
 
-int PatternLayout::format( LoggingEvent * pEvent, va_list args )
+int PatternLayout::format( LoggingEvent * pEvent, char * pBuf, int len )
 {
-    struct tm	tm;
+    struct tm   tm;
     char fmt[30] = "%s";
     char fmtDate[128] = "";
     const char * pPattern = (const char *)getUData();
+    char * pBufBegin = pBuf;
+    char * pEnd = pBuf + len - 10;
     const char * p;
-    char * pBuf = pEvent->m_pMessageBuf;
-    char * pEnd;
     char ch;
-    time_t t;
     int n;
+    time_t t;
     struct timeval tv_diff;
-    pEnd = pBuf + pEvent->m_bufLen - 10;
+    pEnd--;
     if ( pPattern == NULL )
     {
         pPattern = "%m";
     }
     p = pPattern;
-    while( (ch = *p++) != 0 )
+    while((pBuf < pEnd )&&(ch = *p++) != 0 )
     {
         switch( ch )
         {
@@ -98,20 +98,24 @@ int PatternLayout::format( LoggingEvent * pEvent, va_list args )
                         *pBuf++ = ch;
                         break;
                     case 'm':
-                        n = vsnprintf( pBuf, pEnd - pBuf, pEvent->m_format,
-                                args );
-                        if ( n > pEnd - pBuf )
+                        if ( pEvent->m_iMessageLen > pEnd - pBuf )
+                        {
                             n = pEnd - pBuf;
+                        }
+                        else
+                            n = pEvent->m_iMessageLen;
+                        memcpy( pBuf, pEvent->m_pMessageBuf, n );
                         pBuf += n;
                         break;
                     case 'n':
                         *pBuf++ = '\n';
                         break;
                     case 'c':
-                        pBuf += safe_snprintf( pBuf, pEnd - pBuf, fmt,
+                        pBuf += snprintf( pBuf, pEnd - pBuf, fmt,
                                 pEvent->m_pLoggerName );
                         break;
                     case 'd':
+                        
                         ch = *p;
                         if ( ch == '{' )
                         {
@@ -139,7 +143,7 @@ int PatternLayout::format( LoggingEvent * pEvent, va_list args )
                         localtime_r(&t, &tm);
                         if ( *fmtDate == 0 )
                         {
-                            pBuf += safe_snprintf(pBuf, pEnd - pBuf,
+                            pBuf += snprintf(pBuf, pEnd - pBuf,
                             "%04d-%02d-%02d %02d:%02d:%02d.%03d",
                                 tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
                                 tm.tm_hour, tm.tm_min, tm.tm_sec,
@@ -150,15 +154,16 @@ int PatternLayout::format( LoggingEvent * pEvent, va_list args )
                             pBuf += strftime( pBuf, pEnd - pBuf,
                                 fmtDate, &tm );
                         }
+                        
                         break;
                     case 'p':
-                        pBuf += safe_snprintf( pBuf, pEnd - pBuf, fmt,
+                        pBuf += snprintf( pBuf, pEnd - pBuf, fmt,
                                 Level::toString(pEvent->m_level));
                         break;
                     case 'R':
                         tv_diff.tv_sec = pEvent->m_timestamp.tv_sec -
                             s_startTime.tv_sec;
-                        pBuf += safe_snprintf( pBuf, pEnd - pBuf, fmt,
+                        pBuf += snprintf( pBuf, pEnd - pBuf, fmt,
                             tv_diff.tv_sec );
                         break;
                     case 'r':
@@ -171,7 +176,7 @@ int PatternLayout::format( LoggingEvent * pEvent, va_list args )
                             tv_diff.tv_usec += 1000000;
                             --tv_diff.tv_sec;
                         }
-                        pBuf += safe_snprintf( pBuf, pEnd - pBuf, "%d%03d",
+                        pBuf += snprintf( pBuf, pEnd - pBuf, "%d%03d",
                                 (int)tv_diff.tv_sec, (int)(tv_diff.tv_usec/1000) );
                         break;
                     case 'u':   /* not supported */
@@ -188,11 +193,14 @@ int PatternLayout::format( LoggingEvent * pEvent, va_list args )
             break;
 
     }
-    if ( (pBuf > pEvent->m_pMessageBuf )&&(*(pBuf - 1)!= '\n' ))
-        *pBuf++ = '\n';
+    if ( pBuf > pEnd )
+        pBuf = pEnd;
+    if ( !(pEvent->m_flag & LOGEVENT_NO_LINEFEED) )
+        if ( (*(pBuf - 1) != '\n' ))
+            *pBuf++ = '\n';
     *pBuf = 0;
 
-    return pEvent->m_iRMessageLen = pBuf - pEvent->m_pMessageBuf;
+    return  pBuf - pBufBegin;
 }
 
 END_LOG4CXX_NS

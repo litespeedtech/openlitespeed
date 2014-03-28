@@ -9,11 +9,11 @@ add_custom_target(Name ALL COMMAND make WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/
 set_directory_properties(PROPERTIES  ADDITIONAL_MAKE_CLEAN_FILES "${PROJECT_SOURCE_DIR}/src/test/unittest-cpp/UnitTest++/libUnitTest++.a")
 set(libUnitTest  libUnitTest++.a)
 ##########################################################################################
+
 execute_process( COMMAND getconf LFS_CFLAGS
             OUTPUT_VARIABLE  LFS_CFLAGS )
 
 add_definitions( ${LFS_CFLAGS} )
-
 #FIND_LIBRARY(CPPUNIT_LIBRARY NAMES cppunit
 #                          PATHS /usr/lib /lib /usr/local/lib /usr/share/lib /opt/lib /opt/share/lib /var/lib /usr/lib64 /lib64 /usr/local/lib64 /usr/share/lib64 /opt/lib64 /opt/share/lib64 /var/lib64
 #                          DOC "Try and find libcppunit")
@@ -31,7 +31,8 @@ add_subdirectory(extensions)
 add_subdirectory(log4cxx)
 add_subdirectory(main)
 add_subdirectory(ssi)
-
+add_subdirectory(lsiapi)
+add_subdirectory(modules)
 
 ########### next target ###############
 
@@ -91,6 +92,8 @@ SET(util_STAT_SRCS
    test/util/logfiletest.cpp
    test/util/stringmaptest.cpp
    test/util/httpfetchtest.cpp
+   test/util/partitioninfotest.cpp
+   test/util/gmaptest.cpp
 )
 
 SET(spdy_STAT_SRCS
@@ -98,14 +101,22 @@ SET(spdy_STAT_SRCS
    test/spdy/spdyconnectiontest.cpp
    test/spdy/dummiostream.cpp
 )
+
+SET(MODULE_DATAS_SRCS
+   test/lsiapi/moduledata.cpp
+   test/lsiapi/moduletimer.cpp
+   test/lsiapi/lsiapihookstest.cpp
+   test/lsiapi/envhandler.cpp
+)
+
 link_directories(/usr/local/lib ${PROJECT_SOURCE_DIR}/src/test/unittest-cpp/UnitTest++)
 
 add_executable(openlitespeed ${openlitespeed_SRCS} ${edio_STAT_SRCS} 
     ${extensions_STAT_SRCS} ${http_STAT_SRCS} ${socket_STAT_SRCS} 
-    ${util_STAT_SRCS} ${spdy_STAT_SRCS})
+    ${util_STAT_SRCS} ${spdy_STAT_SRCS} ${MODULE_DATAS_SRCS})
 
 
-target_link_libraries(openlitespeed main spdy ssi http ssi registry cgi fcgi jk extensions lsapi proxy edio  log4cxx socket sslpp util misc sysinfo GeoIP pthread dl ${libUnitTest} )
+target_link_libraries(openlitespeed main http spdy ssi lsiapi registry cgi fcgi jk extensions lsapi proxy edio  log4cxx socket sslpp util misc sysinfo GeoIP pthread dl ${libUnitTest} )
 
 install(TARGETS openlitespeed DESTINATION bin)
 

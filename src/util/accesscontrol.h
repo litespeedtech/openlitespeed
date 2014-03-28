@@ -80,6 +80,8 @@ public:
 class SubNetNode;
 class SubNet6Node;
 class IP6AccessControl;
+class XmlNode;
+class ConfigCtx;
 class AccessControl
 {
 private:
@@ -123,6 +125,8 @@ public:
     int addSubNetControl(const char* ip_mask, int allowed);
     void clear();
     int addList( const char * pList, int allow );
+    int config( const XmlNode *pNode );
+    static int isAvailable( const XmlNode *pNode );
 };
 
 

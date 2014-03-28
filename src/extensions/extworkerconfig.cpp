@@ -16,11 +16,11 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "extworkerconfig.h"
-
+#include <http/httpdefs.h>
 #include <socket/gsockaddr.h>
-
+#include "util/configctx.h"
 #include <util/ssnprintf.h>
-
+#include <util/xmlnode.h>
 #include <assert.h>
 #include <limits.h>
 #include <stdio.h>
@@ -159,4 +159,50 @@ void ExtWorkerConfig::removeUnusedSocket()
     unlink( m_sURL.c_str() + 5 );
 }
 
+void ExtWorkerConfig::config( const XmlNode *pNode )
+{
+    const char *pValue;
+    int iMaxConns = ConfigCtx::getCurConfigCtx()->getLongValue( pNode, "maxConns", 1, 2000, 1 );
+    int iRetryTimeout = ConfigCtx::getCurConfigCtx()->getLongValue( pNode, "retryTimeout", 0, LONG_MAX, 10 );
+    int iInitTimeout = ConfigCtx::getCurConfigCtx()->getLongValue( pNode, "initTimeout", 1, LONG_MAX, 3 );
+    int iBuffer = ConfigCtx::getCurConfigCtx()->getLongValue( pNode, "respBuffer", 0, 2, 1 );
+    int iKeepAlive = ConfigCtx::getCurConfigCtx()->getLongValue( pNode, "persistConn", 0, 1, 1 );
+    int iKeepAliveTimeout = ConfigCtx::getCurConfigCtx()->getLongValue( pNode, "pcKeepAliveTimeout", -1, INT_MAX, INT_MAX );
 
+    if ( iKeepAliveTimeout == -1 )
+        iKeepAliveTimeout = INT_MAX;
+
+    if ( iBuffer == 1 )
+        iBuffer = 0;
+    else
+        if ( iBuffer == 0 )
+            iBuffer = HEC_RESP_NOBUFFER;
+        else
+            if ( iBuffer == 2 )
+                iBuffer = HEC_RESP_NPH;
+
+    setPersistConn( iKeepAlive );
+    setKeepAliveTimeout( iKeepAliveTimeout );
+    setMaxConns( iMaxConns );
+    setTimeout( iInitTimeout );
+    setRetryTimeout( iRetryTimeout );
+    setBuffering( iBuffer );
+    clearEnv();
+    const XmlNodeList *pList = pNode->getChildren( "env" );
+
+    if ( pList )
+    {
+        XmlNodeList::const_iterator iter;
+
+        for( iter = pList->begin(); iter != pList->end(); ++iter )
+        {
+            pValue = ( *iter )->getValue();
+
+            if ( pValue )
+            {
+                addEnv( ( *iter )->getValue() );
+            }
+        }
+    }
+
+}

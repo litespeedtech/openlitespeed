@@ -21,6 +21,7 @@
 
 #include <edio/outputstream.h>
 #include <util/autobuf.h>
+#include <util/iovec.h>
 
 
 #define CHUNK_HEADER_SIZE   20
@@ -29,12 +30,14 @@
 #define MAX_CHUNK_SIZE      4096
 
 class IOVec;
+class IOVec;
 class ChunkOutputStream 
 {
     OutputStream  * m_pOS;
-    IOVec         * m_pIov;
+    IOVec           m_iov;
     int             m_iCurSize;
-    int             m_iBuffering;
+    char            m_iBuffering;
+    short           m_iSendFileLeft;
     int             m_iTotalPending;
     int             m_iLastBufLen;
     const char    * m_pLastBufBegin;
@@ -42,23 +45,26 @@ class ChunkOutputStream
     char            m_headerBuf[ CHUNK_HEADER_SIZE ];
     char            m_bufChunk[ CHUNK_BUFSIZE ];
     int writeChunk();
-    int buildIovec( IOVec &iov, const char * pBuf, int size );
-    int chunkedWrite( IOVec &iov, const char * pBuf, int size );
-    int chunkedWrite( IOVec &iov, int &headerTotal,
-                            const char * pBuf, int size);
+    int buildIovec( const char * pBuf, int size );
+    int chunkedWrite( const char * pBuf, int size );
     int fillChunkBuf( const char * pBuf, int size );
+    int buildChunkHeader( int size );
 public:
     ChunkOutputStream();
     ~ChunkOutputStream();
-    void setStream( OutputStream* pOS, IOVec* pIov )
-    {   m_pOS = pOS;  m_pIov = pIov;  }
+    void setStream( OutputStream* pOS )
+    {   m_pOS = pOS;  }
     void open()     {   reset();        }
-    int write( IOVec& output, int &headerTotal, const char * pBuf, int size );
-    int close( IOVec& output, int total );
+    int write( const char * pBuf, int size );
     int close();
     int flush2();
     int flush()
     {
+        if ( m_iCurSize > 0 )
+        {
+            m_iTotalPending += buildIovec( NULL, 0 );
+            m_iCurSize = 0;
+        }
         if ( m_iTotalPending )
             return flush2();
         return 0;
@@ -66,6 +72,9 @@ public:
     void reset();
     void setBuffering( int n )
     {   m_iBuffering = n;    }
+    short& getSendFileLeft()  { return m_iSendFileLeft; }
+    void buildSendFileChunk( int size );
+    void appendCRLF();
 };
 
 #endif

@@ -22,8 +22,8 @@
 #include <extensions/fcgi/fcgistarter.h>
 #include <extensions/registry/extappregistry.h>
 
-#include <http/datetime.h>
-#include <http/httpconnection.h>
+#include <util/datetime.h>
+#include <http/httpsession.h>
 #include <http/httpreq.h>
 #include <http/httpresp.h>
 #include <http/pipeappender.h>
@@ -32,9 +32,12 @@
 #include <log4cxx/appender.h>
 #include <log4cxx/appendermanager.h>
 
+#include <util/stringtool.h>
+#include <util/ssnprintf.h>
+
+
 #include <stdio.h>
 #include <string.h>
-#include <util/ssnprintf.h>
 
 struct LogFormatItem
 {
@@ -124,7 +127,7 @@ int CustomFormat::parseFormat( const char * psFormat )
                 ++p;
                 
             }
-            else if ( *p == '>' )
+            else if (( *p == '>' )||( *p == '<' ))
             {
                 ++p;   
             }
@@ -205,7 +208,10 @@ int CustomFormat::parseFormat( const char * psFormat )
                     itemId = REF_PID;
                     break;
                 case 'q':
-                    itemId = REF_QUERY_STRING;
+                    if ( p[-1] == '<' )
+                        itemId = REF_ORG_QS;
+                    else
+                        itemId = REF_QUERY_STRING;
                     break;
                 case 'r':
                     itemId = REF_REQ_LINE;
@@ -223,7 +229,10 @@ int CustomFormat::parseFormat( const char * psFormat )
                     itemId = REF_REMOTE_USER;
                     break;
                 case 'U':
-                    itemId = REF_URL_PATH;
+                    if ( p[-1] == '>' )
+                        itemId = REF_CUR_URI;
+                    else 
+                        itemId = REF_ORG_REQ_URI;
                     break;
                 case 'V':
                     itemId = REF_SERVER_NAME;
@@ -275,10 +284,10 @@ static int logTime( AutoBuf * pBuf, time_t lTime, const char * pFmt )
     
 }
 
-void AccessLog::customLog( HttpConnection* pConn )
+void AccessLog::customLog( HttpSession* pSession )
 {
     CustomFormat::iterator iter = m_pCustomFormat->begin();
-    HttpReq * pReq = pConn->getReq();
+    HttpReq * pReq = pSession->getReq();
     LogFormatItem *pItem;
     const char * pValue = NULL;
     char * pBuf;
@@ -294,20 +303,20 @@ void AccessLog::customLog( HttpConnection* pConn )
             case REF_STRFTIME:
                 if ( pItem->m_sExtra.c_str() )
                 {
-                    logTime( &m_buf, pConn->getReqTime(), pItem->m_sExtra.c_str() );
+                    logTime( &m_buf, pSession->getReqTime(), pItem->m_sExtra.c_str() );
                 }
                 else
                 {
-                    DateTime::getLogTime( pConn->getReqTime(), m_buf.end() );
+                    DateTime::getLogTime( pSession->getReqTime(), m_buf.end() );
                     m_buf.used( 28 );
                 }
                 break;
             case REF_CONN_STATE:
-                if ( pConn->getStream()->isAborted() )
+                if ( pSession->getStream()->isAborted() )
                 {
                     m_buf.append( 'X' );
                 }
-                else if ( pConn->getReq()->isKeepAlive() )
+                else if ( pSession->getReq()->isKeepAlive() )
                 {
                     m_buf.append( '+' );
                 }
@@ -323,7 +332,7 @@ void AccessLog::customLog( HttpConnection* pConn )
                         pValue = RequestVars::getCookieValue( pReq, pItem->m_sExtra.c_str(), pItem->m_sExtra.len(), n );
                         break;
                     case REF_ENV:
-                        pValue = RequestVars::getEnv(pConn, pItem->m_sExtra.c_str(), pItem->m_sExtra.len(), n );
+                        pValue = RequestVars::getEnv(pSession, pItem->m_sExtra.c_str(), pItem->m_sExtra.len(), n );
                         break;
                     case REF_HTTP_HEADER:
                         pValue = pReq->getHeader( pItem->m_sExtra.c_str(), pItem->m_sExtra.len(), n );
@@ -338,7 +347,7 @@ void AccessLog::customLog( HttpConnection* pConn )
                     default:
                         pBuf= m_buf.end();
                         
-                        n = RequestVars::getReqVar( pConn, pItem->m_itemId, pBuf, m_buf.available() );
+                        n = RequestVars::getReqVar( pSession, pItem->m_itemId, pBuf, m_buf.available() );
                         if ( n > 0 )
                         {
                             if ( pBuf != m_buf.end() )
@@ -499,7 +508,7 @@ int AccessLog::reopenExist()
 
 
 
-void AccessLog::log( const char * pVHostName, int len, HttpConnection* pConn )
+void AccessLog::log( const char * pVHostName, int len, HttpSession* pSession )
 {
     if ( pVHostName )
     {
@@ -508,17 +517,17 @@ void AccessLog::log( const char * pVHostName, int len, HttpConnection* pConn )
         m_buf.append( ']' );
         m_buf.append( ' ' );
     }
-    log( pConn );
+    log( pSession );
 }
 
 
-void AccessLog::log( HttpConnection* pConn )
+void AccessLog::log( HttpSession* pSession )
 {
     int  n;
-    HttpReq*  pReq  = pConn->getReq();
-    HttpResp* pResp = pConn->getResp();
+    HttpReq*  pReq  = pSession->getReq();
+    HttpResp* pResp = pSession->getResp();
     const char * pUser = pReq->getAuthUser();
-    long contentWritten = pResp->getBodySent();
+    off_t contentWritten = pResp->getBodySent();
     char * pAddr;
     char achTemp[100];
     pResp->needLogAccess( 0 );
@@ -532,10 +541,10 @@ void AccessLog::log( HttpConnection* pConn )
     }
     
     if ( m_pCustomFormat )
-        return customLog( pConn );
+        return customLog( pSession );
  
     pAddr = achTemp;
-    n = RequestVars::getReqVar( pConn, REF_REMOTE_HOST, pAddr, sizeof( achTemp )  );
+    n = RequestVars::getReqVar( pSession, REF_REMOTE_HOST, pAddr, sizeof( achTemp )  );
 
     m_buf.appendNoCheck( pAddr, n );
     if ( ! *pUser )
@@ -548,7 +557,7 @@ void AccessLog::log( HttpConnection* pConn )
         m_buf.used( n );
     }
 
-    DateTime::getLogTime( pConn->getReqTime(), m_buf.end() );
+    DateTime::getLogTime( pSession->getReqTime(), m_buf.end() );
     m_buf.used( 30 );
     n = pReq->getOrgReqLineLen();
     char * pOrgReqLine = (char *)pReq->getOrgReqLine();
@@ -570,7 +579,7 @@ void AccessLog::log( HttpConnection* pConn )
     }
     else
     {
-        n = safe_snprintf( m_buf.end(), 20, "%ld", contentWritten );
+        n = StringTool::str_off_t( m_buf.end(), 30, contentWritten );
         m_buf.used( n );
     }
     if ( getAccessLogHeader() & LOG_REFERER )
@@ -650,6 +659,17 @@ void AccessLog::accessLogAgent( int agent )
 
 char AccessLog::getCompress() const
 {   return m_pAppender->getCompress();  }
+
+void AccessLog::closeNonPiped()
+{
+    if (( !m_iPipedLog )&&( m_pAppender->getfd() != -1 ))
+        m_pAppender->close();
+}
+
+void AccessLog::setRollingSize( off_t size )
+{
+    m_pAppender->setRollingSize( size );
+}
 
 
 

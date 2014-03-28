@@ -20,6 +20,7 @@
 
 
 #include <string.h>
+#include <stdlib.h>
 
 #define LOOPBUFUNIT 64
 
@@ -131,6 +132,8 @@ public:
     void swap( LoopBuf& rhs );
     
     void update( int offset, const char * pBuf, int size );
+    
+    char *search( int offset, const char *accept, int acceptLen );
     
 };
 

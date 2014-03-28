@@ -20,6 +20,7 @@
 #ifndef LOOPBUFTEST_H
 #define LOOPBUFTEST_H
 
+#include <stdio.h>
 
 #endif
 

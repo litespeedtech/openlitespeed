@@ -1,68 +1,31 @@
 body,td,a,p{font-family: sans-serif;}
 
-body {
-	color: #333; font-size: 13px; background-color: #FFFFFF; 
-}
+body {color: #333; font-size: 13px; background-color: #FFFFFF;}
 
 
-.pagewrapper {
-	width: 960px; margin: 0 auto; display:block; padding: 10px 0 50px 0;
-}
+.pagewrapper {width: 960px; margin: 0 auto; display:block; padding: 10px 0 50px 0;}
 
-.sidetree {
-	width: 200px;  padding: 10px; border: 0;
-	background-color: #fafafa;
-	float: left;
-}
+.sidetree {	width: 200px;  padding: 10px; border: 0;background-color: #f5f9fc;float: left;}
 
-.contentwrapper {
-	margin-left:240px;margin-bottom:50px;
-}
+.contentwrapper {margin-left:240px;margin-bottom:50px;}
 
-h1 {
-	font-size: 15pt;
-	border-bottom: 1px solid #ddd;
-}
+h1 {font-size: 15pt;border-bottom: 1px solid #ddd;}
+h2 {font-size: 13pt;}
+h3 {font-size: 12pt;}
+h4 {font-size: 14px;}
+h1,h2,h3 {	margin: 20px 0 10px 0;	font-weight: 700;}
 
-h2 {
-	font-size: 13pt;
-}
-
-h3 {
-	font-size: 12pt;
-}
-
-h4 {
-	font-size: 14px;
-}
-
-h1,h2,h3 {
-	margin: 20px 0 10px 0;
-	font-weight: 700;
-}
-
-ol {
-	display: block;
-	list-style-type: decimal;
-}
-
-ol li, ul li {
-	margin: 7px 0;
-}
+ol {display: block;	list-style-type: decimal;}
+ol li, ul li {	margin: 7px 0;}
 
 .sidetree ul { list-style-type: none; padding:5px; margin:0; }
 .sidetree ul .level2 { list-style-type: square; padding: 0 0 0 25px; margin:0;  }
-.sidetree .current a, .sidetree .current a:visited {color:#d50;font-weight:bold;}
-.sidetree a, .toctop A {TEXT-DECORATION: none }
+.sidetree .current a, .sidetree .current a:visited {color:#db8406;font-weight:bold;}
 
-.sidetree h3 a, .sidetree h3 a:visited, .toctop A, .toctop A:visited  { COLOR: #0081c1; }
-.toctop A:hover{ COLOR: #d50; }
+a, a:visited {text-decoration: none; color: #3f81c3; }
+A:hover{ color: #db8406; }
 
-.helpitem {
-	display: block;
-	margin: 20px 0 10px 0;
-	position: relative;	
-}
+.helpitem {	display: block;	margin: 20px 0 10px 0;	position: relative;}
 
 .toc-row {
 	display: inline; width: 100%;
@@ -73,40 +36,22 @@ ol li, ul li {
 	position: relative;	
 }
 
-.toc-row header {
-	color: #555; font-size: 14px; font-weight: bold;
-}
-
-.toc-row header a, .toc-row p a {
-	color: #0081c1;	TEXT-DECORATION: none;
-}
-
-.toc-row a:hover { color: #d50; TEXT-DECORATION: none}
+.toc-row header {color: #555; font-size: 14px; font-weight: bold;}
 
 
-.toc-row p {
-	color: #aaa;	
-}
+.toc-row p {color: #aaa;}
 
-.toc {
-	display: block; padding: 20px 20px 20px 20px; BACKGROUND-COLOR: #fafafa;
-}
+.toc {display: block; padding: 20px 20px 20px 20px; background-color:rgba(245, 249, 252, 0.5); border:1px solid #DBDBDB;}
 
 
-.ht {
-    BACKGROUND-COLOR: transparent; FONT-SIZE: 13px; COLOR: #555;
-}
+.ht { background-color: transparent; font-size: 13px; color: #555;}
 
-.ht-title {
-    FONT-WEIGHT: bold; FONT-SIZE: 14px; COLOR: #FFFFFF; BACKGROUND-COLOR: #555; background-image:linear-gradient(#888,#666);
-}
-.ht-label {
-	FONT-WEIGHT: bold; COLOR: #555; FONT-SIZE: 13px;
-}
+.ht-title { font-weight: bold; font-size: 14px; color: #FFFFFF; background-color: #797D81; background-image:linear-gradient(to bottom, #797D81,#606468);}
+.ht-label { font-weight: bold; color: #555; font-size: 13px;}
  
 
-.top { FONT-SIZE: 11px; TEXT-ALIGN: right; float:right;}
-.top A, .top A:visited {COLOR: #FFFFFF; }
+.top { font-size: 11px; text-align: right; float:right;}
+.top A, .top A:visited {color: #FFFFFF; }
 
 
 .cmd {
@@ -122,37 +67,21 @@ ol li, ul li {
   border-radius: 3px;
 }
 
-.tag {
-  padding: 0 3px 2px;
-  font-size: 12px;
-  color: #fff;
-  background-color: #0081c1;
-  white-space: nowrap;
-  -webkit-border-radius: 3px;
-  -moz-border-radius: 3px;
-  border-radius: 3px;
-}
+.tag { padding: 0 3px 1px; font-size: 12px; color: #fff; background-color: #B6A87C;
+  white-space: nowrap; -webkit-border-radius: 3px; -moz-border-radius: 3px; border-radius: 3px;}
 
-.val { COLOR: #222; FONT-WEIGHT: bold }
-.tagI, .tagP{ COLOR: #0081c1; FONT-WEIGHT: bold }
-.tagI A, .tagI A:visited, .tagP A, .tagP A:visited  { COLOR: #0081c1; TEXT-DECORATION: none }
-.tagI A:hover, .tagP A:hover  { COLOR: #d50; TEXT-DECORATION: underline }
+.val { color: #222; font-weight: bold }
+.tagI, .tagP {font-weight: bold }
+.tagI A:hover, .tagP A:hover  { text-decoration: underline }
+
+.copyright {font-size: 11px; color: #aaa; text-align: center; border-top: 1px solid #ddd; padding-top: 20px; display:block;}
+.copyright A, .copyright A:visited { color: #aaa; text-decoration: none}
+.copyright A:hover, #copyright a:active {color: #aaa; text-decoration: underline}
 
 
-.copyright {
-	FONT-SIZE: 11px; COLOR: #999999; TEXT-ALIGN: center; border-top: 1px solid #ddd; padding-top: 20px; display:block;
-}
-.copyright A, .copyright A:visited{
-    COLOR: #333399; TEXT-DECORATION: none
-}
-.copyright A:hover{
-    COLOR: #3333CC; TEXT-DECORATION: underline
-}
-
-
-.nav-bar { height:18px; width: 100%; BACKGROUND-COLOR: #888; COLOR: #FFFFFF; font-size: 12px; padding: 5px; margin-bottom: 50px;}
+.nav-bar { height:18px; width: 100%; background-color: #888; color: #FFFFFF; font-size: 12px; padding: 5px; margin-bottom: 50px;}
 .nav-bar a, .nav-bar a visited { color: #FFFFFF; text-decoration: none; }
-.nav-bar a:hover {TEXT-DECORATION: underline}
+.nav-bar a:hover {text-decoration: underline}
 .nav-bar .prev {text-align: left; float: left; width: 33%;}
 .nav-bar .center {text-align: center; float: left; width: 33%;}
 .nav-bar .next {text-align: right; float: right; width: 33%;}

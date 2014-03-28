@@ -21,6 +21,9 @@
 #include <util/stringtool.h>
 #include <util/poolalloc.h>
 #include <util/sysinfo/systeminfo.h>
+#include <http/httplog.h>
+#include "util/configctx.h"
+#include <util/xmlnode.h>
 
 #include <assert.h>
 #include <ctype.h>
@@ -808,6 +811,60 @@ int AccessControl::insSubNetControl( const in6_addr &subNet,
 
     pCur->insertChild( subNet, mask, allowed );
     return 0;
+}
+
+int AccessControl::config( const XmlNode *pNode )
+{
+    int c;
+    const char *pValue;
+    const XmlNode *pNode1 = pNode->getChild( "accessControl" );
+    clear();
+
+    if ( pNode1 )
+    {
+        pValue = pNode1->getChildValue( "allow" );
+
+        if ( pValue )
+        {
+            c = addList( pValue, true );
+
+            if ( D_ENABLED( DL_LESS ) )
+                ConfigCtx::getCurConfigCtx()->log_debug( "add %d entries into allowed list.", c );
+        }
+        else
+            ConfigCtx::getCurConfigCtx()->log_warn( "Access Control: No entries in allowed list" );
+
+        pValue = pNode1->getChildValue( "deny" );
+
+        if ( pValue )
+        {
+            c = addList( pValue, false );
+
+            if ( D_ENABLED( DL_LESS ) )
+                ConfigCtx::getCurConfigCtx()->log_debug( "add %d entries into denied list.", c );
+        }
+    }
+    else
+    {
+        if ( D_ENABLED( DL_LESS ) )
+            ConfigCtx::getCurConfigCtx()->log_debug( "no rule for access control." );
+    }    
+    return 0;
+}
+int AccessControl::isAvailable( const XmlNode *pNode )
+{
+    const XmlNode *pNode1 = pNode->getChild( "accessControl" );
+
+    if ( pNode1 )
+    {
+        const char *pAllow = pNode1->getChildValue( "allow" );
+
+        if ( ( ( pAllow ) && strchr( pAllow, 'T' ) )
+                || ( pNode1->getChildValue( "deny" ) ) )
+            return 1;
+    }
+
+    return 0;    
 }
 
 

@@ -18,6 +18,19 @@
 #include <util/pcutil.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <ctype.h>
+#include <stdlib.h>
+#include <unistd.h>
+
+#ifdef __linux
+#include <sched.h>
+#endif
+
+#ifdef __FreeBSD__
+#include <sys/sysctl.h>
+#include <sys/param.h>
+#include <sys/cpuset.h>
+#endif
 
 
 PCUtil::PCUtil(){
@@ -42,6 +55,51 @@ int PCUtil::waitChildren()
         ++count;
     }
     return count;
+}
+
+int PCUtil::getNumProcessors()
+{
+    int numCPU;
+#if defined(linux) || defined(__linux) || defined(__linux__)
+    numCPU = sysconf( _SC_NPROCESSORS_ONLN );
+#else
+    int mib[2];
+    size_t len = sizeof(numCPU);
+    mib[0] = CTL_HW;
+    mib[1] = HW_NCPU;
+    sysctl(mib, 2, &numCPU, &len, NULL, 0);
+    if ( numCPU <= 0 )
+    {
+        mib[1] = HW_NCPU;
+        sysctl( mib, 2, &numCPU, &len, NULL, 0);
+    }
+#endif
+    return ( (numCPU <= 0) ? 0 : numCPU);
+}
+
+void PCUtil::getAffinityMask( int iCpuCount, int iProcessNum, int iNumCoresToUse, cpu_set_t *mask)
+{
+    CPU_ZERO(mask); 
+    if(iCpuCount <= iNumCoresToUse)
+        for(int i = 0; i < iCpuCount; i++)
+            CPU_SET( i, mask );
+    else
+        for(int i = 0; i < iNumCoresToUse; i++)
+            CPU_SET( 
+                ((((iProcessNum + (i*3) )%iCpuCount ) / (iCpuCount/2) ) + (2 * (iProcessNum + (i*3))) % iCpuCount), 
+                    mask
+                   );
+    return;
+}
+
+int PCUtil::setCpuAffinity(cpu_set_t *mask)
+{
+#ifdef __FreeBSD__
+    return cpuset_setaffinity(CPU_LEVEL_WHICH, CPU_WHICH_PID, -1, sizeof(cpu_set_t), mask);
+#elif defined(linux) || defined(__linux) || defined(__linux__)
+    return sched_setaffinity(0, sizeof(cpu_set_t), mask);
+#endif
+    return 0;
 }
 
 

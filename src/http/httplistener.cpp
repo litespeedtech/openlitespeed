@@ -18,17 +18,15 @@
 #include "httplistener.h"
 #include <edio/multiplexer.h>
 #include <http/adns.h>
-#include <http/datetime.h>
+#include <util/datetime.h>
 #include <http/clientcache.h>
 #include <http/connlimitctrl.h>
 #include <http/eventdispatcher.h>
-#include <http/httpconnection.h>
-#include <http/httpconnpool.h>
+#include <http/httpsession.h>
 #include <http/httpglobals.h>
 #include <http/httplog.h>
 #include <http/httpresourcemanager.h>
 #include <http/httpvhost.h>
-#include <http/ntwkiolinkpool.h>
 #include <http/smartsettings.h>
 #include <http/vhostmap.h>
 #include <socket/coresocket.h>
@@ -61,6 +59,7 @@ HttpListener::HttpListener( const char * pName, const char * pAddr )
     , m_iAdmin( 0 )
     , m_isSSL( 0 )
     , m_iBinding( 0xffffffff )
+    , m_iolinkSessionHooks(0)
 {
     m_pMapVHost->setAddrStr( pAddr );
 }
@@ -71,6 +70,7 @@ HttpListener::HttpListener()
     , m_iAdmin( 0 )
     , m_isSSL( 0 )
     , m_iBinding( 0xffffffff )
+    , m_iolinkSessionHooks(0)
 {
 }
 
@@ -82,6 +82,7 @@ HttpListener::~HttpListener()
         delete m_pMapVHost;
     if ( m_pSubIpMap )
         delete m_pSubIpMap;
+    
 }
 
 
@@ -364,11 +365,11 @@ int HttpListener::batchAddConn( struct conn_data * pBegin,
     if ( n <= 0 )
         return 0;
     NtwkIOLink* pConns[CONN_BATCH_SIZE];
-    int ret = NtwkIoLinkPool::get( pConns, n);
+    int ret = HttpGlobals::getResManager()->getNtwkIOLinks( pConns, n);
     pCur = pBegin;
     if ( ret <= 0 )
     {
-        ERR_NO_MEM( "HttpConnPool::getConnections()" );
+        ERR_NO_MEM( "HttpSessionPool::getConnections()" );
         LOG_ERR(( "need %d connections, allocated %d connections!", n, ret ));
         while( pCur < pEnd )
         {
@@ -408,7 +409,7 @@ int HttpListener::batchAddConn( struct conn_data * pBegin,
         //    {
         //        //pConn->accessGranted();
         //    }
-            if ( !pConn->setLink( fd, pCur->pInfo, pMap->getSSLContext() ) )
+            if ( !pConn->setLink( this, fd, pCur->pInfo, pMap->getSSLContext() ) )
             {
                 fcntl( fd, F_SETFD, FD_CLOEXEC );
                 fcntl( fd, F_SETFL, flag );
@@ -425,7 +426,7 @@ int HttpListener::batchAddConn( struct conn_data * pBegin,
     }
     if ( pConnCur < pConnEnd )
     {
-        NtwkIoLinkPool::recycle( pConnCur, pConnEnd - pConnCur);
+        HttpGlobals::getResManager()->recycle( pConnCur, pConnEnd - pConnCur);
     }
 
     return 0;
@@ -457,10 +458,10 @@ int HttpListener::addConnection( struct conn_data * pCur, int *iCount )
         --(*iCount);
         return 0;
     }
-    NtwkIOLink* pConn = NtwkIoLinkPool::get();
+    NtwkIOLink* pConn = HttpGlobals::getResManager()->getNtwkIOLink();
     if ( !pConn )
     {
-        ERR_NO_MEM( "HttpConnPool::getConnection()" );
+        ERR_NO_MEM( "HttpSessionPool::getConnection()" );
         close( fd );
         --(*iCount);
         return -1;
@@ -475,9 +476,9 @@ int HttpListener::addConnection( struct conn_data * pCur, int *iCount )
     pConn->setVHostMap( pMap );
     pConn->setLogger( getLogger());
     pConn->setRemotePort( ntohs( ((sockaddr_in *)(pCur->achPeerAddr))->sin_port) );
-    if ( pConn->setLink( pCur->fd, pCur->pInfo, pMap->getSSLContext() ) )
+    if ( pConn->setLink( this, pCur->fd, pCur->pInfo, pMap->getSSLContext() ) )
     {
-        NtwkIoLinkPool::recycle( pConn );
+        HttpGlobals::getResManager()->recycle( pConn );
         close( fd );
         --(*iCount);
         return -1;
@@ -539,3 +540,9 @@ int HttpListener::writeStatusReport( int fd )
     return 0;
     
 }
+int HttpListener::mapDomainList(HttpVHost * pVHost, const char * pDomains)
+{   
+    return m_pMapVHost->mapDomainList(pVHost, pDomains);     
+    
+}
+

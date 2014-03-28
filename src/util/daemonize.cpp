@@ -16,6 +16,8 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include <util/daemonize.h>
+#include "util/configctx.h"
+#include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <grp.h>
@@ -131,4 +133,49 @@ int Daemonize::changeUserChroot( const char * pUser, uid_t uid,
         }
     }
     return 0;
+}
+struct passwd * Daemonize::configUserGroup( const char *pUser, const char *pGroup,
+        gid_t &gid )
+{
+    if ( !pUser || !pGroup )
+        return NULL;
+
+    struct passwd *pw;
+    pw = getpwnam( pUser );
+
+    if ( !pw )
+    {
+        if ( isdigit( *pUser ) )
+        {
+            uid_t uid = atoi( pUser );
+            pw = getpwuid( uid );
+        }
+
+        if ( !pw )
+        {
+            ConfigCtx::getCurConfigCtx()->log_error( "Invalid user name:%s!", pUser );
+            return NULL;
+        }
+    }
+
+    struct group *gr;
+
+    gr = getgrnam( pGroup );
+
+    if ( !gr )
+    {
+        if ( isdigit( *pGroup ) )
+        {
+            gid = atoi( pGroup );
+        }
+        else
+        {
+            ConfigCtx::getCurConfigCtx()->log_error( "Invalid group name:%s!", pGroup );
+            return NULL;
+        }
+    }
+    else
+        gid = gr->gr_gid;
+
+    return pw;
 }

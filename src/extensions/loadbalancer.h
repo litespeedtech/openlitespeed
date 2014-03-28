@@ -20,7 +20,7 @@
 
 #include <extensions/extworker.h>
 
-class HttpConnection;
+class HttpSession;
 
 class LoadBalancer: public ExtWorker
 {
@@ -37,7 +37,7 @@ public:
     LoadBalancer();
 
     ~LoadBalancer();
-    ExtWorker * selectWorker(HttpConnection * pConn, ExtRequest * pExtReq );
+    ExtWorker * selectWorker(HttpSession *pSession, ExtRequest * pExtReq );
     
     int getWorkerCount() const      {   return m_workers.size();    }
     int addWorker( ExtWorker * pWorker );

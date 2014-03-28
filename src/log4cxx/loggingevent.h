@@ -25,29 +25,29 @@
 #include <sys/time.h>
 
 BEGIN_LOG4CXX_NS
+
+#define LOGEVENT_NO_LINEFEED 1
 class Layout;
 class LoggingEvent
 {
 public:
     int             m_level;
+    int             m_flag;
     const char *    m_pLoggerName;
-    const char *    m_format;
-    struct timeval  m_timestamp;
-    char *          m_pMessageBuf;
-    int             m_bufLen;
+    const char *    m_pMessageBuf;
+    int             m_iMessageLen;
     Layout *        m_pLayout;
-    int             m_iRMessageLen;
+    struct timeval  m_timestamp;
     
     
     LoggingEvent( int level, const char * pLoggerName,
-                const char * format, char * pBuf, int len)
+                const char * pMessage,  int iMessageLen)
         : m_level( level )
+        , m_flag( 0 )
         , m_pLoggerName( pLoggerName )
-        , m_format( format )
-        , m_pMessageBuf( pBuf )
-        , m_bufLen( len )
+        , m_pMessageBuf( pMessage )
+        , m_iMessageLen( iMessageLen )
         , m_pLayout( NULL )
-        , m_iRMessageLen( 0 )
         {
         }
     ~LoggingEvent(){}

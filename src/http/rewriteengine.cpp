@@ -18,7 +18,7 @@
 #include "rewriteengine.h"
 #include <http/handlertype.h>
 #include <http/handlerfactory.h>
-#include <http/httpconnection.h>
+#include <http/httpsession.h>
 #include <http/httpglobals.h>
 #include <http/httplog.h>
 #include <http/httpserverversion.h>
@@ -180,10 +180,10 @@ static int getSubstr( const char * pSource, const int *ovector, int matches, int
     return 0;
 }
 
-int RewriteEngine::getSubstValue( const RewriteSubstItem * pItem, HttpConnection *pConn,
+int RewriteEngine::getSubstValue( const RewriteSubstItem * pItem, HttpSession *pSession,
                         char * &pValue, int bufLen )
 {
-    HttpReq * pReq = pConn->getReq();
+    HttpReq * pReq = pSession->getReq();
     int type = pItem->getType();
     int i;
     if ( type < REF_STRING )
@@ -245,13 +245,13 @@ int RewriteEngine::getSubstValue( const RewriteSubstItem * pItem, HttpConnection
             MapRefItem * pRef = pItem->getMapRef();
             int len = 1024;
             char achBuf[1024];
-            if ( buildString( pRef->getKeyFormat(), pConn, achBuf, len ) == NULL )
+            if ( buildString( pRef->getKeyFormat(), pSession, achBuf, len ) == NULL )
                 return 0;
             if ( (len = pRef->getMap()->lookup( achBuf, len, pValue, bufLen )) == -1 )
             {
                 if ( pRef->getDefaultFormat() )
                 {
-                    if ( buildString( pRef->getDefaultFormat(), pConn,
+                    if ( buildString( pRef->getDefaultFormat(), pSession,
                                     pValue, bufLen ) == NULL )
                         return 0;
                     len = bufLen;
@@ -269,7 +269,7 @@ int RewriteEngine::getSubstValue( const RewriteSubstItem * pItem, HttpConnection
         return getSubstr( m_pCondBuf, m_condVec, m_condMatches, pItem->getIndex(),
                     pValue, m_flag & RULE_FLAG_BR_ESCAPE );
     case REF_ENV:
-        pValue = (char *)RequestVars::getEnv( pConn, pItem->getStr()->c_str(), 
+        pValue = (char *)RequestVars::getEnv( pSession, pItem->getStr()->c_str(), 
                     pItem->getStr()->len(), i );
         if ( !pValue )
         {
@@ -325,25 +325,25 @@ int RewriteEngine::getSubstValue( const RewriteSubstItem * pItem, HttpConnection
             return m_pStrip->len() + m_sourceURLLen;
         }
         //fall through
-    case REF_CUR_URI:
+    case REF_CUR_REWRITE_URI:
         pValue = (char *)m_pSourceURL;
         return m_sourceURLLen;
     case REF_QUERY_STRING:
         pValue = (char *)m_pQS;
         return m_qsLen;
     default:
-        return RequestVars::getReqVar( pConn, type, pValue, bufLen );
+        return RequestVars::getReqVar( pSession, type, pValue, bufLen );
     }
     return 0;
 }
 
 extern int transform_urlDecode( const char * org, int org_len, char * dest, int dest_len, int * changed);
 
-int RewriteEngine::appendSubst( const RewriteSubstItem * pItem, HttpConnection *pConn,
+int RewriteEngine::appendSubst( const RewriteSubstItem * pItem, HttpSession *pSession,
                         char * &pBegin, char *pBufEnd, int &esc_uri, int noDupSlash )
 {
     char * pValue = pBegin;
-    int valLen = getSubstValue( pItem, pConn, pValue, pBufEnd - pValue );
+    int valLen = getSubstValue( pItem, pSession, pValue, pBufEnd - pValue );
     if ( valLen <= 0 )
         return valLen;
     if ( pBufEnd <= pBegin + valLen )
@@ -390,7 +390,7 @@ int RewriteEngine::appendSubst( const RewriteSubstItem * pItem, HttpConnection *
     return 0;
 }
 
-char * RewriteEngine::buildString( const RewriteSubstFormat * pFormat, HttpConnection * pConn,
+char * RewriteEngine::buildString( const RewriteSubstFormat * pFormat, HttpSession *pSession,
                           char * pBuf, int &len, int esc_uri, int noDupSlash )
 {
     char * pBegin = pBuf;
@@ -399,14 +399,14 @@ char * RewriteEngine::buildString( const RewriteSubstFormat * pFormat, HttpConne
     
 //    if ( !pItem->next() )
 //    {
-//        int valLen = getSubstValue( pItem, pConn, pBegin, pBufEnd );
+//        int valLen = getSubstValue( pItem, pSession, pBegin, pBufEnd );
 //        return valLen;
 //        //only one variable, no need to copy to buffer
 //    }
 
     while( pItem )
     {
-        if ( appendSubst( pItem, pConn, pBegin, pBufEnd, esc_uri,
+        if ( appendSubst( pItem, pSession, pBegin, pBufEnd, esc_uri,
                         (pBegin>pBuf)?noDupSlash:0 ) == -1 )
             return NULL;
         pItem = (const RewriteSubstItem *)pItem->next();
@@ -416,7 +416,7 @@ char * RewriteEngine::buildString( const RewriteSubstFormat * pFormat, HttpConne
     return pBuf;
 }
 
-int RewriteEngine::processCond( const RewriteCond * pCond, HttpConnection *pConn )
+int RewriteEngine::processCond( const RewriteCond * pCond, HttpSession *pSession )
 {
     int len = REWRITE_BUF_SIZE - 1;
     char * pTest;
@@ -428,7 +428,7 @@ int RewriteEngine::processCond( const RewriteCond * pCond, HttpConnection *pConn
     else
     {
         pTest = buildString( pCond->getTestStringFormat(),
-                                      pConn, m_pFreeBuf, len, 1, 1 );
+                                      pSession, m_pFreeBuf, len, 1, 1 );
         m_pLastCondStr = pCond->getTestStringFormat();
         m_pLastTestStr = pTest;
         m_lastTestStrLen = len;
@@ -446,9 +446,9 @@ int RewriteEngine::processCond( const RewriteCond * pCond, HttpConnection *pConn
         ret = pCond->getRegex()->exec( pTest, len, 0, 0, condVec,
                                        MAX_REWRITE_MATCH * 3);
         if ( m_logLevel > 2 )
-            LOG_INFO(( pConn->getLogger(),
+            LOG_INFO(( pSession->getLogger(),
                 "[%s] [REWRITE] Cond: Match '%s' with pattern '%s', result: %d",
-                pConn->getLogId(), pTest, pCond->getPattern(), ret ));
+                pSession->getLogId(), pTest, pCond->getPattern(), ret ));
         if ( ret == 0 )
             condMatches = 10;
         else
@@ -462,9 +462,9 @@ int RewriteEngine::processCond( const RewriteCond * pCond, HttpConnection *pConn
         else
             ret = strcmp( pTest, pCond->getPattern() );
         if ( m_logLevel > 2 )
-            LOG_INFO(( pConn->getLogger(),
+            LOG_INFO(( pSession->getLogger(),
                 "[%s] [REWRITE] Cond: Compare '%s' with pattern '%s', result: %d",
-                pConn->getLogId(), pTest, pCond->getPattern(), ret ));
+                pSession->getLogId(), pTest, pCond->getPattern(), ret ));
         switch( code )
         {
         case COND_OP_LESS:
@@ -505,16 +505,16 @@ int RewriteEngine::processCond( const RewriteCond * pCond, HttpConnection *pConn
                 ret = -1;
             }
             if ( m_logLevel > 2 )
-                LOG_INFO(( pConn->getLogger(),
+                LOG_INFO(( pSession->getLogger(),
                     "[%s] [REWRITE] Cond: test '%s' with pattern '%s', result: %d",
-                    pConn->getLogId(), pTest, pCond->getPattern(), ret ));
+                    pSession->getLogId(), pTest, pCond->getPattern(), ret ));
         }
         else
         {
             if ( m_logLevel > 2 )
-                LOG_INFO(( pConn->getLogger(),
+                LOG_INFO(( pSession->getLogger(),
                 "[%s] [REWRITE] stat( %s ) failed ",
-                pConn->getLogId(), pTest ));
+                pSession->getLogId(), pTest ));
             ret = -1;
         }
         
@@ -544,15 +544,15 @@ int RewriteEngine::processCond( const RewriteCond * pCond, HttpConnection *pConn
     
 }
 
-int RewriteEngine::processRule( const RewriteRule * pRule, HttpConnection *pConn )
+int RewriteEngine::processRule( const RewriteRule * pRule, HttpSession *pSession )
 {
     m_ruleMatches = 0;
     int ret = pRule->getRegex()->exec( m_pSourceURL, m_sourceURLLen, 0,
                                        0, m_ruleVec, MAX_REWRITE_MATCH * 3 );
     if ( m_logLevel > 1 )
-        LOG_INFO(( pConn->getLogger(),
+        LOG_INFO(( pSession->getLogger(),
             "[%s] [REWRITE] Rule: Match '%s' with pattern '%s', result: %d",
-            pConn->getLogId(), m_pSourceURL, pRule->getPattern(), ret ));
+            pSession->getLogId(), m_pSourceURL, pRule->getPattern(), ret ));
     if ( ret < 0 )
     {
         if (!(pRule->getFlag() & RULE_FLAG_NOMATCH) )
@@ -572,7 +572,7 @@ int RewriteEngine::processRule( const RewriteRule * pRule, HttpConnection *pConn
     const RewriteCond * pCond = pRule->getFirstCond();
     while( pCond )
     {
-        if ( processCond( pCond, pConn ) )
+        if ( processCond( pCond, pSession ) )
         {
             if (!(( pCond->getFlag() & COND_FLAG_OR )&&
                 ( pCond->next() )) )
@@ -585,7 +585,7 @@ int RewriteEngine::processRule( const RewriteRule * pRule, HttpConnection *pConn
         }
         pCond = (RewriteCond *)pCond->next();
     }
-    return processRewrite( pRule, pConn );
+    return processRewrite( pRule, pSession );
 }
 
 static int isAbsoluteURI( const char * pURI, int len )
@@ -624,7 +624,7 @@ static int isAbsoluteURI( const char * pURI, int len )
 }
 
 
-int RewriteEngine::processQueryString( HttpConnection * pConn, int flag )
+int RewriteEngine::processQueryString( HttpSession *pSession, int flag )
 {
     char * pBuf = (char *)strchr( m_pSourceURL, '?' );
     if ( flag & RULE_FLAG_QSDISCARD )
@@ -632,7 +632,7 @@ int RewriteEngine::processQueryString( HttpConnection * pConn, int flag )
         m_pQS = m_qsBuf;
         m_qsLen = 0;
         m_qsBuf[m_qsLen] = 0;
-        pConn->getReq()->orContextState( REWRITE_QSD );
+        pSession->getReq()->orContextState( REWRITE_QSD );
     }
     if ( !pBuf )
         return 0;
@@ -659,16 +659,16 @@ int RewriteEngine::processQueryString( HttpConnection * pConn, int flag )
                 ++m_qsLen;
             }
             if ( m_logLevel > 1 )
-                LOG_INFO(( pConn->getLogger(),
+                LOG_INFO(( pSession->getLogger(),
                     "[%s] [REWRITE] append query string '%s'",
-                    pConn->getLogId(), pBuf ));
+                    pSession->getLogId(), pBuf ));
         }
         else
         {
             if ( m_logLevel > 1 )
-                LOG_INFO(( pConn->getLogger(),
+                LOG_INFO(( pSession->getLogger(),
                     "[%s] [REWRITE] replace current query string with '%s'",
-                    pConn->getLogId(), pBuf ));
+                    pSession->getLogId(), pBuf ));
             m_qsLen = 0;
         }
         memmove( m_qsBuf, pBuf, n );
@@ -683,9 +683,9 @@ int RewriteEngine::processQueryString( HttpConnection * pConn, int flag )
         if (!( flag & RULE_FLAG_QSAPPEND ))
         {
             if ( m_logLevel > 1 )
-                LOG_INFO(( pConn->getLogger(),
+                LOG_INFO(( pSession->getLogger(),
                     "[%s] [REWRITE] remove current query string",
-                    pConn->getLogId() ));
+                    pSession->getLogId() ));
             m_pQS = m_qsBuf;
             m_qsLen = 0;
             m_qsBuf[m_qsLen] = 0;
@@ -694,7 +694,7 @@ int RewriteEngine::processQueryString( HttpConnection * pConn, int flag )
     return 0;
 }
 
-int RewriteEngine::setCookie( char * pBuf, int len, HttpConnection * pConn )
+int RewriteEngine::setCookie( char * pBuf, int len, HttpSession *pSession )
 {
     char * pName;
     char * pVal;
@@ -708,7 +708,8 @@ int RewriteEngine::setCookie( char * pBuf, int len, HttpConnection * pConn )
     pVal = strtok_r( NULL, ":", &pSave );
     pDomain = strtok_r( NULL, ":", &pSave );
     char *p = strtok_r( NULL, ":", &pSave );
-    age = atoi( p );
+    if ( p )
+        age = atoi( p );
     pPath = strtok_r( NULL, ":", &pSave );
     if ( pPath )
     {
@@ -727,11 +728,11 @@ int RewriteEngine::setCookie( char * pBuf, int len, HttpConnection * pConn )
         httponly = (( *p == '1' )||( strncasecmp( "true", p, 4 ) == 0 )
                    ||( strncasecmp( "HttpOnly", p, 8 ) == 0 )); 
     }
-    return pConn->getResp()->addCookie( pName, pVal, pPath, pDomain, age, secure, httponly );
+    return pSession->getResp()->addCookie( pName, pVal, pPath, pDomain, age, secure, httponly );
     
 }
 
-int RewriteEngine::expandEnv( const RewriteRule * pRule, HttpConnection * pConn )
+int RewriteEngine::expandEnv( const RewriteRule * pRule, HttpSession *pSession )
 {
     RewriteSubstFormat * pEnv = pRule->getEnv()->begin();
     const char * pKey;
@@ -745,11 +746,11 @@ int RewriteEngine::expandEnv( const RewriteRule * pRule, HttpConnection * pConn 
     while( pEnv )
     {
         len = REWRITE_BUF_SIZE - 1;
-        buildString( pEnv, pConn, achBuf, len );
+        buildString( pEnv, pSession, achBuf, len );
         if ( pEnv->isCookie() )
         {
             //FIXME: enable it later
-            setCookie( achBuf, len, pConn );
+            setCookie( achBuf, len, pSession );
             pEnv = (RewriteSubstFormat *)pEnv->next();
             continue;
         }
@@ -763,58 +764,12 @@ int RewriteEngine::expandEnv( const RewriteRule * pRule, HttpConnection * pConn 
             StringTool::strtrim( pValue, pValEnd );
             *(char*)pKeyEnd = 0;
             *(char*)pValEnd = 0;
-            if ( strcasecmp( pKey, "dontlog" ) == 0 )
             {
+                RequestVars::setEnv( pSession, pKey, pKeyEnd - pKey, pValue, pValEnd - pValue );
                 if ( m_logLevel > 4 )
-                    LOG_INFO(( pConn->getLogger(),
-                        "[%s] [REWRITE] disable access log for this request.",
-                         pConn->getLogId() ));
-                pConn->getResp()->needLogAccess(0);
-            }
-            else if ( strcasecmp( pKey, "nokeepalive" ) == 0 )
-            {
-                if ( m_logLevel > 4 )
-                    LOG_INFO(( pConn->getLogger(),
-                        "[%s] [REWRITE] turn off connection keepalive.",
-                         pConn->getLogId() ));
-                pConn->getReq()->keepAlive( false );
-            }
-//            else if ( strcasecmp( pKey, "noconntimeout" ) == 0 )
-//            {
-//                if ( m_logLevel > 4 )
-//                    LOG_INFO(( pConn->getLogger(),
-//                        "[%s] [REWRITE] turn off connection timeout.",
-//                         pConn->getLogId() ));
-//                pConn->getReq()->orContextState( NO_CONN_TIMEOUT );
-//            }
-            else if (( pRule->getAction() == RULE_ACTION_PROXY)&&
-                    ( strcasecmp( pKey, "Proxy-Host" ) == 0 ))
-            {
-                pConn->getReq()->setNewHost( pValue, 
-                        pValEnd - pValue );
-                if ( m_logLevel > 4 )
-                    LOG_INFO(( pConn->getLogger(),
-                        "[%s] [REWRITE] Set Proxy Host header to: '%s' ",
-                    pConn->getLogId(), pKey, pValue ));
-            }
-            else if ( strcasecmp( pKey, "no-gzip" ) == 0 )
-            {
-                if ( strncmp( pValue, "0", 1 ) != 0 )
-                {
-                    if ( m_logLevel > 4 )
-                        LOG_INFO(( pConn->getLogger(),
-                          "[%s] [REWRITE] turn off gzip compression for this requst.",
-                             pConn->getLogId()));
-                    pConn->getReq()->andGzip( ~GZIP_ENABLED );
-                }
-            }
-            else
-            {
-                pConn->getReq()->addEnv( pKey, pKeyEnd - pKey, pValue, pValEnd - pValue );
-                if ( m_logLevel > 4 )
-                    LOG_INFO(( pConn->getLogger(),
+                    LOG_INFO(( pSession->getLogger(),
                         "[%s] [REWRITE] add ENV: '%s:%s' ",
-                        pConn->getLogId(), pKey, pValue ));
+                        pSession->getLogId(), pKey, pValue ));
             }
         }
         pEnv = (RewriteSubstFormat *)pEnv->next();
@@ -822,11 +777,11 @@ int RewriteEngine::expandEnv( const RewriteRule * pRule, HttpConnection * pConn 
     return 0;
 }
 
-int RewriteEngine::processRewrite( const RewriteRule * pRule, HttpConnection *pConn )
+int RewriteEngine::processRewrite( const RewriteRule * pRule, HttpSession *pSession )
 {
     char * pBuf;
     int flag = pRule->getFlag();
-    expandEnv( pRule, pConn );
+    expandEnv( pRule, pSession );
     m_rewritten |= 1;
     if (!( flag & RULE_FLAG_NOREWRITE ))
     {
@@ -835,14 +790,14 @@ int RewriteEngine::processRewrite( const RewriteRule * pRule, HttpConnection *pC
         m_pDestURL = m_pFreeBuf;
         m_pFreeBuf = pBuf;
         m_flag = flag;
-        pBuf = buildString( pRule->getTargetFmt(), pConn, m_pDestURL, len, 1, 1 );
+        pBuf = buildString( pRule->getTargetFmt(), pSession, m_pDestURL, len, 1, 1 );
         // log rewrite result here
         if ( !pBuf )
         {
             if ( m_logLevel > 0 )
-                LOG_ERR(( pConn->getLogger(),
+                LOG_ERR(( pSession->getLogger(),
                     "[%s] [REWRITE] Failed to build the target URI",
-                        pConn->getLogId() ));
+                        pSession->getLogId() ));
             return -1;
         }
 
@@ -860,9 +815,9 @@ int RewriteEngine::processRewrite( const RewriteRule * pRule, HttpConnection *pC
 //         }
 
         if ( m_logLevel > 0 )
-            LOG_INFO(( pConn->getLogger(),
+            LOG_INFO(( pSession->getLogger(),
                     "[%s] [REWRITE] Source URI: '%s' => Result URI: '%s'",
-                    pConn->getLogId(), m_pSourceURL, pBuf ));
+                    pSession->getLogId(), m_pSourceURL, pBuf ));
         m_rewritten |= 2;
         m_pOrgSourceURL = m_pSourceURL;
         m_orgSourceURLLen = m_sourceURLLen;
@@ -872,13 +827,13 @@ int RewriteEngine::processRewrite( const RewriteRule * pRule, HttpConnection *pC
         m_iPathInfoLen = 0;
         if ( flag & (RULE_FLAG_WITHQS|RULE_FLAG_QSDISCARD) )
         {
-            processQueryString( pConn, flag );
+            processQueryString( pSession, flag );
         }
     }
     else if ( m_logLevel > 0 )
-        LOG_INFO(( pConn->getLogger(),
+        LOG_INFO(( pSession->getLogger(),
                 "[%s] [REWRITE] No substition",
-                pConn->getLogId()));
+                pSession->getLogId()));
     
     if ( pRule->getAction() != RULE_ACTION_NONE )
     {
@@ -890,10 +845,10 @@ int RewriteEngine::processRewrite( const RewriteRule * pRule, HttpConnection *pC
     if ( pRule->getMimeType() )
     {
         if ( m_logLevel > 4 )
-            LOG_INFO(( pConn->getLogger(),
+            LOG_INFO(( pSession->getLogger(),
                 "[%s] [REWRITE] set forced type: '%s'",
-                pConn->getLogId(), pRule->getMimeType() ));
-        pConn->getReq()->setForcedType( pRule->getMimeType() );
+                pSession->getLogId(), pRule->getMimeType() ));
+        pSession->getReq()->setForcedType( pRule->getMimeType() );
     }
     return 0;
 }
@@ -933,7 +888,7 @@ const RewriteRule * RewriteEngine::getNextRule( const RewriteRule * pRule,
     return pNext;
 }
 
-int RewriteEngine::processRuleSet( const RewriteRuleList * pRuleList, HttpConnection * pConn,
+int RewriteEngine::processRuleSet( const RewriteRuleList * pRuleList, HttpSession *pSession,
             const HttpContext * pContext, const HttpContext * pRootContext )
 {
     const RewriteRule * pRule = NULL;
@@ -947,7 +902,7 @@ int RewriteEngine::processRuleSet( const RewriteRuleList * pRuleList, HttpConnec
         pRule = getNextRule( NULL, pContext, pRootContext );
     if ( !pRule )
         return 0;
-    HttpReq * pReq = pConn->getReq();
+    HttpReq * pReq = pSession->getReq();
     const AutoStr2 * pBase = NULL;
     AutoStr2    sStrip;
     m_rewritten = 0;
@@ -983,19 +938,19 @@ int RewriteEngine::processRuleSet( const RewriteRuleList * pRuleList, HttpConnec
         if ( m_pStrip )
         {
             if ( m_logLevel > 4 )
-                LOG_INFO(( pConn->getLogger(),
+                LOG_INFO(( pSession->getLogger(),
                         "[%s] [REWRITE] strip base: '%s' from URI: '%s'",
-                        pConn->getLogId(), m_pStrip->c_str(), m_pSourceURL ));
+                        pSession->getLogId(), m_pStrip->c_str(), m_pSourceURL ));
             m_pSourceURL += m_pStrip->len();
             m_sourceURLLen -= m_pStrip->len();
         }
         else
         {
-            if ( pConn->getReq()->isMatched() )
+            if ( pSession->getReq()->isMatched() )
             {
                 const char * pURL;
                 int len;
-                pConn->getReq()->stripRewriteBase( m_pContext,
+                pSession->getReq()->stripRewriteBase( m_pContext,
                     pURL, len );
                 if (( len < m_sourceURLLen )&&( strncmp( 
                         m_pSourceURL + m_sourceURLLen - len, pURL, len ) == 0 ))
@@ -1031,16 +986,16 @@ int RewriteEngine::processRuleSet( const RewriteRuleList * pRuleList, HttpConnec
 //        if (( flag & RULE_FLAG_NOSUBREQ )&&( pReq->isSubReq() > 0 ))
 //            ret = -1;
 //        else
-            ret = processRule( pRule, pConn );
+            ret = processRule( pRule, pSession );
         if ( ret )
         {
             pRule = getNextRule( pRule, pContext, pRootContext );
             while( pRule && ( flag & RULE_FLAG_CHAIN ))
             {
                 if ( m_logLevel > 5 )
-                    LOG_INFO(( pConn->getLogger(),
+                    LOG_INFO(( pSession->getLogger(),
                         "[%s] [REWRITE] skip chained rule: '%s'",
-                        pConn->getLogId(), pRule->getPattern() ));
+                        pSession->getLogId(), pRule->getPattern() ));
                 flag = pRule->getFlag();
                 pRule = getNextRule( pRule, pContext, pRootContext );
                             //(const RewriteRule *) pRule->next();
@@ -1050,16 +1005,16 @@ int RewriteEngine::processRuleSet( const RewriteRuleList * pRuleList, HttpConnec
         if (( flag & RULE_FLAG_LAST )&&!pRule->getSkip())
         {
             if ( m_logLevel > 5 )
-                LOG_INFO(( pConn->getLogger(),
+                LOG_INFO(( pSession->getLogger(),
                     "[%s] [REWRITE] Last Rule, stop!",
-                    pConn->getLogId() ));
+                    pSession->getLogId() ));
             if ( flag & RULE_FLAG_END )
             {
                 if ( m_logLevel > 5 )
-                    LOG_INFO(( pConn->getLogger(),
+                    LOG_INFO(( pSession->getLogger(),
                         "[%s] [REWRITE] End rewrite!",
-                        pConn->getLogId() ));
-                pConn->getReq()->orContextState( SKIP_REWRITE );
+                        pSession->getLogId() ));
+                pSession->getReq()->orContextState( SKIP_REWRITE );
             }
             break;
         }
@@ -1073,24 +1028,24 @@ NEXT_RULE:
                 pRule = getNextRule( NULL, pContext, pRootContext );
             if ( ++loopCount > 10 )
             {
-                LOG_ERR(( pConn->getLogger(),
+                LOG_ERR(( pSession->getLogger(),
                         "[%s] [REWRITE] Rules loop 10 times, possible infinite loop!",
-                        pConn->getLogId() ));
+                        pSession->getLogId() ));
                 break;
             }
             if ( m_logLevel > 5 )
-                LOG_INFO(( pConn->getLogger(),
+                LOG_INFO(( pSession->getLogger(),
                     "[%s] [REWRITE] Next round, restart from the first rule",
-                    pConn->getLogId() ));
+                    pSession->getLogId() ));
             continue;
         }
         if ( !pRule )
             break;
         int n = pRule->getSkip()+1;
         if (( n > 1 )&&( m_logLevel > 5 ))
-            LOG_INFO(( pConn->getLogger(),
+            LOG_INFO(( pSession->getLogger(),
                 "[%s] [REWRITE] skip next %d rules",
-                pConn->getLogId(), n - 1 ));
+                pSession->getLogId(), n - 1 ));
         while( pRule && n > 0 )
         {
             pRule = getNextRule( pRule, pContext, pRootContext );
@@ -1131,9 +1086,9 @@ NEXT_RULE:
                     m_sourceURLLen += baseLen;
                     pBuf[m_sourceURLLen] = 0;
                     if (( m_logLevel > 4 )&&( m_pBase ))
-                        LOG_INFO(( pConn->getLogger(),
+                        LOG_INFO(( pSession->getLogger(),
                                 "[%s] [REWRITE] prepend rewrite base: '%s', final URI: '%s'",
-                                pConn->getLogId(), m_pBase->c_str(), m_pSourceURL ));
+                                pSession->getLogId(), m_pBase->c_str(), m_pSourceURL ));
                 }
             }
             else if ( m_action == RULE_ACTION_NONE )
@@ -1156,7 +1111,7 @@ NEXT_RULE:
             else if ( m_action == RULE_ACTION_REDIRECT )
             {
                 if ( pReq->detectLoopRedirect( (char *)m_pSourceURL, m_sourceURLLen,
-                                        m_pQS, m_qsLen, pConn->isSSL() ) == 0 )
+                                        m_pQS, m_qsLen, pSession->isSSL() ) == 0 )
                 {
                     pReq->setRewriteLocation( (char *)m_pSourceURL, m_sourceURLLen,
                                         m_pQS, m_qsLen, m_flag & RULE_FLAG_NOESCAPE );
@@ -1164,9 +1119,9 @@ NEXT_RULE:
                 }
                 else
                 {
-                    LOG_INFO(( pConn->getLogger(),
+                    LOG_INFO(( pSession->getLogger(),
                             "[%s] [REWRITE] detect external loop redirection with target URL: %s, skip.",
-                                pConn->getLogId(), m_pSourceURL ));
+                                pSession->getLogId(), m_pSourceURL ));
                     m_rewritten = m_statusCode = 0;
                     m_pSourceURL = m_pOrgSourceURL;
                     m_sourceURLLen = m_orgSourceURLLen ;
@@ -1215,7 +1170,8 @@ NEXT_RULE:
         }
         else if ( m_action == RULE_ACTION_REDIRECT )
         {
-            return 0;
+            if (( m_statusCode >= SC_301 )&&( m_statusCode < SC_400 ))
+                return 0;
         }
         return m_statusCode;
     }

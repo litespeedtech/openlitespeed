@@ -17,7 +17,7 @@
 *****************************************************************************/
 #include "proxyconn.h"
 #include <extensions/extworker.h>
-#include <http/httpconnection.h>
+#include <http/httpsession.h>
 #include <http/httpextconnector.h>
 #include <http/httpdefs.h>
 #include <http/httpglobals.h>
@@ -83,8 +83,8 @@ int ProxyConn::doWrite()
 int ProxyConn::sendReqHeader()
 {
     m_iovec.clear();
-    HttpConnection * pConn = getConnector()->getHttpConn();
-    HttpReq * pReq = pConn->getReq();
+    HttpSession *pSession = getConnector()->getHttpSession();
+    HttpReq * pReq = pSession->getReq();
     //remove the trailing "\r\n" before adding our headers
     const char * pBegin = pReq->getOrgReqLine();
     m_iTotalPending = pReq->getHttpHeaderLen();
@@ -104,9 +104,9 @@ int ProxyConn::sendReqHeader()
         
     }
     //add "X-Forwarded-For" header
-    memmove( &pExtraHeader[headerLen], pConn->getPeerAddrString(),
-            pConn->getPeerAddrStrLen() );
-    headerLen += pConn->getPeerAddrStrLen();
+    memmove( &pExtraHeader[headerLen], pSession->getPeerAddrString(),
+            pSession->getPeerAddrStrLen() );
+    headerLen += pSession->getPeerAddrStrLen();
     pExtraHeader[headerLen++] = '\r';
     pExtraHeader[headerLen++] = '\n';
     
@@ -188,7 +188,7 @@ int ProxyConn::sendReqHeader()
         m_iTotalPending += hostLen + sizeof( s_achForwardHost ) + 1 ;
     }
    
-    if ( pConn->isSSL() )
+    if ( pSession->isSSL() )
     {
         m_iovec.append( s_achForwardHttps, sizeof( s_achForwardHttps ) - 1 );
         m_iTotalPending += sizeof( s_achForwardHttps ) - 1;
@@ -421,7 +421,7 @@ int ProxyConn::processResp()
         {
             //debug code
             //::write( 1, HttpGlobals::g_achBuf, pBuf - HttpGlobals::g_achBuf );
-            HttpReq * pReq = pHEC->getHttpConn()->getReq();
+            HttpReq * pReq = pHEC->getHttpSession()->getReq();
             if ( pReq->noRespBody() )
             {
                 incReqProcessed();
@@ -439,7 +439,7 @@ int ProxyConn::processResp()
                 return 0;
             }
 
-            m_iRespBodySize = pHEC->getHttpConn()->getResp()->getContentLen();
+            m_iRespBodySize = pHEC->getHttpSession()->getResp()->getContentLen();
             if ( D_ENABLED( DL_LESS ) )
                 LOG_D(( getLogger(), "[%s] Response body size of proxy reply is %d",
                     getLogId(), m_iRespBodySize ));
@@ -722,7 +722,7 @@ void ProxyConn::onTimer()
 //                LOG_INFO(( getLogger(),
 //                        "[%s] Last 8 bytes are: %#x %#x %#x %#x %#x %#x %#x %#x",
 //                         getLogId(), p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7] ));
-//                HttpReq * pReq = getConnector()->getHttpConn()->getReq();
+//                HttpReq * pReq = getConnector()->getHttpSession()->getReq();
 //                pReq->dumpHeader();
                 
                 setState( CLOSING );

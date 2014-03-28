@@ -3,7 +3,7 @@
   <meta charset="utf-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
   <title>Open LiteSpeed Web Server Users' Manual - Listeners</title>
-  <meta name="description" content="Open LiteSpeed Web Server Users' Manual - Listeners." />  
+  <meta name="description" content="Open LiteSpeed Web Server Users' Manual - Listeners." />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="shortcut icon" href="img/favicon.ico" />
   <link rel="stylesheet" type="text/css" href="css/hdoc.css">
@@ -11,7 +11,7 @@
 <body>
 <div class="pagewrapper"><div class="sidetree">
 <h3>OpenLiteSpeed Web Server <a href="index.html"> Users' Manual</a></h3>
-<h5>Version 1.2 Rev. 2 </h5>
+<h5>Version 1.3 Rev. 1 </h5>
 <hr/>
 <div>
 <ul class="toctop">
@@ -29,6 +29,7 @@
 	<li><a href="ExtApp_Help.html">External Apps</a></li>
 	<li><a href="ScriptHandler_Help.html">Script Handler</a></li>
 	<li><a href="Rails_Help.html">Rack/Rails Settings</a></li>
+	<li><a href="Module_Help.html">Module Configuration</a></li>
 	<li><span class="current"><a href="Listeners_Help.html">Listeners</a></span></li>
 	<li><a href="Templates_Help.html">Templates</a></li>
 	<li><a href="VirtualHosts_Help.html">Virtual Host List</a></li>
@@ -43,7 +44,7 @@
 </li>
 </ul>
 </div></div>
-<div class="contentwrapper"><div class="nav-bar"><div class="prev">&#171 <a href="Rails_Help.html">Rack/Rails Settings</a></div><div class="center"><a href="config.html">Configuration</a></div><div class="next"><a href="Templates_Help.html">Virtual Host Templates</a> &#187;</div></div>
+<div class="contentwrapper"><div class="nav-bar"><div class="prev">&#171 <a href="Module_Help.html">Module Configuration</a></div><div class="center"><a href="config.html">Configuration</a></div><div class="next"><a href="Templates_Help.html">Virtual Host Templates</a> &#187;</div></div>
 <h1>Listeners</h1><h4>Table of Contents</h4><section class="toc"><section class="toc-row"><header>General</header><p>
 <a href="#listenerName">Listener Name</a>&nbsp;|&nbsp;<a href="#listenerIP">IP Address</a>&nbsp;|&nbsp;<a href="#listenerPort">Port</a>&nbsp;|&nbsp;<a href="#listenerBinding">Binding</a>&nbsp;|&nbsp;<a href="#listenerSecure">Secure</a>&nbsp;|&nbsp;</p></section>
 <section class="toc-row"><header><a href="#virtualHostMapping">Virtual Host Mappings</a></header><p>
@@ -80,7 +81,7 @@
 <div class="helpitem"><a name="enableDHE"></a><table width="100%" class="ht" border="0" cellpadding="5" cellspacing="0"> <tr class="ht-title"><td><div>Enable DH Key Exchange<span class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="img/top.gif"></a></span></div></td></tr> <tr><td><span class="ht-label">Description: </span>Allows use of Diffie-Hellman key exchange for further SSL encryption.</td></tr> <tr><td><span class="ht-label">Syntax: </span>Select from radio box</td></tr> <tr><td><span class="ht-label">Tips: </span>[Security] DH key exchange is more secure than using just an RSA key. ECDH and DH key exchange are equally secure.  [Performance] Enabling DH key exchange will increase CPU load and is slower than ECDH key exchange and RSA. ECDH key exchange is preferred when available.</td></tr> </table> </div>
 <div class="helpitem"><a name="DHParam"></a><table width="100%" class="ht" border="0" cellpadding="5" cellspacing="0"> <tr class="ht-title"><td><div>DH Parameter<span class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="img/top.gif"></a></span></div></td></tr> <tr><td><span class="ht-label">Description: </span>Specifies the location of the Diffie-Hellman parameter file necessary for DH key exchange.</td></tr> <tr><td><span class="ht-label">Syntax: </span>File name which can be an absolute path or relative to $SERVER_ROOT.</td></tr> </table> </div>
 <div class="helpitem"><a name="renegProtection"></a><table width="100%" class="ht" border="0" cellpadding="5" cellspacing="0"> <tr class="ht-title"><td><div>SSL Renegotiation Protection<span class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="img/top.gif"></a></span></div></td></tr> <tr><td><span class="ht-label">Description: </span>Specifies whether to enable SSL Renegotiation Protection to  defend against SSL handshake-based attacks. The default value is "Yes".</td></tr> <tr><td><span class="ht-label">Syntax: </span>Select from radio box</td></tr> </table> </div>
-<div class="helpitem"><a name="enableSpdy"></a><table width="100%" class="ht" border="0" cellpadding="5" cellspacing="0"> <tr class="ht-title"><td><div>Enable SPDY<span class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="img/top.gif"></a></span></div></td></tr> <tr><td><span class="ht-label">Description: </span>SPDY is an experimental protocol that runs on top of SSL with the  goal of reducing page load times. More information can be found  at: http://en.wikipedia.org/wiki/SPDY <br/><br/> If you wish to enable SPDY, check the box next to the version(s) you wish to enable.</td></tr> <tr><td><span class="ht-label">Syntax: </span>Check the protocol versions that you want to enable. Leaving all boxes unchecked  will enable SPDY/2 and SPDY/3 (the default). If you wish to disable SPDY, check "None" only  and leave all other boxes unchecked.</td></tr> </table> </div>
+<div class="helpitem"><a name="enableSpdy"></a><table width="100%" class="ht" border="0" cellpadding="5" cellspacing="0"> <tr class="ht-title"><td><div>Enable SPDY<span class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="img/top.gif"></a></span></div></td></tr> <tr><td><span class="ht-label">Description: </span>SPDY is an experimental protocol that runs on top of SSL with the  goal of reducing page load times. More information can be found  at: http://en.wikipedia.org/wiki/SPDY    If you wish to enable SPDY, check the box next to the version(s) you wish to enable.</td></tr> <tr><td><span class="ht-label">Syntax: </span>Check the protocol versions that you want to enable. Leaving all boxes unchecked  will enable SPDY/2 and SPDY/3 (the default). If you wish to disable SPDY, check "None" only  and leave all other boxes unchecked.</td></tr> </table> </div>
 <div class="helpitem"><a name="sslOCSP"></a><table width="100%" class="ht" border="0" cellpadding="5" cellspacing="0"> <tr class="ht-title"><td><div>OCSP Stapling<span class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="img/top.gif"></a></span></div></td></tr> <tr><td><span class="ht-label">Description: </span>Online Certificate Status Protocol (OCSP) is a more efficient method  of checking whether a digital certificate is valid. It works by communicating  with another server — the OCSP responder — to get verification that the certificate  is valid instead of checking through certificate revocation lists (CRL).   OCSP stapling is a further improvement on this protocol, allowing the server to  check with the OCSP responder at regular intervals instead of every time a certificate  is requested. See the <a href="http://en.wikipedia.org/wiki/OCSP_Stapling">OCSP Wikipedia page</a> for more details.</td></tr> </table> </div>
 <div class="helpitem"><a name="enableStapling"></a><table width="100%" class="ht" border="0" cellpadding="5" cellspacing="0"> <tr class="ht-title"><td><div>Enable OCSP Stapling<span class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="img/top.gif"></a></span></div></td></tr> <tr><td><span class="ht-label">Description: </span>Determines whether to enable OCSP stapling, a more efficient way of verifying public key certificates.</td></tr> <tr><td><span class="ht-label">Syntax: </span>Select from radio box</td></tr> </table> </div>
 <div class="helpitem"><a name="ocspRespMaxAge"></a><table width="100%" class="ht" border="0" cellpadding="5" cellspacing="0"> <tr class="ht-title"><td><div>OCSP Response Max Age (secs)<span class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="img/top.gif"></a></span></div></td></tr> <tr><td><span class="ht-label">Description: </span>This option sets the maximum allowable age for an OCSP response. If an OCSP response is older than this maximum age, the server will contact the OCSP responder for a new response. The default value is <span class="val">86400</span>. Maximum age can be turned off by setting this value to <span class="val">-1</span>.</td></tr> <tr><td><span class="ht-label">Syntax: </span>Integer of seconds</td></tr> </table> </div>
@@ -91,7 +92,7 @@
 <div class="helpitem"><a name="crlPath"></a><table width="100%" class="ht" border="0" cellpadding="5" cellspacing="0"> <tr class="ht-title"><td><div>Client Revocation Path<span class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="img/top.gif"></a></span></div></td></tr> <tr><td><span class="ht-label">Description: </span> Specifies the directory containing PEM-encoded CA CRL files for revoked  client certificates. The files in this directory have to be PEM-encoded.  These files are accessed through hash file names, hash-value.rN. Please refer to openSSL or Apache mod_ssl documentation regarding creating the hash filename.</td></tr> <tr><td><span class="ht-label">Syntax: </span>path</td></tr> </table> </div>
 <div class="helpitem"><a name="crlFile"></a><table width="100%" class="ht" border="0" cellpadding="5" cellspacing="0"> <tr class="ht-title"><td><div>Client Revocation File<span class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="img/top.gif"></a></span></div></td></tr> <tr><td><span class="ht-label">Description: </span> Specifies the file containing PEM-encoded CA CRL files enumerating revoked  client certificates. This can be used as an alternative or in addition to  <span class="tagI"><a href="#crlPath">Client Revocation Path</a></span>.</td></tr> <tr><td><span class="ht-label">Syntax: </span>File name which can be an absolute path or relative to $SERVER_ROOT.</td></tr> </table> </div>
 </section>
-</div><footer class="copyright">Copyright &copy; 2013. <a href="http://www.litespeedtech.com">Lite Speed Technologies Inc.</a> All rights reserved.</footer>
+</div><footer class="copyright">Copyright &copy; 2013-2014. <a href="http://www.litespeedtech.com">Lite Speed Technologies Inc.</a> All rights reserved.</footer>
 				</div>
 				</body>
 				</html>

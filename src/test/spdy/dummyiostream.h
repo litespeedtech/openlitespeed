@@ -39,7 +39,7 @@ public:
     int writev( IOVec &vector, int total ) {return 0;};
     int sendfile( IOVec &vector, int &total, int fdSrc, off_t off, size_t size ) {return 0;};
     int close()  { return -1;};
-    int sendHeaders( IOVec &vector, int headerCount );
+    int sendRespHeaders( );
     
     
     void suspendRead()      { setFlag( HIO_FLAG_WANT_READ, 0 );     }

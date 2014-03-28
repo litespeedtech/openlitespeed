@@ -23,6 +23,9 @@
 class ReqHandler;
 class HttpExtConnector;
 class HttpHandler;
+class ConfigCtx;
+class HttpVHost;
+class XmlNode;
 
 class HandlerFactory
 {
@@ -32,6 +35,9 @@ public:
     static ReqHandler* getHandler( int type );
     static void recycle( HttpExtConnector * pHandler );
     static const HttpHandler * getInstance( int type, const char * pName );
+    static const HttpHandler *getHandler( const char *pType, 
+                 const char *pHandler );
+    static const HttpHandler *getHandler( const XmlNode *pNode );
 
 };
 

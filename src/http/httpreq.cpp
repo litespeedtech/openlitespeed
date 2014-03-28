@@ -18,7 +18,7 @@
 #include "httpreq.h"
 #include <http/accesscache.h>
 #include <http/clientinfo.h>
-#include <http/datetime.h>
+#include <util/datetime.h>
 #include <http/denieddir.h>
 #include <http/handlertype.h>
 #include <http/handlerfactory.h>
@@ -47,9 +47,23 @@
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 #include <new>
 #include <util/ssnprintf.h>
+
+struct envAlias_t
+{
+    const char *orgName;
+    unsigned short orgNameLen;
+    const char *inuseName;
+    unsigned short inuseNameLen;
+};
+
+const envAlias_t envAlias[] = {
+    {"cache-control", 13, "LS_CACHE_CTRL", 13},
+};
+
 
 #define HEADER_BUF_INIT_SIZE 2048
 #define REQ_BUF_INIT_SIZE    1024
@@ -85,10 +99,10 @@ static char * escape_uri( char * p, char * pEnd, const char * pURI, int uriLen )
 HttpReq::HttpReq( )
     : m_reqBuf( REQ_BUF_INIT_SIZE )
     , m_headerBuf( HEADER_BUF_INIT_SIZE )
+    , m_fdReqFile( -1 )
 {
     m_urls = (key_value_pair *)g_pool.allocate( sizeof( key_value_pair ) * ( MAX_REDIRECTS + 1 ));
-    if ( !m_urls )
-        throw std::bad_alloc();
+
     m_reqBuf.resize(HEADER_BUF_PAD);
     m_headerBuf.resize(HEADER_BUF_PAD);
     *((int*)m_reqBuf.begin()) = 0;
@@ -100,17 +114,25 @@ HttpReq::HttpReq( )
     ::memset( m_commonHeaderLen, 0,
               (char *)(&m_iLocationOff + 1) - (char *)m_commonHeaderLen );
     m_upgradeProto = UPD_PROTO_NONE;
+    m_pRealPath = NULL;
 }
 
 HttpReq::~HttpReq()
 {
     if ( m_urls )
         g_pool.deallocate( m_urls, sizeof( key_value_pair ) * ( MAX_REDIRECTS + 1 ) );
+    if ( m_fdReqFile != -1 )
+        ::close( m_fdReqFile );
 }
 
 
 void HttpReq::reset()
 {
+    if ( m_fdReqFile != -1 )
+    {
+        ::close( m_fdReqFile );
+        m_fdReqFile = -1;
+    }
     if ( m_pReqBodyBuf )
     {
         if ( !m_pReqBodyBuf->isMmaped() )
@@ -127,6 +149,7 @@ void HttpReq::reset()
     ::memset( m_commonHeaderOffset, 0,
               (char *)(&m_iLocationOff + 1) - (char *)m_commonHeaderOffset );
     m_reqBuf.resize(HEADER_BUF_PAD);
+    m_pRealPath = NULL;
 }
 
 void HttpReq::resetHeaderBuf()
@@ -216,7 +239,7 @@ const HttpVHost * HttpReq::matchVHost()
     return m_pVHost;
 }
 
-int HttpReq::RemoveSpace(const char **pCur, const char *pBEnd)
+int HttpReq::removeSpace(const char **pCur, const char *pBEnd)
 {
     while( 1 )
     {
@@ -267,7 +290,7 @@ int HttpReq::processRequestLine()
     const char * p = pCur;
     while(( p < pLineEnd )&&(( *p != ' ' )&&( *p != '\t' )))
         ++p;
-    result = GetReqMethod( pCur, p );
+    result = parseMethod( pCur, p );
     if ( result )
         return result;
 
@@ -275,7 +298,7 @@ int HttpReq::processRequestLine()
     while(( p < pLineEnd )&&(( *p == ' ' )||( *p == '\t' )))
         ++p;
     pCur = p;
-    result = GetReqHost(pCur, pLineEnd);
+    result = parseHost(pCur, pLineEnd);
     if (result )
         return result;
     p += m_iHostLen;
@@ -286,7 +309,7 @@ int HttpReq::processRequestLine()
         return SC_400;
     m_curURL.keyOff = m_reqBuf.size();
     m_reqURLOff = pCur - m_headerBuf.begin();
-    result = GetReqURL(pCur, p );
+    result = parseURL(pCur, p );
     if ( result )
         return result;
 
@@ -295,7 +318,7 @@ int HttpReq::processRequestLine()
         ++p;
     pCur = p;
 
-    result = GetReqVersion(pCur, pLineEnd );
+    result = parseProtocol(pCur, pLineEnd );
     if( result )
         return result;
     m_reqLineLen = pLineEnd - m_headerBuf.begin() - m_reqLineOff;
@@ -311,7 +334,7 @@ int HttpReq::processRequestLine()
 
     return result;
 }
-int HttpReq::GetReqVersion(const char *pCur, const char *pBEnd)
+int HttpReq::parseProtocol(const char *pCur, const char *pBEnd)
 {
     if ( strncasecmp( pCur, "http/1.", 7 ) != 0 )
     {
@@ -340,7 +363,7 @@ int HttpReq::GetReqVersion(const char *pCur, const char *pBEnd)
     return 0;
 }
 
-int HttpReq::GetReqURL(const char *pCur, const char *pBEnd)
+int HttpReq::parseURL(const char *pCur, const char *pBEnd)
 {
     const char *pFound = pCur,*pMark = ( const char *)memchr( pCur, '?', pBEnd - pCur );
     int result = 0;
@@ -356,7 +379,7 @@ int HttpReq::GetReqURL(const char *pCur, const char *pBEnd)
         m_curURL.valLen = 0;
         pMark = pBEnd;
     }
-    result = GetReqURI(pFound, pMark);
+    result = parseURI(pFound, pMark);
     if(result != 0)
     {
         return result;
@@ -366,7 +389,7 @@ int HttpReq::GetReqURL(const char *pCur, const char *pBEnd)
     return 0;
 }
 
-int HttpReq::GetReqURI(const char *pCur, const char *pBEnd )
+int HttpReq::parseURI(const char *pCur, const char *pBEnd )
 {
     int len = pBEnd - pCur;
     int m = m_reqBuf.available();
@@ -390,7 +413,7 @@ int HttpReq::GetReqURI(const char *pCur, const char *pBEnd )
     return 0;
 }
 
-int HttpReq::GetReqHost(const char* pCur, const char *pBEnd)
+int HttpReq::parseHost(const char* pCur, const char *pBEnd)
 {
     bool bNoHost = false;
     if (( *pCur == '/' )||( *pCur == '%' ))
@@ -412,7 +435,7 @@ int HttpReq::GetReqHost(const char* pCur, const char *pBEnd)
             return 1;
         }
         if(memchr(pCur + 1, '/', (pBEnd -pCur -1))!= NULL)
-               HostProcess(pCur + 1, pBEnd);
+               postProcessHost(pCur + 1, pBEnd);
         else
         {
             pCur = pBEnd;
@@ -424,7 +447,7 @@ int HttpReq::GetReqHost(const char* pCur, const char *pBEnd)
     }
     return 0;
 }
-int HttpReq::GetReqMethod(const char *pCur, const char *pBEnd )
+int HttpReq::parseMethod(const char *pCur, const char *pBEnd )
 {
 
     if ( (m_method = HttpMethod::parse2( pCur )) == 0 )
@@ -448,6 +471,13 @@ int HttpReq::GetReqMethod(const char *pCur, const char *pBEnd )
     return 0;
 }
 
+void HttpReq::setScriptNameLen( int n)
+{  
+    m_iScriptNameLen = n;
+    m_iPathInfoLen = m_curURL.keyLen - n;
+    m_iPathInfoOff = m_curURL.keyOff + m_iScriptNameLen;
+}
+    
 int HttpReq::processHeaderLines()
 {
     const char *pCur = m_headerBuf.begin() + m_iReqHeaderBufFinished;
@@ -485,13 +515,13 @@ int HttpReq::processHeaderLines()
             }
             pTemp = pMark + 1;
             pTemp1 = pLineEnd;
-            SkipSpaceBothSide(pTemp, pTemp1);
+            skipSpaceBothSide(pTemp, pTemp1);
             index = HttpHeader::getIndex( pLineBegin );
             if(index != HttpHeader::H_HEADER_END)
             {
                 m_commonHeaderLen[ index ] = pTemp1 - pTemp;
                 m_commonHeaderOffset[index] = pTemp - m_headerBuf.begin();
-                int Result = ProcessHeader(index);
+                int Result = processHeader(index);
                 if(Result != 0)
                     return Result;
             }
@@ -499,7 +529,7 @@ int HttpReq::processHeaderLines()
             {
                 pCurHeader = newUnknownHeader();
                 pCurHeader->keyOff = pLineBegin - m_headerBuf.begin();
-                pCurHeader->keyLen = SkipSpace( pMark, pLineBegin) - pLineBegin;
+                pCurHeader->keyLen = skipSpace( pMark, pLineBegin) - pLineBegin;
                 pCurHeader->valOff = pTemp - m_headerBuf.begin();
                 pCurHeader->valLen = pTemp1 - pTemp;
                 
@@ -527,7 +557,7 @@ int HttpReq::processHeaderLines()
     return 1;
 }
 
-int HttpReq::ProcessHeader(int index)
+int HttpReq::processHeader(int index)
 {
     const char *pCur = m_headerBuf.begin() + m_commonHeaderOffset[index];
     const char *pBEnd = pCur + m_commonHeaderLen[ index ];
@@ -535,7 +565,7 @@ int HttpReq::ProcessHeader(int index)
     {
     case HttpHeader::H_HOST:
         m_iHostOff = m_commonHeaderOffset[index];
-        HostProcess(pCur, pBEnd);
+        postProcessHost(pCur, pBEnd);
         break;
     case HttpHeader::H_CONTENT_LENGTH:
         m_lEntityLength = strtol(pCur, NULL, 0);
@@ -571,7 +601,7 @@ int HttpReq::ProcessHeader(int index)
     return 0;
 }
 
-int HttpReq::HostProcess(const char* pCur, const char *pBEnd)
+int HttpReq::postProcessHost(const char* pCur, const char *pBEnd)
 {
     const char *pstrfound;
     if((pCur+4) < pBEnd)
@@ -601,7 +631,7 @@ int HttpReq::HostProcess(const char* pCur, const char *pBEnd)
     return 0;
 }
 
-const char* HttpReq::SkipSpace(const char *pOrg, const char *pDest)
+const char* HttpReq::skipSpace(const char *pOrg, const char *pDest)
 {
     char ch;
     if(pOrg > pDest)
@@ -629,7 +659,7 @@ const char* HttpReq::SkipSpace(const char *pOrg, const char *pDest)
     return pOrg;
 }
 
-int HttpReq::SkipSpaceBothSide(const char* &pHBegin, const char* &pHEnd)
+int HttpReq::skipSpaceBothSide(const char* &pHBegin, const char* &pHEnd)
 {
     char ch;
     for(; pHBegin <=pHEnd; pHEnd--)
@@ -730,6 +760,22 @@ key_value_pair * HttpReq::getValueByKey( const AutoBuf & buf, int idxOff, const 
         ++pIndex;
     }
     return NULL;
+}
+
+void HttpReq::removeKeyValueByKey( const AutoBuf & buf, int idxOff, const char * pKey, int keyLen )
+{
+    key_value_pair * pEntry = getValueByKey( buf, idxOff, pKey, keyLen );
+    if ( pEntry )
+    {
+        char * p = m_reqBuf.getPointer( idxOff );
+        int * used = ( ((int *)p) + 1 );
+        key_value_pair * pLast = ( key_value_pair *)( p + sizeof( int ) * 2 ) + (*used-1);
+        if ( pLast != pEntry )
+        {
+            memmove( pEntry, pLast, sizeof( key_value_pair ) );
+        }
+        --*used;
+    }
 }
 
 
@@ -834,7 +880,8 @@ int HttpReq::translatePath( const char * pURI, int uriLen, char * pReal, int len
     {
         pContext = m_pVHost->bestMatch( pURI );
     }
-    if ( pContext->getHandlerType() > HandlerType::HT_STATIC )
+    
+    if ( pContext && pContext->getHandlerType() > HandlerType::HT_STATIC )
         pContext = NULL;
     return translate( pURI, uriLen, pContext, pReal, len );
 }
@@ -1713,15 +1760,10 @@ int HttpReq::processPath( const char * pURI, int uriLen, char * pBuf,
     }
     *p = 0;
     {
-        int follow = m_pVHost->followSymLink();
-        if (( follow != LS_ALWAYS_FOLLOW )||
-                ( HttpServerConfig::getInstance().checkDeniedSymLink() ))
-        {
-            ret = checkSymLink( follow, pBuf, p, pBegin );
-            if ( ret )
-                return ret;
-        }
-
+        ret = checkSymLink( pBuf, p - pBuf, pBegin );
+        if ( ret )
+            return ret;
+ 
         int forcedType = 0;
         if ( m_pContext->shouldMatchFiles() )
             forcedType = filesMatch( p );
@@ -1764,31 +1806,66 @@ int HttpReq::filesMatch( const char * pEnd )
     return 0;
 }
 
-int HttpReq::checkSymLink( int follow, char * pBuf, char * &p, char * pBegin )
+int HttpReq::checkSymLink( const char * pPath, int pathLen, const char * pBegin )
 {
-    int rpathLen = GPath::checkSymLinks( pBuf, p, pBuf + MAX_BUF_SIZE, pBegin, follow );
+    int follow = m_pVHost->followSymLink();
+    int restrained = m_pVHost->restrained();
+    int hasLink = 0;
+    if (( follow == LS_ALWAYS_FOLLOW )&& !restrained &&
+        ( !HttpServerConfig::getInstance().checkDeniedSymLink() ))
+        return 0;
+    //--pBegin;
+    while( *pBegin != '/' && pBegin > pPath )
+        --pBegin;
+    char achTmp[MAX_BUF_SIZE];
+    char * pEnd;
+    memmove( achTmp, pPath, pathLen );
+    pEnd = &achTmp[ pathLen ];
+    *pEnd = 0; 
+    //int rpathLen = GPath::checkSymLinks( pBuf, p, pBuf + MAX_BUF_SIZE, 
+    //                pBegin, follow, &hasLink );
+    int rpathLen = GPath::checkSymLinks( achTmp, pEnd, &achTmp[MAX_BUF_SIZE-1], 
+                    &achTmp[pBegin-pPath], follow, &hasLink );
     if ( rpathLen > 0 )
     {
         if ( HttpServerConfig::getInstance().checkDeniedSymLink() )
         {
-            if ( HttpGlobals::getDeniedDir()->isDenied( pBuf ) )
+            if ( HttpGlobals::getDeniedDir()->isDenied( achTmp ) )
             {
+                LOG_INFO(( getLogger(), "[%s] checkSymLinks() pBuf:%p, pBegin: %p, target: %s, return: %d, hasLink: %d, errno: %d", getLogId(), pPath, pBegin, achTmp, rpathLen, hasLink, errno
+                        ));
                 LOG_INFO(( getLogger(), "[%s] Path [%s] is in access denied list, access denied",
-                           getLogId(), pBuf ));
+                        getLogId(), achTmp ));
                 return SC_403;
             }
         }
-        p = pBuf + rpathLen;
-        return 0;
+        //p = pBuf + rpathLen;
     }
     else
     {
         LOG_INFO(( getLogger(), "[%s] Found symbolic link, or owner of symbolic link and link "
-                   "target does not match for path [%s], access denied.",
-                   getLogId(), pBuf ));
+                "target does not match for path [%s], access denied. ret=%d, errno=%d",
+                getLogId(), pPath, rpathLen, errno ));
         return SC_403;
     }
-
+    if ( hasLink && restrained )
+    {
+        if ( strncmp( achTmp, m_pVHost->getVhRoot()->c_str(),
+                        m_pVHost->getVhRoot()->len() )!= 0 )
+        {
+            if ( strncmp( achTmp, m_pContext->getLocation(), m_pContext->getLocationLen() ) != 0 )
+            {
+                LOG_INFO(( getLogger(), "[%s] Path [%s] is beyond restrained VHOST root [%s]",
+                        getLogId(), achTmp, m_pVHost->getVhRoot()->c_str() ));
+            
+                return SC_403;
+            }
+        }
+    }
+    if ( D_ENABLED( DL_MORE ))
+        LOG_D(( getLogger(), "[%s] Check Symbolic link for [%s] is successful, access to target [%s] is granted"
+                                , getLogId(), pPath, achTmp ));
+    return 0;
 }
 
 
@@ -2196,8 +2273,30 @@ void  HttpReq::smartKeepAlive( const char * pValue )
             m_iKeepAlive = 0;
 }
 
-void HttpReq::addEnv( const char * pKey, int keyLen, const char * pValue, int valLen )
+const char *HttpReq::findEnvAllias(const char * pKey, int keyLen, int& alliasKeyLen)
 {
+    int count = sizeof(envAlias) / sizeof(envAlias_t);
+    for (int i=0; i<count; ++i)
+    {
+        if (envAlias[i].orgNameLen == keyLen &&
+            strncasecmp(envAlias[i].orgName, pKey, keyLen) == 0)
+        {
+            alliasKeyLen = envAlias[i].inuseNameLen;
+            return envAlias[i].inuseName;
+        }
+    }
+    
+    //can't find allias, use the org one
+    alliasKeyLen = keyLen;
+    return pKey;
+}
+
+
+key_value_pair * HttpReq::addEnv( const char * pOrgKey, int orgKeyLen, const char * pValue, int valLen )
+{
+    int keyLen = 0;
+    const char *pKey = findEnvAllias(pOrgKey, orgKeyLen, keyLen);
+    
     key_value_pair * pIdx = getValueByKey( m_reqBuf, m_envIdxOff, pKey, keyLen );
     int n;
     int keyOff, valOff;
@@ -2206,7 +2305,7 @@ void HttpReq::addEnv( const char * pKey, int keyLen, const char * pValue, int va
         if ( valLen == pIdx->valLen )
         {
             if ( strncmp( pValue, m_reqBuf.getPointer( pIdx->valOff ), valLen ) == 0 )
-                return;
+                return pIdx;
         }
         keyOff = pIdx->valOff;
         n = pIdx - getOffset( m_envIdxOff, 0 );
@@ -2223,10 +2322,14 @@ void HttpReq::addEnv( const char * pKey, int keyLen, const char * pValue, int va
     pIdx->keyLen = keyLen;
     pIdx->valOff = valOff;
     pIdx->valLen = valLen;
+    return pIdx;
 }
 
-const char * HttpReq::getEnv( const char * pKey, int keyLen, int &valLen )
+
+const char * HttpReq::getEnv( const char * pOrgKey, int orgKeyLen, int &valLen )
 {
+    int keyLen = 0;
+    const char *pKey = findEnvAllias(pOrgKey, orgKeyLen, keyLen);
     key_value_pair * pIdx = getValueByKey( m_reqBuf, m_envIdxOff, pKey, keyLen );
     if ( pIdx )
     {
@@ -2269,11 +2372,6 @@ const char * HttpReq::getUnknownHeaderByIndex( int idx, int &keyLen,
 char HttpReq::getRewriteLogLevel() const
 {
     return m_pVHost->getRewriteLogLevel();
-}
-
-StaticFileCacheData *& HttpReq::setStaticFileCache()
-{
-    return m_dataStaticFile.getCache();
 }
 
 #include <util/iovec.h>

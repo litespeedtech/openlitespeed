@@ -112,8 +112,9 @@ am_libextensions_a_OBJECTS = loadbalancer.$(OBJEXT) \
 	fcgirecord.$(OBJEXT) jkajp13.$(OBJEXT) jworker.$(OBJEXT) \
 	jworkerconfig.$(OBJEXT) jconn.$(OBJEXT) proxyconfig.$(OBJEXT) \
 	proxyworker.$(OBJEXT) proxyconn.$(OBJEXT) \
-	extappregistry.$(OBJEXT) lsapiworker.$(OBJEXT) \
-	lsapireq.$(OBJEXT) lsapiconn.$(OBJEXT) lsapiconfig.$(OBJEXT)
+	extappregistry.$(OBJEXT) railsappconfig.$(OBJEXT) \
+	lsapiworker.$(OBJEXT) lsapireq.$(OBJEXT) lsapiconn.$(OBJEXT) \
+	lsapiconfig.$(OBJEXT)
 libextensions_a_OBJECTS = $(am_libextensions_a_OBJECTS)
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
@@ -193,6 +194,7 @@ CXXFLAGS = @CXXFLAGS@
 CYGPATH_W = @CYGPATH_W@
 DEFS = @DEFS@
 DEPDIR = @DEPDIR@
+DL_LIB_OPTION = @DL_LIB_OPTION@
 ECHO_C = @ECHO_C@
 ECHO_N = @ECHO_N@
 ECHO_T = @ECHO_T@
@@ -295,7 +297,7 @@ libextensions_a_SOURCES = loadbalancer.cpp localworkerconfig.cpp localworker.cpp
   fcgi/fcgienv.cpp fcgi/fcgiappconfig.cpp fcgi/fcgiapp.cpp fcgi/fcginamevaluepair.cpp fcgi/fcgiconnection.cpp fcgi/fcgirecord.cpp \
   jk/jkajp13.cpp jk/jworker.cpp jk/jworkerconfig.cpp jk/jconn.cpp \
   proxy/proxyconfig.cpp proxy/proxyworker.cpp proxy/proxyconn.cpp \
-  registry/extappregistry.cpp \
+  registry/extappregistry.cpp registry/railsappconfig.cpp\
   lsapi/lsapiworker.cpp lsapi/lsapireq.cpp lsapi/lsapiconn.cpp lsapi/lsapiconfig.cpp 
 
 all: all-am
@@ -381,6 +383,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/proxyconfig.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/proxyconn.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/proxyworker.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/railsappconfig.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/suexec.Po@am__quote@
 
 .cpp.o:
@@ -676,6 +679,20 @@ extappregistry.obj: registry/extappregistry.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='registry/extappregistry.cpp' object='extappregistry.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o extappregistry.obj `if test -f 'registry/extappregistry.cpp'; then $(CYGPATH_W) 'registry/extappregistry.cpp'; else $(CYGPATH_W) '$(srcdir)/registry/extappregistry.cpp'; fi`
+
+railsappconfig.o: registry/railsappconfig.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT railsappconfig.o -MD -MP -MF $(DEPDIR)/railsappconfig.Tpo -c -o railsappconfig.o `test -f 'registry/railsappconfig.cpp' || echo '$(srcdir)/'`registry/railsappconfig.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/railsappconfig.Tpo $(DEPDIR)/railsappconfig.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='registry/railsappconfig.cpp' object='railsappconfig.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o railsappconfig.o `test -f 'registry/railsappconfig.cpp' || echo '$(srcdir)/'`registry/railsappconfig.cpp
+
+railsappconfig.obj: registry/railsappconfig.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT railsappconfig.obj -MD -MP -MF $(DEPDIR)/railsappconfig.Tpo -c -o railsappconfig.obj `if test -f 'registry/railsappconfig.cpp'; then $(CYGPATH_W) 'registry/railsappconfig.cpp'; else $(CYGPATH_W) '$(srcdir)/registry/railsappconfig.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/railsappconfig.Tpo $(DEPDIR)/railsappconfig.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='registry/railsappconfig.cpp' object='railsappconfig.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o railsappconfig.obj `if test -f 'registry/railsappconfig.cpp'; then $(CYGPATH_W) 'registry/railsappconfig.cpp'; else $(CYGPATH_W) '$(srcdir)/registry/railsappconfig.cpp'; fi`
 
 lsapiworker.o: lsapi/lsapiworker.cpp
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT lsapiworker.o -MD -MP -MF $(DEPDIR)/lsapiworker.Tpo -c -o lsapiworker.o `test -f 'lsapi/lsapiworker.cpp' || echo '$(srcdir)/'`lsapi/lsapiworker.cpp

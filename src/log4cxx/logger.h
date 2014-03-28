@@ -41,11 +41,13 @@ BEGIN_LOG4CXX_NS
         } \
      }while(0)
 
+class Layout;
 class Logger : public Duplicable
 {
     int         m_iLevel;
-    Appender *  m_pAppender;
     int         m_iAdditive;
+    Appender *  m_pAppender;
+    Layout *    m_pLayout;
     Logger *    m_pParent;
 
 protected:
@@ -61,7 +63,7 @@ public:
     
     static Logger* getLogger( const char * pName );
     
-    void vlog( int level, const char * format, va_list args );
+    void vlog( int level, const char * format, va_list args, int no_linefeed = 0 );
 
     void log( int level, const char * format, ... )
     {
@@ -156,7 +158,7 @@ public:
         __logger_log( Level::CRIT, format );
     }
 
-    void log( const char * pBuf, int len );
+    void lograw( const char * pBuf, int len );
 
     bool isEnabled( int level ) const
     {   return level <= m_iLevel; }
@@ -181,6 +183,11 @@ public:
     {   return m_pAppender;  }
     void setAppender( Appender * pAppender )
     {   m_pAppender = pAppender;    }
+
+    const Layout * getLaout() const
+    {   return m_pLayout;  }
+    void setLayout( Layout * pLayout )
+    {   m_pLayout = pLayout;    }
 
     void setParent( Logger * pParent )    {   m_pParent = pParent;    }
     

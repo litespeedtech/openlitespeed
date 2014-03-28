@@ -123,12 +123,12 @@ int SampleFcgiExtConn::sendReqBody( )
 //    return ret;
 //}
 
-int SampleFcgiExtConn::onWrite(HttpConnection* pConn )
+int SampleFcgiExtConn::onWrite(HttpSession* pSession )
 {
     return 0;
 }
 
-int SampleFcgiExtConn::onRead(HttpConnection* pConn )
+int SampleFcgiExtConn::onRead(HttpSession* pSession )
 {
     return 0;
 }
@@ -139,7 +139,7 @@ void SampleFcgiExtConn::extProcessorReady()
     printf( "begin to forward request!\n" );
 }
 
-int SampleFcgiExtConn::process( HttpConnection* pConn )
+int SampleFcgiExtConn::process( HttpSession* pSession )
 {
     return 0;
 }
@@ -150,7 +150,7 @@ void SampleFcgiExtConn::extProcessorError( int errCode )
     setState( HEC_COMPLETE );
 }
 
-int  SampleFcgiExtConn::cleanUp( HttpConnection * pConn )
+int  SampleFcgiExtConn::cleanUp( HttpSession *pSession )
 {
     return 0;
 }

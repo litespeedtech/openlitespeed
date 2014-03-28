@@ -24,8 +24,14 @@
 #include <http/httpdefs.h>
 #include <http/httpglobals.h>
 #include <http/httplog.h>
+#include <http/handlerfactory.h>
+#include <http/httpserverconfig.h>
+#include <http/handlertype.h>
+#include <http/httpmime.h>
 #include <socket/coresocket.h>
-
+#include "util/configctx.h"
+#include <util/xmlnode.h>
+#include <extensions/localworker.h>
 #include <fcntl.h>
 #include <signal.h>
 #include <stdio.h>
@@ -199,6 +205,88 @@ int CgidWorker::watchDog( const char * pServerRoot, const char * pChroot,
         setState( ST_GOOD );
     return ret;    
     
+}
+int CgidWorker::config( const XmlNode *pNode1 )
+{
+    int iChrootlen = 0;
+    const char *psChroot = NULL;
+
+    
+    if ( HttpGlobals::s_psChroot )
+    {
+        iChrootlen = HttpGlobals::s_psChroot->len();
+        psChroot = HttpGlobals::s_psChroot->c_str();
+    }
+    int instances = ConfigCtx::getCurConfigCtx()->getLongValue( pNode1,
+                    "maxCGIInstances", 1, 2000, 100 );
+    setMaxConns( instances );
+    ExtAppRegistry::setRLimits( getConfig().getRLimits());
+    ExtAppRegistry::getRLimits()->reset();
+    LocalWorker::configRlimit( ExtAppRegistry::getRLimits(), pNode1 );
+    int priority = ConfigCtx::getCurConfigCtx()->getLongValue( pNode1, "priority", -20, 20, HttpGlobals::s_priority + 1 );
+
+    if ( priority > 20 )
+        priority = 20;
+
+    if ( priority < HttpGlobals::s_priority )
+        priority = HttpGlobals::s_priority;
+
+    char achSocket[128];
+    const char *pValue = pNode1->getChildValue( "cgidSock" );
+
+    if ( !pValue )
+    {
+        snprintf( achSocket, 128, "uds:/%s%sadmin/cgid/cgid.sock",
+                  ( iChrootlen ) ? psChroot : "",
+                  HttpGlobals::s_pServerRoot );
+    }
+    else
+    {
+        strcpy( achSocket, "uds:/" );
+
+        if ( strncasecmp( "uds:/", pValue, 5 ) == 0 )
+            pValue += 5;
+
+        if ( ( iChrootlen ) &&
+                ( strncmp( pValue, psChroot, iChrootlen ) == 0 ) )
+        {
+            pValue += iChrootlen;
+        }
+
+        snprintf( achSocket, 128, "uds:/%s%s",
+                  ( iChrootlen) ? psChroot : "",
+                  pValue );
+    }
+
+    getConfig().setSocket( achSocket );
+    getConfig().setPriority( priority );
+    getConfig().setMaxConns( instances );
+    getConfig().setRetryTimeout( 0 );
+    getConfig().setBuffering( HEC_RESP_NOBUFFER );
+    getConfig().setTimeout( HttpServerConfig::getInstance().getConnTimeout() );
+    HttpGlobals::s_uidMin = ConfigCtx::getCurConfigCtx()->getLongValue( pNode1, "minUID", 10, INT_MAX, 10 );
+    HttpGlobals::s_gidMin = ConfigCtx::getCurConfigCtx()->getLongValue( pNode1, "minGID", 5, INT_MAX, 5 );
+    uid_t forcedGid = ConfigCtx::getCurConfigCtx()->getLongValue( pNode1, "forceGID", 0, INT_MAX, 0 );
+
+    if ( ( forcedGid > 0 ) && ( forcedGid < HttpGlobals::s_gidMin ) )
+    {
+        ConfigCtx::getCurConfigCtx()->log_warn( "\"Force GID\" is smaller than \"Minimum GID\", turn it off." );
+    }
+    else
+        HttpGlobals::s_ForceGid = forcedGid;
+
+    char achMIME[] = "application/x-httpd-cgi";
+    HttpGlobals::getMime()->addMimeHandler( "", achMIME,
+                                            HandlerFactory::getInstance( HandlerType::HT_CGI, NULL ), NULL,  LogIdTracker::getLogId() );
+
+
+    char achMIME_SSI[] = "application/x-httpd-shtml";
+    HttpGlobals::getMime()->addMimeHandler( "", achMIME_SSI,
+                                            HandlerFactory::getInstance( HandlerType::HT_SSI, NULL ), NULL,  LogIdTracker::getLogId() );
+
+    HttpGlobals::s_pidCgid = start( HttpGlobals::s_pServerRoot , psChroot,
+                             HttpGlobals::s_uid, HttpGlobals::s_gid, HttpGlobals::s_priority );
+    return HttpGlobals::s_pidCgid;
 }
 
 void CgidWorker::closeFdCgid()

@@ -43,8 +43,6 @@ int GString::allocate( int size )
         }
         else
         {
-            //throw bad_alloc();  //the old value is not changed
-            // or
             return -1;
         }
     }
@@ -69,8 +67,6 @@ int GString::reallocate( int size )
             }
             else
             {
-                //throw bad_alloc();  //the old value is not changed
-                // or
                 return -1;
             }
         }

@@ -19,13 +19,12 @@
 
 #include <edio/multiplexer.h>
 #include <http/connlimitctrl.h>
-#include <http/datetime.h>
+#include <util/datetime.h>
 #include <http/httpglobals.h>
 #include <http/httplog.h>
-#include <http/httpconnpool.h>
-#include <http/httpconnection.h>
-#include <http/ntwkiolinkpool.h>
-
+#include <http/httpsession.h>
+#include <http/httpresourcemanager.h>
+#include <http/httplistener.h>
 #include <spdy/spdyconnection.h>
 
 #include <socket/gsockaddr.h>
@@ -47,32 +46,122 @@
 #include <util/iovec.h>
 #include "util/ssnprintf.h"
 
+#include <netinet/tcp.h>
+
 #define IO_THROTTLE_READ    8
 #define IO_THROTTLE_WRITE   16
 #define IO_COUNTED          32
 
 //#define SPDY_PLAIN_DEV     
 
+
+#include <../addon/include/ls.h>
+#include <lsiapi/lsiapihooks.h>
+
+
 NtwkIOLink::NtwkIOLink()
+    : m_sessionHooks(0)
 {
+    m_hasBufferedData = 0;
+    m_pModuleConfig = NULL;
 }
+
 
 NtwkIOLink::~NtwkIOLink()
 {
+    LsiapiBridge::releaseModuleData( LSI_MODULE_DATA_L4, getModuleData());
 }
+
+int NtwkIOLink::writev( const struct iovec * vector, int len )
+{
+    int written = 0;
+    
+    if ( m_iHeaderToSend > 0 )
+    {
+        m_iov.append(vector, len);
+
+        written = writev_internal( m_iov.get(), m_iov.len());
+        if ( written >= m_iHeaderToSend )
+        {
+            m_iov.clear();
+            written -= m_iHeaderToSend;
+            m_iHeaderToSend = 0;
+        }
+        else
+        {
+            m_iov.pop_back(len);
+            if ( written > 0 )
+            {
+                m_iHeaderToSend -= written;
+                m_iov.finish( written );
+                return 0;
+            }
+        }
+    }
+    else
+        written = writev_internal( vector, len );
+    
+    return written;
+}
+
+int NtwkIOLink::writev_internal( const struct iovec * vector, int len )
+{
+    const LsiApiHooks *pWritevHooks = m_sessionHooks.get(LSI_HKPT_L4_SENDING);
+    if ( !pWritevHooks ||( pWritevHooks->size() == 0))
+        return (*m_pFpList->m_writev_fp)( (LsiSession *)this, (struct iovec *)vector, len );    
+    int ret;
+    lsi_cb_param_t param;
+    lsi_hook_info_t hookInfo;
+    param._session = (LsiSession *)this;
+
+    hookInfo._hooks = pWritevHooks;
+    hookInfo._termination_fp = (void*)m_pFpList->m_writev_fp;
+    param._cur_hook = (void *)pWritevHooks->begin();
+    param._hook_info = &hookInfo;
+    param._param1 = vector;
+    param._param1_len = len;
+    param._param2 = &m_hasBufferedData;
+    ret = (*(((LsiApiHook *)param._cur_hook)->_cb))( &param );
+    LOG_D (( "[NtwkIOLink::writev] ret %d hasData %d", ret, m_hasBufferedData ));
+    return ret;
+}
+
+int NtwkIOLink::read( char * pBuf, int size )
+{   
+    const LsiApiHooks *pReadHooks = m_sessionHooks.get(LSI_HKPT_L4_RECVING);
+    if ( !pReadHooks ||( pReadHooks->size() == 0))
+        return (*m_pFpList->m_read_fp)( this, pBuf, size );
+    
+    int ret;
+    lsi_cb_param_t param;
+    lsi_hook_info_t hookInfo;
+    param._session = (LsiSession *)this;
+
+    hookInfo._hooks = pReadHooks;
+    hookInfo._termination_fp = (void*)m_pFpList->m_read_fp;
+    param._cur_hook = (void *)((LsiApiHook *)pReadHooks->end() - 1);
+    param._hook_info = &hookInfo;
+    param._param1 = pBuf;
+    param._param1_len = size;
+    param._param2 = NULL;
+    ret = (*(((LsiApiHook *)param._cur_hook)->_cb))( &param );
+    LOG_D (( "[NtwkIOLink::read] read  %d", ret ));
+    return ret;
+}
+
 
 int NtwkIOLink::write( const char * pBuf, int size )
 {
     IOVec iov( pBuf, size );
-    return writev( iov, size );
+    return writev( iov.get(), iov.len() );
 }
 
 void NtwkIOLink::enableThrottle( int enable )
 {
     if ( enable )
-        s_pCur_fn_list_list = &NtwkIOLink::s_fn_list_list_throttle;
+        s_pCur_fp_list_list = &NtwkIOLink::s_fp_list_list_throttle;
     else
-        s_pCur_fn_list_list = &NtwkIOLink::s_fn_list_list_normal;
+        s_pCur_fp_list_list = &NtwkIOLink::s_fp_list_list_normal;
 }
 
 int NtwkIOLink::setupHandler( HiosProtocol verSpdy )
@@ -80,7 +169,7 @@ int NtwkIOLink::setupHandler( HiosProtocol verSpdy )
     HioStreamHandler * pHandler;
 #ifdef SPDY_PLAIN_DEV
     if ( !isSSL() && (verSpdy == HIOS_PROTO_HTTP) )
-        verSpdy = HIOS_PROTO_SPDY2;
+        verSpdy = HIOS_PROTO_SPDY3;
 #endif
     if ( verSpdy != HIOS_PROTO_HTTP )
     {
@@ -98,11 +187,11 @@ int NtwkIOLink::setupHandler( HiosProtocol verSpdy )
     }
     else
     {
-        HttpConnection * pConn = HttpConnPool::getConnection();
-        if ( !pConn )
+        HttpSession *pSession = HttpGlobals::getResManager()->getConnection();
+        if ( !pSession )
             return -1;
-        pConn->setNtwkIOLink( this );
-        pHandler = pConn;
+        pSession->setNtwkIOLink( this );
+        pHandler = pSession;
     }
 
     setProtocol( verSpdy );
@@ -113,14 +202,25 @@ int NtwkIOLink::setupHandler( HiosProtocol verSpdy )
     
 }
 
-int NtwkIOLink::setLink( int fd, ClientInfo * pInfo, SSLContext * pSSLContext )
+int NtwkIOLink::setLink(HttpListener *pListener,  int fd, ClientInfo * pInfo, SSLContext * pSSLContext )
 {
     HioStream::reset( DateTime::s_curTime );
     setfd( fd );
     m_pClientInfo = pInfo;
     setState( HIOS_CONNECTED );
     setHandler( NULL );
+    
+    assert(LSI_HKPT_L4_BEGINSESSION == 0);
+    assert(LSI_HKPT_L4_ENDSESSION == 1);
+    assert(LSI_HKPT_L4_RECVING == 2);
+    assert(LSI_HKPT_L4_SENDING == 3);
+    m_sessionHooks.inherit(pListener->getSessionHooks());
+    m_pModuleConfig = pListener->getModuleConfig();
+    if ( !m_sessionHooks.isDisabled(LSI_HKPT_L4_BEGINSESSION) ) 
+        m_sessionHooks.get(LSI_HKPT_L4_BEGINSESSION)->runNoParamFunctions((const LsiSession *)this);
+    
     memset( &m_iInProcess, 0, (char *)(&m_ssl + 1) - (char *)(&m_iInProcess) );
+    m_iov.clear();
     ++HttpGlobals::s_iIdleConns;
     m_tmToken = HttpGlobals::s_tmToken;
     if ( HttpGlobals::getMultiplexer()->add( this, POLLIN|POLLHUP|POLLERR ) == -1 )
@@ -205,28 +305,28 @@ int NtwkIOLink::handleEvents( short evt )
     m_iInProcess = 1;
     if ( event & POLLIN )
     {
-        (*m_pFnList->m_onRead_fn )( this );
+        (*m_pFpList->m_onRead_fp )( this );
     }
     if ( event & (POLLHUP | POLLERR ))
     {
         setFlag( HIO_FLAG_PEER_SHUTDOWN, 1 );
         m_iInProcess = 0;
-        doClose();
+        close();
         return 0;
     }
     if ( event & POLLOUT )
     {
-        (*m_pFnList->m_onWrite_fn)( this );
+        (*m_pFpList->m_onWrite_fp)( this );
     }
     m_iInProcess = 0;
     if ( getState() >= HIOS_CLOSING )
     {
-        doClose();
+        close();
     }
     return 0;
 }
 
-void NtwkIOLink::doClose()
+int NtwkIOLink::close()
 {
     if ( getHandler() )
     {
@@ -238,7 +338,7 @@ void NtwkIOLink::doClose()
         else 
             getHandler()->onCloseEx();
     }
-    close();
+    return (*m_pFpList->m_close_fp)( this );
 }
 
 void NtwkIOLink::suspendRead()
@@ -267,16 +367,20 @@ void NtwkIOLink::suspendWrite()
     if ( D_ENABLED( DL_LESS ))
         LOG_D(( getLogger(), "[%s] NtwkIOLink::suspendWrite()...", getLogId() ));
     setFlag( HIO_FLAG_WANT_WRITE, 0 );
-    if ( !(( isSSL() )&&( m_ssl.wantWrite())) )
+    if ( !(( isSSL() )&&( m_ssl.wantWrite())) && m_hasBufferedData == 0 )
+    {
         HttpGlobals::getMultiplexer()->suspendWrite(this);
+        if ( D_ENABLED( DL_LESS ))
+            LOG_D(( getLogger(), "[%s] write suspended", getLogId() ));
+    }
 }
 
 void NtwkIOLink::continueWrite()
 {
     if ( D_ENABLED( DL_LESS ))
         LOG_D(( getLogger(), "[%s] NtwkIOLink::continueWrite()...", getLogId() ));
-    if( getFlag( HIO_FLAG_WANT_WRITE ) )
-        return;
+    //if( getFlag( HIO_FLAG_WANT_WRITE ) )
+    //    return;
     setFlag( HIO_FLAG_WANT_WRITE, 1 );
     if ( allowWrite() )
     {
@@ -338,11 +442,12 @@ void NtwkIOLink::checkSSLReadRet( int ret )
         setState( HIOS_CLOSING );
 }
 
-int NtwkIOLink::readExSSL( NtwkIOLink* pThis, char * pBuf, int size )
+int NtwkIOLink::readExSSL( LsiSession* pIS, char * pBuf, int size )
 {
+    NtwkIOLink *pThis = static_cast<NtwkIOLink *>( pIS );
     int ret;
     assert( pBuf );
-    ret = pThis->m_ssl.read( pBuf, size );
+    ret = pThis->getSSL()->read(pBuf, size);
     pThis->checkSSLReadRet( ret );
     //DEBUG CODE:
 //    if ( ret > 0 )
@@ -350,12 +455,12 @@ int NtwkIOLink::readExSSL( NtwkIOLink* pThis, char * pBuf, int size )
     return ret;
 }
 
-int NtwkIOLink::writevExSSL( NtwkIOLink * pThis, IOVec &vector, int total )
+int NtwkIOLink::writevExSSL( LsiSession* pOS, const iovec *vector, int count )
 {
+    NtwkIOLink * pThis = static_cast<NtwkIOLink *>(pOS);
     int ret = 0;
 
-    const struct iovec * vect = vector.get();
-    const struct iovec * pEnd = vect + vector.len();
+    const struct iovec * vect;
     const char * pBuf;
     int bufSize;
     int written;
@@ -365,8 +470,9 @@ int NtwkIOLink::writevExSSL( NtwkIOLink * pThis, IOVec &vector, int total )
     char achBuf[4096];
     pBufEnd = achBuf + 4096;
     pCurEnd = achBuf;
-    for( ; vect < pEnd ;  )
+    for( int i=0; i < count ;  )
     {
+        vect = &vector[i];
         pBuf =( const char *) vect->iov_base;
         bufSize = vect->iov_len;
         if ( bufSize < 1024 )
@@ -375,8 +481,8 @@ int NtwkIOLink::writevExSSL( NtwkIOLink * pThis, IOVec &vector, int total )
             {
                 memmove( pCurEnd, pBuf, bufSize );
                 pCurEnd += bufSize;
-                ++vect;
-                if ( vect < pEnd )
+                ++i;
+                if ( i < count )
                     continue;
             }
             pBuf = achBuf;
@@ -390,8 +496,8 @@ int NtwkIOLink::writevExSSL( NtwkIOLink * pThis, IOVec &vector, int total )
             pCurEnd = achBuf;
         }
         else
-            ++vect;
-        written = pThis->m_ssl.write( pBuf, bufSize );
+            ++i;
+        written = pThis->getSSL()->write( pBuf, bufSize );
         if ( written > 0 )
         {
             pThis->bytesSent( written );
@@ -449,8 +555,22 @@ int NtwkIOLink::flush()
 {
     if ( D_ENABLED( DL_LESS ))
         LOG_D(( getLogger(), "[%s] NtwkIOLink::flush...", getLogId() ));
+                
+    
+//     int nodelay = 1;
+//     ::setsockopt( getfd(), IPPROTO_TCP, TCP_NODELAY, &nodelay, sizeof( int ) );
+    
+    if ( m_hasBufferedData || (m_iHeaderToSend > 0 ) )
+    {
+        if ( D_ENABLED( DL_LESS ))
+            LOG_D(( getLogger(), "[%s] NtwkIOLink::flush buffered data ...", getLogId() ));
+        write("", 0);
+        return 0;
+    }
+    
     if ( !isSSL() )
         return 0;
+    
     int ret;
     switch( ( ret = getSSL()->flush() ))
     {
@@ -557,8 +677,12 @@ void NtwkIOLink::closeSocket()
         return;
     if ( D_ENABLED( DL_LESS ))
         LOG_D(( getLogger(), "[%s] Close socket ...", getLogId() ));
+    
+    if ( !m_sessionHooks.isDisabled( LSI_HKPT_L4_ENDSESSION) ) 
+        m_sessionHooks.get(LSI_HKPT_L4_ENDSESSION)->runNoParamFunctions((const LsiSession *)this);
+    
     HttpGlobals::getMultiplexer()->remove( this );
-    if ( m_pFnList == s_pCur_fn_list_list->m_pSSL )
+    if ( m_pFpList == s_pCur_fp_list_list->m_pSSL )
     {
         m_ssl.release();
         HttpGlobals::getConnLimitCtrl()->decSSLConn();
@@ -584,7 +708,7 @@ void NtwkIOLink::closeSocket()
     //recycle itself.
     if ( D_ENABLED( DL_LESS ))
         LOG_D(( getLogger(), "[%s] Recycle NtwkIoLink", getLogId() ));
-    NtwkIoLinkPool::recycle( this );
+    HttpGlobals::getResManager()->recycle( this );
 }
 
 int NtwkIOLink::onRead( NtwkIOLink * pThis )
@@ -606,16 +730,23 @@ static int matchToken( int token )
         return (( token > HttpGlobals::s_tmPrevToken )||( token <= HttpGlobals::s_tmToken ));
 }
 
+void NtwkIOLink::onTimer()
+{
+    if ( matchToken( this->m_tmToken ) )
+    { 
+        if ( this->hasBufferedData() && this->allowWrite() )
+            this->flush();
+    
+        (*m_pFpList->m_onTimer_fp)( this );
+    }
+}
 
 void NtwkIOLink::onTimer_( NtwkIOLink * pThis )
 {
-    if ( matchToken( pThis->m_tmToken ) )
-    {
-        if ( pThis->detectClose() )
-            return;
-        if (pThis->getHandler())
-            pThis->getHandler()->onTimerEx();
-    }
+    if ( pThis->detectClose() )
+        return;
+    if (pThis->getHandler())
+        pThis->getHandler()->onTimerEx();
 }
 
 int NtwkIOLink::checkReadRet( int ret, int size )
@@ -676,8 +807,9 @@ int NtwkIOLink::checkReadRet( int ret, int size )
 
 }
 
-int NtwkIOLink::readEx( NtwkIOLink* pThis, char * pBuf, int size )
+int NtwkIOLink::readEx( LsiSession* pIS, char * pBuf, int size )
 {
+    NtwkIOLink *pThis = static_cast<NtwkIOLink *>( pIS );
     int ret;
     assert( pBuf );
     ret = ::read( pThis->getfd(), pBuf, size );
@@ -691,118 +823,47 @@ int NtwkIOLink::readEx( NtwkIOLink* pThis, char * pBuf, int size )
 
 #include <util/gsendfile.h>
 
-#if defined(__FreeBSD__ ) || defined(__NetBSD__) || defined(__OpenBSD__) 
-
-#include <sys/uio.h>
-int NtwkIOLink::sendfileEx( IOVec &vector, int headerTotal, int fdSrc, off_t off, size_t size )
+int NtwkIOLink::sendfile( int fdSrc, off_t off, size_t size )
 {
-    struct sf_hdtr hdtr;
-    struct sf_hdtr * pHeader;
-    
-    if ( headerTotal )
+    int ret;
+    const LsiApiHooks *pWritevHooks = m_sessionHooks.get( LSI_HKPT_L4_SENDING );
+    if ( !pWritevHooks ||( pWritevHooks->size() == 0))
+        return sendfileEx( fdSrc, off, size );
+  
+    char buf[8192];
+    off_t curOff = off;
+    while( size > 0 )
     {
-        memset( &hdtr, 0, sizeof( hdtr ) );
-        hdtr.headers = (struct iovec *)vector.get();
-        hdtr.hdr_cnt = vector.len();
-        pHeader = &hdtr;
-    }
-    else
-    {
-        pHeader = NULL;
-    }
-    off_t written;
-    size = (size & ((1<<30)-1)) - headerTotal;
-    headerTotal += size;
-    int ret = ::sendfile( fdSrc, getfd(), off, size, pHeader, &written, 0 );
-    if ( D_ENABLED( DL_MORE ))
-        LOG_D(( "[%s] sendfile() ret: %d, written: %ul", getLogId(), ret, written ));
-    if ( written > 0 )
-        ret = written;
-    return checkWriteRet( ret, headerTotal );
-}
-
-#endif
-
-#if defined(sun) || defined(__sun)
-
-int NtwkIOLink::sendfileEx( IOVec &vector, int headerTotal, int fdSrc, off_t off, size_t size )
-{
-   
-    int n = 0 ;
-    IOVec::iterator iter;
-    sendfilevec_t vec[20];
-    size = (size & ((1<<30)-1)) - headerTotal;
-    if ( headerTotal )
-    {
-        for( iter = vector.begin(); iter < vector.end(); ++iter )
+        int blockSize = sizeof( buf );
+        if ( blockSize > size )
+            blockSize = size;
+        ret = ::pread( fdSrc, buf, blockSize, curOff );
+        if ( ret <= 0 )
+            break;
+        IOVec iovTmp( buf, ret );
+        ret = writev( iovTmp.get(), iovTmp.len() );
+        if ( ret > 0 )
         {
-            vec[n].sfv_fd   = SFV_FD_SELF;
-            vec[n].sfv_flag = 0;
-            vec[n].sfv_off  = (off_t)iter->iov_base;
-            vec[n].sfv_len  = iter->iov_len;
-            ++n;
+            size -= ret;
+            curOff += ret;
         }
+        if ( ret < blockSize )
+            break;
     }
-    
-    vec[n].sfv_fd   = fdSrc;
-    vec[n].sfv_flag = 0;
-    vec[n].sfv_off  = off;
-    vec[n].sfv_len  = size;
-    ++n;
-
-    size_t written;
-    headerTotal += size;
-    //if ( D_ENABLED( DL_MORE ))
-    //    LOG_D(( "[%s] sendfilev() to sent %d bytes", getLogId(), headerTotal ));
-    int ret = ::sendfilev( getfd(), vec, n, &written );
-    //if ( D_ENABLED( DL_MORE ))
-    //    LOG_D(( "[%s] sendfilev() ret: %d, written: %ul", getLogId(), ret, written ));
-    if (( !ret )||( errno = EAGAIN ))
-        ret = written;
-    return checkWriteRet( ret, headerTotal );
+    return curOff - off; 
 }
 
-#endif
-
-#if defined(linux) || defined(__linux) || defined(__linux__) || \
-    defined(macintosh) || defined(__APPLE__) || defined(__APPLE_CC__)||\
-    defined(__gnu_linux__)||defined(HPUX) ||\
-    defined(sun) || defined(__sun)
-
-int NtwkIOLink::sendfile( IOVec &iov, int &headerTotal, int fdSrc, off_t off, size_t size )
+int NtwkIOLink::sendfileEx( int fdSrc, off_t off, size_t size )
 {
+    if ( m_iHeaderToSend > 0 )
+    {    
+        writev(NULL, 0);
+        if ( m_iHeaderToSend > 0 )
+            return 0;
+    }
     int len = 0;
     int written;
     ThrottleControl * pCtrl = getThrottleCtrl();
-    if ( headerTotal > 0 )
-    {
-        if ( pCtrl )
-        {
-            len = writevExT( this, iov, headerTotal );
-            if ( len <= 0 )
-                return len;
-        }
-        else
-        {
-            len = ::writev( getfd(), iov.get(), iov.len() );
-            if ( len <= 0 )
-                return checkWriteRet( len, headerTotal );
-            HttpGlobals::s_lBytesWritten += len;
-            setActiveTime( DateTime::s_curTime );
-        }
-        if ( len >= headerTotal )
-        {
-            iov.clear();
-            headerTotal = 0;
-        }
-        else
-        {
-            resetRevent( POLLOUT );
-            headerTotal -= len;
-            iov.finish( len );
-            return 0;
-        }
-    }
     
     if ( pCtrl )
     {
@@ -825,7 +886,7 @@ int NtwkIOLink::sendfile( IOVec &iov, int &headerTotal, int fdSrc, off_t off, si
         errno = EPIPE;
     }
 #endif
-    len = checkWriteRet( written, size );
+    len = checkWriteRet( written );
     if ( pCtrl )
     {
         int Quota = pCtrl->getOSQuota();
@@ -843,77 +904,17 @@ int NtwkIOLink::sendfile( IOVec &iov, int &headerTotal, int fdSrc, off_t off, si
 }
 
 
-#else
-
-int NtwkIOLink::sendfile( IOVec &iov, int &headerTotal, int fdSrc, off_t off, size_t size )
-{
-    int len = 0;
-    ThrottleControl * pCtrl = getThrottleCtrl();
-
-    if ( pCtrl )
-    {
-        int Quota = pCtrl->getOSQuota();
-        Quota += Quota >> 3;
-        if ( size + headerTotal > (unsigned int )Quota  )
-        {
-            if ( headerTotal > Quota )
-                len = 1;
-            else
-                size = Quota - headerTotal;
-        }
-    }
-    if ( len )
-    {
-        len = writevExT( this, iov, headerTotal );
-        if ( len <= 0 )
-            return len;
-    }
-    else
-    {
-        len = sendfileEx( iov, headerTotal, fdSrc, off, size );
-        if ( len <= 0 )
-            return len;
-        if ( pCtrl )
-        {
-            int Quota = pCtrl->getOSQuota();
-            if (Quota - len < 10 )
-            {
-                pCtrl->useOSQuota( Quota );
-                HttpGlobals::getMultiplexer()->suspendWrite( this );
-            }
-            else
-            {
-                pCtrl->useOSQuota( len );
-            }
-        }
-    }
-    if ( headerTotal > 0 )
-    {
-        if ( len >= headerTotal )
-        {
-            iov.clear();
-            len -= headerTotal;
-            headerTotal = 0;
-        }
-        else
-        {
-            headerTotal -= len;
-            iov.finish( len );
-            return 0;
-        }
-    }
-    return len;
-}
-
-#endif
-
 #endif 
 
 
-int NtwkIOLink::writevEx( NtwkIOLink * pThis, IOVec &vector, int total )
+int NtwkIOLink::writevEx( LsiSession* pOS, const iovec *vector, int count )
 {
-    int len = ::writev( pThis->getfd(), vector.get(), vector.len() );
-    len = pThis->checkWriteRet( len, total );
+    NtwkIOLink * pThis = static_cast<NtwkIOLink *>(pOS);
+    int len = ::writev( pThis->getfd(), vector, count );
+    len = pThis->checkWriteRet( len );
+    //if (pThis->wantWrite() && pThis->m_hasBufferedData)
+    //    HttpGlobals::getMultiplexer()->continueWrite( pThis );
+    
     //FIXME: debug code
 //    if ( len > 0 )
 //    {
@@ -934,19 +935,19 @@ int NtwkIOLink::writevEx( NtwkIOLink * pThis, IOVec &vector, int total )
 }
 
 
-int NtwkIOLink::sendHeaders( IOVec &vector, int headerCount )
+int NtwkIOLink::sendRespHeaders( HttpRespHeaders * pHeader )
 {
-    assert( "Should not be called." == NULL );
-    return -1;
+    if ( pHeader )
+    {
+        pHeader->outputNonSpdyHeaders(&m_iov);
+        m_iHeaderToSend = pHeader->getTotalLen();
+    }
+    return 0;
 }
 
 
-int NtwkIOLink::checkWriteRet( int len, int size )
+int NtwkIOLink::checkWriteRet( int len )
 {
-    if ( len < size )
-        resetRevent( POLLOUT );
-    else
-        setRevent( POLLOUT );
     if ( len > 0 )
     {
         bytesSent( len );
@@ -967,8 +968,11 @@ int NtwkIOLink::checkWriteRet( int len, int size )
         default:
             if ( getState() != HIOS_SHUTDOWN )
             {
-                setState( HIOS_CLOSING );
-                setFlag( HIO_FLAG_ABORT, 1 );
+                if ( m_hasBufferedData == 0 )
+                {
+                    setState( HIOS_CLOSING );
+                    setFlag( HIO_FLAG_ABORT, 1 );
+                }
             }
             if ( D_ENABLED( DL_LESS ))
                 LOG_D(( getLogger(), "[%s] write error: %s\n",
@@ -992,13 +996,14 @@ int NtwkIOLink::detectClose()
     {
         char ch;
         if ( ( getClientInfo()->getAccess() == AC_BLOCK ) ||
-             (::recv( getfd(), &ch, 1, MSG_PEEK ) == 0 ) )
+             (( DateTime::s_curTime - getActiveTime() > 10 )&&
+             (::recv( getfd(), &ch, 1, MSG_PEEK ) == 0 ) ))
         {
             if ( D_ENABLED( DL_LESS ))
                 LOG_D(( getLogger(), "[%s] peer connection close detected!\n", getLogId() ));
             //have the connection closed faster
             setFlag( HIO_FLAG_PEER_SHUTDOWN, 1 );
-            doClose();
+            close();
             return 1;
         }
     }
@@ -1040,41 +1045,44 @@ void NtwkIOLink::dumpState(const char * pFuncName, const char * action)
 
 void NtwkIOLink::onTimer_T( NtwkIOLink * pThis )
 {
-    if ( matchToken( pThis->m_tmToken ) )
-    {
-//        if ( D_ENABLED( DL_MORE ))
-//            LOG_D(( pThis->getLogger(),  "[%s] conn token:%d, global Token: %d\n",
+//    if ( D_ENABLED( DL_MORE ))
+//        LOG_D(( pThis->getLogger(),  "[%s] conn token:%d, global Token: %d\n",
 //                    pThis->getLogId(), pThis->m_tmToken, HttpGlobals::s_tmToken ));
-        if ( pThis->detectClose() )
-            return;
-//            if ( D_ENABLED( DL_MORE ))
-//                LOG_D(( pThis->getLogger(),  "[%s] output avail:%d. state: %d \n",
-//                        pThis->getLogId(),
-//                        pThis->getClientInfo()->getThrottleCtrl().getOSQuota(),
-//                        pThis->getState() ));
-        if ( pThis->allowWrite() && pThis->isWantWrite() )
-        {
-            //pThis->doWrite();
-            //if (  pThis->allowWrite() && pThis->wantWrite() )
-            pThis->dumpState( "onTimer_T", "CW" );
-            HttpGlobals::getMultiplexer()->continueWrite( pThis );
-        }
-        if ( pThis->allowRead() && pThis->isWantRead() )
-        {
-            //if ( pThis->getState() != HCS_WAITING )
-            //    pThis->doReadT();
-            //if ( pThis->allowRead() && pThis->wantRead() )
-            pThis->dumpState( "onTimer_T", "CR" );
-                HttpGlobals::getMultiplexer()->continueRead( pThis );
-        }
-        if ( pThis->getHandler() )
-            pThis->getHandler()->onTimerEx();
+    if ( pThis->detectClose() )
+        return;
+//        if ( D_ENABLED( DL_MORE ))
+//            LOG_D(( pThis->getLogger(),  "[%s] output avail:%d. state: %d \n",
+//                    pThis->getLogId(),
+//                    pThis->getClientInfo()->getThrottleCtrl().getOSQuota(),
+//                    pThis->getState() ));
+        
+    if ( pThis->hasBufferedData() && pThis->allowWrite() )
+        pThis->flush();
+    
+    if ( pThis->allowWrite() && pThis->isWantWrite() )
+    {
+        //pThis->doWrite();
+        //if (  pThis->allowWrite() && pThis->wantWrite() )
+        pThis->dumpState( "onTimer_T", "CW" );
+        HttpGlobals::getMultiplexer()->continueWrite( pThis );
     }
+    if ( pThis->allowRead() && pThis->isWantRead() )
+    {
+        //if ( pThis->getState() != HSS_WAITING )
+        //    pThis->doReadT();
+        //if ( pThis->allowRead() && pThis->wantRead() )
+        pThis->dumpState( "onTimer_T", "CR" );
+            HttpGlobals::getMultiplexer()->continueRead( pThis );
+    }
+    if ( pThis->getHandler() )
+        pThis->getHandler()->onTimerEx();
+
 }
 
 
-int NtwkIOLink::readExT( NtwkIOLink* pThis, char * pBuf, int size )
+int NtwkIOLink::readExT( LsiSession* pIS, char * pBuf, int size )
 {
+    NtwkIOLink *pThis = static_cast<NtwkIOLink *>( pIS );
     ThrottleControl * pTC = pThis->getThrottleCtrl();
     int iQuota = pTC->getISQuota();
     if ( iQuota <= 0 )
@@ -1103,8 +1111,9 @@ int NtwkIOLink::readExT( NtwkIOLink* pThis, char * pBuf, int size )
 
 
 
-int NtwkIOLink::writevExT( NtwkIOLink * pThis, IOVec &vector, int total )
+int NtwkIOLink::writevExT( LsiSession * pOS, const iovec *vector, int count )
 {
+    NtwkIOLink * pThis = static_cast<NtwkIOLink *>(pOS);
     int len = 0;
     ThrottleControl * pCtrl = pThis->getThrottleCtrl();
     int Quota = pCtrl->getOSQuota();
@@ -1114,18 +1123,25 @@ int NtwkIOLink::writevExT( NtwkIOLink * pThis, IOVec &vector, int total )
         HttpGlobals::getMultiplexer()->suspendWrite( pThis );
         return 0;
     }
+    
+    int total = 0;
+    for (int i=0; i<count; ++i)
+        total += vector[i].iov_len;
+    
 //    if ( D_ENABLED( DL_LESS ))
 //        LOG_D(( pThis->getLogger(),  "[%s] Quota:%d, to write: %d\n",
 //                    pThis->getLogId(), Quota, total ));
     if ( (unsigned int)total > (unsigned int )Quota + ( Quota >> 3) )
     {
-        IOVec iov( vector );
+        IOVec iov;
+        iov.append(vector, count);
         total = iov.shrinkTo( Quota, Quota >> 3 );
-        len = ::writev( pThis->getfd(), iov.get(), iov.len() );
+        len = ::writev( pThis->getfd(), iov.begin(), iov.len() );
     }
     else
-        len = ::writev( pThis->getfd(), vector.get(), vector.len() );
-    len = pThis->checkWriteRet( len, total );
+        len = ::writev( pThis->getfd(), vector, count );
+    
+    len = pThis->checkWriteRet( len );
     if (Quota - len < 10 )
     {
         pCtrl->useOSQuota(  Quota );
@@ -1162,34 +1178,31 @@ int NtwkIOLink::writevExT( NtwkIOLink * pThis, IOVec &vector, int total )
 
 void NtwkIOLink::onTimerSSL_T( NtwkIOLink * pThis )
 {
-    if ( matchToken( pThis->m_tmToken ) )
+    if ( pThis->detectClose() )
+        return;
+    if ( pThis->allowWrite() && ( pThis->m_ssl.wantWrite() ))
+        onWriteSSL_T( pThis );
+    if ( pThis->allowRead() && ( pThis->m_ssl.wantRead() ))
+        onReadSSL_T( pThis );
+    if ( pThis->allowWrite() && pThis->isWantWrite() )
     {
-        if ( pThis->detectClose() )
-            return;
-        if ( pThis->allowWrite() && ( pThis->m_ssl.wantWrite() ))
-            onWriteSSL_T( pThis );
-        if ( pThis->allowRead() && ( pThis->m_ssl.wantRead() ))
-            onReadSSL_T( pThis );
-        if ( pThis->allowWrite() && pThis->isWantWrite() )
+        pThis->doWrite();
+        if (  pThis->allowWrite() && pThis->isWantWrite() )
         {
-            pThis->doWrite();
-            if (  pThis->allowWrite() && pThis->isWantWrite() )
-            {
-                pThis->dumpState( "onTimerSSL_T", "CW" );
-                HttpGlobals::getMultiplexer()->continueWrite( pThis );
-            }
+            pThis->dumpState( "onTimerSSL_T", "CW" );
+            HttpGlobals::getMultiplexer()->continueWrite( pThis );
         }
-        if ( pThis->allowRead() && pThis->isWantRead() )
-        {
-            //if ( pThis->getState() != HCS_WAITING )
-            //    pThis->doReadT();
-            //if ( pThis->allowRead() && pThis->wantRead() )
-                pThis->dumpState( "onTimerSSL_T", "CR" );
-                HttpGlobals::getMultiplexer()->continueRead( pThis );
-        }
-        if ( pThis->getHandler() )
-            pThis->getHandler()->onTimerEx();
     }
+    if ( pThis->allowRead() && pThis->isWantRead() )
+    {
+        //if ( pThis->getState() != HSS_WAITING )
+        //    pThis->doReadT();
+        //if ( pThis->allowRead() && pThis->wantRead() )
+            pThis->dumpState( "onTimerSSL_T", "CR" );
+            HttpGlobals::getMultiplexer()->continueRead( pThis );
+    }
+    if ( pThis->getHandler() )
+        pThis->getHandler()->onTimerEx();
 }
 
 
@@ -1328,15 +1341,16 @@ int NtwkIOLink::SSLAgain()
         setSSLAgain();
         break;
     case -1:
-        doClose();
+        close();
         break;
     }
     return ret;
 
 }
 
-int NtwkIOLink::readExSSL_T( NtwkIOLink* pThis, char * pBuf, int size )
+int NtwkIOLink::readExSSL_T( LsiSession* pIS, char * pBuf, int size )
 {
+    NtwkIOLink *pThis = static_cast<NtwkIOLink *>( pIS );
     ThrottleControl * pTC = pThis->getThrottleCtrl();
     int iQuota = pTC->getISQuota();
     if ( iQuota <= 0 )
@@ -1347,7 +1361,7 @@ int NtwkIOLink::readExSSL_T( NtwkIOLink* pThis, char * pBuf, int size )
     if ( size > iQuota )
         size = iQuota;
     pThis->m_iPeerShutdown &= ~IO_THROTTLE_READ;
-    int ret = pThis->m_ssl.read( pBuf, size );
+    int ret = pThis->getSSL()->read(pBuf, size);
     pThis->checkSSLReadRet( ret );
     if ( ret > 0 )
     {
@@ -1363,8 +1377,9 @@ int NtwkIOLink::readExSSL_T( NtwkIOLink* pThis, char * pBuf, int size )
 }
 
 
-int NtwkIOLink::writevExSSL_T( NtwkIOLink * pThis, IOVec &vector, int total )
+int NtwkIOLink::writevExSSL_T( LsiSession * pOS, const iovec *vector, int count )
 {
+    NtwkIOLink * pThis = static_cast<NtwkIOLink *>(pOS);
     ThrottleControl * pCtrl = pThis->getThrottleCtrl();
     int Quota = pCtrl->getOSQuota();
     if ( Quota <= pThis->m_iSslLastWrite / 2 )
@@ -1374,8 +1389,8 @@ int NtwkIOLink::writevExSSL_T( NtwkIOLink * pThis, IOVec &vector, int total )
     }
     unsigned int allowed = (unsigned int)Quota + ( Quota >> 3);
     int ret = 0;
-    const struct iovec * vect = vector.get();
-    const struct iovec * pEnd = vect + vector.len();
+    const struct iovec * vect = vector;
+    const struct iovec * pEnd = vector + count;
     
     //Make OpenSSL happy, not to retry with smaller buffer
     if ( Quota < pThis->m_iSslLastWrite )
@@ -1387,7 +1402,7 @@ int NtwkIOLink::writevExSSL_T( NtwkIOLink * pThis, IOVec &vector, int total )
     char achBuf[4096];
     pBufEnd = achBuf + 4096;
     pCurEnd = achBuf;
-    for( ; ret < Quota && vect < pEnd ;  )
+    for( ; ret < Quota && vect < pEnd;  )
     {
         const char * pBuf =( const char *) vect->iov_base;
         int bufSize;
@@ -1423,7 +1438,7 @@ int NtwkIOLink::writevExSSL_T( NtwkIOLink * pThis, IOVec &vector, int total )
         }
         else
             ++vect;
-        int written = pThis->m_ssl.write( pBuf, bufSize );
+        int written = pThis->getSSL()->write( pBuf, bufSize );
         if ( D_ENABLED( DL_MORE ))
             LOG_D(( "[%s] to write %d bytes, written %d bytes",
                 pThis->getLogId(), bufSize, written ));
@@ -1512,3 +1527,5 @@ const char * NtwkIOLink::buildLogId()
 
     return id.c_str();
 }
+
+

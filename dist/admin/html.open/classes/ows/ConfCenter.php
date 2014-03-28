@@ -2,30 +2,30 @@
 
 class ConfCenter
 {
-	var $_confType; //'serv','admin'
-	var $_serv;
-	var $_curOne; //vh or tp
-	
-	var $_info;
+	public $_confType; //'serv','admin'
+	public $_serv;
+	public $_curOne; //vh or tp
+
+	public $_info;
 	private $_disp;
 	private $_validator;
-	
+
 	private static $_instance = NULL;
-	
+
 	// prevent an object from being constructed
 	private function __construct() {}
-	
+
 	public static function singleton() {
 
 		if (!isset(self::$_instance)) {
 			$c = __CLASS__;
 			self::$_instance = new $c;
-			self::$_instance->init(); 
+			self::$_instance->init();
 		}
 
 		return self::$_instance;
 	}
-	
+
 	private function init()
 	{
 		$mid = DUtil::grab_input("request",'m');
@@ -46,7 +46,7 @@ class ConfCenter
 		if ($this->_validator == NULL)
 			$this->_validator = new ConfValidation();
 		return $this->_validator;
-	} 
+	}
 
 	public function GetDispInfo()
 	{
@@ -78,10 +78,10 @@ class ConfCenter
 				if (isset($tp['member'])) {
 					$vhnames = array_merge($vhnames, array_keys($tp['member']));
 				}
-				
+
 			}
 		}
-		
+
 		$data['vhost'] = $vhnames;
 		$data['serv'] = $this->_serv->_id;
 		$data['servLog'] = $this->getAbsFile($this->_serv->_data['general']['log']['fileName']->GetVal(), 'SR');
@@ -96,7 +96,7 @@ class ConfCenter
 		else
 			return NULL;
 	}
-	
+
 	public function GetHttpdWorkerNum()
 	{
 		$worker = 1;
@@ -104,7 +104,7 @@ class ConfCenter
 			$worker = $this->_serv->_data['general']['httpdWorkers']->GetVal();
 		return $worker;
 	}
-	
+
 	private function setSessionTimeout()
 	{
 		$timeout = 600;
@@ -133,7 +133,7 @@ class ConfCenter
 		$path = NULL;
 		if ( $type == 'serv') {
 			$path = $_SERVER['LS_SERVER_ROOT'] . "conf/httpd_config.xml" ; //fixed location
-		} 
+		}
 		elseif ( $type == 'admin') {
 			$servconf = $this->GetConfFilePath('serv');
 			$adminRoot = ConfigFileEx::grepTagValue($servconf, 'adminRoot');
@@ -151,7 +151,7 @@ class ConfCenter
 		}
 		elseif ( $type == 'vh' ) {
 			$path = $this->getAbsFile($this->_serv->_data['vhTop'][$name]['configFile']->GetVal(), 'VR', $name);
-		} 
+		}
 		else {
 			$path = $this->getAbsFile($this->_serv->_data['tpTop'][$name]['templateFile']->GetVal(), 'SR', $name);
 		}
@@ -183,28 +183,28 @@ class ConfCenter
 			$this->_disp->init($this->_serv->_id);
 		}
 		$this->genMenuInfo();
-		
+
 		if ( $this->_disp->_type == 'vh' || $this->_disp->_type == 'tp')
 		{
 			$vhpath = $this->GetConfFilePath($this->_disp->_type, $this->_disp->_name);
 			$this->_curOne = new ConfData($this->_disp->_type, $vhpath, $this->_disp->_name);
 			$res = $config->load($this->_curOne, $err);
-	
+
 			if ( !$res )
 			{
 				$this->_info['CONF_FILE_ERR'] = $err;
 				return false;
 			}
-	
+
 			if ( $this->_disp->_type == 'vh' )
 			{
 				$this->_info['VH_NAME'] = $this->_disp->_name;
-				$this->getAbsFile('$VH_ROOT/', 'VR', $this->_disp->_name); //set $this->_info['VH_ROOT'] 
+				$this->getAbsFile('$VH_ROOT/', 'VR', $this->_disp->_name); //set $this->_info['VH_ROOT']
 				$this->getAbsFile('$DOC_ROOT/', 'DR', $this->_disp->_name); // set $this->_info['DOC_ROOT']
 			}
-				
+
 		}
-		
+
 		$this->loadSpecial();
 		$viewActions = array('C');
 		if ( !in_array($this->_disp->_act,  $viewActions)) {
@@ -273,7 +273,7 @@ class ConfCenter
 
 				$filename = $vhroot . substr($filename, 9);
 			}
-			elseif ( $type == 'DR' 
+			elseif ( $type == 'DR'
 					 && (strncasecmp('$DOC_ROOT', $filename, 9) == 0) )
 			{
 				if ( !isset($this->_info['DOC_ROOT']) )
@@ -313,7 +313,7 @@ class ConfCenter
 		$oldRef = $cur_ref;
 		$newRef = NULL;
 
-		
+
 		if ( $tbl->_holderIndex != NULL )
 		{
 			$newRef = $extractData[$tbl->_holderIndex]->GetVal();
@@ -325,7 +325,7 @@ class ConfCenter
 			$cur_ref = $newRef;
 			$data = &$data[$cur_ref];
 		}
-		
+
 		if ( isset($tbl->_defaultExtract) )
 		{
 			foreach( $tbl->_defaultExtract as $k => $v )
@@ -341,7 +341,7 @@ class ConfCenter
 		foreach ( $index as $i )
 		{
 			$attr = &$tbl->_dattrs[$i];
-			if ( $attr == NULL || $attr->bypassSavePost()) 
+			if ( $attr == NULL || $attr->bypassSavePost())
 				continue;
 			$data[$attr->_key] = $extractData[$attr->_key];
 		}
@@ -375,7 +375,7 @@ class ConfCenter
 			$ref = DUtil::getLastId($ref);
 			$res = ConfigFileEx::saveUserDB($this->_info['UDB_FILE'],
 									   $this->_curOne->_data['UDB'][$ref]);
-			$restart_required = FALSE;								
+			$restart_required = FALSE;
 		}
 		elseif ( $tid == 'VH_GDB' )
 		{
@@ -389,11 +389,11 @@ class ConfCenter
 		{
 			$file = $_SERVER['LS_SERVER_ROOT'] . 'admin/conf/htpasswd';
 			$res = ConfigFileEx::saveUserDB($file, $this->_serv->_data['ADM']);
-			$restart_required = FALSE;								
+			$restart_required = FALSE;
 		}
 		elseif ( $type == 'serv' || $type == 'sltop' || $type == 'sl'
 				  || $type == 'vhtop' || $type == 'tptop'
-				  || ($type == 'tp' && ($tid == 'TP_MEMBER' || $tid == 'TP')) 
+				  || ($type == 'tp' && ($tid == 'TP_MEMBER' || $tid == 'TP'))
 				  || ($type == 'vh' && stristr($tid,'VH_BASE')))
 		{
 			$res = $config->save($this->_serv);
@@ -435,6 +435,7 @@ class ConfCenter
 	private function refreshInfo()
 	{
 		$handler = array();
+		$servmodules = array();
 
 		if ( isset($this->_serv->_data['ext']) ) {
 			foreach( $this->_serv->_data['ext'] as $name=>$e ) {
@@ -442,13 +443,21 @@ class ConfCenter
 			}
 		}
 		$handler['cgi']['cgi'] = 'CGI Daemon';
-		
+
+		if ( isset($this->_serv->_data['module']) ) {
+			foreach( $this->_serv->_data['module'] as $name=>$m ) {
+				$servmodules[$name] = $name;
+				$handler['module'][$name] = 'Module: ' . $name;
+			}
+		}
+
 		if ( isset($this->_curOne->_data['ext'])){
 			foreach( $this->_curOne->_data['ext'] as $name=>$e ) {
 				$handler[$e['type']->GetVal()][$name] = '[VHost Level]: ' . $name;
 			}
 		}
 		$this->_info['ext'] = $handler;
+		$this->_info['servmodules'] = $servmodules;
 
 		if ( isset($this->_curOne) && isset($this->_curOne->_data['sec']['realm']))	{
 			$realms = array();
@@ -483,7 +492,7 @@ class ConfCenter
 		$this->_disp->_name = $newName;
 		$this->_curOne->_id = $newName;
 		$this->_disp->init();
-		
+
 	}
 
 	private function changeName_TP($oldName, $newName)
@@ -494,9 +503,9 @@ class ConfCenter
 		$this->_disp->_name = $newName;
 		$this->_curOne->_id = $newName;
 		$this->_disp->init();
-		
-	}	
-	
+
+	}
+
 	private function changeName_L($oldName, $newName)
 	{
 		if ( $this->_serv->_data['tpTop'] != NULL
@@ -520,7 +529,7 @@ class ConfCenter
 		$this->_disp->_mid = "sl_$newName";
 		$this->_disp->_name = $newName;
 		$this->_curOne->_id = $newName;
-		$this->_disp->init();		
+		$this->_disp->init();
 	}
 
 	private function changeName_EXT($oldName, $newName)
@@ -578,7 +587,7 @@ class ConfCenter
 			if($disp->_pid == 'base') {
 				$data = &$this->_serv->_data['vhTop'][$disp->_name];
 			}
-			
+
 			else {
 				$data = &$this->_curOne->_data;
 			}
@@ -615,7 +624,7 @@ class ConfCenter
 	private function loadSpecial()
 	{
 		$tid = DUtil::getLastId($this->_disp->_tid);
-		
+
 		if ( $this->_disp->_type == 'serv') {
 
 			if ( $tid == 'SERV_MIME_TOP' ||  $tid == 'SERV_MIME'){
@@ -623,7 +632,7 @@ class ConfCenter
 				$this->_serv->_data['MIME'] = &ConfigFileEx::loadMime($file);
 				$this->_info['MIME_FILE'] = $file;
 			}
-		
+
 		}
 		elseif ( $this->_disp->_type == 'admin') {
 
@@ -634,7 +643,7 @@ class ConfCenter
 
 		}
 		elseif ($this->_disp->_type == 'vh') {
-			
+
 			if ($tid == 'VH_UDB' || $tid == 'VH_GDB') {
 				$temp = explode('`',$this->_disp->_ref);
 				$ref = $temp[0];
@@ -649,7 +658,7 @@ class ConfCenter
 				$file = $this->getAbsFile($loc, 'VR', $this->_info['VH_NAME']);
 				$this->_info['UDB_FILE'] = $file;
 				$this->_curOne->_data['UDB'][$ref] = ConfigFileEx::loadUserDB($file);
-	
+
 			}
 			elseif ( $tid == 'VH_GDB_TOP' || $tid == 'VH_GDB')
 			{
@@ -695,7 +704,7 @@ class ConfCenter
 				$this->changeName_REALM($oldRef, $newRef);
 			}
 		}
-		
+
 		$menuTids = array('L_GENERAL1', 'L_GENERAL', 'ADMIN_L_GENERAL1', 'ADMIN_L_GENERAL', 'VH_TOP_D', 'VH_BASE', 'TP1');
 		if ( in_array($tid, $menuTids) ) {
 			$this->genMenuInfo();
@@ -703,14 +712,14 @@ class ConfCenter
 		elseif ( $isExt || $isRealm ) {
 			$this->refreshInfo();
 		}
-		
+
 	}
 
 	private function &doAction($disp)
 	{
 		if ($disp->_act != 'v' ) {
 			if ($disp->_token != $disp->_tokenInput) {
-				$disp->_err = 'Illegal entry point!'; 
+				$disp->_err = 'Illegal entry point!';
 				return NULL;
 			}
 		}
@@ -728,7 +737,7 @@ class ConfCenter
 		{
 			$tbl = $tblDef->GetTblDef($tid);
 			$extractedData = NULL;
-			if ($tbl->_holderIndex != NULL) 
+			if ($tbl->_holderIndex != NULL)
 			{
 				$curdata = DUtil::locateData( $data, $tbl->_dataLoc, $disp->_ref);
 				$disp->_info['holderIndex'] = DUtil::array_string_keys($curdata);
@@ -736,13 +745,19 @@ class ConfCenter
 			}
 			else
 				$disp->_info['holderIndex'] = NULL;
-			
+
 			$go = $this->GetValidator()->ExtractPost( $tbl, $extractedData, $disp );
 			if ( $go > 0 )
 			{
 				$this->savePost( $extractedData, $disp, $tbl, $ref);
 				$this->saveFile($disp->_type, $disp->_name, $tbl->_id, $disp->_ref);
-				$needTrim = true;
+				if ($tbl->_linkedTbls == NULL)
+					$needTrim = true;
+				else {
+					if ($disp->_ref == NULL) //for new add
+						$disp->_ref = $ref;
+				}
+
 			}
 			else
 			{
@@ -949,7 +964,7 @@ class ConfCenter
 		if ( strncasecmp('$VH_ROOT', $path, 8) == 0 )
 			$path = $vr . substr($path, 8);
 		$path = $this->getAbsFile($path, 'SR', $vn);
-		
+
 		if ( !file_exists($path) && ! PathTool::createFile($path, $disp->_err) )
 		{
 			return false;
@@ -989,7 +1004,7 @@ class ConfCenter
 				$domains .= ', ';
 			$domains .= $tp['member'][$vn]['vhAliases']->GetVal();
 		}
-			
+
 		$vhmap['domain'] = new CVal($domains);
 		foreach( $lns as $ln )
 		{
@@ -1005,7 +1020,7 @@ class ConfCenter
 		$haschanged = FALSE;
 		$cur_disabled = array();
 		if (isset($this->_serv->_data['service']['suspendedVhosts'])) {
-			$cur_disabled = preg_split("/[,;]+/", $this->_serv->_data['service']['suspendedVhosts']->GetVal(), -1, PREG_SPLIT_NO_EMPTY); 
+			$cur_disabled = preg_split("/[,;]+/", $this->_serv->_data['service']['suspendedVhosts']->GetVal(), -1, PREG_SPLIT_NO_EMPTY);
 		}
 		$found = in_array($actId, $cur_disabled);
 		if ($act == 'disable') {
@@ -1027,7 +1042,7 @@ class ConfCenter
 			$this->saveFile('serv', '');
 		}
 	}
-	
+
 	public function GetPageData($disp, &$confErr)
 	{
 		$disp->_err = NULL;

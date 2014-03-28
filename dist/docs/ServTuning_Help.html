@@ -3,7 +3,7 @@
   <meta charset="utf-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
   <title>Open LiteSpeed Web Server Users' Manual - Server Tuning</title>
-  <meta name="description" content="Open LiteSpeed Web Server Users' Manual - Server Tuning." />  
+  <meta name="description" content="Open LiteSpeed Web Server Users' Manual - Server Tuning." />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="shortcut icon" href="img/favicon.ico" />
   <link rel="stylesheet" type="text/css" href="css/hdoc.css">
@@ -11,7 +11,7 @@
 <body>
 <div class="pagewrapper"><div class="sidetree">
 <h3>OpenLiteSpeed Web Server <a href="index.html"> Users' Manual</a></h3>
-<h5>Version 1.2 Rev. 2 </h5>
+<h5>Version 1.3 Rev. 1 </h5>
 <hr/>
 <div>
 <ul class="toctop">
@@ -29,6 +29,7 @@
 	<li><a href="ExtApp_Help.html">External Apps</a></li>
 	<li><a href="ScriptHandler_Help.html">Script Handler</a></li>
 	<li><a href="Rails_Help.html">Rack/Rails Settings</a></li>
+	<li><a href="Module_Help.html">Module Configuration</a></li>
 	<li><a href="Listeners_Help.html">Listeners</a></li>
 	<li><a href="Templates_Help.html">Templates</a></li>
 	<li><a href="VirtualHosts_Help.html">Virtual Host List</a></li>
@@ -86,7 +87,7 @@
 <div class="helpitem"><a name="gzipMaxFileSize"></a><table width="100%" class="ht" border="0" cellpadding="5" cellspacing="0"> <tr class="ht-title"><td><div>Max Static File Size<span class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="img/top.gif"></a></span></div></td></tr> <tr><td><span class="ht-label">Description: </span>Specifies the maximum size of a static file for which the web server will create a compressed file automatically.</td></tr> <tr><td><span class="ht-label">Syntax: </span>Number in bytes not less than 1K.</td></tr> <tr><td><span class="ht-label">Tips: </span>[Performance] It is not recommended to have web server create/update compressed files for large files. Compressing blocks an entire server process and  no further requests can be processed until the compression is completed.</td></tr> </table> </div>
 <div class="helpitem"><a name="gzipMinFileSize"></a><table width="100%" class="ht" border="0" cellpadding="5" cellspacing="0"> <tr class="ht-title"><td><div>Min Static File Size<span class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="img/top.gif"></a></span></div></td></tr> <tr><td><span class="ht-label">Description: </span>Specifies the minimum size of a static file for which the web server will create a corresponding compressed file.</td></tr> <tr><td><span class="ht-label">Syntax: </span>Number in bytes not less than 200.</td></tr> <tr><td><span class="ht-label">Tips: </span>It is not necessary to compress very small files as the bandwidth saving is negligible.</td></tr> </table> </div>
 </section>
-</div><footer class="copyright">Copyright &copy; 2013. <a href="http://www.litespeedtech.com">Lite Speed Technologies Inc.</a> All rights reserved.</footer>
+</div><footer class="copyright">Copyright &copy; 2013-2014. <a href="http://www.litespeedtech.com">Lite Speed Technologies Inc.</a> All rights reserved.</footer>
 				</div>
 				</body>
 				</html>

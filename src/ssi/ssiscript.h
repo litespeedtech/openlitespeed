@@ -25,7 +25,7 @@
 #include <util/tlinklist.h>
 
 
-class HttpConnection;
+class HttpSession;
 class SSITagConfig;
 class LinkedObj;
 class SSIBlock;

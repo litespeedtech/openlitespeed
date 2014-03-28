@@ -34,7 +34,7 @@ class RewriteRuleList;
 class RewriteMapList;
 class RewriteSubstItem;
 class RewriteSubstFormat;
-class HttpConnection;
+class HttpSession;
 class HttpContext;
 
 class RewriteEngine
@@ -77,19 +77,19 @@ class RewriteEngine
     char            m_rewriteBuf[3][REWRITE_BUF_SIZE];
     char            m_qsBuf[REWRITE_BUF_SIZE];
 
-    int processQueryString( HttpConnection * pConn, int flag );
-    int getSubstValue( const RewriteSubstItem * pItem, HttpConnection *pConn,
+    int processQueryString( HttpSession *pSession, int flag );
+    int getSubstValue( const RewriteSubstItem * pItem, HttpSession *pSession,
                         char * &pValue, int bufLen );
     
-    int appendSubst( const RewriteSubstItem * pItem, HttpConnection *pConn,
+    int appendSubst( const RewriteSubstItem * pItem, HttpSession *pSession,
                         char * &pBegin, char *pBufEnd, int &esc_uri, int noDupSlash = 0 );
-    char * buildString( const RewriteSubstFormat * pFormat, HttpConnection * pConn,
+    char * buildString( const RewriteSubstFormat * pFormat, HttpSession *pSession,
                           char * pBuf, int &len, int esc_uri = 0, int noDupSlash = 0 );
-    int processCond( const RewriteCond * pCond, HttpConnection *pConn );
-    int processRule( const RewriteRule * pRule, HttpConnection *pConn );
-    int processRewrite( const RewriteRule * pRule, HttpConnection *pConn );
-    int expandEnv( const RewriteRule * pRule, HttpConnection * pConn );
-    int setCookie( char * pBuf, int len, HttpConnection * pConn );
+    int processCond( const RewriteCond * pCond, HttpSession *pSession );
+    int processRule( const RewriteRule * pRule, HttpSession *pSession );
+    int processRewrite( const RewriteRule * pRule, HttpSession *pSession );
+    int expandEnv( const RewriteRule * pRule, HttpSession *pSession );
+    int setCookie( char * pBuf, int len, HttpSession *pSession );
     const RewriteRule * getNextRule( const RewriteRule * pRule, 
                     const HttpContext * &pContext, const HttpContext * &pRootContext );
 public:
@@ -97,7 +97,7 @@ public:
     ~RewriteEngine();
     static int parseRules( char * &pRules, RewriteRuleList * pRuleList,
                 const RewriteMapList * pMapList );
-    int processRuleSet( const RewriteRuleList * pRuleList, HttpConnection * pConn,
+    int processRuleSet( const RewriteRuleList * pRuleList, HttpSession *pSession,
                         const HttpContext * pContext, const HttpContext * pRootContext );
     const char * getResultURI()     {   return m_pSourceURL;    }
     int          getResultURILen()  {   return m_sourceURLLen;  }

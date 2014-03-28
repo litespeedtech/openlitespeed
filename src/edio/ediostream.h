@@ -109,12 +109,12 @@ public:
         }
     }
 
-    int writev( IOVec &vector )
-    {
+    int writev( const struct iovec * iov, int count )
+    {   
         int ret;
         while( 1 )
         {
-            ret = ::writev( getfd(), vector.get(), vector.len() );
+            ret = ::writev( getfd(), iov, count );
             if ( ret == -1 )
             {
                 if ( errno == EINTR )
@@ -129,6 +129,11 @@ public:
                 setRevent( POLLOUT );
             return ret;
         }
+    }
+    
+    int writev( IOVec &vector )
+    {
+        return writev( vector.get(), vector.len() );
     }
 
     int writev( IOVec &vector, int total )

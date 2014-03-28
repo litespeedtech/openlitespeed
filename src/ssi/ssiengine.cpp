@@ -22,7 +22,7 @@
 #include "ssiconfig.h"
 
 #include <http/handlertype.h>
-#include <http/httpconnection.h>
+#include <http/httpsession.h>
 #include <http/httplog.h>
 #include <http/httputil.h>
 #include <http/httpcgitool.h>
@@ -47,7 +47,7 @@ const char * SSIEngine::getName() const
     return "ssi";
 }
 
-void SSIEngine::printError( HttpConnection * pConn, char * pError )
+void SSIEngine::printError( HttpSession *pSession, char * pError )
 {
     char achBuf[] = "[an error occurred while processing this directive]\n";
     if ( !pError )
@@ -55,54 +55,54 @@ void SSIEngine::printError( HttpConnection * pConn, char * pError )
         pError = achBuf;
     }
     
-    pConn->appendDynBody( 0, pError, strlen( pError ) );
+    pSession->appendDynBody( 0, pError, strlen( pError ) );
 }
 
-int SSIEngine::startExecute( HttpConnection * pConn, 
+int SSIEngine::startExecute( HttpSession *pSession, 
                              SSIScript * pScript )
 {
     if ( !pScript )
         return SC_500;
-    SSIRuntime * pRuntime = pConn->getReq()->getSSIRuntime();
+    SSIRuntime * pRuntime = pSession->getReq()->getSSIRuntime();
     if ( !pRuntime )
     {
         char ct[]= "text/html";
-        HttpReq * pReq = pConn->getReq();
+        HttpReq * pReq = pSession->getReq();
         pRuntime = new SSIRuntime();
         if (!pRuntime )
             return SC_500;
         pRuntime->init();
         pRuntime->initConfig( pReq->getSSIConfig() );
         pReq->setSSIRuntime( pRuntime );
-        pConn->getResp()->reset(RespHeader::REGULAR);
-        //pConn->getResp()->prepareHeaders( pReq );
-        //pConn->setupChunkOS( 0 );
-        HttpCgiTool::processContentType( pReq, pConn->getResp(), 
+        pSession->getResp()->reset();
+        //pSession->getResp()->prepareHeaders( pReq );
+        //pSession->setupChunkOS( 0 );
+        HttpCgiTool::processContentType( pReq, pSession->getResp(), 
                       ct , 9 );
-        pConn->setupRespCache();
+        pSession->setupRespCache();
         if ( pReq->isXbitHackFull() )
         {
-            pConn->getResp()->appendLastMod( pReq->getLastMod() );
+            pSession->getResp()->appendLastMod( pReq->getLastMod() );
         }
         int status = pReq->getStatusCode();
         if (( status >= SC_300 )&&( status < SC_400 ))
         {
             if ( pReq->getLocationOff() )
             {
-                pConn->getResp()->addLocationHeader( pReq );
+                pSession->getResp()->addLocationHeader( pReq );
             }
         }
-        pConn->setupGzipFilter();
+        pSession->setupGzipFilter();
         pReq->andGzip( ~GZIP_ENABLED );  //disable GZIP
     }
     if ( pRuntime->push( pScript ) == -1 )
         return SC_500;
-    pConn->getReq()->backupPathInfo();
+    pSession->getReq()->backupPathInfo();
     pScript->resetRuntime();
-    return resumeExecute( pConn );
+    return resumeExecute( pSession );
 }
 
-int SSIEngine::updateSSIConfig( HttpConnection * pConn, SSIComponent * pComponent, 
+int SSIEngine::updateSSIConfig( HttpSession *pSession, SSIComponent * pComponent, 
                             SSIRuntime * pRuntime )
 {
     SubstItem *pItem = (SubstItem *)pComponent->getFirstAttr();
@@ -120,7 +120,7 @@ int SSIEngine::updateSSIConfig( HttpConnection * pConn, SSIComponent * pComponen
         case SSI_ECHOMSG:
         case SSI_ERRMSG:
         case SSI_TIMEFMT:
-            RequestVars::appendSubst( pItem, pConn, p, len, 0, NULL );
+            RequestVars::appendSubst( pItem, pSession, p, len, 0, NULL );
             if ( attr == SSI_ERRMSG )
                 pRuntime->getConfig()->setErrMsg( achBuf, p - achBuf );
             else if ( attr == SSI_ECHOMSG )
@@ -146,7 +146,7 @@ int SSIEngine::updateSSIConfig( HttpConnection * pConn, SSIComponent * pComponen
     return 0;
 }
 
-int SSIEngine::processEcho( HttpConnection * pConn, SSIComponent * pComponent)
+int SSIEngine::processEcho( HttpSession *pSession, SSIComponent * pComponent)
 {
     SubstItem *pItem = (SubstItem *)pComponent->getFirstAttr();
     char achBuf1[8192];
@@ -166,10 +166,10 @@ int SSIEngine::processEcho( HttpConnection * pConn, SSIComponent * pComponent)
             if (( pItem->getType() == REF_DATE_LOCAL )||
                 ( pItem->getType() == REF_LAST_MODIFIED )||
                 ( pItem->getType() == REF_DATE_GMT ))
-                memccpy( p, pConn->getReq()->getSSIRuntime()
+                memccpy( p, pSession->getReq()->getSSIRuntime()
                         ->getConfig()->getTimeFmt()->c_str(), 0, 4096 );
-            RequestVars::appendSubst( pItem, pConn, p, len, 
-                        0, pConn->getReq()->getSSIRuntime()->getRegexResult() );
+            RequestVars::appendSubst( pItem, pSession, p, len, 
+                        0, pSession->getReq()->getSSIRuntime()->getRegexResult() );
             if ( encode == SSI_ENC_URL )
             {
                 len = HttpUtil::escape( achBuf1, p - achBuf1, 
@@ -187,7 +187,7 @@ int SSIEngine::processEcho( HttpConnection * pConn, SSIComponent * pComponent)
                 p = achBuf1;
             }
             if ( len > 0 )
-                pConn->appendDynBody( 0, p, len );
+                pSession->appendDynBody( 0, p, len );
             break;
         case SSI_ENC_NONE:
         case SSI_ENC_URL:
@@ -201,19 +201,19 @@ int SSIEngine::processEcho( HttpConnection * pConn, SSIComponent * pComponent)
     return 0;
 }
 
-int SSIEngine::processExec( HttpConnection * pConn, SSIComponent * pComponent )
+int SSIEngine::processExec( HttpSession *pSession, SSIComponent * pComponent )
 {
-    if ( pConn->getReq()->isIncludesNoExec() )
+    if ( pSession->getReq()->isIncludesNoExec() )
     {
         //Notice: Exec from server side include is disabled.
         return 0;
     }
     SubstItem *pItem = (SubstItem *)pComponent->getFirstAttr();
-    return processSubReq( pConn, pItem );
+    return processSubReq( pSession, pItem );
 
 }
 
-int SSIEngine::processFileAttr( HttpConnection * pConn, SSIComponent * pComponent )
+int SSIEngine::processFileAttr( HttpSession *pSession, SSIComponent * pComponent )
 {
     SubstItem *pItem = (SubstItem *)pComponent->getFirstAttr();
     if ( !pItem )
@@ -225,17 +225,17 @@ int SSIEngine::processFileAttr( HttpConnection * pConn, SSIComponent * pComponen
     len = 4096;
     if (( attr != SSI_INC_FILE )&&( attr != SSI_INC_VIRTUAL ))
         return 0;
-    SSIRuntime * pRuntime = pConn->getReq()->getSSIRuntime();
-    RequestVars::appendSubst( pItem, pConn, p, len,
+    SSIRuntime * pRuntime = pSession->getReq()->getSSIRuntime();
+    RequestVars::appendSubst( pItem, pSession, p, len,
                 0, pRuntime->getRegexResult() );
     {
         if ( achBuf[0] == 0 )
         {
             len = snprintf( achBuf, 4096, "[an error occurred while processing this directive]\n" );
-            pConn->appendDynBody( 0, achBuf, len );
+            pSession->appendDynBody( 0, achBuf, len );
             return 0;
         }
-        HttpReq * pReq = pConn->getReq();
+        HttpReq * pReq = pSession->getReq();
         const char * pURI ;
         const char * p1;
         if (( attr == SSI_INC_FILE )||( achBuf[0] != '/' ))
@@ -260,7 +260,7 @@ int SSIEngine::processFileAttr( HttpConnection * pConn, SSIComponent * pComponen
     struct stat st;
     if ( nio_stat( achBuf, &st ) == -1 )
     {
-        pConn->appendDynBody( 0, "[error: stat() failed!\n", 23 );
+        pSession->appendDynBody( 0, "[error: stat() failed!\n", 23 );
         return 0;
     }
     if ( pComponent->getType() == SSIComponent::SSI_FSize )
@@ -275,11 +275,11 @@ int SSIEngine::processFileAttr( HttpConnection * pConn, SSIComponent * pComponen
         len = strftime( achBuf, 1024, pRuntime
                     ->getConfig()->getTimeFmt()->c_str(), tm );
     }
-    pConn->appendDynBody( 0, achBuf, len );
+    pSession->appendDynBody( 0, achBuf, len );
     return 0;
 }
 
-int SSIEngine::processSubReq( HttpConnection * pConn, SubstItem *pItem )
+int SSIEngine::processSubReq( HttpSession *pSession, SubstItem *pItem )
 {
     char achBuf[40960];
     char * p;
@@ -287,7 +287,7 @@ int SSIEngine::processSubReq( HttpConnection * pConn, SubstItem *pItem )
     int attr;
     if ( !pItem )
         return 0;
-    SSIRuntime * pRuntime = pConn->getReq()->getSSIRuntime();
+    SSIRuntime * pRuntime = pSession->getReq()->getSSIRuntime();
     attr = pItem->getSubType();
     p = achBuf;
     len = 40960;
@@ -295,7 +295,7 @@ int SSIEngine::processSubReq( HttpConnection * pConn, SubstItem *pItem )
     {
     case SSI_INC_FILE:
     {
-        HttpReq * pReq = pConn->getReq();
+        HttpReq * pReq = pSession->getReq();
         memmove( p, pReq->getURI(), pReq->getURILen() );
         p = p + pReq->getURILen() - pReq->getPathInfoLen();
         while( p[-1] != '/' )
@@ -323,7 +323,7 @@ int SSIEngine::processSubReq( HttpConnection * pConn, SubstItem *pItem )
         // '&' tell cgid to execute it as shell command
         break;
     }
-    RequestVars::appendSubst( pItem, pConn, p, len,
+    RequestVars::appendSubst( pItem, pSession, p, len,
                 0, pRuntime->getRegexResult() );
     if ( attr == SSI_INC_FILE )
     {
@@ -336,13 +336,13 @@ int SSIEngine::processSubReq( HttpConnection * pConn, SubstItem *pItem )
     else if ( attr == SSI_EXEC_CMD )
     {
         
-        if ( pConn->execExtCmd( achBuf, p - achBuf ) == 0 )
+        if ( pSession->execExtCmd( achBuf, p - achBuf ) == 0 )
             return -2;
         else
             return 0;
         //len = snprintf( achBuf, 40960, "'exec cmd' is not available, "
         //            "use 'include virutal' instead.\n" );
-        //pConn->appendDynBody( 0, achBuf, len );
+        //pSession->appendDynBody( 0, achBuf, len );
 
         //return 0;
     }
@@ -351,10 +351,10 @@ int SSIEngine::processSubReq( HttpConnection * pConn, SubstItem *pItem )
         if ( achBuf[0] == 0 )
         {
             len = snprintf( achBuf, 40960, "[an error occurred while processing this directive]\n" );
-            pConn->appendDynBody( 0, achBuf, len );
+            pSession->appendDynBody( 0, achBuf, len );
             return 0;
         }
-        HttpReq * pReq = pConn->getReq();
+        HttpReq * pReq = pSession->getReq();
         const char * pURI = pReq->getURI();
         const char * p1 = pURI + pReq->getURILen() - pReq->getPathInfoLen();
         while( (p1 > pURI) && p1[-1] != '/' )
@@ -366,26 +366,26 @@ int SSIEngine::processSubReq( HttpConnection * pConn, SubstItem *pItem )
     }
     if ( achBuf[0] == '/' )
     {
-        pConn->getReq()->setLocation( achBuf, p - achBuf );
-        pConn->changeHandler();
-        pConn->continueWrite();
+        pSession->getReq()->setLocation( achBuf, p - achBuf );
+        pSession->changeHandler();
+        pSession->continueWrite();
         return -2;
     }
     return 0;
 }
 
-int SSIEngine::processInclude( HttpConnection * pConn, SSIComponent * pComponent )
+int SSIEngine::processInclude( HttpSession *pSession, SSIComponent * pComponent )
 {
     SubstItem *pItem = (SubstItem *)pComponent->getFirstAttr();
-    return processSubReq( pConn, pItem );
+    return processSubReq( pSession, pItem );
 }
 
 #include <util/ienv.h>
 class SSIEnv : public IEnv
 {
-    HttpConnection * m_pConn;
+    HttpSession * m_pSession;
 public:
-    SSIEnv( HttpConnection * pConn) : m_pConn( pConn )    {};
+    SSIEnv( HttpSession *pSession) : m_pSession( pSession )    {};
     ~SSIEnv()   {};
     int add( const char *name, const char *value )
     {   return IEnv::add( name, value );    }
@@ -410,7 +410,7 @@ int SSIEnv::add( const char *name, size_t nameLen,
     len = HttpUtil::escapeHtml(  value, value + valLen, p, &achBuf[40960] - p );
     p += len;
     *p++ = '\n';
-    m_pConn->appendDynBody( 0, achBuf, p - achBuf );
+    m_pSession->appendDynBody( 0, achBuf, p - achBuf );
     return 0;
 }
 
@@ -419,7 +419,7 @@ int SSIEnv::add( const char * buf, size_t len )
     char achBuf[40960];
     int ret = HttpUtil::escapeHtml( buf, buf + len, achBuf, 40960 );
     achBuf[ret] = '\n';
-    m_pConn->appendDynBody( 0, achBuf, ret + 1 );
+    m_pSession->appendDynBody( 0, achBuf, ret + 1 );
     return 0;
 }
 
@@ -432,17 +432,17 @@ int SSIEnv::addVar(  int var_id )
     if ( !pName )
         return 0;
     char * pValue = achBuf;
-    memccpy( pValue, m_pConn->getReq()->getSSIRuntime()
+    memccpy( pValue, m_pSession->getReq()->getSSIRuntime()
                 ->getConfig()->getTimeFmt()->c_str(), 0, 4096 );
-    int valLen = RequestVars::getReqVar( m_pConn, var_id, pValue, 4096 );
+    int valLen = RequestVars::getReqVar( m_pSession, var_id, pValue, 4096 );
     return add( pName, nameLen, pValue, valLen );
 }
 
-int SSIEngine::processPrintEnv( HttpConnection * pConn )
+int SSIEngine::processPrintEnv( HttpSession *pSession )
 {
-    SSIEnv env( pConn );
+    SSIEnv env( pSession );
 
-    HttpCgiTool::buildEnv( &env, pConn );
+    HttpCgiTool::buildEnv( &env, pSession );
     env.addVar( REF_DATE_GMT );
     env.addVar( REF_DATE_LOCAL );
     env.addVar( REF_DOCUMENT_NAME );
@@ -452,7 +452,7 @@ int SSIEngine::processPrintEnv( HttpConnection * pConn )
     return 0;
 }
 
-int SSIEngine::processSet( HttpConnection * pConn, SSIComponent * pComponent )
+int SSIEngine::processSet( HttpSession *pSession, SSIComponent * pComponent )
 {
     SubstItem *pItem = (SubstItem *)pComponent->getFirstAttr();
     const AutoStr2 * pVarName;
@@ -474,11 +474,11 @@ int SSIEngine::processSet( HttpConnection * pConn, SSIComponent * pComponent )
                 continue;
             p = achBuf1;
             len = 8192;
-            len = RequestVars::appendSubst( pItem, pConn, p, len, 0,
-                         pConn->getReq()->getSSIRuntime()->getRegexResult(),
-                         pConn->getReq()->getSSIRuntime()
+            len = RequestVars::appendSubst( pItem, pSession, p, len, 0,
+                         pSession->getReq()->getSSIRuntime()->getRegexResult(),
+                         pSession->getReq()->getSSIRuntime()
                         ->getConfig()->getTimeFmt()->c_str() );
-            pConn->getReq()->addEnv( pVarName->c_str(), pVarName->len(), achBuf1, p - achBuf1 );
+            RequestVars::setEnv(pSession, pVarName->c_str(), pVarName->len(), achBuf1, p - achBuf1 );
         }
 
         pItem = (SubstItem *) pItem->next();
@@ -486,7 +486,7 @@ int SSIEngine::processSet( HttpConnection * pConn, SSIComponent * pComponent )
     return 0;
 }
 
-int SSIEngine::appendLocation( HttpConnection * pConn, const char * pLocation, int len )
+int SSIEngine::appendLocation( HttpSession *pSession, const char * pLocation, int len )
 {
     char achBuf[40960];
     char * p = &achBuf[9];
@@ -499,7 +499,7 @@ int SSIEngine::appendLocation( HttpConnection * pConn, const char * pLocation, i
     p += len;
     memmove( p, "</A>", 4 );
     p += 4;
-    pConn->appendDynBody( 0, achBuf, p - achBuf );
+    pSession->appendDynBody( 0, achBuf, p - achBuf );
     return 0;
 }
 
@@ -536,7 +536,7 @@ static int  shortCurcuit( ExprToken * &pTok )
     return 1;
 }
 
-static int compString(  HttpConnection * pConn, int type, ExprToken * &pTok )
+static int compString(  HttpSession *pSession, int type, ExprToken * &pTok )
 {
     int     len;
     int     ret;
@@ -553,8 +553,8 @@ static int compString(  HttpConnection * pConn, int type, ExprToken * &pTok )
     {
         p1 = achBuf1;
         len = 40960;
-        RequestVars::buildString( pTok->getFormat(), pConn, p1, len, 0,
-             pConn->getReq()->getSSIRuntime()->getRegexResult() );
+        RequestVars::buildString( pTok->getFormat(), pSession, p1, len, 0,
+             pSession->getReq()->getSSIRuntime()->getRegexResult() );
         p1 = achBuf1;
     }
     pTok = pTok->next();
@@ -562,7 +562,7 @@ static int compString(  HttpConnection * pConn, int type, ExprToken * &pTok )
         return 0;
     if ( pTok->getType() == ExprToken::EXP_REGEX )
     {
-        ret = pConn->getReq()->getSSIRuntime()->execRegex( pTok->getRegex(), p1, len );
+        ret = pSession->getReq()->getSSIRuntime()->execRegex( pTok->getRegex(), p1, len );
         if ( ret == 0 )
             ret = 10;
         if ( ret == -1 )
@@ -581,8 +581,8 @@ static int compString(  HttpConnection * pConn, int type, ExprToken * &pTok )
     {
         p2 = achBuf2;
         len = 40960;
-        RequestVars::buildString( pTok->getFormat(), pConn, p2, len, 0,
-             pConn->getReq()->getSSIRuntime()->getRegexResult() );
+        RequestVars::buildString( pTok->getFormat(), pSession, p2, len, 0,
+             pSession->getReq()->getSSIRuntime()->getRegexResult() );
         p2 = achBuf2;
     }
     pTok = pTok->next();
@@ -606,7 +606,7 @@ static int compString(  HttpConnection * pConn, int type, ExprToken * &pTok )
 }
 
 
-int SSIEngine::evalOperator( HttpConnection * pConn, ExprToken * &pTok )
+int SSIEngine::evalOperator( HttpSession *pSession, ExprToken * &pTok )
 {
     char *  p1 = NULL;
     int     len;
@@ -625,8 +625,8 @@ int SSIEngine::evalOperator( HttpConnection * pConn, ExprToken * &pTok )
         char achBuf1[40960];
         p1 = achBuf1;
         len = 40960;
-        RequestVars::buildString( pCur->getFormat(), pConn, p1, len, 0,
-             pConn->getReq()->getSSIRuntime()->getRegexResult() );
+        RequestVars::buildString( pCur->getFormat(), pSession, p1, len, 0,
+             pSession->getReq()->getSSIRuntime()->getRegexResult() );
         return len > 0;
     }
     case ExprToken::EXP_REGEX:
@@ -634,7 +634,7 @@ int SSIEngine::evalOperator( HttpConnection * pConn, ExprToken * &pTok )
     case ExprToken::EXP_NOT:
         if ( pTok )
         {
-            return !evalOperator( pConn, pTok );
+            return !evalOperator( pSession, pTok );
         }
         else
             return 1;
@@ -645,7 +645,7 @@ int SSIEngine::evalOperator( HttpConnection * pConn, ExprToken * &pTok )
     if (( type == ExprToken::EXP_AND )||
         ( type == ExprToken::EXP_OR ))
     {
-        ret = evalOperator( pConn, pTok );
+        ret = evalOperator( pSession, pTok );
         if ((( ret )&&( pTok->getType() == ExprToken::EXP_OR ))||
             (( !ret )&&( pTok->getType() == ExprToken::EXP_AND )))
         {
@@ -655,31 +655,31 @@ int SSIEngine::evalOperator( HttpConnection * pConn, ExprToken * &pTok )
             }
             return ret;
         }
-        ret = evalOperator( pConn, pTok );
+        ret = evalOperator( pSession, pTok );
         return ret;
     }
     if ( !pTok )
         return 0;
-    return compString( pConn, type, pTok );
+    return compString( pSession, type, pTok );
 }
 
-int SSIEngine::evalExpr( HttpConnection * pConn, SubstItem *pItem )
+int SSIEngine::evalExpr( HttpSession *pSession, SubstItem *pItem )
 {
     int ret = 0;
     if (( !pItem )||( pItem->getType() != REF_EXPR ))
         return 0;
     Expression * pExpr = (Expression *)pItem->getAny();
     ExprToken * pTok = pExpr->begin();
-    ret = evalOperator( pConn, pTok );
+    ret = evalOperator( pSession, pTok );
     return ret;
 }
 
 
 
-int SSIEngine::processIf( HttpConnection * pConn, SSI_If * pComponent )
+int SSIEngine::processIf( HttpSession *pSession, SSI_If * pComponent )
 {
     SubstItem *pItem = (SubstItem *)pComponent->getFirstAttr();
-    int ret = evalExpr( pConn, pItem );
+    int ret = evalExpr( pSession, pItem );
     SSIBlock * pBlock;
     if ( ret )
         pBlock = pComponent->getIfBlock();
@@ -687,7 +687,7 @@ int SSIEngine::processIf( HttpConnection * pConn, SSI_If * pComponent )
         pBlock = pComponent->getElseBlock();
     if ( pBlock != NULL )
     {
-        SSIScript * pScript = pConn->getReq()->getSSIRuntime()
+        SSIScript * pScript = pSession->getReq()->getSSIRuntime()
                                 ->getCurrentScript();
         pScript->setCurrentBlock( pBlock );
     }
@@ -695,48 +695,48 @@ int SSIEngine::processIf( HttpConnection * pConn, SSI_If * pComponent )
 }
 
 
-int SSIEngine::executeComponent( HttpConnection * pConn, SSIComponent * pComponent )
+int SSIEngine::executeComponent( HttpSession *pSession, SSIComponent * pComponent )
 {
     AutoBuf * pBuf;
     int ret;
 
     if ( D_ENABLED( DL_MORE ) )
-        LOG_D(( pConn->getLogger(), "[%s] SSI Process component: %d",
-               pConn->getLogId(), pComponent->getType() ));
+        LOG_D(( pSession->getLogger(), "[%s] SSI Process component: %d",
+               pSession->getLogId(), pComponent->getType() ));
 
     switch( pComponent->getType() )
     {
     case SSIComponent::SSI_String:
         pBuf = pComponent->getContentBuf();
-        pConn->appendDynBody( 0, pBuf->begin(), pBuf->size() );
+        pSession->appendDynBody( 0, pBuf->begin(), pBuf->size() );
         break;
     case SSIComponent::SSI_Config:
-        updateSSIConfig( pConn, pComponent, pConn->getReq()->getSSIRuntime() );
+        updateSSIConfig( pSession, pComponent, pSession->getReq()->getSSIRuntime() );
         break;
     case SSIComponent::SSI_Echo:
-        processEcho( pConn, pComponent );
+        processEcho( pSession, pComponent );
         break;
     case SSIComponent::SSI_Exec:
-        ret = processExec( pConn, pComponent );
+        ret = processExec( pSession, pComponent );
         return ret;
         break;
     case SSIComponent::SSI_FSize:
     case SSIComponent::SSI_Flastmod:
-        processFileAttr( pConn, pComponent );
+        processFileAttr( pSession, pComponent );
         break;
     case SSIComponent::SSI_Include:
-        ret = processInclude( pConn, pComponent );
+        ret = processInclude( pSession, pComponent );
         return ret;
         break;
     case SSIComponent::SSI_Printenv:
-        processPrintEnv( pConn );
+        processPrintEnv( pSession );
         break;
     case SSIComponent::SSI_Set:
-        processSet( pConn, pComponent );
+        processSet( pSession, pComponent );
         break;
     case SSIComponent::SSI_If:
     case SSIComponent::SSI_Elif:
-        processIf( pConn, (SSI_If *)pComponent );
+        processIf( pSession, (SSI_If *)pComponent );
         break;
         //SSI_Else,
         //SSI_Elif,
@@ -747,19 +747,19 @@ int SSIEngine::executeComponent( HttpConnection * pConn, SSIComponent * pCompone
 }
 
 
-int SSIEngine::endExecute( HttpConnection * pConn )
+int SSIEngine::endExecute( HttpSession *pSession )
 {
-    SSIRuntime * pRuntime = pConn->getReq()->getSSIRuntime();
+    SSIRuntime * pRuntime = pSession->getReq()->getSSIRuntime();
     if ( pRuntime )
         delete pRuntime;
-    pConn->getReq()->setSSIRuntime( NULL );
+    pSession->getReq()->setSSIRuntime( NULL );
     return 0;
 }
 
 
-int SSIEngine::resumeExecute( HttpConnection * pConn )
+int SSIEngine::resumeExecute( HttpSession *pSession )
 {
-    SSIRuntime * pRuntime = pConn->getReq()->getSSIRuntime();
+    SSIRuntime * pRuntime = pSession->getReq()->getSSIRuntime();
     int ret = 0;
     if ( !pRuntime )
         return -1;
@@ -774,15 +774,15 @@ int SSIEngine::resumeExecute( HttpConnection * pConn )
             pRuntime->pop();
             if ( !pRuntime->done() )
             {
-                pConn->getReq()->restorePathInfo();
+                pSession->getReq()->restorePathInfo();
             }
             continue;
         }
-        ret = executeComponent( pConn, pComponent );
+        ret = executeComponent( pSession, pComponent );
         if ( ret == -2 )
             return 0;
     }
-    endExecute( pConn );
-    return pConn->endDynResp( 1 );
+    endExecute( pSession );
+    return pSession->endDynResp( 1 );
 
 }

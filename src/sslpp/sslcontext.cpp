@@ -16,8 +16,12 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "sslcontext.h"
-#include "sslconnection.h"
-#include "sslerror.h"
+#include <sslpp/sslconnection.h>
+#include <sslpp/sslerror.h>
+
+#include <sslpp/sslocspstapling.h>
+#include <util/configctx.h>
+#include <util/xmlnode.h>
 
 #include <openssl/err.h>
 #include <openssl/rand.h>
@@ -30,9 +34,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <config.h>
-#include "sslocspstapling.h"
-//#include "http/vhostmap.h"
-
+#include <limits.h>
 
 long SSLContext::setOptions( long options )
 {
@@ -501,12 +503,7 @@ int SSLContext::setCipherList( const char * pList )
         {
             //snprintf( cipher, 4095, "RC4:%s", pList );
             //strcpy( cipher, "ALL:HIGH:!aNULL:!SSLV2:!eNULL" );
-#if OPENSSL_VERSION_NUMBER >= 0x10001000L
-            strcpy( cipher, "ECDHE-RSA-AES128-SHA256:AES128-GCM-SHA256:RC4:HIGH:!MD5:!aNULL:!EDH" );
-
-#else
-            strcpy( cipher, "RC4:HIGH:!aNULL:!MD5:!EDH" );
-#endif
+            strcpy( cipher, "RC4:HIGH:!aNULL:!MD5:!SSLv2:!eNULL:!EDH:!LOW:!EXPORT56:!EXPORT40" );
             //strcpy( cipher, "RC4:-EXP:-SSLv2:-ADH" );
             pList = cipher;
         }
@@ -848,22 +845,213 @@ static int sslCertificateStatus_cb(SSL *ssl, void *data)
     return pStapling->callback( ssl );
 }
 
-#include <util/xmlnode.h>
+SSLContext * SSLContext::setKeyCertCipher(const char *pCertFile,
+                    const char *pKeyFile, const char * pCAFile, const char * pCAPath,
+                    const char * pCiphers, int certChain, int cv, int renegProtect )
+{
+    ConfigCtx::getCurConfigCtx()->log_debug( "Create SSL context with"
+                " Certificate file: %s and Key File: %s.",
+                pCertFile, pKeyFile );
+    setRenegProtect( renegProtect );
+    if ( !setKeyCertificateFile( pKeyFile,
+        SSLContext::FILETYPE_PEM, pCertFile,
+        SSLContext::FILETYPE_PEM, certChain ) )
+    {
+        ConfigCtx::getCurConfigCtx()->log_error( "Config SSL Context with"
+                    " Certificate File: %s"
+                    " and Key File:%s get SSL error: %s",
+                pCertFile, pKeyFile,
+                SSLError().what() );
+        return NULL;
+    }
+    else if ( (pCAFile || pCAPath) &&
+        !setCALocation( pCAFile, pCAPath, cv ) )        
+    {
+        ConfigCtx::getCurConfigCtx()->log_error( "Failed to setup Certificate Authority "
+                    "Certificate File: '%s', Path: '%s', SSL error: %s",
+            pCAFile?pCAFile:"", pCAPath?pCAPath:"", SSLError().what() );
+        return NULL;
+    }
+    ConfigCtx::getCurConfigCtx()->log_debug( "set ciphers to:%s", pCiphers );
+    setCipherList( pCiphers );
+    return this;    
+}
 
-int SSLContext::configStapling(const XmlNode *pNode,  
-                             const char *pCAFile, char *pachCert, ConfigCtx* pcurrentCtx)
+SSLContext *SSLContext::config( const XmlNode *pNode )
+{
+    char achCert[MAX_PATH_LEN];
+    char achKey [MAX_PATH_LEN];
+    char achCAFile[MAX_PATH_LEN];
+    char achCAPath[MAX_PATH_LEN];
+
+    const char *pCertFile;
+    const char *pKeyFile;
+    const char *pCiphers;
+    const char *pCAPath;
+    const char *pCAFile;
+
+    SSLContext *pSSL;
+    int protocol;
+    int enableSpdy;
+
+    int cv;
+
+    pCertFile = ConfigCtx::getCurConfigCtx()->getTag( pNode,  "certFile" );
+
+    if ( !pCertFile )
+    {
+        return NULL;
+    }
+
+    pKeyFile = ConfigCtx::getCurConfigCtx()->getTag( pNode, "keyFile" );
+
+    if ( !pKeyFile )
+    {
+        return NULL;
+    }
+
+    if ( ConfigCtx::getCurConfigCtx()->getValidFile( achCert, pCertFile, "certificate file" ) != 0 )
+        return NULL;
+
+    if ( ConfigCtx::getCurConfigCtx()->getValidFile( achKey, pKeyFile, "key file" ) != 0 )
+        return NULL;
+
+    pCiphers = pNode->getChildValue( "ciphers" );
+
+    if ( !pCiphers )
+    {
+        pCiphers = "ALL:!ADH:!EXPORT56:RC4+RSA:+HIGH:+MEDIUM:!SSLv2:+EXP";
+    }
+
+    pCAPath = pNode->getChildValue( "CACertPath" );
+    pCAFile = pNode->getChildValue( "CACertFile" );
+
+    if ( pCAPath )
+    {
+        if ( ConfigCtx::getCurConfigCtx()->getValidPath( achCAPath, pCAPath, "CA Certificate path" ) != 0 )
+            return NULL;
+
+        pCAPath = achCAPath;
+    }
+
+    if ( pCAFile )
+    {
+        if ( ConfigCtx::getCurConfigCtx()->getValidFile( achCAFile, pCAFile, "CA Certificate file" ) != 0 )
+            return NULL;
+
+        pCAFile = achCAFile;
+    }
+
+    cv = ConfigCtx::getCurConfigCtx()->getLongValue( pNode, "clientVerify", 0, 3, 0 );
+    pSSL = setKeyCertCipher( achCert, achKey, pCAFile, pCAPath, pCiphers, 
+                          ConfigCtx::getCurConfigCtx()->getLongValue( pNode, "certChain", 0, 1, 0 ), ( cv != 0 ),
+                                     ConfigCtx::getCurConfigCtx()->getLongValue( pNode, "regenProtection", 0, 1, 1 ) );    
+
+    if ( pSSL == NULL )
+    {
+        ConfigCtx::getCurConfigCtx()->log_error( "failed to create SSL Context with key: %s, Cert: %s!", achKey, achCert );
+        return NULL;
+    }
+
+    protocol = ConfigCtx::getCurConfigCtx()->getLongValue( pNode, "sslProtocol", 1, 15, 15 );
+    setProtocol( protocol );
+
+    int enableDH = ConfigCtx::getCurConfigCtx()->getLongValue( pNode, "enableECDHE", 0, 1, 1 );
+    if ( enableDH )
+        pSSL->initECDH();
+    enableDH = ConfigCtx::getCurConfigCtx()->getLongValue( pNode, "enableDHE", 0, 1, 0 );
+    if ( enableDH )
+    {
+        const char * pDHParam = pNode->getChildValue( "DHParam" );
+        if ( pDHParam )
+        {
+            if ( ConfigCtx::getCurConfigCtx()->getValidPath( achCAPath, pDHParam, "DH Parameter file" ) != 0 )
+            {
+                ConfigCtx::getCurConfigCtx()->log_warn( "invalid path for DH paramter: %s, ignore and use built-in DH parameter!",
+                    pDHParam );
+                
+                pDHParam = NULL;
+            }
+            pDHParam = achCAPath;
+        }
+        pSSL->initDH( pDHParam );
+    }
+    
+    enableSpdy = ConfigCtx::getCurConfigCtx()->getLongValue( pNode, "enableSpdy", 0, 3, 3 );
+
+    if ( enableSpdy )
+        if ( -1 == pSSL->enableSpdy( enableSpdy ) )
+            ConfigCtx::getCurConfigCtx()->log_error( "SPDY can't be enabled [try to set to %d].", enableSpdy );
+
+    if ( cv )
+    {
+        setClientVerify( cv, ConfigCtx::getCurConfigCtx()->getLongValue( pNode, "verifyDepth", 1, INT_MAX, 1 ) );
+        configCRL( pNode, pSSL );
+    }
+
+    if ( ( ConfigCtx::getCurConfigCtx()->getLongValue( pNode, "enableStapling", 0, 1, 0 )) 
+        && ( pCertFile != NULL ) )
+    {
+        if ( getpStapling() == NULL )
+        {
+            const char *pCombineCAfile = pNode->getChildValue( "ocspCACerts" );
+            char CombineCAfile[MAX_PATH_LEN];
+            if ( pCombineCAfile )
+            {
+                if ( ConfigCtx::getCurConfigCtx()->getValidFile( CombineCAfile, pCombineCAfile, "Combine CA file" ) != 0 )
+                    return 0;
+                pSSL->setCertificateChainFile( CombineCAfile );
+            }
+            if ( pSSL->configStapling(pNode, pCAFile, achCert) == 0 )
+                 ConfigCtx::getCurConfigCtx()->log_info( "Enable OCSP Stapling successful!");
+        }
+    }
+    return pSSL;    
+}
+
+int SSLContext::configStapling(const XmlNode *pNode,
+                             const char *pCAFile, char *pachCert )
 {
     SslOcspStapling *pSslOcspStapling = new SslOcspStapling;
 
-    if (pSslOcspStapling->config(pNode, m_pCtx, pCAFile, pachCert, pcurrentCtx) == -1)
+    if ( pSslOcspStapling->config( pNode, m_pCtx, pCAFile, pachCert ) == -1 )
     {
         delete pSslOcspStapling;
         return -1;
     }
-    setStapling( pSslOcspStapling ) ;
+    m_pStapling = pSslOcspStapling;
 
     SSL_CTX_set_tlsext_status_cb(m_pCtx, sslCertificateStatus_cb);
-    SSL_CTX_set_tlsext_status_arg(m_pCtx, m_pStapling);    
+    SSL_CTX_set_tlsext_status_arg(m_pCtx, m_pStapling);
 
-    return 0; 
+    return 0;
+}
+            
+
+void SSLContext::configCRL( const XmlNode *pNode, SSLContext *pSSL )
+{
+    char achCrlFile[MAX_PATH_LEN];
+    char achCrlPath[MAX_PATH_LEN];
+    const char *pCrlPath;
+    const char *pCrlFile;
+    pCrlPath = pNode->getChildValue( "crlPath" );
+    pCrlFile = pNode->getChildValue( "crlFile" );
+
+    if ( pCrlPath )
+    {
+        if ( ConfigCtx::getCurConfigCtx()->getValidPath( achCrlPath, pCrlPath, "CRL path" ) != 0 )
+            return;
+        pCrlPath = achCrlPath;
+    }
+
+    if ( pCrlFile )
+    {
+        if ( ConfigCtx::getCurConfigCtx()->getValidFile( achCrlFile, pCrlFile, "CRL file" ) != 0 )
+            return;
+        pCrlFile = achCrlFile;
+    }
+
+    if ( pCrlPath || pCrlFile )
+        pSSL->addCRL( achCrlFile, achCrlPath );
+
 }

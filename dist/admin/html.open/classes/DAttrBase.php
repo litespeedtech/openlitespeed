@@ -19,8 +19,9 @@ class DAttrBase
 	public $_FDE = 'YYY'; //File:Display:Editable
 	public $_note;
 	public $_icon;
-	
-	public function __construct($key, $type, $label, $inputType=NULL, $allowNull=true, 
+	public $_linkedkeys;
+
+	public function __construct($key, $type, $label, $inputType=NULL, $allowNull=true,
 								$min=NULL, $max=NULL, $inputAttr=NULL, $multiInd=0, $helpKey=NULL)
 	{
 		$this->_htmlName = $key;
@@ -41,7 +42,7 @@ class DAttrBase
 		$cname = get_class($this);
 		$d = new $cname($this->_key, $this->_type, $this->_label, $this->_inputType, $this->_allowNull,
 			$this->_minVal, $this->_maxVal, $this->_inputAttr, $this->_multiInd, $this->_helpKey);
-		
+
 		$d->_htmlName = $this->_htmlName;
 		$d->_glue = $this->_glue;
 		$d->_href = $this->_href;
@@ -49,8 +50,9 @@ class DAttrBase
 		$d->_FDE = $this->_FDE;
 		$d->_note = $this->_note;
 		$d->_icon = $this->_icon;
-		
-		
+		$d->_linkedkeys = $this->_linkedkeys;
+
+
 		if ( $key != NULL )
 		{
 			$d->_htmlName = $key;
@@ -61,7 +63,7 @@ class DAttrBase
 
 		if ($helpkey != NULL)
 			$d->_helpKey = $helpkey;
-			
+
 		return $d;
 	}
 
@@ -110,7 +112,7 @@ class DAttrBase
 		else
 			$value = implode(', ', $vals1);
 	}
-	
+
 	protected function toHtmlContent($cval, $refUrl=NULL)
 	{
 		$o = '';
@@ -118,7 +120,7 @@ class DAttrBase
 			$o .= '<span class="field_novalue">Not Set</span>';
 			return $o;
 		}
-		
+
 		$value = $cval->GetVal();
 		$err = $cval->GetErr();
 
@@ -148,7 +150,7 @@ class DAttrBase
 		} elseif ( $refUrl != NULL ) {
 			$o .= '<span class="field_refUrl"><a href="' . $refUrl . '">';
 		}
-		
+
 
 		if ( $this->_type === 'bool' ) {
 			if ( $value === '1' ) {
@@ -162,7 +164,7 @@ class DAttrBase
 			}
 		}
 		else if($this->_key == "note") {
-			$o .= "<textarea readonly rows=4 cols=60 style='width:100%'>";	
+			$o .= "<textarea readonly rows=4 cols=60 style='width:100%'>";
 			$o .= htmlspecialchars($value,ENT_QUOTES);
 			$o .= "</textarea>";
 		}
@@ -210,7 +212,7 @@ class DAttrBase
 
 		if ( $this->_href || $refUrl != NULL) {
 			$o .= '</a></span>';
-		} 
+		}
 		return $o;
 	}
 
@@ -249,7 +251,7 @@ class DAttrBase
 			return $value;
 	}
 
-	
+
 	protected function genOptions($options, $selValue)
 	{
 		$o = '';
@@ -259,7 +261,7 @@ class DAttrBase
 			{
 				$o .= '<option value="' . $key .'"';
 				if ( $key == $selValue ) {
-					if (!($selValue === '' && $key === 0) 
+					if (!($selValue === '' && $key === 0)
 						&& !($selValue === NULL && $key === 0)
 						&& !($selValue === '0' && $key === '')
 						&& !($selValue === 0 && $key === ''))
@@ -270,7 +272,7 @@ class DAttrBase
 		}
 		return $o;
 	}
-	
+
 	public function extractPost()
 	{
 		$cval = NULL;
@@ -302,8 +304,8 @@ class DAttrBase
 		}
 		return $cval;
 	}
-	
-	public function toHtml(&$data, $refUrl=NULL)
+
+	public function toHtml(&$data, $refUrl=NULL, $linkedData=NULL)
 	{
 		$o = '';
 		if ( $this->_type == 'action' )
@@ -465,8 +467,8 @@ class DAttrBase
 		if ( $this->_allowNull ) {
 			$options[''] = '';
 		}
-		
-		foreach( $this->_minVal as $loc ) 
+
+		foreach( $this->_minVal as $loc )
 		{
 			$d = $info;
 			$locs = explode(':', $loc);
@@ -485,7 +487,7 @@ class DAttrBase
 					}
 				}
 
-				$d = $d[$l]; 
+				$d = $d[$l];
 			}
 			if ( isset($d) ) {
 				$options = $options + $d; // this is array add
@@ -494,6 +496,6 @@ class DAttrBase
 		$this->_maxVal = $options;
 	}
 
-	
+
 
 }

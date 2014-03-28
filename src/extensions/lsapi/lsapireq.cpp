@@ -16,7 +16,7 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "lsapireq.h"
-#include <http/httpconnection.h>
+#include <http/httpsession.h>
 #include <http/httpcontext.h>
 #include <http/httpcgitool.h>
 #include <http/httpserverversion.h>
@@ -93,11 +93,11 @@ LsapiReq::~LsapiReq()
 
 
 
-int LsapiReq::appendEnv( LsapiEnv * pEnv, HttpConnection * pConn )
+int LsapiReq::appendEnv( LsapiEnv * pEnv, HttpSession *pSession )
 {
-    HttpReq * pReq = pConn->getReq();
+    HttpReq * pReq = pSession->getReq();
     int n;
-    int count = HttpCgiTool::buildCommonEnv( pEnv, pConn );
+    int count = HttpCgiTool::buildCommonEnv( pEnv, pSession );
     const AutoStr2 * psTemp = pReq->getRealPath();
     if ( psTemp )
     {
@@ -130,12 +130,12 @@ int LsapiReq::appendEnv( LsapiEnv * pEnv, HttpConnection * pConn )
     return 0;
 }
 
-int LsapiReq::appendSpecialEnv( LsapiEnv * pEnv, HttpConnection * pConn, 
+int LsapiReq::appendSpecialEnv( LsapiEnv * pEnv, HttpSession *pSession, 
                                 struct lsapi_req_header * pHeader )
 {
     //pHeader->m_cntSpecialEnv = 1;
     //pEnv->add( "\001\004safe_mode", 11, "1", 1 );
-    PHPConfig * pConfig = pConn->getReq()->getContext()->getPHPConfig();
+    PHPConfig * pConfig = pSession->getReq()->getContext()->getPHPConfig();
     if ( pConfig )
     {
         pHeader->m_cntSpecialEnv = pConfig->getCount();
@@ -158,13 +158,13 @@ int LsapiReq::appendHttpHeaderIndex( HttpReq * pReq, int cntUnknown )
 }
 
 
-int LsapiReq::buildReq( HttpConnection * pConn, int * totalLen )
+int LsapiReq::buildReq( HttpSession *pSession, int * totalLen )
 {
     int ret;
     LsapiEnv env( &m_bufReq );
 
     
-    HttpReq * pReq = pConn->getReq();
+    HttpReq * pReq = pSession->getReq();
     lsapi_req_header * pHeader = (lsapi_req_header *)m_bufReq.begin();
     m_bufReq.resize( sizeof( lsapi_req_header ) );
     
@@ -172,12 +172,12 @@ int LsapiReq::buildReq( HttpConnection * pConn, int * totalLen )
     pHeader->m_reqBodyLen       = pReq->getContentLength();
     pHeader->m_cntUnknownHeaders = pReq->getUnknownHeaderCount();
     
-    ret = appendSpecialEnv( &env, pConn, pHeader );
+    ret = appendSpecialEnv( &env, pSession, pHeader );
     if ( ret )
     {
         return ret;
     }
-    ret = appendEnv( &env, pConn );
+    ret = appendEnv( &env, pSession );
     if ( ret )
         return ret;
     int pad = ( 8 - ( m_bufReq.size() % 8 ) ) % 8;

@@ -3,13 +3,13 @@ cmake_minimum_required(VERSION 2.8)
 
 ########### next target ###############
 
-SET(main_STAT_SRCS
+SET(main_STAT_SRCS 
+   mainserverconfig.cpp
    lshttpdmain.cpp
    serverinfo.cpp
-   httpserverbuilder.cpp
+   httpconfigloader.cpp
    httpserver.cpp
    plainconf.cpp
-   
 )
 
 add_library(main STATIC ${main_STAT_SRCS})

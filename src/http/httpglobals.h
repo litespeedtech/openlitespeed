@@ -21,14 +21,17 @@
 
 #include <sys/types.h>
 #include <http/reqstats.h>
-    
+#include <util/tlinklist.h>
+#include <../addon/include/ls.h>
+
+
 class AccessControl;
 class AutoStr2;
 class ClientCache;
 class ConnLimitCtrl;
 class DeniedDir;
 class EventDispatcher;
-class HttpConnection;
+class HttpSession;
 class HttpMime;
 class HttpResourceManager;
 class Multiplexer;
@@ -39,7 +42,7 @@ class StdErrLogger;
 class SUExec;
 class CgidWorker;
 class HttpVHost;
-class HttpServerBuilder;
+class HttpConfigLoader;
 
 #ifdef USE_UDNS
 class Adns;
@@ -47,6 +50,17 @@ class Adns;
 class IpToGeo;
 #define G_BUF_SIZE 16384
 #define TIMER_PRECISION 10
+
+class ModuleTimer : public LinkedObj
+{
+public:
+    int                     m_iId;
+    time_t                  m_tmExpire;
+    time_t                  m_tmExpireUs;
+    lsi_timer_callback_pf   m_TimerCb;
+    void*                   m_pTimerCbParam;
+};
+
 
 class HttpGlobals
 {
@@ -106,8 +120,12 @@ public:
 
     static int                    s_rubyProcLimit;
     static int                    s_railsAppLimit;
-    static HttpServerBuilder *    s_pBuilder;
 
+    
+    //module timer linklist
+    static TLinkList<ModuleTimer>    s_ModuleTimerList;
+    
+   
 #ifdef USE_UDNS
     static Adns                   s_adns;
 #endif

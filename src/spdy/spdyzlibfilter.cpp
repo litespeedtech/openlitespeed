@@ -271,7 +271,7 @@ int SpdyZlibFilter::release()
     return 0; 
 }
 
-int SpdyZlibFilter::spdyHeaderInflate( char* pSource, uint32_t length, AutoBuf& bufInflate)
+int SpdyZlibFilter::decompress( char* pSource, uint32_t length, AutoBuf& bufInflate)
 {
     int ret;
 
@@ -328,7 +328,7 @@ int SpdyZlibFilter::spdyHeaderInflate( char* pSource, uint32_t length, AutoBuf& 
     return bufInflate.size();
 }
 
-int SpdyZlibFilter::spdyHeaderDeflate(char* pSource, uint32_t length, LoopBuf* ploopbuf, int flush)
+int SpdyZlibFilter::compress(char* pSource, uint32_t length, LoopBuf* ploopbuf, int flush)
 {
     int ret;
     int old_size = ploopbuf->size();
@@ -340,7 +340,7 @@ int SpdyZlibFilter::spdyHeaderDeflate(char* pSource, uint32_t length, LoopBuf* p
     m_stream.next_out = ( unsigned char * )ploopbuf->end();
     while ( m_stream.avail_in )
     {
-        ret = deflate( &m_stream, flush );
+        ret = ::deflate( &m_stream, flush );
 
         if (( ret == Z_OK ) || ( ret == Z_STREAM_END ) )
         {

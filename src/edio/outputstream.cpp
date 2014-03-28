@@ -23,13 +23,11 @@
 #include <stdio.h>
 #include <errno.h>
 
-int OutputStream::writevToWrite( IOVec& vec )
+int OutputStream::writevToWrite( const struct iovec * vector, int count )
 {
     int ret = 0;
     int bufSize;
     int written = 0;
-    int count = vec.len();
-    const struct iovec * vector = vec.get();
     for( ; count > 0; --count, ++vector )
     {
         const char * pBuf =( const char *) vector->iov_base;
@@ -48,19 +46,13 @@ int OutputStream::writevToWrite( IOVec& vec )
 
 int OutputStream::writev( IOVec& vec )
 {
-    int bufSize;
-    int count = vec.len();
-    int total = 0;
-    const struct iovec * vector = vec.get();
-    for( ; count > 0; --count, ++vector )
-    {
-        const char * pBuf =( const char *) vector->iov_base;
-        bufSize = vector->iov_len;
-        if (( pBuf != NULL )&&( bufSize > 0 ))
-            total += bufSize;
-    }
     
-    return writev( vec, total );
+    return writev( vec.get(), vec.len() );
+}
+
+int OutputStream::writev( IOVec& vec, int total )
+{
+    return writev( vec.get(), vec.len() );
 }
 
 

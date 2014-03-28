@@ -16,7 +16,10 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include <util/rlimits.h>
+#include <util/xmlnode.h>
 #include <string.h>
+#include "util/configctx.h"
+#include <limits.h>
 RLimits::RLimits()
 {
     reset();

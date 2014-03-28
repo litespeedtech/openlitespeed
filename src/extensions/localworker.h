@@ -64,6 +64,7 @@ public:
     int startWorker();
     
     static int workerExec( LocalWorkerConfig& config, int fd );
+    static void configRlimit(RLimits* pRLimits, const XmlNode *pNode );
     
 };
 

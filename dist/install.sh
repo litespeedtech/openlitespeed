@@ -131,6 +131,18 @@ else
 #        if [ -f  "$LSWS_HOME/admin/fcgi-bin/admin_php" ] ; then
 #            HASADMINPHP=y
 #        fi
+
+    elif [ "x$OS" = "xFreeBSD" ] && [ "x$DLCMD" != "x" ]  ; then
+        if [ "x$OSTYPE" != "xamd64" ] ; then
+            $DLCMD $LSWS_HOME/admin/fcgi-bin/admin_php http://www.litespeedtech.com/packages/lsphp5_bin/i386-freebsd/lsphp5
+        else
+            $DLCMD $LSWS_HOME/admin/fcgi-bin/admin_php http://www.litespeedtech.com/packages/lsphp5_bin/x86_64-freebsd/lsphp5
+        fi
+        
+        if [ $? = 0 ] ; then 
+            HASADMINPHP=y
+        fi
+        
     fi
 fi
 
@@ -141,9 +153,10 @@ else
     chmod "$EXEC_MOD" "$LSWS_HOME/admin/fcgi-bin/admin_php"
 fi
 
-ENCRYPT_PASS=`"$LSWS_HOME/admin/fcgi-bin/admin_php" -q "$LSWS_HOME/admin/misc/htpasswd.php" $PASS_ONE`
-echo "$ADMIN_USER:$ENCRYPT_PASS" > "$LSWS_HOME/admin/conf/htpasswd"
-
+if [ ! -f "$LSWS_HOME/admin/conf/htpasswd" ] ; then
+    ENCRYPT_PASS=`"$LSWS_HOME/admin/fcgi-bin/admin_php" -q "$LSWS_HOME/admin/misc/htpasswd.php" $PASS_ONE`
+    echo "$ADMIN_USER:$ENCRYPT_PASS" > "$LSWS_HOME/admin/conf/htpasswd"
+fi
 
 
 if [ -f "$LSWS_HOME/fcgi-bin/lsphp" ]; then

@@ -44,6 +44,18 @@ public:
         else
             return 0;
     }
+    int writev( const struct iovec * iov, int count )
+    {
+        m_count = !m_count;
+        if ( m_count )
+        {
+            m_buf.append( (char *)iov->iov_base, 1 );
+            return 1;
+        }
+        else
+            return 0;
+    }
+    
     int writev( IOVec& iov )
     {
         m_count = !m_count;

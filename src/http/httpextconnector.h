@@ -26,7 +26,7 @@
 #include <log4cxx/ilog.h>
 
 
-class HttpConnection;
+class HttpSession;
 class HttpExtProcessor;
 class ExtWorker;
 class ExtRequest;
@@ -48,7 +48,7 @@ class VMemBuf;
 class HttpExtConnector : public ReqHandler, public ExtRequest
 {
 protected:
-    HttpConnection      * m_pHttpConn;
+    HttpSession         * m_pSession;
     HttpExtProcessor    * m_pProcessor;
     ExtWorker           * m_pWorker;
     AutoBuf               m_respHeaderBuf;
@@ -85,13 +85,13 @@ public:
     int getState() const       { return m_iState;  }
     void setProcessor( HttpExtProcessor * pProcessor )
     {   m_pProcessor = pProcessor; }
-    void setHttpConn( HttpConnection  * pConn )
-    {   m_pHttpConn = pConn;    }
+    void setHttpSession( HttpSession  * pSession )
+    {   m_pSession = pSession;    }
     
     HttpExtProcessor * getProcessor() const
     {   return m_pProcessor;    }
-    HttpConnection* getHttpConn() const
-    {   return m_pHttpConn;     }
+    HttpSession* getHttpSession() const
+    {   return m_pSession;     }
 
     ExtWorker* getWorker() const    {   return m_pWorker;   }
     void setWorker( ExtWorker * pWorker )
@@ -102,13 +102,13 @@ public:
     int& getRespState()             {   return m_iRespState;    }
     void setRespState( int state)   {   m_iRespState = state;   }
     
-    //functions called by the HttpConnection
+    //functions called by the HttpSession
     void abortReq();
     //defined in ReqHandler
-    virtual int process( HttpConnection* pConn, const HttpHandler * pHandler );
-    virtual int onWrite( HttpConnection* pConn, int aioSent );
-    virtual int cleanUp( HttpConnection* pConn );
-    virtual int onRead( HttpConnection* pConn );
+    virtual int process( HttpSession* pSession, const HttpHandler * pHandler );
+    virtual int onWrite( HttpSession* pSession );
+    virtual int cleanUp( HttpSession* pSession );
+    virtual int onRead( HttpSession* pSession );
     virtual void onTimer();
 
     //functions called by the HttpExtProcessor
@@ -125,7 +125,9 @@ public:
 
     int  parseHeader( const char * &pBuf, int &len, int httpResp=0 );
     int  processRespBodyData( int inplace, const char * pBuf, int len );
-    int  respHeaderDone(int len);
+
+    int  respHeaderDone();
+
     bool isRecoverable();
     int  tryRecover();
     int  isAlive();

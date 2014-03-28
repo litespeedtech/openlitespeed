@@ -21,7 +21,7 @@
 
 class HttpResp;
 class HttpReq;
-class HttpConnection;
+class HttpSession;
 class HttpExtConnector;
 class FcgiEnv;
 class Env;
@@ -40,10 +40,10 @@ public:
                         const char * pValue, const char * pLineEnd, int &status );
     static int parseRespHeader( HttpExtConnector * pLB,
                         const char * pBuf, int size, int &status );
-    static int buildEnv( IEnv* pEnv, HttpConnection* pConn);
-    static int buildFcgiEnv( FcgiEnv* pEnv, HttpConnection* pConn );
+    static int buildEnv( IEnv* pEnv, HttpSession* pSession);
+    static int buildFcgiEnv( FcgiEnv* pEnv, HttpSession* pSession );
     static void buildServerEnv();
-    static int buildCommonEnv( IEnv * pEnv, HttpConnection* pConn );
+    static int buildCommonEnv( IEnv * pEnv, HttpSession* pSession );
 
 };
 

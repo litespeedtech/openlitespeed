@@ -25,16 +25,10 @@
 HostInfo::HostInfo()
 {
     init();
-    //FIXME: out of memory
-    //if ( init() == ENOMEM )
-    //  throw OutOfMemException("in HostInfo::HostInfo() function");
 }
 HostInfo::HostInfo(const hostent& rhs)
 {
     init();
-    //FIXME: out of memory
-    //if ( init() == ENOMEM )
-    //  throw OutOfMemException("in HostInfo::HostInfo() function");
     *this = rhs;
 
 

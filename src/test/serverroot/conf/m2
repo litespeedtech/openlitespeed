@@ -45,7 +45,8 @@ ice	= x-conference/x-cooltalk
 ief	= image/ief
 iges	= model/iges
 igs	= model/iges
-java	= text/plainjar     = application/java-archive
+java    = text/plain
+jar     = application/java-archive
 jnlp	= application/x-java-jnlp-file
 jpeg	= image/jpeg
 jpe	= image/jpeg

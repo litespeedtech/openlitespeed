@@ -95,7 +95,9 @@ public:
     int appendPing(uint32_t uiStreamID)
     {   return sendFrame4Bytes( SPDY_FRAME_PING, uiStreamID );  }
 
-    int  sendRespHeaders(IOVec &vector, int iheaderCount, uint32_t uiStreamID);
+    int addBufToGzip(char *hdrBuf, unsigned int& szHdrBuf, int iSpdyVer, struct iovec *iov, int iov_count, LoopBuf *buf, int &total, int flushWhenEnd = 0);
+    int addBufToGzip(char *hdrBuf, unsigned int& szHdrBuf, int iSpdyVer, const char *s, int len, LoopBuf *buf, int &total);
+    int  sendRespHeaders(HttpRespHeaders *pRespHeaders, uint32_t uiStreamID);
 
     int sendWindowUpdateFrame( uint32_t id, int32_t delta )
     {   return sendFrame8Bytes( SPDY_FRAME_WINDOW_UPDATE,
@@ -172,6 +174,9 @@ private:
     int appendReqHeaders(SpdyStream* arg1, int arg2);
     int extractCompressedData();
     void skipRemainData();
+    int compressHeaders(HttpRespHeaders* pRespHeaders);
+    
+    int deflateToBuffer(char *hdrBuf, unsigned int& szHdrBuf, char* pSource, uint32_t length, LoopBuf* ploopbuf, int flush);
     
 private:
     LoopBuf         m_bufInput;
@@ -203,7 +208,6 @@ private:
     int32_t         m_tmIdleBegin;
     int32_t         m_SpdyHeaderMem[10];
     SpdyFrameHeader* m_pcurrentSpdyHeader;
-
 
 private:
     SpdyConnection(const SpdyConnection& other);

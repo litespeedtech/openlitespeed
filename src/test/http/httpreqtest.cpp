@@ -64,7 +64,7 @@ TEST(HttpReqTest_testFragment)
     HttpReqTst req;
     req.getIdBuf() = "testFragment" ;
     req.reset();
-    req.setVHost( (const HttpVHost *)1 );  //just skip vhost lookup while parsing header
+    req.setVHost( (HttpVHost *)1 );  //just skip vhost lookup while parsing header
     CHECK( 1 == req.append( pFrag1, strlen( pFrag1 ) ));
     CHECK( 0 == req.append( pFrag2, strlen( pFrag2 ) ));
     CHECK( req.getOrgReqURLLen() == 26 );
@@ -113,7 +113,7 @@ TEST( HttpReqTest_testParseHeader)
     HttpReqTst req;
     req.getIdBuf() = "testParseHeader";
     req.reset();
-    req.setVHost( (const HttpVHost *)1 );  //just skip vhost look while parsing header
+    req.setVHost( (HttpVHost *)1 );  //just skip vhost look while parsing header
     CHECK( 1 == req.append( pGarbage, strlen( pGarbage ) ));
 
     int len = strlen( pInput );
@@ -201,7 +201,7 @@ TEST( HttpReqTest_testParseHeader1)
     HttpReqTst req;
     req.getIdBuf() = "testParseHeader1" ;
     req.reset();
-    req.setVHost( (const HttpVHost *)1 );  //just skip vhost look while parsing header
+    req.setVHost( (HttpVHost *)1 );  //just skip vhost look while parsing header
 
     int len = strlen( pInput );
     int i;
@@ -269,7 +269,7 @@ TEST( HttpReqTest_testParseHeader2)
     HttpReqTst req;
     req.getIdBuf() = "testParseHeader1" ;
     req.reset();
-    req.setVHost( (const HttpVHost *)1 );  //just skip vhost look while parsing header
+    req.setVHost( (HttpVHost *)1 );  //just skip vhost look while parsing header
 
     int len = strlen( pInput );
     int i;
@@ -331,7 +331,7 @@ TEST( HttpReqTest_testParseHeader3)
     HttpReqTst req;
     req.getIdBuf() = "testParseHeader1" ;
     req.reset();
-    req.setVHost( (const HttpVHost *)1 );  //just skip vhost look while parsing header
+    req.setVHost( (HttpVHost *)1 );  //just skip vhost look while parsing header
 
     int len = strlen( pInput );
     int i;

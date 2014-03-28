@@ -43,7 +43,6 @@ class PidList;
 class ExtWorker : public HttpHandler
 {
     ExtWorkerConfig   * m_pConfig;
-    Multiplexer       * m_pMultiplexer;
     DLinkQueue          m_reqQueue;
     ConnPool            m_connPool;
     unsigned short      m_iRole;
@@ -80,11 +79,6 @@ public:
 
     ExtWorkerConfig * getConfigPointer() const
     {   return m_pConfig;       }
-
-    Multiplexer * getMultiplexer() const
-    {   return m_pMultiplexer;  }
-    void setMultiplexer( Multiplexer * pMplx )
-    {   m_pMultiplexer = pMplx;    }
     
     const char * getURL() const
     {   return m_pConfig->getURL();  }

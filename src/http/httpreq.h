@@ -23,7 +23,6 @@
 #include <http/httpheader.h>
 #include <http/httpmethod.h>
 #include <http/httpver.h>
-#include <http/staticfiledata.h>
 #include <http/httpstatuscode.h>
 #include <util/autostr.h>
 #include <util/logtracker.h>
@@ -38,6 +37,7 @@
 #define PROCESS_CONTEXT         (1<<0)
 #define CONTEXT_AUTH_CHECKED    (1<<1)
 #define REDIR_CONTEXT           (1<<2)
+#define IN_SENDFILE             (1<<3)
 #define KEEP_AUTH_INFO          (1<<5)
 
 #define REWRITE_QSD             (1<<6)
@@ -51,13 +51,12 @@
 #define RESP_CONT_LEN_SET       (1<<13)
 
 
+
 #define GZIP_ENABLED            1
 #define REQ_GZIP_ACCEPT         2
 #define UPSTREAM_GZIP           4
 #define GZIP_REQUIRED           (GZIP_ENABLED | REQ_GZIP_ACCEPT)
 #define GZIP_ADD_ENCODING       8
-
-#define WAIT_FULL_REQ_BODY      (1<<15)
 
 
 
@@ -66,7 +65,7 @@ class AuthRequired;
 class ClientInfo;
 class ExpiresCtrl;
 class HTAuth;
-class HttpConnection;
+class HttpSession;
 class HttpContext;
 class HttpRange;
 class HttpHandler;
@@ -109,7 +108,7 @@ private:
     const MIMESetting * m_pMimeType;
     int                 m_iHttpHeaderEnd;
 
-
+    //Comment:The order of the below 3 varibles should NOT be changed!!!
     short               m_commonHeaderLen[HttpHeader::H_TE];
     int                 m_commonHeaderOffset[HttpHeader::H_TE];
     int                 m_headerIdxOff;
@@ -123,20 +122,19 @@ private:
     short               m_iKeepAlive;
     char                m_iAcceptGzip;
     char                m_iNoRespBody;
-    long                m_lEntityLength;
-    long                m_lEntityFinished;
+    off_t               m_lEntityLength;
+    off_t               m_lEntityFinished;
     short               m_iRedirects;
     short               m_iContextState;
     const HttpHandler * m_pHttpHandler;
 
-    //const HttpContext * m_pHTAContext;
     const HttpContext * m_pContext;
+    //const HttpContext * m_pHTAContext;
     const HttpContext * m_pFMContext;
     VMemBuf           * m_pReqBodyBuf;
     HttpRange         * m_pRange;
-    const HttpVHost   * m_pVHost;
+    HttpVHost         * m_pVHost;
     const char        * m_pForcedType;
-    StaticFileData      m_dataStaticFile;
     int                 m_iAuthUserOff;
     const HTAuth      * m_pHTAuth;
     const AuthRequired* m_pAuthRequired;
@@ -149,11 +147,13 @@ private:
     const AutoStr2    * m_pRealPath;
     int                 m_iMatchedLen;
     int                 m_iNewHostLen;
+    int                 m_upgradeProto;
     int                 m_iLocationOff;
 
     // The following member need not to be initialized
     AutoStr2            m_sRealPathStore;
     int                 m_iMatchedOff;
+    int                 m_fdReqFile;
     struct stat         m_fileStat;
     int                 m_iScriptNameLen;
     key_value_pair    * m_urls;
@@ -162,7 +162,6 @@ private:
     int                 m_iNewHostOff;
     LogTracker        * m_pILog;
 
-    int                 m_upgradeProto;
     
     HttpReq( const HttpReq& rhs ) ;
     void operator=( const HttpReq& rhs );
@@ -177,7 +176,6 @@ private:
     int processMime( const char * pSuffix );
     int filesMatch( const char * pEnd );
 
-    int checkSymLink( int follow, char * pBuf, char * &p, char * pBegin );
     int checkSuffixHandler( const char * pURI, int len, int &cacheable );
 
 
@@ -205,6 +203,8 @@ private:
     key_value_pair * newKeyValueBuf( int &idxOff);
     key_value_pair * getValueByKey( const AutoBuf& buf, int idxOff, const char * pName,
                         int namelen ) const;
+    void removeKeyValueByKey( const AutoBuf & buf, int idxOff, const char * pKey, int keyLen );
+    
     int  getListSize( int idxOff )
     {
         if ( !idxOff )
@@ -281,8 +281,10 @@ public:
 
     AutoBuf& getHeaderBuf()                 {   return m_headerBuf;     }
 
-    const HttpVHost * getVHost() const          {   return m_pVHost;    }
-    void setVHost( const HttpVHost * pVHost )   {   m_pVHost = pVHost;  }
+    const HttpVHost * getVHost() const      {   return m_pVHost;    }
+    HttpVHost * getVHost()                  {   return m_pVHost;    }
+    
+    void setVHost( HttpVHost * pVHost )   {   m_pVHost = pVHost;  }
 
     const char * getURI() const
     {   return m_reqBuf.getPointer( m_curURL.keyOff);   }
@@ -355,21 +357,22 @@ public:
     {   return m_reqBuf.getPointer( m_iAuthUserOff );   }
 
     bool isChunked() const      {   return m_lEntityLength == CHUNKED;  }
-    long getBodyRemain() const
+    off_t getBodyRemain() const
     {   return m_lEntityLength - m_lEntityFinished; }
 
-    long getContentFinished() const     {   return m_lEntityFinished;   }
-    void contentRead( long lLen )       {   m_lEntityFinished += lLen;  }
+    off_t getContentFinished() const    {   return m_lEntityFinished;   }
+    void contentRead( off_t lLen )      {   m_lEntityFinished += lLen;  }
 
 
     const   char* getContentType() const
     {   return getHeader( HttpHeader::H_CONTENT_TYPE );     }
 
-    void setContentLength( long len )   {   m_lEntityLength = len;      }
-    long getContentLength() const       {   return m_lEntityLength;     }
+    void setContentLength( off_t len )  {   m_lEntityLength = len;      }
+    off_t getContentLength() const      {   return m_lEntityLength;     }
     int  getHostStrLen()                {   return m_iHostLen;          }
     int  getScriptNameLen() const       {   return m_iScriptNameLen;    }
-
+    void setScriptNameLen( int n);
+    
     const HttpHandler* getHttpHandler() const{  return m_pHttpHandler;  }
     
     int  translatePath( const char * pURI, int uriLen,
@@ -414,6 +417,13 @@ public:
     void updateKeepAlive();
     struct stat& getFileStat()              {   return m_fileStat;      }
     const struct stat& getFileStat() const  {   return m_fileStat;      }
+    
+    int transferReqFileFd()                 
+    {
+        int fd = m_fdReqFile; 
+        m_fdReqFile = -1;     
+        return fd;          
+    }
 
     HttpRange * getRange() const            {   return m_pRange;        }
     void setRange( HttpRange * pRange )     {   m_pRange = pRange;      }
@@ -453,7 +463,6 @@ public:
 
     void setStatusCode( int code )      {   m_code = code;              }
     int  getStatusCode() const          {   return m_code;              }
-    StaticFileData* getStaticFileData() {   return &m_dataStaticFile;   }
     void tranEncodeToContentLen();
 
     const AutoStr2 * getDocRoot() const;
@@ -472,12 +481,18 @@ public:
     void setForcedType( const char * pType ) {   m_pForcedType = pType;     }
     const char * getForcedType() const      {   return m_pForcedType;       }
 
+    int checkSymLink( const char * pPath, int pathLen, const char * pBegin );
 
-    void addEnv( const char * pKey, int keyLen, const char * pValue, int valLen );
+    const char *findEnvAllias(const char * pKey, int keyLen, int& alliasKeyLen);
+    key_value_pair * addEnv( const char * pKey, int keyLen, const char * pValue, int valLen );
     const char * getEnv( const char * pKey, int keyLen, int &valLen );
     const char * getEnvByIndex( int idx, int &keyLen, const char * &pValue, int &valLen  );
     int  getEnvCount()
     {   return getListSize( m_envIdxOff );  }
+    void unsetEnv( const char * pKey, int keyLen )
+    {    removeKeyValueByKey( m_reqBuf, m_envIdxOff, pKey, keyLen ); }
+
+    
     int  getUnknownHeaderCount()
     {   return getListSize( m_headerIdxOff );  }
     const char * getUnknownHeaderByIndex( int idx, int &keyLen,
@@ -510,24 +525,23 @@ public:
     {
         return ( m_iRedirects )? m_urls[0].keyLen : m_curURL.keyLen;
     }
-    StaticFileCacheData * & setStaticFileCache();
     void appendHeaderIndexes( IOVec * pIOV, int cntUnknown );
     void getAAAData( struct AAAData &aaa, int &satisfyAny );
 
-    long getTotalLen() const    {   return m_lEntityFinished + getHttpHeaderLen();  }
+    off_t getTotalLen() const     {   return m_lEntityFinished + getHttpHeaderLen();  }
 
     const AutoBuf * getExtraHeaders() const;
     
-    int GetReqMethod(const char *pCur, const char *pBEnd );
-    int GetReqHost(const char* pCur, const char *pBEnd);
-    int GetReqURL(const char *pCur, const char *pBEnd);
-    int GetReqVersion(const char *pCur, const char *pBEnd);
-    int RemoveSpace(const char **pCur, const char *pBEnd);
-    int GetReqURI(const char *pCur, const char *pBEnd );
-    const char* SkipSpace(const char *pOrg, const char *pDest);
-    int ProcessHeader(int index);
-    int HostProcess(const char* pCur, const char *pBEnd);
-    int SkipSpaceBothSide(const char* &pHBegin, const char* &pHEnd);
+    int parseMethod(const char *pCur, const char *pBEnd );
+    int parseHost(const char* pCur, const char *pBEnd);
+    int parseURL(const char *pCur, const char *pBEnd);
+    int parseProtocol(const char *pCur, const char *pBEnd);
+    int removeSpace(const char **pCur, const char *pBEnd);
+    int parseURI(const char *pCur, const char *pBEnd );
+    const char* skipSpace(const char *pOrg, const char *pDest);
+    int processHeader(int index);
+    int postProcessHost(const char* pCur, const char *pBEnd);
+    int skipSpaceBothSide(const char* &pHBegin, const char* &pHEnd);
     char isGeoIpOn() const;
     int getDecodedOrgReqURI( char * &pValue );
     SSIRuntime * getSSIRuntime() const  {   return m_pSSIRuntime;   }

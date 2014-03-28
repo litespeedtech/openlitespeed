@@ -26,7 +26,7 @@
 #include <http/httplog.h>
 #include <http/httpmime.h>
 #include <http/httpstatuscode.h>
-#include <http/httpconnection.h>
+#include <http/httpsession.h>
 
 JConn::JConn()
     : m_pReqHeaderEnd ( NULL )
@@ -212,7 +212,7 @@ int JConn::processPacketContent( unsigned char * &p, unsigned char * pEnd )
             code = HttpStatusCode::codeToIndex( code );
             if ( code != -1 )
             {
-                getConnector()->getHttpConn()->getReq()->updateNoRespBodyByStatus( code );
+                getConnector()->getHttpSession()->getReq()->updateNoRespBodyByStatus( code );
                 
             }
             m_iPacketState = STATUS_MSG;
@@ -294,12 +294,12 @@ int JConn::readRespHeader( unsigned char *&p, unsigned char *pEnd )
         char * pHeaderVal = (char *)p1 + 2;
         p = p1 + headerValLen + 3;
         --m_iNumHeader;
-        HttpResp * pResp = getConnector()->getHttpConn()->getResp();
+        HttpResp * pResp = getConnector()->getHttpSession()->getResp();
         int ret = pResp->appendHeader(
                     pHeaderName, headerNameLen, pHeaderVal, headerValLen );
         if ( ret )
             return ret;
-        HttpReq * pReq = getConnector()->getHttpConn()->getReq();
+        HttpReq * pReq = getConnector()->getHttpSession()->getReq();
         if ( pReq->gzipAcceptable() )
         {
             if ( *pHeaderName == 'C' || *pHeaderName == 'c' )
@@ -324,7 +324,7 @@ int JConn::readRespHeader( unsigned char *&p, unsigned char *pEnd )
         }
     }
     getConnector()->getRespState() |= HttpReq::HEADER_OK;
-    return getConnector()->respHeaderDone( m_pCurPos - p );
+    return getConnector()->respHeaderDone();
 }
 
 int JConn::processRespData()
@@ -568,7 +568,7 @@ int JConn::buildReqHeader()
 {
     m_pReqHeaderEnd = m_buf + 4;
     int ret = JkAjp13::buildReq(
-            getConnector()->getHttpConn(), m_pReqHeaderEnd,
+            getConnector()->getHttpSession(), m_pReqHeaderEnd,
             &m_buf[ AJP_MAX_PACKET_SIZE ] );
     if ( ret == -1 )
         return -1;

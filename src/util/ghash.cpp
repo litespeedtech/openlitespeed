@@ -136,7 +136,7 @@ GHash::GHash( size_t init_size, hash_fn hf, val_comp vc )
     init_size = roundUp( init_size );
     m_table = (HashElem **)malloc( init_size * sizeof( HashElem*) );
     if ( !m_table )
-        throw std::bad_alloc();
+        return;
     ::memset( m_table, 0, init_size * sizeof( HashElem*) );
     m_capacity = init_size;
     m_tableEnd = m_table + init_size;

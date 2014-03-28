@@ -3,7 +3,7 @@
   <meta charset="utf-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
   <title>Open LiteSpeed Web Server Users' Manual - Web Socket Proxy</title>
-  <meta name="description" content="Open LiteSpeed Web Server Users' Manual - Web Socket Proxy." />  
+  <meta name="description" content="Open LiteSpeed Web Server Users' Manual - Web Socket Proxy." />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="shortcut icon" href="img/favicon.ico" />
   <link rel="stylesheet" type="text/css" href="css/hdoc.css">
@@ -11,7 +11,7 @@
 <body>
 <div class="pagewrapper"><div class="sidetree">
 <h3>OpenLiteSpeed Web Server <a href="index.html"> Users' Manual</a></h3>
-<h5>Version 1.2 Rev. 2 </h5>
+<h5>Version 1.3 Rev. 1 </h5>
 <hr/>
 <div>
 <ul class="toctop">
@@ -29,6 +29,7 @@
 	<li><a href="ExtApp_Help.html">External Apps</a></li>
 	<li><a href="ScriptHandler_Help.html">Script Handler</a></li>
 	<li><a href="Rails_Help.html">Rack/Rails Settings</a></li>
+	<li><a href="Module_Help.html">Module Configuration</a></li>
 	<li><a href="Listeners_Help.html">Listeners</a></li>
 	<li><a href="Templates_Help.html">Templates</a></li>
 	<li><a href="VirtualHosts_Help.html">Virtual Host List</a></li>
@@ -55,7 +56,7 @@ communication to the appropriate backend stipulated in the {ITEM=wsaddr} field.<
 <section><div class="helpitem"><a name="wsuri"></a><table width="100%" class="ht" border="0" cellpadding="5" cellspacing="0"> <tr class="ht-title"><td><div>URI<span class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="img/top.gif"></a></span></div></td></tr> <tr><td><span class="ht-label">Description: </span>Specifies the URI(s) that will use this WebSocket backend. Traffic to  this URI will only be forwarded to the WebSocket backend when it contains  a WebSocket upgrade request. <br/><br/> Traffic without this upgrade request will automatically be forwarded to the  Context that this URI belongs to. If no Context exists for this URI,  LSWS will treat this traffic as though it is accessing a static context with  the location <span class="val">$DOC_ROOT/URI</span>.</td></tr> <tr><td><span class="ht-label">Syntax: </span>The URI can be a plain URI (starting with "/") or a Perl-compatible  regular expression URI (starting with "exp:"). If a plain URI ends with a "/",  then this WebSocket backend will include all sub-URIs under this URI.</td></tr> <tr><td><span class="ht-label">Example: </span>Using the WebSocket proxy in conjunction with a Context  allows you to serve different kinds of traffic in different ways  on the same page, thus optimizing performance. You can send WebSocket  traffic to the WebSocket backend, while setting up a static context so  that LSWS can serve the page's static content, or an LSAPI context so LSWS  will serve PHP content (both of which LSWS does more efficiently  than the WebSocket backend).</td></tr> </table> </div>
 <div class="helpitem"><a name="wsaddr"></a><table width="100%" class="ht" border="0" cellpadding="5" cellspacing="0"> <tr class="ht-title"><td><div>Address<span class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="img/top.gif"></a></span></div></td></tr> <tr><td><span class="ht-label">Description: </span>A unique socket address used by the WebSocket backend.  IPv4 sockets, IPv6 sockets, and Unix Domain Sockets (UDS) are supported.  IPv4 and IPv6 sockets can be used for communication over the network.  UDS can only be used when the WebSocket backend resides on the same machine as the server.</td></tr> <tr><td><span class="ht-label">Syntax: </span>IPv4 or IPV6 address:port or UDS://path</td></tr> <tr><td><span class="ht-label">Example: </span>127.0.0.1:5434 <br/> UDS://tmp/lshttpd/php.sock.</td></tr> <tr><td><span class="ht-label">Tips: </span>[Security] If the WebSocket backend runs on the same machine,  UDS is preferred. If you have to use an IPv4 or IPv6 socket,  set the IP address to localhost or 127.0.0.1, so the WebSocket backend  is inaccessible from other machines.<br/> [Performance] Unix Domain Sockets generally provide higher performance than IPv4 or IPv6 sockets.</td></tr> </table> </div>
 </section>
-</div><footer class="copyright">Copyright &copy; 2013. <a href="http://www.litespeedtech.com">Lite Speed Technologies Inc.</a> All rights reserved.</footer>
+</div><footer class="copyright">Copyright &copy; 2013-2014. <a href="http://www.litespeedtech.com">Lite Speed Technologies Inc.</a> All rights reserved.</footer>
 				</div>
 				</body>
 				</html>

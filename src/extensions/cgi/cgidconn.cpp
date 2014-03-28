@@ -17,7 +17,7 @@
 *****************************************************************************/
 #include "cgidconn.h"
 #include <http/httpcgitool.h>
-#include <http/httpconnection.h>
+#include <http/httpsession.h>
 #include <http/httpextconnector.h>
 #include <http/httplog.h>
 #include <sys/socket.h>
@@ -222,7 +222,7 @@ int CgidConn::addRequest( ExtRequest * pReq )
     assert( pReq );
     setConnector( (HttpExtConnector *)pReq );
     int ret;
-    if ( getConnector()->getHttpConn()->getReq()->getContextState( EXEC_EXT_CMD ) )
+    if ( getConnector()->getHttpSession()->getReq()->getContextState( EXEC_EXT_CMD ) )
         ret = buildSSIExecHeader();
     else
         ret = buildReqHeader();
@@ -243,8 +243,8 @@ int CgidConn::addRequest( ExtRequest * pReq )
 int CgidConn::buildSSIExecHeader()
 {
     static unsigned int s_id = 0;
-    HttpConnection * pConn = getConnector()->getHttpConn();
-    HttpReq * pReq = pConn->getReq();
+    HttpSession *pSession = getConnector()->getHttpSession();
+    HttpReq * pReq = pSession->getReq();
     const char * pReal;
     const AutoStr2 * psChroot;
     const char * pChroot;
@@ -296,7 +296,7 @@ int CgidConn::buildSSIExecHeader()
     }
     m_req.appendArgv( NULL, 0 );
 
-    HttpCgiTool::buildEnv( &m_req, pConn );
+    HttpCgiTool::buildEnv( &m_req, pSession );
 
     m_req.finalize( s_id++, ((CgidWorker *)getWorker())->getConfig().getSecret(),
                      LSCGID_TYPE_CGI );
@@ -307,8 +307,8 @@ int CgidConn::buildSSIExecHeader()
 int CgidConn::buildReqHeader()
 {
     static unsigned int s_id = 0;
-    HttpConnection * pConn = getConnector()->getHttpConn();
-    HttpReq * pReq = pConn->getReq();
+    HttpSession *pSession = getConnector()->getHttpSession();
+    HttpReq * pReq = pSession->getReq();
     const char * pQueryString = pReq->getQueryString();
     const char * pQsEnd = pReq->getQueryString() + pReq->getQueryStringLen();
     const char * pReal;
@@ -366,7 +366,7 @@ int CgidConn::buildReqHeader()
     }
     m_req.appendArgv( NULL, 0 );
 
-    HttpCgiTool::buildEnv( &m_req, pConn );
+    HttpCgiTool::buildEnv( &m_req, pSession );
 
     m_req.finalize( s_id++, ((CgidWorker *)getWorker())->getConfig().getSecret(),
                     LSCGID_TYPE_CGI );

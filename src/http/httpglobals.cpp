@@ -36,13 +36,7 @@ ConnLimitCtrl          HttpGlobals::s_connLimitCtrl;
 ClientCache            HttpGlobals::s_clients( 1000 );
 
 
-#include <http/httpconnection.h>
-#include <http/httpconnpool.h>
-HttpConnPool::Pool  HttpConnPool::s_pool( 20, 20 );
-
-#include <http/ntwkiolink.h>
-#include <http/ntwkiolinkpool.h>
-NtwkIoLinkPool::Pool  NtwkIoLinkPool::s_pool( 20, 20 );
+#include <http/httpsession.h>
 
 #include <http/clientinfo.h>
 int HttpGlobals::s_iConnsPerClientSoftLimit = INT_MAX;
@@ -55,9 +49,9 @@ ThrottleLimits ThrottleControl::s_default;
 #include <http/httplog.h>
 int    HttpLog::s_debugLevel        = DL_IODATA;
 
-#include <http/datetime.h>
+#include <util/datetime.h>
 time_t DateTime::s_curTime = time( NULL );
-int    DateTime::s_curTimeMS = 0;
+int    DateTime::s_curTimeUs = 0;
 
 long HttpGlobals::s_lBytesRead = 0;
 long HttpGlobals::s_lBytesWritten = 0;
@@ -67,7 +61,7 @@ int  HttpGlobals::s_iIdleConns = 0;
 ReqStats HttpGlobals::s_reqStats;
 
 #include <http/ntwkiolink.h>
-class NtwkIOLink::fn_list NtwkIOLink::s_normal
+class NtwkIOLink::fp_list NtwkIOLink::s_normal
 (
     NtwkIOLink::readEx,
     NtwkIOLink::writevEx,
@@ -77,7 +71,7 @@ class NtwkIOLink::fn_list NtwkIOLink::s_normal
     NtwkIOLink::onTimer_
 );
 
-class NtwkIOLink::fn_list NtwkIOLink::s_normalSSL
+class NtwkIOLink::fp_list NtwkIOLink::s_normalSSL
 (
     NtwkIOLink::readExSSL,
     NtwkIOLink::writevExSSL,
@@ -87,7 +81,7 @@ class NtwkIOLink::fn_list NtwkIOLink::s_normalSSL
     NtwkIOLink::onTimer_
 );
 
-class NtwkIOLink::fn_list NtwkIOLink::s_throttle 
+class NtwkIOLink::fp_list NtwkIOLink::s_throttle 
 (
     NtwkIOLink::readExT,
     NtwkIOLink::writevExT,
@@ -97,7 +91,7 @@ class NtwkIOLink::fn_list NtwkIOLink::s_throttle
     NtwkIOLink::onTimer_T
 );
 
-class NtwkIOLink::fn_list NtwkIOLink::s_throttleSSL
+class NtwkIOLink::fp_list NtwkIOLink::s_throttleSSL
 (
     NtwkIOLink::readExSSL_T,
     NtwkIOLink::writevExSSL_T,
@@ -107,20 +101,20 @@ class NtwkIOLink::fn_list NtwkIOLink::s_throttleSSL
     NtwkIOLink::onTimerSSL_T
 );
 
-class NtwkIOLink::fn_list_list   NtwkIOLink::s_fn_list_list_normal 
+class NtwkIOLink::fp_list_list   NtwkIOLink::s_fp_list_list_normal 
 (
     &NtwkIOLink::s_normal,
     &NtwkIOLink::s_normalSSL
 );
 
-class NtwkIOLink::fn_list_list   NtwkIOLink::s_fn_list_list_throttle
+class NtwkIOLink::fp_list_list   NtwkIOLink::s_fp_list_list_throttle
 (
     &NtwkIOLink::s_throttle,
     &NtwkIOLink::s_throttleSSL
 );
 
-class NtwkIOLink::fn_list_list  *NtwkIOLink::s_pCur_fn_list_list =
-    &NtwkIOLink::s_fn_list_list_normal;
+class NtwkIOLink::fp_list_list  *NtwkIOLink::s_pCur_fp_list_list =
+    &NtwkIOLink::s_fp_list_list_normal;
 
 #include <http/httpserverconfig.h>
 HttpServerConfig HttpServerConfig::s_config;
@@ -156,7 +150,9 @@ const char * HttpMethod::s_psMethod[HttpMethod::HTTP_METHOD_END] =
     "BASELINE-CONTROL",
     "MKACTIVITY",
     "BIND",
-    "SEARCH"
+    "SEARCH",
+    "PURGE",
+    "REFRESH"
     
 };
 int HttpMethod::s_iMethodLen[HttpMethod::HTTP_METHOD_END] =
@@ -178,9 +174,9 @@ int HttpHeader::s_iHeaderLen[H_HEADER_END+1] =
 int HttpRespHeaders::s_iHeaderLen[H_HEADER_END+1] =
 {
     13, 10, 12, 14, 16, 13, 19, 13, //cache-control
-    4, 4, 7, 10, 13, 8, 18, 23, //litespeed-cache-control
+    4, 4, 7, 10, 13, 8, 20, 23, //litespeed-cache-control
     6, 16, 6, 10, 6, 17, 4, 16, 12, //x-powered-by
-    7, 0
+    0
 };
 
 #include <http/denieddir.h>
@@ -196,21 +192,24 @@ SSIEngine                s_ssiHandler;
 #include <http/staticfilecache.h>
 StaticFileCache        HttpGlobals::s_staticFileCache( 1000 );
 
-#include <http/httpresp.h>
-
-char HttpResp::s_sKeepAliveHeader[25] = "Connection: Keep-Alive\r\n";
-char HttpResp::s_sConnCloseHeader[20] = "Connection: close\r\n";
-char HttpResp::s_chunked[29] = "Transfer-Encoding: chunked\r\n";
-char HttpResp::s_sGzipEncodingHeader[48] = "Content-Encoding: gzip\r\nVary: Accept-Encoding\r\n";
-char HttpResp::s_sCommonHeaders[66] = "Date: Tue, 09 Jul 2013 13:43:01 GMT\r\nAccept-Ranges: bytes\r\nServer";
-int             HttpResp::m_commonHeadersCount = 3;
-header_st       HttpResp::m_commonHeaders[3];
-header_st       HttpResp::m_gzipHeaders[2];
-header_st       HttpResp::m_keepaliveHeader;
-header_st       HttpResp::m_chunkedHeader;
-header_st       HttpResp::m_concloseHeader;
+#include <lsiapi/modulehandler.h>
+ModuleHandler           s_ModuleHandler;
 
 
+#include <http/httprespheaders.h>
+
+char HttpRespHeaders::s_sDateHeaders[30] = "Tue, 09 Jul 2013 13:43:01 GMT";
+int             HttpRespHeaders::s_commonHeadersCount = 2;
+http_header_t       HttpRespHeaders::s_commonHeaders[2];
+http_header_t       HttpRespHeaders::s_gzipHeaders[2];
+http_header_t       HttpRespHeaders::s_keepaliveHeader;
+http_header_t       HttpRespHeaders::s_chunkedHeader;
+http_header_t       HttpRespHeaders::s_concloseHeader;
+http_header_t       HttpRespHeaders::s_acceptRangeHeader;
+
+
+TLinkList<ModuleTimer> HttpGlobals::s_ModuleTimerList;
+    
 #include <http/httpver.h>
 #include <http/httpstatuscode.h>
 
@@ -460,7 +459,6 @@ ServerInfo *    HttpGlobals::s_pServerInfo = NULL;
 SUExec *        HttpGlobals::s_pSUExec = NULL;
 CgidWorker *    HttpGlobals::s_pCgid = NULL;
 HttpVHost *     HttpGlobals::s_pGlobalVHost = NULL;
-HttpServerBuilder * HttpGlobals::s_pBuilder = NULL;
 
 uid_t  HttpGlobals::s_uid = 500;
 gid_t  HttpGlobals::s_gid = 500;

@@ -1,49 +1,35 @@
-<?
+<?php
 
-echo GUI::header("{$confCenter->_serv->_id}: $page->_title");
-echo GUI::top_menu();
-echo GUI::left_menu();
-echo '<form name="confform" method="post" action="confMgr.php">'; // to avoid warning, put in echo
-?>
+$buf = GUI::header("{$confCenter->_serv->_id}: $page->_title");
+$buf .= GUI::top_menu();
+$buf .= GUI::left_menu();
 
-<div style='height:10px;'></div>
+$buf .= '<form name="confform" method="post" action="confMgr.php">'; // to avoid warning, put in echo
 
-<? 
+if(strlen($disp->_titleLabel)) {
+	$buf .= '<div><h2>'.$disp->_titleLabel . '</h2></div>'."\n";
+}
 
-if(strlen($disp->_titleLabel)) { 
-	echo  '<div style="width:100%;"><h2>'.$disp->_titleLabel . '</h2></div>'."\n"; 
-} 
-
-echo '<div style="padding-left:10px;">'; // avoid warning, put in echo
-
-?>
-
+$buf .= '<div>
 <!-- START TABS -->
-<div id="xtab" >
-<ul>
-<?
-$uri = $disp->_ctrlUrl . 'm=' . $disp->_mid .'&p=';
+<div class="xtab" ><ul>';
 
+$uri = $disp->_ctrlUrl . 'm=' . $disp->_mid . '&p=';
 
 foreach ( $disp->_tabs as $pid => $tabName )
 {
-	$class= "";
-
-	if ( $page->_id == $pid )
-	{
-		$class = "on";
-
+	$on = '';
+	if ( $page->_id == $pid ){
+		$on = 'class="on"';
 	}
 
-	echo "\t<li class='{$class}'><div><a href='{$uri}{$pid}'>{$tabName}</a></div></li>\n";
+	$buf .= "<li $on><a href='{$uri}{$pid}'>{$tabName}</a></li>";
 
 }
 
-?>
-
-</ul>
-</div>
+$buf .= '</ul></div>
 <!-- END TABS -->
-<br>
+';
 
+echo $buf;
 

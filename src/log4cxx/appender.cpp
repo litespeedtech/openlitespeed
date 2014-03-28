@@ -47,26 +47,29 @@ Appender* Appender::getAppender( const char * pName, const char *pType )
     return (Appender *)s_pFactory->getObj( pName, pType );
 }
 
-int Appender::append( LoggingEvent * pEvent, va_list args )
+int Appender::append( LoggingEvent * pEvent )
 {
+    char achBuf[9000];
+    char * pMessage = achBuf;
+    int len;
     if ( !pEvent )
         return -1;
-    if ( getLayout() )
+    Layout * pLayout;
+    if ( pEvent->m_pLayout )
+        pLayout = pEvent->m_pLayout;
+    else
+        pLayout = m_pLayout;
+    if ( pLayout )
     {
-        if ( getLayout() != pEvent->m_pLayout)
-        {
-            pEvent->m_pLayout = getLayout();
-            getLayout()->format( pEvent, args );
-        }
+         len = pLayout->format( pEvent, pMessage, sizeof( achBuf ) );
     }
     else
     {
-        Layout::defaultFormat( pEvent, args );
+        pMessage = (char *)pEvent->m_pMessageBuf;
+        len = pEvent->m_iMessageLen;
     }
-    assert( pEvent->m_iRMessageLen < 8192 );
-    return append( pEvent->m_pMessageBuf, pEvent->m_iRMessageLen );
+    return append( pMessage, len );
 }
-
 
 END_LOG4CXX_NS
 

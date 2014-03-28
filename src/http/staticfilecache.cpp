@@ -17,9 +17,6 @@
 *****************************************************************************/
 #include "staticfilecache.h"
 #include "staticfilecachedata.h"
-#include "httpglobals.h"
-#include "httpmime.h"
-#include "httpreq.h"
 #include "httpstatuscode.h"
 
 #include <errno.h>
@@ -38,13 +35,14 @@ StaticFileCache::~StaticFileCache()
 }
 
 
-int StaticFileCache::getCacheElement(
-        HttpReq * pReq, StaticFileCacheData* &pData )
+int StaticFileCache::getCacheElement( const char * pPath, int pathLen,
+                                      const struct stat& fileStat, int fd, 
+                                      StaticFileCacheData* &pData,
+                                      FileCacheDataEx *  &pECache )
 {
-    const MIMESetting* pMime = pReq->getMimeType();
     if ( !pData )
     {
-        HttpCache::iterator iter = find( pReq->getRealPath()->c_str() );
+        HttpCache::iterator iter = find( pPath );
         if ( iter )
         {
             pData = (StaticFileCacheData* )(iter.second());
@@ -52,17 +50,19 @@ int StaticFileCache::getCacheElement(
     }
     if ( pData )
     {
-        if ( pData->isDirty( pReq->getFileStat(),
-                    pMime, pReq->getDefaultCharset() ) )
+        if ( pData->isDirty( fileStat ) )
         {
             if ( dirty( pData ) )
                 return SC_500;
+
+            pData = NULL;
+            pECache = NULL;
         }
         else
             return 0;
     }
 
-    int ret = newCache( pReq, pMime, pData );
+    int ret = newCache( pPath, pathLen, fileStat, fd, pData );
     if ( ret  )
         return ret;
     add( pData );
@@ -70,19 +70,17 @@ int StaticFileCache::getCacheElement(
     return 0;
 }
 
-int StaticFileCache::newCache( const HttpReq * pReq,
-     const MIMESetting* pMime, StaticFileCacheData *& pData )
+int StaticFileCache::newCache( const char * pPath, int pathLen,
+                               const struct stat& fileStat, int fd, 
+                               StaticFileCacheData *& pData )
 {
     int ret = SC_500;
     pData = ( StaticFileCacheData* )allocElement();
     if ( pData != NULL )
     {
-        pData->setMimeType( pMime );
-        pData->setCharset( pReq->getDefaultCharset() );
-//         ret = pData->build( *pReq->getRealPath(),
-//                             pReq->getFileStat() );
-        ret = pData->build( *pReq->getRealPath(),
-                            pReq->getFileStat(), pReq->getETagFlags() );        
+        //pData->setMimeType( pMime );
+        //pData->setCharset( pReq->getDefaultCharset() );
+        ret = pData->build( fd, pPath, pathLen, fileStat );        
         if ( ret )
         {
             delete pData;

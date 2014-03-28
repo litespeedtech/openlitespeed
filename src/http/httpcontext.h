@@ -24,6 +24,12 @@
 #include <http/httphandler.h>
 #include "socket/gsockaddr.h"
 #include <stddef.h>
+#include <lsiapi/lsiapi.h>
+#include <lsiapi/lsiapihooks.h>
+#include <lsiapi/lsimoduledata.h>
+
+
+typedef struct lsi_module_config_t lsi_module_config_t;
 
 class AccessControl;
 class AuthRequired;
@@ -40,6 +46,11 @@ class URIMatch;
 class StatusUrlMap;
 class AutoBuf;
 class SSIConfig;
+class ConfigCtx;
+class HttpVHost;
+class RewriteMapList;
+class HttpSession;
+class ModuleConfig;
 
 #define UID_SERVER          0
 #define UID_FILE            1
@@ -88,6 +99,8 @@ class SSIConfig;
 #define BIT_ENABLE_SCRIPT   (1<<27)
 #define BIT_GEO_IP          (1<<28)
 #define BIT_GSOCKADDR       (1<<29)
+#define BIT_SESSIONHOOKS    (1<<30)
+#define BIT_MODULECONFIG    (1<<31)
 
 
 #define REWRITE_OFF         0
@@ -114,6 +127,8 @@ class SSIConfig;
 #define BIT_URI_CACHEABLE       (1<<8)
 
 #define BIT_RAILS_CONTEXT       (1<<6)
+
+
 
 
 /**********************************************************************
@@ -159,6 +174,10 @@ typedef struct _CTX_INT
     ContextList         * m_pFilesMatchList;
     AutoBuf             * m_pExtraHeader;
     SSIConfig           * m_pSSIConfig;
+    
+    HttpSessionHooks   * m_pSessionHooks;
+    ModuleConfig       * m_pModuleConfig;
+    
     GSockAddr             m_GSockAddr;
 } CtxInt;
 
@@ -198,14 +217,16 @@ class HttpContext
     void releaseMIME();
 
 
-    HttpContext( const HttpContext& rhs ) {}
+    HttpContext( const HttpContext& rhs );
     void operator=( const HttpContext& rhs ) {}
 
+    
 
 public:
     HttpContext();
     ~HttpContext();
 
+    
     int set( const char * pURI, const char * pRoot,
              const HttpHandler * pHandler, bool allowBrowse = true, int regex=0);
 
@@ -359,7 +380,7 @@ public:
     {   return m_pInternal->m_pPHPConfig;    }
     //{   return m_pInternal?m_pInternal->m_pPHPConfig : NULL;    }
     void setPHPConfig( PHPConfig * pConfig );
-        
+    
     void setSatisfyAny( int a )
     {   setConfigBit( BIT_SATISFY_ANY, a );
         m_iConfigBits |= BIT_SATISFY;               }
@@ -399,8 +420,8 @@ public:
     const AutoBuf * getExtraHeaders() const
     {   return m_pInternal->m_pExtraHeader;     }
     
-    const GSockAddr *getGSockAddr() const { return &m_pInternal->m_GSockAddr;   }
-    void setGSockAddr(GSockAddr &gsockAddr);
+    const GSockAddr *getWebSockAddr() const { return &m_pInternal->m_GSockAddr;   }
+    void setWebSockAddr(GSockAddr &gsockAddr);
     
     void setGeoIP( int a )
     {   if ( a )
@@ -433,7 +454,28 @@ public:
         
     int isIncludesOn() const
     {   return m_bAllowBrowse & (BIT_INCLUDES_NOEXEC | BIT_INCLUDES );       }  
-      
+    int configAccess( const XmlNode *pContextNode );
+    void configAutoIndex( const XmlNode *pContextNode );
+    int configDirIndex( const XmlNode *pContextNode );
+    int configErrorPages( const XmlNode *pNode );
+    int configRewriteRule( const RewriteMapList * pMapList, char *pRule );
+    int configRewriteRule( const RewriteMapList * pMapList, const XmlNode *pRewriteNode );    
+    int configMime( const XmlNode *pContextNode );    
+    int configExtAuthorizer( const XmlNode *pContextNode );
+    int config(const RewriteMapList * pMapList, const XmlNode *pContextNode, 
+                        int type);
+    
+    void setInternalSessionHooks(HttpSessionHooks *pHooks) { m_pInternal->m_pSessionHooks = pHooks;    }
+    int initExternalSessionHooks();
+    HttpSessionHooks *getSessionHooks() {   return m_pInternal->m_pSessionHooks; }
+    
+    int setOneModuleConfig( int moduel_id, lsi_module_config_t  *module_config );
+    int setModuleConfig( ModuleConfig  *pModuleConfig, int isOwnData );
+    ModuleConfig       *getModuleConfig()   { return  m_pInternal->m_pModuleConfig; }
+    
+    int  isModuleConfigOwn() const   {   return m_iConfigBits & BIT_MODULECONFIG; }
+    int  isSessionHookOwn() const   {   return m_iConfigBits & BIT_SESSIONHOOKS; }
+    
 };
 
 extern void recycleContext( HttpContext * pContext );

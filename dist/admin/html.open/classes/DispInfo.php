@@ -31,14 +31,14 @@ class DispInfo
 		$this->_mid = $this->_pid = $this->_tid = $this->_ref = NULL;
 
 		$this->_mid = DUtil::getGoodVal(DUtil::grab_input("request",'m'));
-		
-		if ( $this->_mid == NULL ) { 
+
+		if ( $this->_mid == NULL ) {
 			$this->_mid = 'serv';
 		}
 		else {
 			$has_mid = TRUE;
 		}
-		 
+
 		$pos = strpos($this->_mid, '_');
 		if ( $pos > 0 )
 		{
@@ -58,21 +58,21 @@ class DispInfo
 			die("Invalid pid");
 		}
 		$pids = array_keys($this->_tabs);
-		
+
 		if ($has_mid) {
 			$this->_pid = DUtil::getGoodVal(DUtil::grab_input("request",'p'));
 		}
 		if ( $this->_pid == NULL)
-		{	
+		{
 			// get default
 			$this->_pid = $pids[0];
 		}
 		else {
-			if (!in_array($this->_pid, $pids))	
+			if (!in_array($this->_pid, $pids))
 				die("Invalid pid");
 			$has_pid = TRUE;
 		}
-		
+
 		if ( $has_pid && !isset($_REQUEST['t0'])
 			 && isset($_REQUEST['t']) )
 		{
@@ -95,7 +95,7 @@ class DispInfo
 		$this->_tokenInput = DUtil::getGoodVal(DUtil::grab_input("request",'tk'));
 		$client = CLIENT::singleton();
 		$this->_token = $client->token;
-		
+
 		if ( isset($_GET['sort']) )
 		{
 			$sort = DUtil::getGoodVal1($_GET['sort']);
@@ -109,7 +109,8 @@ class DispInfo
 			$this->_sort[0] = 0;
 		}
 
-		
+		$this->init();
+
 	}
 
 	function init($serverName='')
@@ -117,38 +118,31 @@ class DispInfo
 		$label = 'Error';
 		switch ( $this->_type )
 		{
-			case 'serv':	
-				$label = 'Server &#187; ' . $serverName;
-				break;
-			case 'sltop':
-			case 'altop':	
-				$label = 'Listeners';
-				break;
-			case 'sl':
-			case 'al':		
-				$label = 'Listener &#187; ' . $this->_name;
-				break;
-			case 'vhtop':	
-				$label = 'Virtual Hosts';
-				break;
-			case 'vh':		
-				$label = 'Virtual Host &#187; '. $this->_name;
-				break;
-			case 'tptop':	
-				$label = 'Virtual Host Templates';
-				break;
-			case 'tp':		
-				$label = 'Virtual Host Template &#187; '. $this->_name;
-				break;
-			case 'lbtop':
-				$label = 'Clusters';
-				break;
-			case 'lb':
-				$label = 'Cluster &#187; '.$this->_name;
-				break;
-			case 'admin':	
-				$label = 'Admin Server';
-				break;
+			case 'serv':	$label = 'Server &#187; ' . $serverName;
+							break;
+			case 'sltop':	$label = 'Listeners';
+							break;
+			case 'sl':		$label = 'Listener &#187; ' . $this->_name;
+							break;
+			case 'vhtop': 	$label = 'Virtual Hosts';
+							break;
+			case 'vh': 		$label = 'Virtual Host &#187; '. $this->_name;
+							break;
+			case 'tptop':	$label = 'Virtual Host Templates';
+							break;
+			case 'tp':		$label = 'Virtual Host Template &#187; '. $this->_name;
+							break;
+			case 'lbtop':	$label = 'Clusters';
+							break;
+			case 'lb':		$label = 'Cluster &#187; '.$this->_name;
+							break;
+			case 'admin':	$label = 'WebAdmin Console';
+							break;
+			case 'altop':	$label = 'WebAdmin Listeners';
+							break;
+			case 'al':		$label = 'WebAdmin Listener &#187; ' . $this->_name;
+							break;
+
 		}
 		$this->_titleLabel = $label;
 

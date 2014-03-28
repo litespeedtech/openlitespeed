@@ -99,8 +99,9 @@ am__v_AR_0 = @echo "  AR      " $@;
 am__v_AR_1 = 
 libmain_a_AR = $(AR) $(ARFLAGS)
 libmain_a_LIBADD =
-am_libmain_a_OBJECTS = lshttpdmain.$(OBJEXT) serverinfo.$(OBJEXT) \
-	httpserverbuilder.$(OBJEXT) httpserver.$(OBJEXT) \
+am_libmain_a_OBJECTS = mainserverconfig.$(OBJEXT) \
+	lshttpdmain.$(OBJEXT) serverinfo.$(OBJEXT) \
+	httpconfigloader.$(OBJEXT) httpserver.$(OBJEXT) \
 	plainconf.$(OBJEXT)
 libmain_a_OBJECTS = $(am_libmain_a_OBJECTS)
 AM_V_P = $(am__v_P_@AM_V@)
@@ -177,6 +178,7 @@ CXXFLAGS = @CXXFLAGS@
 CYGPATH_W = @CYGPATH_W@
 DEFS = @DEFS@
 DEPDIR = @DEPDIR@
+DL_LIB_OPTION = @DL_LIB_OPTION@
 ECHO_C = @ECHO_C@
 ECHO_N = @ECHO_N@
 ECHO_T = @ECHO_T@
@@ -273,8 +275,8 @@ top_srcdir = @top_srcdir@
 noinst_LIBRARIES = libmain.a
 INCLUDES = -I$(top_srcdir)/src
 libmain_a_METASOURCES = AUTO
-libmain_a_SOURCES = lshttpdmain.cpp serverinfo.cpp httpserverbuilder.cpp \
-	httpserver.cpp plainconf.cpp
+libmain_a_SOURCES = mainserverconfig.cpp lshttpdmain.cpp serverinfo.cpp httpconfigloader.cpp \
+	httpserver.cpp plainconf.cpp 
 
 all: all-am
 
@@ -325,9 +327,10 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/httpconfigloader.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/httpserver.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/httpserverbuilder.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lshttpdmain.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/mainserverconfig.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/plainconf.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/serverinfo.Po@am__quote@
 

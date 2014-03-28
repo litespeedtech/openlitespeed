@@ -17,9 +17,9 @@
 *****************************************************************************/
 #include "requestvars.h"
 #include "httpheader.h"
-#include "httpconnection.h"
+#include "httpsession.h"
 #include "httpvhost.h"
-#include "datetime.h"
+#include "util/datetime.h"
 #include <http/httplog.h>
 #include <http/httpserverversion.h>
 #include <http/iptogeo.h>
@@ -40,6 +40,9 @@
 #include <sys/time.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <util/ssnprintf.h>
+#include <sslpp/sslcert.h>
+
 
 SubstItem::SubstItem()
     : m_type( 0 )
@@ -378,6 +381,7 @@ static const char *ServerVarNames[REF_EXT_COUNT] =
     "SCRIPT_BASENAME",
     "SCRIPT_URI",
     "ORG_REQ_URI",
+    "ORG_QUERY_STRING",
     "HTTPS",
 
     "DUMMY",
@@ -405,7 +409,7 @@ static const char *ServerVarNames[REF_EXT_COUNT] =
 static int ServerVarNameLen[REF_EXT_COUNT] =
 {   11, 11, 11, 11, 12, 14, 12, 9, 9, 15, 16, 11, 13, 12,
     11, 11, 11, 15, 15, 11, 11, 9, 4, 9, 8, 8, 9, 8, 8, 9, 11, 11,
-    16, 10, 10, 15, 16, 11, 15, 10, 11, 5,
+    16, 10, 10, 15, 16, 11, 15, 10, 11, 16, 5,
     5, 3, 11, 8, 12, 10, 8, 10, 8, 9, 10, 
     7, 10, 8, 10, 13, 12, 13, 22 
 };
@@ -490,9 +494,9 @@ int RequestVars::parseHttpHeader( const char * pName, int len, const char * &pHe
 }
 
 
-int RequestVars::getReqVar( HttpConnection * pConn, int type, char * &pValue, int bufLen)
+int RequestVars::getReqVar( HttpSession *pSession, int type, char * &pValue, int bufLen)
 {
-    HttpReq * pReq = pConn->getReq();
+    HttpReq * pReq = pSession->getReq();
     int i;
     char *p;
     if ( type < REF_STRING )
@@ -508,10 +512,10 @@ int RequestVars::getReqVar( HttpConnection * pConn, int type, char * &pValue, in
     case REF_REMOTE_HOST:
         //FIXME: use remote addr for now
     case REF_REMOTE_ADDR:
-        pValue = (char *)pConn->getPeerAddrString();
-        return pConn->getPeerAddrStrLen();
+        pValue = (char *)pSession->getPeerAddrString();
+        return pSession->getPeerAddrStrLen();
     case REF_REMOTE_PORT:
-        return snprintf( pValue, bufLen, "%hu", pConn->getRemotePort() );
+        return snprintf( pValue, bufLen, "%hu", pSession->getRemotePort() );
     case REF_REMOTE_USER:
         pValue = (char *)pReq->getAuthUser();
         return strlen( pValue );
@@ -598,7 +602,7 @@ int RequestVars::getReqVar( HttpConnection * pConn, int type, char * &pValue, in
         return pReq->getScriptNameLen();
     case REF_SCRIPT_URI:
         p = pValue;
-        if ( pConn->isSSL() )
+        if ( pSession->isSSL() )
         {
             strcpy( p, "https://" );
             p += 8;
@@ -619,6 +623,8 @@ int RequestVars::getReqVar( HttpConnection * pConn, int type, char * &pValue, in
         return p - pValue;
 
     case REF_ORG_REQ_URI:
+        pValue = (char *)pReq->getOrgReqURL();
+        return pReq->getOrgReqURILen();
     case REF_DOCUMENT_URI:
         return pReq->getDecodedOrgReqURI( pValue );
     case REF_REQ_URI:
@@ -669,7 +675,7 @@ int RequestVars::getReqVar( HttpConnection * pConn, int type, char * &pValue, in
         return 5;
 
     case REF_RESP_BYTES:
-        i = StringTool::str_off_t( pValue, bufLen, pConn->getResp()->getBodySent() );
+        i = StringTool::str_off_t( pValue, bufLen, pSession->getResp()->getBodySent() );
         return i;
     //case REF_COOKIE_VAL
     //case REF_STRFTIME        155
@@ -679,16 +685,16 @@ int RequestVars::getReqVar( HttpConnection * pConn, int type, char * &pValue, in
         struct timeval tv;
         gettimeofday( &tv, NULL );
         DateTime::s_curTime = tv.tv_sec;
-        DateTime::s_curTimeMS = tv.tv_usec;
+        DateTime::s_curTimeUs = tv.tv_usec;
 
-        long lReqTime =  (DateTime::s_curTime - pConn->getReqTime())*1000000 +
-                    (DateTime::s_curTimeMS - pConn->getReqTimeMs());
+        long lReqTime =  (DateTime::s_curTime - pSession->getReqTime())*1000000 +
+                    (DateTime::s_curTimeUs - pSession->getReqTimeUs());
         i = snprintf( pValue, bufLen, "%ld", lReqTime );
         return i;
     }
     case REF_REQ_TIME_SEC:
         i = snprintf( pValue, bufLen, "%ld",
-                    (DateTime::s_curTime - pConn->getReqTime()) );
+                    (DateTime::s_curTime - pSession->getReqTime()) );
         return i;
     case REF_DUMMY:
         return 0;
@@ -700,19 +706,19 @@ int RequestVars::getReqVar( HttpConnection * pConn, int type, char * &pValue, in
         pValue[3] = 0;
         return 3;
     
-    case REF_URL_PATH:
+    case REF_CUR_URI:
         pValue = (char *)pReq->getURI();
         i = pReq->getURILen();
         return i;
     case REF_BYTES_IN:
-        i = StringTool::str_off_t( pValue, bufLen, pConn->getBytesRecv() );
+        i = StringTool::str_off_t( pValue, bufLen, pSession->getBytesRecv() );
         return i;
     case REF_BYTES_OUT:
-        i = StringTool::str_off_t( pValue, bufLen, pConn->getBytesSent() );
+        i = StringTool::str_off_t( pValue, bufLen, pSession->getBytesSent() );
         return i;
 
     case REF_HTTPS:
-        i = snprintf( pValue, bufLen, "%s", pConn->isSSL()?"on":"off" );
+        i = snprintf( pValue, bufLen, "%s", pSession->isSSL()?"on":"off" );
         return i;
 
     case REF_DATE_GMT:
@@ -766,10 +772,10 @@ int RequestVars::getReqVar( HttpConnection * pConn, int type, char * &pValue, in
     }
     case REF_RESP_CONTENT_TYPE:
         i = 0;
-        pValue = (char*)pConn->getResp()->getContentTypeHeader( i );
+        pValue = (char*)pSession->getResp()->getContentTypeHeader( i );
         return i;
     case REF_RESP_CONTENT_LENGTH:
-    {   off_t l = pConn->getResp()->getContentLen();
+    {   off_t l = pSession->getResp()->getContentLen();
         if ( l <= 0 )
             l = 0;
         i = StringTool::str_off_t( pValue, bufLen, l );
@@ -822,6 +828,85 @@ int RequestVars::getReqVar( HttpConnection * pConn, int type, char * &pValue, in
     
 }
 
+//Only for types from LSI_REQ_SSL_VERSION to LSI_REQ_PATH_TRANSLATED which are defined in ls.h
+int RequestVars::getReqVar2( HttpSession *pSession, int type, char * &pValue, int bufLen)
+{
+    HttpReq * pReq = pSession->getReq();
+    int ret = 0;
+    
+    if (type >= LSI_REQ_SSL_VERSION && type <= LSI_REQ_SSL_CLIENT_CERT)
+    {
+        if( !pSession->isSSL() )
+            return 0;
+        
+        SSLConnection *pSSL = pSession->getSSL();
+        if( type == LSI_REQ_SSL_VERSION)
+        {
+            pValue = (char *)pSSL->getVersion();
+            ret = strlen( pValue );
+            return ret;
+        }    
+        else if( type == LSI_REQ_SSL_SESSION_ID )
+        {
+            SSL_SESSION *pSession = pSSL->getSession();
+            if ( pSession )
+            {
+                int idLen = SSLConnection::getSessionIdLen( pSession );
+                ret = idLen * 2;
+                if ( ret > bufLen )
+                    ret = bufLen;
+                StringTool::hexEncode((char *)SSLConnection::getSessionId( pSession ), ret / 2, pValue );
+            }
+            return ret;
+        }
+        else if( type == LSI_REQ_SSL_CLIENT_CERT )
+        {
+            X509 * pClientCert = pSSL->getPeerCertificate();
+            if ( pClientCert )
+                ret = SSLCert::PEMWriteCert( pClientCert, pValue, bufLen );
+            
+            return ret;
+        }
+        else
+        {
+            const SSL_CIPHER * pCipher = pSSL->getCurrentCipher();
+            if ( pCipher )
+            {
+                if( type == LSI_REQ_SSL_CIPHER )
+                {
+                    pValue = (char *)pSSL->getCipherName();
+                    ret = strlen( pValue );
+                }
+                else
+                {
+                    int algkeysize;
+                    int keysize = SSLConnection::getCipherBits( pCipher, &algkeysize );
+                    if( type == LSI_REQ_SSL_CIPHER_USEKEYSIZE )
+                        ret = safe_snprintf( pValue, 20, "%d", keysize );
+                    else //LSI_REQ_SSL_CIPHER_ALGKEYSIZE
+                        ret = safe_snprintf( pValue, 20, "%d", algkeysize );
+                }
+            }
+            return ret;
+        }
+    }
+    else if( type == LSI_REQ_GEOIP_ADDR)
+    {
+        ret = pSession->getPeerAddrStrLen();
+        pValue = (char *)pSession->getPeerAddrString();
+        return ret;
+    }
+    else if( type == LSI_REQ_PATH_TRANSLATED)
+    {
+        int n = pReq->getPathInfoLen();
+        if ( n > 0)
+            ret =  pReq->translatePath( pReq->getPathInfo(), n, pValue, bufLen);
+        return ret;
+    }
+    else
+        return 0;
+}
+
 const char * RequestVars::getUnknownHeader( HttpReq * pReq, const char * pName,
                                         int nameLen, int &headerLen)
 {
@@ -847,14 +932,14 @@ const char * RequestVars::getUnknownHeader( HttpReq * pReq, const char * pName,
 }
 
 
-const char * RequestVars::getEnv( HttpConnection * pConn, const char * pKey, int keyLen, int &valLen )
+const char * RequestVars::getEnv( HttpSession *pSession, const char * pKey, int keyLen, int &valLen )
 {
         
     if (( strncmp( pKey, "GEOI", 4 ) == 0 )
         ||( strncmp( pKey, "GEO:", 4 ) == 0 ))
     {
         const char * pValue;
-        GeoInfo * pInfo = pConn->getClientInfo()->getGeoInfo();
+        GeoInfo * pInfo = pSession->getClientInfo()->getGeoInfo();
         valLen = 0;
         if ( pInfo )
         {
@@ -866,7 +951,7 @@ const char * RequestVars::getEnv( HttpConnection * pConn, const char * pKey, int
             }
         }
     }
-    return pConn->getReq()->getEnv( pKey, keyLen, valLen );
+    return pSession->getReq()->getEnv( pKey, keyLen, valLen );
 }
 
 int RequestVars::getCookieCount( HttpReq * pReq )
@@ -974,10 +1059,10 @@ const char * RequestVars::getHeaderString( int iIndex )
 }
 
 
-int RequestVars::getSubstValue( const SubstItem * pItem, HttpConnection *pConn,
+int RequestVars::getSubstValue( const SubstItem * pItem, HttpSession *pSession,
                         char * &pValue, int bufLen )
 {
-    HttpReq * pReq = pConn->getReq();
+    HttpReq * pReq = pSession->getReq();
     int type = pItem->getType();
     int i;
     if ( type < REF_STRING )
@@ -996,7 +1081,7 @@ int RequestVars::getSubstValue( const SubstItem * pItem, HttpConnection *pConn,
         return pItem->getStr()->len();
         
     case REF_ENV:
-        pValue = (char *)RequestVars::getEnv( pConn, pItem->getStr()->c_str(), 
+        pValue = (char *)RequestVars::getEnv( pSession, pItem->getStr()->c_str(), 
                     pItem->getStr()->len(), i );
         if ( !pValue )
         {
@@ -1010,13 +1095,13 @@ int RequestVars::getSubstValue( const SubstItem * pItem, HttpConnection *pConn,
             i = 0;
         return i;
     default:
-        return RequestVars::getReqVar( pConn, type, pValue, bufLen );
+        return RequestVars::getReqVar( pSession, type, pValue, bufLen );
     }
     return 0;
 }
 
 
-int RequestVars::appendSubst( const SubstItem * pItem, HttpConnection *pConn,
+int RequestVars::appendSubst( const SubstItem * pItem, HttpSession *pSession,
                         char * &pBegin, int len, int noDupSlash,
                         const RegexResult * pRegRes, const char * pTmFmt )
 {
@@ -1025,7 +1110,7 @@ int RequestVars::appendSubst( const SubstItem * pItem, HttpConnection *pConn,
     if ( pItem->getType() == REF_FORMAT_STR )
     {
         valLen = len;
-        buildString( (const SubstFormat *)pItem->getAny(), pConn,
+        buildString( (const SubstFormat *)pItem->getAny(), pSession,
                           pValue, valLen, noDupSlash, pRegRes, pTmFmt );
         
     }
@@ -1045,7 +1130,7 @@ int RequestVars::appendSubst( const SubstItem * pItem, HttpConnection *pConn,
                 ( pItem->getType() == REF_LAST_MODIFIED )||
                 ( pItem->getType() == REF_DATE_GMT )))
                 memccpy( pValue, pTmFmt, 0, len );
-            valLen = getSubstValue( pItem, pConn, pValue, len );
+            valLen = getSubstValue( pItem, pSession, pValue, len );
         }
         if ( valLen <= 0 )
             return valLen;
@@ -1070,7 +1155,7 @@ int RequestVars::appendSubst( const SubstItem * pItem, HttpConnection *pConn,
     return 0;
 }
 
-char * RequestVars::buildString( const SubstFormat * pFormat, HttpConnection * pConn,
+char * RequestVars::buildString( const SubstFormat * pFormat, HttpSession *pSession,
                             char * pBuf, int &len, int noDupSlash, 
                             const RegexResult * pRegRes, const char * pTmFmt )
 {
@@ -1080,14 +1165,14 @@ char * RequestVars::buildString( const SubstFormat * pFormat, HttpConnection * p
     
 //    if ( !pItem->next() )
 //    {
-//        int valLen = getSubstValue( pItem, pConn, pBegin, pBufEnd );
+//        int valLen = getSubstValue( pItem, pSession, pBegin, pBufEnd );
 //        return valLen;
 //        //only one variable, no need to copy to buffer
 //    }
 
     while( pItem )
     {
-        if ( appendSubst( pItem, pConn, pBegin, pBufEnd - pBegin,
+        if ( appendSubst( pItem, pSession, pBegin, pBufEnd - pBegin,
                         (pBegin>pBuf)?noDupSlash:0, pRegRes, pTmFmt ) == -1 )
             return NULL;
         pItem = (const SubstItem *)pItem->next();
@@ -1095,6 +1180,73 @@ char * RequestVars::buildString( const SubstFormat * pFormat, HttpConnection * p
     *pBegin = 0;
     len = pBegin - pBuf;
     return pBuf;
+}
+
+int RequestVars::setEnv( HttpSession* pSession, const char * pName, int nameLen, 
+                        const char * pValue, int valLen )
+{
+    if ( *pName == '!' )
+    {
+        ++pName;
+        pSession->getReq()->unsetEnv( pName, nameLen );
+        if ( D_ENABLED( DL_MEDIUM ) )
+            LOG_D(( pSession->getLogger(),
+                "[%s] remove ENV: '%s' ", pSession->getLogId(), pName ));
+        return 0;
+    }
+    if ( !pValue )
+    {
+        pValue = "1";
+        valLen = 1;
+    }
+    if ( strcasecmp( pName, "dontlog" ) == 0 )
+    {
+        if ( D_ENABLED( DL_MEDIUM ) )
+            LOG_D(( pSession->getLogger(),
+                "[%s] disable access log for this request.",
+                pSession->getLogId() ));
+        pSession->getResp()->needLogAccess(0);
+        return 0;
+    }
+    else if ( ( *pName | 0x20 ) == 'n' )
+    {
+        if ( strcasecmp( pName, "nokeepalive" ) == 0 )
+        {
+            if ( D_ENABLED( DL_MEDIUM ) )
+                LOG_D(( pSession->getLogger(),
+                    "[%s] turn off connection keepalive.",
+                    pSession->getLogId() ));
+            pSession->getReq()->keepAlive( false );
+            return 0;
+        }
+        //else if ( strcasecmp( pName, "noconntimeout" ) == 0 )
+        //{
+        //    if ( D_ENABLED( DL_MEDIUM ) )
+        //        LOG_D(( pSession->getLogger(),
+        //            "[%s] turn off connection timeout.",
+        //            pSession->getLogId() ));
+        //    pSession->setFlag( HSF_NO_CONN_TIMEOUT );
+        //}
+        else if ( strcasecmp( pName, "no-gzip" ) == 0 )
+        {
+            if ( strncmp( pValue, "0", 1 ) != 0 )
+            {
+                if ( D_ENABLED( DL_MEDIUM ) )
+                    LOG_D(( pSession->getLogger(),
+                        "[%s] turn off gzip compression for this requst.",
+                        pSession->getLogId()));
+                pSession->getReq()->andGzip( ~GZIP_ENABLED );
+            }
+            return 0;
+        }
+    }
+
+    pSession->addEnv(pName, nameLen, pValue, valLen);
+    
+    if ( D_ENABLED( DL_MEDIUM ) )
+        LOG_D(( pSession->getLogger(),
+            "[%s] add ENV: '%s:%s' ", pSession->getLogId(), pName, pValue ));
+    return 0;
 }
 
 

@@ -188,14 +188,14 @@ inline uint32_t beReadUint32Adv( unsigned char * &p )
     return v ;
 }
 
-inline unsigned char * beWriteUint16( unsigned char * p, uint16_t v )
+inline char * beWriteUint16( char * p, uint16_t v )
 {
     *p++ = v >> 8;
     *p++ = v & 0xff;
     return p;
 }
 
-inline unsigned char * beWriteUint32( unsigned char * p, uint32_t v )
+inline char * beWriteUint32( char * p, uint32_t v )
 {
     *p++ = v >> 24;
     *p++ = ( v >> 16 ) & 0xff;

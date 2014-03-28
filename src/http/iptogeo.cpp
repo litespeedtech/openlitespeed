@@ -16,11 +16,11 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "iptogeo.h"
-
-//#include <http/httpreq.h>
+#include <http/httpglobals.h>
 #include <http/httplog.h>
 #include <util/ienv.h>
-
+#include "util/configctx.h"
+#include <util/xmlnode.h>
 #include <fcntl.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -561,6 +561,38 @@ int IpToGeo::lookUp( const char * pIP, GeoInfo * pInfo )
     if ( addr == INADDR_BROADCAST)
         return -1;
     return lookUp( addr, pInfo );
+}
+int IpToGeo::config( const XmlNodeList *pList )
+{
+    XmlNodeList::const_iterator iter;
+    int succ = 0;
+
+    for( iter = pList->begin(); iter != pList->end(); ++iter )
+    {
+        XmlNode *p = *iter;
+        const char *pFile = p->getChildValue( "geoipDBFile" );
+        char achBufFile[MAX_PATH_LEN];
+
+        if ( ( !pFile ) ||
+                ( ConfigCtx::getCurConfigCtx()->getValidFile( achBufFile, pFile, "GeoIP DB" ) != 0 ) )
+        {
+            continue;
+        }
+
+        if ( setGeoIpDbFile( achBufFile, p->getChildValue( "geoipDBCache" ) ) == 0 )
+            succ = 1;
+    }
+
+    if ( succ )
+    {
+        HttpGlobals::s_pIpToGeo = this;
+    }
+    else
+    {
+        ConfigCtx::getCurConfigCtx()->log_warn( "Failed to setup a valid GeoIP DB file, Geolocation is disable!" );
+        return -1;
+    }    
+    return 0;
 }
 
 

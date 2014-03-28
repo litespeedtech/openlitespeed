@@ -1,10 +1,10 @@
 <?
 if (!defined('LEGAL')) return;
-echo '<h2>' . TITLE . '</h2>';
+echo '<h2 class="bottom_bar">' . TITLE . '</h2>';
 
 $options = $check->pass_val['build_options'];
 if ($options == NULL) // illegal entry
-	return; 
+	return;
 
 $err = '';
 $tool = new BuildTool($options);
@@ -21,7 +21,7 @@ $_SESSION['progress_file'] = $tool->progress_file;
 $_SESSION['log_file'] = $tool->log_file;
 
 $cmd = 'bash -c "exec ' . $tool->build_prepare_script . ' 1> ' . $tool->log_file . ' 2>&1" &';
-exec($cmd); 
+exec($cmd);
 
 ?>
 
@@ -44,7 +44,7 @@ function getUpdate() {
 	{
 	    xhr = new ActiveXObject(Microsoft.XMLHTTP);
 	}
-	
+
 	xhr.abort();
 	xhr.open("GET", "buildProgress.php", true);
 	xhr.send(null);
@@ -53,13 +53,13 @@ function getUpdate() {
 
 	    if(xhr.readyState != 4)
 	    	return;
-    
+
 		if(xhr.status == 200)
 		{
 			var ta = document.getElementById("statuszone");
 			var pos = xhr.responseText.indexOf("\n**LOG_DETAIL**");
         	ta.innerHTML = xhr.responseText.substring(0,pos);
-        	
+
         	var loga = document.getElementById("logzone");
         	loga.innerHTML = xhr.responseText.substring(pos);
         	if (xhr.responseText.indexOf("\n**PREPARE_DONE**") >= 0) {
@@ -88,15 +88,13 @@ getUpdate();
 <div><span id="statusgraphzone"><img src='/static/images/working.gif'></span></div>
 
 <p><b>Main Status: </b></p>
-<div style="margin-left:20;margin-top:0;border:1;width:900px;height:160px;overflow:auto;">
+<div style="margin:10px;border:1px solid rgb(134,142,167);outline: 3px solid #eaeaea;width:900px;height:160px;overflow:auto;font-family:Courier, monospace; font-size: 11px; background: #FFFFF7; color: #333333; padding: 5px 10px;">
 <pre id="statuszone"></pre>
 </div>
 <p><b>Detailed Log: </b></p>
-<div style="margin-left:20;margin-top:0;border:1;width:900px;height:500px;overflow:auto;">
+<div style="margin:10px;border:1px solid rgb(134,142,167);outline: 3px solid #eaeaea;width:900px;height:500px;overflow:auto;font-family:Courier, monospace; font-size: 11px; background: #222222; color: #ffffff; padding: 5px 10px;">
 <pre id="logzone"></pre>
 </div>
-<p></p>
-
 
 
 </form>

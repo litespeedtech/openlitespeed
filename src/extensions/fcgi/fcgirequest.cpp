@@ -80,7 +80,7 @@ int  FcgiRequest::sendReqHeader()
     int size = m_env.size();
     if ( size == 0 )
     {
-        HttpCgiTool::buildFcgiEnv( &m_env, getConnector()->getHttpConn() );
+        HttpCgiTool::buildFcgiEnv( &m_env, getConnector()->getHttpSession() );
         size = m_env.size();
     }
     int ret = 1;

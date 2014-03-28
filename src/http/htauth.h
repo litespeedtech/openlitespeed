@@ -25,7 +25,7 @@
 class AuthUser;
 class AuthRequired;
 class AutoBuf;
-class HttpConnection;
+class HttpSession;
 class StringList;
 class UserDir;
 class HttpRespHeaders;
@@ -65,15 +65,15 @@ public:
 
     //const AuthUser * getUser( const char * pUser, int userLen ) const;
     int addWWWAuthHeader( HttpRespHeaders& buf ) const ;
-    int basicAuth( HttpConnection * pConn, const char * pAuthorization,
+    int basicAuth( HttpSession *pSession, const char * pAuthorization,
                 int headerLen, char * pAuthUser, int bufLen,
                 const AuthRequired * pRequired  ) const;
-    int digestAuth( HttpConnection * pConn, const char * pAuthorization,
+    int digestAuth( HttpSession *pSession, const char * pAuthorization,
                 int size, char * pAuthUser, int bufLen,
                 const AuthRequired * pRequired ) const ;
 //    int checkAuth(  const char * pAuthorization, int headerLen,
 //                char * pAuthUser, int bufLen  ) const;
-    int authenticate( HttpConnection * pConn, const char * pAuthHeader,
+    int authenticate( HttpSession *pSession, const char * pAuthHeader,
                     int authHeaderLen, char * pAuthUser, int userBufLen,
                     const AuthRequired * pRequired ) const;
 };

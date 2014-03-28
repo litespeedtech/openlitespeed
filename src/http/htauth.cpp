@@ -96,14 +96,14 @@ int HTAuth::buildWWWAuthHeader( const char * pName )
 int HTAuth::addWWWAuthHeader( HttpRespHeaders &buf ) const
 {
     if ( m_iAuthType & AUTH_BASIC )
-        buf.add(HttpRespHeaders::H_WWW_AUTHENTICATE, "WWW-Authenticate", 16, m_authHeader, m_authHeaderLen);
+        buf.add(HttpRespHeaders::H_WWW_AUTHENTICATE, m_authHeader, m_authHeaderLen);
     else if ( m_iAuthType & AUTH_DIGEST )
     {
         char sTemp[256] = {0};
         int n = safe_snprintf( sTemp, 255, "Digest realm=\"%s\" nonce=\"%lu\"\r\n",
                     m_authHeader, time(NULL) );
         
-        buf.add(HttpRespHeaders::H_WWW_AUTHENTICATE, "WWW-Authenticate", 16, sTemp, n);
+        buf.add(HttpRespHeaders::H_WWW_AUTHENTICATE, sTemp, n);
     }
     return 0;
 }
@@ -113,7 +113,7 @@ int HTAuth::addWWWAuthHeader( HttpRespHeaders &buf ) const
 #define MAX_DIGEST_AUTH_LEN  4096
 
 
-int HTAuth::basicAuth( HttpConnection * pConn, const char * pAuthorization, int size,
+int HTAuth::basicAuth( HttpSession *pSession, const char * pAuthorization, int size,
                         char * pAuthUser, int bufLen,
                         const AuthRequired * pRequired ) const
 {
@@ -146,7 +146,7 @@ int HTAuth::basicAuth( HttpConnection * pConn, const char * pAuthorization, int 
     while( ( p > passReq ) && isspace( p[-1] ) )
         --p;
     *p = 0;
-    ret = m_pUserDir->authenticate( pConn, pUser, userLen, passReq, ENCRYPT_PLAIN,
+    ret = m_pUserDir->authenticate( pSession, pUser, userLen, passReq, ENCRYPT_PLAIN,
                         pRequired );
     return ret;
 }
@@ -165,7 +165,7 @@ int HTAuth::basicAuth( HttpConnection * pConn, const char * pAuthorization, int 
 //    DIGEST_ALGORITHM,
 //};
 
-int HTAuth::digestAuth( HttpConnection * pConn, const char * pAuthorization,
+int HTAuth::digestAuth( HttpSession *pSession, const char * pAuthorization,
                         int size, char * pAuthUser, int bufLen,
                         const AuthRequired * pRequired ) const
 {
@@ -278,7 +278,7 @@ int HTAuth::digestAuth( HttpConnection * pConn, const char * pAuthorization,
     return SC_401;
 }
 
-int HTAuth::authenticate( HttpConnection * pConn, const char * pAuthHeader,
+int HTAuth::authenticate( HttpSession *pSession, const char * pAuthHeader,
        int authHeaderLen, char * pAuthUser, int userBufLen,
        const AuthRequired * pRequired ) const
 {
@@ -290,7 +290,7 @@ int HTAuth::authenticate( HttpConnection * pConn, const char * pAuthHeader,
         {
             return SC_401;
         }
-        return basicAuth( pConn, pAuthHeader,
+        return basicAuth( pSession, pAuthHeader,
                     authHeaderLen, pAuthUser,
                     AUTH_USER_SIZE - 1, pRequired );
     }
@@ -302,7 +302,7 @@ int HTAuth::authenticate( HttpConnection * pConn, const char * pAuthHeader,
         {
             return SC_401;
         }
-        return digestAuth( pConn, pAuthHeader,
+        return digestAuth( pSession, pAuthHeader,
                     authHeaderLen, pAuthUser,
                     AUTH_USER_SIZE - 1, pRequired );
     }

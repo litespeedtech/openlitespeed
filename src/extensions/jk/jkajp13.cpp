@@ -20,7 +20,7 @@
 #include <extensions/jk/jworker.h>
 #include <extensions/jk/jworkerconfig.h>
 
-#include <http/httpconnection.h>
+#include <http/httpsession.h>
 #include <http/httpreq.h>
 #include <http/httpmethod.h>
 
@@ -150,9 +150,9 @@ void JkAjp13::buildAjpReqBodyHeader( char * pBuf, int size )
     appendInt( pBuf, size  );
 }
 
-int JkAjp13::buildReq( HttpConnection * pConn, char * &p, char * pEnd )
+int JkAjp13::buildReq( HttpSession *pSession, char * &p, char * pEnd )
 {
-    HttpReq * pReq = pConn->getReq();
+    HttpReq * pReq = pSession->getReq();
     //assert( size == AJP_MAX_PKT_BODY_SIZE );
     char * pEnd2 = pEnd - 6;
     int n;
@@ -167,13 +167,13 @@ int JkAjp13::buildReq( HttpConnection * pConn, char * &p, char * pEnd )
         return -1;
     appendString( p, pReq->getURI(), n );
 
-    n = pConn->getPeerAddrStrLen();
+    n = pSession->getPeerAddrStrLen();
     if ( pEnd - p < 2 *( n + 3 ) )
         return -1;
     // peer address
-    appendString( p, pConn->getPeerAddrString(), n );
+    appendString( p, pSession->getPeerAddrString(), n );
     // peer host, use peer address as DNS lookup is too expensive and avoided,
-    appendString( p, pConn->getPeerAddrString(), n );
+    appendString( p, pSession->getPeerAddrString(), n );
     n = pReq->getHostStrLen();
     if ( pEnd2 - p < n )
         return -1;
@@ -184,7 +184,7 @@ int JkAjp13::buildReq( HttpConnection * pConn, char * &p, char * pEnd )
     //port
     appendInt( p, pReq->getPort() );
     //is_ssl
-    *p++ = (unsigned char )( pConn->isSSL() );
+    *p++ = (unsigned char )( pSession->isSSL() );
     char *pHeaderCounts = p;
     p+=2;
     int headerCounts = 0;
@@ -251,9 +251,9 @@ int JkAjp13::buildReq( HttpConnection * pConn, char * &p, char * pEnd )
         *p++ = AJP_A_QUERY_STRING;
         appendString( p, pAttr, n );
     }
-    if ( pConn->isSSL() )
+    if ( pSession->isSSL() )
     {
-        SSLConnection * pSSL = pConn->getSSL();
+        SSLConnection * pSSL = pSession->getSSL();
         SSL_SESSION * pSession = pSSL->getSession();
         if ( pSession )
         {

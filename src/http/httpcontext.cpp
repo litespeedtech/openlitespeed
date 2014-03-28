@@ -29,7 +29,15 @@
 #include <http/statusurlmap.h>
 #include <http/urimatch.h>
 #include <http/userdir.h>
+#include <http/rewriterule.h>
+#include <http/rewriteengine.h>
+#include <http/handlerfactory.h>
+#include "httpvhost.h"
+#include <extensions/extworker.h>
 
+#include <lsiapi/modulemanager.h>
+#include <util/configctx.h>
+#include <util/xmlnode.h>
 #include <util/accesscontrol.h>
 #include <util/pool.h>
 #include <util/stringlist.h>
@@ -40,11 +48,10 @@
 #include <string.h>
 #include <util/ssnprintf.h>
 
-
 CtxInt HttpContext::s_defaultInternal =
 {   NULL, NULL, NULL, NULL, NULL, NULL,
     NULL, NULL, NULL, NULL, NULL, NULL,
-    NULL, } ;
+    NULL, NULL, NULL, } ;
 
 HttpContext::HttpContext()
     : m_iConfigBits( 0 )
@@ -65,7 +72,6 @@ HttpContext::HttpContext()
     , m_pParent( NULL )
 {
     m_pInternal = &s_defaultInternal;
-    
 }
 
 HttpContext::~HttpContext()
@@ -87,7 +93,14 @@ HttpContext::~HttpContext()
     {
         g_pool.deallocate( m_pInternal, sizeof( CtxInt ) );
     }
-
+    if (( m_iConfigBits & BIT_MODULECONFIG ))
+    {
+        delete m_pInternal->m_pModuleConfig;
+    }
+    if (( m_iConfigBits & BIT_SESSIONHOOKS ))
+    {
+        delete m_pInternal->m_pSessionHooks;
+    }
 }
 
 void HttpContext::releaseHTAConf()
@@ -313,6 +326,9 @@ int HttpContext::initMIME()
     }
     return 0;
 }
+
+
+
 
 static AutoStr2 * s_pDefaultCharset = NULL;
 
@@ -592,6 +608,17 @@ void HttpContext::inherit(const HttpContext * pRootContext )
         {
             m_pInternal->m_pExtraHeader = m_pParent->m_pInternal->m_pExtraHeader;
         }
+        
+        if ( !(m_iConfigBits & BIT_MODULECONFIG ))
+        {
+            m_pInternal->m_pModuleConfig = m_pParent->m_pInternal->m_pModuleConfig;
+        }
+        
+        if ( !(m_iConfigBits & BIT_SESSIONHOOKS ))
+        {
+            m_pInternal->m_pSessionHooks = m_pParent->m_pInternal->m_pSessionHooks;
+        }
+        
     }
 
     if ( !(m_iConfigBits & BIT_ENABLE_EXPIRES) )
@@ -896,17 +923,336 @@ void HttpContext::setPHPConfig( PHPConfig * pConfig )
     }
 }
 
+int HttpContext::initExternalSessionHooks()
+{
+    if (!(m_iConfigBits & BIT_SESSIONHOOKS))
+    {
+        if ( allocateInternal() )
+            return -1;
+        HttpSessionHooks * pSessionHooks = new HttpSessionHooks(0);
+        if ( !pSessionHooks )
+            return -1;
+        pSessionHooks->inherit(LsiApiHooks::getHttpHooks());  //inherit from global level
+        
+        m_pInternal->m_pSessionHooks = pSessionHooks;
+        m_iConfigBits |= BIT_SESSIONHOOKS;
+    }
+    return 0;
+}
+
+
+int HttpContext::setModuleConfig( ModuleConfig  *pModuleConfig, int isOwnData )
+{
+    if (isOwnData && !(m_iConfigBits & BIT_MODULECONFIG))
+    {
+        if ( allocateInternal() )
+            return -1;
+        
+        m_iConfigBits |= BIT_MODULECONFIG;
+    }
+    
+    m_pInternal->m_pModuleConfig = pModuleConfig;
+    return 0;
+}
+
+int HttpContext::setOneModuleConfig( int moduel_id, lsi_module_config_t  *module_config )
+{
+    if (!(m_iConfigBits & BIT_MODULECONFIG))
+    {
+        ModuleConfig *pOldConfig = m_pInternal->m_pModuleConfig;
+        if ( allocateInternal() )
+            return -1;
+        
+        ModuleConfig *pConfig = new ModuleConfig;
+        if (!pConfig)
+            return -1;
+        
+        pConfig->init(ModuleManager::getInstance().getModuleCount());
+        pConfig->inherit(pOldConfig);
+        m_pInternal->m_pModuleConfig = pConfig;
+        m_iConfigBits |= BIT_MODULECONFIG;
+    }
+    
+    m_pInternal->m_pModuleConfig->copy(moduel_id, module_config);
+    return 0;
+}
+
 void HttpContext::getAAAData( struct AAAData & data ) const
 {
     memmove( &data, &m_pInternal->m_pHTAuth, sizeof( AAAData ) );
 }
 
-void HttpContext::setGSockAddr(GSockAddr &gsockAddr)
+void HttpContext::setWebSockAddr(GSockAddr &gsockAddr)
 {
     if ( !allocateInternal() )
     {
         m_pInternal->m_GSockAddr = gsockAddr;
         m_iConfigBits |= BIT_GSOCKADDR;
     }
+}
+int HttpContext::configAccess( const XmlNode *pContextNode )
+{
+    AccessControl *pAccess = NULL;
+
+    if ( AccessControl::isAvailable( pContextNode ) )
+    {
+        pAccess = new AccessControl();
+        pAccess->config( pContextNode );
+        setAccessControl( pAccess );
+    }
+
+    return 0;
+}
+
+void HttpContext::configAutoIndex( const XmlNode *pContextNode )
+{
+    if ( pContextNode->getChildValue( "autoIndex" ) )
+    {
+        setAutoIndex( ConfigCtx::getCurConfigCtx()->getLongValue( pContextNode, "autoIndex", 0, 1, 0 ) );
+    }
+}
+
+int HttpContext::configDirIndex( const XmlNode *pContextNode )
+{
+    clearDirIndexes();
+    const char *pValue = pContextNode->getChildValue( "indexFiles" );
+
+    if ( pValue )
+    {
+        addDirIndexes( pValue );
+    }
+
+    return 0;
+}
+
+int HttpContext::configErrorPages( const XmlNode *pNode )
+{
+    int add = 0;
+    const XmlNodeList *pList = pNode->getChildren( "errorPage" );
+
+    if ( pList )
+    {
+        XmlNodeList::const_iterator iter;
+
+        for( iter = pList->begin(); iter != pList->end(); ++iter )
+        {
+            const XmlNode *pNode = *iter;
+            const char *pCode = pNode->getChildValue( "errCode" );
+            const char *pUrl = pNode->getChildValue( "url" );
+
+            if ( setCustomErrUrls( pCode, pUrl ) != 0 )
+                ConfigCtx::getCurConfigCtx()->log_error( "failed to set up custom error page %s - %s!", pCode, pUrl );
+            else
+                ++add ;
+        }
+    }
+
+    return ( add == 0 );
+}
+
+int HttpContext::configRewriteRule( const RewriteMapList * pMapList, char *pRule )
+{
+    RewriteRuleList *pRuleList;
+    
+    if ( !pRule )
+        return 0;
+    AutoStr rule( pRule );
+    pRule = rule.buf();
+    
+    pRuleList = new RewriteRuleList();
+
+    if ( pRuleList )
+    {
+        RewriteRule::setLogger( NULL, LogIdTracker::getLogId() );
+        if ( RewriteEngine::parseRules( pRule, pRuleList,
+                                       pMapList ) == 0 )
+        {
+            setRewriteRules( pRuleList );
+        }
+        else
+            delete pRuleList;
+    }
+
+    return 0;
+}
+
+int HttpContext::configRewriteRule( const RewriteMapList * pMapList,
+        const XmlNode *pRewriteNode )
+{
+    //Try to get the "RewriteCond" and "RewriteRule" from pRewriteNode
+    char rules[8192] = {0};
+    XmlNodeList list;
+    pRewriteNode->getAllChildren( list );
+    XmlNodeList::const_iterator iter;
+
+    for( iter = list.begin(); iter != list.end(); ++iter )
+    {
+        if ( strncasecmp( ( *iter )->getName(), "Rewrite", 7 ) == 0 )
+        {
+            strcat( rules, ( *iter )->getName() );
+            strcat( rules, " " );
+            strcat( rules, ( *iter )->getValue() );
+            strcat( rules, "\n" );
+        }
+    }
+
+
+    if ( strlen( rules ) > 0 )
+        configRewriteRule( pMapList, rules );
+
+    return 0;
+}
+int HttpContext::configMime( const XmlNode *pContextNode )
+{
+    const char *pValue = pContextNode->getChildValue( "addMIMEType" );
+
+    if ( pValue )
+        addMIME( pValue );
+
+    pValue = pContextNode->getChildValue( "forceType" );
+
+    if ( pValue )
+    {
+        setForceType( ( char * ) pValue, LogIdTracker::getLogId() );
+    }
+
+    pValue = pContextNode->getChildValue( "defaultType" );
+
+    if ( pValue )
+    {
+        initMIME();
+        getMIME()->initDefault( ( char * ) pValue );
+    }
+
+    return 0;
+}
+int HttpContext::configExtAuthorizer( const XmlNode *pContextNode )
+{
+    const HttpHandler *pAuth;
+    const char *pHandler = pContextNode->getChildValue( "authorizer" );
+
+    if ( pHandler )
+    {
+        pAuth = HandlerFactory::getHandler( "fcgiauth", pHandler );
+    }
+    else
+    {
+        const XmlNode *pNode = pContextNode->getChild( "extAuthorizer" );
+
+        if ( !pNode )
+            return 0;
+
+        //pAuth = getHandler( pVHost, pNode );
+        pAuth = HandlerFactory::getHandler( pNode );
+    }
+
+    if ( !pAuth )
+        return 1;
+
+    if ( ( ( ExtWorker * ) pAuth )->getRole() != EXTAPP_AUTHORIZER )
+    {
+        ConfigCtx::getCurConfigCtx()->log_error( "External Application [%s] is not a Authorizer role.",
+                                    pAuth->getName() );
+        return 1;
+    }
+
+    setAuthorizer( pAuth );
+    return 0;
+}
+
+int HttpContext::config(const RewriteMapList * pMapList, const XmlNode *pContextNode, 
+                        int type)
+{
+    const char *pValue;
+    configAutoIndex( pContextNode );
+    configDirIndex( pContextNode );
+
+    if ( type == HandlerType::HT_CGI )
+    {
+        int val = ConfigCtx::getCurConfigCtx()->getLongValue( pContextNode, "allowSetUID", 0, 1, -1 );
+
+        if ( val != -1 )
+        {
+            setConfigBit( BIT_SETUID, 1 );
+            setConfigBit( BIT_ALLOW_SETUID, val );
+        }
+    }
+    configAccess( pContextNode  );
+    configExtAuthorizer( pContextNode );
+
+    getExpires().config( pContextNode, NULL, this );
+    pValue = pContextNode->getChildValue( "expiresByType" );
+
+    if ( pValue && ( *pValue ) )
+        setExpiresByType( pValue );
+
+    pValue = pContextNode->getChildValue( "extraHeaders" );
+
+    if ( pValue && ( *pValue ) )
+        setExtraHeaders( LogIdTracker::getLogId(), pValue, ( int ) strlen( pValue ) );
+
+    pValue = pContextNode->getChildValue( "addDefaultCharset" );
+
+    if ( pValue )
+    {
+        if ( strcasecmp( pValue, "on" ) == 0 )
+        {
+            pValue = pContextNode->getChildValue( "defaultCharsetCustomized" );
+
+            if ( !pValue )
+                setDefaultCharsetOn();
+            else
+                setDefaultCharset( pValue );
+        }
+        else
+            setDefaultCharset( NULL );
+    }
+
+    configMime( pContextNode );
+    const XmlNode *pNode = pContextNode->getChild( "rewrite" );
+
+    if ( pNode )
+    {
+        enableRewrite( ConfigCtx::getCurConfigCtx()->getLongValue( pNode, "enable", 0, 1, 0 ) );
+        pValue = pNode->getChildValue( "option" );
+
+        if ( ( pValue ) && ( strstr( pValue, "inherit" ) ) )
+        {
+            setRewriteInherit( 1 );
+        }
+
+        pValue = pNode->getChildValue( "base" );
+
+        if ( pValue )
+        {
+            if ( *pValue != '/' )
+            {
+                ConfigCtx::getCurConfigCtx()->log_error( "Invalid rewrite base: '%s'", pValue );
+            }
+            else
+            {
+                setRewriteBase( pValue );
+            }
+        }
+
+        pValue = pNode->getChildValue( "rules" );
+        if ( pValue )
+        {
+            configRewriteRule( pMapList, ( char * ) pValue );
+        }
+        else
+            configRewriteRule( pMapList, pNode );
+
+    }
+
+    pNode = pContextNode->getChild( "customErrorPages" );
+
+    if ( pNode )
+    {
+        ConfigCtx currentCtx( "errorpages" );
+        configErrorPages(pNode );
+    }
+
+    return 0;
 }
 

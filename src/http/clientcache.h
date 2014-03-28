@@ -47,6 +47,7 @@ private:
     static int appendDirtyList( GHash::iterator iter, void * pList );
     void       clean( Cache * pCache );
     int     writeBlockedIP( AutoBuf * pBuf, Cache * pCache );
+    void    recycle( ClientInfo * pInfo );
     
 public:
     

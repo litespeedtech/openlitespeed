@@ -22,6 +22,7 @@
 
 #include <http/cacheelement.h>
 #include <util/autostr.h>
+#include <lsiapi/lsimoduledata.h>
 
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -55,7 +56,6 @@ protected:
 
     void setCache( char * pCache )  {   m_pCache = pCache;  }
     const char * getCache() const   {   return m_pCache;    }
-    void setfd( int fd )            {   m_fd = fd;          }
     void setFileSize( off_t size)   {   m_lSize = size;     }
     int  buildCLHeader( bool gziped );
     time_t getLastMod() const       {   return m_lastMod;   }
@@ -87,6 +87,7 @@ public:
                 ||( m_lastMod != fileStat.st_mtime ));
     }
 
+    void setfd( int fd )            {   m_fd = fd;          }
     int  getfd() const              {   return m_fd;        }
     void closefd();
 
@@ -122,8 +123,11 @@ class StaticFileCacheData : public CacheElement
     int             m_iValidateHeaderLen;
     SSIScript     * m_pSSIScript;
 
+    
     unsigned char * m_pMiniMoov;
     int             m_iMiniMoovSize;
+
+    LsiModuleData   m_moduleData;
     
     time_t          m_tmLastCheckGzip;
     FileCacheDataEx* m_pGziped;
@@ -157,8 +161,10 @@ public:
     ~StaticFileCacheData();
     virtual const char * getKey() const
     {   return m_real.c_str(); }
-    int build( const AutoStr2& pPath, const struct stat& fileStat , int etag);
+    int build( int fd, const char *  pPath, int pathLen, const struct stat& fileStat );
     FileCacheDataEx * getGziped() const    {   return m_pGziped;   }
+    const FileCacheDataEx * getFileData() const {   return &m_fileData; }
+    FileCacheDataEx * getFileData()         {   return &m_fileData;     }
 
     SSIScript * getSSIScript() const        {   return m_pSSIScript;    }
     void setSSIScript( SSIScript * p)       {   m_pSSIScript = p;       }
@@ -175,16 +181,22 @@ public:
     int readyCacheData( FileCacheDataEx *&pECache,
                         char compress );
     time_t getLastMod() const       {   return m_fileData.getLastMod();   }
-    bool isDirty( const struct stat &fileStat, const MIMESetting * pMIME,
-            const AutoStr2 * pCharset ) const
-    {   return (pMIME != m_pMimeType) || ( pCharset != m_pCharset ) ||
-                 m_fileData.isDirty( fileStat );  }
-    bool isDirty( const struct stat &fileStat, const MIMESetting * pMIME,
+    bool isDirty( const struct stat &fileStat ) const
+    {   return m_fileData.isDirty( fileStat );      }
+    int needUpdateHeaders( const MIMESetting * pMIME,
             const AutoStr2 * pCharset, short etag ) const
-    {   return (pMIME != m_pMimeType) || ( pCharset != m_pCharset ) ||
-                 m_fileData.isDirty( fileStat ) || ( m_iFileETag != etag );  }
+    {   return (pMIME != m_pMimeType) || ( pCharset != m_pCharset )
+                 || ( m_iFileETag != etag );  }
     int compressFile();
+    
+    int buildHeaders( const MIMESetting * pMIME,
+            const AutoStr2 * pCharset, short etag );
+    int isSamePath(const char* arg1, int arg2)
+    {  return strcmp( m_real.c_str(), arg1 ) == 0;   } 
+        
+    LsiModuleData* getModuleData()      {   return &m_moduleData;    }
 
+    
     static void setUpdateStaticGzipFile( int enable, int level,
                 size_t min, size_t max );
     static void setGzipCachePath( const char * pPath );

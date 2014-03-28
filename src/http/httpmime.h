@@ -34,6 +34,9 @@ class MIMEMap;
 class MIMESuffix;
 class MIMESuffixMap;
 class MIMESettingList;
+class XmlNodeList;
+class HttpVHost;
+class ConfigCtx;
 
 class MIMESetting
 {
@@ -105,6 +108,12 @@ public:
     static int  needCharset( const char * pMIME );
     static int  isValidMimeType( const char* pDescr );
     static int  shouldKeepAlive( const char * pMIME );
+    static int configScriptHandler1( HttpVHost *pVHost,
+        const XmlNodeList *pList, HttpMime *pHttpMime);
+    static int configScriptHandler2( HttpVHost *pVHost,
+        const XmlNodeList *pList, HttpMime *pHttpMime);
+    static void addMimeHandler(const HttpHandler *pHdlr, char *pMime, HttpMime *pHttpMime, 
+                              const char *pSuffix );
 };
 
 

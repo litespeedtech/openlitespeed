@@ -16,11 +16,12 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "lshttpdmain.h"
-
+#include "mainserverconfig.h"
+#include "util/configctx.h"
 #include <extensions/cgi/cgidworker.h>
 #include <extensions/cgi/suexec.h>
 #include <extensions/registry/extappregistry.h>
-#include <http/datetime.h>
+#include <util/datetime.h>
 #include <http/httpdefs.h>
 #include <http/httpglobals.h>
 #include <http/httplog.h>
@@ -34,7 +35,7 @@
 #include <log4cxx/logrotate.h>
 
 #include <main/httpserver.h>
-#include <main/httpserverbuilder.h>
+#include <main/httpconfigloader.h>
 #include <main/serverinfo.h>
 
 #include <util/daemonize.h>
@@ -66,13 +67,16 @@
 #include <time.h>
 #include <unistd.h>
 #include <util/ssnprintf.h>
+#include <lsiapi/lsiapi.h>
+#include <sys/sysctl.h>
+
 
 #define PID_FILE            DEFAULT_TMP_DIR "/lshttpd.pid"
 #define SYSSTATS_FILE       DEFAULT_TMP_DIR "/.sysstats"
 
 static char s_iRunning = 0;
 char *argv0 = NULL;
-
+static int s_iCpuCount = 1;
 
 LshttpdMain::LshttpdMain()
     : m_pServer( NULL )
@@ -84,8 +88,7 @@ LshttpdMain::LshttpdMain()
     , m_fdAdmin( -1 )
 {
     m_pServer = &HttpServer::getInstance();
-    m_pBuilder = new HttpServerBuilder( m_pServer );
-    HttpGlobals::s_pBuilder = m_pBuilder;
+    m_pBuilder = new HttpConfigLoader( );
 }
 LshttpdMain::~LshttpdMain()
 {
@@ -161,11 +164,12 @@ int LshttpdMain::childSignaled( pid_t pid, int signal, int coredump )
 int LshttpdMain::SendCrashNotification( pid_t pid, int signal, int coredump,
                     char * pCoreFile )
 {
+    MainServerConfig&  MainServerConfigObj =  MainServerConfig::getInstance();  
     char achSubject[512];
     char achContent[2048];
     char achTime[50];
     static struct utsname      s_uname;
-    const char * pAdminEmails = m_pBuilder->getAdminEmails();
+    const char * pAdminEmails = MainServerConfigObj.getAdminEmails();
     if (( !pAdminEmails )||( !*pAdminEmails ))
         return 0;
     memset( &s_uname, 0, sizeof( s_uname ) );
@@ -173,7 +177,7 @@ int LshttpdMain::SendCrashNotification( pid_t pid, int signal, int coredump,
         LOG_WARN(( "uname() failed!" ));
     safe_snprintf( achSubject, sizeof( achSubject ) - 1,
             "Web server %s on %s is automatically restarted",
-            m_pBuilder->getServerName(), s_uname.nodename );
+            MainServerConfigObj.getServerName(), s_uname.nodename );
     DateTime::getLogTime( DateTime::s_curTime, achTime );
     achTime[28] = 0;
     int len = safe_snprintf( achContent, sizeof( achContent ) - 1,
@@ -209,13 +213,13 @@ int LshttpdMain::SendCrashNotification( pid_t pid, int signal, int coredump,
     close( fd );
     if ( coredump )
     {
-        const char * pGDB = m_pBuilder->getGDBPath();
+        const char * pGDB = MainServerConfigObj.getGDBPath();
         if (( pGDB == NULL || !*pGDB ))
             pGDB = "gdb";
         char achCmd[1024];
         safe_snprintf( achCmd, 1024,
             "%s --batch --command=%s/admin/misc/gdb-bt %s/bin/lshttpd %s/core* >> %s",
-            pGDB, m_pBuilder->getServerRoot(), m_pBuilder->getServerRoot(),
+            pGDB, MainServerConfigObj.getServerRoot(), MainServerConfigObj.getServerRoot(),
             DEFAULT_TMP_DIR, achFileName );
 
         if ( ::system( achCmd ) == 0 )
@@ -231,6 +235,7 @@ int LshttpdMain::SendCrashNotification( pid_t pid, int signal, int coredump,
 
 void LshttpdMain::onGuardTimer()
 {
+    MainServerConfig&  MainServerConfigObj =  MainServerConfig::getInstance(); 
     static int s_count = 0;
     DateTime::s_curTime = time( NULL );
 //#if !defined( RUN_TEST )
@@ -241,8 +246,8 @@ void LshttpdMain::onGuardTimer()
         return;
     }
 //#endif
-    CgidWorker::checkRestartCgid( m_pBuilder->getServerRoot(),
-                          m_pBuilder->getChroot(),
+    CgidWorker::checkRestartCgid( MainServerConfigObj.getServerRoot(),
+                          MainServerConfigObj.getChroot(),
                           HttpGlobals::s_priority );
     HttpLog::onTimer();
     m_pServer->onVHostTimer();
@@ -272,12 +277,15 @@ int LshttpdMain::processAdminCmd( char * pCmd, char * pEnd, int &apply )
             LOG_NOTICE(( "Reload configuration request from admin interface!" ));
             reconfig();
         }
+        /* COMMENT: Not support reconfigVHost NOW.
         else if ( strncasecmp( pCmd, "vhost:", 6 ) == 0 )
         {
             pCmd += 6;
             LOG_NOTICE(( "Reload configuration for virtual host %s!", pCmd ));
-            m_pBuilder->reconfigVHost( pCmd );
-        }
+            if ( m_pBuilder->loadConfigFile( NULL ) == 0 )
+                m_pServer->reconfigVHost( pCmd, m_pBuilder->getRoot() );
+                //m_pBuilder->reconfigVHost( pCmd );
+        }*/
     }
     else if ( strncasecmp( pCmd, "enable:", 7 ) == 0 )
     {
@@ -581,7 +589,7 @@ int LshttpdMain::testServerRoot( const char * pRoot )
     if ( GPath::checkSymLinks( achBuf, &achBuf[len],
                     &achBuf[MAX_PATH_LEN], achBuf, 1 ) == -1 )
         return -1;
-    m_pBuilder->setServerRoot( achBuf );
+    m_pServer->setServerRoot( achBuf );
     
     //load the config
     if (confType == 0)
@@ -683,7 +691,11 @@ int LshttpdMain::getServerRoot( int argc, char * argv[] )
 
 int LshttpdMain::config()
 {
-    if ( m_pBuilder->initServer() != 0 )
+    int iReleaseXmlTree;
+    int ret = m_pServer->initServer( m_pBuilder->getRoot(), iReleaseXmlTree );
+    if ( iReleaseXmlTree )
+        m_pBuilder->releaseConfigXmlTree();
+    if ( ret != 0 )
         return 1;
     if ( m_pServer->isServerOk() )
         return 2;
@@ -700,7 +712,11 @@ int LshttpdMain::config()
 
 int LshttpdMain::reconfig()
 {
-    if ( m_pBuilder->initServer( 1 ) != 0 )
+    int iReleaseXmlTree;
+    int ret = m_pServer->initServer( m_pBuilder->getRoot(), iReleaseXmlTree, 1 );
+    if ( iReleaseXmlTree )
+        m_pBuilder->releaseConfigXmlTree();
+    if ( ret != 0 )
     {
         LOG_WARN(( "Reconfiguration failed, server is restored to "
                    "the state before reconfiguration as much as possible, "
@@ -817,7 +833,7 @@ void LshttpdMain::removeOldRtreport()
     char achBuf[8192];
     int i = 1;
     int ret, len;
-    m_pBuilder->getCurConfigCtx()->getAbsolute( achBuf, RTREPORT_FILE, 0 );
+    ConfigCtx::getCurConfigCtx()->getAbsolute( achBuf, RTREPORT_FILE, 0 );
     len = strlen( achBuf );
     while( 1 )
     {
@@ -848,22 +864,21 @@ int LshttpdMain::init(int argc, char * argv[])
 
     if ( testRunningServer() != 0 )
         return 2;
-    if ( m_pBuilder->configServerBasics() )
+    if ( m_pServer->configServerBasics( 0, m_pBuilder->getRoot() ) )
         return 1;
     LOG4CXX_NS::LogRotate::roll( HttpLog::getErrorLogger()->getAppender(),
                      HttpGlobals::s_uid, HttpGlobals::s_gid, 1 );
-
-    m_pBuilder->releaseConfigXmlTree();    
     
     if ( HttpGlobals::s_uid <= 10 || HttpGlobals::s_gid < 10 )
     {
+        MainServerConfig&  MainServerConfigObj =  MainServerConfig::getInstance(); 
         LOG_ERR(( "It is not allowed to run LiteSpeed web server on behalf of a "
                 "privileged user/group, user id must not be "
                 "less than 50 and group id must not be less than 10."
                 "UID of user '%s' is %d, GID of group '%s' is %d. "
                 "Please fix above problem first!",
-                m_pBuilder->getUser(), HttpGlobals::s_uid,
-                m_pBuilder->getGroup(), HttpGlobals::s_gid ));
+                MainServerConfigObj.getUser(), HttpGlobals::s_uid,
+                MainServerConfigObj.getGroup(), HttpGlobals::s_gid ));
         return 1;
     }
     changeOwner();
@@ -886,6 +901,8 @@ int LshttpdMain::init(int argc, char * argv[])
     m_pid = getpid();
     if ( m_pidFile.writePid( m_pid ) )
         return 2;
+    
+    
     startAdminSocket();
     ret = config();
     if ( ret )
@@ -901,7 +918,7 @@ int LshttpdMain::init(int argc, char * argv[])
         if ( HttpGlobals::s_psChroot )
         {
             PidFile pidfile;
-            m_pBuilder->getCurConfigCtx()->getAbsolute( achBuf, PID_FILE, 0 );
+            ConfigCtx::getCurConfigCtx()->getAbsolute( achBuf, PID_FILE, 0 );
             pidfile.writePidFile( achBuf, m_pid);
         }
     }
@@ -912,8 +929,10 @@ int LshttpdMain::init(int argc, char * argv[])
     argv[1] = NULL;
     strcpy( argv[0], "openlitespeed (lshttpd - main)" );
 #endif    
+    //if ( !m_noCrashGuard && ( m_pBuilder->getCrashGuard() ))    
+    s_iCpuCount = PCUtil::getNumProcessors();
     
-    if ( !m_noCrashGuard && ( m_pBuilder->getCrashGuard() ))
+    if ( !m_noCrashGuard && ( MainServerConfig::getInstance().getCrashGuard() ))
     {
         if ( guardCrash() )
             return 8;
@@ -929,7 +948,7 @@ int LshttpdMain::init(int argc, char * argv[])
     //    printf( "find it!\n" );
     if ( getuid() == 0 )
     {
-        if ( m_pBuilder->changeUserChroot() == -1 )
+        if ( m_pServer->changeUserChroot( ) == -1 )
             return -1;
         if ( HttpGlobals::s_psChroot )
             m_pServer->offsetChroot();
@@ -954,20 +973,17 @@ int LshttpdMain::main( int argc, char * argv[] )
 #ifdef RUN_TEST
     if (( argc == 2 )&&( strcmp( argv[1], "-x" ) == 0))
     {
-        m_pBuilder->testDomainMod();
-
         allocatePidTracker();
         m_pServer->initAdns();
-        m_pServer->test_main( );
+        m_pServer->test_main( argv0 );
     }
     else
 #endif
     {
-
-        //atexit( releaseServer );
         int ret = init( argc, argv);
         if ( ret != 0 )
             return ret;
+        
         m_pServer->start();
         m_pServer->releaseAll();
     }
@@ -1077,6 +1093,7 @@ int LshttpdMain::startChild( ChildProc * pProc )
     pProc->m_iProcNo = getFirstAvailSlot();
     if ( pProc->m_iProcNo > HttpGlobals::s_children )
         return -1;
+    PCUtil::getAffinityMask( s_iCpuCount, pProc->m_iProcNo-1, 1, &pProc->m_pAffinityMask );
     preFork();
     pProc->m_pid = fork();
     if ( pProc->m_pid == -1 )
@@ -1086,19 +1103,22 @@ int LshttpdMain::startChild( ChildProc * pProc )
     }
     if ( pProc->m_pid == 0 )
     {   //child process
+        
+        PCUtil::setCpuAffinity( &pProc->m_pAffinityMask );
         m_pServer->setBlackBoard( pProc->m_pBlackBoard );
         m_pServer->setProcNo( pProc->m_iProcNo );
+        //setAffinity( 0, pProc->m_iProcNo);  //FIXME: need uncomment and debug
         releaseExcept( pProc );
         m_pServer->reinitMultiplexer();
         close( m_fdAdmin );
         snprintf( argv0, 80, "openlitespeed (lshttpd - #%02d)", pProc->m_iProcNo );
-        
         return 0;
     }
     postFork( pProc->m_pid );
     m_childrenList.push( pProc );
     pProc->m_iState = CP_RUNNING;
     setChildSlot( pProc->m_iProcNo, 1 );
+    
     ++m_curChildren;
     return pProc->m_pid;
 }
@@ -1146,6 +1166,7 @@ int LshttpdMain::cleanUp( int pid, char * pBB )
 
 int LshttpdMain::checkRestartReq( )
 {
+    MainServerConfig&  MainServerConfigObj =  MainServerConfig::getInstance();  
     ChildProc * pProc;
 //    LinkedObj * pPrev = m_childrenList.head();
     pProc = (ChildProc *)m_childrenList.begin();
@@ -1155,7 +1176,7 @@ int LshttpdMain::checkRestartReq( )
         {
             LOG_NOTICE(( "Child Process:%d request a graceful server restart ...",
                          pProc->m_pid ));
-            const char * pAdminEmails = m_pBuilder->getAdminEmails();
+            const char * pAdminEmails = MainServerConfigObj.getAdminEmails();
             if (( pAdminEmails )&&( *pAdminEmails ))
             {
                 char achSubject[512];
@@ -1166,7 +1187,7 @@ int LshttpdMain::checkRestartReq( )
                 safe_snprintf( achSubject, sizeof( achSubject ) - 1,
                         "LiteSpeed Web server %s on %s restarts "
                         "automatically to fix 503 Errors",
-                        m_pBuilder->getServerName(), s_uname.nodename );
+                        MainServerConfigObj.getServerName(), s_uname.nodename );
                 EmailSender::send(
                     achSubject, pAdminEmails, "" );
             }
@@ -1427,3 +1448,42 @@ void LshttpdMain::processSignal()
     HttpSignals::resetEvents();
 }
 
+int LshttpdMain::getNumCores() 
+{
+#if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
+    return sysconf(_SC_NPROCESSORS_ONLN);
+#else
+    int nm[2];
+    size_t len = 4;
+    uint32_t count = 0;
+
+#ifdef HW_AVAILCPU 
+    nm[0] = CTL_HW; nm[1] = HW_AVAILCPU;
+    sysctl(nm, 2, &count, &len, NULL, 0);
+#endif
+    
+    if(count < 1) {
+        nm[1] = HW_NCPU;
+        sysctl(nm, 2, &count, &len, NULL, 0);
+        if(count < 1) { count = 1; }
+    }
+    return count;
+#endif
+}
+/*    
+void LshttpdMain::setAffinity( pid_t pid, int cpuId )
+{
+    if (numCPU <= 1)
+        return ;
+    
+#ifndef LSWS_NO_SET_AFFINITY
+    cpu_set_t mask;
+    CPU_ZERO(&mask);
+    CPU_SET((cpuId - 1)% numCPU, &mask);
+    if (SET_AFFINITY(pid, sizeof(cpu_set_t), &mask) < 0)
+        LOG_ERR(( "[main] setAffinity error, pid %d cpuId %d [numCPU=%d]", pid, cpuId, numCPU ));
+    else
+        LOG_D(( "[main] setAffinity, pid %d cpuId %d [numCPU=%d]", pid, cpuId, numCPU ));
+#endif 
+}
+*/

@@ -18,17 +18,17 @@
 #ifdef RUN_TEST
 
 #include "httpcgitooltest.h"
-#include <http/httpconnection.h>
+#include <http/httpsession.h>
 #include <http/httpextconnector.h>
 #include <http/httpcgitool.h>
 #include "test/unittest-cpp/UnitTest++/src/UnitTest++.h"
 
 // TEST( HttpCgiToolTest_test)
 // {
-//     HttpConnection conn;
+//     HttpSession session;
 //     HttpExtConnector connector;
-//     connector.setHttpConn( &conn );
-//     conn.getReq()->reset();
+//     connector.setHttpSession( &session );
+//     session.getReq()->reset();
 //     char test1[] =
 //     "staTus: 404 not found   \t \r \n"
 //     "Content-Type: \tapplication/x-testcgi \n"
@@ -53,47 +53,47 @@
 //     }
 // 
 //     CHECK( strncmp( pBuf, "this is the resp body", 21 ) == 0 );     
-//     CHECK( conn.getReq()->getStatusCode() == SC_404 );
-//     conn.getResp()->getOutputBuf().append( '\0' );
-//     const char * pOutput = conn.getResp()->getOutputBuf().begin();
+//     CHECK( session.getReq()->getStatusCode() == SC_404 );
+//     session.getResp()->getOutputBuf().append( '\0' );
+//     const char * pOutput = session.getResp()->getOutputBuf().begin();
 //     CHECK( strstr( pOutput,
 //                     "Content-Type: \tapplication/x-testcgi\r\n" ) != NULL );
 //     CHECK( strstr( pOutput,
 //                     "Http-eXtended:my-extension\r\n" ) != NULL );
 //     CHECK( strstr( pOutput,     "MultiLineHeader: line1\r\n"
 //                                          " line2\r\n" ) != NULL );
-//     CHECK( *conn.getReq()->getLocation() == 0 );
+//     CHECK( *session.getReq()->getLocation() == 0 );
 // 
 //     char test2[] = "Location: http://www.somewhere.com/\n\n";
 //     status = 0;
-//     conn.getResp()->reset();
-//     conn.getReq()->setStatusCode( SC_200 );
+//     session.getResp()->reset();
+//     session.getReq()->setStatusCode( SC_200 );
 //     int ret = HttpCgiTool::parseRespHeader( &connector, test2, strlen( test2 ), status );
 //     CHECK( ret == (int)strlen( test2 ) );
 //     CHECK( status == HttpReq::HEADER_OK );
-//     CHECK( conn.getReq()->getStatusCode() == SC_302 );
-//     conn.getResp()->getOutputBuf().append( '\0' );
-//     pOutput = conn.getResp()->getOutputBuf().begin();
+//     CHECK( session.getReq()->getStatusCode() == SC_302 );
+//     session.getResp()->getOutputBuf().append( '\0' );
+//     pOutput = session.getResp()->getOutputBuf().begin();
 //     
 //     CHECK( strstr( pOutput,
 //                     "Location: http://www.somewhere.com/\r\n" ) != NULL );
-//     CHECK( *conn.getReq()->getLocation() == 0 );
+//     CHECK( *session.getReq()->getLocation() == 0 );
 //     
 //     char test3[] = "Location: /internal/redirect/url\n\n";
 //     status = 0;
-//     conn.getResp()->reset();
-//     conn.getReq()->setStatusCode( SC_200 );
+//     session.getResp()->reset();
+//     session.getReq()->setStatusCode( SC_200 );
 //     ret = HttpCgiTool::parseRespHeader( &connector, test3, strlen( test3 ), status );
 //     CHECK( ret == (int)strlen( test3 ) );
 //     CHECK( status == HttpReq::HEADER_OK );
-//     CHECK( conn.getReq()->getStatusCode() == SC_200 );
-//     conn.getResp()->getOutputBuf().append( '\0' );
-//     pOutput = conn.getResp()->getOutputBuf().begin();
+//     CHECK( session.getReq()->getStatusCode() == SC_200 );
+//     session.getResp()->getOutputBuf().append( '\0' );
+//     pOutput = session.getResp()->getOutputBuf().begin();
 // 
 //     CHECK( strstr( pOutput,
 //                     "/internal/redirect/url" ) == NULL );
 //     CHECK( strcmp( "/internal/redirect/url",
-//                             conn.getReq()->getLocation()) == 0 );
+//                             session.getReq()->getLocation()) == 0 );
 //     
 //     
 // }

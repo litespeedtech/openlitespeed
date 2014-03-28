@@ -5,8 +5,8 @@ m4_include(ax_lib_expat.m4)
 
 dnl Process this file with autoconf to produce a configure script.
 AC_PREREQ([2.69])
-AC_INIT([openlitespeed],[1.2.9],[info@litespeedtech.com],[openlitespeed],[http://www.litespeedtech.com/])
-AM_INIT_AUTOMAKE([1.2.9 foreign no-define ])
+AC_INIT([openlitespeed],[1.3],[info@litespeedtech.com],[openlitespeed],[http://www.litespeedtech.com/])
+AM_INIT_AUTOMAKE([1.3 foreign no-define ])
 
 AM_CONFIG_HEADER(src/config.h:src/config.h.in)
 
@@ -98,7 +98,6 @@ AC_ARG_ENABLE([debug],
                 fi
                 echo "OPENLSWS_DEBUG='$OPENLSWS_DEBUG'"
                 ], [])
-
                 
 AC_ARG_ENABLE([profiling],
               [AC_HELP_STRING([--enable-profiling],
@@ -111,9 +110,11 @@ AC_ARG_ENABLE([profiling],
                 echo "OPENLSWS_PROF='$OPENLSWS_PROF'"
                 ], [])                
                 
-CFLAGS="$CFLAGS -fstack-protector `getconf LFS_CFLAGS`"
-CXXFLAGS="$CXXFLAGS -fstack-protector `getconf LFS_CFLAGS`"
+CFLAGS="$CFLAGS -fstack-protector $(getconf LFS_CFLAGS)"
+CXXFLAGS="$CXXFLAGS -fstack-protector $(getconf LFS_CFLAGS)"
+
 echo "Final CFLAGS='$CFLAGS' CXXFLAGS='$CXXFLAGS'"
+ 
 
 
 AC_ARG_ENABLE([rpath],
@@ -177,6 +178,20 @@ AC_FUNC_MMAP
 AC_FUNC_REALLOC
 AC_CHECK_FUNCS(malloc bzero dup2 ftruncate getcwd gethostbyaddr gethostbyname gettimeofday inet_ntoa localtime_r memchr memmove memset mkdir munmap select socket strcasecmp strchr strcspn strdup strerror strncasecmp strpbrk strrchr strspn strstr strtol)
 
+
+DL_LIB_OPTION=" -ldl"
+if test `uname -s` = "Linux"
+then
+    LDFLAGS="$LDFLAGS -Wl,--export-dynamic"
+fi
+if test `uname -s` = "FreeBSD"
+then
+    LDFLAGS="$LDFLAGS -Wl,--export-dynamic"
+    DL_LIB_OPTION=
+fi
+echo "Final LDFLAGS='$LDFLAGS'"
+AC_SUBST([DL_LIB_OPTION])
+
 AC_CONFIG_FILES(Makefile
                 src/Makefile
                 src/edio/Makefile
@@ -188,7 +203,11 @@ AC_CONFIG_FILES(Makefile
                 src/socket/Makefile
                 src/sslpp/Makefile
                 src/ssi/Makefile
-                src/util/Makefile)
+                src/util/Makefile
+                src/lsiapi/Makefile)
 
+                
+
+                
 AC_OUTPUT
 

@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 2.8)
 
 ########### next target ###############
 
-SET(sysinfo_STAT_SRCS
+SET(sysinfo_STAT_SRCS partitioninfo.cpp
    nicdetect.cpp
    systeminfo.cpp
 )

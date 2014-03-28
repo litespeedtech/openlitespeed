@@ -20,7 +20,7 @@
 
 
 #include <sys/types.h>
-
+class ConfigCtx;
 class Daemonize
 {
     Daemonize() {};
@@ -35,6 +35,8 @@ public:
                     const char * pChroot, char * pErr, int errLen );
     static int changeUserGroupRoot( const char * pUser, uid_t uid, gid_t gid,
             gid_t pri_gid, const char * pChroot, char * pErr, int errLen );
+    static struct passwd *configUserGroup( const char *pUser, const char *pGroup,
+        gid_t &gid );
 };
 
 #endif

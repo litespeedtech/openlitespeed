@@ -18,7 +18,7 @@
 #include "httplog.h"
 
 #include <http/accesslog.h>
-#include <http/datetime.h>
+#include <util/datetime.h>
 #include <http/httpglobals.h>
 #include <http/httpreq.h>
 #include <http/httpresp.h>
@@ -156,9 +156,9 @@ LOG4CXX_NS::Logger * HttpLog::getErrorLogger()
 
 
 #define MAX_LOG_LINE_LEN 4096
-int HttpLog::logAccess( const char * pVHost, int len, HttpConnection* pConn )
+int HttpLog::logAccess( const char * pVHost, int len, HttpSession* pSession )
 {
-    accessLog()->log( pVHost, len, pConn );
+    accessLog()->log( pVHost, len, pSession );
     return 0;
 }
 
@@ -297,6 +297,11 @@ void HttpLog::info( const char * fmt, ... )
     }
 }
 
+void HttpLog::vlog( int level, const char * format, va_list args )
+{
+    logger()->vlog( level,  format, args );
+}
+
 void HttpLog::log( int level, const char * fmt, ... )
 {
     va_list ap;
@@ -304,6 +309,23 @@ void HttpLog::log( int level, const char * fmt, ... )
     logger()->vlog( level,  fmt, ap );
     va_end( ap );
     
+}
+
+void HttpLog::vlog( LOG4CXX_NS::Logger * pLogger, int level, const char * format, va_list args, int no_linefeed )
+{
+    if ( !pLogger )
+        pLogger = logger();
+    if ( pLogger->isEnabled( level ) )
+    {
+        pLogger->vlog( level, format, args, no_linefeed );
+    }
+}
+
+void HttpLog::lograw( LOG4CXX_NS::Logger * pLogger, const char * pBuf, int len )
+{
+    if ( !pLogger )
+        pLogger = logger();
+    pLogger->lograw( pBuf, len );
 }
 
 

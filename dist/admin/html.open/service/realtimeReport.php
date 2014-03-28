@@ -29,7 +29,7 @@ function getSelectOptions($selType, $selValue)
 			'eap_inuse'=>'EAProc In Use',
 			'eap_idle'=>'EAProc Idle',
 			'eap_waitQ'=>'EAProc WaitQ',
-			'eap_req_per_sec'=>'EAProc Req/Sec');			
+			'eap_req_per_sec'=>'EAProc Req/Sec');
 	}
 	else if ($selType == 'EAP_SHOW_SORTBY')
 	{
@@ -43,7 +43,7 @@ function getSelectOptions($selType, $selValue)
 			'inuse_conn'=>'In Use',
 			'idle_conn'=>'Idle',
 			'waitqueue_depth'=>'WaitQ',
-			'req_per_sec'=>'Req/Sec');			
+			'req_per_sec'=>'Req/Sec');
 	}
 
 	return DUtil::genOptions($options, $selValue);
@@ -60,7 +60,8 @@ $eap_show_top = DUtil::getGoodVal(DUtil::grab_input("request","eap_show_top"));
 $eap_show_filter = DUtil::getGoodVal(DUtil::grab_input("request","eap_show_filter","string"));
 $eap_show_sort = DUtil::getGoodVal(DUtil::grab_input("request","eap_show_sort","string"));
 $cur_time = gmdate("D M j H:i:s T");
-$server_info = "Snapshot at $cur_time for server {$service->serv['name']}";
+$server_info = "server {$service->serv['name']} snapshot at $cur_time";
+
 
 // setting defaults
 if ($vh_show_ind == '') {
@@ -101,29 +102,18 @@ if($refresh >= 2) {
 <input type="hidden" name="vh_show_ind" value="<?echo $vh_show_ind;?>">
 <input type="hidden" name="eap_show_ind" value="<?echo $eap_show_ind;?>">
 
-<div>
-<table width=100% style='margin-bottom: 5px;' cellpadding=0
-	cellspacing=0>
-	<tr>
-		<td style='border-bottom: 1px solid #cacaca; padding-bottom: 2px;'><span
-			class="h2_font">Real-Time Statistics</span>&nbsp;&nbsp;&nbsp; <? echo $server_info;?></td>
-		<td align="right"
-			style='border-bottom: 1px solid #cacaca; padding-bottom: 2px;'>
-		Refresh Interval: <select onChange='document.rpt.submit();'
-			name="refresh">
+<div class="bottom_bar">
+<span  class="h2_font">Real-Time Statistics</span>&nbsp;&nbsp;&nbsp; <? echo $server_info;?>
+<span style="float:right">Refresh Interval: <select onChange='document.rpt.submit();' name="refresh"  class="th-clr">
 			<?
 			echo( getSelectOptions('REFRESH', $refresh) );
 			?>
-		</select></td>
-	</tr>
-</table>
+		</select></span>
 </div>
-<div>
-<table width=100% cellpadding=0 cellspacing=10>
-	<tr>
-		<td width="35%" valign="top">
-		<table class="xtbl" width="100%" border="0" cellpadding="3"
-			cellspacing="1">
+
+<div style="margin-top:20px;">
+	<div style="width:350px;display:inline-block;vertical-align:top;margin-right:20px;">
+	<table class="xtbl" width="100%" border="0" cellpadding="3"	cellspacing="1">
 			<tr>
 				<td class="xtbl_title" colspan=2>Server Health</td>
 			</tr>
@@ -141,14 +131,13 @@ if($refresh >= 2) {
 			else if ($blocked_count > 0) {
 				$blocked_sample = join(', ', $stats->blocked_ip);
 			}
-			
+
 			$buf .= '<tr><td width=120 class="xtbl_label_vert">Anti-DDoS Blocked IP</td><td class="xtbl_value">' . $blocked_sample
 			.'</td></tr>' ."\n";
 			echo $buf;
 			?>
-		</table>
-		</td>
-		<td width="65%" valign="top">
+	</table></div>
+	<div style="width:560px;display:inline-block;">
 		<table class="xtbl" width="100%" border="0" cellpadding="3"
 			cellspacing="1">
 			<tr>
@@ -199,10 +188,7 @@ if($refresh >= 2) {
 			echo $buf;
 
 			?>
-		</table>
-		</td>
-	</tr>
-</table>
+	</table></div>
 </div>
 <div>
 <table class="xtbl" width="100%" border="0" cellpadding="3"
@@ -250,7 +236,7 @@ if($refresh >= 2) {
 		. "\n";
 
 		$vhlist = $stats->apply_vh_filter($vh_show_top, $vh_show_filter, $vh_show_sort);
-			
+
 		foreach( $vhlist as $vhname ) {
 			if ($vhname == '_Server')
 				continue;
@@ -259,7 +245,7 @@ if($refresh >= 2) {
 			$buf .= '<td width=1><a target=_new href="graph_html.php?gtitle=VHOST Requests: '
 			. urlencode($vhname) . '&vhost=' . urlencode($vhname)
 			. '&extapp=&items=req_processing,req_per_sec&titles=Requests In-Processing,Requests Per Second&colors=ff6600,8ad688&yaxis=Requests"><img src="/static/images/icons/graph.gif" border=0></a></td>';
-			
+
 			$buf .= '<td align="center">'.number_format($vh->req_processing).'</td>';
 			$buf .= '<td align="center">'.number_format($vh->req_per_sec,1).'</td>';
 			$buf .= '<td align="center">'.number_format($vh->req_total).'</td>';
@@ -309,7 +295,7 @@ if($refresh >= 2) {
 		. '<td>In Use</td><td>Idle</td><td>WaitQ</td><td>Req/Sec</td>'
 		. "</tr>\n";
 		$exapps = $stats->apply_eap_filter($eap_show_top, $eap_show_filter, $eap_show_sort);
-			
+
 		foreach( $exapps as $eap ) {
 			$buf .= '<tr class="xtbl_value"><td>' . $eap->vhost . '</td>';
 			$buf .= '<td align="center">' . $eap->type . '</td>';
@@ -327,7 +313,7 @@ if($refresh >= 2) {
 					$buf .= '<td  align="center">'.number_format($eap->waitqueue_depth).'</td>';
 					$buf .= '<td  align="center">'.number_format($eap->req_per_sec).'</td>';
 					$buf .= '</tr>'."\n";
-			} 
+			}
 		}
 		echo $buf;
 ?>

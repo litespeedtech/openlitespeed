@@ -29,12 +29,14 @@
 #include <http/throttlecontrol.h>
 
 #include <log4cxx/nsdefs.h>
+#include <lsiapi/lsimoduledata.h>
 
 #include <util/hashstringmap.h>
 #include <util/refcounter.h>
 #include <util/stringlist.h>
 
 #include <sys/types.h>
+#include <lsiapi/lsiapihooks.h>
 
 BEGIN_LOG4CXX_NS
 class Logger;
@@ -57,7 +59,7 @@ END_LOG4CXX_NS
 #define DEFAULT_ADMIN_SERVER_NAME   "_AdminVHost"
 
 
-class HttpConnection;
+class HttpSession;
 class HttpContext;
 class AccessControl;
 class AccessCache;
@@ -74,6 +76,16 @@ class RewriteRuleList;
 class RewriteMapList;
 class SSITagConfig;
 class SSLContext;
+class HTAuth;
+class ConfigCtx;
+class HashDataCache;
+class LocalWorkerConfig;
+class LocalWorker;
+class Env;
+class RLimits;
+class HttpServerImpl;
+class LsiApiHooks;
+class XmlNodeList;
 
 class RealmMap : public HashStringMap< UserDir* >
 {
@@ -114,6 +126,7 @@ private:
     AutoStr2            m_sName;
     AutoStr2            m_sAdminEmails;
     AutoStr2            m_sAutoIndexURI;
+
     int                 m_iMappingRef;
 
     uid_t               m_uid;
@@ -125,15 +138,19 @@ private:
     RewriteRuleList     m_rewriteRules;    
     RewriteMapList    * m_pRewriteMaps;
     SSLContext        * m_pSSLCtx;
-    SSITagConfig      * m_pSSITagConfig;
+    SSITagConfig      * m_pSSITagConfig; 
     AutoStr2            m_sSpdyAdHeader;
+    LsiModuleData       m_moduleData;
     
     HttpVHost( const HttpVHost& rhs );
     void operator=( const HttpVHost& rhs );
+
+    
 public:
     explicit HttpVHost( const char * pHostName );
     ~HttpVHost();
 
+    
     int setDocRoot( const char * psRoot );
     const AutoStr2 * getDocRoot() const
     {   return m_rootContext.getRoot();     }
@@ -236,7 +253,7 @@ public:
     HttpContext & getRootContext()              {   return m_rootContext;   }
     const HttpContext& getRootContext() const   {   return m_rootContext;   }
     
-    void  logAccess( HttpConnection * pConn ) const;
+    void  logAccess( HttpSession *pSession ) const;
 
     const AutoStr2 * addMatchName( const char * pName )
     {
@@ -302,14 +319,13 @@ public:
     HttpContext * setContext( HttpContext * pContext, const char * pUri,
                 int type, const char * pLocation, const char * pHandler,
                 int allowBrowse, int match = 0 );
-    HttpContext * addContext( int match, const char * pUri, int type,
-        const char * pLocation, const char * pHandler, int allowBrowse );
+
     void setAwstats( Awstats * pAwstats )
     {
         m_pAwstats = pAwstats;
     }
     
-    void logBytes( long bytes );
+    void logBytes( long long bytes );
     void setBytesLogFilePath( const char * pPath, off_t rollingSize );
     int  BytesLogEnabled() const     {   return m_pBytesLog != NULL; }
 
@@ -333,8 +349,71 @@ public:
     SSLContext * getSSLContext() const
     {   return m_pSSLCtx;           }    
     
+    HTAuth *configAuthRealm( HttpContext *pContext,
+                             const char *pRealmName );  
+    int configContextAuth( HttpContext *pContext,
+                           const XmlNode *pContextNode  );   
+    int configBasics( const XmlNode *pVhConfNode, int iChrootLen  );
+    int configWebsocket( const XmlNode *pWebsocketNode );
+    int configVHWebsocketList( const XmlNode *pVhConfNode );
+    int configHotlinkCtrl( const XmlNode *pNode );
+    int setAuthCache( const XmlNode *pNode,
+                          HashDataCache *pAuth );
+    int configRealm( const XmlNode *pRealmNode );
+    int configRealmList( const XmlNode *pRoot);
+    int configSecurity( const XmlNode *pVhConfNode);
+    int configRewrite( const XmlNode *pNode );
+    void configRewriteMap( const XmlNode *pNode );
+    HttpContext* addContext( int match, const char *pUri, 
+        int type, const char *pLocation, const char *pHandler, int allowBrowse );   
+    HttpContext* configContext( const char *pUri, int type, const char *pLocation, 
+             const char *pHandler, int allowBrowse );
+    const XmlNode* configIndex( const XmlNode *pVhConfNode, 
+           const StringList *pStrList );
+    int configIndexFile( const XmlNode *pVhConfNode, 
+           const StringList *pStrList, const char* strIndexURI );
+    int configAwstats( const char* vhDomain, int vhAliasesLen,
+                                    const XmlNode *pNode );
+    HttpContext * addRailsContext( const char *pURI,
+            const char *pLocation, LocalWorker *pWorker );
+    HttpContext *configRailsContext( const char *contextUri, const char *appPath,
+                int maxConns, const char *pRailsEnv, int maxIdle, const Env *pEnv, 
+                const char *pRubyPath );
+    HttpContext *configRailsContext( const XmlNode *pNode,
+        const char *contextUri, const char *appPath );
+    HttpContext *importWebApp( const char *contextUri, const char *appPath,
+        const char *pWorkerName, int allowBrowse );    
+    int configContext( const XmlNode *pContextNode );
+    
+    void checkAndAddNewUriFormModuleList(const XmlNodeList *pModuleList);
+    int configVHContextList( const XmlNode *pVhConfNode, const XmlNodeList *pModuleList );
+    int configVHModuleUrlFilter1( lsi_module_t *pModule, const XmlNodeList *pfilterList);  //step 1 just save params
+    int configVHModuleUrlFilter2( lsi_module_t *pModule, const XmlNodeList *pfilterList);  //step 2 parse the params
+    int configModuleConfigInContext( const XmlNode *pContextNode, int saveParam );
+    
+    int parseVHModulesParams( const XmlNode *pVhConfNode, const XmlNodeList *pModuleList, int saveParam );
+    
+    int config( const XmlNode *pVhConfNode);
+    int configVHScriptHandler( const XmlNode *pVhConfNode );
+    const HttpHandler * isHandlerAllowed( const HttpHandler *pHdlr, int type, 
+                                 const char *pHandler );
+    void configVHChrootMode( const XmlNode *pNode );
+    static HttpVHost *configVHost( const XmlNode *pNode, const char *pName,
+        const char *pDomain, const char *pAliases, const char *pVhRoot,
+        const XmlNode *pConfigNode);
+    static HttpVHost *configVHost( XmlNode *pNode);
+    void configServletMapping(XmlNode *pRoot, char* achURI, int uriLen,
+            const char *pWorkerName, int allowBrowse );
+    int configRedirectContext( const XmlNode *pContextNode, const char *pLocation, 
+          const char *pUri, const char *pHandler, bool allowBrowse, int match, 
+          int type );
+    int checkDeniedSubDirs( const char *pUri, const char *pLocation );
+    
     void setSpdyAdHeader(const char *sHeader)   {       m_sSpdyAdHeader = sHeader;      }
     const AutoStr2& getSpdyAdHeader() const         {       return m_sSpdyAdHeader; }
+
+    LsiModuleData* getModuleData()      {   return &m_moduleData;   }
+    
 };
 
 

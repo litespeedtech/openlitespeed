@@ -20,6 +20,7 @@
 
 #include <util/autostr.h>
 #include <util/gpointerlist.h>
+#include <util/stringtool.h>
 
 #include <ctype.h>
 #include <math.h>
@@ -32,22 +33,22 @@
 
 class ByteRange
 {
-    long m_lBegin;
-    long m_lEnd;
+    off_t m_lBegin;
+    off_t m_lEnd;
 public:
     ByteRange()
         : m_lBegin(0), m_lEnd(0)
         {}
 
-    ByteRange(long b, long e )
+    ByteRange(off_t b, off_t e )
         : m_lBegin( b ), m_lEnd( e )
         {}
-    long getBegin() const   { return m_lBegin;  }
-    long getEnd() const     { return m_lEnd;    }
-    void setBegin( long b ) { m_lBegin = b;     }
-    void setEnd( long e)    { m_lEnd = e;       }
+    off_t getBegin() const   { return m_lBegin;  }
+    off_t getEnd() const     { return m_lEnd;    }
+    void setBegin( off_t b ) { m_lBegin = b;     }
+    void setEnd( off_t e)    { m_lEnd = e;       }
     int check( int entityLen );
-    long getLen() const     { return m_lEnd - m_lBegin + 1;   }
+    off_t getLen() const     { return m_lEnd - m_lBegin + 1;   }
 };
 
 void HttpRangeList::clear()
@@ -61,7 +62,7 @@ int ByteRange::check( int entityLen )
     {
         if ( m_lBegin == -1 )
         {
-            long b = entityLen - m_lEnd;
+            off_t b = entityLen - m_lEnd;
             if ( b < 0 )
                 b = 0;
             m_lBegin = b;
@@ -77,7 +78,7 @@ int ByteRange::check( int entityLen )
     return 0;
 }
 
-HttpRange::HttpRange( long entityLen )
+HttpRange::HttpRange( off_t entityLen )
     : m_lEntityLen( entityLen )
 {
     ::memset( m_boundary, 0, sizeof( m_boundary) );
@@ -161,7 +162,7 @@ int HttpRange::parse( const char * pRange )
         return SC_400;
     int state = 0;
     ByteRange range(-1,-1);
-    long lValue = 0;
+    off_t lValue = 0;
     while( state != 6 )
     {
         switch( ch )
@@ -267,36 +268,51 @@ int HttpRange::getContentRangeString( int n, char * pBuf, int len ) const
 {
     char * pBegin = pBuf;
     int ret;
-    ret = safe_snprintf( pBuf, len, "%s", "bytes " );
+    ret = safe_snprintf( pBuf, len, "%s", "Content-Range: bytes " );
     pBuf += ret;
     len -= ret;
     ret = 0;
     if ( len <= 0 )
         return -1;
+    char achLen[30];
+    StringTool::str_off_t( achLen, 30, m_lEntityLen);
     if (( n < 0 )||(n >= (int)m_list.size() ))
     {
         if ( m_lEntityLen == -1 )
             return -1;
         else
-            ret = safe_snprintf( pBuf, len, "*/%ld", m_lEntityLen );
+            ret = safe_snprintf( pBuf, len, "*/%s\r\n", achLen );
     }
     else
     {
-        int ret1 = safe_snprintf( pBuf, len, "%ld-%ld/", m_list[ n ]->getBegin(),
-                    m_list[ n ]->getEnd() );
+        int ret1;
+        ret1 = StringTool::str_off_t( pBuf, len, m_list[ n ]->getBegin());
+        if ( ret1 < 0 )
+            return -1;
         pBuf += ret1;
         len -= ret1;
+        *pBuf++ = '-';
+        ret1 = StringTool::str_off_t( pBuf, len, m_list[ n ]->getEnd());
+        if ( ret1 < 0 )
+            return -1;
+        pBuf += ret1;
+        len -= ret1;
+        *pBuf++ = '/';
+        len -= 2;
+
         if ( len <= 0 )
             return -1;
         if ( m_lEntityLen >= 0 )
         {
-            ret = safe_snprintf( pBuf, len, "%ld", m_lEntityLen );
+            ret = safe_snprintf( pBuf, len, "%s\r\n", achLen );
         }
         else
         {
             if ( len > 4 )
             {
                 *pBuf++ = '*';
+                *pBuf++ = '\r';
+                *pBuf++ = '\n';
                 *pBuf = 0;
             }
             else
@@ -308,7 +324,7 @@ int HttpRange::getContentRangeString( int n, char * pBuf, int len ) const
     return ( len > 0 ) ? pBuf - pBegin : -1;
 }
 
-int HttpRange::getContentOffset( int n, long& begin, long& end ) const
+int HttpRange::getContentOffset( int n, off_t& begin, off_t& end ) const
 {
     if ((n < 0 )||( n >= (int)m_list.size() ))
         return -1;
@@ -347,43 +363,59 @@ int HttpRange::getPartHeader( int n, const char * pMimeType, char* buf, int size
     assert(( n >= 0 )&&( n <= (int)m_list.size() ));
     int ret;
     if ( n < (int)m_list.size() )
-        ret = safe_snprintf( buf, size,
+    {
+        ret = snprintf( buf, size,
                         "\r\n--%s\r\n"
-                        "Content-type: %s\r\n"
-                        "Content-range: bytes %ld-%ld/%ld\r\n"
-                        "\r\n", m_boundary, pMimeType,
-                        m_list[ n ]->getBegin(),
-                        m_list[ n ]->getEnd(),
-                        m_lEntityLen );
+                        "Content-type: %s\r\n",
+                        m_boundary, pMimeType );
+        if ( ret >= size )
+            return -1;
+        buf += ret;
+        int ret1 = getContentRangeString( n, buf, size - ret );
+        if ( ret1 == -1 )
+            return -1;
+        buf += ret1 ;
+        *buf++ = '\r';
+        *buf++ = '\n'; 
+        ret += ret1 + 2;
+    }
     else
-        ret = safe_snprintf( buf, size, "\r\n--%s--\r\n", m_boundary );
+        ret = snprintf( buf, size, "\r\n--%s--\r\n", m_boundary );
     return ( ret == size )? -1 : ret;
 }
 
 
-long HttpRange::getPartLen( int n, int iMimeTypeLen ) const
+static off_t getDigits(off_t n)
 {
-    long len = 4 + 16 + 2
+    if (n < 10)
+        return 1;
+    else
+        return (off_t)log10((double)n) + 1;
+}
+
+off_t HttpRange::getPartLen( int n, int iMimeTypeLen ) const
+{
+    off_t len = 4 + 16 + 2
          + 14 + iMimeTypeLen + 2
-         + 21 + (long)log10( m_list[ n ]->getBegin() ) + 1 + 1
-         + (long)log10( m_list[ n ]->getEnd() ) + 1 + 1
+         + 21 + getDigits( m_list[ n ]->getBegin() ) + 1
+         + getDigits( m_list[ n ]->getEnd() ) + 1
          + 2 + 2
          + m_list[ n ]->getLen();
     if ( m_lEntityLen == -1 )
         ++len;
     else
-        len += (long)log10( m_lEntityLen ) + 1;
+        len += getDigits( m_lEntityLen );
     return len;
 }
 
-long HttpRange::getMultipartBodyLen( const AutoStr2* pMimeType ) const
+off_t HttpRange::getMultipartBodyLen( const AutoStr2* pMimeType ) const
 {
     assert( pMimeType );
     if ( m_lEntityLen == -1 )
         return -1;
     int typeLen = pMimeType->len();
     int size = m_list.size();
-    long total = 0;
+    off_t total = 0;
     for( int i = 0; i < size; ++i )
     {
         total += getPartLen( i, typeLen );
@@ -396,7 +428,7 @@ bool HttpRange::more() const
     return m_iCurRange < (int)m_list.size();
 }
 
-int HttpRange::getContentOffset( long& begin, long& end ) const
+int HttpRange::getContentOffset( off_t& begin, off_t& end ) const
 {
     return getContentOffset( m_iCurRange, begin, end );
 }

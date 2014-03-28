@@ -36,6 +36,7 @@ public:
         HT_DYNAMIC,
         HT_JAVAWEBAPP = HT_DYNAMIC,
         HT_RAILS,
+        HT_MODULE,
         HT_CGI,
         HT_FASTCGI,
         HT_PROXY,

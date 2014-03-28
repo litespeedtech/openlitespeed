@@ -35,9 +35,9 @@ public:
     ~SampleFcgiExtConn();
 
     //defined in ReqHandler
-    virtual int process( HttpConnection* pConn );
-    virtual int onWrite( HttpConnection* pConn ) ;
-    virtual int onRead( HttpConnection* pConn );
+    virtual int process( HttpSession* pSession );
+    virtual int onWrite( HttpSession* pSession ) ;
+    virtual int onRead( HttpSession* pSession );
 
 
     //functions called by the HttpExtProcessor
@@ -50,7 +50,7 @@ public:
     virtual int releaseProcessor() { return 0;}
 
     virtual int sendReqBody( ) ;
-    virtual int cleanUp( HttpConnection * pConn );
+    virtual int cleanUp( HttpSession *pSession );
     virtual int writeReqBody();
 };
 

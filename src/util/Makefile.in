@@ -116,8 +116,10 @@ am_libutil_a_OBJECTS = httpfetch.$(OBJEXT) httpfetchdriver.$(OBJEXT) \
 	iovec.$(OBJEXT) accesscontrol.$(OBJEXT) signalutil.$(OBJEXT) \
 	loopbuf.$(OBJEXT) stringtool.$(OBJEXT) tsingleton.$(OBJEXT) \
 	base64.$(OBJEXT) pcutil.$(OBJEXT) daemonize.$(OBJEXT) \
-	mysleep.$(OBJEXT) profiletime.$(OBJEXT) nicdetect.$(OBJEXT) \
-	systeminfo.$(OBJEXT) autobuf.$(OBJEXT)
+	mysleep.$(OBJEXT) profiletime.$(OBJEXT) \
+	partitioninfo.$(OBJEXT) nicdetect.$(OBJEXT) \
+	systeminfo.$(OBJEXT) autobuf.$(OBJEXT) configentry.$(OBJEXT) \
+	configctx.$(OBJEXT) logidtracker.$(OBJEXT) datetime.$(OBJEXT)
 libutil_a_OBJECTS = $(am_libutil_a_OBJECTS)
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
@@ -209,6 +211,7 @@ CXXFLAGS = @CXXFLAGS@
 CYGPATH_W = @CYGPATH_W@
 DEFS = @DEFS@
 DEPDIR = @DEPDIR@
+DL_LIB_OPTION = @DL_LIB_OPTION@
 ECHO_C = @ECHO_C@
 ECHO_N = @ECHO_N@
 ECHO_T = @ECHO_T@
@@ -315,7 +318,8 @@ libutil_a_SOURCES = httpfetch.cpp httpfetchdriver.cpp ni_fio.c linkobjpool.cpp p
   gpath.cpp logtracker.cpp gstring.cpp poolalloc.cpp env.cpp \
   xmlnode.cpp iovec.cpp accesscontrol.cpp signalutil.cpp \
   loopbuf.cpp stringtool.cpp tsingleton.cpp base64.cpp pcutil.cpp daemonize.cpp mysleep.c \
-   misc/profiletime.cpp  sysinfo/nicdetect.cpp sysinfo/systeminfo.cpp autobuf.cpp
+   misc/profiletime.cpp sysinfo/partitioninfo.cpp sysinfo/nicdetect.cpp sysinfo/systeminfo.cpp autobuf.cpp \
+   configentry.cpp configctx.cpp logidtracker.cpp datetime.cpp
 
 all: all-am
 
@@ -371,9 +375,12 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/autostr.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/base64.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/blockbuf.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/configctx.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/configentry.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/connpool.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/crashguard.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/daemonize.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/datetime.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dlinkqueue.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/duplicable.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/emailsender.Po@am__quote@
@@ -395,12 +402,14 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/keydata.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/linkedobj.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/linkobjpool.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/logidtracker.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/logtracker.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/loopbuf.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/mysleep.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ni_fio.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/nicdetect.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/objpool.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/partitioninfo.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pcregex.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pcutil.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pidfile.Po@am__quote@
@@ -461,6 +470,20 @@ profiletime.obj: misc/profiletime.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='misc/profiletime.cpp' object='profiletime.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o profiletime.obj `if test -f 'misc/profiletime.cpp'; then $(CYGPATH_W) 'misc/profiletime.cpp'; else $(CYGPATH_W) '$(srcdir)/misc/profiletime.cpp'; fi`
+
+partitioninfo.o: sysinfo/partitioninfo.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT partitioninfo.o -MD -MP -MF $(DEPDIR)/partitioninfo.Tpo -c -o partitioninfo.o `test -f 'sysinfo/partitioninfo.cpp' || echo '$(srcdir)/'`sysinfo/partitioninfo.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/partitioninfo.Tpo $(DEPDIR)/partitioninfo.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='sysinfo/partitioninfo.cpp' object='partitioninfo.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o partitioninfo.o `test -f 'sysinfo/partitioninfo.cpp' || echo '$(srcdir)/'`sysinfo/partitioninfo.cpp
+
+partitioninfo.obj: sysinfo/partitioninfo.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT partitioninfo.obj -MD -MP -MF $(DEPDIR)/partitioninfo.Tpo -c -o partitioninfo.obj `if test -f 'sysinfo/partitioninfo.cpp'; then $(CYGPATH_W) 'sysinfo/partitioninfo.cpp'; else $(CYGPATH_W) '$(srcdir)/sysinfo/partitioninfo.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/partitioninfo.Tpo $(DEPDIR)/partitioninfo.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='sysinfo/partitioninfo.cpp' object='partitioninfo.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o partitioninfo.obj `if test -f 'sysinfo/partitioninfo.cpp'; then $(CYGPATH_W) 'sysinfo/partitioninfo.cpp'; else $(CYGPATH_W) '$(srcdir)/sysinfo/partitioninfo.cpp'; fi`
 
 nicdetect.o: sysinfo/nicdetect.cpp
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT nicdetect.o -MD -MP -MF $(DEPDIR)/nicdetect.Tpo -c -o nicdetect.o `test -f 'sysinfo/nicdetect.cpp' || echo '$(srcdir)/'`sysinfo/nicdetect.cpp

@@ -19,7 +19,7 @@
 #include "handlerfactory.h"
 #include "handlertype.h"
 #include "httpcgitool.h"
-#include "httpconnection.h"
+#include "httpsession.h"
 #include "httpdefs.h"
 #include "httpglobals.h"
 #include "httphandler.h"
@@ -44,7 +44,7 @@
 
 
 HttpExtConnector::HttpExtConnector()
-    : m_pHttpConn( NULL )
+    : m_pSession( NULL )
     , m_pProcessor( NULL )
     , m_pWorker( NULL )
     , m_iState( HEC_BEGIN_REQUEST )
@@ -60,7 +60,7 @@ HttpExtConnector::~HttpExtConnector()
 }
 
 
-int HttpExtConnector::cleanUp( HttpConnection* pConn )
+int HttpExtConnector::cleanUp( HttpSession* pSession )
 {
     if ( D_ENABLED( DL_MEDIUM ) )
         LOG_D(( getLogger(), "[%s] HttpExtConnector::cleanUp() ...", getLogId() ));
@@ -95,7 +95,7 @@ int HttpExtConnector::releaseProcessor()
         if ( next() && getWorker() )
         {
             getWorker()->removeReq( this );
-            getHttpConn()->resumeEventNotify();
+            getHttpSession()->resumeEventNotify();
         }
         
     }
@@ -165,7 +165,7 @@ int HttpExtConnector::parseHeader( const char * &pBuf, int &len, int proxy )
     }
     if ( m_iRespState & 0xff )
     {
-        return respHeaderDone(len);
+        return respHeaderDone();
     }
     else
     {
@@ -188,28 +188,17 @@ int HttpExtConnector::parseHeader( const char * &pBuf, int &len, int proxy )
 
 
 
-
-
-#define MIN_GZIP_SIZE 200
-
-int HttpExtConnector::respHeaderDone(int len)
+int  HttpExtConnector::respHeaderDone()
 {
-    if ( D_ENABLED( DL_MEDIUM ) )
-        LOG_D(( getLogger(),
-                "[%s] response header finished!",
-                getLogId() ));
-    if ( (m_iRespState & HEC_RESP_LOC_SET)&&
-            *(getHttpConn()->getReq()->getLocation()) )
-    {
+    int ret = m_pSession->respHeaderDone( m_iRespState );
+    if ( ret == 1 )
         m_iState |= HEC_REDIRECT;
-        getHttpConn()->changeHandler();
-        getHttpConn()->continueWrite();
-        return 1;
-    }
-    return m_pHttpConn->setupDynRespBodyBuf( m_iRespState );
+    return ret;
 }
 
 
+
+#define MIN_GZIP_SIZE 200
 
 
 int HttpExtConnector::processRespData( const char * pBuf, int len )
@@ -231,22 +220,23 @@ int HttpExtConnector::processRespData( const char * pBuf, int len )
 
 char * HttpExtConnector::getRespBuf( size_t& len )
 {
-    if (( m_pHttpConn->getGzipBuf() )||( !(m_iRespState & 0xff) )|| !m_pHttpConn->getRespCache())
+    if (( m_pSession->getGzipBuf() )||( !(m_iRespState & 0xff) )|| !m_pSession->getRespCache() ||
+        !m_pSession->isHookDisabled( LSI_HKPT_RECV_RESP_BODY ) )
     {
         len = G_BUF_SIZE;
         return HttpGlobals::g_achBuf;
     }
     else
     {
-        return m_pHttpConn->getRespCache()->getWriteBuffer( len );
+        return m_pSession->getRespCache()->getWriteBuffer( len );
     }    
 }
 
 int HttpExtConnector::flushResp()
 {
-    if ( !m_pHttpConn->getRespCache() || !(m_iRespState & 0xff) )
+    if ( !m_pSession->getRespCache() || !(m_iRespState & 0xff) )
         return 0;
-    return m_pHttpConn->flushDynBody(m_iRespState & HEC_RESP_NOBUFFER);
+    return m_pSession->flushDynBody(m_iRespState & HEC_RESP_NOBUFFER);
 }
 
 
@@ -256,14 +246,14 @@ int HttpExtConnector::processRespBodyData( int inplace, const char * pBuf, int l
         LOG_D((getLogger(), "[%s] HttpExtConnector::processRespBodyData()",
                getLogId() ));
         
-        if ( m_pHttpConn->getRespCache() )
+        if ( m_pSession->getRespCache() )
         {
-            int ret = m_pHttpConn->appendDynBody( inplace, pBuf, len );
+            int ret = m_pSession->appendDynBody( inplace, pBuf, len );
             if ( ret == -1 )
             {
                 errResponse( SC_500, NULL );
             }
-            else if ( m_pHttpConn->shouldSuspendReadingResp() )
+            else if ( m_pSession->shouldSuspendReadingResp() )
             {
                 m_pProcessor->suspendRead();
             }
@@ -374,17 +364,17 @@ int HttpExtConnector::endResponse( int endCode, int protocolStatus )
     releaseProcessor();
     if ( m_iRespState & HEC_RESP_AUTHORIZED )
     {
-        m_pHttpConn->authorized();
+        m_pSession->authorized();
         return 0;
     }
     if ( ( m_iRespState & 0xff ) &&
         !(m_iState & (HEC_ERROR|HEC_REDIRECT )) )
     {
-        return m_pHttpConn->endDynResp( !(m_iState & HEC_ABORT_REQUEST) );
+        return m_pSession->endDynResp( !(m_iState & HEC_ABORT_REQUEST) );
     }
     else
     {
-        m_pHttpConn->continueWrite();
+        m_pSession->continueWrite();
     }
     return ret;
 }
@@ -392,72 +382,41 @@ int HttpExtConnector::endResponse( int endCode, int protocolStatus )
 
 
 
-
-
-int HttpExtConnector::sendResp()
+int HttpExtConnector::onWrite(HttpSession* pSession )
 {
-    if ( !m_pHttpConn->getResp()->getHeaderTotal() )
-    {
-        getHttpConn()->suspendWrite();
-        return 1;
-    }
-    {
-        int ret = m_pHttpConn->sendDynBody();
-        if ( ret == -1 )
-        {
-            m_iState |= HEC_ERROR;
-            //abortReq(6);
-            abortReq();
-            return -1;
-        }
-        if ( ret == 1 )
-            return ret;
-    }
     if ( (m_iState & ( HEC_COMPLETE | HEC_ERROR )) == 0 )
     {
         if ( D_ENABLED( DL_MEDIUM ) )
             LOG_D(( getLogger(),
                     "[%s] response buffer is empty, "
-                    "suspend HttpConn write!\n", getLogId() ));
-            getHttpConn()->suspendWrite();
-        m_pHttpConn->resetRespBodyBuf();
+                    "suspend HttpSession write!\n", getLogId() ));
+        //m_pHttpSession->resetRespBodyBuf();
+        getHttpSession()->suspendWrite();
         m_pProcessor->continueRead();
         return 1;
     }
     else
     {
-        //        int l = getHttpConn()->getResp()->getContentLen();
-        //        if (( l >= 0 )&&( l != m_iRespBodySent ))
-        //            getHttpConn()->getReq()->keepAlive( 0 );
-        //assert( !(m_iState & HEC_ERROR) );
-        //if (iState & HEC_COMPLETE )
         if ( D_ENABLED( DL_MEDIUM ) )
             LOG_D(( getLogger(),
                     "[%s] ReqBody: %d, RespBody: %d, HEC_COMPLETE!",
-                    getLogId(), m_iReqBodySent, m_pHttpConn->getDynBodySent() ));
-            return 0;
-        
+                    getLogId(), m_iReqBodySent, m_pSession->getDynBodySent() ));
+        return 0;
     }
 }
 
-
-int HttpExtConnector::onWrite(HttpConnection* pConn, int aioSent )
+int HttpExtConnector::process( HttpSession* pSession, const HttpHandler * pHandler )
 {
-    return sendResp();
-}
-
-int HttpExtConnector::process( HttpConnection* pConn, const HttpHandler * pHandler )
-{
-    assert( pConn );
+    assert( pSession );
     //resetConnector();
     assert( pHandler );
-    setHttpConn( pConn );
+    setHttpSession( pSession );
     setAttempts( 0 );
     if ( pHandler->getHandlerType() == HandlerType::HT_LOADBALANCER )
     {
         LoadBalancer * pLB = (LoadBalancer *)pHandler;
         setLB( pLB );
-        ExtWorker * pWorker = pLB->selectWorker(pConn, this);
+        ExtWorker * pWorker = pLB->selectWorker(pSession, this);
         setWorker( pWorker );
         if ( D_ENABLED( DL_LESS ) )
             LOG_D(( getLogger(), "[%s] Assign new request to ExtProcessor [%s]!",
@@ -519,7 +478,7 @@ int  HttpExtConnector::tryRecover()
                         getLogId(), attempts ));
             if ( pLB && ( attempts % 3 ) == 0 )
             {
-                ExtWorker * pWorker = pLB->selectWorker(m_pHttpConn, this);
+                ExtWorker * pWorker = pLB->selectWorker(m_pSession, this);
                 if ( D_ENABLED( DL_LESS ) )
                 {
                     if ( pWorker )
@@ -577,7 +536,7 @@ int HttpExtConnector::reqHeaderDone()
     if ( D_ENABLED( DL_MEDIUM ) )
         LOG_D(( getLogger(),
             "[%s] request header is done\n", getLogId() ));
-    HttpReq * pReq = getHttpConn()->getReq();
+    HttpReq * pReq = getHttpSession()->getReq();
     getProcessor()->beginReqBody();
     getProcessor()->continueRead();
     if (!(m_iRespState & HEC_RESP_AUTHORIZER)&&( pReq->getBodyBuf() ))
@@ -603,7 +562,7 @@ int HttpExtConnector::reqBodyDone()
 
 int HttpExtConnector::sendReqBody()
 {
-    HttpReq * pReq = getHttpConn()->getReq();
+    HttpReq * pReq = getHttpSession()->getReq();
     VMemBuf * pVMemBuf = pReq->getBodyBuf();
     size_t size;
     char * pBuf;
@@ -618,30 +577,48 @@ int HttpExtConnector::sendReqBody()
         }
         if ( D_ENABLED( DL_MEDIUM ) )
             LOG_D(( getLogger(),
-                "[%s] processor sent request body %d bytes, total sent: %d\n",
-                            getLogId(), written, m_iReqBodySent ));
-        if (( written != (int)size )||( ++count == 10 ))
+                "[%s] processor sent request body %d bytes, total sent: %lld\n",
+                            getLogId(), written, (long long)m_iReqBodySent ));
+        if (( written != (int)size )||( ++count == 2 ))
         {
             if ( written != -1 )
                 getProcessor()->continueWrite();
+            //THINKING: set request aborted flag if return -1?
             return written;
         }
     }
-    setState( getState() & ~HEC_FWD_REQ_BODY );
-    reqBodyDone();
+    if ( pReq->getBodyRemain() <= 0 )
+    {
+        setState( getState() & ~HEC_FWD_REQ_BODY );
+        reqBodyDone();
+    }
+    else
+    {
+        getProcessor()->suspendWrite();
+        getHttpSession()->continueRead();
+        if ( D_ENABLED( DL_MEDIUM ) )
+            LOG_D(( getLogger(),
+                "[%s] all recevied request body sent, suspend write\n",
+                            getLogId() ));
+        
+    }
     return 0;
 }
 
 
-int HttpExtConnector::onRead(HttpConnection* pConn )
+int HttpExtConnector::onRead(HttpSession* pSession )
 {
-//    if ( getState() & HEC_FWD_REQ_BODY )
-//    {
-//        writeReqBody();
-//    }
-//    else
-    getHttpConn()->suspendRead();
-    assert( false );
+    if (( getState() & HEC_ERROR )||!getProcessor())
+        return -1;
+    if ( (getState() & (HEC_FWD_REQ_BODY | HEC_COMPLETE )) 
+            == HEC_FWD_REQ_BODY)
+    {
+        return sendReqBody();
+    }
+    else
+    {
+        getHttpSession()->suspendRead();
+    }
     return 0;
 }
 
@@ -651,21 +628,21 @@ bool HttpExtConnector::isRecoverable()
         return false;
     //if ( m_iReqBodySent == 0 )
     //    return true;
-    //HttpReq * pReq = getHttpConn()->getReq();
+    //HttpReq * pReq = getHttpSession()->getReq();
     return true;
 }
 
 int HttpExtConnector::errResponse( int code, const char * pErr )
 {
     m_iState |= HEC_ERROR;
-    if ( getHttpConn() )
+    if ( getHttpSession() )
     {
         if (!( m_iState & HEC_FWD_RESP_BODY ))
         {
-            getHttpConn()->getReq()->setStatusCode( code );
-            getHttpConn()->changeHandler();
+            getHttpSession()->getReq()->setStatusCode( code );
+            getHttpSession()->changeHandler();
         }
-        getHttpConn()->continueWrite();
+        getHttpSession()->continueWrite();
     }
     return -1;
 }
@@ -678,7 +655,7 @@ void HttpExtConnector::onTimer()
 
 void HttpExtConnector::suspend()
 {
-    getHttpConn()->suspendEventNotify();
+    getHttpSession()->suspendEventNotify();
 }
 
 
@@ -702,16 +679,16 @@ void HttpExtConnector::extProcessorError( int errCode )
 
 const char *  HttpExtConnector::getLogId()
 {
-    if ( m_pHttpConn )
-        return m_pHttpConn->getLogId();
+    if ( m_pSession )
+        return m_pSession->getLogId();
     else
         return "idle";
 }
 
 LOG4CXX_NS::Logger* HttpExtConnector::getLogger() const
 {
-    if ( m_pHttpConn )
-        return m_pHttpConn->getLogger();
+    if ( m_pSession )
+        return m_pSession->getLogger();
     else
         return NULL;
 
@@ -722,8 +699,8 @@ void HttpExtConnector::dump()
     LOG_INFO(( getLogger(), "[%s] HttpExtConnector state: %d, "
                 "request body sent: %d, response body size: %d, response body sent:%d, "
                 "left in buffer: %ld, attempts: %d."
-        , getLogId(), m_iState, m_iReqBodySent, m_pHttpConn->getResp()->getContentLen(), m_pHttpConn->getDynBodySent(),
-        (m_pHttpConn->getRespCache())?m_pHttpConn->getRespCache()->writeBufSize():0, getAttempts() ));    
+        , getLogId(), m_iState, m_iReqBodySent, m_pSession->getResp()->getContentLen(), m_pSession->getDynBodySent(),
+        (m_pSession->getRespCache())?m_pSession->getRespCache()->writeBufSize():0, getAttempts() ));    
     if ( m_pProcessor )
     {
         m_pProcessor->dump();
@@ -741,7 +718,7 @@ int HttpExtConnector::dumpAborted()
 
 int HttpExtConnector::isAlive()
 {
-    return getHttpConn()->isAlive();
+    return getHttpSession()->isAlive();
 }
 
 void HttpExtConnector::setHttpError( int error )

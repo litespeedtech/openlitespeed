@@ -226,6 +226,22 @@ public:
         else
             return -1;
     }
+    
+    static int indexToCode( unsigned int index )
+    {
+        if (index < 1 || index >= SC_END)
+            return -1;
+        
+        int iStage;
+        for (iStage= 2; iStage<7; ++iStage)
+        {
+            if (index < (unsigned int )s_codeToIndex[iStage])
+                break;
+        }
+        --iStage;
+        return iStage * 100 + index - s_codeToIndex[iStage];
+    }
+    
     void operator=( http_sc_t code )  { setCode( code );   }
 
     static bool fatalError( http_sc_t code)

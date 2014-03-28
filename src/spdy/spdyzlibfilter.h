@@ -52,9 +52,8 @@ public:
     ~SpdyZlibFilter();
     int init( int isInflator, int verSpdy );
     int release();
-    int spdyHeaderInflate(char* pSource, uint32_t length, AutoBuf& bufInflate);
-    int spdyHeaderDeflate(char* pSource, uint32_t length, LoopBuf* ploopbuf, int flush);
-
+    int decompress(char* pSource, uint32_t length, AutoBuf& bufInflate);
+    int compress(char* pSource, uint32_t length, LoopBuf* pBuf, int flush);
 };
 
 #endif // SPDYZLIBFILTER_H

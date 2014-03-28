@@ -21,7 +21,7 @@
 #include "extworkerconfig.h"
 #include "pidlist.h"
 
-#include <http/datetime.h>
+#include <util/datetime.h>
 #include <http/httplog.h>
 #include <http/httpstatuscode.h>
 
@@ -32,7 +32,6 @@
 
 ExtWorker::ExtWorker()
     : m_pConfig( NULL )
-    , m_pMultiplexer( NULL )
     , m_iRole( EXTAPP_RESPONDER )
     , m_iMultiplexConns( 0 )
     , m_iWantManagementInfo( 1 )

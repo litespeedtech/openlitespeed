@@ -2,7 +2,7 @@
 
 define ('LEGAL', 1);
 define ('TITLE', 'Compile PHP with LSAPI');
-define ('OPTION_VERSION', 2);
+define ('OPTION_VERSION', 3);
 
 define ('BUILD_DIR', $_SERVER['LS_SERVER_ROOT'] . 'phpbuild');
 define ('LAST_CONF', BUILD_DIR . '/savedconfig.'); // actual file will include . php base version.
@@ -11,8 +11,8 @@ define ('DEFAULT_INSTALL_DIR', $_SERVER['LS_SERVER_ROOT'].'lsphp'); // actual di
 
 $PHP_VER = array('5'=>
 		 array(
-		 	'5.5.7',
-		 	'5.4.23',
+		 	'5.5.9',
+		 	'5.4.25',
 		 	'5.3.28',
 			'5.2.17'),
 		 '4'=>
@@ -24,8 +24,7 @@ define ('APC_VERSION', '3.1.9');
 define ('XCACHE_VERSION', '3.1.0');
 define ('MEMCACHE_VERSION', '2.2.7');
 //define ('MEMCACHED_VERSION', '1.0.2');
-
-				
+define ('OPCACHE_VERSION', '7.0.2');
 
 $DEFAULT_PHP_PARAMS = array(
 	'5' => '--with-mysqli --with-zlib --with-gd --enable-shmop --enable-track-vars --enable-sockets --enable-sysvsem --enable-sysvshm --enable-magic-quotes --enable-mbstring --with-iconv',
@@ -33,5 +32,3 @@ $DEFAULT_PHP_PARAMS = array(
 
 
 include_once( 'buildfunc.inc.php' );
-
-?>

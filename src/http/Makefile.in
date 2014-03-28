@@ -107,7 +107,7 @@ am_libhttp_a_OBJECTS = moduserdir.$(OBJEXT) contextnode.$(OBJEXT) \
 	rewritemap.$(OBJEXT) rewriterule.$(OBJEXT) reqstats.$(OBJEXT) \
 	hotlinkctrl.$(OBJEXT) contextlist.$(OBJEXT) urimatch.$(OBJEXT) \
 	expiresctrl.$(OBJEXT) stderrlogger.$(OBJEXT) htauth.$(OBJEXT) \
-	userdir.$(OBJEXT) authuser.$(OBJEXT) httpconnpool.$(OBJEXT) \
+	userdir.$(OBJEXT) authuser.$(OBJEXT) \
 	httplistenerlist.$(OBJEXT) httpvhostlist.$(OBJEXT) \
 	htpasswd.$(OBJEXT) httphandler.$(OBJEXT) \
 	httplogsource.$(OBJEXT) accesslog.$(OBJEXT) \
@@ -122,7 +122,7 @@ am_libhttp_a_OBJECTS = moduserdir.$(OBJEXT) contextnode.$(OBJEXT) \
 	staticfilecache.$(OBJEXT) cacheelement.$(OBJEXT) \
 	httpcache.$(OBJEXT) chunkoutputstream.$(OBJEXT) \
 	chunkinputstream.$(OBJEXT) httplog.$(OBJEXT) \
-	httpmime.$(OBJEXT) staticfiledata.$(OBJEXT) \
+	httpmime.$(OBJEXT) sendfileinfo.$(OBJEXT) \
 	httpcontext.$(OBJEXT) httpserverversion.$(OBJEXT) \
 	vhostmap.$(OBJEXT) eventdispatcher.$(OBJEXT) \
 	staticfilehandler.$(OBJEXT) reqhandler.$(OBJEXT) \
@@ -130,10 +130,9 @@ am_libhttp_a_OBJECTS = moduserdir.$(OBJEXT) contextnode.$(OBJEXT) \
 	ntwkiolink.$(OBJEXT) httpmethod.$(OBJEXT) httpver.$(OBJEXT) \
 	httpstatuscode.$(OBJEXT) httpstatusline.$(OBJEXT) \
 	httpheader.$(OBJEXT) smartsettings.$(OBJEXT) \
-	datetime.$(OBJEXT) httplistener.$(OBJEXT) httpresp.$(OBJEXT) \
-	httpreq.$(OBJEXT) httpconnection.$(OBJEXT) moov.$(OBJEXT) \
-	iptogeo.$(OBJEXT) hiostream.$(OBJEXT) \
-	httprespheaders.$(OBJEXT) ntwkiolinkpool.$(OBJEXT) \
+	httplistener.$(OBJEXT) httpresp.$(OBJEXT) httpreq.$(OBJEXT) \
+	httpsession.$(OBJEXT) moov.$(OBJEXT) iptogeo.$(OBJEXT) \
+	hiostream.$(OBJEXT) httprespheaders.$(OBJEXT) \
 	l4handler.$(OBJEXT)
 libhttp_a_OBJECTS = $(am_libhttp_a_OBJECTS)
 AM_V_P = $(am__v_P_@AM_V@)
@@ -211,6 +210,7 @@ CXXFLAGS = @CXXFLAGS@
 CYGPATH_W = @CYGPATH_W@
 DEFS = @DEFS@
 DEPDIR = @DEPDIR@
+DL_LIB_OPTION = @DL_LIB_OPTION@
 ECHO_C = @ECHO_C@
 ECHO_N = @ECHO_N@
 ECHO_T = @ECHO_T@
@@ -310,17 +310,17 @@ libhttp_a_METASOURCES = AUTO
 libhttp_a_SOURCES = moduserdir.cpp contextnode.cpp phpconfig.cpp pipeappender.cpp adns.cpp \
 awstats.cpp rewriterulelist.cpp throttlecontrol.cpp rewriteengine.cpp rewritemap.cpp \
 rewriterule.cpp reqstats.cpp hotlinkctrl.cpp contextlist.cpp urimatch.cpp expiresctrl.cpp \
-stderrlogger.cpp htauth.cpp userdir.cpp authuser.cpp httpconnpool.cpp httplistenerlist.cpp \
+stderrlogger.cpp htauth.cpp userdir.cpp authuser.cpp httplistenerlist.cpp \
 httpvhostlist.cpp htpasswd.cpp httphandler.cpp httplogsource.cpp accesslog.cpp accesscache.cpp \
 httpglobals.cpp clientinfo.cpp clientcache.cpp httprange.cpp connlimitctrl.cpp \
 denieddir.cpp httpserverconfig.cpp httpextconnector.cpp statusurlmap.cpp contexttree.cpp httpcgitool.cpp \
 httpsignals.cpp handlertype.cpp handlerfactory.cpp httputil.cpp staticfilecachedata.cpp staticfilecache.cpp \
 cacheelement.cpp httpcache.cpp chunkoutputstream.cpp chunkinputstream.cpp httplog.cpp httpmime.cpp \
-staticfiledata.cpp httpcontext.cpp httpserverversion.cpp vhostmap.cpp eventdispatcher.cpp staticfilehandler.cpp \
+sendfileinfo.cpp httpcontext.cpp httpserverversion.cpp vhostmap.cpp eventdispatcher.cpp staticfilehandler.cpp \
 reqhandler.cpp httpvhost.cpp httpresourcemanager.cpp ntwkiolink.cpp httpmethod.cpp httpver.cpp \
-httpstatuscode.cpp httpstatusline.cpp httpheader.cpp smartsettings.cpp datetime.cpp \
-httplistener.cpp httpresp.cpp httpreq.cpp httpconnection.cpp moov.cpp iptogeo.cpp \
-hiostream.cpp httprespheaders.cpp ntwkiolinkpool.cpp l4handler.cpp
+httpstatuscode.cpp httpstatusline.cpp httpheader.cpp smartsettings.cpp \
+httplistener.cpp httpresp.cpp httpreq.cpp httpsession.cpp moov.cpp iptogeo.cpp \
+hiostream.cpp httprespheaders.cpp l4handler.cpp
 
 
 ####### kdevelop will overwrite this part!!! (end)############
@@ -388,7 +388,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/contextlist.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/contextnode.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/contexttree.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/datetime.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/denieddir.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eventdispatcher.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/expiresctrl.Po@am__quote@
@@ -400,8 +399,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/htpasswd.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/httpcache.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/httpcgitool.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/httpconnection.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/httpconnpool.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/httpcontext.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/httpextconnector.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/httpglobals.Po@am__quote@
@@ -420,6 +417,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/httprespheaders.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/httpserverconfig.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/httpserverversion.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/httpsession.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/httpsignals.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/httpstatuscode.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/httpstatusline.Po@am__quote@
@@ -432,7 +430,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/moduserdir.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/moov.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ntwkiolink.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ntwkiolinkpool.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/phpconfig.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pipeappender.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/reqhandler.Po@am__quote@
@@ -441,10 +438,10 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/rewritemap.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/rewriterule.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/rewriterulelist.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sendfileinfo.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/smartsettings.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/staticfilecache.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/staticfilecachedata.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/staticfiledata.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/staticfilehandler.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/statusurlmap.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stderrlogger.Po@am__quote@

@@ -40,13 +40,13 @@ function vermgr(act, actId)
 	document.mgrform.action = "serviceMgr.php";
 	t = "";
 	if ( act == 'download' ) {
-		t = "download and upgrade to release " + actId;
+		t = "download and upgrade to the latest build of version " + actId;
 	}
 	else if ( act == 'switchTo' ) {
-		t = "switch to release " + actId;
+		t = "switch to version " + actId;
 	}
 	else if ( act == 'remove' )
-		t = "remove release " + actId;
+		t = "remove version " + actId;
 
 	if (t == "" || confirm("Are you sure you want to " + t + "?") )
 		document.mgrform.submit();

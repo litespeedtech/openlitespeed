@@ -6,11 +6,11 @@ class ConfigFile
 	private $tblDef;
 	//TAG=0, VALUE=1, ELEMENTS=2
 
-	function __construct()
+	public function __construct()
 	{}
 
 	//type = ('serv','vh','admin','tp')
-	function load(&$confData, &$err)
+	public function load(&$confData, &$err)
 	{
 		$xmltree = new XmlTreeBuilder();
 		$rootNode = &$xmltree->ParseFile($confData->_path, $err);
@@ -20,12 +20,15 @@ class ConfigFile
 			$this->tblDef = DTblDef::GetInstance();
 
 			$this->load_data($rootNode, $confData);
-			if ( $confData->_type == 'serv' )
+			if ( $confData->_type == 'serv' ) {
 				$this->fill_serv($confData);
-			elseif ( $confData->_type == 'admin' )
+			}
+			elseif ( $confData->_type == 'admin' ) {
 				$this->fill_listener($confData);
-			else
+			}
+			else {
 				$this->fill_vh($confData);
+			}
 
 			return TRUE;
 		}
@@ -34,7 +37,7 @@ class ConfigFile
 		return FALSE;
 	}
 
-	function save(&$confData)
+	public function save(&$confData)
 	{
 		$fd = fopen($confData->_path . ".new", 'w');
 		if ( !$fd )
@@ -51,32 +54,31 @@ class ConfigFile
 
 		$data = &$this->convert_data($confData);
 
-		
 		$level = 0;
 		$result = '<?xml version="1.0" encoding="UTF-8"?>'."\n";
 		$this->writeStruct( $result, $level, $data);
-		
+
 		if(fwrite($fd, $result) === FALSE) {
 			error_log("failed to write temp config for " . $confData->_path . ".new");
 			return FALSE;
 		}
 		fclose($fd);
-		
+
 		@unlink($confData->_path . ".bak");
 		if(!rename($confData->_path, $confData->_path . ".bak")) {
 			error_log("failed to rename " . $confData->_path . " to " . $confData->_path . ".bak");
 			return FALSE;
 		}
-		
+
 		if(!rename($confData->_path . ".new", $confData->_path)) {
 			error_log("failed to rename " . $confData->_path . ".new to " . $confData->_path);
 			return FALSE;
 		}
-	
+
 		return TRUE;
 	}
 
-	function &convert_data($confData)
+	private function &convert_data($confData)
 	{
 		$type = $confData->_type;
 		$from = $confData->_data;
@@ -86,13 +88,9 @@ class ConfigFile
 		    $client = CLIENT::singleton();
 		    $t = $client->type;
 		    if (  $t == 'LSWS' )
-		    {
-			$to = &$to0['httpServerConfig'];
-		    }
+		    	$to = &$to0['httpServerConfig'];
 		    else
-		    {
-			$to = &$to0['loadBalancerConfig'];
-		    }
+				$to = &$to0['loadBalancerConfig'];
 		} elseif ( $type == 'vh' ) {
 			$to = &$to0['virtualHostConfig'];
 		} elseif ( $type == 'tp' ) {
@@ -132,7 +130,7 @@ class ConfigFile
 		return $to0;
 	}
 
-	function load_data(&$rootNode, &$confData)
+	private function load_data(&$rootNode, &$confData)
 	{
 
 		$holder = &$confData->_data;
@@ -164,14 +162,15 @@ class ConfigFile
 					{
 						$holder2 = array();
 						$this->extractSection( $els[$j], $holder2, $page->GetTids() );
-						$holder1[$holder2[$page->GetHolderIndex()]->GetVal()] = $holder2;
+						//if ($holder2[$page->GetHolderIndex()] != NULL)
+							$holder1[$holder2[$page->GetHolderIndex()]->GetVal()] = $holder2;
 					}
 				}
 			}
 		}
 	}
 
-	function fill_serv(&$confData)
+	private function fill_serv(&$confData)
 	{
 		$holder = &$confData->_data;
 		$runningAs = 'user('. $holder['general']['user']->GetVal() .
@@ -181,7 +180,7 @@ class ConfigFile
 		$this->fill_listener($confData);
 	}
 
-	function fill_listener(&$confData)
+	private function fill_listener(&$confData)
 	{
 		$listeners = &$confData->_data['listeners'];
 
@@ -204,7 +203,7 @@ class ConfigFile
 		}
 	}
 
-	function fill_vh(&$confData)
+	private function fill_vh(&$confData)
 	{
 		$ctxs = &$confData->_data['context'];
 		if ( $ctxs == NULL || count($ctxs) == 0 )
@@ -218,7 +217,7 @@ class ConfigFile
 		}
 	}
 
-	function extractSection( &$el, &$holder, $tids)
+	private function extractSection( &$el, &$holder, $tids)
 	{
 		foreach( $tids as $tid ) {
 			$tbl = $this->tblDef->GetTblDef($tid);
@@ -227,36 +226,47 @@ class ConfigFile
 			$isRepeated = ($holderIndex != NULL);
 			$els = &$this->locateXmlElement($el, $tbl->_layerId, $isRepeated);
 
-			if ( count($els) == 0 ) continue;
 
-			$data = &DUtil::locateData( $holder, $tbl->_dataLoc );
+			if ( count($els) == 0 )
+				continue;
+
+			$holder_cur = &DUtil::locateData( $holder, $tbl->_dataLoc );
 			$tags = $tbl->GetTags();
 
 			foreach ($els as $e) {
 				if ( $isRepeated ) {
-					$data1 = array();
-					$data2 = &DUtil::locateData( $data1, $tbl->_dataLoc );
-					$this->extractElement('' , $tags, $e, $data2);
+					$loader_root = array();
+					$loader_cur = &DUtil::locateData( $loader_root, $tbl->_dataLoc );
+					$this->extractElement('' , $tags, $e, $loader_cur);
+
 					if ( $tbl->_subTbls != NULL ) {
-						$this->extractSubTbl($e, $data1, $tbl);
+						$this->extractSubTbl($e, $loader_root, $tbl);
 					}
-					$data[ $data2[$holderIndex]->GetVal() ] = $data2;
+					if ( $tbl->_linkedTbls != NULL && isset($tbl->_linkedTbls['file']) ) {
+						$this->extractSection($e, $loader_cur, $tbl->_linkedTbls['file']);
+					}
+					if ($loader_cur[$holderIndex] != NULL) {
+						$holder_cur[ $loader_cur[$holderIndex]->GetVal() ] = $loader_cur;
+					}
 				} else {
-					$this->extractElement('' , $tags, $e, $data);
+					$this->extractElement('' , $tags, $e, $holder_cur);
 				}
 			}
 		}
 	}
 
-	function extractSubTbl($el, &$holder, $tbl)
+	private function extractSubTbl($el, &$holder, $tbl)
 	{
 		$holder1 = &DUtil::locateData( $holder, $tbl->_dataLoc );
 		$tid = DUtil::getSubTid($tbl->_subTbls, $holder1);
+
 		if ( $tid == NULL )
 			return;
 
 		$tids = array($tid);
 		$holder2 = array();
+
+
 		$this->extractSection($el, $holder2, $tids);
 
 		$holder3 = &DUtil::locateData( $holder2, $tbl->_dataLoc );
@@ -267,7 +277,7 @@ class ConfigFile
 		}
 	}
 
-	function &locateXmlElement(&$el, $layerId, $isRepeated)
+	private function &locateXmlElement(&$el, $layerId, $isRepeated)
 	{
 		$els = array();
 		if ( $layerId == NULL )
@@ -308,11 +318,11 @@ class ConfigFile
 		return $els;
 	}
 
-	function extractElement($prefix, $tags, $el, &$data)
+	private function extractElement($prefix, $tags, $el, &$data)
 	{
 		$ids = array_keys($tags);
 
-		foreach ($el as $e) 
+		foreach ($el as $e)
 		{
 			$name = $e[0];
 			if ( in_array($name, $ids) )
@@ -334,9 +344,9 @@ class ConfigFile
 		}
 	}
 
-	
-	
-	function writeStruct( &$result, &$level, &$data)
+
+
+	private function writeStruct( &$result, &$level, &$data)
 	{
 		$keys = array_keys($data);
 		foreach( $keys as $key )
@@ -374,13 +384,13 @@ class ConfigFile
 		}
 	}
 
-	function convertStruct( &$from, &$to, $tids )
+	private function convertStruct( &$from, &$to, $tids )
 	{
 		foreach( $tids as $tid ) {
-			
+
 			$tbl = $this->tblDef->GetTblDef($tid);
 			$fholder = &DUtil::locateData($from, $tbl->_dataLoc);
-			
+
 			if ( !isset($fholder) )	continue;
 
 			$holder = &DUtil::locateData($to, $tbl->_layerId);
@@ -396,6 +406,9 @@ class ConfigFile
 					if ( $tbl->_subTbls != NULL ) {
 						$this->convertSubTbl($from1, $data, $tbl);
 					}
+					if ( $tbl->_linkedTbls != NULL && isset($tbl->_linkedTbls['file']) ) {
+						$this->convertStruct($from1, $data, $tbl->_linkedTbls['file']);
+					}
 
 					$holder[] = $data;
 				}
@@ -406,15 +419,16 @@ class ConfigFile
 		}
 	}
 
-	function convertSubTbl($from, &$to, $tbl)
+	private function convertSubTbl($from, &$to, $tbl)
 	{
 		$tid1 = DUtil::getSubTid($tbl->_subTbls, $from);
-		if ( $tid1 == NULL ) return;
+		if ( $tid1 == NULL )
+			return;
 		$tbl1 = $this->tblDef->GetTblDef($tid1);
 		$this->convertOneLevel($from, $to, $tbl1->_dattrs);
 	}
 
-	function convertOneLevel($from, &$to, $attrs)
+	private function convertOneLevel($from, &$to, $attrs)
 	{
 		foreach ( $attrs as $attr )
 		{
@@ -425,7 +439,7 @@ class ConfigFile
 		}
 	}
 
-	function convertCopy( $from, &$to, $attr )
+	private function convertCopy( $from, &$to, $attr )
 	{
 		$attr_key = $attr->_key;
 		if ( !isset($from[$attr_key]) && $attr->_allowNull ) {
@@ -451,18 +465,18 @@ class ConfigFile
 
 	}
 
-	function xmlTag($level, $tag, $value)
+	private function xmlTag($level, $tag, $value)
 	{
 		$val = htmlspecialchars($value);
 		return str_repeat('  ', $level) . "<$tag>$val</$tag>\n";
 	}
 
-	function xmlTagS(&$level, $tag)
+	private function xmlTagS(&$level, $tag)
 	{
 		return str_repeat('  ', $level++) . "<$tag>\n";
 	}
 
-	function xmlTagE(&$level, $tag)
+	private function xmlTagE(&$level, $tag)
 	{
 		return str_repeat('  ', --$level) . "</$tag>\n";
 	}

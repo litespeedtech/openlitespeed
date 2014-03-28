@@ -24,13 +24,17 @@
 #include <util/vmembuf.h>
 #include <util/gzipbuf.h>
 
-
+#include <http/httpsession.h>
+#include <http/ntwkiolink.h>
+#include <lsiapi/modulemanager.h>
 
 HttpResourceManager::HttpResourceManager()
     : m_poolChunkInputStream( 0, 10 )
     , m_poolChunkOutputStream(10,10 )
     , m_poolVMemBuf( 0, 10 )
     , m_poolGzipBuf( 0, 10 )
+    , m_poolHttpSession( 20, 20 )
+    , m_poolNtwkIoLink( 20, 20 )
 {
 }
 
@@ -44,6 +48,8 @@ void HttpResourceManager::releaseAll()
     m_poolChunkOutputStream.shrinkTo( 0 );
     m_poolVMemBuf.shrinkTo( 0 );
     m_poolGzipBuf.shrinkTo( 0 );
+    m_poolHttpSession.shrinkTo( 0 );
+    m_poolNtwkIoLink.shrinkTo( 0 );
 }
 
 
@@ -60,6 +66,12 @@ void HttpResourceManager::onTimer()
     m_poolVMemBuf.applyAll( reduceBuf, (void*)16384 );
     //m_poolChunkInputStream( 20 );
     //m_poolChunkOutputStream( 20 );
+    
+    m_poolHttpSession.shrinkTo( 20 );
+    m_poolNtwkIoLink.shrinkTo( 20 );    
+    
+    //Call module manger timer to check and release some resource
+    ModuleManager::getInstance().OnTimer10sec();
 }
 
 

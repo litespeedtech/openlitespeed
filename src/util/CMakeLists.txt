@@ -61,6 +61,10 @@ SET(util_STAT_SRCS
    daemonize.cpp
    autobuf.cpp
    configentry.cpp 
+   configctx.cpp 
+   logidtracker.cpp
+   datetime.cpp
+   gmap.cpp
 )
 
 add_library(util STATIC ${util_STAT_SRCS})

@@ -118,6 +118,51 @@ TEST(LoopBufTest_test)
         CHECK( p0 == buf.getPointer(i));
         buf.inc(p0);
     }
+    
+}
+
+TEST(LoopBufSearchTest)
+{
+    LoopBuf buf;
+    const char *ptr, *ptr2, *pAccept = NULL;
+    char *printBuf = (char *)malloc(128);
+    printf( "LoopBuf Search Test\n" );
+    buf.append( "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa1"
+            "23456789101112131415161718192021222324252627282930313233343536", 127 );
+    buf.pop_front( 20 );
+    buf.append( "37383940414243444546", 20 );
+    pAccept = "2021222324";
+    ptr = buf.search( 0, pAccept, 10 );
+    ptr2 = buf.getPointer( 73 );
+    CHECK( ptr == ptr2 );
+    pAccept = "2333435363";
+    ptr = buf.search( 0, pAccept, 10 );
+    ptr2 = buf.getPointer( 98 );
+    CHECK( ptr == ptr2 );
+    pAccept = "6373839404";
+    ptr = buf.search( 0, pAccept, 10 );
+    ptr2 = buf.getPointer( 106 );
+    CHECK( ptr == ptr2 );
+    pAccept = "9404142434";
+    ptr = buf.search( 0, pAccept, 10 );
+    ptr2 = buf.getPointer( 112 );
+    CHECK( ptr == ptr2 );
+    pAccept = "233343536a";
+    ptr = buf.search( 0, pAccept, 10 );
+    CHECK( ptr == NULL );
+    pAccept = "637383940a";
+    ptr = buf.search( 0, pAccept, 10 );
+    CHECK( ptr == NULL );
+    
+    buf.clear();
+    buf.append( "afafafafafafafafafafafafafafafafafafafafafafafafafafafafafafafaf"
+            "afafafafafafafafafafafafafafafafafafafafafafafafafafafabkbkbkbk", 127);
+    buf.pop_front( 20 );
+    buf.append( "bkbkbkbafafafafafafa" , 20 );
+    pAccept = "bkbkbkbkba";
+    ptr = buf.search( 0, pAccept, 10 );
+    ptr2 = buf.getPointer( 105 );
+    CHECK( ptr == ptr2 );
 }
 
 #endif

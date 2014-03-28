@@ -37,6 +37,12 @@ int BufferedOS::write( const char * pBuf, int size )
     return writeEx( pBuf, size, 1 );
 }
 
+int BufferedOS::writev( const struct iovec * vector, int len )
+{
+    IOVec iov( vector, len );
+    return writevEx( iov, 1 );
+}
+
 int BufferedOS::writeEx( const char * pBuf, int size, int avoidCache )
 {
     assert( m_pOS != NULL );
@@ -76,7 +82,7 @@ int BufferedOS::writevEx( IOVec &vec, int avoidCache )
         m_buf.iov_insert( vec );
         //FIXME: DEBUG Code
         //ret = 0;
-        ret = m_pOS->writev( vec );
+        ret = m_pOS->writev( vec.get(), vec.len() );
         vec.pop_front( vec.len() - oldLen );
         if ( ret > 0 )
         {
@@ -90,7 +96,7 @@ int BufferedOS::writevEx( IOVec &vec, int avoidCache )
     else
         //FIXME: DEBUG Code
         //ret = 0;
-        ret = m_pOS->writev( vec );
+        ret = m_pOS->writev( vec.get(), vec.len() );
     if ( ret >= avoidCache )
     {
         ret = m_buf.cache( vec.get(), vec.len(), ret );
@@ -106,9 +112,9 @@ int BufferedOS::flush()
     int ret = 0;
     if ( !m_buf.empty() )
     {
-        IOVec iovector;
-        m_buf.getIOvec( iovector );
-        ret = m_pOS->writev( iovector );
+        IOVec iov;
+        m_buf.getIOvec( iov );
+        ret = m_pOS->writev( iov.get(), iov.len() );
         if ( ret >= 0 )
         {
             if ( m_buf.size() <= ret )

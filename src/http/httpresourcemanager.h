@@ -21,18 +21,22 @@
 
 
 #include <util/objpool.h>
-  
+
 class ChunkInputStream;
 class ChunkOutputStream;
 class MMapVMemBuf;
 class VMemBuf;
 class GzipBuf;
+class HttpSession;
+class NtwkIOLink;
 
 typedef ObjPool<ChunkInputStream>       ChunkInputStreamPool;
 typedef ObjPool<ChunkOutputStream>      ChunkOutputStreamPool;
 typedef ObjPool<MMapVMemBuf>            VMemBufPool;
 typedef ObjPool<GzipBuf>                GzipBufPool;
 typedef ObjPool<GzipBuf>                GunzipBufPool;
+typedef ObjPool<HttpSession>            HttpSessionPool;
+typedef ObjPool<NtwkIOLink>             NtwkIoLinkPool;
 
 class HttpResourceManager
 {
@@ -41,6 +45,8 @@ class HttpResourceManager
     VMemBufPool             m_poolVMemBuf;
     GzipBufPool             m_poolGzipBuf;
     GunzipBufPool           m_poolGunzipBuf;
+    HttpSessionPool         m_poolHttpSession;
+    NtwkIoLinkPool          m_poolNtwkIoLink;
     
 public:
     HttpResourceManager();
@@ -80,6 +86,35 @@ public:
     void recycle( ChunkOutputStream* pStream )
     {   m_poolChunkOutputStream.recycle( pStream ); }
 
+    
+    
+    void recycle( NtwkIOLink* pConn )
+    {   m_poolNtwkIoLink.recycle( pConn );    }
+
+    NtwkIOLink* getNtwkIOLink()
+    {    return m_poolNtwkIoLink.get();    }
+
+    void recycle( NtwkIOLink** pConn, int n )
+    {   m_poolNtwkIoLink.recycle( (void **)pConn, n );    }
+
+    int getNtwkIOLinks( NtwkIOLink** pConn, int n)
+    {    return m_poolNtwkIoLink.get( pConn, n);    }
+        
+    
+    
+    void recycle( HttpSession* pSession )
+    {   m_poolHttpSession.recycle( pSession );    }
+
+    HttpSession* getConnection()
+    {    return m_poolHttpSession.get();   }
+
+    void recycle( HttpSession** pSession, int n )
+    {   m_poolHttpSession.recycle( (void **)pSession, n );    }
+
+    int getConnections( HttpSession** pSession, int n)
+    {    return m_poolHttpSession.get( pSession, n);          }
+
+    
     void releaseAll();
     
     void onTimer();
