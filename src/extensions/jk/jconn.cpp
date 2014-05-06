@@ -300,7 +300,7 @@ int JConn::readRespHeader( unsigned char *&p, unsigned char *pEnd )
         if ( ret )
             return ret;
         HttpReq * pReq = getConnector()->getHttpSession()->getReq();
-        if ( pReq->gzipAcceptable() )
+        if ( pReq->gzipAcceptable() == GZIP_REQUIRED )
         {
             if ( *pHeaderName == 'C' || *pHeaderName == 'c' )
             {

@@ -63,7 +63,7 @@ SubstItem::~SubstItem()
 }
 
 SubstItem::SubstItem( const SubstItem & rhs )
-    : m_type( rhs.m_type )
+    : LinkedObj(), m_type( rhs.m_type )
 {
     if ( rhs.m_value.m_pStr )
     {
@@ -1205,7 +1205,7 @@ int RequestVars::setEnv( HttpSession* pSession, const char * pName, int nameLen,
             LOG_D(( pSession->getLogger(),
                 "[%s] disable access log for this request.",
                 pSession->getLogId() ));
-        pSession->getResp()->needLogAccess(0);
+        pSession->setAccessLogOff();
         return 0;
     }
     else if ( ( *pName | 0x20 ) == 'n' )

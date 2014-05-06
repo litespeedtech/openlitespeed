@@ -106,20 +106,21 @@ static int initData(struct lsi_cb_param_t *rec)
 static int check_uri_and_reg_handler(struct lsi_cb_param_t *rec)
 {
     const char *uri;
-    uri = g_api->get_req_uri(rec->_session);
-    if ( strncasecmp(uri, TESTURI, strlen(TESTURI)) == 0 )
+    int len;
+    uri = g_api->get_req_uri(rec->_session, &len);
+    if ( len >= strlen(TESTURI) && strncasecmp(uri, TESTURI, strlen(TESTURI)) == 0 )
     {
         g_api->register_req_handler( rec->_session, &MNAME, strlen(TESTURI) );
     }
     return LSI_RET_OK;
 }
 
-static int _init()
+static int _init( lsi_module_t * pModule )
 {
-    g_api->init_module_data(&MNAME, releaseData, LSI_MODULE_DATA_HTTP );
-    g_api->add_hook( LSI_HKPT_HTTP_BEGIN, &MNAME, initData, LSI_HOOK_NORMAL, 0 );
-    g_api->add_hook( LSI_HKPT_HTTP_END, &MNAME, resetData, LSI_HOOK_NORMAL, 0 );
-    g_api->add_hook( LSI_HKPT_RECV_REQ_HEADER, &MNAME, check_uri_and_reg_handler, LSI_HOOK_NORMAL, 0 );
+    g_api->init_module_data(pModule, releaseData, LSI_MODULE_DATA_HTTP );
+    g_api->add_hook( LSI_HKPT_HTTP_BEGIN, pModule, initData, LSI_HOOK_NORMAL, 0 );
+    g_api->add_hook( LSI_HKPT_HTTP_END, pModule, resetData, LSI_HOOK_NORMAL, 0 );
+    g_api->add_hook( LSI_HKPT_RECV_REQ_HEADER, pModule, check_uri_and_reg_handler, LSI_HOOK_NORMAL, 0 );
     return 0;
 }
 
@@ -130,7 +131,7 @@ static int getReqBodyDealerType(void *session)
     int n;
     if( g_api->get_req_content_length( session ) > 0 )
     {
-        n = g_api->get_req_env_by_id( session, LSI_REQ_VAR_PATH_INFO, path, 512);
+        n = g_api->get_req_var_by_id( session, LSI_REQ_VAR_PATH_INFO, path, 512);
         if( n >= 5 && strncasecmp(path, "/echo", 5) == 0)
             return 1;
         else if( n >= 4 && strncasecmp(path, "/md5", 4) == 0)
@@ -420,7 +421,7 @@ static int handlerBeginProcess( void *session)
     //Server req env
     for (i=LSI_REQ_VAR_REMOTE_ADDR; i<LSI_REQ_COUNT; ++i)
     {
-        n = g_api->get_req_env_by_id( session, i, val, VALMAXSIZE);
+        n = g_api->get_req_var_by_id( session, i, val, VALMAXSIZE);
         if (n > 0)
         {
             val[n] = 0;
@@ -501,6 +502,12 @@ static int handlerBeginProcess( void *session)
     return 0;
 }
 
+static int cleanUp( void *session)
+{
+    g_api->free_module_data(session, &MNAME, LSI_MODULE_DATA_HTTP, releaseData);
+    return 0;
+}
+
 static int handlerWriteRemainResp( void *session)    
 {
     MyData *myData = (MyData *)g_api->get_module_data(session, &MNAME, LSI_MODULE_DATA_HTTP);
@@ -511,7 +518,7 @@ static int handlerWriteRemainResp( void *session)
         return LSI_WRITE_RESP_CONTINUE;
 }
 
-struct lsi_handler_t reqHandler = { handlerBeginProcess, handleReqBody, handlerWriteRemainResp };
+struct lsi_handler_t reqHandler = { handlerBeginProcess, handleReqBody, handlerWriteRemainResp, cleanUp };
 
 lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, _init, &reqHandler, NULL, };
 

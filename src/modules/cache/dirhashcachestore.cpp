@@ -32,7 +32,6 @@
 #define DHCS_SOURCE_MATCH   1
 #define DHCS_DEST_CHECK     2
 
-
 DirHashCacheStore::DirHashCacheStore()
  : CacheStore()
 {
@@ -198,7 +197,6 @@ CacheEntry * DirHashCacheStore::getCacheEntry( CacheHash& hash,
                 {
                     dispose = 1;
                 }
-                
             }
             if ( !pEntry->isUpdating() )
             {
@@ -465,6 +463,7 @@ int DirHashCacheStore::renameDiskEntry( CacheEntry * pEntry, char * pFrom,
 
     if ( rename( pFrom, achTo ) == -1 )
         return -1;
+    
     return 0;
 
 }

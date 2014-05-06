@@ -19,8 +19,10 @@
 #define SSLCONTEXT_H
 
 
+#include <stdio.h>
 #include <sys/stat.h>
 #include <util/autostr.h>
+#include <util/pool.h>
 typedef struct ssl_st SSL;
 typedef struct ssl_ctx_st SSL_CTX;
 
@@ -113,5 +115,6 @@ public:
     void configCRL( const XmlNode *pNode, SSLContext *pSSL );
     int  initECDH();
     int  initDH( const char * pFile );
+    
 };
 #endif

@@ -57,18 +57,19 @@ static int onReadEvent( void *session);
 int reg_handler(struct lsi_cb_param_t *rec)
 {
     const char *uri;
-    uri = g_api->get_req_uri(rec->_session);
-    if ( strncasecmp(uri, "/testtimer", 10) == 0 )
+    int len;
+    uri = g_api->get_req_uri(rec->_session, &len);
+    if ( len >= 10 && strncasecmp(uri, "/testtimer", 10) == 0 )
     {
         g_api->register_req_handler(rec->_session, &MNAME, 10);
-        g_api->set_req_env(rec->_session, "cache-control", 13, "public", 6);
+        g_api->set_req_env(rec->_session, "cache-control", 13, "max-age 20", 10);
     }
     return LSI_RET_OK;
 }
 
-static int init()
+static int init(lsi_module_t * pModule )
 {
-    g_api->add_hook( LSI_HKPT_RECV_REQ_HEADER, &MNAME, reg_handler, LSI_HOOK_NORMAL, 0 );
+    g_api->add_hook( LSI_HKPT_RECV_REQ_HEADER, pModule, reg_handler, LSI_HOOK_NORMAL, 0 );
     return 0;
 }
 
@@ -83,7 +84,15 @@ void timer_callback(void *session)
 //The first time the below function will be called, then onWriteEvent will be called next and next
 static int myhandler_process(void *session)
 {
+    char tmBuf[30];
+    time_t t;
+    struct tm *tmp;
+    t = time(NULL);
+    tmp = gmtime(&t);
+    strftime( tmBuf, 30, "%a, %d %b %Y %H:%M:%S GMT", tmp );
     g_api->set_resp_header(session, LSI_RESP_HEADER_CONTENT_TYPE, NULL, 0, "text/html", sizeof("text/html") - 1, LSI_HEADER_SET );
+    g_api->set_resp_header(session, LSI_RESP_HEADER_LAST_MODIFIED, NULL, 0, tmBuf, 29, LSI_HEADER_SET);
+    
     char buf[1024];
     sprintf(buf, "This test will take 5 seconds, now time is %ld<p>", (long)(time(NULL)));
     g_api->append_resp_body(session, buf, strlen(buf));
@@ -110,5 +119,5 @@ static int onWriteEvent( void *session)
     return LSI_WRITE_RESP_FINISHED;
 }
 
-struct lsi_handler_t myhandler = { myhandler_process, onReadEvent, onWriteEvent };
+struct lsi_handler_t myhandler = { myhandler_process, onReadEvent, onWriteEvent, NULL };
 lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, init, &myhandler, NULL, };

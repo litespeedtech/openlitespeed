@@ -27,23 +27,8 @@
 #include <stdio.h>
 #include <lsiapi/lsiapi.h>
 
-static const char * s_protocol[] =
-{
-    "http://",
-    "https://"
-};
-
-const char * HttpResp::getProtocol() const
-{
-    return s_protocol[ m_iSSL ];
-}
-int   HttpResp::getProtocolLen() const
-{
-    return 7 + m_iSSL;
-}
 
 HttpResp::HttpResp()
-    : m_iLogAccess( 0 )
 {
 }
 HttpResp::~HttpResp()
@@ -57,38 +42,7 @@ void HttpResp::reset()
     m_lEntityFinished = 0;
 }
 
-void HttpResp::addLocationHeader( const HttpReq * pReq )
-{
-    const char * pLocation = pReq->getLocation();
-    int len = pReq->getLocationLen();
-    m_respHeaders.add(HttpRespHeaders::H_LOCATION, "", 0);
-    if ( *pLocation == '/' )
-    {
-        const char * pHost = pReq->getHeader( HttpHeader::H_HOST );
-        m_respHeaders.appendLastVal( getProtocol(), getProtocolLen() );
-        m_respHeaders.appendLastVal( pHost, pReq->getHeaderLen( HttpHeader::H_HOST ) );
-    }
-    m_respHeaders.appendLastVal( pLocation, pReq->getLocationLen() );
-}
 
-void HttpResp::prepareHeaders( const HttpReq * pReq, int addAcceptRange ) 
-{
-    m_respHeaders.addCommonHeaders();
-    if (addAcceptRange)
-        m_respHeaders.appendAcceptRange();
-
-    if ( pReq->getAuthRequired() )
-        pReq->addWWWAuthHeader( m_respHeaders );
-    if ( pReq->getLocationOff() )
-    {
-        addLocationHeader( pReq );
-    }
-    const AutoBuf * pExtraHeaders = pReq->getExtraHeaders();
-    if ( pExtraHeaders )
-    {
-        m_respHeaders.parseAdd( pExtraHeaders->begin(), pExtraHeaders->size(), LSI_HEADER_ADD );
-    }
-}
 
 void HttpResp::appendContentLenHeader()
 {

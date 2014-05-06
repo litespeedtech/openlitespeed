@@ -29,6 +29,13 @@ typedef struct _LsiApiHook
 
 typedef SessionHooks<LSI_HKPT_HTTP_BEGIN, LSI_HKPT_HTTP_COUNT> HttpSessionHooks;
 typedef SessionHooks<0, LSI_HKPT_L4_COUNT> IolinkSessionHooks;
+class LsiApiHooks;
+
+typedef struct lsi_hook_info_t
+{
+    const LsiApiHooks * _hooks;
+    void *              _termination_fp;
+} lsi_hook_info_t;
 
 
 class LsiApiHooks
@@ -41,6 +48,7 @@ public:
         , m_iCapacity( 0 )
         , m_iBegin( 0 )
         , m_iEnd( 0 )
+        , m_iFlag( 0 )
     {
         reallocate( capacity );
     }
@@ -55,7 +63,9 @@ public:
     
     short size() const              {   return m_iEnd - m_iBegin;   }
     short capacity() const          {   return m_iCapacity;         }
+    
     short getFlag() const           {   return m_iFlag;             }
+    void  setFlag( short f )        {   m_iFlag |= f;               }
 
     short add( const lsi_module_t *pModule, lsi_callback_pf cb, short priority, short flag = 0 );
 
@@ -75,18 +85,31 @@ public:
     
     int copy( const LsiApiHooks& other );
         
-    int runFunctions(struct lsi_cb_param_t *param) const;
-    int runFunctions( const LsiSession *session, void *param1, int paramLen1, void *param2, int paramLen2) const;
-    int runFunctionsViewData( const LsiSession *session, void *inBuf, int inLen) const;
-    int runNoParamFunctions( const LsiSession *session) const;
+    int runCallback( int level, struct lsi_cb_param_t *param) const;
+    int runCallback( int level,  LsiSession *session, void *param1, int paramLen1, int *flag_out, int flag_in) const
+    {
+        lsi_hook_info_t info = { this, NULL } ;
+        struct lsi_cb_param_t param =
+        {   session, &info, begin(), param1, paramLen1, flag_out, flag_in  };
+        return runCallback(level, &param);
+    }
+
+    int runCallbackViewData( int level, LsiSession *session, void *inBuf, int inLen) const
+    {   return runCallback(level, session, inBuf, inLen, NULL, 0);  }
+    
+    int runCallbackNoParam( int level, LsiSession *session) const
+    {   return runCallback(level, session, NULL, 0, NULL, 0);       }
     
 
-    static IolinkSessionHooks  m_apiIolinkHooks;
-    static HttpSessionHooks    m_apiHttpHooks;
-    static IolinkSessionHooks  *getIolinkHooks()   {   return &m_apiIolinkHooks;   }
-    static HttpSessionHooks    *getHttpHooks()     {   return &m_apiHttpHooks; }
+    static IolinkSessionHooks  *m_pIolinkHooks;
+    static HttpSessionHooks    *m_pHttpHooks;
+    static IolinkSessionHooks  *getIolinkHooks()   {   return m_pIolinkHooks;   }
+    static HttpSessionHooks    *getHttpHooks()     {   return m_pHttpHooks;     }
     static const LsiApiHooks * getGlobalApiHooks( int index );
     static LsiApiHooks * getReleaseDataHooks( int index );
+    static inline const char * getHkptName( int index ) 
+    {   return s_pHkptName[ index ];    }
+    static void initGlobalHooks();
     
     
 private:
@@ -103,6 +126,7 @@ private:
     short        m_iEnd;
     short        m_iFlag;
 
+    static const char * s_pHkptName[];
 
 };
 
@@ -113,7 +137,7 @@ template< int base, int size >
 class SessionHooks
 {
     LsiApiHooks * m_pHookPoints[size];
-    char          m_flag[size];
+    char          m_flagRelease[size];
     char          m_iOwnCopy;
 public:
     explicit SessionHooks(int isGlobalHooks)
@@ -123,7 +147,7 @@ public:
             for (int i=0; i<size; ++i)
             {
                 m_pHookPoints[i] = new LsiApiHooks;
-                m_flag[i] = SESSION_HOOK_FLAG_RELEASE;
+                m_flagRelease[i] = SESSION_HOOK_FLAG_RELEASE;
                 m_iOwnCopy = SESSION_HOOK_FLAG_RELEASE;
             }
         }
@@ -142,7 +166,7 @@ public:
     {
         for (int i = 0; i < size; ++i)
         {
-            if ( m_pHookPoints[i] && ( m_flag[i]& SESSION_HOOK_FLAG_RELEASE ) )
+            if ( m_pHookPoints[i] && ( m_flagRelease[i]& SESSION_HOOK_FLAG_RELEASE ) )
                 delete m_pHookPoints[i];
         }
     }
@@ -163,6 +187,10 @@ public:
     
     const LsiApiHooks * get( int hookLevel ) const
     {   return m_pHookPoints[ hookLevel - base ];  }
+
+    LsiApiHooks * get( int hookLevel )
+    {   return m_pHookPoints[ hookLevel - base ];  }
+    
     void set( int hookLevel, LsiApiHooks * hooks )
     {   m_pHookPoints[hookLevel - base] = hooks;   }
     
@@ -177,8 +205,13 @@ public:
     
     int isDisabled( int hookLevel ) const
     {   
+        return !isEnabled( hookLevel );
+    }
+    
+    int isEnabled( int hookLevel ) const
+    {   
         const LsiApiHooks * p = get( hookLevel );
-        return (!p || (p->size() == 0 ));
+        return (p && (p->size() > 0 ));
     }
     
     void inherit( const SessionHooks<base, size> * parent )
@@ -196,7 +229,7 @@ public:
     LsiApiHooks * getCopy( int hookLevel )
     {
         hookLevel -= base;
-        if (m_flag[hookLevel] & SESSION_HOOK_FLAG_RELEASE )
+        if (m_flagRelease[hookLevel] & SESSION_HOOK_FLAG_RELEASE )
             return m_pHookPoints[hookLevel];
             
         LsiApiHooks ** pHooks; 
@@ -206,21 +239,51 @@ public:
         }
         else
             return NULL;
-        
-        *pHooks = (*pHooks)->dup();
-        m_flag[hookLevel] |= SESSION_HOOK_FLAG_RELEASE;
+        if ( !*pHooks )
+            *pHooks = new LsiApiHooks();
+        else
+            *pHooks = (*pHooks)->dup();
+        m_flagRelease[hookLevel] |= SESSION_HOOK_FLAG_RELEASE;
         m_iOwnCopy |= SESSION_HOOK_FLAG_RELEASE;
         return *pHooks;
     }
+    
+    short getFlag( int hookLevel )
+    {   hookLevel -= base;
+        return m_pHookPoints[hookLevel]? m_pHookPoints[hookLevel]->getFlag(): 0;  
+    }
+    
+    void restartSessionHooks( int * levels, int nLevels, const SessionHooks<base, size> * parent )
+    {
+        for (int i = 0; i < nLevels; ++i)
+        {
+            int l = levels[i] - base;
+            if (( m_flagRelease[ l ]& SESSION_HOOK_FLAG_RELEASE ) )
+            {
+                delete m_pHookPoints[ l ];
+                m_flagRelease[ l ] &= ~SESSION_HOOK_FLAG_RELEASE;
+            }
+            m_pHookPoints[ l ] = (LsiApiHooks *)parent->get( levels[i] );
+        }
+        
+    }
+    
+    int runCallback( int level, struct lsi_cb_param_t *param) const
+    {   return get( level )->runCallback( level, param );   }
+    
+    int runCallback( int level, LsiSession *session, void *param1, int paramLen1, int *param2, int paramLen2) const
+    {   return get( level )->runCallback( level, session, param1, paramLen1, param2, paramLen2 );       }
+    
+    int runCallbackViewData( int level, LsiSession *session, void *inBuf, int inLen) const
+    {   return get( level )->runCallbackViewData( level, session, inBuf, inLen );   }
+    
+    int runCallbackNoParam( int level, LsiSession *session) const
+    {   return get( level )->runCallbackNoParam( level, session );      }
+    
 
 };
 
 
-typedef struct lsi_hook_info_t
-{
-    const LsiApiHooks * _hooks;
-    void *              _termination_fp;
-} lsi_hook_info_t;
 
 
 

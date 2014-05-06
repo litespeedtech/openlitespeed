@@ -108,7 +108,7 @@ static int addExpiresHeader( HttpResp * pResp, StaticFileCacheData * pData,
     
     char sTemp[RFC_1123_TIME_LEN + 1] = {0};
     HttpRespHeaders & buf = pResp->getRespHeaders();
-    buf.add(HttpRespHeaders::H_CACHE_CTRL, "max-age=", 8);
+    buf.add(HttpRespHeaders::H_CACHE_CTRL, "public, max-age=", 16);
     int n = safe_snprintf(sTemp, RFC_1123_TIME_LEN, "%d", age);
     buf.appendLastVal(sTemp, n);
 
@@ -125,7 +125,7 @@ static int addExpiresHeader( HttpResp * pResp, StaticFileCacheData * pData,
 
 static int processFlvStream( HttpSession *pSession, off_t start )
 {
-    HttpReq * pReq = pSession->getReq();
+    //HttpReq * pReq = pSession->getReq();
     SendFileInfo * pData = pSession->getSendFileInfo();
     
     FileCacheDataEx * &pECache = pData->getECache();
@@ -138,14 +138,13 @@ static int processFlvStream( HttpSession *pSession, off_t start )
         pResp->parseAdd( pData->getFileData()->getHeaderBuf(),
                           pData->getFileData()->getHeaderLen() );
         
-        pData->setCurPos( start );
-        pData->setCurEnd( pData->getECache()->getFileSize() );
         pResp->setContentLen( pData->getECache()->getFileSize() - 
                             start + FLV_HEADER_LEN );
         //FIXME: must be sent out first. would like to avoid using dyn body.
         // just append it to stream level buffer.
-        pSession->appendDynBody( 0, FLV_HEADER, FLV_HEADER_LEN );
-        ret = pSession->beginSendStaticFile( pData );
+        pSession->appendDynBody( FLV_HEADER, FLV_HEADER_LEN );
+        pSession->setSendFileBeginEnd( start , pData->getECache()->getFileSize() );
+        ret = pSession->flush();
     }
     return ret;
 }
@@ -258,7 +257,7 @@ int buildMoov( HttpSession *pSession )
             if ( D_ENABLED( DL_LESS ) )
                 LOG_D(( pReq->getLogger(), "[%s] is_mem, buf_size=%u, remaining=%d", 
                     pReq->getLogId(), moov_data->mem.buf_size, moov_data->remaining_bytes));
-            pSession->appendDynBody(0, (char*)moov_data->mem.buffer, moov_data->mem.buf_size);
+            pSession->appendDynBody((char*)moov_data->mem.buffer, moov_data->mem.buf_size);
             free(moov_data->mem.buffer);
             moov_data->mem.buffer = NULL;
         }else{
@@ -267,8 +266,8 @@ int buildMoov( HttpSession *pSession )
                 LOG_D(( pReq->getLogger(), "[%s] send from file, start=%u, buf_size=%u, remaining=%d", 
                     pReq->getLogId(), (uint32_t)moov_data->file.start_offset, moov_data->file.data_size, 
                     moov_data->remaining_bytes));
-            pData->setCurPos( moov_data->file.start_offset );
-            pData->setCurEnd( moov_data->file.start_offset + moov_data->file.data_size );
+            pSession->setSendFileBeginEnd( moov_data->file.start_offset, 
+                                           moov_data->file.start_offset + moov_data->file.data_size );
             return 1;
             //sendfile( pECache->getfd(), moov_data.file.start_offset, 
             //            moov_data.file.data_size );
@@ -306,17 +305,16 @@ int buildMoov( HttpSession *pSession )
     {
         *pLen32++ = htonl((uint32_t)( (mdat_size + 16)>> 32));
         *pLen32 = htonl( (uint32_t)( (mdat_size + 16) & 0xffffffff));
-        pSession->appendDynBody( 0, mdat_header64, 16 );
+        pSession->appendDynBody(  mdat_header64, 16 );
     }
     else
     {
         *pLen32 = htonl( (uint32_t)( (mdat_size + 8) & 0xffffffff));
         memmove( &mdat_header64[12], "mdat", 4 );
-        pSession->appendDynBody( 0, &mdat_header64[8], 8 );
+        pSession->appendDynBody(  &mdat_header64[8], 8 );
     }
     //pSession->flushDynBodyChunk();
-    pData->setCurPos( mdat_start );
-    pData->setCurEnd( mdat_start + mdat_size  );
+    pSession->setSendFileBeginEnd( mdat_start , mdat_start + mdat_size );
     return 1;
 
 }
@@ -370,7 +368,7 @@ int processH264Stream( HttpSession *pSession, double start )
     }
     pSession->getResp()->setContentLen( contentLen );
 
-    pSession->setupRespCache();
+//    pSession->setupRespCache();
     //pSession->getReq()->setVersion( HTTP_1_0 );
     pSession->getReq()->keepAlive( 0 );
     pSession->getResp()->getRespHeaders().add(HttpRespHeaders::H_CONTENT_TYPE,  "video/mp4", 9 );
@@ -380,7 +378,7 @@ int processH264Stream( HttpSession *pSession, double start )
     ret = buildMoov( pSession );
     if ( ret <= 1 )
     {
-        ret = pSession->beginSendStaticFile( pData );
+        ret = pSession->flush();
     }
     return ret;
 }
@@ -536,14 +534,13 @@ int StaticFileHandler::process( HttpSession *pSession, const HttpHandler * pHand
                 }
                 //fall through
             default:
-                pData->setCurPos( 0 );
-                pData->setCurEnd( pData->getECache()->getFileSize() );
 
                 buildStaticFileHeaders( pResp, pReq, pData );
                 if ( pECache == pCache->getGziped() )
                 {
                     pResp->addGzipEncodingHeader();
                 }
+                pSession->setSendFileBeginEnd( 0, pData->getECache()->getFileSize() );
             }
         } //Xuedong Add for SSI Start
         else
@@ -562,11 +559,10 @@ int StaticFileHandler::process( HttpSession *pSession, const HttpHandler * pHand
                 pSession->flushDynBodyChunk();
             }
 
-            pData->setCurPos( 0 );
-            pData->setCurEnd( pECache->getFileSize() );            
+            pSession->setSendFileBeginEnd( 0, pData->getECache()->getFileSize() );
         } 
-        pSession->setRespBodyDone();
-        ret = pSession->beginSendStaticFile( pData );
+        //ret = pSession->flush();
+        pSession->endResponse( 1 );
     }
     return ret;
 
@@ -625,8 +621,9 @@ static int buildRangeHeaders( HttpSession* pSession, HttpRange& range )
         buf.parseAdd(sTemp, ret);
         
         bodyLen = end - begin;
-        pData1->setCurPos( begin );
-        pData1->setCurEnd( end );
+        
+        //TODO: simplify logic with sendMultipart()
+        pSession->setSendFileBeginEnd( begin, end );
     }
     else
     {
@@ -663,8 +660,7 @@ static int sendMultipart( HttpSession *pSession, HttpRange& range )
             {
                 off_t begin, end;
                 range.getContentOffset( begin, end );
-                pData->setCurPos( begin );
-                pData->setCurEnd( end );
+                pSession->setSendFileBeginEnd( begin, end );
                 iRemain = pData->getRemain();
                 assert( iRemain > 0 );
             }
@@ -706,7 +702,7 @@ static int sendMultipart( HttpSession *pSession, HttpRange& range )
                 return 1;
         }
         if ( iRemain )
-            ret = pSession->beginSendStaticFile( pData );
+            ret = pSession->flush();
         else
             return 0;
         if ( ret )
@@ -747,12 +743,12 @@ static int processRange( HttpSession *pSession, HttpReq * pReq, const char *pRan
         ret = pData->getFileData()->readyCacheData( pECache, 0 );
         if ( !ret )
         {
-            HttpResp * pResp = pSession->getResp();
+            //HttpResp * pResp = pSession->getResp();
             pSession->resetResp();
             ret = buildRangeHeaders( pSession, *range);
             if ( !ret )
             {
-                ret = pSession->beginSendStaticFile( pData );
+                ret = pSession->flush();
             }
         }
     }

@@ -1161,7 +1161,7 @@ int HttpServerImpl::configListenerVHostMap( const XmlNode *pRoot,
         for( iter = pList->begin(); iter != pList->end(); ++iter )
         {
             const XmlNode *pListenerNode = *iter;
-            const char *pName = pListenerNode->getChildValue( "name" );
+            const char *pName = pListenerNode->getChildValue( "name", 1 );
             HttpListener *pListener = getListener( pName );
 
             if ( pListener )
@@ -1191,7 +1191,7 @@ HttpListener * HttpServerImpl::configListener( const XmlNode *pNode, int isAdmin
             break;
         }
 
-        const char *pName = ConfigCtx::getCurConfigCtx()->getTag( pNode,  "name" );
+        const char *pName = ConfigCtx::getCurConfigCtx()->getTag( pNode,  "name", 1 );
         if ( pName == NULL )
         {
             break;
@@ -1228,10 +1228,7 @@ HttpListener * HttpServerImpl::configListener( const XmlNode *pNode, int isAdmin
         
         if (!isAdmin)
         {   
-            const XmlNode *p0 = pNode->getChild( "modulelist" );
-            if ( p0 == NULL )
-                p0 = pNode;
-
+            const XmlNode *p0 = pNode->getChild( "modulelist", 1 );
             
             pListener->m_moduleConfig.init(ModuleManager::getInstance().getModuleCount());
             pListener->m_moduleConfig.inherit(ModuleManager::getGlobalModuleConfig());
@@ -1280,10 +1277,7 @@ HttpListener * HttpServerImpl::configListener( const XmlNode *pNode, int isAdmin
 
 int HttpServerImpl::configListeners( const XmlNode *pRoot, int isAdmin )
 {
-    const XmlNode *pNode = pRoot->getChild( "listenerList" );
-
-    if ( !pNode )
-        pNode = pRoot;
+    const XmlNode *pNode = pRoot->getChild( "listenerList", 1 );
 
     XmlNodeList list;
     int c = pNode->getAllChildren( list );
@@ -1359,7 +1353,8 @@ int HttpServerImpl::configAdminConsole( const XmlNode *pNode)
     //skip admin listener configuration
     if ( !enableWebConsole())
         return 0;    
-    mapDomainList( pNode->getChild( "listenerList" ), pVHostAdmin );
+    
+    mapDomainList( pNode->getChild( "listenerList", 1 ), pVHostAdmin );
     return 0;
 }
 const char *HttpServerImpl::configAdminPhpUri( const XmlNode *pNode )
@@ -1607,22 +1602,9 @@ void HttpServerImpl::setAdminThrottleLimits(HttpVHost *pVHostAdmin)
 int HttpServerImpl::enableWebConsole( )
 {
     char theWebConsolePathe[MAX_PATH_LEN];
-
-    if ( ( ConfigCtx::getCurConfigCtx()->getAbsoluteFile( theWebConsolePathe, "$SERVER_ROOT/conf/httpd_config.xml" ) ) == 0 )
-    {
-        if ( access( theWebConsolePathe, F_OK ) == 0 )
-        {
-            if ( ( ConfigCtx::getCurConfigCtx()->getAbsoluteFile( theWebConsolePathe, "$SERVER_ROOT/conf/disablewebconsole" ) ) == 0 )
-            {
-                if ( access( theWebConsolePathe, F_OK ) == 0 )
-                    return 0;
-            }
-        }
-        else
-            return 0;
-    }
-    else
-        return 0;    
+    if ( ( ConfigCtx::getCurConfigCtx()->getAbsoluteFile( theWebConsolePathe, "$SERVER_ROOT/conf/disablewebconsole" ) == 0 ) &&
+        ( access( theWebConsolePathe, F_OK ) == 0 ) )
+        return 0;
     return 1;
 }
 
@@ -1636,7 +1618,7 @@ void HttpServerImpl::mapDomainList( const XmlNode *pListenerNodes, HttpVHost *pV
         for( iter = pList->begin(); iter != pList->end(); ++iter )
         {
             const XmlNode *pListenerNode = *iter;
-            const char *pName = pListenerNode->getChildValue( "name" );
+            const char *pName = pListenerNode->getChildValue( "name", 1 );
             HttpListener *pListener = getListener( pName );
 
             if ( pListener )
@@ -1797,7 +1779,7 @@ int HttpServerImpl::configAccessDeniedDir( const XmlNode *pNode )
 
 int HttpServerImpl::configSecurity( const XmlNode *pRoot)
 {
-    const XmlNode *pNode = pRoot->getChild( "security" );
+    const XmlNode *pNode = pRoot->getChild( "security", 1 );
     {
         ConfigCtx currentCtx( "server", "security" );
 
@@ -1817,9 +1799,6 @@ int HttpServerImpl::configSecurity( const XmlNode *pRoot)
 
         HttpServerConfig &config = HttpServerConfig::getInstance();
         pNode1 = pNode->getChild( "fileAccessControl" );
-
-        if ( !pNode1 )
-            pNode1 = pNode;
 
         config.setFollowSymLink(
             currentCtx.getLongValue( pNode1, "followSymbolLink", 0, 2, 1 ) );
@@ -2095,7 +2074,7 @@ int HttpServerImpl::configVHTemplate( const XmlNode *pNode)
     XmlNode *pVhConfNode;
     XmlNode *pTmpConfNode;
     TPointerList<HttpListener> listeners;
-    const char *pTemplateName = ConfigCtx::getCurConfigCtx()->getTag( pNode, "name" );
+    const char *pTemplateName = ConfigCtx::getCurConfigCtx()->getTag( pNode, "name", 1 );
     {
         if ( !pTemplateName )
         {
@@ -2166,10 +2145,7 @@ int HttpServerImpl::configVHTemplate( const XmlNode *pNode)
 int HttpServerImpl::configVHTemplates( const XmlNode *pRoot)
 {
     ConfigCtx currentCtx( "template" );
-    const XmlNode *pNode = pRoot->getChild( "vhTemplateList" );
-
-    if ( !pNode )
-        pNode = pRoot;
+    const XmlNode *pNode = pRoot->getChild( "vhTemplateList", 1 );
 
     const XmlNodeList *pList = pNode->getChildren( "vhTemplate" );
 
@@ -2189,10 +2165,7 @@ int HttpServerImpl::configVHTemplates( const XmlNode *pRoot)
 int HttpServerImpl::configVHosts( const XmlNode *pRoot)
 {
     ConfigCtx currentCtx( "server", "vhosts" );
-    const XmlNode *pNode = pRoot->getChild( "virtualHostList" );
-
-    if ( !pNode )
-        pNode = pRoot;
+    const XmlNode *pNode = pRoot->getChild( "virtualHostList", 1 );
 
     const XmlNodeList *pList = pNode->getChildren( "virtualHost" );
 
@@ -2305,15 +2278,7 @@ int HttpServerImpl::configServerBasics( int reconfig, const XmlNode *pRoot)
 //Global level module config 
 int HttpServerImpl::configModules( const XmlNode *pRoot )
 {
-    int confType = 0;
-    const XmlNode *pNode = pRoot->getChild( "modulelist" );
-
-    if ( !pNode )
-    {
-        pNode = pRoot;
-        confType = 1;
-    }
-
+    const XmlNode *pNode = pRoot->getChild( "modulelist", 1 );
     if (ModuleManager::getInstance().initModule() != 0)
     {
       LOG_D (( "ModuleManager initModule failed." ));
@@ -2321,18 +2286,15 @@ int HttpServerImpl::configModules( const XmlNode *pRoot )
     }
     
     const XmlNodeList *pList = pNode->getChildren( "module" );
-    if ( pList )
+    int moduleCount = ModuleManager::getInstance().loadModules(pList);
+    ModuleManager::getGlobalModuleConfig()->init(moduleCount);
+    //If global level is "not set", by default is enable, so set to 1 here, other level won't do that
+    for (int i=0; i<moduleCount; ++i)
     {
-        int moduleCount = ModuleManager::getInstance().loadModules(pList);
-        ModuleManager::getGlobalModuleConfig()->init(moduleCount);
-        //If global level is "not set", by default is enable, so set to 1 here, other level won't do that
-        for (int i=0; i<moduleCount; ++i)
-        {
-            ModuleManager::getGlobalModuleConfig()->get(i)->filters_enable = 1;
-        }
-        ModuleConfig::parseConfigList(pList, ModuleManager::getGlobalModuleConfig());
-        ModuleManager::getInstance().runModuleInit();
+        ModuleManager::getGlobalModuleConfig()->get(i)->filters_enable = 1;
     }
+    ModuleConfig::parseConfigList(pList, ModuleManager::getGlobalModuleConfig());
+    ModuleManager::getInstance().runModuleInit();
 
     return 0;
 }
@@ -3084,12 +3046,12 @@ int HttpServer::test_main( const char * pArgv0 )
             "sizeof( NtwkIOLink ) = %d, \n"
             "sizeof( HttpVHost ) = %d, \n"
             "sizeof( LogTracker ) = %d, \n",
-            sizeof( HttpSession ),
-            sizeof( HttpReq ),
-            sizeof( HttpResp ),
-            sizeof( NtwkIOLink ),
-            sizeof( HttpVHost ),
-            sizeof( LogTracker ) );
+            (int)sizeof( HttpSession ),
+            (int)sizeof( HttpReq ),
+            (int)sizeof( HttpResp ),
+            (int)sizeof( NtwkIOLink ),
+            (int)sizeof( HttpVHost ),
+            (int)sizeof( LogTracker ) );
     HttpFetch fetch;
     const char * pEnd = strrchr( pArgv0, '/' );
     --pEnd;

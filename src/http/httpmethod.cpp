@@ -148,7 +148,7 @@ http_method_t HttpMethod::parse2( const char * pMethod )
     default:
         return 0;
     }
-    if (method && (memcmp( s_psMethod[method], pMethod, s_iMethodLen[method] ) == 0 ))
+    if (method && (strncasecmp( s_psMethod[method], pMethod, s_iMethodLen[method] ) == 0 ))
         return method;
     return 0;
 }

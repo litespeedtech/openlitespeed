@@ -91,6 +91,16 @@ static int testparam_parseLine(const char *buf, const char *key, int minValue, i
     return val;
 }
 
+//Setup the below array to let web server know these params
+const char *myParam[] = {
+    "param1", 
+    "param2", 
+    "param3", 
+    "param4", 
+    "param5", 
+    NULL   //The last position must have a NULL to indicate end of the array
+};
+
 static void * testparam_parseConfig( const char *param, void *_initial_config )
 {
     param_st *pInitConfig = (param_st *)_initial_config;
@@ -144,7 +154,7 @@ static int testparam_handlerBeginProcess(void *session)
     if (pparam_st) 
     {
         sprintf(buf, "Current uri is %s.\nContext uri is %s.\nparam1 = %d\nparam2 = %d\nparam3 = %d\nparam4 = %d\nparam5 = %d\n",
-            g_api->get_req_uri(session),
+            g_api->get_req_uri(session, NULL),
             g_api->get_mapped_context_uri(session, &len),
             pparam_st->param1, pparam_st->param2, 
             pparam_st->param3, pparam_st->param4, pparam_st->param5);
@@ -161,17 +171,18 @@ static int testparam_handlerBeginProcess(void *session)
 static int reg_handler(struct lsi_cb_param_t *rec)
 {
     const char *uri;
-    uri = g_api->get_req_uri(rec->_session);
-    if ( strncasecmp(uri, "/testparam/", 6) == 0 )
+    int len;
+    uri = g_api->get_req_uri(rec->_session, &len);
+    if ( len >= 10 && strncasecmp(uri, "/testparam", 10) == 0 )
     {
-        g_api->register_req_handler(rec->_session, &MNAME, 6);
+        g_api->register_req_handler(rec->_session, &MNAME, 10);
     }
     return LSI_RET_OK;
 }
 
-static int testparam_init()
+static int testparam_init(lsi_module_t * pModule)
 {
-    param_st *pparam_st = (param_st *) g_api->get_module_param(NULL, &MNAME);
+    param_st *pparam_st = (param_st *) g_api->get_module_param(NULL, pModule);
     if (pparam_st) 
     {
         g_api->log( LSI_LOG_INFO, "[testparam]Global level param: param1 = %d param2 = %d param3 = %d param4 = %d param5 = %d",
@@ -181,11 +192,10 @@ static int testparam_init()
     else
         g_api->log( LSI_LOG_INFO, "[testparam]Global level NO params, ERROR.");
 
-    g_api->add_hook( LSI_HKPT_URI_MAP, &MNAME, reg_handler, LSI_HOOK_EARLY, 0 );
+    g_api->add_hook( LSI_HKPT_URI_MAP, pModule, reg_handler, LSI_HOOK_EARLY, 0 );
     return 0;
 }
 
-
-struct lsi_handler_t testparam_myhandler = { testparam_handlerBeginProcess, NULL, NULL };
-struct lsi_config_t testparam_dealConfig = { testparam_parseConfig, testparam_freeConfig };
-lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, testparam_init, &testparam_myhandler, &testparam_dealConfig };
+struct lsi_handler_t testparam_myhandler = { testparam_handlerBeginProcess, NULL, NULL, NULL };
+struct lsi_config_t testparam_dealConfig = { testparam_parseConfig, testparam_freeConfig, myParam };
+lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, testparam_init, &testparam_myhandler, &testparam_dealConfig, "Version 1.1" };

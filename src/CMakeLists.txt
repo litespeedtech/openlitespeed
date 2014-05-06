@@ -37,6 +37,7 @@ add_subdirectory(modules)
 ########### next target ###############
 
 SET(openlitespeed_SRCS
+   modules/prelinkedmods.cpp
    httpdtest.cpp
    main.cpp
 )
@@ -113,10 +114,10 @@ link_directories(/usr/local/lib ${PROJECT_SOURCE_DIR}/src/test/unittest-cpp/Unit
 
 add_executable(openlitespeed ${openlitespeed_SRCS} ${edio_STAT_SRCS} 
     ${extensions_STAT_SRCS} ${http_STAT_SRCS} ${socket_STAT_SRCS} 
-    ${util_STAT_SRCS} ${spdy_STAT_SRCS} ${MODULE_DATAS_SRCS})
+    ${util_STAT_SRCS} ${spdy_STAT_SRCS} ${MODULE_DATAS_SRCS} )
 
 
-target_link_libraries(openlitespeed main http spdy ssi lsiapi registry cgi fcgi jk extensions lsapi proxy edio  log4cxx socket sslpp util misc sysinfo GeoIP pthread dl ${libUnitTest} )
+target_link_libraries(openlitespeed main http spdy ssi modgzip lsiapi registry cgi fcgi jk extensions lsapi proxy edio  log4cxx socket sslpp util misc sysinfo GeoIP pthread dl ${libUnitTest} )
 
 install(TARGETS openlitespeed DESTINATION bin)
 

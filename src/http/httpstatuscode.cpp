@@ -38,40 +38,28 @@ StatusCode::StatusCode( int code, const char * pStatus,
             char * pEnd = p + 4096;
             p += safe_snprintf( p, pEnd - p, 
                         "<!DOCTYPE html>\n"
-                        "<html>\n<head><title>%s</title></head>\n"
-                        
-                        "<body style=\"color: #555; margin:0;font: normal 14px/20px Arial, Helvetica, sans-serif; background-color: #474747;\">\n"
-                        "<div style=\"background-color:#fff;\"><div style=\"background-color:rgba(0,0,0,0.1);padding:100px 15px 0 15px;\">\n"
-                        "    <div style=\"min-width:200px;padding:20px 20px 80px 20px;margin:0 30px;text-align: center;"
-                        "-webkit-box-shadow: 0 -30px 30px -4px #999;-moz-box-shadow: 0 -30px 30px -4px #999;box-shadow: 0 -30px 30px -4px #999;\">\n"
-                        "        <h1 style=\"font-size:200px;font-weight:bold;\">%c%c%c</h1>\n"
-                        "<h2 style=\"margin: 20px 0 0 0;font-size: 48px;  line-height: 48px;\">%s</h2>\n"                        
-                        "<div style=\"margin: 20px auto 0 auto;\">\n"
-                        "<p>If you wish to report this error page, please contact the website owner.</p>\n"
-                        "<p>If you are the website owner: It is possible you have reached this page because the server has been misconfigured.\n" 
-                        "If you were not expecting to see this page, please <strong>contact your hosting provider</strong>. \n"
-                        "If you do not know who your hosting provider is, you may be able to look it up by Googling \"whois\""
-                        "and your domain name. This will tell you who your IP is registered to.</p>"       
-                        "</div></div></div></div>"
+                        "<html style=\"height:100%%\">%\n<head><title>%s</title></head>\n"
+                        "<body style=\"color: #444; margin:0;font: normal 14px/20px Arial, Helvetica, sans-serif; height:100%%; background-color: #fff;"
+                        "\">\n"
+                        "<div style=\"height:auto; min-height:100%%; \">"
+                        "     <div style=\"text-align: center; width:800px; margin-left: -400px; position:absolute; top: 30%%; left:50%%;"
+                        "\">\n"
+                        "        <h1 style=\"margin:0; font-size:150px; line-height:150px; font-weight:bold;\">%c%c%c</h1>\n"
+                        "<h2 style=\"margin-top:20px;font-size: 30px;\">%s</h2>\n"                        
+                        "<p>%s</p>\n"      
+                        "</div></div>"
                         ,
-                pStatus, pStatus[1], pStatus[2], pStatus[3], &pStatus[5] );
+                pStatus, pStatus[1], pStatus[2], pStatus[3], &pStatus[5], message ? message : "" );
             //p += safe_snprintf( p, pEnd - p, "%s", message );
             if (( code >= SC_403 )||( code <= SC_404 ))
                 p += snprintf( p, pEnd - p,
-                        "<div style=\"color:#f0f0f0; font-size:12px;margin:auto;padding:30px;"
-                        "border-top: 1px solid rgba(0,0,0,0.15);box-shadow: 0 1px 0 rgba(255, 255, 255, 0.1) inset;\">\n"
-                        "<p>Note: Although this site is running LiteSpeed Web Server, it almost certainly"
-                        " has no other connection to LiteSpeed Technologies Inc. Please do not send email"
-                        " about this site or its contents to LiteSpeed Technologies Inc.</p>\n"
-                        "<p><span style=\"font-style: oblique;\">About LiteSpeed Web Server:</span>"
-                        "<br>LiteSpeed Web Server is a high-performance Apache drop-in replacement."
-                        " Web hosts use LiteSpeed Web Server to improve performance and stability and"
-                        " lower operating costs. If you would like to learn more about how LiteSpeed"
-                        " Web Server helps web hosts provide a better Internet experience, please visit"
-                        " <a style=\"color:#fff;\" href=\"http://www.litespeedtech.com/error-page\">here</a>.</p>"
+                        "<div style=\"color:#f0f0f0; font-size:12px;margin:auto;padding:0px 30px 0px 30px;"
+                        "position:relative;clear:both;height:100px;margin-top:-101px;background-color:#474747;"
+                        "border-top: 1px solid rgba(0,0,0,0.15);box-shadow: 0 1px 0 rgba(255, 255, 255, 0.3) inset;\">\n"
+                        "<br>Proudly powered by  <a style=\"color:#fff;\" href=\"http://www.litespeedtech.com/error-page\">LiteSpeed Web Server</a>"
                         "<p>Please be advised that LiteSpeed Technologies Inc. is not a web hosting"
                         " company and, as such, has no control over content found on this site.</p></div>"
-                        );
+                         );
             
             p += safe_snprintf( p, pEnd -p, "</body></html>\n" );
 

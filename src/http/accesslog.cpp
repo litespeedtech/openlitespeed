@@ -58,15 +58,15 @@ int CustomFormat::parseFormat( const char * psFormat )
 {
     char achBuf[4096];
     
-    memccpy( achBuf, psFormat, 0, 4095 );
-    
-    
-    char *pEnd = &achBuf[strlen( achBuf )];
+    char *pEnd;
     char *p = achBuf;
     char * pBegin = achBuf;
     char * pItemEnd = NULL;
     int state = 0;
     int itemId;
+    
+    memccpy( achBuf, psFormat, 0, 4095 );
+    pEnd = &achBuf[strlen( achBuf )];
     
     while( 1 )
     {
@@ -273,96 +273,144 @@ int CustomFormat::parseFormat( const char * psFormat )
     return 0;
 }
 
-static int logTime( AutoBuf * pBuf, time_t lTime, const char * pFmt )
+static int logTime( char * pBuf, int len, time_t lTime, const char * pFmt )
 {
     struct tm gmt;
     struct tm* pTm = gmtime_r( &lTime, &gmt );
     int n;
-    n = strftime( pBuf->end(), pBuf->available(), pFmt, pTm );
-    pBuf->used( n );
-    return 0;
+    n = strftime( pBuf, len, pFmt, pTm );
+    return n;
     
 }
 
-void AccessLog::customLog( HttpSession* pSession )
+
+int AccessLog::appendStrNoQuote( char * pBuf, int len, const char * pSrc, int srcLen, AccessLog * pLogger )
 {
-    CustomFormat::iterator iter = m_pCustomFormat->begin();
+    if (pLogger &&((srcLen > 4096 )||( pLogger->m_buf.available() <= srcLen + 100 )))
+    {
+        pLogger->flush();
+        pLogger->m_pAppender->append( pSrc, srcLen );
+        return -1;
+    }
+    else
+    {
+        if ( srcLen > 0 )
+        {
+            if ( srcLen > len  )
+                srcLen = len;
+            memmove( pBuf, pSrc, srcLen );
+            return srcLen;
+        }
+    }
+    return 0;
+}
+
+int AccessLog::customLog( HttpSession* pSession, CustomFormat * pLogFmt, char * pOutBuf, int buf_len, AccessLog * pLogger )
+{
+    CustomFormat::iterator iter = pLogFmt->begin();
     HttpReq * pReq = pSession->getReq();
     LogFormatItem *pItem;
     const char * pValue = NULL;
-    char * pBuf;
+    char * pBuf = pOutBuf;
+    char * pBufEnd = pBuf + buf_len;
+    char * p;
     int n;
-    while( iter != m_pCustomFormat->end() )
+    int ret;
+    while( iter != pLogFmt->end() )
     {
         pItem = *iter;
         switch( pItem->m_itemId )
         {
-            case REF_STRING:
-                appendStrNoQuote( pItem->m_sExtra.c_str(), pItem->m_sExtra.len() );
-                break;
-            case REF_STRFTIME:
-                if ( pItem->m_sExtra.c_str() )
-                {
-                    logTime( &m_buf, pSession->getReqTime(), pItem->m_sExtra.c_str() );
-                }
-                else
-                {
-                    DateTime::getLogTime( pSession->getReqTime(), m_buf.end() );
-                    m_buf.used( 28 );
-                }
-                break;
-            case REF_CONN_STATE:
-                if ( pSession->getStream()->isAborted() )
-                {
-                    m_buf.append( 'X' );
-                }
-                else if ( pSession->getReq()->isKeepAlive() )
-                {
-                    m_buf.append( '+' );
-                }
-                else
-                    m_buf.append( '-' );
-                break;
+        case REF_STRING:
+            ret = appendStrNoQuote( pBuf, pBufEnd - pBuf, pItem->m_sExtra.c_str(), pItem->m_sExtra.len(), pLogger );
+            if ( ret > 0 )
+                pBuf += ret;
+            else if ( ret < 0 )
+                pBuf = pLogger->m_buf.end();
+            break;
+        case REF_STRFTIME:
+            if ( pItem->m_sExtra.c_str() )
+            {
+                pBuf += logTime( pBuf, pBufEnd - pBuf, pSession->getReqTime(), pItem->m_sExtra.c_str() );
+            }
+            else
+            {
+                DateTime::getLogTime( pSession->getReqTime(), pBuf );
+                pBuf += 28;
+            }
+            break;
+        case REF_CONN_STATE:
+            if ( pSession->getStream()->isAborted() )
+            {
+                *pBuf++ = 'X';
+            }
+            else if ( pSession->getReq()->isKeepAlive() )
+            {
+                *pBuf++ = '+';
+            }
+            else
+                *pBuf++ = '-';
+            break;
+        case REF_COOKIE_VAL:
+        case REF_ENV:
+        case REF_HTTP_HEADER:
+            switch( pItem->m_itemId )
+            {
             case REF_COOKIE_VAL:
-            case REF_ENV:
-            case REF_HTTP_HEADER:
-                switch( pItem->m_itemId )
-                {
-                    case REF_COOKIE_VAL:
-                        pValue = RequestVars::getCookieValue( pReq, pItem->m_sExtra.c_str(), pItem->m_sExtra.len(), n );
-                        break;
-                    case REF_ENV:
-                        pValue = RequestVars::getEnv(pSession, pItem->m_sExtra.c_str(), pItem->m_sExtra.len(), n );
-                        break;
-                    case REF_HTTP_HEADER:
-                        pValue = pReq->getHeader( pItem->m_sExtra.c_str(), pItem->m_sExtra.len(), n );
-                        break;
-                }
-                if ( pValue )
-                    appendStrNoQuote( pValue, n );
-                else
-                    m_buf.append( '-' );
+                pValue = RequestVars::getCookieValue( pReq, pItem->m_sExtra.c_str(), pItem->m_sExtra.len(), n );
                 break;
-                
-                    default:
-                        pBuf= m_buf.end();
-                        
-                        n = RequestVars::getReqVar( pSession, pItem->m_itemId, pBuf, m_buf.available() );
-                        if ( n > 0 )
-                        {
-                            if ( pBuf != m_buf.end() )
-                                appendStrNoQuote( pBuf, n );
-                            else
-                                m_buf.used( n );
-                        }
-                        else
-                            m_buf.append( '-' );
-                        break;
+            case REF_ENV:
+                pValue = RequestVars::getEnv(pSession, pItem->m_sExtra.c_str(), pItem->m_sExtra.len(), n );
+                break;
+            case REF_HTTP_HEADER:
+                pValue = pReq->getHeader( pItem->m_sExtra.c_str(), pItem->m_sExtra.len(), n );
+                break;
+            }
+            if ( pValue )
+            {
+                ret = appendStrNoQuote( pBuf, pBufEnd - pBuf, pValue, n, pLogger );
+                if ( ret > 0 )
+                    pBuf += ret;
+                else if ( ret < 0 )
+                    pBuf = pLogger->m_buf.end();
+            }
+            else
+                *pBuf++ = '-';
+            break;
+            
+        default:
+            p = pBuf;
+            n = RequestVars::getReqVar( pSession, pItem->m_itemId, p, pBufEnd - pBuf );
+            if ( n > 0 )
+            {
+                if ( p != pBuf )
+                {
+                    ret = appendStrNoQuote( pBuf, pBufEnd - pBuf, p, n, pLogger );
+                    if ( ret > 0 )
+                        pBuf += ret;
+                    else if ( ret < 0 )
+                        pBuf = pLogger->m_buf.end();
+                }
+                else
+                    pBuf += n;
+            }
+            else
+                *pBuf++ = '-';
+            break;
                         
         }
         ++iter;
     }
-    m_buf.append( '\n' );
+    *pBuf++ = '\n';
+    return pBuf - pOutBuf;
+}
+
+
+
+void AccessLog::customLog( HttpSession* pSession, CustomFormat * pLogFmt )
+{
+    int n = customLog( pSession, pLogFmt, m_buf.end(), m_buf.available(), this );
+    m_buf.used( n );
     if (( m_buf.available() < MAX_LOG_LINE_LEN )
         ||!asyncAccessLog() )
     {
@@ -370,18 +418,14 @@ void AccessLog::customLog( HttpSession* pSession )
     }
 }
 
-void AccessLog::appendStrNoQuote( const char * pStr, int len )
+
+CustomFormat * AccessLog::parseLogFormat( const char * pFmt )
 {
-    if ((len > 4096 )||( m_buf.available() <= len + 100 ))
-    {
-        flush();
-        m_pAppender->append( pStr, len );
-    }
-    else
-    {
-        m_buf.appendNoCheck( pStr, len );
-    }
+    CustomFormat * pLogFmt = new CustomFormat();
+    pLogFmt->parseFormat( pFmt );
+    return pLogFmt;
 }
+
 
 int AccessLog::setCustomLog( const char * pFmt )
 {
@@ -530,7 +574,7 @@ void AccessLog::log( HttpSession* pSession )
     off_t contentWritten = pResp->getBodySent();
     char * pAddr;
     char achTemp[100];
-    pResp->needLogAccess( 0 );
+    pSession->setAccessLogOff();
     if ( m_iPipedLog )
     {
         if ( !m_pManager )
@@ -541,7 +585,7 @@ void AccessLog::log( HttpSession* pSession )
     }
     
     if ( m_pCustomFormat )
-        return customLog( pSession );
+        return customLog( pSession, m_pCustomFormat );
  
     pAddr = achTemp;
     n = RequestVars::getReqVar( pSession, REF_REMOTE_HOST, pAddr, sizeof( achTemp )  );

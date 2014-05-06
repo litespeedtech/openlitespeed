@@ -69,9 +69,8 @@ private:
     typedef void *(*node_update)( GMap * pThis, const void * pKey, void * pValue, iterator node );
     typedef iterator (*node_find)  ( GMap * pThis, const void * pKey );
     
-    
-    GMapNode *m_root;
     size_t m_size;
+    GMapNode *m_root;
     val_comp m_vc;
     node_insert m_insert;
     node_update m_update;

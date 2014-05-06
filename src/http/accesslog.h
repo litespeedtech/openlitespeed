@@ -52,8 +52,9 @@ class AccessLog
     AutoBuf m_buf;
 
     int appendStr( const char * pStr, int len);
-    void appendStrNoQuote( const char * pStr, int len );
-    void customLog( HttpSession* pSession );
+    static int appendStrNoQuote( char * pBuf, int len, const char * pSrc, int srcLen, AccessLog * pLogger );
+    void customLog( HttpSession* pSession, CustomFormat * pLogFmt );
+    static int customLog( HttpSession* pSession, CustomFormat * pLogFmt, char * pOutBuf, int buf_len,  AccessLog * pLogger );
     
 public: 
     explicit AccessLog(const char * pPath);
@@ -85,6 +86,12 @@ public:
     void closeNonPiped();
     void setRollingSize( off_t size );
     int  setCustomLog( const char * pFmt );
+    static int  getLogString( HttpSession * pSession, CustomFormat* pLogFmt, char * pBuf, int bufLen )
+    {
+        return customLog( pSession, pLogFmt, pBuf, bufLen, NULL );
+    }
+
+    static CustomFormat * parseLogFormat( const char * pFmt );
     
 };
 

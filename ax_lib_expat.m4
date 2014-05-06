@@ -28,7 +28,7 @@
 #   This macro calls:
 #
 #     AC_SUBST(EXPAT_CFLAGS)
-#     AC_SUBST(EXPAT_LDFLAGS)
+#     AC_SUBST(EXPAT_LIBS)
 #     AC_SUBST(EXPAT_VERSION)  -- only if version requirement is used
 #
 #   And sets:
@@ -44,7 +44,7 @@
 #   and this notice are preserved. This file is offered as-is, without any
 #   warranty.
 
-#serial 8
+#serial 9
 
 AC_DEFUN([AX_LIB_EXPAT],
 [
@@ -98,7 +98,7 @@ AC_DEFUN([AX_LIB_EXPAT],
     )
 
     EXPAT_CFLAGS=""
-    EXPAT_LDFLAGS=""
+    EXPAT_LIBS=""
     EXPAT_VERSION=""
 
     dnl
@@ -127,7 +127,7 @@ AC_DEFUN([AX_LIB_EXPAT],
         CPPFLAGS="$CPPFLAGS -I$expat_include_dir"
 
         saved_LDFLAGS="$LDFLAGS"
-        LDFLAGS="$LDFLAGS $expat_lib_flags"
+        LIBS="$LDFLAGS $expat_lib_flags"
 
         dnl
         dnl Check Expat headers
@@ -174,7 +174,7 @@ p = NULL;
                     ]]
                 )],
                 [
-                EXPAT_LDFLAGS="$expat_lib_flags"
+                EXPAT_LIBS="$expat_lib_flags"
                 expat_lib_found="yes"
                 AC_MSG_RESULT([found])
                 ],
@@ -196,7 +196,7 @@ p = NULL;
         if test "$expat_header_found" = "yes" -a "$expat_lib_found" = "yes"; then
 
             AC_SUBST([EXPAT_CFLAGS])
-            AC_SUBST([EXPAT_LDFLAGS])
+            AC_SUBST([EXPAT_LIBS])
 
             HAVE_EXPAT="yes"
         else

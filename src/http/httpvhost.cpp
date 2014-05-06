@@ -42,6 +42,7 @@
 #include <log4cxx/logger.h>
 #include <log4cxx/layout.h>
 #include <lsiapi/modulemanager.h>
+#include <lsiapi/internal.h>
 #include <sslpp/sslcontext.h>
 #include <util/accesscontrol.h>
 #include <util/hashstringmap.h>
@@ -740,7 +741,7 @@ int HttpVHost::configBasics( const XmlNode *pVhConfNode, int iChrootLen )
 
 int HttpVHost::configWebsocket( const XmlNode *pWebsocketNode )
 {
-    const char *pUri = ConfigCtx::getCurConfigCtx()->getTag( pWebsocketNode, "uri" );
+    const char *pUri = ConfigCtx::getCurConfigCtx()->getTag( pWebsocketNode, "uri", 1 );
     const char *pAddress = ConfigCtx::getCurConfigCtx()->getTag( pWebsocketNode, "address" );
     char achVPath[MAX_PATH_LEN];
     char achRealPath[MAX_PATH_LEN];
@@ -768,10 +769,7 @@ int HttpVHost::configWebsocket( const XmlNode *pWebsocketNode )
 }
 int HttpVHost::configVHWebsocketList( const XmlNode *pVhConfNode )
 {
-    const XmlNode *p0 = pVhConfNode->getChild( "websocketlist" );
-
-    if ( p0 == NULL )
-        p0 = pVhConfNode;
+    const XmlNode *p0 = pVhConfNode->getChild( "websocketlist", 1 );
 
     const XmlNodeList *pList = p0->getChildren( "websocket" );
 
@@ -811,7 +809,7 @@ int HttpVHost::configHotlinkCtrl( const XmlNode *pNode )
 }
 int HttpVHost::configSecurity( const XmlNode *pVhConfNode)
 {
-    const XmlNode *p0 = pVhConfNode->getChild( "security" );
+    const XmlNode *p0 = pVhConfNode->getChild( "security", 1 );
 
     if ( p0 != NULL )
     {
@@ -845,7 +843,7 @@ int HttpVHost::configRealm( const XmlNode *pRealmNode )
 {
     int iChrootLen = 0;
     
-    const char *pName = ConfigCtx::getCurConfigCtx()->getTag( pRealmNode, "name" );
+    const char *pName = ConfigCtx::getCurConfigCtx()->getTag( pRealmNode, "name", 1 );
     if ( pName == NULL )
     {
         return -1;
@@ -931,8 +929,7 @@ int HttpVHost::configRealm( const XmlNode *pRealmNode )
 
 int HttpVHost::configRealmList( const XmlNode *pRoot)
 {
-    const XmlNode *pNode = pRoot->getChild( "realmList" );
-
+    const XmlNode *pNode = pRoot->getChild( "realmList", 1 );
     if ( pNode != NULL )
     {
         const XmlNodeList *pList = pNode->getChildren( "realm" );
@@ -1542,8 +1539,7 @@ int HttpVHost::configContext( const XmlNode *pContextNode )
     const char *pHandler = NULL;
     bool allowBrowse = false;
     int match;
-    pUri = ConfigCtx::getCurConfigCtx()->getTag( pContextNode, "uri" );
-
+    pUri = ConfigCtx::getCurConfigCtx()->getTag( pContextNode, "uri", 1 );
     if ( pUri == NULL )
         return -1;
 
@@ -1649,8 +1645,8 @@ int HttpVHost::configRedirectContext( const XmlNode *pContextNode, const char *p
 
 static int compareContext(const void *p1, const void *p2)
 {
-    return strcmp( (*((XmlNode**)p1))->getChildValue("uri"),
-                   (*((XmlNode**)p2))->getChildValue("uri") );
+    return strcmp( (*((XmlNode**)p1))->getChildValue("uri", 1),
+                   (*((XmlNode**)p2))->getChildValue("uri", 1) );
 }
 
 int HttpVHost::configVHContextList( const XmlNode *pVhConfNode, const XmlNodeList *pModuleList )
@@ -1660,10 +1656,7 @@ int HttpVHost::configVHContextList( const XmlNode *pVhConfNode, const XmlNodeLis
 
     setGlobalMatchContext( 1 );
 
-    const XmlNode *p0 = pVhConfNode->getChild( "contextList" );
-
-    if ( p0 == NULL )
-        p0 = pVhConfNode;
+    const XmlNode *p0 = pVhConfNode->getChild( "contextList", 1 );
 
     XmlNodeList *pList = (XmlNodeList *)(p0->getChildren( "context" ));
 
@@ -1695,10 +1688,7 @@ void HttpVHost::checkAndAddNewUriFormModuleList(const XmlNodeList *pModuleList)
     XmlNodeList::const_iterator iter0;
     for( iter0 = pModuleList->begin(); iter0 != pModuleList->end(); ++iter0 )
     {
-        const XmlNode *p0 = (*iter0)->getChild( "urlfilterlist" );
-        if ( p0 == NULL )
-            p0 = *iter0;
-
+        const XmlNode *p0 = (*iter0)->getChild( "urlfilterlist", 1 );
         const XmlNodeList *pfilterList = p0->getChildren( "urlfilter" );
         if ( pfilterList )
         {
@@ -1711,7 +1701,7 @@ void HttpVHost::checkAndAddNewUriFormModuleList(const XmlNodeList *pModuleList)
             for( iter = pfilterList->begin(); iter != pfilterList->end(); ++iter )
             {
                 pNode = *iter;
-                pValue = pNode->getChildValue("uri");
+                pValue = pNode->getChildValue("uri", 1);
                 if (!pValue || strlen(pValue) == 0)
                     break;
                 
@@ -1753,7 +1743,7 @@ int HttpVHost::configVHModuleUrlFilter1( lsi_module_t *pModule, const XmlNodeLis
     for( iter = pfilterList->begin(); iter != pfilterList->end(); ++iter )
     {
         pNode = *iter;
-        pValue = pNode->getChildValue("uri");
+        pValue = pNode->getChildValue("uri", 1);
         if (!pValue || strlen(pValue) == 0)
         {
             ret = -1;
@@ -1780,18 +1770,18 @@ int HttpVHost::configVHModuleUrlFilter1( lsi_module_t *pModule, const XmlNodeLis
         lsi_module_config_t *module_config;
         if (pContext->isModuleConfigOwn())
         {
-            module_config = pContext->getModuleConfig()->get(pModule->_id);
+            module_config = pContext->getModuleConfig()->get( MODULE_ID( pModule ));
             ModuleConfig::saveConfig(pNode, pModule, module_config);
         }
         else
         {
             module_config = new lsi_module_config_t;
-            memcpy(module_config, pContext->getModuleConfig()->get(pModule->_id), sizeof(lsi_module_config_t));
+            memcpy(module_config, pContext->getModuleConfig()->get(MODULE_ID( pModule )), sizeof(lsi_module_config_t));
             module_config->own_data_flag = 0;
             module_config->sparam = NULL;
             ModuleConfig::saveConfig(pNode, pModule, module_config);
        
-            pContext->setOneModuleConfig( pModule->_id, module_config );
+            pContext->setOneModuleConfig( MODULE_ID( pModule ), module_config );
             delete module_config;
         }
     }
@@ -1801,18 +1791,18 @@ int HttpVHost::configVHModuleUrlFilter1( lsi_module_t *pModule, const XmlNodeLis
 
 lsi_module_config_t *parseModuleConfigParam(lsi_module_t *pModule, const HttpContext *pContext)
 {
-    lsi_module_config_t *config = ((HttpContext *)pContext)->getModuleConfig()->get(pModule->_id);
+    lsi_module_config_t *config = ((HttpContext *)pContext)->getModuleConfig()->get(MODULE_ID( pModule ));
     if (config->own_data_flag == 2 || pContext->getParent() == NULL )
         return config;
         
     
-    HttpSessionHooks *parentHooks = ((HttpContext *)pContext->getParent())->getSessionHooks();
+    //HttpSessionHooks *parentHooks = ((HttpContext *)pContext->getParent())->getSessionHooks();
     ModuleConfig *parentModuleConfig = ((HttpContext *)pContext->getParent())->getModuleConfig();
 
     void *init_config = parseModuleConfigParam(pModule, pContext->getParent())->config;
 
     if (config->filters_enable == -1)
-        config->filters_enable = parentModuleConfig->get(pModule->_id)->filters_enable;
+        config->filters_enable = parentModuleConfig->get(MODULE_ID( pModule ))->filters_enable;
     
     if (config->own_data_flag == 1)
     {
@@ -1827,7 +1817,7 @@ lsi_module_config_t *parseModuleConfigParam(lsi_module_t *pModule, const HttpCon
     
     ((HttpContext *)pContext)->initExternalSessionHooks();
     ModuleManager::getInstance().updateHttpApiHook(((HttpContext *)pContext)->getSessionHooks(), ((HttpContext *)pContext)->getModuleConfig(),
-                                                   pModule->_id);
+                                                   MODULE_ID( pModule ));
     
     return config;
 }
@@ -1847,7 +1837,7 @@ int HttpVHost::configVHModuleUrlFilter2( lsi_module_t *pModule, const XmlNodeLis
     for( iter = pfilterList->begin(); iter != pfilterList->end(); ++iter )
     {
         pNode = *iter;
-        pValue = pNode->getChildValue("uri");
+        pValue = pNode->getChildValue("uri", 1);
         if (!pValue || strlen(pValue) == 0)
         {
             ret = -1;
@@ -1871,7 +1861,7 @@ int HttpVHost::configModuleConfigInContext( const XmlNode *pContextNode, int sav
     const char *pParam = NULL;
     const char *pType = NULL;
     
-    pUri = pContextNode->getChildValue( "uri" );
+    pUri = pContextNode->getChildValue( "uri", 1 );
     pHandler = pContextNode->getChildValue( "handler" );
     pParam = pContextNode->getChildValue( "param" );
     pType = pContextNode->getChildValue( "type" );
@@ -1899,7 +1889,7 @@ int HttpVHost::configModuleConfigInContext( const XmlNode *pContextNode, int sav
         return -1;
     
     lsi_module_t *pModule = moduleIter.second()->getModule();
-    lsi_module_config_t *config = pContext->getModuleConfig()->get(pModule->_id);
+    lsi_module_config_t *config = pContext->getModuleConfig()->get(MODULE_ID( pModule ));
     
     if (!pModule->_config_parser || !pModule->_config_parser->_parse_config)
         return -1;
@@ -1933,7 +1923,7 @@ int HttpVHost::configModuleConfigInContext( const XmlNode *pContextNode, int sav
         }
         if (toBeDel)
         {
-            pContext->setOneModuleConfig( pModule->_id, module_config );
+            pContext->setOneModuleConfig( MODULE_ID( pModule ), module_config );
             delete module_config;
         }
     }
@@ -1956,14 +1946,12 @@ int HttpVHost::parseVHModulesParams( const XmlNode *pVhConfNode, const XmlNodeLi
         for( iter = pModuleList->begin(); iter != pModuleList->end(); ++iter )
         {
             pNode = *iter;
-            p0 = pNode->getChild( "urlfilterlist" );
-            if ( p0 == NULL )
-                p0 = pNode;
-
+            p0 = pNode->getChild( "urlfilterlist", 1 );
+            
             const XmlNodeList *pfilterList = p0->getChildren( "urlfilter" );
             if ( pfilterList )
             {
-                moduleName = pNode->getChildValue("name");
+                moduleName = pNode->getChildValue("name", 1);
                 if (!moduleName)
                 {
                     ret = -1;
@@ -1987,10 +1975,7 @@ int HttpVHost::parseVHModulesParams( const XmlNode *pVhConfNode, const XmlNodeLi
     }
     
     //now for the contextlist part to find out the modulehandler param
-    p0 = pVhConfNode->getChild( "contextList" );
-    if ( p0 == NULL )
-        p0 = pVhConfNode;
-
+    p0 = pVhConfNode->getChild( "contextList", 1 );
     XmlNodeList *pList = (XmlNodeList *)(p0->getChildren( "context" ));
 
     if ( pList )
@@ -2078,8 +2063,7 @@ int HttpVHost::config( const XmlNode *pVhConfNode)
     configIndexFile( pVhConfNode, (&HttpServer::getInstance())->getIndexFileList(), 
                 MainServerConfig::getInstance().getAutoIndexURI() );
 
-    p0 = pVhConfNode->getChild( "customErrorPages" );
-
+    p0 = pVhConfNode->getChild( "customErrorPages", 1 );
     if ( p0 )
     {
         ConfigCtx currentCtx( "errorpages" );
@@ -2089,10 +2073,7 @@ int HttpVHost::config( const XmlNode *pVhConfNode)
     pRootContext->inherit( NULL );
     
     
-    p0 = pVhConfNode->getChild( "modulelist" );
-    if ( p0 == NULL )
-        p0 = pVhConfNode;
-
+    p0 = pVhConfNode->getChild( "modulelist", 1 );
     const XmlNodeList *pModuleList = p0->getChildren( "module" );
     if ( pModuleList )
     {
@@ -2312,7 +2293,7 @@ HttpVHost *HttpVHost::configVHost( XmlNode *pNode)
 
     while( 1 )
     {
-        const char *pName = ConfigCtx::getCurConfigCtx()->getTag( pNode, "name" );
+        const char *pName = ConfigCtx::getCurConfigCtx()->getTag( pNode, "name", 1 );
 
         if ( pName == NULL )
         {

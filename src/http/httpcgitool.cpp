@@ -91,7 +91,7 @@ int HttpCgiTool::processHeaderLine( HttpExtConnector * pExtConn, const char * pL
         if ( pReq->getStatusCode() == SC_304 )
             return 0;
         p = (char *)memchr( pValue, ';', pLineEnd - pValue );
-        if ( pReq->gzipAcceptable() )
+        if ( pReq->gzipAcceptable() == GZIP_REQUIRED )
         {
             register char ch = 0;
             register char *p1;
@@ -131,7 +131,23 @@ int HttpCgiTool::processHeaderLine( HttpExtConnector * pExtConn, const char * pL
         }
         return 0;
     case HttpRespHeaders::H_CONTENT_ENCODING:
-        pReq->andGzip( ~GZIP_ENABLED );
+        if ( pReq->getStatusCode() == SC_304 )
+            return 0;
+        if ( strncasecmp( pValue, "gzip", 4 ) == 0 )
+        {
+            pReq->orGzip( UPSTREAM_GZIP );
+        }
+        else if ( strncasecmp( pValue, "deflate", 7 ) == 0 )
+        {
+            pReq->orGzip( UPSTREAM_DEFLATE );
+        }
+//             if ( !(pReq->gzipAcceptable() & REQ_GZIP_ACCEPT) )
+//                 return 0;
+//         }
+//         else //if ( strncasecmp( pValue, "deflate", 7 ) == 0 )
+//         {
+//             pReq->andGzip( ~GZIP_ENABLED );
+//         }
         break;
     case HttpRespHeaders::H_LOCATION:
         if ( (status & HEC_RESP_PROXY ) || (pReq->getStatusCode() != SC_200 ))
@@ -156,7 +172,8 @@ int HttpCgiTool::processHeaderLine( HttpExtConnector * pExtConn, const char * pL
             }
             else
                 pReq->setLocation( pValue, pLineEnd - pValue );
-            status |= HEC_RESP_LOC_SET;
+            pExtConn->getHttpSession()->changeHandler();
+            //status |= HEC_RESP_LOC_SET;
             return 0;
         }
         break;

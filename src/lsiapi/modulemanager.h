@@ -57,6 +57,12 @@ class ModuleManager : public HashStringMap<LsiModule *>, public TSingleton<Modul
     friend class TSingleton<ModuleManager>;
 private:
     ModuleManager(){ m_gModuleArray = NULL;};
+    iterator addModule( const char * name, const char * pType, lsi_module_t * pModule );
+    int getModulePath(const char *name, char *path, int max_len);
+    lsi_module_t * loadModule( const char *name );
+    void disableModule(lsi_module_t *pModule);
+    int storeModulePointer( int index, lsi_module_t *module );
+    int loadPrelinkedModules();
     
 public:
     ~ModuleManager()
@@ -64,12 +70,8 @@ public:
 
     int initModule();
     
-    char *getModulePath(const char *name, char *path);
-    void disableModule(lsi_module_t *pModule);
     int runModuleInit();
-    int storeModulePointer( int index, lsi_module_t *module );
     
-    int loadModule( const XmlNode *pModuleNode );
     int loadModules( const XmlNodeList *pModuleNodeList );
     int unloadModules();
 
@@ -79,18 +81,16 @@ public:
 
     void OnTimer100msec();
     void OnTimer10sec();
-
     
     void inheritIolinkApiHooks(IolinkSessionHooks *apiIolinkHooks, ModuleConfig *moduleConfig);
     void inheritHttpApiHooks(HttpSessionHooks *apiHttpHooks, ModuleConfig *moduleConfig);
     void updateHttpApiHook(HttpSessionHooks *apiHttpHooks, ModuleConfig *moduleConfig, int module_id);
     
-    
-    static ModuleConfig m_gModuleConfig;
     static ModuleConfig *getGlobalModuleConfig() { return &m_gModuleConfig; }
 private:
     ModulePointer *m_gModuleArray;  //It is pointers stored base on the _module_id order
     short  m_iModuleDataCount[LSI_MODULE_DATA_COUNT];
+    static ModuleConfig m_gModuleConfig;
     
 };
 
@@ -143,7 +143,7 @@ public:
     
     
 public:    
-    static const char *FilterKeyName[];
+    static const char *s_sHkptName[];
     
     static void setFilterEnable(lsi_module_config_t * module_config, int v) { module_config->filters_enable = ((v) ? 1 : 0);  }
     static int  getFilterEnable(lsi_module_config_t * module_config)   { return module_config->filters_enable; }

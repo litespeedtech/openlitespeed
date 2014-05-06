@@ -34,18 +34,18 @@
 /**
  * @brief Defines the minor version number of LSIAPI.
  */
-#define LSIAPI_VERSION_MINOR    0
+#define LSIAPI_VERSION_MINOR    1
 /**
  * @brief Defines the version string of LSIAPI.
  */
-#define LSIAPI_VERSION_STRING   "1.0"
+#define LSIAPI_VERSION_STRING   "1.1"
 
 /**
  * @def LSI_MAX_HOOK_PRIORITY 
  * @brief The max priority level allowed.
  * @since 1.0
  */
-#define LSI_MAX_HOOK_PRIORITY     3000
+#define LSI_MAX_HOOK_PRIORITY     6000
 
 /**
  * @def LSI_MAX_RESP_BUFFER_SIZE 
@@ -153,9 +153,28 @@ enum lsi_hook_priority
 enum lsi_hook_flag
 {
     /**
-     * Transform true flag.
+     * The filter hook function is a Transformer which modify the input data.
+     * This is for filter type hook points, if all filters are not Transformer filters, 
+     * Optimization could be applied by server core when processes the data.
      */
     LSI_HOOK_FLAG_TRANSFORM  = 1,
+    
+   /**
+     * The hook function requires decompressed data.
+     * This flag is for LSI_HKPT_RECV_RESP_BODY and LSI_HKPT_SEND_RESP_BODY.
+     * If any filter requires decommpression, server core will add decompression filter at the
+     * beginning of the filter chain for compressed data. 
+     */
+    LSI_HOOK_FLAG_DECOMPRESS_REQUIRED = 2, 
+        
+    /**
+     * This flag is for LSI_HKPT_SEND_RESP_BODY only, 
+     * this flag should be added only if a filter need to process static file.
+     * If no filter need to process static file, sendfile() API will be used. 
+     */
+    LSI_HOOK_FLAG_PROCESS_STATIC = 4,
+
+    
 };
 
 /**
@@ -295,6 +314,15 @@ enum lsi_hkpt_level
     LSI_HKPT_RECVED_RESP_BODY,
     
     /**
+     * LSI_HKPT_HANDLER_RESTART is the point when server core need to restart handler processing
+     * by discarding the current response, either send back error page, or redirect to a new 
+     * URL. It could be triggered by internal redirect, a module deny access, it is only 
+     * triggered after handler processing starts for current request.
+     */
+    LSI_HKPT_HANDLER_RESTART,
+
+
+    /**
      * LSI_HKPT_SEND_RESP_HEADER is the point when the response header is ready 
      * to be sent by the web server.
      */
@@ -363,6 +391,11 @@ enum lsi_log_level
 enum lsi_result_code
 {
     /**
+     * Return code to deny access.
+     */
+    
+    LSI_RET_DENY = -2,
+    /**
      * Return code error.
      */
     LSI_RET_ERROR = -1,
@@ -389,11 +422,60 @@ enum lsi_onwrite_result_code
     /**
      * No further response data to write return code.
      */
-    LSI_WRITE_RESP_FINISHED,
+    LSI_WRITE_RESP_FINISHED = 0,
     /**
      * More response body data to write return code.
      */
     LSI_WRITE_RESP_CONTINUE,
+};
+
+
+/**
+ * @enum lsi_cb_flag
+ * @brief definition of flags used in hook function input and ouput parameter
+ * @details It defines flags for _flag_in and _flag_out of lsi_cb_param_t.
+ * LSI_CB_FLAG_IN_XXXX is for _flag_in, LSI_CB_FLAG_OUT_BUFFERED_DATA is for 
+ * _flag_out, the flag should be set or removed through bitwise operator. 
+ * 
+ * @since 1.0
+ */
+enum lsi_cb_flags
+{
+    /**
+     * Indicates that a filter buffered data in its own buffer.
+     */
+    LSI_CB_FLAG_OUT_BUFFERED_DATA = 1,
+    
+    /**
+     * This flag require the filter to flush its internal buffer to next filter, then 
+     * pass this flag to next filter. 
+     */
+    LSI_CB_FLAG_IN_FLUSH = 1,
+
+    /**
+     * This flag tells the filter it is the end of stream, there should be no more data 
+     * feeding into this filter. The filter should ignore any input data after this flag is
+     * set, this flag implies LSI_CB_FLAG_IN_FLUSH. A filter should only set this flag after
+     * all buffered data has been sent to next filter.
+     */
+    LSI_CB_FLAG_IN_EOF = 2,
+    
+    /**
+     * This flag is set for LSI_HKPT_SEND_RESP_BODY only if the input data is from 
+     * a static file, if a filter do not need to check static file, can skip processing 
+     * data if this flag is set.
+     * 
+     */
+    LSI_CB_FLAG_IN_STATIC_FILE = 4,
+
+    /**
+     * This flag is set for LSI_HKPT_RECVED_RESP_BODY only if reuqest handler does not abort
+     * in middle of processing the response, For example, backend PHP crashes, or HTTP proxy
+     * connection to backend has been reset. If a hook function only need to process 
+     * succeeded response, should check for this flag. 
+     */
+    LSI_CB_FLAG_IN_RESP_SUCCEED = 8,
+    
 };
 
 
@@ -402,7 +484,7 @@ enum lsi_onwrite_result_code
 /**
  * @enum lsi_req_variable
  * @brief LSIAPI request environment variables.
- * @details Used as API index parameter in env access function get_req_env_by_id.
+ * @details Used as API index parameter in env access function get_req_var_by_id.
  * The example reqinfohandler.c shows usage for all of these variables.
  * @since 1.0
  */
@@ -957,10 +1039,11 @@ struct lsi_module_t;
 struct lsi_api_t;
 struct lsi_cb_param_t;
 struct lsi_hook_info_t;
-struct lsi_gd_cont_val_t;
-
-
-
+struct lsi_gdata_cont_val_t;
+struct stat;
+typedef struct lsi_shm_htable_t lsi_shm_htable_t;
+typedef uint32_t lsi_shm_off_t;
+typedef uint32_t lsi_hash_key_t;
 
 /**
  * @typedef lsi_callback_pf 
@@ -1000,6 +1083,8 @@ typedef void * (*lsi_deserialize_pf)    (char *, int length);
 typedef void    ( *lsi_timer_callback_pf) ( void* );
 
 
+typedef lsi_hash_key_t (*lsi_hash_pf) ( const void * );
+typedef int   (*lsi_hash_value_comp_pf) ( const void * pVal1, const void * pVal2 );
 
 
 /**************************************************************************************************
@@ -1033,31 +1118,31 @@ typedef struct lsi_cb_param_t
     void                    * _cur_hook;
     
     /**
-     * @brief _param1 is a pointer to the first parameter. 
+     * @brief _param is a pointer to the first parameter. 
      * @details Refer to the LSIAPI Developer's Guide's
      * Callback Parameter Definition table for a table 
      * of expected values for each _param based on use.
      * @since 1.0
      */
-    const void              *   _param1;
+    const void              *   _param;
     
     /**
-     * @brief _param1_len is the length of the first parameter.
+     * @brief _param_len is the length of the first parameter.
      * @since 1.0
      */
-    int                         _param1_len;
+    int                         _param_len;
     
     /**
-     * @brief _param2 is a pointer to the second parameter.
+     * @brief _flag_out is a pointer to the second parameter.
      * @since 1.0
      */
-    void                    *   _param2;
+    int                     *   _flag_out;
     
     /**
-     * @brief _param2_len is the length of the second parameter.
+     * @brief _flag_in is the length of the second parameter.
      * @since 1.0
      */
-    int                         _param2_len;
+    int                         _flag_in;
 } lsi_cb_param_t; 
 
 
@@ -1070,15 +1155,15 @@ typedef struct lsi_cb_param_t
 typedef struct lsi_handler_t
 {
     /**
-     * @brief begin_process will be called when the server starts to process a request.
+     * @brief begin_process is called when the server starts to process a request.
      * @details It is used to define the request handler callback function.
      * @since 1.0
      */
     int  ( *begin_process )     ( void *session );
     
     /**
-     * @brief on_read_req_body will be called on a READ event with a large request body. 
-     * @details on_read_req_body will be called when a request has a 
+     * @brief on_read_req_body is called on a READ event with a large request body. 
+     * @details on_read_req_body is called when a request has a 
      * large request body that was not read completely. 
      * If not provided, this function should be set to NULL.
      * The default function will execute and return 0.
@@ -1087,14 +1172,24 @@ typedef struct lsi_handler_t
     int  ( *on_read_req_body )  ( void *session );   
     
     /**
-     * @brief on_write_resp will be called on a WRITE event with a large response body.
-     * @details on_write_resp will be called when the server gets a large response body
+     * @brief on_write_resp is called on a WRITE event with a large response body.
+     * @details on_write_resp is called when the server gets a large response body
      * where the response did not write completely.
      * If not provided, set it to NULL.
      * The default function will execute and return LSI_WRITE_RESP_FINISHED.
      * @since 1.0
      */
     int  ( *on_write_resp )  ( void *session );
+
+    /**
+     * @brief on_clean_up is called when the server core is done with the handler, ask the 
+     * handler to perform cleaning up.
+     * @details It is called after a handler called end_resp(), or server need to switch handler, 
+     * for example, return a error page or perform an internal redirect while this handler processing the request. 
+     * @since 1.0
+     */
+    
+    int  ( *on_clean_up ) ( void *session );
     
 } lsi_handler_t;
 
@@ -1112,25 +1207,48 @@ typedef struct lsi_config_t
 {
     /**
      * @brief _parse_config is a callback function for the server to call to parse the user defined 
-     * parameters and return a pointer to the user defined data.
+     * parameters and return a pointer to the user defined configuration data structure.
+     * @details
+     * 
      * @since 1.0
+     * @param[in] param - the \\0 terminated buffer holding configuration parameters.
+     * @param[in] initial_config - a pointer to default configuration inherited from parent level
+     * @return a pointer to a the user-defined configuration data, which combines initial_config with
+     *         settings in param, if both param and initial_config are NULL, hard-coded default 
+     *         configuration value should be returned.
      */
-    void *                          ( *_parse_config ) ( const char *param, void *_initial_config );
+    void *                          ( *_parse_config ) ( const char *param, void *initial_config );
     
     /**
      * @brief _free_config is a callback function for the server to call to release a pointer to 
      * the user defined data. 
      * @since 1.0
+     * @param[in] config - a pointer to configuration data structure to be released.
      */
-    void                            ( *_free_config ) ( void *_config );
+    void                            ( *_free_config ) ( void *config );
+    
+    
+    /**
+     * @brief _config_keys is an NULL termination array of const char *. 
+     * It is used to filter the module user paramaters by server while parsing the configuration.
+     * @since 1.0
+     */
+    const char **                    _config_keys;
 } lsi_config_t;
+
+
+#define LSI_MODULE_RESERVED_SIZE   ( sizeof( void *) + ( LSI_HKPT_TOTAL_COUNT + 1 ) * sizeof( int32_t ) \
+                                    + LSI_MODULE_DATA_COUNT * sizeof( int16_t ) )
+
+
+typedef struct lsi_module_t lsi_module_t;
 
 /**
  * @struct lsi_module_t
  * @brief Defines an LSIAPI module, this struct must be provided in the module code.
  * @since 1.0
  */
-typedef struct lsi_module_t
+struct lsi_module_t
 {
     /**
      * @brief _signature contains a function pointer that will be called after the module is loaded.
@@ -1144,7 +1262,7 @@ typedef struct lsi_module_t
      * Used to initialize module data and perform hook function registration.
      * @since 1.0
      */
-    int                            ( *_init )( );
+    int                            ( *_init )( lsi_module_t * pModule );
     
     /**
      * @brief _handler needs to be provided if this module is a request handler. 
@@ -1170,34 +1288,10 @@ typedef struct lsi_module_t
      */
     const char *                    _info;
     
-    /**
-     * @brief Initially set to NULL.  After a module is loaded, 
-     * it will be set to the module name.
-     * @since 1.0
-     */
-    void                     *   _name;
+    char                            _reserved[ LSI_MODULE_RESERVED_SIZE ];
     
-    /**
-     * @brief Initially set to 0.  After a module is loaded, 
-     * it will be set to the module id.
-     * @since 1.0
-     */
-    int                             _id;
     
-    /**
-     * @brief Initially set to 0.  After a module is loaded, 
-     * it will be set to the user data id.
-     * @since 1.0
-     */
-    short                           _data_id[LSI_MODULE_DATA_COUNT];
-    
-    /**
-     * @brief Initially set to 0.  After a module is loaded, 
-     * it will be set to the priorities for each hook level.
-     * @since 1.0
-     */
-    int                             _priority[LSI_HKPT_TOTAL_COUNT]; 
-} lsi_module_t;
+};
 
 
 
@@ -1212,6 +1306,10 @@ typedef struct lsi_module_t
  **/
 typedef struct lsi_api_t
 {
+    /**************************************************************************************************************
+     *                                        SINCE LSIAPI 1.0                                                    *
+     * ************************************************************************************************************/
+        
     /**
      * @brief get_server_root is used to get the server root path.
      * 
@@ -1296,8 +1394,11 @@ typedef struct lsi_api_t
      * @param[in] priority - the default hook-point priority. lower value indicates 
      * higher priority and will get executed first. 
      * May be overwritten by the web admin configuration.
-     * @param[in] flag - flag for a hook-point, LSI_HOOK_FLAG_TRANSFORM should be set 
-     * if a hook-point modifies input data, otherwise put 0.
+     * @param[in] flag - Flag for a hook-point: 
+     *   LSI_HOOK_FLAG_TRANSFORM should be set if a hook-point modifies input data, 
+     *   LSI_HOOK_FLAG_DECOMPRESS_REQUIRED should be set if the filter needs decompression,
+     *   LSI_HOOK_FLAG_PROCESS_STATIC should be set if the filter needs to parse the static file.
+     *      This flag turns off sendfile().
      * @return -1 on failure, 0 for already added, location in the hook-point chain on success.
      * 
      */
@@ -1319,8 +1420,11 @@ typedef struct lsi_api_t
      * @param[in] priority - the default hook-point priority. Lower value indicates 
      * higher priority and will get executed first. 
      * May be overwritten by the web admin configuration.
-     * @param[in] flag - flag for a hook point, LSI_HOOK_FLAG_TRANSFORM should be set 
-     * if a hook-point modifies input data, otherwise put 0.
+     * @param[in] flag - Flag for a hook-point: 
+     *   LSI_HOOK_FLAG_TRANSFORM should be set if a hook-point modifies input data, 
+     *   LSI_HOOK_FLAG_DECOMPRESS_REQUIRED should be set if the filter needs decompression,
+     *   LSI_HOOK_FLAG_PROCESS_STATIC should be set if the filter needs to parse the static file.
+     *      This flag turns off sendfile().
      * @return -1 on failure, 0 for already added, location in the filter chain on success.
      */
     int ( *add_session_hook )( void * session, int index, const lsi_module_t *pModule, lsi_callback_pf cb, short priority, short flag );
@@ -1341,6 +1445,16 @@ typedef struct lsi_api_t
     int ( *remove_session_hook )( void * session, int index, const lsi_module_t *pModule );
     
     /**
+     * @brief get_module is used to retrieve module information associated with a hookpoint based on callback parameters.
+     * 
+     * @since 1.0
+     * 
+     * @param[in] param - a pointer to callback parameters.
+     * @return NULL on failure, a pointer to the lsi_module_t data structure on success.
+     */
+    const lsi_module_t * (*get_module )( lsi_cb_param_t * param );
+    
+    /**
      * @brief init_module_data is used to initialize module data of a certain level(scope).
      * init_module_data must be called before using set_module_data or get_module_data.
      * 
@@ -1349,7 +1463,7 @@ typedef struct lsi_api_t
      * @param[in] pModule - a pointer to the current module defined in lsi_module_t struct
      * @param[in] cb - a pointer to the user-defined callback function that releases the user data.
      * @param[in] level - as defined in the module data level enum.
-     * @return -1 for wrong level, -2 for already initialized, 
+     * @return -1 for wrong level, -2 for already initialized, 0 for success
      * hook location of lsi_release_callback_pf from add_hook on success.
      */
     int ( *init_module_data )( lsi_module_t *pModule, lsi_release_callback_pf cb, int level );
@@ -1395,6 +1509,18 @@ typedef struct lsi_api_t
      */
     void * ( *get_module_data )( void *session, const lsi_module_t *pModule, int level );
     
+     /**
+     * @brief get_module_data gets the module data related to current callback.
+     * The return value is a pointer to the user's own data structure.
+     * 
+     * @since 1.0
+     * 
+     * @param[in] param - a pointer to callback parameters.
+     * @param[in] level - as defined in the module data level enum.
+     * @return NULL on failure, a pointer to the user defined data on success.
+     */
+    void * ( *get_cb_module_data )( const lsi_cb_param_t * param, int level );
+
     /**
      * @brief free_module_data is to be called when the user needs to free the module data immediately.
      * It is not used by the web server to call the release callback later.
@@ -1422,8 +1548,9 @@ typedef struct lsi_api_t
     int ( *stream_writev_next )( lsi_cb_param_t * pParam, struct iovec *iov, int count );
     
     /**
-     * @brief stream_read_next needs to be called in the LSI_HKPT_L4_RECVING hook point level just 
-     * after it finishes the action and needs to call the next step.
+     * @brief stream_read_next needs to be called in filter 
+     * callback functions registered to the LSI_HKPT_L4_RECVING and LSI_HKPT_RECV_REQ_BODY hook point level 
+     * to get data from a higher level filter in the chain.
      * 
      * @since 1.0
      * 
@@ -1435,7 +1562,7 @@ typedef struct lsi_api_t
     int ( *stream_read_next )( lsi_cb_param_t * pParam, char *pBuf, int size );
      
     /**
-     * @brief filter_next is used to write the response body to the next function 
+     * @brief stream_write_next is used to write the response body to the next function 
      * in the filter chain of LSI_HKPT_SEND_RESP_BODY level.
      * This must be called in order to send the response body to the next filter.
      * It returns the size written.
@@ -1447,10 +1574,10 @@ typedef struct lsi_api_t
      * @param[in] buflen - the size of the buffer.
      * @return -1 on failure, return value of the hook filter callback function.
      */    
-    int ( *filter_next )( lsi_cb_param_t * pParam, const char *buf, int len );
+    int ( *stream_write_next )( lsi_cb_param_t * pParam, const char *buf, int len );
     
     /**
-     * @brief get_gd_container is used to get the global data container which is determined by the given key.
+     * @brief get_gdata_container is used to get the global data container which is determined by the given key.
      * It will retrieve it if it exists, otherwise it will create a new one. 
      * There are two types of the containers, one is memory type and the other is the file type.
      * Memory type containers will be lost when the web server is restarted.
@@ -1463,10 +1590,10 @@ typedef struct lsi_api_t
      * @param[in] key_len - the string length.
      * @return NULL on failure, a pointer to the data container on success.
      */ 
-    struct lsi_gd_cont_val_t *( *get_gd_container)( int type, const char *key, int key_len );
+    struct lsi_gdata_cont_val_t *( *get_gdata_container)( int type, const char *key, int key_len );
     
     /**
-     * @brief empty_gd_container is used to delete all the data indices in the global data container. 
+     * @brief empty_gdata_container is used to delete all the data indices in the global data container. 
      * It won't delete the physical files in the directory of the container.
      * 
      * @since 1.0
@@ -1474,17 +1601,17 @@ typedef struct lsi_api_t
      * @param[in] container - the global data container.
      * @return -1 on failure, 0 on success.
      */
-    int ( *empty_gd_container )( struct lsi_gd_cont_val_t *container );
+    int ( *empty_gdata_container )( struct lsi_gdata_cont_val_t *container );
     
     /**
-     * @brief purge_gd_container is used to delete the physical files of the empty container.
+     * @brief purge_gdata_container is used to delete the physical files of the empty container.
      * 
      * @since 1.0
      * 
      * @param[in] container - the global data container.
      * @return -1 on failure, 0 on success.
      */
-    int ( *purge_gd_container )( struct lsi_gd_cont_val_t *container );
+    int ( *purge_gdata_container )( struct lsi_gdata_cont_val_t *container );
     
     /**
      * @brief get_gdata is used to get the global data which was already set to the container.
@@ -1500,10 +1627,10 @@ typedef struct lsi_api_t
      * @param[in] cb - a pointer to the user-defined callback function that releases the global data.
      * @param[in] renew_TTL - time to live. 
      * @param[in] deserialize_cb - a pointer to the user-defined deserializer callback function used for file read.
-     * @return a pointer to the user-defined global data, (as defined in gd_item_val_t.value) on success,
+     * @return a pointer to the user-defined global data, (as defined in gdata_item_val_t.value) on success,
      * NULL on failure.
      */
-    void * ( *get_gdata )( struct lsi_gd_cont_val_t *container, const char *key, int key_len, 
+    void * ( *get_gdata )( struct lsi_gdata_cont_val_t *container, const char *key, int key_len, 
                            lsi_release_callback_pf release_cb, int renew_TTL, lsi_deserialize_pf deserialize_cb);
     
     /**
@@ -1516,7 +1643,7 @@ typedef struct lsi_api_t
      * @param[in] key_len - the string length.
      * @return 0.
      */
-    int ( *delete_gdata )( struct lsi_gd_cont_val_t *container, const char *key, int key_len );
+    int ( *delete_gdata )( struct lsi_gdata_cont_val_t *container, const char *key, int key_len );
     
     /**
      * @brief set_gdata is used to set the global data (void * val) with a given key.  
@@ -1539,7 +1666,7 @@ typedef struct lsi_api_t
      * @param[in] serialize_cb - a pointer to the user-defined serializer callback function used for file write.
      * @return -1 on failure, 1 on not forced, 0 on success.
      */
-    int ( *set_gdata )( struct lsi_gd_cont_val_t *container, const char *key, int key_len, void *val, int TTL, 
+    int ( *set_gdata )( struct lsi_gdata_cont_val_t *container, const char *key, int key_len, void *val, int TTL, 
                         lsi_release_callback_pf release_cb, int force_update, lsi_serialize_pf serialize_cb );
         
     /**
@@ -1613,9 +1740,10 @@ typedef struct lsi_api_t
      * @since 1.0
      * 
      * @param[in] session - a pointer to void, ultimately to HttpSession.
-     * @return pointer to the URI string.
+     * @param[in,out] uri_len - a pointer to int, if not NULL, the length of the URI is returned.
+     * @return pointer to the URI string. The string is readonly.
      */
-    const char* ( *get_req_uri )( void *session );
+    const char* ( *get_req_uri )( void *session, int *uri_len );
     
     
     /**
@@ -1738,6 +1866,23 @@ typedef struct lsi_api_t
      */
     const char * ( *get_req_query_string )( void *session, int *len );
     
+    
+    /**
+     * @brief get_req_var_by_id is used to get the value of a server variable and 
+     * environment variable by the env type. Caller is responsible for managing the
+     * buffer holding value returned.
+     * 
+     * @since 1.0
+     * 
+     * @param[in] session - a pointer to void, ultimately to HttpSession.
+     * @param[in] id - enum defined as LSIAPI request variable ID.
+     * @param[in,out] val - a pointer to the allocated buffer holding value string. 
+     * @param[in] maxValLen - the maximum size of the variable value string.
+     * @return the length of the variable value string.
+     */    
+    int ( *get_req_var_by_id )( void *session, int id, char *val, int maxValLen );
+
+    
     /**
      * @brief get_req_env is used to get the value of a server variable and 
      * environment variable based on the name.  It will also get the env that is set by set_req_env.
@@ -1752,21 +1897,7 @@ typedef struct lsi_api_t
      * @return the length of the variable value string.
      */
     int ( *get_req_env )( void *session, const char *name, unsigned int nameLen, char *val, int maxValLen );
-    
-    
-    /**
-     * @brief get_req_env_by_id is used to get the value of a server variable and 
-     * environment variable by the env type.
-     * 
-     * @since 1.0
-     * 
-     * @param[in] session - a pointer to void, ultimately to HttpSession.
-     * @param[in] id - enum defined as LSIAPI request variable ID.
-     * @param[in,out] val - a pointer to the variable value string.
-     * @param[in] maxValLen - the maximum size of the variable value string.
-     * @return the length of the variable value string.
-     */    
-    int ( *get_req_env_by_id )( void *session, int id, char *val, int maxValLen );
+
     
     
     /**
@@ -1812,12 +1943,12 @@ typedef struct lsi_api_t
     int ( *get_uri_file_path )( void *session, const char *uri, int uri_len, char *path, int max_len );
     
     /**
-     * @brief set_uri_qs will redirect the current session to a new uri.
+     * @brief set_uri_qs changes uri and query string of the current session, perform internal/external redirect. 
      * 
      * @since 1.0
      * 
      * @param[in] session - a pointer to void, ultimately to HttpSession.
-     * @param[in] action - action to be taken after changing URI and Query String
+     * @param[in] action - action to be taken to URI and Query String, actions are defined in lsi_url_op  
      * @param[in] uri - a pointer to the URI string.
      * @param[in] len - the length of the URI string.
      * @param[in] qs -  a pointer to the Query String. 
@@ -1848,16 +1979,6 @@ typedef struct lsi_api_t
      */    
     int ( *read_req_body )( void *session, char *buf, int bufLen );
     
-    /**
-     * @brief get_req_body_file_fd is used to get file descriptor of the memory file of the request body. 
-     * The file descriptor should not be closed in the module.
-     * 
-     * @since 1.0
-     * 
-     * @param[in] session - a pointer to void, ultimately to HttpSession.
-     * @return -1 on failure, request body file fd on success.
-     */    
-    int ( *get_req_body_file_fd )( void *session );
     
     /**
      * @brief is_req_body_finished 
@@ -1885,6 +2006,24 @@ typedef struct lsi_api_t
      * @return 
      */
     int ( *set_req_wait_full_body )( void *session );
+    
+    /**
+     * @brief set_resp_wait_full_body is used to make the server wait for the 
+     * the whole response body before starting to send response back to client.  
+     * @details If this function is called before server sending back any response 
+     * data, server will wait the whole response body. If it is called after server 
+     * begins sending back respones data, server will stop sending more data to client 
+     * util the whole response body has been received. 
+     * Please refer to the Response Data Access section of the 
+     * LSWS Module Developer's Guide for a more in-depth explanation of the
+     * purpose of this function if you are still confused.
+     * 
+     * @since 1.0
+     * 
+     * @param[in] session - a pointer to void, ultimately to HttpSession.
+     * @return 
+     */
+    int ( *set_resp_wait_full_body )( void *session );
     
     /**
      * @brief set_status_code is used to set the response status code of a HTTP session.
@@ -1921,6 +2060,9 @@ typedef struct lsi_api_t
      * @return -1 on failure, 0 false, 1 true.
      */
     int ( *is_resp_buffer_available)( void *session );
+    
+    
+    int ( *is_resp_buffer_gzippped)( void *session );
     
     /**
      * @brief append_resp_body is used to append a buffer to the response body.
@@ -1964,7 +2106,7 @@ typedef struct lsi_api_t
      * @param[in] size - remaining size.
      * @return -1 or error codes from various layers of calls on failure, 0 on success.
      */
-    int ( *send_file )( void *session, const char *path, off_t start, off_t size );
+    int ( *send_file )( void *session, const char *path, int64_t start, int64_t size );
     
     
     /**
@@ -1995,7 +2137,7 @@ typedef struct lsi_api_t
      * @param[in] len - the content length.
      * @return 0. 
      */    
-    int ( *set_resp_content_length )( void *session, off_t len );
+    int ( *set_resp_content_length )( void *session, int64_t len );
     
     /**
      * @brief set_resp_header is used to set a response header.  
@@ -2090,14 +2232,231 @@ typedef struct lsi_api_t
      */    
     int ( *remove_resp_header )( void *session, unsigned int header_id, const char *name, int nameLen );
     
+    
     /**
-     * @brief get_multiplexer gets the session multiplexer. 
+     * @brief get_file_path_by_uri it used to get corresponding file path based on request URI.
+     * @details the difference between this function with simply append URI to document root is that this function 
+     * takes context configuration into consideration. If a context pointing to a directory outside the docuemnt root
+     * this function can return correct file path based on the context path. 
+     * 
+     * @since 1.0
+     * 
+     * @param[in] session - a pointer to void, ultimately to HttpSession.
+     * @param[in] uri - the URI.
+     * @param[in] uri_len - size of the URI.
+     * @param[in,out] path - the buffer holding the result path.
+     * @param[in] max_len - size of the path buffer.
+     * 
+     * @return if success, return the size of path, if error, return -1.
+     */
+    int ( *get_file_path_by_uri )( void *session, const char * uri, int uri_len, char * path, int max_len );
+    
+    /**
+     * @brief get_mime_type_by_suffix it used to get corresponding MIME type based on file suffix.
+     * 
+     * @since 1.0
+     * 
+     * @param[in] session - a pointer to void, ultimately to HttpSession.
+     * @param[in] suffix - the file suffix, without the leading dot.
+     * 
+     * @return return the readonly MIME type string.
+     */
+   
+    const char * ( *get_mime_type_by_suffix )( void *session, const char * suffix );
+    
+    /**
+     * @brief set_force_mime_type it used to force server core to use a MIME type with request in current session.
+     * 
+     * @since 1.0
+     * 
+     * @param[in] session - a pointer to void, ultimately to HttpSession.
+     * @param[in] mime - the MIME type string.
+     * 
+     * @return return 0 if success, -1 if failure.
+     */
+    int ( *set_force_mime_type )( void * session, const char * mime );
+    
+    
+    /**
+     * @brief get_req_file_path it used to get the static file path associated with request in current session.
+     * 
+     * @since 1.0
+     * 
+     * @param[in] session - a pointer to void, ultimately to HttpSession.
+     * @param[in,out] pathLen - the length of the path.
+     * 
+     * @return return the file path string if success, NULL if no static file associated.
+     */
+    const char * (*get_req_file_path )( void * session, int * pathLen );
+    
+    /**
+     * @brief get_req_handler_type it used to get the type name of a handler assigned to this request.
+     * 
+     * @since 1.0
+     * 
+     * @param[in] session - a pointer to void, ultimately to HttpSession.
+     * 
+     * @return return type name string, if no handler assigned, return NULL.
+     */
+
+    const char * ( *get_req_handler_type )( void * session );
+    
+    /**
+     * @brief is_access_log_on it returns if access logging is enabled for this session.
+     * 
+     * @since 1.0
+     * 
+     * @param[in] session - a pointer to void, ultimately to HttpSession.
+     * 
+     * @return return 1 if access logging is enabled, 0 if access logging is disabled.
+     */
+    int  ( *is_access_log_on )( void * session );
+    
+    /**
+     * @brief set_access_log it turns on or off access logging.
+     * 
+     * @since 1.0
+     * 
+     * @param[in] session - a pointer to void, ultimately to HttpSession.
+     * @param[in] on_off - set to 1 to turn on access logging, set to 0 to turn off access logging.
+     */
+    void ( *set_access_log )( void * session, int on_off );
+    
+    /**
+     * @brief get_access_log_string it turns a string for access log based on the log_pattern.
+     * 
+     * @since 1.0
+     * 
+     * @param[in] session - a pointer to void, ultimately to HttpSession.
+     * @param[in] log_pattern - the log pattern to be used, for detail, please refer to Apache's custom log format.
+     * @param[in,out] buf - the buffer holding the log string
+     * @param[in] bufLen - the same of buf .
+     * 
+     * @return  the length of the final log string, -1 if error.
+     */
+    int  ( *get_access_log_string )( void * session, const char * log_pattern, char * buf, int bufLen );
+    
+    int ( *get_file_stat )( void * session, const char *path, int pathLen, struct stat * st );
+    
+    int ( *is_resp_handler_aborted )( void * session );
+    
+    /**
+     * @brief get_resp_body_buf it turns a buffer that holds response body of current session .
+     * 
+     * @since 1.0
+     * 
+     * @param[in] session - a pointer to void, ultimately to HttpSession.
+     * 
+     * @return  the pointer to the response body buffer, NULL if resposne body is not available.
+     */
+    void * ( *get_resp_body_buf )( void * session );
+
+    /**
+     * @brief get_req_body_buf it turns a buffer that holds request body of current session .
+     * 
+     * @since 1.0
+     * 
+     * @param[in] session - a pointer to void, ultimately to HttpSession.
+     * 
+     * @return  the pointer to the request body buffer, NULL if resposne body is not available.
+     */
+    void * ( *get_req_body_buf )( void * session );
+    
+    int64_t ( *get_body_buf_size )( void * pBuf );
+    
+    int   ( *is_body_buf_eof ) ( void *pBuf, int64_t offset );
+    
+    const char * ( *acquire_body_buf_block )( void * pBuf, int64_t offset, int * size );
+    
+    void  ( *release_body_buf_block )( void * pBuf, int64_t offset );
+    
+    void  ( *reset_body_buf )( void * pBuf );
+    
+    int   ( *append_body_buf )( void * pBuf, const char * pBlock, int size );
+    
+    /**
+     * @brief get_body_buf_fd is used to get file descriptor if request or response body saved in a file-backed MMAP buffer. 
+     * The file descriptor should not be closed in the module.
+     * 
+     * @since 1.0
+     * 
+     * @param[in] session - a pointer to void, ultimately to HttpSession.
+     * @return -1 on failure, request body file fd on success.
+     */    
+    int   ( *get_body_buf_fd )( void * pBuf );
+    
+
+    /**
+     * @brief end_resp_headers is called by a module handler when the response headers are complete.
+     * @details calling this function is optional. Calling this function will trigger 
+     * LSI_HKPT_RECV_RESP_HEADER hook point, if not called, LSI_HKPT_RECV_RESP_HEADER will be
+     * tiggerered when adding content to response body.
+     * 
+     * @since 1.0
+     * 
+     * @param[in] session - a pointer to void, ultimately to HttpSession.
+     */
+    void ( *end_resp_headers )( void *session );
+    
+    /**
+     * @brief get_module_name returns the name of the module.
+     * 
+     * @since 1.0
+     * 
+     * @param[in] module - a pointer to lsi_module_t.
+     * @return a const pointer to the name of the module, readonly.
+     */
+    const char * ( *get_module_name )( const lsi_module_t * module );
+    
+    
+    /**
+     * @brief get_multiplexer gets the event multiplexer for the main event loop. 
      * 
      * @since 1.0
      * @return a pointer to the multiplexer used by the main event loop. 
      */    
     void * ( *get_multiplexer )();
 
+    
+
+    lsi_shm_off_t ( *shm_allocate )( int size );
+    void  ( *shm_free )( lsi_shm_off_t offset );
+    void *( *shm_get_pointer )( lsi_shm_off_t offset );
+    
+    //helper functions for atomic operations on SHM data
+    void  ( *shm_atom_incr_int8  )( lsi_shm_off_t offset, int8_t  inc_by );
+    void  ( *shm_atom_incr_int16 )( lsi_shm_off_t offset, int16_t inc_by );
+    void  ( *shm_atom_incr_int32 )( lsi_shm_off_t offset, int32_t inc_by );
+    void  ( *shm_atom_incr_int64 )( lsi_shm_off_t offset, int64_t inc_by );
+    
+    lsi_shm_htable_t *   ( *shm_get_table )( const char * pName, int initSize );
+    void  ( *shm_htable_set_hash_comp_pf )( lsi_shm_htable_t *, lsi_hash_pf hash_pf, lsi_hash_value_comp_pf comp_pf );
+
+    // set to new value regardless whether key is in table or not. 
+    int   ( *shm_htable_set )( lsi_shm_htable_t *, const uint8_t * pKey, int keyLen, uint8_t * pValue, int valLen );
+
+    // key must NOT be in table already
+    int   ( *shm_htable_add )( lsi_shm_htable_t *, const uint8_t * pKey, int keyLen, uint8_t * pValue, int valLen );
+
+    // key must be in table already
+    int   ( *shm_htable_update )( lsi_shm_htable_t *, const uint8_t * pKey, int keyLen, uint8_t * pValue, int valLen );
+    
+    lsi_shm_off_t ( *shm_htable_get )( lsi_shm_htable_t *, const uint8_t * pKey, int keyLen, int* valLen ); 
+
+    int   ( *shm_htable_delete )( lsi_shm_htable_t *, const uint8_t * pKey, int keyLen ); 
+    
+    int   ( *shm_htable_flush )( lsi_shm_htable_t * );
+    
+    int   ( *shm_htable_destory )( lsi_shm_htable_t * );
+    
+    
+    int   ( *is_subrequest )( void * session );
+    
+    
+    
+    
+    
+    
     
 } lsi_api_t;
 

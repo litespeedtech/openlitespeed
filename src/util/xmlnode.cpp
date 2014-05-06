@@ -27,8 +27,10 @@
 #include <util/ssnprintf.h>
 
 #include <limits.h>
+#include <fcntl.h>
+#include <unistd.h>
 
-#define BUF_SIZE 1024
+#define BUF_SIZE 4096
 
 class Attr
 {
@@ -196,20 +198,33 @@ int XmlNode::setValue(const char* value, int len)
     return 0;
 }
 
-const XmlNode* XmlNode::getChild(const char* name) const
+const XmlNode* XmlNode::getChild(const char* name, int bOptional) const
 {
+    //FIXME: When we start to stop using the XML, 
+    //Change back to the right value
+    //const XmlNode* defaultValue = NULL;
+    const XmlNode* defaultValue = NULL;
+    if (bOptional)
+        defaultValue = this;
     NodeMap::iterator pos;
     if ( !m_impl->m_pChildrenMap )
-        return NULL;
+        return defaultValue;
     
     pos = m_impl->m_pChildrenMap->find(name);
     if ( pos != m_impl->m_pChildrenMap->end() )
         return *(pos.second()->begin());
     else
-        return NULL;
+        return defaultValue;
 }
-const char* XmlNode::getChildValue( const char *name ) const
+
+const char* XmlNode::getChildValue( const char *name, int bKeyName ) const
 {
+    if (bKeyName)
+    {
+        const char *p = getValue();
+        if (p)
+            return p;
+    }
     const XmlNode * pNode = getChild( name );
     if ( pNode )
         return pNode->getValue();
@@ -260,9 +275,9 @@ long long XmlNode::getLongValue( const char * pTag,
 }
 
 
-XmlNode* XmlNode::getChild(const char* name)
+XmlNode* XmlNode::getChild(const char* name, int bOptional)
 {
-    return ( XmlNode*)((const XmlNode *)this)->getChild( name );
+    return ( XmlNode*)((const XmlNode *)this)->getChild( name, bOptional);
 }
 
 const XmlNodeList * XmlNode::getChildren(const char* name ) const
@@ -459,8 +474,8 @@ static void charHandler(void *data, const char* el, int len)
 
 XmlNode* XmlTreeBuilder::parse(const char* pFilePath, char * pError, int errBufLen)
 {
-    FILE* fpXml = fopen(pFilePath, "r");
-    if ( fpXml == NULL )
+    int fd = open(pFilePath, O_RDONLY);
+    if ( fd == -1 )
     {
         safe_snprintf( pError, errBufLen, "Cannot open xml file: %s\n", pFilePath );
         return NULL;
@@ -476,7 +491,7 @@ XmlNode* XmlTreeBuilder::parse(const char* pFilePath, char * pError, int errBufL
 
     do
     {
-        size_t len = fread(buf, 1, sizeof(buf), fpXml);
+        size_t len = read( fd, buf, sizeof(buf) );
         done = len < sizeof(buf);
 
         if (XML_Parse(parser, buf, len, done) == XML_STATUS_ERROR)
@@ -486,7 +501,7 @@ XmlNode* XmlTreeBuilder::parse(const char* pFilePath, char * pError, int errBufL
                     XML_ErrorString(XML_GetErrorCode(parser))
                     );
             XML_ParserFree(parser);
-            fclose(fpXml);
+            close(fd);
             if ( tree.m_pRoot )
                 delete tree.m_pRoot;
             return NULL;
@@ -495,7 +510,7 @@ XmlNode* XmlTreeBuilder::parse(const char* pFilePath, char * pError, int errBufL
     
     XML_ParserFree(parser);
 
-    fclose(fpXml);
+    close(fd);
 
     return tree.m_pRoot;
 }

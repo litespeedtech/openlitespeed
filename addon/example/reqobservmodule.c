@@ -73,46 +73,37 @@ static int hasBadWord(const char *s, size_t len)
     
     return ret;   
 }
-
-
-int check_file(int fd)
-{
-    char buf[8192] = {0};
-    int n;
-    //const int maxBadWordLength = 20;
-    int ret = LSI_RET_OK;
-    
-    //seek to begin of the file
-    lseek(fd, 0, SEEK_SET);
-    
-    while((n = read(fd, buf, 8192)) != 0)
-    {
-//         if (n == 8192)
-//             lseek(fd, -1 * maxBadWordLength, SEEK_CUR);
-        if (hasBadWord(buf, n))
-        {
-            ret = LSI_RET_ERROR;
-            break;
-        }
-    }
-    
-    return ret;
-}       
     
     
 int check_req_whole_body(struct lsi_cb_param_t *rec)
 {
-    int fd = g_api->get_req_body_file_fd( rec->_session );
-    if (fd != -1)
+    off_t offset = 0;
+    const char * pBuf; 
+    int len = 0;
+    int ret ;
+    void * pReqBodyBuf = g_api->get_req_body_buf( rec->_session );
+    while( !g_api->is_body_buf_eof( pReqBodyBuf, offset ) )
     {
-        return check_file(fd);
+        pBuf = g_api->acquire_body_buf_block(pReqBodyBuf, offset, &len );
+        if ( !pBuf )
+            break;
+        //this is for demonstration purpose, if bad words is at  
+        //the block boundery, will not be detected. 
+        // you should do better in a real-world application.
+        ret = hasBadWord(pBuf, len);
+        g_api->release_body_buf_block( pReqBodyBuf, offset );
+        if ( ret ) 
+        {
+            return LSI_RET_ERROR;
+        }
+        offset += len;
     }
     return LSI_RET_OK;
 }
 
-static int _init()
+static int _init( lsi_module_t * pModule )
 {
-    g_api->add_hook( LSI_HKPT_RECVED_REQ_BODY, &MNAME, check_req_whole_body, LSI_HOOK_EARLY , 0);
+    g_api->add_hook( LSI_HKPT_RECVED_REQ_BODY, pModule, check_req_whole_body, LSI_HOOK_EARLY , 0);
     return 0;
 }
 

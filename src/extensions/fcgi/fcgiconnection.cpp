@@ -618,8 +618,7 @@ int  FcgiConnection::sendReqHeader()
         HttpCgiTool::buildFcgiEnv( &m_env, getConnector()->getHttpSession() );
         size = m_env.size();
     }
-    int ret = 1;
-    ret = sendSpecial( m_env.get(), size );
+    int ret = sendSpecial( m_env.get(), size );
     setInProcess( 1 );
     return ret;
 }

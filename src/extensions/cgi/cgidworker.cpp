@@ -280,9 +280,9 @@ int CgidWorker::config( const XmlNode *pNode1 )
                                             HandlerFactory::getInstance( HandlerType::HT_CGI, NULL ), NULL,  LogIdTracker::getLogId() );
 
 
-    char achMIME_SSI[] = "application/x-httpd-shtml";
-    HttpGlobals::getMime()->addMimeHandler( "", achMIME_SSI,
-                                            HandlerFactory::getInstance( HandlerType::HT_SSI, NULL ), NULL,  LogIdTracker::getLogId() );
+//    char achMIME_SSI[] = "application/x-httpd-shtml";
+//    HttpGlobals::getMime()->addMimeHandler( "", achMIME_SSI,
+//                                            HandlerFactory::getInstance( HandlerType::HT_SSI, NULL ), NULL,  LogIdTracker::getLogId() );
 
     HttpGlobals::s_pidCgid = start( HttpGlobals::s_pServerRoot , psChroot,
                              HttpGlobals::s_uid, HttpGlobals::s_gid, HttpGlobals::s_priority );

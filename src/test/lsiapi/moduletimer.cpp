@@ -18,7 +18,7 @@
 #ifdef RUN_TEST
 
 #include "lsiapi/lsiapi.h"
-#include "../../addon/include/ls.h"
+#include "../addon/include/ls.h"
 #include "test/unittest-cpp/UnitTest++/src/UnitTest++.h"
 #include <unistd.h>
 #include <assert.h>
@@ -30,7 +30,7 @@ void test_module_timer_cb_fp(void *p)
 {
     char buf[31];
     DateTime::getRFCTime(DateTime::s_curTime, buf);
-    printf("Current tiem is %s[%s]\n", buf, ((p)? p : "NULL param" ));
+    printf("Current tiem is %s[%s]\n", buf, ((p)? (char *)p : "NULL param" ));
     
 }
 

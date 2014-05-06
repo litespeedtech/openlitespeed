@@ -34,7 +34,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <stdlib.h>
 #include <memory.h>
-#include <zlib.h>
+//#include <zlib.h>
 #include <string.h>
 
 
@@ -96,8 +96,8 @@ int l4send(struct lsi_cb_param_t * rec)
     
     MyData *myData = NULL;
     char *pBegin;
-    struct iovec * iov = (struct iovec *)rec->_param1;
-    int count = rec->_param1_len;
+    struct iovec * iov = (struct iovec *)rec->_param;
+    int count = rec->_param_len;
     char s[4] = {0};
     int written = 0;
     int i, j;
@@ -136,16 +136,16 @@ int l4send(struct lsi_cb_param_t * rec)
 
     int hasData  =1;
     if (_loopbuff_getdatasize(&myData->writeBuf))
-        rec->_param2 = (void *)&hasData;
+        rec->_flag_out = (void *)&hasData;
     return total;
 }
 
 
-static int init()
+static int init( lsi_module_t * pModule )
 {
-    g_api->init_module_data(&MNAME, l4release, LSI_MODULE_DATA_L4 );
-    g_api->add_hook( LSI_HKPT_L4_BEGINSESSION, &MNAME, l4init, LSI_HOOK_NORMAL, 0 );
-    g_api->add_hook( LSI_HKPT_L4_SENDING, &MNAME, l4send, LSI_HOOK_EARLY + 1, LSI_HOOK_FLAG_TRANSFORM  );
+    g_api->init_module_data(pModule, l4release, LSI_MODULE_DATA_L4 );
+    g_api->add_hook( LSI_HKPT_L4_BEGINSESSION, pModule, l4init, LSI_HOOK_NORMAL, 0 );
+    g_api->add_hook( LSI_HKPT_L4_SENDING, pModule, l4send, LSI_HOOK_EARLY + 1, LSI_HOOK_FLAG_TRANSFORM  );
     return 0;
 }
 

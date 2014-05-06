@@ -190,7 +190,7 @@ public:
 };
 
 MIMESubMap::MIMESubMap( const MIMESubMap& rhs )
-    : m_sMainType( rhs.m_sMainType )
+    : HashStringMap<MIMESetting*>( 10 ), m_sMainType( rhs.m_sMainType )
 {
     iterator iter;
     for( iter = rhs.begin(); iter != rhs.end(); iter = rhs.next( iter ) )
@@ -298,6 +298,7 @@ public:
 };
 
 MIMEMap::MIMEMap( const MIMEMap & rhs )
+    : HashStringMap<MIMESubMap*>( 10 )
 {
     iterator iter;
     for( iter = rhs.begin(); iter != rhs.end(); iter = rhs.next( iter ) )

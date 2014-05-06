@@ -59,11 +59,11 @@ public:
     const char * getServerRoot()    const   {   return m_sServerRoot.c_str();   }
     const char * getChroot()        const   {   return m_sChroot.c_str();       }
     const AutoStr2* getpsChroot()   const   {   return &m_sChroot;              }
-    const int    getChrootlen()     const   {   return m_sChroot.len();         }
+    int    getChrootlen()     const         {   return m_sChroot.len();         }
     const char * getGroup()         const   {   return m_sGroup.c_str();        }
     const char * getUser()          const   {   return m_sUser.c_str();         }
     const char * getAutoIndexURI()  const   {   return m_sAutoIndexURI.c_str(); }
-    const int  getEnableCoreDump()  const   {   return m_iEnableCoreDump;       }
+    int  getEnableCoreDump()  const         {   return m_iEnableCoreDump;       }
     
 };
 

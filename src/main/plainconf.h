@@ -65,11 +65,12 @@ module {
 
 #include <util/xmlnode.h>
 #include "util/autostr.h"
+#define TEST_OUTPUT_PLAIN_CONF
 
 struct plainconfKeywords
 {
-    AutoStr2 name;
-    AutoStr2 alias;
+    const char* name;
+    const char* alias;
 };
 
 namespace plainconf {
@@ -90,6 +91,8 @@ namespace plainconf {
     
     //testing functions
     void testOutputConfigFile(const XmlNode *pNode, const char *file);
+    
+    void flushErrorLog();
     
 }
 

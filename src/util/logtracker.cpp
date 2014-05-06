@@ -19,10 +19,10 @@
 #include <stddef.h>
 LogTracker::LogTracker()
     : m_pLogger( NULL )
-    , m_iLogIdBuilt( 0 )
 {
     m_logId.resizeBuf( MAX_LOGID_LEN + 1 );
     *( m_logId.buf() + MAX_LOGID_LEN ) = 0;
+    *m_logId.buf() = 0;
 }
 LogTracker::~LogTracker()
 {}

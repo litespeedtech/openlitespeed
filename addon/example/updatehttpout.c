@@ -34,7 +34,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <stdlib.h>
 #include <memory.h>
-#include <zlib.h>
+//#include <zlib.h>
 #include <string.h>
 
 /////////////////////////////////////////////////////////////////////////////
@@ -94,8 +94,8 @@ int httpinit(struct lsi_cb_param_t *rec)
 int httprespwrite(struct lsi_cb_param_t *rec)
 {
     MyData *myData = NULL;
-    const char *in = rec->_param1;
-    int inLen = rec->_param1_len;
+    const char *in = rec->_param;
+    int inLen = rec->_param_len;
     int written, total = 0;
 //    int j;
 //    char s[4] = {0};
@@ -113,13 +113,18 @@ int httprespwrite(struct lsi_cb_param_t *rec)
     total = inLen + sizeof(TEST_STRING) -1;
     
     _loopbuff_reorder(&myData->outWBuf);
-    written = g_api->filter_next( rec,  _loopbuff_getdataref(&myData->outWBuf),
+    written = g_api->stream_write_next( rec,  _loopbuff_getdataref(&myData->outWBuf),
                                                  _loopbuff_getdatasize(&myData->outWBuf) );
     _loopbuff_erasedata(&myData->outWBuf, written);
     
     g_api->log(LSI_LOG_DEBUG, "#### mymodulehttp test, next caller written %d, return %d, left %d",  
                          written, total, _loopbuff_getdatasize(&myData->outWBuf));
 
+    if (_loopbuff_hasdata(&myData->outWBuf))
+    {
+        int hasData = 1;
+        rec->_flag_out = &hasData;
+    }
     return inLen; //Because all data used, ruturn thr orignal length
 }
 
@@ -140,7 +145,7 @@ int httpreqHeaderRecved(struct lsi_cb_param_t *rec)
     int hostLen, uaLen, acceptLen, headerLen; 
     char uaBuf[1024], hostBuf[128], acceptBuf[512];
     
-    uri = g_api->get_req_uri(rec->_session);
+    uri = g_api->get_req_uri(rec->_session, NULL);
     host = g_api->get_req_header(rec->_session, "Host", 4, &hostLen);
     ua = g_api->get_req_header(rec->_session, "User-Agent", 10, &uaLen);
     accept = g_api->get_req_header(rec->_session, "Accept", 6, &acceptLen);
@@ -160,12 +165,13 @@ int httpreqHeaderRecved(struct lsi_cb_param_t *rec)
 }
 
 
-static int _init()
+static int _init(lsi_module_t * pModule)
 {
-    g_api->init_module_data(&MNAME, httpRelease, LSI_MODULE_DATA_HTTP );
-    g_api->add_hook(LSI_HKPT_HTTP_BEGIN, &MNAME, httpinit, LSI_HOOK_NORMAL, 0);
-    g_api->add_hook(LSI_HKPT_RECV_RESP_BODY, &MNAME, httprespwrite, LSI_HOOK_NORMAL, LSI_HOOK_FLAG_TRANSFORM);
-    g_api->add_hook(LSI_HKPT_RECV_REQ_HEADER, &MNAME, httpreqHeaderRecved, LSI_HOOK_NORMAL, 0);
+    g_api->init_module_data(pModule, httpRelease, LSI_MODULE_DATA_HTTP );
+    g_api->add_hook(LSI_HKPT_HTTP_BEGIN, pModule, httpinit, LSI_HOOK_NORMAL, 0);
+    g_api->add_hook(LSI_HKPT_RECV_RESP_BODY, pModule, httprespwrite, LSI_HOOK_NORMAL, 
+                    LSI_HOOK_FLAG_TRANSFORM | LSI_HOOK_FLAG_DECOMPRESS_REQUIRED );
+    g_api->add_hook(LSI_HKPT_RECV_REQ_HEADER, pModule, httpreqHeaderRecved, LSI_HOOK_NORMAL, 0);
     return 0;
 }
 

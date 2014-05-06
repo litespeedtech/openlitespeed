@@ -25,7 +25,7 @@
 #include <http/sendfileinfo.h>
 #include <http/ntwkiolink.h>
 #include <lsiapi/lsimoduledata.h>
-#include <lsiapi/lsiapi.h>
+
 #include <util/linkedobj.h>
 
 class ReqHandler;
@@ -48,6 +48,7 @@ enum  HttpSessionState {
     HSS_PROCESSING,
     HSS_REDIRECT,
     HSS_EXT_REDIRECT,
+    HSS_HTTP_ERROR,
     HSS_WRITING,
     HSS_AIO_PENDING,
     HSS_AIO_COMPLETE,
@@ -61,10 +62,17 @@ enum  HttpSessionState {
 #define HSF_RESP_FLUSHED            (1<<4)
 #define HSF_REQ_BODY_DONE           (1<<5)
 #define HSF_REQ_WAIT_FULL_BODY      (1<<6)
-//#define HSF_HOOK_SESSION_STARTED    (1<<6)
+#define HSF_RESP_WAIT_FULL_BODY     (1<<7)
+#define HSF_RESP_HEADER_DONE        (1<<8)
+#define HSF_ACCESS_LOG_OFF          (1<<9)
+#define HSF_HOOK_SESSION_STARTED    (1<<10)
+#define HSF_RECV_RESP_BUFFERED      (1<<11)
+#define HSF_SEND_RESP_BUFFERED      (1<<12)
+#define HSF_CHUNK_CLOSED            (1<<13)
 
 
-class HttpSession : public HioStreamHandler, public LsiSession
+
+class HttpSession : public LsiSession, public HioStreamHandler 
 {    
     HttpReq               m_request;
     HttpResp              m_response;
@@ -79,7 +87,6 @@ class HttpSession : public HioStreamHandler, public LsiSession
     ReqHandler          * m_pHandler;
     
     off_t                 m_lDynBodySent;
-    int                   m_iRespBodyCacheOffset;
     
     VMemBuf             * m_pRespBodyBuf;
     GzipBuf             * m_pGzipBuf;
@@ -131,17 +138,14 @@ private:
     int checkAuthorizer( const HttpHandler * pHandler );
     int assignHandler( const HttpHandler * pHandler );
     int readReqBody();
-    int reqBodyDoneProcess();
+    int reqBodyDone();
     int processReqBody();
     int processNewReq();
     int processURI( const char * pURI );
     int readToHeaderBuf();
     void sendHttpError( const char * pAdditional );
     int detectTimeout();
-    
-    
-    int genRespHeaders();
-    
+        
     //int cacheWrite( const char * pBuf, int size );
     //int writeRespBuf();
 
@@ -164,11 +168,17 @@ private:
     int sendStaticFileEx(  SendFileInfo * pData );
     void releaseSendFileInfo();
     int chunkSendfile( int fdSrc, off_t off, size_t size );
-    static int writeRespBodyCb( HttpSession* pSession, const char * pBuf, int size );
     int processWebSocketUpgrade(const HttpVHost* pVHost);
     int sendRespHeaders( );   
     int resumeHandlerProcess();
-    
+    int flushBody();
+    int endResponseInternal( int success );
+
+    int getModuleDenyCode( int iHookLevel );
+    int processHkptResult( int iHookLevel, int ret );
+    int restartHandlerProcess();
+    int runFilter( int hookLevel, void *pfTerm, const char* pBuf, int len, int flagIn );
+    int contentEncodingFixup();
     
 
 public:
@@ -234,14 +244,12 @@ public:
     long getReqTime() const {   return m_lReqTime;  }
     int32_t getReqTimeUs() const    {   return m_iReqTimeUs;    }
 
-    int writeRespBody( const char * pBuf, int size );
+    int writeRespBodyDirect( const char * pBuf, int size );
+    int writeRespBody( const char * pBuf, int len );
     
     bool sendBody() const
     {   return !m_request.noRespBody();  }
 
-    int  beginWrite();
-
-    void sendRespDone();
 
     int onReadEx();
     int onWriteEx();
@@ -265,7 +273,9 @@ public:
     //const char * buildLogId();
 
     void httpError( int code, const char * pAdditional = NULL)
-    {   m_request.setStatusCode( code );
+    {   if (code < 0)
+            code = SC_500;
+        m_request.setStatusCode( code );
         sendHttpError( pAdditional );
     }
     int read( char * pBuf, int size );
@@ -281,32 +291,31 @@ public:
     int writeRespBodySendFile( int fdFile, off_t offset, size_t size );
     int setupRespCache();   
     void releaseRespCache();
-    int _writeRespBody( const char * pBuf, int len );
     int sendDynBody();
     int setupGzipFilter();
-    int setupGzipBuf( int type );
+    int setupGzipBuf();
     void releaseGzipBuf();
-    int appendDynBody( int inplace, const char * pBuf, int len );  
-    int appendDynBodyEx( int inplace, const char * pBuf, int len );  
+    int appendDynBody( const char * pBuf, int len );  
+    int appendDynBodyEx( const char * pBuf, int len );  
 
-    int appendRespCache( const char * pBuf, int len );
-    int appendRespCacheV( const iovec *vector, int count );
+    int appendRespBodyBuf( const char * pBuf, int len );
+    int appendRespBodyBufV( const iovec *vector, int count );
     
     int shouldSuspendReadingResp();
     void resetRespBodyBuf();
     int checkRespSize( int nobuffer );
 
-    int respHeaderDone( int &respState );
+    int respHeaderDone( int respState );
     
     void setRespBodyDone()
     {   m_iFlag |= HSF_RESP_DONE;    }
     
-    int endDynResp( int success );
-    int setupDynRespBodyBuf( int &iRespState );
+    int endResponse( int success );
+    int setupDynRespBodyBuf();
     GzipBuf * getGzipBuf() const    {   return m_pGzipBuf;  }
     VMemBuf * getRespCache() const  {   return m_pRespBodyBuf; }
     off_t getDynBodySent() const    {   return m_lDynBodySent; }
-    int flushDynBody( int nobuff );
+    //int flushDynBody( int nobuff );
     int execExtCmd( const char * pCmd, int len );
     int handlerProcess( const HttpHandler * pHandler );
     int getParsedScript( SSIScript * &pScript );
@@ -322,6 +331,8 @@ public:
     LOG4CXX_NS::Logger* getLogger() const   {   return getStream()->getLogger();   }
     
     const char * getLogId() {   return getStream()->getLogId();     }
+
+    LogTracker * getLogTracker()    {   return getStream();     }
 
     SendFileInfo* getSendFileInfo() {   return &m_sendFileInfo;   }
 
@@ -349,15 +360,21 @@ public:
 
     void setSendFileOffsetSize( off_t start, off_t size );
 
-    int beginSendStaticFile(  SendFileInfo * pData );
-    int hooked_finalizeHeader( int ver, int code );
+    int finalizeHeader( int ver, int code );
     LsiModuleData* getModuleData()      {   return &m_moduleData;   }
     
     LsiApiHooks * getModSessionHooks( int index )
     {   return m_sessionHooks.getCopy( index ); }
+    void setSendFileBeginEnd( off_t start, off_t end );
+    void prepareHeaders( int arg1 );
+    void addLocationHeader();
     
-    
-    
+    void setAccessLogOff()      {   m_iFlag |= HSF_ACCESS_LOG_OFF;  }
+    int shouldLogAccess() const    
+    {   return !(m_iFlag & HSF_ACCESS_LOG_OFF );    }
+
+    void processContentType( );
+
 };
 
 #endif

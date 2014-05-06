@@ -15,38 +15,10 @@
 *    You should have received a copy of the GNU General Public License       *
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
-/*
-# "{" and "}" to quot a module, in a module, keys shouldn't be duplicate
-#
-# Comment begins with #  
-#
-# Backslash (\) can be used as the last character on a line to indicate to continues onto the next line 
-# The next line will be added one space in the beginning
-# Use "\" for a real \
-#
-# Space(s) or tab(s) in the beginning of a value will be removed, use " " instead of space or tab
-#
-# "include" can be used to include files or directories, wild character can be used here
-
-include mime.types
-
-module {
-        key1    value1 value1...
-        key2    value2 is a multlple lines value with space in beginning of the 2nd line.\
-                    "  "This is  the 2nd line of value2 and end with backslash"\"
-
-        include         1.conf
-        include         conf
-        
-        key3            v3
-
-        submodule1 {
-                skey1   svalue1 s2
-                skey2   sv2
-                
-        }
-}
-*/
+/**
+ * FIXME
+ * For reference of the usage of plain text configuration, please review URL 
+ */
 
 #include "plainconf.h"
 #include "util/stringtool.h"
@@ -57,227 +29,400 @@ module {
 #include <unistd.h>
 #include <util/stringlist.h>
 #include <dirent.h>
-#include <http/httplog.h>
 #include <util/logtracker.h>
 #include <string.h>
 #include <http/httpreq.h>
 #include <util/hashstringmap.h>
+#include <stdarg.h>
 #include <http/httplog.h>
 
-//All the keywords are lower case
-static plainconfKeywords sKeywords[] = {
+//Special case
+//:: means module and module name
 
-        {"accesscontrol",        "acc"},
-        {"accessdenydir",        "acd"},
-        {"accessfilename",        ""},
-        {"accesslog",        ""},
-        {"add",        ""},
-        {"adddefaultcharset",        ""},
-        {"address",        "addr"},
-        {"adminemails",        ""},
-        {"adminroot",        ""},
-        {"aioblocksize",        ""},
-        {"allow",        ""},
-        {"allowbrowse",             ""},
-        {"allowdirectaccess",        ""},
-        {"allowedhosts",        ""},
-        {"allowsymbollink",        ""},
-        {"allowoverride",          ""},
-        {"authname",        ""},
-        {"authorizer",        ""},
-        {"autofix503",        ""},
-        {"autoindex",        ""},
-        {"autoindexuri",            ""},
-        {"autorestart",        "autoreboot"},
-        {"autostart",        "autorun"},
-        {"autoupdatedownloadpkg",        ""},
-        {"autoupdateinterval",        ""},
-        {"awstats",        ""},
-        {"awstatsuri",        ""},
-        {"backlog",        ""},
-        {"banperiod",        ""},
-        {"base",        ""},
-        {"cachetimeout",        ""},
-        {"cgirlimit",        ""},
-        {"checksymbollink",        ""},
-        {"chrootmode",      ""},
-        {"chrootpath",        ""},
-        {"compressarchive",        ""},
-        {"compressibletypes",        ""},
-        {"conntimeout",        ""},
-        {"context",        ""},
-        {"cpuhardlimit",        ""},
-        {"cpusoftlimit",        ""},
-        {"customerrorpages",        ""},
-        {"debuglevel",        ""},
-        {"defaultcharsetcustomized",        ""},
-        {"deny",        ""},
-        {"dir",        ""},
-        {"disableadmin",        ""},
-        {"docroot",        ""},
-        {"dynreqpersec",        ""},
-        {"enable",        ""},
-        {"enablechroot",        ""},
-        {"enablecontextac",        ""},
-        {"enabledyngzipcompress",        ""},
-        {"enableexpires",        ""},
-        {"enablegzip",        ""},
-        {"enablegzipcompress",        ""},
-        {"enablehotlinkctrl",        ""},
-        {"enablelve",        ""},
-        {"enablescript",        ""},
-        {"enablestderrlog",        ""},
-        {"env",        ""},
-        {"errcode",                 ""},
-        {"errorlog",        ""},
-        {"errorpage",               ""},
-        {"eventdispatcher",        ""},
-        {"expires",        ""},
-        {"expiresbytype",        ""},
-        {"expiresdefault",        ""},
-        {"extmaxidletime",        ""},
-        {"extprocessor",        ""},
-        {"extraheaders",        ""},
-        {"fileaccesscontrol",        ""},
-        {"fileetag",        ""},
-        {"filename",        ""},
-        {"followsymbollink",        ""},
-        {"forcestrictownership",        ""},
-        {"general",        ""},
-        {"gracefulrestarttimeout",        ""},
-        {"graceperiod",        ""},
-        {"group",        ""},
-        {"groupdb",        ""},
-        {"gzipautoupdatestatic",        ""},
-        {"gzipcompresslevel",        ""},
-        {"gzipmaxfilesize",        ""},
-        {"gzipminfilesize",        ""},
-        {"gzipstaticcompresslevel",        ""},
-        {"hardlimit",        ""},
-        {"htaccess",         ""},
-        {"hotlinkctrl",        ""},
-        {"inbandwidth",        ""},
-        {"include",        ""},
-        {"index",                   ""},
-        {"indexfiles",        ""},
-        {"inherit",        ""},
-        {"inittimeout",        ""},
-        {"inmembufsize",        ""},
-        {"instances",        ""},
-        {"keepalivetimeout",        ""},
-        {"keepdays",        ""},
-        {"listener",        ""},
-        {"listeners",        ""},
-        {"location",        ""},
-        {"loglevel",        ""},
-        {"logreferer",      ""},
-        {"loguseragent",    ""},
-        {"map",        ""},
-        {"maxcachedfilesize",        ""},
-        {"maxcachesize",        ""},
-        {"maxcgiinstances",        ""},
-        {"maxconnections",        ""},
-        {"maxconns",        ""},
-        {"maxdynrespheadersize",        ""},
-        {"maxdynrespsize",        ""},
-        {"maxkeepalivereq",        ""},
-        {"maxmmapfilesize",        ""},
-        {"maxreqbodysize",        ""},
-        {"maxreqheadersize",        ""},
-        {"maxrequrllen",        ""},
-        {"maxsslconnections",        ""},
-        {"memhardlimit",        ""},
-        {"memsoftlimit",        ""},
-        {"mime",        ""},
-        {"mingid",        ""},
-        {"minuid",        ""},
-        {"name",        ""},
-        {"note",        ""},
-        {"onlyself",        ""},
-        {"outbandwidth",        ""},
-        {"path",        ""},
-        {"pckeepalivetimeout",        ""},
-        {"perclientconnlimit",        ""},
-        {"persistconn",        ""},
-        {"phpsuexec",        ""},
-        {"phpsuexecmaxconn",        ""},
-        {"priority",        ""},
-        {"prochardlimit",        ""},
-        {"procsoftlimit",        ""},
-        {"railsdefaults",        ""},
-        {"railsenv",        ""},
-        {"rcvbufsize",        ""},
-        {"realm",        ""},
-        {"realmlist",        ""},
-        {"required",        ""},
-        {"requiredpermissionmask",        ""},
-        {"respbuffer",        ""},
-        {"restrained",        ""},
-        {"restricteddirpermissionmask",        ""},
-        {"restrictedpermissionmask",        ""},
-        {"restrictedscriptpermissionmask",        ""},
-        {"retrytimeout",        ""},
-        {"rewrite",        ""},
-        {"rewritebase",        ""},
-        {"rewritecond",        ""},
-        {"rewriteengine",        ""},
-        {"rewriterule",        ""},
-        {"rollingsize",        ""},
-        {"rubybin",        ""},
-        {"runonstartup",        ""},
-        {"scripthandler",        ""},
-        {"secure",        ""},
-        {"security",        ""},
-        {"servername",        ""},
-        {"setuidmode",        ""},
-        {"showversionnumber",        ""},
-        {"sitealiases",        ""},
-        {"sitedomain",        ""},
-        {"smartkeepalive",        ""},
-        {"sndbufsize",        ""},
-        {"softlimit",        ""},
-        {"sslcryptodevice",        ""},
-        {"staticreqpersec",        ""},
-        {"suffixes",        ""},
-        {"suspendedvhosts",        ""},
-        {"swappingdir",        ""},
-        {"templatefile",        ""},
-        {"totalinmemcachesize",        ""},
-        {"totalmmapcachesize",        ""},
-        {"tuning",        ""},
-        {"type",        ""},
-        {"updateinterval",        ""},
-        {"updatemode",        ""},
-        {"updateoffset",        ""},
-        {"uri",        ""},
-        {"url",                     ""},
-        {"useaio",        ""},
-        {"user",        ""},
-        {"userdb",        ""},
-        {"usesendfile",        ""},
-        {"useserver",               ""},
-        {"vhroot",        ""},
-        {"vhtemplate",        ""},
-        {"virtualhost",        ""},
-        {"websocket",        ""},
-        {"workingdir",        ""},
+#define SERVER_ROOT_XML_NAME    "httpServerConfig"
+#define UNKNOWN_KEYWORDS        "unknownkeywords"
+//All the keywords are lower case
+static plainconfKeywords sKeywords[] = 
+{
+    {"a_ext_fcgi",                               NULL},
+    {"a_ext_fcgiauth",                           NULL},
+    {"a_ext_loadbalancer",                       NULL},
+    {"a_ext_logger",                             NULL},
+    {"a_ext_lsapi",                              NULL},
+    {"a_ext_proxy",                              NULL},
+    {"a_ext_servlet",                            NULL},
+    {"accesscontrol",                                   "acc"},
+    {"accessdenydir",                                   "acd"},
+    {"accessfilename",                           NULL},
+    {"accesslog",                                NULL},
+    {"add",                                      NULL},
+    {"adddefaultcharset",                        NULL},
+    {"addmimetype",                              NULL},
+    {"address",                                                 "addr"},
+    {"adminconfig",                              NULL},
+    {"adminemails",                              NULL},
+    {"adminroot",                                NULL},
+    {"aioblocksize",                             NULL},
+    {"allow",                                    NULL},
+    {"allowbrowse",                              NULL},
+    {"allowdirectaccess",                        NULL},
+    {"allowedhosts",                             NULL},
+    {"allowoverride",                            NULL},
+    {"allowsetuid",                              NULL},
+    {"allowsymbollink",                          NULL},
+    {"attrgroupmember",                          NULL},
+    {"attrmemberof",                             NULL},
+    {"attrpasswd",                               NULL},
+    {"authname",                                 NULL},
+    {"authorizer",                               NULL},
+    {"autofix503",                               NULL},
+    {"autoindex",                                NULL},
+    {"autoindexuri",                             NULL},
+    {"autorestart",                              NULL},
+    {"autostart",                                NULL},
+    {"autoupdatedownloadpkg",                    NULL},
+    {"autoupdateinterval",                       NULL},
+    {"awstats",                                  NULL},
+    {"awstatsuri",                               NULL},
+    {"backlog",                                  NULL},
+    {"banperiod",                                NULL},
+    {"base",                                     NULL},
+    {"binding",                                  NULL},
+    {"blockbadreq",                              NULL},
+    {"byteslog",                                 NULL},
+    {"cacertfile",                               NULL},
+    {"cacertpath",                               NULL},
+    {"cachetimeout",                             NULL},
+    {"certchain",                                NULL},
+    {"certfile",                                 NULL},
+    {"cgidsock",                                 NULL},
+    {"cgirlimit",                                NULL},
+    {"checksymbollink",                          NULL},
+    {"chrootmode",                               NULL},
+    {"chrootpath",                               NULL},
+    {"ciphers",                                  NULL},
+    {"clientverify",                             NULL},
+    {"compressarchive",                          NULL},
+    {"compressibletypes",                        NULL},
+    {"configfile",                               NULL},
+    {"conntimeout",                              NULL},
+    {"context",                                  NULL},
+    {"contextlist",                              NULL},
+    {"cpuhardlimit",                             NULL},
+    {"cpusoftlimit",                             NULL},
+    {"crlfile",                                  NULL},
+    {"crlpath",                                  NULL},
+    {"customerrorpages",                         NULL},
+    {"debuglevel",                               NULL},
+    {"defaultcharsetcustomized",                 NULL},
+    {"defaulttype",                              NULL},
+    {"deny",                                     NULL},
+    {"dhparam",                                  NULL},
+    {"dir",                                      NULL},
+    {"disableadmin",                             NULL},
+    {"disableinitlogrotation",                   NULL},
+    {"docroot",                                  NULL},
+    {"domain",                                   NULL},
+    {"dynreqpersec",                             NULL},
+    {"enable",                                   NULL},
+    {"enablechroot",                             NULL},
+    {"enablecontextac",                          NULL},
+    {"enablecoredump",                           NULL},
+    {"enabled",                                  NULL},
+    {"enabledhe",                                NULL},
+    {"enabledyngzipcompress",                    NULL},
+    {"enableecdhe",                              NULL},
+    {"enableexpires",                            NULL},
+    {"enablegzip",                               NULL},
+    {"enablegzipcompress",                       NULL},
+    {"enablehotlinkctrl",                        NULL},
+    {"enableipgeo",                              NULL},
+    {"enablelve",                                NULL},
+    {"enablescript",                             NULL},
+    {"enablespdy",                               NULL},
+    {"enablestapling",                           NULL},
+    {"enablestderrlog",                          NULL},
+    {"env",                                      NULL},
+    {"errcode",                                  NULL},
+    {"errorlog",                                 NULL},
+    {"errorpage",                                NULL},
+    {"eventdispatcher",                          NULL},
+    {"expires",                                  NULL},
+    {"expiresbytype",                            NULL},
+    {"expiresdefault",                           NULL},
+    {"externalredirect",                         NULL},
+    {"extgroup",                                 NULL},
+    {"extmaxidletime",                           NULL},
+    {"extprocessor",                             NULL},
+    {"extprocessorlist",                         NULL},
+    {"extraheaders",                             NULL},
+    {"extuser",                                  NULL},
+    {"fileaccesscontrol",                        NULL},
+    {"fileetag",                                 NULL},
+    {"filename",                                 NULL},
+    {"followsymbollink",                         NULL},
+    {"forcegid",                                 NULL},
+    {"forcestrictownership",                     NULL},
+    {"forcetype",                                NULL},
+    {"general",                                  NULL},
+    {"geoipdb",                                  NULL},
+    {"geoipdbcache",                             NULL},
+    {"geoipdbfile",                              NULL},
+    {"gracefulrestarttimeout",                   NULL},
+    {"graceperiod",                              NULL},
+    {"group",                                    NULL},
+    {"groupdb",                                  NULL},
+    {"gzipautoupdatestatic",                     NULL},
+    {"gzipcachedir",                             NULL},
+    {"gzipcompresslevel",                        NULL},
+    {"gzipmaxfilesize",                          NULL},
+    {"gzipminfilesize",                          NULL},
+    {"gzipstaticcompresslevel",                  NULL},
+    {"handler",                                  NULL},
+    {"hardlimit",                                NULL},
+    {"hookpriority",                             NULL},
+    {"hotlinkctrl",                              NULL},
+    {"htaccess",                                 NULL},
+    {"http_begin",                               NULL},
+    {"http_end",                                 NULL},
+    {"httpdworkers",                             NULL},
+    {"httpserverconfig",                         NULL},
+    {"inbandwidth",                              NULL},
+    {"include",                                  NULL},
+    {"index",                                    NULL},
+    {"indexfiles",                               NULL},
+    {"inherit",                                  NULL},
+    {"inittimeout",                              NULL},
+    {"inmembufsize",                             NULL},
+    {"instances",                                NULL},
+    {"iptogeo",                                  NULL},
+    {"keepalivetimeout",                         NULL},
+    {"keepdays",                                 NULL},
+    {"keyfile",                                  NULL},
+    {"l4_begsession",                            NULL},
+    {"l4_endsession",                            NULL},
+    {"l4_recving",                               NULL},
+    {"l4_sending",                               NULL},
+    {"ldapbinddn",                               NULL},
+    {"ldapbindpasswd",                           NULL},
+    {"listener",                                 NULL},
+    {"listenerlist",                             NULL},
+    {"listeners",                                NULL},
+    {"location",                                 NULL},
+    {"log",                                      NULL},
+    {"logformat",                                NULL},
+    {"logging",                                  NULL},
+    {"logheaders",                               NULL},
+    {"loglevel",                                 NULL},
+    {"logreferer",                               NULL},
+    {"loguseragent",                             NULL},
+    {"map",                                      NULL},
+    {"maxcachedfilesize",                        NULL},
+    {"maxcachesize",                             NULL},
+    {"maxcgiinstances",                          NULL},
+    {"maxconnections",                           NULL},
+    {"maxconns",                                 NULL},
+    {"maxdynrespheadersize",                     NULL},
+    {"maxdynrespsize",                           NULL},
+    {"maxkeepalivereq",                          NULL},
+    {"maxmmapfilesize",                          NULL},
+    {"maxreqbodysize",                           NULL},
+    {"maxreqheadersize",                         NULL},
+    {"maxrequrllen",                             NULL},
+    {"maxsslconnections",                        NULL},
+    {"member",                                   NULL},
+    {"memhardlimit",                             NULL},
+    {"memsoftlimit",                             NULL},
+    {"mime",                                     NULL},
+    {"mingid",                                   NULL},
+    {"minuid",                                   NULL},
+    {"module",                                   NULL},
+    {"modulelist",                               NULL},
+    {"name",                                     NULL},
+    {"note",                                     NULL},
+    {"ocspcacerts",                              NULL},
+    {"ocsprespmaxage",                           NULL},
+    {"ocspresponder",                            NULL},
+    {"onlyself",                                 NULL},
+    {"outbandwidth",                             NULL},
+    {"param",                                    NULL},
+    {"path",                                     NULL},
+    {"pckeepalivetimeout",                       NULL},
+    {"perclientconnlimit",                       NULL},
+    {"persistconn",                              NULL},
+    {"phpsuexec",                                NULL},
+    {"phpsuexecmaxconn",                         NULL},
+    {"pipedlogger",                              NULL},
+    {"priority",                                 NULL},
+    {"prochardlimit",                            NULL},
+    {"procsoftlimit",                            NULL},
+    {"railsdefaults",                            NULL},
+    {"railsenv",                                 NULL},
+    {"rcvbufsize",                               NULL},
+    {"realm",                                    NULL},
+    {"realmlist",                                NULL},
+    {"recv_req_bdy",                             NULL},
+    {"recv_req_hdr",                             NULL},
+    {"recv_rsp_bdy",                             NULL},
+    {"recv_rsp_hdr",                             NULL},
+    {"recved_req_bdy",                           NULL},
+    {"recved_rsp_bdy",                           NULL},
+    {"renegprotection",                          NULL},
+    {"required",                                 NULL},
+    {"requiredpermissionmask",                   NULL},
+    {"respbuffer",                               NULL},
+    {"restrained",                               NULL},
+    {"restricteddirpermissionmask",              NULL},
+    {"restrictedpermissionmask",                 NULL},
+    {"restrictedscriptpermissionmask",           NULL},
+    {"retrytimeout",                             NULL},
+    {"rewrite",                                  NULL},
+    {"rewritebase",                              NULL},
+    {"rewritecond",                              NULL},
+    {"rewriteengine",                            NULL},
+    {"rewriterule",                              NULL},
+    {"rollingsize",                              NULL},
+    {"rubybin",                                  NULL},
+    {"rules",                                    NULL},
+    {"runonstartup",                             NULL},
+    {"scripthandler",                            NULL},
+    {"scripthandlerlist",                        NULL},
+    {"secure",                                   NULL},
+    {"security",                                 NULL},
+    {"send_rsp_bdy",                             NULL},
+    {"send_rsp_hdr",                             NULL},
+    {"servername",                               NULL},
+    {"sessiontimeout",                           NULL},
+    {"setuidmode",                               NULL},
+    {"showversionnumber",                        NULL},
+    {"sitealiases",                              NULL},
+    {"sitedomain",                               NULL},
+    {"smartkeepalive",                           NULL},
+    {"sndbufsize",                               NULL},
+    {"softlimit",                                NULL},
+    {"spdyadheader",                             NULL},
+    {"sslcryptodevice",                          NULL},
+    {"sslprotocol",                              NULL},
+    {"staticreqpersec",                          NULL},
+    {"statuscode",                               NULL},
+    {"suffix",                                   NULL},
+    {"suffixes",                                 NULL},
+    {"suspendedvhosts",                          NULL},
+    {"swappingdir",                              NULL},
+    {"templatefile",                             NULL},
+    {"totalinmemcachesize",                      NULL},
+    {"totalmmapcachesize",                       NULL},
+    {"tp_ext_fcgi",                              NULL},
+    {"tp_ext_fcgiauth",                          NULL},
+    {"tp_ext_loadbalancer",                      NULL},
+    {"tp_ext_logger",                            NULL},
+    {"tp_ext_lsapi",                             NULL},
+    {"tp_ext_proxy",                             NULL},
+    {"tp_ext_servlet",                           NULL},
+    {"tp_realm_file",                            NULL},
+    {"tuning",                                   NULL},
+    {"type",                                     NULL},
+    {"umask",                                    NULL},
+    {"updateinterval",                           NULL},
+    {"updatemode",                               NULL},
+    {"updateoffset",                             NULL},
+    {"uri",                                      NULL},
+    {"uri_map",                                  NULL},
+    {"url",                                      NULL},
+    {"urlfilter",                                NULL},
+    {"urlfilterlist",                            NULL},
+    {"useaio",                                   NULL},
+    {"useipinproxyheader",                       NULL},
+    {"user",                                     NULL},
+    {"userdb",                                   NULL},
+    {"usesendfile",                              NULL},
+    {"useserver",                                NULL},
+    {"verifydepth",                              NULL},
+    {"vhaliases",                                NULL},
+    {"vhdomain",                                 NULL},
+    {"vhname",                                   NULL},
+    {"vhost",                                    NULL},
+    {"vhostmap",                                 NULL},
+    {"vhostmaplist",                             NULL},
+    {"vhroot",                                   NULL},
+    {"vhssl",                                    NULL},
+    {"vhtemplate",                               NULL},
+    {"vhtemplatelist",                           NULL},
+    {"virtualhost",                              NULL},
+    {"virtualhostconfig",                        NULL},
+    {"virtualhostlist",                              NULL},
+    {"virtualhosttemplate",                      NULL},
+    {"websocket",                                NULL},
+    {"websocketlist",                                NULL},
+    {"workers",                                      NULL},
+    {"workingdir",                               NULL},
 
 };
 
 namespace plainconf {
-    
+    enum
+    {
+        LOG_LEVEL_ERR = 'E',
+        LOG_LEVEL_INFO = 'I',
+    };
     static GPointerList gModuleList;
     static HashStringMap<plainconfKeywords *> allKeyword(29, GHash::i_hash_string, GHash::i_comp_string);
     static bool bKeywordsInited = false;
     static AutoStr2 rootPath = "";
+    StringList errorLogList;
     
-    void tolower(char *sLine)
+    static void logToMem( char errorLevel, const char *format, ...)
     {
-        int len = strlen(sLine);
-        for (int i=0; i<len; ++i)
+        char buf[512];
+        sprintf(buf, "%c[PlainConf] ", errorLevel);
+        int len = strlen(buf);
+        if (gModuleList.size() > 0)
         {
-            if (sLine[i] >= 'A' && sLine[i] <= 'Z')
-                sLine[i] += ('a' - 'A');
+            XmlNode *pCurNode = (XmlNode *)gModuleList.back();
+            sprintf(buf + len, "[%s:%s] ", pCurNode->getName(), 
+                    ((pCurNode->getValue() == NULL) ? "" : pCurNode->getValue()));
+        }
+        
+        len = strlen(buf);
+        va_list ap;
+        va_start( ap, format );
+        int ret = vsnprintf(buf + len, 512 - len, format, ap);
+        va_end( ap );
+        errorLogList.add(buf, ret + len);
+    }
+    
+    static int for_each_fn( void *s)
+    {
+        const char *p = ((AutoStr2 *)s)->c_str();
+        switch(*p)
+        {
+        case LOG_LEVEL_ERR:
+            LOG_ERR (( p + 1 ));
+            break;
+        case LOG_LEVEL_INFO:
+            LOG_INFO (( p + 1 ));
+            break;
+        default:
+            break;
+        }
+        return 0;
+    }
+    
+    void flushErrorLog()
+    {
+        //int n = errorLogList.size();
+        errorLogList.for_each(errorLogList.begin(), errorLogList.end(), for_each_fn  );
+        errorLogList.clear();
+    }
+    
+    
+    void tolowerstr(char *sLine)
+    {
+        while(*sLine)
+        {
+            if (*sLine >= 'A' && *sLine <= 'Z')
+                *sLine |= 0x20;
+            ++sLine;
         }
     }
     
@@ -289,10 +434,10 @@ namespace plainconf {
         int count = sizeof(sKeywords) / sizeof(plainconfKeywords);
         for (int i=0; i<count; ++i) 
         {
-            allKeyword.insert(sKeywords[i].name.c_str(), &sKeywords[i]);
-            if (sKeywords[i].alias.len() > 0)
+            allKeyword.insert(sKeywords[i].name, &sKeywords[i]);
+            if (sKeywords[i].alias && strlen(sKeywords[i].alias) > 0)
             {
-                allKeyword.insert(sKeywords[i].alias.c_str(), &sKeywords[i]);
+                allKeyword.insert(sKeywords[i].alias, &sKeywords[i]);
             }
         }
         
@@ -307,15 +452,21 @@ namespace plainconf {
     const char *getRealName(char *name)
     {
         assert(bKeywordsInited == true);
-        tolower(name);
+        tolowerstr(name);
         HashStringMap<plainconfKeywords *>::iterator it = allKeyword.find(name);
         
         if ( it == allKeyword.end())
             return NULL;
         else
-            return it.second()->name.c_str();
+            return it.second()->name;
     }
      
+   
+    void trimWhiteSpace(const char **p)
+    {
+        while(**p == 0x20 || **p == '\t')
+            ++(*p);
+    }
    
     //pos: 0, start position, 1: end position
     void removeSpace(char *sLine, int pos)
@@ -345,7 +496,20 @@ namespace plainconf {
     
     inline bool isChunkedLine(const char *sLine)
     {
-        return (sLine[strlen(sLine) - 1] == '\\');
+        int len = strlen(sLine);
+        if (sLine[len - 1] != '\\')
+            return false;
+        
+        //Already know the last one is a '\\'
+        int continuesBackSlashCount = 1;
+        const char *pStart = sLine;
+        const char *pLast = sLine + len - 2;
+        while( pLast >= pStart &&  *pLast-- == '\\')
+        {
+            ++continuesBackSlashCount;
+        }
+        
+        return (continuesBackSlashCount % 2);
     }
     
     bool strcatchr(char *s, char c, int maxStrLen)
@@ -359,7 +523,159 @@ namespace plainconf {
         return true;
     }
 
-    void parseLine(const char *sLine)
+    void saveUnknownItems(const char *fileName, int lineNumber, XmlNode *pCurNode, const char *name, const char *value)
+    {
+        //if not inside a "module" and without a "::", treated as error
+        if (strcasecmp(pCurNode->getName(), "module") != 0 &&
+            strstr(name, "::") == NULL )
+        {
+            logToMem(LOG_LEVEL_ERR, "Not support [%s %s] in file %s:%d", name, value,  fileName, lineNumber);
+            return ;
+        }
+        
+        char newvalue[4096] = {0};
+        XmlNode *pParamNode = new XmlNode;
+        const char *attr = NULL;
+        pParamNode->init(UNKNOWN_KEYWORDS, &attr);
+        strcpy(newvalue, name);
+        strcat(newvalue, " ");
+        strcat(newvalue, value);
+        pParamNode->setValue(newvalue, strlen(newvalue));
+        pCurNode->addChild(pParamNode->getName(), pParamNode);
+    }
+
+    void appendModuleParam(XmlNode *pModuleNode,const char *param)
+    {
+        XmlNode *pParamNode = pModuleNode->getChild("param");
+        if (pParamNode == NULL)
+        {
+            pParamNode = new XmlNode;
+            const char *attr = NULL;
+            pParamNode->init("param", &attr);
+            pParamNode->setValue(param, strlen(param));
+            pModuleNode->addChild(pParamNode->getName(), pParamNode);
+        }
+        else
+        {
+            AutoStr2 totalValue = pParamNode->getValue();
+            totalValue.append("\n", 1);
+            totalValue.append(param, strlen(param));
+            pParamNode->setValue(totalValue.c_str(), totalValue.len());
+        }
+        logToMem(LOG_LEVEL_INFO, "[%s:%s] module [%s] add param [%s]", 
+                 pModuleNode->getParent()->getName(), 
+                 ((pModuleNode->getParent()->getValue())? pModuleNode->getParent()->getValue() : ""),
+                 pModuleNode->getValue(), param );
+    }
+    
+    void addModuleWithParam(XmlNode *pCurNode, const char *moduleName, const char *param)
+    {
+        XmlNode *pModuleNode = NULL;
+        XmlNodeList::const_iterator iter;
+        const XmlNodeList *pModuleList = pCurNode->getChildren("module");
+        if (pModuleList)
+        {
+            for( iter = pModuleList->begin(); iter != pModuleList->end(); ++iter )
+            {
+                if (strcasecmp((*iter)->getChildValue("name", 1), moduleName) == 0)
+                {
+                    pModuleNode = (*iter);
+                    break;
+                }
+            }
+        }
+        
+        if(!pModuleNode)
+        {
+            pModuleNode = new XmlNode;
+            //XmlNode *pParamNode = new XmlNode;
+            const char *attr = NULL;
+            pModuleNode->init("module", &attr);
+            pModuleNode->setValue(moduleName, strlen(moduleName));
+            pCurNode->addChild(pModuleNode->getName(), pModuleNode);
+            logToMem(LOG_LEVEL_INFO, "[%s:%s]addModuleWithParam ADD module %s", 
+                     pCurNode->getName(), pCurNode->getValue(), moduleName );
+        }
+        appendModuleParam(pModuleNode, param);
+    }
+    
+    void handleSpecialCase(XmlNode *pNode)
+    {
+        const XmlNodeList *pUnknownList = pNode->getChildren(UNKNOWN_KEYWORDS);
+        if (!pUnknownList)
+            return ;
+        
+        int bModuleNode = (strcasecmp(pNode->getName(), "module") == 0);
+        XmlNodeList::const_iterator iter;
+        for( iter = pUnknownList->begin(); iter != pUnknownList->end(); ++iter )
+        {
+            const char *value = (*iter)->getValue();
+            if (bModuleNode)
+                appendModuleParam(pNode, value);
+            else
+            {
+                const char *p = strstr(value, "::");
+                
+                //Only hanlde has :: case
+                if (p)
+                {
+                    /**
+                     * CASE such as cache::enablecache 1, will be treated as 
+                     * module chace {
+                     * param enablecache 1
+                     * }
+                     */
+                    char newname[1024] = {0};
+                    char newvalue[4096] = {0};
+                    strncpy(newname, value, p - value);
+                    strcpy(newvalue, p + 2);
+                    
+                    XmlNode *pRootNode = pNode;
+                    while(pRootNode->getParent())
+                        pRootNode = pRootNode->getParent();
+                    const XmlNodeList *pModuleList = pRootNode->getChildren("module");
+                    if (pModuleList)
+                    {
+                        XmlNodeList::const_iterator iter2;
+                        for( iter2 = pModuleList->begin(); iter2 != pModuleList->end(); ++iter2 )
+                        {
+                            if (strcasecmp((*iter2)->getValue(), newname) == 0)
+                            {
+                                addModuleWithParam(pNode, newname, newvalue);
+                                break;
+                            }
+                        }
+                        if (iter2 == pModuleList->end())
+                            logToMem(LOG_LEVEL_ERR, "Module[%s] not defined in server leve while checking [%s].",newname, value );
+
+                    }
+                    else
+                        logToMem(LOG_LEVEL_ERR, "No module defined in server leve while checking [%s].", value );
+                }
+            }
+        }
+    }
+    
+    void handleSpecialCaseLoop(XmlNode *pNode)
+    {
+        XmlNodeList list;
+        int count = pNode->getAllChildren(list);
+        if (count > 0)
+        {
+            XmlNodeList::const_iterator iter;
+            for( iter = list.begin(); iter != list.end(); ++iter )
+                handleSpecialCaseLoop(*iter);
+            handleSpecialCase(pNode);
+        }
+    }
+    
+    void clearNamdAndValue(char* name, char* value)
+    {
+        name[0] = 0;
+        value[0] = 0;
+    }
+    
+    void parseLine(const char *fileName, int lineNumber, const char *sLine)
     {
         const int MAX_NAME_LENGTH = 4096;
         char name[MAX_NAME_LENGTH] = {0};
@@ -385,31 +701,47 @@ namespace plainconf {
                     {
                         pNode = new XmlNode;
                         pNode->init(pRealname, &attr);
+                        if (strlen(value) > 0)
+                            pNode->setValue(value, strlen(value));
                         pCurNode->addChild(pNode->getName(), pNode);
                         gModuleList.push_back(pNode);
                         pCurNode = pNode;
-                        strcpy(name, "");
-                        strcpy(value, "");
+                        clearNamdAndValue(name, value);
                         break;
                     }
                     else
                     {
-                        LOG_ERR(("Error, parseline find module name [%s] is NOT keyword.", name));
+                        logToMem(LOG_LEVEL_ERR, "parseline find block name [%s] is NOT keyword in %s:%d", name, fileName, lineNumber);
                         break;
                     }
                 }
                 else
                 {
-                    LOG_ERR(("Error, parseline find module name is NULL in [%s].", sLine));
+                    logToMem(LOG_LEVEL_ERR, "parseline found '{' without a block name in %s:%d", fileName, lineNumber);
                     break;
                 }
             }
             
             else if (*p == '}' && p == sLine)
             {
-                gModuleList.pop_back();
-                strcpy(name, "");
-                strcpy(value, "");
+                if (gModuleList.size() > 1)
+                {
+                    gModuleList.pop_back();
+                    clearNamdAndValue(name, value);
+                    if (*(p + 1))
+                    {
+                        ++p;
+                        trimWhiteSpace(&p);
+                        parseLine(fileName, lineNumber, p);
+                        break;
+                    }
+                }
+                else
+                {
+                    logToMem(LOG_LEVEL_ERR, "parseline found more '}' in %s:%d", fileName, lineNumber);
+                    clearNamdAndValue(name, value);
+                    break;
+                }
             }
             else if ((*p == ' ' || *p == '\t') && strlen(value) == 0)
             {
@@ -421,11 +753,27 @@ namespace plainconf {
                 if (!bNameSet)
                     strcatchr(name, *p, MAX_NAME_LENGTH);
                 else
-                    strcatchr(value, *p, MAX_NAME_LENGTH);
+                {
+                    if (*p != '\\')
+                        strcatchr(value, *p, MAX_NAME_LENGTH);
+                    else if (p + 1 != pEnd)
+                    {
+                        ++p;
+                        char c = 0;
+                        switch(*p)
+                        {
+                            case 'r':  c = '\r';  break;
+                            case 'n':  c = '\n';  break;
+                            case 't':  c = '\t';  break;
+                            default:  c = *p;     break;
+                        }
+                        strcatchr(value, c, MAX_NAME_LENGTH);
+                    }
+                }
             }
         }
         
-        if (strlen(name) > 0)
+        if ( name[0] != 0 )
         {
             const char *pRealname = getRealName(name);
             if (pRealname) 
@@ -437,10 +785,15 @@ namespace plainconf {
                     pNode->setValue(value, strlen(value));
                 pCurNode->addChild(pNode->getName(), pNode);
             }
-            else
-                LOG_ERR(("Error, parseline find name [%s] is NOT keyword, the value is set to %s.", name, value));
+            else 
+            {
+                //There is no special case in server level
+                //if (memcmp(pCurNode->getName(), SERVER_ROOT_XML_NAME, sizeof(SERVER_ROOT_XML_NAME) - 1) != 0)
+                    saveUnknownItems(fileName, lineNumber, pCurNode, name, value);
+                //else
+                //    logToMem(LOG_LEVEL_ERR, "%s Server level find unknown keyword [%s], ignored.", SERVER_ROOT_XML_NAME, name );
+            }
         }
-        
     }
        
     bool isValidline(const char * sLine)
@@ -466,10 +819,9 @@ namespace plainconf {
     //if true return true, and also set the path 
     bool isInclude(const char * sLine, AutoStr2 &path)
     {
-        if (strncasecmp(sLine, "include",strlen("include")) == 0)
+        if (strncasecmp(sLine, "include", 7) == 0)
         {
-            char *p = (char *)sLine;
-            p += strlen("include");
+            char *p = (char *)sLine + 7;
             removeSpace(p, 0);
             path = p;
             return true;
@@ -506,14 +858,10 @@ namespace plainconf {
     
         if ( !pDir )
         {
-            LOG_ERR(( "Failed to open directory [%s].", pPath ));
+            logToMem(LOG_LEVEL_ERR, "Failed to open directory [%s].", pPath );
             return ;
         }
-        
-        char achPattern[1024] = "";
-        if( pPattern )
-            memccpy( achPattern, pPattern, 0, 1023 );
-    
+
         struct dirent * dir_ent;
         StringList AllEntries;
         while( ( dir_ent = readdir( pDir ) ) )
@@ -523,9 +871,9 @@ namespace plainconf {
                 ( strcmp( pName, ".." ) == 0 )||
                 ( *( pName + strlen( pName ) - 1) == '~' ) )
                 continue;
-            if ( achPattern[0] )
+            if ( pPattern )
             {
-                if ( fnmatch( achPattern, pName, FNM_PATHNAME ) )
+                if ( fnmatch( pPattern, pName, FNM_PATHNAME ) )
                     continue;
             }
             
@@ -537,12 +885,13 @@ namespace plainconf {
         }
         closedir( pDir );
         
-        //AllEntries.sort();
+        //Sort the filename order
+        AllEntries.sort();
         StringList::iterator iter;
         for( iter = AllEntries.begin(); iter != AllEntries.end(); ++iter )
         {
             const char *p = (*iter)->c_str();
-            LOG_INFO(( "Processing config file: %s", p ));
+            logToMem(LOG_LEVEL_INFO, "Processing config file: %s", p );
             LoadConfFile(p);
         }
     }
@@ -557,7 +906,7 @@ namespace plainconf {
         if (orgFile[0] == '/')
             strcpy(targetFile, orgFile);
             
-        if (orgFile[0] == '$')
+        else if (orgFile[0] == '$')
         {
             if (strncasecmp(orgFile, "$server_root/", 13) == 0)
             {
@@ -565,7 +914,10 @@ namespace plainconf {
                 strcat(targetFile, orgFile + 13);
             }
             else
-                LOG_ERR(( "Can't resolve include file %s\n", orgFile));
+            {
+                logToMem(LOG_LEVEL_ERR, "Can't resolve include file %s", orgFile);
+                return ;
+            }
         }
         
         else
@@ -573,15 +925,12 @@ namespace plainconf {
             strcpy(targetFile, rootPath.c_str());
             strcat(targetFile, orgFile);
         }
- 
-         if ( access( targetFile, R_OK ) != 0 )
-             strcpy(targetFile, "");
-         
     }
     
     //This function may be recruse called
     void LoadConfFile(const char *path)
     {
+        logToMem(LOG_LEVEL_INFO, "start parsing file %s", path);
         int type = checkFiletype(path);
         if (type == 0)
             return;
@@ -600,15 +949,15 @@ namespace plainconf {
             //removed the wildchar filename, should be a directory if exist
             if (stat(prefixPath.c_str(), &sb) == -1)
             {
-                LOG_ERR(( "LoadConfFile error 1: fullpath:%s directory:%s\n",
-                         path, prefixPath.c_str() ));
+                logToMem(LOG_LEVEL_ERR, "LoadConfFile error 1, path:%s directory:%s",
+                         path, prefixPath.c_str() );
                 return ;
             }
             
             if ((sb.st_mode & S_IFMT) != S_IFDIR)
             {
-                LOG_ERR(( "LoadConfFile error 2: fullpath:%s directory:%s\n",
-                          path, prefixPath.c_str() ));
+                logToMem(LOG_LEVEL_ERR, "LoadConfFile error 2, path:%s directory:%s",
+                          path, prefixPath.c_str() );
                 return ;
             }
            
@@ -622,7 +971,7 @@ namespace plainconf {
             FILE* fp = fopen(path, "r");
             if ( fp == NULL )
             {
-                LOG_ERR(( "Cannot open plain conf file: %s\n", path ));
+                logToMem(LOG_LEVEL_ERR, "Cannot open configuration file: %s", path );
                 return;
             }
             
@@ -630,9 +979,11 @@ namespace plainconf {
             char sLine[MAX_LINE_LENGTH];
             char * p;
             char sLines[MAX_LINE_LENGTH] = {0};
+            int lineNumber = 0;
 
             while(fgets(sLine, MAX_LINE_LENGTH, fp), !feof(fp))
             {
+                ++lineNumber;
                 p = sLine;
                 removeSpace(p, 0);
                 removeSpace(p, 1);
@@ -653,14 +1004,14 @@ namespace plainconf {
                     if (isChunkedLine(p))
                     {
                         strncat(sLines, p, strlen(p) - 1);
-                        strcatchr(sLines, ' ', MAX_LINE_LENGTH); //add a space at the end of the line which has a '\\'
+                        //strcatchr(sLines, ' ', MAX_LINE_LENGTH); //add a space at the end of the line which has a '\\'
                     }
                     
                     else
                     {
                         strcat(sLines, p);
-                        parseLine(sLines);
-                        strcpy(sLines, "");
+                        parseLine(path, lineNumber, sLines);
+                        sLines[0] = 0x00;
                     }
                 }
             }
@@ -673,12 +1024,17 @@ namespace plainconf {
     {
         XmlNode *rootNode = new XmlNode;
         const char *attr = NULL;
-        rootNode->init("httpServerConfig", &attr);
+        rootNode->init(SERVER_ROOT_XML_NAME, &attr);
         gModuleList.push_back(rootNode);
         
         LoadConfFile(configFilePath);
-        gModuleList.pop_back();
+        if (gModuleList.size() != 1)
+        {
+            logToMem(LOG_LEVEL_ERR, "parseFile find '{' and '}' do not match in the end of file %s.", configFilePath);
+        }
+        gModuleList.clear();
         
+        handleSpecialCaseLoop(rootNode);
         return rootNode;
     }
     
@@ -695,6 +1051,7 @@ namespace plainconf {
         if (!pNode->getParent())
             delete pNode;
     }
+    
     //name: form like "moduleName|submodlue|itemname"
     const char *getConfDeepValue(const XmlNode *pNode, const char *name)
     {
@@ -720,26 +1077,69 @@ namespace plainconf {
             fprintf(fp, "  ");
     }
         
+    void outputValue(FILE *fp, const char *value, int length)
+    {
+        fwrite(value, length, 1, fp);
+    }
+    
+    void outputSigleNode(FILE *fp, const XmlNode *pNode, int level)
+    {
+        const char *pStart = pNode->getValue();
+        fprintf(fp, "%s ", pNode->getName());
+        if (pStart)
+        {
+            const char *p;
+            while(*pStart && (p = strchr(pStart, '\n')))
+            {
+                outputValue(fp, pStart, p - pStart);
+                fwrite("\\n\\\n", 4, 1, fp);
+                outputSpaces(level + 1, fp);
+                pStart = p + 1;
+            }
+            if (*pStart)
+            {
+                outputValue(fp, pStart, strlen(pStart));
+            }
+        }
+        fprintf(fp, "\n");
+    }
+    static int s_compare( const void * p1, const void * p2 )
+    {
+        return (*((XmlNode**)p1))->getName() - (*((XmlNode**)p2))->getName();
+        //strcasecmp( (*((XmlNode**)p1))->getName(),
+               //        (*((XmlNode**)p2))->getName() );
+    }
+
     void outputConfigFile(const XmlNode *pNode, FILE *fp, int level)
     {
         XmlNodeList list;
         int count = pNode->getAllChildren(list);
+        list.sort(s_compare);
         if (count > 0)
         {
-            outputSpaces(level, fp);
-            fprintf(fp, "%s {\n", pNode->getName());
+            if (level > 0)
+            {
+                outputSpaces(level, fp);
+                const char *value = pNode->getValue();
+                if (!value)
+                    value = "";
+                fprintf(fp, "%s %s{\n", pNode->getName(), value);
+            }
             
             XmlNodeList::const_iterator iter;
             for( iter = list.begin(); iter != list.end(); ++iter )
                 outputConfigFile((*iter), fp, level + 1);
             
-            outputSpaces(level, fp);
-            fprintf(fp, "}\n");
+            if (level > 0)
+            {
+                outputSpaces(level, fp);
+                fprintf(fp, "}\n");
+            }
         }
         else
         {
             outputSpaces(level, fp);
-            fprintf(fp, "%s %s\n", pNode->getName(), pNode->getValue());
+            outputSigleNode(fp, pNode, level);
         }
     }
     
@@ -749,6 +1149,5 @@ namespace plainconf {
         int level = 0;
         outputConfigFile(pNode, fp, level);
         fclose(fp);
-    }       
-    
+    }
 }

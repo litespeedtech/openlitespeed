@@ -1305,7 +1305,7 @@ int SpdyConnection::compressHeaders( HttpRespHeaders *pRespHeaders )
         {
             if ( pIov != iov )
                 *pCur++ = '\0';
-            if (( pIov->iov_len >= 512 )|| pBufEnd - pCur < pIov->iov_len )
+            if (( pIov->iov_len >= 512 )|| (size_t)(pBufEnd - pCur) < pIov->iov_len )
             {
                 if ( m_deflator.compress( achHdrBuf, pCur - achHdrBuf, getBuf(), 0 ) == -1 )
                     return -1;

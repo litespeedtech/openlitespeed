@@ -21,7 +21,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-StringList::StringList( const StringList & rhs )
+StringList::StringList( const StringList & rhs  )
+    : TPointerList<AutoStr2>()
 {
     for( const_iterator iter = rhs.begin(); iter != rhs.end(); ++iter )
         add( (*iter)->c_str(), (*iter)->len() );

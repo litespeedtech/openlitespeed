@@ -1,5 +1,12 @@
-If you can't run "make" to build cache.so, try "make clean" first and then "make".
-If still does not work, try "gmake" instead of "make" please.
+After openlitespeed installed, there should be a file cache.so in LSWS_HOME/modules/.
+
+If it is not there, there should be some error occured.
+
+You may want to compile and build it with the Makefile.f with the command
+
+make -f Makefile.f
+
+If still does not work, try "gmake" instead of "make".
 
 About how to config the cache module, please refer to
 http://open.litespeedtech.com/mediawiki/index.php/Help:Modules:Cache

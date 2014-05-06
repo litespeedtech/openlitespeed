@@ -114,12 +114,12 @@ SUITE(HttpHeaderTest)
 TEST(headerIndexMatching)
 {
     const char *p;
-    int l;
+    //int l;
     
     for (int i=0; i<LSI_RESP_HEADER_END; ++i)
     {
         p = HttpRespHeaders::m_sPresetHeaders[i];
-        l = HttpRespHeaders::m_iPresetHeaderLen[i];
+        //l = HttpRespHeaders::m_iPresetHeaderLen[i];
         
         HttpRespHeaders::HEADERINDEX index = HttpRespHeaders::getRespHeaderIndex( p );
         CHECK(i == index);
@@ -296,8 +296,8 @@ void displaySpdyHeaders(HttpRespHeaders *pRespHeaders)
             printf(": ");
             for (int j=0;j<count; ++j)
             {
-                for (int i=0;i<iov[j].iov_len; ++i)
-                    printf("%c", *((char *)iov[j].iov_base + i));
+                for (size_t ii=0; ii<iov[j].iov_len; ++ii)
+                    printf("%c", *((char *)iov[j].iov_base + ii));
             
                 printf("\r\n");
             }
@@ -315,7 +315,6 @@ void DisplayBothHeader(IOVec io, int format, short count, HttpRespHeaders *pResp
     unsigned char *p = NULL;
     it = io.begin();
     p = (unsigned char *)it->iov_base;
-    int temp = it->iov_len;
     //return;//comment this out to view header data
     
     

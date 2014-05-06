@@ -277,7 +277,7 @@ void LoopBuf::update( int offset, const char * pBuf, int size )
 
 char *LoopBuf::search( int offset, const char *accept, int acceptLen )
 {
-    register char *pSplitEnd, *pSplitStart, *ptr = NULL, *pIter = this->getPointer( offset );
+    register char *pSplitStart, *ptr = NULL, *pIter = this->getPointer( offset );
     register const char *pAcceptPtr = accept;
     int iMiss = 0;
     if ( acceptLen > this->size() )
@@ -293,10 +293,10 @@ char *LoopBuf::search( int offset, const char *accept, int acceptLen )
     }
     pSplitStart = pIter;
     
-    if ( acceptLen > this->m_pEnd - this->m_pBuf )
-        pSplitEnd = this->m_pEnd;
-    else
-        pSplitEnd = this->m_pBuf + (acceptLen - 1);
+//     if ( acceptLen > this->m_pEnd - this->m_pBuf )
+//         pSplitEnd = this->m_pEnd;
+//     else
+//         pSplitEnd = this->m_pBuf + (acceptLen - 1);
     
     while( ( pIter > this->m_pEnd) || (pAcceptPtr != accept) )
     {

@@ -27,6 +27,7 @@
 #include <openssl/rand.h>
 #include <openssl/ssl.h>
 
+#include <ctype.h>
 #include <fcntl.h>
 #include <string.h>
 #include <sys/stat.h>
@@ -371,20 +372,100 @@ int SSLContext::setKeyCertificateFile( const char * pKeyFile, int iKeyType,
     return  SSL_CTX_check_private_key( m_pCtx );
 }
 
+const int MAX_CERT_LENGTH = 40960;
+
+static int loadPemWithMissingDash( const char * pFile, char * buf, int bufLen, char **pBegin )
+{
+    int i, fd, iLen;
+    char *pEnd, *p;
+    struct stat st;
+    
+    fd = open( pFile, O_RDONLY );
+    if ( fd < 0 )
+        return -1;
+    
+    if ( fstat( fd, &st ) < 0 )
+    {
+        close( fd );
+        return -1;
+    }
+    
+    iLen = st.st_size;
+    if ( iLen <= MAX_CERT_LENGTH - 10 )
+        i = read( fd, buf + 5, iLen );
+    close( fd );
+    if ( i < iLen )
+        return -1;
+    *pBegin = buf + 5;
+    pEnd = *pBegin + iLen;
+    
+    p = *pBegin;
+    while( *p == '-' )
+        ++p;
+    while( p < *pBegin + 5 )
+        *(--*pBegin) = '-';
+    
+    while ( isspace( pEnd[-1] ) )
+        pEnd--;
+    p = pEnd;
+    
+    while( p[-1] == '-' )
+        --p;
+    while( p + 5 > pEnd )
+        *pEnd++ = '-';
+    *pEnd++ = '\n';
+    *pEnd = 0;
+    
+    return pEnd - *pBegin;
+}
+
+static int loadCertFile( SSL_CTX * pCtx, const char* pFile, int type )
+{
+    char *pBegin,  buf[MAX_CERT_LENGTH];
+    BIO *in;
+    X509 *cert = NULL;
+    int len;
+    
+    /* THIS FILE TYPE WILL NOT BE HANDLED HERE.
+     * Just left this here in case of future implementation.*/
+    if ( translateType( type ) == SSL_FILETYPE_ASN1 )
+        return -1;
+    
+    len = loadPemWithMissingDash( pFile, buf, MAX_CERT_LENGTH, &pBegin );
+    if ( len == -1 )
+        return -1;
+     
+    in = BIO_new_mem_buf( (void*)pBegin, len );
+    cert = PEM_read_bio_X509( in, NULL, 0, NULL );
+    BIO_free( in );
+    if ( !cert )
+        return -1;
+    return SSL_CTX_use_certificate( pCtx, cert );
+}
+
 int SSLContext::setCertificateFile( const char * pFile, int type, int chained )
 {
+    int ret;
     if ( !pFile )
         return 0;
     ::stat( pFile, &m_stCert );
     if ( init( m_iMethod ) )
         return 0;
+    
+    
 
    // m_sCertfile.setStr( pFile );
+    
     if ( chained )
         return SSL_CTX_use_certificate_chain_file( m_pCtx, pFile );
     else
-        return SSL_CTX_use_certificate_file( m_pCtx, pFile,
-            translateType( type ) );
+    {
+        ret = loadCertFile( m_pCtx, pFile, type );
+        if ( ret == -1 )
+            return SSL_CTX_use_certificate_file( m_pCtx, pFile,
+                translateType( type ) );
+        return ret;
+    }        
 }
 
 
@@ -1055,3 +1136,5 @@ void SSLContext::configCRL( const XmlNode *pNode, SSLContext *pSSL )
         pSSL->addCRL( achCrlFile, achCrlPath );
 
 }
+
+

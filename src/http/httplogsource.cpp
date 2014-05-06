@@ -38,11 +38,7 @@ int HttpLogSource::initAccessLog( const XmlNode *pRoot,
                                       int setDebugLevel )
 {
     ConfigCtx currentCtx( "accesslog" );
-    const XmlNode *p0 = pRoot->getChild( "logging" );
-
-    if ( !p0 )
-        p0 = pRoot;
-
+    const XmlNode *p0 = pRoot->getChild( "logging", 1 );
     const XmlNode *pNode1 = p0->getChild( "accessLog" );
 
     if ( pNode1 == NULL )

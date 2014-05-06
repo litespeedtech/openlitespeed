@@ -45,8 +45,8 @@ class Layout;
 class Logger : public Duplicable
 {
     int         m_iLevel;
-    int         m_iAdditive;
     Appender *  m_pAppender;
+    int         m_iAdditive;
     Layout *    m_pLayout;
     Logger *    m_pParent;
 

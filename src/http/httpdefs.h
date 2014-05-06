@@ -56,7 +56,7 @@
 #define HEC_RESP_AUTHORIZED     (1<<14)
 #define HEC_RESP_HTTP_10        (1<<15)
 #define HEC_RESP_CONT_LEN       (1<<16)
-#define HEC_RESP_LOC_SET        (1<<17)
+//#define HEC_RESP_LOC_SET        (1<<17)
 #define HEC_RESP_PROXY          (1<<18)
 
 

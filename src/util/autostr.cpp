@@ -89,10 +89,13 @@ int AutoStr2::setStr( const char * pStr )
 
 void AutoStr2::append( const char * str, const int len )
 {
-    m_iStrLen += len;
-    char *p = resizeBuf(m_iStrLen + 1);
-    memcpy(p + m_iStrLen - len, str, len );
-    *(p + m_iStrLen) = 0;
+    char *p = resizeBuf(m_iStrLen + len + 1);
+    if ( p )
+    {
+        memcpy(p + m_iStrLen, str, len );
+        m_iStrLen += len;
+        *(p + m_iStrLen) = 0;
+    }
 }
 
 

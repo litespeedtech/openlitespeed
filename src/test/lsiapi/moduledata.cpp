@@ -18,7 +18,7 @@
 #ifdef RUN_TEST
 
 #include "lsiapi/lsiapi.h"
-#include "../../addon/include/ls.h"
+#include "../addon/include/ls.h"
 #include "test/unittest-cpp/UnitTest++/src/UnitTest++.h"
 #include <unistd.h>
 #include <assert.h>
@@ -44,7 +44,7 @@ char *s_fn(void *obj, int *len)
 
 void *des_fn(char *buf, int len)
 {
-    assert(len >= sizeof(MyTestData_st));
+    assert((size_t)len >= sizeof(MyTestData_st));
     MyTestData_st *obj = (MyTestData_st *)malloc(sizeof(MyTestData_st));
     memcpy((char*)obj, buf, sizeof(MyTestData_st));
     return (void *)obj;
@@ -62,11 +62,11 @@ TEST(INIT_LSIAPI)
 TEST(FILE_globalLsiDataTest)
 {
     
-    struct lsi_gd_cont_val_t * pCont1 = LsiapiBridge::getLsiapiFunctions()->get_gd_container(LSI_CONTAINER_FILE, "111", 3);
-    struct lsi_gd_cont_val_t * pCont2 = LsiapiBridge::getLsiapiFunctions()->get_gd_container(LSI_CONTAINER_FILE, "122", 3);
-    struct lsi_gd_cont_val_t * pCont11 = LsiapiBridge::getLsiapiFunctions()->get_gd_container(LSI_CONTAINER_FILE, "1111", 3);
+    struct lsi_gdata_cont_val_t * pCont1 = LsiapiBridge::getLsiapiFunctions()->get_gdata_container(LSI_CONTAINER_FILE, "111", 3);
+    struct lsi_gdata_cont_val_t * pCont2 = LsiapiBridge::getLsiapiFunctions()->get_gdata_container(LSI_CONTAINER_FILE, "122", 3);
+    struct lsi_gdata_cont_val_t * pCont11 = LsiapiBridge::getLsiapiFunctions()->get_gdata_container(LSI_CONTAINER_FILE, "1111", 3);
     CHECK(pCont1 == pCont11);
-    struct lsi_gd_cont_val_t * pCont3 = LsiapiBridge::getLsiapiFunctions()->get_gd_container(LSI_CONTAINER_FILE, "1111", 4);
+    struct lsi_gdata_cont_val_t * pCont3 = LsiapiBridge::getLsiapiFunctions()->get_gdata_container(LSI_CONTAINER_FILE, "1111", 4);
     CHECK(pCont1 != pCont3);
 
     
@@ -111,11 +111,11 @@ TEST(FILE_globalLsiDataTest)
     CHECK( memcmp((void*)(&myTestData_st), p, sizeof(MyTestData_st)) == 0 );
     
     sleep(2); //sleep to make sure container create time > the item create time
-    LsiapiBridge::getLsiapiFunctions()->empty_gd_container(pCont1);
+    LsiapiBridge::getLsiapiFunctions()->empty_gdata_container(pCont1);
     p = LsiapiBridge::getLsiapiFunctions()->get_gdata(pCont1, k1, 3, freefn, 0, des_fn);
     CHECK( p == NULL);
  
-    LsiapiBridge::getLsiapiFunctions()->purge_gd_container(pCont1);
+    LsiapiBridge::getLsiapiFunctions()->purge_gdata_container(pCont1);
     
     LsiapiBridge::getLsiapiFunctions()->set_gdata(pCont1, k1, 3, &myTestData_st, 1000, freefn, 1, s_fn);
     p = LsiapiBridge::getLsiapiFunctions()->get_gdata(pCont1, k1, 3, freefn, 0, des_fn);
@@ -131,15 +131,15 @@ TEST(FILE_globalLsiDataTest)
     //EXPIRE testing, DO NOT SET BREAKPOINT
     LsiapiBridge::getLsiapiFunctions()->set_gdata(pCont1, k2, 4, &myTestData_st2, 5, freefn, 1, s_fn);
     sleep(3);
-    expire_gd_check();
+    expire_gdata_check();
     p2 = LsiapiBridge::getLsiapiFunctions()->get_gdata(pCont1, k2, 4, freefn, 1, des_fn);     //renewed, still have 5 seconds expire time
     CHECK( memcmp((void*)(&myTestData_st2), p2, sizeof(MyTestData_st)) == 0 );
     sleep(3);
-    expire_gd_check();
+    expire_gdata_check();
     p2 = LsiapiBridge::getLsiapiFunctions()->get_gdata(pCont1, k2, 4, freefn, 0, des_fn);
     CHECK( memcmp((void*)(&myTestData_st2), p2, sizeof(MyTestData_st)) == 0 );  //passed 3 s, not renewed
     sleep(3);
-    expire_gd_check();
+    expire_gdata_check();
     p2 = LsiapiBridge::getLsiapiFunctions()->get_gdata(pCont1, k2, 4, freefn, 0, des_fn);     //expired!
     CHECK( p2 == NULL);             //You can set a break point here
        
@@ -169,11 +169,11 @@ TEST(FILE_globalLsiDataTest)
 
 TEST(Memory_globalLsiDataTest)
 {   
-    struct lsi_gd_cont_val_t * pCont1 = LsiapiBridge::getLsiapiFunctions()->get_gd_container(LSI_CONTAINER_MEMORY, "111", 3);
-    struct lsi_gd_cont_val_t * pCont2 = LsiapiBridge::getLsiapiFunctions()->get_gd_container(LSI_CONTAINER_MEMORY, "122", 3);
-    struct lsi_gd_cont_val_t * pCont11 = LsiapiBridge::getLsiapiFunctions()->get_gd_container(LSI_CONTAINER_MEMORY, "1111", 3);
+    struct lsi_gdata_cont_val_t * pCont1 = LsiapiBridge::getLsiapiFunctions()->get_gdata_container(LSI_CONTAINER_MEMORY, "111", 3);
+    struct lsi_gdata_cont_val_t * pCont2 = LsiapiBridge::getLsiapiFunctions()->get_gdata_container(LSI_CONTAINER_MEMORY, "122", 3);
+    struct lsi_gdata_cont_val_t * pCont11 = LsiapiBridge::getLsiapiFunctions()->get_gdata_container(LSI_CONTAINER_MEMORY, "1111", 3);
     CHECK(pCont1 == pCont11);
-    struct lsi_gd_cont_val_t * pCont3 = LsiapiBridge::getLsiapiFunctions()->get_gd_container(LSI_CONTAINER_MEMORY, "1111", 4);
+    struct lsi_gdata_cont_val_t * pCont3 = LsiapiBridge::getLsiapiFunctions()->get_gdata_container(LSI_CONTAINER_MEMORY, "1111", 4);
     CHECK(pCont1 != pCont3);
  
     
@@ -214,11 +214,11 @@ TEST(Memory_globalLsiDataTest)
     CHECK( memcmp((void*)(&myTestData_st), p, sizeof(MyTestData_st)) == 0 );
     
     sleep(2); //sleep to make sure container create time > the item create time
-    LsiapiBridge::getLsiapiFunctions()->empty_gd_container(pCont1);
+    LsiapiBridge::getLsiapiFunctions()->empty_gdata_container(pCont1);
     p = LsiapiBridge::getLsiapiFunctions()->get_gdata(pCont1, k1, 3, freefn, 0, NULL);
     CHECK( p == NULL);
  
-    LsiapiBridge::getLsiapiFunctions()->purge_gd_container(pCont1);
+    LsiapiBridge::getLsiapiFunctions()->purge_gdata_container(pCont1);
     
     LsiapiBridge::getLsiapiFunctions()->set_gdata(pCont1, k1, 3, &myTestData_st, 1000, freefn, 1, NULL);
     p = LsiapiBridge::getLsiapiFunctions()->get_gdata(pCont1, k1, 3, freefn, 0, NULL);
@@ -227,15 +227,15 @@ TEST(Memory_globalLsiDataTest)
     //EXPIRE testing, DO NOT SET BREAKPOINT
     LsiapiBridge::getLsiapiFunctions()->set_gdata(pCont1, k2, 4, &myTestData_st2, 5, freefn, 1, NULL);
     sleep(3);
-    expire_gd_check();
+    expire_gdata_check();
     p2 = LsiapiBridge::getLsiapiFunctions()->get_gdata(pCont1, k2, 4, freefn, 1, NULL);     //renewed, still have 5 seconds expire time
     CHECK( memcmp((void*)(&myTestData_st2), p2, sizeof(MyTestData_st)) == 0 );
     sleep(3);
-    expire_gd_check();
+    expire_gdata_check();
     p2 = LsiapiBridge::getLsiapiFunctions()->get_gdata(pCont1, k2, 4, freefn, 0, NULL);
     CHECK( memcmp((void*)(&myTestData_st2), p2, sizeof(MyTestData_st)) == 0 );  //passed 3 s, not renewed
     sleep(3);
-    expire_gd_check();
+    expire_gdata_check();
     p2 = LsiapiBridge::getLsiapiFunctions()->get_gdata(pCont1, k2, 4, freefn, 0, NULL);     //expired!
     CHECK( p2 == NULL);             //You can set a break point here
        

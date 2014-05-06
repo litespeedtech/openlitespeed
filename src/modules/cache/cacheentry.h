@@ -30,8 +30,8 @@
 
 #include <sys/types.h>
 
-#include <cache/ceheader.h>
-#include <cache/cachehash.h>
+#include <ceheader.h>
+#include <cachehash.h>
 #include <util/autostr.h>
 #include <util/refcounter.h>
 

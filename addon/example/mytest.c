@@ -38,8 +38,9 @@ struct lsi_module_t MNAME;
 static int reg_handler(struct lsi_cb_param_t *rec)
 {
     const char *uri;
-    uri = g_api->get_req_uri(rec->_session);
-    if ( strncasecmp(uri, "/mytest", 7) == 0 )
+    int len;
+    uri = g_api->get_req_uri(rec->_session, &len);
+    if ( len >= 7 && strncasecmp(uri, "/mytest", 7) == 0 )
     {
         g_api->register_req_handler(rec->_session, &MNAME, 7);
     }
@@ -59,6 +60,6 @@ static int beginProcess(void *session)
     return 0;
 }
 
-struct lsi_handler_t myhandler = { beginProcess, NULL, NULL };
+struct lsi_handler_t myhandler = { beginProcess, NULL, NULL, NULL };
 lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, _init, &myhandler, NULL, };
 

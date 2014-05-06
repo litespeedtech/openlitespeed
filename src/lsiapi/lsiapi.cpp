@@ -42,7 +42,7 @@
 #include <util/datetime.h>
 #include <stdio.h>
 
-lsi_api_t LsiapiBridge::gLsiapiFunctions = {0};
+lsi_api_t LsiapiBridge::gLsiapiFunctions;
 const lsi_api_t * g_api = &LsiapiBridge::gLsiapiFunctions;
 __LsiGDataContHashT *LsiapiBridge::gLsiGDataContHashT[LSI_CONTAINER_COUNT] = {0};
 
@@ -52,22 +52,22 @@ void  LsiapiBridge::releaseModuleData( int level, LsiModuleData * pData )
     void *data = NULL;
     for (LsiApiHook* hook = pHooks->begin(); hook < pHooks->end(); ++hook)
     {
-        data = pData->get( hook->_module->_data_id[level]);
+        data = pData->get( MODULE_DATA_ID(hook->_module)[level]);
         if ( data )
         {
             lsi_release_callback_pf cb = (lsi_release_callback_pf)hook->_cb;
             cb(data);
-            pData->set( hook->_module->_data_id[level], NULL );
+            pData->set( MODULE_DATA_ID(hook->_module)[level], NULL );
         }
     }
 }
 
-void LsiapiBridge::expire_gd_check()
+void LsiapiBridge::expire_gdata_check()
 {
     time_t tm = DateTime::s_curTime;
     
     __LsiGDataContHashT *pLsiGDataContHashT = NULL;
-    lsi_gd_cont_val_t *containerInfo = NULL;
+    lsi_gdata_cont_val_t *containerInfo = NULL;
     __LsiGDataContHashT::iterator iter;
     __LsiGDataItemHashT::iterator iter2;
 
@@ -83,7 +83,7 @@ void LsiapiBridge::expire_gd_check()
             for(iter2 = pCont->begin(); iter2 != pCont->end(); iter2 = pCont->next(iter2))
             {
                 if (iter.second() && iter2.second()->tmExpire < tm)
-                    erase_gd_element(containerInfo, iter2);
+                    erase_gdata_element(containerInfo, iter2);
             }
         }
     }
@@ -92,9 +92,9 @@ void LsiapiBridge::expire_gd_check()
 
 int LsiapiBridge::init_lsiapi()
 {
-    gLsiapiFunctions.get_gd_container = get_gd_container;
-    gLsiapiFunctions.empty_gd_container = empty_gd_container;
-    gLsiapiFunctions.purge_gd_container = purge_gd_container;
+    gLsiapiFunctions.get_gdata_container = get_gdata_container;
+    gLsiapiFunctions.empty_gdata_container = empty_gdata_container;
+    gLsiapiFunctions.purge_gdata_container = purge_gdata_container;
             
     gLsiapiFunctions.get_gdata = get_gdata;
     gLsiapiFunctions.delete_gdata = delete_gdata;

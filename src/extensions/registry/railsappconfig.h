@@ -37,7 +37,7 @@ private:
     RailsAppConfig() {}
     ~RailsAppConfig() {}
 public:
-    static const int getRailsEnv()  { return s_iRailsEnv;}
+    static int getRailsEnv()  { return s_iRailsEnv;}
     static const LocalWorkerConfig* getpRailsDefault()  { return s_railsDefault; } 
     static LocalWorker *newRailsApp( HttpVHost* pvhost, const char *pAppName, const char *pName, 
     const char *appPath, int maxConns, const char *pRailsEnv, int maxIdle, const Env *pEnv,

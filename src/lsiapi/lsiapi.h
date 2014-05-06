@@ -29,32 +29,32 @@
 
 class LsiModuleData ;
 
-typedef struct gd_key_t 
+typedef struct gdata_key_t 
 {
     char* key_str;
     int key_str_len;
-} gd_key_t;
+} gdata_key_t;
 
-typedef struct gd_item_val_t 
+typedef struct gdata_item_val_t 
 {
-    gd_key_t key;          //Need to deep copy the original buffer
+    gdata_key_t key;          //Need to deep copy the original buffer
     void *value;
     time_t tmCreate;
     time_t tmExpire;        //Create time + TTL = expird time
     time_t tmAccess;        //For not checking file too often
     lsi_release_callback_pf release_cb;
-} gd_item_val_t;
+} gdata_item_val_t;
 
-typedef  THash<gd_item_val_t *> __LsiGDataItemHashT;
+typedef  THash<gdata_item_val_t *> __LsiGDataItemHashT;
 
-typedef struct lsi_gd_cont_val_t {
-    gd_key_t key;          //Need to deep copy the original buffer
+typedef struct lsi_gdata_cont_val_t {
+    gdata_key_t key;          //Need to deep copy the original buffer
     __LsiGDataItemHashT *container;
     time_t tmCreate;
     int type;
-} lsi_gd_cont_val_t;
+} lsi_gdata_cont_val_t;
 
-typedef  THash<lsi_gd_cont_val_t *> __LsiGDataContHashT;
+typedef  THash<lsi_gdata_cont_val_t *> __LsiGDataContHashT;
 //extern __LsiGDataContHashT *gLsiGDataContHashT[];
 
 
@@ -70,7 +70,7 @@ public:
     
     static int init_lsiapi();
     static void uninit_lsiapi();
-    static void expire_gd_check();
+    static void expire_gdata_check();
     static void releaseModuleData( int level, LsiModuleData * pData );
     static lsi_api_t *   getLsiapiFunctions() { return &LsiapiBridge::gLsiapiFunctions; };
 

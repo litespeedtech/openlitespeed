@@ -38,6 +38,8 @@
 #include <main/httpconfigloader.h>
 #include <main/serverinfo.h>
 
+#include <lsiapi/lsiapihooks.h>
+
 #include <util/daemonize.h>
 #include <util/emailsender.h>
 #include <util/gpath.h>
@@ -48,6 +50,8 @@
 #include <util/stringtool.h>
 #include <util/signalutil.h>
 #include <util/vmembuf.h>
+
+#include <openssl/crypto.h>
 
 #include <assert.h>
 #include <ctype.h>
@@ -69,7 +73,7 @@
 #include <util/ssnprintf.h>
 #include <lsiapi/lsiapi.h>
 #include <sys/sysctl.h>
-
+#include <plainconf.h>
 
 #define PID_FILE            DEFAULT_TMP_DIR "/lshttpd.pid"
 #define SYSSTATS_FILE       DEFAULT_TMP_DIR "/.sysstats"
@@ -864,6 +868,8 @@ int LshttpdMain::init(int argc, char * argv[])
 
     if ( testRunningServer() != 0 )
         return 2;
+    
+    
     if ( m_pServer->configServerBasics( 0, m_pBuilder->getRoot() ) )
         return 1;
     LOG4CXX_NS::LogRotate::roll( HttpLog::getErrorLogger()->getAppender(),
@@ -882,7 +888,11 @@ int LshttpdMain::init(int argc, char * argv[])
         return 1;
     }
     changeOwner();
+
+    plainconf::flushErrorLog();
     LOG_NOTICE(( "Loading %s ...", HttpServerVersion::getVersion() ));
+    LOG_NOTICE(( "Using [%s]", SSLeay_version( SSLEAY_VERSION ) ));
+    
     if ( !m_noDaemon )
     {
         if ( Daemonize::daemonize( 1, 1 ) )
@@ -970,6 +980,7 @@ int LshttpdMain::main( int argc, char * argv[] )
     VMemBuf::initAnonPool();
     umask( 022 );
     HttpLog::init();
+    LsiApiHooks::initGlobalHooks();
 #ifdef RUN_TEST
     if (( argc == 2 )&&( strcmp( argv[1], "-x" ) == 0))
     {

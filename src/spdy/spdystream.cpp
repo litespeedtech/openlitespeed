@@ -52,7 +52,7 @@ int SpdyStream::init(uint32_t StreamID,
 {
     HioStream::reset( DateTime::s_curTime );
     pHandler->assignStream( this );
-    setLogIdBuild( 0 );
+    clearLogId();
 
     setState(HIOS_CONNECTED);
     setFlag( (flags & ( SPDY_CTRL_FLAG_FIN | SPDY_CTRL_FLAG_UNIDIRECTIONAL)), 1 );

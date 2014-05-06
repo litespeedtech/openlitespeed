@@ -80,7 +80,7 @@ int NtwkIOLink::writev( const struct iovec * vector, int len )
     {
         m_iov.append(vector, len);
 
-        written = writev_internal( m_iov.get(), m_iov.len());
+        written = writev_internal( m_iov.get(), m_iov.len(), 0);
         if ( written >= m_iHeaderToSend )
         {
             m_iov.clear();
@@ -99,12 +99,12 @@ int NtwkIOLink::writev( const struct iovec * vector, int len )
         }
     }
     else
-        written = writev_internal( vector, len );
+        written = writev_internal( vector, len, 0 );
     
     return written;
 }
 
-int NtwkIOLink::writev_internal( const struct iovec * vector, int len )
+int NtwkIOLink::writev_internal( const struct iovec * vector, int len, int flush_flag )
 {
     const LsiApiHooks *pWritevHooks = m_sessionHooks.get(LSI_HKPT_L4_SENDING);
     if ( !pWritevHooks ||( pWritevHooks->size() == 0))
@@ -113,15 +113,18 @@ int NtwkIOLink::writev_internal( const struct iovec * vector, int len )
     lsi_cb_param_t param;
     lsi_hook_info_t hookInfo;
     param._session = (LsiSession *)this;
+    int    flag_out = 0;
 
     hookInfo._hooks = pWritevHooks;
     hookInfo._termination_fp = (void*)m_pFpList->m_writev_fp;
     param._cur_hook = (void *)pWritevHooks->begin();
     param._hook_info = &hookInfo;
-    param._param1 = vector;
-    param._param1_len = len;
-    param._param2 = &m_hasBufferedData;
+    param._param = vector;
+    param._param_len = len;
+    param._flag_out = &flag_out;
+    param._flag_in = flush_flag;
     ret = (*(((LsiApiHook *)param._cur_hook)->_cb))( &param );
+    m_hasBufferedData = flag_out;
     LOG_D (( "[NtwkIOLink::writev] ret %d hasData %d", ret, m_hasBufferedData ));
     return ret;
 }
@@ -141,9 +144,9 @@ int NtwkIOLink::read( char * pBuf, int size )
     hookInfo._termination_fp = (void*)m_pFpList->m_read_fp;
     param._cur_hook = (void *)((LsiApiHook *)pReadHooks->end() - 1);
     param._hook_info = &hookInfo;
-    param._param1 = pBuf;
-    param._param1_len = size;
-    param._param2 = NULL;
+    param._param = pBuf;
+    param._param_len = size;
+    param._flag_out = NULL;
     ret = (*(((LsiApiHook *)param._cur_hook)->_cb))( &param );
     LOG_D (( "[NtwkIOLink::read] read  %d", ret ));
     return ret;
@@ -176,7 +179,7 @@ int NtwkIOLink::setupHandler( HiosProtocol verSpdy )
         SpdyConnection * pConn = new SpdyConnection();
         if ( !pConn )
             return -1;
-        setLogIdBuild( 0 );
+        clearLogId();
         if ( verSpdy == HIOS_PROTO_SPDY31 )
         {
             verSpdy = HIOS_PROTO_SPDY3;
@@ -216,8 +219,8 @@ int NtwkIOLink::setLink(HttpListener *pListener,  int fd, ClientInfo * pInfo, SS
     assert(LSI_HKPT_L4_SENDING == 3);
     m_sessionHooks.inherit(pListener->getSessionHooks());
     m_pModuleConfig = pListener->getModuleConfig();
-    if ( !m_sessionHooks.isDisabled(LSI_HKPT_L4_BEGINSESSION) ) 
-        m_sessionHooks.get(LSI_HKPT_L4_BEGINSESSION)->runNoParamFunctions((const LsiSession *)this);
+    if ( m_sessionHooks.isEnabled(LSI_HKPT_L4_BEGINSESSION) ) 
+        m_sessionHooks.runCallbackNoParam(LSI_HKPT_L4_BEGINSESSION, this);
     
     memset( &m_iInProcess, 0, (char *)(&m_ssl + 1) - (char *)(&m_iInProcess) );
     m_iov.clear();
@@ -551,8 +554,12 @@ void NtwkIOLink::setSSLAgain()
     }    
 }
 
+//return 1 if flush successful,
+//return 0 if still have pending data
+//return -1 if connection error. 
 int NtwkIOLink::flush()
 {
+    int ret;
     if ( D_ENABLED( DL_LESS ))
         LOG_D(( getLogger(), "[%s] NtwkIOLink::flush...", getLogId() ));
                 
@@ -564,14 +571,32 @@ int NtwkIOLink::flush()
     {
         if ( D_ENABLED( DL_LESS ))
             LOG_D(( getLogger(), "[%s] NtwkIOLink::flush buffered data ...", getLogId() ));
-        write("", 0);
-        return 0;
+        ret = writev_internal( m_iov.get(), m_iov.len(), LSI_CB_FLAG_IN_FLUSH );
+        if ( m_iHeaderToSend > 0 )
+        {
+            if ( ret >= m_iHeaderToSend )
+            {
+                m_iov.clear();
+                m_iHeaderToSend = 0;
+            }
+            else
+            {
+                if ( ret > 0 )
+                {
+                    m_iHeaderToSend -= ret;
+                    m_iov.finish( ret );
+                    ret = 0;
+                }
+                return ret;
+            }
+        }
+        if ( m_hasBufferedData )
+            return 0;
     }
     
     if ( !isSSL() )
         return 0;
     
-    int ret;
     switch( ( ret = getSSL()->flush() ))
     {
     case 0:
@@ -678,8 +703,8 @@ void NtwkIOLink::closeSocket()
     if ( D_ENABLED( DL_LESS ))
         LOG_D(( getLogger(), "[%s] Close socket ...", getLogId() ));
     
-    if ( !m_sessionHooks.isDisabled( LSI_HKPT_L4_ENDSESSION) ) 
-        m_sessionHooks.get(LSI_HKPT_L4_ENDSESSION)->runNoParamFunctions((const LsiSession *)this);
+    if ( m_sessionHooks.isEnabled( LSI_HKPT_L4_ENDSESSION) ) 
+        m_sessionHooks.runCallbackNoParam(LSI_HKPT_L4_ENDSESSION, this);
     
     HttpGlobals::getMultiplexer()->remove( this );
     if ( m_pFpList == s_pCur_fp_list_list->m_pSSL )
@@ -835,7 +860,7 @@ int NtwkIOLink::sendfile( int fdSrc, off_t off, size_t size )
     while( size > 0 )
     {
         int blockSize = sizeof( buf );
-        if ( blockSize > size )
+        if (  blockSize > (int)size )
             blockSize = size;
         ret = ::pread( fdSrc, buf, blockSize, curOff );
         if ( ret <= 0 )
@@ -1006,6 +1031,21 @@ int NtwkIOLink::detectClose()
             close();
             return 1;
         }
+    }
+    return 0;
+}
+
+int NtwkIOLink::detectCloseNow()
+{
+    char ch;
+    if ( ::recv( getfd(), &ch, 1, MSG_PEEK ) == 0 )
+    {
+        if ( D_ENABLED( DL_LESS ))
+            LOG_D(( getLogger(), "[%s] peer connection close detected!\n", getLogId() ));
+        //have the connection closed faster
+        setFlag( HIO_FLAG_PEER_SHUTDOWN, 1 );
+        close();
+        return 1;
     }
     return 0;
 }

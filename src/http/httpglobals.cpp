@@ -158,7 +158,7 @@ const char * HttpMethod::s_psMethod[HttpMethod::HTTP_METHOD_END] =
 int HttpMethod::s_iMethodLen[HttpMethod::HTTP_METHOD_END] =
 {
     7, 7, 3, 4, 4, 3, 6, 5, 7, 4,
-    8, 9, 5, 4, 4, 6, 15, 6, 7, 8, 10, 7, 11, 5, 5, 16, 10, 4, 6
+    8, 9, 5, 4, 4, 6, 15, 6, 7, 8, 10, 7, 11, 5, 5, 16, 10, 4, 6, 5, 7
 };
 
 #include <http/httpheader.h>
@@ -221,7 +221,7 @@ const char * const HttpVer::s_sHttpVer[2] =
 
 StatusCode HttpStatusCode::s_pSC[ SC_END ] =
 {
-    StatusCode( 0, NULL,NULL ),
+    StatusCode( 0, " 200 OK\r\n",NULL ),
     StatusCode( SC_100, " 100 Continue\r\n", NULL),
     StatusCode( SC_101, " 101 Switching Protocols\r\n", NULL),
     StatusCode( SC_102, " 102 Processing\r\n", NULL),

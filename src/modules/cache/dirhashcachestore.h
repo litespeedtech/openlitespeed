@@ -18,7 +18,7 @@
 #ifndef DIRHASHCACHESTORE_H
 #define DIRHASHCACHESTORE_H
 
-#include <cache/cachestore.h>
+#include <cachestore.h>
 
 /**
 	@author Gang Wang <gwang@litespeedtech.com>
@@ -35,10 +35,12 @@ class DirHashCacheStore : public CacheStore
     int isChanged( CacheEntry * pEntry, const char * pPath, int len );
     int isEntryExists( CacheHash& hash, const char * pSuffix, 
                     struct stat * pStat );
-    int isEntryUpdating( CacheHash& hash );
+    
     int isEntryStale( CacheHash & hash );
     int isEntryExist( CacheHash& hash, const char * pSuffix,
         struct stat *pStat );
+
+    int isEntryUpdating( CacheHash& hash );
 
 protected:
     int renameDiskEntry( CacheEntry * pEntry, char * pFrom,
@@ -79,7 +81,6 @@ public:
 
     virtual void removePermEntry( CacheEntry * pEntry );
     int& nio_stat(char achBuf[4096], stat* st);
-
 
 };
 

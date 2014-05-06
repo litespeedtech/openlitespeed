@@ -91,7 +91,17 @@ public:
     int set( const char * pFileName, int size );
     int setfd( const char * pFileName, int fd );
     char * getReadBuffer( size_t &size );
-    char * getWriteBuffer( size_t &size );
+    char * getWriteBuffer( size_t &size )
+    {
+        if (( !m_pCurWBlock )||( m_pCurWPos >= (*m_pCurWBlock)->getBufEnd() ))
+        {
+            if ( mapNextWBlock( ) != 0 )
+                return NULL;
+        }
+        size = (*m_pCurWBlock)->getBufEnd() - m_pCurWPos;
+        return m_pCurWPos;
+    }
+    
     void readUsed( size_t len )     {   m_pCurRPos += len;      }
     void writeUsed( size_t len )    {   m_pCurWPos += len;      }
     char * getCurRPos() const       {   return m_pCurRPos;      }
@@ -121,9 +131,14 @@ public:
                             int fd, size_t destStartOff );
     const char * getTempFileName()  {    return m_sFileName.c_str();    }
         
+    int convertInMemoryToFileBacked();
 
     int convertFileBackedToInMemory();
     static void initAnonPool();
+    int eof( off_t offset );
+    const char * acquireBlockBuf( off_t offset, int *size );
+    void releaseBlockBuf( off_t offset );
+
 
 };
 

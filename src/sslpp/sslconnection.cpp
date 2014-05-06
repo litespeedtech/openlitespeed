@@ -26,7 +26,7 @@
 #include <assert.h>
 #include <config.h>
 
-static const char * s_pErrInvldSSL = "Invalid Parameter, SSL* ssl is null\n";
+//static const char * s_pErrInvldSSL = "Invalid Parameter, SSL* ssl is null\n";
 
 SSLConnection::SSLConnection()
     : m_ssl( NULL )

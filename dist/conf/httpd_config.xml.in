@@ -144,7 +144,7 @@
         <enableDynGzipCompress>1</enableDynGzipCompress>
         <gzipCompressLevel>6</gzipCompressLevel>
         <enableGzipCompress>1</enableGzipCompress>
-        <compressibleTypes>text/html</compressibleTypes>
+        <compressibleTypes>text/*,application/x-javascript,application/javascript,application/xml, image/svg+xml</compressibleTypes>
         <gzipAutoUpdateStatic>1</gzipAutoUpdateStatic>
         <gzipStaticCompressLevel>6</gzipStaticCompressLevel>
         <gzipMaxFileSize>1M</gzipMaxFileSize>

@@ -51,12 +51,12 @@ public:
 
     int init(const char* name, const char** attr);
     int addChild(const char* name, XmlNode* pChild);
-    const XmlNode* getChild(const char* name) const;
-    XmlNode* getChild(const char* name);
+    const XmlNode* getChild(const char* name, int bOptional  = 0) const;
+    XmlNode* getChild(const char* name, int bOptional = 0);
     const XmlNodeList * getChildren(const char* name ) const;
     int getAllChildren(XmlNodeList& list) const;
     int getAllChildren(XmlNodeList& list);
-    const char* getChildValue( const char *name ) const;
+    const char* getChildValue( const char *name, int bKeyName = 0) const;
     const char* getAttr(const char* name) const;
     const AttrMap * getAllAttr() const;
     const char* getName() const;

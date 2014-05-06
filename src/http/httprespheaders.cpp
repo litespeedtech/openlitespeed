@@ -752,8 +752,8 @@ void HttpRespHeaders::buildCommonHeaders()
 void HttpRespHeaders::updateDateHeader()
 {
     char achDateTime[60];
-    DateTime::getRFCTime(DateTime::s_curTime, achDateTime);
-    if(achDateTime)
+    char *p = DateTime::getRFCTime(DateTime::s_curTime, achDateTime);
+    if(p)
         memcpy(HttpRespHeaders::s_sDateHeaders, achDateTime, 29);
 }
 

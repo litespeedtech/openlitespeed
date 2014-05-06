@@ -302,7 +302,7 @@ int HttpReq::processRequestLine()
     if (result )
         return result;
     p += m_iHostLen;
-   pCur = (char*)memchr(p, '/', (pLineEnd -p));
+    pCur = (char*)memchr(p, '/', (pLineEnd -p));
     while(( p < pLineEnd )&&(( *p != ' ' )&&( *p != '\t' )))
         ++p;
     if ( p == pLineEnd )
@@ -459,7 +459,7 @@ int HttpReq::parseMethod(const char *pCur, const char *pBEnd )
         m_iNoRespBody = 1;
 
     if (( m_method < HttpMethod::HTTP_OPTIONS )||
-            ( m_method > HttpMethod::DAV_SEARCH ))
+            ( m_method >= HttpMethod::HTTP_METHOD_END ))
     {
         return SC_505;
     }
@@ -1327,12 +1327,22 @@ int HttpReq::processSuffix( const char * pURI, const char * pURIEnd, int &cachea
     }
     if ( m_pHttpHandler->getHandlerType() == HandlerType::HT_NULL )
     {
-        return processMime( pSuffix );
+        return setMimeBySuffix( pSuffix );
     }
     return 0;
 }
 
-int HttpReq::processMime( const char * pSuffix )
+const char * HttpReq::getMimeBySuffix( const char *pSuffix )
+{
+    const MIMESetting * pMime = m_pContext->determineMime( pSuffix, (char *)m_pForcedType );
+    if ( pMime )
+        return pMime->getMIME()->c_str();
+    else
+        return NULL;
+}
+
+
+int HttpReq::setMimeBySuffix( const char * pSuffix )
 {
     if ( !m_pMimeType )
         m_pMimeType = m_pContext->determineMime( pSuffix, (char *)m_pForcedType );
@@ -2304,8 +2314,8 @@ key_value_pair * HttpReq::addEnv( const char * pOrgKey, int orgKeyLen, const cha
     {
         if ( valLen == pIdx->valLen )
         {
-            if ( strncmp( pValue, m_reqBuf.getPointer( pIdx->valOff ), valLen ) == 0 )
-                return pIdx;
+            memmove( m_reqBuf.getPointer( pIdx->valOff ), pValue, valLen );
+            return pIdx;
         }
         keyOff = pIdx->valOff;
         n = pIdx - getOffset( m_envIdxOff, 0 );

@@ -32,9 +32,9 @@ int HttpConfigLoader::loadPlainConfigFile()
     if ( !m_pRoot )
         m_pRoot = plainconf::parseFile( m_sPlainconfPath.c_str() );
 
-#ifdef OUTPUT_TEST_CONFIG_FILE
+#ifdef TEST_OUTPUT_PLAIN_CONF
     char sPlainFile[512] = {0};
-    strcpy( sPlainFile, pConfigFilePath );
+    strcpy( sPlainFile, m_sPlainconfPath.c_str() );
     strcat( sPlainFile, ".txt" );
     plainconf::testOutputConfigFile( m_pRoot, sPlainFile );
 #endif
