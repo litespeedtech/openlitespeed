@@ -373,6 +373,7 @@ int VMemBuf::appendBlock( BlockBuf * pBlock )
     
 }
 
+
 int VMemBuf::convertFileBackedToInMemory()
 {
     BlockBuf * pBlock;
@@ -615,16 +616,6 @@ int VMemBuf::grow()
 }
 
 
-char * VMemBuf::getWriteBuffer( size_t &size )
-{
-    if (( !m_pCurWBlock )||( m_pCurWPos >= (*m_pCurWBlock)->getBufEnd() ))
-    {
-        if ( mapNextWBlock( ) != 0 )
-            return NULL;
-    }
-    size = (*m_pCurWBlock)->getBufEnd() - m_pCurWPos;
-    return m_pCurWPos;
-}
 
 char * VMemBuf::getReadBuffer( size_t &size )
 {
@@ -729,7 +720,7 @@ int VMemBuf::write( const char * pBuf, int size )
         }
         else
         {
-            memmove( m_pCurWPos, pBuf, len );
+            memmove( m_pCurWPos, pCur, len );
             pCur += len;
             size -= len;
         }
@@ -797,6 +788,59 @@ char * VMemBuf::mapTmpBlock( int fd, BlockBuf &buf, size_t offset, int write )
     }
     buf.setBlockBuf( pBuf, s_iBlockSize );
     return pBuf + offset % s_iBlockSize;
+}
+
+
+int VMemBuf::eof( off_t offset )
+{
+    int total = getCurWOffset(); 
+    if ( offset >= total )
+        return 1;
+    else
+        return 0;
+}
+
+const char * VMemBuf::acquireBlockBuf( off_t offset, int *size )
+{
+    BlockBuf * pSrcBlock = NULL;
+    char * pSrcPos;
+    int total = getCurWOffset(); 
+    int blk = offset / s_iBlockSize;
+    *size = 0;
+    if ( blk >= m_bufList.size() )
+        return NULL;
+    if ( offset >= total )
+        return "";
+ 
+    int len = total - offset;
+    pSrcBlock = m_bufList[blk];
+    if ( !pSrcBlock )
+        return NULL;
+
+    if ( !pSrcBlock->getBuf() )
+    {
+        if ( remapBlock( pSrcBlock, blk * s_iBlockSize ) == -1 )
+            return NULL;
+    }
+    pSrcPos = pSrcBlock->getBuf() + offset % s_iBlockSize;
+    if ( len > pSrcBlock->getBufEnd() - pSrcPos )
+        *size = pSrcBlock->getBufEnd() - pSrcPos;
+    else
+        *size = len;
+    return pSrcPos;
+}
+
+void VMemBuf::releaseBlockBuf( off_t offset )
+{
+    BlockBuf * pSrcBlock = NULL;
+    int blk = offset / s_iBlockSize;
+    if (( m_type != VMBUF_FILE_MAP )||
+        ( blk >= m_bufList.size() ))
+        return ;
+    pSrcBlock = m_bufList[blk];
+    if ( pSrcBlock->getBuf()&&( pSrcBlock != *m_pCurRBlock )
+         &&( pSrcBlock != *m_pCurWBlock ))
+        releaseBlock( pSrcBlock );
 }
 
 int VMemBuf::copyToFile( size_t startOff, size_t len, 

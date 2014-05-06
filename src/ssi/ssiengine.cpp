@@ -55,7 +55,7 @@ void SSIEngine::printError( HttpSession *pSession, char * pError )
         pError = achBuf;
     }
     
-    pSession->appendDynBody( 0, pError, strlen( pError ) );
+    pSession->appendDynBody( pError, strlen( pError ) );
 }
 
 int SSIEngine::startExecute( HttpSession *pSession, 
@@ -79,7 +79,7 @@ int SSIEngine::startExecute( HttpSession *pSession,
         //pSession->setupChunkOS( 0 );
         HttpCgiTool::processContentType( pReq, pSession->getResp(), 
                       ct , 9 );
-        pSession->setupRespCache();
+//        pSession->setupRespCache();
         if ( pReq->isXbitHackFull() )
         {
             pSession->getResp()->appendLastMod( pReq->getLastMod() );
@@ -89,7 +89,7 @@ int SSIEngine::startExecute( HttpSession *pSession,
         {
             if ( pReq->getLocationOff() )
             {
-                pSession->getResp()->addLocationHeader( pReq );
+                pSession->addLocationHeader();
             }
         }
         pSession->setupGzipFilter();
@@ -187,7 +187,7 @@ int SSIEngine::processEcho( HttpSession *pSession, SSIComponent * pComponent)
                 p = achBuf1;
             }
             if ( len > 0 )
-                pSession->appendDynBody( 0, p, len );
+                pSession->appendDynBody( p, len );
             break;
         case SSI_ENC_NONE:
         case SSI_ENC_URL:
@@ -232,7 +232,7 @@ int SSIEngine::processFileAttr( HttpSession *pSession, SSIComponent * pComponent
         if ( achBuf[0] == 0 )
         {
             len = snprintf( achBuf, 4096, "[an error occurred while processing this directive]\n" );
-            pSession->appendDynBody( 0, achBuf, len );
+            pSession->appendDynBody( achBuf, len );
             return 0;
         }
         HttpReq * pReq = pSession->getReq();
@@ -260,7 +260,7 @@ int SSIEngine::processFileAttr( HttpSession *pSession, SSIComponent * pComponent
     struct stat st;
     if ( nio_stat( achBuf, &st ) == -1 )
     {
-        pSession->appendDynBody( 0, "[error: stat() failed!\n", 23 );
+        pSession->appendDynBody( "[error: stat() failed!\n", 23 );
         return 0;
     }
     if ( pComponent->getType() == SSIComponent::SSI_FSize )
@@ -275,7 +275,7 @@ int SSIEngine::processFileAttr( HttpSession *pSession, SSIComponent * pComponent
         len = strftime( achBuf, 1024, pRuntime
                     ->getConfig()->getTimeFmt()->c_str(), tm );
     }
-    pSession->appendDynBody( 0, achBuf, len );
+    pSession->appendDynBody( achBuf, len );
     return 0;
 }
 
@@ -342,7 +342,7 @@ int SSIEngine::processSubReq( HttpSession *pSession, SubstItem *pItem )
             return 0;
         //len = snprintf( achBuf, 40960, "'exec cmd' is not available, "
         //            "use 'include virutal' instead.\n" );
-        //pSession->appendDynBody( 0, achBuf, len );
+        //pSession->appendDynBody( achBuf, len );
 
         //return 0;
     }
@@ -351,7 +351,7 @@ int SSIEngine::processSubReq( HttpSession *pSession, SubstItem *pItem )
         if ( achBuf[0] == 0 )
         {
             len = snprintf( achBuf, 40960, "[an error occurred while processing this directive]\n" );
-            pSession->appendDynBody( 0, achBuf, len );
+            pSession->appendDynBody( achBuf, len );
             return 0;
         }
         HttpReq * pReq = pSession->getReq();
@@ -410,7 +410,7 @@ int SSIEnv::add( const char *name, size_t nameLen,
     len = HttpUtil::escapeHtml(  value, value + valLen, p, &achBuf[40960] - p );
     p += len;
     *p++ = '\n';
-    m_pSession->appendDynBody( 0, achBuf, p - achBuf );
+    m_pSession->appendDynBody( achBuf, p - achBuf );
     return 0;
 }
 
@@ -419,7 +419,7 @@ int SSIEnv::add( const char * buf, size_t len )
     char achBuf[40960];
     int ret = HttpUtil::escapeHtml( buf, buf + len, achBuf, 40960 );
     achBuf[ret] = '\n';
-    m_pSession->appendDynBody( 0, achBuf, ret + 1 );
+    m_pSession->appendDynBody( achBuf, ret + 1 );
     return 0;
 }
 
@@ -499,7 +499,7 @@ int SSIEngine::appendLocation( HttpSession *pSession, const char * pLocation, in
     p += len;
     memmove( p, "</A>", 4 );
     p += 4;
-    pSession->appendDynBody( 0, achBuf, p - achBuf );
+    pSession->appendDynBody( achBuf, p - achBuf );
     return 0;
 }
 
@@ -708,7 +708,7 @@ int SSIEngine::executeComponent( HttpSession *pSession, SSIComponent * pComponen
     {
     case SSIComponent::SSI_String:
         pBuf = pComponent->getContentBuf();
-        pSession->appendDynBody( 0, pBuf->begin(), pBuf->size() );
+        pSession->appendDynBody( pBuf->begin(), pBuf->size() );
         break;
     case SSIComponent::SSI_Config:
         updateSSIConfig( pSession, pComponent, pSession->getReq()->getSSIRuntime() );
@@ -783,6 +783,6 @@ int SSIEngine::resumeExecute( HttpSession *pSession )
             return 0;
     }
     endExecute( pSession );
-    return pSession->endDynResp( 1 );
+    return pSession->endResponse( 1 );
 
 }

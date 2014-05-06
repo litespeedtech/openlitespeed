@@ -46,5 +46,5 @@ int handlerBeginProcess(void *session)
  * Define a handler, need to provide a struct _handler_st object, in which 
  * the first function pointer should not be NULL
  */
-lsi_handler_t myhandler = { handlerBeginProcess, NULL, NULL };
+lsi_handler_t myhandler = { handlerBeginProcess, NULL, NULL, NULL };
 lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, NULL, &myhandler, NULL };

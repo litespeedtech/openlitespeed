@@ -33,8 +33,6 @@
 #include <lsiapi/internal.h>
 #include <lsiapi/lsimoduledata.h>
 #include <lsiapi/lsiapihooks.h>
-#include <lsiapi/lsiapi.h>
-#include <lsiapi/modulemanager.h>
 
 class HttpListener;
 class VHostMap;
@@ -46,7 +44,7 @@ typedef int (*writev_fp)( LsiSession* pThis, const struct iovec *vector, int cou
 typedef int (*read_fp)( LsiSession* pThis, char *pBuf, int size );
 
 
-class NtwkIOLink : public EventReactor, public HioStream, public LsiSession
+class NtwkIOLink : public LsiSession, public EventReactor, public HioStream 
 {
 private:
     typedef int (*onRW_fp)( NtwkIOLink * pThis );
@@ -214,7 +212,7 @@ public:
     void setRemotePort( unsigned short port )
     {   
         m_iRemotePort = port;
-        setLogIdBuild( 0 );  
+        clearLogId();  
     };
     
     unsigned short getRemotePort() const  {   return m_iRemotePort;       };
@@ -222,6 +220,7 @@ public:
     int sendRespHeaders( HttpRespHeaders * pHeaders );
     
     const char * buildLogId();
+    LogTracker * getLogTracker()        {   return this;        }
     
     class fp_list     * getFnList() { return m_pFpList; }
     
@@ -231,6 +230,7 @@ public:
     {   return m_pClientInfo->allowRead();   }
     int close();
     int  detectClose();
+    int  detectCloseNow();
 
 public:
 
@@ -246,7 +246,7 @@ public:
     bool canHold( int size )    {   return allowWrite();        }
 
     int write( const char * pBuf, int size );
-    int writev_internal( const struct iovec * vector, int len );
+    int writev_internal( const struct iovec * vector, int len, int flush_flag );
     int writev( const struct iovec * vector, int len );
     
     int sendfile( int fdSrc, off_t off, size_t size );
@@ -325,7 +325,7 @@ public:
 
     LsiApiHooks * getModSessionHooks( int index )
     {   return m_sessionHooks.getCopy( index ); }
- };
+};
 
 
 #endif

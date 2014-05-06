@@ -29,7 +29,6 @@ class LogTracker
 {
     AutoStr2            m_logId;
     LOG4CXX_NS::Logger* m_pLogger;
-    int                 m_iLogIdBuilt;
     
 public: 
     LogTracker();
@@ -41,9 +40,8 @@ public:
     //return m_logID.c_str();  }
     const char * getLogId()          
     {   
-        if ( m_iLogIdBuilt )
+        if ( isLogIdBuilt() )
             return m_logId.c_str();
-        m_iLogIdBuilt = 1;
         return buildLogId();
     }
     
@@ -51,8 +49,8 @@ public:
     void setLogger( LOG4CXX_NS::Logger* pLogger)
     {   m_pLogger = pLogger;    }
     
-    void setLogIdBuild( int n )     {   m_iLogIdBuilt = n;      }
-    int  isLogIdBuilt() const       {   return m_iLogIdBuilt;   }
+    void clearLogId()     {   *m_logId.buf() = 0;      }
+    int  isLogIdBuilt() const       {   return *m_logId.c_str() != '\0';   }
     virtual const char * buildLogId() = 0;
     
 };

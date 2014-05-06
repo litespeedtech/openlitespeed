@@ -88,10 +88,10 @@ int check_if_remove_session_hook(struct lsi_cb_param_t *rec)
 }
 
 
-static int init()
+static int init(lsi_module_t * pModule)
 {
-    g_api->add_hook( LSI_HKPT_RECV_REQ_HEADER, &MNAME, check_if_remove_session_hook, LSI_HOOK_NORMAL, 0 );
-    g_api->add_hook( LSI_HKPT_SEND_RESP_HEADER, &MNAME, mycb, LSI_HOOK_LAST, 0 );
+    g_api->add_hook( LSI_HKPT_RECV_REQ_HEADER, pModule, check_if_remove_session_hook, LSI_HOOK_NORMAL, 0 );
+    g_api->add_hook( LSI_HKPT_SEND_RESP_HEADER, pModule, mycb, LSI_HOOK_LAST, 0 );
     return 0;
 }
 

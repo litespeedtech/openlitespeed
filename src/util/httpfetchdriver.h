@@ -27,6 +27,7 @@ class HttpFetchDriver : public EventReactor
 {
     HttpFetch * m_pHttpFetch;
     time_t m_tmStart;
+    HttpFetchDriver(const HttpFetchDriver& other);
     
 public:
     virtual int handleEvents(short int event);
@@ -34,7 +35,6 @@ public:
     
     HttpFetchDriver(HttpFetch * pHttpFetch);
     virtual ~HttpFetchDriver()                      {   };
-    HttpFetchDriver(const HttpFetchDriver& other)   {   };
     void start();
     void stop();
     

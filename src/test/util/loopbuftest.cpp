@@ -125,7 +125,7 @@ TEST(LoopBufSearchTest)
 {
     LoopBuf buf;
     const char *ptr, *ptr2, *pAccept = NULL;
-    char *printBuf = (char *)malloc(128);
+    //char *printBuf = (char *)malloc(128);
     printf( "LoopBuf Search Test\n" );
     buf.append( "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa1"
             "23456789101112131415161718192021222324252627282930313233343536", 127 );

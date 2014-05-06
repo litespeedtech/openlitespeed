@@ -27,3 +27,7 @@ if [  "x$INST_USER" = "xroot" ]; then
     chown -R {PHP_USR}:{PHP_USR} {PHP_BUILD_DIR}/php-{PHP_VERSION} 
 fi
 
+if [ -f "/etc/cagefs/cagefs.mp" ] ; then
+# cagefs installed first, need update mount point
+    cagefsctl --update
+fi

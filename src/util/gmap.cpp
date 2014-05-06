@@ -80,13 +80,17 @@ GMap::iterator GMap::next( iterator iter )
     if ( iter == NULL )
         return NULL;
     if ( iter->m_right == NULL )
+    {
         if ( iter->m_parent != NULL )
+        {
             if ( m_vc( iter->m_pKey, iter->m_parent->m_pKey ) > 0 )
                 return NULL;
             else
                 return iter->m_parent;
+        }
         else
             return NULL;
+    }
     iter = iter->m_right;
     while( iter->m_left != NULL )
         iter = iter->m_left;
@@ -383,10 +387,12 @@ GMap::iterator GMap::removeEndNode( GMap* pThis, iterator node, char nullify )
     {
         pSibling->m_color = GMapNode::red;
         if ( nullify == 1 )
+        {
             if ( node == pParent->m_left )
                 pParent->m_left = NULL;
             else
                 pParent->m_right = NULL;
+        }
         
         if ( pParent->m_color == GMapNode::black ) 
             removeEndNode( pThis, pParent, 0 );

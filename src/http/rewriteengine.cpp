@@ -829,6 +829,12 @@ int RewriteEngine::processRewrite( const RewriteRule * pRule, HttpSession *pSess
         {
             processQueryString( pSession, flag );
         }
+        const char * pCode;
+        if ( !m_statusCode )
+            pCode = "200";
+        else
+            pCode = HttpStatusCode::getCodeString( m_statusCode ) + 1;
+        pSession->getReq()->addEnv( "REDIRECT_STATUS", 15, pCode, 3 );
     }
     else if ( m_logLevel > 0 )
         LOG_INFO(( pSession->getLogger(),

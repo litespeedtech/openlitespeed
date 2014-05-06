@@ -193,6 +193,14 @@ int  HttpExtConnector::respHeaderDone()
     int ret = m_pSession->respHeaderDone( m_iRespState );
     if ( ret == 1 )
         m_iState |= HEC_REDIRECT;
+    else if ( ret == 0 )
+    {
+        if ( (m_iRespState &( HEC_RESP_NPH | HEC_RESP_NPH2)) ==
+                    ( HEC_RESP_NPH | HEC_RESP_NPH2) )
+        {
+            m_iRespState |= HEC_RESP_NOBUFFER;
+        }
+    }
     return ret;
 }
 
@@ -220,23 +228,23 @@ int HttpExtConnector::processRespData( const char * pBuf, int len )
 
 char * HttpExtConnector::getRespBuf( size_t& len )
 {
-    if (( m_pSession->getGzipBuf() )||( !(m_iRespState & 0xff) )|| !m_pSession->getRespCache() ||
-        !m_pSession->isHookDisabled( LSI_HKPT_RECV_RESP_BODY ) )
+    if ( (m_iRespState & 0xff) && m_pSession->getRespCache() 
+        && m_pSession->isHookDisabled( LSI_HKPT_RECV_RESP_BODY ) )
     {
-        len = G_BUF_SIZE;
-        return HttpGlobals::g_achBuf;
+        if ( !m_pSession->getGzipBuf() )
+            return m_pSession->getRespCache()->getWriteBuffer( len );
     }
-    else
-    {
-        return m_pSession->getRespCache()->getWriteBuffer( len );
-    }    
+
+    len = G_BUF_SIZE;
+    return HttpGlobals::g_achBuf;
 }
 
 int HttpExtConnector::flushResp()
 {
-    if ( !m_pSession->getRespCache() || !(m_iRespState & 0xff) )
+    if ( !(m_iRespState & 0xff) )
         return 0;
-    return m_pSession->flushDynBody(m_iRespState & HEC_RESP_NOBUFFER);
+    //return m_pSession->flushDynBody(m_iRespState & HEC_RESP_NOBUFFER);
+    return m_pSession->flush();
 }
 
 
@@ -245,24 +253,20 @@ int HttpExtConnector::processRespBodyData( int inplace, const char * pBuf, int l
     if ( D_ENABLED( DL_MEDIUM ) )
         LOG_D((getLogger(), "[%s] HttpExtConnector::processRespBodyData()",
                getLogId() ));
-        
-        if ( m_pSession->getRespCache() )
-        {
-            int ret = m_pSession->appendDynBody( inplace, pBuf, len );
-            if ( ret == -1 )
-            {
-                errResponse( SC_500, NULL );
-            }
-            else if ( m_pSession->shouldSuspendReadingResp() )
-            {
-                m_pProcessor->suspendRead();
-            }
-            
-            //        return checkRespSize();
-            return ret;
-        }
-        else
-            return len;
+    if ( inplace && ( pBuf == HttpGlobals::g_achBuf ))
+        inplace = 0;
+    int ret = m_pSession->appendDynBody( pBuf, len );
+    if ( ret == -1 )
+    {
+        errResponse( SC_500, NULL );
+    }
+    else if ( m_pSession->shouldSuspendReadingResp() )
+    {
+        m_pProcessor->suspendRead();
+    }
+    
+    //        return checkRespSize();
+    return ret;
 }
 
 int HttpExtConnector::extInputReady()
@@ -370,7 +374,7 @@ int HttpExtConnector::endResponse( int endCode, int protocolStatus )
     if ( ( m_iRespState & 0xff ) &&
         !(m_iState & (HEC_ERROR|HEC_REDIRECT )) )
     {
-        return m_pSession->endDynResp( !(m_iState & HEC_ABORT_REQUEST) );
+        return m_pSession->endResponse( !(m_iState & HEC_ABORT_REQUEST) );
     }
     else
     {

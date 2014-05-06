@@ -134,8 +134,6 @@ public:
     void suspend();
         
     char * getRespBuf( size_t& len );
-    int  respBodyRecv( const char * pBuf, size_t len )
-    {   return processRespBodyData( 1, pBuf, len );     }
     
     int reqHeaderDone();
     int reqBodyDone();

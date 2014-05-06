@@ -51,7 +51,7 @@
 CtxInt HttpContext::s_defaultInternal =
 {   NULL, NULL, NULL, NULL, NULL, NULL,
     NULL, NULL, NULL, NULL, NULL, NULL,
-    NULL, NULL, NULL, } ;
+    NULL, NULL, NULL, GSockAddr() } ;
 
 HttpContext::HttpContext()
     : m_iConfigBits( 0 )
@@ -1037,7 +1037,7 @@ int HttpContext::configErrorPages( const XmlNode *pNode )
         for( iter = pList->begin(); iter != pList->end(); ++iter )
         {
             const XmlNode *pNode = *iter;
-            const char *pCode = pNode->getChildValue( "errCode" );
+            const char *pCode = pNode->getChildValue( "errCode", 1 );
             const char *pUrl = pNode->getChildValue( "url" );
 
             if ( setCustomErrUrls( pCode, pUrl ) != 0 )
@@ -1245,8 +1245,8 @@ int HttpContext::config(const RewriteMapList * pMapList, const XmlNode *pContext
 
     }
 
-    pNode = pContextNode->getChild( "customErrorPages" );
-
+    pNode = pContextNode->getChild( "customErrorPages", 1 );
+    
     if ( pNode )
     {
         ConfigCtx currentCtx( "errorpages" );

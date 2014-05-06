@@ -96,7 +96,7 @@ static int httpinit(struct lsi_cb_param_t *rec)
 /**
  * httpreqread will try to read from the next step of the stream as much as possible
  * and hold the data, then double each char to the buffer. 
- * If finally it has hold data, set the hasBufferedData to 1 with *((int *)rec->_param2) = 1;
+ * If finally it has hold data, set the hasBufferedData to 1 with *((int *)rec->_flag_out) = 1;
  * DO NOT SET TO 0, because the other module may already set to 1 when pass in this function.
  * 
  */
@@ -106,7 +106,7 @@ static int httpreqread(struct lsi_cb_param_t *rec)
     char *pBegin;
     char tmpBuf[MAX_BLOCK_BUFSIZE];
     int len, sz, i;
-    char *p = (char *)rec->_param1;
+    char *p = (char *)rec->_param;
     
     myData = (MyData *)g_api->get_module_data(rec->_session, &MNAME, LSI_MODULE_DATA_HTTP);
     if (!myData)
@@ -118,7 +118,7 @@ static int httpreqread(struct lsi_cb_param_t *rec)
         _loopbuff_append(&myData->inBuf, tmpBuf, len);
     }
     
-    while (_loopbuff_hasdata(&myData->inBuf) && (p - (char *)rec->_param1 < rec->_param1_len) )
+    while (_loopbuff_hasdata(&myData->inBuf) && (p - (char *)rec->_param < rec->_param_len) )
     {
         _loopbuff_reorder(&myData->inBuf);
         pBegin = _loopbuff_getdataref(&myData->inBuf);
@@ -127,8 +127,8 @@ static int httpreqread(struct lsi_cb_param_t *rec)
 //#define TESTCASE_2
 #ifndef TESTCASE_2
         //test case 1: double each cahr
-        if (sz > rec->_param1_len / 2)
-            sz = rec->_param1_len / 2;
+        if (sz > rec->_param_len / 2)
+            sz = rec->_param_len / 2;
         for ( i=0; i<sz; ++i)
         {
             *p++ = *pBegin;
@@ -137,8 +137,8 @@ static int httpreqread(struct lsi_cb_param_t *rec)
         }
 #else
         //test case 2: shink to half of the org req body
-        if (sz > rec->_param1_len * 2)
-            sz = rec->_param1_len * 2;
+        if (sz > rec->_param_len * 2)
+            sz = rec->_param_len * 2;
         for ( i=0; i< sz / 2; ++i)
         {
             *p++ = *pBegin;
@@ -149,19 +149,20 @@ static int httpreqread(struct lsi_cb_param_t *rec)
         _loopbuff_erasedata(&myData->inBuf, sz);
     }
     
-    rec->_param1_len = p - (char *)rec->_param1;
+    rec->_param_len = p - (char *)rec->_param;
     if (_loopbuff_hasdata(&myData->inBuf))
-        *((int *)rec->_param2) = 1;
+        *((int *)rec->_flag_out) = 1;
     
-    return rec->_param1_len;
+    return rec->_param_len;
 }
 
 
 static int check_uri_and_reg_handler(struct lsi_cb_param_t *rec)
 {
     const char *uri;
-    uri = g_api->get_req_uri(rec->_session);
-    if ( strncasecmp(uri, TESTURI, strlen(TESTURI)) == 0 )
+    int len;
+    uri = g_api->get_req_uri(rec->_session, &len);
+    if ( len >= strlen(TESTURI) && strncasecmp(uri, TESTURI, strlen(TESTURI)) == 0 )
     {
         g_api->register_req_handler( rec->_session, &MNAME, strlen(TESTURI) );
         //g_api->set_req_wait_full_body( rec->_session );
@@ -169,14 +170,14 @@ static int check_uri_and_reg_handler(struct lsi_cb_param_t *rec)
     return LSI_RET_OK;
 }
 
-static int _init()
+static int _init( lsi_module_t * pModule )
 {
-    g_api->add_hook( LSI_HKPT_RECV_REQ_HEADER, &MNAME, check_uri_and_reg_handler, LSI_HOOK_NORMAL, 0 );
-    MNAME._info = VERSION;  //set version string
+    g_api->add_hook( LSI_HKPT_RECV_REQ_HEADER, pModule, check_uri_and_reg_handler, LSI_HOOK_NORMAL, 0 );
+    pModule->_info = VERSION;  //set version string
     
-    g_api->init_module_data(&MNAME, httpRelease, LSI_MODULE_DATA_HTTP );
-    g_api->add_hook(LSI_HKPT_HTTP_BEGIN, &MNAME, httpinit, LSI_HOOK_NORMAL, 0);
-    g_api->add_hook(LSI_HKPT_RECV_REQ_BODY, &MNAME, httpreqread, LSI_HOOK_EARLY, LSI_HOOK_FLAG_TRANSFORM);
+    g_api->init_module_data(pModule, httpRelease, LSI_MODULE_DATA_HTTP );
+    g_api->add_hook(LSI_HKPT_HTTP_BEGIN, pModule, httpinit, LSI_HOOK_NORMAL, 0);
+    g_api->add_hook(LSI_HKPT_RECV_REQ_BODY, pModule, httpreqread, LSI_HOOK_EARLY, LSI_HOOK_FLAG_TRANSFORM);
     
     return 0;
 }
@@ -225,5 +226,11 @@ static int handlerBeginProcess( void *session )
     return 0;
 }
 
-struct lsi_handler_t reqHandler = { handlerBeginProcess, handleReqBody, NULL };
+static int cleanUp( void *session)
+{
+    g_api->free_module_data(session, &MNAME, LSI_MODULE_DATA_HTTP, httpRelease);
+    return 0;
+}
+
+struct lsi_handler_t reqHandler = { handlerBeginProcess, handleReqBody, NULL, cleanUp };
 lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, _init, &reqHandler, NULL, };

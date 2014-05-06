@@ -100,7 +100,7 @@ public:
             --m_iTotal;
             return m_head.removeNext();
         }
-        assert( m_iTotal = 0 );
+        assert( m_iTotal == 0 );
         return NULL;
     }
 

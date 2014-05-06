@@ -40,8 +40,6 @@ private:
 
     off_t           m_lEntityLength;
     off_t           m_lEntityFinished;
-    short           m_iSSL;
-    short           m_iLogAccess;
     
     HttpResp( const HttpResp& rhs ) {}
     void operator=( const HttpResp& rhs ) {}
@@ -84,19 +82,9 @@ public:
     //    return 1;//m_iHeaderTotalLen > m_respHeaders.getHeaderLeft();   
         
     //}
-
-    void needLogAccess( short n )       {   m_iLogAccess = n;       }
-    short shouldLogAccess() const       {   return m_iLogAccess;    }
     
     bool isChunked() const
     {   return (m_lEntityLength == -1); }
-
-
-    const char * getProtocol() const;
-    int   getProtocolLen() const;
-
-    void setSSL( int ssl )
-    {   m_iSSL = (ssl != 0 );   }
 
     //IOVec& getIov()    {   return m_respHeaders.getIOVec();  }
     int parseAdd( const char * pBuf, int len )

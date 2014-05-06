@@ -46,7 +46,7 @@ TEST( GMapTest_test )
     printf( "Start GMapTest\n" );
     CHECK( gm.size() == 0 );
     
-    for( int i = 0; i < 3; ++i )
+    for( size_t i = 0; i < 3; ++i )
     {
         CHECK( gm.insert( (const void *)(long)aKeys[i], (void *)(long)aVals[i] ) == 0 );
         CHECK( gm.size() == i+1 );
@@ -65,7 +65,7 @@ TEST( GMapTest_test )
         ptr = gm.find( (const void *)(long)aKeys[i] );
         retVal = gm.deleteNode( ptr );
         CHECK( (long)retVal == 2 );
-        CHECK( gm.size() == i );
+        CHECK( gm.size() == (size_t)i );
 #ifdef GMAP_DEBUG
         printf( "\n" );
         GMap::printTree( &gm );
@@ -75,7 +75,7 @@ TEST( GMapTest_test )
     for( int i = 0; i < iCount; ++i )
     {
         CHECK( gm.insert( (const void *)(long)aKeys[i], (void *)(long)aVals[i] ) == 0 );
-        CHECK( gm.size() == i+1 );
+        CHECK( gm.size() == (size_t)i+1 );
     }
 #ifdef GMAP_DEBUG
     GMap::printTree( &gm );
@@ -98,7 +98,7 @@ TEST( GMapTest_test )
         ptr = gm.find( (const void *)(long)aKeys[ aDelList[i] ] );
         retVal = gm.deleteNode( ptr );
         CHECK( (long)retVal == aVals[ aDelList[i] ] );
-        CHECK( gm.size() == iCount - i - 1 );
+        CHECK( gm.size() == (size_t)iCount - (size_t)i - 1 );
 #ifdef GMAP_DEBUG
         GMap::printTree( &gm );
 #endif

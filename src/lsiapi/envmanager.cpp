@@ -45,7 +45,7 @@ int EnvManager::regEnvHandler(const char *name, unsigned int len, lsi_callback_p
     {
         m_envList.append(pEnvHandler);
     }
-    
+    return 0;
 }
 
 int EnvManager::delEnvHandler(const char *name, unsigned int len)
@@ -79,8 +79,8 @@ int EnvManager::execEnvHandler(LsiSession *session, lsi_callback_pf cb, void *va
     lsi_cb_param_t param;
     memset(&param, 0, sizeof(lsi_cb_param_t));
     param._session = (void *)session;
-    param._param1 = val;
-    param._param1_len = valLen;
+    param._param = val;
+    param._param_len = valLen;
     return cb(&param);
 }
 

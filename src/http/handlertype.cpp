@@ -27,15 +27,15 @@ const char * HandlerType::s_sHandlerType[HT_END] =
     "redirect",
     "jwebapp",
     "rails",
+    "module",
     "cgi",
     "fcgi",
     "proxy",
     "jk",
     "lsapi",
     "logger",
-    "loadbalancer",
-    "module"
-
+    "loadbalancer"
+ 
 };
 
 

@@ -225,26 +225,26 @@ static int l4recv2(struct lsi_cb_param_t * rec)
     }
     
     ////////////////////////////////////////////////////////////////////////////////
-    if (_loopbuff_getdatasize(&myData->outBuf) < rec->_param1_len)
+    if (_loopbuff_getdatasize(&myData->outBuf) < rec->_param_len)
     {
-        rec->_param1_len = _loopbuff_getdatasize(&myData->outBuf);
+        rec->_param_len = _loopbuff_getdatasize(&myData->outBuf);
     }
     
-    if (rec->_param1_len > 0)
+    if (rec->_param_len > 0)
     {
-        _loopbuff_getdata(&myData->outBuf, (char *)rec->_param1, rec->_param1_len);
-        _loopbuff_erasedata(&myData->outBuf, rec->_param1_len);
+        _loopbuff_getdata(&myData->outBuf, (char *)rec->_param, rec->_param_len);
+        _loopbuff_erasedata(&myData->outBuf, rec->_param_len);
     }
     
-    return rec->_param1_len;
+    return rec->_param_len;
 }
 
 
-static int init()
+static int init(lsi_module_t * pModule)
 {
-    g_api->init_module_data(&MNAME, l4release2, LSI_MODULE_DATA_L4 );
-    g_api->add_hook( LSI_HKPT_L4_BEGINSESSION, &MNAME, l4init2, LSI_HOOK_NORMAL, 0 );
-    g_api->add_hook(LSI_HKPT_L4_RECVING, &MNAME, l4recv2, LSI_HOOK_EARLY + 1, LSI_HOOK_FLAG_TRANSFORM );
+    g_api->init_module_data(pModule, l4release2, LSI_MODULE_DATA_L4 );
+    g_api->add_hook( LSI_HKPT_L4_BEGINSESSION, pModule, l4init2, LSI_HOOK_NORMAL, 0 );
+    g_api->add_hook(LSI_HKPT_L4_RECVING, pModule, l4recv2, LSI_HOOK_EARLY + 1, LSI_HOOK_FLAG_TRANSFORM );
     return 0;
 }
 

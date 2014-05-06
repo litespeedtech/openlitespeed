@@ -376,7 +376,7 @@ ExtWorker * ExtAppRegistry::configExtApp( const XmlNode *pNode, int configUserGr
         return NULL;
     }
 
-    pName = ConfigCtx::getCurConfigCtx()->getExpandedTag( pNode, "name", achName, 256 );
+    pName = ConfigCtx::getCurConfigCtx()->getExpandedTag( pNode, "name", achName, 256, 1 );
     if ( pName == NULL )
     {
         return NULL;
@@ -514,7 +514,7 @@ int ExtAppRegistry::configLoadBalacner( const XmlNode *pNode, const HttpVHost *p
     }
 
     char achName[256];
-    const char *pName = ConfigCtx::getCurConfigCtx()->getExpandedTag( pNode, "name", achName, 256 );
+    const char *pName = ConfigCtx::getCurConfigCtx()->getExpandedTag( pNode, "name", achName, 256, 1 );
 
     if ( pName == NULL )
     {
@@ -610,10 +610,7 @@ int ExtAppRegistry::configLoadBalacner( const XmlNode *pNode, const HttpVHost *p
 
 int ExtAppRegistry::configExtApps( const XmlNode *pRoot, const HttpVHost *pVHost )
 {
-    const XmlNode *pNode = pRoot->getChild( "extProcessorList" );
-
-    if ( !pNode )
-        pNode = pRoot;
+    const XmlNode *pNode = pRoot->getChild( "extProcessorList", 1 );
 
     XmlNodeList list;
     int c = pNode->getAllChildren( list );

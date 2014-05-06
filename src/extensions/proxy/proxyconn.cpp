@@ -110,12 +110,12 @@ int ProxyConn::sendReqHeader()
     pExtraHeader[headerLen++] = '\r';
     pExtraHeader[headerLen++] = '\n';
     
-#if 0       //always set "Accept-Encoding" header to "gzip"
+#if 1       //always set "Accept-Encoding" header to "gzip"
     char * pAE = ( char *)pReq->getHeader( HttpHeader::H_ACC_ENCODING );
     if ( *pAE )
     {
         int len = pReq->getHeaderLen( HttpHeader::H_ACC_ENCODING );
-        if ( len > 4 )
+        if ( len >= 4 )
         {
             memmove( pAE, "gzip", 4 );
             memset( pAE + 4, ' ', len - 4 );
@@ -491,7 +491,7 @@ int ProxyConn::readRespBody()
                 {
                     m_lLastRespRecvTime = time( NULL );
                     m_iRespBodyRecv += ret;
-                    int ret1 = pHEC->respBodyRecv( pBuf, ret );
+                    int ret1 = pHEC->processRespBodyData( 1, pBuf, ret );
                     if ( ret1 )
                         return ret1;
                     if ( ret > 1024 )
@@ -533,7 +533,7 @@ int ProxyConn::readRespBody()
             if ( ret > 0 )
             {
                 m_iRespBodyRecv += ret;
-                pHEC->respBodyRecv( pBuf, ret );
+                pHEC->processRespBodyData( 1, pBuf, ret );
                 if ( ret > 1024 )
                     pHEC->flushResp();
                 //if ( ret1 )

@@ -19,6 +19,7 @@
 #include <log4cxx/logger.h>
 #include <http/httpglobals.h>
 #include <lsiapi/lsiapi.h>
+#include <lsiapi/internal.h>
 #include <dlfcn.h>
 #include <errno.h>
 #include <time.h>
@@ -27,8 +28,8 @@
 #include <util/datetime.h>
 
 ModuleConfig ModuleManager::m_gModuleConfig;
-extern lsi_api_t  gLsiapiFunctions;
-const char *ModuleConfig::FilterKeyName[] = {
+
+const char *ModuleConfig::s_sHkptName[] = {
     "L4_BEGSESSION",
     "L4_ENDSESSION",
     "L4_RECVING",
@@ -42,10 +43,11 @@ const char *ModuleConfig::FilterKeyName[] = {
     "RECV_RSP_HDR",
     "RECV_RSP_BDY",
     "RECVED_RSP_BDY",
+    "HANDLER_RESTART",
     "SEND_RSP_HDR",
     "SEND_RSP_BDY",
-    "HTTP_END"};
-
+    "HTTP_END"
+};
 
 int ModuleManager::initModule()
 {
@@ -57,13 +59,16 @@ int ModuleManager::initModule()
     return 0;
 }
 
-char *ModuleManager::getModulePath(const char *name, char *path)
+int ModuleManager::getModulePath(const char *name, char *path, int max_len)
 {
-    strcpy ( path, HttpGlobals::s_pServerRoot );
-    strcat ( path, "/modules/" );
-    strcat ( path, name );
-    strcat ( path, ".so" );
-    return path;
+    int n = snprintf( path, max_len-1, "%s/modules/%s.so", HttpGlobals::s_pServerRoot,
+              name );
+    if ( n >= max_len )
+    {
+        n = max_len-1;
+        path[n] = 0;
+    }
+    return n;
 }
 
 // int ModuleManager::testModuleCount(const XmlNodeList *pList)
@@ -101,55 +106,87 @@ int ModuleManager::storeModulePointer( int index, lsi_module_t *pModule )
         m_gModuleArray = (ModulePointer *)realloc( m_gModuleArray, module_count * sizeof(ModulePointer));
     }
     m_gModuleArray[index] = pModule;
-    
+    return 0;
 }
 
-int ModuleManager::loadModule( const XmlNode *pModuleNode )
+ModuleManager::iterator ModuleManager::addModule( const char * name, const char * pType, lsi_module_t * pModule )
+{
+    iterator iter;
+    LsiModule *pLmHttpHandler = new LsiModule ( pModule );
+    MODULE_NAME( pModule ) = strdup ( name );
+    MODULE_ID( pModule ) = getModuleCount();
+    memset( MODULE_DATA_ID( pModule ), 0xFF, sizeof(short) * LSI_MODULE_DATA_COUNT); //value is -1 now.
+    //m_gModuleArray[pModule->_id] = pModule;
+    storeModulePointer( MODULE_ID( pModule ), pModule );
+    
+    iter = insert ( ( char * ) MODULE_NAME( pModule ), pLmHttpHandler );
+    if ( D_ENABLED ( DL_MORE ) )
+        LOG_D (( "%s module [%s] built with API v%hd.%hd has been registered successfully.", pType, MODULE_NAME( pModule ),
+            (int16_t)(pModule->_signature >> 16), (int16_t)pModule->_signature ));
+    return iter;
+}
+
+//extern lsi_module_t * getPrelinkedModule( const char * pModule );
+extern int getPrelinkedModuleCount();
+extern lsi_module_t * getPrelinkedModuleByIndex( unsigned int index, const char ** pName );
+
+
+int ModuleManager::loadPrelinkedModules()
+{
+    int n = getPrelinkedModuleCount();
+    lsi_module_t * pModule;
+    int count = 0;
+    const char * pName; 
+    for( int i = 0; i < n; ++i )
+    {
+        pModule = getPrelinkedModuleByIndex( i, &pName );
+        if ( pModule )
+            if ( addModule( pName, "Intenal", pModule ) != end() )
+                ++count;
+    }
+    return count;
+}
+
+lsi_module_t * ModuleManager::loadModule( const char * name )
 {
     const char * error;
-    const char *name = pModuleNode->getChildValue( "name" );
+    lsi_module_t *pModule = NULL;
+    void *dlLib = NULL;
+    const char * pType = "External";
+    
+    iterator iter = find( name );
+    if ( iter != end() )
+        return iter.second()->getModule();
+    
+    //prelinked checked, now, check file
     char sFilePath[512];
-    getModulePath(name, sFilePath);
-
-    void *sLib = dlopen ( sFilePath, RTLD_LAZY );
-    if ( sLib )
+    getModulePath(name, sFilePath, sizeof( sFilePath ) );
+    dlLib = dlopen ( sFilePath, RTLD_LAZY );
+    if ( dlLib )
+        pModule = ( lsi_module_t* ) dlsym ( dlLib, name );
+    if ( !pModule || !dlLib )
+        error = dlerror();
+    
+    if ( pModule )
     {
-        lsi_module_t *pModule = ( lsi_module_t* ) dlsym ( sLib, name );
-        if ( pModule )
+        if( (pModule->_signature >> 32) != 0x4C53494D )
         {
-            if ( D_ENABLED ( DL_MORE ) )
-                LOG_D (( "[%s] main module object located.", name ));
-            if( (pModule->_signature >> 32) != 0x4C53494D )
-            {
-                error = "Module signature does not match";
-            }
-            else
-            {
-                LsiModule *pLmHttpHandler = new LsiModule ( pModule );
-                pModule->_name = strdup ( name );
-                pModule->_id = getModuleCount();
-                memset(pModule->_data_id, 0xFF, sizeof(short) * LSI_MODULE_DATA_COUNT); //value is -1 now.
-                ModuleConfig::parsePriority(pModuleNode, pModule->_priority);
-                //m_gModuleArray[pModule->_id] = pModule;
-                storeModulePointer( pModule->_id, pModule );
-                
-                insert ( ( char * ) pLmHttpHandler->getModule()->_name, pLmHttpHandler );
-                if ( D_ENABLED ( DL_MORE ) )
-                    LOG_D (( "[%s] built with API v%hd.%hd, registered successfully.", ( char * ) pLmHttpHandler->getModule()->_name,
-                        (int16_t)(pModule->_signature >> 16), (int16_t)pModule->_signature ));
-                return 0;
-            }
+            error = "Module signature does not match";
         }
         else
-            error = dlerror();
-        dlclose(sLib); 
+        {
+            if ( addModule( name, pType, pModule ) != end() )
+                return pModule;
+            else
+                error = "Registration failure.";
+        }
     }
-    else
-        error = dlerror();
 
-    LOG_ERR(( "[%s] load module failed with error: %s", name, error ));
+    if(dlLib)
+        dlclose(dlLib);
 
-    return -1;
+    LOG_ERR(( "Failed to load module [%s], error: %s", name, error ));
+    return NULL;
 }
 
 void ModuleManager::disableModule(lsi_module_t *pModule)
@@ -176,15 +213,15 @@ int ModuleManager::runModuleInit()
         pModule = m_gModuleArray[i];
         if (pModule->_init)
         {
-            int ret = pModule->_init();
+            int ret = pModule->_init( pModule );
             if (ret != 0)
             {
                 disableModule(pModule);
-                LOG_ERR(( "[%s] initialization failure, disabled", pModule->_name ));
+                LOG_ERR(( "[%s] initialization failure, disabled", MODULE_NAME( pModule ) ));
             }
             else
             {
-                LOG_INFO (( "[%s] [%s] has been initialized successfully", pModule->_name,  ((pModule->_info) ? pModule->_info : "") ));
+                LOG_INFO (( "[Module: %s %s] has been initialized successfully", MODULE_NAME( pModule ),  ((pModule->_info) ? pModule->_info : "") ));
             }
         }
     }
@@ -195,14 +232,23 @@ int ModuleManager::loadModules( const XmlNodeList *pModuleNodeList )
 {
     m_gModuleArray = (ModulePointer *)malloc(module_count_init_num * sizeof(ModulePointer));
     XmlNodeList::const_iterator iter;
-    int count = 0;
+    int count = loadPrelinkedModules();
+    if (!pModuleNodeList)
+        return count;
+    
     for( iter = pModuleNodeList->begin(); iter != pModuleNodeList->end(); ++iter )
     {
         const XmlNode *pModuleNode = *iter;
-        if (loadModule(pModuleNode)  == 0)
+        lsi_module_t * pModule;
+        const char *name = pModuleNode->getChildValue( "name", 1 );
+        if ( !name )
+            continue;
+        if ( (pModule = loadModule( name )) != NULL)
+        {
+            ModuleConfig::parsePriority(pModuleNode, MODULE_PRIORITY( pModule ));
             ++count;
+        }
     }
-    
     
     return count;
 }
@@ -214,7 +260,7 @@ int ModuleManager::unloadModules()
     for ( iter = begin(); iter != end(); iter = next ( iter ) )
     {
         pLmHttpHandler = ( LsiModule* ) iter.second();
-        free ( pLmHttpHandler->getModule()->_name );
+        free ( (void *)MODULE_NAME( pLmHttpHandler->getModule()) );
         delete pLmHttpHandler;
         pLmHttpHandler = NULL;
     }
@@ -239,7 +285,7 @@ void ModuleManager::incModuleDataCount(unsigned int level)
 
 void ModuleManager::OnTimer10sec()
 {
-    LsiapiBridge::expire_gd_check();
+    LsiapiBridge::expire_gdata_check();
 }
 
 void ModuleManager::OnTimer100msec()
@@ -383,10 +429,10 @@ int ModuleConfig::isMatchGlobal()
 int ModuleConfig::parsePriority(const XmlNode *pModuleNode, int *priority)
 {
     const char *pValue = NULL;
-    const XmlNode *pPriority = pModuleNode->getChild( "hookpriority" );
+    const XmlNode *pPriority = pModuleNode->getChild( "hookpriority", 1 );
     for(int i=0; i<LSI_HKPT_TOTAL_COUNT; ++i)
     {
-        if (pPriority && ( pValue= pPriority->getChildValue(FilterKeyName[i])))
+        if (pPriority && ( pValue= pPriority->getChildValue(s_sHkptName[i])))
             priority[i] = atoi(pValue);
         else
             priority[i] = LSI_MAX_HOOK_PRIORITY + 1;
@@ -396,7 +442,6 @@ int ModuleConfig::parsePriority(const XmlNode *pModuleNode, int *priority)
 
 int ModuleConfig::saveConfig(const XmlNode *pNode, lsi_module_t *pModule, lsi_module_config_t * module_config)
 {
-    int ret = 0;
     const char *pValue = NULL;
     
     assert(module_config->module == pModule);
@@ -430,16 +475,33 @@ int ModuleConfig::saveConfig(const XmlNode *pNode, lsi_module_t *pModule, lsi_mo
     return 0;
 }
 
+// int ModuleConfig::parseOutsideModuleParam(const XmlNode *pNode)
+// {
+//     XmlNodeList::const_iterator iter;
+//     const XmlNodeList *pUnknownList = parentNode->getChildren("unknownkeywords");
+//     if (!pUnknownList)
+//         return 0;
+//     
+//     for( iter = pUnknownList->begin(); iter != pUnknownList->end(); ++iter )
+//     {
+//         config->config = pModule->_config_parser->_parse_config((*iter)->getValue(), config->config);
+// 
+//     
+//     ModuleConfig *pConfig = new ModuleConfig;
+//         pConfig->init(ModuleManager::getInstance().getModuleCount());
+//         pConfig->inherit(ModuleManager::getGlobalModuleConfig());
+//         ModuleConfig::parseConfigList(pModuleList, pConfig);
+//         pRootContext->setModuleConfig(pConfig, 1);
+//     
+// }
 
 int ModuleConfig::parseConfig(const XmlNode *pNode, lsi_module_t *pModule, ModuleConfig *pModuleConfig)
 {
-    int ret = 0;
     const char *pValue = NULL;
     
-    int module_id = pModule->_id;
+    int module_id = MODULE_ID( pModule );
     lsi_module_config_t *config = pModuleConfig->get(module_id);
     config->module = pModule;
-    int updated = 0;
     
     pValue = pNode->getChildValue("enabled");
     if (pValue)
@@ -450,6 +512,18 @@ int ModuleConfig::parseConfig(const XmlNode *pNode, lsi_module_t *pModule, Modul
     pValue = pNode->getChildValue("param");
     if ( pModule->_config_parser && pModule->_config_parser->_parse_config)
     {
+        if (pModule->_config_parser->_config_keys)
+        {
+            ;
+            //TODO: check the param one by one if it is in array
+//             const char *p;
+//             while (p = *pModule->_config_parser->_config_keys)
+//             {
+//                 LOG_INFO(( "%s", p));
+//                 ++pModule->_config_parser->_config_keys;
+//             }
+            
+        }
         config->config = pModule->_config_parser->_parse_config(pValue, config->config);
         config->own_data_flag = 2;
     }
@@ -461,16 +535,18 @@ int ModuleConfig::parseConfig(const XmlNode *pNode, lsi_module_t *pModule, Modul
 
 int ModuleConfig::parseConfigList(const XmlNodeList *moduleConfigNodeList, ModuleConfig *pModuleConfig)
 {
+    if (!moduleConfigNodeList)
+        return 0;
+    
     int ret = 0;
     const char *pValue = NULL;
     XmlNode *pNode = NULL;
-    int i;
        
     XmlNodeList::const_iterator iter;
     for( iter = moduleConfigNodeList->begin(); iter != moduleConfigNodeList->end(); ++iter )
     {
         pNode = *iter;
-        pValue = pNode->getChildValue("name");
+        pValue = pNode->getChildValue("name", 1);
         if (!pValue)
         {
             ret = -1;

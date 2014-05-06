@@ -91,8 +91,9 @@ int assignHandler(struct lsi_cb_param_t *rec)
     const char *p;
     char path[max_file_len] = {0};
     CounterData *file_data;
-    const char *uri = g_api->get_req_uri(rec->_session);
-    if (strlen(uri) > strlen(URI_PREFIX) &&      
+    int len;
+    const char *uri = g_api->get_req_uri(rec->_session, &len);
+    if (len > strlen(URI_PREFIX) &&      
         strncasecmp(uri, URI_PREFIX, strlen(URI_PREFIX)) == 0)
     {
         p = uri + strlen(URI_PREFIX);
@@ -117,7 +118,6 @@ static int myhandler_process(void *session)
 {
     CounterData *ip_data = NULL, *vhost_data = NULL, *file_data = NULL;
     char output[128];
-    int l;
     
     ip_data = (CounterData *)g_api->get_module_data(session, &MNAME, LSI_MODULE_DATA_IP);
     if (ip_data == NULL)
@@ -143,22 +143,21 @@ static int myhandler_process(void *session)
     ++file_data->count;
     ++vhost_data->count;
     
-    l = sprintf(output, "IP counter = %ld\nVHost counter = %ld\nFile counter = %ld\n", 
+    sprintf(output, "IP counter = %ld\nVHost counter = %ld\nFile counter = %ld\n", 
             ip_data->count, vhost_data->count, file_data->count);
-    g_api->set_resp_content_length(session, l);
-    g_api->append_resp_body(session, output, l);
+    g_api->append_resp_body(session, output, strlen(output));
     g_api->end_resp(session);
     return 0;
 }
 
-static int _init()
+static int _init(lsi_module_t * pModule)
 {
-    g_api->add_hook( LSI_HKPT_RECV_REQ_HEADER, &MNAME, assignHandler, LSI_HOOK_NORMAL, 0 );
-    g_api->init_module_data(&MNAME, releaseCounterDataCb, LSI_MODULE_DATA_VHOST );
-    g_api->init_module_data(&MNAME, releaseCounterDataCb, LSI_MODULE_DATA_IP );
-    g_api->init_module_data(&MNAME, releaseCounterDataCb, LSI_MODULE_DATA_FILE );
+    g_api->add_hook( LSI_HKPT_RECV_REQ_HEADER, pModule, assignHandler, LSI_HOOK_NORMAL, 0 );
+    g_api->init_module_data(pModule, releaseCounterDataCb, LSI_MODULE_DATA_VHOST );
+    g_api->init_module_data(pModule, releaseCounterDataCb, LSI_MODULE_DATA_IP );
+    g_api->init_module_data(pModule, releaseCounterDataCb, LSI_MODULE_DATA_FILE );
     return 0;
 }
 
-struct lsi_handler_t myhandler = { myhandler_process, NULL, NULL };
+struct lsi_handler_t myhandler = { myhandler_process, NULL, NULL, NULL };
 lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, _init, &myhandler, NULL, };

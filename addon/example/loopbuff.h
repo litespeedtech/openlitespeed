@@ -100,6 +100,11 @@ static inline  char* _loopbuff_getdataref(LoopBuff* loopbuff)
     return loopbuff->m_pHead;
 }
 
+static inline  char* _loopbuff_getdataref_end(LoopBuff* loopbuff)
+{
+    return loopbuff->m_pEnd;
+}
+
 /*return 0 ok, 1 means error occured */
 int _loopbuff_erasedata(LoopBuff* loopbuff, int len);
 void _loopbuff_cleardata(LoopBuff* loopbuff);

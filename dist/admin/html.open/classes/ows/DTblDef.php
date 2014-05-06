@@ -809,7 +809,7 @@ class DTblDef
 				'HTTP_BEGIN',
 				'RECV_REQ_HDR', 'URI_MAP', 'RECV_REQ_BDY', 'RECVED_REQ_BDY',
 				'RECV_RSP_HDR', 'RECV_RSP_BDY', 'RECVED_RSP_BDY',
-				'SEND_RSP_HDR', 'SEND_RSP_BDY',
+				'HANDLER_RESTART' ,'SEND_RSP_HDR', 'SEND_RSP_BDY',
 				'HTTP_END');
 		$list = array();
 		$i = 0;
@@ -847,6 +847,7 @@ class DTblDef
 		$attrs = array_merge(
 				array(new DAttr('name', 'modulename', 'Module', 'text', false, NULL, NULL, NULL, 0, 'modulename'),
 						$this->_attrs['note'],
+						new DAttr('internal', 'bool', 'Is Internal', 'radio', true, NULL, NULL, NULL, 0, 'internalmodule'),
 						$this->_attrs['mod_params'],
 						$this->_attrs['mod_enabled']),
 				$this->get_module_hookpoints_attrs('S'));

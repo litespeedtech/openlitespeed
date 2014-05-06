@@ -92,7 +92,7 @@ static void testBasic()
     const char * pResult = "b\r\nHello World\r\n0\r\n\r\n";
     TestOS           testOS;
     IOVec iov;
-    int ht = 0;
+    //int ht = 0;
     ChunkOutputStream chunkOS;
     chunkOS.setStream( &testOS );
     chunkOS.open();
@@ -137,7 +137,7 @@ void testChunkBuffer()
     TestOS           testOS;
     ChunkOutputStream chunkOS;
     IOVec iov;
-    int ht = 0;
+    //int ht = 0;
     chunkOS.setStream( &testOS );
     chunkOS.open();
     chunkOS.setBuffering( 1 );

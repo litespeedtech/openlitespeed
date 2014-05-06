@@ -11,8 +11,8 @@ define ('DEFAULT_INSTALL_DIR', $_SERVER['LS_SERVER_ROOT'].'lsphp'); // actual di
 
 $PHP_VER = array('5'=>
 		 array(
-		 	'5.5.9',
-		 	'5.4.25',
+		 	'5.5.12',
+		 	'5.4.28',
 		 	'5.3.28',
 			'5.2.17'),
 		 '4'=>
@@ -24,10 +24,10 @@ define ('APC_VERSION', '3.1.9');
 define ('XCACHE_VERSION', '3.1.0');
 define ('MEMCACHE_VERSION', '2.2.7');
 //define ('MEMCACHED_VERSION', '1.0.2');
-define ('OPCACHE_VERSION', '7.0.2');
+define ('OPCACHE_VERSION', '7.0.3');
 
 $DEFAULT_PHP_PARAMS = array(
-	'5' => '--with-mysqli --with-zlib --with-gd --enable-shmop --enable-track-vars --enable-sockets --enable-sysvsem --enable-sysvshm --enable-magic-quotes --enable-mbstring --with-iconv',
+	'5' => '--with-mysqli --with-zlib --with-gd --enable-shmop --enable-track-vars --enable-sockets --enable-sysvsem --enable-sysvshm --enable-mbstring --with-iconv',
 	'4' => '--with-mysql  --with-zlib --with-gd --enable-shmop --enable-track-vars --enable-sockets --enable-sysvsem --enable-sysvshm --enable-magic-quotes --enable-mbstring');
 
 

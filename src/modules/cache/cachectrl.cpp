@@ -95,7 +95,16 @@ int CacheCtrl::parse( const char * pHeader, int len)
                         if ( i == 3 )
                             m_iMaxStale = atoi( p );
                         else
+                        {
                             m_iMaxAge = atoi( p );
+                            if (m_iMaxAge > 0)
+                                m_flags |= cache_public;
+                            else
+                            {
+                                m_flags &= ~cache_public;
+                                m_flags &= ~cache_private;
+                            }
+                        }
                     }
                 }
             }

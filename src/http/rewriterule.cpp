@@ -77,6 +77,7 @@ int RewriteSubstItem::needUrlDecode() const
 
 
 RewriteSubstItem::RewriteSubstItem( const RewriteSubstItem & rhs )
+    : SubstItem()
 {
     if ( getType() == REF_MAP )
     {

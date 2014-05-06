@@ -5,8 +5,8 @@ m4_include(ax_lib_expat.m4)
 
 dnl Process this file with autoconf to produce a configure script.
 AC_PREREQ([2.69])
-AC_INIT([openlitespeed],[1.3],[info@litespeedtech.com],[openlitespeed],[http://www.litespeedtech.com/])
-AM_INIT_AUTOMAKE([1.3 foreign no-define ])
+AC_INIT([openlitespeed],[1.3.1],[info@litespeedtech.com],[openlitespeed],[http://www.litespeedtech.com/])
+AM_INIT_AUTOMAKE([1.0 foreign no-define ])
 
 AM_CONFIG_HEADER(src/config.h:src/config.h.in)
 
@@ -28,7 +28,7 @@ AC_PROG_INSTALL
 AC_PROG_LN_S
 AC_PROG_MAKE_SET
 AC_PROG_RANLIB
-
+LT_INIT
 
 # Checks for header files.
 AC_CHECK_HEADER([pthread.h],
@@ -204,10 +204,8 @@ AC_CONFIG_FILES(Makefile
                 src/sslpp/Makefile
                 src/ssi/Makefile
                 src/util/Makefile
-                src/lsiapi/Makefile)
-
-                
-
-                
+                src/lsiapi/Makefile
+                src/modules/Makefile
+                src/modules/cache/Makefile)
 AC_OUTPUT
 

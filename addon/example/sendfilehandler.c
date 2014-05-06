@@ -45,27 +45,28 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 struct lsi_module_t MNAME;
 int dummycall(struct lsi_cb_param_t *rec)
 {
-    const char *in = (const char *)rec->_param1;
-    int inLen = rec->_param1_len;
-    int sent = g_api->filter_next( rec,  in, inLen );
+    const char *in = (const char *)rec->_param;
+    int inLen = rec->_param_len;
+    int sent = g_api->stream_write_next( rec,  in, inLen );
     return sent;
 }
 
 int reg_handler(struct lsi_cb_param_t *rec)
 {
     const char *uri;
-    uri = g_api->get_req_uri(rec->_session);
-    if ( strncasecmp(uri, "/sendfile", 9) == 0 )
+    int len;
+    uri = g_api->get_req_uri(rec->_session, &len);
+    if ( len >= 9 && strncasecmp(uri, "/sendfile", 9) == 0 )
     {
         g_api->register_req_handler(rec->_session, &MNAME, 9);
     }
     return LSI_RET_OK;
 }
 
-static int init()
+static int init(lsi_module_t * pModule)
 {
-    g_api->add_hook( LSI_HKPT_RECV_REQ_HEADER, &MNAME, reg_handler, LSI_HOOK_NORMAL, 0 );
-    //g_api->add_hook( LSI_HKPT_SEND_RESP_BODY, &MNAME, dummycall, LSI_HOOK_NORMAL, 0 );
+    g_api->add_hook( LSI_HKPT_RECV_REQ_HEADER, pModule, reg_handler, LSI_HOOK_NORMAL, 0 );
+    //g_api->add_hook( LSI_HKPT_SEND_RESP_BODY, pModule, dummycall, LSI_HOOK_NORMAL, 0 );
     return 0;
 
 }
@@ -96,5 +97,5 @@ static int myhandler_process(void *session)
     return 0;
 }
 
-struct lsi_handler_t myhandler = { myhandler_process, NULL, NULL };
+struct lsi_handler_t myhandler = { myhandler_process, NULL, NULL, NULL };
 lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, init, &myhandler, NULL, };

@@ -88,7 +88,7 @@ void Logger::vlog( int level, const char * format, va_list args, int no_linefeed
     char achBuf[8192];
     int messageLen;
     messageLen = vsnprintf( achBuf, sizeof( achBuf ) - 1,  format, args );
-    if ( messageLen > sizeof( achBuf ) - 1 )
+    if ( (size_t)messageLen > sizeof( achBuf ) - 1 )
     {
         messageLen = sizeof( achBuf ) - 1;
         achBuf[messageLen] = 0;

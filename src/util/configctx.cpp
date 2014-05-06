@@ -27,6 +27,7 @@
 
 #include <log4cxx/level.h>
 #include "main/mainserverconfig.h"
+#include "main/plainconf.h"
 
 #include <errno.h>
 #include <limits.h>
@@ -161,10 +162,9 @@ void ConfigCtx::log_debug( const char *pFmt, ... )
         va_end( ap );
     }
 }
-const char *ConfigCtx::getTag( const XmlNode *pNode, const char *pName )
+const char *ConfigCtx::getTag( const XmlNode *pNode, const char *pName, int bKeyName )
 {
-    const char *pRet = pNode->getChildValue( pName );
-
+    const char *pRet = pNode->getChildValue( pName, bKeyName );
     if ( !pRet )
     {
         log_error( MISSING_TAG_IN, pName, pNode->getName() );
@@ -385,9 +385,9 @@ int ConfigCtx::getAbsolutePath( char *dest, const char *path )
 }
 
 char *ConfigCtx::getExpandedTag( const XmlNode *pNode,
-        const char *pName, char *pBuf, int bufLen )
+        const char *pName, char *pBuf, int bufLen, int bKeyName )
 {
-    const char *pVal = getTag( pNode, pName );
+    const char *pVal = getTag( pNode, pName, bKeyName );
 
     if ( !pVal )
         return NULL;
@@ -448,7 +448,7 @@ int ConfigCtx::getValidChrootPath( const char *path, const char *desc )
 
 int ConfigCtx::getLogFilePath( char *pBuf, const XmlNode *pNode )
 {
-    const char *pValue = getTag( pNode, "fileName" );
+    const char *pValue = getTag( pNode, "fileName", 1 );
 
     if ( pValue == NULL )
     {
@@ -689,7 +689,7 @@ XmlNode *ConfigCtx::parseFile( const char *configFilePath, const char *rootTag )
         return NULL;
     }
 
-#if (0)
+#ifdef TEST_OUTPUT_PLAIN_CONF
     char sPlainFile[512] = {0};
     strcpy( sPlainFile, configFilePath );
     strcat( sPlainFile, ".txt" );

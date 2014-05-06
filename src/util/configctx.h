@@ -60,7 +60,7 @@ public:
     void log_errorPath( const char *pstr1,  const char *pstr2 );
     void log_errorInvalTag( const char *pstr1,  const char *pstr2);
     void log_errorMissingTag( const char *pstr1);
-    const char * getTag( const XmlNode * pNode, const char * pName );
+    const char * getTag( const XmlNode * pNode, const char * pName, int bKeyName = 0 );
     long long getLongValue( const XmlNode * pNode, const char * pTag,
             long long min, long long max, long long def, int base = 10 );
     int getRootPath ( const char *&pRoot, const char *&pFile );
@@ -74,7 +74,7 @@ public:
     int getValidPath(char * dest, const char * path, const char * desc );
     int getValidChrootPath(const char * path, const char * desc );
     char * getExpandedTag( const XmlNode * pNode,
-                    const char * pName, char *pBuf, int bufLen );    
+                    const char * pName, char *pBuf, int bufLen, int bKeyName = 0 );    
     int expandDomainNames( const char *pDomainNames, 
                     char * achDomains, int len, char dilemma = ',' );  
     int checkAccess( char *pReal);

@@ -54,9 +54,9 @@
 
 #define GZIP_ENABLED            1
 #define REQ_GZIP_ACCEPT         2
-#define UPSTREAM_GZIP           4
 #define GZIP_REQUIRED           (GZIP_ENABLED | REQ_GZIP_ACCEPT)
-#define GZIP_ADD_ENCODING       8
+#define UPSTREAM_GZIP           4
+#define UPSTREAM_DEFLATE        8
 
 
 
@@ -173,7 +173,6 @@ private:
     int processMatchList( const HttpContext * pContext, const char * pURI, int iURILen );
     int processMatchedURI( const char * pURI, int uriLen, char * pMatched, int len );
     int processSuffix( const char * pURI, const char * pURIEnd, int &cacheable );
-    int processMime( const char * pSuffix );
     int filesMatch( const char * pEnd );
 
     int checkSuffixHandler( const char * pURI, int len, int &cacheable );
@@ -432,8 +431,8 @@ public:
     int prepareReqBodyBuf();
 
     char gzipAcceptable() const             {   return m_iAcceptGzip;   }
-    void setGzip( char b)                   {   m_iAcceptGzip = b;      }
     void andGzip( char b)                   {   m_iAcceptGzip &= b;     }
+    void orGzip( char b )                   {   m_iAcceptGzip |= b;     }
 
     char noRespBody() const                 {   return m_iNoRespBody;   }
     void setNoRespBody()                    {   m_iNoRespBody = 1;      }
@@ -582,7 +581,8 @@ public:
     int getETagFlags() const;
     int checkScriptPermission();
     
-    
+    int setMimeBySuffix( const char * pSuffix );
+    const char * getMimeBySuffix( const char *pSuffix );
 };
 
 

@@ -291,8 +291,8 @@ int HttpUtil::unescape_n(const char *pSrc, int srcLen, char *pDest, int n)
             //handle "://" case, keep them
             if (n + 2 <= srcLen && pSrc[-2] == ':') 
                 *p++ = c;
-            else
-                ; //Do nothing so that get rid of duplicate '/'s.
+            //else
+                //; //Do nothing so that get rid of duplicate '/'s.
         }
         else
             *p++ = c;

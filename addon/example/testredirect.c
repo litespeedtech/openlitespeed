@@ -47,8 +47,9 @@ int check_if_redirect(struct lsi_cb_param_t *rec)
     const char *qs;
     int action = LSI_URI_REWRITE;
     int useHandler = 0;
-    uri = g_api->get_req_uri(rec->_session);
-    if ( strcasecmp(uri, TEST_URL) == 0 )
+    int len;
+    uri = g_api->get_req_uri(rec->_session, &len);
+    if ( len >= strlen(TEST_URL) && strncasecmp(uri, TEST_URL, strlen(TEST_URL)) == 0 )
     {
         qs = g_api->get_req_query_string(rec->_session, NULL );
         sscanf(qs, "%d-%d", &action, &useHandler);
@@ -60,9 +61,9 @@ int check_if_redirect(struct lsi_cb_param_t *rec)
     return LSI_RET_OK;
 }
 
-static int _init()
+static int _init( lsi_module_t * pModule )
 {
-    g_api->add_hook( LSI_HKPT_RECV_REQ_HEADER, &MNAME, check_if_redirect, LSI_HOOK_NORMAL, 0 );
+    g_api->add_hook( LSI_HKPT_RECV_REQ_HEADER, pModule, check_if_redirect, LSI_HOOK_NORMAL, 0 );
     return 0;
 }
 
@@ -76,5 +77,5 @@ static int handlerBeginProcess(void *session)
     return 0;
 }
 
-struct lsi_handler_t myhandler = { handlerBeginProcess, NULL, NULL };
+struct lsi_handler_t myhandler = { handlerBeginProcess, NULL, NULL, NULL };
 lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, _init, &myhandler, NULL, "test  redirect v1.0" };
