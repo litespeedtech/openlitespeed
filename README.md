@@ -11,7 +11,7 @@ source code in accordance with the precepts of the GPLv3 license.
 This is the official repository for OpenLiteSpeed's source code. It is maintained byLiteSpeed 
 Technologies.
 
-Fork Specific changes
+Fork specific changes
 --------
 - It is now possible to change the directory that is used for cache data. This is done by using the module setting *storagePath* in the module parameters list. This only works on server level, any settings on virtual host level will be ignored.
 
