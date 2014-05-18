@@ -13,8 +13,7 @@ Technologies.
 
 Fork Specific changes
 --------
-- Cache directory
-It is now possible to change the directory that cache data is saved. This is done by using the module setting *storagePath* in the module parameters list. This only works on server level, any settings on virtual host level will be ignored.
+- It is now possible to change the directory that is used for cache data. This is done by using the module setting *storagePath* in the module parameters list. This only works on server level, any settings on virtual host level will be ignored.
 
 Note: There is a possible bug with the cache module in the upstream. See more [here](https://groups.google.com/forum/#!topic/openlitespeed-development/8hCiIDd-0Ek).
 
