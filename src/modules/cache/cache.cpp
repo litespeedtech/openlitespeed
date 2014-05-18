@@ -220,12 +220,12 @@ static void * parseConfig( const char *param, void *_initial_config )
     }
     
     //cache storage path 
-    char * cachePath = (char *) malloc(max_file_len);
+    //char * cachePath = (char *) malloc(max_file_len);
+    char cachePath[max_file_len]  = {0};
     parseLineStr(param, "storagePath", cachePath);
     if (cachePath != NULL) { 
         pConfig->setStoragePath(cachePath);
     }
-    free(cachePath); 
     return (void *)pConfig;
 }
 
