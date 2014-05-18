@@ -18,7 +18,9 @@
 #ifndef CACHECONFIG_H
 #define CACHECONFIG_H
 
-
+#include <string.h>
+#include <syslog.h>
+#include <stdlib.h>
 #define CACHE_ENABLED                       (1<<0)
 //#define CACHE_POST_NOCACHE                  (1<<1)
 #define CACHE_QS_CACHE                      (1<<2)
@@ -54,6 +56,15 @@ public:
 
     void setMaxStale( int age )         {   m_iMaxStale = age;       }
     int  getMaxStale() const            {   return m_iMaxStale;      }
+
+    void setStoragePath ( char * storagePath) {
+        if (m_storagePath != NULL) { delete[] m_storagePath; }
+	int length = strlen(storagePath)+1;
+	m_storagePath = new char[length];        
+	strcpy(m_storagePath,storagePath);
+    }
+
+    char * getStoragePath() const 	{ return m_storagePath; }
     
     int  isPrivateEnabled() const   {   return m_iCacheFlag & CACHE_PRIVATE_ENABLED;    }
     int  isPublicPrivateEnabled() const 
@@ -70,6 +81,7 @@ private:
     int     m_defaultAge;
     int     m_privateAge;
     int     m_iMaxStale;
+    char *  m_storagePath;
 };
 
 #endif

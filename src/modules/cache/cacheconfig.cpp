@@ -27,9 +27,7 @@ CacheConfig::CacheConfig()
 }
 
 
-CacheConfig::~CacheConfig()
-{
-}
+CacheConfig::~CacheConfig() { delete[] m_storagePath; }
 
 void CacheConfig::inherit( const CacheConfig * pParent )
 {
