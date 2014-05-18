@@ -255,22 +255,13 @@ static int initGData()
     {
         char cachePath[max_file_len]  = {0};
         CacheConfig *pConfig = (CacheConfig *)g_api->get_module_param( NULL, &MNAME );
-        //if (pConfig->getStoragePath() == NULL) {
-            //strcpy(cachePath, g_api->get_server_root());
-	    //char random[max_file_len] = "/tmp/cachedata";
-	    //strcat(random, pConfig->getStoragePath());
-	    strcpy(cachePath,pConfig->getStoragePath());
-            //strcat(cachePath, CACHEMODULEROOT);
-	    //g_api->log(LSI_LOG_ERROR, "[%s] CachePath 2: NULL ", ModuleNameString);
-        //}
-        //else {
-		//strcpy(cachePath, pConfig->getStoragePath());
-		//char tester[max_file_len] = "/tmp/cachedir/";
-		//tester = "/tmp/cachedir";
-		//strcpy(cachePath, tester);
-		//g_api->log(LSI_LOG_ERROR, "[%s] CachePath test %p  %s ", ModuleNameString, pConfig->getStoragePath(),pConfig->getStoragePath());
-	//}
-        g_api->log(LSI_LOG_ERROR, "[%s] CachePath 2: %s ", ModuleNameString, cachePath);
+        if (pConfig->getStoragePath() == NULL) {
+            strcpy(cachePath, g_api->get_server_root());
+            strcat(cachePath, CACHEMODULEROOT);
+        }
+        else {
+	    strcpy(cachePath, pConfig->getStoragePath());
+	}
 	pDirHashCacheStore = new DirHashCacheStore;
         pDirHashCacheStore->setStorageRoot(cachePath);
         g_api->set_gdata(pCont, CACHEMODULEKEY, CACHEMODULEKEYLEN, pDirHashCacheStore, -1, release_cb, 1, NULL);
