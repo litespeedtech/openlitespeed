@@ -15,9 +15,10 @@
 *    You should have received a copy of the GNU General Public License       *
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
+#include <string.h>
+
 #ifndef CACHECONFIG_H
 #define CACHECONFIG_H
-
 
 #define CACHE_ENABLED                       (1<<0)
 //#define CACHE_POST_NOCACHE                  (1<<1)
@@ -54,6 +55,9 @@ public:
 
     void setMaxStale( int age )         {   m_iMaxStale = age;       }
     int  getMaxStale() const            {   return m_iMaxStale;      }
+
+    void setStoragePath ( char * storagePath);
+    char * getStoragePath() const 	{ return m_storagePath; }
     
     int  isPrivateEnabled() const   {   return m_iCacheFlag & CACHE_PRIVATE_ENABLED;    }
     int  isPublicPrivateEnabled() const 
@@ -70,6 +74,7 @@ private:
     int     m_defaultAge;
     int     m_privateAge;
     int     m_iMaxStale;
+    char *  m_storagePath;
 };
 
 #endif

@@ -27,9 +27,7 @@ CacheConfig::CacheConfig()
 }
 
 
-CacheConfig::~CacheConfig()
-{
-}
+CacheConfig::~CacheConfig() { delete[] m_storagePath; }
 
 void CacheConfig::inherit( const CacheConfig * pParent )
 {
@@ -64,4 +62,10 @@ void CacheConfig::apply( const CacheConfig * pParent )
 
 }
 
+void CacheConfig::setStoragePath ( char * storagePath) {
+    if (m_storagePath != NULL) { delete[] m_storagePath; }
+    int length = strlen(storagePath)+1;
+    m_storagePath = new char[length];
+    strcpy(m_storagePath,storagePath);
+}
 

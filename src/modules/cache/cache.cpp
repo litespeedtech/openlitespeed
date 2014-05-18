@@ -125,6 +125,7 @@ const char *paramArray[] = {
     "maxstaleage",
     "enableprivatecache",
     "privateexpireinseconds",
+    "storagepath",
     NULL //Must have NULL in the last item
 };
 
@@ -149,6 +150,20 @@ static int parseLine(const char *buf, const char *key, int minValue, int maxValu
     }
     
     return val;
+}
+
+static void parseLineStr(const char *buf, const char *key,char * dest)
+{
+    const char *paramEnd = buf + strlen(buf);
+    const char *p;
+    int maxLength = strlen(buf);
+    p = strcasestr(buf, key);
+    if (!p) { dest=NULL; }
+    else {
+        int keyLen = strlen(key);
+        if (p + keyLen < paramEnd) { strcpy(dest, (p + keyLen)+1); }
+        else { dest=NULL; }
+    }
 }
 
 static void * parseConfig( const char *param, void *_initial_config )
@@ -203,6 +218,13 @@ static void * parseConfig( const char *param, void *_initial_config )
         pConfig->setConfigBit( CACHE_PRIVATE_AGE_SET, 1 );
     }
     
+    //cache storage path 
+    //char * cachePath = (char *) malloc(max_file_len);
+    char cachePath[max_file_len]  = {0};
+    parseLineStr(param, "storagePath", cachePath);
+    if (cachePath != NULL) { 
+        pConfig->setStoragePath(cachePath);
+    }
     return (void *)pConfig;
 }
 
@@ -231,9 +253,15 @@ static int initGData()
     if (!pDirHashCacheStore)
     {
         char cachePath[max_file_len]  = {0};
-        strcpy(cachePath, g_api->get_server_root());
-        strcat(cachePath, CACHEMODULEROOT);
-        pDirHashCacheStore = new DirHashCacheStore;
+        CacheConfig *pConfig = (CacheConfig *)g_api->get_module_param( NULL, &MNAME );
+        if (pConfig->getStoragePath() == NULL) {
+            strcpy(cachePath, g_api->get_server_root());
+            strcat(cachePath, CACHEMODULEROOT);
+        }
+        else {
+	    strcpy(cachePath, pConfig->getStoragePath());
+	}
+	pDirHashCacheStore = new DirHashCacheStore;
         pDirHashCacheStore->setStorageRoot(cachePath);
         g_api->set_gdata(pCont, CACHEMODULEKEY, CACHEMODULEKEYLEN, pDirHashCacheStore, -1, release_cb, 1, NULL);
         return 0;
