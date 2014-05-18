@@ -35,7 +35,6 @@
 #include <fcntl.h>
 #include <limits.h>
 #include <errno.h>
-#include <syslog.h>
 
 #define MAX_CACHE_CONTROL_LENGTH    128
        
