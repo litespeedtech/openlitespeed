@@ -491,7 +491,7 @@ int ProxyConn::readRespBody()
                 {
                     m_lLastRespRecvTime = time( NULL );
                     m_iRespBodyRecv += ret;
-                    int ret1 = pHEC->processRespBodyData( 1, pBuf, ret );
+                    int ret1 = pHEC->processRespBodyData( pBuf, ret );
                     if ( ret1 )
                         return ret1;
                     if ( ret > 1024 )
@@ -533,7 +533,7 @@ int ProxyConn::readRespBody()
             if ( ret > 0 )
             {
                 m_iRespBodyRecv += ret;
-                pHEC->processRespBodyData( 1, pBuf, ret );
+                pHEC->processRespBodyData( pBuf, ret );
                 if ( ret > 1024 )
                     pHEC->flushResp();
                 //if ( ret1 )

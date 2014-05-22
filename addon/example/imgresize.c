@@ -56,7 +56,7 @@ enum httpimg IMAGE_TYPE;
 #define     MNAME       imgresize
 /////////////////////////////////////////////////////////////////////////////
 
-struct lsi_module_t MNAME;
+lsi_module_t MNAME;
 #define MAX_BLOCK_BUFSIZE   8192
 
 typedef struct _MyData
@@ -67,10 +67,10 @@ typedef struct _MyData
 } MyData;
 
 /*Function Declarations*/
-static int setWaitFull( struct lsi_cb_param_t *rec );
-static int scanForImage( struct lsi_cb_param_t *rec );
-static int parseParameters( struct lsi_cb_param_t *rec );
-static int writeToNextFilter( struct lsi_cb_param_t *rec, MyData *myData );
+static int setWaitFull( lsi_cb_param_t * rec );
+static int scanForImage( lsi_cb_param_t * rec );
+static int parseParameters( lsi_cb_param_t * rec );
+static int writeToNextFilter( lsi_cb_param_t * rec, MyData *myData );
 static int getReqDimensions( const char *buf, int *width, int *height );
 static void* resizeImage( const char *buf, int bufLen, int width, int height, MyData *myData, int *size );
 static int _init();
@@ -90,7 +90,7 @@ int httpRelease(void *data)
     return 0;
 }
 
-int httpinit(struct lsi_cb_param_t *rec)
+int httpinit(lsi_cb_param_t * rec)
 {
     MyData *myData = (MyData *)g_api->get_module_data(rec->_session, &MNAME, LSI_MODULE_DATA_HTTP);
     if (myData == NULL )
@@ -114,13 +114,13 @@ int httpinit(struct lsi_cb_param_t *rec)
     return 0;
 }
 
-static int setWaitFull( struct lsi_cb_param_t *rec )
+static int setWaitFull( lsi_cb_param_t * rec )
 {
     g_api->set_resp_wait_full_body( rec->_session );
     return LSI_RET_OK;
 }
 
-static int scanForImage( struct lsi_cb_param_t *rec )
+static int scanForImage( lsi_cb_param_t * rec )
 {
     MyData *myData = NULL;
     int iLen, inLen, iWidth = 0, iHeight = 0;
@@ -152,7 +152,7 @@ static int scanForImage( struct lsi_cb_param_t *rec )
 }
 
 /* Returns 0 for image, 1 for wrong input */
-static int parseParameters( struct lsi_cb_param_t *rec )
+static int parseParameters( lsi_cb_param_t * rec )
 {
     int iLen;
     const char *ptr;
@@ -178,7 +178,7 @@ static int parseParameters( struct lsi_cb_param_t *rec )
     return 0;
 }
 
-static int writeToNextFilter( struct lsi_cb_param_t *rec, MyData *myData )
+static int writeToNextFilter( lsi_cb_param_t * rec, MyData *myData )
 {
     int iBytesWritten;
     _loopbuff_reorder(&myData->outWBuf);
@@ -239,7 +239,7 @@ static void *resizeImage( const char *buf, int bufLen, int width, int height, My
     return ptr;
 }
 
-static int scanDynamic( struct lsi_cb_param_t *rec )
+static int scanDynamic( lsi_cb_param_t * rec )
 {
     off_t offset = 0;
     int iSrcSize, iDestSize, iWidth, iHeight, iLen = 0;

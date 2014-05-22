@@ -835,7 +835,7 @@ int LsapiConn::readRespBody()
             }
             else
             {
-                len = pHEC->processRespBodyData( 1, pBuf, packetLen );
+                len = pHEC->processRespBodyData( pBuf, packetLen );
             }
             if ( m_iPacketLeft <= 0 )
             {

@@ -23,6 +23,7 @@ CacheConfig::CacheConfig()
     , m_defaultAge(86400)
     , m_privateAge(60)
     , m_iMaxStale( 0 )
+    , m_sStoragePath("")
 {
 }
 
@@ -43,6 +44,7 @@ void CacheConfig::inherit( const CacheConfig * pParent )
             m_iMaxStale = pParent->m_iMaxStale;
         m_iCacheFlag = (m_iCacheFlag & m_iCacheConfigBits)|
                   (pParent->m_iCacheFlag & ~m_iCacheConfigBits );
+        m_sStoragePath.setStr(pParent->getStoragePath());
     }
 
 }

@@ -32,9 +32,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "../include/ls.h"
 
 #define     MNAME       hellohandler
-struct lsi_module_t MNAME;
+lsi_module_t MNAME;
 
-int handlerBeginProcess(void *session)
+int handlerBeginProcess(lsi_session_t session)
 {
     g_api->set_status_code(session, 200);
     g_api->set_resp_header(session, LSI_RESP_HEADER_CONTENT_TYPE, NULL, 0, "text/html", 9, LSI_HEADER_SET );

@@ -495,7 +495,7 @@ int ModuleConfig::saveConfig(const XmlNode *pNode, lsi_module_t *pModule, lsi_mo
 //     
 // }
 
-int ModuleConfig::parseConfig(const XmlNode *pNode, lsi_module_t *pModule, ModuleConfig *pModuleConfig)
+int ModuleConfig::parseConfig(const XmlNode *pNode, lsi_module_t *pModule, ModuleConfig *pModuleConfig, int level, const char *name)
 {
     const char *pValue = NULL;
     
@@ -524,7 +524,7 @@ int ModuleConfig::parseConfig(const XmlNode *pNode, lsi_module_t *pModule, Modul
 //             }
             
         }
-        config->config = pModule->_config_parser->_parse_config(pValue, config->config);
+        config->config = pModule->_config_parser->_parse_config(pValue, config->config, level, name);
         config->own_data_flag = 2;
     }
     else
@@ -533,7 +533,7 @@ int ModuleConfig::parseConfig(const XmlNode *pNode, lsi_module_t *pModule, Modul
     return 0;
 }
 
-int ModuleConfig::parseConfigList(const XmlNodeList *moduleConfigNodeList, ModuleConfig *pModuleConfig)
+int ModuleConfig::parseConfigList(const XmlNodeList *moduleConfigNodeList, ModuleConfig *pModuleConfig, int level, const char *name)
 {
     if (!moduleConfigNodeList)
         return 0;
@@ -560,7 +560,7 @@ int ModuleConfig::parseConfigList(const XmlNodeList *moduleConfigNodeList, Modul
         if (moduleIter == ModuleManager::getInstance().end())
             continue;
         
-        parseConfig(pNode, moduleIter.second()->getModule(), pModuleConfig);
+        parseConfig(pNode, moduleIter.second()->getModule(), pModuleConfig, level, name);
     }
     return ret;
 }

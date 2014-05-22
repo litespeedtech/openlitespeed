@@ -124,7 +124,7 @@ public:
     virtual int  dumpAborted();
 
     int  parseHeader( const char * &pBuf, int &len, int httpResp=0 );
-    int  processRespBodyData( int inplace, const char * pBuf, int len );
+    int  processRespBodyData( const char * pBuf, int len );
 
     int  respHeaderDone();
 

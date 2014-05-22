@@ -112,7 +112,7 @@ TEST(INIT_LSIAPI)
 
 //if need to test below cases
 //Pleaes comment out one line in 
-//LSIAPI void set_req_env( void *session, const char *name, unsigned int nameLen, const char *val, int valLen )
+//LSIAPI void set_req_env( lsi_session_t session, const char *name, unsigned int nameLen, const char *val, int valLen )
 //COMMENT OUT --->  pReq->addEnv( name, nameLen, val, valLen );
 //otherwise will cause crash for pReq is NULL now
 //
@@ -120,7 +120,7 @@ TEST(envManagerTest2)
 {
     //FIXME: unit test crash, comment out for now.
     /*
-    void *session = (void *)100;
+    lsi_session_t session = (void *)100;
     
     LsiapiBridge::getLsiapiFunctions()->set_req_env(session, "cache", 5, (void *)"1", 1);
     LsiapiBridge::getLsiapiFunctions()->set_req_env(session, "cache", 5, (void *)"22", 2);

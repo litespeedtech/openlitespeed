@@ -1807,7 +1807,7 @@ lsi_module_config_t *parseModuleConfigParam(lsi_module_t *pModule, const HttpCon
     if (config->own_data_flag == 1)
     {
         assert(config->sparam != NULL);
-        config->config = pModule->_config_parser->_parse_config(config->sparam->c_str(), init_config);
+        config->config = pModule->_config_parser->_parse_config(config->sparam->c_str(), init_config, LSI_CONTEXT_LEVEL, pContext->getURI());
         delete config->sparam;
         config->sparam = NULL;
         config->own_data_flag = 2;
@@ -2080,7 +2080,7 @@ int HttpVHost::config( const XmlNode *pVhConfNode)
         ModuleConfig *pConfig = new ModuleConfig;
         pConfig->init(ModuleManager::getInstance().getModuleCount());
         pConfig->inherit(ModuleManager::getGlobalModuleConfig());
-        ModuleConfig::parseConfigList(pModuleList, pConfig);
+        ModuleConfig::parseConfigList(pModuleList, pConfig, LSI_VHOST_LEVEL, this->getName());
         pRootContext->setModuleConfig(pConfig, 1);
     }
     else

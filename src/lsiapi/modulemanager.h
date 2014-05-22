@@ -150,9 +150,9 @@ public:
     static int  compare(lsi_module_config_t *config1, lsi_module_config_t *config2);
     
     static int  parsePriority(const XmlNode *pModuleNode, int *priority);
-    static int  parseConfig(const XmlNode *pModuleNode, lsi_module_t *pModule, ModuleConfig *pModuleConfig);
+    static int  parseConfig(const XmlNode *pModuleNode, lsi_module_t *pModule, ModuleConfig *pModuleConfig, int level, const char *name);
     static int  saveConfig(const XmlNode *pModuleUrlfilterNode, lsi_module_t *pModule, lsi_module_config_t * module_config);
-    static int  parseConfigList(const XmlNodeList *moduleConfigNodeList, ModuleConfig *pModuleConfig);
+    static int  parseConfigList(const XmlNodeList *moduleConfigNodeList, ModuleConfig *pModuleConfig, int level, const char *name);
     
 };
 

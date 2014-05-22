@@ -134,7 +134,7 @@ static int init_Z_State_Buf( ZBufInfo& zBufInfo )
     return ret;
 }
 
-static int initZstream( struct lsi_cb_param_t *rec, lsi_module_t *pModule, z_stream *pStream, uint8_t compressLevel )
+static int initZstream( lsi_cb_param_t *rec, lsi_module_t *pModule, z_stream *pStream, uint8_t compressLevel )
 {
     int ret = 0;
     pStream->avail_in = 0;
@@ -158,7 +158,7 @@ static int initZstream( struct lsi_cb_param_t *rec, lsi_module_t *pModule, z_str
     return ret;
 }
 
-int flushLoopBuf( struct lsi_cb_param_t *rec, int iZState, LoopBuff *pBuff )
+int flushLoopBuf( lsi_cb_param_t *rec, int iZState, LoopBuff *pBuff )
 {
     int written = 0;
     int sz = 0;
@@ -196,7 +196,7 @@ static int clearDataPartR( lsi_cb_param_t *rec )
     return releaseDataPartR( rec, (lsi_module_t *)g_api->get_module(rec) );
 }
 
-static int compressbuf( struct lsi_cb_param_t *rec, lsi_module_t *pModule, int isSend )
+static int compressbuf( lsi_cb_param_t *rec, lsi_module_t *pModule, int isSend )
 {
     ModgzipMData *myData = ( ModgzipMData * ) g_api->get_module_data( rec->_session, pModule, LSI_MODULE_DATA_HTTP );
     if ( !myData )
@@ -345,7 +345,7 @@ static int init( lsi_module_t * pModule )
 lsi_module_t modcompress = { LSI_MODULE_SIGNATURE, init, NULL, NULL, MODULE_VERSION, {0} };
 lsi_module_t moddecompress = { LSI_MODULE_SIGNATURE, init, NULL, NULL, MODULE_VERSION, {0} };
 
-static int addHooks( void *session, lsi_module_t *pModule, int isSend, int priority, uint8_t compressLevel )
+static int addHooks( lsi_session_t session, lsi_module_t *pModule, int isSend, int priority, uint8_t compressLevel )
 {
     ModgzipMData *myData = ( ModgzipMData * ) g_api->get_module_data( session, pModule, LSI_MODULE_DATA_HTTP );
     if ( !myData )
@@ -401,7 +401,7 @@ static int addHooks( void *session, lsi_module_t *pModule, int isSend, int prior
 }
 
 //The below is the only function exported
-int addModgzipFilter( void *session, int isSend, uint8_t compressLevel, int priority )
+int addModgzipFilter( lsi_session_t session, int isSend, uint8_t compressLevel, int priority )
 {
     if ( compressLevel == 0 )
         return addHooks( session, &moddecompress, isSend, priority, 0 );

@@ -38,7 +38,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <unistd.h>
 
 #define     MNAME       testenv
-struct lsi_module_t MNAME;
+lsi_module_t MNAME;
 
 #define URI_PREFIX   "/testenv"
 #define max_file_len    1024
@@ -48,7 +48,7 @@ struct lsi_module_t MNAME;
  * //testenv?modcompress:S1P-3000R1P-3000&moddecompress:S1P3000R1P3000
  */
 
-int assignHandler(struct lsi_cb_param_t *rec)
+int assignHandler(lsi_cb_param_t * rec)
 {
     int len;
     const char *p;
@@ -105,7 +105,7 @@ int assignHandler(struct lsi_cb_param_t *rec)
     return 0;
 }
 
-static int myhandler_process(void *session)
+static int myhandler_process(lsi_session_t session)
 {
     int i;
     //200KB
@@ -126,5 +126,5 @@ static int _init(lsi_module_t * pModule)
     return 0;
 }
 
-struct lsi_handler_t myhandler = { myhandler_process, NULL, NULL, NULL };
+lsi_handler_t myhandler = { myhandler_process, NULL, NULL, NULL };
 lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, _init, &myhandler, NULL, };

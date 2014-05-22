@@ -2,6 +2,7 @@
 #define LSIAPIHOOKS_H
 
 //#include "lsiapi/modulemanager.h"
+#include "lsiapi/internal.h"
 #include "lsiapi/lsiapi.h"
 #include "lsiapi/lsimoduledata.h"
 #include <stdlib.h>
@@ -31,7 +32,7 @@ typedef SessionHooks<LSI_HKPT_HTTP_BEGIN, LSI_HKPT_HTTP_COUNT> HttpSessionHooks;
 typedef SessionHooks<0, LSI_HKPT_L4_COUNT> IolinkSessionHooks;
 class LsiApiHooks;
 
-typedef struct lsi_hook_info_t
+typedef struct lsi_hook_info_s
 {
     const LsiApiHooks * _hooks;
     void *              _termination_fp;
@@ -85,11 +86,11 @@ public:
     
     int copy( const LsiApiHooks& other );
         
-    int runCallback( int level, struct lsi_cb_param_t *param) const;
+    int runCallback( int level, lsi_cb_param_t *param) const;
     int runCallback( int level,  LsiSession *session, void *param1, int paramLen1, int *flag_out, int flag_in) const
     {
         lsi_hook_info_t info = { this, NULL } ;
-        struct lsi_cb_param_t param =
+        lsi_cb_param_t param =
         {   session, &info, begin(), param1, paramLen1, flag_out, flag_in  };
         return runCallback(level, &param);
     }
@@ -268,7 +269,7 @@ public:
         
     }
     
-    int runCallback( int level, struct lsi_cb_param_t *param) const
+    int runCallback( int level, lsi_cb_param_t *param) const
     {   return get( level )->runCallback( level, param );   }
     
     int runCallback( int level, LsiSession *session, void *param1, int paramLen1, int *param2, int paramLen2) const

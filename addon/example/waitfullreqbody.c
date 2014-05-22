@@ -52,7 +52,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define     CONTENT_TAIL    "</body></html><p>\r\n"
 
 
-struct lsi_module_t MNAME;
+lsi_module_t MNAME;
 #define MAX_BLOCK_BUFSIZE   8192
 
 typedef struct _MyDatas
@@ -74,7 +74,7 @@ static int httpRelease(void *data)
     return 0;
 }
 
-static int httpinit(struct lsi_cb_param_t *rec)
+static int httpinit(lsi_cb_param_t * rec)
 {
     MyData *myData = (MyData *)g_api->get_module_data(rec->_session, &MNAME, LSI_MODULE_DATA_HTTP);
     if (myData == NULL )
@@ -100,7 +100,7 @@ static int httpinit(struct lsi_cb_param_t *rec)
  * DO NOT SET TO 0, because the other module may already set to 1 when pass in this function.
  * 
  */
-static int httpreqread(struct lsi_cb_param_t *rec)
+static int httpreqread(lsi_cb_param_t * rec)
 {
     MyData *myData = NULL;
     char *pBegin;
@@ -157,7 +157,7 @@ static int httpreqread(struct lsi_cb_param_t *rec)
 }
 
 
-static int check_uri_and_reg_handler(struct lsi_cb_param_t *rec)
+static int check_uri_and_reg_handler(lsi_cb_param_t * rec)
 {
     const char *uri;
     int len;
@@ -182,7 +182,7 @@ static int _init( lsi_module_t * pModule )
     return 0;
 }
 
-static int handleReqBody( void *session )
+static int handleReqBody( lsi_session_t session )
 {
     char buf[MAX_BLOCK_BUFSIZE];
     int ret;
@@ -211,7 +211,7 @@ static int handleReqBody( void *session )
     return 0;
 }
 
-static int handlerBeginProcess( void *session )
+static int handlerBeginProcess( lsi_session_t session )
 {
     g_api->set_req_wait_full_body( session );
     g_api->append_resp_body(session, CONTENT_HEAD, strlen(CONTENT_HEAD));
@@ -226,11 +226,11 @@ static int handlerBeginProcess( void *session )
     return 0;
 }
 
-static int cleanUp( void *session)
+static int cleanUp( lsi_session_t session)
 {
     g_api->free_module_data(session, &MNAME, LSI_MODULE_DATA_HTTP, httpRelease);
     return 0;
 }
 
-struct lsi_handler_t reqHandler = { handlerBeginProcess, handleReqBody, NULL, cleanUp };
+lsi_handler_t reqHandler = { handlerBeginProcess, handleReqBody, NULL, cleanUp };
 lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, _init, &reqHandler, NULL, };

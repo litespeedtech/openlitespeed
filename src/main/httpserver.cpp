@@ -1236,7 +1236,7 @@ HttpListener * HttpServerImpl::configListener( const XmlNode *pNode, int isAdmin
             const XmlNodeList *pModuleList = p0->getChildren( "module" );
             if ( pModuleList )
             {
-                ModuleConfig::parseConfigList(pModuleList, &pListener->m_moduleConfig);
+                ModuleConfig::parseConfigList(pModuleList, &pListener->m_moduleConfig, LSI_SERVER_LEVEL, pName);
             }
             
             ModuleManager::getInstance().inheritIolinkApiHooks(&pListener->m_iolinkSessionHooks, &pListener->m_moduleConfig);
@@ -2293,7 +2293,7 @@ int HttpServerImpl::configModules( const XmlNode *pRoot )
     {
         ModuleManager::getGlobalModuleConfig()->get(i)->filters_enable = 1;
     }
-    ModuleConfig::parseConfigList(pList, ModuleManager::getGlobalModuleConfig());
+    ModuleConfig::parseConfigList(pList, ModuleManager::getGlobalModuleConfig(), LSI_SERVER_LEVEL, pRoot->getName());
     ModuleManager::getInstance().runModuleInit();
 
     return 0;
@@ -2439,6 +2439,7 @@ int HttpServerImpl::configServer( int reconfig, XmlNode *pRoot)
 
     if ( !reconfig )
     {
+        SystemInfo::maxOpenFile( 4096 );
         configMultiplexer(pRoot->getChild( "tuning" ) );
         m_oldListeners.recvListeners();
         HttpGlobals::getStdErrLogger()->initLogger( HttpGlobals::getMultiplexer() );

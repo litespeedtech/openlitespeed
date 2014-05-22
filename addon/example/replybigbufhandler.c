@@ -42,7 +42,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define     MNAME       replybigbufhandler
 /////////////////////////////////////////////////////////////////////////////
 
-struct lsi_module_t MNAME;
+lsi_module_t MNAME;
 
 #define REPLY_BUFFER_LENGTH (1*1024*1024)
 /**
@@ -57,7 +57,7 @@ static int freeMydata(void *data)
     return 0;
 }
 
-static int reg_handler(struct lsi_cb_param_t *rec)
+static int reg_handler(lsi_cb_param_t * rec)
 {
     const char *uri;
     int len;
@@ -84,7 +84,7 @@ static int init( lsi_module_t * pModule)
 }
 
 //The first time the below function will be called, then onWriteEvent will be called next and next
-static int myhandler_process(void *session)
+static int myhandler_process(lsi_session_t session)
 {
     g_api->set_resp_header(session, LSI_RESP_HEADER_CONTENT_TYPE, NULL, 0, "text/html", 9, LSI_HEADER_SET );
     int writeSize = sizeof("replybigbufhandler module reply the first line\r\n") - 1;
@@ -97,7 +97,7 @@ static int myhandler_process(void *session)
 }
 
 //return 0: error, 1: done, 2: not finished, definitions are in ls.h 
-static int onWriteEvent( void *session)    
+static int onWriteEvent( lsi_session_t session)    
 {
 #define BLOACK_SIZE    (1024)
     int i;
@@ -123,5 +123,5 @@ static int onWriteEvent( void *session)
         return LSI_WRITE_RESP_FINISHED;
 }
 
-struct lsi_handler_t myhandler = { myhandler_process, NULL, onWriteEvent, NULL };
+lsi_handler_t myhandler = { myhandler_process, NULL, onWriteEvent, NULL };
 lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, init, &myhandler, NULL, };

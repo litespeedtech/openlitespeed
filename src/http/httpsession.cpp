@@ -1174,7 +1174,7 @@ DO_AUTH:
                 {
                     int ret1;
                     ret1 = checkAuthentication( aaa.m_pHTAuth, aaa.m_pRequired, resume);
-//                     if ( ret1 )
+                     if ( ret1 )
                     {
                         if ( D_ENABLED( DL_LESS ) )
                             LOG_D(( getLogger(), "[%s] checkAuthentication() return %d",
@@ -1518,7 +1518,7 @@ void HttpSession::sendHttpError( const char * pAdditional )
                     if (( ret != m_request.getStatusCode() )&&(m_request.getStatusCode() == SC_404)
                             &&( ret != SC_503 )&&( ret > 0 ))
                     {
-                        ( ret, NULL );
+                        httpError( ret, NULL );
                         return;
                     }
                 }
@@ -2230,7 +2230,7 @@ int HttpSession::setupRespCache()
     return 0;
 }
 
-extern int addModgzipFilter(void *session, int isSend, uint8_t compressLevel, int priority);
+extern int addModgzipFilter(lsi_session_t session, int isSend, uint8_t compressLevel, int priority);
 int HttpSession::setupGzipFilter()
 {
     register char gz = m_request.gzipAcceptable();
@@ -2556,17 +2556,6 @@ int HttpSession::checkRespSize( int nobuffer )
             }
 
             flush();
-            //if ( !isRespHeaderSent() )
-            //{
-            //    if ( beginWrite() == -1 )
-            //        ret = -1;
-            //}
-            //else
-            //{
-            //    setState( HSS_WRITING );
-            //    //sendResp();
-            //    continueWrite();
-            //}
         }
     }
     return ret;
@@ -2664,15 +2653,6 @@ int HttpSession::endResponse( int success )
         
         m_response.setContentLen( size );
         
-//             if ( beginWrite() == -1 )
-//                 ret = -1;
-//         }
-//         else
-//         {
-//             //sendResp();
-//             setState( HSS_WRITING );
-//             continueWrite();
-//         }
     }
 
     setFlag(HSF_RESP_FLUSHED, 0);
@@ -2822,12 +2802,10 @@ void HttpSession::addLocationHeader( )
     headers.appendLastVal( pLocation, m_request.getLocationLen() );
 }
 
-void HttpSession::prepareHeaders( int addAcceptRange ) 
+void HttpSession::prepareHeaders() 
 {
     HttpRespHeaders &headers = m_response.getRespHeaders();
     headers.addCommonHeaders();
-    if (addAcceptRange)
-        headers.appendAcceptRange();
 
     if ( m_request.getAuthRequired() )
         m_request.addWWWAuthHeader( headers );
@@ -2869,7 +2847,7 @@ int HttpSession::sendRespHeaders()
             setupChunkOS( 0 );
         }
     }
-    prepareHeaders( 0 );
+    prepareHeaders();
 
     if ( finalizeHeader( m_request.getVersion(), m_request.getStatusCode()) )
         return 1;
@@ -3147,7 +3125,9 @@ int HttpSession::sendStaticFileEx(  SendFileInfo * pData )
 #if !defined( NO_SENDFILE )
     int fd = pData->getECache()->getfd();
     if ( HttpServerConfig::getInstance().getUseSendfile() &&
-         fd != -1 && !isSSL() )
+         pData->getECache()->getfd() != -1 && !isSSL() 
+         && (!getGzipBuf()||
+            ( pData->getECache() == pData->getFileData()->getGziped() ) ) )
     {
         len = writeRespBodySendFile( fd, pData->getCurPos(), pData->getRemain() );
         if ( len > 0 )
@@ -3167,7 +3147,14 @@ int HttpSession::sendStaticFileEx(  SendFileInfo * pData )
         {
             return -1;
         }
-        len = writeRespBodyDirect( pBuf, written );
+        if ( getGzipBuf() )
+        {
+            len = appendDynBodyEx( pBuf, written );
+            if ( !len )
+                len = written;
+        }
+        else
+            len = writeRespBodyDirect( pBuf, written );
         if ( len > 0 )
         {
             pData->incCurPos( len );

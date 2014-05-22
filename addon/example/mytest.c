@@ -33,9 +33,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <string.h>
 
 #define     MNAME       mytest
-struct lsi_module_t MNAME;
+lsi_module_t MNAME;
 
-static int reg_handler(struct lsi_cb_param_t *rec)
+static int reg_handler(lsi_cb_param_t * rec)
 {
     const char *uri;
     int len;
@@ -53,13 +53,13 @@ static int _init()
     return 0;
 }
 
-static int beginProcess(void *session)
+static int beginProcess(lsi_session_t session)
 {
     g_api->append_resp_body( session, "MyTest!", 7 ); 
     g_api->end_resp(session);
     return 0;
 }
 
-struct lsi_handler_t myhandler = { beginProcess, NULL, NULL, NULL };
+lsi_handler_t myhandler = { beginProcess, NULL, NULL, NULL };
 lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, _init, &myhandler, NULL, };
 

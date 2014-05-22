@@ -204,11 +204,6 @@ int  HttpExtConnector::respHeaderDone()
     return ret;
 }
 
-
-
-#define MIN_GZIP_SIZE 200
-
-
 int HttpExtConnector::processRespData( const char * pBuf, int len )
 {
 
@@ -221,7 +216,7 @@ int HttpExtConnector::processRespData( const char * pBuf, int len )
             return ret;
     }
     if ( len > 0 )
-        return processRespBodyData( 0, pBuf, len );
+        return processRespBodyData( pBuf, len );
     else
         return 0;
 }
@@ -248,13 +243,11 @@ int HttpExtConnector::flushResp()
 }
 
 
-int HttpExtConnector::processRespBodyData( int inplace, const char * pBuf, int len )
+int HttpExtConnector::processRespBodyData( const char * pBuf, int len )
 {
     if ( D_ENABLED( DL_MEDIUM ) )
         LOG_D((getLogger(), "[%s] HttpExtConnector::processRespBodyData()",
                getLogId() ));
-    if ( inplace && ( pBuf == HttpGlobals::g_achBuf ))
-        inplace = 0;
     int ret = m_pSession->appendDynBody( pBuf, len );
     if ( ret == -1 )
     {

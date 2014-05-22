@@ -18,6 +18,7 @@
 #ifndef CACHECONFIG_H
 #define CACHECONFIG_H
 
+#include "util/autostr.h"
 
 #define CACHE_ENABLED                       (1<<0)
 //#define CACHE_POST_NOCACHE                  (1<<1)
@@ -55,6 +56,9 @@ public:
     void setMaxStale( int age )         {   m_iMaxStale = age;       }
     int  getMaxStale() const            {   return m_iMaxStale;      }
     
+    void setStoragePath( const char * s, int len){   m_sStoragePath.setStr(s, len);    }
+    const char* getStoragePath() const  {   return m_sStoragePath.c_str(); }
+
     int  isPrivateEnabled() const   {   return m_iCacheFlag & CACHE_PRIVATE_ENABLED;    }
     int  isPublicPrivateEnabled() const 
     {   return m_iCacheFlag & ( CACHE_PRIVATE_ENABLED | CACHE_ENABLED ); }
@@ -70,6 +74,7 @@ private:
     int     m_defaultAge;
     int     m_privateAge;
     int     m_iMaxStale;
+    AutoStr2 m_sStoragePath;
 };
 
 #endif

@@ -5,7 +5,7 @@
 
 extern lsi_module_t modcompress;
 extern lsi_module_t moddecompress;
-extern int addModgzipFilter(void *session, int isSend, uint8_t compressLevel, int priority);
+extern int addModgzipFilter(lsi_session_t session, int isSend, uint8_t compressLevel, int priority);
 typedef struct 
 {
     const char      * _pName;

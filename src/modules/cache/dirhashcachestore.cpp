@@ -250,7 +250,7 @@ CacheEntry * DirHashCacheStore::createCacheEntry( const CacheHash& hash,
                 const char * pQS, int iQSLen, 
                 const char * pIP, int ipLen,
                 const char * pCookie, int cookieLen,
-                int force )
+                int force, int* errorcode )
 {
     char achBuf[4096];
     int n = buildCacheLocation( achBuf, 4096, hash );
@@ -271,7 +271,10 @@ CacheEntry * DirHashCacheStore::createCacheEntry( const CacheHash& hash,
             if ( DateTime_s_curTime - st.st_mtime > 120 )
                 unlink( achBuf );
             else
+            {
+                *errorcode = -1;
                 return NULL;
+            }
         }
     }
     achBuf[n - 2 * HASH_KEY_LEN - 1] = 0;
@@ -285,22 +288,32 @@ CacheEntry * DirHashCacheStore::createCacheEntry( const CacheHash& hash,
             {
                 if (( mkdir( achBuf, 0700 ) == -1 )&&( errno != EEXIST ))
                 {
+                    *errorcode = -2;
                     return NULL;
                 }
             }
             achBuf[ n - 2 * HASH_KEY_LEN - 5 ] = '/';
             if ( mkdir( achBuf, 0700 ) == -1 )
+            {
+                *errorcode = -3;
                 return NULL;
+            }
         }
         achBuf[ n - 2 * HASH_KEY_LEN - 3 ] = '/';
         if ( mkdir( achBuf, 0700 ) == -1 )
+        {
+            *errorcode = -4;
             return NULL;
+        }
     }
     achBuf[n - 2 * HASH_KEY_LEN - 1 ] = '/';
 
     int fd = ::open( achBuf, O_RDWR | O_CREAT | O_TRUNC | O_EXCL, 0600 );
     if ( fd == -1 )
+    {
+        *errorcode = -5;
         return NULL;
+    }
     ::fcntl( fd, F_SETFD, FD_CLOEXEC );
     //LOG_INFO(( "createCacheEntry(), open fd: %d", fd ));
 
@@ -317,6 +330,7 @@ CacheEntry * DirHashCacheStore::createCacheEntry( const CacheHash& hash,
     CacheStore::iterator iter = find( hash.getKey() );
     if ( iter != end() )
         iter.second()->setUpdating( 1 );
+    *errorcode = 0;
     return pEntry;
 }
 

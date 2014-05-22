@@ -123,7 +123,7 @@ __LsiGDataItemHashT::iterator get_gdata_iterator(__LsiGDataItemHashT *container,
 //renew_gdata_TTL will not update teh acc time and teh Acc time should be updated when accessing.
 static void renew_gdata_TTL(__LsiGDataItemHashT::iterator iter, int TTL, int type, const char *file_path)
 {   
-    struct gdata_item_val_t* pItem = iter.second();
+    gdata_item_val_t* pItem = iter.second();
     pItem->tmCreate = DateTime::s_curTime;
     pItem->tmExpire = TTL + pItem->tmCreate;
     
@@ -144,7 +144,7 @@ static void renew_gdata_TTL(__LsiGDataItemHashT::iterator iter, int TTL, int typ
 
 void erase_gdata_element(lsi_gdata_cont_val_t* containerInfo, __LsiGDataItemHashT::iterator iter)
 {
-    struct gdata_item_val_t* pItem = iter.second();
+    gdata_item_val_t* pItem = iter.second();
     if (containerInfo->type == LSI_CONTAINER_FILE)
     {
         char file_path[LSI_MAX_FILE_PATH_LEN] = {0};
@@ -263,7 +263,7 @@ LSIAPI void * get_gdata(lsi_gdata_cont_val_t *containerInfo, const char *key, in
 {
     __LsiGDataItemHashT *pCont = containerInfo->container;
     __LsiGDataItemHashT::iterator iter = get_gdata_iterator(pCont, key, key_len);
-    struct gdata_item_val_t* pItem = NULL;
+    gdata_item_val_t* pItem = NULL;
     int TTL = 0;
     time_t  tm = DateTime::s_curTime;
     char file_path[LSI_MAX_FILE_PATH_LEN] = {0};

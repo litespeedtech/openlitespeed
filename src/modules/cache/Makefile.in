@@ -119,8 +119,8 @@ am__uninstall_files_from_dir = { \
     || { echo " ( cd '$$dir' && rm -f" $$files ")"; \
          $(am__cd) "$$dir" && rm -f $$files; }; \
   }
-am__installdirs = "$(DESTDIR)$(modulefilesdir)"
-LTLIBRARIES = $(modulefiles_LTLIBRARIES)
+am__installdirs = "$(DESTDIR)$(modulesdir)"
+LTLIBRARIES = $(modules_LTLIBRARIES)
 cache_la_LIBADD =
 am_cache_la_OBJECTS = cache.lo cacheentry.lo cachehash.lo \
 	cachestore.lo ceheader.lo dirhashcacheentry.lo \
@@ -337,7 +337,6 @@ localedir = @localedir@
 localstatedir = @localstatedir@
 mandir = @mandir@
 mkdir_p = @mkdir_p@
-mymodules = @mymodules@
 oldincludedir = @oldincludedir@
 pdfdir = @pdfdir@
 prefix = @prefix@
@@ -351,8 +350,8 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-modulefilesdir = $(prefix)/modules
-modulefiles_LTLIBRARIES = cache.la
+modulesdir = $(prefix)/modules
+modules_LTLIBRARIES = cache.la
 cache_la_LDFLAGS = -module -avoid-version -shared
 INCLUDES = -I$(top_srcdir)/src
 cache_la_METASOURCES = AUTO
@@ -397,33 +396,33 @@ $(ACLOCAL_M4):  $(am__aclocal_m4_deps)
 	cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh
 $(am__aclocal_m4_deps):
 
-install-modulefilesLTLIBRARIES: $(modulefiles_LTLIBRARIES)
+install-modulesLTLIBRARIES: $(modules_LTLIBRARIES)
 	@$(NORMAL_INSTALL)
-	@list='$(modulefiles_LTLIBRARIES)'; test -n "$(modulefilesdir)" || list=; \
+	@list='$(modules_LTLIBRARIES)'; test -n "$(modulesdir)" || list=; \
 	list2=; for p in $$list; do \
 	  if test -f $$p; then \
 	    list2="$$list2 $$p"; \
 	  else :; fi; \
 	done; \
 	test -z "$$list2" || { \
-	  echo " $(MKDIR_P) '$(DESTDIR)$(modulefilesdir)'"; \
-	  $(MKDIR_P) "$(DESTDIR)$(modulefilesdir)" || exit 1; \
-	  echo " $(LIBTOOL) $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=install $(INSTALL) $(INSTALL_STRIP_FLAG) $$list2 '$(DESTDIR)$(modulefilesdir)'"; \
-	  $(LIBTOOL) $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=install $(INSTALL) $(INSTALL_STRIP_FLAG) $$list2 "$(DESTDIR)$(modulefilesdir)"; \
+	  echo " $(MKDIR_P) '$(DESTDIR)$(modulesdir)'"; \
+	  $(MKDIR_P) "$(DESTDIR)$(modulesdir)" || exit 1; \
+	  echo " $(LIBTOOL) $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=install $(INSTALL) $(INSTALL_STRIP_FLAG) $$list2 '$(DESTDIR)$(modulesdir)'"; \
+	  $(LIBTOOL) $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=install $(INSTALL) $(INSTALL_STRIP_FLAG) $$list2 "$(DESTDIR)$(modulesdir)"; \
 	}
 
-uninstall-modulefilesLTLIBRARIES:
+uninstall-modulesLTLIBRARIES:
 	@$(NORMAL_UNINSTALL)
-	@list='$(modulefiles_LTLIBRARIES)'; test -n "$(modulefilesdir)" || list=; \
+	@list='$(modules_LTLIBRARIES)'; test -n "$(modulesdir)" || list=; \
 	for p in $$list; do \
 	  $(am__strip_dir) \
-	  echo " $(LIBTOOL) $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=uninstall rm -f '$(DESTDIR)$(modulefilesdir)/$$f'"; \
-	  $(LIBTOOL) $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=uninstall rm -f "$(DESTDIR)$(modulefilesdir)/$$f"; \
+	  echo " $(LIBTOOL) $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=uninstall rm -f '$(DESTDIR)$(modulesdir)/$$f'"; \
+	  $(LIBTOOL) $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=uninstall rm -f "$(DESTDIR)$(modulesdir)/$$f"; \
 	done
 
-clean-modulefilesLTLIBRARIES:
-	-test -z "$(modulefiles_LTLIBRARIES)" || rm -f $(modulefiles_LTLIBRARIES)
-	@list='$(modulefiles_LTLIBRARIES)'; \
+clean-modulesLTLIBRARIES:
+	-test -z "$(modules_LTLIBRARIES)" || rm -f $(modules_LTLIBRARIES)
+	@list='$(modules_LTLIBRARIES)'; \
 	locs=`for p in $$list; do echo $$p; done | \
 	      sed 's|^[^/]*$$|.|; s|/[^/]*$$||; s|$$|/so_locations|' | \
 	      sort -u`; \
@@ -433,7 +432,7 @@ clean-modulefilesLTLIBRARIES:
 	}
 
 cache.la: $(cache_la_OBJECTS) $(cache_la_DEPENDENCIES) $(EXTRA_cache_la_DEPENDENCIES) 
-	$(AM_V_CXXLD)$(cache_la_LINK) -rpath $(modulefilesdir) $(cache_la_OBJECTS) $(cache_la_LIBADD) $(LIBS)
+	$(AM_V_CXXLD)$(cache_la_LINK) -rpath $(modulesdir) $(cache_la_OBJECTS) $(cache_la_LIBADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
@@ -657,7 +656,7 @@ check-am: all-am
 check: check-am
 all-am: Makefile $(LTLIBRARIES)
 installdirs:
-	for dir in "$(DESTDIR)$(modulefilesdir)"; do \
+	for dir in "$(DESTDIR)$(modulesdir)"; do \
 	  test -z "$$dir" || $(MKDIR_P) "$$dir"; \
 	done
 install: install-am
@@ -692,7 +691,7 @@ maintainer-clean-generic:
 	@echo "it deletes files that may require special tools to rebuild."
 clean: clean-am
 
-clean-am: clean-generic clean-libtool clean-modulefilesLTLIBRARIES \
+clean-am: clean-generic clean-libtool clean-modulesLTLIBRARIES \
 	mostlyclean-am
 
 distclean: distclean-am
@@ -713,7 +712,7 @@ info: info-am
 
 info-am:
 
-install-data-am: install-modulefilesLTLIBRARIES
+install-data-am: install-modulesLTLIBRARIES
 
 install-dvi: install-dvi-am
 
@@ -759,24 +758,24 @@ ps: ps-am
 
 ps-am:
 
-uninstall-am: uninstall-modulefilesLTLIBRARIES
+uninstall-am: uninstall-modulesLTLIBRARIES
 
 .MAKE: install-am install-strip
 
 .PHONY: CTAGS GTAGS TAGS all all-am check check-am clean clean-generic \
-	clean-libtool clean-modulefilesLTLIBRARIES cscopelist-am ctags \
+	clean-libtool clean-modulesLTLIBRARIES cscopelist-am ctags \
 	ctags-am distclean distclean-compile distclean-generic \
 	distclean-libtool distclean-tags distdir dvi dvi-am html \
 	html-am info info-am install install-am install-data \
 	install-data-am install-dvi install-dvi-am install-exec \
 	install-exec-am install-html install-html-am install-info \
-	install-info-am install-man install-modulefilesLTLIBRARIES \
+	install-info-am install-man install-modulesLTLIBRARIES \
 	install-pdf install-pdf-am install-ps install-ps-am \
 	install-strip installcheck installcheck-am installdirs \
 	maintainer-clean maintainer-clean-generic mostlyclean \
 	mostlyclean-compile mostlyclean-generic mostlyclean-libtool \
 	pdf pdf-am ps ps-am tags tags-am uninstall uninstall-am \
-	uninstall-modulefilesLTLIBRARIES
+	uninstall-modulesLTLIBRARIES
 
 
 #noinst_HEADERS = 

@@ -44,8 +44,8 @@ unsigned long long SystemInfo::maxOpenFile( unsigned long long max)
         iMaxOpenFiles = rl.rlim_cur;
         if (( rl.rlim_cur != RLIM_INFINITY )&&( max > rl.rlim_cur ))
         {
-            if (( max <= rl.rlim_max ) || getuid() )
-                rl.rlim_cur = rl.rlim_max;
+            if (rl.rlim_cur < max && max <= rl.rlim_max)
+                rl.rlim_cur = max;
             else
                 rl.rlim_cur = rl.rlim_max = max;
             //if ( rl.rlim_cur == RLIM_INFINITY )

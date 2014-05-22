@@ -38,7 +38,7 @@ StatusCode::StatusCode( int code, const char * pStatus,
             char * pEnd = p + 4096;
             p += safe_snprintf( p, pEnd - p, 
                         "<!DOCTYPE html>\n"
-                        "<html style=\"height:100%%\">%\n<head><title>%s</title></head>\n"
+                        "<html style=\"height:100%%\">\n<head><title>%s</title></head>\n"
                         "<body style=\"color: #444; margin:0;font: normal 14px/20px Arial, Helvetica, sans-serif; height:100%%; background-color: #fff;"
                         "\">\n"
                         "<div style=\"height:auto; min-height:100%%; \">"

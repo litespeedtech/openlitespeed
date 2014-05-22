@@ -39,9 +39,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 
-struct lsi_module_t MNAME;
+lsi_module_t MNAME;
 
-int check_if_redirect(struct lsi_cb_param_t *rec)
+int check_if_redirect(lsi_cb_param_t * rec)
 {
     const char *uri;
     const char *qs;
@@ -67,7 +67,7 @@ static int _init( lsi_module_t * pModule )
     return 0;
 }
 
-static int handlerBeginProcess(void *session)
+static int handlerBeginProcess(lsi_session_t session)
 {
     const char *qs;
     int action = LSI_URI_REWRITE;
@@ -77,5 +77,5 @@ static int handlerBeginProcess(void *session)
     return 0;
 }
 
-struct lsi_handler_t myhandler = { handlerBeginProcess, NULL, NULL, NULL };
+lsi_handler_t myhandler = { handlerBeginProcess, NULL, NULL, NULL };
 lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, _init, &myhandler, NULL, "test  redirect v1.0" };

@@ -44,7 +44,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define     TEST_STRING "_TEST_testmodule_ADD_A_STRING_HERE_<!--->"
 /////////////////////////////////////////////////////////////////////////////
 
-struct lsi_module_t MNAME;
+lsi_module_t MNAME;
 #define MAX_BLOCK_BUFSIZE   8192
 
 typedef struct _MyData
@@ -68,7 +68,7 @@ int httpRelease(void *data)
     return 0;
 }
 
-int httpinit(struct lsi_cb_param_t *rec)
+int httpinit(lsi_cb_param_t * rec)
 {
     MyData *myData = (MyData *)g_api->get_module_data(rec->_session, &MNAME, LSI_MODULE_DATA_HTTP);
     if (myData == NULL )
@@ -91,7 +91,7 @@ int httpinit(struct lsi_cb_param_t *rec)
     return 0;
 }
 
-int httprespwrite(struct lsi_cb_param_t *rec)
+int httprespwrite(lsi_cb_param_t * rec)
 {
     MyData *myData = NULL;
     const char *in = rec->_param;
@@ -138,7 +138,7 @@ static char *getNullEndString(const char *s, int len, char *str, int maxLength)
 }
 
 
-int httpreqHeaderRecved(struct lsi_cb_param_t *rec)
+int httpreqHeaderRecved(lsi_cb_param_t * rec)
 {
     const char *host, *ua, *uri, *accept;
     char *headerBuf;

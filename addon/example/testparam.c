@@ -58,7 +58,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  **********************************************************************/
 
 #define     MNAME       testparam
-struct lsi_module_t MNAME;
+lsi_module_t MNAME;
 
 typedef struct _param_st{
     int param1;
@@ -101,7 +101,7 @@ const char *myParam[] = {
     NULL   //The last position must have a NULL to indicate end of the array
 };
 
-static void * testparam_parseConfig( const char *param, void *_initial_config )
+static void * testparam_parseConfig( const char *param, void *_initial_config, int level, const char *name )
 {
     param_st *pInitConfig = (param_st *)_initial_config;
     param_st *pConfig = (param_st *) malloc(sizeof(struct _param_st));
@@ -144,7 +144,7 @@ static void testparam_freeConfig(void *_config)
     free(_config);
 }
 
-static int testparam_handlerBeginProcess(void *session)
+static int testparam_handlerBeginProcess(lsi_session_t session)
 {
     g_api->set_resp_header(session, LSI_RESP_HEADER_CONTENT_TYPE, NULL, 0, "text/plain", sizeof("text/plain") - 1, LSI_HEADER_SET );
     
@@ -168,7 +168,7 @@ static int testparam_handlerBeginProcess(void *session)
     return 0;
 }
 
-static int reg_handler(struct lsi_cb_param_t *rec)
+static int reg_handler(lsi_cb_param_t * rec)
 {
     const char *uri;
     int len;
@@ -196,6 +196,6 @@ static int testparam_init(lsi_module_t * pModule)
     return 0;
 }
 
-struct lsi_handler_t testparam_myhandler = { testparam_handlerBeginProcess, NULL, NULL, NULL };
-struct lsi_config_t testparam_dealConfig = { testparam_parseConfig, testparam_freeConfig, myParam };
+lsi_handler_t testparam_myhandler = { testparam_handlerBeginProcess, NULL, NULL, NULL };
+lsi_config_t testparam_dealConfig = { testparam_parseConfig, testparam_freeConfig, myParam };
 lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, testparam_init, &testparam_myhandler, &testparam_dealConfig, "Version 1.1" };

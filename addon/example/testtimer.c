@@ -51,10 +51,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define     MNAME       testtimer
 /////////////////////////////////////////////////////////////////////////////
 
-struct lsi_module_t MNAME;
-static int onReadEvent( void *session);
+lsi_module_t MNAME;
+static int onReadEvent( lsi_session_t session);
 
-int reg_handler(struct lsi_cb_param_t *rec)
+int reg_handler(lsi_cb_param_t * rec)
 {
     const char *uri;
     int len;
@@ -73,16 +73,16 @@ static int init(lsi_module_t * pModule )
     return 0;
 }
 
-void timer_callback(void *session)
+void timer_callback(void * session)
 {
     char buf[1024];
     sprintf(buf, "timer triggered and cotinue to write, time: %ld", (long)(time(NULL)));
-    g_api->append_resp_body(session, buf, strlen(buf));
-    g_api->set_handler_write_state(session, 1);
+    g_api->append_resp_body((lsi_session_t)session, buf, strlen(buf));
+    g_api->set_handler_write_state((lsi_session_t)session, 1);
 }
 
 //The first time the below function will be called, then onWriteEvent will be called next and next
-static int myhandler_process(void *session)
+static int myhandler_process(lsi_session_t session)
 {
     char tmBuf[30];
     time_t t;
@@ -103,7 +103,7 @@ static int myhandler_process(void *session)
     return 0;
 }
 
-static int onReadEvent( void *session)
+static int onReadEvent( lsi_session_t session)
 {
     char buf[8192];
     g_api->append_resp_body(session, "I got req body:<br>", sizeof("I got req body:<br>") -1 );
@@ -113,11 +113,11 @@ static int onReadEvent( void *session)
     return 0;
 }
 
-static int onWriteEvent( void *session)
+static int onWriteEvent( lsi_session_t session)
 {
     g_api->append_resp_body(session, "<br>Written finished and bye.<p>", sizeof("<br>Written finished and bye.<p>") -1 );
     return LSI_WRITE_RESP_FINISHED;
 }
 
-struct lsi_handler_t myhandler = { myhandler_process, onReadEvent, onWriteEvent, NULL };
+lsi_handler_t myhandler = { myhandler_process, onReadEvent, onWriteEvent, NULL };
 lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, init, &myhandler, NULL, };

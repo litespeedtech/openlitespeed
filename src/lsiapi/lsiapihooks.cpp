@@ -202,7 +202,7 @@ LsiApiHook * LsiApiHooks::find( const lsi_module_t *pModule ) const
     LsiApiHook * pHook;
     for( pHook = begin(); pHook < end(); ++pHook )
     {
-        if( ( pHook->_module == pModule ) )
+        if( pHook->_module == pModule )
             return pHook;
     }
     return NULL;
@@ -217,7 +217,7 @@ int LsiApiHooks::remove( const lsi_module_t *pModule )
     LsiApiHook * pHook;
     for( pHook = begin(); pHook < end(); ++pHook )
     {
-        if( ( pHook->_module == pModule ) )
+        if( pHook->_module == pModule )
             remove( pHook );
     }
     
@@ -225,7 +225,7 @@ int LsiApiHooks::remove( const lsi_module_t *pModule )
 }
 
 //need to check Hook count before call this function
-int LsiApiHooks::runCallback(int level, struct lsi_cb_param_t *param) const
+int LsiApiHooks::runCallback(int level, lsi_cb_param_t *param) const
 {    
     int ret = 0;
     lsi_cb_param_t rec1;
