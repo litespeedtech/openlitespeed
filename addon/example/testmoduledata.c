@@ -55,7 +55,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <unistd.h>
 
 #define     MNAME       testmoduledata
-struct lsi_module_t MNAME;
+lsi_module_t MNAME;
 
 #define URI_PREFIX   "/testmoduledata"
 #define max_file_len    1024
@@ -75,7 +75,7 @@ int releaseCounterDataCb( void *data )
     return 0;
 }
 
-CounterData *allocateMydata(void *session, const lsi_module_t *module, int level)
+CounterData *allocateMydata(lsi_session_t session, const lsi_module_t *module, int level)
 {
     CounterData *myData = (CounterData*)malloc(sizeof(CounterData));
     if (myData == NULL )
@@ -86,7 +86,7 @@ CounterData *allocateMydata(void *session, const lsi_module_t *module, int level
     return myData;
 }
 
-int assignHandler(struct lsi_cb_param_t *rec)
+int assignHandler(lsi_cb_param_t * rec)
 {
     const char *p;
     char path[max_file_len] = {0};
@@ -114,7 +114,7 @@ int assignHandler(struct lsi_cb_param_t *rec)
     return 0;
 }
 
-static int myhandler_process(void *session)
+static int myhandler_process(lsi_session_t session)
 {
     CounterData *ip_data = NULL, *vhost_data = NULL, *file_data = NULL;
     char output[128];
@@ -159,5 +159,5 @@ static int _init(lsi_module_t * pModule)
     return 0;
 }
 
-struct lsi_handler_t myhandler = { myhandler_process, NULL, NULL, NULL };
+lsi_handler_t myhandler = { myhandler_process, NULL, NULL, NULL };
 lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, _init, &myhandler, NULL, };

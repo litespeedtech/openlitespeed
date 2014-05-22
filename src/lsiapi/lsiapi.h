@@ -29,13 +29,13 @@
 
 class LsiModuleData ;
 
-typedef struct gdata_key_t 
+typedef struct gdata_key_s 
 {
     char* key_str;
     int key_str_len;
 } gdata_key_t;
 
-typedef struct gdata_item_val_t 
+typedef struct gdata_item_val_s 
 {
     gdata_key_t key;          //Need to deep copy the original buffer
     void *value;
@@ -47,7 +47,7 @@ typedef struct gdata_item_val_t
 
 typedef  THash<gdata_item_val_t *> __LsiGDataItemHashT;
 
-typedef struct lsi_gdata_cont_val_t {
+typedef struct lsi_gdata_cont_val_s {
     gdata_key_t key;          //Need to deep copy the original buffer
     __LsiGDataItemHashT *container;
     time_t tmCreate;

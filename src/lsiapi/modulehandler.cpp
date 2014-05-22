@@ -59,7 +59,7 @@ int ModuleHandler::cleanUp(HttpSession* pSession)
     
     if ( pModuleHandler->on_clean_up )
     {
-        int ret = pModuleHandler->on_clean_up(((void *)((LsiSession *)pSession)));
+        int ret = pModuleHandler->on_clean_up(pSession);
         if ( D_ENABLED( DL_MEDIUM ) )
         {
             LOG_D(( pSession->getLogger(), "[%s] [%s] _handler->on_clean_up() return %d",
@@ -82,7 +82,7 @@ int ModuleHandler::onWrite(HttpSession* pSession)
     
     if (pModuleHandler->on_write_resp)
     {
-        int status = pModuleHandler->on_write_resp(((void *)((LsiSession *)pSession)));
+        int status = pModuleHandler->on_write_resp(pSession);
         if ( D_ENABLED( DL_MEDIUM ) )
         {
             LOG_D(( pSession->getLogger(), "[%s] [%s] _handler->on_write_resp() return %d",
@@ -128,7 +128,7 @@ int ModuleHandler::process(HttpSession* pSession, const HttpHandler* pHandler)
     pSession->resetResp();
 //    pSession->setupRespCache();
     
-    int ret = pModuleHandler->begin_process(((void *)((LsiSession *)pSession)));
+    int ret = pModuleHandler->begin_process(pSession);
     if ( D_ENABLED( DL_MEDIUM ) )
     {
         LOG_D(( pSession->getLogger(), "[%s] [%s] _handler->begin_process() return %d",
@@ -156,7 +156,7 @@ int ModuleHandler::onRead( HttpSession* pSession )
     
     if (pModuleHandler->on_read_req_body)
     {
-        int ret = pModuleHandler->on_read_req_body(((void *)((LsiSession *)pSession)));
+        int ret = pModuleHandler->on_read_req_body(pSession);
         if ( D_ENABLED( DL_MEDIUM ) )
         {
             LOG_D(( pSession->getLogger(), "[%s] [%s] _handler->on_write_resp() return %d",

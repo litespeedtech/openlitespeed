@@ -66,7 +66,7 @@ public:
                 const char * pQS, int pQSLen, 
                 const char * pIP, int ipLen,
                 const char * pCookie, int cookieLen,
-                int force );
+                int force, int* errorcode );
 
     virtual void cancelEntry( CacheEntry * pEntry, int remove );
 
@@ -80,7 +80,7 @@ public:
     virtual int publish( CacheEntry * pEntry );
 
     virtual void removePermEntry( CacheEntry * pEntry );
-    int& nio_stat(char achBuf[4096], stat* st);
+    int& nio_stat(char achBuf[4096], struct stat* st);
 
 };
 

@@ -4,9 +4,9 @@ CFLAGS= -fPIC -g  -Wall -c -D_REENTRANT -I../../util/ -I./ -I../ -I../../  $(LFS
 
 OS := $(shell uname)
 ifeq ($(OS), Darwin)
-        LDFLAGS= -fPIC -g -undefined dynamic_lookup -lcrypto -Wall $(LFSFLAGS) -shared
+        LDFLAGS= -fPIC -g -undefined dynamic_lookup  -Wall $(LFSFLAGS) -shared
 else
-        LDFLAGS= -fPIC -g  -lcrypto -Wall $(LFSFLAGS) -shared
+        LDFLAGS= -fPIC -g -Wall $(LFSFLAGS) -shared
 endif
 
 SOURCES =cache.cpp cacheentry.cpp cachehash.cpp cachestore.cpp ceheader.cpp dirhashcacheentry.cpp dirhashcachestore.cpp \

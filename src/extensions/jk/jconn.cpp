@@ -197,7 +197,7 @@ int JConn::processPacketContent( unsigned char * &p, unsigned char * pEnd )
             {
                 if ( !((getConnector()->getState() &
                      (HEC_ABORT_REQUEST|HEC_ERROR|HEC_COMPLETE|HEC_REDIRECT))) )
-                    ret = getConnector()->processRespBodyData( 0, (const char *)p, len );
+                    ret = getConnector()->processRespBodyData( (const char *)p, len );
                 p += len;
                 m_chunkLeft -= len;
             }

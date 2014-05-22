@@ -18,6 +18,7 @@
 #ifndef LS_MODULE_H
 #define LS_MODULE_H
 #include <stdio.h>
+#include <sys/stat.h>
 #include <sys/uio.h>
 #include <inttypes.h>
 #include <stdarg.h>
@@ -94,12 +95,22 @@ extern "C" {
 #endif
 
 
-
-
-
 /**************************************************************************************************
  *                                       API Parameter ENUMs
  **************************************************************************************************/
+
+/**
+ * 
+ * 
+ * 
+ */
+enum lsi_config_level
+{
+    LSI_SERVER_LEVEL = 0,
+    LSI_LISTENER_LEVEL,
+    LSI_VHOST_LEVEL,
+    LSI_CONTEXT_LEVEL,
+};
 
 /**
  * @enum lsi_hook_priority   
@@ -1035,13 +1046,13 @@ enum lsi_resp_header_id
 /*
  * Forward Declarations
  */
-struct lsi_module_t;
-struct lsi_api_t;
-struct lsi_cb_param_t;
-struct lsi_hook_info_t;
-struct lsi_gdata_cont_val_t;
-struct stat;
-typedef struct lsi_shm_htable_t lsi_shm_htable_t;
+typedef struct lsi_module_s lsi_module_t;
+typedef struct lsi_api_s lsi_api_t;
+typedef struct lsi_cb_param_s lsi_cb_param_t;
+typedef struct lsi_hook_info_s lsi_hook_info_t;
+typedef struct lsi_gdata_cont_val_s lsi_gdata_cont_val_t;
+typedef struct lsi_shm_htable_s lsi_shm_htable_t;
+typedef struct lsi_session_s * lsi_session_t;
 typedef uint32_t lsi_shm_off_t;
 typedef uint32_t lsi_hash_key_t;
 
@@ -1050,7 +1061,7 @@ typedef uint32_t lsi_hash_key_t;
  * @brief The callback function and its parameters.
  * @since 1.0
  */
-typedef int     ( *lsi_callback_pf)  ( struct lsi_cb_param_t * );
+typedef int     ( *lsi_callback_pf)  ( lsi_cb_param_t * );
 /**
  * @typedef lsi_release_callback_pf 
  * @brief The memory release callback function for the user module data.
@@ -1093,29 +1104,29 @@ typedef int   (*lsi_hash_value_comp_pf) ( const void * pVal1, const void * pVal2
 
 
 /**
- * @struct lsi_cb_param_t
+ * @typedef lsi_cb_param_t
  * @brief Callback parameters passed to the callback functions
  * @since 1.0
  **/
-typedef struct lsi_cb_param_t
+typedef struct lsi_cb_param_s
 {
     /**
      * @brief _session is a pointer to the session. 
      * @since 1.0
      */
-    void        * _session;
+    lsi_session_t       _session;
     
     /**
      * @brief _hook_info is a pointer to the struct lsi_hook_info_t.
      * @since 1.0
      */
-    struct lsi_hook_info_t   * _hook_info;
+    lsi_hook_info_t   * _hook_info;
     
     /**
      * @brief _cur_hook is a pointer to the current hook.
      * @since 1.0
      */
-    void                    * _cur_hook;
+    void              * _cur_hook;
     
     /**
      * @brief _param is a pointer to the first parameter. 
@@ -1124,7 +1135,7 @@ typedef struct lsi_cb_param_t
      * of expected values for each _param based on use.
      * @since 1.0
      */
-    const void              *   _param;
+    const void        *   _param;
     
     /**
      * @brief _param_len is the length of the first parameter.
@@ -1148,18 +1159,18 @@ typedef struct lsi_cb_param_t
 
 
 /**
- * @struct lsi_handler_t
+ * @typedef lsi_handler_t
  * @brief Pre-defined handler functions
  * @since 1.0
  */
-typedef struct lsi_handler_t
+typedef struct lsi_handler_s
 {
     /**
      * @brief begin_process is called when the server starts to process a request.
      * @details It is used to define the request handler callback function.
      * @since 1.0
      */
-    int  ( *begin_process )     ( void *session );
+    int  ( *begin_process )     ( lsi_session_t session );
     
     /**
      * @brief on_read_req_body is called on a READ event with a large request body. 
@@ -1169,7 +1180,7 @@ typedef struct lsi_handler_t
      * The default function will execute and return 0.
      * @since 1.0
      */
-    int  ( *on_read_req_body )  ( void *session );   
+    int  ( *on_read_req_body )  ( lsi_session_t session );   
     
     /**
      * @brief on_write_resp is called on a WRITE event with a large response body.
@@ -1179,7 +1190,7 @@ typedef struct lsi_handler_t
      * The default function will execute and return LSI_WRITE_RESP_FINISHED.
      * @since 1.0
      */
-    int  ( *on_write_resp )  ( void *session );
+    int  ( *on_write_resp )  ( lsi_session_t session );
 
     /**
      * @brief on_clean_up is called when the server core is done with the handler, ask the 
@@ -1189,12 +1200,12 @@ typedef struct lsi_handler_t
      * @since 1.0
      */
     
-    int  ( *on_clean_up ) ( void *session );
+    int  ( *on_clean_up ) ( lsi_session_t session );
     
 } lsi_handler_t;
 
 /**
- * @struct lsi_config_t
+ * @typedef lsi_config_s
  * @brief Contains functions which are used to define parse and release functions for the
  * user defined configuration parameters.
  * @details 
@@ -1203,7 +1214,7 @@ typedef struct lsi_handler_t
  * allocated memory using the session_end filter hooks.
  * @since 1.0
  */
-typedef struct lsi_config_t
+typedef struct lsi_config_s
 {
     /**
      * @brief _parse_config is a callback function for the server to call to parse the user defined 
@@ -1213,11 +1224,13 @@ typedef struct lsi_config_t
      * @since 1.0
      * @param[in] param - the \\0 terminated buffer holding configuration parameters.
      * @param[in] initial_config - a pointer to default configuration inherited from parent level
+     * @param[in] level - lsi_config_level //FIXME: to be updated!
+     * @param[in] name - name of the Server/Listener/VHost or uri of the Context
      * @return a pointer to a the user-defined configuration data, which combines initial_config with
      *         settings in param, if both param and initial_config are NULL, hard-coded default 
      *         configuration value should be returned.
      */
-    void *                          ( *_parse_config ) ( const char *param, void *initial_config );
+    void *                          ( *_parse_config ) ( const char *param, void *initial_config, int level, const char *name );
     
     /**
      * @brief _free_config is a callback function for the server to call to release a pointer to 
@@ -1241,14 +1254,13 @@ typedef struct lsi_config_t
                                     + LSI_MODULE_DATA_COUNT * sizeof( int16_t ) )
 
 
-typedef struct lsi_module_t lsi_module_t;
 
 /**
- * @struct lsi_module_t
+ * @typedef lsi_module_t
  * @brief Defines an LSIAPI module, this struct must be provided in the module code.
  * @since 1.0
  */
-struct lsi_module_t
+struct lsi_module_s
 {
     /**
      * @brief _signature contains a function pointer that will be called after the module is loaded.
@@ -1269,7 +1281,7 @@ struct lsi_module_t
      * If not present, set to NULL.
      * @since 1.0
      */
-    struct lsi_handler_t *          _handler;
+    lsi_handler_t *          _handler;
     
     /**
      * @brief _config_parser contains functions which are used to parse user defined 
@@ -1277,7 +1289,7 @@ struct lsi_module_t
      * If not present, set to NULL.
      * @since 1.0
      */
-    struct lsi_config_t *           _config_parser;
+    lsi_config_t *           _config_parser;
     
     
     /**
@@ -1300,11 +1312,11 @@ struct lsi_module_t
  **************************************************************************************************/
 
 /**
- * @struct lsi_api_t
+ * @typedef lsi_api_t
  * @brief LSIAPI function set.
  * @since 1.0
  **/
-typedef struct lsi_api_t
+typedef struct lsi_api_s
 {
     /**************************************************************************************************************
      *                                        SINCE LSIAPI 1.0                                                    *
@@ -1341,7 +1353,7 @@ typedef struct lsi_api_t
      * @param[in] level - enum defined in log level definitions.
      * @param[in] fmt - formatted string.
      */
-    void ( *session_log )( void *session, int level, const char * fmt, ... );
+    void ( *session_log )( lsi_session_t session, int level, const char * fmt, ... );
 
     /**
      * @brief session_vlog is used to write the formatted log to error log associated with a session
@@ -1355,7 +1367,7 @@ typedef struct lsi_api_t
      * @param[in] vararg - the varying argument list
      * @param[in] no_linefeed - 1 = do not add \\n at the end of message; 0 = add \\n
      */
-    void ( *session_vlog )( void *session, int level, const char * fmt, va_list vararg, int no_linefeed );
+    void ( *session_vlog )( lsi_session_t session, int level, const char * fmt, va_list vararg, int no_linefeed );
     
     /**
      * @brief session_lograw is used to write additional log messages to error log file associated with a session
@@ -1368,7 +1380,7 @@ typedef struct lsi_api_t
      * @param[in] buf - data to be written to log file.
      * @param[in] len - the size of data to be logged 
      */
-    void ( *session_lograw )( void *session, const char * buf, int len );
+    void ( *session_lograw )( lsi_session_t session, const char * buf, int len );
 
     /**
      * @brief get_module_param is used to get the user defined module parameters which are parsed by 
@@ -1380,7 +1392,7 @@ typedef struct lsi_api_t
      * @param[in] pModule - a pointer to an lsi_module_t struct.
      * @return a pointer to a the user-defined configuration data.
      */
-    void * (* get_module_param)( void *session, const lsi_module_t *pModule );
+    void * (* get_module_param)( lsi_session_t session, const lsi_module_t *pModule );
     
     /**
      * @brief add_hook function is used to add a global level hook function.
@@ -1427,7 +1439,7 @@ typedef struct lsi_api_t
      *      This flag turns off sendfile().
      * @return -1 on failure, 0 for already added, location in the filter chain on success.
      */
-    int ( *add_session_hook )( void * session, int index, const lsi_module_t *pModule, lsi_callback_pf cb, short priority, short flag );
+    int ( *add_session_hook )( lsi_session_t session, int index, const lsi_module_t *pModule, lsi_callback_pf cb, short priority, short flag );
     
     /**
      * @brief remove_session_hook is used to remove a session level hook function.
@@ -1442,7 +1454,7 @@ typedef struct lsi_api_t
      * @param[in] index - as defined in the enum of Hook Point level definitions.
      * @param[in] pModule - a pointer to the lsi_module_t struct.
      */
-    int ( *remove_session_hook )( void * session, int index, const lsi_module_t *pModule );
+    int ( *remove_session_hook )( lsi_session_t session, int index, const lsi_module_t *pModule );
     
     /**
      * @brief get_module is used to retrieve module information associated with a hookpoint based on callback parameters.
@@ -1480,7 +1492,7 @@ typedef struct lsi_api_t
      * @param[in] pathLen - the length of the path string.
      * @return -1 on failure, file descriptor on success.
      */    
-    int ( *init_file_type_mdata )( void *session, const lsi_module_t *pModule, const char *path, int pathLen );
+    int ( *init_file_type_mdata )( lsi_session_t session, const lsi_module_t *pModule, const char *path, int pathLen );
        
     /**
      * @brief set_module_data is used to set the module data of a session level(scope).
@@ -1494,7 +1506,7 @@ typedef struct lsi_api_t
      * @param[in] sParam - a pointer to the user defined data.
      * @return -1 for bad level or no release data callback function, 0 on success.
      */
-    int ( *set_module_data )( void *session, const lsi_module_t *pModule, int level, void *sParam );
+    int ( *set_module_data )( lsi_session_t session, const lsi_module_t *pModule, int level, void *sParam );
     
     /**
      * @brief get_module_data gets the module data which was set by set_module_data.
@@ -1507,7 +1519,7 @@ typedef struct lsi_api_t
      * @param[in] level - as defined in the module data level enum.
      * @return NULL on failure, a pointer to the user defined data on success.
      */
-    void * ( *get_module_data )( void *session, const lsi_module_t *pModule, int level );
+    void * ( *get_module_data )( lsi_session_t session, const lsi_module_t *pModule, int level );
     
      /**
      * @brief get_module_data gets the module data related to current callback.
@@ -1532,7 +1544,7 @@ typedef struct lsi_api_t
      * @param[in] level - as defined in the module data level enum.
      * @param[in] cb - a pointer to the user-defined callback function that releases the user data.
      */    
-    void ( *free_module_data )( void * session, const lsi_module_t *pModule, int level, lsi_release_callback_pf cb );
+    void ( *free_module_data )( lsi_session_t session, const lsi_module_t *pModule, int level, lsi_release_callback_pf cb );
     
     /**
      * @brief stream_writev_next needs to be called in the LSI_HKPT_L4_SENDING hook point level just 
@@ -1590,7 +1602,7 @@ typedef struct lsi_api_t
      * @param[in] key_len - the string length.
      * @return NULL on failure, a pointer to the data container on success.
      */ 
-    struct lsi_gdata_cont_val_t *( *get_gdata_container)( int type, const char *key, int key_len );
+    lsi_gdata_cont_val_t *( *get_gdata_container)( int type, const char *key, int key_len );
     
     /**
      * @brief empty_gdata_container is used to delete all the data indices in the global data container. 
@@ -1601,7 +1613,7 @@ typedef struct lsi_api_t
      * @param[in] container - the global data container.
      * @return -1 on failure, 0 on success.
      */
-    int ( *empty_gdata_container )( struct lsi_gdata_cont_val_t *container );
+    int ( *empty_gdata_container )( lsi_gdata_cont_val_t *container );
     
     /**
      * @brief purge_gdata_container is used to delete the physical files of the empty container.
@@ -1611,7 +1623,7 @@ typedef struct lsi_api_t
      * @param[in] container - the global data container.
      * @return -1 on failure, 0 on success.
      */
-    int ( *purge_gdata_container )( struct lsi_gdata_cont_val_t *container );
+    int ( *purge_gdata_container )( lsi_gdata_cont_val_t *container );
     
     /**
      * @brief get_gdata is used to get the global data which was already set to the container.
@@ -1630,7 +1642,7 @@ typedef struct lsi_api_t
      * @return a pointer to the user-defined global data, (as defined in gdata_item_val_t.value) on success,
      * NULL on failure.
      */
-    void * ( *get_gdata )( struct lsi_gdata_cont_val_t *container, const char *key, int key_len, 
+    void * ( *get_gdata )( lsi_gdata_cont_val_t *container, const char *key, int key_len, 
                            lsi_release_callback_pf release_cb, int renew_TTL, lsi_deserialize_pf deserialize_cb);
     
     /**
@@ -1643,7 +1655,7 @@ typedef struct lsi_api_t
      * @param[in] key_len - the string length.
      * @return 0.
      */
-    int ( *delete_gdata )( struct lsi_gdata_cont_val_t *container, const char *key, int key_len );
+    int ( *delete_gdata )( lsi_gdata_cont_val_t *container, const char *key, int key_len );
     
     /**
      * @brief set_gdata is used to set the global data (void * val) with a given key.  
@@ -1666,7 +1678,7 @@ typedef struct lsi_api_t
      * @param[in] serialize_cb - a pointer to the user-defined serializer callback function used for file write.
      * @return -1 on failure, 1 on not forced, 0 on success.
      */
-    int ( *set_gdata )( struct lsi_gdata_cont_val_t *container, const char *key, int key_len, void *val, int TTL, 
+    int ( *set_gdata )( lsi_gdata_cont_val_t *container, const char *key, int key_len, void *val, int TTL, 
                         lsi_release_callback_pf release_cb, int force_update, lsi_serialize_pf serialize_cb );
         
     /**
@@ -1677,7 +1689,7 @@ typedef struct lsi_api_t
      * @param[in] session - a pointer to void, ultimately to HttpSession.
      * @return length of the request header.
      */
-    int ( *get_req_raw_headers_length )( void *session );
+    int ( *get_req_raw_headers_length )( lsi_session_t session );
     
     /**
      * @brief get_req_raw_headers can be used to store all of the request headers in a given buffer.
@@ -1691,7 +1703,7 @@ typedef struct lsi_api_t
      * @param[in] maxlen - the size of the buffer.
      * @return - the length of the request header.
      */
-    int ( *get_req_raw_headers )( void *session, char *buf, int maxlen );
+    int ( *get_req_raw_headers )( lsi_session_t session, char *buf, int maxlen );
     
     /**
      * @brief get_req_header can be used to get a request header based on the given key.
@@ -1704,7 +1716,7 @@ typedef struct lsi_api_t
      * @param[in,out] valLen - a pointer to the length of the returned string.
      * @return a pointer to the request header key value string.
      */
-    const char* ( *get_req_header )( void *session, const char *key, int keyLen, int *valLen );
+    const char* ( *get_req_header )( lsi_session_t session, const char *key, int keyLen, int *valLen );
     
     /**
      * @brief get_req_header_by_id can be used to get a request header based on the given header id 
@@ -1717,7 +1729,7 @@ typedef struct lsi_api_t
      * @param[in,out] valLen - a pointer to the length of the returned string.
      * @return a pointer to the request header key value string.
      */
-    const char* ( *get_req_header_by_id )( void *session, int id, int *valLen );
+    const char* ( *get_req_header_by_id )( lsi_session_t session, int id, int *valLen );
     
     /**
      * @brief get_req_org_uri is used to get the original URI as delivered in the request, 
@@ -1731,7 +1743,7 @@ typedef struct lsi_api_t
      * 
      * @return length of the URI string.
      */
-    int ( *get_req_org_uri )( void *session, char *buf, int buf_size );
+    int ( *get_req_org_uri )( lsi_session_t session, char *buf, int buf_size );
     
     
     /**
@@ -1743,7 +1755,7 @@ typedef struct lsi_api_t
      * @param[in,out] uri_len - a pointer to int, if not NULL, the length of the URI is returned.
      * @return pointer to the URI string. The string is readonly.
      */
-    const char* ( *get_req_uri )( void *session, int *uri_len );
+    const char* ( *get_req_uri )( lsi_session_t session, int *uri_len );
     
     
     /**
@@ -1755,7 +1767,7 @@ typedef struct lsi_api_t
      * @param[in,out] length - the length of the returned string.
      * @return pointer to the context URI string.
      */
-    const char* ( *get_mapped_context_uri )( void *session, int *length );
+    const char* ( *get_mapped_context_uri )( lsi_session_t session, int *length );
     
     
     /**
@@ -1770,7 +1782,7 @@ typedef struct lsi_api_t
      * @param[in] scriptLen - the length of the script name string.
      * @return -1 on failure, 0 on success.
      */    
-    int ( *register_req_handler )( void *session, lsi_module_t *pModule, int scriptLen );
+    int ( *register_req_handler )( lsi_session_t session, lsi_module_t *pModule, int scriptLen );
     
     
     /**
@@ -1785,7 +1797,7 @@ typedef struct lsi_api_t
      * @return 
      * 
      */
-    int ( *set_handler_write_state )( void *session, int state );
+    int ( *set_handler_write_state )( lsi_session_t session, int state );
     
     /**
      * @brief set_timer sets a timer.
@@ -1819,7 +1831,7 @@ typedef struct lsi_api_t
      * @param[in,out] len - a pointer to the length of the cookies string.
      * @return a pointer to the cookie key string.
      */
-    const char * ( *get_req_cookies )( void *session, int *len );
+    const char * ( *get_req_cookies )( lsi_session_t session, int *len );
     
     /**
      * @brief get_req_cookie_count is used to get the request cookies count.
@@ -1829,7 +1841,7 @@ typedef struct lsi_api_t
      * @param[in] session - a pointer to void, ultimately to HttpSession.
      * @return the number of cookies.
      */
-    int ( *get_req_cookie_count )( void *session );
+    int ( *get_req_cookie_count )( lsi_session_t session );
     
     /**
      * @brief get_cookie_value is to get a cookie based on the cookie name.
@@ -1842,7 +1854,7 @@ typedef struct lsi_api_t
      * @param[in,out] valLen - a pointer to the length of the cookie string.
      * @return a pointer to the cookie string.
      */    
-    const char * ( *get_cookie_value )( void *session, const char * cookie_name, int nameLen, int *valLen );
+    const char * ( *get_cookie_value )( lsi_session_t session, const char * cookie_name, int nameLen, int *valLen );
     
     /**
      * @brief get_client_ip is used to get the request ip address.
@@ -1853,7 +1865,7 @@ typedef struct lsi_api_t
      * @param[in,out] len - a pointer to the length of the IP string.
      * @return a pointer to the IP string.
      */
-    const char * ( *get_client_ip )( void *session, int *len );
+    const char * ( *get_client_ip )( lsi_session_t session, int *len );
     
     /**
      * @brief get_req_query_string is used to get the request query string.
@@ -1864,7 +1876,7 @@ typedef struct lsi_api_t
      * @param[in,out] len - a pointer to the length of the query string.
      * @return a pointer to the query string.
      */
-    const char * ( *get_req_query_string )( void *session, int *len );
+    const char * ( *get_req_query_string )( lsi_session_t session, int *len );
     
     
     /**
@@ -1880,7 +1892,7 @@ typedef struct lsi_api_t
      * @param[in] maxValLen - the maximum size of the variable value string.
      * @return the length of the variable value string.
      */    
-    int ( *get_req_var_by_id )( void *session, int id, char *val, int maxValLen );
+    int ( *get_req_var_by_id )( lsi_session_t session, int id, char *val, int maxValLen );
 
     
     /**
@@ -1896,7 +1908,7 @@ typedef struct lsi_api_t
      * @param[in] maxValLen - the maximum size of the variable value string.
      * @return the length of the variable value string.
      */
-    int ( *get_req_env )( void *session, const char *name, unsigned int nameLen, char *val, int maxValLen );
+    int ( *get_req_env )( lsi_session_t session, const char *name, unsigned int nameLen, char *val, int maxValLen );
 
     
     
@@ -1911,7 +1923,7 @@ typedef struct lsi_api_t
      * @param[in] val - a pointer to the variable value string.
      * @param[in] valLen - the size of the variable value string.
      */    
-    void ( *set_req_env )( void *session, const char *name, unsigned int nameLen, const char *val, int valLen );
+    void ( *set_req_env )( lsi_session_t session, const char *name, unsigned int nameLen, const char *val, int valLen );
     
     
     /**
@@ -1940,7 +1952,7 @@ typedef struct lsi_api_t
      * @param[in] max_len - the max length of the path string.
      * @return the length of the path string.
      */
-    int ( *get_uri_file_path )( void *session, const char *uri, int uri_len, char *path, int max_len );
+    int ( *get_uri_file_path )( lsi_session_t session, const char *uri, int uri_len, char *path, int max_len );
     
     /**
      * @brief set_uri_qs changes uri and query string of the current session, perform internal/external redirect. 
@@ -1955,7 +1967,7 @@ typedef struct lsi_api_t
      * @param[in] qs_len - the length of the Query String.
      * @return -1 on failure, 0 on success.
      */    
-    int ( *set_uri_qs )( void *session, int action, const char *uri, int uri_len, const char *qs, int qs_len );
+    int ( *set_uri_qs )( lsi_session_t session, int action, const char *uri, int uri_len, const char *qs, int qs_len );
     
     /**
      * @brief get_req_content_length is used to get the content length of the request.
@@ -1965,7 +1977,7 @@ typedef struct lsi_api_t
      * @param[in] session - a pointer to void, ultimately to HttpSession.
      * @return content length.
      */    
-    int ( *get_req_content_length )( void *session );
+    int ( *get_req_content_length )( lsi_session_t session );
     
     /**
      * @brief read_req_body is used to get the request body to a given buffer.
@@ -1977,7 +1989,7 @@ typedef struct lsi_api_t
      * @param[in] buflen - size of the buffer.
      * @return length of the request body.
      */    
-    int ( *read_req_body )( void *session, char *buf, int bufLen );
+    int ( *read_req_body )( lsi_session_t session, char *buf, int bufLen );
     
     
     /**
@@ -1989,7 +2001,7 @@ typedef struct lsi_api_t
      * @return 
      * 
      */
-    int ( *is_req_body_finished )( void *session );
+    int ( *is_req_body_finished )( lsi_session_t session );
     
     /**
      * @brief set_req_wait_full_body is used to make the server wait to call
@@ -2005,7 +2017,7 @@ typedef struct lsi_api_t
      * @param[in] session - a pointer to void, ultimately to HttpSession.
      * @return 
      */
-    int ( *set_req_wait_full_body )( void *session );
+    int ( *set_req_wait_full_body )( lsi_session_t session );
     
     /**
      * @brief set_resp_wait_full_body is used to make the server wait for the 
@@ -2023,7 +2035,7 @@ typedef struct lsi_api_t
      * @param[in] session - a pointer to void, ultimately to HttpSession.
      * @return 
      */
-    int ( *set_resp_wait_full_body )( void *session );
+    int ( *set_resp_wait_full_body )( lsi_session_t session );
     
     /**
      * @brief set_status_code is used to set the response status code of a HTTP session.
@@ -2036,7 +2048,7 @@ typedef struct lsi_api_t
      * @param[in] session - a pointer to void, ultimately to HttpSession.
      * @param[in] code - the http response status code.
      */    
-    void ( *set_status_code )( void *session, int code );
+    void ( *set_status_code )( lsi_session_t session, int code );
     
     
     /**
@@ -2047,7 +2059,7 @@ typedef struct lsi_api_t
      * @param[in] session - a pointer to void, ultimately to HttpSession.
      * @return the http response status code.
      */
-    int ( *get_status_code )( void *session );
+    int ( *get_status_code )( lsi_session_t session );
     
     
     /**
@@ -2059,10 +2071,10 @@ typedef struct lsi_api_t
      * @param[in] session - a pointer to void, ultimately to HttpSession.
      * @return -1 on failure, 0 false, 1 true.
      */
-    int ( *is_resp_buffer_available)( void *session );
+    int ( *is_resp_buffer_available)( lsi_session_t session );
     
     
-    int ( *is_resp_buffer_gzippped)( void *session );
+    int ( *is_resp_buffer_gzippped)( lsi_session_t session );
     
     /**
      * @brief append_resp_body is used to append a buffer to the response body.
@@ -2077,7 +2089,7 @@ typedef struct lsi_api_t
      * @param[in] buflen - the size of the buffer.
      * @return the length of the request body.
      */    
-    int ( *append_resp_body )( void *session, const char *buf, int len );
+    int ( *append_resp_body )( lsi_session_t session, const char *buf, int len );
     
     /**
      * @brief append_resp_bodyv is used to append an iovec to the response body.
@@ -2092,7 +2104,7 @@ typedef struct lsi_api_t
      * @param[in] count - the size of the IO vector.
      * @return -1 on failure, return value of the hook filter callback function.
      */    
-    int ( *append_resp_bodyv )( void *session, const struct iovec *iov, int count );
+    int ( *append_resp_bodyv )( lsi_session_t session, const struct iovec *iov, int count );
     
     /**
      * @brief send_file is used to send a file as the response body.
@@ -2106,7 +2118,7 @@ typedef struct lsi_api_t
      * @param[in] size - remaining size.
      * @return -1 or error codes from various layers of calls on failure, 0 on success.
      */
-    int ( *send_file )( void *session, const char *path, int64_t start, int64_t size );
+    int ( *send_file )( lsi_session_t session, const char *path, int64_t start, int64_t size );
     
     
     /**
@@ -2116,7 +2128,7 @@ typedef struct lsi_api_t
      * 
      * @param[in] session - a pointer to void, ultimately to HttpSession.
      */
-    void ( *flush )( void *session );
+    void ( *flush )( lsi_session_t session );
     
     /**
      * @brief end_resp is called when the response sending is complete.
@@ -2125,7 +2137,7 @@ typedef struct lsi_api_t
      * 
      * @param[in] session - a pointer to void, ultimately to HttpSession.
      */
-    void ( *end_resp )( void *session );
+    void ( *end_resp )( lsi_session_t session );
     
     /**
      * @brief set_resp_content_length sets the Content Length of the response. 
@@ -2137,7 +2149,7 @@ typedef struct lsi_api_t
      * @param[in] len - the content length.
      * @return 0. 
      */    
-    int ( *set_resp_content_length )( void *session, int64_t len );
+    int ( *set_resp_content_length )( lsi_session_t session, int64_t len );
     
     /**
      * @brief set_resp_header is used to set a response header.  
@@ -2157,7 +2169,7 @@ typedef struct lsi_api_t
      * @param[in] add_method - enum defined for the method of adding.
      * @return 0.
      */    
-    int ( *set_resp_header )( void *session, unsigned int header_id, const char *name, int nameLen, const char *val, int valLen, int add_method );
+    int ( *set_resp_header )( lsi_session_t session, unsigned int header_id, const char *name, int nameLen, const char *val, int valLen, int add_method );
     
     /**
      * @brief set_resp_header2 is used to parse the headers first then perform set_resp_header.
@@ -2170,7 +2182,7 @@ typedef struct lsi_api_t
      * @param[in] add_method - enum defined for the method of adding.
      * @return 0.
      */    
-    int ( *set_resp_header2 )( void *session, const char *headers, int len, int add_method );
+    int ( *set_resp_header2 )( lsi_session_t session, const char *headers, int len, int add_method );
     
     /**
      * @brief get_resp_header is used to get a response header's value in an iovec array. 
@@ -2189,7 +2201,7 @@ typedef struct lsi_api_t
      * @param[in] maxIovCount - size of the IO vector.
      * @return the count of headers in the IO vector.
      */    
-    int ( *get_resp_header )( void *session, unsigned int header_id, const char *name, int nameLen, struct iovec *iov, int maxIovCount );
+    int ( *get_resp_header )( lsi_session_t session, unsigned int header_id, const char *name, int nameLen, struct iovec *iov, int maxIovCount );
     
     /**
      * @brief get_resp_headers_count is used to get the count of the response headers. 
@@ -2200,7 +2212,7 @@ typedef struct lsi_api_t
      * @param[in] session - a pointer to void, ultimately to HttpSession.
      * @return the number of headers in the whole response header.
      */
-    int ( *get_resp_headers_count )( void *session );
+    int ( *get_resp_headers_count )( lsi_session_t session );
     
     /**
      * @brief get_resp_headers it used to get the whole response headers and store them to the iovec array.
@@ -2214,7 +2226,7 @@ typedef struct lsi_api_t
      * @param[in] maxIovCount - size of the IO vector.
      * @return the count of all the headers.
      */
-    int ( *get_resp_headers )( void *session, struct iovec *iov, int maxIovCount );
+    int ( *get_resp_headers )( lsi_session_t session, struct iovec *iov, int maxIovCount );
     
     /**
      * @brief remove_resp_header is used to remove a response header.  
@@ -2230,7 +2242,7 @@ typedef struct lsi_api_t
      * @param[in] nameLen - the length of the header id name string.
      * @return 0.
      */    
-    int ( *remove_resp_header )( void *session, unsigned int header_id, const char *name, int nameLen );
+    int ( *remove_resp_header )( lsi_session_t session, unsigned int header_id, const char *name, int nameLen );
     
     
     /**
@@ -2249,7 +2261,7 @@ typedef struct lsi_api_t
      * 
      * @return if success, return the size of path, if error, return -1.
      */
-    int ( *get_file_path_by_uri )( void *session, const char * uri, int uri_len, char * path, int max_len );
+    int ( *get_file_path_by_uri )( lsi_session_t session, const char * uri, int uri_len, char * path, int max_len );
     
     /**
      * @brief get_mime_type_by_suffix it used to get corresponding MIME type based on file suffix.
@@ -2262,7 +2274,7 @@ typedef struct lsi_api_t
      * @return return the readonly MIME type string.
      */
    
-    const char * ( *get_mime_type_by_suffix )( void *session, const char * suffix );
+    const char * ( *get_mime_type_by_suffix )( lsi_session_t session, const char * suffix );
     
     /**
      * @brief set_force_mime_type it used to force server core to use a MIME type with request in current session.
@@ -2274,7 +2286,7 @@ typedef struct lsi_api_t
      * 
      * @return return 0 if success, -1 if failure.
      */
-    int ( *set_force_mime_type )( void * session, const char * mime );
+    int ( *set_force_mime_type )( lsi_session_t session, const char * mime );
     
     
     /**
@@ -2287,7 +2299,7 @@ typedef struct lsi_api_t
      * 
      * @return return the file path string if success, NULL if no static file associated.
      */
-    const char * (*get_req_file_path )( void * session, int * pathLen );
+    const char * (*get_req_file_path )( lsi_session_t session, int * pathLen );
     
     /**
      * @brief get_req_handler_type it used to get the type name of a handler assigned to this request.
@@ -2299,7 +2311,7 @@ typedef struct lsi_api_t
      * @return return type name string, if no handler assigned, return NULL.
      */
 
-    const char * ( *get_req_handler_type )( void * session );
+    const char * ( *get_req_handler_type )( lsi_session_t session );
     
     /**
      * @brief is_access_log_on it returns if access logging is enabled for this session.
@@ -2310,7 +2322,7 @@ typedef struct lsi_api_t
      * 
      * @return return 1 if access logging is enabled, 0 if access logging is disabled.
      */
-    int  ( *is_access_log_on )( void * session );
+    int  ( *is_access_log_on )( lsi_session_t session );
     
     /**
      * @brief set_access_log it turns on or off access logging.
@@ -2320,7 +2332,7 @@ typedef struct lsi_api_t
      * @param[in] session - a pointer to void, ultimately to HttpSession.
      * @param[in] on_off - set to 1 to turn on access logging, set to 0 to turn off access logging.
      */
-    void ( *set_access_log )( void * session, int on_off );
+    void ( *set_access_log )( lsi_session_t session, int on_off );
     
     /**
      * @brief get_access_log_string it turns a string for access log based on the log_pattern.
@@ -2334,11 +2346,11 @@ typedef struct lsi_api_t
      * 
      * @return  the length of the final log string, -1 if error.
      */
-    int  ( *get_access_log_string )( void * session, const char * log_pattern, char * buf, int bufLen );
+    int  ( *get_access_log_string )( lsi_session_t session, const char * log_pattern, char * buf, int bufLen );
     
-    int ( *get_file_stat )( void * session, const char *path, int pathLen, struct stat * st );
+    int ( *get_file_stat )( lsi_session_t session, const char *path, int pathLen, struct stat * st );
     
-    int ( *is_resp_handler_aborted )( void * session );
+    int ( *is_resp_handler_aborted )( lsi_session_t session );
     
     /**
      * @brief get_resp_body_buf it turns a buffer that holds response body of current session .
@@ -2349,7 +2361,7 @@ typedef struct lsi_api_t
      * 
      * @return  the pointer to the response body buffer, NULL if resposne body is not available.
      */
-    void * ( *get_resp_body_buf )( void * session );
+    void * ( *get_resp_body_buf )( lsi_session_t session );
 
     /**
      * @brief get_req_body_buf it turns a buffer that holds request body of current session .
@@ -2360,7 +2372,7 @@ typedef struct lsi_api_t
      * 
      * @return  the pointer to the request body buffer, NULL if resposne body is not available.
      */
-    void * ( *get_req_body_buf )( void * session );
+    void * ( *get_req_body_buf )( lsi_session_t session );
     
     int64_t ( *get_body_buf_size )( void * pBuf );
     
@@ -2396,7 +2408,7 @@ typedef struct lsi_api_t
      * 
      * @param[in] session - a pointer to void, ultimately to HttpSession.
      */
-    void ( *end_resp_headers )( void *session );
+    void ( *end_resp_headers )( lsi_session_t session );
     
     /**
      * @brief get_module_name returns the name of the module.
@@ -2450,9 +2462,9 @@ typedef struct lsi_api_t
     int   ( *shm_htable_destory )( lsi_shm_htable_t * );
     
     
-    int   ( *is_subrequest )( void * session );
+    int   ( *is_subrequest )( lsi_session_t session );
     
-    
+    time_t ( *get_cur_time )( int32_t * usec );
     
     
     

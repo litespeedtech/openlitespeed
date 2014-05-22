@@ -44,7 +44,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define     MNAME       updatetcpout1
 /////////////////////////////////////////////////////////////////////////////
 
-struct lsi_module_t MNAME;
+lsi_module_t MNAME;
 #define MAX_BLOCK_BUFSIZE   8192
 
 typedef struct _MyData
@@ -67,7 +67,7 @@ int l4release(void *data)
 }
 
 
-int l4init( struct lsi_cb_param_t * rec )
+int l4init( lsi_cb_param_t * rec )
 {
     
     MyData *myData = (MyData *)g_api->get_module_data(rec->_session, &MNAME, LSI_MODULE_DATA_L4);
@@ -90,7 +90,7 @@ int l4init( struct lsi_cb_param_t * rec )
     return 0;
 }
 
-static int l4send(struct lsi_cb_param_t * rec)
+static int l4send(lsi_cb_param_t * rec)
 {
     MyData *myData = NULL;
     char *pBegin;

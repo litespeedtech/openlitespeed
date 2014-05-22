@@ -3,6 +3,8 @@
 
 #ifndef LSAPI_INTERNAL_H
 #define LSAPI_INTERNAL_H
+
+class lsi_session_s;
 class ModuleConfig;
 class LogTracker;
 
@@ -47,8 +49,13 @@ typedef struct lsi_module_internal_t
 //# error not enough space reserved for internal data in struct lsi_module_t
 //#endif
 
+struct lsi_session_s
+{
+};
 
-class LsiSession
+typedef struct lsi_session_s * lsi_session_t;
+
+class LsiSession : public lsi_session_s
 {
 public:
     LsiSession(){};

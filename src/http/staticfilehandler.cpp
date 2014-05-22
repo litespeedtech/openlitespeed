@@ -79,6 +79,8 @@ inline int buildStaticFileHeaders( HttpResp * pResp, HttpReq * pReq, SendFileInf
                       pData->getFileData()->getHeaderLen() );
     pResp->parseAdd( pData->getECache()->getCLHeader().c_str(),
                       pData->getECache()->getCLHeader().len() );
+    pResp->getRespHeaders().appendAcceptRange();
+
     return 0;
 }
 

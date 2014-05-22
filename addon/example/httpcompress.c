@@ -81,15 +81,15 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //#define GZIP_TWO_HOOK_IMPL
 
 
-struct lsi_module_t MNAME;
+lsi_module_t MNAME;
 
 
-//static int isCompressible( void *session, 
+//static int isCompressible( lsi_session_t session, 
 
 #ifdef GZIP_HOOK_IMPL
-static int httpCompress( struct lsi_cb_param_t *param )
+static int httpCompress( lsi_cb_param_t *param )
 {
-    void *session = param->_session;
+    lsi_session_t session = param->_session;
     int iPtrLen, iCompressible; // NOTE: iPtrLen will be used for various purposes in this method.
     char pCompressed[LSI_MAX_FILE_PATH_LEN];
     const char *pFilePath, 
@@ -135,15 +135,15 @@ lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, _init, NULL, NULL, "httpCompress" }
 #endif
 
 #ifdef GZIP_TWO_HOOK_IMPL
-static int httpEncode( struct lsi_cb_param_t *param )
+static int httpEncode( lsi_cb_param_t *param )
 {
     g_api->set_resp_header(param->_session, LSI_RESP_HEADER_CONTENT_ENCODING, "Content-Encoding", 16, "gzip", 4, LSI_HEADER_SET);
     return LSI_RET_OK;
 }
 
-static int httpCompress( struct lsi_cb_param_t *param )
+static int httpCompress( lsi_cb_param_t *param )
 {
-    void *session = param->_session;
+    lsi_session_t session = param->_session;
     int iPtrLen, iUriLen, iCompressible; // NOTE: iPtrLen will be used for various purposes in this method.
     char pDocPath[LSI_MAX_FILE_PATH_LEN], *ptr;
     const char *pReqUri = g_api->get_req_uri( session, &iUriLen ), 

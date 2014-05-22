@@ -56,7 +56,7 @@ public:
                 const char * pQS, int pQSLen, 
                 const char * pIP, int ipLen,
                 const char * pCookie, int cookieLen,
-                int force ) = 0;
+                int force, int* errorcode ) = 0;
 
     virtual CacheEntry * getCacheEntry( const char * pKey, int keyLen ) = 0;
 

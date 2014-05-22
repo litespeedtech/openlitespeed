@@ -56,7 +56,7 @@ const char *blockWords[] = {
     "badword3",
 };
 
-struct lsi_module_t MNAME;
+lsi_module_t MNAME;
 
 static int hasBadWord(const char *s, size_t len)
 {
@@ -75,7 +75,7 @@ static int hasBadWord(const char *s, size_t len)
 }
     
     
-int check_req_whole_body(struct lsi_cb_param_t *rec)
+int check_req_whole_body(lsi_cb_param_t * rec)
 {
     off_t offset = 0;
     const char * pBuf; 

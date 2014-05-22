@@ -33,9 +33,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "../include/ls.h"
 #include <string.h>
 #define     MNAME       hellohandler2
-struct lsi_module_t MNAME;
+lsi_module_t MNAME;
 
-int reg_handler(struct lsi_cb_param_t *rec)
+static int reg_handler(lsi_cb_param_t * rec)
 {
     const char *uri;
     int len;
@@ -56,11 +56,11 @@ static int _init( lsi_module_t * pModule )
     return 0;
 }
 
-int handlerBeginProcess(void *session)
+static int handlerBeginProcess(lsi_session_t session)
 {
     g_api->append_resp_body( session, "Hello module handler2.\r\n", 24 ); 
     g_api->end_resp(session);
-     g_api->session_log(session, LSI_LOG_DEBUG, "[hellohandler2:%s] handlerBeginProcess fot URI: %s\n", 
+    g_api->session_log(session, LSI_LOG_DEBUG, "[hellohandler2:%s] handlerBeginProcess fot URI: %s\n", 
                    MNAME._info, g_api->get_req_uri(session, NULL));
     return 0;
 }

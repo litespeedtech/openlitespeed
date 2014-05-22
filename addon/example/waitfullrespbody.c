@@ -43,20 +43,20 @@ lsi_module_t MNAME;
 #define     VERSION         "V1.0"
 
 
-static int internalRedir(struct lsi_cb_param_t *rec)
+static int internalRedir(lsi_cb_param_t * rec)
 {
     int action = LSI_URL_REDIRECT_INTERNAL;
     g_api->set_uri_qs(rec->_session, action, DEST_URL, sizeof(DEST_URL) -1, "", 0 );
     return LSI_RET_OK;
 }
 
-static int denyAccess(struct lsi_cb_param_t *rec)
+static int denyAccess(lsi_cb_param_t * rec)
 {
     g_api->set_status_code( rec->_session, 406 );
     return LSI_RET_ERROR;
 }
 
-static int getTestType(struct lsi_cb_param_t *rec)
+static int getTestType(lsi_cb_param_t * rec)
 {
     int type = 0;
     int len;

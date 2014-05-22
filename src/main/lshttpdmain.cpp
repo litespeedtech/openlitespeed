@@ -76,7 +76,6 @@
 #include <plainconf.h>
 
 #define PID_FILE            DEFAULT_TMP_DIR "/lshttpd.pid"
-#define SYSSTATS_FILE       DEFAULT_TMP_DIR "/.sysstats"
 
 static char s_iRunning = 0;
 char *argv0 = NULL;
@@ -258,10 +257,6 @@ void LshttpdMain::onGuardTimer()
     s_count = (s_count + 1) % 5;
     clearToStopApp();
 
-    if ( !s_count )
-    {
-        writeSysStats();
-    }
     //processAdminCtrlFile( m_sCtrlFile.c_str());
 
     checkRestartReq();
@@ -479,72 +474,6 @@ int LshttpdMain::processAdminBuffer( char * p, char * pEnd )
     return 0;
 }
 
-
-void LshttpdMain::writeSysStats()
-{
-    char achStatsFile[256] = "";
-    char achTmpStatsFile[256];
-    if ( HttpGlobals::s_psChroot )
-    {
-        //prefix chroot here
-        strcpy( achStatsFile, HttpGlobals::s_psChroot->c_str() );
-    }
-    strcat( achStatsFile, SYSSTATS_FILE );
-    strcpy( achTmpStatsFile, achStatsFile );
-    strcat( achTmpStatsFile, ".tmp" );
-    int fd  = open( achTmpStatsFile, O_WRONLY | O_CREAT, 0644 );
-    if ( fd == -1 )
-        LOG_ERR(( "Failed to create system statistic report file: %s", achTmpStatsFile ));
-    else
-    {
-        writeProcessData( fd );
-        close( fd );
-        rename( achTmpStatsFile, achStatsFile );
-    }
-}
-
-void LshttpdMain::writeProcessData( int fd )
-{
-    char achPid[20];
-    static char achPs[3][3] = { "ps", "-o", "-p" };
-    static char achParam[] = "pid,nice,pri,pcpu,pmem,rss,vsz,time";
-    static char achPath[] = "PATH=/bin:/usr/bin";
-    char *psCmd[32] =
-    {
-    achPs[0], achPs[1], achParam
-    };
-    psCmd[3] = achPs[2];
-
-    psCmd[4] = achPid;
-    psCmd[5] = NULL;
-    write( fd, "PS\n", 3 );
-    
-    ChildProc * pProc;
-    pProc = (ChildProc *)m_childrenList.begin();
-    while( pProc )
-    {
-        if (( pProc->m_iState == CP_RUNNING )&&( pProc->m_pid > 0 ) )
-        {
-            safe_snprintf( achPid, 20, "%d", pProc->m_pid );
-            int pid = fork();
-            if ( pid < 0)
-                LOG_ERR(( "fork() failed" ));
-            else if ( pid == 0 )
-            {
-                dup2( fd, STDOUT_FILENO );
-                putenv( achPath );
-                pid = execvp( "ps", psCmd );
-                if ( D_ENABLED( DL_LESS ) )
-                    LOG_D(( "Failed to execute 'ps' command: %s ", strerror( errno ) ));
-                exit( 0 );
-            }
-            else
-                waitpid( pid, NULL, 0 );
-        }
-        pProc = (ChildProc *)pProc->next();
-    }
-
-}
 
 #define DEFAULT_XML_CONFIG_FILE         "conf/httpd_config.xml"
 #define DEFAULT_PLAIN_CONFIG_FILE       "conf/httpd_config.conf"

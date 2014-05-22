@@ -7,7 +7,7 @@ class CValidation
 	public function __construct() {
 		$this->_info = NULL;
 	}
-	
+
 	public function ExtractPost($tbl, &$d, $disp)
 	{
 		$this->_info = $disp->_info;
@@ -16,15 +16,15 @@ class CValidation
 		foreach ( $index as $i ) {
 			$attr = $tbl->_dattrs[$i];
 
-			if ( $attr == NULL || $attr->bypassSavePost()) 
+			if ( $attr == NULL || $attr->bypassSavePost())
 				continue;
-				
+
 			$d[$attr->_key] = $attr->extractPost();
 			$needCheck = TRUE;
 			if ( $attr->_type == 'sel1' || $attr->_type == 'sel2' )	{
 				if ( $disp->_act == 'c' ) {
 					$needCheck = FALSE;
-				} 
+				}
 				else {
 					$attr->populate_sel1_options($this->_info, $d);
 				}
@@ -40,7 +40,7 @@ class CValidation
 		$this->setValid($goFlag, $res);
 
 		$this->_info = NULL;
-		
+
 		// if 0 , make it always point to curr page
 		return $goFlag;
 	}
@@ -117,9 +117,9 @@ class CValidation
 				}
 			}
 		}
-		
-		$checkedTids = array('VH_TOP_D','VH_BASE','VH_UDB',	'ADMIN_USR', 'ADMIN_USR_NEW', 
-		'L_GENERAL', 'L_GENERAL1', 'ADMIN_L_GENERAL', 'ADMIN_L_GENERAL1', 'L_SSL', 'L_CERT', 'L_SSL_CERT', 
+
+		$checkedTids = array('VH_TOP_D','VH_BASE','VH_UDB',	'ADMIN_USR', 'ADMIN_USR_NEW',
+		'L_GENERAL', 'L_GENERAL1', 'ADMIN_L_GENERAL', 'ADMIN_L_GENERAL1', 'L_SSL', 'L_CERT', 'L_SSL_CERT',
 		'TP', 'TP1');
 
 		if ( in_array($tbl->_id, $checkedTids) ) {
@@ -156,47 +156,47 @@ class CValidation
 					break;
 			}
 		}
-		
+
 		return $isValid;
 	}
-	
-	
+
+
 	protected function chkPostTbl_TP(&$d)
 	{
 		$isValid = 1;
-		
+
 		$confCenter = ConfCenter::singleton();
-		
+
 		$oldName = trim($confCenter->GetDispInfo()->_name);
 		$newName = trim($d['name']->GetVal());
-		 
+
 		if($oldName != $newName && array_key_exists($newName, $confCenter->_serv->_data['tpTop'])) {
 			$d['name']->SetErr("Template: \"$newName\" already exists. Please use a different name.");
 			$isValid = -1;
-			
+
 		}
-		
+
 		return $isValid;
 	}
-	
+
 	protected function chkPostTbl_VH_BASE(&$d)
 	{
 		$isValid = 1;
-		
+
 		$confCenter = ConfCenter::singleton();
-		
+
 		$oldName = trim($confCenter->GetDispInfo()->_name);
 		$newName = trim($d['name']->GetVal());
-		 
+
 		if($oldName != $newName && array_key_exists($newName, $confCenter->_serv->_data['vhTop'])) {
 			$d['name']->SetErr("Virtual Hostname: \"$newName\" already exists. Please use a different name.");
 			$isValid = -1;
-			
+
 		}
-		
+
 		return $isValid;
 	}
-	
+
 	protected function chkPostTbl_VH_UDB(&$d)
 	{
 		$isValid = 1;
@@ -224,20 +224,20 @@ class CValidation
 	protected function encryptPass($val)
 	{
 		$valid_chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/.";
-		if (CRYPT_MD5 == 1) 
-		{
+		$limit = strlen($valid_chars)-1;
+		$isMac = (strtoupper(PHP_OS) === 'DARWIN');
+
+		if (CRYPT_MD5 == 1 && !$isMac) {
 		    $salt = '$1$';
-		    for($i = 0; $i < 8; $i++) 
-		    {
-			$salt .= $valid_chars[rand(0,strlen($valid_chars)-1)];
+		    for($i = 0; $i < 8; $i++) {
+				$salt .= $valid_chars[rand(0,$limit)];
 		    }
 		    $salt .= '$';
 		}
-		else
-		{
-		    $salt = $valid_chars[rand(0,strlen($valid_chars)-1)];
-		    $salt .= $valid_chars[rand(0,strlen($valid_chars)-1)];
-		}		
+		else {
+		    $salt = $valid_chars[rand(0,$limit)];
+		    $salt .= $valid_chars[rand(0,$limit)];
+		}
 		$pass = crypt($val, $salt);
 		return $pass;
 	}
@@ -305,16 +305,16 @@ class CValidation
 	protected function chkPostTbl_L_GENERAL(&$d)
 	{
 		$isValid = 1;
-	
+
 		$ip = $d['ip']->GetVal();
 		if ( $ip == 'ANY' ) {
 			$ip = '*';
 		}
 		$port = $d['port']->GetVal();
 		$d['address'] = new CVal("$ip:$port");
-		
+
 		$confCenter = ConfCenter::singleton();
-		
+
 		$oldName = trim($confCenter->GetDispInfo()->_name);
 		$newName = trim($d['name']->GetVal());
 
@@ -322,10 +322,10 @@ class CValidation
 			$d['name']->SetErr("Listener \"$newName\" already exists. Please use a different name.");
 			$isValid = -1;
 		}
-		
+
 		return $isValid;
 	}
-	
+
 	protected function isCurrentListenerSecure()
 	{
 		$confCenter = ConfCenter::singleton();
@@ -333,7 +333,7 @@ class CValidation
 		$l = $confCenter->_serv->_data['listeners'][$listenerName];
 		return ($l['secure']->GetVal() == 1);
 	}
-	
+
 	protected function chkPostTbl_L_SSL(&$d)
 	{
 		$isValid = 1;
@@ -348,7 +348,7 @@ class CValidation
 				$isValid = -1;
 			}
 		}
-		
+
 		return $isValid;
 	}
 
@@ -366,10 +366,10 @@ class CValidation
 				$isValid = -1;
 			}
 		}
-		
+
 		return $isValid;
 	}
-	
+
 	protected function validateTblAttr($tblDef, $tbl, &$data)
 	{
 		$valid = 1;
@@ -415,7 +415,7 @@ class CValidation
 	{
 		if ($cval == NULL || $cval->HasErr())
 			return -1;
-			
+
 		if ( !$cval->HasVal()) {
 			if ( $attr->_allowNull ) {
 				return 1;
@@ -427,11 +427,11 @@ class CValidation
 		if ( $attr->_type == 'cust' ) {
 			return 1;
 		}
-		
+
 		$chktype = array('uint', 'name', 'vhname', 'sel','sel1','sel2',
 		'bool','file','filep','file0','file1', 'filetp', 'path',
 		'uri','expuri','url', 'httpurl', 'email', 'dir', 'addr', 'parse');
-		
+
 		if ( !in_array($attr->_type, $chktype) )	{
 			// not checked type ('domain', 'subnet'
 			return 1;
@@ -475,14 +475,14 @@ class CValidation
 
 	protected function chkAttr_sel_val($attr, $val, &$err)
 	{
-		if ( isset( $attr->_maxVal ) 
+		if ( isset( $attr->_maxVal )
 			&& !array_key_exists($val, $attr->_maxVal) ) {
 				$err = "invalid value: $val";
 			return -1;
 		}
 		return 1;
 	}
-	
+
 	protected function chkAttr_name($attr, $cval)
 	{
 		$cval->SetVal( preg_replace("/\s+/", ' ', $cval->GetVal()));
@@ -503,7 +503,7 @@ class CValidation
 		}
 		return 1;
 	}
-	
+
 	protected function chkAttr_vhname($attr, $cval)
 	{
 		$cval->SetVal(preg_replace("/\s+/", ' ', $cval->GetVal()));
@@ -612,12 +612,12 @@ class CValidation
 		$cval->SetErr($err);
 		return $res;
 	}
-	
+
 	protected function chkAttr_dir($attr, $cval)
 	{
 		$val = $cval->GetVal();
 		$err = '';
-		
+
 		if ( substr($val,-1) == '*' ) {
 			$res = $this->chkAttr_file_val($attr, substr($val,0,-1), $err);
 		} else {
@@ -630,7 +630,7 @@ class CValidation
 
 	public function chkAttr_file_val($attr, $val, &$err)
 	{
-		//this is public	
+		//this is public
 		clearstatcache();
 		$err = NULL;
 
@@ -693,9 +693,9 @@ class CValidation
 			$err = "Invalid Path.";
 			return -1;
 		}
-		
+
 		$s = $path{0};
-		
+
 		if ( strpos($path, '$VH_NAME') !== FALSE )	{
 			$path = str_replace('$VH_NAME', $this->_info['VH_NAME'], $path);
 		}
@@ -785,7 +785,7 @@ class CValidation
 		}
 		return 1;
 	}
-	
+
 	protected function chkAttr_email($attr, $cval)
 	{
 		$err = '';
@@ -793,7 +793,7 @@ class CValidation
 		$cval->SetErr($err);
 		return $res;
 	}
-	
+
 	protected function chkAttr_email_val($attr, $val, &$err)
 	{
 		if ( preg_match("/^[[:alnum:]._-]+@.+/", $val ) ) {
@@ -803,7 +803,7 @@ class CValidation
 			return -1;
 		}
 	}
-	
+
 	protected function chkAttr_addr($attr, $cval)
 	{
 		if ( preg_match("/^[[:alnum:]._-]+:(\d)+$/", $cval->GetVal()) ) {
@@ -833,7 +833,7 @@ class CValidation
 		$cval->SetErr($err);
 		return $res;
 	}
-	
+
 	protected function chkAttr_parse_val($attr, $val, &$err)
 	{
 		if ( preg_match($attr->_minVal, $val) ) {

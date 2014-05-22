@@ -42,8 +42,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define     MNAME       sendfilehandler
 /////////////////////////////////////////////////////////////////////////////
 
-struct lsi_module_t MNAME;
-int dummycall(struct lsi_cb_param_t *rec)
+lsi_module_t MNAME;
+int dummycall(lsi_cb_param_t * rec)
 {
     const char *in = (const char *)rec->_param;
     int inLen = rec->_param_len;
@@ -51,7 +51,7 @@ int dummycall(struct lsi_cb_param_t *rec)
     return sent;
 }
 
-int reg_handler(struct lsi_cb_param_t *rec)
+int reg_handler(lsi_cb_param_t * rec)
 {
     const char *uri;
     int len;
@@ -71,7 +71,7 @@ static int init(lsi_module_t * pModule)
 
 }
 
-static int myhandler_process(void *session)
+static int myhandler_process(lsi_session_t session)
 {
     struct stat sb;
     const char *file = "/home/user/ls0312/DEFAULT/html/test1";
@@ -97,5 +97,5 @@ static int myhandler_process(void *session)
     return 0;
 }
 
-struct lsi_handler_t myhandler = { myhandler_process, NULL, NULL, NULL };
+lsi_handler_t myhandler = { myhandler_process, NULL, NULL, NULL };
 lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, init, &myhandler, NULL, };

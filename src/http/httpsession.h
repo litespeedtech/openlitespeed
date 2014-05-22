@@ -366,7 +366,7 @@ public:
     LsiApiHooks * getModSessionHooks( int index )
     {   return m_sessionHooks.getCopy( index ); }
     void setSendFileBeginEnd( off_t start, off_t end );
-    void prepareHeaders( int arg1 );
+    void prepareHeaders();
     void addLocationHeader();
     
     void setAccessLogOff()      {   m_iFlag |= HSF_ACCESS_LOG_OFF;  }

@@ -49,11 +49,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #define TEST_URL    "setrespheader"
 
-struct lsi_module_t MNAME;
+lsi_module_t MNAME;
 
 
 //test changing resp header
-static int mycb(struct lsi_cb_param_t *rec)
+static int mycb(lsi_cb_param_t * rec)
 {
     g_api->set_resp_header(rec->_session, LSI_RESP_HEADER_SERVER, NULL, 0, "/testServer 1.0", sizeof("/testServer 1.0") - 1, LSI_HEADER_SET);
     g_api->set_resp_header(rec->_session, LSI_RESP_HEADER_SET_COOKIE, NULL, 0, "my-test-cookie1", sizeof("my-test-cookie1") - 1, LSI_HEADER_ADD);
@@ -63,13 +63,13 @@ static int mycb(struct lsi_cb_param_t *rec)
 }
 
 //test changing resp header
-static int mycb2(struct lsi_cb_param_t *rec)
+static int mycb2(lsi_cb_param_t * rec)
 {
     g_api->set_resp_header2(rec->_session, "Addheader: MyTest addtional header2\r\n", sizeof("Addheader: MyTest addtional header2\r\n") -1, LSI_HEADER_SET);
     return 0;
 }
 
-int check_if_remove_session_hook(struct lsi_cb_param_t *rec)
+int check_if_remove_session_hook(lsi_cb_param_t * rec)
 {
     const char *qs;
     int sessionHookType = 0;

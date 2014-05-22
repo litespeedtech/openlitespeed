@@ -137,7 +137,7 @@ int Base64_encode( const char *decoded, int size, char * encoded )
 #define     MNAME       updatetcpin1
 /////////////////////////////////////////////////////////////////////////////
 
-struct lsi_module_t MNAME;
+lsi_module_t MNAME;
 #define MAX_BLOCK_BUFSIZE   8192
 
 typedef struct _MyData
@@ -162,7 +162,7 @@ int l4release(void *data)
 }
 
 
-int l4init1( struct lsi_cb_param_t * rec )
+int l4init1( lsi_cb_param_t * rec )
 {
     MyData *myData = (MyData *)g_api->get_module_data(rec->_session, &MNAME, LSI_MODULE_DATA_L4);
     if (!myData)
@@ -186,7 +186,7 @@ int l4init1( struct lsi_cb_param_t * rec )
 }
 
 //expand the recieved data to base64 encode
-int l4recv1(struct lsi_cb_param_t * rec)
+int l4recv1(lsi_cb_param_t * rec)
 {
 #define PLAIN_BLOCK_SIZE 600
 #define ENCODE_BLOCK_SIZE (PLAIN_BLOCK_SIZE * 4 / 3 + 1)
