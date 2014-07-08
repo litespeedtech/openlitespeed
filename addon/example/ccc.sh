@@ -8,17 +8,17 @@ if [ $# -eq 0 ] ; then
   exit 1
 fi
 
-echo "You command is $0 $1"
+echo "Your command is $0 $1"
 echo
 
 if [ ! -f $1 ] ; then
-  echo File $1 not exist
+  echo File $1 does not exist
   echo
   exit 1
 fi
 
 if [ "x$1" = "x./loopbuff.c" ] ; then
-  echo "As I know loopbuff.c can not be compiled to a module. Quit."
+  echo "As I know loopbuff.c cannot be compiled to a module. Quit."
   echo
   exit 1
 fi
@@ -52,7 +52,7 @@ fi
 if [ -f $(pwd)/$TARGET.so ] ; then
 	echo -e "\033[38;5;71m$TARGET.so created.\033[39m"
 else
-    echo -e "\033[38;5;203mError, $TARGET.so not exists.\033[39m"
+    echo -e "\033[38;5;203mError, $TARGET.so does not exist.\033[39m"
 fi
 
 if [ -f $TARGET.o ] ; then 

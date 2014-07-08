@@ -76,7 +76,7 @@ static int releaseData(void *data)
     if (myData)
     {
         free (myData);
-        g_api->log(LSI_LOG_DEBUG, "#### reqinfomodule releaseData" );
+        g_api->log( NULL, LSI_LOG_DEBUG, "#### reqinfomodule releaseData\n" );
     }
     return 0;
 }
@@ -97,7 +97,7 @@ static int initData(lsi_cb_param_t * rec)
     if (!myData)
     {
         myData = (MyData *) calloc(1, sizeof(MyData));
-        g_api->log(LSI_LOG_DEBUG, "#### reqinfomodule init data" );
+        g_api->log( NULL, LSI_LOG_DEBUG, "#### reqinfomodule init data\n" );
         g_api->set_module_data(rec->_session, &MNAME, LSI_MODULE_DATA_HTTP, (void *)myData);
     }
     return 0;
@@ -115,17 +115,21 @@ static int check_uri_and_reg_handler(lsi_cb_param_t * rec)
     return LSI_RET_OK;
 }
 
+static lsi_serverhook_t serverHooks[] = {
+    {LSI_HKPT_HTTP_BEGIN, initData, LSI_HOOK_NORMAL, 0},
+    {LSI_HKPT_HTTP_END, resetData, LSI_HOOK_NORMAL, 0},
+    {LSI_HKPT_RECV_REQ_HEADER, check_uri_and_reg_handler, LSI_HOOK_NORMAL, 0},
+    lsi_serverhook_t_END   //Must put this at the end position
+};
+
 static int _init( lsi_module_t * pModule )
 {
     g_api->init_module_data(pModule, releaseData, LSI_MODULE_DATA_HTTP );
-    g_api->add_hook( LSI_HKPT_HTTP_BEGIN, pModule, initData, LSI_HOOK_NORMAL, 0 );
-    g_api->add_hook( LSI_HKPT_HTTP_END, pModule, resetData, LSI_HOOK_NORMAL, 0 );
-    g_api->add_hook( LSI_HKPT_RECV_REQ_HEADER, pModule, check_uri_and_reg_handler, LSI_HOOK_NORMAL, 0 );
     return 0;
 }
 
 //0:no body or no deal, 1,echo, 2: md5, 3, save to file
-static int getReqBodyDealerType(lsi_session_t session)
+static int getReqBodyDealerType(lsi_session_t *session)
 {
     char path[512];
     int n;
@@ -290,7 +294,7 @@ const char *reqHeaderArray[] = {
     "X-Forwarded-For",
 };
 
-static inline void append( lsi_session_t session, const char *s, int n)
+static inline void append( lsi_session_t *session, const char *s, int n)
 {
     if ( n == 0)
         n = strlen(s);
@@ -301,7 +305,7 @@ static inline void append( lsi_session_t session, const char *s, int n)
 #define CONTENT_HEAD    "<html><head><title>Server request varibles</title></head><body>\r\n"
 #define CONTENT_FORMAT  "<tr><td>%s</td><td>%s</td></tr>\r\n"
 #define CONTENT_TAIL    "</body></html>\r\n"
-static int handleReqBody( lsi_session_t session)
+static int handleReqBody( lsi_session_t *session)
 {
     unsigned char md5[16];
     char buf[8192];
@@ -379,7 +383,7 @@ static int handleReqBody( lsi_session_t session)
     return readbytes;
 }
 
-static int handlerBeginProcess( lsi_session_t session)
+static int handlerBeginProcess( lsi_session_t *session)
 {
     #define VALMAXSIZE 512
     #define LINEMAXSIZE (VALMAXSIZE + 50)
@@ -502,13 +506,13 @@ static int handlerBeginProcess( lsi_session_t session)
     return 0;
 }
 
-static int cleanUp( lsi_session_t session)
+static int cleanUp( lsi_session_t *session)
 {
     g_api->free_module_data(session, &MNAME, LSI_MODULE_DATA_HTTP, releaseData);
     return 0;
 }
 
-static int handlerWriteRemainResp( lsi_session_t session)    
+static int handlerWriteRemainResp( lsi_session_t *session)    
 {
     MyData *myData = (MyData *)g_api->get_module_data(session, &MNAME, LSI_MODULE_DATA_HTTP);
     if ( myData ==  NULL || myData->type == 0 || myData->resp_done == 1)
@@ -520,5 +524,5 @@ static int handlerWriteRemainResp( lsi_session_t session)
 
 lsi_handler_t reqHandler = { handlerBeginProcess, handleReqBody, handlerWriteRemainResp, cleanUp };
 
-lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, _init, &reqHandler, NULL, };
+lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, _init, &reqHandler, NULL, "", serverHooks};
 

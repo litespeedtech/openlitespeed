@@ -22,15 +22,17 @@
 
 
 #include <extensions/extworkerconfig.h>
-#include <util/autobuf.h>
 
 class ProxyConfig : public ExtWorkerConfig
 {
-    AutoBuf     m_headerBuf;
+    int     m_iSsl;
 public:
     ProxyConfig( const char * pName );
     ProxyConfig();
     ~ProxyConfig();
+    
+    int getSsl() const      {   return m_iSsl;  }
+    void setSsl( int s )    {   m_iSsl = s;     }
 };
 
 #endif

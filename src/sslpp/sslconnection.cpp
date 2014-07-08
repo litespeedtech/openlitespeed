@@ -25,6 +25,8 @@
 #include <string.h>
 #include <assert.h>
 #include <config.h>
+#include <sys/uio.h>
+
 
 //static const char * s_pErrInvldSSL = "Invalid Parameter, SSL* ssl is null\n";
 
@@ -134,6 +136,70 @@ int SSLConnection::write( const char * pBuf, int len )
         m_iWant = LAST_WRITE;
         return checkError( ret );
     }
+}
+
+
+int SSLConnection::writev( const struct iovec * vect, int count, int *finished )
+{
+    int ret = 0;
+
+    const struct iovec * pEnd = vect + count;
+    const char * pBuf;
+    int bufSize;
+    int written;
+
+    char * pBufEnd;
+    char * pCurEnd;
+    char achBuf[4096];
+    pBufEnd = achBuf + 4096;
+    pCurEnd = achBuf;
+    for( ; vect < pEnd ;  )
+    {
+        pBuf =( const char *) vect->iov_base;
+        bufSize = vect->iov_len;
+        if ( bufSize < 1024 )
+        {
+            if ( pBufEnd - pCurEnd > bufSize )
+            {
+                memmove( pCurEnd, pBuf, bufSize );
+                pCurEnd += bufSize;
+                ++vect;
+                if ( vect < pEnd )
+                    continue;
+            }
+            pBuf = achBuf;
+            bufSize = pCurEnd - pBuf;
+            pCurEnd = achBuf;
+        }
+        else if ( pCurEnd != achBuf )
+        {
+            pBuf = achBuf;
+            bufSize = pCurEnd - pBuf;
+            pCurEnd = achBuf;
+        }
+        else
+            ++vect;
+        written = write( pBuf, bufSize );
+        if ( written > 0 )
+        {
+            ret += written;
+            if ( written < bufSize )
+            {
+                break;
+            }
+        }
+        else if ( !written )
+        {
+            break;
+        }
+        else 
+        {
+            return -1;
+        }
+    }
+    if ( finished )
+        *finished = ( vect == pEnd );
+    return ret;
 }
 
 int SSLConnection::flush()
@@ -317,3 +383,14 @@ int SSLConnection::buildVerifyErrorString( char * pBuf, int len ) const
     return snprintf( pBuf, len, "FAILED: %s", X509_verify_cert_error_string(
                         SSL_get_verify_result( m_ssl )) );
 }
+
+int SSLConnection::setTlsExtHostName( const char * pName )
+{
+    if ( pName )
+    {
+        return SSL_set_tlsext_host_name( m_ssl, pName );
+    }
+    return  0;
+}
+
+

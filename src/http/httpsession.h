@@ -308,7 +308,13 @@ public:
     int respHeaderDone( int respState );
     
     void setRespBodyDone()
-    {   m_iFlag |= HSF_RESP_DONE;    }
+    {   m_iFlag |= HSF_RESP_DONE; 
+        if ( m_pChunkOS )
+        {
+            setFlag(HSF_RESP_FLUSHED, 0);
+            flush();
+        }
+    }
     
     int endResponse( int success );
     int setupDynRespBodyBuf();
@@ -373,7 +379,7 @@ public:
     int shouldLogAccess() const    
     {   return !(m_iFlag & HSF_ACCESS_LOG_OFF );    }
 
-    void processContentType( );
+    int updateContentCompressible( );
 
 };
 

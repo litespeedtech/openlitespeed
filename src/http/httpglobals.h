@@ -70,7 +70,7 @@ class HttpGlobals
     static HttpMime             * s_pMime;
     static DeniedDir              s_deniedDir;
     static ConnLimitCtrl          s_connLimitCtrl;
-    static ClientCache            s_clients;
+    static ClientCache          * s_pClients;
     static HttpResourceManager    s_ResManager;
     static StaticFileCache        s_staticFileCache;
     static StdErrLogger           s_stdErrLogger;
@@ -150,7 +150,10 @@ public:
     static AccessControl * getAccessCtrl()
     {   return s_pAccessCtrl;       }
     static ClientCache * getClientCache()
-    {   return &s_clients;          }
+    {   return s_pClients;          }
+    static void setClientCache( ClientCache * p )
+    {   s_pClients = p;      }
+    
     static StaticFileCache *getStaticFileCache()
     {   return &s_staticFileCache;  }
     static HttpMime * getMime()

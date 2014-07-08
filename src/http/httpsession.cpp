@@ -394,12 +394,12 @@ int HttpSession::reqBodyDone()
 {
     int ret;
     setFlag(HSF_REQ_BODY_DONE, 1);
-    if ( m_sessionHooks.isEnabled(LSI_HKPT_RECVED_REQ_BODY) )
+    if ( m_sessionHooks.isEnabled(LSI_HKPT_RCVD_REQ_BODY) )
     {
-        ret = m_sessionHooks.runCallbackNoParam(LSI_HKPT_RECVED_REQ_BODY, (LsiSession *)this);
+        ret = m_sessionHooks.runCallbackNoParam(LSI_HKPT_RCVD_REQ_BODY, (LsiSession *)this);
         if ( ret <= -1)
         {
-            return getModuleDenyCode( LSI_HKPT_RECVED_REQ_BODY );
+            return getModuleDenyCode( LSI_HKPT_RCVD_REQ_BODY );
         }
     }
     
@@ -532,7 +532,7 @@ int HttpSession::restartHandlerProcess()
 {
     int sessionLevels[] = { 
         LSI_HKPT_URI_MAP, LSI_HKPT_RECV_RESP_HEADER, 
-        LSI_HKPT_RECV_RESP_BODY, LSI_HKPT_RECVED_RESP_BODY,
+        LSI_HKPT_RECV_RESP_BODY, LSI_HKPT_RCVD_RESP_BODY,
         LSI_HKPT_SEND_RESP_HEADER,
         LSI_HKPT_SEND_RESP_BODY, LSI_HKPT_HTTP_END };
     HttpContext *pContext = &(m_request.getVHost()->getRootContext());
@@ -1147,6 +1147,7 @@ int HttpSession::processURI( int resume )
 DO_AUTH:
         AAAData     aaa;
         int         satisfyAny;
+        int         ret1;
 
         if ( !m_request.getContextState( CONTEXT_AUTH_CHECKED|KEEP_AUTH_INFO ) )
         {
@@ -1172,7 +1173,6 @@ DO_AUTH:
             {
                 if ( aaa.m_pRequired && aaa.m_pHTAuth )
                 {
-                    int ret1;
                     ret1 = checkAuthentication( aaa.m_pHTAuth, aaa.m_pRequired, resume);
                      if ( ret1 )
                     {
@@ -1190,6 +1190,16 @@ DO_AUTH:
                 if ( aaa.m_pAuthorizer )
                     return checkAuthorizer( aaa.m_pAuthorizer );
             }
+            if ( m_sessionHooks.isEnabled( LSI_HKPT_HTTP_AUTH ) )
+            {
+                m_sessionHooks.triggered();    
+                ret1 = m_sessionHooks.runCallback(LSI_HKPT_HTTP_AUTH, (LsiSession *)this, 
+                                                NULL, 0, NULL,0 );
+                ret1 = processHkptResult( LSI_HKPT_HTTP_AUTH, ret1 );
+                if ( ret1 )
+                    return m_request.getStatusCode();
+            }
+            
         }
         if ( ret == SC_404 )
             return ret;
@@ -1788,7 +1798,11 @@ int HttpSession::onWriteEx()
     }
     if ( HSS_COMPLETE == getState() )
         nextRequest();
-
+    else if (( m_iFlag & HSF_RESP_DONE )&&( m_pHandler ))
+    {
+        HttpGlobals::s_reqStats.incReqProcessed();
+        cleanUpHandler();
+    }
     //processPending( ret );
     return 0;
 }
@@ -2230,12 +2244,12 @@ int HttpSession::setupRespCache()
     return 0;
 }
 
-extern int addModgzipFilter(lsi_session_t session, int isSend, uint8_t compressLevel, int priority);
+extern int addModgzipFilter(lsi_session_t *session, int isSend, uint8_t compressLevel, int priority);
 int HttpSession::setupGzipFilter()
 {
     register char gz = m_request.gzipAcceptable();
     int recvhkptNogzip = m_sessionHooks.getFlag( LSI_HKPT_RECV_RESP_BODY ) & LSI_HOOK_FLAG_DECOMPRESS_REQUIRED;
-    int  hkptNogzip = ( m_sessionHooks.getFlag( LSI_HKPT_RECVED_RESP_BODY )
+    int  hkptNogzip = ( m_sessionHooks.getFlag( LSI_HKPT_RCVD_RESP_BODY )
                        | m_sessionHooks.getFlag( LSI_HKPT_SEND_RESP_BODY ))
                       & LSI_HOOK_FLAG_DECOMPRESS_REQUIRED;
     if ( gz & (UPSTREAM_GZIP|UPSTREAM_DEFLATE) )
@@ -2618,12 +2632,12 @@ int HttpSession::endResponseInternal( int success )
         }
     }
     
-    if ( !ret && m_sessionHooks.isEnabled( LSI_HKPT_RECVED_RESP_BODY) )
+    if ( !ret && m_sessionHooks.isEnabled( LSI_HKPT_RCVD_RESP_BODY) )
     {
         m_sessionHooks.triggered();    
-        ret = m_sessionHooks.runCallback(LSI_HKPT_RECVED_RESP_BODY, (LsiSession *)this, 
+        ret = m_sessionHooks.runCallback(LSI_HKPT_RCVD_RESP_BODY, (LsiSession *)this, 
                                          NULL, 0, NULL, success?LSI_CB_FLAG_IN_RESP_SUCCEED:0 );
-        ret = processHkptResult( LSI_HKPT_RECVED_RESP_BODY, ret );
+        ret = processHkptResult( LSI_HKPT_RCVD_RESP_BODY, ret );
     }
     return ret;
 }
@@ -2713,6 +2727,8 @@ int HttpSession::flushBody()
             if ( (m_iFlag & ( HSF_RESP_DONE | HSF_CHUNK_CLOSED )) == HSF_RESP_DONE )
             {
                 m_pChunkOS->close();
+                if ( D_ENABLED( DL_LESS ))
+                    LOG_D(( getLogger(), "[%s] Chunk closed!", getLogId() ));
                 m_iFlag |= HSF_CHUNK_CLOSED;
             }
         }
@@ -2775,7 +2791,10 @@ int HttpSession::flush()
         }
         else
         {
+            if ( D_ENABLED( DL_LESS ))
+                LOG_D(( getLogger(), "[%s] set HSS_COMPLETE flag.", getLogId() ));
             setState( HSS_COMPLETE );
+            
         }
     }
     continueWrite();
@@ -3253,11 +3272,11 @@ int HttpSession::finalizeHeader( int ver, int code )
     return 0;
 }
 
-void HttpSession::processContentType( )
+int HttpSession::updateContentCompressible( )
 {
+    int compressible = 0;
     if ( m_request.gzipAcceptable() == GZIP_REQUIRED )
     {
-        int compressible = 0;
         int len;
         char * pContentType = ( char *)m_response.getRespHeaders().getHeader( HttpRespHeaders::H_CONTENT_TYPE, &len );
         if ( pContentType )
@@ -3270,6 +3289,7 @@ void HttpSession::processContentType( )
         if ( !compressible )
             m_request.andGzip( ~GZIP_ENABLED );
     }
+    return compressible;
 }
 
 int HttpSession::contentEncodingFixup()
@@ -3288,18 +3308,15 @@ int HttpSession::contentEncodingFixup()
             requireChunk = 1;
         }
     }
-    else if ( gz == GZIP_REQUIRED )
+    else if ( !pContentEncoding && updateContentCompressible() )
     {
-        if ( !pContentEncoding )
+        if (( !m_request.getContextState( RESP_CONT_LEN_SET )
+                || m_response.getContentLen() > 200 ) )
         {
-            if (( !m_request.getContextState( RESP_CONT_LEN_SET )
-                    || m_response.getContentLen() > 200 ) )
-            {
-                if ( addModgzipFilter((LsiSession *)this, 1, HttpServerConfig::getInstance().getCompressLevel(), 3000 ) == -1 )
-                    return -1;
-                m_response.addGzipEncodingHeader();
-                requireChunk = 1;
-            }
+            if ( addModgzipFilter((LsiSession *)this, 1, HttpServerConfig::getInstance().getCompressLevel(), 3000 ) == -1 )
+                return -1;
+            m_response.addGzipEncodingHeader();
+            requireChunk = 1;
         }
     }
     if ( requireChunk )

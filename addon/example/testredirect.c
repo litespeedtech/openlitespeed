@@ -61,13 +61,17 @@ int check_if_redirect(lsi_cb_param_t * rec)
     return LSI_RET_OK;
 }
 
+static lsi_serverhook_t serverHooks[] = {
+    {LSI_HKPT_RECV_REQ_HEADER, check_if_redirect, LSI_HOOK_NORMAL, 0},
+    lsi_serverhook_t_END   //Must put this at the end position
+};
+
 static int _init( lsi_module_t * pModule )
 {
-    g_api->add_hook( LSI_HKPT_RECV_REQ_HEADER, pModule, check_if_redirect, LSI_HOOK_NORMAL, 0 );
     return 0;
 }
 
-static int handlerBeginProcess(lsi_session_t session)
+static int handlerBeginProcess(lsi_session_t *session)
 {
     const char *qs;
     int action = LSI_URI_REWRITE;
@@ -78,4 +82,4 @@ static int handlerBeginProcess(lsi_session_t session)
 }
 
 lsi_handler_t myhandler = { handlerBeginProcess, NULL, NULL, NULL };
-lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, _init, &myhandler, NULL, "test  redirect v1.0" };
+lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, _init, &myhandler, NULL, "test  redirect v1.0", serverHooks };

@@ -43,24 +43,28 @@ static int reg_handler(lsi_cb_param_t * rec)
     if (memmem((const void *)uri, len, (const void *)".345", 4))
     {
         g_api->register_req_handler(rec->_session, &MNAME, 0);
-        g_api->session_log(rec->_session, LSI_LOG_DEBUG, "[hellohandler2:%s] register_req_handler fot URI: %s\n", 
+        g_api->log(rec->_session, LSI_LOG_DEBUG, "[hellohandler2:%s] register_req_handler fot URI: %s\n", 
                    MNAME._info, uri);
     }
     return LSI_RET_OK;
 }
 
+static lsi_serverhook_t serverHooks[] = {
+    {LSI_HKPT_RECV_REQ_HEADER, reg_handler, LSI_HOOK_NORMAL, 0},
+    lsi_serverhook_t_END   //Must put this at the end position
+};
+
 static int _init( lsi_module_t * pModule )
 {
-    g_api->add_hook( LSI_HKPT_RECV_REQ_HEADER, &MNAME, reg_handler, LSI_HOOK_NORMAL, 0 );
-    g_api->log(LSI_LOG_DEBUG, "[hellohandler2:%s] _init [log in module code]", MNAME._info);
+    g_api->log( NULL, LSI_LOG_DEBUG, "[hellohandler2:%s] _init [log in module code]\n", MNAME._info);
     return 0;
 }
 
-static int handlerBeginProcess(lsi_session_t session)
+static int handlerBeginProcess(lsi_session_t *session)
 {
     g_api->append_resp_body( session, "Hello module handler2.\r\n", 24 ); 
     g_api->end_resp(session);
-    g_api->session_log(session, LSI_LOG_DEBUG, "[hellohandler2:%s] handlerBeginProcess fot URI: %s\n", 
+    g_api->log(session, LSI_LOG_DEBUG, "[hellohandler2:%s] handlerBeginProcess fot URI: %s\n", 
                    MNAME._info, g_api->get_req_uri(session, NULL));
     return 0;
 }
@@ -69,4 +73,4 @@ static int handlerBeginProcess(lsi_session_t session)
  * the first function pointer should not be NULL
  */
 lsi_handler_t myhandler = { handlerBeginProcess, NULL, NULL, NULL };
-lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, _init, &myhandler, NULL, "version 1.0" };
+lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, _init, &myhandler, NULL, "version 1.0", serverHooks };

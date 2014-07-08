@@ -77,7 +77,7 @@ static int getTestType(lsi_cb_param_t * rec)
         g_api->add_session_hook( rec->_session, LSI_HKPT_RECV_RESP_BODY, &MNAME, internalRedir, LSI_HOOK_NORMAL, 0 );
         break;
     case 3:
-        g_api->add_session_hook( rec->_session, LSI_HKPT_RECVED_RESP_BODY, &MNAME, internalRedir, LSI_HOOK_NORMAL, 0 );
+        g_api->add_session_hook( rec->_session, LSI_HKPT_RCVD_RESP_BODY, &MNAME, internalRedir, LSI_HOOK_NORMAL, 0 );
         break;
     case 4:
         g_api->add_session_hook( rec->_session, LSI_HKPT_SEND_RESP_HEADER, &MNAME, internalRedir, LSI_HOOK_NORMAL, 0 );
@@ -89,7 +89,7 @@ static int getTestType(lsi_cb_param_t * rec)
         g_api->add_session_hook( rec->_session, LSI_HKPT_RECV_RESP_BODY, &MNAME, denyAccess, LSI_HOOK_NORMAL, 0 );
         break;
     case 7:
-        g_api->add_session_hook( rec->_session, LSI_HKPT_RECVED_RESP_BODY, &MNAME, denyAccess, LSI_HOOK_NORMAL, 0 );
+        g_api->add_session_hook( rec->_session, LSI_HKPT_RCVD_RESP_BODY, &MNAME, denyAccess, LSI_HOOK_NORMAL, 0 );
         break;
     case 8:
         g_api->add_session_hook( rec->_session, LSI_HKPT_SEND_RESP_HEADER, &MNAME, denyAccess, LSI_HOOK_NORMAL, 0 );
@@ -100,13 +100,16 @@ static int getTestType(lsi_cb_param_t * rec)
     return 0;
 }
 
-
+static lsi_serverhook_t serverHooks[] = {
+    {LSI_HKPT_RECV_REQ_HEADER, getTestType, LSI_HOOK_NORMAL, 0},
+    
+    lsi_serverhook_t_END   //Must put this at the end position
+};
 
 static int _init( lsi_module_t * pModule )
 {
     pModule->_info = VERSION;  //set version string
-    g_api->add_hook( LSI_HKPT_RECV_REQ_HEADER, pModule, getTestType, LSI_HOOK_NORMAL, 0 );
     return 0;
 }
 
-lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, _init, NULL, NULL, };
+lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, _init, NULL, NULL, "", serverHooks };

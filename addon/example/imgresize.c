@@ -78,7 +78,7 @@ static int _init();
 int httpRelease(void *data)
 {
     MyData *myData = (MyData *)data;
-    g_api->log(LSI_LOG_DEBUG, "#### mymoduleresize %s", "httpRelease" );
+    g_api->log( NULL, LSI_LOG_DEBUG, "#### mymoduleresize %s\n", "httpRelease" );
     if (myData)
     {
         _loopbuff_dealloc(&myData->inWBuf);
@@ -102,7 +102,7 @@ int httpinit(lsi_cb_param_t * rec)
         _loopbuff_alloc(&myData->outWBuf, MAX_BLOCK_BUFSIZE);
         myData->pSrcBuf = NULL;
         
-        g_api->log(LSI_LOG_DEBUG, "#### mymoduleresize init" );
+        g_api->log( NULL, LSI_LOG_DEBUG, "#### mymoduleresize init\n" );
         g_api->set_module_data(rec->_session, &MNAME, LSI_MODULE_DATA_HTTP, (void *)myData);
     } 
     else
@@ -297,17 +297,21 @@ static int scanDynamic( lsi_cb_param_t * rec )
     return LSI_RET_OK;
 }
 
+static lsi_serverhook_t serverHooks[] = {
+    {LSI_HKPT_HTTP_BEGIN, httpinit, LSI_HOOK_NORMAL, 0},
+    {LSI_HKPT_RECV_REQ_HEADER, setWaitFull, LSI_HOOK_NORMAL, 0},
+    {LSI_HKPT_SEND_RESP_HEADER, scanDynamic, LSI_HOOK_NORMAL, 0},
+    //{LSI_HKPT_SEND_RESP_BODY, scanForImage, LSI_HOOK_NORMAL, LSI_HOOK_FLAG_TRANSFORM + LSI_HOOK_FLAG_PROCESS_STATIC},
+    lsi_serverhook_t_END   //Must put this at the end position
+};
+
 static int _init( lsi_module_t *pModule )
 {
     g_api->init_module_data(pModule, httpRelease, LSI_MODULE_DATA_HTTP );
-    g_api->add_hook(LSI_HKPT_HTTP_BEGIN, pModule, httpinit, LSI_HOOK_NORMAL, 0);
-    g_api->add_hook( LSI_HKPT_RECV_REQ_HEADER, pModule, setWaitFull, LSI_HOOK_NORMAL, 0 );
-    g_api->add_hook( LSI_HKPT_SEND_RESP_HEADER, pModule, scanDynamic, LSI_HOOK_NORMAL, 0 );
-    //g_api->add_hook( LSI_HKPT_SEND_RESP_BODY, pModule, scanForImage, LSI_HOOK_NORMAL, LSI_HOOK_FLAG_TRANSFORM + LSI_HOOK_FLAG_PROCESS_STATIC );
     return 0;
 }
 
-lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, _init, NULL, NULL, "imgresize" };
+lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, _init, NULL, NULL, "imgresize", serverHooks};
 
 
 

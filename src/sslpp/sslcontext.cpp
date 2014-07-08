@@ -973,7 +973,7 @@ SSLContext *SSLContext::config( const XmlNode *pNode )
 
     SSLContext *pSSL;
     int protocol;
-    int enableSpdy;
+    int enableSpdy = 0;  //Default is disable
 
     int cv;
 
@@ -1058,7 +1058,13 @@ SSLContext *SSLContext::config( const XmlNode *pNode )
         pSSL->initDH( pDHParam );
     }
     
+#ifdef LS_ENABLE_SPDY
     enableSpdy = ConfigCtx::getCurConfigCtx()->getLongValue( pNode, "enableSpdy", 0, 3, 3 );
+#else
+    //Even if no spdy installed, we still need to parse it
+    //When user set it and will log an error to user, better than nothing
+    enableSpdy = ConfigCtx::getCurConfigCtx()->getLongValue( pNode, "enableSpdy", 0, 3, 0 );
+#endif
 
     if ( enableSpdy )
         if ( -1 == pSSL->enableSpdy( enableSpdy ) )

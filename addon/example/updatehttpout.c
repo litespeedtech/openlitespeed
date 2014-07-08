@@ -58,7 +58,7 @@ typedef struct _MyData
 int httpRelease(void *data)
 {
     MyData *myData = (MyData *)data;
-    g_api->log(LSI_LOG_DEBUG, "#### mymodulehttp %s", "httpRelease" );
+    g_api->log( NULL, LSI_LOG_DEBUG, "#### mymodulehttp %s\n", "httpRelease" );
     if (myData)
     {
         _loopbuff_dealloc(&myData->inWBuf);
@@ -79,7 +79,7 @@ int httpinit(lsi_cb_param_t * rec)
         _loopbuff_init(&myData->outWBuf);
         _loopbuff_alloc(&myData->outWBuf, MAX_BLOCK_BUFSIZE);
         
-        g_api->log(LSI_LOG_DEBUG, "#### mymodulehttp init" );
+        g_api->log( NULL, LSI_LOG_DEBUG, "#### mymodulehttp init\n" );
         g_api->set_module_data(rec->_session, &MNAME, LSI_MODULE_DATA_HTTP, (void *)myData);
     } 
     else
@@ -117,7 +117,7 @@ int httprespwrite(lsi_cb_param_t * rec)
                                                  _loopbuff_getdatasize(&myData->outWBuf) );
     _loopbuff_erasedata(&myData->outWBuf, written);
     
-    g_api->log(LSI_LOG_DEBUG, "#### mymodulehttp test, next caller written %d, return %d, left %d",  
+    g_api->log( NULL, LSI_LOG_DEBUG, "#### mymodulehttp test, next caller written %d, return %d, left %d\n",  
                          written, total, _loopbuff_getdatasize(&myData->outWBuf));
 
     if (_loopbuff_hasdata(&myData->outWBuf))
@@ -149,14 +149,14 @@ int httpreqHeaderRecved(lsi_cb_param_t * rec)
     host = g_api->get_req_header(rec->_session, "Host", 4, &hostLen);
     ua = g_api->get_req_header(rec->_session, "User-Agent", 10, &uaLen);
     accept = g_api->get_req_header(rec->_session, "Accept", 6, &acceptLen);
-    g_api->log(LSI_LOG_DEBUG, "#### mymodulehttp test, httpreqHeaderRecved URI:%s host:%s, ua:%s accept:%s", 
+    g_api->log( NULL, LSI_LOG_DEBUG, "#### mymodulehttp test, httpreqHeaderRecved URI:%s host:%s, ua:%s accept:%s\n", 
                           uri, getNullEndString(host, hostLen, hostBuf, 128), getNullEndString(ua, uaLen, uaBuf, 1024), getNullEndString(accept, acceptLen, acceptBuf, 512) );
     
     headerLen = g_api->get_req_raw_headers_length(rec->_session);
     headerBuf = (char *)malloc(headerLen + 1);
     memset(headerBuf, 0, headerLen + 1);
     g_api->get_req_raw_headers(rec->_session, headerBuf, headerLen);
-    g_api->log(LSI_LOG_DEBUG, "#### mymodulehttp test, httpreqHeaderRecved whole header: %s, length: %d", 
+    g_api->log( NULL, LSI_LOG_DEBUG, "#### mymodulehttp test, httpreqHeaderRecved whole header: %s, length: %d\n", 
                          headerBuf, headerLen);
   
     free (headerBuf);
@@ -164,15 +164,17 @@ int httpreqHeaderRecved(lsi_cb_param_t * rec)
     
 }
 
+static lsi_serverhook_t serverHooks[] = {
+    {LSI_HKPT_HTTP_BEGIN, httpinit, LSI_HOOK_NORMAL, 0},
+    {LSI_HKPT_RECV_RESP_BODY, httprespwrite, LSI_HOOK_NORMAL, LSI_HOOK_FLAG_TRANSFORM | LSI_HOOK_FLAG_DECOMPRESS_REQUIRED},
+    {LSI_HKPT_RECV_REQ_HEADER, httpreqHeaderRecved, LSI_HOOK_NORMAL, 0},
+    lsi_serverhook_t_END   //Must put this at the end position
+};
 
 static int _init(lsi_module_t * pModule)
 {
     g_api->init_module_data(pModule, httpRelease, LSI_MODULE_DATA_HTTP );
-    g_api->add_hook(LSI_HKPT_HTTP_BEGIN, pModule, httpinit, LSI_HOOK_NORMAL, 0);
-    g_api->add_hook(LSI_HKPT_RECV_RESP_BODY, pModule, httprespwrite, LSI_HOOK_NORMAL, 
-                    LSI_HOOK_FLAG_TRANSFORM | LSI_HOOK_FLAG_DECOMPRESS_REQUIRED );
-    g_api->add_hook(LSI_HKPT_RECV_REQ_HEADER, pModule, httpreqHeaderRecved, LSI_HOOK_NORMAL, 0);
     return 0;
 }
 
-lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, _init, NULL, NULL, };
+lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, _init, NULL, NULL, "", serverHooks};

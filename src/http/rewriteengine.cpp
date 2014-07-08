@@ -29,7 +29,10 @@
 #include <http/rewriterulelist.h>
 
 #include <extensions/extworker.h>
+#include <extensions/proxy/proxyworker.h>
+#include <extensions/proxy/proxyconfig.h>
 #include <extensions/registry/extappregistry.h>
+
 
 #include <util/accessdef.h>
 #include <util/ni_fio.h>
@@ -1137,13 +1140,18 @@ NEXT_RULE:
             }
             else if ( m_action == RULE_ACTION_PROXY )
             {
-                if ( strncasecmp( m_pSourceURL, "http://", 7 ) != 0 )
+                int https = 0;
+                if ( strncasecmp( m_pSourceURL, "https://", 8 ) == 0 )
                 {
-                    LOG_ERR(( "[REWRITE] Absolute URL with leading 'http://' is "
+                    https = 1;
+                }
+                else if ( strncasecmp( m_pSourceURL, "http://", 7 ) != 0 )
+                {
+                    LOG_ERR(( "[REWRITE] Absolute URL with leading 'http://' or 'https://' is "
                               "required for proxy, URL: %s", m_pSourceURL ));
                     return SC_500;
                 }
-                char * pHost = (char *)m_pSourceURL + 7;
+                char * pHost = (char *)m_pSourceURL + 7 + https;
                 char * pHostEnd = strchr( pHost, '/' );
                 if (( !pHostEnd )||(pHostEnd == pHost))
                 {
@@ -1159,6 +1167,14 @@ NEXT_RULE:
                               "external application list, please add a 'web server'"
                               " with name '%s'", pHost ));
                     return SC_500;
+                }
+                if ( https && !((ProxyWorker *)pHandler)->getConfig().getSsl() )
+                {
+                    LOG_ERR(( "[REWRITE] Rewrite target require HTTPS, Proxy target is not HTTPS, "
+                              "please change 'web server' '%s' using https://... address "
+                              , pHost ));
+                    return SC_500;
+                    
                 }
                 *pHostEnd = '/';
                 pReq->setHandler( pHandler );

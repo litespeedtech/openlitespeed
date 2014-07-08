@@ -75,16 +75,20 @@ static int disable_compress( lsi_cb_param_t *rec )
     return LSI_RET_OK;
 }
 
+static lsi_serverhook_t serverHooks[] = {
+    {LSI_HKPT_RECV_REQ_HEADER, reg_handler, LSI_HOOK_NORMAL, 0},
+    {LSI_HKPT_RCVD_RESP_BODY, disable_compress, LSI_HOOK_NORMAL, LSI_HOOK_FLAG_DECOMPRESS_REQUIRED},
+    lsi_serverhook_t_END   //Must put this at the end position
+};
+
 static int init( lsi_module_t * pModule)
 {
     g_api->init_module_data(pModule, freeMydata, LSI_MODULE_DATA_HTTP );
-    g_api->add_hook( LSI_HKPT_RECV_REQ_HEADER, pModule, reg_handler, LSI_HOOK_NORMAL, 0 );
-    g_api->add_hook( LSI_HKPT_RECVED_RESP_BODY, pModule, disable_compress, LSI_HOOK_NORMAL, LSI_HOOK_FLAG_DECOMPRESS_REQUIRED );
     return 0;
 }
 
 //The first time the below function will be called, then onWriteEvent will be called next and next
-static int myhandler_process(lsi_session_t session)
+static int myhandler_process(lsi_session_t *session)
 {
     g_api->set_resp_header(session, LSI_RESP_HEADER_CONTENT_TYPE, NULL, 0, "text/html", 9, LSI_HEADER_SET );
     int writeSize = sizeof("replybigbufhandler module reply the first line\r\n") - 1;
@@ -97,7 +101,7 @@ static int myhandler_process(lsi_session_t session)
 }
 
 //return 0: error, 1: done, 2: not finished, definitions are in ls.h 
-static int onWriteEvent( lsi_session_t session)    
+static int onWriteEvent( lsi_session_t *session)    
 {
 #define BLOACK_SIZE    (1024)
     int i;
@@ -124,4 +128,4 @@ static int onWriteEvent( lsi_session_t session)
 }
 
 lsi_handler_t myhandler = { myhandler_process, NULL, onWriteEvent, NULL };
-lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, init, &myhandler, NULL, };
+lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, init, &myhandler, NULL, "", serverHooks};

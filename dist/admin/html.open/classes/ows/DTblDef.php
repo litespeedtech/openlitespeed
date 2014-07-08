@@ -198,6 +198,7 @@ class DTblDef
 
 			'ext_type' => new DAttr('type', 'sel', 'Type', 'select', false, NULL, $this->_options['extType']),
 			'name'=> new DAttr('name', 'name', 'Name', 'text', false),
+			'ext_name'=> new DAttr('name', 'name', 'Name', 'text', false, NULL, NULL, NULL, NULL, 'extAppName'),
 			'ext_address' => new DAttr('address', 'addr', 'Address', 'text', false, NULL, NULL, $this->_options['text_size'], 0, 'extAppAddress'),
 			'ext_maxConns' => new DAttr('maxConns', 'uint', 'Max Connections', 'text', false, 1, 2000),
 			'pcKeepAliveTimeout' => new DAttr('pcKeepAliveTimeout', 'uint', 'Connection Keepalive Timeout', 'text', true, -1, 10000 ),
@@ -480,10 +481,10 @@ class DTblDef
 	{
 		$this->_tblDef[$id] = new DTbl($id, 'Static File Delivery Optimization');
 
-		$etag_options = array( '4'=>'iNode', '8'=>'Modified Time', '16'=>'Size');
+		$etag_options = array( '4'=>'iNode', '8'=>'Modified Time', '16'=>'Size', '0'=>'None');
 
 		$attrs = array(
-			new DAttr('maxCachedFileSize', 'uint', 'Max Cached Small File Size (bytes)', 'text', false, 0, 16384),
+			new DAttr('maxCachedFileSize', 'uint', 'Max Cached Small File Size (bytes)', 'text', false, 0, 1048576),
 			new DAttr('totalInMemCacheSize', 'uint', 'Total Small File Cache Size (bytes)', 'text', false, 0),
 			new DAttr('maxMMapFileSize', 'uint', 'Max MMAP File Size (bytes)', 'text', false, 0),
 			new DAttr('totalMMapCacheSize', 'uint', 'Total MMAP Cache Size (bytes)', 'text', false, 0),
@@ -673,7 +674,7 @@ class DTblDef
 	{
 		$this->_tblDef[$id] = new DTbl($id, 'FastCGI App Definition', 2);
 		$attrs = array(
-			$this->_attrs['name']->dup(NULL, NULL, 'extAppName'),
+			$this->_attrs['ext_name'],
 			$this->_attrs['ext_address'],
 			$this->_attrs['note'],
 			$this->_attrs['ext_maxConns'],
@@ -721,7 +722,7 @@ class DTblDef
 		$parseFormat = "/^(fcgi|fcigauth|lsapi|servlet|proxy)::.+$/";
 		$parseHelp = 'ExtAppType::ExtAppName, e.g. fcgi::myphp, servlet::tomcat';
 
-		$attrs = array( $this->_attrs['name'],
+		$attrs = array( $this->_attrs['ext_name'],
 			new DAttr('workers', 'parse', 'Workers', 'textarea', true, $parseFormat, $parseHelp, 'rows="3" cols="50"', 1),
 			$this->_attrs['note'],
 			);
@@ -733,7 +734,7 @@ class DTblDef
 	private function add_A_EXT_LOGGER($id)
 	{
 		$this->_tblDef[$id] = new DTbl($id, 'Piped Logger Definition', 2);
-		$attrs = array( $this->_attrs['name'],
+		$attrs = array( $this->_attrs['ext_name'],
 				new DAttr('address', 'addr', 'Address for remote logger (Optional)', 'text', true, NULL, NULL, $this->_options['text_size'], 0, 'extAppAddress'),
 				$this->_attrs['note'],
 				$this->_attrs['ext_maxConns'],
@@ -753,7 +754,7 @@ class DTblDef
 	private function add_A_EXT_SERVLET($id)
 	{
 		$this->_tblDef[$id] = new DTbl($id, 'Servlet Engine Definition', 2);
-		$attrs = array( $this->_attrs['name'],
+		$attrs = array( $this->_attrs['ext_name'],
 						$this->_attrs['ext_address'],
 						$this->_attrs['note'],
 						$this->_attrs['ext_maxConns'],
@@ -770,7 +771,20 @@ class DTblDef
 
 	private function add_A_EXT_PROXY($id)
 	{
-		$this->_tblDef[$id] = $this->DupTblDef('A_EXT_SERVLET', $id, 'Web Server Definition');
+		$this->_tblDef[$id] = new DTbl($id, 'Web Server Definition', 2);
+		$attrs = array( $this->_attrs['ext_name'],
+				new DAttr('address', 'wsaddr', 'Address', 'text', false, NULL, NULL, $this->_options['text_size'], 0, 'expWSAddress'),
+				$this->_attrs['note'],
+				$this->_attrs['ext_maxConns'],
+				$this->_attrs['pcKeepAliveTimeout'],
+				$this->_attrs['ext_env'],
+				$this->_attrs['ext_initTimeout'],
+				$this->_attrs['ext_retryTimeout'],
+				$this->_attrs['ext_respBuffer']
+		);
+		$this->_tblDef[$id]->setAttr($attrs, 'ext');
+		$this->_tblDef[$id]->setRepeated( 'name' );
+
 		$this->_tblDef[$id]->_defaultExtract = array('type'=>'proxy');
 	}
 
@@ -804,21 +818,20 @@ class DTblDef
 
 	private function get_module_hookpoints_attrs($type)
 	{
-		//type: S: server level, V: VH / Context level, L: Listener level, T: Top level
-		$tags = array('L4_BEGSESSION', 'L4_ENDSESSION', 'L4_RECVING', 'L4_SENDING',
-				'HTTP_BEGIN',
-				'RECV_REQ_HDR', 'URI_MAP', 'RECV_REQ_BDY', 'RECVED_REQ_BDY',
-				'RECV_RSP_HDR', 'RECV_RSP_BDY', 'RECVED_RSP_BDY',
-				'HANDLER_RESTART' ,'SEND_RSP_HDR', 'SEND_RSP_BDY',
-				'HTTP_END');
+		//type: S: server level, T: Top level
+		$tags = array('L4_BEGINSESSION','L4_ENDSESSION','L4_RECVING','L4_SENDING',
+				'HTTP_BEGIN','RECV_REQ_HEADER','URI_MAP','HTTP_AUTH',
+				'RECV_REQ_BODY','RCVD_REQ_BODY','RECV_RESP_HEADER','RECV_RESP_BODY','RCVD_RESP_BODY',
+				'HANDLER_RESTART','SEND_RESP_HEADER','SEND_RESP_BODY','HTTP_END',
+				'MAIN_INITED','MAIN_PREFORK','MAIN_POSTFORK','WORKER_POSTFORK','WORKER_ATEXIT','MAIN_ATEXIT');
 		$list = array();
 		$i = 0;
 		foreach($tags as $tag) {
 			$i ++;
 			if ($type == 'S')
-				$list[] = new DAttr("hookPriority:$tag", 'uint', "Hook::$tag Priority", 'text', true, -6000, 6000);
+				$list[] = new DAttr($tag, 'uint', "Hook::$tag Priority", 'text', true, -6000, 6000);
 			elseif ($type == 'ST') {
-				$list[] = new DAttr("hookPriority:$tag", 'uint', "<span title=\"Hook::$tag priority\">H$i</span>", 'text', true);
+				$list[] = new DAttr($tag, 'uint', "<span title=\"Hook::$tag priority\">H$i</span>", 'text', true);
 			}
 		}
 		return $list;

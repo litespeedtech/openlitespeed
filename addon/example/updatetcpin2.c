@@ -149,7 +149,7 @@ typedef struct _MyData2
 static int l4release2(void *data)
 {
     MyData2 *myData = (MyData2 *)data;
-    g_api->log(LSI_LOG_DEBUG, "#### updatetcpin1 test %s", "l4release" );
+    g_api->log( NULL, LSI_LOG_DEBUG, "#### updatetcpin1 test %s\n", "l4release" );
     
     if (myData)
     {
@@ -173,7 +173,7 @@ static int l4init2( lsi_cb_param_t * rec )
         _loopbuff_alloc(&myData->inBuf, MAX_BLOCK_BUFSIZE);
         _loopbuff_alloc(&myData->outBuf, MAX_BLOCK_BUFSIZE);
         
-        g_api->log(LSI_LOG_DEBUG, "#### updatetcpin2 test %s", "l4init" );
+        g_api->log( NULL, LSI_LOG_DEBUG, "#### updatetcpin2 test %s\n", "l4init" );
         g_api->set_module_data(rec->_session, &MNAME, LSI_MODULE_DATA_L4, (void *)myData);
     }
     else
@@ -202,7 +202,7 @@ static int l4recv2(lsi_cb_param_t * rec)
     
     while((len = g_api->stream_read_next( rec, tmpBuf, ENCODE_BLOCK_SIZE )) > 0)
     {
-        g_api->log(LSI_LOG_DEBUG, "#### updatetcpin2 test l4recv, inLn = %d", len );
+        g_api->log( NULL, LSI_LOG_DEBUG, "#### updatetcpin2 test l4recv, inLn = %d\n", len );
         _loopbuff_append(&myData->inBuf, tmpBuf, len);
     }
     
@@ -239,13 +239,16 @@ static int l4recv2(lsi_cb_param_t * rec)
     return rec->_param_len;
 }
 
+static lsi_serverhook_t serverHooks[] = {
+    {LSI_HKPT_L4_BEGINSESSION, l4init2, LSI_HOOK_NORMAL, 0},
+    {LSI_HKPT_L4_RECVING, l4recv2, LSI_HOOK_EARLY + 1, LSI_HOOK_FLAG_TRANSFORM},
+    lsi_serverhook_t_END   //Must put this at the end position
+};
 
 static int init(lsi_module_t * pModule)
 {
     g_api->init_module_data(pModule, l4release2, LSI_MODULE_DATA_L4 );
-    g_api->add_hook( LSI_HKPT_L4_BEGINSESSION, pModule, l4init2, LSI_HOOK_NORMAL, 0 );
-    g_api->add_hook(LSI_HKPT_L4_RECVING, pModule, l4recv2, LSI_HOOK_EARLY + 1, LSI_HOOK_FLAG_TRANSFORM );
     return 0;
 }
 
-lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, init, NULL, NULL, };
+lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, init, NULL, NULL, "", serverHooks };

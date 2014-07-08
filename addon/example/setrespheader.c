@@ -58,7 +58,7 @@ static int mycb(lsi_cb_param_t * rec)
     g_api->set_resp_header(rec->_session, LSI_RESP_HEADER_SERVER, NULL, 0, "/testServer 1.0", sizeof("/testServer 1.0") - 1, LSI_HEADER_SET);
     g_api->set_resp_header(rec->_session, LSI_RESP_HEADER_SET_COOKIE, NULL, 0, "my-test-cookie1", sizeof("my-test-cookie1") - 1, LSI_HEADER_ADD);
     g_api->set_resp_header(rec->_session, LSI_RESP_HEADER_SET_COOKIE, NULL, 0, "my-test-cookie2...", sizeof("my-test-cookie2...") - 1, LSI_HEADER_ADD);
-    g_api->log(LSI_LOG_DEBUG, "#### mymodule1 test %s", "myCb" );
+    g_api->log( NULL, LSI_LOG_DEBUG, "#### mymodule1 test %s\n", "myCb" );
     return 0;
 }
 
@@ -87,12 +87,15 @@ int check_if_remove_session_hook(lsi_cb_param_t * rec)
     return LSI_RET_OK;
 }
 
+static lsi_serverhook_t serverHooks[] = {
+    {LSI_HKPT_RECV_REQ_HEADER, check_if_remove_session_hook, LSI_HOOK_NORMAL, 0},
+    {LSI_HKPT_SEND_RESP_HEADER, mycb, LSI_HOOK_LAST, 0},
+    lsi_serverhook_t_END   //Must put this at the end position
+};
 
 static int init(lsi_module_t * pModule)
 {
-    g_api->add_hook( LSI_HKPT_RECV_REQ_HEADER, pModule, check_if_remove_session_hook, LSI_HOOK_NORMAL, 0 );
-    g_api->add_hook( LSI_HKPT_SEND_RESP_HEADER, pModule, mycb, LSI_HOOK_LAST, 0 );
     return 0;
 }
 
-lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, init, NULL, NULL, };
+lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, init, NULL, NULL, "", serverHooks };

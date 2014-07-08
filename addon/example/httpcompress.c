@@ -84,12 +84,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 lsi_module_t MNAME;
 
 
-//static int isCompressible( lsi_session_t session, 
+//static int isCompressible( lsi_session_t *session, 
 
 #ifdef GZIP_HOOK_IMPL
 static int httpCompress( lsi_cb_param_t *param )
 {
-    lsi_session_t session = param->_session;
+    lsi_session_t *session = param->_session;
     int iPtrLen, iCompressible; // NOTE: iPtrLen will be used for various purposes in this method.
     char pCompressed[LSI_MAX_FILE_PATH_LEN];
     const char *pFilePath, 
@@ -125,13 +125,17 @@ static int httpCompress( lsi_cb_param_t *param )
     return LSI_RET_OK;
 }
 
+static lsi_serverhook_t serverHooks[] = {
+    {LSI_HKPT_RECV_RESP_HEADER, httpCompress, LSI_HOOK_NORMAL, 0},
+    lsi_serverhook_t_END   //Must put this at the end position
+};
+
 static int _init( lsi_module_t *pModule )
 {
-    g_api->add_hook( LSI_HKPT_RECV_RESP_HEADER, pModule, httpCompress, LSI_HOOK_NORMAL, 0 );
     return 0;
 }
 
-lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, _init, NULL, NULL, "httpCompress" };
+lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, _init, NULL, NULL, "httpCompress", serverHooks};
 #endif
 
 #ifdef GZIP_TWO_HOOK_IMPL
@@ -143,7 +147,7 @@ static int httpEncode( lsi_cb_param_t *param )
 
 static int httpCompress( lsi_cb_param_t *param )
 {
-    lsi_session_t session = param->_session;
+    lsi_session_t *session = param->_session;
     int iPtrLen, iUriLen, iCompressible; // NOTE: iPtrLen will be used for various purposes in this method.
     char pDocPath[LSI_MAX_FILE_PATH_LEN], *ptr;
     const char *pReqUri = g_api->get_req_uri( session, &iUriLen ), 
@@ -175,7 +179,7 @@ static int httpCompress( lsi_cb_param_t *param )
         {
             g_api->set_force_mime_type( session, pReqHeader );
             snprintf( pDocPath, (iUriLen +=4), "%s%s", pReqUri, ".gz" );
-            //DEBUG g_api->log( LSI_LOG_INFO, pDocPath );
+            //DEBUG g_api->log( NULL,  LSI_LOG_INFO, pDocPath );
             g_api->set_uri_qs( session, LSI_URL_REDIRECT_INTERNAL + LSI_URL_QS_NOCHANGE, 
                                (const char*)pDocPath, iUriLen, NULL, 0 );
             
@@ -186,14 +190,16 @@ static int httpCompress( lsi_cb_param_t *param )
     return LSI_RET_OK;
 }
 
-
+static lsi_serverhook_t serverHooks[] = {
+    {LSI_HKPT_URI_MAP, httpCompress, LSI_HOOK_NORMAL, 0},
+    lsi_serverhook_t_END   //Must put this at the end position
+};
 
 static int _init( lsi_module_t *pModule )
 {
-    g_api->add_hook( LSI_HKPT_URI_MAP, pModule, httpCompress, LSI_HOOK_NORMAL, 0 );
     return 0;
 }
 
-lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, _init, NULL, NULL, "http compress mod" };
+lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, _init, NULL, NULL, "http compress mod", serverHooks };
 #endif
 

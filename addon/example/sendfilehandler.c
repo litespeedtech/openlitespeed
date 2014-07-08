@@ -63,15 +63,19 @@ int reg_handler(lsi_cb_param_t * rec)
     return LSI_RET_OK;
 }
 
+static lsi_serverhook_t serverHooks[] = {
+    {LSI_HKPT_RECV_REQ_HEADER, reg_handler, LSI_HOOK_NORMAL, 0},
+    //{LSI_HKPT_SEND_RESP_BODY, dummycall, LSI_HOOK_NORMAL, 0},
+    lsi_serverhook_t_END   //Must put this at the end position
+};
+
 static int init(lsi_module_t * pModule)
 {
-    g_api->add_hook( LSI_HKPT_RECV_REQ_HEADER, pModule, reg_handler, LSI_HOOK_NORMAL, 0 );
-    //g_api->add_hook( LSI_HKPT_SEND_RESP_BODY, pModule, dummycall, LSI_HOOK_NORMAL, 0 );
     return 0;
 
 }
 
-static int myhandler_process(lsi_session_t session)
+static int myhandler_process(lsi_session_t *session)
 {
     struct stat sb;
     const char *file = "/home/user/ls0312/DEFAULT/html/test1";
@@ -98,4 +102,4 @@ static int myhandler_process(lsi_session_t session)
 }
 
 lsi_handler_t myhandler = { myhandler_process, NULL, NULL, NULL };
-lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, init, &myhandler, NULL, };
+lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, init, &myhandler, NULL, "", serverHooks };

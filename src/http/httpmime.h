@@ -24,7 +24,7 @@
 
 #include <stddef.h>
 
-#define MAX_MIME_LEN 60
+#define MAX_MIME_LEN 256
 
 class HttpHandler;
 class MimeMap;

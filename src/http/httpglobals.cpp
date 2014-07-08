@@ -26,14 +26,14 @@ Pool g_pool;
 //EventDispatcher      * HttpGlobals::s_pDispatcher = NULL;
 Multiplexer          * HttpGlobals::s_pMultiplexer = NULL;
 AccessControl        * HttpGlobals::s_pAccessCtrl = NULL;
-HttpMime             * HttpGlobals::s_pMime;
+HttpMime             * HttpGlobals::s_pMime = NULL;
 int                    HttpGlobals::s_iMultiplexerType = 0;
 
 #include <http/connlimitctrl.h>
 ConnLimitCtrl          HttpGlobals::s_connLimitCtrl;
 
 #include <http/clientcache.h>
-ClientCache            HttpGlobals::s_clients( 1000 );
+ClientCache          * HttpGlobals::s_pClients = NULL;
 
 
 #include <http/httpsession.h>
@@ -489,3 +489,5 @@ RewriteEngine HttpGlobals::s_RewriteEngine;
 Adns   HttpGlobals::s_adns;
 #endif
 IpToGeo * HttpGlobals::s_pIpToGeo = NULL;
+
+

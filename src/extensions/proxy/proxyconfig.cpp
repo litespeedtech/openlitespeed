@@ -18,7 +18,7 @@
 #include "proxyconfig.h"
 
 ProxyConfig::ProxyConfig()
-    : m_headerBuf( 0 )
+    : m_iSsl( 0 )
 {}
 
 ProxyConfig::~ProxyConfig()
@@ -26,5 +26,5 @@ ProxyConfig::~ProxyConfig()
 
 ProxyConfig::ProxyConfig( const char * pName )
     : ExtWorkerConfig( pName )
-    , m_headerBuf( 0 )
+    , m_iSsl( 0 )
 {}
