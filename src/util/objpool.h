@@ -94,6 +94,7 @@ public:
             void * pObj = m_freeList.back();
             m_freeList.pop_back();
             releaseObj( pObj );
+            --m_poolSize;
         }
     }
 

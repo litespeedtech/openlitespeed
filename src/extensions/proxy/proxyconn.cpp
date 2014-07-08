@@ -17,6 +17,8 @@
 *****************************************************************************/
 #include "proxyconn.h"
 #include <extensions/extworker.h>
+#include <extensions/proxy/proxyworker.h>
+#include <extensions/proxy/proxyconfig.h>
 #include <http/httpsession.h>
 #include <http/httpextconnector.h>
 #include <http/httpdefs.h>
@@ -27,6 +29,10 @@
 #include <http/chunkinputstream.h>
 
 #include <sys/socket.h>
+
+#include <sslpp/sslcontext.h>
+#include <sslpp/sslerror.h>
+
 
 static char s_achForwardHttps[] = "X-Forwarded-Proto: https\r\n";
 static char s_achForwardHost[] = "X-Forwarded-Host: ";
@@ -46,15 +52,98 @@ void ProxyConn::init( int fd, Multiplexer* pMplx )
 {
     EdStream::init( fd, pMplx, POLLIN|POLLOUT|POLLHUP|POLLERR );
     reset();
-
+    m_iSsl = ((ProxyWorker *)getWorker())->getConfig().getSsl();
+    if ((m_iSsl)&&( m_ssl.getSSL()) )
+        m_ssl.release();
     m_lReqBeginTime = time( NULL );
     
     //Increase the number of successful request to avoid max connections reduction.
     incReqProcessed();
 }
 
+static SSL * getSslConn() 
+{
+    static SSLContext * s_pProxyCtx = NULL;
+    if ( !s_pProxyCtx )
+    {
+        s_pProxyCtx = new SSLContext();
+        if ( s_pProxyCtx )
+        {
+            //s_pProxyCtx->setCipherList();
+        }
+        else
+            return NULL;
+    }
+    return s_pProxyCtx->newSSL();
+}
+
+void ProxyConn::setSSLAgain()
+{
+    if ( m_ssl.wantRead() )
+        HttpGlobals::getMultiplexer()->switchWriteToRead( this );
+    if ( m_ssl.wantWrite() )
+        HttpGlobals::getMultiplexer()->switchReadToWrite( this );
+}
+
+
+int ProxyConn::connectSSL()
+{
+    if ( !m_ssl.getSSL() )
+    {
+        m_ssl.setSSL( getSslConn() );
+        if ( !m_ssl.getSSL() )
+            return -1;
+        m_ssl.setfd( getfd() );
+        HttpReq * pReq = getConnector()->getHttpSession()->getReq();
+        char * pHostName;
+        int hostLen = pReq->getNewHostLen();
+        if ( hostLen > 0 )
+            pHostName = (char *)pReq->getNewHost();
+        else
+        {
+            pHostName = ( char *)pReq->getHeader( HttpHeader::H_HOST );
+            hostLen = pReq->getHeaderLen( HttpHeader::H_HOST );
+        }
+        if ( pHostName )
+        {
+            char ch = *( pHostName + hostLen );
+            *(pHostName + hostLen) = 0;
+            m_ssl.setTlsExtHostName( pHostName );
+            *(pHostName + hostLen) = ch;
+        }
+    }
+    int ret = m_ssl.connect();
+    switch( ret )
+    {
+    case 0:
+        setSSLAgain();
+        break;
+    case 1:
+        if ( D_ENABLED( DL_LESS ))
+            LOG_D(( getLogger(), "[%s] [SSL] connected!\n", getLogId() ));
+        break;
+    default:
+        if ( errno == EIO )
+        {
+            if ( D_ENABLED( DL_LESS ))
+                LOG_D(( getLogger(), "[%s] SSL_connect() failed!: %s "
+                        , getLogId(), SSLError().what() ));
+        }
+        break;
+    }
+
+    return ret;
+}
+
 int ProxyConn::doWrite()
 {
+    int ret;
+    if (( m_iSsl )&&( !m_ssl.isConnected() ))
+    {
+        ret = connectSSL();
+        if ( ret != 1 )
+            return ret;
+    }
     if ( getConnector() )
     {
         int state = getConnector()->getState();
@@ -207,6 +296,7 @@ int ProxyConn::sendReqHeader()
     return 1;
 }
 
+
 int  ProxyConn::sendReqBody( const char * pBuf, int size )
 {
     int ret;
@@ -214,7 +304,13 @@ int  ProxyConn::sendReqBody( const char * pBuf, int size )
     {
         m_iovec.append(pBuf, size );
         int total = m_iTotalPending + size;
-        ret = writev( m_iovec, total );
+        int finished = 0;
+        if ( m_iSsl )
+        {
+            ret = m_ssl.writev( m_iovec.get(), m_iovec.len(), &finished );
+        }
+        else
+            ret = writev( m_iovec, total );
         m_iovec.pop_back(1);
         if ( ret > 0 )
         {
@@ -242,7 +338,12 @@ int  ProxyConn::sendReqBody( const char * pBuf, int size )
     }
     else
     {
-        ret = write( pBuf, size );
+        if ( m_iSsl )
+        {
+            ret = m_ssl.write( pBuf, size  );
+        }
+        else
+            ret = write( pBuf, size );
         if ( ret > 0 )
             m_iReqTotalSent += ret;
     }
@@ -253,6 +354,18 @@ void ProxyConn::abort()
 {
     setState( ABORT );
     //::shutdown( getfd(), SHUT_RDWR );
+}
+
+int ProxyConn::close()
+{
+    if ( m_iSsl && m_ssl.getSSL() )
+    {
+        if ( D_ENABLED( DL_LESS ) )
+            LOG_D(( getLogger(), "[%s] Shutdown Proxy SSL ...",
+                    getLogId() ));
+        m_ssl.release();
+    }
+    return ExtConn::close();
 }
 
 void ProxyConn::reset()
@@ -290,7 +403,11 @@ int ProxyConn::read( char * pBuf , int size )
         pBuf += len;
         size -= len;
     }
-    int ret = ExtConn::read( pBuf, size );
+    int ret;
+    if ( m_iSsl )
+        ret = m_ssl.read( pBuf, size );
+    else
+        ret = ExtConn::read( pBuf, size );
     if ( D_ENABLED( DL_LESS ) )
         LOG_D(( getLogger(), "[%s] read Response %d bytes",
             getLogId(), ret ));
@@ -305,6 +422,25 @@ int ProxyConn::read( char * pBuf , int size )
         return len;
     return ret;
 }
+
+int ProxyConn::readvSsl( const struct iovec* vector, const struct iovec * pEnd)
+{
+    int total = 0;
+    int ret;
+    while( vector < pEnd )
+    {
+        ret = m_ssl.read( (char *)vector->iov_base, vector->iov_len );
+        if ( ret > 0 )
+            total += ret;
+        if ( ret < 0 )
+            return -1;
+        if ( ret < (int)vector->iov_len ) 
+            break;
+        ++vector;
+    }
+    return total;
+}
+
 
 int ProxyConn::readv( struct iovec *vector, size_t count )
 {
@@ -329,7 +465,11 @@ int ProxyConn::readv( struct iovec *vector, size_t count )
             break;
         }
     }
-    int ret = ExtConn::readv( vector, pEnd - vector );
+    int ret;
+    if ( m_iSsl )
+        ret = readvSsl( vector, pEnd );
+    else
+        ret = ExtConn::readv( vector, pEnd - vector );
     if ( D_ENABLED( DL_LESS ) )
         LOG_D(( getLogger(), "[%s] read Response %d bytes",
             getLogId(), ret ));
@@ -358,9 +498,18 @@ int ProxyConn::readv( struct iovec *vector, size_t count )
 
 int ProxyConn::doRead()
 {
+    int ret;
     if ( D_ENABLED( DL_LESS ) )
         LOG_D(( getLogger(), "[%s] ProxyConn::doRead()\n", getLogId() ));
-    int ret = processResp();
+    if (( m_iSsl )&&( !m_ssl.isConnected() ))
+    {
+        ret = connectSSL();
+        if ( ret != 1 )
+            return ret;
+        return doWrite();
+    }
+
+    ret = processResp();
     if ( getState() == ABORT )
     {
         if ( getConnector() )
@@ -385,8 +534,12 @@ int ProxyConn::processResp()
     int &respState = pHEC->getRespState();
     if ( !(respState & 0xff) )
     {
-        const char * pBuf = HttpGlobals::g_achBuf;
-        len = ExtConn::read( (char *)pBuf, 1460 );
+        char * p = HttpGlobals::g_achBuf;
+        const char * pBuf = p;
+        if ( m_iSsl )
+            len = m_ssl.read( p, 1460 );
+        else
+            len = ExtConn::read( p, 1460 );
         
         if ( len > 0 )
         {
@@ -526,8 +679,8 @@ int ProxyConn::readRespBody()
             {
                 return -1;
             }
-            int toRead = m_iRespBodySize - m_iRespBodyRecv;
-            if ( toRead > (int)bufLen )
+            int64_t toRead = m_iRespBodySize - m_iRespBodyRecv;
+            if ( toRead > (int64_t)bufLen )
                 toRead = bufLen ;
             ret = read( pBuf, toRead );
             if ( ret > 0 )
@@ -645,7 +798,12 @@ int  ProxyConn::flush()
 {
     if ( m_iTotalPending )
     {
-        int ret = writev( m_iovec, m_iTotalPending );
+        int ret;
+        int finished = 0;
+        if ( m_iSsl )
+            ret = m_ssl.writev( m_iovec.get(), m_iovec.len(), &finished );
+        else
+            ret = writev( m_iovec, m_iTotalPending );
         if ( ret >= m_iTotalPending )
         {
             ret -= m_iTotalPending;

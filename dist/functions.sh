@@ -950,6 +950,17 @@ installation()
 			util_mkdir "$CONF_OWN" $DIR_MOD DEFAULT/conf 
 			util_cpdir "$CONF_OWN" $DOC_MOD DEFAULT/conf
 		fi
+		
+		#test if contains DEFAULT/html DEFAULT/cgi-bin and copy when installation
+        if [ ! -d "$LSWS_HOME/DEFAULT/html" ]; then
+            util_mkdir "$SDIR_OWN" $DIR_MOD DEFAULT/html
+            util_cpdir "$SDIR_OWN" $DOC_MOD DEFAULT/html
+        fi
+        if [ ! -d "$LSWS_HOME/DEFAULT/cgi-bin" ]; then
+            util_mkdir "$SDIR_OWN" $DIR_MOD DEFAULT/cgi-bin
+            util_cpdir "$SDIR_OWN" $DOC_MOD DEFAULT/cgi-bin
+        fi
+		
 	else
 		util_cpfile "$CONF_OWN" $CONF_MOD admin/conf/admin_config.xml
 		util_cpfile "$CONF_OWN" $CONF_MOD conf/templates/ccl.xml conf/templates/phpsuexec.xml conf/templates/rails.xml

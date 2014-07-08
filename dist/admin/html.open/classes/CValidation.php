@@ -430,7 +430,7 @@ class CValidation
 
 		$chktype = array('uint', 'name', 'vhname', 'sel','sel1','sel2',
 		'bool','file','filep','file0','file1', 'filetp', 'path',
-		'uri','expuri','url', 'httpurl', 'email', 'dir', 'addr', 'parse');
+		'uri','expuri','url', 'httpurl', 'email', 'dir', 'addr', 'wsaddr', 'parse');
 
 		if ( !in_array($attr->_type, $chktype) )	{
 			// not checked type ('domain', 'subnet'
@@ -812,6 +812,16 @@ class CValidation
 			return 1;
 		} else {
 			$cval->SetErr('invalid address: correct syntax is "IPV4|IPV6_address:port" or UDS://path');
+			return -1;
+		}
+	}
+
+	protected function chkAttr_wsaddr($attr, $cval)
+	{
+		if ( preg_match("/^((http|https):\/\/)?[[:alnum:]._-]+(:\d+)?$/", $cval->GetVal()) ) {
+			return 1;
+		} else {
+			$cval->SetErr('invalid address: correct syntax is "[http|https://]IPV4|IPV6_address[:port]". ');
 			return -1;
 		}
 	}

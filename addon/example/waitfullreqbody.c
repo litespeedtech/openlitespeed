@@ -65,7 +65,7 @@ typedef struct _MyDatas
 static int httpRelease(void *data)
 {
     MyData *myData = (MyData *)data;
-    g_api->log(LSI_LOG_DEBUG, "#### waitfullreqbody %s", "httpRelease" );
+    g_api->log( NULL, LSI_LOG_DEBUG, "#### waitfullreqbody %s\n", "httpRelease" );
     if (myData)
     {
         _loopbuff_dealloc(&myData->inBuf);
@@ -82,7 +82,7 @@ static int httpinit(lsi_cb_param_t * rec)
         myData = (MyData *) malloc(sizeof(MyData));
         _loopbuff_init(&myData->inBuf);
         _loopbuff_alloc(&myData->inBuf, MAX_BLOCK_BUFSIZE);
-        g_api->log(LSI_LOG_DEBUG, "#### waitfullreqbody init" );
+        g_api->log( NULL, LSI_LOG_DEBUG, "#### waitfullreqbody init\n" );
         g_api->set_module_data(rec->_session, &MNAME, LSI_MODULE_DATA_HTTP, (void *)myData);
     } 
     else
@@ -114,7 +114,7 @@ static int httpreqread(lsi_cb_param_t * rec)
         
     while((len = g_api->stream_read_next( rec, tmpBuf, MAX_BLOCK_BUFSIZE )) > 0)
     {
-        g_api->log(LSI_LOG_DEBUG, "#### waitfullreqbody httpreqread, inLn = %d", len );
+        g_api->log( NULL, LSI_LOG_DEBUG, "#### waitfullreqbody httpreqread, inLn = %d\n", len );
         _loopbuff_append(&myData->inBuf, tmpBuf, len);
     }
     
@@ -170,19 +170,25 @@ static int check_uri_and_reg_handler(lsi_cb_param_t * rec)
     return LSI_RET_OK;
 }
 
+
+static lsi_serverhook_t serverHooks[] = {
+    {LSI_HKPT_RECV_REQ_HEADER, check_uri_and_reg_handler, LSI_HOOK_NORMAL, 0},
+    {LSI_HKPT_HTTP_BEGIN, httpinit, LSI_HOOK_NORMAL, 0},
+    {LSI_HKPT_RECV_REQ_BODY, httpreqread, LSI_HOOK_EARLY, LSI_HOOK_FLAG_TRANSFORM},
+    
+    lsi_serverhook_t_END   //Must put this at the end position
+};
+
+
 static int _init( lsi_module_t * pModule )
 {
-    g_api->add_hook( LSI_HKPT_RECV_REQ_HEADER, pModule, check_uri_and_reg_handler, LSI_HOOK_NORMAL, 0 );
     pModule->_info = VERSION;  //set version string
-    
     g_api->init_module_data(pModule, httpRelease, LSI_MODULE_DATA_HTTP );
-    g_api->add_hook(LSI_HKPT_HTTP_BEGIN, pModule, httpinit, LSI_HOOK_NORMAL, 0);
-    g_api->add_hook(LSI_HKPT_RECV_REQ_BODY, pModule, httpreqread, LSI_HOOK_EARLY, LSI_HOOK_FLAG_TRANSFORM);
     
     return 0;
 }
 
-static int handleReqBody( lsi_session_t session )
+static int handleReqBody( lsi_session_t *session )
 {
     char buf[MAX_BLOCK_BUFSIZE];
     int ret;
@@ -211,7 +217,7 @@ static int handleReqBody( lsi_session_t session )
     return 0;
 }
 
-static int handlerBeginProcess( lsi_session_t session )
+static int handlerBeginProcess( lsi_session_t *session )
 {
     g_api->set_req_wait_full_body( session );
     g_api->append_resp_body(session, CONTENT_HEAD, strlen(CONTENT_HEAD));
@@ -226,11 +232,11 @@ static int handlerBeginProcess( lsi_session_t session )
     return 0;
 }
 
-static int cleanUp( lsi_session_t session)
+static int cleanUp( lsi_session_t *session)
 {
     g_api->free_module_data(session, &MNAME, LSI_MODULE_DATA_HTTP, httpRelease);
     return 0;
 }
 
 lsi_handler_t reqHandler = { handlerBeginProcess, handleReqBody, NULL, cleanUp };
-lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, _init, &reqHandler, NULL, };
+lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, _init, &reqHandler, NULL, "", serverHooks };

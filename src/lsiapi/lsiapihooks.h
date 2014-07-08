@@ -23,13 +23,13 @@ typedef struct _LsiApiHook
 } LsiApiHook;
 
 #define LSI_HKPT_L4_COUNT       (LSI_HKPT_HTTP_BEGIN - LSI_HKPT_L4_BEGINSESSION)
-#define LSI_HKPT_HTTP_COUNT     (LSI_HKPT_TOTAL_COUNT - LSI_HKPT_L4_COUNT)
+#define LSI_HKPT_HTTP_COUNT     (LSI_HKPT_HTTP_END - LSI_HKPT_HTTP_BEGIN + 1)
+#define LSI_HKPT_SERVER_COUNT   (LSI_HKPT_TOTAL_COUNT - LSI_HKPT_L4_COUNT - LSI_HKPT_HTTP_COUNT)
 
-//#define  HttpSessionHooks      SessionHooks<LSI_HKPT_HTTP_BEGIN, LSI_HKPT_HTTP_COUNT>
-//#define  IolinkSessionHooks    SessionHooks<0, LSI_HKPT_L4_COUNT>
-
-typedef SessionHooks<LSI_HKPT_HTTP_BEGIN, LSI_HKPT_HTTP_COUNT> HttpSessionHooks;
 typedef SessionHooks<0, LSI_HKPT_L4_COUNT> IolinkSessionHooks;
+typedef SessionHooks<LSI_HKPT_HTTP_BEGIN, LSI_HKPT_HTTP_COUNT> HttpSessionHooks;
+typedef SessionHooks<LSI_HKPT_MAIN_INITED, LSI_HKPT_SERVER_COUNT> ServerSessionHooks;
+
 class LsiApiHooks;
 
 typedef struct lsi_hook_info_s
@@ -104,8 +104,11 @@ public:
 
     static IolinkSessionHooks  *m_pIolinkHooks;
     static HttpSessionHooks    *m_pHttpHooks;
+    static ServerSessionHooks  *m_pServerHooks;
     static IolinkSessionHooks  *getIolinkHooks()   {   return m_pIolinkHooks;   }
     static HttpSessionHooks    *getHttpHooks()     {   return m_pHttpHooks;     }
+    static ServerSessionHooks  *getServerHooks()   {   return m_pServerHooks;     }
+    
     static const LsiApiHooks * getGlobalApiHooks( int index );
     static LsiApiHooks * getReleaseDataHooks( int index );
     static inline const char * getHkptName( int index ) 
@@ -127,7 +130,8 @@ private:
     short        m_iEnd;
     short        m_iFlag;
 
-    static const char * s_pHkptName[];
+public:
+    static const char * s_pHkptName[LSI_HKPT_TOTAL_COUNT];
 
 };
 

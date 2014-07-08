@@ -27,6 +27,10 @@ ProxyWorker::~ProxyWorker()
 
 ExtConn * ProxyWorker::newConn()
 {
-    return new ProxyConn();
+    ProxyConn * pConn = new ProxyConn();
+    //if (( pConn )&&( getConfig().getSsl() ))
+    //    pConn->setUseSsl( 1 );
+        
+    return pConn;
 }
 

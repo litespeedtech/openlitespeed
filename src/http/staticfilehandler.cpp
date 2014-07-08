@@ -626,6 +626,7 @@ static int buildRangeHeaders( HttpSession* pSession, HttpRange& range )
         
         //TODO: simplify logic with sendMultipart()
         pSession->setSendFileBeginEnd( begin, end );
+        pSession->endResponse( 1 );
     }
     else
     {
@@ -634,6 +635,8 @@ static int buildRangeHeaders( HttpSession* pSession, HttpRange& range )
         buf.add(HttpRespHeaders::H_CONTENT_RANGE, "multipart/byteranges; boundary=", 31);
         buf.appendLastVal(range.getBoundary(), strlen(range.getBoundary()) );
         bodyLen = range.getMultipartBodyLen( pData->getMimeType()->getMIME() );
+        pSession->continueWrite();
+        
     }
     pResp->setContentLen( bodyLen );
     pResp->appendContentLenHeader();

@@ -29,41 +29,40 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
 */
-#include "../include/ls.h"
-#include <string.h>
 
-#define     MNAME       mytest
+#include "../include/ls.h"
+#include "loopbuff.h"
+#include <string.h>
+#include <stdint.h>
+#include "stdlib.h"
+#include <unistd.h>
+
+#define     MNAME       testhttpauth
 lsi_module_t MNAME;
 
-static int reg_handler(lsi_cb_param_t * rec)
+int httpAuth(lsi_cb_param_t *rec)
 {
-    const char *uri;
-    int len;
-    uri = g_api->get_req_uri(rec->_session, &len);
-    if ( len >= 7 && strncasecmp(uri, "/mytest", 7) == 0 )
+    //test if the IP is 127.0.0.1 pass through, otherwise, reply 403
+    char ip[16] = {0};
+    g_api->get_req_var_by_id( rec->_session, LSI_REQ_GEOIP_ADDR, ip, 16);
+    if (strcmp(ip, "127.0.0.1") == 0)
+        return LSI_RET_OK;
+    else
     {
-        g_api->register_req_handler(rec->_session, &MNAME, 7);
+        g_api->set_status_code(rec->_session, 403);
+        g_api->log(rec->_session, LSI_LOG_INFO, "Access denied since ip = %s.\n", ip);
+        return LSI_RET_ERROR;
     }
-    return LSI_RET_OK;
 }
 
 static lsi_serverhook_t serverHooks[] = {
-    {LSI_HKPT_RECV_REQ_HEADER, reg_handler, LSI_HOOK_FIRST, 0},
+    {LSI_HKPT_HTTP_AUTH, httpAuth, LSI_HOOK_NORMAL, 0},
     lsi_serverhook_t_END   //Must put this at the end position
 };
 
-static int _init()
+static int _init(lsi_module_t * pModule)
 {
     return 0;
 }
 
-static int beginProcess(lsi_session_t *session)
-{
-    g_api->append_resp_body( session, "MyTest!", 7 ); 
-    g_api->end_resp(session);
-    return 0;
-}
-
-lsi_handler_t myhandler = { beginProcess, NULL, NULL, NULL };
-lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, _init, &myhandler, NULL, "", serverHooks};
-
+lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, _init, NULL, NULL, "", serverHooks};

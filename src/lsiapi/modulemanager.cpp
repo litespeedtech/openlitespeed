@@ -19,6 +19,7 @@
 #include <log4cxx/logger.h>
 #include <http/httpglobals.h>
 #include <lsiapi/lsiapi.h>
+#include <lsiapi/lsiapilib.h>
 #include <lsiapi/internal.h>
 #include <dlfcn.h>
 #include <errno.h>
@@ -28,26 +29,6 @@
 #include <util/datetime.h>
 
 ModuleConfig ModuleManager::m_gModuleConfig;
-
-const char *ModuleConfig::s_sHkptName[] = {
-    "L4_BEGSESSION",
-    "L4_ENDSESSION",
-    "L4_RECVING",
-    "L4_SENDING",
-    
-    "HTTP_BEGIN",
-    "RECV_REQ_HDR",
-    "URI_MAP",
-    "RECV_REQ_BDY",
-    "RECVED_REQ_BDY",
-    "RECV_RSP_HDR",
-    "RECV_RSP_BDY",
-    "RECVED_RSP_BDY",
-    "HANDLER_RESTART",
-    "SEND_RSP_HDR",
-    "SEND_RSP_BDY",
-    "HTTP_END"
-};
 
 int ModuleManager::initModule()
 {
@@ -221,6 +202,20 @@ int ModuleManager::runModuleInit()
             }
             else
             {
+                //add global level hooks here
+                if (pModule->_serverhook) 
+                {
+                    int count = 0;
+                    while (pModule->_serverhook[count].cb)
+                    {
+                        add_global_hook( pModule->_serverhook[count].index, pModule,
+                                         pModule->_serverhook[count].cb,
+                                         pModule->_serverhook[count].priority,
+                                         pModule->_serverhook[count].flag);
+                        ++count;
+                    }
+                }
+                
                 LOG_INFO (( "[Module: %s %s] has been initialized successfully", MODULE_NAME( pModule ),  ((pModule->_info) ? pModule->_info : "") ));
             }
         }
@@ -429,10 +424,9 @@ int ModuleConfig::isMatchGlobal()
 int ModuleConfig::parsePriority(const XmlNode *pModuleNode, int *priority)
 {
     const char *pValue = NULL;
-    const XmlNode *pPriority = pModuleNode->getChild( "hookpriority", 1 );
     for(int i=0; i<LSI_HKPT_TOTAL_COUNT; ++i)
     {
-        if (pPriority && ( pValue= pPriority->getChildValue(s_sHkptName[i])))
+        if ((pValue = pModuleNode->getChildValue(LsiApiHooks::s_pHkptName[i])))
             priority[i] = atoi(pValue);
         else
             priority[i] = LSI_MAX_HOOK_PRIORITY + 1;

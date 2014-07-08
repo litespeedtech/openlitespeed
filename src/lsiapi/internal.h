@@ -53,7 +53,7 @@ struct lsi_session_s
 {
 };
 
-typedef struct lsi_session_s * lsi_session_t;
+typedef struct lsi_session_s lsi_session_t ;
 
 class LsiSession : public lsi_session_s
 {

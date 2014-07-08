@@ -80,14 +80,7 @@ class DAttrBase
 				$value = $value | $val;
 			}
 		}
-		if ( $novalue ) {
-			if ($this->_minVal !== NULL) // has default value
-				return 0;
-			else
-				return '';
-		}
-		else
-			return $value;
+		return ( $novalue ? '' : $value );
 	}
 
 
@@ -439,12 +432,25 @@ class DAttrBase
 				// has default value, for "Not set", set default val
 				$value = $this->_minVal;
 			}
+			$js0 = $js1 = '';
+			if (array_key_exists('0', $this->_maxVal)) {
+				$chval = array_keys($this->_maxVal);
+				foreach ($chval as $chv) {
+					if ($chv == '0')
+						$js1 = "document.confform.$name$chv.checked=false;";
+					else
+						$js0 .= "document.confform.$name$chv.checked=false;";
+				}
+				$js1 = " onclick=\"$js1\"";
+				$js0 = " onclick=\"$js0\"";
+			}
 			foreach( $this->_maxVal as $val=>$disp )
 			{
 				$id = $name.$val;
 				$input .= '<input type="checkbox" id="'.$id.'" name="'.$id.'" value="'.$val.'"';
 				if ( ($value & $val) || ($value === $val) || ($value === '0' && $val === 0) )
 					$input .= ' checked';
+				$input .= ($val == '0') ? $js0 : $js1;
 				$input .= '><label for="'.$id.'"> ' . $disp . ' </label>&nbsp;&nbsp;';
 			}
 			return $input;

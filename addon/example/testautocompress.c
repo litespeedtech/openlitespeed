@@ -29,41 +29,51 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
 */
+
 #include "../include/ls.h"
+#include <stdlib.h>
 #include <string.h>
 
-#define     MNAME       mytest
+#define     MNAME       testautocompress
 lsi_module_t MNAME;
+/////////////////////////////////////////////////////////////////////////////
+#define     VERSION         "V1.0"
 
-static int reg_handler(lsi_cb_param_t * rec)
+static int viewData0(lsi_cb_param_t *rec, const char *level)
 {
-    const char *uri;
-    int len;
-    uri = g_api->get_req_uri(rec->_session, &len);
-    if ( len >= 7 && strncasecmp(uri, "/mytest", 7) == 0 )
+    if (rec->_param_len < 100)
+        g_api->log(rec->_session, LSI_LOG_INFO, "[testautocompress] viewData [%s] %s\n",
+                           level, (const char *)rec->_param);
+    else
     {
-        g_api->register_req_handler(rec->_session, &MNAME, 7);
+        g_api->log(rec->_session, LSI_LOG_INFO, "[testautocompress] viewData [%s] ",  level);
+        g_api->lograw(rec->_session, rec->_param, 40);
+        g_api->lograw(rec->_session, "(...)", 5);
+        g_api->lograw(rec->_session, rec->_param + rec->_param_len - 40, 40);
+        g_api->lograw(rec->_session, "\n", 1);
     }
-    return LSI_RET_OK;
+    return g_api->stream_write_next(rec, rec->_param, rec->_param_len);
+}
+
+static int viewData1(lsi_cb_param_t *rec) {   return viewData0(rec, "RECV");  }
+static int viewData2(lsi_cb_param_t *rec) {   return viewData0(rec, "SEND");  }
+
+static int beginSession(lsi_cb_param_t *rec)
+{
+    g_api->add_session_hook(rec->_session, LSI_HKPT_RECV_RESP_BODY, &MNAME, viewData1, LSI_HOOK_NORMAL, LSI_HOOK_FLAG_DECOMPRESS_REQUIRED );
+    g_api->add_session_hook(rec->_session, LSI_HKPT_SEND_RESP_BODY, &MNAME, viewData2, LSI_HOOK_NORMAL, LSI_HOOK_FLAG_DECOMPRESS_REQUIRED );
+    return 0;
 }
 
 static lsi_serverhook_t serverHooks[] = {
-    {LSI_HKPT_RECV_REQ_HEADER, reg_handler, LSI_HOOK_FIRST, 0},
+    {LSI_HKPT_HTTP_BEGIN, beginSession, LSI_HOOK_NORMAL, 0},
     lsi_serverhook_t_END   //Must put this at the end position
 };
 
 static int _init()
 {
+    MNAME._info = VERSION;  //set version string
     return 0;
 }
 
-static int beginProcess(lsi_session_t *session)
-{
-    g_api->append_resp_body( session, "MyTest!", 7 ); 
-    g_api->end_resp(session);
-    return 0;
-}
-
-lsi_handler_t myhandler = { beginProcess, NULL, NULL, NULL };
-lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, _init, &myhandler, NULL, "", serverHooks};
-
+lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, _init, NULL, NULL, "", serverHooks};

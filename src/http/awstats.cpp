@@ -91,7 +91,6 @@ static const char * s_pList[] =
 {
     "LogFile=\"%s.awstats\"\n",
     "LogType=W\n",
-    "LogFormat=1\n",
     "SiteDomain=\"%s\"\n",
     "HostAliases=\"%s\"\n",
     "DirData=\"%s/data\"\n",
@@ -100,10 +99,10 @@ static const char * s_pList[] =
 };
 
 static int s_pKeyLen[] =
-{   7, 7, 9, 10, 11, 7, 6, 8    };
+{   7, 7, 10, 11, 7, 6, 8    };
 
 static int s_pLineLen[] =
-{   0, 10, 12, 10, 11, 7, 6, 25    };
+{   0, 10, 10, 11, 7, 6, 25    };
 
 
 static int findKeyInList( const char * pCur )
@@ -190,25 +189,24 @@ int Awstats::processLine( const HttpVHost * pVHost, int fdConf,
         n = safe_snprintf( achBuf, sizeof( achBuf ), s_pList[ret],
                     pVHost->getAccessLogPath() + len );
         break;
-    case 3:
+    case 2:
         n = safe_snprintf( achBuf, sizeof( achBuf ), s_pList[ret],
                     m_sSiteDomain.c_str() );
         break;
-    case 4:
+    case 3:
         n = safe_snprintf( achBuf, sizeof( achBuf ), s_pList[ret],
                     m_sSiteAliases.c_str() );
         break;
-    case 5:
+    case 4:
         n = safe_snprintf( achBuf, sizeof( achBuf ), s_pList[ret],
                     m_sWorkingDir.c_str() + len );
         break;
-    case 6:
+    case 5:
         n = safe_snprintf( achBuf, sizeof( achBuf ), s_pList[ret],
                     m_sAwstatsURI.c_str() );
         break;
     case 1:
-    case 2:
-    case 7:
+    case 6:
         pBuf = s_pList[ret];
         n = s_pLineLen[ret];
         break;

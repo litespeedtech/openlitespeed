@@ -29,41 +29,44 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
 */
-#include "../include/ls.h"
-#include <string.h>
 
-#define     MNAME       mytest
+#include "../include/ls.h"
+#include "loopbuff.h"
+#include <string.h>
+#include <stdint.h>
+#include "stdlib.h"
+#include <unistd.h>
+
+#define     MNAME       testserverhook
 lsi_module_t MNAME;
 
-static int reg_handler(lsi_cb_param_t * rec)
+int write_log(const char *sHookName)
 {
-    const char *uri;
-    int len;
-    uri = g_api->get_req_uri(rec->_session, &len);
-    if ( len >= 7 && strncasecmp(uri, "/mytest", 7) == 0 )
-    {
-        g_api->register_req_handler(rec->_session, &MNAME, 7);
-    }
-    return LSI_RET_OK;
+    g_api->log( NULL, LSI_LOG_DEBUG, "[Module:testserverhook] launch point %s\n", sHookName);
+    return 0;
 }
 
+int writeALog1(lsi_cb_param_t * rec) {   return write_log("LSI_HKPT_MAIN_INITED"); }
+int writeALog2(lsi_cb_param_t * rec) {   return write_log("LSI_HKPT_MAIN_PREFORK"); }
+int writeALog3(lsi_cb_param_t * rec) {   return write_log("LSI_HKPT_MAIN_POSTFORK"); }
+int writeALog4(lsi_cb_param_t * rec) {   return write_log("LSI_HKPT_WORKER_POSTFORK"); }
+int writeALog5(lsi_cb_param_t * rec) {   return write_log("LSI_HKPT_WORKER_ATEXIT"); }
+int writeALog6(lsi_cb_param_t * rec) {   return write_log("LSI_HKPT_MAIN_ATEXIT"); }
+
+
 static lsi_serverhook_t serverHooks[] = {
-    {LSI_HKPT_RECV_REQ_HEADER, reg_handler, LSI_HOOK_FIRST, 0},
+    { LSI_HKPT_MAIN_INITED,    writeALog1, LSI_HOOK_NORMAL, 0},
+    { LSI_HKPT_MAIN_PREFORK,      writeALog2, LSI_HOOK_NORMAL, 0},
+    { LSI_HKPT_MAIN_POSTFORK,     writeALog3, LSI_HOOK_NORMAL, 0},
+    { LSI_HKPT_WORKER_POSTFORK,         writeALog4, LSI_HOOK_NORMAL, 0},
+    { LSI_HKPT_WORKER_ATEXIT,         writeALog5, LSI_HOOK_NORMAL, 0},
+    { LSI_HKPT_MAIN_ATEXIT,         writeALog6, LSI_HOOK_NORMAL, 0},
     lsi_serverhook_t_END   //Must put this at the end position
 };
 
-static int _init()
+static int _init(lsi_module_t * pModule)
 {
     return 0;
 }
 
-static int beginProcess(lsi_session_t *session)
-{
-    g_api->append_resp_body( session, "MyTest!", 7 ); 
-    g_api->end_resp(session);
-    return 0;
-}
-
-lsi_handler_t myhandler = { beginProcess, NULL, NULL, NULL };
-lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, _init, &myhandler, NULL, "", serverHooks};
-
+lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, _init, NULL, NULL, "testserverhook v1.0", serverHooks};

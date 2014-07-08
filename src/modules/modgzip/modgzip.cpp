@@ -21,7 +21,7 @@
 #include <string.h>
 #include <zlib.h>
 
-#define     MODULE_VERSION      "1.0"
+#define     MODULE_VERSION      "1.1"
 #define     INIT_LOOPBUF_SIZE   8192
 
 #define     COMPRESS_FLAG    "---"
@@ -151,7 +151,7 @@ static int initZstream( lsi_cb_param_t *rec, lsi_module_t *pModule, z_stream *pS
             ret = -1;
     }
 
-    g_api->session_log( rec->_session, ( ( ret == 0 ) ? LSI_LOG_DEBUG : LSI_LOG_ERROR ),
+    g_api->log( rec->_session, ( ( ret == 0 ) ? LSI_LOG_DEBUG : LSI_LOG_ERROR ),
                         "[%s%s] initZstream init method [%s], %s.\n", g_api->get_module_name( pModule ),
                         ( (compressLevel == 0) ? DECOMPRESS_FLAG : COMPRESS_FLAG ),
                         ( (compressLevel == 0) ? "un-Gzip" : "Gzip"), (( ret == 0 ) ? "succeed" : "failed" ) );
@@ -288,7 +288,7 @@ static int compressbuf( lsi_cb_param_t *rec, lsi_module_t *pModule, int isSend )
                 delete pStream;
                 pZBufInfo->pZStream = NULL;
                 pZBufInfo->iZState = Z_END;
-                g_api->session_log( rec->_session, LSI_LOG_DEBUG, "[%s%s] compressbuf end of stream set.\n",
+                g_api->log( rec->_session, LSI_LOG_DEBUG, "[%s%s] compressbuf end of stream set.\n",
                                     pModuleName, pCompressFlag );
             }
             
@@ -297,7 +297,7 @@ static int compressbuf( lsi_cb_param_t *rec, lsi_module_t *pModule, int isSend )
                 written += sz;
             else if ( sz < 0 )
             {
-                g_api->session_log( rec->_session, LSI_LOG_ERROR, "[%s%s] compressbuf in %d, return %d (written %d, flag in %d)\n",
+                g_api->log( rec->_session, LSI_LOG_ERROR, "[%s%s] compressbuf in %d, return %d (written %d, flag in %d)\n",
                                     pModuleName, pCompressFlag, rec->_param_len, sz, written, rec->_flag_in );
                 return LSI_RET_ERROR;
             }
@@ -306,7 +306,7 @@ static int compressbuf( lsi_cb_param_t *rec, lsi_module_t *pModule, int isSend )
         }
         else
         {
-            g_api->session_log( rec->_session, LSI_LOG_ERROR, "[%s%s] compressbuf in %d, compress function return %d\n",
+            g_api->log( rec->_session, LSI_LOG_ERROR, "[%s%s] compressbuf in %d, compress function return %d\n",
                                 pModuleName, pCompressFlag, rec->_param_len, ret );
             if (ret != Z_BUF_ERROR) //value is -5
                 return LSI_RET_ERROR;
@@ -321,7 +321,7 @@ static int compressbuf( lsi_cb_param_t *rec, lsi_module_t *pModule, int isSend )
             *rec->_flag_out |= LSI_CB_FLAG_OUT_BUFFERED_DATA;
     }
 
-    g_api->session_log( rec->_session, LSI_LOG_INFO, "[%s%s] compressbuf [%s] in %d, consumed: %d, written %d, flag in %d, buffer has %d.\n",
+    g_api->log( rec->_session, LSI_LOG_INFO, "[%s%s] compressbuf [%s] in %d, consumed: %d, written %d, flag in %d, buffer has %d.\n",
                         pModuleName, pCompressFlag, pSendingFlag, rec->_param_len, consumed, written, rec->_flag_in, _loopbuff_getdatasize(pBuff) );
     return consumed;
 }
@@ -337,15 +337,20 @@ static int recvingHook( lsi_cb_param_t *rec )
 
 static int init( lsi_module_t * pModule )
 {
-    g_api->add_hook( LSI_HKPT_HTTP_END, pModule, clearData, LSI_HOOK_NORMAL, 0 );
-    g_api->add_hook( LSI_HKPT_HANDLER_RESTART, pModule, clearData, LSI_HOOK_NORMAL, 0 );
     return g_api->init_module_data( pModule, releaseData, LSI_MODULE_DATA_HTTP );
 }
 
-lsi_module_t modcompress = { LSI_MODULE_SIGNATURE, init, NULL, NULL, MODULE_VERSION, {0} };
-lsi_module_t moddecompress = { LSI_MODULE_SIGNATURE, init, NULL, NULL, MODULE_VERSION, {0} };
 
-static int addHooks( lsi_session_t session, lsi_module_t *pModule, int isSend, int priority, uint8_t compressLevel )
+static lsi_serverhook_t serverHooks[] = {
+    {LSI_HKPT_HTTP_END, clearData, LSI_HOOK_NORMAL, 0},
+    {LSI_HKPT_HANDLER_RESTART, clearData, LSI_HOOK_NORMAL, 0},
+    lsi_serverhook_t_END  //Must put this at the end position
+};
+
+lsi_module_t modcompress = { LSI_MODULE_SIGNATURE, init, NULL, NULL, MODULE_VERSION, serverHooks, {0} };
+lsi_module_t moddecompress = { LSI_MODULE_SIGNATURE, init, NULL, NULL, MODULE_VERSION, serverHooks, {0} };
+
+static int addHooks( lsi_session_t *session, lsi_module_t *pModule, int isSend, int priority, uint8_t compressLevel )
 {
     ModgzipMData *myData = ( ModgzipMData * ) g_api->get_module_data( session, pModule, LSI_MODULE_DATA_HTTP );
     if ( !myData )
@@ -353,7 +358,7 @@ static int addHooks( lsi_session_t session, lsi_module_t *pModule, int isSend, i
         myData = new ModgzipMData;
         if ( !myData )
         {
-            g_api->session_log( session, LSI_LOG_ERROR, "[%s] AddHooks failed: no enough memory [Error 1].\n", g_api->get_module_name( pModule ) );
+            g_api->log( session, LSI_LOG_ERROR, "[%s] AddHooks failed: no enough memory [Error 1].\n", g_api->get_module_name( pModule ) );
             return -1;
         }
         else
@@ -378,7 +383,7 @@ static int addHooks( lsi_session_t session, lsi_module_t *pModule, int isSend, i
         if ( init_Z_State_Buf( myData->recvZBufInfo ) == 0 )
         {
             g_api->add_session_hook( session, LSI_HKPT_RECV_RESP_BODY, pModule, recvingHook, priority, 1 );
-            g_api->add_session_hook( session, LSI_HKPT_RECVED_RESP_BODY, pModule, clearDataPartR, priority, 0 );
+            g_api->add_session_hook( session, LSI_HKPT_RCVD_RESP_BODY, pModule, clearDataPartR, priority, 0 );
             myData->recvZBufInfo.compressLevel = compressLevel;
         }
         else
@@ -395,13 +400,13 @@ static int addHooks( lsi_session_t session, lsi_module_t *pModule, int isSend, i
         //If no prevoius inited ZBufInfo, so this is the first time try, no module data set before.
         if ( myData->recvZBufInfo.inited == 0 && myData->sendZBufInfo.inited == 0 )
             delete myData;
-        g_api->session_log( session, LSI_LOG_ERROR, "[%s] AddHooks failed: no enough memory [Error 2].\n", g_api->get_module_name( pModule ) );
+        g_api->log( session, LSI_LOG_ERROR, "[%s] AddHooks failed: no enough memory [Error 2].\n", g_api->get_module_name( pModule ) );
         return -1;
     }
 }
 
 //The below is the only function exported
-int addModgzipFilter( lsi_session_t session, int isSend, uint8_t compressLevel, int priority )
+int addModgzipFilter( lsi_session_t *session, int isSend, uint8_t compressLevel, int priority )
 {
     if ( compressLevel == 0 )
         return addHooks( session, &moddecompress, isSend, priority, 0 );

@@ -99,9 +99,7 @@ int LsiapiBridge::init_lsiapi()
     gLsiapiFunctions.get_gdata = get_gdata;
     gLsiapiFunctions.delete_gdata = delete_gdata;
     gLsiapiFunctions.set_gdata = set_gdata;
-    
-    gLsiapiFunctions.log = HttpLog::log;
-    
+        
     lsiapi_init_server_api();
 
     AllGlobalDataHashTInit();

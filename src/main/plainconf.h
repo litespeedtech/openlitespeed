@@ -65,7 +65,7 @@ module {
 
 #include <util/xmlnode.h>
 #include "util/autostr.h"
-#define TEST_OUTPUT_PLAIN_CONF
+//#define TEST_OUTPUT_PLAIN_CONF
 
 struct plainconfKeywords
 {

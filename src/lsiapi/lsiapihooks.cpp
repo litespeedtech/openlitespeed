@@ -7,28 +7,36 @@
 
 #include <string.h>
 
-const char * LsiApiHooks::s_pHkptName[] = 
+const char * LsiApiHooks::s_pHkptName[LSI_HKPT_TOTAL_COUNT] = 
 {
     "L4_BEGINSESSION",
     "L4_ENDSESSION",
     "L4_RECVING",
     "L4_SENDING",
-    "HTTP_BEGIN",       
+    "HTTP_BEGIN",
     "RECV_REQ_HEADER",
     "URI_MAP",
+    "HTTP_AUTH",
     "RECV_REQ_BODY",
-    "RECVED_REQ_BODY",
+    "RCVD_REQ_BODY",
     "RECV_RESP_HEADER",
     "RECV_RESP_BODY",
-    "RECVED_RESP_BODY",
+    "RCVD_RESP_BODY",
     "HANDLER_RESTART",
     "SEND_RESP_HEADER",
     "SEND_RESP_BODY",
     "HTTP_END",
+    "MAIN_INITED",
+    "MAIN_PREFORK",
+    "MAIN_POSTFORK",
+    "WORKER_POSTFORK",
+    "WORKER_ATEXIT",
+    "MAIN_ATEXIT",
 };
 
 IolinkSessionHooks * LsiApiHooks::m_pIolinkHooks = NULL;
 HttpSessionHooks  * LsiApiHooks::m_pHttpHooks = NULL;
+ServerSessionHooks  * LsiApiHooks::m_pServerHooks = NULL;
 static LsiApiHooks s_releaseDataHooks[LSI_MODULE_DATA_COUNT];
 
 #define LSI_HOOK_FLAG_NO_INTERRUPT  (1<<7) 
@@ -39,6 +47,7 @@ void LsiApiHooks::initGlobalHooks()
 {
     m_pIolinkHooks = new IolinkSessionHooks( 1 );
     m_pHttpHooks = new HttpSessionHooks( 1 );
+    m_pServerHooks = new ServerSessionHooks( 1 );
     
     m_pIolinkHooks->get( LSI_HKPT_L4_BEGINSESSION )->setFlag( LSI_HOOK_FLAG_NO_INTERRUPT );
     m_pIolinkHooks->get( LSI_HKPT_L4_ENDSESSION )->setFlag( LSI_HOOK_FLAG_NO_INTERRUPT );
@@ -52,8 +61,10 @@ const LsiApiHooks * LsiApiHooks::getGlobalApiHooks( int index )
 { 
     if (index < LSI_HKPT_L4_COUNT)
         return LsiApiHooks::m_pIolinkHooks->get(index);
-    else
+    else if (index <= LSI_HKPT_HTTP_END)
         return LsiApiHooks::m_pHttpHooks->get(index);
+    else
+        return LsiApiHooks::m_pServerHooks->get(index);
 }
 
 LsiApiHooks * LsiApiHooks::getReleaseDataHooks( int index )
@@ -239,18 +250,34 @@ int LsiApiHooks::runCallback(int level, lsi_cb_param_t *param) const
 
         if ( D_ENABLED( DL_MORE ))
         {
-            LogTracker * pTracker = ((LsiSession *)param->_session)->getLogTracker();
-            LOG_D(( pTracker->getLogger(), "[%s] [%s] run Hook function for [Module:%s]", 
-                 pTracker->getLogId(), s_pHkptName[ level ], MODULE_NAME( hook->_module ) ));
+            if (param->_session) 
+            {
+                LogTracker * pTracker = ((LsiSession *)param->_session)->getLogTracker();
+                LOG_D(( pTracker->getLogger(), "[%s] [%s] run Hook function for [Module:%s]", 
+                    pTracker->getLogId(), s_pHkptName[ level ], MODULE_NAME( hook->_module ) ));
+            } 
+            else
+            {
+                LOG_D(( NULL, "[ServerHook: %s] run Hook function for [Module:%s]", 
+                    s_pHkptName[ level ], MODULE_NAME( hook->_module ) ));
+            }
         }
         
         ret = hook->_cb(&rec1);
 
         if ( D_ENABLED( DL_MORE ))
         {
-            LogTracker * pTracker = ((LsiSession *)param->_session)->getLogTracker();
-            LOG_D(( pTracker->getLogger(), "[%s] [%s] [Module:%s] ret %d", 
-                 pTracker->getLogId(), s_pHkptName[ level ], MODULE_NAME( hook->_module ), ret ));
+            if (param->_session) 
+            {
+                LogTracker * pTracker = ((LsiSession *)param->_session)->getLogTracker();
+                LOG_D(( pTracker->getLogger(), "[%s] [%s] [Module:%s] ret %d", 
+                    pTracker->getLogId(), s_pHkptName[ level ], MODULE_NAME( hook->_module ), ret ));
+            }
+            else
+            {
+                LOG_D(( NULL, "[ServerHook: %s] [Module:%s] ret %d", 
+                    s_pHkptName[ level ], MODULE_NAME( hook->_module ), ret ));
+            }
         }
         if ((ret != 0)&&!(m_iFlag & LSI_HOOK_FLAG_NO_INTERRUPT) )
             break;

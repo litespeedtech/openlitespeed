@@ -22,6 +22,7 @@
 #include <http/httpmime.h>
 #include <http/httpreq.h>
 #include <http/httpstatuscode.h>
+#include <http/httpcontext.h>
 #include <ssi/ssiscript.h>
 
 #include <util/ni_fio.h>
@@ -361,6 +362,13 @@ int StaticFileCacheData::testUnMod( HttpReq * pReq )
     return 0;
 }
 
+static int appendEtagPart(char *p, int maxLen, int& firstPartExist, unsigned long value)
+{
+    int len = safe_snprintf( p, maxLen, (firstPartExist ? "-%lx" : "%lx"), value);
+    firstPartExist = 1;
+    return len;
+}
+
 int StaticFileCacheData::buildFixedHeaders( int etag )
 {
     int size = 6 + 30 + 17 + RFC_1123_TIME_LEN
@@ -380,16 +388,31 @@ int StaticFileCacheData::buildFixedHeaders( int etag )
     char *p = m_sHeaders.buf();
     m_iFileETag = etag;
     
-    memcpy( p, "ETag: ", 6 );
-    m_pETag = p + 6;
-    m_iETagLen = safe_snprintf( m_pETag, pEnd - m_pETag,
-            "\"%lx-%lx-%lx\"",
-            (unsigned long)m_fileData.getFileSize(),
-            m_fileData.getLastMod(),
-            (long)m_fileData.getINode());
-    p = m_pETag + m_iETagLen;
-    memcpy( p, "\r\nLast-Modified: ", 17 );
-    p += 17;
+    if (m_iFileETag & ETAG_ALL)
+    {
+        memcpy( p, "ETag: \"", 7 );
+        m_pETag = p + 6;  //Start the etag from the \"
+        
+        p += 7;
+        int firstPartExist = 0;
+        if (m_iFileETag & ETAG_SIZE)
+            p += appendEtagPart(p, pEnd - p, firstPartExist, (unsigned long)m_fileData.getFileSize());
+        
+        if (m_iFileETag & ETAG_MTIME)
+            p += appendEtagPart(p, pEnd - p, firstPartExist, m_fileData.getLastMod());
+        
+        if (m_iFileETag & ETAG_INODE)
+            p += appendEtagPart(p, pEnd - p, firstPartExist, m_fileData.getINode());
+        
+        memcpy( p, "\"\r\n", 3);
+        p += 3;
+        m_iETagLen = p - m_pETag - 2; //the \r\n not belong to etag
+    }
+    else
+        m_iETagLen = 0;
+    
+    memcpy( p, "Last-Modified: ", 15 );
+    p += 15;
     DateTime::getRFCTime( m_fileData.getLastMod(), p );
     p += RFC_1123_TIME_LEN;
 
@@ -398,7 +421,7 @@ int StaticFileCacheData::buildFixedHeaders( int etag )
              m_pMimeType->getMIME()->c_str(), pCharset );
             
     m_sHeaders.setLen( p - m_sHeaders.buf() );
-    m_iValidateHeaderLen = 6 + 17 + 2 + m_iETagLen + RFC_1123_TIME_LEN ;
+    m_iValidateHeaderLen = (m_iETagLen ? (6 + m_iETagLen + 2) : 0) + 15 + 2 + RFC_1123_TIME_LEN ;
     return 0;
 }
 

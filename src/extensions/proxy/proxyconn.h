@@ -21,6 +21,7 @@
 
 #include <extensions/extconn.h>
 #include <extensions/httpextprocessor.h>
+#include <sslpp/sslconnection.h>
 
 class ChunkInputStream;
 class ProxyConn : public ExtConn
@@ -29,28 +30,36 @@ class ProxyConn : public ExtConn
     IOVec       m_iovec;
     int         m_iTotalPending;
     int         m_iReqHeaderSize;
-    int         m_iReqBodySize;
-    int         m_iReqTotalSent;
     long        m_lReqBeginTime;
     long        m_lReqSentTime;
     long        m_lLastRespRecvTime;
     int         m_iRespRecv;
     int         m_iRespHeaderRecv;
         
+    int64_t     m_iReqBodySize;
+    int64_t     m_iReqTotalSent;
+
+    int64_t     m_iRespBodySize;
+    int64_t     m_iRespBodyRecv;
+
     const char * m_pBufBegin;
     const char * m_pBufEnd;
-
     
-    int         m_iRespBodySize;
-    int         m_iRespBodyRecv;
     ChunkInputStream * m_pChunkIS;
 
+    int         m_iSsl;
+    SSLConnection  m_ssl;
+    
     char        m_extraHeader[256];  //X-Forwarded-For
 
     int         processResp();
     int         readRespBody();
     void        setupChunkIS();
-        
+    int         connectSSL();
+    
+    int         readvSsl( const struct iovec* vector, const struct iovec* pEnd );
+    void        setSSLAgain();
+    
 protected:
     virtual int doRead();
     virtual int doWrite();
@@ -86,8 +95,13 @@ public:
     virtual void dump();
 
     virtual int sendReqHeader();
+    virtual int close();
     void reset();
 
+    void setUseSsl( int s )     {   m_iSsl = s;       }
+    int isUseSsl() const        {   return m_iSsl;    }
+
+    
 };
 
 #endif

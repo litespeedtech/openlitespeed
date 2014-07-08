@@ -1718,6 +1718,11 @@ int HttpServerImpl::configTuning( const XmlNode *pRoot)
         currentCtx.getLongValue( pNode, "gzipMinFileSize", 200, LONG_MAX, 300 ),
         currentCtx.getLongValue( pNode, "gzipMaxFileSize", 200, LONG_MAX, 1024 * 1024 )
     );
+    
+    //fileEtag
+    int etag = currentCtx.getLongValue( pNode, "fileETag", 0, 4+8+16, 4+8+16 );
+    HttpServer::getInstance().getServerContext().setFileEtag( etag );
+    
     pValue = pNode->getChildValue( "gzipCacheDir" );
 
     if ( !pValue )
@@ -2319,12 +2324,7 @@ int HttpServerImpl::initGroups( )
 int HttpServerImpl::loadAdminConfig( XmlNode *pRoot)
 {
     ConfigCtx currentCtx( "admin" );
-    const char *pAdminRoot = ConfigCtx::getCurConfigCtx()->getTag( pRoot, "adminRoot" );
-
-    if ( pAdminRoot == NULL )
-    {
-        return -1;
-    }
+    const char *pAdminRoot = "$SERVER_ROOT/admin";
 
     if ( ConfigCtx::getCurConfigCtx()->getValidChrootPath( pAdminRoot, "admin vhost root" ) != 0 )
     {
@@ -2721,6 +2721,8 @@ int HttpServerImpl::initServer( XmlNode* pRoot, int &iReleaseXmlTree, int reconf
 
     if ( ret )
         return ret;
+    
+    HttpGlobals::setClientCache( new ClientCache( 1000 ) );
 
     beginConfig();
     //ret = configServer( reconfig );

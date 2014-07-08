@@ -206,6 +206,7 @@ int ExtAppSubRegistry::generateRTReport( int fd, int type )
 #include <extensions/jk/jworker.h>
 #include <extensions/fcgi/fcgiapp.h>
 #include <extensions/proxy/proxyworker.h>
+#include <extensions/proxy/proxyconfig.h>
 #include <extensions/lsapi/lsapiworker.h>
 #include <extensions/loadbalancer.h>
 
@@ -368,6 +369,7 @@ ExtWorker * ExtAppRegistry::configExtApp( const XmlNode *pNode, int configUserGr
     const char *pPath = NULL;
     ExtWorker *pWorker = NULL;
     ExtWorkerConfig *pConfig = NULL;
+    int isHttps = 0;
     int len = 0;
     if ( HttpGlobals::s_psChroot )
     len = HttpGlobals::s_psChroot->len();
@@ -407,6 +409,27 @@ ExtWorker * ExtAppRegistry::configExtApp( const XmlNode *pNode, int configUserGr
         return NULL;
     }
 
+    //Check http or https for proxy type
+    if (iType == EA_PROXY)
+    {
+        if (strncasecmp(pUri, "https://", 8) == 0)
+            isHttps = 1;
+        
+        //Remove the protocol prefix
+        if (strstr(pUri, "//"))
+            pUri = strstr(pUri, "//") + 2;
+
+        //Remove last '/' if exists
+        int l = strlen(achAddress);
+        if (achAddress[l -1] == '/')
+            achAddress[l -1] = 0x00;
+
+        if (strchr(pUri, ':') == NULL)
+            strcat(achAddress, (isHttps ? ":443" : ":80"));
+        
+        currentCtx.log_debug( "ExtApp Proxy isHttps %d, Uri %s.",  isHttps, pUri);
+    }
+    
     if ( addr.set( pUri, NO_ANY ) )
     {
         currentCtx.log_error( "failed to set socket address %s!", pUri );
@@ -468,12 +491,17 @@ ExtWorker * ExtAppRegistry::configExtApp( const XmlNode *pNode, int configUserGr
     assert( pConfig );
 
     if ( pUri )
+    {
+        if (iType == EA_PROXY)
+            ((ProxyWorker *)pWorker)->getConfig().setSsl(isHttps);
+
         if ( pWorker->setURL( pUri ) )
         {
             currentCtx.log_error( "failed to set socket address to %s!", pName );
             return NULL;
         }
-
+    }
+    
     pWorker->setRole( role );
 
     pConfig->config( pNode );

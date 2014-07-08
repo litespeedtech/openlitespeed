@@ -95,7 +95,7 @@ int assignHandler(lsi_cb_param_t * rec)
             val[valLen] = 0x00;
             
             g_api->set_req_env(rec->_session, name, nameLen, val, valLen);
-            g_api->session_log(rec->_session, LSI_LOG_INFO, "[Module:testEnv] setEnv name[%s] val[%s]\n",name, val);
+            g_api->log(rec->_session, LSI_LOG_INFO, "[Module:testEnv] setEnv name[%s] val[%s]\n",name, val);
             
         }
         else
@@ -105,7 +105,7 @@ int assignHandler(lsi_cb_param_t * rec)
     return 0;
 }
 
-static int myhandler_process(lsi_session_t session)
+static int myhandler_process(lsi_session_t *session)
 {
     int i;
     //200KB
@@ -120,11 +120,15 @@ static int myhandler_process(lsi_session_t session)
     return 0;
 }
 
+static lsi_serverhook_t serverHooks[] = {
+    {LSI_HKPT_RECV_REQ_HEADER, assignHandler, LSI_HOOK_NORMAL, 0},
+    lsi_serverhook_t_END   //Must put this at the end position
+};
+
 static int _init(lsi_module_t * pModule)
 {
-    g_api->add_hook( LSI_HKPT_RECV_REQ_HEADER, pModule, assignHandler, LSI_HOOK_NORMAL, 0 );
     return 0;
 }
 
 lsi_handler_t myhandler = { myhandler_process, NULL, NULL, NULL };
-lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, _init, &myhandler, NULL, };
+lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, _init, &myhandler, NULL, "", serverHooks };

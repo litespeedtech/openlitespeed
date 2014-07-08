@@ -143,8 +143,6 @@ public:
     
     
 public:    
-    static const char *s_sHkptName[];
-    
     static void setFilterEnable(lsi_module_config_t * module_config, int v) { module_config->filters_enable = ((v) ? 1 : 0);  }
     static int  getFilterEnable(lsi_module_config_t * module_config)   { return module_config->filters_enable; }
     static int  compare(lsi_module_config_t *config1, lsi_module_config_t *config2);

@@ -101,11 +101,15 @@ int check_req_whole_body(lsi_cb_param_t * rec)
     return LSI_RET_OK;
 }
 
+static lsi_serverhook_t serverHooks[] = {
+    {LSI_HKPT_RCVD_REQ_BODY, check_req_whole_body, LSI_HOOK_EARLY , 0},
+    lsi_serverhook_t_END   //Must put this at the end position
+};
+
 static int _init( lsi_module_t * pModule )
 {
-    g_api->add_hook( LSI_HKPT_RECVED_REQ_BODY, pModule, check_req_whole_body, LSI_HOOK_EARLY , 0);
     return 0;
 }
 
-lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, _init, NULL, NULL, };
+lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, _init, NULL, NULL, "", serverHooks};
 

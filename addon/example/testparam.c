@@ -144,7 +144,7 @@ static void testparam_freeConfig(void *_config)
     free(_config);
 }
 
-static int testparam_handlerBeginProcess(lsi_session_t session)
+static int testparam_handlerBeginProcess(lsi_session_t *session)
 {
     g_api->set_resp_header(session, LSI_RESP_HEADER_CONTENT_TYPE, NULL, 0, "text/plain", sizeof("text/plain") - 1, LSI_HEADER_SET );
     
@@ -180,22 +180,26 @@ static int reg_handler(lsi_cb_param_t * rec)
     return LSI_RET_OK;
 }
 
+static lsi_serverhook_t serverHooks[] = {
+    {LSI_HKPT_URI_MAP, reg_handler, LSI_HOOK_EARLY, 0},
+    lsi_serverhook_t_END   //Must put this at the end position
+};
+
 static int testparam_init(lsi_module_t * pModule)
 {
     param_st *pparam_st = (param_st *) g_api->get_module_param(NULL, pModule);
     if (pparam_st) 
     {
-        g_api->log( LSI_LOG_INFO, "[testparam]Global level param: param1 = %d param2 = %d param3 = %d param4 = %d param5 = %d",
+        g_api->log( NULL,  LSI_LOG_INFO, "[testparam]Global level param: param1 = %d param2 = %d param3 = %d param4 = %d param5 = %d\n",
             pparam_st->param1, pparam_st->param2, 
             pparam_st->param3, pparam_st->param4, pparam_st->param5);
     }
     else
-        g_api->log( LSI_LOG_INFO, "[testparam]Global level NO params, ERROR.");
+        g_api->log( NULL,  LSI_LOG_INFO, "[testparam]Global level NO params, ERROR.\n");
 
-    g_api->add_hook( LSI_HKPT_URI_MAP, pModule, reg_handler, LSI_HOOK_EARLY, 0 );
     return 0;
 }
 
 lsi_handler_t testparam_myhandler = { testparam_handlerBeginProcess, NULL, NULL, NULL };
 lsi_config_t testparam_dealConfig = { testparam_parseConfig, testparam_freeConfig, myParam };
-lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, testparam_init, &testparam_myhandler, &testparam_dealConfig, "Version 1.1" };
+lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, testparam_init, &testparam_myhandler, &testparam_dealConfig, "Version 1.1", serverHooks };

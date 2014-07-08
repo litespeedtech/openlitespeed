@@ -75,7 +75,7 @@ int releaseCounterDataCb( void *data )
     return 0;
 }
 
-CounterData *allocateMydata(lsi_session_t session, const lsi_module_t *module, int level)
+CounterData *allocateMydata(lsi_session_t *session, const lsi_module_t *module, int level)
 {
     CounterData *myData = (CounterData*)malloc(sizeof(CounterData));
     if (myData == NULL )
@@ -114,7 +114,7 @@ int assignHandler(lsi_cb_param_t * rec)
     return 0;
 }
 
-static int myhandler_process(lsi_session_t session)
+static int myhandler_process(lsi_session_t *session)
 {
     CounterData *ip_data = NULL, *vhost_data = NULL, *file_data = NULL;
     char output[128];
@@ -150,9 +150,13 @@ static int myhandler_process(lsi_session_t session)
     return 0;
 }
 
+static lsi_serverhook_t serverHooks[] = {
+    {LSI_HKPT_RECV_REQ_HEADER, assignHandler, LSI_HOOK_NORMAL, 0},
+    lsi_serverhook_t_END   //Must put this at the end position
+};
+
 static int _init(lsi_module_t * pModule)
 {
-    g_api->add_hook( LSI_HKPT_RECV_REQ_HEADER, pModule, assignHandler, LSI_HOOK_NORMAL, 0 );
     g_api->init_module_data(pModule, releaseCounterDataCb, LSI_MODULE_DATA_VHOST );
     g_api->init_module_data(pModule, releaseCounterDataCb, LSI_MODULE_DATA_IP );
     g_api->init_module_data(pModule, releaseCounterDataCb, LSI_MODULE_DATA_FILE );
@@ -160,4 +164,4 @@ static int _init(lsi_module_t * pModule)
 }
 
 lsi_handler_t myhandler = { myhandler_process, NULL, NULL, NULL };
-lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, _init, &myhandler, NULL, };
+lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, _init, &myhandler, NULL, "", serverHooks};
