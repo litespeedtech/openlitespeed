@@ -389,7 +389,6 @@ static const char *ServerVarNames[REF_EXT_COUNT] =
     "STATUS_CODE",
     "STRFTIME",
     "REQ_TIME_SEC",
-    "REQ_TIME_MS",
     "URL_PATH",
     "CONN_STATE",
     "BYTES_IN",
@@ -404,14 +403,16 @@ static const char *ServerVarNames[REF_EXT_COUNT] =
     "DOCUMENT_URI",
     "LAST_MODIFIED",
     "QUERY_STRING_UNESCAPED",
+    "REQ_TIME_MS",
+    
 };
 
 static int ServerVarNameLen[REF_EXT_COUNT] =
 {   11, 11, 11, 11, 12, 14, 12, 9, 9, 15, 16, 11, 13, 12,
     11, 11, 11, 15, 15, 11, 11, 9, 4, 9, 8, 8, 9, 8, 8, 9, 11, 11,
     16, 10, 10, 15, 16, 11, 15, 10, 11, 16, 5,
-    5, 3, 11, 8, 12, 10, 8, 10, 8, 9, 10, 
-    7, 10, 8, 10, 13, 12, 13, 22 
+    5, 3, 11, 8, 12, 8, 10, 8, 9, 10, 
+    7, 10, 8, 10, 13, 12, 13, 22, 11 
 };
 
 const char * RequestVars::getVarNameStr( int var_id, int &len )

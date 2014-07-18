@@ -1076,32 +1076,6 @@ int HttpContext::configRewriteRule( const RewriteMapList * pMapList, char *pRule
     return 0;
 }
 
-int HttpContext::configRewriteRule( const RewriteMapList * pMapList,
-        const XmlNode *pRewriteNode )
-{
-    //Try to get the "RewriteCond" and "RewriteRule" from pRewriteNode
-    char rules[8192] = {0};
-    XmlNodeList list;
-    pRewriteNode->getAllChildren( list );
-    XmlNodeList::const_iterator iter;
-
-    for( iter = list.begin(); iter != list.end(); ++iter )
-    {
-        if ( strncasecmp( ( *iter )->getName(), "Rewrite", 7 ) == 0 )
-        {
-            strcat( rules, ( *iter )->getName() );
-            strcat( rules, " " );
-            strcat( rules, ( *iter )->getValue() );
-            strcat( rules, "\n" );
-        }
-    }
-
-
-    if ( strlen( rules ) > 0 )
-        configRewriteRule( pMapList, rules );
-
-    return 0;
-}
 int HttpContext::configMime( const XmlNode *pContextNode )
 {
     const char *pValue = pContextNode->getChildValue( "addMIMEType" );
@@ -1216,7 +1190,7 @@ int HttpContext::config(const RewriteMapList * pMapList, const XmlNode *pContext
         enableRewrite( ConfigCtx::getCurConfigCtx()->getLongValue( pNode, "enable", 0, 1, 0 ) );
         pValue = pNode->getChildValue( "option" );
 
-        if ( ( pValue ) && ( strstr( pValue, "inherit" ) ) )
+        if ( ( pValue ) && ( strcasestr( pValue, "inherit" ) ) )
         {
             setRewriteInherit( 1 );
         }
@@ -1240,8 +1214,6 @@ int HttpContext::config(const RewriteMapList * pMapList, const XmlNode *pContext
         {
             configRewriteRule( pMapList, ( char * ) pValue );
         }
-        else
-            configRewriteRule( pMapList, pNode );
 
     }
 

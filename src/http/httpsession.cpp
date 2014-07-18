@@ -1894,9 +1894,9 @@ void HttpSession::recycle()
 }
 void HttpSession::setupChunkOS(int nobuffer)
 {
-    m_response.setContentLen( LSI_RESP_BODY_SIZE_UNKNOWN );
     if ( !m_request.isKeepAlive() )
         return;
+    m_response.setContentLen( LSI_RESP_BODY_SIZE_CHUNKED );
     if (( m_request.getVersion() == HTTP_1_1 )&&( nobuffer != 2 ))
     {
         m_response.appendChunked();
@@ -2322,6 +2322,7 @@ int HttpSession::setupGzipBuf()
                         "[%s] setupGzipBuf() begin GZIP stream.\n",
                         getLogId() ));
                 m_response.addGzipEncodingHeader();
+                m_request.orGzip( UPSTREAM_GZIP );
                 return 0;
             }
             else
@@ -2928,7 +2929,7 @@ int HttpSession::execExtCmd( const char * pCmd, int len )
 
 }
 
-//Fix me: This function is related the new variable "DateTime::s_curTimeMS",
+//Fix me: This function is related the new variable "DateTime::s_curTimeUs",
 //          Not sure if we need it. George may need to review this.
 //
 // int HttpSession::writeConnStatus( char * pBuf, int bufLen )
@@ -2948,7 +2949,7 @@ int HttpSession::execExtCmd( const char * pCmd, int len )
 //         "SD",   //HC_SHUTDOWN,
 //         "CL"    //HC_CLOSING
 //     };
-//     int reqTime= (DateTime::s_curTime - m_lReqTime) * 10 + (DateTime::s_curTimeMS - m_iReqTimeMs)/100000;
+//     int reqTime= (DateTime::s_curTime - m_lReqTime) * 10 + (DateTime::s_curTimeUs - m_iReqTimeMs)/100000;
 //     int n = snprintf( pBuf, bufLen, "%s\t%hd\t%s\t%d.%d\t%d\t%d\t",
 //         getPeerAddrString(), m_iReqServed, s_pState[getState()],
 //         reqTime / 10, reqTime %10 ,

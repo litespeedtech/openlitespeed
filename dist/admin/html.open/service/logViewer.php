@@ -1,5 +1,5 @@
 <?
-function genOptions(&$options, $selValue)
+function genOptions($options, $selValue)
 {
 	$output = '';
 	foreach ( $options as $key => $value )

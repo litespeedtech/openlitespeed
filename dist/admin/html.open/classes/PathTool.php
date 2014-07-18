@@ -42,54 +42,31 @@ class PathTool
 		} while ( $newS != $newS1 );
 		do {
 			$newS1 = $path;
-			$newS = preg_replace('/\/[^\/^\.]+\/\.\.\//', '/',  $path); 
+			$newS = preg_replace('/\/[^\/^\.]+\/\.\.\//', '/',  $path);
 			$path = $newS;
 		} while ( $newS != $newS1 );
 
 		return $path;
 	}
 
-	public static function createFile($path, &$err, $htmlname)
+	public static function createFile($path, &$err)
 	{
-		if ( file_exists($path) )
-		{
-			if ( is_file($path) )
-			{
-				$err = 'Already exists '.$path;
-				return false;
-			}
-			else
-			{
-				$err = 'name conflicting with an existing directory '.$path;
-				return false;
-			}
+		if (file_exists($path))	{
+			$err = is_file($path) ? "Already exists $path" : "name conflicting with an existing directory $path";
+			return FALSE;
 		}
 		$dir = substr($path, 0, (strrpos($path, '/')));
-		if ( PathTool::createDir($dir, 0700, $err) )
-		{
-			if ( touch($path) )
-			{
-				chmod($path, 0600);
-				//populate vhconf tags
-				$type = 'vh';
-				if ($htmlname == 'templateFile')
-					$type = 'tp';
-				$newconf = new ConfData($type, $path, 'newconf');
-				$config = new ConfigFile();
-				$res = $config->save($newconf);
-				if ( !$res )
-				{
-					$err = 'failed to save to file ' . $path;
-					return false;
-				}
-				
-				return true;
-			}
-			else
-				$err = 'failed to create file '. $path;
+		if ( !PathTool::createDir($dir, 0700, $err) ) {
+			$err = 'failed to create file '. $path;
+			return FALSE;
 		}
 
-		return false;
+		if ( touch($path) )	{
+			chmod($path, 0600);
+			return TRUE;
+		}
+		else
+			return FALSE;
 	}
 
 	public static function createDir($path, $mode, &$err)
@@ -110,7 +87,7 @@ class PathTool
 			$err = "invalid path: $path";
 			return false;
 		}
-		if ( !file_exists($parent) 
+		if ( !file_exists($parent)
 			 && !PathTool::createDir($parent, $mode, $err) )
 			return false;
 
@@ -121,7 +98,7 @@ class PathTool
 			$err = "fail to create directory $path";
 			return false;
 		}
-		
+
 	}
 
 	public static function isDenied($path)
@@ -133,7 +110,33 @@ class PathTool
 			return false;
 	}
 
+	public static function GetAbsFile($filename, $type, $vhname='', $vhroot='')
+	{
+		// type = 'SR', 'VR'
+		if ( strpos($filename, '$VH_NAME')!== false )
+			$filename = str_replace('$VH_NAME', $vhname, $filename);
 
+		if ( $filename[0] == '$' ) {
+			if ( strncasecmp('$SERVER_ROOT', $filename, 12) == 0 ) {
+				$filename = SERVER_ROOT . substr($filename, 13);
+			}
+			elseif ( $type == 'VR' && strncasecmp('$VH_ROOT', $filename, 8) == 0 )	{
+				$vhrootf = PathTool::GetAbsFile($vhroot, 'SR', $vhname);
+				if ( substr($vhrootf, -1, 1) !== '/' )
+					$vhrootf .= '/';
+				$filename = $vhrootf . substr($filename, 9);
+			}
+		}
+		elseif ( $filename[0] == '/' ) {
+			if ( isset( $_SERVER['LS_CHROOT'] ) )	{
+				$root = $_SERVER['LS_CHROOT'];
+				$len = strlen($root);
+				if ( strncmp( $filename, $root, $len ) == 0 )
+					$filename = substr($filename, $len);
+			}
+		}
+		return $filename;
+	}
 
 }
 

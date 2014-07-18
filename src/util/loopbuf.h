@@ -132,6 +132,7 @@ public:
     void swap( LoopBuf& rhs );
     
     void update( int offset, const char * pBuf, int size );
+    void straight();
     
     char *search( int offset, const char *accept, int acceptLen );
     

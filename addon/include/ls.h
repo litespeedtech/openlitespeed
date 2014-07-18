@@ -101,15 +101,28 @@ extern "C" {
  **************************************************************************************************/
 
 /**
- * 
- * 
- * 
+ * @enum lsi_config_level  
+ * @brief The parameter level specified in the callback routine, lsi_config_t::_parse_config,
+ * in user configuration parameter parsing.
+ * @since 1.0
  */
 enum lsi_config_level
 {
+    /**
+     * Server level.
+     */
     LSI_SERVER_LEVEL = 0,
+    /**
+     * Listener level.
+     */
     LSI_LISTENER_LEVEL,
+    /**
+     * Virtual Host level.
+     */
     LSI_VHOST_LEVEL,
+    /**
+     * Context level.
+     */
     LSI_CONTEXT_LEVEL,
 };
 
@@ -258,6 +271,7 @@ enum lsi_container_type
  * @details Used in the API index parameter.
  * Determines which stage to hook the callback function to.
  * @since 1.0
+ * @see lsi_serverhook_s
  */
 enum lsi_hkpt_level
 {
@@ -805,6 +819,7 @@ enum lsi_header_op
  * @details LSI_URI_NOCHANGE, LSI_URI_REWRITE and LSI_URL_REDIRECT_* can be combined with 
  * LSI_URL_QS_* 
  * @since 1.0
+ * @see lsi_api_s::set_uri_qs
  */
 enum lsi_url_op
 {
@@ -835,27 +850,32 @@ enum lsi_url_op
     LSI_URL_REDIRECT_302, 
 
     /**
+     * External redirect with status code 303 See Other.
+     */
+    LSI_URL_REDIRECT_303, 
+
+    /**
      * External redirect with status code 307 Temporary Redirect.
      */
     LSI_URL_REDIRECT_307, 
     
     /**
-     * Do not change Query String. Can be combined with LSI_URL_REWRITE and LSI_URL_REDIRECT_*.
+     * Do not change Query String. Only valid with LSI_URI_REWRITE.
      */
     LSI_URL_QS_NOCHANGE = 0<<4,
     
     /**
-     * Append Query String. Can be combined with LSI_URL_REWRITE and LSI_URL_REDIRECT_*.
+     * Append Query String. Can be combined with LSI_URI_REWRITE and LSI_URL_REDIRECT_*.
      */
     LSI_URL_QS_APPEND = 1<<4,
     
     /**
-     * Set Query String. Can be combined with LSI_URL_REWRITE and LSI_URL_REDIRECT_*.
+     * Set Query String. Can be combined with LSI_URI_REWRITE and LSI_URL_REDIRECT_*.
      */
     LSI_URL_QS_SET = 2<<4,
     
     /**
-     * Delete Query String. Can be combined with LSI_URL_REWRITE and LSI_URL_REDIRECT_*.
+     * Delete Query String. Can be combined with LSI_URI_REWRITE and LSI_URL_REDIRECT_*.
      */
     LSI_URL_QS_DELETE = 3<<4,
     
@@ -1296,11 +1316,11 @@ struct lsi_config_s
      * 
      * @since 1.0
      * @param[in] param - the \\0 terminated buffer holding configuration parameters.
-     * @param[in] initial_config - a pointer to default configuration inherited from parent level
-     * @param[in] level - lsi_config_level //FIXME: to be updated!
-     * @param[in] name - name of the Server/Listener/VHost or URI of the Context
+     * @param[in] initial_config - a pointer to the default configuration inherited from the parent level.
+     * @param[in] level - applicable level from enum #lsi_config_level.
+     * @param[in] name - name of the Server/Listener/VHost or URI of the Context.
      * @return a pointer to a the user-defined configuration data, which combines initial_config with
-     *         settings in param, if both param and initial_config are NULL, a hard-coded default 
+     *         settings in param; if both param and initial_config are NULL, a hard-coded default 
      *         configuration value should be returned.
      */
     void *                          ( *_parse_config ) ( const char *param, void *initial_config, int level, const char *name );
@@ -1332,7 +1352,7 @@ struct lsi_config_s
 struct lsi_serverhook_s
 {
     /**
-     * @brief specifies the hook point using level definitions from enum lsi_hkpt_level.
+     * @brief specifies the hook point using level definitions from enum #lsi_hkpt_level.
      * @since 1.0
      */
     int             index;
@@ -1460,7 +1480,7 @@ struct lsi_api_s
      * @since 1.0
      * 
      * @param[in] pSession - current session, log file, and session ID are based on session.
-     * @param[in] level - enum defined in log level definitions.
+     * @param[in] level - enum defined in log level definitions #lsi_log_level.
      * @param[in] fmt - formatted string.
      */
     void ( *log )( lsi_session_t *pSession, int level, const char *fmt, ... );
@@ -1472,7 +1492,7 @@ struct lsi_api_s
      * @since 1.0
      * 
      * @param[in] pSession - current session, log file and session ID are based on session.
-     * @param[in] level - enum defined in log level definitions.
+     * @param[in] level - enum defined in log level definitions #lsi_log_level.
      * @param[in] fmt - formatted string.
      * @param[in] vararg - the varying argument list.
      * @param[in] no_linefeed - 1 = do not add \\n at the end of message; 0 = add \\n
@@ -1500,7 +1520,7 @@ struct lsi_api_s
      * 
      * @param[in] pSession - a pointer to the HttpSession, or use NULL for the server level.
      * @param[in] pModule - a pointer to an lsi_module_t struct.
-     * @return a pointer to a the user-defined configuration data.
+     * @return a pointer to the user-defined configuration data.
      */
     void * ( * get_module_param )( lsi_session_t *pSession, const lsi_module_t *pModule );
 
@@ -1513,7 +1533,7 @@ struct lsi_api_s
      * @since 1.0
      * 
      * @param[in] pSession - a pointer to the HttpSession, obtained from callback parameter.
-     * @param[in] index - as defined in the enum of Hook Point level definitions.
+     * @param[in] index - as defined in the enum of Hook Point level definitions #lsi_hkpt_level.
      * @param[in] pModule - a pointer to the lsi_module_t struct.
      * @param[in] cb - the pointer to the associated callback function.
      * @param[in] priority - the default hook-point priority. Lower value indicates 
@@ -1537,7 +1557,7 @@ struct lsi_api_s
      * @since 1.0
      * 
      * @param[in] pSession - a pointer to the HttpSession, obtained from callback parameters.
-     * @param[in] index - as defined in the enum of Hook Point level definitions.
+     * @param[in] index - as defined in the enum of Hook Point level definitions #lsi_hkpt_level.
      * @param[in] pModule - a pointer to the lsi_module_t struct.
      */
     int ( *remove_session_hook )( lsi_session_t *pSession, int index, const lsi_module_t *pModule );
@@ -1560,7 +1580,7 @@ struct lsi_api_s
      * 
      * @param[in] pModule - a pointer to the current module defined in lsi_module_t struct.
      * @param[in] cb - a pointer to the user-defined callback function that releases the user data.
-     * @param[in] level - as defined in the module data level enum lsi_module_data_level.
+     * @param[in] level - as defined in the module data level enum #lsi_module_data_level.
      * @return -1 for wrong level, -2 for already initialized, 0 for success.
      */
     int ( *init_module_data )( lsi_module_t *pModule, lsi_release_callback_pf cb, int level );
@@ -1587,7 +1607,7 @@ struct lsi_api_s
      * 
      * @param[in] pSession - a pointer to the HttpSession.
      * @param[in] pModule - a pointer to an lsi_module_t struct.
-     * @param[in] level - as defined in the module data level enum.
+     * @param[in] level - as defined in the module data level enum #lsi_module_data_level.
      * @param[in] sParam - a pointer to the user defined data.
      * @return -1 for bad level or no release data callback function, 0 on success.
      */
@@ -1601,7 +1621,7 @@ struct lsi_api_s
      * 
      * @param[in] pSession - a pointer to the HttpSession.
      * @param[in] pModule - a pointer to an lsi_module_t struct.
-     * @param[in] level - as defined in the module data level enum.
+     * @param[in] level - as defined in the module data level enum #lsi_module_data_level.
      * @return NULL on failure, a pointer to the user defined data on success.
      */
     void * ( *get_module_data )( lsi_session_t *pSession, const lsi_module_t *pModule, int level );
@@ -1613,7 +1633,7 @@ struct lsi_api_s
      * @since 1.0
      * 
      * @param[in] pParam - a pointer to callback parameters.
-     * @param[in] level - as defined in the module data level enum.
+     * @param[in] level - as defined in the module data level enum #lsi_module_data_level.
      * @return NULL on failure, a pointer to the user defined data on success.
      */
     void * ( *get_cb_module_data )( const lsi_cb_param_t *pParam, int level );
@@ -1626,7 +1646,7 @@ struct lsi_api_s
      * 
      * @param[in] pSession - a pointer to the HttpSession.
      * @param[in] pModule - a pointer to an lsi_module_t struct.
-     * @param[in] level - as defined in the module data level enum.
+     * @param[in] level - as defined in the module data level enum #lsi_module_data_level.
      * @param[in] cb - a pointer to the user-defined callback function that releases the user data.
      */    
     void ( *free_module_data )( lsi_session_t *pSession, const lsi_module_t *pModule, int level, lsi_release_callback_pf cb );
@@ -1967,7 +1987,7 @@ struct lsi_api_s
      * @since 1.0
      * 
      * @param[in] pSession - a pointer to the HttpSession.
-     * @param[in] id - enum defined as LSIAPI request variable ID.
+     * @param[in] id - enum #lsi_req_variable defined as LSIAPI request variable ID.
      * @param[in,out] val - a pointer to the allocated buffer holding value string. 
      * @param[in] maxValLen - the maximum size of the variable value string.
      * @return the length of the variable value string.
@@ -2036,13 +2056,51 @@ struct lsi_api_s
      * @since 1.0
      * 
      * @param[in] pSession - a pointer to the HttpSession.
-     * @param[in] action - action to be taken to URI and Query String; actions are defined in lsi_url_op.
+     * @param[in] action - action to be taken to URI and Query String, defined by #lsi_url_op:
+     * - LSI_URI_NOCHANGE - do not change the URI.
+     * - LSI_URI_REWRITE - rewrite a new URI and use for processing.
+     * - LSI_URL_REDIRECT_INTERNAL - internal redirect, as if the server received a new request.
+     * - LSI_URL_REDIRECT_{301,302,303,307} - external redirect.
+     * .
+     * combined with one of the Query String qualifiers:
+     * - LSI_URL_QS_NOCHANGE - do not change the Query String (LSI_URI_REWRITE only).
+     * - LSI_URL_QS_APPEND - append to the Query String.
+     * - LSI_URL_QS_SET - set the Query String.
+     * - LSI_URL_QS_DELETE - delete the Query String.
+     * .
+     * and optionally LSI_URL_ENCODED if encoding has been applied to the URI.
      * @param[in] uri - a pointer to the URI string.
      * @param[in] len - the length of the URI string.
      * @param[in] qs -  a pointer to the Query String. 
      * @param[in] qs_len - the length of the Query String.
      * @return -1 on failure, 0 on success.
-     */    
+     * @note LSI_URL_QS_NOCHANGE is only valid with LSI_URI_REWRITE, in which case qs and qs_len MUST be NULL.
+     * In all other cases, a NULL specified Query String has the effect of deleting the resultant Query String completely.
+     * In all cases of redirection, if the Query String is part of the target URL, qs and qs_len must be specified,
+     * since the original Query String is NOT carried over.
+     * 
+     * \b Example of external redirection, changing the URI and setting a new Query String:
+     * @code
+     * 
+       static int handlerBeginProcess( lsi_session_t *pSession )
+       {
+          ...
+          g_api->set_uri_qs( pSession,
+            LSI_URL_REDIRECT_307|LSI_URL_QS_SET, "/new_location", 13, "ABC", 3 );
+          ...
+       }
+     * @endcode
+     * would result in a response header similar to:
+     * @code
+       ...
+       HTTP/1.1 307 Temporary Redirect
+       ...
+       Server: LiteSpeed
+       Location: http://localhost:8088/new_location?ABC
+       ...
+       @endcode
+       \n
+     */
     int ( *set_uri_qs )( lsi_session_t *pSession, int action, const char *uri, int uri_len, const char *qs, int qs_len );
     
     /**
@@ -2232,12 +2290,12 @@ struct lsi_api_s
      * @since 1.0
      * 
      * @param[in] pSession - a pointer to the HttpSession.
-     * @param[in] header_id - enum defined as response-header id
+     * @param[in] header_id - enum #lsi_resp_header_id defined as response-header id.
      * @param[in] name - a pointer to the header id name string.
      * @param[in] nameLen - the length of the header id name string.
      * @param[in] val - a pointer to the header string to be set.
      * @param[in] valLen - the length of the header value string.
-     * @param[in] add_method - enum defined for the method of adding.
+     * @param[in] add_method - enum #lsi_header_op defined for the method of adding.
      * @return 0.
      */    
     int ( *set_resp_header )( lsi_session_t *pSession, unsigned int header_id, const char *name, int nameLen, const char *val, int valLen, int add_method );
@@ -2250,7 +2308,7 @@ struct lsi_api_s
      * @param[in] pSession - a pointer to the HttpSession.
      * @param[in] headers - a pointer to the header string to be set.
      * @param[in] len - the length of the header value string.
-     * @param[in] add_method - enum defined for the method of adding.
+     * @param[in] add_method - enum #lsi_header_op defined for the method of adding.
      * @return 0.
      */    
     int ( *set_resp_header2 )( lsi_session_t *pSession, const char *headers, int len, int add_method );
@@ -2265,7 +2323,7 @@ struct lsi_api_s
      * @since 1.0
      * 
      * @param[in] pSession - a pointer to the HttpSession.
-     * @param[in] header_id - enum defined as response-header indices
+     * @param[in] header_id - enum #lsi_resp_header_id defined as response-header id.
      * @param[in] name - a pointer to the header id name string.
      * @param[in] nameLen - the length of the header id name string.
      * @param[out] iov - the IO vector that contains the headers.
@@ -2308,7 +2366,7 @@ struct lsi_api_s
      * @since 1.0
      * 
      * @param[in] pSession - a pointer to the HttpSession.
-     * @param[in] header_id - enum defined as response-header id
+     * @param[in] header_id - enum #lsi_resp_header_id defined as response-header id.
      * @param[in] name - a pointer to the header id name string.
      * @param[in] nameLen - the length of the header id name string.
      * @return 0.
@@ -2494,6 +2552,35 @@ struct lsi_api_s
      */    
     void * ( *get_multiplexer )();
 
+/**
+ * @def LSI_SHM_MAX_NAME_LEN 
+ * @brief Shared Memory maximum characters in name of Shared Memory Pool or Hash Table
+ * (shm_pool_init and shm_htable_init).
+ * @since 1.0
+ */
+#define LSI_SHM_MAX_NAME_LEN    (11)
+
+/**
+ * @def LSI_SHM_MAX_ALLOC_SIZE 
+ * @brief Shared Memory maximum total memory allocatable (~2GB)
+ * @since 1.0
+ */
+#define LSI_SHM_MAX_ALLOC_SIZE  (2000000000)
+
+/**
+ * @def LSI_SHM_INIT 
+ * @brief Shared Memory flag bit requesting initialization.
+ * @since 1.0
+ */
+#define LSI_SHM_INIT    (0x0001)
+
+/**
+ * @def LSI_SHM_CREATED 
+ * @brief Shared Memory flag bit indicating newly created.
+ * @since 1.0
+ */
+#define LSI_SHM_CREATED (0x0001)
+
     /**
      * @brief shm_pool_init initializes a shared memory pool.
      * @details If the pool does not exist, a new one is created.
@@ -2501,12 +2588,14 @@ struct lsi_api_s
      * @since 1.0
      * 
      * @param[in] pName - the name of the shared memory pool.
+     * This name should not exceed #LSI_SHM_MAX_NAME_LEN characters in length.
      * If NULL, the system default name and size are used.
      * @param[in] initSize - the initial size in bytes of the shared memory pool.
      * If 0, the system default size is used.  The shared memory size grows as needed.
+     * The maximum total allocatable shared memory is defined by #LSI_SHM_MAX_ALLOC_SIZE.
      * @return a pointer to the Shared Memory Pool object, to be used with subsequent shm_pool_* functions.
      * @note shm_pool_init is generally the first routine called to access the shared memory pool system.
-     *   The handle returned is used in all related routines to access and modified shared memory.
+     *   The handle returned is used in all related routines to access and modify shared memory.
      *   The user should always maintain data in terms of shared memory offsets,
      *   and convert to pointers only when accessing or modifying the data, since offsets
      *   to the data remain constant but pointers may change at any time if shared memory is remapped.
@@ -2612,6 +2701,7 @@ struct lsi_api_s
      * @param[in] pShmpool - a pointer to a Shared Memory Pool object (from shm_pool_init).
      * If NULL, a Shared Memory Pool object with the name specified by pName is used.
      * @param[in] pName - the name of the hash table.
+     * This name should not exceed #LSI_SHM_MAX_NAME_LEN characters in length.
      * If NULL, the system default name is used.
      * @param[in] initSize - the initial size (in entries/buckets) of the hash table index.
      * If 0, the system default number is used.
@@ -2621,7 +2711,7 @@ struct lsi_api_s
      * If NULL, the default compare function is used (strcmp(3)).
      * @return a pointer to the Shared Memory Hash Table object, to be used with subsequent shm_htable_* functions.
      * @note shm_hash_init initializes the hash table system afer a shared memory pool has been initialized.
-     *   The handle returned is used in all related routines to access and modified shared memory.
+     *   The handle returned is used in all related routines to access and modify shared memory.
      *   The user should always maintain data in terms of shared memory offsets,
      *   and convert to pointers only when accessing or modifying the data, since offsets
      *   to the data remain constant but pointers may change at any time if shared memory is remapped.
@@ -2647,7 +2737,7 @@ struct lsi_api_s
            
            ...
        
-           valOffset = g_api->shm_htable_get(
+           valOffset = g_api->shm_htable_find(
              pShmhash, (const uint8_t *)myKey, sizeof(myKey) - 1, &valLen );
            if ( valOffset == 0 )
                error;
@@ -2659,7 +2749,7 @@ struct lsi_api_s
            ...
        }
      * @endcode
-     * @see shm_pool_init, shm_htable_add, shm_htable_get, shm_htable_set, shm_htable_update, shm_htable_clear
+     * @see shm_pool_init, shm_htable_add, shm_htable_find, shm_htable_get, shm_htable_set, shm_htable_update, shm_htable_clear
      */
     lsi_shmhash_t * ( *shm_htable_init )( lsi_shmpool_t *pShmpool, const char *pName, size_t initSize, lsi_hash_pf hash_pf, lsi_hash_value_comp_pf comp_pf );
 
@@ -2677,7 +2767,7 @@ struct lsi_api_s
      * @param[in] pValue - the new value to set in the hash table entry.
      * @param[in] valLen - the length of the value at pValue.
      * @return the offset to the entry value in the hash table, else 0 on error.
-     * @see shm_htable_init, shm_htable_add, shm_htable_get, shm_htable_update, shm_htable_off2ptr
+     * @see shm_htable_init, shm_htable_add, shm_htable_find, shm_htable_get, shm_htable_update, shm_htable_off2ptr
      */
     lsi_shm_off_t   ( *shm_htable_set )( lsi_shmhash_t *pShmhash, const uint8_t *pKey, int keyLen, const uint8_t *pValue, int valLen );
 
@@ -2694,7 +2784,7 @@ struct lsi_api_s
      * @param[in] pValue - the new value to set in the hash table entry.
      * @param[in] valLen - the length of the value at pValue.
      * @return the offset to the entry value in the hash table, else 0 on error.
-     * @see shm_htable_init, shm_htable_get, shm_htable_set, shm_htable_update, shm_htable_off2ptr
+     * @see shm_htable_init, shm_htable_find, shm_htable_get, shm_htable_set, shm_htable_update, shm_htable_off2ptr
      */
     lsi_shm_off_t   ( *shm_htable_add )( lsi_shmhash_t *pShmhash, const uint8_t *pKey, int keyLen, const uint8_t *pValue, int valLen );
 
@@ -2711,12 +2801,12 @@ struct lsi_api_s
      * @param[in] pValue - the new value to set in the hash table entry.
      * @param[in] valLen - the length of the value at pValue.
      * @return the offset to the entry value in the hash table, else 0 on error.
-     * @see shm_htable_init, shm_htable_add, shm_htable_get, shm_htable_set, shm_htable_off2ptr
+     * @see shm_htable_init, shm_htable_add, shm_htable_find, shm_htable_get, shm_htable_set, shm_htable_off2ptr
      */
     lsi_shm_off_t   ( *shm_htable_update )( lsi_shmhash_t *pShmhash, const uint8_t *pKey, int keyLen, const uint8_t *pValue, int valLen );
     
     /**
-     * @brief shm_htable_get gets a value from the hash table.
+     * @brief shm_htable_find finds a value in the hash table.
      * @details The key MUST currently exist in the table.
      * 
      * @since 1.0
@@ -2726,9 +2816,31 @@ struct lsi_api_s
      * @param[in] keyLen - the length of the key at pKey.
      * @param[out] pvalLen - the length of the value for this entry.
      * @return the offset to the entry value in the hash table, else 0 on error.
-     * @see shm_htable_init, shm_htable_add, shm_htable_get, shm_htable_set, shm_htable_off2ptr
+     * @see shm_htable_init, shm_htable_add, shm_htable_get, shm_htable_set, shm_htable_update, shm_htable_off2ptr
      */
-    lsi_shm_off_t   ( *shm_htable_get )( lsi_shmhash_t *pShmhash, const uint8_t *pKey, int keyLen, int *pvalLen ); 
+    lsi_shm_off_t   ( *shm_htable_find )( lsi_shmhash_t *pShmhash, const uint8_t *pKey, int keyLen, int *pvalLen ); 
+
+    /**
+     * @brief shm_htable_get gets an entry from the hash table.
+     * @details An entry is returned whether or not the key currently exists in the table;
+     *   i.e., if the key exists, it is returned (find), else a new one is created (add).
+     * 
+     * @since 1.0
+     * 
+     * @param[in] pShmhash - a pointer to the Shared Memory Hash Table object (from shm_htable_init).
+     * @param[in] pKey - the hash table entry key.
+     * @param[in] keyLen - the length of the key at pKey.
+     * @param[in,out] pvalLen - the length of the value for this entry.
+     * @param[in,out] pFlags - various flags (parameters and returns).
+     * - #LSI_SHM_INIT (in) - initialize (clear) entry IF and only if newly created.
+     * - #LSI_SHM_CREATED (out) - a new entry was created.
+     * @return the offset to the entry value in the hash table, else 0 on error.
+     * @note the parameter specified by the user at pvalLen is used only if a new entry is created (#LSI_SHM_CREATED is set);
+     *   else, the length of the existing entry value is returned through this pointer.
+     *   This parameter cannot change the size of an existing entry.
+     * @see shm_htable_init, shm_htable_add, shm_htable_find, shm_htable_set, shm_htable_update, shm_htable_off2ptr
+     */
+    lsi_shm_off_t   ( *shm_htable_get )( lsi_shmhash_t *pShmhash, const uint8_t *pKey, int keyLen, int *pvalLen, int *pFlags ); 
 
     /**
      * @brief shm_htable_delete deletes/removes a hash table entry.
@@ -2776,8 +2888,27 @@ struct lsi_api_s
     
     time_t ( *get_cur_time )( int32_t *usec );
     
+    /**
+     * @brief get_vhost_count gets the count of Virtual Hosts in the system.
+     * 
+     * @since 1.0
+     * 
+     * @return the count of Virtual Hosts.
+     */
+    int          ( *get_vhost_count )();
+    
+    /**
+     * @brief get_vhost gets a Virtual Host object.
+     * 
+     * @since 1.0
+     * 
+     * @param[in] index - the index of the Virtual Host, starting from 0.
+     * @return a pointer to the Virtual Host object.
+     */
+    const void * ( *get_vhost )( int index );
+    
+    
 };
-
 
 /**
  * 

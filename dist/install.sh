@@ -1,5 +1,89 @@
 #!/bin/sh
 
+inst_admin_php()
+{
+    # detect download method
+    OS=`uname -s`
+    OSTYPE=`uname -m`
+
+    DLCMD="wget -nv -O"
+    if [ "x$OS" = "xFreeBSD" ] ; then
+        DL=`which fetch`
+        DLCMD="$DL -o"
+    fi
+    if [ "x$DLCMD" = "x" ] ; then
+        DL=`which wget`
+        DLCMD="$DL -nv -O"
+    fi
+    if [ "x$DLCMD" = "x" ] ; then
+        DL=`which curl`
+        DLCMD="$DL -L -o"
+    fi
+
+    echo "DLCMD is $DLCMD"
+    echo
+    
+    HASADMINPHP=n
+
+    if [ -f "$LSWS_HOME/admin/fcgi-bin/admin_php" ] ; then
+    #    echo -e "\033[38;5;148mphp already exists, needn't to re-build\033[39m"
+        HASADMINPHP=y
+        echo "admin_php found."
+    else
+    
+        if [ ! -d "$LSWS_HOME/admin/fcgi-bin/" ] ; then
+            mkdir -p "$LSWS_HOME/admin/fcgi-bin/"
+            echo "Mkdir $LSWS_HOME/admin/fcgi-bin/ for installing admni_php"
+        fi
+        
+        if [ "x$OS" = "xLinux" ] && [ "x$DLCMD" != "x" ]  ; then
+            if [ "x$OSTYPE" != "xx86_64" ] ; then
+                $DLCMD $LSWS_HOME/admin/fcgi-bin/admin_php http://www.litespeedtech.com/packages/lsphp5_bin/i386/lsphp5
+            else
+                $DLCMD $LSWS_HOME/admin/fcgi-bin/admin_php http://www.litespeedtech.com/packages/lsphp5_bin/x86_64/lsphp5
+            fi
+            
+            if [ $? = 0 ] ; then 
+                HASADMINPHP=y
+                echo "admin_php downloaded."
+            fi
+            
+    #        if [ -f  "$LSWS_HOME/admin/fcgi-bin/admin_php" ] ; then
+    #            HASADMINPHP=y
+    #        fi
+
+        elif [ "x$OS" = "xFreeBSD" ] && [ "x$DLCMD" != "x" ]  ; then
+            if [ "x$OSTYPE" != "xamd64" ] ; then
+                $DLCMD $LSWS_HOME/admin/fcgi-bin/admin_php http://www.litespeedtech.com/packages/lsphp5_bin/i386-freebsd/lsphp5
+            else
+                $DLCMD $LSWS_HOME/admin/fcgi-bin/admin_php http://www.litespeedtech.com/packages/lsphp5_bin/x86_64-freebsd/lsphp5
+            fi
+            
+            if [ $? = 0 ] ; then 
+                HASADMINPHP=y
+                echo "admin_php downloaded."
+            fi
+            
+        fi
+    fi
+
+    if [ "x$HASADMINPHP" = "xn" ] ; then
+        echo -e "\033[38;5;148mStart to build php, this may take several minutes, please waiting ...\033[39m"
+        $LSWS_HOME/admin/misc/build_admin_php.sh
+    else
+        chmod "$EXEC_MOD" "$LSWS_HOME/admin/fcgi-bin/admin_php"
+    fi
+
+    #final checking of existence of admin_php
+    if [ ! -f "$LSWS_HOME/admin/fcgi-bin/admin_php" ] ; then
+        echo -e "\033[38;5;148mFinal checking found admin_php not exists, installation abort.\033[39m"
+        exit 1
+    fi
+}
+
+
+
+#script start here
 cd `dirname "$0"`
 source ./functions.sh 2>/dev/null
 if [ $? != 0 ]; then
@@ -42,14 +126,44 @@ if [ "$WS_GROUP" = "nobody" ] ; then
 fi
 
 
+PHP_INSTALLED=n
 INSTALL_TYPE="reinstall"
 if [ -f "$LSWS_HOME/conf/httpd_config.xml" ] ; then
+
+    printf '\033[31;42m\e[5mWarning:\e[25m\033[0m\033[31m This is a beta version. We recommend that you back up your current installation before trying \n\tthis version. Are you sure you want to overwrite your current version [Yes/No]?\033[0m '  
+    read Overwrite_Old
+    echo 
+
+    if [ "x$Overwrite_Old" = "x" ]; then
+        Overwrite_Old=No
+    fi
+
+    if [ "x$Overwrite_Old" != "xYes" ]; then
+        echo "Abort installation!" 
+        exit 0
+    fi
+    echo
+    
+    echo -e "\033[38;5;148m$LSWS_HOME/conf/httpd_config.xml exists, will be converted to $LSWS_HOME/conf/httpd_config.conf!\033[39m"
+    inst_admin_php
+    PHP_INSTALLED=y
+    
+    rm "$LSWS_HOME/conf/httpd_config.conf"
+    rm "$LSWS_HOME/DEFAULT/conf/vhconf.conf"
+    if [ ! -d "$LSWS_HOME/backup" ] ; then
+        mkdir "$LSWS_HOME/backup"
+    fi
+    $LSINSTALL_DIR/admin/misc/convertxml.sh $LSWS_HOME
+    rm "$LSWS_HOME/conf/httpd_config.xml"
+fi
+
+if [ -f "$LSWS_HOME/conf/httpd_config.conf" ] ; then
     INSTALL_TYPE="upgrade"
     #Now check if the user and group match with the conf file
-    OLD_USER_CONF=`grep "<user>" "$LSWS_HOME/conf/httpd_config.xml"`
-    OLD_GROUP_CONF=`grep "<group>" "$LSWS_HOME/conf/httpd_config.xml"`
-    OLD_USER=`expr "$OLD_USER_CONF" : '.*<user>\(.*\)</user>.*'`
-    OLD_GROUP=`expr "$OLD_GROUP_CONF" : '.*<group>\(.*\)</group>.*'`
+    OLD_USER_CONF=`grep "user" "$LSWS_HOME/conf/httpd_config.conf"`
+    OLD_GROUP_CONF=`grep "group" "$LSWS_HOME/conf/httpd_config.conf"`
+    OLD_USER=`expr "$OLD_USER_CONF" : '\s*user\s*\(\S*\)'`
+    OLD_GROUP=`expr "$OLD_GROUP_CONF" : '\s*group\s*\(\S*\)'`
     
     if [ "$WS_USER" = "$DEFAULT_USER" ] && [ "$WS_GROUP" = "$DEFAULT_GROUP" ] ; then
         WS_USER=$OLD_USER
@@ -57,11 +171,13 @@ if [ -f "$LSWS_HOME/conf/httpd_config.xml" ] ; then
     fi
     
     if [ "$OLD_USER" != "$WS_USER" ] || [ "$OLD_GROUP" != "$WS_GROUP" ]; then
-        echo -e "\033[38;5;148m$LSWS_HOME/conf/httpd_config.xml exists, but the user/group do not match, installing abort!\033[39m"
+        echo -e "\033[38;5;148m$LSWS_HOME/conf/httpd_config.conf exists, but the user/group do not match, installing abort!\033[39m"
         echo -e "\033[38;5;148mYou may change the user/group or remove the direcoty $LSWS_HOME and re-install.\033[39m"
         exit 1
     fi
 fi
+
+echo "INSTALL_TYPE is $INSTALL_TYPE"
 
 DIR_OWN=$WS_USER:$WS_GROUP
 CONF_OWN=$WS_USER:$WS_GROUP
@@ -89,69 +205,13 @@ fi
 buildConfigFiles
 installation
 
+if [ "x$PHP_INSTALLED" = "xn" ] ; then
+    inst_admin_php
+fi
+
 rm $LSWS_HOME/bin/lshttpd
 ln -sf ./openlitespeed $LSWS_HOME/bin/lshttpd
 
-
-# detect download method
-OS=`uname -s`
-OSTYPE=`uname -m`
-
-DLCMD=
-if [ "x$OS" = "xFreeBSD" ] ; then
-    DL=`which fetch`
-    DLCMD="$DL -o"
-fi
-if [ "x$DLCMD" = "x" ] ; then
-    DL=`which wget`
-    DLCMD="$DL -nv -O"
-fi
-if [ "x$DLCMD" = "x" ] ; then
-    DL=`which curl`
-    DLCMD="$DL -L -o"
-fi
-
-HASADMINPHP=n
-
-if [ -f "$LSWS_HOME/admin/fcgi-bin/admin_php" ] ; then
-#    echo -e "\033[38;5;148mphp already exists, needn't to re-build\033[39m"
-    HASADMINPHP=y
-else
-    if [ "x$OS" = "xLinux" ] && [ "x$DLCMD" != "x" ]  ; then
-        if [ "x$OSTYPE" != "xx86_64" ] ; then
-            $DLCMD $LSWS_HOME/admin/fcgi-bin/admin_php http://www.litespeedtech.com/packages/lsphp5_bin/i386/lsphp5
-        else
-            $DLCMD $LSWS_HOME/admin/fcgi-bin/admin_php http://www.litespeedtech.com/packages/lsphp5_bin/x86_64/lsphp5
-        fi
-        
-        if [ $? = 0 ] ; then 
-            HASADMINPHP=y
-        fi
-        
-#        if [ -f  "$LSWS_HOME/admin/fcgi-bin/admin_php" ] ; then
-#            HASADMINPHP=y
-#        fi
-
-    elif [ "x$OS" = "xFreeBSD" ] && [ "x$DLCMD" != "x" ]  ; then
-        if [ "x$OSTYPE" != "xamd64" ] ; then
-            $DLCMD $LSWS_HOME/admin/fcgi-bin/admin_php http://www.litespeedtech.com/packages/lsphp5_bin/i386-freebsd/lsphp5
-        else
-            $DLCMD $LSWS_HOME/admin/fcgi-bin/admin_php http://www.litespeedtech.com/packages/lsphp5_bin/x86_64-freebsd/lsphp5
-        fi
-        
-        if [ $? = 0 ] ; then 
-            HASADMINPHP=y
-        fi
-        
-    fi
-fi
-
-if [ "x$HASADMINPHP" = "xn" ] ; then
-    echo -e "\033[38;5;148mStart to build php, this may take several minutes, please waiting ...\033[39m"
-    $LSWS_HOME/admin/misc/build_admin_php.sh
-else
-    chmod "$EXEC_MOD" "$LSWS_HOME/admin/fcgi-bin/admin_php"
-fi
 
 if [ ! -f "$LSWS_HOME/admin/conf/htpasswd" ] ; then
     ENCRYPT_PASS=`"$LSWS_HOME/admin/fcgi-bin/admin_php" -q "$LSWS_HOME/admin/misc/htpasswd.php" $PASS_ONE`

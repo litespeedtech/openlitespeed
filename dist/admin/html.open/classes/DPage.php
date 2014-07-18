@@ -2,126 +2,130 @@
 
 class DPage
 {
-	var $_type;//serv, vh, sl, admin
-	var $_id;
-	var $_name;
-	var $_title;
-	var $_helpLink;
-	var $_tblIds;
-	var $_includeScript;
+	private $_id;
+	private $_label;
+	private $_tblmap;
 
-	public function __construct($type, $id, $name, $title, $tblIds)
+	private $_printdone;
+	private $_disp_tid;
+	private $_disp_ref;
+	private $_extended;
+	private $_linked_tbls;
+
+	public function __construct($id, $label, $tblmap)
 	{
-		$this->_type = $type;
 		$this->_id = $id;
-		$this->_name = $name;
-		$this->_title = $title;
-		$this->_tblIds = $tblIds;
-		$this->_helpLink = 'index.html';
+		$this->_label = $label;
+		$this->_tblmap = $tblmap;
 	}
 
-	public function PrintHtml(&$confData, $disp)
+	public function GetID()
 	{
-		$viewTags = 'vbsDdBCiI';
-		$editTags = 'eEaScn';
-		$isEdit = ( strpos($editTags, $disp->_act) !== FALSE );
-
-		if ( $disp->_act == 'd' || $disp->_act == 'i' )
-			$this->printActionConfirm($disp);
-
-		if ( $disp->_err != NULL )
-		{
-			echo GUIBase::message("",$disp->_err,"error");
-		}
-
-		$tblDef = DTblDef::GetInstance();
-		if ( $disp->_tid == NULL )
-		{
-			$tids = &$this->_tblIds;
-		}
-		else
-		{
-			$tid = DUtil::getLastId($disp->_tid);
-			$tids = array($tid);
-		}
-		$ref = DUtil::getLastId($disp->_ref);
-
-		foreach ($tids as $ti )
-		{
-			$tbl = $tblDef->GetTblDef($ti);
-			$isExtract = false;
-
-			if ( $disp->_act == 'a' ) {
-				$d = array();
-			}
-			else if ( $disp->_act == 'S'
-					  || $disp->_act == 'c'
-					  || $disp->_act == 'n') //save failed or in change
-			{
-				$isExtract = true;
-				$d = &$confData;
-			}
-			else
-			{
-				$d = DUtil::locateData($confData, $tbl->_dataLoc, $disp->_ref);
-			}
-			if ( $tbl->_holderIndex != NULL )
-			{
-				if ( $disp->_act == 'e' || $disp->_act == 'E' || $disp->_act == 'a')
-				{
-					$disp->_info['holderIndex'] = is_array($d)? array_keys($d):NULL;
-					$disp->_info['holderIndex_cur'] = $ref;
-				}
-				if ( !$isExtract && $ref != NULL && substr($ti, -3) != 'TOP')
-					$d = &$d[$ref];
-			}
-			else
-				$disp->_info['holderIndex'] = NULL;
-
-
-			echo "<div>";
-			$tbl->PrintHtml($d, $ref, $disp, $isEdit);
-			echo "</div>";
-
-			if ($isEdit == FALSE && $tbl->_linkedTbls != NULL && isset($tbl->_linkedTbls['disp'])) {
-				foreach($tbl->_linkedTbls['disp'] as $lti) {
-					$linkedtbl = $tblDef->GetTblDef($lti);
-					$dlinked = DUtil::locateData($d, $linkedtbl->_dataLoc);
-					echo "<div>";
-					$linkedtbl->PrintHtml($dlinked, $ref, $disp, FALSE);
-					echo "</div>";
-				}
-			}
-
-		}
-
-
+		return $this->_id;
 	}
 
-	private function printActionConfirm($disp)
+	public function GetLabel()
 	{
-		$hasB = (strpos($disp->_tid, '`') !== false );
-		echo '<div class=message>';
-		if ( $disp->_act == 'd' )
-		{
-			$actString = $hasB ? 'DC' : 'Dc';
-			//should validate whether there is reference to this entry
-			echo 'Are you sure you want to delete this entry?<br>'.
-				'<span class="edit-link">'.
-				DTbl::getActionLink($disp, $actString) . '</span>'.
-				'<br>This will be permanently removed from the configuration file.';
+		return $this->_label;
+	}
+
+	public function GetTblMap()
+	{
+		return $this->_tblmap;
+	}
+
+	public function PrintHtml($disp)
+	{
+		$this->_disp_tid = $disp->Get(DInfo::FLD_TID);
+		$this->_disp_ref = $disp->Get(DInfo::FLD_REF);
+
+		$this->_linked_tbls = NULL;
+		$this->_extended = TRUE;
+		if ($this->_disp_tid == '') {
+			$this->_extended = FALSE;
 		}
-		else if ( $disp->_act == 'i' )
-		{
-			$actString = $hasB ? 'IC' : 'Ic';
-			echo 'Are you sure you want to instantiate this virtual host?<br>'.
-				'<span class="edit-link">'.
-				DTbl::getActionLink($disp, $actString) . '</span>'.
-				'<br>This will create a dedicated configuration file for this virtual host.';
+		elseif (($last = strrpos($this->_disp_tid, '`')) > 0) {
+			$this->_disp_tid = substr($this->_disp_tid, $last+1);
 		}
 
-		echo "</div>";
+		if (($topmesg = $disp->Get(DInfo::FLD_TopMsg)) != NULL) {
+			foreach($topmesg as $tm) {
+				echo GUIBase::message('', $tm, 'error');
+			}
+		}
+
+		$root = $disp->Get(DInfo::FLD_PgData);
+		if ($root == NULL)
+			return;
+
+		if ($root->Get(CNode::FLD_KEY) == CNode::K_EXTRACTED) {
+			$this->print_tbl($this->_disp_tid, $root, $disp);
+		}
+		else {
+			$this->_printdone = FALSE;
+			$this->print_map($this->_tblmap, $root, $disp);
+		}
+
+		if ($disp->IsViewAction() && $this->_linked_tbls != NULL) {
+			$this->_extended = TRUE;
+			$disp->SetPrintingLinked(TRUE);
+			foreach( $this->_linked_tbls as $lti) {
+				$this->_disp_tid = $lti;
+				$this->_disp_ref = $disp->Get(DInfo::FLD_REF);
+				$this->_printdone = FALSE;
+				$this->print_map($this->_tblmap, $root, $disp);
+			}
+			$disp->SetPrintingLinked(FALSE);
+		}
+	}
+
+	private function print_map($tblmap, $node, $disp)
+	{
+		$dlayer = ($node == NULL) ? NULL : $node->LocateLayer($tblmap->GetLoc());
+		$maps = $tblmap->GetMaps($this->_extended);
+		foreach ($maps as $m)
+		{
+			if (is_a($m, 'DTblMap')) {
+				if (is_array($dlayer)) {
+					$ref = $this->_disp_ref;
+					if (($first = strpos($ref, '`')) > 0) {
+						$this->_disp_ref = substr($ref, $first+1);
+						$ref = substr($ref, 0, $first);
+					}
+					else {
+						$this->_disp_ref = '';
+					}
+					$dlayer = $dlayer[$ref];
+				}
+				$this->print_map($m, $dlayer, $disp);
+				if ($this->_printdone)
+					break;
+			}
+			else {
+				if ($m != NULL && ($this->_disp_tid == '' || $this->_disp_tid == $m)) {
+					$this->print_tbl($m, $dlayer, $disp);
+					if ($this->_disp_tid == $m) {
+						$this->_printdone = TRUE;
+						break;
+					}
+				}
+			}
+		}
 
 	}
+
+	private function print_tbl($tid, $dlayer, $disp)
+	{
+		$tbl = DTblDef::getInstance()->GetTblDef($tid);
+		$tbl->PrintHtml($dlayer, $disp);
+
+		if ($tbl->_linkedTbls != NULL) {
+			if ($this->_linked_tbls == NULL)
+				$this->_linked_tbls = $tbl->_linkedTbls;
+			else
+				$this->_linked_tbls = array_merge($this->_linked_tbls, $tbl->_linkedTbls);
+		}
+	}
+
+
 }
-

@@ -2,7 +2,7 @@
 
 class DAttr extends DAttrBase
 {
-   
+
 	public function blockedVersion()
 	{
 		// no restriction
@@ -11,6 +11,6 @@ class DAttr extends DAttrBase
 
 	public function bypassSavePost()
 	{
-		return ($this->_FDE[2] == 'N');
-	}	
+		return ($this->IsFlagOn(DAttr::BM_NOEDIT));
+	}
 }

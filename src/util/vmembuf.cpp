@@ -616,7 +616,6 @@ int VMemBuf::grow()
 }
 
 
-
 char * VMemBuf::getReadBuffer( size_t &size )
 {
     if (( !m_pCurRBlock )||( m_pCurRPos >= (*m_pCurRBlock)->getBufEnd() ))

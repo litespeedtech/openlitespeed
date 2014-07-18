@@ -28,9 +28,70 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 
+#define ShmClientMagic  0x20140601
+#define ShmClientInfo   "ClientInfo"
+#define ShmClientHash   "ClientHash"
+
+
+#if 0
+TShmClientPool * ClientInfo::s_base = NULL;
+
+int ClientInfo::shmData_init(lsShm_hCacheData_t * p, void * pUParam)
+{
+    TShmClient * pObj = (TShmClient*)p;
+    ClientInfo * pInfo = (ClientInfo *)pObj;
+    
+    // Sample code for init... 
+    pObj->x_ctlThrottle = pInfo->m_ctlThrottle;
+    pObj->x_iConns = pInfo->m_iConns;
+    pObj->x_tmOverLimit = pInfo->m_tmOverLimit;
+    pObj->x_sslNewConn = pInfo->m_sslNewConn;
+    pObj->x_iHits = pInfo->m_iHits;
+    pObj->x_lastConnect = pInfo->m_lastConnect;
+    pObj->x_iAccess = pInfo->m_iAccess;
+    return 0;
+}
+
+int ClientInfo::shmData_remove(lsShm_hCacheData_t * p, void * pUParam)
+{
+    // TShmClient * pObj = (TShmClient*)p;
+    // Need to do something here...
+    // ClientInfo * pInfo = (ClientInfo *)pObj;
+    
+    // Sample code for remove... 
+    return 0;
+}
+#endif
+
 ClientInfo::ClientInfo()
     : m_pGeoInfo( NULL )
-{}
+{
+#if 0
+    m_pShmClient = NULL;
+    m_clientOffset = 0;
+    // Only need to do this once!
+    if (!s_base)
+    {
+       // s_base = new TShmClientPool
+        s_base = new TShmClientPool ( ShmClientMagic
+                                    , ShmClientInfo
+                                    , ShmClientHash
+                                    , 101
+                                    , sizeof(TShmClient)
+                                    , LsShmHash::hash_buf
+                                    , LsShmHash::comp_buf
+                                    , shmData_init
+                                    , shmData_remove
+                                   );
+        if (s_base && (s_base->status() != LSSHM_READY))
+        {
+            delete s_base;
+            s_base = NULL;
+        }
+    }
+#endif
+    ;
+}
 
 
 ClientInfo::~ClientInfo()
@@ -51,6 +112,31 @@ void ClientInfo::setAddr( const struct sockaddr * pAddr )
     {
         len = 24; strLen = 41;
     }
+    
+#if 0
+    if (s_base)
+    {
+        // remove the old one
+        if (m_clientOffset)
+        {
+            // uhmmm probably not to remove...
+            s_base->removeObj((lsShm_hCacheData_t*) s_base->offset2ptr(m_clientOffset) );
+        }
+        
+        m_pShmClient = (TShmClient*)s_base->getObj(pAddr, len, NULL , sizeof( TShmClient ));
+        // initialize the data here...
+        if (m_pShmClient)
+        {
+            // track it
+            s_base->push((lsShm_hCacheData_t*)m_pShmClient);
+            m_clientOffset = s_base->ptr2offset(m_pShmClient);
+        }
+        else
+        {
+            m_clientOffset = 0;
+        }
+    }
+#endif
     memmove( m_achSockAddr, pAddr, len );
     m_sAddr.resizeBuf( strLen );
     if ( m_sAddr.buf() )

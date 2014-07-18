@@ -4,22 +4,22 @@ require_once("../includes/auth.php");
 
 
 //input
-$vhost = DUtil::getGoodVal(DUtil::grab_input("get","vhost"));
-$extapp = DUtil::getGoodVal(DUtil::grab_input("get","extapp"));
-$items_original = DUtil::getGoodVal(DUtil::grab_input("get","items"));
+$vhost = GUIBase::GrabGoodInput("get","vhost");
+$extapp = GUIBase::GrabGoodInput("get","extapp");
+$items_original = GUIBase::GrabGoodInput("get","items");
 $items = explode(",",$items_original);
 
-$yaxis = DUtil::getGoodVal(DUtil::grab_input("get","yaxis"));
+$yaxis = GUIBase::GrabGoodInput("get","yaxis");
 
-$titles_original = DUtil::getGoodVal(DUtil::grab_input("get","titles"));
+$titles_original = GUIBase::GrabGoodInput("get","titles");
 $titles = explode(',',$titles_original);
 
-$colors_original = DUtil::getGoodVal(DUtil::grab_input("get","colors"));
+$colors_original = GUIBase::GrabGoodInput("get","colors");
 $colors = explode(',',$colors_original);
 
 
-$live = DUtil::getGoodVal(DUtil::grab_input("get","live"));
-$live_interval = DUtil::getGoodVal(DUtil::grab_input("get","live_interval","int"));
+$live = GUIBase::GrabGoodInput("get","live");
+$live_interval = GUIBase::GrabGoodInput("get","live_interval","int");
 
 if($live_interval < 10) {
 	$live_interval = 10;
@@ -30,7 +30,7 @@ $stats = new STATS();
 $stats->parse_litespeed();
 
 //client
-$client = CLIENT::singleton();
+$client = CClient::singleton();
 
 //pointer to area of interest
 $region = &$stats;
@@ -56,12 +56,12 @@ if(strlen($vhost) && strlen($extapp)) {
 	}
 	else {
 		$region = &$stats->vhosts[$vhost]->extapps[$extapp];
-		
+
 	}
 }
 
 if($region == NULL) {
-	die('invalid region');	
+	die('invalid region');
 }
 
 if(count($items) == 0) {

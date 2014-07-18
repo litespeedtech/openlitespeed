@@ -60,11 +60,8 @@ if [ "x$PLF" = "xx86_64" ] ; then
         fi
 fi
 
-find . -name '*.1' > /tmp/php-1.lst.$$
-tar -cf /tmp/php-1.tar.$$ -T /tmp/php-1.lst.$$
+
 make clean
-tar -xf /tmp/php-1.tar.$$
-rm /tmp/php-1.tar.$$ /tmp/php-1.lst.$$
 
 main_msg "Compiling PHP (5-10 minutes)" 
 echo `date`

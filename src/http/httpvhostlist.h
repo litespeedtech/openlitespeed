@@ -44,6 +44,7 @@ public:
     int add( HttpVHost * pHost );
     int remove( HttpVHost* pHost );
     HttpVHost* get( const char * pName ) const;
+    HttpVHost* get( int index ) const;  //The index here just base on the order in the map, not added order
     int size() const;
     void appendTo( VHostList& list );
     void swap( HttpVHostMap& rhs );

@@ -51,6 +51,7 @@ class HttpServerConfig
     int32_t     m_iRequiredBits;
     int32_t     m_iScriptForbiddenBits;
     int32_t     m_iDirForbiddenBits;
+    int32_t     m_iRestartTimeout;
 
     HttpServerConfig( const HttpServerConfig& rhs );
 public:
@@ -62,6 +63,9 @@ public:
     void setConnTimeOut( int32_t timeout )  {   m_iConnTimeout = timeout;   }
     int32_t getConnTimeout() const          {   return m_iConnTimeout;      }
 
+    void setRestartTimeOut( int32_t timeout )  {   m_iRestartTimeout = timeout;   }
+    int32_t getRestartTimeout() const          {   return m_iRestartTimeout;      }
+    
     void setKeepAliveTimeout( int32_t t )   {   m_iKeepAliveTimeout = t;    }
     int32_t getKeepAliveTimeout() const     {   return m_iKeepAliveTimeout; }
         

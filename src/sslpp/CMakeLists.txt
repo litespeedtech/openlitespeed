@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 2.8)
 
 ########### next target ###############
 
-SET(sslpp_STAT_SRCS
+SET(sslpp_STAT_SRCS sslsession.cpp
    sslengine.cpp
    sslcert.cpp
    sslerror.cpp
@@ -13,7 +13,9 @@ SET(sslpp_STAT_SRCS
    ../http/requestvars.cpp
 )
 
-add_library(sslpp STATIC ${sslpp_STAT_SRCS})
+add_library(sslpp STATIC ${sslpp_STAT_SRCS} )
+
+find_library( lsshm liblsshm.a )
 
 
 ########### install files ###############

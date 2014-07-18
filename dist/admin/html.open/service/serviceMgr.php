@@ -5,10 +5,10 @@ require_once('../includes/auth.php');
 // this will force login
 $product = PRODUCT::GetInstance();
 
-$act = DUtil::getGoodVal(DUtil::grab_input("get",'act'));
-$actId = DUtil::getGoodVal(DUtil::grab_input("get",'actId'));
-$vl = DUtil::getGoodVal(DUtil::grab_input("get",'vl'));
-$tk = DUtil::getGoodVal(DUtil::grab_input("get",'tk'));
+$act = GUIBase::GrabGoodInput("get",'act');
+$actId = GUIBase::GrabGoodInput("get",'actId');
+$vl = GUIBase::GrabGoodInput("get",'vl');
+$tk = GUIBase::GrabGoodInput("get",'tk');
 
 // validate all inputs
 $actions = array('', 'restart', 'toggledbg', 'enable', 'disable');
@@ -18,19 +18,13 @@ if (!in_array($vl, $vloptions) || !in_array($act, $actions)) {
 	echo "Illegal Entry Point!";
 	return; // illegal entry
 }
-if ($act != '') {	
-	$client = CLIENT::singleton();
-	if ($tk != $client->token) {
-		echo "Illegal Entry Point!";
-		return; // illegal entry
-	}
-}
 
-$confCenter = ConfCenter::singleton();
+if ($act != '' && $tk != $_SESSION['token']) {
+	die("Illegal Entry Point!");
+}
 
 $service = new Service();
 $service->init();
-$service->refreshConf($confCenter->ExportConf());
 
 //check if require restart
 if ($act == 'restart' && $actId == '')
@@ -42,22 +36,21 @@ if ($act == 'restart' && $actId == '')
 elseif (in_array($act, array('toggledbg', 'enable', 'disable', 'restart'))) //other no-restart actions
 {
 	if ($act == 'disable' || $act == 'enable') {
-		$confCenter->enableDisableVh($act, $actId);
+		$service->enableDisableVh($act, $actId);
 	}
-	
+
 	$service->process($act, $actId);
 }
 
-echo GUI::header($service->serv['name']);
 echo GUI::top_menu();
 
-switch($vl) 
+switch($vl)
 {
 	case '1': include 'logViewer.php';
 		break;
 	case '2': include 'realtimeReport.php';
 		break;
-		
+
 	default: include 'homeCont.php';
 		break;
 }

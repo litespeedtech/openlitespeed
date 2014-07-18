@@ -31,7 +31,7 @@ const char * LsiApiHooks::s_pHkptName[LSI_HKPT_TOTAL_COUNT] =
     "MAIN_POSTFORK",
     "WORKER_POSTFORK",
     "WORKER_ATEXIT",
-    "MAIN_ATEXIT",
+    "MAIN_ATEXIT"
 };
 
 IolinkSessionHooks * LsiApiHooks::m_pIolinkHooks = NULL;

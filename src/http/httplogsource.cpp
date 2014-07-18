@@ -38,8 +38,8 @@ int HttpLogSource::initAccessLog( const XmlNode *pRoot,
                                       int setDebugLevel )
 {
     ConfigCtx currentCtx( "accesslog" );
-    const XmlNode *p0 = pRoot->getChild( "logging", 1 );
-    const XmlNode *pNode1 = p0->getChild( "accessLog" );
+    //const XmlNode *p0 = pRoot->getChild( "logging", 1 );
+    const XmlNode *pNode1 = pRoot->getChild( "accessLog" );
 
     if ( pNode1 == NULL )
     {
@@ -223,21 +223,8 @@ int HttpLogSource::initErrorLog( const XmlNode *pRoot,
                                      int setDebugLevel )
 {
     ConfigCtx currentCtx( "errorLog" );
-    int confType = 0;
-    const XmlNode *p0 = pRoot->getChild( "logging" );
-
-    if ( !p0 )
-    {
-        confType = 1;
-        p0 = pRoot;
-    }
-
     const XmlNode *pNode1 = NULL;
-
-    if ( confType == 0 )
-        pNode1 = p0->getChild( "log" );
-    else
-        pNode1 = p0->getChild( "errorLog" );
+    pNode1 = pRoot->getChild( "errorLog" );
 
     if ( pNode1 == NULL )
     {

@@ -73,6 +73,8 @@ public:
     int updateVHost( const char *pName, HttpVHost * pVHost );
     int removeVHost( const char *pName );
     HttpVHost* getVHost( const char * pName ) const;
+    void checkSuspendedVHostList( HttpVHost * pVHost );
+    
 
 //     int mapListenerToVHost( HttpListener * pListener,
 //                             const char * pKey,
@@ -89,6 +91,9 @@ public:
                                 
     AccessControl* getAccessCtrl() const;
     int  getVHostCounts() const;
+    HttpVHost *getVHost( int index ) const;
+    
+    
     void beginConfig();
     void endConfig( int error );
     void onTimer();
@@ -109,6 +114,7 @@ public:
     const char * getSwapDir();
     int setupSwap();
 
+    
     const AutoStr2 * getErrDocUrl( int statusCode ) const;
     void releaseAll();
     virtual void setLogLevel( const char * pLevel );

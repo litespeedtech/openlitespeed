@@ -4,7 +4,6 @@ class DPageDef
 {
 	protected $_pageDef = array();
 	protected $_fileDef = array();
-	protected $_tabDef = array();
 
 	protected function __construct()
 	{
@@ -19,11 +18,19 @@ class DPageDef
 		return $GLOBALS['_DPageDef_'];
 	}
 
-	public function GetFileDef($type)
+	public static function GetPage($dinfo)
+	{
+		$pagedef = DPageDef::GetInstance();
+		$type = $dinfo->Get(DInfo::FLD_View);
+		$pid = $dinfo->Get(DInfo::FLD_PID);
+		return $pagedef->_pageDef[$type][$pid];
+	}
+
+	public function GetFileMap($type)
 	{
 		if ( !isset($this->_fileDef[$type]) )
 		{
-			$funcname = 'add_FilePage_' . $type;
+			$funcname = 'add_FileMap_' . $type;
 			if (!method_exists($this, $funcname)) {
 				die("invalid func name $funcname");
 			}
@@ -32,316 +39,349 @@ class DPageDef
 		return $this->_fileDef[$type];
 	}
 
-	public function GetPageDef($type, $pid)
+	private function add_FileMap_serv()
 	{
-		return $this->_pageDef[$type][$pid];
+		$map = new DTblMap(array('httpServerConfig', ''), // loadBalancerConfig
+				array('S_PROCESS',
+						'S_GENERAL',
+						new DTblMap(array('logging:log','errorlog$fileName'), 'S_LOG'),
+						new DTblMap(array('logging:accessLog','accesslog$fileName'), 'S_ACLOG'),
+						'S_INDEX',
+						new DTblMap('expires', 'A_EXPIRES'),
+						new DTblMap(array('ipToGeo:geoipDB','geoipdb$geoipDBFile'), 'S_GEOIP'),
+						new DTblMap('tuning',
+								array('S_TUNING_OS', 'S_TUNING_CONN', 'S_TUNING_REQ', 'S_TUNING_STATIC', 'S_TUNING_GZIP')),
+						new DTblMap(array('security:fileAccessControl','fileAccessControl'), 'S_SEC_FILE'),
+						new DTblMap(array('security:perClientConnLimit','perClientConnLimit'), 'S_SEC_CONN'),
+						new DTblMap(array('security:CGIRLimit','CGIRLimit'), 'S_SEC_CGI'),
+						new DTblMap(array('security:accessDenyDir','accessDenyDir'), 'S_SEC_DENY'),
+						new DTblMap(array('security:accessControl','accessControl'), 'A_SEC_AC'),
+						new DTblMap(array('extProcessorList:*extProcessor','*extprocessor$name'), 'A_EXT_SEL'),
+						new DTblMap(array('scriptHandlerList','scripthandler'),
+								new DTblMap(array('*scriptHandler','*addsuffix$suffix'), 'A_SCRIPT')),
+						new DTblMap('railsDefaults', 'S_RAILS'),
+						new DTblMap(array('moduleList:*module','*module$name'), 'S_MOD'),
+						new DTblMap(array('virtualHostList:*virtualHost','*virtualhost$name'), 'V_TOPD'),
+						new DTblMap(array('listenerList:*listener','*listener$name'),
+								array('L_GENERAL',
+										new DTblMap(array('vhostMapList:*vhostMap','*vhmap$vhost'), 'L_VHMAP'),
+										'LVT_SSL_CERT', 'LVT_SSL', 'L_SSL_FEATURE', 'LVT_SSL_OCSP', 'LVT_SSL_CLVERIFY',
+										new DTblMap(array('moduleList:*module','*module$name'), 'L_MOD'))),
+						new DTblMap(array('vhTemplateList:*vhTemplate','*vhTemplate$name'),
+								array('T_TOPD', new DTblMap(array('*member','*member$vhName'), 'T_MEMBER'))),
+						'SERVICE_SUSPENDVH'	));
+
+			$this->_fileDef['serv'] = $map;
+		}
+
+	private function add_FileMap_vh()
+	{
+		$map = new DTblMap(array('virtualHostConfig', ''),
+				array('V_GENERAL',
+						new DTblMap(array('logging:log','errorlog$fileName'), 'V_LOG'),
+						new DTblMap(array('logging:accessLog','accesslog$fileName'), 'V_ACLOG'),
+						new DTblMap('index', 'VT_INDXF'),
+						new DTblMap(array('customErrorPages:errorPage', 'errorpage$errCode'), 'VT_ERRPG'),
+						new DTblMap(array('scriptHandlerList','scripthandler'),
+								new DTblMap(array('*scriptHandler','*addsuffix$suffix'), 'A_SCRIPT')),
+						new DTblMap('expires', 'A_EXPIRES'),
+						new DTblMap(array('security:accessControl','accessControl'), 'A_SEC_AC'),
+						new DTblMap(array('security:realmList:*realm','*realm$name'), 'V_REALM_FILE'),
+						new DTblMap(array('extProcessorList:*extProcessor','*extprocessor$name'), 'A_EXT_SEL'),
+						new DTblMap(array('contextList:*context', '*context$uri'), 'VT_CTX_SEL'),
+						new DTblMap('rewrite',
+								array('VT_REWRITE_CTRL',
+										new DTblMap(array('*map', '*map$name'), 'VT_REWRITE_MAP'),
+						'VT_REWRITE_RULE')),
+						new DTblMap('vhssl',
+								array('LVT_SSL_CERT', 'LVT_SSL', 'VT_SSL_FEATURE', 'LVT_SSL_OCSP', 'LVT_SSL_CLVERIFY')),
+						new DTblMap(array('websocketList:*websocket', '*websocket$uri'), 'VT_WBSOCK'),
+						new DTblMap(array('moduleList:*module','*module$name'),
+								array('VT_MOD',
+										new DTblMap(array('urlFilterList:*urlFilter', '*urlFilter$uri'), 'VT_MOD_FILTER')))
+						));
+
+		$this->_fileDef['vh'] = $map;
 	}
 
-	public function GetTabDef($type)
+	private function add_FileMap_tp()
 	{
-		return $this->_tabDef[$type];
-	}
+		$map = new DTblMap(array('virtualHostTemplate', ''),
+				array('T_GENERAL1', 'T_SEC_FILE', 'T_SEC_CONN', 'T_SEC_CGI',
+						new DTblMap('virtualHostConfig',
+								array('T_GENERAL2',
+										new DTblMap(array('logging:log','errorlog$fileName'), 'T_LOG'),
+										new DTblMap(array('logging:accessLog','accesslog$fileName'), 'T_ACLOG'),
+										new DTblMap('index', 'VT_INDXF'),
+										new DTblMap(array('customErrorPages:errorPage', 'errorpage$errCode'), 'VT_ERRPG'),
+										new DTblMap(array('scriptHandlerList','scripthandler'),
+												new DTblMap(array('*scriptHandler','*addsuffix$suffix'), 'A_SCRIPT')),
+										new DTblMap('expires', 'A_EXPIRES'),
+										new DTblMap(array('security:accessControl','accessControl'), 'A_SEC_AC'),
+										new DTblMap(array('security:realmList:*realm','*realm$name'), 'T_REALM_FILE'),
+										new DTblMap(array('extProcessorList:*extProcessor','*extprocessor$name'), 'T_EXT_SEL'),
+										new DTblMap(array('contextList:*context', '*context$uri'), 'VT_CTX_SEL'),
+										new DTblMap('rewrite',
+												array('VT_REWRITE_CTRL',
+														new DTblMap(array('*map', '*map$name'), 'VT_REWRITE_MAP'),
+										'VT_REWRITE_RULE')),
+										new DTblMap('vhssl',
+												array('LVT_SSL_CERT', 'LVT_SSL', 'VT_SSL_FEATURE', 'LVT_SSL_OCSP', 'LVT_SSL_CLVERIFY')),
+										new DTblMap(array('websocketList:*websocket', '*websocket$uri'), 'VT_WBSOCK'),
+										new DTblMap(array('moduleList:*module','*module$name'),
+												array('VT_MOD',
+														new DTblMap(array('urlFilterList:*urlFilter', '*urlFilter$uri'), 'VT_MOD_FILTER')))
+								))));
 
-	protected function add_FilePage_serv()
+			$this->_fileDef['tp'] = $map;
+		}
+
+	private function add_FileMap_admin()
 	{
-		$pages = array();
-		$pages[] = new DFileSect(
-			array(
-				'SERV_PROCESS', 'SERV_GENERAL',
-				'SERV_LOG', 'SERV_ACLOG', 'SERV_INDEX',
-				'SERV_EXPIRES',
-				'A_GEOIP',
-				'SERV_TUNING_OS', 'SERV_TUNING_CONN', 'SERV_TUNING_REQ', 'SERV_TUNING_STATIC', 'SERV_TUNING_GZIP',
-				'SERV_SEC_FILE', 'SERV_SEC_CONN', 'SERV_SEC_CGI',
-				'SERV_SEC_DENY',
-				'A_SECAC', 'A_EXT_SEL',	'A_SCRIPT',
-				'S_RAILS', 'SERV_MODULE',
-				'VH_TOP_D', 'SERVICE_SUSPENDVH'
+		$map = new DTblMap(array('adminConfig', ''),
+				array('ADM_PHP',
+						new DTblMap(array('logging:log','errorlog$fileName'), 'V_LOG'),
+						new DTblMap(array('logging:accessLog','accesslog$fileName'), 'ADM_ACLOG'),
+						new DTblMap(array('security:accessControl','accessControl'), 'A_SEC_AC'),
+						new DTblMap(array('listenerList:*listener','*listener$name'),
+								array('ADM_L_GENERAL', 'LVT_SSL_CERT', 'LVT_SSL', 'L_SSL_FEATURE', 'LVT_SSL_CLVERIFY'))
 				));
 
-		$pages[] = new DFileSect(
-			array('L_GENERAL', 'L_VHMAP', 'L_SSL_CERT', 'L_SSL', 'L_SSL_FEATURE', 'L_SSL_OCSP', 'L_SSL_CLIENT_VERIFY', 'L_MODULE'),
-			'listenerList:listener', 'listeners', 'name' );
-
-		$pages[] = new DFileSect(
-			array('TP', 'TP_MEMBER'),
-			'vhTemplateList:vhTemplate', 'tpTop', 'name');
-
-		$this->_fileDef['serv'] = &$pages;
+		$this->_fileDef['admin'] = $map;
 	}
 
-	protected function add_FilePage_vh()
+	public function GetTabDef($view)
 	{
-		$pages = array();
-		$pages[] = new DFileSect(
-			array(
-				'VH_GENERAL', 'VH_LOG', 'VH_ACLOG', 'VH_INDXF', 'VH_ERRPG',
-				'A_SCRIPT',	'VH_EXPIRES',
-				'A_SECAC', 'VH_REALM_SEL',
-				'A_EXT_SEL', 'VH_CTX_SEL',
-				'VH_REWRITE_CTRL', 'VH_REWRITE_MAP', 'VH_REWRITE_RULE',
-				'VH_SSL_CERT', 'VH_SSL_SSL', 'VH_SSL_FEATURE', 'VH_SSL_OCSP', 'VH_SSL_CLIENT_VERIFY',
-				'VH_WEBSOCKET', 'VH_MODULE'));
+		if(!isset($this->_pageDef[$view]))
+			die("Invalid tabs $view");
 
-		$this->_fileDef['vh'] = &$pages;
-	}
-
-	protected function add_FilePage_tp()
-	{
-		$pages = array();
-		$pages[] = new DFileSect(
-			array('TP_GENERAL1',	'TP_SEC_FILE', 'TP_SEC_CONN', 'TP_SEC_CGI'));
-
-		$pages[] = new DFileSect(
-			array(
-				'TP_GENERAL2', 'TP_LOG',	'TP_ACLOG',	'VH_INDXF',	'VH_ERRPG',
-				'A_SCRIPT',	'VH_EXPIRES',
-				'A_SECAC', 'TP_REALM_SEL',
-				'TP_EXT_SEL', 'VH_CTX_SEL',
-				'VH_REWRITE_CTRL', 'VH_REWRITE_MAP', 'VH_REWRITE_RULE',
-				'VH_SSL_CERT', 'VH_SSL_SSL', 'VH_SSL_FEATURE', 'VH_SSL_OCSP', 'VH_SSL_CLIENT_VERIFY',
-				'VH_WEBSOCKET', 'VH_MODULE'),
-			'virtualHostConfig');
-
-		$this->_fileDef['tp'] = &$pages;
-	}
-
-	protected function add_FilePage_admin()
-	{
-		$pages = array();
-		$pages[] = new DFileSect(
-			array('ADMIN_PHP', 'VH_LOG', 'VH_ACLOG', 'A_SECAC'));
-
-		$pages[] = new DFileSect(
-			array('ADMIN_L_GENERAL', 'L_SSL_CERT', 'L_SSL', 'L_SSL_FEATURE', 'L_SSL_CLIENT_VERIFY'),
-			'listenerList:listener', 'listeners', 'name' );
-
-		$this->_fileDef['admin'] = &$pages;
+		$tabs = array();
+		foreach ($this->_pageDef[$view] as $p) {
+			$tabs[$p->GetID()] = $p->GetLabel();
+		}
+		return $tabs;
 	}
 
 	protected function defineAll()
 	{
-		$page = new DPage('serv', 'general', 'General',
-						  'Server General Settings',
-						  array('SERV_PROCESS', 'SERV_GENERAL', 'SERV_INDEX', 'SERV_EXPIRES', 'A_GEOIP_TOP'));
-		$page->_helpLink = 'ServGeneral_Help.html';
-		$this->_pageDef['serv'][$page->_id] = $page;
+		$id = 'g';
+		$page = new DPage($id, 'General', new DTblMap('',
+				array('S_PROCESS','S_GENERAL','S_INDEX',
+						new DTblMap('expires', 'A_EXPIRES'),
+						new DTblMap('geoipdb$geoipDBFile', 'S_GEOIP_TOP', 'S_GEOIP')),
+				new DTblMap('*index', array('S_MIME_TOP', 'S_MIME'))));
+		$this->_pageDef['serv'][$id] = $page;
 
-		$page = new DPage('serv', 'log', 'Log',
-						  'Server Log Settings',
-						  array('SERV_LOG', 'SERV_ACLOG'));
-		$page->_helpLink = 'ServGeneral_Help.html';
-		$this->_pageDef['serv'][$page->_id] = $page;
+		$id = 'log';
+		$page = new DPage($id, 'Log', new DTblMap('',
+				array(new DTblMap('errorlog$fileName', 'S_LOG'),
+						new DTblMap('accesslog$fileName', 'S_ACLOG'))));
+		$this->_pageDef['serv'][$id] = $page;
 
+		$id = 'tuning';
+		$page = new DPage($id, 'Tuning', new DTblMap('tuning',
+				array('S_TUNING_OS', 'S_TUNING_CONN', 'S_TUNING_REQ', 'S_TUNING_STATIC', 'S_TUNING_GZIP')));
+		$this->_pageDef['serv'][$id] = $page;
 
-		$page = new DPage('serv', 'tuning', 'Tuning',
-						  'Server Tuning Settings',
-						  array( 'SERV_TUNING_OS', 'SERV_TUNING_CONN', 'SERV_TUNING_REQ', 'SERV_TUNING_STATIC', 'SERV_TUNING_GZIP',));
-		$page->_helpLink = 'ServTuning_Help.html';
-		$this->_pageDef['serv'][$page->_id] = $page;
+		$id = 'sec';
+		$page = new DPage($id, 'Security', new DTblMap('',
+				array(new DTblMap('fileAccessControl', 'S_SEC_FILE'),
+						new DTblMap('perClientConnLimit', 'S_SEC_CONN'),
+						new DTblMap('CGIRLimit', 'S_SEC_CGI'),
+						new DTblMap('accessDenyDir', 'S_SEC_DENY'),
+						new DTblMap('accessControl', 'A_SEC_AC'))));
+		$this->_pageDef['serv'][$id] = $page;
 
-		$page = new DPage('serv', 'security', 'Security',
-						  'Server Security Settings',
-						  array('SERV_SEC_FILE', 'SERV_SEC_CONN', 'SERV_SEC_CGI', 'SERV_SEC_DENY', 'A_SECAC'));
-		$page->_helpLink = 'ServSecurity_Help.html';
-		$this->_pageDef['serv'][$page->_id] = $page;
+		$id = 'ext';
+		$page = new DPage($id, 'External App',
+				new DTblMap('*extprocessor$name', 'A_EXT_TOP',
+						array('A_EXT_SEL', 'A_EXT_FCGI', 'A_EXT_FCGIAUTH', 'A_EXT_LSAPI', 'A_EXT_SERVLET', 'A_EXT_PROXY', 'A_EXT_LOGGER', 'A_EXT_LOADBALANCER')));
+		$this->_pageDef['serv'][$id] = $page;
 
+		$id = 'sh';
+		$page = new DPage($id, 'Script Handler', new DTblMap('scripthandler:*addsuffix$suffix', 'A_SCRIPT_TOP', 'A_SCRIPT'));
+		$this->_pageDef['serv'][$id] = $page;
 
-		$page = new DPage('serv', 'ext', 'External App',
-						  'Server Level External Applications',
-						  array('A_EXT_TOP'));
-		$page->_helpLink = 'ExtApp_Help.html';
-		$this->_pageDef['serv'][$page->_id] = $page;
+		$id = 'rails';
+		$page = new DPage($id, 'Rack/Rails', new DTblMap('railsDefaults', 'S_RAILS'));
+		$this->_pageDef['serv'][$id] = $page;
 
-		$page = new DPage('serv', 'scriptHandler', 'Script Handler',
-						  'Server Level Script Handler',
-						  array('A_SCRIPT_TOP'));
-		$page->_helpLink = 'ScriptHandler_Help.html';
-		$this->_pageDef['serv'][$page->_id] = $page;
+		$id = 'mod';
+		$page = new DPage($id, 'Modules', new DTblMap('*module$name', 'S_MOD_TOP', 'S_MOD'));
+		$this->_pageDef['serv'][$id] = $page;
 
-		$page = new DPage('serv', 'railsDefaults', 'Rack/Rails',
-						  'Rack/Rails Settings',
-						  array('S_RAILS'));
-		$page->_helpLink = 'Rails_Help.html';
-		$this->_pageDef['serv'][$page->_id] = $page;
+		$id = 'sltop';
+		$page = new DPage($id, 'Listeners', new DTblMap('*listener$name', 'L_TOP', 'L_GENERAL'));
+		$this->_pageDef['sltop'][$id] = $page;
 
-		$page = new DPage('serv', 'modules', 'Modules',
-						  'External Modules',
-						  array('SERV_MODULE_TOP'));
-		$page->_helpLink = 'Modules_Help.html';
-		$this->_pageDef['serv'][$page->_id] = $page;
+		$id = 'lg';
+		$page = new DPage($id, 'General', new DTblMap('*listener$name',
+				array('L_GENERAL', new DTblMap('*vhmap$vhost', 'L_VHMAP_TOP', 'L_VHMAP'))));
+		$this->_pageDef['sl'][$id] = $page;
 
-		$page = new DPage('tptop', 'tpTop', 'Virtual Host Templates',
-						  'Virtual Host Templates',
-						  array('TP_TOP'));
-		$page->_helpLink = 'Templates_Help.html';
-		$this->_pageDef['tptop'][$page->_id] = $page;
+		$id = 'lsec';
+		$page = new DPage($id, 'SSL', new DTblMap('*listener$name',
+				array('LVT_SSL_CERT', 'LVT_SSL', 'L_SSL_FEATURE', 'LVT_SSL_OCSP', 'LVT_SSL_CLVERIFY')));
+		$this->_pageDef['sl'][$id] = $page;
 
-		$page = new DPage('vhtop', 'vhTop', 'Virtual Hosts',
-						  'Virtual Hosts Settings',
-						  array('VH_TOP'));
-		$page->_helpLink = 'VirtualHosts_Help.html';
-		$this->_pageDef['vhtop'][$page->_id] = $page;
+		$id = 'lmod';
+		$page = new DPage($id, 'Modules', new DTblMap('*listener$name', new DTblMap('*module$name', 'L_MOD_TOP', 'L_MOD')));
+		$this->_pageDef['sl'][$id] = $page;
 
-		$page = new DPage('sltop', 'slTop', 'Listeners',
-						  'Listeners Settings',
-						  array('L_TOP' ));
-		$page->_helpLink = 'Listeners_Help.html';
-		$this->_pageDef['sltop'][$page->_id] = $page;
+		$id = 'vhtop';
+		$page = new DPage($id, 'Virtual Hosts', new DTblMap('*virtualhost$name', 'V_TOP', 'V_TOPD'));
+		$this->_pageDef['vhtop'][$id] = $page;
 
-		$page = new DPage('sl', 'lgeneral', 'General',
-						  'Listener General Settings',
-						  array('L_GENERAL', 'L_VHMAP_TOP'));
-		$page->_helpLink = 'Listeners_Help.html';
-		$this->_pageDef['sl'][$page->_id] = $page;
+		$id = 'tptop';
+		$page = new DPage($id, 'Virtual Host Templates', new DTblMap('*vhTemplate$name', 'T_TOP', 'T_TOPD'));
+		$this->_pageDef['tptop'][$id] = $page;
 
-		$page = new DPage('sl', 'lsecure', 'SSL',
-						  'Listener SSL Settings',
-						  array('L_SSL_CERT', 'L_SSL', 'L_SSL_FEATURE', 'L_SSL_OCSP', 'L_SSL_CLIENT_VERIFY'));
-		$page->_helpLink = 'Listeners_Help.html';
-		$this->_pageDef['sl'][$page->_id] = $page;
+		$id = 'mbr';
+		$page = new DPage($id, 'Template', new DTblMap('*vhTemplate$name',
+				array('T_TOPD', new DTblMap('*member$vhName', 'T_MEMBER_TOP', 'T_MEMBER'))));
+		$this->_pageDef['tp'][$id] = $page;
 
-		$page = new DPage('sl', 'modules', 'Modules',
-				'External Modules',
-				array('L_MODULE_TOP'));
-		$page->_helpLink = 'Modules_Help.html';
-		$this->_pageDef['sl'][$page->_id] = $page;
+		$id = 'base';
+		$page = new DPage($id, 'Basic', new DTblMap('*virtualhost$name',
+				array('V_BASE', 'V_BASE_CONN','V_BASE_SEC', 'V_BASE_THROTTLE')));
+		$this->_pageDef['vh'][$id] = $page;
 
-		$page = new DPage('tp', 'member', 'Template',
-						  'Template Settings',
-						  array('TP', 'TP_MEMBER_TOP'));
-		$page->_helpLink = 'Templates_Help.html';
-		$this->_pageDef['tp'][$page->_id] = $page;
+		$id = 'g';
+		$page = new DPage($id, 'General', new DTblMap('',
+				array('V_GENERAL',
+						new DTblMap('index', 'VT_INDXF'),
+						new DTblMap('errorpage$errCode', 'VT_ERRPG_TOP', 'VT_ERRPG'),
+						new DTblMap('expires', 'A_EXPIRES'))));
+		$this->_pageDef['vh'][$id] = $page;
 
-		$page = new DPage('tp', 'general', 'General',
-						  'Template General Settings',
-						  array('TP_GENERAL', 'TP_LOG', 'TP_ACLOG', 'VH_INDXF', 'VH_ERRPG_TOP', 'A_SCRIPT_TOP', 'VH_EXPIRES'));
-		$page->_helpLink = 'VHGeneral_Help.html';
-		$this->_pageDef['tp'][$page->_id] = $page;
+		$page = new DPage($id, 'General', new DTblMap('',
+				array('T_GENERAL1', new DTblMap('virtualHostConfig',
+						array('T_GENERAL2',
+								new DTblMap('index', 'VT_INDXF'),
+								new DTblMap('errorpage$errCode',  'VT_ERRPG_TOP', 'VT_ERRPG'),
+								new DTblMap('scripthandler', new DTblMap(array('*scriptHandler','*addsuffix$suffix'), 'A_SCRIPT')),
+								new DTblMap('expires', 'A_EXPIRES'))))));
+		$this->_pageDef['tp'][$id] = $page;
 
-		$page = new DPage('tp', 'security', 'Security',
-						  'Tempage Security Settings',
-						  array('TP_SEC_FILE', 'TP_SEC_CONN', 'TP_SEC_CGI', 'A_SECAC', 'TP_REALM_TOP'));
-		$page->_helpLink = 'VHSecurity_Help.html';
-		$this->_pageDef['tp'][$page->_id] = $page;
+		$id = 'log';
+		$page = new DPage($id, 'Log', new DTblMap('',
+				array(new DTblMap('errorlog$fileName', 'V_LOG'),
+						new DTblMap('accesslog$fileName', 'V_ACLOG'))));
+		$this->_pageDef['vh'][$id] = $page;
 
-		$page = new DPage('tp', 'ext', 'External App',
-						  'Template External Applications',
-						  array('TP_EXT_TOP'));
-		$page->_helpLink = 'ExtApp_Help.html';
-		$this->_pageDef['tp'][$page->_id] = $page;
+		$page = new DPage($id, 'Log', new DTblMap('virtualHostConfig',
+				array(new DTblMap('errorlog$fileName', 'T_LOG'),
+						new DTblMap('accesslog$fileName', 'T_ACLOG'))));
+		$this->_pageDef['tp'][$id] = $page;
 
-		$page = new DPage('vh', 'base', 'Basic',
-						  'Virtual Host Base',
-						  array('VH_BASE', 'VH_BASE_CONNECTION','VH_BASE_SECURITY', 'VH_BASE_THROTTLE'));
+		$id = 'sec';
+		$page = new DPage($id, 'Security', new DTblMap('',
+				array(new DTblMap('accessControl', 'A_SEC_AC'),
+						new DTblMap('*realm$name', 'V_REALM_TOP', 'V_REALM_FILE')),
+				new DTblMap('*index', array('V_UDB_TOP', 'V_UDB', 'V_GDB_TOP','V_GDB'))));
+		$this->_pageDef['vh'][$id] = $page;
 
-		$page->_helpLink = 'VHGeneral_Help.html';
-		$this->_pageDef['vh'][$page->_id] = $page;
+		$page = new DPage($id, 'Security', new DTblMap('',
+				array('T_SEC_FILE', 'T_SEC_CONN', 'T_SEC_CGI',
+						new DTblMap('virtualHostConfig',
+								array(new DTblMap('accessControl', 'A_SEC_AC'),
+										new DTblMap('*realm$name', 'T_REALM_TOP', 'T_REALM_FILE'))))));
+		$this->_pageDef['tp'][$id] = $page;
 
-		$page = new DPage('vh', 'general', 'General',
-						  'Virtual Host General Settings',
-						  array('VH_GENERAL', 'VH_INDXF', 'VH_ERRPG_TOP', 'VH_EXPIRES'));
-		$page->_helpLink = 'VHGeneral_Help.html';
-		$this->_pageDef['vh'][$page->_id] = $page;
+		$id = 'ext';
+		$page = new DPage($id, 'External App',
+				new DTblMap('*extprocessor$name', 'A_EXT_TOP',
+						array('A_EXT_SEL', 'A_EXT_FCGI', 'A_EXT_FCGIAUTH', 'A_EXT_LSAPI', 'A_EXT_SERVLET', 'A_EXT_PROXY', 'A_EXT_LOGGER', 'A_EXT_LOADBALANCER')));
+		$this->_pageDef['vh'][$id] = $page;
 
-		$page = new DPage('vh', 'log', 'Log',
-						  'Virtual Host Log Settings',
-						  array('VH_LOG', 'VH_ACLOG'));
-		$page->_helpLink = 'VHGeneral_Help.html';
-		$this->_pageDef['vh'][$page->_id] = $page;
+		$page = new DPage($id, 'External App',
+				new DTblMap('virtualHostConfig:*extprocessor$name', 'T_EXT_TOP',
+						array('T_EXT_SEL', 'T_EXT_FCGI', 'T_EXT_FCGIAUTH', 'T_EXT_LSAPI', 'T_EXT_SERVLET', 'T_EXT_PROXY', 'T_EXT_LOGGER', 'T_EXT_LOADBALANCER')));
+		$this->_pageDef['tp'][$id] = $page;
 
-		$page = new DPage('vh', 'security', 'Security',
-						  'Virtual Host Security Settings',
-						  array('A_SECAC', 'VH_REALM_TOP')); //post beta 'VH_SEC_ACCESS', 'VH_SEC_THROTTLE', 'VH_SEC_EXTAPP',
-		$page->_helpLink = 'VHSecurity_Help.html';
-		$this->_pageDef['vh'][$page->_id] = $page;
+		$id = 'sh';
+		$page = new DPage($id, 'Script Handler', new DTblMap('scripthandler:*addsuffix$suffix', 'A_SCRIPT_TOP', 'A_SCRIPT'));
+		$this->_pageDef['vh'][$id] = $page;
 
-		$page = new DPage('vh', 'ext', 'External App',
-						  'Virtual Host Level External Applications',
-						  array('A_EXT_TOP'));
-		$page->_helpLink = 'ExtApp_Help.html';
-		$this->_pageDef['vh'][$page->_id] = $page;
+		$page = new DPage($id, 'Script Handler', new DTblMap('virtualHostConfig:scripthandler:*addsuffix$suffix', 'A_SCRIPT_TOP', 'A_SCRIPT'));
+		$this->_pageDef['tp'][$id] = $page;
 
-		$page = new DPage('vh', 'scriptHandler', 'Script Handler',
-						  'Virtual Host Script Handler',
-						  array('A_SCRIPT_TOP'));
-		$page->_helpLink = 'VHGeneral_Help.html';
-		$this->_pageDef['vh'][$page->_id] = $page;
+		$id = 'rw';
+		$page = new DPage($id, 'Rewrite', new DTblMap('rewrite',
+				array('VT_REWRITE_CTRL',
+						new DTblMap('*map$name', 'VT_REWRITE_MAP_TOP', 'VT_REWRITE_MAP'),
+						'VT_REWRITE_RULE')));
+		$this->_pageDef['vh'][$id] = $page;
 
-		$page = new DPage('vh', 'rewrite', 'Rewrite',
-						  'Virtual Host Rewrite Settings',
-						  array('VH_REWRITE_CTRL', 'VH_REWRITE_MAP_TOP', 'VH_REWRITE_RULE'));
-		$page->_helpLink = 'Rewrite_Help.html';
-		$this->_pageDef['vh'][$page->_id] = $page;
-		$this->_pageDef['tp'][$page->_id] = $page;
+		$page = new DPage($id, 'Rewrite', new DTblMap('virtualHostConfig:rewrite',
+				array('VT_REWRITE_CTRL',
+						new DTblMap('*map$name', 'VT_REWRITE_MAP_TOP', 'VT_REWRITE_MAP'),
+						'VT_REWRITE_RULE')));
+		$this->_pageDef['tp'][$id] = $page;
 
-		$page = new DPage('vh', 'context', 'Context',
-						  'Virtual Host Context Settings',
-						  array('VH_CTX_TOP'));
-		$page->_helpLink = 'Context_Help.html';
-		$this->_pageDef['vh'][$page->_id] = $page;
-		$this->_pageDef['tp'][$page->_id] = $page;
+		$id = 'ctx';
+		$page = new DPage($id, 'Context', new DTblMap('*context$uri', 'VT_CTX_TOP',
+				array('VT_CTX_SEL', 'VT_CTXG', 'VT_CTXJ', 'VT_CTXS', 'VT_CTXF', 'VT_CTXL',
+						'VT_CTXP', 'VT_CTXC', 'VT_CTXB', 'VT_CTXR', 'VT_CTXRL', 'VT_CTXMD')));
+		$this->_pageDef['vh'][$id] = $page;
 
-		$page = new DPage('vh', 'vhssl', 'SSL',
-						  'Virtual Host SSL Settings',
-						  array('VH_SSL_CERT', 'VH_SSL_SSL', 'VH_SSL_FEATURE', 'VH_SSL_OCSP', 'VH_SSL_CLIENT_VERIFY'));
-		$page->_helpLink = 'Listeners_Help.html';
-		$this->_pageDef['vh'][$page->_id] = $page;
-		$this->_pageDef['tp'][$page->_id] = $page;
+		$page = new DPage($id, 'Context', new DTblMap('virtualHostConfig:*context$uri', 'VT_CTX_TOP',
+				array('VT_CTX_SEL', 'VT_CTXG', 'VT_CTXJ', 'VT_CTXS', 'VT_CTXF', 'VT_CTXL',
+						'VT_CTXP', 'VT_CTXC', 'VT_CTXB', 'VT_CTXR', 'VT_CTXRL')));
+		$this->_pageDef['tp'][$id] = $page;
 
-		$page = new DPage('vh', 'websocket', 'Web Socket Proxy',
-						  'Web Socket Proxy Settings',
-						  array('VH_WEBSOCKET_TOP'));
-		$page->_helpLink = 'Websocket_Help.html';
-		$this->_pageDef['vh'][$page->_id] = $page;
-		$this->_pageDef['tp'][$page->_id] = $page;
+		$id = 'vhssl';
+		$page = new DPage($id, 'SSL', new DTblMap('vhssl',
+				array('LVT_SSL_CERT', 'LVT_SSL', 'VT_SSL_FEATURE', 'LVT_SSL_OCSP', 'LVT_SSL_CLVERIFY')));
+		$this->_pageDef['vh'][$id] = $page;
 
-		$page = new DPage('vh', 'modules', 'Modules',
-				'External Modules',
-				array('VH_MODULE_TOP'));
-		$page->_helpLink = 'Modules_Help.html';
-		$this->_pageDef['vh'][$page->_id] = $page;
-		$this->_pageDef['tp'][$page->_id] = $page;
+		$page = new DPage($id, 'SSL', new DTblMap('virtualHostConfig:vhssl',
+				array('LVT_SSL_CERT', 'LVT_SSL', 'VT_SSL_FEATURE', 'LVT_SSL_OCSP', 'LVT_SSL_CLVERIFY')));
+		$this->_pageDef['tp'][$id] = $page;
 
-		$page = new DPage('admin', 'general', 'General',
-						  'Web Admin Settings',
-						  array('ADMIN_PHP', 'VH_LOG', 'VH_ACLOG'));
-		$page->_helpLink = 'AdminGeneral_Help.html';
-		$this->_pageDef['admin'][$page->_id] = $page;
+		$id = 'wsp';
+		$page = new DPage($id, 'Web Socket Proxy', new DTblMap('*websocket$uri', 'VT_WBSOCK_TOP', 'VT_WBSOCK'));
+		$this->_pageDef['vh'][$id] = $page;
 
-		$page = new DPage('admin', 'security', 'Security',
-						  'Web Admin Security Settings',
-						  array('A_SECAC', 'ADMIN_USR_TOP'));
-		$page->_helpLink = 'AdminGeneral_Help.html';
-		$this->_pageDef['admin'][$page->_id] = $page;
+		$page = new DPage($id, 'Web Socket Proxy', new DTblMap('virtualHostConfig:*websocket$uri', 'VT_WBSOCK_TOP', 'VT_WBSOCK'));
+		$this->_pageDef['tp'][$id] = $page;
 
-		$page = new DPage('altop', 'alTop', 'Admin Listeners',
-						  'Listeners Settings',
-						  array('ADMIN_L_TOP' ));
-		$page->_helpLink = 'AdminListener_Help.html';
-		$this->_pageDef['altop'][$page->_id] = $page;
+		$id = 'mod';
+		$page = new DPage($id, 'Modules', new DTblMap('*module$name',
+				array('VT_MOD_TOP',
+						new DTblMap('*urlFilter$uri', NULL, array('VT_MOD_FILTERTOP', 'VT_MOD_FILTER'))), 'VT_MOD'));
 
-		$page = new DPage('al', 'lgeneral', 'General',
-						  'Admin Listener General Settings',
-						  array('ADMIN_L_GENERAL'));
-		$page->_helpLink = 'AdminListener_Help.html';
-		$this->_pageDef['al'][$page->_id] = $page;
+		$this->_pageDef['vh'][$id] = $page;
 
-		$page = new DPage('al', 'lsecure', 'SSL',
-						  'Listener SSL Settings',
-						  array('L_SSL_CERT', 'L_SSL', 'L_SSL_FEATURE', 'L_SSL_CLIENT_VERIFY'));
-		$page->_helpLink = 'AdminListener_Help.html';
-		$this->_pageDef['al'][$page->_id] = $page;
+		$page = new DPage($id, 'Modules', new DTblMap('virtualHostConfig:*module$name',
+				array('VT_MOD_TOP',
+						new DTblMap('*urlFilter$uri', NULL, array('VT_MOD_FILTERTOP', 'VT_MOD_FILTER'))), 'VT_MOD'));
+		$this->_pageDef['tp'][$id] = $page;
 
-		$types = array_keys($this->_pageDef);
-		foreach ( $types as $type )
-		{
-			$pids = array_keys( $this->_pageDef[$type] );
-			foreach ( $pids as $pid )
-			{
-				$this->_tabDef[$type][$pid] = $this->_pageDef[$type][$pid]->_name;
-			}
-		}
+		$id = 'g';
+		$page = new DPage($id, 'General', new DTblMap('',
+				array('ADM_PHP',
+						new DTblMap('errorlog$fileName', 'V_LOG'),
+						new DTblMap('accesslog$fileName', 'ADM_ACLOG'),
+						new DTblMap('accessControl', 'A_SEC_AC'))));
+		$this->_pageDef['admin'][$id] = $page;
+
+		$id = 'usr';
+		$page = new DPage($id, 'Users', new DTblMap('*index', 'ADM_USR_TOP', array('ADM_USR', 'ADM_USR_NEW')));
+		$this->_pageDef['admin'][$id] = $page;
+
+		$id = 'altop';
+		$page = new DPage($id, 'Listeners', new DTblMap('*listener$name', 'ADM_L_TOP', 'ADM_L_GENERAL'));
+		$this->_pageDef['altop'][$id] = $page;
+
+		$id = 'lg';
+		$page = new DPage($id, 'General', new DTblMap('*listener$name', 'ADM_L_GENERAL'));
+		$this->_pageDef['al'][$id] = $page;
+
+		$id = 'lsec';
+		$page = new DPage($id, 'SSL', new DTblMap('*listener$name',
+				array('LVT_SSL_CERT', 'LVT_SSL', 'L_SSL_FEATURE', 'LVT_SSL_CLVERIFY')));
+		$this->_pageDef['al'][$id] = $page;
 
 	}
 

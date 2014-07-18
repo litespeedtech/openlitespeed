@@ -459,7 +459,6 @@ public:
     int configDirIndex( const XmlNode *pContextNode );
     int configErrorPages( const XmlNode *pNode );
     int configRewriteRule( const RewriteMapList * pMapList, char *pRule );
-    int configRewriteRule( const RewriteMapList * pMapList, const XmlNode *pRewriteNode );    
     int configMime( const XmlNode *pContextNode );    
     int configExtAuthorizer( const XmlNode *pContextNode );
     int config(const RewriteMapList * pMapList, const XmlNode *pContextNode, 

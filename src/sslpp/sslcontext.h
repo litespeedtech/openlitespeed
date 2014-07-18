@@ -78,7 +78,12 @@ public:
     int setCertificateChainFile( const char * pFile );
     int setPrivateKeyFile( const char * pFile, int type );
     int checkPrivateKey();
+    int  setSessionIdContext(unsigned char * sid, unsigned int len);
+    void flushSessionCache(long tm);
+    int  setContextExData(int idx, void * arg);
+    void * getContextExData(int idx);
     long setOptions( long options );
+    long getOptions( );
     long setSessionCacheMode( long mode );
     long setSessionCacheSize( long size );
     long setSessionTimeout( long timeout );
@@ -115,6 +120,6 @@ public:
     void configCRL( const XmlNode *pNode, SSLContext *pSSL );
     int  initECDH();
     int  initDH( const char * pFile );
-    
+    int  enableShmSessionCache( const char * pName, int maxEntries );
 };
 #endif

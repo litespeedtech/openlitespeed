@@ -167,7 +167,8 @@ int LocalWorkerConfig::config( const XmlNode *pNode )
     setRunOnStartUp( ConfigCtx::getCurConfigCtx()->getLongValue( pNode, "runOnStartUp", 0, 1, 0 ) );
 
     RLimits limits;
-    limits = *(ExtAppRegistry::getRLimits());
+    if (ExtAppRegistry::getRLimits() != NULL)
+        limits = *(ExtAppRegistry::getRLimits());
     limits.setCPULimit( RLIM_INFINITY, RLIM_INFINITY );
     LocalWorker::configRlimit( &limits, pNode );
     setRLimits( &limits );

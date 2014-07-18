@@ -296,6 +296,8 @@ void ClientCache::dirtyAll()
 
 ClientInfo * ClientCache::getClientInfo( struct sockaddr * pPeer )
 {
+    // use this to save client information
+    // register TShmClient * pShmClient;
 
     const_iterator iter = find( pPeer );;
     ClientInfo * pInfo;
@@ -308,6 +310,7 @@ ClientInfo * ClientCache::getClientInfo( struct sockaddr * pPeer )
             ERR_NO_MEM( "ClientCache->newClient()" );
             return NULL;
         }
+        // pShmClient = pInfo->getShmClientInfo();
         
         // GeoIP lookup
         if ( HttpGlobals::s_pIpToGeo )
@@ -361,6 +364,8 @@ ClientInfo * ClientCache::getClientInfo( struct sockaddr * pPeer )
     else
     {
         pInfo = iter.second();
+        // pShmClient = pInfo->getShmClientInfo();
+        
         if ( HttpGlobals::getAccessCtrl() )
             pInfo->setAccess( HttpGlobals::getAccessCtrl()->hasAccess( pPeer ) );
         else

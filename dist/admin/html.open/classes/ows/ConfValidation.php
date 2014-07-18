@@ -16,7 +16,7 @@ class ConfValidation extends CValidation
 
 	protected function chkAttr_modulename($attr, $cval)
 	{
-		$name = $cval->GetVal();
+		$name = $cval->Get(CNode::FLD_VAL);
 		if ( preg_match( "/[<>&%\s]/", $name) ) {
 			$cval->SetErr('invalid characters in name');
 			return -1;
@@ -25,31 +25,30 @@ class ConfValidation extends CValidation
 			return 1;
 	}
 
-	protected function validatePostTbl($tbl, &$d)
+	protected function validatePostTbl($tbl, $extracted)
 	{
-		if ($tbl->_id == 'SERV_MODULE') {
-			$isValid = $this->chkPostTbl_SERV_MODULE($d);
+		if ($tbl->_id == 'S_MOD') {
+			$isValid = $this->chkPostTbl_SERV_MODULE($extracted);
 		}
 		else {
-			$isValid = parent::validatePostTbl($tbl, $d);
+			$isValid = parent::validatePostTbl($tbl, $extracted);
 		}
 		return $isValid;
 	}
 
-	protected function chkPostTbl_SERV_MODULE(&$d)
+	protected function chkPostTbl_SERV_MODULE($extracted)
 	{
 		$isValid = 1;
 
-		if ($d['internal']->GetVal() == 0) {
-			$name = $d['name']->GetVal();
-			$module = $_SERVER['LS_SERVER_ROOT'] . "modules/{$name}.so" ;
+		if ($extracted->GetChildVal('internal') == 0) {
+			$name = $extracted->GetChildVal('name');
+			$module = SERVER_ROOT . "modules/{$name}.so" ;
 			if (!file_exists($module)) {
-				$d['name']->SetErr("cannot find external module: $module");
+				$extracted->SetChildErr('name', "cannot find external module: $module");
 				$isValid = -1;
 			}
 		}
 
 		return $isValid;
 	}
-
 }

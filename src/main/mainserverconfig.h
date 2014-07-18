@@ -19,6 +19,8 @@
 #define MAINSERVERCONFIG_H
 #include <util/autostr.h>
 #include <util/tsingleton.h>
+#include <util/stringlist.h>
+
 class MainServerConfig: public TSingleton<MainServerConfig>
 {
     friend class TSingleton<MainServerConfig>;
@@ -33,13 +35,16 @@ private:
     AutoStr         m_sAutoIndexURI;
     AutoStr2        m_sChroot;
     int             m_iCrashGuard;
-    int             m_iEnableCoreDump;    
+    int             m_iEnableCoreDump;
+    int             m_iDisableLogRotate;
+    StringList      m_sSuspendedVhosts;
     MainServerConfig()
         : m_sGroup( "nobody" )
         , m_sUser( "nobody" )
         , m_sAutoIndexURI( "/_autoindex/default.php" )
         , m_iCrashGuard( 2 )
         , m_iEnableCoreDump( 0 )
+        , m_iDisableLogRotate( 0 )
     {}
 public:
     int  getCrashGuard() const          {   return m_iCrashGuard;   }
@@ -53,6 +58,8 @@ public:
     void setUser( const char * pUser )              {   m_sUser = pUser;            }
     void setAutoIndexURI(const char* pAutoIndexURI) {   m_sAutoIndexURI = pAutoIndexURI;}
     void setEnableCoreDump(int iEnableCoreDump)     {  m_iEnableCoreDump = iEnableCoreDump; } 
+    void setDisableLogRotateAtStartup(int n)        {  m_iDisableLogRotate = n; } 
+    
     const char * getServerName()    const   {   return m_sServerName.c_str();   }
     const char * getAdminEmails()   const   {   return m_sAdminEmails.c_str();  }
     const char * getGDBPath()       const   {   return m_gdbPath.c_str();       }
@@ -64,6 +71,8 @@ public:
     const char * getUser()          const   {   return m_sUser.c_str();         }
     const char * getAutoIndexURI()  const   {   return m_sAutoIndexURI.c_str(); }
     int  getEnableCoreDump()  const         {   return m_iEnableCoreDump;       }
+    int  getDisableLogRotateAtStartup()  const         {   return m_iDisableLogRotate;       }
+    StringList &getSuspendedVhosts()        {   return m_sSuspendedVhosts;      }
     
 };
 

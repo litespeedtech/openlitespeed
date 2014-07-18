@@ -18,3 +18,4 @@ add_library(cache SHARED  cacheentry.cpp cachehash.cpp
             ../../util/stringtool.cpp
             ../../util/autostr.cpp
             )
+set_target_properties(cache PROPERTIES PREFIX "")

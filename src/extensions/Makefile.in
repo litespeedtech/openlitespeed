@@ -85,7 +85,8 @@ ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/ax_check_zlib.m4 \
 	$(top_srcdir)/ax_check_openssl.m4 \
 	$(top_srcdir)/ax_path_lib_pcre.m4 \
-	$(top_srcdir)/ax_lib_expat.m4 $(top_srcdir)/configure.ac
+	$(top_srcdir)/ax_lib_expat.m4 $(top_srcdir)/ax_check_liblua.m4 \
+	$(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 mkinstalldirs = $(install_sh) -d
@@ -229,6 +230,7 @@ LIBTOOL = @LIBTOOL@
 LIPO = @LIPO@
 LN_S = @LN_S@
 LTLIBOBJS = @LTLIBOBJS@
+LUA_INCLUDES = @LUA_INCLUDES@
 MAKEINFO = @MAKEINFO@
 MANIFEST_TOOL = @MANIFEST_TOOL@
 MKDIR_P = @MKDIR_P@

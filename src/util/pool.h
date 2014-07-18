@@ -1,24 +1,23 @@
-/*****************************************************************************
-*    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013  LiteSpeed Technologies, Inc.                        *
-*                                                                            *
-*    This program is free software: you can redistribute it and/or modify    *
-*    it under the terms of the GNU General Public License as published by    *
-*    the Free Software Foundation, either version 3 of the License, or       *
-*    (at your option) any later version.                                     *
-*                                                                            *
-*    This program is distributed in the hope that it will be useful,         *
-*    but WITHOUT ANY WARRANTY; without even the implied warranty of          *
-*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the            *
-*    GNU General Public License for more details.                            *
-*                                                                            *
-*    You should have received a copy of the GNU General Public License       *
-*    along with this program. If not, see http://www.gnu.org/licenses/.      *
-*****************************************************************************/
+/*
+ * Copyright 2002 Lite Speed Technologies Inc, All Rights Reserved.
+ * LITE SPEED PROPRIETARY/CONFIDENTIAL.
+ */
+
+/***************************************************************************
+    $Id: pool.h,v 1.1.1.1 2013/12/22 23:42:51 gwang Exp $
+                         -------------------
+    begin                : Wed Apr 30 2003
+    author               : Gang Wang
+    email                : gwang@litespeedtech.com
+ ***************************************************************************/
+
 #ifndef POOL_H
 #define POOL_H
 
 
+/**
+  *@author Gang Wang
+  */
 
 #ifdef _REENTRENT
 #include <thread/tmutex.h>
@@ -38,6 +37,37 @@ public:
     { return (((bytes) + (size_t) _ALIGN-1) & ~((size_t) _ALIGN - 1)); }
 
 private:
+    int m_iMaxUnitBytes;
+    struct _AllocLink
+    {
+        struct _AllocLink*    m_pNext;
+    };
+
+    _AllocLink* volatile *   m_pFreeLists;
+    _AllocLink* volatile     m_pNodeList;
+    // Chunk allocation state.
+    char*         _S_start_free;
+    char*         _S_end_free;
+    size_t        _S_heap_size;
+#ifdef _REENTRANT
+    //Mutex m_allocator_mutex;
+#endif
+
+    static size_t
+    freeListIndex(size_t bytes)
+    { return (((bytes) + (size_t)_ALIGN-1)/(size_t)_ALIGN - 1); }
+
+    // Returns an object of size num, and optionally adds to size num
+    // free list.
+    void*
+    refill(size_t num);
+
+    // Allocates a chunk for nobjs of size size.  nobjs may be reduced
+    // if it is inconvenient to allocate the requested number.
+    char*
+    chunkAlloc(size_t size, int& nobjs);
+
+    void releaseAllBlocks();
 
 public:
 

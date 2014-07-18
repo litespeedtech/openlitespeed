@@ -64,6 +64,7 @@
 #include <log4cxx/logger.h>
 
 #include <main/serverinfo.h>
+#include <main/plainconf.h>
 
 #include <sslpp/sslcontext.h>
 #include <sslpp/sslerror.h>
@@ -1050,7 +1051,7 @@ int HttpServerImpl::addVirtualHostMapping( HttpListener *pListener, const char *
     {
         ConfigCtx::getCurConfigCtx()->log_error( "can't bind administration server to normal listener %s, "
                                     "instead, configure listeners for administration server in "
-                                    "$SERVER_ROOT/admin/conf/admin_config.xml", pListener->getAddrStr() );
+                                    "$SERVER_ROOT/admin/conf/admin_config.conf", pListener->getAddrStr() );
         return -1;
     }
 
@@ -1084,7 +1085,7 @@ int HttpServerImpl::addVirtualHostMapping( HttpListener *pListener, const XmlNod
     {
         ConfigCtx::getCurConfigCtx()->log_error( "can't bind administration server to normal listener %s, "
                                     "instead, configure listeners for administration server in "
-                                    "$SERVER_ROOT/admin/conf/admin_config.xml", pListener->getAddrStr() );
+                                    "$SERVER_ROOT/admin/conf/admin_config.conf", pListener->getAddrStr() );
         return -1;
     }
 
@@ -1106,33 +1107,17 @@ int HttpServerImpl::configVirtualHostMappings( HttpListener *pListener, const Xm
 
     if ( ( pNode != NULL ) && ( pListener ) )
     {
-        const XmlNodeList *pList = pNode->getChildren( "vhostMap" );
+        XmlNodeList list;
+        pNode->getAllChildren( list );
+        XmlNodeList::const_iterator iter;
 
-        if ( pList )  //old type has this mudle name
+        for( iter = list.begin(); iter != list.end(); ++iter )
         {
-            XmlNodeList::const_iterator iter;
-
-            for( iter = pList->begin(); iter != pList->end(); ++iter )
+            if ( strcasecmp( ( *iter )->getName(), "map" ) == 0 )
             {
-                XmlNode *pListenerNode = *iter;
-
-                if ( addVirtualHostMapping( pListener, pListenerNode,
+                if ( addVirtualHostMapping( pListener, ( *iter )->getValue(),
                                            pVHostName ) == 0 )
                     ++add;
-            }
-        }
-        else
-        {
-            XmlNodeList list;
-            pNode->getAllChildren( list );
-            XmlNodeList::const_iterator iter;
-
-            for( iter = list.begin(); iter != list.end(); ++iter )
-            {
-                if ( strcasecmp( ( *iter )->getName(), "map" ) == 0 )
-                    if ( addVirtualHostMapping( pListener, ( *iter )->getValue(),
-                                               pVHostName ) == 0 )
-                        ++add;
             }
         }
     }
@@ -1143,15 +1128,7 @@ int HttpServerImpl::configVirtualHostMappings( HttpListener *pListener, const Xm
 int HttpServerImpl::configListenerVHostMap( const XmlNode *pRoot,
         const char *pVHostName )
 {
-    int confType = 0;
-    const XmlNode *pNode = pRoot->getChild( "listenerList" );
-
-    if ( !pNode )
-    {
-        pNode = pRoot;
-        confType = 1;
-    }
-
+    const XmlNode *pNode = pRoot;
     const XmlNodeList *pList = pNode->getChildren( "listener" );
 
     if ( pList )
@@ -1169,9 +1146,7 @@ int HttpServerImpl::configListenerVHostMap( const XmlNode *pRoot,
                 if ( !pVHostName )
                     pListener->getVHostMap()->clear();
 
-                if ( ( configVirtualHostMappings( pListener,
-                       ( ( confType == 0 ) ? ( pListenerNode->getChild( "vhostMapList" ) ) : ( pListenerNode ) ), 
-                       pVHostName ) > 0 ) && ( pVHostName ) )
+                if ( ( configVirtualHostMappings( pListener, pListenerNode, pVHostName ) > 0 ) && ( pVHostName ) )
                     pListener->endConfig();
 
             }
@@ -1236,7 +1211,7 @@ HttpListener * HttpServerImpl::configListener( const XmlNode *pNode, int isAdmin
             const XmlNodeList *pModuleList = p0->getChildren( "module" );
             if ( pModuleList )
             {
-                ModuleConfig::parseConfigList(pModuleList, &pListener->m_moduleConfig, LSI_SERVER_LEVEL, pName);
+                ModuleConfig::parseConfigList(pModuleList, &pListener->m_moduleConfig, LSI_LISTENER_LEVEL, pName);
             }
             
             ModuleManager::getInstance().inheritIolinkApiHooks(&pListener->m_iolinkSessionHooks, &pListener->m_moduleConfig);
@@ -1277,10 +1252,8 @@ HttpListener * HttpServerImpl::configListener( const XmlNode *pNode, int isAdmin
 
 int HttpServerImpl::configListeners( const XmlNode *pRoot, int isAdmin )
 {
-    const XmlNode *pNode = pRoot->getChild( "listenerList", 1 );
-
     XmlNodeList list;
-    int c = pNode->getAllChildren( list );
+    int c = pRoot->getAllChildren( list );
     int add = 0 ;
 
     for( int i = 0 ; i < c ; ++ i )
@@ -1354,7 +1327,7 @@ int HttpServerImpl::configAdminConsole( const XmlNode *pNode)
     if ( !enableWebConsole())
         return 0;    
     
-    mapDomainList( pNode->getChild( "listenerList", 1 ), pVHostAdmin );
+    mapDomainList( pNode, pVHostAdmin );
     return 0;
 }
 const char *HttpServerImpl::configAdminPhpUri( const XmlNode *pNode )
@@ -1689,6 +1662,9 @@ int HttpServerImpl::configTuning( const XmlNode *pRoot)
                                            0, 16384, 4096 ) );
     FileCacheDataEx::setMaxMMapCacheSize( currentCtx.getLongValue( pNode, "maxMMapFileSize",
                                           0, LONG_MAX, 256 * 1024 ) );
+    int etag = currentCtx.getLongValue( pNode, "fileETag", 0, 4+8+16, 4+8+16 );
+    HttpServer::getInstance().getServerContext().setFileEtag( etag );
+    
     int val = currentCtx.getLongValue( pNode, "useSendfile", 0, 1, 0 );
     config.setUseSendfile( val );
 
@@ -1719,9 +1695,6 @@ int HttpServerImpl::configTuning( const XmlNode *pRoot)
         currentCtx.getLongValue( pNode, "gzipMaxFileSize", 200, LONG_MAX, 1024 * 1024 )
     );
     
-    //fileEtag
-    int etag = currentCtx.getLongValue( pNode, "fileETag", 0, 4+8+16, 4+8+16 );
-    HttpServer::getInstance().getServerContext().setFileEtag( etag );
     
     pValue = pNode->getChildValue( "gzipCacheDir" );
 
@@ -1812,7 +1785,12 @@ int HttpServerImpl::configSecurity( const XmlNode *pRoot)
             currentCtx.getLongValue( pNode1, "requiredPermissionMask", 0, 0177777, 004, 8 ) );
         config.setForbiddenBits(
             currentCtx.getLongValue( pNode1, "restrictedPermissionMask", 0, 0177777, 041111, 8 ) );
-
+ 
+        config.setScriptForbiddenBits(
+            currentCtx.getLongValue( pNode1, "restrictedScriptPermissionMask", 0, 0177777, 000, 8));
+        config.setDirForbiddenBits(
+            currentCtx.getLongValue( pNode1, "restrictedDirPermissionMask", 0, 0177777, 000, 8));
+        
         pNode1 = pNode->getChild( "perClientConnLimit" );
 
         if ( pNode1 )
@@ -1871,8 +1849,12 @@ int HttpServerImpl::configMime( const XmlNode *pRoot )
             return -1;
 
         if ( HttpGlobals::getMime()->loadMime( achBuf ) == 0 )
+        {
+            //Check in the mime file
+            plainconf::checkInFile( achBuf );
             return 0;
-
+        }
+        
         if ( HttpGlobals::getMime()->getDefault() == 0 )
             HttpGlobals::getMime()->initDefault();
     }
@@ -2100,7 +2082,7 @@ int HttpServerImpl::configVHTemplate( const XmlNode *pNode)
         if ( ConfigCtx::getCurConfigCtx()->getValidFile( achTmpConf, pConfFile, "vhost template config" ) != 0 )
             return -1;
 
-        pTmpConfNode = ConfigCtx::getCurConfigCtx()->parseFile( achTmpConf, "virtualHostTemplate" );
+        pTmpConfNode = plainconf::parseFile( achTmpConf, "virtualHostTemplate" );
 
         if ( pTmpConfNode == NULL )
         {
@@ -2259,20 +2241,18 @@ int HttpServerImpl::configServerBasics( int reconfig, const XmlNode *pRoot)
             MainServerConfigObj.setGDBPath( pGDBPath );
         }
 
+        MainServerConfigObj.setDisableLogRotateAtStartup(ConfigCtx::getCurConfigCtx()->getLongValue( pRoot, "disableInitLogRotation", 0, 1, 0 ));
+        
         HttpGlobals::s_503AutoFix = ConfigCtx::getCurConfigCtx()->getLongValue( pRoot, "AutoFix503", 0, 1, 1 );
-        const char *pAutoRestart = pRoot->getChildValue( "autoRestart" );
-
-        if ( pAutoRestart != NULL )
-        {
-            int t = atoi( pAutoRestart );
-
-            if ( t )
-                t = 1;
-
-            //this value can only be set once when server start.
-            if ( MainServerConfigObj.getCrashGuard() == 2 )
-                MainServerConfigObj.setCrashGuard( t );            
-        }
+        
+        long l = ConfigCtx::getCurConfigCtx()->getLongValue( pRoot, "gracefulRestartTimeout", -1, INT_MAX, 300 );
+        if ( l == -1 )
+            l = 3600 * 24;
+        HttpServerConfig::getInstance().setRestartTimeOut(l);
+        
+        //this value can only be set once when server start.
+        if ( MainServerConfigObj.getCrashGuard() == 2 )
+            MainServerConfigObj.setCrashGuard( 1 );
 
         return 0;
     }
@@ -2319,7 +2299,7 @@ int HttpServerImpl::initGroups( )
     return 0;
 }
 
-#define DEFAULT_ADMIN_CONFIG_FILE   "$VH_ROOT/conf/admin_config.xml"
+#define DEFAULT_ADMIN_CONFIG_FILE   "$VH_ROOT/conf/admin_config.conf"
 #define ADMIN_CONFIG_NODE           "AdminConfigNode"
 int HttpServerImpl::loadAdminConfig( XmlNode *pRoot)
 {
@@ -2342,7 +2322,7 @@ int HttpServerImpl::loadAdminConfig( XmlNode *pRoot)
         return -1;
     }
 
-    XmlNode *pAdminConfNode = ConfigCtx::getCurConfigCtx()->parseFile( achConfFile, "adminConfig" );
+    XmlNode *pAdminConfNode = plainconf::parseFile( achConfFile, "adminConfig" );
 
     if ( pAdminConfNode == NULL )
     {
@@ -2503,31 +2483,13 @@ int HttpServerImpl::configServer( int reconfig, XmlNode *pRoot)
         RailsAppConfig::loadRailsDefault( pRoot->getChild( "railsDefaults" ) );
     }
 
-    int confType = 0;
-    const XmlNode *p0 = pRoot->getChild( "scriptHandlerList" );
-
-    if ( !p0 )
-    {
-        confType = 1;
-        p0 = pRoot->getChild( "scriptHandler" );
-    }
-
+    const XmlNode *p0 = pRoot->getChild( "scriptHandler" );
     if ( p0 != NULL )
     {
-        if ( confType == 0 )
-        {
-            const XmlNodeList *pList = p0->getChildren( "scriptHandler" );
+        const XmlNodeList *pList = p0->getChildren( "add" );
 
-            if ( pList && pList->size() > 0 )
-                HttpMime::configScriptHandler1( NULL, pList, NULL );
-        }
-        else
-        {
-            const XmlNodeList *pList = p0->getChildren( "add" );
-
-            if ( pList && pList->size() > 0 )
-                HttpMime::configScriptHandler2( NULL, pList, NULL );
-        }
+        if ( pList && pList->size() > 0 )
+            HttpMime::configScriptHandler( pList, NULL );
     }
 
     p0 = pRoot->getChild( "ipToGeo" );
@@ -2537,6 +2499,15 @@ int HttpServerImpl::configServer( int reconfig, XmlNode *pRoot)
         configIpToGeo( p0 );
     }
 
+    
+    const char *pVal = pRoot->getChildValue( "suspendedVhosts" );
+    if ( pVal )
+    {
+        MainServerConfig::getInstance().getSuspendedVhosts().split( pVal, pVal + strlen( pVal ), "," );
+        MainServerConfig::getInstance().getSuspendedVhosts().sort();
+    }
+    
+    
     HttpServer::getInstance().initAccessLog( pRoot, 1  );
     configVHosts( pRoot );
     configListenerVHostMap( pRoot, NULL );
@@ -3071,6 +3042,7 @@ int HttpServer::test_main( const char * pArgv0 )
     
 //    if ( fetch.startReq( "http://www.litespeedtech.com/index.html", 0, "lst_index.html" ) == 0 )
 //        fetch.process();
+    HttpGlobals::setClientCache( new ClientCache( 1000 ) );
     
     HttpServerConfig::getInstance().setGzipCompress( 1 );
     HttpdTest::runTest();
@@ -3145,6 +3117,15 @@ HttpVHost * HttpServer::getVHost( const char * pName ) const
     return m_impl->getVHost( pName );
 }
 
+void HttpServer::checkSuspendedVHostList( HttpVHost * pVHost )
+{
+    if ( MainServerConfig::getInstance().getSuspendedVhosts().bfind( pVHost->getName() ) )
+    {
+        pVHost->enable( 0 );
+        LOG_D(( "VHost %s disabled.", pVHost->getName() ));
+    }
+}
+
 int HttpServer::mapListenerToVHost( const char * pListener,
                         const char * pKey,
                         const char * pVHost )
@@ -3183,6 +3164,11 @@ AccessControl* HttpServer::getAccessCtrl() const
 int HttpServer::getVHostCounts() const
 {
     return m_impl->m_vhosts.size();
+}
+
+HttpVHost * HttpServer::getVHost( int index ) const
+{
+    return m_impl->m_vhosts.get(index);
 }
 
 void HttpServer::beginConfig()
@@ -3236,7 +3222,7 @@ int HttpServer::setAccessLogFile( const char * pFileName, int pipe )
 void HttpServer::setErrorLogRollingSize( off_t size, int keep_days )
 {
     HttpLog::getErrorLogger()->getAppender()->setRollingSize( size );
-    HttpLog::getErrorLogger()->getAppender()->setKeepDays( size );
+    HttpLog::getErrorLogger()->getAppender()->setKeepDays( keep_days );
 }
 
 

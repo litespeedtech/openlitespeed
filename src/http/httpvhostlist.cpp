@@ -146,6 +146,7 @@ int HttpVHostMap::add( HttpVHost * pHost )
             if ( iter.second() == pHost )
                 return -1;
         }
+        
         return !m_impl->insert( pHost->getName(), pHost );
     }
     else
@@ -182,11 +183,21 @@ HttpVHost * HttpVHostMap::get( const char * pName ) const
     }
 }
 
+HttpVHost * HttpVHostMap::get( int index ) const
+{
+    if ( index < 0 || index >= size() )
+        return NULL;
+    
+    HttpVHostMapImpl::const_iterator iter = m_impl->begin();
+    for (int i=0; i < index ; ++i)
+        iter = m_impl->next( iter );
+    return iter.second();
+}
+
 int HttpVHostMap::size() const
 {
     return m_impl->size();
 }
-
 
 void HttpVHostMap::swap( HttpVHostMap& rhs )
 {

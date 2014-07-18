@@ -1018,29 +1018,8 @@ int HttpMime::addMimeHandler( const char * pSuffix, char * pMime, const HttpHand
     updateMIME( pMime, HttpMime::setHandler, (void *)pHdlr, pParent );
     return 0;
 }
-int HttpMime::configScriptHandler1( HttpVHost *pVHost,
-        const XmlNodeList *pList, HttpMime *pHttpMime )
-{
-    ConfigCtx currentCtx( "scripthandler" );
-    XmlNodeList::const_iterator iter;
 
-    for( iter = pList->begin(); iter != pList->end(); ++iter )
-    {
-        XmlNode *pNode = *iter;
-        char *pSuffix = ( char * ) pNode->getChildValue( "suffix" );
-
-        if ( !pSuffix || !*pSuffix || strchr( pSuffix, '.' ) )
-        {
-            currentCtx.log_errorInvalTag( "suffix", pSuffix );
-        }
-        const HttpHandler *pHdlr = HandlerFactory::getHandler( pNode );
-        addMimeHandler(pHdlr, ( char * ) pNode->getChildValue( "mime" ), pHttpMime, 
-                              pSuffix );
-    }
-    return 0;
-}
-int HttpMime::configScriptHandler2( HttpVHost *pVHost,
-        const XmlNodeList *pList, HttpMime *pHttpMime )
+int HttpMime::configScriptHandler( const XmlNodeList *pList, HttpMime *pHttpMime )
 {
     ConfigCtx currentCtx( "scripthandler", "add" );
     XmlNodeList::const_iterator iter;

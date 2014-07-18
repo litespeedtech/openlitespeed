@@ -23,6 +23,28 @@
 #include <lsiapi/lsimoduledata.h>
 #include <util/autostr.h>
 
+#if 0
+#include <shm/lsshmcache.h>
+
+//
+//  Data in the SHM
+//
+// NOT READY - will continue later
+typedef struct lsShmClientInfo_s {
+    lsShm_hCacheData_t  x_cache;
+    size_t              x_iConns;
+    time_t              x_tmOverLimit;
+    short               x_sslNewConn;
+    int                 x_iHits;
+    time_t              x_lastConnect;
+    int                 x_iAccess;
+    ThrottleControl     x_ctlThrottle;
+} lsShmClientInfo_t ;
+
+typedef struct lsShmClientInfo_s    TShmClient;
+typedef LsShmCache                  TShmClientPool;
+#endif
+
 struct sockaddr;
 class GeoInfo;
 class ClientInfo
@@ -49,7 +71,16 @@ class ClientInfo
     //int       m_iBytesReceived;
     //int       m_iBytesSent;
     //int       m_iExcessiveConnAttempts;
-                        
+
+#if 0 
+    // NOT READY
+    static TShmClientPool * s_base;
+    TShmClient * m_pShmClient;
+    LsShm_offset_t m_clientOffset;
+    static int shmData_init(lsShm_hCacheData_t *, void * pUParam);
+    static int shmData_remove(lsShm_hCacheData_t *, void * pUParam);
+#endif
+    
 public: 
     ClientInfo();
     ~ClientInfo();
@@ -99,6 +130,14 @@ public:
     GeoInfo * getGeoInfo() const        {   return m_pGeoInfo;      }
     
     LsiModuleData* getModuleData()      {   return &m_moduleData;   }
+    
+#if 0
+    TShmClient * getShmClientInfo()
+    {
+        return (TShmClient*) 
+            (s_base ? s_base->offset2ptr(m_clientOffset) : NULL);
+    }
+#endif
 };
 
 #endif

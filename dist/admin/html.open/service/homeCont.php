@@ -1,6 +1,6 @@
 <?
 
-$state = DUtil::getGoodVal(DUtil::grab_input("get","state"));
+$state = GUIBase::GrabGoodInput("get","state");
 
 if($state == 'restarted') {
 	echo GUIBase::message('',ucwords(strtolower($product->product))." has been gracefully restarted.","success");

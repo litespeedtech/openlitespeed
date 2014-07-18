@@ -46,19 +46,19 @@ function getSelectOptions($selType, $selValue)
 			'req_per_sec'=>'Req/Sec');
 	}
 
-	return DUtil::genOptions($options, $selValue);
+	return GuiBase::genOptions($options, $selValue);
 
 }
 
-$refresh = DUtil::getGoodVal(DUtil::grab_input("request","refresh","int"));
-$vh_show_ind = DUtil::getGoodVal(DUtil::grab_input("request","vh_show_ind"));
-$vh_show_top = DUtil::getGoodVal(DUtil::grab_input("request","vh_show_top"));
-$vh_show_filter = DUtil::getGoodVal(DUtil::grab_input("request","vh_show_filter","string"));
-$vh_show_sort = DUtil::getGoodVal(DUtil::grab_input("request","vh_show_sort","string"));
-$eap_show_ind = DUtil::getGoodVal(DUtil::grab_input("request","eap_show_ind"));
-$eap_show_top = DUtil::getGoodVal(DUtil::grab_input("request","eap_show_top"));
-$eap_show_filter = DUtil::getGoodVal(DUtil::grab_input("request","eap_show_filter","string"));
-$eap_show_sort = DUtil::getGoodVal(DUtil::grab_input("request","eap_show_sort","string"));
+$refresh = GUIBase::GrabGoodInput("request","refresh","int");
+$vh_show_ind = GUIBase::GrabGoodInput("request","vh_show_ind");
+$vh_show_top = GUIBase::GrabGoodInput("request","vh_show_top");
+$vh_show_filter = GUIBase::GrabGoodInput("request","vh_show_filter","string");
+$vh_show_sort = GUIBase::GrabGoodInput("request","vh_show_sort","string");
+$eap_show_ind = GUIBase::GrabGoodInput("request","eap_show_ind");
+$eap_show_top = GUIBase::GrabGoodInput("request","eap_show_top");
+$eap_show_filter = GUIBase::GrabGoodInput("request","eap_show_filter","string");
+$eap_show_sort = GUIBase::GrabGoodInput("request","eap_show_sort","string");
 $cur_time = gmdate("D M j H:i:s T");
 $server_info = "server {$service->serv['name']} snapshot at $cur_time";
 

@@ -56,6 +56,7 @@ public:
     const XmlNodeList * getChildren(const char* name ) const;
     int getAllChildren(XmlNodeList& list) const;
     int getAllChildren(XmlNodeList& list);
+    int hasChild();
     const char* getChildValue( const char *name, int bKeyName = 0) const;
     const char* getAttr(const char* name) const;
     const AttrMap * getAllAttr() const;
@@ -67,6 +68,7 @@ public:
     int setValue(const char* value, int len);
     XmlNode * getParent() const;
     int xmlOutput(FILE* fd, int depth) const;
+    
 };
 
 class XmlTreeBuilder

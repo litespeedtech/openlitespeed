@@ -470,7 +470,7 @@ int LshttpdMain::processAdminBuffer( char * p, char * pEnd )
         p = pTemp + 1;
     }
     m_pBuilder->releaseConfigXmlTree();
-    if ( s_iRunning )
+    if ( s_iRunning > 0 )
         m_pServer->generateStatusReport();
     if ( apply )
         applyChanges();
@@ -478,8 +478,8 @@ int LshttpdMain::processAdminBuffer( char * p, char * pEnd )
 }
 
 
-#define DEFAULT_XML_CONFIG_FILE         "conf/httpd_config.xml"
-#define DEFAULT_PLAIN_CONFIG_FILE       "conf/httpd_config.conf"
+
+#define DEFAULT_CONFIG_FILE         "conf/httpd_config.conf"
 
 int LshttpdMain::testServerRoot( const char * pRoot )
 {
@@ -490,33 +490,15 @@ int LshttpdMain::testServerRoot( const char * pRoot )
         return -1;
     char achBuf[MAX_PATH_LEN] = {0};
     
-    int confType = -1;
     if ( GPath::getAbsoluteFile(achBuf, MAX_PATH_LEN, pRoot,
-                            DEFAULT_XML_CONFIG_FILE) == 0 )
+                            DEFAULT_CONFIG_FILE) == 0 )
     {
         if ( access( achBuf, R_OK ) == 0 )
         {
             m_pBuilder->setConfigFilePath( achBuf );
-            confType = 0; //XML
         }
     }
-    
-    if ( confType == -1 )
-    {
-        if ( GPath::getAbsoluteFile(achBuf, MAX_PATH_LEN, pRoot,
-                            DEFAULT_PLAIN_CONFIG_FILE) == 0 )
-        {
-            if ( access( achBuf, R_OK ) == 0 )
-            {
-                m_pBuilder->setPlainConfigFilePath( achBuf );
-                confType = 1;
-            }
-        }
-    }   
-    
-    if (confType == -1)
-        return -1;
-    
+   
     int len = strlen( pRoot );
     if ( pRoot[len-1] == '/' )
         achBuf[len] = 0;
@@ -528,10 +510,8 @@ int LshttpdMain::testServerRoot( const char * pRoot )
     m_pServer->setServerRoot( achBuf );
     
     //load the config
-    if (confType == 0)
-        m_pBuilder->loadConfigFile();
-    else
-        m_pBuilder->loadPlainConfigFile();
+    m_pBuilder->loadConfigFile();
+//    m_pBuilder->loadPlainConfigFile();
 
     return 0;
 }
@@ -804,7 +784,9 @@ int LshttpdMain::init(int argc, char * argv[])
     
     if ( m_pServer->configServerBasics( 0, m_pBuilder->getRoot() ) )
         return 1;
-    LOG4CXX_NS::LogRotate::roll( HttpLog::getErrorLogger()->getAppender(),
+    
+    if (!MainServerConfig::getInstance().getDisableLogRotateAtStartup())
+        LOG4CXX_NS::LogRotate::roll( HttpLog::getErrorLogger()->getAppender(),
                      HttpGlobals::s_uid, HttpGlobals::s_gid, 1 );
     
     if ( HttpGlobals::s_uid <= 10 || HttpGlobals::s_gid < 10 )
@@ -1044,7 +1026,6 @@ int LshttpdMain::startChild( ChildProc * pProc )
     pProc->m_iProcNo = getFirstAvailSlot();
     if ( pProc->m_iProcNo > HttpGlobals::s_children )
         return -1;
-    PCUtil::getAffinityMask( s_iCpuCount, pProc->m_iProcNo-1, 1, &pProc->m_pAffinityMask );
     preFork();
     pProc->m_pid = fork();
     if ( pProc->m_pid == -1 )
@@ -1054,11 +1035,13 @@ int LshttpdMain::startChild( ChildProc * pProc )
     }
     if ( pProc->m_pid == 0 )
     {   //child process
+        cpu_set_t       cpu_affinity;
         
         if ( LsiApiHooks::getServerHooks()->isEnabled( LSI_HKPT_WORKER_POSTFORK) )
             LsiApiHooks::getServerHooks()->runCallbackNoParam(LSI_HKPT_WORKER_POSTFORK, NULL);
 
-        PCUtil::setCpuAffinity( &pProc->m_pAffinityMask );
+        PCUtil::getAffinityMask( s_iCpuCount, pProc->m_iProcNo-1, 1, &cpu_affinity );
+        PCUtil::setCpuAffinity( &cpu_affinity );
         m_pServer->setBlackBoard( pProc->m_pBlackBoard );
         m_pServer->setProcNo( pProc->m_iProcNo );
         //setAffinity( 0, pProc->m_iProcNo);  //FIXME: need uncomment and debug
@@ -1225,9 +1208,11 @@ void LshttpdMain::stopAllChildren()
     broadcastSig( SIGTERM, 0 );
 
     long tmBeginWait = time(NULL);
-    while(( m_childrenList.size() > 0 )&&
-          ( time(NULL) - tmBeginWait
-                < HttpServerConfig::getInstance().getConnTimeout() ))
+    long tmEndWait = tmBeginWait + 300 +
+                     HttpServerConfig::getInstance().getRestartTimeout();
+
+    while( (s_iRunning != -1) && ( m_childrenList.size() > 0 ) &&
+        ( time(NULL) < tmEndWait ) )
     {
         sleep( 1 );
         waitChildren();
@@ -1314,7 +1299,7 @@ int LshttpdMain::guardCrash()
     pfds[1].events = 0;
     s_iRunning = 1;
     startTimer();
-    while( s_iRunning )
+    while( s_iRunning > 0 )
     {
         if ( DateTime::s_curTime - lLastForkTime > 60 )
         {
@@ -1388,7 +1373,7 @@ void LshttpdMain::processSignal()
     if ( HttpSignals::gotSigStop() )
     {
         LOG_NOTICE(( "SIGTERM received, stop server..."));
-        s_iRunning = 0;
+        s_iRunning = -1;
     }
     if ( HttpSignals::gotSigUsr1() || HttpSignals::gotSigHup() )
     {

@@ -43,6 +43,7 @@ HttpServerConfig::HttpServerConfig()
     , m_iRequiredBits( S_IROTH )
     , m_iScriptForbiddenBits( 000 ) //S_IWOTH | S_IWGRP )
     , m_iDirForbiddenBits( 000 ) //S_IWOTH | S_IWGRP )
+    , m_iRestartTimeout( 300 )
 {
 }
 

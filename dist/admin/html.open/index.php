@@ -4,7 +4,6 @@ include_once('includes/auth.php');
 
 $service = new Service();
 
-echo GUI::header();
 echo GUI::top_menu();
 ?>
 

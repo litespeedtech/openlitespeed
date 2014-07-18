@@ -376,6 +376,7 @@ int RewriteCond::parseCondPattern( const char * &pRuleStr, const char *pEnd )
     const char * argBegin = NULL;
     const char * argEnd = NULL;
     const char * pError = NULL;
+    int stripQuote = 0;
     int ret = StringTool::parseNextArg( pRuleStr, pEnd, argBegin, argEnd, pError );
     if ( ret )
     {
@@ -389,6 +390,7 @@ int RewriteCond::parseCondPattern( const char * &pRuleStr, const char *pEnd )
         m_flag |= COND_FLAG_NOMATCH;
         while(( argBegin < argEnd )&&( isspace( *argBegin )))
             argBegin++;
+        stripQuote = 1;
     }
     m_opcode = COND_OP_REGEX;
     switch( *argBegin )
@@ -396,15 +398,18 @@ int RewriteCond::parseCondPattern( const char * &pRuleStr, const char *pEnd )
     case '>':
         m_opcode = COND_OP_GREATER;
         ++argBegin;
+        stripQuote = 1;
         break;
     case '<':
         m_opcode = COND_OP_LESS;
         ++argBegin;
+        stripQuote = 1;
         break;
     case '=':
         m_opcode = COND_OP_EQ;
         ++argBegin;
-        break;
+         stripQuote = 1;
+       break;
     case '-':
         if ( argBegin+2 != argEnd )
             break;
@@ -437,7 +442,22 @@ int RewriteCond::parseCondPattern( const char * &pRuleStr, const char *pEnd )
     if ( argBegin >= argEnd )
         return -1;
     while(( argBegin < argEnd )&&isspace( *argBegin ))
+    {
         ++argBegin;
+        stripQuote = 1;
+    }
+    if ( stripQuote && ( argEnd - argBegin >= 2 ) )
+    {
+        char ch = *argBegin;
+        if (( ch == '"' )||( ch == '\'' ))
+        {
+            if ( argEnd[-1] == ch )
+            {
+                argBegin++;
+                argEnd--;
+            }
+        }
+    }
     m_pattern.setStr(argBegin, argEnd - argBegin );
     return 0;
 }

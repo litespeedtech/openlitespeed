@@ -15,7 +15,10 @@
 *    You should have received a copy of the GNU General Public License       *
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
+#include <log4cxx/logger.h>
+
 #include "sslcontext.h"
+#include <sslpp/sslsession.h>
 #include <sslpp/sslconnection.h>
 #include <sslpp/sslerror.h>
 
@@ -36,6 +39,32 @@
 #include <unistd.h>
 #include <config.h>
 #include <limits.h>
+
+void SSLContext::flushSessionCache( long tm )
+{
+    SSL_CTX_flush_sessions(m_pCtx, tm);
+    // SSL_flush_sessions(m_pCtx, tm);
+}
+
+void* SSLContext::getContextExData( int idx )
+{
+    return SSL_CTX_get_ex_data(m_pCtx, idx);
+}
+
+int SSLContext::setContextExData( int idx, void* arg )
+{
+    return SSL_CTX_set_ex_data(m_pCtx, idx, arg);
+}
+
+int SSLContext::setSessionIdContext( unsigned char* sid, unsigned int len )
+{
+    return SSL_CTX_set_session_id_context( m_pCtx , sid, len);
+}
+
+long SSLContext::getOptions( )
+{
+    return SSL_CTX_get_options( m_pCtx );
+}
 
 long SSLContext::setOptions( long options )
 {
@@ -264,7 +293,13 @@ int SSLContext::init( int iMethod )
         setOptions( SSL_OP_CIPHER_SERVER_PREFERENCE);
 
         //increase defaults
-        setSessionTimeout( 100800 ); 
+        // long oldTimeout = setSessionTimeout( 100800 ); 
+        long timeout = 300;
+        long oldTimeout = setSessionTimeout( timeout );
+        ConfigCtx::getCurConfigCtx()->log_notice("SET OPENSSL CTX TIMEOUT FROM %d TO %d "
+                , oldTimeout
+                , timeout);
+
         setSessionCacheSize ( 1024 * 40 ); 
 
         
@@ -279,7 +314,9 @@ int SSLContext::init( int iMethod )
             SSL_CTX_set_info_callback( m_pCtx, SSLConnection_ssl_info_cb );
         }
         //initECDH();
-
+        
+        //testing code
+        enableShmSessionCache( "SSL", 1024 );
         return 0;
     }
     else
@@ -1026,7 +1063,7 @@ SSLContext *SSLContext::config( const XmlNode *pNode )
     cv = ConfigCtx::getCurConfigCtx()->getLongValue( pNode, "clientVerify", 0, 3, 0 );
     pSSL = setKeyCertCipher( achCert, achKey, pCAFile, pCAPath, pCiphers, 
                           ConfigCtx::getCurConfigCtx()->getLongValue( pNode, "certChain", 0, 1, 0 ), ( cv != 0 ),
-                                     ConfigCtx::getCurConfigCtx()->getLongValue( pNode, "regenProtection", 0, 1, 1 ) );    
+                                     ConfigCtx::getCurConfigCtx()->getLongValue( pNode, "renegprotection", 0, 1, 1 ) );    
 
     if ( pSSL == NULL )
     {
@@ -1060,15 +1097,20 @@ SSLContext *SSLContext::config( const XmlNode *pNode )
     
 #ifdef LS_ENABLE_SPDY
     enableSpdy = ConfigCtx::getCurConfigCtx()->getLongValue( pNode, "enableSpdy", 0, 3, 3 );
+    if ( enableSpdy )
+    {
+        if ( -1 == pSSL->enableSpdy( enableSpdy ) )
+            ConfigCtx::getCurConfigCtx()->log_error( "SPDY can't be enabled [try to set to %d].", enableSpdy );
+    }
 #else
     //Even if no spdy installed, we still need to parse it
     //When user set it and will log an error to user, better than nothing
     enableSpdy = ConfigCtx::getCurConfigCtx()->getLongValue( pNode, "enableSpdy", 0, 3, 0 );
+    if (enableSpdy)
+    {
+        ConfigCtx::getCurConfigCtx()->log_error( "SPDY can't be enabled for not installed." );
+    }
 #endif
-
-    if ( enableSpdy )
-        if ( -1 == pSSL->enableSpdy( enableSpdy ) )
-            ConfigCtx::getCurConfigCtx()->log_error( "SPDY can't be enabled [try to set to %d].", enableSpdy );
 
     if ( cv )
     {
@@ -1142,5 +1184,40 @@ void SSLContext::configCRL( const XmlNode *pNode, SSLContext *pSSL )
         pSSL->addCRL( achCrlFile, achCrlPath );
 
 }
+
+/* should put in configuration file */
+int externalCacheEnable = 1;
+int  SSLContext::enableShmSessionCache( const char * pName, int maxEntries )
+{
+    int retCode = 0;
+    
+    /* enable external cache configuration check */
+    if ( externalCacheEnable)
+    {
+        retCode = SSLSession::watchCtx(this, pName, maxEntries, m_pCtx);
+        if (retCode)
+        {
+            ConfigCtx::getCurConfigCtx()->log_notice("FAILED TO ENABLE EXTERNAL SHM SSL CACHE");
+        } else {
+            ConfigCtx::getCurConfigCtx()->log_notice("EXTERNAL SHM SSL CACHE ENABLED");
+        }
+    } else {
+        ConfigCtx::getCurConfigCtx()->log_notice("NO EXTERNAL SHM SSL CACHE");
+    }
+    
+#if 0    
+    //pName can be used to assign different SHM cache storage for different SSL_CTX
+    //maxEntries can be used to tigger session flush if number of entries reaches the limit. 
+    
+    SSL_CTX_set_session_cache_mode( m_pCtx, SSL_SESS_CACHE_NO_INTERNAL );
+    
+    //add SHM session cache callbacks
+    SSL_CTX_sess_set_new_cb(m_pCtx, ssl_sessnew_cb);
+    SSL_CTX_sess_set_remove_cb(m_pCtx, ssl_sessremove_cb);
+    SSL_CTX_sess_set_get_cb(m_pCtx, ssl_sessget_cb);
+#endif    
+    return retCode;
+}
+
 
 

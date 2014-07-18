@@ -526,6 +526,7 @@ void Awstats::config(HttpVHost *pVHost, int val, char* achBuf, const XmlNode *pA
 {
     const char *pURI;
     const char *pValue;
+    char *p;
     int handlerType;
     int len = strlen( achBuf );
     int iChrootLen = 0;
@@ -571,15 +572,25 @@ void Awstats::config(HttpVHost *pVHost, int val, char* achBuf, const XmlNode *pA
     HttpContext *pContext =
         pVHost->addContext( pURI, handlerType, &achBuf[iChrootLen], NULL, 1 );
 
+    p = achBuf;
+    if ( ConfigCtx::getCurConfigCtx()->getLongValue( pAwNode, "securedConn", 0, 1, 0 ) == 1 )
+    {
+        p += safe_snprintf( achBuf, 8192,
+                "rewriteCond %%{HTTPS} !on\n"
+                "rewriteCond %%{HTTP:X-Forwarded-Proto} !https\n"
+                "rewriteRule ^(.*)$ https://%%{SERVER_NAME}%%{REQUEST_URI} [R,L]\n" );
+
+    }
     if ( val == AWS_STATIC )
     {
-        safe_snprintf( achBuf, 8192,
+        safe_snprintf( p, &achBuf[8192] - p,
                        "RewriteRule ^$ awstats.%s.html\n",
                        pVHost->getName() );
     }
     else
     {
-        safe_snprintf( achBuf, 8192, "RewriteRule ^$ awstats.pl\n"
+        safe_snprintf( p, &achBuf[8192] - p, 
+                       "RewriteRule ^$ awstats.pl\n"
                        "RewriteCond %%{QUERY_STRING} !configdir=\n"
                        "RewriteRule ^awstats.pl "
                        "$0?config=%s&configdir=%s/conf [QSA]\n",

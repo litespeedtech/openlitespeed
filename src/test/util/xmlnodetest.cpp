@@ -32,7 +32,7 @@ TEST( XmlNodeTest_test)
     char * p = achBuf;
     strcpy( p, HttpGlobals::s_pServerRoot );
     CHECK( p != NULL );
-    strcat( achBuf, "/conf/myconfig.xml" );
+    strcat( achBuf, "/conf/myconfig.conf" );
 
     XmlTreeBuilder builder;
     XmlNode* pRoot = builder.parse(achBuf, achError, 1024);

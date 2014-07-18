@@ -2,223 +2,121 @@
 
 class CValidation
 {
-	protected $_info;
+	protected $_disp;
+	protected $_go_flag;
 
-	public function __construct() {
-		$this->_info = NULL;
-	}
+	public function __construct() {}
 
-	public function ExtractPost($tbl, &$d, $disp)
+	public function ExtractPost($disp)
 	{
-		$this->_info = $disp->_info;
-		$goFlag = 1 ;
-		$index = array_keys($tbl->_dattrs);
-		foreach ( $index as $i ) {
-			$attr = $tbl->_dattrs[$i];
+		$this->_disp = $disp;
+		$this->_go_flag = 1;
 
-			if ( $attr == NULL || $attr->bypassSavePost())
+		$tid = $disp->GetLast(DInfo::FLD_TID);
+		$tbl = DTblDef::GetInstance()->GetTblDef($tid);
+
+		$extracted = new CNode(CNode::K_EXTRACTED, '', CNode::T_KB);
+
+		foreach ($tbl->_dattrs as $attr) {
+
+			if ($attr->bypassSavePost()) {
 				continue;
-
-			$d[$attr->_key] = $attr->extractPost();
-			$needCheck = TRUE;
-			if ( $attr->_type == 'sel1' || $attr->_type == 'sel2' )	{
-				if ( $disp->_act == 'c' ) {
-					$needCheck = FALSE;
-				}
-				else {
-					$attr->populate_sel1_options($this->_info, $d);
-				}
 			}
+
+			$needCheck = $attr->extractPost($extracted);
 
 			if ( $needCheck ) {
-				$res = $this->validateAttr($attr, $d[$attr->_key]);
-				$this->setValid($goFlag, $res);
+				if ($attr->_type == 'sel1' || $attr->_type == 'sel2') {
+					$attr->SetDerivedSelOptions($disp->GetDerivedSelOptions($tid, $attr->_minVal, $extracted));
+				}
+				$dlayer = $extracted->GetChildren($attr->GetKey());
+				$this->validateAttr($attr, $dlayer);
+				if (($tid == 'V_TOPD' || $tid == 'V_BASE') && $attr->_type == 'vhname') {
+					$vhname = $dlayer->Get(CNode::FLD_VAL);
+					$disp->Set(DInfo::FLD_ViewName, $vhname);
+				}
 			}
 		}
 
-		$res = $this->validatePostTbl($tbl, $d);
-		$this->setValid($goFlag, $res);
-
-		$this->_info = NULL;
+		$res = $this->validatePostTbl($tbl, $extracted);
+		$this->setValid($res);
 
 		// if 0 , make it always point to curr page
-		return $goFlag;
-	}
 
-	protected function checkListener(&$listener)
-	{
-		if ( $listener['secure']->GetVal() == '0' ) {
-			if ( isset($listener['certFile']) && !$listener['certFile']->HasVal() ) {
-				$listener['certFile']->SetErr(NULL);
-			}
-			if ( isset($listener['keyFile']) && !$listener['keyFile']->HasVal() ) {
-				$listener['keyFile']->SetErr(NULL);
-			}
-		} else {
-			$tids = array('L_SSL_CERT');
-			$this->validateElement($tids, $listener);
+		if ($this->_go_flag <= 0) {
+			$extracted->SetErr('Input error detected. Please resolve the error(s). ');
 		}
+
+		$this->_disp = NULL;
+		return $extracted;
 	}
 
-	protected function validateElement($tids, &$data)
+
+	protected function setValid($res)
 	{
-		$tblDef = DTblDef::GetInstance();
-		$valid = 1;
-		foreach ( $tids as $tid ) {
-			$tbl = $tblDef->GetTblDef($tid);
-			$d = &DUtil::locateData( $data, $tbl->_dataLoc );
-
-			if ( $d == NULL ) continue;
-
-			if ( $tbl->_holderIndex != NULL ) {
-				$keys = array_keys( $d );
-				foreach( $keys as $key ) {
-					$res = $this->validateTblAttr($tblDef, $tbl, $d[$key]);
-					$this->setValid($valid, $res);
-				}
-			} else {
-				$res = $this->validateTblAttr($tblDef, $tbl, $d);
-				$this->setValid($valid, $res);
-			}
-		}
-		return $valid;
-	}
-
-	protected function setValid(&$valid, $res)
-	{
-		if ( $valid != -1 )	{
+		if ( $this->_go_flag != -1 )	{
 			if ( $res == -1 ) {
-				$valid = -1;
-			} elseif ( $res == 0 && $valid == 1 ) {
-				$valid = 0;
+				$this->_go_flag = -1;
+			} elseif ( $res == 0 && $this->_go_flag == 1 ) {
+				$this->_go_flag = 0;
 			}
 		}
 		if ( $res == 2 ) {
-			$valid = 2;
+			$this->_go_flag = 2;
 		}
 	}
 
-	protected function validatePostTbl($tbl, &$d)
+	protected function validatePostTbl($tbl, $extracted)
 	{
 		$isValid = 1;
-		if ( $tbl->_holderIndex != NULL && isset($d[$tbl->_holderIndex])) {
-			$newref = $d[$tbl->_holderIndex]->GetVal();
-			$oldref = NULL;
 
-			if(isset($this->_info['holderIndex_cur'])) {
-				$oldref = $this->_info['holderIndex_cur'];
-			}
-			//echo "oldref = $oldref newref = $newref \n";
-			if ( $oldref == NULL || $newref != $oldref ) {
-				if (isset($this->_info['holderIndex']) && $this->_info['holderIndex'] != NULL
-				&& in_array($newref, $this->_info['holderIndex']) ) {
-					$d[$tbl->_holderIndex]->SetErr('This value has been used! Please choose a unique one.');
+		if ($tbl->_isMulti && $tbl->_holderIndex != NULL) {
+			$keynode = $extracted->GetChildren($tbl->_holderIndex);
+			$holderval = $keynode->Get(CNode::FLD_VAL);
+			$extracted->SetVal($holderval);
+
+			if ($holderval != $this->_disp->GetLast(DInfo::FLD_REF)) {
+				// check conflict
+				$ref = $this->_disp->GetParentRef();
+				$location = DPageDef::GetPage($this->_disp)->GetTblMap()->FindTblLoc($tbl->_id);
+				$confdata = $this->_disp->Get(DInfo::FLD_ConfData);
+				$existingkeys = $confdata->GetChildrenValues($location, $ref);
+
+				if (in_array($holderval, $existingkeys)) {
+					$keynode->SetErr('This value has been used! Please choose a unique one.');
 					$isValid = -1;
 				}
 			}
 		}
 
-		$checkedTids = array('VH_TOP_D','VH_BASE','VH_UDB',	'ADMIN_USR', 'ADMIN_USR_NEW',
-		'L_GENERAL', 'L_GENERAL1', 'ADMIN_L_GENERAL', 'ADMIN_L_GENERAL1', 'L_SSL', 'L_CERT', 'L_SSL_CERT',
-		'TP', 'TP1');
-
-		if ( in_array($tbl->_id, $checkedTids) ) {
-			switch ($tbl->_id) {
-				case 'TP':
-				case 'TP1':
-					$isValid = $this->chkPostTbl_TP($d);
-					break;
-				case 'VH_BASE':
-				case 'VH_TOP_D':
-					$isValid = $this->chkPostTbl_VH_BASE($d);
-					break;
-				case 'VH_UDB':
-					$isValid = $this->chkPostTbl_VH_UDB($d);
-					break;
-				case 'ADMIN_USR':
-					$isValid = $this->chkPostTbl_ADMIN_USR($d);
-					break;
-				case 'ADMIN_USR_NEW':
-					$isValid = $this->chkPostTbl_ADMIN_USR_NEW($d);
-					break;
-				case 'L_GENERAL':
-				case 'L_GENERAL1':
-				case 'ADMIN_L_GENERAL':
-				case 'ADMIN_L_GENERAL1':
-					$isValid = $this->chkPostTbl_L_GENERAL($d);
-					break;
-				case 'L_SSL':
-					$isValid = $this->chkPostTbl_L_SSL($d);
-					break;
-				case 'L_CERT':
-				case 'L_SSL_CERT':
-					$isValid = $this->chkPostTbl_L_SSL_CERT($d);
-					break;
+		if ( isset($tbl->_defaultExtract) )	{
+			foreach( $tbl->_defaultExtract as $k => $v ) {
+				$extracted->AddChild(new CNode($k,$v));
 			}
 		}
 
-		return $isValid;
-	}
-
-
-	protected function chkPostTbl_TP(&$d)
-	{
-		$isValid = 1;
-
-		$confCenter = ConfCenter::singleton();
-
-		$oldName = trim($confCenter->GetDispInfo()->_name);
-		$newName = trim($d['name']->GetVal());
-
-		if($oldName != $newName && array_key_exists($newName, $confCenter->_serv->_data['tpTop'])) {
-			$d['name']->SetErr("Template: \"$newName\" already exists. Please use a different name.");
-			$isValid = -1;
-
+		$view = $this->_disp->Get(DInfo::FLD_View);
+		if ($tbl->_id == 'L_GENERAL' || $tbl->_id == 'ADM_L_GENERAL') {
+			$this->chkPostTbl_L_GENERAL($extracted);
+		}
+		elseif ($view == 'sl' || $view == 'al' ) { // will ignore vhlevel
+			if ($tbl->_id == 'LVT_SSL')
+				$isValid = $this->chkPostTbl_L_SSL($extracted);
+			elseif ($tbl->_id == 'LVT_SSL_CERT')
+				$isValid = $this->chkPostTbl_L_SSL_CERT($extracted);
+		}
+		elseif ($view == 'admin') {
+			if ($tbl->_id == 'ADM_USR')
+				$isValid = $this->chkPostTbl_ADM_USR($extracted);
+			elseif ($tbl->_id == 'ADM_USR_NEW')
+				$isValid = $this->chkPostTbl_ADM_USR_NEW($extracted);
+		}
+		elseif ($tbl->_id == 'V_UDB') {
+			$isValid = $this->chkPostTbl_ADM_USR_NEW($extracted);
 		}
 
-		return $isValid;
-	}
-
-	protected function chkPostTbl_VH_BASE(&$d)
-	{
-		$isValid = 1;
-
-		$confCenter = ConfCenter::singleton();
-
-		$oldName = trim($confCenter->GetDispInfo()->_name);
-		$newName = trim($d['name']->GetVal());
-
-		if($oldName != $newName && array_key_exists($newName, $confCenter->_serv->_data['vhTop'])) {
-			$d['name']->SetErr("Virtual Hostname: \"$newName\" already exists. Please use a different name.");
-			$isValid = -1;
-
-		}
 
 		return $isValid;
-	}
-
-	protected function chkPostTbl_VH_UDB(&$d)
-	{
-		$isValid = 1;
-		if ( $d['pass']->GetVal() != $d['pass1']->GetVal() ) {
-			$d['pass']->SetErr('Passwords do not match!');
-			$isValid = -1;
-		}
-
-		if ( !$d['pass']->HasVal() ) { //new user
-			$d['pass']->SetErr('Missing password!');
-			$isValid = -1;
-		}
-
-		if ( $isValid == -1 ) {
-			return -1;
-		}
-
-		if ( strlen($d['pass']->GetVal()) > 0 ) {
-			$newpass = $this->encryptPass($d['pass']->GetVal());
-			$d['passwd'] = new CVal($newpass);
-		}
-		return 1;
 	}
 
 	protected function encryptPass($val)
@@ -228,123 +126,109 @@ class CValidation
 		$isMac = (strtoupper(PHP_OS) === 'DARWIN');
 
 		if (CRYPT_MD5 == 1 && !$isMac) {
-		    $salt = '$1$';
-		    for($i = 0; $i < 8; $i++) {
+			$salt = '$1$';
+			for($i = 0; $i < 8; $i++) {
 				$salt .= $valid_chars[rand(0,$limit)];
-		    }
-		    $salt .= '$';
+			}
+			$salt .= '$';
 		}
 		else {
-		    $salt = $valid_chars[rand(0,$limit)];
-		    $salt .= $valid_chars[rand(0,$limit)];
+			$salt = $valid_chars[rand(0,$limit)];
+			$salt .= $valid_chars[rand(0,$limit)];
 		}
 		$pass = crypt($val, $salt);
 		return $pass;
 	}
 
-	protected function chkPostTbl_ADMIN_USR(&$d)
+	protected function chkPostTbl_ADM_USR($d)
 	{
 		$isValid = 1;
-		if ( !$d['oldpass']->HasVal() ) {
-			$d['oldpass']->SetErr('Missing Old password!');
+		$oldpass = $d->GetChildVal('oldpass');
+		if ( $oldpass == NULL) {
+			$d->SetChildErr('oldpass', 'Missing Old password!');
 			$isValid = -1;
 		} else {
-			$file = $_SERVER['LS_SERVER_ROOT'] . 'admin/conf/htpasswd';
-			$udb = ConfigFileEx::loadUserDB($file);
-			$olduser = $this->_info['holderIndex_cur'];
-			$passwd = $udb[$olduser]['passwd']->GetVal();
+			$file = SERVER_ROOT . 'admin/conf/htpasswd';
+			$udb = $this->_disp->Get(DInfo::FLD_ConfData);
 
-			$oldpass = $d['oldpass']->GetVal();
+			$oldusername = $this->_disp->GetLast(DInfo::FLD_REF);
+			$passwd = $udb->GetChildVal('*index$name:passwd', $oldusername);
+
 			$encypt = crypt($oldpass, $passwd);
 
 			if ( $encypt != $passwd ) {
-				$d['oldpass']->SetErr('Invalid old password!');
+				$d->SetChildErr('oldpass', 'Invalid old password!');
 				$isValid = -1;
 			}
 		}
 
-		if ( !$d['pass']->HasVal() )	{
-			$d['pass']->SetErr('Missing new password!');
+		$pass = $d->GetChildVal('pass');
+		if ( $pass == NULL )	{
+			$d->SetChildErr('pass', 'Missing new password!');
 			$isValid = -1;
-		} elseif ( $d['pass']->GetVal() != $d['pass1']->GetVal() ) {
-			$d['pass']->SetErr('New passwords do not match!');
+		} elseif ( $pass != $d->GetChildVal('pass1') ) {
+			$d->SetChildErr('pass', 'New passwords do not match!');
 			$isValid = -1;
 		}
 
-		if ( $isValid == -1 ) {
+		if ( $isValid == -1 )
 			return -1;
+
+		$newpass = $this->encryptPass($pass);
+		$d->AddChild(new CNode('passwd', $newpass));
+		return 1;
+	}
+
+	protected function chkPostTbl_ADM_USR_NEW($d)
+	{
+		$isValid = 1;
+		$pass = $d->GetChildVal('pass');
+		if ( $pass == NULL )	{
+			$d->SetChildErr('pass', 'Missing new password!');
+			$isValid = -1;
+		} elseif ( $pass != $d->GetChildVal('pass1') ) {
+			$d->SetChildErr('pass', 'New passwords do not match!');
+			$isValid = -1;
 		}
 
-		$newpass = $this->encryptPass($d['pass']->GetVal());
-		$d['passwd'] = new CVal($newpass);
+		if ( $isValid == -1 )
+			return -1;
+
+		$newpass = $this->encryptPass($pass);
+		$d->AddChild(new CNode('passwd', $newpass));
 
 		return 1;
 	}
 
-	protected function chkPostTbl_ADMIN_USR_NEW(&$d)
+	protected function chkPostTbl_L_GENERAL($d)
 	{
-		$isValid = 1;
-		if ( !$d['pass']->HasVal() )	{
-			$d['pass']->SetErr('Missing new password!');
-			$isValid = -1;
-		} elseif ( $d['pass']->GetVal() != $d['pass1']->GetVal() ) {
-			$d['pass']->SetErr('New passwords do not match!');
-			$isValid = -1;
-		}
-
-		if ( $isValid == -1 ) {
-			return -1;
-		}
-
-		$newpass = $this->encryptPass($d['pass']->GetVal());
-		$d['passwd'] = new CVal($newpass);
-
-		return 1;
-	}
-
-	protected function chkPostTbl_L_GENERAL(&$d)
-	{
-		$isValid = 1;
-
-		$ip = $d['ip']->GetVal();
+		$ip = $d->GetChildVal('ip');
 		if ( $ip == 'ANY' ) {
 			$ip = '*';
 		}
-		$port = $d['port']->GetVal();
-		$d['address'] = new CVal("$ip:$port");
-
-		$confCenter = ConfCenter::singleton();
-
-		$oldName = trim($confCenter->GetDispInfo()->_name);
-		$newName = trim($d['name']->GetVal());
-
-		if($oldName != $newName && array_key_exists($newName, $confCenter->_serv->_data['listeners'])) {
-			$d['name']->SetErr("Listener \"$newName\" already exists. Please use a different name.");
-			$isValid = -1;
-		}
-
-		return $isValid;
+		$port = $d->GetChildVal('port');
+		$d->AddChild(new CNode('address', "$ip:$port") );
 	}
 
 	protected function isCurrentListenerSecure()
 	{
-		$confCenter = ConfCenter::singleton();
-		$listenerName = trim($confCenter->GetDispInfo()->_name);
-		$l = $confCenter->_serv->_data['listeners'][$listenerName];
-		return ($l['secure']->GetVal() == 1);
+		$confdata = $this->_disp->Get(DInfo::FLD_ConfData);
+		$listener = $confdata->GetChildNodeById('listener', $this->_disp->Get(DInfo::FLD_ViewName));
+		$secure = $listener->GetChildVal('secure');
+		return ($secure == 1);
 	}
 
-	protected function chkPostTbl_L_SSL(&$d)
+	protected function chkPostTbl_L_SSL($d)
 	{
 		$isValid = 1;
 		if ($this->isCurrentListenerSecure()) {
-			$err = 'Value must be set for secured listener';
-			if (!$d['sslProtocol']->HasVal()) {
-				$d['sslProtocol']->SetErr($err);
+			$err = 'Value must be set for secured listener. ';
+			if ($d->GetChildVal('sslProtocol') == NULL) {
+				$d->SetChildErr('sslProtocol', $err);
 				$isValid = -1;
 			}
-			if (!$d['ciphers']->HasVal()) {
-				$d['ciphers']->SetErr($err);
+			if ($d->GetChildVal('ciphers') == NULL) {
+				$d->SetChildErr('ciphers', $err);
 				$isValid = -1;
 			}
 		}
@@ -352,17 +236,17 @@ class CValidation
 		return $isValid;
 	}
 
-	protected function chkPostTbl_L_SSL_CERT(&$d)
+	protected function chkPostTbl_L_SSL_CERT($d)
 	{
 		$isValid = 1;
-		if ($this->isCurrentListenerSecure()) {
-			$err = 'Value must be set for secured listener';
-			if (!$d['keyFile']->HasVal()) {
-				$d['keyFile']->SetErr($err);
+		if ($this->isCurrentListenerSecure($disp)) {
+			$err = 'Value must be set for secured listener. ';
+			if ($d->GetChildVal('keyFile') == NULL) {
+				$d->SetChildErr('keyFile', $err);
 				$isValid = -1;
 			}
-			if (!$d['certFile']->HasVal()) {
-				$d['certFile']->SetErr($err);
+			if ($d->GetChildVal('certFile') == NULL) {
+				$d->SetChildErr('certFile', $err);
 				$isValid = -1;
 			}
 		}
@@ -370,70 +254,42 @@ class CValidation
 		return $isValid;
 	}
 
-	protected function validateTblAttr($tblDef, $tbl, &$data)
+	protected function validateAttr($attr, $dlayer)
 	{
-		$valid = 1;
-		if ( $tbl->_subTbls != NULL ) {
-			$tid = DUtil::getSubTid($tbl->_subTbls, $data);
-			if ( $tid == NULL ) {
-				return;
-			}
-			$tbl1 = $tblDef->GetTblDef($tid);
-		} else {
-			$tbl1 = $tbl;
-		}
-
-		$index = array_keys($tbl1->_dattrs);
-		foreach ( $index as $i ) {
-			$attr = $tbl1->_dattrs[$i];
-
-			if ( $attr->_type == 'sel1' || $attr->_type == 'sel2' ) {
-				$attr->populate_sel1_options($this->_info, $data);
-			}
-
-			$res = $this->validateAttr($attr, $data[$attr->_key]);
-			$this->setValid($valid, $res);
-		}
-		return $valid;
-	}
-
-	protected function validateAttr($attr, &$cvals)
-	{
-		$valid = 1;
-		if ( is_array($cvals) )	{
-			for ( $i = 0 ; $i < count($cvals) ; ++$i ) {
-				$res = $this->isValidAttr($attr, $cvals[$i]);
-				$this->setValid($valid, $res);
+		if ( is_array($dlayer) ) {
+			foreach($dlayer as $node) {
+				$res = $this->isValidAttr($attr, $node);
+				$this->setValid($res);
 			}
 		} else {
-			$valid = $this->isValidAttr($attr, $cvals);
+			$res = $this->isValidAttr($attr, $dlayer);
+			$this->setValid($res);
 		}
-		return $valid;
 	}
 
-	protected function isValidAttr($attr, $cval)
+	protected function isValidAttr($attr, $node)
 	{
-		if ($cval == NULL || $cval->HasErr())
+		if ($node == NULL || $node->HasErr())
 			return -1;
 
-		if ( !$cval->HasVal()) {
-			if ( $attr->_allowNull ) {
+		if ( !$node->HasVal()) {
+			if ( !$attr->IsFlagOn(DAttr::BM_NOTNULL) )
 				return 1;
-			}
-			$cval->SetErr('value must be set');
+
+			$node->SetErr('value must be set. ');
 			return -1;
 		}
 
-		if ( $attr->_type == 'cust' ) {
+		$notchk = array('cust', 'domain', 'subnet');
+		if ( in_array($attr->_type, $notchk) ) {
 			return 1;
 		}
 
 		$chktype = array('uint', 'name', 'vhname', 'sel','sel1','sel2',
-		'bool','file','filep','file0','file1', 'filetp', 'path',
+		'bool','file','filep','file0','file1', 'filetp', 'filevh', 'path',
 		'uri','expuri','url', 'httpurl', 'email', 'dir', 'addr', 'wsaddr', 'parse');
 
 		if ( !in_array($attr->_type, $chktype) )	{
-			// not checked type ('domain', 'subnet'
 			return 1;
 		}
 
@@ -450,26 +306,28 @@ class CValidation
 		}
 
 		if ( $attr->_multiInd == 1 ) {
-			$valid = 1;
-			$vals = DUtil::splitMultiple($cval->GetVal());
+			$vals = preg_split("/, /", $node->Get(CNode::FLD_VAL), -1, PREG_SPLIT_NO_EMPTY);
 			$err = array();
 			$funcname .= '_val';
 			foreach( $vals as $i=>$v ) {
 				$res = $this->$funcname($attr, $v, $err[$i]);
-				$this->setValid($valid, $res);
+				$this->setValid($res);
 			}
-			$cval->SetErr(trim(implode(' ', $err)));
-			return $valid;
+			$error = trim(implode(' ', $err));
+			if ($error != '')
+				$node->SetErr($error);
+			return 1;
 		}else {
-			return $this->$funcname($attr, $cval);
+			return $this->$funcname($attr, $node);
 		}
 	}
 
-	protected function chkAttr_sel($attr, $cval)
+	protected function chkAttr_sel($attr, $node)
 	{
 		$err = '';
-		$res = $this->chkAttr_sel_val($attr, $cval->GetVal(), $err);
-		$cval->SetErr($err);
+		$res = $this->chkAttr_sel_val($attr, $node->Get(CNode::FLD_VAL), $err);
+		if ($err != '')
+			$node->SetErr($err);
 		return $res;
 	}
 
@@ -483,11 +341,12 @@ class CValidation
 		return 1;
 	}
 
-	protected function chkAttr_name($attr, $cval)
+	protected function chkAttr_name($attr, $node)
 	{
-		$cval->SetVal( preg_replace("/\s+/", ' ', $cval->GetVal()));
-		$res = $this->chkAttr_name_val($attr, $cval->GetVal(), $err);
-		$cval->SetErr($err);
+		$node->SetVal( preg_replace("/\s+/", ' ', $node->Get(CNode::FLD_VAL)));
+		$res = $this->chkAttr_name_val($attr, $node->Get(CNode::FLD_VAL), $err);
+		if ($err != '')
+			$node->SetErr($err);
 		return $res;
 	}
 
@@ -504,54 +363,34 @@ class CValidation
 		return 1;
 	}
 
-	protected function chkAttr_vhname($attr, $cval)
+	protected function chkAttr_vhname($attr, $node)
 	{
-		$cval->SetVal(preg_replace("/\s+/", ' ', $cval->GetVal()));
-		$val = $cval->GetVal();
+		$node->SetVal(preg_replace("/\s+/", ' ', $node->Get(CNode::FLD_VAL)));
+		$val = $node->Get(CNode::FLD_VAL);
 		if ( preg_match( "/[,;<>&%]/", $val ) ) {
-			$cval->SetErr('Invalid characters found in name');
+			$node->SetErr('Invalid characters found in name');
 			return -1;
 		}
 		if ( strpos($val, ' ') !== FALSE ) {
-			$cval->SetErr('No space allowed in the name');
+			$node->SetErr('No space allowed in the name');
 			return -1;
 		}
 		if ( strlen($val) > 100 ) {
-			$cval->SetErr('name can not be longer than 100 characters');
+			$node->SetErr('name can not be longer than 100 characters');
 			return -1;
 		}
-		$this->_info['VH_NAME'] = $val;
 		return 1;
 	}
 
 	protected function allow_create($attr, $absname)
 	{
-		if ( strpos($attr->_maxVal, 'c') === FALSE ) {
+		if ( strpos($attr->_maxVal, 'c') === FALSE )
 			return FALSE;
-		}
-		if ( $attr->_minVal >= 2
-		&& ( strpos($absname, $_SERVER['LS_SERVER_ROOT'])  === 0 )) {
+
+		if ( $attr->_minVal >= 2 && ( strpos($absname, SERVER_ROOT)  === 0 )) {
 			return TRUE;
 		}
-
-		if (isset($this->_info['VH_ROOT'])) {
-			$VH_ROOT = $this->_info['VH_ROOT'];
-		} else {
-			$VH_ROOT = NULL;
-		}
-
-		if (isset($this->_info['DOC_ROOT'])) {
-			$DOC_ROOT = $this->_info['DOC_ROOT'];
-		}
-
-		if ( $attr->_minVal >= 3 && ( strpos($absname, $VH_ROOT) === 0 ) ) {
-			return TRUE;
-		}
-
-		if ( $attr->_minVal == 4 && ( strpos($absname, $DOC_ROOT) === 0 ) ) {
-			return TRUE;
-		}
-
+		//other places need to manually create
 		return FALSE;
 	}
 
@@ -581,7 +420,7 @@ class CValidation
 		|| ($type == 'file' && !is_file($absname)) ) {
 			$err = $type .' '. htmlspecialchars($absname) . ' does not exist.';
 			if ( $this->allow_create($attr, $absname) ) {
-				$err .= ' <a href="javascript:createFile(\''. $attr->_htmlName . '\')">CLICK TO CREATE</a>';
+				$err .= ' <a href="javascript:createFile(\''. $attr->GetKey() . '\')">CLICK TO CREATE</a>';
 			} else {
 				$err .= ' Please create manually.';
 			}
@@ -596,26 +435,24 @@ class CValidation
 			$err = $type . ' '. htmlspecialchars($absname) . ' is not writable';
 			return -1;
 		}
-		if ( (strpos($attr->_maxVal, 'x') !== FALSE) && !is_executable($absname) ) {
-			$err = $type . ' '. htmlspecialchars($absname) . ' is not executable';
-			return -1;
-		}
+
 		return 1;
 	}
 
-	protected function chkAttr_file($attr, $cval)
+	protected function chkAttr_file($attr, $node)
 	{
-		$val = $cval->GetVal();
+		$val = $node->Get(CNode::FLD_VAL);
 		$err = '';
 		$res = $this->chkAttr_file_val($attr, $val, $err);
-		$cval->SetVal($val);
-		$cval->SetErr($err);
+		$node->SetVal($val);
+		if ($err != '')
+			$node->SetErr($err);
 		return $res;
 	}
 
-	protected function chkAttr_dir($attr, $cval)
+	protected function chkAttr_dir($attr, $node)
 	{
-		$val = $cval->GetVal();
+		$val = $node->Get(CNode::FLD_VAL);
 		$err = '';
 
 		if ( substr($val,-1) == '*' ) {
@@ -623,8 +460,9 @@ class CValidation
 		} else {
 			$res = $this->chkAttr_file_val($attr, $val, $err);
 		}
-		$cval->SetVal($val);
-		$cval->SetErr($err);
+		$node->SetVal($val);
+		if ($err != '')
+			$node->SetErr($err);
 		return $res;
 	}
 
@@ -647,43 +485,38 @@ class CValidation
 		}
 
 		$res = $this->chk_file1($attr, $path, $err);
+
 		if ($attr->_type == 'filetp') {
-			$pathtp = $_SERVER['LS_SERVER_ROOT'] . 'conf/templates/';
+			$pathtp = SERVER_ROOT . 'conf/templates/';
 			if (strstr($path, $pathtp) === FALSE) {
 				$err = ' Template file must locate within $SERVER_ROOT/conf/templates/';
 				$res = -1;
 			}
-			else if (substr($path, -4) != '.xml') {
-				$err = ' Template file name needs to be ".xml"';
+			else if (substr($path, -5) != '.conf') {
+				$err = ' Template file name needs to be ".conf"';
 				$res = -1;
 			}
 		}
-		if ( $res == -1
-		&& $_POST['file_create'] == $attr->_htmlName
-		&& $this->allow_create($attr, $path) )	{
-			if ( PathTool::createFile($path, $err, $attr->_htmlName) ) {
+		elseif ($attr->_type == 'filevh') {
+			$pathvh = SERVER_ROOT . 'conf/vhosts/';
+			if (strstr($path, $pathvh) === FALSE) {
+				$err = ' VHost config file must locate within $SERVER_ROOT/conf/vhosts/, suggested value is $SERVER_ROOT/conf/vhosts/$VH_NAME/vhconf.conf';
+				$res = -1;
+			}
+			else if (substr($path, -5) != '.conf') {
+				$err = ' VHost config file name needs to be ".conf"';
+				$res = -1;
+			}
+		}
+
+		if ( $res == -1 && $_POST['file_create'] == $attr->GetKey()
+			&& $this->allow_create($attr, $path) )	{
+			if ( PathTool::createFile($path, $err, $attr->GetKey()) ) {
 				$err = "$path has been created successfully.";
 			}
 			$res = 0; // make it always point to curr page
 		}
-		if ( $attr->_key == 'vhRoot' )	{
-			if ( substr($path,-1) != '/' ) {
-				$path .= '/';
-			}
-			if ($res == -1) {
-				// do not check path for vhroot, it may be different owner
-				$err = '';
-				$res = 1;
-			}
-			$this->_info['VH_ROOT'] = $path;
-		}
-		elseif ($attr->_key == 'docRoot') {
-			if ($res == -1) {
-				// do not check path for vhroot, it may be different owner
-				$err = '';
-				$res = 1;
-			}
-		}
+
 		return $res;
 	}
 
@@ -697,7 +530,7 @@ class CValidation
 		$s = $path{0};
 
 		if ( strpos($path, '$VH_NAME') !== FALSE )	{
-			$path = str_replace('$VH_NAME', $this->_info['VH_NAME'], $path);
+			$path = str_replace('$VH_NAME', $this->_disp->Get(DInfo::FLD_ViewName), $path);
 		}
 
 		if ( $s == '/' ) {
@@ -713,84 +546,77 @@ class CValidation
 				$err = 'only accept absolute path or path relative to $SERVER_ROOT' . $path;
 				return -1;
 			} else {
-				$path = $_SERVER['LS_SERVER_ROOT'] . substr($path, 13);
+				$path = SERVER_ROOT . substr($path, 13);
 			}
 		}
 		elseif ( $attr->_minVal == 3 ) {
 			if ( strncasecmp('$SERVER_ROOT', $path, 12) == 0 ) {
-				$path = $_SERVER['LS_SERVER_ROOT'] . substr($path, 13);
+				$path = SERVER_ROOT . substr($path, 13);
 			} elseif ( strncasecmp('$VH_ROOT', $path, 8) == 0 )	{
-				if (isset($this->_info['VH_ROOT'])) {
-					$path = $this->_info['VH_ROOT'] . substr($path, 9);
+				$vhroot = $this->_disp->GetVHRoot();
+				if ($vhroot == NULL) {
+					$err = 'Fail to find $VH_ROOT';
+					return -1;
 				}
+				$path = $vhroot . substr($path, 9);
 			} else {
 				$err = 'only accept absolute path or path relative to $SERVER_ROOT or $VH_ROOT';
 				return -1;
-			}
-		}
-		elseif ( $attr->_minVal == 4 ) {
-			if ( strncasecmp('$SERVER_ROOT', $path, 12) == 0 ) {
-				$path = $_SERVER['LS_SERVER_ROOT'] . substr($path, 13);
-			} elseif ( strncasecmp('$VH_ROOT', $path, 8) == 0 )	{
-				$path = $this->_info['VH_ROOT'] . substr($path, 9);
-			} elseif ( strncasecmp('$DOC_ROOT', $path, 9) == 0 ) {
-				$path = $this->_info['DOC_ROOT'] . substr($path, 10);
-			} else {
-				$path = $this->_info['DOC_ROOT'] . $path;
 			}
 		}
 
 		return $this->test_file($path, $err, $attr);
 	}
 
-	protected function chkAttr_uri($attr, $cval)
+	protected function chkAttr_uri($attr, $node)
 	{
-		$val = $cval->GetVal();
+		$val = $node->Get(CNode::FLD_VAL);
 		if ( $val[0] != '/' ) {
-			$cval->SetErr('URI must start with "/"');
+			$node->SetErr('URI must start with "/"');
 			return -1;
 		}
 		return 1;
 	}
 
-	protected function chkAttr_expuri($attr, $cval)
+	protected function chkAttr_expuri($attr, $node)
 	{
-		$val = $cval->GetVal();
+		$val = $node->Get(CNode::FLD_VAL);
 		if ( $val{0} == '/' || strncmp( $val, 'exp:', 4 ) == 0 ) {
 			return 1;
 		} else {
-			$cval->SetErr('URI must start with "/" or "exp:"');
+			$node->SetErr('URI must start with "/" or "exp:"');
 			return -1;
 		}
 	}
 
-	protected function chkAttr_url($attr, $cval)
+	protected function chkAttr_url($attr, $node)
 	{
-		$val = $cval->GetVal();
+		$val = $node->Get(CNode::FLD_VAL);
 		if (( $val{0} != '/' )
 		&&( strncmp( $val, 'http://', 7 ) != 0 )
 		&&( strncmp( $val, 'https://', 8 ) != 0 )) {
-			$cval->SetErr('URL must start with "/" or "http(s)://"');
+			$node->SetErr('URL must start with "/" or "http(s)://"');
 			return -1;
 		}
 		return 1;
 	}
 
-	protected function chkAttr_httpurl($attr, $cval)
+	protected function chkAttr_httpurl($attr, $node)
 	{
-		$val = $cval->GetVal();
+		$val = $node->Get(CNode::FLD_VAL);
 		if (strncmp( $val, 'http://', 7 ) != 0 ) {
-			$cval->SetErr('Http URL must start with "http://"');
+			$node->SetErr('Http URL must start with "http://"');
 			return -1;
 		}
 		return 1;
 	}
 
-	protected function chkAttr_email($attr, $cval)
+	protected function chkAttr_email($attr, $node)
 	{
 		$err = '';
-		$res = $this->chkAttr_email_val($attr, $cval->GetVal(), $err);
-		$cval->SetErr($err);
+		$res = $this->chkAttr_email_val($attr, $node->Get(CNode::FLD_VAL), $err);
+		if ($err != '')
+			$node->SetErr($err);
 		return $res;
 	}
 
@@ -804,43 +630,44 @@ class CValidation
 		}
 	}
 
-	protected function chkAttr_addr($attr, $cval)
+	protected function chkAttr_addr($attr, $node)
 	{
-		if ( preg_match("/^[[:alnum:]._-]+:(\d)+$/", $cval->GetVal()) ) {
+		if ( preg_match("/^[[:alnum:]._-]+:(\d)+$/", $node->Get(CNode::FLD_VAL)) ) {
 			return 1;
-		} elseif ( preg_match("/^UDS:\/\/.+/i", $cval->GetVal()) ) {
+		} elseif ( preg_match("/^UDS:\/\/.+/i", $node->Get(CNode::FLD_VAL)) ) {
 			return 1;
 		} else {
-			$cval->SetErr('invalid address: correct syntax is "IPV4|IPV6_address:port" or UDS://path');
+			$node->SetErr('invalid address: correct syntax is "IPV4|IPV6_address:port" or UDS://path');
 			return -1;
 		}
 	}
 
-	protected function chkAttr_wsaddr($attr, $cval)
+	protected function chkAttr_wsaddr($attr, $node)
 	{
-		if ( preg_match("/^((http|https):\/\/)?[[:alnum:]._-]+(:\d+)?$/", $cval->GetVal()) ) {
+		if ( preg_match("/^((http|https):\/\/)?[[:alnum:]._-]+(:\d+)?$/", $node->Get(CNode::FLD_VAL)) ) {
 			return 1;
 		} else {
-			$cval->SetErr('invalid address: correct syntax is "[http|https://]IPV4|IPV6_address[:port]". ');
+			$node->SetErr('invalid address: correct syntax is "[http|https://]IPV4|IPV6_address[:port]". ');
 			return -1;
 		}
 	}
 
-	protected function chkAttr_bool($attr, $cval)
+	protected function chkAttr_bool($attr, $node)
 	{
-		$val = $cval->GetVal();
+		$val = $node->Get(CNode::FLD_VAL);
 		if ( $val === '1' || $val === '0' ) {
 			return 1;
 		}
-		$cval->SetErr('invalid value');
+		$node->SetErr('invalid value');
 		return -1;
 	}
 
-	protected function chkAttr_parse($attr, $cval)
+	protected function chkAttr_parse($attr, $node)
 	{
 		$err = '';
-		$res = $this->chkAttr_parse_val($attr, $cval->GetVal(), $err);
-		$cval->SetErr($err);
+		$res = $this->chkAttr_parse_val($attr, $node->Get(CNode::FLD_VAL), $err);
+		if ($err != '')
+			$node->SetErr($err);
 		return $res;
 	}
 
@@ -856,29 +683,26 @@ class CValidation
 
 	protected function getKNum($strNum)
 	{
-		$tag = substr($strNum, -1);
+		$tag = strtoupper(substr($strNum, -1));
 		switch( $tag ) {
-			case 'K':
-			case 'k': $multi = 1024; break;
-			case 'M':
-			case 'm': $multi = 1048576; break;
-			case 'G':
-			case 'g': $multi = 1073741824; break;
+			case 'K': $multi = 1024; break;
+			case 'M': $multi = 1048576; break;
+			case 'G': $multi = 1073741824; break;
 			default: return intval($strNum);
 		}
 
 		return (intval(substr($strNum, 0, -1)) * $multi);
 	}
 
-	protected function chkAttr_uint($attr, $cval)
+	protected function chkAttr_uint($attr, $node)
 	{
-		$val = $cval->GetVal();
+		$val = $node->Get(CNode::FLD_VAL);
 		if ( preg_match("/^(-?\d+)([KkMmGg]?)$/", $val, $m) ) {
 			$val1 = $this->getKNum($val);
 			if (isset($attr->_minVal)) {
 				$min = $this->getKNum($attr->_minVal);
 				if ($val1 < $min) {
-					$cval->SetErr('number is less than the minumum required');
+					$node->SetErr('number is less than the minumum required');
 					return -1;
 				}
 
@@ -886,64 +710,17 @@ class CValidation
 			if (isset($attr->_maxVal)) {
 				$max = $this->getKNum($attr->_maxVal);
 				if ( $val1 > $max )	{
-					$cval->SetErr('number exceeds maximum allowed');
+					$node->SetErr('number exceeds maximum allowed');
 					return -1;
 				}
 			}
 			return 1;
 		} else {
-			$cval->SetErr('invalid number format');
+			$node->SetErr('invalid number format');
 			return -1;
 		}
 	}
 
-	protected function chkDups(&$data, &$checkList, $key)
-	{
-		if ( in_array( $data[$key]->GetVal(), $checkList ) ) {
-			$data[$key]->SetErr( "This $key \"" . $data[$key]->GetVal() . '\" already exists. Please enter a different one.');
-			return FALSE;
-		}
-		return TRUE;
-	}
 
-	protected function chkExtApp(&$data, &$attr)
-	{
-		$isValid = TRUE;
-		if ( $data['autoStart']->GetVal() ) {
-			if ( !$data['path']->HasVal() ) {
-				$data['path']->SetErr('must provide path when autoStart is enabled');
-				$isValid = FALSE;
-			}
-			if ( !$data['backlog']->HasVal() )	{
-				$data['backlog']->SetErr('must enter backlog value when autoStart is enabled');
-				$isValid = FALSE;
-			}
-			if ( !$data['instances']->HasVal() ) {
-				$data['instances']->SetErr('must give number of instances when autoStart is enabled');
-				$isValid = FALSE;
-			}
-		}
-
-		if ( isset($attr['names']) && (!$this->chkDups($to, $attr['names'], 'name')) ) {
-			$isValid = FALSE;
-		}
-		return $isValid;
-	}
-
-	protected function chkScriptHandler(&$to, &$attr)
-	{
-		$vals = DUtil::splitMultiple( $to['suffix']->GetVal() );
-		$isValid = TRUE;
-		foreach( $vals as $suffix )	{
-			if ( in_array( $suffix, $attr['names'] ) ) {
-				$t[] = $suffix;
-				$isValid = FALSE;
-			}
-		}
-		if ( !$isValid ) {
-			$to['suffix']->SetErr(' Suffix ' . implode(', ', $t) . ' already exists. Please use a different suffix.');
-		}
-		return $isValid;
-	}
 
 }

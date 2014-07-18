@@ -196,7 +196,7 @@ int HttpCgiTool::processHeaderLine( HttpExtConnector * pExtConn, const char * pL
         }
         return 0;
     case HttpRespHeaders::H_TRANSFER_ENCODING:
-        pResp->setContentLen( LSI_RESP_BODY_SIZE_UNKNOWN );
+        pResp->setContentLen( LSI_RESP_BODY_SIZE_CHUNKED );
         return 0;
     case HttpRespHeaders::H_PROXY_CONNECTION:
     case HttpRespHeaders::H_CONNECTION:
@@ -204,7 +204,7 @@ int HttpCgiTool::processHeaderLine( HttpExtConnector * pExtConn, const char * pL
             status |= HEC_RESP_CONN_CLOSE;
         return 0;
     case HttpRespHeaders::H_CONTENT_LENGTH:
-        if ( pResp->getContentLen() >= 0 )
+        if ( pResp->getContentLen() == LSI_RESP_BODY_SIZE_UNKNOWN )
         {
             off_t lContentLen = strtoll( pValue, NULL, 10 );
             if (( lContentLen >= 0 )&&( lContentLen != LLONG_MAX ))

@@ -59,6 +59,7 @@ lsi_module_t MNAME;
 
 #define URI_PREFIX   "/testmoduledata"
 #define max_file_len    1024
+lsi_shmhash_t *pShmhash = NULL;
 
 typedef struct {
     long count;
@@ -143,8 +144,23 @@ static int myhandler_process(lsi_session_t *session)
     ++file_data->count;
     ++vhost_data->count;
     
-    sprintf(output, "IP counter = %ld\nVHost counter = %ld\nFile counter = %ld\n", 
-            ip_data->count, vhost_data->count, file_data->count);
+    
+    int len = 1024, flag = 0;
+    lsi_shm_off_t offset = g_api->shm_htable_get(pShmhash, (const uint8_t *)URI_PREFIX, sizeof(URI_PREFIX) -1, &len, &flag ); 
+    if ( offset == 0 )
+    {
+        g_api->log(NULL, LSI_LOG_ERROR, "g_api->shm_htable_get return 0, so quit.\n");
+        return 500;
+    }
+    
+    char *pBuf = (char *)g_api->shm_htable_off2ptr(pShmhash, offset);
+    int sharedCount = 0;
+    sscanf(pBuf, "MyShardData %d", &sharedCount );
+    snprintf(pBuf, len, "MyShardData %d\n", ++sharedCount);
+    
+    
+    sprintf(output, "IP counter = %ld\nVHost counter = %ld\nFile counter = %ld\n%s", 
+            ip_data->count, vhost_data->count, file_data->count, pBuf);
     g_api->append_resp_body(session, output, strlen(output));
     g_api->end_resp(session);
     return 0;
@@ -157,9 +173,31 @@ static lsi_serverhook_t serverHooks[] = {
 
 static int _init(lsi_module_t * pModule)
 {
+    pShmhash = g_api->shm_htable_init(NULL, "testSharedM", 0, NULL, NULL);
+    if( pShmhash == NULL )
+    {
+        g_api->log(NULL, LSI_LOG_ERROR, "g_api->shm_htable_init return NULL, so quit.\n");
+        return -1;
+    }
+    
+    int len = 1024, flag = LSI_SHM_INIT;
+    lsi_shm_off_t offset = g_api->shm_htable_get(pShmhash, (const uint8_t *)URI_PREFIX, sizeof(URI_PREFIX) -1, &len, &flag ); 
+    if ( offset == 0 )
+    {
+        g_api->log(NULL, LSI_LOG_ERROR, "g_api->shm_htable_get return 0, so quit.\n");
+        return -1;
+    }
+    if (flag == LSI_SHM_CREATED)
+    {
+        //Set the init value to it
+        uint8_t *pBuf = g_api->shm_htable_off2ptr(pShmhash, offset);
+        snprintf((char *)pBuf, len, "MyShardData 0\r\n");
+    }
+
     g_api->init_module_data(pModule, releaseCounterDataCb, LSI_MODULE_DATA_VHOST );
     g_api->init_module_data(pModule, releaseCounterDataCb, LSI_MODULE_DATA_IP );
     g_api->init_module_data(pModule, releaseCounterDataCb, LSI_MODULE_DATA_FILE );
+
     return 0;
 }
 

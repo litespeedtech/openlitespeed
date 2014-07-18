@@ -85,7 +85,8 @@ ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/ax_check_zlib.m4 \
 	$(top_srcdir)/ax_check_openssl.m4 \
 	$(top_srcdir)/ax_path_lib_pcre.m4 \
-	$(top_srcdir)/ax_lib_expat.m4 $(top_srcdir)/configure.ac
+	$(top_srcdir)/ax_lib_expat.m4 $(top_srcdir)/ax_check_liblua.m4 \
+	$(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 mkinstalldirs = $(install_sh) -d
@@ -100,8 +101,8 @@ am__v_AR_0 = @echo "  AR      " $@;
 am__v_AR_1 = 
 libsslpp_a_AR = $(AR) $(ARFLAGS)
 libsslpp_a_LIBADD =
-am_libsslpp_a_OBJECTS = sslengine.$(OBJEXT) sslcert.$(OBJEXT) \
-	sslerror.$(OBJEXT) sslconnection.$(OBJEXT) \
+am_libsslpp_a_OBJECTS = sslsession.$(OBJEXT) sslengine.$(OBJEXT) \
+	sslcert.$(OBJEXT) sslerror.$(OBJEXT) sslconnection.$(OBJEXT) \
 	sslcontext.$(OBJEXT) sslocspstapling.$(OBJEXT)
 libsslpp_a_OBJECTS = $(am_libsslpp_a_OBJECTS)
 AM_V_P = $(am__v_P_@AM_V@)
@@ -216,6 +217,7 @@ LIBTOOL = @LIBTOOL@
 LIPO = @LIPO@
 LN_S = @LN_S@
 LTLIBOBJS = @LTLIBOBJS@
+LUA_INCLUDES = @LUA_INCLUDES@
 MAKEINFO = @MAKEINFO@
 MANIFEST_TOOL = @MANIFEST_TOOL@
 MKDIR_P = @MKDIR_P@
@@ -310,7 +312,7 @@ top_srcdir = @top_srcdir@
 noinst_LIBRARIES = libsslpp.a
 INCLUDES = -I$(top_srcdir)/src
 libsslpp_a_METASOURCES = AUTO
-libsslpp_a_SOURCES = sslengine.cpp sslcert.cpp sslerror.cpp sslconnection.cpp sslcontext.cpp sslocspstapling.cpp 
+libsslpp_a_SOURCES = sslsession.cpp sslengine.cpp sslcert.cpp sslerror.cpp sslconnection.cpp sslcontext.cpp sslocspstapling.cpp 
 all: all-am
 
 .SUFFIXES:
@@ -366,6 +368,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sslengine.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sslerror.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sslocspstapling.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sslsession.Po@am__quote@
 
 .cpp.o:
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXXCOMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<

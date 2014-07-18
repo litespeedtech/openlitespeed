@@ -10,7 +10,7 @@ if ($manual_script == NULL) {// illegal entry
 $binname = 'lsphp-' . $check->pass_val['php_version'];
 
 $notes = '<ul><li>If the build process is successful, the PHP binary will be created under '
-	. $_SERVER['LS_SERVER_ROOT'] . '/fcgi-bin/ with name ' . $binname
+	. SERVER_ROOT . '/fcgi-bin/ with name ' . $binname
 	. ', and a symbolic link of lsphp' . $check->pass_val['php_version'][0]
 	. ' will be created or updated to the newly built binary. If '
 	. $binname . ' already exists, it will be renamed to ' . $binname . '.bak.</li>';

@@ -81,6 +81,8 @@ read TMP_YN
 echo ""
 if [ "x$TMP_YN" != "xy" ] && [ "x$TMP_YN" != "xY" ]; then
 	rm -rf $BASE_DIR/conf
+	rm -rf $BASE_DIR/admin/conf
+	rm -rf $BASE_DIR/backup
 else
 	DELETE_ALL=0
 fi
@@ -90,6 +92,7 @@ read TMP_YN
 echo ""
 if [ "x$TMP_YN" != "xy" ] && [ "x$TMP_YN" != "xY" ]; then
 	rm -rf $BASE_DIR/logs
+	rm -rf $BASE_DIR/admin/logs
 else
 	DELETE_ALL=0
 fi
@@ -98,7 +101,25 @@ rm -rf $BASE_DIR/docs
 rm -rf $BASE_DIR/DEFAULT
 rm -rf $BASE_DIR/bin
 rm -rf $BASE_DIR/fcgi-bin
-rm -rf $BASE_DIR/admin
+rm -rf $BASE_DIR/admin/cgid
+rm -rf $BASE_DIR/admin/fcgi-bin
+rm -rf $BASE_DIR/admin/html.open
+rm -rf $BASE_DIR/admin/misc
+rm -rf $BASE_DIR/admin/tmp
+rm $BASE_DIR/admin/html
+rm -rf $BASE_DIR/cachedata
+rm -rf $BASE_DIR/gdata
+rm -rf $BASE_DIR/lib
+rm -rf $BASE_DIR/share
+rm -rf $BASE_DIR/tmp
+rm -rf $BASE_DIR/phpbuild
+rm -rf $BASE_DIR/add-ons/snmp_monitoring
+
+
+#Do not remove the modules here since the modules were created by user besides cache.so
+rm $BASE_DIR/modules/cache.so
+
+
 
 if [ $DELETE_ALL -ne 0 ]; then
 	FILES=`ls $BASE_DIR | wc -l`

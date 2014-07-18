@@ -10,6 +10,8 @@ set_directory_properties(PROPERTIES  ADDITIONAL_MAKE_CLEAN_FILES "${PROJECT_SOUR
 set(libUnitTest  libUnitTest++.a)
 ##########################################################################################
 
+add_definitions(-DTEST_OUTPUT_PLAIN_CONF)
+
 execute_process( COMMAND getconf LFS_CFLAGS
             OUTPUT_VARIABLE  LFS_CFLAGS )
 
@@ -26,6 +28,7 @@ add_subdirectory(edio)
 add_subdirectory(socket)
 add_subdirectory(util)
 add_subdirectory(http)
+add_subdirectory(shm)
 add_subdirectory(sslpp)
 add_subdirectory(extensions)
 add_subdirectory(log4cxx)
@@ -116,12 +119,31 @@ add_executable(openlitespeed ${openlitespeed_SRCS} ${edio_STAT_SRCS}
     ${extensions_STAT_SRCS} ${http_STAT_SRCS} ${socket_STAT_SRCS} 
     ${util_STAT_SRCS} ${spdy_STAT_SRCS} ${MODULE_DATAS_SRCS} )
 
+#add_executable(luatest 
+#modules/prelinkedmods.cpp
+#test/lua/luatest.cpp 
+#httpdtest.cpp
+#)
 
-target_link_libraries(openlitespeed main http spdy ssi modgzip lsiapi registry cgi fcgi jk extensions lsapi proxy edio  log4cxx socket sslpp util misc sysinfo GeoIP pthread dl ${libUnitTest} )
+add_executable(shmtest
+test/shm/testshmapi.cpp
+test/shm/shmtest.cpp
+test/shm/lsshmdebug.cpp
+test/shm/testshm.cpp
+test/shm/testshmreg.cpp
+test/shm/testshmhash.cpp
+modules/prelinkedmods.cpp
+httpdtest.cpp
+)
+
+SET( litespeedlib 
+    lsshm main http main modgzip spdy ssi 
+    lsiapi registry cgi fcgi jk extensions 
+    lsapi proxy edio  log4cxx socket 
+    sslpp util misc sysinfo http util GeoIP pthread dl ${libUnitTest} )
+
+target_link_libraries(openlitespeed ${litespeedlib} )
+
+target_link_libraries(shmtest ${litespeedlib} )
 
 install(TARGETS openlitespeed DESTINATION bin)
-
-
-########### install files ###############
-
-

@@ -28,6 +28,7 @@
 
 #include <socket/gsockaddr.h>
 #include <util/ni_fio.h>
+#include <util/pcutil.h>
 
 #include <errno.h>
 #include <fcntl.h>
@@ -165,6 +166,7 @@ int SUExec::spawnChild( const char * pAppCmd, int fdIn, int fdOut,
             setgid( gid );
     }
     setpriority( PRIO_PROCESS, 0, priority );
+    PCUtil::setCpuAffinityAll();
     execve( pDir, &argv[0], env );
     LOG_ERR(( "execve() failed with errno=%d, "
               "when try to start Fast CGI application: %s!",
@@ -386,6 +388,11 @@ int send_fd(int fd, int sendfd)
 int SUExec::cgidSuEXEC( const char * pServerRoot, int * pfd, int listenFd,
                  char * const * pArgv, char * const * env, const RLimits * pLimits )
 {
+    //FIXME: should this happen?
+    if (HttpGlobals::s_pCgid == NULL)
+        return -1;
+    
+    
     int pid = -1;
     while( 1 )
     {
@@ -409,6 +416,7 @@ int SUExec::cgidSuEXEC( const char * pServerRoot, int * pfd, int listenFd,
 #endif
 
     int fdReq = -1;
+
 
 
     CoreSocket::connect( 

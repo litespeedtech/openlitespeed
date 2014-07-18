@@ -8,23 +8,21 @@ class GUIBase
 		return "<div class=panel_{$type} align=left><span class='gui_{$type}'>" . (strlen($title) ? "$title<hr size=1 noshade>" : "") . "$msg</span></div>";
 	}
 
-	public static function header($title = NULL)
+	public static function header()
 	{
 		//charset need to use utf-8 for international chars support. replaced iso-8859-1
-		$client = CLIENT::singleton();
-		$tk = $client->token;
+		$tk = CAuthorizer::GetToken();
 		return "<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.0 Transitional//EN' 'http://www.w3.org/TR/html4/loose.dtd'>
 		<html>
 		<head>
-		<title>{$title} - LiteSpeed WebAdmin Console</title>
+		<title>LiteSpeed WebAdmin Console</title>
 		<meta http-equiv='Content-Type' content='text/html; charset=utf-8'>
 		<meta HTTP-EQUIV='Cache-control' CONTENT='no-cache'>
 		<meta HTTP-EQUIV='Pragma' CONTENT='no-cache'>
 		<meta HTTP-EQUIV='Expires' CONTENT='-1'>
 		<link rel='Shortcut Icon' type='image/x-icon' href='/static/images/icons/favicon.ico' />
 		<link rel='stylesheet' type='text/css' href='/static/styles/style.css'>
-		<script type='text/javascript'
-		src='/static/scripts/general.js'></script>
+		<script type='text/javascript' src='/static/scripts/general.js'></script>
 		</head>
 		<body >
 		<form name='mgrform' method='get' action='/service/serviceMgr.php'>
@@ -37,10 +35,9 @@ class GUIBase
 
 		global $_SESSION;
 
-		$client = CLIENT::singleton();
 		$product = PRODUCT::GetInstance();
 
-		$state = DUtil::getGoodVal(DUtil::grab_input("get","state"));
+		$state = self::GrabGoodInput("get","state");
 		if($state == 'restarted') {
 			$product->refreshVersion();
 		}
@@ -61,8 +58,8 @@ class GUIBase
 <div id="content-wrapper">
 <!-- START CONTENT -->';
 
-		if($client->changed === TRUE) {
-			$buf .= GUIBase::message("",'Configuration has been modified. To apply changes, please perform a <a href="javascript:go(\'restart\', \'\');">Graceful Restart</a>.');
+		if(CClient::HasChanged()) {
+			$buf .= GUIBase::message('','Configuration has been modified. To apply changes, please perform a <a href="javascript:go(\'restart\', \'\');">Graceful Restart</a>.');
 		}
 
 		return $buf;
@@ -72,7 +69,7 @@ class GUIBase
 	public static function gen_footer($year, $extra) {
 		$buf = '
 <!-- END CONTENT -->
-</div>
+</div></div>
 <div id="copyright" align="center">Copyright &copy; ' . $year
 	. ' <a href="http://www.litespeedtech.com">LiteSpeed Technologies, Inc.</a> All Rights Reserved.</div>'
 	. "<!-- $extra -->\n"
@@ -81,28 +78,102 @@ class GUIBase
 		return $buf;
 	}
 
-	public static function gen_left_menu($tabs)
+	public static function genOptions($options, $selValue)
 	{
-		$area = DUtil::getGoodVal(DUtil::grab_input("request","m"));
-
-		$buf = '<!-- START TABS -->
-<div class="xtab" style="margin-left:-8px;"><ul>';
-
-		foreach ( $tabs as $tabName => $tabKey ) {
-			$on = '';
-			if ( substr($area,0,strlen($tabKey)) == $tabKey ) {
-				$on = 'class="on"';
+		$o = '';
+		if ( $options )
+		{
+			foreach ( $options as $key => $value )
+			{
+				$o .= '<option value="' . $key .'"';
+				if ( $key == $selValue ) {
+					if (!($selValue === '' && $key === 0)
+					&& !($selValue === NULL && $key === 0)
+					&& !($selValue === '0' && $key === '')
+					&& !($selValue === 0 && $key === ''))
+						$o .= ' selected';
+				}
+				$o .= ">$value</option>\n";
 			}
-
-			$buf .= "<li $on><a href=\"/config/confMgr.php?m={$tabKey}\">{$tabName}</a></li>\n";
 		}
-
-		$buf .= '</ul></div>
-	<!-- END TABS -->';
-
-		return $buf;
+		return $o;
 	}
 
+	public static function GrabInput($origin, $name, $type = '')
+	{
+		if($name == '' || $origin == '')
+			return NULL;
 
+		global $_REQUEST, $_COOKIE, $_GET, $_POST;
+		$temp = NULL;
+
+		switch(strtoupper($origin)) {
+			case "REQUEST":
+			case "ANY":	$temp = $_REQUEST;
+			break;
+			case "GET": $temp = $_GET;
+			break;
+			case "POST": $temp = $_POST;
+			break;
+			case "COOKIE": $temp = $_COOKIE;
+			break;
+			case "FILE": $temp = $_FILES;
+			break;
+			case "SERVER": $temp = $_SERVER;
+			break;
+			default:
+				die("input extract error.");
+		}
+
+		if(array_key_exists($name, $temp))
+			$temp =  $temp[$name];
+		else
+			$temp = NULL;
+
+		switch($type) {
+			case "int": return (int) $temp;
+			case "float": return (float) $temp;
+			case "string": return trim((string) $temp);
+			case "array": return (is_array($temp) ?  $temp : NULL);
+			case "object": return (is_object($temp) ?  $temp : NULL);
+			default: return trim((string) $temp); //default string
+		}
+
+	}
+
+	public static function GrabGoodInput($origin, $name, $type='')
+	{
+		$val = self::GrabInput($origin, $name, $type);
+		if ( $val != NULL && strpos($val, '<') !== FALSE )	{
+			$val = NULL;
+		}
+
+		return $val;
+	}
+
+	public static function GrabGoodInputWithReset($origin, $name, $type='')
+	{
+		$val = self::GrabInput($origin, $name, $type);
+		if ( $val != NULL && strpos($val, '<') !== FALSE )
+		{
+			switch(strtoupper($origin)) {
+				case "REQUEST":
+				case "ANY":	$_REQUEST[$name] = NULL;
+				break;
+				case "GET": $_GET[$name] = NULL;
+				break;
+				case "POST": $_POST[$name] = NULL;
+				break;
+				case "COOKIE": $_COOKIE[$name] = NULL;
+				break;
+				case "FILE": $_FILES[$name] = NULL;
+				break;
+				case "SERVER": $_SERVER[$name] = NULL;
+				break;
+			}
+			$val = NULL;
+		}
+		return $val;
+	}
 
 }

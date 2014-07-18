@@ -1,30 +1,39 @@
 <?php
 
+/*
+ * type: parse  _minVal = pattern, _maxVal = pattern tips
+ *
+ */
+
 class DAttrBase
 {
-	public $_htmlName;
-	public $_key;
+	protected $_key;
+	protected $_keyalias;
+
 	public $_helpKey;
 	public $_type;
 	public $_minVal;
 	public $_maxVal;
-	public $_inputType;
-	public $_inputAttr;
 	public $_label;
-	public $_allowNull;
-	public $_glue;
 	public $_href;
 	public $_hrefLink;
 	public $_multiInd;
-	public $_FDE = 'YYY'; //File:Display:Editable
 	public $_note;
 	public $_icon;
-	public $_linkedkeys;
+
+	protected $_inputType;
+	protected $_inputAttr;
+	protected $_glue;
+	protected $_bitFlag = 0;
+
+	const BM_NOTNULL = 1;
+	const BM_NOEDIT = 2;
+	const BM_HIDE = 4;
+	const BM_NOFILE = 8;
 
 	public function __construct($key, $type, $label, $inputType=NULL, $allowNull=true,
 								$min=NULL, $max=NULL, $inputAttr=NULL, $multiInd=0, $helpKey=NULL)
 	{
-		$this->_htmlName = $key;
 		$this->_key = $key;
 		$this->_type = $type;
 		$this->_label = $label;
@@ -32,30 +41,48 @@ class DAttrBase
 		$this->_maxVal = $max;
 		$this->_inputType = $inputType;
 		$this->_inputAttr = $inputAttr;
-		$this->_allowNull = $allowNull;
 		$this->_multiInd = $multiInd;
 		$this->_helpKey = ($helpKey == NULL)? $key:$helpKey;
+
+		$this->_bitFlag = $allowNull ? 0 : self::BM_NOTNULL;
+	}
+
+	public function SetGlue($glue)
+	{
+		$this->_glue = $glue;
+	}
+
+	public function SetFlag($flag)
+	{
+		$this->_bitFlag |= $flag;
+	}
+
+	public function IsFlagOn($flag)
+	{
+		return (($this->_bitFlag & $flag) == $flag );
+	}
+
+	public function GetKey()
+	{
+		return $this->_key;
 	}
 
 	public function dup($key, $label, $helpkey)
 	{
 		$cname = get_class($this);
-		$d = new $cname($this->_key, $this->_type, $this->_label, $this->_inputType, $this->_allowNull,
+		$d = new $cname($this->_key, $this->_type, $this->_label, $this->_inputType, TRUE,
 			$this->_minVal, $this->_maxVal, $this->_inputAttr, $this->_multiInd, $this->_helpKey);
 
-		$d->_htmlName = $this->_htmlName;
 		$d->_glue = $this->_glue;
 		$d->_href = $this->_href;
 		$d->_hrefLink = $this->_hrefLink;
-		$d->_FDE = $this->_FDE;
+		$d->_bitFlag = $this->_bitFlag;
 		$d->_note = $this->_note;
 		$d->_icon = $this->_icon;
-		$d->_linkedkeys = $this->_linkedkeys;
 
 
 		if ( $key != NULL )
 		{
-			$d->_htmlName = $key;
 			$d->_key = $key;
 		}
 		if ($label != NULL)
@@ -80,9 +107,8 @@ class DAttrBase
 				$value = $value | $val;
 			}
 		}
-		return ( $novalue ? '' : $value );
+		return ( $novalue ? '' : (string)$value );
 	}
-
 
 	protected function extractSplitMultiple(&$value)
 	{
@@ -106,16 +132,14 @@ class DAttrBase
 			$value = implode(', ', $vals1);
 	}
 
-	protected function toHtmlContent($cval, $refUrl=NULL)
+	protected function toHtmlContent($node, $refUrl=NULL)
 	{
-		$o = '';
-		if ( $cval == NULL || !$cval->HasVal()) {
-			$o .= '<span class="field_novalue">Not Set</span>';
-			return $o;
-		}
+		if ( $node == NULL || !$node->HasVal())
+			return '<span class="field_novalue">Not Set</span>';
 
-		$value = $cval->GetVal();
-		$err = $cval->GetErr();
+		$o = '';
+		$value = $node->Get(CNode::FLD_VAL);
+		$err = $node->Get(CNode::FLD_ERR);
 
 		if ( $this->_type == 'sel1' && $value != NULL && !array_key_exists($value, $this->_maxVal) ) {
 		    $err = 'Invalid value - ' . htmlspecialchars($value,ENT_QUOTES);
@@ -125,12 +149,11 @@ class DAttrBase
 			if ( $type3 == 'fil' || $type3 == 'pat' ) {
 				$validator = new ConfValidation();
 				$validator->chkAttr_file_val($this, $value, $err);
-				error_log('revalidate path ' . $value);
 			}
 		}
 
 		if ( $err ) {
-			$cval->SetErr($err);
+			$node->SetErr($err);
 			$o .= '<span class="field_error">*' . $this->check_split($err, 70) . '</span><br>';
 		}
 
@@ -195,9 +218,6 @@ class DAttrBase
 			$o = $value . '&nbsp;&nbsp;<a href=' . $this->_hrefLink . $value . '>&nbsp;+&nbsp;</a>' ;
 			$o .= '/<a href=' . $this->_hrefLink . '-' . $value . '>&nbsp;-&nbsp;' ;
 		}
-		elseif ( $this->_type == 'action' ) {
-			$o .= $value;
-		}
 		else {
 			$o .= htmlspecialchars($value);
 		}
@@ -220,7 +240,7 @@ class DAttrBase
 			elseif ( $this->_minVal !== NULL )
 				return 'number >= '. $this->_minVal ;
 		}
-		return null;
+		return NULL;
 	}
 
 	protected function check_split($value, $width)
@@ -244,107 +264,88 @@ class DAttrBase
 			return $value;
 	}
 
-
-	protected function genOptions($options, $selValue)
+	public function extractPost($parent)
 	{
-		$o = '';
-		if ( $options )
-		{
-			foreach ( $options as $key => $value )
-			{
-				$o .= '<option value="' . $key .'"';
-				if ( $key == $selValue ) {
-					if (!($selValue === '' && $key === 0)
-						&& !($selValue === NULL && $key === 0)
-						&& !($selValue === '0' && $key === '')
-						&& !($selValue === 0 && $key === ''))
-						$o .= ' selected';
-				}
-				$o .= ">$value</option>\n";
-			}
-		}
-		return $o;
-	}
-
-	public function extractPost()
-	{
-		$cval = NULL;
-		$postVal = DUtil::grab_input("post",$this->_htmlName);
-		if (get_magic_quotes_gpc()) {
-			$postVal = stripslashes($postVal);
-		}
-		if ( $this->_multiInd == 2 )
-		{
-			$cval = array();
-			$v = preg_split("/\n+/", $postVal, -1, PREG_SPLIT_NO_EMPTY);
-			foreach( $v as $vi )
-			{
-				$cval[] = new CVal(trim($vi));
-			}
-		}
-		else if ( $this->_type === 'checkboxOr' )
-		{
+		if ( $this->_type == 'checkboxOr' )
 			$value = $this->extractCheckBoxOr();
-			$cval = new CVal($value);
+		else {
+			$value = GUIBase::GrabInput("post",$this->_key);
+			if (get_magic_quotes_gpc())
+				$value = stripslashes($value);
+		}
+
+		$key = $this->_key;
+		$node = $parent;
+		while (($pos = strpos($key, ':')) > 0 ) {
+			$key0 = substr($key, 0, $pos);
+			$key = substr($key, $pos+1);
+			if ($node->HasDirectChildren($key0))
+				$node = $node->GetChildren($key0);
+			else {
+				$child = new CNode($key0, '', CNode::T_KB);
+				$node->AddChild($child);
+				$node = $child;
+			}
+		}
+
+		if ( $this->_multiInd == 2 && $value != NULL) {
+			$v = preg_split("/\n+/", $value, -1, PREG_SPLIT_NO_EMPTY);
+			foreach( $v as $vi )
+				$node->AddChild(new CNode($key, trim($vi)));
+		}
+		elseif ( $this->_type == 'checkboxOr' ) {
+			$node->AddChild(new CNode($key, $value));
 		}
 		else
 		{
-			$value = trim($postVal);
-			if ( $this->_multiInd == 1 ) {
+			if ( $this->_multiInd == 1 && $value != NULL) {
 				$this->extractSplitMultiple( $value );
 			}
-			$cval = new CVal($value);
+			$node->AddChild(new CNode($key, $value));
 		}
-		return $cval;
+		return TRUE;
 	}
 
-	public function toHtml(&$data, $refUrl=NULL, $linkedData=NULL)
+	public function toHtml($pnode, $refUrl=NULL)
 	{
+		$node = ($pnode == NULL) ? NULL : $pnode->GetChildren($this->_key);
 		$o = '';
-		if ( $this->_type == 'action' )
-		{
-			$a = '';
-			$o .= $this->toHtmlContent(new CVal($data));
-		}
-		else if ( is_array( $data ) )
-		{
-			for ( $i = 0 ; $i < count($data) ; ++$i )
-			{
-				$o .= $this->toHtmlContent($data[$i], $refUrl);
+		if ( is_array( $node ) ) {
+			foreach ($node as $nd) {
+				$o .= $this->toHtmlContent($nd, $refUrl);
 				$o .= '<br>';
 			}
 		}
-		else
-		{
-			$o .= $this->toHtmlContent($data, $refUrl);
+		else {
+			$o .= $this->toHtmlContent($node, $refUrl);
 		}
 		return $o;
 	}
 
-	public function toHtmlInput(&$data, $seq=NULL, $isDisable=false)
+	public function toHtmlInput($pnode, $seq=NULL, $isDisable=false)
 	{
+		$node = ($pnode == NULL) ? NULL : $pnode->GetChildren($this->_key);
 		$err = '';
-		if ( is_array($data) )
-		{
+		$spacer = '&nbsp;&nbsp;&nbsp;&nbsp;';
+		$checked = ' checked';
+
+		if (is_array($node)) {
 			$value = '';
-			foreach( $data as $d )
-			{
-				$value[] = $d->GetVal();
-				$e1 = $this->check_split($d->GetErr(), 70);
+			foreach( $node as $d ) {
+				$value[] = $d->Get(CNode::FLD_VAL);
+				$e1 = $this->check_split($d->Get(CNode::FLD_ERR), 70);
 				if ( $e1 != NULL )
 					$err .= $e1 .'<br>';
 			}
 		}
-		else
-		{
-			if($data != NULL) {
-				$value = $data->GetVal();
-				$err = $this->check_split($data->GetErr(), 70);
+		else {
+			if ($node != NULL) {
+				$value = $node->Get(CNode::FLD_VAL);
+				$err = $this->check_split($node->Get(CNode::FLD_ERR), 70);
 			}
 			else {
 				$value = NULL;
 			}
-
 		}
 
 		if ( is_array( $value ) && $this->_inputType != 'checkbox' )
@@ -355,7 +356,7 @@ class DAttrBase
 				$glue = "\n";
 			$value = implode( $glue, $value );
 		}
-		$name = $this->_htmlName;
+		$name = $this->_key;
 		if ( $seq != NULL )
 			$name .= $seq;
 
@@ -380,54 +381,39 @@ class DAttrBase
 		}
 
 		$style = 'xtbl_value';
-		if ( $this->_inputType === 'text' )
-		{
-			$input .= '<input class="' . $style . '" type="text" name="'.$this->_htmlName.'" '. $inputAttr.' value="' .htmlspecialchars($value,ENT_QUOTES). '">';
-			return $input;
+		if ( $this->_inputType == 'text' )	{
+			$input .= '<input class="' . $style . '" type="text" name="'. $name .'" '. $inputAttr.' value="' .htmlspecialchars($value,ENT_QUOTES). '">';
 		}
-		if ( $this->_inputType === 'password' )
-		{
-			$input .= '<input class="' . $style . '" type="password" name="'.$this->_htmlName.'" '.$inputAttr.' value="' .$value. '">';
-			return $input;
+		elseif ( $this->_inputType == 'password' )	{
+			$input .= '<input class="' . $style . '" type="password" name="' . $name . '" ' . $inputAttr .' value="' .$value. '">';
 		}
-		if ( $this->_inputType === 'textarea' || $this->_inputType === 'textarea1' )
-		{
+		elseif ( $this->_inputType == 'textarea' || $this->_inputType == 'textarea1' ) {
 		    $input .= '<textarea name="'.$name.'" '.$inputAttr.'>'. htmlspecialchars($value,ENT_QUOTES). '</textarea>';
-			return $input;
-
 		}
-		if ( $this->_inputType === 'radio' && $this->_type === 'bool')
-		{
-			$input .= '<input type="radio" id="'.$name.'1" name="'.$name.'" '.$inputAttr.' value="1" ';
+		elseif ( $this->_inputType == 'radio' && $this->_type == 'bool') {
+			$input .= "<input type=\"radio\" id=\"{$name}1\" name=\"{$name}\" $inputAttr value=\"1\"";
 			if ( $value == '1' )
-				$input .= 'checked';
-			$input .= '><label for="'.$name.'1"> Yes </label>&nbsp;&nbsp;&nbsp;&nbsp;';
-			$input .= '<input type="radio" id="'.$name.'0" name="'.$name.'" '.$inputAttr.' value="0" ';
+				$input .= $checked;
+			$input .= "><label for=\"{$name}1\"> Yes </label>$spacer
+				<input type=\"radio\" id=\"{$name}0\" name=\"{$name}\" $inputAttr value=\"0\"";
 			if ( $value == '0' )
-				$input .= 'checked';
-			$input .= '><label for="'.$name.'0"> No </label>';
-			if ( $this->_allowNull )
-			{
-				$input .= '&nbsp;&nbsp;&nbsp;&nbsp;<input type="radio" id="'.$name.'" name="'.$name.'" '.$inputAttr.' value="" ';
+				$input .= $checked;
+			$input .= "><label for=\"{$name}0\"> No </label>";
+			if ( !$this->IsFlagOn(self::BM_NOTNULL) ) {
+				$input .= "$spacer <input type=\"radio\" id=\"{$name}\" name=\"{$name}\" $inputAttr value=\"\"";
 				if ( $value != '0' && $value != '1' )
-					$input .= 'checked';
-				$input .= '><label for="'.$name.'"> Not Set </label>';
+					$input .= $checked;
+				$input .= "><label for=\"{$name}\"> Not Set </label>";
 			}
-			return $input;
 		}
-
-		if ( $this->_inputType === 'checkbox' )
-		{
+		elseif ( $this->_inputType == 'checkbox' )	{
 			$id = $name . $value['val'];
 			$input .= '<input type="checkbox" id="'.$id.'" name="'.$name.'" '.$inputAttr.' value="'.$value['val'].'"';
 			if ( $value['chk'] )
-				$input .= ' checked';
+				$input .= $checked;
 			$input .= '><label for="'.$id.'"> ' . $value['val'] . ' </label>';
-			return $input;
 		}
-
-		if ( $this->_inputType === 'checkboxgroup' )
-		{
+		elseif ( $this->_inputType == 'checkboxgroup' ) {
 			if ($this->_minVal !== NULL && ($value === '' || $value === NULL) ) {
 				// has default value, for "Not set", set default val
 				$value = $this->_minVal;
@@ -446,62 +432,32 @@ class DAttrBase
 			}
 			foreach( $this->_maxVal as $val=>$disp )
 			{
-				$id = $name.$val;
-				$input .= '<input type="checkbox" id="'.$id.'" name="'.$id.'" value="'.$val.'"';
+				$id = $name . $val;
+				$input .= "<input type=\"checkbox\" id=\"{$id}\" name=\"{$id}\" value=\"{$val}\"";
 				if ( ($value & $val) || ($value === $val) || ($value === '0' && $val === 0) )
-					$input .= ' checked';
+					$input .= $checked;
 				$input .= ($val == '0') ? $js0 : $js1;
-				$input .= '><label for="'.$id.'"> ' . $disp . ' </label>&nbsp;&nbsp;';
+				$input .= "><label for=\"{$id}\"> $disp </label> $spacer";
 			}
-			return $input;
 		}
-
-		if ( $this->_inputType === 'select' )
-		{
+		elseif ( $this->_inputType == 'select' ) {
 			$input .= '<select name="'.$name.'" '.$inputAttr.'>';
-			$input .= ($this->genOptions($this->_maxVal, $value));
+			$input .= GUIBase::genOptions($this->_maxVal, $value);
 			$input .= '</select>';
-			return $input;
 		}
-
+		return $input;
 
 	}
 
-	public function populate_sel1_options($info, &$data)
+	public function SetDerivedSelOptions($derived)
 	{
 		$options = array();
-		if ( $this->_allowNull ) {
+		if ( !$this->IsFlagOn(self::BM_NOTNULL) )
 			$options[''] = '';
-		}
-
-		foreach( $this->_minVal as $loc )
-		{
-			$d = $info;
-			$locs = explode(':', $loc);
-			foreach ( $locs as $l )
-			{
-				if ( substr($l, 0, 2) == '$$' )
-				{ //$$type!fcgi
-					$t = strpos($l, '!');
-					$tag = substr($l, 2, $t-2);
-					$tag0 = substr($l, $t+1); // default
-					if (isset($data[$tag]) && $data[$tag]->HasVal()) {
-						$l = $data[$tag]->GetVal();
-					}
-					else {
-						$l = $tag0;
-					}
-				}
-
-				$d = $d[$l];
-			}
-			if ( isset($d) ) {
-				$options = $options + $d; // this is array add
-			}
-		}
+		if ($derived != NULL)
+			$options = array_merge($options, $derived);
 		$this->_maxVal = $options;
 	}
-
 
 
 }

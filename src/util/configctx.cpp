@@ -164,6 +164,12 @@ void ConfigCtx::log_debug( const char *pFmt, ... )
 }
 const char *ConfigCtx::getTag( const XmlNode *pNode, const char *pName, int bKeyName )
 {
+    if (pNode == NULL)
+    {
+        log_error( "pNode is NULL while calling getTag( name: %s )" , pName );
+        return NULL;
+    }
+    
     const char *pRet = pNode->getChildValue( pName, bKeyName );
     if ( !pRet )
     {
@@ -176,6 +182,9 @@ const char *ConfigCtx::getTag( const XmlNode *pNode, const char *pName, int bKey
 long long ConfigCtx::getLongValue( const XmlNode *pNode, const char *pTag,
                                    long long min, long long max, long long def, int base )
 {
+    if (pNode == NULL)
+        return def;
+    
     const char *pValue = pNode->getChildValue( pTag );
     long long val;
 
@@ -693,7 +702,7 @@ XmlNode *ConfigCtx::parseFile( const char *configFilePath, const char *rootTag )
     char sPlainFile[512] = {0};
     strcpy( sPlainFile, configFilePath );
     strcat( sPlainFile, ".txt" );
-    plainconf::testOutputConfigFile( pRoot, sPlainFile );
+//    plainconf::testOutputConfigFile( pRoot, sPlainFile );
 #endif
 
     return pRoot;

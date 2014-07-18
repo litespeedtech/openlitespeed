@@ -184,7 +184,7 @@ class BuildCheck
 
 	function __construct()
 	{
-		$this->cur_step = DUtil::grab_input('ANY',"step");
+		$this->cur_step = GUIBase::GrabInput('ANY',"step");
 		$this->validate_step();
 	}
 
@@ -271,12 +271,12 @@ class BuildCheck
 
 	private function validate_step2()
 	{
-		$go_back = DUtil::grab_input('ANY','back');
+		$go_back = GUIBase::GrabInput('ANY','back');
 		if ($go_back != '') {
 			$this->next_step = 1;
 			return TRUE;
 		}
-		$php_version = DUtil::grab_input('ANY','version');
+		$php_version = GUIBase::GrabGoodInput('ANY','version');
 
 		// only if illegal action, will have err
 		if ( !$this->validate_php_version($php_version) ) {
@@ -287,22 +287,22 @@ class BuildCheck
 
 		$options = new BuildOptions($php_version);
 
-		$options->SetValue('ExtraPathEnv', DUtil::grab_input('ANY','path_env'));
-		$options->SetValue('InstallPath', DUtil::grab_input('ANY','installPath'));
-		$compilerFlags = DUtil::grab_input('ANY','compilerFlags');
-		$configParams = DUtil::grab_input('ANY','configureParams');
+		$options->SetValue('ExtraPathEnv', GUIBase::GrabGoodInput('ANY','path_env'));
+		$options->SetValue('InstallPath', GUIBase::GrabGoodInput('ANY','installPath'));
+		$compilerFlags = GUIBase::GrabGoodInput('ANY','compilerFlags');
+		$configParams = GUIBase::GrabGoodInput('ANY','configureParams');
 		//set the input even it has error, so user can modify
 		$options->SetValue('ConfigParam', $configParams);
 		$options->SetValue('CompilerFlags', $compilerFlags);
 
-		$options->SetValue('AddOnSuhosin', (NULL != DUtil::grab_input('ANY','addonSuhosin')));
-		$options->SetValue('AddOnMailHeader',  (NULL != DUtil::grab_input('ANY','addonMailHeader')));
-		$options->SetValue('AddOnAPC', (NULL != DUtil::grab_input('ANY','addonAPC')));
-		$options->SetValue('AddOnEAccelerator', (NULL != DUtil::grab_input('ANY','addonEAccelerator')));
-		$options->SetValue('AddOnXCache', (NULL != DUtil::grab_input('ANY','addonXCache')));
-		$options->SetValue('AddOnMemCache', (NULL != DUtil::grab_input('ANY','addonMemCache')));
-		$options->SetValue('AddOnMemCached', (NULL != DUtil::grab_input('ANY','addonMemCached')));
-		$options->SetValue('AddOnOPcache', (NULL != DUtil::grab_input('ANY','addonOPcache')));
+		$options->SetValue('AddOnSuhosin', (NULL != GUIBase::GrabGoodInput('ANY','addonSuhosin')));
+		$options->SetValue('AddOnMailHeader',  (NULL != GUIBase::GrabGoodInput('ANY','addonMailHeader')));
+		$options->SetValue('AddOnAPC', (NULL != GUIBase::GrabGoodInput('ANY','addonAPC')));
+		$options->SetValue('AddOnEAccelerator', (NULL != GUIBase::GrabGoodInput('ANY','addonEAccelerator')));
+		$options->SetValue('AddOnXCache', (NULL != GUIBase::GrabGoodInput('ANY','addonXCache')));
+		$options->SetValue('AddOnMemCache', (NULL != GUIBase::GrabGoodInput('ANY','addonMemCache')));
+		$options->SetValue('AddOnMemCached', (NULL != GUIBase::GrabGoodInput('ANY','addonMemCached')));
+		$options->SetValue('AddOnOPcache', (NULL != GUIBase::GrabGoodInput('ANY','addonOPcache')));
 
 		// can be real input err
 		$v1 = $this->validate_extra_path_env($options->GetValue('ExtraPathEnv'));
@@ -363,13 +363,13 @@ class BuildCheck
 			return FALSE;
 		}
 
-		$manual_script = DUtil::grab_input('ANY','manual_script');
+		$manual_script = GUIBase::GrabGoodInput('ANY','manual_script');
 		if ($manual_script == '' || !file_exists($manual_script)) {
 			echo "missing manual script";
 			return FALSE;
 		}
 
-		$php_version = DUtil::grab_input('ANY', 'php_version');
+		$php_version = GUIBase::GrabGoodInput('ANY', 'php_version');
 		if ($php_version == '') {
 			echo "missing php_version";
 			return FALSE;
@@ -379,9 +379,9 @@ class BuildCheck
 		$this->pass_val['progress_file'] = $progress_file;
 		$this->pass_val['log_file'] = $log_file;
 		$this->pass_val['manual_script'] = $manual_script;
-		$this->pass_val['extentions'] = DUtil::grab_input('ANY', 'extentions');
+		$this->pass_val['extentions'] = GUIBase::GrabGoodInput('ANY', 'extentions');
 
-		$go_back = DUtil::grab_input('ANY','back');
+		$go_back = GUIBase::GrabGoodInput('ANY','back');
 		if ($go_back != '') {
 			$this->next_step = 2;
 		}
@@ -891,7 +891,7 @@ opcache.enable_cli=1
 		$params['{ENABLE_MAILHEADER}'] = ($this->options->GetValue('AddOnMailHeader')) ? 1 : 0;
 		$params['{LSAPI_VERSION}'] = LSAPI_VERSION;
 		$params['{PHP_CONF_OPTIONS}'] = $this->options->GetValue('ConfigParam');
-		$params['{LSWS_HOME}'] = $_SERVER['LS_SERVER_ROOT'];
+		$params['{LSWS_HOME}'] = SERVER_ROOT;
 		$params['{INSTALL_SCRIPT}'] = $this->build_install_script;
 
 		$search = array_keys($params);

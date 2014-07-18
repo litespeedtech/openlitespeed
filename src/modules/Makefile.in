@@ -87,7 +87,8 @@ ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/ax_check_zlib.m4 \
 	$(top_srcdir)/ax_check_openssl.m4 \
 	$(top_srcdir)/ax_path_lib_pcre.m4 \
-	$(top_srcdir)/ax_lib_expat.m4 $(top_srcdir)/configure.ac
+	$(top_srcdir)/ax_lib_expat.m4 $(top_srcdir)/ax_check_liblua.m4 \
+	$(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 mkinstalldirs = $(install_sh) -d
@@ -202,7 +203,7 @@ am__define_uniq_tagged_files = \
   done | $(am__uniquify_input)`
 ETAGS = etags
 CTAGS = ctags
-DIST_SUBDIRS = $(SUBDIRS)
+DIST_SUBDIRS = cache lua
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 am__relativize = \
   dir0=`pwd`; \
@@ -276,6 +277,7 @@ LIBTOOL = @LIBTOOL@
 LIPO = @LIPO@
 LN_S = @LN_S@
 LTLIBOBJS = @LTLIBOBJS@
+LUA_INCLUDES = @LUA_INCLUDES@
 MAKEINFO = @MAKEINFO@
 MANIFEST_TOOL = @MANIFEST_TOOL@
 MKDIR_P = @MKDIR_P@
@@ -373,7 +375,8 @@ libmodules_a_METASOURCES = AUTO
 libmodules_a_SOURCES = modgzip/modgzip.cpp \
   ../../addon/example/loopbuff.c 
 
-SUBDIRS = cache
+@HAVE_LIBLUA_FALSE@SUBDIRS = cache
+@HAVE_LIBLUA_TRUE@SUBDIRS = cache lua
 all: all-recursive
 
 .SUFFIXES:

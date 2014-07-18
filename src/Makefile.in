@@ -86,7 +86,8 @@ ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/ax_check_zlib.m4 \
 	$(top_srcdir)/ax_check_openssl.m4 \
 	$(top_srcdir)/ax_path_lib_pcre.m4 \
-	$(top_srcdir)/ax_lib_expat.m4 $(top_srcdir)/configure.ac
+	$(top_srcdir)/ax_lib_expat.m4 $(top_srcdir)/ax_check_liblua.m4 \
+	$(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 mkinstalldirs = $(install_sh) -d
@@ -103,7 +104,7 @@ openlitespeed_DEPENDENCIES = ./main/libmain.a ./http/libhttp.a \
 	./spdy/libspdy.a ./extensions/libextensions.a \
 	./log4cxx/liblog4cxx.a ./socket/libsocket.a ./sslpp/libsslpp.a \
 	./ssi/libssi.a ./edio/libedio.a ./util/libutil.a \
-	./lsiapi/liblsiapi.a ./modules/libmodules.a \
+	./lsiapi/liblsiapi.a ./modules/libmodules.a ./shm/liblsshm.a \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 AM_V_lt = $(am__v_lt_@AM_V@)
@@ -265,6 +266,7 @@ LIBTOOL = @LIBTOOL@
 LIPO = @LIPO@
 LN_S = @LN_S@
 LTLIBOBJS = @LTLIBOBJS@
+LUA_INCLUDES = @LUA_INCLUDES@
 MAKEINFO = @MAKEINFO@
 MANIFEST_TOOL = @MANIFEST_TOOL@
 MKDIR_P = @MKDIR_P@
@@ -358,13 +360,13 @@ openlitespeed_SOURCES = modules/prelinkedmods.cpp httpdtest.cpp main.cpp
 openlitespeed_LDADD = ./main/libmain.a ./http/libhttp.a ./spdy/libspdy.a \
         ./extensions/libextensions.a ./log4cxx/liblog4cxx.a ./socket/libsocket.a \
         ./sslpp/libsslpp.a  ./ssi/libssi.a ./edio/libedio.a ./util/libutil.a ./lsiapi/liblsiapi.a \
-        ./modules/libmodules.a \
+        ./modules/libmodules.a ./shm/liblsshm.a \
         $(EXPAT_LIBS) $(OPENSSL_LIBS) $(PCRE_LIBS) -lGeoIP -lz -lexpat -lpthread $(DL_LIB_OPTION)
 
 AM_CPPFLAGS = $(PCRE_CFLAGS) $(OPENSSL_INCLUDES) $(EXPAT_CFLAGS)
 AM_LDFLAGS = -L/usr/lib $(OPENSSL_LDFLAGS)
 INCLUDES = -I$(top_srcdir)/src 
-SUBDIRS = socket util http spdy sslpp ssi extensions log4cxx main edio lsiapi  modules
+SUBDIRS = socket util http spdy sslpp ssi extensions log4cxx main edio lsiapi  modules shm 
 
 # the library search path.
 openlitespeed_LDFLAGS = $(all_libraries)

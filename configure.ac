@@ -2,10 +2,11 @@ m4_include(ax_check_zlib.m4)
 m4_include(ax_check_openssl.m4)
 m4_include(ax_path_lib_pcre.m4)
 m4_include(ax_lib_expat.m4)
+m4_include(ax_check_liblua.m4)
 
 dnl Process this file with autoconf to produce a configure script.
 AC_PREREQ([2.69])
-AC_INIT([openlitespeed],[1.3.3],[info@litespeedtech.com],[openlitespeed],[http://www.litespeedtech.com/])
+AC_INIT([openlitespeed],[1.4.0],[info@litespeedtech.com],[openlitespeed],[http://www.litespeedtech.com/])
 AM_INIT_AUTOMAKE([1.0 foreign no-define ])
 
 AM_CONFIG_HEADER(src/config.h:src/config.h.in)
@@ -110,11 +111,42 @@ AC_ARG_ENABLE([profiling],
                 echo "OPENLSWS_PROF='$OPENLSWS_PROF'"
                 ], [])                
                 
+dnl liblua check
+AC_MSG_CHECKING(whether to compile mod_lua module)
+
+AC_ARG_WITH(lua,
+[  --with-lua[[=DIR]]       use liblua (located in directory DIR, if supplied) for compiling mod_lua module.  [[default=no]]],
+[
+    if test $withval = no
+    then
+        need_lua=no
+    elif test $withval = yes
+    then
+        need_lua=yes
+    else
+        need_lua=yes
+        lua_dir=$withval
+    fi
+],[
+    need_lua=no
+    lua_dir=
+])
+if test "x$need_lua" = "xno" ; then
+    AC_MSG_RESULT(no)
+else
+    AC_MSG_RESULT(yes)
+    AC_LIBLUA_CHECK
+    if test "x$need_lua" = "xno" ; then
+        AC_MSG_RESULT(liblua header files not found - disabling compile mod_lua module)
+    fi
+fi
+AM_CONDITIONAL([HAVE_LIBLUA], [test x$need_lua = xyes])
+echo "Lua inlcude = $LUA_INCLUDES, need_lua = $need_lua"    
+                
 CFLAGS="$CFLAGS -fstack-protector $(getconf LFS_CFLAGS)"
 CXXFLAGS="$CXXFLAGS -fstack-protector $(getconf LFS_CFLAGS)"
 
 echo "Final CFLAGS='$CFLAGS' CXXFLAGS='$CXXFLAGS'"
- 
 
 
 AC_ARG_ENABLE([rpath],
@@ -189,6 +221,13 @@ then
     LDFLAGS="$LDFLAGS -Wl,--export-dynamic"
     DL_LIB_OPTION=
 fi
+
+#For Mac OS, add special falgs for LuaJit
+if test `uname -s` = "Darwin"
+then
+    LDFLAGS="$LDFLAGS -pagezero_size 10000 -image_base 100000000"
+fi
+
 echo "Final LDFLAGS='$LDFLAGS'"
 AC_SUBST([DL_LIB_OPTION])
 
@@ -206,6 +245,15 @@ AC_CONFIG_FILES(Makefile
                 src/util/Makefile
                 src/lsiapi/Makefile
                 src/modules/Makefile
+                src/shm/Makefile
                 src/modules/cache/Makefile)
+                
+if test x$need_lua = xyes ; then
+    AC_CONFIG_FILES(src/modules/lua/Makefile)
+    echo "Will compile and build mod_lua module."
+else
+    echo "Will NOT compile and build mod_lua module."
+fi
+                
 AC_OUTPUT
 

@@ -25,7 +25,8 @@
 #include <http/httprespheaders.h>
 
 #define RANGE_HEADER_LEN    22
-#define LSI_RESP_BODY_SIZE_UNKNOWN -1
+#define LSI_RESP_BODY_SIZE_CHUNKED (-1)
+#define LSI_RESP_BODY_SIZE_UNKNOWN (-2)
 
 class HttpReq;
 

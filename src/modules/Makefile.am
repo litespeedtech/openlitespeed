@@ -10,7 +10,11 @@ libmodules_a_METASOURCES = AUTO
 libmodules_a_SOURCES = modgzip/modgzip.cpp \
   ../../addon/example/loopbuff.c 
 
+if HAVE_LIBLUA
+SUBDIRS = cache lua
+else
 SUBDIRS = cache
-  
+endif
+
 #noinst_HEADERS = 
 

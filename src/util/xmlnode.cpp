@@ -292,6 +292,14 @@ const XmlNodeList * XmlNode::getChildren(const char* name ) const
         return NULL;
 }
 
+int XmlNode::hasChild()
+{
+    if ( !m_impl->m_pChildrenMap )
+        return 0;
+    else
+        return 1;
+}
+
 int XmlNode::getAllChildren( XmlNodeList& list )
 {
     return ((const XmlNode *)this)->getAllChildren(list);

@@ -80,10 +80,10 @@ EOF
 
 readCurrentConfig()
 {
-	OLD_USER_CONF=`grep "<user>" "$LSWS_HOME/conf/httpd_config.xml"`
-	OLD_GROUP_CONF=`grep "<group>" "$LSWS_HOME/conf/httpd_config.xml"`
-	OLD_USER=`expr "$OLD_USER_CONF" : '.*<user>\(.*\)</user>.*'`
-	OLD_GROUP=`expr "$OLD_GROUP_CONF" : '.*<group>\(.*\)</group>.*'`
+	OLD_USER_CONF=`grep "user" "$LSWS_HOME/conf/httpd_config.conf"`
+	OLD_GROUP_CONF=`grep "group" "$LSWS_HOME/conf/httpd_config.conf"`
+	OLD_USER=`expr "$OLD_USER_CONF" : '\s*user\s*\(\S*\)'`
+	OLD_GROUP=`expr "$OLD_GROUP_CONF" : '\s*group\s*\(\S*\)'`
 	if [ "x$OLD_USER" != "x" ]; then
 		WS_USER=$OLD_USER
 	fi
@@ -111,7 +111,7 @@ install_dir()
 
 	if [ $INST_USER = "root" ]; then
         DEST_RECOM="/usr/local/lsws"
-        if [ -f "/opt/lsws/conf/httpd_config.xml" ]; then
+        if [ -f "/opt/lsws/conf/httpd_config.conf" ]; then
             DEST_RECOM="/opt/lsws"
         fi
 		WS_USER="nobody"
@@ -162,7 +162,7 @@ EOF
 				SUCC=0
 			fi
 		fi
-		if [ -f "$LSWS_HOME/conf/httpd_config.xml" ]; then
+		if [ -f "$LSWS_HOME/conf/httpd_config.conf" ]; then
 			cat <<EOF
 
 Found old configuration file under destination directory $LSWS_HOME. 
@@ -200,7 +200,7 @@ EOF
 
 	export LSWS_HOME
 
-	if [ -f "$LSWS_HOME/conf/httpd_config.xml" ]; then
+	if [ -f "$LSWS_HOME/conf/httpd_config.conf" ]; then
 		readCurrentConfig
 	else
 		INSTALL_TYPE="reinstall"
@@ -593,22 +593,22 @@ EOF
 buildConfigFiles()
 {
 
-#sed -e "s/%ADMIN_PORT%/$ADMIN_PORT/" -e "s/%PHP_FCGI_PORT%/$ADMIN_PHP_PORT/" "$LSINSTALL_DIR/admin/conf/admin_config.xml.in" > "$LSINSTALL_DIR/admin/conf/admin_config.xml"
+#sed -e "s/%ADMIN_PORT%/$ADMIN_PORT/" -e "s/%PHP_FCGI_PORT%/$ADMIN_PHP_PORT/" "$LSINSTALL_DIR/admin/conf/admin_config.conf.in" > "$LSINSTALL_DIR/admin/conf/admin_config.conf"
     
     if [ "x${SSL_HOSTNAME}" != "x" ] ; then
         echo "SSL host is [${SSL_HOSTNAME}], use adminSSL"
-        sed -e "s/%ADMIN_PORT%/$ADMIN_PORT/" -e "s/%SSL_HOSTNAME%/$SSL_HOSTNAME/" "$LSINSTALL_DIR/admin/conf/admin_config_ssl.xml.in" > "$LSINSTALL_DIR/admin/conf/admin_config.xml"
+        sed -e "s/%ADMIN_PORT%/$ADMIN_PORT/" -e "s/%SSL_HOSTNAME%/$SSL_HOSTNAME/" "$LSINSTALL_DIR/admin/conf/admin_config_ssl.conf.in" > "$LSINSTALL_DIR/admin/conf/admin_config.conf"
     else
         echo "SSL host is [${SSL_HOSTNAME}], No adminssl"
-        sed -e "s/%ADMIN_PORT%/$ADMIN_PORT/" "$LSINSTALL_DIR/admin/conf/admin_config.xml.in" > "$LSINSTALL_DIR/admin/conf/admin_config.xml"
+        sed -e "s/%ADMIN_PORT%/$ADMIN_PORT/" "$LSINSTALL_DIR/admin/conf/admin_config.conf.in" > "$LSINSTALL_DIR/admin/conf/admin_config.conf"
     fi
     
-	sed -e "s/%USER%/$WS_USER/" -e "s/%GROUP%/$WS_GROUP/" -e "s/%ADMIN_EMAIL%/$ADMIN_EMAIL/" -e "s/%HTTP_PORT%/$HTTP_PORT/" -e  "s/%RUBY_BIN%/$RUBY_PATH/" -e "s/%SERVER_NAME%/$SERVER_NAME/" "$LSINSTALL_DIR/conf/httpd_config.xml.in" > "$LSINSTALL_DIR/conf/httpd_config.xml.tmp"
+	sed -e "s/%USER%/$WS_USER/" -e "s/%GROUP%/$WS_GROUP/" -e "s/%ADMIN_EMAIL%/$ADMIN_EMAIL/" -e "s/%HTTP_PORT%/$HTTP_PORT/" -e  "s/%RUBY_BIN%/$RUBY_PATH/" -e "s/%SERVER_NAME%/$SERVER_NAME/" "$LSINSTALL_DIR/conf/httpd_config.conf.in" > "$LSINSTALL_DIR/conf/httpd_config.conf.tmp"
 
 	if [ $SETUP_PHP -eq 1 ]; then
-		sed -e "s/%PHP_BEGIN%//" -e "s/%PHP_END%//" -e "s/%PHP_SUFFIX%/$PHP_SUFFIX/" -e "s/%PHP_PORT%/$PHP_PORT/" "$LSINSTALL_DIR/conf/httpd_config.xml.tmp" > "$LSINSTALL_DIR/conf/httpd_config.xml"
+		sed -e "s/%PHP_BEGIN%//" -e "s/%PHP_END%//" -e "s/%PHP_SUFFIX%/$PHP_SUFFIX/" -e "s/%PHP_PORT%/$PHP_PORT/" "$LSINSTALL_DIR/conf/httpd_config.conf.tmp" > "$LSINSTALL_DIR/conf/httpd_config.conf"
 	else
-		sed -e "s/%PHP_BEGIN%/<!--/" -e "s/%PHP_END%/-->/" -e "s/%PHP_SUFFIX%/php/" -e "s/%PHP_PORT%/5201/" "$LSINSTALL_DIR/conf/httpd_config.xml.tmp" > "$LSINSTALL_DIR/conf/httpd_config.xml"
+		sed -e "s/%PHP_BEGIN%/<!--/" -e "s/%PHP_END%/-->/" -e "s/%PHP_SUFFIX%/php/" -e "s/%PHP_PORT%/5201/" "$LSINSTALL_DIR/conf/httpd_config.conf.tmp" > "$LSINSTALL_DIR/conf/httpd_config.conf"
 	fi
 
         sed -e "s/%USER%/$WS_USER/" -e "s/%GROUP%/$WS_GROUP/"  -e "s/%ADMIN_EMAIL%/$ADMIN_EMAIL/" -e "s/%HTTP_PORT%/$HTTP_PORT/" -e "s/%RUBY_BIN%/$RUBY_PATH/"  "$LSINSTALL_DIR/conf/httpd_config.conf.in" > "$LSINSTALL_DIR/conf/httpd_config.conf"
@@ -890,15 +890,15 @@ installation()
         rm -rf "$LSWS_HOME/admin/html.$VERSION"
     fi
 
-    util_mkdir "$SDIR_OWN" $DIR_MOD admin bin docs fcgi-bin php lib logs modules cachedata gdata docs/css docs/img admin/logs add-ons share share/autoindex share/autoindex/icons admin/fcgi-bin admin/html.$VERSION admin/misc tmp  
-    util_mkdir "$CONF_OWN" $SDIR_MOD conf conf/cert conf/templates admin/conf admin/tmp phpbuild
+    util_mkdir "$SDIR_OWN" $DIR_MOD admin bin docs fcgi-bin php lib logs modules backup cachedata gdata docs/css docs/img admin/logs add-ons share share/autoindex share/autoindex/icons admin/fcgi-bin admin/html.$VERSION admin/misc tmp  
+    util_mkdir "$CONF_OWN" $SDIR_MOD conf conf/cert conf/templates conf/vhosts conf/vhosts/Example admin/conf admin/tmp phpbuild
     util_mkdir "$SDIR_OWN" $SDIR_MOD admin/cgid admin/cgid/secret
     util_mkdir "$DIR_OWN" $SDIR_MOD tmp/ocspcache
     chgrp  $WS_GROUP $LSWS_HOME/admin/tmp $LSWS_HOME/admin/cgid
     chmod  g+x $LSWS_HOME/admin/tmp $LSWS_HOME/admin/cgid 
     chown  $CONF_OWN $LSWS_HOME/admin/tmp/sess_* 1>/dev/null 2>&1
     chown  $DIR_OWN $LSWS_HOME/cachedata
-    util_mkdir "$SDIR_OWN" $DIR_MOD DEFAULT 
+    util_mkdir "$SDIR_OWN" $DIR_MOD Example 
 
     find "$LSWS_HOME/admin/tmp" -type s -atime +1 -delete 2>/dev/null
     if [ $? -ne 0 ]; then
@@ -920,19 +920,20 @@ installation()
     util_ccpfile "$SDIR_OWN" $EXEC_MOD fcgi-bin/lsperld.fpl 
     util_cpfile "$SDIR_OWN" $EXEC_MOD  fcgi-bin/RailsRunner.rb  fcgi-bin/RailsRunner.rb.2.3
 	util_cpfile "$SDIR_OWN" $EXEC_MOD admin/misc/rc-inst.sh admin/misc/admpass.sh admin/misc/rc-uninst.sh admin/misc/uninstall.sh admin/misc/lsws.rc admin/misc/lsws.rc.gentoo admin/misc/enable_phpa.sh admin/misc/mgr_ver.sh admin/misc/gzipStatic.sh admin/misc/fp_install.sh admin/misc/create_admin_keypair.sh admin/misc/awstats_install.sh admin/misc/update.sh admin/misc/cleancache.sh admin/misc/lsup.sh
-    util_cpfile "$SDIR_OWN" $EXEC_MOD admin/misc/ap_lsws.sh.in admin/misc/build_ap_wrapper.sh admin/misc/cpanel_restart_httpd.in admin/misc/build_admin_php.sh
+    util_cpfile "$SDIR_OWN" $EXEC_MOD admin/misc/ap_lsws.sh.in admin/misc/build_ap_wrapper.sh admin/misc/cpanel_restart_httpd.in admin/misc/build_admin_php.sh admin/misc/convertxml.sh
 	util_cpfile "$SDIR_OWN" $DOC_MOD admin/misc/gdb-bt admin/misc/htpasswd.php admin/misc/php.ini admin/misc/genjCryptionKeyPair.php admin/misc/purge_cache_byurl.php
-	
+    util_cpfile "$SDIR_OWN" $DOC_MOD admin/misc/convertxml.php
+    
+    
 	if [ $SET_LOGIN -eq 1 ]; then
 		util_cpfile "$CONF_OWN" $CONF_MOD admin/conf/htpasswd
 	else
 		util_ccpfile "$CONF_OWN" $CONF_MOD admin/conf/htpasswd
 	fi
 	if [ $INSTALL_TYPE = "upgrade" ]; then
-		util_ccpfile "$CONF_OWN" $CONF_MOD admin/conf/admin_config.xml
+		util_ccpfile "$CONF_OWN" $CONF_MOD admin/conf/admin_config.conf
 		util_cpfile "$CONF_OWN" $CONF_MOD admin/conf/php.ini admin/conf/${SSL_HOSTNAME}.key admin/conf/${SSL_HOSTNAME}.crt
-		util_ccpfile "$CONF_OWN" $CONF_MOD conf/httpd_config.xml conf/mime.properties conf/templates/ccl.xml conf/templates/phpsuexec.xml conf/templates/rails.xml
-		util_ccpfile "$CONF_OWN" $CONF_MOD conf/templates/ccl.xml
+		util_ccpfile "$CONF_OWN" $CONF_MOD conf/httpd_config.conf conf/mime.properties conf/templates/ccl.conf conf/templates/phpsuexec.conf conf/templates/rails.conf
         $TEST_BIN ! -L "$LSWS_HOME/bin/lshttpd"
         if [ $? -eq 0 ]; then
         	mv -f "$LSWS_HOME/bin/lshttpd" "$LSWS_HOME/bin/lshttpd.old"
@@ -946,31 +947,28 @@ installation()
         	mv -f "$LSWS_HOME/admin/html" "$LSWS_HOME/admin/html.old"
         fi
 
-        if [ ! -f "$LSWS_HOME/DEFAULT/conf/vhconf.xml" ]; then
-			util_mkdir "$CONF_OWN" $DIR_MOD DEFAULT/conf 
-			util_cpdir "$CONF_OWN" $DOC_MOD DEFAULT/conf
+        if [ ! -f "$LSWS_HOME/conf/vhosts/Example/vhconf.conf" ]; then
+			util_cpdir "$CONF_OWN" $CONF_MOD conf/vhosts/Example
 		fi
 		
-		#test if contains DEFAULT/html DEFAULT/cgi-bin and copy when installation
-        if [ ! -d "$LSWS_HOME/DEFAULT/html" ]; then
-            util_mkdir "$SDIR_OWN" $DIR_MOD DEFAULT/html
-            util_cpdir "$SDIR_OWN" $DOC_MOD DEFAULT/html
+		#test if contains Example/html Example/cgi-bin and copy when installation
+        if [ ! -d "$LSWS_HOME/Example/html" ]; then
+            util_mkdir "$SDIR_OWN" $DIR_MOD Example/html
+            util_cpdir "$SDIR_OWN" $DOC_MOD Example/html
         fi
-        if [ ! -d "$LSWS_HOME/DEFAULT/cgi-bin" ]; then
-            util_mkdir "$SDIR_OWN" $DIR_MOD DEFAULT/cgi-bin
-            util_cpdir "$SDIR_OWN" $DOC_MOD DEFAULT/cgi-bin
+        if [ ! -d "$LSWS_HOME/Example/cgi-bin" ]; then
+            util_mkdir "$SDIR_OWN" $DIR_MOD Example/cgi-bin
+            util_cpdir "$SDIR_OWN" $DOC_MOD Example/cgi-bin
         fi
 		
 	else
-		util_cpfile "$CONF_OWN" $CONF_MOD admin/conf/admin_config.xml
-		util_cpfile "$CONF_OWN" $CONF_MOD conf/templates/ccl.xml conf/templates/phpsuexec.xml conf/templates/rails.xml
+		util_cpfile "$CONF_OWN" $CONF_MOD admin/conf/admin_config.conf
+		util_cpfile "$CONF_OWN" $CONF_MOD conf/templates/ccl.conf conf/templates/phpsuexec.conf conf/templates/rails.conf
 		util_cpfile "$CONF_OWN" $CONF_MOD admin/conf/php.ini admin/conf/${SSL_HOSTNAME}.key admin/conf/${SSL_HOSTNAME}.crt
-		util_cpfile "$CONF_OWN" $CONF_MOD conf/httpd_config.xml conf/mime.properties conf/httpd_config.conf
-		util_cpfile "$CONF_OWN" $EXEC_MOD conf/switch_config.sh
-        util_mkdir "$CONF_OWN" $DIR_MOD DEFAULT/conf
-        util_cpdir "$CONF_OWN" $DOC_MOD DEFAULT/conf
-		util_mkdir "$SDIR_OWN" $DIR_MOD DEFAULT/html DEFAULT/cgi-bin 
-		util_cpdir "$SDIR_OWN" $DOC_MOD DEFAULT/html DEFAULT/cgi-bin
+		util_cpfile "$CONF_OWN" $CONF_MOD conf/httpd_config.conf conf/mime.properties conf/httpd_config.conf
+        util_cpdir "$CONF_OWN" $CONF_MOD conf/vhosts/Example
+		util_mkdir "$SDIR_OWN" $DIR_MOD Example/html Example/cgi-bin 
+		util_cpdir "$SDIR_OWN" $DOC_MOD Example/html Example/cgi-bin
 	fi
 
     chown -R "$CONF_OWN" "$LSWS_HOME/conf/"
@@ -980,7 +978,7 @@ installation()
     util_cpfile "$CONF_OWN" $DOC_MOD conf/${SSL_HOSTNAME}.key
     
 	util_ccpfile "$SDIR_OWN" $DOC_MOD php/php.ini
-	util_mkdir "$DIR_OWN" $DIR_MOD DEFAULT/logs DEFAULT/fcgi-bin
+	util_mkdir "$DIR_OWN" $DIR_MOD Example/logs Example/fcgi-bin
 	util_cpdir "$SDIR_OWN" $DOC_MOD admin/html.$VERSION
 	rm -rf $LSWS_HOME/admin/html
 	ln -sf ./html.$VERSION $LSWS_HOME/admin/html

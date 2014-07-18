@@ -273,10 +273,6 @@ class DTblTips
 			$tips[] = 'You can disable index file by not using server settings and blanking vhost settings.';
 			$tips[] = 'You can enable/disable "auto index" at context level.';
 		}
-		elseif ( $tid == 'VH_FRONTPG')
-		{
-			$tips[] = 'Domain names are comma-dilimited list of domain:port. For e.g. www.domain1.com:80, www.domain2.com:443 ';
-		}
 		elseif ( $tid == 'VH_REWRITE_MAP')
 		{
 			$tips[] = 'Enter URI for location. URI must start with "/".';

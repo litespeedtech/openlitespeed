@@ -24,30 +24,13 @@ HttpConfigLoader::~HttpConfigLoader()
 {
 }
 
-int HttpConfigLoader::loadPlainConfigFile()
+int HttpConfigLoader::loadConfigFile( )
 {
     plainconf::initKeywords();
     plainconf::setRootPath( MainServerConfig::getInstance().getServerRoot() );
-
+    
     if ( !m_pRoot )
-        m_pRoot = plainconf::parseFile( m_sPlainconfPath.c_str() );
-
-#ifdef TEST_OUTPUT_PLAIN_CONF
-    char sPlainFile[512] = {0};
-    strcpy( sPlainFile, m_sPlainconfPath.c_str() );
-    strcat( sPlainFile, ".txt" );
-    plainconf::testOutputConfigFile( m_pRoot, sPlainFile );
-#endif
-    return ( m_pRoot == NULL ) ? -1 : 0;
-}
-
-int HttpConfigLoader::loadConfigFile( const char *pConfigFilePath )
-{
-    if ( pConfigFilePath == NULL )
-        pConfigFilePath = m_sConfigFilePath.c_str();
-
-    if ( !m_pRoot )
-        m_pRoot = ConfigCtx::getCurConfigCtx()->parseFile( pConfigFilePath, "httpServerConfig" );
+        m_pRoot = plainconf::parseFile( m_sConfigFilePath.c_str(), "httpServerConfig" );
 
     return ( m_pRoot == NULL ) ? -1 : 0;
 }

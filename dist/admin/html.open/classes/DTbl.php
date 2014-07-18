@@ -3,31 +3,31 @@
 class DTbl
 {
 	public $_id;
-	public $_title;
 	public $_dattrs;
 	public $_helpKey;
-
-	public $_width = '100%';
-	public $_align;
-	public $_isMulti;//0:regular, 1:multi-top, 2:multi-detail
-	public $_icon;
-	public $_addTbl;
 	public $_cols;
-	public $_hasNote = false;
-	public $_hasB = false;
-
-	public $_layerId = NULL;
-	public $_dataLoc = NULL;
+	public $_isMulti;//0:regular, 1:multi-top, 2:multi-detail
 
 	public	$_holderIndex = NULL;
+	public $_showParentRef = false;
 
 	public $_subTbls = NULL;
 	public $_defaultExtract = NULL;
-
 	public $_linkedTbls = NULL;
-	public $_showParentRef = false;
 
-	public function __construct($id, $title=NULL, $isMulti=0, $addTbl=NULL, $align=0, $icon=NULL, $hasNote=NULL)
+	private $_width = '100%';
+	private $_align;
+	private $_title;
+	private $_addTbl;
+	private $_icon;
+	private $_hasNote;
+
+
+	private $_sorted_tbl = FALSE;
+	private $_sort_ascend;
+	private $_sort_key;
+
+	public function __construct($id, $title=NULL, $isMulti=0, $addTbl=NULL, $align=0, $icon=NULL, $hasNote=FALSE)
     {
 		$this->_id = $id;
 		$this->_title = $title;
@@ -35,11 +35,10 @@ class DTbl
 		$this->_addTbl = $addTbl;
 		$this->_align = $align;
 		$this->_icon = $icon;
-		if ($hasNote === NULL && $this->_isMulti)
-			$this->_hasNote = TRUE;
+		$this->_hasNote = $hasNote;
 	}
 
-	public function dup($newId, $title=NULL)
+	public function Dup($newId, $title=NULL)
 	{
 		$d = new DTbl($newId, $this->_title, $this->_isMulti, $this->_addTbl, $this->_align, $this->_icon);
 		$d->_dattrs = $this->_dattrs;
@@ -47,13 +46,10 @@ class DTbl
 		$d->_width = $this->_width;
 		$d->_cols = $this->_cols;
 		$d->_hasNote = $this->_hasNote;
-		$d->_hasB = $this->_hasB;
-		$d->_layerId = $this->_layerId;
-		$d->_dataLoc = $this->_dataLoc;
 		$d->_holderIndex = $this->_holderIndex;
 		$d->_subTbls = $this->_subTbls;
-		$d->_defaultExtract = $this->_defaultExtract;
 		$d->_linkedTbls = $this->_linkedTbls;
+		$d->_defaultExtract = $this->_defaultExtract;
 		$d->_showParentRef = $this->_showParentRef;
 
 		if ($title != NULL) {
@@ -63,20 +59,15 @@ class DTbl
 		return $d;
 	}
 
-	public function setRepeated( $holderIndex )
+	public function SetAttr($attrs, $holderIdx=NULL)
 	{
-		$this->_holderIndex = $holderIndex;
-	}
-
-	public function setAttr(&$attrs, $dataLoc=NULL, $layerId=NULL)
-	{
-		$this->_dattrs = &$attrs;
-		$this->_layerId = $layerId;
-		$this->_dataLoc = $dataLoc;
+		$this->_dattrs = $attrs;
+		$this->_holderIndex = $holderIdx;
 		if ( $this->_isMulti == 1 ) {
 			$this->_cols = count($attrs);
 			if ($this->_hasNote)
-				$this->_cols++;
+				$this->_cols ++;
+
 			if($this->_icon != NULL)
 				$this->_cols++;
 		}
@@ -85,111 +76,47 @@ class DTbl
 		}
 	}
 
-	public function setDataLoc($dataLoc, $layerId=NULL)
+	public function GetSubTid($node)
 	{
-		$this->_dataLoc = $dataLoc;
-		if ($layerId != NULL)
-			$this->_layerId = $layerId;
-	}
+		if ($this->_subTbls == '')
+			return NULL;
 
-	public function GetTags()
-	{
-		$tags = array();
-		$keys = array_keys($this->_dattrs);
-		foreach ( $keys as $key )
-		{
-			$attr = $this->_dattrs[$key];
-			$pos = strpos($attr->_key, ':');
-			if ( $pos === false )
-				$tags[$attr->_key] = $attr->_multiInd;
-			else
-			{
-				$layer = substr($attr->_key, 0, $pos);
-				$id = substr($attr->_key, $pos+1);
-				$tags[$layer][$id] = $attr->_multiInd;
-			}
+		$keynode = $node->GetChildren($this->_subTbls[0]);
+		if ($keynode == NULL)
+			return NULL;
+		$newkey = $keynode->Get(CNode::FLD_VAL);
+		if ( ($newkey == '0') || !isset($this->_subTbls[$newkey]) ) {
+			return $this->_subTbls[1]; // use default
 		}
-		return $tags;
-	}
-
-
-	public function getActionLink($disp, $actions, $editTid='', $editRef='')
-	{
-		$buf = '';
-		$allActions = array('a'=>'Add', 'v'=>'View', 'e'=>'Edit',
-							'E'=>'Edit', 'd'=>'Delete', 's'=>'Save',
-							'b'=>'Back', 'B'=>'Back', 'n'=>'Next',
-							'D'=>'Yes', 'c'=>'Cancel', 'C'=>'Cancel',
-							'i'=>'Instantiate', 'I'=>'Yes',
-							'X' => 'View/Edit');
-		$chars = preg_split('//', $actions, -1, PREG_SPLIT_NO_EMPTY);
-		foreach ( $chars as $act )
-		{
-			$ctrlUrl = '<a href="' . $disp->_ctrlUrl . 'm=' . $disp->_mid . '&p=' . $disp->_pid;
-			$t = '';
-			$r = '';
-			$buf .= '&nbsp;&nbsp;&nbsp;';
-			$name = $allActions[$act];
-			if ( $act == 'b' || $act == 'c' ) {
-				$act = 'b';
-			}
-			elseif ( $act == 'e' ) {
-				$t = '&t=' . $this->_id;
-			}
-			elseif ( $act == 'a' ) {
-				$t = '&t=' . $disp->_tid . '`' . $this->_addTbl;
-				if ( $disp->_ref != NULL ) {
-					$r = '&r=' . $disp->_ref . '`';
-				}
-			}
-			elseif ( strpos('vEdDCBiI', $act) !== false ) {
-				if ( $act == 'C' ) {
-					$act = 'B';
-				}
-
-				if ( isset($this->_hasB) && $this->_hasB && $editTid != '' ) {
-					$t = '&t=' . $disp->_tid . '`' . $editTid;
-					$r = '&r=' . $disp->_ref . '`' . urlencode($editRef);
-				}
-				else {
-					if ( $editTid == '' ) {
-						$editTid = $disp->_tid;
-					}
-					if ( $editRef == '' ) {
-						$editRef = $disp->_ref;
-					}
-
-					$t = '&t=' . $editTid;
-					$r = '&r=' . urlencode($editRef);
-				}
-			}
-
-			if ( $act == 's' ) {
-				$buf .= '<a href="javascript:document.confform.submit()">Save</a>';
-			}
-			elseif ( $act == 'n' ) {
-				$buf .= '<a href="javascript:document.confform.a.value=\'n\';document.confform.submit()">Next</a>';
-			}
-			elseif( $act == 'X') {
-				//vhtop=>vh_... tptop=>tp_.... sltop=>sl_...
-				$buf .= '<a href="' . $disp->_ctrlUrl . 'm=' . substr($disp->_type, 0, 2) . '_' . $editRef . "\">{$name}</a>";
-			}
-			else {
-				$buf .= $ctrlUrl . $t . $r . '&a=' . $act . '&tk=' . $disp->_token . '">' . $name . '</a>';
-			}
-		}
-		return $buf;
-	}
-
-	public function PrintHtml(&$data, $ref, $disp, $isEdit)
-	{
-		if ($isEdit)
-			$this->printEditHtml($data, $disp);
 		else
-			$this->printViewHtml($data, $ref, $disp);
+			return $this->_subTbls[$newkey];
 	}
 
-	private function getPrintHeader($disp, $actString)
+
+	public function PrintHtml($dlayer, $disp)
+	{
+		if ($this->_holderIndex != NULL && $dlayer != NULL) {
+			// populate missing index
+			if (is_array($dlayer)) {
+				foreach ($dlayer as $key => $nd) {
+					if ($nd->GetChildren($this->_holderIndex) == NULL) {
+						$nd->AddChild(new CNode($this->_holderIndex, $nd->Get(CNode::FLD_VAL)));
+					}
+				}
+			}
+			elseif ($dlayer->GetChildren($this->_holderIndex) == NULL) {
+				$dlayer->AddChild(new CNode($this->_holderIndex, $dlayer->Get(CNode::FLD_VAL)));
+			}
+		}
+
+		if ($disp->IsViewAction())
+			$this->print_view($dlayer, $disp);
+		else
+			$this->print_edit($dlayer, $disp);
+	}
+
+
+	private function get_print_header($disp, $actString, $hasSort=FALSE)
 	{
 		$buf = '<tr><td class=xtbl_header colspan="' . $this->_cols . '">';
 
@@ -200,10 +127,10 @@ class DTbl
 		if($dhelp_item != NULL) {
 			$table_help = '&nbsp;&nbsp;&nbsp;&nbsp' . $dhelp_item->render($this->_helpKey);
 		}
-		else if (count($this->_dattrs) == 1) {
+		else if (count($this->_dattrs) == 1 && $this->_cols == 1) {
 			$av = array_values($this->_dattrs);
 			$a0 = $av[0];
-			if ($a0->_inputType == 'textarea1') {
+			if ($a0->_label == NULL || $a0->_label == $this->_title) {
 				$dhelp_item = DATTR_HELP::GetInstance()->GetItem($a0->_helpKey);
 				if($dhelp_item != NULL) {
 					$is_blocked = $a0->blockedVersion();
@@ -214,12 +141,13 @@ class DTbl
 
 		}
 		$title = $this->_title;
-		if ($this->_showParentRef && $disp->_ref != NULL) {
-			$pos = strpos($disp->_ref, '`');
+		$ref = $disp->Get(DInfo::FLD_REF);
+		if ($this->_showParentRef && $ref != NULL) {
+			$pos = strpos($ref, '`');
 			if ($pos !== FALSE)
-				$title .= ' - ' . substr($disp->_ref, 0, $pos);
+				$title .= ' - ' . substr($ref, 0, $pos);
 			else
-				$title .= ' - ' . $disp->_ref;
+				$title .= ' - ' . $ref;
 		}
 		$buf .= '<span class="xtbl_title">'. $title . $table_help . '</span>';
 
@@ -236,7 +164,7 @@ class DTbl
 			$actString = NULL;
 
 		if ( $actString != NULL ) {
-			$titleActionLink = $this->getActionLink($disp, $actString);
+			$titleActionLink = $disp->GetActionLink($actString, $this->_id, '', $this->_addTbl);
 			$buf .= '<span class="xtbl_edit">'.$titleActionLink.'</span>';
 		}
 
@@ -245,14 +173,23 @@ class DTbl
 		if ( $this->_isMulti == 1 )
 		{
 			$buf .= '<tr class="xtbl_title2">';
-
-			$hasSort = ( $disp->_sort != NULL && $disp->_sort[0] == $this->_id );
-			$a = '1'; //ascend
-			$url = $disp->_ctrlUrl . 'm=' . $disp->_mid . '&p=' . $disp->_pid;
-			if ( $disp->_tid != NULL )
-				$url .= '&t=' . $disp->_tid;
-			if ( $disp->_ref != NULL )
-				$url .= '&r=' . $disp->_ref;
+			if ($hasSort) {
+				$this->_sorted_tbl  = FALSE;
+				$sortval = $disp->Get(DInfo::FLD_SORT);
+				if ($sortval != NULL) {
+					$pos = strpos($sortval, '`');
+					if ($this->_id == substr($sortval, 0, $pos)) {
+						$this->_sorted_tbl = TRUE;
+						$this->_sort_ascend = $sortval[$pos+1];
+						$this->_sort_key = substr($sortval, $pos+2);
+					}
+				}
+			}
+			$url = $disp->Get(DInfo::FLD_CtrlUrl);
+			if ( $disp->Get(DInfo::FLD_TID) != NULL )
+				$url .= '&t=' . $disp->Get(DInfo::FLD_TID);
+			if ( $disp->Get(DInfo::FLD_REF) != NULL )
+				$url .= '&r=' . $disp->Get(DInfo::FLD_REF);
 
 			if ($this->_icon != NULL)
 				$buf .= '<td class="icon"></td>';
@@ -263,7 +200,7 @@ class DTbl
 			foreach( $keys as $i )
 			{
 				$attr = $this->_dattrs[$i];
-				if ( $attr->_FDE[1] == 'N' )
+				if ( $attr->IsFlagOn(DAttr::BM_HIDE) )
 					continue;
 
 				$buf .= '<td';
@@ -271,17 +208,17 @@ class DTbl
 					$buf .= ' align="'.$this->_align[$i] .'"';
 
 				$buf .= '>' . $attr->_label;
-				if ( $attr->_type != 'action' )
+				if ( $hasSort && $attr->_type != 'action' )
 				{
 					$buf .= ' <a href="' . $url . '&sort=' . $this->_id . '`';
-					if ( $hasSort && array_key_exists(2,$disp->_sort) && array_key_exists(1,$disp->_sort) && $disp->_sort[2] == $attr->_key && $disp->_sort[1] == '1' )
+					if ($this->_sorted_tbl && $this->_sort_ascend == 1 && $this->_sort_key == $attr->GetKey())
 						$a = '0';
 					else
-						$a = '1';
+						$a = '1'; //ascend
 
-					$buf .= $a . $attr->_key . '">';
-					$buf .= ($a=='1')? '<img src="/static/images/icons/up.gif" border="0" width="13" align="absmiddle">' : '<img src="/static/images/icons/down.gif" width="13" align="absmiddle" border="0">';
-					$buf .= '</a>';
+					$buf .= $a . $attr->GetKey() . '"><img src="/static/images/icons/';
+					$buf .= ($a=='1')? 'up' : 'down';
+					$buf .= '.gif" border="0" width="13" align="absmiddle"></a>';
 				}
 				if ( $attr->_type == 'ctxseq' ) {
 					$attr->_hrefLink = $url . $attr->_href;
@@ -294,116 +231,82 @@ class DTbl
 		return $buf;
 	}
 
-	private function printViewHtml(&$data, $ref, $disp)
+	private function print_view($dlayer, $disp)
 	{
 		$buf = '<div><table width="'.$this->_width.'" class="xtbl" border="0" cellpadding="5" cellspacing="1">' . "\n";
+		$ref = $disp->GetLast(DInfo::FLD_REF);
+		$disptid = $disp->Get(DInfo::FLD_TID);
+		$hasB = ($disptid != '');
 
-		if ( $this->_isMulti == 1)
-		{
+		if ( $this->_isMulti == 1) {
 			if ( $this->_addTbl == NULL )
-				$actString = 'e';
+				$actString = 'E'; //e';
 			else if ( $this->_addTbl != 'N' )
 				$actString = 'a';
 			else
 				$actString = '';
 
-			if ( $this->_hasB )
+			if ($hasB)
 				$actString .= 'B';
 
-			$buf .= $this->getPrintHeader($disp, $actString);
+			$hasSort = ($dlayer != NULL && is_array($dlayer));
+			$buf .= $this->get_print_header($disp, $actString, $hasSort);
 
-			if ( $data != NULL && count($data) > 0 )
+			if ( $dlayer != NULL)
 			{
-				$keys = array_keys($data);
-				if ( $disp->_sort[0] == $this->_id )
-				{
-					if ( array_key_exists(2,$disp->_sort) &&  $this->_holderIndex == $disp->_sort[2] )
-					{
-						if ( $disp->_sort[1] == 1 )
-							sort($keys);
-						else
-							rsort($keys);
-					}
-					else
-					{
-						//default context view sort
-						if(!array_key_exists(1,$disp->_sort) &&  $disp->_pid == "context" ) {
-							$disp->_sort[2] = "order";
-							$disp->_sort[1] = 0; //asc
-						}
-
-						$s = array();
-
-						if(array_key_exists(2,$disp->_sort))
-							$by = $disp->_sort[2];
-						else
-							$by = NULL;
-
-						foreach( $keys as $key )
-						{
-							$d = &$data[$key];
-
-							if(array_key_exists($by, $d)) {
-								$a = $d[$by];
-								$a = $a->GetVal();
-							}
-							else {
-								$a = NULL;
-							}
-
-							$s[$key] = $a;
-						}
-
-
-
-						if ( array_key_exists(1,$disp->_sort) && $disp->_sort[1] == 1 )
-						{
-							if ( $by == 'order' )
-								asort($s, SORT_NUMERIC);
-							else
-								asort($s, SORT_STRING);
-						}
-						else
-						{
-							if ( $by == 'order' )
-								arsort($s, SORT_NUMERIC);
-							else
-								arsort($s, SORT_STRING);
-						}
-						$keys = array_keys($s);
-					}
+				if (!is_array($dlayer)) {
+					$dlayer = array($dlayer->Get(CNode::FLD_VAL) => $dlayer);
 				}
+
+				if ($hasSort && $this->_sorted_tbl) {
+					$sorted = array();
+					$is_num = TRUE;
+					foreach ($dlayer as $key => $node) {
+						$val = $node->GetChildVal($this->_sort_key);
+						if ($is_num && !is_numeric($val))
+							$is_num = FALSE;
+						$sorted[$key] = $val;
+					}
+					$flag = $is_num ? SORT_NUMERIC : SORT_STRING;
+					if ($this->_sort_ascend == 1)
+						asort($sorted, $flag);
+					else
+						arsort($sorted, $flag);
+					$keys = array_keys($sorted);
+				}
+				else
+					$keys = array_keys($dlayer);
 
 				$action_attr = NULL;
 				foreach ($this->_dattrs as $attr) {
 					if ($attr->_type == 'action') {
+						if ( $attr->IsFlagOn(DAttr::BM_NOTNULL) && strpos($attr->_maxVal, 'd') !== FALSE && count($dlayer) == 1	)
+							$attr->_maxVal = str_replace('d', '', $attr->_maxVal); // do not allow delete if only one left
 						$action_attr = $attr;
 						break;
 					}
 				}
+				$index = 0;
 				foreach ( $keys as $key ) {
-					$buf .= $this->getPrintHtmlLine1($data[$key], $key, $disp, $action_attr);
+					$nd = $dlayer[$key];
+					$buf .= $this->get_print_line_multi($nd, $key, $index, $disp, $action_attr);
+					$index ++;
 				}
-
-
 			}
 		}
 		else
 		{
-			if ( $ref == NULL ) {
-				$actString = 'e';
-				if ( $this->_hasB )
-					$actString .= 'B';
+			$actString = 'E';
+			if ($hasB)
+				$actString .= 'B';
+			if ($ref != NULL && is_array($dlayer)) {
+				$dlayer = $dlayer[$ref];
 			}
-			else {
-				$actString = 'Ed';
-				$actString .= ($this->_hasB ? 'B' : 'b');
-			}
-			$buf .= $this->getPrintHeader($disp, $actString);
 
-			$keys = array_keys($this->_dattrs);
-			foreach( $keys as $i )	{
-				$buf .= $this->getPrintHtmlLine($data, $disp, $i);
+			$buf .= $this->get_print_header($disp, $actString);
+
+			foreach ($this->_dattrs as $attr) {
+				$buf .= $this->get_print_line($dlayer, $disp, $attr);
 			}
 		}
 
@@ -412,12 +315,12 @@ class DTbl
 
 	}
 
-	private function getPrintTips($tips)
+	private function get_print_tips($tips)
 	{
 		$buf = '<div class="tips"><ul>';
 		foreach( $tips as $tip )
 		{
-			if(strlen($tip)) {
+			if($tip != '') {
 				$buf .= "<li>$tip</li>\n";
 			}
 		}
@@ -425,42 +328,45 @@ class DTbl
 		return $buf;
 	}
 
-	private function printEditHtml(&$data, $disp)
+	private function print_edit($dlayer, $disp)
 	{
 		$buf = '';
+		$ref = $disp->GetLast(DInfo::FLD_REF);
+
+		if ($ref != NULL && is_array($dlayer)) {
+			$dlayer = $dlayer[$ref];
+		}
 
 		$tips = DTblTips::getTips($this->_id);
 
 		if ( $tips != NULL ) {
-			$buf .= $this->getPrintTips($tips);
+			$buf .= $this->get_print_tips($tips);
 		}
 
 		$buf .= "\n". '<div><table width="'.$this->_width.'" class="xtbl" border="0" cellpadding="5" cellspacing="1">' . "\n";
 
-		$actString = ( (substr($this->_id, -3) == 'SEL') ? 'n':'s' ) . ( $this->_hasB ? 'B':'b');
-		$buf .= $this->getPrintHeader($disp, $actString);
+		$actString = ( (substr($this->_id, -3) == 'SEL') ? 'n':'s' ) . 'B';
+		$buf .= $this->get_print_header($disp, $actString);
 
-		$keys = array_keys($this->_dattrs);
-		foreach ( $keys as $key ) {
-			$buf .= $this->getPrintHtmlInputLine($data, $disp->_info, $key);
+		foreach ($this->_dattrs as $attr) {
+			$buf .= $this->get_print_inputline($dlayer, $disp, $attr);
 		}
 
 		$buf .= '</table></div>';
 		echo "$buf \n";
 	}
 
-	private function getPrintHtmlLine(&$data, $disp, $index)
+	private function get_print_line($node, $disp, $attr)
 	{
 		$valwid = 0;
-		$attr = $this->_dattrs[$index];
-		if ( $attr == NULL || $attr->_FDE[1] == 'N') {
+		if ( $attr == NULL || $attr->IsFlagOn(DAttr::BM_HIDE)) {
 			return '';
 		}
 
 		$is_blocked = $attr->blockedVersion();
 		$version = $is_blocked? $attr->_version: 0;
-		if ( $attr->_type == 'sel1' ) {
-			$attr->populate_sel1_options($disp->_info, $data);
+		if ( $attr->_type == 'sel1' && $node != NULL && $node->GetChildVal($attr->GetKey()) != NULL ) {
+			$attr->SetDerivedSelOptions($disp->GetDerivedSelOptions($this->_id, $attr->_minVal, $node));
 		}
 
 		$buf = '<tr class="xtbl_value">';
@@ -507,35 +413,34 @@ class DTbl
 
 		if ( $attr->_href )
 		{
-			$link = $disp->_ctrlUrl . 'm=' . $disp->_mid . '&p=' . $disp->_pid;
-			if ( $disp->_tid != NULL )
-				$link .= '&t=' . $disp->_tid;
-			if ( $disp->_ref != NULL )
-				$link .= '&r='. $disp->_ref;
+			//$link = $disp->_ctrlUrl . 'm=' . $disp->_mid . '&p=' . $disp->_pid;
+			$link = $disp->Get(DInfo::FLD_CtrlUrl);
+			if ( $disp->Get(DInfo::FLD_TID) != NULL )
+				$link .= '&t=' . $disp->Get(DInfo::FLD_TID);
+			if ( $disp->Get(DInfo::FLD_REF) != NULL )
+				$link .= '&r='. $disp->Get(DInfo::FLD_REF);
 
 			$link .= $attr->_href;
-			$attr->_hrefLink = str_replace('$R', $disp->_ref, $link);
+			$attr->_hrefLink = str_replace('$R', $disp->Get(DInfo::FLD_REF), $link);
 		}
 
-		$buf .= ($attr->toHtml($data[$attr->_key]));
+		$buf .= ($attr->toHtml($node));
 
 
 		$buf .= "</td></tr>\n";
 		return $buf;
 	}
 
-
-	private function getPrintHtmlInputLine(&$data, &$info, $key)
+	private function get_print_inputline($dlayer, $disp, $attr)
 	{
-		$attr = $this->_dattrs[$key];
-		if ( $attr == NULL || $attr->_FDE[2] == 'N')
+		if ( $attr->IsFlagOn(DAttr::BM_NOEDIT))
 			return '';
 
 		$valwid = 0;
 		$is_blocked = $attr->blockedVersion();
 		$version = $is_blocked? $attr->_version: 0;
 		if ( $attr->_type == 'sel1' ) {
-			$attr->populate_sel1_options($info, $data);
+			$attr->SetDerivedSelOptions($disp->GetDerivedSelOptions($this->_id, $attr->_minVal, $dlayer));
 		}
 
 		$buf = '<tr class="xtbl_value">';
@@ -548,6 +453,8 @@ class DTbl
 				$buf .= '<td class="xtbl_label">';
 			}
 			$buf .= $attr->_label;
+			if ($attr->IsFlagOn(DAttr::BM_NOTNULL))
+				$buf .= ' *';
 
 			if ($this->_cols == 1) {
 				$buf .= '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;';
@@ -571,7 +478,7 @@ class DTbl
 		else {
 			$buf .= '<td';
 		}
-		if ($attr->blockedVersion()) {
+		if ($is_blocked) {
 			$buf .= ' class="xtbl_value_blocked" ';
 		}
 		if ($valwid > 0) {
@@ -580,24 +487,17 @@ class DTbl
 		$buf .= '>';
 
 		if ($is_blocked)
-			$buf .= ($attr->toHtml($data[$attr->_key]));
+			$buf .= $attr->toHtml($dlayer);
 		else
-			$buf .= ($attr->toHtmlInput($data[$attr->_key]));
+			$buf .= $attr->toHtmlInput($dlayer);
 
 		$buf .= "</td></tr>\n";
 
 		return $buf;
 	}
 
-	private function getPrintHtmlLine1(&$data, $key0, $disp, $action_attr)
+	private function get_print_line_multi($data, $key0, $htmlid, $disp, $action_attr)
 	{
-		static $htmlid;
-
-		if (isset($htmlid))
-			$htmlid++;
-		else
-			$htmlid = 1;
-
 		$buf = '<tr class="xtbl_value">';
 
 		$keys = array_keys($this->_dattrs);
@@ -608,17 +508,15 @@ class DTbl
 
 		if ($action_attr != NULL) {
 
-			if ( is_array($action_attr->_minVal) )
-			{
+			if ( is_array($action_attr->_minVal) ) {
 				$index = $action_attr->_minVal[0];
-				$ti = $action_attr->_minVal[$data[$index]->GetVal()];
-				if ( $ti == NULL )
-					$ti = $action_attr->_minVal[1];
+				$type = $data->GetChildVal($index);
+				$ti = isset($action_attr->_minVal[$type]) ? $action_attr->_minVal[$type] : $action_attr->_minVal[1];
 			}
 			else
 				$ti = $action_attr->_minVal;
 
-			$actionLink = $this->getActionLink($disp, $action_attr->_maxVal, $ti, $key0);
+			$actionLink = $disp->GetActionLink( $action_attr->_maxVal, $ti, $key0);
 
 			$tmp_a = strpos($actionLink, '"') +1;
 			$tmp_e = strpos($actionLink, '">');
@@ -628,19 +526,14 @@ class DTbl
 		foreach( $keys as $key )
 		{
 			$attr = $this->_dattrs[$key];
-			if ( $attr->_FDE[1] == 'N' )
+			if ( $attr->IsFlagOn(DAttr::BM_HIDE) )
 				continue;
-
-			$linkedData = NULL;
-			if ($attr->_linkedkeys != NULL) {
-				$linkedData = $data[$attr->_linkedkeys];
-			}
 
 			if($key == 0) {
 				if ($this->_icon != NULL) {
-					if($attr->_key == "type" &&  is_array($attr->_maxVal) && is_array($this->_icon)) {
-						$icon_name = array_key_exists($data['type']->GetVal(), $this->_icon) ?
-							$this->_icon[$data['type']->GetVal()] : 'application';
+					if ($attr->GetKey() == 'type' && is_array($attr->_maxVal) && is_array($this->_icon)) {
+						$type = $data->GetChildVal('type');
+						$icon_name = isset($this->_icon[$type]) ? $this->_icon[$type] : 'application';
 					}
 					else {
 						$icon_name = $this->_icon;
@@ -649,10 +542,9 @@ class DTbl
 				}
 				if ($this->_hasNote) {
 					$buf .= '<td class="icon">';
-					if(isset($data['note']) && $data['note']->HasVal()) {
+					if ( ($note = $data->GetChildVal('note')) != NULL ) {
 						$buf .= '<img class="xtip-hover-info' . $htmlid . '" src="/static/images/icons/info.gif">'
-								. '<div id="xtip-note-info' . $htmlid . '" class="snp-mouseoffset notedefault">'
-								. $data['note']->GetVal() . '</div>';
+								. '<div id="xtip-note-info' . $htmlid . '" class="snp-mouseoffset notedefault">' . $note . '</div>';
 					}
 					$buf .= '</td>';
 				}
@@ -664,18 +556,16 @@ class DTbl
 			$buf .= '>';
 
 			if ( $attr->_type == 'action' )	{
-				$buf .= ($attr->toHtml($actionLink));
+				$buf .= $actionLink;
 			}
 			else {
-				if ( $attr->_type == 'sel1' ) {
-					$attr->populate_sel1_options($disp->_info, $data);
+				if ( $attr->_type == 'sel1' && $data->GetChildVal($attr->GetKey()) != NULL ) {
+					$attr->SetDerivedSelOptions($disp->GetDerivedSelOptions($this->_id, $attr->_minVal, $data));
 				}
-				if ($attr->_key == $this->_holderIndex) {
-					$buf .= ($attr->toHtml($data[$attr->_key], $indexActionLink, $linkedData));
-				}
-				else {
-					$buf .= ($attr->toHtml($data[$attr->_key], NULL, $linkedData));
-				}
+				if ($attr->GetKey() == $this->_holderIndex)
+					$buf .= $attr->toHtml($data, $indexActionLink);
+				else
+					$buf .= $attr->toHtml($data, NULL);
 			}
 			$buf .= '</td>';
 		}

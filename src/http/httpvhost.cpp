@@ -55,6 +55,7 @@
 #include <util/ssnprintf.h>
 #include <main/httpserver.h>
 #include "main/mainserverconfig.h"
+#include "main/plainconf.h"
 
 #include <extensions/localworker.h>
 #include <extensions/localworkerconfig.h>
@@ -72,10 +73,12 @@
 RealmMap::RealmMap( int initSize )
         : _shmap( initSize )
 {}
+
 RealmMap::~RealmMap()
 {
     release_objects();
 }
+
 const UserDir* RealmMap::find( const char * pScript ) const
 {
     iterator iter = _shmap::find( pScript );
@@ -102,6 +105,7 @@ UserDir *RealmMap::get( const char * pFile, const char * pGroup )
     }
     return NULL;
 }
+
 UserDir *HttpVHost::getFileUserDir(
           const char * pName, const char * pFile, const char * pGroup )
 {
@@ -285,11 +289,14 @@ int HttpVHost::setDocRoot( const char * psRoot )
 }
 
 AccessControl * HttpVHost::getAccessCtrl()
-{   return m_pAccessCache->getAccessCtrl();   }
+{   
+    return m_pAccessCache->getAccessCtrl();   
+}
+
 void HttpVHost::enableAccessCtrl()
-{   m_pAccessCache = new AccessCache( 1543 );   }
-
-
+{  
+    m_pAccessCache = new AccessCache( 1543 ); 
+}
 
 //const StringList* HttpVHost::getIndexFileList() const
 //{
@@ -519,6 +526,7 @@ void HttpVHost::updateUGid( const char * pLogId, const char * pPath)
         setGid( st.st_gid );
     }
 }
+
 HttpContext * HttpVHost::setContext( HttpContext * pContext,
     const char * pUri, int type, const char * pLocation, const char * pHandler,
     int allowBrowse, int match )
@@ -652,6 +660,7 @@ HTAuth *HttpVHost::configAuthRealm( HttpContext *pContext,
 
     return pAuth;
 }
+
 int HttpVHost::configContextAuth( HttpContext *pContext,
                            const XmlNode *pContextNode  )
 {
@@ -767,6 +776,7 @@ int HttpVHost::configWebsocket( const XmlNode *pWebsocketNode )
     pContext->setWebSockAddr( gsockAddr );
     return 0;
 }
+
 int HttpVHost::configVHWebsocketList( const XmlNode *pVhConfNode )
 {
     const XmlNode *p0 = pVhConfNode->getChild( "websocketlist", 1 );
@@ -785,6 +795,7 @@ int HttpVHost::configVHWebsocketList( const XmlNode *pVhConfNode )
 
     return 0;
 }
+
 int HttpVHost::configHotlinkCtrl( const XmlNode *pNode )
 {
     int enabled = ConfigCtx::getCurConfigCtx()->getLongValue( pNode, "enableHotlinkCtrl", 0, 1, 0 );
@@ -807,6 +818,7 @@ int HttpVHost::configHotlinkCtrl( const XmlNode *pNode )
     setHotlinkCtrl( pCtrl );
     return 0;
 }
+
 int HttpVHost::configSecurity( const XmlNode *pVhConfNode)
 {
     const XmlNode *p0 = pVhConfNode->getChild( "security", 1 );
@@ -830,6 +842,7 @@ int HttpVHost::configSecurity( const XmlNode *pVhConfNode)
 
     return 0;
 }
+
 int HttpVHost::setAuthCache( const XmlNode *pNode,
                           HashDataCache *pAuth )
 {
@@ -839,6 +852,7 @@ int HttpVHost::setAuthCache( const XmlNode *pNode,
     pAuth->setMaxSize( maxSize );
     return 0;
 }
+
 int HttpVHost::configRealm( const XmlNode *pRealmNode )
 {
     int iChrootLen = 0;
@@ -850,17 +864,10 @@ int HttpVHost::configRealm( const XmlNode *pRealmNode )
     }
     ConfigCtx currentCtx( "realm", pName );
 
-    const char *pType = pRealmNode->getChildValue( "type" );
     
     if ( HttpGlobals::s_psChroot != NULL )
     iChrootLen = HttpGlobals::s_psChroot->len();
     
-    if ( !pType )
-    {
-        ConfigCtx::getCurConfigCtx()->log_warn( "Realm type is not specified, use default: file." );
-        pType = "file";
-    }
-
     const XmlNode *p2 = pRealmNode->getChild( "userDB" );
 
     if ( p2 == NULL )
@@ -869,58 +876,51 @@ int HttpVHost::configRealm( const XmlNode *pRealmNode )
         return -1;
     }
 
-    if ( strcasecmp( pType, "file" ) == 0 )
+    const char *pFile = NULL, *pGroup = NULL, *pGroupFile = NULL;
+    char achBufFile[MAX_PATH_LEN];
+    char achBufGroup[MAX_PATH_LEN];
+
+    pFile = p2->getChildValue( "location" );
+
+    if ( ( !pFile ) ||
+            ( ConfigCtx::getCurConfigCtx()->getValidFile( achBufFile, pFile, "user DB" ) != 0 ) )
     {
-        const char *pFile = NULL, *pGroup = NULL, *pGroupFile = NULL;
-        char achBufFile[MAX_PATH_LEN];
-        char achBufGroup[MAX_PATH_LEN];
+        return -1;
+    }
 
-        pFile = p2->getChildValue( "location" );
+    const XmlNode *pGroupNode = pRealmNode->getChild( "groupDB" );
 
-        if ( ( !pFile ) ||
-                ( ConfigCtx::getCurConfigCtx()->getValidFile( achBufFile, pFile, "user DB" ) != 0 ) )
-        {
-            return -1;
-        }
-
-        const XmlNode *pGroupNode = pRealmNode->getChild( "groupDB" );
-
-        if ( pGroupNode )
-        {
-            pGroup = pGroupNode->getChildValue( "location" );
-
-            if ( pGroup )
-            {
-                if ( ConfigCtx::getCurConfigCtx()->getValidFile( achBufGroup, pGroup, "group DB" ) != 0 )
-                {
-                    return -1;
-                }
-                else
-                    pGroupFile = &achBufGroup[iChrootLen];
-            }
-
-        }
-
-        UserDir *pUserDir =
-            getFileUserDir( pName, &achBufFile[iChrootLen],
-                                    pGroupFile );
-
-        if ( !pUserDir )
-        {
-            ConfigCtx::getCurConfigCtx()->log_error( "Failed to create authentication DB." );
-            return -1;
-        }
-
-        setAuthCache( p2, pUserDir->getUserCache() );
+    if ( pGroupNode )
+    {
+        pGroup = pGroupNode->getChildValue( "location" );
 
         if ( pGroup )
         {
-            setAuthCache( pGroupNode, pUserDir->getGroupCache() );
+            if ( ConfigCtx::getCurConfigCtx()->getValidFile( achBufGroup, pGroup, "group DB" ) != 0 )
+            {
+                return -1;
+            }
+            else
+                pGroupFile = &achBufGroup[iChrootLen];
         }
+
     }
-    else
+
+    UserDir *pUserDir =
+        getFileUserDir( pName, &achBufFile[iChrootLen],
+                                pGroupFile );
+
+    if ( !pUserDir )
     {
-        ConfigCtx::getCurConfigCtx()->log_error( "unsupported DB type in realm %s!", pName );
+        ConfigCtx::getCurConfigCtx()->log_error( "Failed to create authentication DB." );
+        return -1;
+    }
+
+    setAuthCache( p2, pUserDir->getUserCache() );
+
+    if ( pGroup )
+    {
+        setAuthCache( pGroupNode, pUserDir->getGroupCache() );
     }
 
     return 0;
@@ -948,6 +948,7 @@ int HttpVHost::configRealmList( const XmlNode *pRoot)
 
     return 0;
 }
+
 void HttpVHost::configRewriteMap( const XmlNode *pNode )
 {
     const XmlNodeList *pList = pNode->getChildren( "map" );
@@ -976,6 +977,7 @@ void HttpVHost::configRewriteMap( const XmlNode *pNode )
         }
     } 
 }
+
 int HttpVHost::configRewrite( const XmlNode *pNode )
 {
     getRootContext().enableRewrite( ConfigCtx::getCurConfigCtx()->getLongValue( pNode, "enable", 0, 1, 0 ) );
@@ -985,13 +987,11 @@ int HttpVHost::configRewrite( const XmlNode *pNode )
     
     RewriteRule::setLogger( NULL, LogIdTracker::getLogId() );
     char *pRules = ( char * ) pNode->getChildValue( "rules" );
-
     if ( pRules )
     {
         getRootContext().configRewriteRule( getRewriteMaps(), pRules );
     }
-    else
-        getRootContext().configRewriteRule( getRewriteMaps(), pNode );
+
 
     return 0;
 }
@@ -1455,6 +1455,7 @@ HttpContext *HttpVHost::importWebApp( const char *contextUri, const char *appPat
     delete pRoot;
     return pContext;
 }
+
 void HttpVHost::configServletMapping(XmlNode *pRoot, char* pachURI, int iUriLen,
     const char *pWorkerName, int allowBrowse )
 {
@@ -1788,7 +1789,6 @@ int HttpVHost::configVHModuleUrlFilter1( lsi_module_t *pModule, const XmlNodeLis
     return ret;
 }
 
-
 lsi_module_config_t *parseModuleConfigParam(lsi_module_t *pModule, const HttpContext *pContext)
 {
     lsi_module_config_t *config = ((HttpContext *)pContext)->getModuleConfig()->get(MODULE_ID( pModule ));
@@ -2119,41 +2119,22 @@ int HttpVHost::config( const XmlNode *pVhConfNode)
 
 int HttpVHost::configVHScriptHandler( const XmlNode *pVhConfNode )
 {
-    int configType = 0; //old type
-    const XmlNode *p0 = pVhConfNode->getChild( "scriptHandlerList" );
-
-    if ( p0 == NULL )
-    {
-        configType = 1;
-        p0 = pVhConfNode->getChild( "scriptHandler" );
-    }
+    const XmlNode *p0 = pVhConfNode->getChild( "scriptHandler" );
 
     if ( p0 == NULL )
         return 0;
 
-    if ( configType == 0 )
+    const XmlNodeList *pList = p0->getChildren( "add" );
+
+    if ( pList && pList->size() > 0 )
     {
-        const XmlNodeList *pList = p0->getChildren( "scriptHandler" );
-
-        if ( !pList || pList->size() == 0 )
-            return 0;
-
         getRootContext().initMIME();
-        HttpMime::configScriptHandler1( this, pList, getMIME() );
-    }
-    else
-    {
-        const XmlNodeList *pList = p0->getChildren( "add" );
-
-        if ( pList && pList->size() > 0 )
-        {
-            getRootContext().initMIME();
-            HttpMime::configScriptHandler2( this, pList, getMIME() );
-        }
+        HttpMime::configScriptHandler( pList, getMIME() );
     }
 
     return 0;
 }
+
 const HttpHandler * HttpVHost::isHandlerAllowed( const HttpHandler *pHdlr, int type, 
                                  const char *pHandler )
 {
@@ -2269,11 +2250,9 @@ HttpVHost *HttpVHost::configVHost( const XmlNode *pNode, const char *pName,
                                              ThrottleControl::getDefault(), &currentCtx );
 
         
-        
-        
-        
         if ( pVHnew->config( pConfigNode ) == 0 )
         {
+            HttpServer::getInstance().checkSuspendedVHostList( pVHnew );
             return pVHnew;
         }
 
@@ -2320,7 +2299,7 @@ HttpVHost *HttpVHost::configVHost( XmlNode *pNode)
         {
             if ( ConfigCtx::getCurConfigCtx()->getValidFile( achVhConf, pConfFile, "vhost config" ) == 0 )
             {
-                pVhConfNode = ConfigCtx::getCurConfigCtx()->parseFile( achVhConf, "virtualHostConfig" );
+                pVhConfNode = plainconf::parseFile( achVhConf, "virtualHostConfig" );
 
                 if ( pVhConfNode == NULL )
                 {

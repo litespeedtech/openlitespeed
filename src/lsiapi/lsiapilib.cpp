@@ -31,11 +31,14 @@
 #include <lsiapi/modulehandler.h>
 #include <lsiapi/modulemanager.h>
 
+#include <shm/lsi_shm.h>
+
 #include <util/datetime.h>
 #include <util/ghash.h>
 #include <util/gpath.h>
 #include <util/ni_fio.h>
 #include <util/vmembuf.h>
+#include <main/httpserver.h>
 
 #include <fcntl.h>
 #include <sys/stat.h>
@@ -1050,7 +1053,7 @@ static int is_resp_buffer_gzippped(lsi_session_t *session)
     if (pSession == NULL)
         return -1;
     
-    if (pSession->getGzipBuf())
+    if (pSession->getReq()->gzipAcceptable() & ( UPSTREAM_GZIP | UPSTREAM_DEFLATE ))
         return 1;
     else
         return 0;
@@ -1187,6 +1190,7 @@ static int set_uri_qs( lsi_session_t *session, int action, const char *uri, int 
     case LSI_URL_REDIRECT_INTERNAL:
     case LSI_URL_REDIRECT_301:
     case LSI_URL_REDIRECT_302:
+    case LSI_URL_REDIRECT_303:
     case LSI_URL_REDIRECT_307: 
         if ( !(action & LSI_URL_ENCODED) )
             len = HttpUtil::escape( uri, uri_len, tmpBuf, sizeof( tmpBuf ) - 1 );
@@ -1244,8 +1248,14 @@ static int set_uri_qs( lsi_session_t *session, int action, const char *uri, int 
                 *pStart++ = '&';
             }
         }
-        memcpy(pStart, qs, qs_len);
-        final_qs_len += qs_len;
+        else 
+            qs_act = LSI_URL_QS_SET;
+        if ( qs )
+        {
+            memcpy(pStart, qs, qs_len);
+            final_qs_len += qs_len;
+            pStart += qs_len;
+        }
     }
     len = pStart - tmpBuf;
   
@@ -1255,7 +1265,7 @@ static int set_uri_qs( lsi_session_t *session, int action, const char *uri, int 
     case LSI_URI_REWRITE:
         if ( uri_act != LSI_URI_NOCHANGE )
             pSession->getReq()->setRewriteURI( tmpBuf, urlLen, 1 );
-        if ( uri_act & URL_QS_OP_MASK )
+        if ( qs_act & URL_QS_OP_MASK )
             pSession->getReq()->setRewriteQueryString( pQs, final_qs_len );
 //        pSession->getReq()->addEnv(11);
         break;
@@ -1266,14 +1276,14 @@ static int set_uri_qs( lsi_session_t *session, int action, const char *uri, int 
         break;
     case LSI_URL_REDIRECT_301:
     case LSI_URL_REDIRECT_302:
+    case LSI_URL_REDIRECT_303:
     case LSI_URL_REDIRECT_307: 
         pSession->getReq()->setLocation( tmpBuf, len );
-        if ( uri_act == LSI_URL_REDIRECT_301 )
-            code = SC_301;
-        else if( uri_act == LSI_URL_REDIRECT_302 )
-            code = SC_302;
-        else
+        
+        if ( uri_act == LSI_URL_REDIRECT_307 )
             code = SC_307;
+        else
+            code = SC_301 + uri_act - LSI_URL_REDIRECT_301;
         pSession->getReq()->setStatusCode( code );
         pSession->setState( HSS_EXT_REDIRECT );
         pSession->continueWrite();
@@ -1359,6 +1369,8 @@ static const char * get_req_handler_type( lsi_session_t *session )
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
     if ( pSession == NULL || pSession->getCurHandler() == NULL )
+        return NULL;
+    if (pSession->getCurHandler() == NULL)
         return NULL;
     return HandlerType::getHandlerTypeString( pSession->getCurHandler()->getType() );
 }
@@ -1494,7 +1506,7 @@ static int   get_body_buf_fd( void * pBuf )
 }
 
 
-static void  reset_body_buf ( void * pBuf )
+static void  reset_body_buf( void * pBuf )
 {
     if ( pBuf )
     {
@@ -1503,7 +1515,7 @@ static void  reset_body_buf ( void * pBuf )
     }
 }
     
-static int   append_body_buf ( void * pBuf, const char * pBlock, int size )
+static int   append_body_buf( void * pBuf, const char * pBlock, int size )
 {
     if ( !pBuf || !pBlock || size < 0 )
         return -1;
@@ -1525,6 +1537,15 @@ static time_t get_cur_time( int32_t * usec )
     return DateTime::s_curTime;
 }
 
+static int get_vhost_count()
+{
+    return HttpServer::getInstance().getVHostCounts();
+}
+
+const void *get_vhost( int index )
+{
+    return (const void *)HttpServer::getInstance().getVHost( index );
+}
 
 void lsiapi_init_server_api()
 {
@@ -1584,7 +1605,6 @@ void lsiapi_init_server_api()
     pApi->set_req_wait_full_body = set_req_wait_full_body;
     pApi->set_resp_wait_full_body = set_resp_wait_full_body;
     
-   
     pApi->is_resp_buffer_available = is_resp_buffer_available;
     pApi->append_resp_body = append_resp_body;
     pApi->append_resp_bodyv = append_resp_bodyv;
@@ -1634,5 +1654,23 @@ void lsiapi_init_server_api()
     pApi->reset_body_buf = reset_body_buf;
     pApi->append_body_buf = append_body_buf;
     pApi->get_cur_time = get_cur_time;
+    
+    // shared memory
+    pApi->shm_pool_init = lsi_shmpool_openbyname;
+    pApi->shm_pool_alloc = lsi_shmpool_alloc2;
+    pApi->shm_pool_free = lsi_shmpool_release2;
+    pApi->shm_pool_off2ptr = lsi_shmpool_key2ptr;
+    pApi->shm_htable_init = lsi_shmhash_open;
+    pApi->shm_htable_set = lsi_shmhash_set;
+    pApi->shm_htable_add = lsi_shmhash_insert;
+    pApi->shm_htable_update = lsi_shmhash_update;
+    pApi->shm_htable_find = lsi_shmhash_find;
+    pApi->shm_htable_get = lsi_shmhash_get;
+    pApi->shm_htable_delete = lsi_shmhash_remove;
+    pApi->shm_htable_clear = lsi_shmhash_clear;
+    pApi->shm_htable_off2ptr = lsi_shmhash_datakey2ptr;
+
+    pApi->get_vhost_count = get_vhost_count;
+    pApi->get_vhost = get_vhost;
 
 }

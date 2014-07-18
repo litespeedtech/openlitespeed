@@ -3,13 +3,13 @@
 require_once("../includes/auth.php");
 
 
-$graph_title = DUtil::getGoodVal(DUtil::grab_input("get","gtitle"));
-$vhost = DUtil::getGoodVal(DUtil::grab_input("get","vhost"));
-$extapp = DUtil::getGoodVal(DUtil::grab_input("get","extapp"));
-$items = DUtil::getGoodVal(DUtil::grab_input("get","items"));
-$titles = DUtil::getGoodVal(DUtil::grab_input("get","titles"));
-$colors = DUtil::getGoodVal(DUtil::grab_input("get","colors"));
-$yaxis = DUtil::getGoodVal(DUtil::grab_input("get","yaxis"));
+$graph_title = GUIBase::GrabGoodInput("get","gtitle");
+$vhost = GUIBase::GrabGoodInput("get","vhost");
+$extapp = GUIBase::GrabGoodInput("get","extapp");
+$items = GUIBase::GrabGoodInput("get","items");
+$titles = GUIBase::GrabGoodInput("get","titles");
+$colors = GUIBase::GrabGoodInput("get","colors");
+$yaxis = GUIBase::GrabGoodInput("get","yaxis");
 
 $xmlsrc = 'graph_xml.php?vhost=' . urlencode($vhost)
 	. '&extapp=' . urlencode($extapp)

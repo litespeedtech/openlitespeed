@@ -10,11 +10,11 @@ class GUI extends GUIBase
     <li><a href="/" class="mainlevel">Home</a></li>
     <li><a href="/service/serviceMgr.php" class="mainlevel">Actions</a>
       <ul>
- 	<li><a href="javascript:go(\'restart\',\'\');">Graceful Restart</a></li>
-	<li><a href="javascript:toggle();">Toggle Debug Logging</a></li>
-	<li><a href="/service/serviceMgr.php?vl=1">Server Log Viewer</a></li>
-	<li><a href="/service/serviceMgr.php?vl=2">Real-Time Stats</a></li>
-	<li><a href="/utility/build_php/buildPHP.php">Compile PHP</a></li>
+	 	<li><a href="javascript:go(\'restart\',\'\');">Graceful Restart</a></li>
+		<li><a href="javascript:toggle();">Toggle Debug Logging</a></li>
+		<li><a href="/service/serviceMgr.php?vl=1">Server Log Viewer</a></li>
+		<li><a href="/service/serviceMgr.php?vl=2">Real-Time Stats</a></li>
+		<li><a href="/utility/build_php/buildPHP.php">Compile PHP</a></li>
       </ul>
     </li>
     <li><a href="/config/confMgr.php?m=serv"  class="mainlevel">Configuration</a>
@@ -34,7 +34,8 @@ class GUI extends GUIBase
     <li><a href="/docs/"  class="mainlevel" target=_new>Help</a></li>
   </ul>';
 
-		$buf = parent::gen_top_menu($dropdown);
+		$buf = parent::header();
+		$buf .= parent::gen_top_menu($dropdown);
 		return $buf;
 	}
 
@@ -63,32 +64,4 @@ class GUI extends GUIBase
 		return $buf;
 	}
 
-	public static function left_menu()
-	{
-		$confCenter = ConfCenter::singleton();
-
-		$conftype = $confCenter->_confType;
-
-		if($conftype == "admin") {
-
-			$listeners = count($confCenter->_serv->_data['listeners']);
-
-			$tabs = array('Admin' => 'admin', "Listeners ($listeners)" => 'altop');
-		}
-		else {
-
-			$vhosts = count($confCenter->_info['VHS']);
-			$listeners = count($confCenter->_info['LNS']);
-			$templates = isset($confCenter->_serv->_data['tpTop']) ? count($confCenter->_serv->_data['tpTop']) : 0;
-
-			$tabs = array('Server' => 'serv', "Listeners ($listeners)" => 'sltop',
-					"Virtual Hosts ($vhosts)" => 'vhtop', "Virtual Host Templates ($templates)" => 'tptop');
-		}
-
-		return parent::gen_left_menu($tabs);
-	}
-
-
-
 }
-

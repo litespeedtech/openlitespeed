@@ -237,13 +237,13 @@ int epoll::waitAndProcessEvents( int iTimeoutMilliSec )
                         epevt.data.fd = fd;
                         epevt.events = 0;
                         (syscall(__NR_epoll_ctl, m_epfd, EPOLL_CTL_DEL, fd, &epevt ));
-                        LOG_WARN(( "[%d] Remove looping fd: %d, event: %d\n", getpid(), fd, p->events ));
+                        //LOG_WARN(( "[%d] Remove looping fd: %d, event: %d\n", getpid(), fd, p->events ));
                         ++s_problems;
                     }
                 }
                 else if ( s_loop_count >= 20 )
                 {
-                    LOG_WARN(( "Looping fd: %d, event: %d\n", fd, p->events ));
+                    //LOG_WARN(( "Looping fd: %d, event: %d\n", fd, p->events ));
                     assert( p->events );
                     problem_detected = 0;
                 }

@@ -275,6 +275,16 @@ void LoopBuf::update( int offset, const char * pBuf, int size )
     }
 }
 
+void LoopBuf::straight()
+{
+    LoopBuf bufTmp;
+    bufTmp.guarantee( size() );
+    bufTmp.used( size() );
+    moveTo( bufTmp.begin(), size() );
+    swap( bufTmp );
+}
+
+
 char *LoopBuf::search( int offset, const char *accept, int acceptLen )
 {
     register char *pSplitStart, *ptr = NULL, *pIter = this->getPointer( offset );
@@ -317,7 +327,6 @@ char *LoopBuf::search( int offset, const char *accept, int acceptLen )
     }
     return (char *)memmem( this->m_pBuf, this->m_pEnd - this->m_pBuf, accept, acceptLen );
 }
-
 
 
 

@@ -18,8 +18,6 @@
 #ifndef HTTPVHOST_H
 #define HTTPVHOST_H
 
-
-
 #include <http/contexttree.h>
 #include <http/expiresctrl.h>
 #include <http/httpcontext.h>
@@ -413,7 +411,6 @@ public:
     const AutoStr2& getSpdyAdHeader() const         {       return m_sSpdyAdHeader; }
 
     LsiModuleData* getModuleData()      {   return &m_moduleData;   }
-    
 };
 
 
