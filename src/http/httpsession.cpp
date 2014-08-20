@@ -1600,7 +1600,6 @@ int HttpSession::buildErrorResponse( const char * errMsg )
             int len = HttpStatusCode::getBodyLen( errCode );
             m_response.setContentLen( len );
             m_response.parseAdd( HttpStatusCode::getHeaders( errCode ), HttpStatusCode::getHeadersLen( errCode ));
-            sendRespHeaders();
             
             int ret = appendDynBody( pHtml, len );
             if ( ret < len )
@@ -2324,6 +2323,7 @@ int HttpSession::setupGzipBuf()
                     LOG_D(( getLogger(),
                         "[%s] setupGzipBuf() begin GZIP stream.\n",
                         getLogId() ));
+                m_response.setContentLen( LSI_RESP_BODY_SIZE_UNKNOWN );
                 m_response.addGzipEncodingHeader();
                 m_request.orGzip( UPSTREAM_GZIP );
                 return 0;
