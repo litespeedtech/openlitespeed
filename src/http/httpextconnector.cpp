@@ -107,6 +107,7 @@ int HttpExtConnector::releaseProcessor()
 void HttpExtConnector::resetConnector()
 {
     memset( &m_iState, 0, (char *)(&m_iRespBodySent + 1 ) - (char *)&m_iState );
+    m_respHeaderBuf.clear();
 }
 
 

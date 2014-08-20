@@ -399,8 +399,8 @@ public:
     const AutoBuf * getExtraHeaders() const
     {   return m_pInternal->m_pExtraHeader;     }
     
-    const GSockAddr *getGSockAddr() const { return &m_pInternal->m_GSockAddr;   }
-    void setGSockAddr(GSockAddr &gsockAddr);
+    const GSockAddr *getWebSockAddr() const { return &m_pInternal->m_GSockAddr;   }
+    void setWebSockAddr(GSockAddr &gsockAddr);
     
     void setGeoIP( int a )
     {   if ( a )

@@ -325,7 +325,7 @@ int RewriteEngine::getSubstValue( const RewriteSubstItem * pItem, HttpConnection
             return m_pStrip->len() + m_sourceURLLen;
         }
         //fall through
-    case REF_CUR_URI:
+    case REF_CUR_REWRITE_URI:
         pValue = (char *)m_pSourceURL;
         return m_sourceURLLen;
     case REF_QUERY_STRING:

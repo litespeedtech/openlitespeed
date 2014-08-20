@@ -360,19 +360,26 @@ int HttpRange::getPartHeader( int n, const char * pMimeType, char* buf, int size
     return ( ret == size )? -1 : ret;
 }
 
+static off_t getDigits(off_t n)
+{
+    if (n < 10)
+        return 1;
+    else
+        return (off_t)log10((double)n) + 1;
+}
 
 long HttpRange::getPartLen( int n, int iMimeTypeLen ) const
 {
     long len = 4 + 16 + 2
          + 14 + iMimeTypeLen + 2
-         + 21 + (long)log10( m_list[ n ]->getBegin() ) + 1 + 1
-         + (long)log10( m_list[ n ]->getEnd() ) + 1 + 1
+         + 21 + getDigits( m_list[ n ]->getBegin() ) + 1
+         + getDigits( m_list[ n ]->getEnd() ) + 1
          + 2 + 2
          + m_list[ n ]->getLen();
     if ( m_lEntityLen == -1 )
         ++len;
     else
-        len += (long)log10( m_lEntityLen ) + 1;
+        len += getDigits( m_lEntityLen );
     return len;
 }
 

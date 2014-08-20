@@ -104,6 +104,7 @@ private:
     int detectTimeout();
     
     int sendSpdyHeaders();
+    int processWebSocketUpgrade(const HttpVHost* pVHost);
     
     //int cacheWrite( const char * pBuf, int size );
     //int writeRespBuf();

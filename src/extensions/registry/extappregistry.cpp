@@ -75,7 +75,6 @@ ExtWorker * ExtAppSubRegistry::addWorker( int type, const char * pName )
             pApp = newWorker( type, pName );
         if ( pApp )
         {
-            pApp->setMultiplexer( HttpGlobals::getMultiplexer() );
             m_pRegistry->insert( pApp->getName(), pApp );
         }
         return pApp;

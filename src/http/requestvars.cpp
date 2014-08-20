@@ -378,6 +378,7 @@ static const char *ServerVarNames[REF_EXT_COUNT] =
     "SCRIPT_BASENAME",
     "SCRIPT_URI",
     "ORG_REQ_URI",
+    "ORG_QUERY_STRING",
     "HTTPS",
 
     "DUMMY",
@@ -405,7 +406,7 @@ static const char *ServerVarNames[REF_EXT_COUNT] =
 static int ServerVarNameLen[REF_EXT_COUNT] =
 {   11, 11, 11, 11, 12, 14, 12, 9, 9, 15, 16, 11, 13, 12,
     11, 11, 11, 15, 15, 11, 11, 9, 4, 9, 8, 8, 9, 8, 8, 9, 11, 11,
-    16, 10, 10, 15, 16, 11, 15, 10, 11, 5,
+    16, 10, 10, 15, 16, 11, 15, 10, 11, 16, 5,
     5, 3, 11, 8, 12, 10, 8, 10, 8, 9, 10, 
     7, 10, 8, 10, 13, 12, 13, 22 
 };
@@ -619,6 +620,8 @@ int RequestVars::getReqVar( HttpConnection * pConn, int type, char * &pValue, in
         return p - pValue;
 
     case REF_ORG_REQ_URI:
+        pValue = (char *)pReq->getOrgReqURL();
+        return pReq->getOrgReqURILen();
     case REF_DOCUMENT_URI:
         return pReq->getDecodedOrgReqURI( pValue );
     case REF_REQ_URI:
@@ -700,7 +703,7 @@ int RequestVars::getReqVar( HttpConnection * pConn, int type, char * &pValue, in
         pValue[3] = 0;
         return 3;
     
-    case REF_URL_PATH:
+    case REF_CUR_URI:
         pValue = (char *)pReq->getURI();
         i = pReq->getURILen();
         return i;

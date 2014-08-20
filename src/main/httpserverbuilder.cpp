@@ -1389,8 +1389,12 @@ int HttpServerBuilder::configContext( HttpVHost *pVHost, const XmlNode *pContext
 int HttpServerBuilder::configContextRewriteRule( HttpVHost *pVHost,
         HttpContext *pContext, char *pRule )
 {
-    RewriteRuleList *pRuleList = new RewriteRuleList();
-
+    RewriteRuleList *pRuleList;
+    if ( !pRule )
+        return 0;
+    AutoStr rule( pRule );
+    pRule = rule.buf();
+    pRuleList = new RewriteRuleList();
     if ( pRuleList )
     {
         RewriteRule::setLogger( NULL, LogIdTracker::getLogId() );
@@ -1672,7 +1676,7 @@ int HttpServerBuilder::configWebsocket( HttpVHost *pVHost, const XmlNode *pWebso
 
     GSockAddr gsockAddr;
     gsockAddr.parseAddr( pAddress );
-    pContext->setGSockAddr( gsockAddr );
+    pContext->setWebSockAddr( gsockAddr );
     return 0;
 }
 

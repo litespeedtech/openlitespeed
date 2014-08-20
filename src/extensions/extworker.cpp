@@ -32,7 +32,6 @@
 
 ExtWorker::ExtWorker()
     : m_pConfig( NULL )
-    , m_pMultiplexer( NULL )
     , m_iRole( EXTAPP_RESPONDER )
     , m_iMultiplexConns( 0 )
     , m_iWantManagementInfo( 1 )

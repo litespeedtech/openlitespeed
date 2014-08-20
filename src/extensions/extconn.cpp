@@ -22,6 +22,7 @@
 #include <socket/gsockaddr.h>
 #include <socket/coresocket.h>
 #include <http/datetime.h>
+#include <http/httpglobals.h>
 #include <http/httplog.h>
 #include <http/httpstatuscode.h>
 
@@ -117,7 +118,7 @@ int ExtConn::reconnect()
     if ( m_iState != DISCONNECTED )
         close();
     if ( m_pWorker )
-        return connect( m_pWorker->getMultiplexer() );
+        return connect( HttpGlobals::getMultiplexer() );
     else
         return -1;
 }

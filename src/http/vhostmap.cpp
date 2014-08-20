@@ -68,6 +68,7 @@ VHostMap::VHostMap()
     , m_pWildMatches( NULL )
     , m_pSSLContext( NULL )
     , m_iNamedVH( 0 )
+    , m_iStripWWW( 1 )
 {}
 
 VHostMap::~VHostMap()
@@ -532,10 +533,13 @@ int VHostMap::mapDomainList( HttpVHost   * pVHost,
                 if ( p )
                     *p = 0;
             }
-            if ( strncmp( temp, "www.", 4 ) == 0 )
-                p0 = temp + 4;
-            else
-                p0 = temp;
+            p0 = temp;
+
+            if ( m_iStripWWW )
+            {
+                if  (strncmp( p0, "www.", 4 ) == 0 )
+                    p0 += 4;
+            }
             if ( len )
                 addMaping( pVHost, p0 );
         }
@@ -670,7 +674,6 @@ int SubIpMap::hasSSL()
     return 0;
 }
 
-//#define WWW_    MK_DWORD4( 'w', 'w', 'w', '.' )
 SSLContext * VHostMapFindSSLContext( void * arg, const char * pName )
 {
     VHostMap * pMap = (VHostMap *)arg;
@@ -683,16 +686,12 @@ SSLContext * VHostMapFindSSLContext( void * arg, const char * pName )
         int len = 1024;
         pHost = StringTool::strnlower( pName, achBuf, len );
         pHostEnd = pHost + len;
-        char tempCh = pHost[4];
-        pHost[4] = 0;
-        if ( pMap->isStripWWW() )
-        {
-           // if ( MK_DWORD( pHost ) == WWW_ )
-           if(strstr(pHost, "www.") != NULL)
-                pHost += 4;
-        }
-        pHost[4] = tempCh;
         pVHost = pMap->matchVHost( pHost, pHostEnd );
+        if (( !pVHost )&&( memcmp(pHost, "www.", 4) == 0 ))
+        {
+            pHost += 4;
+            pVHost = pMap->matchVHost( pHost, pHostEnd );
+        }
     }
     if ( pVHost )
         return pVHost->getSSLContext();

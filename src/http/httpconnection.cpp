@@ -521,6 +521,30 @@ int HttpConnection::updateClientInfoFromProxyHeader( const char * pProxyHeader )
     return 0;
 }
 
+int HttpConnection::processWebSocketUpgrade( const HttpVHost * pVHost )
+{
+    HttpContext* pContext = pVHost->getContext(m_request.getURI(), 0);
+    LOG_D ((getLogger(), "[%s] VH: web socket, name: [%s] URI: [%s]", getLogId(), pVHost->getName(), m_request.getURI() )); 
+    if ( pContext && pContext->getWebSockAddr()->get() ) 
+    {
+        m_request.setStatusCode( SC_101 );
+        logAccess( 0 );
+        L4Handler *pL4Handler = new L4Handler();
+        pL4Handler->assignStream( getStream() );
+        pL4Handler->init(m_request, pContext->getWebSockAddr(), getPeerAddrString(), getPeerAddrStrLen());
+        LOG_D ((getLogger(), "[%s] VH: %s web socket !!!", getLogId(), pVHost->getName() ));
+        recycle();
+        return 0;
+        //DO NOT release pL4Handler, it will be releaseed itself.
+    }
+    else
+    {
+        LOG_INFO(( getLogger(), "[%s] Cannot found web socket backend URI: [%s]", getLogId(), m_request.getURI() )); 
+        return SC_404;
+    }
+}
+
+
 int HttpConnection::processNewReq()
 {
     int ret;
@@ -573,18 +597,7 @@ int HttpConnection::processNewReq()
     
     if ( m_request.isWebsocket() )
     {
-        HttpContext* pContext = pVHost->getContext(m_request.getURI(), 0);
-        LOG_D ((getLogger(), "[%s] VH: web socket, name: [%s] URI: [%s]", getLogId(), pVHost->getName(), m_request.getURI() )); 
-        const char tmp[sizeof(GSockAddr) + 1] = {0};
-        if ( pContext && memcmp((char*)pContext->getGSockAddr(), tmp, sizeof(GSockAddr)) != 0 ) 
-        {
-            L4Handler *pL4Handler = new L4Handler();
-            pL4Handler->assignStream(this->m_pNtwkIOLink);
-            pL4Handler->init(m_request, pContext->getGSockAddr(), getPeerAddrString(), getPeerAddrStrLen());
-            LOG_D ((getLogger(), "[%s] VH: %s web socket !!!", getLogId(), pVHost->getName() ));
-            return 0;
-            //DO NOT release pL4Handler, it will be releaseed itself.
-        }
+        return processWebSocketUpgrade( pVHost );
     }
     
     

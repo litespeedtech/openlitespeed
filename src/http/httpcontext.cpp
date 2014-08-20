@@ -901,7 +901,7 @@ void HttpContext::getAAAData( struct AAAData & data ) const
     memmove( &data, &m_pInternal->m_pHTAuth, sizeof( AAAData ) );
 }
 
-void HttpContext::setGSockAddr(GSockAddr &gsockAddr)
+void HttpContext::setWebSockAddr(GSockAddr &gsockAddr)
 {
     if ( !allocateInternal() )
     {

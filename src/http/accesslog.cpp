@@ -124,7 +124,7 @@ int CustomFormat::parseFormat( const char * psFormat )
                 ++p;
                 
             }
-            else if ( *p == '>' )
+            else if (( *p == '>' )||( *p == '<' ))
             {
                 ++p;   
             }
@@ -205,7 +205,10 @@ int CustomFormat::parseFormat( const char * psFormat )
                     itemId = REF_PID;
                     break;
                 case 'q':
-                    itemId = REF_QUERY_STRING;
+                    if ( p[-1] == '<' )
+                        itemId = REF_ORG_QS;
+                    else
+                        itemId = REF_QUERY_STRING;
                     break;
                 case 'r':
                     itemId = REF_REQ_LINE;
@@ -223,7 +226,10 @@ int CustomFormat::parseFormat( const char * psFormat )
                     itemId = REF_REMOTE_USER;
                     break;
                 case 'U':
-                    itemId = REF_URL_PATH;
+                    if ( p[-1] == '>' )
+                        itemId = REF_CUR_URI;
+                    else 
+                        itemId = REF_ORG_REQ_URI;
                     break;
                 case 'V':
                     itemId = REF_SERVER_NAME;

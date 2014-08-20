@@ -612,8 +612,6 @@ buildConfigFiles()
 		sed -e "s/%PHP_BEGIN%/<!--/" -e "s/%PHP_END%/-->/" -e "s/%PHP_SUFFIX%/php/" -e "s/%PHP_PORT%/5201/" "$LSINSTALL_DIR/conf/httpd_config.xml.tmp" > "$LSINSTALL_DIR/conf/httpd_config.xml"
 	fi
 
-        sed -e "s/%USER%/$WS_USER/" -e "s/%GROUP%/$WS_GROUP/"  -e "s/%ADMIN_EMAIL%/$ADMIN_EMAIL/" -e "s/%HTTP_PORT%/$HTTP_PORT/" -e "s/%RUBY_BIN%/$RUBY_PATH/"  "$LSINSTALL_DIR/conf/httpd_config.conf.in" > "$LSINSTALL_DIR/conf/httpd_config.conf"
-
 }
 
 util_mkdir()
@@ -954,7 +952,7 @@ installation()
 		util_cpfile "$CONF_OWN" $CONF_MOD admin/conf/admin_config.xml
 		util_cpfile "$CONF_OWN" $CONF_MOD conf/templates/ccl.xml conf/templates/phpsuexec.xml conf/templates/rails.xml
 		util_cpfile "$CONF_OWN" $CONF_MOD admin/conf/php.ini admin/conf/${SSL_HOSTNAME}.key admin/conf/${SSL_HOSTNAME}.crt
-		util_cpfile "$CONF_OWN" $CONF_MOD conf/httpd_config.xml conf/mime.properties conf/httpd_config.conf
+		util_cpfile "$CONF_OWN" $CONF_MOD conf/httpd_config.xml conf/mime.properties 
 		util_cpfile "$CONF_OWN" $EXEC_MOD conf/switch_config.sh
         util_mkdir "$CONF_OWN" $DIR_MOD DEFAULT/conf
         util_cpdir "$CONF_OWN" $DOC_MOD DEFAULT/conf

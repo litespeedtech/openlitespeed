@@ -147,6 +147,7 @@ private:
     int                 m_iPathInfoOff;
     int                 m_iPathInfoLen;
     const AutoStr2    * m_pRealPath;
+    int                 m_code;
     int                 m_iMatchedLen;
     int                 m_iNewHostLen;
     int                 m_iLocationOff;
@@ -157,7 +158,6 @@ private:
     struct stat         m_fileStat;
     int                 m_iScriptNameLen;
     key_value_pair    * m_urls;
-    int                 m_code;
     int                 m_iLocationLen;
     int                 m_iNewHostOff;
     LogTracker        * m_pILog;

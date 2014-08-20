@@ -347,16 +347,16 @@ int send_fd(int fd, int sendfd)
     struct iovec    iov[1];
     char nothing = '!';
     
-    memset( &msg, 0, sizeof(msg) );
 #if (!defined(sun) && !defined(__sun)) || defined(_XPG4_2) || defined(_KERNEL)
+    int             control_space = CMSG_SPACE(sizeof(int));
     union {
       struct cmsghdr    cm;
-      char                control[__CMSG_ALIGN(sizeof(struct cmsghdr)) + __CMSG_ALIGN(sizeof(int))];
+      char                control[sizeof( struct cmsghdr ) + sizeof(int) + 8];
     } control_un;
     struct cmsghdr    *cmptr;
 
     msg.msg_control = control_un.control;
-    msg.msg_controllen = sizeof(control_un.control);
+    msg.msg_controllen = control_space;
 
     cmptr = CMSG_FIRSTHDR(&msg);
     cmptr->cmsg_len = CMSG_LEN(sizeof(int));
@@ -370,6 +370,7 @@ int send_fd(int fd, int sendfd)
 
     msg.msg_name = NULL;
     msg.msg_namelen = 0;
+    msg.msg_flags = 0;
 
     iov[0].iov_base = &nothing;
     iov[0].iov_len = 1;
