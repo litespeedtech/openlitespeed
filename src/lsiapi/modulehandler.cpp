@@ -140,7 +140,7 @@ int ModuleHandler::process(HttpSession* pSession, const HttpHandler* pHandler)
         return HttpStatusCode::codeToIndex( ret );
     else
     {
-        if ( !pSession->getFlag( HSF_MODULE_WRITE_SUSPENDED | HSF_RESP_DONE ) )
+        if ( !pSession->getFlag( HSF_MODULE_WRITE_SUSPENDED | HSF_HANDLER_DONE ) )
             pSession->continueWrite();
         return 0;
     }

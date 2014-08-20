@@ -665,14 +665,6 @@ int VMemBuf::mapNextRBlock()
 }
 
 
-bool VMemBuf::empty() const
-{
-    if ( m_curRBlkPos < m_curWBlkPos )
-        return false;
-    if ( !m_pCurWBlock )
-        return true;
-    return ( m_pCurRPos >= m_pCurWPos );
-}
 
 long VMemBuf::writeBufSize() const
 {

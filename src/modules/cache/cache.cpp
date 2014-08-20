@@ -112,6 +112,7 @@ typedef struct _MyMData {
     CacheCtrl cacheCtrl;
     CacheHash cePublicHash;
     CacheHash cePrivateHash;
+    int     hasAddedHook;
 } MyMData;
 
 const char *paramArray[] = {
@@ -179,6 +180,29 @@ static int parseLine(const char *buf, const char *key, int minValue, int maxValu
     return val;
 }
 
+
+static int createCachePath(const char *path, int mode)
+{
+    struct stat st;
+    if ( stat( path, &st ) == -1 )
+    {
+        if ( mkdir( path, mode ) == -1 )
+            return -1;
+    }
+    return 0;
+}
+
+
+//Update permission of the dest to the same of the src
+static void matchDirectoryPermissions(const char *src, const char *dest)
+{
+    struct stat st;
+    if (stat(src, &st) != -1)
+    {
+        chown(dest, st.st_uid, st.st_gid);
+    }
+}
+
 static void * parseConfig( const char *param, void *_initial_config, int level, const char *name )
 {
     CacheConfig *pInitConfig = (CacheConfig *)_initial_config;
@@ -237,7 +261,26 @@ static void * parseConfig( const char *param, void *_initial_config, int level, 
     if (p && valLen > 0)
     {
         if (level != LSI_CONTEXT_LEVEL)
-            pConfig->setStoragePath(p, valLen);
+        {
+            char cachePath[max_file_len]  = {0};
+            char defaultCachePath[max_file_len]  = {0};
+            if (p[0] != '/') 
+                strcpy(cachePath, g_api->get_server_root());
+            strcpy(defaultCachePath, g_api->get_server_root());
+            strncat(cachePath, p, valLen);
+            strncat(defaultCachePath, CACHEMODULEROOT, strlen(CACHEMODULEROOT));
+            
+            if (createCachePath(cachePath, 0755) == -1)
+            {
+                g_api->log(NULL, LSI_LOG_ERROR, "[%s]parseConfig failed to create directory [%s].\n",
+                                   ModuleNameString, cachePath);
+            }
+            else
+            {
+                matchDirectoryPermissions(defaultCachePath , cachePath);
+                pConfig->setStoragePath(p, valLen);
+            }
+        }
         else
             g_api->log( NULL, LSI_LOG_INFO, "[%s]context [%s] shouldn't have 'storagepath' parameter.\n", 
                 ModuleNameString, name);
@@ -398,13 +441,19 @@ void clearHooks(lsi_session_t *session)
 {
     MyMData *myData = (MyMData *) g_api->get_module_data(session, &MNAME, LSI_MODULE_DATA_HTTP);
     if (myData)
+    {
+        if (myData->hasAddedHook)
+        {
+            if (myData->hasAddedHook == 2)
+                g_api->remove_session_hook( session, LSI_HKPT_RCVD_RESP_BODY, &MNAME );
+            
+            g_api->remove_session_hook( session, LSI_HKPT_RECV_RESP_HEADER, &MNAME );
+            g_api->remove_session_hook( session, LSI_HKPT_HANDLER_RESTART, &MNAME );
+            g_api->remove_session_hook( session, LSI_HKPT_HTTP_END, &MNAME );
+            myData->hasAddedHook = 0;
+        }
         g_api->free_module_data(session, &MNAME, LSI_MODULE_DATA_HTTP, httpRelease);
-
-    g_api->remove_session_hook( session, LSI_HKPT_RECV_RESP_HEADER, &MNAME );
-    g_api->remove_session_hook( session, LSI_HKPT_HANDLER_RESTART, &MNAME );
-    g_api->remove_session_hook( session, LSI_HKPT_RCVD_RESP_BODY, &MNAME );
-    g_api->remove_session_hook( session, LSI_HKPT_HTTP_END, &MNAME );
-    
+    }
 }
 
 static int cancelCache(lsi_cb_param_t *rec)
@@ -483,6 +532,7 @@ static int createEntry(lsi_cb_param_t *rec)
     //Now we can store it
     myData->iCacheState = CE_STATE_WILLCACHE;
     g_api->add_session_hook( rec->_session, LSI_HKPT_RCVD_RESP_BODY, &MNAME, cacheTofile, LSI_HOOK_LAST, 0 );
+    myData->hasAddedHook = 2;
     return 0;
 }
 
@@ -675,17 +725,6 @@ int getCacheUserData(lsi_cb_param_t * rec)
     return 0;
 }
 
-int createCachePath(const char *path, int mode)
-{
-    struct stat st;
-    if ( stat( path, &st ) == -1 )
-    {
-        if ( mkdir( path, mode ) == -1 )
-            return -1;
-    }
-    return 0;
-}
-
 static int checkAssignHandler(lsi_cb_param_t *rec)
 {
     char httpMethod[10] = {0};
@@ -826,7 +865,9 @@ static int checkAssignHandler(lsi_cb_param_t *rec)
             strcpy(cachePath, g_api->get_server_root());
         
         strcat(cachePath, pPath);
-        if (createCachePath(cachePath, 0700) == -1)
+        
+        struct stat st;
+        if ( stat( cachePath, &st ) == -1 )
         {
             g_api->log(rec->_session, LSI_LOG_ERROR, "[%s]checkAssignHandler failed to create directory [%s].\n",
                                ModuleNameString, cachePath);
@@ -854,6 +895,7 @@ static int checkAssignHandler(lsi_cb_param_t *rec)
         //only GET need to store, HEAD won't
         g_api->add_session_hook( rec->_session, LSI_HKPT_RECV_RESP_HEADER, &MNAME, createEntry, LSI_HOOK_LAST, 0 );
         g_api->add_session_hook( rec->_session, LSI_HKPT_HANDLER_RESTART, &MNAME, cancelCache, LSI_HOOK_LAST, 0 );
+        myData->hasAddedHook = 1;
         
         //g_api->add_session_hook( rec->_session, LSI_HKPT_RCVD_RESP_BODY, &MNAME, cacheTofile, LSI_HOOK_LAST, 0 );
         g_api->log(rec->_session, LSI_LOG_INFO, "[%s]checkAssignHandler Add Hooks.\n", ModuleNameString);

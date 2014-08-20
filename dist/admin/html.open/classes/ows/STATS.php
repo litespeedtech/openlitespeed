@@ -7,7 +7,7 @@ class STATS {
 	var $version = null;
 	var $uptime = null;
 	var $load_avg = NULL;
-	
+
 	var $bps_in = 0;
 	var $bps_out = 0;
 	var $ssl_bps_in = 0;
@@ -40,11 +40,11 @@ class STATS {
 		$this->report_path = $product->tmp_path;
 		$this->processes = $product->processes;
 	}
-	
+
 	function parse_all() {
 		$this->parse_litespeed();
 		$this->parse_sysstat();
-		
+
 	}
 
 	function parse_sysstat() {
@@ -62,7 +62,7 @@ class STATS {
 			else {
 				$content = file_get_contents("{$this->report_path}.rtreport");
 			}
-			
+
 		}
 		$result = array();
 		$this->blocked_ip = array();
@@ -89,7 +89,7 @@ class STATS {
 			$this->ssl_conn += (int) $result[14][$f];
 			$this->avail_ssl_conn += (int) $result[15][$f];
 		}
-		
+
 		$result = array();
 		$found = 0;
 		$found = preg_match_all("/BLOCKED_IP: ([0-9 \[\]\.,]*)/", $content, $result);
@@ -103,7 +103,7 @@ class STATS {
 		}
 		$result = array();
 		$found = 0;
-		$found = preg_match_all("/REQ_RATE \[([^\]]*)\]: REQ_PROCESSING: ([0-9]+), REQ_PER_SEC: ([0-9]+), TOT_REQS: ([0-9]+)/i",$content,$result);
+		$found = preg_match_all("/REQ_RATE \[(.*)\]: REQ_PROCESSING: ([0-9]+), REQ_PER_SEC: ([0-9\.]+), TOT_REQS: ([0-9]+)/i",$content,$result);
 
 		for($f = 0; $f < $found; $f++) {
 			$vhost = trim($result[1][$f]);
@@ -127,7 +127,7 @@ class STATS {
 		$result = array();
 		$found = 0;
 
-		$found = preg_match_all("/EXTAPP \[([^\]]*)\] \[([^\]]*)\] \[([^\]]*)\]: CMAXCONN: ([0-9]+), EMAXCONN: ([0-9]+), POOL_SIZE: ([0-9]+), INUSE_CONN: ([0-9]+), IDLE_CONN: ([0-9]+), WAITQUE_DEPTH: ([0-9]+), REQ_PER_SEC: ([0-9]+), TOT_REQS: ([0-9]+)/i",$content,$result);
+		$found = preg_match_all("/EXTAPP \[([^\]]*)\] \[(.*)\] \[([^\]]*)\]: CMAXCONN: ([0-9]+), EMAXCONN: ([0-9]+), POOL_SIZE: ([0-9]+), INUSE_CONN: ([0-9]+), IDLE_CONN: ([0-9]+), WAITQUE_DEPTH: ([0-9]+), REQ_PER_SEC: ([0-9\.]+), TOT_REQS: ([0-9]+)/i",$content,$result);
 
 		for($f = 0; $f < $found; $f++) {
 			$vhost = trim($result[2][$f]);
@@ -164,7 +164,7 @@ class STATS {
 			$this->vhosts[$vhost]->eap_waitQ += (int) $result[9][$f];
 			$this->vhosts[$vhost]->eap_req_per_sec += (int) $result[10][$f];
 			$this->vhosts[$vhost]->eap_req_total += (int) $result[11][$f];
-			
+
 		}
 
 		if (count($this->blocked_ip) > 2) {
@@ -172,18 +172,18 @@ class STATS {
 		}
 		$this->serv = $this->vhosts['_Server'];
 	}
-	
+
 	function apply_vh_filter($top, $filter, $sort) {
 		$list = array_keys($this->vhosts);
-		
+
 		if ($filter != "") {
 			$filter = "/$filter/i";
 			$list = preg_grep($filter, $list);
 		}
 		if (count($list) <= 1) {
-			return $list; 
+			return $list;
 		}
-		
+
 		if ($sort != "") {
 			if ($sort == 'vhname') {
 				sort($list);
@@ -194,11 +194,11 @@ class STATS {
 					$sortAsc2[] = $vhname;
 				}
 				array_multisort($sortDesc1, SORT_DESC, SORT_NUMERIC, $sortAsc2, SORT_ASC, SORT_STRING);
-				$list = $sortAsc2; 
+				$list = $sortAsc2;
 			}
-			
+
 		}
-		
+
 		if ($top != 0 && count($list) > $top) {
 			$list = array_slice($list, 0, $top);
 		}
@@ -206,16 +206,16 @@ class STATS {
 	}
 
 	function apply_eap_filter($top, $filter, $sort) {
-		
+
 		$listAll = array();
 		foreach($this->vhosts as $vh) {
 			if (count($vh->extapps)>0) {
 				$listAll = array_merge($listAll, $vh->extapps);
 			}
 		}
-		
+
 		$list = array_keys($listAll);
-		
+
 		if ($filter != "") {
 			$filter = "/$filter/i";
 			$list = preg_grep($filter, $list);
@@ -223,15 +223,15 @@ class STATS {
 
 		$c = count($list);
 		$exapps = array();
-		
+
 		if ($c == 0) {
-			return $exapps; 
+			return $exapps;
 		}
 		else if ($c == 1) {
 			$exapps[] = $listAll[$list[0]];
-			return $exapps; 
+			return $exapps;
 		}
-		
+
 		if ($sort != "") {
 			if ($sort == 'extapp') {
 				sort($list);
@@ -242,20 +242,20 @@ class STATS {
 					$sortAsc2[] = $name;
 				}
 				array_multisort($sortDesc1, SORT_DESC, SORT_NUMERIC, $sortAsc2, SORT_ASC, SORT_STRING);
-				$list = $sortAsc2; 
+				$list = $sortAsc2;
 			}
-			
+
 		}
-		
+
 		if ($top != 0 && count($list) > $top) {
 			$list = array_slice($list, 0, $top);
 		}
 		foreach($list as $name) {
-			$exapps[] = $listAll[$name]; 
+			$exapps[] = $listAll[$name];
 		}
 		return $exapps;
 	}
-	
+
 
 }
 
@@ -265,7 +265,6 @@ class STATS_VHOST {
 	var $req_processing = 0;
 	var $req_per_sec = 0;
 	var $req_total = 0;
-	var $output_bankdwidth = 0;
 	var $eap_count = 0;
 	var $eap_process = 0;
 	var $eap_inuse = 0;

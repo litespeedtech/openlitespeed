@@ -1044,7 +1044,6 @@ int LshttpdMain::startChild( ChildProc * pProc )
     pProc->m_iProcNo = getFirstAvailSlot();
     if ( pProc->m_iProcNo > HttpGlobals::s_children )
         return -1;
-    PCUtil::getAffinityMask( s_iCpuCount, pProc->m_iProcNo-1, 1, &pProc->m_pAffinityMask );
     preFork();
     pProc->m_pid = fork();
     if ( pProc->m_pid == -1 )
@@ -1054,11 +1053,13 @@ int LshttpdMain::startChild( ChildProc * pProc )
     }
     if ( pProc->m_pid == 0 )
     {   //child process
+        cpu_set_t       cpu_affinity;
         
         if ( LsiApiHooks::getServerHooks()->isEnabled( LSI_HKPT_WORKER_POSTFORK) )
             LsiApiHooks::getServerHooks()->runCallbackNoParam(LSI_HKPT_WORKER_POSTFORK, NULL);
 
-        PCUtil::setCpuAffinity( &pProc->m_pAffinityMask );
+        PCUtil::getAffinityMask( s_iCpuCount, pProc->m_iProcNo-1, 1, &cpu_affinity );
+        PCUtil::setCpuAffinity( &cpu_affinity );
         m_pServer->setBlackBoard( pProc->m_pBlackBoard );
         m_pServer->setProcNo( pProc->m_iProcNo );
         //setAffinity( 0, pProc->m_iProcNo);  //FIXME: need uncomment and debug

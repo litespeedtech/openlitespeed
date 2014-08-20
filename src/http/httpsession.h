@@ -56,7 +56,7 @@ enum  HttpSessionState {
 };
 
 #define HSF_URI_PROCESSED           (1<<0)
-#define HSF_RESP_DONE               (1<<1)
+#define HSF_HANDLER_DONE            (1<<1)
 #define HSF_RESP_HEADER_SENT        (1<<2)
 #define HSF_MODULE_WRITE_SUSPENDED  (1<<3)
 #define HSF_RESP_FLUSHED            (1<<4)
@@ -220,7 +220,7 @@ public:
     void releaseFileCacheDataEx(FileCacheDataEx * &pECache);
     void releaseStaticFileCacheData(StaticFileCacheData * &pCache);
     
-    int isEndResponse() const   { return (m_iFlag & HSF_RESP_DONE );     }
+    int isEndResponse() const   { return (m_iFlag & HSF_HANDLER_DONE );     }
     
 public:
     void setupChunkOS(int nobuffer);
@@ -308,7 +308,7 @@ public:
     int respHeaderDone( int respState );
     
     void setRespBodyDone()
-    {   m_iFlag |= HSF_RESP_DONE; 
+    {   m_iFlag |= HSF_HANDLER_DONE; 
         if ( m_pChunkOS )
         {
             setFlag(HSF_RESP_FLUSHED, 0);

@@ -835,6 +835,11 @@ enum lsi_url_op
     LSI_URL_REDIRECT_302, 
 
     /**
+     * External redirect with status code 303 See Other.
+     */
+    LSI_URL_REDIRECT_303, 
+
+    /**
      * External redirect with status code 307 Temporary Redirect.
      */
     LSI_URL_REDIRECT_307, 
@@ -2776,6 +2781,59 @@ struct lsi_api_s
     
     time_t ( *get_cur_time )( int32_t *usec );
     
+    /**
+     * @brief get_vhost_count gets the count of Virtual Hosts in the system.
+     * 
+     * @since 1.0
+     * 
+     * @return the count of Virtual Hosts.
+     */
+    int          ( *get_vhost_count )();
+    
+    /**
+     * @brief get_vhost gets a Virtual Host object.
+     * 
+     * @since 1.0
+     * 
+     * @param[in] index - the index of the Virtual Host, starting from 0.
+     * @return a pointer to the Virtual Host object.
+     */
+    const void * ( *get_vhost )( int index );
+
+    int         (* set_vhost_module_data) ( const void *vhost, const lsi_module_t *pModule, void *data );
+    void *      (* get_Vhost_module_data) ( const void *vhost, const lsi_module_t *pModule );
+    
+    /**
+     * @brief handoff_fd return a duplicated file descriptor associated with current session and
+     *    all data received on this file descriptor, including parsed request headers 
+     *    and data has not been processed. 
+     *    After this function call the server core will stop processing current session and closed
+     *    the original file descriptor. The session object will become invalid. 
+     *    
+     * 
+     * @since 1.0
+     * 
+     * @param[in] pSession - a pointer to the HttpSession.
+     * @param[in,out] pData - a pointer to a pointer pointing to the buffer holding data received so far
+     *     The buffer is allocated by server core, must be released by the caller of this function with free().
+     * @param[in,out] pDataLen - a pointer to the variable receive the size of the buffer.
+     * @return a file descriptor if success, -1 if failed. the file descriptor is dupped from the original 
+     *         file descriptor, it should be closed by the caller of this function when done. 
+     */
+    int ( *handoff_fd )( lsi_session_t *pSession, char ** pData, int *pDataLen );
+        
+    
+    
+    /**
+     * 
+     * @brief _debugLevel is the level of debugging than server core uses,
+     *    it controls the level of details of debugging messages. 
+     *    its range is from 0 to 10, debugging is disabled when set to 0, 
+     *    highest level of debug output is used when set to 10.  
+     * 
+     */
+    unsigned char   _debugLevel;
+    
 };
 
 
@@ -2787,6 +2845,20 @@ struct lsi_api_s
  * @since 1.0
  */    
 extern const lsi_api_t * g_api;
+
+/**
+ *  
+ * @brief inline function to check if debug logging is enabled or not,
+ * It should be checked before calling g_api->log() to write a debug log message to 
+ * minimize the cost of debug logging when debug logging was disabled. 
+ * 
+ * @param[in] level the debug logging level, can be in range of 0-9, use 0 to check if debug logging is on or off.
+ *                  use 1-9 to check if message at specific level should be logged. 
+ * @return  if current debug level is higher (bigger number) than @param level, return 1, otherwise return 0
+ * 
+ */
+static inline int lsi_isdebug( unsigned int level)  
+{   return ( g_api->_debugLevel > level );  }
 
 
 #ifdef __cplusplus

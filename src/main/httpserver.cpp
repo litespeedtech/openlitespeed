@@ -437,6 +437,11 @@ int HttpServerImpl::generateStatusReport()
     {
         LOG_ERR(( "Failed to generate the status report!" ));
     }
+    char achBuf1[1024];
+    ret = snprintf( achBuf1, 1024, "DEBUG_LOG: %d, VERSION: %s-%s\n",
+                 ( D_ENABLED( DL_LESS ))? 1 : 0, PACKAGE_VERSION, LS_PLATFORM );
+    pAppender->append( achBuf1, ret );
+    
     pAppender->append( "EOF\n", 4 );
     pAppender->close();
     return 0;
@@ -2258,21 +2263,13 @@ int HttpServerImpl::configServerBasics( int reconfig, const XmlNode *pRoot)
         {
             MainServerConfigObj.setGDBPath( pGDBPath );
         }
+       
 
         HttpGlobals::s_503AutoFix = ConfigCtx::getCurConfigCtx()->getLongValue( pRoot, "AutoFix503", 0, 1, 1 );
-        const char *pAutoRestart = pRoot->getChildValue( "autoRestart" );
-
-        if ( pAutoRestart != NULL )
-        {
-            int t = atoi( pAutoRestart );
-
-            if ( t )
-                t = 1;
-
-            //this value can only be set once when server start.
-            if ( MainServerConfigObj.getCrashGuard() == 2 )
-                MainServerConfigObj.setCrashGuard( t );            
-        }
+        
+        //this value can only be set once when server start.
+        if ( MainServerConfigObj.getCrashGuard() == 2 )
+            MainServerConfigObj.setCrashGuard( 1 );
 
         return 0;
     }

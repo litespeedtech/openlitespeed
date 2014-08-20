@@ -276,7 +276,7 @@ class DTblDef
 
 			'mod_params' => new DAttr('param', 'cust', 'Module Parameters', 'textarea1', true, NULL,
 					'use format key=value, one parameter per line','rows="4" cols="60" wrap="off"', 0, 'modParams'),
-			'mod_enabled' => new DAttr('enabled', 'bool', 'Enable Filters', 'radio', true, NULL, NULL, NULL, 0, 'moduleEnabled'),
+			'mod_enabled' => new DAttr('enabled', 'bool', 'Enable Hooks', 'radio', true, NULL, NULL, NULL, 0, 'moduleEnabled'),
 		);
 
 
@@ -301,8 +301,6 @@ class DTblDef
 	{
 		$this->_tblDef[$id] = new DTbl($id, 'Server Process');
 
-		$attr1 = new DAttr('autoRestart', 'bool', 'Auto Restart', 'radio', false);
-
 		$runningAs = new DAttr('runningAs', 'cust', 'Running As', 'text', false, NULL, NULL, $this->_options['text_size'] . ' readonly');
 		$runningAs->_FDE = 'NYN';
 
@@ -318,7 +316,6 @@ class DTblDef
 			$this->_attrs['priority']->dup(NULL, NULL, 'serverPriority'),
 			new DAttr('inMemBufSize', 'uint', 'Memory I/O Buffer', 'text', false, 0, NULL),
 			new DAttr('swappingDir', 'cust', 'Swapping Directory', 'text', false, 1, 'rw', $this->_options['text_size']),
-			$attr1,
 			new DAttr( 'autoFix503', 'bool', 'Auto Fix 503 Error', 'radio', true ),
 			new DAttr('gracefulRestartTimeout', 'uint', 'Graceful Restart Timeout (secs)', 'text', true, -1, 2592000)
 
@@ -842,12 +839,12 @@ class DTblDef
 		$align = array('center', 'center', 'center', 'center');
 		$this->_tblDef[$id] = new DTbl($id, 'Server Modules Definition', 1, 'SERV_MODULE', $align, "module");
 
-		$attrs = array_merge(
-				array(new DAttr('name', 'cust', 'Module'),
-					new DAttr('enabled', 'bool', '<span title="Enable Filters">EnabFilt</span>', 'radio', true)),
-				$this->get_module_hookpoints_attrs('ST'),
-				array(new DAttr('action', 'action', 'Action', NULL, false, 'SERV_MODULE', 'vEd'))
-			);
+		$attrs = array(new DAttr('name', 'cust', 'Module'),
+				new DAttr('internal', 'bool', 'Is Internal', 'radio', true, NULL, NULL, NULL, 0, 'internalmodule'),
+				$this->_attrs['mod_params'],
+				$this->_attrs['mod_enabled'],
+				new DAttr('action', 'action', 'Action', NULL, false, 'SERV_MODULE', 'vEd')
+		);
 
 		$this->_tblDef[$id]->setAttr($attrs, 'module');
 		$this->_tblDef[$id]->setRepeated('name');
@@ -922,7 +919,7 @@ class DTblDef
 	private function add_VH_MODULE_FILTER($id)
 	{
 		// for file extraction
-		$this->_tblDef[$id] = new DTbl($id, 'URL Filter', 2);
+		$this->_tblDef[$id] = new DTbl($id, 'Context', 2);
 
 		$attrs = array($this->_attrs['ctx_uri'],
 					$this->_attrs['mod_params'],
@@ -1019,7 +1016,7 @@ class DTblDef
 
 		$attrs = array(
 			new DAttr('name', 'vhname', 'Virtual Host Name', 'text', false, NULL, NULL, NULL, 0, 'vhName'),
-			new DAttr('vhRoot', 'path', 'Virtual Host Root', 'text', false, 2, '', $this->_options['text_size']),//no validation, maybe suexec owner
+			new DAttr('vhRoot', 'cust', 'Virtual Host Root', 'text', false, 2, '', $this->_options['text_size']),//no validation, maybe suexec owner
 			new DAttr('configFile', 'file', 'Config File', 'text', false, 3, 'rwc', $this->_options['text_size']),
 			$this->_attrs['note'],
 			$this->_attrs['vh_allowSymbolLink'],
@@ -1043,7 +1040,7 @@ class DTblDef
 
 		$attrs = array(
 			new DAttr('name', 'vhname', 'Virtual Host Name', 'text', false, NULL, NULL, NULL, 0, 'vhName'),
-			new DAttr('vhRoot', 'path', 'Virtual Host Root', 'text', false, 2, 'rx', $this->_options['text_size']),
+			new DAttr('vhRoot', 'cust', 'Virtual Host Root', 'text', false, 2, 'rx', $this->_options['text_size']),
 			new DAttr('configFile', 'file', 'Config File', 'text', false, 3, 'rwc', $this->_options['text_size']),
 			$this->_attrs['note']
 			);
@@ -1856,10 +1853,13 @@ class DTblDef
 			// for gui use only
 		$attrs = array(
 			$this->_attrs['tp_vhRoot'],
-			$this->_attrs['tp_vrFile']->dup('configFile', 'Config File', NULL),
+			new DAttr('configFile', 'parse', 'Config File', 'text', true,
+						'/\$VH_NAME.+\.conf$/',
+						'Requiring variable $VH_NAME and end with .xml. Suggested location is $SERVER_ROOT/conf/vhosts/$VH_NAME/vhconf.xml',
+						$this->_options['text_size'], 0, 'templateVHConfigFile'),
 			$this->_attrs['vh_maxKeepAliveReq'],
 			$this->_attrs['vh_smartKeepAlive'],
-			$this->_attrs['tp_vrFile']->dup('docRoot', 'Document Root', NULL),
+			$this->_attrs['tp_vrFile']->dup('docRoot', 'Document Root', 'templateVHDocRoot'),
 			$this->_attrs['adminEmails'],
 			$this->_attrs['vh_enableGzip'],
 			$this->_attrs['enableIpGeo'],
@@ -1876,7 +1876,10 @@ class DTblDef
 
 		$attrs = array(
 			$this->_attrs['tp_vhRoot'],
-			$this->_attrs['tp_vrFile']->dup('configFile', 'Config File', NULL),
+			new DAttr('configFile', 'parse', 'Config File', 'text', true,
+						'/\$VH_NAME.+\.conf$/',
+						'Requiring variable $VH_NAME and end with .xml. Suggested location is $SERVER_ROOT/conf/vhosts/$VH_NAME/vhconf.xml',
+						$this->_options['text_size'], 0, 'templateVHConfigFile'),
 			$this->_attrs['vh_maxKeepAliveReq'],
 			$this->_attrs['vh_smartKeepAlive']
 			);
@@ -1889,7 +1892,7 @@ class DTblDef
 		// for file use only
 		$this->_tblDef[$id] = new DTbl($id);
 		$attrs = array(
-			$this->_attrs['tp_vrFile']->dup('docRoot', 'Document Root', NULL),
+			$this->_attrs['tp_vrFile']->dup('docRoot', 'Document Root', 'templateVHDocRoot'),
 			$this->_attrs['adminEmails'],
 			$this->_attrs['vh_enableGzip'],
 			$this->_attrs['enableIpGeo'],

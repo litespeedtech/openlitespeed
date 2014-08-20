@@ -767,6 +767,17 @@ int RewriteEngine::expandEnv( const RewriteRule * pRule, HttpSession *pSession )
             StringTool::strtrim( pValue, pValEnd );
             *(char*)pKeyEnd = 0;
             *(char*)pValEnd = 0;
+            if (( pRule->getAction() == RULE_ACTION_PROXY)&&
+                ( strcasecmp( pKey, "Proxy-Host" ) == 0 ))
+            {
+                pSession->getReq()->setNewHost( pValue, 
+                        pValEnd - pValue );
+                if ( m_logLevel > 4 )
+                    LOG_INFO(( pSession->getLogger(),
+                        "[%s] [REWRITE] Set Proxy Host header to: '%s' ",
+                    pSession->getLogId(), pKey, pValue ));
+            }
+            else
             {
                 RequestVars::setEnv( pSession, pKey, pKeyEnd - pKey, pValue, pValEnd - pValue );
                 if ( m_logLevel > 4 )

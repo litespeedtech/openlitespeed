@@ -648,7 +648,7 @@ static int set_handler_write_state( lsi_session_t *session, int state )
     if (state)
     {
         pSession->continueWrite();
-        pSession->setFlag( HSF_MODULE_WRITE_SUSPENDED, 0 );
+        pSession->setFlag( HSF_MODULE_WRITE_SUSPENDED|HSF_RESP_FLUSHED, 0 );
     }
     else
     {
@@ -1050,7 +1050,7 @@ static int is_resp_buffer_gzippped(lsi_session_t *session)
     if (pSession == NULL)
         return -1;
     
-    if (pSession->getGzipBuf())
+    if (pSession->getReq()->gzipAcceptable() & ( UPSTREAM_GZIP | UPSTREAM_DEFLATE ))
         return 1;
     else
         return 0;
@@ -1187,6 +1187,7 @@ static int set_uri_qs( lsi_session_t *session, int action, const char *uri, int 
     case LSI_URL_REDIRECT_INTERNAL:
     case LSI_URL_REDIRECT_301:
     case LSI_URL_REDIRECT_302:
+    case LSI_URL_REDIRECT_303:
     case LSI_URL_REDIRECT_307: 
         if ( !(action & LSI_URL_ENCODED) )
             len = HttpUtil::escape( uri, uri_len, tmpBuf, sizeof( tmpBuf ) - 1 );
@@ -1244,8 +1245,14 @@ static int set_uri_qs( lsi_session_t *session, int action, const char *uri, int 
                 *pStart++ = '&';
             }
         }
-        memcpy(pStart, qs, qs_len);
-        final_qs_len += qs_len;
+        else 
+            qs_act = LSI_URL_QS_SET;
+        if ( qs )
+        {
+            memcpy(pStart, qs, qs_len);
+            final_qs_len += qs_len;
+            pStart += qs_len;
+        }
     }
     len = pStart - tmpBuf;
   
@@ -1255,7 +1262,7 @@ static int set_uri_qs( lsi_session_t *session, int action, const char *uri, int 
     case LSI_URI_REWRITE:
         if ( uri_act != LSI_URI_NOCHANGE )
             pSession->getReq()->setRewriteURI( tmpBuf, urlLen, 1 );
-        if ( uri_act & URL_QS_OP_MASK )
+        if ( qs_act & URL_QS_OP_MASK )
             pSession->getReq()->setRewriteQueryString( pQs, final_qs_len );
 //        pSession->getReq()->addEnv(11);
         break;
@@ -1266,14 +1273,14 @@ static int set_uri_qs( lsi_session_t *session, int action, const char *uri, int 
         break;
     case LSI_URL_REDIRECT_301:
     case LSI_URL_REDIRECT_302:
+    case LSI_URL_REDIRECT_303:
     case LSI_URL_REDIRECT_307: 
         pSession->getReq()->setLocation( tmpBuf, len );
-        if ( uri_act == LSI_URL_REDIRECT_301 )
-            code = SC_301;
-        else if( uri_act == LSI_URL_REDIRECT_302 )
-            code = SC_302;
-        else
+        
+        if ( uri_act == LSI_URL_REDIRECT_307 )
             code = SC_307;
+        else
+            code = SC_301 + uri_act - LSI_URL_REDIRECT_301;
         pSession->getReq()->setStatusCode( code );
         pSession->setState( HSS_EXT_REDIRECT );
         pSession->continueWrite();
@@ -1635,4 +1642,5 @@ void lsiapi_init_server_api()
     pApi->append_body_buf = append_body_buf;
     pApi->get_cur_time = get_cur_time;
 
+    pApi->_debugLevel = HttpLog::getDebugLevel();
 }

@@ -39,7 +39,6 @@ public:
     unsigned short  m_iProcNo;
     short           m_iState;
     char *          m_pBlackBoard;
-    cpu_set_t       m_pAffinityMask;
 
     ChildProc()
         : m_pid( -1 )

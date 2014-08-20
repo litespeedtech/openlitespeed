@@ -122,8 +122,13 @@ int ModuleManager::loadPrelinkedModules()
     {
         pModule = getPrelinkedModuleByIndex( i, &pName );
         if ( pModule )
+        {
             if ( addModule( pName, "Intenal", pModule ) != end() )
+            {
+                ModuleConfig::parsePriority(NULL, MODULE_PRIORITY( pModule ));
                 ++count;
+            }
+        }
     }
     return count;
 }
@@ -278,6 +283,11 @@ void ModuleManager::incModuleDataCount(unsigned int level)
         ++ m_iModuleDataCount[level];
 }
 
+void ModuleManager::updateDebugLevel()
+{
+   LsiapiBridge::getLsiapiFunctions()->_debugLevel = HttpLog::getDebugLevel();
+}
+
 void ModuleManager::OnTimer10sec()
 {
     LsiapiBridge::expire_gdata_check();
@@ -426,7 +436,7 @@ int ModuleConfig::parsePriority(const XmlNode *pModuleNode, int *priority)
     const char *pValue = NULL;
     for(int i=0; i<LSI_HKPT_TOTAL_COUNT; ++i)
     {
-        if ((pValue = pModuleNode->getChildValue(LsiApiHooks::s_pHkptName[i])))
+        if (pModuleNode && (pValue = pModuleNode->getChildValue(LsiApiHooks::s_pHkptName[i])))
             priority[i] = atoi(pValue);
         else
             priority[i] = LSI_MAX_HOOK_PRIORITY + 1;

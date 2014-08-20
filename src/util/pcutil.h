@@ -62,7 +62,13 @@ public:
     static int waitChildren();
     static int getNumProcessors();
     static void getAffinityMask( int iCpuCount, int iProcessNum, int iNumCoresToUse, cpu_set_t *_mask);
-    static int setCpuAffinity(cpu_set_t *_mask);
+    static int setCpuAffinity(cpu_set_t *mask);
+    static void setCpuAffinityAll();
+
+private:
+    static int          s_nCpu;
+    static cpu_set_t    s_maskAll;
+
 };
 
 #endif

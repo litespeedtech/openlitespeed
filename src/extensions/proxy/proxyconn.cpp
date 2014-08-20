@@ -596,7 +596,7 @@ int ProxyConn::processResp()
             if ( D_ENABLED( DL_LESS ) )
                 LOG_D(( getLogger(), "[%s] Response body size of proxy reply is %d",
                     getLogId(), m_iRespBodySize ));
-            if ( m_iRespBodySize == -1 )
+            if ( m_iRespBodySize == LSI_RESP_BODY_SIZE_CHUNKED )
             {
                 setupChunkIS();
             }
