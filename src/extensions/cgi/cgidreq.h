@@ -48,7 +48,7 @@ public:
 
     int appendArgv( const char * pArgv, int len );
     int appendEnv( const char * pEnv, int len );
-    int buildReqHeader(  int uid, int gid, int priority,
+    int buildReqHeader(  int uid, int gid, int priority, int umaskVal,
                     const char * pChroot, int chrootLen,
                     const char * pReal, int pathLen, const RLimits * pLimits);
     int finalize( int req_id, const char * pSecret, int type );

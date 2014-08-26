@@ -143,8 +143,8 @@ static inline int lsi_futex_trylock( lsi_mutex_t * p )
 
 static inline int lsi_futex_unlock( lsi_mutex_t * p )
 {
-    register int * lp = p;
-    assert (*lp == lock_Inuse);
+    // register int * lp = p;
+    assert (*p == lock_Inuse);
         
     *p = lock_Avail;
     return syscall ( SYS_futex, p, FUTEX_WAKE, 1, NULL, NULL, 0);

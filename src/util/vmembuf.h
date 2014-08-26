@@ -121,7 +121,14 @@ public:
     size_t getCurFileSize() const   {   return m_curTotalSize;  }
     size_t getCurRBlkPos() const    {   return m_curRBlkPos;    }
     size_t getCurWBlkPos() const    {   return m_curWBlkPos;    }
-    bool empty() const;
+    int empty() const
+    {
+        if ( m_curRBlkPos < m_curWBlkPos )
+            return 0;
+        if ( !m_pCurWBlock )
+            return 1;
+        return ( m_pCurRPos >= m_pCurWPos );
+    }    
     long writeBufSize() const;
     int  reinit( int TargetSize = -1 );
     int  exactSize( long *pSize = NULL );

@@ -141,7 +141,7 @@ public:
     const char * getHeader(HEADERINDEX index, int *valLen ) const;
     
     //For LSIAPI using//return number of header appended to iov
-    int getAllHeaders( struct iovec *iov, int maxIovCount );
+    int getAllHeaders( struct iovec *iov_key, struct iovec *iov_val, int maxIovCount );
     
     int  HeaderBeginPos()  {   return nextHeaderPos(-1); }
     int  HeaderEndPos()    {    return -1; }
@@ -190,26 +190,22 @@ public:
 
     
 private:
-    AutoBuf             m_buf;
-    unsigned char       m_KVPairindex[H_HEADER_END];
-    AutoStr2            m_sKVPair;
-    unsigned char       m_hasHole;
-    short               m_iHeaderTotalCount;
-    short               m_iHeaderRemovedCount;
-    short               m_iHeaderUniqueCount;
-    short               m_hLastHeaderKVPairIndex;
+    AutoBuf         m_buf;
+    AutoStr2        m_sKVPair;
+    unsigned char   m_KVPairindex[H_HEADER_END];
+    short           m_iHttpCode;
+    char            m_hasHole;
+    char            m_iHeaderBuilt;
+    short           m_iHeaderTotalCount;
+    short           m_iHeaderRemovedCount;
+    short           m_iHeaderUniqueCount;
+    short           m_hLastHeaderKVPairIndex;
+    short           m_iHeadersTotalLen;
+    
+    char            m_iHttpVersion;
+    char            m_iKeepAlive;
 
-    
-    
-    
-    //const StatusLineString   *m_pStatusLine;
-    int8_t   m_iHttpVersion;
-    int8_t   m_iKeepAlive;
-    short    m_iHttpCode;
     static int s_iHeaderLen[H_HEADER_END + 1];
-    
-    short     m_iHeaderBuilt;
-    short     m_iHeadersTotalLen;
     
     int             getFreeSpaceCount() const {    return m_sKVPair.len() / sizeof(resp_kvpair) - m_iHeaderTotalCount;   }; 
     void            incKVPairs(int num);

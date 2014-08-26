@@ -19,6 +19,7 @@
 #include <util/stringtool.h>
 #include <openssl/rand.h>
 #include <util/rlimits.h>
+#include <stdio.h>
 
 CgidReq::CgidReq()
     : m_buf( 2048 )
@@ -135,7 +136,7 @@ void CgidReq::clear()
 }
 
 
-int CgidReq::buildReqHeader(  int uid, int gid, int priority,
+int CgidReq::buildReqHeader(  int uid, int gid, int priority, int umaskVal,
                  const char * pChroot, int chrootLen,
                  const char * pReal, int pathLen, const RLimits * pLimits )
 {
@@ -155,6 +156,7 @@ int CgidReq::buildReqHeader(  int uid, int gid, int priority,
         pHeader->m_chrootPathLen = 0;
     }
     pHeader->m_priority = priority;
+    pHeader->m_umask = umaskVal;
     add( pReal, pathLen + 1 );
     pEnd = pReal + pathLen;
     const char * p = pEnd;

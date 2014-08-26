@@ -4,7 +4,7 @@
 #ifndef LSAPI_INTERNAL_H
 #define LSAPI_INTERNAL_H
 
-class lsi_session_s;
+struct lsi_session_s;
 class ModuleConfig;
 class LogTracker;
 

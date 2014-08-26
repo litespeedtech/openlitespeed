@@ -80,6 +80,7 @@ public:
     static inline bool isDebugEnabled( int level )
     {  return (level <= s_debugLevel);   }
     static bool isDebugEnabled( LOG4CXX_NS::Logger * pLogger, int level );
+    static int  getDebugLevel()     {   return s_debugLevel;    }
     static void setDebugLevel( int level );
     static void toggleDebugLog();
 

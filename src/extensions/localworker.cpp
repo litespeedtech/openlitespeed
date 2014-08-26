@@ -456,7 +456,7 @@ int LocalWorker::workerExec( LocalWorkerConfig& config, int fd )
         *(argv[0]-1) = '/';
     else
         pDir = argv[0];
-    HttpGlobals::s_pSUExec->prepare( uid, gid, config.getPriority(),
+    HttpGlobals::s_pSUExec->prepare( uid, gid, config.getPriority(), config.getUmask(),
                                      pChrootPath, chrootLen,
                                      pDir, strlen( pDir ), config.getRLimits() );
     int rfd = -1;
@@ -476,7 +476,7 @@ int LocalWorker::workerExec( LocalWorkerConfig& config, int fd )
 
     if ( pid == -1 )
         pid = SUExec::spawnChild( config.getCommand(), fd, -1, config.getEnv()->get(),
-                    config.getPriority(), config.getRLimits());
+                    config.getPriority(), config.getRLimits(), config.getUmask());
     if ( rfd != -1 )
         close( rfd );
         

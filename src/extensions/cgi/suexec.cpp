@@ -101,7 +101,7 @@ int SUExec::buildArgv( char *pCmd, char ** pDir,
 
 int SUExec::spawnChild( const char * pAppCmd, int fdIn, int fdOut,
                         char * const *env, int priority, const RLimits * pLimits,
-                        uid_t uid, gid_t gid )
+                        int umaskVal, uid_t uid, gid_t gid )
 {
 
     int forkResult;
@@ -157,7 +157,7 @@ int SUExec::spawnChild( const char * pAppCmd, int fdIn, int fdOut,
     }
     else
         pDir = argv[0];
-    //umask( HttpGlobals::s_umask );
+    umask( umaskVal );
     if ( getuid() == 0 )
     {
         if ( uid )
@@ -234,6 +234,7 @@ int SUExec::suEXEC( const char * pServerRoot, int * pfd, int listenFd,
         if ( !*pArgv )
             break;
     }
+
     while( 1 )
     {
         m_req.appendEnv( *env, *env?strlen( *env ):0 );
@@ -273,7 +274,7 @@ int SUExec::suEXEC( const char * pServerRoot, int * pfd, int listenFd,
     write( fdsData[0], sockAddr, len+1 );
     close( fdsData[0] );
 
-    int pid = SUExec::spawnChild( achExec, listenFd, fdsData[1], pEnv, 0, pLimits );
+    int pid = SUExec::spawnChild( achExec, listenFd, fdsData[1], pEnv, 0, pLimits, HttpGlobals::s_umask );
     close( fdsData[1] );
     close( fds[1] );
     if ( pid != -1 )
@@ -401,6 +402,7 @@ int SUExec::cgidSuEXEC( const char * pServerRoot, int * pfd, int listenFd,
         if ( !*pArgv )
             break;
     }
+
     while( 1 )
     {
         m_req.appendEnv( *env, *env?strlen( *env ):0 );

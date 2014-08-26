@@ -87,6 +87,8 @@ public:
     void updateHttpApiHook(HttpSessionHooks *apiHttpHooks, ModuleConfig *moduleConfig, int module_id);
     
     static ModuleConfig *getGlobalModuleConfig() { return &m_gModuleConfig; }
+    static void updateDebugLevel();    
+    
 private:
     ModulePointer *m_gModuleArray;  //It is pointers stored base on the _module_id order
     short  m_iModuleDataCount[LSI_MODULE_DATA_COUNT];

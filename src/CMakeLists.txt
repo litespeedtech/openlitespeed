@@ -140,7 +140,7 @@ SET( litespeedlib
     lsshm main http main modgzip spdy ssi 
     lsiapi registry cgi fcgi jk extensions 
     lsapi proxy edio  log4cxx socket 
-    sslpp util misc sysinfo http util GeoIP pthread dl ${libUnitTest} )
+    sslpp util misc sysinfo http edio util GeoIP pthread dl ${libUnitTest} )
 
 target_link_libraries(openlitespeed ${litespeedlib} )
 

@@ -38,7 +38,7 @@ class Appender;
 class AppenderManager;
 END_LOG4CXX_NS
 
-struct CustomFormat;
+class CustomFormat;
 class HttpSession;
 class AccessLog  
 {

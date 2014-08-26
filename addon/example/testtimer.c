@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2013, LiteSpeed Technologies Inc.
+Copyright (c) 2013 - 2014, LiteSpeed Technologies Inc.
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -59,7 +59,7 @@ int reg_handler(lsi_cb_param_t * rec)
     const char *uri;
     int len;
     uri = g_api->get_req_uri(rec->_session, &len);
-    if ( len >= 10 && strncasecmp(uri, "/testtimer", 10) == 0 )
+    if ( len >= 11 && strncasecmp(uri, "/testtimer/", 11) == 0 )
     {
         g_api->register_req_handler(rec->_session, &MNAME, 10);
         g_api->set_req_env(rec->_session, "cache-control", 13, "max-age 20", 10);

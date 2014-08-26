@@ -15,10 +15,11 @@
 *    You should have received a copy of the GNU General Public License       *
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
-#include  <netinet/in.h> 
-#include  <iostream>
+#include <netinet/in.h> 
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
+#include <util/autobuf.h>
 #include "spdydebug.h"
 
 int printheader( unsigned char* buff, int length )
@@ -86,21 +87,16 @@ int printheader( unsigned char* buff, int length )
 
 void printbuffstr( char* buff, int length )
 {
-    static char pbuff[1000];
-
     if ( length > 999 )
         length = 999;
 
-    memcpy( pbuff, buff, length );
-    pbuff[length] = 0;
-    printf( pbuff );
+    ::write( STDOUT_FILENO, buff, length );
 }
 
 void printbuff( unsigned char* buff, int length )
 {
-    static std::string tempstr;
-    static char pbuff[1000];
-    tempstr.clear();
+    char pbuff[1000];
+    AutoBuf buf( 4096 );
 
     for ( int i = 0; i < length; )
     {
@@ -111,16 +107,16 @@ void printbuff( unsigned char* buff, int length )
         {
             pbuff[0] = 0;
             sprintf( pbuff, "%04X, ", i );
-            tempstr += pbuff;
+            buf.append( pbuff );
 
             for ( int ix = 0; ix < ii; ix++ )
             {
                 pbuff[0] = 0;
                 sprintf( pbuff, "%02X,", buff[i + ix] );
-                tempstr += pbuff;
+                buf.append( pbuff );
             }
 
-            tempstr += "\n";
+            buf.append( "\n" );
 
             break;
         }
@@ -130,10 +126,10 @@ void printbuff( unsigned char* buff, int length )
             sprintf( pbuff, "%04X, %02X,%02X,%02X,%02X,%02X,%02X,%02X,%02X,%02X,%02X,%02X,%02X,%02X,%02X,%02X,%02X,\n", i,
                      buff[i], buff[i + 1], buff[i + 2], buff[i + 3], buff[i + 4], buff[i + 5], buff[i + 6], buff[i + 7],
                      buff[i + 8], buff[i + 9], buff[i +10], buff[i + 11], buff[i + 12], buff[i + 13], buff[i + 14], buff[i + 15] );
-            tempstr += pbuff;
+            buf.append( pbuff );
             i += 16;
         }
     }
 
-    printf( tempstr.c_str() );
+    ::write( STDOUT_FILENO, buf.begin(), buf.size() );
 }

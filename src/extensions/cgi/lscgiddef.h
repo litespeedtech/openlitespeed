@@ -54,6 +54,7 @@ typedef struct
     uid_t   m_uid;
     gid_t   m_gid;
     int     m_priority;
+    int     m_umask;
 
     
 #if defined(RLIMIT_AS) || defined(RLIMIT_DATA) || defined(RLIMIT_VMEM)

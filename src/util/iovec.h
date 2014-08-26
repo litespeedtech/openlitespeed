@@ -92,7 +92,7 @@ public:
     
     void append( const struct iovec* vector, int len )
     {
-        assert( len < (struct iovec*)m_store + MAX_VECTOR_LEN - m_pEnd );
+        assert( len <= (struct iovec*)m_store + MAX_VECTOR_LEN - m_pEnd );
         memmove( m_pEnd, vector, sizeof( struct iovec ) * len );
         m_pEnd += len;
     }

@@ -76,25 +76,27 @@ int HttpRespHeaders::m_iPresetHeaderLen[H_HEADER_END] =
 HttpRespHeaders::HttpRespHeaders()
 {
     m_sKVPair = "";
-    incKVPairs(20); //init 20 kvpair spaces 
+    incKVPairs(16); //init 16 kvpair spaces 
     reset();
 }
 
 void HttpRespHeaders::reset()
 {
-    m_hasHole = 0;
-    m_iHeaderTotalCount = 0;
-    m_iHeaderRemovedCount = 0;
-    m_iHeaderUniqueCount = 0;
     m_buf.clear();
     memset(m_KVPairindex, 0xFF, H_HEADER_END);
-    memset(m_sKVPair.buf(), 0, m_sKVPair.len());
     m_hLastHeaderKVPairIndex = -1;
-    m_iHttpVersion = 0; //HTTP/1.1
+    memset(m_sKVPair.buf(), 0, m_sKVPair.len());
     m_iHttpCode = SC_200;
-    m_iKeepAlive = 0;
-    m_iHeaderBuilt = 0;
-    m_iHeadersTotalLen = 0;
+    memset( &m_hasHole, 0, &m_iKeepAlive+1 - &m_hasHole );
+//     m_hasHole = 0;
+//     m_iHeaderTotalCount = 0;
+//     m_iHeaderRemovedCount = 0;
+//     m_iHeaderUniqueCount = 0;
+// 
+//     m_iHttpVersion = 0; //HTTP/1.1
+//     m_iKeepAlive = 0;
+//     m_iHeaderBuilt = 0;
+//     m_iHeadersTotalLen = 0;
     
 }
 
@@ -613,8 +615,8 @@ int HttpRespHeaders::nextHeaderPos(int pos)
     }
     return ret;
 }
-    
-int HttpRespHeaders::getAllHeaders( struct iovec *iov, int maxIovCount )
+
+int HttpRespHeaders::getAllHeaders( struct iovec *iov_key, struct iovec *iov_val, int maxIovCount )
 {
     int count = 0;
 //     if (withStatusLine)
@@ -630,8 +632,10 @@ int HttpRespHeaders::getAllHeaders( struct iovec *iov, int maxIovCount )
         resp_kvpair *pKv = getKVPair(i);
         if (pKv->keyLen > 0)
         {
-            iov[count].iov_base = m_buf.begin() + pKv->keyOff;
-            iov[count].iov_len = pKv->keyLen + pKv->valLen + 4;
+            iov_key[count].iov_base = m_buf.begin() + pKv->keyOff;
+            iov_key[count].iov_len = pKv->keyLen;
+            iov_val[count].iov_base = m_buf.begin() + pKv->valOff;
+            iov_val[count].iov_len = pKv->valLen;
             ++count;
         }
     }

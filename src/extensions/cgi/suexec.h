@@ -20,6 +20,7 @@
 
 
 #include <extensions/cgi/cgidreq.h>
+#include <http/httpglobals.h>
 
 class RLimits; 
 class SUExec
@@ -32,12 +33,12 @@ public:
     static int buildArgv( char *pCmd, char ** pDir, char ** pArgv, int argvLen );
     static int spawnChild( const char * pAppCmd, int fdIn, int fdOut,
                      char * const *env, int priority, const RLimits * pLimits,
-                     uid_t uid = 0, gid_t gid = 0 );
+                     int umaskVal, uid_t uid = 0, gid_t gid = 0 );
     
-    int prepare( int uid, int gid, int priority,
+    int prepare( int uid, int gid, int priority,int umaskVal,
                  const char * pChroot, int chrootLen,
                  const char * pReal, int pathLen, const RLimits * pLimits)
-    {   return m_req.buildReqHeader( uid, gid, priority,
+    {   return m_req.buildReqHeader( uid, gid, priority, umaskVal,
             pChroot, chrootLen, pReal, pathLen, pLimits );     }
         
     int appendArgv( const char * pArgv, int len )

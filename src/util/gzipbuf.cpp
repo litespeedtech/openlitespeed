@@ -142,6 +142,8 @@ int GzipBuf::process( int finish )
             ret = ::inflate(&m_zstr, finish );
         if ( ret == Z_STREAM_ERROR )
             return -1;
+        if ( ret == Z_BUF_ERROR )
+            ret = 0;
         m_pCompressCache->writeUsed( m_zstr.next_out -
                 (unsigned char *)m_pCompressCache->getCurWPos() );
         if (( m_zstr.avail_out )||( ret == Z_STREAM_END ))

@@ -1587,7 +1587,7 @@ int HttpVHost::configContext( const XmlNode *pContextNode )
         return -1;
     }
 
-    HttpContext *pContext;
+    HttpContext *pContext = NULL;
 
     switch( type )
     {

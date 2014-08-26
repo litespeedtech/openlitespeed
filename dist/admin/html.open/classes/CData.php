@@ -151,7 +151,7 @@ class CData
 		$layer = $this->_root->GetChildrenByLoc($location, $ref);
 		if ($layer != NULL) {
 			if (is_array($layer))
-				$vals = array_keys($layer);
+				$vals = array_map('strval', array_keys($layer));
 			else
 				$vals[] = $layer->Get(CNode::FLD_VAL);
 		}

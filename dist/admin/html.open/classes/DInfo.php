@@ -499,7 +499,7 @@ class DInfo
 
 		sort($names);
 		foreach ($names as $name)
-			$o[$name] = $name;
+			$o["$name"] = $name;
 
 		return $o;
 	}

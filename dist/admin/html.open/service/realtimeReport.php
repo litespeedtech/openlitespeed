@@ -24,7 +24,6 @@ function getSelectOptions($selType, $selValue)
 			'vhname'=>'Virtual Host Name',
 			'req_processing'=>'Requests in Processing',
 			'req_per_sec'=>'Request/Second',
-			'output_bankdwidth'=>'Output Bandwidth',
 			'eap_process'=>'ExtApp Processes',
 			'eap_inuse'=>'EAProc In Use',
 			'eap_idle'=>'EAProc Idle',
@@ -194,7 +193,7 @@ if($refresh >= 2) {
 <table class="xtbl" width="100%" border="0" cellpadding="3"
 	cellspacing="1">
 	<tr class="xtbl_title">
-		<td colspan="11">
+		<td colspan="10">
 		<table width="100%" border="0" cellpadding="3">
 			<tr>
 				<td>Virtual Host</td>
@@ -230,7 +229,6 @@ if($refresh >= 2) {
 		$buf = '<tr class="xtbl_label_vert">'
 		. '<td>VH Name</td><td>&nbsp;</td>'
 		. '<td>Req in Processing</td><td>Req/Sec</td><td>Total Req</td>'
-		. '<td>Output Bandwidth</td>'
 		. '<td>ExtApp Processes</td><td>EAProc In Use</td><td>EAProc Idle</td>'
 		. '<td>EAProc WaitQ</td><td>EAProc Req/Sec</td></tr>'
 		. "\n";
@@ -249,7 +247,6 @@ if($refresh >= 2) {
 			$buf .= '<td align="center">'.number_format($vh->req_processing).'</td>';
 			$buf .= '<td align="center">'.number_format($vh->req_per_sec,1).'</td>';
 			$buf .= '<td align="center">'.number_format($vh->req_total).'</td>';
-			$buf .= '<td align="center">'.number_format($vh->output_bankdwidth).'</td>';
 			$buf .= '<td  align="center">'.number_format($vh->eap_process).'</td>';
 			$buf .= '<td  align="center">'.number_format($vh->eap_inuse).'</td>';
 			$buf .= '<td  align="center">'.number_format($vh->eap_idle).'</td>';

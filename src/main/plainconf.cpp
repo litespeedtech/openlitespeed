@@ -348,7 +348,7 @@ plainconfKeywords plainconf::sKeywords[] =
     {"worker_atexit",          NULL},
     {"main_atexit",          NULL},
 
-    
+    {"umask",          NULL},
 
 };
 
@@ -990,7 +990,7 @@ void plainconf::checkInFile(const char *path)
     buf.append(new_path, strlen(new_path));
     buf.append("\" -mUpdate \"", 12);
     buf.append(new_path, strlen(new_path));
-    buf.append("\" ", 2);
+    buf.append("\" >/dev/null 2>&1", 17);
     ret = system(buf.c_str());
     if (ret == 0)
         logToMem(LOG_LEVEL_INFO, "RCS checkin config file %s OK.", new_path);

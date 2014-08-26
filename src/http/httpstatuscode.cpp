@@ -64,32 +64,11 @@ StatusCode::StatusCode( int code, const char * pStatus,
             p += safe_snprintf( p, pEnd -p, "</body></html>\n" );
 
             m_iBodySize = p - achBuf;
-            m_pHeaderBody = (char *)malloc( m_iBodySize + 160 );
+            m_pHeaderBody = (char *)malloc( m_iBodySize + 1 );
             if ( !m_pHeaderBody )
                 m_iBodySize =0;
             else
-            {
-                int n;
-                if ( code >= SC_307 )
-                {
-                    n = safe_snprintf( m_pHeaderBody, 159,
-                        "Cache-Control: private, no-cache, max-age=0\r\n"
-                        "Pragma: no-cache\r\n"
-                        "Content-Type: text/html\r\n"
-                        "Content-Length: %d\r\n",
-                        m_iBodySize );
-                    
-                }
-                else
-                {
-                    n = safe_snprintf( m_pHeaderBody, 79,
-                        "Content-Type: text/html\r\n"
-                        "Content-Length: %d\r\n",
-                        m_iBodySize );
-                }
-                m_iHeaderSize = n;
-                memcpy( m_pHeaderBody + n, achBuf, m_iBodySize + 1 );
-            }
+                memcpy( m_pHeaderBody, achBuf, m_iBodySize + 1 );
         }
     }
 }

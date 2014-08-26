@@ -413,7 +413,7 @@ const int MAX_CERT_LENGTH = 40960;
 
 static int loadPemWithMissingDash( const char * pFile, char * buf, int bufLen, char **pBegin )
 {
-    int i, fd, iLen;
+    int i = 0, fd, iLen;
     char *pEnd, *p;
     struct stat st;
     
@@ -621,7 +621,16 @@ int SSLContext::setCipherList( const char * pList )
         {
             //snprintf( cipher, 4095, "RC4:%s", pList );
             //strcpy( cipher, "ALL:HIGH:!aNULL:!SSLV2:!eNULL" );
+#if OPENSSL_VERSION_NUMBER >= 0x10001000L
+            strcpy( cipher, "EECDH+ECDSA+AESGCM EECDH+aRSA+AESGCM EECDH+ECDSA+SHA384 "
+                            "EECDH+ECDSA+SHA256 EECDH+aRSA+SHA384 EECDH+aRSA+SHA256 "
+                            "EECDH+aRSA+RC4 EECDH EDH+aRSA RC4 !aNULL !eNULL !LOW "
+                            "!3DES !MD5 !EXP !PSK !SRP !DSSTLS_ECDHE_RSA_WITH_AES_128_CBC_SHA:"
+                    );
+            //strcpy( cipher, "HIGH:!MD5:!aNULL:!EDH@strength" );
+#else
             strcpy( cipher, "RC4:HIGH:!aNULL:!MD5:!SSLv2:!eNULL:!EDH:!LOW:!EXPORT56:!EXPORT40" );
+#endif
             //strcpy( cipher, "RC4:-EXP:-SSLv2:-ADH" );
             pList = cipher;
         }

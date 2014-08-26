@@ -180,7 +180,7 @@ class DTblDefBase
 									 $this->_options['tp_vname'][0], $this->_options['tp_vname'][1],
 									 $this->_options['text_size'], 0, 'templateVHRoot'),
 
-			'tp_vrFile' => new DAttr('fileName', 'parse', 'File Name', 'text', true,
+			'tp_vrFile' => new DAttr('fileName', 'parse', 'File Name', 'text', false,
 					'/(\$VH_NAME)|(\$VH_ROOT)/', 'requiring variable $VH_NAME or $VH_ROOT',	$this->_options['text_size'], 0, 'templateFileRef'),
 
 			'tp_name' => new DAttr('name', 'parse', 'Name', 'text', false,
@@ -1300,20 +1300,21 @@ class DTblDefBase
 
 		$attrs = array(
 				$this->_attrs['tp_vhRoot'],
-				$this->_attrs['tp_vrFile']->dup('configFile', 'Config File', NULL),
+				new DAttr('configFile', 'parse', 'Config File', 'text', true,
+						'/\$VH_NAME.+\.conf$/',
+						'Requiring variable $VH_NAME and end with .conf. Suggested location is $SERVER_ROOT/conf/vhosts/$VH_NAME/vhconf.conf',
+						$this->_options['text_size'], 0, 'templateVHConfigFile'),
 				$this->_attrs['vh_maxKeepAliveReq'],
 				$this->_attrs['vh_smartKeepAlive']
 		);
-		// to do: need check path contain VH variable.
 		$this->_tblDef[$id]->SetAttr($attrs);
 	}
 
 	protected function add_T_GENERAL2($id)
 	{
-		// for file use only
 		$this->_tblDef[$id] = new DTbl($id, 'Base2');
 		$attrs = array(
-				$this->_attrs['tp_vrFile']->dup('docRoot', 'Document Root', NULL),
+				$this->_attrs['tp_vrFile']->dup('docRoot', 'Document Root', 'templateVHDocRoot'),
 				$this->_attrs['adminEmails'],
 				$this->_attrs['vh_enableGzip'],
 				$this->_attrs['enableIpGeo'],

@@ -1068,7 +1068,7 @@ int HttpReq::setRewriteQueryString(  const char * pQS, int len )
 int HttpReq::setRewriteLocation( char * pURI, int uriLen,
                                  const char * pQS, int qsLen, int escape )
 {
-    int totalLen = uriLen + qsLen + 2 + (escape)? uriLen: 0;
+    int totalLen = uriLen + qsLen + 2 + ((escape)? uriLen: 0);
     if ( totalLen > MAX_URL_LEN )
         totalLen = MAX_URL_LEN;
     if ( m_reqBuf.available() < totalLen )
