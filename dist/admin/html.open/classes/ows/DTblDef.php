@@ -53,7 +53,7 @@ class DTblDef extends DTblDefBase
 		parent::loadCommonAttrs();
 		$this->_attrs['mod_params'] = new DAttr('param', 'cust', 'Module Parameters', 'textarea1', true, NULL,
 					'use format key=value, one parameter per line','rows="4" cols="60" wrap="off"', 0, 'modParams');
-		$this->_attrs['mod_enabled'] = new DAttr('enabled', 'bool', 'Enable Filters', 'radio', true, NULL, NULL, NULL, 0, 'moduleEnabled');
+		$this->_attrs['mod_enabled'] = new DAttr('enabled', 'bool', 'Enable Hooks', 'radio', true, NULL, NULL, NULL, 0, 'moduleEnabled');
 	}
 
 	protected function add_S_PROCESS($id) //keep
@@ -179,12 +179,12 @@ class DTblDef extends DTblDefBase
 		$align = array('center', 'center', 'center', 'center');
 		$this->_tblDef[$id] = new DTbl($id, 'Server Modules Definition', 1, 'S_MOD', $align, 'module', TRUE);
 
-		$attrs = array_merge(
-				array(new DAttr('name', 'cust', 'Module'),
-					new DAttr('enabled', 'bool', '<span title="Enable Filters">EnabFilt</span>', 'radio', true)),
-				$this->get_module_hookpoints_attrs('ST'),
-				array(new DAttr('action', 'action', 'Action', NULL, TRUE, 'S_MOD', 'vEd'))
-			);
+		$attrs = array(new DAttr('name', 'cust', 'Module'),
+				new DAttr('internal', 'bool', 'Is Internal', 'radio', true, NULL, NULL, NULL, 0, 'internalmodule'),
+				$this->_attrs['mod_params'],
+				$this->_attrs['mod_enabled'],
+				new DAttr('action', 'action', 'Action', NULL, TRUE, 'S_MOD', 'vEd')
+		);
 
 		$this->_tblDef[$id]->SetAttr($attrs, 'name');
 	}
@@ -236,7 +236,7 @@ class DTblDef extends DTblDefBase
 	protected function add_VT_MOD_FILTERTOP($id)
 	{
 		$align = array('center', 'center', 'center', 'center');
-		$this->_tblDef[$id] = new DTbl($id, 'URL Filters', 1, 'VT_MOD_FILTER', $align, 'filter', FALSE);
+		$this->_tblDef[$id] = new DTbl($id, 'Context', 1, 'VT_MOD_FILTER', $align, 'filter', FALSE);
 
 		$attrs = array( new DAttr('uri', 'cust', 'URI'),
 						$this->_attrs['mod_params'],
@@ -250,7 +250,7 @@ class DTblDef extends DTblDefBase
 
 	protected function add_VT_MOD_FILTER($id)
 	{
-		$this->_tblDef[$id] = new DTbl($id, 'URL Filter', 2);
+		$this->_tblDef[$id] = new DTbl($id, 'Context', 2);
 
 		$attrs = array($this->_attrs['ctx_uri'],
 					$this->_attrs['mod_params'],
@@ -333,7 +333,7 @@ class DTblDef extends DTblDefBase
 
 		$attrs = array(
 			$realm_attr['realm_name'],
-			$realm_attr['realm_type'],
+			new DAttr('userDB:location', 'cust', 'User DB Location'),
 			new DAttr('action', 'action', 'Action', NULL, TRUE, 'V_REALM_FILE', 'vEd')
 		);
 		$this->_tblDef[$id]->SetAttr($attrs, 'name');
@@ -348,7 +348,7 @@ class DTblDef extends DTblDefBase
 
 		$attrs = array(
 			$realm_attr['realm_name'],
-			$realm_attr['realm_type'],
+				new DAttr('userDB:location', 'cust', 'User DB Location'),
 			new DAttr('action', 'action', 'Action', NULL, TRUE, 'T_REALM_FILE', 'vEd')
 		);
 		$this->_tblDef[$id]->SetAttr($attrs, 'name');
@@ -480,10 +480,10 @@ class DTblDef extends DTblDefBase
 						new DAttr('handler', 'sel1', 'Fast CGI App', 'select', false,
 								'extprocessor:fcgi', NULL, NULL, 0, 'fcgiapp'),
 						$this->_attrs['note'],
-						$this->_attrs['extraHeaders'],
+						$this->_attrs['extraHeaders']),
 						$this->get_ctx_attrs('auth'),
 						$this->get_ctx_attrs('charset')
-				));
+				);
 		$this->_tblDef[$id]->SetAttr($attrs, 'uri');
 		$this->_tblDef[$id]->_defaultExtract = array('type'=>'fcgi');
 		$this->_tblDef[$id]->_helpKey = 'TABLEfcgiContext';
@@ -541,6 +541,7 @@ class DTblDef extends DTblDefBase
 			);
 		$this->_tblDef[$id]->SetAttr($attrs, 'uri');
 		$this->_tblDef[$id]->_defaultExtract = array('type'=>'loadbalancer');
+		$this->_tblDef[$id]->_helpKey = 'TABLElbContext';
 	}
 
 	protected function add_VT_CTXP($id)

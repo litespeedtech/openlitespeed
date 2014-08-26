@@ -1189,6 +1189,7 @@ int RequestVars::setEnv( HttpSession* pSession, const char * pName, int nameLen,
     if ( *pName == '!' )
     {
         ++pName;
+        --nameLen;
         pSession->getReq()->unsetEnv( pName, nameLen );
         if ( D_ENABLED( DL_MEDIUM ) )
             LOG_D(( pSession->getLogger(),

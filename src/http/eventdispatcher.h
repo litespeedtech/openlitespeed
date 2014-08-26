@@ -42,6 +42,7 @@ public:
     int run();
     int stop();
     int linger( int timeout );
+    void updateDebugLevel();
     //HttpResourceManager * getResManager()
     //{   return &m_ResManager;   }
 

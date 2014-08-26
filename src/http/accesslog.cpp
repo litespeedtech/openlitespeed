@@ -519,17 +519,14 @@ int AccessLog::init( const char * pName, int pipe )
             {
                 flush();
                 m_pAppender->close();
-                m_pAppender->setName( pName );
+                //m_pAppender->setName( pName );
             }
             else
                 return 0;
         }
-        else
-        {
-            m_pAppender = LOG4CXX_NS::Appender::getAppender( pName );
-            if ( !m_pAppender )
-                return -1;
-        }
+        m_pAppender = LOG4CXX_NS::Appender::getAppender( pName );
+        if ( !m_pAppender )
+            return -1;
         ret = m_pAppender->open();
     }
     return ret;

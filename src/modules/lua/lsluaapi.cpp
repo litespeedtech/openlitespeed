@@ -76,12 +76,15 @@ static LOG4CXX_NS::Logger * getLogger()
 
 void LsLua_log( lua_State * pState, int level, int no_linefeed, const char * fmt, ...)
 {
-    char achNewFmt[1024];
-    va_list arglist;
-    va_start(arglist, fmt);
-    snprintf( achNewFmt, 1023, "[%p] %s", pState, fmt );
-    getLogger()->vlog(level, achNewFmt, arglist, no_linefeed);
-    va_end( arglist );
+    if ( level >= LsLuaEngine::debugLevel() )
+    {
+        char achNewFmt[1024];
+        va_list arglist;
+        va_start(arglist, fmt);
+        snprintf( achNewFmt, 1023, "[%p] %s", pState, fmt );
+        getLogger()->vlog(level, achNewFmt, arglist, no_linefeed);
+        va_end( arglist );
+    }
 }
 
 

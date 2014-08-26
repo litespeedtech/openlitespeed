@@ -56,7 +56,7 @@ public:
     int reinit();
     int beginStream();
     int write( const char * pBuf, int len )
-    {   return compress( pBuf, len )? -1 : len;  }
+    {   return ( compress( pBuf, len ) < 0 )? -1 : len;  }
     int shouldFlush()
     {   return m_zstr.total_in - m_lastFlush > m_flushWindowSize;       }
     int flush()

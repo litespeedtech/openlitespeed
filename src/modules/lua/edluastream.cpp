@@ -233,7 +233,7 @@ int EdLuaStream::send( lua_State * pState, const char * pBuf, int32_t iLen )
 
 int EdLuaStream::doWrite( lua_State * pState )
 {
-    int ret;
+    int ret = 0; 
     int len;
     while ( m_bufOut.size() > 0 )
     {

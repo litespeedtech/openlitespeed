@@ -30,6 +30,7 @@ class LocalWorkerConfig : public ExtWorkerConfig
     int         m_iPriority;
     int         m_iRunOnStartUp;
     RLimits     m_rlimits;
+    int         m_umask;
 
 public:
     explicit LocalWorkerConfig( const char * pName );
@@ -69,6 +70,8 @@ public:
     int getPriority() const         {   return m_iPriority; }
     void setPriority( int p)        {   m_iPriority = p;    }
 
+    void setUmask( int mask )     {   m_umask = mask;       }
+    int getUmask() const         {   return m_umask;      }
 
     int isProcPerConn() const       {   return m_iInstances >= getMaxConns();   }
     int checkExtAppSelfManagedAndFixEnv( );

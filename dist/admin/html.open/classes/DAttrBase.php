@@ -451,11 +451,9 @@ class DAttrBase
 
 	public function SetDerivedSelOptions($derived)
 	{
-		$options = array();
+		$options = ($derived) ? $derived : array();
 		if ( !$this->IsFlagOn(self::BM_NOTNULL) )
 			$options[''] = '';
-		if ($derived != NULL)
-			$options = array_merge($options, $derived);
 		$this->_maxVal = $options;
 	}
 

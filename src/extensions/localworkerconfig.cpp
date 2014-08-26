@@ -40,6 +40,7 @@ LocalWorkerConfig::LocalWorkerConfig( const char * pName )
     , m_iInstances( 1 )
     , m_iPriority( 0 )
     , m_iRunOnStartUp( 0 )
+    , m_umask ( HttpGlobals::s_umask )
 {
 }
 
@@ -163,6 +164,10 @@ int LocalWorkerConfig::config( const XmlNode *pNode )
     setPriority( priority );
     setBackLog( backlog );
     setMaxIdleTime( l );
+    
+    
+    int umakeVal = ConfigCtx::getCurConfigCtx()->getLongValue( pNode, "umask", 000, 0777, HttpGlobals::s_umask, 8);
+    setUmask(umakeVal);
 
     setRunOnStartUp( ConfigCtx::getCurConfigCtx()->getLongValue( pNode, "runOnStartUp", 0, 1, 0 ) );
 

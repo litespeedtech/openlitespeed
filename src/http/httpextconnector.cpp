@@ -107,6 +107,7 @@ int HttpExtConnector::releaseProcessor()
 void HttpExtConnector::resetConnector()
 {
     memset( &m_iState, 0, (char *)(&m_iRespBodySent + 1 ) - (char *)&m_iState );
+    m_respHeaderBuf.clear();
 }
 
 
@@ -409,6 +410,7 @@ int HttpExtConnector::process( HttpSession* pSession, const HttpHandler * pHandl
     assert( pHandler );
     setHttpSession( pSession );
     setAttempts( 0 );
+    m_iRespHeaderSize = 0;
     if ( pHandler->getHandlerType() == HandlerType::HT_LOADBALANCER )
     {
         LoadBalancer * pLB = (LoadBalancer *)pHandler;

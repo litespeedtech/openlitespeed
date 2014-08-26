@@ -185,6 +185,8 @@ public:
 
     // execute LUA string as command
     static int doString(lua_State * L, const char * str);
+    
+    
 
 private:
     LsLuaApi( const LsLuaApi& other );

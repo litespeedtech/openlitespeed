@@ -438,6 +438,11 @@ int HttpServerImpl::generateStatusReport()
     {
         LOG_ERR(( "Failed to generate the status report!" ));
     }
+    char achBuf1[1024];
+    ret = snprintf( achBuf1, 1024, "DEBUG_LOG: %d, VERSION: %s-%s\n",
+                 ( D_ENABLED( DL_LESS ))? 1 : 0, PACKAGE_VERSION, LS_PLATFORM );
+    pAppender->append( achBuf1, ret );
+    
     pAppender->append( "EOF\n", 4 );
     pAppender->close();
     return 0;

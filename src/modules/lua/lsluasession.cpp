@@ -1814,20 +1814,6 @@ void LsLua_create_req_meta( lua_State * L )
     // LsLuaApi::dumpStack( L, "DONE LsLua_create_req_meta", 10 );
 }
 
-// dummy for testing purpose
-static int  LsLua_resp_set_header_dummy( lua_State * L )
-{
-    LsLuaSession * pSession = LsLua_getSession( L );
-
-    g_api->set_resp_header(pSession->getHttpSession(), 
-                LSI_RESP_HEADER_UNKNOWN, "H1",   2, "V1",   2, LSI_HEADER_SET);
-    g_api->set_resp_header(pSession->getHttpSession(), 
-                LSI_RESP_HEADER_UNKNOWN, "H2",   2, "V2",   2, LSI_HEADER_SET);
-    g_api->set_resp_header(pSession->getHttpSession(), 
-                LSI_RESP_HEADER_UNKNOWN, "H3",   2, "V3",   2, LSI_HEADER_SET);
-    return 0;
-}
-
 //
 //  resp SECTION
 //
@@ -1835,25 +1821,26 @@ static int LsLua_resp_get_headers( lua_State * L )
 {    
     LsLuaSession * pSession = LsLua_getSession( L );
 #define MAX_RESP_HEADERS_NUMBER     50
-    struct iovec iov[MAX_RESP_HEADERS_NUMBER];
+    struct iovec iov_key[MAX_RESP_HEADERS_NUMBER];
+    struct iovec iov_val[MAX_RESP_HEADERS_NUMBER];
     char bigout[0x1000];
-    register int size = 0, len = 0;
+    register int size = 0;
     register char * cp = bigout;
 
-    //
-    //  dummy code to enable our development 
-    // REMOVE THIS on real
-    LsLua_resp_set_header_dummy( L );
-    
     int count = g_api->get_resp_headers(pSession->getHttpSession(),
-                            iov, MAX_RESP_HEADERS_NUMBER);
+                            iov_key, iov_val, MAX_RESP_HEADERS_NUMBER);
     for(int i=0; i<count; ++i)
     {
-        len = iov[i].iov_len;
-        memcpy(cp, iov[i].iov_base, len);
-        cp += len++;    // watch len++
+        memcpy(cp, iov_key[i].iov_base, iov_key[i].iov_len);
+        cp += iov_key[i].iov_len;
+        memcpy(cp, ": ", 2);
+        cp += 2;
+        memcpy(cp, iov_val[i].iov_base, iov_val[i].iov_len);
+        cp += iov_val[i].iov_len;
+        memcpy(cp, "\r\n", 2);
+        cp += 2;
         *cp++ = '+';
-        size += len;    // just incr
+        size += iov_key[i].iov_len + iov_val[i].iov_len + 5;
     }
     // *cp = 0;
     if ( size )

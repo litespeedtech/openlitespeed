@@ -27,6 +27,8 @@
 #include <util/xmlnode.h>
 #include <lsiapi/lsiapihooks.h>
 #include <util/datetime.h>
+#include <main/plainconf.h>
+
 
 ModuleConfig ModuleManager::m_gModuleConfig;
 
@@ -122,8 +124,13 @@ int ModuleManager::loadPrelinkedModules()
     {
         pModule = getPrelinkedModuleByIndex( i, &pName );
         if ( pModule )
+        {
             if ( addModule( pName, "Intenal", pModule ) != end() )
+            {
+                ModuleConfig::parsePriority(NULL, MODULE_PRIORITY( pModule ));
                 ++count;
+            }
+        }
     }
     return count;
 }
@@ -186,6 +193,103 @@ void ModuleManager::disableModule(lsi_module_t *pModule)
         ((LsiApiHooks *)(LsiApiHooks::getHttpHooks()->get(i + base)))->remove(pModule);
 }
 
+static void checkModuleDef(lsi_module_t *pModule)
+{
+#define DEF_VERSION_INFO_REPFIX  "version:"
+#define DEF_VERSION_INFO_REPFIX_SIZE  (sizeof(DEF_VERSION_INFO_REPFIX) -1)
+    
+    
+    char defPath[513] = {0};
+    snprintf( defPath, 512, "%s/modules/%s.def", HttpGlobals::s_pServerRoot, MODULE_NAME(pModule));
+    const char *info = pModule->_info;
+    int match = 0;
+    size_t infoLen = 0;
+    if (info)
+    {
+        infoLen = strlen(info);
+        //We will save and compare only the first 240 bytes
+        if (infoLen > 240)
+            infoLen = 240;
+    }
+    
+    
+    FILE *fp = fopen(defPath, "rb");
+    if (fp)
+    {
+        char sLine[256] = {0};
+        fgets(sLine, 255, fp);
+        size_t len2 = strlen(sLine);
+        if (len2 > DEF_VERSION_INFO_REPFIX_SIZE)
+        {
+            char *pinfo = sLine + DEF_VERSION_INFO_REPFIX_SIZE;
+            len2 -= DEF_VERSION_INFO_REPFIX_SIZE + 1;
+            /**
+             * We just added a \n at the end of the line, so just remove it
+             * In this way, we keep the leading space and tail space in the info
+             * Of cause these spaces are not recommanded but we still have to support.
+             */
+            if (len2 >= 1)
+                len2 -= 1;
+          
+            if (info == NULL)
+            {
+                if (len2 == 0)
+                    match = 1;
+            }
+            else
+            {
+                if (infoLen == len2 &&
+                    memcmp(info, pinfo, infoLen) == 0)
+                    match = 1;
+            }
+        }
+        fclose(fp);
+    }
+    
+    if (!match)
+    {
+        fp = fopen(defPath, "wb");
+        if (fp)
+        {
+            AutoStr2 sInfo;
+            sInfo.setStr(DEF_VERSION_INFO_REPFIX);
+            if (info != NULL)
+            {
+                sInfo.append(info, infoLen);
+            }
+            
+            fprintf(fp, "%s\n\n", sInfo.c_str());
+            
+            if (pModule->_config_parser)
+            {
+                const char *p;
+                while ( (p = *pModule->_config_parser->_config_keys) != NULL )
+                {
+                    fprintf(fp, "param.%s\n", p);
+                    ++pModule->_config_parser->_config_keys;
+                }
+            }
+            
+            if (pModule->_serverhook) 
+            {
+                int count = 0;
+                while (pModule->_serverhook[count].cb)
+                {
+                    int index = pModule->_serverhook[count].index;
+                    if (index < 0 || index >= LSI_HKPT_TOTAL_COUNT)
+                        LOG_ERR(( "[%s] create def file failure, wrong index(%d).\n", MODULE_NAME( pModule ), index ));
+                    else
+                        fprintf(fp, "priority.%s:%d\n", LsiApiHooks::s_pHkptName[index],
+                                     pModule->_serverhook[count].priority);
+                    ++count;
+                }
+            }
+            fclose(fp);
+        }
+    }
+}
+
+
 int ModuleManager::runModuleInit()
 {
     lsi_module_t *pModule;
@@ -194,6 +298,7 @@ int ModuleManager::runModuleInit()
         pModule = m_gModuleArray[i];
         if (pModule->_init)
         {
+            checkModuleDef(pModule);
             int ret = pModule->_init( pModule );
             if (ret != 0)
             {
@@ -276,6 +381,11 @@ void ModuleManager::incModuleDataCount(unsigned int level)
 {
     if (level < LSI_MODULE_DATA_COUNT)
         ++ m_iModuleDataCount[level];
+}
+
+void ModuleManager::updateDebugLevel()
+{
+   LsiapiBridge::getLsiapiFunctions()->_debugLevel = HttpLog::getDebugLevel();
 }
 
 void ModuleManager::OnTimer10sec()
@@ -426,7 +536,7 @@ int ModuleConfig::parsePriority(const XmlNode *pModuleNode, int *priority)
     const char *pValue = NULL;
     for(int i=0; i<LSI_HKPT_TOTAL_COUNT; ++i)
     {
-        if ((pValue = pModuleNode->getChildValue(LsiApiHooks::s_pHkptName[i])))
+        if ( pModuleNode && (pValue = pModuleNode->getChildValue(LsiApiHooks::s_pHkptName[i])))
             priority[i] = atoi(pValue);
         else
             priority[i] = LSI_MAX_HOOK_PRIORITY + 1;

@@ -378,7 +378,7 @@ static int handleReqBody( lsi_session_t *session)
         
     if ( written > 0)
         g_api->flush(session);
-    g_api->set_handler_write_state(session, 1);
+    //g_api->set_handler_write_state(session, 1);
     
     return readbytes;
 }

@@ -27,7 +27,7 @@ public:
 	~FDPass();
     static int read_fd(int fd, void *ptr, int nbytes, int *recvfd);
     static int write_fd(int fd, void *ptr, int nbytes, int sendfd);
-    
+    static int writex_fd(int fd, void *ptr, int nbytes, int sendfd);
 };
 
 #endif

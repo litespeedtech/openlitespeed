@@ -286,6 +286,7 @@ static int compressbuf( lsi_cb_param_t *rec, lsi_module_t *pModule, int isSend )
                 else
                     deflateEnd( pStream );
                 delete pStream;
+                pStream = NULL;
                 pZBufInfo->pZStream = NULL;
                 pZBufInfo->iZState = Z_END;
                 g_api->log( rec->_session, LSI_LOG_DEBUG, "[%s%s] compressbuf end of stream set.\n",
@@ -315,7 +316,7 @@ static int compressbuf( lsi_cb_param_t *rec, lsi_module_t *pModule, int isSend )
     while ( pZBufInfo->iZState != Z_END && pStream->avail_out == 0 );
 
     //written += sendoutLoopBuf(rec, pBuff);
-    if ( ( _loopbuff_hasdata( pBuff ) ) || ( pStream->avail_out == 0 ) )
+    if ( ( _loopbuff_hasdata( pBuff ) ) || (pStream && ( pStream->avail_out == 0 )) )
     {
         if ( rec->_flag_out )
             *rec->_flag_out |= LSI_CB_FLAG_OUT_BUFFERED_DATA;
@@ -340,15 +341,21 @@ static int init( lsi_module_t * pModule )
     return g_api->init_module_data( pModule, releaseData, LSI_MODULE_DATA_HTTP );
 }
 
+// static lsi_serverhook_t serverHooks[] = {
+//     {LSI_HKPT_HTTP_END, clearData, LSI_HOOK_NORMAL, 0},
+//     {LSI_HKPT_HANDLER_RESTART, clearData, LSI_HOOK_NORMAL, 0},
+//     lsi_serverhook_t_END  //Must put this at the end position
+// };
 
-static lsi_serverhook_t serverHooks[] = {
-    {LSI_HKPT_HTTP_END, clearData, LSI_HOOK_NORMAL, 0},
-    {LSI_HKPT_HANDLER_RESTART, clearData, LSI_HOOK_NORMAL, 0},
-    lsi_serverhook_t_END  //Must put this at the end position
-};
+lsi_module_t modcompress = { LSI_MODULE_SIGNATURE, init, NULL, NULL, MODULE_VERSION, NULL, {0} };
+lsi_module_t moddecompress = { LSI_MODULE_SIGNATURE, init, NULL, NULL, MODULE_VERSION, NULL, {0} };
 
-lsi_module_t modcompress = { LSI_MODULE_SIGNATURE, init, NULL, NULL, MODULE_VERSION, serverHooks, {0} };
-lsi_module_t moddecompress = { LSI_MODULE_SIGNATURE, init, NULL, NULL, MODULE_VERSION, serverHooks, {0} };
+static void set_Module_data( lsi_session_t *session, lsi_module_t * pModule, ModgzipMData *myData )
+{
+    g_api->set_module_data( session, pModule, LSI_MODULE_DATA_HTTP, ( void * )myData );
+    g_api->add_session_hook( session, LSI_HKPT_HTTP_END, pModule, clearData, LSI_HOOK_NORMAL, 0 );
+    g_api->add_session_hook( session, LSI_HKPT_HANDLER_RESTART, pModule, clearData, LSI_HOOK_NORMAL, 0 );
+}
 
 static int addHooks( lsi_session_t *session, lsi_module_t *pModule, int isSend, int priority, uint8_t compressLevel )
 {
@@ -392,7 +399,7 @@ static int addHooks( lsi_session_t *session, lsi_module_t *pModule, int isSend, 
 
     if ( err == 0 )
     {
-        g_api->set_module_data( session, pModule, LSI_MODULE_DATA_HTTP, ( void * )myData );
+        set_Module_data( session, pModule, myData );
         return 0;
     }
     else

@@ -397,12 +397,14 @@ static int execute_cgi( lscgid_t * pCGI)
         pCGI->m_argv[0] = pCGI->m_pCGIDir;
     }
 
-
+    umask(pCGI->m_data.m_umask);
+    //fprintf( stderr, "execute_cgi m_umask=%03o\n", pCGI->m_data.m_umask );
     if ( execve( pCGI->m_pCGIDir, pCGI->m_argv, pCGI->m_env ) == -1 )
     {
         set_cgi_error( (char *)"lscgid: execve()", pCGI->m_pCGIDir );
         return 500;
     }
+
     return 0;
 }
 

@@ -86,8 +86,8 @@ int add_global_hook( int index, const lsi_module_t *pModule, lsi_callback_pf cb,
     if (priority[index] < LSI_MAX_HOOK_PRIORITY && priority[index] > -1 * LSI_MAX_HOOK_PRIORITY)
         order = priority[index];
     if ( D_ENABLED( DL_MORE ))
-            LOG_D(( "[Module: %s] add_global_hook, index %d, priority %hd, flag %hd", 
-                MODULE_NAME( pModule ), index, order, flag ));
+            LOG_D(( "[Module: %s] add_global_hook, index %d [%s], priority %hd, flag %hd", 
+                MODULE_NAME( pModule ), index, LsiApiHooks::s_pHkptName[index], order, flag ));
     return pHooks->add( pModule, cb, order, flag );
 }
 
@@ -127,8 +127,8 @@ static int lsiapi_add_session_hook( lsi_session_t *session, int index, const lsi
     if (priority[index] < LSI_MAX_HOOK_PRIORITY && priority[index] > -1 * LSI_MAX_HOOK_PRIORITY)
         order = priority[index];
     if ( D_ENABLED( DL_MORE ))
-            LOG_D(( "[Module: %s] add_session_hook, index %d, priority %hd, flag %hd", 
-                MODULE_NAME( pModule ), index, order, flag ));
+            LOG_D(( "[Module: %s] add_session_hook, index %d [%s], priority %hd, flag %hd", 
+                MODULE_NAME( pModule ), index, LsiApiHooks::s_pHkptName[index], order, flag ));
     return pHooks->add( pModule, cb, order, flag );
 }
 
@@ -542,13 +542,13 @@ static int get_resp_headers_count( lsi_session_t *session )
     return respHeaders.getHeadersCount(0);  //For API, retuen the non-spdy case
 }
 
-static int get_resp_headers( lsi_session_t *session, struct iovec *iov, int maxIovCount )
+static int get_resp_headers( lsi_session_t *session, struct iovec *iov_key, struct iovec *iov_val, int maxIovCount )
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
     if (pSession == NULL )
         return -1;
     HttpRespHeaders& respHeaders = pSession->getResp()->getRespHeaders();
-    return respHeaders.getAllHeaders( iov, maxIovCount );
+    return respHeaders.getAllHeaders( iov_key, iov_val, maxIovCount );
 }
 
 static int remove_resp_header( lsi_session_t *session, unsigned int header_index, const char *name, int nameLen )
@@ -587,6 +587,76 @@ static int get_req_raw_headers( lsi_session_t *session, char *buf, int maxlen)
     memcpy(buf, p, size);
     return size;
 }
+
+static int get_req_headers_count( lsi_session_t *session)
+{
+    HttpSession *pSession = (HttpSession *)((LsiSession *)session);
+    if (pSession == NULL )
+        return -1;
+    
+    HttpReq* pReq = pSession->getReq();
+    int count = 0 ;
+    const char * pTemp;
+    for( int i = 0; i < HttpHeader::H_TRANSFER_ENCODING; ++i )
+    {
+        pTemp = pReq->getHeader( i );
+        if ( *pTemp )
+            ++count;
+    }
+
+    count += pReq->getUnknownHeaderCount();
+    return count;
+}
+
+static int get_req_headers( lsi_session_t *session, struct iovec *iov_key, struct iovec *iov_val, int maxIovCount)
+{
+    HttpSession *pSession = (HttpSession *)((LsiSession *)session);
+    if (pSession == NULL )
+        return -1;
+    
+    HttpReq* pReq = pSession->getReq();
+    int i, n;
+    const char * pTemp;
+    int index = 0;
+    for( i = 0; i <= HttpHeader::H_TRANSFER_ENCODING; ++i )
+    {
+        pTemp = pReq->getHeader( i );
+        if ( *pTemp )
+        {
+            iov_key[index].iov_base = (void *)RequestVars::getHeaderString(i);
+            iov_key[index].iov_len = HttpHeader::getHeaderStringLen(i);
+            
+            iov_val[index].iov_base = (void *)pTemp;
+            iov_val[index].iov_len = pReq->getHeaderLen( i );
+            
+            ++index;
+        }
+    }
+
+    n = pReq->getUnknownHeaderCount();
+    for( i = 0; i < n; ++i )
+    {
+        const char * pKey;
+        const char * pVal;
+        int keyLen;
+        int valLen;
+        pKey = pReq->getUnknownHeaderByIndex( i, keyLen, pVal, valLen );
+        if ( pKey )
+        {
+            iov_key[index].iov_base = (void *)pKey;
+            iov_key[index].iov_len = keyLen;
+            
+            iov_val[index].iov_base = (void *)pVal;
+            iov_val[index].iov_len = valLen;
+            
+            ++index;
+        }
+    }
+    
+    return index;
+}
+
+
 
 static int get_req_org_uri( lsi_session_t *session, char *buf, int buf_size )
 {
@@ -651,7 +721,8 @@ static int set_handler_write_state( lsi_session_t *session, int state )
     if (state)
     {
         pSession->continueWrite();
-        pSession->setFlag( HSF_MODULE_WRITE_SUSPENDED, 0 );
+        pSession->setState(HSS_WRITING);
+        pSession->setFlag( HSF_MODULE_WRITE_SUSPENDED|HSF_RESP_FLUSHED, 0 );
     }
     else
     {
@@ -1547,6 +1618,52 @@ const void *get_vhost( int index )
     return (const void *)HttpServer::getInstance().getVHost( index );
 }
 
+//a special case of set_module_data
+static int set_vhost_module_data ( const void *vhost, const lsi_module_t *pModule, void *data )
+{
+    int ret = -1;
+    LsiModuleData * pData = ((HttpVHost *)vhost)->getModuleData ();
+    
+    if (pData)
+    {
+        if ( !pData->isDataInited())
+        {
+            if ( data )
+                pData->initData(ModuleManager::getInstance().getModuleDataCount(LSI_MODULE_DATA_VHOST));
+            else 
+                return 0;
+        }
+        pData->set( MODULE_DATA_ID( pModule )[LSI_MODULE_DATA_VHOST], data);
+        ret = 0;   
+    }    
+    
+    return ret;   
+}
+
+static void * get_Vhost_module_data( const void *vhost, const lsi_module_t *pModule )
+{
+    LsiModuleData * pData = ((HttpVHost *)vhost)->getModuleData ();
+    if ( !pData )
+        return NULL;
+    return pData->get( MODULE_DATA_ID( pModule )[LSI_MODULE_DATA_VHOST] );
+}
+
+int handoff_fd( lsi_session_t *session, char ** pData, int *pDataLen )
+{
+    if ( !session || !pData || !pDataLen )
+        return -1;
+    HttpSession *pSession = (HttpSession *)((LsiSession *)session);
+    return pSession->handoff( pData, pDataLen );
+}
+int get_local_sockaddr( lsi_session_t *session, char * pIp, int maxLen )
+{
+    if ( !session || !pIp)
+        return -1;
+    HttpSession *pSession = (HttpSession *)((LsiSession *)session);
+    return pSession->getServerAddrStr( pIp, maxLen );
+}
+
+
 void lsiapi_init_server_api()
 {
     lsi_api_t * pApi = LsiapiBridge::getLsiapiFunctions();
@@ -1580,7 +1697,9 @@ void lsiapi_init_server_api()
     pApi->remove_timer = lsi_remove_timer;
     pApi->get_req_raw_headers_length = get_req_raw_headers_length;
     pApi->get_req_raw_headers = get_req_raw_headers;
-        
+    pApi->get_req_headers_count = get_req_headers_count;
+    pApi->get_req_headers = get_req_headers;
+    
     pApi->get_req_header = get_req_header;
     pApi->get_req_header_by_id = get_req_header_by_id;
     pApi->get_req_org_uri = get_req_org_uri;
@@ -1672,5 +1791,12 @@ void lsiapi_init_server_api()
 
     pApi->get_vhost_count = get_vhost_count;
     pApi->get_vhost = get_vhost;
+    pApi->set_vhost_module_data = set_vhost_module_data;
+    pApi->get_Vhost_module_data = get_Vhost_module_data;
 
+    pApi->handoff_fd = handoff_fd;
+    pApi->get_local_sockaddr = get_local_sockaddr;
+
+    pApi->_debugLevel = HttpLog::getDebugLevel();
+    
 }

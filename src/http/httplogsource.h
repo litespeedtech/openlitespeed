@@ -38,7 +38,7 @@ public:
     virtual int setAccessLogFile( const char * pFileName, int pipe ) = 0;
     virtual int setErrorLogFile( const char * pFileName ) = 0;
     virtual void setErrorLogRollingSize( off_t size, int keep_days ) = 0;
-    virtual void setBytesLogFilePath( const char * pFileName, long rollingSize ) {}
+    virtual void setBytesLogFilePath( const char * pFileName, off_t rollingSize ) {}
     virtual void enableAccessLog( int size ) {}
     virtual AccessLog* getAccessLog() const = 0;
     int initAccessLog( const XmlNode *pNode,

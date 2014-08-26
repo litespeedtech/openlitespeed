@@ -101,11 +101,14 @@ public:
     static const char * getLuaName()
     {   return s_luaName; }
     
+    static int debugLevel()
+    {   return s_debugLevel; }
+    
+    static void setDebugLevel( int level )
+    {   s_debugLevel = level; }
+    
     static int debug()
     { return s_debug ; }
-    
-    static int isDummy()
-    { return s_dummy ; }
     
 private:
     static int execLuaCmd(const char * cmd);    // invoke LUA inside the coroutine
@@ -128,14 +131,14 @@ private:
     //  module parameters
     //
     static char *       s_lib;          // the module library /usr/lib/libluajit.so
-    static char       * s_luaPath;     // user defined LUA_PATH
-    static int          s_dummy;        // enable dummy test
-    static int          s_debug;        // debug
+    static char       * s_luaPath;      // user defined LUA_PATH
+    static int          s_debug;        // note: this is internal debug for LUA
     static int          s_maxRunTime;   // max allowable runtime in msec
     static int          s_maxLineCount; // time to throddle
     static int          s_pauseTime;    // time to pause in msec
     static int          s_jitLineMod;   // modifier for JIT
     static int          s_firstTime;    // detect very first time parameter parsing
+    static int          s_debugLevel;   // current web server debug level
     static char         s_luaName[0x10];// 15 bytes to save the name
     static char         s_version[0x20];// 31 bytes for LUA information
 };

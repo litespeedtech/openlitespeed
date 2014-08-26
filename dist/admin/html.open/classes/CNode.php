@@ -370,7 +370,7 @@ class CNode
 			if (($varpos = strpos($layer, '$')) > 0) {
 				$layer = substr($layer, 0, $varpos);
 			}
-			$location = $layer;
+			$location = substr($location, strpos($location, $layer));
 			$layer = strtolower($layer);
 			if (!isset($node->_els[$layer])) {
 				if ($ismulti && ($ref == '~')) { // for new child, return parent

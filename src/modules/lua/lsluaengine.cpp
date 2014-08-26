@@ -43,19 +43,19 @@
 
 
 int             LsLuaEngine::s_firstTime = 1;           // firstTime parse param
+int             LsLuaEngine::s_debugLevel = 0;          // debugLevel from server
 int             LsLuaEngine::s_ready = 0;               // not ready
 ls_lua_t *      LsLuaEngine::s_luaSys = NULL;
 ls_lua_api_t *  LsLuaEngine::s_luaApi = NULL;
 lua_State *     LsLuaEngine::s_stateSystem = NULL;
 
 int             LsLuaEngine::s_maxRunTime = 0;           // 0 no limit
-int             LsLuaEngine::s_maxLineCount = 10000000;  // 10000000 instruction per yield ~ 1000000 lines
+int             LsLuaEngine::s_maxLineCount = 0;         // default is 0 (10000000 instruction per yield ~ 1000000 lines)
 int             LsLuaEngine::s_jitLineMod = 10000;       // JIT hookcount is very fast... we need to slow it down
                                                          // JIT hookcount is different
                                                          // It based on abnormal LUA code ("C")
                                                          
-int             LsLuaEngine::s_dummy = 0;                // just run a dummy test
-int             LsLuaEngine::s_debug = 0;                // turn on LUA handler debug
+int             LsLuaEngine::s_debug = 0;                // internal LUA debug trace
 int             LsLuaEngine::s_pauseTime = 500;          // pause time 500 msec per yield
 char *          LsLuaEngine::s_lib = NULL;               // user specified
 char            LsLuaEngine::s_luaName[0x10] = "LUA";    // default module name
@@ -111,8 +111,8 @@ int LsLuaEngine::init()
                     , s_luaName, s_maxRunTime , s_maxLineCount
               );
     g_api->log(NULL, LSI_LOG_DEBUG
-                    , "%s pause[%dmsec] jitlinemod[%d] dummy[%d]\n"
-                    , s_luaName, s_pauseTime , s_jitLineMod , s_dummy
+                    , "%s pause[%dmsec] jitlinemod[%d]\n"
+                    , s_luaName, s_pauseTime , s_jitLineMod 
               );
     
     if (s_type == LSLUA_ENGINE_JIT)
@@ -549,17 +549,7 @@ void* LsLuaEngine::parseParam( const char* param, void* initial_config, int leve
                 else
                     s_debug = 0;
                 g_api->log(NULL, LSI_LOG_NOTICE,
-                             "SET %s = %s [%d]\n", key, value, s_dummy);;
-            }
-            else if (!strcasecmp("dummy", key))
-            {
-                // allow hex and decimal
-                if ((sscanf(value, "%i", &s_dummy) == 1) && (s_dummy > 0))
-                    s_dummy = 1;
-                else
-                    s_dummy = 0;
-                g_api->log(NULL, LSI_LOG_NOTICE,
-                             "SET %s = %s [%d]\n", key, value, s_dummy);
+                             "SET %s = %s [%d]\n", key, value, s_debug);;
             }
 #endif
             else
@@ -578,7 +568,7 @@ void* LsLuaEngine::parseParam( const char* param, void* initial_config, int leve
 
 void LsLuaEngine::removeParam( void* config )
 {
-    g_api->log(NULL, LSI_LOG_NOTICE,
+    g_api->log(NULL, LSI_LOG_DEBUG,
                             "REMOVE PARAMETERS [%p]\n", config);
     if (s_lib)
     {
@@ -712,7 +702,7 @@ int LsLuaFuncMap::loadLuaScript( lsi_session_t *session, lua_State * L, const ch
                         && (scriptStat.st_ino == p->m_stat.st_ino)
                         && (scriptStat.st_size == p->m_stat.st_size)
                    )
-                        
+                    
                 {
                     p->loadLua(L);
                     return (0);
@@ -723,7 +713,7 @@ int LsLuaFuncMap::loadLuaScript( lsi_session_t *session, lua_State * L, const ch
                 p->unloadLua(L);    // unload the LUA table
                 p->remove();        // remove myself from base
                 delete p;           // killed loaded entry
-                
+            
                 // NOTE never/ever continue the loop.
                 return loadLuaScript(session, L, scriptName);
             }
@@ -735,7 +725,7 @@ int LsLuaFuncMap::loadLuaScript( lsi_session_t *session, lua_State * L, const ch
     p = new LsLuaFuncMap(session, L, scriptName);
     if (p->isReady())
     {
-        g_api->log(NULL, LSI_LOG_NOTICE,
+        g_api->log(session, LSI_LOG_NOTICE,
                      "LUA LOAD FROM SRC SAVED TO CACHE %s\n", scriptName);
         return 0;
     }

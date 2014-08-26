@@ -285,7 +285,8 @@ int CgidConn::buildSSIExecHeader()
         pDir = argv[0];
 
     int priority = ((CgidWorker *)getWorker())->getConfig().getPriority();
-    m_req.buildReqHeader( uid, gid, priority, pChroot, ret, pDir,
+    
+    m_req.buildReqHeader( uid, gid, priority, HttpGlobals::s_umask, pChroot, ret, pDir,
                 strlen( pDir ),
                 ((CgidWorker *)getWorker())->getConfig().getRLimits() );
     p = &argv[1];
@@ -341,7 +342,8 @@ int CgidConn::buildReqHeader()
         ret = 0;
     }
     int priority = ((CgidWorker *)getWorker())->getConfig().getPriority();
-    m_req.buildReqHeader( uid, gid, priority, pChroot, ret, pReal,
+    
+    m_req.buildReqHeader( uid, gid, priority, HttpGlobals::s_umask, pChroot, ret, pReal,
                 pReq->getRealPath()->len(),
                 ((CgidWorker *)getWorker())->getConfig().getRLimits() );
     if ( *pQueryString && (memchr( pQueryString, '=',

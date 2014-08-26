@@ -140,6 +140,47 @@ int FDPass::write_fd(int fd, void *ptr, int nbytes, int sendfd)
     return(sendmsg(fd, &msg, 0));
 }
 
+int FDPass::writex_fd(int fd, void *ptr, int nbytes, int sendfd)
+{
+    struct msghdr    msg;
+    struct iovec    iov[2];
+
+#if (!defined(sun) && !defined(__sun)) || defined(_XPG4_2) || defined(_KERNEL)
+    int             control_space = CMSG_SPACE(sizeof(int));
+    union {
+      struct cmsghdr    cm;
+      char                control[ sizeof( struct cmsghdr ) + sizeof(int) + 8];
+    } control_un;
+    struct cmsghdr    *cmptr;
+
+    msg.msg_control = control_un.control;
+    msg.msg_controllen = control_space;
+
+    cmptr = CMSG_FIRSTHDR(&msg);
+    cmptr->cmsg_len = CMSG_LEN( sizeof( int ) );
+    cmptr->cmsg_level = SOL_SOCKET;
+    cmptr->cmsg_type = SCM_RIGHTS;
+    memmove( CMSG_DATA(cmptr), &sendfd, sizeof( int ) );
+#else
+    msg.msg_accrights = (caddr_t) &sendfd;
+    msg.msg_accrightslen = sizeof(int);
+#endif
+
+    msg.msg_name = NULL;
+    msg.msg_namelen = 0;
+    msg.msg_flags = 0;
+
+    int len = nbytes;
+    iov[0].iov_base = (char *)&len;
+    iov[0].iov_len = sizeof(int);
+    iov[1].iov_base = (char *)ptr;
+    iov[1].iov_len = nbytes;
+    msg.msg_iov = iov;
+    msg.msg_iovlen = 2;
+
+    len = sendmsg(fd, &msg, 0);
+    return(len - sizeof(int));
+}
 
 #include <stdio.h>
 #include <unistd.h>
