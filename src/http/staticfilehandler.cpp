@@ -571,7 +571,7 @@ int StaticFileHandler::process( HttpConnection * pConn, const HttpHandler * pHan
                 if ( ret )
                     return ret;
             }
-            if ( !ret )
+            if ( !ret && pData->getCache()->getFileSize() > 0 )
                 return processRange( pConn, pReq, pRange );
         }
         else

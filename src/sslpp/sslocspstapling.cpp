@@ -16,8 +16,10 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include <sslpp/sslocspstapling.h>
+#include <sslpp/sslerror.h>
 #include "main/httpserverbuilder.h"
 #include <http/httpglobals.h>
+
 #include <util/base64.h>
 #include <util/httpfetch.h>
 #include <util/vmembuf.h>
@@ -391,6 +393,14 @@ int SslOcspStapling::certVerify(OCSP_RESPONSE *pResponse, OCSP_BASICRESP *pBasic
             if ( ::stat( m_sRespfile.c_str(), &st ) == 0 ) 
                 m_RespTime = st.st_mtime;                
         }
+    }
+    if ( iResult )
+    {
+        setLastErrMsg( "%s", SSLError().what() );
+        ERR_clear_error();
+        if ( m_pHttpFetch )
+            m_pHttpFetch->writeLog(s_ErrMsg.c_str());
+
     }
     return iResult;
 }

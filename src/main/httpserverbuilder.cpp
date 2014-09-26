@@ -3890,7 +3890,7 @@ int HttpServerBuilder::initErrorLog2( HttpLogSource &logSource, const XmlNode *p
         logSource.setLogLevel( pValue );
 
     off_t rollSize =
-        m_pCurConfigCtx->getLongValue( pNode, "rollingSize", 1024 * 1024,
+        m_pCurConfigCtx->getLongValue( pNode, "rollingSize", 0,
                                        INT_MAX, 1024 * 10240 );
     int days = m_pCurConfigCtx->getLongValue( pNode, "keepDays", 0,
                LLONG_MAX, 30 );

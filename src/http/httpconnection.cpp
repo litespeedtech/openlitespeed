@@ -549,7 +549,12 @@ int HttpConnection::processNewReq()
 {
     int ret;
     if ( getStream()->isSpdy() )
+    {
         m_request.keepAlive( 0 );
+        m_request.setGzip( REQ_GZIP_ACCEPT | 
+            HttpServerConfig::getInstance().getGzipCompress()
+        );
+    }
     if ((HttpGlobals::s_useProxyHeader == 1)||
         ((HttpGlobals::s_useProxyHeader == 2)&&( getClientInfo()->getAccess() == AC_TRUST )))
     {
