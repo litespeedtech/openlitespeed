@@ -149,7 +149,10 @@ private:
     int doWrite()
     {
         if ( isWantWrite() )
-            return getHandler()->onWriteEx();
+            if (getHandler())
+                return getHandler()->onWriteEx();
+            else
+                return 0;
         else
         {
             suspendWrite();

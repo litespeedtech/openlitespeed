@@ -1854,7 +1854,7 @@ class DTblDef
 		$attrs = array(
 			$this->_attrs['tp_vhRoot'],
 			new DAttr('configFile', 'parse', 'Config File', 'text', true,
-						'/\$VH_NAME.+\.conf$/',
+						'/\$VH_NAME.*\.xml$/',
 						'Requiring variable $VH_NAME and end with .xml. Suggested location is $SERVER_ROOT/conf/vhosts/$VH_NAME/vhconf.xml',
 						$this->_options['text_size'], 0, 'templateVHConfigFile'),
 			$this->_attrs['vh_maxKeepAliveReq'],

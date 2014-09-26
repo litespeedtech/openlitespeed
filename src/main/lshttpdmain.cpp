@@ -873,13 +873,13 @@ int LshttpdMain::init(int argc, char * argv[])
 #endif    
     //if ( !m_noCrashGuard && ( m_pBuilder->getCrashGuard() ))    
     s_iCpuCount = PCUtil::getNumProcessors();
-    
+
+    //Server init done
+    if ( LsiApiHooks::getServerHooks()->isEnabled( LSI_HKPT_MAIN_INITED) )
+        LsiApiHooks::getServerHooks()->runCallbackNoParam(LSI_HKPT_MAIN_INITED, NULL);
+
     if ( !m_noCrashGuard && ( MainServerConfig::getInstance().getCrashGuard() ))
     {
-        //Server init done
-        if ( LsiApiHooks::getServerHooks()->isEnabled( LSI_HKPT_MAIN_INITED) )
-            LsiApiHooks::getServerHooks()->runCallbackNoParam(LSI_HKPT_MAIN_INITED, NULL);
-
         if ( guardCrash() )
             return 8;
         m_pidFile.closePidFile();

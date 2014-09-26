@@ -754,7 +754,12 @@ int HttpSession::processNewReq()
 {
     int ret;
     if ( getStream()->isSpdy() )
+    {
         m_request.keepAlive( 0 );
+        m_request.orGzip( REQ_GZIP_ACCEPT | 
+            HttpServerConfig::getInstance().getGzipCompress()
+        );
+    }
     if ((HttpGlobals::s_useProxyHeader == 1)||
         ((HttpGlobals::s_useProxyHeader == 2)&&( getClientInfo()->getAccess() == AC_TRUST )))
     {
@@ -1116,7 +1121,7 @@ int HttpSession::processURI( int resume )
                     }
                 }
             }
-            
+            pContext = m_request.getContext();
             //since context chnaged, need to update m_sessionHooks & m_pModuleConfig
             m_pModuleConfig = ((HttpContext *)pContext)->getModuleConfig();
             if (!m_sessionHooks.hasOwnCopy())
@@ -1599,7 +1604,12 @@ int HttpSession::buildErrorResponse( const char * errMsg )
         {
             int len = HttpStatusCode::getBodyLen( errCode );
             m_response.setContentLen( len );
-            m_response.parseAdd( HttpStatusCode::getHeaders( errCode ), HttpStatusCode::getHeadersLen( errCode ));
+            m_response.getRespHeaders().add(HttpRespHeaders::H_CONTENT_TYPE,  "text/html", 9 );
+            if ( errCode >= SC_307 )
+            {
+                m_response.getRespHeaders().add(HttpRespHeaders::H_CACHE_CTRL, "private, no-cache, max-age=0", 28 );
+                m_response.getRespHeaders().add(HttpRespHeaders::H_PRAGMA, "no-cache", 8 );
+            }
             
             int ret = appendDynBody( pHtml, len );
             if ( ret < len )

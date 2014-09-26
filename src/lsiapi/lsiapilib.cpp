@@ -83,8 +83,8 @@ int add_global_hook( int index, const lsi_module_t *pModule, lsi_callback_pf cb,
     if (priority[index] < LSI_MAX_HOOK_PRIORITY && priority[index] > -1 * LSI_MAX_HOOK_PRIORITY)
         order = priority[index];
     if ( D_ENABLED( DL_MORE ))
-            LOG_D(( "[Module: %s] add_global_hook, index %d, priority %hd, flag %hd", 
-                MODULE_NAME( pModule ), index, order, flag ));
+            LOG_D(( "[Module: %s] add_global_hook, index %d [%s], priority %hd, flag %hd", 
+                MODULE_NAME( pModule ), index, LsiApiHooks::s_pHkptName[index], order, flag ));
     return pHooks->add( pModule, cb, order, flag );
 }
 
@@ -124,8 +124,8 @@ static int lsiapi_add_session_hook( lsi_session_t *session, int index, const lsi
     if (priority[index] < LSI_MAX_HOOK_PRIORITY && priority[index] > -1 * LSI_MAX_HOOK_PRIORITY)
         order = priority[index];
     if ( D_ENABLED( DL_MORE ))
-            LOG_D(( "[Module: %s] add_session_hook, index %d, priority %hd, flag %hd", 
-                MODULE_NAME( pModule ), index, order, flag ));
+            LOG_D(( "[Module: %s] add_session_hook, index %d [%s], priority %hd, flag %hd", 
+                MODULE_NAME( pModule ), index, LsiApiHooks::s_pHkptName[index], order, flag ));
     return pHooks->add( pModule, cb, order, flag );
 }
 

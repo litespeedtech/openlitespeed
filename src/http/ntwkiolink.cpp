@@ -522,6 +522,10 @@ int NtwkIOLink::writevExSSL( LsiSession* pOS, const iovec *vector, int count )
         }
         else if ( pThis->getState() != HIOS_SHUTDOWN )
         {
+            if ( D_ENABLED( DL_LESS ))
+                LOG_D(( pThis->getLogger(), "[%s] SSL_write() failed: %s "
+                        , pThis->getLogId(), SSLError().what() ));
+            
             pThis->setState( HIOS_CLOSING );
             return -1;
         }

@@ -11,7 +11,7 @@ BASE_DIR=`dirname $LSINSTALL_DIR`
 LSWS_HOME=`dirname $BASE_DIR`
 
 PATH=$PATH
-PHP_VERSION=5.5.9
+PHP_VERSION=5.3.29
 PHP_BUILD_DIR=$LSWS_HOME/phpbuild
 mkdir ${PHP_BUILD_DIR}
 LOG_FILE=${PHP_BUILD_DIR}/adminphp.log
@@ -87,7 +87,7 @@ if [ -e "${PHP_SRC}" ] ; then
 fi
 
 if [ ${PHP_SRC_READY} = "N" ] ; then
-	DOWNLOAD_URL="http://us.php.net/get/${PHP_SRC}/from/us.php.net/mirror"
+	DOWNLOAD_URL="http://us1.php.net/get/${PHP_SRC}/from/us1.php.net/mirror"
 	main_msg "Retrieving PHP source archive from ${DOWNLOAD_URL}" 
 	${DL_METHOD} ${PHP_SRC} ${DOWNLOAD_URL}
 
@@ -95,6 +95,17 @@ if [ ${PHP_SRC_READY} = "N" ] ; then
 	if [ "$?" -eq "0" ] ; then
 		PHP_SRC_READY=Y
 	fi
+fi
+
+if [ ${PHP_SRC_READY} = "N" ] ; then
+    DOWNLOAD_URL="http://us2.php.net/get/${PHP_SRC}/from/us2.php.net/mirror"
+    main_msg "Try again, retrieving PHP source archive from ${DOWNLOAD_URL}" 
+    ${DL_METHOD} ${PHP_SRC} ${DOWNLOAD_URL}
+
+    test_phpsrc_ok ${PHP_SRC}
+    if [ "$?" -eq "0" ] ; then
+        PHP_SRC_READY=Y
+    fi
 fi
 
 if [ ${PHP_SRC_READY} = "N" ] ; then
@@ -206,7 +217,12 @@ if [ "x$PLF" = "xx86_64" ] ; then
 fi
 
 
+find . -name '*.1' > /tmp/php-1.lst.$$
+tar -cf /tmp/php-1.tar.$$ -T /tmp/php-1.lst.$$
 make clean
+tar -xf /tmp/php-1.tar.$$
+rm /tmp/php-1.tar.$$ /tmp/php-1.lst.$$
+
 
 main_msg "Compiling PHP (5-10 minutes)" 
 echo `date`

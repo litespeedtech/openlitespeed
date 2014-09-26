@@ -98,15 +98,10 @@ private:
 
     int                 m_iReqHeaderBufFinished;
 
-    int                 m_reqLineOff;
-    int                 m_reqLineLen;
-
     key_value_pair      m_curURL;
-    int                 m_reqURLOff;
-    int                 m_reqURLLen;
 
     const MIMESetting * m_pMimeType;
-    int                 m_iHttpHeaderEnd;
+    
 
     //Comment:The order of the below 3 varibles should NOT be changed!!!
     short               m_commonHeaderLen[HttpHeader::H_TE];
@@ -127,6 +122,12 @@ private:
     short               m_iRedirects;
     short               m_iContextState;
     const HttpHandler * m_pHttpHandler;
+    
+    int                 m_reqLineOff;
+    int                 m_reqLineLen;
+    int                 m_reqURLOff;
+    int                 m_reqURLLen;
+    int                 m_iHttpHeaderEnd;
 
     const HttpContext * m_pContext;
     //const HttpContext * m_pHTAContext;

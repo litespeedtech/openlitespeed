@@ -39,6 +39,10 @@ int CgidReq::add( const char *name, size_t nameLen,
     int len = nameLen + valLen + 4;
     if ( len > 65530 )
         return -1;
+    if ( value && strncmp( value, "() {", 4 ) == 0 )
+    {
+        return -1;
+    }
     if ( bufLen < len )
     {
         int grow = ((len - bufLen + 1023) >> 10 ) << 10;

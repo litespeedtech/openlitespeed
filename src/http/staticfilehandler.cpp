@@ -490,7 +490,7 @@ int StaticFileHandler::process( HttpSession *pSession, const HttpHandler * pHand
                 if ( ret )
                     return ret;
             }
-            if ( !ret )
+            if ( !ret && pData->getFileData()->getFileSize() > 0 )
                 return processRange( pSession, pReq, pRange );
         }
         else

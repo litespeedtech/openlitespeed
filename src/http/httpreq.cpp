@@ -516,6 +516,12 @@ int HttpReq::processHeaderLines()
             pTemp = pMark + 1;
             pTemp1 = pLineEnd;
             skipSpaceBothSide(pTemp, pTemp1);
+            if ( strncmp( pTemp, "() {", 4 ) == 0 )
+            {
+                LOG_INFO(( "[%s] Status 400: CVE-2014-6271, CVE-2014-7169 signature detected in request header!",
+                        getLogId() ));
+                return SC_400;
+            }
             index = HttpHeader::getIndex( pLineBegin );
             if(index != HttpHeader::H_HEADER_END)
             {

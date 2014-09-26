@@ -29,6 +29,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
 */
+#define _GNU_SOURCE 
 #include "../include/ls.h"
 #include <string.h>
 #include <stdlib.h>
@@ -173,7 +174,7 @@ static int reg_handler(lsi_cb_param_t * rec)
     const char *uri;
     int len;
     uri = g_api->get_req_uri(rec->_session, &len);
-    if ( len >= 10 && strncasecmp(uri, "/testparam", 10) == 0 )
+    if ( len >= 10 && strcasestr(uri, "/testparam") )
     {
         g_api->register_req_handler(rec->_session, &MNAME, 10);
     }

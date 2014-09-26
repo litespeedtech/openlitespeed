@@ -92,7 +92,7 @@ int ModuleHandler::onWrite(HttpSession* pSession)
         }
         if (status != LSI_WRITE_RESP_CONTINUE)
         {
-            pSession->endResponse(0);
+            pSession->endResponse(1);
         }
         return (status == LSI_WRITE_RESP_CONTINUE);
     }
