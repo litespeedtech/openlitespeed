@@ -26,7 +26,7 @@ ContextList::ContextList()
     : TPointerList< HttpContext >( 4 )
 {
     m_size = capacity();
-    m_sTags.resizeBuf( m_size );
+    m_sTags.prealloc( m_size );
     memset( m_sTags.buf(), 0, m_size );
 }
 
@@ -53,7 +53,7 @@ int ContextList::add( HttpContext * pContext, int release )
     int n = size();
     if ( m_size <= n )
     {
-        if ( m_sTags.resizeBuf( m_size * 2 ) )
+        if ( m_sTags.prealloc( m_size * 2 ) )
         {
             memset( m_sTags.buf() + m_size, 0, m_size );
             m_size = m_size * 2;

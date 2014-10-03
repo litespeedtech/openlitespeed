@@ -38,6 +38,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  ********************************************************************/
 
 #include "../include/ls.h"
+
+#include <lsr/lsr_xpool.h>
+
 #include <stdlib.h>
 #include <string.h>
 #include <openssl/md5.h>
@@ -75,18 +78,8 @@ static int releaseData(void *data)
     MyData *myData = (MyData *)data;
     if (myData)
     {
-        free (myData);
+        //free (myData); Do not need to free with session pool, will be freed at the end of the session.
         g_api->log( NULL, LSI_LOG_DEBUG, "#### reqinfomodule releaseData\n" );
-    }
-    return 0;
-}
-
-static int resetData(lsi_cb_param_t * rec)
-{
-    MyData *myData = (MyData *)g_api->get_module_data(rec->_session, &MNAME, LSI_MODULE_DATA_HTTP);
-    if (myData)
-    {
-        memset(myData, 0, sizeof(MyData));
     }
     return 0;
 }
@@ -94,12 +87,11 @@ static int resetData(lsi_cb_param_t * rec)
 static int initData(lsi_cb_param_t * rec)
 {
     MyData *myData = (MyData *)g_api->get_module_data(rec->_session, &MNAME, LSI_MODULE_DATA_HTTP);
-    if (!myData)
-    {
-        myData = (MyData *) calloc(1, sizeof(MyData));
-        g_api->log( NULL, LSI_LOG_DEBUG, "#### reqinfomodule init data\n" );
-        g_api->set_module_data(rec->_session, &MNAME, LSI_MODULE_DATA_HTTP, (void *)myData);
-    }
+    lsr_xpool_t *pPool = g_api->get_session_pool( rec->_session );
+    myData = (MyData *)lsr_xpool_alloc( pPool, sizeof( MyData ) );
+    memset( myData, 0, sizeof( MyData ) );
+    g_api->log( NULL, LSI_LOG_DEBUG, "#### reqinfomodule init data\n" );
+    g_api->set_module_data(rec->_session, &MNAME, LSI_MODULE_DATA_HTTP, (void *)myData);
     return 0;
 }
 
@@ -108,7 +100,7 @@ static int check_uri_and_reg_handler(lsi_cb_param_t * rec)
     const char *uri;
     int len;
     uri = g_api->get_req_uri(rec->_session, &len);
-    if ( len >= strlen(TESTURI) && strncasecmp(uri, TESTURI, strlen(TESTURI)) == 0 )
+    if ( uri && len >= strlen(TESTURI) && strncasecmp(uri, TESTURI, strlen(TESTURI)) == 0 )
     {
         g_api->register_req_handler( rec->_session, &MNAME, strlen(TESTURI) );
     }
@@ -116,9 +108,9 @@ static int check_uri_and_reg_handler(lsi_cb_param_t * rec)
 }
 
 static lsi_serverhook_t serverHooks[] = {
-    {LSI_HKPT_HTTP_BEGIN, initData, LSI_HOOK_NORMAL, 0},
-    {LSI_HKPT_HTTP_END, resetData, LSI_HOOK_NORMAL, 0},
-    {LSI_HKPT_RECV_REQ_HEADER, check_uri_and_reg_handler, LSI_HOOK_NORMAL, 0},
+    {LSI_HKPT_HTTP_BEGIN, initData, LSI_HOOK_NORMAL, LSI_HOOK_FLAG_ENABLED},
+    //{LSI_HKPT_HTTP_END, resetData, LSI_HOOK_NORMAL, LSI_HOOK_FLAG_ENABLED},
+    {LSI_HKPT_RECV_REQ_HEADER, check_uri_and_reg_handler, LSI_HOOK_NORMAL, LSI_HOOK_FLAG_ENABLED},
     lsi_serverhook_t_END   //Must put this at the end position
 };
 
@@ -314,7 +306,8 @@ static int handleReqBody( lsi_session_t *session)
     MyData *myData = (MyData *)g_api->get_module_data(session, &MNAME, LSI_MODULE_DATA_HTTP);
     if ( myData ==  NULL || myData->type == 0)
     {
-       return 0;
+        g_api->end_resp(session);
+        return 0;
     }
     
     while(1)
@@ -367,10 +360,13 @@ static int handleReqBody( lsi_session_t *session)
         }
         else if (myData->type == 3)
         {
-            fclose(myData->fp);
-            append(session, "File uploaded.<br>", 18);
-            written += 18;
-            
+            if (myData->fp)
+            {
+                fclose(myData->fp);
+                myData->fp = NULL;
+                append(session, "File uploaded.<br>", 18);
+                written += 18;
+            }
         }
         
         myData->resp_done = 1;
@@ -378,14 +374,14 @@ static int handleReqBody( lsi_session_t *session)
         
     if ( written > 0)
         g_api->flush(session);
-    //g_api->set_handler_write_state(session, 1);
-    
+    g_api->set_handler_write_state(session, 1);
+    //g_api->end_resp(session);
     return readbytes;
 }
 
 static int handlerBeginProcess( lsi_session_t *session)
 {
-    #define VALMAXSIZE 512
+    #define VALMAXSIZE 4096
     #define LINEMAXSIZE (VALMAXSIZE + 50)
     char val[VALMAXSIZE], line[LINEMAXSIZE] = {0};
     int n;
@@ -393,19 +389,20 @@ static int handlerBeginProcess( lsi_session_t *session)
     const char *p;
     char *buf;
     MyData *myData = (MyData *)g_api->get_module_data(session, &MNAME, LSI_MODULE_DATA_HTTP);
+    lsr_xpool_t *pPool = g_api->get_session_pool( session );
     
     //Create response body
     append( session, CONTENT_HEAD, 0);
     
     //Original request header
     n = g_api->get_req_raw_headers_length(session);
-    buf = (char *)malloc(n + 1);
+    buf = (char *)lsr_xpool_alloc( pPool, n + 1 );
     memset(buf, 0, n + 1);
     n = g_api->get_req_raw_headers(session, buf, n + 1);
     append( session, "Original request<table border=1><tr><td><pre>\r\n", 0);
     append( session, buf, n);
     append( session, "\r\n</pre></td></tr>\r\n", 0);
-    free(buf);
+    lsr_xpool_free( pPool, buf );
     
     append( session, "\r\n</table><br>Request headers<br><table border=1>\r\n", 0);
     for (i=0; i<sizeof(reqHeaderArray) / sizeof(char *); ++i)
@@ -501,8 +498,10 @@ static int handlerBeginProcess( lsi_session_t *session)
         
     g_api->flush(session);
     
-    if ( myData->type != 0)
-        handleReqBody( session );
+//     if ( myData->type != 0)
+         handleReqBody( session );
+    
+    //g_api->end_resp(session);
     return 0;
 }
 

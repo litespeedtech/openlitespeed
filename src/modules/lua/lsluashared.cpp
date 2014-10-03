@@ -382,7 +382,7 @@ static inline lsi_shmhash_t * lsLuaSharedObjectHelper( lua_State * L, const char
                 return NULL;
             }
             // snprinf - guaranteed the null will be added - given keyName is big enough
-            snprintf(keyName, keyLen, "%.*s", size, cp);
+            snprintf(keyName, keyLen, "%.*s", (int)size, cp);
             if (keyName[0])
                 return pShared;
         }
@@ -887,7 +887,7 @@ static int LsLua_shared_GET(lua_State * L)
     if (cp && len && (len < LSSHM_MAXNAMELEN ) )
     {
         char buf[0x100];
-        snprintf(buf, 0x100, "%.*s", len, cp);
+        snprintf(buf, 0x100, "%.*s", (int)len, cp);
         // LsLua_log( L, LSI_LOG_NOTICE, 0, "%s [%s] %d", "LsLua_shared_GET", buf, len);
         
         lsi_shmhash_t * hash = lsLuaOpenShm(buf);

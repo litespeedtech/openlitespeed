@@ -47,7 +47,7 @@ int ConnPool::regConn( IConnection * pConn )
         if ( setMaxConns( m_connList.size() + 10 ) )
             return -1;
     }
-    m_connList.safe_push_back( pConn );
+    m_connList.unsafe_push_back( pConn );
     return 0;
 }
 
@@ -74,7 +74,7 @@ void ConnPool::removeConn( IConnection * pConn )
         }
     }
     if ( found )
-        m_badList.safe_push_back( pConn );
+        m_badList.unsafe_push_back( pConn );
 }
 
 int  ConnPool::inFreeList( IConnection * pConn )

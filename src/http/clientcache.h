@@ -44,7 +44,7 @@ private:
     Cache                   m_v6;
     ClientList              m_toBeRemoved;
     
-    static int appendDirtyList( GHash::iterator iter, void * pList );
+    static int appendDirtyList( const void *pKey, void *pData, void * pList );
     void       clean( Cache * pCache );
     int     writeBlockedIP( AutoBuf * pBuf, Cache * pCache );
     void    recycle( ClientInfo * pInfo );

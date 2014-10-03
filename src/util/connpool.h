@@ -69,7 +69,7 @@ public:
     void reuse( IConnection* pConn )
     {
         assert( pConn );
-        m_freeList.safe_push_back( pConn );
+        m_freeList.unsafe_push_back( pConn );
     }
 
     int  inFreeList( IConnection * pConn );

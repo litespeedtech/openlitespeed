@@ -31,20 +31,20 @@ ContextTree::ContextTree()
 {
     m_pRootNode = new ContextNode("", NULL);
     m_pLocRootNode = new ContextNode( "", NULL );
-    m_pLocRootPath = g_pool.dupstr( "/" );
+    m_pLocRootPath = Pool::dupstr( "/" );
 }
 
 ContextTree::~ContextTree()
 {
     delete m_pRootNode;
     delete m_pLocRootNode;
-    g_pool.deallocate2( m_pLocRootPath );
+    Pool::deallocate2( m_pLocRootPath );
 }
 
 void ContextTree::setRootLocation( const char * pLocation )
 {
-    g_pool.deallocate2( m_pLocRootPath );
-    m_pLocRootPath = g_pool.dupstr( pLocation );
+    Pool::deallocate2( m_pLocRootPath );
+    m_pLocRootPath = Pool::dupstr( pLocation );
     m_iLocRootPathLen =  strlen( pLocation );
 }
 

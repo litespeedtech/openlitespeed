@@ -47,7 +47,7 @@ TEST(HttpBufTest_test)
     CHECK( 15 == buf.size() );
     
     CHECK( buf.size() == buf.end() - buf.begin() );
-    CHECK( 10 == buf.getPointer( 10 ) - buf.begin() );
+    CHECK( 10 == buf.getp( 10 ) - buf.begin() );
     CHECK( buf.available() == buf.capacity() - buf.size() );
     buf.clear();
     CHECK( 0 == buf.size() );

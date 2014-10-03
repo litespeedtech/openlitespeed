@@ -59,10 +59,12 @@ class KQueuer : public Multiplexer
         pEvent->udata  = pHandler;
         return 0;
     }
-       
+    void processAioEvent( struct kevent * pEvent );
+    void processSocketEvent( struct kevent * pEvent );   
 public: 
     KQueuer();
     ~KQueuer();
+    virtual int getHandle() const   {   return m_fdKQ;  }
     virtual int init( int capacity = DEFAULT_CAPACITY );
     virtual int add( EventReactor* pHandler, short mask );
     virtual int remove( EventReactor* pHandler );

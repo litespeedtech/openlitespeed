@@ -32,6 +32,7 @@ public:
     {
         DEFAULT_CAPACITY = 16
     };
+    virtual int getHandle() const          {    return -1;  }
     virtual int init( int capacity = DEFAULT_CAPACITY ) { return 0; };
     virtual int add( EventReactor* pHandler, short mask ) = 0;
     virtual int remove( EventReactor* pHandler ) = 0;
@@ -51,6 +52,8 @@ public:
     virtual void testEvents( EventReactor * pHandler ) {}
     int  getFLTag() const   {   return m_iFLTag;        }
     void setFLTag(int tag)  {   m_iFLTag = tag;         }
+    
+    
 };
 
 #endif

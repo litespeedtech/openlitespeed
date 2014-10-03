@@ -1795,8 +1795,6 @@ lsi_module_config_t *parseModuleConfigParam(lsi_module_t *pModule, const HttpCon
     if (config->own_data_flag == 2 || pContext->getParent() == NULL )
         return config;
         
-    
-    //HttpSessionHooks *parentHooks = ((HttpContext *)pContext->getParent())->getSessionHooks();
     ModuleConfig *parentModuleConfig = ((HttpContext *)pContext->getParent())->getModuleConfig();
 
     void *init_config = parseModuleConfigParam(pModule, pContext->getParent())->config;
@@ -1807,7 +1805,7 @@ lsi_module_config_t *parseModuleConfigParam(lsi_module_t *pModule, const HttpCon
     if (config->own_data_flag == 1)
     {
         assert(config->sparam != NULL);
-        config->config = pModule->_config_parser->_parse_config(config->sparam->c_str(), init_config, LSI_CONTEXT_LEVEL, pContext->getURI());
+        config->config = pModule->_config_parser->_parse_config(config->sparam->c_str(), config->sparam->len(), init_config, LSI_CONTEXT_LEVEL, pContext->getURI());
         delete config->sparam;
         config->sparam = NULL;
         config->own_data_flag = 2;
@@ -2090,15 +2088,15 @@ int HttpVHost::config( const XmlNode *pVhConfNode)
     
     ModuleConfig *pModuleConfig = pRootContext->getModuleConfig();
     
-    if (pModuleConfig->isMatchGlobal())
-    {
-        HttpSessionHooks *parentHooks = ((HttpContext *)pRootContext->getParent())->getSessionHooks();
-        pRootContext->setInternalSessionHooks(parentHooks);
-    }
-    else
+//     if (pModuleConfig->isMatchGlobal())
+//     {
+//         HttpSessionHooks *parentHooks = ((HttpContext *)pRootContext->getParent())->getSessionHooks();
+//         pRootContext->setInternalSessionHooks(parentHooks);
+//     }
+//     else
     {
         pRootContext->initExternalSessionHooks();
-        ModuleManager::getInstance().inheritHttpApiHooks(pRootContext->getSessionHooks(), pModuleConfig);
+        ModuleManager::getInstance().applyConfigToHttpRt(pRootContext->getSessionHooks(), pModuleConfig);
     }
     
     //Here, checking pModuleList because modulelist may have new context

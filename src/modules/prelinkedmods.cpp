@@ -1,11 +1,11 @@
 
-#include <../addon/include/ls.h>
+#include <ls.h>
 
 #include <string.h>
 
 extern lsi_module_t modcompress;
 extern lsi_module_t moddecompress;
-extern int addModgzipFilter(lsi_session_t *session, int isSend, uint8_t compressLevel, int priority);
+extern int addModgzipFilter(lsi_session_t *session, int isSend, uint8_t compressLevel);
 typedef struct 
 {
     const char      * _pName;

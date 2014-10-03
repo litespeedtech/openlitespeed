@@ -18,8 +18,7 @@
 #ifndef AUTOSTR_H
 #define AUTOSTR_H
 
-
-
+#include <lsr/lsr_str.h>
 #include <string.h>
 
 class AutoStr
@@ -38,54 +37,86 @@ public:
         setStr( rhs.c_str() );
         return *this;
     }
-    int setStr( const char * pStr );
-    int setStr( const char * pStr, int len );
-    char * resizeBuf( int size );
-    char * buf()                    {   return m_pStr;  }
-    const char * c_str()    const   {   return m_pStr;  }
-    //operator const char *() const   {   return m_pStr;  }
+    
+    int          setStr( const char * pStr );
+    int          setStr( const char * pStr, int len );
+    char       * prealloc( int size );
+    char       * buf()                    {   return m_pStr;  }
+    const char * c_str()    const         {   return m_pStr;  }
+    operator const char *() const         {   return m_pStr;  }
     
 };
 
-class AutoStr2 : public AutoStr
+
+class AutoStr2 : private lsr_str_t
 {
-    int m_iStrLen;
     AutoStr2& operator=( const AutoStr * pStr );
     AutoStr2& operator=( const AutoStr2 * pStr );
 public:
-    AutoStr2();
-    AutoStr2( const AutoStr2& );
+    AutoStr2()
+    {   lsr_str_blank( this );    }
+    
+    AutoStr2( const AutoStr2& rhs )
+    {   lsr_str_copy( this, &rhs ); }
+    
     AutoStr2( const char * pStr )
-    {   m_iStrLen = AutoStr::setStr( pStr ); }
+    {   lsr_str( this, pStr, strlen( pStr ) );   }
+    
     AutoStr2( const char * pStr, int len )
-        :m_iStrLen( len )
-    {   AutoStr::setStr( pStr, len );   }
-        
-    ~AutoStr2() {}
+    {   lsr_str( this, pStr, len );   }
+    
+    ~AutoStr2()
+    {   lsr_str_d( this );  }
+    
     AutoStr2& operator=( const char * pStr )
     {
-        m_iStrLen = AutoStr::setStr( pStr );
+        lsr_str_set_str( this, pStr, strlen( pStr ) );
         return *this;
     }
+    
     AutoStr2& operator=( const AutoStr2 &rhs )
     {
-        m_iStrLen = AutoStr::setStr( rhs.c_str(), rhs.len() );
+        lsr_str_set_str( this, rhs.c_str(), rhs.len() );
         return *this;
     }
-
-    int len() const         {   return m_iStrLen;   }
-    void setLen( int len )  {   m_iStrLen = len;    }
-    int setStr( const char * pStr );
-    int setStr( const char * pStr, int len )
-    {   m_iStrLen = len; return AutoStr::setStr( pStr, len );   }
-    void append( const char * str, const int len );
+    
+    char       *buf()                                   {   return m_pStr;  }
+    const char *c_str() const                           {   return m_pStr;  }
+    int         len() const                             {   return m_iStrLen;   }
+    void        setLen( int len )                       {   m_iStrLen = len;    }
+    
+    char   *prealloc( int size )                       {   return lsr_str_prealloc( this, size );    }
+    void    append( const char * pStr, const int len )  {   lsr_str_append( this, pStr, len );  }
+    int     setStr( const char * pStr, int len )        {   return lsr_str_set_str( this, pStr, len );   }
+    int     setStr( const char * pStr )                 
+    {   
+        return lsr_str_set_str( this, pStr, strlen( pStr ) );
+    }
+    
+    //operator const char *() const   {   return m_pStr;  }
+    
 };
 
 static inline int operator==( const AutoStr& s1, const char * s2 )
 {   return ((s1.c_str() == s2)||(s1.c_str()&&s2&&!strcmp( s1.c_str(), s2 )));    }
 static inline int operator==( const char * s1, const AutoStr& s2 )
 {   return ((s1 == s2.c_str())||(s1&&s2.c_str()&&!strcmp( s1, s2.c_str() )));    }
+static inline int operator==( const AutoStr2& s1, const char * s2 )
+{   return ((s1.c_str() == s2)||(s1.c_str()&&s2&&!strcmp( s1.c_str(), s2 )));    }
+static inline int operator==( const char * s1, const AutoStr2& s2 )
+{   return ((s1 == s2.c_str())||(s1&&s2.c_str()&&!strcmp( s1, s2.c_str() )));    }
+
 static inline int operator==( const AutoStr& s1, const AutoStr2& s2 )
 {   return ((s1.c_str() == s2.c_str()) || (s1.c_str()&&s2.c_str()&&!strcmp( s1.c_str(), s2.c_str() )));    }
+static inline int operator==( const AutoStr2& s1, const AutoStr& s2 )
+{   return ((s1.c_str() == s2.c_str()) || (s1.c_str()&&s2.c_str()&&!strcmp( s1.c_str(), s2.c_str() )));    }
+
+static inline int operator==( const AutoStr& s1, const AutoStr& s2 )
+{   return ((s1.c_str() == s2.c_str()) || (s1.c_str()&&s2.c_str()&&!strcmp( s1.c_str(), s2.c_str() )));    }
+static inline int operator==( const AutoStr2& s1, const AutoStr2& s2 )
+{   return ((s1.c_str() == s2.c_str()) || (s1.c_str()&&s2.c_str()&&!strcmp( s1.c_str(), s2.c_str() )));    }
+
 
 #endif
+
+

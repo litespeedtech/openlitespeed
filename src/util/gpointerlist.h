@@ -19,30 +19,33 @@
 #define GPOINTERLIST_H
 
 
-
-  
+#include <lsr/lsr_ptrlist.h>
+ 
 #include <stddef.h>
 #include <string.h>
 #include <sys/types.h>
 
 typedef int (*gpl_for_each_fn)( void *);
 
-class GPointerList
+class GPointerList : private lsr_ptrlist_t
 {
-    void ** m_pStore;
-    void ** m_pStoreEnd;
-    void ** m_pEnd;
-    
-    int allocate( int capacity );
-    GPointerList( const GPointerList & rhs );
+    int allocate( int capacity )
+    {   return lsr_ptrlist_reserve( this, capacity );   }
+    GPointerList( const GPointerList & rhs )
+    {   lsr_ptrlist_copy( this, &rhs );   }
     void operator=( const GPointerList& rhs );
 public: 
     typedef void ** iterator;
     typedef void *const* const_iterator;
-    GPointerList();
-    explicit GPointerList( size_t initSize );
-    ~GPointerList();
-    ssize_t size() const     {   return m_pEnd - m_pStore;   }
+
+    GPointerList()
+    {   lsr_ptrlist( this, 0 );   }
+    explicit GPointerList( size_t initSize )
+    {   lsr_ptrlist( this, initSize );   }
+    ~GPointerList()
+    {   lsr_ptrlist_d( this );   }
+
+    ssize_t size() const    {   return m_pEnd - m_pStore;   }
     bool empty() const      {   return m_pEnd == m_pStore;  }
     bool full() const       {   return m_pEnd == m_pStoreEnd;   }
     size_t capacity() const {   return m_pStoreEnd - m_pStore;  }
@@ -53,44 +56,45 @@ public:
     const_iterator end() const      {   return m_pEnd;      }
     void * back() const             {   return *(m_pEnd - 1);   }
     int reserve( size_t sz )        {   return allocate( sz );  }
-    int resize( size_t sz );
+    int resize( size_t sz ) {   return lsr_ptrlist_resize( this, sz ); }
     int grow( size_t sz )   {   return allocate( sz + capacity() ); }
     
     iterator erase( iterator iter )
     {   *iter = *(--m_pEnd );  return iter; }
-    void safe_push_back( void *pPointer )   {   *m_pEnd++ = pPointer;   }
-    void safe_push_back( void **pPointer, int n );
-    void safe_pop_back( void **pPointer, int n );
-    int  push_back( void * pPointer );
-    int  push_back( const void * pPointer )
-    {   return push_back( (void *)pPointer );    }
-    int  push_back( const GPointerList& list );
-    void *pop_back()                        {   return *(--m_pEnd);         }
+
+    int  push_back( void *pPointer )
+    {   return lsr_ptrlist_push_back( this, pPointer );   }
+    int  push_back( const void *pPointer )
+    {   return push_back( (void *)pPointer );   }
+    int  push_back( const GPointerList& list )
+    {   return lsr_ptrlist_push_back2( this, &list );   }
+    void unsafe_push_back( void *pPointer )
+    {   *m_pEnd++ = pPointer;   }
+    void unsafe_push_back( void **pPointer, int n )
+    {   lsr_ptrlist_unsafe_push_backn( this, pPointer, n );   }
+
+    void *pop_back()        {   return *(--m_pEnd);         }
+    void unsafe_pop_back( void **pPointer, int n )
+    {   lsr_ptrlist_unsafe_pop_backn( this, pPointer, n );   }
     int pop_front( void **pPointer, int n )
-    {   if (n > size() ) 
-        {
-            n = size();
-        }
-        memmove( pPointer, m_pStore, n * sizeof( void *) );
-        if ( n >= size() )
-            clear();
-        else
-        {
-            memmove( m_pStore, m_pStore + n, sizeof( void *) * ( m_pEnd - m_pStore - n ) );
-            m_pEnd -= n;
-        }
-        return n;
-    }
+    {   return lsr_ptrlist_pop_front( this, pPointer, n );   }
+
     void *& operator[]( size_t off )        {   return *(m_pStore + off);   }
     void *& operator[]( size_t off ) const  {   return *(m_pStore + off);   }
-    void sort( int(*compare)(const void *, const void *) );
-    void swap( GPointerList & rhs );
-    
+
+    void sort( int(*compare)(const void *, const void *) )
+    {   lsr_ptrlist_sort( this, compare );   }
+    void swap( GPointerList & rhs )
+    {   lsr_ptrlist_swap( this, &rhs );   }
+ 
     const_iterator lower_bound( const void * pKey,
-             int(*compare)(const void *, const void *) ) const ;
+             int(*compare)(const void *, const void *) ) const
+    {   return lsr_ptrlist_lower_bound( this, pKey, compare );   }
     const_iterator bfind( const void * pKey,
-             int(*compare)(const void *, const void *) ) const;
-    int for_each( iterator beg, iterator end, gpl_for_each_fn fn );
+             int(*compare)(const void *, const void *) ) const
+    {   return lsr_ptrlist_bfind( this, pKey, compare );   }
+    int for_each( iterator beg, iterator end, gpl_for_each_fn fn )
+    {   return lsr_ptrlist_for_each( beg, end, fn );   }
 
 };
 
@@ -169,6 +173,5 @@ public:
     int for_each( iterator beg, iterator end, gpl_for_each_fn fn )
     {   return GPointerList::for_each( (void**)beg, (void**)end, fn );    }
 };
-
 
 #endif

@@ -415,56 +415,52 @@ void ModuleManager::OnTimer100msec()
     }
 }
 
-void ModuleManager::inheritIolinkApiHooks(IolinkSessionHooks *apiIolinkHooks, ModuleConfig *moduleConfig)
+void ModuleManager::applyConfigToIolinkRt(IolinkSessionHooks *pSessionHooks, ModuleConfig *moduleConfig)
 {
-    apiIolinkHooks->inherit(LsiApiHooks::getIolinkHooks());
-    if( moduleConfig->isMatchGlobal() != 0)
-        return ;
-    
     int count = moduleConfig->getCount();
     for (short module_id = 0; module_id < count; ++module_id)
     {
         if ( !moduleConfig->getFilterEnable(module_id) )
         {
-             for (int level= apiIolinkHooks->getBase(); level< apiIolinkHooks->getBase() + apiIolinkHooks->getSize(); ++level)
-                apiIolinkHooks->getCopy(level)->remove(m_gModuleArray[module_id]);
+            pSessionHooks->setEnableOfModule(m_gModuleArray[module_id], 0);
         }
+        //We do not deal with enable==1 case because before call this function, the RT is inherit from global
     }
 }
 
-/****
- * There is a int fromGlobal because global level inherit is different.
- * Global level will add all hooks to global hooks, even the moduleConfig is disable the hook.
- * We need to do so is because global level hooks should have all of the hook so that 
- * the other level can inheit from it no matter the hook is enabled or disabled
- * 
- * The findParentMatch() will find if match with real global(all ENABLED), if YES, return 1 and 
- * will inherit from the global hooks
- * If not match real global, will try to match parent, if YES, return 2.
- * But if fromGlobal is 1, the parent is also global, the Moduleconfig is NOT all enabled, so that
- * the inherit need to be treated as not match
- */
-void ModuleManager::inheritHttpApiHooks(HttpSessionHooks *apiHttpHooks, ModuleConfig *moduleConfig)
+void ModuleManager::applyConfigToServerRt(ServerSessionHooks *pSessionHooks, ModuleConfig *moduleConfig)
 {
-    apiHttpHooks->inherit(LsiApiHooks::getHttpHooks());  //inherit from global level
     int count = moduleConfig->getCount();
     for (short module_id = 0; module_id < count; ++module_id)
     {
         if ( !moduleConfig->getFilterEnable(module_id) )
         {
-            for (int level= apiHttpHooks->getBase(); level< apiHttpHooks->getBase() + apiHttpHooks->getSize(); ++level)
-                apiHttpHooks->getCopy(level)->remove(m_gModuleArray[module_id]);
+            pSessionHooks->setEnableOfModule(m_gModuleArray[module_id], 0);
+        }
+        //We do not deal with enable==1 case because before call this function, the RT is inherit from global
+    }
+}
+
+
+void ModuleManager::applyConfigToHttpRt(HttpSessionHooks *pSessionHooks, ModuleConfig *moduleConfig)
+{
+    int count = moduleConfig->getCount();
+    for (short module_id = 0; module_id < count; ++module_id)
+    {
+        if ( !moduleConfig->getFilterEnable(module_id) )
+        {
+            pSessionHooks->setEnableOfModule(m_gModuleArray[module_id], 0);
         }
     }
 }
     
-void ModuleManager::updateHttpApiHook(HttpSessionHooks *apiHttpHooks, ModuleConfig *moduleConfig, int module_id)
+void ModuleManager::updateHttpApiHook(HttpSessionHooks *pRtHooks, ModuleConfig *moduleConfig, int module_id)
 {
     if ( !moduleConfig->getFilterEnable(module_id) )
     {
-        for (int level= apiHttpHooks->getBase(); level< apiHttpHooks->getBase() + apiHttpHooks->getSize(); ++level)
-            apiHttpHooks->getCopy(level)->remove(m_gModuleArray[module_id]);
+        pRtHooks->setEnableOfModule(m_gModuleArray[module_id], 0);
     }
+    //We do not deal with enable==1 case because before call this function, the RT is inherit from global
 }
 
 void ModuleConfig::init(int count)
@@ -602,18 +598,21 @@ int ModuleConfig::saveConfig(const XmlNode *pNode, lsi_module_t *pModule, lsi_mo
 int ModuleConfig::parseConfig(const XmlNode *pNode, lsi_module_t *pModule, ModuleConfig *pModuleConfig, int level, const char *name)
 {
     const char *pValue = NULL;
+    int iValueLen = 0;
     
     int module_id = MODULE_ID( pModule );
     lsi_module_config_t *config = pModuleConfig->get(module_id);
     config->module = pModule;
     
     pValue = pNode->getChildValue("enabled");
+    iValueLen = pNode->getChildValueLen("enabled");
     if (pValue)
     {
         ModuleConfig::setFilterEnable(config, atoi(pValue));
     }
     
     pValue = pNode->getChildValue("param");
+    iValueLen = pNode->getChildValueLen("param");
     if ( pModule->_config_parser && pModule->_config_parser->_parse_config)
     {
         if (pModule->_config_parser->_config_keys)
@@ -628,7 +627,7 @@ int ModuleConfig::parseConfig(const XmlNode *pNode, lsi_module_t *pModule, Modul
 //             }
             
         }
-        config->config = pModule->_config_parser->_parse_config(pValue, config->config, level, name);
+        config->config = pModule->_config_parser->_parse_config(pValue, iValueLen, config->config, level, name);
         config->own_data_flag = 2;
     }
     else

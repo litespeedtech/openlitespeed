@@ -72,12 +72,13 @@ static int reg_handler(lsi_cb_param_t * rec)
 
 static int disable_compress( lsi_cb_param_t *rec )
 {
+    //To disable compress, just set the LSI_HOOK_FLAG_DECOMPRESS_REQUIRED flag in the hook.
     return LSI_RET_OK;
 }
 
 static lsi_serverhook_t serverHooks[] = {
-    {LSI_HKPT_RECV_REQ_HEADER, reg_handler, LSI_HOOK_NORMAL, 0},
-    {LSI_HKPT_RCVD_RESP_BODY, disable_compress, LSI_HOOK_NORMAL, LSI_HOOK_FLAG_DECOMPRESS_REQUIRED},
+    {LSI_HKPT_RECV_REQ_HEADER, reg_handler, LSI_HOOK_NORMAL, LSI_HOOK_FLAG_ENABLED},
+    {LSI_HKPT_RCVD_RESP_BODY, disable_compress, LSI_HOOK_NORMAL, LSI_HOOK_FLAG_DECOMPRESS_REQUIRED | LSI_HOOK_FLAG_ENABLED},
     lsi_serverhook_t_END   //Must put this at the end position
 };
 

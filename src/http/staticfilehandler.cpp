@@ -35,6 +35,7 @@
 #include <util/gzipbuf.h>
 #include <util/iovec.h>
 #include <util/stringtool.h>
+#include <lsr/lsr_xpool.h>
 
 #include <fcntl.h>
 #include <errno.h>
@@ -490,7 +491,7 @@ int StaticFileHandler::process( HttpSession *pSession, const HttpHandler * pHand
                 if ( ret )
                     return ret;
             }
-            if ( !ret )
+            if ( !ret && pData->getFileData()->getFileSize() > 0 )
                 return processRange( pSession, pReq, pRange );
         }
         else
@@ -564,7 +565,7 @@ int StaticFileHandler::process( HttpSession *pSession, const HttpHandler * pHand
             pSession->setSendFileBeginEnd( 0, pData->getECache()->getFileSize() );
         } 
         //ret = pSession->flush();
-        pSession->endResponse( 1 );
+        ret = pSession->endResponse( 1 );
     }
     return ret;
 
@@ -723,12 +724,13 @@ static int processRange( HttpSession *pSession, HttpReq * pReq, const char *pRan
 {
     SendFileInfo * pData = pSession->getSendFileInfo();
     StaticFileCacheData * pCache = pData->getFileData();
-    HttpRange* range = new HttpRange( pCache->getFileSize() );
-    int ret = range->parse( pRange );
+    lsr_xpool_t *pPool = pSession->getReq()->getPool();
+    HttpRange* range = new (lsr_xpool_alloc( pPool, sizeof( HttpRange )))HttpRange( pCache->getFileSize() );
+    int ret = range->parse( pRange, *pPool );
     if ( ret )
     {
         pReq->setContentLength( pCache->getFileSize() );
-        delete range;
+        lsr_xpool_free( pPool, range );
         if ( ret == SC_416 )  //Range unsatisfiable
         {
             HttpRespHeaders &buf = pSession->getResp()->getRespHeaders();

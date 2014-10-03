@@ -87,7 +87,7 @@ int SSIEngine::startExecute( HttpSession *pSession,
         int status = pReq->getStatusCode();
         if (( status >= SC_300 )&&( status < SC_400 ))
         {
-            if ( pReq->getLocationOff() )
+            if ( pReq->getLocation() != NULL )
             {
                 pSession->addLocationHeader();
             }

@@ -118,13 +118,13 @@ static void    testShmHashSmall(LsShm * shm, LsShmPool * pool)
     p_hashNumItem = myHashNumItem;
     for (int i = 0; i < NUM_HASHNUMITEM; i++, p_hashNumItem++)
     {
-        iter = myHashNum->find_iterator((void*)p_hashNumItem->key, p_hashNumItem->keyLen);
+        iter = myHashNum->find_iterator((void*)(long)p_hashNumItem->key, p_hashNumItem->keyLen);
         if (!iter)
         {
             fprintf(debugBase::fp(), "GOOD HASH MISSING KEY %d\n",
                     p_hashNumItem->key);
         
-            iter = myHashNum->insert_iterator( (void*)p_hashNumItem->key, p_hashNumItem->keyLen,
+            iter = myHashNum->insert_iterator( (void*)(long)p_hashNumItem->key, p_hashNumItem->keyLen,
                         p_hashNumItem->value, p_hashNumItem->valueLen);
             if (!iter)
             {
@@ -132,7 +132,7 @@ static void    testShmHashSmall(LsShm * shm, LsShmPool * pool)
                     p_hashNumItem->key);
             }
         
-            iter = myHashNum->find_iterator( (void*)p_hashNumItem->key, p_hashNumItem->keyLen);
+            iter = myHashNum->find_iterator( (void*)(long)p_hashNumItem->key, p_hashNumItem->keyLen);
             if (!iter)
             {
                 fprintf(debugBase::fp(), "ERROR HASH MISSING KEY %d\n",
@@ -303,7 +303,7 @@ static int  findNumKey( LsShmHash * p_hash, int num , int id)
     myHashItem_t x;
     setHashNumItem(&x, num, id);
     
-    iter = p_hash->find_iterator( (void *)x.key, x.keyLen );
+    iter = p_hash->find_iterator( (void *)(long)x.key, x.keyLen );
     if (!iter)
     {
         fprintf(debugBase::fp(), "ERROR FIND HASH-NUM %d %d\n", num, id);
@@ -326,7 +326,7 @@ static int  saveNumKey( LsShmHash * p_hash, int num , int id)
     LsShmHash::iterator iter;
     myHashItem_t x;
     setHashNumItem(&x, num, id);
-    iter = p_hash->set_iterator( (void *)x.key, x.keyLen, x.value, x.valueLen);
+    iter = p_hash->set_iterator( (void *)(long)x.key, x.keyLen, x.value, x.valueLen);
     if (!iter)
     {
         fprintf(debugBase::fp(), "ERROR SAVE HASH-NUM %d %d\n", num, id);
@@ -514,7 +514,7 @@ void * runThread (void * uData)
         if (testLargeStrHash(p->shm, p->pool, p->hash, p->id))
             exitCode = -p->id;
     }
-    pthread_exit((void*)exitCode);
+    pthread_exit((void*)(long)exitCode);
 }
 
 myThread_t  myThread[8] = {

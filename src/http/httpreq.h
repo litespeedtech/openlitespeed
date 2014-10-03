@@ -26,6 +26,10 @@
 #include <http/httpstatuscode.h>
 #include <util/autostr.h>
 #include <util/logtracker.h>
+#include <lsr/lsr_hash.h>
+#include <lsr/lsr_xpool.h>
+#include <lsr/lsr_str.h>
+#include <util/objarray.h>
 
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -89,29 +93,38 @@ typedef struct
     int valLen;
 } key_value_pair;
 
+
+
 class HttpReq 
 {
 private:
     const VHostMap    * m_pVHostMap;
-    AutoBuf             m_reqBuf;
     AutoBuf             m_headerBuf;
 
     int                 m_iReqHeaderBufFinished;
 
-    int                 m_reqLineOff;
-    int                 m_reqLineLen;
-
     key_value_pair      m_curURL;
-    int                 m_reqURLOff;
-    int                 m_reqURLLen;
 
     const MIMESetting * m_pMimeType;
-    int                 m_iHttpHeaderEnd;
+    
+    lsr_xpool_t         m_pool;
+    lsr_str_pair_t      m_curUrl;
+    lsr_str_pair_t    * m_pUrls;
+    lsr_str_t           m_location;
+    char              * m_pAuthUser;
+    lsr_str_t           m_pathInfo;
+    lsr_str_t           m_newHost;
+    lsr_hash_t        * m_envHash;
+    TObjArray< key_value_pair > m_unknHeaders;
 
     //Comment:The order of the below 3 varibles should NOT be changed!!!
     short               m_commonHeaderLen[HttpHeader::H_TE];
     int                 m_commonHeaderOffset[HttpHeader::H_TE];
     int                 m_headerIdxOff;
+    int                 m_reqLineOff;
+    int                 m_reqLineLen;
+    int                 m_reqURLOff;
+    int                 m_reqURLLen;
     unsigned char       m_iHeaderStatus;
     unsigned char       m_iHS1;
     unsigned char       m_iHS3;
@@ -127,6 +140,8 @@ private:
     short               m_iRedirects;
     short               m_iContextState;
     const HttpHandler * m_pHttpHandler;
+    
+    int                 m_iHttpHeaderEnd;
 
     const HttpContext * m_pContext;
     //const HttpContext * m_pHTAContext;
@@ -135,36 +150,32 @@ private:
     HttpRange         * m_pRange;
     HttpVHost         * m_pVHost;
     const char        * m_pForcedType;
-    int                 m_iAuthUserOff;
     const HTAuth      * m_pHTAuth;
     const AuthRequired* m_pAuthRequired;
     SSIRuntime        * m_pSSIRuntime;
-    int                 m_envIdxOff;
     int                 m_iHostOff;
     int                 m_iHostLen;
-    int                 m_iPathInfoOff;
-    int                 m_iPathInfoLen;
     const AutoStr2    * m_pRealPath;
     int                 m_iMatchedLen;
-    int                 m_iNewHostLen;
-    int                 m_code;
-    int                 m_upgradeProto;
-    int                 m_iLocationOff;
 
-    // The following member need not to be initialized
+    int                 m_upgradeProto;
+    int                 m_code;
+    
+    // The following member do not need to be initialized
     AutoStr2            m_sRealPathStore;
-    int                 m_iMatchedOff;
     int                 m_fdReqFile;
     struct stat         m_fileStat;
     int                 m_iScriptNameLen;
-    key_value_pair    * m_urls;
-    int                 m_iLocationLen;
-    int                 m_iNewHostOff;
+
     LogTracker        * m_pILog;
+    
 
     
     HttpReq( const HttpReq& rhs ) ;
     void operator=( const HttpReq& rhs );
+    
+    int setQS( const char *qs, int qsLen );
+    void uSetURI( char *pURI, int uriLen );
 
     int redirectDir( const char * pURI );
     int processPath( const char * pURI, int uriLen, char * pBuf,
@@ -195,37 +206,20 @@ private:
         m_commonHeaderOffset[index] = off;
         m_commonHeaderLen[index] = len;
     }
-    key_value_pair * getCurHeaderIdx();
-    key_value_pair * newUnknownHeader()
-    {   return newKeyValueBuf( m_headerIdxOff );    }
+    key_value_pair * getCurHeaderIdx()
+    {   return m_unknHeaders.getObj( m_unknHeaders.getSize() - 1 ); }
+    key_value_pair * newUnknownHeader();
 
-    key_value_pair * newKeyValueBuf( int &idxOff);
-    key_value_pair * getValueByKey( const AutoBuf& buf, int idxOff, const char * pName,
+    key_value_pair * newKeyValueBuf();
+    key_value_pair * getUnknHeaderByKey( const AutoBuf& buf, const char * pName,
                         int namelen ) const;
-    void removeKeyValueByKey( const AutoBuf & buf, int idxOff, const char * pKey, int keyLen );
     
-    int  getListSize( int idxOff )
+    key_value_pair * getUnknHeaderPair( int index )
     {
-        if ( !idxOff )
-            return 0;
-        char * p = m_reqBuf.getPointer( idxOff );
-        return *( ((int *)p) + 1 );
-    }
-    key_value_pair * getOffset( int idxOff, int n )
-    {
-        if ( !idxOff )
-            return 0;
-        char * p = m_reqBuf.getPointer( idxOff );
-        if ( n < *( ((int *)p) + 1 ))
-            return ( key_value_pair *)( p + sizeof( int ) * 2 ) + n;
-        else
-            return NULL;
+        return m_unknHeaders.getObj( index );
     }
 
     int appendIndexToUri( const char * pIndex, int indexLen );
-    
-    int dupString( const char * pString );
-    int dupString( const char * pString, int len );
 
     int checkHotlink( const HotlinkCtrl * pHLC, const char * pSuffix );
     
@@ -265,7 +259,7 @@ public:
     void reset();
     void reset2();
 
-    void setILog( LogTracker * pILog ){   m_pILog = pILog;        }
+    void setILog( LogTracker * pILog )      {   m_pILog = pILog;        }
     LOG4CXX_NS::Logger* getLogger() const   {   return m_pILog->getLogger();    }
     const char *  getLogId()                {   return m_pILog->getLogId();     }
     
@@ -283,37 +277,22 @@ public:
     const HttpVHost * getVHost() const      {   return m_pVHost;    }
     HttpVHost * getVHost()                  {   return m_pVHost;    }
     
-    void setVHost( HttpVHost * pVHost )   {   m_pVHost = pVHost;  }
+    void setVHost( HttpVHost * pVHost )     {   m_pVHost = pVHost;  }
 
-    const char * getURI() const
-    {   return m_reqBuf.getPointer( m_curURL.keyOff);   }
+    const char * getURI()                   {   return lsr_str_c_str( &m_curUrl.m_key );}
+    int   getURILen()                       {   return lsr_str_len( &m_curUrl.m_key );}
     
-    void setNewHost( const char * pInfo, int len) 
-    {
-        m_iNewHostLen = len;
-        m_iNewHostOff = dupString( pInfo, m_iNewHostLen );
-    }
-
-    int getNewHostLen() const   {   return m_iNewHostLen;       }
-    const char * getNewHost() const {   return m_reqBuf.getPointer( m_iNewHostOff );   }
+    void setNewHost( const char * pInfo, int len ) 
+    {   lsr_str_set_str_xp( &m_newHost, pInfo, len, &m_pool ); }
+    int getNewHostLen()                     {   return lsr_str_len( &m_newHost );   }
+    const char * getNewHost()               {   return lsr_str_c_str( &m_newHost );   }
     
-    const char * getPathInfo() const
-    {   return m_reqBuf.getPointer( m_iPathInfoOff );   }
-
-    const char * getQueryString() const
-    {   return ( m_curURL.valOff >= 0 )
-                    ? m_headerBuf.getPointer(m_curURL.valOff)
-                    : m_reqBuf.getPointer(-m_curURL.valOff);  }
-
-    const char * getQueryString( key_value_pair * p ) const
-    {   return ( p->valOff >= 0 )
-                    ? m_headerBuf.getPointer(p->valOff)
-                    : m_reqBuf.getPointer(-p->valOff);  }
-                    
-    int   getURILen() const             {   return m_curURL.keyLen; }
-    int   getPathInfoLen() const        {   return m_iPathInfoLen;  }
-    int   getQueryStringLen() const     {   return m_curURL.valLen; }
-
+    const char * getPathInfo()              {   return lsr_str_c_str( &m_pathInfo );  }
+    int   getPathInfoLen()                  {   return lsr_str_len( &m_pathInfo );   }
+    
+    const char * getQueryString()           {   return lsr_str_c_str( &m_curUrl.m_value );  }
+    int   getQueryStringLen()               {   return lsr_str_len( &m_curUrl.m_value );  }
+    
     int   isWebsocket() const           {   return ((UPD_PROTO_WEBSOCKET == m_upgradeProto) ? 1 : 0); }
  
     //request header
@@ -323,11 +302,11 @@ public:
 
     const char * getHeader( const char * pName, int namelen, int& valLen ) const
     {
-        key_value_pair * pIdx = getValueByKey( m_headerBuf, m_headerIdxOff, pName, namelen );
+        key_value_pair * pIdx = getUnknHeaderByKey( m_headerBuf, pName, namelen );
         if ( pIdx )
         {
             valLen = pIdx->valLen;
-            return m_headerBuf.getPointer( pIdx->valOff );
+            return m_headerBuf.getp( pIdx->valOff );
         }
         return NULL;
     }
@@ -338,11 +317,11 @@ public:
     {   return m_commonHeaderLen[ index ];      }
 
     const char * getHostStr()
-    {   return m_headerBuf.getPointer( m_iHostOff );    }
+    {   return m_headerBuf.getp( m_iHostOff );    }
     const char * getOrgReqLine() const
-    {   return m_headerBuf.getPointer( m_reqLineOff );  }
+    {   return m_headerBuf.getp( m_reqLineOff );  }
     const char * getOrgReqURL() const
-    {   return m_headerBuf.getPointer( m_reqURLOff );   }
+    {   return m_headerBuf.getp( m_reqURLOff );   }
     int getHttpHeaderLen() const
     {   return m_iHttpHeaderEnd - m_reqLineOff;         }
     int getHttpHeaderEnd() const        {   return m_iHttpHeaderEnd;    }
@@ -352,8 +331,7 @@ public:
 
     const char * encodeReqLine( int &len );
     
-    const char * getAuthUser() const
-    {   return m_reqBuf.getPointer( m_iAuthUserOff );   }
+    const char * getAuthUser() const    {   return m_pAuthUser; }
 
     bool isChunked() const      {   return m_lEntityLength == CHUNKED;  }
     off_t getBodyRemain() const
@@ -401,13 +379,10 @@ public:
 
     const AutoStr2* getRealPath() const {   return m_pRealPath;         }
 
-    int  getLocationOff() const         {   return m_iLocationOff;      }
-    int  getLocationLen() const         {   return m_iLocationLen;      }
+    int  getLocationLen()               {   return lsr_str_len( &m_location );  }
     int  setLocation( const char * pLoc, int len );
-    const char * getLocation() const
-    {  return m_reqBuf.getPointer( m_iLocationOff ); }
-    void clearLocation()
-    {   m_iLocationOff = m_iLocationLen = 0;    }
+    const char * getLocation()          {   return lsr_str_c_str( &m_location );  }
+    void clearLocation()                {   lsr_str_unsafe_set( &m_location, NULL, 0 ); }
     
     int  addWWWAuthHeader( HttpRespHeaders &buf ) const;
     const AuthRequired* getAuthRequired() const {   return m_pAuthRequired; }
@@ -482,18 +457,22 @@ public:
 
     int checkSymLink( const char * pPath, int pathLen, const char * pBegin );
 
-    const char *findEnvAllias(const char * pKey, int keyLen, int& alliasKeyLen);
-    key_value_pair * addEnv( const char * pKey, int keyLen, const char * pValue, int valLen );
+    const char * findEnvAlias(const char * pKey, int keyLen, int& aliasKeyLen);
+    lsr_str_pair_t * addEnv( const char * pKey, int keyLen, const char * pValue, int valLen );
     const char * getEnv( const char * pKey, int keyLen, int &valLen );
-    const char * getEnvByIndex( int idx, int &keyLen, const char * &pValue, int &valLen  );
+    const lsr_hash_t * getEnvHash() const   {   return m_envHash;   }
     int  getEnvCount()
-    {   return getListSize( m_envIdxOff );  }
-    void unsetEnv( const char * pKey, int keyLen )
-    {    removeKeyValueByKey( m_reqBuf, m_envIdxOff, pKey, keyLen ); }
+    {   
+        if ( m_envHash )
+            return lsr_hash_size( m_envHash );
+        return 0;
+    }
+    void unsetEnv( const char * pKey, int keyLen );
 
-    
     int  getUnknownHeaderCount()
-    {   return getListSize( m_headerIdxOff );  }
+    {   
+        return m_unknHeaders.getSize();
+    }
     const char * getUnknownHeaderByIndex( int idx, int &keyLen,
         const char * &pValue, int &valLen  );
     char getRewriteLogLevel() const;
@@ -518,12 +497,14 @@ public:
     int saveCurURL();
     const char * getOrgURI()
     {
-        return m_reqBuf.getPointer( ( m_iRedirects )?m_urls[0].keyOff : m_curURL.keyOff);
+        return m_iRedirects ? lsr_str_c_str( &(m_pUrls[0].m_key) ) : lsr_str_c_str( &m_curUrl.m_key );
     }
+    
     int  getOrgURILen()
     {
-        return ( m_iRedirects )? m_urls[0].keyLen : m_curURL.keyLen;
+        return m_iRedirects ? lsr_str_len( &(m_pUrls[0].m_key) ) : lsr_str_len( &m_curUrl.m_key );
     }
+    
     void appendHeaderIndexes( IOVec * pIOV, int cntUnknown );
     void getAAAData( struct AAAData &aaa, int &satisfyAny );
 
@@ -559,14 +540,16 @@ public:
     }  
     int   getOrgReqURILen()
     {
-        if ( ( m_iRedirects )?m_urls[0].valOff : m_curURL.valOff )
-            return m_reqURLLen - 1 - (( m_iRedirects )?m_urls[0].valLen : m_curURL.valLen);
+        if ( ( m_iRedirects )? &(m_pUrls[0].m_value) : &m_curUrl.m_value )
+            return m_reqURLLen - 1 - (( m_iRedirects ) ? 
+                    lsr_str_len( &(m_pUrls[0].m_value) ) : lsr_str_len( &m_curUrl.m_value ) );
         else
             return m_reqURLLen;
-    }  
+    }
+    
     int isMatched() const
     {
-        return m_iMatchedLen ;
+        return m_iMatchedLen;
     }   
     void stripRewriteBase( const HttpContext * pCtx, 
             const char * &m_pSourceURL, int &m_sourceURLLen );   
@@ -583,6 +566,9 @@ public:
     
     int setMimeBySuffix( const char * pSuffix );
     const char * getMimeBySuffix( const char *pSuffix );
+    
+    lsr_xpool_t *getPool()
+    {   return &m_pool; }
 };
 
 

@@ -75,6 +75,8 @@ class DevPoller : public Multiplexer
 public: 
     DevPoller();
     ~DevPoller();
+    
+    virtual int getHandle() const   {   return m_fdDP;  }
     virtual int init( int capacity = DEFAULT_CAPACITY );
     virtual int add( EventReactor* pHandler, short mask );
     virtual int remove( EventReactor* pHandler );

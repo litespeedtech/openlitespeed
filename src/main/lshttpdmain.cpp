@@ -75,6 +75,8 @@
 #include <sys/sysctl.h>
 #include <plainconf.h>
 
+#define GlobalServerSessionHooks (LsiApiHooks::getServerSessionHooks())
+
 #define PID_FILE            DEFAULT_TMP_DIR "/lshttpd.pid"
 
 static char s_iRunning = 0;
@@ -113,8 +115,8 @@ int LshttpdMain::preFork()
     if ( D_ENABLED( DL_LESS ) )
         LOG_D(( "[AutoRestarter] prepare to fork new child process to handle request!" ));
     
-    if ( LsiApiHooks::getServerHooks()->isEnabled( LSI_HKPT_MAIN_PREFORK) )
-        LsiApiHooks::getServerHooks()->runCallbackNoParam(LSI_HKPT_MAIN_PREFORK, NULL);
+    if ( GlobalServerSessionHooks->isEnabled( LSI_HKPT_MAIN_PREFORK) )
+        GlobalServerSessionHooks->runCallbackNoParam(LSI_HKPT_MAIN_PREFORK, NULL);
     return 0;
 }
 
@@ -324,6 +326,7 @@ int LshttpdMain::processAdminCmd( char * pCmd, char * pEnd, int &apply )
     {
         LOG_NOTICE(( "Toggle debug logging request from admin interface!" ));
         broadcastSig( SIGUSR2, 0 );
+        HttpLog::toggleDebugLog();
         apply = 0;
     }
     return 0;
@@ -691,6 +694,7 @@ void LshttpdMain::parseOpt( int argc, char *argv[] )
     char achCwd[512];
     getServerRootFromExecutablePath( argv[0], achCwd, 512 );
     opterr = 0;
+    int serverMode = LSI_SERVER_MODE_DAEMON;
     while ( ( c = getopt( argc, argv, opts )) != EOF )
     {
         switch (c) {
@@ -700,6 +704,7 @@ void LshttpdMain::parseOpt( int argc, char *argv[] )
         case 'd':
             m_noDaemon = 1;
             m_noCrashGuard = 1;
+            serverMode = LSI_SERVER_MODE_FORGROUND;
             break;
         case 'n':
             m_noDaemon = 1;
@@ -715,6 +720,8 @@ void LshttpdMain::parseOpt( int argc, char *argv[] )
             printf ("?? getopt returned character code -%o ??\n", c);
         }
     }
+    
+    m_pServer->setServerMode(serverMode);
 }
 
 
@@ -855,13 +862,13 @@ int LshttpdMain::init(int argc, char * argv[])
 #endif    
     //if ( !m_noCrashGuard && ( m_pBuilder->getCrashGuard() ))    
     s_iCpuCount = PCUtil::getNumProcessors();
-    
+
+    //Server init done
+    if ( GlobalServerSessionHooks->isEnabled( LSI_HKPT_MAIN_INITED) )
+        GlobalServerSessionHooks->runCallbackNoParam(LSI_HKPT_MAIN_INITED, NULL);
+
     if ( !m_noCrashGuard && ( MainServerConfig::getInstance().getCrashGuard() ))
     {
-        //Server init done
-        if ( LsiApiHooks::getServerHooks()->isEnabled( LSI_HKPT_MAIN_INITED) )
-            LsiApiHooks::getServerHooks()->runCallbackNoParam(LSI_HKPT_MAIN_INITED, NULL);
-
         if ( guardCrash() )
             return 8;
         m_pidFile.closePidFile();
@@ -916,8 +923,8 @@ int LshttpdMain::main( int argc, char * argv[] )
         m_pServer->start();
         
         //If HttpGlobals::s_iProcNo is 0, is main process
-        if ( LsiApiHooks::getServerHooks()->isEnabled( LSI_HKPT_WORKER_ATEXIT) )
-            LsiApiHooks::getServerHooks()->runCallbackNoParam(LSI_HKPT_WORKER_ATEXIT, NULL);
+        if ( GlobalServerSessionHooks->isEnabled( LSI_HKPT_WORKER_ATEXIT) )
+            GlobalServerSessionHooks->runCallbackNoParam(LSI_HKPT_WORKER_ATEXIT, NULL);
         m_pServer->releaseAll();
     }
     return 0;
@@ -1037,8 +1044,8 @@ int LshttpdMain::startChild( ChildProc * pProc )
     {   //child process
         cpu_set_t       cpu_affinity;
         
-        if ( LsiApiHooks::getServerHooks()->isEnabled( LSI_HKPT_WORKER_POSTFORK) )
-            LsiApiHooks::getServerHooks()->runCallbackNoParam(LSI_HKPT_WORKER_POSTFORK, NULL);
+        if ( GlobalServerSessionHooks->isEnabled( LSI_HKPT_WORKER_POSTFORK) )
+            GlobalServerSessionHooks->runCallbackNoParam(LSI_HKPT_WORKER_POSTFORK, NULL);
 
         PCUtil::getAffinityMask( s_iCpuCount, pProc->m_iProcNo-1, 1, &cpu_affinity );
         PCUtil::setCpuAffinity( &cpu_affinity );
@@ -1052,8 +1059,8 @@ int LshttpdMain::startChild( ChildProc * pProc )
         return 0;
     }
     
-    if ( LsiApiHooks::getServerHooks()->isEnabled( LSI_HKPT_MAIN_POSTFORK) )
-        LsiApiHooks::getServerHooks()->runCallbackNoParam(LSI_HKPT_MAIN_POSTFORK, NULL);
+    if ( GlobalServerSessionHooks->isEnabled( LSI_HKPT_MAIN_POSTFORK) )
+        GlobalServerSessionHooks->runCallbackNoParam(LSI_HKPT_MAIN_POSTFORK, NULL);
     postFork( pProc->m_pid );
     m_childrenList.push( pProc );
     pProc->m_iState = CP_RUNNING;
@@ -1359,8 +1366,8 @@ int LshttpdMain::guardCrash()
         stopAllChildren();
     
     //Server Exit hookpoint called here
-    if ( LsiApiHooks::getServerHooks()->isEnabled( LSI_HKPT_MAIN_ATEXIT) )
-        LsiApiHooks::getServerHooks()->runCallbackNoParam(LSI_HKPT_MAIN_ATEXIT, NULL);
+    if ( GlobalServerSessionHooks->isEnabled( LSI_HKPT_MAIN_ATEXIT) )
+        GlobalServerSessionHooks->runCallbackNoParam(LSI_HKPT_MAIN_ATEXIT, NULL);
 
     HttpLog::notice( "[PID:%d] Server Stopped!\n", getpid() );
     exit( ret );

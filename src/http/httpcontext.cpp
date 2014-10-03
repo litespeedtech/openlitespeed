@@ -91,7 +91,7 @@ HttpContext::~HttpContext()
 
     if (( m_iConfigBits & BIT_CTXINT ))
     {
-        g_pool.deallocate( m_pInternal, sizeof( CtxInt ) );
+        Pool::deallocate( m_pInternal, sizeof( CtxInt ) );
     }
     if (( m_iConfigBits & BIT_MODULECONFIG ))
     {
@@ -163,7 +163,7 @@ int HttpContext::set( const char * pURI, const char * pLocation,
     if (( pLocation )&&( *pLocation ))
     {
         int len = strlen( pLocation );
-        m_sLocation.resizeBuf( len + 15 );
+        m_sLocation.prealloc( len + 15 );
         strcpy( m_sLocation.buf(), pLocation );
         m_sLocation.setLen( len );
         if ( *(pLocation + len - 1 ) == '/' )
@@ -177,7 +177,7 @@ int HttpContext::set( const char * pURI, const char * pLocation,
 //        }
     }
     int len = strlen( pURI );
-    m_sContextURI.resizeBuf( len + 8 );
+    m_sContextURI.prealloc( len + 8 );
     strcpy( m_sContextURI.buf(), pURI );
     if (( isDir && !regex )&&( *( pURI + len - 1 ) != '/' ))
     {
@@ -293,7 +293,7 @@ int HttpContext::allocateInternal()
 {
     if ( !(m_iConfigBits & BIT_CTXINT ) )
     {
-        m_pInternal = (CtxInt *)g_pool.allocate( sizeof( CtxInt ) );
+        m_pInternal = (CtxInt *)Pool::allocate( sizeof( CtxInt ) );
         if ( !m_pInternal )
             return -1;
         memset( m_pInternal, 0, sizeof( CtxInt ) );
@@ -416,7 +416,7 @@ int HttpContext::setExtraHeaders( const char * pLogId, const char * pHeaders, in
             {
                 m_pInternal->m_pExtraHeader->append(
                     pLineBegin, pHeaderNameEnd - pLineBegin );
-                m_pInternal->m_pExtraHeader->append( ':' );
+                m_pInternal->m_pExtraHeader->append_unsafe( ':' );
                 m_pInternal->m_pExtraHeader->append( pHeaderNameEnd + 1,
                             pCurEnd - pHeaderNameEnd - 1 );
                 m_pInternal->m_pExtraHeader->append( "\r\n", 2 );
@@ -929,10 +929,10 @@ int HttpContext::initExternalSessionHooks()
     {
         if ( allocateInternal() )
             return -1;
-        HttpSessionHooks * pSessionHooks = new HttpSessionHooks(0);
+        HttpSessionHooks * pSessionHooks = new HttpSessionHooks();
         if ( !pSessionHooks )
             return -1;
-        pSessionHooks->inherit(LsiApiHooks::getHttpHooks());  //inherit from global level
+        pSessionHooks->inherit(LsiApiHooks::getHttpHooks(), NULL, 1); //inherit from global level
         
         m_pInternal->m_pSessionHooks = pSessionHooks;
         m_iConfigBits |= BIT_SESSIONHOOKS;

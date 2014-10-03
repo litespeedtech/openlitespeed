@@ -346,7 +346,7 @@ int CgidConn::buildReqHeader()
     m_req.buildReqHeader( uid, gid, priority, HttpGlobals::s_umask, pChroot, ret, pReal,
                 pReq->getRealPath()->len(),
                 ((CgidWorker *)getWorker())->getConfig().getRLimits() );
-    if ( *pQueryString && (memchr( pQueryString, '=',
+    if ( pQueryString && (memchr( pQueryString, '=',
                                 pQsEnd - pQueryString ) == NULL ))
     {
         char * pPlus;

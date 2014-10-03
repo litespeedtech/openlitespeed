@@ -63,9 +63,9 @@ static int sockAddrLen( int family )
 int GSockAddr::allocate( int family )
 {
     if ( m_pSockAddr )
-        g_pool.deallocate( m_pSockAddr, m_len );
+        Pool::deallocate( m_pSockAddr, m_len );
     m_len = sockAddrLen( family );
-    m_pSockAddr = ( struct sockaddr *)g_pool.allocate( m_len );
+    m_pSockAddr = ( struct sockaddr *)Pool::allocate( m_len );
     if ( m_pSockAddr )
     {
         bzero( m_pSockAddr, m_len );
@@ -79,7 +79,7 @@ int GSockAddr::allocate( int family )
 
 void GSockAddr::release()
 {   if ( m_pSockAddr )
-        g_pool.deallocate( m_pSockAddr, m_len );
+        Pool::deallocate( m_pSockAddr, m_len );
 }
 
 /**

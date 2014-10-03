@@ -31,7 +31,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include "../include/ls.h"
-#include "loopbuff.h"
+#include <lsr/lsr_loopbuf.h>
 
 #include "gd.h"
 #include <stdio.h>
@@ -42,13 +42,18 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <sys/types.h>
 #include <sys/stat.h>
 
+/****************************************************************
+ * How to test: Access an image dynamically (i.e. with a proxy),
+ * ensuring that the resize dimensions are in the query string.
+ * For example: http://localhost:8088/apple.jpeg?w=400&h=500
+ * 
+ ***************************************************************/
+
 enum httpimg{ 
     HTTP_IMG_GIF, 
     HTTP_IMG_PNG,
     HTTP_IMG_JPEG
 };
-
-enum httpimg IMAGE_TYPE;
 
 /////////////////////////////////////////////////////////////////////////////
 //DEFINE the module name, MUST BE the same as .so file name
@@ -61,56 +66,35 @@ lsi_module_t MNAME;
 
 typedef struct _MyData
 {
-    LoopBuff inWBuf;
-    LoopBuff outWBuf;
-    void *pSrcBuf;
+    lsr_loopbuf_t inWBuf;
+    lsr_loopbuf_t outWBuf;
+    enum httpimg IMAGE_TYPE;
 } MyData;
 
 /*Function Declarations*/
 static int setWaitFull( lsi_cb_param_t * rec );
 static int scanForImage( lsi_cb_param_t * rec );
-static int parseParameters( lsi_cb_param_t * rec );
-static int writeToNextFilter( lsi_cb_param_t * rec, MyData *myData );
-static int getReqDimensions( const char *buf, int *width, int *height );
+static int parseParameters( lsi_cb_param_t * rec, MyData *myData );
+static int getReqDimensions( const char *buf, int iLen, int *width, int *height );
 static void* resizeImage( const char *buf, int bufLen, int width, int height, MyData *myData, int *size );
 static int _init();
 
 int httpRelease(void *data)
 {
-    MyData *myData = (MyData *)data;
     g_api->log( NULL, LSI_LOG_DEBUG, "#### mymoduleresize %s\n", "httpRelease" );
-    if (myData)
-    {
-        _loopbuff_dealloc(&myData->inWBuf);
-        _loopbuff_dealloc(&myData->outWBuf);
-        if ( myData->pSrcBuf )
-            free( myData->pSrcBuf );
-        free (myData);
-    }
     return 0;
 }
 
 int httpinit(lsi_cb_param_t * rec)
 {
-    MyData *myData = (MyData *)g_api->get_module_data(rec->_session, &MNAME, LSI_MODULE_DATA_HTTP);
-    if (myData == NULL )
-    {
-        myData = (MyData *) malloc(sizeof(MyData));
-        _loopbuff_init(&myData->inWBuf);
-        _loopbuff_alloc(&myData->inWBuf, MAX_BLOCK_BUFSIZE);
-        _loopbuff_init(&myData->outWBuf);
-        _loopbuff_alloc(&myData->outWBuf, MAX_BLOCK_BUFSIZE);
-        myData->pSrcBuf = NULL;
-        
-        g_api->log( NULL, LSI_LOG_DEBUG, "#### mymoduleresize init\n" );
-        g_api->set_module_data(rec->_session, &MNAME, LSI_MODULE_DATA_HTTP, (void *)myData);
-    } 
-    else
-    {
-        _loopbuff_dealloc(&myData->inWBuf);
-        _loopbuff_dealloc(&myData->outWBuf);
-    }
+    MyData *myData;
+    lsr_xpool_t *pool = g_api->get_session_pool( rec->_session );
+    myData = lsr_xpool_alloc( pool, sizeof( MyData ));
+    lsr_loopbuf_x( &myData->inWBuf, MAX_BLOCK_BUFSIZE, pool );
+    lsr_loopbuf_x( &myData->outWBuf, MAX_BLOCK_BUFSIZE, pool );
     
+    g_api->log( NULL, LSI_LOG_DEBUG, "#### mymoduleresize init\n" );
+    g_api->set_module_data(rec->_session, &MNAME, LSI_MODULE_DATA_HTTP, (void *)myData);
     return 0;
 }
 
@@ -120,39 +104,8 @@ static int setWaitFull( lsi_cb_param_t * rec )
     return LSI_RET_OK;
 }
 
-static int scanForImage( lsi_cb_param_t * rec )
-{
-    MyData *myData = NULL;
-    int iLen, inLen, iWidth = 0, iHeight = 0;
-    const char *in, *pDimensions;
-    
-    in = rec->_param;
-    inLen = rec->_param_len;
-    myData = (MyData *)g_api->get_module_data(rec->_session, &MNAME, LSI_MODULE_DATA_HTTP);
-    
-    if ( parseParameters( rec ) == 0 )
-    {
-        pDimensions = g_api->get_req_query_string( rec->_session, &iLen );
-        if ( (iLen != 0)
-            && (getReqDimensions( pDimensions, &iWidth, &iHeight ) == 0)
-        )
-        {
-            //if ( resizeImage( in, inLen, iWidth, iHeight, myData ) != LSI_RET_OK )
-                //return LSI_RET_ERROR;
-        }
-        else
-        {
-            _loopbuff_append( &myData->outWBuf, in, inLen );
-        }
-    }
-    
-    if ( writeToNextFilter( rec, myData ) != LSI_RET_OK )
-        return LSI_RET_ERROR;
-    return inLen;
-}
-
 /* Returns 0 for image, 1 for wrong input */
-static int parseParameters( lsi_cb_param_t * rec )
+static int parseParameters( lsi_cb_param_t * rec, MyData *myData )
 {
     int iLen;
     const char *ptr;
@@ -168,101 +121,108 @@ static int parseParameters( lsi_cb_param_t * rec )
         return 1;
     
     if ( memcmp( ptr + 6, "png", 3 ) == 0 )
-        IMAGE_TYPE = HTTP_IMG_PNG;
+        myData->IMAGE_TYPE = HTTP_IMG_PNG;
     else if ( memcmp( ptr + 6, "gif", 3 ) == 0 )
-        IMAGE_TYPE = HTTP_IMG_GIF;
+        myData->IMAGE_TYPE = HTTP_IMG_GIF;
     else if ( memcmp( ptr + 6, "jpeg", 4 ) == 0 )
-        IMAGE_TYPE = HTTP_IMG_JPEG;
+        myData->IMAGE_TYPE = HTTP_IMG_JPEG;
     else
         return 1;
     return 0;
 }
 
-static int writeToNextFilter( lsi_cb_param_t * rec, MyData *myData )
-{
-    int iBytesWritten;
-    _loopbuff_reorder(&myData->outWBuf);
-    iBytesWritten = g_api->stream_write_next( rec, _loopbuff_getdataref(&myData->outWBuf),
-                                                _loopbuff_getdatasize(&myData->outWBuf) );
-    if ( iBytesWritten < 0 )
-        return LSI_RET_ERROR;
-    _loopbuff_erasedata(&myData->outWBuf, iBytesWritten);
-    *((int *)( rec->_flag_out)) = _loopbuff_hasdata( &myData->outWBuf );
-    return LSI_RET_OK;
-}
-
 /*return 0 on success, -1 for garbage queries*/
-static int getReqDimensions( const char *buf, int *width, int *height )
+static int getReqDimensions( const char *buf, int iLen, int *width, int *height )
 {
-    //TODO: figure out how to get actual requested dimensions
-    *width = 400;
-    *height = 500;
+    const char *parse, *ptr2, *ptr = buf, *pEnd = buf + iLen;
+    int val = 0;
+    while( ptr < pEnd - 1 )
+    {
+        if ( *ptr != 'w' && *ptr != 'h' )
+            return -1;
+        if ( *(ptr + 1) != '=' )
+            return -1;
+        ptr2 = memchr( ptr + 2, '&', (pEnd - ptr) - 2 );
+        if ( !ptr2 )
+            ptr2 = pEnd;
+        for( parse = ptr + 2; parse < ptr2; ++parse )
+        {
+            if ( *parse < '0' || *parse > '9' )
+                return -1;
+            val = val * 10 + (*parse - '0');
+        }
+        if ( *ptr == 'w' && *width == 0 )
+            *width = val;
+        else if ( *ptr == 'h' && *height == 0 )
+            *height = val;
+        if ( *ptr2 != '&' )
+            return 0;
+        val = 0;
+        ptr = ptr2 + 1;
+    }
     return 0;
 }
 
 static void *resizeImage( const char *buf, int bufLen, int width, int height, MyData *myData, int *size )
 {
     
-    //FILE *out;
     char *ptr;
-    //gdIOCtxPtr ioc;
-    gdImagePtr dest, src = gdImageCreateFromPngPtr( bufLen, (void *)buf );
+    gdImagePtr dest, src;
+    if ( myData->IMAGE_TYPE == HTTP_IMG_JPEG )
+        src = gdImageCreateFromJpegPtr( bufLen, (void *)buf );
+    else if ( myData->IMAGE_TYPE == HTTP_IMG_GIF )
+        src = gdImageCreateFromGifPtr( bufLen, (void *)buf );
+    else if ( myData->IMAGE_TYPE == HTTP_IMG_PNG )
+        src = gdImageCreateFromPngPtr( bufLen, (void *)buf );
+    else
+        return NULL;
     
-    //TODO: get aspect ratio
+    if ( !width && !height )
+        return NULL;
+    else if ( !width )
+        width = height * src->sx / src->sy;
+    else if ( !height )
+        height = width * src->sy / src->sx;
     dest = gdImageCreateTrueColor( width, height );
     
     gdImageCopyResampled( dest, src, 0, 0, 0, 0, 
                           width, height, 
                           src->sx, src->sy );
-    /*
-    ioc = gdNewDynamicCtx( sizeof(*dest), NULL );
     
-    gdImagePngCtx( dest, ioc );
-    
-    gdDPExtractData( ioc, size );
-    */
-    ptr = gdImagePngPtr( dest, size );
-    /*
-    out = fopen("/home/user/Downloads/test.png", "wb");
-    if (!out) {
-        return ptr;
-    }
-    if (fwrite(ptr, 1, *size, out) != *size) {
-        return ptr;
-    }
-    if (fclose(out) != 0) {
-        return ptr;
-    }
-    //*/
-    
+    if ( myData->IMAGE_TYPE == HTTP_IMG_JPEG )
+        ptr = gdImageJpegPtr( dest, size, 50 );
+    else if ( myData->IMAGE_TYPE == HTTP_IMG_GIF )
+        ptr = gdImageGifPtr( dest, size );
+    else if ( myData->IMAGE_TYPE == HTTP_IMG_PNG )
+        ptr = gdImagePngPtr( dest, size );
     
     return ptr;
 }
 
-static int scanDynamic( lsi_cb_param_t * rec )
+static int scanForImage( lsi_cb_param_t * rec )
 {
     off_t offset = 0;
-    int iSrcSize, iDestSize, iWidth, iHeight, iLen = 0;
+    int iSrcSize, iDestSize, iWidth = 0, iHeight = 0, iLen = 0;
     void *pRespBodyBuf, *pSrcBuf, *pDestBuf;
     const char *ptr, *pDimensions;
     MyData *myData = (MyData *)g_api->get_module_data(rec->_session, &MNAME, LSI_MODULE_DATA_HTTP);
+    lsr_xpool_t *pPool = g_api->get_session_pool( rec->_session );
     
-    //TODO: Check to make sure that I'm accessing the right thing - use parseParameters?
-    
-    if ( parseParameters( rec ) == 0 )
+    if ( parseParameters( rec, myData ) == 0 )
     {
         
         pDimensions = g_api->get_req_query_string( rec->_session, &iLen );
         if ( (iLen == 0)
-            || (getReqDimensions( pDimensions, &iWidth, &iHeight ) != 0)
+            || (getReqDimensions( pDimensions, iLen, &iWidth, &iHeight ) != 0)
         )
         {
-            return LSI_RET_ERROR;
+            return LSI_RET_OK;
         }
         pRespBodyBuf = g_api->get_resp_body_buf( rec->_session );
+        if ( !pRespBodyBuf )
+            return LSI_RET_OK;
         iSrcSize = g_api->get_body_buf_size( pRespBodyBuf );
-        myData->pSrcBuf = malloc( iSrcSize );
-        pSrcBuf = myData->pSrcBuf;
+        pSrcBuf = lsr_xpool_alloc( pPool, iSrcSize );
         while( !g_api->is_body_buf_eof( pRespBodyBuf, offset ) )
         {
             ptr = g_api->acquire_body_buf_block( pRespBodyBuf, offset, &iLen );
@@ -273,13 +233,15 @@ static int scanDynamic( lsi_cb_param_t * rec )
             offset += iLen;
         }
     }
-    //*
+    else
+    {
+        return LSI_RET_OK;
+    }
     g_api->reset_body_buf( pRespBodyBuf );
     if ( g_api->append_body_buf( pRespBodyBuf, pSrcBuf, iSrcSize ) != iSrcSize )
         return LSI_RET_ERROR;
     iSrcSize = g_api->get_body_buf_size( pRespBodyBuf );
-    //g_api->set_resp_content_length( rec->_session, iSrcSize );
-    //*/
+    
     pDestBuf = resizeImage( pSrcBuf, iSrcSize, iWidth, iHeight, myData, &iDestSize );
     if ( !pDestBuf )
         return LSI_RET_ERROR;    
@@ -287,21 +249,19 @@ static int scanDynamic( lsi_cb_param_t * rec )
     while( g_api->is_resp_buffer_available( rec->_session ) <= 0 );
     
     
-    /*
+    g_api->reset_body_buf( pRespBodyBuf );
     if ( g_api->append_body_buf( pRespBodyBuf, pDestBuf, iDestSize ) != iDestSize )
         return LSI_RET_ERROR;
     g_api->set_resp_content_length( rec->_session, iDestSize );
-    //*/
     
-    
+    gdFree( pDestBuf );
     return LSI_RET_OK;
 }
 
 static lsi_serverhook_t serverHooks[] = {
-    {LSI_HKPT_HTTP_BEGIN, httpinit, LSI_HOOK_NORMAL, 0},
-    {LSI_HKPT_RECV_REQ_HEADER, setWaitFull, LSI_HOOK_NORMAL, 0},
-    {LSI_HKPT_SEND_RESP_HEADER, scanDynamic, LSI_HOOK_NORMAL, 0},
-    //{LSI_HKPT_SEND_RESP_BODY, scanForImage, LSI_HOOK_NORMAL, LSI_HOOK_FLAG_TRANSFORM + LSI_HOOK_FLAG_PROCESS_STATIC},
+    {LSI_HKPT_HTTP_BEGIN, httpinit, LSI_HOOK_NORMAL, LSI_HOOK_FLAG_ENABLED},
+    {LSI_HKPT_RECV_REQ_HEADER, setWaitFull, LSI_HOOK_NORMAL, LSI_HOOK_FLAG_ENABLED},
+    {LSI_HKPT_SEND_RESP_HEADER, scanForImage, LSI_HOOK_NORMAL, LSI_HOOK_FLAG_ENABLED},
     lsi_serverhook_t_END   //Must put this at the end position
 };
 

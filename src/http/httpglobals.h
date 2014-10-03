@@ -22,7 +22,7 @@
 #include <sys/types.h>
 #include <http/reqstats.h>
 #include <util/tlinklist.h>
-#include <../addon/include/ls.h>
+#include <ls.h>
 
 
 class AccessControl;

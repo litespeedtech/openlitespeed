@@ -30,14 +30,22 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
 */
 #include "../include/ls.h"
+#include <stdlib.h>
 #include <string.h>
 #include <fcntl.h>
 
 /******************************************************************************
  * 
  * HOW TO TEST:
- * use any url with qurey string like 
- * ?setrespheader[0123], then you will get different responese headers
+ * Go to any url with the query string:
+ * ?setrespheader[0123], then you will get different response headers
+ * 
+ * Tests:
+ * mycb - The 1 bit in the query string is set.  Is an example of setting a response header.
+ *      If 1 bit is not set, it is an example of removing a session hook.
+ * mycb2 - The 2 bit in the query string is set.  Is an example of setting a response header.
+ * mycb3 - The 4 bit is set.  Is an example of removing response headers.
+ * mycb4 - The 8 bit is set.  Is an example of getting response headers.
  * 
  */
 
@@ -51,13 +59,20 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 lsi_module_t MNAME;
 
+const char *headers[2] =
+{
+    "Set-Cookie",
+    "Addheader"
+};
+
+const int numheaders = 2;
 
 //test changing resp header
 static int mycb(lsi_cb_param_t * rec)
 {
     g_api->set_resp_header(rec->_session, LSI_RESP_HEADER_SERVER, NULL, 0, "/testServer 1.0", sizeof("/testServer 1.0") - 1, LSI_HEADER_SET);
-    g_api->set_resp_header(rec->_session, LSI_RESP_HEADER_SET_COOKIE, NULL, 0, "my-test-cookie1", sizeof("my-test-cookie1") - 1, LSI_HEADER_ADD);
-    g_api->set_resp_header(rec->_session, LSI_RESP_HEADER_SET_COOKIE, NULL, 0, "my-test-cookie2...", sizeof("my-test-cookie2...") - 1, LSI_HEADER_ADD);
+    g_api->set_resp_header(rec->_session, LSI_RESP_HEADER_SET_COOKIE, NULL, 0, "An Example Cookie", sizeof("An Example Cookie") - 1, LSI_HEADER_ADD);
+    g_api->set_resp_header(rec->_session, LSI_RESP_HEADER_SET_COOKIE, NULL, 0, "1 bit set!", sizeof("1 bit set!") - 1, LSI_HEADER_ADD);
     g_api->log( NULL, LSI_LOG_DEBUG, "#### mymodule1 test %s\n", "myCb" );
     return 0;
 }
@@ -65,8 +80,62 @@ static int mycb(lsi_cb_param_t * rec)
 //test changing resp header
 static int mycb2(lsi_cb_param_t * rec)
 {
-    g_api->set_resp_header2(rec->_session, "Addheader: MyTest addtional header2\r\n", sizeof("Addheader: MyTest addtional header2\r\n") -1, LSI_HEADER_SET);
+    g_api->set_resp_header2(rec->_session, "Addheader: 2 bit set!\r\n", sizeof("Addheader: 2 bit set!\r\n") -1, LSI_HEADER_SET);
     return 0;
+}
+
+static int mycb3(lsi_cb_param_t * rec)
+{
+    
+    g_api->set_resp_header2(rec->_session, "Destructheader: 4 bit set! Removing other headers...\r\n", 
+                            sizeof("Destructheader: 4 bit set! Removing other headers...\r\n") -1, LSI_HEADER_ADD);
+    g_api->remove_resp_header( rec->_session, LSI_RESP_HEADER_SET_COOKIE, NULL, 0 );
+    g_api->remove_resp_header( rec->_session, -1, "Addheader", sizeof("Addheader") - 1 );
+    return 0;
+}
+
+static int mycb4(lsi_cb_param_t * rec)
+{
+    int i, j, iov_count = g_api->get_resp_headers_count( rec->_session );
+    struct iovec iov_key[iov_count], iov_val[iov_count];
+    memset( iov_key, 0, sizeof( struct iovec ) * iov_count );
+    memset( iov_val, 0, sizeof( struct iovec ) * iov_count );
+    
+    g_api->set_resp_header2(rec->_session, "ProtectorHeader: 8 bit set! Duplicating headers for potential removal!\r\n", 
+                            sizeof("ProtectorHeader: 8 bit set! Duplicating headers for potential removal!\r\n") -1, LSI_HEADER_ADD);
+    iov_count = g_api->get_resp_headers( rec->_session, iov_key, iov_val, iov_count );
+    for( i = iov_count - 1; i >= 0; --i )
+    {
+        for( j = 0; j < numheaders; ++j )
+        {
+            if ( strncmp( headers[j], (const char *)iov_key[i].iov_base, iov_key[i].iov_len ) == 0 )
+            {
+                char save[256];
+                sprintf( save, "SavedHeader: %.*s\r\n",
+                    iov_val[i].iov_len, (char *)iov_val[i].iov_base
+                );
+                g_api->set_resp_header2(rec->_session, save, strlen( save ), LSI_HEADER_ADD);
+            }
+        }
+    }
+    return 0;
+}
+
+int check_type(lsi_cb_param_t * rec)
+{
+    const char *qs;
+    int sessionHookType = 0;
+    qs = g_api->get_req_query_string(rec->_session, NULL );
+    sessionHookType = strtol( qs + sizeof( TEST_URL ) - 1, NULL, 10 );
+    if ( sessionHookType & 0x01 )
+        mycb( rec );
+    if ( sessionHookType & 0x02 )
+        mycb2( rec );
+    if ( sessionHookType & 0x08 )
+        mycb4( rec );
+    if ( sessionHookType & 0x04 )
+        mycb3( rec );
+    return LSI_RET_OK;
 }
 
 int check_if_remove_session_hook(lsi_cb_param_t * rec)
@@ -74,22 +143,18 @@ int check_if_remove_session_hook(lsi_cb_param_t * rec)
     const char *qs;
     int sessionHookType = 0;
     qs = g_api->get_req_query_string(rec->_session, NULL );
-    
-    if ( strncasecmp(qs, TEST_URL, sizeof(TEST_URL) -1) == 0 )
+    if ( qs && strncasecmp(qs, TEST_URL, sizeof(TEST_URL) -1) == 0 )
     {
-        sscanf(qs + sizeof(TEST_URL) -1, "%d", &sessionHookType);
-        if (!(sessionHookType & 0x01))
-            g_api->remove_session_hook(rec->_session, LSI_HKPT_SEND_RESP_HEADER, &MNAME );
-        
-        if (sessionHookType & 0x02)
-            g_api->add_session_hook(rec->_session, LSI_HKPT_SEND_RESP_HEADER, &MNAME, mycb2, LSI_HOOK_LAST, 0 );
+        sessionHookType = strtol( qs + sizeof( TEST_URL ) - 1, NULL, 10 );
+        if (sessionHookType & 0x0f)
+            g_api->set_session_hook_enable_flag(rec->_session, LSI_HKPT_SEND_RESP_HEADER, &MNAME, 1 );
     }
     return LSI_RET_OK;
 }
 
 static lsi_serverhook_t serverHooks[] = {
-    {LSI_HKPT_RECV_REQ_HEADER, check_if_remove_session_hook, LSI_HOOK_NORMAL, 0},
-    {LSI_HKPT_SEND_RESP_HEADER, mycb, LSI_HOOK_LAST, 0},
+    {LSI_HKPT_RECV_REQ_HEADER, check_if_remove_session_hook, LSI_HOOK_NORMAL, LSI_HOOK_FLAG_ENABLED},
+    {LSI_HKPT_SEND_RESP_HEADER, check_type, LSI_HOOK_NORMAL, 0},
     lsi_serverhook_t_END   //Must put this at the end position
 };
 

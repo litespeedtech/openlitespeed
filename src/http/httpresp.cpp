@@ -28,8 +28,11 @@
 #include <lsiapi/lsiapi.h>
 
 
-HttpResp::HttpResp()
+HttpResp::HttpResp( lsr_xpool_t *pool )
+    : m_respHeaders( pool )
 {
+    m_lEntityLength = 0;
+    m_lEntityFinished = 0;
 }
 HttpResp::~HttpResp()
 {

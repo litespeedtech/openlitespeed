@@ -114,7 +114,7 @@ int PollfdReactor::remove( EventReactor *pHandler )
         if ( pRm == m_pEnd - 1)
         {
             --m_pEnd;
-            while( m_pEnd[-1].fd == -1 )
+            while( m_pEnd > m_pfds && m_pEnd[-1].fd == -1 )
                 --m_pEnd;
         }
         else

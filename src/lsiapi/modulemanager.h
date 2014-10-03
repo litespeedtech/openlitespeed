@@ -18,7 +18,7 @@
 #ifndef MODULEMANAGER_H
 #define MODULEMANAGER_H
 
-#include "../addon/include/ls.h"
+#include "ls.h"
 #include <lsiapi/lsiapihooks.h>
 #include <lsiapi/lsiapi.h>
 #include <lsiapi/lsimoduledata.h>
@@ -36,7 +36,7 @@ class ModuleConfig;
 class HttpContext;
 
 template< int base, int size >
-class SessionHooks;
+class HookChainList;
 
 
 typedef lsi_module_t * ModulePointer;
@@ -82,10 +82,13 @@ public:
     void OnTimer100msec();
     void OnTimer10sec();
     
-    void inheritIolinkApiHooks(IolinkSessionHooks *apiIolinkHooks, ModuleConfig *moduleConfig);
-    void inheritHttpApiHooks(HttpSessionHooks *apiHttpHooks, ModuleConfig *moduleConfig);
-    void updateHttpApiHook(HttpSessionHooks *apiHttpHooks, ModuleConfig *moduleConfig, int module_id);
-    
+    void applyConfigToIolinkRt(IolinkSessionHooks *pRtHooks, ModuleConfig *moduleConfig);
+    void applyConfigToServerRt(ServerSessionHooks *pSessionHooks, ModuleConfig *moduleConfig);
+    void applyConfigToHttpRt(HttpSessionHooks *pRtHooks, ModuleConfig *moduleConfig);
+    void updateHttpApiHook(HttpSessionHooks *pRtHooks, ModuleConfig *moduleConfig, int module_id);
+
+    lsi_module_t * GetModulePointer(int module_id)  { return m_gModuleArray[module_id];  }
+
     static ModuleConfig *getGlobalModuleConfig() { return &m_gModuleConfig; }
     static void updateDebugLevel();    
     
@@ -133,6 +136,7 @@ public:
     
     
 public:
+    //Return the module count
     int getCount()  { return m_count;   }
     
     void init(int count);

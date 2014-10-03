@@ -68,12 +68,18 @@ int reg_handler(lsi_cb_param_t * rec)
 }
 
 static lsi_serverhook_t serverHooks[] = {
-    {LSI_HKPT_RECV_REQ_HEADER, reg_handler, LSI_HOOK_NORMAL, 0},
+    {LSI_HKPT_RECV_REQ_HEADER, reg_handler, LSI_HOOK_NORMAL, LSI_HOOK_FLAG_ENABLED},
     lsi_serverhook_t_END   //Must put this at the end position
 };
 
+int nullRelease(void *p)
+{  
+    return 0;
+}
+
 static int init(lsi_module_t * pModule )
 {
+    g_api->init_module_data(pModule, nullRelease, LSI_MODULE_DATA_HTTP );
     return 0;
 }
 
@@ -102,8 +108,8 @@ static int myhandler_process(lsi_session_t *session)
     g_api->append_resp_body(session, buf, strlen(buf));
     g_api->flush(session);
     g_api->set_handler_write_state(session, 0);
-    g_api->set_timer(5000, timer_callback, session);
-
+    int id = g_api->set_timer(5000, timer_callback, session);
+    g_api->set_module_data(session, &MNAME, LSI_MODULE_DATA_HTTP, (void*)(long)id);
     return 0;
 }
 
@@ -123,5 +129,13 @@ static int onWriteEvent( lsi_session_t *session)
     return LSI_WRITE_RESP_FINISHED;
 }
 
-lsi_handler_t myhandler = { myhandler_process, onReadEvent, onWriteEvent, NULL };
+static int onCleanUp( lsi_session_t *session )
+{
+    int id = (int)(long)g_api->get_module_data(session, &MNAME, LSI_MODULE_DATA_HTTP);
+    g_api->remove_timer(id);
+    g_api->set_module_data(session, &MNAME, LSI_MODULE_DATA_HTTP, NULL);
+    return 0;
+}
+
+lsi_handler_t myhandler = { myhandler_process, onReadEvent, onWriteEvent, onCleanUp };
 lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, init, &myhandler, NULL, "", serverHooks};

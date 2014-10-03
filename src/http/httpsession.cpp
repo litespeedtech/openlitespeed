@@ -72,8 +72,12 @@
 
 #include <lsiapi/internal.h>
 
+#define GlobalHttpHooks  (LsiApiHooks::getHttpHooks())
 
-HttpSession::HttpSession() : m_sessionHooks(0)
+
+HttpSession::HttpSession()
+    : m_request(),
+    m_response( m_request.getPool() )
 {
     memset( &m_pChunkIS, 0, (char *)(&m_iReqServed + 1) - (char *)&m_pChunkIS );
     m_pModuleConfig = NULL;
@@ -100,6 +104,7 @@ int HttpSession::onInitConnected()
     m_request.setILog( getStream() );
     if (m_request.getBodyBuf())
         m_request.getBodyBuf()->reinit();
+    m_response.reset();
     m_request.reset();
     return 0;
 }
@@ -122,7 +127,7 @@ inline int HttpSession::getModuleDenyCode(  int iHookLevel )
 inline int HttpSession::processHkptResult( int iHookLevel, int ret )
 {
     if ((( getState() == HSS_EXT_REDIRECT )||( getState() == HSS_REDIRECT ))
-        && *(m_request.getLocation()) )
+        && (m_request.getLocation() != NULL) )
     {
         //perform external redirect.
         continueWrite();
@@ -273,11 +278,13 @@ void HttpSession::nextRequest()
         }
         
         m_sessionHooks.reset();
+        m_sessionHooks.disableAll();
         m_iFlag = 0;
         logAccess( 0 );
         ++m_iReqServed;
         m_lReqTime = DateTime::s_curTime;
         m_iReqTimeUs = DateTime::s_curTimeUs;
+        m_response.reset();
         m_request.reset2();
         releaseSendFileInfo();
         if ( m_pRespBodyBuf )
@@ -415,7 +422,7 @@ int HttpSession::readReqBody()
         LOG_D(( getLogger(), "[%s] Read Request Body!",
             getLogId() ));
 
-    const LsiApiHooks *pReadHooks = m_sessionHooks.get(LSI_HKPT_RECV_REQ_BODY);
+    const LsiApiHooks *pReadHooks = GlobalHttpHooks->get(LSI_HKPT_RECV_REQ_BODY);
     int count = 0;
     int hasBufferedData = 1;
     int endBody;
@@ -437,24 +444,23 @@ int HttpSession::readReqBody()
             return SC_400;
         }
         
-        if ( !pReadHooks ||( pReadHooks->size() == 0))
+        if ( !pReadHooks || m_sessionHooks.isDisabled(LSI_HKPT_RECV_REQ_BODY))
             ret = readReqBodyTermination( (LsiSession *)this, pBuf, size );
         else
         {
-            m_sessionHooks.triggered();    
-
             lsi_cb_param_t param;
             lsi_hook_info_t hookInfo;
             param._session = (LsiSession *)this;
 
             hookInfo._hooks = pReadHooks;
-            hookInfo._termination_fp = (void*)readReqBodyTermination;
+            hookInfo._termination_fp = (POINTER_termination_fp)readReqBodyTermination;
+            hookInfo._enable_array = m_sessionHooks.getEnableArray(LSI_HKPT_RECV_REQ_BODY);
             param._cur_hook = (void *)((LsiApiHook *)pReadHooks->end() - 1);
             param._hook_info = &hookInfo;
             param._param = pBuf;
             param._param_len = size;
             param._flag_out = &hasBufferedData;
-            ret = (*(((LsiApiHook *)param._cur_hook)->_cb))( &param );
+            ret = LsiApiHooks::runBackwardCb(&param);
             LOG_D (( getLogger(), "[%s][LSI_HKPT_RECV_REQ_BODY] read  %d ", getLogId(), ret ));
         }
         if ( ret > 0 )
@@ -526,23 +532,14 @@ int HttpSession::resumeHandlerProcess()
 
 }
 
-
-
 int HttpSession::restartHandlerProcess()
 {
-    int sessionLevels[] = { 
-        LSI_HKPT_URI_MAP, LSI_HKPT_RECV_RESP_HEADER, 
-        LSI_HKPT_RECV_RESP_BODY, LSI_HKPT_RCVD_RESP_BODY,
-        LSI_HKPT_SEND_RESP_HEADER,
-        LSI_HKPT_SEND_RESP_BODY, LSI_HKPT_HTTP_END };
     HttpContext *pContext = &(m_request.getVHost()->getRootContext());
-    m_sessionHooks.restartSessionHooks( sessionLevels, sizeof( sessionLevels )/ sizeof(int), pContext->getSessionHooks() );
-    
+    m_sessionHooks.reset();
+    m_sessionHooks.inherit(GlobalHttpHooks, pContext->getSessionHooks(), 0);
     if ( m_sessionHooks.isEnabled( LSI_HKPT_HANDLER_RESTART) )
     {
-        m_sessionHooks.triggered();    
         m_sessionHooks.runCallbackNoParam(LSI_HKPT_HANDLER_RESTART, (LsiSession *)this);
-        
     }
 
     m_iFlag &= ~( HSF_RESP_HEADER_DONE | HSF_RESP_WAIT_FULL_BODY | HSF_RESP_FLUSHED | HSF_HANDLER_DONE );
@@ -736,6 +733,7 @@ int HttpSession::processWebSocketUpgrade( const HttpVHost * pVHost )
         pL4Handler->assignStream( getStream() );
         pL4Handler->init(m_request, pContext->getWebSockAddr(), getPeerAddrString(), getPeerAddrStrLen());
         LOG_D ((getLogger(), "[%s] VH: %s web socket !!!", getLogId(), pVHost->getName() ));
+        m_response.reset();
         m_request.reset2();
         recycle();
         return 0;
@@ -754,7 +752,12 @@ int HttpSession::processNewReq()
 {
     int ret;
     if ( getStream()->isSpdy() )
+    {
         m_request.keepAlive( 0 );
+        m_request.orGzip( REQ_GZIP_ACCEPT | 
+            HttpServerConfig::getInstance().getGzipCompress()
+        );
+    }
     if ((HttpGlobals::s_useProxyHeader == 1)||
         ((HttpGlobals::s_useProxyHeader == 2)&&( getClientInfo()->getAccess() == AC_TRUST )))
     {
@@ -798,14 +801,13 @@ int HttpSession::processNewReq()
     }
     
     HttpContext *pContext0 = ((HttpContext *)&(pVHost->getRootContext()));
-    m_sessionHooks.inherit(pContext0->getSessionHooks());
+    m_sessionHooks.inherit(GlobalHttpHooks, pContext0->getSessionHooks(), 0);
     m_pModuleConfig = pContext0->getModuleConfig();
     
     //Run LSI_HKPT_HTTP_BEGIN after the inherit from vhost
     m_iFlag |= HSF_HOOK_SESSION_STARTED;
     if ( m_sessionHooks.isEnabled( LSI_HKPT_HTTP_BEGIN) )
     {
-        m_sessionHooks.triggered();    
         ret = m_sessionHooks.runCallbackNoParam(LSI_HKPT_HTTP_BEGIN, (LsiSession *)this);
         if ( ret <= -1)
         {
@@ -829,7 +831,6 @@ int HttpSession::processNewReq()
     m_request.setStatusCode( SC_200 );
     if ( m_sessionHooks.isEnabled( LSI_HKPT_RECV_REQ_HEADER) ) 
     {
-        m_sessionHooks.triggered();    
         if ( m_sessionHooks.runCallbackNoParam(LSI_HKPT_RECV_REQ_HEADER, (LsiSession *)this) < 0 )
         {
             return getModuleDenyCode( LSI_HKPT_RECV_REQ_HEADER );
@@ -934,7 +935,7 @@ int HttpSession::checkAuthentication( const HTAuth * pHTAuth,
     {
         if ( ret > 0 )  // if ret = -1, performing an external authentication
         {
-            if ( *pAuthUser )
+            if ( pAuthUser )
                 LOG_INFO(( getLogger(), "[%s] Authentication failed with user: '%s'.",
                     getLogId(), pAuthUser ));
         }
@@ -951,12 +952,12 @@ int HttpSession::checkAuthentication( const HTAuth * pHTAuth,
 
 }
 
-void HttpSession::resumeAuthentication()
-{
-    int ret = processURI( 1 );
-    if ( ret )
-        httpError( ret );
-}
+// void HttpSession::resumeAuthentication()
+// {
+//     int ret = processURI( 1 );
+//     if ( ret )
+//         httpError( ret );
+// }
 
 int HttpSession::checkAuthorizer( const HttpHandler * pHandler )
 {
@@ -1044,9 +1045,8 @@ int HttpSession::processURI( int resume )
                     proceed = 0;
                 const HttpContext *pContext = &(pVHost->getRootContext());
                 m_request.setContext( pContext );
-                if (m_sessionHooks.hasOwnCopy())
-                    m_sessionHooks.reset();
-                m_sessionHooks.inherit(((HttpContext *)pContext)->getSessionHooks());
+                m_sessionHooks.reset();
+                m_sessionHooks.inherit(GlobalHttpHooks, ((HttpContext *)pContext)->getSessionHooks(), 0);
                 m_pModuleConfig = ((HttpContext *)pContext)->getModuleConfig();
             }
         }
@@ -1106,9 +1106,8 @@ int HttpSession::processURI( int resume )
                         if ( ret == -2 )
                         {
                             m_request.setContext( pContext );
-                            if (m_sessionHooks.hasOwnCopy())
-                                m_sessionHooks.reset();
-                            m_sessionHooks.inherit(((HttpContext *)pContext)->getSessionHooks());
+                            m_sessionHooks.reset();
+                            m_sessionHooks.inherit(GlobalHttpHooks, ((HttpContext *)pContext)->getSessionHooks(), 0);
                             m_pModuleConfig = ((HttpContext *)pContext)->getModuleConfig();
                             goto DO_AUTH;
                         }
@@ -1116,15 +1115,13 @@ int HttpSession::processURI( int resume )
                     }
                 }
             }
-            
+            pContext = m_request.getContext();
             //since context chnaged, need to update m_sessionHooks & m_pModuleConfig
             m_pModuleConfig = ((HttpContext *)pContext)->getModuleConfig();
-            if (!m_sessionHooks.hasOwnCopy())
-                m_sessionHooks.inherit(((HttpContext *)pContext)->getSessionHooks());//FIXME
+            m_sessionHooks.inherit(GlobalHttpHooks, ((HttpContext *)pContext)->getSessionHooks(), 0);
 
             if ( m_sessionHooks.isEnabled( LSI_HKPT_URI_MAP) )
             {
-                m_sessionHooks.triggered();    
                 if ( m_sessionHooks.runCallbackNoParam(LSI_HKPT_URI_MAP, (LsiSession *)this) < 0 )
                 {
                     return getModuleDenyCode( LSI_HKPT_URI_MAP );
@@ -1196,7 +1193,6 @@ DO_AUTH:
             }
             if ( m_sessionHooks.isEnabled( LSI_HKPT_HTTP_AUTH ) )
             {
-                m_sessionHooks.triggered();    
                 ret1 = m_sessionHooks.runCallback(LSI_HKPT_HTTP_AUTH, (LsiSession *)this, 
                                                 NULL, 0, NULL,0 );
                 ret1 = processHkptResult( LSI_HKPT_HTTP_AUTH, ret1 );
@@ -1706,7 +1702,7 @@ int HttpSession::doWrite( )
     if ( ret )
         return ret;
     
-    if ( m_pHandler && !( m_iFlag & (HSF_HANDLER_DONE |HSF_MODULE_WRITE_SUSPENDED) ) )
+    if ( m_pHandler && !( m_iFlag & (HSF_HANDLER_DONE |HSF_HANDLER_WRITE_SUSPENDED) ) )
     {
         ret = m_pHandler->onWrite( this );
         if ( D_ENABLED( DL_MORE ))
@@ -1714,7 +1710,10 @@ int HttpSession::doWrite( )
                     getLogId(), ret ));
     }
     else
+    {
         suspendWrite();
+        return ret;
+    }
     
     if ( ret == 0 && 
         ( (m_iFlag & (HSF_HANDLER_DONE | 
@@ -1771,7 +1770,7 @@ int HttpSession::onWriteEx()
         suspendWrite();
         {
             const char * pLocation = m_request.getLocation();
-            if ( *pLocation )
+            if ( pLocation )
             {
                 if ( getState() == HSS_REDIRECT )
                 {
@@ -1837,9 +1836,8 @@ void HttpSession::closeConnection( )
         cleanUpHandler();
     }
     
-    if ( m_iFlag & HSF_HOOK_SESSION_STARTED )  //m_sessionHooks.isTriggered() )
+    if ( m_iFlag & HSF_HOOK_SESSION_STARTED )
     {
-        //m_sessionHooks.clearTriggered();
         if ( m_sessionHooks.isEnabled( LSI_HKPT_HTTP_END) )
             m_sessionHooks.runCallbackNoParam(LSI_HKPT_HTTP_END, (LsiSession *)this);
     }
@@ -1866,6 +1864,7 @@ void HttpSession::closeConnection( )
     }    
     
     m_lReqTime = DateTime::s_curTime;
+    m_response.reset();
     m_request.reset();
     m_request.resetHeaderBuf();
     releaseSendFileInfo();
@@ -2158,9 +2157,9 @@ void HttpSession::releaseRespCache()
     }
 }
 
-static int writeRespBodyTermination( HttpSession *session, const char * pBuf, int len )
+static int writeRespBodyTermination( LsiSession *session, const char * pBuf, int len )
 {
-    return session->writeRespBodyDirect( pBuf, len );
+    return ((HttpSession *)session)->writeRespBodyDirect( pBuf, len );
 }
 
 int HttpSession::writeRespBody( const char * pBuf, int len )
@@ -2168,7 +2167,7 @@ int HttpSession::writeRespBody( const char * pBuf, int len )
     if ( m_sessionHooks.isDisabled( LSI_HKPT_SEND_RESP_BODY) )
         return writeRespBodyDirect( pBuf, len );
     
-    return runFilter( LSI_HKPT_SEND_RESP_BODY, (void *)writeRespBodyTermination, pBuf, len, 0 );
+    return runFilter( LSI_HKPT_SEND_RESP_BODY, (POINTER_termination_fp)writeRespBodyTermination, pBuf, len, 0 );
 }
 
 
@@ -2251,7 +2250,7 @@ int HttpSession::setupRespCache()
     return 0;
 }
 
-extern int addModgzipFilter(lsi_session_t *session, int isSend, uint8_t compressLevel, int priority);
+extern int addModgzipFilter(lsi_session_t *session, int isSend, uint8_t compressLevel );
 int HttpSession::setupGzipFilter()
 {
     register char gz = m_request.gzipAcceptable();
@@ -2261,15 +2260,19 @@ int HttpSession::setupGzipFilter()
                       & LSI_HOOK_FLAG_DECOMPRESS_REQUIRED;
     if ( gz & (UPSTREAM_GZIP|UPSTREAM_DEFLATE) )
     {
+        setFlag(HSF_RESP_BODY_COMPRESSED);
         if ( recvhkptNogzip || hkptNogzip || !(gz & REQ_GZIP_ACCEPT) )
         {
             //setup decompression filter at RECV_RESP_BODY filter
-            if ( addModgzipFilter((LsiSession *)this, 0, 0, -3000 ) == -1 )  //addModgzipFilter((LsiSession *)this, isSend, 0, -3000 );
+            if ( addModgzipFilter((LsiSession *)this, 0, 0 ) == -1 )
                 return -1;
             m_response.getRespHeaders().del( HttpRespHeaders::H_CONTENT_ENCODING );  //FIXME: check if removed in modgzip
-                gz &= ~(UPSTREAM_GZIP|UPSTREAM_DEFLATE);
+            gz &= ~(UPSTREAM_GZIP|UPSTREAM_DEFLATE);
+            clearFlag(HSF_RESP_BODY_COMPRESSED);
         }
     }
+    else
+        clearFlag(HSF_RESP_BODY_COMPRESSED);
     
     if ( gz == GZIP_REQUIRED )
     {
@@ -2284,10 +2287,11 @@ int HttpSession::setupGzipFilter()
         }
         else //turn on compression at SEND_RESP_BODY filter
         {
-            //g_api->add_session_hook( this, LSI_HKPT_SEND_RESP_BODY, gunzip_module, gunzip_function, LSI_HOOK_LAST, 0 );
-            if ( addModgzipFilter((LsiSession *)this, 1, HttpServerConfig::getInstance().getCompressLevel(), 3000 ) == -1 )
+            if ( addModgzipFilter((LsiSession *)this, 1, HttpServerConfig::getInstance().getCompressLevel() ) == -1 )
                 return -1;
             m_response.addGzipEncodingHeader();
+            //The below do not set the flag because compress won't update the resp VMBuf to decompressed
+            //setFlag(HSF_RESP_BODY_COMPRESSED);
         }
     }
     return 0;
@@ -2331,12 +2335,14 @@ int HttpSession::setupGzipBuf()
                 m_response.setContentLen( LSI_RESP_BODY_SIZE_UNKNOWN );
                 m_response.addGzipEncodingHeader();
                 m_request.orGzip( UPSTREAM_GZIP );
+                setFlag(HSF_RESP_BODY_COMPRESSED);
                 return 0;
             }
             else
             {
                 LOG_ERR(( getLogger(), "[%s] out of swapping space while initialize GZIP stream!", getLogId() ));
                 delete m_pGzipBuf;
+                clearFlag(HSF_RESP_BODY_COMPRESSED);
                 m_pGzipBuf = NULL;
             }
         }
@@ -2375,6 +2381,12 @@ int HttpSession::appendDynBodyEx( const char * pBuf, int len )
     }
     else
     {
+        if ( !m_pRespBodyBuf )
+        {
+            setupDynRespBodyBuf();
+            if ( !m_pRespBodyBuf )
+                return len;
+        }
         ret = appendRespBodyBuf( pBuf, len );
     }
 
@@ -2387,17 +2399,18 @@ int appendDynBodyTermination( HttpSession *conn, const char * pBuf, int len )
     return conn->appendDynBodyEx( pBuf, len );
 }
 
-int HttpSession::runFilter( int hookLevel, void * pfTermination, const char * pBuf, int len, int flagIn )
+
+int HttpSession::runFilter( int hookLevel, POINTER_termination_fp pfTermination, const char * pBuf, int len, int flagIn )
 {
     int ret;
     int bit;
     int flagOut = 0;
-    m_sessionHooks.triggered();    
-    const LsiApiHooks *pHooks = m_sessionHooks.get(hookLevel);
+    const LsiApiHooks *pHooks = GlobalHttpHooks->get(hookLevel);
     lsi_cb_param_t param;
     lsi_hook_info_t hookInfo;
     param._session = (LsiSession *)this;
     hookInfo._hooks = pHooks;
+    hookInfo._enable_array = m_sessionHooks.getEnableArray(hookLevel);
     hookInfo._termination_fp = pfTermination;
     param._cur_hook = (void *)pHooks->begin();
     param._hook_info = &hookInfo;
@@ -2405,7 +2418,7 @@ int HttpSession::runFilter( int hookLevel, void * pfTermination, const char * pB
     param._param_len = len;
     param._flag_out = &flagOut;
     param._flag_in = flagIn;
-    ret = (*(((LsiApiHook *)param._cur_hook)->_cb))( &param );
+    ret = LsiApiHooks::runForwardCb( &param );
 
     if ( hookLevel == LSI_HKPT_RECV_RESP_BODY )
         bit = HSF_RECV_RESP_BUFFERED;
@@ -2446,7 +2459,7 @@ int HttpSession::appendDynBody( const char * pBuf, int len )
     
     if ( m_sessionHooks.isDisabled( LSI_HKPT_RECV_RESP_BODY) )
         return appendDynBodyEx( pBuf, len );
-    return runFilter( LSI_HKPT_RECV_RESP_BODY, (void *)appendDynBodyTermination, pBuf, len, 0 );    
+    return runFilter( LSI_HKPT_RECV_RESP_BODY, (POINTER_termination_fp)appendDynBodyTermination, pBuf, len, 0 );    
 }
 
 int HttpSession::appendRespBodyBuf( const char * pBuf, int len )
@@ -2598,7 +2611,6 @@ int HttpSession::respHeaderDone(int iRespState)
                 getLogId() ));
     if ( m_sessionHooks.isEnabled( LSI_HKPT_RECV_RESP_HEADER) )
     {
-        m_sessionHooks.triggered();    
         ret = m_sessionHooks.runCallbackNoParam(LSI_HKPT_RECV_RESP_HEADER, (LsiSession *)this);
     }
     if ( processHkptResult( LSI_HKPT_RECV_RESP_HEADER, ret ) )
@@ -2621,7 +2633,7 @@ int HttpSession::endResponseInternal( int success )
 
     if ( sendBody() && m_sessionHooks.isEnabled( LSI_HKPT_RECV_RESP_BODY ) )
     {
-        ret = runFilter( LSI_HKPT_RECV_RESP_BODY, (void *)appendDynBodyTermination, 
+        ret = runFilter( LSI_HKPT_RECV_RESP_BODY, (POINTER_termination_fp)appendDynBodyTermination, 
                           NULL, 0, LSI_CB_FLAG_IN_EOF ); 
 
     }
@@ -2643,7 +2655,6 @@ int HttpSession::endResponseInternal( int success )
     
     if ( !ret && m_sessionHooks.isEnabled( LSI_HKPT_RCVD_RESP_BODY) )
     {
-        m_sessionHooks.triggered();    
         ret = m_sessionHooks.runCallback(LSI_HKPT_RCVD_RESP_BODY, (LsiSession *)this, 
                                          NULL, 0, NULL, success?LSI_CB_FLAG_IN_RESP_SUCCEED:0 );
         ret = processHkptResult( LSI_HKPT_RCVD_RESP_BODY, ret );
@@ -2693,7 +2704,7 @@ int HttpSession::flushBody()
     {
         if ( m_sessionHooks.isEnabled( LSI_HKPT_RECV_RESP_BODY ) )
         {
-            ret = runFilter( LSI_HKPT_RECV_RESP_BODY, (void *)appendDynBodyTermination, 
+            ret = runFilter( LSI_HKPT_RECV_RESP_BODY, (POINTER_termination_fp)appendDynBodyTermination, 
                             NULL, 0, LSI_CB_FLAG_IN_FLUSH ); 
         }
     }
@@ -2721,7 +2732,7 @@ int HttpSession::flushBody()
         int flush = LSI_CB_FLAG_IN_FLUSH;
         if ( (( m_iFlag & ( HSF_HANDLER_DONE | HSF_RECV_RESP_BUFFERED )) == HSF_HANDLER_DONE ) )
             flush = LSI_CB_FLAG_IN_EOF;
-        ret = runFilter( LSI_HKPT_SEND_RESP_BODY, (void *)writeRespBodyTermination, 
+        ret = runFilter( LSI_HKPT_SEND_RESP_BODY, (POINTER_termination_fp)writeRespBodyTermination, 
                         NULL, 0, flush ); 
     }
    
@@ -2758,6 +2769,7 @@ int HttpSession::flush()
     {    
         if ( D_ENABLED( DL_LESS ))
             LOG_D(( getLogger(), "[%s] HSF_RESP_FLUSHED flag is set, skip flush.", getLogId() ));
+        suspendWrite();
         return 0;
     }
     if ( !sendBody() && !getFlag( HSF_HANDLER_DONE ) )
@@ -2794,7 +2806,7 @@ int HttpSession::flush()
     if (ret == 0)
     {
         if ( getFlag( HSF_HANDLER_DONE 
-                    | HSF_RECV_RESP_BUFFERED 
+                    | HSF_RECV_RESP_BUFFERED
                     | HSF_SEND_RESP_BUFFERED ) == HSF_HANDLER_DONE ) 
         {
             if ( D_ENABLED( DL_LESS ))
@@ -2841,7 +2853,7 @@ void HttpSession::prepareHeaders()
     if ( m_request.getAuthRequired() )
         m_request.addWWWAuthHeader( headers );
     
-    if ( m_request.getLocationOff() )
+    if ( m_request.getLocation() != NULL )
         addLocationHeader();
     const AutoBuf * pExtraHeaders = m_request.getExtraHeaders();
     if ( pExtraHeaders )
@@ -3161,6 +3173,11 @@ int HttpSession::sendStaticFileEx(  SendFileInfo * pData )
             ( pData->getECache() == pData->getFileData()->getGziped() ) ) )
     {
         len = writeRespBodySendFile( fd, pData->getCurPos(), pData->getRemain() );
+        if ( D_ENABLED( DL_MEDIUM ) )
+           LOG_D(( getLogger(),
+                  "[%s] writeRespBodySendFile() return %ld.\n",
+                 getLogId(), len ));
+        
         if ( len > 0 )
         {
             pData->incCurPos( len );
@@ -3186,14 +3203,20 @@ int HttpSession::sendStaticFileEx(  SendFileInfo * pData )
         }
         else
             len = writeRespBodyDirect( pBuf, written );
+        if ( D_ENABLED( DL_MEDIUM ) )
+           LOG_D(( getLogger(),
+                  "[%s] %s return %ld.\n",
+                 getLogId(), getGzipBuf()? "appendDynBodyEx()": "writeRespBodyDirect()", len ));
         if ( len > 0 )
         {
             pData->incCurPos( len );
             if ( len < written )
                 return 1;
         }
+        else if ( len == 0 )
+            break;
         else
-            return 1;
+            return len;
     }
     return ( pData->getRemain() > 0 );
 }
@@ -3208,17 +3231,15 @@ int HttpSession::sendStaticFile(  SendFileInfo * pData )
          !(m_sessionHooks.getFlag( LSI_HKPT_SEND_RESP_BODY )& LSI_HOOK_FLAG_PROCESS_STATIC ))
         return sendStaticFileEx( pData );
 
-    m_sessionHooks.triggered();    
-    
     lsi_cb_param_t param;
     lsi_hook_info_t hookInfo;
     int buffered = 0;
     param._session = (LsiSession *)this;
 
-    hookInfo._termination_fp = (void*)writeRespBodyTermination;
+    hookInfo._termination_fp = (POINTER_termination_fp)writeRespBodyTermination;
+    hookInfo._hooks = GlobalHttpHooks->get(LSI_HKPT_SEND_RESP_BODY);
+    hookInfo._enable_array = m_sessionHooks.getEnableArray( LSI_HKPT_SEND_RESP_BODY );
     param._hook_info = &hookInfo;
-
-    hookInfo._hooks = m_sessionHooks.get(LSI_HKPT_SEND_RESP_BODY);
 
     param._flag_in  = 0;
     param._flag_out = &buffered;
@@ -3243,8 +3264,9 @@ int HttpSession::sendStaticFile(  SendFileInfo * pData )
 //             &&( (m_iFlag & (HSF_HANDLER_DONE | 
 //                             HSF_RECV_RESP_BUFFERED ) == HSF_HANDLER_DONE ))
 //             param._flag_in = LSI_CB_FLAG_IN_EOF;
-        len = (*(((LsiApiHook *)param._cur_hook)->_cb))( &param );
-        LOG_D (( "[HttpSession::sendStaticFile] sent: %d, buffered: %d", len, buffered ));
+        len = LsiApiHooks::runForwardCb( &param );
+        if ( D_ENABLED( DL_MEDIUM ) )
+            LOG_D (( "[HttpSession::sendStaticFile] sent: %d, buffered: %d", len, buffered ));
 
         if ( len > 0 )
         {
@@ -3284,7 +3306,6 @@ int HttpSession::finalizeHeader( int ver, int code )
     
     if ( m_sessionHooks.isEnabled( LSI_HKPT_SEND_RESP_HEADER) )
     {
-        m_sessionHooks.triggered();    
         ret = m_sessionHooks.runCallbackNoParam(LSI_HKPT_SEND_RESP_HEADER, (LsiSession *)this);
         ret = processHkptResult( LSI_HKPT_SEND_RESP_HEADER, ret );
         if ( ret )
@@ -3326,9 +3347,10 @@ int HttpSession::contentEncodingFixup()
     {
         if ( pContentEncoding )
         {
-            if ( addModgzipFilter((LsiSession *)this, 1, 0, -3000 ) == -1 )
+            if ( addModgzipFilter((LsiSession *)this, 1, 0 ) == -1 )
                 return -1;
             m_response.getRespHeaders().del( HttpRespHeaders::H_CONTENT_ENCODING );
+            clearFlag(HSF_RESP_BODY_COMPRESSED);
             requireChunk = 1;
         }
     }
@@ -3337,9 +3359,11 @@ int HttpSession::contentEncodingFixup()
         if (( !m_request.getContextState( RESP_CONT_LEN_SET )
                 || m_response.getContentLen() > 200 ) )
         {
-            if ( addModgzipFilter((LsiSession *)this, 1, HttpServerConfig::getInstance().getCompressLevel(), 3000 ) == -1 )
+            if ( addModgzipFilter((LsiSession *)this, 1, HttpServerConfig::getInstance().getCompressLevel() ) == -1 )
                 return -1;
             m_response.addGzipEncodingHeader();
+            //The below do not set the flag because compress won't update the resp VMBuf to decompressed
+            //setFlag(HSF_RESP_BODY_COMPRESSED);
             requireChunk = 1;
         }
     }

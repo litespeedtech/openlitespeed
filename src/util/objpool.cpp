@@ -36,7 +36,7 @@ int GObjPool::allocate( int size )
             void * pObj = newObj();
             if ( pObj )
             {
-                m_freeList.safe_push_back( pObj );
+                m_freeList.unsafe_push_back( pObj );
                 ++m_poolSize;
             }
             else

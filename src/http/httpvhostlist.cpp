@@ -98,11 +98,11 @@ class HttpVHostMapImpl: public HashStringMap<HttpVHost *>
         return 0;
     }
 
-    static int callTimer( GHash::iterator it )
-    {   ((HttpVHost *)it->second())->onTimer();  return 0;  }
+    static int callTimer( const void *pKey, void *pData )
+    {   ((HttpVHost *)pData)->onTimer();  return 0;  }
 
-    static int callTimer30Secs( GHash::iterator it )
-    {   ((HttpVHost *)it->second())->onTimer30Secs();   return 0; }
+    static int callTimer30Secs( const void *pKey, void *pData )
+    {   ((HttpVHost *)pData)->onTimer30Secs();   return 0; }
 
 
     void onTimer()

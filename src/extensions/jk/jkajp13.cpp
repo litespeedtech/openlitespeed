@@ -231,7 +231,7 @@ int JkAjp13::buildReq( HttpSession *pSession, char * &p, char * pEnd )
     }
     appendInt( pHeaderCounts, headerCounts );
     const char * pAttr = pReq->getAuthUser();
-    if ( *pAttr )
+    if ( pAttr )
     {
         n = strlen( pAttr );
         if ( pEnd2 - p < n + 8 )
@@ -243,7 +243,7 @@ int JkAjp13::buildReq( HttpSession *pSession, char * &p, char * pEnd )
     }
 
     pAttr = pReq->getQueryString();
-    if ( *pAttr )
+    if ( pAttr )
     {
         n = pReq->getQueryStringLen();
         if ( pEnd2 - p < n )

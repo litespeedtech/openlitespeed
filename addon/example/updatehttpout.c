@@ -30,8 +30,10 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
 */
 #include "../include/ls.h"
-#include "loopbuff.h"
+#include <lsr/lsr_loopbuf.h>
+#include <lsr/lsr_xpool.h>
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <memory.h>
 //#include <zlib.h>
@@ -49,51 +51,35 @@ lsi_module_t MNAME;
 
 typedef struct _MyData
 {
-    LoopBuff inWBuf;
-    LoopBuff outWBuf;
+    lsr_loopbuf_t inWBuf;
+    lsr_loopbuf_t outWBuf;
 } MyData;
 
 
 
 int httpRelease(void *data)
 {
-    MyData *myData = (MyData *)data;
     g_api->log( NULL, LSI_LOG_DEBUG, "#### mymodulehttp %s\n", "httpRelease" );
-    if (myData)
-    {
-        _loopbuff_dealloc(&myData->inWBuf);
-        _loopbuff_dealloc(&myData->outWBuf);
-        free (myData);
-    }
     return 0;
 }
 
 int httpinit(lsi_cb_param_t * rec)
 {
     MyData *myData = (MyData *)g_api->get_module_data(rec->_session, &MNAME, LSI_MODULE_DATA_HTTP);
-    if (myData == NULL )
-    {
-        myData = (MyData *) malloc(sizeof(MyData));
-        _loopbuff_init(&myData->inWBuf);
-        _loopbuff_alloc(&myData->inWBuf, MAX_BLOCK_BUFSIZE);
-        _loopbuff_init(&myData->outWBuf);
-        _loopbuff_alloc(&myData->outWBuf, MAX_BLOCK_BUFSIZE);
-        
-        g_api->log( NULL, LSI_LOG_DEBUG, "#### mymodulehttp init\n" );
-        g_api->set_module_data(rec->_session, &MNAME, LSI_MODULE_DATA_HTTP, (void *)myData);
-    } 
-    else
-    {
-        _loopbuff_dealloc(&myData->inWBuf);
-        _loopbuff_dealloc(&myData->outWBuf);
-    }
+    lsr_xpool_t *pool = g_api->get_session_pool( rec->_session );
+    myData = (MyData *)lsr_xpool_alloc( pool, sizeof( MyData ) );
+    lsr_loopbuf_x( &myData->inWBuf, MAX_BLOCK_BUFSIZE, pool );
+    lsr_loopbuf_x( &myData->outWBuf, MAX_BLOCK_BUFSIZE, pool );
     
+    g_api->log( NULL, LSI_LOG_DEBUG, "#### mymodulehttp init\n" );
+    g_api->set_module_data(rec->_session, &MNAME, LSI_MODULE_DATA_HTTP, (void *)myData);
     return 0;
 }
 
 int httprespwrite(lsi_cb_param_t * rec)
 {
     MyData *myData = NULL;
+    lsr_xpool_t *pool = g_api->get_session_pool( rec->_session );
     const char *in = rec->_param;
     int inLen = rec->_param_len;
     int written, total = 0;
@@ -104,23 +90,29 @@ int httprespwrite(lsi_cb_param_t * rec)
 //     for ( j=0; j<inLen; ++j )
 //     {
 //         sprintf(s, "%c ", (unsigned char)in[j]);
-//         _loopbuff_append(&myData->outWBuf, s, 2);
+//         lsr_loopbuf_xappend( &myData->m_outWBuf, s, 2, pool );
 //         total += 2;
 //     }
 
-    _loopbuff_append(&myData->outWBuf, TEST_STRING, sizeof(TEST_STRING) -1 );
-    _loopbuff_append(&myData->outWBuf, in, inLen);
-    total = inLen + sizeof(TEST_STRING) -1;
+    //If have content, append a string for testing
+    if (inLen > 0)
+    {
+        lsr_loopbuf_xappend( &myData->outWBuf, TEST_STRING, sizeof( TEST_STRING ) - 1, pool );
+        lsr_loopbuf_xappend( &myData->outWBuf, in, inLen, pool );
+        total = inLen + sizeof(TEST_STRING) -1;
+    }
     
-    _loopbuff_reorder(&myData->outWBuf);
-    written = g_api->stream_write_next( rec,  _loopbuff_getdataref(&myData->outWBuf),
-                                                 _loopbuff_getdatasize(&myData->outWBuf) );
-    _loopbuff_erasedata(&myData->outWBuf, written);
+    lsr_loopbuf_xstraight( &myData->outWBuf, pool );
+    
+    written = g_api->stream_write_next( rec, lsr_loopbuf_begin( &myData->outWBuf ),
+                                        lsr_loopbuf_size( &myData->outWBuf ) );
+    lsr_loopbuf_pop_front( &myData->outWBuf, written );
     
     g_api->log( NULL, LSI_LOG_DEBUG, "#### mymodulehttp test, next caller written %d, return %d, left %d\n",  
-                         written, total, _loopbuff_getdatasize(&myData->outWBuf));
+                         written, total, lsr_loopbuf_size( &myData->outWBuf ));
 
-    if (_loopbuff_hasdata(&myData->outWBuf))
+    
+    if ( !lsr_loopbuf_empty( &myData->outWBuf ))
     {
         int hasData = 1;
         rec->_flag_out = &hasData;
@@ -144,6 +136,7 @@ int httpreqHeaderRecved(lsi_cb_param_t * rec)
     char *headerBuf;
     int hostLen, uaLen, acceptLen, headerLen; 
     char uaBuf[1024], hostBuf[128], acceptBuf[512];
+    lsr_xpool_t *pPool = g_api->get_session_pool( rec->_session );
     
     uri = g_api->get_req_uri(rec->_session, NULL);
     host = g_api->get_req_header(rec->_session, "Host", 4, &hostLen);
@@ -153,21 +146,21 @@ int httpreqHeaderRecved(lsi_cb_param_t * rec)
                           uri, getNullEndString(host, hostLen, hostBuf, 128), getNullEndString(ua, uaLen, uaBuf, 1024), getNullEndString(accept, acceptLen, acceptBuf, 512) );
     
     headerLen = g_api->get_req_raw_headers_length(rec->_session);
-    headerBuf = (char *)malloc(headerLen + 1);
+    headerBuf = (char *)lsr_xpool_alloc( pPool, headerLen + 1 );
     memset(headerBuf, 0, headerLen + 1);
     g_api->get_req_raw_headers(rec->_session, headerBuf, headerLen);
     g_api->log( NULL, LSI_LOG_DEBUG, "#### mymodulehttp test, httpreqHeaderRecved whole header: %s, length: %d\n", 
                          headerBuf, headerLen);
   
-    free (headerBuf);
+    lsr_xpool_free( pPool, headerBuf );
     return 0;
     
 }
 
 static lsi_serverhook_t serverHooks[] = {
-    {LSI_HKPT_HTTP_BEGIN, httpinit, LSI_HOOK_NORMAL, 0},
-    {LSI_HKPT_RECV_RESP_BODY, httprespwrite, LSI_HOOK_NORMAL, LSI_HOOK_FLAG_TRANSFORM | LSI_HOOK_FLAG_DECOMPRESS_REQUIRED},
-    {LSI_HKPT_RECV_REQ_HEADER, httpreqHeaderRecved, LSI_HOOK_NORMAL, 0},
+    {LSI_HKPT_HTTP_BEGIN, httpinit, LSI_HOOK_NORMAL, LSI_HOOK_FLAG_ENABLED},
+    {LSI_HKPT_RECV_RESP_BODY, httprespwrite, LSI_HOOK_NORMAL, LSI_HOOK_FLAG_TRANSFORM | LSI_HOOK_FLAG_DECOMPRESS_REQUIRED | LSI_HOOK_FLAG_ENABLED},
+    {LSI_HKPT_RECV_REQ_HEADER, httpreqHeaderRecved, LSI_HOOK_NORMAL, LSI_HOOK_FLAG_ENABLED},
     lsi_serverhook_t_END   //Must put this at the end position
 };
 

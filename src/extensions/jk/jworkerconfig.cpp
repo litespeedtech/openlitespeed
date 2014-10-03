@@ -30,14 +30,14 @@ JWorkerConfig::JWorkerConfig( const char * pName )
 JWorkerConfig::~JWorkerConfig()
 {
     if ( m_pSecret )
-        g_pool.deallocate2( m_pSecret );
+        Pool::deallocate2( m_pSecret );
 }
 
 void JWorkerConfig::setSecret( const char * pSecret )
 {
     if ( m_pSecret )
-         g_pool.deallocate2( m_pSecret );
+         Pool::deallocate2( m_pSecret );
     m_secretLen = strlen( pSecret );
-    m_pSecret = g_pool.dupstr( pSecret, m_secretLen );
+    m_pSecret = Pool::dupstr( pSecret, m_secretLen );
 }
 

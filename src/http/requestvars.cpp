@@ -134,7 +134,7 @@ static const char * findEndOfVarName( const char * pBegin, const char * pEnd )
 {
     if ( *pBegin == '{' )
     {
-        return StringTool::findCloseBracket( pBegin + 1, pEnd );
+        return StringTool::findCloseBracket( pBegin + 1, pEnd, '{', '}' );
     }
     while( pBegin < pEnd )
     {
@@ -519,7 +519,9 @@ int RequestVars::getReqVar( HttpSession *pSession, int type, char * &pValue, int
         return snprintf( pValue, bufLen, "%hu", pSession->getRemotePort() );
     case REF_REMOTE_USER:
         pValue = (char *)pReq->getAuthUser();
-        return strlen( pValue );
+        if ( pValue )
+            return strlen( pValue );
+        return 0;
     case REF_REMOTE_IDENT:
         //do not support;
         return 0;

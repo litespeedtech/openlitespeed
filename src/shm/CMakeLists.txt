@@ -13,7 +13,6 @@ SET(shm_STAT_SRCS
     lsshmhash.cpp 
     lsshmpool.cpp 
     lsshm.cpp
-    lslock.cpp
     lsi_shm.cpp
     ls_fallocate.c
 )

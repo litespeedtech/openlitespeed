@@ -48,14 +48,14 @@ UserDir::~UserDir()
         delete m_pCacheGroup;
     }
     if ( m_pName )
-        g_pool.deallocate2( m_pName );
+        Pool::deallocate2( m_pName );
 }
 
 void UserDir::setName( const char * pName )
 {
     if ( m_pName )
-        g_pool.deallocate2( m_pName );
-    m_pName = g_pool.dupstr( pName );
+        Pool::deallocate2( m_pName );
+    m_pName = Pool::dupstr( pName );
 }
 
 const AuthUser * UserDir::getUserIfMatchGroup( HttpSession *pSession, const char * pUser,

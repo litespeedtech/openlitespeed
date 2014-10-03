@@ -20,43 +20,43 @@
 #define PCREGEX_H
 
 
+#include <lsr/lsr_pcreg.h>
 #include <util/autostr.h>
 #include <pcre.h>
 
 //#define _USE_PCRE_JIT_
 
 
-class RegexResult
+class RegexResult : private lsr_pcre_result_t
 {
-public: 
-    RegexResult( )
-        : m_pBuf( NULL )
-        , m_matches( 0 )
-        {}
-    ~RegexResult() {}
-
+public:
+    RegexResult()
+    {   lsr_pcre_result( this );   }
+    
+    ~RegexResult()
+    {   lsr_pcre_result_d( this );  }
+    
     void setBuf( const char * pBuf )    {   m_pBuf = pBuf;          }
+    
     void setMatches( int matches )      {   m_matches = matches;    }
-    int getSubstr( int i, char * &pValue ) const;
+    
+    int getSubstr( int i, char * &pValue ) const
+    {   return lsr_pcre_result_get_substring( this, i, &pValue );    }
+    
     int * getVector()                   {   return m_ovector;        }
+    
     int  getMatches() const             {   return m_matches;       }
-
-private:
-    const char * m_pBuf;
-    int    m_ovector[30];
-    int    m_matches;
 };
 
-
-class Pcregex       //pcreapi
+class Pcregex : private lsr_pcre_t      //pcreapi
 {
-    pcre        * m_regex;
-    pcre_extra  * m_extra;
-    int           m_iSubStr;
-    
 public: 
-    Pcregex();
-    ~Pcregex();
+    Pcregex()
+    {   lsr_pcre( this );   }
+    
+    ~Pcregex()
+    {   lsr_pcre_d( this ); }
+    
 #ifdef _USE_PCRE_JIT_
 #if !defined(__sparc__) && !defined(__sparc64__)
     static void init_jit_stack();
@@ -64,7 +64,11 @@ public:
     static void release_jit_stack( void * pValue);
 #endif
 #endif
-    int  compile(const char * regex, int options, int matchLimit = 0, int recursionLimit = 0);
+    int  compile( const char *regex, int options, int matchLimit = 0, int recursionLimit = 0 )
+    {   
+        return lsr_pcre_compile( this, regex, options, matchLimit, recursionLimit );
+    }
+    
     int  exec( const char *subject, int length, int startoffset,
                 int options, int *ovector, int ovecsize ) const
     {
@@ -77,6 +81,7 @@ public:
         return pcre_exec( m_regex, m_extra, subject, length, startoffset,
                         options, ovector, ovecsize );
     }
+    
     int  exec( const char *subject, int length, int startoffset,
                 int options, RegexResult * pRes ) const
     {
@@ -84,37 +89,42 @@ public:
                         options, pRes->getVector(), 30 ) );
         return pRes->getMatches();
     }
-    void release();
+    
+    void release()              {   lsr_pcre_release( this );   }
+    
     int  getSubStrCount() const  {   return m_iSubStr;   }
 
 };
 
-
-
-class RegSub
+class RegSub : private lsr_pcre_sub_t
 {
-
-    typedef struct 
-    {
-        int m_strBegin;
-        int m_strLen;
-        int m_param;  
-    } RegSubEntry;
-    AutoStr       m_parsed;
-    RegSubEntry * m_pList;
-    RegSubEntry * m_pListEnd;
-    
 public:
-    RegSub();
-    RegSub( const RegSub & rhs );
-    ~RegSub();
-    void release();
-    int compile( const char * input );
+    RegSub()
+    {   lsr_pcre_sub( this );   }
+    
+    RegSub( const RegSub & rhs )
+    {   lsr_pcre_sub_copy( this, &rhs ); }
+    
+    ~RegSub()
+    {   lsr_pcre_sub_d( this ); }
+    
+    void release()
+    {   lsr_pcre_sub_release( this );   }
+    
+    int compile( const char * input )
+    {   return lsr_pcre_sub_compile( this, input ); }
+    
     int exec( const char * input, const int *ovector, int ovec_num,
-                char * output, int &length );
+                char * output, int &length )
+    {   
+        return lsr_pcre_sub_exec( this, input, ovector, ovec_num, 
+        output, &length );
+    }
 };
-
-
-
-
 #endif
+
+
+
+
+
+

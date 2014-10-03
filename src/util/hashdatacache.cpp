@@ -47,14 +47,14 @@ const KeyData * HashDataCache::getData( const char * pKey )
 DataStore::~DataStore()
 {
     if ( m_uriDataStore )
-        g_pool.deallocate2( m_uriDataStore );
+        Pool::deallocate2( m_uriDataStore );
 }
 
 void DataStore::setDataStoreURI( const char * pURI )
 {
     if ( m_uriDataStore )
-        g_pool.deallocate2( m_uriDataStore );
-    m_uriDataStore = g_pool.dupstr( pURI );
+        Pool::deallocate2( m_uriDataStore );
+    m_uriDataStore = Pool::dupstr( pURI );
 }
 
 

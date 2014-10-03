@@ -54,6 +54,7 @@ class epoll : public Multiplexer
 public:
     epoll();
     ~epoll();
+    virtual int getHandle() const   {   return m_epfd;  }
     virtual int init( int capacity = DEFAULT_CAPACITY );
     virtual int add( EventReactor* pHandler, short mask );
     virtual int remove( EventReactor* pHandler );

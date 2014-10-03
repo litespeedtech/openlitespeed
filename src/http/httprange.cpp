@@ -19,7 +19,6 @@
 #include "httpstatuscode.h"
 
 #include <util/autostr.h>
-#include <util/gpointerlist.h>
 #include <util/stringtool.h>
 
 #include <ctype.h>
@@ -50,9 +49,6 @@ public:
     int check( int entityLen );
     off_t getLen() const     { return m_lEnd - m_lBegin + 1;   }
 };
-
-void HttpRangeList::clear()
-{   release_objects();  }
 
 
 
@@ -86,10 +82,20 @@ HttpRange::HttpRange( off_t entityLen )
 
 
 int HttpRange::count() const
-{   return m_list.size();   }
+{
+    return m_array.getSize();
+}
 
+ByteRange * HttpRange::getSlot( lsr_xpool_t & pool )
+{
+    if ( m_array.getCapacity() == 0 )
+        m_array.guarantee( &pool, 3 );
+    else if ( m_array.getCapacity() <= m_array.getSize() + 1 )
+        m_array.guarantee( &pool, m_array.getCapacity() * 2 );
+    return m_array.getNew();
+}
 
-int HttpRange::checkAndInsert( ByteRange & range )
+int HttpRange::checkAndInsert( ByteRange & range, lsr_xpool_t & pool )
 {
     if (( range.getBegin() == -1 )&&( range.getEnd() == -1 ))
         return -1;
@@ -100,7 +106,7 @@ int HttpRange::checkAndInsert( ByteRange & range )
         if ( range.check( m_lEntityLen ) )
             return -1;
     }
-    m_list.push_back( new ByteRange( range ) );
+    new (getSlot( pool )) ByteRange( range );
     return 0;
 }
 
@@ -149,9 +155,9 @@ int HttpRange::checkAndInsert( ByteRange & range )
     5 -> err: receive char other than the above
 */
 
-int HttpRange::parse( const char * pRange )
+int HttpRange::parse( const char * pRange, lsr_xpool_t & pool )
 {
-    m_list.clear();
+    m_array.clear();
     if ( strncasecmp( pRange, "bytes=", 6 ) != 0 )
         return SC_400;
     char ch;
@@ -227,7 +233,7 @@ int HttpRange::parse( const char * pRange )
                 lValue = 0;
                 //don't break, fall through
             case 2:  case 5:
-                if ( checkAndInsert( range ) == -1 )
+                if ( checkAndInsert( range, pool ) == -1 )
                 {
                     state = 6;
                     break;
@@ -255,10 +261,10 @@ int HttpRange::parse( const char * pRange )
     }
     if ( state == 6 )
     {
-        m_list.clear();
+        m_array.clear();
         return SC_400;
     }
-    if ( m_list.empty() )
+    if ( m_array.getSize() == 0 )
         return SC_416; //range not satisfiable
     return 0;
 }
@@ -276,7 +282,7 @@ int HttpRange::getContentRangeString( int n, char * pBuf, int len ) const
         return -1;
     char achLen[30];
     StringTool::str_off_t( achLen, 30, m_lEntityLen);
-    if (( n < 0 )||(n >= (int)m_list.size() ))
+    if ((n < 0) || (n >= m_array.getSize()))
     {
         if ( m_lEntityLen == -1 )
             return -1;
@@ -286,13 +292,13 @@ int HttpRange::getContentRangeString( int n, char * pBuf, int len ) const
     else
     {
         int ret1;
-        ret1 = StringTool::str_off_t( pBuf, len, m_list[ n ]->getBegin());
+        ret1 = StringTool::str_off_t( pBuf, len, m_array.getObj( n )->getBegin());
         if ( ret1 < 0 )
             return -1;
         pBuf += ret1;
         len -= ret1;
         *pBuf++ = '-';
-        ret1 = StringTool::str_off_t( pBuf, len, m_list[ n ]->getEnd());
+        ret1 = StringTool::str_off_t( pBuf, len, m_array.getObj( n )->getEnd());
         if ( ret1 < 0 )
             return -1;
         pBuf += ret1;
@@ -326,21 +332,16 @@ int HttpRange::getContentRangeString( int n, char * pBuf, int len ) const
 
 int HttpRange::getContentOffset( int n, off_t& begin, off_t& end ) const
 {
-    if ((n < 0 )||( n >= (int)m_list.size() ))
+    if ((n < 0) || ( n >= m_array.getSize()))
         return -1;
-    if ( m_list[ n ]->check( m_lEntityLen ) == 0 )
+    if ( m_array.getObj( n )->check( m_lEntityLen ) == 0 )
     {
-        begin = m_list[ n ]->getBegin();
-        end = m_list[ n ]->getEnd() + 1;
+        begin = m_array.getObj( n )->getBegin();
+        end = m_array.getObj( n )->getEnd() + 1;
         return 0;
     }
     else
         return -1;
-}
-
-void HttpRange::clear()
-{
-    m_list.clear();
 }
 
 void HttpRange::makeBoundaryString()
@@ -360,9 +361,9 @@ void HttpRange::beginMultipart()
 
 int HttpRange::getPartHeader( int n, const char * pMimeType, char* buf, int size ) const
 {
-    assert(( n >= 0 )&&( n <= (int)m_list.size() ));
+    assert(( n >= 0 )&&( n <= m_array.getSize()));
     int ret;
-    if ( n < (int)m_list.size() )
+    if ( n < m_array.getSize())
     {
         ret = snprintf( buf, size,
                         "\r\n--%s\r\n"
@@ -397,10 +398,10 @@ off_t HttpRange::getPartLen( int n, int iMimeTypeLen ) const
 {
     off_t len = 4 + 16 + 2
          + 14 + iMimeTypeLen + 2
-         + 21 + getDigits( m_list[ n ]->getBegin() ) + 1
-         + getDigits( m_list[ n ]->getEnd() ) + 1
+         + 21 + getDigits( m_array.getObj( n )->getBegin() ) + 1
+         + getDigits( m_array.getObj( n )->getEnd() ) + 1
          + 2 + 2
-         + m_list[ n ]->getLen();
+         + m_array.getObj( n )->getLen();
     if ( m_lEntityLen == -1 )
         ++len;
     else
@@ -414,7 +415,7 @@ off_t HttpRange::getMultipartBodyLen( const AutoStr2* pMimeType ) const
     if ( m_lEntityLen == -1 )
         return -1;
     int typeLen = pMimeType->len();
-    int size = m_list.size();
+    int size = m_array.getSize();
     off_t total = 0;
     for( int i = 0; i < size; ++i )
     {
@@ -425,11 +426,13 @@ off_t HttpRange::getMultipartBodyLen( const AutoStr2* pMimeType ) const
 
 bool HttpRange::more() const
 {
-    return m_iCurRange < (int)m_list.size();
+    return m_iCurRange < m_array.getSize();
 }
 
 int HttpRange::getContentOffset( off_t& begin, off_t& end ) const
 {
     return getContentOffset( m_iCurRange, begin, end );
 }
+
+
 

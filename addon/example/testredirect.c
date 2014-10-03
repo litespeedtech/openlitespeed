@@ -30,6 +30,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
 */
 #include "../include/ls.h"
+#include <stdlib.h>
 #include <string.h>
 #define     MNAME       testredirect
 #define     TEST_URL       "/testredirect"
@@ -37,11 +38,62 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #define DEST_URL        "/index.html"
 
-
+/* This module tests redirect operations.
+ * Valid urls are /testredirect?x-y
+ * x is a LSI URL Operation.  Valid operations are outlined in the lsi_url_op enum in ls.h
+ * y determines who handles the operation, 0 for the server, 1 for module.
+ * 
+ * Note: If y = 1, only the redirect URL Ops are valid.
+ */
 
 lsi_module_t MNAME;
 
-int check_if_redirect(lsi_cb_param_t * rec)
+int parse_qs( const char *qs, int *action, int *useHandler )
+{
+    int len;
+    const char *pBuf;
+    if ( !qs || (len = strlen( qs )) <= 0 )
+        return -1;
+    *action = strtol( qs, NULL, 10 );
+    pBuf = memchr( qs, '-', len );
+    if ( pBuf && useHandler )
+        *useHandler = strtol( pBuf + 1, NULL, 10 );
+    return 0;
+}
+
+void report_error( lsi_session_t *session, const char *qs )
+{
+    char errBuf[512];
+    sprintf( errBuf, "Error: Invalid argument.\n"
+                    "Query String was %s.\n"
+                    "Expected d-d, where d is an integer.\n"
+                    "Valid values for the first d are LSI URL Ops.\n"
+                    "Valid values for the second d are\n"
+                    "\t 0 for normal operations,\n"
+                    "\t 1 for module handled operations.\n"
+                    "If using module handled operations, can only use redirect URL Ops.\n",
+                    qs
+            );
+    g_api->append_resp_body( session, errBuf, strlen( errBuf ));
+    g_api->end_resp( session );
+}
+
+//Checks to make sure URL Action is valid.  0 for valid, -1 for invalid.
+int test_range( int action )
+{
+    action = action & 127;
+    if ( action == 0 || action == 1 )
+        return 0;
+    else if ( action > 16 && action < 23 )
+        return 0;
+    else if ( action > 32 && action < 39 )
+        return 0;
+    else if ( action > 48 && action < 55 )
+        return 0;
+    return -1;
+}
+
+int check_if_redirect( lsi_cb_param_t * rec )
 {
     const char *uri;
     const char *qs;
@@ -52,17 +104,25 @@ int check_if_redirect(lsi_cb_param_t * rec)
     if ( len >= strlen(TEST_URL) && strncasecmp(uri, TEST_URL, strlen(TEST_URL)) == 0 )
     {
         qs = g_api->get_req_query_string(rec->_session, NULL );
-        sscanf(qs, "%d-%d", &action, &useHandler);
-        if (!useHandler)
+        if ( parse_qs( qs, &action, &useHandler ) < 0 )
+        {
+            report_error( rec->_session, qs );
+            return LSI_RET_OK;
+        }
+        if ( test_range( action ) < 0 )
+            report_error( rec->_session, qs );
+        else if ( !useHandler )
             g_api->set_uri_qs(rec->_session, action, DEST_URL, sizeof(DEST_URL) -1, "", 0 );
-        else
+        else if ( action > 1 )
             g_api->register_req_handler(rec->_session, &MNAME, TEST_URL_LEN);
+        else
+            report_error( rec->_session, qs );
     }
     return LSI_RET_OK;
 }
 
 static lsi_serverhook_t serverHooks[] = {
-    {LSI_HKPT_RECV_REQ_HEADER, check_if_redirect, LSI_HOOK_NORMAL, 0},
+    {LSI_HKPT_RECV_REQ_HEADER, check_if_redirect, LSI_HOOK_NORMAL, LSI_HOOK_FLAG_ENABLED},
     lsi_serverhook_t_END   //Must put this at the end position
 };
 
@@ -71,13 +131,20 @@ static int _init( lsi_module_t * pModule )
     return 0;
 }
 
-static int handlerBeginProcess(lsi_session_t *session)
+static int handlerBeginProcess( lsi_session_t *session )
 {
     const char *qs;
     int action = LSI_URI_REWRITE;
     qs = g_api->get_req_query_string(session, NULL );
-    sscanf(qs, "%d", &action);
-    g_api->set_uri_qs(session, action, DEST_URL, sizeof(DEST_URL) -1, "", 0 );
+    if ( parse_qs( qs, &action, NULL ) < 0 )
+    {
+        report_error( session, qs );
+        return LSI_RET_OK;
+    }
+    if ( action == 17 || action == 33 || action == 49 )
+        report_error( session, qs );
+    else
+        g_api->set_uri_qs( session, action, DEST_URL, sizeof(DEST_URL) -1, "", 0 );
     return 0;
 }
 

@@ -367,7 +367,7 @@ int VMemBuf::appendBlock( BlockBuf * pBlock )
     }
     else
     {
-        m_bufList.safe_push_back( pBlock );
+        m_bufList.unsafe_push_back( pBlock );
         return 0;
     }
     

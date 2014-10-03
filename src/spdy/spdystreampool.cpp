@@ -18,7 +18,7 @@
 #include "spdystreampool.h"
 #include "spdystream.h"
 
-Pool SpdyStreamPool::s_pool; 
+ObjPool<SpdyStream> SpdyStreamPool::s_pool; 
 void SpdyStreamPool::recycle( SpdyStream* pStream )
 {
     s_pool.recycle( pStream );    

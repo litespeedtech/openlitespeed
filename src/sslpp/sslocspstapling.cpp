@@ -16,8 +16,9 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include <sslpp/sslocspstapling.h>
+#include <sslpp/sslerror.h>
 
-#include <util/base64.h>
+#include <lsr/lsr_base64.h>
 #include <util/configctx.h>
 #include <util/httpfetch.h>
 #include <util/vmembuf.h>
@@ -318,7 +319,7 @@ int SslOcspStapling::createRequest()
     len = getRequestData(pReqData);
     if ( len <= 0 )
         return -1;
-    len64 = Base64::encode( (const char*)ReqData, len, (char*)pReqData64);
+    len64 = lsr_base64_encode( (const char*)ReqData, len, (char*)pReqData64);
 
     const char* pUrl = m_sOcspResponder.c_str();
     memcpy( pReqData,  pUrl, m_sOcspResponder.len());
@@ -390,6 +391,14 @@ int SslOcspStapling::certVerify(OCSP_RESPONSE *pResponse, OCSP_BASICRESP *pBasic
             if ( ::stat( m_sRespfile.c_str(), &st ) == 0 ) 
                 m_RespTime = st.st_mtime;                
         }
+    }
+    if ( iResult )
+    {
+        setLastErrMsg( "%s", SSLError().what() );
+        ERR_clear_error();
+        if ( m_pHttpFetch )
+            m_pHttpFetch->writeLog(s_ErrMsg.c_str());
+
     }
     return iResult;
 }

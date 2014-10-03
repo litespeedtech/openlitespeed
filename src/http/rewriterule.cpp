@@ -266,13 +266,13 @@ MapRefItem::MapRefItem( const MapRefItem& rhs )
 int MapRefItem::parse( const char * &pFormatStr, const char * pEnd, const RewriteMapList * pMaps )
 {
     const char * pMapName = pFormatStr + 2;
-    const char * pClose = StringTool::findCloseBracket( pMapName, pEnd );
+    const char * pClose = StringTool::findCloseBracket( pMapName, pEnd, '{', '}' );
     if ( pClose == pEnd )
     {
         HttpLog::parse_error( s_pCurLine,  "missing '}'" );
         return -1;
     }
-    const char * pColon = StringTool::findCharInBracket( pMapName, pClose, ':' );
+    const char * pColon = StringTool::findCharInBracket( pMapName, pClose, ':', '{', '}' );
     if ( pColon == NULL )
     {
         HttpLog::parse_error( s_pCurLine,  "missing ':'" );
@@ -292,7 +292,7 @@ int MapRefItem::parse( const char * &pFormatStr, const char * pEnd, const Rewrit
         m_pMap = iter.second();
     }
     pFormatStr = pClose + 1;
-    const char * pDefault = StringTool::findCharInBracket( pMapName, pClose, '|' );
+    const char * pDefault = StringTool::findCharInBracket( pMapName, pClose, '|', '{', '}' );
     if ( pDefault != NULL )
     {
         assert( !m_pDefaultFormat );

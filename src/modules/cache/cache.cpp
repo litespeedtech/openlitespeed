@@ -15,7 +15,7 @@
 *    You should have received a copy of the GNU General Public License       *
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
-#include "../../../addon/include/ls.h"
+#include "ls.h"
 #include "cacheconfig.h"
 #include "cachectrl.h"
 #include <stdlib.h>
@@ -26,6 +26,7 @@
 #include "dirhashcachestore.h"
 #include "dirhashcacheentry.h"
 #include "cachehash.h"
+#include <lsr/lsr_confparser.h>
 #include "util/autostr.h"
 #include <util/datetime.h>
 #include <util/stringtool.h>
@@ -130,54 +131,85 @@ const char *paramArray[] = {
     NULL //Must have NULL in the last item
 };
 
-static const char* parseLineStr(const char *buf, const char *key, int& len)
-{
-    int bufLen = strlen(buf);
-    int keyLen = strlen(key);
-    const char *p0, *p1;
-    
-    len = 0;
-    if (bufLen <= keyLen || (p0 = strcasestr(buf, key)) == NULL)
-         return NULL;
-    
-    p0 += keyLen;
-    while (p0 < buf + bufLen && (*p0 == ' ' || *p0 == '\t'))
-        ++p0;
-    
-    p1 = p0;
-    /**
-     * TODO: when plain conf, needn't these checking 
-     * Just use:  len = buf + bufLen - p0;
-     * For tail already trimmed
-     */
-    while(p1 < buf + bufLen && *p1 != ' ' && *p1 != '\t' && *p1 != '\n' && *p1 != '\r')
-        ++p1;
-    
-    len = p1 - p0;
-    return p0;
-}
+const int paramArrayLen = 11;
 
-static int parseLine(const char *buf, const char *key, int minValue, int maxValue, int defValue)
+// Parses the key and value given.  If key is storagepath, returns 1, otherwise returns 0
+static int parseLine( CacheConfig *pConfig, const char *key, int keyLen, const char *val, int valLen )
 {
-    const char *paramEnd = buf + strlen(buf);
-    const char *p;
-    int val = defValue;
-    
-    p = strcasestr(buf, key);
-    if (!p)
-        return val;
-    
-    int keyLen = strlen(key);
-    if (p + keyLen < paramEnd)
+    int i, bit, minValue = 0, maxValue = 1, defValue = 0;
+    for( i = 0; i < paramArrayLen; ++i )
     {
-        if (sscanf(p + keyLen, "%d", &val) == 1)
-        {
-            if (val < minValue || val > maxValue)
-                val =defValue;
-        }
+        if ( strncasecmp( key, paramArray[i], keyLen ) == 0 )
+            break;
+    }
+
+    switch( i )
+    {
+    case 0:
+        bit = CACHE_ENABLED;
+        break;
+    case 1:
+        bit = CACHE_QS_CACHE;
+        break;
+    case 2:
+        bit = CACHE_REQ_COOKIE_CACHE;
+        break;
+    case 3:
+        bit = CACHE_RESP_COOKIE_CACHE;
+        break;
+    case 4:
+        bit = CACHE_IGNORE_REQ_CACHE_CTRL_HEADER;
+        break;
+    case 5:
+        bit = CACHE_IGNORE_RESP_CACHE_CTRL_HEADER;
+        break;
+    case 6:
+        bit = CACHE_MAX_AGE_SET;
+        maxValue = INT_MAX;        
+        break;
+    case 7:
+        bit = CACHE_STALE_AGE_SET;
+        maxValue = INT_MAX;
+        break;
+    case 8:
+        bit = CACHE_PRIVATE_ENABLED;
+        break;
+    case 9:
+        bit = CACHE_PRIVATE_AGE_SET;
+        maxValue = INT_MAX;
+        break;
+    case 10:
+        return 1; //Only case to return 1
+    default:
+        //Not a part of the list
+        return 0;
     }
     
-    return val;
+    int value = strtol( val, NULL, 10 );
+    if ( ! (value == 0 && *val != '0' ) )
+    {
+        if ( value < minValue || value > maxValue )
+            value = defValue;
+    
+        if ( bit == CACHE_MAX_AGE_SET )
+        {
+            pConfig->setDefaultAge( value );
+            value = 1;
+        }
+        else if ( bit == CACHE_STALE_AGE_SET )
+        {
+            pConfig->setMaxStale( value );
+            value = 1;
+        }
+        else if ( bit == CACHE_PRIVATE_AGE_SET )
+        {
+            pConfig->setPrivateAge( value );
+            value = 1;
+        }
+
+        pConfig->setConfigBit( bit, value );
+    }
+    return 0;
 }
 
 
@@ -203,8 +235,11 @@ static void matchDirectoryPermissions(const char *src, const char *dest)
     }
 }
 
-static void * parseConfig( const char *param, void *_initial_config, int level, const char *name )
+static void * parseConfig( const char *param, int param_len, void *_initial_config, int level, const char *name )
 {
+    const char *pLineBegin, *pLineEnd, *pParamEnd = param + param_len;
+    lsr_confparser_t cp;
+    lsr_objarray_t *pList;
     CacheConfig *pInitConfig = (CacheConfig *)_initial_config;
     CacheConfig *pConfig = new CacheConfig;
     if (!pConfig)
@@ -214,78 +249,54 @@ static void * parseConfig( const char *param, void *_initial_config, int level, 
     if (!param)
         return (void *)pConfig;
     
-    long val = parseLine( param, "enableCache", -1, 1, -1 );
-    if ( val != -1 )
-        pConfig->setConfigBit( CACHE_ENABLED, val );
-    val = parseLine( param, "qsCache", -1, 1, -1 );
-    if ( val != -1 )
-        pConfig->setConfigBit( CACHE_QS_CACHE, val );
-    val = parseLine( param, "reqCookieCache", -1, 1, -1 );
-    if ( val != -1 )
-        pConfig->setConfigBit( CACHE_REQ_COOKIE_CACHE, val );
-    val = parseLine( param, "respCookieCache", -1, 1, -1 );
-    if ( val != -1 )
-        pConfig->setConfigBit( CACHE_RESP_COOKIE_CACHE, val );
-    val = parseLine( param, "ignoreReqCacheCtrl", -1, 1, -1 );
-    if ( val != -1 )
-        pConfig->setConfigBit( CACHE_IGNORE_REQ_CACHE_CTRL_HEADER, val );
-    val = parseLine( param, "ignoreRespCacheCtrl", -1, 1, -1 );
-    if ( val != -1 )
-        pConfig->setConfigBit( CACHE_IGNORE_RESP_CACHE_CTRL_HEADER, val );
-    val = parseLine( param, "expireInSeconds", -1, INT_MAX, -1 );
-    if ( val != -1 )
-    {
-        pConfig->setDefaultAge( val );
-        pConfig->setConfigBit( CACHE_MAX_AGE_SET, 1 );
-    }
-    val = parseLine( param, "maxStaleAge", -1, INT_MAX, -1 );
-    if ( val != -1 )
-    {
-        pConfig->setMaxStale( val );
-        pConfig->setConfigBit( CACHE_STALE_AGE_SET, 1 );
-    }
-    val = parseLine( param, "enablePrivateCache", -1, 1, -1 );
-    if ( val != -1 )
-        pConfig->setConfigBit( CACHE_PRIVATE_ENABLED, val );
-
-    val = parseLine( param, "privateExpireInSeconds", -1, INT_MAX, -1 );
-    if ( val != -1 )
-    {
-        pConfig->setPrivateAge( val );
-        pConfig->setConfigBit( CACHE_PRIVATE_AGE_SET, 1 );
-    }
+    lsr_confparser( &cp );
     
-    //In context level, do not parse and use this parameter
-    int valLen = 0;
-    const char *p = parseLineStr( param, "storagepath", valLen );
-    if (p && valLen > 0)
+    while((pLineBegin = lsr_get_conf_line( &param, pParamEnd, &pLineEnd )) != NULL )
     {
-        if (level != LSI_CONTEXT_LEVEL)
-        {
-            char cachePath[max_file_len]  = {0};
-            char defaultCachePath[max_file_len]  = {0};
-            if (p[0] != '/') 
-                strcpy(cachePath, g_api->get_server_root());
-            strcpy(defaultCachePath, g_api->get_server_root());
-            strncat(cachePath, p, valLen);
-            strncat(defaultCachePath, CACHEMODULEROOT, strlen(CACHEMODULEROOT));
+        pList = lsr_conf_parse_line_kv( &cp, pLineBegin, pLineEnd );
+        if ( !pList )
+            continue;
+        
+        lsr_str_t *pKey = (lsr_str_t *)lsr_objarray_getobj( pList, 0 );
+        lsr_str_t *pVal = (lsr_str_t *)lsr_objarray_getobj( pList, 1 );
+        const char *pValStr = lsr_str_c_str( pVal );
+        if ( pValStr == NULL )
+            continue;
             
-            if (createCachePath(cachePath, 0755) == -1)
+        int valLen = lsr_str_len( pVal );
+        if ( valLen == 0 )
+            continue;
+        
+        if ( parseLine( pConfig, lsr_str_c_str( pKey ), lsr_str_len( pKey ), pValStr, valLen) == 1)
+        {
+            if (level != LSI_CONTEXT_LEVEL)
             {
-                g_api->log(NULL, LSI_LOG_ERROR, "[%s]parseConfig failed to create directory [%s].\n",
-                                   ModuleNameString, cachePath);
+                char cachePath[max_file_len]  = {0};
+                char defaultCachePath[max_file_len]  = {0};
+                if (pValStr[0] != '/') 
+                    strcpy(cachePath, g_api->get_server_root());
+                strcpy(defaultCachePath, g_api->get_server_root());
+                strncat(cachePath, pValStr, valLen);
+                strncat(defaultCachePath, CACHEMODULEROOT, strlen(CACHEMODULEROOT));
+                
+                if (createCachePath(cachePath, 0755) == -1)
+                {
+                    g_api->log(NULL, LSI_LOG_ERROR, "[%s]parseConfig failed to create directory [%s].\n",
+                                    ModuleNameString, cachePath);
+                }
+                else
+                {
+                    matchDirectoryPermissions(defaultCachePath , cachePath);
+                    pConfig->setStoragePath(pValStr, valLen);
+                }
             }
             else
-            {
-                matchDirectoryPermissions(defaultCachePath , cachePath);
-                pConfig->setStoragePath(p, valLen);
-            }
+                g_api->log( NULL, LSI_LOG_INFO, "[%s]context [%s] shouldn't have 'storagepath' parameter.\n", 
+                    ModuleNameString, name);
         }
-        else
-            g_api->log( NULL, LSI_LOG_INFO, "[%s]context [%s] shouldn't have 'storagepath' parameter.\n", 
-                ModuleNameString, name);
     }
     
+    lsr_confparser_d( &cp );
     return (void *)pConfig;
 }
 
@@ -452,11 +463,11 @@ void clearHooks(lsi_session_t *session)
         if (myData->hasAddedHook)
         {
             if (myData->hasAddedHook == 2)
-                g_api->remove_session_hook( session, LSI_HKPT_RCVD_RESP_BODY, &MNAME );
+                g_api->set_session_hook_enable_flag( session, LSI_HKPT_RCVD_RESP_BODY, &MNAME, 0 );
             
-            g_api->remove_session_hook( session, LSI_HKPT_RECV_RESP_HEADER, &MNAME );
-            g_api->remove_session_hook( session, LSI_HKPT_HANDLER_RESTART, &MNAME );
-            g_api->remove_session_hook( session, LSI_HKPT_HTTP_END, &MNAME );
+            g_api->set_session_hook_enable_flag( session, LSI_HKPT_RECV_RESP_HEADER, &MNAME, 0 );
+            g_api->set_session_hook_enable_flag( session, LSI_HKPT_HANDLER_RESTART, &MNAME, 0 );
+            g_api->set_session_hook_enable_flag( session, LSI_HKPT_HTTP_END, &MNAME, 0 );
             myData->hasAddedHook = 0;
         }
         g_api->free_module_data(session, &MNAME, LSI_MODULE_DATA_HTTP, httpRelease);
@@ -538,7 +549,7 @@ static int createEntry(lsi_cb_param_t *rec)
     
     //Now we can store it
     myData->iCacheState = CE_STATE_WILLCACHE;
-    g_api->add_session_hook( rec->_session, LSI_HKPT_RCVD_RESP_BODY, &MNAME, cacheTofile, LSI_HOOK_LAST, 0 );
+    g_api->set_session_hook_enable_flag( rec->_session, LSI_HKPT_RCVD_RESP_BODY, &MNAME, 1 );
     myData->hasAddedHook = 2;
     return 0;
 }
@@ -631,7 +642,7 @@ int cacheTofile(lsi_cb_param_t *rec)
     
 #ifdef CACHE_RESP_HEADER        
     if (myData->m_pEntry->m_sRespHeader.len() > 4096)
-        myData->m_pEntry->m_sRespHeader.resizeBuf(0);
+        myData->m_pEntry->m_sRespHeader.prealloc(0);
 #endif
     
     myData->pEntry->setContentLen(CeHeader.m_lenETag + headersBufSize, 0);
@@ -803,7 +814,7 @@ static int checkAssignHandler(lsi_cb_param_t *rec)
     const char *pQS = g_api->get_req_query_string( rec->_session, &iQSLen );
     
     //If no env and rewrite-rule, then check 
-    char cacheEnv[MAX_CACHE_CONTROL_LENGTH];
+    char cacheEnv[MAX_CACHE_CONTROL_LENGTH] = {0};
     int cacheEnvLen = g_api->get_req_env(rec->_session, "cache-control", 13, cacheEnv, MAX_CACHE_CONTROL_LENGTH);
     
     CacheCtrl cacheCtrl;
@@ -905,11 +916,11 @@ static int checkAssignHandler(lsi_cb_param_t *rec)
     else if (myData->iMethod == HTTP_GET && myData->iCacheState == CE_STATE_NOCACHE)
     {
         //only GET need to store, HEAD won't
-        g_api->add_session_hook( rec->_session, LSI_HKPT_RECV_RESP_HEADER, &MNAME, createEntry, LSI_HOOK_LAST, 0 );
-        g_api->add_session_hook( rec->_session, LSI_HKPT_HANDLER_RESTART, &MNAME, cancelCache, LSI_HOOK_LAST, 0 );
+        g_api->set_session_hook_enable_flag( rec->_session, LSI_HKPT_RECV_RESP_HEADER, &MNAME, 1 );
+        g_api->set_session_hook_enable_flag( rec->_session, LSI_HKPT_HANDLER_RESTART, &MNAME, 1 );
         myData->hasAddedHook = 1;
         
-        //g_api->add_session_hook( rec->_session, LSI_HKPT_RCVD_RESP_BODY, &MNAME, cacheTofile, LSI_HOOK_LAST, 0 );
+        //g_api->set_session_hook_flag( rec->_session, LSI_HKPT_RCVD_RESP_BODY, &MNAME, 1 );
         g_api->log(rec->_session, LSI_LOG_INFO, "[%s]checkAssignHandler Add Hooks.\n", ModuleNameString);
     }
     else
@@ -929,8 +940,13 @@ int releaseIpCounter( void *data )
 
 
 static lsi_serverhook_t serverHooks[] = {
-    {LSI_HKPT_RECV_REQ_HEADER, checkAssignHandler, LSI_HOOK_LAST, 0},
-    {LSI_HKPT_HTTP_END, cancelCache, LSI_HOOK_LAST, 0},
+    {LSI_HKPT_RECV_REQ_HEADER, checkAssignHandler, LSI_HOOK_LAST, LSI_HOOK_FLAG_ENABLED},
+    {LSI_HKPT_HTTP_END, cancelCache, LSI_HOOK_LAST, LSI_HOOK_FLAG_ENABLED},
+    
+    {LSI_HKPT_RECV_RESP_HEADER, createEntry, LSI_HOOK_LAST, 0}, //Disabled
+    {LSI_HKPT_HANDLER_RESTART, cancelCache, LSI_HOOK_LAST, 0},  //Disabled
+    {LSI_HKPT_RCVD_RESP_BODY, cacheTofile, LSI_HOOK_LAST, 0},   //Disabled
+    
     lsi_serverhook_t_END   //Must put this at the end position
 };
 
@@ -1111,7 +1127,11 @@ static int myhandler_process(lsi_session_t *session)
         {
             g_api->set_resp_header(session, LSI_RESP_HEADER_CONTENT_ENCODING, NULL, 0, "gzip", 4, LSI_HEADER_SET);
             g_api->log(session, LSI_LOG_DEBUG, "[%s]set_resp_header [Content-Encoding: gzip].\n", ModuleNameString);
+            g_api->set_resp_buffer_gzip_flag(session, 1);
         }
+        else
+            g_api->set_resp_buffer_gzip_flag(session, 0);
+        
         g_api->set_resp_content_length(session, length);
         if (g_api->send_file(session, filePath, startPos, length) == 0)
             g_api->end_resp(session);

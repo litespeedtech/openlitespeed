@@ -40,7 +40,7 @@ public:
         typedef PoolAllocator<_Tp1> other;
     };
 
-    PoolAllocator( Pool * pool = &g_pool) throw()
+    PoolAllocator( Pool * pool = NULL ) throw()
         : m_pPool( pool )
         {}
 #ifndef WIN32
@@ -55,13 +55,13 @@ public:
 
     pointer allocate( size_t __n, const void* = 0)
         {
-            return (pointer) m_pPool->allocate( __n * sizeof(_Tp) );
+            return (pointer) Pool::allocate( __n * sizeof(_Tp) );
         }
 
     // __p is not permitted to be a null pointer.
     void deallocate( void * __p, size_t __n)
         {
-            m_pPool->deallocate( __p, __n * sizeof(_Tp) );
+            Pool::deallocate( __p, __n * sizeof(_Tp) );
         }
 
     size_t max_size() const throw()
@@ -74,7 +74,7 @@ public:
 
     char * _Charalloc(size_type _Size)
     {
-        return (char *)(m_pPool->allocate( _Size ));
+        return (char *)(Pool::allocate( _Size ));
     }
 
 

@@ -30,7 +30,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
 */
 #include "../include/ls.h"
-#include "loopbuff.h"
+#include <lsr/lsr_loopbuf.h>
 
 #include <stdlib.h>
 #include <memory.h>
@@ -49,7 +49,7 @@ lsi_module_t MNAME;
 
 typedef struct _MyData
 {
-    LoopBuff writeBuf;
+    lsr_loopbuf_t writeBuf;
 } MyData;
 
 int l4release(void *data)
@@ -59,7 +59,7 @@ int l4release(void *data)
     
     if (myData)
     {
-        _loopbuff_dealloc(&myData->writeBuf);
+        lsr_loopbuf_d( &myData->writeBuf );
         free (myData);
     }
     
@@ -74,8 +74,7 @@ int l4init( lsi_cb_param_t * rec )
     if (!myData)
     {
         myData = (MyData *) malloc(sizeof(MyData));
-        _loopbuff_init(&myData->writeBuf);
-        _loopbuff_alloc(&myData->writeBuf, MAX_BLOCK_BUFSIZE);
+        lsr_loopbuf( &myData->writeBuf, MAX_BLOCK_BUFSIZE );
         
         g_api->log( NULL, LSI_LOG_DEBUG, "#### updatetcpout1 test %s\n", "l4init" );
         
@@ -83,10 +82,8 @@ int l4init( lsi_cb_param_t * rec )
     }
     else
     {
-        _loopbuff_cleardata(&myData->writeBuf);
+        lsr_loopbuf_clear( &myData->writeBuf );
     }
-    
-    
     return 0;
 }
 
@@ -104,7 +101,7 @@ static int l4send(lsi_cb_param_t * rec)
 
     g_api->log( NULL, LSI_LOG_DEBUG, "#### updatetcpoutdata test %s\n", "tcpsend" );
     myData = (MyData *)g_api->get_module_data(rec->_session, &MNAME, LSI_MODULE_DATA_L4);
-    if (MAX_BLOCK_BUFSIZE > _loopbuff_getdatasize(&myData->writeBuf))
+    if ( MAX_BLOCK_BUFSIZE > lsr_loopbuf_size( &myData->writeBuf ))
     {
         
         for (i=0; i<count; ++i)
@@ -114,31 +111,30 @@ static int l4send(lsi_cb_param_t * rec)
             for ( j=0; j<iov[i].iov_len; ++j )
             {
                 sprintf(s, "=%02X", (unsigned char)pBegin[j]);
-                _loopbuff_append(&myData->writeBuf, s, 3);
+                lsr_loopbuf_append( &myData->writeBuf, s, 3 );
                 ++ total;
             }
         }
     }
 
-    _loopbuff_reorder(&myData->writeBuf);
-    iovOut.iov_base = _loopbuff_getdataref(&myData->writeBuf);
-    iovOut.iov_len = _loopbuff_getdatasize(&myData->writeBuf);
+    lsr_loopbuf_straight( &myData->writeBuf );
+    iovOut.iov_base = lsr_loopbuf_begin( &myData->writeBuf );
+    iovOut.iov_len = lsr_loopbuf_size( &myData->writeBuf );
     written = g_api->stream_writev_next( rec, &iovOut, 1 );
+    lsr_loopbuf_pop_front( &myData->writeBuf, written );
     
-    _loopbuff_erasedata(&myData->writeBuf, written);
-    
-    g_api->log( NULL, LSI_LOG_DEBUG, "#### updatetcpoutdata test, next caller written %d, return %d, left %d\n",  written, total, _loopbuff_getdatasize(&myData->writeBuf));
-    
-    int hasData  =1;
-    if (_loopbuff_getdatasize(&myData->writeBuf))
+    g_api->log( NULL, LSI_LOG_DEBUG, "#### updatetcpoutdata test, next caller written %d, return %d, left %d\n",  written, total, lsr_loopbuf_size( &myData->writeBuf ));
+
+    int hasData = 1;
+    if ( lsr_loopbuf_size( &myData->writeBuf ) )
         rec->_flag_out = (void *)&hasData;
     
     return total;
 }
 
 static lsi_serverhook_t serverHooks[] = {
-    {LSI_HKPT_L4_BEGINSESSION, l4init, LSI_HOOK_NORMAL, 0},
-    {LSI_HKPT_L4_SENDING, l4send, LSI_HOOK_EARLY, LSI_HOOK_FLAG_TRANSFORM},
+    {LSI_HKPT_L4_BEGINSESSION, l4init, LSI_HOOK_NORMAL, LSI_HOOK_FLAG_ENABLED},
+    {LSI_HKPT_L4_SENDING, l4send, LSI_HOOK_EARLY, LSI_HOOK_FLAG_TRANSFORM | LSI_HOOK_FLAG_ENABLED},
     lsi_serverhook_t_END   //Must put this at the end position
 };
 
