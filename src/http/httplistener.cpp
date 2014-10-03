@@ -59,7 +59,6 @@ HttpListener::HttpListener( const char * pName, const char * pAddr )
     , m_iAdmin( 0 )
     , m_isSSL( 0 )
     , m_iBinding( 0xffffffff )
-    , m_iolinkSessionHooks(0)
 {
     m_pMapVHost->setAddrStr( pAddr );
 }
@@ -70,7 +69,6 @@ HttpListener::HttpListener()
     , m_iAdmin( 0 )
     , m_isSSL( 0 )
     , m_iBinding( 0xffffffff )
-    , m_iolinkSessionHooks(0)
 {
 }
 

@@ -136,10 +136,10 @@ void debugBase::dumpMapHeader( LsShm* pShm )
     fprintf(m_fp, "REG NUMPERPAGE %X SIZE %d E%d H%d R%d  OFFSET %X %X MAX %d\n",
             hp->x_numRegPerBlk,
             
-            sizeof(lsShmRegBlkHdr_t),
-            sizeof(lsShmReg_t),
-            sizeof(lsShmRegElem_t),
-            sizeof(lsShmRegBlk_t),
+            (int)sizeof(lsShmRegBlkHdr_t),
+            (int)sizeof(lsShmReg_t),
+            (int)sizeof(lsShmRegElem_t),
+            (int)sizeof(lsShmRegBlk_t),
             
             hp->x_regBlkOffset,
             hp->x_regLastBlkOffset,
@@ -156,7 +156,7 @@ void debugBase::dumpHeader( LsShm* pShm )
             pShm->m_pShmMap_o,
             pShm->m_maxSize_o,
             pShm->m_pShmData,
-            (unsigned int)pShm->m_pShmData - (unsigned int)(pShm->m_pShmMap)
+            (unsigned int)((char*)pShm->m_pShmData - (char *)pShm->m_pShmMap)
         );
 }
 
@@ -365,7 +365,7 @@ const char* debugBase::decode( const char* p, int size )
     
     sp = sbuf;
     cp = buf;
-    nb = sprintf(cp, "%08X ", (unsigned int)buf);
+    nb = sprintf(cp, "%p ", buf);
     cp += nb;
     if (size > 0x20)
     {
@@ -396,7 +396,7 @@ void debugBase::dumpBuf( const char* tag, const char* buf, int size )
     {
         if (tag)
             fprintf(fp(), "%-8.8s ", tag);
-        fprintf(fp(), "%08X ", (unsigned int)buf);
+        fprintf(fp(), "%p ", buf);
         for (i = 0; (i < 0x10) && size; i++, size--, buf++)
         {
             fprintf(fp(), "%02X ", ((unsigned int)*buf)&0xff) ;

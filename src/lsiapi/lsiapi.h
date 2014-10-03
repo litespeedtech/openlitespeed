@@ -17,7 +17,7 @@
 *****************************************************************************/
 #ifndef LSIAPI_H
 #define LSIAPI_H
-#include <../addon/include/ls.h>
+#include <ls.h>
 #include <util/hashstringmap.h>
 #include <http/httplog.h>
 #include "lsiapihooks.h"

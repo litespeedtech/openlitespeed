@@ -130,6 +130,94 @@ int KQueuer::remove( EventReactor* pHandler )
     return 0;
 }
 
+void KQueuer::processAioEvent( struct kevent * pEvent )
+{
+    //TODO: handle AIO event
+}
+
+void KQueuer::processSocketEvent( struct kevent *pEvent )
+{
+    EventReactor * pReactor = (EventReactor *)pEvent->udata;
+    if ( pReactor && (pReactor->getfd() == (int)pEvent->ident ))
+    {
+        short revent;
+        if ( pEvent->flags & EV_ERROR )
+        {
+            if ( pEvent->data != ENOENT )
+            {
+                fprintf( stderr, "kevent() error, fd: %d, error: %d, filter: %d flags: %04X\n", pReactor->getfd(), (int)pEvent->data, pEvent->filter, pEvent->flags );
+            }
+            //revent = POLLERR;
+            return;
+        }
+        else
+        {
+            switch( pEvent->filter )
+            {
+            case EVFILT_READ:
+                if ( pEvent->flags & EV_EOF )
+                {
+                    revent = POLLHUP|POLLIN;
+                }
+                else if ( pReactor->getEvents() & POLLIN )
+                {
+                    revent = POLLIN;
+                }
+                else
+                {
+                    appendEvent( pReactor, pReactor->getfd(), EVFILT_READ, EV_DELETE );
+                    return;
+                }
+                break;
+            case EVFILT_WRITE:
+                if ( pReactor->getEvents() & POLLOUT )
+                {
+                    revent = POLLOUT;
+                }
+                else
+                {
+                    appendEvent( pReactor, pReactor->getfd(), EVFILT_WRITE, EV_DELETE );
+                    return;
+                }
+                break;
+            default:
+                fprintf( stderr, "Kqueue: unkown event, ident: %d, "
+                                    " filter: %hd, flags: %hd, fflags: %d, data: %d,"
+                                    " udata: %p\n", (int)pEvent->ident,
+                                    pEvent->filter, pEvent->flags, pEvent->fflags,
+                                    (int)pEvent->data, pEvent->udata );
+                appendEvent( NULL, (int)pEvent->ident, pEvent->filter, EV_DELETE );
+                return;
+            }
+        }
+        pReactor->assignRevent( revent );
+        pReactor->handleEvents( revent );
+    }
+    else
+    {
+//                fprintf( stderr, "Kqueue: mystery event, ident: %d, "
+//                                 " filter: %hd, flags: %hd, fflags: %d, data: %d,"
+//                                 " udata: %p, reactor fd: %d\n", (int)pEvent->ident,
+//                                 pEvent->filter, pEvent->flags, pEvent->fflags,
+//                                 (int)pEvent->data, pEvent->udata,
+//                                 (pReactor)?pReactor->getfd():-1 );
+        //wil get this if modify event after socket closed, new socket created with the same file descriptor
+        if ( pEvent->flags & EV_ERROR )  
+        {
+            fprintf( stderr, "kevent(), mismatch handler, fd: %d, error: %d, filter: %d flags: %04X\n", pReactor->getfd(), (int)pEvent->data, pEvent->filter, pEvent->flags );
+            //if ( (int)pEvent->data != EBADF )
+            //    close( (int)pEvent->ident );
+        }
+        else if ( !pReactor )
+            appendEvent( NULL, (int)pEvent->ident, pEvent->filter, EV_DELETE );
+//                if ( pEvent->filter == EVFILT_READ )
+//                    appendEvent( NULL, (int)pEvent->ident, EVFILT_READ,  EV_DELETE );
+//                if ( pEvent->filter == EVFILT_READ )
+//                    appendEvent( NULL, (int)pEvent->ident, EVFILT_WRITE, EV_DELETE );
+    }
+    
+}
+
 int KQueuer::waitAndProcessEvents( int iTimeoutMilliSec )
 {
     struct timespec timeout;
@@ -202,84 +290,10 @@ int KQueuer::waitAndProcessEvents( int iTimeoutMilliSec )
         struct kevent * pEnd   = &results[ret];
         for( ; pBegin < pEnd; ++pBegin )
         {
-            EventReactor * pReactor = (EventReactor *)pBegin->udata;
-            if ( pReactor && (pReactor->getfd() == (int)pBegin->ident ))
-            {
-                short revent;
-                if ( pBegin->flags & EV_ERROR )
-                {
-                    if ( pBegin->data != ENOENT )
-                    {
-                        fprintf( stderr, "kevent() error, fd: %d, error: %d, filter: %d flags: %04X\n", pReactor->getfd(), (int)pBegin->data, pBegin->filter, pBegin->flags );
-                    }
-                    //revent = POLLERR;
-                    continue;
-                }
-                else
-                {
-                    switch( pBegin->filter )
-                    {
-                    case EVFILT_READ:
-                        if ( pBegin->flags & EV_EOF )
-                        {
-                            revent = POLLHUP|POLLIN;
-                        }
-                        else if ( pReactor->getEvents() & POLLIN )
-                        {
-                            revent = POLLIN;
-                        }
-                        else
-                        {
-                            appendEvent( pReactor, pReactor->getfd(), EVFILT_READ, EV_DELETE );
-                            continue;
-                        }
-                        break;
-                    case EVFILT_WRITE:
-                        if ( pReactor->getEvents() & POLLOUT )
-                        {
-                            revent = POLLOUT;
-                        }
-                        else
-                        {
-                            appendEvent( pReactor, pReactor->getfd(), EVFILT_WRITE, EV_DELETE );
-                            continue;
-                        }
-                        break;
-                    default:
-                        fprintf( stderr, "Kqueue: unkown event, ident: %d, "
-                                         " filter: %hd, flags: %hd, fflags: %d, data: %d,"
-                                         " udata: %p\n", (int)pBegin->ident,
-                                         pBegin->filter, pBegin->flags, pBegin->fflags,
-                                         (int)pBegin->data, pBegin->udata );
-                        appendEvent( NULL, (int)pBegin->ident, pBegin->filter, EV_DELETE );
-                        continue;
-                    }
-                }
-                pReactor->assignRevent( revent );
-                pReactor->handleEvents( revent );
-            }
+            if ( pBegin->filter == EVFILT_AIO )
+                processAioEvent( pBegin );
             else
-            {
-//                fprintf( stderr, "Kqueue: mystery event, ident: %d, "
-//                                 " filter: %hd, flags: %hd, fflags: %d, data: %d,"
-//                                 " udata: %p, reactor fd: %d\n", (int)pBegin->ident,
-//                                 pBegin->filter, pBegin->flags, pBegin->fflags,
-//                                 (int)pBegin->data, pBegin->udata,
-//                                 (pReactor)?pReactor->getfd():-1 );
-                //wil get this if modify event after socket closed, new socket created with the same file descriptor
-                if ( pBegin->flags & EV_ERROR )  
-                {
-                    fprintf( stderr, "kevent(), mismatch handler, fd: %d, error: %d, filter: %d flags: %04X\n", pReactor->getfd(), (int)pBegin->data, pBegin->filter, pBegin->flags );
-                    //if ( (int)pBegin->data != EBADF )
-                    //    close( (int)pBegin->ident );
-                }
-                else if ( !pReactor )
-                    appendEvent( NULL, (int)pBegin->ident, pBegin->filter, EV_DELETE );
-//                if ( pBegin->filter == EVFILT_READ )
-//                    appendEvent( NULL, (int)pBegin->ident, EVFILT_READ,  EV_DELETE );
-//                if ( pBegin->filter == EVFILT_READ )
-//                    appendEvent( NULL, (int)pBegin->ident, EVFILT_WRITE, EV_DELETE );
-            }
+                processSocketEvent( pBegin );
         }
     }
     return ret;

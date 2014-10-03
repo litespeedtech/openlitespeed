@@ -50,7 +50,6 @@
 #include <stdarg.h>
 
 
-
 static int is_release_cb_added( const lsi_module_t *pModule, int level )
 {
     return ((MODULE_DATA_ID( pModule )[level] != -1) ? 1: 0);
@@ -71,7 +70,7 @@ static int lsiapi_add_release_data_hook( int index, const lsi_module_t *pModule,
     if (( index < 0 )||( index >= LSI_MODULE_DATA_COUNT ))
         return -1;
     pHooks = LsiApiHooks::getReleaseDataHooks( index );
-    if ( pHooks->add( pModule, cb, 0 ) >= 0 )
+    if ( pHooks->add( pModule, cb, 0, LSI_HOOK_FLAG_ENABLED ) >= 0 )
         return 0;
     return -1;
 }
@@ -91,18 +90,16 @@ int add_global_hook( int index, const lsi_module_t *pModule, lsi_callback_pf cb,
     return pHooks->add( pModule, cb, order, flag );
 }
 
-static int lsiapi_add_session_hook( lsi_session_t *session, int index, const lsi_module_t *pModule, 
-                             lsi_callback_pf cb, short order, short flag )
+static int set_session_hook_enable_flag( lsi_session_t *session, int index, const lsi_module_t *pModule, int enable )
 {
-    const int *priority = MODULE_PRIORITY(pModule);
-    LsiApiHooks * pHooks;
+    int ret = -1;
     switch( index )
     {
     case LSI_HKPT_L4_BEGINSESSION:
     case LSI_HKPT_L4_ENDSESSION:
     case LSI_HKPT_L4_RECVING:
     case LSI_HKPT_L4_SENDING:
-        pHooks = ((NtwkIOLink *)(LsiSession *)session)->getModSessionHooks( index );
+        ret = ((NtwkIOLink *)(LsiSession *)session)->getSessionHooks()->setEnable(index, pModule, enable);
         break;
         
     case LSI_HKPT_HTTP_BEGIN:
@@ -117,57 +114,17 @@ static int lsiapi_add_session_hook( lsi_session_t *session, int index, const lsi
     case LSI_HKPT_SEND_RESP_HEADER:
     case LSI_HKPT_SEND_RESP_BODY:
     case LSI_HKPT_HTTP_END:
-        pHooks = ((HttpSession *)(LsiSession *)session)->getModSessionHooks( index );
+        ret = ((HttpSession *)(LsiSession *)session)->getSessionHooks()->setEnable(index, pModule, enable);
         break;
         
     default:
-        return -1;
-    }
-    
-    if (priority[index] < LSI_MAX_HOOK_PRIORITY && priority[index] > -1 * LSI_MAX_HOOK_PRIORITY)
-        order = priority[index];
-    if ( D_ENABLED( DL_MORE ))
-            LOG_D(( "[Module: %s] add_session_hook, index %d [%s], priority %hd, flag %hd", 
-                MODULE_NAME( pModule ), index, LsiApiHooks::s_pHkptName[index], order, flag ));
-    return pHooks->add( pModule, cb, order, flag );
-}
-
-static int lsiapi_remove_session_hook( lsi_session_t *session, int index, const lsi_module_t *pModule )
-{
-    LsiApiHooks * pHooks;
-    switch( index )
-    {
-    case LSI_HKPT_L4_BEGINSESSION:
-    case LSI_HKPT_L4_ENDSESSION:
-    case LSI_HKPT_L4_RECVING:
-    case LSI_HKPT_L4_SENDING:
-        pHooks = ((NtwkIOLink *)(LsiSession *)session)->getModSessionHooks( index );
         break;
-        
-    case LSI_HKPT_HTTP_BEGIN:
-    case LSI_HKPT_RECV_REQ_HEADER:
-    case LSI_HKPT_URI_MAP:
-    case LSI_HKPT_RECV_REQ_BODY:
-    case LSI_HKPT_RCVD_REQ_BODY:
-    case LSI_HKPT_RECV_RESP_HEADER:
-    case LSI_HKPT_RECV_RESP_BODY:
-    case LSI_HKPT_HANDLER_RESTART:
-    case LSI_HKPT_RCVD_RESP_BODY:
-    case LSI_HKPT_SEND_RESP_HEADER:
-    case LSI_HKPT_SEND_RESP_BODY:
-    case LSI_HKPT_HTTP_END:
-        pHooks = ((HttpSession *)(LsiSession *)session)->getModSessionHooks( index );
-        break;
-        
-    default:
-        return -1;
     }
-
-    if ( D_ENABLED( DL_MORE ))
-        LOG_D(( "[Module: %s] remove_session_hook, index %d", 
-                MODULE_NAME( pModule ), index ));
-
-    return pHooks->remove( pModule );
+   
+   if ( D_ENABLED( DL_MORE ))
+            LOG_D(( "[Module: %s] set_session_hook_enable_flag, index %d [%s], enable %hd", 
+                MODULE_NAME( pModule ), index, LsiApiHooks::s_pHkptName[index], enable ));
+    return ret;
 }
 
 static  void log( lsi_session_t *session, int level, const char * fmt, ... )
@@ -361,14 +318,8 @@ static void free_module_data(lsi_session_t *session, const lsi_module_t *pModule
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-typedef int  ( * appendDynBodyTermination_fun)  ( HttpSession *session, const char * pBuf, int len);
 static int stream_write_next( lsi_cb_param_t * pParam, const char *buf, int len )
 {
-    if ( (((LsiApiHook *)pParam->_cur_hook) + 1) == pParam->_hook_info->_hooks->end() )
-    {
-        return ( *(appendDynBodyTermination_fun)(pParam->_hook_info->_termination_fp) )( 
-                 (HttpSession *)((LsiSession *)pParam->_session), buf, len );
-    }
     lsi_cb_param_t param;
     param._session = pParam->_session;
     param._cur_hook = (void *)(((LsiApiHook *)pParam->_cur_hook) + 1);
@@ -377,18 +328,13 @@ static int stream_write_next( lsi_cb_param_t * pParam, const char *buf, int len 
     param._param_len = len;
     param._flag_out = pParam->_flag_out;
     param._flag_in = pParam->_flag_in;
-    return (*(((LsiApiHook *)param._cur_hook)->_cb))( &param );
+    return LsiApiHooks::runForwardCb(&param);
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static int lsiapi_stream_read_next( lsi_cb_param_t * pParam, char *pBuf, int size )
 {
-    if ( ((LsiApiHook *)pParam->_cur_hook) == pParam->_hook_info->_hooks->begin() )
-    {
-        return ( *(read_fp)(pParam->_hook_info->_termination_fp) )( 
-                    (LsiSession *)pParam->_session, pBuf, size );
-    }
     lsi_cb_param_t param;
     param._session = pParam->_session;
     param._cur_hook = (void *)(((LsiApiHook *)pParam->_cur_hook) - 1);
@@ -397,17 +343,11 @@ static int lsiapi_stream_read_next( lsi_cb_param_t * pParam, char *pBuf, int siz
     param._param_len = size;
     param._flag_out = pParam->_flag_out;
     param._flag_in = pParam->_flag_in;
-    return (*(((LsiApiHook *)param._cur_hook)->_cb))( &param );
-    
+    return LsiApiHooks::runBackwardCb(&param);
 }
 
 static int lsiapi_stream_writev_next( lsi_cb_param_t * pParam, struct iovec *iov, int count )
 {
-    if ( (((LsiApiHook *)pParam->_cur_hook) + 1) == pParam->_hook_info->_hooks->end() )
-    {
-        return ( *(writev_fp)(pParam->_hook_info->_termination_fp) )( 
-                 (LsiSession *)pParam->_session, iov, count );
-    }
     lsi_cb_param_t param;
     param._session = pParam->_session;
     param._cur_hook = (void *)(((LsiApiHook *)pParam->_cur_hook) + 1);
@@ -416,8 +356,7 @@ static int lsiapi_stream_writev_next( lsi_cb_param_t * pParam, struct iovec *iov
     param._param_len = count;
     param._flag_out = pParam->_flag_out;
     param._flag_in = pParam->_flag_in;
-    return (*((((LsiApiHook *)param._cur_hook))->_cb))( &param );
-    
+    return LsiApiHooks::runForwardCb(&param);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -722,12 +661,12 @@ static int set_handler_write_state( lsi_session_t *session, int state )
     {
         pSession->continueWrite();
         pSession->setState(HSS_WRITING);
-        pSession->setFlag( HSF_MODULE_WRITE_SUSPENDED|HSF_RESP_FLUSHED, 0 );
+        pSession->setFlag( HSF_HANDLER_WRITE_SUSPENDED|HSF_RESP_FLUSHED, 0 );
     }
     else
     {
         pSession->suspendWrite();
-        pSession->setFlag( HSF_MODULE_WRITE_SUSPENDED, 1 );
+        pSession->setFlag( HSF_HANDLER_WRITE_SUSPENDED, 1 );
     }
     return 0;
 }
@@ -1124,10 +1063,26 @@ static int is_resp_buffer_gzippped(lsi_session_t *session)
     if (pSession == NULL)
         return -1;
     
-    if (pSession->getReq()->gzipAcceptable() & ( UPSTREAM_GZIP | UPSTREAM_DEFLATE ))
+    //if (pSession->getReq()->gzipAcceptable() & ( UPSTREAM_GZIP | UPSTREAM_DEFLATE ))
+    if (pSession->getFlag(HSF_RESP_BODY_COMPRESSED))
         return 1;
     else
         return 0;
+}
+
+
+
+static int set_resp_buffer_gzip_flag(lsi_session_t *session, int set )
+{
+    HttpSession *pSession = (HttpSession *)((LsiSession *)session);
+    if (pSession == NULL)
+        return -1;
+    
+    if (set)
+        pSession->setFlag( HSF_RESP_BODY_COMPRESSED );
+    else
+        pSession->clearFlag( HSF_RESP_BODY_COMPRESSED );
+    return 0;
 }
 
 //return 0 is OK, -1 error
@@ -1209,6 +1164,7 @@ static void lsi_flush( lsi_session_t *session )
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
     if (pSession == NULL)
         return;
+    pSession->setFlag(HSF_RESP_FLUSHED, 0);
     pSession->flush();
 }
 
@@ -1294,6 +1250,8 @@ static int set_uri_qs( lsi_session_t *session, int action, const char *uri, int 
             pQs = NULL;
             final_qs_len = 0;
         }
+        else if ( qs_act == LSI_URL_QS_APPEND )
+            qs_act = LSI_URL_QS_NOCHANGE;
     }
     else 
     {
@@ -1617,7 +1575,7 @@ const void *get_vhost( int index )
 {
     return (const void *)HttpServer::getInstance().getVHost( index );
 }
-
+ 
 //a special case of set_module_data
 static int set_vhost_module_data ( const void *vhost, const lsi_module_t *pModule, void *data )
 {
@@ -1640,7 +1598,7 @@ static int set_vhost_module_data ( const void *vhost, const lsi_module_t *pModul
     return ret;   
 }
 
-static void * get_Vhost_module_data( const void *vhost, const lsi_module_t *pModule )
+static void * get_vhost_module_data( const void *vhost, const lsi_module_t *pModule )
 {
     LsiModuleData * pData = ((HttpVHost *)vhost)->getModuleData ();
     if ( !pData )
@@ -1648,6 +1606,18 @@ static void * get_Vhost_module_data( const void *vhost, const lsi_module_t *pMod
     return pData->get( MODULE_DATA_ID( pModule )[LSI_MODULE_DATA_VHOST] );
 }
 
+static void * get_vhost_module_param( const void *vhost, const lsi_module_t *pModule )
+{
+    if (vhost == NULL)
+        return NULL;
+    
+    ModuleConfig *pConfig = ((HttpVHost *)vhost)->getRootContext().getModuleConfig();
+    if (!pConfig)
+        return NULL;
+    
+    return pConfig->get( MODULE_ID( pModule ) )->config;
+}
+    
 int handoff_fd( lsi_session_t *session, char ** pData, int *pDataLen )
 {
     if ( !session || !pData || !pDataLen )
@@ -1663,12 +1633,22 @@ int get_local_sockaddr( lsi_session_t *session, char * pIp, int maxLen )
     return pSession->getServerAddrStr( pIp, maxLen );
 }
 
+int get_server_mode()
+{
+    return HttpServer::getInstance().getServerMode();
+}
 
+lsr_xpool_t *get_session_pool( lsi_session_t *session )
+{   
+    HttpSession *pSession = (HttpSession *)((LsiSession *)session);
+    return pSession->getReq()->getPool();
+}
+   
 void lsiapi_init_server_api()
 {
     lsi_api_t * pApi = LsiapiBridge::getLsiapiFunctions();
-    pApi->add_session_hook = lsiapi_add_session_hook;
-    pApi->remove_session_hook = lsiapi_remove_session_hook;
+    pApi->set_session_hook_enable_flag = set_session_hook_enable_flag;
+    
     pApi->register_env_handler = lsiapi_register_env_handler;
     pApi->get_module = get_module;
 
@@ -1721,6 +1701,7 @@ void lsiapi_init_server_api()
     pApi->read_req_body = read_req_body;
     pApi->is_req_body_finished = is_req_body_finished;
     pApi->is_resp_buffer_gzippped = is_resp_buffer_gzippped;
+    pApi->set_resp_buffer_gzip_flag = set_resp_buffer_gzip_flag;
     pApi->set_req_wait_full_body = set_req_wait_full_body;
     pApi->set_resp_wait_full_body = set_resp_wait_full_body;
     
@@ -1792,10 +1773,13 @@ void lsiapi_init_server_api()
     pApi->get_vhost_count = get_vhost_count;
     pApi->get_vhost = get_vhost;
     pApi->set_vhost_module_data = set_vhost_module_data;
-    pApi->get_Vhost_module_data = get_Vhost_module_data;
+    pApi->get_vhost_module_data = get_vhost_module_data;
+    pApi->get_vhost_module_param = get_vhost_module_param;
+    pApi->get_session_pool = get_session_pool;
 
     pApi->handoff_fd = handoff_fd;
     pApi->get_local_sockaddr = get_local_sockaddr;
+    pApi->get_server_mode = get_server_mode;
 
     pApi->_debugLevel = HttpLog::getDebugLevel();
     

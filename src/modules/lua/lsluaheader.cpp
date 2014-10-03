@@ -20,7 +20,7 @@
 #include "lsluasession.h"
 #include "lsluaengine.h"
 #include "lsluaapi.h"
-#include <../addon/include/ls.h>
+#include <ls.h>
 #include <log4cxx/logger.h>
 #include <http/httpsession.h>
 

@@ -31,7 +31,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include "../include/ls.h"
-#include "loopbuff.h"
 #include <string.h>
 #include <stdint.h>
 #include "stdlib.h"
@@ -121,7 +120,7 @@ static int myhandler_process(lsi_session_t *session)
 }
 
 static lsi_serverhook_t serverHooks[] = {
-    {LSI_HKPT_RECV_REQ_HEADER, assignHandler, LSI_HOOK_NORMAL, 0},
+    {LSI_HKPT_RECV_REQ_HEADER, assignHandler, LSI_HOOK_NORMAL, LSI_HOOK_FLAG_ENABLED},
     lsi_serverhook_t_END   //Must put this at the end position
 };
 

@@ -381,7 +381,7 @@ int StaticFileCacheData::buildFixedHeaders( int etag )
     }
     else
         pCharset = "";
-    if ( !m_sHeaders.resizeBuf( size ) )
+    if ( !m_sHeaders.prealloc( size ) )
         return SC_500;
     
     char * pEnd = m_sHeaders.buf() + size;
@@ -430,7 +430,7 @@ int  FileCacheDataEx::buildCLHeader( bool gziped )
     int size = 40;
     //if ( gziped )
     //    size += 24;
-    if ( !m_sCLHeader.resizeBuf( size ) )
+    if ( !m_sCLHeader.prealloc( size ) )
         return SC_500;
     char * p = m_sCLHeader.buf();
 //    if ( gziped )
@@ -718,7 +718,7 @@ int StaticFileCacheData::buildGzipPath()
     
     StringTool::hexEncode( (const char *)&achHash[1], MD5_DIGEST_LENGTH-1, &achPath[n] );
     n+= 30;
-    char * pReal = m_gzippedPath.resizeBuf( n + 6 );
+    char * pReal = m_gzippedPath.prealloc( n + 6 );
     if ( !pReal )
         return -1;
     strncpy( pReal, achPath, n );

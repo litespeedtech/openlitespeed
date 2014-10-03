@@ -22,9 +22,11 @@
 #include "lsluascript.h"
 #include "lsluaapi.h"
 #include "ls_lua.h"
-#include "../addon/include/ls.h"
+#include "ls.h"
 #include <http/httplog.h>
 #include <log4cxx/logger.h>
+#include <lsr/lsr_strtool.h>
+#include <lsr/lsr_confparser.h>
 #include <sys/stat.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -407,14 +409,13 @@ lua_State * LsLuaEngine::injectLsiapi(lua_State * L)
 //  Configuration from LiteSpeed
 //  simple scanf parse - 
 //
-void* LsLuaEngine::parseParam( const char* param, void* initial_config, int level, const char *name )
+void* LsLuaEngine::parseParam( const char* param, int param_len, void* initial_config, int level, const char *name )
 {
-    char    key[0x1000];
-    char    value[0x1000];
-    int     n, nb;
-    register char    * p;
     int     sec, line;
     char *  cp;
+    lsr_confparser_t confparser;
+    lsr_objarray_t *pList;
+    const char *pLineBegin, *pLineEnd, *pParamEnd = param + param_len;
     
     LsLuaUserParam * pParent = (LsLuaUserParam * )initial_config;
     LsLuaUserParam * pUser = new LsLuaUserParam(level);
@@ -440,7 +441,6 @@ void* LsLuaEngine::parseParam( const char* param, void* initial_config, int leve
         s_firstTime = 0;
         return pUser;
     }
-    p = (char *)param;
     g_api->log(NULL, LSI_LOG_DEBUG, "%s: LUA PARSEPARAM %d %s Parent %2d [%.20s] %d\n"
                     , name
                     , level
@@ -450,118 +450,140 @@ void* LsLuaEngine::parseParam( const char* param, void* initial_config, int leve
                     , pParent ? pParent->getMaxRunTime() : -1
                     );
     
-    do
+    lsr_confparser( &confparser );
+    while((pLineBegin = lsr_get_conf_line( &param, pParamEnd, &pLineEnd )) != NULL )
     {
-        n = sscanf(p, "%s%s%n", key, value, &nb);
-        if (n == 2)
+        pList = lsr_conf_parse_line_kv( &confparser, pLineBegin, pLineEnd );
+        if ( !pList )
+            continue;
+        lsr_str_t *pKey = (lsr_str_t *)lsr_objarray_getobj( pList, 0 );
+        lsr_str_t *pValue = (lsr_str_t *)lsr_objarray_getobj( pList, 1 );
+        if ( lsr_str_len( pValue ) == 0 )
         {
-            // Parameters on the httpServerConfig level - the very firstTime
-            if (s_firstTime)
+            g_api->log(NULL, LSI_LOG_ERROR, "LUA PARSEPARAM NO VALUE GIVEN FOR PARAMETER %.*s\n",
+                lsr_str_len( pKey ), lsr_str_c_str( pKey )
+            );
+            continue;
+        }
+        // Parameters on the httpServerConfig level - the very firstTime
+        if (s_firstTime)
+        {
+            if ( (!strncasecmp("luapath", lsr_str_c_str( pKey ), lsr_str_len( pKey ))))
             {
-                if ( (!strcasecmp("luapath", key)) )
+                if ((cp = strndup(lsr_str_c_str( pValue ), lsr_str_len( pValue ))))
                 {
-                    if ( (cp = strdup(value)) )
-                    {
-                        if (s_luaPath)
-                            free(s_luaPath);
-                        s_luaPath = cp;
-                    }
-                    g_api->log(NULL, LSI_LOG_NOTICE
-                            , "%s LUA SET %s = %s [%s]\n"
-                            , name, key, value, s_luaPath ? s_luaPath : s_sysLuaPath);
-                    p += nb;
-                    continue;
-                }
-                else if (  (!strcasecmp("lib", key)) || (!strcasecmp("lua.so", key)) ) 
-                {
-                    if ( (cp = strdup(value)) )
-                    {
-                        if (s_lib)
-                            free(s_lib);
-                        s_lib = cp;
-                    }
-                    g_api->log(NULL, LSI_LOG_NOTICE
-                            , "%s LUA SET %s = %s [%s]\n"
-                            , name, key, value, s_lib ? s_lib : "NULL");
-                    p += nb;
-                    continue;
-                }
-            }
-            
-            // runtime parameters
-            if (!strcasecmp("maxruntime", key))
-            {
-                // allow hex and decimal
-                if ((sscanf(value, "%i", &sec) == 1) && (sec > 0))
-                {
-                    if (s_firstTime)
-                        s_maxRunTime = sec;
-                    pUser->setMaxRunTime(sec);
+                    if (s_luaPath)
+                        free(s_luaPath);
+                    s_luaPath = cp;
                 }
                 g_api->log(NULL, LSI_LOG_NOTICE
-                            , "%s LUA SET %s = %s msec [%d %s]\n"
-                            , name , key, value, pUser->getMaxRunTime()
-                            , pUser->getMaxRunTime() ? "ENABLED" : "DISABLED");
+                        , "%s LUA SET %.*s = %.*s [%s]\n"
+                        , name
+                        , lsr_str_len( pKey ), lsr_str_c_str( pKey )
+                        , lsr_str_len( pValue ), lsr_str_c_str( pValue )
+                        , s_luaPath ? s_luaPath : s_sysLuaPath);
+                continue;
             }
-            else if (!strcasecmp("maxlinecount", key))
+            else if (  (!strncasecmp("lib", lsr_str_c_str( pKey ), lsr_str_len( pKey ))) 
+                || (!strncasecmp("lua.so", lsr_str_c_str( pKey ), lsr_str_len( pKey ))) ) 
             {
-                // allow hex and decimal
-                if ((sscanf(value, "%i", &line) == 1) && (line >= 0))
+                if ((cp = strndup(lsr_str_c_str( pValue ), lsr_str_len( pValue ))))
                 {
-                    if (s_firstTime)
-                        s_maxLineCount = line;
-                    pUser->setMaxLineCount(line);
+                    if (s_lib)
+                        free(s_lib);
+                    s_lib = cp;
                 }
                 g_api->log(NULL, LSI_LOG_NOTICE
-                            , "%s LUA SET %s = %s [%d %s]\n"
-                            , name , key, value, pUser->getMaxLineCount()
-                            , pUser->getMaxLineCount() ? "ENABLED" : "DISABLED");
+                        , "%s LUA SET %.*s = %.*s [%s]\n"
+                        , name
+                        , lsr_str_len( pKey ), lsr_str_c_str( pKey )
+                        , lsr_str_len( pValue ), lsr_str_c_str( pValue )
+                        , s_lib ? s_lib : "NULL");
+                continue;
             }
-            
-            // extemely differcult parameters for fine tuning
-            else if (!strcasecmp("jitlinemod", key))
+        }
+        
+        // runtime parameters
+        if (!strncasecmp("maxruntime", lsr_str_c_str( pKey ), lsr_str_len( pKey )))
+        {
+            // base 0 is same functionality as %i in sscanf
+            if ((sec = strtol( lsr_str_c_str( pValue ), NULL, 0 )) && (sec > 0))
             {
-                // allow hex and decimal
-                if ((sscanf(value, "%i", &line) == 1) && (line > 0))
-                    s_jitLineMod = line;
-                g_api->log(NULL, LSI_LOG_NOTICE
-                            , "%s LUA SET %s = %s [%d]\n"
-                            , name, key, value, s_jitLineMod );
+                if (s_firstTime)
+                    s_maxRunTime = sec;
+                pUser->setMaxRunTime(sec);
             }
-            else if (!strcasecmp("pause", key))
+            g_api->log(NULL, LSI_LOG_NOTICE
+                        , "%s LUA SET %.*s = %.*s msec [%d %s]\n"
+                        , name 
+                        , lsr_str_len( pKey ), lsr_str_c_str( pKey )
+                        , lsr_str_len( pValue ), lsr_str_c_str( pValue )
+                        , pUser->getMaxRunTime()
+                        , pUser->getMaxRunTime() ? "ENABLED" : "DISABLED");
+        }
+        else if (!strncasecmp("maxlinecount", lsr_str_c_str( pKey ), lsr_str_len( pKey )))
+        {
+            // allow hex and decimal
+            if ((line = strtol( lsr_str_c_str( pValue ), NULL, 0 )) && (line >= 0))
             {
-                // allow hex and decimal
-                if ((sscanf(value, "%i", &sec) == 1) && (sec > 0))
-                    s_pauseTime = sec;
-                g_api->log(NULL, LSI_LOG_NOTICE
-                            , "%s LUA SET %s = %s [%d]\n"
-                            , name, key, value, s_pauseTime);
+                if (s_firstTime)
+                    s_maxLineCount = line;
+                pUser->setMaxLineCount(line);
             }
+            g_api->log(NULL, LSI_LOG_NOTICE
+                        , "%s LUA SET %.*s = %.*s [%d %s]\n"
+                        , name
+                        , lsr_str_len( pKey ), lsr_str_c_str( pKey )
+                        , lsr_str_len( pValue ), lsr_str_c_str( pValue )
+                        , pUser->getMaxLineCount()
+                        , pUser->getMaxLineCount() ? "ENABLED" : "DISABLED");
+        }
+        
+        // extremely diffecult parameters for fine tuning
+        else if (!strncasecmp("jitlinemod", lsr_str_c_str( pKey ), lsr_str_len( pKey )))
+        {
+            // allow hex and decimal
+            if ((line = strtol( lsr_str_c_str( pValue ), NULL, 0 )) && (line > 0))
+                s_jitLineMod = line;
+            g_api->log(NULL, LSI_LOG_NOTICE
+                        , "%s LUA SET %.*s = %.*s [%d]\n"
+                        , name
+                        , lsr_str_len( pKey ), lsr_str_c_str( pKey )
+                        , lsr_str_len( pValue ), lsr_str_c_str( pValue )
+                        , s_jitLineMod );
+        }
+        else if (!strncasecmp("pause", lsr_str_c_str( pKey ), lsr_str_len( pKey )))
+        {
+            // allow hex and decimal
+            if ((sec = strtol( lsr_str_c_str( pValue ), NULL, 0 )) && (sec > 0))
+                s_pauseTime = sec;
+            g_api->log(NULL, LSI_LOG_NOTICE
+                        , "%s LUA SET %.*s = %.*s [%d]\n"
+                        , name
+                        , lsr_str_len( pKey ), lsr_str_c_str( pKey )
+                        , lsr_str_len( pValue ), lsr_str_c_str( pValue )
+                        , s_pauseTime);
+        }
 #if 0
 //
 // DEBUG STUFF
 //
-            else if (!strcasecmp("debug", key))
-            {
-                // allow hex and decimal
-                if ((sscanf(value, "%i", &s_debug) == 1) && (s_debug > 0))
-                    ;
-                else
-                    s_debug = 0;
-                g_api->log(NULL, LSI_LOG_NOTICE,
-                             "SET %s = %s [%d]\n", key, value, s_debug);;
-            }
-#endif
+        else if (!strncasecmp("debug", lsr_str_c_str( pKey ), lsr_str_len( pKey )))
+        {
+            // allow hex and decimal
+            if ((s_debug = strtol( lsr_str_c_str( pValue ), NULL, 0 )) && (s_debug > 0))
+                ;
             else
-            {
-                // ignore this pair values
-                g_api->log(NULL, LSI_LOG_NOTICE,
-                            "%s IGNORE MODULE PARAMETERS [%s] [%s]\n", name, key, value);
-            }
+                s_debug = 0;
+            g_api->log(NULL, LSI_LOG_NOTICE,
+                            "SET %.*s = %.*s [%d]\n"
+                            , lsr_str_len( pKey ), lsr_str_c_str( pKey )
+                            , lsr_str_len( pValue ), lsr_str_c_str( pValue )
+                            , s_debug);;
         }
-        p += nb;
-    } while (n == 2);
-    
+#endif
+    }
+    lsr_confparser_d( &confparser );
     s_firstTime = 0;
     return (void *)pUser;
 }

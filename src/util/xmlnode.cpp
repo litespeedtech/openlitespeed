@@ -66,9 +66,9 @@ AttrMap::~AttrMap()
 class NodeMap: public HashStringMap<XmlNodeList*>
 {
 public:
-    static int releaseNode( GHash::iterator iter )
+    static int releaseNode( const void *pKey, void *pData )
     {
-        ((XmlNodeList *)iter->second())->release_objects();
+        ((XmlNodeList *)pData)->release_objects();
         return 0;
     }
 
@@ -112,7 +112,7 @@ class XmlNodeImpl
     friend class XmlTree;
 
     AutoStr m_sName;
-    AutoStr m_sValue;
+    AutoStr2 m_sValue;
     XmlNode * m_pParentNode;
     NodeMap * m_pChildrenMap;
     AttrMap * m_pAttrMap;
@@ -179,6 +179,11 @@ const char* XmlNode::getValue() const
     return m_impl->m_sValue.c_str();
 }
 
+int XmlNode::getValueLen() const
+{
+    return m_impl->m_sValue.len();
+}
+
 int XmlNode::addChild(const char* name, XmlNode* pChild)
 {
     m_impl->addChild( name, pChild );
@@ -229,6 +234,18 @@ const char* XmlNode::getChildValue( const char *name, int bKeyName ) const
     if ( pNode )
         return pNode->getValue();
     return NULL;
+}
+
+int XmlNode::getChildValueLen( const char *name, int bKeyName ) const
+{
+    if (bKeyName)
+    {
+        return getValueLen();
+    }
+    const XmlNode * pNode = getChild( name );
+    if ( pNode )
+        return pNode->getValueLen();
+    return 0;
 }
 
 static long long getLongValue( const char * pValue, int base = 10 )
@@ -386,7 +403,7 @@ public:
         , m_pCurNode(NULL)
         , m_setValue(false )
         {
-            m_curValue.resizeBuf( MAX_XML_VALUE_LEN );
+            m_curValue.prealloc( MAX_XML_VALUE_LEN );
         }
     ~XmlTree()
     {

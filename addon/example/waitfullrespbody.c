@@ -33,7 +33,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "../include/ls.h"
 #include <stdlib.h>
 #include <string.h>
-#include "loopbuff.h"
 
 #define     MNAME       waitfullrespbody
 #define     TESTURI     "waitfullrespbody"
@@ -56,52 +55,64 @@ static int denyAccess(lsi_cb_param_t * rec)
     return LSI_RET_ERROR;
 }
 
+static int type2hook[] =
+{
+    LSI_HKPT_RECV_RESP_HEADER,
+    LSI_HKPT_RECV_RESP_BODY,
+    LSI_HKPT_RCVD_RESP_BODY,
+    LSI_HKPT_SEND_RESP_HEADER,
+    LSI_HKPT_RECV_RESP_HEADER,
+    LSI_HKPT_RECV_RESP_BODY,
+    LSI_HKPT_RCVD_RESP_BODY,
+    LSI_HKPT_SEND_RESP_HEADER,
+};
+
 static int getTestType(lsi_cb_param_t * rec)
 {
     int type = 0;
     int len;
     const char *qs = g_api->get_req_query_string(rec->_session, &len);
+    char buf[256];
     if ( len >= strlen(TESTURI) && strncasecmp(qs, TESTURI, strlen(TESTURI)) == 0 )
-        sscanf(qs + strlen(TESTURI), "%d", &type);
-
-    if (type == 0)
+        type = strtol( qs + strlen( TESTURI ), NULL, 10 );
+    else
         return 0;
-    if ( type <= 10 )
-        g_api->set_resp_wait_full_body( rec->_session );
-    switch(type)
+
+    if ( (type < 1) || (type > 10) )
     {
-    case 1:
-        g_api->add_session_hook( rec->_session, LSI_HKPT_RECV_RESP_HEADER, &MNAME, internalRedir, LSI_HOOK_NORMAL, 0 );
-        break;
-    case 2:
-        g_api->add_session_hook( rec->_session, LSI_HKPT_RECV_RESP_BODY, &MNAME, internalRedir, LSI_HOOK_NORMAL, 0 );
-        break;
-    case 3:
-        g_api->add_session_hook( rec->_session, LSI_HKPT_RCVD_RESP_BODY, &MNAME, internalRedir, LSI_HOOK_NORMAL, 0 );
-        break;
-    case 4:
-        g_api->add_session_hook( rec->_session, LSI_HKPT_SEND_RESP_HEADER, &MNAME, internalRedir, LSI_HOOK_NORMAL, 0 );
-        break;
-    case 5:
-        g_api->add_session_hook( rec->_session, LSI_HKPT_RECV_RESP_HEADER, &MNAME, denyAccess, LSI_HOOK_NORMAL, 0 );
-        break;
-    case 6:
-        g_api->add_session_hook( rec->_session, LSI_HKPT_RECV_RESP_BODY, &MNAME, denyAccess, LSI_HOOK_NORMAL, 0 );
-        break;
-    case 7:
-        g_api->add_session_hook( rec->_session, LSI_HKPT_RCVD_RESP_BODY, &MNAME, denyAccess, LSI_HOOK_NORMAL, 0 );
-        break;
-    case 8:
-        g_api->add_session_hook( rec->_session, LSI_HKPT_SEND_RESP_HEADER, &MNAME, denyAccess, LSI_HOOK_NORMAL, 0 );
-        break;
-    default:
-        break;
+        snprintf( buf, sizeof(buf), "Error: Invalid argument. There must be a number\n"
+                    "between 1 and 10 (inclusive) after \'waitfullrespbody\'.\n"
+                    "Query String: [%.*s].\n", len, qs );
+        g_api->append_resp_body( rec->_session, buf, strlen(buf));
+        g_api->end_resp( rec->_session );
+        return 0;
     }
+
+    g_api->set_resp_wait_full_body( rec->_session );
+    if ( type <= 8 )
+        g_api->set_session_hook_enable_flag( rec->_session, type2hook[type - 1], &MNAME, 1 );
+
     return 0;
 }
 
+static int session_hook_func(lsi_cb_param_t * rec)
+{
+    int len;
+    const char *qs = g_api->get_req_query_string(rec->_session, &len);
+    if( !qs || len < sizeof(TESTURI))
+        return 0;
+        
+    int type = strtol( qs + sizeof(TESTURI) - 1, NULL, 10 );
+    return ( type < 5 )? internalRedir(rec): denyAccess(rec);
+}
+    
 static lsi_serverhook_t serverHooks[] = {
-    {LSI_HKPT_RECV_REQ_HEADER, getTestType, LSI_HOOK_NORMAL, 0},
+    {LSI_HKPT_RECV_REQ_HEADER, getTestType, LSI_HOOK_NORMAL, LSI_HOOK_FLAG_ENABLED},
+    
+    {LSI_HKPT_RECV_RESP_HEADER, session_hook_func, LSI_HOOK_NORMAL, 0},
+    {LSI_HKPT_RECV_RESP_BODY, session_hook_func, LSI_HOOK_NORMAL, 0},
+    {LSI_HKPT_RCVD_RESP_BODY, session_hook_func, LSI_HOOK_NORMAL, 0},
+    {LSI_HKPT_SEND_RESP_HEADER, session_hook_func, LSI_HOOK_NORMAL, 0},
     
     lsi_serverhook_t_END   //Must put this at the end position
 };

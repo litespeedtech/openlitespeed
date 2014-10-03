@@ -58,10 +58,12 @@ public:
     int getAllChildren(XmlNodeList& list);
     int hasChild();
     const char* getChildValue( const char *name, int bKeyName = 0) const;
+    int getChildValueLen( const char *name, int bKeyName = 0) const;
     const char* getAttr(const char* name) const;
     const AttrMap * getAllAttr() const;
     const char* getName() const;
     const char* getValue() const;
+    int getValueLen() const;
     long long getLongValue( const char * pTag,
             long long min, long long max, long long def, int base = 10 ) const ;
     

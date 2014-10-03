@@ -48,7 +48,7 @@ static int reg_handler(lsi_cb_param_t * rec)
 }
 
 static lsi_serverhook_t serverHooks[] = {
-    {LSI_HKPT_RECV_REQ_HEADER, reg_handler, LSI_HOOK_FIRST, 0},
+    {LSI_HKPT_RECV_REQ_HEADER, reg_handler, LSI_HOOK_FIRST, LSI_HOOK_FLAG_ENABLED},
     lsi_serverhook_t_END   //Must put this at the end position
 };
 
@@ -59,7 +59,7 @@ static int _init()
 
 static int beginProcess(lsi_session_t *session)
 {
-    g_api->append_resp_body( session, "MyTest!", 7 ); 
+    g_api->append_resp_body( session, "MyTest!\n", 8 ); 
     g_api->end_resp(session);
     return 0;
 }

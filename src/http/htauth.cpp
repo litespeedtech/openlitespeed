@@ -21,7 +21,7 @@
 #include <http/httpstatuscode.h>
 #include <http/userdir.h>
 
-#include <util/base64.h>
+#include <lsr/lsr_base64.h>
 #include <util/pool.h>
 #include <util/stringlist.h>
 #include <util/stringtool.h>
@@ -58,14 +58,14 @@ HTAuth::HTAuth( const char * pRealm )
 HTAuth::~HTAuth()
 {
     if ( m_pName )
-        g_pool.deallocate2( m_pName );
+        Pool::deallocate2( m_pName );
     if ( m_authHeader )
-        g_pool.deallocate2( m_authHeader );
+        Pool::deallocate2( m_authHeader );
 }
 
 void HTAuth::setName( const char * pName )
 {
-    m_pName = (char *)g_pool.dupstr( pName );
+    m_pName = (char *)Pool::dupstr( pName );
     buildWWWAuthHeader( pName );
 }
 
@@ -75,14 +75,14 @@ int HTAuth::buildWWWAuthHeader( const char * pName )
 {
     if ( m_iAuthType & AUTH_DIGEST )
     {
-        m_authHeader = (char *)g_pool.dupstr( pName );
+        m_authHeader = (char *)Pool::dupstr( pName );
         return 0;
     }
     else if ( m_iAuthType & AUTH_BASIC )
     {
         int len = strlen( pName ) + 40;
 
-        m_authHeader = (char *)g_pool.reallocate2( m_authHeader, len );
+        m_authHeader = (char *)Pool::reallocate2( m_authHeader, len );
         if ( m_authHeader )
         {
             m_authHeaderLen = safe_snprintf( m_authHeader, len,
@@ -120,7 +120,7 @@ int HTAuth::basicAuth( HttpSession *pSession, const char * pAuthorization, int s
 
     char buf[MAX_BASIC_AUTH_LEN];
     char * pUser = buf;
-    int ret = Base64::decode( pAuthorization, size, pUser );
+    int ret = lsr_base64_decode( pAuthorization, size, pUser );
     if ( ret == -1 )
         return SC_401;
     while( isspace( *pUser ) )

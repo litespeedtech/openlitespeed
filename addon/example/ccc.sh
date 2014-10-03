@@ -2,6 +2,8 @@
 
 echo =====================================================================================
 
+cd `dirname "$0"`
+
 if [ $# -eq 0 ] ; then
   echo Need a c file name, such as $0 mymodule.c
   echo
@@ -13,12 +15,6 @@ echo
 
 if [ ! -f $1 ] ; then
   echo File $1 does not exist
-  echo
-  exit 1
-fi
-
-if [ "x$1" = "x./loopbuff.c" ] ; then
-  echo "As I know loopbuff.c cannot be compiled to a module. Quit."
   echo
   exit 1
 fi
@@ -38,16 +34,22 @@ else
 	UNDEFINED_FLAG=""
 fi
 
-
-
-gcc -g -Wall -fPIC -c -D_REENTRANT $(getconf LFS_CFLAGS)   $TARGET.c
-if [ -f loopbuff.c ]; then
-    gcc -g -Wall -fPIC -c -D_REENTRANT $(getconf LFS_CFLAGS) loopbuff.c
-    gcc -g -Wall -fPIC $UNDEFINED_FLAG  $(getconf LFS_CFLAGS)  -o $TARGET.so $TARGET.o  loopbuff.o -shared
-    rm loopbuff.o
+if [ "$TARGET" = "imgresize" ] ; then
+    if [ -e "/usr/local/lib/libgd.a" ] ; then
+        GDLIB="-lgd"
+    else
+        echo "Lib gd is not installed.  Cannot use $TARGET without it."
+        echo
+        exit 1
+    fi
 else
-    gcc -g -Wall -fPIC $UNDEFINED_FLAG $(getconf LFS_CFLAGS)  -o $TARGET.so $TARGET.o -shared
+    GDLIB=""
 fi
+
+
+
+gcc -g -Wall -fPIC -c -D_REENTRANT $(getconf LFS_CFLAGS)   $TARGET.c -I "../../src" -I "../../include"
+gcc -g -Wall -fPIC $UNDEFINED_FLAG  $(getconf LFS_CFLAGS)  -o $TARGET.so $TARGET.o -shared $GDLIB
 
 if [ -f $(pwd)/$TARGET.so ] ; then
 	echo -e "\033[38;5;71m$TARGET.so created.\033[39m"

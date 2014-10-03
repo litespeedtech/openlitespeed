@@ -343,7 +343,7 @@ top_srcdir = @top_srcdir@
 
 ####### kdevelop will overwrite this part!!! (begin)##########
 noinst_LIBRARIES = libhttp.a
-INCLUDES = -I$(top_srcdir)/src
+INCLUDES = -I$(top_srcdir)/include -I$(top_srcdir)/src
 libhttp_a_METASOURCES = AUTO
 libhttp_a_SOURCES = moduserdir.cpp contextnode.cpp phpconfig.cpp pipeappender.cpp adns.cpp \
 awstats.cpp rewriterulelist.cpp throttlecontrol.cpp rewriteengine.cpp rewritemap.cpp \

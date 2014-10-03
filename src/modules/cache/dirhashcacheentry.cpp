@@ -60,7 +60,7 @@ int DirHashCacheEntry::loadCeHeader()
     int len = getHeader().m_keyLen;
     if ( len > 0 )
     {
-        char * p = getKey().resizeBuf( len+1 );
+        char * p = getKey().prealloc( len+1 );
         if ( !p )   
             return -1;
         if ( nio_read( fd, p, len ) < len )

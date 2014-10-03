@@ -24,7 +24,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <../addon/include/ls.h>
+#include <ls.h>
 #include <socket/gsockaddr.h>
 
 class LsJsUserParam;
@@ -53,6 +53,7 @@ public:
 public:
     // module parameter setup
     static void * parseParam ( const char *param
+                                , int param_len
                                 , void *initial_config
                                 , int level
                                 , const char *name );

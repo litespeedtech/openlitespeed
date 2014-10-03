@@ -23,7 +23,7 @@
 #include <inttypes.h>
 #include <socket/gsockaddr.h>
 
-#include <../addon/include/ls.h>
+#include <ls.h>
 #include <edluastream.h>
 #include <lsluaapi.h>
 

@@ -218,7 +218,7 @@ TEST( HttpReqTest_testParseHeader1)
     CHECK( HttpReq::HEADER_OK == status );
     CHECK( HttpMethod::HTTP_POST == req.getMethod() );
     CHECK( strcmp( req.getURI(), "/" ) == 0 );
-    CHECK( *req.getQueryString() == 0 );
+    CHECK( req.getQueryStringLen() == 0 );
     CHECK( req.getOrgReqURLLen() == 41 );
     for( int i = 0; i < (int)(sizeof( pSample ) / sizeof( char *)); i += 2 )
     {

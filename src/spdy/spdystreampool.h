@@ -19,11 +19,11 @@
 #define SPDYSTREAMPOOL_H
 #include <util/objpool.h>
 #include <util/dlinkqueue.h>
+
 class SpdyStream;
-typedef ObjPool<SpdyStream>       Pool;
 class SpdyStreamPool : public ObjPool<SpdyStream>
 {  
-    static Pool s_pool; 
+    static ObjPool<SpdyStream> s_pool; 
     SpdyStreamPool();
     ~SpdyStreamPool();
 public:

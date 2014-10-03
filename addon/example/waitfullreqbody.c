@@ -33,7 +33,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "../include/ls.h"
 #include <stdlib.h>
 #include <string.h>
-#include "loopbuff.h"
+#include <lsr/lsr_loopbuf.h>
 
 
 /////////////////////////////////////////////////////////////////////////////
@@ -57,39 +57,25 @@ lsi_module_t MNAME;
 
 typedef struct _MyDatas
 {
-    LoopBuff inBuf;
+    lsr_loopbuf_t inBuf;
 } MyData;
 
 
 
 static int httpRelease(void *data)
 {
-    MyData *myData = (MyData *)data;
     g_api->log( NULL, LSI_LOG_DEBUG, "#### waitfullreqbody %s\n", "httpRelease" );
-    if (myData)
-    {
-        _loopbuff_dealloc(&myData->inBuf);
-        free (myData);
-    }
     return 0;
 }
 
 static int httpinit(lsi_cb_param_t * rec)
 {
-    MyData *myData = (MyData *)g_api->get_module_data(rec->_session, &MNAME, LSI_MODULE_DATA_HTTP);
-    if (myData == NULL )
-    {
-        myData = (MyData *) malloc(sizeof(MyData));
-        _loopbuff_init(&myData->inBuf);
-        _loopbuff_alloc(&myData->inBuf, MAX_BLOCK_BUFSIZE);
-        g_api->log( NULL, LSI_LOG_DEBUG, "#### waitfullreqbody init\n" );
-        g_api->set_module_data(rec->_session, &MNAME, LSI_MODULE_DATA_HTTP, (void *)myData);
-    } 
-    else
-    {
-        _loopbuff_dealloc(&myData->inBuf);
-    }
-    
+    MyData *myData;
+    lsr_xpool_t *pool = g_api->get_session_pool( rec->_session );
+    myData = lsr_xpool_alloc( pool, sizeof( MyData ));
+    lsr_loopbuf_x( &myData->inBuf, MAX_BLOCK_BUFSIZE, pool );
+    g_api->log( NULL, LSI_LOG_DEBUG, "#### waitfullreqbody init\n" );
+    g_api->set_module_data(rec->_session, &MNAME, LSI_MODULE_DATA_HTTP, (void *)myData);
     return 0;
 }
 
@@ -103,6 +89,7 @@ static int httpinit(lsi_cb_param_t * rec)
 static int httpreqread(lsi_cb_param_t * rec)
 {
     MyData *myData = NULL;
+    lsr_xpool_t *pool = g_api->get_session_pool( rec->_session );
     char *pBegin;
     char tmpBuf[MAX_BLOCK_BUFSIZE];
     int len, sz, i;
@@ -115,14 +102,14 @@ static int httpreqread(lsi_cb_param_t * rec)
     while((len = g_api->stream_read_next( rec, tmpBuf, MAX_BLOCK_BUFSIZE )) > 0)
     {
         g_api->log( NULL, LSI_LOG_DEBUG, "#### waitfullreqbody httpreqread, inLn = %d\n", len );
-        _loopbuff_append(&myData->inBuf, tmpBuf, len);
+        lsr_loopbuf_xappend( &myData->inBuf, tmpBuf, len, pool);
     }
     
-    while (_loopbuff_hasdata(&myData->inBuf) && (p - (char *)rec->_param < rec->_param_len) )
+    while( !lsr_loopbuf_empty( &myData->inBuf ) && (p - (char *)rec->_param < rec->_param_len) )
     {
-        _loopbuff_reorder(&myData->inBuf);
-        pBegin = _loopbuff_getdataref(&myData->inBuf);
-        sz = _loopbuff_getdatasize(&myData->inBuf);
+        lsr_loopbuf_xstraight( &myData->inBuf, pool );
+        pBegin = lsr_loopbuf_begin( &myData->inBuf );
+        sz = lsr_loopbuf_size( &myData->inBuf );
 
 //#define TESTCASE_2
 #ifndef TESTCASE_2
@@ -146,11 +133,11 @@ static int httpreqread(lsi_cb_param_t * rec)
         }
 #endif
 
-        _loopbuff_erasedata(&myData->inBuf, sz);
+        lsr_loopbuf_pop_front( &myData->inBuf, sz );
     }
     
     rec->_param_len = p - (char *)rec->_param;
-    if (_loopbuff_hasdata(&myData->inBuf))
+    if ( !lsr_loopbuf_empty( &myData->inBuf ))
         *((int *)rec->_flag_out) = 1;
     
     return rec->_param_len;
@@ -172,9 +159,9 @@ static int check_uri_and_reg_handler(lsi_cb_param_t * rec)
 
 
 static lsi_serverhook_t serverHooks[] = {
-    {LSI_HKPT_RECV_REQ_HEADER, check_uri_and_reg_handler, LSI_HOOK_NORMAL, 0},
-    {LSI_HKPT_HTTP_BEGIN, httpinit, LSI_HOOK_NORMAL, 0},
-    {LSI_HKPT_RECV_REQ_BODY, httpreqread, LSI_HOOK_EARLY, LSI_HOOK_FLAG_TRANSFORM},
+    {LSI_HKPT_RECV_REQ_HEADER, check_uri_and_reg_handler, LSI_HOOK_NORMAL, LSI_HOOK_FLAG_ENABLED},
+    {LSI_HKPT_HTTP_BEGIN, httpinit, LSI_HOOK_NORMAL, LSI_HOOK_FLAG_ENABLED},
+    {LSI_HKPT_RECV_REQ_BODY, httpreqread, LSI_HOOK_EARLY, LSI_HOOK_FLAG_TRANSFORM | LSI_HOOK_FLAG_ENABLED},
     
     lsi_serverhook_t_END   //Must put this at the end position
 };

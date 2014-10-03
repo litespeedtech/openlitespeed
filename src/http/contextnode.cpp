@@ -32,7 +32,7 @@ ContextNode::ContextNode( const char* pchLabel, ContextNode* pParentNode)
     , m_iHTAState( HTA_UNKNOWN )
     , m_iRelease( 1 )
 {
-    m_pLabel = g_pool.dupstr( pchLabel );
+    m_pLabel = Pool::dupstr( pchLabel );
 }
 
 ContextNode::~ContextNode()
@@ -40,12 +40,12 @@ ContextNode::~ContextNode()
     if ( m_iRelease && m_pContext )
         delete m_pContext;
     if ( m_pLabel )
-        g_pool.deallocate2( m_pLabel );
+        Pool::deallocate2( m_pLabel );
     release_objects();
 }
 
 void ContextNode::setLabel( const char* l)
-{   m_pLabel = g_pool.dupstr(l);  }
+{   m_pLabel = Pool::dupstr(l);  }
 
 void ContextNode::setContextUpdateParent( HttpContext* pContext, int noRedirect )
 {

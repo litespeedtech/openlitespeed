@@ -109,7 +109,8 @@ private:
     SSLConnection       m_ssl;
 
     class fp_list     * m_pFpList;
-    SessionHooks<LSI_HKPT_L4_BEGINSESSION, LSI_HKPT_L4_COUNT>  m_sessionHooks;
+    IolinkSessionHooks  m_sessionHooks;
+    
     short               m_hasBufferedData;
     IOVec               m_iov;
     
@@ -149,7 +150,10 @@ private:
     int doWrite()
     {
         if ( isWantWrite() )
-            return getHandler()->onWriteEx();
+            if (getHandler())
+                return getHandler()->onWriteEx();
+            else
+                return 0;
         else
         {
             suspendWrite();
@@ -206,7 +210,6 @@ private:
     int sslSetupHandler();
 
     void dumpState(const char * pFuncName, const char * action);
-    void initSessionHooks( int index, LsiApiHooks ** pHooks );
 
 public:
     void setRemotePort( unsigned short port )
@@ -323,8 +326,8 @@ public:
     
     LsiModuleData* getModuleData()      {   return &m_moduleData;   }
 
-    LsiApiHooks * getModSessionHooks( int index )
-    {   return m_sessionHooks.getCopy( index ); }
+    IolinkSessionHooks  *getSessionHooks() {  return &m_sessionHooks;    }
+
 };
 
 

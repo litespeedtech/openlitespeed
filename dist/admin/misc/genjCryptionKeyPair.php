@@ -1,6 +1,6 @@
 <?php
 
-require_once('../html/classes/jCryption.php');
+require_once('../html/lib/jCryption.php');
 
 /**
  * RSAKeyImport

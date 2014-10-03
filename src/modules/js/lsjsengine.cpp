@@ -17,15 +17,17 @@
 *****************************************************************************/
 
 #include "lsjsengine.h"
-#include "../addon/include/ls.h"
+#include "ls.h"
 #include <http/httplog.h>
 #include <log4cxx/logger.h>
+#include <lsr/lsr_strtool.h>
+#include <lsr/lsr_confparser.h>
+#include <util/fdpass.h>
 #include <sys/stat.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <errno.h>
-#include <util/fdpass.h>
 // #include "/home/user/simon/unixdomain/nethelper.c"
 
 // Node search path:
@@ -183,27 +185,27 @@ int    LsJsEngine::runScript(lsi_session_t *session
 //  Configuration parameters for LiteSpeed js driver
 //
 void* LsJsEngine::parseParam( const char* param
+                                , int param_len
                                 , void* initial_config
                                 , int level
                                 , const char *name )
 {
-    char    key[0x1000];
-    char    value[0x1000];
-    int     n, nb;
-    register char    * p;
+    lsr_confparser_t confparser;
+    lsr_objarray_t *pList;
+    const char *pLineBegin, *pLineEnd, *pParamEnd = param + param_len;
     
     LsJsUserParam * pParent = (LsJsUserParam * )initial_config;
     LsJsUserParam * pUser = new LsJsUserParam(level);
     
     g_api->log(NULL, LSI_LOG_NOTICE
-                    , "JS Param %s %d %s"
+                    , "JS Param %s %d %s\n"
                     , name
                     , level
                     , param ? param : "");
     
     if ((!pUser) || (!pUser->isReady()))
     {
-        g_api->log(NULL, LSI_LOG_ERROR, "JS PARSEPARAM NO MEMORY");
+        g_api->log(NULL, LSI_LOG_ERROR, "JS PARSEPARAM NO MEMORY\n");
         return NULL;
     }
     if (pParent)
@@ -218,9 +220,8 @@ void* LsJsEngine::parseParam( const char* param
         return pUser;
     }
     
-    p = (char *)param;
     g_api->log(NULL, LSI_LOG_NOTICE
-                    , "JS Param name %s level %d %s parent %d param %s %d"
+                    , "JS Param name %s level %d %s parent %d param %s %d\n"
                     , name
                     , level
                     , (level == LSI_MODULE_DATA_HTTP) ? "HTTP" : ""
@@ -229,35 +230,47 @@ void* LsJsEngine::parseParam( const char* param
                     , pParent ? pParent->isReady() : -1
                     );
     
-    // search for each parameters here
-    do
+    lsr_confparser( &confparser );
+    while((pLineBegin = lsr_get_conf_line( &param, pParamEnd, &pLineEnd )) != NULL )
     {
-        n = sscanf(p, "%s%s%n", key, value, &nb);
-        if (n == 2)
+        pList = lsr_conf_parse_line_kv( &confparser, pLineBegin, pLineEnd );
+        if ( !pList )
+            continue;
+        lsr_str_t *pKey = (lsr_str_t *)lsr_objarray_getobj( pList, 0 );
+        lsr_str_t *pValue = (lsr_str_t *)lsr_objarray_getobj( pList, 1 );
+        if ( lsr_str_len( pValue ) == 0 )
         {
-            // runtime parameters
-            if (!strcasecmp("data", key))
-            {
-                // allow hex and decimal
-                int val = 0;
-                if ((sscanf(value, "%i", &val) == 1) && (val > 0))
-                {
-                    pUser->setData(val);
-                }
-                g_api->log(NULL, LSI_LOG_NOTICE
-                            , "%s JS SET %s = %s [%d]\n"
-                            , name , key, value, pUser->data());
-            }
-            else
-            {
-                // ignore this pair values
-                g_api->log(NULL, LSI_LOG_NOTICE
-                            , "%s IGNORE MODULE PARAMETERS [%s] [%s]\n"
-                            , name, key, value);
-            }
+            g_api->log(NULL, LSI_LOG_ERROR, "JS PARSEPARAM NO VALUE GIVEN FOR PARAMETER %.*s\n",
+                lsr_str_len( pKey ), lsr_str_c_str( pKey )
+            );
+            continue;
         }
-        p += nb;
-    } while (n == 2);
+        if (!strncasecmp("data", lsr_str_c_str( pKey ), lsr_str_len( pKey )))
+        {
+            int val = 0;
+            // base 0 is same functionality as %i in sscanf
+            if ((val = strtol( lsr_str_c_str( pValue ), NULL, 0 )) && (val > 0))
+            {
+                pUser->setData(val);
+            }
+            g_api->log(NULL, LSI_LOG_NOTICE
+                        , "%s JS SET %.*s = %.*s [%d]\n"
+                        , name
+                        , lsr_str_len( pKey ), lsr_str_c_str( pKey )
+                        , lsr_str_len( pValue ), lsr_str_c_str( pValue )
+                        , pUser->data());
+        }
+        else
+        {
+            // ignore this pair values
+            g_api->log(NULL, LSI_LOG_NOTICE
+                        , "%s JS IGNORE MODULE PARAMETERS [%.*s] [%.*s]\n"
+                        , name
+                        , lsr_str_len( pKey ), lsr_str_c_str( pKey )
+                        , lsr_str_len( pValue ), lsr_str_c_str( pValue ));
+        }
+    }
+    lsr_confparser_d( &confparser );
     s_firstTime = 0;
     return (void *)pUser;
 }

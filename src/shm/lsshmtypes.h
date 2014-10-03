@@ -49,17 +49,17 @@ typedef struct ls_shmhash_s    lsi_shmhash_t;
 typedef struct ls_shmobject_s  lsi_shmobject_t;
 
 #ifdef LSSHM_USE_SPINLOCK
-typedef lsi_spinlock_t          lsi_shmlock_t;
-#define lsi_shmlock_setup       lsi_spinlock_setup         
-#define lsi_shmlock_lock        lsi_spinlock_lock         
-#define lsi_shmlock_trylock     lsi_spinlock_trylock       
-#define lsi_shmlock_unlock      lsi_spinlock_unlock      
+typedef lsr_spinlock_t          lsi_shmlock_t;
+#define lsi_shmlock_setup       lsr_spinlock_setup         
+#define lsi_shmlock_lock        lsr_spinlock_lock         
+#define lsi_shmlock_trylock     lsr_spinlock_trylock       
+#define lsi_shmlock_unlock      lsr_spinlock_unlock      
 #else
-typedef lsi_mutex_t             lsi_shmlock_t;
-#define lsi_shmlock_setup       lsi_mutex_setup             
-#define lsi_shmlock_lock        lsi_mutex_lock              
-#define lsi_shmlock_trylock     lsi_mutex_trylock           
-#define lsi_shmlock_unlock      lsi_mutex_unlock            
+typedef lsr_mutex_t             lsi_shmlock_t;
+#define lsi_shmlock_setup       lsr_mutex_setup             
+#define lsi_shmlock_lock        lsr_mutex_lock              
+#define lsi_shmlock_trylock     lsr_mutex_trylock           
+#define lsi_shmlock_unlock      lsr_mutex_unlock            
 #endif
 
 

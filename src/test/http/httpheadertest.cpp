@@ -430,7 +430,9 @@ void CheckIoHeader(IOVec io, char *phBuf)
 
 TEST (respHeaders)
 {
-    HttpRespHeaders h;
+    lsr_xpool_t pool;
+    lsr_xpool_init( &pool );
+    HttpRespHeaders h( &pool );
     IOVec io;
     char *pVal = NULL;
     int valLen = 0;
@@ -649,6 +651,8 @@ TEST (respHeaders)
     h.outputNonSpdyHeaders(&io);
     DisplayBothHeader(io, kk, h.getHeadersCount(0), &h);
     CheckIoHeader(io,sTestHdr);
+    
+    lsr_xpool_destroy( &pool );
     
     /*
     

@@ -43,6 +43,7 @@
 #include <util/pool.h>
 #include <util/stringtool.h>
 #include <util/vmembuf.h>
+#include <lsr/lsr_str.h>
 #include <ctype.h>
 #include <errno.h>
 #include <stdio.h>
@@ -51,6 +52,10 @@
 
 #include <new>
 #include <util/ssnprintf.h>
+
+
+
+#define URL_INDEX_PAD 32
 
 struct envAlias_t
 {
@@ -63,7 +68,6 @@ struct envAlias_t
 const envAlias_t envAlias[] = {
     {"cache-control", 13, "LS_CACHE_CTRL", 13},
 };
-
 
 #define HEADER_BUF_INIT_SIZE 2048
 #define REQ_BUF_INIT_SIZE    1024
@@ -97,37 +101,53 @@ static char * escape_uri( char * p, char * pEnd, const char * pURI, int uriLen )
     return p;
 }
 HttpReq::HttpReq( )
-    : m_reqBuf( REQ_BUF_INIT_SIZE )
-    , m_headerBuf( HEADER_BUF_INIT_SIZE )
+    : m_headerBuf( HEADER_BUF_INIT_SIZE )
     , m_fdReqFile( -1 )
 {
-    m_urls = (key_value_pair *)g_pool.allocate( sizeof( key_value_pair ) * ( MAX_REDIRECTS + 1 ));
-
-    m_reqBuf.resize(HEADER_BUF_PAD);
     m_headerBuf.resize(HEADER_BUF_PAD);
-    *((int*)m_reqBuf.begin()) = 0;
     *((int*)m_headerBuf.begin() ) = 0;
     m_iReqHeaderBufFinished = HEADER_BUF_PAD;
     //m_pHTAContext = NULL;
     m_pContext = NULL;
     m_pSSIRuntime = NULL;
     ::memset( m_commonHeaderLen, 0,
-              (char *)(&m_iLocationOff + 1) - (char *)m_commonHeaderLen );
+              (char *)(&m_code + 1) - (char *)m_commonHeaderLen );
     m_upgradeProto = UPD_PROTO_NONE;
     m_pRealPath = NULL;
+    lsr_xpool_init( &m_pool );
+    uSetURI( NULL, 0 );
+    lsr_str_unsafe_set( &m_curUrl.m_value, NULL, 0);
+    lsr_str_unsafe_set( &m_location, NULL, 0 );
+    lsr_str_unsafe_set( &m_pathInfo, NULL, 0);
+    lsr_str_unsafe_set( &m_newHost, NULL, 0);
+    m_pUrls = (lsr_str_pair_t *)lsr_xpool_alloc( &m_pool, sizeof( lsr_str_pair_t ) * (MAX_REDIRECTS + 1) );
+    memset( m_pUrls, 0, sizeof( lsr_str_pair_t ) * (MAX_REDIRECTS + 1) );
+    m_envHash = NULL;
+    m_pAuthUser = NULL;
+    m_pRange = NULL;
 }
 
 HttpReq::~HttpReq()
 {
-    if ( m_urls )
-        g_pool.deallocate( m_urls, sizeof( key_value_pair ) * ( MAX_REDIRECTS + 1 ) );
     if ( m_fdReqFile != -1 )
         ::close( m_fdReqFile );
+    lsr_xpool_reset( &m_pool );
+    uSetURI( NULL, 0 );
+    lsr_str_unsafe_set( &m_curUrl.m_value, NULL, 0);
+    lsr_str_unsafe_set( &m_location, NULL, 0 );
+    lsr_str_unsafe_set( &m_pathInfo, NULL, 0);
+    lsr_str_unsafe_set( &m_newHost, NULL, 0);
+    m_pUrls = NULL;
+    m_envHash = NULL;
+    m_unknHeaders.init();
+    m_pAuthUser = NULL;
+    m_pRange = NULL;
 }
 
 
 void HttpReq::reset()
 {
+    lsr_xpool_skip_free( &m_pool );
     if ( m_fdReqFile != -1 )
     {
         ::close( m_fdReqFile );
@@ -142,20 +162,27 @@ void HttpReq::reset()
             HttpGlobals::getResManager()->recycle( m_pReqBodyBuf );
         }
     }
-    if ( m_pRange )
-    {
-        delete m_pRange;
-    }
     ::memset( m_commonHeaderOffset, 0,
-              (char *)(&m_iLocationOff + 1) - (char *)m_commonHeaderOffset );
-    m_reqBuf.resize(HEADER_BUF_PAD);
+              (char *)(&m_code + 1) - (char *)m_commonHeaderOffset );
     m_pRealPath = NULL;
+    lsr_xpool_reset( &m_pool );
+    uSetURI( NULL, 0 );
+    lsr_str_unsafe_set( &m_curUrl.m_value, NULL, 0);
+    lsr_str_unsafe_set( &m_location, NULL, 0 );
+    lsr_str_unsafe_set( &m_pathInfo, NULL, 0);
+    lsr_str_unsafe_set( &m_newHost, NULL, 0);
+    m_pUrls = (lsr_str_pair_t *)lsr_xpool_alloc( &m_pool, sizeof( lsr_str_pair_t ) * (MAX_REDIRECTS + 1) );
+    memset( m_pUrls, 0, sizeof( lsr_str_pair_t ) * (MAX_REDIRECTS + 1) );
+    m_envHash = NULL;
+    m_unknHeaders.init();
+    m_pAuthUser = NULL;
+    m_pRange = NULL;
 }
 
 void HttpReq::resetHeaderBuf()
 {
     m_iReqHeaderBufFinished = HEADER_BUF_PAD;
-    m_headerBuf.resize(HEADER_BUF_PAD);
+    m_headerBuf.resize( HEADER_BUF_PAD );
 }
 
 void HttpReq::reset2()
@@ -171,6 +198,16 @@ void HttpReq::reset2()
     }
     else
         resetHeaderBuf();
+}
+
+int HttpReq::setQS( const char* qs, int qsLen )
+{   
+    return lsr_str_set_str_xp( &m_curUrl.m_value, qs, qsLen, &m_pool ); 
+}
+
+void HttpReq::uSetURI( char* pURI, int uriLen )
+{   
+    lsr_str_unsafe_set( &m_curUrl.m_key, pURI, uriLen );  
 }
 
 int HttpReq::appendPendingHeaderData( const char * pBuf, int len )
@@ -239,11 +276,11 @@ const HttpVHost * HttpReq::matchVHost()
     return m_pVHost;
 }
 
-int HttpReq::removeSpace(const char **pCur, const char *pBEnd)
+int HttpReq::removeSpace( const char **pCur, const char *pBEnd )
 {
     while( 1 )
     {
-        if ( *pCur >= pBEnd)
+        if ( *pCur >= pBEnd )
         {
             m_iReqHeaderBufFinished = *pCur - m_headerBuf.begin();
             return 1;
@@ -269,7 +306,7 @@ int HttpReq::processRequestLine()
     {
         while( pCur < pLineEnd )
         {
-            if ( !isspace( *pCur ) )
+            if ( !isspace( *pCur ))
                 break;
             ++pCur;
         }
@@ -278,9 +315,9 @@ int HttpReq::processRequestLine()
         ++pCur;
         m_iReqHeaderBufFinished = pCur - m_headerBuf.begin();
     }
-    if(pLineEnd == NULL)
+    if ( pLineEnd == NULL )
     {
-       if(iBufLen < MAX_BUF_SIZE + 20)
+       if ( iBufLen < MAX_BUF_SIZE + 20 )
            return 1;
        else
         return SC_400;
@@ -299,17 +336,16 @@ int HttpReq::processRequestLine()
         ++p;
     pCur = p;
     result = parseHost(pCur, pLineEnd);
-    if (result )
+    if ( result )
         return result;
     p += m_iHostLen;
-    pCur = (char*)memchr(p, '/', (pLineEnd -p));
+    pCur = (char*)memchr( p, '/', (pLineEnd -p));
     while(( p < pLineEnd )&&(( *p != ' ' )&&( *p != '\t' )))
         ++p;
     if ( p == pLineEnd )
         return SC_400;
-    m_curURL.keyOff = m_reqBuf.size();
     m_reqURLOff = pCur - m_headerBuf.begin();
-    result = parseURL(pCur, p );
+    result = parseURL( pCur, p );
     if ( result )
         return result;
 
@@ -318,11 +354,11 @@ int HttpReq::processRequestLine()
         ++p;
     pCur = p;
 
-    result = parseProtocol(pCur, pLineEnd );
-    if( result )
+    result = parseProtocol( pCur, pLineEnd );
+    if ( result )
         return result;
     m_reqLineLen = pLineEnd - m_headerBuf.begin() - m_reqLineOff;
-    if ( *(pLineEnd - 1) == '\r')
+    if ( *(pLineEnd - 1) == '\r' )
         m_reqLineLen --;
 
     m_iHeaderStatus = HEADER_HEADER;
@@ -334,7 +370,7 @@ int HttpReq::processRequestLine()
 
     return result;
 }
-int HttpReq::parseProtocol(const char *pCur, const char *pBEnd)
+int HttpReq::parseProtocol( const char *pCur, const char *pBEnd )
 {
     if ( strncasecmp( pCur, "http/1.", 7 ) != 0 )
     {
@@ -363,65 +399,53 @@ int HttpReq::parseProtocol(const char *pCur, const char *pBEnd)
     return 0;
 }
 
-int HttpReq::parseURL(const char *pCur, const char *pBEnd)
+int HttpReq::parseURL( const char *pCur, const char *pBEnd )
 {
     const char *pFound = pCur,*pMark = ( const char *)memchr( pCur, '?', pBEnd - pCur );
     int result = 0;
-    if(pMark)
+    if ( pMark )
     {
         pCur = pMark + 1;
-        m_curURL.valOff = pCur - m_headerBuf.begin();
-        m_curURL.valLen = pBEnd - pCur;
+        setQS( pCur, pBEnd - pCur );
     }
     else
     {
-        m_curURL.valOff = 0;
-        m_curURL.valLen = 0;
+        lsr_str_unsafe_set( &m_curUrl.m_value, NULL, 0 );
         pMark = pBEnd;
     }
-    result = parseURI(pFound, pMark);
-    if(result != 0)
+    result = parseURI( pFound, pMark );
+    if ( result != 0 )
     {
         return result;
     }
-    m_reqURLLen = pBEnd - m_headerBuf.begin() - m_reqURLOff ;
+    m_reqURLLen = pBEnd - m_headerBuf.begin() - m_reqURLOff;
     //m_reqURLLen = pCur - m_headerBuf.begin() - m_reqURLOff;
     return 0;
 }
 
-int HttpReq::parseURI(const char *pCur, const char *pBEnd )
+int HttpReq::parseURI( const char *pCur, const char *pBEnd )
 {
     int len = pBEnd - pCur;
-    int m = m_reqBuf.available();
-    if(m < len )
-    {
-        if (m_reqBuf.grow( len - m ) == -1)
-        {
-            return SC_500;
-        }
-    }
-    int n = HttpUtil::unescape((char*) m_reqBuf.end(), len, pCur );
+    char *p = (char *)lsr_xpool_alloc( &m_pool, len + URL_INDEX_PAD );
+    int n = HttpUtil::unescape( p, len, pCur );
     --n;
-    n = GPath::clean( m_reqBuf.end(), n );
-    m_curURL.keyOff = m_reqBuf.size();
-    if(n > 0)
-        m_reqBuf.used(n);
-    else
+    n = GPath::clean( p, n );
+    if ( n <= 0 )
         return SC_400;
-    m_reqBuf.append( '\0' );
-    m_curURL.keyLen = n;
+    *(p + n) = '\0';
+    uSetURI( p, n );
     return 0;
 }
 
-int HttpReq::parseHost(const char* pCur, const char *pBEnd)
+int HttpReq::parseHost( const char* pCur, const char *pBEnd )
 {
     bool bNoHost = false;
     if (( *pCur == '/' )||( *pCur == '%' ))
         bNoHost = true;
-    if(!bNoHost)
+    if ( !bNoHost )
     {
         const char * pHost;
-        pHost = ( const char *)memchr( pCur, ':', pBEnd - pCur );
+        pHost = (const char *)memchr( pCur, ':', pBEnd - pCur );
         if (( pHost )&&(pHost +2 < pBEnd))
         {
             if((*(pHost + 1)=='/' )&&(*(pHost + 2)=='/' ))
@@ -451,55 +475,48 @@ int HttpReq::parseMethod(const char *pCur, const char *pBEnd )
 {
 
     if ( (m_method = HttpMethod::parse2( pCur )) == 0 )
-    {
         return SC_400;
-    }
 
     if ( m_method == HttpMethod::HTTP_HEAD )
         m_iNoRespBody = 1;
 
     if (( m_method < HttpMethod::HTTP_OPTIONS )||
             ( m_method >= HttpMethod::HTTP_METHOD_END ))
-    {
         return SC_505;
-    }
     pCur += HttpMethod::getLen( m_method );
     if ((*pCur != ' ')&&(*pCur != '\t' ))
-    {
         return SC_400;
-    }
     return 0;
 }
 
 void HttpReq::setScriptNameLen( int n)
 {  
     m_iScriptNameLen = n;
-    m_iPathInfoLen = m_curURL.keyLen - n;
-    m_iPathInfoOff = m_curURL.keyOff + m_iScriptNameLen;
+    lsr_str_unsafe_set( &m_pathInfo, (char *)getURI() + m_iScriptNameLen, 
+                        getURILen() - n );
 }
     
 int HttpReq::processHeaderLines()
 {
-    const char *pCur = m_headerBuf.begin() + m_iReqHeaderBufFinished;
     const char *pBEnd = m_headerBuf.end();
-    key_value_pair * pCurHeader = NULL;
     const char *pMark = NULL;
     const char *pLineEnd= NULL;
-    const char* pLineBegin  = pCur;
-    const char* pTemp = NULL;
-    const char* pTemp1 = NULL;
+    const char *pLineBegin  = m_headerBuf.begin() + m_iReqHeaderBufFinished;
+    const char *pTemp = NULL;
+    const char *pTemp1 = NULL;
+    key_value_pair * pCurHeader = NULL;
     bool headerfinished = false;
     int index;
     while((pLineEnd  = ( const char *)memchr(pLineBegin, '\n', pBEnd - pLineBegin )) != NULL)
     {
         pMark = ( const char *)memchr(pLineBegin, ':', pLineEnd - pLineBegin);
-        if(pMark != NULL)
+        if ( pMark != NULL )
         {
             while(1)
             {
-                if(pLineEnd + 1 >= pBEnd)
+                if ( pLineEnd + 1 >= pBEnd )
                     return 1;
-                if((*(pLineEnd+1)==' ')||(*(pLineEnd+1)=='\t'))
+                if ((*(pLineEnd+1)==' ')||(*(pLineEnd+1)=='\t'))
                 {
                     *((char*)pLineEnd) = ' ';
                     if(*(pLineEnd-1)=='\r')
@@ -508,7 +525,7 @@ int HttpReq::processHeaderLines()
                 else
                     break;
                 pLineEnd  = ( const char *)memchr(pLineEnd, '\n', pBEnd - pLineEnd );
-                if( pLineEnd == NULL)
+                if ( pLineEnd == NULL )
                     return 1;
                 else
                     continue;
@@ -516,8 +533,14 @@ int HttpReq::processHeaderLines()
             pTemp = pMark + 1;
             pTemp1 = pLineEnd;
             skipSpaceBothSide(pTemp, pTemp1);
+            if ( strncmp( pTemp, "() {", 4 ) == 0 )
+            {
+                LOG_INFO(( "[%s] Status 400: CVE-2014-6271, CVE-2014-7169 signature detected in request header!",
+                        getLogId() ));
+                return SC_400;
+            }
             index = HttpHeader::getIndex( pLineBegin );
-            if(index != HttpHeader::H_HEADER_END)
+            if ( index != HttpHeader::H_HEADER_END )
             {
                 m_commonHeaderLen[ index ] = pTemp1 - pTemp;
                 m_commonHeaderOffset[index] = pTemp - m_headerBuf.begin();
@@ -541,14 +564,14 @@ int HttpReq::processHeaderLines()
             }
         }
         pLineBegin = pLineEnd + 1;
-        if((*(pLineEnd-1)=='\r')&&(*(pLineEnd-2)=='\n'))
+        if ((*(pLineEnd-1)=='\r')&&(*(pLineEnd-2)=='\n'))
         {
             headerfinished = true;
             break;
         }
     }
     m_iReqHeaderBufFinished = pLineBegin - m_headerBuf.begin();
-    if(headerfinished)
+    if ( headerfinished )
     {
         m_iHttpHeaderEnd = m_iReqHeaderBufFinished;
         m_iHeaderStatus = HEADER_OK;
@@ -557,21 +580,21 @@ int HttpReq::processHeaderLines()
     return 1;
 }
 
-int HttpReq::processHeader(int index)
+int HttpReq::processHeader( int index )
 {
     const char *pCur = m_headerBuf.begin() + m_commonHeaderOffset[index];
     const char *pBEnd = pCur + m_commonHeaderLen[ index ];
-    switch (index)
+    switch ( index )
     {
     case HttpHeader::H_HOST:
         m_iHostOff = m_commonHeaderOffset[index];
-        postProcessHost(pCur, pBEnd);
+        postProcessHost( pCur, pBEnd );
         break;
     case HttpHeader::H_CONTENT_LENGTH:
-        m_lEntityLength = strtol(pCur, NULL, 0);
+        m_lEntityLength = strtol( pCur, NULL, 0 );
         break;
     case HttpHeader::H_TRANSFER_ENCODING:
-        if (strncasecmp( pCur, "chunked", 7 ) == 0 )
+        if ( strncasecmp( pCur, "chunked", 7 ) == 0 )
         {
             if ( getMethod() <= HttpMethod::HTTP_HEAD )
                 return SC_400;
@@ -579,11 +602,11 @@ int HttpReq::processHeader(int index)
         }
         break;
     case HttpHeader::H_ACC_ENCODING:
-        if(m_commonHeaderLen[ index ] >= 4)
+        if ( m_commonHeaderLen[ index ] >= 4 )
         {
             char ch = *pBEnd;
             *((char*)pBEnd) = 0;
-            if(strstr(pCur, "gzip") != NULL)
+            if ( strstr( pCur, "gzip" ) != NULL )
                 m_iAcceptGzip = REQ_GZIP_ACCEPT |
                         HttpServerConfig::getInstance().getGzipCompress();
             *((char*)pBEnd) = ch;
@@ -601,14 +624,14 @@ int HttpReq::processHeader(int index)
     return 0;
 }
 
-int HttpReq::postProcessHost(const char* pCur, const char *pBEnd)
+int HttpReq::postProcessHost( const char* pCur, const char *pBEnd )
 {
     const char *pstrfound;
-    if((pCur+4) < pBEnd)
+    if ((pCur+4) < pBEnd )
     {
         register char ch1;
         int iNum = pBEnd - pCur;
-        for(int i = 0; i < iNum; i++)
+        for( int i = 0; i < iNum; i++ )
         {
             ch1 = pCur[i];
             if (( ch1 >= 'A' )&&( ch1 <= 'Z' ))
@@ -617,11 +640,11 @@ int HttpReq::postProcessHost(const char* pCur, const char *pBEnd)
                 ((char*)pCur)[i] = ch1;
             }
         }
-        if(strncmp((char *)pCur, "www.", 4) == 0)
+        if ( strncmp((char *)pCur, "www.", 4 ) == 0 )
             m_iLeadingWWW = 1;
     }
-    pstrfound = (char*)memchr(pCur, ':', (pBEnd -pCur));
-    if(pstrfound)
+    pstrfound = (char*)memchr( pCur, ':', (pBEnd -pCur));
+    if ( pstrfound )
         m_iHostLen = pstrfound - pCur;
     else
         m_iHostLen = pBEnd - pCur;
@@ -631,16 +654,16 @@ int HttpReq::postProcessHost(const char* pCur, const char *pBEnd)
     return 0;
 }
 
-const char* HttpReq::skipSpace(const char *pOrg, const char *pDest)
+const char* HttpReq::skipSpace( const char *pOrg, const char *pDest )
 {
     char ch;
-    if(pOrg > pDest)
+    if ( pOrg > pDest )
     {
         //pTemp = pOrg - 1;
-        for(; pOrg > pDest; pOrg--)
+        for( ; pOrg > pDest; pOrg-- )
         {
             ch = *(pOrg -1);
-            if((ch == ' ')||(ch == '\t')||(ch == '\r'))
+            if ((ch == ' ')||(ch == '\t')||(ch == '\r'))
                 continue;
             else
                 break;
@@ -648,9 +671,9 @@ const char* HttpReq::skipSpace(const char *pOrg, const char *pDest)
     }
     else
     {
-        for(; pOrg < pDest; pOrg++)
+        for( ; pOrg < pDest; pOrg++ )
         {
-            if((*pOrg == ' ')||(*pOrg == '\t')||(*pOrg == '\r'))
+            if ((*pOrg == ' ')||(*pOrg == '\t')||(*pOrg == '\r'))
                 continue;
             else
                 break;
@@ -659,26 +682,26 @@ const char* HttpReq::skipSpace(const char *pOrg, const char *pDest)
     return pOrg;
 }
 
-int HttpReq::skipSpaceBothSide(const char* &pHBegin, const char* &pHEnd)
+int HttpReq::skipSpaceBothSide( const char* &pHBegin, const char* &pHEnd )
 {
     char ch;
-    for(; pHBegin <=pHEnd; pHEnd--)
+    for( ; pHBegin <=pHEnd; pHEnd-- )
     {
-        if(pHBegin ==pHEnd)
+        if ( pHBegin ==pHEnd )
             break;
         ch = *(pHEnd-1);
-        if((ch == ' ')||(ch == '\t')||(ch == '\r'))
+        if ((ch == ' ')||(ch == '\t')||(ch == '\r'))
             continue;
         else
             break;
     }
-    if(pHBegin+1 >= pHEnd)
+    if ( pHBegin+1 >= pHEnd )
         return (pHEnd - pHBegin);
-    for(; pHBegin <=pHEnd; pHBegin++)
+    for( ; pHBegin <=pHEnd; pHBegin++ )
     {
-        if(pHBegin ==pHEnd)
+        if ( pHBegin ==pHEnd )
             break;
-        if((*pHBegin == ' ')||(*pHBegin == '\t')||(*pHBegin == '\r'))
+        if ((*pHBegin == ' ')||(*pHBegin == '\t')||(*pHBegin == '\r'))
             continue;
         else
             break;
@@ -686,100 +709,40 @@ int HttpReq::skipSpaceBothSide(const char* &pHBegin, const char* &pHEnd)
     return (pHEnd - pHBegin);
 }
 
-
-key_value_pair * HttpReq::newKeyValueBuf( int &idxOff)
+key_value_pair * HttpReq::newKeyValueBuf()
 {
-    char * p = NULL;
-    int orgSize;
-    int newSize;
-    int used;
-    if ( idxOff == 0 )
-    {
-        orgSize = 0;
-        used = 0;
-    }
-    else
-    {
-        p = m_reqBuf.getPointer( idxOff );
-        orgSize = *((int *)p );
-        used = *( ((int *)p) + 1 );
-    }
-    if ( used == orgSize )
-    {
-        newSize = orgSize + 10;
-        int total = sizeof( int ) * 2 + sizeof( key_value_pair ) * newSize;
-        //pad buffer to begin with 4 bytes alignment
-        int pad = m_reqBuf.size() % 4;
-        if ( pad )
-        {
-            m_reqBuf.used( 4 - pad );
-        }
-        idxOff = m_reqBuf.size();
-        if ( m_reqBuf.available() < total )
-            if ( m_reqBuf.grow( total ) )
-                return NULL;
-        char * pNewBuf = m_reqBuf.end();
-        m_reqBuf.used( total );
-        if ( orgSize > 0 )
-            memmove( pNewBuf, p, sizeof( int ) * 2 + sizeof( key_value_pair ) * orgSize );
-        else
-            *( ((int *)pNewBuf) + 1 ) = 0;
-        p = pNewBuf;
-        *((int *)p ) = newSize;
-    }
-    ++*( ((int *)p) + 1 );
-    return ( key_value_pair *)( p + sizeof( int ) * 2 ) + used;
+    return (key_value_pair *)lsr_xpool_alloc( &m_pool, sizeof( key_value_pair ) );
 }
 
-key_value_pair * HttpReq::getCurHeaderIdx()
+key_value_pair* HttpReq::newUnknownHeader()
 {
-    char * p = m_reqBuf.getPointer( m_headerIdxOff );
-    int used = *( ((int *)p) + 1 );
-    return ( key_value_pair *)( p + sizeof( int ) * 2 ) + (used-1);
+    if ( m_unknHeaders.getCapacity() == 0 )
+        m_unknHeaders.guarantee( &m_pool, 10 );
+    else if ( m_unknHeaders.getCapacity() <= m_unknHeaders.getSize() + 1 )
+        m_unknHeaders.guarantee( &m_pool, m_unknHeaders.getCapacity() * 2 );
+    return m_unknHeaders.getNew();
 }
 
-
-key_value_pair * HttpReq::getValueByKey( const AutoBuf & buf, int idxOff, const char * pName,
-                                  int namelen ) const
+key_value_pair * HttpReq::getUnknHeaderByKey( const AutoBuf & buf, const char * pName, int namelen ) const
 {
-    if ( !idxOff )
-        return NULL;
-    const char * p = m_reqBuf.getPointer( idxOff );
-    key_value_pair * pIndex = ( key_value_pair *)( p + sizeof( int ) * 2 );
-    key_value_pair * pEnd = pIndex + *( ((int *)p) + 1 );
-    while( pIndex < pEnd )
+    const char * p;
+    int index = 0;
+    key_value_pair * ptr;
+    while((ptr = m_unknHeaders.getObj( index )) != NULL )
     {
-        if ( namelen == pIndex->keyLen )
+        if ( namelen == ptr->keyLen )
         {
-            p = buf.getPointer( pIndex->keyOff );
+            p = buf.getp( ptr->keyOff );
             if ( strncasecmp( p, pName, namelen ) == 0 )
-            {
-                return pIndex;
-            }
+                return ptr;
         }
-        ++pIndex;
+        ++index;
     }
     return NULL;
 }
 
-void HttpReq::removeKeyValueByKey( const AutoBuf & buf, int idxOff, const char * pKey, int keyLen )
-{
-    key_value_pair * pEntry = getValueByKey( buf, idxOff, pKey, keyLen );
-    if ( pEntry )
-    {
-        char * p = m_reqBuf.getPointer( idxOff );
-        int * used = ( ((int *)p) + 1 );
-        key_value_pair * pLast = ( key_value_pair *)( p + sizeof( int ) * 2 ) + (*used-1);
-        if ( pLast != pEntry )
-        {
-            memmove( pEntry, pLast, sizeof( key_value_pair ) );
-        }
-        --*used;
-    }
-}
 
-
-int HttpReq::processNewReqData(const struct sockaddr * pAddr)
+int HttpReq::processNewReqData( const struct sockaddr * pAddr )
 {
     if ( !m_pVHost->isEnabled() )
     {
@@ -803,13 +766,13 @@ int HttpReq::processNewReqData(const struct sockaddr * pAddr)
         }
     }
 
-    m_iScriptNameLen = m_curURL.keyLen;
+    m_iScriptNameLen = getURILen();
     if ( D_ENABLED( DL_LESS ) )
     {
         const char * pQS = getQueryString();
         char * pQSEnd = (char *)pQS + getQueryStringLen();
         char ch = 0;
-        if ( *pQS )
+        if ( pQS )
         {
             ch = *pQSEnd;
             *pQSEnd = 0;
@@ -819,7 +782,7 @@ int HttpReq::processNewReqData(const struct sockaddr * pAddr)
                 "\tQueryString=[%s]\n\tContent Length=%d\n",
                 getLogId(), HttpMethod::get( getMethod() ), getURI(),
                 pQS, getContentLength() ));
-        if ( *pQS )
+        if ( pQS )
             *pQSEnd = ch;
 
     }
@@ -940,52 +903,34 @@ int HttpReq::setCurrentURL( const char * pURL, int len, int alloc )
             LOG_D(( getLogger(), "[%s] URL is invalid - not start with '/'.", getLogId() ));
         return SC_400;
     }
+    char * pURI;
+    int iURILen = len;
+    const char * pArgs = pURL;
     if ( getLocation() == pURL )
     {
         //share the buffer of location
-        m_curURL.keyOff = m_iLocationOff;
-        m_iLocationOff = 0;
+        pURI = (char *)getLocation();
+        lsr_str_unsafe_set( &m_location, NULL, 0 );
     }
     else
-    {
-        if ( m_reqBuf.available() < len )
-        {
-            int ret;
-            if (( ret = growBuf( m_reqBuf, len )) )
-                return ret;
-        }
-        m_curURL.keyOff = m_reqBuf.size();
-    }
-    char * pURI = m_reqBuf.getPointer( m_curURL.keyOff );
-    const char * pArgs = pURL ;
+        pURI = (char *)lsr_xpool_alloc( &m_pool, len + URL_INDEX_PAD );
     //decode URI
-    m_curURL.keyLen = len;
-    int n = HttpUtil::unescape_inplace( pURI, m_curURL.keyLen, pArgs );
+    int n = HttpUtil::unescape_inplace( pURI, iURILen, pArgs );
     if ( n == -1 )
     {
         if ( D_ENABLED( DL_LESS ) )
             LOG_D(( getLogger(), "[%s] Unable to decode request URI: %s.",
                     getLogId(), pURI ));
-            return SC_400;    //invalid url format
+        return SC_400;    //invalid url format
     }
-    m_curURL.valLen = n - 1 - ( pArgs -  pURI);
-    if ((alloc)||( m_curURL.valLen > 0 )||( !m_pSSIRuntime ))
-    {
-        if ( m_iLocationOff != m_curURL.keyOff )
-        {
-            m_curURL.valOff = -(m_curURL.keyOff + ( pArgs - pURI ));
-            m_reqBuf.used( (n + 3) & (~3) );
-        }
-        else
-            m_curURL.valOff = m_curURL.keyOff + ( pArgs - pURI );
-    }
+    uSetURI( pURI, iURILen );
+    if ((alloc)||( n - 1 - (pArgs - pURI) > 0 )||( !m_pSSIRuntime ))
+        setQS( getURI() + (pArgs - pURI), n - 1 - (pArgs - pURI) );
+        
     else
-    {
-        m_curURL.valOff = m_urls[m_iRedirects-1].valOff;
-        m_curURL.valLen = m_urls[m_iRedirects-1].valLen;
-    }
-    m_iScriptNameLen = m_curURL.keyLen;
-    m_iPathInfoLen = 0;
+        m_curUrl.m_value = m_pUrls[m_iRedirects-1].m_value;
+    m_iScriptNameLen = getURILen();
+    lsr_str_set_len( &m_pathInfo, 0 );
     return 0;
 }
 
@@ -995,12 +940,9 @@ int HttpReq::setRewriteURI( const char * pURL, int len, int no_escape )
     int totalLen = len + ((!no_escape)? len * 2: 0);
     if ( totalLen > MAX_URL_LEN )
         totalLen = MAX_URL_LEN;
-    if ( m_reqBuf.available() < totalLen + 4)
-        if ( m_reqBuf.grow( totalLen ) == -1 )
-            return SC_500;
-    m_curURL.keyOff = m_reqBuf.size();
-    char * p = m_reqBuf.end();
-    char * pEnd = p + m_reqBuf.available() - 1;
+    char * p = (char *)lsr_xpool_alloc( &m_pool, totalLen + URL_INDEX_PAD );
+    char * pEnd = p + totalLen - 1;
+    uSetURI( p, totalLen );
     if ( !no_escape )
         p = escape_uri( p, pEnd, pURL, len );
     else
@@ -1009,59 +951,22 @@ int HttpReq::setRewriteURI( const char * pURL, int len, int no_escape )
         p += len;
     }
     *p = 0;
-    m_curURL.keyLen = p - m_reqBuf.end();
-    m_iScriptNameLen = m_curURL.keyLen;
-    m_reqBuf.used( ((m_iScriptNameLen + 1) + 3)& ~3  );
+    lsr_str_set_len( &m_curUrl.m_key, p - getURI() );
+    m_iScriptNameLen = getURILen();
     return 0;
 }
 int HttpReq::appendIndexToUri( const char * pIndex, int indexLen )
 {
-    if ( m_curURL.keyOff + m_curURL.keyLen + 1 >= m_reqBuf.size() )
-    {
-        if ( m_reqBuf.available() < indexLen )
-        {
-            int ret;
-            if (( ret = growBuf( m_reqBuf, indexLen )) )
-                return ret;
-        }
-        memmove( m_reqBuf.end() - 1, pIndex, indexLen + 1 );
-        m_curURL.keyLen += indexLen;
-        m_iScriptNameLen = m_curURL.keyLen;
-        m_reqBuf.used( indexLen );
-        return 0;
-
-    }
-    int len = m_curURL.keyLen + indexLen + 1;
-    if ( m_reqBuf.available() < len )
-    {
-        int ret;
-        if (( ret = growBuf( m_reqBuf, len )) )
-            return ret;
-    }
-    memmove( m_reqBuf.end(), getURI(), m_curURL.keyLen );
-    memmove( m_reqBuf.end() + m_curURL.keyLen, pIndex, indexLen + 1 );
-    m_curURL.keyOff = m_reqBuf.size();
-    m_curURL.keyLen = len - 1;
-    m_iScriptNameLen = m_curURL.keyLen;
-    m_iPathInfoLen = 0;
-    m_reqBuf.used( len );
+    lsr_str_append_xp( &m_curUrl.m_key, pIndex, indexLen, &m_pool );
+    m_iScriptNameLen = getURILen();
+    lsr_str_set_len( &m_pathInfo, 0 );
     return 0;
 }
 
 
 int HttpReq::setRewriteQueryString(  const char * pQS, int len )
 {
-    ++len;
-    if ( m_reqBuf.available() < len )
-    {
-        int ret;
-        if (( ret = growBuf( m_reqBuf, len )) )
-            return ret;
-    }
-    m_curURL.valOff = -m_reqBuf.size();
-    memmove( m_reqBuf.end(), pQS, len );
-    m_reqBuf.used( (len +3 ) & ~3 );
-    m_curURL.valLen = len - 1;
+    setQS( pQS, len );
     return 0;
 }
 
@@ -1071,11 +976,10 @@ int HttpReq::setRewriteLocation( char * pURI, int uriLen,
     int totalLen = uriLen + qsLen + 2 + ((escape)? uriLen: 0);
     if ( totalLen > MAX_URL_LEN )
         totalLen = MAX_URL_LEN;
-    if ( m_reqBuf.available() < totalLen )
-        if ( m_reqBuf.grow( totalLen ) == -1 )
-            return SC_500;
-    char * p = m_reqBuf.end();
-    char * pEnd = p + m_reqBuf.available();
+
+    char * p = (char *)lsr_xpool_alloc( &m_pool, totalLen + URL_INDEX_PAD );
+    char * pEnd = p + totalLen - 1;
+    lsr_str_unsafe_set( &m_location, p, totalLen );
     if ( escape )
         p += HttpUtil::escape( pURI, p, pEnd - p - 4 );
     else
@@ -1083,7 +987,7 @@ int HttpReq::setRewriteLocation( char * pURI, int uriLen,
         memcpy( p, pURI, uriLen );
         p += uriLen;
     }
-    if ( *pQS )
+    if ( qsLen != 0 )
     {
         *p++ = '?';
         if ( qsLen > pEnd - p )
@@ -1092,9 +996,7 @@ int HttpReq::setRewriteLocation( char * pURI, int uriLen,
         p += qsLen;
     }
     *p = 0;
-    m_iLocationOff = m_reqBuf.size();
-    m_iLocationLen = p - m_reqBuf.end();
-    m_reqBuf.used( ((m_iLocationLen + 1) + 3)& ~3  );
+    lsr_str_set_len( &m_location, p - getLocation() );
     return 0;
 }
 
@@ -1105,7 +1007,11 @@ int HttpReq::saveCurURL()
         LOG_ERR(( getLogger(), "[%s] Maximum number of redirect reached.", getLogId() ));
         return SC_500;
     }
-    m_urls[m_iRedirects++] = m_curURL;
+    m_pUrls[m_iRedirects].m_key = m_curUrl.m_key;
+    uSetURI( NULL, 0 );
+    
+    m_pUrls[m_iRedirects++].m_value = m_curUrl.m_value;
+    lsr_str_unsafe_set( &m_curUrl.m_value, NULL, 0 );
     return 0;
 }
 
@@ -1131,7 +1037,7 @@ int HttpReq::internalRedirectURI( const char * pURI, int len, int resetPathInfo,
     setRewriteURI( pURI, len, no_escape );
     if ( resetPathInfo )
     {
-        m_iPathInfoLen = 0;
+        lsr_str_set_len( &m_pathInfo, 0 );
         return detectLoopRedirect();
     }
     return 0;
@@ -1145,18 +1051,21 @@ int HttpReq::detectLoopRedirect()
     int i;
     for( i = 0; i < m_iRedirects; ++i )
     {
-        if (( getURILen() == m_urls[i].keyLen)
-                &&( strncmp( pURI, m_reqBuf.getPointer( m_urls[i].keyOff ),
-                             m_urls[i].keyLen) == 0 )
-                &&( getQueryStringLen() == m_urls[i].valLen )
-                &&( strncmp( pArg, m_reqBuf.getPointer( m_urls[i].valOff ),
-                             m_urls[i].valLen) == 0 ))
+        lsr_str_pair_t tmp = m_pUrls[i];
+        if 
+        (
+           (lsr_str_len( &tmp.m_key ) == getURILen())
+        && (strncmp( lsr_str_c_str( &tmp.m_key ), pURI, lsr_str_len( &tmp.m_key ) ) == 0)
+        && (lsr_str_len( &tmp.m_value ) == getQueryStringLen())
+        && (strncmp( lsr_str_c_str( &tmp.m_value ), pArg, lsr_str_len( &tmp.m_value ) ) == 0)
+        )
             break;
+        
     }
     if ( i < m_iRedirects ) //loop detected
     {
-        m_reqBuf.pop_end( m_reqBuf.size() - m_curURL.keyOff );
-        m_curURL = m_urls[ --m_iRedirects ];
+        m_curUrl.m_key = m_pUrls[--m_iRedirects].m_key;
+        m_curUrl.m_value = m_pUrls[m_iRedirects].m_value;
         LOG_ERR(( getLogger(), "[%s] detect loop redirection.", getLogId() ));
         //FIXME:
         // print the redirect url stack.
@@ -1187,16 +1096,14 @@ int HttpReq::redirect( const char * pURL, int len, int alloc )
     return internalRedirect( pURL, len, alloc );
 }
 
-int HttpReq::contextRedirect(const HttpContext *pContext, int destLen )
+int HttpReq::contextRedirect( const HttpContext *pContext, int destLen )
 {
     int code = pContext->redirectCode();
     if (( code >= SC_400 )||(( code != -1)&&( code < SC_300 )))
         return code;
     char * pDestURI;
     if ( destLen )
-    {
         pDestURI = HttpGlobals::g_achBuf;
-    }
     else
     {
         int contextURILen = pContext->getURILen();
@@ -1229,9 +1136,7 @@ int HttpReq::contextRedirect(const HttpContext *pContext, int destLen )
         return code;
     }
     else
-    {
         return internalRedirect( pDestURI, destLen );
-    }
 }
 
 static const char * findSuffix( const char * pBegin, const char * pEnd )
@@ -1242,12 +1147,10 @@ static const char * findSuffix( const char * pBegin, const char * pEnd )
     while( pCur > pBegin )
     {
         register char ch = *( pCur - 1 );
-        if (ch == '/' )
+        if ( ch == '/' )
             break;
-        if (ch == '.' )
-        {
+        if ( ch == '.' )
             return pCur;
-        }
         --pCur;
     }
     return NULL;
@@ -1272,8 +1175,7 @@ int HttpReq::processMatchList( const HttpContext * pContext, const char * pURI, 
                 *p = 0;
                 int newLen = p - HttpGlobals::g_achBuf;
                 ++p;
-                m_curURL.valLen = m_iMatchedLen - newLen;
-                m_curURL.valOff = -dupString( p,  m_curURL.valLen );
+                setQS( p, m_iMatchedLen - newLen );
                 m_iMatchedLen = newLen;
             }
         }
@@ -1309,10 +1211,10 @@ int HttpReq::checkSuffixHandler( const char * pURI, int len, int &cacheable )
 
 int HttpReq::processSuffix( const char * pURI, const char * pURIEnd, int &cacheable )
 {
-    const char * pSuffix = findSuffix( pURI, pURIEnd);
+    const char * pSuffix = findSuffix( pURI, pURIEnd );
     if ( pSuffix )
     {
-        const HotlinkCtrl * pHLC= m_pVHost->getHotlinkCtrl();
+        const HotlinkCtrl * pHLC = m_pVHost->getHotlinkCtrl();
         if ( pHLC )
         {
             int ret = checkHotlink( pHLC, pSuffix );
@@ -1368,7 +1270,7 @@ int HttpReq::setMimeBySuffix( const char * pSuffix )
     }
     else
     {
-        if ( m_iPathInfoLen > 0 ) //Path info is not allowed for static file
+        if ( getPathInfoLen() > 0 ) //Path info is not allowed for static file
         {
             LOG_INFO(( getLogger(), "[%s] URI '%s' refers to a static file with PATH_INFO [%s].",
                        getLogId(), getURI(), getPathInfo() ));
@@ -1530,35 +1432,11 @@ int HttpReq::processContextPath()
     return ret;
 }
 
-void HttpReq::saveMatchedResult()
-{
-    if ( m_iMatchedLen )
-    {
-        m_iMatchedOff = dupString( HttpGlobals::g_achBuf, m_iMatchedLen );
-    }
-}
-void HttpReq::restoreMatchedResult()
-{
-    if ( m_iMatchedLen )
-    {
-        memmove( HttpGlobals::g_achBuf, m_reqBuf.getPointer( m_iMatchedOff ),
-                 m_iMatchedLen + 1 );
-    }
-}
-
 char * HttpReq::allocateAuthUser()
 {
-    if ( m_reqBuf.available() < AUTH_USER_SIZE )
-    {
-        if ( m_reqBuf.grow( AUTH_USER_SIZE ) == -1 )
-            return NULL;
-    }
-    m_iAuthUserOff = m_reqBuf.size();
-    m_reqBuf.used( AUTH_USER_SIZE );
-    return m_reqBuf.begin() + m_iAuthUserOff;
-
+    m_pAuthUser = (char *)lsr_xpool_alloc( &m_pool, AUTH_USER_SIZE );
+    return m_pAuthUser;
 }
-
 
 int HttpReq::redirectDir( const char * pURI )
 {
@@ -1568,7 +1446,7 @@ int HttpReq::redirectDir( const char * pURI )
     p += HttpUtil::escape( pURI, p, MAX_URL_LEN - 4 );
     *p++ = '/';
     const char * pQueryString = getQueryString();
-    if ( *pQueryString )
+    if ( pQueryString )
     {
         int len = getQueryStringLen();
         *p++ = '?';
@@ -1622,8 +1500,7 @@ int HttpReq::processURIEx( const char * pURI, int uriLen, int &cacheable )
                 --contextLen;
             if ( contextLen < uriLen )
             {
-                m_iPathInfoLen = uriLen - contextLen;
-                m_iPathInfoOff = dupString( pURI + contextLen, m_iPathInfoLen );
+                lsr_str_set_str_xp( &m_pathInfo, pURI + contextLen, uriLen - contextLen, &m_pool );
             }
             m_pRealPath = NULL;
             return 0;
@@ -1692,7 +1569,7 @@ int HttpReq::processPath( const char * pURI, int uriLen, char * pBuf,
         while(( --p > pBegin )&&( *p != '/' ))
             ;
     } while( p >= pBegin );
-    if (ret == -1)
+    if ( ret == -1 )
     {
         //if ( strcmp( p, "/favicon.ico" ) != 0 )
         if ( D_ENABLED( DL_LESS ))
@@ -1703,16 +1580,15 @@ int HttpReq::processPath( const char * pURI, int uriLen, char * pBuf,
     if ( p != pEnd )
     {
         // set PATH_INFO and SCRIPT_NAME
-        m_iPathInfoLen = (pEnd - p);
+        lsr_str_set_str_xp( &m_pathInfo, p, pEnd - p, &m_pool );
         int orgURILen = getOrgURILen();
-        if ( m_iPathInfoLen < orgURILen )
+        if ( pEnd - p < orgURILen )
         {
-            if ( strncmp( getOrgURI() + orgURILen - m_iPathInfoLen, p, m_iPathInfoLen ) == 0 )
+            if ( strncmp( getOrgURI() + orgURILen - (pEnd - p), p, pEnd - p ) == 0 )
             {
-                m_iScriptNameLen = uriLen - m_iPathInfoLen;
+                m_iScriptNameLen = uriLen - (pEnd - p);
             }
         }
-        m_iPathInfoOff = dupString( p, m_iPathInfoLen );
         *p = 0;
     }
     else
@@ -1787,7 +1663,7 @@ int HttpReq::processPath( const char * pURI, int uriLen, char * pBuf,
         }
 
     }
-    m_sRealPathStore.setStr(pBuf, p - pBuf );
+    m_sRealPathStore.setStr( pBuf, p - pBuf );
     m_pRealPath = &m_sRealPathStore;
     return ret;
 }
@@ -1971,30 +1847,11 @@ int HttpReq::addWWWAuthHeader( HttpRespHeaders &buf ) const
 }
 
 
-
+//NOTICE: Returns length set, currently return value isn't used, so may switch to new string if needed.
 int HttpReq::setLocation( const char * pLoc, int len )
 {
     assert( pLoc );
-    m_iLocationOff = dupString( pLoc, len );
-    m_iLocationLen = len;
-    return m_iLocationOff;
-}
-
-int HttpReq::dupString( const char * pString )
-{
-    int ret = m_reqBuf.size();
-    if ( m_reqBuf.append( pString, strlen( pString ) + 1 ) == -1)
-        return 0;
-    return ret;
-}
-
-int HttpReq::dupString( const char * pString, int len )
-{
-    int ret = m_reqBuf.size();
-    if ( m_reqBuf.append( pString, len + 1 ) == -1)
-        return 0;
-    *( m_reqBuf.end() - 1) = 0;
-    return ret;
+    return lsr_str_set_str_xp( &m_location, pLoc, len, &m_pool );
 }
 
 
@@ -2060,7 +1917,7 @@ void HttpReq::tranEncodeToContentLen()
         ++len;
         --pBegin;
     }
-    if ( (pBegin[-1] | 0x20) != 'g' )
+    if ((pBegin[-1] | 0x20) != 'g' )
         return;
     pBegin -= 17;
     len += 17;
@@ -2203,7 +2060,7 @@ void HttpReq::dumpHeader()
 int HttpReq::getUGidChroot( uid_t *pUid, gid_t *pGid,
                             const AutoStr2 **pChroot )
 {
-    if ( m_fileStat.st_mode & (S_ISUID|S_ISGID) )
+    if ( m_fileStat.st_mode & (S_ISUID|S_ISGID))
     {
         if ( !m_pContext || !m_pContext->allowSetUID())
         {
@@ -2247,7 +2104,7 @@ int HttpReq::getUGidChroot( uid_t *pUid, gid_t *pGid,
         return SC_403;
     }
     *pChroot = NULL;
-    if (  m_pVHost )
+    if ( m_pVHost )
     {
         chMode = m_pContext->getChrootMode();
         switch( chMode )
@@ -2271,7 +2128,7 @@ int HttpReq::getUGidChroot( uid_t *pUid, gid_t *pGid,
 
 const AutoStr2 * HttpReq::getDefaultCharset() const
 {
-    if (m_pContext )
+    if ( m_pContext )
         return m_pContext->getDefaultCharset();
     return NULL;
 }
@@ -2283,97 +2140,103 @@ void  HttpReq::smartKeepAlive( const char * pValue )
             m_iKeepAlive = 0;
 }
 
-const char *HttpReq::findEnvAllias(const char * pKey, int keyLen, int& alliasKeyLen)
+const char *HttpReq::findEnvAlias( const char * pKey, int keyLen, int& aliasKeyLen )
 {
-    int count = sizeof(envAlias) / sizeof(envAlias_t);
-    for (int i=0; i<count; ++i)
+    int count = sizeof( envAlias ) / sizeof( envAlias_t );
+    for( int i = 0; i < count; ++i )
     {
-        if (envAlias[i].orgNameLen == keyLen &&
-            strncasecmp(envAlias[i].orgName, pKey, keyLen) == 0)
+        if ( envAlias[i].orgNameLen == keyLen &&
+            strncasecmp( envAlias[i].orgName, pKey, keyLen ) == 0 )
         {
-            alliasKeyLen = envAlias[i].inuseNameLen;
+            aliasKeyLen = envAlias[i].inuseNameLen;
             return envAlias[i].inuseName;
         }
     }
     
-    //can't find allias, use the org one
-    alliasKeyLen = keyLen;
+    //can't find alias, use the org one
+    aliasKeyLen = keyLen;
     return pKey;
 }
 
-
-key_value_pair * HttpReq::addEnv( const char * pOrgKey, int orgKeyLen, const char * pValue, int valLen )
+lsr_str_pair_t * HttpReq::addEnv( const char * pOrgKey, int orgKeyLen, const char * pValue, int valLen )
 {
     int keyLen = 0;
-    const char *pKey = findEnvAllias(pOrgKey, orgKeyLen, keyLen);
+    const char * pKey = findEnvAlias( pOrgKey, orgKeyLen, keyLen );
+    lsr_hash_iter iter;
+    lsr_str_t pCompKey;
+    lsr_str_pair_t * sp;
+    if ( !m_envHash )
+        m_envHash = lsr_hash_new( 10, lsr_str_ci_hf, lsr_str_ci_cmp, &m_pool );
     
-    key_value_pair * pIdx = getValueByKey( m_reqBuf, m_envIdxOff, pKey, keyLen );
-    int n;
-    int keyOff, valOff;
-    if ( pIdx )
+    lsr_str_unsafe_set( &pCompKey, (char *)pKey, keyLen );
+    if ((iter = lsr_hash_find( m_envHash, &pCompKey )) != NULL )
     {
-        if ( valLen == pIdx->valLen )
-        {
-            memmove( m_reqBuf.getPointer( pIdx->valOff ), pValue, valLen );
-            return pIdx;
-        }
-        keyOff = pIdx->valOff;
-        n = pIdx - getOffset( m_envIdxOff, 0 );
+        sp = (lsr_str_pair_t *)lsr_hash_get_data( iter );
+        if ( strncasecmp( lsr_str_c_str( &sp->m_value ), pValue, valLen ) != 0 )
+            lsr_str_set_str_xp( &sp->m_value, pValue, valLen, &m_pool );
     }
     else
     {
-        pIdx = newKeyValueBuf( m_envIdxOff );
-        n = getListSize( m_envIdxOff ) - 1;
-        keyOff = dupString( pKey, keyLen );
+        sp = (lsr_str_pair_t *)lsr_xpool_alloc( &m_pool, sizeof( lsr_str_pair_t ) );
+        lsr_str_xp( &sp->m_key, pKey, keyLen, &m_pool );
+        lsr_str_xp( &sp->m_value, pValue, valLen, &m_pool );
+        lsr_hash_insert( m_envHash, &sp->m_key, sp );
     }
-    valOff = dupString( pValue, valLen );
-    pIdx = getOffset( m_envIdxOff, n );
-    pIdx->keyOff = keyOff;
-    pIdx->keyLen = keyLen;
-    pIdx->valOff = valOff;
-    pIdx->valLen = valLen;
-    return pIdx;
+    return sp;
 }
 
 
 const char * HttpReq::getEnv( const char * pOrgKey, int orgKeyLen, int &valLen )
 {
     int keyLen = 0;
-    const char *pKey = findEnvAllias(pOrgKey, orgKeyLen, keyLen);
-    key_value_pair * pIdx = getValueByKey( m_reqBuf, m_envIdxOff, pKey, keyLen );
-    if ( pIdx )
+    const char * pKey = findEnvAlias( pOrgKey, orgKeyLen, keyLen );
+    lsr_str_t pKeyStr;
+    lsr_str_pair_t *sp;
+    lsr_hash_iter iter;
+    if ( m_envHash != NULL )
     {
-        valLen = pIdx->valLen;
-        return m_reqBuf.getPointer( pIdx->valOff );
+        lsr_str_unsafe_set( &pKeyStr, (char *)pKey, keyLen );
+        if ((iter = lsr_hash_find( m_envHash, &pKeyStr )) != NULL )
+        {
+            sp = (lsr_str_pair_t *)lsr_hash_get_data( iter );
+            valLen = lsr_str_len( &sp->m_value );
+            return lsr_str_c_str( &sp->m_value );
+        }
     }
     return NULL;
 }
 
-const char * HttpReq::getEnvByIndex( int idx, int &keyLen,
-                                     const char * &pValue, int &valLen  )
+void HttpReq::unsetEnv( const char * pKey, int keyLen )
 {
-    key_value_pair * pIdx = getOffset( m_envIdxOff, idx );
-    if ( pIdx )
+    lsr_str_t ptr;
+    lsr_str_pair_t * sp;
+    lsr_hash_iter iter;
+    if ( m_envHash )
     {
-        pValue = m_reqBuf.getPointer( pIdx->valOff );
-        valLen = pIdx->valLen;
-        keyLen = pIdx->keyLen;
-        return m_reqBuf.getPointer( pIdx->keyOff );
+        lsr_str_unsafe_set( &ptr, (char *)pKey, keyLen );
+        iter = lsr_hash_find( m_envHash, &ptr );
+        if ( !iter )
+            return;
+        sp = (lsr_str_pair_t *)lsr_hash_get_data( iter );
+        lsr_hash_erase( m_envHash, iter );
+        lsr_str_d_xp( &sp->m_key, &m_pool );
+        lsr_str_d_xp( &sp->m_value, &m_pool );
+        lsr_xpool_free( &m_pool, sp );
     }
-    return NULL;
 }
+
 
 
 const char * HttpReq::getUnknownHeaderByIndex( int idx, int &keyLen,
         const char * &pValue, int &valLen  )
 {
-    key_value_pair * pIdx = getOffset( m_headerIdxOff, idx );
+    key_value_pair * pIdx = getUnknHeaderPair( idx );
     if ( pIdx )
     {
-        pValue = m_headerBuf.getPointer( pIdx->valOff );
+        pValue = m_headerBuf.getp( pIdx->valOff );
         valLen = pIdx->valLen;
         keyLen = pIdx->keyLen;
-        return m_headerBuf.getPointer( pIdx->keyOff );
+        return m_headerBuf.getp( pIdx->keyOff );
     }
     return NULL;
 }
@@ -2390,7 +2253,7 @@ void HttpReq::appendHeaderIndexes( IOVec * pIOV, int cntUnknown )
     pIOV->append( &m_commonHeaderLen, (char *)&m_headerIdxOff - (char *)&m_commonHeaderLen );
     if ( cntUnknown > 0 )
     {
-        key_value_pair * pIdx = getOffset( m_headerIdxOff, 0 );
+        key_value_pair * pIdx = getUnknHeaderPair( 0 );
         pIOV->append( pIdx, sizeof( key_value_pair ) * cntUnknown );
     }
 }
@@ -2409,26 +2272,24 @@ const char * HttpReq::encodeReqLine( int &len )
 {
     const char * pURI = getURI();
     int uriLen = getURILen();
-    int start = m_reqBuf.size();
-    int maxLen = uriLen * 3 + 16 + getQueryStringLen();
-    if ( m_reqBuf.available() < maxLen )
-        if ( m_reqBuf.reserve( start + maxLen + 10 ) == -1 )
-            return NULL;
-    char * p = m_reqBuf.getPointer( start );
+    int qsLen = getQueryStringLen();
+    int maxLen = uriLen * 3 + 16 + qsLen;
+    char *p = (char *)lsr_xpool_alloc( &m_pool, maxLen + 10 );
+    char *pStart = p;
     memmove( p, HttpMethod::get( m_method ), HttpMethod::getLen( m_method ));
-    p += HttpMethod::getLen(m_method);
+    p += HttpMethod::getLen( m_method );
     *p++ = ' ';
     //p = escape_uri( p, pURI, uriLen );
     memmove( p, pURI, uriLen );
     p += uriLen;
-    if ( getQueryStringLen() > 0 )
+    if ( qsLen > 0 )
     {
         *p++ = '?';
-        memmove( p, getQueryString(), getQueryStringLen() );
-        p+= getQueryStringLen();
+        memmove( p, getQueryString(), qsLen );
+        p+= qsLen;
     }
-    len = p - m_reqBuf.end();
-    return m_reqBuf.end();
+    len = p - pStart;
+    return pStart;
 }
 
 
@@ -2436,13 +2297,13 @@ int HttpReq::getDecodedOrgReqURI( char * &pValue )
 {
     if ( m_iRedirects > 0 )
     {
-        pValue = m_reqBuf.getPointer( m_urls[0].keyOff );
-        return m_urls[0].keyLen;
+        pValue = lsr_str_buf( &(m_pUrls[0].m_key) );
+        return lsr_str_len( &(m_pUrls[0].m_key) );
     }
     else
     {
-        pValue = m_reqBuf.getPointer( m_curURL.keyOff );
-        return m_curURL.keyLen;
+        pValue = lsr_str_buf( &m_curUrl.m_key );
+        return getURILen();
     }
 }
 SSIConfig * HttpReq::getSSIConfig()
@@ -2462,17 +2323,17 @@ int HttpReq::isIncludesNoExec() const
 #include <ssi/ssiruntime.h>
 void HttpReq::backupPathInfo()
 {
-    m_pSSIRuntime->savePathInfo( m_iPathInfoOff, m_iPathInfoLen, m_iRedirects );
-
+    m_pSSIRuntime->savePathInfo( m_pathInfo, m_iRedirects );
 }
 
 void HttpReq::restorePathInfo()
 {
     int oldRedirects = m_iRedirects;
-    m_pSSIRuntime->restorePathInfo( m_iPathInfoOff, m_iPathInfoLen, m_iRedirects );
+    m_pSSIRuntime->restorePathInfo( m_pathInfo, m_iRedirects );
     if ( m_iRedirects < oldRedirects )
     {
-        m_curURL =  m_urls[m_iRedirects];
+        m_curUrl.m_key = m_pUrls[m_iRedirects].m_key;
+        m_curUrl.m_value = m_pUrls[m_iRedirects].m_value;
     }
 }        
 void HttpReq::stripRewriteBase( const HttpContext * pCtx, 
@@ -2492,14 +2353,14 @@ int HttpReq::detectLoopRedirect(const char * pURI, int uriLen,
     int i;
     const char * p = pURI;
     int relativeLen = uriLen;
-    if ( strncasecmp( p, "http", 4 ) == 0)
+    if ( strncasecmp( p, "http", 4 ) == 0 )
     {
         int isHttps;
         p += 4;
         isHttps = (*p == 's');
         if ( isHttps != isSSL )
             return 0;
-        if (isHttps )
+        if ( isHttps )
         {
             ++p;
         }
@@ -2531,16 +2392,16 @@ int HttpReq::detectLoopRedirect(const char * pURI, int uriLen,
         return 1;
     for( i = 0; i < m_iRedirects; ++i )
     {
-        if (((( uriLen == m_urls[i].keyLen)
-            &&( strncmp( pURI, m_reqBuf.getPointer( m_urls[i].keyOff ),
-                        m_urls[i].keyLen) == 0 ))||
-             (( relativeLen != uriLen )&&
-              ( relativeLen == m_urls[i].keyLen)&&
-              ( strncmp( p, m_reqBuf.getPointer( m_urls[i].keyOff ),
-                        m_urls[i].keyLen) == 0 )))
-            &&( qsLen == m_urls[i].valLen )
-            &&( strncmp( pArg, getQueryString( &m_urls[i] ),
-                        m_urls[i].valLen) == 0 ))
+        lsr_str_pair_t tmp = m_pUrls[i];
+        if ((((lsr_str_len( &tmp.m_key ) == uriLen)
+                && (strncmp( lsr_str_c_str( &tmp.m_key ), pURI, 
+                        lsr_str_len( &tmp.m_key ) ) == 0))
+            || ((lsr_str_len( &tmp.m_key ) == relativeLen)
+                && (strncmp( lsr_str_c_str( &tmp.m_key ), p, 
+                        lsr_str_len( &tmp.m_key ) ) == 0)))
+        && (lsr_str_len( &tmp.m_value ) == qsLen)
+        && (strncmp( lsr_str_c_str( &tmp.m_value ), pArg, 
+                        lsr_str_len( &tmp.m_value ) ) == 0))
             break;
     }
     if ( i < m_iRedirects ) //loop detected
@@ -2555,7 +2416,7 @@ int HttpReq::getETagFlags() const
 {
     int tagMod = 0;
     int etag;
-    if (m_pContext )
+    if ( m_pContext )
         etag = m_pContext->getFileEtag();
     else if ( m_pVHost )
         etag = m_pVHost->getRootContext().getFileEtag();

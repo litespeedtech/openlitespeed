@@ -28,11 +28,15 @@
 #include <extensions/fcgi/fcgienv.h>
 #include <sslpp/sslconnection.h>
 #include <sslpp/sslcert.h>
+#include <openssl/x509.h>
 
 #include <util/autobuf.h>
 #include <util/autostr.h>
 #include <util/env.h>
 #include <util/stringtool.h>
+
+#include <lsr/lsr_hash.h>
+#include <lsr/lsr_str.h>
 
 #include <ctype.h>
 #include <limits.h>
@@ -184,7 +188,7 @@ int HttpCgiTool::processHeaderLine( HttpExtConnector * pExtConn, const char * pL
             pReq->updateNoRespBodyByStatus( tmpIndex );
             if (( tmpIndex >= SC_300 )&&( tmpIndex < SC_400 ))
             {
-                if ( *pReq->getLocation() )
+                if ( pReq->getLocation() != NULL )
                 {
                     pResp->appendHeader( "Location: ", 10,
                         pReq->getLocation(), pReq->getLocationLen() );
@@ -429,17 +433,35 @@ int HttpCgiTool::addSpecialEnv( IEnv * pEnv, HttpReq * pReq )
     return 0;
 }
 
+static int lookup_ssl_cert_serial( X509 *pCert, char * pBuf, int len )
+{
+    BIO *bio;
+    int n;
+
+    if ((bio = BIO_new(BIO_s_mem())) == NULL)
+        return -1;
+    i2a_ASN1_INTEGER(bio, X509_get_serialNumber(pCert));
+    //n = BIO_pending(bio);
+    n = BIO_read(bio, pBuf, len);
+    pBuf[n] = '\0';
+    BIO_free(bio);
+    return n;
+}
+
+
 int HttpCgiTool::buildCommonEnv( IEnv * pEnv, HttpSession *pSession )
 {
     int count = 0;
     HttpReq * pReq = pSession->getReq();
     const char * pTemp;
     int n;
-    int i;
     char buf[128];
+    lsr_hash_t *pEnvHash;
+    lsr_hash_iter iter;
+    const lsr_str_pair_t *pPair;
 
     pTemp = pReq->getAuthUser();
-    if (  *pTemp )
+    if ( pTemp )
     {
         //FIXME: only Basic is support now
         pEnv->add( "AUTH_TYPE", 9, "Basic", 5 );
@@ -493,19 +515,19 @@ int HttpCgiTool::buildCommonEnv( IEnv * pEnv, HttpSession *pSession )
                     pSession->getPeerAddrStrLen() );
             count += pInfo->addGeoEnv( pEnv )+1;
         }
-    }    
-
+    }
     n = pReq->getEnvCount();
     count += n;
-    for( i = 0; i < n; ++i )
+    if ((pEnvHash = (lsr_hash_t *)pReq->getEnvHash()) != NULL )
     {
-        const char * pKey;
-        const char * pVal;
-        int keyLen;
-        int valLen;
-        pKey = pReq->getEnvByIndex( i, keyLen, pVal, valLen );
-        if ( pKey )
-            pEnv->add( pKey, keyLen, pVal, valLen );
+        iter = lsr_hash_begin( pEnvHash );
+        do
+        {
+            pPair = (lsr_str_pair_t *)lsr_hash_get_data( iter );
+            pEnv->add( lsr_str_c_str( &pPair->m_key ), lsr_str_len( &pPair->m_key ),
+                       lsr_str_c_str( &pPair->m_value ), lsr_str_len( &pPair->m_value ) 
+                     );
+        } while( (iter = lsr_hash_next( pEnvHash, iter )) != NULL );
     }
     
     if ( pSession->isSSL() )
@@ -544,17 +566,60 @@ int HttpCgiTool::buildCommonEnv( IEnv * pEnv, HttpSession *pSession )
             count += 3;
         }
 
-        X509 * pClientCert = pSSL->getPeerCertificate();
-        if ( pClientCert )
+        int i = pSSL->getVerifyMode();
+        if ( i != 0 )
         {
-            //IMPROVE: too many deep copy here.
             char achBuf[4096];
-            n = SSLCert::PEMWriteCert( pClientCert, achBuf, 4096 );
-            if ((n>0)&&( n <= 4096 ))
+            X509 * pClientCert = pSSL->getPeerCertificate();
+            if ( pSSL->isVerifyOk() )
             {
-                pEnv->add( "SSL_CLIENT_CERT", 15, achBuf, n );
-                ++count;
+                if ( pClientCert )
+                {
+                    //IMPROVE: too many deep copy here.
+                    //n = SSLCert::PEMWriteCert( pClientCert, achBuf, 4096 );
+                    //if ((n>0)&&( n <= 4096 ))
+                    //{
+                    //    pEnv->add( "SSL_CLIENT_CERT", 15, achBuf, n );
+                    //    ++count;
+                    //}
+                    n = snprintf( achBuf, sizeof( achBuf ), "%lu", X509_get_version( pClientCert ) + 1 );
+                    pEnv->add( "SSL_CLIENT_M_VERSION", 20, achBuf, n );
+                    ++count;
+                    n = lookup_ssl_cert_serial( pClientCert, achBuf, 4096 );
+                    if ( n != -1 )
+                    {
+                        pEnv->add( "SSL_CLIENT_M_SERIAL", 19, achBuf, n );
+                        ++count;
+                    }
+                    X509_NAME_oneline( X509_get_subject_name( pClientCert ), achBuf, 4096 );
+                    pEnv->add( "SSL_CLIENT_S_DN", 15, achBuf, strlen( achBuf ));
+                    ++count;
+                    X509_NAME_oneline( X509_get_issuer_name( pClientCert ), achBuf, 4096 );
+                    pEnv->add( "SSL_CLIENT_I_DN", 15, achBuf, strlen( achBuf ));
+                    ++count;
+                    if ( SSLConnection::isClientVerifyOptional( i ) )
+                    {
+                        strcpy( achBuf, "GENEROUS" );
+                        n = 8;
+                    }
+                    else
+                    {
+                        strcpy( achBuf, "SUCCESS" );
+                        n = 7;
+                    }
+                }
+                else
+                {
+                    strcpy( achBuf, "NONE" );
+                    n = 4;
+                }
             }
+            else
+            {
+                n = pSSL->buildVerifyErrorString( achBuf, sizeof( achBuf ) );
+            }
+            pEnv->add( "SSL_CLIENT_VERIFY", 17, achBuf, n );
+            ++count;
         }
         
     }    
@@ -574,7 +639,7 @@ int HttpCgiTool::addHttpHeaderEnv( IEnv * pEnv, HttpReq * pReq )
             // security reason
             //pass AUTHORIZATION header only when server does not check it.
             if (( i == HttpHeader::H_AUTHORIZATION )
-                &&( *pReq->getAuthUser() ))
+                &&( pReq->getAuthUser() ))
                 continue;
             pEnv->add( CGI_HEADERS[i], CGI_HEADER_LEN[i],
                         pTemp, pReq->getHeaderLen( i ));

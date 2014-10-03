@@ -23,6 +23,7 @@
 #include <http/httpstatusline.h>
 #include <util/iovec.h>
 #include <http/httprespheaders.h>
+#include <lsr/lsr_types.h>
 
 #define RANGE_HEADER_LEN    22
 #define LSI_RESP_BODY_SIZE_CHUNKED (-1)
@@ -42,13 +43,14 @@ private:
     off_t           m_lEntityLength;
     off_t           m_lEntityFinished;
     
-    HttpResp( const HttpResp& rhs ) {}
-    void operator=( const HttpResp& rhs ) {}
+    HttpResp( const HttpResp& rhs );
+    void operator=( const HttpResp& rhs );
 
     
     void addWWWAuthHeader( const HttpReq * pReq);
 public:
-    explicit HttpResp();
+    explicit HttpResp( lsr_xpool_t *pool );
+    HttpResp();
     ~HttpResp();
 
     void reset();

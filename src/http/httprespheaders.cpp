@@ -73,9 +73,9 @@ int HttpRespHeaders::m_iPresetHeaderLen[H_HEADER_END] =
     10, 6, 17, 4, 16, 12 //"X_Powered_By"
 };
 
-HttpRespHeaders::HttpRespHeaders()
+HttpRespHeaders::HttpRespHeaders( lsr_xpool_t *pool )
 {
-    m_sKVPair = "";
+    m_pool = pool;
     incKVPairs(16); //init 16 kvpair spaces 
     reset();
 }
@@ -85,9 +85,10 @@ void HttpRespHeaders::reset()
     m_buf.clear();
     memset(m_KVPairindex, 0xFF, H_HEADER_END);
     m_hLastHeaderKVPairIndex = -1;
-    memset(m_sKVPair.buf(), 0, m_sKVPair.len());
     m_iHttpCode = SC_200;
     memset( &m_hasHole, 0, &m_iKeepAlive+1 - &m_hasHole );
+    m_aKVPairs.init();
+    m_aKVPairs.setSize( 0 );
 //     m_hasHole = 0;
 //     m_iHeaderTotalCount = 0;
 //     m_iHeaderRemovedCount = 0;
@@ -100,21 +101,21 @@ void HttpRespHeaders::reset()
     
 }
 
-void HttpRespHeaders::incKVPairs(int num)
+inline void HttpRespHeaders::incKVPairs(int num)
 {
-    int size = m_sKVPair.len() + sizeof(resp_kvpair) * num;
-    m_sKVPair.resizeBuf(size);
-    m_sKVPair.setLen(size);
-    
-    size = sizeof(resp_kvpair) * num;
-    char *temp = m_sKVPair.buf() + m_sKVPair.len() - size;
-    memset(temp, 0, size);
+    m_aKVPairs.guarantee( m_pool, m_aKVPairs.getSize() + num );
 }
 
-inline resp_kvpair * HttpRespHeaders::getKVPair(int index) const
+inline resp_kvpair * HttpRespHeaders::getKV(int index) const
 {
-    resp_kvpair *pKVPair = (resp_kvpair *) (m_sKVPair.c_str() + index * sizeof(resp_kvpair));
-    return pKVPair;
+    return m_aKVPairs.getObj( index );
+}
+
+inline resp_kvpair* HttpRespHeaders::getNewKV()
+{
+    resp_kvpair *tmp = m_aKVPairs.getNew();
+    memset( tmp, 0, sizeof( resp_kvpair ));
+    return tmp;
 }
 
 //Replace the value with new value in pKv, in this case must have enough space
@@ -148,7 +149,7 @@ int HttpRespHeaders::appendHeader(resp_kvpair *pKv, const char * pName, unsigned
     resp_kvpair *pUpdKv = pKv;
     if (pKv->valLen > 0 && method == LSI_HEADER_ADD)
     {
-        int new_id = m_iHeaderTotalCount ++;
+        int new_id = getTotalCount();
         if ( getFreeSpaceCount() <= 0 )
             incKVPairs( 10 );
         if (pKv->next_index == 0)
@@ -156,28 +157,29 @@ int HttpRespHeaders::appendHeader(resp_kvpair *pKv, const char * pName, unsigned
         else 
         {
             while ((pKv->next_index & BYPASS_HIGHEST_BIT_MASK) > 0)
-                pKv = getKVPair((pKv->next_index & BYPASS_HIGHEST_BIT_MASK) - 1);
+                pKv = getKV((pKv->next_index & BYPASS_HIGHEST_BIT_MASK) - 1);
         
             pKv->next_index = ((new_id + 1) | HIGHEST_BIT_NUMBER);
         }
-        pUpdKv = getKVPair(new_id);
+        pUpdKv = getNewKV();
+        assert( new_id == m_aKVPairs.getSize() - 1 );
         pUpdKv->next_index = HIGHEST_BIT_NUMBER;
         assert(pUpdKv->valLen == 0);
     }
 
     pUpdKv->keyOff = m_buf.size();
     pUpdKv->keyLen = nameLen;
-    m_buf.appendNoCheck(pName, nameLen);
-    m_buf.appendNoCheck(": ", 2);
+    m_buf.append_unsafe(pName, nameLen);
+    m_buf.append_unsafe(": ", 2);
     
     if (pUpdKv->valLen > 0)  //only apply when append and merge
     {
-        m_buf.appendNoCheck(m_buf.begin() + pUpdKv->valOff, pUpdKv->valLen);
-        m_buf.appendNoCheck(",", 1);  //for append and merge case
+        m_buf.append_unsafe(m_buf.begin() + pUpdKv->valOff, pUpdKv->valLen);
+        m_buf.append_unsafe(",", 1);  //for append and merge case
         ++ pUpdKv->valLen;
     }
-    m_buf.appendNoCheck(pVal, valLen);
-    m_buf.appendNoCheck("\r\n", 2);
+    m_buf.append_unsafe(pVal, valLen);
+    m_buf.append_unsafe("\r\n", 2);
     pUpdKv->valOff = pUpdKv->keyOff + nameLen + 2;
     pUpdKv->valLen +=  valLen;
     return 0;
@@ -217,16 +219,17 @@ static int hasValue(const char *existVal, int existValLen, const char *val, int 
 int HttpRespHeaders::_add(int kvOrderNum, const char * pName, int nameLen, const char * pVal, unsigned int valLen, int method)
 {
     assert(kvOrderNum >= 0);
-    if ( kvOrderNum == m_iHeaderTotalCount )
+    resp_kvpair *pKv;
+    if ( kvOrderNum == getTotalCount() )
     {
         //Add a new header
         if (getFreeSpaceCount() == 0)
             incKVPairs(10);
-        ++m_iHeaderTotalCount;
+        pKv = getNewKV();
         ++m_iHeaderUniqueCount;
     }
-    
-    resp_kvpair *pKv = getKVPair(kvOrderNum);
+    else
+        pKv = getKV(kvOrderNum);
     
     //enough space for replace, use the same keyoff, and update valoff, add padding, make it is the same length as before
     if (method == LSI_HEADER_SET && pKv->keyLen == (int)nameLen && pKv->valLen >= (int)valLen )
@@ -260,7 +263,7 @@ int HttpRespHeaders::add( HEADERINDEX headerIndex, const char * pVal, unsigned i
         return -1;
     
     if (m_KVPairindex[headerIndex] == 0xFF)
-        m_KVPairindex[headerIndex] = m_iHeaderTotalCount;
+        m_KVPairindex[headerIndex] = getTotalCount();
     return _add(m_KVPairindex[headerIndex], m_sPresetHeaders[headerIndex], m_iPresetHeaderLen[headerIndex], pVal, valLen, method);
 }
     
@@ -280,7 +283,7 @@ int HttpRespHeaders::add( const char * pName, int nameLen, const char * pVal, un
     if ( ret != -1)
         kvOrderNum = ret;
     else
-        kvOrderNum = m_iHeaderTotalCount;
+        kvOrderNum = getTotalCount();
     
     return _add(kvOrderNum, pName, nameLen, pVal, valLen, method);
 }
@@ -291,8 +294,8 @@ int HttpRespHeaders::appendLastVal(const char * pVal, int valLen)
     if (m_hLastHeaderKVPairIndex == -1 || valLen <= 0)
         return -1;
     
-    assert( m_hLastHeaderKVPairIndex < m_iHeaderTotalCount );
-    resp_kvpair *pKv = getKVPair(m_hLastHeaderKVPairIndex);
+    assert( m_hLastHeaderKVPairIndex < getTotalCount() );
+    resp_kvpair *pKv = getKV(m_hLastHeaderKVPairIndex);
     
     //check if it is the end
     if (m_buf.size() != pKv->valOff + pKv->valLen + 2)
@@ -310,8 +313,8 @@ int HttpRespHeaders::appendLastVal(const char * pVal, int valLen)
     //Only update the valLen of the kvpair
     pKv->valLen += valLen;
     m_buf.used( -2 );//move back two char, to replace the \r\n at the end
-    m_buf.appendNoCheck(pVal, valLen);
-    m_buf.appendNoCheck("\r\n", 2);
+    m_buf.append_unsafe(pVal, valLen);
+    m_buf.append_unsafe("\r\n", 2);
     
     return 0;
 }
@@ -336,7 +339,7 @@ void HttpRespHeaders::_del(int kvOrderNum)
     if (kvOrderNum <= -1)
         return;
     
-    resp_kvpair *pKv = getKVPair(kvOrderNum);
+    resp_kvpair *pKv = getKV(kvOrderNum);
     if ((pKv->next_index & BYPASS_HIGHEST_BIT_MASK) > 0)
         _del((pKv->next_index & BYPASS_HIGHEST_BIT_MASK) - 1);
     
@@ -386,7 +389,7 @@ char *HttpRespHeaders::getContentTypeHeader(int &len)
         return NULL;
     }
     
-    resp_kvpair *pKv = getKVPair(index);
+    resp_kvpair *pKv = getKV(index);
     len = pKv->valLen;
     return getVal(pKv);
 }
@@ -434,11 +437,12 @@ int HttpRespHeaders::parseAdd(const char * pStr, int len, int method )
 int HttpRespHeaders::getHeaderKvOrder(const char *pName, unsigned int nameLen)
 {
     int index = -1;
+    int total = getTotalCount();
     resp_kvpair *pKv = NULL;
 
-    for (int i=0; i<m_iHeaderTotalCount; ++i)
+    for (int i=0; i<total; ++i)
     {
-        pKv = getKVPair(i);
+        pKv = getKV(i);
         if (pKv->keyLen == (int)nameLen &&
             strncasecmp(pName, getName(pKv), nameLen) == 0)
         {
@@ -458,7 +462,7 @@ int HttpRespHeaders::_getHeader(int kvOrderNum, char **pName, int *nameLen, stru
         *nameLen = 0;
     while ( kvOrderNum >= 0 && count < maxIovCount)
     {
-        pKv = getKVPair(kvOrderNum);
+        pKv = getKV(kvOrderNum);
         if (pKv->keyLen > 0 && pKv->valLen > 0)
         {
             if (pName && nameLen && 0 == *nameLen)
@@ -498,7 +502,7 @@ const char * HttpRespHeaders::getHeader(HEADERINDEX index, int *valLen) const
     resp_kvpair *pKv;
     if (m_KVPairindex[index] == 0xFF)
         return NULL;
-    pKv = getKVPair(m_KVPairindex[index]);
+    pKv = getKV(m_KVPairindex[index]);
     *valLen = pKv->valLen;
     return getVal(pKv);
 }
@@ -605,9 +609,10 @@ HttpRespHeaders::HEADERINDEX HttpRespHeaders::getRespHeaderIndex( const char * p
 int HttpRespHeaders::nextHeaderPos(int pos)
 {
     int ret = -1;
-    for (int i=pos + 1; i<m_iHeaderTotalCount; ++i) 
+    int total = getTotalCount();
+    for (int i=pos + 1; i<total; ++i) 
     {
-        if (getKVPair(i)->keyLen > 0 && ((getKVPair(i)->next_index & HIGHEST_BIT_NUMBER) == 0) )
+        if (getKV(i)->keyLen > 0 && ((getKV(i)->next_index & HIGHEST_BIT_NUMBER) == 0))
         {
             ret = i;
             break;
@@ -619,6 +624,7 @@ int HttpRespHeaders::nextHeaderPos(int pos)
 int HttpRespHeaders::getAllHeaders( struct iovec *iov_key, struct iovec *iov_val, int maxIovCount )
 {
     int count = 0;
+    int total = getTotalCount();
 //     if (withStatusLine)
 //     {
 //         const StatusLineString& statusLine = HttpStatusLine::getStatusLine( m_iHttpVersion, m_iHttpCode );
@@ -627,9 +633,9 @@ int HttpRespHeaders::getAllHeaders( struct iovec *iov_key, struct iovec *iov_val
 //         ++count;
 //     }
     
-    for (int i=0; i<m_iHeaderTotalCount && count < maxIovCount; ++i) 
+    for (int i=0; i<total && count < maxIovCount; ++i) 
     {
-        resp_kvpair *pKv = getKVPair(i);
+        resp_kvpair *pKv = getKV(i);
         if (pKv->keyLen > 0)
         {
             iov_key[count].iov_base = m_buf.begin() + pKv->keyOff;
@@ -653,10 +659,9 @@ int HttpRespHeaders::getAllHeaders( struct iovec *iov_key, struct iovec *iov_val
 int HttpRespHeaders::appendToIovExclude(IOVec* iovec, const char * pName, int nameLen) const
 {
     int total = 0;
-    resp_kvpair *pKv = getKVPair( 0 );
-    resp_kvpair *pKvEnd = getKVPair( m_iHeaderTotalCount );
+    resp_kvpair *pKv;
     
-    while( pKv < pKvEnd ) 
+    for( int i = 0; (pKv = getKV( i )) != NULL; ++i )
     {
         if ((pKv->keyLen > 0)
             &&(( pKv->keyLen != nameLen )
@@ -665,7 +670,6 @@ int HttpRespHeaders::appendToIovExclude(IOVec* iovec, const char * pName, int na
             iovec->appendCombine(m_buf.begin() + pKv->keyOff, pKv->keyLen + pKv->valLen + 4);
             total += pKv->keyLen + pKv->valLen + 4;
         }
-        ++pKv;
     }
     return total;
 }

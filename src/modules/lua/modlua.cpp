@@ -29,7 +29,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
 */
-#include "../../../addon/include/ls.h"
+#include <ls.h>
 #include "lsluaengine.h"
 #include "lsluasession.h"
 #include <string.h>
@@ -203,7 +203,7 @@ int recv_req_header(lsi_cb_param_t *rec)
 }
 
 static lsi_serverhook_t serverHooks[] = {
-    { LSI_HKPT_RECV_REQ_HEADER, recv_req_header, LSI_HOOK_NORMAL, 0 },
+    { LSI_HKPT_RECV_REQ_HEADER, recv_req_header, LSI_HOOK_NORMAL, LSI_HOOK_FLAG_ENABLED },
     lsi_serverhook_t_END    //Must put this at the end position
 };
 

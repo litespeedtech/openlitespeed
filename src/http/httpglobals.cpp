@@ -21,8 +21,6 @@
 #include <limits.h>
 #include <stddef.h>
 
-#include <util/pool.h>
-Pool g_pool;
 //EventDispatcher      * HttpGlobals::s_pDispatcher = NULL;
 Multiplexer          * HttpGlobals::s_pMultiplexer = NULL;
 AccessControl        * HttpGlobals::s_pAccessCtrl = NULL;

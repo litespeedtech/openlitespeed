@@ -17,7 +17,7 @@
 *****************************************************************************/
 #include "cachehash.h"
 #include <zlib.h>
-#include <util/crc64.h>
+#include <lsr/lsr_crc64.h>
 #include <string.h>
 
 CacheHash::CacheHash()
@@ -40,7 +40,7 @@ void CacheHash::hash( const char * pBuf, int len )
 {
     //*((uint64_t *)m_key) = ls_crc64( *((uint64_t *)m_key), (const unsigned char *)pBuf, len ); 
     uint64_t *pKey = (uint64_t *)m_key;
-    *pKey = ls_crc64( *pKey, (const unsigned char *)pBuf, len ); 
+    *pKey = lsr_crc64( *pKey, (const unsigned char *)pBuf, len ); 
 }
 
 hash_key_t CacheHash::to_ghash_key(const void* __s)

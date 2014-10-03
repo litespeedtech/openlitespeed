@@ -6,7 +6,7 @@ m4_include(ax_check_liblua.m4)
 
 dnl Process this file with autoconf to produce a configure script.
 AC_PREREQ([2.69])
-AC_INIT([openlitespeed],[1.4.1],[info@litespeedtech.com],[openlitespeed],[http://www.litespeedtech.com/])
+AC_INIT([openlitespeed],[1.4.2],[info@litespeedtech.com],[openlitespeed],[http://www.litespeedtech.com/])
 AM_INIT_AUTOMAKE([1.0 foreign no-define ])
 
 AM_CONFIG_HEADER(src/config.h:src/config.h.in)
@@ -146,7 +146,6 @@ echo "Lua inlcude = $LUA_INCLUDES, need_lua = $need_lua"
 CFLAGS="$CFLAGS -fstack-protector $(getconf LFS_CFLAGS)"
 CXXFLAGS="$CXXFLAGS -fstack-protector $(getconf LFS_CFLAGS)"
 
-echo "Final CFLAGS='$CFLAGS' CXXFLAGS='$CXXFLAGS'"
 
 
 AC_ARG_ENABLE([rpath],
@@ -165,12 +164,16 @@ AC_ARG_WITH([libdir],
                     OPENLSWS_LIBDIR=lib
                 else
                     if test "$OSTYPE" != x86_64 ; then
+                        CFLAGS="$CFLAGS -march=i686"
+                        CXXFLAGS="$CXXFLAGS -march=i686"
                         OPENLSWS_LIBDIR=lib
                     else
                         OPENLSWS_LIBDIR=lib64
                     fi
                 fi
              ])
+echo "Final CFLAGS='$CFLAGS' CXXFLAGS='$CXXFLAGS'"
+             
 echo "Default system lib directory = $OPENLSWS_LIBDIR"
 AC_SUBST([OPENLSWS_LIBDIR])
 
@@ -242,7 +245,6 @@ AC_CONFIG_FILES(Makefile
                 src/socket/Makefile
                 src/sslpp/Makefile
                 src/ssi/Makefile
-                src/util/Makefile
                 src/lsiapi/Makefile
                 src/modules/Makefile
                 src/shm/Makefile

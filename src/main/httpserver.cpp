@@ -1206,6 +1206,7 @@ HttpListener * HttpServerImpl::configListener( const XmlNode *pNode, int isAdmin
             break;
         }
         
+        
         if (!isAdmin)
         {   
             const XmlNode *p0 = pNode->getChild( "modulelist", 1 );
@@ -1219,8 +1220,12 @@ HttpListener * HttpServerImpl::configListener( const XmlNode *pNode, int isAdmin
                 ModuleConfig::parseConfigList(pModuleList, &pListener->m_moduleConfig, LSI_LISTENER_LEVEL, pName);
             }
             
-            ModuleManager::getInstance().inheritIolinkApiHooks(&pListener->m_iolinkSessionHooks, &pListener->m_moduleConfig);
+            pListener->getSessionHooks()->inherit(LsiApiHooks::getIolinkHooks(), NULL, 1);
+            ModuleManager::getInstance().applyConfigToIolinkRt(pListener->getSessionHooks(),
+                                                               &pListener->m_moduleConfig);
         }
+//        else
+//            pListener->getSessionHooks()->disableAll();
         
         if ( pSSLCtx )
         {
@@ -1969,7 +1974,7 @@ int HttpServerImpl::configServerBasic2( const XmlNode *pRoot, const char* pSwapD
         configSecurity( pRoot );
         
         m_serverContext.setModuleConfig(ModuleManager::getGlobalModuleConfig(), 0);
-        m_serverContext.setInternalSessionHooks(LsiApiHooks::getHttpHooks());
+        m_serverContext.initExternalSessionHooks();
         return 0;
     }
 
@@ -2285,6 +2290,11 @@ int HttpServerImpl::configModules( const XmlNode *pRoot )
     }
     ModuleConfig::parseConfigList(pList, ModuleManager::getGlobalModuleConfig(), LSI_SERVER_LEVEL, pRoot->getName());
     ModuleManager::getInstance().runModuleInit();
+    
+    //all hooks are ready, init the RtHooks for ServerHooks
+    LsiApiHooks::m_pServerSessionHooks->inherit(LsiApiHooks::m_pServerHooks, NULL, 1);
+    ModuleManager::getInstance().applyConfigToServerRt(LsiApiHooks::m_pServerSessionHooks,
+                                                               ModuleManager::getGlobalModuleConfig());
 
     return 0;
 }
@@ -2437,6 +2447,9 @@ int HttpServerImpl::configServer( int reconfig, XmlNode *pRoot)
         int new_pri = getpriority( PRIO_PROCESS, 0 );
         ConfigCtx::getCurConfigCtx()->log_info( "old priority: %d, new priority: %d", pri, new_pri );
     }
+    
+    //Must load modules before parse and set scriptHandlers
+    configModules( pRoot );
 
     ret = configServerBasic2( pRoot, pRoot->getChildValue( "swappingDir" ) );
 
@@ -2450,8 +2463,6 @@ int HttpServerImpl::configServer( int reconfig, XmlNode *pRoot)
 
     configTuning( pRoot );
     
-    //Must load modules before parse and set scriptHandlers
-    configModules( pRoot );
 
     if ( startListeners(pRoot, ADMIN_CONFIG_NODE ) )
         return -1;

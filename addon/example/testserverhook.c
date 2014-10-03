@@ -31,7 +31,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include "../include/ls.h"
-#include "loopbuff.h"
 #include <string.h>
 #include <stdint.h>
 #include "stdlib.h"
@@ -55,12 +54,12 @@ int writeALog6(lsi_cb_param_t * rec) {   return write_log("LSI_HKPT_MAIN_ATEXIT"
 
 
 static lsi_serverhook_t serverHooks[] = {
-    { LSI_HKPT_MAIN_INITED,    writeALog1, LSI_HOOK_NORMAL, 0},
-    { LSI_HKPT_MAIN_PREFORK,      writeALog2, LSI_HOOK_NORMAL, 0},
-    { LSI_HKPT_MAIN_POSTFORK,     writeALog3, LSI_HOOK_NORMAL, 0},
-    { LSI_HKPT_WORKER_POSTFORK,         writeALog4, LSI_HOOK_NORMAL, 0},
-    { LSI_HKPT_WORKER_ATEXIT,         writeALog5, LSI_HOOK_NORMAL, 0},
-    { LSI_HKPT_MAIN_ATEXIT,         writeALog6, LSI_HOOK_NORMAL, 0},
+    { LSI_HKPT_MAIN_INITED,    writeALog1, LSI_HOOK_NORMAL, LSI_HOOK_FLAG_ENABLED},
+    { LSI_HKPT_MAIN_PREFORK,      writeALog2, LSI_HOOK_NORMAL, LSI_HOOK_FLAG_ENABLED},
+    { LSI_HKPT_MAIN_POSTFORK,     writeALog3, LSI_HOOK_NORMAL, LSI_HOOK_FLAG_ENABLED},
+    { LSI_HKPT_WORKER_POSTFORK,         writeALog4, LSI_HOOK_NORMAL, LSI_HOOK_FLAG_ENABLED},
+    { LSI_HKPT_WORKER_ATEXIT,         writeALog5, LSI_HOOK_NORMAL, LSI_HOOK_FLAG_ENABLED},
+    { LSI_HKPT_MAIN_ATEXIT,         writeALog6, LSI_HOOK_NORMAL, LSI_HOOK_FLAG_ENABLED},
     lsi_serverhook_t_END   //Must put this at the end position
 };
 

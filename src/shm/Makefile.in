@@ -103,7 +103,7 @@ liblsshm_a_AR = $(AR) $(ARFLAGS)
 liblsshm_a_LIBADD =
 am_liblsshm_a_OBJECTS = lsshmcache.$(OBJEXT) lsshmlock.$(OBJEXT) \
 	lsshmhash.$(OBJEXT) lsshmpool.$(OBJEXT) lsshm.$(OBJEXT) \
-	lslock.$(OBJEXT) lsi_shm.$(OBJEXT) ls_fallocate.$(OBJEXT)
+	lsi_shm.$(OBJEXT) ls_fallocate.$(OBJEXT)
 liblsshm_a_OBJECTS = $(am_liblsshm_a_OBJECTS)
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
@@ -328,10 +328,10 @@ top_srcdir = @top_srcdir@
 
 ####### kdevelop will overwrite this part!!! (begin)##########
 noinst_LIBRARIES = liblsshm.a
-INCLUDES = -I$(top_srcdir)/src
+INCLUDES = -I$(top_srcdir)/include -I$(top_srcdir)/src
 liblsshm_a_METASOURCES = AUTO
 liblsshm_a_SOURCES = lsshmcache.cpp lsshmlock.cpp lsshmhash.cpp lsshmpool.cpp \
-    lsshm.cpp lslock.cpp lsi_shm.cpp ls_fallocate.c
+    lsshm.cpp lsi_shm.cpp ls_fallocate.c
 
 all: all-am
 
@@ -384,7 +384,6 @@ distclean-compile:
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ls_fallocate.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lsi_shm.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lslock.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lsshm.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lsshmcache.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lsshmhash.Po@am__quote@

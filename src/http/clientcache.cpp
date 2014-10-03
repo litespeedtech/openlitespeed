@@ -214,7 +214,7 @@ int ClientCache::generateBlockedIPReport( int fd )
     buf.append( "BLOCKED_IP: ", 12 );
     writeBlockedIP( &buf, &m_v4 );
     writeBlockedIP( &buf, &m_v6 );
-    buf.append( '\n' );
+    buf.append_unsafe( '\n' );
     write( fd, buf.begin(), buf.size() );
     return 0;
 }
@@ -233,9 +233,9 @@ ClientInfo * ClientCache::newClient( const struct sockaddr * pAddr )
 }
 
 #include <util/accessdef.h>
-static int resetQuotas( GHash::iterator iter )
+static int resetQuotas( const void *pKey, void *pData )
 {
-    ClientInfo * pInfo = ((ClientInfo *)iter->second());
+    ClientInfo * pInfo = ((ClientInfo *)pData);
     if ( !pInfo )
         return 0;
     pInfo->setSslNewConn( 0 );
@@ -258,9 +258,9 @@ static int resetQuotas( GHash::iterator iter )
     return 0;
 }
 
-static int setThrottleLimit( GHash::iterator iter )
+static int setThrottleLimit( const void *pKey, void *pData )
 {
-    ClientInfo * pInfo = ((ClientInfo *)iter->second());
+    ClientInfo * pInfo = ((ClientInfo *)pData);
     if ( pInfo )
         pInfo->getThrottleCtrl().adjustLimits( ThrottleControl::getDefault() );
     return 0;
@@ -279,9 +279,9 @@ void ClientCache::onTimer()
     m_v6.for_each( m_v6.begin(), m_v6.end(), resetQuotas );
 }
 
-int ClientCache::appendDirtyList( GHash::iterator iter, void * pList )
+int ClientCache::appendDirtyList( const void *pKey, void *pData, void * pList )
 {
-    ((ClientCache::ClientList *)pList)->push_back( iter->second() );
+    ((ClientCache::ClientList *)pList)->push_back( pData );
     return 0;
 }
 

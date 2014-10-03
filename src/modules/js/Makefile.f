@@ -1,6 +1,6 @@
 CC=g++
 LFSFLAGS= $(shell getconf LFS_CFLAGS)
-CFLAGS= -fPIC -g  -Wall -c -D_REENTRANT -I../../util/ -I./ -I../ -I../../  $(LFSFLAGS)
+CFLAGS= -fPIC -g  -Wall -c -D_REENTRANT -I../../../include/ -I./ -I../ -I../../  $(LFSFLAGS)
 
 OS := $(shell uname)
 ifeq ($(OS), Darwin)

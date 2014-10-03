@@ -83,9 +83,9 @@ public:
         return iter;
     }
 
-    static int deleteObj( GHash::iterator iter )
+    static int deleteObj( const void *pKey, void *pData )
     {
-        delete (T)(iter->second());
+        delete (T)( pData );
         return 0;
     }
 

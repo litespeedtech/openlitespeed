@@ -92,7 +92,7 @@ int ModuleHandler::onWrite(HttpSession* pSession)
         }
         if (status != LSI_WRITE_RESP_CONTINUE)
         {
-            pSession->endResponse(0);
+            pSession->endResponse(1);
         }
         return (status == LSI_WRITE_RESP_CONTINUE);
     }
@@ -105,7 +105,7 @@ int ModuleHandler::onWrite(HttpSession* pSession)
                 MODULE_NAME( ((const LsiModule *)pHandler)->getModule() )
                 ));
         }
-        pSession->setFlag( HSF_MODULE_WRITE_SUSPENDED );
+        pSession->setFlag( HSF_HANDLER_WRITE_SUSPENDED );
         return LSI_WRITE_RESP_CONTINUE;
     }
 }
@@ -140,7 +140,7 @@ int ModuleHandler::process(HttpSession* pSession, const HttpHandler* pHandler)
         return HttpStatusCode::codeToIndex( ret );
     else
     {
-        if ( !pSession->getFlag( HSF_MODULE_WRITE_SUSPENDED | HSF_HANDLER_DONE ) )
+        if ( !pSession->getFlag( HSF_HANDLER_WRITE_SUSPENDED | HSF_HANDLER_DONE ) )
             pSession->continueWrite();
         return 0;
     }

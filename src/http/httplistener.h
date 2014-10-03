@@ -53,7 +53,7 @@ class HttpListener : public EventReactor, public LogTracker
     
     ModuleConfig m_moduleConfig;
     IolinkSessionHooks  m_iolinkSessionHooks;
-        
+    
     HttpListener( const HttpListener& rhs );
     void operator=( const HttpListener& rhs );
     int addConnection( struct conn_data * pCur, int *iCount );

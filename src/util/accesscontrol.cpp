@@ -173,9 +173,9 @@ public:
     void clear();
 
     void *operator new( size_t sz )
-    {   return g_pool.allocate( sizeof( SubNetNode ) );   }
+    {   return Pool::allocate( sizeof( SubNetNode ) );   }
     void operator delete( void * p)
-    {   return g_pool.deallocate( p, sizeof( SubNetNode ) );    }
+    {   return Pool::deallocate( p, sizeof( SubNetNode ) );    }
 };
 
 SubNetNode::~SubNetNode()
@@ -289,9 +289,9 @@ public:
     void clear();
 
     void *operator new( size_t sz )
-    {   return g_pool.allocate( sizeof( SubNet6Node ) );   }
+    {   return Pool::allocate( sizeof( SubNet6Node ) );   }
     void operator delete( void * p)
-    {   return g_pool.deallocate( p, sizeof( SubNet6Node ) );    }
+    {   return Pool::deallocate( p, sizeof( SubNet6Node ) );    }
 };
 
 SubNet6Node::~SubNet6Node()

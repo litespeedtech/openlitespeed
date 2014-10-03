@@ -21,6 +21,8 @@
 #include <util/pcregex.h>
 #include <ssi/ssiconfig.h>
 
+#include <lsr/lsr_str.h>
+
 #define SSI_STACK_SIZE 10
 
 class SSIScript;
@@ -36,7 +38,10 @@ public:
     ~SSIRuntime();
 
     void init()
-    {   m_pCurScript = &m_stack[0] -1;   }
+    {   
+        m_pCurScript = &m_stack[0] -1;
+        memset( m_stkPathInfo, 0, sizeof( lsr_str_t ) * SSI_STACK_SIZE );
+    }
 
     int  push( SSIScript *pScript )
     {
@@ -80,17 +85,15 @@ public:
     void requireCmd()   {   m_flag = SSI_REQ_CMD;   }
     int  isCGIRequired() const {   return m_flag > 0;      }
 
-    void savePathInfo( int off, int len, int redirects )
+    void savePathInfo( lsr_str_t pathInfo, int redirects )
     {
-        m_stkPathInfoOff[ m_pCurScript - m_stack ] = off;
-        m_stkPathInfoLen[ m_pCurScript - m_stack ] = len;
+        m_stkPathInfo[ m_pCurScript - m_stack ] = pathInfo;
         m_stkRedirectIdx[ m_pCurScript - m_stack ] = redirects;
     }
 
-    void restorePathInfo( int &off, int &len, short int &redirects )
+    void restorePathInfo( lsr_str_t &pathInfo, short int &redirects )
     {
-        off = m_stkPathInfoOff[ m_pCurScript - m_stack ];
-        len = m_stkPathInfoLen[ m_pCurScript - m_stack ];
+        pathInfo = m_stkPathInfo[ m_pCurScript - m_stack ];
         redirects = m_stkRedirectIdx[ m_pCurScript - m_stack ];
     }
 
@@ -98,8 +101,7 @@ public:
 private:
     SSIScript **    m_pCurScript;
     SSIScript *     m_stack[SSI_STACK_SIZE];
-    int             m_stkPathInfoOff[SSI_STACK_SIZE];
-    int             m_stkPathInfoLen[SSI_STACK_SIZE];
+    lsr_str_t       m_stkPathInfo[SSI_STACK_SIZE];
     short int       m_stkRedirectIdx[SSI_STACK_SIZE];
     SSIConfig       m_config;
     AutoStr2        m_strRegex;

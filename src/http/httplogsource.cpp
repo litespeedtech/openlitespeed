@@ -186,7 +186,7 @@ int HttpLogSource::initErrorLog2( const XmlNode *pNode,
         setLogLevel( pValue );
 
     off_t rollSize =
-        ConfigCtx::getCurConfigCtx()->getLongValue( pNode, "rollingSize", 1024 * 1024,
+        ConfigCtx::getCurConfigCtx()->getLongValue( pNode, "rollingSize", 0,
                                        INT_MAX, 1024 * 10240 );
     int days = ConfigCtx::getCurConfigCtx()->getLongValue( pNode, "keepDays", 0,
                LLONG_MAX, 30 );

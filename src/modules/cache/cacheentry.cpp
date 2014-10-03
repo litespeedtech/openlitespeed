@@ -53,7 +53,7 @@ int CacheEntry::setKey( const CacheHash& hash,
             len += cookieLen + 1;
     }
 
-    char * pBuf = m_sKey.resizeBuf( len + 1 );
+    char * pBuf = m_sKey.prealloc( len + 1 );
     if ( !pBuf )
         return -1;
     memmove( pBuf, pURI, iURILen + 1 );

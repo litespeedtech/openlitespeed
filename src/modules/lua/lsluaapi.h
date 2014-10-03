@@ -20,7 +20,7 @@
 #define LSLUAAPI_H
 
 #include <modules/lua/lsluaengine.h>
-#include <../addon/include/ls.h>
+#include <ls.h>
 #include <string.h>
 
 enum LSLUA_BAD

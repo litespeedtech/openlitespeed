@@ -58,7 +58,7 @@ public:
     {
         if ( pObj )
         {
-            m_freeList.safe_push_back( pObj );
+            m_freeList.unsafe_push_back( pObj );
         }
     }
 
@@ -71,7 +71,7 @@ public:
                 return 0;
             }
         }
-        m_freeList.safe_pop_back( pObj, n);
+        m_freeList.unsafe_pop_back( pObj, n);
         return n;
     }
 
@@ -79,7 +79,7 @@ public:
     {
         if ( pObj )
         {
-            m_freeList.safe_push_back( pObj, n );
+            m_freeList.unsafe_push_back( pObj, n );
         }
     }
     

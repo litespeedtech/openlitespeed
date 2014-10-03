@@ -1,6 +1,6 @@
 noinst_LIBRARIES = libssi.a
 
-INCLUDES = -I$(top_srcdir)/src
+INCLUDES = -I$(top_srcdir)/include -I$(top_srcdir)/src
 
 libssi_a_METASOURCES = AUTO
 

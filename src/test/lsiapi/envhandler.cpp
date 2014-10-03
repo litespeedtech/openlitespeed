@@ -19,7 +19,7 @@
 
 #include "lsiapi/lsiapi.h"
 #include "lsiapi/envmanager.h"
-#include "../addon/include/ls.h"
+#include "ls.h"
 #include "test/unittest-cpp/UnitTest++/src/UnitTest++.h"
 #include <unistd.h>
 #include "lsiapi/lsiapi.h"

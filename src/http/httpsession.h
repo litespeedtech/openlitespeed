@@ -58,7 +58,7 @@ enum  HttpSessionState {
 #define HSF_URI_PROCESSED           (1<<0)
 #define HSF_HANDLER_DONE            (1<<1)
 #define HSF_RESP_HEADER_SENT        (1<<2)
-#define HSF_MODULE_WRITE_SUSPENDED  (1<<3)
+#define HSF_HANDLER_WRITE_SUSPENDED (1<<3)
 #define HSF_RESP_FLUSHED            (1<<4)
 #define HSF_REQ_BODY_DONE           (1<<5)
 #define HSF_REQ_WAIT_FULL_BODY      (1<<6)
@@ -70,6 +70,8 @@ enum  HttpSessionState {
 #define HSF_SEND_RESP_BUFFERED      (1<<12)
 #define HSF_CHUNK_CLOSED            (1<<13)
 
+#define HSF_RESP_BODY_COMPRESSED    (1<<14)
+
 
 
 class HttpSession : public LsiSession, public HioStreamHandler 
@@ -79,7 +81,7 @@ class HttpSession : public LsiSession, public HioStreamHandler
 
     LsiModuleData         m_moduleData; //lsiapi user data of http level
 
-    HttpSessionHooks  m_sessionHooks;
+    HttpSessionHooks m_sessionHooks;
     
     ChunkInputStream    * m_pChunkIS;
     ChunkOutputStream   * m_pChunkOS;
@@ -177,7 +179,7 @@ private:
     int getModuleDenyCode( int iHookLevel );
     int processHkptResult( int iHookLevel, int ret );
     int restartHandlerProcess();
-    int runFilter( int hookLevel, void *pfTerm, const char* pBuf, int len, int flagIn );
+    int runFilter( int hookLevel, POINTER_termination_fp pfTerm, const char* pBuf, int len, int flagIn );
     int contentEncodingFixup();
     
 
@@ -283,7 +285,7 @@ public:
     ReqHandler * getCurHandler() const  {   return m_pHandler;  }
 
 
-    void resumeAuthentication();
+    //void resumeAuthentication();
     void authorized();
     
     void addEnv( const char * pKey, int keyLen, const char * pValue, long valLen );
@@ -369,8 +371,8 @@ public:
     int finalizeHeader( int ver, int code );
     LsiModuleData* getModuleData()      {   return &m_moduleData;   }
     
-    LsiApiHooks * getModSessionHooks( int index )
-    {   return m_sessionHooks.getCopy( index ); }
+    HttpSessionHooks * getSessionHooks( ) { return &m_sessionHooks;   }
+    
     void setSendFileBeginEnd( off_t start, off_t end );
     void prepareHeaders();
     void addLocationHeader();

@@ -1,5 +1,5 @@
 
-#include <../addon/include/ls.h>
+#include <ls.h>
 
 #ifndef LSAPI_INTERNAL_H
 #define LSAPI_INTERNAL_H
@@ -67,5 +67,5 @@ protected:
     ModuleConfig * m_pModuleConfig;
 };
 
-
+typedef int (* POINTER_termination_fp)(LsiSession *, void *, int);
 #endif

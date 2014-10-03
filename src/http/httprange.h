@@ -19,23 +19,19 @@
 #define HTTPRANGE_H
 
 
+#include <lsr/lsr_xpool.h>
+#include <util/objarray.h>
+#include <sys/types.h>
 
-#include <util/gpointerlist.h>  
+#include <new>
   
 #define MAX_PART_HEADER_LEN 256
 
 class AutoStr2;
 class ByteRange;
-class HttpRangeList : public TPointerList<ByteRange>
-{
-public:
-    void clear();
-};
-
-class ByteRange;
 class HttpRange
 {
-    HttpRangeList m_list;
+    TObjArray< ByteRange > m_array;
     off_t   m_lEntityLen;
     int     m_iCurRange;
     char    m_boundary[20];
@@ -43,7 +39,8 @@ class HttpRange
     char  * m_pPartHeaderEnd;
     char  * m_pCurHeaderPos;
     
-    int  checkAndInsert( ByteRange & range );
+    ByteRange * getSlot( lsr_xpool_t & pool );
+    int  checkAndInsert( ByteRange & range, lsr_xpool_t & pool );
     void makeBoundaryString();
 
 public: 
@@ -51,10 +48,9 @@ public:
     ~HttpRange() {}
     
     int  count() const;
-    int  parse( const char * pRange );
+    int  parse( const char * pRange, lsr_xpool_t & pool );
     int  getContentRangeString( int n, char * pBuf, int len ) const;
     int  getContentOffset( int n, off_t& begin, off_t& end ) const;
-    void clear();
     void setContentLen( off_t entityLen )    { m_lEntityLen = entityLen; }
     void beginMultipart();
     
@@ -91,6 +87,7 @@ public:
         m_pCurHeaderPos = m_partHeaderBuf;
         return len;
     }
+    
     const char * getPartHeader() const {    return m_pCurHeaderPos; }
 };
 

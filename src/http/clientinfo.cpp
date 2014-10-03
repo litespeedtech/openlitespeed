@@ -138,7 +138,7 @@ void ClientInfo::setAddr( const struct sockaddr * pAddr )
     }
 #endif
     memmove( m_achSockAddr, pAddr, len );
-    m_sAddr.resizeBuf( strLen );
+    m_sAddr.prealloc( strLen );
     if ( m_sAddr.buf() )
     {
         inet_ntop( pAddr->sa_family, ((char * )pAddr) + ((len >> 1) - 4),

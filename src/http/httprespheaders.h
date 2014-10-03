@@ -23,7 +23,7 @@
 #include <util/iovec.h>
 #include <http/httpstatusline.h>
 #include <http/httpreq.h>
-#include <../addon/include/ls.h>
+#include <ls.h>
 
 // namespace RespHeader {
 //     enum ADD_METHOD {
@@ -100,7 +100,7 @@ public:
     };
         
 public:
-    HttpRespHeaders();
+    HttpRespHeaders( lsr_xpool_t *pool );
     ~HttpRespHeaders() {};
     
     void reset();
@@ -126,10 +126,10 @@ public:
         if (dupLineAsOne)
             return m_iHeaderUniqueCount;
         else
-            return m_iHeaderTotalCount - m_iHeaderRemovedCount;
+            return m_aKVPairs.getSize() - m_iHeaderRemovedCount;
     }
     
-    int  getTotalCount() const                       {   return m_iHeaderTotalCount;   }
+    int  getTotalCount() const                       {   return m_aKVPairs.getSize();   }
     
     char *getContentTypeHeader(int &len);
         
@@ -190,13 +190,13 @@ public:
 
     
 private:
+    lsr_xpool_t   * m_pool;
     AutoBuf         m_buf;
-    AutoStr2        m_sKVPair;
+    TObjArray< resp_kvpair > m_aKVPairs;
     unsigned char   m_KVPairindex[H_HEADER_END];
     short           m_iHttpCode;
     char            m_hasHole;
     char            m_iHeaderBuilt;
-    short           m_iHeaderTotalCount;
     short           m_iHeaderRemovedCount;
     short           m_iHeaderUniqueCount;
     short           m_hLastHeaderKVPairIndex;
@@ -207,9 +207,10 @@ private:
 
     static int s_iHeaderLen[H_HEADER_END + 1];
     
-    int             getFreeSpaceCount() const {    return m_sKVPair.len() / sizeof(resp_kvpair) - m_iHeaderTotalCount;   }; 
+    int             getFreeSpaceCount() const {    return m_aKVPairs.getCapacity() - m_aKVPairs.getSize();   };
     void            incKVPairs(int num);
-    resp_kvpair *   getKVPair(int index) const;
+    resp_kvpair *   getKV( int index ) const;
+    resp_kvpair *   getNewKV();
     char *          getHeaderStr(int offset)        { return m_buf.begin() + offset;  }
     const char *    getHeaderStr(int offset) const  { return m_buf.begin() + offset;  }
     char *          getName(resp_kvpair *pKv)   { return getHeaderStr(pKv->keyOff); }
@@ -225,7 +226,7 @@ private:
     int             getHeaderKvOrder(const char *pName, unsigned int nameLen);
     void            verifyHeaderLength(HEADERINDEX headerIndex, const char * pName, unsigned int nameLen);
     
-    HttpRespHeaders(const HttpRespHeaders& other) {};
+    HttpRespHeaders(const HttpRespHeaders& other);
     
     static char s_sDateHeaders[30];
     static http_header_t   s_commonHeaders[2];

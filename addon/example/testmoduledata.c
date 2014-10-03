@@ -32,7 +32,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /**
  * This test module will reply the counter of how many times of your IP accessing, 
- * and of the page being accessed, and how mnay times of this file be accessed
+ * and of the page being accessed, and how many times of this file be accessed
  * If test uri is /testmoduledata/file1, and if /file1 exists in testing vhost directory
  * then the uri will be handled
  */
@@ -41,17 +41,19 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /***
  * HOW TO TEST
- * Create a file "aaa", "bbb" in the /DEFAULT/html, 
+ * Create a file "aaa", "bbb" in the /Example/html, 
  * then curl http://127.0.0.1:8088/testmoduledata/aaa and 
  * curl http://127.0.0.1:8088/testmoduledata/bbb,
  * you will see the result
  * 
  */
 #include "../include/ls.h"
-#include "loopbuff.h"
+#include <lsr/lsr_confparser.h>
+#include <lsr/lsr_pool.h>
+
 #include <string.h>
 #include <stdint.h>
-#include "stdlib.h"
+#include <stdlib.h>
 #include <unistd.h>
 
 #define     MNAME       testmoduledata
@@ -61,24 +63,27 @@ lsi_module_t MNAME;
 #define max_file_len    1024
 lsi_shmhash_t *pShmhash = NULL;
 
+const char *sharedDataStr = "MySharedData";
+const int sharedDataLen = 12;
+
 typedef struct {
     long count;
 } CounterData;
 
 int releaseCounterDataCb( void *data )
 {
-    if (!data)
+    if (!data) 
         return 0;
     
     CounterData *pData = (CounterData *)data;
     pData->count = 0;
-    free(pData);
+    lsr_pfree(pData);
     return 0;
 }
 
 CounterData *allocateMydata(lsi_session_t *session, const lsi_module_t *module, int level)
 {
-    CounterData *myData = (CounterData*)malloc(sizeof(CounterData));
+    CounterData *myData = (CounterData*)lsr_palloc(sizeof(CounterData));
     if (myData == NULL )
         return NULL;
 
@@ -155,9 +160,13 @@ static int myhandler_process(lsi_session_t *session)
     
     char *pBuf = (char *)g_api->shm_htable_off2ptr(pShmhash, offset);
     int sharedCount = 0;
-    sscanf(pBuf, "MyShardData %d", &sharedCount );
-    snprintf(pBuf, len, "MyShardData %d\n", ++sharedCount);
-    
+    if ( strncmp( pBuf, sharedDataStr, sharedDataLen ) != 0 )
+    {
+        g_api->log( NULL, LSI_LOG_ERROR, "[testmoduledata] Shm Hash Table returned incorrect number of arguments.\n" );
+        return 500;
+    }
+    sharedCount = strtol( pBuf + 13, NULL, 10 );
+    snprintf(pBuf, len, "%s %d\n", sharedDataStr, ++sharedCount);
     
     sprintf(output, "IP counter = %ld\nVHost counter = %ld\nFile counter = %ld\n%s", 
             ip_data->count, vhost_data->count, file_data->count, pBuf);
@@ -167,7 +176,7 @@ static int myhandler_process(lsi_session_t *session)
 }
 
 static lsi_serverhook_t serverHooks[] = {
-    {LSI_HKPT_RECV_REQ_HEADER, assignHandler, LSI_HOOK_NORMAL, 0},
+    {LSI_HKPT_RECV_REQ_HEADER, assignHandler, LSI_HOOK_NORMAL, LSI_HOOK_FLAG_ENABLED},
     lsi_serverhook_t_END   //Must put this at the end position
 };
 
@@ -191,7 +200,7 @@ static int _init(lsi_module_t * pModule)
     {
         //Set the init value to it
         uint8_t *pBuf = g_api->shm_htable_off2ptr(pShmhash, offset);
-        snprintf((char *)pBuf, len, "MyShardData 0\r\n");
+        snprintf((char *)pBuf, len, "MySharedData 0\r\n");
     }
 
     g_api->init_module_data(pModule, releaseCounterDataCb, LSI_MODULE_DATA_VHOST );

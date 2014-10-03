@@ -22,7 +22,6 @@
 #include <util/pcregex.h>
 #include "test/unittest-cpp/UnitTest++/src/UnitTest++.h"
 
-
 SUITE(PcregexTest)
 {
 TEST(test)

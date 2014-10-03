@@ -19,7 +19,7 @@
 #ifndef ENVMANAGER_H
 #define ENVMANAGER_H
 
-#include "../addon/include/ls.h"
+#include "ls.h"
 #include <util/tsingleton.h>
 #include <util/tlinklist.h>
 #include <util/linkedobj.h>

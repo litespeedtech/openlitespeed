@@ -181,12 +181,12 @@ int CgiConnection::sendReqBody( const char * pBuf, int size )
 int CgiConnection::s_iCgiCount = 0;
 
 void *CgiConnection::operator new( size_t sz )
-{   void * ret = g_pool.allocate( sizeof( CgiConnection ) );
+{   void * ret = Pool::allocate( sizeof( CgiConnection ) );
     if ( ret )
         ++s_iCgiCount;
     return ret;
 }
 void CgiConnection::operator delete( void * p)
 {   --s_iCgiCount;
-    return g_pool.deallocate( p, sizeof( CgiConnection ) );    }
+    return Pool::deallocate( p, sizeof( CgiConnection ) );    }
 

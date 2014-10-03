@@ -29,7 +29,7 @@ class LsLuaSession;
 #include <stdlib.h>
 #include <string.h>
 
-#include <../addon/include/ls.h>
+#include <ls.h>
 #include <modules/lua/ls_lua.h>
 #include <socket/gsockaddr.h>
 
@@ -49,7 +49,7 @@ public:
     
     static void set_version(const char * buf, size_t len)
     {
-        snprintf(s_version, sizeof(s_version)-1, "%s %.*s", s_luaName, len, buf);
+        snprintf(s_version, sizeof(s_version)-1, "%s %.*s", s_luaName, (int)len, buf);
     }
     static const char * version()
     { return s_version; }
@@ -83,7 +83,7 @@ private:
 public:
     
     // module parameter setup
-    static void * parseParam ( const char *param, void *initial_config, int level, const char *name );
+    static void * parseParam ( const char *param, int param_len, void *initial_config, int level, const char *name );
     static void removeParam( void * config);
     
     static int getMaxRunTime()

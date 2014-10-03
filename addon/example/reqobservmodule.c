@@ -29,19 +29,20 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
 */
-/*******************************************************************
+/******************************************************************************
  * How to test this sample
- * 1, build it, put the file reqinfomodule.so to $LSWS_HOME/modules
- * 2, curl -F file=@/home/.../test1 http://localhost:8088/ 
- * 3, if test1 contain at least one word in blockWords, will get 403
- *    otherwise, will get 200
- ********************************************************************/
+ * 1, Build the module, put reqinfomodule.so to $LSWS_HOME/modules
+ * 2, Create a file with the bad words.
+ * 3, Run curl and upload the file and access a dynamically generated page,
+ * curl -F "file=@/home/.../filewithbadwords" http://localhost:8088/phpinfo.php
+ * 4, If filewithbadwords contain at least one word in blockWords, 
+ *    will get 403, otherwise will get 200
+ *****************************************************************************/
 #define _GNU_SOURCE 
 #include "../include/ls.h"
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include "loopbuff.h"
 
 /////////////////////////////////////////////////////////////////////////////
 //DEFINE the module name, MUST BE the same as .so file name
@@ -102,7 +103,7 @@ int check_req_whole_body(lsi_cb_param_t * rec)
 }
 
 static lsi_serverhook_t serverHooks[] = {
-    {LSI_HKPT_RCVD_REQ_BODY, check_req_whole_body, LSI_HOOK_EARLY , 0},
+    {LSI_HKPT_RCVD_REQ_BODY, check_req_whole_body, LSI_HOOK_EARLY , LSI_HOOK_FLAG_ENABLED},
     lsi_serverhook_t_END   //Must put this at the end position
 };
 

@@ -1,7 +1,7 @@
 ####### kdevelop will overwrite this part!!! (begin)##########
 noinst_LIBRARIES = libfcgi.a
 
-INCLUDES = -I$(top_srcdir)/src -I$(all_includes)
+INCLUDES = -I$(top_srcdir)/include -I$(top_srcdir)/src -I$(all_includes)
 
 libfcgi_a_METASOURCES = AUTO
 

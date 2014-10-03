@@ -18,76 +18,51 @@
 #ifndef GHASH_H
 #define GHASH_H
 
-
+#include <lsr/lsr_hash.h>
+#include <lsr/lsr_internal.h>
+#include <lsr/lsr_xpool.h>
   
 #include <stddef.h>
 
 typedef unsigned long hash_key_t;
 
-
-class GHash 
+class GHash : private lsr_hash_t
 {
+private:
+    GHash( const GHash &rhs );
+    void operator=( const GHash &rhs );
 public:
-    
-    class HashElem 
+    class HashElem : private lsr_hashelem_t
     {
         friend class GHash;
-        HashElem    * m_pNext;
-        const void  * m_pKey;
-        void        * m_pData;
-        hash_key_t    m_hkey;
-        
-        void setKey( const void * pKey )    {m_pKey = pKey;  }
+        void setKey( const void * pKey )    
+        {m_pKey = pKey;  }
         
         //Forbidden functions
         HashElem& operator++();
         HashElem operator++( int );
         HashElem& operator--();
         HashElem operator--( int );
-
+            
+    public:
+        const void *getKey() const  {   return m_pKey;  }
+        void       *getData() const {   return m_pData; }
+        hash_key_t  getHKey() const {   return m_hkey;  }
+        HashElem   *getNext() const {   return (HashElem *)m_pNext; }
+        const void *first() const   {   return m_pKey;  }
+        void       *second() const  {   return m_pData; }
+    };
     
-    public:
-        const void* getKey() const  {   return m_pKey;  }
-        void * getData() const      {   return m_pData; }
-        hash_key_t getHKey() const  {   return m_hkey;  }
-        HashElem * getNext() const  {   return m_pNext; }
-
-        void setData( void * p )    {   m_pData = p;    }
-
-        const void * first() const  {   return m_pKey;  }
-        void * second() const       {   return m_pData; }
-    };
-
-    /*
-    class iterator
-    {
-        HashElem * m_pElem;
-        
-        iterator& operator++();
-        iterator operator++( int );
-        iterator& operator--();
-        iterator operator--( int );
-    public:
-        iterator( HashElem * pElem )
-            : m_pElem( pElem )
-            {}
-        iterator( const iterator& rhs )
-            : m_pElem( rhs.m_pElem )
-            {}
-        int compare( const iterator& rhs ) const
-        {   return m_pElem - rhs.m_pElem;   }
-        HashElem * operator->() {   return
-    };
-    typedef const iterator const_iterator;
-    */
     typedef HashElem* iterator;
     typedef const HashElem* const_iterator;
 
     typedef hash_key_t (*hash_fn) ( const void * );
     typedef int   (*val_comp) ( const void * pVal1, const void * pVal2 );
-    typedef int (*for_each_fn)( iterator iter);
-    typedef int (*for_each_fn2)( iterator iter, void *pUData);
-
+    //typedef int (*for_each_fn)( iterator iter);
+    //typedef int (*for_each_fn2)( iterator iter, void *pUData);
+    typedef lsr_hash_for_each_fn for_each_fn;
+    typedef lsr_hash_for_each2_fn for_each_fn2;
+    
     static hash_key_t hash_string(const void * __s);
     static int  comp_string( const void * pVal1, const void * pVal2 );
 
@@ -97,88 +72,83 @@ public:
     static int  cmp_ipv6( const void * pVal1, const void * pVal2 );
     static hash_key_t hf_ipv6( const void * pKey );
     
-
-
-    //strcmp
-
-private:
-
-    typedef iterator (*hash_insert)(GHash * pThis, const void * pKey, void * pValue);
-    typedef iterator (*hash_update)(GHash * pThis, const void * pKey, void * pValue);
-    typedef iterator (*hash_find)  (GHash * pThis, const void * pKey );
-
-    HashElem  **m_table;
-    HashElem  **m_tableEnd;
-    size_t      m_capacity;
-    size_t      m_size;
-    int         m_full_factor;
-    hash_fn     m_hf;
-    val_comp    m_vc;
-    int         m_grow_factor;
-    hash_insert m_insert;
-    hash_update m_update;
-    hash_find   m_find;
-
-    void        rehash();
-    iterator    find2( const void * pKey, hash_key_t key );
-    iterator    insert2( const void * pKey, void *pValue, hash_key_t key );
-    static iterator insert_num(GHash * pThis, const void * pKey, void * pValue );
-    static iterator update_num(GHash * pThis, const void * pKey, void * pValue);
-    static iterator find_num(GHash * pThis, const void * pKey );
-    static iterator insert_p(GHash * pThis, const void * pKey, void * pValue );
-    static iterator update_p(GHash * pThis, const void * pKey, void * pValue);
-    static iterator find_p(GHash * pThis, const void * pKey );
-
-public:
-
-    GHash( size_t init_size, hash_fn hf, val_comp vc );
-    ~GHash();
-    void clear();
-    void erase( iterator iter );
-
-    void swap( GHash & rhs );
-
-    iterator find( const void * pKey)
-    {   return (*m_find)( this, pKey );  }
+    GHash( size_t init_size, hash_fn hf, val_comp vc, lsr_xpool_t *pool = NULL )
+    {   lsr_hash( this, init_size, hf, vc, pool );    }
+    
+    ~GHash()
+    {   
+        if ( m_xpool )
+            assert( !lsr_xpool_is_empty( m_xpool ) );
+        lsr_hash_d( this ); 
+    }
+    
+    void        clear()                     {   lsr_hash_clear( this ); }
+    void        erase( iterator iter )      {   lsr_hash_erase( this, iter );   }
+    void        swap( GHash & rhs )         {   lsr_hash_swap( this, &rhs );    }
+    
+    hash_fn     get_hash_fn() const         {   return m_hf;    }
+    val_comp    get_val_comp() const        {   return m_vc;    }
+    void        set_full_factor( int f )    {   if ( f > 0 )    m_full_factor = f;  }
+    void        set_grow_factor( int f )    {   if ( f > 0 )    m_grow_factor = f;  }
+    
+    bool        empty() const               {   return m_size == 0; }
+    size_t      size() const                {   return m_size;      }
+    size_t      capacity() const            {   return m_capacity;  }
+    
+    iterator        begin()                 {   return (iterator)lsr_hash_begin( this );    }
+    iterator        end()                   {   return NULL;    }
+    const_iterator  begin() const           {   return ((GHash *)this)->begin(); }
+    const_iterator  end() const             {   return ((GHash *)this)->end();   }
+    
+    iterator find( const void * pKey )
+    {   
+        return (iterator)(*m_find)( this, pKey );
+    }
+    
     const_iterator find( const void * pKey ) const
-    {   return ((GHash *)this)->find( pKey );   }
+    {   
+        return (const_iterator)((GHash *)this)->find( pKey );
+    }
 
     iterator insert(const void * pKey, void * pValue)
-    {   return (*m_insert)( this, pKey, pValue );   }
+    {   
+        return (iterator)(*m_insert)( this, pKey, pValue );
+    }
 
     iterator update(const void * pKey, void * pValue)
-    {   return (*m_update)( this, pKey, pValue );   }
-
-    hash_fn get_hash_fn() const     {   return m_hf;    }
-    val_comp get_val_comp() const   {   return m_vc;    }
-
-    void set_full_factor( int f )   {   if ( f > 0 )    m_full_factor = f;  }
-    void set_grow_factor( int f )   {   if ( f > 0 )    m_grow_factor = f;  }
-
-    bool empty() const              {   return m_size == 0; }
-    size_t size() const             {   return m_size;      }
-    size_t capacity() const         {   return m_capacity;  }
-    iterator begin();
-    iterator end()                  {   return NULL;    }
-    const_iterator begin() const    {   return ((GHash*)this)->begin(); }
-    const_iterator end() const      {   return ((GHash*)this)->end();   }
-
-    iterator next( iterator iter );
+    {   
+        return (iterator)(*m_update)( this, pKey, pValue );
+    }
+    
+    iterator next( iterator iter )
+    {   
+        return (iterator)lsr_hash_next( this, iter );
+    }
+    
     const_iterator next( const_iterator iter ) const
-    {   return ((GHash *)this)->next((iterator)iter); }
-    int for_each( iterator beg, iterator end, for_each_fn fun );
-    int for_each2( iterator beg, iterator end, for_each_fn2 fun, void * pUData );
-};
+    {   
+        return ((GHash *)this)->next((iterator)iter);
+    }
+    
+    int for_each( iterator beg, iterator end, for_each_fn fun )
+    {   
+        return lsr_hash_for_each( this, beg, end, fun );    
+    }
+    
+    int for_each2( iterator beg, iterator end, for_each_fn2 fun, void * pUData )
+    {   
+        return lsr_hash_for_each2( this, beg, end, fun, pUData );   
+    }
 
-//bool operator!=( const GHash::iterator& lhs, const GHash::iterator& rhs )
-//{   return lhs.compare( rhs ) != 0 ;    }
-//bool operator==( const GHash::iterator& lhs, const GHash::iterator& rhs )
-//{   return lhs.compare( rhs ) == 0 ;    }
+};
 
 template< class T >
 class THash
     : public GHash
 {
+private:
+    THash( const THash &rhs );
+    void operator=( const THash &rhs );
 public:
     class iterator
     {
@@ -228,9 +198,9 @@ public:
     iterator begin()
     {   return GHash::begin();        }
     
-    static int deleteObj( GHash::iterator iter )
+    static int deleteObj( const void *pKey, void *pData )
     {
-        delete (T)(iter->second());
+        delete (T)(pData);
         return 0;
     }
 

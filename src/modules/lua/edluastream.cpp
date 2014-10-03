@@ -18,7 +18,7 @@
 
 #include "edluastream.h"
 #include <edio/multiplexer.h>
-#include <../addon/include/ls.h>
+#include <ls.h>
 #include <socket/coresocket.h>
 #include <socket/gsockaddr.h>
 
