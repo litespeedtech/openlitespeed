@@ -2734,6 +2734,8 @@ int HttpSession::flushBody()
             flush = LSI_CB_FLAG_IN_EOF;
         ret = runFilter( LSI_HKPT_SEND_RESP_BODY, (POINTER_termination_fp)writeRespBodyTermination, 
                         NULL, 0, flush ); 
+        if ( m_iFlag & HSF_SEND_RESP_BUFFERED )
+            return 1;
     }
    
     //int nodelay = 1;
