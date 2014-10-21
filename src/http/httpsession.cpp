@@ -2549,7 +2549,12 @@ int HttpSession::appendRespBodyBufV( const iovec *vector, int count )
 
 int HttpSession::shouldSuspendReadingResp()
 {
-    return m_pRespBodyBuf ? (m_pRespBodyBuf->getCurWBlkPos() >= 2048 * 1024) : 0; 
+    if ( m_pRespBodyBuf )
+    {
+        int buffered = m_pRespBodyBuf->getCurWBlkPos() - m_pRespBodyBuf->getCurRBlkPos();
+        return (( buffered >= 1024 * 1024 )||( buffered < 0 ));
+    }
+    return 0; 
 }
 
 void HttpSession::resetRespBodyBuf()
@@ -2734,6 +2739,8 @@ int HttpSession::flushBody()
             flush = LSI_CB_FLAG_IN_EOF;
         ret = runFilter( LSI_HKPT_SEND_RESP_BODY, (POINTER_termination_fp)writeRespBodyTermination, 
                         NULL, 0, flush ); 
+        if ( m_iFlag & HSF_SEND_RESP_BUFFERED )
+            return 1;
     }
    
     //int nodelay = 1;
