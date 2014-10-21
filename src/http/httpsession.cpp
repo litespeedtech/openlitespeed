@@ -2549,7 +2549,12 @@ int HttpSession::appendRespBodyBufV( const iovec *vector, int count )
 
 int HttpSession::shouldSuspendReadingResp()
 {
-    return m_pRespBodyBuf ? (m_pRespBodyBuf->getCurWBlkPos() >= 2048 * 1024) : 0; 
+    if ( m_pRespBodyBuf )
+    {
+        int buffered = m_pRespBodyBuf->getCurWBlkPos() - m_pRespBodyBuf->getCurRBlkPos();
+        return (( buffered >= 1024 * 1024 )||( buffered < 0 ));
+    }
+    return 0; 
 }
 
 void HttpSession::resetRespBodyBuf()
