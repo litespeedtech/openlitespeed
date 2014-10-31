@@ -264,7 +264,11 @@ static int compressbuf( lsi_cb_param_t *rec, lsi_module_t *pModule, int isSend )
         if ( written == -1 )
             return -1;
         if ( !lsr_loopbuf_empty( pBuf ))
+        {
+            if ( rec->_flag_out )
+                *rec->_flag_out |= LSI_CB_FLAG_OUT_BUFFERED_DATA;
             return 0;
+        }
     }
     
     if ( pZBufInfo->iZState == Z_END ) 

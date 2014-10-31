@@ -108,7 +108,7 @@ am_libedio_a_OBJECTS = reactorindex.$(OBJEXT) fdindex.$(OBJEXT) \
 	outputstream.$(OBJEXT) flowcontrol.$(OBJEXT) iochain.$(OBJEXT) \
 	multiplexerfactory.$(OBJEXT) eventreactor.$(OBJEXT) \
 	poller.$(OBJEXT) multiplexer.$(OBJEXT) pollfdreactor.$(OBJEXT) \
-	lookupfd.$(OBJEXT) devpoller.$(OBJEXT)
+	lookupfd.$(OBJEXT) devpoller.$(OBJEXT) eventnotifier.$(OBJEXT)
 libedio_a_OBJECTS = $(am_libedio_a_OBJECTS)
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
@@ -315,7 +315,7 @@ top_srcdir = @top_srcdir@
 noinst_LIBRARIES = libedio.a
 INCLUDES = -I$(top_srcdir)/include -I$(top_srcdir)/src
 libedio_a_METASOURCES = AUTO
-libedio_a_SOURCES = reactorindex.cpp fdindex.cpp kqueuer.cpp epoll.cpp rtsigio.cpp ediostream.cpp outputbuf.cpp cacheos.cpp inputstream.cpp bufferedos.cpp outputstream.cpp flowcontrol.cpp iochain.cpp multiplexerfactory.cpp eventreactor.cpp poller.cpp multiplexer.cpp pollfdreactor.cpp lookupfd.cpp devpoller.cpp
+libedio_a_SOURCES = reactorindex.cpp fdindex.cpp kqueuer.cpp epoll.cpp rtsigio.cpp ediostream.cpp outputbuf.cpp cacheos.cpp inputstream.cpp bufferedos.cpp outputstream.cpp flowcontrol.cpp iochain.cpp multiplexerfactory.cpp eventreactor.cpp poller.cpp multiplexer.cpp pollfdreactor.cpp lookupfd.cpp devpoller.cpp eventnotifier.cpp
 all: all-am
 
 .SUFFIXES:
@@ -370,6 +370,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/devpoller.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ediostream.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/epoll.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eventnotifier.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eventreactor.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/fdindex.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/flowcontrol.Po@am__quote@

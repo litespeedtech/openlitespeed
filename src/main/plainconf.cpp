@@ -141,6 +141,7 @@ plainconfKeywords plainconf::sKeywords[] =
     {"followsymbollink",                         NULL},
     {"forcegid",                                 NULL},
     {"forcetype",                                NULL},
+    {"geoipdb",                                  NULL},
     {"geoipdbcache",                             NULL},
     {"geoipdbfile",                              NULL},
     {"graceperiod",                              NULL},

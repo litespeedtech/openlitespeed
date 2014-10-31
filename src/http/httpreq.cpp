@@ -1008,10 +1008,8 @@ int HttpReq::saveCurURL()
         return SC_500;
     }
     m_pUrls[m_iRedirects].m_key = m_curUrl.m_key;
-    uSetURI( NULL, 0 );
-    
     m_pUrls[m_iRedirects++].m_value = m_curUrl.m_value;
-    lsr_str_unsafe_set( &m_curUrl.m_value, NULL, 0 );
+    
     return 0;
 }
 

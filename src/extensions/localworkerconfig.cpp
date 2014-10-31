@@ -169,7 +169,7 @@ int LocalWorkerConfig::config( const XmlNode *pNode )
     int umakeVal = ConfigCtx::getCurConfigCtx()->getLongValue( pNode, "umask", 000, 0777, HttpGlobals::s_umask, 8);
     setUmask(umakeVal);
 
-    setRunOnStartUp( ConfigCtx::getCurConfigCtx()->getLongValue( pNode, "runOnStartUp", 0, 1, 0 ) );
+    setRunOnStartUp( ConfigCtx::getCurConfigCtx()->getLongValue( pNode, "runOnStartUp", 0, 2, 0 ) );
 
     RLimits limits;
     if (ExtAppRegistry::getRLimits() != NULL)

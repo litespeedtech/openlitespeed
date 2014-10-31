@@ -795,8 +795,8 @@ uninstall-am:
 
 
 install-data-hook:
-	( cd dist; ./install.sh "$(prefix)" "$(OPENLSWS_USER)" "$(OPENLSWS_GROUP)" "$(OPENLSWS_ADMIN)" "$(OPENLSWS_PASSWORD)" "$(OPENLSWS_EMAIL)" "$(OPENLSWS_ADMINSSL)";)
-	( rm -f $(prefix)/modules/cache.la  $(prefix)/modules/mod_lua.la)
+	( cd dist; ./install.sh "$(DESTDIR)$(prefix)" "$(OPENLSWS_USER)" "$(OPENLSWS_GROUP)" "$(OPENLSWS_ADMIN)" "$(OPENLSWS_PASSWORD)" "$(OPENLSWS_EMAIL)" "$(OPENLSWS_ADMINSSL)";)
+	( rm -f $(DESTDIR)$(prefix)/modules/cache.la  $(DESTDIR)$(prefix)/modules/mod_lua.la)
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

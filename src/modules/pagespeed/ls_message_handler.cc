@@ -40,11 +40,9 @@ extern "C" {
 namespace net_instaweb
 {
 
-    LsiMessageHandler::LsiMessageHandler( AbstractMutex* mutex )
-        : mutex_( mutex ),
-          buffer_( NULL )
+    LsiMessageHandler::LsiMessageHandler( Timer* timer, AbstractMutex* mutex )
+        : SystemMessageHandler( timer, mutex )
     {
-        SetPidString( static_cast<int64>( getpid() ) );
     }
 
 // Installs a signal handler for common crash signals, that tries to print
@@ -55,17 +53,6 @@ namespace net_instaweb
         signal( SIGABRT, signal_handler );
         signal( SIGFPE, signal_handler );
         signal( SIGSEGV, signal_handler );
-    }
-
-    bool LsiMessageHandler::Dump( Writer* writer )
-    {
-        // Can't dump before SharedCircularBuffer is set up.
-        if( buffer_ == NULL )
-        {
-            return false;
-        }
-
-        return buffer_->Dump( writer, &handler_ );
     }
 
     lsi_log_level LsiMessageHandler::GetLsiLogLevel( MessageType type )
@@ -88,44 +75,16 @@ namespace net_instaweb
         }
     }
 
-    void LsiMessageHandler::set_buffer( SharedCircularBuffer* buff )
-    {
-        ScopedMutex lock( mutex_.get() );
-        buffer_ = buff;
-    }
-
     void LsiMessageHandler::MessageVImpl( MessageType type, const char* msg,
                                           va_list args )
     {
         lsi_log_level log_level = GetLsiLogLevel( type );
         GoogleString formatted_message = Format( msg, args );
-        g_api->log( NULL, log_level, "[%s @%ld] %s\n",
-                    kModuleName, static_cast<long>( getpid() ),
-                    formatted_message.c_str() );
+        g_api->log( NULL, log_level, "[%s %s] %s\n",
+                    kModuleName, kModPagespeedVersion, formatted_message.c_str() );
 
         // Prepare a log message for the SharedCircularBuffer only.
-        // Prepend time and severity to message.
-        // Format is [time] [severity] [pid] message.
-        GoogleString message;
-        GoogleString time;
-        PosixTimer timer;
-
-        if( !ConvertTimeToString( timer.NowMs(), &time ) )
-        {
-            time = "?";
-        }
-
-        StrAppend( &message, "[", time, "] ",
-                   "[", MessageTypeToString( type ), "] " );
-        StrAppend( &message, pid_string_, " ", formatted_message, "\n" );
-        {
-            ScopedMutex lock( mutex_.get() );
-
-            if( buffer_ != NULL )
-            {
-                buffer_->Write( message );
-            }
-        }
+        AddMessageToBuffer( type, formatted_message );
     }
 
     void LsiMessageHandler::FileMessageVImpl( MessageType type, const char* file,
@@ -134,9 +93,9 @@ namespace net_instaweb
     {
         lsi_log_level log_level = GetLsiLogLevel( type );
         GoogleString formatted_message = Format( msg, args );
-        g_api->log( NULL, log_level, "[%s @%ld] %s\n",
-                    kModuleName, static_cast<long>( getpid() ),
-                    formatted_message.c_str() );
+        g_api->log( NULL, log_level, "[%s %s] %s:%d:%s",
+                    kModuleName, kModPagespeedVersion, file, line,
+                           formatted_message.c_str() );
     }
 
 }  // namespace net_instaweb

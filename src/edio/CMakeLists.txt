@@ -27,6 +27,7 @@ SET(edio_STAT_SRCS
    pollfdreactor.cpp
    lookupfd.cpp
    devpoller.cpp
+   eventnotifier.cpp
 )
 
 add_library(edio STATIC ${edio_STAT_SRCS})

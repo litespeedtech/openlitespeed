@@ -15,55 +15,54 @@
 *    You should have received a copy of the GNU General Public License       *
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
-#ifndef LSI_SERVER_CONTEXT_H_
-#define LSI_SERVER_CONTEXT_H_
+#ifndef EVENTNOTIFIER_H
+#define EVENTNOTIFIER_H
 
-#include "pagespeed.h"
+#include <edio/eventreactor.h>
 
-#include "ls_message_handler.h"
-#include "net/instaweb/automatic/public/proxy_fetch.h"
-#include "net/instaweb/system/public/system_server_context.h"
+#if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
+#include <linux/version.h>
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,30)
+#include <limits.h>
+#include <sys/eventfd.h>
+#define LSEFD_AVAIL
+#endif // LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,30)
+#endif // defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
 
+class Multiplexer;
 
-namespace net_instaweb
+typedef  void ( * EVENT_CALLBACK )( void* );
+
+class EventNotifier :  public EventReactor
 {
-    class LsiRewriteDriverFactory;
-    class LsiRewriteOptions;
-    class SystemRequestContext;
+#ifdef LSEFD_AVAIL
+    uint64_t m_count;
+#else
+    int m_fdIn;
+#endif
 
-    class LsiServerContext : public SystemServerContext
+public:
+    EventNotifier() 
+#ifdef LSEFD_AVAIL
+    : m_count( 0 )
+#else
+    : m_fdIn( -1 ) 
+#endif
+    {};
+    ~EventNotifier();
+    virtual int handleEvents( short int event );
+    int initNotifier( Multiplexer* pMultiplexer );
+    void notify();
+#ifndef LSEFD_AVAIL
+    int getFdIn()
     {
-    public:
-        LsiServerContext(
-            LsiRewriteDriverFactory* factory, StringPiece hostname, int port );
-        virtual ~LsiServerContext();
+        return m_fdIn;
+    }
+#endif
+    void uninitNotifier( Multiplexer* pMultiplexer );
+    
+    virtual int onNotified( int count ) = 0;
+};
 
-        // We expect to use ProxyFetch with HTML.
-        virtual bool ProxiesHtml() const
-        {
-            return true;
-        }
+#endif // EVENTNOTIFIER_H
 
-        LsiRewriteOptions* config();
-        LsiRewriteDriverFactory* ls_rewrite_driver_factory()
-        {
-            return ls_factory_;
-        }
-        
-        SystemRequestContext* NewRequestContext( lsi_session_t* session );
-
-        LsiMessageHandler* lsi_message_handler()
-        {
-            return dynamic_cast<LsiMessageHandler*>( message_handler() );
-        }
-        
-        virtual GoogleString FormatOption( StringPiece option_name, StringPiece args );
-        
-    private:
-        LsiRewriteDriverFactory* ls_factory_;
-
-    };
-
-}  // namespace net_instaweb
-
-#endif  // LSI_SERVER_CONTEXT_H_

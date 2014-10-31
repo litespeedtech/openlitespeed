@@ -57,6 +57,7 @@ int EventDispatcher::init( const char * pType )
         {
             HttpGlobals::setMultiplexer( pMultiplexer );
             pMultiplexer->setPriHandler( highPriorityTask );
+            HttpGlobals::s_ModuleEventNotifier.initNotifier(pMultiplexer);
             return 0;
         }
     }
@@ -76,6 +77,7 @@ int EventDispatcher::reinit( )
         {
             HttpGlobals::setMultiplexer( pMultiplexer );
             pMultiplexer->setPriHandler( highPriorityTask );
+            HttpGlobals::s_ModuleEventNotifier.initNotifier(pMultiplexer);
             return 0;
         }
     }

@@ -48,11 +48,18 @@ namespace net_instaweb
         char ip[60] = {0};
         g_api->get_local_sockaddr( session, ip, 60 );
         StringPiece local_ip = ip;
-        g_api->log( NULL, LSI_LOG_DEBUG, "NewRequestContext port %d and ip %s\n", local_port, local_ip );
+        g_api->log( NULL, LSI_LOG_DEBUG, "NewRequestContext port %d and ip %s\n", local_port, ip );
         return new SystemRequestContext( thread_system()->NewMutex(),
                                          timer(),
                                          ps_determine_host( session ),  //  hostname,
                                          local_port,
                                          local_ip );
     }
+    
+    GoogleString LsiServerContext::FormatOption( StringPiece option_name,
+            StringPiece args )
+    {
+        return StrCat( "pagespeed ", option_name, " ", args );
+    }
+
 }  // namespace net_instaweb

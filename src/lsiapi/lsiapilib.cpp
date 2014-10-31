@@ -665,6 +665,10 @@ static int set_handler_write_state( lsi_session_t *session, int state )
     }
     else
     {
+        //Should only work on HSS_WRITING state.
+        if (pSession->getState() != HSS_WRITING)
+            return -1;
+        
         pSession->suspendWrite();
         pSession->setFlag( HSF_HANDLER_WRITE_SUSPENDED, 1 );
     }
@@ -724,6 +728,20 @@ static int lsi_remove_timer( int timer_id )
     return 0;
 }
 
+static void * set_event_notifier( lsi_session_t *pSession, lsi_module_t *pModule, int level )
+{
+    return (void *)HttpGlobals::s_ModuleEventNotifier.addEventObj(pSession, pModule, level);
+}
+
+static void remove_event_notifier( void **event_obj_pointer )
+{
+    HttpGlobals::s_ModuleEventNotifier.removeEventObj((EventObj **)event_obj_pointer);
+}
+
+static int notify_event_notifier( void **event_obj_pointer )
+{
+    return HttpGlobals::s_ModuleEventNotifier.notifyEventObj((EventObj **)event_obj_pointer);
+}
 
 static const char* get_req_header( lsi_session_t *session, const char *key, int keyLen, int *valLen )
 {
@@ -1643,7 +1661,7 @@ lsr_xpool_t *get_session_pool( lsi_session_t *session )
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
     return pSession->getReq()->getPool();
 }
-   
+
 void lsiapi_init_server_api()
 {
     lsi_api_t * pApi = LsiapiBridge::getLsiapiFunctions();
@@ -1675,6 +1693,11 @@ void lsiapi_init_server_api()
     pApi->set_handler_write_state = set_handler_write_state;
     pApi->set_timer = lsi_set_timer;
     pApi->remove_timer = lsi_remove_timer;
+    
+    pApi->set_event_notifier = set_event_notifier;
+    pApi->remove_event_notifier = remove_event_notifier;
+    pApi->notify_event_notifier = notify_event_notifier;
+    
     pApi->get_req_raw_headers_length = get_req_raw_headers_length;
     pApi->get_req_raw_headers = get_req_raw_headers;
     pApi->get_req_headers_count = get_req_headers_count;
