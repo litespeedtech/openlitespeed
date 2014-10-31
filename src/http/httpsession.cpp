@@ -288,7 +288,7 @@ void HttpSession::nextRequest()
         m_request.reset2();
         releaseSendFileInfo();
         if ( m_pRespBodyBuf )
-            releaseRespCache();        
+            releaseRespCache();
         if ( m_pGzipBuf )
             releaseGzipBuf();
 
@@ -747,32 +747,31 @@ int HttpSession::processWebSocketUpgrade( const HttpVHost * pVHost )
     }
 }
 
-
-int HttpSession::processNewReq()
+int HttpSession::hookResumeCallback(int level, lsi_module_t *pModule)
 {
     int ret;
-    if ( getStream()->isSpdy() )
+    if (level == LSI_HKPT_RECV_REQ_HEADER)
     {
-        m_request.keepAlive( 0 );
-        m_request.orGzip( REQ_GZIP_ACCEPT | 
-            HttpServerConfig::getInstance().getGzipCompress()
-        );
-    }
-    if ((HttpGlobals::s_useProxyHeader == 1)||
-        ((HttpGlobals::s_useProxyHeader == 2)&&( getClientInfo()->getAccess() == AC_TRUST )))
-    {
-        const char * pProxyHeader = m_request.getHeader( HttpHeader::H_X_FORWARDED_FOR );
-        if ( *pProxyHeader )
+        ret = processNewReq(pModule);
+        if (ret == 9999)
+            return 0;
+        
+        continueRead();
+        continueWrite();
+
+        if (( ret )&&( getStream()->getState() < HIOS_SHUTDOWN ))
         {
-            ret = updateClientInfoFromProxyHeader( pProxyHeader );
-            if ( ret )
-                return ret;
+            httpError( ret );
         }
     }
-    m_lReqTime = DateTime::s_curTime;
-    m_iReqTimeUs = DateTime::s_curTimeUs;
+    
+    return 0;
+}
 
-    m_iFlag &= ~HSF_ACCESS_LOG_OFF;
+int HttpSession::processNewReq(lsi_module_t *pModule)
+{
+    int ret;
+    int resume = (pModule ? 1 : 0);
     
     const HttpVHost * pVHost = m_request.matchVHost();
     if ( !pVHost )
@@ -790,56 +789,94 @@ int HttpSession::processNewReq()
     }
     
     getStream()->setLogger( pVHost->getLogger() );
-    if ( getStream()->isLogIdBuilt() )
-    {
-        AutoStr2 &id = getStream()->getIdBuf();
-        register char * p = id.buf() + id.len();
-        while( *p && *p != '#' )
-            ++p;
-        *p++ = '#';
-        memccpy( p, pVHost->getName(), 0, id.buf() + MAX_LOGID_LEN - p );
-    }
+
     
-    HttpContext *pContext0 = ((HttpContext *)&(pVHost->getRootContext()));
-    m_sessionHooks.inherit(GlobalHttpHooks, pContext0->getSessionHooks(), 0);
-    m_pModuleConfig = pContext0->getModuleConfig();
-    
-    //Run LSI_HKPT_HTTP_BEGIN after the inherit from vhost
-    m_iFlag |= HSF_HOOK_SESSION_STARTED;
-    if ( m_sessionHooks.isEnabled( LSI_HKPT_HTTP_BEGIN) )
+    if (resume == 0)
     {
-        ret = m_sessionHooks.runCallbackNoParam(LSI_HKPT_HTTP_BEGIN, (LsiSession *)this);
-        if ( ret <= -1)
+        if ( getStream()->isSpdy() )
         {
-            return getModuleDenyCode( LSI_HKPT_HTTP_BEGIN );
+            m_request.keepAlive( 0 );
+            m_request.orGzip( REQ_GZIP_ACCEPT | 
+                HttpServerConfig::getInstance().getGzipCompress()
+            );
+        }
+        if ((HttpGlobals::s_useProxyHeader == 1)||
+            ((HttpGlobals::s_useProxyHeader == 2)&&( getClientInfo()->getAccess() == AC_TRUST )))
+        {
+            const char * pProxyHeader = m_request.getHeader( HttpHeader::H_X_FORWARDED_FOR );
+            if ( *pProxyHeader )
+            {
+                ret = updateClientInfoFromProxyHeader( pProxyHeader );
+                if ( ret )
+                    return ret;
+            }
+        }
+        m_lReqTime = DateTime::s_curTime;
+        m_iReqTimeUs = DateTime::s_curTimeUs;
+
+        m_iFlag &= ~HSF_ACCESS_LOG_OFF;
+        
+        if ( getStream()->isLogIdBuilt() )
+        {
+            AutoStr2 &id = getStream()->getIdBuf();
+            register char * p = id.buf() + id.len();
+            while( *p && *p != '#' )
+                ++p;
+            *p++ = '#';
+            memccpy( p, pVHost->getName(), 0, id.buf() + MAX_LOGID_LEN - p );
         }
         
-    }
-    
+        HttpContext *pContext0 = ((HttpContext *)&(pVHost->getRootContext()));
+        m_sessionHooks.inherit(GlobalHttpHooks, pContext0->getSessionHooks(), 0);
+        m_pModuleConfig = pContext0->getModuleConfig();
+        
+        //Run LSI_HKPT_HTTP_BEGIN after the inherit from vhost
+        m_iFlag |= HSF_HOOK_SESSION_STARTED;
+        if ( m_sessionHooks.isEnabled( LSI_HKPT_HTTP_BEGIN) )
+        {
+            ret = m_sessionHooks.runCallbackNoParam(LSI_HKPT_HTTP_BEGIN, (LsiSession *)this);
+            if ( ret <= -1)
+            {
+                return getModuleDenyCode( LSI_HKPT_HTTP_BEGIN );
+            }
+        }
 
-    ret = m_request.processNewReqData(getPeerAddr());
-    if ( ret )
-    {
-        return ret;
+        ret = m_request.processNewReqData(getPeerAddr());
+        if ( ret )
+        {
+            return ret;
+        }
+        
+        if ( m_request.isWebsocket() )
+        {
+            return processWebSocketUpgrade( pVHost );
+        }
+    
+        m_request.setStatusCode( SC_200 );
     }
     
-    if ( m_request.isWebsocket() )
-    {
-        return processWebSocketUpgrade( pVHost );
-    }
-    
-    m_request.setStatusCode( SC_200 );
     if ( m_sessionHooks.isEnabled( LSI_HKPT_RECV_REQ_HEADER) ) 
     {
-        if ( m_sessionHooks.runCallbackNoParam(LSI_HKPT_RECV_REQ_HEADER, (LsiSession *)this) < 0 )
+        ret = m_sessionHooks.runCallbackNoParam(LSI_HKPT_RECV_REQ_HEADER, (LsiSession *)this, pModule);
+        if ( ret < 0 )
         {
             return getModuleDenyCode( LSI_HKPT_RECV_REQ_HEADER );
+        } else if( ret == LSI_RET_SUSPEND)
+        {
+            if ( D_ENABLED( DL_LESS ) )
+                LOG_D(( getLogger(), "[%s] processNewReq suspended.",
+                        getLogId()));
+            suspendRead();
+            suspendWrite();
+            return 9999;  //a unused number, others are status-code
         }
+        
         if ( getState() == HSS_EXT_REDIRECT )
         {
             return m_request.getStatusCode();
         }
     }
+    
     if ((m_pNtwkIOLink->isThrottle())&&( m_pNtwkIOLink->getClientInfo()->getAccess() != AC_TRUST ))
         m_pNtwkIOLink->getThrottleCtrl()->adjustLimits( pVHost->getThrottleLimits() );
     if ( m_request.isKeepAlive() )
@@ -1648,7 +1685,7 @@ int HttpSession::onReadEx()
             }
 
         }
-        if ( !ret )
+        if ( ret == 0 || ret == 9999 )
             return 0;
         break;
 
@@ -1997,7 +2034,14 @@ int HttpSession::writeRespBodyDirect( const char * pBuf, int size )
 {
     int written;
     if ( m_pChunkOS )
+    {
         written = m_pChunkOS->write( pBuf, size );
+        if(written != size)
+        {
+            if ( D_ENABLED( DL_MEDIUM ) )
+                LOG_D((getLogger(), "[%s] writeRespBodyDirect size %d, written %d, !",  getLogId(), size, written ));
+        }
+    }
     else
         written = getStream()->write( pBuf, size );
     if ( written > 0 )
@@ -2549,7 +2593,12 @@ int HttpSession::appendRespBodyBufV( const iovec *vector, int count )
 
 int HttpSession::shouldSuspendReadingResp()
 {
-    return m_pRespBodyBuf ? (m_pRespBodyBuf->getCurWBlkPos() >= 2048 * 1024) : 0; 
+    if ( m_pRespBodyBuf )
+    {
+        int buffered = m_pRespBodyBuf->getCurWBlkPos() - m_pRespBodyBuf->getCurRBlkPos();
+        return (( buffered >= 1024 * 1024 )||( buffered < 0 ));
+    }
+    return 0; 
 }
 
 void HttpSession::resetRespBodyBuf()
@@ -2734,6 +2783,8 @@ int HttpSession::flushBody()
             flush = LSI_CB_FLAG_IN_EOF;
         ret = runFilter( LSI_HKPT_SEND_RESP_BODY, (POINTER_termination_fp)writeRespBodyTermination, 
                         NULL, 0, flush ); 
+        if ( m_iFlag & HSF_SEND_RESP_BUFFERED )
+            return 1;
     }
    
     //int nodelay = 1;
@@ -3156,7 +3207,8 @@ void HttpSession::setSendFileBeginEnd( off_t start, off_t end )
     setFlag(HSF_RESP_FLUSHED, 0);
     if ( !getFlag( HSF_RESP_HEADER_DONE ) )
         respHeaderDone( 0 );    
-
+//    getStream()->setFlag( HIO_FLAG_WANT_WRITE, 1 );
+//    setState( HSS_WRITING );
 }
 
 int HttpSession::sendStaticFileEx(  SendFileInfo * pData )
@@ -3266,7 +3318,7 @@ int HttpSession::sendStaticFile(  SendFileInfo * pData )
 //             param._flag_in = LSI_CB_FLAG_IN_EOF;
         len = LsiApiHooks::runForwardCb( &param );
         if ( D_ENABLED( DL_MEDIUM ) )
-            LOG_D (( "[HttpSession::sendStaticFile] sent: %d, buffered: %d", len, buffered ));
+            LOG_D (( "[HttpSession::sendStaticFile] to be written: %ld, sent: %ld, buffered: %d.", (long)written, len, buffered ));
 
         if ( len > 0 )
         {

@@ -95,19 +95,32 @@ public:
         
     
     int runCallback( int level, lsi_cb_param_t *param) const;
-    int runCallback( int level, int8_t *pEnableArray, LsiSession *session, void *param1, int paramLen1, int *flag_out, int flag_in) const
+    int runCallback( int level, int8_t *pEnableArray, LsiSession *session, void *param1, int paramLen1, int *flag_out, int flag_in, lsi_module_t *pModule = NULL) const
     {
+        if (pModule && find(pModule) == NULL)
+        {
+            //ERROR
+            pModule = NULL;
+        }
+        
         lsi_hook_info_t info = { this, pEnableArray, NULL } ;
         lsi_cb_param_t param =
-        {   session, &info, begin(), param1, paramLen1, flag_out, flag_in  };
+        {   session, 
+            &info, 
+            (pModule ?  find(pModule) + 1: begin()),
+            param1, 
+            paramLen1, 
+            flag_out, 
+            flag_in  };
+
         return runCallback(level, &param);
     }
 
     int runCallbackViewData( int level, int8_t *pEnableArray,LsiSession *session, void *inBuf, int inLen) const
     {   return runCallback(level, pEnableArray, session, inBuf, inLen, NULL, 0);  }
     
-    int runCallbackNoParam( int level, int8_t *pEnableArray,LsiSession *session) const
-    {   return runCallback(level, pEnableArray, session, NULL, 0, NULL, 0);       }
+    int runCallbackNoParam( int level, int8_t *pEnableArray,LsiSession *session, lsi_module_t *pModule = NULL) const
+    {   return runCallback(level, pEnableArray, session, NULL, 0, NULL, 0, pModule);       }
     
     
     static int runForwardCb( lsi_cb_param_t * param );
@@ -419,8 +432,8 @@ public:
     int runCallbackViewData( int level, LsiSession *session, void *inBuf, int inLen) const
     {   return m_pHookChainList->get(level)->runCallbackViewData( level, m_pEnableArray[level - base], session, inBuf, inLen );   }
     
-    int runCallbackNoParam( int level, LsiSession *session) const
-    {   return m_pHookChainList->get(level)->runCallbackNoParam( level, m_pEnableArray[level - base], session );      }
+    int runCallbackNoParam( int level, LsiSession *session, lsi_module_t *pModule = NULL) const
+    {   return m_pHookChainList->get(level)->runCallbackNoParam( level, m_pEnableArray[level - base], session, pModule );      }
     
 };
 

@@ -84,32 +84,6 @@ namespace net_instaweb
             main_conf_ = main_conf;
         }
 
-        bool use_per_vhost_statistics() const
-        {
-            return use_per_vhost_statistics_;
-        }
-        void set_use_per_vhost_statistics( bool x )
-        {
-            use_per_vhost_statistics_ = x;
-        }
-        bool install_crash_handler() const
-        {
-            return install_crash_handler_;
-        }
-        void set_install_crash_handler( bool x )
-        {
-            install_crash_handler_ = x;
-        }
-        void set_rate_limit_background_fetches( bool x )
-        {
-            rate_limit_background_fetches_ = x;
-        }
-
-        virtual bool UseBeaconResultsInFilters() const
-        {
-            return true;
-        }
-
         void LoggingInit();
 
         virtual void ShutDownMessageHandlers();
@@ -122,12 +96,9 @@ namespace net_instaweb
         LsiRewriteOptions* main_conf_;
 
         bool threads_started_;
-        bool use_per_vhost_statistics_;
         LsiMessageHandler* lsi_message_handler_;
         LsiMessageHandler* lsi_html_parse_message_handler_;
-        bool install_crash_handler_;
 
-        bool rate_limit_background_fetches_;
         typedef std::set<LsiMessageHandler*> LsiMessageHandlerSet;
         LsiMessageHandlerSet server_context_message_handlers_;
 

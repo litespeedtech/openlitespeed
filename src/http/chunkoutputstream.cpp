@@ -112,6 +112,11 @@ int ChunkOutputStream::write( const char * pBuf, int size )
     assert( m_pOS != NULL );
     if ( m_iTotalPending )
     {
+        if ( m_pLastBufBegin && pBuf != m_pLastBufBegin )
+        {
+            m_iov.adjust( m_pLastBufBegin, pBuf, m_iLastBufLen );
+            m_pLastBufBegin = pBuf;
+        }
         ret = flush2();
         switch( ret )
         {

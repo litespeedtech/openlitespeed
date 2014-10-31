@@ -22,8 +22,10 @@
 #include <sys/types.h>
 #include <http/reqstats.h>
 #include <util/tlinklist.h>
+#include <util/dlinkqueue.h>
 #include <ls.h>
-
+#include <edio/eventnotifier.h>
+#include <lsiapi/internal.h>
 
 class AccessControl;
 class AutoStr2;
@@ -43,6 +45,7 @@ class SUExec;
 class CgidWorker;
 class HttpVHost;
 class HttpConfigLoader;
+class EventNotifier;
 
 #ifdef USE_UDNS
 class Adns;
@@ -54,13 +57,112 @@ class IpToGeo;
 class ModuleTimer : public LinkedObj
 {
 public:
-    int                     m_iId;
+    int                     m_iId;  //Use a id because queue will remove some expired timer
     time_t                  m_tmExpire;
     time_t                  m_tmExpireUs;
     lsi_timer_callback_pf   m_TimerCb;
     void*                   m_pTimerCbParam;
 };
 
+class EventObj : public DLinkedObj
+{
+public:
+    int                     m_iId;
+    short                   m_iLevel;
+    short                   m_state;  //1, OK, 0, removed
+    LsiSession *            m_pSession;
+    lsi_module_t *          m_pModule;
+};
+
+class ModuleEventNotifier : public EventNotifier
+{
+public:
+    ModuleEventNotifier() { m_id = 0; }
+    
+    DLinkQueue          m_EventObjListWait;
+    DLinkQueue          m_EventObjListDone;
+    int m_id;
+    
+    void removeEventObj( EventObj **pEventObj )
+    {
+        if ((*pEventObj) && (*pEventObj)->m_state == 1)
+        {
+            (*pEventObj)->remove();
+            (*pEventObj)->m_iId = 0;
+            (*pEventObj)->m_iLevel = 0;
+            (*pEventObj)->m_pModule = 0;
+            (*pEventObj)->m_pSession = 0;
+            (*pEventObj)->m_state = 0;
+            delete *pEventObj;
+            *pEventObj = NULL;
+        }
+    }
+    
+    virtual int onNotified( int count )
+    {
+        while(!m_EventObjListDone.empty())
+        {
+            EventObj *pObj = (EventObj *)m_EventObjListDone.begin();
+            if (pObj)
+            {
+                if( pObj->m_pModule )
+                    pObj->m_pSession->hookResumeCallback(pObj->m_iLevel, pObj->m_pModule);
+                removeEventObj(&pObj);
+            }
+            else
+                break;
+        }
+        return 0;
+    }
+    
+    EventObj *addEventObj(lsi_session_t *pSession, lsi_module_t *pModule, int level)
+    {
+        EventObj *pEventObj = new EventObj;
+        if (pEventObj)
+        {
+            pEventObj->m_iId = m_id ++;
+            pEventObj->m_iLevel = level;
+            pEventObj->m_pModule = pModule;
+            pEventObj->m_pSession = (LsiSession *)pSession;
+            pEventObj->m_state = 1;
+            m_EventObjListWait.push_front(pEventObj);
+        }
+        return pEventObj;
+    }
+    
+    inline int isEventObjValid(EventObj *pEventObj)
+    {
+        return (pEventObj->next() != NULL && pEventObj->prev() != NULL);
+    }
+    
+    int notifyEventObj(EventObj **pEventObj)
+    {
+        //pEventObj should be in Wait list
+        //assert();
+        
+        if (*pEventObj == NULL)
+            return -1;
+        
+        if ( !isEventObjValid(*pEventObj)) 
+            removeEventObj(pEventObj);
+        
+        //Move from Wait list to Done list
+        EventObj *pNewObj = new EventObj;
+        if (!pNewObj)
+            return -1; //ERROR
+        
+        pNewObj->m_iId = (*pEventObj)->m_iId;
+        pNewObj->m_iLevel = (*pEventObj)->m_iLevel;
+        pNewObj->m_pModule = (*pEventObj)->m_pModule;
+        pNewObj->m_pSession = (*pEventObj)->m_pSession;
+        pNewObj->m_state = 1;
+        m_EventObjListDone.push_front(pNewObj);
+        removeEventObj(pEventObj);
+
+        notify();
+        return 0;
+    }
+};
 
 class HttpGlobals
 {
@@ -124,7 +226,7 @@ public:
     
     //module timer linklist
     static TLinkList<ModuleTimer>    s_ModuleTimerList;
-    
+    static ModuleEventNotifier       s_ModuleEventNotifier;
    
 #ifdef USE_UDNS
     static Adns                   s_adns;

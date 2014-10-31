@@ -39,26 +39,27 @@ public:
     int CollectHeaders( lsi_session_t* session );
 
     void Release();
-    void set_handle_error( bool x )
+    void set_ipro_lookup( bool x )
     {
-        handle_error_ = x;
+        ipro_lookup_ = x;
     }
-
+    
     void set_pipe_fd( int pipe_fd )
     {
         pipe_fd_ = pipe_fd;
         g_api->log( session_, LSI_LOG_DEBUG, "[Module:modpagespeed]set_pipe_fd pipe_fd_ = %d.\n", pipe_fd_ );
     }
-    bool isLastBufSent()
-    {
-        return last_buf_sent_;
-    }
-    bool isDoneCalled( bool& success )
-    {
-        success = m_success;
-        return done_called_;
-    }
+//     bool isLastBufSent()
+//     {
+//         return last_buf_sent_;
+//     }
+//     bool isDoneCalled( bool& success )
+//     {
+//         success = m_success;
+//         return done_called_;
+//     }
 
+    bool isDoneAndSuccess()    { return done_called_ && m_success;  }
 private:
     virtual bool HandleWrite( const StringPiece& sp, MessageHandler* handler );
     virtual bool HandleFlush( MessageHandler* handler );
@@ -83,7 +84,7 @@ private:
     int pipe_fd_;
     int references_;
     pthread_mutex_t mutex_;
-    bool handle_error_;
+    bool ipro_lookup_;
     bool m_success;
     PreserveCachingHeaders preserve_caching_headers_;
 };

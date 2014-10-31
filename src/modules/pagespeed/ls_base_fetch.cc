@@ -23,6 +23,7 @@
 #include "net/instaweb/util/public/google_message_handler.h"
 #include "net/instaweb/util/public/message_handler.h"
 #include <unistd.h>
+#include <errno.h>
 
 LsiBaseFetch::LsiBaseFetch( lsi_session_t* session, int pipe_fd,
                             LsiServerContext* server_context,
@@ -35,7 +36,7 @@ LsiBaseFetch::LsiBaseFetch( lsi_session_t* session, int pipe_fd,
       last_buf_sent_( false ),
       pipe_fd_( pipe_fd ),
       references_( 2 ),
-      handle_error_( true ),
+      ipro_lookup_( false ),
       m_success( false ),
       preserve_caching_headers_( preserve_caching_headers )
 {
@@ -72,16 +73,14 @@ bool LsiBaseFetch::HandleWrite( const StringPiece& sp,
 
 int LsiBaseFetch::CopyBufferToLs( lsi_session_t* session )
 {
-//    CHECK( !( last_buf_sent_ ) )
-//            << "CopyBufferToLs() was called after the last buffer was sent";
+    CHECK(!(done_called_ && last_buf_sent_))
+        << "CopyBufferToLs() was called after the last buffer was sent";
 
-    if( last_buf_sent_ && buffer_.empty() )
-    {
+    if( !done_called_ && buffer_.empty() )
         return 1;
-    }
 
-    g_api->log( NULL, LSI_LOG_DEBUG, "* * *[size %d]\n", buffer_.size() );  //, buffer_.c_str());
-    copy_response_body_to_buff( session, buffer_.c_str(), buffer_.size() );
+    //g_api->log( NULL, LSI_LOG_DEBUG, "* * *[size %d]\n", buffer_.size() );  //, buffer_.c_str());
+    copy_response_body_to_buff( session, buffer_.c_str(), buffer_.size(), done_called_ /* send_last_buf */);
 
     // Done with buffer contents now.
     buffer_.clear();
@@ -89,7 +88,7 @@ int LsiBaseFetch::CopyBufferToLs( lsi_session_t* session )
     if( done_called_ )
     {
         last_buf_sent_ = true;
-        return LSI_RET_OK;
+        return 0;
     }
 
     return 1;
@@ -98,9 +97,7 @@ int LsiBaseFetch::CopyBufferToLs( lsi_session_t* session )
 int LsiBaseFetch::CollectAccumulatedWrites( lsi_session_t* session )
 {
     if( last_buf_sent_ )
-    {
-        return LSI_RET_OK;
-    }
+        return 0;
 
     int rc;
     Lock();
@@ -125,9 +122,7 @@ int LsiBaseFetch::CollectHeaders( lsi_session_t* session )
 void LsiBaseFetch::RequestCollection()
 {
     if( pipe_fd_ == -1 )
-    {
         return ;
-    }
 
     int rc;
     char c = 'A';
@@ -141,20 +136,28 @@ void LsiBaseFetch::HandleHeadersComplete()
     int status_code = response_headers()->status_code();
     bool status_ok = ( status_code != 0 ) && ( status_code < 400 );
 
-    if( status_ok || handle_error_ )
+    if( !ipro_lookup_ || status_ok )
     {
+        // If this is a 404 response we need to count it in the stats.
         if( response_headers()->status_code() == HttpStatus::kNotFound )
         {
             server_context_->rewrite_stats()->resource_404_count()->Add( 1 );
         }
     }
 
-    RequestCollection();  // Headers available.
+    // For the IPRO lookup, supress notification of the nginx side here.
+    // If we send both this event and the one from done, nasty stuff will happen
+    // if we loose the race with with the nginx side destructing this base fetch
+    // instance (and thereby clearing the byte and its pending extraneous event.
+    if( !ipro_lookup_ )
+    {
+       //RequestCollection();  // Headers available.
+    }
 }
 
 bool LsiBaseFetch::HandleFlush( MessageHandler* handler )
 {
-    RequestCollection();
+    //RequestCollection();
     return true;
 }
 
@@ -174,8 +177,8 @@ void LsiBaseFetch::DecrefAndDeleteIfUnreferenced()
 void LsiBaseFetch::HandleDone( bool success )
 {
     m_success = success;
-    g_api->log( session_, LSI_LOG_DEBUG, "[Module:modpagespeed]HandleDone called, success=%s, done_called_=%s!\n",
-                ( success ? "true" : "false" ), ( done_called_ ? "true" : "false" ) );
+    g_api->log( session_, LSI_LOG_DEBUG, "[Module:modpagespeed]HandleDone called, success=%d, done_called_=%d!\n",
+                success, done_called_ );
 
     Lock();
     done_called_ = true;

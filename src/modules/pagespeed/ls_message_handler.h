@@ -19,14 +19,12 @@
 #define LSI_MESSAGE_HANDLER_H_
 
 #include "pagespeed.h"
+
 #include <cstdarg>
 
-#include "third_party/apr/src/include/apr_time.h"
-
+#include "net/instaweb/system/public/system_message_handler.h"
 #include "net/instaweb/util/public/basictypes.h"
-#include "net/instaweb/util/public/google_message_handler.h"
 #include "net/instaweb/util/public/message_handler.h"
-#include "net/instaweb/util/public/scoped_ptr.h"
 #include "net/instaweb/util/public/string.h"
 #include "net/instaweb/util/public/string_util.h"
 
@@ -34,34 +32,19 @@ namespace net_instaweb
 {
 
     class AbstractMutex;
-    class SharedCircularBuffer;
     class Timer;
-    class Writer;
 
 // Implementation of a message handler that uses log_error()
 // logging to emit messages, with a fallback to GoogleMessageHandler
-    class LsiMessageHandler : public GoogleMessageHandler
+    class LsiMessageHandler : public SystemMessageHandler
     {
     public:
-        explicit LsiMessageHandler( AbstractMutex* mutex );
+        explicit LsiMessageHandler( Timer* timer, AbstractMutex* mutex );
 
         // Installs a signal handler for common crash signals that tries to print
         // out a backtrace.
         static void InstallCrashHandler();
 
-        // When LsiRewriteDriver instantiates the LsiMessageHandlers, the
-        // SharedCircularBuffer and ngx_log_t are not available yet. These
-        // will later be set in RootInit/Childinit
-        // Messages logged before that will be passed on to handler_;
-        void set_buffer( SharedCircularBuffer* buff );
-
-
-        void SetPidString( const int64 pid )
-        {
-            pid_string_ = StrCat( "[", Integer64ToString( pid ), "]" );
-        }
-        // Dump contents of SharedCircularBuffer.
-        bool Dump( Writer* writer );
 
     protected:
         virtual void MessageVImpl( MessageType type, const char* msg, va_list args );
@@ -71,12 +54,6 @@ namespace net_instaweb
 
     private:
         lsi_log_level GetLsiLogLevel( MessageType type );
-        scoped_ptr<AbstractMutex> mutex_;
-        GoogleString pid_string_;
-        // handler_ is used as a fallback when we can not use log_errort
-        // It's also used when calling Dump on the internal SharedCircularBuffer
-        GoogleMessageHandler handler_;
-        SharedCircularBuffer* buffer_;
 
     };
 

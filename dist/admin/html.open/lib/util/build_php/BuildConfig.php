@@ -22,9 +22,9 @@ class BuildConfig
 		switch ($field) {
 
 			case self::PHP_VERSION:	return
-			array('5.6.1',
-			'5.5.17',
-			'5.4.33',
+			array('5.6.2',
+			'5.5.18',
+			'5.4.34',
 			'5.3.29',
 			'5.2.17',
 			'4.4.9');
@@ -60,8 +60,8 @@ class BuildConfig
 				return SERVER_ROOT . 'lsphp';  // actual dir will include . php base version.
 			case self::DEFAULT_PARAMS:
 				return array(
-				'5' => '--with-mysqli --with-zlib --with-gd --enable-shmop --enable-sockets --enable-sysvsem --enable-sysvshm --enable-mbstring --with-iconv',
-				'4' => '--with-mysql  --with-zlib --with-gd --enable-shmop --enable-track-vars --enable-sockets --enable-sysvsem --enable-sysvshm --enable-magic-quotes --enable-mbstring'
+				'5' => '--with-mysqli --with-zlib --with-gd --enable-shmop --enable-sockets --enable-sysvsem --enable-sysvshm --enable-mbstring --with-iconv  --with-mcrypt',
+				'4' => '--with-mysql  --with-zlib --with-gd --enable-shmop --enable-sockets --enable-sysvsem --enable-sysvshm --enable-magic-quotes --enable-mbstring'
 						);
 
 		}

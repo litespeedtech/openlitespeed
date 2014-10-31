@@ -540,9 +540,10 @@ public:
     }  
     int   getOrgReqURILen()
     {
-        if ( ( m_iRedirects )? &(m_pUrls[0].m_value) : &m_curUrl.m_value )
-            return m_reqURLLen - 1 - (( m_iRedirects ) ? 
-                    lsr_str_len( &(m_pUrls[0].m_value) ) : lsr_str_len( &m_curUrl.m_value ) );
+        if ( m_iRedirects ? lsr_str_c_str( &(m_pUrls[0].m_value))
+                            : lsr_str_c_str( &m_curUrl.m_value ) )
+            return m_reqURLLen - 1 - ( m_iRedirects ? lsr_str_len( &(m_pUrls[0].m_value))
+                                                    : lsr_str_len( &m_curUrl.m_value ) );
         else
             return m_reqURLLen;
     }

@@ -513,6 +513,11 @@ enum lsi_result_code
      * Return code success.
      */
     LSI_RET_OK = 0,
+    /**
+     * 
+     */
+    LSI_RET_SUSPEND,
+    
 };
 
 
@@ -1955,6 +1960,22 @@ struct lsi_api_s
      * 
      */
     int ( *remove_timer )( int time_id );
+    
+    /**
+     * return notifier pointer
+     */
+    void * ( *set_event_notifier ) ( lsi_session_t *pSession, lsi_module_t *pModule, int level );
+    /**
+     * return 0 for no error, otherwise an error code is returned
+     */
+    int ( *notify_event_notifier ) ( void **event_notifier_pointer );
+    void ( *remove_event_notifier ) ( void **event_notifier_pointer );
+    
+    
+    
+    
+    
+    
     
     /**
      * get_req_cookies is used to get all the request cookies.

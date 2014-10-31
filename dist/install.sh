@@ -27,9 +27,15 @@ inst_admin_php()
 
     if [ -f "$LSWS_HOME/admin/fcgi-bin/admin_php" ] ; then
     #    echo -e "\033[38;5;148mphp already exists, needn't to re-build\033[39m"
-        HASADMINPHP=y
-        echo "admin_php found."
-    else
+        "$LSWS_HOME/admin/fcgi-bin/admin_php" -i | grep json 2>&1 1>/dev/null
+        if [ $? = 0 ]; then
+            HASADMINPHP=y
+            echo "admin_php found."
+        else
+            mv "$LSWS_HOME/admin/fcgi-bin/admin_php" "$LSWS_HOME/admin/fcgi-bin/admin_php.bak"
+        fi
+    fi
+    if [ "x$HASADMINPHP" = "xn" ] ; then
     
         if [ ! -d "$LSWS_HOME/admin/fcgi-bin/" ] ; then
             mkdir -p "$LSWS_HOME/admin/fcgi-bin/"
@@ -219,16 +225,13 @@ if [ ! -f "$LSWS_HOME/admin/conf/htpasswd" ] ; then
 fi
 
 
-if [ -f "$LSWS_HOME/fcgi-bin/lsphp" ]; then
-    mv -f "$LSWS_HOME/fcgi-bin/lsphp" "$LSWS_HOME/fcgi-bin/lsphp.old"
-    echo "Your current PHP engine $LSWS_HOME/fcgi-bin/lsphp is renamed to lsphp.old"
-fi
-
-cp -f "$LSWS_HOME/admin/fcgi-bin/admin_php" "$LSWS_HOME/fcgi-bin/lsphp"
-chown "$SDIR_OWN" "$LSWS_HOME/fcgi-bin/lsphp"
-chmod "$EXEC_MOD" "$LSWS_HOME/fcgi-bin/lsphp"
-if [ ! -f "$LSWS_HOME/fcgi-bin/lsphp5" ]; then
-    ln -sf "./lsphp" "$LSWS_HOME/fcgi-bin/lsphp5"
+if [ ! -f "$LSWS_HOME/fcgi-bin/lsphp" ]; then
+    cp -f "$LSWS_HOME/admin/fcgi-bin/admin_php" "$LSWS_HOME/fcgi-bin/lsphp"
+    chown "$SDIR_OWN" "$LSWS_HOME/fcgi-bin/lsphp"
+    chmod "$EXEC_MOD" "$LSWS_HOME/fcgi-bin/lsphp"
+    if [ ! -f "$LSWS_HOME/fcgi-bin/lsphp5" ]; then
+        ln -sf "./lsphp" "$LSWS_HOME/fcgi-bin/lsphp5"
+    fi
 fi
 
 

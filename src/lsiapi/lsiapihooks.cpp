@@ -295,6 +295,13 @@ int LsiApiHooks::runCallback(int level, lsi_cb_param_t *param) const
         
     LsiApiHook *hook = begin();
     LsiApiHook *hookEnd = end();  //FIXME: I found end() will change since m_iEnd will change
+    int offset = (LsiApiHook *)param->_cur_hook - begin();
+    if(offset > 0)
+    {
+        pEnableArray += offset;
+        hook = (LsiApiHook *)param->_cur_hook;
+    }
+    
     while(hook != hookEnd)
     {
         if (*pEnableArray++ == 0)

@@ -5,7 +5,7 @@ if ($argc != 3)
   
 $SERVROOT = $argv[1];
 
-ini_set('include_path', "../html.open/classes/:../html.open/classes/ows/:.");
+ini_set('include_path', "../html.open/lib/:../html.open/lib/ows/:.");
 
 date_default_timezone_set('America/New_York');
 

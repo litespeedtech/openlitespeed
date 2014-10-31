@@ -11,7 +11,7 @@ if [ ! -f psol/include/out/Release/obj/gen/net/instaweb/public/version.h ] ; the
 
     DL=`which curl`
     DLCMD="$DL -O "
-    TARGET=1.8.31.4.tar.gz
+    TARGET=1.9.32.1.tar.gz
 	$DLCMD https://dl.google.com/dl/page-speed/psol/$TARGET  
 	tar -xzvf $TARGET # expands to psol/
 	rm $TARGET

@@ -69,11 +69,9 @@ namespace net_instaweb
                                       NULL /* default shared memory runtime */, hostname, port ),
         main_conf_( NULL ),
         threads_started_( false ),
-        use_per_vhost_statistics_( false ),
-        lsi_message_handler_( new LsiMessageHandler( thread_system()->NewMutex() ) ),
+        lsi_message_handler_( new LsiMessageHandler(timer(), thread_system()->NewMutex() ) ),
         lsi_html_parse_message_handler_(
-            new LsiMessageHandler( thread_system()->NewMutex() ) ),
-        install_crash_handler_( false ),
+            new LsiMessageHandler(timer(), thread_system()->NewMutex() ) ),
         lsi_shared_circular_buffer_( NULL ),
         hostname_( hostname.as_string() ),
         port_( port )
@@ -199,7 +197,7 @@ namespace net_instaweb
     {
         Install_log_message_handler();
 
-        if( install_crash_handler_ )
+        if( install_crash_handler() )
         {
             LsiMessageHandler::InstallCrashHandler();
         }
@@ -217,7 +215,7 @@ namespace net_instaweb
         ServerContext* server_context )
     {
         LsiMessageHandler* handler = new LsiMessageHandler(
-            thread_system()->NewMutex() );
+            timer(), thread_system()->NewMutex() );
         // The lsi_shared_circular_buffer_ will be NULL if MessageBufferSize hasn't
         // been raised from its default of 0.
         handler->set_buffer( lsi_shared_circular_buffer_ );

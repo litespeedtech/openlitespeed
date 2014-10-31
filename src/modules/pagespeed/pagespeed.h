@@ -79,7 +79,7 @@ namespace net_instaweb
                                          const ResponseHeaders& pagespeed_headers,
                                          PreserveCachingHeaders preserve_caching_headers );
 
-    int copy_response_body_to_buff( lsi_session_t* session, const char* s, int len );
+    int copy_response_body_to_buff( lsi_session_t* session, const char* s, int len, int done_called );
 
     StringPiece ps_determine_host( lsi_session_t* session );
 
@@ -103,6 +103,7 @@ namespace RequestRouting
         kConsole,
         kMessages,
         kAdmin,
+        kCachePurge,
         kGlobalAdmin,
         kPagespeedSubrequest,
         kNotHeadOrGet,

@@ -76,6 +76,7 @@ int ExtConn::assignReq( ExtRequest * pReq )
 //                   "assign a new request" ));
 //        close();
 //    }
+    m_iCPState = 0;
     ret = addRequest( pReq );
     if ( ret )
     {
@@ -136,6 +137,7 @@ int ExtConn::connectEx( Multiplexer * pMplx )
     int ret;
     ret = CoreSocket::connect( m_pWorker->getServerAddr(), pMplx->getFLTag(), &fd, 1 );
     m_iReqProcessed = 0;
+    m_iCPState = 0;
     m_iToStop = 0;
     if (( fd == -1 )&&( errno == ECONNREFUSED ))
     {
@@ -295,7 +297,7 @@ void ExtConn::onSecTimer()
     }
     else if ( getReq() )
     {
-        if (  m_iReqProcessed == 0 )
+        if (  !m_iCPState && m_iReqProcessed == 0 )
         {
             if (secs >= m_pWorker->getTimeout() )
             {
@@ -305,10 +307,10 @@ void ExtConn::onSecTimer()
             }
             else if ((secs == 10 )&&(getReq()->isRecoverable()))
             {
-                if ( D_ENABLED( DL_LESS ) )
+/*                if ( D_ENABLED( DL_LESS ) )
                     LOG_D(( getLogger(), "[%s] No response in 10 seconds, possible dead lock, "
                             "try starting a new instance.", getLogId() ));
-                m_pWorker->addNewProcess();
+                m_pWorker->addNewProcess(); */
             }
         }
     }
@@ -325,8 +327,8 @@ void ExtConn::onSecTimer()
 int ExtConn::connError( int errCode )
 {
     if ( D_ENABLED( DL_LESS ) )
-        LOG_D(( getLogger(), "[%s] connection to [%s] on request #%d, error: %s!",
-                getLogId(), m_pWorker->getURL(), m_iReqProcessed,
+        LOG_D(( getLogger(), "[%s] connection to [%s] on request #%d, comfirmed %d, error: %s!",
+                getLogId(), m_pWorker->getURL(), m_iReqProcessed, (int)m_iCPState,
                 strerror( errCode ) ));
 	if ( errCode == EINTR )
 		return 0;
@@ -336,7 +338,7 @@ int ExtConn::connError( int errCode )
     {
         if (((m_pWorker->getConnPool().getFreeConns() == 0)||( (pReq->getAttempts() % 3) == 0 ))&&
             (( errCode == EPIPE )||( errCode == ECONNRESET))&&
-             (pReq->isRecoverable())&&( m_iReqProcessed ))
+             (pReq->isRecoverable())&&( m_iReqProcessed )&&(!m_iCPState))
         {
             pReq->incAttempts();
             pReq->resetConnector();

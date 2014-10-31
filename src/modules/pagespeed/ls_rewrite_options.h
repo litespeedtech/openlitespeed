@@ -129,10 +129,11 @@ namespace net_instaweb
                                     const char* id,
                                     StringPiece option_name,
                                     OptionScope scope,
-                                    const char* help )
+                                    const char* help,
+                                    bool safe_to_print )
         {
             AddProperty( default_value, offset, id, option_name, scope, help,
-                         lsi_properties_ );
+                        safe_to_print, lsi_properties_ );
         }
 
         Option<GoogleString> statistics_path_;

@@ -207,7 +207,8 @@ http_header_t       HttpRespHeaders::s_acceptRangeHeader;
 
 
 TLinkList<ModuleTimer> HttpGlobals::s_ModuleTimerList;
-    
+ModuleEventNotifier HttpGlobals::s_ModuleEventNotifier;
+
 #include <http/httpver.h>
 #include <http/httpstatuscode.h>
 
@@ -487,5 +488,4 @@ RewriteEngine HttpGlobals::s_RewriteEngine;
 Adns   HttpGlobals::s_adns;
 #endif
 IpToGeo * HttpGlobals::s_pIpToGeo = NULL;
-
 

@@ -42,8 +42,8 @@ class LsapiConn: public ExtConn
     long                        m_lReqSentTime;
     LsapiReq                    m_lsreq;
     
-    short                       m_respState;
-    short                       m_reqReceived;
+    int                         m_respState;
+    //short                       m_reqReceived;
     int                         m_iCurRespHeader;
     char                      * m_pRespHeader;
     char                      * m_pRespHeaderBufEnd;

@@ -45,7 +45,7 @@ namespace net_instaweb
         "NumExpensiveRewriteThreads",
         "StaticAssetPrefix",
         "TrackOriginalContentLength",
-        "UsePerVHostStatistics",  // TODO(anupama): What to do about "No longer used"
+        "UsePerVHostStatistics",
         "BlockingRewriteRefererUrls",
         "CreateSharedMemoryMetadataCache",
         "LoadFromFile",
@@ -88,23 +88,29 @@ namespace net_instaweb
         // ls-specific options.
         add_lsi_option(
             "", &LsiRewriteOptions::statistics_path_, "nsp", kStatisticsPath,
-            kServerScope, "Set the statistics path. Ex: /lsi_pagespeed_statistics" );
+            kServerScope, "Set the statistics path. Ex: /lsi_pagespeed_statistics",
+            false );
         add_lsi_option(
             "", &LsiRewriteOptions::global_statistics_path_, "ngsp",
             kGlobalStatisticsPath, kProcessScope,
-            "Set the global statistics path. Ex: /lsi_pagespeed_global_statistics" );
+            "Set the global statistics path. Ex: /lsi_pagespeed_global_statistics",
+            false );
         add_lsi_option(
             "", &LsiRewriteOptions::console_path_, "ncp", kConsolePath, kServerScope,
-            "Set the console path. Ex: /pagespeed_console" );
+            "Set the console path. Ex: /pagespeed_console",
+            false );
         add_lsi_option(
             "", &LsiRewriteOptions::messages_path_, "nmp", kMessagesPath,
-            kServerScope, "Set the messages path.  Ex: /lsi_pagespeed_message" );
+            kServerScope, "Set the messages path.  Ex: /lsi_pagespeed_message",
+            false );
         add_lsi_option(
             "", &LsiRewriteOptions::admin_path_, "nap", kAdminPath,
-            kServerScope, "Set the admin path.  Ex: /pagespeed_admin" );
+            kServerScope, "Set the admin path.  Ex: /pagespeed_admin",
+            false );
         add_lsi_option(
             "", &LsiRewriteOptions::global_admin_path_, "ngap", kGlobalAdminPath,
-            kProcessScope, "Set the global admin path.  Ex: /pagespeed_global_admin" );
+            kProcessScope, "Set the global admin path.  Ex: /pagespeed_global_admin",
+            false );
 
         MergeSubclassProperties( lsi_properties_ );
 
@@ -204,8 +210,7 @@ namespace net_instaweb
         return RewriteOptions::kOptionOk;
     }
 
-    RewriteOptions::OptionSettingResult
-    LsiRewriteOptions::ParseAndSetOptionFromName1(
+    RewriteOptions::OptionSettingResult LsiRewriteOptions::ParseAndSetOptionFromName1(
         StringPiece name, StringPiece arg,
         GoogleString* msg, MessageHandler* handler )
     {
@@ -267,15 +272,6 @@ namespace net_instaweb
         CHECK_GE( n_args, 1 );
 
         StringPiece directive = args[0];
-
-        // Remove initial "ModPagespeed" if there is one.
-        StringPiece mod_pagespeed( "ModPagespeed" );
-
-        if( StringCaseStartsWith( directive, mod_pagespeed ) )
-        {
-            directive.remove_prefix( mod_pagespeed.size() );
-        }
-
         if( GetOptionScope( directive ) > scope )
         {
             return ps_error_string_for_option(
@@ -292,101 +288,32 @@ namespace net_instaweb
         else if( n_args == 2 )
         {
             StringPiece arg = args[1];
-
-            // TODO(morlovich): Remove these special hacks, and handle these via
-            // ParseAndSetOptionFromEnum1.
-            if( IsDirective( directive, "UsePerVHostStatistics" ) )
+            result = ParseAndSetOptionFromName1( directive, arg, &msg, handler );
+            if( result == RewriteOptions::kOptionNameUnknown )
             {
-                result = ParseAndSetOptionHelper<LsiRewriteDriverFactory> (
-                             arg, driver_factory,
-                             &LsiRewriteDriverFactory::set_use_per_vhost_statistics );
-            }
-            else if( IsDirective( directive, "InstallCrashHandler" ) )
-            {
-                result = ParseAndSetOptionHelper<LsiRewriteDriverFactory> (
-                             arg, driver_factory,
-                             &LsiRewriteDriverFactory::set_install_crash_handler );
-            }
-            else if( IsDirective( directive, "MessageBufferSize" ) )
-            {
-                int message_buffer_size;
-                bool ok = StringToInt( arg.as_string(), &message_buffer_size );
-
-                if( ok && message_buffer_size >= 0 )
-                {
-                    driver_factory->set_message_buffer_size( message_buffer_size );
-                    result = RewriteOptions::kOptionOk;
-                }
-                else
-                {
-                    result = RewriteOptions::kOptionValueInvalid;
-                }
-            }
-            else if( IsDirective( directive, "RateLimitBackgroundFetches" ) )
-            {
-                result = ParseAndSetOptionHelper<LsiRewriteDriverFactory> (
-                             arg, driver_factory,
-                             &LsiRewriteDriverFactory::set_rate_limit_background_fetches );
-            }
-            else if( IsDirective( directive, "ForceCaching" ) )
-            {
-                result = ParseAndSetOptionHelper<SystemRewriteDriverFactory> (
-                             arg, driver_factory,
-                             &SystemRewriteDriverFactory::set_force_caching );
-            }
-            else if( IsDirective( directive, "ListOutstandingUrlsOnError" ) )
-            {
-                result = ParseAndSetOptionHelper<SystemRewriteDriverFactory> (
-                             arg, driver_factory,
-                             &SystemRewriteDriverFactory::list_outstanding_urls_on_error );
-            }
-            else if( IsDirective( directive, "TrackOriginalContentLength" ) )
-            {
-                result = ParseAndSetOptionHelper<SystemRewriteDriverFactory> (
-                             arg, driver_factory,
-                             &SystemRewriteDriverFactory::set_track_original_content_length );
-            }
-            else if( IsDirective( directive, "StaticAssetPrefix" ) )
-            {
-                driver_factory->set_static_asset_prefix( arg );
-                result = RewriteOptions::kOptionOk;
+                result = driver_factory->ParseAndSetOption1(
+                             directive,
+                             arg,
+                             scope >= RewriteOptions::kProcessScope,
+                             &msg,
+                             handler );
             }
             
-            //FIXME: I disabled inplace right now for we just do not support it
-            else if( IsDirective( directive, "InPlaceResourceOptimization" ) )
-            {
-                ps_error_string_for_option(directive, "Not support right now.");
-                result = RewriteOptions::kOptionOk;
-            }
-            else
-            {
-                result = ParseAndSetOptionFromName1( directive, arg, &msg, handler );
-            }
         }
         else if( n_args == 3 )
         {
-            // Short-term special handling, until this moves to common code.
-            // TODO(morlovich): Clean this up.
-            if( StringCaseEqual( directive, "CreateSharedMemoryMetadataCache" ) )
-            {
-                int64 kb = 0;
-
-                if( !StringToInt64( args[2], &kb ) || kb < 0 )
-                {
-                    result = RewriteOptions::kOptionValueInvalid;
-                    msg = "size_kb must be a positive 64-bit integer";
-                }
-                else
-                {
-                    bool ok = driver_factory->caches()->CreateShmMetadataCache(
-                                  args[1].as_string(), kb, &msg );
-                    result = ok ? kOptionOk : kOptionValueInvalid;
-                }
-            }
-            else
-            {
-                result = ParseAndSetOptionFromName2( directive, args[1], args[2],
+            result = ParseAndSetOptionFromName2( directive, args[1], args[2],
                                                      &msg, handler );
+
+            if( result == RewriteOptions::kOptionNameUnknown )
+            {
+                result = driver_factory->ParseAndSetOption2(
+                             directive,
+                             args[1],
+                             args[2],
+                             scope >= RewriteOptions::kProcessScope,
+                             &msg,
+                             handler );
             }
         }
         else if( n_args == 4 )
@@ -396,8 +323,7 @@ namespace net_instaweb
         }
         else
         {
-            return ps_error_string_for_option(
-                       directive, "not recognized or too many arguments" );
+            result = RewriteOptions::kOptionNameUnknown;
         }
 
         switch( result )
@@ -433,7 +359,7 @@ namespace net_instaweb
         options->Merge( *this );
         return options;
     }
-
+    
     const LsiRewriteOptions* LsiRewriteOptions::DynamicCast(
         const RewriteOptions* instance )
     {

@@ -23,7 +23,7 @@
 #include "base/debug/debugger.h"
 #include "base/debug/stack_trace.h"
 #include "base/logging.h"
-#include "pagespeed/kernel/base/string_util.h"
+#include "net/instaweb/util/public/string_util.h"
 
 lsi_log_level GetLogLevel( int severity )
 {

@@ -240,7 +240,11 @@ int HttpExtConnector::flushResp()
     if ( !(m_iRespState & 0xff) )
         return 0;
     //return m_pSession->flushDynBody(m_iRespState & HEC_RESP_NOBUFFER);
-    return m_pSession->flush();
+    int finished = m_iState & ( HEC_ABORT_REQUEST | HEC_ERROR | HEC_COMPLETE );
+    int ret = m_pSession->flush();
+    if (( ret == 0 )&&(!finished )&& m_pProcessor )
+        m_pProcessor->continueRead();
+    return ret;
 }
 
 

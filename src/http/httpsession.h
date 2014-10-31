@@ -136,13 +136,16 @@ public:
     int32_t getFlag() const       {   return m_iFlag;             }
     int32_t getFlag( int mask)    {   return m_iFlag & mask;      }
     
+    virtual int hookResumeCallback(int level, lsi_module_t *pModule);
+    
+    
 private:   
     int checkAuthorizer( const HttpHandler * pHandler );
     int assignHandler( const HttpHandler * pHandler );
     int readReqBody();
     int reqBodyDone();
     int processReqBody();
-    int processNewReq();
+    int processNewReq(lsi_module_t *pModule = NULL);
     int processURI( const char * pURI );
     int readToHeaderBuf();
     void sendHttpError( const char * pAdditional );
