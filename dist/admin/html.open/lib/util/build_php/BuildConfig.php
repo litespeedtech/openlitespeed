@@ -29,7 +29,7 @@ class BuildConfig
 			'5.2.17',
 			'4.4.9');
 
-			case self::LSAPI_VERSION: return '6.6';
+			case self::LSAPI_VERSION: return '6.7';
 
 			case self::SUHOSIN_VERSION: return '0.9.36';
 
