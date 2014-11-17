@@ -274,6 +274,123 @@ static int verifySHA( const char * pStored, const char * pPasswd, int seeded )
     return memcmp( m, pStored, SHA_DIGEST_LENGTH );
 }
 
+
+void ApTo64(char *s, unsigned long v, int n)
+{
+    static unsigned char itoa64[] =         /* 0 ... 63 => ASCII - 64 */
+    "./0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+
+    while (--n >= 0) {
+    *s++ = itoa64[v&0x3f];
+    v >>= 6;
+    }
+}
+
+void ApMD5Encode(const unsigned char *pw,
+                  const unsigned char *sp, int sl,
+                  char *result)
+{
+
+    char *p;
+    unsigned char final[16];
+    int i;
+    int pl;
+    unsigned int pwlen;
+    MD5_CTX ctx, ctx1;
+    unsigned long l;
+
+    MD5_Init(&ctx);
+
+    pwlen = strlen((char *)pw);
+    MD5_Update(&ctx, pw, pwlen);
+    MD5_Update(&ctx, sp, sl);
+
+    MD5_Init(&ctx1);
+    MD5_Update(&ctx1, pw, pwlen);
+    MD5_Update(&ctx1, sp+6, sl-6);
+    MD5_Update(&ctx1, pw, pwlen);
+    MD5_Final(final, &ctx1);
+    for(pl = pwlen; pl > 0; pl -= 16)
+    {
+        MD5_Update(&ctx, final, (pl > 16) ? 16 : (unsigned int) pl);
+    }
+
+    /*
+     * Don't leave anything around in vm they could use.
+     */
+    memset(final, 0, sizeof(final));
+
+    /*
+     * Then something really weird...
+     */
+    for (i = pwlen; i != 0; i >>= 1)
+    {
+        if (i & 1)
+        {
+            MD5_Update(&ctx, final, 1);
+        }
+        else
+        {
+            MD5_Update(&ctx, pw, 1);
+        }
+    }
+
+    MD5_Final(final, &ctx);
+
+    for (i = 0; i < 1000; i++)
+    {
+        MD5_Init(&ctx1);
+        if (i & 1) {
+            MD5_Update(&ctx1, pw, pwlen);
+        }
+        else {
+            MD5_Update(&ctx1, final, 16);
+        }
+        if (i % 3) {
+            MD5_Update(&ctx1, sp+6, sl-6);
+        }
+
+        if (i % 7) {
+            MD5_Update(&ctx1, pw, pwlen);
+        }
+
+        if (i & 1) {
+            MD5_Update(&ctx1, final, 16);
+        }
+        else {
+            MD5_Update(&ctx1, pw, pwlen);
+        }
+        MD5_Final(final,&ctx1);
+    }
+
+    p = result;
+
+    l = (final[ 0]<<16) | (final[ 6]<<8) | final[12]; ApTo64(p, l, 4); p += 4;
+    l = (final[ 1]<<16) | (final[ 7]<<8) | final[13]; ApTo64(p, l, 4); p += 4;
+    l = (final[ 2]<<16) | (final[ 8]<<8) | final[14]; ApTo64(p, l, 4); p += 4;
+    l = (final[ 3]<<16) | (final[ 9]<<8) | final[15]; ApTo64(p, l, 4); p += 4;
+    l = (final[ 4]<<16) | (final[10]<<8) | final[ 5]; ApTo64(p, l, 4); p += 4;
+    l =                    final[11]                ; ApTo64(p, l, 2); p += 2;
+    *p = '\0';
+
+    /*
+     * Don't leave anything around in vm they could use.
+     */
+    memset(final, 0, sizeof(final));
+
+}
+
+static int verifyApMD5( const char * pStored, const char * pPasswd )
+{
+    char result[120];
+    ApMD5Encode((const unsigned char *)pPasswd,
+                (const unsigned char *)pStored, 14,
+                result);
+
+    return memcmp( result, pStored + 15, 22 );
+}
+
+
 int UserDir::authenticate( HttpSession *pSession, const char * pUserName, int len,
                       const char * pPasswd, int encryptMethod,
                       const AuthRequired * pRequired )
@@ -304,6 +421,10 @@ int UserDir::authenticate( HttpSession *pSession, const char * pUserName, int le
             if ( verifyMD5(pStored, pPasswd, 0 ) == 0 )
                 return 0;
             break;
+        case ENCRYPT_APMD5:
+            if ( verifyApMD5( pStored, pPasswd ) == 0 )
+                return 0;
+            break;    
         case ENCRYPT_SHA:
             if ( verifySHA(pStored, pPasswd, 0 ) == 0 )
                 return 0;
