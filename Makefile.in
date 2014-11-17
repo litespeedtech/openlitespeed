@@ -268,6 +268,7 @@ PACKAGE_URL = @PACKAGE_URL@
 PACKAGE_VERSION = @PACKAGE_VERSION@
 PATH_SEPARATOR = @PATH_SEPARATOR@
 PCRE_CFLAGS = @PCRE_CFLAGS@
+PCRE_LDFLAGS = @PCRE_LDFLAGS@
 PCRE_LIBS = @PCRE_LIBS@
 RANLIB = @RANLIB@
 SED = @SED@
@@ -793,8 +794,8 @@ uninstall-am:
 
 
 install-data-hook:
-	( cd dist; ./install.sh "$(prefix)" "$(OPENLSWS_USER)" "$(OPENLSWS_GROUP)" "$(OPENLSWS_ADMIN)" "$(OPENLSWS_PASSWORD)" "$(OPENLSWS_EMAIL)" "$(OPENLSWS_ADMINSSL)";)
-	( rm -f $(prefix)/modules/cache.la )
+	( cd dist; ./install.sh "$(DESTDIR)$(prefix)" "$(OPENLSWS_USER)" "$(OPENLSWS_GROUP)" "$(OPENLSWS_ADMIN)" "$(OPENLSWS_PASSWORD)" "$(OPENLSWS_EMAIL)" "$(OPENLSWS_ADMINSSL)";)
+	( rm -f $(DESTDIR)$(prefix)/modules/cache.la )
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

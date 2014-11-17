@@ -131,18 +131,6 @@ else
 #        if [ -f  "$LSWS_HOME/admin/fcgi-bin/admin_php" ] ; then
 #            HASADMINPHP=y
 #        fi
-
-    elif [ "x$OS" = "xFreeBSD" ] && [ "x$DLCMD" != "x" ]  ; then
-        if [ "x$OSTYPE" != "xamd64" ] ; then
-            $DLCMD $LSWS_HOME/admin/fcgi-bin/admin_php http://www.litespeedtech.com/packages/lsphp5_bin/i386-freebsd/lsphp5
-        else
-            $DLCMD $LSWS_HOME/admin/fcgi-bin/admin_php http://www.litespeedtech.com/packages/lsphp5_bin/x86_64-freebsd/lsphp5
-        fi
-        
-        if [ $? = 0 ] ; then 
-            HASADMINPHP=y
-        fi
-        
     fi
 fi
 

@@ -260,10 +260,36 @@ static void * parseConfig( const char *param, void *_initial_config, int level, 
     const char *p = parseLineStr( param, "storagepath", valLen );
     if (p && valLen > 0)
     {
+        char *pBak = new char[valLen + 1];
+        strncpy(pBak, p, valLen);
+        pBak[valLen] = 0x00;
+        p = pBak;
+        
         if (level != LSI_CONTEXT_LEVEL)
         {
+            char pTmp[max_file_len]  = {0};
             char cachePath[max_file_len]  = {0};
             char defaultCachePath[max_file_len]  = {0};
+            
+            //check if contains $
+            if (strchr(p, '$'))
+            {
+                int ret = g_api->expand_current_server_varible( level, p, pTmp, max_file_len);
+                if (ret >= 0)
+                {
+                    p = pTmp;
+                    valLen = ret;
+                }
+                else
+                {
+                    g_api->log(NULL, LSI_LOG_ERROR, "[%s]parseConfig failed to expand_current_server_varible[%s], default will be in use.\n",
+                                   ModuleNameString, p);
+                    
+                    delete []pBak;
+                    return (void *)pConfig;
+                }
+            }
+            
             if (p[0] != '/') 
                 strcpy(cachePath, g_api->get_server_root());
             strcpy(defaultCachePath, g_api->get_server_root());
@@ -277,13 +303,17 @@ static void * parseConfig( const char *param, void *_initial_config, int level, 
             }
             else
             {
-                matchDirectoryPermissions(defaultCachePath , cachePath);
+                matchDirectoryPermissions(defaultCachePath, cachePath);
                 pConfig->setStoragePath(p, valLen);
+                g_api->log(NULL, LSI_LOG_DEBUG, "[%s]parseConfig setStoragePath [%s] for level %d[name: %s].\n",
+                                   ModuleNameString, cachePath, level, name);
             }
         }
         else
             g_api->log( NULL, LSI_LOG_INFO, "[%s]context [%s] shouldn't have 'storagepath' parameter.\n", 
                 ModuleNameString, name);
+
+        delete []pBak;
     }
     
     return (void *)pConfig;

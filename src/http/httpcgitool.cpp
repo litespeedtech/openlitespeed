@@ -28,6 +28,7 @@
 #include <extensions/fcgi/fcgienv.h>
 #include <sslpp/sslconnection.h>
 #include <sslpp/sslcert.h>
+#include <openssl/x509.h>
 
 #include <util/autobuf.h>
 #include <util/autostr.h>
@@ -429,6 +430,22 @@ int HttpCgiTool::addSpecialEnv( IEnv * pEnv, HttpReq * pReq )
     return 0;
 }
 
+static int lookup_ssl_cert_serial( X509 *pCert, char * pBuf, int len )
+{
+    BIO *bio;
+    int n;
+
+    if ((bio = BIO_new(BIO_s_mem())) == NULL)
+        return -1;
+    i2a_ASN1_INTEGER(bio, X509_get_serialNumber(pCert));
+    //n = BIO_pending(bio);
+    n = BIO_read(bio, pBuf, len);
+    pBuf[n] = '\0';
+    BIO_free(bio);
+    return n;
+}
+
+
 int HttpCgiTool::buildCommonEnv( IEnv * pEnv, HttpSession *pSession )
 {
     int count = 0;
@@ -544,17 +561,60 @@ int HttpCgiTool::buildCommonEnv( IEnv * pEnv, HttpSession *pSession )
             count += 3;
         }
 
-        X509 * pClientCert = pSSL->getPeerCertificate();
-        if ( pClientCert )
+        i = pSSL->getVerifyMode();
+        if ( i != 0 )
         {
-            //IMPROVE: too many deep copy here.
             char achBuf[4096];
-            n = SSLCert::PEMWriteCert( pClientCert, achBuf, 4096 );
-            if ((n>0)&&( n <= 4096 ))
+            X509 * pClientCert = pSSL->getPeerCertificate();
+            if ( pSSL->isVerifyOk() )
             {
-                pEnv->add( "SSL_CLIENT_CERT", 15, achBuf, n );
-                ++count;
+                if ( pClientCert )
+                {
+                    //IMPROVE: too many deep copy here.
+                    //n = SSLCert::PEMWriteCert( pClientCert, achBuf, 4096 );
+                    //if ((n>0)&&( n <= 4096 ))
+                    //{
+                    //    pEnv->add( "SSL_CLIENT_CERT", 15, achBuf, n );
+                    //    ++count;
+                    //}
+                    n = snprintf( achBuf, sizeof( achBuf ), "%lu", X509_get_version( pClientCert ) + 1 );
+                    pEnv->add( "SSL_CLIENT_M_VERSION", 20, achBuf, n );
+                    ++count;
+                    n = lookup_ssl_cert_serial( pClientCert, achBuf, 4096 );
+                    if ( n != -1 )
+                    {
+                        pEnv->add( "SSL_CLIENT_M_SERIAL", 19, achBuf, n );
+                        ++count;
+                    }
+                    X509_NAME_oneline( X509_get_subject_name( pClientCert ), achBuf, 4096 );
+                    pEnv->add( "SSL_CLIENT_S_DN", 15, achBuf, strlen( achBuf ));
+                    ++count;
+                    X509_NAME_oneline( X509_get_issuer_name( pClientCert ), achBuf, 4096 );
+                    pEnv->add( "SSL_CLIENT_I_DN", 15, achBuf, strlen( achBuf ));
+                    ++count;
+                    if ( SSLConnection::isClientVerifyOptional( i ) )
+                    {
+                        strcpy( achBuf, "GENEROUS" );
+                        n = 8;
+                    }
+                    else
+                    {
+                        strcpy( achBuf, "SUCCESS" );
+                        n = 7;
+                    }
+                }
+                else
+                {
+                    strcpy( achBuf, "NONE" );
+                    n = 4;
+                }
             }
+            else
+            {
+                n = pSSL->buildVerifyErrorString( achBuf, sizeof( achBuf ) );
+            }
+            pEnv->add( "SSL_CLIENT_VERIFY", 17, achBuf, n );
+            ++count;
         }
         
     }    

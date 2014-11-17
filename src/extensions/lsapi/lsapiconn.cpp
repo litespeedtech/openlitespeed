@@ -232,7 +232,7 @@ void LsapiConn::reset()
     m_iovec.clear();
     m_iTotalPending = 0;
     m_respState     = LSAPI_CONN_IDLE;
-    m_reqReceived   = 0;
+    //m_reqReceived   = 0;
     //memset( &m_iTotalPending, 0,
     //        ((char *)(&m_pChunkIS + 1)) - (char *)&m_iTotalPending );
 }
@@ -403,7 +403,8 @@ int LsapiConn::processPacketHeader( char * pBuf, int len )
             }
             break;
         case LSAPI_REQ_RECEIVED:
-            m_reqReceived       = 1;
+            //m_reqReceived       = 1;
+            setCPState( 1 );
             break;
         }
     }
@@ -455,7 +456,8 @@ int LsapiConn::processRespBuffed()
             setRespBuf( m_pRespHeaderProcess );
             return ret;
         case LSAPI_REQ_RECEIVED:
-            m_reqReceived       = 1;
+            //m_reqReceived       = 1;
+            setCPState( 1 );
             break;
         }
         m_pRespHeaderProcess    = (char *)&m_respInfo;
@@ -585,7 +587,8 @@ int LsapiConn::processResp()
                         setRespBuf( m_pRespHeaderProcess );
                         break;
                     case LSAPI_REQ_RECEIVED:
-                        m_reqReceived       = 1;
+                        //m_reqReceived       = 1;
+                        setCPState( 1 );
                         break;
                     }
                 }
@@ -1020,7 +1023,7 @@ void LsapiConn::cleanUp()
 
 void LsapiConn::onTimer()
 {
-    if ( m_respState && !m_reqReceived &&( DateTime::s_curTime - m_lReqSentTime >= 3 ))
+    if ( m_respState && !getCPState() &&( DateTime::s_curTime - m_lReqSentTime >= 3 ))
     {
         LOG_NOTICE(( getLogger(), "[%s] No request delivery notification has been received from LSAPI application, possible dead lock.", getLogId() ));
         if ( ((LsapiWorker *)getWorker())->getConfig().getSelfManaged() )

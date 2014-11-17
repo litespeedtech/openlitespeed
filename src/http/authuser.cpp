@@ -18,6 +18,7 @@
 #include "authuser.h"
 #include <util/stringlist.h>
 #include <util/stringtool.h>
+#include <util/base64.h>
 
 AuthUser::AuthUser()
     :m_pGroups( NULL )
@@ -75,6 +76,23 @@ int AuthUser::addGroup( const char * pGroup )
     m_pGroups->sort();
     return 0;
         
+}
+
+void AuthUser::updatePasswdEncMethod()
+{
+    if ( strncmp( m_passwd.c_str(), "$apr1$", 6 ) == 0 )
+        setEncMethod( ENCRYPT_APMD5 );
+    else if ( strncasecmp( m_passwd.c_str(), "{sha}", 5 ) == 0 )
+    {
+        char buf[128];
+        const char * p = m_passwd.c_str() + 5;
+        int len = Base64::decode( p, strlen( p ), buf );
+        if ( len == 20 )
+        {
+            setPasswd( buf, len );
+            setEncMethod( ENCRYPT_SHA );
+        }
+    }
 }
 
 int AuthGroup::add( const char * pUser )

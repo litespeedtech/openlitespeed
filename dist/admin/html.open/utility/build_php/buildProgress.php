@@ -3,7 +3,6 @@ require_once('../../includes/auth.php');
 
 include_once( 'buildconf.inc.php' );
 
-global $_SESSION;
 $progress_file = $_SESSION['progress_file'];
 $log_file = $_SESSION['log_file'];
 

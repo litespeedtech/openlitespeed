@@ -72,7 +72,7 @@ int PCUtil::getNumProcessors()
     mib[0] = CTL_HW;
     mib[1] = HW_NCPU;
     sysctl(mib, 2, &s_nCpu, &len, NULL, 0);
-    if ( numCPU <= 0 )
+    if ( s_nCpu <= 0 )
     {
         mib[1] = HW_NCPU;
         sysctl( mib, 2, &s_nCpu, &len, NULL, 0);

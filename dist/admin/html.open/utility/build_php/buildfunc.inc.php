@@ -345,7 +345,6 @@ class BuildCheck
 
 	private function validate_step3()
 	{
-		global $_SESSION;
 
 		if (!isset($_SESSION['progress_file'])) {
 			echo "missing progress file";

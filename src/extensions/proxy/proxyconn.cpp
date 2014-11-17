@@ -411,6 +411,10 @@ int ProxyConn::read( char * pBuf , int size )
     if ( D_ENABLED( DL_LESS ) )
         LOG_D(( getLogger(), "[%s] read Response %d bytes",
             getLogId(), ret ));
+    if ( m_iSsl && (ret < 0 ))
+    {
+        errno = ECONNRESET;
+    }    
     if ( ret > 0 )
     {
         m_iRespRecv += ret;

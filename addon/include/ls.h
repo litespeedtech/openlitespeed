@@ -2823,6 +2823,14 @@ struct lsi_api_s
     int ( *handoff_fd )( lsi_session_t *pSession, char ** pData, int *pDataLen );
         
     
+     /** @since 1.0
+     * @param[in] level - lsi_config_level
+     * @param[in] pVarible - varible of the Server/Listener/VHost or URI of the Context
+     * @param[in] buf - a buffer to store the result
+     * @param[in] max_len - length of the buf
+     * @return return the length written to the buf
+     */
+    int ( *expand_current_server_varible ) ( int level, const char *pVarible, char *buf, int max_len );
     
     /**
      * 

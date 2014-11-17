@@ -16,7 +16,6 @@ if (!$tool || !$tool->generate_script($err))
 }
 
 
-global $_SESSION;
 $_SESSION['progress_file'] = $tool->progress_file;
 $_SESSION['log_file'] = $tool->log_file;
 

@@ -38,7 +38,6 @@ class CLIENT
 
 
 	function init() {
-		global $_SESSION;
 
 		$oldname = session_name($this->type . 'WEBUI'); // to prevent conflicts with other app sessions
 		session_start();
@@ -103,7 +102,6 @@ class CLIENT
 	}
 
 	function updateAccessTime() {
-		global $_SESSION;
 		$_SESSION['lastaccess'] = time();
 	}
 
@@ -112,9 +110,9 @@ class CLIENT
 		session_destroy();
 		session_unset();
 		$outdated = time() - 3600*24*30;
-		setcookie($this->id_field, "a", $outdated, "/");
-		setcookie($this->pass_field, "b", $outdated, "/");
-		setcookie(session_name(), "b", $outdated, "/");
+		setcookie($this->id_field, '', $outdated, "/");
+		setcookie($this->pass_field, '', $outdated, "/");
+		setcookie(session_name(), '', $outdated, "/");
 	}
 
 
@@ -191,7 +189,6 @@ If you do not recognize the IP address, please follow below recommended ways to 
 
 	//persistent stats
 	function &getStat($key) {
-		global $_SESSION;
 
 		$key = "stat_$key";
 
@@ -205,7 +202,6 @@ If you do not recognize the IP address, please follow below recommended ways to 
 	}
 
 	function addStat($key, &$data) {
-		global $_SESSION;
 
 		$result = &$this->getStat($key);
 		$sess_key = "stat_$key";

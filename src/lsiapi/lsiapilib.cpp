@@ -46,6 +46,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 
+#include "util/configctx.h"
 
 
 static int is_release_cb_added( const lsi_module_t *pModule, int level )
@@ -1532,6 +1533,24 @@ static time_t get_cur_time( int32_t * usec )
     return DateTime::s_curTime;
 }
 
+int expand_current_server_varible( int level, const char *pVarible, char *buf, int maxLen )
+{
+    int ret = -1;
+    switch ( level )
+    {
+    case LSI_SERVER_LEVEL:
+    case LSI_LISTENER_LEVEL:
+    case LSI_VHOST_LEVEL:
+        ret = ConfigCtx::getCurConfigCtx()->expandVariable( pVarible, buf, maxLen, 1 );
+        break;
+
+    case LSI_CONTEXT_LEVEL:
+    default:
+        break;
+    }
+    
+    return ret;
+}
 
 void lsiapi_init_server_api()
 {
@@ -1641,6 +1660,7 @@ void lsiapi_init_server_api()
     pApi->reset_body_buf = reset_body_buf;
     pApi->append_body_buf = append_body_buf;
     pApi->get_cur_time = get_cur_time;
+    pApi->expand_current_server_varible = expand_current_server_varible;
 
     pApi->_debugLevel = HttpLog::getDebugLevel();
 }

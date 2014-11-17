@@ -156,6 +156,7 @@ public:
     const_iterator end() const   {  return m_pEnd;      }
     void setEnd( iterator end )         {   m_pEnd = end;   }
     void setBegin( iterator begin )     {   m_pBegin = begin;   }
+    void adjust( const char* pOld, const char* pNew, int len );
 };
 
 #endif

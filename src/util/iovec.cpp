@@ -79,4 +79,17 @@ int IOVec::finish( int &finishedLen )
     return 0;
 }
 
+void IOVec::adjust( const char* pOld, const char* pNew, int len )
+{
+    iterator iter, iterEnd = end();
+    for( iter = begin(); iter != iterEnd; ++iter )
+    {
+        if ( iter->iov_base >= pOld && iter->iov_base < pOld + len )
+        {
+            iter->iov_base = (char *)iter->iov_base + (pNew - pOld);  
+        }
+    }    
+}
+
+
 

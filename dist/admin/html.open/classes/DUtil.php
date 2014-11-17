@@ -16,7 +16,6 @@ class DUtil
 	}
 
 	public static function grab_input($origin = "",$name = "",$type = "") {
-		global $_REQUEST, $_COOKIE, $_GET, $_POST;
 		$temp = NULL;
 
 		$origin = strtoupper($origin);

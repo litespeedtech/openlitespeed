@@ -181,6 +181,11 @@ const AuthUser * UserDir::getUser( HttpSession *pSession, HashDataCache * pCache
         pUser->setKey( pKey, len );
         pUser->setExist( 0 );
     }
+    else
+    {
+        if ( pUser->getEncMethod() == ENCRYPT_PLAIN )
+            pUser->updatePasswdEncMethod();
+    }
     pUser->setTimestamp( DateTime::s_curTime );
     if ( pCache->insert( pUser->getKey(), pUser ) == pCache->end() )
     {

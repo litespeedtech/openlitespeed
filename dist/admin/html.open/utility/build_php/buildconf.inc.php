@@ -11,15 +11,15 @@ define ('DEFAULT_INSTALL_DIR', $_SERVER['LS_SERVER_ROOT'].'lsphp'); // actual di
 
 $PHP_VER = array('5'=>
 		 array(
-		 	'5.6.0',
-		 	'5.5.17',
-		 	'5.4.33',
+		 	'5.6.3',
+		 	'5.5.19',
+		 	'5.4.35',
 		 	'5.3.29',
 			'5.2.17'),
 		 '4'=>
 		 array('4.4.9'));
 
-define ('LSAPI_VERSION', '6.6');
+define ('LSAPI_VERSION', '6.7');
 define ('SUHOSIN_VERSION', '0.9.33');
 define ('APC_VERSION', '3.1.9');
 define ('XCACHE_VERSION', '3.2.0');
@@ -28,8 +28,8 @@ define ('MEMCACHE_VERSION', '2.2.7');
 define ('OPCACHE_VERSION', '7.0.3');
 
 $DEFAULT_PHP_PARAMS = array(
-	'5' => '--with-mysqli --with-zlib --with-gd --enable-shmop --enable-track-vars --enable-sockets --enable-sysvsem --enable-sysvshm --enable-mbstring --with-iconv',
-	'4' => '--with-mysql  --with-zlib --with-gd --enable-shmop --enable-track-vars --enable-sockets --enable-sysvsem --enable-sysvshm --enable-magic-quotes --enable-mbstring');
+	'5' => '--with-mysqli --with-zlib --with-gd --enable-shmop --enable-sockets --enable-sysvsem --enable-sysvshm --enable-mbstring --with-iconv --with-mcrypt',
+	'4' => '--with-mysql  --with-zlib --with-gd --enable-shmop --enable-sockets --enable-sysvsem --enable-sysvshm --enable-magic-quotes --enable-mbstring');
 
 
 include_once( 'buildfunc.inc.php' );
