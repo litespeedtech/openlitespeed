@@ -972,7 +972,9 @@ installation()
 	fi
 
     chown -R "$CONF_OWN" "$LSWS_HOME/conf/"
-    chmod -R o-rwx "$LSWS_HOME/conf/"
+    chmod -R 0755 "$LSWS_HOME/conf/"
+    chmod 0600 "$LSWS_HOME/conf/httpd_config.conf"
+    chmod 0600 "$LSWS_HOME/conf/vhosts/Example/vhconf.conf"
 
     util_cpfile "$CONF_OWN" $DOC_MOD conf/${SSL_HOSTNAME}.crt
     util_cpfile "$CONF_OWN" $DOC_MOD conf/${SSL_HOSTNAME}.key

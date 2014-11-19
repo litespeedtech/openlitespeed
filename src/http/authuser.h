@@ -75,6 +75,7 @@ public:
     void setPasswd( const char * pPasswd, int len ) {   m_passwd.setStr( pPasswd, len); }
     int  setGroups( const char * pGroups, const char * pEnd );
     int  addGroup( const char * pGroup );
+    void updatePasswdEncMethod();
 
     void setPasswd( const char * pPasswd )  {   m_passwd = pPasswd;     }
     

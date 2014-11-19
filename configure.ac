@@ -231,6 +231,7 @@ then
     LDFLAGS="$LDFLAGS -pagezero_size 10000 -image_base 100000000"
 fi
 
+LDFLAGS="$LDFLAGS $PCRE_LDFLAGS"
 echo "Final LDFLAGS='$LDFLAGS'"
 AC_SUBST([DL_LIB_OPTION])
 

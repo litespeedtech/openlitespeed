@@ -82,13 +82,16 @@ int FileStore::open()
     {
         struct stat st;
         if ( nio_stat( getDataStoreURI(), &st ) == -1 )
+        {
+            LOG_ERR(( "Failed to get file stat: '%s', errno %d.", getDataStoreURI(), errno ));
             return errno;
+        }
         if ( S_ISDIR( st.st_mode ) )
             return EINVAL;
         m_fp = fopen( getDataStoreURI(), "r");
         if ( m_fp == NULL )
         {
-            LOG_NOTICE(( "Failed to open file: '%s'", getDataStoreURI() ));
+            LOG_NOTICE(( "Failed to open file: '%s', errno %d.", getDataStoreURI(), errno ));
             return errno;
         }
         m_lModifiedTime = st.st_mtime;

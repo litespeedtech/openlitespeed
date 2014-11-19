@@ -49,6 +49,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 
+#include "util/configctx.h"
 
 static int is_release_cb_added( const lsi_module_t *pModule, int level )
 {
@@ -1662,6 +1663,25 @@ lsr_xpool_t *get_session_pool( lsi_session_t *session )
     return pSession->getReq()->getPool();
 }
 
+int expand_current_server_varible( int level, const char *pVarible, char *buf, int maxLen )
+{
+    int ret = -1;
+    switch ( level )
+    {
+    case LSI_SERVER_LEVEL:
+    case LSI_LISTENER_LEVEL:
+    case LSI_VHOST_LEVEL:
+        ret = ConfigCtx::getCurConfigCtx()->expandVariable( pVarible, buf, maxLen, 1 );
+        break;
+
+    case LSI_CONTEXT_LEVEL:
+    default:
+        break;
+    }
+    
+    return ret;
+}
+
 void lsiapi_init_server_api()
 {
     lsi_api_t * pApi = LsiapiBridge::getLsiapiFunctions();
@@ -1803,6 +1823,7 @@ void lsiapi_init_server_api()
     pApi->handoff_fd = handoff_fd;
     pApi->get_local_sockaddr = get_local_sockaddr;
     pApi->get_server_mode = get_server_mode;
+    pApi->expand_current_server_varible = expand_current_server_varible;
 
     pApi->_debugLevel = HttpLog::getDebugLevel();
     

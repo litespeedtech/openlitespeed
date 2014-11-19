@@ -271,8 +271,35 @@ static void * parseConfig( const char *param, int param_len, void *_initial_conf
         {
             if (level != LSI_CONTEXT_LEVEL)
             {
+                char *pBak = new char[valLen + 1];
+                strncpy(pBak, pValStr, valLen);
+                pBak[valLen] = 0x00;
+                pValStr = pBak;
+                    
+                char pTmp[max_file_len]  = {0};
                 char cachePath[max_file_len]  = {0};
                 char defaultCachePath[max_file_len]  = {0};
+                
+                //check if contains $
+                if (strchr(pValStr, '$'))
+                {
+                    int ret = g_api->expand_current_server_varible( level, pValStr, pTmp, max_file_len);
+                    if (ret >= 0)
+                    {
+                        pValStr = pTmp;
+                        valLen = ret;
+                    }
+                    else
+                    {
+                        g_api->log(NULL, LSI_LOG_ERROR, "[%s]parseConfig failed to expand_current_server_varible[%s], default will be in use.\n",
+                                       ModuleNameString, pValStr);
+                        
+                        delete []pBak;
+                        lsr_confparser_d( &cp );
+                        return (void *)pConfig;
+                    }
+                }
+                
                 if (pValStr[0] != '/') 
                     strcpy(cachePath, g_api->get_server_root());
                 strcpy(defaultCachePath, g_api->get_server_root());
@@ -287,8 +314,11 @@ static void * parseConfig( const char *param, int param_len, void *_initial_conf
                 else
                 {
                     matchDirectoryPermissions(defaultCachePath , cachePath);
-                    pConfig->setStoragePath(pValStr, valLen);
+                    pConfig->setStoragePath(cachePath, strlen(cachePath));
+                    g_api->log(NULL, LSI_LOG_DEBUG, "[%s]parseConfig setStoragePath [%s] for level %d[name: %s].\n",
+                                   ModuleNameString, cachePath, level, name);
                 }
+                delete []pBak;
             }
             else
                 g_api->log( NULL, LSI_LOG_INFO, "[%s]context [%s] shouldn't have 'storagepath' parameter.\n", 
@@ -572,7 +602,7 @@ int cacheTofile(lsi_cb_param_t *rec)
 //     }
     
     myData->pEntry->setMaxStale(myData->pConfig->getMaxStale());
-    g_api->log(rec->_session, LSI_LOG_INFO, "[%s]save to %s cachestore, uri:%s\n", ModuleNameString,
+    g_api->log(rec->_session, LSI_LOG_DEBUG, "[%s]save to %s cachestore, uri:%s\n", ModuleNameString,
                        ((myData->cacheCtrl.isPrivateCacheable()) ? "private" : "public"), myData->orgUri);
     
     int fd = myData->pEntry->getFdStore();
@@ -797,7 +827,7 @@ static int checkAssignHandler(lsi_cb_param_t *rec)
     
     if (method == HTTP_UNKNOWN || method == HTTP_POST)
     {
-        g_api->log(rec->_session, LSI_LOG_INFO, "[%s]checkAssignHandler returned, method %s[%d].\n", ModuleNameString, httpMethod, method);
+        g_api->log(rec->_session, LSI_LOG_DEBUG, "[%s]checkAssignHandler returned, method %s[%d].\n", ModuleNameString, httpMethod, method);
         return 0;
     }
     
@@ -806,7 +836,7 @@ static int checkAssignHandler(lsi_cb_param_t *rec)
     const char *rangeRequest = g_api->get_req_header_by_id(rec->_session, LSI_REQ_HEADER_RANGE, &rangeRequestLen);
     if (rangeRequest && rangeRequestLen > 0)
     {
-        g_api->log(rec->_session, LSI_LOG_INFO, "[%s]checkAssignHandler returned, not support rangeRequest [%s].\n", ModuleNameString, rangeRequest);
+        g_api->log(rec->_session, LSI_LOG_DEBUG, "[%s]checkAssignHandler returned, not support rangeRequest [%s].\n", ModuleNameString, rangeRequest);
         return 0;
     }
     
@@ -824,7 +854,7 @@ static int checkAssignHandler(lsi_cb_param_t *rec)
             ( pConfig->isPublicPrivateEnabled() == 0 ||
             (!pConfig->isSet(CACHE_QS_CACHE) && pQS && iQSLen > 0)) )
         {
-            g_api->log(rec->_session, LSI_LOG_INFO, "[%s]checkAssignHandler returned, for cache disabled or has QS but qscache disabled.\n", 
+            g_api->log(rec->_session, LSI_LOG_DEBUG, "[%s]checkAssignHandler returned, for cache disabled or has QS but qscache disabled.\n", 
                                ModuleNameString);
             clearHooks(rec->_session);
             return 0;
@@ -859,7 +889,7 @@ static int checkAssignHandler(lsi_cb_param_t *rec)
             cacheCtrl.parse((const char *)cacheEnv, cacheEnvLen);
         if (cacheCtrl.isCacheOff())
         {
-            g_api->log(rec->_session, LSI_LOG_INFO, "[%s]checkAssignHandler returned, for cache disabled.\n", ModuleNameString);
+            g_api->log(rec->_session, LSI_LOG_DEBUG, "[%s]checkAssignHandler returned, for cache disabled.\n", ModuleNameString);
             clearHooks(rec->_session);
             return 0;
         }
@@ -911,7 +941,7 @@ static int checkAssignHandler(lsi_cb_param_t *rec)
         myData->iMethod == HTTP_REFRESH)
     {
         g_api->register_req_handler( rec->_session, &MNAME, 0);
-        g_api->log(rec->_session, LSI_LOG_INFO, "[%s]checkAssignHandler register_req_handler OK.\n", ModuleNameString);
+        g_api->log(rec->_session, LSI_LOG_DEBUG, "[%s]checkAssignHandler register_req_handler OK.\n", ModuleNameString);
     }
     else if (myData->iMethod == HTTP_GET && myData->iCacheState == CE_STATE_NOCACHE)
     {
@@ -921,12 +951,12 @@ static int checkAssignHandler(lsi_cb_param_t *rec)
         myData->hasAddedHook = 1;
         
         //g_api->set_session_hook_flag( rec->_session, LSI_HKPT_RCVD_RESP_BODY, &MNAME, 1 );
-        g_api->log(rec->_session, LSI_LOG_INFO, "[%s]checkAssignHandler Add Hooks.\n", ModuleNameString);
+        g_api->log(rec->_session, LSI_LOG_DEBUG, "[%s]checkAssignHandler Add Hooks.\n", ModuleNameString);
     }
     else
     {
         g_api->free_module_data(rec->_session, &MNAME, LSI_MODULE_DATA_HTTP, httpRelease);
-        g_api->log(rec->_session, LSI_LOG_INFO, "[%s]checkAssignHandler won't do anything and quit.\n", ModuleNameString);
+        g_api->log(rec->_session, LSI_LOG_DEBUG, "[%s]checkAssignHandler won't do anything and quit.\n", ModuleNameString);
     }
     
     return 0;

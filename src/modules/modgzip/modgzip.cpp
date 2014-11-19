@@ -337,7 +337,7 @@ static int compressbuf( lsi_cb_param_t *rec, lsi_module_t *pModule, int isSend )
             *rec->_flag_out |= LSI_CB_FLAG_OUT_BUFFERED_DATA;
     }
 
-    g_api->log( rec->_session, LSI_LOG_INFO, "[%s%s] compressbuf [%s] in %d, consumed: %d, written %d, flag in %d, buffer has %d.\n",
+    g_api->log( rec->_session, LSI_LOG_DEBUG, "[%s%s] compressbuf [%s] in %d, consumed: %d, written %d, flag in %d, buffer has %d.\n",
                         pModuleName, pCompressFlag, pSendingFlag, rec->_param_len, consumed, written, rec->_flag_in, lsr_loopbuf_size( pBuf ) );
     return consumed;
 }
