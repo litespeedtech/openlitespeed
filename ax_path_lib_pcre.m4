@@ -51,6 +51,7 @@
 
 AC_DEFUN([AX_PATH_LIB_PCRE],[dnl
 AC_MSG_CHECKING([lib pcre])
+PCRE_LDFLAGS=
 AC_ARG_WITH(pcre,
 [  --with-pcre[[=prefix]]    compile xmlpcre part (via libpcre check)],,
      with_pcre="yes")
@@ -62,9 +63,9 @@ else
   AC_CHECK_LIB(pcre, pcre_study)
   if test "$ac_cv_lib_pcre_pcre_study" = "yes" ; then
      PCRE_LIBS="-lpcre"
-
      if test "$with_pcre" != "yes" ; then
-         LDFLAGS="$LDFLAGS -L$with_pcre/$OPENLSWS_LIBDIR"
+         PCRE_LDFLAGS="-L$with_pcre/$OPENLSWS_LIBDIR"
+         LDFLAGS="$LDFLAGS $PCRE_LDFLAGS"
          CPPFLAGS="$CPPFLAGS -I$with_pcre/include"
      fi
 
@@ -72,19 +73,21 @@ else
      AC_MSG_RESULT([$PCRE_LIBS])
      m4_ifval($1,$1)
   else
-     OLDLDFLAGS="$LDFLAGS" ; LDFLAGS="$LDFLAGS -L$with_pcre/$OPENLSWS_LIBDIR"
+     PCRE_LDFLAGS="-L$with_pcre/$OPENLSWS_LIBDIR"
+     OLDLDFLAGS="$LDFLAGS" ; LDFLAGS="$LDFLAGS $PCRE_LDFLAGS"
      OLDCPPFLAGS="$CPPFLAGS" ; CPPFLAGS="$CPPFLAGS -I$with_pcre/include"
      AC_CHECK_LIB(pcre, pcre_compile)
      CPPFLAGS="$OLDCPPFLAGS"
      LDFLAGS="$OLDLDFLAGS"
      if test "$ac_cv_lib_pcre_pcre_compile" = "yes" ; then
-        AC_MSG_RESULT(.setting PCRE_LIBS -L$with_pcre/$OPENLSWS_LIBDIR -lpcre)
-        PCRE_LIBS="-L$with_pcre/$OPENLSWS_LIBDIR -lpcre"
+        AC_MSG_RESULT(.setting PCRE_LIBS $PCRE_LDFLAGS -lpcre)
+        PCRE_LIBS="$PCRE_LDFLAGS -lpcre"
         test -d "$with_pcre/include" && PCRE_CFLAGS="-I$with_pcre/include"
         AC_MSG_CHECKING([$OPENLSWS_LIBDIR pcre])
         AC_MSG_RESULT([$PCRE_LIBS])
         m4_ifval($1,$1)
      else
+        PCRE_LDFLAGS=
         AC_MSG_CHECKING([$OPENLSWS_LIBDIR pcre])
         AC_MSG_RESULT([no, (WARNING)])
         m4_ifval($2,$2)
@@ -93,4 +96,5 @@ else
 fi
 AC_SUBST([PCRE_LIBS])
 AC_SUBST([PCRE_CFLAGS])
+AC_SUBST([PCRE_LDFLAGS])
 ])

@@ -129,7 +129,7 @@ LsShm::LsShm( const char * mapName,
     }
     
     if (!s_dirBase)
-        dirName = LSSHM_SYSSHM_DIR;
+        dirName = getDefaultShmDir();
     else
         dirName = s_dirBase;
     
@@ -228,7 +228,7 @@ LsShm* LsShm::get( const char* mapName, int initsize)
         HttpLog::notice( "ERROR: FAILED TO CREATE SHARE MEMORY %d MAPNAME [%s] DIR [%s] "
             , pObj->status()
             , mapName
-            , s_dirBase ? s_dirBase : LSSHM_SYSSHM_DIR
+            , s_dirBase ? s_dirBase : getDefaultShmDir()
             );
         
         delete pObj;

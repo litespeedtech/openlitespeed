@@ -84,7 +84,8 @@ typedef uint32_t                LsShm_size_t ;
 #define LSSHM_SYSPOOL           "LsPool"    // default SHM POOL name
 #define LSSHM_SYSHASH           "LsHash"    // default SHM HASH name
 
-#define LSSHM_SYSSHM_DIR        "/dev/shm/LiteSpeed"
+#define LSSHM_SYSSHM_DIR1        "/dev/shm/LiteSpeed"
+#define LSSHM_SYSSHM_DIR2        "/tmp/LiteSpeed_shm"
 #define LSSHM_SYSSHM_FILENAME   LSSHM_SYSSHM
 #define LSSHM_SYSSHM_FILE_EXT   "shm"
 #define LSSHM_SYSLOCK_FILE_EXT  "lock"

@@ -78,7 +78,9 @@ public:
                   const char * mapName,
                   LsShm_size_t initialSize);
     ~LsShmLock();
-   
+
+    static const char * getDefaultShmDir();
+
     const char * fileName() const
     { return m_fileName; }
     

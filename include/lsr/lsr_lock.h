@@ -186,13 +186,13 @@ lsr_inline int lsr_futex_lock( lsr_mutex_t * p )
  *   atomic memory access.
  * 
  * @param[in] p - A pointer to the lock.
- * @return 0 on success, else -1 if unable to acquire the lock.
+ * @return 0 on success, else 1 if unable to acquire the lock.
  *
  * @see lsr_futex_setup, lsr_futex_lock, lsr_futex_unlock
  */
 lsr_inline int lsr_futex_trylock( lsr_mutex_t * p )
 {
-    return ( __sync_bool_compare_and_swap( p, 0, 1 ) ) ? 0 : -1;
+    return !__sync_bool_compare_and_swap( p, 0, 1 );
 }
 
 /**
@@ -258,13 +258,13 @@ lsr_inline int lsr_atomic_spin_lock( lsr_spinlock_t * p )
  *   a spinlock set up with built-in functions for atomic memory access.
  * 
  * @param[in] p - A pointer to the lock.
- * @return 0 on success, else -1 if unable to acquire the lock.
+ * @return 0 on success, else 1 if unable to acquire the lock.
  *
  * @see lsr_atomic_spin_setup, lsr_atomic_spin_lock, lsr_atomic_spin_unlock
  */
 lsr_inline int lsr_atomic_spin_trylock( lsr_spinlock_t * p )
 {
-    return ( __sync_bool_compare_and_swap( p, lock_Avail, lock_Inuse ) )? 0: -1;
+    return !__sync_bool_compare_and_swap( p, lock_Avail, lock_Inuse );
 }
 
 /**

@@ -51,7 +51,7 @@ LsShmLock::LsShmLock( const char * dirName,
 {
     char buf[0x1000];
     if (!dirName)
-        dirName = LSSHM_SYSSHM_DIR;
+        dirName = getDefaultShmDir();
     if (!mapName)
         mapName = LSSHM_SYSSHM_FILENAME;
     
@@ -300,5 +300,23 @@ int LsShmLock::freeLock( lsi_shmlock_t * pLock)
     return 0;
 }
 
+const char * LsShmLock::getDefaultShmDir()
+{
+    static int isDirTected = 0;
+    if( isDirTected == 0 )
+    {
+        const char *pathname = "/dev/shm";
+        struct stat sb;
+        if( stat(pathname, &sb) == 0 && S_ISDIR(sb.st_mode) )
+            isDirTected = 1;
+        else
+            isDirTected = 2;
+    }
+    
+    if ( isDirTected == 1 )
+        return LSSHM_SYSSHM_DIR1;
+    else
+        return LSSHM_SYSSHM_DIR2;
+}
 
 
