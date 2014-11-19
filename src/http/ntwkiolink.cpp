@@ -45,8 +45,10 @@
 #include <util/accessdef.h>
 #include <util/iovec.h>
 #include "util/ssnprintf.h"
+#include "util/stringtool.h"
 
 #include <netinet/tcp.h>
+#include <openssl/ssl.h>
 
 #define IO_THROTTLE_READ    8
 #define IO_THROTTLE_WRITE   16
@@ -1301,6 +1303,69 @@ static char s_errUseSSL[] =
     "Powered By LiteSpeed Web Server<br />\n"
     "<a href='http://www.litespeedtech.com'><i>http://www.litespeedtech.com</i></a>\n"
     "</body></html>\n";
+    
+static char s_redirectSSL1[] =
+    "HTTP/1.0 301 Moved Permanently\r\n"
+    "Location: https://";
+static char s_redirectSSL2[] =
+    "\r\nCache-Control: private, no-cache, max-age=0\r\n"
+    "Pragma: no-cache\r\n"
+    "Server:LiteSpeed\r\n"
+    "Content-Length: 0\r\n"
+    "Connection: Close\r\n\r\n";
+
+int NtwkIOLink::isValidHttpRequest(const char *buf)
+{
+    if (strcasestr(buf, "HOST:") &&
+        strcasestr(buf, "HTTP/") &&
+        strcasestr(buf, "\n") &&
+            (strcasestr(buf, "GET ") ||
+            strcasestr(buf, "POST ") ||
+            strcasestr(buf, "HEAD ")))
+        return 1;
+    else
+        return 0;
+}
+    
+    
+char *NtwkIOLink::get_url_from_reqheader(char *buf, int length, int *url_len)
+{
+    char uri[4096] = {0};
+    char host[4096] = {0};
+    const char *pStart = (const char *)buf;
+    const char *pBufEnd = (const char *)buf + length;
+    pStart += 4;
+    const char *pEnd = strcasestr(pStart, "HTTP/");
+    if( pEnd - pStart > 4096 )
+    {
+        LOG_ERR(( getLogger(), "[%s] get_url_from_reqheader found uri size (%d)(> 4096) too large, should be something wrong.",
+                    getLogId(), pEnd - pStart ));
+        return NULL;
+    }
+    
+    strncpy(uri, pStart, pEnd - pStart);
+    char *puri = uri;
+    puri = StringTool::strtrim( puri );
+    
+    pStart = strcasestr(pEnd, (const char *)"HOST:");
+    pEnd = StringTool::getLine(pStart, pBufEnd);
+    if( pEnd - pStart > 4096 )
+    {
+        LOG_ERR(( getLogger(), "[%s] get_url_from_reqheader found host size (%d)(> 4096) too large, should be something wrong.",
+                    getLogId(), pEnd - pStart ));
+        return NULL;
+    }
+    
+    strncpy(host, pStart + 5, pEnd - pStart -5);
+    char *phost = host;
+    phost = StringTool::strtrim( phost );
+    
+    strcpy(buf, phost);
+    strcat(buf, puri);
+    *url_len = strlen(buf);
+    return buf;
+}
+
 int NtwkIOLink::acceptSSL()
 {
     int ret = m_ssl.accept();
@@ -1323,6 +1388,50 @@ int NtwkIOLink::acceptSSL()
     }
     else if ( errno == EIO )
     {
+        //The buf is null terminated string
+        char buf[8192 + 1] = {0};
+        unsigned int offset = 0, length = 0;
+        offset = m_ssl.getSSL()->packet_length;
+        if (offset > 8192)
+            offset = 8192;
+        memcpy(buf, (char *)m_ssl.getSSL()->packet, offset );
+        length = offset;
+        
+        int isValid = 0;
+        if (isValidHttpRequest(buf))
+            isValid = 1;
+        else if ( offset < 8192 && 
+                (offset < 4 ||  
+                (strncasecmp(buf, "GET ", 4) == 0 || 
+                strncasecmp(buf, "POST ", 5) == 0 ||
+                strncasecmp(buf, "HEAD ", 4) == 0) ))
+        {
+            int ret = ::read(getfd(), buf + offset, 8192 - offset);
+            if (ret > 0)
+            {
+                length += ret;
+                if (isValidHttpRequest(buf))
+                    isValid = 1;
+            }
+        }
+        
+        if( isValid )
+        {
+            int url_len = 0;
+            char *url = get_url_from_reqheader(buf, length, &url_len);
+            if( url )
+            {
+                if ( D_ENABLED( DL_LESS ))
+                    LOG_D(( getLogger(), "[%s] SSL_accept() failed! Return 301 and redirect to location: https://%s."
+                        , getLogId(), url ));
+                ::write( getfd(), s_redirectSSL1, sizeof( s_redirectSSL1 ) - 1 );
+                ::write( getfd(), url, url_len );
+                ::write( getfd(), s_redirectSSL2, sizeof( s_redirectSSL2 ) - 1 );
+                return ret;
+            }
+        }
+        
+
         if ( D_ENABLED( DL_LESS ))
             LOG_D(( getLogger(), "[%s] SSL_accept() failed!: %s "
                     , getLogId(), SSLError().what() ));

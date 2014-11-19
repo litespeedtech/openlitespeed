@@ -271,7 +271,8 @@ public:
     
     int SSLAgain();
     int acceptSSL();
-
+    char *get_url_from_reqheader(char *buf, int length, int *url_len);
+    int isValidHttpRequest(const char *buf);
     
     int setLink( HttpListener *pListener, int fd, ClientInfo * pInfo, SSLContext * pSSLContext );
 
