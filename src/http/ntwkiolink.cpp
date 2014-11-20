@@ -1307,6 +1307,7 @@ static char s_errUseSSL[] =
 static char s_redirectSSL1[] =
     "HTTP/1.0 301 Moved Permanently\r\n"
     "Location: https://";
+    
 static char s_redirectSSL2[] =
     "\r\nCache-Control: private, no-cache, max-age=0\r\n"
     "Pragma: no-cache\r\n"
@@ -1314,56 +1315,83 @@ static char s_redirectSSL2[] =
     "Content-Length: 0\r\n"
     "Connection: Close\r\n\r\n";
 
-int NtwkIOLink::isValidHttpRequest(const char *buf)
+int NtwkIOLink::get_url_from_reqheader(char *buf, int length, char **puri, int *uri_len, char **phost, int *host_len)
 {
-    if (strcasestr(buf, "HOST:") &&
-        strcasestr(buf, "HTTP/") &&
-        strcasestr(buf, "\n") &&
-            (strcasestr(buf, "GET ") ||
-            strcasestr(buf, "POST ") ||
-            strcasestr(buf, "HEAD ")))
-        return 1;
-    else
-        return 0;
-}
-    
-    
-char *NtwkIOLink::get_url_from_reqheader(char *buf, int length, int *url_len)
-{
-    char uri[4096] = {0};
-    char host[4096] = {0};
-    const char *pStart = (const char *)buf;
     const char *pBufEnd = (const char *)buf + length;
-    pStart += 4;
-    const char *pEnd = strcasestr(pStart, "HTTP/");
-    if( pEnd - pStart > 4096 )
+    if( strncasecmp(buf, "GET ", 4) != 0 &&
+        strncasecmp(buf, "POST", 4) != 0 &&
+        strncasecmp(buf, "HEAD", 4) != 0 )
+        return -1;
+    
+    char *pStart = strcasestr(buf, (const char *)"HOST:");
+    if (!pStart)
+        return -2;
+    
+    *phost = pStart + 5;
+    char *pEnd = (char *)memchr(*phost, '\n', pBufEnd - *phost);
+    if (!pEnd)
+        return -3;
+        
+    *pEnd = 0x00;
+    *phost = StringTool::strtrim( *phost );
+    *host_len = strlen(*phost);
+    
+    *puri = buf + 4;
+    //Must remove the leading space to avoid pEnd to become it.
+    skipLeadingSpace( (const char **)puri );
+    
+    //Only search the puri(buf +4) to phost area for space
+    pEnd = (char *)memchr(*puri, ' ', *phost - *puri);
+    if (!pEnd)
+        return -4;
+    
+    skipLeadingSpace( (const char **)&pEnd );
+    if(strncasecmp(pEnd, "HTTP/", 5) != 0)
+        return -5;
+    
+    *pEnd = 0x00; //set 0 to end of the puri
+    *puri = StringTool::strtrim( *puri );
+    *uri_len = strlen(*puri);
+    return 0;
+}
+
+void NtwkIOLink::handle_acceptSSL_EIO_Err()
+{
+    //The buf is null terminated string
+    char buf[8192 + 1] = {0};
+    unsigned int offset = 0, length = 0;
+    offset = m_ssl.getSSL()->packet_length;
+    if (offset > 8192)
+        offset = 8192;
+    memcpy(buf, (char *)m_ssl.getSSL()->packet, offset );
+    length = offset;
+    
+    //Normally it is 11 bytes, checking with 8192, just to avoid buffer overflow
+    if ( offset < 8192 )
     {
-        LOG_ERR(( getLogger(), "[%s] get_url_from_reqheader found uri size (%d)(> 4096) too large, should be something wrong.",
-                    getLogId(), pEnd - pStart ));
-        return NULL;
+        int ret = ::read(getfd(), buf + offset, 8192 - offset);
+        if (ret > 0)
+            length += ret;
     }
     
-    strncpy(uri, pStart, pEnd - pStart);
-    char *puri = uri;
-    puri = StringTool::strtrim( puri );
-    
-    pStart = strcasestr(pEnd, (const char *)"HOST:");
-    pEnd = StringTool::getLine(pStart, pBufEnd);
-    if( pEnd - pStart > 4096 )
+    int uri_len = 0, host_len = 0;
+    char *puri = NULL, *phost = NULL;
+    int rc_parse = get_url_from_reqheader(buf, length, &puri, &uri_len, &phost, &host_len);
+    if (rc_parse == 0)
     {
-        LOG_ERR(( getLogger(), "[%s] get_url_from_reqheader found host size (%d)(> 4096) too large, should be something wrong.",
-                    getLogId(), pEnd - pStart ));
-        return NULL;
+        iovec iov[4] = {{s_redirectSSL1, sizeof( s_redirectSSL1 ) - 1},
+            {phost, (size_t)host_len},
+            {puri, (size_t)uri_len},
+            {s_redirectSSL2, sizeof( s_redirectSSL2 ) - 1}};
+        ::writev(getfd(), iov, 4);
     }
-    
-    strncpy(host, pStart + 5, pEnd - pStart -5);
-    char *phost = host;
-    phost = StringTool::strtrim( phost );
-    
-    strcpy(buf, phost);
-    strcat(buf, puri);
-    *url_len = strlen(buf);
-    return buf;
+    else
+    {
+        if ( D_ENABLED( DL_LESS ))
+            LOG_D(( getLogger(), "[%s] SSL_accept() failed!: %s, get_url_from_reqheader return %d.", 
+                    getLogId(), SSLError().what(), rc_parse ));
+        ::write( getfd(), s_errUseSSL, sizeof( s_errUseSSL ) - 1 );
+    }
 }
 
 int NtwkIOLink::acceptSSL()
@@ -1387,57 +1415,8 @@ int NtwkIOLink::acceptSSL()
 
     }
     else if ( errno == EIO )
-    {
-        //The buf is null terminated string
-        char buf[8192 + 1] = {0};
-        unsigned int offset = 0, length = 0;
-        offset = m_ssl.getSSL()->packet_length;
-        if (offset > 8192)
-            offset = 8192;
-        memcpy(buf, (char *)m_ssl.getSSL()->packet, offset );
-        length = offset;
-        
-        int isValid = 0;
-        if (isValidHttpRequest(buf))
-            isValid = 1;
-        else if ( offset < 8192 && 
-                (offset < 4 ||  
-                (strncasecmp(buf, "GET ", 4) == 0 || 
-                strncasecmp(buf, "POST ", 5) == 0 ||
-                strncasecmp(buf, "HEAD ", 4) == 0) ))
-        {
-            int ret = ::read(getfd(), buf + offset, 8192 - offset);
-            if (ret > 0)
-            {
-                length += ret;
-                if (isValidHttpRequest(buf))
-                    isValid = 1;
-            }
-        }
-        
-        if( isValid )
-        {
-            int url_len = 0;
-            char *url = get_url_from_reqheader(buf, length, &url_len);
-            if( url )
-            {
-                if ( D_ENABLED( DL_LESS ))
-                    LOG_D(( getLogger(), "[%s] SSL_accept() failed! Return 301 and redirect to location: https://%s."
-                        , getLogId(), url ));
-                ::write( getfd(), s_redirectSSL1, sizeof( s_redirectSSL1 ) - 1 );
-                ::write( getfd(), url, url_len );
-                ::write( getfd(), s_redirectSSL2, sizeof( s_redirectSSL2 ) - 1 );
-                return ret;
-            }
-        }
-        
-
-        if ( D_ENABLED( DL_LESS ))
-            LOG_D(( getLogger(), "[%s] SSL_accept() failed!: %s "
-                    , getLogId(), SSLError().what() ));
-        ::write( getfd(), s_errUseSSL, sizeof( s_errUseSSL ) - 1 );
-    }
-
+        handle_acceptSSL_EIO_Err();
+    
     return ret;
 }
 
