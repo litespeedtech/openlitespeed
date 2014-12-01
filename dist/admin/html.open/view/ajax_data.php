@@ -217,7 +217,6 @@ function ajax_downloadlog()
 
 function ajax_buildprogress()
 {
-    global $_SESSION ;
     $progress_file = $_SESSION['progress_file'] ;
     $log_file = $_SESSION['log_file'] ;
 

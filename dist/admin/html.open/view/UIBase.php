@@ -285,7 +285,6 @@ class UIBase
 		if($name == '' || $origin == '')
 			return NULL;
 
-		global $_REQUEST, $_COOKIE, $_GET, $_POST;
 		$temp = NULL;
 
 		switch(strtoupper($origin)) {

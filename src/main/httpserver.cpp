@@ -1220,7 +1220,7 @@ HttpListener * HttpServerImpl::configListener( const XmlNode *pNode, int isAdmin
                 ModuleConfig::parseConfigList(pModuleList, &pListener->m_moduleConfig, LSI_LISTENER_LEVEL, pName);
             }
             
-            pListener->getSessionHooks()->inherit(LsiApiHooks::getIolinkHooks(), NULL, 1);
+            pListener->getSessionHooks()->inherit( NULL, 1);
             ModuleManager::getInstance().applyConfigToIolinkRt(pListener->getSessionHooks(),
                                                                &pListener->m_moduleConfig);
         }
@@ -2292,7 +2292,7 @@ int HttpServerImpl::configModules( const XmlNode *pRoot )
     ModuleManager::getInstance().runModuleInit();
     
     //all hooks are ready, init the RtHooks for ServerHooks
-    LsiApiHooks::m_pServerSessionHooks->inherit(LsiApiHooks::m_pServerHooks, NULL, 1);
+    LsiApiHooks::m_pServerSessionHooks->inherit( NULL, 1);
     ModuleManager::getInstance().applyConfigToServerRt(LsiApiHooks::m_pServerSessionHooks,
                                                                ModuleManager::getGlobalModuleConfig());
 

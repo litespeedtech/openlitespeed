@@ -17,7 +17,6 @@ class CAuthorizer
         $label = preg_replace('/\W/', '_', SERVER_ROOT) ;
         $this->_id_field = "{$label}_uid" ;
         $this->_pass_field = "{$label}_pass" ;
-        global $_SESSION ;
 
         session_name("{$label}WEBUI") ; // to prevent conflicts with other app sessions
         session_start() ;
@@ -50,8 +49,8 @@ class CAuthorizer
                     die() ;
                 }
 
-                $this->id = UIBase::GrabGoodInput('cookie', $this->_id_field) ;
-                $this->pass = UIBase::GrabInput('cookie', $this->_pass_field) ;
+                $this->_id = UIBase::GrabGoodInput('cookie', $this->_id_field) ;
+                $this->_pass = UIBase::GrabInput('cookie', $this->_pass_field) ;
             }
             if ( ! defined('NO_UPDATE_ACCESS') )
                 $this->updateAccessTime() ;
@@ -86,34 +85,29 @@ class CAuthorizer
 
     public function IsValid()
     {
-        global $_SESSION ;
         return ! ( ($_SESSION['valid'] !== TRUE) || (isset($_SERVER['HTTP_REFERER']) && strpos($_SERVER['HTTP_REFERER'], $_SERVER['HTTP_HOST']) === FALSE)) ;
     }
 
     public static function GetToken()
     {
-        global $_SESSION ;
         return $_SESSION['token'] ;
     }
 
     public static function SetTimeout( $timeout )
     {
-        global $_SESSION ;
         $_SESSION['timeout'] = (int) $timeout ;
     }
 
     public static function HasSetTimeout()
     {
-        global $_SESSION ;
         return (isset($_SESSION['timeout']) && $_SESSION['timeout'] >= 60) ;
     }
 
     public function GetCmdHeader()
     {
-        global $_SESSION ;
         if ( isset($_SESSION['secret']) && is_array($_SESSION['secret']) ) {
-            $uid = PMA_blowfish_decrypt($this->id, $_SESSION['secret'][0]) ;
-            $password = PMA_blowfish_decrypt($this->pass, $_SESSION['secret'][1]) ;
+            $uid = PMA_blowfish_decrypt($this->_id, $_SESSION['secret'][0]) ;
+            $password = PMA_blowfish_decrypt($this->_pass, $_SESSION['secret'][1]) ;
             return "auth:$uid:$password\n" ;
         }
         else
@@ -141,7 +135,6 @@ class CAuthorizer
             file_put_contents($keyfile, $serialized_str) ;
             chmod($keyfile, 0600) ;
         }
-        global $_SESSION ;
         $_SESSION['d_int'] = $mykeys['d_int'] ;
         $_SESSION['n_int'] = $mykeys['n_int'] ;
 
@@ -172,7 +165,6 @@ class CAuthorizer
         $pass = NULL ;
 
         if ( isset($_POST['jCryption']) ) {
-            global $_SESSION ;
             $jCryption = new jCryption() ;
             $var = $jCryption->decrypt($_POST['jCryption'], $_SESSION['d_int'], $_SESSION['n_int']) ;
             unset($_SESSION['d_int']) ;
@@ -197,7 +189,6 @@ class CAuthorizer
 
     private function updateAccessTime( $secret = NULL )
     {
-        global $_SESSION ;
         $_SESSION['lastaccess'] = time() ;
         if ( isset($secret) ) {
             $_SESSION['valid'] = TRUE ;
@@ -210,9 +201,9 @@ class CAuthorizer
         session_destroy() ;
         session_unset() ;
         $outdated = time() - 3600 * 24 * 30 ;
-        setcookie($this->_id_field, "a", $outdated, "/") ;
-        setcookie($this->_pass_field, "b", $outdated, "/") ;
-        setcookie(session_name(), "b", $outdated, "/") ;
+        setcookie($this->_id_field, '', $outdated, "/") ;
+        setcookie($this->_pass_field, '', $outdated, "/") ;
+        setcookie(session_name(), '', $outdated, "/") ;
     }
 
     private function authenticate( $authUser, $authPass )

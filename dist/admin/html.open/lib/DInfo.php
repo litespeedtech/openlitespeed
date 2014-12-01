@@ -120,7 +120,6 @@ class DInfo
 		}
 
 		$tokenInput = UIBase::GrabGoodInput("request",'tk');
-		global $_SESSION;
 		$this->_token =  $_SESSION['token'];
 		if ($this->_act != 'v' && $this->_token != $tokenInput) {
 			die('Illegal entry point!');

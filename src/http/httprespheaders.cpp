@@ -54,7 +54,7 @@ const char * HttpRespHeaders::m_sPresetHeaders[H_HEADER_END] =
     "Last-Modified",
     "Location",
     "X-Litespeed-Location",
-    "Litespeed-Cache-Control",
+    "X-Litespeed-Cache-Control",
     "Pragma",
     "Proxy-Connection",
     "Server",
@@ -66,11 +66,12 @@ const char * HttpRespHeaders::m_sPresetHeaders[H_HEADER_END] =
     "X-Powered-By"
 };
 
-int HttpRespHeaders::m_iPresetHeaderLen[H_HEADER_END] = 
+int HttpRespHeaders::s_iHeaderLen[H_HEADER_END+1] =
 {
-    13, 10, 12, 14, 16, 13, 19, 13, 4, //"Date"
-    4, 7, 10, 13, 8, 20, 23, 6, 16, 6,  // "Server"
-    10, 6, 17, 4, 16, 12 //"X_Powered_By"
+    13, 10, 12, 14, 16, 13, 19, 13, //cache-control
+    4, 4, 7, 10, 13, 8, 20, 25, //x-litespeed-cache-control
+    6, 16, 6, 10, 6, 17, 4, 16, 12, //x-powered-by
+    0
 };
 
 HttpRespHeaders::HttpRespHeaders( lsr_xpool_t *pool )
@@ -264,7 +265,7 @@ int HttpRespHeaders::add( HEADERINDEX headerIndex, const char * pVal, unsigned i
     
     if (m_KVPairindex[headerIndex] == 0xFF)
         m_KVPairindex[headerIndex] = getTotalCount();
-    return _add(m_KVPairindex[headerIndex], m_sPresetHeaders[headerIndex], m_iPresetHeaderLen[headerIndex], pVal, valLen, method);
+    return _add(m_KVPairindex[headerIndex], m_sPresetHeaders[headerIndex], s_iHeaderLen[headerIndex], pVal, valLen, method);
 }
     
 
@@ -274,7 +275,7 @@ int HttpRespHeaders::add( const char * pName, int nameLen, const char * pVal, un
     HEADERINDEX headerIndex = getRespHeaderIndex( pName );
     if ( headerIndex != H_HEADER_END )
     {
-        assert( m_iPresetHeaderLen[headerIndex] == nameLen);
+        assert( s_iHeaderLen[headerIndex] == nameLen);
         assert(strncasecmp(m_sPresetHeaders[headerIndex], pName, nameLen) ==0);
         return add(headerIndex, pVal, valLen, method);
     }

@@ -684,7 +684,7 @@ TEST (respHeaders)
         "LAST-MODIFIED",
         "LOCATION",
         "x-litespeed-location",
-        "LITESPEED-CACHE-CONTROL",
+        "X-LITESPEED-CACHE-CONTROL",
         "PRAGMA",
         "PROXY-CONNECTION",
         "SERVER",
@@ -713,7 +713,7 @@ TEST (respHeaders)
         "xLAST-MODIFIED",
         "xLOCATION",
         "xx-litespeed-location",
-        "xLITESPEED-CACHE-CONTROL",
+        "xX-LITESPEED-CACHE-CONTROL",
         "xPRAGMA",
         "xPROXY-CONNECTION",
         "xSERVER",
@@ -743,7 +743,7 @@ TEST (respHeaders)
         "LAST-MODIFIED: xLAST-MODIFIED\r\n"
         "LOCATION: xLOCATION\r\n"
         "x-litespeed-location: xx-litespeed-location\r\n"
-        "LITESPEED-CACHE-CONTROL: xLITESPEED-CACHE-CONTROL\r\n"
+        "X-LITESPEED-CACHE-CONTROL: xLITESPEED-CACHE-CONTROL\r\n"
         "PRAGMA: xPRAGMA\r\n"
         "PROXY-CONNECTION: xPROXY-CONNECTION\r\n"
         "SERVER: xSERVER\r\n"

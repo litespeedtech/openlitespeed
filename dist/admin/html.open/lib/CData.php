@@ -544,7 +544,9 @@ class CData
 		 	$runningAs = 'user('. $this->_root->GetChildVal('user') .
 		 		') : group(' . $this->_root->GetChildVal('group') .')' ;
 		 	$this->_root->AddChild(new CNode('runningAs', $runningAs));
+        }
 
+        if ($this->_type == DInfo::CT_SERV || $this->_type == DInfo::CT_ADMIN) {
 		 	if ( ($listeners = $this->_root->GetChildren('listener')) != NULL) {
 		 		if (!is_array($listeners))
 		 			$listeners = array($listeners);
@@ -577,7 +579,8 @@ class CData
 		 	}
 
 		}
-		elseif ($this->_type == DInfo::CT_VH || $this->_type == DInfo::CT_TP) {
+
+        if ($this->_type == DInfo::CT_VH || $this->_type == DInfo::CT_TP) {
 			$loc = ($this->_type == DInfo::CT_VH) ? 'context' : 'virtualHostConfig:context';
 			if ( ($ctxs = $this->_root->GetChildren($loc)) != NULL) {
 				if (!is_array($ctxs))
@@ -588,6 +591,7 @@ class CData
 				}
 			}
 		}
+
 		$loc = ($this->_type == DInfo::CT_TP) ? 'virtualHostConfig:scripthandler' : 'scripthandler';
 		if ( ($sh = $this->_root->GetChildren($loc)) != NULL) {
 			if (($shc = $sh->GetChildren('add')) != NULL) {

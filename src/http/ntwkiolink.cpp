@@ -60,7 +60,6 @@
 #include <ls.h>
 #include <lsiapi/lsiapihooks.h>
 
-#define GlobalIolinkHooks  (LsiApiHooks::getIolinkHooks())
 
 NtwkIOLink::NtwkIOLink() : m_sessionHooks()
 {
@@ -109,7 +108,7 @@ int NtwkIOLink::writev( const struct iovec * vector, int len )
 
 int NtwkIOLink::writev_internal( const struct iovec * vector, int len, int flush_flag )
 {
-    const LsiApiHooks * pWritevHooks = GlobalIolinkHooks->get( LSI_HKPT_L4_SENDING );
+    const LsiApiHooks * pWritevHooks = LsiApiHooks::getGlobalApiHooks( LSI_HKPT_L4_SENDING );
     if( !pWritevHooks || m_sessionHooks.isDisabled( LSI_HKPT_L4_SENDING ) )
         return ( *m_pFpList->m_writev_fp )( ( LsiSession * )this, ( struct iovec * )vector, len );
 
@@ -136,7 +135,7 @@ int NtwkIOLink::writev_internal( const struct iovec * vector, int len, int flush
 
 int NtwkIOLink::read( char * pBuf, int size )
 {
-    const LsiApiHooks * pReadHooks = GlobalIolinkHooks->get( LSI_HKPT_L4_RECVING );
+    const LsiApiHooks * pReadHooks = LsiApiHooks::getGlobalApiHooks( LSI_HKPT_L4_RECVING );
     if( !pReadHooks || m_sessionHooks.isDisabled( LSI_HKPT_L4_RECVING ) )
         return ( *m_pFpList->m_read_fp )( this, pBuf, size );
 
@@ -226,7 +225,7 @@ int NtwkIOLink::setLink( HttpListener * pListener,  int fd, ClientInfo * pInfo, 
 
     //Comment: admin listener is not init-ed, so pListener->getSessionHooks() is NULL and 
     // then the sessionhooks will be disabled.
-    m_sessionHooks.inherit( GlobalIolinkHooks, pListener->getSessionHooks(), 0);
+    m_sessionHooks.inherit( pListener->getSessionHooks(), 0);
     
     m_pModuleConfig = pListener->getModuleConfig();
 
@@ -878,7 +877,7 @@ int NtwkIOLink::readEx( LsiSession * pIS, char * pBuf, int size )
 int NtwkIOLink::sendfile( int fdSrc, off_t off, size_t size )
 {
     int ret;
-    const LsiApiHooks * pWritevHooks = GlobalIolinkHooks->get( LSI_HKPT_L4_SENDING );
+    const LsiApiHooks * pWritevHooks = LsiApiHooks::getGlobalApiHooks( LSI_HKPT_L4_SENDING );
     if( !pWritevHooks || m_sessionHooks.isDisabled( LSI_HKPT_L4_SENDING ) )
         return sendfileEx( fdSrc, off, size );
 

@@ -35,10 +35,6 @@ class ModuleHandler;
 class ModuleConfig;
 class HttpContext;
 
-template< int base, int size >
-class HookChainList;
-
-
 typedef lsi_module_t * ModulePointer;
 
 class LsiModule : public HttpHandler
