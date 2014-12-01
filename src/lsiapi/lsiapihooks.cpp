@@ -34,9 +34,7 @@ const char * LsiApiHooks::s_pHkptName[LSI_HKPT_TOTAL_COUNT] =
     "MAIN_ATEXIT"
 };
 
-IolinkHookChainList  * LsiApiHooks::m_pIolinkHooks = NULL;
-HttpHookChainList    * LsiApiHooks::m_pHttpHooks = NULL;
-ServerHookChainList  * LsiApiHooks::m_pServerHooks = NULL;
+LsiApiHooks LsiApiHooks::s_hooks[LSI_HKPT_TOTAL_COUNT];
 ServerSessionHooks * LsiApiHooks::m_pServerSessionHooks = NULL;
 static LsiApiHooks * s_releaseDataHooks = NULL;
 
@@ -45,29 +43,17 @@ static LsiApiHooks * s_releaseDataHooks = NULL;
 
 void LsiApiHooks::initGlobalHooks()
 {
-    m_pIolinkHooks = new IolinkHookChainList();
-    m_pHttpHooks = new HttpHookChainList();
-    m_pServerHooks = new ServerHookChainList();
     m_pServerSessionHooks = new ServerSessionHooks();
     s_releaseDataHooks = new LsiApiHooks[LSI_MODULE_DATA_COUNT];
     
-    m_pIolinkHooks->get( LSI_HKPT_L4_BEGINSESSION )->setGlobalFlag( LSI_HOOK_FLAG_NO_INTERRUPT );
-    m_pIolinkHooks->get( LSI_HKPT_L4_ENDSESSION )->setGlobalFlag( LSI_HOOK_FLAG_NO_INTERRUPT );
+    s_hooks[ LSI_HKPT_L4_BEGINSESSION ].setGlobalFlag( LSI_HOOK_FLAG_NO_INTERRUPT );
+    s_hooks[ LSI_HKPT_L4_ENDSESSION ].setGlobalFlag( LSI_HOOK_FLAG_NO_INTERRUPT );
     
-    m_pHttpHooks->get( LSI_HKPT_HTTP_BEGIN )->setGlobalFlag( LSI_HOOK_FLAG_NO_INTERRUPT );
-    m_pHttpHooks->get( LSI_HKPT_HTTP_END )->setGlobalFlag( LSI_HOOK_FLAG_NO_INTERRUPT );
-    m_pHttpHooks->get( LSI_HKPT_HANDLER_RESTART )->setGlobalFlag( LSI_HOOK_FLAG_NO_INTERRUPT );
+    s_hooks[ LSI_HKPT_HTTP_BEGIN ].setGlobalFlag( LSI_HOOK_FLAG_NO_INTERRUPT );
+    s_hooks[ LSI_HKPT_HTTP_END ].setGlobalFlag( LSI_HOOK_FLAG_NO_INTERRUPT );
+    s_hooks[ LSI_HKPT_HANDLER_RESTART ].setGlobalFlag( LSI_HOOK_FLAG_NO_INTERRUPT );
 }
 
-const LsiApiHooks * LsiApiHooks::getGlobalApiHooks( int index )
-{ 
-    if (index < LSI_HKPT_L4_COUNT)
-        return LsiApiHooks::m_pIolinkHooks->get(index);
-    else if (index <= LSI_HKPT_HTTP_END)
-        return LsiApiHooks::m_pHttpHooks->get(index);
-    else
-        return LsiApiHooks::m_pServerHooks->get(index);
-}
 
 int LsiApiHooks::runForwardCb( lsi_cb_param_t * param )
 {

@@ -10,10 +10,6 @@
 
 class LsiSession;
 
-
-template< int base, int size >
-class HookChainList;
-
 template< int base, int size >
 class SessionHooks;
 
@@ -29,9 +25,6 @@ typedef struct _LsiApiHook
 #define LSI_HKPT_HTTP_COUNT     (LSI_HKPT_HTTP_END - LSI_HKPT_HTTP_BEGIN + 1)
 #define LSI_HKPT_SERVER_COUNT   (LSI_HKPT_TOTAL_COUNT - LSI_HKPT_L4_COUNT - LSI_HKPT_HTTP_COUNT)
 
-typedef HookChainList<0, LSI_HKPT_L4_COUNT> IolinkHookChainList;
-typedef HookChainList<LSI_HKPT_HTTP_BEGIN, LSI_HKPT_HTTP_COUNT> HttpHookChainList;
-typedef HookChainList<LSI_HKPT_MAIN_INITED, LSI_HKPT_SERVER_COUNT> ServerHookChainList;
 typedef SessionHooks<0, LSI_HKPT_L4_COUNT>   IolinkSessionHooks;
 typedef SessionHooks<LSI_HKPT_HTTP_BEGIN, LSI_HKPT_HTTP_COUNT>   HttpSessionHooks;
 typedef SessionHooks<LSI_HKPT_MAIN_INITED, LSI_HKPT_SERVER_COUNT>   ServerSessionHooks;
@@ -127,18 +120,13 @@ public:
     static int runBackwardCb( lsi_cb_param_t * param );
     
 
-    static IolinkHookChainList  *m_pIolinkHooks;
-    static HttpHookChainList    *m_pHttpHooks;
-    static ServerHookChainList  *m_pServerHooks;
-    static IolinkHookChainList  *getIolinkHooks()   {   return m_pIolinkHooks;   }
-    static HttpHookChainList    *getHttpHooks()     {   return m_pHttpHooks;     }
-    static ServerHookChainList  *getServerHooks()   {   return m_pServerHooks;     }
     
     static ServerSessionHooks *m_pServerSessionHooks;
     static ServerSessionHooks *getServerSessionHooks() {   return m_pServerSessionHooks;    }
     
     
-    static const LsiApiHooks * getGlobalApiHooks( int index );
+    static const LsiApiHooks * getGlobalApiHooks( int index )
+    {   return &s_hooks[index];         }
     static LsiApiHooks * getReleaseDataHooks( int index );
     static inline const char * getHkptName( int index ) 
     {   return s_pHkptName[ index ];    }
@@ -161,49 +149,9 @@ private:
 
 public:
     static const char * s_pHkptName[LSI_HKPT_TOTAL_COUNT];
-
+    static LsiApiHooks  s_hooks[LSI_HKPT_TOTAL_COUNT];
 };
 
-template< int base, int size >
-class HookChainList
-{
-    LsiApiHooks * m_pHookPoints[size];
-
-public:
-    explicit HookChainList()
-    {
-        for (int i=0; i<size; ++i)
-        {
-            m_pHookPoints[i] = new LsiApiHooks;
-        }
-    }
-    ~HookChainList()
-    {
-        release();
-    }
-    
-    void release()
-    {
-        for (int i = 0; i < size; ++i)
-        {
-            if ( m_pHookPoints[i]  )
-                delete m_pHookPoints[i];
-        }
-    }
-    
-    int getBase()   { return base;  }
-    int getSize()   { return size;  }
-    
-    const LsiApiHooks * get( int hookLevel ) const
-    {   return m_pHookPoints[ hookLevel - base ];  }
-
-    LsiApiHooks * get( int hookLevel )
-    {   return m_pHookPoints[ hookLevel - base ];  }
-    
-    void set( int hookLevel, LsiApiHooks * hooks )
-    {   m_pHookPoints[hookLevel - base] = hooks;   }
-
-};
 
 template< int base, int size >
 class SessionHooks
@@ -219,7 +167,6 @@ class SessionHooks
     
 private:
     int8_t *m_pEnableArray[size];
-    HookChainList<base, size> *m_pHookChainList;
     short   m_iFlag[size];
     short   m_iStatus;
     
@@ -233,7 +180,7 @@ private:
         for( int i=0; i<size; ++i )
         {
             int level = base + i;
-            int level_size = m_pHookChainList->get(level)->size();
+            int level_size = LsiApiHooks::getGlobalApiHooks(level)->size();
             memcpy(m_pEnableArray[i], parentSessionHooks->getEnableArray(level), level_size * sizeof(int8_t));
         }
         memcpy(m_iFlag, parentSessionHooks->m_iFlag, size * sizeof(short));
@@ -243,8 +190,8 @@ private:
     {
         int index = level - base;
         m_iFlag[index] = 0;
-        int level_size = m_pHookChainList->get(level)->size();
-        LsiApiHook *pHook = m_pHookChainList->get(level)->begin();
+        int level_size = LsiApiHooks::getGlobalApiHooks(level)->size();
+        LsiApiHook *pHook = LsiApiHooks::getGlobalApiHooks(level)->begin();
         int8_t *pEnableArray = m_pEnableArray[index];
         
         for( int j=0; j<level_size; ++j)
@@ -260,7 +207,6 @@ private:
     
     void updateFlag()
     {
-        assert(m_pHookChainList);
         for( int i=0; i<size; ++i ) 
         {
             updateFlag(base + i);
@@ -276,8 +222,8 @@ private:
         
         for( int i=0; i<size; ++i ) 
         {
-            int level_size = m_pHookChainList->get(base + i)->size();
-            LsiApiHook *pHook = m_pHookChainList->get(base + i)->begin();
+            int level_size = LsiApiHooks::getGlobalApiHooks(base + i)->size();
+            LsiApiHook *pHook = LsiApiHooks::getGlobalApiHooks(base + i)->begin();
             int8_t *pEnableArray = m_pEnableArray[i];
             for( int j=0; j<level_size; ++j)
             {
@@ -289,19 +235,15 @@ private:
     }
     
     //int and set the disable array from the global(in the LsiApiHook flag)
-    int initSessionHooks(HookChainList<base, size> *gHookChainList)
+    int initSessionHooks()
     {
-        if(m_pHookChainList || m_iStatus != UNINIT)
+        if( m_iStatus != UNINIT)
             return 1;
-            
-        if (!gHookChainList)
-            return -1;
-        
-        m_pHookChainList = gHookChainList;
+                    
         for( int i=0; i<size; ++i) 
         {
             //int level = base + i;
-            int level_size = m_pHookChainList->get(base + i)->size();
+            int level_size = LsiApiHooks::getGlobalApiHooks(base + i)->size();
             m_pEnableArray[i] = new int8_t[level_size];
         }
         m_iStatus = INITED;
@@ -312,11 +254,11 @@ private:
     
 public:
     //with the globalHooks for determine the base and size
-    SessionHooks() : m_pHookChainList(0), m_iStatus(UNINIT)  {}
+    SessionHooks() : m_iStatus(UNINIT)  {}
 
     ~SessionHooks() 
     {
-        if(m_pHookChainList)
+        if ( m_iStatus != UNINIT )
         {
             for( int i=0; i<size; ++i) 
                 delete []m_pEnableArray[i];
@@ -329,7 +271,7 @@ public:
         {
             for( int i=0; i<size; ++i ) 
             {
-                int level_size = m_pHookChainList->get(base + i)->size();
+                int level_size = LsiApiHooks::getGlobalApiHooks(base + i)->size();
                 memset(m_pEnableArray[i], 0, level_size);
                 m_iFlag[i] = 0;
             }
@@ -337,12 +279,12 @@ public:
         }
     }
     
-    void inherit(HookChainList<base, size> *gHookChainList, SessionHooks<base, size> *parentRt, int isGlobal)
+    void inherit(SessionHooks<base, size> *parentRt, int isGlobal)
     {
         switch(m_iStatus)
         {
         case UNINIT:
-            initSessionHooks(gHookChainList);
+            initSessionHooks();
             //No break, follow with the next
         case INITED:
             if ( parentRt && !parentRt->isAllDisabled())
@@ -367,9 +309,8 @@ public:
         if (m_iStatus < INITED)
             return -1;
         
-        assert(m_pHookChainList);
         int level_index = -1;
-        LsiApiHook * pHook = m_pHookChainList->get(level)->find(pModule, &level_index);
+        LsiApiHook * pHook = LsiApiHooks::getGlobalApiHooks(level)->find(pModule, &level_index);
         if( pHook == NULL)
             return -1;
         
@@ -389,7 +330,6 @@ public:
     
     void setEnableOfModule(const lsi_module_t *pModule, int enable)
     {
-        assert(m_pHookChainList);
         for( int level = base; level < base + size; ++level )
             setEnable(level, pModule, enable);
     }
@@ -404,7 +344,7 @@ public:
     int getBase()   { return base;  }
     int getSize()   { return size;  }
     
-    int isNotInited() const   {   return ((m_pHookChainList == NULL) || (m_iStatus == UNINIT)); }
+    int isNotInited() const   {   return (m_iStatus == UNINIT); }
     
     int isAllDisabled() const   {   return isNotInited(); }
     
@@ -424,16 +364,16 @@ public:
         
     
     int runCallback( int level, lsi_cb_param_t *param) const
-    {   return m_pHookChainList->get(level)->runCallback( level, m_pEnableArray[level - base], param );   }
+    {   return LsiApiHooks::getGlobalApiHooks(level)->runCallback( level, m_pEnableArray[level - base], param );   }
     
     int runCallback( int level, LsiSession *session, void *param1, int paramLen1, int *param2, int paramLen2) const
-    {   return m_pHookChainList->get(level)->runCallback( level, m_pEnableArray[level - base], session, param1, paramLen1, param2, paramLen2 );       }
+    {   return LsiApiHooks::getGlobalApiHooks(level)->runCallback( level, m_pEnableArray[level - base], session, param1, paramLen1, param2, paramLen2 );       }
     
     int runCallbackViewData( int level, LsiSession *session, void *inBuf, int inLen) const
-    {   return m_pHookChainList->get(level)->runCallbackViewData( level, m_pEnableArray[level - base], session, inBuf, inLen );   }
+    {   return LsiApiHooks::getGlobalApiHooks(level)->runCallbackViewData( level, m_pEnableArray[level - base], session, inBuf, inLen );   }
     
     int runCallbackNoParam( int level, LsiSession *session, lsi_module_t *pModule = NULL) const
-    {   return m_pHookChainList->get(level)->runCallbackNoParam( level, m_pEnableArray[level - base], session, pModule );      }
+    {   return LsiApiHooks::getGlobalApiHooks(level)->runCallbackNoParam( level, m_pEnableArray[level - base], session, pModule );      }
     
 };
 

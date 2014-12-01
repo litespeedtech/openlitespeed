@@ -1,10 +1,7 @@
 CC=g++
-LFSFLAGS= $(shell getconf LFS_CFLAGS)
-
-CFLAGS= -fPIC -g  -Wall -c -D_REENTRANT $(LFSFLAGS)
-
 OS := $(shell uname)
 MACHINE_TYPE := $(shell uname -m)
+LFSFLAGS= $(shell getconf LFS_CFLAGS)
 
 INCLUDE_ARCH=
 PSOLPATH=
@@ -13,14 +10,16 @@ ifeq ($(OS), Darwin)
         LDFLAGS= -fPIC -g -undefined dynamic_lookup  -Wall $(LFSFLAGS) -shared
 	INCLUDE_ARCH=arch/mac/ia32
 	$(shell echo Sorry, pagespeed does not support MAC OS)
-	
+
 else
-    ifeq ($(MACHINE_TYPE), x86_64)
+	ifeq ($(MACHINE_TYPE), x86_64)
 	    INCLUDE_ARCH = arch/linux/x64
 	    PSOLPATH = $(shell pwd)/psol/lib/Release/linux/x64/
+	    CFLAGS= -fPIC -g  -Wall -c -D_REENTRANT $(LFSFLAGS)
 	else
 	    INCLUDE_ARCH = arch/linux/ia32
 	    PSOLPATH = $(shell pwd)/psol/lib/Release/linux/ia32/
+	    CFLAGS= -fPIC -g  -Wall -c -D_REENTRANT $(LFSFLAGS) -march=$(MACHINE_TYPE)
 	endif
 	LDFLAGS= -fPIC -g -Wall $(LFSFLAGS) -shared
 endif

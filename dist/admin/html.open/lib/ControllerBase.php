@@ -59,13 +59,11 @@ class ControllerBase
 
 	public static function HasChanged()
 	{
-		global $_SESSION;
 		return (isset($_SESSION['changed']) ? $_SESSION['changed'] : false);
 	}
 
 	protected function setChanged($changed)
 	{
-		global $_SESSION;
 		$_SESSION['changed'] = $changed;
 	}
 

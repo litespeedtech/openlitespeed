@@ -169,13 +169,6 @@ int HttpHeader::s_iHeaderLen[H_HEADER_END+1] =
     0
 };
 
-int HttpRespHeaders::s_iHeaderLen[H_HEADER_END+1] =
-{
-    13, 10, 12, 14, 16, 13, 19, 13, //cache-control
-    4, 4, 7, 10, 13, 8, 20, 23, //litespeed-cache-control
-    6, 16, 6, 10, 6, 17, 4, 16, 12, //x-powered-by
-    0
-};
 
 #include <http/denieddir.h>
 DeniedDir            HttpGlobals::s_deniedDir;

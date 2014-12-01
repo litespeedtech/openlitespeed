@@ -21,7 +21,6 @@ class DMsg
 
 	private static function init()
 	{
-		global $_SESSION;
 		$lang = DMsg::DEFAULT_LANG;
 
 		if (isset($_SESSION[DMsg::_COOKIE_LANG_])) {
@@ -70,7 +69,6 @@ class DMsg
 
 	public static function SetLang($lang)
 	{
-		global $_SESSION;
 		if (array_key_exists($lang, self::$_supported)) {
 			$_SESSION['DMsg::_COOKIE_LANG_'] = $lang;
 			self::$_curlang = '';
@@ -93,7 +91,7 @@ class DMsg
 		if (isset($_tipsdb[$label]))
 			return $_tipsdb[$label];
 		else {
-			error_log("DMsg:undefined attr tip $label");
+			//error_log("DMsg:undefined attr tip $label"); allow null
 			return NULL;
 		}
 	}

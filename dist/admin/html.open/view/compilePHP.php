@@ -302,7 +302,6 @@ class CompilePHPUI
 			else
 				$buf .= UIBase::error_divmesg(DMsg::UIStr('buildphp_failsaveconf'));
 
-			global $_SESSION;
 			$_SESSION['progress_file'] = $tool->progress_file;
 			$_SESSION['log_file'] = $tool->log_file;
 

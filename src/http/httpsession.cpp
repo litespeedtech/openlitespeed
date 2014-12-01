@@ -72,8 +72,6 @@
 
 #include <lsiapi/internal.h>
 
-#define GlobalHttpHooks  (LsiApiHooks::getHttpHooks())
-
 
 HttpSession::HttpSession()
     : m_request(),
@@ -422,7 +420,7 @@ int HttpSession::readReqBody()
         LOG_D(( getLogger(), "[%s] Read Request Body!",
             getLogId() ));
 
-    const LsiApiHooks *pReadHooks = GlobalHttpHooks->get(LSI_HKPT_RECV_REQ_BODY);
+    const LsiApiHooks *pReadHooks = LsiApiHooks::getGlobalApiHooks(LSI_HKPT_RECV_REQ_BODY);
     int count = 0;
     int hasBufferedData = 1;
     int endBody;
@@ -536,7 +534,7 @@ int HttpSession::restartHandlerProcess()
 {
     HttpContext *pContext = &(m_request.getVHost()->getRootContext());
     m_sessionHooks.reset();
-    m_sessionHooks.inherit(GlobalHttpHooks, pContext->getSessionHooks(), 0);
+    m_sessionHooks.inherit( pContext->getSessionHooks(), 0);
     if ( m_sessionHooks.isEnabled( LSI_HKPT_HANDLER_RESTART) )
     {
         m_sessionHooks.runCallbackNoParam(LSI_HKPT_HANDLER_RESTART, (LsiSession *)this);
@@ -827,7 +825,7 @@ int HttpSession::processNewReq(lsi_module_t *pModule)
         }
         
         HttpContext *pContext0 = ((HttpContext *)&(pVHost->getRootContext()));
-        m_sessionHooks.inherit(GlobalHttpHooks, pContext0->getSessionHooks(), 0);
+        m_sessionHooks.inherit( pContext0->getSessionHooks(), 0);
         m_pModuleConfig = pContext0->getModuleConfig();
         
         //Run LSI_HKPT_HTTP_BEGIN after the inherit from vhost
@@ -1083,7 +1081,7 @@ int HttpSession::processURI( int resume )
                 const HttpContext *pContext = &(pVHost->getRootContext());
                 m_request.setContext( pContext );
                 m_sessionHooks.reset();
-                m_sessionHooks.inherit(GlobalHttpHooks, ((HttpContext *)pContext)->getSessionHooks(), 0);
+                m_sessionHooks.inherit( ((HttpContext *)pContext)->getSessionHooks(), 0);
                 m_pModuleConfig = ((HttpContext *)pContext)->getModuleConfig();
             }
         }
@@ -1144,7 +1142,7 @@ int HttpSession::processURI( int resume )
                         {
                             m_request.setContext( pContext );
                             m_sessionHooks.reset();
-                            m_sessionHooks.inherit(GlobalHttpHooks, ((HttpContext *)pContext)->getSessionHooks(), 0);
+                            m_sessionHooks.inherit( ((HttpContext *)pContext)->getSessionHooks(), 0);
                             m_pModuleConfig = ((HttpContext *)pContext)->getModuleConfig();
                             goto DO_AUTH;
                         }
@@ -1155,7 +1153,7 @@ int HttpSession::processURI( int resume )
             pContext = m_request.getContext();
             //since context chnaged, need to update m_sessionHooks & m_pModuleConfig
             m_pModuleConfig = ((HttpContext *)pContext)->getModuleConfig();
-            m_sessionHooks.inherit(GlobalHttpHooks, ((HttpContext *)pContext)->getSessionHooks(), 0);
+            m_sessionHooks.inherit( ((HttpContext *)pContext)->getSessionHooks(), 0);
 
             if ( m_sessionHooks.isEnabled( LSI_HKPT_URI_MAP) )
             {
@@ -2449,7 +2447,7 @@ int HttpSession::runFilter( int hookLevel, POINTER_termination_fp pfTermination,
     int ret;
     int bit;
     int flagOut = 0;
-    const LsiApiHooks *pHooks = GlobalHttpHooks->get(hookLevel);
+    const LsiApiHooks *pHooks = LsiApiHooks::getGlobalApiHooks(hookLevel);
     lsi_cb_param_t param;
     lsi_hook_info_t hookInfo;
     param._session = (LsiSession *)this;
@@ -3289,7 +3287,7 @@ int HttpSession::sendStaticFile(  SendFileInfo * pData )
     param._session = (LsiSession *)this;
 
     hookInfo._termination_fp = (POINTER_termination_fp)writeRespBodyTermination;
-    hookInfo._hooks = GlobalHttpHooks->get(LSI_HKPT_SEND_RESP_BODY);
+    hookInfo._hooks = LsiApiHooks::getGlobalApiHooks(LSI_HKPT_SEND_RESP_BODY);
     hookInfo._enable_array = m_sessionHooks.getEnableArray( LSI_HKPT_SEND_RESP_BODY );
     param._hook_info = &hookInfo;
 

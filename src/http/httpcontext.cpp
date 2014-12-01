@@ -932,7 +932,7 @@ int HttpContext::initExternalSessionHooks()
         HttpSessionHooks * pSessionHooks = new HttpSessionHooks();
         if ( !pSessionHooks )
             return -1;
-        pSessionHooks->inherit(LsiApiHooks::getHttpHooks(), NULL, 1); //inherit from global level
+        pSessionHooks->inherit( NULL, 1); //inherit from global level
         
         m_pInternal->m_pSessionHooks = pSessionHooks;
         m_iConfigBits |= BIT_SESSIONHOOKS;

@@ -182,15 +182,9 @@ void ModuleManager::disableModule(lsi_module_t *pModule)
     int i;
     pModule->_handler = NULL;
 
-    int base = LsiApiHooks::getIolinkHooks()->getBase();
-    int size = LsiApiHooks::getIolinkHooks()->getSize();
-    for (i=0; i<size; ++i)
-        ((LsiApiHooks *)(LsiApiHooks::getIolinkHooks()->get(i + base)))->remove(pModule);
+    for (i=0; i< LSI_HKPT_TOTAL_COUNT; ++i)
+        ((LsiApiHooks *)(LsiApiHooks::getGlobalApiHooks( i )))->remove(pModule);
     
-    base = LsiApiHooks::getHttpHooks()->getBase();
-    size = LsiApiHooks::getHttpHooks()->getSize();
-    for (i=0; i<size; ++i)
-        ((LsiApiHooks *)(LsiApiHooks::getHttpHooks()->get(i + base)))->remove(pModule);
 }
 
 static void checkModuleDef(lsi_module_t *pModule)
