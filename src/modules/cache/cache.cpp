@@ -898,8 +898,20 @@ static int checkAssignHandler(lsi_cb_param_t *rec)
     MyMData *myData = (MyMData *) g_api->get_module_data(rec->_session, &MNAME, LSI_MODULE_DATA_HTTP);
     if (!myData)
     {
-        char *uri = new char[uriLen + 1];
-        g_api->get_req_org_uri(rec->_session, uri, uriLen + 1);
+        char host[512] = {0};
+        int hostLen = g_api->get_req_var_by_id( rec->_session, LSI_REQ_VAR_SERVER_NAME, host, 512 );
+        char port[12] = {0};
+        int portLen = g_api->get_req_var_by_id( rec->_session, LSI_REQ_VAR_SERVER_PORT, port, 12 );
+
+        //host:port uri
+        char *uri = new char[uriLen + hostLen + portLen + 2];
+        strncpy(uri, host, hostLen);
+        uri[hostLen] = ':';
+        strncpy(uri + hostLen + 1, port, portLen);
+        g_api->get_req_org_uri(rec->_session, uri + hostLen + 1 + portLen, uriLen + 1);
+        uriLen += (hostLen + 1 + portLen); //Set the the right uriLen
+        uri[uriLen] = 0x00; //NULL terminated
+
         myData = new MyMData;
         memset(myData, 0, sizeof(MyMData));
         myData->pConfig = pConfig;
