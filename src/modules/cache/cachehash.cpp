@@ -31,8 +31,6 @@ CacheHash::~CacheHash()
 
 void CacheHash::init()
 {
-    //uint64_t *pKey = (uint64_t *)m_key;
-    //*pKey = ls_crc64( 0, NULL, 0 );  
     memset(m_key, 0, 8);
 }
 
