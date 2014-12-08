@@ -413,8 +413,11 @@ public:
     void setNoRespBody()                    {   m_iNoRespBody = 1;      }
     void updateNoRespBodyByStatus( int code )
     {
-        switch( m_code = code ) { case SC_100: case SC_101: case SC_204:
+        if ( !(m_iContextState & KEEP_AUTH_INFO) )
+        {
+            switch( m_code = code ) { case SC_100: case SC_101: case SC_204:
                            case SC_205: case SC_304: m_iNoRespBody = 1; }
+        }
     }
 
     
