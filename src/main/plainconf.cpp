@@ -162,6 +162,7 @@ plainconfKeywords plainconf::sKeywords[] =
     {"inbandwidth",                              NULL},
     {"include",                                  NULL},
     {"index",                                    NULL},
+    {"inherit",                                  NULL},
     {"indexfiles",                               NULL},
     {"inittimeout",                              NULL},
     {"internal",                              NULL},
@@ -309,7 +310,6 @@ plainconfKeywords plainconf::sKeywords[] =
     {"restricteddirpermissionmask",                               NULL},
     {"restrictedscriptpermissionmask",                               NULL},
 
-    {"option",                               NULL},
     {"phpsuexec",                            NULL},
     
     {"phpsuexecmaxconn",             NULL},
@@ -350,6 +350,7 @@ plainconfKeywords plainconf::sKeywords[] =
     {"main_atexit",          NULL},
 
     {"umask",          NULL},
+    {"blockbadreq",      NULL},  //Add to avoid error notice in errorlog
 
 };
 

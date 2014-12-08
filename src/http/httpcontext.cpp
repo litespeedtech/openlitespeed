@@ -1188,9 +1188,9 @@ int HttpContext::config(const RewriteMapList * pMapList, const XmlNode *pContext
     if ( pNode )
     {
         enableRewrite( ConfigCtx::getCurConfigCtx()->getLongValue( pNode, "enable", 0, 1, 0 ) );
-        pValue = pNode->getChildValue( "option" );
+        pValue = pNode->getChildValue( "inherit" );
 
-        if ( ( pValue ) && ( strcasestr( pValue, "inherit" ) ) )
+        if ( ( pValue ) && ( strcasestr( pValue, "1" ) ) )
         {
             setRewriteInherit( 1 );
         }
