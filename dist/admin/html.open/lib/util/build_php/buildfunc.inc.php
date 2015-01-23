@@ -18,7 +18,6 @@ class BuildOptions
 			'AddOnSuhosin' => FALSE,
 			'AddOnMailHeader' => FALSE,
 			'AddOnAPC' => FALSE,
-			'AddOnEAccelerator' => FALSE,
 			'AddOnXCache' => FALSE,
 			'AddOnMemCache' => FALSE,
 			'AddOnMemCached' => FALSE,
@@ -92,7 +91,6 @@ class BuildOptions
 		$this->vals['AddOnSuhosin'] = FALSE;
 		$this->vals['AddOnMailHeader'] = FALSE;
 		$this->vals['AddOnAPC'] = FALSE;
-		$this->vals['AddOnEAccelerator'] = FALSE;
 		$this->vals['AddOnXCache'] = FALSE;
 		$this->vals['AddOnMemCache'] = FALSE;
 		$this->vals['AddOnMemCached'] = FALSE;
@@ -149,7 +147,6 @@ class BuildOptions
 		$addon_suhosin = $this->vals['AddOnSuhosin'] ? 'true':'false';
 		$addon_mailHeader = $this->vals['AddOnMailHeader'] ? 'true':'false';
 		$addon_apc = $this->vals['AddOnAPC'] ? 'true':'false';
-		$addon_eacc = $this->vals['AddOnEAccelerator'] ? 'true':'false';
 		$addon_xcache = $this->vals['AddOnXCache'] ? 'true':'false';
 		$addon_memcache = $this->vals['AddOnMemCache'] ? 'true':'false';
 		$addon_opcache = $this->vals['AddOnOPcache'] ? 'true':'false';
@@ -159,12 +156,14 @@ class BuildOptions
 		$loc.installPath.value = '{$this->vals['InstallPath']}';
 		$loc.compilerFlags.value = '$flags';
 		$loc.configureParams.value = '$params';
-		$loc.addonMailHeader.checked = $addon_mailHeader;
-		$loc.addonAPC.checked = $addon_apc;
-		$loc.addonEAccelerator.checked = $addon_eacc;
+                if ($loc.addonMailHeader != null)
+                    $loc.addonMailHeader.checked = $addon_mailHeader;
+                if ($loc.addonAPC != null)
+                    $loc.addonAPC.checked = $addon_apc;
 		$loc.addonXCache.checked = $addon_xcache;
 		$loc.addonMemCache.checked = $addon_memcache;
-		$loc.addonOPcache.checked = $addon_opcache;
+                if ($loc.addonOPcache != null)
+                    $loc.addonOPcache.checked = $addon_opcache;
 		if ($loc.addonSuhosin != null)
 			$loc.addonSuhosin.checked = $addon_suhosin;
 		\"";
@@ -212,6 +211,22 @@ class BuildCheck
 	public function GetCurrentStep()
 	{
 		return $this->cur_step;
+	}
+
+    public function GetModuleSupport($php_version)
+	{
+        $modules = array();
+        $v = substr($php_version, 0, 4);
+
+        $modules['suhosin'] = in_array($v, array('5.4.','5.5.','5.6.'));
+
+        $modules['apc'] = in_array($v, array('4.4.', '5.1.', '5.2.', '5.3.', '5.4.')); // apc is supported up to 5.4.
+
+        $modules['opcache'] = in_array($v, array('5.2.', '5.3.', '5.4.'));   // opcache is built-in since 5.5
+
+        $modules['mailheader'] = in_array($v, array('4.4.', '5.1.', '5.2.', '5.3.', '5.4.', '5.5'));
+
+        return $modules;
 	}
 
 	private function validate_step1()
@@ -268,7 +283,6 @@ class BuildCheck
 		$options->SetValue('AddOnSuhosin', (NULL != UIBase::GrabGoodInput('ANY','addonSuhosin')));
 		$options->SetValue('AddOnMailHeader',  (NULL != UIBase::GrabGoodInput('ANY','addonMailHeader')));
 		$options->SetValue('AddOnAPC', (NULL != UIBase::GrabGoodInput('ANY','addonAPC')));
-		$options->SetValue('AddOnEAccelerator', (NULL != UIBase::GrabGoodInput('ANY','addonEAccelerator')));
 		$options->SetValue('AddOnXCache', (NULL != UIBase::GrabGoodInput('ANY','addonXCache')));
 		$options->SetValue('AddOnMemCache', (NULL != UIBase::GrabGoodInput('ANY','addonMemCache')));
 		$options->SetValue('AddOnMemCached', (NULL != UIBase::GrabGoodInput('ANY','addonMemCached')));
@@ -628,8 +642,8 @@ class BuildTool
 		$ext = array('{EXTENSION_NAME}' => 'Suhosin');
 		$ver = 'suhosin-'. BuildConfig::GetVersion(BuildConfig::SUHOSIN_VERSION);
 		$ext['{EXTENSION_DIR}'] = $ver;
-		$ext['{EXTENSION_SRC}'] = $ver .'.tgz';
-		$ext['{EXTENSION_DOWNLOAD_URL}'] = 'http://download.suhosin.org/' . $ver . '.tgz';
+		$ext['{EXTENSION_SRC}'] = $ver .'.tar.gz';
+		$ext['{EXTENSION_DOWNLOAD_URL}'] = 'http://download.suhosin.org/' . $ver . '.tar.gz';
 		$ext['{EXTRACT_METHOD}'] = 'tar -zxf';
 		$ext['{EXTENSION_EXTRA_CONFIG}'] = '';
 
@@ -644,25 +658,6 @@ class BuildTool
 		$ext['{EXTENSION_EXTRA_CONFIG}'] = '--enable-apc';
 
 		$this->ext_options['APC'] = $ext;
-
-		$ext = array('{EXTENSION_NAME}' => 'eAccelerator');
-		// determin ea version
-		if ($php_version >= '5.2') {
-			$ver = '0.9.6.1';
-			$sver = 'eaccelerator-0.9.6.1';
-		}
-		else {
-			$ver = '0.9.5.3';
-			$sver = 'eaccelerator-0.9.5.3';
-		}
-		$ext['{EXTENSION_DIR}'] = $sver;
-		$ext['{EXTENSION_SRC}'] = $sver . '.tar.bz2';
-		// $ext['{EXTENSION_DOWNLOAD_URL}'] = 'http://bart.eaccelerator.net/source/' . $ver . '/' . $sver . '.tar.bz2';
-		$ext['{EXTENSION_DOWNLOAD_URL}'] = 'http://www.litespeedtech.com/packages/eaccelerator/' . $sver . '.tar.bz2';
-		$ext['{EXTRACT_METHOD}'] = 'tar -jxf';
-		$ext['{EXTENSION_EXTRA_CONFIG}'] = '--enable-eaccelerator=shared --without-eaccelerator-use-inode';
-
-		$this->ext_options['eAccelerator'] = $ext;
 
 		$ext = array('{EXTENSION_NAME}' => 'XCache');
 		$ver = 'xcache-' . BuildConfig::GetVersion(BuildConfig::XCACHE_VERSION);
@@ -711,9 +706,6 @@ class BuildTool
 		if (strpos($extensions, 'APC') !== FALSE) {
 			$ocname[] = 'APC';
 		}
-		if (strpos($extensions, 'eAccelerator') !== FALSE) {
-			$ocname[] = 'eAccelerator';
-		}
 		if (strpos($extensions, 'XCache') !== FALSE) {
 			$ocname[] = 'XCache';
 		}
@@ -737,28 +729,6 @@ class BuildTool
 ;				Suhosin
 ;				=================
 extension=suhosin.so
-
-';
-			}
-			if ($ocn == 'eAccelerator') {
-				$notes1 .= '
-;				=================
-;				eAccelerator
-;				=================
-extension="eaccelerator.so"
-eaccelerator.shm_size= 16
-eaccelerator.cache_dir="/tmp/eaccelerator"
-eaccelerator.enable=1
-eaccelerator.optimizer=1
-eaccelerator.check_mtime=1
-eaccelerator.debug=0
-eaccelerator.filter=""
-eaccelerator.shm_max="0"
-eaccelerator.shm_ttl="0"
-eaccelerator.shm_prune_period="0"
-eaccelerator.shm_only="0"
-eaccelerator.compress="1"
-eaccelerator.compress_level="9"
 
 ';
 			}
@@ -818,15 +788,15 @@ opcache.enable_cli=1
 		$params['{PHP_VERSION}'] = $this->options->GetValue('PHPVersion');
 		$params['{PROGRESS_F}'] = $this->progress_file;
 		$params['{LOG_FILE}'] = $this->log_file;
-		$processUser = posix_getpwuid(posix_geteuid());
+        $processUser = posix_getpwuid(posix_geteuid());
+        $gidinfo = posix_getgrgid($processUser['gid']);
 		$params['{PHP_USR}'] = $processUser['name'];
+        $params['{PHP_USRGROUP}'] = $gidinfo['name'];
 		$params['{EXTRA_PATH_ENV}'] = $this->options->GetValue('ExtraPathEnv');
 		$params['{PHP_BUILD_DIR}'] = BuildConfig::Get(BuildConfig::BUILD_DIR);
 		$params['{DL_METHOD}'] = $this->dlmethod;
 		$params['{INSTALL_DIR}'] = $this->options->GetValue('InstallPath');
 		$params['{COMPILER_FLAGS}'] = $this->options->GetValue('CompilerFlags');
-		$params['{ENABLE_SUHOSIN}'] = ($this->options->GetValue('AddOnSuhosin')) ? 1 : 0;
-		$params['{SUHOSIN_PATCH_URL}'] = '';
 		$params['{ENABLE_MAILHEADER}'] = ($this->options->GetValue('AddOnMailHeader')) ? 1 : 0;
 		$params['{LSAPI_VERSION}'] = BuildConfig::GetVersion(BuildConfig::LSAPI_VERSION);
 		$params['{PHP_CONF_OPTIONS}'] = $this->options->GetValue('ConfigParam');
@@ -890,9 +860,6 @@ opcache.enable_cli=1
 		}
 		if ($this->options->GetValue('AddOnAPC')) {
 			$extList[] = 'APC';
-		}
-		if ($this->options->GetValue('AddOnEAccelerator')) {
-			$extList[] = 'eAccelerator';
 		}
 		if ($this->options->GetValue('AddOnXCache')) {
 			$extList[] = 'XCache';

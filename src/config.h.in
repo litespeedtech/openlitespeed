@@ -209,7 +209,7 @@
    slash. */
 #undef LSTAT_FOLLOWS_SLASHED_SYMLINK
 
-/* Define if need spdy feature */
+/* Define if need spdy/http2 feature */
 #undef LS_ENABLE_SPDY
 
 /* Define to the sub-directory in which libtool stores uninstalled libraries.

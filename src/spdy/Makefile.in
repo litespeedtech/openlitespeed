@@ -104,7 +104,8 @@ libspdy_a_AR = $(AR) $(ARFLAGS)
 libspdy_a_LIBADD =
 am_libspdy_a_OBJECTS = spdyprotocol.$(OBJEXT) spdyconnection.$(OBJEXT) \
 	spdystream.$(OBJEXT) spdyzlibfilter.$(OBJEXT) \
-	spdystreampool.$(OBJEXT)
+	spdystreampool.$(OBJEXT) h2connection.$(OBJEXT) \
+	h2protocol.$(OBJEXT) h2stream.$(OBJEXT) hpack.$(OBJEXT)
 libspdy_a_OBJECTS = $(am_libspdy_a_OBJECTS)
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
@@ -313,7 +314,7 @@ top_srcdir = @top_srcdir@
 noinst_LIBRARIES = libspdy.a
 INCLUDES = -I$(top_srcdir)/include -I$(top_srcdir)/src
 libspdy_a_METASOURCES = AUTO
-libspdy_a_SOURCES = spdyprotocol.cpp spdyconnection.cpp spdystream.cpp spdyzlibfilter.cpp spdystreampool.cpp
+libspdy_a_SOURCES = spdyprotocol.cpp spdyconnection.cpp spdystream.cpp spdyzlibfilter.cpp spdystreampool.cpp h2connection.cpp h2protocol.cpp h2stream.cpp hpack.cpp
 noinst_HEADERS = 
 all: all-am
 
@@ -364,6 +365,10 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/h2connection.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/h2protocol.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/h2stream.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/hpack.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/spdyconnection.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/spdyprotocol.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/spdystream.Po@am__quote@

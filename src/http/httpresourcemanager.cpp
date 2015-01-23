@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013  LiteSpeed Technologies, Inc.                        *
+*    Copyright (C) 2013 - 2015  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -74,5 +74,9 @@ void HttpResourceManager::onTimer()
     ModuleManager::getInstance().OnTimer10sec();
 }
 
+HioStreamHandler* HttpResourceManager::getHioStreamHandler()
+{    
+    return m_poolHttpSession.get();   
+}
 
 

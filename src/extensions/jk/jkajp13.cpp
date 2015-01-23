@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013  LiteSpeed Technologies, Inc.                        *
+*    Copyright (C) 2013 - 2015  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -40,15 +40,15 @@ JkAjp13::~JkAjp13(){
 
 static const char * s_pForwardHeaderName[9] =
 {
-    "Cache-Control",
-    "If-Modified-Since",
-    "If-Match",
-    "If-None-Match",
-    "If-Unmodified-Since",
-    "If-Range",
-    "Keep-Alive",
-    "Range",
-    "Transfer-Encoding"
+    "cache-control",
+    "if-modified-since",
+    "if-match",
+    "if-none-match",
+    "if-unmodified-since",
+    "if-range",
+    "keep-alive",
+    "range",
+    "transfer-encoding"
 };
 
 static int s_iForwardHeaderLen[9] =
@@ -59,17 +59,17 @@ static int s_iForwardHeaderLen[9] =
 const char * JkAjp13::s_pRespHeaders[AJP_RESP_HEADERS_NUM + 1] =
 {
     "",
-    "Content-Type",
-    "Content-Language",
-    "Content-Length",
-    "Date",
-    "Last-Modified",
-    "Location",
-    "Set-Cookie",
-    "Set-Cookie2",
-    "Servlet-Engine",
-    "Status",
-    "WWW-Authenticate"
+    "content-type",
+    "content-language",
+    "content-length",
+    "date",
+    "last-modified",
+    "location",
+    "set-cookie",
+    "set-cookie2",
+    "servlet-engine",
+    "status",
+    "www-authenticate"
 };
 
 int JkAjp13::s_iRespHeaderLen[AJP_RESP_HEADERS_NUM + 1] =

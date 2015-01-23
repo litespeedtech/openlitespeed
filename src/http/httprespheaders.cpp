@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013  LiteSpeed Technologies, Inc.                        *
+*    Copyright (C) 2013 - 2015  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -39,31 +39,31 @@
 
 const char * HttpRespHeaders::m_sPresetHeaders[H_HEADER_END] = 
 {
-    "Accept-Ranges",
-    "Connection",
-    "Content-Type",
-    "Content-Length",
-    "Content-Encoding",
-    "Content-Range",
-    "Content-Disposition",
-    "Cache-Control",
-    "Date",
-    "Etag",
-    "Expires",
-    "Keep-Alive",
-    "Last-Modified",
-    "Location",
-    "X-Litespeed-Location",
-    "X-Litespeed-Cache-Control",
-    "Pragma",
-    "Proxy-Connection",
-    "Server",
-    "Set-Cookie",
-    "Status",
-    "Transfer-Encoding",
-    "Vary",
-    "Www-Authenticate",
-    "X-Powered-By"
+    "accept-ranges",
+    "connection",
+    "content-type",
+    "content-length",
+    "content-encoding",
+    "content-range",
+    "content-disposition",
+    "cache-control",
+    "date",
+    "etag",
+    "expires",
+    "keep-alive",
+    "last-modified",
+    "location",
+    "x-litespeed-location",
+    "x-litespeed-cache-control",
+    "pragma",
+    "proxy-connection",
+    "server",
+    "set-cookie",
+    "status",
+    "transfer-encoding",
+    "vary",
+    "www-authenticate",
+    "x-powered-by"
 };
 
 int HttpRespHeaders::s_iHeaderLen[H_HEADER_END+1] =
@@ -735,11 +735,11 @@ void HttpRespHeaders::buildCommonHeaders()
     HttpRespHeaders::s_gzipHeaders[0].valLen   = 4;
     
     HttpRespHeaders::s_gzipHeaders[1].index    = HttpRespHeaders::H_VARY;
-    HttpRespHeaders::s_gzipHeaders[1].val      = "Accept-Encoding";
+    HttpRespHeaders::s_gzipHeaders[1].val      = "accept-encoding";
     HttpRespHeaders::s_gzipHeaders[1].valLen   = 15;
     
     HttpRespHeaders::s_keepaliveHeader.index    = HttpRespHeaders::H_CONNECTION;
-    HttpRespHeaders::s_keepaliveHeader.val      = "Keep-Alive";
+    HttpRespHeaders::s_keepaliveHeader.val      = "keep-alive";
     HttpRespHeaders::s_keepaliveHeader.valLen   = 10;
     
     HttpRespHeaders::s_concloseHeader.index    = HttpRespHeaders::H_CONNECTION;

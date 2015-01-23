@@ -1,8 +1,4 @@
-<HTML>
-<BODY>
 <?php 
-  date_default_timezone_set('America/New_York');
-  phpinfo(); 
+date_default_timezone_set('America/New_York');
+phpinfo(); 
 ?>
-</BODY>
-</HTML>

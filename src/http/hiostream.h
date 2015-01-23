@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013  LiteSpeed Technologies, Inc.                        *
+*    Copyright (C) 2013 - 2015  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -28,6 +28,7 @@ class IOVec;
 
 class HioStreamHandler;
 class HttpRespHeaders;
+class NtwkIOLink;
 
 enum HioState 
 {
@@ -43,6 +44,7 @@ enum HiosProtocol
     HIOS_PROTO_SPDY2 = 1,
     HIOS_PROTO_SPDY3 = 2,
     HIOS_PROTO_SPDY31 = 3,
+    HIOS_PROTO_HTTP2 = 4,
     HIOS_PROTO_MAX 
 };
 
@@ -90,6 +92,8 @@ public:
     virtual void continueWrite() = 0;
     virtual void switchWriteToRead() = 0;
     virtual void onTimer() = 0;
+    virtual NtwkIOLink * getNtwkIoLink() = 0;
+    
     //virtual uint32_t GetStreamID() = 0;
     
     void reset( int32_t timeStamp )

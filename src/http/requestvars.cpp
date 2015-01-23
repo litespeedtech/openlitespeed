@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013  LiteSpeed Technologies, Inc.                        *
+*    Copyright (C) 2013 - 2015  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -1027,31 +1027,31 @@ const char * RequestVars::getCookieValue( HttpReq * pReq, const char * pCookieNa
 static const char * const s_pHeaders[] =
 {
     //Most common headers
-    "Accept",
-    "Accept-Charset",
-    "Accept-Encoding",
-    "Accept-Language",
-    "Authorization",
-    "Connection",
-    "Content-Type",
-    "Content-Length",
-    "Cookie",
-    "Cookie2",
-    "Host",
-    "Pragma",
-    "Referer",
-    "User-Agent",
-    "Cache-Control",
-    "If-Modified-Since",
-    "If-Match",
-    "If-None-Match",
-    "If-Unmodified-Since",
-    "If-Range",
-    "Keep-Alive",
-    "Range",
-    "X-Forwarded-for",
-    "Via",
-    "Transfer-Encoding"
+    "accept",
+    "accept-charset",
+    "accept-encoding",
+    "accept-language",
+    "authorization",
+    "connection",
+    "content-type",
+    "content-length",
+    "cookie",
+    "cookie2",
+    "host",
+    "pragma",
+    "referer",
+    "user-agent",
+    "cache-control",
+    "if-modified-since",
+    "if-match",
+    "if-none-match",
+    "if-unmodified-since",
+    "if-range",
+    "keep-alive",
+    "range",
+    "x-forwarded-for",
+    "via",
+    "transfer-encoding"
 };
 
 const char * RequestVars::getHeaderString( int iIndex )

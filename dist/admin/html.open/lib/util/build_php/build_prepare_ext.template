@@ -66,29 +66,6 @@ if [ "$?" -ne "0" ] ; then
 			check_errs 1 "Could not extract {EXTENSION_NAME} extension source archive"
 		fi
 		
-		if [ "{EXTENSION_NAME}" = "eAccelerator" ] ; then
-			echo "  .. Special handling for eAccelerator: do not use spin lock, buggy"
-			echo "     set mm_sem_spinlock=no and mm_sem_ipc=no in config.m4"
-			cd {EXTENSION_DIR}
-			cp config.m4 config.m4.orig
-		    sed -e 's/mm_sem_spinlock=yes/mm_sem_spinlock=no/' -e 's/mm_sem_ipc=yes/mm_sem_ipc=no/' config.m4.orig > config.m4
-			if [ "$?" -ne "0" ] ; then
-				echo "   sed command error, please try to modify config.m4 manually to avoid using spinlock"
-				# continue, do not abort here
-			fi
-		fi
-	fi
-else
-	if [ "{EXTENSION_NAME}" = "eAccelerator" ] ; then
-		echo "  .. Special handling for eAccelerator: do not use spin lock, buggy"
-		echo "     set mm_sem_spinlock=no and mm_sem_ipc=no in config.m4"
-		cd {EXTENSION_DIR}
-		cp config.m4 config.m4.orig
-	    sed -e 's/mm_sem_spinlock=yes/mm_sem_spinlock=no/' -e 's/mm_sem_ipc=yes/mm_sem_ipc=no/' config.m4.orig > config.m4
-		if [ "$?" -ne "0" ] ; then
-			echo "   sed command error, please try to modify config.m4 manually to avoid using spinlock"
-			# continue, do not abort here
-		fi
 	fi
 	
 fi

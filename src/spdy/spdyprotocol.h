@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013  LiteSpeed Technologies, Inc.                        *
+*    Copyright (C) 2013 - 2015  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -20,6 +20,7 @@
 #include <sys/types.h>
 //#include <algorithm> 
 #include <arpa/inet.h>
+#include <spdy/protocoldef.h>
 // Types of SPDY frames.
 
 enum SpdyFrameType
@@ -111,6 +112,8 @@ enum SpdyGoAwayStatus
     SPDY_GOAWAY_NUM_STATUS_CODES = 3
 };
 
+#define SPDY_FRAME_HEADER_SIZE 8
+
 class SpdyFrameHeader
 {
     struct spdy_ctl_hdr
@@ -158,54 +161,8 @@ public:
     uint32_t getHboData( int n ) const     {   return ntohl( m_data[n] );  }
 };
 
-inline uint16_t beReadUint16( const unsigned char * p )
-{
-    return ( (uint16_t)(*p) ) << 8 | *( p + 1 );
-}
 
-inline uint32_t beReadUint32( const unsigned char * p )
-{
-    register uint32_t v = *p++;
-    v = ( v << 8 ) | *p++;
-    v = ( v << 8 ) | *p++;
-    v = ( v << 8 ) | *p;
-    return v ;
-}
-
-inline uint16_t beReadUint16Adv( unsigned char * &p )
-{
-    register uint16_t v = *p++;
-    v = ( v << 8 ) | *p++;
-    return v;
-}
-
-inline uint32_t beReadUint32Adv( unsigned char * &p )
-{
-    register uint32_t v = *p++;
-    v = ( v << 8 ) | *p++;
-    v = ( v << 8 ) | *p++;
-    v = ( v << 8 ) | *p++;
-    return v ;
-}
-
-inline char * beWriteUint16( char * p, uint16_t v )
-{
-    *p++ = v >> 8;
-    *p++ = v & 0xff;
-    return p;
-}
-
-inline char * beWriteUint32( char * p, uint32_t v )
-{
-    *p++ = v >> 24;
-    *p++ = ( v >> 16 ) & 0xff;
-    *p++ = ( v >> 8 ) & 0xff;
-    *p++ = v & 0xff;
-    return p;
-    
-}
-
-const char* getFrameName(unsigned char bframeType);
+const char* getSpdyFrameName(unsigned char bframeType);
 
 class SpdySettingPairs
 {
