@@ -254,9 +254,11 @@ $_tipsdb['enableRewrite'] = new DAttrHelp('Enable Rewrite', 'Specifies whether t
 
 $_tipsdb['enableScript'] = new DAttrHelp('Enable Script', 'Specifies whether scripting (non-static pages) is allowed in this virtual host.  If disabled, CGI, FastCGI, LSAPI, Servlet engines and other scripting languages will not be allowed in this virtual host.  Therefore, if you want to use a script handler, you need to enable it here as well.', '', 'Select from radio box', '');
 
-$_tipsdb['enableSpdy'] = new DAttrHelp('Enable SPDY', 'SPDY is an experimental protocol that runs on top of SSL with the  goal of reducing page load times. More information can be found  at: http://en.wikipedia.org/wiki/SPDY    If you wish to enable SPDY, check the box next to the version(s) you wish to enable.', '', 'Check the protocol versions that you want to enable. Leaving all boxes unchecked  will enable SPDY/2 and SPDY/3 (the default). If you wish to disable SPDY, check &quot;None&quot; only  and leave all other boxes unchecked.', '');
+$_tipsdb['enableSpdy'] = new DAttrHelp('Enable SPDY/HTTP2', 'HTTP/2 and SPDY are new versions of the HTTP network protocol with the goal of reducing page load times.  More information can be found at: http://en.wikipedia.org/wiki/HTTP/2', '', 'Check the protocol(s) you wish to enable. Leaving all boxes unchecked will enable SPDY and HTTP/2 support (the default).  If you wish to disable SPDY and HTTP/2, check &quot;None&quot; only and leave all other boxes unchecked.', '');
 
 $_tipsdb['enableStapling'] = new DAttrHelp('Enable OCSP Stapling', 'Determines whether to enable OCSP stapling, a more efficient way of verifying public key certificates.', '', 'Select from radio box', '');
+
+$_tipsdb['enableh2c'] = new DAttrHelp('Enable HTTP/2 Over Cleartext TCP', 'Specifies whether to enable HTTP/2 over non-encrypted TCP connections. Default is disabled.', '', 'Select from radio box', '');
 
 $_tipsdb['env'] = new DAttrHelp('Environment', 'Specifies extra environment variables for the external application.', '', 'Key=value. Multiple variables can be separated by &quot;ENTER&quot;', '');
 
@@ -610,7 +612,7 @@ $_tipsdb['templateVHAliases'] = new DAttrHelp('Aliases', 'Specifies alternate na
 
 $_tipsdb['templateVHConfigFile'] = new DAttrHelp('Instantiated VHost Config File', 'Specifies the location of the config file generated when you instantiate a member virtual host.  Variable $VH_NAME must appear in the path so each virtual host will have its own file. Suggested location is $SERVER_ROOT/conf/vhosts/$VH_NAME/vhconf.conf. This config file will  be created only after you move a member vhost out of the template through instantiation.', '', 'String with $VH_NAME variable and .conf suffix', '');
 
-$_tipsdb['templateVHDocRoot'] = new DAttrHelp('Document Root', 'Specifies the unique path for each member virtual host&#039;s document root.   Variable $VH_NAME or $VH_ROOT must appear in the path so  each member virtual host will have its own document root. END_EXAMPLE', '', 'string with $VH_NAME or $VH_ROOT variable', '$VH_ROOT/public_html/ or $SERVER_ROOT/$VH_NAME/public_html.');
+$_tipsdb['templateVHDocRoot'] = new DAttrHelp('Document Root', 'Specifies the unique path for each member virtual host&#039;s document root.   Variable $VH_NAME or $VH_ROOT must appear in the path so  each member virtual host will have its own document root.', '', 'string with $VH_NAME or $VH_ROOT variable', '$VH_ROOT/public_html/ or $SERVER_ROOT/$VH_NAME/public_html.');
 
 $_tipsdb['templateVHDomain'] = new DAttrHelp('Domain', 'Specifies the main domain name for this member virtual host.  If left blank, the virtual host name will be used. This should be a fully qualified domain name, but you can use an IP address as well.  It is recommended to append :<port> for web sites not on port 80.  For configurations containing domain names, this domain can be referenced  with variable $VH_DOMAIN.    This domain name will be used in the following situations: <ol>   <li>To match the hostname in the Host header when processing a   request.</li>   <li>To populate the domain name configurations for add-ons    like FrontPage or AWstats.</li>  <li>To configure listener-to-virtual host mappings based on the virtual host template.</li> </ol>', '', 'domain name', '');
 

@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013  LiteSpeed Technologies, Inc.                        *
+*    Copyright (C) 2013 - 2015  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -920,16 +920,24 @@ int SSLContext::addCRL( const char * pCRLFile, const char * pCRLPath)
 
 
 #ifdef LS_ENABLE_SPDY
-static const char * NEXT_PROTO_STRING[3] = 
+/**
+ * We support h2-16, but if set to this value, firefox will not choose h2-16, so we have to use h2-14.
+ */
+static const char * NEXT_PROTO_STRING[8] = 
 {
+    "\x08http/1.1",
     "\x06spdy/2\x08http/1.1",
     "\x08spdy/3.1\x06spdy/3\x08http/1.1",
-    "\x08spdy/3.1\x06spdy/3\x06spdy/2\x08http/1.1" 
+    "\x08spdy/3.1\x06spdy/3\x06spdy/2\x08http/1.1",
+    "\x05h2-14\x08http/1.1",
+    "\x05h2-14\x06spdy/2\x08http/1.1",
+    "\x05h2-14\x08spdy/3.1\x06spdy/3\x08http/1.1",
+    "\x05h2-14\x08spdy/3.1\x06spdy/3\x06spdy/2\x08http/1.1",
 };
 
-static int NEXT_PROTO_STRING_LEN[3] =
+static unsigned int NEXT_PROTO_STRING_LEN[8] =
 {
-    16, 25, 32
+    9, 16, 25, 32, 15, 22, 31, 38,
 };
 
 //static const char NEXT_PROTO_STRING[] = "\x06spdy/2\x08http/1.1\x08http/1.0";
@@ -938,17 +946,35 @@ static int SSLConnection_ssl_npn_advertised_cb(SSL *pSSL, const unsigned char **
                                  unsigned int *outlen, void *arg)
 {
     SSLContext * pCtx = (SSLContext *)arg;
-    *out = (const unsigned char *)NEXT_PROTO_STRING[ pCtx->getEnableSpdy() - 1 ];
-    *outlen = NEXT_PROTO_STRING_LEN[ pCtx->getEnableSpdy() - 1 ];
+    *out = (const unsigned char *)NEXT_PROTO_STRING[ pCtx->getEnableSpdy()];
+    *outlen = NEXT_PROTO_STRING_LEN[ pCtx->getEnableSpdy() ];
     return SSL_TLSEXT_ERR_OK;
 }
 
+static int SSLConntext_alpn_select_cb(SSL *pSSL, const unsigned char **out, 
+                                 unsigned char *outlen, const unsigned char *in,
+                                 unsigned int inlen, void *arg)
+{
+    SSLContext * pCtx = (SSLContext *)arg;
+    if (SSL_select_next_proto((unsigned char **) out, outlen, 
+                              (const unsigned char *)NEXT_PROTO_STRING[ pCtx->getEnableSpdy() ],
+                              NEXT_PROTO_STRING_LEN[ pCtx->getEnableSpdy() ],
+                              in, inlen)
+        != OPENSSL_NPN_NEGOTIATED)
+    {
+        return SSL_TLSEXT_ERR_NOACK;
+    }
+    return SSL_TLSEXT_ERR_OK;
+}
 
 int SSLContext::enableSpdy( int level )
 {
-    m_iEnableSpdy = ( level & 3 );
+    m_iEnableSpdy = ( level & 7 );
     if ( m_iEnableSpdy == 0 )
         return 0;
+#ifdef TLSEXT_TYPE_application_layer_protocol_negotiation
+    SSL_CTX_set_alpn_select_cb( m_pCtx, SSLConntext_alpn_select_cb, this );
+#endif
 #ifdef TLSEXT_TYPE_next_proto_neg
     SSL_CTX_set_next_protos_advertised_cb(m_pCtx, SSLConnection_ssl_npn_advertised_cb, this);
 #else
@@ -1104,20 +1130,21 @@ SSLContext *SSLContext::config( const XmlNode *pNode )
         pSSL->initDH( pDHParam );
     }
     
+
 #ifdef LS_ENABLE_SPDY
-    enableSpdy = ConfigCtx::getCurConfigCtx()->getLongValue( pNode, "enableSpdy", 0, 3, 3 );
+    enableSpdy = ConfigCtx::getCurConfigCtx()->getLongValue( pNode, "enableSpdy", 0, 7, 7 );
     if ( enableSpdy )
     {
         if ( -1 == pSSL->enableSpdy( enableSpdy ) )
-            ConfigCtx::getCurConfigCtx()->log_error( "SPDY can't be enabled [try to set to %d].", enableSpdy );
+            ConfigCtx::getCurConfigCtx()->log_error( "SPDY/HTTP2 can't be enabled [try to set to %d].", enableSpdy );
     }
 #else
     //Even if no spdy installed, we still need to parse it
     //When user set it and will log an error to user, better than nothing
-    enableSpdy = ConfigCtx::getCurConfigCtx()->getLongValue( pNode, "enableSpdy", 0, 3, 0 );
+    enableSpdy = ConfigCtx::getCurConfigCtx()->getLongValue( pNode, "enableSpdy", 0, 7, 0 );
     if (enableSpdy)
     {
-        ConfigCtx::getCurConfigCtx()->log_error( "SPDY can't be enabled for not installed." );
+        ConfigCtx::getCurConfigCtx()->log_error( "SPDY/HTTP2 can't be enabled for not installed." );
     }
 #endif
 

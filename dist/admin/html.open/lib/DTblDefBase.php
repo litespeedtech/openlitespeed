@@ -865,7 +865,7 @@ class DTblDefBase
 	{
 		$attrs = array(
 			$this->_attrs['ssl_renegProtection'],
-			DTblDefBase::NewCheckBoxAttr('enableSpdy', DMsg::ALbl('l_enablespdy'), array('1'=>'SPDY/2', '2'=>'SPDY/3', '0'=>DMsg::ALbl('o_none')))
+			DTblDefBase::NewCheckBoxAttr('enableSpdy', DMsg::ALbl('l_enablespdy'), array('1'=>'SPDY/2', '2'=>'SPDY/3', '4'=>'HTTP/2', '0'=>DMsg::ALbl('o_none')))
 		    );
 		$this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_securityandfeatures'), $attrs);
 	}

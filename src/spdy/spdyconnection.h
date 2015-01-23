@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013  LiteSpeed Technologies, Inc.                        *
+*    Copyright (C) 2013 - 2015  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -32,14 +32,6 @@
 #define SPDY_CONN_FLAG_FLOW_CTRL        (1<<1)
 
 #define SPDY_STREAM_PRIORITYS          8
-
-typedef struct
-{
-    char* pName;
-    char* pValue;
-    uint16_t nameLen;
-    uint16_t ValueLen;
-} NameValuePair;
 
 class SpdyStream;
 
@@ -130,7 +122,9 @@ public:
     
     void recycleStream( uint32_t uiStreamID );
     static void replaceZero( char* pValue, int ilength );
-                                
+ 
+    NtwkIOLink * getNtwkIoLink();
+    
 private:
     typedef THash< SpdyStream* > StreamMap;
     

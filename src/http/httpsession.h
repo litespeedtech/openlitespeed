@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013  LiteSpeed Technologies, Inc.                        *
+*    Copyright (C) 2013 - 2015  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -174,6 +174,8 @@ private:
     void releaseSendFileInfo();
     int chunkSendfile( int fdSrc, off_t off, size_t size );
     int processWebSocketUpgrade(const HttpVHost* pVHost);
+    int processHttp2Upgrade(const HttpVHost* pVHost);
+    
     int sendRespHeaders( );   
     int resumeHandlerProcess();
     int flushBody();
@@ -192,7 +194,7 @@ public:
         
 public:
     NtwkIOLink * getNtwkIOLink() const      {   return m_pNtwkIOLink;   }
-    void setNtwkIOLink( NtwkIOLink * p )    {   m_pNtwkIOLink = p;      }
+    //void setNtwkIOLink( NtwkIOLink * p )    {   m_pNtwkIOLink = p;      }
     //below are wrapper functions
     SSLConnection* getSSL()     {   return m_pNtwkIOLink->getSSL();  }
     bool isSSL() const          {   return m_pNtwkIOLink->isSSL();  }

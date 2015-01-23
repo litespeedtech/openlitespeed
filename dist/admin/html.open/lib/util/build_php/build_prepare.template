@@ -2,8 +2,6 @@
 #	PHP_VERSION = {PHP_VERSION}
 #	PHP_BUILD_DIR = {PHP_BUILD_DIR}
 #	DL_METHOD = {DL_METHOD}
-#	ENABLE_SUHOSIN = {ENABLE_SUHOSIN} # 1 or 0
-#	SUHOSIN_PATCH_URL = {SUHOSIN_PATCH_URL}
 #	ENABLE_MAILHEADER = {ENABLE_MAILHEADER} # 1 or 0
 #	LSAPI_VERSION = {LSAPI_VERSION}
 ###########################################
@@ -86,32 +84,6 @@ if [ $PHP_SRC_READY = "N" ] ; then
 fi
 	
 echo ""
-
-if [ {ENABLE_SUHOSIN} -eq 1 ] && [ "A{SUHOSIN_PATCH_URL}" != "A" ] ; then
-
-	if [ -e suhosin-patch-{PHP_VERSION}.patch.gz ] ; then
-		rm -f suhosin-patch-{PHP_VERSION}.patch.gz
-		check_errs $? "Could not delete old copy suhosin-patch-{PHP_VERSION}.patch.gz"
-	fi
-	
-	echo "Suhosin is enabled"
-	main_msg "Retrieving Suhosin patch from {SUHOSIN_PATCH_URL}" 
-	{DL_METHOD} suhosin-patch-{PHP_VERSION}.patch.gz {SUHOSIN_PATCH_URL}
-	check_errs $? "Could not retrieve Suhosin patch"
-	echo ""
-	
-	echo "Extracting Suhosin patch: gunzip -f suhosin-patch-{PHP_VERSION}.patch.gz"
-	gunzip -f suhosin-patch-{PHP_VERSION}.patch.gz
-	check_errs $? "Could not extract Suhosin patch"
-	echo ""
-	
-	main_msg "Patching source with Suhosin patch" 
-	cd php-{PHP_VERSION}
-	patch -p1 < ../suhosin-patch-{PHP_VERSION}.patch
-	check_errs $? "Could not patch source with Suhosin patch"
-	cd ..
-	echo ""
-fi
 
 if [ {ENABLE_MAILHEADER} -eq 1 ] ; then
 

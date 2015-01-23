@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013  LiteSpeed Technologies, Inc.                        *
+*    Copyright (C) 2013 - 2015  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -88,6 +88,7 @@ HttpSession::~HttpSession()
 
 int HttpSession::onInitConnected()
 {
+    m_pNtwkIOLink = getStream()->getNtwkIoLink();
     m_lReqTime = DateTime::s_curTime;
     m_iReqTimeUs = DateTime::s_curTimeUs;
     if ( m_pNtwkIOLink )
@@ -745,6 +746,13 @@ int HttpSession::processWebSocketUpgrade( const HttpVHost * pVHost )
     }
 }
 
+int HttpSession::processHttp2Upgrade( const HttpVHost * pVHost )
+{
+    getNtwkIOLink()->switchToHttp2Handler(this);
+    return 0;
+}
+
+
 int HttpSession::hookResumeCallback(int level, lsi_module_t *pModule)
 {
     int ret;
@@ -848,6 +856,10 @@ int HttpSession::processNewReq(lsi_module_t *pModule)
         if ( m_request.isWebsocket() )
         {
             return processWebSocketUpgrade( pVHost );
+        }
+        else if (HttpGlobals::s_enableH2c ==1 && m_request.isHttp2Upgrade() )
+        {
+            processHttp2Upgrade( pVHost );
         }
     
         m_request.setStatusCode( SC_200 );
@@ -2861,6 +2873,11 @@ int HttpSession::flush()
             if ( D_ENABLED( DL_LESS ))
                 LOG_D(( getLogger(), "[%s] set HSS_COMPLETE flag.", getLogId() ));
             setState( HSS_COMPLETE );
+        }
+        else if( getFlag( HSF_RECV_RESP_BUFFERED ) || getFlag( HSF_SEND_RESP_BUFFERED ))
+        {
+            //Do not change anything and hold
+            return 0;
         }
         else
         {

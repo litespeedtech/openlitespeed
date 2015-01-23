@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013  LiteSpeed Technologies, Inc.                        *
+*    Copyright (C) 2013 - 2015  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -19,11 +19,11 @@
 #define SPDYSTREAMPOOL_H
 #include <util/objpool.h>
 #include <util/dlinkqueue.h>
-
 class SpdyStream;
+typedef ObjPool<SpdyStream>       Pool;
 class SpdyStreamPool : public ObjPool<SpdyStream>
 {  
-    static ObjPool<SpdyStream> s_pool; 
+    static Pool s_pool; 
     SpdyStreamPool();
     ~SpdyStreamPool();
 public:

@@ -66,6 +66,7 @@ class DTblDef extends DTblDefBase
 				DTblDefBase::NewIntAttr('inMemBufSize', DMsg::ALbl('l_inmembufsize'), false, 0),
 				DTblDefBase::NewTextAttr('swappingDir', DMsg::ALbl('l_swappingdir'), 'cust', false),
 				DTblDefBase::NewBoolAttr('autoFix503', DMsg::ALbl('l_autofix503')),
+                DTblDefBase::NewBoolAttr('enableh2c', DMsg::ALbl('l_enableh2c')),
 				DTblDefBase::NewIntAttr('gracefulRestartTimeout', DMsg::ALbl('l_gracefulrestarttimeout'), true, -1, 2592000)
 		);
 		$this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_serverprocess'), $attrs);

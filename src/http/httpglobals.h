@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013  LiteSpeed Technologies, Inc.                        *
+*    Copyright (C) 2013 - 2015  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -211,6 +211,7 @@ public:
     static int                    s_503Errors;
     static int                    s_503AutoFix;
     static int                    s_useProxyHeader;
+    static int                    s_enableH2c;
 
     static int                    s_tmPrevToken;
     static int                    s_tmToken;
