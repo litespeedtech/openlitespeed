@@ -317,6 +317,7 @@ class DTblDef
 			new DAttr('inMemBufSize', 'uint', 'Memory I/O Buffer', 'text', false, 0, NULL),
 			new DAttr('swappingDir', 'cust', 'Swapping Directory', 'text', false, 1, 'rw', $this->_options['text_size']),
 			new DAttr( 'autoFix503', 'bool', 'Auto Fix 503 Error', 'radio', true ),
+            new DAttr( 'enableh2c', 'bool', 'Enable HTTP/2 Over Cleartext TCP', 'radio', true ),
 			new DAttr('gracefulRestartTimeout', 'uint', 'Graceful Restart Timeout (secs)', 'text', true, -1, 2592000)
 
 			);
@@ -2144,7 +2145,7 @@ class DTblDef
 
 		$attrs = array(
 			$this->_attrs['ssl_renegProtection'],
-		    new DAttr('enableSpdy',	'checkboxOr', 'Enable SPDY', 'checkboxgroup', true, NULL, array('1'=>'SPDY/2', '2'=>'SPDY/3', '0'=>'None')),
+		    new DAttr('enableSpdy', 'checkboxOr', 'Enable SPDY/HTTP2', 'checkboxgroup', true, NULL, array('1'=>'SPDY/2', '2'=>'SPDY/3', '4'=>'HTTP/2', '0'=>'None')),
 		    );
 		$this->_tblDef[$id]->setAttr($attrs);
 	}

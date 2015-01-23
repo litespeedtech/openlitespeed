@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013  LiteSpeed Technologies, Inc.                        *
+*    Copyright (C) 2013 - 2015  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -21,7 +21,8 @@
 #include <http/httplog.h>
 #include <http/httpglobals.h>
 #include <http/httpresourcemanager.h>
-#include <http/httpsession.h>
+//#include <http/httpsession.h>
+#include <http/httprespheaders.h>
 
 #include "edio/inputstream.h"
 #include <util/iovec.h>
@@ -157,9 +158,9 @@ int SpdyConnection::onReadEx2()
         {
             if ( m_iCurrentFrameRemain < 0 )
             {
-                if ( m_bufInput.size() < 8 )
+                if ( m_bufInput.size() < SPDY_FRAME_HEADER_SIZE )
                     break;
-                m_bufInput.moveTo((char*)m_pcurrentSpdyHeader, 8);
+                m_bufInput.moveTo((char*)m_pcurrentSpdyHeader, SPDY_FRAME_HEADER_SIZE);
                 m_iCurrentFrameRemain = m_pcurrentSpdyHeader->getLength();
                 if ( D_ENABLED( DL_LESS ) )
                 {
@@ -180,13 +181,13 @@ int SpdyConnection::onReadEx2()
                 }
                 if ( m_iCurrentFrameRemain > 0 )
                     m_bufInput.pop_front( m_iCurrentFrameRemain );
-                m_iCurrentFrameRemain = -8;
+                m_iCurrentFrameRemain = -SPDY_FRAME_HEADER_SIZE;
             }
             else
             {
                 processDataFrame( m_pcurrentSpdyHeader );
                 if ( m_iCurrentFrameRemain == 0 )
-                    m_iCurrentFrameRemain = -8;
+                    m_iCurrentFrameRemain = -SPDY_FRAME_HEADER_SIZE;
             }
         }
 
@@ -226,8 +227,8 @@ int SpdyConnection::processControlFrame( SpdyFrameHeader* pHeader)
         extraHeader = extraHeaderLen[m_bVersion -2][pHeader->getType()];
     if(extraHeader > m_iCurrentFrameRemain)
         extraHeader = m_iCurrentFrameRemain;
-    memset((char*)pHeader + 8, 0, 10);
-    m_bufInput.moveTo((char*)pHeader + 8, extraHeader);
+    memset((char*)pHeader + SPDY_FRAME_HEADER_SIZE, 0, 10);
+    m_bufInput.moveTo((char*)pHeader + SPDY_FRAME_HEADER_SIZE, extraHeader);
     m_iCurrentFrameRemain -= extraHeader;
     printLogMsg(pHeader);
     switch ( pHeader->getType() )
@@ -268,7 +269,7 @@ void SpdyConnection::printLogMsg( SpdyFrameHeader* pHeader )
     if ( D_ENABLED( DL_LESS ) )
     {
             LOG_D(( getLogger(), "[%s] Received %s, size: %d, D0:%d, D1:%d\n",
-                    getLogId(),getFrameName(pHeader->getType()), pHeader->getLength(), 
+                    getLogId(),getSpdyFrameName(pHeader->getType()), pHeader->getLength(), 
                     pHeader->getHboData( 0 ),  pHeader->getHboData( 1 )) );  
     }
 }
@@ -639,26 +640,18 @@ int SpdyConnection::appendReqHeaders( SpdyStream* pStream, int NVPairCnt )
     {
         pStream->appendInputData( m_NameValuePairListReqline[i].pValue, m_NameValuePairListReqline[i].ValueLen);
         if( i == 2 )
-        {
-            pStream->appendInputData( '\r' );
-            pStream->appendInputData( '\n' );
-        }
+            pStream->appendInputData( "\r\n", 2 );
         else
-        {
-            pStream->appendInputData( ' ' );
-        }
+            pStream->appendInputData( " ", 1 );
     } 
     for( int i = 0; i < NVPairCnt; i++ )
     {
         pStream->appendInputData( m_NameValuePairList[i].pName, m_NameValuePairList[i].nameLen );
-        pStream->appendInputData( ':' );
-        pStream->appendInputData( ' ' );
+        pStream->appendInputData( ": ", 2 );
         pStream->appendInputData( m_NameValuePairList[i].pValue, m_NameValuePairList[i].ValueLen );
-        pStream->appendInputData( '\r' );
-        pStream->appendInputData( '\n' );
-    }  
-    pStream->appendInputData( '\r' );
-    pStream->appendInputData( '\n' );
+        pStream->appendInputData( "\r\n", 2 );
+    }
+    pStream->appendInputData( "\r\n", 2 );
     return 0;
     
 }
@@ -666,15 +659,10 @@ int SpdyConnection::appendReqHeaders( SpdyStream* pStream, int NVPairCnt )
 SpdyStream* SpdyConnection::getNewStream( uint32_t uiStreamID, int iPriority, uint8_t ubSpdy_Flags)
 {
     SpdyStream* pStream;
-    NtwkIOLink * pLink;
-
-    HttpSession *pSession = HttpGlobals::getResManager()->getConnection();
+    HioStreamHandler *pSession = HttpGlobals::getResManager()->getHioStreamHandler();
     if ( !pSession )
         return NULL;
-    pLink = static_cast<NtwkIOLink *>(getStream() );
-    pSession->setNtwkIOLink( pLink );
     pStream = new SpdyStream();
-    //pStream = SpdyStreamPool::getSpdyStream();
     m_mapStream.insert(( void* )(long)uiStreamID, pStream );
     if ( D_ENABLED( DL_MORE ) )
     {
@@ -682,7 +670,7 @@ SpdyStream* SpdyConnection::getNewStream( uint32_t uiStreamID, int iPriority, ui
                 getLogId(), uiStreamID, m_mapStream.size() ) );
     }
     pStream->init( uiStreamID, iPriority, this, ubSpdy_Flags, pSession );
-    pStream->setProtocol( pLink->getProtocol() );
+    pStream->setProtocol( getStream()->getProtocol() );
     if ( m_bVersion == 3 )
         pStream->setFlag( HIO_FLAG_FLOWCTRL, 1 );
     return pStream;
@@ -741,7 +729,7 @@ int SpdyConnection::sendFrame8Bytes( SpdyFrameType type, uint32_t uiVal1, uint32
     if ( D_ENABLED( DL_MORE ) )
     {
         LOG_D(( getLogger(), "[%s] send %s frame, stream: %d, value: %d"
-                , getLogId(), getFrameName( type ), uiVal1, uiVal2 ) );
+                , getLogId(), getSpdyFrameName( type ), uiVal1, uiVal2 ) );
     }
     return 0;
 }
@@ -755,7 +743,7 @@ int SpdyConnection::sendFrame4Bytes( SpdyFrameType type, uint32_t uiVal1 )
     if ( D_ENABLED( DL_MORE ) )
     {
         LOG_D(( getLogger(), "[%s] send %s frame, value: %d"
-                , getLogId(), getFrameName( type ), uiVal1 ) );
+                , getLogId(), getSpdyFrameName( type ), uiVal1 ) );
     }
     return 0;
 }
@@ -1424,4 +1412,10 @@ void SpdyConnection::resetStream( StreamMap::iterator it, SpdyRstErrorCode code 
     sendRstFrame( it.second()->getStreamID(), code ); 
     recycleStream( it );
 }
+
+NtwkIOLink * SpdyConnection::getNtwkIoLink()
+{
+    return getStream()->getNtwkIoLink();
+}
+
 

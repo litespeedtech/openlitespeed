@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013  LiteSpeed Technologies, Inc.                        *
+*    Copyright (C) 2013 - 2015  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -2266,6 +2266,7 @@ int HttpServerImpl::configServerBasics( int reconfig, const XmlNode *pRoot)
        
 
         HttpGlobals::s_503AutoFix = ConfigCtx::getCurConfigCtx()->getLongValue( pRoot, "AutoFix503", 0, 1, 1 );
+        HttpGlobals::s_enableH2c = ConfigCtx::getCurConfigCtx()->getLongValue( pRoot, "enableh2c", 0, 1, 0 );
         
         //this value can only be set once when server start.
         if ( MainServerConfigObj.getCrashGuard() == 2 )

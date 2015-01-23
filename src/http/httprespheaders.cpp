@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013  LiteSpeed Technologies, Inc.                        *
+*    Copyright (C) 2013 - 2015  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -39,38 +39,39 @@
 
 const char * HttpRespHeaders::m_sPresetHeaders[H_HEADER_END] = 
 {
-    "Accept-Ranges",
-    "Connection",
-    "Content-Type",
-    "Content-Length",
-    "Content-Encoding",
-    "Content-Range",
-    "Content-Disposition",
-    "Cache-Control",
-    "Date",
-    "Etag",
-    "Expires",
-    "Keep-Alive",
-    "Last-Modified",
-    "Location",
-    "X-Litespeed-Location",
-    "Litespeed-Cache-Control",
-    "Pragma",
-    "Proxy-Connection",
-    "Server",
-    "Set-Cookie",
-    "Status",
-    "Transfer-Encoding",
-    "Vary",
-    "Www-Authenticate",
-    "X-Powered-By"
+    "accept-ranges",
+    "connection",
+    "content-type",
+    "content-length",
+    "content-encoding",
+    "content-range",
+    "content-disposition",
+    "cache-control",
+    "date",
+    "etag",
+    "expires",
+    "keep-alive",
+    "last-modified",
+    "location",
+    "x-litespeed-location",
+    "x-litespeed-cache-control",
+    "pragma",
+    "proxy-connection",
+    "server",
+    "set-cookie",
+    "status",
+    "transfer-encoding",
+    "vary",
+    "www-authenticate",
+    "x-powered-by"
 };
 
-int HttpRespHeaders::m_iPresetHeaderLen[H_HEADER_END] = 
+int HttpRespHeaders::s_iHeaderLen[H_HEADER_END+1] =
 {
-    13, 10, 12, 14, 16, 13, 19, 13, 4, //"Date"
-    4, 7, 10, 13, 8, 20, 23, 6, 16, 6,  // "Server"
-    10, 6, 17, 4, 16, 12 //"X_Powered_By"
+    13, 10, 12, 14, 16, 13, 19, 13, //cache-control
+    4, 4, 7, 10, 13, 8, 20, 25, //x-litespeed-cache-control
+    6, 16, 6, 10, 6, 17, 4, 16, 12, //x-powered-by
+    0
 };
 
 HttpRespHeaders::HttpRespHeaders()
@@ -261,7 +262,7 @@ int HttpRespHeaders::add( HEADERINDEX headerIndex, const char * pVal, unsigned i
     
     if (m_KVPairindex[headerIndex] == 0xFF)
         m_KVPairindex[headerIndex] = m_iHeaderTotalCount;
-    return _add(m_KVPairindex[headerIndex], m_sPresetHeaders[headerIndex], m_iPresetHeaderLen[headerIndex], pVal, valLen, method);
+    return _add(m_KVPairindex[headerIndex], m_sPresetHeaders[headerIndex], s_iHeaderLen[headerIndex], pVal, valLen, method);
 }
     
 
@@ -271,7 +272,7 @@ int HttpRespHeaders::add( const char * pName, int nameLen, const char * pVal, un
     HEADERINDEX headerIndex = getRespHeaderIndex( pName );
     if ( headerIndex != H_HEADER_END )
     {
-        assert( m_iPresetHeaderLen[headerIndex] == nameLen);
+        assert( s_iHeaderLen[headerIndex] == nameLen);
         assert(strncasecmp(m_sPresetHeaders[headerIndex], pName, nameLen) ==0);
         return add(headerIndex, pVal, valLen, method);
     }
@@ -728,11 +729,11 @@ void HttpRespHeaders::buildCommonHeaders()
     HttpRespHeaders::s_gzipHeaders[0].valLen   = 4;
     
     HttpRespHeaders::s_gzipHeaders[1].index    = HttpRespHeaders::H_VARY;
-    HttpRespHeaders::s_gzipHeaders[1].val      = "Accept-Encoding";
+    HttpRespHeaders::s_gzipHeaders[1].val      = "accept-encoding";
     HttpRespHeaders::s_gzipHeaders[1].valLen   = 15;
     
     HttpRespHeaders::s_keepaliveHeader.index    = HttpRespHeaders::H_CONNECTION;
-    HttpRespHeaders::s_keepaliveHeader.val      = "Keep-Alive";
+    HttpRespHeaders::s_keepaliveHeader.val      = "keep-alive";
     HttpRespHeaders::s_keepaliveHeader.valLen   = 10;
     
     HttpRespHeaders::s_concloseHeader.index    = HttpRespHeaders::H_CONNECTION;

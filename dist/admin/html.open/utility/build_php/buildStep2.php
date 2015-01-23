@@ -12,7 +12,7 @@
 		$options = new BuildOptions($php_version);
 		$options->setDefaultOptions();
 		$default_options = $options;
-		$has_suhosin = $check->is_suhosin_supported($php_version);
+        $supported = $check->GetModuleSupport($php_version);
 	}
 	elseif ($cur_step == 2) {
 		$options = $check->pass_val['input_options'];
@@ -131,47 +131,49 @@
             <td class="icon"></td>
     <td>
     	<?
-    		$buf = '';
-    		$checked = ' checked="checked"';
-    		if ($has_suhosin) {
-    			$buf .= '<input type="checkbox" name="addonSuhosin"';
-	    		if ($options->GetValue('AddOnSuhosin'))
-	    			$buf .= $checked;
-	    		$buf .= '> <a href="http://www.hardened-php.net/suhosin/index.html">Suhosin</a> (General Hardening) <br>';
-	    	}
+    	$buf = '';
+    	$checked = ' checked="checked"';
+    	if ($supported['suhosin']) {
+    		$buf .= '<input type="checkbox" name="addonSuhosin"';
+    		if ($options->GetValue('AddOnSuhosin'))
+    			$buf .= $checked;
+    		$buf .= '> <a href="http://suhosin.org">Suhosin</a> (General Hardening) <br>';
+    	}
 
-	    	$buf .= '<input type="checkbox" name="addonMailHeader"';
-	    	if ($options->GetValue('AddOnMailHeader'))
-	    		$buf .= $checked;
-	    	$buf .= '> <a href="http://choon.net/php-mail-header.php">PHP Mail Header Patch</a> (Identifies Mail Source) <br>
-	    	        <input type="checkbox" name="addonAPC"';
-	    	if ($options->GetValue('AddOnAPC'))
-	    		$buf .= $checked;
-	    	$buf .= '> <a href="http://pecl.php.net/package/APC">APC</a> (Opcode Cache) V' . APC_VERSION;
+        if ($supported['mailheader']) {
+            $buf .= '<input type="checkbox" name="addonMailHeader"';
+            if ($options->GetValue('AddOnMailHeader'))
+                $buf .= $checked;
+            $buf .= '> <a href="http://choon.net/php-mail-header.php">PHP Mail Header Patch</a> (Identifies Mail Source) <br>';
+        }
 
-	    	$buf .= '<br><input type="checkbox" name="addonEAccelerator"';
-	    	if ($options->GetValue('AddOnEAccelerator'))
-	    		$buf .= $checked;
-	    	$buf .= '> <a href="http://www.eaccelerator.net">eAccelerator</a> (Opcode Cache)<br>
-	    	        <input type="checkbox" name="addonXCache"';
-	    	if ($options->GetValue('AddOnXCache'))
-	    		$buf .= $checked;
-	    	$buf .= '> <a href="http://xcache.lighttpd.net/">XCache</a>  (Opcode Cache) V' . XCACHE_VERSION;
+        if ($supported['apc']) {
+            $buf .= '<input type="checkbox" name="addonAPC"';
+            if ($options->GetValue('AddOnAPC'))
+                $buf .= $checked;
+            $buf .= '> <a href="http://pecl.php.net/package/APC">APC</a> (Opcode Cache) V' . APC_VERSION . '<br>';
+        }
 
-	    	$buf .= '<br><input type="checkbox" name="addonMemCache"';
-	    	if ($options->GetValue('AddOnMemCache'))
-	    		$buf .= $checked;
-	    	$buf .= '> <a href="http://pecl.php.net/package/memcache">memcache</a> (memcached extension) V' . MEMCACHE_VERSION;
+        $buf .= '<input type="checkbox" name="addonXCache"';
+        if ($options->GetValue('AddOnXCache'))
+            $buf .= $checked;
+        $buf .= '> <a href="http://xcache.lighttpd.net/">XCache</a>  (Opcode Cache) V' . XCACHE_VERSION;
 
-	    	$buf .= '<br><input type="checkbox" name="addonOPcache"';
-	    	if ($options->GetValue('AddOnOPcache'))
-	    		$buf .= $checked;
-	    	$buf .= '> <a href="http://pecl.php.net/package/ZendOpcache">Zend OPcache</a> (Opcode Cache) V' . OPCACHE_VERSION;
+        $buf .= '<br><input type="checkbox" name="addonMemCache"';
+        if ($options->GetValue('AddOnMemCache'))
+            $buf .= $checked;
+        $buf .= '> <a href="http://pecl.php.net/package/memcache">memcache</a> (memcached extension) V' . MEMCACHE_VERSION . '<br>';
 
-	    	$buf .= '<p class="field_note">Note: If you want to use a version not listed here, you can manually update the settings in /usr/local/lsws/admin/html/utility/build_php/buildconf.inc.php.</p>';
+        if ($supported['opcache']) {
+            $buf .= '<input type="checkbox" name="addonOPcache"';
+            if ($options->GetValue('AddOnOPcache'))
+                $buf .= $checked;
+            $buf .= '> <a href="http://pecl.php.net/package/ZendOpcache">Zend OPcache</a> (Opcode Cache) V' . OPCACHE_VERSION . '<br>';
+        }
 
-	    	echo $buf;
+    	$buf .= '<p class="field_note">Note: If you want to use a version not listed here, you can manually update the settings in /usr/local/lsws/admin/html/utility/build_php/buildconf.inc.php.</p>';
 
+    	echo $buf;
     	?>
 
     </td>

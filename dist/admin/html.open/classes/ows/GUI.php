@@ -40,10 +40,10 @@ class GUI extends GUIBase
 
 	public static function footer()
 	{
-		$year = '2013-2014';
+		$year = '2013-2015';
 		$extra = '
     Open LiteSpeed is an open source HTTP server.
-    Copyright (C) 2013-2014  Lite Speed Technologies, Inc.
+    Copyright (C) 2013-2015  Lite Speed Technologies, Inc.
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by

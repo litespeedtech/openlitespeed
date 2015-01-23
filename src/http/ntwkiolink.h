@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013  LiteSpeed Technologies, Inc.                        *
+*    Copyright (C) 2013 - 2015  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -27,7 +27,6 @@
 #include <sslpp/sslconnection.h>
 #include <util/logtracker.h>
 #include <util/iovec.h>
-#include <spdy/spdyprotocol.h>
 
 #include <sys/types.h>
 #include <lsiapi/internal.h>
@@ -275,6 +274,9 @@ public:
     
     int get_url_from_reqheader(char *buf, int length, char **puri, int *uri_len, char **phost, int *host_len);
     
+    
+    int switchToHttp2Handler(HttpSession *pSession);
+    
     int setLink( HttpListener *pListener, int fd, ClientInfo * pInfo, SSLContext * pSSLContext );
 
     const char * getPeerAddrString() const
@@ -330,6 +332,7 @@ public:
 
     LsiApiHooks * getModSessionHooks( int index )
     {   return m_sessionHooks.getCopy( index ); }
+    virtual NtwkIOLink * getNtwkIoLink()    {   return this;    }
 };
 
 

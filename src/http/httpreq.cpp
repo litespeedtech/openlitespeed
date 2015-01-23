@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013  LiteSpeed Technologies, Inc.                        *
+*    Copyright (C) 2013 - 2015  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -447,6 +447,7 @@ int HttpReq::parseHost(const char* pCur, const char *pBEnd)
     }
     return 0;
 }
+
 int HttpReq::parseMethod(const char *pCur, const char *pBEnd )
 {
 
@@ -490,6 +491,8 @@ int HttpReq::processHeaderLines()
     const char* pTemp1 = NULL;
     bool headerfinished = false;
     int index;
+    
+    m_upgradeProto = UPD_PROTO_NONE; //0;
     while((pLineEnd  = ( const char *)memchr(pLineBegin, '\n', pBEnd - pLineBegin )) != NULL)
     {
         pMark = ( const char *)memchr(pLineBegin, ':', pLineEnd - pLineBegin);
@@ -539,10 +542,18 @@ int HttpReq::processHeaderLines()
                 pCurHeader->valOff = pTemp - m_headerBuf.begin();
                 pCurHeader->valLen = pTemp1 - pTemp;
                 
-                if ( pCurHeader->keyLen == 7 && strncasecmp(pLineBegin, "Upgrade", 7) == 0 &&
-                    pCurHeader->valLen == 9 && strncasecmp(pTemp, "websocket", 9) == 0 )
+                if ( pCurHeader->keyLen == 7 && strncasecmp(pLineBegin, "Upgrade", 7) == 0)
                 {
-                    m_upgradeProto = UPD_PROTO_WEBSOCKET;
+                    if (pCurHeader->valLen == 9 && strncasecmp(pTemp, "websocket", 9) == 0 )
+                    {
+                        m_upgradeProto = UPD_PROTO_WEBSOCKET;
+                    }
+                    else if (pCurHeader->valLen >= 3 && strncasecmp(pTemp, "h2c", 3) == 0 )
+                    {
+                        m_upgradeProto = UPD_PROTO_HTTP2;
+                        //Destroy it, to avoid loop calling 
+                        memset((char *)(pLineBegin - 2), 0x20, 7 + pCurHeader->valLen + 4);//
+                    }
                 }
             }
         }

@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013  LiteSpeed Technologies, Inc.                        *
+*    Copyright (C) 2013 - 2015  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -400,6 +400,5 @@ void GHash::swap( GHash & rhs )
     memmove( temp, this, sizeof( GHash ) );
     memmove( this, &rhs, sizeof( GHash ) );
     memmove( &rhs, temp, sizeof( GHash ) );
-    
 }
 

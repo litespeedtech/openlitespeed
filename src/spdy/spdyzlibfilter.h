@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013  LiteSpeed Technologies, Inc.                        *
+*    Copyright (C) 2013 - 2015  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -22,7 +22,6 @@
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
-#include "spdyprotocol.h"
 #include "zlib.h"
 #include <sys/types.h>       /* basic system data types */
 #include "util/autobuf.h"

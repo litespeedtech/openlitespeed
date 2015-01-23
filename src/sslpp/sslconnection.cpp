@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013  LiteSpeed Technologies, Inc.                        *
+*    Copyright (C) 2013 - 2015  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -339,15 +339,23 @@ const char * SSLConnection::getVersion() const
 {   return SSL_get_version( m_ssl );        }
 
 static const char NPN_SPDY_PREFIX[] = { 's', 'p', 'd', 'y', '/' };
+
 int SSLConnection::getSpdyVersion()
 {
     int v = 0;
     
 #ifdef LS_ENABLE_SPDY
+    unsigned int             len = 0;
+    const unsigned char     *data = NULL;
+    
+#ifdef TLSEXT_TYPE_application_layer_protocol_negotiation
+    SSL_get0_alpn_selected(m_ssl, &data, &len);
+#endif 
+
 #ifdef TLSEXT_TYPE_next_proto_neg
-    unsigned int             len;
-    const unsigned char     *data;
-    SSL_get0_next_proto_negotiated(m_ssl, &data, &len);
+    if ( !data )
+        SSL_get0_next_proto_negotiated(m_ssl, &data, &len);
+#endif
     if (len > sizeof( NPN_SPDY_PREFIX ) && 
         strncasecmp((const char *)data, NPN_SPDY_PREFIX, sizeof( NPN_SPDY_PREFIX ) ) == 0) 
     {
@@ -356,7 +364,12 @@ int SSLConnection::getSpdyVersion()
              v = 3;
         return v;
     }
-#endif
+    
+    //h2: http2 version is 4
+    if( len >= 2 && data[0] == 'h' && data[1] == '2' ) 
+    {
+        return 4;
+    }
 #endif
     return v;
 }

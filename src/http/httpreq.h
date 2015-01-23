@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013  LiteSpeed Technologies, Inc.                        *
+*    Copyright (C) 2013 - 2015  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -256,6 +256,7 @@ public:
     {
         UPD_PROTO_NONE = 0,
         UPD_PROTO_WEBSOCKET = 1,
+        UPD_PROTO_HTTP2 = 2,
     };
         
     explicit HttpReq();
@@ -316,7 +317,8 @@ public:
     int   getQueryStringLen() const     {   return m_curURL.valLen; }
 
     int   isWebsocket() const           {   return ((UPD_PROTO_WEBSOCKET == m_upgradeProto) ? 1 : 0); }
- 
+    int   isHttp2Upgrade() const        {   return ((UPD_PROTO_HTTP2 == m_upgradeProto) ? 1 : 0); }
+    
     //request header
 
     const char * getHeader( size_t index ) const
@@ -439,8 +441,14 @@ public:
     void setNoRespBody()                    {   m_iNoRespBody = 1;      }
     void updateNoRespBodyByStatus( int code )
     {
-        switch( m_code = code ) { case SC_100: case SC_101: case SC_204:
-                           case SC_205: case SC_304: m_iNoRespBody = 1; }
+        if ( !(m_iContextState & KEEP_AUTH_INFO) )
+        {
+            switch( m_code = code ) 
+            {
+            case SC_100: case SC_101: case SC_204: case SC_205: case SC_304: 
+                m_iNoRespBody = 1; 
+            }
+        }
     }
 
     

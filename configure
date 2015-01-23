@@ -794,6 +794,7 @@ with_password
 with_email
 enable_adminssl
 enable_spdy
+enable_http2
 enable_debug
 enable_profiling
 enable_rpath
@@ -1451,7 +1452,10 @@ Optional Features:
   --enable-adminssl=[yes/no]
                           Enable HTTPS for admin console (modify adminssl.conf
                           before installation) [default=yes]
-  --enable-spdy           Enable SPDY over HTTPS (Spdy is disabled by default)
+  --enable-spdy           Enable SPDY and http2 over HTTPS (Spdy and http2 are
+                          disabled by default)
+  --enable-http2          Enable SPDY and http2 over HTTPS (Spdy and http2 are
+                          disabled by default)
   --enable-debug          Enable debugging symbols (Debug is disabled by
                           default)
   --enable-profiling      Enable cpu profiling (profiling is disabled by
@@ -15659,7 +15663,16 @@ if test "${enable_spdy+set}" = set; then :
   enableval=$enable_spdy;
 $as_echo "#define LS_ENABLE_SPDY 1" >>confdefs.h
 
-                 echo "SPDY enabled!!!"
+                 echo "SPDY/http2 enabled!!!"
+fi
+
+
+# Check whether --enable-http2 was given.
+if test "${enable_http2+set}" = set; then :
+  enableval=$enable_http2;
+$as_echo "#define LS_ENABLE_SPDY 1" >>confdefs.h
+
+                 echo "SPDY/http2 enabled!!!"
 fi
 
 

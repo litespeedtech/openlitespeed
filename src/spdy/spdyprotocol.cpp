@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013  LiteSpeed Technologies, Inc.                        *
+*    Copyright (C) 2013 - 2015  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -17,7 +17,7 @@
 *****************************************************************************/
 #include "spdyprotocol.h"
 
-static const char* s_sFrameName[] = { 
+static const char* s_sSpdyFrameName[] = { 
     "DATA",
     "SYN_STREAM",
     "SYN_REPLY",
@@ -31,10 +31,10 @@ static const char* s_sFrameName[] = {
     "CREDENTIAL"
 }; 
 
-const char* getFrameName(unsigned char bframeType)
+const char* getSpdyFrameName(unsigned char bframeType)
 {
    if ( bframeType <= SPDY_FRAME_LAST_CONTROL_TYPE )
-       return s_sFrameName[bframeType];
+       return s_sSpdyFrameName[bframeType];
    return "UNKONWN"; 
 }
 

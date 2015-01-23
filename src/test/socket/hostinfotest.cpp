@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013  LiteSpeed Technologies, Inc.                        *
+*    Copyright (C) 2013 - 2015  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -74,8 +74,8 @@ TEST( HostInfoTest_testAll)
 {
     testOne(getHostByName("localhost"));
     HostInfo h;
-    bool b = h.getHostByName("w.a.com");
-    CHECK(b==false);
+    //bool b = h.getHostByName("w.a.com");
+    //CHECK(b==false);
 //    GSockAddr a0("127.0.0.1");
 //    b = h.getHostByAddr(&a0);
 //    CHECK(b == true);

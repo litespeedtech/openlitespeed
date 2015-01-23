@@ -81,9 +81,15 @@ AC_SUBST([OPENLSWS_ADMINSSL])
 
 AC_ARG_ENABLE([spdy],
               [AC_HELP_STRING([--enable-spdy],
-                              [Enable SPDY over HTTPS (Spdy is disabled by default)])],
-               [ AC_DEFINE([LS_ENABLE_SPDY], [1], [Define if need spdy feature]) 
-                 echo "SPDY enabled!!!" ], [])
+                              [Enable SPDY and http2 over HTTPS (Spdy and http2 are disabled by default)])],
+               [ AC_DEFINE([LS_ENABLE_SPDY], [1], [Define if need spdy/http2 feature]) 
+                 echo "SPDY/http2 enabled!!!" ], [])
+                 
+AC_ARG_ENABLE([http2],
+              [AC_HELP_STRING([--enable-http2],
+                              [Enable SPDY and http2 over HTTPS (Spdy and http2 are disabled by default)])],
+               [ AC_DEFINE([LS_ENABLE_SPDY], [1], [Define if need spdy/http2 feature]) 
+                 echo "SPDY/http2 enabled!!!" ], [])
 
 AC_ARG_ENABLE([debug],
               [AC_HELP_STRING([--enable-debug],

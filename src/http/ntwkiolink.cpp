@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013  LiteSpeed Technologies, Inc.                        *
+*    Copyright (C) 2013 - 2015  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -25,6 +25,8 @@
 #include <http/httpsession.h>
 #include <http/httpresourcemanager.h>
 #include <http/httplistener.h>
+#include <http/httpdefs.h>
+#include <spdy/h2connection.h>
 #include <spdy/spdyconnection.h>
 
 #include <socket/gsockaddr.h>
@@ -55,6 +57,8 @@
 #define IO_COUNTED          32
 
 //#define SPDY_PLAIN_DEV     
+
+//#define HTTP2_PLAIN_DEV     
 
 
 #include <../addon/include/ls.h>
@@ -176,7 +180,31 @@ int NtwkIOLink::setupHandler( HiosProtocol verSpdy )
     if ( !isSSL() && (verSpdy == HIOS_PROTO_HTTP) )
         verSpdy = HIOS_PROTO_SPDY3;
 #endif
-    if ( verSpdy != HIOS_PROTO_HTTP )
+    
+#ifdef HTTP2_PLAIN_DEV
+    if ( !isSSL() && (verSpdy == HIOS_PROTO_HTTP) )
+        verSpdy = HIOS_PROTO_HTTP2;
+#endif
+    
+    
+    if ( verSpdy == HIOS_PROTO_HTTP )
+    {
+        HttpSession *pSession = HttpGlobals::getResManager()->getConnection();
+        if ( !pSession )
+            return -1;
+        //pSession->setNtwkIOLink( this );
+        pHandler = pSession;
+    }
+    else if ( verSpdy == HIOS_PROTO_HTTP2 )
+    {
+        H2Connection * pConn = new H2Connection();
+        if ( !pConn )
+            return -1;
+        clearLogId();
+        pConn->init( );
+        pHandler = pConn;
+    }
+    else
     {
         SpdyConnection * pConn = new SpdyConnection();
         if ( !pConn )
@@ -190,21 +218,27 @@ int NtwkIOLink::setupHandler( HiosProtocol verSpdy )
         pConn->init( verSpdy );
         pHandler = pConn;
     }
-    else
-    {
-        HttpSession *pSession = HttpGlobals::getResManager()->getConnection();
-        if ( !pSession )
-            return -1;
-        pSession->setNtwkIOLink( this );
-        pHandler = pSession;
-    }
-
+    
     setProtocol( verSpdy );
 
     pHandler->assignStream( this );    
     pHandler->onInitConnected();
     return 0;
     
+}
+
+int NtwkIOLink::switchToHttp2Handler(HttpSession *pSession)
+{
+    assert(pSession == getHandler());
+    H2Connection * pHandler = new H2Connection();
+    if ( !pHandler )
+        return -1;
+    clearLogId();
+    pHandler->init( );
+    setProtocol( HIOS_PROTO_HTTP2 );
+    pHandler->assignStream( this );
+    pHandler->createInitH2cUpgradedStream(pSession );
+    return 0;
 }
 
 int NtwkIOLink::setLink(HttpListener *pListener,  int fd, ClientInfo * pInfo, SSLContext * pSSLContext )
@@ -1323,8 +1357,8 @@ int NtwkIOLink::get_url_from_reqheader(char *buf, int length, char **puri, int *
         strncasecmp(buf, "HEAD", 4) != 0 )
         return -1;
     
-    char *pStart = strcasestr(buf, (const char *)"HOST:");
-    if (!pStart)
+    char *pStart = strcasestr(buf, (const char *)"host:");
+    if (!pStart || pBufEnd - pStart < 6)
         return -2;
     
     *phost = pStart + 5;

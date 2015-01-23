@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013  LiteSpeed Technologies, Inc.                        *
+*    Copyright (C) 2013 - 2015  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -171,13 +171,6 @@ int HttpHeader::s_iHeaderLen[H_HEADER_END+1] =
     0
 };
 
-int HttpRespHeaders::s_iHeaderLen[H_HEADER_END+1] =
-{
-    13, 10, 12, 14, 16, 13, 19, 13, //cache-control
-    4, 4, 7, 10, 13, 8, 20, 23, //litespeed-cache-control
-    6, 16, 6, 10, 6, 17, 4, 16, 12, //x-powered-by
-    0
-};
 
 #include <http/denieddir.h>
 DeniedDir            HttpGlobals::s_deniedDir;
@@ -476,6 +469,7 @@ int    HttpGlobals::s_children = 1;
 int    HttpGlobals::s_503Errors = 0;
 int    HttpGlobals::s_503AutoFix = 1;
 int    HttpGlobals::s_useProxyHeader = 0;
+int    HttpGlobals::s_enableH2c = 0;
 
 int  HttpGlobals::s_rubyProcLimit = 10;
 int  HttpGlobals::s_railsAppLimit = 1;

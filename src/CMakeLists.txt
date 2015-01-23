@@ -98,6 +98,8 @@ SET(util_STAT_SRCS
 )
 
 SET(spdy_STAT_SRCS
+   test/spdy/huffmantest.cpp
+   test/spdy/hpacktest.cpp
    test/spdy/spdyzlibfiltertest.cpp
    test/spdy/spdyconnectiontest.cpp
    test/spdy/dummiostream.cpp

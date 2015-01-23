@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2014  LiteSpeed Technologies, Inc.                        *
+*    Copyright (C) 2013 - 2015  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -253,7 +253,11 @@ static int compressbuf( lsi_cb_param_t *rec, lsi_module_t *pModule, int isSend )
         if ( written == -1 )
             return -1;
         if ( _loopbuff_hasdata( pBuff ) )
+        {
+            if ( rec->_flag_out )
+                *rec->_flag_out |= LSI_CB_FLAG_OUT_BUFFERED_DATA;
             return 0;
+        }
     }
     
     if ( pZBufInfo->iZState == Z_END ) 
