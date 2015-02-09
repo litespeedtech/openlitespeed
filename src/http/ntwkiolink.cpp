@@ -1679,7 +1679,7 @@ void NtwkIOLink::changeClientInfo( ClientInfo * pInfo )
     m_pClientInfo = pInfo;
 }
 
-static const char * s_pProtoString[] = { "", ":SPDY2", ":SPDY3"   };
+static const char * s_pProtoString[] = { "", ":SPDY2", ":SPDY3", ":SPDY31", ":HTTP2" };
 const char * NtwkIOLink::buildLogId()
 {
     AutoStr2 & id = getIdBuf();
