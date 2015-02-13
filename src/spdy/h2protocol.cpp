@@ -15,26 +15,25 @@
 *    You should have received a copy of the GNU General Public License       *
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
-#include "spdyprotocol.h"
+#include "h2protocol.h"
 
 static const char* s_sH2FrameName[] = { 
     "DATA",
-    "SYN_STREAM",
-    "SYN_REPLY",
+    "HEADERS",
+    "PRIORITY",
     "RST_STREAM",
     "SETTINGS",
-    "NOOP",
+    "PUSH_PROMISE",
     "PING",
     "GOAWAY",
-    "HEADERS",
     "WINDOW_UPDATE",
-    "CREDENTIAL"
-}; 
+    "CONTINUATION"
+};
 
 const char* getH2FrameName(unsigned char bframeType)
 {
-   if ( bframeType <= SPDY_FRAME_LAST_CONTROL_TYPE )
-       return s_sH2FrameName[bframeType];
-   return "UNKONWN"; 
+    if (bframeType <= H2_FRAME_MAX_TYPE)
+        return s_sH2FrameName[bframeType];
+    return "UNKONWN";
 }
 
