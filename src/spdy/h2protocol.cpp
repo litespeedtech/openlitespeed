@@ -32,7 +32,7 @@ static const char* s_sH2FrameName[] = {
 
 const char* getH2FrameName(unsigned char bframeType)
 {
-    if (bframeType <= H2_FRAME_MAX_TYPE)
+    if (bframeType < H2_FRAME_MAX_TYPE)
         return s_sH2FrameName[bframeType];
     return "UNKONWN";
 }
