@@ -4,7 +4,7 @@
 #	COMPILER_FLAGS = {COMPILER_FLAGS}
 #	PHP_CONF_OPTIONS = {PHP_CONF_OPTIONS}
 #	PHP_USR = {PHP_USR}
-#       PHP_USERGROUP = {PHP_USERGROUP}
+#       PHP_USRGROUP = {PHP_USRGROUP}
 ###########################################
 
 echo ""
@@ -98,8 +98,8 @@ INST_USER=`id`
 INST_USER=`expr "$INST_USER" : 'uid=.*(\(.*\)) gid=.*'`
 
 if [  "x$INST_USER" = "xroot" ]; then
-   chown -R {PHP_USR}:{PHP_USERGROUP} {PHP_BUILD_DIR}/php-{PHP_VERSION} 
-   check_errs $? "Could not chown to {PHP_USR}:{PHP_USERGROUP} for direcotry {PHP_BUILD_DIR}/php-{PHP_VERSION}"
+   chown -R {PHP_USR}:{PHP_USRGROUP} {PHP_BUILD_DIR}/php-{PHP_VERSION} 
+   check_errs $? "Could not chown to {PHP_USR}:{PHP_USRGROUP} for direcotry {PHP_BUILD_DIR}/php-{PHP_VERSION}"
 fi
 
 echo ""
