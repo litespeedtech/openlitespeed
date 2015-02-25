@@ -17,7 +17,7 @@
 *****************************************************************************/
 #ifndef SPDYZLIBFILTER_H
 #define SPDYZLIBFILTER_H
-#include  <netinet/in.h> 
+#include  <netinet/in.h>
 #include  <iostream>
 #include <assert.h>
 #include <stdio.h>
@@ -27,6 +27,8 @@
 #include "util/autobuf.h"
 #include "util/loopbuf.h"
 #include "spdydebug.h"
+#include <lsdef.h>
+
 /**
  * Context for zlib deflating and inflating.
  * Allows to use the same zlib stream on multiple frames. (Needed
@@ -35,24 +37,23 @@
 
 class SpdyZlibFilter
 {
-
-private:
-    z_stream m_stream;
-    short    m_version;
-    short    m_isInflator;
-
-private:
-    SpdyZlibFilter(const SpdyZlibFilter& other);
-    SpdyZlibFilter& operator=(const SpdyZlibFilter& other);
-    bool operator==(const SpdyZlibFilter& other) const;
-    
 public:
     SpdyZlibFilter();
     ~SpdyZlibFilter();
-    int init( int isInflator, int verSpdy );
+    int init(int isInflator, int verSpdy);
     int release();
-    int decompress(char* pSource, uint32_t length, AutoBuf& bufInflate);
-    int compress(char* pSource, uint32_t length, LoopBuf* pBuf, int flush);
+    int decompress(char *pSource, uint32_t length, AutoBuf &bufInflate);
+    int compress(char *pSource, uint32_t length, LoopBuf *pBuf, int flush);
+
+private:
+    bool operator==(const SpdyZlibFilter &other) const;
+
+private:
+    z_stream m_stream;
+    short    m_iVersion;
+    short    m_isInflator;
+    
+    LS_NO_COPY_ASSIGN(SpdyZlibFilter);
 };
 
 #endif // SPDYZLIBFILTER_H

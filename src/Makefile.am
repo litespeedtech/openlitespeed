@@ -2,13 +2,11 @@ bin_PROGRAMS = openlitespeed
 openlitespeed_SOURCES = modules/prelinkedmods.cpp httpdtest.cpp main.cpp \
    util/httpfetchdriver.cpp \
    util/httpfetch.cpp \
-   util/ni_fio.c \
    util/linkobjpool.cpp \
    util/pidfile.cpp \
    util/hashdatacache.cpp \
    util/keydata.cpp \
    util/tlinklist.cpp \
-   util/mysleep.c \
    util/rlimits.cpp \
    util/duplicable.cpp \
    util/gfactory.cpp \
@@ -51,44 +49,60 @@ openlitespeed_SOURCES = modules/prelinkedmods.cpp httpdtest.cpp main.cpp \
    util/configctx.cpp \
    util/logidtracker.cpp \
    util/datetime.cpp \
+   util/resourcepool.cpp \
+   util/linkqueue.cpp \
+   util/httputil.cpp \
    util/misc/profiletime.cpp \
    util/sysinfo/partitioninfo.cpp \
    util/sysinfo/nicdetect.cpp \
    util/sysinfo/systeminfo.cpp \
-   lsr/lsr_aho.c \
-   lsr/lsr_base64.c \
-   lsr/lsr_buf.c \
-   lsr/lsr_confparser.c \
-   lsr/lsr_crc64.c \
-   lsr/lsr_dlinkq.c \
-   lsr/lsr_hash.c \
-   lsr/lsr_link.c \
-   lsr/lsr_lock.c \
-   lsr/lsr_loopbuf.c \
-   lsr/lsr_map.c \
-   lsr/lsr_md5.c \
-   lsr/lsr_objarray.c \
-   lsr/lsr_pcreg.c \
-   lsr/lsr_pool.c \
-   lsr/lsr_ptrlist.c \
-   lsr/lsr_sha1.c \
-   lsr/lsr_str.c \
-   lsr/lsr_strlist.c \
-   lsr/lsr_strtool.c \
-   lsr/lsr_xpool.c
+   lsr/ls_aho.c \
+   lsr/ls_base64.c \
+   lsr/ls_buf.c \
+   lsr/ls_confparser.c \
+   lsr/ls_crc64.c \
+   lsr/ls_dlinkq.c \
+   lsr/ls_fileio.c \
+   lsr/ls_hash.c \
+   lsr/ls_lfqueue.c \
+   lsr/ls_lfstack.c \
+   lsr/ls_link.c \
+   lsr/ls_lock.c \
+   lsr/ls_loopbuf.c \
+   lsr/ls_map.c \
+   lsr/ls_md5.c \
+   lsr/ls_mpscq.c \
+   lsr/ls_objarray.c \
+   lsr/ls_objpool.c \
+   lsr/ls_pcreg.c \
+   lsr/ls_pool.c \
+   lsr/ls_ptrlist.c \
+   lsr/ls_sha1.c \
+   lsr/ls_str.c \
+   lsr/ls_strlist.c \
+   lsr/ls_strtool.c \
+   lsr/ls_time.c \
+   lsr/ls_xpool.c \
+   lsr/xxhash.c \
+   thread/pthreadcond.cpp \
+   thread/pthreadmutex.cpp \
+   thread/pthreadworkqueue.cpp \
+   thread/thread.cpp \
+   thread/workcrew.cpp \
+   thread/worker.cpp
 
 
 openlitespeed_LDADD =  ./main/libmain.a ./http/libhttp.a ./spdy/libspdy.a \
         ./extensions/libextensions.a ./log4cxx/liblog4cxx.a ./socket/libsocket.a \
         ./sslpp/libsslpp.a  ./ssi/libssi.a ./edio/libedio.a ./lsiapi/liblsiapi.a \
         ./modules/libmodules.a ./shm/liblsshm.a  \
-        $(EXPAT_LIBS) $(OPENSSL_LIBS) $(PCRE_LIBS) -lGeoIP -lz -lexpat -lpthread $(DL_LIB_OPTION)
+        $(EXPAT_LIBS) $(OPENSSL_LIBS) $(PCRE_LIBS) -lGeoIP -lz -lexpat -lpthread $(DL_LIB_OPTION) $(RT_LIB_OPTION)
 
 
 AM_CPPFLAGS = $(PCRE_CFLAGS) $(OPENSSL_INCLUDES) $(EXPAT_CFLAGS)
 AM_LDFLAGS = -L/usr/lib $(OPENSSL_LDFLAGS)
-INCLUDES = -I$(top_srcdir)/include -I$(top_srcdir)/src 
-SUBDIRS =  socket http spdy sslpp ssi extensions log4cxx main edio lsiapi  modules shm 
+INCLUDES = -I$(top_srcdir)/include -I$(top_srcdir)/src
+SUBDIRS =  socket http spdy sslpp ssi extensions log4cxx main edio lsiapi  modules shm
 
 
 # the library search path.

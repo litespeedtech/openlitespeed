@@ -34,13 +34,14 @@ class PartitionInfo
 public:
     PartitionInfo();
     ~PartitionInfo();
-    static int getPartitionInfo( const char* path, uint64_t *outTotal, uint64_t *outFree );
-    
+    static int getPartitionInfo(const char *path, uint64_t *outTotal,
+                                uint64_t *outFree);
+
 private:
-    PartitionInfo( const PartitionInfo& other );
-    PartitionInfo& operator= ( const PartitionInfo& other );
-    bool operator== ( const PartitionInfo& other );
-    
+    PartitionInfo(const PartitionInfo &other);
+    PartitionInfo &operator= (const PartitionInfo &other);
+    bool operator== (const PartitionInfo &other);
+
 private:
 };
 

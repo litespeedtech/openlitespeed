@@ -19,6 +19,7 @@
 #define LOGROTATE_H
 
 
+#include <lsdef.h>
 #include <log4cxx/nsdefs.h>
 #include <sys/types.h>
 
@@ -27,17 +28,22 @@ BEGIN_LOG4CXX_NS
 class Appender;
 class LogRotate
 {
-public: 
+public:
     LogRotate();
     ~LogRotate();
-    static int roll(Appender * pAppender, uid_t uid, gid_t gid, off_t rollingSize );
-    static int testRolling( Appender * pAppender, off_t rollingSize, uid_t uid, gid_t gid );
-    static int postRotate( Appender * pAppender, uid_t uid, gid_t gid);
+    static int roll(Appender *pAppender, uid_t uid, gid_t gid,
+                    off_t rollingSize);
+    static int testRolling(Appender *pAppender, off_t rollingSize, uid_t uid,
+                           gid_t gid);
+    static int postRotate(Appender *pAppender, uid_t uid, gid_t gid);
 
-    static int testAndRoll( Appender * pAppender, uid_t uid, gid_t gid );
-    static int testRolling( Appender * pAppender, uid_t uid, gid_t gid);
+    static int testAndRoll(Appender *pAppender, uid_t uid, gid_t gid);
+    static int testRolling(Appender *pAppender, uid_t uid, gid_t gid);
 
 
+
+
+    LS_NO_COPY_ASSIGN(LogRotate);
 };
 
 END_LOG4CXX_NS

@@ -19,13 +19,14 @@
 #define CGICONNECTION_H
 
 
+#include <lsdef.h>
 #include <edio/ediostream.h>
 #include <extensions/httpextprocessor.h>
 
 class HttpExtConnector;
 
 class CgiConnection : public HttpExtProcessor,
-                      public EdStream
+    public EdStream
 {
     static int s_iCgiCount;
 public:
@@ -41,25 +42,26 @@ public:
     virtual bool wantWrite();
 
     //interface defined by HttpExtProcessor
-    virtual int init( int fd, Multiplexer* pMultiplexer,
-                    HttpExtConnector *pConn );
-                    
+    virtual int init(int fd, Multiplexer *pMultiplexer,
+                     HttpExtConnector *pConn);
+
     virtual void abort();
     virtual void cleanUp();
 
     virtual int  begin();
     virtual int  beginReqBody();
-    virtual int  endOfReqBody( );
+    virtual int  endOfReqBody();
     virtual int  sendReqHeader();
-    virtual int  sendReqBody( const char * pBuf, int size);
-    virtual int  readResp( char * pBuf, int size );
+    virtual int  sendReqBody(const char *pBuf, int size);
+    virtual int  readResp(char *pBuf, int size);
 
     void onTimer() {}
     virtual void finishRecvBuf() {}
-    void *operator new( size_t sz );
-    void operator delete( void * p);
+    void *operator new(size_t sz);
+    void operator delete(void *p);
     static int getCgiCount()
     {   return s_iCgiCount; }
+    LS_NO_COPY_ASSIGN(CgiConnection);
 };
 
 #endif

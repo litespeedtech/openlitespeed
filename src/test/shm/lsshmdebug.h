@@ -16,7 +16,6 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #ifndef LSSHMDEBUG_H
-#include <http/httpglobals.h>
 #include <http/httplog.h>
 
 #include <fcntl.h>
@@ -38,48 +37,49 @@
 
 class debugBase
 {
-    static FILE * m_fp;
-    static char * m_outfile;
-    
-    static void dumpFreeBlock(LsShm * pShm, LsShm_offset_t offset);
-    static void dumpMapFreeList(LsShm * pShm);
-    static void dumpMapCheckFree(LsShm * pShm);
-    static void dumpMapHeader(LsShm* pShm);
-    static void dumpHeader(LsShm* pShm);
+    static FILE *m_fp;
+    static char *m_outfile;
 
-    static void dumpPoolDataCheck(LsShmPool * pool);
-    static void dumpPoolDataFreeList(LsShmPool * pool);
-    static void dumpPoolDataFreeBucket(LsShmPool * pool);
-    static void dumpPoolPage(LsShmPool * pool);
-    static void dumpPoolData(LsShmPool * pool);
-    static void dumpPoolHeader(LsShmPool * pool);
-    
+    static void dumpFreeBlock(LsShm *pShm, LsShmOffset_t offset);
+    static void dumpMapFreeList(LsShm *pShm);
+    static void dumpMapCheckFree(LsShm *pShm);
+    static void dumpMapHeader(LsShm *pShm);
+    static void dumpHeader(LsShm *pShm);
+
+    static void dumpPoolDataCheck(LsShmPool *pool);
+    static void dumpPoolDataFreeList(LsShmPool *pool);
+    static void dumpPoolDataFreeBucket(LsShmPool *pool);
+    static void dumpPoolPage(LsShmPool *pool);
+    static void dumpPoolData(LsShmPool *pool);
+    static void dumpPoolHeader(LsShmPool *pool);
+
 public:
-    static void dumpShmReg(LsShm * pShm);
-    
-    static FILE * fp() { return m_fp; };
-    static void setup(const char * filename = LSI_SHM_DEBUGFILE);
-    static void done();
-    static void dumpShm(LsShmPool * pool, int mode, void * udata);
+    static void dumpShmReg(LsShm *pShm);
 
-    inline static LsShm_size_t roundPageSize(LsShmPool * pool, LsShm_size_t size)
+    static FILE *fp() { return m_fp; };
+    static void setup(const char *filename = LSI_SHM_DEBUGFILE);
+    static void done();
+    static void dumpShm(LsShmPool *pool, int mode, void *udata);
+
+    inline static LsShmSize_t roundPageSize(LsShmPool *pool, LsShmSize_t size)
     { return pool->roundPageSize(size); };
-    inline static LsShm_size_t roundDataSize(LsShmPool * pool, LsShm_size_t size)
+    inline static LsShmSize_t roundDataSize(LsShmPool *pool, LsShmSize_t size)
     { return pool->roundDataSize(size); };
-    static LsShm * pool2shm(LsShmPool * pool)
+    static LsShm *pool2shm(LsShmPool *pool)
     { return pool->m_pShm ; }
-    
-    static void dumpShmPool(LsShmPool * pool, int mode, void * udata);
-    
-    static int checkStatus(const char * tag, const char * mapName, LsShm_status_t status);
-    static void dumpRegistry(const char * tag, const lsShmReg_t * p_reg);
-    
-    static const char * decode(const char * p, int len);
-    static void dumpBuf(const char * tag, const char * buf, int size);
-    static void dumpIter(const char * tag, LsShmHash::iterator iter);
+
+    static void dumpShmPool(LsShmPool *pool, int mode, void *udata);
+
+    static int checkStatus(const char *tag, const char *mapName,
+                           LsShmStatus_t status);
+    static void dumpRegistry(const char *tag, const LsShmReg *p_reg);
+
+    static const char *decode(const char *p, int len);
+    static void dumpBuf(const char *tag, const char *buf, int size);
+    static void dumpIter(const char *tag, LsShmHash::iterator iter);
     static void dumpIterKey(LsShmHash::iterator iter);
     static void dumpIterValue(LsShmHash::iterator iter);
-    
+
 };
 
 #endif

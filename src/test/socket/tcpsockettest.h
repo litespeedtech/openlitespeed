@@ -16,7 +16,7 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #ifdef RUN_TEST
- 
+
 #ifndef TCPSOCKETTEST_H
 #define TCPSOCKETTEST_H
 

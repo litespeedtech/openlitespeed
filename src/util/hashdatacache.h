@@ -25,73 +25,73 @@
 #include <util/hashstringmap.h>
 
 class KeyData;
-  
+
 class HashDataCache : public HashStringMap< KeyData *>
 {
-    int     m_cacheExpire;
-    int     m_maxCacheSize;
+    int     m_iCacheExpire;
+    int     m_iMaxCacheSize;
 
-    HashDataCache( const HashDataCache& );
-    HashDataCache& operator=( const HashDataCache& );
-public: 
-    HashDataCache( int expire, int cacheSize)
-        : m_cacheExpire( expire )
-        , m_maxCacheSize( cacheSize )
-        {}
-        
+    HashDataCache(const HashDataCache &);
+    HashDataCache &operator=(const HashDataCache &);
+public:
+    HashDataCache(int expire, int cacheSize)
+        : m_iCacheExpire(expire)
+        , m_iMaxCacheSize(cacheSize)
+    {}
+
     HashDataCache()
-        : m_cacheExpire( 10 )
-        , m_maxCacheSize( 1024 )
-        {}
+        : m_iCacheExpire(10)
+        , m_iMaxCacheSize(1024)
+    {}
     ~HashDataCache();
-    void setExpire( int expire )    {   m_cacheExpire = expire;     }
-    int  getExpire() const          {   return m_cacheExpire;       }
-    void setMaxSize( int size )     {   m_maxCacheSize = size;      }
-    int  getMaxSize() const         {   return m_maxCacheSize;      }
+    void setExpire(int expire)    {   m_iCacheExpire = expire;     }
+    int  getExpire() const          {   return m_iCacheExpire;       }
+    void setMaxSize(int size)     {   m_iMaxCacheSize = size;      }
+    int  getMaxSize() const         {   return m_iMaxCacheSize;      }
 
-    const KeyData * getData( const char * pKey );
+    const KeyData *getData(const char *pKey);
 };
 
 class DataStore
 {
-    char *  m_uriDataStore;
+    char   *m_pDataStoreUri;
 
 public:
     DataStore()
-        : m_uriDataStore( NULL )
-        {}
+        : m_pDataStoreUri(NULL)
+    {}
     virtual ~DataStore();
-    void setDataStoreURI( const char * pURI );
-    const char * getDataStoreURI() const   {   return m_uriDataStore;  }
+    void setDataStoreURI(const char *pURI);
+    const char *getDataStoreURI() const   {   return m_pDataStoreUri;  }
 
-    virtual KeyData * getDataFromStore( const char * pKey, int len ) = 0;
-    virtual int       isStoreChanged( long time ) = 0;
-    virtual KeyData * newEmptyData( const char *pKey, int len ) = 0;
-    virtual KeyData * getNext()     {   return NULL;    }
+    virtual KeyData *getDataFromStore(const char *pKey, int len) = 0;
+    virtual int       isStoreChanged(long time) = 0;
+    virtual KeyData *newEmptyData(const char *pKey, int len) = 0;
+    virtual KeyData *getNext()     {   return NULL;    }
 };
 
 class FileStore : public DataStore
 {
-    time_t        m_lModifiedTime;
-    time_t        m_lLastCheckTime;
-    
-    FILE        * m_fp;
-    
+    time_t        m_modifiedTime;
+    time_t        m_lastCheckTime;
+
+    FILE         *m_pFile;
+
 protected:
-    KeyData * getDataFromStore( const char * pKey, int keyLen );
-    virtual KeyData * parseLine( char * pLine, char * pLineEnd ) = 0;
-    virtual KeyData * parseLine( const char * pKey, int keyLen,
-                                char *pLine, char *pLineEnd ) = 0;
+    KeyData *getDataFromStore(const char *pKey, int keyLen);
+    virtual KeyData *parseLine(char *pLine, char *pLineEnd) = 0;
+    virtual KeyData *parseLine(const char *pKey, int keyLen,
+                               char *pLine, char *pLineEnd) = 0;
 
 public:
     FileStore()
-        : m_lModifiedTime(1)
-        , m_lLastCheckTime( 0 )
-        , m_fp( NULL )
-        {}
+        : m_modifiedTime(1)
+        , m_lastCheckTime(0)
+        , m_pFile(NULL)
+    {}
     virtual ~FileStore() {}
-    virtual int isStoreChanged( long time );
-    virtual KeyData * getNext();
+    virtual int isStoreChanged(long time);
+    virtual KeyData *getNext();
     int open();
     void close();
 };

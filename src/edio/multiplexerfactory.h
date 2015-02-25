@@ -19,18 +19,22 @@
 #define MUTLIPLEXERFACTORY_H
 
 
+#include <lsdef.h>
 #include <util/tsingleton.h>
 
 class Multiplexer;
-class MultiplexerFactory 
+class MultiplexerFactory
 {
     friend class TSingleton< MultiplexerFactory >;
     MultiplexerFactory();
     ~MultiplexerFactory();
-    
-    static int s_iMaxFds;
-    
+
+    static int          s_iMaxFds;
+    static Multiplexer *s_pMultiplexer;
+
 public:
+    static int          s_iMultiplexerType;
+
     enum
     {
         POLL,
@@ -41,9 +45,15 @@ public:
         EPOLL,
         BEST
     };
-    static int getType( const char * pType );
-    static Multiplexer* get( int type );
-    static void recycle( Multiplexer * ptr );
+    static int getType(const char *pType);
+    static Multiplexer *getNew(int type);
+    static void recycle(Multiplexer *ptr);
+
+    static Multiplexer *getMultiplexer()
+    {   return s_pMultiplexer;  }
+    static void setMultiplexer(Multiplexer *pMultiplexer)
+    {   s_pMultiplexer = pMultiplexer;  }
+    LS_NO_COPY_ASSIGN(MultiplexerFactory);
 };
 
 #endif

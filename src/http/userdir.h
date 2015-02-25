@@ -20,7 +20,7 @@
 
 
 
-#include <http/authuser.h>  
+#include <http/authuser.h>
 #include <util/hashdatacache.h>
 
 class AutoStr2;
@@ -29,7 +29,11 @@ class HttpSession;
 class AuthRequired
 {
     int         m_iRequiredType;
-    StringList* m_pRequired;
+    StringList *m_pRequired;
+
+    AuthRequired(const AuthRequired &rhs);
+    void operator=(const AuthRequired &rhs);
+
 public:
 
     enum
@@ -44,80 +48,89 @@ public:
 
     AuthRequired();
     ~AuthRequired();
-    int parse( const char * pRequired );
-    const AutoStr2 * find( const char * p ) const;
+    int parse(const char *pRequired);
+    const AutoStr2 *find(const char *p) const;
     int         getType() const  {   return m_iRequiredType; }
-    StringList * getList() const {   return m_pRequired; }
+    StringList *getList() const {   return m_pRequired; }
 };
 
 
 class UserDir
 {
-    char            * m_pName;
-    HashDataCache   * m_pCacheUser;
-    HashDataCache   * m_pCacheGroup;
+    char             *m_pName;
+    HashDataCache    *m_pCacheUser;
+    HashDataCache    *m_pCacheGroup;
     int               m_encryptMethod;
 
-    UserDir( const UserDir& );
-    UserDir& operator=( const UserDir& );
+    UserDir(const UserDir &);
+    UserDir &operator=(const UserDir &);
 
-    
-public: 
+
+public:
     UserDir()
-        : m_pName( NULL )
-        , m_pCacheUser ( NULL )
-        , m_pCacheGroup( NULL )
-        {}
+        : m_pName(NULL)
+        , m_pCacheUser(NULL)
+        , m_pCacheGroup(NULL)
+    {}
     virtual ~UserDir();
 
-    const char * getName() const        {   return m_pName;  }
-    void setName( const char * pName );
+    const char *getName() const        {   return m_pName;  }
+    void setName(const char *pName);
 
-    void setUserCache( HashDataCache * pCache );
-    void setGroupCache( HashDataCache * pCache );
+    void setUserCache(HashDataCache *pCache);
+    void setGroupCache(HashDataCache *pCache);
 
-    HashDataCache * getUserCache()  {   return m_pCacheUser;    }
-    HashDataCache * getGroupCache() {   return m_pCacheGroup;   }
-    
-    virtual int authenticate( HttpSession *pSession, const char * pUser, int nameLen,
-                      const char * pPasswd, int encryptMethod,
-                      const AuthRequired * pRequired );
-    
-    virtual AuthUser * getUserFromStore( HttpSession *pSession, HashDataCache * pCache,
-                        const char * pUser, int len, int *ready ) = 0;
-    virtual AuthGroup* getGroupFromStore( HttpSession *pSession, HashDataCache * pCache,
-                        const char * pGroup, int len, int *ready ) = 0;
+    HashDataCache *getUserCache()  {   return m_pCacheUser;    }
+    HashDataCache *getGroupCache() {   return m_pCacheGroup;   }
 
-    const AuthUser * getRequiredUser( HttpSession *pSession, const char * pUser, int userLen,
-                     const AuthRequired * pRequired, int *ready );
+    virtual int authenticate(HttpSession *pSession, const char *pUser,
+                             int nameLen,
+                             const char *pPasswd, int encryptMethod,
+                             const AuthRequired *pRequired);
 
-    const AuthUser * getUserIfMatchGroup( HttpSession *pSession, const char * pUser, int userLen,
-                                const StringList *m_pReqGroups, int *ready );
+    virtual AuthUser *getUserFromStore(HttpSession *pSession,
+                                       HashDataCache *pCache,
+                                       const char *pUser, int len, int *ready) = 0;
+    virtual AuthGroup *getGroupFromStore(HttpSession *pSession,
+                                         HashDataCache  *pCache,
+                                         const char *pGroup, int len, int *ready) = 0;
 
-    const AuthUser * getUser( HttpSession *pSession,
-                        const char * pUser, int len, int* ready )
-    {   return getUser( pSession, m_pCacheUser, pUser, len, ready );   }
-    const StringList* getGroup( HttpSession *pSession,
-                        const char * pGroup, int len, int* ready )
-    {   return getGroup( pSession, m_pCacheGroup, pGroup, len, ready );    }
-    virtual const AuthUser * getUser( HttpSession *pSession, HashDataCache * pCache,
-                        const char * pUser, int len, int* ready );
-    virtual const StringList* getGroup( HttpSession *pSession, HashDataCache * pCache,
-                        const char * pGroup, int len, int* ready );
+    const AuthUser *getRequiredUser(HttpSession *pSession, const char *pUser,
+                                    int userLen,
+                                    const AuthRequired *pRequired, int *ready);
 
-    virtual const char * getUserStoreURI() = 0;
-    virtual const char * getGroupStoreURI() = 0;
+    const AuthUser *getUserIfMatchGroup(HttpSession *pSession,
+                                        const char *pUser, int userLen,
+                                        const StringList *m_pReqGroups, int *ready);
+
+    const AuthUser *getUser(HttpSession *pSession,
+                            const char *pUser, int len, int *ready)
+    {   return getUser(pSession, m_pCacheUser, pUser, len, ready);   }
+    const StringList *getGroup(HttpSession *pSession,
+                               const char *pGroup, int len, int *ready)
+    {   return getGroup(pSession, m_pCacheGroup, pGroup, len, ready);    }
+    virtual const AuthUser *getUser(HttpSession *pSession,
+                                    HashDataCache *pCache,
+                                    const char *pUser, int len, int *ready);
+    virtual const StringList *getGroup(HttpSession *pSession,
+                                       HashDataCache *pCache,
+                                       const char *pGroup, int len, int *ready);
+
+    virtual const char *getUserStoreURI() = 0;
+    virtual const char *getGroupStoreURI() = 0;
     virtual int isGroupDBAvail() = 0;
-    virtual int isUserStoreChanged( long tm )   {  return 1;    }
-    virtual int isGroupStoreChanged( long tm )  {   return 1;   }
+    virtual int isUserStoreChanged(long tm)   {  return 1;    }
+    virtual int isGroupStoreChanged(long tm)  {   return 1;   }
     void onTimer();
 };
 
 class PlainFileUserDir : public UserDir
 {
 
-    DataStore   * m_pUserStore;
-    DataStore   * m_pGroupStore;
+    DataStore    *m_pUserStore;
+    DataStore    *m_pGroupStore;
+    PlainFileUserDir(const PlainFileUserDir &rhs);
+    void operator=(const PlainFileUserDir &rhs);
 public:
     PlainFileUserDir();
     ~PlainFileUserDir();
@@ -126,29 +139,29 @@ public:
 //                      const char * pPasswd, int encryptMethod,
 //                      AuthRequired * pRequired );
 
-    AuthUser * getUserFromStore( HttpSession *pSession, HashDataCache * pCache,
-                const char * pUser, int len, int *ready )
+    AuthUser *getUserFromStore(HttpSession *pSession, HashDataCache *pCache,
+                               const char *pUser, int len, int *ready)
     {
-        return (AuthUser *)m_pUserStore->getDataFromStore( pUser, len );
+        return (AuthUser *)m_pUserStore->getDataFromStore(pUser, len);
     }
 
-    AuthGroup * getGroupFromStore( HttpSession *pSession, HashDataCache * pCache,
-                    const char * pGroup, int len, int *ready )
+    AuthGroup *getGroupFromStore(HttpSession *pSession, HashDataCache *pCache,
+                                 const char *pGroup, int len, int *ready)
     {
-        if ( !m_pGroupStore )
+        if (!m_pGroupStore)
             return NULL;
-        return (AuthGroup *)m_pGroupStore->getDataFromStore( pGroup, len );
+        return (AuthGroup *)m_pGroupStore->getDataFromStore(pGroup, len);
     }
-    virtual const char * getUserStoreURI()
+    virtual const char *getUserStoreURI()
     {   return m_pUserStore->getDataStoreURI();     }
-    virtual const char * getGroupStoreURI()
+    virtual const char *getGroupStoreURI()
     {   return m_pGroupStore->getDataStoreURI();    }
     virtual int isGroupDBAvail()
     {   return m_pGroupStore != NULL;   }
 
-    int setDataStore( const char * pFile, const char * pGroup );
-    int isUserStoreChanged( long tm )   {  return m_pUserStore->isStoreChanged( tm );    }
-    int isGroupStoreChanged( long tm )  {  return m_pGroupStore->isStoreChanged( tm );   }
+    int setDataStore(const char *pFile, const char *pGroup);
+    int isUserStoreChanged(long tm)   {  return m_pUserStore->isStoreChanged(tm);    }
+    int isGroupStoreChanged(long tm)  {  return m_pGroupStore->isStoreChanged(tm);   }
 
 };
 

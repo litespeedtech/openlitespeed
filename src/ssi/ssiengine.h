@@ -37,43 +37,46 @@ public:
 
     ~SSIEngine();
 
-    virtual const char * getName() const;
+    virtual const char *getName() const;
 
 
-    static int startExecute( HttpSession *pSession, 
-                             SSIScript * pScript );
-    static int resumeExecute( HttpSession *pSession );
+    static int startExecute(HttpSession *pSession,
+                            SSIScript *pScript);
+    static int resumeExecute(HttpSession *pSession);
 
-    static int appendLocation( HttpSession *pSession, const char * pLocation, int len );
+    static int appendLocation(HttpSession *pSession, const char *pLocation,
+                              int len);
 
-    static void printError( HttpSession *pSession, char * pError );
+    static void printError(HttpSession *pSession, char *pError);
 
 private:
-    static int updateSSIConfig( HttpSession *pSession, SSIComponent * pComponent, 
-                            SSIRuntime * pRuntime );
+    static int updateSSIConfig(HttpSession *pSession, SSIComponent *pComponent,
+                               SSIRuntime *pRuntime);
 
-    static int processEcho( HttpSession *pSession, SSIComponent * pComponent);
+    static int processEcho(HttpSession *pSession, SSIComponent *pComponent);
 
-    static int processExec( HttpSession *pSession, SSIComponent * pComponent );
+    static int processExec(HttpSession *pSession, SSIComponent *pComponent);
 
-    static int processFileAttr( HttpSession *pSession, SSIComponent * pComponent );
+    static int processFileAttr(HttpSession *pSession,
+                               SSIComponent *pComponent);
 
-    static int processInclude( HttpSession *pSession, SSIComponent * pComponent );
+    static int processInclude(HttpSession *pSession, SSIComponent *pComponent);
 
-    static int processPrintEnv( HttpSession *pSession );
+    static int processPrintEnv(HttpSession *pSession);
 
-    static int processSet( HttpSession *pSession, SSIComponent * pComponent );
+    static int processSet(HttpSession *pSession, SSIComponent *pComponent);
 
-    static int processSubReq( HttpSession *pSession, SubstItem *pItem );
+    static int processSubReq(HttpSession *pSession, SubstItem *pItem);
 
-    static int executeComponent( HttpSession *pSession, SSIComponent * pComponent );
+    static int executeComponent(HttpSession *pSession,
+                                SSIComponent *pComponent);
 
-    static int endExecute( HttpSession *pSession );
+    static int endExecute(HttpSession *pSession);
 
-    static int evalOperator( HttpSession *pSession, ExprToken * &pTok );
-    static int evalExpr( HttpSession *pSession, SubstItem *pItem );
+    static int evalOperator(HttpSession *pSession, ExprToken *&pTok);
+    static int evalExpr(HttpSession *pSession, SubstItem *pItem);
 
-    static int processIf( HttpSession *pSession, SSI_If * pComponent );
+    static int processIf(HttpSession *pSession, SSI_If *pComponent);
 
 
 };

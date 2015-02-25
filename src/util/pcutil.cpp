@@ -33,9 +33,11 @@
 #endif
 
 
-PCUtil::PCUtil(){
+PCUtil::PCUtil()
+{
 }
-PCUtil::~PCUtil(){
+PCUtil::~PCUtil()
+{
 }
 
 
@@ -43,10 +45,10 @@ int PCUtil::waitChildren()
 {
     int status, pid;
     int count = 0;
-    while( true )
+    while (true)
     {
-        pid = waitpid( -1, &status, WNOHANG|WUNTRACED );
-        if ( pid <= 0 )
+        pid = waitpid(-1, &status, WNOHANG | WUNTRACED);
+        if (pid <= 0)
         {
             //if ((pid < 1)&&( errno == EINTR ))
             //    continue;
@@ -62,47 +64,50 @@ cpu_set_t    PCUtil::s_maskAll;
 
 int PCUtil::getNumProcessors()
 {
-    if ( s_nCpu > 0 )
+    if (s_nCpu > 0)
         return s_nCpu;
 #if defined(linux) || defined(__linux) || defined(__linux__)
-    s_nCpu = sysconf( _SC_NPROCESSORS_ONLN );
+    s_nCpu = sysconf(_SC_NPROCESSORS_ONLN);
 #else
     int mib[2];
     size_t len = sizeof(s_nCpu);
     mib[0] = CTL_HW;
     mib[1] = HW_NCPU;
     sysctl(mib, 2, &s_nCpu, &len, NULL, 0);
-    if ( s_nCpu <= 0 )
+    if (s_nCpu <= 0)
     {
         mib[1] = HW_NCPU;
-        sysctl( mib, 2, &s_nCpu, &len, NULL, 0);
+        sysctl(mib, 2, &s_nCpu, &len, NULL, 0);
     }
 #endif
-    if ( s_nCpu <= 0 )
+    if (s_nCpu <= 0)
         s_nCpu = 1;
-    getAffinityMask( s_nCpu, s_nCpu, s_nCpu, &s_maskAll );
+    getAffinityMask(s_nCpu, s_nCpu, s_nCpu, &s_maskAll);
     return s_nCpu;
 }
 
-void PCUtil::getAffinityMask( int iCpuCount, int iProcessNum, int iNumCoresToUse, cpu_set_t *mask)
+void PCUtil::getAffinityMask(int iCpuCount, int iProcessNum,
+                             int iNumCoresToUse, cpu_set_t *mask)
 {
-    CPU_ZERO(mask); 
-    if(iCpuCount <= iNumCoresToUse)
-        for(int i = 0; i < iCpuCount; i++)
-            CPU_SET( i, mask );
+    CPU_ZERO(mask);
+    if (iCpuCount <= iNumCoresToUse)
+        for (int i = 0; i < iCpuCount; i++)
+            CPU_SET(i, mask);
     else
-        for(int i = 0; i < iNumCoresToUse; i++)
-            CPU_SET( 
-                ((((iProcessNum + (i*3) )%iCpuCount ) / (iCpuCount/2) ) + (2 * (iProcessNum + (i*3))) % iCpuCount), 
-                    mask
-                   );
+        for (int i = 0; i < iNumCoresToUse; i++)
+            CPU_SET(
+                ((((iProcessNum + (i * 3)) % iCpuCount) / (iCpuCount / 2)) + (2 *
+                        (iProcessNum + (i * 3))) % iCpuCount),
+                mask
+            );
     return;
 }
 
 int PCUtil::setCpuAffinity(cpu_set_t *mask)
 {
 #ifdef __FreeBSD__
-    return cpuset_setaffinity(CPU_LEVEL_WHICH, CPU_WHICH_PID, -1, sizeof(cpu_set_t), mask);
+    return cpuset_setaffinity(CPU_LEVEL_WHICH, CPU_WHICH_PID, -1,
+                              sizeof(cpu_set_t), mask);
 #elif defined(linux) || defined(__linux) || defined(__linux__)
     return sched_setaffinity(0, sizeof(cpu_set_t), mask);
 #endif
@@ -111,8 +116,8 @@ int PCUtil::setCpuAffinity(cpu_set_t *mask)
 
 void PCUtil::setCpuAffinityAll()
 {
-    if ( s_nCpu < 0 )
+    if (s_nCpu < 0)
         getNumProcessors();
-    setCpuAffinity( &s_maskAll );
+    setCpuAffinity(&s_maskAll);
 }
 

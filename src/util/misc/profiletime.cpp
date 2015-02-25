@@ -16,27 +16,76 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "profiletime.h"
-#include <assert.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 
-ProfileTime::ProfileTime( const char * pDesc )
+
+ProfileTime::ProfileTime(const char *pName, int iLoopCount,
+                         ProfilePrecision p)
+    : m_pName(pName)
 {
-    assert( NULL != pDesc );
-    m_pDesc = strdup( pDesc );
-    printf( "Start executing: %s\n", pDesc );
-    int ret = gettimeofday( &m_tv, NULL );
-    assert( 0 == ret );
+    m_used = 0;
+    m_precision = p;
+    if (iLoopCount < 1)
+        m_iterCount = 1;
+    else
+        m_iterCount = iLoopCount;
+#if defined(macintosh) || defined(__APPLE__) || defined(__APPLE_CC__)
+    host_get_clock_service(mach_host_self(), SYSTEM_CLOCK, &m_clock);
+    clock_get_time(m_clock, &m_begin);
+#else
+    clock_gettime(CLOCK_MONOTONIC, &m_begin);
+#endif
 }
+
 ProfileTime::~ProfileTime()
 {
-    struct timeval now;
-    int ret = gettimeofday( &now, NULL );
-    assert( 0 == ret );
-    printf( "End executing %s, took: %ld microseconds\n", m_pDesc,
-            ((long) now.tv_sec - m_tv.tv_sec ) * 1000000 +
-            now.tv_usec - m_tv.tv_usec );
-    free( m_pDesc );
+#if defined(macintosh) || defined(__APPLE__) || defined(__APPLE_CC__)
+    mach_port_deallocate(mach_task_self(), m_clock);
+#endif
+    if (m_used)
+        return;
+    printTime();
 }
+
+int64_t ProfileTime::timeUsed()
+{
+    dx();
+    m_used = 1;
+    return m_diffns;
+}
+
+void ProfileTime::dx()
+{
+#if defined(macintosh) || defined(__APPLE__) || defined(__APPLE_CC__)
+    clock_get_time(m_clock, &m_end);
+#else
+    clock_gettime(CLOCK_MONOTONIC, &m_end);
+#endif
+    int64_t ns;
+    int iDiv, iMult;
+
+    if (m_precision == PROFILE_MICRO)
+    {
+        iDiv = 1e3;
+        iMult = 1e6;
+    }
+    else
+    {
+        iDiv = 1;
+        iMult = 1e9;
+    }
+    ns = (m_end.tv_nsec - m_begin.tv_nsec) / iDiv;
+    if (ns >= 0)
+        m_diffns = (m_end.tv_sec - m_begin.tv_sec) * iMult + ns;
+    else
+        m_diffns = (m_end.tv_sec - m_begin.tv_sec - 1) * iMult + (ns + iMult);
+}
+
+void ProfileTime::printTime()
+{
+    dx();
+    const char *pType = (m_precision == PROFILE_MICRO ? "ms" : "ns");
+    printf("%s Total: %" PRId64 " %s, Average Per Loop: %" PRId64 " %s\n",
+           m_pName, m_diffns, pType, m_diffns / m_iterCount, pType);
+}
+
 

@@ -19,6 +19,8 @@
 #define HTTPSTATUSCODE_H
 
 
+#include <lsdef.h>
+#include <util/tsingleton.h>
 
 #include <assert.h>
 #include <stddef.h>
@@ -28,7 +30,7 @@ enum
     SC_100 = 1,
     SC_101 ,
     SC_102 ,
-    
+
     SC_200 ,
     SC_201 ,
     SC_202 ,
@@ -73,7 +75,7 @@ enum
     SC_422 ,
     SC_423 ,
     SC_424 ,
-    
+
     SC_500 ,
     SC_501 ,
     SC_502 ,
@@ -91,25 +93,30 @@ enum
 class StatusCode
 {
     friend class HttpStatusCode;
-    
-    const char * m_status;
+
+    const char *m_status;
     int          status_size;
-    char       * m_pHeaderBody;
+    char        *m_pHeaderBody;
     int          m_iBodySize;
 public:
-    
-    StatusCode( int code, const char * pStatus, const char * body );
+
+    StatusCode(int code, const char *pStatus, const char *body);
     ~StatusCode();
+    LS_NO_COPY_ASSIGN(StatusCode);
 };
 
 typedef int http_sc_t;
 
-class HttpStatusCode
+class HttpStatusCode : public TSingleton<HttpStatusCode>
 {
-    static StatusCode   s_pSC[ SC_END ];
-    static int          s_codeToIndex[7];
+    friend class TSingleton<HttpStatusCode>;
 
-    http_sc_t           m_iCode;
+    static int  s_codeToIndex[7];
+
+    StatusCode *m_aSC[ SC_END ];
+
+    HttpStatusCode();
+    ~HttpStatusCode();
 public:
     enum
     {
@@ -170,82 +177,65 @@ public:
 
     };
 
-
-    HttpStatusCode() : m_iCode( SC_200 ) {};
-    ~HttpStatusCode() {};
-    int getCode() const         { return m_iCode;   }
-    void setCode(int code)
-    { if (( code >= 100 )&&(code < 510 ))
-        m_iCode = code; }
-
-    const char * getCodeString() const
+    const char *getCodeString(http_sc_t code)
     {
-        return getCodeString( m_iCode );
+        return m_aSC[code]->m_status;
     }
-    const char * getHtml() const
+    int getCodeStringLen(http_sc_t code)
     {
-        return getRealHtml( m_iCode );
+        return m_aSC[code]->status_size;
     }
-
-    static const char * getCodeString( http_sc_t code )
+    const char *getHeaders(http_sc_t code)
     {
-        return s_pSC[code].m_status;
+        return m_aSC[code]->m_pHeaderBody;
     }
-    static int getCodeStringLen( http_sc_t code )
+    const char *getRealHtml(http_sc_t code)
     {
-        return s_pSC[code].status_size;
+        return (m_aSC[code]->m_pHeaderBody) ? m_aSC[code]->m_pHeaderBody : NULL;
     }
-    static const char * getHeaders( http_sc_t code )
+    int getBodyLen(http_sc_t code)
     {
-        return s_pSC[code].m_pHeaderBody;
-    }
-    static const char * getRealHtml( http_sc_t code )
-    {
-        return (s_pSC[code].m_pHeaderBody)?s_pSC[code].m_pHeaderBody : NULL;
-    }    
-    static int getBodyLen( http_sc_t code )
-    {
-        return s_pSC[code].m_iBodySize;
+        return m_aSC[code]->m_iBodySize;
     }
 
-    static int codeToIndex( const char * code );
-    
-    static int codeToIndex( unsigned int real_code )
+    int codeToIndex(const char *code);
+
+    int codeToIndex(unsigned int real_code)
     {
         int index = real_code % 100;
         int offset = real_code / 100;
-        if (( offset < 6 )
-            &&(index < s_codeToIndex[offset + 1] - s_codeToIndex[offset] ))
+        if ((offset < 6)
+            && (index < s_codeToIndex[offset + 1] - s_codeToIndex[offset]))
             return s_codeToIndex[offset] + index;
         else
-            return -1;
+            return LS_FAIL;
     }
-    
-    static int indexToCode( unsigned int index )
+
+    int indexToCode(unsigned int index)
     {
         if (index < 1 || index >= SC_END)
-            return -1;
-        
+            return LS_FAIL;
+
         int iStage;
-        for (iStage= 2; iStage<7; ++iStage)
+        for (iStage = 2; iStage < 7; ++iStage)
         {
-            if (index < (unsigned int )s_codeToIndex[iStage])
+            if (index < (unsigned int)s_codeToIndex[iStage])
                 break;
         }
         --iStage;
         return iStage * 100 + index - s_codeToIndex[iStage];
     }
-    
-    void operator=( http_sc_t code )  { setCode( code );   }
 
-    static bool fatalError( http_sc_t code)
+
+    bool fatalError(http_sc_t code)
     {
-        return (( code == SC_400 )||( code >= SC_500 )
-                ||( code == SC_408)
-                ||(( code >= SC_411 )&&( code <= SC_415 ))
-                );
+        return ((code == SC_400) || (code >= SC_500)
+                || (code == SC_408)
+                || ((code >= SC_411) && (code <= SC_415))
+               );
     }
-        
+
+    LS_NO_COPY_ASSIGN(HttpStatusCode);
 };
 
 #endif

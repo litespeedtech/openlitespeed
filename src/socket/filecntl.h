@@ -30,31 +30,33 @@ private:
     ~FileCntl() {};
 public:
     static  int     fcntl(int fd, int cmd)
-        {   return ::fcntl( fd, cmd );   }
+    {   return ::fcntl(fd, cmd);   }
 
-    static  int     fcntl(int fd, int cmd, int arg )
-        {   return ::fcntl( fd, cmd, arg );  }
+    static  int     fcntl(int fd, int cmd, int arg)
+    {   return ::fcntl(fd, cmd, arg);  }
 
     static  int     fcntl(int fd, int cmd, long arg)
-        {   return ::fcntl( fd, cmd, arg );  }
+    {   return ::fcntl(fd, cmd, arg);  }
 
     static  int     fcntl(int fd, int cmd, struct flock *lock)
-        {   return ::fcntl( fd, cmd, lock ); }
+    {   return ::fcntl(fd, cmd, lock); }
 
-    static  int     setNonBlock( int fd, int nonblock = 1 )
-        {   int val = fcntl( fd, F_GETFL, 0 );
-            if ( nonblock )
-                return fcntl( fd, F_SETFL, val | O_NONBLOCK );
-            else
-                return fcntl( fd, F_SETFL, val &(~O_NONBLOCK) );
-        }
+    static  int     setNonBlock(int fd, int nonblock = 1)
+    {
+        int val = fcntl(fd, F_GETFL, 0);
+        if (nonblock)
+            return fcntl(fd, F_SETFL, val | O_NONBLOCK);
+        else
+            return fcntl(fd, F_SETFL, val & (~O_NONBLOCK));
+    }
 
-    static int      isSet( int fd, int arg )
-        {   int val = fcntl( fd, F_GETFL, 0 );
-            return ( val != -1 )
-                        ?((val&arg) == arg )
-                        : val;
-        }
+    static int      isSet(int fd, int arg)
+    {
+        int val = fcntl(fd, F_GETFL, 0);
+        return (val != -1)
+               ? ((val & arg) == arg)
+               : val;
+    }
 };
 
 #endif

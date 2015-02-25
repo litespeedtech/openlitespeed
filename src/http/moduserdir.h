@@ -20,8 +20,9 @@
 
 
 
+#include <lsdef.h>
 #include <util/autostr.h>
-#include <util/stringlist.h>  
+#include <util/stringlist.h>
 
 class ModUserdir
 {
@@ -39,14 +40,15 @@ class ModUserdir
         MUD_PATH,
         MUD_REDIRECT
     };
-    int buildPath( char * pURL, int urlLen, char *p, char * pPath, int &len );
-    
-public: 
+    int buildPath(char *pURL, int urlLen, char *p, char *pPath, int &len);
+
+public:
     ModUserdir();
     ~ModUserdir();
 
-    int parse( char * pBegin, char * pEnd );
-    int buildPath( char * pURL, int userLen, char * pPath, int &len );
+    int parse(char *pBegin, char *pEnd);
+    int buildPath(char *pURL, int userLen, char *pPath, int &len);
+    LS_NO_COPY_ASSIGN(ModUserdir);
 };
 
 #endif

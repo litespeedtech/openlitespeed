@@ -18,10 +18,10 @@
 #ifndef CACHEHASH_H
 #define CACHEHASH_H
 
-/**
-	@author Gang Wang <gwang@litespeedtech.com>
-*/
 
+
+#include <lsdef.h>
+#include <lsr/xxhash.h>
 #include <util/ghash.h>
 
 #define HASH_KEY_LEN 8
@@ -31,19 +31,38 @@ public:
     CacheHash();
 
     ~CacheHash();
-    
-    void init();
-    void init( const CacheHash &rhs )
-    {   *this = rhs;       } 
-    void hash( const char * pBuf, int len );
 
-    const char * getKey() const   {   return m_key;     }
+    void init(const CacheHash &rhs)
+    {
+        *this = rhs;
+    }
 
-    static hash_key_t to_ghash_key(const void* __s);
-    static int  compare( const void * pVal1, const void * pVal2 );
+    void initHash(XXH64_state_t *pState)
+    {
+        XXH64_reset(pState, 0);
+    }
+
+    void updHash(XXH64_state_t *pState, const char *pBuf, int len)
+    {
+        XXH64_update(pState, pBuf, len);
+    }
+
+    void saveHash(XXH64_state_t *pState)
+    {
+        *((uint64_t *)m_key) = XXH64_digest(pState);
+    }
+
+    const char *getKey() const
+    {
+        return m_key;
+    }
+
+    static hash_key_t to_ghash_key(const void *__s);
+    static int  compare(const void *pVal1, const void *pVal2);
 
 private:
     char  m_key[HASH_KEY_LEN];
+
 };
 
 #endif

@@ -26,15 +26,15 @@ class HttpListener;
 class HttpVHost;
 class HttpListenerList : public TPointerList< HttpListener >
 {
-    HttpListenerList( const HttpListenerList& rhs );
-    void operator=( const HttpListenerList& rhs );
+    HttpListenerList(const HttpListenerList &rhs);
+    void operator=(const HttpListenerList &rhs);
 public:
     HttpListenerList();
     ~HttpListenerList();
-    int add( HttpListener * pListener );
-    int remove( HttpListener * pListener );
+    int add(HttpListener *pListener);
+    int remove(HttpListener *pListener);
     //HttpListener* get( const char * pName ) const;
-    HttpListener* get( const char * pName, const char * pAddr );
+    HttpListener *get(const char *pName, const char *pAddr);
     void stopAll();
     void suspendAll();
     void suspendSSL();
@@ -43,12 +43,12 @@ public:
     void resumeAllButSSL();
     void endConfig();
     void clear();
-    void moveNonExist( HttpListenerList& rhs );
-    void removeVHostMappings( HttpVHost * pVHost );
-    int  writeStatusReport( int fd );
-    int  writeRTReport( int fd );
+    void moveNonExist(HttpListenerList &rhs);
+    void removeVHostMappings(HttpVHost *pVHost);
+    int  writeStatusReport(int fd);
+    int  writeRTReport(int fd);
     void releaseUnused();
-    int  saveInUseListnersTo( HttpListenerList& rhs );
+    int  saveInUseListnersTo(HttpListenerList &rhs);
     void passListeners();
     void recvListeners();
 };

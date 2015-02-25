@@ -20,32 +20,33 @@
 
 #include <util/pool.h>
 
-template<class _Tp>
+template<class T>
 class PoolAllocator
 {
+    void operator=(const PoolAllocator &rhs);
 public:
-    Pool * m_pPool;
-    PoolAllocator(const PoolAllocator&) throw() { }
+    Pool *m_pPool;
+    PoolAllocator(const PoolAllocator &) throw() { }
 
     typedef size_t          size_type;
     typedef ptrdiff_t       difference_type;
-    typedef _Tp*            pointer;
-    typedef const _Tp*      const_pointer;
-    typedef _Tp&            reference;
-    typedef const _Tp&      const_reference;
-    typedef _Tp             value_type;
+    typedef T            *pointer;
+    typedef const T      *const_pointer;
+    typedef T            &reference;
+    typedef const T      &const_reference;
+    typedef T             value_type;
 
-    template <class _Tp1> struct rebind
+    template <class V> struct rebind
     {
-        typedef PoolAllocator<_Tp1> other;
+        typedef PoolAllocator<V> other;
     };
 
-    PoolAllocator( Pool * pool = NULL ) throw()
-        : m_pPool( pool )
-        {}
+    PoolAllocator(Pool *pool = NULL) throw()
+        : m_pPool(pool)
+    {}
 #ifndef WIN32
-    template <class U> PoolAllocator( const PoolAllocator<U>& rhs ) throw()
-        : m_pPool( rhs.m_pPool )  {}
+    template <class U> PoolAllocator(const PoolAllocator<U> &rhs) throw()
+        : m_pPool(rhs.m_pPool)  {}
 #endif
 
     ~PoolAllocator() throw() {}
@@ -53,32 +54,33 @@ public:
     pointer address(reference __x) const { return &__x; }
     const_pointer address(const_reference __x) const { return &__x; }
 
-    pointer allocate( size_t __n, const void* = 0)
-        {
-            return (pointer) Pool::allocate( __n * sizeof(_Tp) );
-        }
+    pointer allocate(size_t __n, const void * = 0)
+    {
+        return (pointer) Pool::allocate(__n * sizeof(T));
+    }
 
     // __p is not permitted to be a null pointer.
-    void deallocate( void * __p, size_t __n)
-        {
-            Pool::deallocate( __p, __n * sizeof(_Tp) );
-        }
+    void deallocate(void *__p, size_t __n)
+    {
+        Pool::deallocate(__p, __n * sizeof(T));
+    }
 
     size_t max_size() const throw()
-        {
-            return size_t(-1) / sizeof( _Tp );
-        }
-        
-    void construct(pointer __p, const _Tp& __val) { new(__p) _Tp(__val); }
-    void destroy(pointer __p) { __p->~_Tp(); }
-
-    char * _Charalloc(size_type _Size)
     {
-        return (char *)(Pool::allocate( _Size ));
+        return size_t(-1) / sizeof(T);
+    }
+
+    void construct(pointer __p, const T &__val) { new(__p) T(__val); }
+    void destroy(pointer __p) { __p->~T(); }
+
+    char *_Charalloc(size_type _Size)
+    {
+        return (char *)(Pool::allocate(_Size));
     }
 
 
 };
 
 #endif //_POOLALLOC_H_
+
 

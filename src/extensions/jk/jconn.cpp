@@ -22,19 +22,18 @@
 #include <extensions/extworker.h>
 
 #include <http/httpextconnector.h>
-#include <http/httpglobals.h>
 #include <http/httplog.h>
 #include <http/httpmime.h>
 #include <http/httpstatuscode.h>
 #include <http/httpsession.h>
 
 JConn::JConn()
-    : m_pReqHeaderEnd ( NULL )
-    , m_pBufEnd( NULL )
-    , m_packetLeft( 0 )
-    , m_pCurPos( m_respBuf )
-    , m_iPacketState( PACKET_HEADER )
-    , m_pRespBufEnd( (unsigned char *)&(m_respBuf[ sizeof( m_respBuf )]) )
+    : m_pReqHeaderEnd(NULL)
+    , m_pBufEnd(NULL)
+    , m_packetLeft(0)
+    , m_pCurPos(m_respBuf)
+    , m_iPacketState(PACKET_HEADER)
+    , m_pRespBufEnd((unsigned char *) & (m_respBuf[ sizeof(m_respBuf)]))
 {
 }
 
@@ -42,16 +41,16 @@ JConn::~JConn()
 {
 }
 
-inline int getInt( unsigned char * &p )
+inline int getInt(unsigned char *&p)
 {
     int i = *p++;
     i <<= 8;
     i |= *p++;
     return i;
 }
-inline int peekInt( unsigned char *p )
+inline int peekInt(unsigned char *p)
 {
-    return ((((int)*p) << 8 )|( *(p+1) ));
+    return ((((int) * p) << 8) | (*(p + 1)));
 }
 
 //inline unsigned long getLong( unsigned chsr * &p )
@@ -59,9 +58,9 @@ inline int peekInt( unsigned char *p )
 //
 //}
 
-void JConn::init( int fd, Multiplexer* pMplx )
+void JConn::init(int fd, Multiplexer *pMplx)
 {
-    EdStream::init( fd, pMplx, POLLIN|POLLOUT|POLLHUP|POLLERR );
+    EdStream::init(fd, pMplx, POLLIN | POLLOUT | POLLHUP | POLLERR);
     //Do not call reset(), not necessary
     //reset();
 }
@@ -69,42 +68,40 @@ void JConn::init( int fd, Multiplexer* pMplx )
 
 int JConn::doWrite()
 {
-    if ( getConnector() )
+    if (getConnector())
     {
         int state = getConnector()->getState();
-        if ((!state)||( state & (HEC_FWD_REQ_HEADER | HEC_FWD_REQ_BODY) ))
-        {
+        if ((!state) || (state & (HEC_FWD_REQ_HEADER | HEC_FWD_REQ_BODY)))
             return getConnector()->extOutputReady();
-        }
     }
-    if ( m_iTotalPending > 0 )
+    if (m_iTotalPending > 0)
         return flush();
     else
         suspendWrite();
     return 0;
 }
 
-int JConn::processPacketHeader( unsigned char * &p )
+int JConn::processPacketHeader(unsigned char *&p)
 {
-    if (( *p != AJP_RESP_PREFIX_B1)||
-        ( *(p+1) != AJP_RESP_PREFIX_B2 ))
+    if ((*p != AJP_RESP_PREFIX_B1) ||
+        (*(p + 1) != AJP_RESP_PREFIX_B2))
     {
-        LOG_ERR(( getLogger(), "[%s] Invalid AJP response signature %x%x",
-                    getLogId(), (int) *p,
-                    (int) *(p+1) ));
-        return -1;
+        LOG_ERR((getLogger(), "[%s] Invalid AJP response signature %x%x",
+                 getLogId(), (int) *p,
+                 (int) * (p + 1)));
+        return LS_FAIL;
     }
-    p+= 2;
-    m_curPacketSize = getInt( p );
-    if ( m_curPacketSize > AJP_MAX_PKT_BODY_SIZE )
+    p += 2;
+    m_curPacketSize = getInt(p);
+    if (m_curPacketSize > AJP_MAX_PKT_BODY_SIZE)
     {
-        LOG_ERR(( getLogger(), "[%s] packet size is too large - %d",
-                getLogId(), m_curPacketSize ));
-        return -1;
+        LOG_ERR((getLogger(), "[%s] packet size is too large - %d",
+                 getLogId(), m_curPacketSize));
+        return LS_FAIL;
     }
     m_packetType = *p++;
     m_packetLeft = m_curPacketSize - 1;
-    switch(m_packetType)
+    switch (m_packetType)
     {
     case AJP13_RESP_BODY_CHUNK:
         m_iPacketState = CHUNK_LEN;
@@ -113,118 +110,116 @@ int JConn::processPacketHeader( unsigned char * &p )
         m_iPacketState = STATUS_CODE;
         break;
     case AJP13_END_RESP:
-        if ( *p != 1)
+        if (*p != 1)
         {
-            if ( D_ENABLED( DL_LESS ) )
-                LOG_D(( getLogger(),
-                    "[%s] close connection required by servlet engine %s ",
-                    getLogId(), getWorker()->getURL() ));
-            
-            setState( CLOSING );
+            if (D_ENABLED(DL_LESS))
+                LOG_D((getLogger(),
+                       "[%s] close connection required by servlet engine %s ",
+                       getLogId(), getWorker()->getURL()));
+
+            setState(CLOSING);
         }
         p++;
-        if ( getConnector() )
+        if (getConnector())
         {
             incReqProcessed();
-            if ( getState() == ABORT )
-                setState( PROCESSING );
-            setInProcess( 0 );            
-            getConnector()->endResponse( 0, 0 );
+            if (getState() == ABORT)
+                setState(PROCESSING);
+            setInProcess(0);
+            getConnector()->endResponse(0, 0);
         }
         break;
     case AJP13_MORE_REQ_BODY:
     default:
         break;
     }
-    return 0;    
+    return 0;
 }
 
-int JConn::processPacketData( unsigned char * &p )
+int JConn::processPacketData(unsigned char *&p)
 {
-    if ( m_iPacketState == PACKET_HEADER )
+    if (m_iPacketState == PACKET_HEADER)
     {
         //m_respHeader + m_packetLeft
-        if ( m_pCurPos - p >= AJP_MIN_PACKET_SIZE )
+        if (m_pCurPos - p >= AJP_MIN_PACKET_SIZE)
         {
-            int ret = processPacketHeader( p );
-            if ( ret )
-                return -1;
+            int ret = processPacketHeader(p);
+            if (ret)
+                return LS_FAIL;
         }
         else
             return 1;
     }
-    if ( p == m_pCurPos )
+    if (p == m_pCurPos)
         return 1;
     int ret = 0;
-    unsigned char * pCur = p;
-    unsigned char * pEnd = p + m_packetLeft;
-    if ( pEnd > m_pCurPos )
+    unsigned char *pCur = p;
+    unsigned char *pEnd = p + m_packetLeft;
+    if (pEnd > m_pCurPos)
         pEnd = m_pCurPos;
-    if ( getConnector() )
-        ret = processPacketContent( p, pEnd );
+    if (getConnector())
+        ret = processPacketContent(p, pEnd);
     else
         p = pEnd;
-    if ( ret == -1 )
+    if (ret == -1)
         return ret;
     m_packetLeft -= p - pCur;
-    if ( m_packetLeft == 0 )
+    if (m_packetLeft == 0)
         m_iPacketState = PACKET_HEADER;
     return 0;
 }
 
-int JConn::processPacketContent( unsigned char * &p, unsigned char * pEnd )
+int JConn::processPacketContent(unsigned char *&p, unsigned char *pEnd)
 {
     int ret = 0;
-    switch( m_iPacketState )
+    switch (m_iPacketState)
     {
     case CHUNK_LEN:
-        if ( pEnd - p >= 2 )
+        if (pEnd - p >= 2)
         {
-            m_chunkLeft = getInt( p );
-            assert( m_chunkLeft == m_curPacketSize - 4 );
+            m_chunkLeft = getInt(p);
+            assert(m_chunkLeft == m_curPacketSize - 4);
             m_iPacketState = CHUNK_DATA;
         }
         else
             break;
-        //fall through
+    //fall through
     case CHUNK_DATA:
-        if ( pEnd - p > 0 )
+        if (pEnd - p > 0)
         {
             int len = m_chunkLeft;
-            if ( pEnd - p < len )
+            if (pEnd - p < len)
                 len = pEnd - p;
-            if ( len > 0 )
+            if (len > 0)
             {
-                if ( !((getConnector()->getState() &
-                     (HEC_ABORT_REQUEST|HEC_ERROR|HEC_COMPLETE|HEC_REDIRECT))) )
-                    ret = getConnector()->processRespBodyData( (const char *)p, len );
+                if (!((getConnector()->getState() &
+                       (HEC_ABORT_REQUEST | HEC_ERROR | HEC_COMPLETE | HEC_REDIRECT))))
+                    ret = getConnector()->processRespBodyData((const char *)p, len);
                 p += len;
                 m_chunkLeft -= len;
             }
-            if ( p < pEnd )
+            if (p < pEnd)
                 ++p;
         }
         break;
     case STATUS_CODE:
-        if ( pEnd - p >= 2 )
+        if (pEnd - p >= 2)
         {
-            int code = getInt( p );
-            code = HttpStatusCode::codeToIndex( code );
-            if ( code != -1 )
-            {
-                getConnector()->getHttpSession()->getReq()->updateNoRespBodyByStatus( code );
-                
-            }
+            int code = getInt(p);
+            code = HttpStatusCode::getInstance().codeToIndex(code);
+            if (code != -1)
+                getConnector()->getHttpSession()->getReq()->updateNoRespBodyByStatus(code);
+
             m_iPacketState = STATUS_MSG;
         }
         else
             break;
-        //fall through
+    //fall through
     case STATUS_MSG:
-        if ( pEnd - p > 2 )
+        if (pEnd - p > 2)
         {
-            int strLen = peekInt( p );
-            if ( strLen + 2 < pEnd - p )
+            int strLen = peekInt(p);
+            if (strLen + 2 < pEnd - p)
             {
                 p += strLen + 3;    //skip status message as we don't use it
                 m_iPacketState = NUM_HEADERS;
@@ -234,92 +229,90 @@ int JConn::processPacketContent( unsigned char * &p, unsigned char * pEnd )
         }
         else
             break;
-        //fall through
+    //fall through
     case NUM_HEADERS:
-        if ( pEnd - p >= 2 )
+        if (pEnd - p >= 2)
         {
-            m_iNumHeader = getInt( p );
+            m_iNumHeader = getInt(p);
             m_iPacketState = RESP_HEADER;
         }
         else
             break;
-        //fall through
+    //fall through
     case RESP_HEADER:
-        ret = readRespHeader( p, pEnd );
+        ret = readRespHeader(p, pEnd);
     default:
         p = pEnd;
         break;
     }
     return ret;
-    
+
 }
 
-int JConn::readRespHeader( unsigned char *&p, unsigned char *pEnd )
+int JConn::readRespHeader(unsigned char *&p, unsigned char *pEnd)
 {
-    while( m_iNumHeader > 0 )
+    while (m_iNumHeader > 0)
     {
-        if ( pEnd - p < 4 )
+        if (pEnd - p < 4)
             return 0;
         unsigned char id1 = *p;
         unsigned char id2;
         int headerNameLen;
-        const char * pHeaderName;
-        unsigned char * p1;
-        if ( id1 == 0xA0 )
+        const char *pHeaderName;
+        unsigned char *p1;
+        if (id1 == 0xA0)
         {
-            id2 = *(p+1);
-            if (( id2 > 0 )&&( id2 <= AJP_RESP_HEADERS_NUM ))
+            id2 = *(p + 1);
+            if ((id2 > 0) && (id2 <= AJP_RESP_HEADERS_NUM))
             {
-                pHeaderName = JkAjp13::getRespHeaderById( id2 );
-                headerNameLen = JkAjp13::getRespHeaderLenById( id2 );
+                pHeaderName = JkAjp13::getRespHeaderById(id2);
+                headerNameLen = JkAjp13::getRespHeaderLenById(id2);
                 p1 = p + 2;
             }
             else
             {
                 //invalid header id
-                return -1;
+                return LS_FAIL;
             }
         }
         else
         {
-            headerNameLen = id1 << 8 | *(p+1);
-            if ( pEnd - p < headerNameLen + 5 )
+            headerNameLen = id1 << 8 | *(p + 1);
+            if (pEnd - p < headerNameLen + 5)
                 return 0;
             pHeaderName = (const char *)p + 2;
             p1 = p + headerNameLen + 3;
         }
-        int headerValLen = peekInt( p1 );
-        if ( pEnd - p1 < headerValLen + 3 )
+        int headerValLen = peekInt(p1);
+        if (pEnd - p1 < headerValLen + 3)
             return 0;
-        char * pHeaderVal = (char *)p1 + 2;
+        char *pHeaderVal = (char *)p1 + 2;
         p = p1 + headerValLen + 3;
         --m_iNumHeader;
-        HttpResp * pResp = getConnector()->getHttpSession()->getResp();
+        HttpResp *pResp = getConnector()->getHttpSession()->getResp();
         int ret = pResp->appendHeader(
-                    pHeaderName, headerNameLen, pHeaderVal, headerValLen );
-        if ( ret )
+                      pHeaderName, headerNameLen, pHeaderVal, headerValLen);
+        if (ret)
             return ret;
-        HttpReq * pReq = getConnector()->getHttpSession()->getReq();
-        if ( pReq->gzipAcceptable() == GZIP_REQUIRED )
+        HttpReq *pReq = getConnector()->getHttpSession()->getReq();
+        if (pReq->gzipAcceptable() == GZIP_REQUIRED)
         {
-            if ( *pHeaderName == 'C' || *pHeaderName == 'c' )
+            if (*pHeaderName == 'C' || *pHeaderName == 'c')
             {
-                if ( strcasecmp( pHeaderName, "content-type" ) == 0 )
+                if (strcasecmp(pHeaderName, "content-type") == 0)
                 {
-                    char * p = (char *)memchr( pHeaderVal, ';', headerValLen );
-                    if ( !p )
+                    char *p = (char *)memchr(pHeaderVal, ';', headerValLen);
+                    if (!p)
                         p = pHeaderVal + headerValLen;
-                    register char ch;
+                    char ch;
                     ch = *p;
                     *p = 0;
-                    if ( !HttpGlobals::getMime()->compressable( pHeaderVal ) )
-                        pReq->andGzip( ~GZIP_ENABLED );
+                    if (!HttpMime::getMime()->compressable(pHeaderVal))
+                        pReq->andGzip(~GZIP_ENABLED);
                     *p = ch;
                 }
-                else if ( strcasecmp( pHeaderName, "content-encoding" ) == 0 )
-                {
-                    pReq->andGzip( ~GZIP_ENABLED );
-                }
+                else if (strcasecmp(pHeaderName, "content-encoding") == 0)
+                    pReq->andGzip(~GZIP_ENABLED);
             }
         }
     }
@@ -330,21 +323,21 @@ int JConn::readRespHeader( unsigned char *&p, unsigned char *pEnd )
 int JConn::processRespData()
 {
     int ret;
-    unsigned char * p = m_respBuf;
-    while( p < m_pCurPos )
+    unsigned char *p = m_respBuf;
+    while (p < m_pCurPos)
     {
-        ret = processPacketData( p );
-        if ( ret == 1 )
+        ret = processPacketData(p);
+        if (ret == 1)
         {
-            if ( p != m_pCurPos )
+            if (p != m_pCurPos)
             {
-                memmove( m_respBuf, p, m_pCurPos - p );
-                m_pCurPos = m_respBuf + (m_pCurPos - p );
+                memmove(m_respBuf, p, m_pCurPos - p);
+                m_pCurPos = m_respBuf + (m_pCurPos - p);
                 return 0;
             }
         }
-        else if ( ret == -1 )
-            return -1;
+        else if (ret == -1)
+            return LS_FAIL;
     }
     m_pCurPos = m_respBuf;
     return 0;
@@ -354,100 +347,100 @@ int JConn::doRead()
 {
     int len = 0;
     int ret = 0;
-    while( true )
+    while (true)
     {
         int toRead = m_pRespBufEnd - m_pCurPos;
-        len = read( (char *)m_pCurPos, toRead);
-        if ( len > 0 )
+        len = read((char *)m_pCurPos, toRead);
+        if (len > 0)
         {
-            if ( D_ENABLED( DL_MEDIUM ) )
-                LOG_D(( getLogger(), "[%s] process STDOUT %d bytes",
-                    getLogId(), len ));
+            if (D_ENABLED(DL_MEDIUM))
+                LOG_D((getLogger(), "[%s] process STDOUT %d bytes",
+                       getLogId(), len));
             //printf( ">>read %d bytes from CGI\n", len );
             //::write( 1, m_pCurPos, len );
             m_pCurPos += len;
             ret = processRespData();
-            if ( ret == -1 )
+            if (ret == -1)
             {
                 errno = EIO;
                 len = -1;
                 break;
             }
-            if ( len < toRead )
+            if (len < toRead)
             {
-                if (( m_packetType != AJP13_END_RESP )&&
-                    ( getConnector() ))
+                if ((m_packetType != AJP13_END_RESP) &&
+                    (getConnector()))
                     getConnector()->flushResp();
                 break;
             }
         }
-        else 
+        else
             break;
     }
-    if ( getState() == ABORT )
+    if (getState() == ABORT)
     {
-        if ( getConnector() )
+        if (getConnector())
         {
             incReqProcessed();
-            getConnector()->endResponse( 0, 0 );
+            getConnector()->endResponse(0, 0);
         }
-    }    
+    }
     return len;
 }
-int JConn::doError( int err)
+int JConn::doError(int err)
 {
     return 0;
 }
 
 
-int JConn::addRequest( ExtRequest * pReq )
+int JConn::addRequest(ExtRequest *pReq)
 {
-    assert( pReq );
-    setConnector( (HttpExtConnector *)pReq );
+    assert(pReq);
+    setConnector((HttpExtConnector *)pReq);
     reset();
     m_pCurPos = m_respBuf;
     m_iPacketState = PACKET_HEADER;
     int ret = buildReqHeader();
-    if ( ret )
+    if (ret)
     {
-        if ( D_ENABLED( DL_LESS ) )
-            LOG_D(( getLogger(),
-                "[%s] Request header can't fit into 8K buffer, "
-                "can't forward request to servlet engine",
-                getLogId() ));
-        ((HttpExtConnector *)pReq)->setProcessor( NULL );
-        setConnector( NULL );
+        if (D_ENABLED(DL_LESS))
+            LOG_D((getLogger(),
+                   "[%s] Request header can't fit into 8K buffer, "
+                   "can't forward request to servlet engine",
+                   getLogId()));
+        ((HttpExtConnector *)pReq)->setProcessor(NULL);
+        setConnector(NULL);
         ret = SC_500;
     }
     return ret;
     //return 0;
 }
 
-ExtRequest* JConn::getReq() const
+ExtRequest *JConn::getReq() const
 {
     return getConnector();
 }
 
 
-int JConn::removeRequest( ExtRequest * pReq )
+int JConn::removeRequest(ExtRequest *pReq)
 {
-    if ( getConnector() )
+    if (getConnector())
     {
-        getConnector()->setProcessor( NULL );
-        setConnector( NULL );
+        getConnector()->setProcessor(NULL);
+        setConnector(NULL);
     }
     return 0;
 }
 
 void JConn::reset()
 {
-    memset( &m_pReqHeaderEnd, 0, (char *)(&m_iTotalPending + 1 ) -
-        (char *)(&m_pReqHeaderEnd ) );
+    memset(&m_pReqHeaderEnd, 0, (char *)(&m_iTotalPending + 1) -
+           (char *)(&m_pReqHeaderEnd));
 }
 
 void JConn::abort()
 {
-    setState( ABORT );
+    setState(ABORT);
 }
 
 int  JConn::begin()
@@ -462,28 +455,26 @@ int  JConn::beginReqBody()
 
 int  JConn::sendReqBodyPacket()
 {
-    JkAjp13::buildAjpReqBodyHeader( m_pBufEnd, m_iPendingBody );
+    JkAjp13::buildAjpReqBodyHeader(m_pBufEnd, m_iPendingBody);
     m_iTotalPending = m_iPendingBody + 6;
     m_iPendingBody = 0;
     return 0;
 }
 
-int  JConn::sendReqBody( const char * pBuf, int size )
+int  JConn::sendReqBody(const char *pBuf, int size)
 {
     int len = 0;
-    if ( m_iTotalPending > 0 )
-        if ( flush() == -1 )
-            return -1;
-    if ( m_iTotalPending > 0 )
+    if (m_iTotalPending > 0)
+        if (flush() == -1)
+            return LS_FAIL;
+    if (m_iTotalPending > 0)
         return 0;
-    if ( !m_iPendingBody )
-    {
-        m_iovec.append( m_pBufEnd, 6 );
-    }
-    if ( size + m_iPendingBody > AJP_MAX_PKT_BODY_SIZE - 2 )
+    if (!m_iPendingBody)
+        m_iovec.append(m_pBufEnd, 6);
+    if (size + m_iPendingBody > AJP_MAX_PKT_BODY_SIZE - 2)
     {
         len = AJP_MAX_PKT_BODY_SIZE - 2 - m_iPendingBody;
-        m_iovec.append( pBuf, len );
+        m_iovec.append(pBuf, len);
         m_iPendingBody += len;
         sendReqBodyPacket();
         return len;
@@ -491,19 +482,19 @@ int  JConn::sendReqBody( const char * pBuf, int size )
     else
     {
         m_iPendingBody += size;
-        m_iovec.append( pBuf, size );
+        m_iovec.append(pBuf, size);
         return size;
     }
 }
 
 int  JConn::endOfReqBody()
 {
-    if ( m_iPendingBody )
+    if (m_iPendingBody)
         sendReqBodyPacket();
-    if ( m_iTotalPending )
+    if (m_iTotalPending)
     {
         int ret = flush();
-        if ( ret )
+        if (ret)
             return ret;
     }
     //JkAjp13::buildAjpHeader( m_pBufEnd, 0 );
@@ -514,10 +505,10 @@ int  JConn::endOfReqBody()
 
 int  JConn::flush()
 {
-    if ( m_iTotalPending )
+    if (m_iTotalPending)
     {
-        int ret = writev( m_iovec, m_iTotalPending );
-        if ( ret >= m_iTotalPending )
+        int ret = writev(m_iovec, m_iTotalPending);
+        if (ret >= m_iTotalPending)
         {
             ret -= m_iTotalPending;
             m_iTotalPending = 0;
@@ -525,27 +516,27 @@ int  JConn::flush()
         }
         else
         {
-            if ( ret > 0 )
+            if (ret > 0)
             {
                 m_iTotalPending -= ret;
-                m_iovec.finish( ret );
+                m_iovec.finish(ret);
                 return 1;
             }
-            return -1;
+            return LS_FAIL;
         }
     }
     return 0;
 }
 
 
-int  JConn::readResp( char * pBuf, int size )
+int  JConn::readResp(char *pBuf, int size)
 {
     return 0;
 }
 
 void JConn::cleanUp()
 {
-    setConnector( NULL );
+    setConnector(NULL);
     reset();
     recycle();
 }
@@ -568,25 +559,25 @@ int JConn::buildReqHeader()
 {
     m_pReqHeaderEnd = m_buf + 4;
     int ret = JkAjp13::buildReq(
-            getConnector()->getHttpSession(), m_pReqHeaderEnd,
-            &m_buf[ AJP_MAX_PACKET_SIZE ] );
-    if ( ret == -1 )
-        return -1;
+                  getConnector()->getHttpSession(), m_pReqHeaderEnd,
+                  &m_buf[ AJP_MAX_PACKET_SIZE ]);
+    if (ret == -1)
+        return LS_FAIL;
     m_pBufEnd = m_pReqHeaderEnd;
-    ret = JkAjp13::buildWorkerHeader( (JWorker *)getWorker(),
-            m_pBufEnd, &m_buf[ AJP_MAX_PACKET_SIZE] );
-    if ( ret == -1 )
-        return -1;
-    JkAjp13::buildAjpHeader( m_buf, m_pBufEnd - m_buf - 4 );
+    ret = JkAjp13::buildWorkerHeader((JWorker *)getWorker(),
+                                     m_pBufEnd, &m_buf[ AJP_MAX_PACKET_SIZE]);
+    if (ret == -1)
+        return LS_FAIL;
+    JkAjp13::buildAjpHeader(m_buf, m_pBufEnd - m_buf - 4);
     return 0;
 }
 
 int JConn::sendReqHeader()
 {
     m_iovec.clear();
-    m_iovec.append( m_buf, m_pBufEnd - m_buf );
+    m_iovec.append(m_buf, m_pBufEnd - m_buf);
     m_iTotalPending = m_pBufEnd - m_buf;
-    setInProcess( 1 );
+    setInProcess(1);
     return 1;
 }
 

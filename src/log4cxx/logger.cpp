@@ -27,55 +27,55 @@
 BEGIN_LOG4CXX_NS
 
 static int s_inited = 0;
-::GFactory * s_pFactory = NULL;
+::GFactory *s_pFactory = NULL;
 
-Logger::Logger( const char * pName)
-    : Duplicable( pName )
-    , m_iLevel( Level::DEBUG )
-    , m_pAppender( NULL )
-    , m_iAdditive( 1 )
-    , m_pLayout( NULL )
-    , m_pParent( NULL )
+Logger::Logger(const char *pName)
+    : Duplicable(pName)
+    , m_iLevel(Level::DEBUG)
+    , m_pAppender(NULL)
+    , m_iAdditive(1)
+    , m_pLayout(NULL)
+    , m_pParent(NULL)
 {
 }
 
 
 void Logger::init()
 {
-    if ( !s_inited )
+    if (!s_inited)
     {
         s_inited = 1;
         s_pFactory = new GFactory();
-        if ( s_pFactory )
+        if (s_pFactory)
         {
             FileAppender::init();
             Layout::init();
             PatternLayout::init();
-            s_pFactory->registType( new Logger("Logger") );
+            s_pFactory->registerType(new Logger("Logger"));
             s_inited = 1;
         }
     }
 }
 
-Logger * Logger::getLogger( const char * pName )
+Logger *Logger::getLogger(const char *pName)
 {
     init();
-    if ( !*pName )
+    if (!*pName)
         pName = ROOT_LOGGER_NAME;
-    return (Logger *)s_pFactory->getObj( pName, "Logger" );
+    return (Logger *)s_pFactory->getObj(pName, "Logger");
 }
 
-Duplicable * Logger::dup( const char * pName )
+Duplicable *Logger::dup(const char *pName)
 {
-    return new Logger( pName );
+    return new Logger(pName);
 }
 
-static int logSanitorize( char * pBuf, int len )
+static int logSanitorize(char *pBuf, int len)
 {
-    char * pEnd = pBuf + len - 2;
-    while( pBuf < pEnd )
+    char *pEnd = pBuf + len - 2;
+    while (pBuf < pEnd)
     {
-        if ( *pBuf < 0x20 )
+        if (*pBuf < 0x20)
             *pBuf = '.';
         ++pBuf;
     }
@@ -83,46 +83,47 @@ static int logSanitorize( char * pBuf, int len )
 }
 
 
-void Logger::vlog( int level, const char * format, va_list args, int no_linefeed )
+void Logger::vlog(int level, const char *format, va_list args,
+                  int no_linefeed)
 {
     char achBuf[8192];
     int messageLen;
-    messageLen = vsnprintf( achBuf, sizeof( achBuf ) - 1,  format, args );
-    if ( (size_t)messageLen > sizeof( achBuf ) - 1 )
+    messageLen = vsnprintf(achBuf, sizeof(achBuf) - 1,  format, args);
+    if ((size_t)messageLen > sizeof(achBuf) - 1)
     {
-        messageLen = sizeof( achBuf ) - 1;
+        messageLen = sizeof(achBuf) - 1;
         achBuf[messageLen] = 0;
     }
-    messageLen = logSanitorize( achBuf, messageLen );
-    LoggingEvent event( level, getName(), achBuf, messageLen );
+    messageLen = logSanitorize(achBuf, messageLen);
+    LoggingEvent event(level, getName(), achBuf, messageLen);
 
-    if ( no_linefeed )
+    if (no_linefeed)
         event.m_flag |= LOGEVENT_NO_LINEFEED;
-    
-    gettimeofday( &event.m_timestamp, NULL );
-    Logger * pLogger = this;
-    while( 1 )
+
+    gettimeofday(&event.m_timestamp, NULL);
+    Logger *pLogger = this;
+    while (1)
     {
-        if ( !event.m_pLayout )
+        if (!event.m_pLayout)
             event.m_pLayout = pLogger->m_pLayout;
-        if ( pLogger->m_pAppender && level <= pLogger->getLevel() )
+        if (pLogger->m_pAppender && level <= pLogger->getLevel())
         {
-            if ( pLogger->m_pAppender->append( &event ) == -1 )
+            if (pLogger->m_pAppender->append(&event) == -1)
                 break;
         }
-        if ( !pLogger->m_pParent || !pLogger->m_iAdditive )
+        if (!pLogger->m_pParent || !pLogger->m_iAdditive)
             break;
         pLogger = m_pParent;
     }
 }
 
-void Logger::lograw( const char * pBuf, int len )
+void Logger::lograw(const char *pBuf, int len)
 {
-    if ( m_pAppender )
-        if ( m_pAppender->append( pBuf, len ) == -1 )
+    if (m_pAppender)
+        if (m_pAppender->append(pBuf, len) == -1)
             return;
-    if ( m_pParent && m_iAdditive )
-        m_pParent->lograw( pBuf, len );
+    if (m_pParent && m_iAdditive)
+        m_pParent->lograw(pBuf, len);
 }
 
 

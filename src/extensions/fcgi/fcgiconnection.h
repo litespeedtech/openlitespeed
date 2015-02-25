@@ -19,6 +19,7 @@
 #define FCGICONNECTION_H
 
 
+#include <lsdef.h>
 #include <edio/bufferedos.h>
 #include <extensions/extconn.h>
 #include <extensions/httpextprocessor.h>
@@ -26,18 +27,18 @@
 #include <extensions/fcgi/fcgienv.h>
 #include <util/autobuf.h>
 
-//#define FCGI_MPLX 
+//#define FCGI_MPLX
 
 #define FCGI_MAX_PACKET_SIZE    8192
 
 class FcgiApp;
 class Multiplexer;
 class FcgiConnection : public ExtConn
-                     , public HttpExtProcessor
+    , public HttpExtProcessor
 {
 private:
 
-    BufferedOS      m_bufOS;    
+    BufferedOS      m_bufOS;
     AutoBuf         m_bufRec;
     FCGI_Header     m_recCur;
     uint16_t        m_recSize;
@@ -50,33 +51,33 @@ private:
     int             m_iWantWrite;
     int             m_iTotalPending;
     int             m_iCurStreamHeader;
-    char            m_streamHeaders[sizeof( FCGI_Header ) * 8 ];
+    char            m_streamHeaders[sizeof(FCGI_Header) * 8 ];
     IOVec           m_iovec;
     FcgiEnv         m_env;
 
     int             m_lReqSentTime;
     int             m_lReqBeginTime;
 
-    
-    int cacheOutput( const char * pBuf, int len );
-    int sendStreamPacket( int streamType, int id,
-                    const char * pBuf, int size );
+
+    int cacheOutput(const char *pBuf, int len);
+    int sendStreamPacket(int streamType, int id,
+                         const char *pBuf, int size);
     //int processFcgiRecord( char * pBuf, int size, int& used);
-    int buildFcgiRecHeader( char * pBuf, int size, int& len );
-    int processFcgiRecData( char * pBuf, int size, int& end );
-    
+    int buildFcgiRecHeader(char *pBuf, int size, int &len);
+    int processFcgiRecData(char *pBuf, int size, int &end);
+
     //int processFcgiDataNew();
     int processFcgiData();
     int queryAppAttr();
     bool isOutputBufEmpty();
-    void processManagementVal( char *pName, int nameLen,
-                            char *pValue, int valLen );
-    int processManagementRec( char * pBuf, int size );
-    int processEndOfRequestRecord( char * pBuf, int size );
+    void processManagementVal(char *pName, int nameLen,
+                              char *pValue, int valLen);
+    int processManagementRec(char *pBuf, int size);
+    int processEndOfRequestRecord(char *pBuf, int size);
     int flushOutBuf();
 
-    int  pendingEndStream( int type );
-    int  pendingWrite( const char * pBuf, int size, int type );
+    int  pendingEndStream(int type);
+    int  pendingWrite(const char *pBuf, int size, int type);
     int  sendAbortRec();
 
     enum
@@ -88,40 +89,40 @@ private:
 
 protected:
     virtual int doRead();
-    virtual int doError( int err);
-    int addRequest( ExtRequest* pReq );
+    virtual int doError(int err);
+    int addRequest(ExtRequest *pReq);
     void retryProcessor();
-    ExtRequest* getReq() const;
-    
+    ExtRequest *getReq() const;
+
 public:
     static const char s_padding[8];
     FcgiConnection();
     ~FcgiConnection();
-    void init( int fd, Multiplexer* pMplx );
-    int sendRecord( const char *rec, int size );
-    int writeStream( int streamType, int id,
-                const char * pBuf, int size );
-    int endOfStream( int streamType, int id );
+    void init(int fd, Multiplexer *pMplx);
+    int sendRecord(const char *rec, int size);
+    int writeStream(int streamType, int id,
+                    const char *pBuf, int size);
+    int endOfStream(int streamType, int id);
     bool wantRead();
     bool wantWrite();
-    
-    int removeRequest( ExtRequest* pReq );
+
+    int removeRequest(ExtRequest *pReq);
 
     int close()    {   m_bufOS.flush(); ExtConn::close(); return 0;    }
     void finishRecvBuf();
-    int readStdOut( int iReqId, char * pBuf, int size );
-    
+    int readStdOut(int iReqId, char *pBuf, int size);
+
     void suspendWrite();
     void continueWrite();
     virtual int doWrite();
 
     virtual int  begin();
-    int  sendSpecial( const char * pBuf, int size );
-    int  sendReqBody( const char * pBuf, int size );
+    int  sendSpecial(const char *pBuf, int size);
+    int  sendReqBody(const char *pBuf, int size);
     int  sendReqHeader();
-    int  beginReqBody( );
-    int  endOfReqBody( );
-    int  readResp( char * pBuf, int size );
+    int  beginReqBody();
+    int  endOfReqBody();
+    int  readResp(char *pBuf, int size);
     void abort();
     void cleanUp();
     int  flush();
@@ -132,16 +133,17 @@ public:
 
     //int  onExtWrite();
     int  onStdOut();
-    int  processStdOut( char * pBuf, int size );
-    int  processStdErr( char * pBuf, int size );
-    int  endOfRequest(  int code, int status);
-    int  sendEndOfStream( int type );
+    int  processStdOut(char *pBuf, int size);
+    int  processStdErr(char *pBuf, int size);
+    int  endOfRequest(int code, int status);
+    int  sendEndOfStream(int type);
 
     int  connUnavail();
 
     void dump();
-    
-        
+
+
+    LS_NO_COPY_ASSIGN(FcgiConnection);
 };
 
 #endif

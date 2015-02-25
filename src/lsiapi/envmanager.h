@@ -18,6 +18,7 @@
 #ifndef ENVMANAGER_H
 #define ENVMANAGER_H
 
+#include <lsdef.h>
 #include "ls.h"
 #include <util/tsingleton.h>
 #include <util/tlinklist.h>
@@ -29,33 +30,40 @@ class EnvHandler : public LinkedObj
 {
     friend class EnvManager;
 private:
-    char *m_name;
-    int m_len;
+    char *m_pName;
+    int m_iLen;
     lsi_callback_pf m_cb;
-    
+
 public:
-    EnvHandler()    {   m_name = NULL; m_len = 0;   };
-    ~EnvHandler()   {   if (m_name) free(m_name);  };
+    EnvHandler()    {   m_pName = NULL; m_iLen = 0;   };
+    ~EnvHandler()   {   if (m_pName) free(m_pName);  };
+
+
+    LS_NO_COPY_ASSIGN(EnvHandler);
 };
 
 class EnvManager : public TSingleton<EnvManager>
 {
     friend class TSingleton<EnvManager>;
-    
+
 public:
     EnvManager();
     ~EnvManager();
-    
+
     int regEnvHandler(const char *name, unsigned int len, lsi_callback_pf cb);
     int delEnvHandler(const char *name, unsigned int len);
-    
+
     lsi_callback_pf findHandler(const char *name);
-    int execEnvHandler(LsiSession *session, lsi_callback_pf cb, void *val, long valLen);
-    
+    int execEnvHandler(LsiSession *session, lsi_callback_pf cb, void *val,
+                       long valLen);
+
 private:
     HashStringMap<EnvHandler *> m_envHashT;
     TLinkList<EnvHandler>  m_envList;
-    
+
+
+
+    LS_NO_COPY_ASSIGN(EnvManager);
 };
 
 #endif // ENVMANAGER_H

@@ -16,8 +16,8 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "localworkerconfig.h"
-#include <http/httpglobals.h>
 #include <http/httpserverconfig.h>
+#include <http/serverprocessconfig.h>
 #include <util/rlimits.h>
 #include "util/configctx.h"
 #include <util/xmlnode.h>
@@ -33,31 +33,31 @@
 #include <grp.h>
 #include <pwd.h>
 
-LocalWorkerConfig::LocalWorkerConfig( const char * pName )
-    : ExtWorkerConfig( pName )
-    , m_pCommand( NULL )
-    , m_iBackLog( 10 )
-    , m_iInstances( 1 )
-    , m_iPriority( 0 )
-    , m_iRunOnStartUp( 0 )
-    , m_umask ( HttpGlobals::s_umask )
+LocalWorkerConfig::LocalWorkerConfig(const char *pName)
+    : ExtWorkerConfig(pName)
+    , m_pCommand(NULL)
+    , m_iBackLog(10)
+    , m_iInstances(1)
+    , m_iPriority(0)
+    , m_iRunOnStartUp(0)
+    , m_umask(ServerProcessConfig::getInstance().getUMask())
 {
 }
 
 LocalWorkerConfig::LocalWorkerConfig()
-    : m_pCommand( NULL )
-    , m_iBackLog( 10 )
-    , m_iInstances( 1 )
-    , m_iPriority( 0 )
-    , m_iRunOnStartUp( 0 )
+    : m_pCommand(NULL)
+    , m_iBackLog(10)
+    , m_iInstances(1)
+    , m_iPriority(0)
+    , m_iRunOnStartUp(0)
 {
 }
 
-LocalWorkerConfig::LocalWorkerConfig( const LocalWorkerConfig& rhs )
-    : ExtWorkerConfig( rhs )
+LocalWorkerConfig::LocalWorkerConfig(const LocalWorkerConfig &rhs)
+    : ExtWorkerConfig(rhs)
 {
-    if ( rhs.m_pCommand )
-        m_pCommand = strdup( rhs.m_pCommand );
+    if (rhs.m_pCommand)
+        m_pCommand = strdup(rhs.m_pCommand);
     else
         m_pCommand = NULL;
     m_iBackLog = rhs.m_iBackLog;
@@ -71,17 +71,17 @@ LocalWorkerConfig::LocalWorkerConfig( const LocalWorkerConfig& rhs )
 
 LocalWorkerConfig::~LocalWorkerConfig()
 {
-    if ( m_pCommand )
-        free( m_pCommand );
+    if (m_pCommand)
+        free(m_pCommand);
 }
 
-void LocalWorkerConfig::setAppPath( const char * pPath )
+void LocalWorkerConfig::setAppPath(const char *pPath)
 {
-    if (( pPath != NULL )&&( strlen( pPath ) > 0 ))
+    if ((pPath != NULL) && (strlen(pPath) > 0))
     {
-        if ( m_pCommand )
-            free( m_pCommand );
-        m_pCommand = strdup( pPath );
+        if (m_pCommand)
+            free(m_pCommand);
+        m_pCommand = strdup(pPath);
     }
 }
 
@@ -92,17 +92,17 @@ void LocalWorkerConfig::beginConfig()
 
 void LocalWorkerConfig::endConfig()
 {
-    
+
 }
 
-void LocalWorkerConfig::setRLimits( const RLimits * pRLimits )
+void LocalWorkerConfig::setRLimits(const RLimits *pRLimits)
 {
-    if ( !pRLimits )
+    if (!pRLimits)
         return;
     m_rlimits = *pRLimits;
-    
+
 }
-int LocalWorkerConfig::checkExtAppSelfManagedAndFixEnv( )
+int LocalWorkerConfig::checkExtAppSelfManagedAndFixEnv()
 {
     static const char *instanceEnv[] =
     {
@@ -114,140 +114,147 @@ int LocalWorkerConfig::checkExtAppSelfManagedAndFixEnv( )
     Env *pEnv = getEnv();
     const char *pEnvValue = NULL;
 
-    for( i = 0; i < sizeof( instanceEnv ) / sizeof( char * ); ++i )
+    for (i = 0; i < sizeof(instanceEnv) / sizeof(char *); ++i)
     {
-        pEnvValue = pEnv->find( instanceEnv[i] );
+        pEnvValue = pEnv->find(instanceEnv[i]);
 
-        if ( pEnvValue != NULL )
+        if (pEnvValue != NULL)
             break;
     }
 
 
-    if ( pEnvValue )
+    if (pEnvValue)
     {
-        int children = atol( pEnvValue );
-        
-        
-        if ( ( children > 0 ) && ( children * getInstances() < getMaxConns() ) )
+        int children = atol(pEnvValue);
+
+
+        if ((children > 0) && (children * getInstances() < getMaxConns()))
         {
-            ConfigCtx::getCurConfigCtx()->log_warn( "Improper configuration: the value of "
-                                "%s should not be less than 'Max "
-                                "connections', 'Max connections' is reduced to %d."
-                                , instanceEnv[i], children * getInstances() );
-            setMaxConns( children * getInstances() );
+            ConfigCtx::getCurConfigCtx()->logWarn("Improper configuration: the value of "
+                                                  "%s should not be less than 'Max "
+                                                  "connections', 'Max connections' is reduced to %d."
+                                                  , instanceEnv[i], children * getInstances());
+            setMaxConns(children * getInstances());
         }
 
         selfManaged = 1;
     }
 
-    pEnv->add( 0, 0, 0, 0 );
-    return selfManaged;    
+    pEnv->add(0, 0, 0, 0);
+    return selfManaged;
 }
-int LocalWorkerConfig::config( const XmlNode *pNode )
+int LocalWorkerConfig::config(const XmlNode *pNode)
 {
+    ServerProcessConfig &procConfig =ServerProcessConfig::getInstance();
     int selfManaged;
     int instances;
-    int backlog = ConfigCtx::getCurConfigCtx()->getLongValue( pNode, "backlog", 1, 100, 10 );
-    int priority = ConfigCtx::getCurConfigCtx()->getLongValue( pNode, "priority", -20, 20, HttpGlobals::s_priority + 1 );
+    int backlog = ConfigCtx::getCurConfigCtx()->getLongValue(pNode, "backlog",
+                  1, 100, 10);
+    int priority = ConfigCtx::getCurConfigCtx()->getLongValue(pNode,
+                   "priority", -20, 20, procConfig.getPriority() + 1);
 
-    if ( priority > 20 )
+    if (priority > 20)
         priority = 20;
 
-    if ( priority < HttpGlobals::s_priority )
-        priority = HttpGlobals::s_priority;
+    if (priority < procConfig.getPriority())
+        priority = procConfig.getPriority();
 
-    long l = ConfigCtx::getCurConfigCtx()->getLongValue( pNode, "extMaxIdleTime", -1, INT_MAX, INT_MAX );
+    long l = ConfigCtx::getCurConfigCtx()->getLongValue(pNode,
+             "extMaxIdleTime", -1, INT_MAX, INT_MAX);
 
-    if ( l == -1 )
+    if (l == -1)
         l = INT_MAX;
 
-    setPriority( priority );
-    setBackLog( backlog );
-    setMaxIdleTime( l );
-    
-    
-    int umakeVal = ConfigCtx::getCurConfigCtx()->getLongValue( pNode, "umask", 000, 0777, HttpGlobals::s_umask, 8);
+    setPriority(priority);
+    setBackLog(backlog);
+    setMaxIdleTime(l);
+
+
+    int umakeVal = ConfigCtx::getCurConfigCtx()->getLongValue(pNode, "umask",
+                   000, 0777, procConfig.getUMask(), 8);
     setUmask(umakeVal);
 
-    setRunOnStartUp( ConfigCtx::getCurConfigCtx()->getLongValue( pNode, "runOnStartUp", 0, 2, 0 ) );
+    setRunOnStartUp(ConfigCtx::getCurConfigCtx()->getLongValue(pNode,
+                    "runOnStartUp", 0, 2, 0));
 
     RLimits limits;
     if (ExtAppRegistry::getRLimits() != NULL)
         limits = *(ExtAppRegistry::getRLimits());
-    limits.setCPULimit( RLIM_INFINITY, RLIM_INFINITY );
-    LocalWorker::configRlimit( &limits, pNode );
-    setRLimits( &limits );
+    limits.setCPULimit(RLIM_INFINITY, RLIM_INFINITY);
+    LocalWorker::configRlimit(&limits, pNode);
+    setRLimits(&limits);
     Env *pEnv = getEnv();
 
-    if ( pEnv->find( "PATH" ) == NULL )
-    {
-        pEnv->add( "PATH=/bin:/usr/bin" );
-    }
-    instances = ConfigCtx::getCurConfigCtx()->getLongValue( pNode, "instances", 1, INT_MAX, 1 );
+    if (pEnv->find("PATH") == NULL)
+        pEnv->add("PATH=/bin:/usr/bin");
+    instances = ConfigCtx::getCurConfigCtx()->getLongValue(pNode, "instances",
+                1, INT_MAX, 1);
 
-    if ( instances > 2000 )
+    if (instances > 2000)
         instances = 2000;
 
-    if ( instances >
-            HttpServerConfig::getInstance().getMaxFcgiInstances() )
+    if (instances >
+        HttpServerConfig::getInstance().getMaxFcgiInstances())
     {
         instances = HttpServerConfig::getInstance().getMaxFcgiInstances();
-        ConfigCtx::getCurConfigCtx()->log_warn( "<instances> is too large, use default max:%d", instances );
+        ConfigCtx::getCurConfigCtx()->logWarn("<instances> is too large, use default max:%d",
+                                              instances);
     }
-    setInstances( instances );
-    selfManaged = checkExtAppSelfManagedAndFixEnv( );
-    setSelfManaged( selfManaged );
-    if ( ( instances != 1 ) &&
-            ( getMaxConns() > instances ) )
+    setInstances(instances);
+    selfManaged = checkExtAppSelfManagedAndFixEnv();
+    setSelfManaged(selfManaged);
+    if ((instances != 1) &&
+        (getMaxConns() > instances))
     {
-        ConfigCtx::getCurConfigCtx()->log_notice( "Possible mis-configuration: 'Instances'=%d, "
-                                "'Max connections'=%d, unless one Fast CGI process is "
-                                "capable of handling multiple connections, "
-                                "you should set 'Instances' greater or equal to "
-                                "'Max connections'.", instances, getMaxConns() );
-        setMaxConns( instances );
+        ConfigCtx::getCurConfigCtx()->logNotice("Possible mis-configuration: 'Instances'=%d, "
+                                                "'Max connections'=%d, unless one Fast CGI process is "
+                                                "capable of handling multiple connections, "
+                                                "you should set 'Instances' greater or equal to "
+                                                "'Max connections'.", instances, getMaxConns());
+        setMaxConns(instances);
     }
-  
+
     RLimits *pLimits = getRLimits();
 #if defined(RLIMIT_NPROC)
-    int mini_nproc = ( 3 * getMaxConns() + 50 ) * HttpGlobals::s_children;
+    int mini_nproc = (3 * getMaxConns() + 50)
+                    * HttpServerConfig::getInstance().getChildren();
     struct rlimit   *pNProc = pLimits->getProcLimit();
 
-    if ( ( ( pNProc->rlim_cur > 0 ) && ( ( int ) pNProc->rlim_cur < mini_nproc ) )
-            || ( ( pNProc->rlim_max > 0 ) && ( ( int ) pNProc->rlim_max < mini_nproc ) ) )
+    if (((pNProc->rlim_cur > 0) && ((int) pNProc->rlim_cur < mini_nproc))
+        || ((pNProc->rlim_max > 0) && ((int) pNProc->rlim_max < mini_nproc)))
     {
-        ConfigCtx::getCurConfigCtx()->log_notice( "'Process Limit' probably is too low, "
-                                "adjust the limit to: %d.", mini_nproc );
-        pLimits->setProcLimit( mini_nproc, mini_nproc );
+        ConfigCtx::getCurConfigCtx()->logNotice("'Process Limit' probably is too low, "
+                                                "adjust the limit to: %d.", mini_nproc);
+        pLimits->setProcLimit(mini_nproc, mini_nproc);
     }
 
 #endif
-  
+
     return 0;
 }
-void LocalWorkerConfig::configExtAppUserGroup(  const XmlNode *pNode, int iType )
+void LocalWorkerConfig::configExtAppUserGroup(const XmlNode *pNode,
+        int iType)
 {
 
-    const char *pUser = pNode->getChildValue( "extUser" );
-    const char *pGroup = pNode->getChildValue( "extGroup" );
+    const char *pUser = pNode->getChildValue("extUser");
+    const char *pGroup = pNode->getChildValue("extGroup");
     gid_t gid = -1;
-    struct passwd *pw = Daemonize::configUserGroup( pUser, pGroup, gid );
+    struct passwd *pw = Daemonize::configUserGroup(pUser, pGroup, gid);
 
-    if ( pw )
+    if (pw)
     {
-        if ( ( int ) gid == -1 )
+        if ((int) gid == -1)
             gid = pw->pw_gid;
 
-        if ( ( iType != EA_LOGGER ) && ( ( pw->pw_uid < HttpGlobals::s_uidMin ) ||
-                                        ( gid < HttpGlobals::s_gidMin ) ) )
+        if ((iType != EA_LOGGER)
+            && ((pw->pw_uid < ServerProcessConfig::getInstance().getUidMin())
+                || (gid <ServerProcessConfig::getInstance().getGidMin())))
         {
-            ConfigCtx::getCurConfigCtx()->log_notice( "ExtApp suExec access denied,"
-                                    " UID or GID of VHost document root is smaller "
-                                    "than minimum UID, GID configured. " );
+            ConfigCtx::getCurConfigCtx()->logNotice("ExtApp suExec access denied,"
+                                                    " UID or GID of VHost document root is smaller "
+                                                    "than minimum UID, GID configured. ");
         }
         else
-        {
-            setUGid( pw->pw_uid, gid );
-        }
+            setUGid(pw->pw_uid, gid);
     }
 }

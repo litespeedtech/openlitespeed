@@ -19,138 +19,134 @@
 #define LSI_REWRITE_OPTIONS_H_
 
 #include "pagespeed.h"
+#include <lsdef.h>
 
 #include "net/instaweb/rewriter/public/rewrite_options.h"
 #include "net/instaweb/system/public/system_rewrite_options.h"
 
 namespace net_instaweb
 {
-    class LsiRewriteDriverFactory;
+class LsiRewriteDriverFactory;
 
-    class LsiRewriteOptions : public SystemRewriteOptions
+class LsiRewriteOptions : public SystemRewriteOptions
+{
+public:
+    // See rewrite_options::Initialize and ::Terminate
+    static void Initialize();
+    static void Terminate();
+
+    LsiRewriteOptions(const StringPiece &description,
+                      ThreadSystem *thread_system);
+    explicit LsiRewriteOptions(ThreadSystem *thread_system);
+    virtual ~LsiRewriteOptions() { }
+
+    // args is an array of n_args StringPieces together representing a directive.
+    // For example:
+    //   ["RewriteLevel", "PassThrough"]
+    // or
+    //   ["EnableFilters", "combine_css,extend_cache,rewrite_images"]
+    // or
+    //   ["ShardDomain", "example.com", "s1.example.com,s2.example.com"]
+    // Apply the directive, returning LSI_CONF_OK on success or an error message
+    // on failure.
+    //
+    // pool is a memory pool for allocating error strings.
+    const char *ParseAndSetOptions(
+        StringPiece *args, int n_args, MessageHandler *handler,
+        LsiRewriteDriverFactory *driver_factory, OptionScope scope);
+
+    // Make an identical copy of these options and return it.
+    virtual LsiRewriteOptions *Clone() const;
+
+    // Returns a suitably down cast version of 'instance' if it is an instance
+    // of this class, NULL if not.
+    static const LsiRewriteOptions *DynamicCast(const RewriteOptions
+            *instance);
+    static LsiRewriteOptions *DynamicCast(RewriteOptions *instance);
+
+    const GoogleString &GetStatisticsPath() const
     {
-    public:
-        // See rewrite_options::Initialize and ::Terminate
-        static void Initialize();
-        static void Terminate();
+        return m_sStatisticsPath.value();
+    }
+    const GoogleString &GetGlobalStatisticsPath() const
+    {
+        return m_sGlobalStatisticsPath.value();
+    }
+    const GoogleString &GetConsolePath() const
+    {
+        return m_sConsolePath.value();
+    }
+    const GoogleString &GetMessagesPath() const
+    {
+        return m_sMessagesPath.value();
+    }
+    const GoogleString &GetAdminPath() const
+    {
+        return m_sAdminPath.value();
+    }
+    const GoogleString &GetGlobalAdminPath() const
+    {
+        return m_sGlobalAdminPath.value();
+    }
 
-        LsiRewriteOptions( const StringPiece& description,
-                           ThreadSystem* thread_system );
-        explicit LsiRewriteOptions( ThreadSystem* thread_system );
-        virtual ~LsiRewriteOptions() { }
+private:
+    // Helper methods for ParseAndSetOptions().  Each can:
+    //  - return kOptionNameUnknown and not set msg:
+    //    - directive not handled; continue on with other possible
+    //      interpretations.
+    //  - return kOptionOk and not set msg:
+    //    - directive handled, all's well.
+    //  - return kOptionValueInvalid and set msg:
+    //    - directive handled with an error; return the error to the user.
+    //
+    // msg will be shown to the user on kOptionValueInvalid.  While it would be
+    // nice to always use msg and never use the MessageHandler, some option
+    // parsing code in RewriteOptions expects to write to a MessageHandler.  If
+    // that happens we put a summary on msg so the user sees something, and the
+    // detailed message goes to their log via handler.
+    OptionSettingResult ParseAndSetOptions0(
+        StringPiece directive, GoogleString *msg, MessageHandler *handler);
 
-        // args is an array of n_args StringPieces together representing a directive.
-        // For example:
-        //   ["RewriteLevel", "PassThrough"]
-        // or
-        //   ["EnableFilters", "combine_css,extend_cache,rewrite_images"]
-        // or
-        //   ["ShardDomain", "example.com", "s1.example.com,s2.example.com"]
-        // Apply the directive, returning LSI_CONF_OK on success or an error message
-        // on failure.
-        //
-        // pool is a memory pool for allocating error strings.
-        const char* ParseAndSetOptions(
-            StringPiece* args, int n_args, MessageHandler* handler,
-            LsiRewriteDriverFactory* driver_factory, OptionScope scope );
+    virtual OptionSettingResult ParseAndSetOptionFromName1(
+        StringPiece name, StringPiece arg,
+        GoogleString *msg, MessageHandler *handler);
 
-        // Make an identical copy of these options and return it.
-        virtual LsiRewriteOptions* Clone() const;
+    static Properties *m_pProperties;
+    static void AddProperties();
+    void Init();
 
-        // Returns a suitably down cast version of 'instance' if it is an instance
-        // of this class, NULL if not.
-        static const LsiRewriteOptions* DynamicCast( const RewriteOptions* instance );
-        static LsiRewriteOptions* DynamicCast( RewriteOptions* instance );
+    // Add an option to lsi_properties_
+    template<class OptionClass>
+    static void AddLsiOption(typename OptionClass::ValueType default_value,
+                               OptionClass LsiRewriteOptions::*offset,
+                               const char *id,
+                               StringPiece option_name,
+                               OptionScope scope,
+                               const char *help,
+                               bool safe_to_print)
+    {
+        AddProperty(default_value, offset, id, option_name, scope, help,
+                    safe_to_print, m_pProperties);
+    }
 
-        const GoogleString& statistics_path() const
-        {
-            return statistics_path_.value();
-        }
-        const GoogleString& global_statistics_path() const
-        {
-            return global_statistics_path_.value();
-        }
-        const GoogleString& console_path() const
-        {
-            return console_path_.value();
-        }
-        const GoogleString& messages_path() const
-        {
-            return messages_path_.value();
-        }
-        const GoogleString& admin_path() const
-        {
-            return admin_path_.value();
-        }
-        const GoogleString& global_admin_path() const
-        {
-            return global_admin_path_.value();
-        }
+    Option<GoogleString> m_sStatisticsPath;
+    Option<GoogleString> m_sGlobalStatisticsPath;
+    Option<GoogleString> m_sConsolePath;
+    Option<GoogleString> m_sMessagesPath;
+    Option<GoogleString> m_sAdminPath;
+    Option<GoogleString> m_sGlobalAdminPath;
 
-    private:
-        // Helper methods for ParseAndSetOptions().  Each can:
-        //  - return kOptionNameUnknown and not set msg:
-        //    - directive not handled; continue on with other possible
-        //      interpretations.
-        //  - return kOptionOk and not set msg:
-        //    - directive handled, all's well.
-        //  - return kOptionValueInvalid and set msg:
-        //    - directive handled with an error; return the error to the user.
-        //
-        // msg will be shown to the user on kOptionValueInvalid.  While it would be
-        // nice to always use msg and never use the MessageHandler, some option
-        // parsing code in RewriteOptions expects to write to a MessageHandler.  If
-        // that happens we put a summary on msg so the user sees something, and the
-        // detailed message goes to their log via handler.
-        OptionSettingResult ParseAndSetOptions0(
-            StringPiece directive, GoogleString* msg, MessageHandler* handler );
+    // Helper for ParseAndSetOptions.  Returns whether the two directives equal,
+    // ignoring case.
+    bool IsDirective(StringPiece config_directive,
+                     StringPiece compare_directive);
 
-        virtual OptionSettingResult ParseAndSetOptionFromName1(
-            StringPiece name, StringPiece arg,
-            GoogleString* msg, MessageHandler* handler );
+    // Returns a given option's scope.
+    RewriteOptions::OptionScope GetOptionScope(StringPiece option_name);
 
-        // We may want to override 2- and 3-argument versions as well in the future,
-        // but they are not needed yet.
 
-        // Keeps the properties added by this subclass.  These are merged into
-        // RewriteOptions::all_properties_ during Initialize().
-        //
-        // RewriteOptions uses static initialization to reduce memory usage and
-        // construction time.  All LsiRewriteOptions instances will have the same
-        // Properties, so we can build the list when we initialize the first one.
-        static Properties* lsi_properties_;
-        static void AddProperties();
-        void Init();
-
-        // Add an option to lsi_properties_
-        template<class OptionClass>
-        static void add_lsi_option( typename OptionClass::ValueType default_value,
-                                    OptionClass LsiRewriteOptions::*offset,
-                                    const char* id,
-                                    StringPiece option_name,
-                                    OptionScope scope,
-                                    const char* help,
-                                    bool safe_to_print )
-        {
-            AddProperty( default_value, offset, id, option_name, scope, help,
-                        safe_to_print, lsi_properties_ );
-        }
-
-        Option<GoogleString> statistics_path_;
-        Option<GoogleString> global_statistics_path_;
-        Option<GoogleString> console_path_;
-        Option<GoogleString> messages_path_;
-        Option<GoogleString> admin_path_;
-        Option<GoogleString> global_admin_path_;
-
-        // Helper for ParseAndSetOptions.  Returns whether the two directives equal,
-        // ignoring case.
-        bool IsDirective( StringPiece config_directive, StringPiece compare_directive );
-
-        // Returns a given option's scope.
-        RewriteOptions::OptionScope GetOptionScope( StringPiece option_name );
-
-    };
+    LS_NO_COPY_ASSIGN(LsiRewriteOptions);
+};
 
 }  // namespace net_instaweb
 

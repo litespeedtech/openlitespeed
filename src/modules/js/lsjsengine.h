@@ -33,37 +33,39 @@ class LsJsUserParam;
 //
 class LsJsEngine
 {
-    static int          s_ready;        // init is good and ready to load scripts
+    static int
+    s_ready;        // init is good and ready to load scripts
     static int          s_firstTime;
-    static char*        s_serverSocket;
-    
+    static char        *s_serverSocket;
+
 public:
     LsJsEngine();
     ~LsJsEngine();
-    
+
     // only three functions will be used to by handler
     // static int init( TYPE type, const char * pDynLibPath );
     static int init();
-    static int isReady(lsi_session_t *session);                      // setup Session and get ready
+    static int isReady(lsi_session_t
+                       *session);                      // setup Session and get ready
     static int runScript(lsi_session_t *session
-                        , LsJsUserParam *pUser
-                        , const char * scriptpath
+                         , LsJsUserParam *pUser
+                         , const char *scriptpath
                         );
 public:
     // module parameter setup
-    static void * parseParam ( const char *param
-                                , int param_len
-                                , void *initial_config
-                                , int level
-                                , const char *name );
-    static void removeParam( void * config);
-    
+    static void *parseParam(const char *param
+                            , int param_len
+                            , void *initial_config
+                            , int level
+                            , const char *name);
+    static void removeParam(void *config);
+
 private:
-    LsJsEngine( const LsJsEngine& other );
-    LsJsEngine& operator=( const LsJsEngine& other );
-    bool operator==( const LsJsEngine& other );
-    
-    static int tcpDomainSocket(const char * path);
+    LsJsEngine(const LsJsEngine &other);
+    LsJsEngine &operator=(const LsJsEngine &other);
+    bool operator==(const LsJsEngine &other);
+
+    static int tcpDomainSocket(const char *path);
 };
 
 //
@@ -77,42 +79,42 @@ class LsJsUserParam
     int         m_data;
 public:
     LsJsUserParam(int level)
-            : m_level(level)
-            , m_ready(1)
-            , m_data(0)
+        : m_level(level)
+        , m_ready(1)
+        , m_data(0)
     { }
-    
+
     ~LsJsUserParam()
     {
     };
-    
+
     int isReady() const
     {   return m_ready; }
-    
+
     void setReady(int flag)
     {   m_ready = flag; }
-    
+
     void setLevel(int level)
     {   m_level = level; }
-    
+
     int level() const
     {   return m_level; }
-    
+
     void setData(int data)
     {   m_data = data; }
-    
+
     int data() const
     {   return m_data; }
-    
-    LsJsUserParam& operator= ( const LsJsUserParam& other )
+
+    LsJsUserParam &operator= (const LsJsUserParam &other)
     {
         m_ready = other.m_ready;
         return *this;
     }
-    
+
 private:
-    LsJsUserParam( const LsJsUserParam& other );
-    bool operator==( const LsJsUserParam& other );
+    LsJsUserParam(const LsJsUserParam &other);
+    bool operator==(const LsJsUserParam &other);
 };
 
 #endif // LSJSENGINE_H

@@ -28,7 +28,7 @@
 #include <sys/time.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include <util/ssnprintf.h>
+#include <lsr/ls_strtool.h>
 
 class ByteRange
 {
@@ -37,47 +37,46 @@ class ByteRange
 public:
     ByteRange()
         : m_lBegin(0), m_lEnd(0)
-        {}
+    {}
 
-    ByteRange(off_t b, off_t e )
-        : m_lBegin( b ), m_lEnd( e )
-        {}
+    ByteRange(off_t b, off_t e)
+        : m_lBegin(b), m_lEnd(e)
+    {}
     off_t getBegin() const   { return m_lBegin;  }
     off_t getEnd() const     { return m_lEnd;    }
-    void setBegin( off_t b ) { m_lBegin = b;     }
-    void setEnd( off_t e)    { m_lEnd = e;       }
-    int check( int entityLen );
+    void setBegin(off_t b) { m_lBegin = b;     }
+    void setEnd(off_t e)    { m_lEnd = e;       }
+    int check(int entityLen);
     off_t getLen() const     { return m_lEnd - m_lBegin + 1;   }
+    LS_NO_COPY_ASSIGN(ByteRange);
 };
 
 
 
-int ByteRange::check( int entityLen )
+int ByteRange::check(int entityLen)
 {
-    if ( entityLen > 0 )
+    if (entityLen > 0)
     {
-        if ( m_lBegin == -1 )
+        if (m_lBegin == -1)
         {
             off_t b = entityLen - m_lEnd;
-            if ( b < 0 )
+            if (b < 0)
                 b = 0;
             m_lBegin = b;
             m_lEnd = entityLen - 1;
         }
-        if (( m_lEnd == -1 )||( m_lEnd >= entityLen ))
-        {
+        if ((m_lEnd == -1) || (m_lEnd >= entityLen))
             m_lEnd = entityLen - 1 ;
-        }
-        if ( m_lEnd < m_lBegin )
-            return -1;
+        if (m_lEnd < m_lBegin)
+            return LS_FAIL;
     }
     return 0;
 }
 
-HttpRange::HttpRange( off_t entityLen )
-    : m_lEntityLen( entityLen )
+HttpRange::HttpRange(off_t entityLen)
+    : m_lEntityLen(entityLen)
 {
-    ::memset( m_boundary, 0, sizeof( m_boundary) );
+    ::memset(m_boundary, 0, sizeof(m_boundary));
 }
 
 
@@ -86,27 +85,27 @@ int HttpRange::count() const
     return m_array.getSize();
 }
 
-ByteRange * HttpRange::getSlot( lsr_xpool_t & pool )
+ByteRange *HttpRange::getSlot(ls_xpool_t &pool)
 {
-    if ( m_array.getCapacity() == 0 )
-        m_array.guarantee( &pool, 3 );
-    else if ( m_array.getCapacity() <= m_array.getSize() + 1 )
-        m_array.guarantee( &pool, m_array.getCapacity() * 2 );
+    if (m_array.getCapacity() == 0)
+        m_array.guarantee(&pool, 3);
+    else if (m_array.getCapacity() <= m_array.getSize() + 1)
+        m_array.guarantee(&pool, m_array.getCapacity() * 2);
     return m_array.getNew();
 }
 
-int HttpRange::checkAndInsert( ByteRange & range, lsr_xpool_t & pool )
+int HttpRange::checkAndInsert(ByteRange &range, ls_xpool_t &pool)
 {
-    if (( range.getBegin() == -1 )&&( range.getEnd() == -1 ))
-        return -1;
-    if ( m_lEntityLen > 0 )
+    if ((range.getBegin() == -1) && (range.getEnd() == -1))
+        return LS_FAIL;
+    if (m_lEntityLen > 0)
     {
-        if ( range.getBegin() >= m_lEntityLen )
+        if (range.getBegin() >= m_lEntityLen)
             return 0;
-        if ( range.check( m_lEntityLen ) )
-            return -1;
+        if (range.check(m_lEntityLen))
+            return LS_FAIL;
     }
-    new (getSlot( pool )) ByteRange( range );
+    new(getSlot(pool)) ByteRange(range.getBegin(), range.getEnd());
     return 0;
 }
 
@@ -155,98 +154,119 @@ int HttpRange::checkAndInsert( ByteRange & range, lsr_xpool_t & pool )
     5 -> err: receive char other than the above
 */
 
-int HttpRange::parse( const char * pRange, lsr_xpool_t & pool )
+int HttpRange::parse(const char *pRange, ls_xpool_t &pool)
 {
     m_array.clear();
-    if ( strncasecmp( pRange, "bytes=", 6 ) != 0 )
+    if (strncasecmp(pRange, "bytes=", 6) != 0)
         return SC_400;
     char ch;
-    pRange+= 6;
-    while( isspace(( ch = *pRange++ )) )
+    pRange += 6;
+    while (isspace((ch = *pRange++)))
         ;
-    if ( !ch )
+    if (!ch)
         return SC_400;
     int state = 0;
-    ByteRange range(-1,-1);
+    ByteRange range(-1, -1);
     off_t lValue = 0;
-    while( state != 6 )
+    while (state != 6)
     {
-        switch( ch )
+        switch (ch)
         {
         case ' ':
         case '\t':
-            switch( state )
+            switch (state)
             {
-            case 0: case 2: case 4: case 5:
+            case 0:
+            case 2:
+            case 4:
+            case 5:
                 break;
             case 1:
                 state = 4;
-                range.setBegin( lValue );
+                range.setBegin(lValue);
                 lValue = 0;
                 break;
             case 3:
                 state = 5;
-                range.setEnd( lValue );
+                range.setEnd(lValue);
                 lValue = 0;
                 break;
             }
             break;
-        case '0': case '1': case '2': case '3': case '4':
-        case '5': case '6': case '7': case '8': case '9':
-            switch( state )
+        case '0':
+        case '1':
+        case '2':
+        case '3':
+        case '4':
+        case '5':
+        case '6':
+        case '7':
+        case '8':
+        case '9':
+            switch (state)
             {
-            case 0: case 2:
+            case 0:
+            case 2:
                 lValue = ch - '0';
                 ++state;
                 break;
-            case 1: case 3:
-                lValue = (lValue << 3 ) + (lValue << 1 ) + (ch - '0');
+            case 1:
+            case 3:
+                lValue = (lValue << 3) + (lValue << 1) + (ch - '0');
                 break;
-            case 4: case 5:
+            case 4:
+            case 5:
                 state = 6; //error,
                 break;
             }
             break;
         case '-':
-            switch( state )
+            switch (state)
             {
             case 1:
-                range.setBegin( lValue );
+                range.setBegin(lValue);
                 lValue = 0;
-                //don't break, fall through
-            case 0: case 4:
+            //don't break, fall through
+            case 0:
+            case 4:
                 state = 2;
                 break;
-            case 2: case 3: case 5:
+            case 2:
+            case 3:
+            case 5:
                 state = 6;
                 break;
             }
             break;
-        case '\r': case '\n':
+        case '\r':
+        case '\n':
             ch = 0;
-            //fall through
-        case ',': case '\0': 
-            switch( state )
+        //fall through
+        case ',':
+        case '\0':
+            switch (state)
             {
             case 3:
-                range.setEnd( lValue );
+                range.setEnd(lValue);
                 lValue = 0;
-                //don't break, fall through
-            case 2:  case 5:
-                if ( checkAndInsert( range, pool ) == -1 )
+            //don't break, fall through
+            case 2:
+            case 5:
+                if (checkAndInsert(range, pool) == -1)
                 {
                     state = 6;
                     break;
                 }
-                range.setBegin( -1 );
-                range.setEnd( -1 );
+                range.setBegin(-1);
+                range.setEnd(-1);
                 state = 0;
                 break;
-            case 1: case 4:
+            case 1:
+            case 4:
                 state = 6;
                 break;
             case 0:
-                if ( ch )
+                if (ch)
                     state = 6;
                 break;
             }
@@ -255,66 +275,64 @@ int HttpRange::parse( const char * pRange, lsr_xpool_t & pool )
             state = 6;
             break;
         }
-        if ( !ch )
+        if (!ch)
             break;
         ch = *pRange++;
     }
-    if ( state == 6 )
+    if (state == 6)
     {
         m_array.clear();
         return SC_400;
     }
-    if ( m_array.getSize() == 0 )
+    if (m_array.getSize() == 0)
         return SC_416; //range not satisfiable
     return 0;
 }
 
-//Content-Range: 
-int HttpRange::getContentRangeString( int n, char * pBuf, int len ) const
+//Content-Range:
+int HttpRange::getContentRangeString(int n, char *pBuf, int len) const
 {
-    char * pBegin = pBuf;
+    char *pBegin = pBuf;
     int ret;
-    ret = safe_snprintf( pBuf, len, "%s", "Content-Range: bytes " );
+    ret = ls_snprintf(pBuf, len, "%s", "Content-Range: bytes ");
     pBuf += ret;
     len -= ret;
     ret = 0;
-    if ( len <= 0 )
-        return -1;
+    if (len <= 0)
+        return LS_FAIL;
     char achLen[30];
-    StringTool::str_off_t( achLen, 30, m_lEntityLen);
+    StringTool::offsetToStr(achLen, 30, m_lEntityLen);
     if ((n < 0) || (n >= m_array.getSize()))
     {
-        if ( m_lEntityLen == -1 )
-            return -1;
+        if (m_lEntityLen == -1)
+            return LS_FAIL;
         else
-            ret = safe_snprintf( pBuf, len, "*/%s\r\n", achLen );
+            ret = ls_snprintf(pBuf, len, "*/%s\r\n", achLen);
     }
     else
     {
         int ret1;
-        ret1 = StringTool::str_off_t( pBuf, len, m_array.getObj( n )->getBegin());
-        if ( ret1 < 0 )
-            return -1;
+        ret1 = StringTool::offsetToStr(pBuf, len, m_array.getObj(n)->getBegin());
+        if (ret1 < 0)
+            return LS_FAIL;
         pBuf += ret1;
         len -= ret1;
         *pBuf++ = '-';
-        ret1 = StringTool::str_off_t( pBuf, len, m_array.getObj( n )->getEnd());
-        if ( ret1 < 0 )
-            return -1;
+        ret1 = StringTool::offsetToStr(pBuf, len, m_array.getObj(n)->getEnd());
+        if (ret1 < 0)
+            return LS_FAIL;
         pBuf += ret1;
         len -= ret1;
         *pBuf++ = '/';
         len -= 2;
 
-        if ( len <= 0 )
-            return -1;
-        if ( m_lEntityLen >= 0 )
-        {
-            ret = safe_snprintf( pBuf, len, "%s\r\n", achLen );
-        }
+        if (len <= 0)
+            return LS_FAIL;
+        if (m_lEntityLen >= 0)
+            ret = ls_snprintf(pBuf, len, "%s\r\n", achLen);
         else
         {
-            if ( len > 4 )
+            if (len > 4)
             {
                 *pBuf++ = '*';
                 *pBuf++ = '\r';
@@ -322,35 +340,35 @@ int HttpRange::getContentRangeString( int n, char * pBuf, int len ) const
                 *pBuf = 0;
             }
             else
-                return -1;
+                return LS_FAIL;
         }
     }
     len -= ret;
     pBuf += ret;
-    return ( len > 0 ) ? pBuf - pBegin : -1;
+    return (len > 0) ? pBuf - pBegin : -1;
 }
 
-int HttpRange::getContentOffset( int n, off_t& begin, off_t& end ) const
+int HttpRange::getContentOffset(int n, off_t &begin, off_t &end) const
 {
-    if ((n < 0) || ( n >= m_array.getSize()))
-        return -1;
-    if ( m_array.getObj( n )->check( m_lEntityLen ) == 0 )
+    if ((n < 0) || (n >= m_array.getSize()))
+        return LS_FAIL;
+    if (m_array.getObj(n)->check(m_lEntityLen) == 0)
     {
-        begin = m_array.getObj( n )->getBegin();
-        end = m_array.getObj( n )->getEnd() + 1;
+        begin = m_array.getObj(n)->getBegin();
+        end = m_array.getObj(n)->getEnd() + 1;
         return 0;
     }
     else
-        return -1;
+        return LS_FAIL;
 }
 
 void HttpRange::makeBoundaryString()
 {
     struct timeval now;
-    gettimeofday( &now, NULL );
-    safe_snprintf( m_boundary, sizeof( m_boundary ) - 1, "%08x%08x",
-            (int)now.tv_usec^getpid(), (int)(now.tv_usec^now.tv_sec) );
-    *( m_boundary + sizeof( m_boundary ) - 1 ) = 0;
+    gettimeofday(&now, NULL);
+    ls_snprintf(m_boundary, sizeof(m_boundary) - 1, "%08x%08x",
+                (int)now.tv_usec ^ getpid(), (int)(now.tv_usec ^ now.tv_sec));
+    *(m_boundary + sizeof(m_boundary) - 1) = 0;
 }
 
 void HttpRange::beginMultipart()
@@ -359,30 +377,31 @@ void HttpRange::beginMultipart()
     m_iCurRange = -1;
 }
 
-int HttpRange::getPartHeader( int n, const char * pMimeType, char* buf, int size ) const
+int HttpRange::getPartHeader(int n, const char *pMimeType, char *buf,
+                             int size) const
 {
-    assert(( n >= 0 )&&( n <= m_array.getSize()));
+    assert((n >= 0) && (n <= m_array.getSize()));
     int ret;
-    if ( n < m_array.getSize())
+    if (n < m_array.getSize())
     {
-        ret = snprintf( buf, size,
-                        "\r\n--%s\r\n"
-                        "Content-type: %s\r\n",
-                        m_boundary, pMimeType );
-        if ( ret >= size )
-            return -1;
+        ret = snprintf(buf, size,
+                       "\r\n--%s\r\n"
+                       "Content-type: %s\r\n",
+                       m_boundary, pMimeType);
+        if (ret >= size)
+            return LS_FAIL;
         buf += ret;
-        int ret1 = getContentRangeString( n, buf, size - ret );
-        if ( ret1 == -1 )
-            return -1;
+        int ret1 = getContentRangeString(n, buf, size - ret);
+        if (ret1 == -1)
+            return LS_FAIL;
         buf += ret1 ;
         *buf++ = '\r';
-        *buf++ = '\n'; 
+        *buf++ = '\n';
         ret += ret1 + 2;
     }
     else
-        ret = snprintf( buf, size, "\r\n--%s--\r\n", m_boundary );
-    return ( ret == size )? -1 : ret;
+        ret = snprintf(buf, size, "\r\n--%s--\r\n", m_boundary);
+    return (ret == size) ? -1 : ret;
 }
 
 
@@ -394,33 +413,31 @@ static off_t getDigits(off_t n)
         return (off_t)log10((double)n) + 1;
 }
 
-off_t HttpRange::getPartLen( int n, int iMimeTypeLen ) const
+off_t HttpRange::getPartLen(int n, int iMimeTypeLen) const
 {
     off_t len = 4 + 16 + 2
-         + 14 + iMimeTypeLen + 2
-         + 21 + getDigits( m_array.getObj( n )->getBegin() ) + 1
-         + getDigits( m_array.getObj( n )->getEnd() ) + 1
-         + 2 + 2
-         + m_array.getObj( n )->getLen();
-    if ( m_lEntityLen == -1 )
+                + 14 + iMimeTypeLen + 2
+                + 21 + getDigits(m_array.getObj(n)->getBegin()) + 1
+                + getDigits(m_array.getObj(n)->getEnd()) + 1
+                + 2 + 2
+                + m_array.getObj(n)->getLen();
+    if (m_lEntityLen == -1)
         ++len;
     else
-        len += getDigits( m_lEntityLen );
+        len += getDigits(m_lEntityLen);
     return len;
 }
 
-off_t HttpRange::getMultipartBodyLen( const AutoStr2* pMimeType ) const
+off_t HttpRange::getMultipartBodyLen(const AutoStr2 *pMimeType) const
 {
-    assert( pMimeType );
-    if ( m_lEntityLen == -1 )
-        return -1;
+    assert(pMimeType);
+    if (m_lEntityLen == -1)
+        return LS_FAIL;
     int typeLen = pMimeType->len();
     int size = m_array.getSize();
     off_t total = 0;
-    for( int i = 0; i < size; ++i )
-    {
-        total += getPartLen( i, typeLen );
-    }
+    for (int i = 0; i < size; ++i)
+        total += getPartLen(i, typeLen);
     return total + 24;
 }
 
@@ -429,9 +446,9 @@ bool HttpRange::more() const
     return m_iCurRange < m_array.getSize();
 }
 
-int HttpRange::getContentOffset( off_t& begin, off_t& end ) const
+int HttpRange::getContentOffset(off_t &begin, off_t &end) const
 {
-    return getContentOffset( m_iCurRange, begin, end );
+    return getContentOffset(m_iCurRange, begin, end);
 }
 
 

@@ -24,7 +24,7 @@
 
 #include <string.h>
 
-const char * LsiApiHooks::s_pHkptName[LSI_HKPT_TOTAL_COUNT] = 
+const char *LsiApiHooks::s_pHkptName[LSI_HKPT_TOTAL_COUNT] =
 {
     "L4_BEGINSESSION",
     "L4_ENDSESSION",
@@ -52,115 +52,121 @@ const char * LsiApiHooks::s_pHkptName[LSI_HKPT_TOTAL_COUNT] =
 };
 
 LsiApiHooks LsiApiHooks::s_hooks[LSI_HKPT_TOTAL_COUNT];
-ServerSessionHooks * LsiApiHooks::m_pServerSessionHooks = NULL;
-static LsiApiHooks * s_releaseDataHooks = NULL;
+ServerSessionHooks *LsiApiHooks::s_pServerSessionHooks = NULL;
+static LsiApiHooks *s_releaseDataHooks = NULL;
 
-#define LSI_HOOK_FLAG_NO_INTERRUPT  1 
+#define LSI_HOOK_FLAG_NO_INTERRUPT  1
 
 
 void LsiApiHooks::initGlobalHooks()
 {
-    m_pServerSessionHooks = new ServerSessionHooks();
+    s_pServerSessionHooks = new ServerSessionHooks();
     s_releaseDataHooks = new LsiApiHooks[LSI_MODULE_DATA_COUNT];
-    
-    s_hooks[ LSI_HKPT_L4_BEGINSESSION ].setGlobalFlag( LSI_HOOK_FLAG_NO_INTERRUPT );
-    s_hooks[ LSI_HKPT_L4_ENDSESSION ].setGlobalFlag( LSI_HOOK_FLAG_NO_INTERRUPT );
-    
-    s_hooks[ LSI_HKPT_HTTP_BEGIN ].setGlobalFlag( LSI_HOOK_FLAG_NO_INTERRUPT );
-    s_hooks[ LSI_HKPT_HTTP_END ].setGlobalFlag( LSI_HOOK_FLAG_NO_INTERRUPT );
-    s_hooks[ LSI_HKPT_HANDLER_RESTART ].setGlobalFlag( LSI_HOOK_FLAG_NO_INTERRUPT );
+
+    s_hooks[ LSI_HKPT_L4_BEGINSESSION ].setGlobalFlag(
+        LSI_HOOK_FLAG_NO_INTERRUPT);
+    s_hooks[ LSI_HKPT_L4_ENDSESSION ].setGlobalFlag(
+        LSI_HOOK_FLAG_NO_INTERRUPT);
+
+    s_hooks[ LSI_HKPT_HTTP_BEGIN ].setGlobalFlag(LSI_HOOK_FLAG_NO_INTERRUPT);
+    s_hooks[ LSI_HKPT_HTTP_END ].setGlobalFlag(LSI_HOOK_FLAG_NO_INTERRUPT);
+    s_hooks[ LSI_HKPT_HANDLER_RESTART ].setGlobalFlag(
+        LSI_HOOK_FLAG_NO_INTERRUPT);
 }
 
 
-int LsiApiHooks::runForwardCb( lsi_cb_param_t * param )
+int LsiApiHooks::runForwardCb(lsi_cb_param_t *param)
 {
-    lsi_hook_info_t * hookInfo = param->_hook_info ;
-    LsiApiHook * hook = (LsiApiHook *)param->_cur_hook;
-    LsiApiHook * hookEnd = hookInfo->_hooks->end();
-    int8_t * flag = hookInfo->_enable_array + (hook - hookInfo->_hooks->begin());
-    while( hook < hookEnd )
+    lsiapi_hookinfo_t *hookInfo = param->_hook_info;
+    lsiapi_hook_t *hook = (lsiapi_hook_t *)param->_cur_hook;
+    lsiapi_hook_t *hookEnd = hookInfo->hooks->end();
+    int8_t *flag = hookInfo->enable_array + (hook -
+                   hookInfo->hooks->begin());
+    while (hook < hookEnd)
     {
-        if( *flag++ == 0 )
+        if (*flag++ == 0)
         {
             ++hook;
             continue;
         }
-        param->_cur_hook = ( void * )hook;
-        return ( *( ( ( LsiApiHook * )param->_cur_hook )->_cb ) )( param );
+        param->_cur_hook = (void *)hook;
+        return (*(((lsiapi_hook_t *)param->_cur_hook)->cb))(param);
     }
-    
-    return param->_hook_info->_termination_fp(
-                (LsiSession *)param->_session, (void *)param->_param, param->_param_len );
+
+    return param->_hook_info->term_fn(
+               (LsiSession *)param->_session, (void *)param->_param, param->_param_len);
 }
 
-int LsiApiHooks::runBackwardCb( lsi_cb_param_t * param )
+int LsiApiHooks::runBackwardCb(lsi_cb_param_t *param)
 {
-    lsi_hook_info_t * hookInfo = param->_hook_info ;
-    LsiApiHook * hook = (LsiApiHook *)param->_cur_hook;
-    LsiApiHook * hookBegin = hookInfo->_hooks->begin();
-    int8_t * flag = hookInfo->_enable_array + ( hook - hookBegin );
-    while( hook >= hookBegin )
+    lsiapi_hookinfo_t *hookInfo = param->_hook_info;
+    lsiapi_hook_t *hook = (lsiapi_hook_t *)param->_cur_hook;
+    lsiapi_hook_t *hookBegin = hookInfo->hooks->begin();
+    int8_t *flag = hookInfo->enable_array + (hook - hookBegin);
+    while (hook >= hookBegin)
     {
-        if( *flag-- == 0 )
+        if (*flag-- == 0)
         {
             --hook;
             continue;
         }
-        param->_cur_hook = ( void * )hook;
-        return ( *( ( ( LsiApiHook * )param->_cur_hook )->_cb ) )( param );
+        param->_cur_hook = (void *)hook;
+        return (*(((lsiapi_hook_t *)param->_cur_hook)->cb))(param);
     }
-    
-    return param->_hook_info->_termination_fp(
-            (LsiSession *)param->_session, (void *)param->_param, param->_param_len );
+
+    return param->_hook_info->term_fn(
+               (LsiSession *)param->_session, (void *)param->_param, param->_param_len);
 }
 
 
-LsiApiHooks * LsiApiHooks::getReleaseDataHooks( int index )
+LsiApiHooks *LsiApiHooks::getReleaseDataHooks(int index)
 {   return &s_releaseDataHooks[index];   }
 
-LsiApiHooks::LsiApiHooks( const LsiApiHooks& other )
-    : m_pHooks( NULL )
-    , m_iCapacity( 0 )
-    , m_iBegin( 0 )
-    , m_iEnd( 0 )
-    , m_iFlag( 0 )
+LsiApiHooks::LsiApiHooks(const LsiApiHooks &other)
+    : m_pHooks(NULL)
+    , m_iCapacity(0)
+    , m_iBegin(0)
+    , m_iEnd(0)
+    , m_iFlag(0)
 {
-    if( reallocate( other.size() + 4, 2 ) != -1 )
+    if (reallocate(other.size() + 4, 2) != -1)
     {
-        memcpy( m_pHooks + m_iBegin, other.begin(), (char *)other.end() - (char *)other.begin() );
+        memcpy(m_pHooks + m_iBegin, other.begin(),
+               (char *)other.end() - (char *)other.begin());
         m_iEnd = m_iBegin + other.size();
     }
 }
 
-int LsiApiHooks::copy( const LsiApiHooks& other )
+int LsiApiHooks::copy(const LsiApiHooks &other)
 {
-    if ( m_iCapacity < other.size() )
-        if( reallocate( other.size() + 4, 2 ) == -1 )
-            return -1;
-    m_iBegin = ( m_iCapacity - other.size() ) / 2;
-    memcpy( m_pHooks + m_iBegin, other.begin(), (char *)other.end() - (char *)other.begin() );
+    if (m_iCapacity < other.size())
+        if (reallocate(other.size() + 4, 2) == -1)
+            return LS_FAIL;
+    m_iBegin = (m_iCapacity - other.size()) / 2;
+    memcpy(m_pHooks + m_iBegin, other.begin(),
+           (char *)other.end() - (char *)other.begin());
     m_iEnd = m_iBegin + other.size();
     return 0;
 }
 
 
-int LsiApiHooks::reallocate( int capacity, int newBegin )
+int LsiApiHooks::reallocate(int capacity, int newBegin)
 {
-    LsiApiHook * pHooks;
+    lsiapi_hook_t *pHooks;
     int size = this->size();
-    if( capacity < size )
+    if (capacity < size)
         capacity = size;
-    if( capacity < size + newBegin )
+    if (capacity < size + newBegin)
         capacity = size + newBegin;
-    pHooks = ( LsiApiHook * )malloc( capacity * sizeof( LsiApiHook ) );
-    if( !pHooks )
-        return -1;
-    if( newBegin < 0 )
-        newBegin = ( capacity - size ) / 2;
-    if( m_pHooks )
+    pHooks = (lsiapi_hook_t *)malloc(capacity * sizeof(lsiapi_hook_t));
+    if (!pHooks)
+        return LS_FAIL;
+    if (newBegin < 0)
+        newBegin = (capacity - size) / 2;
+    if (m_pHooks)
     {
-        memcpy( pHooks + newBegin, begin(), size * sizeof( LsiApiHook ) );
-        free( m_pHooks );
+        memcpy(pHooks + newBegin, begin(), size * sizeof(lsiapi_hook_t));
+        free(m_pHooks);
     }
 
     m_pHooks = pHooks;
@@ -171,188 +177,189 @@ int LsiApiHooks::reallocate( int capacity, int newBegin )
 
 }
 
-//For same cb and same priority in same module, it will fail to add, but return 0 
-short LsiApiHooks::add( const lsi_module_t *pModule, lsi_callback_pf cb, short priority, short flag )
+//For same cb and same priority in same module, it will fail to add, but return 0
+short LsiApiHooks::add(const lsi_module_t *pModule, lsi_callback_pf cb,
+                       short priority, short flag)
 {
-    LsiApiHook * pHook;
-    if( size() == m_iCapacity )
+    lsiapi_hook_t *pHook;
+    if (size() == m_iCapacity)
     {
-        if( reallocate( m_iCapacity + 4 ) == -1 )
-            return -1;
+        if (reallocate(m_iCapacity + 4) == -1)
+            return LS_FAIL;
 
     }
-    for( pHook = begin(); pHook < end(); ++pHook )
+    for (pHook = begin(); pHook < end(); ++pHook)
     {
-        if( pHook->_priority > priority )
+        if (pHook->priority > priority)
             break;
-        else if( pHook->_priority == priority && pHook->_module == pModule && pHook->_cb == cb )
+        else if (pHook->priority == priority && pHook->module == pModule
+                 && pHook->cb == cb)
             return 0;  //already added
     }
-    
-    if( ( pHook != begin() ) || ( m_iBegin == 0 ) )
+
+    if ((pHook != begin()) || (m_iBegin == 0))
     {
         //cannot insert front
-        if( ( pHook != end() ) || ( m_iEnd == m_iCapacity ) )
+        if ((pHook != end()) || (m_iEnd == m_iCapacity))
         {
             //cannot append directly
-            if( m_iEnd < m_iCapacity )
+            if (m_iEnd < m_iCapacity)
             {
                 //moving entries toward the end
-                memmove( pHook + 1, pHook , (char *)end() - (char *)pHook );
+                memmove(pHook + 1, pHook , (char *)end() - (char *)pHook);
                 ++m_iEnd;
             }
             else
             {
                 //moving entries before the insert point
-                memmove( begin() - 1, begin(), (char *)pHook - (char *)begin() );
+                memmove(begin() - 1, begin(), (char *)pHook - (char *)begin());
                 --m_iBegin;
                 --pHook;
             }
         }
         else
-        {
             ++m_iEnd;
-        }
     }
     else
     {
         --pHook;
         --m_iBegin;
     }
-    pHook->_module = pModule;
-    pHook->_cb = cb;
-    pHook->_priority = priority;
-    pHook->_flag = flag;
+    pHook->module = pModule;
+    pHook->cb = cb;
+    pHook->priority = priority;
+    pHook->flag = flag;
     return pHook - begin();
 }
 
-LsiApiHook * LsiApiHooks::find( const lsi_module_t *pModule, lsi_callback_pf cb )
+lsiapi_hook_t *LsiApiHooks::find(const lsi_module_t *pModule,
+                                 lsi_callback_pf cb)
 {
-    LsiApiHook * pHook;
-    for( pHook = begin(); pHook < end(); ++pHook )
+    lsiapi_hook_t *pHook;
+    for (pHook = begin(); pHook < end(); ++pHook)
     {
-        if( ( pHook->_module == pModule ) && ( pHook->_cb == cb ) )
+        if ((pHook->module == pModule) && (pHook->cb == cb))
             return pHook;
     }
     return NULL;
 }
 
-int LsiApiHooks::remove( LsiApiHook *pHook )
+int LsiApiHooks::remove(lsiapi_hook_t *pHook)
 {
-    if( ( pHook < begin() ) || ( pHook >= end() ) )
-        return -1;
-    if( pHook == begin() )
+    if ((pHook < begin()) || (pHook >= end()))
+        return LS_FAIL;
+    if (pHook == begin())
         ++m_iBegin;
     else
     {
-        if( pHook != end() - 1 )
-            memmove( pHook, pHook + 1, (char *)end() - (char *)pHook );
+        if (pHook != end() - 1)
+            memmove(pHook, pHook + 1, (char *)end() - (char *)pHook);
         --m_iEnd;
     }
     return 0;
 }
 
 //COMMENT: if one module add more hooks at this level, the return is the first one!!!!
-LsiApiHook * LsiApiHooks::find( const lsi_module_t *pModule ) const
+lsiapi_hook_t *LsiApiHooks::find(const lsi_module_t *pModule) const
 {
-    LsiApiHook * pHook;
-    for( pHook = begin(); pHook < end(); ++pHook )
+    lsiapi_hook_t *pHook;
+    for (pHook = begin(); pHook < end(); ++pHook)
     {
-        if( pHook->_module == pModule )
+        if (pHook->module == pModule)
             return pHook;
     }
     return NULL;
-    
+
 }
 
-LsiApiHook * LsiApiHooks::find( const lsi_module_t *pModule, int *index ) const
+lsiapi_hook_t *LsiApiHooks::find(const lsi_module_t *pModule,
+                                 int *index) const
 {
-    LsiApiHook * pHook = find( pModule );
+    lsiapi_hook_t *pHook = find(pModule);
     if (pHook)
         *index = pHook - begin();
     return pHook;
 }
 
-//COMMENT: if one module add more hooks at this level, the return of 
+//COMMENT: if one module add more hooks at this level, the return of
 //LsiApiHooks::find( const lsi_module_t *pModule ) is the first one!!!!
 //But the below function will remove all the hooks
-int LsiApiHooks::remove( const lsi_module_t *pModule )
+int LsiApiHooks::remove(const lsi_module_t *pModule)
 {
-    LsiApiHook * pHook;
-    for( pHook = begin(); pHook < end(); ++pHook )
+    lsiapi_hook_t *pHook;
+    for (pHook = begin(); pHook < end(); ++pHook)
     {
-        if( pHook->_module == pModule )
-            remove( pHook );
+        if (pHook->module == pModule)
+            remove(pHook);
     }
-    
+
     return 0;
 }
 
 
 //need to check Hook count before call this function
 int LsiApiHooks::runCallback(int level, lsi_cb_param_t *param) const
-{    
+{
     int ret = 0;
     lsi_cb_param_t rec1;
-    int8_t *pEnableArray = param->_hook_info->_enable_array;
-        
-    LsiApiHook *hook = begin();
-    LsiApiHook *hookEnd = end();  //FIXME: I found end() will change since m_iEnd will change
-    int offset = (LsiApiHook *)param->_cur_hook - begin();
-    if(offset > 0)
-    {
-        pEnableArray += offset;
-        hook = (LsiApiHook *)param->_cur_hook;
-    }
-    
-    while(hook != hookEnd)
+    int8_t *pEnableArray = param->_hook_info->enable_array;
+
+    lsiapi_hook_t *hook = (lsiapi_hook_t *)param->_cur_hook;
+    lsiapi_hook_t *hookEnd = end();
+    pEnableArray += (lsiapi_hook_t *)param->_cur_hook - begin();
+
+    while (hook < hookEnd)
     {
         if (*pEnableArray++ == 0)
         {
             ++hook;
             continue;
         }
-        
+
         rec1 = *param;
         rec1._cur_hook = (void *)hook;
 
-        if ( D_ENABLED( DL_MORE ))
+        if (D_ENABLED(DL_MORE))
         {
-            if (param->_session) 
+            if (param->_session)
             {
-                LogTracker * pTracker = ((LsiSession *)param->_session)->getLogTracker();
-                LOG_D(( pTracker->getLogger(), "[%s] [%s] run Hook function for [Module:%s]", 
-                    pTracker->getLogId(), s_pHkptName[ level ], MODULE_NAME( hook->_module ) ));
-            } 
+                LogTracker *pTracker = ((LsiSession *)param->_session)->getLogTracker();
+                LOG_D((pTracker->getLogger(),
+                       "[%s] [%s] run Hook function for [Module:%s]",
+                       pTracker->getLogId(), s_pHkptName[ level ], MODULE_NAME(hook->module)));
+            }
             else
             {
-                LOG_D(( NULL, "[ServerHook: %s] run Hook function for [Module:%s]", 
-                    s_pHkptName[ level ], MODULE_NAME( hook->_module ) ));
+                LOG_D((NULL, "[ServerHook: %s] run Hook function for [Module:%s]",
+                       s_pHkptName[ level ], MODULE_NAME(hook->module)));
             }
         }
-        
-        ret = hook->_cb(&rec1);
 
-        if ( D_ENABLED( DL_MORE ))
+        ret = hook->cb(&rec1);
+
+        if (D_ENABLED(DL_MORE))
         {
-            if (param->_session) 
+            if (param->_session)
             {
-                LogTracker * pTracker = ((LsiSession *)param->_session)->getLogTracker();
-                LOG_D(( pTracker->getLogger(), "[%s] [%s] [Module:%s] ret %d", 
-                    pTracker->getLogId(), s_pHkptName[ level ], MODULE_NAME( hook->_module ), ret ));
+                LogTracker *pTracker = ((LsiSession *)param->_session)->getLogTracker();
+                LOG_D((pTracker->getLogger(), "[%s] [%s] [Module:%s] ret %d",
+                       pTracker->getLogId(), s_pHkptName[ level ], MODULE_NAME(hook->module),
+                       ret));
             }
             else
             {
-                LOG_D(( NULL, "[ServerHook: %s] [Module:%s] ret %d", 
-                    s_pHkptName[ level ], MODULE_NAME( hook->_module ), ret ));
+                LOG_D((NULL, "[ServerHook: %s] [Module:%s] ret %d",
+                       s_pHkptName[ level ], MODULE_NAME(hook->module), ret));
             }
         }
-        if ((ret != 0)&&!(m_iFlag & LSI_HOOK_FLAG_NO_INTERRUPT) )
+        if ((ret == LSI_HK_RET_SUSPEND) || ((ret != 0)
+                                         && !(m_iFlag & LSI_HOOK_FLAG_NO_INTERRUPT)))
             break;
-    
+
         ++hook;
     }
-    
+    param->_cur_hook = hook;
+
     return ret;
 }
 

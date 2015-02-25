@@ -27,48 +27,41 @@
 #include <time.h>
 #include <unistd.h>
 #include <util/gfactory.h>
-#include <util/ni_fio.h>
+#include <lsr/ls_fileio.h>
 
 
 BEGIN_LOG4CXX_NS
 
-int Appender::isopen()
+Appender *Appender::getAppender(const char *pName)
 {
-    return m_fd != -1;
+    return getAppender(pName, "appender.ps");
 }
 
-Appender* Appender::getAppender( const char * pName )
+Appender *Appender::getAppender(const char *pName, const char *pType)
 {
-    return getAppender( pName, "appender.ps" );
+    return (Appender *)s_pFactory->getObj(pName, pType);
 }
 
-Appender* Appender::getAppender( const char * pName, const char *pType )
-{
-    return (Appender *)s_pFactory->getObj( pName, pType );
-}
-
-int Appender::append( LoggingEvent * pEvent )
+int Appender::append(LoggingEvent *pEvent)
 {
     char achBuf[9000];
-    char * pMessage = achBuf;
+    char *pMessage = achBuf;
     int len;
-    if ( !pEvent )
-        return -1;
-    Layout * pLayout;
-    if ( pEvent->m_pLayout )
+    if (!pEvent)
+        return LS_FAIL;
+    Layout *pLayout;
+    if (pEvent->m_pLayout)
         pLayout = pEvent->m_pLayout;
     else
         pLayout = m_pLayout;
-    if ( pLayout )
-    {
-         len = pLayout->format( pEvent, pMessage, sizeof( achBuf ) );
-    }
+    if (pLayout)
+        len = pLayout->format(pEvent, pMessage, sizeof(achBuf));
     else
     {
         pMessage = (char *)pEvent->m_pMessageBuf;
         len = pEvent->m_iMessageLen;
     }
-    return append( pMessage, len );
+    return append(pMessage, len);
 }
 
 END_LOG4CXX_NS

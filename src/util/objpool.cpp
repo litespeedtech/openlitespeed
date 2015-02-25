@@ -16,38 +16,37 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include <util/objpool.h>
+#include <lsdef.h>
 
-GObjPool::GObjPool( int chunkSize )
-    : m_chunkSize( chunkSize )
-    , m_poolSize( 0 )
+GObjPool::GObjPool(int chunkSize)
+    : m_iChunkSize(chunkSize)
+    , m_iPoolSize(0)
 {
 }
 
-int GObjPool::allocate( int size )
+int GObjPool::allocate(int size)
 {
-    if ( (int)m_freeList.capacity() < m_poolSize + size )
-        if ( m_freeList.reserve( m_poolSize + size ) )
-            return -1;
+    if ((int)m_freeList.capacity() < m_iPoolSize + size)
+        if (m_freeList.reserve(m_iPoolSize + size))
+            return LS_FAIL;
     int i = 0;
     try
     {
-        for( ; i < size; ++i )
+        for (; i < size; ++i)
         {
-            void * pObj = newObj();
-            if ( pObj )
+            void *pObj = newObj();
+            if (pObj)
             {
-                m_freeList.unsafe_push_back( pObj );
-                ++m_poolSize;
+                m_freeList.unsafe_push_back(pObj);
+                ++m_iPoolSize;
             }
             else
-            {
-                return -1;
-            }
+                return LS_FAIL;
         }
     }
     catch (...)
     {
-        return -1;
+        return LS_FAIL;
     }
     return 0;
 }

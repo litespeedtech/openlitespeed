@@ -20,7 +20,8 @@
 
 
 
-#include <util/refcounter.h>  
+#include <lsdef.h>
+#include <util/refcounter.h>
 
 #include <sys/types.h>
 
@@ -28,15 +29,16 @@
 class CacheElement : public RefCounter
 {
     time_t  m_lastAccess;
-public: 
+public:
     CacheElement() {};
     virtual ~CacheElement() {};
     bool isInUse() const    {   return getRef() > 0;    }
     time_t getLastAccess() const    {   return m_lastAccess;    }
-    void setLastAccess( time_t tm ) {   m_lastAccess = tm;      }
-    
-    virtual const char * getKey() const = 0;
+    void setLastAccess(time_t tm) {   m_lastAccess = tm;      }
+
+    virtual const char *getKey() const = 0;
     virtual int32_t release() = 0;
+    LS_NO_COPY_ASSIGN(CacheElement);
 };
 
 #endif

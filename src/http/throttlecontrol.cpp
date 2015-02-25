@@ -20,6 +20,7 @@
 #include <http/httpdefs.h>
 #include <assert.h>
 
+ThrottleLimits ThrottleControl::s_default;
 
 void ThrottleControl::resetQuotas()
 {
@@ -29,29 +30,33 @@ void ThrottleControl::resetQuotas()
     m_req[1].reset();
 }
 
-void ThrottleLimits::config( const XmlNode * pNode1, const ThrottleLimits * pDefault, 
-                             ConfigCtx* pCurrentCtx)
+void ThrottleLimits::config(const XmlNode *pNode1,
+                            const ThrottleLimits *pDefault,
+                            ConfigCtx *pCurrentCtx)
 {
     int outlimit = -1;
     int inlimit = -1;
-    if (( pDefault == this )||( pDefault->getOutputLimit() != INT_MAX ))
+    if ((pDefault == this) || (pDefault->getOutputLimit() != INT_MAX))
     {
-        outlimit = ConfigCtx::getCurConfigCtx()->getLongValue( pNode1, "outBandwidth", -1, INT_MAX, -1);
-        inlimit = ConfigCtx::getCurConfigCtx()->getLongValue( pNode1, "inBandwidth", -1, INT_MAX, -1);
-        if ( inlimit == -1 )
+        outlimit = ConfigCtx::getCurConfigCtx()->getLongValue(pNode1,
+                   "outBandwidth", -1, INT_MAX, -1);
+        inlimit = ConfigCtx::getCurConfigCtx()->getLongValue(pNode1, "inBandwidth",
+                  -1, INT_MAX, -1);
+        if (inlimit == -1)
             inlimit = outlimit;
-        if ( outlimit < 0 )
-            outlimit = inlimit = ConfigCtx::getCurConfigCtx()->getLongValue( pNode1, "throttleLimit", 0, INT_MAX, -1);
-        if (( outlimit > 0 )&&( outlimit < INT_MAX - THROTTLE_UNIT ))
+        if (outlimit < 0)
+            outlimit = inlimit = ConfigCtx::getCurConfigCtx()->getLongValue(pNode1,
+                                 "throttleLimit", 0, INT_MAX, -1);
+        if ((outlimit > 0) && (outlimit < INT_MAX - THROTTLE_UNIT))
         {
             outlimit =
-                (( outlimit + THROTTLE_UNIT - 1 ) / THROTTLE_UNIT) * THROTTLE_UNIT;
-            if ( inlimit < INT_MAX - 1024 )
-                inlimit = ( inlimit + 1023 ) & ~1023;
+                ((outlimit + THROTTLE_UNIT - 1) / THROTTLE_UNIT) * THROTTLE_UNIT;
+            if (inlimit < INT_MAX - 1024)
+                inlimit = (inlimit + 1023) & ~1023;
         }
-        if ( outlimit == -1 )
+        if (outlimit == -1)
         {
-            if ( pDefault != this )
+            if (pDefault != this)
             {
                 outlimit = pDefault->getOutputLimit();
                 inlimit = pDefault->getInputLimit();
@@ -63,20 +68,22 @@ void ThrottleLimits::config( const XmlNode * pNode1, const ThrottleLimits * pDef
             }
         }
     }
-    if ( outlimit <= 0 )
+    if (outlimit <= 0)
         outlimit = INT_MAX;
-    if ( inlimit <= 0 )
+    if (inlimit <= 0)
         inlimit = INT_MAX;
     m_iOutput = outlimit;
     m_iInput = inlimit;
-    int limit = ConfigCtx::getCurConfigCtx()->getLongValue( pNode1, "dynReqPerSec", 0, INT_MAX,
-                              pDefault->getDynReqLimit() );
-    if ( limit == 0 )
+    int limit = ConfigCtx::getCurConfigCtx()->getLongValue(pNode1,
+                "dynReqPerSec", 0, INT_MAX,
+                pDefault->getDynReqLimit());
+    if (limit == 0)
         limit = INT_MAX;
     m_iDynReq = limit;
-    limit = ConfigCtx::getCurConfigCtx()->getLongValue( pNode1, "staticReqPerSec", 0, INT_MAX,
-                          pDefault->getStaticReqLimit() );
-    if ( limit == 0 )
+    limit = ConfigCtx::getCurConfigCtx()->getLongValue(pNode1,
+            "staticReqPerSec", 0, INT_MAX,
+            pDefault->getStaticReqLimit());
+    if (limit == 0)
         limit = INT_MAX;
-    m_iStaticReq = limit; 
+    m_iStaticReq = limit;
 }

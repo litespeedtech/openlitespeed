@@ -24,7 +24,7 @@ TcpServerSocket::TcpServerSocket( struct sockaddr *pAddr, int backlog )
 {
     if ( listen( pAddr, backlog ) == CoreSocket::FAIL )
     {
-        //FIXME: add exceptions or output error message.
+        //TODO: add exceptions or output error message.
     }
 }
 

@@ -19,8 +19,8 @@
 #include "ls.h"
 #include <http/httplog.h>
 #include <log4cxx/logger.h>
-#include <lsr/lsr_strtool.h>
-#include <lsr/lsr_confparser.h>
+#include <lsr/ls_strtool.h>
+#include <lsr/ls_confparser.h>
 #include <util/fdpass.h>
 #include <sys/stat.h>
 #include <stdlib.h>
@@ -41,9 +41,11 @@
 // if prefix with /, ../ and ./ then the corresponding path will be using.
 //
 
-int             LsJsEngine::s_firstTime = 1;          // firstTime parse param
+int             LsJsEngine::s_firstTime =
+    1;          // firstTime parse param
 int             LsJsEngine::s_ready = 0;              // not ready
-char *          LsJsEngine::s_serverSocket = 0;       // default module name
+char           *LsJsEngine::s_serverSocket =
+    0;       // default module name
 
 //
 //  Should use user param for this
@@ -61,26 +63,26 @@ LsJsEngine::~LsJsEngine()
 int LsJsEngine::init()
 {
     s_ready = 0;     // set no ready
-    
-    if (! (s_serverSocket = (char *)malloc(strlen(DEF_SERVERSOCKET)+10)) )
+
+    if (!(s_serverSocket = (char *)malloc(strlen(DEF_SERVERSOCKET) + 10)))
     {
         g_api->log(NULL, LSI_LOG_NOTICE
-                , "LiteSpeed Node.js handler NO MEMORY\n" );
+                   , "LiteSpeed Node.js handler NO MEMORY\n");
         return 0;
     }
-        
+
     strcpy(s_serverSocket, DEF_SERVERSOCKET);
     s_ready = 1;     // ready rock n roll
-    
+
     g_api->log(NULL, LSI_LOG_NOTICE
-                , "LiteSpeed Node.js socketPath [%s]\n"
-                , s_serverSocket
-                );
-    
+               , "LiteSpeed Node.js socketPath [%s]\n"
+               , s_serverSocket
+              );
+
     return 0 ;
 }
 
-int	LsJsEngine::isReady(lsi_session_t *session)
+int LsJsEngine::isReady(lsi_session_t *session)
 {
     if (!s_ready)
         return 0;
@@ -91,81 +93,81 @@ int	LsJsEngine::isReady(lsi_session_t *session)
 //  runScript - working code.
 //
 int    LsJsEngine::runScript(lsi_session_t *session
-                            , LsJsUserParam * pUser
-                            , const char * scriptpath)
+                             , LsJsUserParam *pUser
+                             , const char *scriptpath)
 {
     char        buf[0x100];
     int         nb;
     static int  counter = 0;    // testing purpose
     counter++;
-    
+
     if (pUser)
         g_api->log(session, LSI_LOG_DEBUG
-                , "level %d ready %d script [%s] %d\n"
-                , pUser->level() 
-                , pUser->isReady()
-                , scriptpath
-                , counter
-                );
+                   , "level %d ready %d script [%s] %d\n"
+                   , pUser->level()
+                   , pUser->isReady()
+                   , scriptpath
+                   , counter
+                  );
     else
         g_api->log(session, LSI_LOG_DEBUG
-                , "script [%s] %d\n"
-                , scriptpath
-                , counter
-                );
-        
+                   , "script [%s] %d\n"
+                   , scriptpath
+                   , counter
+                  );
+
     int node_fd = 0;
-    if ( (node_fd = tcpDomainSocket(s_serverSocket)) < 0 )
+    if ((node_fd = tcpDomainSocket(s_serverSocket)) < 0)
     {
         g_api->log(NULL, LSI_LOG_NOTICE,
                    "FAILED TO CONNECT LiteSpeed Node.js SOCKET [%s] errno %d [%d]\r\n"
                    , s_serverSocket
                    , errno, counter);
-        
+
         nb = snprintf(buf, 0x1000, "<html><body>\r\n"
-                                    "<p>FAILED TO CONNECT litespeed.js SOCKET [%s]</p>\r\n"
-                                    "<p>%s</p>\r\n"
-                                    "</body></html>\r\n"
-                        , s_serverSocket
-                        , scriptpath
+                      "<p>FAILED TO CONNECT litespeed.js SOCKET [%s]</p>\r\n"
+                      "<p>%s</p>\r\n"
+                      "</body></html>\r\n"
+                      , s_serverSocket
+                      , scriptpath
                      );
-        g_api->append_resp_body( session ,  buf, nb);
-        g_api->end_resp( session );
-        return(0);
+        g_api->append_resp_body(session ,  buf, nb);
+        g_api->end_resp(session);
+        return (0);
     }
 
     char *xbuf = 0;
     int xbuflen = 0;
     int http_fd = 0;
     http_fd = g_api->handoff_fd(session, &xbuf, &xbuflen);
-    
+
     if (http_fd < 0)
     {
         g_api->log(NULL, LSI_LOG_NOTICE
-                    , "LS-JS HTTP failed to handoff [%s]"
-                    , scriptpath);
+                   , "LS-JS HTTP failed to handoff [%s]"
+                   , scriptpath);
         nb = snprintf(buf, 0x1000, "<html><body>\r\n"
-                                "<p>LiteSpeed Node.js is busy</p>\r\n"
-                                "<p>LiteSpeed Node.js FAILED to handoff [%s]</p>\r\n"
-                                "</body></html>\r\n", scriptpath);
-        g_api->append_resp_body( session ,  buf, nb);
-        g_api->end_resp( session );
+                      "<p>LiteSpeed Node.js is busy</p>\r\n"
+                      "<p>LiteSpeed Node.js FAILED to handoff [%s]</p>\r\n"
+                      "</body></html>\r\n", scriptpath);
+        g_api->append_resp_body(session ,  buf, nb);
+        g_api->end_resp(session);
         close(node_fd);
-        return(0);
+        return (0);
     }
-    
+
     // At this point node_fd and http_fd should be good
     nb = snprintf(buf, 0x100, "Running %s\r\n", scriptpath);
-    
+
     int byteSent;
-    byteSent = FDPass::writex_fd(node_fd, xbuf, xbuflen, http_fd);
+    byteSent = FDPass::writexFd(node_fd, xbuf, xbuflen, http_fd);
     if (byteSent != xbuflen)
     {
         nb = snprintf(buf, 0x100
-                        , "FAILED TO SENDFD %s [sent %d got %d] errno %d\r\n"
-                        , scriptpath, xbuflen, byteSent, errno);
+                      , "FAILED TO SENDFD %s [sent %d got %d] errno %d\r\n"
+                      , scriptpath, xbuflen, byteSent, errno);
         g_api->log(NULL, LSI_LOG_NOTICE, buf);
-        
+
         // attemp to write msg back to blowser
         write(http_fd, "<html><body>\r\n", 14);
         write(http_fd, buf, nb);
@@ -183,25 +185,25 @@ int    LsJsEngine::runScript(lsi_session_t *session
 //
 //  Configuration parameters for LiteSpeed js driver
 //
-void* LsJsEngine::parseParam( const char* param
-                                , int param_len
-                                , void* initial_config
-                                , int level
-                                , const char *name )
+void *LsJsEngine::parseParam(const char *param
+                             , int param_len
+                             , void *initial_config
+                             , int level
+                             , const char *name)
 {
-    lsr_confparser_t confparser;
-    lsr_objarray_t *pList;
+    ls_confparser_t confparser;
+    ls_objarray_t *pList;
     const char *pLineBegin, *pLineEnd, *pParamEnd = param + param_len;
-    
-    LsJsUserParam * pParent = (LsJsUserParam * )initial_config;
-    LsJsUserParam * pUser = new LsJsUserParam(level);
-    
+
+    LsJsUserParam *pParent = (LsJsUserParam *)initial_config;
+    LsJsUserParam *pUser = new LsJsUserParam(level);
+
     g_api->log(NULL, LSI_LOG_NOTICE
-                    , "JS Param %s %d %s\n"
-                    , name
-                    , level
-                    , param ? param : "");
-    
+               , "JS Param %s %d %s\n"
+               , name
+               , level
+               , param ? param : "");
+
     if ((!pUser) || (!pUser->isReady()))
     {
         g_api->log(NULL, LSI_LOG_ERROR, "JS PARSEPARAM NO MEMORY\n");
@@ -218,98 +220,100 @@ void* LsJsEngine::parseParam( const char* param
         s_firstTime = 0;
         return pUser;
     }
-    
+
     g_api->log(NULL, LSI_LOG_NOTICE
-                    , "JS Param name %s level %d %s parent %d param %s %d\n"
-                    , name
-                    , level
-                    , (level == LSI_MODULE_DATA_HTTP) ? "HTTP" : ""
-                    , pParent ? pParent->level() : -1
-                    , param ? param : ""
-                    , pParent ? pParent->isReady() : -1
-                    );
-    
-    lsr_confparser( &confparser );
-    while((pLineBegin = lsr_get_conf_line( &param, pParamEnd, &pLineEnd )) != NULL )
+               , "JS Param name %s level %d %s parent %d param %s %d\n"
+               , name
+               , level
+               , (level == LSI_MODULE_DATA_HTTP) ? "HTTP" : ""
+               , pParent ? pParent->level() : -1
+               , param ? param : ""
+               , pParent ? pParent->isReady() : -1
+              );
+
+    ls_confparser(&confparser);
+    while ((pLineBegin = ls_getconfline(&param, pParamEnd, &pLineEnd)) != NULL)
     {
-        pList = lsr_conf_parse_line_kv( &confparser, pLineBegin, pLineEnd );
-        if ( !pList )
+        pList = ls_confparser_linekv(&confparser, pLineBegin, pLineEnd);
+        if (!pList)
             continue;
-        lsr_str_t *pKey = (lsr_str_t *)lsr_objarray_getobj( pList, 0 );
-        lsr_str_t *pValue = (lsr_str_t *)lsr_objarray_getobj( pList, 1 );
-        if ( lsr_str_len( pValue ) == 0 )
+        ls_str_t *pKey = (ls_str_t *)ls_objarray_getobj(pList, 0);
+        ls_str_t *pValue = (ls_str_t *)ls_objarray_getobj(pList, 1);
+        if (ls_str_len(pValue) == 0)
         {
-            g_api->log(NULL, LSI_LOG_ERROR, "JS PARSEPARAM NO VALUE GIVEN FOR PARAMETER %.*s\n",
-                lsr_str_len( pKey ), lsr_str_c_str( pKey )
-            );
+            g_api->log(NULL, LSI_LOG_ERROR,
+                       "JS PARSEPARAM NO VALUE GIVEN FOR PARAMETER %.*s\n",
+                       ls_str_len(pKey), ls_str_cstr(pKey)
+                      );
             continue;
         }
-        if (!strncasecmp("data", lsr_str_c_str( pKey ), lsr_str_len( pKey )))
+        if (!strncasecmp("data", ls_str_cstr(pKey), ls_str_len(pKey)))
         {
             int val = 0;
             // base 0 is same functionality as %i in sscanf
-            if ((val = strtol( lsr_str_c_str( pValue ), NULL, 0 )) && (val > 0))
-            {
+            if ((val = strtol(ls_str_cstr(pValue), NULL, 0)) && (val > 0))
                 pUser->setData(val);
-            }
             g_api->log(NULL, LSI_LOG_NOTICE
-                        , "%s JS SET %.*s = %.*s [%d]\n"
-                        , name
-                        , lsr_str_len( pKey ), lsr_str_c_str( pKey )
-                        , lsr_str_len( pValue ), lsr_str_c_str( pValue )
-                        , pUser->data());
+                       , "%s JS SET %.*s = %.*s [%d]\n"
+                       , name
+                       , ls_str_len(pKey), ls_str_cstr(pKey)
+                       , ls_str_len(pValue), ls_str_cstr(pValue)
+                       , pUser->data());
         }
         else
         {
             // ignore this pair values
             g_api->log(NULL, LSI_LOG_NOTICE
-                        , "%s JS IGNORE MODULE PARAMETERS [%.*s] [%.*s]\n"
-                        , name
-                        , lsr_str_len( pKey ), lsr_str_c_str( pKey )
-                        , lsr_str_len( pValue ), lsr_str_c_str( pValue ));
+                       , "%s JS IGNORE MODULE PARAMETERS [%.*s] [%.*s]\n"
+                       , name
+                       , ls_str_len(pKey), ls_str_cstr(pKey)
+                       , ls_str_len(pValue), ls_str_cstr(pValue));
         }
     }
-    lsr_confparser_d( &confparser );
+    ls_confparser_d(&confparser);
     s_firstTime = 0;
     return (void *)pUser;
 }
 
-void LsJsEngine::removeParam( void* config )
+void LsJsEngine::removeParam(void *config)
 {
     g_api->log(NULL , LSI_LOG_NOTICE
-            , "REMOVE PARAMETERS [%p]\n", config);
+               , "REMOVE PARAMETERS [%p]\n", config);
 }
 
-int LsJsEngine::tcpDomainSocket( const char* path )
+int LsJsEngine::tcpDomainSocket(const char *path)
 {
     struct sockaddr_un  addr;
-    register int        fd;
-    
-    if ( (strlen(path) > sizeof(addr.sun_path) - 1) ) {
+    int        fd;
+
+    if ((strlen(path) > sizeof(addr.sun_path) - 1))
+    {
         g_api->log(NULL, LSI_LOG_NOTICE
-                    , "domainSocket Path too long %d max %d\n"
-                    , strlen(path), sizeof(addr.sun_path) - 1);
-        return -1;
+                   , "domainSocket Path too long %d max %d\n"
+                   , strlen(path), sizeof(addr.sun_path) - 1);
+        return LS_FAIL;
     }
-    if ( (fd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
+    if ((fd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1)
+    {
         g_api->log(NULL, LSI_LOG_NOTICE
-                    , "FAILED TO Aquire domainSocket %s\n"
-                    , path
+                   , "FAILED TO Aquire domainSocket %s\n"
+                   , path
                   );
-        return -1;
+        return LS_FAIL;
     }
     memset(&addr, 0, sizeof(addr));
     addr.sun_family = AF_UNIX;
-    strncpy(addr.sun_path, path, sizeof(addr.sun_path)-1);
+    strncpy(addr.sun_path, path, sizeof(addr.sun_path) - 1);
 
     /* client mode: just connect it */
-    if (connect(fd, (struct sockaddr*)&addr, sizeof(addr)) == -1) {
+    if (connect(fd, (struct sockaddr *)&addr, sizeof(addr)) == -1)
+    {
         g_api->log(NULL, LSI_LOG_NOTICE
-                    , "FAILED TO connect domainSocket %s\n"
-                    , path
-               );
+                   , "FAILED TO connect domainSocket %s\n"
+                   , path
+                  );
         close(fd);
-        return -1;
+        return LS_FAIL;
     }
     return fd;
 }

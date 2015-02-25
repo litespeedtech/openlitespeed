@@ -18,10 +18,8 @@
 #ifndef CACHESTORE_H
 #define CACHESTORE_H
 
-/**
-	@author Gang Wang <gwang@litespeedtech.com>
-*/
 
+#include <lsdef.h>
 #include <util/hashstringmap.h>
 #include <util/gpointerlist.h>
 #include <util/autostr.h>
@@ -41,62 +39,76 @@ public:
     virtual ~CacheStore();
 
     int reset();
-    
+
     virtual int clearStrage() = 0;
 
-    virtual CacheEntry * getCacheEntry( CacheHash& hash,
-                const char * pURI, int pURILen, 
-                const char * pQS, int pQSLen, 
-                const char * pIP, int ipLen,
-                const char * pCookie, int cookieLen,
-                int32_t lastCacheFlush, int maxStale ) = 0;
+    virtual CacheEntry *getCacheEntry(CacheHash &hash,
+                                      const char *pURI, int pURILen,
+                                      const char *pQS, int pQSLen,
+                                      const char *pIP, int ipLen,
+                                      const char *pCookie, int cookieLen,
+                                      int32_t lastCacheFlush, int maxStale) = 0;
 
-    virtual CacheEntry * createCacheEntry( const CacheHash& hash,
-                const char * pURI, int pURILen, 
-                const char * pQS, int pQSLen, 
-                const char * pIP, int ipLen,
-                const char * pCookie, int cookieLen,
-                int force, int* errorcode ) = 0;
+    virtual CacheEntry *createCacheEntry(const CacheHash &hash,
+                                         const char *pURI, int pURILen,
+                                         const char *pQS, int pQSLen,
+                                         const char *pIP, int ipLen,
+                                         const char *pCookie, int cookieLen,
+                                         int force, int *errorcode) = 0;
 
-    virtual CacheEntry * getCacheEntry( const char * pKey, int keyLen ) = 0;
+    virtual CacheEntry *getCacheEntry(const char *pKey, int keyLen) = 0;
 
-    virtual CacheEntry * getWriteEntry( const char * pKey, int keyLen, 
-                        const char * pHash ) = 0;
+    virtual CacheEntry *getWriteEntry(const char *pKey, int keyLen,
+                                      const char *pHash) = 0;
 
-    virtual int saveEntry( CacheEntry * pEntry ) = 0;
+    virtual int saveEntry(CacheEntry *pEntry) = 0;
 
-    virtual void cancelEntry( CacheEntry * pEntry, int remove ) = 0;
+    virtual void cancelEntry(CacheEntry *pEntry, int remove) = 0;
 
     //virtual int dirty( const char * pKey, int keyLen ) = 0;
-    virtual int publish( CacheEntry * pEntry ) = 0;
+    virtual int publish(CacheEntry *pEntry) = 0;
 
     //virtual int isDirty( CacheEntry * pEntry, long tmCur ) = 0;
 
 
-    virtual void removePermEntry( CacheEntry * pEntry ) = 0;
+    virtual void removePermEntry(CacheEntry *pEntry) = 0;
 
-    virtual int stale( CacheEntry* pEntry );
+    virtual int stale(CacheEntry *pEntry);
 
-    virtual int dispose( CacheStore::iterator iter, int isRemovePermEntry );
+    virtual int dispose(CacheStore::iterator iter, int isRemovePermEntry);
 
-    int     purge( CacheEntry*  pEntry );
-    int     refresh( CacheEntry*  pEntry );
+    int     purge(CacheEntry  *pEntry);
+    int     refresh(CacheEntry  *pEntry);
 
     void houseKeeping();
 
-    void setStorageRoot( const char * pRoot )
-    {   m_sRoot.setStr( pRoot );        }
-    
-    const AutoStr2& getRoot() const {   return m_sRoot; }
-    
-    void setMaxObjSize( long objSize )  {   m_lMaxObjSize = objSize;  }
-    long getMaxObjSize()    {   return m_lMaxObjSize;   }
-    void addToDirtyList( CacheEntry * pEntry )
-    {   m_dirtyList.push_back( pEntry );        }
+    void setStorageRoot(const char *pRoot)
+    {
+        m_sRoot.setStr(pRoot);
+    }
+
+    const AutoStr2 &getRoot() const
+    {
+        return m_sRoot;
+    }
+
+    void setMaxObjSize(long objSize)
+    {
+        m_iMaxObjSize = objSize;
+    }
+    long getMaxObjSize()
+    {
+        return m_iMaxObjSize;
+    }
+    void addToDirtyList(CacheEntry *pEntry)
+    {
+        m_dirtyList.push_back(pEntry);
+    }
 
 protected:
-    virtual int renameDiskEntry( CacheEntry * pEntry, char * pFrom,
-                 const char * pFromSuffix, const char * pToSuffix, int validate ) = 0;
+    virtual int renameDiskEntry(CacheEntry *pEntry, char *pFrom,
+                                const char *pFromSuffix, const char *pToSuffix, 
+                                int validate) = 0;
 
 private:
     int m_iTotalEntries;
@@ -105,8 +117,12 @@ private:
 
     TPointerList< CacheEntry > m_dirtyList;
 
-    long      m_lMaxObjSize;
+    long      m_iMaxObjSize;
     AutoStr2  m_sRoot;
+
+
+    LS_NO_COPY_ASSIGN(CacheStore);
 };
 
 #endif
+

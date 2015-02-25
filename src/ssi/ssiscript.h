@@ -19,6 +19,7 @@
 #define SSISCRIPT_H
 
 
+#include <lsdef.h>
 #include <util/autobuf.h>
 
 #include <util/autostr.h>
@@ -57,7 +58,7 @@ enum
 class ExprToken : public LinkedObj
 {
 public:
-    enum 
+    enum
     {
         EXP_NONE,
         EXP_STRING,
@@ -76,31 +77,34 @@ public:
         EXP_OR,
         EXP_END
     };
-    ExprToken() 
-        : m_type( EXP_NONE )
-        , m_obj( NULL )
-        {}
+    ExprToken()
+        : m_type(EXP_NONE)
+        , m_obj(NULL)
+    {}
     ~ExprToken();
-    
-    void setToken( int type, void * obj )
+
+    void setToken(int type, void *obj)
     {   m_type = type; m_obj = obj;     }
     int getType() const     {   return m_type;  }
-    void * getObj() const   {   return m_obj;   }
-    AutoStr2 * getStr() const   {   return (AutoStr2 *)m_obj;   }
-    SubstFormat * getFormat() const {   return (SubstFormat *)m_obj;   }
-    Pcregex * getRegex() const  {   return (Pcregex *)m_obj;    }
+    void *getObj() const   {   return m_obj;   }
+    AutoStr2 *getStr() const   {   return (AutoStr2 *)m_obj;   }
+    SubstFormat *getFormat() const {   return (SubstFormat *)m_obj;   }
+    Pcregex *getRegex() const  {   return (Pcregex *)m_obj;    }
 
     static int s_priority[EXP_END];
-    
+
     int getPriority() const {   return s_priority[m_type];  }
 
-    ExprToken * next() const
+    ExprToken *next() const
     {   return (ExprToken *)LinkedObj::next();  }
 
 private:
 
     int m_type;
-    void * m_obj;
+    void *m_obj;
+
+
+    LS_NO_COPY_ASSIGN(ExprToken);
 };
 
 
@@ -108,15 +112,15 @@ private:
 
 class Expression : public LinkedObj, public TLinkList<ExprToken>
 {
-    int appendToken( int token );
-    int appendString( const char * pBegin, int len );
-    int appendRegex( const char * pBegin, int len, int flag );
+    int appendToken(int token);
+    int appendString(const char *pBegin, int len);
+    int appendRegex(const char *pBegin, int len, int flag);
     int buildPrefix();
 
 public:
     Expression() {}
-    ~Expression() { release_objects();  }
-    int parse( const char * pBegin, const char * pEnd );
+    ~Expression() { releaseObjects();  }
+    int parse(const char *pBegin, const char *pEnd);
 };
 
 
@@ -141,27 +145,27 @@ public:
         SSI_Block
     };
 
-    SSIComponent() 
-        : m_content( 0 )
-        , m_iType( 0 )
-        , m_parsed( NULL ) 
-        {}
+    SSIComponent()
+        : m_content(0)
+        , m_iType(0)
+        , m_parsed(NULL)
+    {}
     virtual ~SSIComponent();
 
 
     int getType() const     {   return m_iType; }
-    void setType( int type ){   m_iType = type; }
-    AutoBuf * getContentBuf()   {   return &m_content;  }
+    void setType(int type) {   m_iType = type; }
+    AutoBuf *getContentBuf()   {   return &m_content;  }
 
-    void appendPrased( LinkedObj * p );
+    void appendPrased(LinkedObj *p);
 
-    LinkedObj * getFirstAttr() const
+    LinkedObj *getFirstAttr() const
     {   return m_parsed;       }
 
 private:
     AutoBuf m_content;
     int     m_iType;
-    LinkedObj * m_parsed;
+    LinkedObj *m_parsed;
 };
 
 class SSI_If : public SSIComponent
@@ -169,15 +173,15 @@ class SSI_If : public SSIComponent
 public:
     SSI_If();
     ~SSI_If();
-    void setIfBlock( SSIBlock * pBlock )    {   m_blockIf = pBlock;     }
-    void setElseBlock( SSIBlock * pBlock )  {   m_blockElse = pBlock;   }
+    void setIfBlock(SSIBlock *pBlock)    {   m_blockIf = pBlock;     }
+    void setElseBlock(SSIBlock *pBlock)  {   m_blockElse = pBlock;   }
 
-    SSIBlock * getIfBlock() const       {   return m_blockIf;   }
-    SSIBlock * getElseBlock() const     {   return m_blockElse; }
+    SSIBlock *getIfBlock() const       {   return m_blockIf;   }
+    SSIBlock *getElseBlock() const     {   return m_blockElse; }
 
 private:
-    SSIBlock * m_blockIf;
-    SSIBlock * m_blockElse;
+    SSIBlock *m_blockIf;
+    SSIBlock *m_blockElse;
 
 
 };
@@ -187,21 +191,21 @@ class SSIBlock : public TLinkList<SSIComponent>
 {
 public:
     SSIBlock()
-        : m_pParentBlock( NULL )
-        , m_pParentComp( NULL )
+        : m_pParentBlock(NULL)
+        , m_pParentComp(NULL)
     {}
-    SSIBlock( SSIBlock * pBlock, SSI_If *pComp)
-        : m_pParentBlock( pBlock )
-        , m_pParentComp( pComp )
+    SSIBlock(SSIBlock *pBlock, SSI_If *pComp)
+        : m_pParentBlock(pBlock)
+        , m_pParentComp(pComp)
     {}
 
-    ~SSIBlock() {   release_objects();  }
+    ~SSIBlock() {   releaseObjects();  }
 
-    SSIBlock     * getParentBlock() const   {   return m_pParentBlock;  }
-    SSI_If       * getParentComp() const    {   return m_pParentComp;   }
+    SSIBlock      *getParentBlock() const   {   return m_pParentBlock;  }
+    SSI_If        *getParentComp() const    {   return m_pParentComp;   }
 private:
-    SSIBlock * m_pParentBlock;
-    SSI_If   * m_pParentComp;
+    SSIBlock *m_pParentBlock;
+    SSI_If    *m_pParentComp;
 
 };
 
@@ -212,43 +216,44 @@ public:
 
     ~SSIScript();
 
-    int parse( SSITagConfig * pConfig, const char * pScriptPath );
+    int parse(SSITagConfig *pConfig, const char *pScriptPath);
 
     void resetRuntime()
-    {   m_pCurBlock = &m_main;
+    {
+        m_pCurBlock = &m_main;
         m_pCurComponent = (SSIComponent *)m_main.head()->next();
     }
-    void setCurrentBlock( SSIBlock * pBlock );
+    void setCurrentBlock(SSIBlock *pBlock);
 
-    SSIComponent * getCurrentComponent() const
+    SSIComponent *getCurrentComponent() const
     {   return m_pCurComponent;     }
-    SSIComponent * nextComponent();
+    SSIComponent *nextComponent();
 
-    const char * getPath() const
+    const char *getPath() const
     {   return m_sPath.c_str();     }
 
-    void setStatusCode(int code )   {   m_iParserState = code;      }
+    void setStatusCode(int code)   {   m_iParserState = code;      }
     int  getStatusCode() const      {   return m_iParserState;      }
 
     long getLastMod() const         {   return m_lModify;           }
 
     static int testParse();
 
-private: 
-    int processSSIFile( SSITagConfig * pConfig, int fd );
-    int parse( SSITagConfig * pConfig, char * pBegin, char *pEnd, int finish );
-    int append_html_content( const char * pBegin, const char * pEnd );
-    int parse_ssi_directive( const char * pBegin, const char * pEnd );
+private:
+    int processSSIFile(SSITagConfig *pConfig, int fd);
+    int parse(SSITagConfig *pConfig, char *pBegin, char *pEnd, int finish);
+    int append_html_content(const char *pBegin, const char *pEnd);
+    int parse_ssi_directive(const char *pBegin, const char *pEnd);
 
-    int parseIf( int cmd, const char * pBegin, const char * pEnd );
-    int addBlock( SSI_If * pSSI_If, int is_else );
-    int parseAttrs( int cmd, const char * pBegin, const char * pEnd );
+    int parseIf(int cmd, const char *pBegin, const char *pEnd);
+    int addBlock(SSI_If *pSSI_If, int is_else);
+    int parseAttrs(int cmd, const char *pBegin, const char *pEnd);
 
-    int getAttr( const char * &pBegin, const char * pEnd, 
-                char * pAttrName, const char * &pValue, 
-                int &valLen );
+    int getAttr(const char *&pBegin, const char *pEnd,
+                char *pAttrName, const char *&pValue,
+                int &valLen);
 
-    SSI_If * getComponentIf( SSIBlock * &pBlock );
+    SSI_If *getComponentIf(SSIBlock *&pBlock);
 
 
     AutoStr2    m_sPath;
@@ -257,8 +262,8 @@ private:
     long        m_lSize;
 
     SSIBlock        m_main;
-    SSIComponent  * m_pCurComponent;
-    SSIBlock      * m_pCurBlock;
+    SSIComponent   *m_pCurComponent;
+    SSIBlock       *m_pCurBlock;
 };
 
 #endif

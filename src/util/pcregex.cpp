@@ -31,29 +31,29 @@
 static int s_jit_key_inited = 0;
 static pthread_key_t s_jit_stack_key;
 
-void Pcregex::init_jit_stack()
+void Pcregex::initJitStack()
 {
     s_jit_key_inited = 1;
-    pthread_key_create( &s_jit_stack_key, release_jit_stack );
+    pthread_key_create(&s_jit_stack_key, releaseJitStack);
 }
 
-void Pcregex::release_jit_stack( void * pValue)
+void Pcregex::releaseJitStack(void *pValue)
 {
-    pcre_jit_stack_free((pcre_jit_stack *) pValue );
+    pcre_jit_stack_free((pcre_jit_stack *) pValue);
 }
 
 
-pcre_jit_stack * Pcregex::get_jit_stack()
+pcre_jit_stack *Pcregex::getJitStack()
 {
     pcre_jit_stack *jit_stack;
 
-    if ( !s_jit_key_inited )
-        init_jit_stack();
-    jit_stack = (pcre_jit_stack *)pthread_getspecific( s_jit_stack_key );
-    if ( !jit_stack )
+    if (!s_jit_key_inited)
+        initJitStack();
+    jit_stack = (pcre_jit_stack *)pthread_getspecific(s_jit_stack_key);
+    if (!jit_stack)
     {
-        jit_stack = (pcre_jit_stack *)pcre_jit_stack_alloc(32*1024, 512*1024);
-        pthread_setspecific( s_jit_stack_key, jit_stack );
+        jit_stack = (pcre_jit_stack *)pcre_jit_stack_alloc(32 * 1024, 512 * 1024);
+        pthread_setspecific(s_jit_stack_key, jit_stack);
     }
     return jit_stack;
 }

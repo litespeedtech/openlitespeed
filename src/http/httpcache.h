@@ -28,7 +28,7 @@
 
 class CacheElement;
 
-typedef HashStringMap<CacheElement*> CacheDataMap;
+typedef HashStringMap<CacheElement *> CacheDataMap;
 typedef TPointerList<CacheElement> DirtyCacheList;
 
 class HttpCache : public CacheDataMap
@@ -37,24 +37,24 @@ class HttpCache : public CacheDataMap
 
     void release();
 
-    HttpCache( const HttpCache& rhs );
-    void operator=( const HttpCache& rhs );
+    HttpCache(const HttpCache &rhs);
+    void operator=(const HttpCache &rhs);
     void clean();
     void dirtyAll();
-    
+
 protected:
-    virtual CacheElement* allocElement() = 0;
-    virtual void recycle( CacheElement* pData ) = 0;
+    virtual CacheElement *allocElement() = 0;
+    virtual void recycle(CacheElement *pData) = 0;
 public:
-    HttpCache( int initSize );
+    HttpCache(int initSize);
     virtual ~HttpCache();
     void releaseAll();
-    int add( CacheElement* data )
+    int add(CacheElement *data)
     {
-        assert( data != NULL );
-        return insert( data->getKey(), data )? 0 : -1;
+        assert(data != NULL);
+        return insert(data->getKey(), data) ? 0 : -1;
     }
-    int dirty( CacheElement* data );
+    int dirty(CacheElement *data);
     void onTimer();
 };
 

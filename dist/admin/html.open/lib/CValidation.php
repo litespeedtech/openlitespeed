@@ -426,7 +426,7 @@ class CValidation
 		|| ($type == 'file' && !is_file($absname)) ) {
 			$err = $type .' '. htmlspecialchars($absname) . ' does not exist.';
 			if ( $this->allow_create($attr, $absname) ) {
-				$err .= ' <a href="javascript:createFile(\''. $attr->GetKey() . '\')">CLICK TO CREATE</a>';
+				$err .= ' <a href="javascript:lst_createFile(\''. $attr->GetKey() . '\')">CLICK TO CREATE</a>';
 			} else {
 				$err .= ' Please create manually.';
 			}

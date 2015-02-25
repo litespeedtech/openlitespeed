@@ -29,7 +29,7 @@
 
 TEST(HttpRequestLineTest_test)
 {
-    const char * s_psMethod[] =
+    const char *s_psMethod[] =
     {
         "UNKNOWN",
         "OPTIONS ",
@@ -43,7 +43,7 @@ TEST(HttpRequestLineTest_test)
         "MOVE "
     };
 
-    const char * s_psMethodBad[] =
+    const char *s_psMethodBad[] =
     {
         "UNKNOWN",
         "OPTIONS23",
@@ -57,16 +57,14 @@ TEST(HttpRequestLineTest_test)
         " MOVE"
     };
     int i;
-    for( i = 0; i < 10; i++ )
+    for (i = 0; i < 10; i++)
     {
         //printf( "i=%d\n", i );
-        CHECK( i == HttpMethod::parse( s_psMethod[i] ) );
+        CHECK(i == HttpMethod::parse(s_psMethod[i]));
     }
     //CHECK( 0 == reqline.setMethod( s_psMethod[0] ) );
-    for( i = 1; i < 10; i++ )
-    {
-        CHECK( 0 == HttpMethod::parse( s_psMethodBad[i] ) );
-    }
+    for (i = 1; i < 10; i++)
+        CHECK(0 == HttpMethod::parse(s_psMethodBad[i]));
 //    const char * pV1 = "HTTP/1.1";
 //    const char * pV2 = "HTTP/1.0";
 //    const char * pV3 = "HTTP/11.20";

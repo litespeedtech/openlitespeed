@@ -19,17 +19,17 @@
 #define LSAPICONFIG_H
 
 
+
 #include <extensions/localworkerconfig.h>
 
 class LsapiConfig : public LocalWorkerConfig
 {
 
 public:
-    explicit LsapiConfig( const char * pName );
+    explicit LsapiConfig(const char *pName);
     LsapiConfig();
 
     ~LsapiConfig();
-
 };
 
 #endif

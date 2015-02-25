@@ -21,11 +21,12 @@
 #include <socket/coresocket.h>
 
 
-class RawSocket : public CoreSocket  {
-public: 
+class RawSocket : public CoreSocket
+{
+public:
     RawSocket(int iDomain, int iProtocol)
-        : CoreSocket( iDomain, SOCK_RAW, iProtocol )
-        {}
+        : CoreSocket(iDomain, SOCK_RAW, iProtocol)
+    {}
     ~RawSocket() {};
 };
 

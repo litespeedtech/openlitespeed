@@ -24,7 +24,6 @@
 #include <edio/multiplexer.h>
 #include <edio/multiplexerfactory.h>
 
-#include <http/httpglobals.h>
 #include <http/httplog.h>
 
 #include <util/datetime.h>
@@ -38,32 +37,32 @@
 #include <unistd.h>
 #include <ctype.h>
 
-const char * progname;
+const char *progname;
 
 void onIdleTime();
 
-char * argv0 = NULL;
+char *argv0 = NULL;
 
-static int initMultiplexer( const char * pType )
+static int initMultiplexer(const char *pType)
 {
-    Multiplexer * pMplx;
-    int iMultiplexerType = MultiplexerFactory::getType( pType );
-    pMplx = MultiplexerFactory::get( iMultiplexerType );
-    if ( pMplx != NULL )
+    Multiplexer *pMplx;
+    int iMultiplexerType = MultiplexerFactory::getType(pType);
+    pMplx = MultiplexerFactory::getNew(iMultiplexerType);
+    if (pMplx != NULL)
     {
-        if ( !pMplx->init( 1024 ) )
+        if (!pMplx->init(1024))
         {
-            HttpGlobals::setMultiplexer( pMplx );
+            MultiplexerFactory::setMultiplexer(pMplx);
             return 0;
         }
     }
-    return -1;
+    return LS_FAIL;
 }
 
 static void processTimer()
 {
     struct timeval tv;
-    gettimeofday( &tv, NULL );
+    gettimeofday(&tv, NULL);
 
     //FIXME: debug code
     //LOG_D(( "processTimer()" ));
@@ -71,21 +70,21 @@ static void processTimer()
     DateTime::s_curTime = tv.tv_sec;
     DateTime::s_curTimeUs = tv.tv_usec;
 
-    HttpGlobals::getMultiplexer()->timerExecute();
+    MultiplexerFactory::getMultiplexer()->timerExecute();
 }
 
 int eventLoop()
 {
-    register int ret;
+    int ret;
     // register int sigEvent;
-    while( true )
+    while (true)
     {
-        ret = HttpGlobals::getMultiplexer()->waitAndProcessEvents( 1000 );
-        if (( ret == -1 )&& errno )
+        ret = MultiplexerFactory::getMultiplexer()->waitAndProcessEvents(1000);
+        if ((ret == -1) && errno)
         {
-            if (!((errno == EINTR )||(errno == EAGAIN)))
+            if (!((errno == EINTR) || (errno == EAGAIN)))
             {
-                fprintf( stderr, "Unexpected error inside event loop: %s", strerror( errno ) );
+                fprintf(stderr, "Unexpected error inside event loop: %s", strerror(errno));
                 return 1;
             }
         }
@@ -128,19 +127,19 @@ int main(int argc, char *argv[])
 {
     HttpLog::init();
     progname = argv[0];
-    
+
     // Test the fail message
     // if ( LsLuaEngine::init(LsLuaEngine::LSLUA_ENGINE_JIT, "/usr/lib/junk.so") == -1)
     // if ( LsLuaEngine::init(LsLuaEngine::LSLUA_ENGINE_REGULAR , "/usr/lib/liblua.so") == -1)
     // if ( LsLuaEngine::init(LsLuaEngine::LSLUA_ENGINE_JIT, "/usr/lib/libluajit.so") == -1)
-    if ( LsLuaEngine::init() == -1 )
+    if (LsLuaEngine::init() == -1)
         return 1;
 
-    initMultiplexer( "epoll" );
+    initMultiplexer("epoll");
 
     eventLoop();
 
-    exit( 0 );
+    exit(0);
 }
 
 

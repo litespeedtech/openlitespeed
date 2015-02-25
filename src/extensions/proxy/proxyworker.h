@@ -19,20 +19,22 @@
 #define PROXYWORKER_H
 
 
+#include <lsdef.h>
 #include <extensions/extworker.h>
 class ProxyConfig;
 class ProxyWorker : public ExtWorker
 {
 protected:
 
-    virtual ExtConn * newConn();
+    virtual ExtConn *newConn();
 
-public: 
-    explicit ProxyWorker( const char * pName );
+public:
+    explicit ProxyWorker(const char *pName);
     ~ProxyWorker();
-    ProxyConfig& getConfig()
+    ProxyConfig &getConfig()
     {   return *((ProxyConfig *)getConfigPointer());  }
-    
+
+    LS_NO_COPY_ASSIGN(ProxyWorker);
 };
 
 #endif

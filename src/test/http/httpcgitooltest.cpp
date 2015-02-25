@@ -51,8 +51,8 @@
 //         if ( status == HttpReq::HEADER_OK )
 //             break;
 //     }
-// 
-//     CHECK( strncmp( pBuf, "this is the resp body", 21 ) == 0 );     
+//
+//     CHECK( strncmp( pBuf, "this is the resp body", 21 ) == 0 );
 //     CHECK( session.getReq()->getStatusCode() == SC_404 );
 //     session.getResp()->getOutputBuf().append( '\0' );
 //     const char * pOutput = session.getResp()->getOutputBuf().begin();
@@ -63,7 +63,7 @@
 //     CHECK( strstr( pOutput,     "MultiLineHeader: line1\r\n"
 //                                          " line2\r\n" ) != NULL );
 //     CHECK( *session.getReq()->getLocation() == 0 );
-// 
+//
 //     char test2[] = "Location: http://www.somewhere.com/\n\n";
 //     status = 0;
 //     session.getResp()->reset();
@@ -74,11 +74,11 @@
 //     CHECK( session.getReq()->getStatusCode() == SC_302 );
 //     session.getResp()->getOutputBuf().append( '\0' );
 //     pOutput = session.getResp()->getOutputBuf().begin();
-//     
+//
 //     CHECK( strstr( pOutput,
 //                     "Location: http://www.somewhere.com/\r\n" ) != NULL );
 //     CHECK( *session.getReq()->getLocation() == 0 );
-//     
+//
 //     char test3[] = "Location: /internal/redirect/url\n\n";
 //     status = 0;
 //     session.getResp()->reset();
@@ -89,13 +89,13 @@
 //     CHECK( session.getReq()->getStatusCode() == SC_200 );
 //     session.getResp()->getOutputBuf().append( '\0' );
 //     pOutput = session.getResp()->getOutputBuf().begin();
-// 
+//
 //     CHECK( strstr( pOutput,
 //                     "/internal/redirect/url" ) == NULL );
 //     CHECK( strcmp( "/internal/redirect/url",
 //                             session.getReq()->getLocation()) == 0 );
-//     
-//     
+//
+//
 // }
 
 #endif

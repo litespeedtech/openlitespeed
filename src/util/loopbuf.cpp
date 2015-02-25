@@ -24,75 +24,67 @@
 #include <assert.h>
 
 
-void LoopBuf::iov_insert( IOVec &vect ) const
+void LoopBuf::iovInsert(IOVec &vect) const
 {
     int size = this->size();
-    if ( size > 0 )
+    if (size > 0)
     {
-        int len = m_pBufEnd - m_pHead;
-        if ( size > len )
+        int len = pbufend - phead;
+        if (size > len)
         {
-            vect.push_front( m_pBuf, size - len );
-            vect.push_front( m_pHead, len );
+            vect.push_front(pbuf, size - len);
+            vect.push_front(phead, len);
         }
         else
-        {
-            vect.push_front( m_pHead, size );
-        }
+            vect.push_front(phead, size);
     }
 }
 
-void LoopBuf::iov_append( IOVec &vect ) const
+void LoopBuf::iovAppend(IOVec &vect) const
 {
     int size = this->size();
-    if ( size > 0 )
+    if (size > 0)
     {
-        int len = m_pBufEnd - m_pHead;
-        if ( size > len )
+        int len = pbufend - phead;
+        if (size > len)
         {
-            vect.append( m_pHead, len );
-            vect.append( m_pBuf, size - len );
+            vect.append(phead, len);
+            vect.append(pbuf, size - len);
         }
         else
-        {
-            vect.append( m_pHead, size );
-        }
+            vect.append(phead, size);
     }
 }
 
-void XLoopBuf::iov_insert( IOVec &vect ) const
+void XLoopBuf::iovInsert(IOVec &vect) const
 {
     int size = this->size();
-    if ( size > 0 )
+    if (size > 0)
     {
-        int len = m_loopbuf.m_pBufEnd - m_loopbuf.m_pHead;
-        if ( size > len )
+        int len = loopbuf.pbufend - loopbuf.phead;
+        if (size > len)
         {
-            vect.push_front( m_loopbuf.m_pBuf, size - len );
-            vect.push_front( m_loopbuf.m_pHead, len );
+            vect.push_front(loopbuf.pbuf, size - len);
+            vect.push_front(loopbuf.phead, len);
         }
         else
-        {
-            vect.push_front( m_loopbuf.m_pHead, size );
-        }
+            vect.push_front(loopbuf.phead, size);
     }
 }
 
-void XLoopBuf::iov_append( IOVec& vect ) const
+void XLoopBuf::iovAppend(IOVec &vect) const
 {
     int size = this->size();
-    if ( size > 0 )
+    if (size > 0)
     {
-        int len = m_loopbuf.m_pBufEnd - m_loopbuf.m_pHead;
-        if ( size > len )
+        int len = loopbuf.pbufend - loopbuf.phead;
+        if (size > len)
         {
-            vect.append( m_loopbuf.m_pHead, len );
-            vect.append( m_loopbuf.m_pBuf, size - len );
+            vect.append(loopbuf.phead, len);
+            vect.append(loopbuf.pbuf, size - len);
         }
         else
-        {
-            vect.append( m_loopbuf.m_pHead, size );
-        }
+            vect.append(loopbuf.phead, size);
     }
 }
 

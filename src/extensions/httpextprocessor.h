@@ -20,39 +20,41 @@
 
 
 
+#include <lsdef.h>
 #include <edio/flowcontrol.h>
 #include <log4cxx/ilog.h>
 
 class HttpExtConnector;
 
 class HttpExtProcessor : virtual public IOFlowControl
-                       , virtual public LOG4CXX_NS::ILog
+    , virtual public LOG4CXX_NS::ILog
 {
-    HttpExtConnector* m_pConnector;
+    HttpExtConnector *m_pConnector;
 protected:
-    HttpExtConnector* getConnector() const
+    HttpExtConnector *getConnector() const
     {   return m_pConnector;    }
-    void setConnector( HttpExtConnector* pConnector );
+    void setConnector(HttpExtConnector *pConnector);
 public:
     HttpExtProcessor()
-    : m_pConnector( 0 ) {};
+        : m_pConnector(0) {};
     virtual ~HttpExtProcessor() {};
     virtual void abort() = 0;
     virtual int  begin() = 0;
-    virtual int  beginReqBody( ) = 0;
-    virtual int  endOfReqBody( ) = 0;
-    virtual int  sendReqBody( const char * pBuf, int size ) = 0;
+    virtual int  beginReqBody() = 0;
+    virtual int  endOfReqBody() = 0;
+    virtual int  sendReqBody(const char *pBuf, int size) = 0;
     virtual int  sendReqHeader() = 0;
-    virtual int  readResp( char * pBuf, int size ) = 0;
+    virtual int  readResp(char *pBuf, int size) = 0;
     virtual void finishRecvBuf() = 0;
     virtual void dump() {}
 
     virtual void cleanUp() = 0;
 
 
-    LOG4CXX_NS::Logger * getLogger() const;
-    const char * getLogId();
+    LOG4CXX_NS::Logger *getLogger() const;
+    const char *getLogId();
 
+    LS_NO_COPY_ASSIGN(HttpExtProcessor);
 };
 
 #endif

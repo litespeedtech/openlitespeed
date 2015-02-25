@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013  LiteSpeed Technologies, Inc.                        *
+*    Copyright (C) 2013 - 2015  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -25,23 +25,24 @@
 #include <sys/time.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
+#include <lsdef.h>
 
 
 /*
-*   ls_expandfile - expanding current file
-*   return 0 if file expanded
-*   otherwise return -1 
-* 
-*   if incrsize < 0 the file will be reduced.
-*/
+ *   ls_expandfile - expanding current file
+ *   return 0 if file expanded
+ *   otherwise return -1
+ *
+ *   if incrsize < 0 the file will be reduced.
+ */
 int ls_expandfile(int fd, size_t fromsize, size_t incrsize)
 {
-    register size_t fromloc;
-    register int pagesize = getpagesize();
-    register size_t newsize = fromsize + incrsize;
-    
-    if ( ftruncate(fd, newsize) )
-        return -1 ;
+    size_t fromloc;
+    int pagesize = getpagesize();
+    size_t newsize = fromsize + incrsize;
+
+    if (ftruncate(fd, newsize) < 0)
+        return LS_FAIL;
 
     if (newsize <= fromsize)
         return 0;
@@ -52,11 +53,11 @@ int ls_expandfile(int fd, size_t fromsize, size_t incrsize)
         if (pwrite(fd, "", 1, fromsize) != 1)
         {
             ftruncate(fd, fromloc);
-            return -1;
+            return LS_FAIL;
         }
         fromsize += pagesize;
     }
-    while (fromsize < newsize) ;
+    while (fromsize < newsize);
     return 0;
 }
 

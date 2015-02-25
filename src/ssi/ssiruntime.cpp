@@ -19,7 +19,7 @@
 #include <util/pcregex.h>
 
 SSIRuntime::SSIRuntime()
-    : m_flag( 0 )
+    : m_flag(0)
 {
     init();
 }
@@ -29,24 +29,25 @@ SSIRuntime::~SSIRuntime()
 {
 }
 
-int SSIRuntime::initConfig( SSIConfig * pConfig )
+int SSIRuntime::initConfig(SSIConfig *pConfig)
 {
-    m_config.copy( pConfig );
-    if ( m_config.getTimeFmt()->c_str() == NULL )
-        m_config.setTimeFmt( "%A, %d-%b-%Y %H:%M:%S %Z", 24 );
-    if ( m_config.getErrMsg()->c_str() == NULL )
-        m_config.setErrMsg( "[an error occurred while processing this directive]", 50 );
-    if ( m_config.getEchoMsg()->c_str() == NULL )
-        m_config.setEchoMsg( "(none)", 6 );
+    m_config.copy(pConfig);
+    if (m_config.getTimeFmt()->c_str() == NULL)
+        m_config.setTimeFmt("%A, %d-%b-%Y %H:%M:%S %Z", 24);
+    if (m_config.getErrMsg()->c_str() == NULL)
+        m_config.setErrMsg("[an error occurred while processing this directive]",
+                           50);
+    if (m_config.getEchoMsg()->c_str() == NULL)
+        m_config.setEchoMsg("(none)", 6);
     return 0;
 }
 
-int SSIRuntime::execRegex( Pcregex * pReg, const char * pSubj, int len )
+int SSIRuntime::execRegex(Pcregex *pReg, const char *pSubj, int len)
 {
-    if (( !pReg )||( !pSubj )||( len < 0 )||(len>=40960))
-        return -1;
-    m_strRegex.setStr( pSubj, len );
-    m_regexResult.setBuf( m_strRegex.c_str() );
-    return pReg->exec( m_strRegex.c_str(), len, 0, 0, &m_regexResult );
+    if ((!pReg) || (!pSubj) || (len < 0) || (len >= 40960))
+        return LS_FAIL;
+    m_strRegex.setStr(pSubj, len);
+    m_regexResult.setBuf(m_strRegex.c_str());
+    return pReg->exec(m_strRegex.c_str(), len, 0, 0, &m_regexResult);
 }
 

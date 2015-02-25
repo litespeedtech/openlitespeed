@@ -21,7 +21,6 @@
 #include <http/contexttree.h>
 #include <http/handlertype.h>
 #include <http/htauth.h>
-#include <http/httpglobals.h>
 #include <http/httplog.h>
 #include <http/httpmime.h>
 #include <http/phpconfig.h>
@@ -46,91 +45,81 @@
 #include <errno.h>
 #include <stdio.h>
 #include <string.h>
-#include <util/ssnprintf.h>
+#include <lsr/ls_strtool.h>
 
 CtxInt HttpContext::s_defaultInternal =
-{   NULL, NULL, NULL, NULL, NULL, NULL,
+{
     NULL, NULL, NULL, NULL, NULL, NULL,
-    NULL, NULL, NULL, GSockAddr() } ;
+    NULL, NULL, NULL, NULL, NULL, NULL,
+    NULL, NULL, NULL, GSockAddr()
+} ;
 
 HttpContext::HttpContext()
-    : m_iConfigBits( 0 )
-    , m_pURIMatch( NULL )
-    , m_pMatchList( NULL )
-    , m_pFilesMatchStr( NULL )
-    , m_pHandler( NULL )
-    , m_pInternal( NULL )
-    , m_bAllowBrowse( BIT_ALLOW_BROWSE | BIT_INCLUDES | BIT_INCLUDES_NOEXEC )
-    , m_redirectCode( -1 )
-    , m_iSetUidMode( ENABLE_SCRIPT )
-    , m_iConfigBits2( BIT_URI_CACHEABLE )
-    , m_iRewriteEtag( 0 )
+    : m_iConfigBits(0)
+    , m_pURIMatch(NULL)
+    , m_pMatchList(NULL)
+    , m_pFilesMatchStr(NULL)
+    , m_pHandler(NULL)
+    , m_pInternal(NULL)
+    , m_bAllowBrowse(BIT_ALLOW_BROWSE | BIT_INCLUDES | BIT_INCLUDES_NOEXEC)
+    , m_redirectCode(-1)
+    , m_iSetUidMode(ENABLE_SCRIPT)
+    , m_iConfigBits2(BIT_URI_CACHEABLE)
+    , m_iRewriteEtag(0)
 //    , m_iFilesMatchCtx( 0 )
-    , m_lHTALastMod( 0 )
-    , m_pRewriteBase( NULL )
-    , m_pRewriteRules( NULL )
-    , m_pParent( NULL )
+    , m_lHTALastMod(0)
+    , m_pRewriteBase(NULL)
+    , m_pRewriteRules(NULL)
+    , m_pParent(NULL)
 {
     m_pInternal = &s_defaultInternal;
 }
 
 HttpContext::~HttpContext()
 {
-    if ( m_pMatchList )
-    {
+    if (m_pMatchList)
         delete m_pMatchList;
-    }
-    
-    if (m_pFilesMatchStr )
+
+    if (m_pFilesMatchStr)
         delete m_pFilesMatchStr;
-    if ( m_pURIMatch )
+    if (m_pURIMatch)
         delete m_pURIMatch;
-    if ( m_pRewriteBase )
+    if (m_pRewriteBase)
         delete m_pRewriteBase;
     releaseHTAConf();
 
-    if (( m_iConfigBits & BIT_CTXINT ))
-    {
-        Pool::deallocate( m_pInternal, sizeof( CtxInt ) );
-    }
-    if (( m_iConfigBits & BIT_MODULECONFIG ))
-    {
+    if ((m_iConfigBits & BIT_CTXINT))
+        Pool::deallocate(m_pInternal, sizeof(CtxInt));
+    if ((m_iConfigBits & BIT_MODULECONFIG))
         delete m_pInternal->m_pModuleConfig;
-    }
-    if (( m_iConfigBits & BIT_SESSIONHOOKS ))
-    {
+    if ((m_iConfigBits & BIT_SESSIONHOOKS))
         delete m_pInternal->m_pSessionHooks;
-    }
 }
 
 void HttpContext::releaseHTAConf()
 {
-    if (( m_pRewriteRules )&&( m_iConfigBits & BIT_REWRITE_RULE ))
-    {
+    if ((m_pRewriteRules) && (m_iConfigBits & BIT_REWRITE_RULE))
         delete m_pRewriteRules;
-    }
-    if (( m_iConfigBits & BIT_CTXINT ))
+    if ((m_iConfigBits & BIT_CTXINT))
     {
-        if (( m_iConfigBits & BIT_DIRINDEX )&&( m_pInternal->m_pIndexList ))
-        {
+        if ((m_iConfigBits & BIT_DIRINDEX) && (m_pInternal->m_pIndexList))
             delete m_pInternal->m_pIndexList;
-        }
-        if (( m_iConfigBits & BIT_PHPCONFIG )&&( m_pInternal->m_pPHPConfig ))
+        if ((m_iConfigBits & BIT_PHPCONFIG) && (m_pInternal->m_pPHPConfig))
             delete m_pInternal->m_pPHPConfig;
-        if (( m_iConfigBits & BIT_ERROR_DOC )&&( m_pInternal->m_pCustomErrUrls ))
+        if ((m_iConfigBits & BIT_ERROR_DOC) && (m_pInternal->m_pCustomErrUrls))
             delete m_pInternal->m_pCustomErrUrls;
-        if (( m_iConfigBits & BIT_AUTH_REQ )&&( m_pInternal->m_pRequired ))
+        if ((m_iConfigBits & BIT_AUTH_REQ) && (m_pInternal->m_pRequired))
             delete m_pInternal->m_pRequired;
-        if (( m_iConfigBits & BIT_FILES_MATCH )&&( m_pInternal->m_pFilesMatchList ))
+        if ((m_iConfigBits & BIT_FILES_MATCH) && (m_pInternal->m_pFilesMatchList))
             delete m_pInternal->m_pFilesMatchList;
-        if (( m_iConfigBits & BIT_EXTRA_HEADER )&&( m_pInternal->m_pExtraHeader ))
+        if ((m_iConfigBits & BIT_EXTRA_HEADER) && (m_pInternal->m_pExtraHeader))
             delete m_pInternal->m_pExtraHeader;
         releaseHTAuth();
         releaseAccessControl();
         releaseMIME();
         releaseDefaultCharset();
-        
-        memset( m_pInternal, 0 , sizeof( CtxInt ) );
+
+        memset(m_pInternal, 0 , sizeof(CtxInt));
         m_iConfigBits = BIT_CTXINT;
     }
     else
@@ -139,34 +128,34 @@ void HttpContext::releaseHTAConf()
 
 
 
-int HttpContext::set( const char * pURI, const char * pLocation,
-            const HttpHandler * pHandler, bool browse, int regex)
+int HttpContext::set(const char *pURI, const char *pLocation,
+                     const HttpHandler *pHandler, bool browse, int regex)
 {
-    if ( pURI == NULL )
+    if (pURI == NULL)
         return EINVAL;
-    if ( strncasecmp( pURI, "exp:", 4 ) == 0 )
+    if (strncasecmp(pURI, "exp:", 4) == 0)
     {
         regex = 1;
         pURI += 4;
-        while( isspace( *pURI ) )
+        while (isspace(*pURI))
             ++pURI;
-        if ( !*pURI )
+        if (!*pURI)
             return EINVAL;
     }
-    if ( regex )
+    if (regex)
     {
-        int ret = setURIMatch( pURI, pLocation );
-        if ( ret )
+        int ret = setURIMatch(pURI, pLocation);
+        if (ret)
             return ret;
     }
-    int isDir= 0;
-    if (( pLocation )&&( *pLocation ))
+    int isDir = 0;
+    if ((pLocation) && (*pLocation))
     {
-        int len = strlen( pLocation );
-        m_sLocation.prealloc( len + 15 );
-        strcpy( m_sLocation.buf(), pLocation );
-        m_sLocation.setLen( len );
-        if ( *(pLocation + len - 1 ) == '/' )
+        int len = strlen(pLocation);
+        m_sLocation.prealloc(len + 15);
+        strcpy(m_sLocation.buf(), pLocation);
+        m_sLocation.setLen(len);
+        if (*(pLocation + len - 1) == '/')
             isDir = 1;
 //        if ( type < HandlerType::HT_FASTCGI )
 //        {
@@ -176,74 +165,72 @@ int HttpContext::set( const char * pURI, const char * pLocation,
 //                m_sLocation += "/";
 //        }
     }
-    int len = strlen( pURI );
-    m_sContextURI.prealloc( len + 8 );
-    strcpy( m_sContextURI.buf(), pURI );
-    if (( isDir && !regex )&&( *( pURI + len - 1 ) != '/' ))
+    int len = strlen(pURI);
+    m_sContextURI.prealloc(len + 8);
+    strcpy(m_sContextURI.buf(), pURI);
+    if ((isDir && !regex) && (*(pURI + len - 1) != '/'))
     {
-        *( m_sContextURI.buf() + len++ ) = '/';
-        *( m_sContextURI.buf() + len ) = '\0';
+        *(m_sContextURI.buf() + len++) = '/';
+        *(m_sContextURI.buf() + len) = '\0';
     }
-    m_sContextURI.setLen( len );
+    m_sContextURI.setLen(len);
     m_pHandler = pHandler;
     allowBrowse(browse);
     return 0;
 }
 
-int HttpContext::setFilesMatch( const char * pURI, int regex )
+int HttpContext::setFilesMatch(const char *pURI, int regex)
 {
-    if ( !pURI )
-        return -1;
-    if ( regex )
+    if (!pURI)
+        return LS_FAIL;
+    if (regex)
     {
         //m_iFilesMatchCtx = 1;
-        return setURIMatch( pURI, NULL );
+        return setURIMatch(pURI, NULL);
     }
     else
     {
-        if ( m_pFilesMatchStr )
+        if (m_pFilesMatchStr)
         {
             //assert( m_iFilesMatchCtx );
             delete m_pFilesMatchStr;
         }
-        m_pFilesMatchStr = StringTool::parseMatchPattern( pURI );
+        m_pFilesMatchStr = StringTool::parseMatchPattern(pURI);
         //m_iFilesMatchCtx = 1;
-        return ( m_pFilesMatchStr == NULL );
+        return (m_pFilesMatchStr == NULL);
     }
-    
+
 }
 
 
-int HttpContext::matchFiles( const char * pFile, int len ) const
+int HttpContext::matchFiles(const char *pFile, int len) const
 {
     //if ( !m_iFilesMatchCtx )
     //    return 0;
-    if ( m_pURIMatch )
+    if (m_pURIMatch)
+        return (m_pURIMatch->match(pFile, len) > 0) ;
+    else if (m_pFilesMatchStr)
     {
-        return (m_pURIMatch->match( pFile, len ) > 0) ;
-    }
-    else if ( m_pFilesMatchStr )
-    {
-        return ( StringTool::strmatch( pFile, pFile + len,
-                    m_pFilesMatchStr->begin(),
-                    m_pFilesMatchStr->end(), 1 ) == 0 );
+        return (StringTool::strMatch(pFile, pFile + len,
+                                     m_pFilesMatchStr->begin(),
+                                     m_pFilesMatchStr->end(), 1) == 0);
     }
     return 0;
 }
 
 
-const HttpContext * HttpContext::matchFilesContext( const char * pFile,
-                    int len ) const
+const HttpContext *HttpContext::matchFilesContext(const char *pFile,
+        int len) const
 {
     //if ( !m_pInternal ||!m_pInternal->m_pFilesMatchList)
-    if ( !m_pInternal->m_pFilesMatchList)
+    if (!m_pInternal->m_pFilesMatchList)
         return NULL;
     ContextList::iterator iter;
-    for( iter = m_pInternal->m_pFilesMatchList->begin();
+    for (iter = m_pInternal->m_pFilesMatchList->begin();
          iter != m_pInternal->m_pFilesMatchList->end();
-         ++iter )
+         ++iter)
     {
-        if ( (*iter)->matchFiles( pFile, len ) == 1 )
+        if ((*iter)->matchFiles(pFile, len) == 1)
             return *iter;
     }
     return NULL;
@@ -251,52 +238,52 @@ const HttpContext * HttpContext::matchFilesContext( const char * pFile,
 
 
 
-int HttpContext::addFilesMatchContext( HttpContext * pContext )
+int HttpContext::addFilesMatchContext(HttpContext *pContext)
 {
-    if (!( m_iConfigBits & BIT_FILES_MATCH ))
+    if (!(m_iConfigBits & BIT_FILES_MATCH))
     {
-        if ( allocateInternal() )
-            return -1;
-        ContextList * pList = new ContextList();
-        if ( !pList )
-            return -1;
+        if (allocateInternal())
+            return LS_FAIL;
+        ContextList *pList = new ContextList();
+        if (!pList)
+            return LS_FAIL;
         m_pInternal->m_pFilesMatchList = pList;
-        m_iConfigBits |= BIT_FILES_MATCH;        
+        m_iConfigBits |= BIT_FILES_MATCH;
     }
-    if ( m_pInternal->m_pFilesMatchList->add( pContext, 1 ) == -1 )
-        return -1;
-    pContext->setParent( this );
+    if (m_pInternal->m_pFilesMatchList->add(pContext, 1) == -1)
+        return LS_FAIL;
+    pContext->setParent(this);
     return 0;
 }
 
-int HttpContext::setURIMatch( const char * pRegex, const char * pSubst )
+int HttpContext::setURIMatch(const char *pRegex, const char *pSubst)
 {
-    if ( m_pURIMatch )
+    if (m_pURIMatch)
         delete m_pURIMatch;
     m_pURIMatch = new URIMatch();
-    if ( !m_pURIMatch )
+    if (!m_pURIMatch)
         return ENOMEM;
-    m_pURIMatch->set( pRegex, pSubst );
-    if ( pRegex )
-        m_sContextURI.setStr( pRegex );
-    if ( pSubst )
-        m_sLocation.setStr( pSubst );
-    return 0;    
+    m_pURIMatch->set(pRegex, pSubst);
+    if (pRegex)
+        m_sContextURI.setStr(pRegex);
+    if (pSubst)
+        m_sLocation.setStr(pSubst);
+    return 0;
 }
 
-void HttpContext::setRoot( const char * pRoot )
+void HttpContext::setRoot(const char *pRoot)
 {
-    m_sLocation.setStr( pRoot, strlen( pRoot ) );
+    m_sLocation.setStr(pRoot, strlen(pRoot));
 }
 
 int HttpContext::allocateInternal()
 {
-    if ( !(m_iConfigBits & BIT_CTXINT ) )
+    if (!(m_iConfigBits & BIT_CTXINT))
     {
-        m_pInternal = (CtxInt *)Pool::allocate( sizeof( CtxInt ) );
-        if ( !m_pInternal )
-            return -1;
-        memset( m_pInternal, 0, sizeof( CtxInt ) );
+        m_pInternal = (CtxInt *)Pool::allocate(sizeof(CtxInt));
+        if (!m_pInternal)
+            return LS_FAIL;
+        memset(m_pInternal, 0, sizeof(CtxInt));
         m_iConfigBits |= BIT_CTXINT;
     }
     return 0;
@@ -304,7 +291,7 @@ int HttpContext::allocateInternal()
 
 void HttpContext::releaseMIME()
 {
-    if ((m_iConfigBits & BIT_MIME)&& m_pInternal->m_pMIME )
+    if ((m_iConfigBits & BIT_MIME) && m_pInternal->m_pMIME)
     {
         delete m_pInternal->m_pMIME;
         m_iConfigBits &= ~BIT_MIME;
@@ -316,11 +303,11 @@ int HttpContext::initMIME()
 {
     if (!(m_iConfigBits & BIT_MIME))
     {
-        if ( allocateInternal() )
-            return -1;
-        HttpMime * pMIME = new HttpMime();
-        if ( !pMIME )
-            return -1;
+        if (allocateInternal())
+            return LS_FAIL;
+        HttpMime *pMIME = new HttpMime();
+        if (!pMIME)
+            return LS_FAIL;
         m_pInternal->m_pMIME = pMIME;
         m_iConfigBits |= BIT_MIME;
     }
@@ -330,31 +317,31 @@ int HttpContext::initMIME()
 
 
 
-static AutoStr2 * s_pDefaultCharset = NULL;
+static AutoStr2 *s_pDefaultCharset = NULL;
 
 void HttpContext::releaseDefaultCharset()
 {
-    if ((m_iConfigBits & BIT_DEF_CHARSET)&& m_pInternal->m_pDefaultCharset
-        &&( m_pInternal->m_pDefaultCharset != s_pDefaultCharset ))
+    if ((m_iConfigBits & BIT_DEF_CHARSET) && m_pInternal->m_pDefaultCharset
+        && (m_pInternal->m_pDefaultCharset != s_pDefaultCharset))
     {
         delete m_pInternal->m_pDefaultCharset;
         m_iConfigBits &= ~BIT_DEF_CHARSET;
     }
-    if ( m_pInternal )
+    if (m_pInternal)
         m_pInternal->m_pDefaultCharset = NULL;
 }
 
-void HttpContext::setDefaultCharset( const char * pCharset )
+void HttpContext::setDefaultCharset(const char *pCharset)
 {
     releaseDefaultCharset();
-    if ( pCharset )
+    if (pCharset)
     {
-        if ( allocateInternal() )
+        if (allocateInternal())
             return ;
         char achBuf[256];
-        safe_snprintf( achBuf, 255, "; charset=%s", pCharset );
+        ls_snprintf(achBuf, 255, "; charset=%s", pCharset);
         achBuf[255] = 0;
-        m_pInternal->m_pDefaultCharset = new AutoStr2( achBuf );
+        m_pInternal->m_pDefaultCharset = new AutoStr2(achBuf);
     }
     m_iConfigBits |= BIT_DEF_CHARSET;
 }
@@ -362,76 +349,77 @@ void HttpContext::setDefaultCharset( const char * pCharset )
 void HttpContext::setDefaultCharsetOn()
 {
     releaseDefaultCharset();
-    if ( !s_pDefaultCharset )
+    if (!s_pDefaultCharset)
     {
-        s_pDefaultCharset = new AutoStr2( "; charset=ISO-8859-1" );
-        if ( !s_pDefaultCharset )
+        s_pDefaultCharset = new AutoStr2("; charset=ISO-8859-1");
+        if (!s_pDefaultCharset)
             return;
     }
-    if ( allocateInternal() )
+    if (allocateInternal())
         return ;
     m_pInternal->m_pDefaultCharset = s_pDefaultCharset;
     m_iConfigBits |= BIT_DEF_CHARSET;
 }
 
 
-void HttpContext::setHTAuth(HTAuth* pHTAuth)
+void HttpContext::setHTAuth(HTAuth *pHTAuth)
 {
     releaseHTAuth();
-    if ( allocateInternal() )
+    if (allocateInternal())
         return ;
     m_pInternal->m_pHTAuth = pHTAuth;
     m_iConfigBits |= BIT_AUTH;
 }
 
-int HttpContext::setExtraHeaders( const char * pLogId, const char * pHeaders, int len )
+int HttpContext::setExtraHeaders(const char *pLogId, const char *pHeaders,
+                                 int len)
 {
-    if ( allocateInternal() )
-        return -1;
-    if ( !(m_iConfigBits & BIT_EXTRA_HEADER) )
+    if (allocateInternal())
+        return LS_FAIL;
+    if (!(m_iConfigBits & BIT_EXTRA_HEADER))
     {
-        m_pInternal->m_pExtraHeader = new AutoBuf( 512 );
-        if ( !m_pInternal->m_pExtraHeader )
+        m_pInternal->m_pExtraHeader = new AutoBuf(512);
+        if (!m_pInternal->m_pExtraHeader)
         {
-            LOG_WARN(( "[%s] Failed to allocate buffer for extra headers", pLogId ));
-            return -1;
+            LOG_WARN(("[%s] Failed to allocate buffer for extra headers", pLogId));
+            return LS_FAIL;
         }
     }
     m_iConfigBits |= BIT_EXTRA_HEADER;
-    if ( strcasecmp( pHeaders, "none" ) == 0 )
+    if (strcasecmp(pHeaders, "none") == 0)
         return 0;
-    
-    const char * pEnd = pHeaders + len;
-    const char * pLineBegin, *pLineEnd;
+
+    const char *pEnd = pHeaders + len;
+    const char *pLineBegin, *pLineEnd;
     pLineBegin = pHeaders;
-    while( (pLineEnd = StringTool::getLine( pLineBegin, pEnd )) )
+    while ((pLineEnd = StringTool::getLine(pLineBegin, pEnd)))
     {
-        const char * pCurEnd = pLineEnd;
-        StringTool::strtrim( pLineBegin, pCurEnd );
-        if ( pLineBegin < pCurEnd )
+        const char *pCurEnd = pLineEnd;
+        StringTool::strTrim(pLineBegin, pCurEnd);
+        if (pLineBegin < pCurEnd)
         {
-            const char * pHeaderNameEnd = strpbrk( pLineBegin, ": " );
-            if (( pHeaderNameEnd )&&( pHeaderNameEnd > pLineBegin )&&
-                    ( pHeaderNameEnd + 1 < pCurEnd ))
+            const char *pHeaderNameEnd = strpbrk(pLineBegin, ": ");
+            if ((pHeaderNameEnd) && (pHeaderNameEnd > pLineBegin) &&
+                (pHeaderNameEnd + 1 < pCurEnd))
             {
                 m_pInternal->m_pExtraHeader->append(
-                    pLineBegin, pHeaderNameEnd - pLineBegin );
-                m_pInternal->m_pExtraHeader->append_unsafe( ':' );
-                m_pInternal->m_pExtraHeader->append( pHeaderNameEnd + 1,
-                            pCurEnd - pHeaderNameEnd - 1 );
-                m_pInternal->m_pExtraHeader->append( "\r\n", 2 );
+                    pLineBegin, pHeaderNameEnd - pLineBegin);
+                m_pInternal->m_pExtraHeader->appendUnsafe(':');
+                m_pInternal->m_pExtraHeader->append(pHeaderNameEnd + 1,
+                                                    pCurEnd - pHeaderNameEnd - 1);
+                m_pInternal->m_pExtraHeader->append("\r\n", 2);
             }
             else
             {
-                char * p = ( char * )pCurEnd;
+                char *p = (char *)pCurEnd;
                 *p = '0';
-                LOG_WARN(( "[%s] Invalid Header: %s", pLogId, pLineBegin ));
+                LOG_WARN(("[%s] Invalid Header: %s", pLogId, pLineBegin));
                 *p = '\n';
             }
         }
 
         pLineBegin = pLineEnd;
-        while( isspace( *pLineBegin ) )
+        while (isspace(*pLineBegin))
             ++pLineBegin;
     }
     return 0;
@@ -440,7 +428,7 @@ int HttpContext::setExtraHeaders( const char * pLogId, const char * pHeaders, in
 
 void HttpContext::releaseHTAuth()
 {
-    if ((m_iConfigBits & BIT_AUTH)&&( m_pInternal->m_pHTAuth ))
+    if ((m_iConfigBits & BIT_AUTH) && (m_pInternal->m_pHTAuth))
     {
         delete m_pInternal->m_pHTAuth;
         m_pInternal->m_pHTAuth = NULL;
@@ -448,31 +436,31 @@ void HttpContext::releaseHTAuth()
 }
 
 
-int HttpContext::setAuthRequired( const char * pRequired )
+int HttpContext::setAuthRequired(const char *pRequired)
 {
-    if (!(m_iConfigBits & BIT_AUTH_REQ )||
-        (!m_pInternal)||!m_pInternal->m_pRequired )
+    if (!(m_iConfigBits & BIT_AUTH_REQ) ||
+        (!m_pInternal) || !m_pInternal->m_pRequired)
     {
-        if ( allocateInternal() )
-            return -1;
-        if ( !m_pInternal->m_pRequired )
+        if (allocateInternal())
+            return LS_FAIL;
+        if (!m_pInternal->m_pRequired)
         {
             m_pInternal->m_pRequired = new AuthRequired();
-            if ( !m_pInternal->m_pRequired )
-                return -1;
+            if (!m_pInternal->m_pRequired)
+                return LS_FAIL;
         }
         m_iConfigBits |= BIT_AUTH_REQ;
 
     }
-    return m_pInternal->m_pRequired->parse( pRequired );
+    return m_pInternal->m_pRequired->parse(pRequired);
 }
 
 
-int HttpContext::setAccessControl(AccessControl* pAccess)
+int HttpContext::setAccessControl(AccessControl *pAccess)
 {
     releaseAccessControl();
-    if ( allocateInternal() )
-        return -1;
+    if (allocateInternal())
+        return LS_FAIL;
     m_pInternal->m_pAccessCtrl = pAccess;
     m_iConfigBits |= BIT_ACCESS;
     return 0;
@@ -480,29 +468,29 @@ int HttpContext::setAccessControl(AccessControl* pAccess)
 
 void HttpContext::releaseAccessControl()
 {
-    if ((m_iConfigBits & BIT_ACCESS)&& m_pInternal->m_pAccessCtrl )
+    if ((m_iConfigBits & BIT_ACCESS) && m_pInternal->m_pAccessCtrl)
     {
         delete m_pInternal->m_pAccessCtrl;
         m_pInternal->m_pAccessCtrl = NULL;
     }
 }
 
-int HttpContext::addAccessRule( const char * pRule, int allow )
+int HttpContext::addAccessRule(const char *pRule, int allow)
 {
-    if ( !(m_iConfigBits & BIT_ACCESS) || !m_pInternal->m_pAccessCtrl )
+    if (!(m_iConfigBits & BIT_ACCESS) || !m_pInternal->m_pAccessCtrl)
     {
-        AccessControl * pCtrl = new AccessControl();
-        if (( !pCtrl )||( setAccessControl( pCtrl ) ))
-            return -1;
+        AccessControl *pCtrl = new AccessControl();
+        if ((!pCtrl) || (setAccessControl(pCtrl)))
+            return LS_FAIL;
     }
-    m_pInternal->m_pAccessCtrl->addList( pRule, allow );
+    m_pInternal->m_pAccessCtrl->addList(pRule, allow);
     return 0;
 }
 
-int HttpContext::setAuthorizer( const HttpHandler * pHandler )
+int HttpContext::setAuthorizer(const HttpHandler *pHandler)
 {
-    if ( allocateInternal() )
-        return -1;
+    if (allocateInternal())
+        return LS_FAIL;
     m_pInternal->m_pAuthorizer = pHandler;
     m_iConfigBits |= BIT_AUTHORIZER;
     return 0;
@@ -510,413 +498,383 @@ int HttpContext::setAuthorizer( const HttpHandler * pHandler )
 
 
 
-static RewriteRuleList * getValidRewriteRules(
-    const HttpContext * pContext )
+static RewriteRuleList *getValidRewriteRules(
+    const HttpContext *pContext)
 {
-    while( pContext )
+    while (pContext)
     {
-        if ( pContext->getRewriteRules() )
+        if (pContext->getRewriteRules())
             return pContext->getRewriteRules();
-        if ( !(pContext->rewriteEnabled() & REWRITE_INHERIT) )
+        if (!(pContext->rewriteEnabled() & REWRITE_INHERIT))
             break;
         pContext = pContext->getParent();
     }
     return NULL;
 }
 
-void HttpContext::inherit(const HttpContext * pRootContext )
+void HttpContext::inherit(const HttpContext *pRootContext)
 {
-    if ( !m_pParent )
+    if (!m_pParent)
         return;
-    if ( !m_pHandler )
+    if (!m_pHandler)
         m_pHandler = m_pParent->m_pHandler;
-    if ( !(m_iConfigBits & BIT_CTXINT ) )
-    {
+    if (!(m_iConfigBits & BIT_CTXINT))
         m_pInternal = m_pParent->m_pInternal;
-    }
     else
     {
-        if ( !(m_iConfigBits & BIT_AUTH) )
-        {
+        if (!(m_iConfigBits & BIT_AUTH))
             m_pInternal->m_pHTAuth = m_pParent->getHTAuth();
-        }
-        if ( !(m_iConfigBits & BIT_AUTH_REQ ) )
-        {
+        if (!(m_iConfigBits & BIT_AUTH_REQ))
             m_pInternal->m_pRequired = m_pParent->m_pInternal->m_pRequired;
-        }
-        if ( !(m_iConfigBits & BIT_ACCESS) )
-        {
+        if (!(m_iConfigBits & BIT_ACCESS))
             m_pInternal->m_pAccessCtrl = m_pParent->getAccessControl();
-        }
-        if ( !(m_iConfigBits & BIT_DEF_CHARSET ) )
-        {
+        if (!(m_iConfigBits & BIT_DEF_CHARSET))
             m_pInternal->m_pDefaultCharset = m_pParent->m_pInternal->m_pDefaultCharset;
-        }
-        if ( !(m_iConfigBits & BIT_MIME ) )
-        {
+        if (!(m_iConfigBits & BIT_MIME))
             m_pInternal->m_pMIME = m_pParent->m_pInternal->m_pMIME;
-        }
         else
         {
-            if ( m_pInternal->m_pMIME )
+            if (m_pInternal->m_pMIME)
             {
-                m_pInternal->m_pMIME->inherit( HttpGlobals::getMime(), 1 );
-                m_pInternal->m_pMIME->inherit( m_pParent->m_pInternal->m_pMIME, 0 );
+                m_pInternal->m_pMIME->inherit(HttpMime::getMime(), 1);
+                m_pInternal->m_pMIME->inherit(m_pParent->m_pInternal->m_pMIME, 0);
             }
         }
-        if ( !(m_iConfigBits & BIT_FORCE_TYPE ) )
-        {
+        if (!(m_iConfigBits & BIT_FORCE_TYPE))
             m_pInternal->m_pForceType = m_pParent->m_pInternal->m_pForceType;
-        }
-        if ( !(m_iConfigBits & BIT_AUTHORIZER ) )
-        {
+        if (!(m_iConfigBits & BIT_AUTHORIZER))
             m_pInternal->m_pAuthorizer = m_pParent->m_pInternal->m_pAuthorizer;
-        }
-        if ( !(m_iConfigBits & BIT_DIRINDEX ))
-        {
+        if (!(m_iConfigBits & BIT_DIRINDEX))
             m_pInternal->m_pIndexList = m_pParent->m_pInternal->m_pIndexList;
-        }
-        if ( !(m_iConfigBits & BIT_PHPCONFIG ))
+        if (!(m_iConfigBits & BIT_PHPCONFIG))
             m_pInternal->m_pPHPConfig = m_pParent->m_pInternal->m_pPHPConfig;
         else
         {
-            m_pInternal->m_pPHPConfig->merge( m_pParent->m_pInternal->m_pPHPConfig );
+            m_pInternal->m_pPHPConfig->merge(m_pParent->m_pInternal->m_pPHPConfig);
             m_pInternal->m_pPHPConfig->buildLsapiEnv();
         }
-        if ( !(m_iConfigBits & BIT_ERROR_DOC ))
+        if (!(m_iConfigBits & BIT_ERROR_DOC))
             m_pInternal->m_pCustomErrUrls = m_pParent->m_pInternal->m_pCustomErrUrls;
         else
         {
             m_pInternal->m_pCustomErrUrls->inherit(
-                        m_pParent->m_pInternal->m_pCustomErrUrls );
+                m_pParent->m_pInternal->m_pCustomErrUrls);
         }
-        if ( m_iConfigBits & BIT_FILES_MATCH )
+        if (m_iConfigBits & BIT_FILES_MATCH)
         {
             ContextList::iterator iter;
-            for( iter = m_pInternal->m_pFilesMatchList->begin();
-                 iter != m_pInternal->m_pFilesMatchList->end(); ++iter )
-            {
-                (*iter)->inherit( pRootContext );
-            }
+            for (iter = m_pInternal->m_pFilesMatchList->begin();
+                 iter != m_pInternal->m_pFilesMatchList->end(); ++iter)
+                (*iter)->inherit(pRootContext);
             m_pInternal->m_pFilesMatchList->merge(
-                    m_pParent->m_pInternal->m_pFilesMatchList, 0 );
+                m_pParent->m_pInternal->m_pFilesMatchList, 0);
         }
         else
             m_pInternal->m_pFilesMatchList = m_pParent->m_pInternal->m_pFilesMatchList;
 
-        if ( !(m_iConfigBits & BIT_EXTRA_HEADER ))
-        {
+        if (!(m_iConfigBits & BIT_EXTRA_HEADER))
             m_pInternal->m_pExtraHeader = m_pParent->m_pInternal->m_pExtraHeader;
-        }
-        
-        if ( !(m_iConfigBits & BIT_MODULECONFIG ))
-        {
+
+        if (!(m_iConfigBits & BIT_MODULECONFIG))
             m_pInternal->m_pModuleConfig = m_pParent->m_pInternal->m_pModuleConfig;
-        }
-        
-        if ( !(m_iConfigBits & BIT_SESSIONHOOKS ))
-        {
+
+        if (!(m_iConfigBits & BIT_SESSIONHOOKS))
             m_pInternal->m_pSessionHooks = m_pParent->m_pInternal->m_pSessionHooks;
-        }
-        
+
     }
 
-    if ( !(m_iConfigBits & BIT_ENABLE_EXPIRES) )
+    if (!(m_iConfigBits & BIT_ENABLE_EXPIRES))
+        m_expires.enable(m_pParent->getExpires().isEnabled());
+    if (!(m_iConfigBits & BIT_EXPIRES_DEFAULT))
     {
-        m_expires.enable( m_pParent->getExpires().isEnabled() );
-    }
-    if ( !(m_iConfigBits & BIT_EXPIRES_DEFAULT) )
-    {
-        m_expires.setBase( m_pParent->getExpires().getBase() );
-        m_expires.setAge( m_pParent->getExpires().getAge() );
+        m_expires.setBase(m_pParent->getExpires().getBase());
+        m_expires.setAge(m_pParent->getExpires().getAge());
     }
 
-    if ( !(m_iConfigBits & BIT_SETUID) )
+    if (!(m_iConfigBits & BIT_SETUID))
     {
-        setConfigBit( BIT_ALLOW_SETUID,
-                    m_pParent->m_iConfigBits & BIT_ALLOW_SETUID);
+        setConfigBit(BIT_ALLOW_SETUID,
+                     m_pParent->m_iConfigBits & BIT_ALLOW_SETUID);
     }
-    if ( m_pParent->m_iSetUidMode & CHANG_UID_ONLY )
+    if (m_pParent->m_iSetUidMode & CHANG_UID_ONLY)
         m_iSetUidMode |= CHANG_UID_ONLY;
-        
-    if ( !(m_iConfigBits & BIT_SUEXEC ) )
+
+    if (!(m_iConfigBits & BIT_SUEXEC))
     {
-        m_iSetUidMode = (m_iSetUidMode & ~UID_MASK)|
+        m_iSetUidMode = (m_iSetUidMode & ~UID_MASK) |
                         (m_pParent->m_iSetUidMode & UID_MASK);
     }
-    if ( !(m_iConfigBits & BIT_CHROOT ) )
+    if (!(m_iConfigBits & BIT_CHROOT))
     {
         m_iSetUidMode = (m_iSetUidMode & ~CHROOT_MASK) |
-                        ( m_pParent->m_iSetUidMode & CHROOT_MASK);
+                        (m_pParent->m_iSetUidMode & CHROOT_MASK);
     }
-    if ( !(m_iConfigBits & BIT_GEO_IP ) )
+    if (!(m_iConfigBits & BIT_GEO_IP))
     {
         m_iSetUidMode = (m_iSetUidMode & ~CTX_GEOIP_ON) |
-                        ( m_pParent->m_iSetUidMode & CTX_GEOIP_ON);
+                        (m_pParent->m_iSetUidMode & CTX_GEOIP_ON);
     }
-    if ( !(m_iConfigBits & BIT_ENABLE_SCRIPT ) )
+    if (!(m_iConfigBits & BIT_ENABLE_SCRIPT))
     {
         m_iSetUidMode = (m_iSetUidMode & ~ENABLE_SCRIPT) |
-                        ( m_pParent->m_iSetUidMode & ENABLE_SCRIPT);
+                        (m_pParent->m_iSetUidMode & ENABLE_SCRIPT);
     }
-    
-    if ( !(m_iConfigBits & BIT_REWRITE_ENGINE) )
+
+    if (!(m_iConfigBits & BIT_REWRITE_ENGINE))
     {
         m_iRewriteEtag = (m_iRewriteEtag & ~REWRITE_MASK) |
-                    (( m_pParent->m_iRewriteEtag | REWRITE_INHERIT ) & REWRITE_MASK);
+                         ((m_pParent->m_iRewriteEtag | REWRITE_INHERIT) & REWRITE_MASK);
     }
-    if ( !(m_iConfigBits2 & BIT_FILES_ETAG ) )
+    if (!(m_iConfigBits2 & BIT_FILES_ETAG))
     {
         m_iRewriteEtag = (m_iRewriteEtag & ~ETAG_MASK) |
-                    ( m_pParent->m_iRewriteEtag  & ETAG_MASK);
+                         (m_pParent->m_iRewriteEtag  & ETAG_MASK);
     }
     else
     {
-        if ( m_iRewriteEtag & ETAG_MOD_ALL )
+        if (m_iRewriteEtag & ETAG_MOD_ALL)
         {
             int tag = m_pParent->m_iRewriteEtag & ETAG_ALL;
             int mask = (m_iRewriteEtag & ETAG_MOD_ALL) >> 3;
-            int val = ( m_iRewriteEtag & ETAG_ALL ) & mask;
+            int val = (m_iRewriteEtag & ETAG_ALL) & mask;
             m_iRewriteEtag = (m_iRewriteEtag & ~ETAG_MASK)
-                    |((tag & ~mask ) | val )|(m_iRewriteEtag & ETAG_MOD_ALL);
+                             | ((tag & ~mask) | val) | (m_iRewriteEtag & ETAG_MOD_ALL);
         }
     }
-    
-    
-    
-    if ( m_iConfigBits & BIT_REWRITE_INHERIT )
+
+
+
+    if (m_iConfigBits & BIT_REWRITE_INHERIT)
     {
-        RewriteRuleList * pList =
-                getValidRewriteRules( m_pParent );
-        if ( !(m_iConfigBits & BIT_REWRITE_RULE ))
+        RewriteRuleList *pList =
+            getValidRewriteRules(m_pParent);
+        if (!(m_iConfigBits & BIT_REWRITE_RULE))
             m_pRewriteRules = pList;
-
-        //FIXME: append rules from parent
-    }
-    
-    if ( !(m_iConfigBits & BIT_SATISFY ) )
-    {
-        setConfigBit( BIT_SATISFY_ANY, m_pParent->isSatisfyAny() );
     }
 
-    if ( !(m_iConfigBits & BIT_AUTOINDEX ) )
-    {
-        setConfigBit( BIT_AUTOINDEX_ON, m_pParent->isAutoIndexOn() );
-    }
+    if (!(m_iConfigBits & BIT_SATISFY))
+        setConfigBit(BIT_SATISFY_ANY, m_pParent->isSatisfyAny());
 
-    if ( m_pMatchList )
+    if (!(m_iConfigBits & BIT_AUTOINDEX))
+        setConfigBit(BIT_AUTOINDEX_ON, m_pParent->isAutoIndexOn());
+
+    if (m_pMatchList)
     {
         ContextList::iterator iter;
-        for( iter = m_pMatchList->begin(); iter != m_pMatchList->end(); ++iter )
-        {
-            (*iter)->inherit( pRootContext );
-        }
+        for (iter = m_pMatchList->begin(); iter != m_pMatchList->end(); ++iter)
+            (*iter)->inherit(pRootContext);
     }
 }
 
-int HttpContext::addMatchContext( HttpContext * pContext )
+int HttpContext::addMatchContext(HttpContext *pContext)
 {
     //assert( !m_iFilesMatchCtx );
-    if ( !m_pMatchList )
+    if (!m_pMatchList)
     {
         m_pMatchList = new ContextList();
-        if ( !m_pMatchList )
-            return -1;
+        if (!m_pMatchList)
+            return LS_FAIL;
     }
-    if ( m_pMatchList->add( pContext, 1 ) == -1 )
-        return -1;
-    pContext->setParent( this );
+    if (m_pMatchList->add(pContext, 1) == -1)
+        return LS_FAIL;
+    pContext->setParent(this);
     return 0;
 }
 
-const HttpContext * HttpContext::match( const char * pURI, int iURILen,
-                  char * pBuf, int &bufLen ) const
+const HttpContext *HttpContext::match(const char *pURI, int iURILen,
+                                      char *pBuf, int &bufLen) const
 {
     //if ( !m_pMatchList || m_iFilesMatchCtx)
-    if ( !m_pMatchList )
+    if (!m_pMatchList)
         return NULL;
     ContextList::iterator iter;
-    for( iter = m_pMatchList->begin(); iter != m_pMatchList->end(); ++iter )
+    for (iter = m_pMatchList->begin(); iter != m_pMatchList->end(); ++iter)
     {
-        if ( (*iter)->getURIMatch()->match( pURI, iURILen, pBuf, bufLen ) == 0 )
+        if ((*iter)->getURIMatch()->match(pURI, iURILen, pBuf, bufLen) == 0)
             return *iter;
     }
     return NULL;
 }
 
-const HttpContext * HttpContext::findMatchContext( const char * pURI, int useLocation ) const
+const HttpContext *HttpContext::findMatchContext(const char *pURI,
+        int useLocation) const
 {
     //if ( !m_pMatchList || m_iFilesMatchCtx)
-    if ( !m_pMatchList )
+    if (!m_pMatchList)
         return NULL;
     ContextList::iterator iter;
-    for( iter = m_pMatchList->begin(); iter != m_pMatchList->end(); ++iter )
+    for (iter = m_pMatchList->begin(); iter != m_pMatchList->end(); ++iter)
     {
         const char *p;
-        if ( !useLocation )
+        if (!useLocation)
             p = (*iter)->getURI();
         else
             p = (*iter)->getLocation();
-        if ( p &&(strcmp( p, pURI ) == 0 ) )
+        if (p && (strcmp(p, pURI) == 0))
             return *iter;
     }
     return NULL;
-    
-}
-
-
-
-int HttpContext::addMIME( const char * pValue )
-{
-    if ( initMIME() )
-        return -1;
-    return m_pInternal->m_pMIME->addType( HttpGlobals::getMime(), pValue,
-                                        m_sLocation.c_str() );
 
 }
 
-int HttpContext::setExpiresByType( const char * pValue )
+
+
+int HttpContext::addMIME(const char *pValue)
 {
-    if ( initMIME() )
-        return -1;
-    return m_pInternal->m_pMIME->setExpiresByType(pValue, HttpGlobals::getMime(),
-                                m_sLocation.c_str() );
+    if (initMIME())
+        return LS_FAIL;
+    return m_pInternal->m_pMIME->addType(HttpMime::getMime(), pValue,
+                                         m_sLocation.c_str());
+
 }
 
-int HttpContext::setCompressByType( const char * pValue )
+int HttpContext::setExpiresByType(const char *pValue)
 {
-    if ( initMIME() )
-        return -1;
-    return m_pInternal->m_pMIME->setCompressableByType( pValue, HttpGlobals::getMime(),
-                                    m_sLocation.c_str() );
+    if (initMIME())
+        return LS_FAIL;
+    return m_pInternal->m_pMIME->setExpiresByType(pValue,
+            HttpMime::getMime(),
+            m_sLocation.c_str());
 }
 
-int HttpContext::setForceType( char * pValue, const char * pLogId )
+int HttpContext::setCompressByType(const char *pValue)
 {
-    const MIMESetting * pSetting = NULL;
-    if ( allocateInternal() )
-        return -1;
-    if ( strcasecmp( pValue, "none" ) != 0 )
+    if (initMIME())
+        return LS_FAIL;
+    return m_pInternal->m_pMIME->setCompressableByType(pValue,
+            HttpMime::getMime(),
+            m_sLocation.c_str());
+}
+
+int HttpContext::setForceType(char *pValue, const char *pLogId)
+{
+    const MIMESetting *pSetting = NULL;
+    if (allocateInternal())
+        return LS_FAIL;
+    if (strcasecmp(pValue, "none") != 0)
     {
-        if ( m_pInternal->m_pMIME )
-            pSetting = m_pInternal->m_pMIME->getMIMESetting( pValue );
-        if ( !pSetting )
-            pSetting = HttpGlobals::getMime()->getMIMESetting( pValue );
-        if ( !pSetting )
+        if (m_pInternal->m_pMIME)
+            pSetting = m_pInternal->m_pMIME->getMIMESetting(pValue);
+        if (!pSetting)
+            pSetting = HttpMime::getMime()->getMIMESetting(pValue);
+        if (!pSetting)
         {
-            LOG_WARN(( "[%s] can't set 'Forced Type', undefined MIME Type %s",
-                        pLogId, pValue ));
-            return -1;
+            LOG_WARN(("[%s] can't set 'Forced Type', undefined MIME Type %s",
+                      pLogId, pValue));
+            return LS_FAIL;
         }
     }
     m_pInternal->m_pForceType = pSetting;
-    setConfigBit( BIT_FORCE_TYPE, 1 );
+    setConfigBit(BIT_FORCE_TYPE, 1);
     return 0;
 }
 
-const MIMESetting * HttpContext::determineMime( const char * pSuffix,
-                                                char * pForcedType ) const
+const MIMESetting *HttpContext::determineMime(const char *pSuffix,
+        char *pForcedType) const
 {
     const MIMESetting *pMimeType = NULL;
-    if ( pForcedType )
+    if (pForcedType)
     {
-        if ( m_pInternal->m_pMIME )
-            pMimeType = m_pInternal->m_pMIME->getMIMESetting( pForcedType );
-        if ( !pMimeType )
-            pMimeType = HttpGlobals::getMime()->getMIMESetting( pForcedType );
-        if ( pMimeType )
+        if (m_pInternal->m_pMIME)
+            pMimeType = m_pInternal->m_pMIME->getMIMESetting(pForcedType);
+        if (!pMimeType)
+            pMimeType = HttpMime::getMime()->getMIMESetting(pForcedType);
+        if (pMimeType)
             return pMimeType;
     }
-    if ( m_pInternal->m_pForceType )
+    if (m_pInternal->m_pForceType)
         return m_pInternal->m_pForceType;
-    if ( pSuffix )
+    if (pSuffix)
     {
-		char achSuffix[256];
-		int len = 256;
-		StringTool::strnlower( pSuffix, achSuffix, len );
-        if ( m_pInternal->m_pMIME )
+        char achSuffix[256];
+        int len = 256;
+        StringTool::strLower(pSuffix, achSuffix, len);
+        if (m_pInternal->m_pMIME)
         {
-            pMimeType = m_pInternal->m_pMIME->getFileMimeByType( achSuffix );
-            if ( pMimeType )
+            pMimeType = m_pInternal->m_pMIME->getFileMimeByType(achSuffix);
+            if (pMimeType)
                 return pMimeType;
         }
-        pMimeType = HttpGlobals::getMime()->getFileMimeByType( achSuffix );
-        if ( pMimeType )
+        pMimeType = HttpMime::getMime()->getFileMimeByType(achSuffix);
+        if (pMimeType)
             return pMimeType;
     }
-    if ( m_pInternal->m_pMIME )
+    if (m_pInternal->m_pMIME)
     {
         pMimeType = m_pInternal->m_pMIME->getDefault();
-        if ( pMimeType )
+        if (pMimeType)
             return pMimeType;
     }
-    pMimeType = HttpGlobals::getMime()->getDefault();
+    pMimeType = HttpMime::getMime()->getDefault();
     return pMimeType;
 }
 
 
-void HttpContext::setRewriteBase( const char * p )
+void HttpContext::setRewriteBase(const char *p)
 {
-    m_pRewriteBase = new AutoStr2( p );
+    m_pRewriteBase = new AutoStr2(p);
 }
 
 
 void HttpContext::clearDirIndexes()
 {
-    if ((m_iConfigBits & BIT_DIRINDEX )&&( m_pInternal->m_pIndexList ))
+    if ((m_iConfigBits & BIT_DIRINDEX) && (m_pInternal->m_pIndexList))
         delete m_pInternal->m_pIndexList;
-    if ( m_pInternal )
+    if (m_pInternal)
         m_pInternal->m_pIndexList = NULL;
     m_iConfigBits &= ~BIT_DIRINDEX;
 }
 
 
-void HttpContext::addDirIndexes( const char * pList )
+void HttpContext::addDirIndexes(const char *pList)
 {
-    if ( !(m_iConfigBits & BIT_DIRINDEX ))
+    if (!(m_iConfigBits & BIT_DIRINDEX))
     {
         m_iConfigBits |= BIT_DIRINDEX;
-        if ( allocateInternal() )
+        if (allocateInternal())
             return ;
     }
-    if ( strcmp( pList, "-") == 0 )
+    if (strcmp(pList, "-") == 0)
         return;
-    if ( !m_pInternal->m_pIndexList )
+    if (!m_pInternal->m_pIndexList)
     {
         m_pInternal->m_pIndexList = new StringList();
-        if (!m_pInternal->m_pIndexList )
+        if (!m_pInternal->m_pIndexList)
             return;
     }
-    char * p1 = strdup( pList );
-    m_pInternal->m_pIndexList->split( p1, strlen( p1 ) + p1, ", " );
-    free( p1 );
+    char *p1 = strdup(pList);
+    m_pInternal->m_pIndexList->split(p1, strlen(p1) + p1, ", ");
+    free(p1);
 }
 
 
-int  HttpContext::setCustomErrUrls(const char * pStatusCode, const char* url)
+int  HttpContext::setCustomErrUrls(const char *pStatusCode,
+                                   const char *url)
 {
-    int statusCode = atoi( pStatusCode );
-    if (!(m_iConfigBits & BIT_ERROR_DOC ))
+    int statusCode = atoi(pStatusCode);
+    if (!(m_iConfigBits & BIT_ERROR_DOC))
     {
-        if ( allocateInternal() )
-            return -1;
+        if (allocateInternal())
+            return LS_FAIL;
         m_pInternal->m_pCustomErrUrls = new StatusUrlMap();
-        if ( !m_pInternal->m_pCustomErrUrls )
-            return -1;
+        if (!m_pInternal->m_pCustomErrUrls)
+            return LS_FAIL;
         m_iConfigBits |= BIT_ERROR_DOC;
     }
-    return m_pInternal->m_pCustomErrUrls->setStatusUrlMap( statusCode, url );
+    return m_pInternal->m_pCustomErrUrls->setStatusUrlMap(statusCode, url);
 }
 
 
-const AutoStr2 * HttpContext::getErrDocUrl( int statusCode ) const
-{   return m_pInternal->m_pCustomErrUrls?
-            m_pInternal->m_pCustomErrUrls->getUrl( statusCode ): NULL;    }
-
-
-void HttpContext::setPHPConfig( PHPConfig * pConfig )
+const AutoStr2 *HttpContext::getErrDocUrl(int statusCode) const
 {
-    if ( !allocateInternal() )
+    return m_pInternal->m_pCustomErrUrls ?
+           m_pInternal->m_pCustomErrUrls->getUrl(statusCode) : NULL;
+}
+
+
+void HttpContext::setPHPConfig(PHPConfig *pConfig)
+{
+    if (!allocateInternal())
     {
         m_pInternal->m_pPHPConfig = pConfig;
         m_iConfigBits |= BIT_PHPCONFIG;
@@ -927,13 +885,13 @@ int HttpContext::initExternalSessionHooks()
 {
     if (!(m_iConfigBits & BIT_SESSIONHOOKS))
     {
-        if ( allocateInternal() )
-            return -1;
-        HttpSessionHooks * pSessionHooks = new HttpSessionHooks();
-        if ( !pSessionHooks )
-            return -1;
-        pSessionHooks->inherit( NULL, 1); //inherit from global level
-        
+        if (allocateInternal())
+            return LS_FAIL;
+        HttpSessionHooks *pSessionHooks = new HttpSessionHooks();
+        if (!pSessionHooks)
+            return LS_FAIL;
+        pSessionHooks->inherit(NULL, 1);  //inherit from global level
+
         m_pInternal->m_pSessionHooks = pSessionHooks;
         m_iConfigBits |= BIT_SESSIONHOOKS;
     }
@@ -941,134 +899,133 @@ int HttpContext::initExternalSessionHooks()
 }
 
 
-int HttpContext::setModuleConfig( ModuleConfig  *pModuleConfig, int isOwnData )
+int HttpContext::setModuleConfig(ModuleConfig  *pModuleConfig,
+                                 int isOwnData)
 {
     if (isOwnData && !(m_iConfigBits & BIT_MODULECONFIG))
     {
-        if ( allocateInternal() )
-            return -1;
-        
+        if (allocateInternal())
+            return LS_FAIL;
+
         m_iConfigBits |= BIT_MODULECONFIG;
     }
-    
+
     m_pInternal->m_pModuleConfig = pModuleConfig;
     return 0;
 }
 
-int HttpContext::setOneModuleConfig( int moduel_id, lsi_module_config_t  *module_config )
+int HttpContext::setOneModuleConfig(int moduel_id,
+                                    lsi_module_config_t  *module_config)
 {
     if (!(m_iConfigBits & BIT_MODULECONFIG))
     {
         ModuleConfig *pOldConfig = m_pInternal->m_pModuleConfig;
-        if ( allocateInternal() )
-            return -1;
-        
+        if (allocateInternal())
+            return LS_FAIL;
+
         ModuleConfig *pConfig = new ModuleConfig;
         if (!pConfig)
-            return -1;
-        
+            return LS_FAIL;
+
         pConfig->init(ModuleManager::getInstance().getModuleCount());
         pConfig->inherit(pOldConfig);
         m_pInternal->m_pModuleConfig = pConfig;
         m_iConfigBits |= BIT_MODULECONFIG;
     }
-    
+
     m_pInternal->m_pModuleConfig->copy(moduel_id, module_config);
     return 0;
 }
 
-void HttpContext::getAAAData( struct AAAData & data ) const
+void HttpContext::getAAAData(struct AAAData &data) const
 {
-    memmove( &data, &m_pInternal->m_pHTAuth, sizeof( AAAData ) );
+    memmove(&data, &m_pInternal->m_pHTAuth, sizeof(AAAData));
 }
 
 void HttpContext::setWebSockAddr(GSockAddr &gsockAddr)
 {
-    if ( !allocateInternal() )
+    if (!allocateInternal())
     {
         m_pInternal->m_GSockAddr = gsockAddr;
         m_iConfigBits |= BIT_GSOCKADDR;
     }
 }
-int HttpContext::configAccess( const XmlNode *pContextNode )
+int HttpContext::configAccess(const XmlNode *pContextNode)
 {
     AccessControl *pAccess = NULL;
 
-    if ( AccessControl::isAvailable( pContextNode ) )
+    if (AccessControl::isAvailable(pContextNode))
     {
         pAccess = new AccessControl();
-        pAccess->config( pContextNode );
-        setAccessControl( pAccess );
+        pAccess->config(pContextNode);
+        setAccessControl(pAccess);
     }
 
     return 0;
 }
 
-void HttpContext::configAutoIndex( const XmlNode *pContextNode )
+void HttpContext::configAutoIndex(const XmlNode *pContextNode)
 {
-    if ( pContextNode->getChildValue( "autoIndex" ) )
-    {
-        setAutoIndex( ConfigCtx::getCurConfigCtx()->getLongValue( pContextNode, "autoIndex", 0, 1, 0 ) );
-    }
+    if (pContextNode->getChildValue("autoIndex"))
+        setAutoIndex(ConfigCtx::getCurConfigCtx()->getLongValue(pContextNode,
+                     "autoIndex", 0, 1, 0));
 }
 
-int HttpContext::configDirIndex( const XmlNode *pContextNode )
+int HttpContext::configDirIndex(const XmlNode *pContextNode)
 {
     clearDirIndexes();
-    const char *pValue = pContextNode->getChildValue( "indexFiles" );
+    const char *pValue = pContextNode->getChildValue("indexFiles");
 
-    if ( pValue )
-    {
-        addDirIndexes( pValue );
-    }
+    if (pValue)
+        addDirIndexes(pValue);
 
     return 0;
 }
 
-int HttpContext::configErrorPages( const XmlNode *pNode )
+int HttpContext::configErrorPages(const XmlNode *pNode)
 {
     int add = 0;
-    const XmlNodeList *pList = pNode->getChildren( "errorPage" );
+    const XmlNodeList *pList = pNode->getChildren("errorPage");
 
-    if ( pList )
+    if (pList)
     {
         XmlNodeList::const_iterator iter;
 
-        for( iter = pList->begin(); iter != pList->end(); ++iter )
+        for (iter = pList->begin(); iter != pList->end(); ++iter)
         {
             const XmlNode *pNode = *iter;
-            const char *pCode = pNode->getChildValue( "errCode", 1 );
-            const char *pUrl = pNode->getChildValue( "url" );
+            const char *pCode = pNode->getChildValue("errCode", 1);
+            const char *pUrl = pNode->getChildValue("url");
 
-            if ( setCustomErrUrls( pCode, pUrl ) != 0 )
-                ConfigCtx::getCurConfigCtx()->log_error( "failed to set up custom error page %s - %s!", pCode, pUrl );
+            if (setCustomErrUrls(pCode, pUrl) != 0)
+                ConfigCtx::getCurConfigCtx()->logError("failed to set up custom error page %s - %s!",
+                                                       pCode, pUrl);
             else
                 ++add ;
         }
     }
 
-    return ( add == 0 );
+    return (add == 0);
 }
 
-int HttpContext::configRewriteRule( const RewriteMapList * pMapList, char *pRule )
+int HttpContext::configRewriteRule(const RewriteMapList *pMapList,
+                                   char *pRule)
 {
     RewriteRuleList *pRuleList;
-    
-    if ( !pRule )
+
+    if (!pRule)
         return 0;
-    AutoStr rule( pRule );
+    AutoStr rule(pRule);
     pRule = rule.buf();
-    
+
     pRuleList = new RewriteRuleList();
 
-    if ( pRuleList )
+    if (pRuleList)
     {
-        RewriteRule::setLogger( NULL, LogIdTracker::getLogId() );
-        if ( RewriteEngine::parseRules( pRule, pRuleList,
-                                       pMapList ) == 0 )
-        {
-            setRewriteRules( pRuleList );
-        }
+        RewriteRule::setLogger(NULL, LogIdTracker::getLogId());
+        if (RewriteEngine::parseRules(pRule, pRuleList,
+                                      pMapList) == 0)
+            setRewriteRules(pRuleList);
         else
             delete pRuleList;
     }
@@ -1076,153 +1033,145 @@ int HttpContext::configRewriteRule( const RewriteMapList * pMapList, char *pRule
     return 0;
 }
 
-int HttpContext::configMime( const XmlNode *pContextNode )
+int HttpContext::configMime(const XmlNode *pContextNode)
 {
-    const char *pValue = pContextNode->getChildValue( "addMIMEType" );
+    const char *pValue = pContextNode->getChildValue("addMIMEType");
 
-    if ( pValue )
-        addMIME( pValue );
+    if (pValue)
+        addMIME(pValue);
 
-    pValue = pContextNode->getChildValue( "forceType" );
+    pValue = pContextNode->getChildValue("forceType");
 
-    if ( pValue )
-    {
-        setForceType( ( char * ) pValue, LogIdTracker::getLogId() );
-    }
+    if (pValue)
+        setForceType((char *) pValue, LogIdTracker::getLogId());
 
-    pValue = pContextNode->getChildValue( "defaultType" );
+    pValue = pContextNode->getChildValue("defaultType");
 
-    if ( pValue )
+    if (pValue)
     {
         initMIME();
-        getMIME()->initDefault( ( char * ) pValue );
+        getMIME()->initDefault((char *) pValue);
     }
 
     return 0;
 }
-int HttpContext::configExtAuthorizer( const XmlNode *pContextNode )
+int HttpContext::configExtAuthorizer(const XmlNode *pContextNode)
 {
     const HttpHandler *pAuth;
-    const char *pHandler = pContextNode->getChildValue( "authorizer" );
+    const char *pHandler = pContextNode->getChildValue("authorizer");
 
-    if ( pHandler )
-    {
-        pAuth = HandlerFactory::getHandler( "fcgiauth", pHandler );
-    }
+    if (pHandler)
+        pAuth = HandlerFactory::getHandler("fcgiauth", pHandler);
     else
     {
-        const XmlNode *pNode = pContextNode->getChild( "extAuthorizer" );
+        const XmlNode *pNode = pContextNode->getChild("extAuthorizer");
 
-        if ( !pNode )
+        if (!pNode)
             return 0;
 
         //pAuth = getHandler( pVHost, pNode );
-        pAuth = HandlerFactory::getHandler( pNode );
+        pAuth = HandlerFactory::getHandler(pNode);
     }
 
-    if ( !pAuth )
+    if (!pAuth)
         return 1;
 
-    if ( ( ( ExtWorker * ) pAuth )->getRole() != EXTAPP_AUTHORIZER )
+    if (((ExtWorker *) pAuth)->getRole() != EXTAPP_AUTHORIZER)
     {
-        ConfigCtx::getCurConfigCtx()->log_error( "External Application [%s] is not a Authorizer role.",
-                                    pAuth->getName() );
+        ConfigCtx::getCurConfigCtx()->logError("External Application [%s] is not a Authorizer role.",
+                                               pAuth->getName());
         return 1;
     }
 
-    setAuthorizer( pAuth );
+    setAuthorizer(pAuth);
     return 0;
 }
 
-int HttpContext::config(const RewriteMapList * pMapList, const XmlNode *pContextNode, 
+int HttpContext::config(const RewriteMapList *pMapList,
+                        const XmlNode *pContextNode,
                         int type)
 {
     const char *pValue;
-    configAutoIndex( pContextNode );
-    configDirIndex( pContextNode );
+    configAutoIndex(pContextNode);
+    configDirIndex(pContextNode);
 
-    if ( type == HandlerType::HT_CGI )
+    if (type == HandlerType::HT_CGI)
     {
-        int val = ConfigCtx::getCurConfigCtx()->getLongValue( pContextNode, "allowSetUID", 0, 1, -1 );
+        int val = ConfigCtx::getCurConfigCtx()->getLongValue(pContextNode,
+                  "allowSetUID", 0, 1, -1);
 
-        if ( val != -1 )
+        if (val != -1)
         {
-            setConfigBit( BIT_SETUID, 1 );
-            setConfigBit( BIT_ALLOW_SETUID, val );
+            setConfigBit(BIT_SETUID, 1);
+            setConfigBit(BIT_ALLOW_SETUID, val);
         }
     }
-    configAccess( pContextNode  );
-    configExtAuthorizer( pContextNode );
+    configAccess(pContextNode);
+    configExtAuthorizer(pContextNode);
 
-    getExpires().config( pContextNode, NULL, this );
-    pValue = pContextNode->getChildValue( "expiresByType" );
+    getExpires().config(pContextNode, NULL, this);
+    pValue = pContextNode->getChildValue("expiresByType");
 
-    if ( pValue && ( *pValue ) )
-        setExpiresByType( pValue );
+    if (pValue && (*pValue))
+        setExpiresByType(pValue);
 
-    pValue = pContextNode->getChildValue( "extraHeaders" );
+    pValue = pContextNode->getChildValue("extraHeaders");
 
-    if ( pValue && ( *pValue ) )
-        setExtraHeaders( LogIdTracker::getLogId(), pValue, ( int ) strlen( pValue ) );
+    if (pValue && (*pValue))
+        setExtraHeaders(LogIdTracker::getLogId(), pValue, (int) strlen(pValue));
 
-    pValue = pContextNode->getChildValue( "addDefaultCharset" );
+    pValue = pContextNode->getChildValue("addDefaultCharset");
 
-    if ( pValue )
+    if (pValue)
     {
-        if ( strcasecmp( pValue, "on" ) == 0 )
+        if (strcasecmp(pValue, "on") == 0)
         {
-            pValue = pContextNode->getChildValue( "defaultCharsetCustomized" );
+            pValue = pContextNode->getChildValue("defaultCharsetCustomized");
 
-            if ( !pValue )
+            if (!pValue)
                 setDefaultCharsetOn();
             else
-                setDefaultCharset( pValue );
+                setDefaultCharset(pValue);
         }
         else
-            setDefaultCharset( NULL );
+            setDefaultCharset(NULL);
     }
 
-    configMime( pContextNode );
-    const XmlNode *pNode = pContextNode->getChild( "rewrite" );
+    configMime(pContextNode);
+    const XmlNode *pNode = pContextNode->getChild("rewrite");
 
-    if ( pNode )
+    if (pNode)
     {
-        enableRewrite( ConfigCtx::getCurConfigCtx()->getLongValue( pNode, "enable", 0, 1, 0 ) );
-        pValue = pNode->getChildValue( "inherit" );
+        enableRewrite(ConfigCtx::getCurConfigCtx()->getLongValue(pNode, "enable",
+                      0, 1, 0));
+        pValue = pNode->getChildValue("inherit");
 
-        if ( ( pValue ) && ( strcasestr( pValue, "1" ) ) )
+        if ((pValue) && (strcasestr(pValue, "1")))
+            setRewriteInherit(1);
+
+        pValue = pNode->getChildValue("base");
+
+        if (pValue)
         {
-            setRewriteInherit( 1 );
-        }
-
-        pValue = pNode->getChildValue( "base" );
-
-        if ( pValue )
-        {
-            if ( *pValue != '/' )
-            {
-                ConfigCtx::getCurConfigCtx()->log_error( "Invalid rewrite base: '%s'", pValue );
-            }
+            if (*pValue != '/')
+                ConfigCtx::getCurConfigCtx()->logError("Invalid rewrite base: '%s'",
+                                                       pValue);
             else
-            {
-                setRewriteBase( pValue );
-            }
+                setRewriteBase(pValue);
         }
 
-        pValue = pNode->getChildValue( "rules" );
-        if ( pValue )
-        {
-            configRewriteRule( pMapList, ( char * ) pValue );
-        }
+        pValue = pNode->getChildValue("rules");
+        if (pValue)
+            configRewriteRule(pMapList, (char *) pValue);
 
     }
 
-    pNode = pContextNode->getChild( "customErrorPages", 1 );
-    
-    if ( pNode )
+    pNode = pContextNode->getChild("customErrorPages", 1);
+
+    if (pNode)
     {
-        ConfigCtx currentCtx( "errorpages" );
-        configErrorPages(pNode );
+        ConfigCtx currentCtx("errorpages");
+        configErrorPages(pNode);
     }
 
     return 0;

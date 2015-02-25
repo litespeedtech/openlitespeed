@@ -20,9 +20,9 @@
 #include "lsapiconn.h"
 
 
-LsapiWorker::LsapiWorker( const char * pName )
+LsapiWorker::LsapiWorker(const char *pName)
 {
-    setConfigPointer( new LsapiConfig( pName ) );
+    setConfigPointer(new LsapiConfig(pName));
 }
 
 
@@ -30,7 +30,7 @@ LsapiWorker::~LsapiWorker()
 {
 }
 
-ExtConn * LsapiWorker::newConn()
+ExtConn *LsapiWorker::newConn()
 {
     return new LsapiConn();
 }
@@ -40,9 +40,7 @@ int LsapiWorker::startEx()
 {
     int ret = 1;
     LsapiConfig &config = getConfig();
-    if (config.getSelfManaged()&&( config.getURL() )&&( config.getCommand() ))
-    {
+    if (config.getSelfManaged() && (config.getURL()) && (config.getCommand()))
         ret = startWorker();
-    }
     return ret;
 }

@@ -10,8 +10,15 @@ execute_process( COMMAND getconf LFS_CFLAGS
 
 add_definitions( ${LFS_CFLAGS} )
 
-add_library(cache SHARED  cacheentry.cpp cachehash.cpp 
-            cachestore.cpp ceheader.cpp dirhashcacheentry.cpp 
-            dirhashcachestore.cpp cache.cpp cacheconfig.cpp cachectrl.cpp
-            )
+add_library(cache SHARED
+    cacheentry.cpp
+    cachehash.cpp 
+    cachestore.cpp
+    ceheader.cpp
+    dirhashcacheentry.cpp 
+    dirhashcachestore.cpp
+    cache.cpp
+    cacheconfig.cpp
+    cachectrl.cpp
+)
 set_target_properties(cache PROPERTIES PREFIX "")

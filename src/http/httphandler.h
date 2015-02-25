@@ -22,15 +22,16 @@
 class HttpHandler
 {
     int                 m_iType;
-public: 
+    void operator=(const HttpHandler &rhs);
+public:
     HttpHandler();
-    HttpHandler( const HttpHandler & rhs );
+    HttpHandler(const HttpHandler &rhs);
     virtual ~HttpHandler();
 
     int getHandlerType() const          {   return m_iType;     }
-    void setHandlerType( int type )     {   m_iType = type;     }
-    virtual const char * getName() const = 0;
-    
+    void setHandlerType(int type)     {   m_iType = type;     }
+    virtual const char *getName() const = 0;
+
 };
 
 #endif

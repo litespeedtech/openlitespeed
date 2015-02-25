@@ -19,7 +19,7 @@
 #include <extensions/extworker.h>
 #include <extensions/localworkerconfig.h>
 #include <http/handlertype.h>
-#include <http/httpglobals.h>
+#include <http/serverprocessconfig.h>
 #include <http/handlerfactory.h>
 #include <util/configctx.h>
 #include <util/stringlist.h>
@@ -30,71 +30,70 @@
 #include <socket/gsockaddr.h>
 #include <unistd.h>
 
-static ExtWorker * newWorker( int type, const char * pName );
-RLimits* ExtAppRegistry::s_pRLimits = NULL;
-class ExtAppMap : public HashStringMap< ExtWorker* >
+static ExtWorker *newWorker(int type, const char *pName);
+RLimits *ExtAppRegistry::s_pRLimits = NULL;
+class ExtAppMap : public HashStringMap< ExtWorker * >
 {
 public:
+    ExtAppMap()
+    {}
     ~ExtAppMap()
     {   removeAll();    }
     void removeAll();
+    LS_NO_COPY_ASSIGN(ExtAppMap);
 };
 
 
 void ExtAppMap::removeAll()
 {
-    release_objects();
+    releaseObjects();
 }
 
 ExtAppSubRegistry::ExtAppSubRegistry()
-    : m_pRegistry( new ExtAppMap() )
-    , m_pOldWorkers( new ExtAppMap() )
+    : m_pRegistry(new ExtAppMap())
+    , m_pOldWorkers(new ExtAppMap())
 {
 }
 
 ExtAppSubRegistry::~ExtAppSubRegistry()
 {
-    if ( m_pRegistry )
+    if (m_pRegistry)
         delete m_pRegistry;
-    if ( m_pOldWorkers )
+    if (m_pOldWorkers)
         delete m_pOldWorkers;
-    s_toBeStoped.release_objects();
+    s_toBeStoped.releaseObjects();
 }
 
-ExtWorker * ExtAppSubRegistry::addWorker( int type, const char * pName )
+ExtWorker *ExtAppSubRegistry::addWorker(int type, const char *pName)
 {
-    if ( pName == NULL )
+    if (pName == NULL)
         return NULL;
-    ExtAppMap::iterator iter = m_pRegistry->find( pName );
-    if ( iter != m_pRegistry->end() )
-    {
+    ExtAppMap::iterator iter = m_pRegistry->find(pName);
+    if (iter != m_pRegistry->end())
         return iter.second();
-    }
     else
     {
-        ExtWorker * pApp = NULL;
-        iter = m_pOldWorkers->find( pName );
-        if ( iter != m_pOldWorkers->end() )
+        ExtWorker *pApp = NULL;
+        iter = m_pOldWorkers->find(pName);
+        if (iter != m_pOldWorkers->end())
         {
             pApp = iter.second();
-            m_pOldWorkers->remove( pApp->getName() );
+            m_pOldWorkers->remove(pApp->getName());
         }
         else
-            pApp = newWorker( type, pName );
-        if ( pApp )
-        {
-            m_pRegistry->insert( pApp->getName(), pApp );
-        }
+            pApp = newWorker(type, pName);
+        if (pApp)
+            m_pRegistry->insert(pApp->getName(), pApp);
         return pApp;
     }
 }
 
-ExtWorker * ExtAppSubRegistry::getWorker( const char * pName )
+ExtWorker *ExtAppSubRegistry::getWorker(const char *pName)
 {
-    if (( pName == NULL )||( strlen( pName ) == 0 ))
+    if ((pName == NULL) || (strlen(pName) == 0))
         return NULL;
-    ExtAppMap::iterator iter = m_pRegistry->find( pName );
-    if ( iter == m_pRegistry->end() )
+    ExtAppMap::iterator iter = m_pRegistry->find(pName);
+    if (iter == m_pRegistry->end())
         return NULL;
 //    if ( iter.second()->notStarted() )
 //    {
@@ -106,9 +105,9 @@ ExtWorker * ExtAppSubRegistry::getWorker( const char * pName )
 }
 
 
-int ExtAppSubRegistry::stopWorker( ExtWorker * pApp )
+int ExtAppSubRegistry::stopWorker(ExtWorker *pApp)
 {
-    if ( pApp )
+    if (pApp)
         return pApp->stop();
     return 0;
 }
@@ -116,12 +115,10 @@ int ExtAppSubRegistry::stopWorker( ExtWorker * pApp )
 int ExtAppSubRegistry::stopAllWorkers()
 {
     ExtAppMap::iterator iter;
-    for( iter = m_pRegistry->begin();
-        iter != m_pRegistry->end();
-        iter = m_pRegistry->next( iter ) )
-    {
+    for (iter = m_pRegistry->begin();
+         iter != m_pRegistry->end();
+         iter = m_pRegistry->next(iter))
         iter.second()->stop();
-    }
     return 0;
 }
 
@@ -129,35 +126,31 @@ int ExtAppSubRegistry::stopAllWorkers()
 void ExtAppSubRegistry::runOnStartUp()
 {
     ExtAppMap::iterator iter;
-    for( iter = m_pRegistry->begin();
-        iter != m_pRegistry->end();
-        iter = m_pRegistry->next( iter ) )
-    {
+    for (iter = m_pRegistry->begin();
+         iter != m_pRegistry->end();
+         iter = m_pRegistry->next(iter))
         iter.second()->runOnStartUp();
-    }
 }
 
 
 void ExtAppSubRegistry::beginConfig()
 {
-    assert( m_pOldWorkers->size() == 0 );
-    m_pRegistry->swap( *m_pOldWorkers );
+    assert(m_pOldWorkers->size() == 0);
+    m_pRegistry->swap(*m_pOldWorkers);
 
 }
 
 void ExtAppSubRegistry::endConfig()
 {
     ExtAppMap::iterator iter;
-    for( iter = m_pOldWorkers->begin();
-        iter != m_pOldWorkers->end();
-        iter = m_pRegistry->next( iter ) )
+    for (iter = m_pOldWorkers->begin();
+         iter != m_pOldWorkers->end();
+         iter = m_pRegistry->next(iter))
     {
-        if ( iter.second()->canStop() )
-        {
+        if (iter.second()->canStop())
             delete iter.second();
-        }
         else
-            s_toBeStoped.push_back( iter.second() );
+            s_toBeStoped.push_back(iter.second());
     }
     m_pOldWorkers->clear();
 }
@@ -165,23 +158,21 @@ void ExtAppSubRegistry::endConfig()
 void ExtAppSubRegistry::onTimer()
 {
     ExtAppMap::iterator iter;
-    for( iter = m_pRegistry->begin();
-        iter != m_pRegistry->end();
-        iter = m_pRegistry->next( iter ) )
-    {
+    for (iter = m_pRegistry->begin();
+         iter != m_pRegistry->end();
+         iter = m_pRegistry->next(iter))
         iter.second()->onTimer();
-    }
 }
 
 void ExtAppSubRegistry::clear()
 {
-    m_pRegistry->release_objects();
-    m_pOldWorkers->release_objects();
+    m_pRegistry->releaseObjects();
+    m_pOldWorkers->releaseObjects();
 }
 
-int ExtAppSubRegistry::generateRTReport( int fd, int type )
+int ExtAppSubRegistry::generateRTReport(int fd, int type)
 {
-    static const char * s_pTypeName[] =
+    static const char *s_pTypeName[] =
     {
         "CGI",
         "FastCGI",
@@ -190,14 +181,12 @@ int ExtAppSubRegistry::generateRTReport( int fd, int type )
         "LSAPI",
         "Logger"
     };
-        
+
     ExtAppMap::iterator iter;
-    for( iter = m_pRegistry->begin();
-        iter != m_pRegistry->end();
-        iter = m_pRegistry->next( iter ) )
-    {
-        iter.second()->generateRTReport( fd, s_pTypeName[ type ] );
-    }
+    for (iter = m_pRegistry->begin();
+         iter != m_pRegistry->end();
+         iter = m_pRegistry->next(iter))
+        iter.second()->generateRTReport(fd, s_pTypeName[ type ]);
     return 0;
 }
 
@@ -210,37 +199,37 @@ int ExtAppSubRegistry::generateRTReport( int fd, int type )
 #include <extensions/lsapi/lsapiworker.h>
 #include <extensions/loadbalancer.h>
 
-static ExtWorker * newWorker( int type, const char * pName )
+static ExtWorker *newWorker(int type, const char *pName)
 {
-    ExtWorker * pWorker;
-    switch( type )
+    ExtWorker *pWorker;
+    switch (type)
     {
     case EA_CGID:
-        pWorker = new CgidWorker( pName );
+        pWorker = new CgidWorker(pName);
         break;
     case EA_FCGI:
-        pWorker = new FcgiApp( pName );
+        pWorker = new FcgiApp(pName);
         break;
     case EA_PROXY:
-        pWorker = new ProxyWorker( pName );
+        pWorker = new ProxyWorker(pName);
         break;
     case EA_JENGINE:
-        pWorker = new JWorker( pName );
+        pWorker = new JWorker(pName);
         break;
     case EA_LSAPI:
-        pWorker = new LsapiWorker( pName );
+        pWorker = new LsapiWorker(pName);
         break;
     case EA_LOGGER:
-        pWorker = new FcgiApp( pName );
+        pWorker = new FcgiApp(pName);
         break;
     case EA_LOADBALANCER:
-        pWorker = new LoadBalancer( pName );
+        pWorker = new LoadBalancer(pName);
         break;
     default:
         return NULL;
     }
-    if ( pWorker )
-        pWorker->setHandlerType( type + HandlerType::HT_CGI );
+    if (pWorker)
+        pWorker->setHandlerType(type + HandlerType::HT_CGI);
     return pWorker;
 }
 
@@ -249,76 +238,64 @@ static StaticObj< ExtAppSubRegistry > s_registry[EA_NUM_APP];
 
 #include <extensions/pidlist.h>
 static StaticObj< PidList > s_pidList;
-static PidSimpleList * s_pSimpleList = NULL;
+static PidSimpleList *s_pSimpleList = NULL;
 
 
-ExtWorker * ExtAppRegistry::addApp( int type, const char * pName )
+ExtWorker *ExtAppRegistry::addApp(int type, const char *pName)
 {
-    assert( type >= 0 && type < EA_NUM_APP );
-    return s_registry[type]()->addWorker( type, pName );
+    assert(type >= 0 && type < EA_NUM_APP);
+    return s_registry[type]()->addWorker(type, pName);
 }
 
-ExtWorker * ExtAppRegistry::getApp( int type, const char * pName )
+ExtWorker *ExtAppRegistry::getApp(int type, const char *pName)
 {
-    assert( type >= 0 && type < EA_NUM_APP );
-    return s_registry[type]()->getWorker( pName );
+    assert(type >= 0 && type < EA_NUM_APP);
+    return s_registry[type]()->getWorker(pName);
 }
 
-int ExtAppRegistry::stopApp( ExtWorker * pApp )
+int ExtAppRegistry::stopApp(ExtWorker *pApp)
 {
-    if ( pApp )
+    if (pApp)
         return pApp->stop();
     return 0;
 }
 
 int ExtAppRegistry::stopAll()
 {
-    for( int i = 0; i < EA_NUM_APP; ++i )
-    {
+    for (int i = 0; i < EA_NUM_APP; ++i)
         s_registry[i]()->stopAllWorkers();
-    }
     return 0;
 }
 
 
 void ExtAppRegistry::beginConfig()
 {
-    for( int i = 0; i < EA_NUM_APP; ++i )
-    {
+    for (int i = 0; i < EA_NUM_APP; ++i)
         s_registry[i]()->beginConfig();
-    }
 }
 
 void ExtAppRegistry::endConfig()
 {
-    for( int i = 0; i < EA_NUM_APP; ++i )
-    {
+    for (int i = 0; i < EA_NUM_APP; ++i)
         s_registry[i]()->endConfig();
-    }
 }
 
 void ExtAppRegistry::clear()
 {
-    for( int i = 0; i < EA_NUM_APP; ++i )
-    {
+    for (int i = 0; i < EA_NUM_APP; ++i)
         s_registry[i]()->clear();
-    }
 }
 
 void ExtAppRegistry::onTimer()
 {
-    for( int i = 0; i < EA_NUM_APP; ++i )
-    {
+    for (int i = 0; i < EA_NUM_APP; ++i)
         s_registry[i]()->onTimer();
-    }
 }
 
 void ExtAppRegistry::init()
 {
-    for( int i = 0; i < EA_NUM_APP; ++i )
-    {
+    for (int i = 0; i < EA_NUM_APP; ++i)
         s_registry[i].construct();
-    }
     s_pidList.construct();
 }
 
@@ -326,7 +303,7 @@ void ExtAppRegistry::shutdown()
 {
     s_pidList.destruct();
     s_pSimpleList = NULL;
-    for( int i = 0; i < EA_NUM_APP; ++i )
+    for (int i = 0; i < EA_NUM_APP; ++i)
     {
         s_registry[i]()->clear();
         s_registry[i].destruct();
@@ -335,26 +312,27 @@ void ExtAppRegistry::shutdown()
 
 void ExtAppRegistry::runOnStartUp()
 {
-    for( int i = 0; i < EA_NUM_APP; ++i )
+    for (int i = 0; i < EA_NUM_APP; ++i)
     {
-        if ( i != EA_LOGGER )
+        if (i != EA_LOGGER)
             s_registry[i]()->runOnStartUp();
     }
-    
+
 }
 
 
-int ExtAppRegistry::generateRTReport( int fd )
+int ExtAppRegistry::generateRTReport(int fd)
 {
-    for( int i = 0; i < EA_NUM_APP; ++i )
+    for (int i = 0; i < EA_NUM_APP; ++i)
     {
-        if ( i != EA_LOGGER )
-            s_registry[i]()->generateRTReport( fd, i );
+        if (i != EA_LOGGER)
+            s_registry[i]()->generateRTReport(fd, i);
     }
     return 0;
 }
 
-ExtWorker * ExtAppRegistry::configExtApp( const XmlNode *pNode, int configUserGroup )
+ExtWorker *ExtAppRegistry::configExtApp(const XmlNode *pNode,
+                                        int configUserGroup)
 {
     int iType;
     int role;
@@ -371,263 +349,254 @@ ExtWorker * ExtAppRegistry::configExtApp( const XmlNode *pNode, int configUserGr
     ExtWorkerConfig *pConfig = NULL;
     int isHttps = 0;
     int len = 0;
-    if ( HttpGlobals::s_psChroot )
-    len = HttpGlobals::s_psChroot->len();
-    if ( strncasecmp( pNode->getName(), "extProcessor", 12 ) != 0 )
+    if (ServerProcessConfig::getInstance().getChroot() != NULL)
+        len = ServerProcessConfig::getInstance().getChroot()->len();
+    if (strncasecmp(pNode->getName(), "extProcessor", 12) != 0)
+        return NULL;
+
+    pName = ConfigCtx::getCurConfigCtx()->getExpandedTag(pNode, "name",
+            achName, 256, 1);
+    if (pName == NULL)
+        return NULL;
+
+    ConfigCtx currentCtx(pName);
+
+    pType = ConfigCtx::getCurConfigCtx()->getTag(pNode, "type");
+    if (!pType)
+        return NULL;
+
+    iType = HandlerType::getHandlerType(pType, role);
+    if ((iType < HandlerType::HT_FASTCGI) ||
+        (iType >= HandlerType::HT_END))
     {
+        currentCtx.logError("unknown external processor <type>: %s", pType);
         return NULL;
     }
 
-    pName = ConfigCtx::getCurConfigCtx()->getExpandedTag( pNode, "name", achName, 256, 1 );
-    if ( pName == NULL )
-    {
-        return NULL;
-    }
-
-    ConfigCtx currentCtx( pName );
-
-    pType = ConfigCtx::getCurConfigCtx()->getTag( pNode, "type" );
-    if ( !pType )
-        return NULL;
-
-    iType = HandlerType::getHandlerType( pType, role );
-    if ( ( iType < HandlerType::HT_FASTCGI ) ||
-            ( iType >= HandlerType::HT_END ) )
-    {
-        currentCtx.log_error( "unknown external processor <type>: %s", pType );
-        return NULL;
-    }
-
-    if ( HandlerType::HT_LOADBALANCER == iType )
+    if (HandlerType::HT_LOADBALANCER == iType)
         return NULL;
 
     iType -= HandlerType::HT_CGI;
 
-    pUri = ConfigCtx::getCurConfigCtx()->getExpandedTag( pNode, "address", achAddress, 128 );
-    if ( ( pUri == NULL ) && ( iType != HandlerType::HT_LOGGER ) )
-    {
+    pUri = ConfigCtx::getCurConfigCtx()->getExpandedTag(pNode, "address",
+            achAddress, 128);
+    if ((pUri == NULL) && (iType != HandlerType::HT_LOGGER))
         return NULL;
-    }
 
     //Check http or https for proxy type
     if (iType == EA_PROXY)
     {
         if (strncasecmp(pUri, "https://", 8) == 0)
             isHttps = 1;
-        
+
         //Remove the protocol prefix
         if (strstr(pUri, "//"))
             pUri = strstr(pUri, "//") + 2;
 
         //Remove last '/' if exists
         int l = strlen(achAddress);
-        if (achAddress[l -1] == '/')
-            achAddress[l -1] = 0x00;
+        if (achAddress[l - 1] == '/')
+            achAddress[l - 1] = 0x00;
 
         if (strchr(pUri, ':') == NULL)
             strcat(achAddress, (isHttps ? ":443" : ":80"));
-        
-        currentCtx.log_debug( "ExtApp Proxy isHttps %d, Uri %s.",  isHttps, pUri);
+
+        currentCtx.logDebug("ExtApp Proxy isHttps %d, Uri %s.",  isHttps, pUri);
     }
-    
-    if ( addr.set( pUri, NO_ANY ) )
+
+    if (addr.set(pUri, NO_ANY))
     {
-        currentCtx.log_error( "failed to set socket address %s!", pUri );
+        currentCtx.logError("failed to set socket address %s!", pUri);
         return NULL;
     }
 
-    if ( ( iType == EA_FCGI ) || ( iType == EA_LOGGER ) || ( iType == EA_LSAPI ) )
+    if ((iType == EA_FCGI) || (iType == EA_LOGGER) || (iType == EA_LSAPI))
     {
-        if ( iType == EA_LOGGER )
+        if (iType == EA_LOGGER)
             iAutoStart = 1;
         else
-        {
-            iAutoStart = ConfigCtx::getCurConfigCtx()->getLongValue( pNode, "autoStart", 0, 2, 0 );
-        }
+            iAutoStart = ConfigCtx::getCurConfigCtx()->getLongValue(pNode, "autoStart",
+                         0, 2, 0);
 
-        pPath = pNode->getChildValue( "path" );
+        pPath = pNode->getChildValue("path");
 
-        if ( ( iAutoStart ) && ( ( !pPath || !*pPath ) ) )
+        if ((iAutoStart) && ((!pPath || !*pPath)))
         {
-            currentCtx.log_errorMissingTag( "path" );
+            currentCtx.logErrorMissingTag("path");
             return NULL;
         }
 
-        if ( iAutoStart )
+        if (iAutoStart)
         {
-            if ( ConfigCtx::getCurConfigCtx()->getAbsoluteFile( buf, pPath ) != 0 )
+            if (ConfigCtx::getCurConfigCtx()->getAbsoluteFile(buf, pPath) != 0)
                 return NULL;
 
             char *pCmd = buf;
-            char *p = ( char * ) StringTool::strNextArg( pCmd );
+            char *p = (char *) StringTool::strNextArg(pCmd);
 
-            if ( p )
+            if (p)
                 *p = 0;
 
-            if ( access( pCmd, X_OK ) == -1 )
+            if (access(pCmd, X_OK) == -1)
             {
-                currentCtx.log_error( "invalid path - %s, "
-                                      "it cannot be started by Web server!", buf );
+                currentCtx.logError("invalid path - %s, "
+                                    "it cannot be started by Web server!", buf);
                 return NULL;
             }
 
-            if ( p )
+            if (p)
                 *p = ' ';
 
-            if ( pCmd != buf )
+            if (pCmd != buf)
                 buf[len] = *buf;
 
             pPath = &buf[len];
         }
     }
-    pWorker = addApp( iType, pName );
+    pWorker = addApp(iType, pName);
 
-    if ( !pWorker )
+    if (!pWorker)
     {
-        currentCtx.log_error( "failed to add external processor!" );
+        currentCtx.logError("failed to add external processor!");
         return NULL;
     }
     pConfig = pWorker->getConfigPointer();
-    assert( pConfig );
+    assert(pConfig);
 
-    if ( pUri )
+    if (pUri)
     {
         if (iType == EA_PROXY)
             ((ProxyWorker *)pWorker)->getConfig().setSsl(isHttps);
 
-        if ( pWorker->setURL( pUri ) )
+        if (pWorker->setURL(pUri))
         {
-            currentCtx.log_error( "failed to set socket address to %s!", pName );
+            currentCtx.logError("failed to set socket address to %s!", pName);
             return NULL;
         }
     }
-    
-    pWorker->setRole( role );
 
-    pConfig->config( pNode );
+    pWorker->setRole(role);
 
-    if ( !iAutoStart )
+    pConfig->config(pNode);
+
+    if (!iAutoStart)
     {
-        pConfig->getEnv()->add( 0, 0, 0, 0 );
+        pConfig->getEnv()->add(0, 0, 0, 0);
         return pWorker;
     }
-    
-    LocalWorker *pApp = static_cast<LocalWorker *>( pWorker );
 
-    if ( pApp )
+    LocalWorker *pApp = static_cast<LocalWorker *>(pWorker);
+
+    if (pApp)
     {
         LocalWorkerConfig &config = pApp->getConfig();
-        config.setAppPath( pPath );
-        config.setStartByServer( iAutoStart );
+        config.setAppPath(pPath);
+        config.setStartByServer(iAutoStart);
 
-        config.config( pNode );
+        config.config(pNode);
 
-        
-        if ( configUserGroup )
-        {
-            config.configExtAppUserGroup(  pNode, iType );
 
-        }
+        if (configUserGroup)
+            config.configExtAppUserGroup(pNode, iType);
+
     }
 
     return pWorker;
 
 }
 
-int ExtAppRegistry::configLoadBalacner( const XmlNode *pNode, const HttpVHost *pVHost )
+int ExtAppRegistry::configLoadBalacner(const XmlNode *pNode,
+                                       const HttpVHost *pVHost)
 {
-    if ( strncasecmp( pNode->getName(), "extProcessor", 12 ) != 0 )
-    {
+    if (strncasecmp(pNode->getName(), "extProcessor", 12) != 0)
         return 1;
-    }
 
     char achName[256];
-    const char *pName = ConfigCtx::getCurConfigCtx()->getExpandedTag( pNode, "name", achName, 256, 1 );
+    const char *pName = ConfigCtx::getCurConfigCtx()->getExpandedTag(pNode,
+                        "name", achName, 256, 1);
 
-    if ( pName == NULL )
-    {
+    if (pName == NULL)
         return 1;
-    }
 
-    ConfigCtx currentCtx( pName );
+    ConfigCtx currentCtx(pName);
 
-    const char *pType = ConfigCtx::getCurConfigCtx()->getTag( pNode, "type" );
+    const char *pType = ConfigCtx::getCurConfigCtx()->getTag(pNode, "type");
 
-    if ( !pType )
+    if (!pType)
         return 1;
 
     int iType;
     int role;
-    iType = HandlerType::getHandlerType( pType, role );
+    iType = HandlerType::getHandlerType(pType, role);
 
-    if ( HandlerType::HT_LOADBALANCER != iType )
+    if (HandlerType::HT_LOADBALANCER != iType)
         return 1;
 
     iType -= HandlerType::HT_CGI;
 
     LoadBalancer *pLB;
 
-    pLB = ( LoadBalancer * ) addApp( iType, pName );
+    pLB = (LoadBalancer *) addApp(iType, pName);
 
-    if ( !pLB )
+    if (!pLB)
     {
-        currentCtx.log_error( "failed to add load balancer!" );
+        currentCtx.logError("failed to add load balancer!");
         return 1;
     }
     else
     {
         pLB->clearWorkerList();
 
-        if ( pVHost )
-        {
-            pLB->getConfigPointer()->setVHost( pVHost );
-        }
+        if (pVHost)
+            pLB->getConfigPointer()->setVHost(pVHost);
 
-        const char *pWorkers = pNode->getChildValue( "workers" );
+        const char *pWorkers = pNode->getChildValue("workers");
 
-        if ( pWorkers )
+        if (pWorkers)
         {
             StringList workerList;
-            workerList.split( pWorkers, pWorkers + strlen( pWorkers ), "," );
+            workerList.split(pWorkers, pWorkers + strlen(pWorkers), ",");
             StringList::const_iterator iter;
 
-            for( iter = workerList.begin(); iter != workerList.end(); ++iter )
+            for (iter = workerList.begin(); iter != workerList.end(); ++iter)
             {
-                const char *pType = ( *iter )->c_str();
-                char *pName = ( char * ) strstr( pType, "::" );
+                const char *pType = (*iter)->c_str();
+                char *pName = (char *) strstr(pType, "::");
 
-                if ( !pName )
+                if (!pName)
                 {
-                    currentCtx.log_error( "invalid worker syntax [%s].", pType );
+                    currentCtx.logError("invalid worker syntax [%s].", pType);
                     continue;
                 }
 
                 *pName = 0;
                 pName += 2;
-                iType = HandlerType::getHandlerType( pType, role );
+                iType = HandlerType::getHandlerType(pType, role);
 
-                if ( ( iType == HandlerType::HT_LOADBALANCER ) ||
-                        ( iType == HandlerType::HT_LOGGER ) ||
-                        ( iType < HandlerType::HT_CGI ) )
+                if ((iType == HandlerType::HT_LOADBALANCER) ||
+                    (iType == HandlerType::HT_LOGGER) ||
+                    (iType < HandlerType::HT_CGI))
                 {
-                    currentCtx.log_error( "invalid handler type [%s] for load balancer worker.", pType );
+                    currentCtx.logError("invalid handler type [%s] for load balancer worker.",
+                                        pType);
                     continue;
                 }
 
-                const ExtWorker *pWorker = static_cast<const ExtWorker *>(HandlerFactory::getHandler( pType, pName ));
+                const ExtWorker *pWorker = static_cast<const ExtWorker *>
+                                           (HandlerFactory::getHandler(pType, pName));
 
-                if ( pWorker )
+                if (pWorker)
                 {
-                    if (pWorker->getConfigPointer()->getVHost() != pVHost )
+                    if (pWorker->getConfigPointer()->getVHost() != pVHost)
                     {
-                        currentCtx.log_error( "Access to handler [%s:%s] is denied!",
-                                        pType, pName );
+                        currentCtx.logError("Access to handler [%s:%s] is denied!",
+                                            pType, pName);
                         continue;
                     }
                 }
 
-                if ( pWorker )
-                    pLB->addWorker( ( ExtWorker * ) pWorker );
+                if (pWorker)
+                    pLB->addWorker((ExtWorker *) pWorker);
             }
         }
     }
@@ -636,32 +605,33 @@ int ExtAppRegistry::configLoadBalacner( const XmlNode *pNode, const HttpVHost *p
 
 }
 
-int ExtAppRegistry::configExtApps( const XmlNode *pRoot, const HttpVHost *pVHost )
+int ExtAppRegistry::configExtApps(const XmlNode *pRoot,
+                                  const HttpVHost *pVHost)
 {
-    const XmlNode *pNode = pRoot->getChild( "extProcessorList", 1 );
+    const XmlNode *pNode = pRoot->getChild("extProcessorList", 1);
 
     XmlNodeList list;
-    int c = pNode->getAllChildren( list );
+    int c = pNode->getAllChildren(list);
     int add = 0 ;
     XmlNode *pExtAppNode;
 
-    for( int i = 0 ; i < c ; ++ i )
+    for (int i = 0 ; i < c ; ++ i)
     {
         pExtAppNode = list[i];
-        ExtWorker * pWorker = configExtApp( pExtAppNode, pVHost!= NULL );
-        if ( pWorker != NULL )
+        ExtWorker *pWorker = configExtApp(pExtAppNode, pVHost != NULL);
+        if (pWorker != NULL)
         {
-            if ( pVHost )
-                pWorker->getConfigPointer()->setVHost( pVHost );
+            if (pVHost)
+                pWorker->getConfigPointer()->setVHost(pVHost);
             ++add ;
         }
     }
 
-    for( int i = 0 ; i < c ; ++ i )
+    for (int i = 0 ; i < c ; ++ i)
     {
         pExtAppNode = list[i];
 
-        if ( configLoadBalacner( pExtAppNode, pVHost ) == 0 )
+        if (configLoadBalacner(pExtAppNode, pVHost) == 0)
             ++add ;
     }
 
@@ -669,7 +639,7 @@ int ExtAppRegistry::configExtApps( const XmlNode *pRoot, const HttpVHost *pVHost
 
 }
 
-#include <unistd.h> 
+#include <unistd.h>
 PidRegistry::PidRegistry()
 {
 }
@@ -678,41 +648,39 @@ PidRegistry::~PidRegistry()
 {
 }
 
-void PidRegistry::add( pid_t pid, ExtWorker * pApp, long tm )
+void PidRegistry::add(pid_t pid, ExtWorker *pApp, long tm)
 {
-    s_pidList()->add( pid, tm );
-    if ( pApp )
-        pApp->addPid( pid );
+    s_pidList()->add(pid, tm);
+    if (pApp)
+        pApp->addPid(pid);
 
-    if ( s_pSimpleList )
-        s_pSimpleList->add( pid, getpid(), pApp );
+    if (s_pSimpleList)
+        s_pSimpleList->add(pid, getpid(), pApp);
 }
 
-ExtWorker * PidRegistry::remove( pid_t pid)
+ExtWorker *PidRegistry::remove(pid_t pid)
 {
-    ExtWorker * pWorker = NULL;
-    if ( s_pSimpleList )
+    ExtWorker *pWorker = NULL;
+    if (s_pSimpleList)
     {
-        pWorker = s_pSimpleList->remove( pid );
-        s_pidList()->remove( pid );
+        pWorker = s_pSimpleList->remove(pid);
+        s_pidList()->remove(pid);
     }
     return pWorker;
-    
+
 }
 
-    
 
-void PidRegistry::setSimpleList( PidSimpleList * pList )
+
+void PidRegistry::setSimpleList(PidSimpleList *pList)
 {
-    s_pSimpleList = pList;    
+    s_pSimpleList = pList;
 }
 
-void PidRegistry::markToStop( pid_t pid, int kill_type )
+void PidRegistry::markToStop(pid_t pid, int kill_type)
 {
-    if ( s_pSimpleList )
-    {
-        s_pSimpleList->markToStop( pid, kill_type );
-    }
+    if (s_pSimpleList)
+        s_pSimpleList->markToStop(pid, kill_type);
 }
 
 

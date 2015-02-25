@@ -19,21 +19,23 @@
 #define JWORKERCONFIG_H
 
 #include <extensions/extworkerconfig.h>
+#include <lsdef.h>
 
 
 
 class JWorkerConfig : public ExtWorkerConfig
 {
-    char *  m_pSecret;
+    char   *m_pSecret;
     int     m_secretLen;
 public:
-    JWorkerConfig( const char * pName );
+    JWorkerConfig(const char *pName);
     JWorkerConfig();
     ~JWorkerConfig();
-    void setSecret( const char * pSecret );
-    const char * getSecret() const  {   return m_pSecret;   }
+    void setSecret(const char *pSecret);
+    const char *getSecret() const  {   return m_pSecret;   }
     int getSecretLen() const        {   return m_secretLen; }
-    
+
+    LS_NO_COPY_ASSIGN(JWorkerConfig);
 };
 
 #endif

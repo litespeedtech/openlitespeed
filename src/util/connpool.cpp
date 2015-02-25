@@ -19,74 +19,72 @@
 
 ConnPool::~ConnPool()
 {
-    m_connList.release_objects();
-    m_badList.release_objects();
+    m_connList.releaseObjects();
+    m_badList.releaseObjects();
 }
 
-int ConnPool::setMaxConns( int max )
+int ConnPool::setMaxConns(int max)
 {
-    if ( (int)m_connList.capacity() < max )
+    if ((int)m_connList.capacity() < max)
     {
-        if ( m_connList.reserve( max ) )
-            return -1;
-        if ( m_freeList.reserve( max ) )
-            return -1;
-        if ( m_badList.reserve( max ) )
-            return -1;
+        if (m_connList.reserve(max))
+            return LS_FAIL;
+        if (m_freeList.reserve(max))
+            return LS_FAIL;
+        if (m_badList.reserve(max))
+            return LS_FAIL;
     }
-    if ( m_iMaxConns < max )
+    if (m_iMaxConns < max)
         m_iMaxConns = max;
     return 0;
 }
 
-int ConnPool::regConn( IConnection * pConn )
+int ConnPool::regConn(IConnection *pConn)
 {
-    assert( pConn );
-    if ( m_freeList.full() )
+    assert(pConn);
+    if (m_freeList.full())
     {
-        if ( setMaxConns( m_connList.size() + 10 ) )
-            return -1;
+        if (setMaxConns(m_connList.size() + 10))
+            return LS_FAIL;
     }
-    m_connList.unsafe_push_back( pConn );
+    m_connList.unsafe_push_back(pConn);
     return 0;
 }
 
-void ConnPool::removeConn( IConnection * pConn )
+void ConnPool::removeConn(IConnection *pConn)
 {
     TPointerList<IConnection>::iterator iter;
     int found = 0;
-    for( iter = m_connList.begin(); iter != m_connList.end(); ++iter )
+    for (iter = m_connList.begin(); iter != m_connList.end(); ++iter)
     {
-        if ( *iter == pConn )
+        if (*iter == pConn)
         {
-            m_connList.erase( iter );
+            m_connList.erase(iter);
             found = 1;
             break;
         }
     }
-    for( iter = m_freeList.begin(); iter != m_freeList.end(); ++iter )
+    for (iter = m_freeList.begin(); iter != m_freeList.end(); ++iter)
     {
-        if ( *iter == pConn )
+        if (*iter == pConn)
         {
-            m_freeList.erase( iter );
+            m_freeList.erase(iter);
             found = 1;
             break;
         }
     }
-    if ( found )
-        m_badList.unsafe_push_back( pConn );
+    if (found)
+        m_badList.unsafe_push_back(pConn);
 }
 
-int  ConnPool::inFreeList( IConnection * pConn )
+int  ConnPool::inFreeList(IConnection *pConn)
 {
     TPointerList<IConnection>::iterator iter;
     TPointerList<IConnection>::iterator iterEnd = m_freeList.end();
-    for( iter = m_freeList.begin(); iter != iterEnd; ++iter )
+    for (iter = m_freeList.begin(); iter != iterEnd; ++iter)
     {
-        if ( *iter == pConn )
-        {
+        if (*iter == pConn)
             return 1;
-        }
     }
     return 0;
 }

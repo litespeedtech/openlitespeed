@@ -18,9 +18,9 @@
 #ifndef HTTPSIGNALS_H
 #define HTTPSIGNALS_H
 
-
+#include <lsdef.h>
 #include <util/signalutil.h>
-  
+
 enum
 {
     HS_CHILD = 1,
@@ -34,14 +34,14 @@ enum
 class HttpSignals
 {
     static int s_iEvents;
-    
+
     HttpSignals();
     ~HttpSignals();
 public:
 
     static int  gotEvent()      {   return s_iEvents;       }
     static void resetEvents()   {   s_iEvents = 0;          }
-    
+
     static void resetSigChild() {   s_iEvents &= ~HS_CHILD; }
     static void resetSigAlarm() {   s_iEvents &= ~HS_ALARM; }
     static void setSigStop()    {   s_iEvents |= HS_STOP;   }
@@ -52,11 +52,12 @@ public:
     static int  gotSigHup()     {   return s_iEvents & HS_HUP;      }
     static int  gotSigUsr1()    {   return s_iEvents & HS_USR1;     }
     static int  gotSigUsr2()    {   return s_iEvents & HS_USR2;     }
-    
-    static void orEvent( int event );
 
-    static void init( sighandler_t sigchild );
-    
+    static void orEvent(int event);
+
+    static void init(sighandler_t sigchild);
+
+    LS_NO_COPY_ASSIGN(HttpSignals);
 };
 
 #endif

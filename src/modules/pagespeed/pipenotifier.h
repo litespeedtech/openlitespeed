@@ -21,29 +21,32 @@
 #include <../../edio/eventreactor.h>
 class Multiplexer;
 
-typedef  void ( * EVENT_CALLBACK )( void* );
+typedef  void (* EVENT_CALLBACK)(void *);
 
 class PipeNotifier :  public EventReactor
 {
     int m_fdIn;
     EVENT_CALLBACK m_cb;
-    void* session_;
+    void *session_;
 
+    PipeNotifier(const PipeNotifier &rhs);
+    void operator=(const PipeNotifier &rhs);
 public:
-    PipeNotifier() : m_fdIn( -1 ), m_cb( NULL ) {};
+    PipeNotifier() : m_fdIn(-1), m_cb(NULL) {};
     ~PipeNotifier();
-    virtual int handleEvents( short int event );
-    int initNotifier( Multiplexer* pMultiplexer, void* session );
+    virtual int handleEvents(short int event);
+    int initNotifier(Multiplexer *pMultiplexer, void *session);
     void notify();
     int getFdIn()
     {
         return m_fdIn;
     }
-    void setCb( EVENT_CALLBACK cb )
+    void setCb(EVENT_CALLBACK cb)
     {
         m_cb = cb;
     }
-    void uninitNotifier( Multiplexer* pMultiplexer );
+    void uninitNotifier(Multiplexer *pMultiplexer);
+
 };
 
 #endif // PIPENOTIFIER_H

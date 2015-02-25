@@ -18,6 +18,7 @@
 #ifndef PATTERNLAYOUT_H
 #define PATTERNLAYOUT_H
 
+#include <lsdef.h>
 #include "layout.h"
 #include <log4cxx/nsdefs.h>
 #include <stdarg.h>
@@ -30,14 +31,17 @@ BEGIN_LOG4CXX_NS
 class PatternLayout : public Layout
 {
     static struct timeval s_startTime;
-    PatternLayout( const char * pName)
-        : Layout( pName )
-        {}
-public: 
+    PatternLayout(const char *pName)
+        : Layout(pName)
+    {}
+public:
     ~PatternLayout() {}
     static int init();
-    virtual Duplicable * dup( const char * pName );
-    virtual int format( LoggingEvent * pEvent, char * pBuf, int len);
+    virtual Duplicable *dup(const char *pName);
+    virtual int format(LoggingEvent *pEvent, char *pBuf, int len);
+
+
+    LS_NO_COPY_ASSIGN(PatternLayout);
 };
 
 END_LOG4CXX_NS

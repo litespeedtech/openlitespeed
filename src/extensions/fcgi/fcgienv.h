@@ -18,6 +18,7 @@
 #ifndef FCGIENV_H
 #define FCGIENV_H
 
+#include <lsdef.h>
 #include <util/autobuf.h>
 #include <util/ienv.h>
 
@@ -25,20 +26,21 @@
 class FcgiEnv : public IEnv
 {
     AutoBuf  m_buf;
-public: 
-    FcgiEnv() : m_buf( 2048 ) {};
+public:
+    FcgiEnv() : m_buf(2048) {};
     ~FcgiEnv() {}
-    int add( const char *name, const char *value )
-    {   return IEnv::add( name, value ); }
-    
-    int add( const char *name, size_t nameLen,
-            const char *value, size_t valLen );
-    int add( const char * buf, size_t len )
-    {   return m_buf.append( buf, len );   }
+    int add(const char *name, const char *value)
+    {   return IEnv::add(name, value); }
+
+    int add(const char *name, size_t nameLen,
+            const char *value, size_t valLen);
+    int add(const char *buf, size_t len)
+    {   return m_buf.append(buf, len);   }
     void clear()
     {   m_buf.clear();  }
-    const char * get() const {  return m_buf.begin();   }
+    const char *get() const {  return m_buf.begin();   }
     int size() const          {  return m_buf.size();     }
+    LS_NO_COPY_ASSIGN(FcgiEnv);
 };
 
 #endif

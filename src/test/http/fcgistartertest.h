@@ -29,7 +29,7 @@ class FcgiStarterTest : public CppUnit::TestFixture
     CPPUNIT_TEST_SUITE( FcgiStarterTest );
     CPPUNIT_TEST( test );
     CPPUNIT_TEST_SUITE_END();
-public: 
+public:
     FcgiStarterTest();
     ~FcgiStarterTest();
     void test();

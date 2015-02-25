@@ -17,5 +17,5 @@
 *****************************************************************************/
 #include "logidtracker.h"
 
-char  LogIdTracker::s_sLogId[128] = "config" ;
+char  LogIdTracker::s_aLogId[128] = "config";
 int   LogIdTracker::s_iIdLen = 6;

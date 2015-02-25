@@ -18,5 +18,10 @@
 #include "httpver.h"
 
 
+const char *const HttpVer::s_sHttpVer[2] =
+{
+    "HTTP/1.1",
+    "HTTP/1.0"
+};
 
 

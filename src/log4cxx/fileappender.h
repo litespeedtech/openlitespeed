@@ -18,9 +18,8 @@
 #ifndef FILEAPPENDER_H
 #define FILEAPPENDER_H
 
-
-
-#include <log4cxx/nsdefs.h>
+#include <lsdef.h>
+#include <edio/aiooutputstream.h>
 #include <log4cxx/appender.h>
 
 #include <stddef.h>
@@ -32,23 +31,31 @@ BEGIN_LOG4CXX_NS
 class FileAppender : public Appender
 {
     ino_t    m_ino;
+    AioOutputStream m_stream;
 
-protected: 
-    explicit FileAppender( const char * pName )
-        : Appender( pName )
-        , m_ino( 0 )
-        {}
-    Duplicable * dup( const char * pName );
-                       
+protected:
+    explicit FileAppender(const char *pName)
+        : Appender(pName)
+        , m_ino(0)
+        , m_stream()
+    {}
+    Duplicable *dup(const char *pName);
+
 public:
     virtual ~FileAppender() {};
     static int init();
-    
+
     virtual int open();
     virtual int close();
     virtual int reopenExist();
-    virtual int append( const char * pBuf, int len );
-    
+    virtual int append(const char *pBuf, int len);
+    virtual int getfd() const               {   return m_stream.getfd();        }
+    void setAsync()                         {   return m_stream.setAsync();     }
+    int flush()                             {   return m_stream.flush();        }
+
+
+
+    LS_NO_COPY_ASSIGN(FileAppender);
 };
 
 END_LOG4CXX_NS

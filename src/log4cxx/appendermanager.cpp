@@ -22,9 +22,9 @@ BEGIN_LOG4CXX_NS
 
 
 AppenderManager::AppenderManager()
-    : m_pCurAppender( NULL ) 
-    , m_curAppender( 0 )
-    , m_strategy( 0 )
+    : m_pCurAppender(NULL)
+    , m_curAppender(0)
+    , m_strategy(0)
 {
 }
 
@@ -33,29 +33,29 @@ AppenderManager::~AppenderManager()
 {
 }
 
-void AppenderManager::addAppender( Appender * p)
+void AppenderManager::addAppender(Appender *p)
 {
-    m_appenders.push_back( p );
+    m_appenders.push_back(p);
 }
 
 
-Appender * AppenderManager::getAppender()
+Appender *AppenderManager::getAppender()
 {
-    switch( m_strategy )
+    switch (m_strategy)
     {
     case AM_TILLFAIL:
-        if (( m_pCurAppender == NULL )||
-              m_pCurAppender->isFail() )
-            return findAppender( m_pCurAppender );
+        if ((m_pCurAppender == NULL) ||
+            m_pCurAppender->isFail())
+            return findAppender(m_pCurAppender);
         else
             return m_pCurAppender;
         break;
     case AM_RROBIN:
         return getNextAppender();
     case AM_TILLFULL:
-        if (( m_pCurAppender == NULL )||
-              m_pCurAppender->isFull() )
-            return findAppender( m_pCurAppender );
+        if ((m_pCurAppender == NULL) ||
+            m_pCurAppender->isFull())
+            return findAppender(m_pCurAppender);
         else
             return m_pCurAppender;
         break;
@@ -64,18 +64,18 @@ Appender * AppenderManager::getAppender()
     }
 }
 
-Appender * AppenderManager::findAppender( Appender * pExcept )
+Appender *AppenderManager::findAppender(Appender *pExcept)
 {
     TPointerList<Appender>::iterator iter;
     m_pCurAppender = NULL;
-    for( iter = m_appenders.begin(); iter != m_appenders.end();
-        ++iter )
+    for (iter = m_appenders.begin(); iter != m_appenders.end();
+         ++iter)
     {
-        if (!(*iter)->isFail() )
+        if (!(*iter)->isFail())
         {
-            if (( !m_pCurAppender )&&( pExcept != *iter ))
+            if ((!m_pCurAppender) && (pExcept != *iter))
                 m_pCurAppender = *iter;
-            if ( !(*iter)->isFull() )
+            if (!(*iter)->isFull())
             {
                 m_pCurAppender = *iter;
                 break;
@@ -85,29 +85,29 @@ Appender * AppenderManager::findAppender( Appender * pExcept )
     return m_pCurAppender;
 }
 
-Appender * AppenderManager::getNextAppender()
+Appender *AppenderManager::getNextAppender()
 {
     int s = m_appenders.size();
-    if ( s == 1 )
+    if (s == 1)
         return (*m_appenders.begin());
-    if ( s == 0 )
+    if (s == 0)
         return NULL;
     int n = m_curAppender++;
     int m = -1;
-    Appender * p = NULL;
-    while( n != m_curAppender )
+    Appender *p = NULL;
+    while (n != m_curAppender)
     {
-        if ( n >= s )
+        if (n >= s)
             n = 0;
         p = m_appenders[n];
-        if (!p->isFail() )
+        if (!p->isFail())
         {
-            if ( !p->isFull() )
+            if (!p->isFull())
             {
                 m_curAppender = n;
                 return p;
             }
-            if ( m == -1 )
+            if (m == -1)
                 m = n;
             m = n;
         }

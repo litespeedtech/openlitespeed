@@ -21,7 +21,7 @@
 
 
 #define AUTH_USER_SIZE       64
-  
+
 class AuthUser;
 class AuthRequired;
 class AutoBuf;
@@ -32,16 +32,16 @@ class HttpRespHeaders;
 
 class HTAuth
 {
-    char      * m_pName;
-    char      * m_authHeader;
+    char       *m_pName;
+    char       *m_authHeader;
     int         m_authHeaderLen;
-    UserDir   * m_pUserDir;
+    UserDir    *m_pUserDir;
     short       m_iAuthType;
     short       m_iAuthTypeUsed;
-    
-    HTAuth( const HTAuth& rhs );
-    void operator=( const HTAuth& rhs );
-    int buildWWWAuthHeader( const char * pName );
+
+    HTAuth(const HTAuth &rhs);
+    void operator=(const HTAuth &rhs);
+    int buildWWWAuthHeader(const char *pName);
 public:
     enum
     {
@@ -51,31 +51,31 @@ public:
     };
 
     HTAuth();
-    HTAuth( const char * pRealm );
+    HTAuth(const char *pRealm);
     ~HTAuth();
 
-    void setName( const char * pName );
-    const char * getName() const        {   return m_pName;                 }
-    
-    void setAuthType( int iType )       {   m_iAuthType = iType;            }
-    void setUserDir( UserDir * pDir )   {   m_pUserDir = pDir;              }
-        
+    void setName(const char *pName);
+    const char *getName() const        {   return m_pName;                 }
+
+    void setAuthType(int iType)       {   m_iAuthType = iType;            }
+    void setUserDir(UserDir *pDir)   {   m_pUserDir = pDir;              }
+
     int  getAuthType() const            {   return m_iAuthType;             }
-    const UserDir* getUserDir() const   {   return m_pUserDir;              }
+    const UserDir *getUserDir() const   {   return m_pUserDir;              }
 
     //const AuthUser * getUser( const char * pUser, int userLen ) const;
-    int addWWWAuthHeader( HttpRespHeaders& buf ) const ;
-    int basicAuth( HttpSession *pSession, const char * pAuthorization,
-                int headerLen, char * pAuthUser, int bufLen,
-                const AuthRequired * pRequired  ) const;
-    int digestAuth( HttpSession *pSession, const char * pAuthorization,
-                int size, char * pAuthUser, int bufLen,
-                const AuthRequired * pRequired ) const ;
+    int addWWWAuthHeader(HttpRespHeaders &buf) const ;
+    int basicAuth(HttpSession *pSession, const char *pAuthorization,
+                  int headerLen, char *pAuthUser, int bufLen,
+                  const AuthRequired *pRequired) const;
+    int digestAuth(HttpSession *pSession, const char *pAuthorization,
+                   int size, char *pAuthUser, int bufLen,
+                   const AuthRequired *pRequired) const ;
 //    int checkAuth(  const char * pAuthorization, int headerLen,
 //                char * pAuthUser, int bufLen  ) const;
-    int authenticate( HttpSession *pSession, const char * pAuthHeader,
-                    int authHeaderLen, char * pAuthUser, int userBufLen,
-                    const AuthRequired * pRequired ) const;
+    int authenticate(HttpSession *pSession, const char *pAuthHeader,
+                     int authHeaderLen, char *pAuthUser, int userBufLen,
+                     const AuthRequired *pRequired) const;
 };
 
 #endif

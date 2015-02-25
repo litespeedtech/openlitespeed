@@ -20,20 +20,22 @@
 
 
 
-#include <extensions/extworker.h>  
+#include <lsdef.h>
+#include <extensions/extworker.h>
 
 class JWorkerConfig;
 class JWorker : public ExtWorker
-{    
+{
 protected:
 
-    virtual ExtConn * newConn();
+    virtual ExtConn *newConn();
 
-public: 
-    explicit JWorker( const char * pname );
+public:
+    explicit JWorker(const char *pname);
     ~JWorker();
-    JWorkerConfig& getConfig()
+    JWorkerConfig &getConfig()
     {   return *((JWorkerConfig *)getConfigPointer());  }
+    LS_NO_COPY_ASSIGN(JWorker);
 };
 
 #endif

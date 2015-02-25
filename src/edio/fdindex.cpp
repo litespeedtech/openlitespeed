@@ -23,8 +23,8 @@
 #include <string.h>
 
 FdIndex::FdIndex()
-    : m_pIndexes( NULL )
-    , m_capacity( 0 )
+    : m_pIndexes(NULL)
+    , m_capacity(0)
 {
 }
 FdIndex::~FdIndex()
@@ -32,15 +32,15 @@ FdIndex::~FdIndex()
     deallocate();
 }
 
-int FdIndex::allocate( int capacity )
+int FdIndex::allocate(int capacity)
 {
-    unsigned short *pIndexes= ( unsigned short *) realloc( m_pIndexes,
-                        capacity * sizeof(short ));
+    unsigned short *pIndexes = (unsigned short *) realloc(m_pIndexes,
+                               capacity * sizeof(short));
     if (!pIndexes)
-        return -1;
-    if ( capacity > m_capacity )
-        memset( pIndexes + m_capacity, -1,
-                sizeof( short ) * (capacity - m_capacity ) );
+        return LS_FAIL;
+    if (capacity > m_capacity)
+        memset(pIndexes + m_capacity, -1,
+               sizeof(short) * (capacity - m_capacity));
     m_pIndexes = pIndexes;
     m_capacity = capacity;
     return 0;
@@ -48,8 +48,8 @@ int FdIndex::allocate( int capacity )
 
 int FdIndex::deallocate()
 {
-    if ( m_pIndexes )
-        free( m_pIndexes );
+    if (m_pIndexes)
+        free(m_pIndexes);
     return 0;
 }
 

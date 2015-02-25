@@ -17,13 +17,13 @@
 *****************************************************************************/
 #include "tcpsockopt.h"
 
-int TcpSockOpt::setTcpKeepAlive( CoreSocket& sock, int timeout )
+int TcpSockOpt::setTcpKeepAlive(CoreSocket &sock, int timeout)
 {
-    setKeepAlive( sock, (timeout != 0) );
+    setKeepAlive(sock, (timeout != 0));
 #ifdef TCP_KEEPALIVE
-    return sock.setTcpSockOptInt( TCP_KEEPALIVE, timeout );
+    return sock.setTcpSockOptInt(TCP_KEEPALIVE, timeout);
 #elif defined( TCP_KEEPINTVL )
-    return sock.setTcpSockOptInt( TCP_KEEPINTVL, timeout );
+    return sock.setTcpSockOptInt(TCP_KEEPINTVL, timeout);
 #else
     return CoreSocket::SUCCESS;
 #endif

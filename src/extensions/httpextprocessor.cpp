@@ -19,26 +19,24 @@
 #include <http/httpextconnector.h>
 
 
-void HttpExtProcessor::setConnector( HttpExtConnector* pConnector )
+void HttpExtProcessor::setConnector(HttpExtConnector *pConnector)
 {
     m_pConnector = pConnector;
-    if ( pConnector )
-    {
-        pConnector->setProcessor( this );
-    }
+    if (pConnector)
+        pConnector->setProcessor(this);
 }
 
-LOG4CXX_NS::Logger * HttpExtProcessor::getLogger() const
+LOG4CXX_NS::Logger *HttpExtProcessor::getLogger() const
 {
-    if ( m_pConnector )
+    if (m_pConnector)
         return m_pConnector->getLogger();
     else
         return NULL;
 }
 
-const char * HttpExtProcessor::getLogId()
+const char *HttpExtProcessor::getLogId()
 {
-    if ( m_pConnector )
+    if (m_pConnector)
         return m_pConnector->getLogId();
     else
         return "idle";

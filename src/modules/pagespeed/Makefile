@@ -37,18 +37,18 @@ INCLUDEFILES =-I. -I../.. -I.. -I../../util -I../../../include \
 	      -I./psol/include/third_party/css_parser/src/ 
 
 	      
-SOURCES =pagespeed.cc log_message_handler.cc ls_message_handler.cc \
-        pipenotifier.cc \
-        ls_server_context.cc \
-        ls_rewrite_driver_factory.cc \
-        ls_caching_headers.cc \
-        ls_rewrite_options.cc  \
-        ls_base_fetch.cc
+SOURCES =pagespeed.cpp log_message_handler.cpp ls_message_handler.cpp \
+        pipenotifier.cpp \
+        ls_server_context.cpp \
+        ls_rewrite_driver_factory.cpp \
+        ls_caching_headers.cpp \
+        ls_rewrite_options.cpp  \
+        ls_base_fetch.cpp
         
 
 $(shell rm *.o ../../util/*.o)
 
-OBJECTS=$(SOURCES:.cc=.o)
+OBJECTS=$(SOURCES:.cpp=.o)
 TARGET  = modpagespeed.so
 
 all: $(TARGET)
@@ -56,7 +56,7 @@ all: $(TARGET)
 $(TARGET): $(OBJECTS)
 	$(CC)  $(OBJECTS) $(PSOLPATH)pagespeed_automatic.a $(INCLUDEFILES) -o $@  $(LDFLAGS)
 
-.cc.o:
+.cpp.o:
 	$(CC)  $(INCLUDEFILES) $(CFLAGS)  $< -o $@
         
 clean:

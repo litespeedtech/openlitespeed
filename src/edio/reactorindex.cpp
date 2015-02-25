@@ -23,9 +23,9 @@
 #include <string.h>
 
 ReactorIndex::ReactorIndex()
-    : m_pIndexes( NULL )
-    , m_capacity( 0 )
-    , m_iUsed( 0 )
+    : m_pIndexes(NULL)
+    , m_capacity(0)
+    , m_iUsed(0)
 {
 }
 
@@ -34,15 +34,15 @@ ReactorIndex::~ReactorIndex()
     deallocate();
 }
 
-int ReactorIndex::allocate( int capacity )
+int ReactorIndex::allocate(int capacity)
 {
-    EventReactor ** pIndexes = ( EventReactor **) realloc( m_pIndexes,
-                        capacity * sizeof(EventReactor *));
+    EventReactor **pIndexes = (EventReactor **) realloc(m_pIndexes,
+                              capacity * sizeof(EventReactor *));
     if (!pIndexes)
-        return -1;
-    if ( (unsigned)capacity > m_capacity )
-        memset( pIndexes + m_capacity, 0,
-                sizeof( EventReactor * ) * (capacity - m_capacity ) );
+        return LS_FAIL;
+    if ((unsigned)capacity > m_capacity)
+        memset(pIndexes + m_capacity, 0,
+               sizeof(EventReactor *) * (capacity - m_capacity));
     m_pIndexes = pIndexes;
     m_capacity = capacity;
     return 0;
@@ -50,8 +50,8 @@ int ReactorIndex::allocate( int capacity )
 
 int ReactorIndex::deallocate()
 {
-    if ( m_pIndexes )
-        free( m_pIndexes );
+    if (m_pIndexes)
+        free(m_pIndexes);
     return 0;
 }
 
@@ -63,19 +63,19 @@ int ReactorIndex::deallocate()
 void ReactorIndex::timerExec()
 {
     unsigned int i;
-    while(((m_iUsed) > 0)&&(m_pIndexes[m_iUsed] == NULL ))
+    while (((m_iUsed) > 0) && (m_pIndexes[m_iUsed] == NULL))
         --m_iUsed;
-    for( i = 0; i <= m_iUsed; ++i )
+    for (i = 0; i <= m_iUsed; ++i)
     {
-        if ( m_pIndexes[i] )
+        if (m_pIndexes[i])
         {
-            if ( m_pIndexes[i]->getfd() == (int)i )
+            if (m_pIndexes[i]->getfd() == (int)i)
                 m_pIndexes[i]->onTimer();
             else
             {
 //                LOG_ERR(( "[%d] ReactorIndex[%d]=%p, getfd()=%d, type: %s", getpid(), i, m_pIndexes[i], m_pIndexes[i]->getfd(),
 //                typeid( *m_pIndexes[i] ).name() ));
-                
+
                 m_pIndexes[i] = NULL;
             }
         }

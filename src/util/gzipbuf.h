@@ -18,28 +18,29 @@
 #ifndef GZIPBUF_H
 #define GZIPBUF_H
 
+#include <lsdef.h>
 
 
 #include <inttypes.h>
 #include <zlib.h>
-  
+
 class VMemBuf;
 
 class GzipBuf
 {
     z_stream        m_zstr;
     //uint32_t        m_crc;
-    uint32_t        m_lastFlush;
-    uint32_t        m_flushWindowSize;
-    short           m_type;
-    short           m_streamStarted;
-    VMemBuf       * m_pCompressCache;
+    uint32_t        m_iLastFlush;
+    uint32_t        m_iFlushWindowSize;
+    short           m_iType;
+    short           m_iStreamStarted;
+    VMemBuf        *m_pCompressCache;
 
-    int process( int finish );
-    int compress( const char * pBuf, int len );
-    int decompress( const char * pBuf, int len );
-public: 
-    enum 
+    int process(int finish);
+    int compress(const char *pBuf, int len);
+    int decompress(const char *pBuf, int len);
+public:
+    enum
     {
         GZIP_UNKNOWN,
         GZIP_DEFLATE,
@@ -47,44 +48,48 @@ public:
     };
     GzipBuf();
     ~GzipBuf();
-    
-    explicit GzipBuf( int type, int level );
 
-    int getType() const {   return m_type;   }
+    explicit GzipBuf(int type, int level);
 
-    int init( int type, int level);
+    int getType() const {   return m_iType;   }
+
+    int init(int type, int level);
     int reinit();
     int beginStream();
-    int write( const char * pBuf, int len )
-    {   return ( compress( pBuf, len ) < 0 )? -1 : len;  }
+    int write(const char *pBuf, int len)
+    {   return (compress(pBuf, len) < 0) ? -1 : len;  }
     int shouldFlush()
-    {   return m_zstr.total_in - m_lastFlush > m_flushWindowSize;       }
+    {   return m_zstr.total_in - m_iLastFlush > m_iFlushWindowSize;       }
     int flush()
-    {   m_lastFlush = m_zstr.total_in; return process( Z_SYNC_FLUSH );  }
+    {   m_iLastFlush = m_zstr.total_in; return process(Z_SYNC_FLUSH);  }
     int endStream();
     int reset()
-    {   return deflateReset (&m_zstr);  }
+    {   return deflateReset(&m_zstr);  }
 
-    void setFlushWindowSize( unsigned long size )
-    {   m_flushWindowSize = size;       }
-        
+    void setFlushWindowSize(unsigned long size)
+    {   m_iFlushWindowSize = size;       }
+
     int release();
 
-    void setCompressCache( VMemBuf * pCache )
+    void setCompressCache(VMemBuf *pCache)
     {   m_pCompressCache = pCache;  }
-    VMemBuf * getCompressCache() const
+    VMemBuf *getCompressCache() const
     {   return m_pCompressCache;    }
     int resetCompressCache();
-    const char * getLastError() const
+    const char *getLastError() const
     {   return m_zstr.msg;          }
 
-    int processFile( int type, const char * pFileName, const char * pCompressFileName );
+    int processFile(int type, const char *pFileName,
+                    const char *pCompressFileName);
 
-    int compressFile( const char * pFileName, const char * pCompressFileName )
-    {   return processFile( GZIP_DEFLATE, pFileName, pCompressFileName );       }
-    int decompressFile( const char * pFileName, const char * pDecompressFileName )
-    {   return processFile( GZIP_INFLATE, pFileName, pDecompressFileName );       }
-    int isStreamStarted() const {   return m_streamStarted;     }
+    int compressFile(const char *pFileName, const char *pCompressFileName)
+    {   return processFile(GZIP_DEFLATE, pFileName, pCompressFileName);       }
+    int decompressFile(const char *pFileName, const char *pDecompressFileName)
+    {   return processFile(GZIP_INFLATE, pFileName, pDecompressFileName);       }
+    int isStreamStarted() const {   return m_iStreamStarted;     }
+
+
+    LS_NO_COPY_ASSIGN(GzipBuf);
 };
 
 #endif

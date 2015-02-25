@@ -24,7 +24,7 @@ class SmartSettings
 {
     SmartSettings();
     ~SmartSettings();
-public: 
+public:
     static int getDefaultHttpBufSize()    { return 1024; }
     static int getHttpBufIncreaseSize()   { return 1024; }
     static int getMaxHeaderBufSize()      { return 4096; }

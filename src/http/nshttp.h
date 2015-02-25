@@ -19,10 +19,10 @@
 #define NS_HTTP_H_
 
 #define NS_HTTP_BEGIN \
-namespace Http \
-{
+    namespace Http \
+    {
 #define NS_HTTP_END \
-}
+    }
 
 
 #endif //NS_HTTP_H_

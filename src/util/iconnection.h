@@ -22,7 +22,7 @@
 
 class IConnection
 {
-public: 
+public:
     IConnection() {};
     virtual ~IConnection() {};
 };

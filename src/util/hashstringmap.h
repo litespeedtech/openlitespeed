@@ -19,6 +19,7 @@
 #define HASHSTRINGMAP_H
 
 
+#include <lsdef.h>
 
 #include <util/ghash.h>
 #include <util/autostr.h>
@@ -32,69 +33,70 @@ public:
     {
         GHash::iterator m_iter;
     public:
-        iterator() : m_iter( NULL )
+        iterator() : m_iter(NULL)
         {}
 
-        iterator( GHash::iterator iter ) : m_iter( iter )
+        iterator(GHash::iterator iter) : m_iter(iter)
         {}
-        iterator( GHash::const_iterator iter )
-            : m_iter( (GHash::iterator)iter )
-        {}
-
-        iterator( const iterator& rhs ) : m_iter( rhs.m_iter )
+        iterator(GHash::const_iterator iter)
+            : m_iter((GHash::iterator)iter)
         {}
 
-        const char * first() const
-        {  return (const char *)( m_iter->first() );   }
+        iterator(const iterator &rhs) : m_iter(rhs.m_iter)
+        {}
+
+        const char *first() const
+        {  return (const char *)(m_iter->first());   }
 
         T second() const
-        {   return (T)( m_iter->second() );   }
+        {   return (T)(m_iter->second());   }
 
-        operator GHash::iterator ()
+        operator GHash::iterator()
         {   return m_iter;  }
 
     };
     typedef iterator const_iterator;
-    
-    HashStringMap( int initsize = 29, 
-                GHash::hash_fn hf = GHash::hash_string,
-                GHash::val_comp vc = GHash::comp_string )
-        : GHash( initsize, hf, vc )
-        {};
+
+    HashStringMap(int initsize = 29,
+                  GHash::hasher hf = GHash::hfString,
+                  GHash::value_compare vc = GHash::cmpString)
+        : GHash(initsize, hf, vc)
+    {};
     ~HashStringMap() {};
 
-    iterator insert( const char * pKey, const T& val )
+    iterator insert(const char *pKey, const T &val)
     {
-        return GHash::insert( pKey, val );
+        return GHash::insert(pKey, val);
     }
 
-    iterator update( const char * pKey, const T& val )
+    iterator update(const char *pKey, const T &val)
     {
-        return GHash::update( pKey, val );
+        return GHash::update(pKey, val);
     }
 
-    iterator remove( const char * pKey )
+    iterator remove(const char *pKey)
     {
-        iterator iter = GHash::find( pKey );
-        if ( iter != end() )
-        {
-            GHash::erase( iter );
-        }
+        iterator iter = GHash::find(pKey);
+        if (iter != end())
+            GHash::erase(iter);
         return iter;
     }
 
-    static int deleteObj( const void *pKey, void *pData )
+    static int deleteObj(const void *pKey, void *pData)
     {
-        delete (T)( pData );
+        delete(T)(pData);
         return 0;
     }
 
-    void release_objects()
+    void releaseObjects()
     {
-        GHash::for_each( begin(), end(), deleteObj );
+        GHash::for_each(begin(), end(), deleteObj);
         GHash::clear();
     }
 
+
+
+    LS_NO_COPY_ASSIGN(HashStringMap);
 };
 
 class StrStr
@@ -107,29 +109,32 @@ public:
 class StrStrHashMap : public HashStringMap<StrStr *>
 {
 public:
-    StrStrHashMap( int initsize = 29, GHash::hash_fn hf= GHash::hash_string,
-                    GHash::val_comp vc = GHash::comp_string)
-        : HashStringMap<StrStr *>( initsize, hf, vc )
-        {};
-    ~StrStrHashMap() {  release_objects();   };
-    iterator insert_update( const char * pKey, const char * pValue )
+    StrStrHashMap(int initsize = 29, GHash::hasher hf = GHash::hfString,
+                  GHash::value_compare vc = GHash::cmpString)
+        : HashStringMap<StrStr * >(initsize, hf, vc)
+    {};
+    ~StrStrHashMap() {  releaseObjects();   };
+    iterator update(const char *pKey, const char *pValue)
     {
-        iterator iter = find( pKey );
-        if (iter != end() )
+        iterator iter = find(pKey);
+        if (iter != end())
         {
-            iter.second()->str2.setStr( pValue );
+            iter.second()->str2.setStr(pValue);
             return iter;
         }
         else
         {
-            StrStr * pStr = new StrStr();
-            pStr->str1.setStr( pKey );
-            pStr->str2.setStr( pValue );
-            return insert( pStr->str1.c_str(), pStr );
+            StrStr *pStr = new StrStr();
+            pStr->str1.setStr(pKey);
+            pStr->str2.setStr(pValue);
+            return insert(pStr->str1.c_str(), pStr);
         }
     }
 
 
+
+
+    LS_NO_COPY_ASSIGN(StrStrHashMap);
 };
 
 

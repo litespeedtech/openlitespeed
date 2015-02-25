@@ -16,15 +16,13 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "hpack.h"
-//#include <assert.h>
 #include "stdio.h"
 
 #define LS_STR_TO_IOVEC(a) (a), (sizeof(a) -1)
 #define MAX_HEADER_LENGTH   4096
 
 //ref: https://www.mnot.net/talks/http2-expectations/hpack.html
-
-static HPackHeaderTable_t g_HPackStaticTable_t[HPackStaticTableCount] = 
+static HPackHeaderTable_t g_HPackStaticTable_t[HPackStaticTableCount] =
 {
     { LS_STR_TO_IOVEC(":authority"),         LS_STR_TO_IOVEC("") },
     { LS_STR_TO_IOVEC(":method"),            LS_STR_TO_IOVEC("GET") },
@@ -91,7 +89,8 @@ static HPackHeaderTable_t g_HPackStaticTable_t[HPackStaticTableCount] =
 
 
 
-HPackHuffEncode_t HuffmanCode::m_HPackHuffEncode_t[257] = {
+HPackHuffEncode_t HuffmanCode::m_HPackHuffEncode_t[257] =
+{
     {     0x1ff8,    13},    //        (  0)
     {   0x7fffd8,    23},    //        (  1)
     {  0xfffffe2,    28},    //        (  2)
@@ -352,10 +351,10 @@ HPackHuffEncode_t HuffmanCode::m_HPackHuffEncode_t[257] = {
 };
 
 
-HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] = 
+HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
 {
-        /* 0 */
-    { 
+    /* 0 */
+    {
         { 4, 0x00, 0 },
         { 5, 0x00, 0 },
         { 7, 0x00, 0 },
@@ -373,8 +372,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 57, 0x00, 0 },
         { 64, 0x01, 0 },
     },
-        /* 1 */
-    { 
+    /* 1 */
+    {
         { 0, 0x03, 48 },
         { 0, 0x03, 49 },
         { 0, 0x03, 50 },
@@ -392,8 +391,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 20, 0x00, 0 },
         { 21, 0x00, 0 },
     },
-        /* 2 */
-    { 
+    /* 2 */
+    {
         { 1, 0x02, 48 },
         { 22, 0x03, 48 },
         { 1, 0x02, 49 },
@@ -411,8 +410,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 1, 0x02, 111 },
         { 22, 0x03, 111 },
     },
-        /* 3 */
-    { 
+    /* 3 */
+    {
         { 2, 0x02, 48 },
         { 9, 0x02, 48 },
         { 23, 0x02, 48 },
@@ -430,8 +429,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 23, 0x02, 97 },
         { 40, 0x03, 97 },
     },
-        /* 4 */
-    { 
+    /* 4 */
+    {
         { 3, 0x02, 48 },
         { 6, 0x02, 48 },
         { 10, 0x02, 48 },
@@ -449,8 +448,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 49 },
         { 56, 0x03, 49 },
     },
-        /* 5 */
-    { 
+    /* 5 */
+    {
         { 3, 0x02, 50 },
         { 6, 0x02, 50 },
         { 10, 0x02, 50 },
@@ -468,8 +467,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 97 },
         { 56, 0x03, 97 },
     },
-        /* 6 */
-    { 
+    /* 6 */
+    {
         { 2, 0x02, 99 },
         { 9, 0x02, 99 },
         { 23, 0x02, 99 },
@@ -487,8 +486,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 23, 0x02, 111 },
         { 40, 0x03, 111 },
     },
-        /* 7 */
-    { 
+    /* 7 */
+    {
         { 3, 0x02, 99 },
         { 6, 0x02, 99 },
         { 10, 0x02, 99 },
@@ -506,8 +505,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 101 },
         { 56, 0x03, 101 },
     },
-        /* 8 */
-    { 
+    /* 8 */
+    {
         { 3, 0x02, 105 },
         { 6, 0x02, 105 },
         { 10, 0x02, 105 },
@@ -525,8 +524,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 111 },
         { 56, 0x03, 111 },
     },
-        /* 9 */
-    { 
+    /* 9 */
+    {
         { 1, 0x02, 115 },
         { 22, 0x03, 115 },
         { 1, 0x02, 116 },
@@ -544,8 +543,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 0, 0x03, 56 },
         { 0, 0x03, 57 },
     },
-        /* 10 */
-    { 
+    /* 10 */
+    {
         { 2, 0x02, 115 },
         { 9, 0x02, 115 },
         { 23, 0x02, 115 },
@@ -563,8 +562,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 1, 0x02, 46 },
         { 22, 0x03, 46 },
     },
-        /* 11 */
-    { 
+    /* 11 */
+    {
         { 3, 0x02, 115 },
         { 6, 0x02, 115 },
         { 10, 0x02, 115 },
@@ -582,8 +581,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 116 },
         { 56, 0x03, 116 },
     },
-        /* 12 */
-    { 
+    /* 12 */
+    {
         { 2, 0x02, 32 },
         { 9, 0x02, 32 },
         { 23, 0x02, 32 },
@@ -601,8 +600,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 23, 0x02, 46 },
         { 40, 0x03, 46 },
     },
-        /* 13 */
-    { 
+    /* 13 */
+    {
         { 3, 0x02, 32 },
         { 6, 0x02, 32 },
         { 10, 0x02, 32 },
@@ -620,8 +619,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 37 },
         { 56, 0x03, 37 },
     },
-        /* 14 */
-    { 
+    /* 14 */
+    {
         { 3, 0x02, 45 },
         { 6, 0x02, 45 },
         { 10, 0x02, 45 },
@@ -639,8 +638,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 46 },
         { 56, 0x03, 46 },
     },
-        /* 15 */
-    { 
+    /* 15 */
+    {
         { 1, 0x02, 47 },
         { 22, 0x03, 47 },
         { 1, 0x02, 51 },
@@ -658,8 +657,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 1, 0x02, 57 },
         { 22, 0x03, 57 },
     },
-        /* 16 */
-    { 
+    /* 16 */
+    {
         { 2, 0x02, 47 },
         { 9, 0x02, 47 },
         { 23, 0x02, 47 },
@@ -677,8 +676,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 23, 0x02, 53 },
         { 40, 0x03, 53 },
     },
-        /* 17 */
-    { 
+    /* 17 */
+    {
         { 3, 0x02, 47 },
         { 6, 0x02, 47 },
         { 10, 0x02, 47 },
@@ -696,8 +695,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 51 },
         { 56, 0x03, 51 },
     },
-        /* 18 */
-    { 
+    /* 18 */
+    {
         { 3, 0x02, 52 },
         { 6, 0x02, 52 },
         { 10, 0x02, 52 },
@@ -715,8 +714,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 53 },
         { 56, 0x03, 53 },
     },
-        /* 19 */
-    { 
+    /* 19 */
+    {
         { 2, 0x02, 54 },
         { 9, 0x02, 54 },
         { 23, 0x02, 54 },
@@ -734,8 +733,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 23, 0x02, 57 },
         { 40, 0x03, 57 },
     },
-        /* 20 */
-    { 
+    /* 20 */
+    {
         { 3, 0x02, 54 },
         { 6, 0x02, 54 },
         { 10, 0x02, 54 },
@@ -753,8 +752,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 55 },
         { 56, 0x03, 55 },
     },
-        /* 21 */
-    { 
+    /* 21 */
+    {
         { 3, 0x02, 56 },
         { 6, 0x02, 56 },
         { 10, 0x02, 56 },
@@ -772,8 +771,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 57 },
         { 56, 0x03, 57 },
     },
-        /* 22 */
-    { 
+    /* 22 */
+    {
         { 26, 0x00, 0 },
         { 27, 0x00, 0 },
         { 29, 0x00, 0 },
@@ -791,8 +790,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 65, 0x00, 0 },
         { 68, 0x01, 0 },
     },
-        /* 23 */
-    { 
+    /* 23 */
+    {
         { 0, 0x03, 61 },
         { 0, 0x03, 65 },
         { 0, 0x03, 95 },
@@ -810,8 +809,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 38, 0x00, 0 },
         { 39, 0x00, 0 },
     },
-        /* 24 */
-    { 
+    /* 24 */
+    {
         { 1, 0x02, 61 },
         { 22, 0x03, 61 },
         { 1, 0x02, 65 },
@@ -829,8 +828,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 1, 0x02, 104 },
         { 22, 0x03, 104 },
     },
-        /* 25 */
-    { 
+    /* 25 */
+    {
         { 2, 0x02, 61 },
         { 9, 0x02, 61 },
         { 23, 0x02, 61 },
@@ -848,8 +847,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 23, 0x02, 98 },
         { 40, 0x03, 98 },
     },
-        /* 26 */
-    { 
+    /* 26 */
+    {
         { 3, 0x02, 61 },
         { 6, 0x02, 61 },
         { 10, 0x02, 61 },
@@ -867,8 +866,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 65 },
         { 56, 0x03, 65 },
     },
-        /* 27 */
-    { 
+    /* 27 */
+    {
         { 3, 0x02, 95 },
         { 6, 0x02, 95 },
         { 10, 0x02, 95 },
@@ -886,8 +885,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 98 },
         { 56, 0x03, 98 },
     },
-        /* 28 */
-    { 
+    /* 28 */
+    {
         { 2, 0x02, 100 },
         { 9, 0x02, 100 },
         { 23, 0x02, 100 },
@@ -905,8 +904,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 23, 0x02, 104 },
         { 40, 0x03, 104 },
     },
-        /* 29 */
-    { 
+    /* 29 */
+    {
         { 3, 0x02, 100 },
         { 6, 0x02, 100 },
         { 10, 0x02, 100 },
@@ -924,8 +923,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 102 },
         { 56, 0x03, 102 },
     },
-        /* 30 */
-    { 
+    /* 30 */
+    {
         { 3, 0x02, 103 },
         { 6, 0x02, 103 },
         { 10, 0x02, 103 },
@@ -943,8 +942,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 104 },
         { 56, 0x03, 104 },
     },
-        /* 31 */
-    { 
+    /* 31 */
+    {
         { 1, 0x02, 108 },
         { 22, 0x03, 108 },
         { 1, 0x02, 109 },
@@ -962,8 +961,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 0, 0x03, 67 },
         { 0, 0x03, 68 },
     },
-        /* 32 */
-    { 
+    /* 32 */
+    {
         { 2, 0x02, 108 },
         { 9, 0x02, 108 },
         { 23, 0x02, 108 },
@@ -981,8 +980,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 23, 0x02, 112 },
         { 40, 0x03, 112 },
     },
-        /* 33 */
-    { 
+    /* 33 */
+    {
         { 3, 0x02, 108 },
         { 6, 0x02, 108 },
         { 10, 0x02, 108 },
@@ -1000,8 +999,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 109 },
         { 56, 0x03, 109 },
     },
-        /* 34 */
-    { 
+    /* 34 */
+    {
         { 3, 0x02, 110 },
         { 6, 0x02, 110 },
         { 10, 0x02, 110 },
@@ -1019,8 +1018,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 112 },
         { 56, 0x03, 112 },
     },
-        /* 35 */
-    { 
+    /* 35 */
+    {
         { 2, 0x02, 114 },
         { 9, 0x02, 114 },
         { 23, 0x02, 114 },
@@ -1038,8 +1037,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 1, 0x02, 68 },
         { 22, 0x03, 68 },
     },
-        /* 36 */
-    { 
+    /* 36 */
+    {
         { 3, 0x02, 114 },
         { 6, 0x02, 114 },
         { 10, 0x02, 114 },
@@ -1057,8 +1056,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 117 },
         { 56, 0x03, 117 },
     },
-        /* 37 */
-    { 
+    /* 37 */
+    {
         { 2, 0x02, 58 },
         { 9, 0x02, 58 },
         { 23, 0x02, 58 },
@@ -1076,8 +1075,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 23, 0x02, 68 },
         { 40, 0x03, 68 },
     },
-        /* 38 */
-    { 
+    /* 38 */
+    {
         { 3, 0x02, 58 },
         { 6, 0x02, 58 },
         { 10, 0x02, 58 },
@@ -1095,8 +1094,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 66 },
         { 56, 0x03, 66 },
     },
-        /* 39 */
-    { 
+    /* 39 */
+    {
         { 3, 0x02, 67 },
         { 6, 0x02, 67 },
         { 10, 0x02, 67 },
@@ -1114,8 +1113,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 68 },
         { 56, 0x03, 68 },
     },
-        /* 40 */
-    { 
+    /* 40 */
+    {
         { 44, 0x00, 0 },
         { 45, 0x00, 0 },
         { 47, 0x00, 0 },
@@ -1133,8 +1132,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 69, 0x00, 0 },
         { 72, 0x01, 0 },
     },
-        /* 41 */
-    { 
+    /* 41 */
+    {
         { 0, 0x03, 69 },
         { 0, 0x03, 70 },
         { 0, 0x03, 71 },
@@ -1152,8 +1151,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 0, 0x03, 83 },
         { 0, 0x03, 84 },
     },
-        /* 42 */
-    { 
+    /* 42 */
+    {
         { 1, 0x02, 69 },
         { 22, 0x03, 69 },
         { 1, 0x02, 70 },
@@ -1171,8 +1170,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 1, 0x02, 76 },
         { 22, 0x03, 76 },
     },
-        /* 43 */
-    { 
+    /* 43 */
+    {
         { 2, 0x02, 69 },
         { 9, 0x02, 69 },
         { 23, 0x02, 69 },
@@ -1190,8 +1189,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 23, 0x02, 72 },
         { 40, 0x03, 72 },
     },
-        /* 44 */
-    { 
+    /* 44 */
+    {
         { 3, 0x02, 69 },
         { 6, 0x02, 69 },
         { 10, 0x02, 69 },
@@ -1209,8 +1208,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 70 },
         { 56, 0x03, 70 },
     },
-        /* 45 */
-    { 
+    /* 45 */
+    {
         { 3, 0x02, 71 },
         { 6, 0x02, 71 },
         { 10, 0x02, 71 },
@@ -1228,8 +1227,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 72 },
         { 56, 0x03, 72 },
     },
-        /* 46 */
-    { 
+    /* 46 */
+    {
         { 2, 0x02, 73 },
         { 9, 0x02, 73 },
         { 23, 0x02, 73 },
@@ -1247,8 +1246,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 23, 0x02, 76 },
         { 40, 0x03, 76 },
     },
-        /* 47 */
-    { 
+    /* 47 */
+    {
         { 3, 0x02, 73 },
         { 6, 0x02, 73 },
         { 10, 0x02, 73 },
@@ -1266,8 +1265,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 74 },
         { 56, 0x03, 74 },
     },
-        /* 48 */
-    { 
+    /* 48 */
+    {
         { 3, 0x02, 75 },
         { 6, 0x02, 75 },
         { 10, 0x02, 75 },
@@ -1285,8 +1284,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 76 },
         { 56, 0x03, 76 },
     },
-        /* 49 */
-    { 
+    /* 49 */
+    {
         { 1, 0x02, 77 },
         { 22, 0x03, 77 },
         { 1, 0x02, 78 },
@@ -1304,8 +1303,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 1, 0x02, 84 },
         { 22, 0x03, 84 },
     },
-        /* 50 */
-    { 
+    /* 50 */
+    {
         { 2, 0x02, 77 },
         { 9, 0x02, 77 },
         { 23, 0x02, 77 },
@@ -1323,8 +1322,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 23, 0x02, 80 },
         { 40, 0x03, 80 },
     },
-        /* 51 */
-    { 
+    /* 51 */
+    {
         { 3, 0x02, 77 },
         { 6, 0x02, 77 },
         { 10, 0x02, 77 },
@@ -1342,8 +1341,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 78 },
         { 56, 0x03, 78 },
     },
-        /* 52 */
-    { 
+    /* 52 */
+    {
         { 3, 0x02, 79 },
         { 6, 0x02, 79 },
         { 10, 0x02, 79 },
@@ -1361,8 +1360,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 80 },
         { 56, 0x03, 80 },
     },
-        /* 53 */
-    { 
+    /* 53 */
+    {
         { 2, 0x02, 81 },
         { 9, 0x02, 81 },
         { 23, 0x02, 81 },
@@ -1380,8 +1379,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 23, 0x02, 84 },
         { 40, 0x03, 84 },
     },
-        /* 54 */
-    { 
+    /* 54 */
+    {
         { 3, 0x02, 81 },
         { 6, 0x02, 81 },
         { 10, 0x02, 81 },
@@ -1399,8 +1398,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 82 },
         { 56, 0x03, 82 },
     },
-        /* 55 */
-    { 
+    /* 55 */
+    {
         { 3, 0x02, 83 },
         { 6, 0x02, 83 },
         { 10, 0x02, 83 },
@@ -1418,8 +1417,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 84 },
         { 56, 0x03, 84 },
     },
-        /* 56 */
-    { 
+    /* 56 */
+    {
         { 0, 0x03, 85 },
         { 0, 0x03, 86 },
         { 0, 0x03, 87 },
@@ -1437,8 +1436,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 73, 0x00, 0 },
         { 74, 0x01, 0 },
     },
-        /* 57 */
-    { 
+    /* 57 */
+    {
         { 1, 0x02, 85 },
         { 22, 0x03, 85 },
         { 1, 0x02, 86 },
@@ -1456,8 +1455,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 1, 0x02, 118 },
         { 22, 0x03, 118 },
     },
-        /* 58 */
-    { 
+    /* 58 */
+    {
         { 2, 0x02, 85 },
         { 9, 0x02, 85 },
         { 23, 0x02, 85 },
@@ -1475,8 +1474,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 23, 0x02, 89 },
         { 40, 0x03, 89 },
     },
-        /* 59 */
-    { 
+    /* 59 */
+    {
         { 3, 0x02, 85 },
         { 6, 0x02, 85 },
         { 10, 0x02, 85 },
@@ -1494,8 +1493,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 86 },
         { 56, 0x03, 86 },
     },
-        /* 60 */
-    { 
+    /* 60 */
+    {
         { 3, 0x02, 87 },
         { 6, 0x02, 87 },
         { 10, 0x02, 87 },
@@ -1513,8 +1512,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 89 },
         { 56, 0x03, 89 },
     },
-        /* 61 */
-    { 
+    /* 61 */
+    {
         { 2, 0x02, 106 },
         { 9, 0x02, 106 },
         { 23, 0x02, 106 },
@@ -1532,8 +1531,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 23, 0x02, 118 },
         { 40, 0x03, 118 },
     },
-        /* 62 */
-    { 
+    /* 62 */
+    {
         { 3, 0x02, 106 },
         { 6, 0x02, 106 },
         { 10, 0x02, 106 },
@@ -1551,8 +1550,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 107 },
         { 56, 0x03, 107 },
     },
-        /* 63 */
-    { 
+    /* 63 */
+    {
         { 3, 0x02, 113 },
         { 6, 0x02, 113 },
         { 10, 0x02, 113 },
@@ -1570,8 +1569,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 118 },
         { 56, 0x03, 118 },
     },
-        /* 64 */
-    { 
+    /* 64 */
+    {
         { 1, 0x02, 119 },
         { 22, 0x03, 119 },
         { 1, 0x02, 120 },
@@ -1589,8 +1588,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 75, 0x00, 0 },
         { 78, 0x00, 0 },
     },
-        /* 65 */
-    { 
+    /* 65 */
+    {
         { 2, 0x02, 119 },
         { 9, 0x02, 119 },
         { 23, 0x02, 119 },
@@ -1608,8 +1607,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 23, 0x02, 122 },
         { 40, 0x03, 122 },
     },
-        /* 66 */
-    { 
+    /* 66 */
+    {
         { 3, 0x02, 119 },
         { 6, 0x02, 119 },
         { 10, 0x02, 119 },
@@ -1627,8 +1626,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 120 },
         { 56, 0x03, 120 },
     },
-        /* 67 */
-    { 
+    /* 67 */
+    {
         { 3, 0x02, 121 },
         { 6, 0x02, 121 },
         { 10, 0x02, 121 },
@@ -1646,8 +1645,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 122 },
         { 56, 0x03, 122 },
     },
-        /* 68 */
-    { 
+    /* 68 */
+    {
         { 1, 0x02, 38 },
         { 22, 0x03, 38 },
         { 1, 0x02, 42 },
@@ -1665,8 +1664,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 79, 0x00, 0 },
         { 81, 0x00, 0 },
     },
-        /* 69 */
-    { 
+    /* 69 */
+    {
         { 2, 0x02, 38 },
         { 9, 0x02, 38 },
         { 23, 0x02, 38 },
@@ -1684,8 +1683,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 23, 0x02, 59 },
         { 40, 0x03, 59 },
     },
-        /* 70 */
-    { 
+    /* 70 */
+    {
         { 3, 0x02, 38 },
         { 6, 0x02, 38 },
         { 10, 0x02, 38 },
@@ -1703,8 +1702,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 42 },
         { 56, 0x03, 42 },
     },
-        /* 71 */
-    { 
+    /* 71 */
+    {
         { 3, 0x02, 44 },
         { 6, 0x02, 44 },
         { 10, 0x02, 44 },
@@ -1722,8 +1721,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 59 },
         { 56, 0x03, 59 },
     },
-        /* 72 */
-    { 
+    /* 72 */
+    {
         { 2, 0x02, 88 },
         { 9, 0x02, 88 },
         { 23, 0x02, 88 },
@@ -1741,8 +1740,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 82, 0x00, 0 },
         { 84, 0x00, 0 },
     },
-        /* 73 */
-    { 
+    /* 73 */
+    {
         { 3, 0x02, 88 },
         { 6, 0x02, 88 },
         { 10, 0x02, 88 },
@@ -1760,8 +1759,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 90 },
         { 56, 0x03, 90 },
     },
-        /* 74 */
-    { 
+    /* 74 */
+    {
         { 1, 0x02, 33 },
         { 22, 0x03, 33 },
         { 1, 0x02, 34 },
@@ -1779,8 +1778,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 85, 0x00, 0 },
         { 88, 0x00, 0 },
     },
-        /* 75 */
-    { 
+    /* 75 */
+    {
         { 2, 0x02, 33 },
         { 9, 0x02, 33 },
         { 23, 0x02, 33 },
@@ -1798,8 +1797,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 23, 0x02, 41 },
         { 40, 0x03, 41 },
     },
-        /* 76 */
-    { 
+    /* 76 */
+    {
         { 3, 0x02, 33 },
         { 6, 0x02, 33 },
         { 10, 0x02, 33 },
@@ -1817,8 +1816,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 34 },
         { 56, 0x03, 34 },
     },
-        /* 77 */
-    { 
+    /* 77 */
+    {
         { 3, 0x02, 40 },
         { 6, 0x02, 40 },
         { 10, 0x02, 40 },
@@ -1836,8 +1835,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 41 },
         { 56, 0x03, 41 },
     },
-        /* 78 */
-    { 
+    /* 78 */
+    {
         { 2, 0x02, 63 },
         { 9, 0x02, 63 },
         { 23, 0x02, 63 },
@@ -1855,8 +1854,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 89, 0x00, 0 },
         { 90, 0x00, 0 },
     },
-        /* 79 */
-    { 
+    /* 79 */
+    {
         { 3, 0x02, 63 },
         { 6, 0x02, 63 },
         { 10, 0x02, 63 },
@@ -1874,8 +1873,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 23, 0x02, 43 },
         { 40, 0x03, 43 },
     },
-        /* 80 */
-    { 
+    /* 80 */
+    {
         { 3, 0x02, 39 },
         { 6, 0x02, 39 },
         { 10, 0x02, 39 },
@@ -1893,8 +1892,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 43 },
         { 56, 0x03, 43 },
     },
-        /* 81 */
-    { 
+    /* 81 */
+    {
         { 2, 0x02, 124 },
         { 9, 0x02, 124 },
         { 23, 0x02, 124 },
@@ -1912,8 +1911,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 91, 0x00, 0 },
         { 92, 0x00, 0 },
     },
-        /* 82 */
-    { 
+    /* 82 */
+    {
         { 3, 0x02, 124 },
         { 6, 0x02, 124 },
         { 10, 0x02, 124 },
@@ -1931,8 +1930,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 23, 0x02, 62 },
         { 40, 0x03, 62 },
     },
-        /* 83 */
-    { 
+    /* 83 */
+    {
         { 3, 0x02, 35 },
         { 6, 0x02, 35 },
         { 10, 0x02, 35 },
@@ -1950,8 +1949,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 62 },
         { 56, 0x03, 62 },
     },
-        /* 84 */
-    { 
+    /* 84 */
+    {
         { 1, 0x02, 0 },
         { 22, 0x03, 0 },
         { 1, 0x02, 36 },
@@ -1969,8 +1968,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 93, 0x00, 0 },
         { 94, 0x00, 0 },
     },
-        /* 85 */
-    { 
+    /* 85 */
+    {
         { 2, 0x02, 0 },
         { 9, 0x02, 0 },
         { 23, 0x02, 0 },
@@ -1988,8 +1987,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 23, 0x02, 91 },
         { 40, 0x03, 91 },
     },
-        /* 86 */
-    { 
+    /* 86 */
+    {
         { 3, 0x02, 0 },
         { 6, 0x02, 0 },
         { 10, 0x02, 0 },
@@ -2007,8 +2006,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 36 },
         { 56, 0x03, 36 },
     },
-        /* 87 */
-    { 
+    /* 87 */
+    {
         { 3, 0x02, 64 },
         { 6, 0x02, 64 },
         { 10, 0x02, 64 },
@@ -2026,8 +2025,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 91 },
         { 56, 0x03, 91 },
     },
-        /* 88 */
-    { 
+    /* 88 */
+    {
         { 2, 0x02, 93 },
         { 9, 0x02, 93 },
         { 23, 0x02, 93 },
@@ -2045,8 +2044,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 0, 0x03, 123 },
         { 95, 0x00, 0 },
     },
-        /* 89 */
-    { 
+    /* 89 */
+    {
         { 3, 0x02, 93 },
         { 6, 0x02, 93 },
         { 10, 0x02, 93 },
@@ -2064,8 +2063,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 126 },
         { 56, 0x03, 126 },
     },
-        /* 90 */
-    { 
+    /* 90 */
+    {
         { 2, 0x02, 94 },
         { 9, 0x02, 94 },
         { 23, 0x02, 94 },
@@ -2083,8 +2082,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 96, 0x00, 0 },
         { 110, 0x00, 0 },
     },
-        /* 91 */
-    { 
+    /* 91 */
+    {
         { 3, 0x02, 94 },
         { 6, 0x02, 94 },
         { 10, 0x02, 94 },
@@ -2102,8 +2101,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 125 },
         { 56, 0x03, 125 },
     },
-        /* 92 */
-    { 
+    /* 92 */
+    {
         { 2, 0x02, 60 },
         { 9, 0x02, 60 },
         { 23, 0x02, 60 },
@@ -2121,8 +2120,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 111, 0x00, 0 },
         { 133, 0x00, 0 },
     },
-        /* 93 */
-    { 
+    /* 93 */
+    {
         { 3, 0x02, 60 },
         { 6, 0x02, 60 },
         { 10, 0x02, 60 },
@@ -2140,8 +2139,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 96 },
         { 56, 0x03, 96 },
     },
-        /* 94 */
-    { 
+    /* 94 */
+    {
         { 3, 0x02, 123 },
         { 6, 0x02, 123 },
         { 10, 0x02, 123 },
@@ -2159,8 +2158,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 134, 0x00, 0 },
         { 153, 0x00, 0 },
     },
-        /* 95 */
-    { 
+    /* 95 */
+    {
         { 0, 0x03, 92 },
         { 0, 0x03, 195 },
         { 0, 0x03, 208 },
@@ -2178,8 +2177,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 154, 0x00, 0 },
         { 169, 0x00, 0 },
     },
-        /* 96 */
-    { 
+    /* 96 */
+    {
         { 1, 0x02, 92 },
         { 22, 0x03, 92 },
         { 1, 0x02, 195 },
@@ -2197,8 +2196,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 108, 0x00, 0 },
         { 109, 0x00, 0 },
     },
-        /* 97 */
-    { 
+    /* 97 */
+    {
         { 2, 0x02, 92 },
         { 9, 0x02, 92 },
         { 23, 0x02, 92 },
@@ -2216,8 +2215,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 1, 0x02, 130 },
         { 22, 0x03, 130 },
     },
-        /* 98 */
-    { 
+    /* 98 */
+    {
         { 3, 0x02, 92 },
         { 6, 0x02, 92 },
         { 10, 0x02, 92 },
@@ -2235,8 +2234,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 195 },
         { 56, 0x03, 195 },
     },
-        /* 99 */
-    { 
+    /* 99 */
+    {
         { 3, 0x02, 208 },
         { 6, 0x02, 208 },
         { 10, 0x02, 208 },
@@ -2254,8 +2253,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 23, 0x02, 130 },
         { 40, 0x03, 130 },
     },
-        /* 100 */
-    { 
+    /* 100 */
+    {
         { 3, 0x02, 128 },
         { 6, 0x02, 128 },
         { 10, 0x02, 128 },
@@ -2273,8 +2272,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 130 },
         { 56, 0x03, 130 },
     },
-        /* 101 */
-    { 
+    /* 101 */
+    {
         { 1, 0x02, 131 },
         { 22, 0x03, 131 },
         { 1, 0x02, 162 },
@@ -2292,8 +2291,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 0, 0x03, 167 },
         { 0, 0x03, 172 },
     },
-        /* 102 */
-    { 
+    /* 102 */
+    {
         { 2, 0x02, 131 },
         { 9, 0x02, 131 },
         { 23, 0x02, 131 },
@@ -2311,8 +2310,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 23, 0x02, 194 },
         { 40, 0x03, 194 },
     },
-        /* 103 */
-    { 
+    /* 103 */
+    {
         { 3, 0x02, 131 },
         { 6, 0x02, 131 },
         { 10, 0x02, 131 },
@@ -2330,8 +2329,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 162 },
         { 56, 0x03, 162 },
     },
-        /* 104 */
-    { 
+    /* 104 */
+    {
         { 3, 0x02, 184 },
         { 6, 0x02, 184 },
         { 10, 0x02, 184 },
@@ -2349,8 +2348,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 194 },
         { 56, 0x03, 194 },
     },
-        /* 105 */
-    { 
+    /* 105 */
+    {
         { 2, 0x02, 224 },
         { 9, 0x02, 224 },
         { 23, 0x02, 224 },
@@ -2368,8 +2367,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 1, 0x02, 172 },
         { 22, 0x03, 172 },
     },
-        /* 106 */
-    { 
+    /* 106 */
+    {
         { 3, 0x02, 224 },
         { 6, 0x02, 224 },
         { 10, 0x02, 224 },
@@ -2387,8 +2386,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 226 },
         { 56, 0x03, 226 },
     },
-        /* 107 */
-    { 
+    /* 107 */
+    {
         { 2, 0x02, 153 },
         { 9, 0x02, 153 },
         { 23, 0x02, 153 },
@@ -2406,8 +2405,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 23, 0x02, 172 },
         { 40, 0x03, 172 },
     },
-        /* 108 */
-    { 
+    /* 108 */
+    {
         { 3, 0x02, 153 },
         { 6, 0x02, 153 },
         { 10, 0x02, 153 },
@@ -2425,8 +2424,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 161 },
         { 56, 0x03, 161 },
     },
-        /* 109 */
-    { 
+    /* 109 */
+    {
         { 3, 0x02, 167 },
         { 6, 0x02, 167 },
         { 10, 0x02, 167 },
@@ -2444,8 +2443,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 172 },
         { 56, 0x03, 172 },
     },
-        /* 110 */
-    { 
+    /* 110 */
+    {
         { 114, 0x00, 0 },
         { 115, 0x00, 0 },
         { 117, 0x00, 0 },
@@ -2463,8 +2462,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 170, 0x00, 0 },
         { 180, 0x00, 0 },
     },
-        /* 111 */
-    { 
+    /* 111 */
+    {
         { 0, 0x03, 176 },
         { 0, 0x03, 177 },
         { 0, 0x03, 179 },
@@ -2482,8 +2481,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 131, 0x00, 0 },
         { 132, 0x00, 0 },
     },
-        /* 112 */
-    { 
+    /* 112 */
+    {
         { 1, 0x02, 176 },
         { 22, 0x03, 176 },
         { 1, 0x02, 177 },
@@ -2501,8 +2500,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 1, 0x02, 229 },
         { 22, 0x03, 229 },
     },
-        /* 113 */
-    { 
+    /* 113 */
+    {
         { 2, 0x02, 176 },
         { 9, 0x02, 176 },
         { 23, 0x02, 176 },
@@ -2520,8 +2519,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 23, 0x02, 209 },
         { 40, 0x03, 209 },
     },
-        /* 114 */
-    { 
+    /* 114 */
+    {
         { 3, 0x02, 176 },
         { 6, 0x02, 176 },
         { 10, 0x02, 176 },
@@ -2539,8 +2538,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 177 },
         { 56, 0x03, 177 },
     },
-        /* 115 */
-    { 
+    /* 115 */
+    {
         { 3, 0x02, 179 },
         { 6, 0x02, 179 },
         { 10, 0x02, 179 },
@@ -2558,8 +2557,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 209 },
         { 56, 0x03, 209 },
     },
-        /* 116 */
-    { 
+    /* 116 */
+    {
         { 2, 0x02, 216 },
         { 9, 0x02, 216 },
         { 23, 0x02, 216 },
@@ -2577,8 +2576,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 23, 0x02, 229 },
         { 40, 0x03, 229 },
     },
-        /* 117 */
-    { 
+    /* 117 */
+    {
         { 3, 0x02, 216 },
         { 6, 0x02, 216 },
         { 10, 0x02, 216 },
@@ -2596,8 +2595,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 217 },
         { 56, 0x03, 217 },
     },
-        /* 118 */
-    { 
+    /* 118 */
+    {
         { 3, 0x02, 227 },
         { 6, 0x02, 227 },
         { 10, 0x02, 227 },
@@ -2615,8 +2614,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 229 },
         { 56, 0x03, 229 },
     },
-        /* 119 */
-    { 
+    /* 119 */
+    {
         { 1, 0x02, 230 },
         { 22, 0x03, 230 },
         { 0, 0x03, 129 },
@@ -2634,8 +2633,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 0, 0x03, 170 },
         { 0, 0x03, 173 },
     },
-        /* 120 */
-    { 
+    /* 120 */
+    {
         { 2, 0x02, 230 },
         { 9, 0x02, 230 },
         { 23, 0x02, 230 },
@@ -2653,8 +2652,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 1, 0x02, 146 },
         { 22, 0x03, 146 },
     },
-        /* 121 */
-    { 
+    /* 121 */
+    {
         { 3, 0x02, 230 },
         { 6, 0x02, 230 },
         { 10, 0x02, 230 },
@@ -2672,8 +2671,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 23, 0x02, 132 },
         { 40, 0x03, 132 },
     },
-        /* 122 */
-    { 
+    /* 122 */
+    {
         { 3, 0x02, 129 },
         { 6, 0x02, 129 },
         { 10, 0x02, 129 },
@@ -2691,8 +2690,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 132 },
         { 56, 0x03, 132 },
     },
-        /* 123 */
-    { 
+    /* 123 */
+    {
         { 2, 0x02, 133 },
         { 9, 0x02, 133 },
         { 23, 0x02, 133 },
@@ -2710,8 +2709,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 23, 0x02, 146 },
         { 40, 0x03, 146 },
     },
-        /* 124 */
-    { 
+    /* 124 */
+    {
         { 3, 0x02, 133 },
         { 6, 0x02, 133 },
         { 10, 0x02, 133 },
@@ -2729,8 +2728,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 134 },
         { 56, 0x03, 134 },
     },
-        /* 125 */
-    { 
+    /* 125 */
+    {
         { 3, 0x02, 136 },
         { 6, 0x02, 136 },
         { 10, 0x02, 136 },
@@ -2748,8 +2747,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 146 },
         { 56, 0x03, 146 },
     },
-        /* 126 */
-    { 
+    /* 126 */
+    {
         { 1, 0x02, 154 },
         { 22, 0x03, 154 },
         { 1, 0x02, 156 },
@@ -2767,8 +2766,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 1, 0x02, 173 },
         { 22, 0x03, 173 },
     },
-        /* 127 */
-    { 
+    /* 127 */
+    {
         { 2, 0x02, 154 },
         { 9, 0x02, 154 },
         { 23, 0x02, 154 },
@@ -2786,8 +2785,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 23, 0x02, 163 },
         { 40, 0x03, 163 },
     },
-        /* 128 */
-    { 
+    /* 128 */
+    {
         { 3, 0x02, 154 },
         { 6, 0x02, 154 },
         { 10, 0x02, 154 },
@@ -2805,8 +2804,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 156 },
         { 56, 0x03, 156 },
     },
-        /* 129 */
-    { 
+    /* 129 */
+    {
         { 3, 0x02, 160 },
         { 6, 0x02, 160 },
         { 10, 0x02, 160 },
@@ -2824,8 +2823,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 163 },
         { 56, 0x03, 163 },
     },
-        /* 130 */
-    { 
+    /* 130 */
+    {
         { 2, 0x02, 164 },
         { 9, 0x02, 164 },
         { 23, 0x02, 164 },
@@ -2843,8 +2842,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 23, 0x02, 173 },
         { 40, 0x03, 173 },
     },
-        /* 131 */
-    { 
+    /* 131 */
+    {
         { 3, 0x02, 164 },
         { 6, 0x02, 164 },
         { 10, 0x02, 164 },
@@ -2862,8 +2861,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 169 },
         { 56, 0x03, 169 },
     },
-        /* 132 */
-    { 
+    /* 132 */
+    {
         { 3, 0x02, 170 },
         { 6, 0x02, 170 },
         { 10, 0x02, 170 },
@@ -2881,8 +2880,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 173 },
         { 56, 0x03, 173 },
     },
-        /* 133 */
-    { 
+    /* 133 */
+    {
         { 137, 0x00, 0 },
         { 138, 0x00, 0 },
         { 140, 0x00, 0 },
@@ -2900,8 +2899,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 181, 0x00, 0 },
         { 190, 0x00, 0 },
     },
-        /* 134 */
-    { 
+    /* 134 */
+    {
         { 0, 0x03, 178 },
         { 0, 0x03, 181 },
         { 0, 0x03, 185 },
@@ -2919,8 +2918,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 151, 0x00, 0 },
         { 152, 0x00, 0 },
     },
-        /* 135 */
-    { 
+    /* 135 */
+    {
         { 1, 0x02, 178 },
         { 22, 0x03, 178 },
         { 1, 0x02, 181 },
@@ -2938,8 +2937,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 1, 0x02, 196 },
         { 22, 0x03, 196 },
     },
-        /* 136 */
-    { 
+    /* 136 */
+    {
         { 2, 0x02, 178 },
         { 9, 0x02, 178 },
         { 23, 0x02, 178 },
@@ -2957,8 +2956,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 23, 0x02, 186 },
         { 40, 0x03, 186 },
     },
-        /* 137 */
-    { 
+    /* 137 */
+    {
         { 3, 0x02, 178 },
         { 6, 0x02, 178 },
         { 10, 0x02, 178 },
@@ -2976,8 +2975,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 181 },
         { 56, 0x03, 181 },
     },
-        /* 138 */
-    { 
+    /* 138 */
+    {
         { 3, 0x02, 185 },
         { 6, 0x02, 185 },
         { 10, 0x02, 185 },
@@ -2995,8 +2994,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 186 },
         { 56, 0x03, 186 },
     },
-        /* 139 */
-    { 
+    /* 139 */
+    {
         { 2, 0x02, 187 },
         { 9, 0x02, 187 },
         { 23, 0x02, 187 },
@@ -3014,8 +3013,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 23, 0x02, 196 },
         { 40, 0x03, 196 },
     },
-        /* 140 */
-    { 
+    /* 140 */
+    {
         { 3, 0x02, 187 },
         { 6, 0x02, 187 },
         { 10, 0x02, 187 },
@@ -3033,8 +3032,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 189 },
         { 56, 0x03, 189 },
     },
-        /* 141 */
-    { 
+    /* 141 */
+    {
         { 3, 0x02, 190 },
         { 6, 0x02, 190 },
         { 10, 0x02, 190 },
@@ -3052,8 +3051,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 196 },
         { 56, 0x03, 196 },
     },
-        /* 142 */
-    { 
+    /* 142 */
+    {
         { 1, 0x02, 198 },
         { 22, 0x03, 198 },
         { 1, 0x02, 228 },
@@ -3071,8 +3070,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 0, 0x03, 141 },
         { 0, 0x03, 143 },
     },
-        /* 143 */
-    { 
+    /* 143 */
+    {
         { 2, 0x02, 198 },
         { 9, 0x02, 198 },
         { 23, 0x02, 198 },
@@ -3090,8 +3089,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 23, 0x02, 233 },
         { 40, 0x03, 233 },
     },
-        /* 144 */
-    { 
+    /* 144 */
+    {
         { 3, 0x02, 198 },
         { 6, 0x02, 198 },
         { 10, 0x02, 198 },
@@ -3109,8 +3108,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 228 },
         { 56, 0x03, 228 },
     },
-        /* 145 */
-    { 
+    /* 145 */
+    {
         { 3, 0x02, 232 },
         { 6, 0x02, 232 },
         { 10, 0x02, 232 },
@@ -3128,8 +3127,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 233 },
         { 56, 0x03, 233 },
     },
-        /* 146 */
-    { 
+    /* 146 */
+    {
         { 1, 0x02, 1 },
         { 22, 0x03, 1 },
         { 1, 0x02, 135 },
@@ -3147,8 +3146,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 1, 0x02, 143 },
         { 22, 0x03, 143 },
     },
-        /* 147 */
-    { 
+    /* 147 */
+    {
         { 2, 0x02, 1 },
         { 9, 0x02, 1 },
         { 23, 0x02, 1 },
@@ -3166,8 +3165,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 23, 0x02, 138 },
         { 40, 0x03, 138 },
     },
-        /* 148 */
-    { 
+    /* 148 */
+    {
         { 3, 0x02, 1 },
         { 6, 0x02, 1 },
         { 10, 0x02, 1 },
@@ -3185,8 +3184,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 135 },
         { 56, 0x03, 135 },
     },
-        /* 149 */
-    { 
+    /* 149 */
+    {
         { 3, 0x02, 137 },
         { 6, 0x02, 137 },
         { 10, 0x02, 137 },
@@ -3204,8 +3203,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 138 },
         { 56, 0x03, 138 },
     },
-        /* 150 */
-    { 
+    /* 150 */
+    {
         { 2, 0x02, 139 },
         { 9, 0x02, 139 },
         { 23, 0x02, 139 },
@@ -3223,8 +3222,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 23, 0x02, 143 },
         { 40, 0x03, 143 },
     },
-        /* 151 */
-    { 
+    /* 151 */
+    {
         { 3, 0x02, 139 },
         { 6, 0x02, 139 },
         { 10, 0x02, 139 },
@@ -3242,8 +3241,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 140 },
         { 56, 0x03, 140 },
     },
-        /* 152 */
-    { 
+    /* 152 */
+    {
         { 3, 0x02, 141 },
         { 6, 0x02, 141 },
         { 10, 0x02, 141 },
@@ -3261,8 +3260,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 143 },
         { 56, 0x03, 143 },
     },
-        /* 153 */
-    { 
+    /* 153 */
+    {
         { 157, 0x00, 0 },
         { 158, 0x00, 0 },
         { 160, 0x00, 0 },
@@ -3280,8 +3279,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 191, 0x00, 0 },
         { 207, 0x00, 0 },
     },
-        /* 154 */
-    { 
+    /* 154 */
+    {
         { 0, 0x03, 147 },
         { 0, 0x03, 149 },
         { 0, 0x03, 150 },
@@ -3299,8 +3298,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 0, 0x03, 182 },
         { 0, 0x03, 183 },
     },
-        /* 155 */
-    { 
+    /* 155 */
+    {
         { 1, 0x02, 147 },
         { 22, 0x03, 147 },
         { 1, 0x02, 149 },
@@ -3318,8 +3317,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 1, 0x02, 158 },
         { 22, 0x03, 158 },
     },
-        /* 156 */
-    { 
+    /* 156 */
+    {
         { 2, 0x02, 147 },
         { 9, 0x02, 147 },
         { 23, 0x02, 147 },
@@ -3337,8 +3336,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 23, 0x02, 151 },
         { 40, 0x03, 151 },
     },
-        /* 157 */
-    { 
+    /* 157 */
+    {
         { 3, 0x02, 147 },
         { 6, 0x02, 147 },
         { 10, 0x02, 147 },
@@ -3356,8 +3355,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 149 },
         { 56, 0x03, 149 },
     },
-        /* 158 */
-    { 
+    /* 158 */
+    {
         { 3, 0x02, 150 },
         { 6, 0x02, 150 },
         { 10, 0x02, 150 },
@@ -3375,8 +3374,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 151 },
         { 56, 0x03, 151 },
     },
-        /* 159 */
-    { 
+    /* 159 */
+    {
         { 2, 0x02, 152 },
         { 9, 0x02, 152 },
         { 23, 0x02, 152 },
@@ -3394,8 +3393,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 23, 0x02, 158 },
         { 40, 0x03, 158 },
     },
-        /* 160 */
-    { 
+    /* 160 */
+    {
         { 3, 0x02, 152 },
         { 6, 0x02, 152 },
         { 10, 0x02, 152 },
@@ -3413,8 +3412,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 155 },
         { 56, 0x03, 155 },
     },
-        /* 161 */
-    { 
+    /* 161 */
+    {
         { 3, 0x02, 157 },
         { 6, 0x02, 157 },
         { 10, 0x02, 157 },
@@ -3432,8 +3431,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 158 },
         { 56, 0x03, 158 },
     },
-        /* 162 */
-    { 
+    /* 162 */
+    {
         { 1, 0x02, 165 },
         { 22, 0x03, 165 },
         { 1, 0x02, 166 },
@@ -3451,8 +3450,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 1, 0x02, 183 },
         { 22, 0x03, 183 },
     },
-        /* 163 */
-    { 
+    /* 163 */
+    {
         { 2, 0x02, 165 },
         { 9, 0x02, 165 },
         { 23, 0x02, 165 },
@@ -3470,8 +3469,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 23, 0x02, 174 },
         { 40, 0x03, 174 },
     },
-        /* 164 */
-    { 
+    /* 164 */
+    {
         { 3, 0x02, 165 },
         { 6, 0x02, 165 },
         { 10, 0x02, 165 },
@@ -3489,8 +3488,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 166 },
         { 56, 0x03, 166 },
     },
-        /* 165 */
-    { 
+    /* 165 */
+    {
         { 3, 0x02, 168 },
         { 6, 0x02, 168 },
         { 10, 0x02, 168 },
@@ -3508,8 +3507,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 174 },
         { 56, 0x03, 174 },
     },
-        /* 166 */
-    { 
+    /* 166 */
+    {
         { 2, 0x02, 175 },
         { 9, 0x02, 175 },
         { 23, 0x02, 175 },
@@ -3527,8 +3526,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 23, 0x02, 183 },
         { 40, 0x03, 183 },
     },
-        /* 167 */
-    { 
+    /* 167 */
+    {
         { 3, 0x02, 175 },
         { 6, 0x02, 175 },
         { 10, 0x02, 175 },
@@ -3546,8 +3545,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 180 },
         { 56, 0x03, 180 },
     },
-        /* 168 */
-    { 
+    /* 168 */
+    {
         { 3, 0x02, 182 },
         { 6, 0x02, 182 },
         { 10, 0x02, 182 },
@@ -3565,8 +3564,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 183 },
         { 56, 0x03, 183 },
     },
-        /* 169 */
-    { 
+    /* 169 */
+    {
         { 0, 0x03, 188 },
         { 0, 0x03, 191 },
         { 0, 0x03, 197 },
@@ -3584,8 +3583,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 208, 0x00, 0 },
         { 223, 0x00, 0 },
     },
-        /* 170 */
-    { 
+    /* 170 */
+    {
         { 1, 0x02, 188 },
         { 22, 0x03, 188 },
         { 1, 0x02, 191 },
@@ -3603,8 +3602,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 0, 0x03, 148 },
         { 0, 0x03, 159 },
     },
-        /* 171 */
-    { 
+    /* 171 */
+    {
         { 2, 0x02, 188 },
         { 9, 0x02, 188 },
         { 23, 0x02, 188 },
@@ -3622,8 +3621,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 23, 0x02, 231 },
         { 40, 0x03, 231 },
     },
-        /* 172 */
-    { 
+    /* 172 */
+    {
         { 3, 0x02, 188 },
         { 6, 0x02, 188 },
         { 10, 0x02, 188 },
@@ -3641,8 +3640,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 191 },
         { 56, 0x03, 191 },
     },
-        /* 173 */
-    { 
+    /* 173 */
+    {
         { 3, 0x02, 197 },
         { 6, 0x02, 197 },
         { 10, 0x02, 197 },
@@ -3660,8 +3659,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 231 },
         { 56, 0x03, 231 },
     },
-        /* 174 */
-    { 
+    /* 174 */
+    {
         { 2, 0x02, 239 },
         { 9, 0x02, 239 },
         { 23, 0x02, 239 },
@@ -3679,8 +3678,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 1, 0x02, 159 },
         { 22, 0x03, 159 },
     },
-        /* 175 */
-    { 
+    /* 175 */
+    {
         { 3, 0x02, 239 },
         { 6, 0x02, 239 },
         { 10, 0x02, 239 },
@@ -3698,8 +3697,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 23, 0x02, 142 },
         { 40, 0x03, 142 },
     },
-        /* 176 */
-    { 
+    /* 176 */
+    {
         { 3, 0x02, 9 },
         { 6, 0x02, 9 },
         { 10, 0x02, 9 },
@@ -3717,8 +3716,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 142 },
         { 56, 0x03, 142 },
     },
-        /* 177 */
-    { 
+    /* 177 */
+    {
         { 2, 0x02, 144 },
         { 9, 0x02, 144 },
         { 23, 0x02, 144 },
@@ -3736,8 +3735,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 23, 0x02, 159 },
         { 40, 0x03, 159 },
     },
-        /* 178 */
-    { 
+    /* 178 */
+    {
         { 3, 0x02, 144 },
         { 6, 0x02, 144 },
         { 10, 0x02, 144 },
@@ -3755,8 +3754,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 145 },
         { 56, 0x03, 145 },
     },
-        /* 179 */
-    { 
+    /* 179 */
+    {
         { 3, 0x02, 148 },
         { 6, 0x02, 148 },
         { 10, 0x02, 148 },
@@ -3774,8 +3773,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 159 },
         { 56, 0x03, 159 },
     },
-        /* 180 */
-    { 
+    /* 180 */
+    {
         { 0, 0x03, 171 },
         { 0, 0x03, 206 },
         { 0, 0x03, 215 },
@@ -3793,8 +3792,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 224, 0x00, 0 },
         { 238, 0x00, 0 },
     },
-        /* 181 */
-    { 
+    /* 181 */
+    {
         { 1, 0x02, 171 },
         { 22, 0x03, 171 },
         { 1, 0x02, 206 },
@@ -3812,8 +3811,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 0, 0x03, 234 },
         { 0, 0x03, 235 },
     },
-        /* 182 */
-    { 
+    /* 182 */
+    {
         { 2, 0x02, 171 },
         { 9, 0x02, 171 },
         { 23, 0x02, 171 },
@@ -3831,8 +3830,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 23, 0x02, 225 },
         { 40, 0x03, 225 },
     },
-        /* 183 */
-    { 
+    /* 183 */
+    {
         { 3, 0x02, 171 },
         { 6, 0x02, 171 },
         { 10, 0x02, 171 },
@@ -3850,8 +3849,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 206 },
         { 56, 0x03, 206 },
     },
-        /* 184 */
-    { 
+    /* 184 */
+    {
         { 3, 0x02, 215 },
         { 6, 0x02, 215 },
         { 10, 0x02, 215 },
@@ -3869,8 +3868,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 225 },
         { 56, 0x03, 225 },
     },
-        /* 185 */
-    { 
+    /* 185 */
+    {
         { 2, 0x02, 236 },
         { 9, 0x02, 236 },
         { 23, 0x02, 236 },
@@ -3888,8 +3887,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 1, 0x02, 235 },
         { 22, 0x03, 235 },
     },
-        /* 186 */
-    { 
+    /* 186 */
+    {
         { 3, 0x02, 236 },
         { 6, 0x02, 236 },
         { 10, 0x02, 236 },
@@ -3907,8 +3906,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 237 },
         { 56, 0x03, 237 },
     },
-        /* 187 */
-    { 
+    /* 187 */
+    {
         { 2, 0x02, 199 },
         { 9, 0x02, 199 },
         { 23, 0x02, 199 },
@@ -3926,8 +3925,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 23, 0x02, 235 },
         { 40, 0x03, 235 },
     },
-        /* 188 */
-    { 
+    /* 188 */
+    {
         { 3, 0x02, 199 },
         { 6, 0x02, 199 },
         { 10, 0x02, 199 },
@@ -3945,8 +3944,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 207 },
         { 56, 0x03, 207 },
     },
-        /* 189 */
-    { 
+    /* 189 */
+    {
         { 3, 0x02, 234 },
         { 6, 0x02, 234 },
         { 10, 0x02, 234 },
@@ -3964,8 +3963,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 235 },
         { 56, 0x03, 235 },
     },
-        /* 190 */
-    { 
+    /* 190 */
+    {
         { 194, 0x00, 0 },
         { 195, 0x00, 0 },
         { 197, 0x00, 0 },
@@ -3983,8 +3982,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 239, 0x00, 0 },
         { 246, 0x00, 0 },
     },
-        /* 191 */
-    { 
+    /* 191 */
+    {
         { 0, 0x03, 192 },
         { 0, 0x03, 193 },
         { 0, 0x03, 200 },
@@ -4002,8 +4001,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 0, 0x03, 255 },
         { 206, 0x00, 0 },
     },
-        /* 192 */
-    { 
+    /* 192 */
+    {
         { 1, 0x02, 192 },
         { 22, 0x03, 192 },
         { 1, 0x02, 193 },
@@ -4021,8 +4020,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 1, 0x02, 213 },
         { 22, 0x03, 213 },
     },
-        /* 193 */
-    { 
+    /* 193 */
+    {
         { 2, 0x02, 192 },
         { 9, 0x02, 192 },
         { 23, 0x02, 192 },
@@ -4040,8 +4039,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 23, 0x02, 201 },
         { 40, 0x03, 201 },
     },
-        /* 194 */
-    { 
+    /* 194 */
+    {
         { 3, 0x02, 192 },
         { 6, 0x02, 192 },
         { 10, 0x02, 192 },
@@ -4059,8 +4058,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 193 },
         { 56, 0x03, 193 },
     },
-        /* 195 */
-    { 
+    /* 195 */
+    {
         { 3, 0x02, 200 },
         { 6, 0x02, 200 },
         { 10, 0x02, 200 },
@@ -4078,8 +4077,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 201 },
         { 56, 0x03, 201 },
     },
-        /* 196 */
-    { 
+    /* 196 */
+    {
         { 2, 0x02, 202 },
         { 9, 0x02, 202 },
         { 23, 0x02, 202 },
@@ -4097,8 +4096,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 23, 0x02, 213 },
         { 40, 0x03, 213 },
     },
-        /* 197 */
-    { 
+    /* 197 */
+    {
         { 3, 0x02, 202 },
         { 6, 0x02, 202 },
         { 10, 0x02, 202 },
@@ -4116,8 +4115,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 205 },
         { 56, 0x03, 205 },
     },
-        /* 198 */
-    { 
+    /* 198 */
+    {
         { 3, 0x02, 210 },
         { 6, 0x02, 210 },
         { 10, 0x02, 210 },
@@ -4135,8 +4134,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 213 },
         { 56, 0x03, 213 },
     },
-        /* 199 */
-    { 
+    /* 199 */
+    {
         { 1, 0x02, 218 },
         { 22, 0x03, 218 },
         { 1, 0x02, 219 },
@@ -4154,8 +4153,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 0, 0x03, 203 },
         { 0, 0x03, 204 },
     },
-        /* 200 */
-    { 
+    /* 200 */
+    {
         { 2, 0x02, 218 },
         { 9, 0x02, 218 },
         { 23, 0x02, 218 },
@@ -4173,8 +4172,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 23, 0x02, 240 },
         { 40, 0x03, 240 },
     },
-        /* 201 */
-    { 
+    /* 201 */
+    {
         { 3, 0x02, 218 },
         { 6, 0x02, 218 },
         { 10, 0x02, 218 },
@@ -4192,8 +4191,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 219 },
         { 56, 0x03, 219 },
     },
-        /* 202 */
-    { 
+    /* 202 */
+    {
         { 3, 0x02, 238 },
         { 6, 0x02, 238 },
         { 10, 0x02, 238 },
@@ -4211,8 +4210,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 240 },
         { 56, 0x03, 240 },
     },
-        /* 203 */
-    { 
+    /* 203 */
+    {
         { 2, 0x02, 242 },
         { 9, 0x02, 242 },
         { 23, 0x02, 242 },
@@ -4230,8 +4229,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 1, 0x02, 204 },
         { 22, 0x03, 204 },
     },
-        /* 204 */
-    { 
+    /* 204 */
+    {
         { 3, 0x02, 242 },
         { 6, 0x02, 242 },
         { 10, 0x02, 242 },
@@ -4249,8 +4248,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 243 },
         { 56, 0x03, 243 },
     },
-        /* 205 */
-    { 
+    /* 205 */
+    {
         { 3, 0x02, 255 },
         { 6, 0x02, 255 },
         { 10, 0x02, 255 },
@@ -4268,8 +4267,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 23, 0x02, 204 },
         { 40, 0x03, 204 },
     },
-        /* 206 */
-    { 
+    /* 206 */
+    {
         { 3, 0x02, 203 },
         { 6, 0x02, 203 },
         { 10, 0x02, 203 },
@@ -4287,8 +4286,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 204 },
         { 56, 0x03, 204 },
     },
-        /* 207 */
-    { 
+    /* 207 */
+    {
         { 211, 0x00, 0 },
         { 212, 0x00, 0 },
         { 214, 0x00, 0 },
@@ -4306,8 +4305,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 247, 0x00, 0 },
         { 250, 0x00, 0 },
     },
-        /* 208 */
-    { 
+    /* 208 */
+    {
         { 0, 0x03, 211 },
         { 0, 0x03, 212 },
         { 0, 0x03, 214 },
@@ -4325,8 +4324,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 0, 0x03, 252 },
         { 0, 0x03, 253 },
     },
-        /* 209 */
-    { 
+    /* 209 */
+    {
         { 1, 0x02, 211 },
         { 22, 0x03, 211 },
         { 1, 0x02, 212 },
@@ -4344,8 +4343,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 1, 0x02, 244 },
         { 22, 0x03, 244 },
     },
-        /* 210 */
-    { 
+    /* 210 */
+    {
         { 2, 0x02, 211 },
         { 9, 0x02, 211 },
         { 23, 0x02, 211 },
@@ -4363,8 +4362,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 23, 0x02, 221 },
         { 40, 0x03, 221 },
     },
-        /* 211 */
-    { 
+    /* 211 */
+    {
         { 3, 0x02, 211 },
         { 6, 0x02, 211 },
         { 10, 0x02, 211 },
@@ -4382,8 +4381,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 212 },
         { 56, 0x03, 212 },
     },
-        /* 212 */
-    { 
+    /* 212 */
+    {
         { 3, 0x02, 214 },
         { 6, 0x02, 214 },
         { 10, 0x02, 214 },
@@ -4401,8 +4400,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 221 },
         { 56, 0x03, 221 },
     },
-        /* 213 */
-    { 
+    /* 213 */
+    {
         { 2, 0x02, 222 },
         { 9, 0x02, 222 },
         { 23, 0x02, 222 },
@@ -4420,8 +4419,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 23, 0x02, 244 },
         { 40, 0x03, 244 },
     },
-        /* 214 */
-    { 
+    /* 214 */
+    {
         { 3, 0x02, 222 },
         { 6, 0x02, 222 },
         { 10, 0x02, 222 },
@@ -4439,8 +4438,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 223 },
         { 56, 0x03, 223 },
     },
-        /* 215 */
-    { 
+    /* 215 */
+    {
         { 3, 0x02, 241 },
         { 6, 0x02, 241 },
         { 10, 0x02, 241 },
@@ -4458,8 +4457,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 244 },
         { 56, 0x03, 244 },
     },
-        /* 216 */
-    { 
+    /* 216 */
+    {
         { 1, 0x02, 245 },
         { 22, 0x03, 245 },
         { 1, 0x02, 246 },
@@ -4477,8 +4476,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 1, 0x02, 253 },
         { 22, 0x03, 253 },
     },
-        /* 217 */
-    { 
+    /* 217 */
+    {
         { 2, 0x02, 245 },
         { 9, 0x02, 245 },
         { 23, 0x02, 245 },
@@ -4496,8 +4495,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 23, 0x02, 248 },
         { 40, 0x03, 248 },
     },
-        /* 218 */
-    { 
+    /* 218 */
+    {
         { 3, 0x02, 245 },
         { 6, 0x02, 245 },
         { 10, 0x02, 245 },
@@ -4515,8 +4514,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 246 },
         { 56, 0x03, 246 },
     },
-        /* 219 */
-    { 
+    /* 219 */
+    {
         { 3, 0x02, 247 },
         { 6, 0x02, 247 },
         { 10, 0x02, 247 },
@@ -4534,8 +4533,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 248 },
         { 56, 0x03, 248 },
     },
-        /* 220 */
-    { 
+    /* 220 */
+    {
         { 2, 0x02, 250 },
         { 9, 0x02, 250 },
         { 23, 0x02, 250 },
@@ -4553,8 +4552,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 23, 0x02, 253 },
         { 40, 0x03, 253 },
     },
-        /* 221 */
-    { 
+    /* 221 */
+    {
         { 3, 0x02, 250 },
         { 6, 0x02, 250 },
         { 10, 0x02, 250 },
@@ -4572,8 +4571,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 251 },
         { 56, 0x03, 251 },
     },
-        /* 222 */
-    { 
+    /* 222 */
+    {
         { 3, 0x02, 252 },
         { 6, 0x02, 252 },
         { 10, 0x02, 252 },
@@ -4591,8 +4590,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 253 },
         { 56, 0x03, 253 },
     },
-        /* 223 */
-    { 
+    /* 223 */
+    {
         { 0, 0x03, 254 },
         { 227, 0x00, 0 },
         { 229, 0x00, 0 },
@@ -4610,8 +4609,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 251, 0x00, 0 },
         { 252, 0x00, 0 },
     },
-        /* 224 */
-    { 
+    /* 224 */
+    {
         { 1, 0x02, 254 },
         { 22, 0x03, 254 },
         { 0, 0x03, 2 },
@@ -4629,8 +4628,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 0, 0x03, 17 },
         { 0, 0x03, 18 },
     },
-        /* 225 */
-    { 
+    /* 225 */
+    {
         { 2, 0x02, 254 },
         { 9, 0x02, 254 },
         { 23, 0x02, 254 },
@@ -4648,8 +4647,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 1, 0x02, 7 },
         { 22, 0x03, 7 },
     },
-        /* 226 */
-    { 
+    /* 226 */
+    {
         { 3, 0x02, 254 },
         { 6, 0x02, 254 },
         { 10, 0x02, 254 },
@@ -4667,8 +4666,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 23, 0x02, 3 },
         { 40, 0x03, 3 },
     },
-        /* 227 */
-    { 
+    /* 227 */
+    {
         { 3, 0x02, 2 },
         { 6, 0x02, 2 },
         { 10, 0x02, 2 },
@@ -4686,8 +4685,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 3 },
         { 56, 0x03, 3 },
     },
-        /* 228 */
-    { 
+    /* 228 */
+    {
         { 2, 0x02, 4 },
         { 9, 0x02, 4 },
         { 23, 0x02, 4 },
@@ -4705,8 +4704,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 23, 0x02, 7 },
         { 40, 0x03, 7 },
     },
-        /* 229 */
-    { 
+    /* 229 */
+    {
         { 3, 0x02, 4 },
         { 6, 0x02, 4 },
         { 10, 0x02, 4 },
@@ -4724,8 +4723,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 5 },
         { 56, 0x03, 5 },
     },
-        /* 230 */
-    { 
+    /* 230 */
+    {
         { 3, 0x02, 6 },
         { 6, 0x02, 6 },
         { 10, 0x02, 6 },
@@ -4743,8 +4742,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 7 },
         { 56, 0x03, 7 },
     },
-        /* 231 */
-    { 
+    /* 231 */
+    {
         { 1, 0x02, 8 },
         { 22, 0x03, 8 },
         { 1, 0x02, 11 },
@@ -4762,8 +4761,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 1, 0x02, 18 },
         { 22, 0x03, 18 },
     },
-        /* 232 */
-    { 
+    /* 232 */
+    {
         { 2, 0x02, 8 },
         { 9, 0x02, 8 },
         { 23, 0x02, 8 },
@@ -4781,8 +4780,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 23, 0x02, 14 },
         { 40, 0x03, 14 },
     },
-        /* 233 */
-    { 
+    /* 233 */
+    {
         { 3, 0x02, 8 },
         { 6, 0x02, 8 },
         { 10, 0x02, 8 },
@@ -4800,8 +4799,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 11 },
         { 56, 0x03, 11 },
     },
-        /* 234 */
-    { 
+    /* 234 */
+    {
         { 3, 0x02, 12 },
         { 6, 0x02, 12 },
         { 10, 0x02, 12 },
@@ -4819,8 +4818,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 14 },
         { 56, 0x03, 14 },
     },
-        /* 235 */
-    { 
+    /* 235 */
+    {
         { 2, 0x02, 15 },
         { 9, 0x02, 15 },
         { 23, 0x02, 15 },
@@ -4838,8 +4837,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 23, 0x02, 18 },
         { 40, 0x03, 18 },
     },
-        /* 236 */
-    { 
+    /* 236 */
+    {
         { 3, 0x02, 15 },
         { 6, 0x02, 15 },
         { 10, 0x02, 15 },
@@ -4857,8 +4856,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 16 },
         { 56, 0x03, 16 },
     },
-        /* 237 */
-    { 
+    /* 237 */
+    {
         { 3, 0x02, 17 },
         { 6, 0x02, 17 },
         { 10, 0x02, 17 },
@@ -4876,8 +4875,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 18 },
         { 56, 0x03, 18 },
     },
-        /* 238 */
-    { 
+    /* 238 */
+    {
         { 0, 0x03, 19 },
         { 0, 0x03, 20 },
         { 0, 0x03, 21 },
@@ -4895,8 +4894,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 0, 0x03, 249 },
         { 253, 0x00, 0 },
     },
-        /* 239 */
-    { 
+    /* 239 */
+    {
         { 1, 0x02, 19 },
         { 22, 0x03, 19 },
         { 1, 0x02, 20 },
@@ -4914,8 +4913,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 1, 0x02, 27 },
         { 22, 0x03, 27 },
     },
-        /* 240 */
-    { 
+    /* 240 */
+    {
         { 2, 0x02, 19 },
         { 9, 0x02, 19 },
         { 23, 0x02, 19 },
@@ -4933,8 +4932,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 23, 0x02, 23 },
         { 40, 0x03, 23 },
     },
-        /* 241 */
-    { 
+    /* 241 */
+    {
         { 3, 0x02, 19 },
         { 6, 0x02, 19 },
         { 10, 0x02, 19 },
@@ -4952,8 +4951,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 20 },
         { 56, 0x03, 20 },
     },
-        /* 242 */
-    { 
+    /* 242 */
+    {
         { 3, 0x02, 21 },
         { 6, 0x02, 21 },
         { 10, 0x02, 21 },
@@ -4971,8 +4970,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 23 },
         { 56, 0x03, 23 },
     },
-        /* 243 */
-    { 
+    /* 243 */
+    {
         { 2, 0x02, 24 },
         { 9, 0x02, 24 },
         { 23, 0x02, 24 },
@@ -4990,8 +4989,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 23, 0x02, 27 },
         { 40, 0x03, 27 },
     },
-        /* 244 */
-    { 
+    /* 244 */
+    {
         { 3, 0x02, 24 },
         { 6, 0x02, 24 },
         { 10, 0x02, 24 },
@@ -5009,8 +5008,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 25 },
         { 56, 0x03, 25 },
     },
-        /* 245 */
-    { 
+    /* 245 */
+    {
         { 3, 0x02, 26 },
         { 6, 0x02, 26 },
         { 10, 0x02, 26 },
@@ -5028,8 +5027,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 27 },
         { 56, 0x03, 27 },
     },
-        /* 246 */
-    { 
+    /* 246 */
+    {
         { 1, 0x02, 28 },
         { 22, 0x03, 28 },
         { 1, 0x02, 29 },
@@ -5047,8 +5046,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 254, 0x00, 0 },
         { 255, 0x00, 0 },
     },
-        /* 247 */
-    { 
+    /* 247 */
+    {
         { 2, 0x02, 28 },
         { 9, 0x02, 28 },
         { 23, 0x02, 28 },
@@ -5066,8 +5065,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 23, 0x02, 31 },
         { 40, 0x03, 31 },
     },
-        /* 248 */
-    { 
+    /* 248 */
+    {
         { 3, 0x02, 28 },
         { 6, 0x02, 28 },
         { 10, 0x02, 28 },
@@ -5085,8 +5084,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 29 },
         { 56, 0x03, 29 },
     },
-        /* 249 */
-    { 
+    /* 249 */
+    {
         { 3, 0x02, 30 },
         { 6, 0x02, 30 },
         { 10, 0x02, 30 },
@@ -5104,8 +5103,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 31 },
         { 56, 0x03, 31 },
     },
-        /* 250 */
-    { 
+    /* 250 */
+    {
         { 2, 0x02, 127 },
         { 9, 0x02, 127 },
         { 23, 0x02, 127 },
@@ -5123,8 +5122,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 0, 0x03, 22 },
         { 0, 0x04, 0 },
     },
-        /* 251 */
-    { 
+    /* 251 */
+    {
         { 3, 0x02, 127 },
         { 6, 0x02, 127 },
         { 10, 0x02, 127 },
@@ -5142,8 +5141,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 220 },
         { 56, 0x03, 220 },
     },
-        /* 252 */
-    { 
+    /* 252 */
+    {
         { 3, 0x02, 249 },
         { 6, 0x02, 249 },
         { 10, 0x02, 249 },
@@ -5161,8 +5160,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 0, 0x04, 0 },
         { 0, 0x04, 0 },
     },
-        /* 253 */
-    { 
+    /* 253 */
+    {
         { 2, 0x02, 10 },
         { 9, 0x02, 10 },
         { 23, 0x02, 10 },
@@ -5180,8 +5179,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 0, 0x04, 0 },
         { 0, 0x04, 0 },
     },
-        /* 254 */
-    { 
+    /* 254 */
+    {
         { 3, 0x02, 10 },
         { 6, 0x02, 10 },
         { 10, 0x02, 10 },
@@ -5199,8 +5198,8 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
         { 41, 0x02, 13 },
         { 56, 0x03, 13 },
     },
-        /* 255 */
-    { 
+    /* 255 */
+    {
         { 3, 0x02, 22 },
         { 6, 0x02, 22 },
         { 10, 0x02, 22 },
@@ -5220,15 +5219,17 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
     },
 };
 
-size_t HuffmanCode::huffmanEncBufSize(const unsigned char *src, const unsigned char *src_end)
+size_t HuffmanCode::huffmanEncBufSize(const unsigned char *src,
+                                      const unsigned char *src_end)
 {
     size_t bufSizeBits = 0;
-    while(src < src_end)
+    while (src < src_end)
         bufSizeBits += m_HPackHuffEncode_t[*src ++].bits;
     return (bufSizeBits + 7) / 8;
 }
 
-int HuffmanCode::huffmanEnc(const unsigned char *src, const unsigned char *src_end, unsigned char *dst, int dst_len)
+int HuffmanCode::huffmanEnc(const unsigned char *src, const unsigned char *src_end, 
+                            unsigned char *dst, int dst_len)
 {
     unsigned char *p_src = (unsigned char *)src;
     unsigned char *p_dst = dst;
@@ -5238,20 +5239,21 @@ int HuffmanCode::huffmanEnc(const unsigned char *src, const unsigned char *src_e
 
     while (p_src != src_end)
     {
-        const HPackHuffEncode_t & curEncCode = m_HPackHuffEncode_t[*p_src++];
+        const HPackHuffEncode_t &curEncCode = m_HPackHuffEncode_t[*p_src++];
         bits |= (uint64_t)curEncCode.code << (bits_left - curEncCode.bits);
         bits_left -= curEncCode.bits;
-        while (bits_left <= 32) 
+        while (bits_left <= 32)
         {
             *p_dst++ = (bits >> 32) & 0xFF;
             bits <<= 8;
             bits_left += 8;
             if (p_dst == dst_end)
-                return -1;  //dst does not have enough space
+                return LS_FAIL;  //dst does not have enough space
         }
     }
 
-    if (bits_left != 40) {
+    if (bits_left != 40)
+    {
         //assert(bits_left < 40 && bits_left > 0);
         bits |= ((uint64_t)1 << bits_left) - 1;
         *p_dst++ = bits >> 32;
@@ -5260,12 +5262,14 @@ int HuffmanCode::huffmanEnc(const unsigned char *src, const unsigned char *src_e
     return p_dst - dst;
 }
 
-unsigned char *HuffmanCode::huffmanDec4bits( uint8_t src_4bits, unsigned char *dst, HPackHuffDecodeStatus_t &status)
+unsigned char *HuffmanCode::huffmanDec4bits(uint8_t src_4bits,
+        unsigned char *dst, HPackHuffDecodeStatus_t &status)
 {
-    const HPackHuffDecode_t & curDecCode = m_HPackHuffDecode_t[status.state][src_4bits];
-    if ( curDecCode.flags & HPACK_HUFFMAN_FLAG_FAIL )
+    const HPackHuffDecode_t &curDecCode =
+        m_HPackHuffDecode_t[status.state][src_4bits];
+    if (curDecCode.flags & HPACK_HUFFMAN_FLAG_FAIL)
         return NULL; //failed
-    if ( curDecCode.flags & HPACK_HUFFMAN_FLAG_SYM )
+    if (curDecCode.flags & HPACK_HUFFMAN_FLAG_SYM)
         *dst++ = curDecCode.sym;
 
     status.state = curDecCode.state;
@@ -5273,40 +5277,42 @@ unsigned char *HuffmanCode::huffmanDec4bits( uint8_t src_4bits, unsigned char *d
     return dst;
 }
 
-int HuffmanCode::huffmanDec(unsigned char * src, int src_len, unsigned char *dst, int dst_len)
+int HuffmanCode::huffmanDec(unsigned char *src, int src_len,
+                            unsigned char *dst, int dst_len)
 {
     unsigned char *p_src = src;
     unsigned char *src_end = src + src_len;
     unsigned char *p_dst = dst;
     unsigned char *dst_end = dst + dst_len;
     HPackHuffDecodeStatus_t status = { 0, 1 };
-    
-    while ( p_src != src_end )
+
+    while (p_src != src_end)
     {
-        if ( (p_dst = huffmanDec4bits( *p_src >> 4, p_dst, status)) == NULL )
-            return -1;
-        if ( (p_dst = huffmanDec4bits( *p_src & 0xf, p_dst, status)) == NULL )
-            return -1;
+        if ((p_dst = huffmanDec4bits(*p_src >> 4, p_dst, status)) == NULL)
+            return LS_FAIL;
+        if ((p_dst = huffmanDec4bits(*p_src & 0xf, p_dst, status)) == NULL)
+            return LS_FAIL;
         if (p_dst == dst_end)
             return -2;
         ++p_src;
     }
 
-    if ( !status.eos )
-        return -1;
+    if (!status.eos)
+        return LS_FAIL;
 
     *p_dst = 0x00;
     return p_dst - dst;
 }
 
-void DynamicTableEntry::init(char * name, uint32_t name_len, char * val, uint32_t val_len, uint32_t nameIndex)
+void DynamicTableEntry::init(char *name, uint32_t name_len, char *val,
+                             uint32_t val_len, uint32_t nameIndex)
 {
     if (m_valLen && m_val)
         delete []m_val;
-    
+
     if (m_nameLen && m_nameStxTabId == 0 && m_name)
         delete []m_name;
-    
+
     m_nameLen = name_len;
     m_valLen = val_len;
     m_nameStxTabId = 0;
@@ -5319,12 +5325,12 @@ void DynamicTableEntry::init(char * name, uint32_t name_len, char * val, uint32_
     {
         m_name = new char[m_nameLen + 1];
         memcpy(m_name, name, name_len);
-        m_name[name_len] = 0x00; //NULL terminated.
+        m_name[name_len] = 0x00;
     }
-    
+
     m_val = new char[val_len + 1];
     memcpy(m_val, val, val_len);
-    m_val[val_len] = 0x00; //NULL terminated.
+    m_val[val_len] = 0x00;
 }
 
 DynamicTableEntry *HPackDynamicTable::getEntryByTabId(uint32_t id)
@@ -5341,20 +5347,19 @@ void HPackDynamicTable::removeOverflowEntries()
 }
 
 //https://tools.ietf.org/html/draft-ietf-httpbis-header-compression-10#section-5.1
-unsigned char * Hpack::encInt(unsigned char * dst, uint32_t value, uint32_t prefix_bits)
+unsigned char *Hpack::encInt(unsigned char *dst, uint32_t value,
+                             uint32_t prefix_bits)
 {
     if (value < (uint32_t)(1 << prefix_bits))
-    {
         *dst++ |= value;
-    } 
     else
     {
         *dst++ |= (1 << prefix_bits) - 1;
         value -= (1 << prefix_bits) - 1;
-        while ( value >= 128 ) 
+        while (value >= 128)
         {
             *dst++ = (0x80 | value);
-             value >>= 7;
+            value >>= 7;
         }
         *dst++ = value;
     }
@@ -5362,7 +5367,8 @@ unsigned char * Hpack::encInt(unsigned char * dst, uint32_t value, uint32_t pref
 }
 
 //https://tools.ietf.org/html/draft-ietf-httpbis-header-compression-10#section-5.1
-uint32_t Hpack::decInt(unsigned char* &src, const unsigned char *src_end, uint32_t prefix_bits)
+uint32_t Hpack::decInt(unsigned char *&src, const unsigned char *src_end,
+                       uint32_t prefix_bits)
 {
     uint32_t I, B, M;
     uint8_t prefix_max = (1 << prefix_bits) - 1;
@@ -5371,27 +5377,30 @@ uint32_t Hpack::decInt(unsigned char* &src, const unsigned char *src_end, uint32
         return I;
 
     M = 0;
-    do 
+    do
     {
         B = *src++;
-        I += ( B & 0xFF ) << M;
+        I += (B & 0xFF) << M;
         M += 7;
-        if (M > 31 ) 
+        if (M > 31)
             break; //Something wrong, the result will be more than 2 << 31;
-    } while ( (B & 0x80) == 0x80 );
+    } while ((B & 0x80) == 0x80);
     return I;
 }
 
-int Hpack::encStr(unsigned char * dst, size_t dst_len, const unsigned char *str, uint16_t str_len)
+int Hpack::encStr(unsigned char *dst, size_t dst_len,
+                  const unsigned char *str, uint16_t str_len)
 {
     unsigned char *p_dst = dst;
     unsigned char buf[MAX_HEADER_LENGTH];
-    int rc = HuffmanCode::huffmanEnc(str, str + str_len, buf, MAX_HEADER_LENGTH);
-    
-    //Check if need huffman encodeing or not 
-    //Comment: (size_t)rc <= str_len   = means if the same length, we still use Huffman 
-    //                     ^
-    //
+    int rc = HuffmanCode::huffmanEnc(str, str + str_len, buf,
+                                     MAX_HEADER_LENGTH);
+
+    /*
+     * Check if need huffman encodeing or not
+     * Comment: (size_t)rc <= str_len   = means if same length, still use Huffman
+     *                     ^
+     */
     if (rc > 0 && (size_t)rc < dst_len && (size_t)rc <= str_len)
     {
         *p_dst = 0x80;
@@ -5399,7 +5408,7 @@ int Hpack::encStr(unsigned char * dst, size_t dst_len, const unsigned char *str,
         memcpy(p_dst, buf, rc);
         p_dst += rc;
     }
-    else if(str_len < dst_len)
+    else if (str_len < dst_len)
     {
         *p_dst = 0x00;
         p_dst = encInt(p_dst, rc, 7);
@@ -5407,13 +5416,14 @@ int Hpack::encStr(unsigned char * dst, size_t dst_len, const unsigned char *str,
         p_dst += str_len;
     }
     else
-        return -1; //No enough space
-        
+        return LS_FAIL; //No enough space
+
     return p_dst - dst;
 }
 
 //reutrn the length in the dst, also update the src
-int Hpack::decStr(unsigned char * dst, size_t dst_len, unsigned char* &src, const unsigned char *src_end)
+int Hpack::decStr(unsigned char *dst, size_t dst_len, unsigned char *&src,
+                  const unsigned char *src_end)
 {
     if (src == src_end)
         return 0;
@@ -5423,18 +5433,18 @@ int Hpack::decStr(unsigned char * dst, size_t dst_len, unsigned char* &src, cons
     int ret = 0;
     if (src + len > src_end)
         return -2;  //wrong int
-    
-    if (is_huffman) 
+
+    if (is_huffman)
     {
-        if((uint32_t)(src_end - src) < len)
+        if ((uint32_t)(src_end - src) < len)
             return -2;
-        
+
         ret = HuffmanCode::huffmanDec(src, len, dst, dst_len);
         src += len;
     }
     else
     {
-        if ( dst_len < (size_t)(src_end - src) )
+        if (dst_len < (size_t)(src_end - src))
             ret = -3;  //dst not enough space
         else
         {
@@ -5443,12 +5453,13 @@ int Hpack::decStr(unsigned char * dst, size_t dst_len, unsigned char* &src, cons
             ret = len;
         }
     }
-    
+
     return ret;
 }
 
 //not find return 0, otherwise return the index
-int Hpack::getStaticTableId( char * name, uint16_t name_len, char * val, uint16_t val_len, int& val_matched)
+int Hpack::getStaticTableId(char *name, uint16_t name_len, char *val,
+                            uint16_t val_len, int &val_matched)
 {
     if (name_len < 3)
         return 0;
@@ -5456,11 +5467,13 @@ int Hpack::getStaticTableId( char * name, uint16_t name_len, char * val, uint16_
     int i;
     val_matched = 0;
     //check value first
-    for(i=1 ;i<16; ++i)
+    for (i = 1 ; i < 16; ++i)
     {
-        if(g_HPackStaticTable_t[i].val_len == val_len && strncasecmp(val, g_HPackStaticTable_t[i].val, val_len) == 0)
+        if (g_HPackStaticTable_t[i].val_len == val_len
+            && strncasecmp(val, g_HPackStaticTable_t[i].val, val_len) == 0)
         {
-            if (g_HPackStaticTable_t[i].name_len == name_len && strncasecmp(name, g_HPackStaticTable_t[i].name, name_len) == 0)
+            if (g_HPackStaticTable_t[i].name_len == name_len
+                && strncasecmp(name, g_HPackStaticTable_t[i].name, name_len) == 0)
             {
                 val_matched = 1;
                 return i + 1;
@@ -5468,9 +5481,10 @@ int Hpack::getStaticTableId( char * name, uint16_t name_len, char * val, uint16_
         }
     }
 
-    for(i=0 ;i<HPackStaticTableCount; ++i)
+    for (i = 0 ; i < HPackStaticTableCount; ++i)
     {
-        if (g_HPackStaticTable_t[i].name_len == name_len && strncasecmp(name, g_HPackStaticTable_t[i].name, name_len) == 0)
+        if (g_HPackStaticTable_t[i].name_len == name_len
+            && strncasecmp(name, g_HPackStaticTable_t[i].name, name_len) == 0)
             return i + 1;
     }
 
@@ -5478,14 +5492,17 @@ int Hpack::getStaticTableId( char * name, uint16_t name_len, char * val, uint16_
 }
 
 //responseTable
-unsigned char *Hpack::encHeader(unsigned char *dst, unsigned char *dstEnd, char *name, uint16_t nameLen, char *value, uint16_t valueLen, int indexedType)
+unsigned char *Hpack::encHeader(unsigned char *dst, unsigned char *dstEnd,
+                                char *name, uint16_t nameLen, char *value,
+                                uint16_t valueLen, int indexedType)
 {
     //assert(indexedType >= 0 && indexedType <= 2);
     int val_match = 0;
-    int staticTableIndex = getStaticTableId( name, nameLen, value, valueLen, val_match );
-    
+    int staticTableIndex = getStaticTableId(name, nameLen, value, valueLen,
+                                            val_match);
+
     //If both name and value matched
-    if ( val_match == 1 )
+    if (val_match == 1)
     {
         *dst = 0x80;
         dst = encInt(dst, staticTableIndex, 7);
@@ -5493,49 +5510,53 @@ unsigned char *Hpack::encHeader(unsigned char *dst, unsigned char *dstEnd, char 
     }
 
     int dynTabIndex = 0;
-    DynamicTableEntry *pRespEntry = getRespDynamicTable().find(name, nameLen, value, valueLen, dynTabIndex);
+    DynamicTableEntry *pRespEntry = getRespDynamicTable().find(name, nameLen,
+                                    value, valueLen, dynTabIndex);
     if (pRespEntry)
     {
         *dst = 0x80;
         dst = encInt(dst, dynTabIndex, 7);
         return dst;
     }
-    
+
     //indexedType: 0, Add, 1,: without, 2: never
     char indexedPrefixNumber[] = {0x40, 0x00, 0x10};
     if (staticTableIndex > 0 || dynTabIndex > 0)
     {
         *dst = indexedPrefixNumber[indexedType];
-        dst = encInt(dst, (( staticTableIndex > 0) ? staticTableIndex : dynTabIndex), ((indexedType == 0) ? 6 : 4));
-    } 
-    else 
+        dst = encInt(dst, ((staticTableIndex > 0) ? staticTableIndex :
+                           dynTabIndex), ((indexedType == 0) ? 6 : 4));
+    }
+    else
     {
         *dst++ = indexedPrefixNumber[indexedType];
         dst += encStr(dst, dstEnd - dst, (const unsigned char *)name, nameLen);
     }
-    
-    dst += encStr(dst, dstEnd - dst,  (const unsigned char *)value, valueLen);
-    
-    if( indexedType == 0 )
-        getRespDynamicTable().pushEntry(name, nameLen, value, valueLen, staticTableIndex);
-    
+
+    dst += encStr(dst, dstEnd - dst, (const unsigned char *)value, valueLen);
+
+    if (indexedType == 0)
+        getRespDynamicTable().pushEntry(name, nameLen, value, valueLen,
+                                        staticTableIndex);
+
     return dst;
 }
 
 //src will be changed
 //return 1: OK, 0: end, -1: failed.
-int Hpack::decHeader(unsigned char * &src, unsigned char *srcEnd, char * name, uint16_t& name_len, char * val, uint16_t& val_len)
+int Hpack::decHeader(unsigned char *&src, unsigned char *srcEnd, char *name,
+                     uint16_t &name_len, char *val, uint16_t &val_len)
 {
     if (src == srcEnd)
         return 0;
-    
-    if ( (*src & 0xe0) == 0x20 )  //001 xxxxx
+
+    if ((*src & 0xe0) == 0x20)    //001 xxxxx
     {
         int newCapcity = decInt(src, srcEnd, 5);
         getReqDynamicTable().updateMaxCapacity(newCapcity);
         return 1;
     }
-    
+
     uint32_t index = 0;
     int indexedType = -1;
     int len;
@@ -5554,17 +5575,17 @@ int Hpack::decHeader(unsigned char * &src, unsigned char *srcEnd, char * name, u
         indexedType = 0;
 
     //Never indexed
-    else if (*src == 0x10 ) //00010000
+    else if (*src == 0x10)  //00010000
         indexedType = 2;
-    
-    else if ((*src & 0xf0) == 0x10 ) //0001 xxxx
+
+    else if ((*src & 0xf0) == 0x10)  //0001 xxxx
     {
         index = decInt(src, srcEnd, 4);
         indexedType = 2;
     }
 
     //without indexed
-    else if (*src == 0x00 ) //0000 0000
+    else if (*src == 0x00)  //0000 0000
         indexedType = 1;
 
     else // 0000 xxxx
@@ -5572,7 +5593,7 @@ int Hpack::decHeader(unsigned char * &src, unsigned char *srcEnd, char * name, u
         index = decInt(src, srcEnd, 4);
         indexedType = 1;
     }
-    
+
     if (index > 0)
     {
         if (index <= HPackStaticTableCount) //static table
@@ -5588,22 +5609,23 @@ int Hpack::decHeader(unsigned char * &src, unsigned char *srcEnd, char * name, u
         }
         else
         {
-            DynamicTableEntry *pRespEntry = getReqDynamicTable().getEntryByTabId(index);
+            DynamicTableEntry *pRespEntry = getReqDynamicTable().getEntryByTabId(
+                                                index);
             if (pRespEntry == NULL)
             {
                 //Error
-                return -1;
+                return LS_FAIL;
             }
-            if(name_len < pRespEntry->getNameLen())
+            if (name_len < pRespEntry->getNameLen())
                 return -2; //bypass this too long header
-                
+
             name_len = pRespEntry->getNameLen();
             memcpy(name, pRespEntry->getName(), name_len);
             if (indexedType == 3)
             {
-                if(val_len < pRespEntry->getValueLen())
+                if (val_len < pRespEntry->getValueLen())
                     return -2;
-                
+
                 val_len = pRespEntry->getValueLen();
                 memcpy(val, pRespEntry->getValue(), val_len);
                 return 1;
@@ -5616,7 +5638,7 @@ int Hpack::decHeader(unsigned char * &src, unsigned char *srcEnd, char * name, u
         len = decStr((unsigned char *)name, name_len, src, srcEnd);
         name_len = len;
     }
-    
+
     len = decStr((unsigned char *)val, val_len, src, srcEnd);
     val_len = len;
 

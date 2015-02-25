@@ -20,6 +20,7 @@
 
 
 
+#include <lsdef.h>
 #include <util/linkedobj.h>
 
 #include <log4cxx/ilog.h>
@@ -29,37 +30,38 @@ class LoadBalancer;
 class ExtConn;
 
 class ExtRequest : public DLinkedObj
-                 , virtual public LOG4CXX_NS::ILog
+    , virtual public LOG4CXX_NS::ILog
 {
     int             m_iAttempts;
-    LoadBalancer  * m_pLB;
+    LoadBalancer   *m_pLB;
     int             m_iWorkerTrack;
-    
-public: 
-    ExtRequest(): m_iAttempts( 0 ) {};
+
+public:
+    ExtRequest(): m_iAttempts(0) {};
     virtual ~ExtRequest() {};
 
-    void setAttempts( int att ) {   m_iAttempts = att;  }
+    void setAttempts(int att) {   m_iAttempts = att;  }
     int  getAttempts() const    {   return m_iAttempts; }
     int  incAttempts()          {   return ++m_iAttempts;   }
-    
-    void setLB( LoadBalancer * pLB )    {   m_pLB = pLB;    m_iWorkerTrack = 0;   }
-    LoadBalancer * getLB() const        {   return m_pLB;   }
-    
+
+    void setLB(LoadBalancer *pLB)    {   m_pLB = pLB;    m_iWorkerTrack = 0;   }
+    LoadBalancer *getLB() const        {   return m_pLB;   }
+
     int getWorkerTrack() const      {   return m_iWorkerTrack;  }
-    void addWorkerTrack( int n )    {   m_iWorkerTrack |= ( 1 << n );   }   
-    
-    
+    void addWorkerTrack(int n)    {   m_iWorkerTrack |= (1 << n);   }
+
+
     virtual void resetConnector() = 0;
     virtual bool isRecoverable() = 0;
     virtual int  tryRecover() = 0;
     virtual void suspend() = 0;
     virtual int  isAlive() = 0;
-    virtual int  endResponse( int endCode, int protocolStatus ) = 0;
-    virtual void setHttpError( int error ) = 0;
+    virtual int  endResponse(int endCode, int protocolStatus) = 0;
+    virtual void setHttpError(int error) = 0;
     //virtual const char *  getLogId() const;
     //virtual LOG4CXX_NS::Logger* getLogger() const;
-    
+
+    LS_NO_COPY_ASSIGN(ExtRequest);
 };
 
 #endif

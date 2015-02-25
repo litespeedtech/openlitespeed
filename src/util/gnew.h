@@ -24,8 +24,8 @@
 extern "C++"
 {
 
-extern void *operator new( size_t sz );
-extern void operator delete( void * p);
+    extern void *operator new(size_t sz);
+    extern void operator delete(void *p);
 
 };
 #endif

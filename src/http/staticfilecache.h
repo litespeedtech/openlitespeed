@@ -19,26 +19,31 @@
 #define STATICFILECACHE_H
 
 
+#include <lsdef.h>
 #include <http/httpcache.h>
+#include <util/tsingleton.h>
 
 class StaticFileCacheData;
 class FileCacheDataEx;
 
-class StaticFileCache : public HttpCache
+class StaticFileCache : public HttpCache, public TSingleton<StaticFileCache>
 {
-    CacheElement* allocElement();
-    void recycle( CacheElement* pElement );
-    int  newCache( const char * pPath, int pathLen, 
-                   const struct stat& fileStat, int fd, 
-                   StaticFileCacheData *&pData );
+    friend class TSingleton<StaticFileCache>;
+
+    CacheElement *allocElement();
+    void recycle(CacheElement *pElement);
+    int  newCache(const char *pPath, int pathLen,
+                  const struct stat &fileStat, int fd,
+                  StaticFileCacheData *&pData);
+    StaticFileCache();
 public:
-    StaticFileCache( int initSize );
     ~StaticFileCache();
 
-    int getCacheElement( const char * pPath, int pathLen, 
-                         const struct stat& fileStat, int fd, 
-                         StaticFileCacheData* &pData, FileCacheDataEx *  &pECache );
-    void returnCacheElement( StaticFileCacheData* pElement );
+    int getCacheElement(const char *pPath, int pathLen,
+                        const struct stat &fileStat, int fd,
+                        StaticFileCacheData *&pData, FileCacheDataEx *&pECache);
+    void returnCacheElement(StaticFileCacheData *pElement);
+    LS_NO_COPY_ASSIGN(StaticFileCache);
 };
 
 #endif

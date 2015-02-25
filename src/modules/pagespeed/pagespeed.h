@@ -28,7 +28,6 @@
 
 #define     MNAME           modpagespeed
 #define     ModuleName      "modpagespeed"
-const char kModuleName[] =  "Module::modpagespeed";
 
 #define PAGESPEED_MODULEKEY     ModuleName
 #define PAGESPEED_MODULEKEYLEN  (sizeof(ModuleName) -1)
@@ -41,75 +40,76 @@ using namespace net_instaweb;
 
 namespace net_instaweb
 {
-    class GzipInflater;
-    class StringAsyncFetch;
-    class ProxyFetch;
-    class RewriteDriver;
-    class RequestHeaders;
-    class ResponseHeaders;
-    class InPlaceResourceRecorder;
+class GzipInflater;
+class StringAsyncFetch;
+class ProxyFetch;
+class RewriteDriver;
+class RequestHeaders;
+class ResponseHeaders;
+class InPlaceResourceRecorder;
 
 // s1: AutoStr, s2: string literal
 // true if they're equal, false otherwise
 #define STR_EQ_LITERAL(s1, s2)          \
-    ((s1).len() == (sizeof(s2)-1) &&      \
-     strncmp((s1).c_str(), (s2), (sizeof(s2)-1)) == 0)
+((s1).len() == (sizeof(s2)-1) &&      \
+ strncmp((s1).c_str(), (s2), (sizeof(s2)-1)) == 0)
 
-// s1: ngx_str_t, s2: string literal
+// s1: AutoStr, s2: string literal
 // true if they're equal ignoring case, false otherwise
 #define STR_CASE_EQ_LITERAL(s1, s2)     \
-    ((s1).len() == (sizeof(s2)-1) &&      \
-     strncasecmp((s1).c_str(), (s2), (sizeof(s2)-1)) == 0)
+((s1).len() == (sizeof(s2)-1) &&      \
+ strncasecmp((s1).c_str(), (s2), (sizeof(s2)-1)) == 0)
 
 
-    enum PreserveCachingHeaders
-    {
-        kPreserveAllCachingHeaders,  // Cache-Control, ETag, Last-Modified, etc
-        kPreserveOnlyCacheControl,   // Only Cache-Control.
-        kDontPreserveHeaders,
-    };
+enum PreserveCachingHeaders
+{
+    kPreserveAllCachingHeaders,  // Cache-Control, ETag, Last-Modified, etc
+    kPreserveOnlyCacheControl,   // Only Cache-Control.
+    kDontPreserveHeaders,
+};
 
-    void copy_response_headers_from_server( lsi_session_t* session,
-                                            ResponseHeaders* headers );
+void CopyRespHeadersFromServer(lsi_session_t *session,
+                                       ResponseHeaders *headers);
 
-    void copy_request_headers_from_server( lsi_session_t* session,
-                                           RequestHeaders* headers );
+void CopyReqHeadersFromServer(lsi_session_t *session,
+                                      RequestHeaders *headers);
 
-    int copy_response_headers_to_server( lsi_session_t* session,
-                                         const ResponseHeaders& pagespeed_headers,
-                                         PreserveCachingHeaders preserve_caching_headers );
+int CopyRespHeadersToServer(lsi_session_t *session,
+                                    const ResponseHeaders &pagespeed_headers,
+                                    PreserveCachingHeaders preserve_caching_headers);
 
-    int copy_response_body_to_buff( lsi_session_t* session, const char* s, int len, int done_called );
+int CopyRespBodyToBuf(lsi_session_t *session, const char *s,
+                               int len, int done_called);
 
-    StringPiece ps_determine_host( lsi_session_t* session );
+StringPiece DetermineHost(lsi_session_t *session);
 
-    int ps_determine_port( lsi_session_t* session );
+int DeterminePort(lsi_session_t *session);
 
 }  // namespace net_instaweb
 
 
 namespace RequestRouting
 {
-    enum Response
-    {
-        kError,
-        kNotUnderstood,
-        kStaticContent,
-        kInvalidUrl,
-        kPagespeedDisabled,
-        kBeacon,
-        kStatistics,
-        kGlobalStatistics,
-        kConsole,
-        kMessages,
-        kAdmin,
-        kCachePurge,
-        kGlobalAdmin,
-        kPagespeedSubrequest,
-        kNotHeadOrGet,
-        kErrorResponse,
-        kResource,
-    };
+enum Response
+{
+    kError,
+    kNotUnderstood,
+    kStaticContent,
+    kInvalidUrl,
+    kPagespeedDisabled,
+    kBeacon,
+    kStatistics,
+    kGlobalStatistics,
+    kConsole,
+    kMessages,
+    kAdmin,
+    kCachePurge,
+    kGlobalAdmin,
+    kPagespeedSubrequest,
+    kNotHeadOrGet,
+    kErrorResponse,
+    kResource,
+};
 }  // namespace RequestRouting
 
 #endif //LSI_PAGESPEEND_H_

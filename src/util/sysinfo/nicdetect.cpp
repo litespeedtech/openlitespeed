@@ -23,7 +23,6 @@
 #include    <netinet/in.h>
 #include    <sys/ioctl.h>
 #include    <arpa/inet.h>
-#include    <util/ssnprintf.h>
 
 #if defined(sun) || defined(__sun)
 #include    <sys/socket.h>
@@ -59,7 +58,8 @@ NICDetect::free_ifi_info(struct ifi_info *ifihead)
 {
     struct ifi_info    *ifi, *ifinext;
 
-    for (ifi = ifihead; ifi != NULL; ifi = ifinext) {
+    for (ifi = ifihead; ifi != NULL; ifi = ifinext)
+    {
         if (ifi->ifi_addr != NULL)
             free(ifi->ifi_addr);
         if (ifi->ifi_brdaddr != NULL)

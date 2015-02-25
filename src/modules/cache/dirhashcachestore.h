@@ -18,11 +18,9 @@
 #ifndef DIRHASHCACHESTORE_H
 #define DIRHASHCACHESTORE_H
 
+#include <lsdef.h>
 #include <cachestore.h>
 
-/**
-	@author Gang Wang <gwang@litespeedtech.com>
-*/
 
 class CacheHash;
 class DirHashCacheEntry;
@@ -30,21 +28,21 @@ class DirHashCacheEntry;
 class DirHashCacheStore : public CacheStore
 {
 
-    int buildCacheLocation( char *pBuf, int len, const CacheHash& hash );
-    int updateEntryState( DirHashCacheEntry * pEntry );
-    int isChanged( CacheEntry * pEntry, const char * pPath, int len );
-    int isEntryExists( CacheHash& hash, const char * pSuffix, 
-                    struct stat * pStat );
-    
-    int isEntryStale( CacheHash & hash );
-    int isEntryExist( CacheHash& hash, const char * pSuffix,
-        struct stat *pStat );
+    int buildCacheLocation(char *pBuf, int len, const CacheHash &hash);
+    int updateEntryState(DirHashCacheEntry *pEntry);
+    int isChanged(CacheEntry *pEntry, const char *pPath, int len);
+    int isEntryExists(CacheHash &hash, const char *pSuffix,
+                      struct stat *pStat);
 
-    int isEntryUpdating( CacheHash& hash );
+    int isEntryStale(CacheHash &hash);
+    int isEntryExist(CacheHash &hash, const char *pSuffix,
+                     struct stat *pStat);
+
+    int isEntryUpdating(CacheHash &hash);
 
 protected:
-    int renameDiskEntry( CacheEntry * pEntry, char * pFrom,
-                 const char * pFromSuffix, const char * pToSuffix, int validate );
+    int renameDiskEntry(CacheEntry *pEntry, char *pFrom,
+                        const char *pFromSuffix, const char *pToSuffix, int validate);
 
 public:
     DirHashCacheStore();
@@ -54,34 +52,37 @@ public:
     virtual int clearStrage();
 
 
-    virtual CacheEntry * getCacheEntry( CacheHash& hash,
-                const char * pURI, int pURILen, 
-                const char * pQS, int pQSLen, 
-                const char * pIP, int ipLen,
-                const char * pCookie, int cookieLen,
-                int32_t lastCacheFlush, int maxStale  );
+    virtual CacheEntry *getCacheEntry(CacheHash &hash,
+                                      const char *pURI, int pURILen,
+                                      const char *pQS, int pQSLen,
+                                      const char *pIP, int ipLen,
+                                      const char *pCookie, int cookieLen,
+                                      int32_t lastCacheFlush, int maxStale);
 
-    virtual CacheEntry * createCacheEntry( const CacheHash& hash,
-                const char * pURI, int pURILen, 
-                const char * pQS, int pQSLen, 
-                const char * pIP, int ipLen,
-                const char * pCookie, int cookieLen,
-                int force, int* errorcode );
+    virtual CacheEntry *createCacheEntry(const CacheHash &hash,
+                                         const char *pURI, int pURILen,
+                                         const char *pQS, int pQSLen,
+                                         const char *pIP, int ipLen,
+                                         const char *pCookie, int cookieLen,
+                                         int force, int *errorcode);
 
-    virtual void cancelEntry( CacheEntry * pEntry, int remove );
+    virtual void cancelEntry(CacheEntry *pEntry, int remove);
 
-    virtual CacheEntry * getCacheEntry( const char * pKey, int keyLen );
+    virtual CacheEntry *getCacheEntry(const char *pKey, int keyLen);
 
-    virtual CacheEntry * getWriteEntry( const char * pKey, int keyLen, 
-                        const char * pHash );
+    virtual CacheEntry *getWriteEntry(const char *pKey, int keyLen,
+                                      const char *pHash);
 
-    virtual int saveEntry( CacheEntry * pEntry );
+    virtual int saveEntry(CacheEntry *pEntry);
 
-    virtual int publish( CacheEntry * pEntry );
+    virtual int publish(CacheEntry *pEntry);
 
-    virtual void removePermEntry( CacheEntry * pEntry );
-    int& nio_stat(char achBuf[4096], struct stat* st);
+    virtual void removePermEntry(CacheEntry *pEntry);
+    int &ls_fio_stat(char achBuf[4096], struct stat *st);
 
+
+
+    LS_NO_COPY_ASSIGN(DirHashCacheStore);
 };
 
 #endif

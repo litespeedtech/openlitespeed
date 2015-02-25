@@ -31,31 +31,31 @@
 namespace net_instaweb
 {
 
-    class AbstractMutex;
-    class Timer;
+class AbstractMutex;
+class Timer;
 
 // Implementation of a message handler that uses log_error()
 // logging to emit messages, with a fallback to GoogleMessageHandler
-    class LsiMessageHandler : public SystemMessageHandler
-    {
-    public:
-        explicit LsiMessageHandler( Timer* timer, AbstractMutex* mutex );
+class LsiMessageHandler : public SystemMessageHandler
+{
+public:
+    explicit LsiMessageHandler(Timer *timer, AbstractMutex *mutex);
 
-        // Installs a signal handler for common crash signals that tries to print
-        // out a backtrace.
-        static void InstallCrashHandler();
+    // Installs a signal handler for common crash signals that tries to print
+    // out a backtrace.
+    static void InstallCrashHandler();
 
 
-    protected:
-        virtual void MessageVImpl( MessageType type, const char* msg, va_list args );
+protected:
+    virtual void MessageVImpl(MessageType type, const char *msg, va_list args);
 
-        virtual void FileMessageVImpl( MessageType type, const char* filename,
-                                       int line, const char* msg, va_list args );
+    virtual void FileMessageVImpl(MessageType type, const char *filename,
+                                  int line, const char *msg, va_list args);
 
-    private:
-        lsi_log_level GetLsiLogLevel( MessageType type );
+private:
+    lsi_log_level GetLsiLogLevel(MessageType type);
 
-    };
+};
 
 }  // namespace net_instaweb
 

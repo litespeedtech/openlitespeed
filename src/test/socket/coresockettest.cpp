@@ -16,8 +16,8 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #ifdef RUN_TEST
- 
- 
+
+
 #include "coresockettest.h"
 #include <socket/gsockaddr.h>
 #include "test/unittest-cpp/UnitTest++/src/UnitTest++.h"
@@ -26,31 +26,31 @@
 class Tester : public CoreSocket
 {
 public:
-    Tester( int domain, int type, int protocol )
-        :CoreSocket( domain, type, protocol )
-        {}
-    Tester( int fd )
-        :CoreSocket( fd )
-        {}
+    Tester(int domain, int type, int protocol)
+        : CoreSocket(domain, type, protocol)
+    {}
+    Tester(int fd)
+        : CoreSocket(fd)
+    {}
     ~Tester() {}
 };
 
-TEST( CoreSocketTest_testConstructors)
+TEST(CoreSocketTest_testConstructors)
 {
-    Tester sock1(PF_INET, SOCK_STREAM, 0 );
-    Tester sock2( sock1.getfd() );
-    CHECK( -1 != sock1.getfd() );
-    CHECK( sock1.getfd() == sock2.getfd() );
-    GSockAddr name1( PF_INET );
+    Tester sock1(PF_INET, SOCK_STREAM, 0);
+    Tester sock2(sock1.getfd());
+    CHECK(-1 != sock1.getfd());
+    CHECK(sock1.getfd() == sock2.getfd());
+    GSockAddr name1(PF_INET);
     socklen_t namelen1 = name1.len();
-    GSockAddr name2( PF_INET );
+    GSockAddr name2(PF_INET);
     socklen_t namelen2 = name2.len();
-    CHECK( 0 == sock1.getSockName( name1.get(), &namelen1 ));
-    CHECK( 0 == sock2.getSockName( name2.get(), &namelen2 ));
+    CHECK(0 == sock1.getSockName(name1.get(), &namelen1));
+    CHECK(0 == sock2.getSockName(name2.get(), &namelen2));
     //CHECK( 0 == memcmp( &name1, &name2, sizeof( IPv4SockAddr ) ));
-    CHECK( sock1.close() == 0);
-    CHECK( sock2.close() == -1 );
-    CHECK( errno == EBADF );
+    CHECK(sock1.close() == 0);
+    CHECK(sock2.close() == -1);
+    CHECK(errno == EBADF);
 }
 // void CoreSocketTest::testBind()
 // {

@@ -19,17 +19,21 @@
 #define CRASHGUARD_H
 
 
+#include <lsdef.h>
 #include <util/guardedapp.h>
 
 class CrashGuard
 {
-    GuardedApp * m_pGuardedApp;
-public: 
-    CrashGuard( GuardedApp * pApp )
-        : m_pGuardedApp( pApp )
-        {}
+    GuardedApp *m_pGuardedApp;
+public:
+    CrashGuard(GuardedApp *pApp)
+        : m_pGuardedApp(pApp)
+    {}
     ~CrashGuard() {};
     int guardCrash();
+
+
+    LS_NO_COPY_ASSIGN(CrashGuard);
 };
 
 #endif

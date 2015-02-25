@@ -18,7 +18,7 @@
 #ifndef LSLOCK_H
 #define LSLOCK_H
 
-#include <lsr/lsr_lock.h>
+#include <lsr/ls_lock.h>
 
 #endif
 

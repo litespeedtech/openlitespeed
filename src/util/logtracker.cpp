@@ -18,10 +18,10 @@
 #include <util/logtracker.h>
 #include <stddef.h>
 LogTracker::LogTracker()
-    : m_pLogger( NULL )
+    : m_pLogger(NULL)
 {
-    m_logId.prealloc( MAX_LOGID_LEN + 1 );
-    *( m_logId.buf() + MAX_LOGID_LEN ) = 0;
+    m_logId.prealloc(MAX_LOGID_LEN + 1);
+    *(m_logId.buf() + MAX_LOGID_LEN) = 0;
     *m_logId.buf() = 0;
 }
 LogTracker::~LogTracker()

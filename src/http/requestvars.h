@@ -129,54 +129,60 @@ class SubstItem : public LinkedObj
     union
     {
         long          m_index;
-        AutoStr2    * m_pStr;
-        void        * m_pAny;
-        
+        AutoStr2     *m_pStr;
+        void         *m_pAny;
+
     }           m_value;
+
+
+    void operator=(const SubstItem &rhs);
 public:
     SubstItem();
     ~SubstItem();
-    SubstItem( const SubstItem & rhs );
-    void setType( int type )            {   m_type = type;              }
+    SubstItem(const SubstItem &rhs);
+    void setType(int type)            {   m_type = type;              }
     int getType() const                 {   return m_type;              }
 
-    void setSubType( int type )         {   m_subType = type;           }
+    void setSubType(int type)         {   m_subType = type;           }
     int getSubType() const              {   return m_subType;           }
 
 
-    void setIndex( int index )          {   m_value.m_index = index;    }
+    void setIndex(int index)          {   m_value.m_index = index;    }
     long getIndex() const               {   return m_value.m_index;     }
 
-    AutoStr2 * setStr( const char * pStr, int len );
-    void setStr( AutoStr2 * pStr )      {   m_value.m_pStr = pStr;      }
-    AutoStr2 * getStr() const           {   return m_value.m_pStr;      }
+    AutoStr2 *setStr(const char *pStr, int len);
+    void setStr(AutoStr2 *pStr)      {   m_value.m_pStr = pStr;      }
+    AutoStr2 *getStr() const           {   return m_value.m_pStr;      }
 
-    void setAny( void * p )             {   m_value.m_pAny = p;      }
-    void * getAny() const               {   return m_value.m_pAny;   }
+    void setAny(void *p)             {   m_value.m_pAny = p;      }
+    void *getAny() const               {   return m_value.m_pAny;   }
 
-    SubstFormat* getFormatStr() const
+    SubstFormat *getFormatStr() const
     {   return (SubstFormat *)m_value.m_pAny;   }
 
 
-    void parseString(  const char * &pBegin, const char * pEnd,
-                        const char * stopChars );
-    int parseServerVar( const char * pCurLine, const char * &pFormatStr, 
-                        const char * pEnd, int isSSI = 0 );
+    void parseString(const char *&pBegin, const char *pEnd,
+                     const char *stopChars);
+    int parseServerVar(const char *pCurLine, const char *&pFormatStr,
+                       const char *pEnd, int isSSI = 0);
 
-    int equal( const SubstItem& rhs ) const
-    {   return ((m_type == rhs.m_type )&&( m_value.m_index == rhs.m_value.m_index ));  }
+    int equal(const SubstItem &rhs) const
+    {   return ((m_type == rhs.m_type) && (m_value.m_index == rhs.m_value.m_index));  }
 };
 
 class SubstFormat : public TLinkList< SubstItem >
 {
     //int   m_type;
-public:    
+
+    void operator=(const SubstFormat &rhs);
+public:
     SubstFormat();
     ~SubstFormat();
-    SubstFormat( const SubstFormat& rhs );
-    int parse( const char * pCurLine, 
-                const char * pFormatStr, const char * pEnd, int isSSI = 0, char varChar = '$' );
-    int equal( const SubstFormat& rhs ) const;
+    SubstFormat(const SubstFormat &rhs);
+    int parse(const char *pCurLine,
+              const char *pFormatStr, const char *pEnd, int isSSI = 0,
+              char varChar = '$');
+    int equal(const SubstFormat &rhs) const;
 
     //void setType( int type ) {  m_type = type;  }
     //int getType() const      {  return m_type;  }
@@ -191,37 +197,40 @@ public:
     RequestVars();
 
     ~RequestVars();
-    static int parseBuiltIn( const char * pVar, int len, int ext = 0);
-    static int parseHttpHeader( const char * pName, int len, const char * &pHeaderName, int &headerLen );
+    static int parseBuiltIn(const char *pVar, int len, int ext = 0);
+    static int parseHttpHeader(const char *pName, int len,
+                               const char *&pHeaderName, int &headerLen);
 
-    static int getReqVar( HttpSession *pSession, int type, char * &pValue, int bufLen);
-    static int getReqVar2( HttpSession *pSession, int type, char * &pValue, int bufLen); 
-  
-    static const char * getUnknownHeader( HttpReq * pReq, const char * pName,
+    static int getReqVar(HttpSession *pSession, int type, char *&pValue,
+                         int bufLen);
+    static int getReqVar2(HttpSession *pSession, int type, char *&pValue,
+                          int bufLen);
+
+    static const char *getUnknownHeader(HttpReq *pReq, const char *pName,
                                         int nameLen, int &headerLen);
-    static const char * getHeaderString( int iIndex );
-    static const char * getCookieValue( HttpReq * pReq, const char * pCookieName,
-                                        int nameLen, int &idLen );
-    static int getCookieCount( HttpReq * pReq );
-    static const char * getEnv( HttpSession *pSession, const char * pKey,
-                                int keyLen, int &valLen );
+    static const char *getHeaderString(int iIndex);
+    static const char *getCookieValue(HttpReq *pReq, const char *pCookieName,
+                                      int nameLen, int &idLen);
+    static int getCookieCount(HttpReq *pReq);
+    static const char *getEnv(HttpSession *pSession, const char *pKey,
+                              int keyLen, int &valLen);
 
-    static int getSubstValue( const SubstItem * pItem, HttpSession *pSession,
-                        char * &pValue, int bufLen );
+    static int getSubstValue(const SubstItem *pItem, HttpSession *pSession,
+                             char *&pValue, int bufLen);
 
-    static int appendSubst( const SubstItem * pItem, HttpSession *pSession,
-                        char * &pBegin, int len, int noDupSlash,
-                        const RegexResult * pRegRes, const char * pTmFmt = NULL );
+    static int appendSubst(const SubstItem *pItem, HttpSession *pSession,
+                           char *&pBegin, int len, int noDupSlash,
+                           const RegexResult *pRegRes, const char *pTmFmt = NULL);
 
-    static char * buildString( const SubstFormat * pFormat, HttpSession *pSession,
-                          char * pBuf, int &len, int noDupSlash, const RegexResult * pRegRes,
-                          const char * pTmFmt = NULL );
+    static char *buildString(const SubstFormat *pFormat, HttpSession *pSession,
+                             char *pBuf, int &len, int noDupSlash, const RegexResult *pRegRes,
+                             const char *pTmFmt = NULL);
 
-    static const char * getVarNameStr( int var_id, int &len );
+    static const char *getVarNameStr(int var_id, int &len);
 
-    static int setEnv( HttpSession* pSession, const char * pName, int nameLen, 
-                        const char * pValue, int valLen );
-    
+    static int setEnv(HttpSession *pSession, const char *pName, int nameLen,
+                      const char *pValue, int valLen);
+
 };
 
 #endif

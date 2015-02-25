@@ -218,40 +218,39 @@ static const unsigned char s_spdyV3Dictionary[] =
     0x2c, 0x65, 0x6e, 0x71, 0x3d, 0x30, 0x2e         // .enq.0.
 };
 
-static const unsigned char * s_dicts[] = { NULL, s_spdyV2Dictionary, s_spdyV3Dictionary };
-static int  s_dictsLen[] =
-    { 0, sizeof( s_spdyV2Dictionary ), sizeof( s_spdyV3Dictionary ) };
+static const unsigned char *s_dicts[] = { NULL, s_spdyV2Dictionary, s_spdyV3Dictionary };
+static int  s_dictsLen[] = { 0, sizeof(s_spdyV2Dictionary), sizeof(s_spdyV3Dictionary) };
 
 SpdyZlibFilter::SpdyZlibFilter()
-    : m_version( 2 )
-    , m_isInflator( 0 )
+    : m_iVersion(2)
+    , m_isInflator(0)
 {
-    memset( &m_stream, 0, sizeof( m_stream ) );
+    memset(&m_stream, 0, sizeof(m_stream));
 }
 
-int SpdyZlibFilter::init( int isInflator, int verSpdy )
+int SpdyZlibFilter::init(int isInflator, int verSpdy)
 {
     int ret;
 
     m_isInflator = isInflator;
-    assert( (uint)verSpdy < sizeof( s_dicts ) / sizeof( char * ) );
-    m_version = verSpdy;
-    if ( isInflator )
+    assert((uint)verSpdy < sizeof(s_dicts) / sizeof(char *));
+    m_iVersion = verSpdy;
+    if (isInflator)
     {
-        if ( m_stream.state )
-            ret = inflateReset( &m_stream );
+        if (m_stream.state)
+            ret = inflateReset(&m_stream);
         else
-            ret = inflateInit2( &m_stream, 15 );
+            ret = inflateInit2(&m_stream, 15);
     }
     else
     {
-        if ( m_stream.state )
-            ret = deflateReset( &m_stream );
+        if (m_stream.state)
+            ret = deflateReset(&m_stream);
         else
-            ret = deflateInit( &m_stream, -1 );
+            ret = deflateInit(&m_stream, -1);
 
-        ret = deflateSetDictionary( &m_stream, s_dicts[ m_version ],
-                                    s_dictsLen[ m_version ] );
+        ret = deflateSetDictionary(&m_stream, s_dicts[ m_iVersion ],
+                                   s_dictsLen[ m_iVersion ]);
     }
 
     return ret;
@@ -264,40 +263,39 @@ SpdyZlibFilter::~SpdyZlibFilter()
 
 int SpdyZlibFilter::release()
 {
-    if ( m_isInflator )
-        inflateEnd( &m_stream );
+    if (m_isInflator)
+        inflateEnd(&m_stream);
     else
-        deflateEnd( &m_stream );
-    return 0; 
+        deflateEnd(&m_stream);
+    return 0;
 }
 
-int SpdyZlibFilter::decompress( char* pSource, uint32_t length, AutoBuf& bufInflate)
+int SpdyZlibFilter::decompress(char *pSource, uint32_t length, AutoBuf &bufInflate)
 {
     int ret;
 
     m_stream.avail_in = length;
-    m_stream.next_in = ( unsigned char * )pSource;
+    m_stream.next_in = (unsigned char *)pSource;
     m_stream.avail_out = bufInflate.available();
-    m_stream.next_out = ( unsigned char* )bufInflate.end();
-    
-    while( m_stream.avail_in )
+    m_stream.next_out = (unsigned char *)bufInflate.end();
+
+    while (m_stream.avail_in)
     {
-        ret = inflate( &m_stream, Z_SYNC_FLUSH );
-        if ( ret == Z_STREAM_ERROR )
-            return -1;
+        ret = inflate(&m_stream, Z_SYNC_FLUSH);
+        if (ret == Z_STREAM_ERROR)
+            return LS_FAIL;
 
-        switch ( ret )
+        switch (ret)
         {
-
         case Z_NEED_DICT:
             /* Setting the dictionary for the SPDY zlib compression. */
-            ret = inflateSetDictionary( &m_stream, s_dicts[ m_version ],
-                                        s_dictsLen[ m_version ] );
+            ret = inflateSetDictionary(&m_stream, s_dicts[ m_iVersion ],
+                                       s_dictsLen[ m_iVersion ]);
 
-            if ( ret != Z_OK )
+            if (ret != Z_OK)
             {
-                inflateEnd( &m_stream );
-                return -1;
+                inflateEnd(&m_stream);
+                return LS_FAIL;
             }
             continue;
 
@@ -313,50 +311,50 @@ int SpdyZlibFilter::decompress( char* pSource, uint32_t length, AutoBuf& bufInfl
         default:
             return ret;
         }
-        bufInflate.used( m_stream.next_out - ( unsigned char* )bufInflate.end() );
-        if(m_stream.avail_out == 0)
+        bufInflate.used(m_stream.next_out - (unsigned char *)bufInflate.end());
+        if (m_stream.avail_out == 0)
         {
             bufInflate.grow(512);
             m_stream.avail_out = bufInflate.available();
-            m_stream.next_out = ( unsigned char* )bufInflate.end();
+            m_stream.next_out = (unsigned char *)bufInflate.end();
         }
         else
-        {
             break;
-        }
     }
     return bufInflate.size();
 }
 
-int SpdyZlibFilter::compress(char* pSource, uint32_t length, LoopBuf* ploopbuf, int flush)
+int SpdyZlibFilter::compress(char *pSource, uint32_t length,
+                             LoopBuf *ploopbuf, int flush)
 {
     int ret;
     int old_size = ploopbuf->size();
     ploopbuf->guarantee(1024);
-    
-    m_stream.avail_in = length;
-    m_stream.next_in = ( unsigned char * )pSource;
-    m_stream.avail_out = ploopbuf->contiguous();
-    m_stream.next_out = ( unsigned char * )ploopbuf->end();
-    while ( m_stream.avail_in )
-    {
-        ret = ::deflate( &m_stream, flush );
 
-        if (( ret == Z_OK ) || ( ret == Z_STREAM_END ) )
+    m_stream.avail_in = length;
+    m_stream.next_in = (unsigned char *)pSource;
+    m_stream.avail_out = ploopbuf->contiguous();
+    m_stream.next_out = (unsigned char *)ploopbuf->end();
+    while (m_stream.avail_in)
+    {
+        ret = ::deflate(&m_stream, flush);
+
+        if ((ret == Z_OK) || (ret == Z_STREAM_END))
         {
-            ploopbuf->used( (char *)m_stream.next_out - ploopbuf->end() );
-            if( m_stream.avail_out == 0 )
+            ploopbuf->used((char *)m_stream.next_out - ploopbuf->end());
+            if (m_stream.avail_out == 0)
             {
                 ploopbuf->guarantee(1024);
                 m_stream.avail_out = ploopbuf->contiguous();
-                m_stream.next_out = ( unsigned char * )ploopbuf->end();                
+                m_stream.next_out = (unsigned char *)ploopbuf->end();
             }
             else
-                break; 
+                break;
         }
         else
         {
-            if( ( ret == Z_BUF_ERROR) && (m_stream.avail_out > 0) && (m_stream.avail_in == 0) )
+            if ((ret == Z_BUF_ERROR) && (m_stream.avail_out > 0)
+                && (m_stream.avail_in == 0))
                 break;
             return ret;
         }

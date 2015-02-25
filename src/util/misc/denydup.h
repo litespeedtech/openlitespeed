@@ -22,8 +22,8 @@
 class DenyDup
 {
 private:
-    DenyDup( const DenyDup& dup ) {};
-    void operator=( const DenyDup& dup ) {};
+    DenyDup(const DenyDup &dup) {};
+    void operator=(const DenyDup &dup) {};
 public:
     DenyDup() {};
     ~DenyDup() {};

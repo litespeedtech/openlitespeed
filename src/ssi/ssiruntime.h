@@ -18,10 +18,11 @@
 #ifndef SSIRUNTIME_H
 #define SSIRUNTIME_H
 
+#include <lsdef.h>
 #include <util/pcregex.h>
 #include <ssi/ssiconfig.h>
 
-#include <lsr/lsr_str.h>
+#include <lsr/ls_str.h>
 
 #define SSI_STACK_SIZE 10
 
@@ -31,67 +32,69 @@ class SSIScript;
 #define SSI_REQ_CGI 1
 #define SSI_REQ_CMD 2
 
-class SSIRuntime{
+class SSIRuntime
+{
 public:
     SSIRuntime();
 
     ~SSIRuntime();
 
     void init()
-    {   
-        m_pCurScript = &m_stack[0] -1;
-        memset( m_stkPathInfo, 0, sizeof( lsr_str_t ) * SSI_STACK_SIZE );
+    {
+        m_pCurScript = &m_stack[0] - 1;
+        memset(m_stkPathInfo, 0, sizeof(ls_str_t) * SSI_STACK_SIZE);
     }
 
-    int  push( SSIScript *pScript )
+    int  push(SSIScript *pScript)
     {
-        if ( m_pCurScript < &m_stack[SSI_STACK_SIZE-1] )
+        if (m_pCurScript < &m_stack[SSI_STACK_SIZE - 1])
         {
             *(++m_pCurScript) = pScript;
             return 0;
         }
         else
-            return -1;
+            return LS_FAIL;
     }
 
     void pop()
-    {   if ( m_pCurScript > &m_stack[0] -1 )
+    {
+        if (m_pCurScript > &m_stack[0] - 1)
             -- m_pCurScript;
     }
     int  full()
     {   return m_pCurScript >= &m_stack[SSI_STACK_SIZE];    }
 
     int  done()
-    {   return m_pCurScript == &m_stack[0] -1;    }
+    {   return m_pCurScript == &m_stack[0] - 1;    }
 
-    int initConfig( SSIConfig * pConfig );
+    int initConfig(SSIConfig *pConfig);
 
-    SSIScript * getCurrentScript() const
+    SSIScript *getCurrentScript() const
     {   return *m_pCurScript;   }
-    
-    SSIConfig * getConfig() 
+
+    SSIConfig *getConfig()
     {   return &m_config;       }
-    
-    const RegexResult * getRegexResult() const 
+
+    const RegexResult *getRegexResult() const
     {   return &m_regexResult;      }
 
-    RegexResult * getRegexResult()
+    RegexResult *getRegexResult()
     {   return &m_regexResult;      }
 
-    int execRegex( Pcregex * pReg, const char * pSubj, int len );
+    int execRegex(Pcregex *pReg, const char *pSubj, int len);
 
     void clearFlag()    {   m_flag = 0;     }
     void requireCGI()   {   m_flag = SSI_REQ_CGI;   }
     void requireCmd()   {   m_flag = SSI_REQ_CMD;   }
     int  isCGIRequired() const {   return m_flag > 0;      }
 
-    void savePathInfo( lsr_str_t pathInfo, int redirects )
+    void savePathInfo(ls_str_t pathInfo, int redirects)
     {
         m_stkPathInfo[ m_pCurScript - m_stack ] = pathInfo;
         m_stkRedirectIdx[ m_pCurScript - m_stack ] = redirects;
     }
 
-    void restorePathInfo( lsr_str_t &pathInfo, short int &redirects )
+    void restorePathInfo(ls_str_t &pathInfo, short int &redirects)
     {
         pathInfo = m_stkPathInfo[ m_pCurScript - m_stack ];
         redirects = m_stkRedirectIdx[ m_pCurScript - m_stack ];
@@ -99,15 +102,18 @@ public:
 
 
 private:
-    SSIScript **    m_pCurScript;
-    SSIScript *     m_stack[SSI_STACK_SIZE];
-    lsr_str_t       m_stkPathInfo[SSI_STACK_SIZE];
+    SSIScript     **m_pCurScript;
+    SSIScript      *m_stack[SSI_STACK_SIZE];
+    ls_str_t       m_stkPathInfo[SSI_STACK_SIZE];
     short int       m_stkRedirectIdx[SSI_STACK_SIZE];
     SSIConfig       m_config;
     AutoStr2        m_strRegex;
     RegexResult     m_regexResult;
     int             m_flag;
 
+
+
+    LS_NO_COPY_ASSIGN(SSIRuntime);
 };
 
 #endif

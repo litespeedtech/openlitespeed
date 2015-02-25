@@ -19,6 +19,7 @@
 #define PIPEAPPENDER_H
 
 
+#include <lsdef.h>
 #include <log4cxx/appender.h>
 #include <edio/eventreactor.h>
 #include <edio/outputbuf.h>
@@ -28,28 +29,34 @@ class PipeAppender : public LOG4CXX_NS::Appender, public EventReactor
 {
     OutputBuf       m_buf;
     int             m_pid;
+    int             m_fd;
     int             m_error;
-    
+
     int     flush();
-    
+
 public:
-    explicit PipeAppender( const char * pName )
-        : Appender( pName )
-        , m_pid( -1 )
-        , m_error( 0 )
-        {}
-    Duplicable * dup( const char * pName );
+    explicit PipeAppender(const char *pName)
+        : Appender(pName)
+        , m_pid(-1)
+        , m_fd(-1)
+        , m_error(0)
+    {}
+    Duplicable *dup(const char *pName);
 
     ~PipeAppender() {};
     static int init();
 
+    void setfd(int fd)            {   m_fd = fd;      }
+    virtual int getfd() const       {   return m_fd;    }
+
     virtual int open();
     virtual int close();
     virtual int reopenExist();
-    virtual int append( const char * pBuf, int len );
-    virtual int handleEvents( short event );
+    virtual int append(const char *pBuf, int len);
+    virtual int handleEvents(short event);
     virtual int isFull();
     virtual int isFail();
+    LS_NO_COPY_ASSIGN(PipeAppender);
 };
 
 

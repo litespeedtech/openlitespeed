@@ -15,11 +15,9 @@
 *    You should have received a copy of the GNU General Public License       *
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
-#ifndef NO_LUA_TEST
-#include "lsluaengine.h"
-#include "lsluaapi.h"
-#include "ls_lua.h"
-#endif
+#include <modules/lua/lsluaapi.h>
+#include <modules/lua/lsluaengine.h>
+#include <modules/lua/lsluasession.h>
 
 #include <shm/lsshmhash.h>
 #include <shm/lsi_shm.h>
@@ -27,7 +25,7 @@
 #include <time.h>
 #include <sys/time.h>
 
-#define LSLUA_SHMVALUE_MAGIC   0x20140523
+#define LS_LUASHM_MAGIC   0x20140523
 
 //
 // LiteSpeed LUA Shared memory interface
@@ -40,25 +38,27 @@
 //  If you need more data than a double link will be used.
 //  I would need a timer check function very soon...
 //
-typedef enum {
-    nil_type = 0,
-    long_type,
-    double_type,
-    string_type,
-    boolean_type
-} lsLuaShmValueType_t;
-
-struct lsLuaShmValue_s
+typedef enum
 {
-    uint32_t             m_magic;        
+    ls_luashm_nil = 0,
+    ls_luashm_long,
+    ls_luashm_double,
+    ls_luashm_string,
+    ls_luashm_boolean
+} ls_luashm_type;
+
+struct ls_luashm_s
+{
+    uint32_t             m_iMagic;
     time_t               m_expireTime;   /* time to expire in sec    */
     int32_t              m_expireTimeUs; /* time to expire in sec    */
-    uint32_t             m_flags;        /* 32bits flags             */
-    uint32_t             m_valueLen;     /* len of the Value         */
-    lsLuaShmValueType_t  m_type;         /* type of the Value        */
-    union {
+    uint32_t             m_iFlags;       /* 32bits flags             */
+    uint32_t             m_iValueLen;    /* len of the Value         */
+    ls_luashm_type       m_type;         /* type of the Value        */
+    union
+    {
         double           m_double;
-        uint32_t         m_offset;       /* offset to the SHM        */
+        uint32_t         m_iOffset;      /* offset to the SHM        */
         uint32_t         m_ulong;
         uint32_t         m_ulongArray [2];
         uint16_t         m_ushortArray[4];
@@ -69,163 +69,140 @@ struct lsLuaShmValue_s
         uint8_t          m_boolean;
     };
 };
-typedef struct lsLuaShmValue_s  lsLuaShmValue_t;
+typedef struct ls_luashm_s  ls_luashm_t;
 
-//
-//  Helper function to create/open share memory for Lua
-//
-static inline lsi_shmhash_t * lsLuaOpenShm(const char * name)
+
+static inline LsShmHash *LsLuaShmOpen(const char *name)
 {
-    return lsi_shmhash_open(NULL, name,
-                                    LSSHM_HASHINITSIZE,
-                                    LsShmHash::hash_string,
-                                    LsShmHash::comp_string);
+    AutoStr2 *pName;
+    LsShmHash *pRet;
+    LsShm *pShm = LsShm::open(name, 0, NULL);
+    if (pShm == NULL)
+        return NULL;
+    LsShmPool *pPool = pShm->getGlobalPool();
+    if (pPool == NULL)
+        return NULL;
+    pName = new AutoStr2(name);
+    pName->append("hash", 4);
+    pRet =  pPool->getNamedHash(pName->c_str(), LSSHM_HASHINITSIZE,
+                            LsShmHash::hashString, LsShmHash::compString);
+    delete pName;
+    return pRet;
 }
 
-static inline int lsLuaCloseShm(lsi_shmhash_t *phash)
+
+static inline void LsLuaShmClose(LsShmHash *pHash)
 {
-    return lsi_shmhash_close(phash);
+    pHash->close();
 }
 
-//
-//  @brief lsLuaFindShmValue
-//  @brief (1) search the name from hash and return the previously defined value 
-//
-//  @brief phash - LiteSpeed SHM Hash table handle
-//  @brief name - name string to search for
-//  @brief return 0 if failed to find name
-//
-static lsLuaShmValue_t * lsLuaFindShmValue(lsi_shmhash_t *phash
-                                           , const char * name)
+
+static ls_luashm_t *LsLuaShmFind(LsShmHash *pHash,
+                                 const char *name)
 {
     int retsize;
-    lsi_shmhash_datakey_t       key;
-    int len = strlen(name)+1;
-    if ( (key = lsi_shmhash_find(phash, (const uint8_t *)name, len, &retsize)) )
-    {
-        return (lsLuaShmValue_t *)lsi_shmhash_datakey2ptr(phash, (lsi_shm_off_t)key);
-    }
+    LsShmOffset_t key;
+    int len = strlen(name) + 1;
+    if ((key = pHash->find((const uint8_t *)name, len, &retsize)))
+        return (ls_luashm_t *)pHash->offset2ptr(key);
     return NULL;
 }
 
-//
-//  @brief lsLuaSetShmValue
-//  @brief (1) search the name from hash and return the previously defined value 
-//  @brief (2) if not defined then a new one will be created according to the given
-//  @brief              parameter
-//  @brief (3) if defined then the new parameter will over written the hashvalue
-//  @brief (4) if pvalue is null then the SHM hash object will be removed
-//
-//  @brief phash - LiteSpeed SHM Hash table handle
-//  @brief name - name string to search for
-//  @brief type - long, double, non-null, terminated string and boolean
-//  @brief pvalue - the given value pointer
-//  @brief size - sizeof the object
-//
-//  @brief return 0 if set is good... else -1
-//
-static lsLuaShmValue_t * lsLuaSetShmValue(lsi_shmhash_t *phash
-                                           , const char * name
-                                           , lsLuaShmValueType_t type
-                                           , const void * pvalue,
-                                           int size)
+
+static ls_luashm_t *LsLuaShmSetval(LsShmHash *pHash,
+                                   const char *name,
+                                   ls_luashm_type type,
+                                   const void *pvalue,
+                                   int size)
 {
-    lsi_shmhash_datakey_t       key;
-    int                         retsize;
-    
-    int len = strlen(name)+1;
-    
-    if (!pvalue)
+    int retsize, remap = 0;
+    LsShmOffset_t key;
+    ls_luashm_t *pShmValue;
+
+    int len = strlen(name) + 1;
+
+    if (pvalue == NULL)
     {
-        /* remove the name from SHM HASH OBJECT */
-        lsi_shmhash_remove(phash, (const uint8_t *)name, len);
+        pHash->remove(name, len);
         return NULL;
     }
-    if (!size)
-        return NULL; /* bad parameter */
-    
-    if (!(key = lsi_shmhash_find(phash, (const uint8_t *)name, len, &retsize)))
+    if (size == 0)
+        return NULL;
+
+    if ((key = pHash->find(name, len, &retsize)) == 0)
     {
-        /* create a new SHM HASH OBJECT */
-        lsLuaShmValue_t shmvalue;
-        
-        shmvalue.m_magic = LSLUA_SHMVALUE_MAGIC;
+        ls_luashm_t shmvalue;
+
+        shmvalue.m_iMagic = LS_LUASHM_MAGIC;
         shmvalue.m_expireTime = 0;
         shmvalue.m_expireTimeUs = 0;
-        shmvalue.m_flags = 0;
+        shmvalue.m_iFlags = 0;
         shmvalue.m_type = type;
-        shmvalue.m_valueLen = size;
-        if ( size > (int)sizeof(double) )
+        shmvalue.m_iValueLen = size;
+        if (size > (int)sizeof(double))
         {
-            lsi_shm_key_t offset;
-            // allocated pool memory if size if larger than standard...
-            offset = lsi_shmhash_alloc2(phash, size);
-            if (!offset)
-                return NULL; 
-            
-            shmvalue.m_offset = offset;
-            memcpy( lsi_shmhash_key2ptr(phash, offset), pvalue, size);
+            LsShmOffset_t offset;
+            offset = pHash->alloc2(size, remap);
+            if (offset == 0)
+                return NULL;
+
+            shmvalue.m_iOffset = offset;
+            memcpy(pHash->offset2ptr(offset), pvalue, size);
         }
         else
-        {
             memcpy(shmvalue.m_ucharArray, pvalue, size);
-        }
-        
-        key = lsi_shmhash_insert(phash, (const uint8_t *)name, len, (const uint8_t *)&shmvalue, sizeof(shmvalue));
-        if (!key)
+
+        key = pHash->insert(name, len, &shmvalue, sizeof(shmvalue));
+        if (key == 0)
         {
             if (size > (int)sizeof(double))
-                lsi_shmhash_release2(phash, shmvalue.m_offset, shmvalue.m_valueLen);
+                pHash->release2(shmvalue.m_iOffset, shmvalue.m_iValueLen);
             return NULL;
         }
-        return (lsLuaShmValue_t*)lsi_shmhash_datakey2ptr(phash, key);
+        return (ls_luashm_t *)pHash->offset2ptr(key);
     }
 
-    // replace to new value
-    lsLuaShmValue_t * pShmValue;
-    pShmValue = (lsLuaShmValue_t *)lsi_shmhash_datakey2ptr(phash, key);
-    
-    /* if ( (type == string_type) && (size > sizeof(double)) ) */
-    if ( (size > (int)sizeof(double)) )
+    pShmValue = (ls_luashm_t *)pHash->offset2ptr(key);
+
+    if ((size > (int)sizeof(double)))
     {
         // if newsize bigger need double reference
-        if ((int)(pShmValue->m_valueLen) != size)
+        if ((int)(pShmValue->m_iValueLen) != size)
         {
-            lsi_shm_key_t offset ;
-            offset = lsi_shmhash_alloc2(phash, size) ;
-            if (!offset)
+            LsShmOffset_t offset;
+            offset = pHash->alloc2(size, remap);
+            if (offset == 0)
                 return NULL; // no memory
-            
-            if (pShmValue->m_valueLen > sizeof(double))
-                lsi_shmhash_release2(phash, pShmValue->m_offset, pShmValue->m_valueLen );
-            
-            pShmValue->m_offset = offset;
-            pShmValue->m_valueLen = size;
+
+            if (pShmValue->m_iValueLen > sizeof(double))
+                pHash->release2(pShmValue->m_iOffset, pShmValue->m_iValueLen);
+
+            pShmValue->m_iOffset = offset;
+            pShmValue->m_iValueLen = size;
         }
         pShmValue->m_type = type;
-        memcpy( lsi_shmhash_key2ptr(phash, pShmValue->m_offset), pvalue, size);
+        memcpy(pHash->offset2ptr(pShmValue->m_iOffset),
+               pvalue, size);
         return pShmValue;
     }
-   
-    if (pShmValue->m_valueLen > sizeof(double))
-    {
-        lsi_shmhash_release2(phash, pShmValue->m_offset, pShmValue->m_valueLen );
-    }
-   
+
+    if (pShmValue->m_iValueLen > sizeof(double))
+        pHash->release2(pShmValue->m_iOffset, pShmValue->m_iValueLen);
+
     pShmValue->m_type = type;
-    pShmValue->m_valueLen = size;
-    switch(type)
+    pShmValue->m_iValueLen = size;
+    switch (type)
     {
-    case long_type:
-        pShmValue->m_ulong = *((unsigned long*)pvalue);
+    case ls_luashm_long:
+        pShmValue->m_ulong = *((unsigned long *)pvalue);
         break;
-    case double_type:
-        pShmValue->m_double = *((double*)pvalue);
+    case ls_luashm_double:
+        pShmValue->m_double = *((double *)pvalue);
         break;
-    case string_type:
-        memcpy( pShmValue->m_ucharArray, pvalue, size);
+    case ls_luashm_string:
+        memcpy(pShmValue->m_ucharArray, pvalue, size);
         break;
-    case boolean_type:
+    case ls_luashm_boolean:
         pShmValue->m_boolean = *((unsigned char *)pvalue);
         break;
     default:
@@ -234,49 +211,41 @@ static lsLuaShmValue_t * lsLuaSetShmValue(lsi_shmhash_t *phash
     return pShmValue;
 }
 
-//
-//  Check if time all expired...
-//
-inline static int isTimeExpired( lsLuaShmValue_t * pShmValue )
+
+inline static int isTimeExpired(ls_luashm_t *pShmValue)
 {
-    if ( ! pShmValue->m_expireTime )
-        return 0; // never expire
-        
-    time_t t;
+    if (pShmValue->m_expireTime == 0)
+        return 0;
+
+    time_t t, dt;
     int32_t usec;
     t = g_api->get_cur_time(&usec);
-    
-    time_t dt;
+
     dt = t - pShmValue->m_expireTime;
-    if ( (dt > 0)
-            || ( (!dt)&&(usec > pShmValue->m_expireTimeUs)) )
+    if ((dt > 0)
+        || ((!dt) && (usec > pShmValue->m_expireTimeUs)))
         return 1;
     else
         return 0;
 }
 
-//
-//  @brief setExpirationTime - set the expiration time for lsLuaShmValue_t
-//  @brief return 0 - expiration saved
-//  @brief return 1 - won't expire
-//
-inline static int setExpirationTime( lsLuaShmValue_t * pShmValue,
-                                            double expTime)
+
+inline static int setExpirationTime(ls_luashm_t *pShmValue,
+                                    double expTime)
 {
-    // check resolution
 #define MIN_RESOLUTION 0.001
     if (expTime < MIN_RESOLUTION)
     {
         pShmValue->m_expireTime = 0;
         return 1;
     }
-    int sec = (int)expTime; // chop!
+    int sec = (int)expTime;
     int usec = (int)((expTime - sec) * 1000000.0) % 1000000;
-    
+
     // potential race between sec and usec loading...
     int32_t now_usec;
     time_t t = g_api->get_cur_time(&now_usec);
-   
+
     time_t curTime = t + sec;
     int curTimeUs = now_usec + usec;
     if (curTimeUs > 1000000)
@@ -287,101 +256,45 @@ inline static int setExpirationTime( lsLuaShmValue_t * pShmValue,
     pShmValue->m_expireTime = curTime;
     pShmValue->m_expireTimeUs = curTimeUs;
     return 0;
-} 
-
-int LsLua_shared_cbfunc_check_expired_n_release(lsi_shmhash_t *pHash
-                            , uint8_t * p
-                            , void * )
-{
-    lsLuaShmValue_t * pShmValue = (lsLuaShmValue_t*)p;
-    
-    if ( isTimeExpired(pShmValue) )
-    {
-        pShmValue->m_magic = 0;
-        if (pShmValue->m_valueLen > sizeof(double))
-        {
-            lsi_shmhash_release2(pHash, pShmValue->m_offset, pShmValue->m_valueLen);
-        }
-        return 1;
-    }
-    return 0;
 }
 
-int LsLua_shared_cbfunc(lsi_shmhash_t *pHash
-                            , uint8_t * p
-                            , void * pUdata)
-{
-    const char * keyValue = (const char *)pUdata;
-    lsLuaShmValue_t * pShmValue = (lsLuaShmValue_t*)p;
-    
-    if ( (!strcmp(keyValue, "flush_all")) )
-    {
-        pShmValue->m_expireTime = 1; // expire it
-    }
-    else
-    {
-        pShmValue->m_expireTime = 2; // expire it
-    }
-    return 0;
-}
 
-#ifndef NO_LUA_TEST
-//
-//  LUA Interface 
-//
-
-#define LSLUA_SHARED_DATA "LS_SHARED"
-//
-//  Useful inline for lsi_shmhash_t * udata
-//
-static inline lsi_shmhash_t * LUA_CHECKU_SHARED( lua_State * L, const char * tag )
+static inline LsShmHash *LsLuaShmGetSelf(lua_State *L, const char *tag)
 {
-    register lsi_shmhash_t * * pp;
-    pp = ( lsi_shmhash_t * * )LsLuaEngine::api()->checkudata( L, 1, LSLUA_SHARED_DATA );
-    if ( !pp )
+    LsShmHash **pp;
+    pp = (LsShmHash **)LsLuaApi::checkudata(L, 1,
+                                            LSLUA_SHARED_DATA);
+    if (pp == NULL)
     {
-        LsLua_log( L, LSI_LOG_NOTICE, 0, "%s <INVALID LUA UDATA>" , tag );
+        LsLuaLog(L, LSI_LOG_NOTICE, 0, "%s <INVALID LUA UDATA>" , tag);
         return 0;
     }
     return (*pp);
 }
 
-//
-//  @brief lsLuaSharedObjectHelper
-//  @brief Helper should be called in each of the sharedObject
-//  @brief (1) check actual number of elements against the given numElem
-//  @brief (2) extract the keyName to keyName buffer
-//  @brief (3) if keyName is too long... it will truncated to keyLen.
-//  @brief return lsi_shmhash_t * if success
-//  @brief return NULL on any error
-//
-static inline lsi_shmhash_t * lsLuaSharedObjectHelper( lua_State * L, const char * tag
-                                        , int & numElem, char * keyName, int keyLen )
+
+static inline LsShmHash *LsLuaShmGetHash(lua_State *L, const char *tag,
+        int &numElem, char *keyName,
+        int keyLen)
 {
-    // LsLuaApi::dumpStack( L, "BEGIN lsLuaShareObjectHelper", 10);
-    register lsi_shmhash_t * pShared = LUA_CHECKU_SHARED(L, tag);
-    register int num = LsLuaEngine::api()->gettop(L);
-    
-    /*  
-     *NOTE: 1 = USERDATA T, 2 = KEY, ... 
-     */
-    if (( num >= numElem ) && pShared )
+    LsShmHash *pShared = LsLuaShmGetSelf(L, tag);
+    int num = LsLuaApi::gettop(L);
+
+    if ((num >= numElem) && pShared)
     {
         numElem = num;
-        size_t  size;
-        const char * cp;
-        if ( ( cp = LsLuaEngine::api()->tolstring( L, 2, &size ) )  &&  size )
+        size_t size;
+        const char *cp;
+        if ((cp = LsLuaApi::tolstring(L, 2, &size))  &&  size)
         {
             keyName[0] = 0;
             if (size >= (size_t)keyLen)
             {
-                // the string buffer is too big
-                LsLua_log( L, LSI_LOG_NOTICE, 0
-                            , "%s LUA SHARE NAME [%s] LEN %d too big"
-                            , tag, keyName, size);
+                LsLuaLog(L, LSI_LOG_NOTICE, 0,
+                         "%s LUA SHARE NAME [%s] LEN %d too big",
+                         tag, keyName, size);
                 return NULL;
             }
-            // snprinf - guaranteed the null will be added - given keyName is big enough
             snprintf(keyName, keyLen, "%.*s", (int)size, cp);
             if (keyName[0])
                 return pShared;
@@ -389,228 +302,203 @@ static inline lsi_shmhash_t * lsLuaSharedObjectHelper( lua_State * L, const char
     }
     return NULL;
 }
-            
-static int LsLua_shared_tostring( lua_State * L )
+
+
+static int LsLuaShmToString(lua_State *L)
 {
-    const char * tag = "ls.shared.tostring";
-    char    buf[0x100];
-    
-    register lsi_shmhash_t * pShared = LUA_CHECKU_SHARED(L, tag);
-    if ( pShared )
-        snprintf( buf, 0x100, "%s <%p>", tag, pShared );
-    
-    LsLuaEngine::api()->pushstring( L, buf );
+    const char *tag = "ls.shared.tostring";
+    char buf[0x100];
+
+    LsShmHash *pShared = LsLuaShmGetSelf(L, tag);
+    if (pShared)
+        snprintf(buf, 0x100, "%s <%p>", tag, pShared);
+
+    LsLuaApi::pushstring(L, buf);
     return 1;
 }
 
-static int LsLua_shared_gc( lua_State * L )
+
+static int LsLuaShmGc(lua_State *L)
 {
-    const char * tag = "ls.shared.gc";
-    register lsi_shmhash_t * pShared = LUA_CHECKU_SHARED(L, tag);
-    
+    const char *tag = "ls.shared.gc";
+    LsShmHash *pShared = LsLuaShmGetSelf(L, tag);
+
     if (pShared)
     {
-        lsLuaCloseShm(pShared);
-        LsLua_log( L, LSI_LOG_DEBUG, 0, "LsLua_shared_gc %s <%p>", tag, pShared);
+        LsLuaShmClose(pShared);
+        LsLuaLog(L, LSI_LOG_DEBUG, 0,
+                 "LsLuaSharedGc %s <%p>",
+                 tag, pShared);
     }
     return 0;
 }
 
-//
-//  Helper to create a LUA Meta Object for ls.shared.DICT
-//
-static int  LsLua_shared_create ( lua_State * L , lsi_shmhash_t * pHash)
+
+static int LsLuaShmCreate(lua_State *L , LsShmHash *pHash)
 {
-    // LsLuaApi::dumpStack( L, "BEGIN LsLua_shared_create", 10);
-    if (pHash)
-    {    
-        register lsi_shmhash_t * * pp;
-        pp = ( lsi_shmhash_t * * )( LsLuaEngine::api()->newuserdata( L, sizeof( lsi_shmhash_t * * )));
-        if (pp)
-        {
-            *pp = pHash;
-            LsLuaEngine::api()->getfield( L, LsLuaEngine::api()->LS_LUA_REGISTRYINDEX, LSLUA_SHARED_DATA );
-            LsLuaEngine::api()->setmetatable( L, -2 );
-            // LsLuaApi::dumpStack( L, "LsLua_shared_create", 10);
-            return 1;
-        }
+    LsShmHash **pp;
+    pp = (LsShmHash **)(LsLuaApi::newuserdata(L,
+                        sizeof(LsShmHash **)));
+    if (pp)
+    {
+        *pp = pHash;
+        LsLuaApi::getfield(L, LSLUA_REGISTRYINDEX, LSLUA_SHARED_DATA);
+        LsLuaApi::setmetatable(L, -2);
+        return 1;
     }
-    // LsLuaApi::dumpStack( L, "END LsLua_shared_create", 10);
-    return LsLuaApi::return_badparameterx( L, LSLUA_BAD_PARAMETERS );
+    return LsLuaApi::userError(L, "shared_index", "Create user data failed.");
 }
 
-//
-//  @brief LsLua_shared_get_helper - support get and get_stale
-//
-inline static int  LsLua_shared_get_helper( lua_State * L, int checkExpired )
+
+static int LsLuaShmGetHelper(lua_State *L, int checkExpired)
 {
-    const char * tag = "ls.shared.get_helper";
+    const char *ptr, *tag = "ls.shared.get_helper";
     char namebuf[0x100];
     int numElem = 2;
-    register lsi_shmhash_t * pShared ;
+    LsShmHash *pShared;
+    ls_luashm_t *pVal;
 
-    // LsLuaApi::dumpStack( L, "BEGIN LsLua_shared_get_helper", 10);
-    pShared = lsLuaSharedObjectHelper( L, tag, numElem, namebuf, 0x100 );
-    if (pShared)
+    pShared = LsLuaShmGetHash(L, tag, numElem, namebuf, 0x100);
+    if (pShared == NULL)
     {
-        register lsLuaShmValue_t * pVal;
-        pVal = lsLuaFindShmValue(pShared, namebuf);
-        if (!pVal)
+        LsLuaApi::pushnil(L);
+        LsLuaApi::pushstring(L, "not a shared OBJECT");
+        return 2;
+    }
+
+    pVal = LsLuaShmFind(pShared, namebuf);
+    if (pVal == NULL)
+    {
+        LsLuaApi::pushnil(L);
+        LsLuaApi::pushstring(L, "not found");
+        return 2;
+    }
+
+    if (checkExpired && isTimeExpired(pVal))
+    {
+        LsLuaApi::pushnil(L);
+        LsLuaApi::pushstring(L, "expired");
+        return 2;
+    }
+
+    switch (pVal->m_type)
+    {
+    case ls_luashm_long:
+        LsLuaApi::pushinteger(L, pVal->m_ulong);
+        break;
+    case ls_luashm_double:
+        LsLuaApi::pushnumber(L, (lua_Number)pVal->m_double);
+        break;
+    case ls_luashm_string:
+        if (pVal->m_iValueLen > sizeof(double))
         {
-            // LsLua_log( L, LSI_LOG_NOTICE, 0, "HASH-NOT-FOUND %s <%p> [%s]", tag, pShared, namebuf);
-                
-            LsLuaEngine::api()->pushnil( L );
-            LsLuaEngine::api()->pushstring( L, "not found");
-            return 2;
-        }
-        
-        if ( checkExpired && (isTimeExpired( pVal )) )
-        {
-            LsLuaEngine::api()->pushnil( L );
-            LsLuaEngine::api()->pushstring( L, "expired");
-            return 2;
-        }
-        
-        switch(pVal->m_type)
-        {
-        case long_type:
-            LsLuaEngine::api()->pushinteger( L, pVal->m_ulong );
-            break;
-        case double_type:
-            LsLuaEngine::api()->pushnumber( L, (lua_Number)pVal->m_double );
-            break;
-        case string_type:
-            if ( pVal->m_valueLen > sizeof(double) )
-            {
-                LsLuaEngine::api()->pushlstring( L
-                                , (const char *)lsi_shmhash_key2ptr( pShared, pVal->m_offset )
-                                , pVal->m_valueLen);
-            }
-            else
-            {
-                LsLuaEngine::api()->pushlstring( L
-                                , (const char *)pVal->m_ucharArray
-                                , pVal->m_valueLen);
-            }
-            break;
-                
-        case boolean_type:
-            if (pVal->m_boolean)
-                LsLuaEngine::api()->pushboolean( L, 1 );
-            else
-                LsLuaEngine::api()->pushboolean( L, 0 );
-            break;
-                
-        case nil_type:
-        default:
-            /* problem unknow type */
-            LsLuaEngine::api()->pushnil( L );
-            LsLuaEngine::api()->pushstring( L, "not a shared value type");
-            return 2;
-        }
-            
-        // LsLuaApi::dumpStack( L, "END LsLua_shared_get", 10);
-        if ( !checkExpired )
-        {
-            LsLuaEngine::api()->pushinteger( L, pVal->m_flags );
-            
-            if ( isTimeExpired(pVal) )
-                LsLuaEngine::api()->pushboolean( L, 1);
-            return 3;
-        }
-        if (pVal->m_flags) // tricky... doc...
-        {
-            LsLuaEngine::api()->pushinteger( L, pVal->m_flags );
-            return 2;
+            ptr = (const char *)pShared->offset2ptr(pVal->m_iOffset);
+            LsLuaApi::pushlstring(L, ptr, pVal->m_iValueLen);
         }
         else
-            return 1;
+        {
+            LsLuaApi::pushlstring(L, (const char *)pVal->m_ucharArray,
+                                  pVal->m_iValueLen);
+        }
+        break;
+
+    case ls_luashm_boolean:
+        if (pVal->m_boolean)
+            LsLuaApi::pushboolean(L, 1);
+        else
+            LsLuaApi::pushboolean(L, 0);
+        break;
+
+    case ls_luashm_nil:
+    default:
+        LsLuaApi::pushnil(L);
+        LsLuaApi::pushstring(L, "not a shared value type");
+        return 2;
     }
-    // something is not right about LUA - may be new version!
-    LsLuaEngine::api()->pushnil( L );
-    LsLuaEngine::api()->pushstring( L, "not a shared OBJECT");
-    return 2;
+
+    if (checkExpired == 0)
+    {
+        LsLuaApi::pushinteger(L, pVal->m_iFlags);
+
+        if (isTimeExpired(pVal))
+            LsLuaApi::pushboolean(L, 1);
+        return 3;
+    }
+    if (pVal->m_iFlags)
+    {
+        LsLuaApi::pushinteger(L, pVal->m_iFlags);
+        return 2;
+    }
+    else
+        return 1;
 }
 
-static int  LsLua_shared_get( lua_State * L )
-{ 
-    return LsLua_shared_get_helper(L, 1);
-}
 
-static int  LsLua_shared_get_stale( lua_State * L )
-{ 
-    return LsLua_shared_get_helper(L, 0);
-}
-
-//
-//  @brief LsLua_shared_set_helper
-//  @brief load value from lua_State STACK element 
-//  @brief elements:      3 = value, 4 = expiration, 5 flags
-//
-static int LsLua_shared_set_helper(lua_State * L
-                        , lsi_shmhash_t * pShared
-                        , int numElem
-                        , const char * keyName)
+static int LsLuaShmGet(lua_State *L)
 {
-    // LsLuaApi::dumpStack( L, "BEGIN LsLua_shared_set_helper", 10);
-    
+    return LsLuaShmGetHelper(L, 1);
+}
+
+
+static int LsLuaShmGetStale(lua_State *L)
+{
+    return LsLuaShmGetHelper(L, 0);
+}
+
+
+static int LsLuaShmSetHelper(lua_State *L, LsShmHash *pShared,
+                             int numElem, const char *keyName)
+{
+
     /* NOTE: elements 3 = value, 4 = expTime, 5 = flags */
-    register lsLuaShmValue_t * p_Val = NULL;
-    const char * p_string;
-    size_t      len;
-            
-    int valueType = LsLuaEngine::api()->type( L, 3 );
+    ls_luashm_t *p_Val = NULL;
+    const char *p_string;
+    size_t len;
+    int valueType = LsLuaApi::type(L, 3);
+
     switch (valueType)
     {
     case LUA_TNIL:
-        // remove the share key
-        p_Val = lsLuaSetShmValue(pShared, keyName, nil_type, NULL, 0);
-        LsLuaEngine::api()->pushboolean( L, 1 );
-        LsLuaEngine::api()->pushnil( L );
-        LsLuaEngine::api()->pushboolean( L, 0 ); // always...
-        // DONE! 
+        p_Val = LsLuaShmSetval(pShared, keyName, ls_luashm_nil, NULL, 0);
+        LsLuaApi::pushboolean(L, 1);
+        LsLuaApi::pushnil(L);
+        LsLuaApi::pushboolean(L, 0);
         return 3;
-                
+
     case LUA_TNUMBER:
-        // using double
         double myDouble;
         long myLong;
-        p_string = LsLuaEngine::api()->tolstring( L, 3, &len ) ;
+        p_string = LsLuaApi::tolstring(L, 3, &len);
         if (memchr(p_string, '.', len))
         {
-            // double
-            myDouble = LsLuaEngine::api()->tonumberx( L, 3, NULL );
-            p_Val = lsLuaSetShmValue(pShared, keyName, double_type, &myDouble, sizeof(myDouble));
+            myDouble = LsLuaApi::tonumber(L, 3);
+            p_Val = LsLuaShmSetval(pShared, keyName, ls_luashm_double,
+                                   &myDouble, sizeof(myDouble));
         }
         else
         {
-            // regular long
-            myLong = LsLuaEngine::api()->tonumberx( L, 3, NULL );
-            p_Val = lsLuaSetShmValue(pShared, keyName, long_type, &myLong, sizeof(myLong));
+            myLong = LsLuaApi::tonumber(L, 3);
+            p_Val = LsLuaShmSetval(pShared, keyName, ls_luashm_long,
+                                   &myLong, sizeof(myLong));
         }
         break;
-                
+
     case LUA_TBOOLEAN:
-        // using 1 or 0
         char myBool;
-        if ( LsLuaEngine::api()->toboolean( L, 3) )
-        {
-            // true
+        if (LsLuaApi::toboolean(L, 3))
             myBool = 1;
-        }
         else
-        {
-            // false
             myBool = 0;
-        }
-        p_Val = lsLuaSetShmValue(pShared, keyName, boolean_type, &myBool, sizeof(myBool));
+        p_Val = LsLuaShmSetval(pShared, keyName, ls_luashm_boolean,
+                               &myBool, sizeof(myBool));
         break;
-        
+
     case LUA_TSTRING:
-        p_string = LsLuaEngine::api()->tolstring( L, 3, &len ) ;
-        p_Val = lsLuaSetShmValue(pShared, keyName, string_type, p_string, len);
+        p_string = LsLuaApi::tolstring(L, 3, &len);
+        p_Val = LsLuaShmSetval(pShared, keyName, ls_luashm_string,
+                               p_string, len);
         break;
-                
+
     case LUA_TNONE:
     case LUA_TTABLE:
     case LUA_TFUNCTION:
@@ -618,9 +506,9 @@ static int LsLua_shared_set_helper(lua_State * L
     case LUA_TTHREAD:
     case LUA_TLIGHTUSERDATA:
     default:
-        LsLuaEngine::api()->pushboolean( L, 0 );
-        LsLuaEngine::api()->pushstring( L, "bad value type" );
-        LsLuaEngine::api()->pushboolean( L, 0 );
+        LsLuaApi::pushboolean(L, 0);
+        LsLuaApi::pushstring(L, "bad value type");
+        LsLuaApi::pushboolean(L, 0);
         return 3;
     }
 
@@ -628,352 +516,349 @@ static int LsLua_shared_set_helper(lua_State * L
     {
         if (numElem > 3)
         {
-            lua_Number tValue = LsLuaEngine::api()->tonumberx( L, 4, NULL);
-            setExpirationTime( p_Val, tValue );
-                
+            lua_Number tValue = LsLuaApi::tonumber(L, 4);
+            setExpirationTime(p_Val, tValue);
+
             if (numElem > 4)
-            {
-                p_Val->m_flags = LsLuaEngine::api()->tointegerx( L, 5, NULL );
-            } 
+                p_Val->m_iFlags = LsLuaApi::tointeger(L, 5);
         }
-        LsLuaEngine::api()->pushboolean( L, 1 );
-        LsLuaEngine::api()->pushnil( L );
-        LsLuaEngine::api()->pushboolean( L, 0 );
-        // LsLuaApi::dumpStack( L, "END LsLua_shared_set", 10);
+        LsLuaApi::pushboolean(L, 1);
+        LsLuaApi::pushnil(L);
+        LsLuaApi::pushboolean(L, 0);
         return 3;
     }
-    LsLuaEngine::api()->pushboolean( L, 0 );
-    LsLuaEngine::api()->pushstring( L, "bad hashkey" );
-    LsLuaEngine::api()->pushboolean( L, 0 );
+    LsLuaApi::pushboolean(L, 0);
+    LsLuaApi::pushstring(L, "bad hashkey");
+    LsLuaApi::pushboolean(L, 0);
     return 3;
 }
 
-static int  LsLua_shared_set( lua_State * L )
+
+static int  LsLuaShmSet(lua_State *L)
 {
-    const char * tag = "ls.shared.set";
+    const char *tag = "ls.shared.set";
     char namebuf[0x100];
     int numElem = 3;
-    register lsi_shmhash_t * pShared ;
+    LsShmHash *pShared;
 
-    // LsLuaApi::dumpStack( L, "BEGIN LsLua_shared_set", 10);
-    pShared = lsLuaSharedObjectHelper( L, tag, numElem, namebuf, 0x100 );
+    pShared = LsLuaShmGetHash(L, tag, numElem, namebuf, 0x100);
     if (pShared)
-    {
-        return LsLua_shared_set_helper( L, pShared, numElem, namebuf );
-    }
-    LsLuaEngine::api()->pushboolean( L, 0 );
-    LsLuaEngine::api()->pushstring( L, "bad parameters" );
-    LsLuaEngine::api()->pushboolean( L, 0 );
+        return LsLuaShmSetHelper(L, pShared, numElem, namebuf);
+    LsLuaApi::pushboolean(L, 0);
+    LsLuaApi::pushstring(L, "bad parameters");
+    LsLuaApi::pushboolean(L, 0);
     return 3;
 }
 
-// NO different as shared_set
-static int LsLua_shared_safe_set(lua_State * L)
+
+static int LsLuaShmSetSafe(lua_State *L)
 {
-    return LsLua_shared_set(L);
+    return LsLuaShmSet(L);
 }
 
-static int  LsLua_shared_add( lua_State * L )
+
+static int LsLuaShmAdd(lua_State *L)
 {
-    const char * tag = "ls.shared.add";
+    const char *tag = "ls.shared.add";
     char namebuf[0x100];
     int numElem = 3;
-    register lsi_shmhash_t * pShared ;
+    LsShmHash *pShared;
 
-    // LsLuaApi::dumpStack( L, "BEGIN LsLua_shared_add", 10);
-    pShared = lsLuaSharedObjectHelper( L, tag, numElem, namebuf, 0x100 );
+    pShared = LsLuaShmGetHash(L, tag, numElem, namebuf, 0x100);
     if (pShared)
     {
-        lsLuaShmValue_t * pShmValue = lsLuaFindShmValue(pShared, namebuf);
-        if ( (!pShmValue) || isTimeExpired(pShmValue) )
-        {
-            return LsLua_shared_set_helper( L, pShared, numElem, namebuf );
-        }
+        ls_luashm_t *pShmValue = LsLuaShmFind(pShared, namebuf);
+        if ((pShmValue == NULL) || isTimeExpired(pShmValue))
+            return LsLuaShmSetHelper(L, pShared, numElem, namebuf);
         else
         {
-            LsLuaEngine::api()->pushboolean( L, 0 );
-            LsLuaEngine::api()->pushstring( L, "exists" );
-            LsLuaEngine::api()->pushboolean( L, 0 );
+            LsLuaApi::pushboolean(L, 0);
+            LsLuaApi::pushstring(L, "exists");
+            LsLuaApi::pushboolean(L, 0);
         }
         return 3;
     }
     else
     {
-        LsLuaEngine::api()->pushboolean( L, 0 );
-        LsLuaEngine::api()->pushstring( L, "bad parameters" );
-        LsLuaEngine::api()->pushboolean( L, 0 );
+        LsLuaApi::pushboolean(L, 0);
+        LsLuaApi::pushstring(L, "bad parameters");
+        LsLuaApi::pushboolean(L, 0);
         return 3;
-    } 
+    }
 }
 
-static int  LsLua_shared_safe_add( lua_State * L )
+
+static int LsLuaShmAddSafe(lua_State *L)
 {
-    return LsLua_shared_add( L );
+    return LsLuaShmAdd(L);
 }
 
-static int  LsLua_shared_replace( lua_State * L )
+
+static int LsLuaShmReplace(lua_State *L)
 {
-    const char * tag = "ls.shared.add";
+    const char *tag = "ls.shared.add";
     char namebuf[0x100];
     int numElem = 3;
-    register lsi_shmhash_t * pShared ;
+    LsShmHash *pShared;
 
-    // LsLuaApi::dumpStack( L, "BEGIN LsLua_shared_replace", 10);
-    pShared = lsLuaSharedObjectHelper( L, tag, numElem, namebuf, 0x100 );
+    pShared = LsLuaShmGetHash(L, tag, numElem, namebuf, 0x100);
     if (pShared)
     {
-        lsLuaShmValue_t * pShmValue = lsLuaFindShmValue(pShared, namebuf);
-        if ( ( pShmValue ) && (!isTimeExpired(pShmValue)) )
-        {
-            return LsLua_shared_set_helper( L, pShared, numElem, namebuf );
-        }
+        ls_luashm_t *pShmValue = LsLuaShmFind(pShared, namebuf);
+        if ((pShmValue) && (!isTimeExpired(pShmValue)))
+            return LsLuaShmSetHelper(L, pShared, numElem, namebuf);
         else
         {
-            LsLuaEngine::api()->pushboolean( L, 0 );
-            LsLuaEngine::api()->pushstring( L, "not found" );
-            LsLuaEngine::api()->pushboolean( L, 0 );
+            LsLuaApi::pushboolean(L, 0);
+            LsLuaApi::pushstring(L, "not found");
+            LsLuaApi::pushboolean(L, 0);
             return 3;
         }
     }
     else
     {
-        LsLuaEngine::api()->pushboolean( L, 0 );
-        LsLuaEngine::api()->pushstring( L, "bad parameters" );
-        LsLuaEngine::api()->pushboolean( L, 0 );
+        LsLuaApi::pushboolean(L, 0);
+        LsLuaApi::pushstring(L, "bad parameters");
+        LsLuaApi::pushboolean(L, 0);
         return 3;
-    } 
+    }
 }
 
-static int LsLua_shared_incr(lua_State * L)
+
+static int LsLuaShmIncr(lua_State *L)
 {
-    const char * tag = "ls.shared.incr";
+    const char *tag = "ls.shared.incr";
     char namebuf[0x100];
     int numElem = 2;
-    register lsi_shmhash_t * pShared ;
+    LsShmHash *pShared;
 
-    // LsLuaApi::dumpStack( L, "BEGIN LsLua_shared_incr", 10);
-    pShared = lsLuaSharedObjectHelper( L, tag, numElem, namebuf, 0x100 );
+    pShared = LsLuaShmGetHash(L, tag, numElem, namebuf, 0x100);
     if (pShared)
     {
-        lsLuaShmValue_t * pShmValue = lsLuaFindShmValue(pShared, namebuf);
-        if ( ( pShmValue ) && (!isTimeExpired(pShmValue)) )
+        ls_luashm_t *pShmValue = LsLuaShmFind(pShared, namebuf);
+        if ((pShmValue) && (!isTimeExpired(pShmValue)))
         {
-            if (pShmValue->m_type == long_type)
+            if (pShmValue->m_type == ls_luashm_long)
             {
                 pShmValue->m_ulong++;
-                LsLuaEngine::api()->pushinteger( L, pShmValue->m_ulong );
-                LsLuaEngine::api()->pushnil( L );
-            } 
-            else if (pShmValue->m_type == double_type)
+                LsLuaApi::pushinteger(L, pShmValue->m_ulong);
+                LsLuaApi::pushnil(L);
+            }
+            else if (pShmValue->m_type == ls_luashm_double)
             {
                 pShmValue->m_double += 1.0;
-                LsLuaEngine::api()->pushnumber( L, pShmValue->m_double );
-                LsLuaEngine::api()->pushnil( L );
+                LsLuaApi::pushnumber(L, pShmValue->m_double);
+                LsLuaApi::pushnil(L);
             }
             else
             {
-                LsLuaEngine::api()->pushnil( L );
-                LsLuaEngine::api()->pushstring( L, "not a number" );
+                LsLuaApi::pushnil(L);
+                LsLuaApi::pushstring(L, "not a number");
             }
             return 2;
         }
         else
         {
-            LsLuaEngine::api()->pushnil( L );
-            LsLuaEngine::api()->pushstring( L, "not found" );
+            LsLuaApi::pushnil(L);
+            LsLuaApi::pushstring(L, "not found");
             return 2;
         }
     }
-    LsLuaEngine::api()->pushnil( L );
-    LsLuaEngine::api()->pushstring( L, "bad parameters" );
+    LsLuaApi::pushnil(L);
+    LsLuaApi::pushstring(L, "bad parameters");
     return 2;
 }
 
-static int LsLua_shared_delete(lua_State * L)
+
+static int LsLuaShmDelete(lua_State *L)
 {
-    // 1 = USERDATA 2 = key
-    register int num = LsLuaEngine::api()->gettop(L);
+    int num = LsLuaApi::gettop(L);
     if (num > 2)
-    {
         LsLuaApi::pop(L, num - 2);
-    }
-    LsLuaEngine::api()->pushnil( L );
-    return LsLua_shared_set( L );
+    LsLuaApi::pushnil(L);
+    return LsLuaShmSet(L);
 }
 
-//
-//  @brief LsLua_shared_flush_all 
-//  @brief mark all lsi_shmhash_t * to expired status
-//
-static int LsLua_shared_flush_all(lua_State * L)
+
+typedef struct ls_luashm_scanner_s
 {
-    // LsLuaApi::dumpStack( L, "BEGIN lsLua_shared_flush_all", 10);
-    register lsi_shmhash_t *pShared = LUA_CHECKU_SHARED(L, "lsLua_shared_flush_all");
-    
-    if (!pShared)
-    { 
-        LsLuaEngine::api()->pushnil( L );
-        LsLuaEngine::api()->pushstring( L, "bad parameters" );
-        return 2;
-    }
-    //
-    //  do the flush here
-    //
-    lsi_shmhash_scanraw(pShared
-                    , LSLUA_SHMVALUE_MAGIC
-                    , sizeof(lsLuaShmValue_t)
-                    , LsLua_shared_cbfunc
-                    , (void *)"flush_all");
-                    
+    LsShmHash  *handle;
+    const char *key;
+    int         maxcheck;
+    int         numchecked;
+} ls_luashm_scanner_t;
+
+
+int LsLuaShmFlushAllCb(LsShmHash::iterator iter, void *pUData)
+{
+    ls_luashm_scanner_t *pScanner = (ls_luashm_scanner_t *)pUData;
+    ls_luashm_t *pVal = (ls_luashm_t *)iter->getVal();
+//     printf( "%s, %x\n", iter->getKey(), pVal->m_iMagic);
+    if ((iter->getValLen() != sizeof(ls_luashm_t))
+        || (pVal->m_iMagic != LS_LUASHM_MAGIC))
+        return 0;
+
+    if (strcmp(pScanner->key, "flush_all") == 0)
+        pVal->m_expireTime = 1;
+    else
+        pVal->m_expireTime = 2;
     return 0;
 }
 
-//
-//  @brief LsLua_shared_flush_expired 
-//  @brief delete all expired keys
-//
-static int LsLua_shared_flush_expired(lua_State * L)
+
+int LsLuaShmFlushExpCb(LsShmHash::iterator iter, void *pUData)
 {
-    // LsLuaApi::dumpStack( L, "BEGIN lsLua_shared_flush_all", 10);
-    register lsi_shmhash_t * pShared = LUA_CHECKU_SHARED(L, "lsLua_shared_flush_all");
-    
-    if (!pShared)
-    { 
-        LsLuaEngine::api()->pushinteger( L, 0 );
+    ls_luashm_scanner_t *pScanner = (ls_luashm_scanner_t *)pUData;
+    ls_luashm_t *pVal = (ls_luashm_t *)iter->getVal();
+    LsShmHash *pHash = pScanner->handle;
+
+    if ((iter->getValLen() != sizeof(ls_luashm_t))
+        || (pVal->m_iMagic != LS_LUASHM_MAGIC))
+        return 0;
+
+    if (isTimeExpired(pVal))
+    {
+        pVal->m_iMagic = 0;
+        if (pVal->m_iValueLen > sizeof(double))
+            pHash->release2(pVal->m_iOffset, pVal->m_iValueLen);
+        pHash->eraseIterator(iter);
+        ++pScanner->numchecked;
+        if ((pScanner->maxcheck)
+            && (pScanner->numchecked >= pScanner->maxcheck))
+        {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+
+static int LsLuaShmFlushAll(lua_State *L)
+{
+    ls_luashm_scanner_t scanner;
+    LsShmHash *pShared = LsLuaShmGetSelf(L,
+                                         "lsLua_shared_flush_all");
+
+    if (pShared == NULL)
+    {
+        LsLuaApi::pushnil(L);
+        LsLuaApi::pushstring(L, "bad parameters");
+        return 2;
+    }
+    scanner.handle = pShared;
+    scanner.key = "flush_all";
+    scanner.maxcheck = 0;
+    scanner.numchecked = 0;
+    pShared->for_each2(pShared->begin(), pShared->end(), LsLuaShmFlushAllCb,
+                       &scanner);
+    return 0;
+}
+
+
+static int LsLuaShmFlushExpired(lua_State *L)
+{
+    ls_luashm_scanner_t scanner;
+    LsShmHash *pShared = LsLuaShmGetSelf(L,
+                                         "lsLua_shared_flush_all");
+
+    if (pShared == NULL)
+    {
+        LsLuaApi::pushinteger(L, 0);
         return 1;
     }
     else
     {
-        // NOTE 1-USERDATA 2-number
         int numOut = 0;
-        numOut = LsLuaEngine::api()->tointegerx( L, 2, NULL);
-#if 0
-        if (LsLuaEngine::api()->type( L, 2 ) == LUA_TNUMBER)
-            numOut = LsLuaEngine::api()->tointegerx( L, 2, NULL);
-        else
-            numOut = 0;
-#endif
+        numOut = LsLuaApi::tointeger(L, 2);
+
         if (numOut < 0)
-            numOut = 0; // deleted all
-            
-        int n = lsi_shmhash_scanraw_checkremove(pShared
-                    , LSLUA_SHMVALUE_MAGIC
-                    , sizeof(lsLuaShmValue_t)
-                    , LsLua_shared_cbfunc_check_expired_n_release
-                    , (void *)&numOut);
-                    
-        //
-        //  flush out all the expired keys here
-        //
-        // LsLua_log( L, LSI_LOG_NOTICE, 0, "%s %d ret %d", "LsLua_shared_flush_expired", numOut, n);
-        LsLuaEngine::api()->pushinteger( L, n );
+            numOut = 0;
+        scanner.handle = pShared;
+        scanner.key = NULL;
+        scanner.maxcheck = numOut;
+        scanner.numchecked = 0;
+        int n = pShared->for_each2(pShared->begin(), pShared->end(),
+                                   LsLuaShmFlushExpCb, &scanner);
+
+        LsLuaApi::pushinteger(L, n);
         return 1;
     }
 }
 
-//
-//  The USERDATA Shared Object GET/SET
-//
 
-//
-//  GET - RETRUN shared Memory pool
-//
-static int LsLua_shared_GET(lua_State * L)
+static int LsLuaShmNewhash(lua_State *L)
 {
     size_t len = 0;
-    const char * cp;
-    
-    cp = LsLuaEngine::api()->tolstring( L, 2, &len);
-    if (cp && len && (len < LSSHM_MAXNAMELEN ) )
+    const char *cp;
+
+    cp = LsLuaApi::tolstring(L, 2, &len);
+    if (cp && len && (len < LSSHM_MAXNAMELEN))
     {
         char buf[0x100];
         snprintf(buf, 0x100, "%.*s", (int)len, cp);
-        // LsLua_log( L, LSI_LOG_NOTICE, 0, "%s [%s] %d", "LsLua_shared_GET", buf, len);
-        
-        lsi_shmhash_t * hash = lsLuaOpenShm(buf);
-        if (!hash)
+
+        LsShmHash *pHash = LsLuaShmOpen(buf);
+        if (pHash == NULL)
         {
-            return LsLuaApi::return_badparameterx( L, LSLUA_BAD_PARAMETERS );
+            return LsLuaApi::serverError(L, "shared_index", "Opening shared "
+                                         "memory failed.");
         }
-        return LsLua_shared_create ( L , hash );
+
+        return LsLuaShmCreate(L , pHash);
     }
-    return LsLuaApi::return_badparameterx( L, LSLUA_BAD_PARAMETERS );
+    return LsLuaApi::userError(L, "shared_index", "Invalid input name");
 }
 
-//
-//  Don't support this
-//
-static int LsLua_shared_SET(lua_State * L)
-{
-    const char *    tag = "LsLua_shared_SET";
-    LsLuaApi::dumpStack( L, tag, 10);
-    return 0;
-}
 
-//
-//  LiteSpeed SHARE META
-//
-static const luaL_Reg shared_sub[] =
+static const luaL_Reg LsLuaShmLib[] =
 {
-    {"get",             LsLua_shared_get},
-    {"get_stale",       LsLua_shared_get_stale},
-    {"set",             LsLua_shared_set},
-    {"safe_set",        LsLua_shared_safe_set},
-    {"add",             LsLua_shared_add},
-    {"safe_add",        LsLua_shared_safe_add},
-    {"replace",         LsLua_shared_replace},
-    
-    {"incr",            LsLua_shared_incr},
-    {"delete",          LsLua_shared_delete},
-    {"flush_all",       LsLua_shared_flush_all},
-    {"flush_expired",   LsLua_shared_flush_expired},
+    {   "get",             LsLuaShmGet},
+    {   "get_stale",       LsLuaShmGetStale},
+    {   "set",             LsLuaShmSet},
+    {   "safe_set",        LsLuaShmSetSafe},
+    {   "add",             LsLuaShmAdd},
+    {   "safe_add",        LsLuaShmAddSafe},
+    {   "replace",         LsLuaShmReplace},
+
+    {   "incr",            LsLuaShmIncr},
+    {   "delete",          LsLuaShmDelete},
+    {   "flush_all",       LsLuaShmFlushAll},
+    {   "flush_expired",   LsLuaShmFlushExpired},
     {NULL, NULL}
 };
 
-static const luaL_Reg shared_meta_sub[] =
+static const luaL_Reg LsLuaShmMeta[] =
 {
-    {"__gc",        LsLua_shared_gc},
-    {"__tostring",  LsLua_shared_tostring},
+    {   "__gc",        LsLuaShmGc},
+    {   "__tostring",  LsLuaShmToString},
     {NULL, NULL}
 };
 
-void LsLua_create_shared_meta( lua_State * L )
+void LsLuaCreateSharedmeta(lua_State *L)
 {
-    //LsLuaApi::dumpStack( L, "BEGIN LsLua_create_shared_meta", 10 );
-    LsLuaEngine::api()->openlib( L, LS_LUA ".shared", shared_sub, 0 );
-    LsLuaEngine::api()->newmetatable( L, LSLUA_SHARED_DATA );
-    LsLuaEngine::api()->openlib( L, NULL, shared_meta_sub, 0 );
+    LsLuaApi::openlib(L, LS_LUA ".shared", LsLuaShmLib, 0);
+    LsLuaApi::newmetatable(L, LSLUA_SHARED_DATA);
+    LsLuaApi::openlib(L, NULL, LsLuaShmMeta, 0);
 
+    LsLuaApi::pushlstring(L, "__index", 7);
+    LsLuaApi::pushvalue(L, -3);
+    LsLuaApi::rawset(L, -3);
     // pushliteral
-    LsLuaEngine::api()->pushlstring( L, "__index", 7 );
-    LsLuaEngine::api()->pushvalue( L, -3 );
-    LsLuaEngine::api()->rawset( L, -3 );      // metatable.__index = methods
-    // pushliteral
-    LsLuaEngine::api()->pushlstring( L, "__metatable", 11 );
-    LsLuaEngine::api()->pushvalue( L, -3 );
-    LsLuaEngine::api()->rawset( L, -3 );      // metatable.__metatable = methods
+    LsLuaApi::pushlstring(L, "__metatable", 11);
+    LsLuaApi::pushvalue(L, -3);
+    LsLuaApi::rawset(L, -3);
 
-    LsLuaEngine::api()->settop( L, -3 );     // pop 2
-
-    //LsLuaApi::dumpStack( L, "END LsLua_create_shared_meta", 10 );
+    LsLuaApi::settop(L, -3);
 }
 
-void LsLua_create_shared ( lua_State * L)
+void LsLuaCreateShared(lua_State *L)
 {
-    /* should have the table on the stack already */
-    //LsLuaApi::dumpStack( L, "BEGIN LsLua_create_shared", 10);
-    
-    LsLuaEngine::api()->createtable(L, 0, 0); /* create ls.header table         */
-    LsLuaEngine::api()->createtable(L, 0, 2); /* create metatable for ls.header */
-    LsLuaEngine::api()->pushcclosure(L, LsLua_shared_SET, 0);
-    LsLuaEngine::api()->setfield(L, -2, "__newindex");
-    LsLuaEngine::api()->pushcclosure(L, LsLua_shared_GET, 0);
-    LsLuaEngine::api()->setfield(L, -2, "__index");
-    LsLuaEngine::api()->setmetatable(L, -2);
-    LsLuaEngine::api()->setfield(L, -2, "shared"); 
-    
-    //LsLuaApi::dumpStack( L, "END LsLua_create_shared", 10);
+    LsLuaApi::createtable(L, 0, 0);
+    LsLuaApi::createtable(L, 0, 2);
+    LsLuaApi::pushcclosure(L, LsLuaShmNewhash, 0);
+    LsLuaApi::setfield(L, -2, "__index");
+    LsLuaApi::setmetatable(L, -2);
+    LsLuaApi::setfield(L, -2, "shared");
 }
 
 
-#endif // NO_LUA_TEST

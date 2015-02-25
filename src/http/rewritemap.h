@@ -19,6 +19,7 @@
 #define REWRITEMAP_H
 
 
+#include <lsdef.h>
 #include <util/autostr.h>
 #include <util/hashdatacache.h>
 #include <util/hashstringmap.h>
@@ -28,20 +29,23 @@ class RewriteMapData : public KeyData
 {
     AutoStr2    m_value;
 public:
-    const AutoStr2 * getValue() const       {   return &m_value;    }
-    void setValue( const char * pValue, int len)
-    {   m_value.setStr( pValue, len );      }
-    
+    RewriteMapData() {}
+    ~RewriteMapData() {}
+    const AutoStr2 *getValue() const       {   return &m_value;    }
+    void setValue(const char *pValue, int len)
+    {   m_value.setStr(pValue, len);      }
+
+    LS_NO_COPY_ASSIGN(RewriteMapData);
 };
 
 class RewriteMapFile : public FileStore
 {
 
 protected:
-    virtual KeyData * parseLine( char * pLine, char * pLineEnd );
-    virtual KeyData * parseLine( const char * pKey, int keyLen,
-                                 char * pLine, char *pLineEnd );
-    virtual KeyData * newEmptyData( const char *pKey, int len );
+    virtual KeyData *parseLine(char *pLine, char *pLineEnd);
+    virtual KeyData *parseLine(const char *pKey, int keyLen,
+                               char *pLine, char *pLineEnd);
+    virtual KeyData *newEmptyData(const char *pKey, int len);
 
 public:
     RewriteMapFile() {}
@@ -49,18 +53,18 @@ public:
 
 };
 
-    
+
 class RewriteMap : public HashDataCache
 {
 
     AutoStr             m_sName;
     int                 m_type;
     long                m_loadTime;
-    RewriteMapFile *    m_pStore;
+    RewriteMapFile     *m_pStore;
 
     int reloadFromStore();
-    
-public: 
+
+public:
 
     enum
     {
@@ -76,12 +80,13 @@ public:
 
     RewriteMap();
     ~RewriteMap();
-    
-    void setName( const char * pName )  {   m_sName.setStr( pName );    }
-    const char * getName() const        {   return m_sName.c_str();     }
 
-    int parseType_Source( const char * pSource );
-    int lookup( const char * pKey, int keyLen, char * pValue, int valLen );
+    void setName(const char *pName)  {   m_sName.setStr(pName);    }
+    const char *getName() const        {   return m_sName.c_str();     }
+
+    int parseType_Source(const char *pSource);
+    int lookup(const char *pKey, int keyLen, char *pValue, int valLen);
+    LS_NO_COPY_ASSIGN(RewriteMap);
 };
 
 class RewriteMapList : public HashStringMap<RewriteMap *>

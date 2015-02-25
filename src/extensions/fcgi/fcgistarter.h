@@ -26,7 +26,7 @@ class FcgiStarter
     FcgiStarter();
     ~FcgiStarter();
 public:
-    static int start( FcgiApp& config );
+    static int start(FcgiApp &config);
 };
 
 #endif

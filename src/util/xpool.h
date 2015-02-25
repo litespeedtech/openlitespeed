@@ -18,34 +18,39 @@
 #ifndef XPOOL_H
 #define XPOOL_H
 
-#include <lsr/lsr_xpool.h>
+#include <lsr/ls_xpool.h>
 
 #include <inttypes.h>
 
-class XPool : private lsr_xpool_t
+class XPool : private ls_xpool_t
 {
+
+
+    XPool(const XPool &rhs);
+    void operator=(const XPool &rhs);
+
 public:
     XPool()
     {
-        lsr_xpool_init( this );
+        ls_xpool_init(this);
     }
-    
+
     ~XPool()
     {
-        lsr_xpool_reset( this );
+        ls_xpool_reset(this);
     }
-    
+
     void reset()
-    {   lsr_xpool_reset( this );    }
-    
-    void *alloc( uint32_t size )
-    {   return lsr_xpool_alloc( this, size );   }
-    
-    void *realloc( void *pOld, uint32_t new_size )
-    {   return lsr_xpool_realloc( this, pOld, new_size);    }
-    
-    void free( void *data )
-    {   lsr_xpool_free( this, data );   }
+    {   ls_xpool_reset(this);    }
+
+    void *alloc(uint32_t size)
+    {   return ls_xpool_alloc(this, size);   }
+
+    void *realloc(void *pOld, uint32_t new_size)
+    {   return ls_xpool_realloc(this, pOld, new_size);    }
+
+    void free(void *data)
+    {   ls_xpool_free(this, data);   }
 };
 
 #endif

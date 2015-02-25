@@ -7,6 +7,7 @@ cmake_policy(SET CMP0002 OLD)
 ########### next target ###############
 
 SET(edio_STAT_SRCS
+#    eventnotifier.cpp
    reactorindex.cpp
    fdindex.cpp
    kqueuer.cpp
@@ -27,14 +28,19 @@ SET(edio_STAT_SRCS
    pollfdreactor.cpp
    lookupfd.cpp
    devpoller.cpp
+   aioeventhandler.cpp
+   sigeventdispatcher.cpp
+   aiooutputstream.cpp
+   aiosendfile.cpp
    eventnotifier.cpp
+   eventprocessor.cpp
 )
 
 add_library(edio STATIC ${edio_STAT_SRCS})
 
 
 ########### install files ###############
-
+                 
 
 
 

@@ -19,6 +19,7 @@
 #define FCGIAPP_H
 
 
+#include <lsdef.h>
 #include <extensions/localworker.h>
 class FcgiAppConfig;
 
@@ -27,25 +28,26 @@ class FcgiApp : public LocalWorker
     int             m_iMaxConns;
     int             m_iMaxReqs;
 
-    ExtConn *       newConn();
-    
-public: 
+    ExtConn        *newConn();
+
+public:
     //explicit FcgiApp( FcgiAppConfig& fcgiAppConfig );
-    explicit FcgiApp( const char * pName );
+    explicit FcgiApp(const char *pName);
     ~FcgiApp();
 
     //bool isReady()
     //{   return (getCurInstances() > 0); }
     int startEx();
-    
-    FcgiAppConfig& getConfig() const
+
+    FcgiAppConfig &getConfig() const
     {   return *(FcgiAppConfig *)getConfigPointer();    }
 
-    void setFcgiMaxConns( int max )     {   m_iMaxConns = max;          }
-    void setFcgiMaxReqs( int max )      {   m_iMaxReqs = max;           }
+    void setFcgiMaxConns(int max)     {   m_iMaxConns = max;          }
+    void setFcgiMaxReqs(int max)      {   m_iMaxReqs = max;           }
 
-    virtual int setURL( const char * pURL );
-        
+    virtual int setURL(const char *pURL);
+
+    LS_NO_COPY_ASSIGN(FcgiApp);
 };
 
 #endif

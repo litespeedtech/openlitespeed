@@ -17,29 +17,29 @@
 *****************************************************************************/
 #include "httpfetchdriver.h"
 #include "httpfetch.h"
-#include <http/httpglobals.h>
 #include <edio/multiplexer.h>
+#include <edio/multiplexerfactory.h>
 
 
-HttpFetchDriver::HttpFetchDriver(HttpFetch * pHttpFetch)
+HttpFetchDriver::HttpFetchDriver(HttpFetch *pHttpFetch)
 {
-    m_pHttpFetch = pHttpFetch; 
-    m_tmStart = time(NULL); 
+    m_pHttpFetch = pHttpFetch;
+    m_start = time(NULL);
 }
 
 int HttpFetchDriver::handleEvents(short int event)
 {
-    return m_pHttpFetch->processEvents( event );
+    return m_pHttpFetch->processEvents(event);
 }
 
 void HttpFetchDriver::onTimer()
 {
-    if ( m_pHttpFetch->getTimeout() < 0 )
-        return ;
-    
-    if ( time(NULL) - m_tmStart >= m_pHttpFetch->getTimeout() )
+    if (m_pHttpFetch->getTimeout() < 0)
+        return;
+
+    if (time(NULL) - m_start >= m_pHttpFetch->getTimeout())
     {
-        m_pHttpFetch->setTimeout( -1 );
+        m_pHttpFetch->setTimeout(-1);
         m_pHttpFetch->closeConnection();
     }
 }
@@ -47,14 +47,14 @@ void HttpFetchDriver::onTimer()
 void HttpFetchDriver::start()
 {
     setPollfd();
-    Multiplexer *pMpl =  HttpGlobals::getMultiplexer();
+    Multiplexer *pMpl =  MultiplexerFactory::getMultiplexer();
     if (pMpl)
-       pMpl->add( this,  POLLIN|POLLOUT|POLLHUP|POLLERR );
+        pMpl->add(this,  POLLIN | POLLOUT | POLLHUP | POLLERR);
 }
 
 void HttpFetchDriver::stop()
 {
-    Multiplexer *pMpl =  HttpGlobals::getMultiplexer();
+    Multiplexer *pMpl =  MultiplexerFactory::getMultiplexer();
     if (pMpl)
-        pMpl->remove( this );
+        pMpl->remove(this);
 }

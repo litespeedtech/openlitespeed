@@ -17,47 +17,49 @@
 *****************************************************************************/
 #include "urimatch.h"
 
-URIMatch::URIMatch(){
+URIMatch::URIMatch()
+{
 }
-URIMatch::~URIMatch(){
+URIMatch::~URIMatch()
+{
 }
 
-int URIMatch::set( const char * pExpr, const char * subst )
+int URIMatch::set(const char *pExpr, const char *subst)
 {
-    if ( !pExpr )
-        return -1;
-    if ( m_regex.compile( pExpr, 0 ) == 0 )
+    if (!pExpr)
+        return LS_FAIL;
+    if (m_regex.compile(pExpr, 0) == 0)
     {
-        if ( subst )
-            return m_subst.compile( subst );
+        if (subst)
+            return m_subst.compile(subst);
         else
             return 0;
     }
-    return -1;
+    return LS_FAIL;
 }
 
-int URIMatch::match( const char * pURI, int uriLen, char * pResult, int &len )
+int URIMatch::match(const char *pURI, int uriLen, char *pResult, int &len)
 {
     int vector[30];
     int size = 30;
-    int n = m_regex.exec( pURI, uriLen, 0, 0, vector, size );
-    if ( n < 0 )
-        return -1;
-    if ( n == 0 )
+    int n = m_regex.exec(pURI, uriLen, 0, 0, vector, size);
+    if (n < 0)
+        return LS_FAIL;
+    if (n == 0)
         n = 10;
-    return m_subst.exec( pURI, vector, n, pResult, len );
+    return m_subst.exec(pURI, vector, n, pResult, len);
 }
 
-int URIMatch::match( const char * pStr, int strLen )
+int URIMatch::match(const char *pStr, int strLen)
 {
     int vector[30];
     int size = 30;
-    int n = m_regex.exec( pStr, strLen, 0, 0, vector, size );
-    if ( n < 0 )
-        return -1;
-    if ( n == 0 )
+    int n = m_regex.exec(pStr, strLen, 0, 0, vector, size);
+    if (n < 0)
+        return LS_FAIL;
+    if (n == 0)
         n = 10;
-    return n;   
+    return n;
 }
 
 

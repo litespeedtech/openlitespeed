@@ -18,30 +18,35 @@
 #ifndef HTTPCONFIGLOADER_H
 #define HTTPCONFIGLOADER_H
 
+#include <lsdef.h>
 #include <util/logidtracker.h>
 
 #include <limits.h>
 class XmlNode;
 
 
-class HttpConfigLoader {
+class HttpConfigLoader
+{
 private:
-    XmlNode       * m_pRoot;
+    XmlNode        *m_pRoot;
 
     AutoStr         m_sConfigFilePath;
 
-   
+
 public:
-    HttpConfigLoader( )
+    HttpConfigLoader()
         : m_pRoot(NULL)
-        {};
+    {};
 
     ~HttpConfigLoader();
     void releaseConfigXmlTree();
     int loadConfigFile();
-    void setConfigFilePath(const char * pConfig)
+    void setConfigFilePath(const char *pConfig)
     {   m_sConfigFilePath = pConfig;      }
-    XmlNode* getRoot()                  {   return m_pRoot;         }
+    XmlNode *getRoot()                  {   return m_pRoot;         }
+
+
+    LS_NO_COPY_ASSIGN(HttpConfigLoader);
 };
 
 #endif

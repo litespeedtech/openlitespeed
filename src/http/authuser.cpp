@@ -18,24 +18,24 @@
 #include "authuser.h"
 #include <util/stringlist.h>
 #include <util/stringtool.h>
-#include <../include/lsr/lsr_base64.h>
+#include <../include/lsr/ls_base64.h>
 
 AuthUser::AuthUser()
-    :m_pGroups( NULL )
+    : m_pGroups(NULL)
 {
 }
 
 AuthUser::~AuthUser()
 {
-    if ( m_pGroups )
+    if (m_pGroups)
         delete m_pGroups;
 }
 
-int AuthUser::setGroups( const char * pGroups, const char * pEnd )
+int AuthUser::setGroups(const char *pGroups, const char *pEnd)
 {
-    if ( !pGroups )
+    if (!pGroups)
     {
-        if ( m_pGroups )
+        if (m_pGroups)
         {
             delete m_pGroups;
             m_pGroups = NULL;
@@ -44,17 +44,17 @@ int AuthUser::setGroups( const char * pGroups, const char * pEnd )
     }
     else
     {
-        if ( m_pGroups )
-            m_pGroups->release_objects();
+        if (m_pGroups)
+            m_pGroups->releaseObjects();
         else
         {
             m_pGroups = new StringList();
-            if ( !m_pGroups )
-                return -1;
+            if (!m_pGroups)
+                return LS_FAIL;
         }
     }
     int size;
-    if ( ( size = m_pGroups->split( pGroups, pEnd, "," )) == 0 )
+    if ((size = m_pGroups->split(pGroups, pEnd, ",")) == 0)
     {
         delete m_pGroups;
         m_pGroups = NULL;
@@ -64,44 +64,44 @@ int AuthUser::setGroups( const char * pGroups, const char * pEnd )
     return size;
 }
 
-int AuthUser::addGroup( const char * pGroup )
+int AuthUser::addGroup(const char *pGroup)
 {
-    if ( !m_pGroups )
+    if (!m_pGroups)
     {
         m_pGroups = new StringList();
-        if ( !m_pGroups )
-            return -1;
+        if (!m_pGroups)
+            return LS_FAIL;
     }
-    m_pGroups->add( pGroup );
+    m_pGroups->add(pGroup);
     m_pGroups->sort();
     return 0;
-        
+
 }
 
 void AuthUser::updatePasswdEncMethod()
 {
-    if ( strncmp( m_passwd.c_str(), "$apr1$", 6 ) == 0 )
-        setEncMethod( ENCRYPT_APMD5 );
-    else if ( strncasecmp( m_passwd.c_str(), "{sha}", 5 ) == 0 )
+    if (strncmp(m_passwd.c_str(), "$apr1$", 6) == 0)
+        setEncMethod(ENCRYPT_APMD5);
+    else if (strncasecmp(m_passwd.c_str(), "{sha}", 5) == 0)
     {
         char buf[128];
-        const char * p = m_passwd.c_str() + 5;
-        int len = lsr_base64_decode( p, strlen( p ), buf );
-        if ( len == 20 )
+        const char *p = m_passwd.c_str() + 5;
+        int len = ls_base64_decode(p, strlen(p), buf);
+        if (len == 20)
         {
-            setPasswd( buf, len );
-            setEncMethod( ENCRYPT_SHA );
+            setPasswd(buf, len);
+            setEncMethod(ENCRYPT_SHA);
         }
     }
 }
 
-int AuthGroup::add( const char * pUser )
+int AuthGroup::add(const char *pUser)
 {
-    if ( StringList::add( pUser ) )
+    if (StringList::add(pUser))
     {
         sort();
         return 0;
     }
-    return -1;
+    return LS_FAIL;
 }
 

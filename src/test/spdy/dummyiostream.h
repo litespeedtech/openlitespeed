@@ -24,36 +24,37 @@
 class DummySpdyConnStream: public HioStream
 {
     int             m_running;
-    char*           m_pDatabuff;
+    char           *m_pDatabuff;
     int             m_Datalen;
     LoopBuf         m_InputBuff;
 public:
     DummySpdyConnStream();
-    DummySpdyConnStream(char* buff, int length);
-    ~DummySpdyConnStream(){};
-    int read( char * buf, int len );
-    int write( const char * buf, int len );
+    DummySpdyConnStream(char *buff, int length);
+    ~DummySpdyConnStream() {};
+    int read(char *buf, int len);
+    int write(const char *buf, int len);
     int flush() {   return -1;   }
-    
+
     ////////////////////////////
-    int writev( IOVec &vector, int total ) {return 0;};
-    int sendfile( IOVec &vector, int &total, int fdSrc, off_t off, size_t size ) {return 0;};
+    int writev(IOVec &vector, int total) {return 0;};
+    int sendfile(IOVec &vector, int &total, int fdSrc, off_t off,
+                 size_t size) {return 0;};
     int close()  { return -1;};
-    int sendRespHeaders( );
-    
-    
-    void suspendRead()      { setFlag( HIO_FLAG_WANT_READ, 0 );     }
-    void continueRead()     { setFlag( HIO_FLAG_WANT_READ, 1 );     }
-    void suspendWrite(){return;};
-    void continueWrite(){return;};
-    void switchWriteToRead(){return;};
+    int sendRespHeaders();
+
+
+    void suspendRead()      { setFlag(HIO_FLAG_WANT_READ, 0);     }
+    void continueRead()     { setFlag(HIO_FLAG_WANT_READ, 1);     }
+    void suspendWrite() {return;};
+    void continueWrite() {return;};
+    void switchWriteToRead() {return;};
     void onTimer() {};
-    uint32_t GetStreamID(){return 0;};   
-    virtual const char * buildLogId()   {   return getLogId();    }
-    
+    uint32_t GetStreamID() {return 0;};
+    virtual const char *buildLogId()   {   return getLogId();    }
+
     /////////////////////////////
 private:
-    void appendInputData( char * buff, int length );
+    void appendInputData(char *buff, int length);
     int eventLoop();
     int onInitConnected();
 

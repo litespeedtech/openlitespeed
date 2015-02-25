@@ -17,4 +17,53 @@
 *****************************************************************************/
 #include "httpstatusline.h"
 
+#include <string.h>
+
+#define STATUS_LINE_BUF_SIZE 64 * SC_END * 2
+
+static  char s_achBuf[STATUS_LINE_BUF_SIZE];
+static  char *s_pEnd = s_achBuf;
+
+StatusLineString::StatusLineString(int version, int code)
+{
+    if (code > 0)
+    {
+        int verLen = HttpVer::getVersionStringLen(version);
+        int codeLen = HttpStatusCode::getInstance().getCodeStringLen(code);
+        m_iLineLen = verLen + codeLen ;
+        m_pLine = s_pEnd;
+        memcpy(s_pEnd, HttpVer::getVersionString(version), verLen);
+        memcpy(s_pEnd + verLen, HttpStatusCode::getInstance().getCodeString(code), codeLen);
+        s_pEnd += m_iLineLen;
+    }
+    else
+    {
+        m_pLine = NULL;
+        m_iLineLen = 0;
+    }
+}
+
+
+HttpStatusLine::HttpStatusLine()
+{
+    int code, version = HTTP_1_1;
+    for(code = 0; code < SC_END; ++code)
+        m_aCache[version][code] = new StatusLineString(version, code);
+
+    version = HTTP_1_0;
+    for(code = 0; code < SC_END; ++code)
+        m_aCache[version][code] = new StatusLineString(version, code);
+}
+
+HttpStatusLine::~HttpStatusLine()
+{
+    int code, version = HTTP_1_1;
+    for(code = 0; code < SC_END; ++code)
+        delete m_aCache[version][code];
+
+    version = HTTP_1_0;
+    for(code = 0; code < SC_END; ++code)
+        delete m_aCache[version][code];
+}
+
 

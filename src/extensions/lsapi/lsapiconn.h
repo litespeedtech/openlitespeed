@@ -19,6 +19,7 @@
 #define LSAPICONN_H
 
 
+#include <lsdef.h>
 #include <extensions/extconn.h>
 #include <extensions/httpextprocessor.h>
 #include <extensions/lsapi/lsapidef.h>
@@ -31,7 +32,7 @@
 #define LSAPI_CONN_READ_RESP_BODY   4
 
 class LsapiConn: public ExtConn
-               , public HttpExtProcessor
+    , public HttpExtProcessor
 {
     int                         m_pid;
     IOVec                       m_iovec;
@@ -41,22 +42,22 @@ class LsapiConn: public ExtConn
     long                        m_lReqBeginTime;
     long                        m_lReqSentTime;
     LsapiReq                    m_lsreq;
-    
+
     int                         m_respState;
     //short                       m_reqReceived;
     int                         m_iCurRespHeader;
-    char                      * m_pRespHeader;
-    char                      * m_pRespHeaderBufEnd;
-    char                      * m_pRespHeaderProcess;
+    char                       *m_pRespHeader;
+    char                       *m_pRespHeaderBufEnd;
+    char                       *m_pRespHeaderProcess;
     struct lsapi_packet_header  m_respHeader;
     struct lsapi_resp_info      m_respInfo;
     char                        m_respBuf[4096];
-        
-    
-    int     processPacketHeader( char * pBuf, int len );
+
+
+    int     processPacketHeader(char *pBuf, int len);
     int     processRespBuffed();
-    int     processRespHeader( char * pEnd, int &status );
-    void    setRespBuf( char * pStart );
+    int     processRespHeader(char *pEnd, int &status);
+    void    setRespBuf(char *pStart);
 
     int     processResp();
     int     readRespBody();
@@ -66,21 +67,21 @@ class LsapiConn: public ExtConn
 protected:
     virtual int doRead();
     virtual int doWrite();
-    virtual int doError( int err );
-    virtual int addRequest( ExtRequest * pReq );
-    virtual ExtRequest* getReq() const;
-    virtual void init( int fd, Multiplexer* pMplx );
+    virtual int doError(int err);
+    virtual int addRequest(ExtRequest *pReq);
+    virtual ExtRequest *getReq() const;
+    virtual void init(int fd, Multiplexer *pMplx);
     virtual void onTimer();
-    virtual int connect( Multiplexer * pMplx );
+    virtual int connect(Multiplexer *pMplx);
 
-    
+
 public:
     LsapiConn();
 
     ~LsapiConn();
 
 public:
-    virtual int removeRequest( ExtRequest * pReq );
+    virtual int removeRequest(ExtRequest *pReq);
 
     virtual void finishRecvBuf();
 
@@ -91,8 +92,8 @@ public:
     virtual int  begin();
     virtual int  beginReqBody();
     virtual int  endOfReqBody();
-    virtual int  sendReqBody( const char * pBuf, int size );
-    virtual int  readResp( char * pBuf, int size );
+    virtual int  sendReqBody(const char *pBuf, int size);
+    virtual int  readResp(char *pBuf, int size);
     virtual int  flush();
     virtual void cleanUp();
     virtual void dump();
@@ -100,8 +101,9 @@ public:
 
     virtual int sendReqHeader();
     void reset();
-    
-    
+
+
+    LS_NO_COPY_ASSIGN(LsapiConn);
 };
 
 #endif

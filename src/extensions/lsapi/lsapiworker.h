@@ -18,6 +18,7 @@
 #ifndef LSAPIWORKER_H
 #define LSAPIWORKER_H
 
+#include <lsdef.h>
 #include <extensions/localworker.h>
 class LsapiConfig;
 
@@ -25,17 +26,18 @@ class LsapiWorker : public LocalWorker
 {
 protected:
 
-    virtual ExtConn * newConn();
+    virtual ExtConn *newConn();
 
 public:
-    explicit LsapiWorker( const char * pName );
+    explicit LsapiWorker(const char *pName);
 
     ~LsapiWorker();
 
-    LsapiConfig& getConfig() const
+    LsapiConfig &getConfig() const
     {   return *((LsapiConfig *)getConfigPointer());  }
 
-    int startEx();        
+    int startEx();
+    LS_NO_COPY_ASSIGN(LsapiWorker);
 };
 
 #endif

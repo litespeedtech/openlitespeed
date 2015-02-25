@@ -31,120 +31,124 @@
 #define VMBUF_FILE_MAP  2
 
 typedef TPointerList<BlockBuf> BufList;
-  
+
 class VMemBuf
 {
 protected:
     static size_t   s_iBlockSize;
     static size_t   s_iMinMmapSize;
     static int      s_iKeepOpened;
-    static int      s_fdSpare;
-    static char     s_sTmpFileTemplate[256];
+    static int      s_iFdSpare;
+    static char     s_aTmpFileTemplate[256];
     static int      s_iMaxAnonMapBlocks;
     static int      s_iCurAnonMapBlocks;
-    
-private:    
-    BufList     m_bufList;
-    AutoStr2    m_sFileName;
-    int         m_fd;
-    size_t      m_curTotalSize;
 
-    short       m_type;
-    char        m_autoGrow;
-    char        m_noRecycle;
-    size_t      m_curWBlkPos;
-    BlockBuf ** m_pCurWBlock;
-    char      * m_pCurWPos;
+private:
+    BufList         m_bufList;
+    AutoStr2        m_fileName;
+    int             m_iFd;
+    size_t          m_iCurTotalSize;
 
-    size_t      m_curRBlkPos;
-    BlockBuf ** m_pCurRBlock;
-    char      * m_pCurRPos;
+    short           m_iType;
+    unsigned char   m_iAutoGrow;
+    unsigned char   m_iNoRecycle;
+    size_t          m_iCurWBlkPos;
+    BlockBuf      **m_pCurWBlock;
+    char           *m_pCurWPos;
 
+    size_t          m_curRBlkPos;
+    BlockBuf      **m_pCurRBlock;
+    char           *m_pCurRPos;
+
+
+    VMemBuf(const VMemBuf &rhs);
+    void operator=(const VMemBuf &rhs);
 
     int mapNextWBlock();
     int mapNextRBlock();
-    int appendBlock( BlockBuf * pBlock );
+    int appendBlock(BlockBuf *pBlock);
     int grow();
     void releaseBlocks();
     void reset();
-    BlockBuf * getAnonMapBlock( int size );
-    void recycle( BlockBuf * pBuf );
+    BlockBuf *getAnonMapBlock(int size);
+    void recycle(BlockBuf *pBuf);
 
-    int  remapBlock( BlockBuf * pBlock, int pos );
+    int  remapBlock(BlockBuf *pBlock, int pos);
 
 public:
     void deallocate();
 
     static size_t getBlockSize()    {   return s_iBlockSize;    }
-	static int lowOnAnonMem()	
-		{	return s_iMaxAnonMapBlocks - s_iCurAnonMapBlocks < s_iMaxAnonMapBlocks / 4; }
+    static int lowOnAnonMem()
+    {   return s_iMaxAnonMapBlocks - s_iCurAnonMapBlocks < s_iMaxAnonMapBlocks / 4; }
     static size_t getMinMmapSize()  {   return s_iMinMmapSize;  }
-    static void setMaxAnonMapSize( int sz );
-    static void setTempFileTemplate( const char * pTemp );
-    static char * mapTmpBlock( int fd, BlockBuf &buf, size_t offset, int write = 0 );
-    static void releaseBlock( BlockBuf * pBlock );
+    static void setMaxAnonMapSize(int sz);
+    static void setTempFileTemplate(const char *pTemp);
+    static char *mapTmpBlock(int fd, BlockBuf &buf, size_t offset,
+                             int write = 0);
+    static void releaseBlock(BlockBuf *pBlock);
 
-    explicit VMemBuf( int TargetSize = 0);
+    explicit VMemBuf(int TargetSize = 0);
     ~VMemBuf();
-    int set( int type, int size );
-    int set( BlockBuf * pBlock );
-    int set( const char * pFileName, int size );
-    int setfd( const char * pFileName, int fd );
-    char * getReadBuffer( size_t &size );
-    char * getWriteBuffer( size_t &size )
+    int set(int type, int size);
+    int set(BlockBuf *pBlock);
+    int set(const char *pFileName, int size);
+    int setFd(const char *pFileName, int fd);
+    char *getReadBuffer(size_t &size);
+    char *getWriteBuffer(size_t &size)
     {
-        if (( !m_pCurWBlock )||( m_pCurWPos >= (*m_pCurWBlock)->getBufEnd() ))
+        if ((!m_pCurWBlock) || (m_pCurWPos >= (*m_pCurWBlock)->getBufEnd()))
         {
-            if ( mapNextWBlock( ) != 0 )
+            if (mapNextWBlock() != 0)
                 return NULL;
         }
         size = (*m_pCurWBlock)->getBufEnd() - m_pCurWPos;
         return m_pCurWPos;
     }
-    
-    void readUsed( size_t len )     {   m_pCurRPos += len;      }
-    void writeUsed( size_t len )    {   m_pCurWPos += len;      }
-    char * getCurRPos() const       {   return m_pCurRPos;      }
-    size_t getCurROffset() const    
-    {   return (m_pCurRBlock)?( m_curRBlkPos - ((*m_pCurRBlock)->getBufEnd() - m_pCurRPos)):0;   }
-    char * getCurWPos() const       {   return m_pCurWPos;      }
-    size_t getCurWOffset() const    
-    {   return m_pCurWBlock?(m_curWBlkPos - ((*m_pCurWBlock)->getBufEnd() - m_pCurWPos)):0;   }
-    int write( const char * pBuf, int size );
-    bool isMmaped() const {   return m_type >= VMBUF_ANON_MAP;  }
+
+    void readUsed(size_t len)     {   m_pCurRPos += len;      }
+    void writeUsed(size_t len)    {   m_pCurWPos += len;      }
+    char *getCurRPos() const       {   return m_pCurRPos;      }
+    size_t getCurROffset() const
+    {   return (m_pCurRBlock) ? (m_curRBlkPos - ((*m_pCurRBlock)->getBufEnd() - m_pCurRPos)) : 0;   }
+    char *getCurWPos() const       {   return m_pCurWPos;      }
+    size_t getCurWOffset() const
+    {   return m_pCurWBlock ? (m_iCurWBlkPos - ((*m_pCurWBlock)->getBufEnd() - m_pCurWPos)) : 0;   }
+    int write(const char *pBuf, int size);
+    bool isMmaped() const {   return m_iType >= VMBUF_ANON_MAP;  }
     //int  seekRPos( size_t pos );
     //int  seekWPos( size_t pos );
     void rewindWriteBuf();
     void rewindReadBuf();
-    int setROffset( size_t offset );
-    int getfd() const               {   return m_fd;            }
-    size_t getCurFileSize() const   {   return m_curTotalSize;  }
+    int setROffset(size_t offset);
+    int getFd() const               {   return m_iFd;            }
+    size_t getCurFileSize() const   {   return m_iCurTotalSize;  }
     size_t getCurRBlkPos() const    {   return m_curRBlkPos;    }
-    size_t getCurWBlkPos() const    {   return m_curWBlkPos;    }
+    size_t getCurWBlkPos() const    {   return m_iCurWBlkPos;    }
     int empty() const
     {
-        if ( m_curRBlkPos < m_curWBlkPos )
+        if (m_curRBlkPos < m_iCurWBlkPos)
             return 0;
-        if ( !m_pCurWBlock )
+        if (!m_pCurWBlock)
             return 1;
-        return ( m_pCurRPos >= m_pCurWPos );
-    }    
+        return (m_pCurRPos >= m_pCurWPos);
+    }
     long writeBufSize() const;
-    int  reinit( int TargetSize = -1 );
-    int  exactSize( long *pSize = NULL );
-    int  shrinkBuf( long size );
+    int  reinit(int TargetSize = -1);
+    int  exactSize(long *pSize = NULL);
+    int  shrinkBuf(long size);
     int  close();
-    int  copyToFile( size_t startOff, size_t len, 
-                            int fd, size_t destStartOff );
-    const char * getTempFileName()  {    return m_sFileName.c_str();    }
-        
+    int  copyToFile(size_t startOff, size_t len,
+                    int fd, size_t destStartOff);
+    const char *getTempFileName()  {    return m_fileName.c_str();    }
+
     int convertInMemoryToFileBacked();
 
     int convertFileBackedToInMemory();
     static void initAnonPool();
-    int eof( off_t offset );
-    const char * acquireBlockBuf( off_t offset, int *size );
-    void releaseBlockBuf( off_t offset );
+    int eof(off_t offset);
+    const char *acquireBlockBuf(off_t offset, int *size);
+    void releaseBlockBuf(off_t offset);
 
 
 };
@@ -152,7 +156,7 @@ public:
 class MMapVMemBuf : public VMemBuf
 {
 public:
-    explicit MMapVMemBuf( int TargetSize = 0);
+    explicit MMapVMemBuf(int TargetSize = 0);
 };
 
 

@@ -19,14 +19,14 @@
 #include <extensions/extrequest.h>
 
 LoadBalancer::LoadBalancer()
-    : m_lastWorker( 0 )
+    : m_lastWorker(0)
 {
 }
 
-LoadBalancer::LoadBalancer( const char * pName )
-    : m_lastWorker( 0 )
+LoadBalancer::LoadBalancer(const char *pName)
+    : m_lastWorker(0)
 {
-    setConfigPointer( new ExtWorkerConfig( pName ) );
+    setConfigPointer(new ExtWorkerConfig(pName));
 }
 
 LoadBalancer::~LoadBalancer()
@@ -34,39 +34,40 @@ LoadBalancer::~LoadBalancer()
 }
 
 
-ExtConn * LoadBalancer::newConn()
+ExtConn *LoadBalancer::newConn()
 {
     return NULL;
 }
 
-int LoadBalancer::addWorker( ExtWorker * pWorker )
+int LoadBalancer::addWorker(ExtWorker *pWorker)
 {
-    return m_workers.push_back( pWorker );
+    return m_workers.push_back(pWorker);
 }
 
 
-int LoadBalancer::workerLoadCompare( ExtWorker * pWorker, ExtWorker * pSelect )
+int LoadBalancer::workerLoadCompare(ExtWorker *pWorker, ExtWorker *pSelect)
 {
-    if ( pWorker->getState() == ExtWorker::ST_BAD )
+    if (pWorker->getState() == ExtWorker::ST_BAD)
         return 1;
     int ret = pWorker->getQueuedReqs() - pSelect->getQueuedReqs();
-    if ( ret )
+    if (ret)
         return ret;
-    return pWorker->getUtilRatio() - pSelect->getUtilRatio();    
+    return pWorker->getUtilRatio() - pSelect->getUtilRatio();
 }
 
 
-ExtWorker * LoadBalancer::selectWorker(HttpSession *pSession, ExtRequest * pExtReq )
+ExtWorker *LoadBalancer::selectWorker(HttpSession *pSession,
+                                      ExtRequest *pExtReq)
 {
-    ExtWorker * pWorker, *pSelected = NULL;
+    ExtWorker *pWorker, *pSelected = NULL;
     int select = 0;
     int n = 0;
     int track = pExtReq->getWorkerTrack();
-    while( n < m_workers.size() )
+    while (n < m_workers.size())
     {
-        if ( (track & ( 1 << n )) == 0 )
+        if ((track & (1 << n)) == 0)
         {
-            if ( !pSelected )
+            if (!pSelected)
             {
                 pSelected = m_workers[n];
                 select = n;
@@ -74,7 +75,7 @@ ExtWorker * LoadBalancer::selectWorker(HttpSession *pSession, ExtRequest * pExtR
             else
             {
                 pWorker = m_workers[n];
-                if ( workerLoadCompare( pWorker, pSelected ) < 0 )
+                if (workerLoadCompare(pWorker, pSelected) < 0)
                 {
                     pSelected = pWorker;
                     select = n;
@@ -83,10 +84,8 @@ ExtWorker * LoadBalancer::selectWorker(HttpSession *pSession, ExtRequest * pExtR
         }
         ++n;
     }
-    if ( pSelected )
-    {
-        pExtReq->addWorkerTrack( select );
-    }
+    if (pSelected)
+        pExtReq->addWorkerTrack(select);
     return pSelected;
 }
 

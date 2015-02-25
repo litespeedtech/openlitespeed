@@ -24,16 +24,20 @@ class ReqStats
 {
     int     m_iReqPerSec;
     int     m_iTotalReqs;
-public: 
-	ReqStats();
-	~ReqStats();
+
+
+    ReqStats(const ReqStats &rhs);
+    void operator=(const ReqStats &rhs);
+public:
+    ReqStats();
+    ~ReqStats();
     void incReqProcessed()  {   ++m_iReqPerSec;         }
     int  getRPS() const     {   return m_iReqPerSec;    }
     int  getTotal() const   {   return m_iTotalReqs;    }
     void reset()            {   m_iReqPerSec = 0;       }
     void resetTotal()       {   m_iTotalReqs = 0;       }
     void finalizeRpt();
-    
+
 };
 
 #endif

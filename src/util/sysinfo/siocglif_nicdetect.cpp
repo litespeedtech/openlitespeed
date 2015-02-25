@@ -25,16 +25,17 @@ NICDetect::get_ifi_info(int family, int doaliases)
     struct lifreq        *ifr, *ifrend, ifrcopy;
     struct sockaddr_in  *sinptr;
     struct sockaddr_in6 *sinptr6;
-    
+
     sockfd = ::socket(family, SOCK_DGRAM, 0);
-    
-    lastlen = len = 100 * sizeof(struct lifreq);    /* initial buffer size guess */
-    memset( &ifc, 0, sizeof( ifc ) );
+
+    lastlen = len = 100 * sizeof(struct
+                                 lifreq);    /* initial buffer size guess */
+    memset(&ifc, 0, sizeof(ifc));
     ifc.lifc_family = AF_UNSPEC;
-    for ( ; ; )
+    for (; ;)
     {
         buf = (char *)malloc(len);
-        if ( buf )
+        if (buf)
         {
             ifc.lifc_len = len;
             ifc.lifc_buf = buf;
@@ -42,7 +43,7 @@ NICDetect::get_ifi_info(int family, int doaliases)
             {
                 if (errno != EINVAL || lastlen != 0)
                 {
-                    close( sockfd );
+                    close(sockfd);
                     return NULL;
                 }
             }
@@ -57,24 +58,24 @@ NICDetect::get_ifi_info(int family, int doaliases)
         }
         else
         {
-            close( sockfd );
+            close(sockfd);
             return NULL;
         }
     }
     ifihead = NULL;
     ifipnext = &ifihead;
     lastname[0] = 0;
-    ifrend = (struct lifreq *)(ifc.lifc_buf + ifc.lifc_len );
-    for ( ifr = ifc.lifc_req; ifr < ifrend; ++ifr )
+    ifrend = (struct lifreq *)(ifc.lifc_buf + ifc.lifc_len);
+    for (ifr = ifc.lifc_req; ifr < ifrend; ++ifr)
     {
 
         if (((struct sockaddr *)&ifr->lifr_addr)->sa_family != family)
             continue;    /* ignore if not desired address family */
 
         myflags = 0;
-        if ( (cptr = strchr(ifr->lifr_name, ':')) != NULL)
-            *cptr = 0;        /* replace colon will null */
-        if (strncmp(lastname, ifr->lifr_name, IFNAMSIZ) == 0) 
+        if ((cptr = strchr(ifr->lifr_name, ':')) != NULL)
+            * cptr = 0;       /* replace colon will null */
+        if (strncmp(lastname, ifr->lifr_name, IFNAMSIZ) == 0)
         {
             if (doaliases == 0)
                 continue;    /* already processed this interface */
@@ -95,18 +96,20 @@ NICDetect::get_ifi_info(int family, int doaliases)
         ifi->ifi_flags = flags;        /* IFF_xxx values */
         ifi->ifi_myflags = myflags;    /* IFI_xxx values */
         memmove(ifi->ifi_name, ifr->lifr_name, IFI_NAME);
-        ifi->ifi_name[IFI_NAME-1] = '\0';
+        ifi->ifi_name[IFI_NAME - 1] = '\0';
 
-        switch (((struct sockaddr *)&ifr->lifr_addr)->sa_family) 
+        switch (((struct sockaddr *)&ifr->lifr_addr)->sa_family)
         {
         case AF_INET:
             sinptr = (struct sockaddr_in *) &ifr->lifr_addr;
-            if (ifi->ifi_addr == NULL) {
+            if (ifi->ifi_addr == NULL)
+            {
                 ifi->ifi_addr = (sockaddr *)calloc(1, sizeof(struct sockaddr_in));
                 memmove(ifi->ifi_addr, sinptr, sizeof(struct sockaddr_in));
 
 #ifdef    SIOCGLIFBRDADDR
-                if (flags & IFF_BROADCAST) {
+                if (flags & IFF_BROADCAST)
+                {
                     ioctl(sockfd, SIOCGLIFBRDADDR, &ifrcopy);
                     sinptr = (struct sockaddr_in *) &ifrcopy.lifr_broadaddr;
                     ifi->ifi_brdaddr = (sockaddr *)calloc(1, sizeof(struct sockaddr_in));
@@ -115,7 +118,8 @@ NICDetect::get_ifi_info(int family, int doaliases)
 #endif
 
 #ifdef    SIOCGLIFDSTADDR
-                if (flags & IFF_POINTOPOINT) {
+                if (flags & IFF_POINTOPOINT)
+                {
                     ioctl(sockfd, SIOCGLIFDSTADDR, &ifrcopy);
                     sinptr = (struct sockaddr_in *) &ifrcopy.lifr_dstaddr;
                     ifi->ifi_dstaddr = (sockaddr *)calloc(1, sizeof(struct sockaddr_in));
@@ -125,39 +129,39 @@ NICDetect::get_ifi_info(int family, int doaliases)
             }
             if ((flags & IFF_LOOPBACK) == 0)
             {
-                
+
                 struct sockaddr_in  *sin;
                 struct arpreq       arpreq;
-                memset( &arpreq, 0, sizeof( arpreq ) );
+                memset(&arpreq, 0, sizeof(arpreq));
                 sin = (struct sockaddr_in *)&arpreq.arp_pa;
                 sin->sin_family = AF_INET;
                 sinptr = (struct sockaddr_in *) &ifr->lifr_addr;
                 //printf( "%s-%s\n", ifi->ifi_name, inet_ntoa( sinptr->sin_addr ) );
                 memmove(&sin->sin_addr, &sinptr->sin_addr, sizeof(struct in_addr));
-                len = ioctl( sockfd, SIOCGARP, &arpreq );
-                if ( len == -1 )
-                    perror( "ioctl" );
+                len = ioctl(sockfd, SIOCGARP, &arpreq);
+                if (len == -1)
+                    perror("ioctl");
                 else
                 {
                     ifi->ifi_hlen = 6;
-                    memmove(ifi->ifi_haddr, arpreq.arp_ha.sa_data, 6 );
+                    memmove(ifi->ifi_haddr, arpreq.arp_ha.sa_data, 6);
                 }
             }
             break;
         case AF_INET6:
             sinptr6 = (struct sockaddr_in6 *) &ifr->lifr_addr;
-            if (ifi->ifi_addr == NULL) 
+            if (ifi->ifi_addr == NULL)
             {
                 ifi->ifi_addr = (sockaddr *)calloc(1, sizeof(struct sockaddr_in6));
                 memmove(ifi->ifi_addr, sinptr6, sizeof(struct sockaddr_in6));
-            }            
+            }
             break;
         default:
             break;
         }
     }
-    close( sockfd );
+    close(sockfd);
     free(buf);
-    return(ifihead);    /* pointer to first structure in linked list */
+    return (ifihead);   /* pointer to first structure in linked list */
 }
 

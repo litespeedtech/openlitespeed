@@ -77,50 +77,52 @@ public:
         H_VARY,
         H_WWW_AUTHENTICATE,
         H_X_POWERED_BY,
-        
+
         H_HEADER_END
-        
-        //not commonly used headers. 
+
+        //not commonly used headers.
 //         H_AGE,
 //         H_PROXY_AUTHENTICATE,
 //         H_RETRY_AFTER,
 //         H_SET_COOKIE2,
-// 
-// 
+//
+//
 //         // general-header
 //         H_TRAILER,
 //         H_UPGRADE,
 //         H_WARNING,
-// 
+//
 //         // entity-header
 //         H_ALLOW,
 //         H_CONTENT_LANGUAGE,
 //         H_CONTENT_LOCATION,
 //         H_CONTENT_MD5,
     };
-        
+
 public:
-    HttpRespHeaders( lsr_xpool_t *pool );
+    HttpRespHeaders(ls_xpool_t *pool);
     ~HttpRespHeaders() {};
-    
+
     void reset();
-    
-    int add( HEADERINDEX headerIndex, const char * pVal, unsigned int valLen, int method = LSI_HEADER_SET );
-    int add( const char * pName, int nameLen, const char * pVal, unsigned int valLen, int method = LSI_HEADER_SET );
-    
-    int appendLastVal( const char * pVal, int valLen );
-    int add( http_header_t *headerArray, int size, int method = LSI_HEADER_SET );
-    int parseAdd( const char * pStr, int len, int method = LSI_HEADER_SET );
-    
-    
+
+    int add(HEADERINDEX headerIndex, const char *pVal, unsigned int valLen,
+            int method = LSI_HEADER_SET);
+    int add(const char *pName, int nameLen, const char *pVal,
+            unsigned int valLen, int method = LSI_HEADER_SET);
+
+    int appendLastVal(const char *pVal, int valLen);
+    int add(http_header_t *headerArray, int size, int method = LSI_HEADER_SET);
+    int parseAdd(const char *pStr, int len, int method = LSI_HEADER_SET);
+
+
     //Special case
-    void addStatusLine( int ver, int code, short iKeepAlive ) {  m_iHttpVersion = ver; m_iHttpCode = code; m_iKeepAlive = iKeepAlive; }
+    void addStatusLine(int ver, int code, short iKeepAlive) {  m_iHttpVersion = ver; m_iHttpCode = code; m_iKeepAlive = iKeepAlive; }
     short getHttpVersion()  { return m_iHttpVersion; }
     short getHttpCode()     { return m_iHttpCode;   }
-    
-    int del( const char * pName, int nameLen );
-    int del( HEADERINDEX headerIndex );
-    
+
+    int del(const char *pName, int nameLen);
+    int del(HEADERINDEX headerIndex);
+
     int  getHeadersCount(int dupLineAsOne)
     {
         if (dupLineAsOne)
@@ -128,69 +130,73 @@ public:
         else
             return m_aKVPairs.getSize() - m_iHeaderRemovedCount;
     }
-    
+
     int  getTotalCount() const                       {   return m_aKVPairs.getSize();   }
-    
+
     char *getContentTypeHeader(int &len);
-        
+
     //return number of header appended to iov
-    int  getHeader(const char *pName, int nameLen, struct iovec *iov, int maxIovCount);
+    int  getHeader(const char *pName, int nameLen, struct iovec *iov,
+                   int maxIovCount);
     int  getHeader(HEADERINDEX index, struct iovec *iov, int maxIovCount);
-    
-    int  getFirstHeader(const char *pName, int nameLen, char **val, int &valLen);
-    const char * getHeader(HEADERINDEX index, int *valLen ) const;
-    
+
+    int  getFirstHeader(const char *pName, int nameLen, char **val,
+                        int &valLen);
+    const char *getHeader(HEADERINDEX index, int *valLen) const;
+
     //For LSIAPI using//return number of header appended to iov
-    int getAllHeaders( struct iovec *iov_key, struct iovec *iov_val, int maxIovCount );
-    
+    int getAllHeaders(struct iovec *iov_key, struct iovec *iov_val,
+                      int maxIovCount);
+
     int  HeaderBeginPos()  {   return nextHeaderPos(-1); }
     int  HeaderEndPos()    {    return -1; }
     int  nextHeaderPos(int pos);
 
-    int  getHeader(int pos, char **pName, int *nameLen, struct iovec *iov, int maxIovCount)
+    int  getHeader(int pos, char **pName, int *nameLen, struct iovec *iov,
+                   int maxIovCount)
     {   return _getHeader(pos, pName, nameLen, iov, maxIovCount); }
-    
+
 public:
-    
-     //0: REGULAR, 1:SPDY2 2, SPDY3, 3, SPDY 4, .....
+
+    //0: REGULAR, 1:SPDY2 2, SPDY3, 3, SPDY 4, .....
     int outputNonSpdyHeaders(IOVec *iovec);
     int isRespHeadersBuilt()    {   return m_iHeaderBuilt;  }
     int getTotalLen()       { return m_iHeadersTotalLen; }
-    int appendToIov(IOVec* iovec) const;
-    int appendToIovExclude(IOVec* iovec, const char * pName, int nameLen) const;
-    
-    static HEADERINDEX getRespHeaderIndex( const char * pHeader );
-    static int getHeaderStringLen( HEADERINDEX index )  {    return s_iHeaderLen[(int)index];  }
+    int appendToIov(IOVec *iovec) const;
+    int appendToIovExclude(IOVec *iovec, const char *pName, int nameLen) const;
+
+    static HEADERINDEX getRespHeaderIndex(const char *pHeader);
+    static int getHeaderStringLen(HEADERINDEX index)  {    return s_iHeaderLen[(int)index];  }
 
     static void buildCommonHeaders();
     static void updateDateHeader();
-    static void hideServerSignature( int hide );
+    static void hideServerSignature(int hide);
 
     void addGzipEncodingHeader()
     {
-        add( s_gzipHeaders, 2);
+        add(s_gzipHeaders, 2);
     }
-    
+
     void appendChunked()
     {
-        add( &s_chunkedHeader, 1);
+        add(&s_chunkedHeader, 1);
     }
-    
+
     void appendAcceptRange()
     {
-        add( &s_acceptRangeHeader, 1);
+        add(&s_acceptRangeHeader, 1);
     }
-    
+
     void addCommonHeaders()
     {   add(s_commonHeaders, s_commonHeadersCount);     }
 
 public:
-    static const char * m_sPresetHeaders[H_HEADER_END];
+    static const char *m_sPresetHeaders[H_HEADER_END];
     static int m_iPresetHeaderLen[H_HEADER_END];
 
-    
+
 private:
-    lsr_xpool_t   * m_pool;
+    ls_xpool_t    *m_pool;
     AutoBuf         m_buf;
     TObjArray< resp_kvpair > m_aKVPairs;
     unsigned char   m_KVPairindex[H_HEADER_END];
@@ -201,33 +207,39 @@ private:
     short           m_iHeaderUniqueCount;
     short           m_hLastHeaderKVPairIndex;
     short           m_iHeadersTotalLen;
-    
+
     char            m_iHttpVersion;
     char            m_iKeepAlive;
 
     static int s_iHeaderLen[H_HEADER_END + 1];
-    
+
     int             getFreeSpaceCount() const {    return m_aKVPairs.getCapacity() - m_aKVPairs.getSize();   };
     void            incKVPairs(int num);
-    resp_kvpair *   getKV( int index ) const;
-    resp_kvpair *   getNewKV();
-    char *          getHeaderStr(int offset)        { return m_buf.begin() + offset;  }
-    const char *    getHeaderStr(int offset) const  { return m_buf.begin() + offset;  }
-    char *          getName(resp_kvpair *pKv)   { return getHeaderStr(pKv->keyOff); }
-    char *          getVal(resp_kvpair *pKv)   { return getHeaderStr(pKv->valOff); }
-    const char *    getVal(resp_kvpair *pKv) const   { return getHeaderStr(pKv->valOff); }
-    int  _getHeader(int kvOrderNum, char **pName, int *nameLen, struct iovec *iov, int maxIovCount);
-    
-    int _add(int kvOrderNum, const char * pName, int nameLen, const char * pVal, unsigned int valLen, int method);
+    resp_kvpair    *getKV(int index) const;
+    resp_kvpair    *getNewKV();
+    char           *getHeaderStr(int offset)        { return m_buf.begin() + offset;  }
+    const char     *getHeaderStr(int offset) const  { return m_buf.begin() + offset;  }
+    char           *getName(resp_kvpair *pKv)   { return getHeaderStr(pKv->keyOff); }
+    char           *getVal(resp_kvpair *pKv)   { return getHeaderStr(pKv->valOff); }
+    const char     *getVal(resp_kvpair *pKv) const   { return getHeaderStr(pKv->valOff); }
+    int  _getHeader(int kvOrderNum, char **pName, int *nameLen,
+                    struct iovec *iov, int maxIovCount);
+
+    int _add(int kvOrderNum, const char *pName, int nameLen, const char *pVal,
+             unsigned int valLen, int method);
 
     void            _del(int kvOrderNum);
-    void            replaceHeader(resp_kvpair *pKv, const char * pVal, unsigned int valLen);
-    int             appendHeader(resp_kvpair *pKv, const char * pName, unsigned int nameLen, const char * pVal, unsigned int valLen, int);
+    void            replaceHeader(resp_kvpair *pKv, const char *pVal,
+                                  unsigned int valLen);
+    int             appendHeader(resp_kvpair *pKv, const char *pName,
+                                 unsigned int nameLen, const char *pVal, unsigned int valLen, int);
     int             getHeaderKvOrder(const char *pName, unsigned int nameLen);
-    void            verifyHeaderLength(HEADERINDEX headerIndex, const char * pName, unsigned int nameLen);
-    
-    HttpRespHeaders(const HttpRespHeaders& other);
-    
+    void            verifyHeaderLength(HEADERINDEX headerIndex,
+                                       const char *pName, unsigned int nameLen);
+
+    HttpRespHeaders(const HttpRespHeaders &other);
+    void operator=(const HttpRespHeaders &rhs);
+
     static char s_sDateHeaders[30];
     static http_header_t   s_commonHeaders[2];
     static http_header_t   s_gzipHeaders[2];
@@ -236,10 +248,11 @@ private:
     static http_header_t   s_concloseHeader;
     static http_header_t   s_acceptRangeHeader;
     static int             s_commonHeadersCount;
-    
+
 };
 
-struct http_header_t {
+struct http_header_t
+{
     HttpRespHeaders::HEADERINDEX index;
     const char *val;
     unsigned int valLen;

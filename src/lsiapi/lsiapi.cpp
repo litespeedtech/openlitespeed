@@ -28,8 +28,6 @@
 #include <lsiapi/lsiapilib.h>
 #include <lsiapi/lsiapigd.h>
 #include <http/requestvars.h>
-
-#include <http/httpglobals.h>
 #include <http/staticfilecachedata.h>
 #include <lsiapi/lsiapi.h>
 #include <dirent.h>
@@ -37,76 +35,165 @@
 #include <errno.h>
 #include "modulemanager.h"
 #include "util/ghash.h"
-#include <util/ni_fio.h>
+#include <lsr/ls_fileio.h>
 #include <util/gpath.h>
 #include <util/datetime.h>
 #include <stdio.h>
 
-lsi_api_t LsiapiBridge::gLsiapiFunctions;
-const lsi_api_t * g_api = &LsiapiBridge::gLsiapiFunctions;
-__LsiGDataContHashT *LsiapiBridge::gLsiGDataContHashT[LSI_CONTAINER_COUNT] = {0};
+lsi_api_t LsiapiBridge::g_lsiapiFunctions;
+const lsi_api_t *g_api = &LsiapiBridge::g_lsiapiFunctions;
+GDataContainer *LsiapiBridge::g_aGDataContainer[LSI_CONTAINER_COUNT] = {0};
 
-void  LsiapiBridge::releaseModuleData( int level, LsiModuleData * pData )
+void  LsiapiBridge::releaseModuleData(int level, LsiModuleData *pData)
 {
-    LsiApiHooks* pHooks = LsiApiHooks::getReleaseDataHooks(level);
+    if (!pData->isDataInited())
+        return;
+    LsiApiHooks *pHooks = LsiApiHooks::getReleaseDataHooks(level);
     void *data = NULL;
-    for (LsiApiHook* hook = pHooks->begin(); hook < pHooks->end(); ++hook)
+    for (lsiapi_hook_t *hook = pHooks->begin(); hook < pHooks->end(); ++hook)
     {
-        data = pData->get( MODULE_DATA_ID(hook->_module)[level]);
-        if ( data )
+        data = pData->get(MODULE_DATA_ID(hook->module)[level]);
+        if (data)
         {
-            lsi_release_callback_pf cb = (lsi_release_callback_pf)hook->_cb;
+            lsi_release_callback_pf cb = (lsi_release_callback_pf)hook->cb;
             cb(data);
-            pData->set( MODULE_DATA_ID(hook->_module)[level], NULL );
+            pData->set(MODULE_DATA_ID(hook->module)[level], NULL);
         }
     }
 }
 
-void LsiapiBridge::expire_gdata_check()
+void LsiapiBridge::checkExpiredGData()
 {
     time_t tm = DateTime::s_curTime;
-    
-    __LsiGDataContHashT *pLsiGDataContHashT = NULL;
-    lsi_gdata_cont_val_t *containerInfo = NULL;
-    __LsiGDataContHashT::iterator iter;
-    __LsiGDataItemHashT::iterator iter2;
 
-    for(int i=0;i<LSI_CONTAINER_COUNT; ++i )
+    GDataContainer *pLsiGDataContHashT = NULL;
+    lsi_gdata_cont_t *containerInfo = NULL;
+    GDataContainer::iterator iter;
+    GDataHash::iterator iter2;
+
+    for (int i = 0; i < LSI_CONTAINER_COUNT; ++i)
     {
-        pLsiGDataContHashT = gLsiGDataContHashT[i];
-        if ( !pLsiGDataContHashT )
+        pLsiGDataContHashT = g_aGDataContainer[i];
+        if (!pLsiGDataContHashT)
             continue;
-        for(iter = pLsiGDataContHashT->begin(); iter != pLsiGDataContHashT->end(); iter = pLsiGDataContHashT->next(iter))
+        for (iter = pLsiGDataContHashT->begin(); iter != pLsiGDataContHashT->end();
+             iter = pLsiGDataContHashT->next(iter))
         {
             containerInfo = iter.second();
-            __LsiGDataItemHashT *pCont = containerInfo->container;
-            for(iter2 = pCont->begin(); iter2 != pCont->end(); iter2 = pCont->next(iter2))
+            GDataHash *pCont = containerInfo->container;
+            for (iter2 = pCont->begin(); iter2 != pCont->end();
+                 iter2 = pCont->next(iter2))
             {
-                if (iter.second() && iter2.second()->tmExpire < tm)
-                    erase_gdata_element(containerInfo, iter2);
+                if (iter.second() && iter2.second()->tmexpire < tm)
+                    erase_gdata_elem(containerInfo, iter2);
             }
         }
     }
 }
 
 
-int LsiapiBridge::init_lsiapi()
+int LsiapiBridge::initLsiapi()
 {
-    gLsiapiFunctions.get_gdata_container = get_gdata_container;
-    gLsiapiFunctions.empty_gdata_container = empty_gdata_container;
-    gLsiapiFunctions.purge_gdata_container = purge_gdata_container;
-            
-    gLsiapiFunctions.get_gdata = get_gdata;
-    gLsiapiFunctions.delete_gdata = delete_gdata;
-    gLsiapiFunctions.set_gdata = set_gdata;
-        
+    g_lsiapiFunctions.get_gdata_container = get_gdata_container;
+    g_lsiapiFunctions.empty_gdata_container = empty_gdata_container;
+    g_lsiapiFunctions.purge_gdata_container = purge_gdata_container;
+
+    g_lsiapiFunctions.get_gdata = get_gdata;
+    g_lsiapiFunctions.delete_gdata = delete_gdata;
+    g_lsiapiFunctions.set_gdata = set_gdata;
+
     lsiapi_init_server_api();
 
-    AllGlobalDataHashTInit();
+    init_gdata_hashes();
     return 0;
 }
 
-void LsiapiBridge::uninit_lsiapi()
+void LsiapiBridge::uninitLsiapi()
 {
-    AllGlobalDataHashTUnInit();
+    uninit_gdata_hashes();
 }
+
+
+// void ModuleEventNotifier::removeEventObj(EventObj **pEventObj)
+// {
+//     if ((*pEventObj) && (*pEventObj)->m_iState == 1)
+//     {
+//         (*pEventObj)->remove();
+//         (*pEventObj)->m_iId = 0;
+//         (*pEventObj)->m_iLevel = 0;
+//         (*pEventObj)->m_pModule = 0;
+//         (*pEventObj)->m_pSession = 0;
+//         (*pEventObj)->m_iState = 0;
+//         delete *pEventObj;
+//         *pEventObj = NULL;
+//     }
+// }
+//
+// int ModuleEventNotifier::onNotified(int count)
+// {
+//     while (!m_eventObjListDone.empty())
+//     {
+//         EventObj *pObj = (EventObj *)m_eventObjListDone.begin();
+//         if (pObj)
+//         {
+//             if (pObj->m_pModule)
+//                 pObj->m_pSession->hookResumeCallback(pObj->m_iLevel, pObj->m_pModule);
+//             removeEventObj(&pObj);
+//         }
+//         else
+//             break;
+//     }
+//     return 0;
+// }
+//
+// EventObj *ModuleEventNotifier::addEventObj(lsi_session_t *pSession,
+//         lsi_module_t *pModule, int level)
+// {
+//     EventObj *pEventObj = new EventObj;
+//     if (pEventObj)
+//     {
+//         pEventObj->m_iId = m_iId ++;
+//         pEventObj->m_iLevel = level;
+//         pEventObj->m_pModule = pModule;
+//         pEventObj->m_pSession = (LsiSession *)pSession;
+//         pEventObj->m_iState = 1;
+//         m_eventObjListWait.push_front(pEventObj);
+//     }
+//     return pEventObj;
+// }
+//
+// int ModuleEventNotifier::isEventObjValid(EventObj *pEventObj)
+// {
+//     return (pEventObj->next() != NULL && pEventObj->prev() != NULL);
+// }
+//
+// int ModuleEventNotifier::notifyEventObj(EventObj **pEventObj)
+// {
+//     //pEventObj should be in Wait list
+//     //assert();
+//
+//     if (*pEventObj == NULL)
+//         return -1;
+//
+//     if (!isEventObjValid(*pEventObj))
+//         removeEventObj(pEventObj);
+//
+//     //Move from Wait list to Done list
+//     EventObj *pNewObj = new EventObj;
+//     if (!pNewObj)
+//         return -1; //ERROR
+//
+//     pNewObj->m_iId = (*pEventObj)->m_iId;
+//     pNewObj->m_iLevel = (*pEventObj)->m_iLevel;
+//     pNewObj->m_pModule = (*pEventObj)->m_pModule;
+//     pNewObj->m_pSession = (*pEventObj)->m_pSession;
+//     pNewObj->m_iState = 1;
+//     m_eventObjListDone.push_front(pNewObj);
+//     removeEventObj(pEventObj);
+//
+//     notify();
+//     return 0;
+// }
+
+
+

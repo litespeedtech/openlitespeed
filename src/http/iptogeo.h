@@ -21,6 +21,7 @@
 
 #include <inttypes.h>
 
+#include <lsdef.h>
 #include "GeoIP.h"
 #include "GeoIPCity.h"
 
@@ -36,8 +37,8 @@ class GeoInfo
 public:
     GeoInfo();
     ~GeoInfo();
-    const char * getGeoEnv( const char * pEnvName );
-    int addGeoEnv( IEnv * pEnv );
+    const char *getGeoEnv(const char *pEnvName);
+    int addGeoEnv(IEnv *pEnv);
     //void addGeoEnv( HttpReq * pReq );
     void reset();
     void release();
@@ -47,38 +48,45 @@ private:
     int          m_netspeed;
     int          m_countryId;
 
-    GeoIPRegion* m_pRegion;
-    GeoIPRecord* m_pCity;
+    GeoIPRegion *m_pRegion;
+    GeoIPRecord *m_pCity;
 
-    char * m_pOrg;
-    char * m_pIsp;
+    char *m_pOrg;
+    char *m_pIsp;
+    LS_NO_COPY_ASSIGN(GeoInfo);
 };
-  
+
 class IpToGeo
 {
 
-public: 
+public:
     IpToGeo();
     ~IpToGeo();
 
-    int setGeoIpDbFile( const char * pFile, const char * cacheMode  );
-    void setUseProxyHeaders( int i )    {   m_useProxyHeaders = i;      }
+    int setGeoIpDbFile(const char *pFile, const char *cacheMode);
+    void setUseProxyHeaders(int i)    {   m_useProxyHeaders = i;      }
     int getUseProxyHeaders() const      {   return m_useProxyHeaders;   }
-    
-    int lookUp( uint32_t addr, GeoInfo * pInfo );
-    int lookUp( const char * pIP, GeoInfo * pInfo );
-    int lookUpV6( in6_addr addr, GeoInfo * pInfo );
-    int config( const XmlNodeList *pList );
-    
+
+    int lookUp(uint32_t addr, GeoInfo *pInfo);
+    int lookUp(const char *pIP, GeoInfo *pInfo);
+    int lookUpV6(in6_addr addr, GeoInfo *pInfo);
+    int config(const XmlNodeList *pList);
+
+    static void setIpToGeo( IpToGeo *pItg )
+    {   s_pIpToGeo = pItg;  }
+    static IpToGeo *getIpToGeo()
+    {   return s_pIpToGeo;  }
+
 private:
 
     int     m_locDbType;
     int     m_useProxyHeaders;
-    GeoIP * m_pLocation;
-    GeoIP * m_pOrg;
-    GeoIP * m_pIsp;
-    GeoIP * m_pNetspeed;
-    
+    GeoIP *m_pLocation;
+    GeoIP *m_pOrg;
+    GeoIP *m_pIsp;
+    GeoIP *m_pNetspeed;
+    static IpToGeo *s_pIpToGeo;
+    LS_NO_COPY_ASSIGN(IpToGeo);
 };
 
 #endif

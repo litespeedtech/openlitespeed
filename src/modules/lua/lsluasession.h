@@ -23,16 +23,17 @@
 #include <socket/gsockaddr.h>
 
 #include <ls.h>
-#include <edluastream.h>
-#include <lsluaapi.h>
+#include <modules/lua/edluastream.h>
+#include <modules/lua/lsluaapi.h>
 
 class LsLuaStreamData;
 class LsLuaTimerData;
 
+
 //
 //  Callback function type - reversed LsLuaSession and lua_State for purpose
 //
-typedef void (* LsLuaSesionCallBackFunc_t)(LsLuaSession *, lua_State *);
+typedef void (* pf_sleeprestart)(LsLuaSession *, lua_State *);
 
 class LsLuaSession
 {
@@ -40,196 +41,199 @@ public:
     LsLuaSession();
     ~LsLuaSession();
 
-    void init( lsi_session_t * pSession )
+    void init(lsi_session_t *pSession, int iCurHook)
     {
         m_pHttpSession = pSession;
-        m_pVM = NULL;
+        m_pState = NULL;
+        m_iCurHook = iCurHook;
     }
-    // 5.2 LUA
-    int setupLuaEnv(lua_State * L, LsLuaUserParam * pUser);
-    // JIT LUA 5.1
-    int setupLuaEnvX(lua_State * L, LsLuaUserParam * pUser);
 
-    inline lsi_session_t * getHttpSession() const
+    int setupLuaEnv(lua_State *L, LsLuaUserParam *pUser);
+
+    static LsLuaSession *getSelf(lua_State *L);
+
+    inline lsi_session_t *getHttpSession() const
     {   return m_pHttpSession;      }
 
-    inline lua_State * getLuaState() const
-    {   return m_pVM;      }
+    inline lua_State *getLuaState() const
+    {   return m_pState;      }
 
-    inline lua_State * getLuaStateMom() const
-    {   return m_pVM_mom;      }
-    
+    inline lua_State *getLuaStateMom() const
+    {   return m_pStateMom;      }
+
     inline void clearState()
-    {   m_pVM = NULL, m_pVM_mom = NULL; m_pHttpSession = NULL; }
+    {   m_pState = NULL, m_pStateMom = NULL; m_pHttpSession = NULL; }
 
-    // static LsLuaSession *  findByLsiSession ( const lsi_session_t * pSession) ;
-    // static LsLuaSession *  findByLuaState ( const lua_State * L) ;
+    // static LsLuaSession *  findByLsiSession ( const lsi_session_t * pSession);
+    // static LsLuaSession *  findByLuaState ( const lua_State * L);
 
-    // these three function to control the req_body wait
-    inline void setLuaWaitReqBody()
-    {   m_waitReqBody = 1; }
-    inline int isLuaWaitReqBody() const
-    {   return m_waitReqBody ; }
-    inline void clearLuaWaitReqBody()
-    {   m_waitReqBody = 0; }
-    
-    // these throttle the lua execution speed 
-    inline void setWaitLineExec()
-    {   m_waitLineExec = 1; }
-    inline int isWaitLineExec() const
-    {   return m_waitLineExec ; }
-    inline void clearWaitLineExec()
-    {   m_waitLineExec = 0; }
+    inline void setFlag(uint32_t iFlag)
+    {   m_iFlags |= iFlag;  }
+    inline int isFlagSet(uint32_t iFlag) const
+    {   return m_iFlags & iFlag;    }
+    inline void clearFlag(uint32_t iFlag)
+    {   m_iFlags &= ~iFlag; }
 
     inline void setLuaExitCode(int code)
-    {   m_exitCode = code;  }
+    {   m_iExitCode = code;  }
 
     inline int getLuaExitCode() const
-    {   return m_exitCode;  }
+    {   return m_iExitCode;  }
 
-    inline void setLuaDoneFlag()
-    {   m_doneFlag = 1;  }
-    
-    inline int isLuaDoneFlag() const
-    {   return m_doneFlag; }
-    
     inline int key() const
-    {   return m_key; }
-    
+    {   return m_iKey; }
+
     void    resume(lua_State *, int numarg);
 
     // schedule a LUA state timer
-    void    setTimer(int msec, LsLuaSesionCallBackFunc_t, lua_State *, int flag);
+    void    setTimer(int msec, pf_sleeprestart, lua_State *, int flag);
 
-    static EdLuaStream * newEdLuaStream(lua_State *); // used for allocator
+    static EdLuaStream *newEdLuaStream(lua_State *); // used for allocator
     void closeAllStream();                  // called by end of session
-    void markCloseStream(lua_State *, EdLuaStream *);    // called by GC incase LUA GC is active
-    
-    // URL Redirected
-    inline void setUrlRedirected()
-    {   m_UrlRedirected = 1; }
-    inline int isUrlRedirected() const
-    {   return m_UrlRedirected; }
-    inline void clearUrlRedirected()
-    {   m_UrlRedirected = 0; }
+    void markCloseStream(lua_State *,
+                         EdLuaStream *);   // called by GC incase LUA GC is active
 
-    inline void setEndFlag()
-    {   m_endFlag = 1; }
-    inline int isEndFlag() const
-    {   return m_endFlag; }
-    inline void clearEndFlag()
-    {   m_endFlag = 0; }
-    
-    // these control the lua resp
-    inline void setWaitRespBuf()
-    {   m_waitRespBuf = 1; }
-    inline int isWaitRespBuf() const
-    {   return m_waitRespBuf ; }
-    inline void clearWaitRespBuf()
-    {   m_waitRespBuf = 0; }
-    
-    inline LsLuaTimerData * endTimer() const
+    inline LsLuaTimerData *endTimer() const
     {   return m_pEndTimer; }
-    
-    inline LsLuaTimerData * maxRunTimer() const
+
+    inline LsLuaTimerData *maxRunTimer() const
     {   return m_pMaxTimer; }
-    
-    static inline void trace( const char* tag, LsLuaSession* pSess, lua_State* L)
+
+    static inline void trace(const char *tag, LsLuaSession *pSess,
+                             lua_State *L)
     {
-        LsLua_log( L, LSI_LOG_NOTICE, 0,
-                "TRACE %s {%p, %p} [%p %p] %d %d %d",
-                tag, pSess, L, 
-                pSess ? pSess->getLuaState() : NULL, pSess->getHttpSession(),
-                pSess->m_key,
-                pSess->m_endFlag,
-                pSess->m_doneFlag
-             );
+        LsLuaLog(L, LSI_LOG_NOTICE, 0,
+                 "TRACE %s {%p, %p} [%p %p] %d %d",
+                 tag, pSess, L,
+                 pSess ? pSess->getLuaState() : NULL, pSess->getHttpSession(),
+                 pSess->m_iKey,
+                 pSess->isFlagSet(LLF_LUADONE)
+                );
     }
-    inline int * getRefPtr() 
-    {   return &m_ref; }
+    inline int *getRefPtr()
+    {   return &m_iRef; }
     inline int  getRef() const
-    {   return m_ref; }
-    
+    {   return m_iRef; }
+
     inline int getTop() const
-    {   return m_top; };
-    inline void setTop(int top) 
-    {   m_top = top; };
-    
+    {   return m_iTop; };
+    inline void setTop(int top)
+    {   m_iTop = top; };
+
+    //
+    // Checks if the Lua session is called before iHkpt
+    //
+    inline int checkHookBefore(int iHkpt)
+    {   return m_iCurHook & iHkpt; }
+
+    static int checkHook(LsLuaSession *pSession, lua_State *L,
+                         const char *pSrc, int idx)
+    {
+        if (pSession->checkHookBefore(idx) == 0)
+        {
+            LsLuaLog(L, LSI_LOG_DEBUG, 0,
+                     "%s: Called at invalid hook point", pSrc);
+            return LsLuaApi::error(L, "Called at invalid hook point");
+        }
+        return 0;
+    }
+
+    inline void *getFilterBuf()
+    {   return m_pFilterBuf;    }
+
+    inline void setFilterBuf(void *pBuf)
+    {   m_pFilterBuf = pBuf;    }
+
+    inline LsLuaUserParam *getUserParam()
+    {   return m_pUserParam;    }
+
+    inline lsi_cb_param_t *getModParam()
+    {   return m_pModParam;    }
+
+    inline void setUserParam(LsLuaUserParam *pParam)
+    {   m_pUserParam = pParam;  }
+
+    inline void setModParam(lsi_cb_param_t *pParam)
+    {   m_pModParam = pParam;  }
+
     void releaseTimer();
-    
+
     // resp control
-    int onWrite(lsi_session_t * httpSession);    // called by modlua.c
-    int wait4RespBuffer(lua_State *L); 
-private:    
-    lua_State    * m_wait4RespBuf_L;
-    
+    int onWrite(lsi_session_t *httpSession);     // called by modlua.c
+    int wait4RespBuffer(lua_State *L);
+
+    static int endSession(LsLuaSession *);
 private:
-    LsLuaSession( const LsLuaSession& other );
-    LsLuaSession& operator=( const LsLuaSession& other );
-    bool operator==( const LsLuaSession& other );
+    lua_State     *m_wait4RespBuf_L;
 
 private:
-    lsi_session_t *  m_pHttpSession;
-    lua_State    * m_pVM; 
-    lua_State    * m_pVM_mom;       // save the parent state
+    LsLuaSession(const LsLuaSession &other);
+    LsLuaSession &operator=(const LsLuaSession &other);
+    bool operator==(const LsLuaSession &other);
+
+private:
+    lsi_session_t    *m_pHttpSession;
+    lua_State        *m_pState;
+    lua_State        *m_pStateMom;        // save the parent state
 
     //
-    //  LUA status 
+    //  LUA status
     //
-    int         m_exitCode;         // from ls.exit
-    uint32_t    m_doneFlag    : 1;  // done - reached ls._end 
-    uint32_t    m_runFlag     : 1;  // running - most of the time
-    uint32_t    m_waitReqBody : 1;  // waiting for req_body
-    uint32_t    m_waitLineExec : 1; // waiting Lua line Exec
-    uint32_t    m_waitRespBuf : 1;  // waiting for resp buffer
-    uint32_t    m_UrlRedirected : 1;// Url has been redirected
-    uint32_t    m_endFlag       : 1;
-    int         m_key;              // my key
-    int         m_ref;              // my ref for LUA
-    int         m_top;
-    LsLuaTimerData * m_pEndTimer;   // track the last endTimer
-    LsLuaTimerData * m_pMaxTimer;   // track the maxTimer
-    LsLuaStreamData * m_pStream;    // my stream pool
-    
-    // Need to track all LUA installed timer 
-    LsLuaTimerData *    m_pTimerList;
-    void addTimerToList(LsLuaTimerData * pTimerData);
-    void rmTimerFromList(LsLuaTimerData * pTimerData);
-    void releaseTimerList( );
-    void dumpTimerList( const char * tag );
+    uint32_t          m_iFlags;
+    int               m_iExitCode;       // from ls.exit
+    int               m_iKey;            // my key
+    int               m_iRef;            // my ref for LUA
+    int               m_iTop;
+    int               m_iCurHook;       // Current hook point.
+    void             *m_pFilterBuf;
+    LsLuaTimerData   *m_pEndTimer;      // track the last endTimer
+    LsLuaTimerData   *m_pMaxTimer;      // track the maxTimer
+    LsLuaStreamData *m_pStream;         // my stream pool
+    LsLuaUserParam   *m_pUserParam;
+    lsi_cb_param_t   *m_pModParam;
+
+    // Need to track all LUA installed timer
+    LsLuaTimerData   *m_pTimerList;
+    void addTimerToList(LsLuaTimerData *pTimerData);
+    void rmTimerFromList(LsLuaTimerData *pTimerData);
+    void releaseTimerList();
+    void dumpTimerList(const char *tag);
 
     //
     // We don't allow to use std::map...
     // Then build a linear list to track the session for now.
     //
-    void clearLuaStatus();   
-    static int  s_key;              // System wise unique key
-    
-    // callback timer 
+    void clearLuaStatus();
+    static int  s_iKey;              // System wide unique key
+
+    // callback timer
     static void timerCb(void *);
 
     // reach max runtime callback
     // static void maxruntimeCb(void *);
     static void maxRunTimeCb(LsLuaSession *pSession, lua_State *L);
-    
+
     //
     // Hook point for LUA line hook + Lsi timer callback
     //
     static void luaLineLooper(LsLuaSession *pSession, lua_State *L);
-    static void luaLineHookCb(lua_State * L, lua_Debug *ar);
+    static void luaLineHookCb(lua_State *L, lua_Debug *ar);
     inline void upLuaCounter()
-    { m_luaLineCount++; }
-    u_int32_t m_luaLineCount;    // counter how many time this got called
+    { m_iLuaLineCount++; }
+    u_int32_t m_iLuaLineCount;    // counter how many time this got called
 public:
     u_int32_t getLuaCounter()
-    { return m_luaLineCount; }
+    { return m_iLuaLineCount; }
 };
 
-
-void LsLua_create_session( lua_State * L );
-void LsLua_create_req_meta( lua_State * L );
-void LsLua_create_resp_meta( lua_State * L );
-void LsLua_create_session_meta( lua_State * L );
+void LsLuaCreateConstants(lua_State *L);
+void LsLuaCreateUD(lua_State *L);
+void LsLuaCreateSession(lua_State *L);
+void LsLuaCreateRegexmeta(lua_State *L);
+void LsLuaCreateReqmeta(lua_State *L);
+void LsLuaCreateRespmeta(lua_State *L);
+void LsLuaCreateSessionmeta(lua_State *L);
+void LsLuaCreateArgTable(lua_State *L);
 
 //
 //  keep track of EdStream
@@ -237,32 +241,32 @@ void LsLua_create_session_meta( lua_State * L );
 class LsLuaStreamData
 {
 public: // no need to protect myself
-    LsLuaStreamData(EdLuaStream * sock, LsLuaStreamData * _next)
-    : m_sock(sock)
-    , m_next(_next)
-    , m_active(1)
+    LsLuaStreamData(EdLuaStream *sock, LsLuaStreamData *_next)
+        : m_pSock(sock)
+        , m_pNext(_next)
+        , m_pActive(1)
     {
     }
-    inline EdLuaStream * stream() const
-    { return m_sock; }
+    inline EdLuaStream *stream() const
+    { return m_pSock; }
     inline int isActive() const
-    {   return m_active; }
-    inline void setNotActive() 
-    { m_active = 0; }
-    inline LsLuaStreamData * next() const
-    { return m_next; }
-    inline int isMatch(EdLuaStream * sock)
-    { return sock == m_sock; }
+    {   return m_pActive; }
+    inline void setNotActive()
+    { m_pActive = 0; }
+    inline LsLuaStreamData *next() const
+    { return m_pNext; }
+    inline int isMatch(EdLuaStream *sock)
+    { return sock == m_pSock; }
     void close(lua_State *);
 private:
-    LsLuaStreamData( );
-    LsLuaStreamData( const LsLuaStreamData& other );
-    LsLuaStreamData& operator=( const LsLuaStreamData& other );
-    bool operator==( const LsLuaStreamData& other );
+    LsLuaStreamData();
+    LsLuaStreamData(const LsLuaStreamData &other);
+    LsLuaStreamData &operator=(const LsLuaStreamData &other);
+    bool operator==(const LsLuaStreamData &other);
 private:
-    EdLuaStream * m_sock;
-    LsLuaStreamData * m_next;
-    int m_active; // the stream still active
+    EdLuaStream *m_pSock;
+    LsLuaStreamData *m_pNext;
+    int m_pActive; // the stream still active
 };
 
 //
@@ -271,53 +275,53 @@ private:
 class LsLuaTimerData
 {
 public: // no need to protect myself
-    LsLuaTimerData(LsLuaSession *pSession, LsLuaSesionCallBackFunc_t func, lua_State * L)
+    LsLuaTimerData(LsLuaSession *pSession, pf_sleeprestart func, lua_State *L)
     {
-       m_key = pSession->key();
-       m_pFunc = func;
-       m_pSession = pSession;
-       m_L = L;
-       m_flag = 0;
-       m_id = 0;
-       m_pNext = NULL;
+        m_iKey = pSession->key();
+        m_pFunc = func;
+        m_pSession = pSession;
+        m_pState = L;
+        m_iDeleteFlag = 0;
+        m_iTimerId = 0;
+        m_pNext = NULL;
     }
-    ~LsLuaTimerData() { m_key = 0; }
+    ~LsLuaTimerData() { m_iKey = 0; }
     int key() const
-    {   return m_key; }
-    LsLuaSession * session() const
+    {   return m_iKey; }
+    LsLuaSession *session() const
     {   return m_pSession; }
-    lua_State * L() const
-    {   return m_L; }
+    lua_State *L() const
+    {   return m_pState; }
     void timerCallBack() const
-    {   (*m_pFunc)(m_pSession, m_L); }
+    {   (*m_pFunc)(m_pSession, m_pState); }
     int flag() const
-    {   return m_flag; }
-    void setFlag( int flag ) 
-    {   m_flag = flag; }
+    {   return m_iDeleteFlag; }
+    void setFlag(int flag)
+    {   m_iDeleteFlag = flag; }
     int id() const
-    {   return m_id; }
-    void setId( int id )
-    {   m_id = id; }
-    
-    LsLuaTimerData * next()
+    {   return m_iTimerId; }
+    void setId(int id)
+    {   m_iTimerId = id; }
+
+    LsLuaTimerData *next()
     {   return m_pNext; }
-    
-    void setNext(LsLuaTimerData * pTimerData)
+
+    void setNext(LsLuaTimerData *pTimerData)
     {   m_pNext = pTimerData; }
-    
-private:    
-    LsLuaTimerData( );
-    LsLuaTimerData( const LsLuaTimerData& other );
-    LsLuaTimerData& operator=( const LsLuaTimerData& other );
-    bool operator==( const LsLuaTimerData& other );
-private:    
-    int             m_flag;         // Session deleted
-    int             m_key;
-    LsLuaSesionCallBackFunc_t        m_pFunc;
-    LsLuaSession *  m_pSession;
-    lua_State *     m_L;
-    int             m_id;
-    LsLuaTimerData * m_pNext;       // track the timer by each LUA Session
+
+private:
+    LsLuaTimerData();
+    LsLuaTimerData(const LsLuaTimerData &other);
+    LsLuaTimerData &operator=(const LsLuaTimerData &other);
+    bool operator==(const LsLuaTimerData &other);
+private:
+    int             m_iDeleteFlag;         // Session deleted
+    int             m_iKey;
+    pf_sleeprestart m_pFunc;
+    LsLuaSession   *m_pSession;
+    lua_State      *m_pState;
+    int             m_iTimerId;
+    LsLuaTimerData *m_pNext;       // track the timer by each LUA Session
 };
 
 #endif // LSLUAREQ_H

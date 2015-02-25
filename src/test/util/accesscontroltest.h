@@ -16,7 +16,7 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #ifdef RUN_TEST
- 
+
 #ifndef ACCESSCONTROLTEST_H
 #define ACCESSCONTROLTEST_H
 

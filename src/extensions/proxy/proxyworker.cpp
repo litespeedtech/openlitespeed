@@ -18,19 +18,19 @@
 #include "proxyworker.h"
 #include "proxyconfig.h"
 #include "proxyconn.h"
-ProxyWorker::ProxyWorker( const char * pName )
+ProxyWorker::ProxyWorker(const char *pName)
 {
-    setConfigPointer( new ProxyConfig( pName ) );
+    setConfigPointer(new ProxyConfig(pName));
 }
 ProxyWorker::~ProxyWorker()
 {}
 
-ExtConn * ProxyWorker::newConn()
+ExtConn *ProxyWorker::newConn()
 {
-    ProxyConn * pConn = new ProxyConn();
+    ProxyConn *pConn = new ProxyConn();
     //if (( pConn )&&( getConfig().getSsl() ))
     //    pConn->setUseSsl( 1 );
-        
+
     return pConn;
 }
 

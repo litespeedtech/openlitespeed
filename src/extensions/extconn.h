@@ -19,6 +19,7 @@
 #define EXTCONN_H
 
 
+#include <lsdef.h>
 #include <time.h>
 #include <edio/ediostream.h>
 #include <util/iconnection.h>
@@ -28,7 +29,7 @@ class ExtRequest;
 class ExtWorker;
 
 class ExtConn : public EdStream, public IConnection
-              , virtual public LOG4CXX_NS::ILog
+    , virtual public LOG4CXX_NS::ILog
 {
     char            m_iState;
     char            m_iToStop;
@@ -36,20 +37,20 @@ class ExtConn : public EdStream, public IConnection
     char            m_iCPState;
     time_t          m_tmLastAccess;
     int             m_iReqProcessed;
-    ExtWorker     * m_pWorker;
+    ExtWorker      *m_pWorker;
 
 
 protected:
-    int connError( int error );
-    int connectEx( Multiplexer * pMplx );
+    int connError(int error);
+    int connectEx(Multiplexer *pMplx);
 
     virtual int doRead() = 0;
-    virtual int doError( int err ) = 0;
+    virtual int doError(int err) = 0;
     virtual int doWrite() = 0;
-    virtual int addRequest( ExtRequest * pReq ) = 0;
-    virtual int connect( Multiplexer * pMplx );
+    virtual int addRequest(ExtRequest *pReq) = 0;
+    virtual int connect(Multiplexer *pMplx);
 public:
-    virtual int removeRequest( ExtRequest* pReq ) = 0;
+    virtual int removeRequest(ExtRequest *pReq) = 0;
     enum
     {
         DISCONNECTED,
@@ -70,28 +71,28 @@ public:
 
     ExtConn();
     virtual ~ExtConn();
-    void  setState( char state )    {   m_iState = state;       }
+    void  setState(char state)    {   m_iState = state;       }
     char  getState() const          {   return m_iState;        }
 
-    void  setToStop( char n )       {   m_iToStop = n;          }
+    void  setToStop(char n)       {   m_iToStop = n;          }
     char  getToStop() const         {   return m_iToStop;       }
 
-    void  setInProcess( char s )    {   m_iInProcess = s;       }
+    void  setInProcess(char s)    {   m_iInProcess = s;       }
     char  getInProcess() const      {   return m_iInProcess;    }
 
-    void  setCPState( char s )      {   m_iCPState = s;         }
+    void  setCPState(char s)      {   m_iCPState = s;         }
     char  getCPState() const        {   return m_iCPState;      }
 
-    void  access( time_t tm )       {   m_tmLastAccess = tm;    }
+    void  access(time_t tm)       {   m_tmLastAccess = tm;    }
     time_t getLastAccess() const    {   return m_tmLastAccess;  }
 
-    void  setWorker( ExtWorker * pWorker )
+    void  setWorker(ExtWorker *pWorker)
     {   m_pWorker = pWorker;      }
-    ExtWorker * getWorker() const
+    ExtWorker *getWorker() const
     {   return m_pWorker;   }
 
     //void reset();
-    virtual void init( int fd, Multiplexer* pMplx ) = 0;
+    virtual void init(int fd, Multiplexer *pMplx) = 0;
     virtual int  close();
 
     int  onRead();
@@ -106,11 +107,11 @@ public:
 
     int  getReqProcessed() const    {   return m_iReqProcessed; }
     void incReqProcessed()          {   ++m_iReqProcessed;      }
-    void setReqProcessed( int n)    {   m_iReqProcessed = n;    }
+    void setReqProcessed(int n)    {   m_iReqProcessed = n;    }
 
 
-    int  assignReq( ExtRequest* req );
-    virtual ExtRequest* getReq() const = 0;
+    int  assignReq(ExtRequest *req);
+    virtual ExtRequest *getReq() const = 0;
     void recycle();
 
     void checkInProcess();
@@ -122,6 +123,7 @@ public:
     void continueWrite();
     void suspendWrite();
 #endif
+    LS_NO_COPY_ASSIGN(ExtConn);
 };
 
 #endif

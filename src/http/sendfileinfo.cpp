@@ -21,10 +21,12 @@
 
 
 SendFileInfo::SendFileInfo()
-    : m_pFileData( NULL )
-    , m_pECache( NULL )
-    , m_lCurPos( 0 )
-    , m_lCurEnd( 0 )
+    : m_pFileData(NULL)
+    , m_pECache(NULL)
+    , m_pAioBuf(NULL)
+    , m_lCurPos(0)
+    , m_lCurEnd(0)
+    , m_lAioLen(0)
 {
 }
 

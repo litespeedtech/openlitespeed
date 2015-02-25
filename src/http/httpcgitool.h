@@ -31,19 +31,19 @@ class HttpCgiTool
 {
     HttpCgiTool()   {};
     ~HttpCgiTool()  {};
-    static int addHttpHeaderEnv( IEnv * pEnv, HttpReq * pReq );
-    static int addSpecialEnv( IEnv * pEnv, HttpReq * pReq );
+    static int addHttpHeaderEnv(IEnv *pEnv, HttpReq *pReq);
+    static int addSpecialEnv(IEnv *pEnv, HttpReq *pReq);
 public:
-    static int processContentType( HttpReq * pReq, HttpResp* pResp, 
-                        const char * pValue, int valLen );    
-    static int processHeaderLine( HttpExtConnector * pLB,
-                        const char * pValue, const char * pLineEnd, int &status );
-    static int parseRespHeader( HttpExtConnector * pLB,
-                        const char * pBuf, int size, int &status );
-    static int buildEnv( IEnv* pEnv, HttpSession* pSession);
-    static int buildFcgiEnv( FcgiEnv* pEnv, HttpSession* pSession );
+    static int processContentType(HttpReq *pReq, HttpResp *pResp,
+                                  const char *pValue, int valLen);
+    static int processHeaderLine(HttpExtConnector *pLB,
+                                 const char *pValue, const char *pLineEnd, int &status);
+    static int parseRespHeader(HttpExtConnector *pLB,
+                               const char *pBuf, int size, int &status);
+    static int buildEnv(IEnv *pEnv, HttpSession *pSession);
+    static int buildFcgiEnv(FcgiEnv *pEnv, HttpSession *pSession);
     static void buildServerEnv();
-    static int buildCommonEnv( IEnv * pEnv, HttpSession* pSession );
+    static int buildCommonEnv(IEnv *pEnv, HttpSession *pSession);
 
 };
 

@@ -20,6 +20,7 @@
 
 
 
+#include <lsdef.h>
 #include <log4cxx/nsdefs.h>
 #include <util/autostr.h>
 #include <util/duplicable.h>
@@ -32,23 +33,26 @@ BEGIN_LOG4CXX_NS
 class LoggingEvent;
 class Layout : public Duplicable
 {
-    void   * m_pUserData;
+    void    *m_pUserData;
 protected:
-    Layout(const char *pName )
-        : Duplicable( pName )
-        , m_pUserData( NULL )
-        {};
-public: 
+    Layout(const char *pName)
+        : Duplicable(pName)
+        , m_pUserData(NULL)
+    {};
+public:
     virtual ~Layout() {};
     static int init();
-    static Layout* getLayout( const char * pName, const char * pType );
-    void setUData( void * udata )
+    static Layout *getLayout(const char *pName, const char *pType);
+    void setUData(void *udata)
     {   m_pUserData = udata;    }
-    void * getUData() const
+    void *getUData() const
     {   return m_pUserData;     }
-    virtual Duplicable * dup( const char * pName );
-    virtual int format( LoggingEvent * pEvent, char * pBuf, int len );
-    
+    virtual Duplicable *dup(const char *pName);
+    virtual int format(LoggingEvent *pEvent, char *pBuf, int len);
+
+
+
+    LS_NO_COPY_ASSIGN(Layout);
 };
 
 END_LOG4CXX_NS

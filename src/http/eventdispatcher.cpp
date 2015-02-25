@@ -18,18 +18,20 @@
 #include "eventdispatcher.h"
 #include <edio/multiplexer.h>
 #include <edio/multiplexerfactory.h>
+#include <edio/sigeventdispatcher.h>
 #include <http/adns.h>
 #include <util/datetime.h>
 #include <http/httpdefs.h>
-#include <http/httpglobals.h>
 #include <http/httplog.h>
 #include <http/httpsignals.h>
+#include <http/ntwkiolink.h>
 #include <http/connlimitctrl.h>
 #include <main/httpserver.h>
 #include <errno.h>
 #include <string.h>
 #include <sys/time.h>
 #include <unistd.h>
+#include <lsiapi/moduleeventnotifier.h>
 #include <lsiapi/modulemanager.h>
 
 int highPriorityTask();
@@ -44,49 +46,50 @@ EventDispatcher::~EventDispatcher()
     release();
 }
 
-int EventDispatcher::init( const char * pType )
+int EventDispatcher::init(const char *pType)
 {
-    if ( HttpGlobals::getMultiplexer() )
+    if (MultiplexerFactory::getMultiplexer())
         return 0;
-    HttpGlobals::s_iMultiplexerType = MultiplexerFactory::getType( pType );
-    Multiplexer * pMultiplexer =
-            MultiplexerFactory::get( HttpGlobals::s_iMultiplexerType );
-    if ( pMultiplexer != NULL )
+    MultiplexerFactory::s_iMultiplexerType = MultiplexerFactory::getType(
+                pType);
+    Multiplexer *pMultiplexer =
+        MultiplexerFactory::getNew(MultiplexerFactory::s_iMultiplexerType);
+    if (pMultiplexer != NULL)
     {
-        if ( !pMultiplexer->init( DEFAULT_INIT_POLL_SIZE) )
+        if (!pMultiplexer->init(DEFAULT_INIT_POLL_SIZE))
         {
-            HttpGlobals::setMultiplexer( pMultiplexer );
-            pMultiplexer->setPriHandler( highPriorityTask );
-            HttpGlobals::s_ModuleEventNotifier.initNotifier(pMultiplexer);
+            MultiplexerFactory::setMultiplexer(pMultiplexer);
+            pMultiplexer->setPriHandler(highPriorityTask);
+            ModuleEventNotifier::getInstance().initNotifier(pMultiplexer);
             return 0;
         }
     }
-    return -1;
+    return LS_FAIL;
 }
 
-int EventDispatcher::reinit( )
+int EventDispatcher::reinit()
 {
-    if ( !HttpGlobals::getMultiplexer() )
-        return -1;
-    MultiplexerFactory::recycle( HttpGlobals::getMultiplexer() );
-    Multiplexer * pMultiplexer =
-            MultiplexerFactory::get( HttpGlobals::s_iMultiplexerType );
-    if ( pMultiplexer != NULL )
+    if (!MultiplexerFactory::getMultiplexer())
+        return LS_FAIL;
+    MultiplexerFactory::recycle(MultiplexerFactory::getMultiplexer());
+    Multiplexer *pMultiplexer =
+        MultiplexerFactory::getNew(MultiplexerFactory::s_iMultiplexerType);
+    if (pMultiplexer != NULL)
     {
-        if ( !pMultiplexer->init( DEFAULT_INIT_POLL_SIZE) )
+        if (!pMultiplexer->init(DEFAULT_INIT_POLL_SIZE))
         {
-            HttpGlobals::setMultiplexer( pMultiplexer );
-            pMultiplexer->setPriHandler( highPriorityTask );
-            HttpGlobals::s_ModuleEventNotifier.initNotifier(pMultiplexer);
+            MultiplexerFactory::setMultiplexer(pMultiplexer);
+            pMultiplexer->setPriHandler(highPriorityTask);
+            ModuleEventNotifier::getInstance().initNotifier(pMultiplexer);
             return 0;
         }
     }
-    return -1;
+    return LS_FAIL;
 }
 
 void EventDispatcher::release()
 {
-    MultiplexerFactory::recycle( HttpGlobals::getMultiplexer() );
+    MultiplexerFactory::recycle(MultiplexerFactory::getMultiplexer());
 }
 
 int EventDispatcher::stop()
@@ -98,55 +101,55 @@ int EventDispatcher::stop()
 static void processTimer()
 {
     struct timeval tv;
-    gettimeofday( &tv, NULL );
+    gettimeofday(&tv, NULL);
 
-    //FIXME: debug code
+    //TEST: debug code
     //LOG_D(( "processTimer()" ));
-    
+
     DateTime::s_curTime = tv.tv_sec;
     DateTime::s_curTimeUs = tv.tv_usec;
-    HttpGlobals::s_tmPrevToken = HttpGlobals::s_tmToken;
-    HttpGlobals::s_tmToken = tv.tv_usec / ( 1000000 / TIMER_PRECISION );
-    if ( HttpGlobals::s_tmToken < HttpGlobals::s_tmPrevToken )
+    NtwkIOLink::setPrevToken(NtwkIOLink::getToken());
+    NtwkIOLink::setToken(tv.tv_usec / (1000000 / TIMER_PRECISION));
+    if (NtwkIOLink::getToken() < NtwkIOLink::getPrevToken())
         HttpServer::getInstance().onTimer();
-    HttpGlobals::getMultiplexer()->timerExecute();
+    MultiplexerFactory::getMultiplexer()->timerExecute();
 }
 
 int highPriorityTask()
 {
-    if ( HttpSignals::gotSigAlarm() )
+    if (HttpSignals::gotSigAlarm())
     {
         HttpSignals::resetSigAlarm();
         processTimer();
     }
-    HttpGlobals::getConnLimitCtrl()->tryAcceptNewConn();
+    ConnLimitCtrl::getInstance().tryAcceptNewConn();
     return 0;
 }
 
-static void startTimer( )
+static void startTimer()
 {
     struct itimerval tmv;
-    memset( &tmv, 0, sizeof( struct itimerval ) );
+    memset(&tmv, 0, sizeof(struct itimerval));
     tmv.it_interval.tv_usec = 1000000 / TIMER_PRECISION;
-    gettimeofday( &tmv.it_value, NULL );
+    gettimeofday(&tmv.it_value, NULL);
     tmv.it_value.tv_sec = 0;
-    HttpGlobals::s_tmPrevToken = HttpGlobals::s_tmToken = 
-            tmv.it_value.tv_usec / tmv.it_interval.tv_usec;
+    NtwkIOLink::setToken(tmv.it_value.tv_usec / tmv.it_interval.tv_usec);
+    NtwkIOLink::setPrevToken(NtwkIOLink::getToken());
     tmv.it_value.tv_usec = tmv.it_interval.tv_usec -
-            tmv.it_value.tv_usec % tmv.it_interval.tv_usec;
-    setitimer (ITIMER_REAL, &tmv, NULL);
+                           tmv.it_value.tv_usec % tmv.it_interval.tv_usec;
+    setitimer(ITIMER_REAL, &tmv, NULL);
 }
 
 /*
 #define MLTPLX_TIMEOUT 1000
 int EventDispatcher::run()
 {
-    register int ret;
-    register int sigEvent;
+    int ret;
+    int sigEvent;
     startTimer();
     while( true )
     {
-        ret = HttpGlobals::getMultiplexer()->waitAndProcessEvents(
+        ret = MultiplexerFactory::getMultiplexer()->waitAndProcessEvents(
                     MLTPLX_TIMEOUT );
         if (( ret == -1 )&& errno )
         {
@@ -162,10 +165,10 @@ int EventDispatcher::run()
             if ( sigEvent & HS_ALARM )
             {
                 processTimer();
-                HttpGlobals::getConnLimitCtrl()->checkWaterMark();
+                ConnLimitCtrl::getInstance().checkWaterMark();
 
 #ifdef  USE_CARES
-                if ( HttpGlobals::s_dnsLookup )
+                if (HttpServerConfig::getInstance().getDnsLookup())
                     Adns::process();
 #endif
             }
@@ -184,30 +187,28 @@ int EventDispatcher::run()
 static inline void processTimerNew()
 {
     struct timeval tv;
-    gettimeofday( &tv, NULL );
+    gettimeofday(&tv, NULL);
 
-    //FIXME: debug code
+    //TEST: debug code
     //int n = tv.tv_usec / ( 1000000 / TIMER_PRECISION );
-    
+
     DateTime::s_curTime = tv.tv_sec;
     DateTime::s_curTimeUs = tv.tv_usec;
-    HttpGlobals::s_tmPrevToken = HttpGlobals::s_tmToken;
-    HttpGlobals::s_tmToken = tv.tv_usec / ( 1000000 / TIMER_PRECISION );
-    if ( HttpGlobals::s_tmToken != HttpGlobals::s_tmPrevToken )
-    {   
-        if ( HttpGlobals::s_tmToken < HttpGlobals::s_tmPrevToken )
+    NtwkIOLink::setPrevToken(NtwkIOLink::getToken());
+    NtwkIOLink::setToken(tv.tv_usec / (1000000 / TIMER_PRECISION));
+    if (NtwkIOLink::getToken() != NtwkIOLink::getPrevToken())
+    {
+        if (NtwkIOLink::getToken() < NtwkIOLink::getPrevToken())
         {
-            if ( getppid() == 1 )
-            {   
+            if (getppid() == 1)
                 HttpSignals::setSigStop();
-            }
             HttpServer::getInstance().onTimer();
         }
-        HttpGlobals::getMultiplexer()->timerExecute();
-        HttpGlobals::getConnLimitCtrl()->checkWaterMark();
+        MultiplexerFactory::getMultiplexer()->timerExecute();
+        ConnLimitCtrl::getInstance().checkWaterMark();
         //LOG_D(( "processTimer()" ));
     }
-    
+
     ModuleManager::getInstance().OnTimer100msec();
 }
 
@@ -215,35 +216,36 @@ static inline void processTimerNew()
 #define MLTPLX_TIMEOUT 100
 int EventDispatcher::run()
 {
-    register int ret;
-    register int sigEvent;
-    while( true )
+    int ret;
+    int sigEvent;
+    while (true)
     {
-        ret = HttpGlobals::getMultiplexer()->waitAndProcessEvents(
-                    MLTPLX_TIMEOUT );
-        if (( ret == -1 )&& errno )
+        ret = MultiplexerFactory::getMultiplexer()->waitAndProcessEvents(
+                  MLTPLX_TIMEOUT);
+        if ((ret == -1) && errno)
         {
-            if (!((errno == EINTR )||(errno == EAGAIN)))
+            if (!((errno == EINTR) || (errno == EAGAIN)))
             {
-                LOG_ERR(( "Unexpected error inside event loop: %s", strerror( errno ) ));
+                LOG_ERR(("Unexpected error inside event loop: %s", strerror(errno)));
                 return 1;
             }
         }
         processTimerNew();
-        if ( (sigEvent = HttpSignals::gotEvent()) )
+#ifdef LS_AIO_USE_SIGNAL
+        SigEventDispatcher::processSigEvent();
+#endif
+        if ((sigEvent = HttpSignals::gotEvent()))
         {
             HttpSignals::resetEvents();
-            if ( sigEvent & HS_USR2 )
+            if (sigEvent & HS_USR2)
             {
                 HttpLog::toggleDebugLog();
                 ModuleManager::updateDebugLevel();
 
             }
-            if ( sigEvent & HS_CHILD )
-            {
-                HttpServer::cleanPid();   
-            }
-            if ( sigEvent & HS_STOP )
+            if (sigEvent & HS_CHILD)
+                HttpServer::cleanPid();
+            if (sigEvent & HS_STOP)
                 break;
         }
     }
@@ -251,35 +253,36 @@ int EventDispatcher::run()
 }
 
 
-int EventDispatcher::linger( int timeout )
+int EventDispatcher::linger(int timeout)
 {
-    register int ret;
+    int ret;
     long endTime = time(NULL) + timeout;
-    HttpGlobals::getMultiplexer()->setPriHandler( NULL );
+    MultiplexerFactory::getMultiplexer()->setPriHandler(NULL);
     startTimer();
-    while(( time( NULL ) < endTime )&&
-          ( HttpGlobals::getConnLimitCtrl()->getMaxConns() >
-            HttpGlobals::getConnLimitCtrl()->availConn() ))
+    while ((time(NULL) < endTime)
+            && (ConnLimitCtrl::getInstance().getMaxConns()
+                > ConnLimitCtrl::getInstance().availConn()))
     {
-        ret = HttpGlobals::getMultiplexer()->waitAndProcessEvents(
-                    MLTPLX_TIMEOUT );
-        if ( ret == -1 )
+        ret = MultiplexerFactory::getMultiplexer()->waitAndProcessEvents(
+                  MLTPLX_TIMEOUT);
+        if (ret == -1)
         {
-            if (!((errno == EINTR )||(errno == EAGAIN)))
+            if (!((errno == EINTR) || (errno == EAGAIN)))
             {
-                LOG_ERR(( "Unexpected error inside event loop: %s", strerror( errno ) ));
+                LOG_ERR(("Unexpected error inside event loop: %s", strerror(errno)));
                 return 1;
             }
         }
-        if ( HttpSignals::gotSigAlarm() )
+#ifdef LS_AIO_USE_SIGNAL
+        SigEventDispatcher::processSigEvent();
+#endif
+        if (HttpSignals::gotSigAlarm())
         {
             HttpSignals::resetEvents();
             processTimer();
         }
-        if ( HttpSignals::gotSigChild() )
-        {
+        if (HttpSignals::gotSigChild())
             HttpServer::cleanPid();
-        }
 
     }
     return 0;

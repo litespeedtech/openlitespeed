@@ -22,7 +22,7 @@
 
 class IOVec;
 
-class CacheOS 
+class CacheOS
 {
 public:
     CacheOS() {}
@@ -30,12 +30,12 @@ public:
     //        pRet return total bytes written to output stream
     // return -1 if error occure
     //        other total bytes cached and written to output stream
-    
-    virtual int cacheWrite( const char * pBuf, int size,
-                        int * pRet = 0 ) = 0;
-    virtual int cacheWritev( IOVec &vector, int total,
-                        int * pRet = 0 ) = 0;
-    virtual bool canHold( int size ) = 0;
-    
+
+    virtual int cacheWrite(const char *pBuf, int size,
+                           int *pRet = 0) = 0;
+    virtual int cacheWritev(IOVec &vector, int total,
+                            int *pRet = 0) = 0;
+    virtual bool canHold(int size) = 0;
+
 };
 #endif

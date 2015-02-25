@@ -18,54 +18,54 @@
 #ifndef OBJARRAY_H
 #define OBJARRAY_H
 
-#include <lsr/lsr_objarray.h>
+#include <lsr/ls_objarray.h>
 
 #include <string.h>
 
-class ObjArray : private lsr_objarray_t
+class ObjArray : private ls_objarray_t
 {
 private:
-    ObjArray( const ObjArray &rhs );
-    void operator=( const ObjArray &rhs );
+    ObjArray(const ObjArray &rhs);
+    void operator=(const ObjArray &rhs);
 public:
-    ObjArray( int objSize )                     {   lsr_objarray_init( this, objSize ); }
+    ObjArray(int objSize)                     {   ls_objarray_init(this, objSize); }
     ~ObjArray() {};
-    
-    void    init( int objSize )                 {   lsr_objarray_init( this, objSize ); }
-    void    release( lsr_xpool_t *pool )        {   lsr_objarray_release( this, pool ); }
-    void    clear()                             {   m_size = 0; }
-    
-    int     getCapacity() const                 {   return m_capacity;  }
-    int     getSize() const                     {   return m_size;  }
-    int     getObjSize() const                  {   return m_objSize;   }
-    void   *getArray()                          {   return m_pArray;}
-    void   *getObj( int index ) const           {   return lsr_objarray_getobj( this, index );}
-    void   *getNew()                            {   return lsr_objarray_getnew( this ); }
-    
-    void    setSize( int size )                 {   lsr_objarray_setsize( this, size ); }
-    
-    void setCapacity( lsr_xpool_t *pool, int numObj ) 
-    {   lsr_objarray_setcapacity( this, pool, numObj ); }
-    
-    void guarantee( lsr_xpool_t *pool, int numObj )     
-    {   lsr_objarray_guarantee( this, pool, numObj );   }
+
+    void    init(int objSize)                 {   ls_objarray_init(this, objSize); }
+    void    release(ls_xpool_t *pool)        {   ls_objarray_release(this, pool); }
+    void    clear()                             {   sizenow = 0; }
+
+    int     getCapacity() const                 {   return sizemax;  }
+    int     getSize() const                     {   return sizenow;  }
+    int     getObjSize() const                  {   return objsize;   }
+    void   *getArray()                          {   return parray;}
+    void   *getObj(int index) const           {   return ls_objarray_getobj(this, index);}
+    void   *getNew()                            {   return ls_objarray_getnew(this); }
+
+    void    setSize(int size)                 {   ls_objarray_setsize(this, size); }
+
+    void setCapacity(ls_xpool_t *pool, int numObj)
+    {   ls_objarray_setcapacity(this, pool, numObj); }
+
+    void guarantee(ls_xpool_t *pool, int numObj)
+    {   ls_objarray_guarantee(this, pool, numObj);   }
 };
-    
+
 template< class T >
 class TObjArray : public ObjArray
-{   
+{
 private:
-    TObjArray( const TObjArray &rhs );
-    void operator=( const TObjArray& rhs );
+    TObjArray(const TObjArray &rhs);
+    void operator=(const TObjArray &rhs);
 public:
     TObjArray()
-        :ObjArray( sizeof( T ) )
+        : ObjArray(sizeof(T))
     {};
-    ~TObjArray(){};
-    
-    void    init()                      {   ObjArray::init( sizeof( T ));   }
+    ~TObjArray() {};
+
+    void    init()                      {   ObjArray::init(sizeof(T));   }
     T      *getArray()                  {   return (T *)ObjArray::getArray(); }
-    T      *getObj( int index ) const   {   return (T *)ObjArray::getObj( index );  }
+    T      *getObj(int index) const   {   return (T *)ObjArray::getObj(index);  }
     T      *getNew()                    {   return (T *)ObjArray::getNew(); }
 };
 

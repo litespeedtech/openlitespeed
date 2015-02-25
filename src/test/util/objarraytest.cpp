@@ -16,8 +16,8 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #ifdef RUN_TEST
- 
-#include <lsr/lsr_xpool.h>
+
+#include <lsr/ls_xpool.h>
 #include <util/objarray.h>
 
 #include <stdio.h>
@@ -30,166 +30,166 @@ typedef struct testpair_s
     int val;
 } testpair_t;
 
-TEST( objArrayTest_test)
+TEST(objArrayTest_test)
 {
     int i;
-    ObjArray *pArray = new ObjArray( sizeof( testpair_t ));
-    lsr_xpool_t pool;
-    lsr_xpool_init( &pool );
-    
-    CHECK( pArray->getCapacity() == 0 );
-    CHECK( pArray->getSize() == 0 );
-    CHECK( pArray->getArray() == NULL );
-    pArray->guarantee( &pool, 10 );
-    CHECK( pArray->getCapacity() == 10 );
-    CHECK( pArray->getSize() == 0 );
-    CHECK( pArray->getArray() != NULL );
-    for( i = 0; i < 10; ++i )
+    ObjArray *pArray = new ObjArray(sizeof(testpair_t));
+    ls_xpool_t pool;
+    ls_xpool_init(&pool);
+
+    CHECK(pArray->getCapacity() == 0);
+    CHECK(pArray->getSize() == 0);
+    CHECK(pArray->getArray() == NULL);
+    pArray->guarantee(&pool, 10);
+    CHECK(pArray->getCapacity() == 10);
+    CHECK(pArray->getSize() == 0);
+    CHECK(pArray->getArray() != NULL);
+    for (i = 0; i < 10; ++i)
     {
         testpair_t *buf = (testpair_t *)pArray->getNew();
         buf->key = buf->val = i + 1;
     }
-    CHECK( pArray->getSize() == 10 );
-    CHECK( pArray->getCapacity() == 10 );
-    CHECK( pArray->getNew() == NULL );
-    for( i = 0; i < 10; ++i )
+    CHECK(pArray->getSize() == 10);
+    CHECK(pArray->getCapacity() == 10);
+    CHECK(pArray->getNew() == NULL);
+    for (i = 0; i < 10; ++i)
     {
-        testpair_t *buf = (testpair_t *)pArray->getObj( i );
-        CHECK( buf->key == i + 1 && buf->val == i + 1 );
+        testpair_t *buf = (testpair_t *)pArray->getObj(i);
+        CHECK(buf->key == i + 1 && buf->val == i + 1);
     }
-    CHECK( pArray->getObj( 0 ) == pArray->getArray());
-    CHECK( pArray->getObj( -1 ) == NULL );
-    CHECK( pArray->getObj( 11 ) == NULL );
-    pArray->guarantee( &pool, 20 );
-    CHECK( pArray->getCapacity() == 20 );
-    CHECK( pArray->getSize() == 10 );
-    CHECK( pArray->getArray() != NULL );
-    CHECK( pArray->getObj( 15 ) == NULL );
-    for( i = 10; i < 20; ++i )
+    CHECK(pArray->getObj(0) == pArray->getArray());
+    CHECK(pArray->getObj(-1) == NULL);
+    CHECK(pArray->getObj(11) == NULL);
+    pArray->guarantee(&pool, 20);
+    CHECK(pArray->getCapacity() == 20);
+    CHECK(pArray->getSize() == 10);
+    CHECK(pArray->getArray() != NULL);
+    CHECK(pArray->getObj(15) == NULL);
+    for (i = 10; i < 20; ++i)
     {
         testpair_t *buf = (testpair_t *)pArray->getNew();
         buf->key = buf->val = i + 1;
     }
-    for( i = 0; i < 20; ++i )
+    for (i = 0; i < 20; ++i)
     {
-        testpair_t *buf = (testpair_t *)pArray->getObj( i );
-        CHECK( buf->key == i + 1 && buf->val == i + 1 );
+        testpair_t *buf = (testpair_t *)pArray->getObj(i);
+        CHECK(buf->key == i + 1 && buf->val == i + 1);
     }
-    pArray->setCapacity( &pool, 30 );
-    CHECK( pArray->getCapacity() == 30 );
-    CHECK( pArray->getSize() == 20 );
-    CHECK( pArray->getArray() != NULL );
-    for( i = 20; i < 30; ++i )
+    pArray->setCapacity(&pool, 30);
+    CHECK(pArray->getCapacity() == 30);
+    CHECK(pArray->getSize() == 20);
+    CHECK(pArray->getArray() != NULL);
+    for (i = 20; i < 30; ++i)
     {
         testpair_t *buf = (testpair_t *)pArray->getNew();
         buf->key = buf->val = i - 1;
     }
-    for( i = 0; i < 20; ++i )
+    for (i = 0; i < 20; ++i)
     {
-        testpair_t *buf = (testpair_t *)pArray->getObj( i );
-        CHECK( buf->key == i + 1 && buf->val == i + 1 );
+        testpair_t *buf = (testpair_t *)pArray->getObj(i);
+        CHECK(buf->key == i + 1 && buf->val == i + 1);
     }
-    for( i = 20; i < 30; ++i )
+    for (i = 20; i < 30; ++i)
     {
-        testpair_t *buf = (testpair_t *)pArray->getObj( i );
-        CHECK( buf->key == i - 1 && buf->val == i - 1 );
+        testpair_t *buf = (testpair_t *)pArray->getObj(i);
+        CHECK(buf->key == i - 1 && buf->val == i - 1);
     }
-    lsr_xpool_destroy( &pool );
+    ls_xpool_destroy(&pool);
     //Test with global pool.
-    pArray = new ObjArray( sizeof( testpair_t ));
-    
-    CHECK( pArray->getCapacity() == 0 );
-    CHECK( pArray->getSize() == 0 );
-    CHECK( pArray->getArray() == NULL );
-    pArray->guarantee( NULL, 10 );
-    CHECK( pArray->getCapacity() == 10 );
-    CHECK( pArray->getSize() == 0 );
-    CHECK( pArray->getArray() != NULL );
-    for( i = 0; i < 10; ++i )
+    pArray = new ObjArray(sizeof(testpair_t));
+
+    CHECK(pArray->getCapacity() == 0);
+    CHECK(pArray->getSize() == 0);
+    CHECK(pArray->getArray() == NULL);
+    pArray->guarantee(NULL, 10);
+    CHECK(pArray->getCapacity() == 10);
+    CHECK(pArray->getSize() == 0);
+    CHECK(pArray->getArray() != NULL);
+    for (i = 0; i < 10; ++i)
     {
         testpair_t *buf = (testpair_t *)pArray->getNew();
         buf->key = buf->val = i + 1;
     }
-    CHECK( pArray->getSize() == 10 );
-    CHECK( pArray->getCapacity() == 10 );
-    CHECK( pArray->getNew() == NULL );
-    for( i = 0; i < 10; ++i )
+    CHECK(pArray->getSize() == 10);
+    CHECK(pArray->getCapacity() == 10);
+    CHECK(pArray->getNew() == NULL);
+    for (i = 0; i < 10; ++i)
     {
-        testpair_t *buf = (testpair_t *)pArray->getObj( i );
-        CHECK( buf->key == i + 1 && buf->val == i + 1 );
+        testpair_t *buf = (testpair_t *)pArray->getObj(i);
+        CHECK(buf->key == i + 1 && buf->val == i + 1);
     }
-    pArray->guarantee( NULL, 20 );
-    CHECK( pArray->getCapacity() == 20 );
-    CHECK( pArray->getSize() == 10 );
-    CHECK( pArray->getArray() != NULL );
-    pArray->release( NULL );
+    pArray->guarantee(NULL, 20);
+    CHECK(pArray->getCapacity() == 20);
+    CHECK(pArray->getSize() == 10);
+    CHECK(pArray->getArray() != NULL);
+    pArray->release(NULL);
 }
 
-TEST( TObjArrayTest_test)
+TEST(TObjArrayTest_test)
 {
     int i;
     TObjArray<testpair_t> *pArray = new TObjArray<testpair_t>();
-    lsr_xpool_t pool;
-    lsr_xpool_init( &pool );
-    
-    CHECK( pArray->getCapacity() == 0 );
-    CHECK( pArray->getSize() == 0 );
-    CHECK( pArray->getArray() == NULL );
-    pArray->guarantee( &pool, 10 );
-    CHECK( pArray->getCapacity() == 10 );
-    CHECK( pArray->getSize() == 0 );
-    CHECK( pArray->getArray() != NULL );
-    for( i = 0; i < 10; ++i )
+    ls_xpool_t pool;
+    ls_xpool_init(&pool);
+
+    CHECK(pArray->getCapacity() == 0);
+    CHECK(pArray->getSize() == 0);
+    CHECK(pArray->getArray() == NULL);
+    pArray->guarantee(&pool, 10);
+    CHECK(pArray->getCapacity() == 10);
+    CHECK(pArray->getSize() == 0);
+    CHECK(pArray->getArray() != NULL);
+    for (i = 0; i < 10; ++i)
     {
         testpair_t *buf = pArray->getNew();
         buf->key = buf->val = i + 1;
     }
-    CHECK( pArray->getSize() == 10 );
-    CHECK( pArray->getCapacity() == 10 );
-    CHECK( pArray->getNew() == NULL );
-    for( i = 0; i < 10; ++i )
+    CHECK(pArray->getSize() == 10);
+    CHECK(pArray->getCapacity() == 10);
+    CHECK(pArray->getNew() == NULL);
+    for (i = 0; i < 10; ++i)
     {
-        testpair_t *buf = pArray->getObj( i );
-        CHECK( buf->key == i + 1 && buf->val == i + 1 );
+        testpair_t *buf = pArray->getObj(i);
+        CHECK(buf->key == i + 1 && buf->val == i + 1);
     }
-    CHECK( pArray->getObj( 0 ) == pArray->getArray());
-    CHECK( pArray->getObj( -1 ) == NULL );
-    CHECK( pArray->getObj( 11 ) == NULL );
-    pArray->guarantee( &pool, 20 );
-    CHECK( pArray->getCapacity() == 20 );
-    CHECK( pArray->getSize() == 10 );
-    CHECK( pArray->getArray() != NULL );
-    CHECK( pArray->getObj( 15 ) == NULL );
-    for( i = 10; i < 20; ++i )
+    CHECK(pArray->getObj(0) == pArray->getArray());
+    CHECK(pArray->getObj(-1) == NULL);
+    CHECK(pArray->getObj(11) == NULL);
+    pArray->guarantee(&pool, 20);
+    CHECK(pArray->getCapacity() == 20);
+    CHECK(pArray->getSize() == 10);
+    CHECK(pArray->getArray() != NULL);
+    CHECK(pArray->getObj(15) == NULL);
+    for (i = 10; i < 20; ++i)
     {
         testpair_t *buf = pArray->getNew();
         buf->key = buf->val = i + 1;
     }
-    for( i = 0; i < 20; ++i )
+    for (i = 0; i < 20; ++i)
     {
-        testpair_t *buf = pArray->getObj( i );
-        CHECK( buf->key == i + 1 && buf->val == i + 1 );
+        testpair_t *buf = pArray->getObj(i);
+        CHECK(buf->key == i + 1 && buf->val == i + 1);
     }
-    pArray->setCapacity( &pool, 30 );
-    CHECK( pArray->getCapacity() == 30 );
-    CHECK( pArray->getSize() == 20 );
-    CHECK( pArray->getArray() != NULL );
-    for( i = 20; i < 30; ++i )
+    pArray->setCapacity(&pool, 30);
+    CHECK(pArray->getCapacity() == 30);
+    CHECK(pArray->getSize() == 20);
+    CHECK(pArray->getArray() != NULL);
+    for (i = 20; i < 30; ++i)
     {
         testpair_t *buf = pArray->getNew();
         buf->key = buf->val = i - 1;
     }
-    for( i = 0; i < 20; ++i )
+    for (i = 0; i < 20; ++i)
     {
-        testpair_t *buf = pArray->getObj( i );
-        CHECK( buf->key == i + 1 && buf->val == i + 1 );
+        testpair_t *buf = pArray->getObj(i);
+        CHECK(buf->key == i + 1 && buf->val == i + 1);
     }
-    for( i = 20; i < 30; ++i )
+    for (i = 20; i < 30; ++i)
     {
-        testpair_t *buf = pArray->getObj( i );
-        CHECK( buf->key == i - 1 && buf->val == i - 1 );
+        testpair_t *buf = pArray->getObj(i);
+        CHECK(buf->key == i - 1 && buf->val == i - 1);
     }
-    lsr_xpool_destroy( &pool );
+    ls_xpool_destroy(&pool);
 }
 
 

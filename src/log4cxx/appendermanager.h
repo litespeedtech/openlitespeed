@@ -19,6 +19,7 @@
 #define APPENDERMANAGER_H
 
 
+#include <lsdef.h>
 #include <log4cxx/nsdefs.h>
 #include <util/gpointerlist.h>
 
@@ -29,28 +30,32 @@ class Appender;
 class AppenderManager
 {
     TPointerList<Appender>  m_appenders;
-    Appender *              m_pCurAppender; 
+    Appender               *m_pCurAppender;
     int                     m_curAppender;
     int                     m_strategy;
-    
-    Appender * getNextAppender();
-    Appender * findAppender( Appender * pExcept );
-    
+
+    Appender *getNextAppender();
+    Appender *findAppender(Appender *pExcept);
+
 public:
     enum
     {
         AM_TILLFULL,
         AM_TILLFAIL,
         AM_RROBIN
-        
+
     };
     AppenderManager();
 
     ~AppenderManager();
-    void addAppender( Appender * p);
-    Appender * getAppender();
+    void addAppender(Appender *p);
+    Appender *getAppender();
 
-    void setStrategy( int st )      {   m_strategy = st;    }
+    void setStrategy(int st)      {   m_strategy = st;    }
+
+
+
+    LS_NO_COPY_ASSIGN(AppenderManager);
 };
 
 

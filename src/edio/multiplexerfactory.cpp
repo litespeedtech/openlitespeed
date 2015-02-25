@@ -27,7 +27,7 @@
 #include <string.h>
 
 int MultiplexerFactory::s_iMaxFds = 4096;
-static const char * s_sType[MultiplexerFactory::BEST+1] =
+static const char *s_sType[MultiplexerFactory::BEST + 1] =
 {
     "poll",
     "select",
@@ -38,17 +38,20 @@ static const char * s_sType[MultiplexerFactory::BEST+1] =
     "best"
 };
 
-int MultiplexerFactory::getType( const char * pType )
+int          MultiplexerFactory::s_iMultiplexerType = 0;
+Multiplexer *MultiplexerFactory::s_pMultiplexer = NULL;
+
+int MultiplexerFactory::getType(const char *pType)
 {
     int i;
-    if ( !pType )
+    if (!pType)
         return POLL;
-    for( i = 0; i < BEST+1; ++i )
+    for (i = 0; i < BEST + 1; ++i)
     {
-        if ( strcasecmp( pType, s_sType[i] ) == 0 )
+        if (strcasecmp(pType, s_sType[i]) == 0)
             break;
     }
-    if ( i == BEST )
+    if (i == BEST)
     {
 #if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
         i = EPOLL;
@@ -67,9 +70,9 @@ int MultiplexerFactory::getType( const char * pType )
 }
 
 
-Multiplexer* MultiplexerFactory::get( int type )
+Multiplexer *MultiplexerFactory::getNew(int type)
 {
-    switch( type )
+    switch (type)
     {
 #if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
 #if 0
@@ -101,8 +104,8 @@ Multiplexer* MultiplexerFactory::get( int type )
     }
 }
 
-void MultiplexerFactory::recycle( Multiplexer * ptr )
+void MultiplexerFactory::recycle(Multiplexer *ptr)
 {
-    if ( ptr )
+    if (ptr)
         delete ptr;
 }

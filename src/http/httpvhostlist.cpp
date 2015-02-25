@@ -21,111 +21,109 @@
 
 #include <stdio.h>
 #include <unistd.h>
-#include <util/ssnprintf.h>
+#include <lsr/ls_strtool.h>
 
 class HttpVHostMapImpl: public HashStringMap<HttpVHost *>
 {
     friend class HttpVHostMap;
     ~HttpVHostMapImpl()
     {
-        release_objects();
+        releaseObjects();
     }
-    
-    void appendTo( VHostList& pList )
+
+    void appendTo(VHostList &pList)
     {
         iterator iter, iterEnd = end();
-        for( iter = begin(); iter != iterEnd; iter = next( iter ) )
+        for (iter = begin(); iter != iterEnd; iter = next(iter))
         {
-            if ( iter.second()->getRef() == 0 )
+            if (iter.second()->getRef() == 0)
                 delete iter.second();
             else
-                pList.push_back( iter.second() );
+                pList.push_back(iter.second());
         }
         clear();
     }
 
 
-    void moveNonExist( HttpVHostMapImpl& rhs )
+    void moveNonExist(HttpVHostMapImpl &rhs)
     {
-        for( iterator iter = rhs.begin(); iter != rhs.end(); )
+        for (iterator iter = rhs.begin(); iter != rhs.end();)
         {
-            if ( find( iter.first() ) == end() )
+            if (find(iter.first()) == end())
             {
                 iterator iterMove = iter;
-                iter = next( iter );
-                insert( iterMove.first(), iterMove.second() );
-                rhs.erase( iterMove );
+                iter = next(iter);
+                insert(iterMove.first(), iterMove.second());
+                rhs.erase(iterMove);
             }
             else
-                iter = next( iter );
+                iter = next(iter);
         }
     }
-    int writeRTReport( int fd ) const
+    int writeRTReport(int fd) const
     {
         const_iterator iter;
         const_iterator iterEnd = end();
         char achBuf[1024];
-        for( iter = begin(); iter != iterEnd; iter = next( iter ) )
+        for (iter = begin(); iter != iterEnd; iter = next(iter))
         {
             iter.second()->getReqStats()->finalizeRpt();
-            int len = safe_snprintf( achBuf, 1024, "REQ_RATE [%s]: "
-                        "REQ_PROCESSING: %d, REQ_PER_SEC: %d, TOT_REQS: %d\n",
-                        iter.first(), iter.second()->getRef(),
-                        iter.second()->getReqStats()->getRPS(),
-                        iter.second()->getReqStats()->getTotal() );
+            int len = ls_snprintf(achBuf, 1024, "REQ_RATE [%s]: "
+                                  "REQ_PROCESSING: %d, REQ_PER_SEC: %d, TOT_REQS: %d\n",
+                                  iter.first(), iter.second()->getRef(),
+                                  iter.second()->getReqStats()->getRPS(),
+                                  iter.second()->getReqStats()->getTotal());
             iter.second()->getReqStats()->reset();
-            if ( ::write( fd, achBuf, len ) != len )
-                return -1;
+            if (::write(fd, achBuf, len) != len)
+                return LS_FAIL;
         }
         return 0;
     }
 
-    int writeStatusReport( int fd ) const
+    int writeStatusReport(int fd) const
     {
         const_iterator iter;
         const_iterator iterEnd = end();
         char achBuf[1024];
-        for( iter = begin(); iter != iterEnd; iter = next( iter ) )
+        for (iter = begin(); iter != iterEnd; iter = next(iter))
         {
-            if (strcmp( iter.first(), DEFAULT_ADMIN_SERVER_NAME) != 0 )
+            if (strcmp(iter.first(), DEFAULT_ADMIN_SERVER_NAME) != 0)
             {
-                int len = safe_snprintf( achBuf, 1024, "VHOST [%s] %d\n", iter.first(),
-                        (iter.second()->isEnabled() != 0) );
-                if ( ::write( fd, achBuf, len ) != len )
-                    return -1;
+                int len = ls_snprintf(achBuf, 1024, "VHOST [%s] %d\n", iter.first(),
+                                      (iter.second()->isEnabled() != 0));
+                if (::write(fd, achBuf, len) != len)
+                    return LS_FAIL;
             }
         }
         return 0;
     }
 
-    static int callTimer( const void *pKey, void *pData )
+    static int callTimer(const void *pKey, void *pData)
     {   ((HttpVHost *)pData)->onTimer();  return 0;  }
 
-    static int callTimer30Secs( const void *pKey, void *pData )
+    static int callTimer30Secs(const void *pKey, void *pData)
     {   ((HttpVHost *)pData)->onTimer30Secs();   return 0; }
 
 
     void onTimer()
     {
-        for_each( begin(), end(), callTimer );
+        for_each(begin(), end(), callTimer);
     }
     void onTimer30Secs()
     {
-        for_each( begin(), end(), callTimer30Secs );
+        for_each(begin(), end(), callTimer30Secs);
     }
-    void offsetChroot( const char * pChroot, int len )
+    void offsetChroot(const char *pChroot, int len)
     {
         const_iterator iter;
         const_iterator iterEnd = end();
-        for( iter = begin(); iter != iterEnd; iter = next( iter ) )
-        {
-            iter.second()->offsetChroot( pChroot, len );
-        }
+        for (iter = begin(); iter != iterEnd; iter = next(iter))
+            iter.second()->offsetChroot(pChroot, len);
     }
 };
 
 HttpVHostMap::HttpVHostMap()
-    : m_impl( new HttpVHostMapImpl() )
+    : m_impl(new HttpVHostMapImpl())
 {
 
 }
@@ -135,41 +133,41 @@ HttpVHostMap::~HttpVHostMap()
     delete m_impl;
 }
 
-int HttpVHostMap::add( HttpVHost * pHost )
+int HttpVHostMap::add(HttpVHost *pHost)
 {
-    if ( pHost != NULL )
+    if (pHost != NULL)
     {
         HttpVHostMapImpl::const_iterator iter;
         HttpVHostMapImpl::const_iterator iterEnd = m_impl->end();
-        for( iter = m_impl->begin(); iter != iterEnd; iter = m_impl->next( iter ) )
+        for (iter = m_impl->begin(); iter != iterEnd; iter = m_impl->next(iter))
         {
-            if ( iter.second() == pHost )
-                return -1;
+            if (iter.second() == pHost)
+                return LS_FAIL;
         }
-        
-        return !m_impl->insert( pHost->getName(), pHost );
+
+        return !m_impl->insert(pHost->getName(), pHost);
     }
     else
-        return -1;
+        return LS_FAIL;
 }
 
-int HttpVHostMap::remove( HttpVHost * pHost )
+int HttpVHostMap::remove(HttpVHost *pHost)
 {
-    if ( pHost != NULL )
+    if (pHost != NULL)
     {
-        m_impl->remove( pHost->getName() );
+        m_impl->remove(pHost->getName());
         return 0;
     }
     else
-        return -1;
+        return LS_FAIL;
 }
 
-HttpVHost * HttpVHostMap::get( const char * pName ) const
+HttpVHost *HttpVHostMap::get(const char *pName) const
 {
-    if ( pName == NULL )
+    if (pName == NULL)
         return NULL;
-    HttpVHostMapImpl::const_iterator iter = m_impl->find( pName );
-    if ( iter == m_impl->end() )
+    HttpVHostMapImpl::const_iterator iter = m_impl->find(pName);
+    if (iter == m_impl->end())
         return NULL;
     else
     {
@@ -183,14 +181,14 @@ HttpVHost * HttpVHostMap::get( const char * pName ) const
     }
 }
 
-HttpVHost * HttpVHostMap::get( int index ) const
+HttpVHost *HttpVHostMap::get(int index) const
 {
-    if ( index < 0 || index >= size() )
+    if (index < 0 || index >= size())
         return NULL;
-    
+
     HttpVHostMapImpl::const_iterator iter = m_impl->begin();
-    for (int i=0; i < index ; ++i)
-        iter = m_impl->next( iter );
+    for (int i = 0; i < index ; ++i)
+        iter = m_impl->next(iter);
     return iter.second();
 }
 
@@ -199,22 +197,22 @@ int HttpVHostMap::size() const
     return m_impl->size();
 }
 
-void HttpVHostMap::swap( HttpVHostMap& rhs )
+void HttpVHostMap::swap(HttpVHostMap &rhs)
 {
-    HttpVHostMapImpl* temp;
+    HttpVHostMapImpl *temp;
     temp = m_impl;
     m_impl = rhs.m_impl;
     rhs.m_impl = temp;
 }
 
-void HttpVHostMap::appendTo( VHostList& pList )
+void HttpVHostMap::appendTo(VHostList &pList)
 {
-    m_impl->appendTo( pList );
+    m_impl->appendTo(pList);
 }
 
-void HttpVHostMap::moveNonExist( HttpVHostMap& rhs )
+void HttpVHostMap::moveNonExist(HttpVHostMap &rhs)
 {
-    m_impl->moveNonExist( *(rhs.m_impl) );
+    m_impl->moveNonExist(*(rhs.m_impl));
 }
 
 
@@ -228,62 +226,60 @@ void HttpVHostMap::onTimer30Secs()
     m_impl->onTimer30Secs();
 }
 
-void HttpVHostMap::offsetChroot( const char * pChroot, int len )
+void HttpVHostMap::offsetChroot(const char *pChroot, int len)
 {
-    m_impl->offsetChroot( pChroot, len );
+    m_impl->offsetChroot(pChroot, len);
 }
 
 
-int HttpVHostMap::writeRTReport( int fd ) const
+int HttpVHostMap::writeRTReport(int fd) const
 {
-    return m_impl->writeRTReport( fd );
+    return m_impl->writeRTReport(fd);
 }
 
-int HttpVHostMap::writeStatusReport( int fd ) const
+int HttpVHostMap::writeStatusReport(int fd) const
 {
-    return m_impl->writeStatusReport( fd );
+    return m_impl->writeStatusReport(fd);
 }
 
-void HttpVHostMap::release_objects()
+void HttpVHostMap::releaseObjects()
 {
-    m_impl->release_objects();
+    m_impl->releaseObjects();
 }
 
 void VHostList::releaseUnused()
 {
     iterator iter;
-    for( iter = begin(); iter != end();  )
+    for (iter = begin(); iter != end();)
     {
-        if ( (*iter)->getRef() <= 0 )
+        if ((*iter)->getRef() <= 0)
         {
-            delete (*iter );
-            erase( iter );
+            delete(*iter);
+            erase(iter);
         }
         else
-        {
             ++iter;
-        }
     }
 }
 
-void HttpVHostMap::incRef( HttpVHost * pHost )
+void HttpVHostMap::incRef(HttpVHost *pHost)
 {
     pHost->incMappingRef();
 }
-void HttpVHostMap::decRef( HttpVHost * pHost )
+void HttpVHostMap::decRef(HttpVHost *pHost)
 {
     pHost->decMappingRef();
 }
 
-const char * HttpVHostMap::getName( HttpVHost * pHost )
+const char *HttpVHostMap::getName(HttpVHost *pHost)
 {
     return pHost->getName();
 }
 
-const char * HttpVHostMap::addMatchName( HttpVHost * pHost,
-                const char * pName )
+const char *HttpVHostMap::addMatchName(HttpVHost *pHost,
+                                       const char *pName)
 {
-    return pHost->addMatchName( pName )->c_str();
+    return pHost->addMatchName(pName)->c_str();
 }
 
 

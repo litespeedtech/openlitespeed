@@ -19,18 +19,18 @@
 #include "jworkerconfig.h"
 #include "jconn.h"
 
-JWorker::JWorker( const char * pName )
+JWorker::JWorker(const char *pName)
 {
-    setConfigPointer( new JWorkerConfig( pName ) );
+    setConfigPointer(new JWorkerConfig(pName));
 }
 
 JWorker::~JWorker()
 {
 }
 
-ExtConn * JWorker::newConn()
+ExtConn *JWorker::newConn()
 {
-    return new JConn();    
+    return new JConn();
 }
 
 

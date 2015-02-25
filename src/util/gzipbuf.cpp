@@ -17,7 +17,8 @@
 *****************************************************************************/
 #include <util/gzipbuf.h>
 #include <util/vmembuf.h>
-#include <util/ni_fio.h>
+
+#include <lsr/ls_fileio.h>
 
 #include <assert.h>
 //#include <netinet/in.h>
@@ -31,15 +32,15 @@
 
 GzipBuf::GzipBuf()
 {
-    memset (this, 0, sizeof( GzipBuf ));
-    m_flushWindowSize = DEFAULT_FLUSH_WINDOW;
+    memset(this, 0, sizeof(GzipBuf));
+    m_iFlushWindowSize = DEFAULT_FLUSH_WINDOW;
 }
 
-GzipBuf::GzipBuf( int type, int level )
+GzipBuf::GzipBuf(int type, int level)
 {
-    memset (this, 0, sizeof( GzipBuf ));
-    m_flushWindowSize = DEFAULT_FLUSH_WINDOW;
-    init( type, level );    
+    memset(this, 0, sizeof(GzipBuf));
+    m_iFlushWindowSize = DEFAULT_FLUSH_WINDOW;
+    init(type, level);
 }
 
 GzipBuf::~GzipBuf()
@@ -49,38 +50,34 @@ GzipBuf::~GzipBuf()
 
 int GzipBuf::release()
 {
-    if ( m_type == GZIP_INFLATE )
-       return inflateEnd(&m_zstr);
+    if (m_iType == GZIP_INFLATE)
+        return inflateEnd(&m_zstr);
     else
-       return deflateEnd(&m_zstr);
+        return deflateEnd(&m_zstr);
 }
 
 
-int GzipBuf::init( int type, int level )
+int GzipBuf::init(int type, int level)
 {
     int ret;
-    if ( type == GZIP_INFLATE )
-        m_type = GZIP_INFLATE;
+    if (type == GZIP_INFLATE)
+        m_iType = GZIP_INFLATE;
     else
-        m_type = GZIP_DEFLATE;
-    if ( m_type == GZIP_DEFLATE )
+        m_iType = GZIP_DEFLATE;
+    if (m_iType == GZIP_DEFLATE)
     {
-        if ( !m_zstr.state )
-            ret = deflateInit2 (&m_zstr, level, Z_DEFLATED, 15+16, 8,
-                            Z_DEFAULT_STRATEGY);
+        if (!m_zstr.state)
+            ret = deflateInit2(&m_zstr, level, Z_DEFLATED, 15 + 16, 8,
+                               Z_DEFAULT_STRATEGY);
         else
-        {
-            ret = deflateReset( &m_zstr );
-        }
+            ret = deflateReset(&m_zstr);
     }
     else
     {
-        if ( !m_zstr.state )
-            ret = inflateInit2( &m_zstr, 15+16 );
+        if (!m_zstr.state)
+            ret = inflateInit2(&m_zstr, 15 + 16);
         else
-        {
-            ret = inflateReset( &m_zstr );
-        }
+            ret = inflateReset(&m_zstr);
     }
     return ret;
 }
@@ -88,82 +85,77 @@ int GzipBuf::init( int type, int level )
 int GzipBuf::reinit()
 {
     int ret;
-    if ( m_type == GZIP_DEFLATE )
-    {
-        ret = deflateReset( &m_zstr );
-    }
+    if (m_iType == GZIP_DEFLATE)
+        ret = deflateReset(&m_zstr);
     else
-    {
-        ret = inflateReset( &m_zstr );
-    }
-    m_streamStarted = 1;
+        ret = inflateReset(&m_zstr);
+    m_iStreamStarted = 1;
     return ret;
 }
 
 
 int GzipBuf::beginStream()
 {
-    if ( !m_pCompressCache )
-        return -1;
+    if (!m_pCompressCache)
+        return LS_FAIL;
     size_t size;
     m_zstr.next_out = (unsigned char *)
-            m_pCompressCache->getWriteBuffer( size );
+                      m_pCompressCache->getWriteBuffer(size);
     m_zstr.avail_out = size;
-    if ( !m_zstr.next_out )
-        return -1;
-    m_streamStarted = 1;
+    if (!m_zstr.next_out)
+        return LS_FAIL;
+    m_iStreamStarted = 1;
     return 0;
 }
 
-int GzipBuf::compress( const char * pBuf, int len )
+int GzipBuf::compress(const char *pBuf, int len)
 {
-    if ( !m_streamStarted )
-        return -1;
+    if (!m_iStreamStarted)
+        return LS_FAIL;
     m_zstr.next_in = (unsigned char *)pBuf;
     m_zstr.avail_in = len;
-    return process( 0 );
+    return process(0);
 }
 
-int GzipBuf::process( int finish )
+int GzipBuf::process(int finish)
 {
     do
     {
         int ret;
         size_t size;
-        if ( !m_zstr.avail_out )
+        if (!m_zstr.avail_out)
         {
-            m_zstr.next_out = (unsigned char *)m_pCompressCache->getWriteBuffer( size );
+            m_zstr.next_out = (unsigned char *)m_pCompressCache->getWriteBuffer(size);
             m_zstr.avail_out = size;
-            assert( m_zstr.avail_out );
+            assert(m_zstr.avail_out);
         }
-        if ( m_type == GZIP_DEFLATE )
+        if (m_iType == GZIP_DEFLATE)
             ret = ::deflate(&m_zstr, finish);
         else
-            ret = ::inflate(&m_zstr, finish );
-        if ( ret == Z_STREAM_ERROR )
-            return -1;
-        if ( ret == Z_BUF_ERROR )
+            ret = ::inflate(&m_zstr, finish);
+        if (ret == Z_STREAM_ERROR)
+            return LS_FAIL;
+        if (ret == Z_BUF_ERROR)
             ret = 0;
-        m_pCompressCache->writeUsed( m_zstr.next_out -
-                (unsigned char *)m_pCompressCache->getCurWPos() );
-        if (( m_zstr.avail_out )||( ret == Z_STREAM_END ))
+        m_pCompressCache->writeUsed(m_zstr.next_out -
+                                    (unsigned char *)m_pCompressCache->getCurWPos());
+        if ((m_zstr.avail_out) || (ret == Z_STREAM_END))
             return ret;
-        m_zstr.next_out = (unsigned char *)m_pCompressCache->getWriteBuffer( size );
+        m_zstr.next_out = (unsigned char *)m_pCompressCache->getWriteBuffer(size);
         m_zstr.avail_out = size;
-        if ( !m_zstr.next_out )
-            return -1;
-    }while( true );
+        if (!m_zstr.next_out)
+            return LS_FAIL;
+    }
+    while (true);
 }
 
 
 int GzipBuf::endStream()
 {
-    int ret = process( Z_FINISH );
-    m_streamStarted = 0;
+    int ret = process(Z_FINISH);
+    m_iStreamStarted = 0;
     if (ret != Z_STREAM_END)
-    {
-        return -1;
-    }
+        return LS_FAIL;
     return 0;
 }
 
@@ -173,51 +165,51 @@ int GzipBuf::resetCompressCache()
     m_pCompressCache->rewindWriteBuf();
     size_t size;
     m_zstr.next_out = (unsigned char *)
-            m_pCompressCache->getWriteBuffer( size );
+                      m_pCompressCache->getWriteBuffer(size);
     m_zstr.avail_out = size;
     return 0;
 }
 
 
-int GzipBuf::processFile( int type, const char * pFileName,
-                    const char * pCompressFileName )
+int GzipBuf::processFile(int type, const char *pFileName,
+                         const char *pCompressFileName)
 {
     int fd;
     int ret = 0;
-    fd = open( pFileName, O_RDONLY );
-    if ( fd == -1 )
-        return -1;
+    fd = open(pFileName, O_RDONLY);
+    if (fd == -1)
+        return LS_FAIL;
     VMemBuf gzFile;
-    ret = gzFile.set( pCompressFileName, -1 );
-    if ( !ret )
+    ret = gzFile.set(pCompressFileName, -1);
+    if (!ret)
     {
-        setCompressCache( &gzFile );
-        if ( ((ret = init( type, 6 )) == 0 )&&((ret = beginStream()) == 0 ))
+        setCompressCache(&gzFile);
+        if (((ret = init(type, 6)) == 0) && ((ret = beginStream()) == 0))
         {
             int len;
             char achBuf[16384];
-            while( true )
+            while (true)
             {
-                len = nio_read( fd, achBuf, sizeof( achBuf ) );
-                if ( len <= 0 )
+                len = ls_fio_read(fd, achBuf, sizeof(achBuf));
+                if (len <= 0)
                     break;
-                if ( this->write( achBuf, len ) )
+                if (this->write(achBuf, len))
                 {
                     ret = -1;
                     break;
                 }
             }
-            if ( !ret )
+            if (!ret)
             {
                 ret = endStream();
                 long size;
-                if ( !ret )
-                    ret = gzFile.exactSize( &size );
+                if (!ret)
+                    ret = gzFile.exactSize(&size);
             }
             gzFile.close();
         }
     }
-    ::close( fd );
+    ::close(fd);
     return ret;
 }
 

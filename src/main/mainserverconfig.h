@@ -38,42 +38,44 @@ private:
     int             m_iEnableCoreDump;
     int             m_iDisableLogRotate;
     StringList      m_sSuspendedVhosts;
+    void operator=(const MainServerConfig &rhs);
+    MainServerConfig(const MainServerConfig &rhs);
     MainServerConfig()
-        : m_sGroup( "nobody" )
-        , m_sUser( "nobody" )
-        , m_sAutoIndexURI( "/_autoindex/default.php" )
-        , m_iCrashGuard( 2 )
-        , m_iEnableCoreDump( 0 )
-        , m_iDisableLogRotate( 0 )
+        : m_sGroup("nobody")
+        , m_sUser("nobody")
+        , m_sAutoIndexURI("/_autoindex/default.php")
+        , m_iCrashGuard(2)
+        , m_iEnableCoreDump(0)
+        , m_iDisableLogRotate(0)
     {}
 public:
     int  getCrashGuard() const          {   return m_iCrashGuard;   }
-    void setCrashGuard( int guard )     {   m_iCrashGuard = guard;  }   
-    void setServerName( const char * pServerName )  {   m_sServerName = pServerName;}
-    void setAdminEmails( const char * pEmails)      {   m_sAdminEmails = pEmails;   }
-    void setGDBPath( const char * pGdbPath)         {   m_gdbPath = pGdbPath;       }
-    void setServerRoot( const char * pServerRoot )  {   m_sServerRoot = pServerRoot;}
-    void setChroot( const char * pChroot )          {   m_sChroot = pChroot;        }
-    void setGroup( const char * pGroup )            {   m_sGroup = pGroup;          }
-    void setUser( const char * pUser )              {   m_sUser = pUser;            }
-    void setAutoIndexURI(const char* pAutoIndexURI) {   m_sAutoIndexURI = pAutoIndexURI;}
-    void setEnableCoreDump(int iEnableCoreDump)     {  m_iEnableCoreDump = iEnableCoreDump; } 
-    void setDisableLogRotateAtStartup(int n)        {  m_iDisableLogRotate = n; } 
-    
-    const char * getServerName()    const   {   return m_sServerName.c_str();   }
-    const char * getAdminEmails()   const   {   return m_sAdminEmails.c_str();  }
-    const char * getGDBPath()       const   {   return m_gdbPath.c_str();       }
-    const char * getServerRoot()    const   {   return m_sServerRoot.c_str();   }
-    const char * getChroot()        const   {   return m_sChroot.c_str();       }
-    const AutoStr2* getpsChroot()   const   {   return &m_sChroot;              }
+    void setCrashGuard(int guard)     {   m_iCrashGuard = guard;  }
+    void setServerName(const char *pServerName)  {   m_sServerName = pServerName;}
+    void setAdminEmails(const char *pEmails)      {   m_sAdminEmails = pEmails;   }
+    void setGDBPath(const char *pGdbPath)         {   m_gdbPath = pGdbPath;       }
+    void setServerRoot(const char *pServerRoot)  {   m_sServerRoot = pServerRoot;}
+    void setChroot(const char *pChroot)          {   m_sChroot = pChroot;        }
+    void setGroup(const char *pGroup)            {   m_sGroup = pGroup;          }
+    void setUser(const char *pUser)              {   m_sUser = pUser;            }
+    void setAutoIndexURI(const char *pAutoIndexURI) {   m_sAutoIndexURI = pAutoIndexURI;}
+    void setEnableCoreDump(int iEnableCoreDump)     {  m_iEnableCoreDump = iEnableCoreDump; }
+    void setDisableLogRotateAtStartup(int n)        {  m_iDisableLogRotate = n; }
+
+    const char *getServerName()    const   {   return m_sServerName.c_str();   }
+    const char *getAdminEmails()   const   {   return m_sAdminEmails.c_str();  }
+    const char *getGDBPath()       const   {   return m_gdbPath.c_str();       }
+    const char *getServerRoot()    const   {   return m_sServerRoot.c_str();   }
+    const char *getChroot()        const   {   return m_sChroot.c_str();       }
+    const AutoStr2 *getpsChroot()   const   {   return &m_sChroot;              }
     int    getChrootlen()     const         {   return m_sChroot.len();         }
-    const char * getGroup()         const   {   return m_sGroup.c_str();        }
-    const char * getUser()          const   {   return m_sUser.c_str();         }
-    const char * getAutoIndexURI()  const   {   return m_sAutoIndexURI.c_str(); }
+    const char *getGroup()         const   {   return m_sGroup.c_str();        }
+    const char *getUser()          const   {   return m_sUser.c_str();         }
+    const char *getAutoIndexURI()  const   {   return m_sAutoIndexURI.c_str(); }
     int  getEnableCoreDump()  const         {   return m_iEnableCoreDump;       }
     int  getDisableLogRotateAtStartup()  const         {   return m_iDisableLogRotate;       }
     StringList &getSuspendedVhosts()        {   return m_sSuspendedVhosts;      }
-    
+
 };
 
 #endif // MAINSERVERCONFIG_H

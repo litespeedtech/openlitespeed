@@ -16,7 +16,7 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #ifdef RUN_TEST
- 
+
 #include "httpvhostlisttest.h"
 
 #include <http/httpvhostlist.h>
@@ -24,23 +24,23 @@
 #include "test/unittest-cpp/UnitTest++/src/UnitTest++.h"
 
 
-TEST( HttpVHostListTest_test)
+TEST(HttpVHostListTest_test)
 {
     HttpVHostMap list;
-    HttpVHost * pHost1 = new HttpVHost( "host1" );
-    HttpVHost * pHost2 = new HttpVHost( "host2" );
-    CHECK( list.add( pHost1 ) == 0 );
-    CHECK( list.add( pHost2 ) == 0 );
-    HttpVHost* p1 = list.get( "host1" );
-    CHECK( p1 != NULL );
-    CHECK( p1 == pHost1 );
-    CHECK( list.get( "host2" ) == pHost2 );
-    CHECK( list.get( "host3" ) == NULL );
+    HttpVHost *pHost1 = new HttpVHost("host1");
+    HttpVHost *pHost2 = new HttpVHost("host2");
+    CHECK(list.add(pHost1) == 0);
+    CHECK(list.add(pHost2) == 0);
+    HttpVHost *p1 = list.get("host1");
+    CHECK(p1 != NULL);
+    CHECK(p1 == pHost1);
+    CHECK(list.get("host2") == pHost2);
+    CHECK(list.get("host3") == NULL);
     // add again will fail
-    CHECK( list.add( pHost1 ) != 0 );
+    CHECK(list.add(pHost1) != 0);
 
-    CHECK( list.remove( p1 ) == 0 );
-    CHECK( list.get( "host1" ) == NULL );
+    CHECK(list.remove(p1) == 0);
+    CHECK(list.get("host1") == NULL);
     //CHECK( list.remove( p1 ) == 0 );
 }
 

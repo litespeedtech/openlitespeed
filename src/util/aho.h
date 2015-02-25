@@ -18,7 +18,7 @@
 #ifndef AHO_H
 #define AHO_H
 
-#include <lsr/lsr_aho.h>
+#include <lsr/ls_aho.h>
 
 #include <stdio.h>
 #include <string.h>
@@ -35,42 +35,43 @@
 extern "C"
 {
 #endif
-    
-typedef lsr_aho_state_t AhoState;
 
-class Aho : private lsr_aho_t
+typedef ls_aho_state_t AhoState;
+
+class Aho : private ls_aho_t
 {
 private:
-    Aho( const Aho &rhs );
-    void operator=( const Aho& rhs );
+    Aho(const Aho &rhs);
+    void operator=(const Aho &rhs);
 public:
-    Aho( int case_insensitive )
-    {   lsr_aho( this, case_insensitive );    }
-    
+    Aho(int case_insensitive)
+    {   ls_aho(this, case_insensitive);    }
+
     ~Aho()
-    {   lsr_aho_d( this );  }
-    
+    {   ls_aho_d(this);  }
+
     AhoState *getZeroState()
-    {   return m_zero_state;    }
-    
-    int addNonUniquePattern( const char *pattern, size_t size )
-    {   return lsr_aho_add_non_unique_pattern( this, pattern, size );   }
-    
-    int addPatternsFromFile( const char *filename )
-    {   return lsr_aho_add_patterns_from_file( this, filename );    }
-    
+    {   return zero_state;    }
+
+    int addPattern(const char *pattern, size_t size)
+    {   return ls_aho_addpattern(this, pattern, size);   }
+
+    int addPatternsFromFile(const char *filename)
+    {   return ls_aho_addfromfile(this, filename);    }
+
     int makeTree()
-    {   return lsr_aho_make_tree( this );   }
-    
+    {   return ls_aho_maketree(this);   }
+
     int optimizeTree()
-    {   return lsr_aho_optimize_tree( this );    }
-    
+    {   return ls_aho_optimizetree(this);    }
+
     /* search for matches in an aho corasick tree. */
-    unsigned int search( AhoState *start_state, const char *string, size_t size, size_t startpos, 
-                         size_t *out_start, size_t *out_end, AhoState **out_last_state )
-    {   
-        return lsr_aho_search( this, start_state, string, size, startpos, 
-            out_start, out_end, out_last_state );
+    unsigned int search(AhoState *start_state, const char *string, size_t size,
+                        size_t startpos,
+                        size_t *out_start, size_t *out_end, AhoState **out_last_state)
+    {
+        return ls_aho_search(this, start_state, string, size, startpos,
+                             out_start, out_end, out_last_state);
     }
 };
 

@@ -25,69 +25,61 @@
 EventNotifier::~EventNotifier()
 {
 #ifndef LSEFD_AVAIL
-    if( m_fdIn != -1 )
-    {
-        close( m_fdIn );
-    }
+    if (m_fdIn != -1)
+        close(m_fdIn);
 #endif
-    if( getfd() != -1 )
-    {
-        close( getfd() );
-    }
+    if (getfd() != -1)
+        close(getfd());
 }
 
-int EventNotifier::handleEvents( short int event )
+int EventNotifier::handleEvents(short int event)
 {
     int count = 0;
 
-    if( event & POLLIN )
+    if (event & POLLIN)
     {
 #ifdef LSEFD_AVAIL
         uint64_t ret;
-        if ( eventfd_read( getfd(), &ret ) < 0 )
-            return -1;
-        
-        if ( ret > INT_MAX )
+        if (eventfd_read(getfd(), &ret) < 0)
+            return LS_FAIL;
+
+        if (ret > INT_MAX)
             count = INT_MAX;
         else
             count = (int)ret;
 #else
         char achBuf[50];
         int len = 0;
-        while(( len = read( getfd(), achBuf, sizeof( achBuf ) / sizeof( char ))) > 0 )
-        {
+        while ((len = read(getfd(), achBuf, sizeof(achBuf) / sizeof(char))) > 0)
             count += len;
-        }
 #endif
-        onNotified( count );
+        onNotified(count);
     }
 
     return 0;
 }
 
-int EventNotifier::initNotifier( Multiplexer* pMultiplexer )
+int EventNotifier::initNotifier(Multiplexer *pMultiplexer)
 {
 #ifdef LSEFD_AVAIL
-    setfd( eventfd( 0, EFD_CLOEXEC | EFD_NONBLOCK ));
+    setfd(eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK));
 #else
     int fds[2];
 
-    if( socketpair( AF_UNIX, SOCK_STREAM, 0, fds ) == -1 )
-    {
-        return -1;
-    }
+    if (socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == -1)
+        return LS_FAIL;
 
-    ::fcntl( fds[0], F_SETFD, FD_CLOEXEC );
-    ::fcntl( fds[1], F_SETFD, FD_CLOEXEC );
+    ::fcntl(fds[0], F_SETFD, FD_CLOEXEC);
+    ::fcntl(fds[1], F_SETFD, FD_CLOEXEC);
     int fl = 0;
-    ::fcntl( fds[1], F_GETFL, &fl );
-    ::fcntl( fds[1], F_SETFL, fl | pMultiplexer->getFLTag() );
-    EventReactor::setfd( fds[1] );
+    ::fcntl(fds[1], F_GETFL, &fl);
+    ::fcntl(fds[1], F_SETFL, fl | pMultiplexer->getFLTag());
+    EventReactor::setfd(fds[1]);
     m_fdIn = fds[0];
 #endif
-    if ( getfd() == -1 )
-        return -1;
-    pMultiplexer->add( this, POLLIN | POLLHUP | POLLERR );
+    if (getfd() == -1)
+        return LS_FAIL;
+    pMultiplexer->add(this, POLLIN | POLLHUP | POLLERR);
 
     return 0;
 }
@@ -96,9 +88,9 @@ int EventNotifier::initNotifier( Multiplexer* pMultiplexer )
 void EventNotifier::notify()
 {
 #ifdef LSEFD_AVAIL
-    eventfd_write( getfd(), 1 );
+    eventfd_write(getfd(), 1);
 #else
-    write( m_fdIn, "a", 1 );
+    write(m_fdIn, "a", 1);
 #endif
 }
 

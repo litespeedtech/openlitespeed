@@ -16,61 +16,61 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #ifdef RUN_TEST
- 
+
 #include "gzipbuftest.h"
 #include <util/gzipbuf.h>
 #include <util/vmembuf.h>
 #include "test/unittest-cpp/UnitTest++/src/UnitTest++.h"
 
 
-TEST( GzipBufTest_testGzipFile)
+TEST(GzipBufTest_testGzipFile)
 {
     VMemBuf gzFile;
-    gzFile.set( "gzipbuftest.gz" , -1 );
+    gzFile.set("gzipbuftest.gz" , -1);
     //gzFile.set( VMBUF_ANON_MAP , -1 );
     GzipBuf gzBuf;
-    CHECK( 0 == gzBuf.init( GzipBuf::GZIP_DEFLATE, 6 ) );
+    CHECK(0 == gzBuf.init(GzipBuf::GZIP_DEFLATE, 6));
 
     char achBuf[8192];
-    memset( achBuf, 'A', 4096 );
-    memset( achBuf+ 4096, 'b', 4096 );
+    memset(achBuf, 'A', 4096);
+    memset(achBuf + 4096, 'b', 4096);
 
-    gzBuf.setCompressCache( &gzFile );
-    CHECK( 0 == gzBuf.beginStream() );
-    CHECK( 8192 == gzBuf.write( achBuf, 8192 ) );
-    CHECK( 0 == gzBuf.endStream() );
+    gzBuf.setCompressCache(&gzFile);
+    CHECK(0 == gzBuf.beginStream());
+    CHECK(8192 == gzBuf.write(achBuf, 8192));
+    CHECK(0 == gzBuf.endStream());
     gzFile.exactSize();
     gzFile.close();
 
     gzBuf.reset();
     gzFile.deallocate();
-    gzFile.set( "gzipbuftest2.gz", -1 );
+    gzFile.set("gzipbuftest2.gz", -1);
 
-    CHECK( 0 == gzBuf.beginStream() );
-    for( int i = 1; i < 1024; ++i )
-        CHECK( i == gzBuf.write( achBuf+ 4096 - i / 2, i ) );
-    CHECK( 0 == gzBuf.endStream() );
+    CHECK(0 == gzBuf.beginStream());
+    for (int i = 1; i < 1024; ++i)
+        CHECK(i == gzBuf.write(achBuf + 4096 - i / 2, i));
+    CHECK(0 == gzBuf.endStream());
     gzFile.exactSize();
     gzFile.close();
 
     gzBuf.reset();
     gzFile.deallocate();
-    gzFile.set( "gzipbuftest3.gz", -1 );
+    gzFile.set("gzipbuftest3.gz", -1);
 
-    CHECK( 0 == gzBuf.beginStream() );
+    CHECK(0 == gzBuf.beginStream());
     int num;
-    for( int i = 1; i < 20000; ++i )
+    for (int i = 1; i < 20000; ++i)
     {
         num = rand();
-        CHECK( 4 == gzBuf.write( (char *)&num, 4 ) );
+        CHECK(4 == gzBuf.write((char *)&num, 4));
     }
     //printf( "before end stream, filesize=%d\n", gzFile.getCurFileSize() );
-    CHECK( 0 == gzBuf.endStream() );
+    CHECK(0 == gzBuf.endStream());
     //printf( "after end stream, filesize=%d\n", gzFile.getCurFileSize() );
     gzFile.exactSize();
     gzFile.close();
-        
-    
+
+
 }
 
 #endif

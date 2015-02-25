@@ -21,18 +21,20 @@
 
 
 
+#include <lsdef.h>
 #include <extensions/extworkerconfig.h>
 
 class ProxyConfig : public ExtWorkerConfig
 {
     int     m_iSsl;
 public:
-    ProxyConfig( const char * pName );
+    ProxyConfig(const char *pName);
     ProxyConfig();
     ~ProxyConfig();
-    
+
     int getSsl() const      {   return m_iSsl;  }
-    void setSsl( int s )    {   m_iSsl = s;     }
+    void setSsl(int s)    {   m_iSsl = s;     }
+    LS_NO_COPY_ASSIGN(ProxyConfig);
 };
 
 #endif

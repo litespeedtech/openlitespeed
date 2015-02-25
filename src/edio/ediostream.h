@@ -52,97 +52,97 @@ public:
 class Multiplexer;
 class LoopBuf;
 class EdStream : public EventReactor, public EdIS,
-                 public EdOS
+    public EdOS
 {
     Multiplexer *m_pMplex;
 
-    EdStream( const EdStream& rhs );
-    void operator=( const EdStream& rhs );
-    virtual int handleEvents( short event );
-    int regist( Multiplexer* pMplx, int event = 0);
+    EdStream(const EdStream &rhs);
+    void operator=(const EdStream &rhs);
+    virtual int handleEvents(short event);
+    int regist(Multiplexer *pMplx, int event = 0);
 protected:
-    void setMultiplexer( Multiplexer * pMplx )
+    void setMultiplexer(Multiplexer *pMplx)
     {   m_pMplex = pMplx; }
 public:
     EdStream()
-        : m_pMplex( 0 ) {};
-    EdStream(int fd, Multiplexer* pMplx, int events = 0)
+        : m_pMplex(0) {};
+    EdStream(int fd, Multiplexer *pMplx, int events = 0)
         : EventReactor(fd)
-        , m_pMplex( pMplx )
-        {   regist( pMplx, events );  };
+        , m_pMplex(pMplx)
+    {   regist(pMplx, events);  };
     ~EdStream();
-    void init( int fd, Multiplexer* pMplx, int events )
+    void init(int fd, Multiplexer *pMplx, int events)
     {
-        setfd( fd );
+        setfd(fd);
         m_pMplex = pMplx;
-        regist( pMplx, events );
+        regist(pMplx, events);
     }
 
-    virtual void continueRead()     {   m_pMplex->continueRead( this );   }
-    virtual void suspendRead()      {   m_pMplex->suspendRead( this ); }
+    virtual void continueRead()     {   m_pMplex->continueRead(this);   }
+    virtual void suspendRead()      {   m_pMplex->suspendRead(this); }
 
-    int read( char * pBuf, int size );
-    int readv( struct iovec *vector, size_t count);
+    int read(char *pBuf, int size);
+    int readv(struct iovec *vector, size_t count);
     virtual int onRead() = 0;
 
-    virtual void continueWrite()    {   m_pMplex->continueWrite( this );  }
-    virtual void suspendWrite()     {   m_pMplex->suspendWrite( this );}
+    virtual void continueWrite()    {   m_pMplex->continueWrite(this);  }
+    virtual void suspendWrite()     {   m_pMplex->suspendWrite(this);}
     virtual int onWrite() = 0;
-    int write( const char * buf, int len )
+    int write(const char *buf, int len)
     {
         int ret;
-        while( 1 )
+        while (1)
         {
-            ret = ::write( getfd(), buf, len  );
-            if ( ret == -1 )
+            ret = ::write(getfd(), buf, len);
+            if (ret == -1)
             {
-                if ( errno == EAGAIN )
+                if (errno == EAGAIN)
                     ret = 0;
-                if ( errno == EINTR )
+                if (errno == EINTR)
                     continue;
             }
-            if ( ret < len )
-                resetRevent( POLLOUT );
+            if (ret < len)
+                resetRevent(POLLOUT);
             else
-                setRevent( POLLOUT );
+                setRevent(POLLOUT);
             return ret;
         }
     }
 
-    int writev( const struct iovec * iov, int count )
-    {   
+    int writev(const struct iovec *iov, int count)
+    {
         int ret;
-        while( 1 )
+        while (1)
         {
-            ret = ::writev( getfd(), iov, count );
-            if ( ret == -1 )
+            ret = ::writev(getfd(), iov, count);
+            if (ret == -1)
             {
-                if ( errno == EINTR )
+                if (errno == EINTR)
                     continue;
-                if ( errno == EAGAIN )
+                if (errno == EAGAIN)
                 {
-                    resetRevent( POLLOUT );
+                    resetRevent(POLLOUT);
                     ret = 0;
                 }
             }
             else
-                setRevent( POLLOUT );
+                setRevent(POLLOUT);
             return ret;
         }
     }
-    
-    int writev( IOVec &vector )
+
+    int writev(IOVec &vector)
     {
-        return writev( vector.get(), vector.len() );
+        return writev(vector.get(), vector.len());
     }
 
-    int writev( IOVec &vector, int total )
-    {   return writev( vector );        }
-    
-    int write( LoopBuf* pBuf );
+    int writev(IOVec &vector, int total)
+    {   return writev(vector);        }
 
-    Multiplexer* getMultiplexer() const
-        {   return m_pMplex;  }
+    int write(LoopBuf *pBuf);
+
+    Multiplexer *getMultiplexer() const
+    {   return m_pMplex;  }
 
     virtual int onHangup();
     virtual int onError() = 0;
