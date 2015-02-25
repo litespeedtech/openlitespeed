@@ -179,12 +179,13 @@ void HttpSession::logAccess(int cancelled)
             pVHost->logBytes(bytes);
         }
         if (((!cancelled) || (isRespHeaderSent()))
-            && pVHost->enableAccessLog())
+            && pVHost->enableAccessLog()
+            && shouldLogAccess())
             pVHost->logAccess(this);
         else
             setAccessLogOff();
     }
-    else if (m_pNtwkIOLink)
+    else if (m_pNtwkIOLink && shouldLogAccess())
         HttpLog::logAccess(NULL, 0, this);
 }
 
@@ -1845,7 +1846,7 @@ void HttpSession::closeConnection()
         if (m_sessionHooks.isEnabled(LSI_HKPT_HTTP_END))
             m_sessionHooks.runCallbackNoParam(LSI_HKPT_HTTP_END, (LsiSession *)this);
     }
-    m_iFlag = 0;
+
     if (getStream()->getState() == HIOS_CLOSING)
         getStream()->setState(HIOS_CLOSING);
     if (getStream()->isReadyToRelease())
@@ -1856,8 +1857,7 @@ void HttpSession::closeConnection()
 
     m_request.keepAlive(0);
 
-    if (shouldLogAccess())
-        logAccess(getStream()->getFlag(HIO_FLAG_PEER_SHUTDOWN));
+    logAccess(getStream()->getFlag(HIO_FLAG_PEER_SHUTDOWN));
 
     if (m_pSubResp)
     {
