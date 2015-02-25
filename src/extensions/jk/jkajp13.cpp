@@ -31,14 +31,16 @@
 #include <util/stringtool.h>
 
 #include <stdio.h>
-#include <util/ssnprintf.h>
+#include <lsr/ls_strtool.h>
 
-JkAjp13::JkAjp13(){
+JkAjp13::JkAjp13()
+{
 }
-JkAjp13::~JkAjp13(){
+JkAjp13::~JkAjp13()
+{
 }
 
-static const char * s_pForwardHeaderName[9] =
+static const char *s_pForwardHeaderName[9] =
 {
     "cache-control",
     "if-modified-since",
@@ -56,7 +58,7 @@ static int s_iForwardHeaderLen[9] =
     13, 17, 8, 13, 19, 8, 10, 5, 17
 };
 
-const char * JkAjp13::s_pRespHeaders[AJP_RESP_HEADERS_NUM + 1] =
+const char *JkAjp13::s_pRespHeaders[AJP_RESP_HEADERS_NUM + 1] =
 {
     "",
     "content-type",
@@ -114,189 +116,191 @@ attribute_value := (string)
 Not that the all-important header is "content-length', because it determines whether or not the container looks for another packet immediately.
 */
 
-inline void appendInt( char *&p, int n )
+inline void appendInt(char *&p, int n)
 {
-    *p++ = (unsigned char )((n >> 8 ) & 0xff );
-    *p++ = (unsigned char )(n & 0xff );
+    *p++ = (unsigned char)((n >> 8) & 0xff);
+    *p++ = (unsigned char)(n & 0xff);
 }
 
-inline void appendLong( char *&p, int n )
+inline void appendLong(char *&p, int n)
 {
-    *p++ = (unsigned char )((n >> 24 ) & 0xff );
-    *p++ = (unsigned char )((n >> 16 ) & 0xff );
-    *p++ = (unsigned char )((n >> 8 ) & 0xff );
-    *p++ = (unsigned char )(n & 0xff );
+    *p++ = (unsigned char)((n >> 24) & 0xff);
+    *p++ = (unsigned char)((n >> 16) & 0xff);
+    *p++ = (unsigned char)((n >> 8) & 0xff);
+    *p++ = (unsigned char)(n & 0xff);
 }
 
-inline void appendString( char *&p, const char *s, int n )
+inline void appendString(char *&p, const char *s, int n)
 {
-    appendInt( p, n );
-    ::memcpy( p, s, n );
-    p += n; *p++= 0;
+    appendInt(p, n);
+    ::memcpy(p, s, n);
+    p += n;
+    *p++ = 0;
 }
 
-void JkAjp13::buildAjpHeader( char * pBuf, int size )
+void JkAjp13::buildAjpHeader(char *pBuf, int size)
 {
     *pBuf++ = AJP_REQ_PREFIX_B1;
     *pBuf++ = AJP_REQ_PREFIX_B2;
-    appendInt( pBuf, size );
+    appendInt(pBuf, size);
 }
 
-void JkAjp13::buildAjpReqBodyHeader( char * pBuf, int size )
+void JkAjp13::buildAjpReqBodyHeader(char *pBuf, int size)
 {
     *pBuf++ = AJP_REQ_PREFIX_B1;
     *pBuf++ = AJP_REQ_PREFIX_B2;
-    appendInt( pBuf, size + 2 );
-    appendInt( pBuf, size  );
+    appendInt(pBuf, size + 2);
+    appendInt(pBuf, size);
 }
 
-int JkAjp13::buildReq( HttpSession *pSession, char * &p, char * pEnd )
+int JkAjp13::buildReq(HttpSession *pSession, char *&p, char *pEnd)
 {
-    HttpReq * pReq = pSession->getReq();
+    HttpReq *pReq = pSession->getReq();
     //assert( size == AJP_MAX_PKT_BODY_SIZE );
-    char * pEnd2 = pEnd - 6;
+    char *pEnd2 = pEnd - 6;
     int n;
     *p++ = AJP13_FORWARD_REQUEST;
     *p++ = pReq->getMethod();       //method
-    n = HttpVer::getVersionStringLen( pReq->getVersion() );
+    n = HttpVer::getVersionStringLen(pReq->getVersion());
     //Protocol string
-    appendString( p, HttpVer::getVersionString( pReq->getVersion() ), n);
+    appendString(p, HttpVer::getVersionString(pReq->getVersion()), n);
     // request uri
     n = pReq->getURILen();
-    if ( pEnd2 - p < n )
-        return -1;
-    appendString( p, pReq->getURI(), n );
+    if (pEnd2 - p < n)
+        return LS_FAIL;
+    appendString(p, pReq->getURI(), n);
 
     n = pSession->getPeerAddrStrLen();
-    if ( pEnd - p < 2 *( n + 3 ) )
-        return -1;
+    if (pEnd - p < 2 * (n + 3))
+        return LS_FAIL;
     // peer address
-    appendString( p, pSession->getPeerAddrString(), n );
+    appendString(p, pSession->getPeerAddrString(), n);
     // peer host, use peer address as DNS lookup is too expensive and avoided,
-    appendString( p, pSession->getPeerAddrString(), n );
+    appendString(p, pSession->getPeerAddrString(), n);
     n = pReq->getHostStrLen();
-    if ( pEnd2 - p < n )
-        return -1;
+    if (pEnd2 - p < n)
+        return LS_FAIL;
     //host
-    appendString( p, pReq->getHostStr(), n );
-    if ( p >= pEnd2 )
-        return -1;
+    appendString(p, pReq->getHostStr(), n);
+    if (p >= pEnd2)
+        return LS_FAIL;
     //port
-    appendInt( p, pReq->getPort() );
+    appendInt(p, pReq->getPort());
     //is_ssl
-    *p++ = (unsigned char )( pSession->isSSL() );
+    *p++ = (unsigned char)(pSession->isSSL());
     char *pHeaderCounts = p;
-    p+=2;
+    p += 2;
     int headerCounts = 0;
     size_t i;
-    const char * pHeader;
-    for( i = HttpHeader::H_ACCEPT; i < HttpHeader::H_CACHE_CTRL; ++i )
+    const char *pHeader;
+    for (i = HttpHeader::H_ACCEPT; i < HttpHeader::H_CACHE_CTRL; ++i)
     {
-        pHeader = pReq->getHeader( i );
-        if ( *pHeader )
+        pHeader = pReq->getHeader(i);
+        if (*pHeader)
         {
-            n = pReq->getHeaderLen( i );
-            if ( pEnd2 - p < n )
-                return -1;
+            n = pReq->getHeaderLen(i);
+            if (pEnd2 - p < n)
+                return LS_FAIL;
             *p++ = 0xA0;
-            *p++ = (unsigned char)(i+1);
-            appendString( p, pHeader, n );
+            *p++ = (unsigned char)(i + 1);
+            appendString(p, pHeader, n);
             ++headerCounts;
         }
     }
-    pHeader = pReq->getHeader( HttpHeader::H_CONTENT_LENGTH );
-    if ( !*pHeader )
+    pHeader = pReq->getHeader(HttpHeader::H_CONTENT_LENGTH);
+    if (!*pHeader)
     {
-        if ( pEnd2 - p < 2 )
-            return -1;
+        if (pEnd2 - p < 2)
+            return LS_FAIL;
         *p++ = 0xA0;
-        *p++ = (unsigned char)(HttpHeader::H_CONTENT_LENGTH+1);
-        appendString( p, "0", 1 );
+        *p++ = (unsigned char)(HttpHeader::H_CONTENT_LENGTH + 1);
+        appendString(p, "0", 1);
         ++headerCounts;
     }
-    for( i = HttpHeader::H_CACHE_CTRL; i < HttpHeader::H_TRANSFER_ENCODING; ++i )
+    for (i = HttpHeader::H_CACHE_CTRL; i < HttpHeader::H_TRANSFER_ENCODING;
+         ++i)
     {
-        const char * pHeader = pReq->getHeader( i );
-        if ( *pHeader )
+        const char *pHeader = pReq->getHeader(i);
+        if (*pHeader)
         {
-            n = pReq->getHeaderLen( i );
-            if ( pEnd2 - p < n +
+            n = pReq->getHeaderLen(i);
+            if (pEnd2 - p < n +
                 s_iForwardHeaderLen[ i - HttpHeader::H_CACHE_CTRL])
-                return -1;
-            appendString( p, s_pForwardHeaderName[i - HttpHeader::H_CACHE_CTRL],
-                                s_iForwardHeaderLen[ i - HttpHeader::H_CACHE_CTRL] );
-            appendString( p, pHeader, n );
+                return LS_FAIL;
+            appendString(p, s_pForwardHeaderName[i - HttpHeader::H_CACHE_CTRL],
+                         s_iForwardHeaderLen[ i - HttpHeader::H_CACHE_CTRL]);
+            appendString(p, pHeader, n);
             ++headerCounts;
         }
     }
-    appendInt( pHeaderCounts, headerCounts );
-    const char * pAttr = pReq->getAuthUser();
-    if ( pAttr )
+    appendInt(pHeaderCounts, headerCounts);
+    const char *pAttr = pReq->getAuthUser();
+    if (pAttr)
     {
-        n = strlen( pAttr );
-        if ( pEnd2 - p < n + 8 )
-            return -1;
+        n = strlen(pAttr);
+        if (pEnd2 - p < n + 8)
+            return LS_FAIL;
         *p++ = AJP_A_REMOTE_USER;
-        appendString( p, pAttr, n );
+        appendString(p, pAttr, n);
         *p++ = AJP_A_AUTH_TYPE;
-        appendString( p, "BASIC", 5 );
+        appendString(p, "BASIC", 5);
     }
 
     pAttr = pReq->getQueryString();
-    if ( pAttr )
+    if (pAttr)
     {
         n = pReq->getQueryStringLen();
-        if ( pEnd2 - p < n )
-            return -1;
+        if (pEnd2 - p < n)
+            return LS_FAIL;
         *p++ = AJP_A_QUERY_STRING;
-        appendString( p, pAttr, n );
+        appendString(p, pAttr, n);
     }
-    if ( pSession->isSSL() )
+    if (pSession->isSSL())
     {
-        SSLConnection * pSSL = pSession->getSSL();
-        SSL_SESSION * pSession = pSSL->getSession();
-        if ( pSession )
+        SSLConnection *pSSL = pSession->getSSL();
+        SSL_SESSION *pSession = pSSL->getSession();
+        if (pSession)
         {
-            int idLen = SSLConnection::getSessionIdLen( pSession);
+            int idLen = SSLConnection::getSessionIdLen(pSession);
             n = idLen * 2;
-            if ( pEnd2 - p < n )
-                return -1;
+            if (pEnd2 - p < n)
+                return LS_FAIL;
             *p++ = AJP_A_SSL_SESSION;
-            appendInt( p, n );
+            appendInt(p, n);
             StringTool::hexEncode(
-                (char *)SSLConnection::getSessionId( pSession ),
-                idLen, p );
+                (char *)SSLConnection::getSessionId(pSession),
+                idLen, p);
             p += n;
             *p++ = 0;
         }
-        
-        const SSL_CIPHER * pCipher = pSSL->getCurrentCipher();
-        if ( pCipher )
+
+        const SSL_CIPHER *pCipher = pSSL->getCurrentCipher();
+        if (pCipher)
         {
-            const char * pName = pSSL->getCipherName();
-            n = strlen( pName );
-            if ( pEnd2 - p < n )
-                return -1;
+            const char *pName = pSSL->getCipherName();
+            n = strlen(pName);
+            if (pEnd2 - p < n)
+                return LS_FAIL;
             *p++ = AJP_A_SSL_CIPHER;
-            appendString( p, pName, n );
+            appendString(p, pName, n);
             int algkeysize;
-            int keysize = SSLConnection::getCipherBits( pCipher, &algkeysize );
-            if ( pEnd2 - p < 20 )
-                return -1;
+            int keysize = SSLConnection::getCipherBits(pCipher, &algkeysize);
+            if (pEnd2 - p < 20)
+                return LS_FAIL;
             *p++ = AJP_A_SSL_KEY_SIZE;
-            n = safe_snprintf( p + 2, 16, "%d", keysize );
-            appendInt( p, n );
+            n = ls_snprintf(p + 2, 16, "%d", keysize);
+            appendInt(p, n);
             p += n + 1;
         }
 
-        X509 * pClientCert = pSSL->getPeerCertificate();
-        if ( pClientCert )
+        X509 *pClientCert = pSSL->getPeerCertificate();
+        if (pClientCert)
         {
-            n = SSLCert::PEMWriteCert( pClientCert, p+3, pEnd - p );
-            if ((n>0)&&( n < pEnd2 - p ))
+            n = SSLCert::PEMWriteCert(pClientCert, p + 3, pEnd - p);
+            if ((n > 0) && (n < pEnd2 - p))
             {
                 *p++ = AJP_A_SSL_CERT;
-                appendInt( p, n );
+                appendInt(p, n);
                 p += n;
                 *p++ = 0;
             }
@@ -306,49 +310,49 @@ int JkAjp13::buildReq( HttpSession *pSession, char * &p, char * pEnd )
     return 0;
 }
 
-int JkAjp13::buildWorkerHeader( JWorker * pWorker, char * &p, char * pEnd )
+int JkAjp13::buildWorkerHeader(JWorker *pWorker, char *&p, char *pEnd)
 {
-    //FIXME: jvm_route
+    //TODO: jvm_route
     //pAttr = ???;
     //if (pAttr )
     //{
     //    n = strlen( pAttr );
     //    if ( pEnd - p < n )
-    //        return -1;
+    //        return LS_FAIL;
     //    *p++ = AJP_A_JVM_ROUTE;
     //    appendString( p, pAttr, n );
     //}
 
     //add shared secret between servlet engine and web server
-    char * pEnd2 = pEnd - 6;
+    char *pEnd2 = pEnd - 6;
     int n;
-    const char * pSecret = pWorker->getConfig().getSecret();
+    const char *pSecret = pWorker->getConfig().getSecret();
     n = pWorker->getConfig().getSecretLen();
-    if ( pSecret )
+    if (pSecret)
     {
-        if ( pEnd2 - p < n )
-            return -1;
+        if (pEnd2 - p < n)
+            return LS_FAIL;
         *p++ = AJP_A_SECRET;
-        appendString( p, pSecret, n );
+        appendString(p, pSecret, n);
     }
 
     //add custom environment variables as attributes
     const Env *env = pWorker->getConfig().getEnv();
     int sz = env->size();
-    char * const * pEnvs = env->get();
-    for( int i = 0 ; i <sz; ++i )
+    char *const *pEnvs = env->get();
+    for (int i = 0 ; i < sz; ++i)
     {
-        if ( !pEnvs[i] )
+        if (!pEnvs[i])
             continue;
-        char * pVal = strchr( pEnvs[i], '=' );
-        if ( pVal == NULL )
+        char *pVal = strchr(pEnvs[i], '=');
+        if (pVal == NULL)
             continue;
-        n = strlen( pEnvs[i] );
-        if ( pEnd2 - p < n )
-            return -1;
+        n = strlen(pEnvs[i]);
+        if (pEnd2 - p < n)
+            return LS_FAIL;
         *p++ = AJP_A_REQ_ATTRIBUTE;
-        appendString( p, pEnvs[i], pVal - pEnvs[i] );
-        appendString( p, pVal, pEnvs[i] + n - pVal );
+        appendString(p, pEnvs[i], pVal - pEnvs[i]);
+        appendString(p, pVal, pEnvs[i] + n - pVal);
     }
     *p++ = AJP_A_END;
     return 0;

@@ -35,7 +35,6 @@ SET(http_STAT_SRCS
    httplogsource.cpp
    accesslog.cpp
    accesscache.cpp
-   httpglobals.cpp
    clientinfo.cpp
    clientcache.cpp
    httprange.cpp
@@ -49,7 +48,6 @@ SET(http_STAT_SRCS
    httpsignals.cpp
    handlertype.cpp
    handlerfactory.cpp
-   httputil.cpp
    staticfilecachedata.cpp
    staticfilecache.cpp
    cacheelement.cpp
@@ -81,9 +79,12 @@ SET(http_STAT_SRCS
    iptogeo.cpp
    moov.cpp
    #requestvars.cpp
-   hiostream.cpp 
+   hiostream.cpp
    httprespheaders.cpp
    l4handler.cpp
+   httpaiosendfile.cpp
+   serverprocessconfig.cpp
+   httpstats.cpp
 )
 
 add_library(http STATIC ${http_STAT_SRCS})

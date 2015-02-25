@@ -35,7 +35,7 @@
 #define SET_AFFINITY(pid, size, mask)       \
     thread_policy_set(mach_thread_self(), THREAD_AFFINITY_POLICY, mask, \
                       THREAD_AFFINITY_POLICY_COUNT)
-                      
+
 #else //__FreeBSD__ and others
 //#if (defined(__FreeBSD__) && (__FreeBSD_version >= 700110) )
 #   include <sys/param.h>
@@ -43,10 +43,10 @@
 #   include <sys/cpuset.h>
 #   define cpu_set_t cpuset_t
 #   define SET_AFFINITY(pid, size, mask) \
-           cpuset_setaffinity(CPU_LEVEL_WHICH, CPU_WHICH_TID, -1, size, mask)
+    cpuset_setaffinity(CPU_LEVEL_WHICH, CPU_WHICH_TID, -1, size, mask)
 #   define GET_AFFINITY(pid, size, mask) \
-           cpuset_getaffinity(CPU_LEVEL_WHICH, CPU_WHICH_TID, -1, size, mask)
-           
+    cpuset_getaffinity(CPU_LEVEL_WHICH, CPU_WHICH_TID, -1, size, mask)
+
 //# else
 ////#   error "This platform does not support GET_AFFINITY"
 //#define LSWS_NO_SET_AFFINITY    1
@@ -56,18 +56,23 @@
 
 class PCUtil
 {
-	PCUtil();
-	~PCUtil();
+    PCUtil();
+    PCUtil(const PCUtil &rhs);
+    ~PCUtil();
+    void operator=(const PCUtil &rhs);
 public:
     static int waitChildren();
     static int getNumProcessors();
-    static void getAffinityMask( int iCpuCount, int iProcessNum, int iNumCoresToUse, cpu_set_t *_mask);
+    static void getAffinityMask(int iCpuCount, int iProcessNum,
+                                int iNumCoresToUse, cpu_set_t *_mask);
     static int setCpuAffinity(cpu_set_t *mask);
     static void setCpuAffinityAll();
 
 private:
     static int          s_nCpu;
     static cpu_set_t    s_maskAll;
+
+
 
 };
 

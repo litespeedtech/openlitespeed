@@ -24,17 +24,17 @@
 
 class GuardedApp
 {
-public: 
+public:
     GuardedApp() {};
     virtual ~GuardedApp() {};
     virtual int forkTooFreq()   {   return 0;   }
     virtual int preFork()       {   return 0;   }
-    virtual int forkError( int err )    {   return 0;   }
-    virtual int postFork( pid_t pid )     {   return 0;   }
-    virtual int childExit( pid_t pid, int stat )   {   return 0;   }
-    virtual int childSignaled( pid_t pid, int signal, int coredump )
+    virtual int forkError(int err)    {   return 0;   }
+    virtual int postFork(pid_t pid)     {   return 0;   }
+    virtual int childExit(pid_t pid, int stat)   {   return 0;   }
+    virtual int childSignaled(pid_t pid, int signal, int coredump)
     {   return 0;   }
-    virtual int cleanUp( pid_t pid, char * pBB)       {   return 0;   }
+    virtual int cleanUp(pid_t pid, char *pBB)       {   return 0;   }
     virtual void onGuardTimer() {}
 };
 

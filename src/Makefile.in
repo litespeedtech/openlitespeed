@@ -98,16 +98,16 @@ am__installdirs = "$(DESTDIR)$(bindir)"
 PROGRAMS = $(bin_PROGRAMS)
 am_openlitespeed_OBJECTS = prelinkedmods.$(OBJEXT) httpdtest.$(OBJEXT) \
 	main.$(OBJEXT) httpfetchdriver.$(OBJEXT) httpfetch.$(OBJEXT) \
-	ni_fio.$(OBJEXT) linkobjpool.$(OBJEXT) pidfile.$(OBJEXT) \
+	linkobjpool.$(OBJEXT) pidfile.$(OBJEXT) \
 	hashdatacache.$(OBJEXT) keydata.$(OBJEXT) tlinklist.$(OBJEXT) \
-	mysleep.$(OBJEXT) rlimits.$(OBJEXT) duplicable.$(OBJEXT) \
-	gfactory.$(OBJEXT) fdpass.$(OBJEXT) pcregex.$(OBJEXT) \
-	autostr.$(OBJEXT) staticobj.$(OBJEXT) pool.$(OBJEXT) \
-	hashstringmap.$(OBJEXT) ghash.$(OBJEXT) emailsender.$(OBJEXT) \
-	guardedapp.$(OBJEXT) crashguard.$(OBJEXT) \
-	iconnection.$(OBJEXT) dlinkqueue.$(OBJEXT) connpool.$(OBJEXT) \
-	gzipbuf.$(OBJEXT) vmembuf.$(OBJEXT) blockbuf.$(OBJEXT) \
-	stringlist.$(OBJEXT) semaphore.$(OBJEXT) refcounter.$(OBJEXT) \
+	rlimits.$(OBJEXT) duplicable.$(OBJEXT) gfactory.$(OBJEXT) \
+	fdpass.$(OBJEXT) pcregex.$(OBJEXT) autostr.$(OBJEXT) \
+	staticobj.$(OBJEXT) pool.$(OBJEXT) hashstringmap.$(OBJEXT) \
+	ghash.$(OBJEXT) emailsender.$(OBJEXT) guardedapp.$(OBJEXT) \
+	crashguard.$(OBJEXT) iconnection.$(OBJEXT) \
+	dlinkqueue.$(OBJEXT) connpool.$(OBJEXT) gzipbuf.$(OBJEXT) \
+	vmembuf.$(OBJEXT) blockbuf.$(OBJEXT) stringlist.$(OBJEXT) \
+	semaphore.$(OBJEXT) refcounter.$(OBJEXT) \
 	gpointerlist.$(OBJEXT) linkedobj.$(OBJEXT) objpool.$(OBJEXT) \
 	gpath.$(OBJEXT) logtracker.$(OBJEXT) poolalloc.$(OBJEXT) \
 	env.$(OBJEXT) xmlnode.$(OBJEXT) iovec.$(OBJEXT) \
@@ -115,16 +115,21 @@ am_openlitespeed_OBJECTS = prelinkedmods.$(OBJEXT) httpdtest.$(OBJEXT) \
 	stringtool.$(OBJEXT) tsingleton.$(OBJEXT) pcutil.$(OBJEXT) \
 	daemonize.$(OBJEXT) configentry.$(OBJEXT) configctx.$(OBJEXT) \
 	logidtracker.$(OBJEXT) datetime.$(OBJEXT) \
+	resourcepool.$(OBJEXT) linkqueue.$(OBJEXT) httputil.$(OBJEXT) \
 	profiletime.$(OBJEXT) partitioninfo.$(OBJEXT) \
-	nicdetect.$(OBJEXT) systeminfo.$(OBJEXT) lsr_aho.$(OBJEXT) \
-	lsr_base64.$(OBJEXT) lsr_buf.$(OBJEXT) \
-	lsr_confparser.$(OBJEXT) lsr_crc64.$(OBJEXT) \
-	lsr_dlinkq.$(OBJEXT) lsr_hash.$(OBJEXT) lsr_link.$(OBJEXT) \
-	lsr_lock.$(OBJEXT) lsr_loopbuf.$(OBJEXT) lsr_map.$(OBJEXT) \
-	lsr_md5.$(OBJEXT) lsr_objarray.$(OBJEXT) lsr_pcreg.$(OBJEXT) \
-	lsr_pool.$(OBJEXT) lsr_ptrlist.$(OBJEXT) lsr_sha1.$(OBJEXT) \
-	lsr_str.$(OBJEXT) lsr_strlist.$(OBJEXT) lsr_strtool.$(OBJEXT) \
-	lsr_xpool.$(OBJEXT)
+	nicdetect.$(OBJEXT) systeminfo.$(OBJEXT) ls_aho.$(OBJEXT) \
+	ls_base64.$(OBJEXT) ls_buf.$(OBJEXT) ls_confparser.$(OBJEXT) \
+	ls_crc64.$(OBJEXT) ls_dlinkq.$(OBJEXT) ls_fileio.$(OBJEXT) \
+	ls_hash.$(OBJEXT) ls_lfqueue.$(OBJEXT) ls_lfstack.$(OBJEXT) \
+	ls_link.$(OBJEXT) ls_lock.$(OBJEXT) ls_loopbuf.$(OBJEXT) \
+	ls_map.$(OBJEXT) ls_md5.$(OBJEXT) ls_mpscq.$(OBJEXT) \
+	ls_objarray.$(OBJEXT) ls_objpool.$(OBJEXT) ls_pcreg.$(OBJEXT) \
+	ls_pool.$(OBJEXT) ls_ptrlist.$(OBJEXT) ls_sha1.$(OBJEXT) \
+	ls_str.$(OBJEXT) ls_strlist.$(OBJEXT) ls_strtool.$(OBJEXT) \
+	ls_time.$(OBJEXT) ls_xpool.$(OBJEXT) xxhash.$(OBJEXT) \
+	pthreadcond.$(OBJEXT) pthreadmutex.$(OBJEXT) \
+	pthreadworkqueue.$(OBJEXT) thread.$(OBJEXT) workcrew.$(OBJEXT) \
+	worker.$(OBJEXT)
 openlitespeed_OBJECTS = $(am_openlitespeed_OBJECTS)
 am__DEPENDENCIES_1 =
 openlitespeed_DEPENDENCIES = ./main/libmain.a ./http/libhttp.a \
@@ -133,7 +138,7 @@ openlitespeed_DEPENDENCIES = ./main/libmain.a ./http/libhttp.a \
 	./ssi/libssi.a ./edio/libedio.a ./lsiapi/liblsiapi.a \
 	./modules/libmodules.a ./shm/liblsshm.a $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1)
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
 am__v_lt_0 = --silent
@@ -344,6 +349,7 @@ PCRE_CFLAGS = @PCRE_CFLAGS@
 PCRE_LDFLAGS = @PCRE_LDFLAGS@
 PCRE_LIBS = @PCRE_LIBS@
 RANLIB = @RANLIB@
+RT_LIB_OPTION = @RT_LIB_OPTION@
 SED = @SED@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
@@ -405,13 +411,11 @@ top_srcdir = @top_srcdir@
 openlitespeed_SOURCES = modules/prelinkedmods.cpp httpdtest.cpp main.cpp \
    util/httpfetchdriver.cpp \
    util/httpfetch.cpp \
-   util/ni_fio.c \
    util/linkobjpool.cpp \
    util/pidfile.cpp \
    util/hashdatacache.cpp \
    util/keydata.cpp \
    util/tlinklist.cpp \
-   util/mysleep.c \
    util/rlimits.cpp \
    util/duplicable.cpp \
    util/gfactory.cpp \
@@ -454,42 +458,58 @@ openlitespeed_SOURCES = modules/prelinkedmods.cpp httpdtest.cpp main.cpp \
    util/configctx.cpp \
    util/logidtracker.cpp \
    util/datetime.cpp \
+   util/resourcepool.cpp \
+   util/linkqueue.cpp \
+   util/httputil.cpp \
    util/misc/profiletime.cpp \
    util/sysinfo/partitioninfo.cpp \
    util/sysinfo/nicdetect.cpp \
    util/sysinfo/systeminfo.cpp \
-   lsr/lsr_aho.c \
-   lsr/lsr_base64.c \
-   lsr/lsr_buf.c \
-   lsr/lsr_confparser.c \
-   lsr/lsr_crc64.c \
-   lsr/lsr_dlinkq.c \
-   lsr/lsr_hash.c \
-   lsr/lsr_link.c \
-   lsr/lsr_lock.c \
-   lsr/lsr_loopbuf.c \
-   lsr/lsr_map.c \
-   lsr/lsr_md5.c \
-   lsr/lsr_objarray.c \
-   lsr/lsr_pcreg.c \
-   lsr/lsr_pool.c \
-   lsr/lsr_ptrlist.c \
-   lsr/lsr_sha1.c \
-   lsr/lsr_str.c \
-   lsr/lsr_strlist.c \
-   lsr/lsr_strtool.c \
-   lsr/lsr_xpool.c
+   lsr/ls_aho.c \
+   lsr/ls_base64.c \
+   lsr/ls_buf.c \
+   lsr/ls_confparser.c \
+   lsr/ls_crc64.c \
+   lsr/ls_dlinkq.c \
+   lsr/ls_fileio.c \
+   lsr/ls_hash.c \
+   lsr/ls_lfqueue.c \
+   lsr/ls_lfstack.c \
+   lsr/ls_link.c \
+   lsr/ls_lock.c \
+   lsr/ls_loopbuf.c \
+   lsr/ls_map.c \
+   lsr/ls_md5.c \
+   lsr/ls_mpscq.c \
+   lsr/ls_objarray.c \
+   lsr/ls_objpool.c \
+   lsr/ls_pcreg.c \
+   lsr/ls_pool.c \
+   lsr/ls_ptrlist.c \
+   lsr/ls_sha1.c \
+   lsr/ls_str.c \
+   lsr/ls_strlist.c \
+   lsr/ls_strtool.c \
+   lsr/ls_time.c \
+   lsr/ls_xpool.c \
+   lsr/xxhash.c \
+   thread/pthreadcond.cpp \
+   thread/pthreadmutex.cpp \
+   thread/pthreadworkqueue.cpp \
+   thread/thread.cpp \
+   thread/workcrew.cpp \
+   thread/worker.cpp
 
 openlitespeed_LDADD = ./main/libmain.a ./http/libhttp.a ./spdy/libspdy.a \
         ./extensions/libextensions.a ./log4cxx/liblog4cxx.a ./socket/libsocket.a \
         ./sslpp/libsslpp.a  ./ssi/libssi.a ./edio/libedio.a ./lsiapi/liblsiapi.a \
         ./modules/libmodules.a ./shm/liblsshm.a  \
-        $(EXPAT_LIBS) $(OPENSSL_LIBS) $(PCRE_LIBS) -lGeoIP -lz -lexpat -lpthread $(DL_LIB_OPTION)
+        $(EXPAT_LIBS) $(OPENSSL_LIBS) $(PCRE_LIBS) -lGeoIP -lz -lexpat -lpthread $(DL_LIB_OPTION) $(RT_LIB_OPTION)
 
 AM_CPPFLAGS = $(PCRE_CFLAGS) $(OPENSSL_INCLUDES) $(EXPAT_CFLAGS)
 AM_LDFLAGS = -L/usr/lib $(OPENSSL_LDFLAGS)
-INCLUDES = -I$(top_srcdir)/include -I$(top_srcdir)/src 
-SUBDIRS = socket http spdy sslpp ssi extensions log4cxx main edio lsiapi  modules shm 
+INCLUDES = -I$(top_srcdir)/include -I$(top_srcdir)/src
+SUBDIRS = socket http spdy sslpp ssi extensions log4cxx main edio lsiapi  modules shm
 
 # the library search path.
 openlitespeed_LDFLAGS = $(all_libraries)
@@ -628,38 +648,44 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/httpdtest.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/httpfetch.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/httpfetchdriver.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/httputil.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/iconnection.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/iovec.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/keydata.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/linkedobj.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/linkobjpool.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/linkqueue.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/logidtracker.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/logtracker.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/loopbuf.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lsr_aho.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lsr_base64.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lsr_buf.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lsr_confparser.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lsr_crc64.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lsr_dlinkq.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lsr_hash.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lsr_link.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lsr_lock.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lsr_loopbuf.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lsr_map.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lsr_md5.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lsr_objarray.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lsr_pcreg.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lsr_pool.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lsr_ptrlist.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lsr_sha1.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lsr_str.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lsr_strlist.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lsr_strtool.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lsr_xpool.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ls_aho.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ls_base64.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ls_buf.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ls_confparser.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ls_crc64.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ls_dlinkq.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ls_fileio.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ls_hash.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ls_lfqueue.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ls_lfstack.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ls_link.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ls_lock.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ls_loopbuf.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ls_map.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ls_md5.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ls_mpscq.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ls_objarray.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ls_objpool.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ls_pcreg.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ls_pool.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ls_ptrlist.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ls_sha1.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ls_str.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ls_strlist.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ls_strtool.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ls_time.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ls_xpool.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/main.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/mysleep.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ni_fio.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/nicdetect.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/objpool.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/partitioninfo.Po@am__quote@
@@ -670,7 +696,11 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/poolalloc.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/prelinkedmods.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/profiletime.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pthreadcond.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pthreadmutex.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pthreadworkqueue.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/refcounter.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/resourcepool.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/rlimits.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/semaphore.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/signalutil.Po@am__quote@
@@ -678,10 +708,14 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stringlist.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stringtool.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/systeminfo.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/thread.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tlinklist.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tsingleton.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/vmembuf.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/workcrew.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/worker.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/xmlnode.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/xxhash.Po@am__quote@
 
 .c.o:
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
@@ -704,327 +738,397 @@ distclean-compile:
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LTCOMPILE) -c -o $@ $<
 
-ni_fio.o: util/ni_fio.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ni_fio.o -MD -MP -MF $(DEPDIR)/ni_fio.Tpo -c -o ni_fio.o `test -f 'util/ni_fio.c' || echo '$(srcdir)/'`util/ni_fio.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/ni_fio.Tpo $(DEPDIR)/ni_fio.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='util/ni_fio.c' object='ni_fio.o' libtool=no @AMDEPBACKSLASH@
+ls_aho.o: lsr/ls_aho.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ls_aho.o -MD -MP -MF $(DEPDIR)/ls_aho.Tpo -c -o ls_aho.o `test -f 'lsr/ls_aho.c' || echo '$(srcdir)/'`lsr/ls_aho.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/ls_aho.Tpo $(DEPDIR)/ls_aho.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/ls_aho.c' object='ls_aho.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ni_fio.o `test -f 'util/ni_fio.c' || echo '$(srcdir)/'`util/ni_fio.c
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ls_aho.o `test -f 'lsr/ls_aho.c' || echo '$(srcdir)/'`lsr/ls_aho.c
 
-ni_fio.obj: util/ni_fio.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ni_fio.obj -MD -MP -MF $(DEPDIR)/ni_fio.Tpo -c -o ni_fio.obj `if test -f 'util/ni_fio.c'; then $(CYGPATH_W) 'util/ni_fio.c'; else $(CYGPATH_W) '$(srcdir)/util/ni_fio.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/ni_fio.Tpo $(DEPDIR)/ni_fio.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='util/ni_fio.c' object='ni_fio.obj' libtool=no @AMDEPBACKSLASH@
+ls_aho.obj: lsr/ls_aho.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ls_aho.obj -MD -MP -MF $(DEPDIR)/ls_aho.Tpo -c -o ls_aho.obj `if test -f 'lsr/ls_aho.c'; then $(CYGPATH_W) 'lsr/ls_aho.c'; else $(CYGPATH_W) '$(srcdir)/lsr/ls_aho.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/ls_aho.Tpo $(DEPDIR)/ls_aho.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/ls_aho.c' object='ls_aho.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ni_fio.obj `if test -f 'util/ni_fio.c'; then $(CYGPATH_W) 'util/ni_fio.c'; else $(CYGPATH_W) '$(srcdir)/util/ni_fio.c'; fi`
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ls_aho.obj `if test -f 'lsr/ls_aho.c'; then $(CYGPATH_W) 'lsr/ls_aho.c'; else $(CYGPATH_W) '$(srcdir)/lsr/ls_aho.c'; fi`
 
-mysleep.o: util/mysleep.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT mysleep.o -MD -MP -MF $(DEPDIR)/mysleep.Tpo -c -o mysleep.o `test -f 'util/mysleep.c' || echo '$(srcdir)/'`util/mysleep.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/mysleep.Tpo $(DEPDIR)/mysleep.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='util/mysleep.c' object='mysleep.o' libtool=no @AMDEPBACKSLASH@
+ls_base64.o: lsr/ls_base64.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ls_base64.o -MD -MP -MF $(DEPDIR)/ls_base64.Tpo -c -o ls_base64.o `test -f 'lsr/ls_base64.c' || echo '$(srcdir)/'`lsr/ls_base64.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/ls_base64.Tpo $(DEPDIR)/ls_base64.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/ls_base64.c' object='ls_base64.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o mysleep.o `test -f 'util/mysleep.c' || echo '$(srcdir)/'`util/mysleep.c
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ls_base64.o `test -f 'lsr/ls_base64.c' || echo '$(srcdir)/'`lsr/ls_base64.c
 
-mysleep.obj: util/mysleep.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT mysleep.obj -MD -MP -MF $(DEPDIR)/mysleep.Tpo -c -o mysleep.obj `if test -f 'util/mysleep.c'; then $(CYGPATH_W) 'util/mysleep.c'; else $(CYGPATH_W) '$(srcdir)/util/mysleep.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/mysleep.Tpo $(DEPDIR)/mysleep.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='util/mysleep.c' object='mysleep.obj' libtool=no @AMDEPBACKSLASH@
+ls_base64.obj: lsr/ls_base64.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ls_base64.obj -MD -MP -MF $(DEPDIR)/ls_base64.Tpo -c -o ls_base64.obj `if test -f 'lsr/ls_base64.c'; then $(CYGPATH_W) 'lsr/ls_base64.c'; else $(CYGPATH_W) '$(srcdir)/lsr/ls_base64.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/ls_base64.Tpo $(DEPDIR)/ls_base64.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/ls_base64.c' object='ls_base64.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o mysleep.obj `if test -f 'util/mysleep.c'; then $(CYGPATH_W) 'util/mysleep.c'; else $(CYGPATH_W) '$(srcdir)/util/mysleep.c'; fi`
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ls_base64.obj `if test -f 'lsr/ls_base64.c'; then $(CYGPATH_W) 'lsr/ls_base64.c'; else $(CYGPATH_W) '$(srcdir)/lsr/ls_base64.c'; fi`
 
-lsr_aho.o: lsr/lsr_aho.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lsr_aho.o -MD -MP -MF $(DEPDIR)/lsr_aho.Tpo -c -o lsr_aho.o `test -f 'lsr/lsr_aho.c' || echo '$(srcdir)/'`lsr/lsr_aho.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/lsr_aho.Tpo $(DEPDIR)/lsr_aho.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/lsr_aho.c' object='lsr_aho.o' libtool=no @AMDEPBACKSLASH@
+ls_buf.o: lsr/ls_buf.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ls_buf.o -MD -MP -MF $(DEPDIR)/ls_buf.Tpo -c -o ls_buf.o `test -f 'lsr/ls_buf.c' || echo '$(srcdir)/'`lsr/ls_buf.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/ls_buf.Tpo $(DEPDIR)/ls_buf.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/ls_buf.c' object='ls_buf.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lsr_aho.o `test -f 'lsr/lsr_aho.c' || echo '$(srcdir)/'`lsr/lsr_aho.c
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ls_buf.o `test -f 'lsr/ls_buf.c' || echo '$(srcdir)/'`lsr/ls_buf.c
 
-lsr_aho.obj: lsr/lsr_aho.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lsr_aho.obj -MD -MP -MF $(DEPDIR)/lsr_aho.Tpo -c -o lsr_aho.obj `if test -f 'lsr/lsr_aho.c'; then $(CYGPATH_W) 'lsr/lsr_aho.c'; else $(CYGPATH_W) '$(srcdir)/lsr/lsr_aho.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/lsr_aho.Tpo $(DEPDIR)/lsr_aho.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/lsr_aho.c' object='lsr_aho.obj' libtool=no @AMDEPBACKSLASH@
+ls_buf.obj: lsr/ls_buf.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ls_buf.obj -MD -MP -MF $(DEPDIR)/ls_buf.Tpo -c -o ls_buf.obj `if test -f 'lsr/ls_buf.c'; then $(CYGPATH_W) 'lsr/ls_buf.c'; else $(CYGPATH_W) '$(srcdir)/lsr/ls_buf.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/ls_buf.Tpo $(DEPDIR)/ls_buf.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/ls_buf.c' object='ls_buf.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lsr_aho.obj `if test -f 'lsr/lsr_aho.c'; then $(CYGPATH_W) 'lsr/lsr_aho.c'; else $(CYGPATH_W) '$(srcdir)/lsr/lsr_aho.c'; fi`
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ls_buf.obj `if test -f 'lsr/ls_buf.c'; then $(CYGPATH_W) 'lsr/ls_buf.c'; else $(CYGPATH_W) '$(srcdir)/lsr/ls_buf.c'; fi`
 
-lsr_base64.o: lsr/lsr_base64.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lsr_base64.o -MD -MP -MF $(DEPDIR)/lsr_base64.Tpo -c -o lsr_base64.o `test -f 'lsr/lsr_base64.c' || echo '$(srcdir)/'`lsr/lsr_base64.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/lsr_base64.Tpo $(DEPDIR)/lsr_base64.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/lsr_base64.c' object='lsr_base64.o' libtool=no @AMDEPBACKSLASH@
+ls_confparser.o: lsr/ls_confparser.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ls_confparser.o -MD -MP -MF $(DEPDIR)/ls_confparser.Tpo -c -o ls_confparser.o `test -f 'lsr/ls_confparser.c' || echo '$(srcdir)/'`lsr/ls_confparser.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/ls_confparser.Tpo $(DEPDIR)/ls_confparser.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/ls_confparser.c' object='ls_confparser.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lsr_base64.o `test -f 'lsr/lsr_base64.c' || echo '$(srcdir)/'`lsr/lsr_base64.c
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ls_confparser.o `test -f 'lsr/ls_confparser.c' || echo '$(srcdir)/'`lsr/ls_confparser.c
 
-lsr_base64.obj: lsr/lsr_base64.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lsr_base64.obj -MD -MP -MF $(DEPDIR)/lsr_base64.Tpo -c -o lsr_base64.obj `if test -f 'lsr/lsr_base64.c'; then $(CYGPATH_W) 'lsr/lsr_base64.c'; else $(CYGPATH_W) '$(srcdir)/lsr/lsr_base64.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/lsr_base64.Tpo $(DEPDIR)/lsr_base64.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/lsr_base64.c' object='lsr_base64.obj' libtool=no @AMDEPBACKSLASH@
+ls_confparser.obj: lsr/ls_confparser.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ls_confparser.obj -MD -MP -MF $(DEPDIR)/ls_confparser.Tpo -c -o ls_confparser.obj `if test -f 'lsr/ls_confparser.c'; then $(CYGPATH_W) 'lsr/ls_confparser.c'; else $(CYGPATH_W) '$(srcdir)/lsr/ls_confparser.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/ls_confparser.Tpo $(DEPDIR)/ls_confparser.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/ls_confparser.c' object='ls_confparser.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lsr_base64.obj `if test -f 'lsr/lsr_base64.c'; then $(CYGPATH_W) 'lsr/lsr_base64.c'; else $(CYGPATH_W) '$(srcdir)/lsr/lsr_base64.c'; fi`
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ls_confparser.obj `if test -f 'lsr/ls_confparser.c'; then $(CYGPATH_W) 'lsr/ls_confparser.c'; else $(CYGPATH_W) '$(srcdir)/lsr/ls_confparser.c'; fi`
 
-lsr_buf.o: lsr/lsr_buf.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lsr_buf.o -MD -MP -MF $(DEPDIR)/lsr_buf.Tpo -c -o lsr_buf.o `test -f 'lsr/lsr_buf.c' || echo '$(srcdir)/'`lsr/lsr_buf.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/lsr_buf.Tpo $(DEPDIR)/lsr_buf.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/lsr_buf.c' object='lsr_buf.o' libtool=no @AMDEPBACKSLASH@
+ls_crc64.o: lsr/ls_crc64.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ls_crc64.o -MD -MP -MF $(DEPDIR)/ls_crc64.Tpo -c -o ls_crc64.o `test -f 'lsr/ls_crc64.c' || echo '$(srcdir)/'`lsr/ls_crc64.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/ls_crc64.Tpo $(DEPDIR)/ls_crc64.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/ls_crc64.c' object='ls_crc64.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lsr_buf.o `test -f 'lsr/lsr_buf.c' || echo '$(srcdir)/'`lsr/lsr_buf.c
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ls_crc64.o `test -f 'lsr/ls_crc64.c' || echo '$(srcdir)/'`lsr/ls_crc64.c
 
-lsr_buf.obj: lsr/lsr_buf.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lsr_buf.obj -MD -MP -MF $(DEPDIR)/lsr_buf.Tpo -c -o lsr_buf.obj `if test -f 'lsr/lsr_buf.c'; then $(CYGPATH_W) 'lsr/lsr_buf.c'; else $(CYGPATH_W) '$(srcdir)/lsr/lsr_buf.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/lsr_buf.Tpo $(DEPDIR)/lsr_buf.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/lsr_buf.c' object='lsr_buf.obj' libtool=no @AMDEPBACKSLASH@
+ls_crc64.obj: lsr/ls_crc64.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ls_crc64.obj -MD -MP -MF $(DEPDIR)/ls_crc64.Tpo -c -o ls_crc64.obj `if test -f 'lsr/ls_crc64.c'; then $(CYGPATH_W) 'lsr/ls_crc64.c'; else $(CYGPATH_W) '$(srcdir)/lsr/ls_crc64.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/ls_crc64.Tpo $(DEPDIR)/ls_crc64.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/ls_crc64.c' object='ls_crc64.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lsr_buf.obj `if test -f 'lsr/lsr_buf.c'; then $(CYGPATH_W) 'lsr/lsr_buf.c'; else $(CYGPATH_W) '$(srcdir)/lsr/lsr_buf.c'; fi`
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ls_crc64.obj `if test -f 'lsr/ls_crc64.c'; then $(CYGPATH_W) 'lsr/ls_crc64.c'; else $(CYGPATH_W) '$(srcdir)/lsr/ls_crc64.c'; fi`
 
-lsr_confparser.o: lsr/lsr_confparser.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lsr_confparser.o -MD -MP -MF $(DEPDIR)/lsr_confparser.Tpo -c -o lsr_confparser.o `test -f 'lsr/lsr_confparser.c' || echo '$(srcdir)/'`lsr/lsr_confparser.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/lsr_confparser.Tpo $(DEPDIR)/lsr_confparser.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/lsr_confparser.c' object='lsr_confparser.o' libtool=no @AMDEPBACKSLASH@
+ls_dlinkq.o: lsr/ls_dlinkq.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ls_dlinkq.o -MD -MP -MF $(DEPDIR)/ls_dlinkq.Tpo -c -o ls_dlinkq.o `test -f 'lsr/ls_dlinkq.c' || echo '$(srcdir)/'`lsr/ls_dlinkq.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/ls_dlinkq.Tpo $(DEPDIR)/ls_dlinkq.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/ls_dlinkq.c' object='ls_dlinkq.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lsr_confparser.o `test -f 'lsr/lsr_confparser.c' || echo '$(srcdir)/'`lsr/lsr_confparser.c
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ls_dlinkq.o `test -f 'lsr/ls_dlinkq.c' || echo '$(srcdir)/'`lsr/ls_dlinkq.c
 
-lsr_confparser.obj: lsr/lsr_confparser.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lsr_confparser.obj -MD -MP -MF $(DEPDIR)/lsr_confparser.Tpo -c -o lsr_confparser.obj `if test -f 'lsr/lsr_confparser.c'; then $(CYGPATH_W) 'lsr/lsr_confparser.c'; else $(CYGPATH_W) '$(srcdir)/lsr/lsr_confparser.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/lsr_confparser.Tpo $(DEPDIR)/lsr_confparser.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/lsr_confparser.c' object='lsr_confparser.obj' libtool=no @AMDEPBACKSLASH@
+ls_dlinkq.obj: lsr/ls_dlinkq.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ls_dlinkq.obj -MD -MP -MF $(DEPDIR)/ls_dlinkq.Tpo -c -o ls_dlinkq.obj `if test -f 'lsr/ls_dlinkq.c'; then $(CYGPATH_W) 'lsr/ls_dlinkq.c'; else $(CYGPATH_W) '$(srcdir)/lsr/ls_dlinkq.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/ls_dlinkq.Tpo $(DEPDIR)/ls_dlinkq.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/ls_dlinkq.c' object='ls_dlinkq.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lsr_confparser.obj `if test -f 'lsr/lsr_confparser.c'; then $(CYGPATH_W) 'lsr/lsr_confparser.c'; else $(CYGPATH_W) '$(srcdir)/lsr/lsr_confparser.c'; fi`
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ls_dlinkq.obj `if test -f 'lsr/ls_dlinkq.c'; then $(CYGPATH_W) 'lsr/ls_dlinkq.c'; else $(CYGPATH_W) '$(srcdir)/lsr/ls_dlinkq.c'; fi`
 
-lsr_crc64.o: lsr/lsr_crc64.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lsr_crc64.o -MD -MP -MF $(DEPDIR)/lsr_crc64.Tpo -c -o lsr_crc64.o `test -f 'lsr/lsr_crc64.c' || echo '$(srcdir)/'`lsr/lsr_crc64.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/lsr_crc64.Tpo $(DEPDIR)/lsr_crc64.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/lsr_crc64.c' object='lsr_crc64.o' libtool=no @AMDEPBACKSLASH@
+ls_fileio.o: lsr/ls_fileio.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ls_fileio.o -MD -MP -MF $(DEPDIR)/ls_fileio.Tpo -c -o ls_fileio.o `test -f 'lsr/ls_fileio.c' || echo '$(srcdir)/'`lsr/ls_fileio.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/ls_fileio.Tpo $(DEPDIR)/ls_fileio.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/ls_fileio.c' object='ls_fileio.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lsr_crc64.o `test -f 'lsr/lsr_crc64.c' || echo '$(srcdir)/'`lsr/lsr_crc64.c
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ls_fileio.o `test -f 'lsr/ls_fileio.c' || echo '$(srcdir)/'`lsr/ls_fileio.c
 
-lsr_crc64.obj: lsr/lsr_crc64.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lsr_crc64.obj -MD -MP -MF $(DEPDIR)/lsr_crc64.Tpo -c -o lsr_crc64.obj `if test -f 'lsr/lsr_crc64.c'; then $(CYGPATH_W) 'lsr/lsr_crc64.c'; else $(CYGPATH_W) '$(srcdir)/lsr/lsr_crc64.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/lsr_crc64.Tpo $(DEPDIR)/lsr_crc64.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/lsr_crc64.c' object='lsr_crc64.obj' libtool=no @AMDEPBACKSLASH@
+ls_fileio.obj: lsr/ls_fileio.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ls_fileio.obj -MD -MP -MF $(DEPDIR)/ls_fileio.Tpo -c -o ls_fileio.obj `if test -f 'lsr/ls_fileio.c'; then $(CYGPATH_W) 'lsr/ls_fileio.c'; else $(CYGPATH_W) '$(srcdir)/lsr/ls_fileio.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/ls_fileio.Tpo $(DEPDIR)/ls_fileio.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/ls_fileio.c' object='ls_fileio.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lsr_crc64.obj `if test -f 'lsr/lsr_crc64.c'; then $(CYGPATH_W) 'lsr/lsr_crc64.c'; else $(CYGPATH_W) '$(srcdir)/lsr/lsr_crc64.c'; fi`
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ls_fileio.obj `if test -f 'lsr/ls_fileio.c'; then $(CYGPATH_W) 'lsr/ls_fileio.c'; else $(CYGPATH_W) '$(srcdir)/lsr/ls_fileio.c'; fi`
 
-lsr_dlinkq.o: lsr/lsr_dlinkq.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lsr_dlinkq.o -MD -MP -MF $(DEPDIR)/lsr_dlinkq.Tpo -c -o lsr_dlinkq.o `test -f 'lsr/lsr_dlinkq.c' || echo '$(srcdir)/'`lsr/lsr_dlinkq.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/lsr_dlinkq.Tpo $(DEPDIR)/lsr_dlinkq.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/lsr_dlinkq.c' object='lsr_dlinkq.o' libtool=no @AMDEPBACKSLASH@
+ls_hash.o: lsr/ls_hash.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ls_hash.o -MD -MP -MF $(DEPDIR)/ls_hash.Tpo -c -o ls_hash.o `test -f 'lsr/ls_hash.c' || echo '$(srcdir)/'`lsr/ls_hash.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/ls_hash.Tpo $(DEPDIR)/ls_hash.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/ls_hash.c' object='ls_hash.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lsr_dlinkq.o `test -f 'lsr/lsr_dlinkq.c' || echo '$(srcdir)/'`lsr/lsr_dlinkq.c
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ls_hash.o `test -f 'lsr/ls_hash.c' || echo '$(srcdir)/'`lsr/ls_hash.c
 
-lsr_dlinkq.obj: lsr/lsr_dlinkq.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lsr_dlinkq.obj -MD -MP -MF $(DEPDIR)/lsr_dlinkq.Tpo -c -o lsr_dlinkq.obj `if test -f 'lsr/lsr_dlinkq.c'; then $(CYGPATH_W) 'lsr/lsr_dlinkq.c'; else $(CYGPATH_W) '$(srcdir)/lsr/lsr_dlinkq.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/lsr_dlinkq.Tpo $(DEPDIR)/lsr_dlinkq.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/lsr_dlinkq.c' object='lsr_dlinkq.obj' libtool=no @AMDEPBACKSLASH@
+ls_hash.obj: lsr/ls_hash.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ls_hash.obj -MD -MP -MF $(DEPDIR)/ls_hash.Tpo -c -o ls_hash.obj `if test -f 'lsr/ls_hash.c'; then $(CYGPATH_W) 'lsr/ls_hash.c'; else $(CYGPATH_W) '$(srcdir)/lsr/ls_hash.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/ls_hash.Tpo $(DEPDIR)/ls_hash.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/ls_hash.c' object='ls_hash.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lsr_dlinkq.obj `if test -f 'lsr/lsr_dlinkq.c'; then $(CYGPATH_W) 'lsr/lsr_dlinkq.c'; else $(CYGPATH_W) '$(srcdir)/lsr/lsr_dlinkq.c'; fi`
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ls_hash.obj `if test -f 'lsr/ls_hash.c'; then $(CYGPATH_W) 'lsr/ls_hash.c'; else $(CYGPATH_W) '$(srcdir)/lsr/ls_hash.c'; fi`
 
-lsr_hash.o: lsr/lsr_hash.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lsr_hash.o -MD -MP -MF $(DEPDIR)/lsr_hash.Tpo -c -o lsr_hash.o `test -f 'lsr/lsr_hash.c' || echo '$(srcdir)/'`lsr/lsr_hash.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/lsr_hash.Tpo $(DEPDIR)/lsr_hash.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/lsr_hash.c' object='lsr_hash.o' libtool=no @AMDEPBACKSLASH@
+ls_lfqueue.o: lsr/ls_lfqueue.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ls_lfqueue.o -MD -MP -MF $(DEPDIR)/ls_lfqueue.Tpo -c -o ls_lfqueue.o `test -f 'lsr/ls_lfqueue.c' || echo '$(srcdir)/'`lsr/ls_lfqueue.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/ls_lfqueue.Tpo $(DEPDIR)/ls_lfqueue.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/ls_lfqueue.c' object='ls_lfqueue.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lsr_hash.o `test -f 'lsr/lsr_hash.c' || echo '$(srcdir)/'`lsr/lsr_hash.c
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ls_lfqueue.o `test -f 'lsr/ls_lfqueue.c' || echo '$(srcdir)/'`lsr/ls_lfqueue.c
 
-lsr_hash.obj: lsr/lsr_hash.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lsr_hash.obj -MD -MP -MF $(DEPDIR)/lsr_hash.Tpo -c -o lsr_hash.obj `if test -f 'lsr/lsr_hash.c'; then $(CYGPATH_W) 'lsr/lsr_hash.c'; else $(CYGPATH_W) '$(srcdir)/lsr/lsr_hash.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/lsr_hash.Tpo $(DEPDIR)/lsr_hash.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/lsr_hash.c' object='lsr_hash.obj' libtool=no @AMDEPBACKSLASH@
+ls_lfqueue.obj: lsr/ls_lfqueue.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ls_lfqueue.obj -MD -MP -MF $(DEPDIR)/ls_lfqueue.Tpo -c -o ls_lfqueue.obj `if test -f 'lsr/ls_lfqueue.c'; then $(CYGPATH_W) 'lsr/ls_lfqueue.c'; else $(CYGPATH_W) '$(srcdir)/lsr/ls_lfqueue.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/ls_lfqueue.Tpo $(DEPDIR)/ls_lfqueue.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/ls_lfqueue.c' object='ls_lfqueue.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lsr_hash.obj `if test -f 'lsr/lsr_hash.c'; then $(CYGPATH_W) 'lsr/lsr_hash.c'; else $(CYGPATH_W) '$(srcdir)/lsr/lsr_hash.c'; fi`
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ls_lfqueue.obj `if test -f 'lsr/ls_lfqueue.c'; then $(CYGPATH_W) 'lsr/ls_lfqueue.c'; else $(CYGPATH_W) '$(srcdir)/lsr/ls_lfqueue.c'; fi`
 
-lsr_link.o: lsr/lsr_link.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lsr_link.o -MD -MP -MF $(DEPDIR)/lsr_link.Tpo -c -o lsr_link.o `test -f 'lsr/lsr_link.c' || echo '$(srcdir)/'`lsr/lsr_link.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/lsr_link.Tpo $(DEPDIR)/lsr_link.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/lsr_link.c' object='lsr_link.o' libtool=no @AMDEPBACKSLASH@
+ls_lfstack.o: lsr/ls_lfstack.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ls_lfstack.o -MD -MP -MF $(DEPDIR)/ls_lfstack.Tpo -c -o ls_lfstack.o `test -f 'lsr/ls_lfstack.c' || echo '$(srcdir)/'`lsr/ls_lfstack.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/ls_lfstack.Tpo $(DEPDIR)/ls_lfstack.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/ls_lfstack.c' object='ls_lfstack.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lsr_link.o `test -f 'lsr/lsr_link.c' || echo '$(srcdir)/'`lsr/lsr_link.c
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ls_lfstack.o `test -f 'lsr/ls_lfstack.c' || echo '$(srcdir)/'`lsr/ls_lfstack.c
 
-lsr_link.obj: lsr/lsr_link.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lsr_link.obj -MD -MP -MF $(DEPDIR)/lsr_link.Tpo -c -o lsr_link.obj `if test -f 'lsr/lsr_link.c'; then $(CYGPATH_W) 'lsr/lsr_link.c'; else $(CYGPATH_W) '$(srcdir)/lsr/lsr_link.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/lsr_link.Tpo $(DEPDIR)/lsr_link.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/lsr_link.c' object='lsr_link.obj' libtool=no @AMDEPBACKSLASH@
+ls_lfstack.obj: lsr/ls_lfstack.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ls_lfstack.obj -MD -MP -MF $(DEPDIR)/ls_lfstack.Tpo -c -o ls_lfstack.obj `if test -f 'lsr/ls_lfstack.c'; then $(CYGPATH_W) 'lsr/ls_lfstack.c'; else $(CYGPATH_W) '$(srcdir)/lsr/ls_lfstack.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/ls_lfstack.Tpo $(DEPDIR)/ls_lfstack.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/ls_lfstack.c' object='ls_lfstack.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lsr_link.obj `if test -f 'lsr/lsr_link.c'; then $(CYGPATH_W) 'lsr/lsr_link.c'; else $(CYGPATH_W) '$(srcdir)/lsr/lsr_link.c'; fi`
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ls_lfstack.obj `if test -f 'lsr/ls_lfstack.c'; then $(CYGPATH_W) 'lsr/ls_lfstack.c'; else $(CYGPATH_W) '$(srcdir)/lsr/ls_lfstack.c'; fi`
 
-lsr_lock.o: lsr/lsr_lock.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lsr_lock.o -MD -MP -MF $(DEPDIR)/lsr_lock.Tpo -c -o lsr_lock.o `test -f 'lsr/lsr_lock.c' || echo '$(srcdir)/'`lsr/lsr_lock.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/lsr_lock.Tpo $(DEPDIR)/lsr_lock.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/lsr_lock.c' object='lsr_lock.o' libtool=no @AMDEPBACKSLASH@
+ls_link.o: lsr/ls_link.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ls_link.o -MD -MP -MF $(DEPDIR)/ls_link.Tpo -c -o ls_link.o `test -f 'lsr/ls_link.c' || echo '$(srcdir)/'`lsr/ls_link.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/ls_link.Tpo $(DEPDIR)/ls_link.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/ls_link.c' object='ls_link.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lsr_lock.o `test -f 'lsr/lsr_lock.c' || echo '$(srcdir)/'`lsr/lsr_lock.c
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ls_link.o `test -f 'lsr/ls_link.c' || echo '$(srcdir)/'`lsr/ls_link.c
 
-lsr_lock.obj: lsr/lsr_lock.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lsr_lock.obj -MD -MP -MF $(DEPDIR)/lsr_lock.Tpo -c -o lsr_lock.obj `if test -f 'lsr/lsr_lock.c'; then $(CYGPATH_W) 'lsr/lsr_lock.c'; else $(CYGPATH_W) '$(srcdir)/lsr/lsr_lock.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/lsr_lock.Tpo $(DEPDIR)/lsr_lock.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/lsr_lock.c' object='lsr_lock.obj' libtool=no @AMDEPBACKSLASH@
+ls_link.obj: lsr/ls_link.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ls_link.obj -MD -MP -MF $(DEPDIR)/ls_link.Tpo -c -o ls_link.obj `if test -f 'lsr/ls_link.c'; then $(CYGPATH_W) 'lsr/ls_link.c'; else $(CYGPATH_W) '$(srcdir)/lsr/ls_link.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/ls_link.Tpo $(DEPDIR)/ls_link.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/ls_link.c' object='ls_link.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lsr_lock.obj `if test -f 'lsr/lsr_lock.c'; then $(CYGPATH_W) 'lsr/lsr_lock.c'; else $(CYGPATH_W) '$(srcdir)/lsr/lsr_lock.c'; fi`
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ls_link.obj `if test -f 'lsr/ls_link.c'; then $(CYGPATH_W) 'lsr/ls_link.c'; else $(CYGPATH_W) '$(srcdir)/lsr/ls_link.c'; fi`
 
-lsr_loopbuf.o: lsr/lsr_loopbuf.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lsr_loopbuf.o -MD -MP -MF $(DEPDIR)/lsr_loopbuf.Tpo -c -o lsr_loopbuf.o `test -f 'lsr/lsr_loopbuf.c' || echo '$(srcdir)/'`lsr/lsr_loopbuf.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/lsr_loopbuf.Tpo $(DEPDIR)/lsr_loopbuf.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/lsr_loopbuf.c' object='lsr_loopbuf.o' libtool=no @AMDEPBACKSLASH@
+ls_lock.o: lsr/ls_lock.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ls_lock.o -MD -MP -MF $(DEPDIR)/ls_lock.Tpo -c -o ls_lock.o `test -f 'lsr/ls_lock.c' || echo '$(srcdir)/'`lsr/ls_lock.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/ls_lock.Tpo $(DEPDIR)/ls_lock.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/ls_lock.c' object='ls_lock.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lsr_loopbuf.o `test -f 'lsr/lsr_loopbuf.c' || echo '$(srcdir)/'`lsr/lsr_loopbuf.c
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ls_lock.o `test -f 'lsr/ls_lock.c' || echo '$(srcdir)/'`lsr/ls_lock.c
 
-lsr_loopbuf.obj: lsr/lsr_loopbuf.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lsr_loopbuf.obj -MD -MP -MF $(DEPDIR)/lsr_loopbuf.Tpo -c -o lsr_loopbuf.obj `if test -f 'lsr/lsr_loopbuf.c'; then $(CYGPATH_W) 'lsr/lsr_loopbuf.c'; else $(CYGPATH_W) '$(srcdir)/lsr/lsr_loopbuf.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/lsr_loopbuf.Tpo $(DEPDIR)/lsr_loopbuf.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/lsr_loopbuf.c' object='lsr_loopbuf.obj' libtool=no @AMDEPBACKSLASH@
+ls_lock.obj: lsr/ls_lock.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ls_lock.obj -MD -MP -MF $(DEPDIR)/ls_lock.Tpo -c -o ls_lock.obj `if test -f 'lsr/ls_lock.c'; then $(CYGPATH_W) 'lsr/ls_lock.c'; else $(CYGPATH_W) '$(srcdir)/lsr/ls_lock.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/ls_lock.Tpo $(DEPDIR)/ls_lock.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/ls_lock.c' object='ls_lock.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lsr_loopbuf.obj `if test -f 'lsr/lsr_loopbuf.c'; then $(CYGPATH_W) 'lsr/lsr_loopbuf.c'; else $(CYGPATH_W) '$(srcdir)/lsr/lsr_loopbuf.c'; fi`
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ls_lock.obj `if test -f 'lsr/ls_lock.c'; then $(CYGPATH_W) 'lsr/ls_lock.c'; else $(CYGPATH_W) '$(srcdir)/lsr/ls_lock.c'; fi`
 
-lsr_map.o: lsr/lsr_map.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lsr_map.o -MD -MP -MF $(DEPDIR)/lsr_map.Tpo -c -o lsr_map.o `test -f 'lsr/lsr_map.c' || echo '$(srcdir)/'`lsr/lsr_map.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/lsr_map.Tpo $(DEPDIR)/lsr_map.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/lsr_map.c' object='lsr_map.o' libtool=no @AMDEPBACKSLASH@
+ls_loopbuf.o: lsr/ls_loopbuf.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ls_loopbuf.o -MD -MP -MF $(DEPDIR)/ls_loopbuf.Tpo -c -o ls_loopbuf.o `test -f 'lsr/ls_loopbuf.c' || echo '$(srcdir)/'`lsr/ls_loopbuf.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/ls_loopbuf.Tpo $(DEPDIR)/ls_loopbuf.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/ls_loopbuf.c' object='ls_loopbuf.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lsr_map.o `test -f 'lsr/lsr_map.c' || echo '$(srcdir)/'`lsr/lsr_map.c
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ls_loopbuf.o `test -f 'lsr/ls_loopbuf.c' || echo '$(srcdir)/'`lsr/ls_loopbuf.c
 
-lsr_map.obj: lsr/lsr_map.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lsr_map.obj -MD -MP -MF $(DEPDIR)/lsr_map.Tpo -c -o lsr_map.obj `if test -f 'lsr/lsr_map.c'; then $(CYGPATH_W) 'lsr/lsr_map.c'; else $(CYGPATH_W) '$(srcdir)/lsr/lsr_map.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/lsr_map.Tpo $(DEPDIR)/lsr_map.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/lsr_map.c' object='lsr_map.obj' libtool=no @AMDEPBACKSLASH@
+ls_loopbuf.obj: lsr/ls_loopbuf.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ls_loopbuf.obj -MD -MP -MF $(DEPDIR)/ls_loopbuf.Tpo -c -o ls_loopbuf.obj `if test -f 'lsr/ls_loopbuf.c'; then $(CYGPATH_W) 'lsr/ls_loopbuf.c'; else $(CYGPATH_W) '$(srcdir)/lsr/ls_loopbuf.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/ls_loopbuf.Tpo $(DEPDIR)/ls_loopbuf.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/ls_loopbuf.c' object='ls_loopbuf.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lsr_map.obj `if test -f 'lsr/lsr_map.c'; then $(CYGPATH_W) 'lsr/lsr_map.c'; else $(CYGPATH_W) '$(srcdir)/lsr/lsr_map.c'; fi`
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ls_loopbuf.obj `if test -f 'lsr/ls_loopbuf.c'; then $(CYGPATH_W) 'lsr/ls_loopbuf.c'; else $(CYGPATH_W) '$(srcdir)/lsr/ls_loopbuf.c'; fi`
 
-lsr_md5.o: lsr/lsr_md5.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lsr_md5.o -MD -MP -MF $(DEPDIR)/lsr_md5.Tpo -c -o lsr_md5.o `test -f 'lsr/lsr_md5.c' || echo '$(srcdir)/'`lsr/lsr_md5.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/lsr_md5.Tpo $(DEPDIR)/lsr_md5.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/lsr_md5.c' object='lsr_md5.o' libtool=no @AMDEPBACKSLASH@
+ls_map.o: lsr/ls_map.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ls_map.o -MD -MP -MF $(DEPDIR)/ls_map.Tpo -c -o ls_map.o `test -f 'lsr/ls_map.c' || echo '$(srcdir)/'`lsr/ls_map.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/ls_map.Tpo $(DEPDIR)/ls_map.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/ls_map.c' object='ls_map.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lsr_md5.o `test -f 'lsr/lsr_md5.c' || echo '$(srcdir)/'`lsr/lsr_md5.c
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ls_map.o `test -f 'lsr/ls_map.c' || echo '$(srcdir)/'`lsr/ls_map.c
 
-lsr_md5.obj: lsr/lsr_md5.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lsr_md5.obj -MD -MP -MF $(DEPDIR)/lsr_md5.Tpo -c -o lsr_md5.obj `if test -f 'lsr/lsr_md5.c'; then $(CYGPATH_W) 'lsr/lsr_md5.c'; else $(CYGPATH_W) '$(srcdir)/lsr/lsr_md5.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/lsr_md5.Tpo $(DEPDIR)/lsr_md5.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/lsr_md5.c' object='lsr_md5.obj' libtool=no @AMDEPBACKSLASH@
+ls_map.obj: lsr/ls_map.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ls_map.obj -MD -MP -MF $(DEPDIR)/ls_map.Tpo -c -o ls_map.obj `if test -f 'lsr/ls_map.c'; then $(CYGPATH_W) 'lsr/ls_map.c'; else $(CYGPATH_W) '$(srcdir)/lsr/ls_map.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/ls_map.Tpo $(DEPDIR)/ls_map.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/ls_map.c' object='ls_map.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lsr_md5.obj `if test -f 'lsr/lsr_md5.c'; then $(CYGPATH_W) 'lsr/lsr_md5.c'; else $(CYGPATH_W) '$(srcdir)/lsr/lsr_md5.c'; fi`
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ls_map.obj `if test -f 'lsr/ls_map.c'; then $(CYGPATH_W) 'lsr/ls_map.c'; else $(CYGPATH_W) '$(srcdir)/lsr/ls_map.c'; fi`
 
-lsr_objarray.o: lsr/lsr_objarray.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lsr_objarray.o -MD -MP -MF $(DEPDIR)/lsr_objarray.Tpo -c -o lsr_objarray.o `test -f 'lsr/lsr_objarray.c' || echo '$(srcdir)/'`lsr/lsr_objarray.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/lsr_objarray.Tpo $(DEPDIR)/lsr_objarray.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/lsr_objarray.c' object='lsr_objarray.o' libtool=no @AMDEPBACKSLASH@
+ls_md5.o: lsr/ls_md5.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ls_md5.o -MD -MP -MF $(DEPDIR)/ls_md5.Tpo -c -o ls_md5.o `test -f 'lsr/ls_md5.c' || echo '$(srcdir)/'`lsr/ls_md5.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/ls_md5.Tpo $(DEPDIR)/ls_md5.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/ls_md5.c' object='ls_md5.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lsr_objarray.o `test -f 'lsr/lsr_objarray.c' || echo '$(srcdir)/'`lsr/lsr_objarray.c
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ls_md5.o `test -f 'lsr/ls_md5.c' || echo '$(srcdir)/'`lsr/ls_md5.c
 
-lsr_objarray.obj: lsr/lsr_objarray.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lsr_objarray.obj -MD -MP -MF $(DEPDIR)/lsr_objarray.Tpo -c -o lsr_objarray.obj `if test -f 'lsr/lsr_objarray.c'; then $(CYGPATH_W) 'lsr/lsr_objarray.c'; else $(CYGPATH_W) '$(srcdir)/lsr/lsr_objarray.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/lsr_objarray.Tpo $(DEPDIR)/lsr_objarray.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/lsr_objarray.c' object='lsr_objarray.obj' libtool=no @AMDEPBACKSLASH@
+ls_md5.obj: lsr/ls_md5.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ls_md5.obj -MD -MP -MF $(DEPDIR)/ls_md5.Tpo -c -o ls_md5.obj `if test -f 'lsr/ls_md5.c'; then $(CYGPATH_W) 'lsr/ls_md5.c'; else $(CYGPATH_W) '$(srcdir)/lsr/ls_md5.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/ls_md5.Tpo $(DEPDIR)/ls_md5.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/ls_md5.c' object='ls_md5.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lsr_objarray.obj `if test -f 'lsr/lsr_objarray.c'; then $(CYGPATH_W) 'lsr/lsr_objarray.c'; else $(CYGPATH_W) '$(srcdir)/lsr/lsr_objarray.c'; fi`
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ls_md5.obj `if test -f 'lsr/ls_md5.c'; then $(CYGPATH_W) 'lsr/ls_md5.c'; else $(CYGPATH_W) '$(srcdir)/lsr/ls_md5.c'; fi`
 
-lsr_pcreg.o: lsr/lsr_pcreg.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lsr_pcreg.o -MD -MP -MF $(DEPDIR)/lsr_pcreg.Tpo -c -o lsr_pcreg.o `test -f 'lsr/lsr_pcreg.c' || echo '$(srcdir)/'`lsr/lsr_pcreg.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/lsr_pcreg.Tpo $(DEPDIR)/lsr_pcreg.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/lsr_pcreg.c' object='lsr_pcreg.o' libtool=no @AMDEPBACKSLASH@
+ls_mpscq.o: lsr/ls_mpscq.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ls_mpscq.o -MD -MP -MF $(DEPDIR)/ls_mpscq.Tpo -c -o ls_mpscq.o `test -f 'lsr/ls_mpscq.c' || echo '$(srcdir)/'`lsr/ls_mpscq.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/ls_mpscq.Tpo $(DEPDIR)/ls_mpscq.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/ls_mpscq.c' object='ls_mpscq.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lsr_pcreg.o `test -f 'lsr/lsr_pcreg.c' || echo '$(srcdir)/'`lsr/lsr_pcreg.c
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ls_mpscq.o `test -f 'lsr/ls_mpscq.c' || echo '$(srcdir)/'`lsr/ls_mpscq.c
 
-lsr_pcreg.obj: lsr/lsr_pcreg.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lsr_pcreg.obj -MD -MP -MF $(DEPDIR)/lsr_pcreg.Tpo -c -o lsr_pcreg.obj `if test -f 'lsr/lsr_pcreg.c'; then $(CYGPATH_W) 'lsr/lsr_pcreg.c'; else $(CYGPATH_W) '$(srcdir)/lsr/lsr_pcreg.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/lsr_pcreg.Tpo $(DEPDIR)/lsr_pcreg.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/lsr_pcreg.c' object='lsr_pcreg.obj' libtool=no @AMDEPBACKSLASH@
+ls_mpscq.obj: lsr/ls_mpscq.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ls_mpscq.obj -MD -MP -MF $(DEPDIR)/ls_mpscq.Tpo -c -o ls_mpscq.obj `if test -f 'lsr/ls_mpscq.c'; then $(CYGPATH_W) 'lsr/ls_mpscq.c'; else $(CYGPATH_W) '$(srcdir)/lsr/ls_mpscq.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/ls_mpscq.Tpo $(DEPDIR)/ls_mpscq.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/ls_mpscq.c' object='ls_mpscq.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lsr_pcreg.obj `if test -f 'lsr/lsr_pcreg.c'; then $(CYGPATH_W) 'lsr/lsr_pcreg.c'; else $(CYGPATH_W) '$(srcdir)/lsr/lsr_pcreg.c'; fi`
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ls_mpscq.obj `if test -f 'lsr/ls_mpscq.c'; then $(CYGPATH_W) 'lsr/ls_mpscq.c'; else $(CYGPATH_W) '$(srcdir)/lsr/ls_mpscq.c'; fi`
 
-lsr_pool.o: lsr/lsr_pool.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lsr_pool.o -MD -MP -MF $(DEPDIR)/lsr_pool.Tpo -c -o lsr_pool.o `test -f 'lsr/lsr_pool.c' || echo '$(srcdir)/'`lsr/lsr_pool.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/lsr_pool.Tpo $(DEPDIR)/lsr_pool.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/lsr_pool.c' object='lsr_pool.o' libtool=no @AMDEPBACKSLASH@
+ls_objarray.o: lsr/ls_objarray.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ls_objarray.o -MD -MP -MF $(DEPDIR)/ls_objarray.Tpo -c -o ls_objarray.o `test -f 'lsr/ls_objarray.c' || echo '$(srcdir)/'`lsr/ls_objarray.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/ls_objarray.Tpo $(DEPDIR)/ls_objarray.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/ls_objarray.c' object='ls_objarray.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lsr_pool.o `test -f 'lsr/lsr_pool.c' || echo '$(srcdir)/'`lsr/lsr_pool.c
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ls_objarray.o `test -f 'lsr/ls_objarray.c' || echo '$(srcdir)/'`lsr/ls_objarray.c
 
-lsr_pool.obj: lsr/lsr_pool.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lsr_pool.obj -MD -MP -MF $(DEPDIR)/lsr_pool.Tpo -c -o lsr_pool.obj `if test -f 'lsr/lsr_pool.c'; then $(CYGPATH_W) 'lsr/lsr_pool.c'; else $(CYGPATH_W) '$(srcdir)/lsr/lsr_pool.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/lsr_pool.Tpo $(DEPDIR)/lsr_pool.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/lsr_pool.c' object='lsr_pool.obj' libtool=no @AMDEPBACKSLASH@
+ls_objarray.obj: lsr/ls_objarray.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ls_objarray.obj -MD -MP -MF $(DEPDIR)/ls_objarray.Tpo -c -o ls_objarray.obj `if test -f 'lsr/ls_objarray.c'; then $(CYGPATH_W) 'lsr/ls_objarray.c'; else $(CYGPATH_W) '$(srcdir)/lsr/ls_objarray.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/ls_objarray.Tpo $(DEPDIR)/ls_objarray.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/ls_objarray.c' object='ls_objarray.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lsr_pool.obj `if test -f 'lsr/lsr_pool.c'; then $(CYGPATH_W) 'lsr/lsr_pool.c'; else $(CYGPATH_W) '$(srcdir)/lsr/lsr_pool.c'; fi`
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ls_objarray.obj `if test -f 'lsr/ls_objarray.c'; then $(CYGPATH_W) 'lsr/ls_objarray.c'; else $(CYGPATH_W) '$(srcdir)/lsr/ls_objarray.c'; fi`
 
-lsr_ptrlist.o: lsr/lsr_ptrlist.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lsr_ptrlist.o -MD -MP -MF $(DEPDIR)/lsr_ptrlist.Tpo -c -o lsr_ptrlist.o `test -f 'lsr/lsr_ptrlist.c' || echo '$(srcdir)/'`lsr/lsr_ptrlist.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/lsr_ptrlist.Tpo $(DEPDIR)/lsr_ptrlist.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/lsr_ptrlist.c' object='lsr_ptrlist.o' libtool=no @AMDEPBACKSLASH@
+ls_objpool.o: lsr/ls_objpool.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ls_objpool.o -MD -MP -MF $(DEPDIR)/ls_objpool.Tpo -c -o ls_objpool.o `test -f 'lsr/ls_objpool.c' || echo '$(srcdir)/'`lsr/ls_objpool.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/ls_objpool.Tpo $(DEPDIR)/ls_objpool.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/ls_objpool.c' object='ls_objpool.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lsr_ptrlist.o `test -f 'lsr/lsr_ptrlist.c' || echo '$(srcdir)/'`lsr/lsr_ptrlist.c
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ls_objpool.o `test -f 'lsr/ls_objpool.c' || echo '$(srcdir)/'`lsr/ls_objpool.c
 
-lsr_ptrlist.obj: lsr/lsr_ptrlist.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lsr_ptrlist.obj -MD -MP -MF $(DEPDIR)/lsr_ptrlist.Tpo -c -o lsr_ptrlist.obj `if test -f 'lsr/lsr_ptrlist.c'; then $(CYGPATH_W) 'lsr/lsr_ptrlist.c'; else $(CYGPATH_W) '$(srcdir)/lsr/lsr_ptrlist.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/lsr_ptrlist.Tpo $(DEPDIR)/lsr_ptrlist.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/lsr_ptrlist.c' object='lsr_ptrlist.obj' libtool=no @AMDEPBACKSLASH@
+ls_objpool.obj: lsr/ls_objpool.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ls_objpool.obj -MD -MP -MF $(DEPDIR)/ls_objpool.Tpo -c -o ls_objpool.obj `if test -f 'lsr/ls_objpool.c'; then $(CYGPATH_W) 'lsr/ls_objpool.c'; else $(CYGPATH_W) '$(srcdir)/lsr/ls_objpool.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/ls_objpool.Tpo $(DEPDIR)/ls_objpool.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/ls_objpool.c' object='ls_objpool.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lsr_ptrlist.obj `if test -f 'lsr/lsr_ptrlist.c'; then $(CYGPATH_W) 'lsr/lsr_ptrlist.c'; else $(CYGPATH_W) '$(srcdir)/lsr/lsr_ptrlist.c'; fi`
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ls_objpool.obj `if test -f 'lsr/ls_objpool.c'; then $(CYGPATH_W) 'lsr/ls_objpool.c'; else $(CYGPATH_W) '$(srcdir)/lsr/ls_objpool.c'; fi`
 
-lsr_sha1.o: lsr/lsr_sha1.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lsr_sha1.o -MD -MP -MF $(DEPDIR)/lsr_sha1.Tpo -c -o lsr_sha1.o `test -f 'lsr/lsr_sha1.c' || echo '$(srcdir)/'`lsr/lsr_sha1.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/lsr_sha1.Tpo $(DEPDIR)/lsr_sha1.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/lsr_sha1.c' object='lsr_sha1.o' libtool=no @AMDEPBACKSLASH@
+ls_pcreg.o: lsr/ls_pcreg.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ls_pcreg.o -MD -MP -MF $(DEPDIR)/ls_pcreg.Tpo -c -o ls_pcreg.o `test -f 'lsr/ls_pcreg.c' || echo '$(srcdir)/'`lsr/ls_pcreg.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/ls_pcreg.Tpo $(DEPDIR)/ls_pcreg.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/ls_pcreg.c' object='ls_pcreg.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lsr_sha1.o `test -f 'lsr/lsr_sha1.c' || echo '$(srcdir)/'`lsr/lsr_sha1.c
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ls_pcreg.o `test -f 'lsr/ls_pcreg.c' || echo '$(srcdir)/'`lsr/ls_pcreg.c
 
-lsr_sha1.obj: lsr/lsr_sha1.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lsr_sha1.obj -MD -MP -MF $(DEPDIR)/lsr_sha1.Tpo -c -o lsr_sha1.obj `if test -f 'lsr/lsr_sha1.c'; then $(CYGPATH_W) 'lsr/lsr_sha1.c'; else $(CYGPATH_W) '$(srcdir)/lsr/lsr_sha1.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/lsr_sha1.Tpo $(DEPDIR)/lsr_sha1.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/lsr_sha1.c' object='lsr_sha1.obj' libtool=no @AMDEPBACKSLASH@
+ls_pcreg.obj: lsr/ls_pcreg.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ls_pcreg.obj -MD -MP -MF $(DEPDIR)/ls_pcreg.Tpo -c -o ls_pcreg.obj `if test -f 'lsr/ls_pcreg.c'; then $(CYGPATH_W) 'lsr/ls_pcreg.c'; else $(CYGPATH_W) '$(srcdir)/lsr/ls_pcreg.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/ls_pcreg.Tpo $(DEPDIR)/ls_pcreg.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/ls_pcreg.c' object='ls_pcreg.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lsr_sha1.obj `if test -f 'lsr/lsr_sha1.c'; then $(CYGPATH_W) 'lsr/lsr_sha1.c'; else $(CYGPATH_W) '$(srcdir)/lsr/lsr_sha1.c'; fi`
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ls_pcreg.obj `if test -f 'lsr/ls_pcreg.c'; then $(CYGPATH_W) 'lsr/ls_pcreg.c'; else $(CYGPATH_W) '$(srcdir)/lsr/ls_pcreg.c'; fi`
 
-lsr_str.o: lsr/lsr_str.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lsr_str.o -MD -MP -MF $(DEPDIR)/lsr_str.Tpo -c -o lsr_str.o `test -f 'lsr/lsr_str.c' || echo '$(srcdir)/'`lsr/lsr_str.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/lsr_str.Tpo $(DEPDIR)/lsr_str.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/lsr_str.c' object='lsr_str.o' libtool=no @AMDEPBACKSLASH@
+ls_pool.o: lsr/ls_pool.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ls_pool.o -MD -MP -MF $(DEPDIR)/ls_pool.Tpo -c -o ls_pool.o `test -f 'lsr/ls_pool.c' || echo '$(srcdir)/'`lsr/ls_pool.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/ls_pool.Tpo $(DEPDIR)/ls_pool.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/ls_pool.c' object='ls_pool.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lsr_str.o `test -f 'lsr/lsr_str.c' || echo '$(srcdir)/'`lsr/lsr_str.c
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ls_pool.o `test -f 'lsr/ls_pool.c' || echo '$(srcdir)/'`lsr/ls_pool.c
 
-lsr_str.obj: lsr/lsr_str.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lsr_str.obj -MD -MP -MF $(DEPDIR)/lsr_str.Tpo -c -o lsr_str.obj `if test -f 'lsr/lsr_str.c'; then $(CYGPATH_W) 'lsr/lsr_str.c'; else $(CYGPATH_W) '$(srcdir)/lsr/lsr_str.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/lsr_str.Tpo $(DEPDIR)/lsr_str.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/lsr_str.c' object='lsr_str.obj' libtool=no @AMDEPBACKSLASH@
+ls_pool.obj: lsr/ls_pool.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ls_pool.obj -MD -MP -MF $(DEPDIR)/ls_pool.Tpo -c -o ls_pool.obj `if test -f 'lsr/ls_pool.c'; then $(CYGPATH_W) 'lsr/ls_pool.c'; else $(CYGPATH_W) '$(srcdir)/lsr/ls_pool.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/ls_pool.Tpo $(DEPDIR)/ls_pool.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/ls_pool.c' object='ls_pool.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lsr_str.obj `if test -f 'lsr/lsr_str.c'; then $(CYGPATH_W) 'lsr/lsr_str.c'; else $(CYGPATH_W) '$(srcdir)/lsr/lsr_str.c'; fi`
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ls_pool.obj `if test -f 'lsr/ls_pool.c'; then $(CYGPATH_W) 'lsr/ls_pool.c'; else $(CYGPATH_W) '$(srcdir)/lsr/ls_pool.c'; fi`
 
-lsr_strlist.o: lsr/lsr_strlist.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lsr_strlist.o -MD -MP -MF $(DEPDIR)/lsr_strlist.Tpo -c -o lsr_strlist.o `test -f 'lsr/lsr_strlist.c' || echo '$(srcdir)/'`lsr/lsr_strlist.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/lsr_strlist.Tpo $(DEPDIR)/lsr_strlist.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/lsr_strlist.c' object='lsr_strlist.o' libtool=no @AMDEPBACKSLASH@
+ls_ptrlist.o: lsr/ls_ptrlist.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ls_ptrlist.o -MD -MP -MF $(DEPDIR)/ls_ptrlist.Tpo -c -o ls_ptrlist.o `test -f 'lsr/ls_ptrlist.c' || echo '$(srcdir)/'`lsr/ls_ptrlist.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/ls_ptrlist.Tpo $(DEPDIR)/ls_ptrlist.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/ls_ptrlist.c' object='ls_ptrlist.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lsr_strlist.o `test -f 'lsr/lsr_strlist.c' || echo '$(srcdir)/'`lsr/lsr_strlist.c
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ls_ptrlist.o `test -f 'lsr/ls_ptrlist.c' || echo '$(srcdir)/'`lsr/ls_ptrlist.c
 
-lsr_strlist.obj: lsr/lsr_strlist.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lsr_strlist.obj -MD -MP -MF $(DEPDIR)/lsr_strlist.Tpo -c -o lsr_strlist.obj `if test -f 'lsr/lsr_strlist.c'; then $(CYGPATH_W) 'lsr/lsr_strlist.c'; else $(CYGPATH_W) '$(srcdir)/lsr/lsr_strlist.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/lsr_strlist.Tpo $(DEPDIR)/lsr_strlist.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/lsr_strlist.c' object='lsr_strlist.obj' libtool=no @AMDEPBACKSLASH@
+ls_ptrlist.obj: lsr/ls_ptrlist.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ls_ptrlist.obj -MD -MP -MF $(DEPDIR)/ls_ptrlist.Tpo -c -o ls_ptrlist.obj `if test -f 'lsr/ls_ptrlist.c'; then $(CYGPATH_W) 'lsr/ls_ptrlist.c'; else $(CYGPATH_W) '$(srcdir)/lsr/ls_ptrlist.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/ls_ptrlist.Tpo $(DEPDIR)/ls_ptrlist.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/ls_ptrlist.c' object='ls_ptrlist.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lsr_strlist.obj `if test -f 'lsr/lsr_strlist.c'; then $(CYGPATH_W) 'lsr/lsr_strlist.c'; else $(CYGPATH_W) '$(srcdir)/lsr/lsr_strlist.c'; fi`
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ls_ptrlist.obj `if test -f 'lsr/ls_ptrlist.c'; then $(CYGPATH_W) 'lsr/ls_ptrlist.c'; else $(CYGPATH_W) '$(srcdir)/lsr/ls_ptrlist.c'; fi`
 
-lsr_strtool.o: lsr/lsr_strtool.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lsr_strtool.o -MD -MP -MF $(DEPDIR)/lsr_strtool.Tpo -c -o lsr_strtool.o `test -f 'lsr/lsr_strtool.c' || echo '$(srcdir)/'`lsr/lsr_strtool.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/lsr_strtool.Tpo $(DEPDIR)/lsr_strtool.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/lsr_strtool.c' object='lsr_strtool.o' libtool=no @AMDEPBACKSLASH@
+ls_sha1.o: lsr/ls_sha1.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ls_sha1.o -MD -MP -MF $(DEPDIR)/ls_sha1.Tpo -c -o ls_sha1.o `test -f 'lsr/ls_sha1.c' || echo '$(srcdir)/'`lsr/ls_sha1.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/ls_sha1.Tpo $(DEPDIR)/ls_sha1.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/ls_sha1.c' object='ls_sha1.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lsr_strtool.o `test -f 'lsr/lsr_strtool.c' || echo '$(srcdir)/'`lsr/lsr_strtool.c
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ls_sha1.o `test -f 'lsr/ls_sha1.c' || echo '$(srcdir)/'`lsr/ls_sha1.c
 
-lsr_strtool.obj: lsr/lsr_strtool.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lsr_strtool.obj -MD -MP -MF $(DEPDIR)/lsr_strtool.Tpo -c -o lsr_strtool.obj `if test -f 'lsr/lsr_strtool.c'; then $(CYGPATH_W) 'lsr/lsr_strtool.c'; else $(CYGPATH_W) '$(srcdir)/lsr/lsr_strtool.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/lsr_strtool.Tpo $(DEPDIR)/lsr_strtool.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/lsr_strtool.c' object='lsr_strtool.obj' libtool=no @AMDEPBACKSLASH@
+ls_sha1.obj: lsr/ls_sha1.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ls_sha1.obj -MD -MP -MF $(DEPDIR)/ls_sha1.Tpo -c -o ls_sha1.obj `if test -f 'lsr/ls_sha1.c'; then $(CYGPATH_W) 'lsr/ls_sha1.c'; else $(CYGPATH_W) '$(srcdir)/lsr/ls_sha1.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/ls_sha1.Tpo $(DEPDIR)/ls_sha1.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/ls_sha1.c' object='ls_sha1.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lsr_strtool.obj `if test -f 'lsr/lsr_strtool.c'; then $(CYGPATH_W) 'lsr/lsr_strtool.c'; else $(CYGPATH_W) '$(srcdir)/lsr/lsr_strtool.c'; fi`
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ls_sha1.obj `if test -f 'lsr/ls_sha1.c'; then $(CYGPATH_W) 'lsr/ls_sha1.c'; else $(CYGPATH_W) '$(srcdir)/lsr/ls_sha1.c'; fi`
 
-lsr_xpool.o: lsr/lsr_xpool.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lsr_xpool.o -MD -MP -MF $(DEPDIR)/lsr_xpool.Tpo -c -o lsr_xpool.o `test -f 'lsr/lsr_xpool.c' || echo '$(srcdir)/'`lsr/lsr_xpool.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/lsr_xpool.Tpo $(DEPDIR)/lsr_xpool.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/lsr_xpool.c' object='lsr_xpool.o' libtool=no @AMDEPBACKSLASH@
+ls_str.o: lsr/ls_str.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ls_str.o -MD -MP -MF $(DEPDIR)/ls_str.Tpo -c -o ls_str.o `test -f 'lsr/ls_str.c' || echo '$(srcdir)/'`lsr/ls_str.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/ls_str.Tpo $(DEPDIR)/ls_str.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/ls_str.c' object='ls_str.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lsr_xpool.o `test -f 'lsr/lsr_xpool.c' || echo '$(srcdir)/'`lsr/lsr_xpool.c
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ls_str.o `test -f 'lsr/ls_str.c' || echo '$(srcdir)/'`lsr/ls_str.c
 
-lsr_xpool.obj: lsr/lsr_xpool.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT lsr_xpool.obj -MD -MP -MF $(DEPDIR)/lsr_xpool.Tpo -c -o lsr_xpool.obj `if test -f 'lsr/lsr_xpool.c'; then $(CYGPATH_W) 'lsr/lsr_xpool.c'; else $(CYGPATH_W) '$(srcdir)/lsr/lsr_xpool.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/lsr_xpool.Tpo $(DEPDIR)/lsr_xpool.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/lsr_xpool.c' object='lsr_xpool.obj' libtool=no @AMDEPBACKSLASH@
+ls_str.obj: lsr/ls_str.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ls_str.obj -MD -MP -MF $(DEPDIR)/ls_str.Tpo -c -o ls_str.obj `if test -f 'lsr/ls_str.c'; then $(CYGPATH_W) 'lsr/ls_str.c'; else $(CYGPATH_W) '$(srcdir)/lsr/ls_str.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/ls_str.Tpo $(DEPDIR)/ls_str.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/ls_str.c' object='ls_str.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o lsr_xpool.obj `if test -f 'lsr/lsr_xpool.c'; then $(CYGPATH_W) 'lsr/lsr_xpool.c'; else $(CYGPATH_W) '$(srcdir)/lsr/lsr_xpool.c'; fi`
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ls_str.obj `if test -f 'lsr/ls_str.c'; then $(CYGPATH_W) 'lsr/ls_str.c'; else $(CYGPATH_W) '$(srcdir)/lsr/ls_str.c'; fi`
+
+ls_strlist.o: lsr/ls_strlist.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ls_strlist.o -MD -MP -MF $(DEPDIR)/ls_strlist.Tpo -c -o ls_strlist.o `test -f 'lsr/ls_strlist.c' || echo '$(srcdir)/'`lsr/ls_strlist.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/ls_strlist.Tpo $(DEPDIR)/ls_strlist.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/ls_strlist.c' object='ls_strlist.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ls_strlist.o `test -f 'lsr/ls_strlist.c' || echo '$(srcdir)/'`lsr/ls_strlist.c
+
+ls_strlist.obj: lsr/ls_strlist.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ls_strlist.obj -MD -MP -MF $(DEPDIR)/ls_strlist.Tpo -c -o ls_strlist.obj `if test -f 'lsr/ls_strlist.c'; then $(CYGPATH_W) 'lsr/ls_strlist.c'; else $(CYGPATH_W) '$(srcdir)/lsr/ls_strlist.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/ls_strlist.Tpo $(DEPDIR)/ls_strlist.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/ls_strlist.c' object='ls_strlist.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ls_strlist.obj `if test -f 'lsr/ls_strlist.c'; then $(CYGPATH_W) 'lsr/ls_strlist.c'; else $(CYGPATH_W) '$(srcdir)/lsr/ls_strlist.c'; fi`
+
+ls_strtool.o: lsr/ls_strtool.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ls_strtool.o -MD -MP -MF $(DEPDIR)/ls_strtool.Tpo -c -o ls_strtool.o `test -f 'lsr/ls_strtool.c' || echo '$(srcdir)/'`lsr/ls_strtool.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/ls_strtool.Tpo $(DEPDIR)/ls_strtool.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/ls_strtool.c' object='ls_strtool.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ls_strtool.o `test -f 'lsr/ls_strtool.c' || echo '$(srcdir)/'`lsr/ls_strtool.c
+
+ls_strtool.obj: lsr/ls_strtool.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ls_strtool.obj -MD -MP -MF $(DEPDIR)/ls_strtool.Tpo -c -o ls_strtool.obj `if test -f 'lsr/ls_strtool.c'; then $(CYGPATH_W) 'lsr/ls_strtool.c'; else $(CYGPATH_W) '$(srcdir)/lsr/ls_strtool.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/ls_strtool.Tpo $(DEPDIR)/ls_strtool.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/ls_strtool.c' object='ls_strtool.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ls_strtool.obj `if test -f 'lsr/ls_strtool.c'; then $(CYGPATH_W) 'lsr/ls_strtool.c'; else $(CYGPATH_W) '$(srcdir)/lsr/ls_strtool.c'; fi`
+
+ls_time.o: lsr/ls_time.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ls_time.o -MD -MP -MF $(DEPDIR)/ls_time.Tpo -c -o ls_time.o `test -f 'lsr/ls_time.c' || echo '$(srcdir)/'`lsr/ls_time.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/ls_time.Tpo $(DEPDIR)/ls_time.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/ls_time.c' object='ls_time.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ls_time.o `test -f 'lsr/ls_time.c' || echo '$(srcdir)/'`lsr/ls_time.c
+
+ls_time.obj: lsr/ls_time.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ls_time.obj -MD -MP -MF $(DEPDIR)/ls_time.Tpo -c -o ls_time.obj `if test -f 'lsr/ls_time.c'; then $(CYGPATH_W) 'lsr/ls_time.c'; else $(CYGPATH_W) '$(srcdir)/lsr/ls_time.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/ls_time.Tpo $(DEPDIR)/ls_time.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/ls_time.c' object='ls_time.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ls_time.obj `if test -f 'lsr/ls_time.c'; then $(CYGPATH_W) 'lsr/ls_time.c'; else $(CYGPATH_W) '$(srcdir)/lsr/ls_time.c'; fi`
+
+ls_xpool.o: lsr/ls_xpool.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ls_xpool.o -MD -MP -MF $(DEPDIR)/ls_xpool.Tpo -c -o ls_xpool.o `test -f 'lsr/ls_xpool.c' || echo '$(srcdir)/'`lsr/ls_xpool.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/ls_xpool.Tpo $(DEPDIR)/ls_xpool.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/ls_xpool.c' object='ls_xpool.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ls_xpool.o `test -f 'lsr/ls_xpool.c' || echo '$(srcdir)/'`lsr/ls_xpool.c
+
+ls_xpool.obj: lsr/ls_xpool.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ls_xpool.obj -MD -MP -MF $(DEPDIR)/ls_xpool.Tpo -c -o ls_xpool.obj `if test -f 'lsr/ls_xpool.c'; then $(CYGPATH_W) 'lsr/ls_xpool.c'; else $(CYGPATH_W) '$(srcdir)/lsr/ls_xpool.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/ls_xpool.Tpo $(DEPDIR)/ls_xpool.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/ls_xpool.c' object='ls_xpool.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ls_xpool.obj `if test -f 'lsr/ls_xpool.c'; then $(CYGPATH_W) 'lsr/ls_xpool.c'; else $(CYGPATH_W) '$(srcdir)/lsr/ls_xpool.c'; fi`
+
+xxhash.o: lsr/xxhash.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT xxhash.o -MD -MP -MF $(DEPDIR)/xxhash.Tpo -c -o xxhash.o `test -f 'lsr/xxhash.c' || echo '$(srcdir)/'`lsr/xxhash.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/xxhash.Tpo $(DEPDIR)/xxhash.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/xxhash.c' object='xxhash.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o xxhash.o `test -f 'lsr/xxhash.c' || echo '$(srcdir)/'`lsr/xxhash.c
+
+xxhash.obj: lsr/xxhash.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT xxhash.obj -MD -MP -MF $(DEPDIR)/xxhash.Tpo -c -o xxhash.obj `if test -f 'lsr/xxhash.c'; then $(CYGPATH_W) 'lsr/xxhash.c'; else $(CYGPATH_W) '$(srcdir)/lsr/xxhash.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/xxhash.Tpo $(DEPDIR)/xxhash.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/xxhash.c' object='xxhash.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o xxhash.obj `if test -f 'lsr/xxhash.c'; then $(CYGPATH_W) 'lsr/xxhash.c'; else $(CYGPATH_W) '$(srcdir)/lsr/xxhash.c'; fi`
 
 .cpp.o:
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXXCOMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
@@ -1747,6 +1851,48 @@ datetime.obj: util/datetime.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o datetime.obj `if test -f 'util/datetime.cpp'; then $(CYGPATH_W) 'util/datetime.cpp'; else $(CYGPATH_W) '$(srcdir)/util/datetime.cpp'; fi`
 
+resourcepool.o: util/resourcepool.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT resourcepool.o -MD -MP -MF $(DEPDIR)/resourcepool.Tpo -c -o resourcepool.o `test -f 'util/resourcepool.cpp' || echo '$(srcdir)/'`util/resourcepool.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/resourcepool.Tpo $(DEPDIR)/resourcepool.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='util/resourcepool.cpp' object='resourcepool.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o resourcepool.o `test -f 'util/resourcepool.cpp' || echo '$(srcdir)/'`util/resourcepool.cpp
+
+resourcepool.obj: util/resourcepool.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT resourcepool.obj -MD -MP -MF $(DEPDIR)/resourcepool.Tpo -c -o resourcepool.obj `if test -f 'util/resourcepool.cpp'; then $(CYGPATH_W) 'util/resourcepool.cpp'; else $(CYGPATH_W) '$(srcdir)/util/resourcepool.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/resourcepool.Tpo $(DEPDIR)/resourcepool.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='util/resourcepool.cpp' object='resourcepool.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o resourcepool.obj `if test -f 'util/resourcepool.cpp'; then $(CYGPATH_W) 'util/resourcepool.cpp'; else $(CYGPATH_W) '$(srcdir)/util/resourcepool.cpp'; fi`
+
+linkqueue.o: util/linkqueue.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT linkqueue.o -MD -MP -MF $(DEPDIR)/linkqueue.Tpo -c -o linkqueue.o `test -f 'util/linkqueue.cpp' || echo '$(srcdir)/'`util/linkqueue.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/linkqueue.Tpo $(DEPDIR)/linkqueue.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='util/linkqueue.cpp' object='linkqueue.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o linkqueue.o `test -f 'util/linkqueue.cpp' || echo '$(srcdir)/'`util/linkqueue.cpp
+
+linkqueue.obj: util/linkqueue.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT linkqueue.obj -MD -MP -MF $(DEPDIR)/linkqueue.Tpo -c -o linkqueue.obj `if test -f 'util/linkqueue.cpp'; then $(CYGPATH_W) 'util/linkqueue.cpp'; else $(CYGPATH_W) '$(srcdir)/util/linkqueue.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/linkqueue.Tpo $(DEPDIR)/linkqueue.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='util/linkqueue.cpp' object='linkqueue.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o linkqueue.obj `if test -f 'util/linkqueue.cpp'; then $(CYGPATH_W) 'util/linkqueue.cpp'; else $(CYGPATH_W) '$(srcdir)/util/linkqueue.cpp'; fi`
+
+httputil.o: util/httputil.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT httputil.o -MD -MP -MF $(DEPDIR)/httputil.Tpo -c -o httputil.o `test -f 'util/httputil.cpp' || echo '$(srcdir)/'`util/httputil.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/httputil.Tpo $(DEPDIR)/httputil.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='util/httputil.cpp' object='httputil.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o httputil.o `test -f 'util/httputil.cpp' || echo '$(srcdir)/'`util/httputil.cpp
+
+httputil.obj: util/httputil.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT httputil.obj -MD -MP -MF $(DEPDIR)/httputil.Tpo -c -o httputil.obj `if test -f 'util/httputil.cpp'; then $(CYGPATH_W) 'util/httputil.cpp'; else $(CYGPATH_W) '$(srcdir)/util/httputil.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/httputil.Tpo $(DEPDIR)/httputil.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='util/httputil.cpp' object='httputil.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o httputil.obj `if test -f 'util/httputil.cpp'; then $(CYGPATH_W) 'util/httputil.cpp'; else $(CYGPATH_W) '$(srcdir)/util/httputil.cpp'; fi`
+
 profiletime.o: util/misc/profiletime.cpp
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT profiletime.o -MD -MP -MF $(DEPDIR)/profiletime.Tpo -c -o profiletime.o `test -f 'util/misc/profiletime.cpp' || echo '$(srcdir)/'`util/misc/profiletime.cpp
 @am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/profiletime.Tpo $(DEPDIR)/profiletime.Po
@@ -1802,6 +1948,90 @@ systeminfo.obj: util/sysinfo/systeminfo.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='util/sysinfo/systeminfo.cpp' object='systeminfo.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o systeminfo.obj `if test -f 'util/sysinfo/systeminfo.cpp'; then $(CYGPATH_W) 'util/sysinfo/systeminfo.cpp'; else $(CYGPATH_W) '$(srcdir)/util/sysinfo/systeminfo.cpp'; fi`
+
+pthreadcond.o: thread/pthreadcond.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT pthreadcond.o -MD -MP -MF $(DEPDIR)/pthreadcond.Tpo -c -o pthreadcond.o `test -f 'thread/pthreadcond.cpp' || echo '$(srcdir)/'`thread/pthreadcond.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/pthreadcond.Tpo $(DEPDIR)/pthreadcond.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='thread/pthreadcond.cpp' object='pthreadcond.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o pthreadcond.o `test -f 'thread/pthreadcond.cpp' || echo '$(srcdir)/'`thread/pthreadcond.cpp
+
+pthreadcond.obj: thread/pthreadcond.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT pthreadcond.obj -MD -MP -MF $(DEPDIR)/pthreadcond.Tpo -c -o pthreadcond.obj `if test -f 'thread/pthreadcond.cpp'; then $(CYGPATH_W) 'thread/pthreadcond.cpp'; else $(CYGPATH_W) '$(srcdir)/thread/pthreadcond.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/pthreadcond.Tpo $(DEPDIR)/pthreadcond.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='thread/pthreadcond.cpp' object='pthreadcond.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o pthreadcond.obj `if test -f 'thread/pthreadcond.cpp'; then $(CYGPATH_W) 'thread/pthreadcond.cpp'; else $(CYGPATH_W) '$(srcdir)/thread/pthreadcond.cpp'; fi`
+
+pthreadmutex.o: thread/pthreadmutex.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT pthreadmutex.o -MD -MP -MF $(DEPDIR)/pthreadmutex.Tpo -c -o pthreadmutex.o `test -f 'thread/pthreadmutex.cpp' || echo '$(srcdir)/'`thread/pthreadmutex.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/pthreadmutex.Tpo $(DEPDIR)/pthreadmutex.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='thread/pthreadmutex.cpp' object='pthreadmutex.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o pthreadmutex.o `test -f 'thread/pthreadmutex.cpp' || echo '$(srcdir)/'`thread/pthreadmutex.cpp
+
+pthreadmutex.obj: thread/pthreadmutex.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT pthreadmutex.obj -MD -MP -MF $(DEPDIR)/pthreadmutex.Tpo -c -o pthreadmutex.obj `if test -f 'thread/pthreadmutex.cpp'; then $(CYGPATH_W) 'thread/pthreadmutex.cpp'; else $(CYGPATH_W) '$(srcdir)/thread/pthreadmutex.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/pthreadmutex.Tpo $(DEPDIR)/pthreadmutex.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='thread/pthreadmutex.cpp' object='pthreadmutex.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o pthreadmutex.obj `if test -f 'thread/pthreadmutex.cpp'; then $(CYGPATH_W) 'thread/pthreadmutex.cpp'; else $(CYGPATH_W) '$(srcdir)/thread/pthreadmutex.cpp'; fi`
+
+pthreadworkqueue.o: thread/pthreadworkqueue.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT pthreadworkqueue.o -MD -MP -MF $(DEPDIR)/pthreadworkqueue.Tpo -c -o pthreadworkqueue.o `test -f 'thread/pthreadworkqueue.cpp' || echo '$(srcdir)/'`thread/pthreadworkqueue.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/pthreadworkqueue.Tpo $(DEPDIR)/pthreadworkqueue.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='thread/pthreadworkqueue.cpp' object='pthreadworkqueue.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o pthreadworkqueue.o `test -f 'thread/pthreadworkqueue.cpp' || echo '$(srcdir)/'`thread/pthreadworkqueue.cpp
+
+pthreadworkqueue.obj: thread/pthreadworkqueue.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT pthreadworkqueue.obj -MD -MP -MF $(DEPDIR)/pthreadworkqueue.Tpo -c -o pthreadworkqueue.obj `if test -f 'thread/pthreadworkqueue.cpp'; then $(CYGPATH_W) 'thread/pthreadworkqueue.cpp'; else $(CYGPATH_W) '$(srcdir)/thread/pthreadworkqueue.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/pthreadworkqueue.Tpo $(DEPDIR)/pthreadworkqueue.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='thread/pthreadworkqueue.cpp' object='pthreadworkqueue.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o pthreadworkqueue.obj `if test -f 'thread/pthreadworkqueue.cpp'; then $(CYGPATH_W) 'thread/pthreadworkqueue.cpp'; else $(CYGPATH_W) '$(srcdir)/thread/pthreadworkqueue.cpp'; fi`
+
+thread.o: thread/thread.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT thread.o -MD -MP -MF $(DEPDIR)/thread.Tpo -c -o thread.o `test -f 'thread/thread.cpp' || echo '$(srcdir)/'`thread/thread.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/thread.Tpo $(DEPDIR)/thread.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='thread/thread.cpp' object='thread.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o thread.o `test -f 'thread/thread.cpp' || echo '$(srcdir)/'`thread/thread.cpp
+
+thread.obj: thread/thread.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT thread.obj -MD -MP -MF $(DEPDIR)/thread.Tpo -c -o thread.obj `if test -f 'thread/thread.cpp'; then $(CYGPATH_W) 'thread/thread.cpp'; else $(CYGPATH_W) '$(srcdir)/thread/thread.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/thread.Tpo $(DEPDIR)/thread.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='thread/thread.cpp' object='thread.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o thread.obj `if test -f 'thread/thread.cpp'; then $(CYGPATH_W) 'thread/thread.cpp'; else $(CYGPATH_W) '$(srcdir)/thread/thread.cpp'; fi`
+
+workcrew.o: thread/workcrew.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT workcrew.o -MD -MP -MF $(DEPDIR)/workcrew.Tpo -c -o workcrew.o `test -f 'thread/workcrew.cpp' || echo '$(srcdir)/'`thread/workcrew.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/workcrew.Tpo $(DEPDIR)/workcrew.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='thread/workcrew.cpp' object='workcrew.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o workcrew.o `test -f 'thread/workcrew.cpp' || echo '$(srcdir)/'`thread/workcrew.cpp
+
+workcrew.obj: thread/workcrew.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT workcrew.obj -MD -MP -MF $(DEPDIR)/workcrew.Tpo -c -o workcrew.obj `if test -f 'thread/workcrew.cpp'; then $(CYGPATH_W) 'thread/workcrew.cpp'; else $(CYGPATH_W) '$(srcdir)/thread/workcrew.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/workcrew.Tpo $(DEPDIR)/workcrew.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='thread/workcrew.cpp' object='workcrew.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o workcrew.obj `if test -f 'thread/workcrew.cpp'; then $(CYGPATH_W) 'thread/workcrew.cpp'; else $(CYGPATH_W) '$(srcdir)/thread/workcrew.cpp'; fi`
+
+worker.o: thread/worker.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT worker.o -MD -MP -MF $(DEPDIR)/worker.Tpo -c -o worker.o `test -f 'thread/worker.cpp' || echo '$(srcdir)/'`thread/worker.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/worker.Tpo $(DEPDIR)/worker.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='thread/worker.cpp' object='worker.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o worker.o `test -f 'thread/worker.cpp' || echo '$(srcdir)/'`thread/worker.cpp
+
+worker.obj: thread/worker.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT worker.obj -MD -MP -MF $(DEPDIR)/worker.Tpo -c -o worker.obj `if test -f 'thread/worker.cpp'; then $(CYGPATH_W) 'thread/worker.cpp'; else $(CYGPATH_W) '$(srcdir)/thread/worker.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/worker.Tpo $(DEPDIR)/worker.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='thread/worker.cpp' object='worker.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o worker.obj `if test -f 'thread/worker.cpp'; then $(CYGPATH_W) 'thread/worker.cpp'; else $(CYGPATH_W) '$(srcdir)/thread/worker.cpp'; fi`
 
 mostlyclean-libtool:
 	-rm -f *.lo

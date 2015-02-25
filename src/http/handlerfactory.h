@@ -31,13 +31,13 @@ class HandlerFactory
 {
     HandlerFactory();
     ~HandlerFactory();
-public: 
-    static ReqHandler* getHandler( int type );
-    static void recycle( HttpExtConnector * pHandler );
-    static const HttpHandler * getInstance( int type, const char * pName );
-    static const HttpHandler *getHandler( const char *pType, 
-                 const char *pHandler );
-    static const HttpHandler *getHandler( const XmlNode *pNode );
+public:
+    static ReqHandler *getHandler(int type);
+    static void recycle(HttpExtConnector *pHandler);
+    static const HttpHandler *getInstance(int type, const char *pName);
+    static const HttpHandler *getHandler(const char *pType,
+                                         const char *pHandler);
+    static const HttpHandler *getHandler(const XmlNode *pNode);
 
 };
 

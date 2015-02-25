@@ -37,40 +37,40 @@ Poller::~Poller()
 {
 }
 
-int Poller::allocate( int capacity )
+int Poller::allocate(int capacity)
 {
-    return m_pfdReactors.allocate( capacity );
+    return m_pfdReactors.allocate(capacity);
 }
 
 
-int Poller::init( int capacity )
+int Poller::init(int capacity)
 {
-    return allocate( capacity );
+    return allocate(capacity);
 }
 
-int Poller::add( EventReactor* pHandler, short mask )
+int Poller::add(EventReactor *pHandler, short mask)
 {
-    assert( pHandler );
-    m_pfdReactors.add(pHandler, mask );
+    assert(pHandler);
+    m_pfdReactors.add(pHandler, mask);
     return 0;
 }
 
-int Poller::remove( EventReactor* pHandler )
+int Poller::remove(EventReactor *pHandler)
 {
-    assert( pHandler );
-    m_pfdReactors.remove( pHandler );
+    assert(pHandler);
+    m_pfdReactors.remove(pHandler);
     return 0;
 }
 
 
-int Poller::waitAndProcessEvents( int iTimeoutMilliSec )
+int Poller::waitAndProcessEvents(int iTimeoutMilliSec)
 {
     int events = ::poll(m_pfdReactors.getPollfd(),
-                    m_pfdReactors.getSize(),
-                    iTimeoutMilliSec);
-    if ( events > 0 )
+                        m_pfdReactors.getSize(),
+                        iTimeoutMilliSec);
+    if (events > 0)
     {
-        m_pfdReactors.setEvents( events );
+        m_pfdReactors.setEvents(events);
         m_pfdReactors.processAllEvents();
         return 0;
     }

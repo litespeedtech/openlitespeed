@@ -20,20 +20,25 @@
 
 
 
+#include <lsdef.h>
 #include <util/autostr.h>
-  
+
 class Duplicable
 {
-    AutoStr2 m_sName;
-public: 
-    Duplicable(const char * pName)
-        : m_sName( pName )
-        {}
+    AutoStr2 m_name;
+public:
+    Duplicable(const char *pName)
+        : m_name(pName)
+    {}
     virtual ~Duplicable() {};
-    virtual Duplicable * dup( const char * pName ) = 0;
-    const char * getName() const
-    {   return m_sName.c_str(); }
-    void setName( const char * pName )  {   m_sName.setStr( pName );    }
+    virtual Duplicable *dup(const char *pName) = 0;
+    const char *getName() const
+    {   return m_name.c_str(); }
+    void setName(const char *pName)
+    {   m_name.setStr(pName);    }
+
+
+    LS_NO_COPY_ASSIGN(Duplicable);
 };
 
 #endif

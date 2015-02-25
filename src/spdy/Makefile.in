@@ -253,6 +253,7 @@ PCRE_CFLAGS = @PCRE_CFLAGS@
 PCRE_LDFLAGS = @PCRE_LDFLAGS@
 PCRE_LIBS = @PCRE_LIBS@
 RANLIB = @RANLIB@
+RT_LIB_OPTION = @RT_LIB_OPTION@
 SED = @SED@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
@@ -314,7 +315,10 @@ top_srcdir = @top_srcdir@
 noinst_LIBRARIES = libspdy.a
 INCLUDES = -I$(top_srcdir)/include -I$(top_srcdir)/src
 libspdy_a_METASOURCES = AUTO
-libspdy_a_SOURCES = spdyprotocol.cpp spdyconnection.cpp spdystream.cpp spdyzlibfilter.cpp spdystreampool.cpp h2connection.cpp h2protocol.cpp h2stream.cpp hpack.cpp
+libspdy_a_SOURCES = spdyprotocol.cpp spdyconnection.cpp spdystream.cpp \
+		spdyzlibfilter.cpp spdystreampool.cpp h2connection.cpp \
+		h2protocol.cpp h2stream.cpp hpack.cpp
+
 noinst_HEADERS = 
 all: all-am
 

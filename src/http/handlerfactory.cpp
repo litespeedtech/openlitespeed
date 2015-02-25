@@ -34,18 +34,22 @@
 #include <stdio.h>
 
 #include "ssi/ssiengine.h"
-extern StaticFileHandler        s_staticFileHandler;
-extern RedirectHandler          s_redirectHandler;
-extern SSIEngine                s_ssiHandler;
-extern ModuleHandler           s_ModuleHandler;
+// extern StaticFileHandler        s_staticFileHandler;
+// extern RedirectHandler          s_redirectHandler;
+// extern SSIEngine                s_ssiHandler;
+// extern ModuleHandler           s_ModuleHandler;
+StaticFileHandler        s_staticFileHandler;
+RedirectHandler          s_redirectHandler;
+SSIEngine                s_ssiHandler;
+ModuleHandler           s_ModuleHandler;
 
 typedef ObjPool<HttpExtConnector>   ExtConnectorPool;
-static ExtConnectorPool             s_extConnectorPool( 0, 10 );
+static ExtConnectorPool             s_extConnectorPool(0, 10);
 
 
-ReqHandler* HandlerFactory::getHandler( int type )
+ReqHandler *HandlerFactory::getHandler(int type)
 {
-    switch( type )
+    switch (type)
     {
     case HandlerType::HT_STATIC:
         return &s_staticFileHandler;
@@ -66,31 +70,31 @@ ReqHandler* HandlerFactory::getHandler( int type )
 }
 
 
-void HandlerFactory::recycle( HttpExtConnector * pHandler )
+void HandlerFactory::recycle(HttpExtConnector *pHandler)
 {
-    s_extConnectorPool.recycle(  pHandler );
+    s_extConnectorPool.recycle(pHandler);
 }
 
-const HttpHandler * HandlerFactory::getInstance( int type, const char * pName )
+const HttpHandler *HandlerFactory::getInstance(int type, const char *pName)
 {
     ModuleManager::iterator iter;
-    
-    switch( type )
+
+    switch (type)
     {
     case HandlerType::HT_STATIC:
         return &s_staticFileHandler;
     case HandlerType::HT_SSI:
-        return &s_ssiHandler;        
+        return &s_ssiHandler;
     case HandlerType::HT_REDIRECT:
         return &s_redirectHandler;
     case HandlerType::HT_MODULE:
         iter = ModuleManager::getInstance().find(pName);
-        if ( iter != ModuleManager::getInstance().end() &&
-            ((LsiModule*)iter.second())->getModule()->_handler)
+        if (iter != ModuleManager::getInstance().end() &&
+            ((LsiModule *)iter.second())->getModule()->_handler)
             return iter.second();
         else
             return NULL;
-        
+
     case HandlerType::HT_CGI:
         pName = "lscgid";
     case HandlerType::HT_FASTCGI:
@@ -98,38 +102,40 @@ const HttpHandler * HandlerFactory::getInstance( int type, const char * pName )
     case HandlerType::HT_SERVLET:
     case HandlerType::HT_LSAPI:
     case HandlerType::HT_LOADBALANCER:
-        if ( !pName )
+        if (!pName)
             return NULL;
-        return ExtAppRegistry::getApp( type - HandlerType::HT_CGI, pName );
-    
+        return ExtAppRegistry::getApp(type - HandlerType::HT_CGI, pName);
+
     }
     return NULL;
 }
 
 const HttpHandler *HandlerFactory::getHandler(
-        const char *pType, const char *pHandler )
+    const char *pType, const char *pHandler)
 {
     int role = HandlerType::ROLE_RESPONDER;
-    int type = HandlerType::getHandlerType( pType, role );
+    int type = HandlerType::getHandlerType(pType, role);
 
-    if ( ( type == HandlerType::HT_END ) ||
-            ( type == HandlerType::HT_JAVAWEBAPP ) ||
-            ( type == HandlerType::HT_RAILS ) )
+    if ((type == HandlerType::HT_END) ||
+        (type == HandlerType::HT_JAVAWEBAPP) ||
+        (type == HandlerType::HT_RAILS))
     {
-        ConfigCtx::getCurConfigCtx()->log_error( "Invalid External app type:[%s]" , pType );
+        ConfigCtx::getCurConfigCtx()->logError("Invalid External app type:[%s]" ,
+                                               pType);
         return NULL;
     }
 
-    const HttpHandler *pHdlr = HandlerFactory::getInstance( type, pHandler );
-    
+    const HttpHandler *pHdlr = HandlerFactory::getInstance(type, pHandler);
+
     return pHdlr;
 }
 
-const HttpHandler *HandlerFactory::getHandler( const XmlNode *pNode )
+const HttpHandler *HandlerFactory::getHandler(const XmlNode *pNode)
 {
-    const char *pType = pNode->getChildValue( "type" );
+    const char *pType = pNode->getChildValue("type");
 
     char achHandler[256];
-    const char *pHandler = ConfigCtx::getCurConfigCtx()->getExpandedTag( pNode, "handler", achHandler, 256 );
-    return getHandler( pType, pHandler );
+    const char *pHandler = ConfigCtx::getCurConfigCtx()->getExpandedTag(pNode,
+                           "handler", achHandler, 256);
+    return getHandler(pType, pHandler);
 }

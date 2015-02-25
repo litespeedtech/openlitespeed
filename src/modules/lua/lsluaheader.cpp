@@ -16,138 +16,188 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include <ctype.h>
-#include "lsluasession.h"
-#include "lsluaengine.h"
-#include "lsluaapi.h"
+#include <modules/lua/lsluaapi.h>
+#include <modules/lua/lsluaengine.h>
+#include <modules/lua/lsluasession.h>
 #include <ls.h>
 #include <log4cxx/logger.h>
 #include <http/httpsession.h>
 
-static int LsLua_header_dummy(lua_State * L)
+static int LsLuaHeaderDummy(lua_State *L)
 {
-    LsLuaApi::dumpStack( L, "ls.header dummy ", 10);
+    LsLuaApi::dumpStack(L, "ls.header dummy ", 10);
     return 0;
 }
 
-static int LsLua_header_tostring( lua_State * L )
+static int LsLuaHeaderToString(lua_State *L)
 {
     char    buf[0x100];
 
-    snprintf( buf, 0x100, "<ls.header %p>", L );
-    LsLuaEngine::api()->pushstring( L, buf );
+    snprintf(buf, 0x100, "<ls.header %p>", L);
+    LsLuaApi::pushstring(L, buf);
     return 1;
 }
 
-static int LsLua_header_gc( lua_State * L )
+static int LsLuaHeaderGc(lua_State *L)
 {
-    LsLua_log( L, LSI_LOG_INFO, 0, "<ls.header GC>");
+    LsLuaLog(L, LSI_LOG_INFO, 0, "<ls.header GC>");
     return 0;
 }
 
-static const luaL_Reg lslua_header_funcs[] =
+static const luaL_Reg LsLuaHeaderFuncs[] =
 {
-    {"dummy",       LsLua_header_dummy             },
+    {   "dummy",       LsLuaHeaderDummy       },
     {NULL, NULL}
 };
 
-static const luaL_Reg lslua_header_meta_sub[] =
+static const luaL_Reg LsLuaHeaderMetaSub[] =
 {
-    {"__gc",        LsLua_header_gc},
-    {"__tostring",  LsLua_header_tostring},
+    {   "__gc",        LsLuaHeaderGc          },
+    {   "__tostring",  LsLuaHeaderToString    },
     {NULL, NULL}
 };
 
 
-int LsLua_header_get(lua_State * L)
+static const char *LsLuaHeaderTransformKey(lsi_session_t *session,
+        const char *pInput,
+        size_t len)
 {
-#define _NUMIOV 0x100
-    struct iovec  iovpool[_NUMIOV];
+    char *pTmp;
+    int i;
+    ls_xpool_t *pool = g_api->get_session_pool(session);
 
-    size_t          len;
-    const char *    cp;
-    // LsLuaApi::dumpStack( L, "ls.header GET", 10);
-
-    LsLuaSession * pSession = LsLua_getSession( L );
-    cp = LsLuaEngine::api()->tolstring( L, 2, &len);
-    // dont touch stack anymore!
-    // LsLuaApi::pop(L, 2);
-    if (cp && len)
+    if (memchr(pInput, '_', len) == NULL)
+        return pInput;
+    pTmp = (char *)ls_xpool_alloc(pool, len);
+    for (i = 0; i < (int)len; ++i)
     {
-        // only support status for now!
-        int num;
-        if ( (num = g_api->get_resp_header(pSession->getHttpSession(),
-                LSI_RESP_HEADER_CONTENT_TYPE, cp, len, iovpool, _NUMIOV)) ) {
-            // only care the last one!
-            num--;
-            if (((char *)iovpool[num].iov_base)[0] == ' ')
-                LsLuaEngine::api()->pushnil(L);
-            else
-                LsLuaEngine::api()->pushlstring( L,
-                        (const char *)iovpool[num].iov_base, iovpool[num].iov_len );
-            return 1;
-        }
-        LsLua_log( L, LSI_LOG_INFO, 0, "ls.header GET %s", cp);
-    }
-    else
-    {
-        LsLua_log( L, LSI_LOG_INFO, 0, "ls.header GET BADSTACK");
-    }
-    LsLuaEngine::api()->pushnil(L);
-    LsLuaApi::dumpStackCount( L, "END ls.header GET");
-    return 1;
-}
-
-int LsLua_header_set(lua_State * L)
-{
-    size_t          len, tolen;
-    const char *    cp; 
-    const char *    p_to;
-    // LsLuaApi::dumpStack( L, "ls.header SET", 10);
-
-    LsLuaSession * pSession = LsLua_getSession( L );
-    cp = LsLuaEngine::api()->tolstring( L, 2, &len);
-    if (cp && len)
-    {
-        p_to = LsLuaEngine::api()->tolstring( L, 3, &tolen);
-        if (p_to && tolen)
-        {
-            LsLua_log( L, LSI_LOG_DEBUG, 0, "ls.header SET %s to %s", cp, p_to);
-            g_api->set_resp_header(pSession->getHttpSession(),
-                LSI_RESP_HEADER_CONTENT_TYPE, cp, len, p_to, tolen, LSI_HEADER_SET);
-        }
+        if (pInput[i] == '_')
+            pTmp[i] = '-';
         else
-        {
-            g_api->set_resp_header(pSession->getHttpSession(),
-                LSI_RESP_HEADER_CONTENT_TYPE, cp, len, "", 0, LSI_HEADER_SET);
-            LsLua_log( L, LSI_LOG_DEBUG, 0, "ls.header DEL %s", cp);
-        }
+            pTmp[i] = pInput[i];
+    }
+    return pTmp;
+}
+
+int LsLuaHeaderGet(lua_State *L)
+{
+    const int       iMaxHeaders = 0x100;
+    struct iovec    iov[iMaxHeaders];
+    size_t          len;
+    const char     *pInput, *pKey;
+    int             i, iHeaderCount, iRet;
+    LsLuaSession   *pSession = LsLuaGetSession(L);
+    lsi_session_t  *session = pSession->getHttpSession();
+    if ((iRet = LsLuaApi::checkArgType(L, 2, LUA_TSTRING, "header_get")) != 0)
+        return iRet;
+
+    pInput = LsLuaApi::tolstring(L, 2, &len);
+
+    if (pInput == NULL || len == 0)
+        return LsLuaApi::userError(L, "header_get", "Header Key not valid.");
+
+    pKey = LsLuaHeaderTransformKey(session, pInput, len);
+
+    iHeaderCount = g_api->get_resp_header(session, LSI_RESP_HEADER_UNKNOWN,
+                                          pKey, len, iov, iMaxHeaders);
+    if (iHeaderCount <= 0)
+        LsLuaApi::pushnil(L);
+    else if (iHeaderCount == 1)
+    {
+        LsLuaApi::pushlstring(L, (const char *)iov[0].iov_base,
+                              iov[0].iov_len);
     }
     else
     {
-        LsLua_log( L, LSI_LOG_INFO, 0, "ls.header SET BADSTACK");
+        LsLuaApi::createtable(L, iHeaderCount, 0);
+        for (i = 0; i < iHeaderCount; ++i)
+        {
+            LsLuaApi::pushlstring(L, (const char *)iov[i].iov_base,
+                                  iov[i].iov_len);
+            LsLuaApi::rawseti(L, -2, i + 1);
+        }
+    }
+    return 1;
+}
+
+int LsLuaHeaderSet(lua_State *L)
+{
+    const char *pInput, *pKey, *pVal;
+    unsigned int iHeaderId, iAddOp;
+    size_t iKeyLen, iValLen;
+    int i, iTableLen, iRet;
+    LsLuaSession *pSession = LsLuaGetSession(L);
+    lsi_session_t *session = pSession->getHttpSession();
+
+    if ((iRet = LsLuaApi::checkArgType(L, 2, LUA_TSTRING, "header_set")) != 0)
+        return iRet;
+
+    pInput = LsLuaApi::tolstring(L, 2, &iKeyLen);
+
+    if (pInput == NULL || iKeyLen == 0)
+        return LsLuaApi::userError(L, "header_set", "Header Key not valid.");
+
+    pKey = LsLuaHeaderTransformKey(session, pInput, iKeyLen);
+
+    iHeaderId = g_api->get_resp_header_id(session, pKey);
+    switch (iHeaderId)
+    {
+    case LSI_RESP_HEADER_SET_COOKIE:
+    case LSI_RESP_HEADER_UNKNOWN:
+        iAddOp = LSI_HEADER_APPEND;
+        break;
+    default:
+        iAddOp = LSI_HEADER_SET;
+        break;
+    }
+    switch (LsLuaApi::type(L, 3))
+    {
+    case LUA_TTABLE:
+        if ((iTableLen = LsLuaApi::objlen(L, 3)) != 0)
+            break;
+    //fall through
+    case LUA_TNIL:
+        g_api->remove_resp_header(session, LSI_RESP_HEADER_UNKNOWN,
+                                  pKey, iKeyLen);
+        return 0;
+    case LUA_TSTRING:
+    case LUA_TNUMBER:
+        pVal = LsLuaApi::tolstring(L, 3, &iValLen);
+        g_api->set_resp_header(session, iHeaderId, pKey, iKeyLen,
+                               pVal, iValLen, iAddOp);
+        return 0;
+    default:
+        return LsLuaApi::userError(L, "header_set", "Value argument not valid.");
+    }
+
+    for (i = 1; i <= iTableLen; ++i)
+    {
+        LsLuaApi::rawgeti(L, 3, i);
+        switch (LsLuaApi::type(L, -1))
+        {
+        case LUA_TSTRING:
+        case LUA_TNUMBER:
+            pVal = LsLuaApi::tolstring(L, -1, &iValLen);
+            g_api->set_resp_header(session, iHeaderId, pKey, iKeyLen,
+                                   pVal, iValLen, iAddOp);
+            break;
+        default:
+            return LsLuaApi::userError(L, "header_set", "Value argument not valid.");
+        }
+        LsLuaApi::pop(L, 1);
     }
     return 0;
 }
 
-void LsLua_create_header( lua_State * L )
+void LsLuaCreateHeader(lua_State *L)
 {
-    /* should have the table on the stack already */
-    // LsLuaApi::dumpStack( L, "BEGIN create_header", 10);
-    
-    LsLuaEngine::api()->createtable(L, 0, 0); /* create ls.header table         */
-    LsLuaEngine::api()->createtable(L, 0, 2); /* create metatable for ls.header */
-    LsLuaEngine::api()->pushcclosure(L, LsLua_header_set, 0);
-    LsLuaEngine::api()->setfield(L, -2, "__newindex");
-    LsLuaEngine::api()->pushcclosure(L, LsLua_header_get, 0);
-    LsLuaEngine::api()->setfield(L, -2, "__index");
-    LsLuaEngine::api()->setmetatable(L, -2);
-    LsLuaEngine::api()->setfield(L, -2, "header"); 
-    
-    // LsLuaApi::dumpStack( L, "END create_header", 10);
-}
-
-void LsLua_create_header_meta( lua_State * L )
-{
-    ;
+    LsLuaApi::createtable(L, 0, 0);
+    LsLuaApi::createtable(L, 0, 2);
+    LsLuaApi::pushcclosure(L, LsLuaHeaderSet, 0);
+    LsLuaApi::setfield(L, -2, "__newindex");
+    LsLuaApi::pushcclosure(L, LsLuaHeaderGet, 0);
+    LsLuaApi::setfield(L, -2, "__index");
+    LsLuaApi::setmetatable(L, -2);
+    LsLuaApi::setfield(L, -2, "header");
 }
 

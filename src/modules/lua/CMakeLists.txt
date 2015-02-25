@@ -15,14 +15,13 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  ${MY_CMAKE_WARNING_FLAGS}" )
 ########### next target ###############
 
 SET(lua_STAT_SRCS 
-    lsluascript.cpp 
     lsluaengine.cpp
     edluastream.cpp
     lsluaapi.cpp
-    ls_lua_util.c
     lsluasession.cpp
     lsluaheader.cpp
     lsluashared.cpp
+    lsluaregex.cpp
     modlua.cpp
 )
 

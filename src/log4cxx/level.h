@@ -19,13 +19,14 @@
 #define LEVEL_H
 
 
+#include <lsdef.h>
 #include <log4cxx/nsdefs.h>
 
-BEGIN_LOG4CXX_NS    
+BEGIN_LOG4CXX_NS
 
 class Level
 {
-    static const char * s_levelName[];
+    static const char *s_levelName[];
     Level() {};
     ~Level() {};
 public:
@@ -44,11 +45,14 @@ public:
         UNKNOWN = 10000
     };
 
-    static const char * toString( int level )
+    static const char *toString(int level)
     {   return s_levelName[ level / 1000 ]; }
-    static int toInt( const char * levelName );
-    static int getSysLogInt( int level )
+    static int toInt(const char *levelName);
+    static int getSysLogInt(int level)
     {   return level / 1000; }
+
+
+    LS_NO_COPY_ASSIGN(Level);
 };
 
 END_LOG4CXX_NS

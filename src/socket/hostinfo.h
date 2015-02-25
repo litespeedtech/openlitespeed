@@ -26,20 +26,21 @@
 class HostInfo : public hostent
 {
 private:
-    char * m_pBuf;
+    char *m_pBuf;
     int init();
-    static void copyMemArray( char ** const pDestArray,
-                const char * const * const pArray, int length, char * &pBuf );
-    static char * buf_memcpy( char * &pBuf, const char *pSrc, int n );
-    static char * buf_strncpy( char * &pBuf, const char *pSrc, int n );
+    static void copyMemArray(char **const pDestArray,
+                             const char *const *const pArray, int length, char *&pBuf);
+    static char *buf_memcpy(char *&pBuf, const char *pSrc, int n);
+    static char *buf_strncpy(char *&pBuf, const char *pSrc, int n);
 
 public:
     HostInfo();
     ~HostInfo();
-    HostInfo(const hostent& rhs);
-    HostInfo& operator=( const hostent& rhs );
+    HostInfo(const hostent &rhs);
+    HostInfo &operator=(const hostent &rhs);
     bool getHostByName(const char *name);
-    bool getHostByAddr(const void *addr, int len = sizeof(in_addr), int type = AF_INET);
+    bool getHostByAddr(const void *addr, int len = sizeof(in_addr),
+                       int type = AF_INET);
 
 
 };

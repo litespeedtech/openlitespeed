@@ -19,6 +19,7 @@
 #define HOTLINKCTRL_H
 
 
+#include <lsdef.h>
 #include <util/stringlist.h>
 #include <util/autostr.h>
 
@@ -33,26 +34,27 @@ class HotlinkCtrl
     short           m_iDummy;
     StringList      m_listSuffix;
     StringList      m_listHosts;
-    Pcregex       * m_pRegex;
+    Pcregex        *m_pRegex;
     AutoStr2        m_sRedirect;
 
-public: 
+public:
     HotlinkCtrl();
     ~HotlinkCtrl();
     char allowDirectAccess() const          {   return m_iAllowDirectAcc;   }
     char onlySelf() const                   {   return m_iOnlySelf;         }
     const StringList *getSuffixList() const {   return &m_listSuffix;       }
-    const char * getRedirect() const        {   return m_sRedirect.c_str(); }
+    const char *getRedirect() const        {   return m_sRedirect.c_str(); }
     int  getRedirectLen() const             {   return m_sRedirect.len();   }
 
-    void setDirectAccess( int dir )         {   m_iAllowDirectAcc = dir;    }
-    void setOnlySelf( int self )            {   m_iOnlySelf = self;         }
-    void setRedirect( const char * uri )    {   m_sRedirect.setStr( uri );  }
-    int  setHosts( const char * pHosts );
-    int  setRegex( const char * pRegex );
-    int  setSuffixes( const char * suffix );
-    int  allowed( const char * pRef, int len )  const;
-    int config( const XmlNode *pNode );
+    void setDirectAccess(int dir)         {   m_iAllowDirectAcc = dir;    }
+    void setOnlySelf(int self)            {   m_iOnlySelf = self;         }
+    void setRedirect(const char *uri)    {   m_sRedirect.setStr(uri);  }
+    int  setHosts(const char *pHosts);
+    int  setRegex(const char *pRegex);
+    int  setSuffixes(const char *suffix);
+    int  allowed(const char *pRef, int len)  const;
+    int config(const XmlNode *pNode);
+    LS_NO_COPY_ASSIGN(HotlinkCtrl);
 };
 
 #endif

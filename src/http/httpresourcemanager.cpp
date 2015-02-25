@@ -27,14 +27,18 @@
 #include <http/httpsession.h>
 #include <http/ntwkiolink.h>
 #include <lsiapi/modulemanager.h>
+#include <spdy/h2connection.h>
+#include <spdy/spdyconnection.h>
+
+char HttpResourceManager::g_aBuf[GLOBAL_BUF_SIZE + 8];
 
 HttpResourceManager::HttpResourceManager()
-    : m_poolChunkInputStream( 0, 10 )
-    , m_poolChunkOutputStream(10,10 )
-    , m_poolVMemBuf( 0, 10 )
-    , m_poolGzipBuf( 0, 10 )
-    , m_poolHttpSession( 20, 20 )
-    , m_poolNtwkIoLink( 20, 20 )
+    : m_poolChunkInputStream(0, 10)
+    , m_poolChunkOutputStream(10, 10)
+    , m_poolVMemBuf(0, 10)
+    , m_poolGzipBuf(0, 10)
+    , m_poolHttpSession(20, 20)
+    , m_poolNtwkIoLink(20, 20)
 {
 }
 
@@ -44,39 +48,57 @@ HttpResourceManager::~HttpResourceManager()
 
 void HttpResourceManager::releaseAll()
 {
-    m_poolChunkInputStream.shrinkTo( 0 );
-    m_poolChunkOutputStream.shrinkTo( 0 );
-    m_poolVMemBuf.shrinkTo( 0 );
-    m_poolGzipBuf.shrinkTo( 0 );
-    m_poolHttpSession.shrinkTo( 0 );
-    m_poolNtwkIoLink.shrinkTo( 0 );
+    m_poolChunkInputStream.shrinkTo(0);
+    m_poolChunkOutputStream.shrinkTo(0);
+    m_poolVMemBuf.shrinkTo(0);
+    m_poolGzipBuf.shrinkTo(0);
+    m_poolHttpSession.shrinkTo(0);
+    m_poolNtwkIoLink.shrinkTo(0);
 }
 
 
-static int reduceBuf( void * pObj, void * size )
+static int reduceBuf(void *pObj, void *size)
 {
-    ((VMemBuf *)pObj)->shrinkBuf( (long) size );
+    ((VMemBuf *)pObj)->shrinkBuf((long) size);
     //((VMemBuf *)pObj)->resizeFile( (long) size );
     return 0;
 }
 
 void HttpResourceManager::onTimer()
 {
-    m_poolVMemBuf.shrinkTo( 20 );
-    m_poolVMemBuf.applyAll( reduceBuf, (void*)16384 );
+    m_poolVMemBuf.shrinkTo(20);
+    m_poolVMemBuf.applyAll(reduceBuf, (void *)16384);
     //m_poolChunkInputStream( 20 );
     //m_poolChunkOutputStream( 20 );
-    
-    m_poolHttpSession.shrinkTo( 20 );
-    m_poolNtwkIoLink.shrinkTo( 20 );    
-    
+
+    m_poolHttpSession.shrinkTo(20);
+    m_poolNtwkIoLink.shrinkTo(20);
+
     //Call module manger timer to check and release some resource
     ModuleManager::getInstance().OnTimer10sec();
 }
 
-HioStreamHandler* HttpResourceManager::getHioStreamHandler()
-{    
-    return m_poolHttpSession.get();   
+HioHandler *HttpResourceManager::getHioHandler(HiosProtocol ver)
+{
+    HioHandler *pHioHandler;
+    switch (ver)
+    {
+    case HIOS_PROTO_HTTP:
+        pHioHandler = m_poolHttpSession.get();
+        break;
+    case HIOS_PROTO_HTTP2:
+        pHioHandler = (HioHandler *)(new H2Connection());
+        break;
+    default:
+        pHioHandler = (HioHandler *)(new SpdyConnection());
+        break;
+    }
+    
+    if (!pHioHandler)
+        return NULL;
+    
+    pHioHandler->init(ver);
+    return pHioHandler;
 }
 
 

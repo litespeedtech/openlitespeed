@@ -17,11 +17,11 @@
 *****************************************************************************/
 #include <http/pipeappender.h>
 #include <edio/multiplexer.h>
+#include <edio/multiplexerfactory.h>
 #include <extensions/fcgi/fcgiapp.h>
 #include <extensions/fcgi/fcgiappconfig.h>
 #include <extensions/localworker.h>
 #include <extensions/registry/extappregistry.h>
-#include <http/httpglobals.h>
 #include <http/httplog.h>
 #include <log4cxx/layout.h>
 #include <log4cxx/loggingevent.h>
@@ -37,14 +37,14 @@
 #include <time.h>
 #include <unistd.h>
 #include <util/gfactory.h>
-#include <util/ni_fio.h>
+#include <lsr/ls_fileio.h>
 
 
 using namespace LOG4CXX_NS;
 
-Duplicable * PipeAppender::dup( const char * pName )
+Duplicable *PipeAppender::dup(const char *pName)
 {
-    Appender * pAppender = new PipeAppender( pName );
+    Appender *pAppender = new PipeAppender(pName);
     return pAppender;
 }
 
@@ -69,42 +69,42 @@ int PipeAppender::reopenExist()
 int PipeAppender::open()
 {
     m_error = 0;
-    if ( Appender::getfd() != -1 )
+    if (Appender::getfd() != -1)
         return 0;
-    const char * pName = getName();
-    if ( !pName )
+    const char *pName = getName();
+    if (!pName)
     {
         m_error = errno = EINVAL;
-        return -1;
+        return LS_FAIL;
     }
-    FcgiApp * pApp = (FcgiApp *)ExtAppRegistry::getApp( EA_LOGGER, pName );
-    if ( !pApp )
-        return -1;
-    if ( pApp->getCurInstances() >= pApp->getConfig().getInstances() )
-        return -1;
+    FcgiApp *pApp = (FcgiApp *)ExtAppRegistry::getApp(EA_LOGGER, pName);
+    if (!pApp)
+        return LS_FAIL;
+    if (pApp->getCurInstances() >= pApp->getConfig().getInstances())
+        return LS_FAIL;
     int fds[2];
-    if ( socketpair( AF_UNIX, SOCK_STREAM, 0, fds ) == -1 )
+    if (socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == -1)
     {
         m_error = errno;
-        LOG_ERR(( "[PipeAppender] socketpair() failed!" ));
-        return -1;
+        LOG_ERR(("[PipeAppender] socketpair() failed!"));
+        return LS_FAIL;
     }
-    fcntl( fds[0], F_SETFD, FD_CLOEXEC );
-    m_pid = LocalWorker::workerExec( pApp->getConfig(), fds[1] );
-    ::close( fds[1] );
-    if ( m_pid == -1 )
+    fcntl(fds[0], F_SETFD, FD_CLOEXEC);
+    m_pid = LocalWorker::workerExec(pApp->getConfig(), fds[1]);
+    ::close(fds[1]);
+    if (m_pid == -1)
     {
         m_error = errno;
-        ::close( fds[0] );
-        return -1;
+        ::close(fds[0]);
+        return LS_FAIL;
     }
     long fl;
-    fl = ::fcntl( fds[0], F_GETFL );
-    fl = fl | HttpGlobals::getMultiplexer()->getFLTag();
-    ::fcntl( fds[0], F_SETFL, fl );
-    Appender::setfd( fds[0] );
-    EventReactor::setfd( fds[0] );
-    HttpGlobals::getMultiplexer()->add( this, POLLERR | POLLHUP );
+    fl = ::fcntl(fds[0], F_GETFL);
+    fl = fl | MultiplexerFactory::getMultiplexer()->getFLTag();
+    ::fcntl(fds[0], F_SETFL, fl);
+    setfd(fds[0]);
+    EventReactor::setfd(fds[0]);
+    MultiplexerFactory::getMultiplexer()->add(this, POLLERR | POLLHUP);
     m_buf.clear();
     return 0;
 }
@@ -112,39 +112,39 @@ int PipeAppender::open()
 int PipeAppender::close()
 {
     // stop previous external logger
-    
-    HttpGlobals::getMultiplexer()->remove( this );
-    EventReactor::setfd( -1 );
-    ::close( Appender::getfd() );
-    Appender::setfd( -1 );
-    
-    if ( m_pid != -1 )
-        kill( m_pid, SIGTERM );
+
+    MultiplexerFactory::getMultiplexer()->remove(this);
+    EventReactor::setfd(-1);
+    ::close(getfd());
+    setfd(-1);
+
+    if (m_pid != -1)
+        kill(m_pid, SIGTERM);
     m_pid = -1;
     return 0;
 }
 
 
-int PipeAppender::append( const char * pBuf, int len )
+int PipeAppender::append(const char *pBuf, int len)
 {
-    if ( Appender::getfd() == -1 )
-        if ( open() == -1 )
-            return -1;
-    if ( !m_buf.empty() )
+    if (Appender::getfd() == -1)
+        if (open() == -1)
+            return LS_FAIL;
+    if (!m_buf.empty())
     {
         flush();
-        if ( !m_buf.empty() )
-            return m_buf.cache( pBuf, len, 0 );
+        if (!m_buf.empty())
+            return m_buf.cache(pBuf, len, 0);
     }
-    int ret = ::nio_write( Appender::getfd(), pBuf, len );
-    if ( ret < len )
+    int ret = ::ls_fio_write(Appender::getfd(), pBuf, len);
+    if (ret < len)
     {
-        if (( ret > -1 )||( errno == EAGAIN ))
+        if ((ret > -1) || (errno == EAGAIN))
         {
-            LOG_NOTICE(( "[PipeAppender:%d] cache output: %d", Appender::getfd(),
-                            len - ret ));
-            HttpGlobals::getMultiplexer()->continueWrite( this );
-            return m_buf.cache( pBuf, len, (ret==-1)?0:ret );
+            LOG_NOTICE(("[PipeAppender:%d] cache output: %d", Appender::getfd(),
+                        len - ret));
+            MultiplexerFactory::getMultiplexer()->continueWrite(this);
+            return m_buf.cache(pBuf, len, (ret == -1) ? 0 : ret);
         }
         else
             close();
@@ -154,46 +154,44 @@ int PipeAppender::append( const char * pBuf, int len )
 
 int PipeAppender::flush()
 {
-    LOG_NOTICE(( "[PipeAppender:%d] flush() cache size: %d", Appender::getfd(),
-             m_buf.size() ));
-    if ( !m_buf.empty() )
+    LOG_NOTICE(("[PipeAppender:%d] flush() cache size: %d", Appender::getfd(),
+                m_buf.size()));
+    if (!m_buf.empty())
     {
         IOVec iov;
-        m_buf.getIOvec( iov );
-        int ret = ::writev( Appender::getfd(), iov.get(), iov.len() );
-        LOG_NOTICE(( "[PipeAppender] flush() writev() return %d", ret ));
-        if ( ret > 0 )
+        m_buf.getIOvec(iov);
+        int ret = ::writev(Appender::getfd(), iov.get(), iov.len());
+        LOG_NOTICE(("[PipeAppender] flush() writev() return %d", ret));
+        if (ret > 0)
         {
-            if ( m_buf.size() <= ret )
+            if (m_buf.size() <= ret)
                 m_buf.clear();
             else
-                m_buf.pop_front( ret );
-            if ( !m_buf.empty() )
+                m_buf.pop_front(ret);
+            if (!m_buf.empty())
                 return 0;
         }
         else
         {
-            if ( errno != EAGAIN )
+            if (errno != EAGAIN)
             {
                 m_error = errno;
                 close();
-                return -1;
+                return LS_FAIL;
             }
             return 0;
-        }        
-        
+        }
+
     }
-    HttpGlobals::getMultiplexer()->suspendWrite( this );
+    MultiplexerFactory::getMultiplexer()->suspendWrite(this);
     return 0;
 }
 
-int PipeAppender::handleEvents( short event )
+int PipeAppender::handleEvents(short event)
 {
-    if ( event & POLLOUT )
-    {
+    if (event & POLLOUT)
         flush();
-    }
-    if ( event & (POLLHUP | POLLERR ))
+    if (event & (POLLHUP | POLLERR))
         close();
     return 0;
 }

@@ -18,22 +18,26 @@
 #ifndef STATICOBJ_H
 #define STATICOBJ_H
 
+#include <lsdef.h>
 
 #include <new>
 template< class T>
 class StaticObj
 {
-    char m_achObj[ sizeof( T ) ];
-    
-public: 
+    char m_aObj[ sizeof(T) ];
+
+public:
     StaticObj() {};
     ~StaticObj() {};
-    T * operator()()
-    {   return (T*)m_achObj;    }
+    T *operator()()
+    {   return (T *)m_aObj;    }
     void construct()
-    {   new (m_achObj) T(); }
+    {   new(m_aObj) T(); }
     void destruct()
     {   operator()()->~T(); }
+
+
+    LS_NO_COPY_ASSIGN(StaticObj);
 };
 
 #endif

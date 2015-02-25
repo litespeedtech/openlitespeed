@@ -23,55 +23,55 @@
 
 int HttpSignals::s_iEvents = 0;
 
-static void sigquit( int sig )
+static void sigquit(int sig)
 {
     //printf( "sigquit()!\n" );
     //HttpServer::getInstance().shutdown();
-    HttpSignals::orEvent( HS_STOP );
+    HttpSignals::orEvent(HS_STOP);
 }
 
-static void sigpipe( int sig )
+static void sigpipe(int sig)
 {
     //printf( "sigpipe()!\n" );
 }
 
-static void sigalarm( int sig )
+static void sigalarm(int sig)
 {
-    HttpSignals::orEvent( HS_ALARM );
+    HttpSignals::orEvent(HS_ALARM);
 }
 
-static void sighup( int sig )
+static void sighup(int sig)
 {
     //fprintf( stderr, "sighup()!\n" );
-    HttpSignals::orEvent( HS_HUP );
+    HttpSignals::orEvent(HS_HUP);
 }
 
-static void sigusr1( int sig )
+static void sigusr1(int sig)
 {
-    HttpSignals::orEvent( HS_USR1 );
+    HttpSignals::orEvent(HS_USR1);
 }
 
-static void sigusr2( int sig )
+static void sigusr2(int sig)
 {
-    HttpSignals::orEvent( HS_USR2 );
+    HttpSignals::orEvent(HS_USR2);
 }
 
-void HttpSignals::orEvent( int event )
+void HttpSignals::orEvent(int event)
 {   s_iEvents |= event;     }
 
 
-void HttpSignals::init( sighandler_t sigchild)
+void HttpSignals::init(sighandler_t sigchild)
 {
-    SignalUtil::signal( SIGTERM, sigquit );
+    SignalUtil::signal(SIGTERM, sigquit);
 #ifdef RUN_TEST
-    SignalUtil::signal( SIGINT, sigquit );
+    SignalUtil::signal(SIGINT, sigquit);
 #endif
-    SignalUtil::signal( SIGHUP, sighup );
-    SignalUtil::signal( SIGPIPE, sigpipe );
-    SignalUtil::signal( SIGCHLD, sigchild );
-    SignalUtil::signal( SIGALRM, sigalarm );
-    SignalUtil::signal( SIGUSR1, sigusr1 );
-    SignalUtil::signal( SIGUSR2, sigusr2 );
+    SignalUtil::signal(SIGHUP, sighup);
+    SignalUtil::signal(SIGPIPE, sigpipe);
+    SignalUtil::signal(SIGCHLD, sigchild);
+    SignalUtil::signal(SIGALRM, sigalarm);
+    SignalUtil::signal(SIGUSR1, sigusr1);
+    SignalUtil::signal(SIGUSR2, sigusr2);
 }
 
 

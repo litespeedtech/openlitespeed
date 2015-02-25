@@ -18,8 +18,8 @@
 #include <util/hashdatacache.h>
 #include <util/pool.h>
 #include <util/keydata.h>
-#include <util/ni_fio.h>
 #include <http/httplog.h>
+#include <lsr/ls_fileio.h>
 
 #include <errno.h>
 #include <sys/stat.h>
@@ -31,14 +31,12 @@ HashDataCache::~HashDataCache()
 {
 }
 
-const KeyData * HashDataCache::getData( const char * pKey )
+const KeyData *HashDataCache::getData(const char *pKey)
 {
     const_iterator iter;
-    iter = find( pKey );
-    if ( iter != end() )
-    {
+    iter = find(pKey);
+    if (iter != end())
         return iter.second();
-    }
     return NULL;
 }
 
@@ -46,65 +44,67 @@ const KeyData * HashDataCache::getData( const char * pKey )
 
 DataStore::~DataStore()
 {
-    if ( m_uriDataStore )
-        Pool::deallocate2( m_uriDataStore );
+    if (m_pDataStoreUri)
+        Pool::deallocate2(m_pDataStoreUri);
 }
 
-void DataStore::setDataStoreURI( const char * pURI )
+void DataStore::setDataStoreURI(const char *pURI)
 {
-    if ( m_uriDataStore )
-        Pool::deallocate2( m_uriDataStore );
-    m_uriDataStore = Pool::dupstr( pURI );
+    if (m_pDataStoreUri)
+        Pool::deallocate2(m_pDataStoreUri);
+    m_pDataStoreUri = Pool::dupstr(pURI);
 }
 
 
 
-int FileStore::isStoreChanged( long time )
+int FileStore::isStoreChanged(long time)
 {
-    long curTime = ::time( NULL );
-    if ( curTime != m_lLastCheckTime )
+    long curTime = ::time(NULL);
+    if (curTime != m_lastCheckTime)
     {
         struct stat st;
-        m_lLastCheckTime = curTime;
-        if ( nio_stat( getDataStoreURI(), &st ) == -1 )
-            return -1;
-        if ( m_lModifiedTime != st.st_mtime )
+        m_lastCheckTime = curTime;
+        if (ls_fio_stat(getDataStoreURI(), &st) == -1)
+            return LS_FAIL;
+        if (m_modifiedTime != st.st_mtime)
             return 1;
     }
-    if ( time < m_lModifiedTime )
+    if (time < m_modifiedTime)
         return 1;
     return 0;
 }
 
 int FileStore::open()
 {
-    if ( m_fp == NULL )
+    if (m_pFile == NULL)
     {
         struct stat st;
-        if ( nio_stat( getDataStoreURI(), &st ) == -1 )
+        if (ls_fio_stat(getDataStoreURI(), &st) == -1)
         {
-            LOG_ERR(( "Failed to get file stat: '%s', errno %d.", getDataStoreURI(), errno ));
+            LOG_ERR(("Failed to get file stat: '%s', errno %d.", getDataStoreURI(),
+                     errno));
             return errno;
         }
-        if ( S_ISDIR( st.st_mode ) )
+        if (S_ISDIR(st.st_mode))
             return EINVAL;
-        m_fp = fopen( getDataStoreURI(), "r");
-        if ( m_fp == NULL )
+        m_pFile = fopen(getDataStoreURI(), "r");
+        if (m_pFile == NULL)
         {
-            LOG_NOTICE(( "Failed to open file: '%s', errno %d.", getDataStoreURI(), errno ));
+            LOG_NOTICE(("Failed to open file: '%s', errno %d.", getDataStoreURI(),
+                        errno));
             return errno;
         }
-        m_lModifiedTime = st.st_mtime;
+        m_modifiedTime = st.st_mtime;
     }
     return 0;
 }
 
 void FileStore::close()
 {
-    if ( m_fp )
+    if (m_pFile)
     {
-        fclose(m_fp);
-        m_fp = NULL;
+        fclose(m_pFile);
+        m_pFile = NULL;
     }
 }
 
@@ -112,54 +112,50 @@ void FileStore::close()
 
 #define TEMP_BUF_LEN 4096
 
-KeyData * FileStore::getNext()
+KeyData *FileStore::getNext()
 {
-    char pBuf[TEMP_BUF_LEN+1];
-    if ( !m_fp )
+    char pBuf[TEMP_BUF_LEN + 1];
+    if (!m_pFile)
         return NULL;
-    while( !feof(m_fp) )
+    while (!feof(m_pFile))
     {
-        if ( fgets(pBuf, TEMP_BUF_LEN, m_fp) )
+        if (fgets(pBuf, TEMP_BUF_LEN, m_pFile))
         {
-            KeyData * pData = parseLine( pBuf, &pBuf[strlen( pBuf )] );
-            if ( pData )
-            {
+            KeyData *pData = parseLine(pBuf, &pBuf[strlen(pBuf)]);
+            if (pData)
                 return pData;
-            }
         }
     }
     return NULL;
 }
 
-KeyData * FileStore::getDataFromStore( const char * pKey, int keyLen )
+KeyData *FileStore::getDataFromStore(const char *pKey, int keyLen)
 {
 
-    char * pPos;
-    char pBuf[TEMP_BUF_LEN+1];
-    KeyData * pData = NULL;
-    if ( open() )
+    char *pPos;
+    char pBuf[TEMP_BUF_LEN + 1];
+    KeyData *pData = NULL;
+    if (open())
         return NULL;
-    fseeko( m_fp, 0, SEEK_SET );
-    while( !feof(m_fp) )
+    fseeko(m_pFile, 0, SEEK_SET);
+    while (!feof(m_pFile))
     {
-        if ( fgets(pBuf, TEMP_BUF_LEN, m_fp) )
+        if (fgets(pBuf, TEMP_BUF_LEN, m_pFile))
         {
-            if ( strncmp( pBuf, pKey, keyLen ) == 0 )
+            if (strncmp(pBuf, pKey, keyLen) == 0)
             {
-                register char ch;
+                char ch;
                 pPos = pBuf + keyLen;
-                while( (( ch = *pPos ) == ' ')||( ch == '\t' ))
+                while (((ch = *pPos) == ' ') || (ch == '\t'))
                     ++pPos;
-                if ( *pPos++ == ':' )
+                if (*pPos++ == ':')
                 {
-                    char * pLineEnd = strlen( pPos ) + pPos;
-                    while( ((ch = pLineEnd[-1] ) == '\n' )||(ch == '\r' ))
-                        *(--pLineEnd) = 0;
-                    pData = parseLine( pKey, keyLen, pPos, pLineEnd );
-                    if ( pData )
-                    {
+                    char *pLineEnd = strlen(pPos) + pPos;
+                    while (((ch = pLineEnd[-1]) == '\n') || (ch == '\r'))
+                        * (--pLineEnd) = 0;
+                    pData = parseLine(pKey, keyLen, pPos, pLineEnd);
+                    if (pData)
                         break;
-                    }
                 }
             }
         }

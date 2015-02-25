@@ -20,71 +20,74 @@
 #include <ctype.h>
 #include <string.h>
 
-const char StringTool::s_hex[17] = "0123456789abcdef";
+const char StringTool::s_aHex[17] = "0123456789abcdef";
 
-StringList * StringTool::parseMatchPattern( const char *pPattern )
+StringList *StringTool::parseMatchPattern(const char *pPattern)
 {
-    char * pBegin;
+    char *pBegin;
     char ch;
-    StringList * pList = new StringList();
-    if ( !pList )
+    StringList *pList = new StringList();
+    if (!pList)
         return NULL;
     char achBuf[2048];
     pBegin = achBuf;
     *pBegin++ = 0;
-    while( (ch = *pPattern++) )
+    while ((ch = *pPattern++))
     {
-        switch( ch )
+        switch (ch)
         {
         case '*':
         case '?':
-            if ( pBegin - 1 != achBuf )
-                pList->add( achBuf, pBegin - achBuf );
+            if (pBegin - 1 != achBuf)
+                pList->add(achBuf, pBegin - achBuf);
             pBegin = achBuf;
-            while( 1 )
+            while (1)
             {
                 *pBegin++ = ch;
-                if ( *pPattern != ch )
+                if (*pPattern != ch)
                     break;
                 ++pPattern;
-                
+
             }
-            if ( ch == '*' )
-                pList->add( achBuf, 1 );
+            if (ch == '*')
+                pList->add(achBuf, 1);
             else
-                pList->add( achBuf, pBegin - achBuf );
+                pList->add(achBuf, pBegin - achBuf);
             pBegin = achBuf;
             *pBegin++ = 0;
             break;
 
         case '\\':
             ch = *pPattern++;
-            //fall through
+        //fall through
         default:
-            if ( ch )
+            if (ch)
                 *pBegin++ = ch;
             break;
-                        
+
         }
     }
-    if ( pBegin - 1 != achBuf )
-        pList->add( achBuf, pBegin - achBuf );
+    if (pBegin - 1 != achBuf)
+        pList->add(achBuf, pBegin - achBuf);
     return pList;
 }
 
-void * StringTool::memmem(const char * haystack, size_t haystacklen, const char *needle, size_t needleLength)
+void *StringTool::memmem(const char *haystack, size_t haystacklen,
+                         const char *needle, size_t needleLength)
 {
-    register const char *p = haystack + haystacklen;
-    
-    if ( haystacklen < needleLength )
+    const char *p = haystack + haystacklen;
+
+    if (haystacklen < needleLength)
         return NULL;
-    
-    if ( needleLength == 0 )
+
+    if (needleLength == 0)
         return (void *)haystack;
-    
-    while(haystack < p && ( (haystack = (const char *)memchr(haystack, *needle, haystacklen)) != NULL ))
+
+    while (haystack < p
+           && ((haystack = (const char *)memchr(haystack, *needle,
+                           haystacklen)) != NULL))
     {
-        if ( memcmp(haystack, needle, needleLength) == 0 )
+        if (memcmp(haystack, needle, needleLength) == 0)
             return (void *)haystack;
         ++haystack;
     }

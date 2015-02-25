@@ -19,7 +19,7 @@
 #define SSLERROR_H
 
 
-
+#include <lsdef.h>
 #include <exception>
 
 class SSLError : public std::exception
@@ -28,12 +28,14 @@ class SSLError : public std::exception
     char m_achMsg[256];
 public:
     SSLError() throw();
-    SSLError( int err ) throw();
-    SSLError( const char * pErr ) throw();
+    SSLError(int err) throw();
+    SSLError(const char *pErr) throw();
     ~SSLError() throw();
-    const char * what() const throw()
+    const char *what() const throw()
     {   return m_achMsg;  }
     int get() const     {   return m_iError;    }
+    
+    LS_NO_COPY_ASSIGN(SSLError);
 };
 
 #endif

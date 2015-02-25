@@ -18,44 +18,48 @@
 #ifndef LOGIDTRACKER_H
 #define LOGIDTRACKER_H
 
+#include <lsdef.h>
 #include <util/autostr.h>
 
 class LogIdTracker
 {
-    static char  s_sLogId[128];
+    static char  s_aLogId[128];
     static int   s_iIdLen;
-    
-    AutoStr m_sOldId;
+
+    AutoStr m_oldId;
 public:
-    LogIdTracker( const char * pNewId )
+    LogIdTracker(const char *pNewId)
     {
-        m_sOldId = getLogId();
-        setLogId( pNewId );
+        m_oldId = getLogId();
+        setLogId(pNewId);
     }
     LogIdTracker()
     {
-        m_sOldId = getLogId();
+        m_oldId = getLogId();
     }
     ~LogIdTracker()
     {
-        setLogId( m_sOldId.c_str() );
+        setLogId(m_oldId.c_str());
     }
-    static const char * getLogId()
-    {   return s_sLogId;    }
-    
-    static void setLogId( const char * pId )
+    static const char *getLogId()
+    {   return s_aLogId;    }
+
+    static void setLogId(const char *pId)
     {
-        strncpy( s_sLogId, pId, sizeof( s_sLogId ) - 1 );
-        s_sLogId[ sizeof( s_sLogId ) - 1 ] = 0;
-        s_iIdLen = strlen( s_sLogId ); 
+        strncpy(s_aLogId, pId, sizeof(s_aLogId) - 1);
+        s_aLogId[ sizeof(s_aLogId) - 1 ] = 0;
+        s_iIdLen = strlen(s_aLogId);
     }
-    
-    static void appendLogId( const char * pId )
+
+    static void appendLogId(const char *pId)
     {
-        strncpy( s_sLogId + s_iIdLen, pId, sizeof( s_sLogId ) -1 - s_iIdLen );
-        s_sLogId[ sizeof( s_sLogId ) - 1 ] = 0;
-        s_iIdLen += strlen( s_sLogId + s_iIdLen );
+        strncpy(s_aLogId + s_iIdLen, pId, sizeof(s_aLogId) - 1 - s_iIdLen);
+        s_aLogId[ sizeof(s_aLogId) - 1 ] = 0;
+        s_iIdLen += strlen(s_aLogId + s_iIdLen);
     }
+
+
+    LS_NO_COPY_ASSIGN(LogIdTracker);
 };
 
 

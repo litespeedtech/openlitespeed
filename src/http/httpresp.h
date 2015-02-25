@@ -23,7 +23,7 @@
 #include <http/httpstatusline.h>
 #include <util/iovec.h>
 #include <http/httprespheaders.h>
-#include <lsr/lsr_types.h>
+#include <lsr/ls_types.h>
 
 #define RANGE_HEADER_LEN    22
 #define LSI_RESP_BODY_SIZE_CHUNKED (-1)
@@ -34,22 +34,22 @@ class HttpReq;
 class HttpResp
 {
 public:
-    
 
-private:    
+
+private:
     HttpRespHeaders         m_respHeaders;
-    
+
 
     off_t           m_lEntityLength;
     off_t           m_lEntityFinished;
-    
-    HttpResp( const HttpResp& rhs );
-    void operator=( const HttpResp& rhs );
 
-    
-    void addWWWAuthHeader( const HttpReq * pReq);
+    HttpResp(const HttpResp &rhs);
+    void operator=(const HttpResp &rhs);
+
+
+    void addWWWAuthHeader(const HttpReq *pReq);
 public:
-    explicit HttpResp( lsr_xpool_t *pool );
+    explicit HttpResp(ls_xpool_t *pool);
     HttpResp();
     ~HttpResp();
 
@@ -62,42 +62,34 @@ public:
 //    }
 
 
-    int appendHeader( const char * pName, int nameLen,
-                        const char * pValue, int valLen );
-    void addLocationHeader( const HttpReq * pReq);
+    int appendHeader(const char *pName, int nameLen,
+                     const char *pValue, int valLen);
+    void addLocationHeader(const HttpReq *pReq);
 
-    void prepareHeaders( const HttpReq * pReq, int addAcceptRange = 0 );
+    void prepareHeaders(const HttpReq *pReq, int addAcceptRange = 0);
     void appendContentLenHeader();
 
-    HttpRespHeaders& getRespHeaders()
+    HttpRespHeaders &getRespHeaders()
     {   return m_respHeaders;  }
 
-    void setContentLen( off_t len )     {   m_lEntityLength = len;  }
+    void setContentLen(off_t len)     {   m_lEntityLength = len;  }
     off_t getContentLen() const         {   return m_lEntityLength; }
 
-    void written( long len )            {   m_lEntityFinished += len;    }
+    void written(long len)            {   m_lEntityFinished += len;    }
     off_t getBodySent() const           {   return m_lEntityFinished; }
 
-    //int  replySent()
-    //{ 
-        //FIXME
-        //assert("replySent fixme..." == NULL);
-    //    return 1;//m_iHeaderTotalLen > m_respHeaders.getHeaderLeft();   
-        
-    //}
-    
     bool isChunked() const
     {   return (m_lEntityLength == -1); }
 
     //IOVec& getIov()    {   return m_respHeaders.getIOVec();  }
-    int parseAdd( const char * pBuf, int len )
-    {   return m_respHeaders.parseAdd(pBuf, len, LSI_HEADER_ADD );    }
-    
+    int parseAdd(const char *pBuf, int len)
+    {   return m_respHeaders.parseAdd(pBuf, len, LSI_HEADER_ADD);    }
+
     void addGzipEncodingHeader()
     {
         m_respHeaders.addGzipEncodingHeader();
     }
-    
+
     void appendChunked()
     {
         m_respHeaders.appendChunked();
@@ -106,14 +98,14 @@ public:
 
 
     off_t getTotalLen()    {   return m_lEntityFinished + m_respHeaders.getTotalLen();   }
-    //int  isRespHeaderBuilt()      {   return m_respHeaders.isRespHeadersBuilt();   }    
-    const char * getContentTypeHeader(int &len )  {    return m_respHeaders.getContentTypeHeader(len);  }
-       
-    int  appendLastMod( long tmMod );
-    int addCookie( const char * pName, const char * pVal,
-                 const char * path, const char * domain, int expires,
-                 int secure, int httponly );  
-        
+    //int  isRespHeaderBuilt()      {   return m_respHeaders.isRespHeadersBuilt();   }
+    const char *getContentTypeHeader(int &len)  {    return m_respHeaders.getContentTypeHeader(len);  }
+
+    int  appendLastMod(long tmMod);
+    int addCookie(const char *pName, const char *pVal,
+                  const char *path, const char *domain, int expires,
+                  int secure, int httponly);
+
 };
 
 #endif

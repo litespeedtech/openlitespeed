@@ -27,9 +27,9 @@
 
 
 ChunkInputStream::ChunkInputStream()
-    : m_pIS( NULL )
-    , m_iChunkLen( INIT_CHUNK_LEN )
-    , m_iRemain( 0 )
+    : m_pIS(NULL)
+    , m_iChunkLen(INIT_CHUNK_LEN)
+    , m_iRemain(0)
 {
 }
 ChunkInputStream::~ChunkInputStream()
@@ -39,7 +39,7 @@ ChunkInputStream::~ChunkInputStream()
 void ChunkInputStream::open()
 {
     m_iChunkLen = INIT_CHUNK_LEN;
-    memset( &m_iRemain, 0, (char *)&m_achChunkLenBuf - (char *)&m_iRemain );
+    memset(&m_iRemain, 0, (char *)&m_achChunkLenBuf - (char *)&m_iRemain);
 }
 
 //void ChunkInputStream::updateLastBytes( char * pBuf, int len )
@@ -53,142 +53,143 @@ void ChunkInputStream::open()
 //    }
 //}
 
-int ChunkInputStream::bufRead( char * pBuf, int len, int prefetch )
+int ChunkInputStream::bufRead(char *pBuf, int len, int prefetch)
 {
     int left = m_iBufLen - m_iBufUsed;
     int ret;
-    if ( left > 0 )
+    if (left > 0)
     {
-        if ( left > len )
+        if (left > len)
             left = len;
-        memmove( pBuf, &m_achChunkLenBuf[m_iBufUsed], left );
+        memmove(pBuf, &m_achChunkLenBuf[m_iBufUsed], left);
         m_iBufUsed += left;
-        if ( m_iBufUsed == m_iBufLen )
+        if (m_iBufUsed == m_iBufLen)
             m_iBufUsed = m_iBufLen = 0;
-        if ( left == len )
+        if (left == len)
             return left;
-        pBuf += left; len -= left;
+        pBuf += left;
+        len -= left;
     }
-    if ( prefetch )
+    if (prefetch)
     {
         struct iovec vector[2];
         vector[0].iov_base = pBuf;
         vector[0].iov_len = len;
         vector[1].iov_base = m_achChunkLenBuf;
         vector[1].iov_len = 8;
-        ret = m_pIS->readv( vector, 2 );
-        if ( ret - len > 0 )
+        ret = m_pIS->readv(vector, 2);
+        if (ret - len > 0)
         {
             m_iBufLen = ret - len;
             ret = len;
-            updateLastBytes( pBuf, ret );
-            updateLastBytes( m_achChunkLenBuf, m_iBufLen );
+            updateLastBytes(pBuf, ret);
+            updateLastBytes(m_achChunkLenBuf, m_iBufLen);
         }
         else
-            updateLastBytes( pBuf, ret );
-        
+            updateLastBytes(pBuf, ret);
+
     }
     else
     {
-        ret = m_pIS->read( pBuf, len );
-        updateLastBytes( pBuf, ret );
+        ret = m_pIS->read(pBuf, len);
+        updateLastBytes(pBuf, ret);
     }
-    if ( ret > 0 ) 
+    if (ret > 0)
         return ret + left;
-    if ( left )
+    if (left)
         return left;
     return ret;
 }
 
 int ChunkInputStream::nextChunk()
 {
-    if ( m_iBufLen >= MAX_CHUNK_LEN_BUF_SIZE )
-        return -1;
-    int len = (m_iBufLen)? MAX_CHUNK_LEN_BUF_SIZE - m_iBufLen :8;
-    len = m_pIS->read( &m_achChunkLenBuf[ m_iBufLen ], len );
-    if ( len > 0 )
+    if (m_iBufLen >= MAX_CHUNK_LEN_BUF_SIZE)
+        return LS_FAIL;
+    int len = (m_iBufLen) ? MAX_CHUNK_LEN_BUF_SIZE - m_iBufLen : 8;
+    len = m_pIS->read(&m_achChunkLenBuf[ m_iBufLen ], len);
+    if (len > 0)
     {
-        updateLastBytes( &m_achChunkLenBuf[ m_iBufLen ], len );
+        updateLastBytes(&m_achChunkLenBuf[ m_iBufLen ], len);
         m_iBufLen += len;
         return parseChunkLen();
     }
-    else if ( len == 0 )
+    else if (len == 0)
         return len;
     //m_iChunkLen = INVALID_CHUNK;
-    return -1;
+    return LS_FAIL;
 }
 
 int ChunkInputStream::parseChunkLen()
 {
-    char * pLineEnd = (char *)memchr( m_achChunkLenBuf, '\n', m_iBufLen );
-    if ( pLineEnd )
+    char *pLineEnd = (char *)memchr(m_achChunkLenBuf, '\n', m_iBufLen);
+    if (pLineEnd)
     {
-        m_iBufUsed = ( pLineEnd - (char *)m_achChunkLenBuf) + 1;
-        if ( m_iBufUsed >= m_iBufLen )
+        m_iBufUsed = (pLineEnd - (char *)m_achChunkLenBuf) + 1;
+        if (m_iBufUsed >= m_iBufLen)
             m_iBufUsed = m_iBufLen = 0;
-        if ( pLineEnd[-1] == '\r' )
+        if (pLineEnd[-1] == '\r')
             --pLineEnd;
-        char * p = m_achChunkLenBuf;
-        StringTool::strtrim( (const char *&)p, (const char *&)pLineEnd );
+        char *p = m_achChunkLenBuf;
+        StringTool::strTrim((const char *&)p, (const char *&)pLineEnd);
         *pLineEnd = 0;
-        char * p1;
-        long lLen = strtol( p, &p1, 16 );
-        if ((( !*p1 )||( *p1 == ' ')||( *p1 ==';'))&&( p1 != p ))
+        char *p1;
+        long lLen = strtol(p, &p1, 16);
+        if (((!*p1) || (*p1 == ' ') || (*p1 == ';')) && (p1 != p))
         {
             m_iChunkLen = lLen;
-            if ( m_iChunkLen )
+            if (m_iChunkLen)
                 m_iRemain = lLen + 2;
             else
                 m_iRemain = -2;
-            
+
             return 1;
         }
     }
     else
     {
-        if ( m_iBufLen < MAX_CHUNK_LEN_BUF_SIZE )
+        if (m_iBufLen < MAX_CHUNK_LEN_BUF_SIZE)
             return 0;
     }
     //m_iChunkLen = INVALID_CHUNK;
-    return -1;
+    return LS_FAIL;
 }
 
 int ChunkInputStream::readTrailingCRLF()
 {
     int ret = 1;
-    if ( m_iBufLen == m_iBufUsed )
+    if (m_iBufLen == m_iBufUsed)
     {
         m_iBufUsed = 0;
         m_iBufLen = 0;
-        ret = m_pIS->read( m_achChunkLenBuf, 8 + m_iRemain );
-        if ( ret <= 0 )
+        ret = m_pIS->read(m_achChunkLenBuf, 8 + m_iRemain);
+        if (ret <= 0)
             return ret;
-        updateLastBytes( m_achChunkLenBuf, ret );
+        updateLastBytes(m_achChunkLenBuf, ret);
         m_iBufLen = ret;
     }
-    while( m_iBufLen > m_iBufUsed )
+    while (m_iBufLen > m_iBufUsed)
     {
         char ch = m_achChunkLenBuf[ m_iBufUsed++ ];
-        if ( ch == '\n' )
+        if (ch == '\n')
         {
             m_iRemain = 0;
-            if( m_iBufUsed )
+            if (m_iBufUsed)
             {
-                memmove( m_achChunkLenBuf, &m_achChunkLenBuf[m_iBufUsed],
-                        m_iBufLen - m_iBufUsed );
+                memmove(m_achChunkLenBuf, &m_achChunkLenBuf[m_iBufUsed],
+                        m_iBufLen - m_iBufUsed);
                 m_iBufLen -= m_iBufUsed;
                 m_iBufUsed = 0;
-                if ( m_iBufLen )
+                if (m_iBufLen)
                     return parseChunkLen();
             }
             return 1;
         }
-        if (( ch == '\r' )&&( m_iRemain == 2 ))
+        if ((ch == '\r') && (m_iRemain == 2))
         {
             --m_iRemain;
             continue;
         }
-        return -1;
+        return LS_FAIL;
     }
     return ret;
 }
@@ -197,20 +198,20 @@ int ChunkInputStream::skipTrailer()
 {
     char achBuf[128];
     int ret;
-    while( true )
+    while (true)
     {
-        ret = bufRead( achBuf, sizeof( achBuf ), 1 );
-        if ( ret <= 0 )
+        ret = bufRead(achBuf, sizeof(achBuf), 1);
+        if (ret <= 0)
             return ret;
-        char * pBegin = achBuf;
-        char * pEnd = &achBuf[ret];
-        while( pBegin < pEnd )
+        char *pBegin = achBuf;
+        char *pEnd = &achBuf[ret];
+        while (pBegin < pEnd)
         {
-            switch( m_iRemain )
+            switch (m_iRemain)
             {
             case -3:
-                pBegin = (char *)memchr( pBegin, '\n', pEnd - pBegin );
-                if ( pBegin )
+                pBegin = (char *)memchr(pBegin, '\n', pEnd - pBegin);
+                if (pBegin)
                 {
                     ++m_iRemain;
                     ++pBegin;
@@ -219,24 +220,20 @@ int ChunkInputStream::skipTrailer()
                     pBegin = pEnd;
                 break;
             case -2:
-                if ( *pBegin == '\r' )
-                {
+                if (*pBegin == '\r')
                     ++m_iRemain;
-                }
-                else if ( *pBegin == '\n' )
+                else if (*pBegin == '\n')
                 {
                     m_iChunkLen = CHUNK_EOF;
                     m_iRemain = 0;
                     return 1;
                 }
                 else
-                {
                     m_iRemain = -3;
-                }
                 ++pBegin;
                 break;
             case -1:
-                if ( *pBegin == '\n' )
+                if (*pBegin == '\n')
                 {
                     m_iChunkLen = CHUNK_EOF;
                     m_iRemain = 0;
@@ -247,23 +244,23 @@ int ChunkInputStream::skipTrailer()
                 ++pBegin;
                 break;
             }
-        }            
-    }            
+        }
+    }
 }
 
 
-int ChunkInputStream::readChunkContent( char * &pBuf, int &size, int &len )
+int ChunkInputStream::readChunkContent(char *&pBuf, int &size, int &len)
 {
     int readLen = m_iRemain - 2;
     int ret;
-    if ( readLen > size )
+    if (readLen > size)
     {
         readLen = size;
-        ret = bufRead( pBuf, readLen, 0 );
+        ret = bufRead(pBuf, readLen, 0);
     }
     else
-        ret = bufRead( pBuf, readLen, 1 );
-    if ( ret > 0 )
+        ret = bufRead(pBuf, readLen, 1);
+    if (ret > 0)
     {
         pBuf += ret;
         size -= ret;
@@ -273,58 +270,46 @@ int ChunkInputStream::readChunkContent( char * &pBuf, int &size, int &len )
     return ret;
 }
 
-int ChunkInputStream::read( char * pBuf, int size )
+int ChunkInputStream::read(char *pBuf, int size)
 {
     int ret = -1, len = 0;
-    assert( m_pIS );
-    if ( !m_pIS )
-        return -1;
+    assert(m_pIS);
+    if (!m_pIS)
+        return LS_FAIL;
     do
     {
-        if ( m_iChunkLen == CHUNK_EOF )
-        {
+        if (m_iChunkLen == CHUNK_EOF)
             return len;
-        }
-        if ( m_iChunkLen <= INVALID_CHUNK )    //error of chunked stream
+        if (m_iChunkLen <= INVALID_CHUNK)      //error of chunked stream
         {
             ret = -1;
             break;
         }
-        if ( !m_iRemain )         //current chunk is finished
-        {
+        if (!m_iRemain)           //current chunk is finished
             ret = nextChunk();
-        }
-        if ( m_iRemain > 2 )
-        {
-            ret = readChunkContent( pBuf, size, len );
-        }
-        if ((m_iRemain <= 2 )          // reading trailing "\r\n" of a chunk
-            &&( m_iRemain > 0 ))
-        {
+        if (m_iRemain > 2)
+            ret = readChunkContent(pBuf, size, len);
+        if ((m_iRemain <= 2)           // reading trailing "\r\n" of a chunk
+            && (m_iRemain > 0))
             ret = readTrailingCRLF();
-        }
-        if ( m_iRemain < 0 )
-        {
+        if (m_iRemain < 0)
             ret = skipTrailer();
-        }
     }
-    while(( ret > 0 )&&( size > 0 ));
-    if ( ret <= 0 )
+    while ((ret > 0) && (size > 0));
+    if (ret <= 0)
     {
-        if ( ret )
+        if (ret)
             m_iChunkLen = INVALID_CHUNK;
-        if ( len == 0 )      //data is not ready from underlying IS
-        {
+        if (len == 0)        //data is not ready from underlying IS
             len = ret;
-        }
     }
     return len;
 }
 
-int ChunkInputStream::readv( struct iovec *vector, size_t count)
+int ChunkInputStream::readv(struct iovec *vector, size_t count)
 {
-    assert( "ChunkInputStream::readv() is not impelemented" == NULL );
-    return -1;
+    assert("ChunkInputStream::readv() is not impelemented" == NULL);
+    return LS_FAIL;
 }
 
 

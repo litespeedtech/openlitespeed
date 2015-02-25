@@ -32,29 +32,29 @@ template < class T >
 class TSingleton
 {
 private:
-    TSingleton( const TSingleton& rhs );
-    void operator=( const TSingleton& rhs );
+    TSingleton(const TSingleton &rhs);
+    void operator=(const TSingleton &rhs);
 protected:
     TSingleton() {};
     ~TSingleton() {};
 public:
-    static T& getInstance()
+    static T &getInstance()
     {
 #ifdef LAZY_CREATE
-        static T* s_pInstance = NULL;
-        if ( s_pInstance == NULL )
+        static T *s_pInstance = NULL;
+        if (s_pInstance == NULL)
         {
 #ifdef _REENTRENT
             {
                 static Mutex mutex;
-                LockMutex lock( mutex );
-                if ( s_pInstance == NULL )
+                LockMutex lock(mutex);
+                if (s_pInstance == NULL)
                     s_pInstance = new T();
             }
 #else
             s_pInstance = new T();
 #endif
-            assert( s_pInstance != NULL );
+            assert(s_pInstance != NULL);
         }
         return *s_pInstance;
 #else  //LAZY_CREATE

@@ -27,12 +27,12 @@ class ModuleHandler : public ReqHandler
 public:
     ModuleHandler();
     ~ModuleHandler();
-    virtual const char * getName() const {  return "module"; }
-    virtual int cleanUp(HttpSession* pSession);
-    virtual int onWrite(HttpSession* pSession);
-    virtual int process(HttpSession* pSession, const HttpHandler* pHandler);
+    virtual const char *getName() const {  return "module"; }
+    virtual int cleanUp(HttpSession *pSession);
+    virtual int onWrite(HttpSession *pSession);
+    virtual int process(HttpSession *pSession, const HttpHandler *pHandler);
     virtual void onTimer() {};
-    virtual int onRead( HttpSession* pSession );
+    virtual int onRead(HttpSession *pSession);
 };
 
 #endif // MODULEHANDLER_H

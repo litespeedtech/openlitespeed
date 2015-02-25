@@ -1,36 +1,22 @@
-/*
-Copyright (c) 2014, LiteSpeed Technologies Inc.
-All rights reserved.
-
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are
-met: 
-
-    * Redistributions of source code must retain the above copyright
-      notice, this list of conditions and the following disclaimer. 
-    * Redistributions in binary form must reproduce the above
-      copyright notice, this list of conditions and the following
-      disclaimer in the documentation and/or other materials provided
-      with the distribution. 
-    * Neither the name of the Lite Speed Technologies Inc nor the
-      names of its contributors may be used to endorse or promote
-      products derived from this software without specific prior
-      written permission.  
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
-OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
-*/
+/*****************************************************************************
+*    Open LiteSpeed is an open source HTTP server.                           *
+*    Copyright (C) 2013 - 2015  LiteSpeed Technologies, Inc.                 *
+*                                                                            *
+*    This program is free software: you can redistribute it and/or modify    *
+*    it under the terms of the GNU General Public License as published by    *
+*    the Free Software Foundation, either version 3 of the License, or       *
+*    (at your option) any later version.                                     *
+*                                                                            *
+*    This program is distributed in the hope that it will be useful,         *
+*    but WITHOUT ANY WARRANTY; without even the implied warranty of          *
+*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the            *
+*    GNU General Public License for more details.                            *
+*                                                                            *
+*    You should have received a copy of the GNU General Public License       *
+*    along with this program. If not, see http://www.gnu.org/licenses/.      *
+*****************************************************************************/
 #include "../include/ls.h"
-#include <lsr/lsr_loopbuf.h>
+#include <lsr/ls_loopbuf.h>
 
 #include <stdlib.h>
 #include <memory.h>
@@ -49,49 +35,50 @@ lsi_module_t MNAME;
 
 typedef struct _MyData
 {
-    lsr_loopbuf_t writeBuf;
+    ls_loopbuf_t writeBuf;
 } MyData;
 
 int l4release(void *data)
 {
     MyData *myData = (MyData *)data;
-    g_api->log( NULL, LSI_LOG_DEBUG, "#### updatetcpout2 test %s\n", "l4release" );
-    
+    g_api->log(NULL, LSI_LOG_DEBUG, "#### updatetcpout2 test %s\n",
+               "l4release");
+
     if (myData)
     {
-        lsr_loopbuf_d( &myData->writeBuf );
-        free (myData);
+        ls_loopbuf_d(&myData->writeBuf);
+        free(myData);
     }
-    
+
     return 0;
 }
 
 
-int l4init( lsi_cb_param_t * rec )
+int l4init(lsi_cb_param_t *rec)
 {
-    
-    MyData *myData = (MyData *)g_api->get_module_data(rec->_session, &MNAME, LSI_MODULE_DATA_L4);
+
+    MyData *myData = (MyData *)g_api->get_module_data(rec->_session, &MNAME,
+                     LSI_MODULE_DATA_L4);
     if (!myData)
     {
         myData = (MyData *) malloc(sizeof(MyData));
-        lsr_loopbuf( &myData->writeBuf, MAX_BLOCK_BUFSIZE );
-        g_api->log( NULL, LSI_LOG_DEBUG, "#### updatetcpout2 test %s\n", "l4init" );
-        g_api->set_module_data(rec->_session, &MNAME, LSI_MODULE_DATA_L4, (void *)myData);
+        ls_loopbuf(&myData->writeBuf, MAX_BLOCK_BUFSIZE);
+        g_api->log(NULL, LSI_LOG_DEBUG, "#### updatetcpout2 test %s\n", "l4init");
+        g_api->set_module_data(rec->_session, &MNAME, LSI_MODULE_DATA_L4,
+                               (void *)myData);
     }
     else
-    {
-        lsr_loopbuf_clear( &myData->writeBuf );
-    }
+        ls_loopbuf_clear(&myData->writeBuf);
     return 0;
 }
 
-int l4send(lsi_cb_param_t * rec)
+int l4send(lsi_cb_param_t *rec)
 {
     int total = 0;
-    
+
     MyData *myData = NULL;
     char *pBegin;
-    struct iovec * iov = (struct iovec *)rec->_param;
+    struct iovec *iov = (struct iovec *)rec->_param;
     int count = rec->_param_len;
     char s[4] = {0};
     int written = 0;
@@ -99,56 +86,61 @@ int l4send(lsi_cb_param_t * rec)
     int c;
     struct iovec iovOut;
 
-    g_api->log( NULL, LSI_LOG_DEBUG, "#### updatetcpout2 test %s\n", "l4send" );
-    myData = (MyData *)g_api->get_module_data(rec->_session, &MNAME, LSI_MODULE_DATA_L4);
-    
-    if ( MAX_BLOCK_BUFSIZE > lsr_loopbuf_size( &myData->writeBuf ))
+    g_api->log(NULL, LSI_LOG_DEBUG, "#### updatetcpout2 test %s\n", "l4send");
+    myData = (MyData *)g_api->get_module_data(rec->_session, &MNAME,
+             LSI_MODULE_DATA_L4);
+
+    if (MAX_BLOCK_BUFSIZE > ls_loopbuf_size(&myData->writeBuf))
     {
-        for (i=0; i<count; ++i)
+        for (i = 0; i < count; ++i)
         {
             total += iov[i].iov_len;
             pBegin = (char *)iov[i].iov_base;
-            
-            for ( j=0; j<iov[i].iov_len; j += 3 )
+
+            for (j = 0; j < iov[i].iov_len; j += 3)
             {
                 memcpy(s, pBegin + j, 3);
-                if ( *s == '=' )
-                    c = strtol( s + 1, NULL, 16 );
+                if (*s == '=')
+                    c = strtol(s + 1, NULL, 16);
                 else
                 {
-                    g_api->log( NULL, LSI_LOG_INFO, "[Module: updatetcpout2] Error: Invalid entry in l4send.\n" );
+                    g_api->log(NULL, LSI_LOG_INFO,
+                               "[Module: updatetcpout2] Error: Invalid entry in l4send.\n");
                     return total;
                 }
                 s[0] = c;
-                lsr_loopbuf_append( &myData->writeBuf, s, 1 );
+                ls_loopbuf_append(&myData->writeBuf, s, 1);
                 total += 3;
             }
         }
     }
-    
-    lsr_loopbuf_straight( &myData->writeBuf );
-    iovOut.iov_base = lsr_loopbuf_begin( &myData->writeBuf );
-    iovOut.iov_len = lsr_loopbuf_size( &myData->writeBuf );
-    written = g_api->stream_writev_next( rec, &iovOut, 1 );
-    lsr_loopbuf_pop_front( &myData->writeBuf, written );
-    
-    g_api->log( NULL, LSI_LOG_DEBUG, "#### updatetcpout2 test, next caller written %d, return %d, left %d\n",  written, total, lsr_loopbuf_size( &myData->writeBuf ));
+
+    ls_loopbuf_straight(&myData->writeBuf);
+    iovOut.iov_base = ls_loopbuf_begin(&myData->writeBuf);
+    iovOut.iov_len = ls_loopbuf_size(&myData->writeBuf);
+    written = g_api->stream_writev_next(rec, &iovOut, 1);
+    ls_loopbuf_popfront(&myData->writeBuf, written);
+
+    g_api->log(NULL, LSI_LOG_DEBUG,
+               "#### updatetcpout2 test, next caller written %d, return %d, left %d\n",
+               written, total, ls_loopbuf_size(&myData->writeBuf));
 
     int hasData = 1;
-    if ( lsr_loopbuf_size( &myData->writeBuf ))
+    if (ls_loopbuf_size(&myData->writeBuf))
         rec->_flag_out = (void *)&hasData;
     return total;
 }
 
-static lsi_serverhook_t serverHooks[] = {
+static lsi_serverhook_t serverHooks[] =
+{
     {LSI_HKPT_L4_BEGINSESSION, l4init, LSI_HOOK_NORMAL, LSI_HOOK_FLAG_ENABLED},
     {LSI_HKPT_L4_SENDING, l4send, LSI_HOOK_EARLY + 1, LSI_HOOK_FLAG_TRANSFORM | LSI_HOOK_FLAG_ENABLED},
     lsi_serverhook_t_END   //Must put this at the end position
 };
 
-static int init( lsi_module_t * pModule )
+static int init(lsi_module_t *pModule)
 {
-    g_api->init_module_data(pModule, l4release, LSI_MODULE_DATA_L4 );
+    g_api->init_module_data(pModule, l4release, LSI_MODULE_DATA_L4);
     return 0;
 }
 

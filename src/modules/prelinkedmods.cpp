@@ -21,14 +21,15 @@
 
 extern lsi_module_t modcompress;
 extern lsi_module_t moddecompress;
-extern int addModgzipFilter(lsi_session_t *session, int isSend, uint8_t compressLevel);
-typedef struct 
+extern int addModgzipFilter(lsi_session_t *session, int isSend,
+                            uint8_t compressLevel);
+struct Prelinked_Module
 {
-    const char      * _pName;
-    lsi_module_t    * _pModule;
-} Prelinked_Module;
+    const char       *_pName;
+    lsi_module_t     *_pModule;
+};
 
-Prelinked_Module g_prelinked[] = 
+Prelinked_Module g_prelinked[] =
 {
     { "modcompress", &modcompress   },
     { "moddecompress", &moddecompress   },
@@ -36,12 +37,13 @@ Prelinked_Module g_prelinked[] =
 
 int getPrelinkedModuleCount()
 {
-    return sizeof( g_prelinked ) / sizeof( Prelinked_Module );
+    return sizeof(g_prelinked) / sizeof(Prelinked_Module);
 }
 
-lsi_module_t * getPrelinkedModuleByIndex( unsigned int index, const char ** pName )
+lsi_module_t *getPrelinkedModuleByIndex(unsigned int index,
+                                        const char **pName)
 {
-    if ( index >= sizeof( g_prelinked ) / sizeof( Prelinked_Module ) )
+    if (index >= sizeof(g_prelinked) / sizeof(Prelinked_Module))
         return NULL;
     *pName = g_prelinked[index]._pName;
     return g_prelinked[index]._pModule;

@@ -19,17 +19,17 @@
 #define FCGIAPPCONFIG_H
 
 
-  
+
 #include <extensions/localworkerconfig.h>
 
 class RLimits;
 class FcgiAppConfig : public LocalWorkerConfig
 {
-public: 
-    explicit FcgiAppConfig( const char * pName );
+public:
+    explicit FcgiAppConfig(const char *pName);
     FcgiAppConfig();
     ~FcgiAppConfig();
-    FcgiAppConfig( const FcgiAppConfig& rhs );
+    FcgiAppConfig(const FcgiAppConfig &rhs);
 
 };
 

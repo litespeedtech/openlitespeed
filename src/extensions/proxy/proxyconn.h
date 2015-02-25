@@ -19,13 +19,14 @@
 #define PROXYCONN_H
 
 
+#include <lsdef.h>
 #include <extensions/extconn.h>
 #include <extensions/httpextprocessor.h>
 #include <sslpp/sslconnection.h>
 
 class ChunkInputStream;
 class ProxyConn : public ExtConn
-                , public HttpExtProcessor
+    , public HttpExtProcessor
 {
     IOVec       m_iovec;
     int         m_iTotalPending;
@@ -35,47 +36,47 @@ class ProxyConn : public ExtConn
     long        m_lLastRespRecvTime;
     int         m_iRespRecv;
     int         m_iRespHeaderRecv;
-        
+
     int64_t     m_iReqBodySize;
     int64_t     m_iReqTotalSent;
 
     int64_t     m_iRespBodySize;
     int64_t     m_iRespBodyRecv;
 
-    const char * m_pBufBegin;
-    const char * m_pBufEnd;
-    
-    ChunkInputStream * m_pChunkIS;
+    const char *m_pBufBegin;
+    const char *m_pBufEnd;
+
+    ChunkInputStream *m_pChunkIS;
 
     int         m_iSsl;
     SSLConnection  m_ssl;
-    
+
     char        m_extraHeader[256];  //X-Forwarded-For
 
     int         processResp();
     int         readRespBody();
     void        setupChunkIS();
     int         connectSSL();
-    
-    int         readvSsl( const struct iovec* vector, const struct iovec* pEnd );
+
+    int         readvSsl(const struct iovec *vector, const struct iovec *pEnd);
     void        setSSLAgain();
-    
+
 protected:
     virtual int doRead();
     virtual int doWrite();
-    virtual int doError( int err );
-    virtual int addRequest( ExtRequest * pReq );
-    virtual ExtRequest* getReq() const;
-    virtual void init( int fd, Multiplexer* pMplx );
+    virtual int doError(int err);
+    virtual int addRequest(ExtRequest *pReq);
+    virtual ExtRequest *getReq() const;
+    virtual void init(int fd, Multiplexer *pMplx);
     virtual void onTimer();
 
-    int read( char * pBuf , int size );
-    int readv( struct iovec *vector, size_t count);
+    int read(char *pBuf , int size);
+    int readv(struct iovec *vector, size_t count);
 
 public:
-    virtual int removeRequest( ExtRequest * pReq );
+    virtual int removeRequest(ExtRequest *pReq);
 
-public: 
+public:
     ProxyConn();
     ~ProxyConn();
 
@@ -88,8 +89,8 @@ public:
     virtual int  begin();
     virtual int  beginReqBody();
     virtual int  endOfReqBody();
-    virtual int  sendReqBody( const char * pBuf, int size );
-    virtual int  readResp( char * pBuf, int size );
+    virtual int  sendReqBody(const char *pBuf, int size);
+    virtual int  readResp(char *pBuf, int size);
     virtual int  flush();
     virtual void cleanUp();
     virtual void dump();
@@ -98,10 +99,11 @@ public:
     virtual int close();
     void reset();
 
-    void setUseSsl( int s )     {   m_iSsl = s;       }
+    void setUseSsl(int s)     {   m_iSsl = s;       }
     int isUseSsl() const        {   return m_iSsl;    }
 
-    
+
+    LS_NO_COPY_ASSIGN(ProxyConn);
 };
 
 #endif

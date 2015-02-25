@@ -16,7 +16,7 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #ifdef RUN_TEST
- 
+
 #ifndef STRINGTOOLTEST_H
 #define STRINGTOOLTEST_H
 
@@ -27,11 +27,11 @@
 static const char *pMemspnInput = "abcdefghijklmnopqrstuvwxyz";
 static const char *pMemspnAccept = "123abcdefghijklmnopqrstuvwxyz";
 
-static const int aMemspnInputSize[] = 
+static const int aMemspnInputSize[] =
 {
-    0, 
-    26, 
-    26, 
+    0,
+    26,
+    26,
     26,
     26,
     26
@@ -66,30 +66,30 @@ static const size_t aMemCspnOutput[] =
 };
 
 /******** Look up Substring Testing Dictionary ********/
-        /* Check List:
-        * 1. Check if it finds key, value goes to the end.
-        * 2. Check if it handles key not found
-        * 3. Check when key is in the middle of buffer, space before comparator
-        * 4. Same as 3 except + space after comparator and before seperator as well.
-        * 5. Same as 3 except + multiple spaces after comparator
-        * 6. Multiple spaces in middle of value
-        * 7. Alphanumeric seperators
-        * 8. Alphanumeric comparators
-        * 9. Empty value
-        * 10. No Value and No Comparator
-        * 11. Target is substring of a key, target doesn't exist.
-        * 12. Multiple spaces in front of buffer, at end of buffer, in front of value, at end of value
-        * 13. Check single key
-        * 14. Check multiple keys, target included
-        * 15. Check multiple keys, target excluded
-        * 16. Check Multiple Keys, empty target
-        * 17. Check quotes
-        * 18. Check single quotes
-        * 19. Check dangling quotes
-        * 20. Check spaces everywhere
-        */
+/* Check List:
+* 1. Check if it finds key, value goes to the end.
+* 2. Check if it handles key not found
+* 3. Check when key is in the middle of buffer, space before comparator
+* 4. Same as 3 except + space after comparator and before seperator as well.
+* 5. Same as 3 except + multiple spaces after comparator
+* 6. Multiple spaces in middle of value
+* 7. Alphanumeric seperators
+* 8. Alphanumeric comparators
+* 9. Empty value
+* 10. No Value and No Comparator
+* 11. Target is substring of a key, target doesn't exist.
+* 12. Multiple spaces in front of buffer, at end of buffer, in front of value, at end of value
+* 13. Check single key
+* 14. Check multiple keys, target included
+* 15. Check multiple keys, target excluded
+* 16. Check Multiple Keys, empty target
+* 17. Check quotes
+* 18. Check single quotes
+* 19. Check dangling quotes
+* 20. Check spaces everywhere
+*/
 
-static const char *aLUSSInputs[] = 
+static const char *aLUSSInputs[] =
 {
     "key=value",
     "key=value",
@@ -113,7 +113,7 @@ static const char *aLUSSInputs[] =
     "key=value; first=alpha; second =    \"    beta    \"    ; third= delta; fourth=epsilon"
 };
 
-static const int aLUSSInputLen[] = 
+static const int aLUSSInputLen[] =
 {
     9,
     9,
@@ -137,7 +137,7 @@ static const int aLUSSInputLen[] =
     84
 };
 
-static const char *aLUSSKeys[] = 
+static const char *aLUSSKeys[] =
 {
     "key",
     "blah",

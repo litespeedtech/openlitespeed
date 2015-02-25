@@ -27,11 +27,11 @@ class StaticFileHandler : public ReqHandler, public HttpHandler
 public:
     StaticFileHandler();
     ~StaticFileHandler();
-    virtual const char * getName() const;
-    virtual int process( HttpSession* pSession, const HttpHandler * pHandler );
-    virtual int onWrite( HttpSession* pSession );
-    virtual int cleanUp( HttpSession* pSession );
-    virtual bool notAllowed( int Method ) const;
+    virtual const char *getName() const;
+    virtual int process(HttpSession *pSession, const HttpHandler *pHandler);
+    virtual int onWrite(HttpSession *pSession);
+    virtual int cleanUp(HttpSession *pSession);
+    virtual bool notAllowed(int Method) const;
 
 };
 
@@ -40,7 +40,7 @@ class RedirectHandler : public HttpHandler
 public:
     RedirectHandler();
     ~RedirectHandler();
-    virtual const char * getName() const;
+    virtual const char *getName() const;
 };
 
 

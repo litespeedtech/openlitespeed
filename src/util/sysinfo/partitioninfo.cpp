@@ -16,6 +16,7 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "partitioninfo.h"
+#include <lsdef.h>
 
 PartitionInfo::PartitionInfo()
 {
@@ -29,28 +30,29 @@ PartitionInfo::~PartitionInfo()
 
 }
 
-int PartitionInfo::getPartitionInfo(const char *path, uint64_t *outTotal, uint64_t *outFree)
+int PartitionInfo::getPartitionInfo(const char *path, uint64_t *outTotal,
+                                    uint64_t *outFree)
 {
 #if defined(__linux) || defined(sun)
     struct statvfs st;
-    if ( statvfs(path, &st) != 0 )
+    if (statvfs(path, &st) != 0)
     {
         *outFree = 0;
         *outTotal = 0;
-        return -1;
+        return LS_FAIL;
     }
 #elif defined(__FreeBSD__) || defined(__APPLE__)
     struct statfs st;
-    if ( statfs(path, &st) != 0 )
+    if (statfs(path, &st) != 0)
     {
         *outFree = 0;
         *outTotal = 0;
-        return -1;
+        return LS_FAIL;
     }
 #else
     *outFree = 0;
     *outTotal = 0;
-    return -1;
+    return LS_FAIL;
 #endif
     *outFree = st.f_bsize * st.f_bavail >> 10;
     *outTotal = st.f_bsize * st.f_blocks >> 10;

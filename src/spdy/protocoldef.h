@@ -21,59 +21,58 @@
 
 typedef struct
 {
-    char* pName;
-    char* pValue;
+    char *pName;
+    char *pValue;
     uint16_t nameLen;
     uint16_t ValueLen;
 } NameValuePair;
 
 
-
-static inline uint16_t beReadUint16( const unsigned char * p )
+static inline uint16_t beReadUint16(const unsigned char *p)
 {
-    return ( (uint16_t)(*p) ) << 8 | *( p + 1 );
+    return ((uint16_t)(*p)) << 8 | *(p + 1);
 }
 
-static inline uint32_t beReadUint32( const unsigned char * p )
+static inline uint32_t beReadUint32(const unsigned char *p)
 {
-    register uint32_t v = *p++;
-    v = ( v << 8 ) | *p++;
-    v = ( v << 8 ) | *p++;
-    v = ( v << 8 ) | *p;
+    uint32_t v = *p++;
+    v = (v << 8) | *p++;
+    v = (v << 8) | *p++;
+    v = (v << 8) | *p;
     return v ;
 }
 
-static inline uint16_t beReadUint16Adv( unsigned char * &p )
+static inline uint16_t beReadUint16Adv(unsigned char *&p)
 {
-    register uint16_t v = *p++;
-    v = ( v << 8 ) | *p++;
+    uint16_t v = *p++;
+    v = (v << 8) | *p++;
     return v;
 }
 
-static inline uint32_t beReadUint32Adv( unsigned char * &p )
+static inline uint32_t beReadUint32Adv(unsigned char *&p)
 {
-    register uint32_t v = *p++;
-    v = ( v << 8 ) | *p++;
-    v = ( v << 8 ) | *p++;
-    v = ( v << 8 ) | *p++;
+    uint32_t v = *p++;
+    v = (v << 8) | *p++;
+    v = (v << 8) | *p++;
+    v = (v << 8) | *p++;
     return v ;
 }
 
-static inline char * beWriteUint16( char * p, uint16_t v )
+static inline char *beWriteUint16(char *p, uint16_t v)
 {
     *p++ = v >> 8;
     *p++ = v & 0xff;
     return p;
 }
 
-static inline char * beWriteUint32( char * p, uint32_t v )
+static inline char *beWriteUint32(char *p, uint32_t v)
 {
     *p++ = v >> 24;
-    *p++ = ( v >> 16 ) & 0xff;
-    *p++ = ( v >> 8 ) & 0xff;
+    *p++ = (v >> 16) & 0xff;
+    *p++ = (v >> 8) & 0xff;
     *p++ = v & 0xff;
     return p;
-    
+
 }
 
 #endif //SPDYPROTOCOLDEF_H

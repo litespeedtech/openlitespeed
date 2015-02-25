@@ -23,17 +23,17 @@
 
 
 /** No descriptions */
-int LookUpFD::allocate( int capacity )
+int LookUpFD::allocate(int capacity)
 {
     // Resize arrays indexed by fd if fd is beyond what we've seen.
     int *pn = (int *)realloc(m_pIntArray, capacity * sizeof(int));
     if (!pn)
-    	return ENOMEM;
+        return ENOMEM;
     // Clear new elements
     //for (int i=m_iCapacity; i<n; i++)
-    //	pn[i] = -1;
-    memset( pn + m_iCapacity, -1,
-            sizeof( int) * ( capacity-m_iCapacity ));
+    //  pn[i] = -1;
+    memset(pn + m_iCapacity, -1,
+           sizeof(int) * (capacity - m_iCapacity));
     m_pIntArray = pn;
 
     m_iCapacity = capacity;
@@ -43,21 +43,21 @@ int LookUpFD::allocate( int capacity )
 /** No descriptions */
 int LookUpFD::deallocate()
 {
-    if ( m_pIntArray )
+    if (m_pIntArray)
     {
-        free( m_pIntArray );
+        free(m_pIntArray);
         m_pIntArray = NULL;
         m_iCapacity = 0;
     }
     return 0;
 }
 /** No descriptions */
-int LookUpFD::grow( int fd )
+int LookUpFD::grow(int fd)
 {
     // Resize arrays indexed by fd if fd is beyond what we've seen.
     int n = m_iCapacity * 2;
     if (n < fd + 10)
         n = fd + 10;
-    return allocate( n );
+    return allocate(n);
 }
 

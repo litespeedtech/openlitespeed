@@ -26,58 +26,58 @@
 #include <stdlib.h>
 #include <string.h>
 
-hash_key_t GHash::hash_string(const void* __s)
+hash_key_t GHash::hfString(const void *__s)
 {
-  register hash_key_t __h = 0;
-  register const char * p = (const char *)__s;
-  register char ch = *(const char*)p++;
-  for ( ; ch ; ch = *((const char*)p++))
-    __h = __h * 31 + (ch );
+    hash_key_t __h = 0;
+    const char *p = (const char *)__s;
+    char ch = *(const char *)p++;
+    for (; ch; ch = *((const char *)p++))
+        __h = __h * 31 + (ch);
 
-  return __h;
+    return __h;
 }
 
-int  GHash::comp_string( const void * pVal1, const void * pVal2 )
-{   return strcmp( (const char *)pVal1, (const char *)pVal2 );  }
+int  GHash::cmpString(const void *pVal1, const void *pVal2)
+{   return strcmp((const char *)pVal1, (const char *)pVal2);  }
 
-hash_key_t GHash::i_hash_string(const void* __s)
+hash_key_t GHash::hfCiString(const void *__s)
 {
-    register hash_key_t __h = 0;
-    register const char * p = (const char *)__s;
-    register char ch = *(const char*)p++;
-    for ( ; ch ; ch = *((const char*)p++))
+    hash_key_t __h = 0;
+    const char *p = (const char *)__s;
+    char ch = *(const char *)p++;
+    for (; ch; ch = *((const char *)p++))
     {
         if (ch >= 'A' && ch <= 'Z')
             ch += 'a' - 'A';
-        __h = __h * 31 + (ch );
+        __h = __h * 31 + (ch);
     }
     return __h;
 }
 
-int  GHash::i_comp_string( const void * pVal1, const void * pVal2 )
-{   return strncasecmp( (const char *)pVal1, (const char *)pVal2, strlen((const char *)pVal1) );  }
-    
-hash_key_t GHash::hf_ipv6( const void * pKey )
+int  GHash::cmpCiString(const void *pVal1, const void *pVal2)
+{   return strncasecmp((const char *)pVal1, (const char *)pVal2, strlen((const char *)pVal1));  }
+
+hash_key_t GHash::hfIpv6(const void *pKey)
 {
     hash_key_t key;
-    if ( sizeof( hash_key_t ) == 4 )
+    if (sizeof(hash_key_t) == 4)
     {
         key = *((const hash_key_t *)pKey) +
-              *(((const hash_key_t *)pKey) + 1 ) +
-              *(((const hash_key_t *)pKey) + 2 ) +
-              *(((const hash_key_t *)pKey) + 3 );
+              *(((const hash_key_t *)pKey) + 1) +
+              *(((const hash_key_t *)pKey) + 2) +
+              *(((const hash_key_t *)pKey) + 3);
     }
     else
     {
         key = *((const hash_key_t *)pKey) +
-              *(((const hash_key_t *)pKey) + 1 );
+              *(((const hash_key_t *)pKey) + 1);
     }
     return key;
 }
-    
-int  GHash::cmp_ipv6( const void * pVal1, const void * pVal2 )
+
+int  GHash::cmpIpv6(const void *pVal1, const void *pVal2)
 {
-    return memcmp( pVal1, pVal2, 16 );
+    return memcmp(pVal1, pVal2, 16);
 }
 
 

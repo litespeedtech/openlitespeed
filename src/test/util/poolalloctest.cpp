@@ -16,7 +16,7 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #ifdef RUN_TEST
- 
+
 #include "poolalloctest.h"
 
 #include <util/poolalloc.h>
@@ -37,28 +37,31 @@ public:
     std::string s2;
 };
 
-class TestAllocator : public std::map< int, dummy,std::less<int>, PoolAllocator<dummy> >
+class TestAllocator : public
+    std::map< int, dummy, std::less<int>, PoolAllocator<dummy> >
 {
 
 };
 
-TEST( PoolAllocTest_test)
+TEST(PoolAllocTest_test)
 {
-    dummy d1,d2,d3 ;
+    dummy d1, d2, d3 ;
     TestAllocator test;
-    std::map<int,dummy> test2;
+    std::map<int, dummy> test2;
+    const char *pPoolAlloc = "PoolAllocator benchmark";
+    const char *pStdAlloc = "std::allocator benchmark";
     int i;
     {
-        ProfileTime profile1( "PoolAllocator benchmark" );
-        for( int i = 0 ; i < 100000; i++ )
-        test.insert( TestAllocator::value_type( i, d1 ));
-        test.erase( test.begin(), test.end() );
+        ProfileTime profile1(pPoolAlloc, 100000, PROFILE_NANO);
+        for (int i = 0 ; i < 100000; i++)
+            test.insert(TestAllocator::value_type(i, d1));
+        test.erase(test.begin(), test.end());
     }
     {
-        ProfileTime profile1( "std::allocator benchmark" );
-        for( i = 0 ; i < 100000; i++ )
-        test2.insert( std::map<int,dummy>::value_type( i, d1 ));
-        test2.erase( test2.begin(), test2.end() );
+        ProfileTime profile1(pStdAlloc, 100000, PROFILE_NANO);
+        for (i = 0 ; i < 100000; i++)
+            test2.insert(std::map<int, dummy>::value_type(i, d1));
+        test2.erase(test2.begin(), test2.end());
     }
 }
 

@@ -28,149 +28,146 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include <util/ssnprintf.h>
+#include <lsr/ls_strtool.h>
 
 int Daemonize::daemonize(int nochdir, int noclose)
 {
 #ifdef daemon
-    return daemon( nochdir, noclose );
+    return daemon(nochdir, noclose);
 #else
-    if ( fork() )
+    if (fork())
         _exit(0);
-    if ( setsid() == -1)
-        return -1;
-    if ( fork() )
-        _exit( 0 );
-    if ( !nochdir )
+    if (setsid() == -1)
+        return LS_FAIL;
+    if (fork())
+        _exit(0);
+    if (!nochdir)
     {
-        if ( !getuid() )
-            chroot( "/" );
-        chdir( "/" );
+        if (!getuid())
+            chroot("/");
+        chdir("/");
     }
-    if ( !noclose )
-    {
+    if (!noclose)
         close();
-    }
     return 0;
 #endif
 }
 
 int Daemonize::close()
 {
-    int fd = open( "/dev/null", O_RDWR );
-    if ( fd != -1 )
+    int fd = open("/dev/null", O_RDWR);
+    if (fd != -1)
     {
-        dup2( fd, 0 );
-        dup2( fd, 1 );
-        dup2( fd, 2 );
-        ::close( fd );
+        dup2(fd, 0);
+        dup2(fd, 1);
+        dup2(fd, 2);
+        ::close(fd);
         return 0;
     }
-    return -1;
+    return LS_FAIL;
 }
 
 //int Daemonize::writePIDFile( const char * pFileName )
 //{
 //    FILE* pidfp = fopen( pFileName, "w" );
 //    if ( pidfp == NULL )
-//        return -1;
+//        return LS_FAIL;
 //    fprintf( pidfp, "%d\n", (int)getpid() );
 //    fclose( pidfp );
 //    return 0;
 //}
 
-int Daemonize::changeUserGroupRoot( const char * pUser, uid_t uid, gid_t gid,
-        gid_t pri_gid, const char * pChroot, char * pErr, int errLen )
+int Daemonize::changeUserGroupRoot(const char *pUser, uid_t uid, gid_t gid,
+                                   gid_t pri_gid, const char *pChroot, char *pErr, int errLen)
 {
-    if ( initGroups( pUser, gid, pri_gid, pErr, errLen ) == -1 )
-        return -1;
-    return changeUserChroot( pUser, uid, pChroot, pErr, errLen );
+    if (initGroups(pUser, gid, pri_gid, pErr, errLen) == -1)
+        return LS_FAIL;
+    return changeUserChroot(pUser, uid, pChroot, pErr, errLen);
 }
 
-int Daemonize::initGroups( const char * pUser, gid_t gid, gid_t pri_gid,
-                 char * pErr, int errLen )
+int Daemonize::initGroups(const char *pUser, gid_t gid, gid_t pri_gid,
+                          char *pErr, int errLen)
 {
-    if ( getuid() == 0 )
+    if (getuid() == 0)
     {
-        if ( setgid( gid )  < 0 )
+        if (setgid(gid)  < 0)
         {
-            safe_snprintf( pErr, errLen, "setgid( %d ) failed!", (int)gid );
-            return -1;
+            ls_snprintf(pErr, errLen, "setgid( %d ) failed!", (int)gid);
+            return LS_FAIL;
         }
-        if ( initgroups( pUser, pri_gid ) == -1 )
+        if (initgroups(pUser, pri_gid) == -1)
         {
-            safe_snprintf( pErr, errLen, "initgroups( %s, %d ) failed!",
-                    pUser, (int)pri_gid );
-            return -1;
+            ls_snprintf(pErr, errLen, "initgroups( %s, %d ) failed!",
+                        pUser, (int)pri_gid);
+            return LS_FAIL;
         }
     }
     return 0;
 }
 
-int Daemonize::changeUserChroot( const char * pUser, uid_t uid,
-                    const char * pChroot, char * pErr, int errLen )
+int Daemonize::changeUserChroot(const char *pUser, uid_t uid,
+                                const char *pChroot, char *pErr, int errLen)
 {
-    if ( getuid() == 0 )
+    if (getuid() == 0)
     {
-        if (( pChroot )&&(*(pChroot + 1 ) != 0 ))
+        if ((pChroot) && (*(pChroot + 1) != 0))
         {
-            if ( chroot( pChroot ) == -1 )
+            if (chroot(pChroot) == -1)
             {
-                safe_snprintf( pErr, errLen, "chroot( %s ) failed!", pChroot );
-                return -1;
+                ls_snprintf(pErr, errLen, "chroot( %s ) failed!", pChroot);
+                return LS_FAIL;
             }
         }
-        if ( setuid( uid ) < 0 )
+        if (setuid(uid) < 0)
         {
-            safe_snprintf( pErr, errLen, "setuid( %d ) failed!", (int)uid );
-            return -1;
+            ls_snprintf(pErr, errLen, "setuid( %d ) failed!", (int)uid);
+            return LS_FAIL;
         }
-        if ( setuid( 0 ) != -1 )
+        if (setuid(0) != -1)
         {
-            safe_snprintf( pErr, errLen,
-                "[Kernel bug] setuid(0) succeed after gave up root privilege!" );
-            return -1;
+            ls_snprintf(pErr, errLen,
+                        "[Kernel bug] setuid(0) succeed after gave up root privilege!");
+            return LS_FAIL;
         }
     }
     return 0;
 }
-struct passwd * Daemonize::configUserGroup( const char *pUser, const char *pGroup,
-        gid_t &gid )
+struct passwd *Daemonize::configUserGroup(const char *pUser,
+        const char *pGroup,
+        gid_t &gid)
 {
-    if ( !pUser || !pGroup )
+    if (!pUser || !pGroup)
         return NULL;
 
     struct passwd *pw;
-    pw = getpwnam( pUser );
+    pw = getpwnam(pUser);
 
-    if ( !pw )
+    if (!pw)
     {
-        if ( isdigit( *pUser ) )
+        if (isdigit(*pUser))
         {
-            uid_t uid = atoi( pUser );
-            pw = getpwuid( uid );
+            uid_t uid = atoi(pUser);
+            pw = getpwuid(uid);
         }
 
-        if ( !pw )
+        if (!pw)
         {
-            ConfigCtx::getCurConfigCtx()->log_error( "Invalid user name:%s!", pUser );
+            ConfigCtx::getCurConfigCtx()->logError("Invalid user name:%s!", pUser);
             return NULL;
         }
     }
 
     struct group *gr;
 
-    gr = getgrnam( pGroup );
+    gr = getgrnam(pGroup);
 
-    if ( !gr )
+    if (!gr)
     {
-        if ( isdigit( *pGroup ) )
-        {
-            gid = atoi( pGroup );
-        }
+        if (isdigit(*pGroup))
+            gid = atoi(pGroup);
         else
         {
-            ConfigCtx::getCurConfigCtx()->log_error( "Invalid group name:%s!", pGroup );
+            ConfigCtx::getCurConfigCtx()->logError("Invalid group name:%s!", pGroup);
             return NULL;
         }
     }

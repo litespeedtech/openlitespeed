@@ -20,38 +20,40 @@
 
 
 
+#include <lsdef.h>
 #include <http/httpcgitool.h>
 #include <http/httpextconnector.h>
 #include <extensions/fcgi/fcgienv.h>
-  
+
 class SampleFcgiExtConn : public HttpExtConnector
 {
     FcgiEnv m_env;
     //char * m_pBodyBuf;
     int m_iBodySize;
     int m_iBodySent;
-public: 
+public:
     SampleFcgiExtConn();
     ~SampleFcgiExtConn();
 
     //defined in ReqHandler
-    virtual int process( HttpSession* pSession );
-    virtual int onWrite( HttpSession* pSession ) ;
-    virtual int onRead( HttpSession* pSession );
+    virtual int process(HttpSession *pSession);
+    virtual int onWrite(HttpSession *pSession) ;
+    virtual int onRead(HttpSession *pSession);
 
 
     //functions called by the HttpExtProcessor
-    virtual void extProcessorError( int errCode ) ;
+    virtual void extProcessorError(int errCode) ;
     virtual void extProcessorReady() ;
-    virtual int processRespData( const char * pBuf, int len );
-    virtual int processErrData( const char * pBuf, int len );
-    virtual int endResponse( int endCode, int protocolStatus );
-    virtual int processResp( const char * pBuf, int len );
+    virtual int processRespData(const char *pBuf, int len);
+    virtual int processErrData(const char *pBuf, int len);
+    virtual int endResponse(int endCode, int protocolStatus);
+    virtual int processResp(const char *pBuf, int len);
     virtual int releaseProcessor() { return 0;}
 
-    virtual int sendReqBody( ) ;
-    virtual int cleanUp( HttpSession *pSession );
+    virtual int sendReqBody() ;
+    virtual int cleanUp(HttpSession *pSession);
     virtual int writeReqBody();
+    LS_NO_COPY_ASSIGN(SampleFcgiExtConn);
 };
 
 #endif

@@ -31,274 +31,278 @@
 
 
 //
-//  @brief LsShmCache 
+//  @brief LsShmCache
 //  @brief Shared Memory Hash Cache Container
 //
-LsShmCache::LsShmCache (
-                  uint32_t              magic
-                , const char *          cacheName
-                , const char *          shmHashName
-                , size_t                initHashSize
-                , LsShm_size_t          uDataSize
-                , LsShmHash::hash_fn    hf
-                , LsShmHash::val_comp   vc
-                , udata_init_fn         udataInitCallback
-                , udata_remove_fn       udataRemoveCallback
-                )
-                : m_status(LSSHM_NOTREADY)
-                , m_pShmHash(NULL)
-                , m_hdrOffset(0)
-                , m_magic(magic)
-                , m_uDataSize(uDataSize)
-                , m_dataInit_cb(udataInitCallback)
-                , m_dataRemove_cb(udataRemoveCallback)
+LsShmCache::LsShmCache(
+    uint32_t              magic,
+    const char           *cacheName,
+    const char           *shmHashName,
+    size_t                initHashSize,
+    LsShmSize_t           uDataSize,
+    LsShmHash::hash_fn    hf,
+    LsShmHash::val_comp   vc,
+    udata_init_fn         udataInitCallback,
+    udata_remove_fn       udataRemoveCallback
+)
+    : m_status(LSSHM_NOTREADY)
+    , m_pShmHash(NULL)
+    , m_iHdrOffset(0)
+    , m_iMagic(magic)
+    , m_iDataSize(uDataSize)
+    , m_dataInit_cb(udataInitCallback)
+    , m_dataRemove_cb(udataRemoveCallback)
 {
-    if ( (m_pShmHash = LsShmHash::get(NULL
-                    , shmHashName
-                    , initHashSize
-                    , hf
-                    , vc
-                    ) ) )
-    { 
-        lsShmReg_t * pReg;
-        if (! (pReg = m_pShmHash->findReg (cacheName)) ) 
-        {
+    LsShm *pShm;
+    LsShmPool *pPool;
+    
+    if ((pShm = LsShm::open(shmHashName, 0)) == NULL)
+        return;
+    if ((pPool = pShm->getGlobalPool()) == NULL)
+        return;
+    if ((m_pShmHash = pPool->getNamedHash(shmHashName, initHashSize, hf, vc)) != NULL)
+    {
+        LsShmReg *pReg;
+        if ((pReg = m_pShmHash->findReg(cacheName)) == NULL)
             pReg = m_pShmHash->addReg(cacheName);
-        }
-        if (pReg)
+        if (pReg != NULL)
         {
-            if ( ! (m_hdrOffset = pReg->x_value) )
+            if ((m_iHdrOffset = pReg->x_iValue) == 0)
             {
                 int remapped = 0;
-                m_hdrOffset = m_pShmHash->alloc2(sizeof(lsShm_hCacheHdr_t), remapped );
-                if ( ( !m_hdrOffset ) )
+                m_iHdrOffset =
+                    m_pShmHash->alloc2(sizeof(lsShm_hCacheHdr_t), remapped);
+                if (m_iHdrOffset == 0)
                 {
                     // trouble no memory
                     m_status = LSSHM_ERROR;
                 }
                 else
                 {
-                    if (remapped)
+                    if (remapped != 0)
                         remap();
-                    pReg->x_value = m_hdrOffset;
+                    pReg->x_iValue = m_iHdrOffset;
                 }
             }
         }
         if (m_status == LSSHM_NOTREADY)
-        {
             m_status = LSSHM_READY;
-        }
-        m_pShmHash->enableManualLock(); // we will be responsible for the lock ourselve.
-    }   
+        m_pShmHash->enableManualLock(); // we will be responsible for the lock
+    }
 }
 
-void LsShmCache::push( lsShm_hCacheData_t* pObj )
+
+void LsShmCache::push(lsShm_hCacheData_t *pObj)
 {
-    if (pObj->x_tracked)
+    if (pObj->x_iTracked != 0)
         return;
 
-    register lsShm_hCacheHdr_t * pHdr = getCacheHeader();
-    register LsShm_offset_t offset = m_pShmHash->ptr2offset(pObj);
-    if (pHdr->x_front)
+    lsShm_hCacheHdr_t *pHdr = getCacheHeader();
+    LsShmOffset_t offset = m_pShmHash->ptr2offset(pObj);
+    if (pHdr->x_iFront != 0)
     {
-        lsShm_hCacheData_t * pFront = (lsShm_hCacheData_t*) m_pShmHash->offset2ptr(pHdr->x_front);
-        pFront->x_next = offset;
-        pObj->x_back = pHdr->x_front;
+        lsShm_hCacheData_t *pFront =
+            (lsShm_hCacheData_t *)m_pShmHash->offset2ptr(pHdr->x_iFront);
+        pFront->x_iNext = offset;
+        pObj->x_iBack = pHdr->x_iFront;
     }
     else
     {
         // lonely child
-        pHdr->x_back = offset;
-        pObj->x_back = 0;
+        pHdr->x_iBack = offset;
+        pObj->x_iBack = 0;
     }
-    pHdr->x_front = offset;
-    pHdr->x_num++;
-    
-    pObj->x_next = 0;
-    pObj->x_tracked = 1;
+    pHdr->x_iFront = offset;
+    ++pHdr->x_iNum;
+
+    pObj->x_iNext = 0;
+    pObj->x_iTracked = 1;
 }
+
 
 void LsShmCache::pop()
 {
-    register lsShm_hCacheHdr_t * pHdr = getCacheHeader();
-    register LsShm_offset_t offset = pHdr->x_back;
-    
-    if (offset)
+    lsShm_hCacheHdr_t *pHdr = getCacheHeader();
+    LsShmOffset_t offset = pHdr->x_iBack;
+
+    if (offset != 0)
     {
-        lsShm_hCacheData_t * pBack = (lsShm_hCacheData_t*) 
-                                            m_pShmHash->offset2ptr(offset);
-        pHdr->x_back = pBack->x_next;
-        if (pHdr->x_back == 0)
+        lsShm_hCacheData_t *pBack =
+            (lsShm_hCacheData_t *)m_pShmHash->offset2ptr(offset);
+        pHdr->x_iBack = pBack->x_iNext;
+        if (pHdr->x_iBack == 0)
         {
             // queue is empty after pop...
-            pHdr->x_front = 0;
+            pHdr->x_iFront = 0;
         }
         else
         {
-            lsShm_hCacheData_t * pNext = (lsShm_hCacheData_t*) 
-                                            m_pShmHash->offset2ptr(pHdr->x_back);
-            pNext->x_back = 0;
+            lsShm_hCacheData_t *pNext =
+                (lsShm_hCacheData_t *)m_pShmHash->offset2ptr(pHdr->x_iBack);
+            pNext->x_iBack = 0;
         }
-        pHdr->x_num--;
-        pBack->x_next = 0;
-        pBack->x_tracked = 0;
+        --pHdr->x_iNum;
+        pBack->x_iNext = 0;
+        pBack->x_iTracked = 0;
     }
 }
 
-void LsShmCache::push_back( lsShm_hCacheData_t* pObj )
-{ 
-    if (pObj->x_tracked)
+
+void LsShmCache::push_back(lsShm_hCacheData_t *pObj)
+{
+    if (pObj->x_iTracked != 0)
         return;
-        
-    register lsShm_hCacheHdr_t * pHdr = getCacheHeader();
-    register LsShm_offset_t offset = m_pShmHash->ptr2offset(pObj);
-    if (pHdr->x_back)
+
+    lsShm_hCacheHdr_t *pHdr = getCacheHeader();
+    LsShmOffset_t offset = m_pShmHash->ptr2offset(pObj);
+    if (pHdr->x_iBack != 0)
     {
-        lsShm_hCacheData_t * pBack = (lsShm_hCacheData_t*) m_pShmHash->offset2ptr(pHdr->x_back);
-        pBack->x_back = offset;
-        pObj->x_next = pHdr->x_back;
+        lsShm_hCacheData_t *pBack =
+            (lsShm_hCacheData_t *)m_pShmHash->offset2ptr(pHdr->x_iBack);
+        pBack->x_iBack = offset;
+        pObj->x_iNext = pHdr->x_iBack;
     }
-    else 
+    else
     {
         // lonely child
-        pHdr->x_front = offset;
-        pObj->x_next = 0;
+        pHdr->x_iFront = offset;
+        pObj->x_iNext = 0;
     }
-    pHdr->x_back = offset;
-    pHdr->x_num++;
-    pObj->x_back = 0; //ensure I am the last one
-    pObj->x_tracked = 1;
+    pHdr->x_iBack = offset;
+    ++pHdr->x_iNum;
+    pObj->x_iBack = 0; //ensure I am the last one
+    pObj->x_iTracked = 1;
 }
 
-void LsShmCache::setFirst( lsShm_hCacheData_t* pObj )
+
+void LsShmCache::setFirst(lsShm_hCacheData_t *pObj)
 {
-    register lsShm_hCacheHdr_t * pHdr = getCacheHeader();
-    lsShm_hCacheData_t * pFirst = (lsShm_hCacheData_t*)m_pShmHash->offset2ptr(pHdr->x_front);
+    lsShm_hCacheHdr_t *pHdr = getCacheHeader();
+    lsShm_hCacheData_t *pFirst =
+        (lsShm_hCacheData_t *)m_pShmHash->offset2ptr(pHdr->x_iFront);
     if (pObj == pFirst)
         return;
-    disconnectObj( pObj );
+    disconnectObj(pObj);
     push(pObj);
 }
 
-void LsShmCache::setLast( lsShm_hCacheData_t* pObj )
+
+void LsShmCache::setLast(lsShm_hCacheData_t *pObj)
 {
-    register lsShm_hCacheHdr_t * pHdr = getCacheHeader();
-    lsShm_hCacheData_t * pLast = (lsShm_hCacheData_t*)m_pShmHash->offset2ptr(pHdr->x_back);
+    lsShm_hCacheHdr_t *pHdr = getCacheHeader();
+    lsShm_hCacheData_t *pLast =
+        (lsShm_hCacheData_t *)m_pShmHash->offset2ptr(pHdr->x_iBack);
     if (pObj == pLast)
         return;
-    disconnectObj( pObj );
-    push_back( pObj );
+    disconnectObj(pObj);
+    push_back(pObj);
 }
+
 
 //
 //  @brief disconnectObj
 //  @brief disconnect the forward and backward links to the queue
 //
-void LsShmCache::disconnectObj( lsShm_hCacheData_t* pObj )
+void LsShmCache::disconnectObj(lsShm_hCacheData_t *pObj)
 {
-    if (!pObj->x_tracked)
-        return ;
-    
-    register lsShm_hCacheHdr_t * pHdr = getCacheHeader();
-    if (pObj->x_next)
+    if (pObj->x_iTracked == 0)
+        return;
+
+    lsShm_hCacheHdr_t *pHdr = getCacheHeader();
+    if (pObj->x_iNext != 0)
     {
-        lsShm_hCacheData_t * pNext = (lsShm_hCacheData_t*)m_pShmHash->offset2ptr(pObj->x_next);
-        if (pObj->x_back)
+        lsShm_hCacheData_t *pNext =
+            (lsShm_hCacheData_t *)m_pShmHash->offset2ptr(pObj->x_iNext);
+        if (pObj->x_iBack != 0)
         {
-            lsShm_hCacheData_t * pBack = (lsShm_hCacheData_t*)m_pShmHash->offset2ptr(pObj->x_back);
-            pBack->x_next = pObj->x_next;
-            pNext->x_back = pObj->x_back;
+            lsShm_hCacheData_t *pBack =
+                (lsShm_hCacheData_t *)m_pShmHash->offset2ptr(pObj->x_iBack);
+            pBack->x_iNext = pObj->x_iNext;
+            pNext->x_iBack = pObj->x_iBack;
         }
         else
         {
-            pNext->x_back = 0;
-            pHdr->x_back = pObj->x_next;
+            pNext->x_iBack = 0;
+            pHdr->x_iBack = pObj->x_iNext;
         }
     }
     else
     {
-        if (pObj->x_back)
+        if (pObj->x_iBack != 0)
         {
-            lsShm_hCacheData_t * pBack = (lsShm_hCacheData_t*)m_pShmHash->offset2ptr(pObj->x_back);
-            pBack->x_next = 0;
-            pHdr->x_front = pObj->x_back;
+            lsShm_hCacheData_t *pBack =
+                (lsShm_hCacheData_t *)m_pShmHash->offset2ptr(pObj->x_iBack);
+            pBack->x_iNext = 0;
+            pHdr->x_iFront = pObj->x_iBack;
         }
         else
         {
-            pHdr->x_back = 0;
-            pHdr->x_front = 0;
+            pHdr->x_iBack = 0;
+            pHdr->x_iFront = 0;
         }
     }
-    pHdr->x_num--;
-    pObj->x_next = 0;
-    pObj->x_back = 0;
-    pObj->x_tracked = 0; // not in the queue
+    --pHdr->x_iNum;
+    pObj->x_iNext = 0;
+    pObj->x_iBack = 0;
+    pObj->x_iTracked = 0; // not in the queue
 }
 
-lsShm_hCacheData_t* LsShmCache::getObj( const void* pKey
-                                        , int keyLen
-                                        , const void* pValue
-                                        , int valueLen
-                                        , void* pUParam )
+
+lsShm_hCacheData_t *LsShmCache::getObj(const void *pKey, int keyLen,
+                                       const void *pValue, int valueLen, void *pUParam)
 {
-    lsShm_hCacheData_t * pObj;
-    
+    lsShm_hCacheData_t *pObj;
+
 #if 0
     pObj = findObj(pKey, keyLen);
-    if ( pObj )
-    {
+    if (pObj != NULL)
         return pObj;
-    }
 #endif
     LsShmHash::iterator iter;
-    if (!( iter = m_pShmHash->insert_iterator(pKey
-                                        , keyLen
-                                        , NULL
-                                        , valueLen)) )
-    {
+    if ((iter =
+             m_pShmHash->insertIterator(pKey, keyLen, NULL, valueLen)) == NULL)
         return NULL;
-    }
-    pObj = ( lsShm_hCacheData_t * ) iter->p_value();
-    // ::memset(pObj, 0, sizeof(lsShm_hCacheData_t));
+    pObj = (lsShm_hCacheData_t *)iter->getVal();
     ::memset(pObj, 0, valueLen);
-    pObj->x_magic = m_magic;
-    pObj->x_expireTime = DateTime::s_curTime;
-    pObj->x_expireTimeMs = DateTime::s_curTimeUs / 1000;
-    pObj->x_iteratorOffset = m_pShmHash->ptr2offset(iter);
+    pObj->x_iMagic = m_iMagic;
+    pObj->x_iExpireTime = DateTime::s_curTime;
+    pObj->x_iExpireTimeMs = DateTime::s_curTimeUs / 1000;
+    pObj->x_iIteratorOffset = m_pShmHash->ptr2offset(iter);
 #if 0
     // memset take care of these already...
-    pObj->x_next = 0;
-    pObj->x_back = 0;
-    pObj->x_inited = 0;   /* init indication */
-    pObj->x_tracked = 0;  /* push indication */
+    pObj->x_iNext = 0;
+    pObj->x_iBack = 0;
+    pObj->x_iInited = 0;    // init indication
+    pObj->x_iTracked = 0;   // push indication
 #endif
-        
+
 #ifdef DEBUG_RUN
-    HttpLog::notice("LsShmCache::getObj %6d iter <%p> obj <%p> size %d"
-            , ::getpid(), iter, pObj, (long)pObj-(long)iter);
+    HttpLog::notice("LsShmCache::getObj %6d iter <%p> obj <%p> size %d",
+                    ::getpid(), iter, pObj, (long)pObj - (long)iter);
 #endif
-    
-    if (m_dataInit_cb)
+
+    if (m_dataInit_cb != NULL)
         (*m_dataInit_cb)(pObj, pUParam);
     return pObj;
 }
 
-int LsShmCache::remove2NonExpired( void* pUParam )
-{
-    register int numRemoved = 0;    // number of cache items removed
-    register lsShm_hCacheHdr_t * pHdr = getCacheHeader();
-    LsShm_offset_t offset;
 
-    while ( (offset = pHdr->x_back) )
+int LsShmCache::remove2NonExpired(void *pUParam)
+{
+    int numRemoved = 0;    // number of cache items removed
+    lsShm_hCacheHdr_t *pHdr = getCacheHeader();
+    LsShmOffset_t offset;
+
+    while ((offset = pHdr->x_iBack) != 0)
     {
-        register lsShm_hCacheData_t * pObj;
-        pObj = (lsShm_hCacheData_t*)m_pShmHash->offset2ptr(offset);
-        if ( isElementExpired(pObj) )
+        lsShm_hCacheData_t *pObj;
+        pObj = (lsShm_hCacheData_t *)m_pShmHash->offset2ptr(offset);
+        if (isElementExpired(pObj))
         {
             pop();
             // remove
             removeObjData(pObj, pUParam);
-            numRemoved++;
+            ++numRemoved;
         }
         else
         {
@@ -309,68 +313,70 @@ int LsShmCache::remove2NonExpired( void* pUParam )
     return numRemoved;
 }
 
-int LsShmCache::removeAllExpired( void* pUParam )
+
+int LsShmCache::removeAllExpired(void *pUParam)
 {
-    register int numRemoved = 0;   // number of cache items removed
-    register lsShm_hCacheHdr_t * pHdr = getCacheHeader();
-    LsShm_offset_t offset = pHdr->x_back;
-        
-    numRemoved = remove2NonExpired( pUParam );
-    if ( (offset = pHdr->x_back) )
+    int numRemoved = 0;   // number of cache items removed
+    lsShm_hCacheHdr_t *pHdr = getCacheHeader();
+    LsShmOffset_t offset = pHdr->x_iBack;
+
+    numRemoved = remove2NonExpired(pUParam);
+    if ((offset = pHdr->x_iBack) != 0)
     {
         // skip the first one!
-        register lsShm_hCacheData_t * pObj;
-        pObj = (lsShm_hCacheData_t*)m_pShmHash->offset2ptr(offset);
-        while ( (offset = pObj->x_next) )
+        lsShm_hCacheData_t *pObj;
+        pObj = (lsShm_hCacheData_t *)m_pShmHash->offset2ptr(offset);
+        while ((offset = pObj->x_iNext) != 0)
         {
-            pObj = (lsShm_hCacheData_t*)m_pShmHash->offset2ptr(offset);
-            if ( isElementExpired(pObj) )
+            pObj = (lsShm_hCacheData_t *)m_pShmHash->offset2ptr(offset);
+            if (isElementExpired(pObj))
             {
                 disconnectObj(pObj);
                 removeObjData(pObj, pUParam);
-                numRemoved++;
+                ++numRemoved;
             }
         }
     }
     return numRemoved;
 }
 
-void LsShmCache::stat( LsHash_stat_t& stat, udata_callback_fn _cb )
+
+void LsShmCache::stat(LsHashStat &stat, udata_callback_fn _cb)
 {
-    ::memset(&stat, 0, sizeof(LsHash_stat_t));
-    register lsShm_hCacheHdr_t * pHdr = getCacheHeader();
-    LsShm_offset_t offset = pHdr->x_back;
-    while (offset)
+    ::memset(&stat, 0, sizeof(LsHashStat));
+    lsShm_hCacheHdr_t *pHdr = getCacheHeader();
+    LsShmOffset_t offset = pHdr->x_iBack;
+    while (offset != 0)
     {
-        lsShm_hCacheData_t * pObj;
-        pObj = (lsShm_hCacheData_t *) m_pShmHash->offset2ptr(offset);
+        lsShm_hCacheData_t *pObj;
+        pObj = (lsShm_hCacheData_t *)m_pShmHash->offset2ptr(offset);
         if (isElementExpired(pObj))
-            stat.numExpired++;
-        stat.num++;
-        
-        if (_cb)
+            ++stat.numExpired;
+        ++stat.num;
+
+        if (_cb != NULL)
             (*_cb)(pObj, (void *)&stat);
-        offset = pObj->x_next;
+        offset = pObj->x_iNext;
     }
 }
 
-int LsShmCache::loop( LsShmCache::udata_callback_fn _cb, void* pUParam )
+
+int LsShmCache::loop(LsShmCache::udata_callback_fn _cb, void *pUParam)
 {
-    register int num = 0;
-    register lsShm_hCacheHdr_t * pHdr = getCacheHeader();
-    LsShm_offset_t offset = pHdr->x_back;
-        
-    while (offset)
+    int num = 0;
+    lsShm_hCacheHdr_t *pHdr = getCacheHeader();
+    lsShm_hCacheData_t *pObj;
+    int retValue;
+
+    LsShmOffset_t offset = pHdr->x_iBack;
+    while (offset != 0)
     {
-        register lsShm_hCacheData_t * pObj;
-        pObj = (lsShm_hCacheData_t *) m_pShmHash->offset2ptr(offset);
-                        
-        int retValue = (*_cb)(pObj, pUParam);
-        if (retValue)
+        pObj = (lsShm_hCacheData_t *)m_pShmHash->offset2ptr(offset);
+        if ((retValue = (*_cb)(pObj, pUParam)) != 0)
             return retValue;
-        
-        offset = pObj->x_next;
-        num++;
+
+        offset = pObj->x_iNext;
+        ++num;
     }
     return num;
-} 
+}

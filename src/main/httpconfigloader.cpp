@@ -24,20 +24,21 @@ HttpConfigLoader::~HttpConfigLoader()
 {
 }
 
-int HttpConfigLoader::loadConfigFile( )
+int HttpConfigLoader::loadConfigFile()
 {
     plainconf::initKeywords();
-    plainconf::setRootPath( MainServerConfig::getInstance().getServerRoot() );
-    
-    if ( !m_pRoot )
-        m_pRoot = plainconf::parseFile( m_sConfigFilePath.c_str(), "httpServerConfig" );
+    plainconf::setRootPath(MainServerConfig::getInstance().getServerRoot());
 
-    return ( m_pRoot == NULL ) ? -1 : 0;
+    if (!m_pRoot)
+        m_pRoot = plainconf::parseFile(m_sConfigFilePath.c_str(),
+                                       "httpServerConfig");
+
+    return (m_pRoot == NULL) ? -1 : 0;
 }
 
 void HttpConfigLoader::releaseConfigXmlTree()
 {
-    if ( m_pRoot )
+    if (m_pRoot)
     {
         delete m_pRoot;
         m_pRoot = NULL;

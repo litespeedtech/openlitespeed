@@ -29,44 +29,44 @@ class TcpConnection : public StreamSocket
     friend class TcpServerSocket;
 private:
     GSockAddr    m_peerAddr;
-    TcpConnection( const TcpConnection& rhs );
-    void operator=( const TcpConnection& rhs );
+    TcpConnection(const TcpConnection &rhs);
+    void operator=(const TcpConnection &rhs);
 protected:
 public:
-    explicit TcpConnection( int fd )
+    explicit TcpConnection(int fd)
         : StreamSocket()
-        {   setfd( fd ); }
+    {   setfd(fd); }
     TcpConnection()
-        : StreamSocket( PF_INET )
-        {}
+        : StreamSocket(PF_INET)
+    {}
     ~TcpConnection() {};
-    GSockAddr* getPeerAddr() {   return &m_peerAddr;  }
+    GSockAddr *getPeerAddr() {   return &m_peerAddr;  }
 
-    int     getPeerName( SockAddr &name, socklen_t &namelen)
-        {
-            return ::getpeername( getfd(), &name, &namelen );
-        }
+    int     getPeerName(SockAddr &name, socklen_t &namelen)
+    {
+        return ::getpeername(getfd(), &name, &namelen);
+    }
 
-    void    setPeerAddr( const GSockAddr* pAddr);
+    void    setPeerAddr(const GSockAddr *pAddr);
 
-    int     connect( const GSockAddr* pDest )
-        {   return StreamSocket::connect( pDest->get(), pDest->len() ); }
+    int     connect(const GSockAddr *pDest)
+    {   return StreamSocket::connect(pDest->get(), pDest->len()); }
 
-    int     connect( const in_addr_t addr, int port )
-        {
-            m_peerAddr.set( addr, port );
-            return connect( &m_peerAddr );
-        }
+    int     connect(const in_addr_t addr, int port)
+    {
+        m_peerAddr.set(addr, port);
+        return connect(&m_peerAddr);
+    }
 
-    int     connect( const char * pAddr )
-        {
-            m_peerAddr.set( PF_INET, pAddr, NO_ANY );
-            return connect( &m_peerAddr );
-        }
-    const char *  getPeerAddr( char * pAddr, int len ) const
-        {
-            return m_peerAddr.toAddrString( pAddr, len );
-        }
+    int     connect(const char *pAddr)
+    {
+        m_peerAddr.set(PF_INET, pAddr, NO_ANY);
+        return connect(&m_peerAddr);
+    }
+    const char   *getPeerAddr(char *pAddr, int len) const
+    {
+        return m_peerAddr.toAddrString(pAddr, len);
+    }
 };
 
 #endif

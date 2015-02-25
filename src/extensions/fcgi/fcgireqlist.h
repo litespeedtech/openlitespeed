@@ -19,23 +19,25 @@
 #define FCGIREQLIST_H
 
 
+#include <lsdef.h>
 class FcgiRequest;
 class FcgiReqListData;
 class FcgiReqList
 {
     int m_iActiveReqs;
-    FcgiReqListData* m_pData;
+    FcgiReqListData *m_pData;
 public:
     FcgiReqList();
     ~FcgiReqList();
-    FcgiRequest* get( int iId );
-    int regist( FcgiRequest* pReq );
-    void unregist( FcgiRequest* pReq );
-    FcgiRequest* first();
-    FcgiRequest* next( int id );
+    FcgiRequest *get(int iId);
+    int regist(FcgiRequest *pReq);
+    void unregist(FcgiRequest *pReq);
+    FcgiRequest *first();
+    FcgiRequest *next(int id);
 
     int size() const
     {   return m_iActiveReqs;   }
+    LS_NO_COPY_ASSIGN(FcgiReqList);
 };
 
 #endif

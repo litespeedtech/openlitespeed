@@ -16,368 +16,296 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include <ls.h>
-#include "lsluaengine.h"
-#include "lsluasession.h"
+#include <modules/lua/lsluaengine.h>
+#include <modules/lua/lsluasession.h>
 #include <string.h>
 #include <unistd.h>
 #include <time.h>
 
-#define MAXFILENAMELEN  0x1000
 
 #define     MNAME       mod_lua
 extern lsi_module_t MNAME;
 
 /* Module Data */
-typedef struct {
-    LsLuaSession * pSession;
-} luaModuleData_t;
-
-static int releaseLuaData( void * data)
+typedef struct
 {
-    if (!data)
-        return 0;
-    luaModuleData_t * pData = (luaModuleData_t *) data;
+    LsLuaSession *m_pSession;
+} luaData_t;
 
-    pData->pSession = NULL;
+static int releaseLuaData(void *data)
+{
+    if (data == NULL)
+        return 0;
+
+    luaData_t *pData = (luaData_t *)data;
+    pData->m_pSession = NULL;
     free(pData);
     return 0;
 }
 
-static luaModuleData_t * allocateLuaData(lsi_session_t * session, const lsi_module_t * module, int level)
+
+static luaData_t *allocateLuaData(lsi_session_t *session,
+                                  const lsi_module_t *module, int level)
 {
-    luaModuleData_t * pData = (luaModuleData_t *) malloc(sizeof(luaModuleData_t));
-    if (!pData)
+    luaData_t *pData = (luaData_t *)malloc(sizeof(luaData_t));
+    if (pData == NULL)
         return NULL;
-    memset(pData, 0, sizeof(luaModuleData_t));
+    memset(pData, 0, sizeof(luaData_t));
     g_api->set_module_data(session, module, level, pData);
     return pData;
 }
 
-static LsLuaSession * getLsLuaSession_from_moduleData(lsi_session_t * pSess)
+
+static LsLuaSession *getLuaSess(lsi_session_t *session)
 {
-    luaModuleData_t * pData = (luaModuleData_t *) g_api->get_module_data(pSess, &MNAME, LSI_MODULE_DATA_HTTP);
-    if (pData)
-        return pData->pSession;
-    else
+    luaData_t *pData = (luaData_t *)g_api->get_module_data(session, &MNAME,
+                       LSI_MODULE_DATA_HTTP);
+    if (pData == NULL)
         return NULL;
+    return pData->m_pSession;
 }
 
-#if 0
-static int http_end(lsi_cb_param_t *rec)
+
+static int runLuaFilter(lsi_cb_param_t *rec, int index)
 {
-    extern void http_end_callback(void *);
-
-    g_api->log( NULL, LSI_LOG_DEBUG,  "HTTP_END [%s]\n", g_api->get_req_uri(rec->_session, NULL));
-    // http_end_callback(rec->_session);
-    return LSI_RET_OK;
-}
-
-static int http_begin(lsi_cb_param_t *rec)
-{
-    //const char *uri;
-    //uri = g_api->get_req_uri(rec->_session, NULL );
-    // g_api->log( NULL, LSI_LOG_DEBUG,  "HTTP_BEGIN [%s]\n", uri);
-    return LSI_RET_OK;
-}
-
-static int recv_resp_header(struct lsi_cb_param_t *rec)
-{
-    const char *uri;
-    uri = g_api->get_req_uri(rec->_session);
-    g_api->log( NULL, LSI_LOG_DEBUG,  "RECV_RESP_HEADER [%s]\n", uri);
-    return LSI_RET_OK;
-}
-
-static int recv_resp_body(struct lsi_cb_param_t *rec)
-{
-    const char *uri;
-    uri = g_api->get_req_uri(rec->_session);
-    g_api->log( NULL, LSI_LOG_DEBUG,  "RECV_RESP_BODY [%s]\n", uri);
-    return LSI_RET_OK;
-}
-
-static int recvd_resp_body(struct lsi_cb_param_t *rec)
-{
-    const char *uri;
-    uri = g_api->get_req_uri(rec->_session);
-    g_api->log( NULL, LSI_LOG_DEBUG,  "RECVD_RESP_BODY [%s]\n", uri);
-    return LSI_RET_OK;
-}
-
-static int send_resp_header(struct lsi_cb_param_t *rec)
-{
-    const char *uri;
-    uri = g_api->get_req_uri(rec->_session);
-    g_api->log( NULL, LSI_LOG_DEBUG,  "SEND_RESP_HEADER [%s]\n", uri);
-    return LSI_RET_OK;
-}
-
-static int send_resp_body(struct lsi_cb_param_t *rec)
-{
-    const char *uri;
-    uri = g_api->get_req_uri(rec->_session);
-    g_api->log( NULL, LSI_LOG_DEBUG,  "SEND_RESP_BODY [%s]\n", uri);
-    return LSI_RET_OK;
-}
-
-static int recved_req_handler(struct lsi_cb_param_t *rec)
-{
-    const char *uri;
-    uri = g_api->get_req_uri(rec->_session);
-    g_api->log( NULL, LSI_LOG_DEBUG,  "recved_req_handler [%s]\n", uri);
-    return LSI_RET_OK;
-}
-
-//
-//  LSI_HKPT_RECV_REQ_BODY 
-//
-int recv_req_body(struct lsi_cb_param_t *rec)
-{
-    const char *uri;
-    uri = g_api->get_req_uri(rec->_session);
-    g_api->log( NULL, LSI_LOG_DEBUG,  "RECV_REQ_BODY LUA exec_handler [%s]\n", uri);
-    return LSI_RET_OK;
-}
-
-#endif
-//
-//  LSI_HKPT_RECV_REQ_HEADER 
-//      If we choose to use HOOK POINT for handler selection,
-//          this is the HOOK POINT...
-//
-int recv_req_header(lsi_cb_param_t *rec)
-{
-    // luaHandlerX( rec->_session );
-    const char *uri;
-    int len;
-    uri = g_api->get_req_uri(rec->_session, &len);
-    if ((len > 5) && (!memcmp(uri+len-4, ".lua", 4))) 
-    {
-        g_api->register_req_handler(rec->_session, &MNAME, 0);
-        // g_api->log( rec->_session, LSI_LOG_DEBUG,  "LUA RECV_REQ_HEADER [%s]\n", uri);
-    }
-        
-#if 0
-    g_api->log( NULL, LSI_LOG_NOTICE,  "LUA RECV_REQ_HEADER LUA [%s]\n", uri);
-
-    char luafile[MAXFILENAMELEN];   /* 4k filenamepath */
-    char buf[0x1000];
-    register int    n;
-
-    if (g_api->get_uri_file_path( rec->_session, uri, strlen(uri), luafile, MAXFILENAMELEN))
-    {
-        n = snprintf(buf, 0x1000, "luahandler: FAILED TO COMPOSE LUA script path %s\r\n", uri);
-        g_api->append_resp_body( rec->_session, buf, n);
-        g_api->end_resp( rec->_session );
-        return LSI_RET_OK;
-    }
-    g_api->log( NULL, LSI_LOG_NOTICE,  "LUA RECV_REQ_HEADER LUA PATH [%s]\n", luafile);
-
-
-    if ( memcmp(uri, "/lslua/", 7) == 0 )
-    {
-        if (LsLuaEngine::isReady(rec->_session))
-        {
-            g_api->log( NULL, LSI_LOG_DEBUG,  "LUA recv_req_header [%s]\n", uri);
-            g_api->register_req_handler(rec->_session, &MNAME, 0);
-            // This enforce the handler wont be called until all the data is there.
-            // g_api->set_wait_full_req_body( rec->_session );
-        }
-    }
-#endif
-    return LSI_RET_OK;
-}
-
-static lsi_serverhook_t serverHooks[] = {
-    { LSI_HKPT_RECV_REQ_HEADER, recv_req_header, LSI_HOOK_NORMAL, LSI_HOOK_FLAG_ENABLED },
-    lsi_serverhook_t_END    //Must put this at the end position
-};
-
-static int _init( lsi_module_t * pModule )
-{
-    //
-    //  load LUA Engine here
-    //
-    if (LsLuaEngine::init())
-    {
-        return -1;
-    }
-    
-    pModule->_info = LsLuaEngine::version();  //set version string
-    
-    //
-    // enable call back
-    //
-    g_api->log( NULL, LSI_LOG_NOTICE,  "LUA: %s ENGINE READY\n", LsLuaEngine::getLuaName());
-
-    //
-    //  module data for LsLuaSession look up
-    //
-    g_api->init_module_data( pModule, releaseLuaData, LSI_MODULE_DATA_HTTP );
-    return 0;
-}
-
-static int luaHandler(lsi_session_t *session )
-{
-    luaModuleData_t * pData;
-
-// myTimerStart();
-    pData = (luaModuleData_t *) g_api->get_module_data(session, &MNAME, LSI_MODULE_DATA_HTTP);
-    if (!pData)
+    LsLuaUserParam *pUser;
+    const char *pFile;
+    int iFileLen;
+    lsi_session_t *session = rec->_session;
+    luaData_t *pData = (luaData_t *)g_api->get_module_data(session, &MNAME,
+                       LSI_MODULE_DATA_HTTP);
+    if (pData == NULL)
     {
         pData = allocateLuaData(session, &MNAME, LSI_MODULE_DATA_HTTP);
-        if (!pData)
+        if (pData == NULL)
         {
-            g_api->log( NULL, LSI_LOG_ERROR,  "FAILED TO ALLOCATE MODULE DATA\n");
-            return LSI_RET_ERROR;
+            g_api->log(NULL, LSI_LOG_ERROR,
+                       "FAILED TO ALLOCATE MODULE DATA\n");
+            return LSI_HK_RET_ERROR;
         }
     }
-    pData->pSession = NULL;
+    pData->m_pSession = NULL;
 
-    char * uri;
-    uri = (char *)g_api->get_req_uri( session, NULL );
-    
-    char luafile[MAXFILENAMELEN];   /* 4k filenamepath */
+    pUser = (LsLuaUserParam *)g_api->get_module_param(session, &MNAME);
+    pFile = pUser->getFilterPath(index, iFileLen);
+    if (iFileLen <= 0)
+    {
+        g_api->log(NULL, LSI_LOG_ERROR, "Invalid Lua Filter file.");
+        return LSI_HK_RET_ERROR;
+    }
+    if (index == LSLUA_HOOK_BODY)
+    {
+        return LsLuaEngine::runFilterScript(rec, pFile, pUser,
+                                            &(pData->m_pSession), index);
+    }
+    return LsLuaEngine::runScript(session, pFile, pUser,
+                                  &(pData->m_pSession), index);
+}
+
+
+int prepLuaFilter(lsi_cb_param_t *rec)
+{
+    lsi_session_t *session = rec->_session;
+    LsLuaUserParam *pUser = (LsLuaUserParam *)g_api->get_module_param(session,
+                            &MNAME);
+    g_api->set_req_wait_full_body(session);
+    //TODO: set resp wait full body?
+
+    if (pUser->isFilterActive(LSLUA_HOOK_REWRITE))
+    {
+        g_api->set_session_hook_enable_flag(session,
+                                            LSI_HKPT_URI_MAP,
+                                            &MNAME, LSI_HOOK_FLAG_ENABLED);
+    }
+
+    if (pUser->isFilterActive(LSLUA_HOOK_AUTH))
+    {
+        g_api->set_session_hook_enable_flag(session,
+                                            LSI_HKPT_HTTP_AUTH,
+                                            &MNAME, LSI_HOOK_FLAG_ENABLED);
+    }
+
+    if (pUser->isFilterActive(LSLUA_HOOK_HEADER))
+    {
+        g_api->set_session_hook_enable_flag(session,
+                                            LSI_HKPT_RCVD_RESP_HEADER,
+                                            &MNAME, LSI_HOOK_FLAG_ENABLED);
+    }
+
+    if (pUser->isFilterActive(LSLUA_HOOK_BODY))
+    {
+        g_api->set_session_hook_enable_flag(session,
+                                            LSI_HKPT_RECV_RESP_BODY,
+                                            &MNAME, LSI_HOOK_FLAG_ENABLED);
+    }
+    return LSI_HK_RET_OK;
+}
+
+
+int luaRewrite(lsi_cb_param_t *rec)
+{   return runLuaFilter(rec, LSLUA_HOOK_REWRITE);   }
+
+
+int luaAuthFilter(lsi_cb_param_t *rec)
+{   return runLuaFilter(rec, LSLUA_HOOK_AUTH);  }
+
+
+int luaHeaderFilter(lsi_cb_param_t *rec)
+{   return runLuaFilter(rec, LSLUA_HOOK_HEADER);   }
+
+
+int luaBodyFilter(lsi_cb_param_t *rec)
+{   return runLuaFilter(rec, LSLUA_HOOK_BODY);  }
+
+
+int registerLua(lsi_cb_param_t *rec)
+{
+    int len;
+    const char *uri = g_api->get_req_uri(rec->_session, &len);
+    if ((len > 5) && (memcmp(uri + len - 4, ".lua", 4) == 0))
+        g_api->register_req_handler(rec->_session, &MNAME, 0);
+    return LSI_HK_RET_OK;
+}
+
+
+static int luaHandler(lsi_session_t *session)
+{
+    char *uri;
+    char luafile[MAXFILENAMELEN];
     char buf[0x1000];
-    register int    n;
+    int n;
+    LsLuaUserParam *pUser;
+    luaData_t *pData;
 
-    if (g_api->is_req_body_finished(session))
+    pData = (luaData_t *)g_api->get_module_data(session, &MNAME,
+            LSI_MODULE_DATA_HTTP);
+    if (pData == NULL)
     {
-        ;
-    }
-    else
-    {
-        g_api->set_req_wait_full_body( session );
-    }
-
-    if (g_api->get_uri_file_path( session, uri, strlen(uri), luafile, MAXFILENAMELEN))
-    {
-        n = snprintf(buf, 0x1000, "luahandler: FAILED TO COMPOSE LUA script path %s\r\n", uri);
-        g_api->append_resp_body( session, buf, n);
-        g_api->end_resp( session );
-        return LSI_RET_OK;
-    }
-    // g_api->log( NULL, LSI_LOG_NOTICE,  "LUA HANDLER PATH [%s]\n", luafile);
-
-    // set to 1 = continueWrite, 0 = suspendWrite - the default is 1 if onWrite is provied.
-    // So I just set this off... 
-    g_api->set_handler_write_state( session, 0);
-    
-    LsLuaEngine::setDebugLevel((int) g_api->_debugLevel);
-
-        LsLuaUserParam * pUser = (LsLuaUserParam *) g_api->get_module_param(session, &MNAME);
-        if (LsLuaEngine::api()->jitMode)
+        pData = allocateLuaData(session, &MNAME, LSI_MODULE_DATA_HTTP);
+        if (pData == NULL)
         {
-            LsLuaEngine::runScriptX(session, luafile, pUser, &(pData->pSession));
+            g_api->log(NULL, LSI_LOG_ERROR,
+                       "FAILED TO ALLOCATE MODULE DATA\n");
+            return 500;
         }
-        else
-        {
-            LsLuaEngine::runScript(session, luafile, pUser, &(pData->pSession));
-        }
-// myTimerStop();
-    return LSI_RET_OK;
-}
+    }
+    pData->m_pSession = NULL;
+    pUser = (LsLuaUserParam *)g_api->get_module_param(session, &MNAME);
+    uri = (char *)g_api->get_req_uri(session, NULL);
 
-//
-//  onCleanupEvent - remove junk...
-//
-static int onCleanupEvent( lsi_session_t *session )
-{
-    extern void http_end_callback(void *, LsLuaSession *);
-    
-    // g_api->log( session, LSI_LOG_DEBUG,  "LUA onCleanupEvent\n");
-    http_end_callback(session, getLsLuaSession_from_moduleData(session));
-    return 0;
-}
-
-//
-//  onReadEvent - activated when whole request body has been read by the server.
-//
-static int onReadEvent( lsi_session_t *session )
-{
-    LsLuaSession * pSession;
-
-    pSession = getLsLuaSession_from_moduleData(session);
-    
-    // pSession = LsLuaSession::findByLsiSession(session);
-    if (!pSession)
+    if (g_api->get_uri_file_path(session, uri, strlen(uri),
+                                 luafile, MAXFILENAMELEN) != 0)
     {
-        g_api->log( session, LSI_LOG_NOTICE,  "ERROR: LUA onReadEvent Session NULL\n");
+        n = snprintf(buf, 0x1000, "luahandler: FAILED TO COMPOSE LUA"
+                     " script path %s\r\n", uri);
+        g_api->append_resp_body(session, buf, n);
+        g_api->end_resp(session);
         return 0;
     }
 
-    //
-    // Code from David... we need to worry about this later
-    // This check statement should be an assert instead!
-    if (!g_api->is_req_body_finished(session))
+    g_api->set_handler_write_state(session, 0);
+    LsLuaEngine::setDebugLevel((int)g_api->_debugLevel);
+    return LsLuaEngine::runScript(session, luafile, pUser,
+                                  &(pData->m_pSession), LSLUA_HOOK_HANDLER);
+
+}
+
+
+static int onCleanupEvent(lsi_session_t *session)
+{
+    extern void CleanupLuaSession(void *, LsLuaSession *);
+
+    CleanupLuaSession(session, getLuaSess(session));
+    return 0;
+}
+
+
+static int onReadEvent(lsi_session_t *session)
+{
+    LsLuaSession *pSession = getLuaSess(session);
+    if (pSession == NULL)
+    {
+        g_api->log(session, LSI_LOG_NOTICE,
+                   "ERROR: LUA onReadEvent Session NULL\n");
+        return 0;
+    }
+
+    // TODO: Fix this when everything is settled with what we expect for lua.
+    if (g_api->is_req_body_finished(session))
     {
         char buf[8192];
 #define     CONTENT_FORMAT  "<tr><td>%s</td><td>%s</td></tr><p>\r\n"
-        snprintf(buf, 8192, CONTENT_FORMAT, "ERROR", "You must forget to set wait all req body!!!<p>\r\n");
+        snprintf(buf, 8192, CONTENT_FORMAT, "ERROR",
+                 "Must set wait full request body!<p>\r\n");
         g_api->append_resp_body(session, buf, strlen(buf));
         return 0;
     }
-    if (pSession->isLuaWaitReqBody() && (!pSession->isLuaDoneFlag()))
-    {
-        // wake up the LUA script which waiting for Request body.
+    if ((pSession->isFlagSet(LLF_WAITREQBODY))
+        && (!pSession->isFlagSet(LLF_LUADONE)))
         pSession->resume(pSession->getLuaState(), 0);
-    }
     return 0;
-} 
+}
 
-//
-//  A typical handler should set write state to 0... no onWriteEvent
-//    g_api->set_handler_write_state( session, 0);
-//
-//  For lua script -
-//      We turn on the onWriteEvent while there is no more buffer for us to write.
-//      when we get call
-//      (1) check if there is buffer available for us to continue.
-//      (2) resume the yielded code. (session level)
-//
-static int onWriteEvent( lsi_session_t *session )
+
+static int onWriteEvent(lsi_session_t *session)
 {
-    LsLuaSession * pSession;
-    pSession = getLsLuaSession_from_moduleData(session);
-    
-    // pSession = LsLuaSession::findByLsiSession(session);
-    // g_api->log( session, LSI_LOG_DEBUG,  "LUA onWrite %p <%p>", session, pSession);
-    if (pSession)
-    {
-        if (pSession->onWrite(session) == 1)
-        {
-            return LSI_WRITE_RESP_CONTINUE;
-        }
-    }
+    LsLuaSession *pSession = getLuaSess(session);
+
+    if ((pSession != NULL)
+        && (pSession->onWrite(session) == 1))
+        return LSI_WRITE_RESP_CONTINUE;
     return LSI_WRITE_RESP_FINISHED;
 }
 
-const char *myParam[] = {
-    "lib", 
+
+static lsi_serverhook_t serverHooks[] =
+{
+    {
+        LSI_HKPT_HTTP_BEGIN, prepLuaFilter, LSI_HOOK_EARLY,
+        LSI_HOOK_FLAG_ENABLED
+    },
+    { LSI_HKPT_URI_MAP, luaRewrite, LSI_HOOK_EARLY, 0 },
+    { LSI_HKPT_URI_MAP, registerLua, LSI_HOOK_NORMAL, LSI_HOOK_FLAG_ENABLED },
+    { LSI_HKPT_HTTP_AUTH, luaAuthFilter, LSI_HOOK_EARLY, 0 },
+    { LSI_HKPT_RCVD_RESP_HEADER, luaHeaderFilter, LSI_HOOK_EARLY, 0 },
+    { LSI_HKPT_RECV_RESP_BODY, luaBodyFilter, LSI_HOOK_EARLY, 0 },
+    lsi_serverhook_t_END
+};
+
+
+static int _init(lsi_module_t *pModule)
+{
+    if (LsLuaEngine::init() != 0)
+        return LS_FAIL;
+    pModule->_info = LsLuaEngine::version();
+    g_api->log(NULL, LSI_LOG_NOTICE, "LUA: %s ENGINE READY\n",
+               LsLuaEngine::getLuaName());
+    g_api->init_module_data(pModule, releaseLuaData, LSI_MODULE_DATA_HTTP);
+    return 0;
+}
+
+const char *myParam[] =
+{
+    "lib",
     "maxruntime",
     "maxlinecount",
-    NULL   //The last position must have a NULL to indicate end of the array
+    NULL
 };
 
-/**
- * Define a handler, need to provide a struct _handler_functions_st object, in which 
- * the first function pointer should not be NULL
- */
-static lsi_handler_t lslua_mod_handler = { luaHandler, onReadEvent, onWriteEvent , onCleanupEvent};
+static lsi_handler_t lslua_mod_handler = { luaHandler, onReadEvent,
+                                           onWriteEvent, onCleanupEvent
+                                         };
 
-//
-//  module parameters
-//  lib /usr/lib/liblua.so
-//  lib /usr/lib/libluajit.so
-//  maxruntime 300 
-//
-static lsi_config_t lslua_mod_config = { LsLuaEngine::parseParam, LsLuaEngine::removeParam , myParam };
+static lsi_config_t lslua_mod_config = { LsLuaEngine::parseParam,
+                                         LsLuaEngine::removeParam,
+                                         myParam
+                                       };
 
 lsi_module_t MNAME = { LSI_MODULE_SIGNATURE,
-                        _init,
-                        &lslua_mod_handler,
-                        &lslua_mod_config,
-                        "v1.0",
-                        serverHooks,
-                        {0}
-};
+                       _init,
+                       &lslua_mod_handler,
+                       &lslua_mod_config,
+                       "v1.0",
+                       serverHooks,
+{0}
+                     };

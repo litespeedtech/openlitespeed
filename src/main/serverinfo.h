@@ -26,33 +26,41 @@
 class UnixSocketInfo : public DLinkedObj
 {
 public:
-    char *      m_pFileName;
+    char       *m_pFileName;
     ino_t       m_node;
     time_t      m_mtime;
 };
 
 class ServerInfo
 {
+    static ServerInfo *s_pServerInfo;
     int cleanUnixSocketList();
-    char *allocate( int len );
-    
+    char *allocate(int len);
+
 public:
     PidSimpleList   m_pidList;
     pid_t           m_pidLinger;
-    char *          m_pChroot;
+    char           *m_pChroot;
     DLinkedObj      m_unixSocketList;
-    char *          m_pBufEnd;
+    char           *m_pBufEnd;
     int             m_restart;
-    
-    ServerInfo( char * pBegin, char * pEnd);
+
+    ServerInfo(char *pBegin, char *pEnd);
     ~ServerInfo();
-    void addUnixSocket( const char * pSock, struct stat * pStat );
-    void updateUnixSocket( const char * pSock, struct stat * pStat );
+    ServerInfo(const ServerInfo &rhs);
+    void operator=(const ServerInfo &rhs);
+    void addUnixSocket(const char *pSock, struct stat *pStat);
+    void updateUnixSocket(const char *pSock, struct stat *pStat);
     void cleanUp();
-    char * dupStr( const char * pStr, int len );
-    void setRestart( int val )      {   m_restart = val;    }
+    char *dupStr(const char *pStr, int len);
+    void setRestart(int val)      {   m_restart = val;    }
     int  getRestart() const         {   return m_restart;   }
-    int  cleanPidList( int ToStopOnly = 0 );
+    int  cleanPidList(int ToStopOnly = 0);
+
+    static void setServerInfo( ServerInfo *pServerInfo )
+    {   s_pServerInfo = pServerInfo;    }
+    static ServerInfo *getServerInfo()
+    {   return s_pServerInfo;   }
 };
 
 #endif

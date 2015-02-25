@@ -18,6 +18,8 @@
 #ifndef ERRORNO_H
 #define ERRORNO_H
 
+#include <lsdef.h>
+
 #include <errno.h>
 
 
@@ -31,16 +33,19 @@ private:
 public:
     ErrorNo()
         : m_iErrNo(0)
-        {}
+    {}
     ~ErrorNo()
-        {}
+    {}
     int freezeErrno()
-        {   return m_iErrNo = errno;  }
+    {   return m_iErrNo = errno;  }
     int getFreezedErrno() const
-        {   return m_iErrNo;    }
+    {   return m_iErrNo;    }
     int getErrno() const
-        {   return errno;     }
-    const char * getErrStr();
-    const char * getFreezedErrStr();
+    {   return errno;     }
+    const char *getErrStr();
+    const char *getFreezedErrStr();
+
+
+    LS_NO_COPY_ASSIGN(ErrorNo);
 };
 #endif

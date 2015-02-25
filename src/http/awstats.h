@@ -18,6 +18,7 @@
 #ifndef AWSTATS_H
 #define AWSTATS_H
 
+#include <lsdef.h>
 #include <util/autostr.h>
 
 #define AWS_STATIC  1
@@ -38,31 +39,33 @@ class Awstats
     int             m_iLastUpdate;
     int             m_iMode;
 
-    int processLine( const HttpVHost * pVHost, int fdConf,
-                char * pCur, char * pLineEnd, char * &pLastWrite );
+    int processLine(const HttpVHost *pVHost, int fdConf,
+                    char *pCur, char *pLineEnd, char *&pLastWrite);
 
-    int shouldBuildStatic( const char * pName );
-    int executeUpdate(const char * pName);
-    int createConfigFile( char * pModel, const HttpVHost * pVHost );
-    int prepareAwstatsEnv( const HttpVHost * pVHost );
-public: 
+    int shouldBuildStatic(const char *pName);
+    int executeUpdate(const char *pName);
+    int createConfigFile(char *pModel, const HttpVHost *pVHost);
+    int prepareAwstatsEnv(const HttpVHost *pVHost);
+public:
     Awstats();
     ~Awstats();
-    int updateIfNeed( long curTime, const HttpVHost * pVHost );
-    int update(const HttpVHost * pVHost);
-    void setWorkingDir( const char * pDir ) {   m_sWorkingDir.setStr( pDir );   }
-    void setURI( const char * pURI )        {   m_sAwstatsURI.setStr( pURI );   }
-    void setSiteDomain( const char * pDmn ) {   m_sSiteDomain.setStr( pDmn );   }
-    void setAliases( const char * pAls )    {   m_sSiteAliases.setStr( pAls );  }
-    void setMode( int mode )                {   m_iMode = mode;                 }
-    void setInterval( int i )               {   m_iUpdateInterval = i;          }
-    void setOffset( int off )               {   m_iUpdateTimeOffset = off;      }
-    const char * getWorkingDir() const      {   return m_sWorkingDir.c_str();   }
-    const char * getSiteDomain() const      {   return m_sSiteDomain.c_str();   }
+    int updateIfNeed(long curTime, const HttpVHost *pVHost);
+    int update(const HttpVHost *pVHost);
+    void setWorkingDir(const char *pDir) {   m_sWorkingDir.setStr(pDir);   }
+    void setURI(const char *pURI)        {   m_sAwstatsURI.setStr(pURI);   }
+    void setSiteDomain(const char *pDmn) {   m_sSiteDomain.setStr(pDmn);   }
+    void setAliases(const char *pAls)    {   m_sSiteAliases.setStr(pAls);  }
+    void setMode(int mode)                {   m_iMode = mode;                 }
+    void setInterval(int i)               {   m_iUpdateInterval = i;          }
+    void setOffset(int off)               {   m_iUpdateTimeOffset = off;      }
+    const char *getWorkingDir() const      {   return m_sWorkingDir.c_str();   }
+    const char *getSiteDomain() const      {   return m_sSiteDomain.c_str();   }
     int  getInterval() const                {   return m_iUpdateInterval;       }
-    void config(HttpVHost *pVHost, int val, char* achBuf, const XmlNode *pAwNode, 
-           char* iconURI, const char* vhDomain, int vhAliasesLen );
-    
+    void config(HttpVHost *pVHost, int val, char *achBuf,
+                const XmlNode *pAwNode,
+                char *iconURI, const char *vhDomain, int vhAliasesLen);
+
+    LS_NO_COPY_ASSIGN(Awstats);
 };
 
 #endif

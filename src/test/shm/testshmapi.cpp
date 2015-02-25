@@ -15,7 +15,6 @@
 *    You should have received a copy of the GNU General Public License       *
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
-#include <http/httpglobals.h>
 #include <http/httplog.h>
 
 #include <fcntl.h>
@@ -28,7 +27,7 @@
 #include <shm/lsi_shm.h>
 #include "lsshmdebug.h"
 
-#define NO_LUA_TEST
+// #define NO_LUA_TEST
 #include <modules/lua/lsluashared.cpp>
 
 //
@@ -38,31 +37,32 @@
 //
 static int    testLuaShmApi()
 {
-    lsi_shmhash_t * pHash = lsLuaOpenShm("abc");
+    lsi_shmhash_t *pHash = ls_luashm_open("abc");
     assert(pHash);
 
-    register lsLuaShmValue_t * pVal;
-    register const char * key = "Simon";
-    
-    pVal = lsLuaFindShmValue(pHash, key);
+    ls_luashm_t *pVal;
+    const char *key = "Simon";
+
+    pVal = ls_luashm_find(pHash, key);
     if (!pVal)
     {
         /* need to create a new value */
         uint32_t myValue = 8899;
-        lsLuaSetShmValue(pHash, key, long_type, &myValue, sizeof(myValue));
-        
-        pVal = lsLuaFindShmValue(pHash, key);
-        
+        ls_luashm_setval(pHash, key, ls_luashm_long, &myValue, sizeof(myValue));
+
+        pVal = ls_luashm_find(pHash, key);
+
         assert(pVal);
     }
-    
-    debugBase::dumpBuf("DECODE", (char *)pVal, sizeof(lsLuaShmValue_t));
-    
-    fprintf(debugBase::fp(), "%s <%p> dProcess ID = %d ", key, pVal, pVal->m_ulong);
+
+    debugBase::dumpBuf("DECODE", (char *)pVal, sizeof(ls_luashm_t));
+
+    fprintf(debugBase::fp(), "%s <%p> dProcess ID = %d ", key, pVal,
+            pVal->m_ulong);
     pVal->m_ulong = getpid();
     fprintf(debugBase::fp(), " change to -> %d\n", pVal->m_ulong);
 
-    lsLuaCloseShm(pHash);
+    ls_luashm_close(pHash);
     fflush(debugBase::fp());
     return 0;
 }
@@ -73,8 +73,6 @@ static int    testLuaShmApi()
 int    testShmApi()
 {
     if (testLuaShmApi())
-    {
-        return -1;
-    }
+        return LS_FAIL;
     return 0;
 }

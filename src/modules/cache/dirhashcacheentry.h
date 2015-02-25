@@ -18,11 +18,10 @@
 #ifndef DIRHASHCACHEENTRY_H
 #define DIRHASHCACHEENTRY_H
 
+#include <lsdef.h>
 #include <cacheentry.h>
 
-/**
-	@author Gang Wang <gwang@litespeedtech.com>
-*/
+
 class DirHashCacheStore;
 class DirHashCacheEntry : public CacheEntry
 {
@@ -36,16 +35,19 @@ public:
 
     int saveCeHeader();
 
-    int allocate( int size );
+    int allocate(int size);
 
     int releaseTmpResource();
 
 private:
-    int32_t         m_lastCheck;
-    int32_t         m_lastMod;
-    off_t           m_lSize;
+    int32_t         m_iLastCheck;
+    int32_t         m_iLastMod;
+    off_t           m_iSize;
     ino_t           m_inode;
 
+
+
+    LS_NO_COPY_ASSIGN(DirHashCacheEntry);
 };
 
 #endif

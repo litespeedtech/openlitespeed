@@ -22,7 +22,7 @@
 #include <edio/multiplexer.h>
 #include <http/httplog.h>
 #include <socket/gsockaddr.h>
-#include <util/mysleep.h>
+#include <lsr/ls_time.h>
 
 #include <signal.h>
 #include <sys/stat.h>
@@ -30,11 +30,11 @@
 #include <sys/wait.h>
 
 
-FcgiApp::FcgiApp( const char * pName )
-    : m_iMaxConns( 10 )
-    , m_iMaxReqs( 10 )
+FcgiApp::FcgiApp(const char *pName)
+    : m_iMaxConns(10)
+    , m_iMaxReqs(10)
 {
-    setConfigPointer( new FcgiAppConfig( pName ) );
+    setConfigPointer(new FcgiAppConfig(pName));
 }
 
 
@@ -46,27 +46,25 @@ FcgiApp::~FcgiApp()
 int FcgiApp::startEx()
 {
     int ret = 1;
-    if (( getConfig().getURL() )&&( getConfig().getCommand() ))
-    {
+    if ((getConfig().getURL()) && (getConfig().getCommand()))
         ret = startWorker();
-    }
     return ret;
 }
 
 
 
-ExtConn * FcgiApp::newConn()
+ExtConn *FcgiApp::newConn()
 {
     return new FcgiConnection();
 }
 
 
-int FcgiApp::setURL( const char * pURL )
+int FcgiApp::setURL(const char *pURL)
 {
 //    return ExtWorker::setURL( pURL );
-    getConfig().setURL( pURL );
-    if ( getfd() == -1 )
-        return getConfig().updateServerAddr( pURL );
+    getConfig().setURL(pURL);
+    if (getfd() == -1)
+        return getConfig().updateServerAddr(pURL);
     return 0;
 }
 

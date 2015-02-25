@@ -18,11 +18,11 @@
 #include "httphandler.h"
 
 HttpHandler::HttpHandler()
-    : m_iType( 0 )
+    : m_iType(0)
 {}
 
-HttpHandler::HttpHandler( const HttpHandler & rhs )
-    : m_iType( rhs.m_iType )
+HttpHandler::HttpHandler(const HttpHandler &rhs)
+    : m_iType(rhs.m_iType)
 {
 }
 

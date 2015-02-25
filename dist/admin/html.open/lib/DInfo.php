@@ -248,8 +248,7 @@ class DInfo
 						'p' => $this->_pid,
 						't' => $this->_tid,
 						'r' => $this->_ref,
-						'tk' => $this->_token,
-						'file_create' => ''));
+						'tk' => $this->_token));
 
 		if ($this->_servData != NULL) {
 			$props->Set(UIProperty::FLD_SERVER_NAME, $this->_servData->GetId());

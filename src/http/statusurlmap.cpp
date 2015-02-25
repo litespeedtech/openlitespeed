@@ -27,70 +27,70 @@
 
 StatusUrlMap::StatusUrlMap()
 {
-    memset( m_pSC, 0, sizeof(m_pSC));
+    memset(m_pSC, 0, sizeof(m_pSC));
 }
 
-StatusUrlMap::StatusUrlMap( const StatusUrlMap &rhs )
+StatusUrlMap::StatusUrlMap(const StatusUrlMap &rhs)
 {
     int i;
-    memset( m_pSC, 0, sizeof(m_pSC));
-    for ( i = 0 ; i < SC_END ; ++i )
-        if ( rhs.m_pSC[i] != NULL )
-            m_pSC[i] = new AutoStr2( *rhs.m_pSC[i] );   
+    memset(m_pSC, 0, sizeof(m_pSC));
+    for (i = 0 ; i < SC_END ; ++i)
+        if (rhs.m_pSC[i] != NULL)
+            m_pSC[i] = new AutoStr2(*rhs.m_pSC[i]);
 }
 
-                                                                                                
+
 StatusUrlMap::~StatusUrlMap()
 {
     int i;
-    for ( i = 0 ; i < SC_END ; ++i )
-        if ( m_pSC[i] != NULL )
-            delete m_pSC[i]; 
-                        
+    for (i = 0 ; i < SC_END ; ++i)
+        if (m_pSC[i] != NULL)
+            delete m_pSC[i];
+
 }
 
-int StatusUrlMap::setUrl(int statusCode, const char* url)
+int StatusUrlMap::setUrl(int statusCode, const char *url)
 {
-    
-    int index = HttpStatusCode::codeToIndex( statusCode );
-    if (( index > 0 )&& (index < SC_END))
+
+    int index = HttpStatusCode::getInstance().codeToIndex(statusCode);
+    if ((index > 0) && (index < SC_END))
     {
-        if ( *(m_pSC + index ) == NULL )
-            *( m_pSC + index ) = new AutoStr2( url );
+        if (*(m_pSC + index) == NULL)
+            *(m_pSC + index) = new AutoStr2(url);
         else
-            (*( m_pSC + index ))->setStr( url, strlen( url ) );
+            (*(m_pSC + index))->setStr(url, strlen(url));
         return 0;
     }
     else
     {
         HttpLog::error("Invalid status code in set status code URL mapping! %d - %s\n",
-            statusCode, url);
+                       statusCode, url);
         return -1 ;
     }
 
     return 0;
 }
 
-int StatusUrlMap::setStatusUrlMap(int statusCode, const char* url)
+int StatusUrlMap::setStatusUrlMap(int statusCode, const char *url)
 {
-    if ( url == NULL )
+    if (url == NULL)
     {
         HttpLog::error("Invalid Url in set status code URL mapping! %d - %s\n",
-            statusCode, url);
+                       statusCode, url);
         return -1 ;
     }
 
-    return setUrl( statusCode, url);
+    return setUrl(statusCode, url);
 
 }
 
-int StatusUrlMap::inherit( const StatusUrlMap * pMap )
+int StatusUrlMap::inherit(const StatusUrlMap *pMap)
 {
-    if ( !pMap )
+    if (!pMap)
         return 0;
-    for ( int i = 0 ; i < SC_END ; ++i )
-        if (( pMap->m_pSC[i] != NULL )&&( m_pSC[i] == NULL ))
-            m_pSC[i] = new AutoStr2( *pMap->m_pSC[i] );
+    for (int i = 0 ; i < SC_END ; ++i)
+        if ((pMap->m_pSC[i] != NULL) && (m_pSC[i] == NULL))
+            m_pSC[i] = new AutoStr2(*pMap->m_pSC[i]);
     return 0;
 }
 

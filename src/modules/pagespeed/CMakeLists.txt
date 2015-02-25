@@ -31,13 +31,13 @@ execute_process( COMMAND getconf LFS_CFLAGS
 
 add_definitions( ${LFS_CFLAGS} )
 
-add_library(modpagespeed SHARED  pagespeed.cc  log_message_handler.cc ls_message_handler.cc
-            pipenotifier.cc
-            ls_server_context.cc
-            ls_rewrite_driver_factory.cc
-            ls_caching_headers.cc
-            ls_rewrite_options.cc 
-            ls_base_fetch.cc
+add_library(modpagespeed SHARED  pagespeed.cpp  log_message_handler.cpp ls_message_handler.cpp
+            pipenotifier.cpp
+            ls_server_context.cpp
+            ls_rewrite_driver_factory.cpp
+            ls_caching_headers.cpp
+            ls_rewrite_options.cpp 
+            ls_base_fetch.cpp
             )
 
 target_link_libraries(modpagespeed ${PROJECT_SOURCE_DIR}/src/modules/pagespeed/psol/lib/Debug/linux/${OSVERSION}/pagespeed_automatic.a)

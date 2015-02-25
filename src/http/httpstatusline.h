@@ -19,32 +19,41 @@
 #define HTTPSTATUSLINE_H
 
 
+#include <lsdef.h>
 #include <http/httpstatuscode.h>
 #include <http/httpver.h>
+#include <util/tsingleton.h>
 
 #define MAX_STATUS_LINE_LEN 64
 
 class StatusLineString
 {
     int     m_iLineLen;
-    char*   m_pLine;
+    char   *m_pLine;
 public:
-    StatusLineString( int version, int code );
+    StatusLineString(int version, int code);
     int getLen() const          {   return m_iLineLen;  }
-    const char * get() const    {   return m_pLine;     }
+    const char *get() const    {   return m_pLine;     }
+    LS_NO_COPY_ASSIGN(StatusLineString);
 };
 
-class HttpStatusLine
+class HttpStatusLine : public TSingleton<HttpStatusLine>
 {
-    static StatusLineString m_cache[2][SC_END];
+    friend class TSingleton<HttpStatusLine>;
+
+    StatusLineString *m_aCache[2][SC_END];
     HttpStatusLine();
     ~HttpStatusLine();
-    
+
 public:
 
 
-    static const StatusLineString& getStatusLine( int ver, int code)
-    {   return m_cache[ver][code];  }
+    const StatusLineString &getStatusLine(int ver, int code)
+    {   return *m_aCache[ver][code];  }
+
+
+
+    LS_NO_COPY_ASSIGN(HttpStatusLine);
 };
 
 #endif

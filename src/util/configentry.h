@@ -26,7 +26,7 @@ class ConfigValidator
 public:
     ConfigValidator( long long min, long long max, long long def )
     {}
-    int operator()(long long val )const 
+    int operator()(long long val )const
     { return 0; }
 };
 
@@ -44,7 +44,7 @@ class ConfigEntry
 public:
     ConfigEntry();
     ~ConfigEntry();
-    
+
 public:
     enum
     {
@@ -54,23 +54,23 @@ public:
         FILE,
         VALID_PATH,
         VALID_FILE,
-        
+
     };
 
 private:
-    ConfigEntry& operator=(const ConfigEntry& other);
-    ConfigEntry(const ConfigEntry& other);
+    ConfigEntry &operator=(const ConfigEntry &other);
+    ConfigEntry(const ConfigEntry &other);
 
 private:
-    AutoStr     m_sName;
+    AutoStr     m_name;
     short       m_iValueType;
     short       m_iOptinal;
-    long long   m_iDefault; 
+    long long   m_iDefault;
     long long   m_iMin;
     long long   m_iMax;
-    AutoStr     m_sRegexValidate;
-    
-    
+    AutoStr     m_regexValidate;
+
+
 };
 
 #endif // CONFIGENTRY_H

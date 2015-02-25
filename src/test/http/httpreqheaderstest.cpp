@@ -16,14 +16,14 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #ifdef RUN_TEST
- 
+
 #include "httpreqheaderstest.h"
 #include <util/autobuf.h>
 #include "test/unittest-cpp/UnitTest++/src/UnitTest++.h"
 
 
 
-TEST( HttpReqHeadersTest_test)
+TEST(HttpReqHeadersTest_test)
 {
 //    const char * pSample[] =
 //    {

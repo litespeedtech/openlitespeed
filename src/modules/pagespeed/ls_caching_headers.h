@@ -19,6 +19,7 @@
 #define LSI_CACHING_HEADERS_H_
 
 #include "pagespeed.h"
+#include <lsdef.h>
 
 #include "pagespeed/kernel/base/basictypes.h"
 #include "pagespeed/kernel/http/caching_headers.h"
@@ -26,13 +27,13 @@
 class LsiCachingHeaders : public CachingHeaders
 {
 public:
-    explicit LsiCachingHeaders( lsi_session_t* session )
-        : CachingHeaders( g_api->get_status_code( session ) ),
-          m_session( session )
+    explicit LsiCachingHeaders(lsi_session_t *session)
+        : CachingHeaders(g_api->get_status_code(session)),
+          m_session(session)
     {
     }
 
-    virtual bool Lookup( const StringPiece& key, StringPieceVector* values );
+    virtual bool Lookup(const StringPiece &key, StringPieceVector *values);
 
     virtual bool IsLikelyStaticResourceType() const
     {
@@ -45,7 +46,9 @@ public:
     }
 
 private:
-    lsi_session_t* m_session;
+    lsi_session_t *m_session;
+
+    LS_NO_COPY_ASSIGN(LsiCachingHeaders);
 };
 
 

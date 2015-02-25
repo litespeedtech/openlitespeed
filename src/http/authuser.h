@@ -19,6 +19,7 @@
 #define AUTHUSER_H
 
 
+#include <lsdef.h>
 #include <util/autostr.h>
 #include <util/stringlist.h>
 #include <util/keydata.h>
@@ -44,51 +45,53 @@ class AuthData : public KeyData
     short       m_encMethod;
 public:
     AuthData()
-        : m_exist( 1 )
-        , m_encMethod( ENCRYPT_PLAIN )
-        {}
+        : m_exist(1)
+        , m_encMethod(ENCRYPT_PLAIN)
+    {}
     virtual ~AuthData() {}
 
 
     long getTimestamp() const           {   return m_lTimestamp;    }
-    void setTimestamp( long stamp )     {   m_lTimestamp = stamp;   }
+    void setTimestamp(long stamp)     {   m_lTimestamp = stamp;   }
 
     short isExist()  const              {   return m_exist;         }
-    void  setExist( short exist )       {   m_exist = exist;        }
+    void  setExist(short exist)       {   m_exist = exist;        }
 
     short getEncMethod() const          {   return m_encMethod;     }
-    void  setEncMethod( short m )       {   m_encMethod = m;        }  
+    void  setEncMethod(short m)       {   m_encMethod = m;        }
+    LS_NO_COPY_ASSIGN(AuthData);
 };
 
 class AuthUser : public AuthData
 {
 private:
     AutoStr      m_passwd;
-    StringList * m_pGroups;
+    StringList *m_pGroups;
 
-    
-public: 
+
+public:
 
 
     AuthUser();
     ~AuthUser();
-    void setPasswd( const char * pPasswd, int len ) {   m_passwd.setStr( pPasswd, len); }
-    int  setGroups( const char * pGroups, const char * pEnd );
-    int  addGroup( const char * pGroup );
+    void setPasswd(const char *pPasswd, int len) {   m_passwd.setStr(pPasswd, len); }
+    int  setGroups(const char *pGroups, const char *pEnd);
+    int  addGroup(const char *pGroup);
     void updatePasswdEncMethod();
 
-    void setPasswd( const char * pPasswd )  {   m_passwd = pPasswd;     }
-    
-    const char * getPasswd() const          {   return m_passwd.c_str();}
-    const StringList * getGroups() const    {   return m_pGroups;       }
+    void setPasswd(const char *pPasswd)  {   m_passwd = pPasswd;     }
+
+    const char *getPasswd() const          {   return m_passwd.c_str();}
+    const StringList *getGroups() const    {   return m_pGroups;       }
+    LS_NO_COPY_ASSIGN(AuthUser);
 };
 
-class AuthGroup : public AuthData, public StringList 
+class AuthGroup : public AuthData, public StringList
 {
 public:
     AuthGroup() {}
     ~AuthGroup() {}
-    int add( const char * pUser );
+    int add(const char *pUser);
 };
 
 #endif

@@ -20,15 +20,15 @@
 #include <openssl/ssl.h>
 
 SSLCert::SSLCert()
-    : m_cert( NULL )
-    , m_pSubjectName( NULL )
-    , m_pIssuer( NULL )
+    : m_cert(NULL)
+    , m_pSubjectName(NULL)
+    , m_pIssuer(NULL)
 {
 }
-SSLCert::SSLCert( X509 * pCert )
-    : m_cert( pCert )
-    , m_pSubjectName( NULL )
-    , m_pIssuer( NULL )
+SSLCert::SSLCert(X509 *pCert)
+    : m_cert(pCert)
+    , m_pSubjectName(NULL)
+    , m_pIssuer(NULL)
 {}
 
 SSLCert::~SSLCert()
@@ -38,69 +38,67 @@ SSLCert::~SSLCert()
 
 void SSLCert::release()
 {
-    if ( m_cert )
+    if (m_cert)
     {
-        X509* pCert = m_cert;
+        X509 *pCert = m_cert;
         m_cert = NULL;
-        X509_free( pCert );
-        if ( m_pSubjectName )
+        X509_free(pCert);
+        if (m_pSubjectName)
         {
-            char * p = m_pSubjectName;
+            char *p = m_pSubjectName;
             m_pSubjectName = NULL;
-            free( p );
+            free(p);
         }
-        if ( m_pIssuer )
+        if (m_pIssuer)
         {
-            char * p = m_pIssuer;
+            char *p = m_pIssuer;
             m_pIssuer = NULL;
-            free( p );
+            free(p);
         }
     }
 }
 
-void SSLCert::operator=( X509* pCert )
+void SSLCert::operator=(X509 *pCert)
 {
     release();
     m_cert = pCert;
 }
 
-const char * SSLCert::getSubjectName()
+const char *SSLCert::getSubjectName()
 {
-    if ( !m_pSubjectName )
+    if (!m_pSubjectName)
     {
-        if ( m_cert )
-            m_pSubjectName = X509_NAME_oneline (
-                    X509_get_subject_name (m_cert), 0, 0);
+        if (m_cert)
+            m_pSubjectName = X509_NAME_oneline(
+                                 X509_get_subject_name(m_cert), 0, 0);
     }
     return m_pSubjectName;
 }
 
-const char * SSLCert::getIssuer()
+const char *SSLCert::getIssuer()
 {
-    if ( !m_pIssuer )
+    if (!m_pIssuer)
     {
-        if ( m_cert )
-            m_pIssuer = X509_NAME_oneline (
-                    X509_get_issuer_name (m_cert), 0, 0);
+        if (m_cert)
+            m_pIssuer = X509_NAME_oneline(
+                            X509_get_issuer_name(m_cert), 0, 0);
     }
     return m_pIssuer;
 }
 
-int SSLCert::PEMWriteCert( X509 * pCert, char * pBuf, int len )
+int SSLCert::PEMWriteCert(X509 *pCert, char *pBuf, int len)
 {
     int n;
     BIO *bio;
-    if ( !pCert )
-        return -1;
-    bio = BIO_new( BIO_s_mem() );
-    if ( bio == NULL )
-        return -1;
-    PEM_write_bio_X509( bio, pCert );
-    n = BIO_pending( bio );
-    if ( pBuf && len >= n )
-    {
-        n = BIO_read( bio, pBuf, n );
-    }
-    BIO_free( bio );
+    if (!pCert)
+        return LS_FAIL;
+    bio = BIO_new(BIO_s_mem());
+    if (bio == NULL)
+        return LS_FAIL;
+    PEM_write_bio_X509(bio, pCert);
+    n = BIO_pending(bio);
+    if (pBuf && len >= n)
+        n = BIO_read(bio, pBuf, n);
+    BIO_free(bio);
     return n;
 }

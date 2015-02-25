@@ -23,7 +23,7 @@
 
 class TaskSet: public std::set<TimerTask *>
 {
-    
+
 };
 
 TimerProcessor::TimerProcessor()
@@ -39,32 +39,32 @@ TimerProcessor::~TimerProcessor()
 void TimerProcessor::reset()
 {
     TaskSet::iterator iter = m_pSet->begin();
-    for( ; iter != m_pSet->end(); ++iter )
+    for (; iter != m_pSet->end(); ++iter)
     {
-        (*iter)->setProcessor( NULL );
-        remove( *iter );
+        (*iter)->setProcessor(NULL);
+        remove(*iter);
     }
     m_pSet->clear();
 }
 
-void TimerProcessor::add( TimerTask * pTask )
+void TimerProcessor::add(TimerTask *pTask)
 {
-    m_pSet->insert( pTask );
-    pTask->setProcessor( this );
+    m_pSet->insert(pTask);
+    pTask->setProcessor(this);
 }
 
-void TimerProcessor::remove( TimerTask * pTask )
+void TimerProcessor::remove(TimerTask *pTask)
 {
-    if ( pTask->getProcessor() )
+    if (pTask->getProcessor())
     {
-        m_pSet->erase( pTask );
-        pTask->setProcessor( NULL );
+        m_pSet->erase(pTask);
+        pTask->setProcessor(NULL);
     }
-    Timer* timer = pTask->getTimer();
-    if ( timer )
-        timer->cancel( pTask );
-    
-        
+    Timer *timer = pTask->getTimer();
+    if (timer)
+        timer->cancel(pTask);
+
+
 }
 
 

@@ -7,7 +7,7 @@ INCLUDES= -I$(top_srcdir)/include -I$(top_srcdir)/src -I$(LUA_INCLUDES)
 
 mod_lua_la_METASOURCES= AUTO
 
-mod_lua_la_SOURCES=lsluascript.cpp lsluaengine.cpp edluastream.cpp lsluaapi.cpp ls_lua_util.c \
+mod_lua_la_SOURCES=lsluascript.cpp lsluaengine.cpp edluastream.cpp lsluaapi.cpp \
     lsluasession.cpp lsluaheader.cpp lsluashared.cpp modlua.cpp
 
 #noinst_HEADERS = 

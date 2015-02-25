@@ -18,6 +18,7 @@
 #ifndef HTTPSERVERVERSION_H
 #define HTTPSERVERVERSION_H
 
+#include <lsdef.h>
 #include <config.h>
 
 class HttpServerVersion
@@ -27,9 +28,10 @@ class HttpServerVersion
     HttpServerVersion() {};
     ~HttpServerVersion() {};
 public:
-    static const char * getVersion()    {   return s_pVersion;      }
+    static const char *getVersion()    {   return s_pVersion;      }
     static int getVersionLen()          {   return s_iVersionLen;   }
-    static void hideDetail( int hide );
+    static void hideDetail(int hide);
+    LS_NO_COPY_ASSIGN(HttpServerVersion);
 };
 
 #endif

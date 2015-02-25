@@ -23,35 +23,39 @@ class TimerProcessor;
 class Timer;
 class TimerTask
 {
-    long               m_scheduled;
-    int                m_event;
-    Timer            * m_pTimer;
-    TimerProcessor   * m_pProcessor;
-public: 
+    long               m_iScheduled;
+    int                m_iEvent;
+    Timer             *m_pTimer;
+    TimerProcessor    *m_pProcessor;
+
+
+    TimerTask(const TimerTask &rhs);
+    void operator=(const TimerTask &rhs);
+public:
     TimerTask();
-    TimerTask( TimerProcessor * pProcessor )
-        : m_scheduled( 0 )
-        , m_event( 0 )
-        , m_pTimer( 0 )
-        , m_pProcessor( pProcessor )
-        {}
+    TimerTask(TimerProcessor *pProcessor)
+        : m_iScheduled(0)
+        , m_iEvent(0)
+        , m_pTimer(0)
+        , m_pProcessor(pProcessor)
+    {}
     ~TimerTask();
     void reset();
     int  getEvent() const
-    {   return m_event;     }
-    void setEvent( int event )
-    {   m_event = event;    }
+    {   return m_iEvent;     }
+    void setEvent(int event)
+    {   m_iEvent = event;    }
     long getScheduledTime() const
-    {   return m_scheduled; }
-    void setScheduledTime( long scheduled )
-    {   m_scheduled = scheduled;    }
-    TimerProcessor * getProcessor() const
+    {   return m_iScheduled; }
+    void setScheduledTime(long scheduled)
+    {   m_iScheduled = scheduled;    }
+    TimerProcessor *getProcessor() const
     {   return m_pProcessor;    }
-    void setProcessor( TimerProcessor * pProcessor )
+    void setProcessor(TimerProcessor *pProcessor)
     {   m_pProcessor = pProcessor;  }
-    Timer * getTimer() const
+    Timer *getTimer() const
     {   return m_pTimer;    }
-    void setTimer( Timer *pTimer )
+    void setTimer(Timer *pTimer)
     {   m_pTimer = pTimer;   }
 };
 

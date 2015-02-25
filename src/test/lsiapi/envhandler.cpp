@@ -60,58 +60,58 @@ TEST(envManagerTest)
     EnvManager::getInstance().regEnvHandler("hello!", 6, cb2);
     EnvManager::getInstance().regEnvHandler("hel", 3, cb3);
     EnvManager::getInstance().regEnvHandler("cc", 2, cb4);
-    
+
     EnvManager::getInstance().regEnvHandler("?che*", 5, cb5);
     EnvManager::getInstance().regEnvHandler("che??", 5, cb2);
     EnvManager::getInstance().regEnvHandler("che*", 4, cb3);
     EnvManager::getInstance().regEnvHandler("cache", 5, cb4);
-    
-    
+
+
     lsi_callback_pf pcb = NULL;
-    
+
     pcb = EnvManager::getInstance().findHandler("cc");
     CHECK(pcb == cb4);
-    
+
     pcb = EnvManager::getInstance().findHandler("ccc");
     CHECK(pcb == NULL);
-    
+
     pcb = EnvManager::getInstance().findHandler("ccche");
     CHECK(pcb == cb1);
-    
+
     pcb = EnvManager::getInstance().findHandler("ccche!");
     CHECK(pcb == cb1);
-    
+
     pcb = EnvManager::getInstance().findHandler("hel");
     CHECK(pcb == cb3);
-        
+
     pcb = EnvManager::getInstance().findHandler("hello!");
     CHECK(pcb == cb2);
-    
+
     pcb = EnvManager::getInstance().findHandler("xche!");
     CHECK(pcb == cb5);
-    
+
     pcb = EnvManager::getInstance().findHandler("che!");
     CHECK(pcb == cb3);
-    
+
     pcb = EnvManager::getInstance().findHandler("che!!");
     CHECK(pcb == cb2);  //because "che??" is registered before "che*"
-    
+
     pcb = EnvManager::getInstance().findHandler("che!!!");
-    CHECK(pcb == cb3);  
-    
+    CHECK(pcb == cb3);
+
     pcb = EnvManager::getInstance().findHandler("cache");
     CHECK(pcb == cb4);
-    
+
 }
 
 TEST(INIT_LSIAPI)
 {
-    LsiapiBridge::init_lsiapi();
+    LsiapiBridge::initLsiapi();
 }
 
 
 //if need to test below cases
-//Pleaes comment out one line in 
+//Pleaes comment out one line in
 //LSIAPI void set_req_env( lsi_session_t *session, const char *name, unsigned int nameLen, const char *val, int valLen )
 //COMMENT OUT --->  pReq->addEnv( name, nameLen, val, valLen );
 //otherwise will cause crash for pReq is NULL now
@@ -121,20 +121,20 @@ TEST(envManagerTest2)
     //FIXME: unit test crash, comment out for now.
     /*
     lsi_session_t *session = (void *)100;
-    
+
     LsiapiBridge::getLsiapiFunctions()->set_req_env(session, "cache", 5, (void *)"1", 1);
     LsiapiBridge::getLsiapiFunctions()->set_req_env(session, "cache", 5, (void *)"22", 2);
     LsiapiBridge::getLsiapiFunctions()->set_req_env(session, "cache", 5, (void *)"222", 3);
     //print cb4
-    
+
     LsiapiBridge::getLsiapiFunctions()->set_req_env(session, "hello!", 6, (void *)"1", 1);
     LsiapiBridge::getLsiapiFunctions()->set_req_env(session, "hello!", 6, (void *)"121212", 6);
     //print
-    
+
     LsiapiBridge::getLsiapiFunctions()->set_req_env(session, "xche!", 5, (void *)"1", 1);
     LsiapiBridge::getLsiapiFunctions()->set_req_env(session, "xche!", 5, (void *)"abcdef", 6);
     //p
-*/    
+    */
 }
 
 

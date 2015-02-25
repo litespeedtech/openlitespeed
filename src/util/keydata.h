@@ -24,14 +24,18 @@
 class KeyData
 {
     AutoStr     m_key;
-public: 
+    KeyData(const KeyData &rhs);
+    void operator=(const KeyData &rhs);
+public:
     KeyData() {};
     virtual ~KeyData() {};
-    const char * getKey() const        {   return m_key.c_str();  }
-    void setKey( const char * key )    {   m_key = key;           }
-    void setKey( const char * pKey, int len )
-    {   m_key.setStr( pKey, len); }
-    
+    const char *getKey() const        {   return m_key.c_str();  }
+    void setKey(const char *key)    {   m_key = key;           }
+    void setKey(const char *pKey, int len)
+    {   m_key.setStr(pKey, len); }
+
+
+
 };
 
 #endif

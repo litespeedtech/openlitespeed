@@ -19,7 +19,8 @@
 #define ACCESSLOG_H
 
 
-#include <util/autobuf.h>  
+#include <lsdef.h>
+#include <util/autobuf.h>
 
 #define MAX_BUFFERED_LEN 8192
 #define MAX_LOG_LINE_LEN 4096
@@ -40,59 +41,63 @@ END_LOG4CXX_NS
 
 class CustomFormat;
 class HttpSession;
-class AccessLog  
+class AccessLog
 {
-    LOG4CXX_NS::Appender        * m_pAppender;
-    LOG4CXX_NS::AppenderManager * m_pManager;
-    CustomFormat                * m_pCustomFormat;
-    
+    LOG4CXX_NS::Appender         *m_pAppender;
+    LOG4CXX_NS::AppenderManager *m_pManager;
+    CustomFormat                 *m_pCustomFormat;
+
     short   m_iAsync;
     short   m_iPipedLog;
     int     m_iAccessLogHeader;
     AutoBuf m_buf;
 
-    int appendStr( const char * pStr, int len);
-    static int appendStrNoQuote( char * pBuf, int len, const char * pSrc, int srcLen, AccessLog * pLogger );
-    void customLog( HttpSession* pSession, CustomFormat * pLogFmt );
-    static int customLog( HttpSession* pSession, CustomFormat * pLogFmt, char * pOutBuf, int buf_len,  AccessLog * pLogger );
-    
-public: 
-    explicit AccessLog(const char * pPath);
+    int appendStr(const char *pStr, int len);
+    static int appendStrNoQuote(char *pBuf, int len, const char *pSrc,
+                                int srcLen, AccessLog *pLogger);
+    void customLog(HttpSession *pSession, CustomFormat *pLogFmt);
+    static int customLog(HttpSession *pSession, CustomFormat *pLogFmt,
+                         char *pOutBuf, int buf_len,  AccessLog *pLogger);
+
+public:
+    explicit AccessLog(const char *pPath);
     AccessLog();
     ~AccessLog();
-    int init( const char * pName, int pipe );
-    void log( HttpSession* pSession );
-    void log( const char * pVHostName, int len, HttpSession* pSession );
+    int init(const char *pName, int pipe);
+    void log(HttpSession *pSession);
+    void log(const char *pVHostName, int len, HttpSession *pSession);
     void flush();
 
-    void accessLogReferer( int referer );
-    void accessLogAgent( int agent );
-    void setLogHeaders( int flag )          {   m_iAccessLogHeader = flag;  }
+    void accessLogReferer(int referer);
+    void accessLogAgent(int agent);
+    void setLogHeaders(int flag)          {   m_iAccessLogHeader = flag;  }
     int getAccessLogHeader()                {   return m_iAccessLogHeader; }
 
-    void setAsyncAccessLog( short async )   {   m_iAsync = async;           }
+    void setAsyncAccessLog(short async)   {   m_iAsync = async;           }
     short asyncAccessLog()  const           {   return m_iAsync;           }
 
-    void setPipedLog( short pipe )          {   m_iPipedLog = pipe;         }
+    void setPipedLog(short pipe)          {   m_iPipedLog = pipe;         }
     short isPipedLog()  const               {   return m_iPipedLog;        }
-    
-    LOG4CXX_NS::Appender * getAppender() const      {   return m_pAppender; }
-    void setAppender( LOG4CXX_NS::Appender * p )    {   m_pAppender = p;    }
+
+    LOG4CXX_NS::Appender *getAppender() const      {   return m_pAppender; }
+    void setAppender(LOG4CXX_NS::Appender *p)    {   m_pAppender = p;    }
 
     char getCompress() const;
-    const char * getLogPath() const;
+    const char *getLogPath() const;
     int  reopenExist();
 
     void closeNonPiped();
-    void setRollingSize( off_t size );
-    int  setCustomLog( const char * pFmt );
-    static int  getLogString( HttpSession * pSession, CustomFormat* pLogFmt, char * pBuf, int bufLen )
+    void setRollingSize(off_t size);
+    int  setCustomLog(const char *pFmt);
+    static int  getLogString(HttpSession *pSession, CustomFormat *pLogFmt,
+                             char *pBuf, int bufLen)
     {
-        return customLog( pSession, pLogFmt, pBuf, bufLen, NULL );
+        return customLog(pSession, pLogFmt, pBuf, bufLen, NULL);
     }
 
-    static CustomFormat * parseLogFormat( const char * pFmt );
-    
+    static CustomFormat *parseLogFormat(const char *pFmt);
+
+    LS_NO_COPY_ASSIGN(AccessLog);
 };
 
 #endif

@@ -27,24 +27,24 @@ class HttpContext;
 class ContextMatchList : public TPointerList< HttpContext >
 {
 public:
-    ContextMatchList() 
-        : TPointerList< HttpContext >( 2 )
-        {}
+    ContextMatchList()
+        : TPointerList< HttpContext >(2)
+    {}
     ~ContextMatchList() { clear(); }
 };
 class ContextList : public TPointerList< HttpContext >
 {
     int         m_size;
     AutoStr     m_sTags;
-    ContextList( const ContextList& rhs );
-    void operator=( const ContextList& rhs );
+    ContextList(const ContextList &rhs);
+    void operator=(const ContextList &rhs);
 public:
     ContextList();
     ~ContextList();
     void release();
-    int add( HttpContext * pContext, int release );
-    int merge( const ContextList * rhs, int release );
-    void releaseUnused( long curTime, long timeout );
+    int add(HttpContext *pContext, int release);
+    int merge(const ContextList *rhs, int release);
+    void releaseUnused(long curTime, long timeout);
 };
 
 

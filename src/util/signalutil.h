@@ -25,7 +25,7 @@ typedef void (*sighandler_t)(int);
 #endif
 class SignalUtil
 {
-public: 
+public:
     SignalUtil();
     ~SignalUtil();
     static sighandler_t signal(int sig, sighandler_t handler);

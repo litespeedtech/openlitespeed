@@ -20,6 +20,7 @@
 
 #if defined(sun) || defined(__sun)
 
+#include <lsdef.h>
 #include <edio/multiplexer.h>
 #include <edio/reactorindex.h>
 #include <sys/poll.h>
@@ -30,71 +31,75 @@ class DevPoller : public Multiplexer
 {
     int             m_fdDP;
     ReactorIndex    m_reactorIndex;
-    
+
     int             m_curChanges;
     struct pollfd   m_events[MAX_EVENTS];
     struct pollfd   m_changes[MAX_CHANGES];
 
     int applyChanges();
-    
-    int appendChange( int fd, short mask )
+
+    int appendChange(int fd, short mask)
     {
-        if ( m_curChanges >= MAX_CHANGES )
-            if ( applyChanges() == -1 )
-                return -1;
+        if (m_curChanges >= MAX_CHANGES)
+            if (applyChanges() == -1)
+                return LS_FAIL;
         m_changes[m_curChanges].fd       = fd;
         m_changes[m_curChanges++].events = mask;
-        return 0;
+        return LS_OK;
     }
-    void setEvent( EventReactor* pHandler, short mask )
-    {   if ( mask != pHandler->getEvents() )
+    void setEvent(EventReactor *pHandler, short mask)
+    {
+        if (mask != pHandler->getEvents())
         {
-            appendChange( pHandler->getfd(), POLLREMOVE );
-            appendChange( pHandler->getfd(), mask );
-            pHandler->setMask2( mask );
+            appendChange(pHandler->getfd(), POLLREMOVE);
+            appendChange(pHandler->getfd(), mask);
+            pHandler->setMask2(mask);
         }
     }
 
-    void addEvent( EventReactor* pHandler, short mask )
-    {   if ( (mask & pHandler->getEvents()) != mask )
+    void addEvent(EventReactor *pHandler, short mask)
+    {
+        if ((mask & pHandler->getEvents()) != mask)
         {
-            pHandler->orMask2( mask );
-            appendChange( pHandler->getfd(), pHandler->getEvents() );
-        }
-    }
-        
-    void removeEvent( EventReactor* pHandler, short mask )
-    {   if ( mask & pHandler->getEvents() )
-        {
-            appendChange( pHandler->getfd(), POLLREMOVE );
-            pHandler->andMask2( ~mask );
-            appendChange( pHandler->getfd(), pHandler->getEvents() );
+            pHandler->orMask2(mask);
+            appendChange(pHandler->getfd(), pHandler->getEvents());
         }
     }
 
-public: 
+    void removeEvent(EventReactor *pHandler, short mask)
+    {
+        if (mask & pHandler->getEvents())
+        {
+            appendChange(pHandler->getfd(), POLLREMOVE);
+            pHandler->andMask2(~mask);
+            appendChange(pHandler->getfd(), pHandler->getEvents());
+        }
+    }
+
+public:
     DevPoller();
     ~DevPoller();
-    
+
     virtual int getHandle() const   {   return m_fdDP;  }
-    virtual int init( int capacity = DEFAULT_CAPACITY );
-    virtual int add( EventReactor* pHandler, short mask );
-    virtual int remove( EventReactor* pHandler );
-    virtual int waitAndProcessEvents( int iTimeoutMilliSec );
+    virtual int init(int capacity = DEFAULT_CAPACITY);
+    virtual int add(EventReactor *pHandler, short mask);
+    virtual int remove(EventReactor *pHandler);
+    virtual int waitAndProcessEvents(int iTimeoutMilliSec);
     virtual void timerExecute();
-    virtual void setPriHandler( EventReactor::pri_handler handler );
+    virtual void setPriHandler(EventReactor::pri_handler handler);
 
-    virtual void continueRead( EventReactor* pHandler );
-    virtual void suspendRead( EventReactor* pHandler );
-    virtual void continueWrite( EventReactor* pHandler );
-    virtual void suspendWrite( EventReactor* pHandler );
-    
-    virtual void switchWriteToRead( EventReactor * pHandler )
-    {   setEvent( pHandler, POLLIN | POLLERR | POLLHUP );   }
+    virtual void continueRead(EventReactor *pHandler);
+    virtual void suspendRead(EventReactor *pHandler);
+    virtual void continueWrite(EventReactor *pHandler);
+    virtual void suspendWrite(EventReactor *pHandler);
 
-    virtual void switchReadToWrite( EventReactor * pHandler )
-    {   setEvent( pHandler, POLLOUT | POLLERR | POLLHUP );  }
+    virtual void switchWriteToRead(EventReactor *pHandler)
+    {   setEvent(pHandler, POLLIN | POLLERR | POLLHUP);   }
 
+    virtual void switchReadToWrite(EventReactor *pHandler)
+    {   setEvent(pHandler, POLLOUT | POLLERR | POLLHUP);  }
+
+    LS_NO_COPY_ASSIGN(DevPoller);
 };
 
 #endif //defined(sun) || defined(__sun)

@@ -30,35 +30,37 @@
 
 class XmlNode;
 class HttpContext;
-  
+
 class ExpiresCtrl
 {
-public: 
+private:
+    void operator=(const ExpiresCtrl &rhs);
+public:
     ExpiresCtrl();
     ~ExpiresCtrl();
-    ExpiresCtrl( const ExpiresCtrl & rhs );
+    ExpiresCtrl(const ExpiresCtrl &rhs);
 
-    void    copyExpires( const ExpiresCtrl & rhs );
+    void    copyExpires(const ExpiresCtrl &rhs);
     char    isEnabled() const   {   return m_iEnabled;      }
     char    getBase() const     {   return m_iBase;         }
     int     getAge() const      {   return m_iAge;          }
-    char    compressable() const{   return m_iCompressable; }
+    char    compressable() const {   return m_iCompressable; }
     char    cfgHandler() const  {   return m_iBits & CONFIG_HANDLER;    }
     char    cfgCompress() const {   return m_iBits & CONFIG_COMPRESS;   }
     char    cfgExpires() const  {   return m_iBits & CONFIG_EXPIRES;    }
     char    isImage() const     {   return m_iBits & CONFIG_IMAGE;      }
-    
-    void    enable( int enable )    {   m_iEnabled = enable;    }
-    void    setBase( int base )     {   m_iBase = base;         }
-    void    setAge( int age )       {   m_iAge = age;           }
+
+    void    enable(int enable)    {   m_iEnabled = enable;    }
+    void    setBase(int base)     {   m_iBase = base;         }
+    void    setAge(int age)       {   m_iAge = age;           }
     void    setCompressable(int c)  {   m_iCompressable = c;    }
-    void    setBit( char bit )      {   m_iBits |= bit;         }
-    void    clearBit( char bit )    {   m_iBits &= ~bit;        }
-        
-    int     parse( const char * pConfig );
-    int     config( const XmlNode * pExpires, const ExpiresCtrl * pDefault, 
-                    HttpContext * pContext );
-    
+    void    setBit(char bit)      {   m_iBits |= bit;         }
+    void    clearBit(char bit)    {   m_iBits &= ~bit;        }
+
+    int     parse(const char *pConfig);
+    int     config(const XmlNode *pExpires, const ExpiresCtrl *pDefault,
+                   HttpContext *pContext);
+
 private:
     char    m_iEnabled;
     char    m_iBase;
@@ -70,15 +72,17 @@ private:
 class ExpiresCtrlConfig
 {
 private:
-    ExpiresCtrl * m_pDefault;
-    HttpContext * m_pContext;
-    
+    ExpiresCtrl *m_pDefault;
+    HttpContext *m_pContext;
+
+    ExpiresCtrlConfig(const ExpiresCtrlConfig &rhs);
+    void operator=(const ExpiresCtrlConfig &rhs);
 public:
-    ExpiresCtrlConfig( ExpiresCtrl * pDefault, HttpContext * pContext )
-        : m_pDefault( pDefault )
-        , m_pContext( pContext )
-        {}
-    int operator()( ExpiresCtrl * pCtrl, const XmlNode * pNode ) ;
+    ExpiresCtrlConfig(ExpiresCtrl *pDefault, HttpContext *pContext)
+        : m_pDefault(pDefault)
+        , m_pContext(pContext)
+    {}
+    int operator()(ExpiresCtrl *pCtrl, const XmlNode *pNode) ;
 
 };
 

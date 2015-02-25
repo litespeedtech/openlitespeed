@@ -29,7 +29,9 @@ class LsLuaSession;
 #include <string.h>
 
 #include <ls.h>
-#include <modules/lua/ls_lua.h>
+#include <lsr/ls_loopbuf.h>
+#include <lsr/ls_str.h>
+#include <modules/lua/lsluadefs.h>
 #include <socket/gsockaddr.h>
 
 class LsLuaFunc;
@@ -38,216 +40,276 @@ class LsLuaUserParam;
 class LsLuaEngine
 {
 public:
-    enum TYPE
+    enum LSLUA_TYPE
     {
         LSLUA_ENGINE_REGULAR = 0,
         LSLUA_ENGINE_JIT = 1,
     };
     LsLuaEngine();
     ~LsLuaEngine();
-    
-    static void set_version(const char * buf, size_t len)
+
+    static void setVersion(const char *buf, size_t len)
     {
-        snprintf(s_version, sizeof(s_version)-1, "%s %.*s", s_luaName, (int)len, buf);
+        snprintf(s_aVersion, sizeof(s_aVersion) - 1, "%s %.*s",
+                 s_aLuaName, (int)len, buf);
     }
-    static const char * version()
-    { return s_version; }
+    static const char *version()
+    {   return s_aVersion;  }
 
-    static inline struct ls_lua_api_t * api()
-    {   return s_luaApi;        }
-
-    // only three functions will be used to by handler
-    // static int init( TYPE type, const char * pDynLibPath );
     static int init();
-    static int isReady(lsi_session_t *session);                      // setup Session and get ready
-    // 5.2 LUA
-    static int runScript(lsi_session_t *session, const char * scriptpath, LsLuaUserParam *pUser, LsLuaSession ** pSession); // setup Session and run
-    // 5.1 JIT LUA
-    static int runScriptX(lsi_session_t *session, const char * scriptpath, LsLuaUserParam *pUser, LsLuaSession ** pSession); // setup Session and run
-    static void refX( LsLuaSession * );
-    static void unrefX( LsLuaSession * );
-    static int  loadRefX( LsLuaSession *, lua_State *);
+    static int isReady(lsi_session_t *session);
 
-    // call by standalone testing
+    static int runScript(lsi_session_t *session, const char *scriptpath,
+                         LsLuaUserParam *pUser, LsLuaSession **ppSession,
+                         int iCurHook);
+    static int runFilterScript(lsi_cb_param_t *rec, const char *scriptpath,
+                               LsLuaUserParam *pUser, LsLuaSession **ppSession,
+                               int iCurHook);
+    static int writeToNextFilter(lsi_cb_param_t *rec, LsLuaUserParam *pUser,
+                                 const char *pOut, int iOutLen);
+    static void ref(LsLuaSession *pSession);
+    static void unref(LsLuaSession *pSession);
+    static int  loadRef(LsLuaSession *pSession, lua_State *L);
+
+    static int resume(lua_State *L, int iArgs);
+    static int checkResume(LsLuaSession *pSession, int iRet);
+    static int resumeNcheck(LsLuaSession *pSession, int iArgs);
+
     static int testCmd();
 
-    // inject api
-    static lua_State * injectLsiapi(lua_State *);   // return the newly created lua_State
-private:
-    static lua_State * getSystemState()
-    {   return s_stateSystem; }
-    
-    // invoke resume coroutine and check status
-    static int resumeNcheck(LsLuaSession * pSession);
-public:
-    
-    // module parameter setup
-    static void * parseParam ( const char *param, int param_len, void *initial_config, int level, const char *name );
-    static void removeParam( void * config);
-    
+    static lua_State *injectLsiapi(lua_State *L);
+
+    static void *parseParam(const char *param, int param_len,
+                            void *initial_config, int level,
+                            const char *name);
+    static void removeParam(void *config);
+
     static int getMaxRunTime()
-    {   return s_maxRunTime; }
-    
+    {   return s_iMaxRunTime;   }
+
     static int getMaxLineCount()
-    {   return s_maxLineCount; }
-    
+    {   return s_iMaxLineCount; }
+
     static int getPauseTime()
-    {   return s_pauseTime; }
-    
+    {   return s_iPauseTime;    }
+
     static int getJitLineMod()
-    {   return s_jitLineMod; }
-    
-    static const char * getLuaName()
-    {   return s_luaName; }
-    
+    {   return s_iJitLineMod;   }
+
+    static const char *getLuaName()
+    {   return s_aLuaName;      }
+
     static int debugLevel()
-    {   return s_debugLevel; }
-    
-    static void setDebugLevel( int level )
-    {   s_debugLevel = level; }
-    
+    {   return s_iDebugLevel;   }
+
+    static void setDebugLevel(int level)
+    {   s_iDebugLevel = level;  }
+
     static int debug()
-    { return s_debug ; }
-    
+    {   return s_iDebug;        }
+
 private:
-    static int execLuaCmd(const char * cmd);    // invoke LUA inside the coroutine
-    static lua_State * newLuaConnection();
-    static lua_State * newLuaThread(lua_State *);
-    
+    static lua_State *getSystemState()
+    {   return s_pSystemState;  }
+    static void setupUD(lua_State *L);
+    static int setupSandBox(lua_State *L);
+    static int execLuaCmd(const char *cmd);
+    static lua_State *newLuaConnection();
+    static lua_State *newLuaThread(lua_State *L);
+    static LsLuaSession *prepState(lsi_session_t *session,
+                                   const char *scriptpath,
+                                   LsLuaUserParam *pUser,
+                                   int iCurHook);
+    static int runState(lsi_session_t *session, LsLuaSession *pSandbox,
+                        int iCurHook);
+    static int respFilterSetup(lsi_cb_param_t *rec, lua_State *L);
+    static int filterOut(lsi_cb_param_t *rec, const char *pBuf, int iLen);
+
 private:
-    LsLuaEngine( const LsLuaEngine& other );
-    LsLuaEngine& operator=( const LsLuaEngine& other );
-    bool operator==( const LsLuaEngine& other );
+    LsLuaEngine(const LsLuaEngine &other);
+    LsLuaEngine &operator=(const LsLuaEngine &other);
+    bool operator==(const LsLuaEngine &other);
 private:
-    static const char * s_syslib; // the module library /usr/lib/libluajit.so
-    static const char * s_sysLuaPath;  // system default LUA_PATH
-    static ls_lua_t *   s_luaSys;
-    static ls_lua_api_t * s_luaApi;
-    static lua_State * s_stateSystem;
-    static TYPE s_type;
-    static int          s_ready;    // init is good and ready to load scripts
+    static const char  *s_pSysLuaLib;
+    static const char  *s_pSysLuaPath;
+    static lua_State   *s_pSystemState;
+    static LSLUA_TYPE   s_type;
+    static int          s_iReady;
     //
     //  module parameters
     //
-    static char *       s_lib;          // the module library /usr/lib/libluajit.so
-    static char       * s_luaPath;      // user defined LUA_PATH
-    static int          s_debug;        // note: this is internal debug for LUA
-    static int          s_maxRunTime;   // max allowable runtime in msec
-    static int          s_maxLineCount; // time to throddle
-    static int          s_pauseTime;    // time to pause in msec
-    static int          s_jitLineMod;   // modifier for JIT
-    static int          s_firstTime;    // detect very first time parameter parsing
-    static int          s_debugLevel;   // current web server debug level
-    static char         s_luaName[0x10];// 15 bytes to save the name
-    static char         s_version[0x20];// 31 bytes for LUA information
+    static char        *s_pLuaLib;
+    static char        *s_pLuaPath;
+    static int
+    s_iDebug;        // note: this is internal debug for LUA
+    static int          s_iMaxRunTime;   // max allowable runtime in msec
+    static int          s_iMaxLineCount; // time to throddle
+    static int          s_iPauseTime;    // time to pause in msec
+    static int          s_iJitLineMod;   // modifier for JIT
+    static int
+    s_iFirstTime;    // detect very first time parameter parsing
+    static int          s_iDebugLevel;   // current web server debug level
+    static char         s_aLuaName[0x10];// 15 bytes to save the name
+    static char         s_aVersion[0x20];// 31 bytes for LUA information
 };
 
 //
 //  @Container for all loaded LUA functions
 //  @loadLuaScript - load LUA script file into the container, return status (see below)
-//                 
+//
 //  @ scriptName - return the name of the script
 //  @ funcName - LiteSpeed internal name of the script
-//  @ statue - 1 good. 0 not ready, -1 syntax error, -2 LUA error
+//  @ status - 1 good. 0 not ready, -1 syntax error, -2 LUA error
 //
 class LsLuaFuncMap
 {
 public:
-    static int  loadLuaScript(lsi_session_t *session, lua_State * L, const char * scriptName);
-    
-    const char * scriptNname() const
-    { return m_scriptName; }
-    const char * funcName() const
-    { return m_funcName; }
-    
+    static int loadLuaScript(lsi_session_t *session, lua_State *L,
+                             const char *scriptName);
+
+    const char *scriptName() const
+    {   return m_pScriptName;   }
+    const char *funcName() const
+    {   return m_pFuncName;     }
+
     int isReady() const
-    { return m_status == 1 ? 1 : 0; }
-    
+    {   return m_iStatus == 1 ? 1 : 0;  }
+
     int status() const
-    { return m_status; }
-    
+    {   return m_iStatus;   }
+
 private:
-   LsLuaFuncMap(lsi_session_t *session, lua_State *L, const char  * scriptName);
-   LsLuaFuncMap();
-   ~LsLuaFuncMap();
-   void add();
-   void remove();
-   void loadLua(lua_State *);
-   void unloadLua(lua_State *); // remove from LUA_TABLE
-   
-   static const char * textFileReader (lua_State *, void * d, size_t * retSize);
-private:
-    LsLuaFuncMap( const LsLuaFuncMap& other );
-    LsLuaFuncMap& operator=( const LsLuaFuncMap& other );
-    bool operator==( const LsLuaFuncMap& other );
-    
-private:
-    lua_State *         m_L;            // lua State
-    char *              m_scriptName;   // lua
-    char *              m_funcName;     //
-    int                 m_status;       // 1 - ready, 0 - not ready, -1 - syntax error, -2 - lua error
-    LsLuaFuncMap *      m_next;
-    struct stat         m_stat;
-    
-    static LsLuaFuncMap * s_map;
-    static int          s_num;
+    LsLuaFuncMap(lsi_session_t *session, lua_State *L,
+                 const char *scriptName);
+    LsLuaFuncMap();
+    ~LsLuaFuncMap();
+
+    LsLuaFuncMap(const LsLuaFuncMap &other);
+    LsLuaFuncMap &operator=(const LsLuaFuncMap &other);
+    bool operator==(const LsLuaFuncMap &other);
+
+    void add();
+    void remove();
+    void loadLuaFunc(lua_State *L);
+    void unloadLuaFunc(lua_State *L);
+
+    static const char *textFileReader(lua_State *L, void *d,
+                                      size_t *retSize);
+
+    char                *m_pScriptName;
+    char                *m_pFuncName;
+    int                  m_iStatus;
+    LsLuaFuncMap        *m_pNext;
+    struct stat          m_stat;
+
+    static LsLuaFuncMap *s_pMap;
+    static int           s_iMapCnt;
 };
 
-//
-//  @brief LsLusUserParam
-//
 class LsLuaUserParam
 {
-    int         m_maxRunTime;   // max allowable runtime in msec
-    int         m_maxLineCount; // time to throddle
-    int         m_level;
-    int         m_ready;
 public:
     LsLuaUserParam(int level)
-            : m_maxRunTime(LsLuaEngine::getMaxRunTime())
-            , m_maxLineCount(LsLuaEngine::getMaxLineCount())
-            , m_level(level)
-            , m_ready(1)
-    { }
-    
+        : m_iMaxRunTime(LsLuaEngine::getMaxRunTime())
+        , m_iMaxLineCount(LsLuaEngine::getMaxLineCount())
+        , m_iLevel(level)
+        , m_iReady(1)
+        , m_pPendingBuf(NULL)
+    {
+        ls_str(&m_rewritePath, NULL, 0);
+        ls_str(&m_authPath, NULL, 0);
+        ls_str(&m_headerFilterPath, NULL, 0);
+        ls_str(&m_bodyFilterPath, NULL, 0);
+    }
+
     ~LsLuaUserParam()
     {
+        ls_str_d(&m_rewritePath);
+        ls_str_d(&m_authPath);
+        ls_str_d(&m_headerFilterPath);
+        ls_str_d(&m_bodyFilterPath);
     };
-    
+
     int isReady() const
-    {   return m_ready; }
-    
+    {   return m_iReady;    }
+
     void setReady(int flag)
-    {   m_ready = flag; }
-    
+    {   m_iReady = flag;    }
+
     void setLevel(int level)
-    {   m_level = level; }
-    
+    {   m_iLevel = level;   }
+
     int getLevel() const
-    {   return m_level; }
-    
+    {   return m_iLevel;    }
+
     int getMaxRunTime() const
-    {   return m_maxRunTime; }
-    
+    {   return m_iMaxRunTime;   }
+
     int getMaxLineCount() const
-    {   return m_maxLineCount; }
-    
+    {   return m_iMaxLineCount; }
+
     void setMaxRunTime(int maxTime)
-    {   m_maxRunTime = maxTime; }
-    
+    {   m_iMaxRunTime = maxTime; }
+
     void setMaxLineCount(int maxLine)
-    {   m_maxLineCount = maxLine; }
-    
-    LsLuaUserParam& operator= ( const LsLuaUserParam& other )
+    {   m_iMaxLineCount = maxLine; }
+
+    int isFilterActive(int index)
     {
-        m_maxRunTime = other.m_maxRunTime;
-        m_maxLineCount = other.m_maxLineCount;
-        m_ready = other.m_ready;
+        ls_str_t *pBuf = getPathBuf(index);
+        if (!pBuf)
+            return 0;
+        return (ls_str_cstr(getPathBuf(index)) ? 1 : 0);
+    }
+
+    const char *getFilterPath(int index, int &iPathLen)
+    {
+        ls_str_t *pBuf = getPathBuf(index);
+        if (!pBuf)
+            return NULL;
+        iPathLen = ls_str_len(pBuf);
+        return ls_str_cstr(pBuf);
+    }
+
+    void setFilterPath(int index, const char *path, int iPathLen)
+    {
+        ls_str_t *pBuf = getPathBuf(index);
+        if (!pBuf)
+            return;
+        ls_str_setstr(pBuf, path, iPathLen);
+    }
+
+    ls_xloopbuf_t *getPendingBuf()
+    {   return m_pPendingBuf;    }
+
+    void setPendingBuf(ls_xloopbuf_t *pBuf)
+    {   m_pPendingBuf = pBuf;    }
+
+    void clearPendingBuf()
+    {   m_pPendingBuf = NULL;    }
+
+    LsLuaUserParam &operator= (const LsLuaUserParam &other)
+    {
+        m_iMaxRunTime = other.m_iMaxRunTime;
+        m_iMaxLineCount = other.m_iMaxLineCount;
+        m_iReady = other.m_iReady;
         return *this;
     }
 private:
-    LsLuaUserParam( const LsLuaUserParam& other );
-    bool operator==( const LsLuaUserParam& other );
+    LsLuaUserParam(const LsLuaUserParam &other);
+    bool operator==(const LsLuaUserParam &other);
+
+    ls_str_t *getPathBuf(int index);
+
+    int         m_iMaxRunTime;   // max allowable runtime in msec
+    int         m_iMaxLineCount; // time to throddle
+    int         m_iLevel;
+    int         m_iReady;
+    ls_str_t   m_rewritePath;
+    ls_str_t   m_authPath;
+    ls_str_t   m_headerFilterPath;
+    ls_str_t   m_bodyFilterPath;
+    ls_xloopbuf_t *m_pPendingBuf;
 };
 
 #endif // LSLUAENGINE_H

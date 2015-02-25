@@ -26,44 +26,44 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
-    static int stopListener( void * pListener )
-    {   ((HttpListener*)pListener)->stop(); return 0;  }
+static int stopListener(void *pListener)
+{   ((HttpListener *)pListener)->stop(); return 0;  }
 
-    static int suspendListener( void * pListener )
-    {   ((HttpListener*)pListener)->suspend(); return 0;  }
+static int suspendListener(void *pListener)
+{   ((HttpListener *)pListener)->suspend(); return 0;  }
 
-    static int suspendSSLListener( void * pListener )
-    {
-        if ( ((HttpListener*)pListener)->isSSL() )
-            ((HttpListener*)pListener)->suspend();
-        return 0;
-    }
+static int suspendSSLListener(void *pListener)
+{
+    if (((HttpListener *)pListener)->isSSL())
+        ((HttpListener *)pListener)->suspend();
+    return 0;
+}
 
-    static int resumeListener( void * pListener )
-    {
-        ((HttpListener*)pListener)->resume();
-        return 0;
-    }
+static int resumeListener(void *pListener)
+{
+    ((HttpListener *)pListener)->resume();
+    return 0;
+}
 
-    static int resumeSSLListener( void * pListener )
-    {
-        if ( ((HttpListener*)pListener)->isSSL() )
-            ((HttpListener*)pListener)->resume();
-        return 0;
-    }
+static int resumeSSLListener(void *pListener)
+{
+    if (((HttpListener *)pListener)->isSSL())
+        ((HttpListener *)pListener)->resume();
+    return 0;
+}
 
-    static int resumeButSSLListener( void * pListener )
-    {
-        if ( !((HttpListener*)pListener)->isSSL())
-            ((HttpListener*)pListener)->resume();
-        return 0;
-    }
+static int resumeButSSLListener(void *pListener)
+{
+    if (!((HttpListener *)pListener)->isSSL())
+        ((HttpListener *)pListener)->resume();
+    return 0;
+}
 
-    static int endConfigListener( void * pListener )
-    {
-        ((HttpListener*)pListener)->endConfig();
-        return 0;
-    }
+static int endConfigListener(void *pListener)
+{
+    ((HttpListener *)pListener)->endConfig();
+    return 0;
+}
 
 
 HttpListenerList::HttpListenerList()
@@ -72,36 +72,36 @@ HttpListenerList::HttpListenerList()
 
 HttpListenerList::~HttpListenerList()
 {
-    release_objects();
+    releaseObjects();
 }
 
-static int s_compare( const void * p1, const void * p2 )
+static int s_compare(const void *p1, const void *p2)
 {
-    return strcmp( (*((HttpListener**)p1))->getName(),
-                   (*((HttpListener**)p2))->getName() );
+    return strcmp((*((HttpListener **)p1))->getName(),
+                  (*((HttpListener **)p2))->getName());
 }
-static int f_compare( const void * p1, const void * p2 )
+static int f_compare(const void *p1, const void *p2)
 {
-    return strcmp( (const char *)p1,
-                   ((HttpListener*)p2)->getName() );
+    return strcmp((const char *)p1,
+                  ((HttpListener *)p2)->getName());
 }
 
-int HttpListenerList::add( HttpListener * pListener )
+int HttpListenerList::add(HttpListener *pListener)
 {
-    assert( pListener != NULL );
-    push_back( pListener );
-    sort( s_compare );
+    assert(pListener != NULL);
+    push_back(pListener);
+    sort(s_compare);
     return 0;
 }
 
-int HttpListenerList::remove( HttpListener * pListener )
+int HttpListenerList::remove(HttpListener *pListener)
 {
-    assert( pListener != NULL );
-    iterator iter = bfind( pListener->getName(), f_compare );
-    if ( iter != end() )
+    assert(pListener != NULL);
+    iterator iter = bfind(pListener->getName(), f_compare);
+    if (iter != end())
     {
-        erase( iter );
-        sort( s_compare );
+        erase(iter);
+        sort(s_compare);
     }
     return 0;
 }
@@ -117,38 +117,38 @@ int HttpListenerList::remove( HttpListener * pListener )
 //        return (*iter);
 //}
 
-HttpListener* HttpListenerList::get( const char * pName, const char * pAddr )
+HttpListener *HttpListenerList::get(const char *pName, const char *pAddr)
 {
     iterator iter;
     char achBuf[256];
-    if ( pName )
+    if (pName)
     {
-        iter = bfind( pName, f_compare );
-        if ( iter != end() )
+        iter = bfind(pName, f_compare);
+        if (iter != end())
             return *iter;
     }
-    if ( pAddr )
+    if (pAddr)
     {
-        iter = bfind( pAddr, f_compare );
-        if ( iter != end() )
+        iter = bfind(pAddr, f_compare);
+        if (iter != end())
         {
-            HttpListener * p = *iter;
-            p->setName( pName );
-            sort( s_compare );
+            HttpListener *p = *iter;
+            p->setName(pName);
+            sort(s_compare);
             return p;
         }
-        if ( strncmp( pAddr, "0.0.0.0:", 8 ) == 0 )
+        if (strncmp(pAddr, "0.0.0.0:", 8) == 0)
         {
-            snprintf( achBuf, 256, "*:%s", pAddr + 8 );
+            snprintf(achBuf, 256, "*:%s", pAddr + 8);
             pAddr = achBuf;
         }
-        for( iterator iter = begin(); iter != end(); ++iter )
+        for (iterator iter = begin(); iter != end(); ++iter)
         {
-            if ( strcasecmp( pAddr, (*iter)->getAddrStr() ) == 0 )
+            if (strcasecmp(pAddr, (*iter)->getAddrStr()) == 0)
             {
-                HttpListener * p = *iter;
-                p->setName( pName );
-                sort( s_compare );
+                HttpListener *p = *iter;
+                p->setName(pName);
+                sort(s_compare);
                 return p;
             }
         }
@@ -159,47 +159,48 @@ HttpListener* HttpListenerList::get( const char * pName, const char * pAddr )
 
 void HttpListenerList::stopAll()
 {
-    for_each( begin(), end(), stopListener );
+    for_each(begin(), end(), stopListener);
 }
 
 void HttpListenerList::suspendAll()
 {
-    for_each( begin(), end(), suspendListener );
+    for_each(begin(), end(), suspendListener);
 }
 
 void HttpListenerList::suspendSSL()
 {
-    for_each( begin(), end(), suspendSSLListener );
+    for_each(begin(), end(), suspendSSLListener);
 }
 
 void HttpListenerList::resumeAll()
 {
-    for_each( begin(), end(), resumeListener );
+    for_each(begin(), end(), resumeListener);
 }
 
 void HttpListenerList::resumeSSL()
 {
-    for_each( begin(), end(), resumeSSLListener );
+    for_each(begin(), end(), resumeSSLListener);
 }
 
 void HttpListenerList::resumeAllButSSL()
 {
-    for_each( begin(), end(), resumeButSSLListener );
+    for_each(begin(), end(), resumeButSSLListener);
 }
 
 void HttpListenerList::endConfig()
 {
-    for_each( begin(), end(), endConfigListener );
+    for_each(begin(), end(), endConfigListener);
 }
 
 void HttpListenerList::clear()
 {
-    release_objects();
+    releaseObjects();
 }
 
-static int compare_fd( const void * p1, const void *p2 )
+static int compare_fd(const void *p1, const void *p2)
 {
-    return (*(const HttpListener **)p1)->getfd() - (*(const HttpListener **)p2)->getfd();
+    return (*(const HttpListener **)p1)->getfd() - (*(const HttpListener **)
+            p2)->getfd();
 }
 
 void HttpListenerList::passListeners()
@@ -207,24 +208,24 @@ void HttpListenerList::passListeners()
     int startfd = 1000;
     int count = 0;
     int sort = 0;
-    for( iterator iter = begin(); iter != end(); ++iter )
+    for (iterator iter = begin(); iter != end(); ++iter)
     {
-        if ( (*iter)->getfd() >= 1000 )
+        if ((*iter)->getfd() >= 1000)
             sort = 1;
-        if ( (*iter)->getfd() != -1 )
+        if ((*iter)->getfd() != -1)
             ++count;
     }
-    close( startfd + count );
-    if ( sort )
-        this->sort( compare_fd );
-    for( iterator iter = end()-1; iter >= begin(); --iter )
+    close(startfd + count);
+    if (sort)
+        this->sort(compare_fd);
+    for (iterator iter = end() - 1; iter >= begin(); --iter)
     {
-        if ( (*iter)->getfd() != -1 )
+        if ((*iter)->getfd() != -1)
         {
             --count;
-            LOG_INFO(( "Pass listener %s, copy fd %d to %d.", (*iter)->getAddrStr(),
-                     (*iter)->getfd(), startfd+count ));
-            dup2( (*iter)->getfd(), startfd + count );
+            LOG_INFO(("Pass listener %s, copy fd %d to %d.", (*iter)->getAddrStr(),
+                      (*iter)->getfd(), startfd + count));
+            dup2((*iter)->getfd(), startfd + count);
         }
     }
 }
@@ -236,72 +237,70 @@ void HttpListenerList::recvListeners()
     char        achSockAddr[128];
     socklen_t   len;
     len = 128;
-    if ( getpeername( startfd, (struct sockaddr *)achSockAddr, &len ) != -1 )
+    if (getpeername(startfd, (struct sockaddr *)achSockAddr, &len) != -1)
         startfd = 300;      // Must not be connected
     else
     {
         len = 128;
-        if ( getsockname( startfd, (struct sockaddr *)achSockAddr, &len ) == -1 )
+        if (getsockname(startfd, (struct sockaddr *)achSockAddr, &len) == -1)
             startfd = 300;  // Must be a server socket
     }
-    while( 1 )
+    while (1)
     {
         len = 128;
-        if ( getpeername( startfd, (struct sockaddr *)achSockAddr, &len ) != -1 )
+        if (getpeername(startfd, (struct sockaddr *)achSockAddr, &len) != -1)
             break;      // Must not be connected
         len = 128;
-        if ( getsockname( startfd, (struct sockaddr *)achSockAddr, &len ) == -1 )
+        if (getsockname(startfd, (struct sockaddr *)achSockAddr, &len) == -1)
             break;      // Must be a server socket
-        if ( ((struct sockaddr *)achSockAddr)->sa_family != PF_UNIX )
+        if (((struct sockaddr *)achSockAddr)->sa_family != PF_UNIX)
         {
-            int fd = dup( startfd );
-            HttpListener * pListener = new HttpListener();
-            pListener->assign( fd, (struct sockaddr *)achSockAddr );
-            push_back( pListener );
-            sort( s_compare );
+            int fd = dup(startfd);
+            HttpListener *pListener = new HttpListener();
+            pListener->assign(fd, (struct sockaddr *)achSockAddr);
+            push_back(pListener);
+            sort(s_compare);
         }
-        close( startfd );
+        close(startfd);
         ++startfd;
     }
 }
 
 
 
-void HttpListenerList::moveNonExist( HttpListenerList& rhs )
+void HttpListenerList::moveNonExist(HttpListenerList &rhs)
 {
-    for( iterator iter = rhs.begin(); iter != rhs.end(); )
+    for (iterator iter = rhs.begin(); iter != rhs.end();)
     {
-        if ( bfind( (*iter)->getName(), f_compare ) == end() )
+        if (bfind((*iter)->getName(), f_compare) == end())
         {
-            add( *iter );
-            rhs.erase( iter );
+            add(*iter);
+            rhs.erase(iter);
         }
         else
             ++iter;
     }
 }
 
-void HttpListenerList::removeVHostMappings( HttpVHost * pVHost)
+void HttpListenerList::removeVHostMappings(HttpVHost *pVHost)
 {
-    for( iterator iter = begin(); iter != end(); ++iter )
-    {
-        (*iter)->getVHostMap()->removeVHost( pVHost );
-    }
+    for (iterator iter = begin(); iter != end(); ++iter)
+        (*iter)->getVHostMap()->removeVHost(pVHost);
 }
 
-int HttpListenerList::writeRTReport( int fd )
+int HttpListenerList::writeRTReport(int fd)
 {
     return 0;
 }
 
-int HttpListenerList::writeStatusReport( int fd )
+int HttpListenerList::writeStatusReport(int fd)
 {
     iterator iter;
     iterator iterEnd = end();
-    for( iter = begin(); iter != iterEnd; ++iter )
+    for (iter = begin(); iter != iterEnd; ++iter)
     {
-        if ( (*iter)->writeStatusReport( fd ) == -1 )
-            return -1;
+        if ((*iter)->writeStatusReport(fd) == -1)
+            return LS_FAIL;
     }
     return 0;
 }
@@ -309,38 +308,34 @@ int HttpListenerList::writeStatusReport( int fd )
 void HttpListenerList::releaseUnused()
 {
     iterator iter;
-    for( iter = begin(); iter != end();  )
+    for (iter = begin(); iter != end();)
     {
         (*iter)->stop();
-        if ( (*iter)->getVHostMap()->getRef() <= 0 )
+        if ((*iter)->getVHostMap()->getRef() <= 0)
         {
-            delete (*iter );
-            erase( iter );
+            delete(*iter);
+            erase(iter);
         }
         else
-        {
             ++iter;
-        }
     }
 }
 
-int HttpListenerList::saveInUseListnersTo( HttpListenerList& rhs )
+int HttpListenerList::saveInUseListnersTo(HttpListenerList &rhs)
 {
     int add = 0;
     iterator iter;
-    for( iter = begin(); iter != end();  )
+    for (iter = begin(); iter != end();)
     {
         (*iter)->stop();
-        if ( (*iter)->getVHostMap()->getRef() <= 0 )
-        {
-            delete ( *iter );
-        }
+        if ((*iter)->getVHostMap()->getRef() <= 0)
+            delete(*iter);
         else
         {
-            rhs.add( *iter );
+            rhs.add(*iter);
             add++;
         }
-        erase( iter );
+        erase(iter);
     }
     return add;
 }

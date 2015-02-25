@@ -41,8 +41,8 @@
 
 #define UNKNOWN_KEYWORDS        "unknownkeywords"
 //All the keywords are lower case
-//FIXME: !! means the item marked need to be rempved in later version
-plainconfKeywords plainconf::sKeywords[] = 
+//TODO: !! means the item marked need to be rempved in later version
+plainconfKeywords plainconf::sKeywords[] =
 {
     {"accesscontrol",                            NULL},
     {"accessdenydir",                            NULL},
@@ -106,6 +106,8 @@ plainconfKeywords plainconf::sKeywords[] =
     {"domain",                                   NULL},
     {"dynreqpersec",                             NULL},
     {"enable",                                   NULL},
+    {"enableaio",                                NULL},
+    {"enableaiolog",                             NULL},
     {"enablechroot",                             NULL},
     {"enablecoredump",                           NULL},
     {"enabled",                                  NULL},
@@ -287,7 +289,7 @@ plainconfKeywords plainconf::sKeywords[] =
     {"vhname",                                   NULL},
     {"vhost",                                    NULL},
     {"vhostmap",                                 NULL},
-    {"vhostmaplist",                             NULL},//!!, FIXME: in relative code, need to update
+    {"vhostmaplist",                             NULL},//!!
     {"vhroot",                                   NULL},
     {"vhssl",                                    NULL},
     {"vhtemplate",                               NULL},
@@ -300,8 +302,8 @@ plainconfKeywords plainconf::sKeywords[] =
     {"websocketlist",                                NULL},//!!
     {"workers",                                      NULL},
     {"workingdir",                               NULL},
-    
-    
+
+
     {"disableinitlogrotation",                               NULL},
     {"fileetag",                               NULL},
     {"gracefulrestarttimeout",                               NULL},
@@ -312,10 +314,10 @@ plainconfKeywords plainconf::sKeywords[] =
     {"restrictedscriptpermissionmask",                               NULL},
 
     {"phpsuexec",                            NULL},
-    
+
     {"phpsuexecmaxconn",             NULL},
     {"useaio",             NULL},
-    
+
     {"aioblocksize",             NULL},
     {"forcestrictownership",             NULL},
     {"accessfilename",             NULL},
@@ -323,8 +325,8 @@ plainconfKeywords plainconf::sKeywords[] =
     {"cachetimeout",             NULL},
     {"general",             NULL},
     {"enablecontextac",             NULL},
-        
-    
+
+
     //Hooks name here
     {"l4_beginsession",          NULL},
     {"l4_endsession",          NULL},
@@ -355,7 +357,8 @@ plainconfKeywords plainconf::sKeywords[] =
 
 };
 
-static HashStringMap<plainconfKeywords *> allKeyword(29, GHash::i_hash_string, GHash::i_comp_string);
+static HashStringMap<plainconfKeywords *> allKeyword(29, GHash::hfCiString,
+        GHash::cmpCiString);
 bool plainconf::bKeywordsInited = false;
 bool plainconf::bErrorLogSetup = false;
 AutoStr2 plainconf::rootPath = "";
@@ -365,60 +368,67 @@ GPointerList plainconf::gModuleList;
 /***
  * We try to make log available even if errorlog is not setup.
  * So, at the beginning, we put the logs to StringList plainconf::errorLogList by call logToMem()
- * once flushErrorLog() is called, it means errorlog is setup, and this function will save all 
+ * once flushErrorLog() is called, it means errorlog is setup, and this function will save all
  * the buffered logs to errorlog file.
  * Then if logToMem still be called, it should not access the stringlist anymore,
  * but just access the errorlog directly.
  */
-void plainconf::logToMem( char errorLevel, const char *format, ...)
+void plainconf::logToMem(char errorLevel, const char *format, ...)
 {
     char buf[512];
     sprintf(buf, "%c[PlainConf] ", errorLevel);
     int len = strlen(buf);
+
     if (gModuleList.size() > 0)
     {
         XmlNode *pCurNode = (XmlNode *)gModuleList.back();
-        sprintf(buf + len, "[%s:%s] ", pCurNode->getName(), 
+        sprintf(buf + len, "[%s:%s] ", pCurNode->getName(),
                 ((pCurNode->getValue() == NULL) ? "" : pCurNode->getValue()));
     }
-    
+
     len = strlen(buf);
     va_list ap;
-    va_start( ap, format );
+    va_start(ap, format);
     int ret = vsnprintf(buf + len, 512 - len, format, ap);
-    va_end( ap );
+    va_end(ap);
+
     if (!bErrorLogSetup)
         errorLogList.add(buf, ret + len);
     else
     {
         if (errorLevel == LOG_LEVEL_ERR)
-            LOG_ERR (( buf + 1 ));
+            LOG_ERR((buf + 1));
         else
-            LOG_INFO (( buf + 1 ));
+            LOG_INFO((buf + 1));
     }
 }
 
-static int for_each_fn( void *s)
+static int for_each_fn(void *s)
 {
     const char *p = ((AutoStr2 *)s)->c_str();
-    switch(*p)
+
+    switch (*p)
     {
     case LOG_LEVEL_ERR:
-        LOG_ERR (( p + 1 ));
+        LOG_ERR((p + 1));
         break;
+
     case LOG_LEVEL_INFO:
-        LOG_INFO (( p + 1 ));
+        LOG_INFO((p + 1));
         break;
+
     default:
         break;
     }
+
     return 0;
 }
 
 void plainconf::flushErrorLog()
 {
     //int n = errorLogList.size();
-    errorLogList.for_each(errorLogList.begin(), errorLogList.end(), for_each_fn);
+    errorLogList.for_each(errorLogList.begin(), errorLogList.end(),
+                          for_each_fn);
     errorLogList.clear();
     bErrorLogSetup = true;
 }
@@ -426,10 +436,11 @@ void plainconf::flushErrorLog()
 
 void plainconf::tolowerstr(char *sLine)
 {
-    while(*sLine)
+    while (*sLine)
     {
         if (*sLine >= 'A' && *sLine <= 'Z')
             *sLine |= 0x20;
+
         ++sLine;
     }
 }
@@ -438,21 +449,21 @@ void plainconf::initKeywords()
 {
     if (bKeywordsInited)
         return ;
-    
+
     int count = sizeof(sKeywords) / sizeof(plainconfKeywords);
-    for (int i=0; i<count; ++i) 
+
+    for (int i = 0; i < count; ++i)
     {
         allKeyword.insert(sKeywords[i].name, &sKeywords[i]);
+
         if (sKeywords[i].alias && strlen(sKeywords[i].alias) > 0)
-        {
             allKeyword.insert(sKeywords[i].alias, &sKeywords[i]);
-        }
     }
-    
+
     bKeywordsInited = true;
 }
 
-void plainconf::setRootPath(const char *root) 
+void plainconf::setRootPath(const char *root)
 {
     rootPath = root;
 }
@@ -462,17 +473,17 @@ const char *plainconf::getRealName(char *name)
     assert(bKeywordsInited == true);
     tolowerstr(name);
     HashStringMap<plainconfKeywords *>::iterator it = allKeyword.find(name);
-    
-    if ( it == allKeyword.end())
+
+    if (it == allKeyword.end())
         return NULL;
     else
         return it.second()->name;
 }
- 
+
 
 void plainconf::trimWhiteSpace(const char **p)
 {
-    while(**p == 0x20 || **p == '\t')
+    while (**p == 0x20 || **p == '\t')
         ++(*p);
 }
 
@@ -481,20 +492,22 @@ const char *plainconf::getStrNoSpace(const char *sLine, size_t &length)
 {
     int len = strlen(sLine);
     int offset = -1, i;
-    for (i=0; i<len; ++i)
+
+    for (i = 0; i < len; ++i)
     {
         if (sLine[i] != ' ' && sLine[i] != '\t')
             break;
         else
             offset = i;
     }
-    
-    for (; i<len; ++i)
+
+    for (; i < len; ++i)
     {
         if (sLine[i] == ' ' || sLine[i] == '\t' ||
             sLine[i] == '\r' || sLine[i] == '\n')
             break;
     }
+
     length = i - (offset + 1);
     return sLine + offset + 1;
 }
@@ -504,21 +517,24 @@ void plainconf::removeSpace(char *sLine, int pos)
 {
     int len = strlen(sLine);
     int index, offset = -1;
-    for (int i=0; i<len; ++i)
+
+    for (int i = 0; i < len; ++i)
     {
         index = ((pos == 0) ? i : (len - 1 - i));
+
         if (sLine[index] != ' ' &&
-            sLine[index] != '\t' && 
+            sLine[index] != '\t' &&
             sLine[index] != '\r' &&
             sLine[index] != '\n')
             break;
         else
-            offset = i;                
+            offset = i;
     }
+
     if (pos == 0)
     {
         offset += 1; //index change to count
-        memmove(sLine, sLine + offset, len - offset); 
+        memmove(sLine, sLine + offset, len - offset);
         sLine[len - offset] = 0x00;
     }
     else
@@ -528,19 +544,21 @@ void plainconf::removeSpace(char *sLine, int pos)
 bool plainconf::isChunkedLine(const char *sLine)
 {
     int len = strlen(sLine);
+
     if (sLine[len - 1] != '\\')
         return false;
-    
+
     //Already know the last one is a '\\'
     int continuesBackSlashCount = 1;
     const char *pStart = sLine;
     const char *pLast = sLine + len - 2;
-    while( pLast >= pStart &&  *pLast-- == '\\')
+
+    while (pLast >= pStart &&  *pLast-- == '\\')
     {
         ++continuesBackSlashCount;
         break; //Now if more than 2 \, will not be treated as continued
     }
-    
+
     //return (continuesBackSlashCount % 2);
     return (continuesBackSlashCount == 1);
 }
@@ -548,24 +566,27 @@ bool plainconf::isChunkedLine(const char *sLine)
 bool plainconf::strcatchr(char *s, char c, int maxStrLen)
 {
     int len = strlen(s);
+
     if (len == maxStrLen)
         return false;
-    
+
     s[len] = c;
     s[len + 1] = 0x00;
     return true;
 }
 
-void plainconf::saveUnknownItems(const char *fileName, int lineNumber, XmlNode *pCurNode, const char *name, const char *value)
+void plainconf::saveUnknownItems(const char *fileName, int lineNumber,
+                                 XmlNode *pCurNode, const char *name, const char *value)
 {
     //if not inside a "module" and without a "::", treated as error
     if (strcasecmp(pCurNode->getName(), "module") != 0 &&
-        strstr(name, "::") == NULL )
+        strstr(name, "::") == NULL)
     {
-        logToMem(LOG_LEVEL_ERR, "Not support [%s %s] in file %s:%d", name, value,  fileName, lineNumber);
+        logToMem(LOG_LEVEL_ERR, "Not support [%s %s] in file %s:%d", name, value,
+                 fileName, lineNumber);
         return ;
     }
-    
+
     char newvalue[4096] = {0};
     XmlNode *pParamNode = new XmlNode;
     const char *attr = NULL;
@@ -577,9 +598,10 @@ void plainconf::saveUnknownItems(const char *fileName, int lineNumber, XmlNode *
     pCurNode->addChild(pParamNode->getName(), pParamNode);
 }
 
-void plainconf::appendModuleParam(XmlNode *pModuleNode,const char *param)
+void plainconf::appendModuleParam(XmlNode *pModuleNode, const char *param)
 {
     XmlNode *pParamNode = pModuleNode->getChild("param");
+
     if (pParamNode == NULL)
     {
         pParamNode = new XmlNode;
@@ -595,20 +617,24 @@ void plainconf::appendModuleParam(XmlNode *pModuleNode,const char *param)
         totalValue.append(param, strlen(param));
         pParamNode->setValue(totalValue.c_str(), totalValue.len());
     }
-    logToMem(LOG_LEVEL_INFO, "[%s:%s] module [%s] add param [%s]", 
-             pModuleNode->getParent()->getName(), 
-             ((pModuleNode->getParent()->getValue())? pModuleNode->getParent()->getValue() : ""),
-             pModuleNode->getValue(), param );
+
+    logToMem(LOG_LEVEL_INFO, "[%s:%s] module [%s] add param [%s]",
+             pModuleNode->getParent()->getName(),
+             ((pModuleNode->getParent()->getValue()) ?
+              pModuleNode->getParent()->getValue() : ""),
+             pModuleNode->getValue(), param);
 }
 
-void plainconf::addModuleWithParam(XmlNode *pCurNode, const char *moduleName, const char *param)
+void plainconf::addModuleWithParam(XmlNode *pCurNode,
+                                   const char *moduleName, const char *param)
 {
     XmlNode *pModuleNode = NULL;
     XmlNodeList::const_iterator iter;
     const XmlNodeList *pModuleList = pCurNode->getChildren("module");
+
     if (pModuleList)
     {
-        for( iter = pModuleList->begin(); iter != pModuleList->end(); ++iter )
+        for (iter = pModuleList->begin(); iter != pModuleList->end(); ++iter)
         {
             if (strcasecmp((*iter)->getChildValue("name", 1), moduleName) == 0)
             {
@@ -617,8 +643,8 @@ void plainconf::addModuleWithParam(XmlNode *pCurNode, const char *moduleName, co
             }
         }
     }
-    
-    if(!pModuleNode)
+
+    if (!pModuleNode)
     {
         pModuleNode = new XmlNode;
         //XmlNode *pParamNode = new XmlNode;
@@ -626,34 +652,38 @@ void plainconf::addModuleWithParam(XmlNode *pCurNode, const char *moduleName, co
         pModuleNode->init("module", &attr);
         pModuleNode->setValue(moduleName, strlen(moduleName));
         pCurNode->addChild(pModuleNode->getName(), pModuleNode);
-        logToMem(LOG_LEVEL_INFO, "[%s:%s]addModuleWithParam ADD module %s", 
-                 pCurNode->getName(), pCurNode->getValue(), moduleName );
+        logToMem(LOG_LEVEL_INFO, "[%s:%s]addModuleWithParam ADD module %s",
+                 pCurNode->getName(), pCurNode->getValue(), moduleName);
     }
+
     appendModuleParam(pModuleNode, param);
 }
 
 void plainconf::handleSpecialCase(XmlNode *pNode)
 {
     const XmlNodeList *pUnknownList = pNode->getChildren(UNKNOWN_KEYWORDS);
+
     if (!pUnknownList)
         return ;
-    
+
     int bModuleNode = (strcasecmp(pNode->getName(), "module") == 0);
     XmlNodeList::const_iterator iter;
-    for( iter = pUnknownList->begin(); iter != pUnknownList->end(); ++iter )
+
+    for (iter = pUnknownList->begin(); iter != pUnknownList->end(); ++iter)
     {
         const char *value = (*iter)->getValue();
+
         if (bModuleNode)
             appendModuleParam(pNode, value);
         else
         {
             const char *p = strstr(value, "::");
-            
+
             //Only hanlde has :: case
             if (p)
             {
                 /**
-                 * CASE such as cache::enablecache 1, will be treated as 
+                 * CASE such as cache::enablecache 1, will be treated as
                  * module chace {
                  * param enablecache 1
                  * }
@@ -662,15 +692,19 @@ void plainconf::handleSpecialCase(XmlNode *pNode)
                 char newvalue[4096] = {0};
                 strncpy(newname, value, p - value);
                 strcpy(newvalue, p + 2);
-                
+
                 XmlNode *pRootNode = pNode;
-                while(pRootNode->getParent())
+
+                while (pRootNode->getParent())
                     pRootNode = pRootNode->getParent();
+
                 const XmlNodeList *pModuleList = pRootNode->getChildren("module");
+
                 if (pModuleList)
                 {
                     XmlNodeList::const_iterator iter2;
-                    for( iter2 = pModuleList->begin(); iter2 != pModuleList->end(); ++iter2 )
+
+                    for (iter2 = pModuleList->begin(); iter2 != pModuleList->end(); ++iter2)
                     {
                         if (strcasecmp((*iter2)->getValue(), newname) == 0)
                         {
@@ -678,12 +712,16 @@ void plainconf::handleSpecialCase(XmlNode *pNode)
                             break;
                         }
                     }
+
                     if (iter2 == pModuleList->end())
-                        logToMem(LOG_LEVEL_ERR, "Module[%s] not defined in server leve while checking [%s].",newname, value );
+                        logToMem(LOG_LEVEL_ERR,
+                                 "Module[%s] not defined in server leve while checking [%s].", newname,
+                                 value);
 
                 }
                 else
-                    logToMem(LOG_LEVEL_ERR, "No module defined in server leve while checking [%s].", value );
+                    logToMem(LOG_LEVEL_ERR,
+                             "No module defined in server leve while checking [%s].", value);
             }
         }
     }
@@ -693,36 +731,40 @@ void plainconf::handleSpecialCaseLoop(XmlNode *pNode)
 {
     XmlNodeList list;
     int count = pNode->getAllChildren(list);
+
     if (count > 0)
     {
         XmlNodeList::const_iterator iter;
-        for( iter = list.begin(); iter != list.end(); ++iter )
+
+        for (iter = list.begin(); iter != list.end(); ++iter)
             handleSpecialCaseLoop(*iter);
+
         handleSpecialCase(pNode);
     }
 }
 
-void plainconf::clearNameAndValue(char* name, char* value)
+void plainconf::clearNameAndValue(char *name, char *value)
 {
     name[0] = 0;
     value[0] = 0;
 }
 
-void plainconf::parseLine(const char *fileName, int lineNumber, const char *sLine)
+void plainconf::parseLine(const char *fileName, int lineNumber,
+                          const char *sLine)
 {
     const int MAX_NAME_LENGTH = 4096;
     char name[MAX_NAME_LENGTH] = {0};
     char value[MAX_NAME_LENGTH] = {0};
     const char *attr = NULL;
-    
+
     XmlNode *pNode = NULL;
     XmlNode *pCurNode = (XmlNode *)gModuleList.back();
     const char *p = sLine;
     const char *pEnd = sLine + strlen(sLine);
-    
+
     bool bNameSet = false;
-   
-    for(; p < pEnd; ++p)
+
+    for (; p < pEnd; ++p)
     {
         //"{" is a beginning of a block only if it is the last char of a line
         if (*p == '{' && pEnd - p == 1)
@@ -730,15 +772,18 @@ void plainconf::parseLine(const char *fileName, int lineNumber, const char *sLin
             if (strlen(name) > 0)
             {
                 const char *pRealname = getRealName(name);
-                if (pRealname) 
+
+                if (pRealname)
                 {
                     pNode = new XmlNode;
                     pNode->init(pRealname, &attr);
-                    
+
                     //Remove space in the end of the value such as "module cache  {", value will be "cache"
                     removeSpace(value, 1);
+
                     if (strlen(value) > 0)
                         pNode->setValue(value, strlen(value));
+
                     pCurNode->addChild(pNode->getName(), pNode);
                     gModuleList.push_back(pNode);
                     pCurNode = pNode;
@@ -747,23 +792,27 @@ void plainconf::parseLine(const char *fileName, int lineNumber, const char *sLin
                 }
                 else
                 {
-                    logToMem(LOG_LEVEL_ERR, "parseline find block name [%s] is NOT keyword in %s:%d", name, fileName, lineNumber);
+                    logToMem(LOG_LEVEL_ERR,
+                             "parseline find block name [%s] is NOT keyword in %s:%d", name, fileName,
+                             lineNumber);
                     break;
                 }
             }
             else
             {
-                logToMem(LOG_LEVEL_ERR, "parseline found '{' without a block name in %s:%d", fileName, lineNumber);
+                logToMem(LOG_LEVEL_ERR,
+                         "parseline found '{' without a block name in %s:%d", fileName, lineNumber);
                 break;
             }
         }
-        
+
         else if (*p == '}' && p == sLine)
         {
             if (gModuleList.size() > 1)
             {
                 gModuleList.pop_back();
                 clearNameAndValue(name, value);
+
                 if (*(p + 1))
                 {
                     ++p;
@@ -774,7 +823,8 @@ void plainconf::parseLine(const char *fileName, int lineNumber, const char *sLin
             }
             else
             {
-                logToMem(LOG_LEVEL_ERR, "parseline found more '}' in %s:%d", fileName, lineNumber);
+                logToMem(LOG_LEVEL_ERR, "parseline found more '}' in %s:%d", fileName,
+                         lineNumber);
                 clearNameAndValue(name, value);
                 break;
             }
@@ -792,39 +842,44 @@ void plainconf::parseLine(const char *fileName, int lineNumber, const char *sLin
                 strcatchr(value, *p, MAX_NAME_LENGTH);
         }
     }
-    
-    if ( name[0] != 0 )
+
+    if (name[0] != 0)
     {
         const char *pRealname = getRealName(name);
-        if (pRealname) 
+
+        if (pRealname)
         {
             assert(pNode == NULL);
             pNode = new XmlNode;
             pNode->init(pRealname, &attr);
+
             if (strlen(value) > 0)
                 pNode->setValue(value, strlen(value));
+
             pCurNode->addChild(pNode->getName(), pNode);
         }
-        else 
+        else
         {
             //There is no special case in server level
             //if (memcmp(pCurNode->getName(), SERVER_ROOT_XML_NAME, sizeof(SERVER_ROOT_XML_NAME) - 1) != 0)
-                saveUnknownItems(fileName, lineNumber, pCurNode, name, value);
+            saveUnknownItems(fileName, lineNumber, pCurNode, name, value);
             //else
             //    logToMem(LOG_LEVEL_ERR, "%s Server level find unknown keyword [%s], ignored.", SERVER_ROOT_XML_NAME, name );
         }
     }
 }
-   
-bool plainconf::isValidline(const char * sLine)
+
+bool plainconf::isValidline(const char *sLine)
 {
     int len = strlen(sLine);
+
     if (len == 0 || sLine[0] == '#')
         return false;
 
     const char invalidChars[] = "# \t\r\n\\";
     bool bValid = false;
-    for ( int i = 0; i < len; ++i )
+
+    for (int i = 0; i < len; ++i)
     {
         if (!strchr(invalidChars, sLine[i]))
         {
@@ -832,28 +887,31 @@ bool plainconf::isValidline(const char * sLine)
             break;
         }
     }
-    
+
     return bValid;
 }
 
 //Return the length copied the sign, 0 means not a mulline mode
-int plainconf::checkMultiLineMode(const char * sLine, char *sMultiLineModeSign, int maxSize)
+int plainconf::checkMultiLineMode(const char *sLine,
+                                  char *sMultiLineModeSign, int maxSize)
 {
     const char *p = strstr(sLine, "<<<");
     int n = 0;
-    if (p && p > sLine && (n = strlen(sLine) - (p - sLine + 3)) > 0 )
+
+    if (p && p > sLine && (n = strlen(sLine) - (p - sLine + 3)) > 0)
     {
         if (n > maxSize)
             n = maxSize;
-       
+
         strncpy(sMultiLineModeSign, p + 3, n);
         return n;
     }
+
     return 0;
 }
 
-//if true return true, and also set the path 
-bool plainconf::isInclude(const char * sLine, AutoStr2 &path)
+//if true return true, and also set the path
+bool plainconf::isInclude(const char *sLine, AutoStr2 &path)
 {
     if (strncasecmp(sLine, "include", 7) == 0)
     {
@@ -862,7 +920,7 @@ bool plainconf::isInclude(const char * sLine, AutoStr2 &path)
         path = p;
         return true;
     }
-    
+
     return false;
 }
 
@@ -870,63 +928,69 @@ bool plainconf::isInclude(const char * sLine, AutoStr2 &path)
 int plainconf::checkFiletype(const char *path)
 {
     struct stat sb;
-    
+
     //Already has wildcahr, treat as directory
     if (strchr(path, '*') ||
         strchr(path, '?') ||
         (strchr(path, '[') && strchr(path, ']')))
-    return 3;
-    
+        return 3;
+
     if (stat(path, &sb) == -1)
         return 0;
-    
+
     if ((sb.st_mode & S_IFMT) == S_IFDIR)
         return 2;
-    
+
     else
         return 1;
 }
 
-void plainconf::loadDirectory(const char *pPath, const char * pPattern)
+void plainconf::loadDirectory(const char *pPath, const char *pPattern)
 {
-    DIR * pDir = opendir( pPath );
+    DIR *pDir = opendir(pPath);
 
-    if ( !pDir )
+    if (!pDir)
     {
-        logToMem(LOG_LEVEL_ERR, "Failed to open directory [%s].", pPath );
+        logToMem(LOG_LEVEL_ERR, "Failed to open directory [%s].", pPath);
         return ;
     }
 
-    struct dirent * dir_ent;
+    struct dirent *dir_ent;
+
     StringList AllEntries;
-    while( ( dir_ent = readdir( pDir ) ) )
+
+    while ((dir_ent = readdir(pDir)))
     {
         const char *pName = dir_ent->d_name;
-        if (( strcmp( pName, "." ) == 0 )||
-            ( strcmp( pName, ".." ) == 0 )||
-            ( *( pName + strlen( pName ) - 1) == '~' ) )
+
+        if ((strcmp(pName, ".") == 0) ||
+            (strcmp(pName, "..") == 0) ||
+            (*(pName + strlen(pName) - 1) == '~'))
             continue;
-        if ( pPattern )
+
+        if (pPattern)
         {
-            if ( fnmatch( pPattern, pName, FNM_PATHNAME ) )
+            if (fnmatch(pPattern, pName, FNM_PATHNAME))
                 continue;
         }
-        
+
         char str[4096] = {0};
         strcpy(str, pPath);
         strcatchr(str, '/', 4096);
         strcat(str, pName);
         AllEntries.add(str);
     }
-    closedir( pDir );
-    
+
+    closedir(pDir);
+
     //Sort the filename order
     AllEntries.sort();
     StringList::iterator iter;
-    for( iter = AllEntries.begin(); iter != AllEntries.end(); ++iter )
+
+    for (iter = AllEntries.begin(); iter != AllEntries.end(); ++iter)
     {
         const char *p = (*iter)->c_str();
-        logToMem(LOG_LEVEL_INFO, "Processing config file: %s", p );
+        logToMem(LOG_LEVEL_INFO, "Processing config file: %s", p);
         loadConfFile(p);
     }
 }
@@ -934,13 +998,14 @@ void plainconf::loadDirectory(const char *pPath, const char * pPattern)
 void plainconf::getIncludeFile(const char *orgFile, char *targetFile)
 {
     int len = strlen(orgFile);
+
     if (len == 0)
         return;
 
     //Absolute path
     if (orgFile[0] == '/')
         strcpy(targetFile, orgFile);
-        
+
     else if (orgFile[0] == '$')
     {
         if (strncasecmp(orgFile, "$server_root/", 13) == 0)
@@ -954,7 +1019,7 @@ void plainconf::getIncludeFile(const char *orgFile, char *targetFile)
             return ;
         }
     }
-    
+
     else
     {
         strcpy(targetFile, rootPath.c_str());
@@ -967,14 +1032,14 @@ void plainconf::getIncludeFile(const char *orgFile, char *targetFile)
 //Example: co -u1.1 httpd_config.conf
 void plainconf::checkInFile(const char *path)
 {
-    if ( access(path, 0) == -1)
+    if (access(path, 0) == -1)
         return ;
-    
+
     //Backup file abd checkin and out
     char new_path[4096];
     strcpy(new_path, path);
     strcat(new_path, "0");
-    
+
     AutoStr2 buf;
     buf.setStr("cp \"");
     buf.append(path, strlen(path));
@@ -982,25 +1047,28 @@ void plainconf::checkInFile(const char *path)
     buf.append(new_path, strlen(new_path));
     buf.append("\"", 1);
     int ret = system(buf.c_str());
+
     if (ret != 0)
     {
-        logToMem(LOG_LEVEL_INFO, "Failed to backup the conf file %s, ret %d.", 
-                    path, ret);
+        logToMem(LOG_LEVEL_INFO, "Failed to backup the conf file %s, ret %d.",
+                 path, ret);
         return ;
     }
-    
+
     buf.setStr("ci -l -q -t-\"");
     buf.append(new_path, strlen(new_path));
     buf.append("\" -mUpdate \"", 12);
     buf.append(new_path, strlen(new_path));
     buf.append("\" >/dev/null 2>&1", 17);
     ret = system(buf.c_str());
+
     if (ret == 0)
         logToMem(LOG_LEVEL_INFO, "RCS checkin config file %s OK.", new_path);
     else
-        logToMem(LOG_LEVEL_INFO, "Failed to RCS checkin conf file %s, ret %d, error(%s). "
-                "Org command is %s.", new_path, ret, strerror(errno), buf.c_str());
-        
+        logToMem(LOG_LEVEL_INFO,
+                 "Failed to RCS checkin conf file %s, ret %d, error(%s). "
+                 "Org command is %s.", new_path, ret, strerror(errno), buf.c_str());
+
     unlink(new_path);
 }
 
@@ -1008,112 +1076,119 @@ void plainconf::checkInFile(const char *path)
 void plainconf::loadConfFile(const char *path)
 {
     logToMem(LOG_LEVEL_INFO, "start parsing file %s", path);
-    
+
     int type = checkFiletype(path);
+
     if (type == 0)
         return;
-    
+
     else if (type == 2)
         loadDirectory(path, NULL);
-    
+
     else if (type == 3)
     {
         AutoStr2 prefixPath = path;
-        const char * p = strrchr(path, '/');
+        const char *p = strrchr(path, '/');
+
         if (p)
             prefixPath.setStr(path, p - path);
-        
+
         struct stat sb;
+
         //removed the wildchar filename, should be a directory if exist
         if (stat(prefixPath.c_str(), &sb) == -1)
         {
             logToMem(LOG_LEVEL_ERR, "LoadConfFile error 1, path:%s directory:%s",
-                     path, prefixPath.c_str() );
+                     path, prefixPath.c_str());
             return ;
         }
-        
+
         if ((sb.st_mode & S_IFMT) != S_IFDIR)
         {
             logToMem(LOG_LEVEL_ERR, "LoadConfFile error 2, path:%s directory:%s",
-                      path, prefixPath.c_str() );
+                     path, prefixPath.c_str());
             return ;
         }
-       
+
         loadDirectory(prefixPath.c_str(), p + 1);
     }
-    
+
     else //existed file
     {
         //gModuleList.push_back();
         //XmlNode *xmlNode = new XmlNode;
-        FILE* fp = fopen(path, "r");
-        if ( fp == NULL )
+        FILE *fp = fopen(path, "r");
+
+        if (fp == NULL)
         {
-            logToMem(LOG_LEVEL_ERR, "Cannot open configuration file: %s", path );
+            logToMem(LOG_LEVEL_ERR, "Cannot open configuration file: %s", path);
             return;
         }
-        
-        
+
+
         const int MAX_LINE_LENGTH = 8192;
         char sLine[MAX_LINE_LENGTH];
-        char * p;
+        char *p;
         char sLines[MAX_LINE_LENGTH] = {0};
         int lineNumber = 0;
         const int MAX_MULLINE_SIGN_LENGTH = 128;
         char sMultiLineModeSign[MAX_MULLINE_SIGN_LENGTH] = {0};
         size_t  nMultiLineModeSignLen = 0;  //>0 is mulline mode
 
-        while(fgets(sLine, MAX_LINE_LENGTH, fp), !feof(fp))
+        while (fgets(sLine, MAX_LINE_LENGTH, fp), !feof(fp))
         {
             ++lineNumber;
             p = sLine;
-            
+
             if (nMultiLineModeSignLen)
             {
                 //Check if reach the END of the milline mode
                 size_t len = 0;
                 const char *pLineStart = getStrNoSpace(p, len);
-                if ( len == nMultiLineModeSignLen &&
+
+                if (len == nMultiLineModeSignLen &&
                     strncasecmp(pLineStart, sMultiLineModeSign, nMultiLineModeSignLen) == 0)
                 {
                     nMultiLineModeSignLen = 0;
-                    removeSpace(sLines, 1);  //Remove the last \r\n so that if it is one line, it will still be one line
+                    removeSpace(sLines,
+                                1);   //Remove the last \r\n so that if it is one line, it will still be one line
                     parseLine(path, lineNumber, sLines);
                     sLines[0] = 0x00;
                 }
                 else
                     strcat(sLines, p);
-                
+
                 continue;
             }
-            
+
             removeSpace(p, 0);
             removeSpace(p, 1);
-            
+
             if (!isValidline(p))
                 continue;
-            
+
             AutoStr2 pathInclude;
+
             if (isInclude(p, pathInclude))
             {
                 char achBuf[512] = {0};
                 getIncludeFile(pathInclude.c_str(), achBuf);
                 loadConfFile(achBuf);
             }
-            else 
+            else
             {
-                nMultiLineModeSignLen = checkMultiLineMode(p, sMultiLineModeSign, MAX_MULLINE_SIGN_LENGTH);
+                nMultiLineModeSignLen = checkMultiLineMode(p, sMultiLineModeSign,
+                                        MAX_MULLINE_SIGN_LENGTH);
+
                 if (nMultiLineModeSignLen > 0)
-                {
                     strncat(sLines, p, strlen(p) - (3 + nMultiLineModeSignLen));
-                }
                 //need to continue
                 else if (isChunkedLine(p))
                 {
                     strncat(sLines, p, strlen(p) - 1);
                     //strcatchr(sLines, ' ', MAX_LINE_LENGTH); //add a space at the end of the line which has a '\\'
                 }
-                
+
                 else
                 {
                     strcat(sLines, p);
@@ -1122,41 +1197,47 @@ void plainconf::loadConfFile(const char *path)
                 }
             }
         }
+
         fclose(fp);
-        
+
         //Parsed, check in it
         checkInFile(path);
     }
 }
 
 //return the root node of the tree
-XmlNode* plainconf::parseFile(const char* configFilePath, const char *rootTag)
+XmlNode *plainconf::parseFile(const char *configFilePath,
+                              const char *rootTag)
 {
 #ifdef TEST_OUTPUT_PLAIN_CONF
-    char *tmp = (char *)new char[5 * 1024*1024];
+    char *tmp = (char *)new char[5 * 1024 * 1024];
+
     if (tmp)
         delete []tmp;
+
 #endif
     XmlNode *rootNode = new XmlNode;
     const char *attr = NULL;
     rootNode->init(rootTag, &attr);
     gModuleList.push_back(rootNode);
-    
+
     loadConfFile(configFilePath);
+
     if (gModuleList.size() != 1)
-    {
-        logToMem(LOG_LEVEL_ERR, "parseFile find '{' and '}' do not match in the end of file %s, rootTag %s.", configFilePath, rootTag);
-    }
+        logToMem(LOG_LEVEL_ERR,
+                 "parseFile find '{' and '}' do not match in the end of file %s, rootTag %s.",
+                 configFilePath, rootTag);
+
     gModuleList.clear();
-    
+
     handleSpecialCaseLoop(rootNode);
-    
-    
+
+
 #ifdef TEST_OUTPUT_PLAIN_CONF
     char sPlainFile[512] = {0};
-    strcpy( sPlainFile, configFilePath );
-    strcat( sPlainFile, ".txt" );
-    plainconf::testOutputConfigFile( rootNode, sPlainFile );
+    strcpy(sPlainFile, configFilePath);
+    strcat(sPlainFile, ".txt");
+    plainconf::testOutputConfigFile(rootNode, sPlainFile);
 #endif
     return rootNode;
 }
@@ -1165,27 +1246,33 @@ void plainconf::release(XmlNode *pNode)
 {
     XmlNodeList list;
     int count = pNode->getAllChildren(list);
+
     if (count > 0)
     {
         XmlNodeList::const_iterator iter;
-        for( iter = list.begin(); iter != list.end(); ++iter )
+
+        for (iter = list.begin(); iter != list.end(); ++iter)
             release(*iter);
     }
+
     if (!pNode->getParent())
         delete pNode;
 }
 
 //name: form like "moduleName|submodlue|itemname"
-const char *plainconf::getConfDeepValue(const XmlNode *pNode, const char *name)
+const char *plainconf::getConfDeepValue(const XmlNode *pNode,
+                                        const char *name)
 {
     const char *p = strchr(name, '|');
+
     if (!p)
-        return pNode->getChildValue( name );
+        return pNode->getChildValue(name);
     else
     {
         AutoStr2 subName;
         subName.setStr(name, p - name);
         const XmlNode *subNode = pNode->getChild(subName.c_str());
+
         if (subNode)
             return getConfDeepValue(subNode, p + 1);
         else
@@ -1196,10 +1283,10 @@ const char *plainconf::getConfDeepValue(const XmlNode *pNode, const char *name)
 //The below functions are only for test.
 void plainconf::outputSpaces(int level, FILE *fp)
 {
-    for (int i=1; i<level; ++i)
+    for (int i = 1; i < level; ++i)
         fprintf(fp, "    ");
 }
-    
+
 void plainconf::outputValue(FILE *fp, const char *value, int length)
 {
     fwrite(value, length, 1, fp);
@@ -1210,9 +1297,11 @@ void plainconf::outputSigleNode(FILE *fp, const XmlNode *pNode, int level)
     outputSpaces(level, fp);
     const char *pStart = pNode->getValue();
     fprintf(fp, "%s ", pNode->getName());
+
     if (pStart && *pStart)
     {
         const char *p = strchr(pStart, '\n');
+
         if (p)
         {
             fprintf(fp, "<<<MY_END\n%s\n", pStart);
@@ -1222,15 +1311,19 @@ void plainconf::outputSigleNode(FILE *fp, const XmlNode *pNode, int level)
         else
             outputValue(fp, pStart, strlen(pStart));
     }
+
     fprintf(fp, "\n");
 }
 
-static int s_compare( const void * p1, const void * p2 )
+static int s_compare(const void *p1, const void *p2)
 {
     //return (*((XmlNode**)p1))->getName() - (*((XmlNode**)p2))->getName();
-    int ret = (*((XmlNode**)p1))->hasChild() - (*((XmlNode**)p2))->hasChild();
+    int ret = (*((XmlNode **)p1))->hasChild() - (*((XmlNode **)
+              p2))->hasChild();
+
     if (ret == 0)
-        ret = (*((XmlNode**)p1))->getName() - (*((XmlNode**)p2))->getName();
+        ret = (*((XmlNode **)p1))->getName() - (*((XmlNode **)p2))->getName();
+
     //strcasecmp( (*((XmlNode**)p1))->getName(), (*((XmlNode**)p2))->getName() );
     return ret;
 }
@@ -1240,6 +1333,7 @@ void plainconf::outputConfigFile(const XmlNode *pNode, FILE *fp, int level)
     XmlNodeList list;
     int count = pNode->getAllChildren(list);
     list.sort(s_compare);
+
     if (count > 0)
     {
         if (level > 0)
@@ -1247,15 +1341,18 @@ void plainconf::outputConfigFile(const XmlNode *pNode, FILE *fp, int level)
             fprintf(fp, "\n");
             outputSpaces(level, fp);
             const char *value = pNode->getValue();
+
             if (!value)
                 value = "";
+
             fprintf(fp, "%s %s {\n", pNode->getName(), value);
         }
-        
+
         XmlNodeList::const_iterator iter;
-        for( iter = list.begin(); iter != list.end(); ++iter )
+
+        for (iter = list.begin(); iter != list.end(); ++iter)
             outputConfigFile((*iter), fp, level + 1);
-        
+
         if (level > 0)
         {
             outputSpaces(level, fp);
@@ -1263,19 +1360,18 @@ void plainconf::outputConfigFile(const XmlNode *pNode, FILE *fp, int level)
         }
     }
     else
-    {
         outputSigleNode(fp, pNode, level);
-    }
 }
 
-void plainconf::testOutputConfigFile(const XmlNode *pNode, const char *file)
+void plainconf::testOutputConfigFile(const XmlNode *pNode,
+                                     const char *file)
 {
     FILE *fp = fopen(file, "w");
-    if(!fp) 
+
+    if (!fp)
         return;
-    
+
     int level = 0;
     outputConfigFile(pNode, fp, level);
     fclose(fp);
 }
-

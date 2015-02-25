@@ -18,6 +18,7 @@
 #ifndef LINKEDOBJ_H
 #define LINKEDOBJ_H
 
+#include <lsdef.h>
 
 #include <assert.h>
 #include <stddef.h>
@@ -25,34 +26,39 @@
 
 class LinkedObj
 {
-    LinkedObj * m_pNext;
-    
+    LinkedObj *m_pNext;
+
+    LinkedObj(const LinkedObj &rhs);
 public:
-    LinkedObj() : m_pNext( NULL ) {}
-    explicit LinkedObj( LinkedObj * next )
-        : m_pNext( next )
+    LinkedObj() : m_pNext(NULL) {}
+    explicit LinkedObj(LinkedObj *next)
+        : m_pNext(next)
     {}
-        
-    LinkedObj* next() const
-    {   return m_pNext;     }
-
-    void setNext( LinkedObj * pNext )
-    {   m_pNext = pNext;        }
-
-    void addNext( LinkedObj * pNext )
+    void operator=(const LinkedObj &rhs)
     {
-        LinkedObj * pTemp = m_pNext;
-        setNext( pNext );
-        pNext->setNext( pTemp );
+        m_pNext = rhs.m_pNext;
     }
 
-    LinkedObj* removeNext()
+    LinkedObj *next() const
+    {   return m_pNext;     }
+
+    void setNext(LinkedObj *pNext)
+    {   m_pNext = pNext;        }
+
+    void addNext(LinkedObj *pNext)
     {
-        LinkedObj * pNext = m_pNext;
-        if ( pNext )
+        LinkedObj *pTemp = m_pNext;
+        setNext(pNext);
+        pNext->setNext(pTemp);
+    }
+
+    LinkedObj *removeNext()
+    {
+        LinkedObj *pNext = m_pNext;
+        if (pNext)
         {
-            setNext( pNext->m_pNext );
-            pNext->setNext( NULL );
+            setNext(pNext->m_pNext);
+            pNext->setNext(NULL);
         }
         return pNext;
     }
@@ -61,86 +67,85 @@ public:
 
 class DLinkedObj : public LinkedObj
 {
-    DLinkedObj * m_pPrev;
-    
+    DLinkedObj *m_pPrev;
+
 public:
 
-    DLinkedObj(): m_pPrev( NULL) {}
-    DLinkedObj( DLinkedObj * prev, DLinkedObj * next )
-        : LinkedObj( next ), m_pPrev( prev )
-        {}
-    
-    DLinkedObj* prev() const
+    DLinkedObj(): m_pPrev(NULL) {}
+    DLinkedObj(DLinkedObj *prev, DLinkedObj *next)
+        : LinkedObj(next), m_pPrev(prev)
+    {}
+
+    DLinkedObj *prev() const
     {   return m_pPrev;     }
 
-    void setPrev( DLinkedObj * p ) 
+    void setPrev(DLinkedObj *p)
     {   m_pPrev = p;        }
 
-    DLinkedObj* next() const
-    {   return (DLinkedObj*)LinkedObj::next();     }
+    DLinkedObj *next() const
+    {   return (DLinkedObj *)LinkedObj::next();     }
 
-    void addNext( DLinkedObj * pNext )
+    void addNext(DLinkedObj *pNext)
     {
-        assert( pNext );
-        DLinkedObj* pTemp = next();
-        LinkedObj::addNext( pNext );
+        assert(pNext);
+        DLinkedObj *pTemp = next();
+        LinkedObj::addNext(pNext);
         pNext->m_pPrev = this;
-        if ( pTemp )
-        {
+        if (pTemp)
             pTemp->m_pPrev = pNext;
-        }
     }
-    
-    DLinkedObj* removeNext()
+
+    DLinkedObj *removeNext()
     {
         DLinkedObj *pNext = next();
-        if ( pNext )
+        if (pNext)
         {
-            setNext( pNext->next() );
-            if ( next() )
+            setNext(pNext->next());
+            if (next())
                 next()->m_pPrev = this;
-            memset( pNext, 0, sizeof( DLinkedObj ) );
+            memset(pNext, 0, sizeof(DLinkedObj));
         }
         return pNext;
     }
 
-    void addPrev( DLinkedObj * pPrev )
+    void addPrev(DLinkedObj *pPrev)
     {
-        assert( pPrev );
-        DLinkedObj* pTemp;
+        assert(pPrev);
+        DLinkedObj *pTemp;
         pTemp = m_pPrev;
         m_pPrev = pPrev;
         pPrev->m_pPrev = pTemp;
-        pPrev->setNext( this );
-        if ( pTemp )
-        {
-            pTemp->setNext( pPrev );
-        }
+        pPrev->setNext(this);
+        if (pTemp)
+            pTemp->setNext(pPrev);
     }
 
-    DLinkedObj* removePrev()
+    DLinkedObj *removePrev()
     {
         DLinkedObj *pPrev = m_pPrev;
-        if ( m_pPrev )
+        if (m_pPrev)
         {
             m_pPrev = pPrev->m_pPrev;
-            if ( m_pPrev )
-                m_pPrev->setNext( this );
-            memset( pPrev, 0, sizeof( DLinkedObj ) );
+            if (m_pPrev)
+                m_pPrev->setNext(this);
+            memset(pPrev, 0, sizeof(DLinkedObj));
         }
         return pPrev;
     }
 
-    DLinkedObj* remove()
+    DLinkedObj *remove()
     {
-        DLinkedObj * pNext = next();
-        if ( pNext )
+        DLinkedObj *pNext = next();
+        if (pNext)
             pNext->m_pPrev = m_pPrev;
-        if ( m_pPrev )
-            m_pPrev->setNext( next() );
-        memset( this, 0, sizeof( DLinkedObj ) );
+        if (m_pPrev)
+            m_pPrev->setNext(next());
+        memset(this, 0, sizeof(DLinkedObj));
         return pNext;
     }
-                
+
+
+
+    LS_NO_COPY_ASSIGN(DLinkedObj);
 };
 #endif

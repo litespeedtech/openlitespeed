@@ -25,16 +25,17 @@ extern "C"
 {
 #endif
 
-extern int lscgid_main(int fd, char *argv0, const char *secret, char * pServerSock);
+extern int lscgid_main(int fd, char *argv0, const char *secret,
+                       char *pServerSock);
 
 typedef struct
 {
     lscgid_req  m_data;
-    char *      m_pBuf;
-    char *      m_pChroot;
-    char *      m_pCGIDir;
-    char **     m_argv;
-    char **     m_env;
+    char       *m_pBuf;
+    char       *m_pChroot;
+    char       *m_pCGIDir;
+    char      **m_argv;
+    char      **m_env;
     int         m_fdReceived;
 
 } lscgid_t;
@@ -46,4 +47,4 @@ typedef struct
 #endif
 
 #endif
- 
+

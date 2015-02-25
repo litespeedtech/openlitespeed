@@ -21,54 +21,54 @@
 #include <string.h>
 
 AutoStr::AutoStr()
-    : m_pStr( NULL )
+    : m_pStr(NULL)
 {
 }
 AutoStr::~AutoStr()
 {
-    if ( m_pStr )
-        Pool::deallocate2( m_pStr );
+    if (m_pStr)
+        Pool::deallocate2(m_pStr);
 }
 
-AutoStr::AutoStr( const AutoStr& rhs )
-    : m_pStr( NULL )
+AutoStr::AutoStr(const AutoStr &rhs)
+    : m_pStr(NULL)
 {
-    if ( rhs.c_str() )
-        m_pStr = Pool::dupstr( rhs.c_str() );
+    if (rhs.c_str())
+        m_pStr = Pool::dupstr(rhs.c_str());
 }
 
-char * AutoStr::prealloc( int size )
+char *AutoStr::prealloc(int size)
 {
-    char *p = (char *)Pool::reallocate2( m_pStr, size );
-    if ( p )
+    char *p = (char *)Pool::reallocate2(m_pStr, size);
+    if (p)
         m_pStr = p;
     return p;
 }
 
 
-AutoStr::AutoStr( const char * pStr )
+AutoStr::AutoStr(const char *pStr)
 {
-    m_pStr = Pool::dupstr( pStr );
+    m_pStr = Pool::dupstr(pStr);
 }
 
-int AutoStr::setStr( const char * pStr )
+int AutoStr::setStr(const char *pStr)
 {
-    int len = strlen( pStr );
-    return setStr( pStr, len );
+    int len = strlen(pStr);
+    return setStr(pStr, len);
 }
 
-int AutoStr::setStr( const char * pStr, int len )
+int AutoStr::setStr(const char *pStr, int len)
 {
-    if ( m_pStr )
-        Pool::deallocate2( m_pStr );
-    m_pStr = Pool::dupstr( pStr, len + 1 );
+    if (m_pStr)
+        Pool::deallocate2(m_pStr);
+    m_pStr = Pool::dupstr(pStr, len + 1);
     *(m_pStr + len) = 0;
     return len;
 }
 
-AutoStr& AutoStr::operator=( const char * pStr )
+AutoStr &AutoStr::operator=(const char *pStr)
 {
-    setStr( pStr );
+    setStr(pStr);
     return *this;
 }
 

@@ -25,15 +25,15 @@ class ServerSocket : public CoreSocket
 
 public:
     ServerSocket(int domain = PF_INET)
-        : CoreSocket( domain, SOCK_STREAM )
-        {}
-	~ServerSocket() {};
+        : CoreSocket(domain, SOCK_STREAM)
+    {}
+    ~ServerSocket() {};
 protected:
     int     listen(int backlog)
-        {   return ::listen( getfd(), backlog ); }
+    {   return ::listen(getfd(), backlog); }
 public:
-    int     accept( SockAddr  *addr,  socklen_t *addrlen)
-        {   return ::accept( getfd(), addr, addrlen );   }
+    int     accept(SockAddr  *addr,  socklen_t *addrlen)
+    {   return ::accept(getfd(), addr, addrlen);   }
 };
 
 #endif

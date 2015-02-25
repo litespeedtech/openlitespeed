@@ -27,23 +27,23 @@ SSIConfig::~SSIConfig()
 {
 }
 
-void SSIConfig::setSizeFmt( const char * pVal, int len )
+void SSIConfig::setSizeFmt(const char *pVal, int len)
 {
-    if ( strncasecmp( pVal, "bytes", 4 ) == 0 )
-            m_iSizeFmt = 1;
+    if (strncasecmp(pVal, "bytes", 4) == 0)
+        m_iSizeFmt = 1;
 }
 
-void SSIConfig::copy( const SSIConfig * config )
+void SSIConfig::copy(const SSIConfig *config)
 {
-    if ( !config )
+    if (!config)
         return;
-    if ( config->m_sEchoMsg.c_str() )
-        m_sEchoMsg.setStr( config->m_sEchoMsg.c_str() );
-    if ( config->m_sErrMsg.c_str() )
-        m_sErrMsg.setStr( config->m_sErrMsg.c_str() );
-    if ( config->m_sTimeFmt.c_str() )
-        m_sTimeFmt.setStr( config->m_sTimeFmt.c_str() );
-    m_iSizeFmt = config->m_iSizeFmt;   
+    if (config->m_sEchoMsg.c_str())
+        m_sEchoMsg.setStr(config->m_sEchoMsg.c_str());
+    if (config->m_sErrMsg.c_str())
+        m_sErrMsg.setStr(config->m_sErrMsg.c_str());
+    if (config->m_sTimeFmt.c_str())
+        m_sTimeFmt.setStr(config->m_sTimeFmt.c_str());
+    m_iSizeFmt = config->m_iSizeFmt;
 
 }
 

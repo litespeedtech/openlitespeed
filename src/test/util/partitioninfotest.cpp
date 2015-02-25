@@ -26,9 +26,9 @@ static const char *pRoot = "/";
 TEST(PartitionInfoTest)
 {
     uint64_t iTotal = 0, iFree = 0;
-    CHECK((PartitionInfo::getPartitionInfo( pRoot, &iTotal, &iFree) == 0) 
-        && iTotal != 0 
-        && iFree != 0);
+    CHECK((PartitionInfo::getPartitionInfo(pRoot, &iTotal, &iFree) == 0)
+          && iTotal != 0
+          && iFree != 0);
     std::cout << "Total: " << iTotal << ", Free: " << iFree << std::endl;
 }
 

@@ -18,7 +18,6 @@
 #include "clientinfo.h"
 #include <http/iptogeo.h>
 #include <util/datetime.h>
-#include <http/httpglobals.h>
 #include <http/httplog.h>
 #include <util/pool.h>
 #include <util/accessdef.h>
@@ -27,21 +26,27 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
+#include <limits.h>
 
 #define ShmClientMagic  0x20140601
 #define ShmClientInfo   "ClientInfo"
 #define ShmClientHash   "ClientHash"
 
 
-#if 0
-TShmClientPool * ClientInfo::s_base = NULL;
+int ClientInfo::s_iSoftLimitPC = INT_MAX;
+int ClientInfo::s_iHardLimitPC = 100;
+int ClientInfo::s_iOverLimitGracePeriod = 10;
+int ClientInfo::s_iBanPeriod = 60;
 
-int ClientInfo::shmData_init(lsShm_hCacheData_t * p, void * pUParam)
+#if 0
+TShmClientPool *ClientInfo::s_base = NULL;
+
+int ClientInfo::shmData_init(lsShm_hCacheData_t *p, void *pUParam)
 {
-    TShmClient * pObj = (TShmClient*)p;
-    ClientInfo * pInfo = (ClientInfo *)pObj;
-    
-    // Sample code for init... 
+    TShmClient *pObj = (TShmClient *)p;
+    ClientInfo *pInfo = (ClientInfo *)pObj;
+
+    // Sample code for init...
     pObj->x_ctlThrottle = pInfo->m_ctlThrottle;
     pObj->x_iConns = pInfo->m_iConns;
     pObj->x_tmOverLimit = pInfo->m_tmOverLimit;
@@ -52,19 +57,19 @@ int ClientInfo::shmData_init(lsShm_hCacheData_t * p, void * pUParam)
     return 0;
 }
 
-int ClientInfo::shmData_remove(lsShm_hCacheData_t * p, void * pUParam)
+int ClientInfo::shmData_remove(lsShm_hCacheData_t *p, void *pUParam)
 {
     // TShmClient * pObj = (TShmClient*)p;
     // Need to do something here...
     // ClientInfo * pInfo = (ClientInfo *)pObj;
-    
-    // Sample code for remove... 
+
+    // Sample code for remove...
     return 0;
 }
 #endif
 
 ClientInfo::ClientInfo()
-    : m_pGeoInfo( NULL )
+    : m_pGeoInfo(NULL)
 {
 #if 0
     m_pShmClient = NULL;
@@ -72,14 +77,14 @@ ClientInfo::ClientInfo()
     // Only need to do this once!
     if (!s_base)
     {
-       // s_base = new TShmClientPool
-        s_base = new TShmClientPool ( ShmClientMagic
+        // s_base = new TShmClientPool
+        s_base = new TShmClientPool(ShmClientMagic
                                     , ShmClientInfo
                                     , ShmClientHash
                                     , 101
                                     , sizeof(TShmClient)
-                                    , LsShmHash::hash_buf
-                                    , LsShmHash::comp_buf
+                                    , LsShmHash::hashBuf
+                                    , LsShmHash::compBuf
                                     , shmData_init
                                     , shmData_remove
                                    );
@@ -96,23 +101,25 @@ ClientInfo::ClientInfo()
 
 ClientInfo::~ClientInfo()
 {
-    if ( m_pGeoInfo )
-        delete m_pGeoInfo;    
+    if (m_pGeoInfo)
+        delete m_pGeoInfo;
 }
 
 
-void ClientInfo::setAddr( const struct sockaddr * pAddr )
+void ClientInfo::setAddr(const struct sockaddr *pAddr)
 {
     int len, strLen;
-    if ( AF_INET == pAddr->sa_family )
+    if (AF_INET == pAddr->sa_family)
     {
-        len = 16; strLen = 17;
+        len = 16;
+        strLen = 17;
     }
     else
     {
-        len = 24; strLen = 41;
+        len = 24;
+        strLen = 41;
     }
-    
+
 #if 0
     if (s_base)
     {
@@ -120,88 +127,86 @@ void ClientInfo::setAddr( const struct sockaddr * pAddr )
         if (m_clientOffset)
         {
             // uhmmm probably not to remove...
-            s_base->removeObj((lsShm_hCacheData_t*) s_base->offset2ptr(m_clientOffset) );
+            s_base->removeObj((lsShm_hCacheData_t *) s_base->offset2ptr(
+                                  m_clientOffset));
         }
-        
-        m_pShmClient = (TShmClient*)s_base->getObj(pAddr, len, NULL , sizeof( TShmClient ));
+
+        m_pShmClient = (TShmClient *)s_base->getObj(pAddr, len, NULL ,
+                       sizeof(TShmClient));
         // initialize the data here...
         if (m_pShmClient)
         {
             // track it
-            s_base->push((lsShm_hCacheData_t*)m_pShmClient);
+            s_base->push((lsShm_hCacheData_t *)m_pShmClient);
             m_clientOffset = s_base->ptr2offset(m_pShmClient);
         }
         else
-        {
             m_clientOffset = 0;
-        }
     }
 #endif
-    memmove( m_achSockAddr, pAddr, len );
-    m_sAddr.prealloc( strLen );
-    if ( m_sAddr.buf() )
+    memmove(m_achSockAddr, pAddr, len);
+    m_sAddr.prealloc(strLen);
+    if (m_sAddr.buf())
     {
-        inet_ntop( pAddr->sa_family, ((char * )pAddr) + ((len >> 1) - 4),
-                m_sAddr.buf(), strLen );
-        m_sAddr.setLen( strlen( m_sAddr.c_str()) );
+        inet_ntop(pAddr->sa_family, ((char *)pAddr) + ((len >> 1) - 4),
+                  m_sAddr.buf(), strLen);
+        m_sAddr.setLen(strlen(m_sAddr.c_str()));
     }
-    memset( &m_iConns, 0, (char *)(&m_lastConnect + 1) - (char *)&m_iConns );
+    memset(&m_iConns, 0, (char *)(&m_lastConnect + 1) - (char *)&m_iConns);
     m_iAccess = 1;
 }
 
 int ClientInfo::checkAccess()
 {
-    switch ( m_iAccess )
+    int iSoftLimit = ClientInfo::getPerClientSoftLimit();
+    switch (m_iAccess)
     {
     case AC_BLOCK:
     case AC_DENY:
-        if ( D_ENABLED( DL_LESS ))
-            LOG_D(( "[%s] Access is denied!", getAddrString() ));
+        if (D_ENABLED(DL_LESS))
+            LOG_D(("[%s] Access is denied!", getAddrString()));
         return 1;
     case AC_ALLOW:
-        if ( getOverLimitTime() )
+        if (getOverLimitTime())
         {
-            if ( DateTime::s_curTime - getOverLimitTime()
-                    >= HttpGlobals::s_iOverLimitGracePeriod )
+            if (DateTime::s_curTime - getOverLimitTime()
+                >= ClientInfo::getOverLimitGracePeriod())
             {
-                LOG_NOTICE(( "[%s] is over per client soft connection limit: %d for %d seconds,"
-                             " close connection!",
-                    getAddrString(), HttpGlobals::s_iConnsPerClientSoftLimit,
-                    DateTime::s_curTime - getOverLimitTime() ));
-                setOverLimitTime( DateTime::s_curTime );
-                setAccess( AC_BLOCK );
+                LOG_NOTICE(("[%s] is over per client soft connection limit: %d for %d seconds,"
+                            " close connection!",
+                            getAddrString(), iSoftLimit,
+                            DateTime::s_curTime - getOverLimitTime()));
+                setOverLimitTime(DateTime::s_curTime);
+                setAccess(AC_BLOCK);
                 return 1;
             }
             else
             {
-                if ( D_ENABLED( DL_LESS ))
-                    LOG_D(( "[%s] %d connections established, limit: %d.",
-                        getAddrString(), getConns(),
-                        HttpGlobals::s_iConnsPerClientSoftLimit ));
+                if (D_ENABLED(DL_LESS))
+                    LOG_D(("[%s] %d connections established, limit: %d.",
+                           getAddrString(), getConns(), iSoftLimit));
             }
         }
-        else if ( (int)getConns() >= HttpGlobals::s_iConnsPerClientSoftLimit )
-            setOverLimitTime( DateTime::s_curTime );
-        if ( (int)getConns() >= HttpGlobals::s_iConnsPerClientHardLimit )
+        else if ((int)getConns() >= iSoftLimit)
+            setOverLimitTime(DateTime::s_curTime);
+        if ((int)getConns() >= ClientInfo::getPerClientHardLimit())
         {
-            LOG_NOTICE(( "[%s] Reached per client connection hard limit: %d, close connection!",
-                    getAddrString(), HttpGlobals::s_iConnsPerClientHardLimit ));
-            setOverLimitTime( DateTime::s_curTime );
-            setAccess( AC_BLOCK );
+            LOG_NOTICE(("[%s] Reached per client connection hard limit: %d, close connection!",
+                        getAddrString(), ClientInfo::getPerClientHardLimit()));
+            setOverLimitTime(DateTime::s_curTime);
+            setAccess(AC_BLOCK);
             return 1;
         }
-        //fall through
+    //fall through
     case AC_TRUST:
     default:
         break;
     }
     return 0;
 }
-GeoInfo * ClientInfo::allocateGeoInfo()
+GeoInfo *ClientInfo::allocateGeoInfo()
 {
-    if ( !m_pGeoInfo )
-    {
+    if (!m_pGeoInfo)
         m_pGeoInfo = new GeoInfo();
-    }
     return m_pGeoInfo;
 }

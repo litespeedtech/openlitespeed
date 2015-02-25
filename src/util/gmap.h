@@ -18,101 +18,111 @@
 #ifndef GMAP_H
 #define GMAP_H
 
-#include <lsr/lsr_map.h>
-#include <lsr/lsr_internal.h>
-#include <lsr/lsr_xpool.h>
+#include <lsr/ls_map.h>
+#include <lsr/ls_internal.h>
+#include <lsr/ls_xpool.h>
 
 //#define GMAP_DEBUG
 
-class GMap : private lsr_map_t
+class GMap : private ls_map_t
 {
 private:
-    GMap( const GMap &rhs );
-    void operator=( const GMap &rhs );
+    GMap(const GMap &rhs);
+    void operator=(const GMap &rhs);
 public:
-    
-    class GMapNode : private lsr_mapnode_t
+
+    class GMapNode : private ls_mapnode_t
     {
         friend class GMap;
-        
+
         //Forbidden functions
-        GMapNode& operator++();
-        GMapNode operator++( int );
-        GMapNode& operator--();
-        GMapNode operator--( int );
+        GMapNode &operator++();
+        GMapNode operator++(int);
+        GMapNode &operator--();
+        GMapNode operator--(int);
     public:
-        const void *getKey() const      {   return m_pKey;  }
-        void       *getValue() const    {   return m_pValue;}
+        const void *getKey() const      {   return pkey;  }
+        void       *getValue() const    {   return pvalue;}
     };
-    
+
     typedef GMapNode *iterator;
     typedef const GMapNode *const_iterator;
-    
-    typedef lsr_map_val_comp val_comp;
-    typedef lsr_map_for_each_fn for_each_fn;
-    typedef lsr_map_for_each2_fn for_each_fn2;
-    
+
+    typedef ls_map_value_compare value_compare;
+    typedef ls_map_foreach_fn for_each_fn;
+    typedef ls_map_foreach2_fn for_each2_fn;
+
 public:
-    GMap( val_comp vc, lsr_xpool_t *pool = NULL )
-    {   lsr_map( this, vc, pool );    }
-    
+    GMap(value_compare vc, ls_xpool_t *pool = NULL)
+    {   ls_map(this, vc, pool);    }
+
     ~GMap()
     {   clear();    }
-    
-    void        clear()                 {   lsr_map_clear( this );  }
-    void        swap( GMap & rhs )      {   lsr_map_swap( this, &rhs ); }
-    bool        empty() const           {   return m_size == 0; }
-    size_t      size() const            {   return m_size;  }
-    val_comp    get_val_comp() const    {   return m_vc;    }
-    
-    iterator        begin()             {   return (iterator)lsr_map_begin( this ); }
-    iterator        end()               {   return (iterator)lsr_map_end( this );   }
+
+    void        clear()                 {   ls_map_clear(this);  }
+    void        swap(GMap &rhs)      {   ls_map_swap(this, &rhs); }
+    bool        empty() const           {   return sizenow == 0; }
+    size_t      size() const            {   return sizenow;  }
+    value_compare    val_comp() const    {   return vc_fn;    }
+
+    iterator        begin()             {   return (iterator)ls_map_begin(this); }
+    iterator        end()               {   return (iterator)ls_map_end(this);   }
     const_iterator  begin() const       {   return ((GMap *)this)->begin(); }
     const_iterator  end() const         {   return ((GMap *)this)->end();   }
-    
-    iterator find( const void *pKey )
-    {  
-        return (iterator)(*m_find)( this, pKey );
-    }
-    
-    int insert( const void *pKey, void *pValue )
-    {   
-        return (*m_insert)( this, pKey, pValue );
+
+    iterator find(const void *pKey)
+    {
+        return (iterator)(*find_fn)(this, pKey);
     }
 
-    void *update( const void *pKey, void *pValue, iterator node = NULL )
-    {   
-        return (*m_update)( this, pKey, pValue, node );
+    int insert(const void *pKey, void *pValue)
+    {
+        return (*insert_fn)(this, pKey, pValue);
     }
-    
-    void *deleteNode( iterator node )
-    {   
-        return lsr_map_delete_node( this, node );
+
+    void *update(const void *pKey, void *pValue, iterator node = NULL)
+    {
+        return (*update_fn)(this, pKey, pValue, node);
     }
-    
-    iterator next( iterator iter )
-    {   
-        return (iterator)lsr_map_next( this, iter );
+
+    void *detachNode(iterator node)
+    {
+        return ls_map_detachnode(this, node);
     }
-    
-    const_iterator next( const_iterator iter ) const
-    {   
-        return ((GMap *)this)->next( iter );
+
+    int attachNode(const void *pKey, void *pVal)
+    {
+        return ls_map_attachnode(this, pKey, pVal);
     }
-    
-    int for_each( iterator beg, iterator end, for_each_fn fun )
-    {   
-        return lsr_map_for_each( this, beg, end, fun );
+
+    void *deleteNode(iterator node)
+    {
+        return ls_map_deletenode(this, node);
     }
-    
-    int for_each2( iterator beg, iterator end, for_each_fn2 fun, void *pUData )
-    {   
-        return lsr_map_for_each2( this, beg, end, fun, pUData );
+
+    iterator next(iterator iter)
+    {
+        return (iterator)ls_map_next(this, iter);
     }
-    
+
+    const_iterator next(const_iterator iter) const
+    {
+        return ((GMap *)this)->next(iter);
+    }
+
+    int for_each(iterator beg, iterator end, for_each_fn fun)
+    {
+        return ls_map_foreach(this, beg, end, fun);
+    }
+
+    int for_each2(iterator beg, iterator end, for_each2_fn fun, void *pUData)
+    {
+        return ls_map_foreach2(this, beg, end, fun, pUData);
+    }
+
 #ifdef LSR_MAP_DEBUG
-    static void printTree( GMap *pThis )    
-    {   lsr_map_printTree( pThis );  }
+    static void printTree(GMap *pThis)
+    {   ls_map_printTree(pThis);  }
 #endif
 };
 
@@ -123,8 +133,8 @@ class TMap
     : public GMap
 {
 private:
-    TMap( const TMap &rhs );
-    void operator=( const TMap &rhs );
+    TMap(const TMap &rhs);
+    void operator=(const TMap &rhs);
 public:
     class iterator
     {
@@ -133,56 +143,62 @@ public:
         iterator()
         {}
 
-        iterator( GMap::iterator iter ) : m_iter( iter )
+        iterator(GMap::iterator iter) : m_iter(iter)
         {}
 //         iterator( GMap::const_iterator iter )
 //             : m_iter( (GMap::iterator)iter )
 //         {}
 
-        iterator( const iterator& rhs ) : m_iter( rhs.m_iter )
+        iterator(const iterator &rhs) : m_iter(rhs.m_iter)
         {}
-        
+
         const void *first() const
         {  return  m_iter->getKey();   }
 
         T second() const
-        {   return (T)( m_iter->getValue() );   }
+        {   return (T)(m_iter->getValue());   }
 
-        operator GMap::iterator ()
+        operator GMap::iterator()
         {   return m_iter;  }
 
     };
     typedef iterator const_iterator;
 
-    TMap( GMap::val_comp cf )
-        : GMap( cf )
-        {};
+    TMap(GMap::value_compare cf)
+        : GMap(cf)
+    {};
     ~TMap() {};
-    
-    iterator insert( const void *pKey, const T& val )
-    {   return GMap::insert( pKey, (void *)val );  }
 
-    iterator update( const void *pKey, const T& val, TMap::iterator node = NULL )
-    {   return GMap::update( pKey, (void *)val, (GMap::iterator)node );  }
+    int insert(const void *pKey, const T *val)
+    {   return GMap::insert(pKey, (void *)val);  }
 
-    iterator find( const void *pKey )
-    {   return GMap::find( pKey );   }
+    void *update(const void *pKey, const T *val, TMap::iterator node = NULL)
+    {   return GMap::update(pKey, (void *)val, (GMap::iterator)node);  }
 
-    const_iterator find( const void *pKey ) const
-    {   return GMap::find( pKey );   }
-    
+    iterator find(const void *pKey)
+    {   return GMap::find(pKey);   }
+
+    const_iterator find(const void *pKey) const
+    {   return GMap::find(pKey);   }
+
+    T *detachNode(TMap::iterator node)
+    {   return GMap::detachNode(node);  }
+
+    int attachNode(const void *pKey, const T *val)
+    {   return GMap::attachNode(pKey, (void *)val); }
+
     iterator begin()
     {   return GMap::begin();        }
-    
-    static int deleteObj( TMap::iterator iter/* GMap::iterator iter */ )
+
+    static int deleteObj(TMap::iterator iter/* GMap::iterator iter */)
     {
-        delete (T)( iter->second() );
+        delete(T)(iter->second());
         return 0;
     }
 
-    void release_objects()
+    void releaseObjects()
     {
-        GMap::for_each( begin(), end(), deleteObj );
+        GMap::for_each(begin(), end(), deleteObj);
         GMap::clear();
     }
 

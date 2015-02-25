@@ -27,11 +27,11 @@ class Timer
 {
     timeval    m_start;
     timeval    m_end;
-    char *     m_tag;
+    char      *m_tag;
     int        stopped;
     int        counter;
 public:
-    Timer(const char * tag = "TEST")
+    Timer(const char *tag = "TEST")
     {
         counter = 0;
         stopped = 0;
@@ -46,9 +46,7 @@ public:
     ~Timer()
     {
         if (!stopped)
-        {
             show();
-        }
         if (m_tag)
         {
             free(m_tag);
@@ -69,15 +67,15 @@ public:
     }
     uint32_t ms()
     {
-        if  (!stopped)
+        if (!stopped)
             stop();
 
-        return ((m_end.tv_sec - m_start.tv_sec) * 1000000) 
-                    + (m_end.tv_usec - m_start.tv_usec);
+        return ((m_end.tv_sec - m_start.tv_sec) * 1000000)
+               + (m_end.tv_usec - m_start.tv_usec);
     }
     void show()
     {
-        if (!stopped) 
+        if (!stopped)
             stop();
         std::cout << msStr() << "\n";
     }
@@ -94,10 +92,10 @@ public:
     inline void setCount(int c)
     { counter = c; };
 
-    friend std::ostream & operator<< (std::ostream & os, Timer & );
+    friend std::ostream &operator<< (std::ostream &os, Timer &);
 };
 
-std::ostream & operator<< (std::ostream & os, Timer & o)
+std::ostream &operator<< (std::ostream &os, Timer &o)
 {
     os << o.msStr();
     return  os;

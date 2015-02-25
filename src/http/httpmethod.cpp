@@ -19,11 +19,53 @@
 #include <inttypes.h>
 #include <string.h>
 
-http_method_t HttpMethod::parse2( const char * pMethod )
+
+const char *HttpMethod::s_psMethod[HttpMethod::HTTP_METHOD_END] =
 {
-    register http_method_t method = 0;
-    register char ch = *pMethod & ~0x20;
-    switch( ch )
+    "UNKNOWN",
+    "OPTIONS",
+    "GET",
+    "HEAD",
+    "POST",
+    "PUT",
+    "DELETE",
+    "TRACE",
+    "CONNECT",
+    "MOVE",
+    "PROPFIND",
+    "PROPPATCH",
+    "MKCOL",
+    "COPY",
+    "LOCK",
+    "UNLOCK",
+    "VERSION-CONTROL",
+    "REPORT",
+    "CHECKIN",
+    "CHECKOUT",
+    "UNCHECKOUT",
+    "UPDATE",
+    "MKWORKSPACE",
+    "LABEL",
+    "MERGE",
+    "BASELINE-CONTROL",
+    "MKACTIVITY",
+    "BIND",
+    "SEARCH",
+    "PURGE",
+    "REFRESH"
+
+};
+int HttpMethod::s_iMethodLen[HttpMethod::HTTP_METHOD_END] =
+{
+    7, 7, 3, 4, 4, 3, 6, 5, 7, 4,
+    8, 9, 5, 4, 4, 6, 15, 6, 7, 8, 10, 7, 11, 5, 5, 16, 10, 4, 6, 5, 7
+};
+
+http_method_t HttpMethod::parse2(const char *pMethod)
+{
+    http_method_t method = 0;
+    char ch = *pMethod & ~0x20;
+    switch (ch)
     {
     case 'G':
         method = HTTP_GET;
@@ -34,9 +76,9 @@ http_method_t HttpMethod::parse2( const char * pMethod )
     case 'O':
         method = HTTP_OPTIONS;
         break;
-        
+
     case 'P':
-        switch( *(pMethod+2) & ~0x20 )
+        switch (*(pMethod + 2) & ~0x20)
         {
         case 'T':
             method = HTTP_PUT;
@@ -48,7 +90,7 @@ http_method_t HttpMethod::parse2( const char * pMethod )
             method = HTTP_POST;
             break;
         case 'O':
-            if ( 'F' == (*(pMethod+4 ) & ~0x20 ) )
+            if ('F' == (*(pMethod + 4) & ~0x20))
                 method = DAV_PROPFIND;
             else
                 method = DAV_PROPPATCH;
@@ -58,13 +100,13 @@ http_method_t HttpMethod::parse2( const char * pMethod )
     case 'D':
         method = HTTP_DELETE;
         break;
-        
+
     case 'T':
         method = HTTP_TRACE;
         break;
-        
+
     case 'C':
-        switch( *(pMethod+2) & ~0x20 )
+        switch (*(pMethod + 2) & ~0x20)
         {
         case 'P':
             method = DAV_COPY;
@@ -73,7 +115,7 @@ http_method_t HttpMethod::parse2( const char * pMethod )
             method = HTTP_CONNECT;
             break;
         case 'E':
-            if (( *(pMethod+6) & ~0x20 ) == 'O' )
+            if ((*(pMethod + 6) & ~0x20) == 'O')
                 method = DAV_CHECKOUT;
             else
                 method = DAV_CHECKIN;
@@ -81,7 +123,7 @@ http_method_t HttpMethod::parse2( const char * pMethod )
         }
         break;
     case 'M':
-        switch( *(pMethod+2) & ~0x20 )
+        switch (*(pMethod + 2) & ~0x20)
         {
         case 'V':
             method = HTTP_MOVE;
@@ -100,27 +142,27 @@ http_method_t HttpMethod::parse2( const char * pMethod )
             break;
         }
         break;
-        
+
     case 'L':
-        if (( *(pMethod+2) & ~0x20 ) == 'C' )
+        if ((*(pMethod + 2) & ~0x20) == 'C')
             method = DAV_LOCK;
-        else 
+        else
             method = DAV_LABEL;
         break;
-        
+
     case 'R':
-        if (( *(pMethod+2) & ~0x20 ) == 'F' )
+        if ((*(pMethod + 2) & ~0x20) == 'F')
             method = HTTP_REFRESH;
         else
             method = DAV_REPORT;
         break;
-        
+
     case 'S':
         method = DAV_SEARCH;
         break;
-        
+
     case 'U':
-        switch( *(pMethod+2) & ~0x20 )
+        switch (*(pMethod + 2) & ~0x20)
         {
         case 'L':
             method = DAV_UNLOCK;
@@ -133,34 +175,35 @@ http_method_t HttpMethod::parse2( const char * pMethod )
             break;
         }
         break;
-        
+
     case 'V':
         method = DAV_VERSION_CONTROL;
         break;
-        
+
     case 'B':
-        if ( ( *(pMethod+2) & ~0x20 ) == 'N' )
+        if ((*(pMethod + 2) & ~0x20) == 'N')
             method = DAV_BIND;
         else
             method = DAV_BASELINE_CONTROL;
         break;
-        
+
     default:
         return 0;
     }
-    if (method && (strncasecmp( s_psMethod[method], pMethod, s_iMethodLen[method] ) == 0 ))
+    if (method
+        && (strncasecmp(s_psMethod[method], pMethod, s_iMethodLen[method]) == 0))
         return method;
     return 0;
 }
 
 
-http_method_t HttpMethod::parse( const char * pMethod )
+http_method_t HttpMethod::parse(const char *pMethod)
 {
-    http_method_t method = parse2( pMethod );
-    if ( method )
+    http_method_t method = parse2(pMethod);
+    if (method)
     {
-        char ch= *(pMethod + getLen( method ) );
-        if (( ch != ' ' )&&( ch != '\t' ))
+        char ch = *(pMethod + getLen(method));
+        if ((ch != ' ') && (ch != '\t'))
             return 0;
     }
     return method;

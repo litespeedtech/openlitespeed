@@ -23,63 +23,69 @@
 #include <stdlib.h>
 #include <sys/types.h>
 #include <sys/mman.h>
-  
+
+#include <lsdef.h>
 #include <util/gpointerlist.h>
 //#include <util/linkedobj.h>
 
 #ifndef MAP_FILE
 #define MAP_FILE 0
 #endif //MAP_FILE
-  
+
 class BlockBuf //: public LinkedObj
 {
-    char  * m_pBuf;
-    char  * m_pBufEnd;
+    char   *m_pBuf;
+    char   *m_pBufEnd;
 public:
     BlockBuf()
-        : m_pBuf( NULL )
-        , m_pBufEnd( NULL )
+        : m_pBuf(NULL)
+        , m_pBufEnd(NULL)
     {}
 
-    BlockBuf( char * pBuf, size_t size )
-        : m_pBuf( pBuf )
-        , m_pBufEnd( pBuf + size )
+    BlockBuf(char *pBuf, size_t size)
+        : m_pBuf(pBuf)
+        , m_pBufEnd(pBuf + size)
     {}
     virtual ~BlockBuf() {}
     virtual void deallocate()
     {}
-    void setBlockBuf( char * pBuf, size_t size )
+    void setBlockBuf(char *pBuf, size_t size)
     {   m_pBuf = pBuf; m_pBufEnd = pBuf + size;       }
 
-    char * getBuf() const           {   return m_pBuf;              }
-    char * getBufEnd() const        {   return m_pBufEnd;           }
+    char *getBuf() const           {   return m_pBuf;              }
+    char *getBufEnd() const        {   return m_pBufEnd;           }
     size_t  getBlockSize() const    {   return m_pBufEnd - m_pBuf;  }
 
+
+
+    LS_NO_COPY_ASSIGN(BlockBuf);
 };
 
 class MallocBlockBuf : public BlockBuf
 {
 public:
     MallocBlockBuf() {}
-    MallocBlockBuf( char * pBuf, size_t size )
-        : BlockBuf( pBuf, size )
+    MallocBlockBuf(char *pBuf, size_t size)
+        : BlockBuf(pBuf, size)
     {}
-    ~MallocBlockBuf()   {   if ( getBuf() ) free( getBuf() );    }
+    ~MallocBlockBuf()   {   if (getBuf()) free(getBuf());    }
     void deallocate()
-    {   free( getBuf() );     }
+    {   free(getBuf());     }
 };
 
 class MmapBlockBuf : public BlockBuf
 {
 public:
     MmapBlockBuf() {}
-    MmapBlockBuf( char * pBuf, size_t size )
-        : BlockBuf( pBuf, size )
+    MmapBlockBuf(char *pBuf, size_t size)
+        : BlockBuf(pBuf, size)
     {}
-    ~MmapBlockBuf()     {   if ( getBuf() ) munmap( getBuf(), getBlockSize() ); }
+    ~MmapBlockBuf()     {   if (getBuf()) munmap(getBuf(), getBlockSize()); }
     void deallocate()
-    {   munmap( getBuf(), getBlockSize() ); 
-        setBlockBuf( NULL, getBlockSize() );     }
+    {
+        munmap(getBuf(), getBlockSize());
+        setBlockBuf(NULL, getBlockSize());
+    }
 };
 
 

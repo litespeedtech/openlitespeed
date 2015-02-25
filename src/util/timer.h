@@ -25,16 +25,19 @@ class TimerImpl;
 
 class Timer
 {
-    TimerImpl* m_impl;
-public: 
+    TimerImpl *m_pImpl;
+
+    Timer(const Timer &rhs);
+    void operator=(const Timer &rhs);
+public:
     Timer();
     ~Timer();
     /** Schedules the specified task for execution after the specified delay.
      *  @param task task to be scheduled.
      *  @param delay delay in seconds before task is to be executed.
      */
-    int  schedule( TimerTask* task, long delay );
-    void cancel( TimerTask* task );
+    int  schedule(TimerTask *task, long delay);
+    void cancel(TimerTask *task);
     void execute();
     static int currentTime();
 };

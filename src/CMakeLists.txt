@@ -47,13 +47,11 @@ SET(openlitespeed_SRCS
 SET(util_SRCS
    util/httpfetchdriver.cpp
    util/httpfetch.cpp
-   util/ni_fio.c
    util/linkobjpool.cpp
    util/pidfile.cpp
    util/hashdatacache.cpp
    util/keydata.cpp
    util/tlinklist.cpp
-   util/mysleep.c
    util/rlimits.cpp
    util/duplicable.cpp
    util/gfactory.cpp
@@ -96,6 +94,9 @@ SET(util_SRCS
    util/configctx.cpp
    util/logidtracker.cpp
    util/datetime.cpp
+   util/resourcepool.cpp
+   util/linkqueue.cpp
+   util/httputil.cpp
    util/misc/profiletime.cpp
    util/sysinfo/partitioninfo.cpp
    util/sysinfo/nicdetect.cpp
@@ -103,28 +104,45 @@ SET(util_SRCS
 )
 
 SET(lsr_SRCS
-   lsr/lsr_aho.c
-   lsr/lsr_base64.c
-   lsr/lsr_buf.c
-   lsr/lsr_confparser.c
-   lsr/lsr_crc64.c
-   lsr/lsr_dlinkq.c
-   lsr/lsr_hash.c
-   lsr/lsr_link.c
-   lsr/lsr_lock.c
-   lsr/lsr_loopbuf.c
-   lsr/lsr_map.c
-   lsr/lsr_md5.c
-   lsr/lsr_objarray.c
-   lsr/lsr_objpool.c
-   lsr/lsr_pcreg.c
-   lsr/lsr_pool.c
-   lsr/lsr_ptrlist.c
-   lsr/lsr_sha1.c
-   lsr/lsr_str.c
-   lsr/lsr_strlist.c
-   lsr/lsr_strtool.c
-   lsr/lsr_xpool.c
+   lsr/ls_aho.c
+   lsr/ls_base64.c
+   lsr/ls_buf.c
+   lsr/ls_confparser.c
+   lsr/ls_crc64.c
+   lsr/ls_dlinkq.c
+   lsr/ls_fileio.c
+   lsr/ls_hash.c
+   lsr/ls_lfqueue.c
+   lsr/ls_lfstack.c
+   lsr/ls_link.c
+   lsr/ls_llmq.c
+   lsr/ls_llxq.c
+   lsr/ls_lock.c
+   lsr/ls_loopbuf.c
+   lsr/ls_map.c
+   lsr/ls_md5.c
+   lsr/ls_mpscq.c
+   lsr/ls_objarray.c
+   lsr/ls_objpool.c
+   lsr/ls_pcreg.c
+   lsr/ls_pool.c
+   lsr/ls_ptrlist.c
+   lsr/ls_sha1.c
+   lsr/ls_str.c
+   lsr/ls_strlist.c
+   lsr/ls_strtool.c
+   lsr/ls_time.c
+   lsr/ls_xpool.c
+   lsr/xxhash.c
+)
+
+SET(thread_SRCS
+   thread/pthreadcond.cpp
+   thread/pthreadmutex.cpp
+   thread/pthreadworkqueue.cpp
+   thread/thread.cpp
+   thread/workcrew.cpp
+   thread/worker.cpp
 )
 
 SET(edio_STAT_SRCS
@@ -194,89 +212,150 @@ SET(spdy_STAT_SRCS
 
 SET(MODULE_DATAS_SRCS
    test/lsiapi/moduledata.cpp
-   test/lsiapi/moduletimer.cpp
+   test/lsiapi/moduletimertest.cpp
    test/lsiapi/lsiapihookstest.cpp
    test/lsiapi/envhandler.cpp
 )
 
 SET(lsr_STAT_SRCS
-   test/lsr/lsr_ahotest.cpp
-   test/lsr/lsr_confparsertest.cpp
-   test/lsr/lsr_base64test.cpp
-   test/lsr/lsr_buftest.cpp
-   test/lsr/lsr_dlinkqtest.cpp
-   test/lsr/lsr_hashtest.cpp
-   test/lsr/lsr_linktest.cpp
-   test/lsr/lsr_loopbuftest.cpp
-   test/lsr/lsr_maptest.cpp
-   test/lsr/lsr_md5test.cpp
-   test/lsr/lsr_objarraytest.cpp
-   test/lsr/lsr_objpooltest.cpp
-   test/lsr/lsr_pcregtest.cpp
-   test/lsr/lsr_pooltest.cpp
-   test/lsr/lsr_ptrlisttest.cpp
-   test/lsr/lsr_sha1test.cpp
-   test/lsr/lsr_strtest.cpp
-   test/lsr/lsr_strlisttest.cpp
-   test/lsr/lsr_strtooltest.cpp
-   test/lsr/lsr_xpooltest.cpp
+   test/lsr/ls_ahotest.cpp
+   test/lsr/ls_confparsertest.cpp
+   test/lsr/ls_base64test.cpp
+   test/lsr/ls_buftest.cpp
+   test/lsr/ls_dlinkqtest.cpp
+   test/lsr/ls_hashtest.cpp
+   test/lsr/ls_linktest.cpp
+   test/lsr/ls_loopbuftest.cpp
+   test/lsr/ls_maptest.cpp
+   test/lsr/ls_md5test.cpp
+   test/lsr/ls_objarraytest.cpp
+   test/lsr/ls_objpooltest.cpp
+   test/lsr/ls_pcregtest.cpp
+   test/lsr/ls_pooltest.cpp
+   test/lsr/ls_ptrlisttest.cpp
+   test/lsr/ls_sha1test.cpp
+   test/lsr/ls_strtest.cpp
+   test/lsr/ls_strlisttest.cpp
+   test/lsr/ls_strtooltest.cpp
+   test/lsr/ls_xpooltest.cpp
+)
+
+SET(thread_STAT_SRCS
+   test/thread/pthreadworkqueuetest.cpp
+   test/thread/threadtest.cpp
+   test/thread/workcrewtest.cpp
+)
+
+SET(shm_STAT_SRCS
+   test/shm/shmlrutest.cpp
+   test/shm/shmxtest.cpp
 )
 
 link_directories(/usr/local/lib ${PROJECT_SOURCE_DIR}/src/test/unittest-cpp/UnitTest++)
 
-add_executable(openlitespeed ${openlitespeed_SRCS} ${util_SRCS} ${lsr_SRCS} ${edio_STAT_SRCS} 
-    ${extensions_STAT_SRCS} ${http_STAT_SRCS} ${socket_STAT_SRCS} 
-    ${util_STAT_SRCS} ${spdy_STAT_SRCS} ${MODULE_DATAS_SRCS} 
-    ${lsr_STAT_SRCS})
+add_executable(openlitespeed ${openlitespeed_SRCS} ${util_SRCS} ${lsr_SRCS}
+    ${thread_SRCS} ${edio_STAT_SRCS}
+    ${extensions_STAT_SRCS} ${http_STAT_SRCS} ${socket_STAT_SRCS}
+    ${util_STAT_SRCS} ${spdy_STAT_SRCS} ${MODULE_DATAS_SRCS}
+    ${lsr_STAT_SRCS} ${thread_STAT_SRCS} ${shm_STAT_SRCS})
 
-#add_executable(luatest 
+#add_executable(luatest
 #modules/prelinkedmods.cpp
-#test/lua/luatest.cpp 
+#test/lua/luatest.cpp
 #httpdtest.cpp
 #)
 
-add_executable(shmtest
-test/shm/testshmapi.cpp
-test/shm/shmtest.cpp
-test/shm/lsshmdebug.cpp
-test/shm/testshm.cpp
-test/shm/testshmreg.cpp
-test/shm/testshmhash.cpp
+add_executable(shmlru_test
+test/shm/shmlru_test.c
 modules/prelinkedmods.cpp
 httpdtest.cpp
-${lsr_SRCS}
 ${util_SRCS}
+${lsr_SRCS}
+${thread_SRCS}
 )
 
-add_executable(lsr_locktest
-test/lsr/lsr_locktest.cpp ${lsr_SRCS}
+# add_executable(shmtest
+# test/shm/testshmapi.cpp
+# test/shm/shmtest.cpp
+# test/shm/lsshmdebug.cpp
+# test/shm/testshm.cpp
+# test/shm/testshmreg.cpp
+# test/shm/testshmhash.cpp
+# modules/prelinkedmods.cpp
+# httpdtest.cpp
+# ${lsr_SRCS}
+# ${thread_SRCS}
+# ${util_SRCS}
+# )
+
+add_executable(ls_lfqueuetest
+test/lsr/ls_lfqueuetest.c
+${lsr_SRCS}
 )
 
-add_executable(lsr_thrsafetest
-test/lsr/lsr_thrsafetest.cpp ${lsr_SRCS}
+add_executable(ls_lfstacktest
+test/lsr/ls_lfstacktest.cpp
+util/misc/profiletime.cpp
+${lsr_SRCS}
+${test_SRCS}
 )
 
-add_executable(lsr_valgrindtest
-test/lsr/lsr_valgrindtest.c ${lsr_SRCS}
+add_executable(ls_llmqtest
+test/lsr/ls_llmqtest.c
+${lsr_SRCS}
+)
+
+add_executable(ls_locktest
+test/lsr/ls_locktest.cpp
+${lsr_SRCS}
+)
+
+add_executable(ls_stacktest
+test/lsr/ls_stacktest.cpp
+util/misc/profiletime.cpp
+${lsr_SRCS}
+${test_SRCS}
+)
+
+add_executable(ls_thrsafetest
+test/lsr/ls_thrsafetest.cpp
+${lsr_SRCS}
+)
+
+add_executable(ls_valgrindtest
+test/lsr/ls_valgrindtest.c
+${lsr_SRCS}
 )
 
 
 
-SET( litespeedlib 
-    lsshm main http main modgzip spdy ssi 
-    lsiapi registry cgi fcgi jk extensions 
-    lsapi proxy edio  log4cxx socket 
-    sslpp  http edio GeoIP pthread ${CMAKE_DL_LIBS} ${libUnitTest} )
+SET( litespeedlib
+    lsshm main http main modgzip spdy ssi
+    lsiapi registry cgi fcgi jk extensions
+    lsapi proxy edio log4cxx socket
+    sslpp  http edio GeoIP pthread rt
+    cache
+    ${CMAKE_DL_LIBS} ${libUnitTest} )
 
 target_link_libraries(openlitespeed ${litespeedlib} )
 
-target_link_libraries(shmtest ${litespeedlib} )
+# target_link_libraries(shmtest ${litespeedlib} )
 
-target_link_libraries(lsr_locktest pthread ssl crypto pcre )
+target_link_libraries(shmlru_test ${litespeedlib} )
 
-target_link_libraries(lsr_thrsafetest pthread ssl crypto pcre )
+target_link_libraries(ls_lfqueuetest pthread ssl crypto pcre )
 
-target_link_libraries(lsr_valgrindtest pthread ssl crypto pcre )
+target_link_libraries(ls_lfstacktest pthread ssl crypto pcre )
+
+target_link_libraries(ls_llmqtest pthread ssl crypto pcre )
+
+target_link_libraries(ls_locktest pthread ssl crypto pcre )
+
+target_link_libraries(ls_stacktest pthread ssl crypto pcre )
+
+target_link_libraries(ls_thrsafetest pthread ssl crypto pcre )
+
+target_link_libraries(ls_valgrindtest pthread ssl crypto pcre )
 
 install(TARGETS openlitespeed DESTINATION bin)
 

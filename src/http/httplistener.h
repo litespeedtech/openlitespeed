@@ -42,87 +42,87 @@ class HttpListener : public EventReactor, public LogTracker
     friend class HttpServerImpl;
     static int32_t      m_iSockSendBufSize;
     static int32_t      m_iSockRecvBufSize;
-    
+
     AutoStr             m_sName;
-    VHostMap          * m_pMapVHost;
-    SubIpMap          * m_pSubIpMap;
-    
+    VHostMap           *m_pMapVHost;
+    SubIpMap           *m_pSubIpMap;
+
     short               m_iAdmin;
     short               m_isSSL;
     unsigned int        m_iBinding;
-    
+
     ModuleConfig m_moduleConfig;
     IolinkSessionHooks  m_iolinkSessionHooks;
-    
-    HttpListener( const HttpListener& rhs );
-    void operator=( const HttpListener& rhs );
-    int addConnection( struct conn_data * pCur, int *iCount );
-    //int addConnection( int fd, const struct sockaddr * pPeer );
-    int batchAddConn( struct conn_data * pBegin,
-                      struct conn_data *pEnd, int *iCount );
-    int checkAccess( struct conn_data * pData );
-    int setSockAttr( int fd, GSockAddr &addr );
-    VHostMap * getSubMap( int fd );
 
-    
+    HttpListener(const HttpListener &rhs);
+    void operator=(const HttpListener &rhs);
+    int addConnection(struct conn_data *pCur, int *iCount);
+    //int addConnection( int fd, const struct sockaddr * pPeer );
+    int batchAddConn(struct conn_data *pBegin,
+                     struct conn_data *pEnd, int *iCount);
+    int checkAccess(struct conn_data *pData);
+    int setSockAttr(int fd, GSockAddr &addr);
+    VHostMap *getSubMap(int fd);
+
+
 protected:
-    virtual const char * buildLogId() { return NULL; };
-    
+    virtual const char *buildLogId() { return NULL; };
+
 public:
-    explicit HttpListener( const char * pName, const char * pAddr );
+    explicit HttpListener(const char *pName, const char *pAddr);
 
     HttpListener();
-    
+
     virtual ~HttpListener();
 
     void beginConfig();
     void endConfig();
-    
+
     short isSSL() const                 {   return m_isSSL;     }
 
-    const char * getName() const        {   return m_sName.c_str();     }
-    void setName( const char * pName )  {   m_sName = pName;    }
-    
-    const char * getAddrStr() const;
+    const char *getName() const        {   return m_sName.c_str();     }
+    void setName(const char *pName)  {   m_sName = pName;    }
+
+    const char *getAddrStr() const;
 
     int getPort() const;
 
     short isAdmin() const               {   return m_iAdmin;    }
-    void setAdmin( char admin )         {   m_iAdmin = admin;   }
+    void setAdmin(char admin)         {   m_iAdmin = admin;   }
 
-    
+
     unsigned int getBinding() const     {   return m_iBinding;  }
-    void setBinding( unsigned int b )   {   m_iBinding = b;     }
-    
-    int assign( int fd, struct sockaddr * pAddr );
+    void setBinding(unsigned int b)   {   m_iBinding = b;     }
 
-    const VHostMap * getVHostMap() const
+    int assign(int fd, struct sockaddr *pAddr);
+
+    const VHostMap *getVHostMap() const
     {   return m_pMapVHost;     }
-    VHostMap * getVHostMap() 
+    VHostMap *getVHostMap()
     {   return m_pMapVHost;     }
-            
+
     virtual int start();
 
-    virtual int handleEvents( short event );
-    
+    virtual int handleEvents(short event);
+
     //virtual int start( Multiplexer* pMulti );
     virtual int suspend();
     virtual int resume();
     virtual int stop();
 
     void onTimer();
-    
-    static void setSockSendBufSize( int32_t size )
+
+    static void setSockSendBufSize(int32_t size)
     {   m_iSockSendBufSize = size;              }
-    static void setSockRecvBufSize( int32_t size )
+    static void setSockRecvBufSize(int32_t size)
     {   m_iSockRecvBufSize = size;              }
 
-    VHostMap * addIpMap( const char * pIP );
-    int addDefaultVHost( HttpVHost * pVHost );
+    VHostMap *addIpMap(const char *pIP);
+    int addDefaultVHost(HttpVHost *pVHost);
 
-    int writeStatusReport( int fd );
-    int mapDomainList(HttpVHost * pVHost, const char * pDomains);
-    
+    int writeStatusReport(int fd);
+    int mapDomainList(HttpVHost *pVHost, const char *pDomains);
+
     IolinkSessionHooks  *getSessionHooks() {  return &m_iolinkSessionHooks;    }
     ModuleConfig *getModuleConfig()         { return &m_moduleConfig;   }
 };

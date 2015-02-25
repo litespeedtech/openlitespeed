@@ -18,7 +18,7 @@
 #ifndef LOG_MESSAGE_HANDLER_H_
 #define LOG_MESSAGE_HANDLER_H_
 
-void Install_log_message_handler();
+void InstallLogMessageHandler();
 
 #endif  // LOG_MESSAGE_HANDLER_H_
 

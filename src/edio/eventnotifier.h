@@ -31,8 +31,6 @@
 
 class Multiplexer;
 
-typedef  void ( * EVENT_CALLBACK )( void* );
-
 class EventNotifier :  public EventReactor
 {
 #ifdef LSEFD_AVAIL
@@ -42,16 +40,16 @@ class EventNotifier :  public EventReactor
 #endif
 
 public:
-    EventNotifier() 
+    EventNotifier()
 #ifdef LSEFD_AVAIL
-    : m_count( 0 )
+        : m_count(0)
 #else
-    : m_fdIn( -1 ) 
+        : m_fdIn(-1)
 #endif
     {};
-    ~EventNotifier();
-    virtual int handleEvents( short int event );
-    int initNotifier( Multiplexer* pMultiplexer );
+    virtual ~EventNotifier();
+    virtual int handleEvents(short int event);
+    int initNotifier(Multiplexer *pMultiplexer);
     void notify();
 #ifndef LSEFD_AVAIL
     int getFdIn()
@@ -59,9 +57,12 @@ public:
         return m_fdIn;
     }
 #endif
-    void uninitNotifier( Multiplexer* pMultiplexer );
-    
-    virtual int onNotified( int count ) = 0;
+    void uninitNotifier(Multiplexer *pMultiplexer);
+
+    virtual int onNotified(int count) = 0;
+private:
+    EventNotifier(const EventNotifier &rhs);
+    void operator=(const EventNotifier &rhs);
 };
 
 #endif // EVENTNOTIFIER_H

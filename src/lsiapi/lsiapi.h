@@ -19,7 +19,7 @@
 #define LSIAPI_H
 #include <ls.h>
 #include <util/hashstringmap.h>
-#include <http/httplog.h>
+#include <util/dlinkqueue.h>
 #include "lsiapihooks.h"
 
 #define LSIAPI extern "C"
@@ -27,35 +27,36 @@
 
 
 
-class LsiModuleData ;
+class LsiModuleData;
 
-typedef struct gdata_key_s 
+typedef struct gdata_key_s
 {
-    char* key_str;
+    char *key_str;
     int key_str_len;
 } gdata_key_t;
 
-typedef struct gdata_item_val_s 
+typedef struct gdata_item_s
 {
     gdata_key_t key;          //Need to deep copy the original buffer
     void *value;
-    time_t tmCreate;
-    time_t tmExpire;        //Create time + TTL = expird time
-    time_t tmAccess;        //For not checking file too often
+    time_t tmcreate;
+    time_t tmexpire;        //Create time + TTL = expird time
+    time_t tmaccess;        //For not checking file too often
     lsi_release_callback_pf release_cb;
-} gdata_item_val_t;
+} gdata_item_t;
 
-typedef  THash<gdata_item_val_t *> __LsiGDataItemHashT;
+typedef  THash<gdata_item_t *> GDataHash;
 
-typedef struct lsi_gdata_cont_val_s {
+typedef struct lsi_gdata_cont_s
+{
     gdata_key_t key;          //Need to deep copy the original buffer
-    __LsiGDataItemHashT *container;
-    time_t tmCreate;
+    GDataHash *container;
+    time_t tmcreate;
     int type;
-} lsi_gdata_cont_val_t;
+} lsi_gdata_cont_t;
 
-typedef  THash<lsi_gdata_cont_val_t *> __LsiGDataContHashT;
-//extern __LsiGDataContHashT *gLsiGDataContHashT[];
+typedef  THash<lsi_gdata_cont_t *> GDataContainer;
+//extern GDataContainer *gLsiGDataContHashT[];
 
 
 class LsiapiBridge
@@ -63,17 +64,19 @@ class LsiapiBridge
 public:
     LsiapiBridge() {};
     ~LsiapiBridge() {};
-    
-    static lsi_api_t  gLsiapiFunctions;
-    static __LsiGDataContHashT *gLsiGDataContHashT[LSI_CONTAINER_COUNT];  //global data
-    
-    
-    static int init_lsiapi();
-    static void uninit_lsiapi();
-    static void expire_gdata_check();
-    static void releaseModuleData( int level, LsiModuleData * pData );
-    static lsi_api_t *   getLsiapiFunctions() { return &LsiapiBridge::gLsiapiFunctions; };
+
+    static lsi_api_t  g_lsiapiFunctions;
+    static GDataContainer *g_aGDataContainer[LSI_CONTAINER_COUNT];
+
+
+    static int initLsiapi();
+    static void uninitLsiapi();
+    static void checkExpiredGData();
+    static void releaseModuleData(int level, LsiModuleData *pData);
+    static lsi_api_t *getLsiapiFunctions()
+    { return &LsiapiBridge::g_lsiapiFunctions; };
 
 };
+
 
 #endif // LSIAPI_H

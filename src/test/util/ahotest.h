@@ -23,15 +23,16 @@
 #ifndef AHOTEST_H
 #define AHOTEST_H
 
-Aho *getTree( const char *acceptBuf[], int bufCount, int sensitive );
+Aho *getTree(const char *acceptBuf[], int bufCount, int sensitive);
 
 const int iTestOneLen = 86;
-const char * pTestOne = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. "
-        "Quisque sagittis lectus erat.";
+const char *pTestOne =
+    "Lorem ipsum dolor sit amet, consectetur adipiscing elit. "
+    "Quisque sagittis lectus erat.";
 
 //Find first occurrence
 const int iAcceptOneLen = 5;
-const char * aAcceptOne[] = 
+const char *aAcceptOne[] =
 {
     "dolof",
     "ultricies",
@@ -42,7 +43,7 @@ const char * aAcceptOne[] =
 
 //Never find occurrence
 const int iAcceptTwoLen = 5;
-const char * aAcceptTwo[] = 
+const char *aAcceptTwo[] =
 {
     "stuff",
     "blah",
@@ -52,11 +53,11 @@ const char * aAcceptTwo[] =
 };
 
 const int iTestTwoLen = 5;
-const char * pTestTwo = "apple";
+const char *pTestTwo = "apple";
 
 //Length of accept is longer than input
 const int iAcceptThreeLen = 4;
-const char * aAcceptThree[] =
+const char *aAcceptThree[] =
 {
     "alphabet",
     "octangular",
@@ -66,7 +67,7 @@ const char * aAcceptThree[] =
 
 //Input matches all but last character
 const int iAcceptFourLen = 5;
-const char * aAcceptFour[] =
+const char *aAcceptFour[] =
 {
     "appla",
     "applb",
@@ -76,11 +77,11 @@ const char * aAcceptFour[] =
 };
 
 const int iTestThreeLen = 21;
-const char * pTestThree = "blahabdcdegfghjkstuff";
+const char *pTestThree = "blahabdcdegfghjkstuff";
 
 //Jump branches
 const int iAcceptFiveLen = 4;
-const char * aAcceptFive[] = 
+const char *aAcceptFive[] =
 {
     "abcdefg",
     "bdcdefgh",
@@ -89,18 +90,18 @@ const char * aAcceptFive[] =
 };
 
 const int iTestFourLen = 21;
-const char * pTestFour = "APPLESBANANASCHERRIES";
+const char *pTestFour = "APPLESBANANASCHERRIES";
 
 //Case insensitive and sensitive
 const int iAcceptSixLen = 2;
-const char * aAcceptSix[] = 
+const char *aAcceptSix[] =
 {
     "bAnAnas",
     "Apples"
 };
 
 const int iTestFiveLen = 10;
-const char * pTestFive = "aaaaaaaaaa";
+const char *pTestFive = "aaaaaaaaaa";
 
 //Test null check
 const int iAcceptSevenLen = 8;
@@ -116,7 +117,7 @@ const char *aAcceptSeven[] =
     "octangular"
 };
 
-const char *aTestInput[] = 
+const char *aTestInput[] =
 {
     pTestOne,
     pTestOne,
@@ -127,7 +128,7 @@ const char *aTestInput[] =
     pTestFour,
     pTestFive
 };
-int aTestInputLen[] = 
+int aTestInputLen[] =
 {
     iTestOneLen,
     iTestOneLen,
@@ -138,7 +139,7 @@ int aTestInputLen[] =
     iTestFourLen,
     iTestFiveLen
 };
-const char **aTestAccept[] = 
+const char **aTestAccept[] =
 {
     aAcceptOne,
     aAcceptTwo,
@@ -149,7 +150,7 @@ const char **aTestAccept[] =
     aAcceptSix,
     aAcceptSeven
 };
-int aTestAcceptLen[] = 
+int aTestAcceptLen[] =
 {
     iAcceptOneLen,
     iAcceptTwoLen,
@@ -161,29 +162,29 @@ int aTestAcceptLen[] =
     iAcceptSevenLen
 };
 
-size_t aOutStartRes[] = 
+size_t aOutStartRes[] =
 {
     57,
-    (size_t)-1,
-    (size_t)-1,
+    (size_t) - 1,
+    (size_t) - 1,
     0,
     9,
-    (size_t)-1,
+    (size_t) - 1,
     0,
-    (size_t)-1
+    (size_t) - 1
 };
-size_t aOutEndRes[] = 
+size_t aOutEndRes[] =
 {
     64,
-    (size_t)-1,
-    (size_t)-1,
+    (size_t) - 1,
+    (size_t) - 1,
     5,
     16,
-    (size_t)-1,
+    (size_t) - 1,
     6,
-    (size_t)-1
+    (size_t) - 1
 };
-int aSensitive[] = 
+int aSensitive[] =
 {
     1,
     1,

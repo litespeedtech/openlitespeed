@@ -25,14 +25,14 @@ class FcgiNameValuePair
     FcgiNameValuePair();
     ~FcgiNameValuePair();
 public:
-    static int append( char * pBuf, int& size,
-            const char * pName, int nameLen,
-            const char * pValue, int valLen );
-    static int append( char * pBuf, int &size,
-        const char * pName, const char * pValue );
-    static int decode( char * pBuf, int size,
-            char * &pName, int &nameLen,
-            char * &pVal, int &valLen );
+    static int append(char *pBuf, int &size,
+                      const char *pName, int nameLen,
+                      const char *pValue, int valLen);
+    static int append(char *pBuf, int &size,
+                      const char *pName, const char *pValue);
+    static int decode(char *pBuf, int size,
+                      char *&pName, int &nameLen,
+                      char *&pVal, int &valLen);
 };
 
 #endif

@@ -16,7 +16,6 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "iptogeo.h"
-#include <http/httpglobals.h>
 #include <http/httplog.h>
 #include <util/ienv.h>
 #include "util/configctx.h"
@@ -27,10 +26,12 @@
 #include <arpa/inet.h>
 
 
+IpToGeo *IpToGeo::s_pIpToGeo = NULL;
+
 GeoInfo::GeoInfo()
-    : m_netspeed( -1 )
+    : m_netspeed(-1)
 {
-    memset( &m_countryId, 0, (char *)(&m_pIsp + 1) - (char *)&m_countryId );
+    memset(&m_countryId, 0, (char *)(&m_pIsp + 1) - (char *)&m_countryId);
 }
 
 
@@ -43,105 +44,99 @@ void GeoInfo::reset()
 {
     release();
     m_netspeed = -1;
-    memset( &m_countryId, 0, (char *)(&m_pIsp + 1) - (char *)&m_countryId );
+    memset(&m_countryId, 0, (char *)(&m_pIsp + 1) - (char *)&m_countryId);
 }
 
 void GeoInfo::release()
 {
-    if ( m_pRegion )
-        GeoIPRegion_delete( m_pRegion );
-    if ( m_pCity )
-        GeoIPRecord_delete( m_pCity );
-    if ( m_pOrg )
-        free( m_pOrg );
-    if ( m_pIsp )
-        free( m_pIsp );
+    if (m_pRegion)
+        GeoIPRegion_delete(m_pRegion);
+    if (m_pCity)
+        GeoIPRecord_delete(m_pCity);
+    if (m_pOrg)
+        free(m_pOrg);
+    if (m_pIsp)
+        free(m_pIsp);
 }
 
 
-const char * GeoInfo::getGeoEnv( const char * pEnvName )
+const char *GeoInfo::getGeoEnv(const char *pEnvName)
 {
     static char s_achBuf[15];
-    if ( strncasecmp( pEnvName, "GEOIP_", 6 ) != 0 )
+    if (strncasecmp(pEnvName, "GEOIP_", 6) != 0)
     {
-        if ( strncasecmp( pEnvName, "GEO:", 4 ) != 0 )
-             return NULL;
+        if (strncasecmp(pEnvName, "GEO:", 4) != 0)
+            return NULL;
         pEnvName -= 2;
     }
     pEnvName += 6;
-    if ( strncasecmp( pEnvName, "COUNTRY_", 8 ) == 0 )
+    if (strncasecmp(pEnvName, "COUNTRY_", 8) == 0)
     {
         pEnvName += 8;
-        if ( strcasecmp( pEnvName, "CODE" ) == 0 )
+        if (strcasecmp(pEnvName, "CODE") == 0)
         {
-        
-            if ( (m_countryId > 0) && ( (unsigned int)m_countryId < sizeof( GeoIP_country_name ) / sizeof( const char *) ))
-            {
+
+            if ((m_countryId > 0)
+                && ((unsigned int)m_countryId < sizeof(GeoIP_country_name) / sizeof(
+                        const char *)))
                 return GeoIP_country_code[m_countryId];
-            }
-            else if ( m_pRegion )
-            {
+            else if (m_pRegion)
                 return m_pRegion->country_code;
-            }
-            else if ( m_pCity )
-            {
+            else if (m_pCity)
                 return m_pCity->country_code;
-            }
         }
-        else if ( strcasecmp( pEnvName, "NAME" ) == 0 )
+        else if (strcasecmp(pEnvName, "NAME") == 0)
         {
-            if ( (m_countryId > 0) && ( (unsigned int)m_countryId < sizeof( GeoIP_country_name ) / sizeof( const char *) ))
+            if ((m_countryId > 0)
+                && ((unsigned int)m_countryId < sizeof(GeoIP_country_name) / sizeof(
+                        const char *)))
                 return GeoIP_country_name[m_countryId];
-            else if ( m_pCity )
+            else if (m_pCity)
                 return m_pCity->country_name;
         }
-        else if ( strcasecmp( pEnvName, "CONTINENT" ) == 0 )
+        else if (strcasecmp(pEnvName, "CONTINENT") == 0)
         {
-            if ( (m_countryId > 0) && ( (unsigned int)m_countryId < sizeof( GeoIP_country_name ) / sizeof( const char *) ))
-            {
+            if ((m_countryId > 0)
+                && ((unsigned int)m_countryId < sizeof(GeoIP_country_name) / sizeof(
+                        const char *)))
                 return GeoIP_country_continent[ m_countryId ];
-            }
-            else if ( m_pCity )
-            {
+            else if (m_pCity)
                 return m_pCity->continent_code;
-            }
 
         }
     }
-    else if ( strcasecmp( pEnvName, "REGION" ) == 0 )
+    else if (strcasecmp(pEnvName, "REGION") == 0)
     {
-        if ( m_pRegion )
+        if (m_pRegion)
         {
             if (m_pRegion->region[0])
                 return m_pRegion->region;
         }
-        if ( m_pCity )
+        if (m_pCity)
             return m_pCity->region;
     }
-    else if ( strcasecmp( pEnvName, "CONTINENT_CODE" ) == 0 )
+    else if (strcasecmp(pEnvName, "CONTINENT_CODE") == 0)
     {
-        if ( ( m_countryId > 0) && ( (unsigned int)m_countryId < sizeof( GeoIP_country_name ) / sizeof( const char *) ))
-        {
+        if ((m_countryId > 0)
+            && ((unsigned int)m_countryId < sizeof(GeoIP_country_name) / sizeof(
+                    const char *)))
             return GeoIP_country_continent[m_countryId];
-        }
-        else if ( m_pCity )
-        {
+        else if (m_pCity)
             return m_pCity->continent_code;
-        }
     }
-    else if ( strcasecmp( pEnvName, "CITY" ) == 0 )
+    else if (strcasecmp(pEnvName, "CITY") == 0)
     {
-        if ( m_pCity )
+        if (m_pCity)
             return m_pCity->city;
     }
-    else if ( strcasecmp( pEnvName, "POSTAL_CODE" ) == 0 )
+    else if (strcasecmp(pEnvName, "POSTAL_CODE") == 0)
     {
-        if ( m_pCity && m_pCity->postal_code )
+        if (m_pCity && m_pCity->postal_code)
             return m_pCity->postal_code;
     }
-    else if ( strcasecmp( pEnvName, "NETSPEED" ) == 0 )
+    else if (strcasecmp(pEnvName, "NETSPEED") == 0)
     {
-        switch( m_netspeed )
+        switch (m_netspeed)
         {
         case GEOIP_DIALUP_SPEED:
             return "dialup";
@@ -156,39 +151,41 @@ const char * GeoInfo::getGeoEnv( const char * pEnvName )
             return "unknown";
         }
     }
-    else if ( strcasecmp( pEnvName, "ORGANIZATION" ) == 0 )
+    else if (strcasecmp(pEnvName, "ORGANIZATION") == 0)
         return m_pOrg;
-    else if ( strcasecmp( pEnvName, "ISP" ) == 0 )
+    else if (strcasecmp(pEnvName, "ISP") == 0)
         return m_pIsp;
-    else if (( strcasecmp( pEnvName, "AREA_CODE" ) == 0 )||
-             ( strcasecmp( pEnvName, "DMA_CODE"  ) == 0 ))
+    else if ((strcasecmp(pEnvName, "AREA_CODE") == 0) ||
+             (strcasecmp(pEnvName, "DMA_CODE") == 0))
     {
-        snprintf( s_achBuf, 15, "%d", m_pCity->area_code );
+        snprintf(s_achBuf, 15, "%d", m_pCity->area_code);
         return s_achBuf;
     }
     return NULL;
 }
 
 
-int GeoInfo::addGeoEnv( IEnv * pEnv )
+int GeoInfo::addGeoEnv(IEnv *pEnv)
 {
     int count = 0;
-    const char * pStr;
+    const char *pStr;
     int len;
-    if ( (m_countryId > 0) && ( (unsigned int)m_countryId < sizeof( GeoIP_country_name ) / sizeof( const char *) ))
+    if ((m_countryId > 0)
+        && ((unsigned int)m_countryId < sizeof(GeoIP_country_name) / sizeof(
+                const char *)))
     {
         pStr = GeoIP_country_name[m_countryId];
-        pEnv->add( "GEOIP_COUNTRY_CODE", 18, GeoIP_country_code[m_countryId], 2 );
-        pEnv->add( "GEOIP_COUNTRY_NAME", 18, pStr, strlen( pStr ) );
+        pEnv->add("GEOIP_COUNTRY_CODE", 18, GeoIP_country_code[m_countryId], 2);
+        pEnv->add("GEOIP_COUNTRY_NAME", 18, pStr, strlen(pStr));
         pStr = GeoIP_country_continent[ m_countryId ];
-        pEnv->add( "GEOIP_CONTINENT_CODE", 20, pStr, 2 );
-        
+        pEnv->add("GEOIP_CONTINENT_CODE", 20, pStr, 2);
+
         count += 3;
     }
 
-    if ( m_netspeed != -1)
+    if (m_netspeed != -1)
     {
-        switch( m_netspeed )
+        switch (m_netspeed)
         {
         case GEOIP_DIALUP_SPEED:
             pStr = "dialup";
@@ -211,90 +208,92 @@ int GeoInfo::addGeoEnv( IEnv * pEnv )
             len = 7;
             break;
         }
-        pEnv->add( "GEOIP_NETSPEED", 14, pStr, len );
+        pEnv->add("GEOIP_NETSPEED", 14, pStr, len);
         ++count;
     }
 
-    if ( m_pRegion )
+    if (m_pRegion)
     {
-        pEnv->add( "GEOIP_COUNTRY_CODE", 18, m_pRegion->country_code, 2 );
+        pEnv->add("GEOIP_COUNTRY_CODE", 18, m_pRegion->country_code, 2);
         ++count;
         if (m_pRegion->region[0])
         {
-            pEnv->add( "GEOIP_REGION", 12, m_pRegion->region, strlen( m_pRegion->region ));
+            pEnv->add("GEOIP_REGION", 12, m_pRegion->region,
+                      strlen(m_pRegion->region));
             ++count;
-            pStr = GeoIP_region_name_by_code(m_pRegion->country_code, m_pRegion->region);
-            if ( pStr )
+            pStr = GeoIP_region_name_by_code(m_pRegion->country_code,
+                                             m_pRegion->region);
+            if (pStr)
             {
-                pEnv->add( "GEOIP_REGION_NAME", 17, pStr, strlen( pStr ));
+                pEnv->add("GEOIP_REGION_NAME", 17, pStr, strlen(pStr));
                 ++count;
             }
         }
     }
 
-    if ( m_pCity )
+    if (m_pCity)
     {
         char achBuf[256];
-        len = snprintf( achBuf, 256, "%d", m_pCity->dma_code );
-        pEnv->add( "GEOIP_DMA_CODE", 14, achBuf, len );
-        pEnv->add( "GEOIP_METRO_CODE", 16, achBuf, len );
+        len = snprintf(achBuf, 256, "%d", m_pCity->dma_code);
+        pEnv->add("GEOIP_DMA_CODE", 14, achBuf, len);
+        pEnv->add("GEOIP_METRO_CODE", 16, achBuf, len);
 
-        len = snprintf( achBuf, 256, "%d", m_pCity->area_code );
-        pEnv->add( "GEOIP_AREA_CODE", 15, achBuf, len );
+        len = snprintf(achBuf, 256, "%d", m_pCity->area_code);
+        pEnv->add("GEOIP_AREA_CODE", 15, achBuf, len);
 
-        len = snprintf( achBuf, 256, "%f", m_pCity->latitude );
-        pEnv->add( "GEOIP_LATITUDE", 14, achBuf, len );
+        len = snprintf(achBuf, 256, "%f", m_pCity->latitude);
+        pEnv->add("GEOIP_LATITUDE", 14, achBuf, len);
 
-        len = snprintf( achBuf, 256, "%f", m_pCity->longitude );
-        pEnv->add( "GEOIP_LONGITUDE", 15, achBuf, len );
+        len = snprintf(achBuf, 256, "%f", m_pCity->longitude);
+        pEnv->add("GEOIP_LONGITUDE", 15, achBuf, len);
 
-        pEnv->add( "GEOIP_COUNTRY_CODE", 18, m_pCity->country_code, 2 );
+        pEnv->add("GEOIP_COUNTRY_CODE", 18, m_pCity->country_code, 2);
 
-        pEnv->add( "GEOIP_COUNTRY_NAME", 18, m_pCity->country_name,
-                    strlen( m_pCity->country_name ) );
-        pEnv->add( "GEOIP_CONTINENT_CODE", 20, m_pCity->continent_code, 2 );
+        pEnv->add("GEOIP_COUNTRY_NAME", 18, m_pCity->country_name,
+                  strlen(m_pCity->country_name));
+        pEnv->add("GEOIP_CONTINENT_CODE", 20, m_pCity->continent_code, 2);
 
-        len = snprintf( achBuf, 256, "%d", m_pCity->area_code );
-        pEnv->add( "GEOIP_AREA_CODE", 15, achBuf, len );
+        len = snprintf(achBuf, 256, "%d", m_pCity->area_code);
+        pEnv->add("GEOIP_AREA_CODE", 15, achBuf, len);
         count += 9;
 
-        if ( m_pCity->postal_code )
+        if (m_pCity->postal_code)
         {
-            pEnv->add( "GEOIP_POSTAL_CODE", 17, m_pCity->postal_code,
-                    strlen( m_pCity->postal_code ) );
+            pEnv->add("GEOIP_POSTAL_CODE", 17, m_pCity->postal_code,
+                      strlen(m_pCity->postal_code));
             ++count;
         }
-                    
-        if ( m_pCity->region )
+
+        if (m_pCity->region)
         {
-            pEnv->add( "GEOIP_REGION", 12, m_pCity->region,
-                    strlen( m_pCity->region ) );
+            pEnv->add("GEOIP_REGION", 12, m_pCity->region,
+                      strlen(m_pCity->region));
             ++count;
             pStr = GeoIP_region_name_by_code(m_pCity->country_code, m_pCity->region);
-            if ( pStr )
+            if (pStr)
             {
-                pEnv->add( "GEOIP_REGION_NAME", 17, pStr, strlen( pStr ));
+                pEnv->add("GEOIP_REGION_NAME", 17, pStr, strlen(pStr));
                 ++count;
             }
         }
-        
-        if ( m_pCity->city )
+
+        if (m_pCity->city)
         {
-            pEnv->add( "GEOIP_CITY", 10, m_pCity->city,
-                    strlen( m_pCity->city ) );
+            pEnv->add("GEOIP_CITY", 10, m_pCity->city,
+                      strlen(m_pCity->city));
             ++count;
         }
     }
 
-    if ( m_pOrg )
+    if (m_pOrg)
     {
-        pEnv->add( "GEOIP_ORGANIZATION", 18, m_pOrg, strlen( m_pOrg ) );
+        pEnv->add("GEOIP_ORGANIZATION", 18, m_pOrg, strlen(m_pOrg));
         ++count;
     }
 
-    if ( m_pIsp )
+    if (m_pIsp)
     {
-        pEnv->add( "GEOIP_ISP", 9, m_pIsp, strlen( m_pIsp ) );
+        pEnv->add("GEOIP_ISP", 9, m_pIsp, strlen(m_pIsp));
         ++count;
     }
     return count;
@@ -395,203 +394,182 @@ void GeoInfo::addGeoEnv( HttpReq * pReq )
 
 
 IpToGeo::IpToGeo()
-    : m_pLocation( NULL )
-    , m_pOrg( NULL )
-    , m_pIsp( NULL )
-    , m_pNetspeed( NULL )
+    : m_pLocation(NULL)
+    , m_pOrg(NULL)
+    , m_pIsp(NULL)
+    , m_pNetspeed(NULL)
 {
 }
 
 IpToGeo::~IpToGeo()
 {
-    if ( m_pLocation )
-        GeoIP_delete( m_pLocation );
-    if ( m_pOrg )
-        GeoIP_delete( m_pOrg );
-    if ( m_pIsp )
-        GeoIP_delete( m_pIsp );
-    if ( m_pNetspeed )
-        GeoIP_delete( m_pNetspeed );
+    if (m_pLocation)
+        GeoIP_delete(m_pLocation);
+    if (m_pOrg)
+        GeoIP_delete(m_pOrg);
+    if (m_pIsp)
+        GeoIP_delete(m_pIsp);
+    if (m_pNetspeed)
+        GeoIP_delete(m_pNetspeed);
 }
 
-int IpToGeo::setGeoIpDbFile( const char * pFile, const char * cacheMode )
+int IpToGeo::setGeoIpDbFile(const char *pFile, const char *cacheMode)
 {
-    GeoIP * pGip;
+    GeoIP *pGip;
     int flag = GEOIP_MEMORY_CACHE;
-    if ( !pFile )
-        return -1;
-    if ( cacheMode )
+    if (!pFile)
+        return LS_FAIL;
+    if (cacheMode)
     {
-        if ( strcasecmp( cacheMode, "Standard" ) == 0 )
-        {
+        if (strcasecmp(cacheMode, "Standard") == 0)
             flag = GEOIP_STANDARD;
-        }
-        else if ( strcasecmp( cacheMode, "MemoryCache" ) == 0 )
-        {
+        else if (strcasecmp(cacheMode, "MemoryCache") == 0)
             flag = GEOIP_MEMORY_CACHE;
-        }
-        else if ( strcasecmp( cacheMode, "CheckCache" ) == 0 )
-        {
+        else if (strcasecmp(cacheMode, "CheckCache") == 0)
             flag = GEOIP_CHECK_CACHE;
-        }
-        else if ( strcasecmp( cacheMode, "IndexCache" ) == 0 )
+        else if (strcasecmp(cacheMode, "IndexCache") == 0)
             flag = GEOIP_INDEX_CACHE;
     }
-    pGip = GeoIP_open( pFile, flag );
-    if( !pGip )
+    pGip = GeoIP_open(pFile, flag);
+    if (!pGip)
     {
-        LOG_ERR(( "Failed to open GeoIP DB file: %s", pFile ));
-        return -1;
+        LOG_ERR(("Failed to open GeoIP DB file: %s", pFile));
+        return LS_FAIL;
     }
-    int fd = fileno( pGip->GeoIPDatabase );
-    if ( fd != -1 )
-        ::fcntl( fd, F_SETFD, FD_CLOEXEC );
+    int fd = fileno(pGip->GeoIPDatabase);
+    if (fd != -1)
+        ::fcntl(fd, F_SETFD, FD_CLOEXEC);
 
-    flag = GeoIP_database_edition( pGip );
-    switch( flag )
+    flag = GeoIP_database_edition(pGip);
+    switch (flag)
     {
     case GEOIP_COUNTRY_EDITION:
     case GEOIP_REGION_EDITION_REV0:
-	case GEOIP_REGION_EDITION_REV1:
+    case GEOIP_REGION_EDITION_REV1:
     case GEOIP_CITY_EDITION_REV0:
-	case GEOIP_CITY_EDITION_REV1:
-        if ( m_pLocation )
-            GeoIP_delete( m_pLocation );
+    case GEOIP_CITY_EDITION_REV1:
+        if (m_pLocation)
+            GeoIP_delete(m_pLocation);
         m_pLocation = pGip;
         m_locDbType = flag;
         break;
-        
+
     case GEOIP_ORG_EDITION:
-        if ( m_pOrg )
-            GeoIP_delete( m_pOrg );
+        if (m_pOrg)
+            GeoIP_delete(m_pOrg);
         m_pOrg = pGip;
         break;
-        
+
     case GEOIP_ISP_EDITION:
-        if ( m_pIsp )
-            GeoIP_delete( m_pIsp );
+        if (m_pIsp)
+            GeoIP_delete(m_pIsp);
         m_pIsp = pGip;
         break;
-    
+
     case GEOIP_NETSPEED_EDITION:
-        if ( m_pNetspeed )
-            GeoIP_delete( m_pNetspeed );
+        if (m_pNetspeed)
+            GeoIP_delete(m_pNetspeed);
         m_pNetspeed = pGip;
         break;
-        
+
     default:
-        GeoIP_delete( pGip );
-        return -1;
+        GeoIP_delete(pGip);
+        return LS_FAIL;
     }
     return 0;
 }
 
-int IpToGeo::lookUp( uint32_t addr, GeoInfo * pInfo )
+int IpToGeo::lookUp(uint32_t addr, GeoInfo *pInfo)
 {
-    addr = htonl( addr );
-    if ( m_pLocation )
+    addr = htonl(addr);
+    if (m_pLocation)
     {
-        switch( m_locDbType )
+        switch (m_locDbType)
         {
-            case GEOIP_COUNTRY_EDITION:
-                pInfo->m_countryId = GeoIP_id_by_ipnum(m_pLocation, addr);
-                break;
-                
-            case GEOIP_REGION_EDITION_REV0:
-            case GEOIP_REGION_EDITION_REV1:
-                pInfo->m_pRegion = GeoIP_region_by_ipnum( m_pLocation, addr );
-                break;
-                
-            case GEOIP_CITY_EDITION_REV0:
-            case GEOIP_CITY_EDITION_REV1:
-                pInfo->m_pCity = GeoIP_record_by_ipnum( m_pLocation, addr );
-                break;
+        case GEOIP_COUNTRY_EDITION:
+            pInfo->m_countryId = GeoIP_id_by_ipnum(m_pLocation, addr);
+            break;
+
+        case GEOIP_REGION_EDITION_REV0:
+        case GEOIP_REGION_EDITION_REV1:
+            pInfo->m_pRegion = GeoIP_region_by_ipnum(m_pLocation, addr);
+            break;
+
+        case GEOIP_CITY_EDITION_REV0:
+        case GEOIP_CITY_EDITION_REV1:
+            pInfo->m_pCity = GeoIP_record_by_ipnum(m_pLocation, addr);
+            break;
         }
-        
+
     }
-    if ( m_pOrg )
-    {
+    if (m_pOrg)
         pInfo->m_pOrg = GeoIP_name_by_ipnum(m_pOrg, addr);
-    }
-    if ( m_pIsp )
-    {
+    if (m_pIsp)
         pInfo->m_pIsp = GeoIP_name_by_ipnum(m_pIsp, addr);
-    }
-    if ( m_pNetspeed )
-    {
-        pInfo->m_netspeed = GeoIP_id_by_ipnum (m_pNetspeed, addr);
-    }
+    if (m_pNetspeed)
+        pInfo->m_netspeed = GeoIP_id_by_ipnum(m_pNetspeed, addr);
     return 0;
 }
 
-int IpToGeo::lookUpV6( in6_addr addr, GeoInfo * pInfo )
+int IpToGeo::lookUpV6(in6_addr addr, GeoInfo *pInfo)
 {
-    if ( m_pLocation )
+    if (m_pLocation)
     {
-        switch( m_locDbType )
+        switch (m_locDbType)
         {
-            case GEOIP_REGION_EDITION_REV0:
-            case GEOIP_REGION_EDITION_REV1:
-                pInfo->m_pRegion = GeoIP_region_by_ipnum_v6( m_pLocation, addr );
-                break;
-            case GEOIP_COUNTRY_EDITION_V6:
-                pInfo->m_countryId = GeoIP_id_by_ipnum_v6( m_pLocation, addr );
-                break;
+        case GEOIP_REGION_EDITION_REV0:
+        case GEOIP_REGION_EDITION_REV1:
+            pInfo->m_pRegion = GeoIP_region_by_ipnum_v6(m_pLocation, addr);
+            break;
+        case GEOIP_COUNTRY_EDITION_V6:
+            pInfo->m_countryId = GeoIP_id_by_ipnum_v6(m_pLocation, addr);
+            break;
         }
-        
+
     }
-    if ( m_pOrg )
-    {
+    if (m_pOrg)
         pInfo->m_pOrg = GeoIP_name_by_ipnum_v6(m_pOrg, addr);
-    }
-    if ( m_pIsp )
-    {
+    if (m_pIsp)
         pInfo->m_pIsp = GeoIP_name_by_ipnum_v6(m_pIsp, addr);
-    }
-    if ( m_pNetspeed )
-    {
+    if (m_pNetspeed)
         pInfo->m_netspeed = GeoIP_id_by_ipnum_v6(m_pNetspeed, addr);
-    }
     return 0;
 }
 
-int IpToGeo::lookUp( const char * pIP, GeoInfo * pInfo )
+int IpToGeo::lookUp(const char *pIP, GeoInfo *pInfo)
 {
-    in_addr_t addr = inet_addr( pIP );
-    if ( addr == INADDR_BROADCAST)
-        return -1;
-    return lookUp( addr, pInfo );
+    in_addr_t addr = inet_addr(pIP);
+    if (addr == INADDR_BROADCAST)
+        return LS_FAIL;
+    return lookUp(addr, pInfo);
 }
-int IpToGeo::config( const XmlNodeList *pList )
+int IpToGeo::config(const XmlNodeList *pList)
 {
     XmlNodeList::const_iterator iter;
     int succ = 0;
 
-    for( iter = pList->begin(); iter != pList->end(); ++iter )
+    for (iter = pList->begin(); iter != pList->end(); ++iter)
     {
         XmlNode *p = *iter;
-        const char *pFile = p->getChildValue( "geoipDBFile" );
+        const char *pFile = p->getChildValue("geoipDBFile");
         char achBufFile[MAX_PATH_LEN];
 
-        if ( ( !pFile ) ||
-                ( ConfigCtx::getCurConfigCtx()->getValidFile( achBufFile, pFile, "GeoIP DB" ) != 0 ) )
-        {
+        if ((!pFile) ||
+            (ConfigCtx::getCurConfigCtx()->getValidFile(achBufFile, pFile,
+                    "GeoIP DB") != 0))
             continue;
-        }
 
-        if ( setGeoIpDbFile( achBufFile, p->getChildValue( "geoipDBCache" ) ) == 0 )
+        if (setGeoIpDbFile(achBufFile, p->getChildValue("geoipDBCache")) == 0)
             succ = 1;
     }
 
-    if ( succ )
-    {
-        HttpGlobals::s_pIpToGeo = this;
-    }
+    if (succ)
+        IpToGeo::setIpToGeo(this);
     else
     {
-        ConfigCtx::getCurConfigCtx()->log_warn( "Failed to setup a valid GeoIP DB file, Geolocation is disable!" );
-        return -1;
-    }    
+        ConfigCtx::getCurConfigCtx()->logWarn("Failed to setup a valid GeoIP DB file, Geolocation is disable!");
+        return LS_FAIL;
+    }
     return 0;
 }
 

@@ -20,7 +20,8 @@
 #include <lsiapi/lsiapi.h>
 
 void lsiapi_init_server_api();
-int add_global_hook( int index, const lsi_module_t *pModule, lsi_callback_pf cb, short order, short flag );
+int add_global_hook(int index, const lsi_module_t *pModule,
+                    lsi_callback_pf cb, short order, short flag);
 
 
 #endif //LSIAPILIB_H

@@ -24,20 +24,21 @@
 class AutoStr2;
 class StringList: public TPointerList<AutoStr2>
 {
+    void operator=(const StringList &rhs);
 public:
     StringList()    {}
     ~StringList();
-    StringList( const StringList & rhs );
-    const AutoStr2 * add( const char * pStr, int len );
-    const AutoStr2 * add( const char * pStr );
-    const AutoStr2 * find( const char * pString ) const;
-    int split( const char * pBegin, const char * pEnd, const char * delim );
-    void remove( const char * pString );
+    StringList(const StringList &rhs);
+    const AutoStr2 *add(const char *pStr, int len);
+    const AutoStr2 *add(const char *pStr);
+    const AutoStr2 *find(const char *pString) const;
+    int split(const char *pBegin, const char *pEnd, const char *delim);
+    void remove(const char *pString);
     void clear();
     void sort();
-    AutoStr2 * bfind( const char * pStr ) const;
-    void insert( AutoStr2 * pDir );
-    AutoStr2 * const* lower_bound( const char * pStr ) const;
+    AutoStr2 *bfind(const char *pStr) const;
+    void insert(AutoStr2 *pDir);
+    AutoStr2 *const *lower_bound(const char *pStr) const;
 };
 
 #endif

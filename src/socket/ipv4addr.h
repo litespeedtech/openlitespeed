@@ -31,54 +31,54 @@ class IPv4Addr : public in_addr
 {
 public:
     IPv4Addr() {};
-    IPv4Addr( const char * pAddr )
-        { inet_aton( pAddr );               }
-    IPv4Addr( const in_addr addr ): in_addr( addr ) {};
-    IPv4Addr( in_addr_t addr ) {   s_addr = addr;  }
+    IPv4Addr(const char *pAddr)
+    { inet_aton(pAddr);               }
+    IPv4Addr(const in_addr addr): in_addr(addr) {};
+    IPv4Addr(in_addr_t addr) {   s_addr = addr;  }
     int     inet_aton(const char *cp)
-        {   return ::inet_pton( AF_INET, cp, this ); }
-    static  int inet_aton( const char *cp, in_addr* addr )
-        {   return ::inet_pton( AF_INET, cp, addr ); }
+    {   return ::inet_pton(AF_INET, cp, this); }
+    static  int inet_aton(const char *cp, in_addr *addr)
+    {   return ::inet_pton(AF_INET, cp, addr); }
     static  in_addr_t inet_addr(const char *cp)
-        {   return ::inet_addr( cp );       }
-    char *  inet_ntoa()
-        {   return ::inet_ntoa( *this );    }
+    {   return ::inet_addr(cp);       }
+    char   *inet_ntoa()
+    {   return ::inet_ntoa(*this);    }
     // Note: when copy constructor is declared, do not need to override operator=
     // IPv4Addr& operator=( const in_addr& rhs )
     //     {   this->s_addr = rhs.s_addr; return *this;  }
     //void test( IPv4Addr& lhs, in_addr& rhs )
     //    {   lhs = rhs; rhs = lhs; }
-    bool operator==( const in_addr_t& rhs )
-        {   return ( this->s_addr == rhs );  }
+    bool operator==(const in_addr_t &rhs)
+    {   return (this->s_addr == rhs);  }
 };
 
 class IPv4SockAddr : public sockaddr_in
 {
     void init()
-    {   ::memset( (sockaddr_in*)this, 0, sizeof( sockaddr_in ) );   }
+    {   ::memset((sockaddr_in *)this, 0, sizeof(sockaddr_in));   }
 public:
     IPv4SockAddr()
-        {   init();     }
-    IPv4SockAddr( const sockaddr_in& rhs )
-        : sockaddr_in( rhs )
-        {}
-    IPv4SockAddr( const int family, const in_addr_t addr, const in_port_t port )
-        {
-            init();
-            sin_family      = family;
-            sin_addr.s_addr = addr;
-            sin_port        = htons( port );
-        }
-    void set( const int family, const in_addr_t addr, const in_port_t port )
-        {
-            sin_family      = family;
-            sin_addr.s_addr = addr;
-            sin_port        = htons( port );
-        }
-    const char * toAddrString( char * pBuf, int len ) const
-        {
-            return inet_ntop( sin_family, &sin_addr, pBuf, len );
-        }
+    {   init();     }
+    IPv4SockAddr(const sockaddr_in &rhs)
+        : sockaddr_in(rhs)
+    {}
+    IPv4SockAddr(const int family, const in_addr_t addr, const in_port_t port)
+    {
+        init();
+        sin_family      = family;
+        sin_addr.s_addr = addr;
+        sin_port        = htons(port);
+    }
+    void set(const int family, const in_addr_t addr, const in_port_t port)
+    {
+        sin_family      = family;
+        sin_addr.s_addr = addr;
+        sin_port        = htons(port);
+    }
+    const char *toAddrString(char *pBuf, int len) const
+    {
+        return inet_ntop(sin_family, &sin_addr, pBuf, len);
+    }
 };
 
 #endif

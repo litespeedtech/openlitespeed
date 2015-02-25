@@ -50,13 +50,13 @@ typedef struct
     unsigned short m_chrootPathLen;     //if chroot to '/', m_chrootPathLen = 0
     unsigned short m_exePathLen;
     unsigned short m_exeNameLen;
-    
+
     uid_t   m_uid;
     gid_t   m_gid;
     int     m_priority;
     int     m_umask;
 
-    
+
 #if defined(RLIMIT_AS) || defined(RLIMIT_DATA) || defined(RLIMIT_VMEM)
     struct rlimit   m_data;
 #endif

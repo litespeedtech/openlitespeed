@@ -18,9 +18,9 @@
 #ifndef SPDYPROTOCOL_H
 #define SPDYPROTOCOL_H
 #include <sys/types.h>
-//#include <algorithm> 
 #include <arpa/inet.h>
 #include <spdy/protocoldef.h>
+#include <lsdef.h>
 // Types of SPDY frames.
 
 enum SpdyFrameType
@@ -128,41 +128,48 @@ class SpdyFrameHeader
     {
         struct spdy_ctl_hdr m_ctl;
         uint32_t      m_iStreamId;
-        
+
     } m_un;
     unsigned char m_bFlags;
     unsigned char m_bLength[3];
     uint32_t      m_data[];
-public: 
+public:
     SpdyFrameHeader() {}
-    ~SpdyFrameHeader() {}  
-    
+    ~SpdyFrameHeader() {}
+
     int isControlFrame() const      {   return m_un.m_ctl.m_b80 == 0x80;  }
-    unsigned char getType() const   {   return (m_un.m_ctl.m_b80 == 0x80)? (m_un.m_ctl.m_bType):( 0 );  }
-    unsigned char getFlags() const  {   return m_bFlags; }
-    unsigned char getVersion() const{   return m_un.m_ctl.m_bVer;   }
-
-    uint32_t getDataStreamId() const{   return ntohl( m_un.m_iStreamId);  }
-    void setStreamId( uint32_t id ) {  m_un.m_iStreamId = htonl( id );  }
-
-    
-    uint32_t getLength() const       
-    {   return ( ((uint32_t)m_bLength[0]) << 16 ) | 
-               ( ((uint32_t)m_bLength[1]) << 8 ) |
-               ( m_bLength[2] );
-    }           
-    void setLength( uint32_t l )
+    unsigned char getType() const   
     {
-        m_bLength[ 0 ] = ( l >> 16 ) & 0xff;
-        m_bLength[ 1 ] = ( l >> 8 ) & 0xff;
+        return (m_un.m_ctl.m_b80 == 0x80) ? (m_un.m_ctl.m_bType) : (0);  
+    }
+    
+    unsigned char getFlags() const  {   return m_bFlags; }
+    unsigned char getVersion() const {   return m_un.m_ctl.m_bVer;   }
+
+    uint32_t getDataStreamId() const {   return ntohl(m_un.m_iStreamId);  }
+    void setStreamId(uint32_t id) {  m_un.m_iStreamId = htonl(id);  }
+
+
+    uint32_t getLength() const
+    {
+        return (((uint32_t)m_bLength[0]) << 16) |
+               (((uint32_t)m_bLength[1]) << 8) |
+               (m_bLength[2]);
+    }
+    void setLength(uint32_t l)
+    {
+        m_bLength[ 0 ] = (l >> 16) & 0xff;
+        m_bLength[ 1 ] = (l >> 8) & 0xff;
         m_bLength[ 2 ] = l & 0xff;
     }
-    uint32_t getData( int n ) const   {   return m_data[n];   }
-    uint32_t getHboData( int n ) const     {   return ntohl( m_data[n] );  }
+    uint32_t getData(int n) const   {   return m_data[n];   }
+    uint32_t getHboData(int n) const     {   return ntohl(m_data[n]);  }
+    
+    LS_NO_COPY_ASSIGN(SpdyFrameHeader);
 };
 
 
-const char* getSpdyFrameName(unsigned char bframeType);
+const char *getSpdyFrameName(unsigned char bframeType);
 
 class SpdySettingPairs
 {
@@ -170,11 +177,11 @@ class SpdySettingPairs
     {
         unsigned char m_b[4];
         uint32_t      m_ui;
-        
+
     } m_unFlagId;
     uint32_t      m_uiValue;
-    
-public: 
+
+public:
     void swapID()
     {
         unsigned char ch;
@@ -187,7 +194,8 @@ public:
     }
     unsigned char getFlags() const { return m_unFlagId.m_b[0]; }
     uint32_t getValue() const { return ntohl(m_uiValue); }
-    uint32_t getID() const  { return ( ntohl(m_unFlagId.m_ui) & 0xFFFFFF); }
+    uint32_t getID() const  { return (ntohl(m_unFlagId.m_ui) & 0xFFFFFF); }
+
 };
 
 #define SPDY_MAX_DATAFRAM_SIZE    65536

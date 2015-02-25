@@ -18,6 +18,8 @@
 #ifndef LSI_BASE_FETCH_H_
 #define LSI_BASE_FETCH_H_
 
+#include <lsdef.h>
+
 #include <pthread.h>
 #include "pagespeed.h"
 #include "ls_server_context.h"
@@ -28,46 +30,38 @@
 class LsiBaseFetch : public AsyncFetch
 {
 public:
-    LsiBaseFetch( lsi_session_t* session, int pipe_fd,
-                  LsiServerContext* server_context,
-                  const RequestContextPtr& request_ctx,
-                  PreserveCachingHeaders preserve_caching_headers );
+    LsiBaseFetch(lsi_session_t *session, int pipe_fd,
+                 LsServerContext *server_context,
+                 const RequestContextPtr &request_ctx,
+                 PreserveCachingHeaders preserve_caching_headers);
     virtual ~LsiBaseFetch();
 
-    int CollectAccumulatedWrites( lsi_session_t* session );
+    int CollectAccumulatedWrites(lsi_session_t *session);
 
-    int CollectHeaders( lsi_session_t* session );
+    int CollectHeaders(lsi_session_t *session);
 
     void Release();
-    void set_ipro_lookup( bool x )
+    void SetIproLookup(bool x)
     {
-        ipro_lookup_ = x;
+        m_bIproLookup = x;
     }
-    
-    void set_pipe_fd( int pipe_fd )
-    {
-        pipe_fd_ = pipe_fd;
-        g_api->log( session_, LSI_LOG_DEBUG, "[Module:modpagespeed]set_pipe_fd pipe_fd_ = %d.\n", pipe_fd_ );
-    }
-//     bool isLastBufSent()
-//     {
-//         return last_buf_sent_;
-//     }
-//     bool isDoneCalled( bool& success )
-//     {
-//         success = m_success;
-//         return done_called_;
-//     }
 
-    bool isDoneAndSuccess()    { return done_called_ && m_success;  }
+    void SetPipeFd(int pipe_fd)
+    {
+        m_iPipeFd = pipe_fd;
+        g_api->log(m_session, LSI_LOG_DEBUG,
+                   "[Module:modpagespeed]set_pipe_fd pipe_fd_ = %d.\n", m_iPipeFd);
+    }
+
+    bool IsDoneAndSuccess()    { return m_bDoneCalled && m_bSuccess;  }
 private:
-    virtual bool HandleWrite( const StringPiece& sp, MessageHandler* handler );
-    virtual bool HandleFlush( MessageHandler* handler );
+    virtual bool HandleWrite(const StringPiece &sp, MessageHandler *handler);
+    virtual bool HandleFlush(MessageHandler *handler);
     virtual void HandleHeadersComplete();
-    virtual void HandleDone( bool success );
+    virtual void HandleDone(bool success);
 
     void RequestCollection();
-    int CopyBufferToLs( lsi_session_t* session );
+    int CopyBufferToLs(lsi_session_t *session);
 
     void Lock();
     void Unlock();
@@ -76,17 +70,19 @@ private:
     // it's zero we delete ourself.
     void DecrefAndDeleteIfUnreferenced();
 
-    lsi_session_t* session_;
-    GoogleString buffer_;
-    LsiServerContext* server_context_;
-    bool done_called_;
-    bool last_buf_sent_;
-    int pipe_fd_;
-    int references_;
-    pthread_mutex_t mutex_;
-    bool ipro_lookup_;
-    bool m_success;
-    PreserveCachingHeaders preserve_caching_headers_;
+    lsi_session_t          *m_session;
+    GoogleString            m_buffer;
+    LsServerContext        *m_pServerContext;
+    bool                    m_bDoneCalled;
+    bool                    m_bLastBufSent;
+    int                     m_iPipeFd;
+    int                     m_iReferences;
+    pthread_mutex_t         m_mutex;
+    bool                    m_bIproLookup;
+    bool                    m_bSuccess;
+    PreserveCachingHeaders  m_preserveCachingHeaders;
+
+    LS_NO_COPY_ASSIGN(LsiBaseFetch);
 };
 
 #endif  // LSI_BASE_FETCH_H_

@@ -25,114 +25,502 @@ class debugBase;
 #include <string.h>
 #include <shm/lsshmpool.h>
 #include <socket/gsockaddr.h>
-class   LsShmPool;
-typedef uint32_t LsShm_hkey_t;
 
-/*
- *  HASH element 
- *  
- *  +----------------
+/**
+ * @file
+ *  HASH element
+ *
+ *  +--------------------
  *  | Element info
  *  | hkey
- *  | real key len
- *  | data len
- *  +---------------- 
- *  | real key
- *  +---------------- 
- *  | data ----> where data started
+ *  +--------------------  <--- start of variable data
+ *  | key len
+ *  | key
  *  +--------------------
- * 
+ *  | LRU info (optional)
+ *  +--------------------  <--- value offset
+ *  | value len
+ *  | value
+ *  +--------------------
+ *
  *  It is reasonable to support max 32k key string.
  *  Otherwise we should change to uint32_t
  */
-typedef int32_t      lsShmHashElemLen_t ;
-typedef int32_t      lsShmHashElemOffset_t ;
-typedef int32_t      lsShmHashRkeyLen_t ;
-typedef int32_t      lsShmHashValueLen_t ;
 
-typedef struct lsShm_hElem_s {
-    lsShmHashElemLen_t      x_len;          /* element size     */
-    lsShmHashElemOffset_t   x_valueOff;     /* offset to value  */
-    LsShm_offset_t          x_next;         /* offset to next in element list */
-    LsShm_hkey_t            x_hkey;         /* the key itself */
-    lsShmHashRkeyLen_t      x_rkeyLen;
-    lsShmHashValueLen_t     x_valueLen;
-    uint32_t                x_data[0];       /* Enforce 32bit alignment */
 
-    inline uint8_t *        p_key() const   { return (uint8_t*)x_data; }
-    inline uint8_t *        p_value() const { return ((uint8_t*)x_data) + x_valueOff; }
+class   LsShmPool;
+typedef uint32_t     LsShmHKey;
+typedef int32_t      LsShmHElemLen_t;
+typedef uint32_t     LsShmHElemOffs_t;
+typedef int32_t      LsShmHRkeyLen_t;
+typedef int32_t      LsShmHValueLen_t;
 
-    inline const uint8_t *  first() const   { return p_key(); }
-    inline uint8_t *        second() const  { return p_value(); }
+typedef struct
+{
+    LsShmOffset_t        x_iLinkNext;     // offset to next in linked list
+    LsShmOffset_t        x_iLinkPrev;     // offset to prev in linked list
+    time_t               x_lasttime;      // last update time (sec)
+} LsShmHElemLink;
+
+
+typedef struct ls_vardata_s
+{
+    int32_t         x_size;
+    uint8_t         x_data[0];
+} ls_vardata_t;
+
+
+typedef struct lsShm_hElem_s
+{
+    LsShmHElemLen_t      x_iLen;          // element size
+    uint32_t             x_iValOff;
+    LsShmOffset_t        x_iNext;         // offset to next in element list
+    LsShmHKey            x_hkey;          // the key itself
+    uint8_t              x_aData[0];
+
+    uint8_t         *getKey() const
+    { return ((ls_vardata_t *)x_aData)->x_data; }
+    int32_t          getKeyLen() const
+    { return ((ls_vardata_t *)x_aData)->x_size; }
+    uint8_t         *getVal() const
+    { return ((ls_vardata_t *)(x_aData + x_iValOff))->x_data; }
+    int32_t          getValLen() const
+    { return ((ls_vardata_t *)(x_aData + x_iValOff))->x_size; }
+    void             setKeyLen(int32_t len)
+    { ((ls_vardata_t *)x_aData)->x_size = len; }
+    void             setValLen(int32_t len)
+    { ((ls_vardata_t *)(x_aData + x_iValOff))->x_size = len; }
+
+    LsShmHElemLink  *getLruLinkPtr() const
+    { return ((LsShmHElemLink *)(x_aData + x_iValOff) - 1); }
+    LsShmOffset_t    getLruLinkNext() const
+    { return getLruLinkPtr()->x_iLinkNext; }
+    LsShmOffset_t    getLruLinkPrev() const
+    { return getLruLinkPtr()->x_iLinkPrev; }
+    time_t           getLruLasttime() const
+    { return getLruLinkPtr()->x_lasttime; }
+    void             setLruLinkNext(LsShmOffset_t off)
+    { getLruLinkPtr()->x_iLinkNext = off; }
+    void             setLruLinkPrev(LsShmOffset_t off)
+    { getLruLinkPtr()->x_iLinkPrev = off; }
     
-                                            /* real value len */
-    inline int32_t          realValLen() const { return x_len - sizeof(struct lsShm_hElem_s) - x_valueOff; }
-} lsShm_hElem_t;
+    const uint8_t   *first() const   { return getKey(); }
+    uint8_t         *second() const  { return getVal(); }
 
-typedef struct {
-    LsShm_offset_t  x_offset;   // offset location of hash element
-} lsShm_hIdx_t;
+    // real value len
+    int32_t          realValLen() const
+    {
+        return (x_iLen - sizeof(struct lsShm_hElem_s) - x_iValOff - sizeof(ls_vardata_t));
+    }
+} LsShmHElem;
 
-typedef struct {
-    uint32_t        x_magic;
-    LsShm_size_t    x_capacity; 
-    LsShm_size_t    x_size; 
-    LsShm_size_t    x_full_factor;
-    LsShm_size_t    x_grow_factor;
-    LsShm_offset_t  x_iTable;
-    LsShm_offset_t  x_lockOffset;
-    LsShm_offset_t  x_glockOffset;
-    uint8_t         x_mode;
-    uint8_t         x_unused[3];
-} lsShm_hTable_t;
+typedef struct
+{
+    LsShmOffset_t   x_iOffset;   // offset location of hash element
+} LsShmHIdx;
+
+typedef struct
+{
+    uint32_t        x_iMagic;
+    LsShmSize_t     x_iCapacity;
+    LsShmSize_t     x_iSize;
+    LsShmSize_t     x_iFullFactor;
+    LsShmSize_t     x_iGrowFactor;
+    LsShmOffset_t   x_iTable;
+    LsShmOffset_t   x_iBitMap;
+    LsShmOffset_t   x_iLockOffset;
+    LsShmOffset_t   x_iGLockOffset;
+    LsShmOffset_t   x_iLruOffset;
+    uint8_t         x_iMode;
+    uint8_t         x_iLruMode; // lru hash=1, xlru=2
+    uint8_t         x_unused[2];
+} LsShmHTable;
 
 class LsShmHash : public ls_shmhash_s, ls_shmobject_s
 {
-    uint32_t        m_magic;
 public:
-    typedef lsShm_hElem_t* iterator;
-    typedef const lsShm_hElem_t* const_iterator;
+    typedef LsShmHElem *iterator;
+    typedef const LsShmHElem *const_iterator;
 
-    typedef LsShm_hkey_t (*hash_fn) ( const void *, int len  );
-    typedef int   (*val_comp) ( const void * pVal1, const void * pVal2, int len );
-    typedef int (*for_each_fn)( iterator iter);
-    typedef int (*for_each_fn2)( iterator iter, void *pUData);
+    typedef LsShmHKey(*hash_fn)(const void *pVal, int len);
+    typedef int (*val_comp)(const void *pVal1, const void *pVal2, int len);
+    typedef int (*for_each_fn)(iterator iter);
+    typedef int (*for_each_fn2)(iterator iter, void *pUData);
 
-    static LsShm_hkey_t hash_string(const void * __s, int len );
-    static int  comp_string( const void * pVal1, const void * pVal2, int len );
+    static LsShmHKey hashString(const void *__s, int len);
+    static int compString(const void *pVal1, const void *pVal2, int len);
 
-    static LsShm_hkey_t hash_32id(const void * __s, int len );
-    static LsShm_hkey_t hash_buf(const void * __s, int len );
-    static int  comp_buf( const void * pVal1, const void * pVal2, int len );
+    static LsShmHKey hash32id(const void *__s, int len);
+    static LsShmHKey hashBuf(const void *__s, int len);
+    static LsShmHKey hashXXH32(const void *__s, int len);
+    static int compBuf(const void *pVal1, const void *pVal2, int len);
 
-    static LsShm_hkey_t i_hash_string(const void * __s, int len);
-    static int  i_comp_string( const void * pVal1, const void * pVal2, int len );
+    static LsShmHKey iHashString(const void *__s, int len);
+    static int iCompString(const void *pVal1, const void *pVal2, int len);
 
-    static int  cmp_ipv6( const void * pVal1, const void * pVal2, int len );
-    static LsShm_hkey_t hf_ipv6( const void * pKey, int len );
-    
-    inline LsShm_status_t status()
+    static int cmpIpv6(const void *pVal1, const void *pVal2, int len);
+    static LsShmHKey hfIpv6(const void *pKey, int len);
+
+    LsShmStatus_t status()
     { return m_status; }
+
+public:
+    LsShmHash(LsShmPool *pool,
+              const char *name, size_t init_size, hash_fn hf, val_comp vc);
+    virtual ~LsShmHash();
+
+    static LsShmHash *checkHTable(GHash::iterator itor, LsShmPool *pool,
+                                  const char *name, LsShmHash::hash_fn hf, LsShmHash::val_comp vc);
     
-private:
-    inline uint32_t getIndex(uint32_t k, uint32_t n)
-    { return k % n ; }
+    LsShmPool *getPool() const
+    {   return m_pPool;     }
 
-    typedef iterator (*hash_insert)(LsShmHash * pThis, const void * pKey, int keyLen, const void * pValue, int valueLen);
-    typedef iterator (*hash_update)(LsShmHash * pThis, const void * pKey, int keyLen, const void * pValue, int valueLen);
-    typedef iterator (*hash_set)(LsShmHash * pThis, const void * pKey, int keyLen, const void * pValue, int valueLen);
-    typedef iterator (*hash_get)(LsShmHash * pThis, const void * pKey, int keyLen, const void * pValue, int valueLen, int * pFlag);
-    typedef iterator (*hash_find)  (LsShmHash * pThis, const void * pKey , int keyLen);
+    LsShmOffset_t ptr2offset(const void *ptr) const
+    {   return m_pPool->ptr2offset(ptr); }
+    void *offset2ptr(LsShmOffset_t offset) const
+    {   return m_pPool->offset2ptr(offset); }
 
-private: // private data should start from here
-    lsShm_hTable_t *    m_table;
-    lsShm_hIdx_t *      m_idxStart;
-    lsShm_hIdx_t *      m_idxEnd;
+    iterator offset2iterator(LsShmOffset_t offset) const
+    {   return (iterator)m_pPool->offset2ptr(offset); }
 
-    LsShmPool *         m_pool;
-    LsShm_offset_t      m_offset;
-    char *              m_name;
+    void *offset2iteratorData(LsShmOffset_t offset) const
+    {   return ((iterator)m_pPool->offset2ptr(offset))->getVal(); }
+
+    LsShmOffset_t alloc2(LsShmSize_t size, int &remapped)
+    {   return m_pPool->alloc2(size, remapped); }
+    void release2(LsShmOffset_t offset, LsShmSize_t size)
+    {   m_pPool->release2(offset, size); }
+
+    int round4(int x) const
+    {   return (x + 0x3) & ~0x3; }
+    void *getIterDataPtr(iterator iter) const
+    {   return iter->getVal(); }
+
+    const char *name() const
+    {   return m_pName; }
+
+    void checkRemap()
+    {   remap(); }
+
+    void close();
+
+    void clear();
+
+    void remove(const void *pKey, int keyLen)
+    {
+        iterator iter;
+        if ((iter = findIterator(pKey, keyLen)) != NULL)
+            eraseIterator(iter);
+    }
+
+    LsShmOffset_t find(const void *pKey, int keyLen, int *retsize)
+    {
+        iterator iter;
+        if ((iter = findIterator(pKey, keyLen)) == NULL)
+        {
+            *retsize = 0;
+            return 0;
+        }
+        *retsize = iter->getValLen();
+        return ptr2offset(iter->getVal());
+    }
+
+    LsShmOffset_t get(
+        const void *pKey, int keyLen, int *valueLen, int *pFlag)
+    {
+        int myValueLen = *valueLen;
+        iterator iter;
+        int flag = *pFlag;
+
+        if ((iter = getIterator(pKey, keyLen, NULL, myValueLen, pFlag)) == NULL)
+        {
+            *valueLen = 0;
+            return 0;
+        }
+        if (flag & LSSHM_FLAG_SETTOP)
+            linkSetTop(iter);
+        if ((*pFlag & LSSHM_FLAG_CREATED) && (m_pLru != NULL))
+        {
+            lruSpecial(iter);
+            ++m_pLru->nvalset;
+        }
+        *valueLen = iter->getValLen();
+        return ptr2offset(iter->getVal());
+    }
+
+    LsShmOffset_t set(
+        const void *pKey, int keyLen, const void *pValue, int valueLen)
+    {
+        iterator iter = setIterator(pKey, keyLen, pValue, valueLen);
+        return (iter != NULL) ? ptr2offset(iter->getVal()) : 0;
+    }
+
+    LsShmOffset_t insert(
+        const void *pKey, int keyLen, const void *pValue, int valueLen)
+    {
+        iterator iter = insertIterator(pKey, keyLen, pValue, valueLen);
+        return (iter != NULL) ? ptr2offset(iter->getVal()) : 0;
+    }
+
+    LsShmOffset_t update(
+        const void *pKey, int keyLen, const void *pValue, int valueLen)
+    {
+        iterator iter = updateIterator(pKey, keyLen, pValue, valueLen);
+        return (iter != NULL) ? ptr2offset(iter->getVal()) : 0;
+    }
+
+    void eraseIterator(iterator iter)
+    {
+        autoLock();
+        remap();
+        eraseIteratorHelper(iter);
+        autoUnlock();
+    }
+
+    //
+    //  Note - iterators should not be saved.
+    //         use ptr2offset(iterator) to save the offset
+    //
+    iterator findIterator(const void *pKey, int keyLen)
+    {
+        autoLock();
+        remap();
+        iterator iter = (*m_find)(this, pKey, keyLen);
+        autoUnlock();
+        return iter;
+    }
+
+    iterator getIterator(
+        const void *pKey, int keyLen, const void *pValue, int valueLen,
+        int *pFlag)
+    {
+        autoLock();
+        remap();
+        iterator iter = (*m_get)(this, pKey, keyLen, pValue, valueLen, pFlag);
+        autoUnlock();
+        return iter;
+    }
+
+    iterator setIterator(
+        const void *pKey, int keyLen, const void *pValue, int valueLen)
+    {
+        autoLock();
+        remap();
+        iterator iter = (*m_set)(this, pKey, keyLen, pValue, valueLen);
+        autoUnlock();
+        return iter;
+    }
+
+    iterator insertIterator(
+        const void *pKey, int keyLen, const void *pValue, int valueLen)
+    {
+        autoLock();
+        remap();
+        iterator iter = (*m_insert)(this, pKey, keyLen, pValue, valueLen);
+        autoUnlock();
+        return iter;
+    }
+
+    iterator updateIterator(
+        const void *pKey, int keyLen, const void *pValue, int valueLen)
+    {
+        autoLock();
+        remap();
+        iterator iter = (*m_update)(this, pKey, keyLen, pValue, valueLen);
+        autoUnlock();
+        return iter;
+    }
+
+    hash_fn getHashFn() const   {   return m_hf;    }
+    val_comp getValComp() const {   return m_vc;    }
+
+    void setFullFactor(int f)   {   if (f > 0) m_pTable->x_iFullFactor = f;  }
+    void setGrowFactor(int f)   {   if (f > 0) m_pTable->x_iGrowFactor = f;  }
+
+    bool empty() const              {   return m_pTable->x_iSize == 0; }
+    size_t size() const             {   return m_pTable->x_iSize;      }
+    size_t capacity() const         {   return m_pTable->x_iCapacity;  }
+    LsShmOffset_t lruHdrOff() const {   return m_pTable->x_iLruOffset; }
+    iterator begin();
+    iterator end()                  {   return NULL;   }
+    const_iterator begin() const    {   return ((LsShmHash *)this)->begin(); }
+    const_iterator end() const      {   return ((LsShmHash *)this)->end();   }
+
+    iterator next(iterator iter);
+    const_iterator next(const_iterator iter) const
+    {   return ((LsShmHash *)this)->next((iterator)iter); }
+    int for_each(iterator beg, iterator end, for_each_fn fun);
+    int for_each2(iterator beg, iterator end, for_each_fn2 fun, void *pUData);
+
+    void destroy();
+
+    //  @brief stat
+    //  @brief gether statistic on HashTable
+    int stat(LsHashStat *pHashStat, for_each_fn2 fun);
+
+    // Special section for registries entries
+#ifdef notdef
+    LsShmReg *getReg(int num)
+    {   return m_pool->getReg(num); }
+#endif
+    LsShmReg *findReg(const char *name)
+    {   return m_pPool->findReg(name); }
+    LsShmReg *addReg(const char *name)
+    {   return m_pPool->addReg(name); }
+
+    //
+    //  @brief eraseIterator_helper
+    //  @brief  should only be called after SHM-HASH-LOCK has been acquired.
+    //
+    void eraseIteratorHelper(iterator iter);
+
+    void enableManualLock()
+    {   m_pPool->disableLock(); disableLock(); }
+    void disableManualLock()
+    {   m_pPool->enableLock(); enableLock(); }
+
+    int lock()
+    {   return m_iLockEnable ? 0 : lsi_shmlock_lock(m_pShmLock); }
+
+    int trylock()
+    {   return m_iLockEnable ? 0 : lsi_shmlock_trylock(m_pShmLock); }
+
+    int unlock()
+    {   return m_iLockEnable ? 0 : lsi_shmlock_unlock(m_pShmLock); }
+
+    int getRef()     { return m_iRef; }
+    int upRef()      { return ++m_iRef; }
+    int downRef()    { return --m_iRef; }
+
+protected:
+    typedef iterator(*hash_insert)(LsShmHash *pThis,
+                                   const void *pKey, int keyLen,
+                                   const void *pValue, int valueLen);
+    typedef iterator(*hash_update)(LsShmHash *pThis,
+                                   const void *pKey, int keyLen,
+                                   const void *pValue, int valueLen);
+    typedef iterator(*hash_set)(LsShmHash *pThis,
+                                const void *pKey, int keyLen,
+                                const void *pValue, int valueLen);
+    typedef iterator(*hash_get)(LsShmHash *pThis,
+                                const void *pKey, int keyLen,
+                                const void *pValue, int valueLen, int *pFlag);
+    typedef iterator(*hash_find)(LsShmHash *pThis,
+                                 const void *pKey, int keyLen);
+
+    uint32_t getIndex(uint32_t k, uint32_t n)
+    {   return k % n ; }
+
+    int getBitMapEnt(LsShmHKey key)
+    {
+        int indx = getIndex(key, m_iCapacity);
+        return m_pBitMap[indx / s_bitsPerChar] & s_bitMask[indx % s_bitsPerChar];
+    }
+    void setBitMapEnt(LsShmHKey key)
+    {
+        int indx = getIndex(key, m_iCapacity);
+        m_pBitMap[indx / s_bitsPerChar] |= s_bitMask[indx % s_bitsPerChar];
+    }
+    void clrBitMapEnt(LsShmHKey key)
+    {
+        int indx = getIndex(key, m_iCapacity);
+        m_pBitMap[indx / s_bitsPerChar] &= ~(s_bitMask[indx % s_bitsPerChar]);
+    }
     
+    int sz2TableSz(LsShmSize_t sz)
+    {   return (sz * sizeof(LsShmHIdx)); }
+    
+    int sz2BitMapSz(LsShmSize_t sz)
+    {   return ((sz + s_bitsPerChar - 1) / s_bitsPerChar); }
+    
+    int         rehash();
+    iterator    find2(const void *pKey, int keyLen, LsShmHKey key);
+    iterator    insert2(const void *pKey, int keyLen,
+                        const void *pValue, int valueLen, LsShmHKey key);
+
+    static iterator insertNum(LsShmHash *pThis,
+                              const void *pKey, int keyLen,
+                              const void *pValue, int valueLen);
+    static iterator setNum(LsShmHash *pThis,
+                           const void *pKey, int keyLen,
+                           const void *pValue, int valueLen);
+    static iterator updateNum(LsShmHash *pThis,
+                              const void *pKey, int keyLen,
+                              const void *pValue, int valueLen);
+    static iterator findNum(LsShmHash *pThis,
+                            const void *pKey, int keyLen);
+    static iterator getNum(LsShmHash *pThis,
+                           const void *pKey, int keyLen,
+                           const void *pValue, int valueLen, int *pFlag);
+
+    static iterator insertPtr(LsShmHash *pThis,
+                              const void *pKey, int keyLen,
+                              const void *pValue, int valueLen);
+    static iterator setPtr(LsShmHash *pThis,
+                           const void *pKey, int keyLen,
+                           const void *pValue, int valueLen);
+    static iterator updatePtr(LsShmHash *pThis,
+                              const void *pKey, int keyLen,
+                              const void *pValue, int valueLen);
+    static iterator findPtr(LsShmHash *pThis,
+                            const void *pKey, int keyLen);
+    static iterator getPtr(LsShmHash *pThis,
+                           const void *pKey, int keyLen,
+                           const void *pValue, int valueLen, int *pFlag);
+
+    void setIterData(iterator iter, const void *pValue)
+    {
+        if (pValue != NULL)
+            ::memcpy(iter->getVal(), pValue, iter->getValLen());
+    }
+    void setIterKey(iterator iter, const void *pKey)
+    {   ::memcpy(iter->getKey(), pKey, iter->getKeyLen()); }
+
+    void remap();
+    static int release_hash_elem(iterator iter, void *pUData);
+
+    void enableLock()
+    {   m_iLockEnable = 1; };
+
+    void disableLock()
+    {   m_iLockEnable = 0; };
+
+    int autoLock()
+    {   return m_iLockEnable && lsi_shmlock_lock(m_pShmLock); }
+
+    int autoUnlock()
+    {   return m_iLockEnable && lsi_shmlock_unlock(m_pShmLock); }
+
+    // stat helper
+    int statIdx(iterator iter, for_each_fn2 fun, void *pUData);
+
+    int setupLock()
+    {   return m_iLockEnable && lsi_shmlock_setup(m_pShmLock); }
+
+    int setupGLock()
+    {   return lsi_shmlock_setup(m_pShmGLock); }
+
+    virtual void valueSetup(uint32_t *pValOff, int *pValLen)
+    {   return; }
+    virtual void linkHElem(LsShmHElem *pElem, LsShmOffset_t offElem)
+    {   return; }
+    virtual void linkSetTop(LsShmHElem *pElem)
+    {   return; }
+    virtual void lruSpecial(iterator Iter)
+    {   return; }
+
+protected:
+    uint32_t            m_iMagic;
+    LsShmHTable        *m_pTable;
+    LsShmHIdx          *m_pIdxStart;
+    LsShmHIdx          *m_pIdxEnd;
+    uint8_t            *m_pBitMap;
+    LsHashLruInfo      *m_pLru;
+
+    LsShmPool          *m_pPool;
+    LsShmOffset_t       m_iOffset;
+    char               *m_pName;
+
     hash_fn             m_hf;
     val_comp            m_vc;
     hash_insert         m_insert;
@@ -140,320 +528,28 @@ private: // private data should start from here
     hash_set            m_set;
     hash_find           m_find;
     hash_get            m_get;
-    
-    int8_t              m_poolOwner;
-    int8_t              m_lockEnable;
-    int8_t              m_mode;         /* keep track on _num mode 0 = _num, 1 = normal*/
-    int8_t              m_notused;      /* future use */
-    lsShmMap_t *        m_pShmMap;      /* keep track on map */
-    lsi_shmlock_t *     m_pShmLock;     /* local lock for Hash */
-    lsi_shmlock_t *     m_pShmGLock;    /* global lock */
-    LsShm_status_t      m_status;
-    LsShm_size_t        m_capacity;
-    
-    int       rehash();
-    iterator    find2( const void * pKey, int keyLen, LsShm_hkey_t key );
-    iterator    insert2( const void * pKey, int keyLen, const void *pValue, int valueLen, LsShm_hkey_t key );
-    static iterator insert_num(LsShmHash * pThis, const void * pKey, int keyLen, const void * pValue, int valueLen );
-    static iterator set_num(LsShmHash * pThis, const void * pKey, int keyLen, const void * pValue, int valueLen);
-    static iterator update_num(LsShmHash * pThis, const void * pKey, int keyLen, const void * pValue, int valueLen);
-    static iterator find_num(LsShmHash * pThis, const void * pKey, int keyLen );
-    static iterator get_num(LsShmHash * pThis, const void * pKey, int keyLen, const void * pValue, int valueLen, int * pFlag);
-    
-    static iterator insert_p(LsShmHash * pThis, const void * pKey, int keyLen, const void * pValue, int valueLen );
-    static iterator set_p(LsShmHash * pThis, const void * pKey, int keyLen, const void * pValue, int valueLen);
-    static iterator update_p(LsShmHash * pThis, const void * pKey, int keyLen, const void * pValue, int valueLen);
-    static iterator find_p(LsShmHash * pThis, const void * pKey, int keyLen );
-    static iterator get_p(LsShmHash * pThis, const void * pKey, int keyLen, const void * pValue, int valueLen, int * pFlag);
 
-    inline void setIterData(iterator iter, const void * pValue) 
-    { if (pValue)
-        ::memcpy( iter->p_value(), pValue, iter->x_valueLen); }
-    inline void setIterKey(iterator iter, const void * pKey)
-    { ::memcpy( iter->p_key(), pKey, iter->x_rkeyLen); }
-    
-    void remap() ;
-    static int release_hash_elem( iterator iter, void * pUData);
-    
-private: // will become private soon
-    LsShmHash( LsShmPool * pool
-                , const char * name
-                , size_t init_size
-                , hash_fn hf
-                , val_comp vc );
-    ~LsShmHash();
-    
-public:
-    inline LsShm_offset_t ptr2offset( const void * ptr) const
-    { return m_pool->ptr2offset(ptr); }
-    inline void * offset2ptr( LsShm_offset_t  offset) const
-    { return m_pool->offset2ptr(offset); }
-    
-    inline iterator offset2iterator( LsShm_offset_t  offset) const
-    { return (iterator)m_pool->offset2ptr(offset); }
-    
-    inline void * offset2iteratorData( LsShm_offset_t  offset) const
-    { return ((iterator)m_pool->offset2ptr(offset))->p_value(); }
-    
-    inline LsShm_offset_t alloc2(LsShm_size_t size, int & remapped)
-    { return m_pool->alloc2(size, remapped); }
-    inline void release2(LsShm_offset_t offset, LsShm_size_t size)
-    { m_pool->release2(offset, size); }
-    
-    inline int round4(int x) const
-    { return (x + 0x3) & ~0x3; }
-    inline void * getIterDataPtr(iterator iter) const
-    { return iter->p_value(); }
-    
-    inline const char * name() const
-    { return m_name; }
-    
-    inline void checkRemap()
-    { remap(); }
-    
-#if 0
-private: // will become private soon
-    LsShmHash( LsShmPool * pool
-                , const char * name
-                , size_t init_size
-                , hash_fn hf
-                , val_comp vc );
-    ~LsShmHash();
-    
-public:
-#endif
-    
-    static LsShmHash * get( size_t init_size
-                , hash_fn hf
-                , val_comp vc );
-    static LsShmHash * get( const char * name
-                , size_t init_size
-                , hash_fn hf
-                , val_comp vc );
-    static LsShmHash * get( LsShmPool * pool
-                , const char * name
-                , size_t init_size
-                , hash_fn hf
-                , val_comp vc );
-    void unget();
-    
-    void clear();
-    
-    inline void remove( const void * pKey, int keyLen)
-    {
-        iterator iter;
-        if ( (iter = find_iterator (pKey, keyLen)) )
-        {
-            erase_iterator(iter);
-        }
-    }
-    
-    inline LsShm_offset_t find( const void * pKey, int keyLen, int * retsize)
-    { 
-        iterator iter;
-        if ( (iter = find_iterator(pKey, keyLen)) )
-        {
-            *retsize = iter->x_valueLen;
-            return ptr2offset( iter->p_value() );
-        }
-        else
-        {
-            *retsize = 0;
-            return 0;
-        }
-        // return ptr2offset( find_iterator(pKey, keyLen).x_data ) ;
-    }
-    
-    inline LsShm_offset_t get( const void * pKey, int keyLen, int * valueLen, int * pFlag )
-    {
-        int myValueLen = *valueLen;
-        iterator iter;
-        
-        if ( (iter = get_iterator(pKey, keyLen, NULL, myValueLen, pFlag)) )
-        {
-            *valueLen = iter->x_valueLen;
-            return ptr2offset( iter->p_value() );
-        }
-        else
-        {
-            *valueLen = 0;
-            return 0;
-        }
-    }
-    
-    inline LsShm_offset_t set(const void * pKey, int keyLen, const void * pValue, int valueLen)
-    { 
-        iterator iter;
-        iter = set_iterator(pKey, keyLen, pValue, valueLen);
-        return iter ? ptr2offset( iter->p_value() ) : 0;
-    }
-    inline LsShm_offset_t insert(const void * pKey, int keyLen, const void * pValue, int valueLen)
-    {
-        iterator iter;
-        iter = insert_iterator(pKey, keyLen, pValue, valueLen);
-        return iter ? ptr2offset( iter->p_value() ) : 0;
-    }
-    inline LsShm_offset_t update(const void * pKey, int keyLen, const void * pValue, int valueLen)
-    { 
-        iterator iter;
-        iter = update_iterator(pKey, keyLen, pValue, valueLen);
-        return iter ? ptr2offset( iter->p_value() ) : 0;
-    }
-
-    void erase_iterator( iterator iter )
-    {
-        autoLock(); remap();
-        erase_iterator_helper( iter );
-        autoUnlock();
-    }
-    
-    //
-    //  Noted - the iterator should not be saved use ptr2offset(iterator)
-    //          to save the offset
-    iterator find_iterator( const void * pKey, int keyLen)
-    {
-        autoLock(); remap(); 
-        iterator iter = (*m_find)( this, pKey, keyLen ); 
-        autoUnlock(); return iter;
-    }
-
-    //
-    //  Noted - the iterator should not be saved use ptr2offset(iterator)
-    //          to save the offset
-    iterator insert_iterator(const void * pKey, int keyLen, const void * pValue, int valueLen)
-    {
-        autoLock(); remap(); 
-        iterator iter = (*m_insert)( this, pKey, keyLen, pValue, valueLen); 
-        autoUnlock(); return iter ;
-    }
-
-    //
-    //  Noted - the iterator should not be saved use ptr2offset(iterator)
-    //          to save the offset
-    iterator get_iterator(const void * pKey, int keyLen, const void * pValue, int valueLen, int * pFlag)
-    {
-        autoLock(); remap(); 
-        iterator iter = (*m_get)( this, pKey, keyLen, pValue, valueLen, pFlag ); 
-        autoUnlock(); return iter ;
-    }
-    
-    //
-    //  Noted - the iterator should not be saved use ptr2offset(iterator)
-    //          to save the offset
-    iterator set_iterator(const void * pKey, int keyLen, const void * pValue, int valueLen)
-    {
-        autoLock(); remap(); 
-        iterator iter = (*m_set)( this, pKey, keyLen, pValue, valueLen ); 
-        autoUnlock(); return iter ;
-    }
-
-    //
-    //  Noted - the iterator should not be saved use ptr2offset(iterator)
-    //          to save the offset
-    iterator update_iterator(const void * pKey, int keyLen, const void * pValue, int valueLen)
-    {
-        autoLock(); remap(); 
-        iterator iter = (*m_update)( this, pKey, keyLen, pValue, valueLen ); 
-        autoUnlock(); return iter ;
-    }
-
-    hash_fn get_hash_fn() const     {   return m_hf;    }
-    val_comp get_val_comp() const   {   return m_vc;    }
-
-    void set_full_factor( int f )   {   if ( f > 0 )    m_table->x_full_factor = f;  }
-    void set_grow_factor( int f )   {   if ( f > 0 )    m_table->x_grow_factor = f;  }
-
-    bool empty() const              {   return m_table->x_size == 0; }
-    size_t size() const             {   return m_table->x_size;      }
-    size_t capacity() const         {   return m_table->x_capacity;  }
-    iterator begin();
-    iterator end()                  {   return NULL;    }
-    const_iterator begin() const    {   return ((LsShmHash*)this)->begin(); }
-    const_iterator end() const      {   return ((LsShmHash*)this)->end();   }
-
-    iterator next( iterator iter );
-    const_iterator next( const_iterator iter ) const
-    {   return ((LsShmHash *)this)->next((iterator)iter); }
-    int for_each( iterator beg, iterator end, for_each_fn fun );
-    int for_each2( iterator beg, iterator end, for_each_fn2 fun, void * pUData );
-    
-    void destroy();
-    
-    //  @brief stat 
-    //  @brief gether statistic on HashTable
-    int stat(LsHash_stat_t * pHashStat, for_each_fn2 fun);
-    
-     // Special section for registries entries 
-    inline lsShmReg_t *  getReg(int num)
-    { return m_pool->getReg(num); }
-    inline lsShmReg_t *  findReg(const char * name)
-    { return m_pool->findReg(name); }
-    inline lsShmReg_t *  addReg(const char * name)
-    { return m_pool->addReg(name); }
-    
-    //
-    //  @brief erase_iterator_helper 
-    //  @brief  should only be called after SHM-HASH-LOCK have been aquired.
-    //
-    void erase_iterator_helper( iterator iter );
-    
-public:
-#if 0
-    inline int g_lock () { return lsi_shmlock_lock (m_pShmGLock); }
-
-    inline int g_trylock () { return lsi_shmlock_trylock (m_pShmGLock); }
-    
-    inline int g_unlock () { return lsi_shmlock_unlock (m_pShmGLock); }
-#endif
-    void enableManualLock()
-    { m_pool->disableLock(); disableLock(); }
-    void disableManualLock()
-    { m_pool->enableLock(); enableLock(); }
-    
-    inline int lock ()
-    { return m_lockEnable ? 0 : lsi_shmlock_lock(m_pShmLock); }
-
-    inline int trylock ()
-    { return m_lockEnable ? 0 : lsi_shmlock_trylock(m_pShmLock); }
-
-    inline int unlock ()
-    {   return m_lockEnable ? 0 : lsi_shmlock_unlock(m_pShmLock); }
-
-private:
-    inline void enableLock()
-    { m_lockEnable = 1; };
-    
-    inline void disableLock()
-    { m_lockEnable = 0; };
-    
-    inline int autoLock ()
-    { return m_lockEnable && lsi_shmlock_lock(m_pShmLock); }
-
-    inline int autoUnlock ()
-    {   return m_lockEnable && lsi_shmlock_unlock(m_pShmLock); }
-
-    // stat helper
-    int statIdx(iterator iter, for_each_fn2 fun, void * pUData);
-    
-    int setupLock()
-    { return m_lockEnable
-            && lsi_shmlock_setup(m_pShmLock); }
-
-
-    int setupGLock()
-    {   return lsi_shmlock_setup( m_pShmGLock );    }
+    int8_t              m_iPoolOwner;
+    int8_t              m_iLockEnable;
+    int8_t              m_iMode;        // mode 0=Num, 1=Ptr
+    int8_t              m_notused;
+    LsShmMap           *m_pShmMap;      // keep track of map
+    lsi_shmlock_t      *m_pShmLock;     // local lock for Hash
+    lsi_shmlock_t      *m_pShmGLock;    // global lock
+    LsShmStatus_t       m_status;
+    LsShmSize_t         m_iCapacity;
 
     // house keeping
-    int m_ref;
-    HashStringMap< lsi_shmobject_t *> & m_objBase;
-    inline int up_ref() { return ++m_ref; }
-    inline int down_ref() { return --m_ref; }
+    int m_iRef;
     
+    static const uint8_t s_bitMask[];
+    static const size_t s_bitsPerChar;
+    
+private:
     // disable the bad boys!
-    LsShmHash( const LsShmHash & );
-    LsShmHash & operator=( const LsShmHash & );
+    LsShmHash(const LsShmHash &other);
+    LsShmHash &operator=(const LsShmHash &other);
 
-    
 #ifdef LSSHM_DEBUG_ENABLE
     // for debug purpose - should debug this later
     friend class debugBase;
@@ -461,15 +557,15 @@ private:
 };
 
 
-//
-//  TShmHash - LiteSpeed Shm Hash object
-//  SIMON - haven't verified this yet; will do this later.
-//
-#if 0
 template< class T >
 class TShmHash
     : public LsShmHash
 {
+private:
+    TShmHash() {};
+    TShmHash(const TShmHash &rhs);
+    ~TShmHash() {};
+    void operator=(const TShmHash &rhs);
 public:
     class iterator
     {
@@ -478,61 +574,57 @@ public:
         iterator()
         {}
 
-        iterator( LsShmHash::iterator iter ) : m_iter( iter )
+        iterator(LsShmHash::iterator iter) : m_iter(iter)
         {}
-        iterator( LsShmHash::const_iterator iter )
-            : m_iter( (LsShmHash::iterator)iter )
-        {}
-
-        iterator( const iterator& rhs ) : m_iter( rhs.m_iter )
+        iterator(LsShmHash::const_iterator iter)
+            : m_iter((LsShmHash::iterator)iter)
         {}
 
-        const void * first() const
+        iterator(const iterator &rhs) : m_iter(rhs.m_iter)
+        {}
+
+        const void *first() const
         {  return  m_iter->first();   }
 
-        T second() const
-        {   return (T)( m_iter->second() );   }
+        T *second() const
+        {   return (T *)(m_iter->second());   }
 
-        operator LsShmHash::iterator ()
+        operator LsShmHash::iterator()
         {   return m_iter;  }
-
     };
     typedef iterator const_iterator;
 
-    TShmHash( int initsize, LsShmHash::hash_fn hf, LsShmHash::val_comp cf )
-        : LsShmHash( initsize, hf, cf )
-        {};
-    ~TShmHash() {};
-
-    iterator insert( const void * pKey, const T& val )
-    {   return LsShmHash::insert( pKey, (void *)val );  }
-
-    iterator update( const void * pKey, const T& val )
-    {   return LsShmHash::update( pKey, (void *)val );  }
-
-    iterator find( const void * pKey )
-    {   return LsShmHash::find( pKey );   }
-
-    const_iterator find( const void * pKey ) const
-    {   return LsShmHash::find( pKey );   }
+    LsShmOffset_t get(const void *pKey, int keyLen, int *valueLen, int *pFlag)
+    {
+        *valueLen = sizeof(T);
+        return LsShmHash::get(pKey, keyLen, valueLen, pFlag);
+    }
+        
+    LsShmOffset_t set(const void *pKey, int keyLen, T *pValue)
+    {   return LsShmHash::set(pKey, keyLen, (const void *)pValue, sizeof(T));  }
+    
+    LsShmOffset_t insert(const void *pKey, int keyLen, T *pValue)
+    {   return LsShmHash::insert(pKey, keyLen, (const void *)pValue, sizeof(T));  }
+    
+    LsShmOffset_t update(const void *pKey, int keyLen, T *pValue)
+    {   return LsShmHash::update(pKey, keyLen, (const void *)pValue, sizeof(T));  }
+    
+    iterator getIterator(const void *pKey, int keyLen, T *pValue, int *pFlag)
+    {   return LsShmHash::getIterator(pKey, keyLen, (const void *)pValue, sizeof(T), pFlag);  }
+    
+    iterator setIterator(const void *pKey, int keyLen, T *pValue)
+    {   return LsShmHash::setIterator(pKey, keyLen, (const void *)pValue, sizeof(T));  }
+    
+    iterator insertIterator(const void *pKey, int keyLen, T *pValue)
+    {   return LsShmHash::insertIterator(pKey, keyLen, (const void *)pValue, sizeof(T));  }
+    
+    iterator updateIterator(const void *pKey, int keyLen, T *pValue)
+    {   return LsShmHash::updateIterator(pKey, keyLen, (const void *)pValue, sizeof(T));  }
     
     iterator begin()
-    {   return LsShmHash::begin();        }
-    
-    static int deleteObj( LsShmHash::iterator iter )
-    {
-        delete (T)(iter->second());
-        return 0;
-    }
-
-    void release_objects()
-    {
-        LsShmHash::for_each( begin(), end(), deleteObj );
-        LsShmHash::clear();
-    }
+    {   return LsShmHash::begin();  }
 
 };
-#endif
 
 #endif // LSSHMHASH_H
 

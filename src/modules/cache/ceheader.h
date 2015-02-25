@@ -18,16 +18,14 @@
 #ifndef CEHEADER_H
 #define CEHEADER_H
 
-/**
-	@author Gang Wang <gwang@litespeedtech.com>
-*/
 
 #include <inttypes.h>
 #include <http/platforms.h>
 
 #define CE_ID "LSCH"
 
-struct CeHeader{
+struct CeHeader
+{
 public:
     CeHeader();
 
@@ -36,23 +34,23 @@ public:
     enum
     {
         CEH_COMPRESSIBLE = 1,
-        CEH_COMPRESSED   = 1<<1,
-        CEH_IN_CONSTRUCT = 1<<2,
-        CEH_PRIVATE      = 1<<3,
-        CEH_STALE        = 1<<4,
-        CEH_UPDATING     = 1<<5
+        CEH_COMPRESSED   = 1 << 1,
+        CEH_IN_CONSTRUCT = 1 << 2,
+        CEH_PRIVATE      = 1 << 3,
+        CEH_STALE        = 1 << 4,
+        CEH_UPDATING     = 1 << 5
     };
 
     int32_t m_tmCreated;        //Created Time
     int32_t m_tmExpire;         //Expire Time
-    int32_t m_flag;             //Combination of CEH_xxx flags
-    int32_t m_keyLen;           //Cache Key Length
-    int32_t m_statusCode;       //Response Status Code
-    int32_t m_valPart1Len;      //Response Header Length
-    int32_t m_valPart2Len;      //Response Body Length
+    int32_t m_iFlag;             //Combination of CEH_xxx flags
+    int32_t m_iKeyLen;           //Cache Key Length
+    int32_t m_iStatusCode;       //Response Status Code
+    int32_t m_iValPart1Len;      //Response Header Length
+    int32_t m_iValPart2Len;      //Response Body Length
     int32_t m_tmLastMod;        //Last Modified time parsed from response header if set
-    int16_t m_offETag;          //ETag header value location
-    int16_t m_lenETag;          //ETag Header size
+    int16_t m_iOffETag;          //ETag header value location
+    int16_t m_iLenETag;          //ETag Header size
 
 };
 

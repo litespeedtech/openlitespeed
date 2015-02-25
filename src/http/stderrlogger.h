@@ -19,28 +19,34 @@
 #define STDERRLOGGER_H
 
 
+#include <lsdef.h>
 #include <edio/eventreactor.h>
 #include <log4cxx/nsdefs.h>
+#include <util/tsingleton.h>
+
 BEGIN_LOG4CXX_NS
 class Appender;
 END_LOG4CXX_NS
 
 class Multiplexer;
-class StdErrLogger : public EventReactor 
+class StdErrLogger : public EventReactor, public TSingleton<StdErrLogger>
 {
+    friend class TSingleton<StdErrLogger>;
     int m_iEnabled;
     int m_fdStdErr;
-    LOG4CXX_NS::Appender * m_pAppender;
-public: 
+    LOG4CXX_NS::Appender *m_pAppender;
     StdErrLogger();
+public:
     ~StdErrLogger();
-    int setLogFileName( const char * pName );
-    const char * getLogFileName() const;
-    virtual int handleEvents( short event );
+    int setLogFileName(const char *pName);
+    const char *getLogFileName() const;
+    virtual int handleEvents(short event);
     int getStdErr() const   {   return m_fdStdErr;    }
-    int initLogger( Multiplexer * pMultiplexer);
-	LOG4CXX_NS::Appender * getAppender() const {	return m_pAppender; }
-	int isEnabled() const   {   return m_iEnabled;  }
+    int initLogger(Multiplexer *pMultiplexer);
+    LOG4CXX_NS::Appender *getAppender() const {    return m_pAppender; }
+    int isEnabled() const   {   return m_iEnabled;  }
+
+    LS_NO_COPY_ASSIGN(StdErrLogger);
 };
 
 #endif

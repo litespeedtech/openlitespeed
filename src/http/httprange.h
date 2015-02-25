@@ -19,12 +19,13 @@
 #define HTTPRANGE_H
 
 
-#include <lsr/lsr_xpool.h>
+#include <lsdef.h>
+#include <lsr/ls_xpool.h>
 #include <util/objarray.h>
 #include <sys/types.h>
 
 #include <new>
-  
+
 #define MAX_PART_HEADER_LEN 256
 
 class AutoStr2;
@@ -36,41 +37,42 @@ class HttpRange
     int     m_iCurRange;
     char    m_boundary[20];
     char    m_partHeaderBuf[MAX_PART_HEADER_LEN];
-    char  * m_pPartHeaderEnd;
-    char  * m_pCurHeaderPos;
-    
-    ByteRange * getSlot( lsr_xpool_t & pool );
-    int  checkAndInsert( ByteRange & range, lsr_xpool_t & pool );
+    char   *m_pPartHeaderEnd;
+    char   *m_pCurHeaderPos;
+
+    ByteRange *getSlot(ls_xpool_t &pool);
+    int  checkAndInsert(ByteRange &range, ls_xpool_t &pool);
     void makeBoundaryString();
 
-public: 
-    explicit HttpRange( off_t entityLen = -1 );
+public:
+    explicit HttpRange(off_t entityLen = -1);
     ~HttpRange() {}
-    
-    int  count() const;
-    int  parse( const char * pRange, lsr_xpool_t & pool );
-    int  getContentRangeString( int n, char * pBuf, int len ) const;
-    int  getContentOffset( int n, off_t& begin, off_t& end ) const;
-    void setContentLen( off_t entityLen )    { m_lEntityLen = entityLen; }
-    void beginMultipart();
-    
-    const char * getBoundary() const
-    {   return m_boundary;  }
-    
-    off_t getPartLen( int n, int iMimeTypeLen ) const;
-    int  getPartHeader( int n, const char * pMimeType, char* buf, int size ) const;
-    int  getPartHeader( const char * pMimeType, char* buf, int size ) const
-    {   return getPartHeader( m_iCurRange, pMimeType, buf, size );      }
 
-    off_t getMultipartBodyLen( const AutoStr2 * pMimeType ) const;
-    
+    int  count() const;
+    int  parse(const char *pRange, ls_xpool_t &pool);
+    int  getContentRangeString(int n, char *pBuf, int len) const;
+    int  getContentOffset(int n, off_t &begin, off_t &end) const;
+    void setContentLen(off_t entityLen)    { m_lEntityLen = entityLen; }
+    void beginMultipart();
+
+    const char *getBoundary() const
+    {   return m_boundary;  }
+
+    off_t getPartLen(int n, int iMimeTypeLen) const;
+    int  getPartHeader(int n, const char *pMimeType, char *buf,
+                       int size) const;
+    int  getPartHeader(const char *pMimeType, char *buf, int size) const
+    {   return getPartHeader(m_iCurRange, pMimeType, buf, size);      }
+
+    off_t getMultipartBodyLen(const AutoStr2 *pMimeType) const;
+
     bool more() const;
     void next() {   ++m_iCurRange;  }
-    int  getContentOffset( off_t& begin, off_t& end ) const;
+    int  getContentOffset(off_t &begin, off_t &end) const;
     int  getPartHeaderLen() const   {   return m_pPartHeaderEnd - m_pCurHeaderPos;  }
-    void partHeaderSent( int &len )
+    void partHeaderSent(int &len)
     {
-        if ( len > m_pPartHeaderEnd - m_pCurHeaderPos )
+        if (len > m_pPartHeaderEnd - m_pCurHeaderPos)
         {
             len -= m_pPartHeaderEnd - m_pCurHeaderPos;
             m_pCurHeaderPos = m_pPartHeaderEnd;
@@ -80,15 +82,17 @@ public:
             m_pCurHeaderPos += len;
             len = 0;
         }
-    }       
-    int buildPartHeader( const char * pMimeType )
-    {   int len = getPartHeader( pMimeType, m_partHeaderBuf, MAX_PART_HEADER_LEN );
+    }
+    int buildPartHeader(const char *pMimeType)
+    {
+        int len = getPartHeader(pMimeType, m_partHeaderBuf, MAX_PART_HEADER_LEN);
         m_pPartHeaderEnd = (char *)m_partHeaderBuf + len;
         m_pCurHeaderPos = m_partHeaderBuf;
         return len;
     }
-    
-    const char * getPartHeader() const {    return m_pCurHeaderPos; }
+
+    const char *getPartHeader() const {    return m_pCurHeaderPos; }
+    LS_NO_COPY_ASSIGN(HttpRange);
 };
 
 

@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013  LiteSpeed Technologies, Inc.                        *
+*    Copyright (C) 2013 - 2015  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -17,7 +17,7 @@
 *****************************************************************************/
 
 //
-//  Simple LiteSpeed (Node.js) AddOn C++ module 
+//  Simple LiteSpeed (Node.js) AddOn C++ module
 //  (1) provide abilities for Java Side Server Script to pass fd via domain socket.
 //  (2) provide abilities for Java Side Server Script dup2 fd.
 //
@@ -35,7 +35,7 @@ using namespace v8;
 #include <stddef.h>
 #include <string.h>
 #include <sys/types.h>
-#include <sys/socket.h> 
+#include <sys/socket.h>
 #include <sys/uio.h>
 
 #ifndef __CMSG_ALIGN
@@ -60,9 +60,10 @@ static int litespeed_read_fd(int fd, void *ptr, int nbytes, int *recvfd)
     int             n;
 
     int             control_space = CMSG_SPACE(sizeof(int));
-    union {
-      struct cmsghdr    cm;
-      char                control[ sizeof( struct cmsghdr ) + sizeof(int) + 8];
+    union
+    {
+        struct cmsghdr    cm;
+        char                control[ sizeof(struct cmsghdr) + sizeof(int) + 8];
     } control_un;
     struct cmsghdr    *cmptr;
 
@@ -78,30 +79,32 @@ static int litespeed_read_fd(int fd, void *ptr, int nbytes, int *recvfd)
     msg.msg_iov = iov;
     msg.msg_iovlen = 1;
 
-    if ( (n = recvmsg(fd, &msg, 0)) <= 0)
-        return(n);
+    if ((n = recvmsg(fd, &msg, 0)) <= 0)
+        return (n);
 
-    if ( (cmptr = CMSG_FIRSTHDR(&msg)) != NULL &&
-        cmptr->cmsg_len >= CMSG_LEN( sizeof( int ) ) ) 
+    if ((cmptr = CMSG_FIRSTHDR(&msg)) != NULL &&
+        cmptr->cmsg_len >= CMSG_LEN(sizeof(int)))
     {
         if (cmptr->cmsg_level != SOL_SOCKET)
             return -1;
         if (cmptr->cmsg_type != SCM_RIGHTS)
             return -2;
-        memmove( recvfd, CMSG_DATA(cmptr), sizeof( int ) );
+        memmove(recvfd, CMSG_DATA(cmptr), sizeof(int));
     }
     else
         *recvfd = -1;        /* descriptor was not passed */
 
-    return(n);
+    return (n);
 }
 /* end litespeed_read_fd */
 
 
-Handle<Value> Sleep(const Arguments& args) {
+Handle<Value> Sleep(const Arguments &args)
+{
     HandleScope scope;
 
-    if (args.Length() < 1) {
+    if (args.Length() < 1)
+    {
         ThrowException(Exception::TypeError(String::New("Accept: missing fd")));
         return scope.Close(Undefined());
     }
@@ -111,17 +114,20 @@ Handle<Value> Sleep(const Arguments& args) {
 }
 
 //
-//  ReadFd 
+//  ReadFd
 //
-Handle<Value> ReadFd(const Arguments& args) {
+Handle<Value> ReadFd(const Arguments &args)
+{
     HandleScope scope;
 
-    if (args.Length() > 1) {
+    if (args.Length() > 1)
+    {
         int pauseTime = args[1]->NumberValue();
         if (pauseTime)
             sleep(pauseTime);
     }
-    if (args.Length() < 1) {
+    if (args.Length() < 1)
+    {
         ThrowException(Exception::TypeError(String::New("Accept: missing fd")));
         return scope.Close(Undefined());
     }
@@ -133,19 +139,23 @@ Handle<Value> ReadFd(const Arguments& args) {
     Local<Number> num;
 
     nb = litespeed_read_fd(fd, &msgsize, sizeof(int), &http_fd);
-    if (nb != sizeof(int)) {
-        printf("Failed to read fd from domainsocket %d errno %d read-ret[%d]\n" , fd, errno, nb);
-        http_fd = -1; 
+    if (nb != sizeof(int))
+    {
+        printf("Failed to read fd from domainsocket %d errno %d read-ret[%d]\n" ,
+               fd, errno, nb);
+        http_fd = -1;
     }
 
     num = Number::New(http_fd);
     return scope.Close(num);
 }
 
-Handle<Value> Close(const Arguments& args) {
+Handle<Value> Close(const Arguments &args)
+{
     HandleScope scope;
 
-    if (args.Length() < 1) {
+    if (args.Length() < 1)
+    {
         ThrowException(Exception::TypeError(String::New("close: missing fd")));
         return scope.Close(Undefined());
     }
@@ -153,14 +163,18 @@ Handle<Value> Close(const Arguments& args) {
     return scope.Close(Undefined());
 }
 
-Handle<Value> NumBytes(const Arguments& args) {
+Handle<Value> NumBytes(const Arguments &args)
+{
     HandleScope scope;
 
-    if (args.Length() < 1) {
-        ThrowException(Exception::TypeError(String::New("Wrong number of arguments")));
+    if (args.Length() < 1)
+    {
+        ThrowException(Exception::TypeError(
+                           String::New("Wrong number of arguments")));
         return scope.Close(Undefined());
     }
-    if (!args[0]->IsNumber()) {
+    if (!args[0]->IsNumber())
+    {
         ThrowException(Exception::TypeError(String::New("Wrong arguments")));
         return scope.Close(Undefined());
     }
@@ -168,15 +182,16 @@ Handle<Value> NumBytes(const Arguments& args) {
     Local<Number> num;
     int fd, bytesAvail = 0;
     fd = args[0]->NumberValue();
-    if (ioctl(fd, FIONREAD, &bytesAvail)) {
+    if (ioctl(fd, FIONREAD, &bytesAvail))
+    {
         // perror("ioctl FIONREAD failed");
         // printf("errno: %d\n", errno);
         ThrowException(Exception::TypeError(String::New(
-                "ioctl FIONREAD failed errno=" + errno)));
+                                                "ioctl FIONREAD failed errno=" + errno)));
         num = Number::New(-1);
-    } else {
-        num = Number::New(bytesAvail);
     }
+    else
+        num = Number::New(bytesAvail);
     return scope.Close(num);
 }
 
@@ -186,14 +201,18 @@ Handle<Value> NumBytes(const Arguments& args) {
 //          (1) check if the dst fd is empty.
 //          (2) if empty then do the dup2 and close the src fd.
 //
-Handle<Value> Dup2x(const Arguments& args) {
+Handle<Value> Dup2x(const Arguments &args)
+{
     HandleScope scope;
 
-    if (args.Length() < 2) {
-        ThrowException(Exception::TypeError(String::New("Wrong number of arguments")));
+    if (args.Length() < 2)
+    {
+        ThrowException(Exception::TypeError(
+                           String::New("Wrong number of arguments")));
         return scope.Close(Undefined());
     }
-    if (!args[0]->IsNumber() || !args[1]->IsNumber()) {
+    if (!args[0]->IsNumber() || !args[1]->IsNumber())
+    {
         ThrowException(Exception::TypeError(String::New("Wrong arguments")));
         return scope.Close(Undefined());
     }
@@ -203,36 +222,42 @@ Handle<Value> Dup2x(const Arguments& args) {
     int fd = args[1]->NumberValue();
 
     int bytesAvail = 0;
-    if (ioctl(fd, FIONREAD, &bytesAvail)) {
+    if (ioctl(fd, FIONREAD, &bytesAvail))
+    {
         ThrowException(Exception::TypeError(String::New(
-                "Fd ioctl FIONREAD failed errno=" + errno)));
+                                                "Fd ioctl FIONREAD failed errno=" + errno)));
         num = Number::New(-1);
         return scope.Close(num);
     }
 
-    if (bytesAvail) {
+    if (bytesAvail)
+    {
         /* do nothing yet - wait til the end of read*/
         num = Number::New(from_fd);
-    } else {
+    }
+    else
+    {
         int needToAdd = 0;
         struct epoll_event event;
-        uv_loop_t * loop = uv_default_loop();
+        uv_loop_t *loop = uv_default_loop();
         // printf("backend_fd = %d\n", loop ? loop->backend_fd : -1);
 
         errno = 0;
-        if (epoll_ctl(loop->backend_fd, EPOLL_CTL_ADD, fd, &event)) {
-            if (errno == EEXIST) {
+        if (epoll_ctl(loop->backend_fd, EPOLL_CTL_ADD, fd, &event))
+        {
+            if (errno == EEXIST)
                 needToAdd = 1;
-            }
         }
         int dupRet;
-        dupRet = dup2(from_fd, fd );
+        dupRet = dup2(from_fd, fd);
         close(from_fd);
 
-        if (needToAdd) {
+        if (needToAdd)
+        {
             event.data.fd = fd;
             event.events = EPOLLIN;
-            if (epoll_ctl(loop->backend_fd, EPOLL_CTL_ADD, fd, &event)) {
+            if (epoll_ctl(loop->backend_fd, EPOLL_CTL_ADD, fd, &event))
+            {
                 perror("epoll_ctl: FAILED TO ADD CALLBACK");
                 printf("errno = %d\n", errno);
                 num = Number::New(-1);
@@ -244,17 +269,18 @@ Handle<Value> Dup2x(const Arguments& args) {
     return scope.Close(num);
 }
 
-void init(Handle<Object> exports, Handle<Object> module) {
-  exports->Set(String::NewSymbol("close"),
-      FunctionTemplate::New(Close)->GetFunction());
-  exports->Set(String::NewSymbol("readfd"),
-      FunctionTemplate::New(ReadFd)->GetFunction());
-  exports->Set(String::NewSymbol("dup2x"),
-      FunctionTemplate::New(Dup2x)->GetFunction());
-  exports->Set(String::NewSymbol("numbytes"),
-      FunctionTemplate::New(NumBytes)->GetFunction());
-  exports->Set(String::NewSymbol("sleep"),
-      FunctionTemplate::New(Sleep)->GetFunction());
+void init(Handle<Object> exports, Handle<Object> module)
+{
+    exports->Set(String::NewSymbol("close"),
+                 FunctionTemplate::New(Close)->GetFunction());
+    exports->Set(String::NewSymbol("readfd"),
+                 FunctionTemplate::New(ReadFd)->GetFunction());
+    exports->Set(String::NewSymbol("dup2x"),
+                 FunctionTemplate::New(Dup2x)->GetFunction());
+    exports->Set(String::NewSymbol("numbytes"),
+                 FunctionTemplate::New(NumBytes)->GetFunction());
+    exports->Set(String::NewSymbol("sleep"),
+                 FunctionTemplate::New(Sleep)->GetFunction());
 }
 
 NODE_MODULE(litespeed, init)

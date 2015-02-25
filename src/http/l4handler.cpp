@@ -19,13 +19,13 @@
 #include <socket/gsockaddr.h>
 #include <http/httplog.h>
 
-L4Handler::L4Handler() 
+L4Handler::L4Handler()
 {
     m_pL4conn = new L4conn(this);
     m_buf = new LoopBuf(MAX_OUTGOING_BUF_ZISE);
     m_iState = 0;
 }
-    
+
 void L4Handler::recycle()
 {
     delete m_buf;
@@ -37,40 +37,38 @@ int L4Handler::onReadEx()
 {
     bool empty = m_pL4conn->getBuf()->empty();
     int space;
-    
-    while ( (space = m_pL4conn->getBuf()->contiguous()) > 0)
+
+    while ((space = m_pL4conn->getBuf()->contiguous()) > 0)
     {
         int n = getStream()->read(m_pL4conn->getBuf()->end(), space);
-        if ( D_ENABLED( DL_LESS ) )
-        {
-            LOG_D ((getLogger(), "[%s] L4Handler: read [%d]", getLogId(), n ));
-        }
-        
-        if (n > 0) 
+        if (D_ENABLED(DL_LESS))
+            LOG_D((getLogger(), "[%s] L4Handler: read [%d]", getLogId(), n));
+
+        if (n > 0)
             m_pL4conn->getBuf()->used(n);
-        else if ( n == 0 )
+        else if (n == 0)
             break;
         else // if (n < 0)
         {
             closeBothConnection();
-            return -1;
+            return LS_FAIL;
         }
     }
-    
-    if ( !m_pL4conn->getBuf()->empty() )
+
+    if (!m_pL4conn->getBuf()->empty())
     {
         m_pL4conn->doWrite();
-        if ( !m_pL4conn->getBuf()->empty() && empty)
+        if (!m_pL4conn->getBuf()->empty() && empty)
             m_pL4conn->continueWrite();
-  
-        if (m_pL4conn->getBuf()->available() <= 0 )
+
+        if (m_pL4conn->getBuf()->available() <= 0)
         {
             suspendRead();
-            if ( D_ENABLED( DL_LESS ) )
-                LOG_D ((getLogger(), "[%s] L4Handler: suspendRead", getLogId() ));
+            if (D_ENABLED(DL_LESS))
+                LOG_D((getLogger(), "[%s] L4Handler: suspendRead", getLogId()));
         }
     }
-    
+
     return 0;
 }
 
@@ -78,49 +76,51 @@ int L4Handler::onWriteEx()
 {
     bool full = ((getBuf()->available() == 0) ? true : false);
     int length;
-    
-    while ((length = getBuf()->blockSize()) > 0 )
+
+    while ((length = getBuf()->blockSize()) > 0)
     {
         int n = getStream()->write(getBuf()->begin(), length);
-        if ( D_ENABLED( DL_LESS ) )
-                LOG_D ((getLogger(), "[%s] L4Handler: write [%d of %d]", getLogId(), n, length ));
-        
+        if (D_ENABLED(DL_LESS))
+            LOG_D((getLogger(), "[%s] L4Handler: write [%d of %d]", getLogId(), n,
+                   length));
+
         if (n > 0)
             getBuf()->pop_front(n);
-        else if ( n == 0 )
+        else if (n == 0)
             break;
         else // if (n < 0)
         {
             closeBothConnection();
-            return -1;
+            return LS_FAIL;
         }
     }
-    
+
     if (getBuf()->available() != 0)
     {
         if (full)
             m_pL4conn->continueRead();
-    
-        if ( getBuf()->empty() )
+
+        if (getBuf()->empty())
         {
             suspendWrite();
-            if ( D_ENABLED( DL_LESS ) )
+            if (D_ENABLED(DL_LESS))
             {
-                LOG_D(( getLogger(), "[%s] [L4conn] m_pL4conn->continueRead",
-                    getLogId() ));
+                LOG_D((getLogger(), "[%s] [L4conn] m_pL4conn->continueRead",
+                       getLogId()));
             }
         }
     }
-        
+
     return 0;
 }
 
-int L4Handler::init(HttpReq &req, const GSockAddr *pGSockAddr, const char *pIP, int iIpLen)
+int L4Handler::init(HttpReq &req, const GSockAddr *pGSockAddr,
+                    const char *pIP, int iIpLen)
 {
     int ret = m_pL4conn->init(pGSockAddr);
     if (ret != 0)
         return ret;
-    
+
     int hasSlashR = 1; //"\r\n"" or "\n"
     LoopBuf *pBuff = m_pL4conn->getBuf();
     pBuff->append(req.getOrgReqLine(), req.getHttpHeaderLen());
@@ -129,11 +129,9 @@ int L4Handler::init(HttpReq &req, const GSockAddr *pGSockAddr, const char *pIP, 
     if (pBuffEnd[-2] == 'n')
         hasSlashR = 0;
     else
-    {
         assert(pBuffEnd[-2] == '\r');
-    }
-    
-    pBuff->used( -1 * hasSlashR - 1);
+
+    pBuff->used(-1 * hasSlashR - 1);
     pBuff->append("X-Forwarded-For", 15);
     pBuff->append(": ", 2);
     pBuff->append(pIP, iIpLen);
@@ -141,19 +139,20 @@ int L4Handler::init(HttpReq &req, const GSockAddr *pGSockAddr, const char *pIP, 
         pBuff->append("\r\n\r\n", 4);
     else
         pBuff->append("\n\n", 2);
-    
+
     continueRead();
-    if ( D_ENABLED( DL_LESS ) )
+    if (D_ENABLED(DL_LESS))
     {
-        LOG_D ((getLogger(), "[%s] L4Handler: init web socket, reqheader [%s], len [%d]",
-                getLogId(), req.getOrgReqLine(), req.getHttpHeaderLen() ));
+        LOG_D((getLogger(),
+               "[%s] L4Handler: init web socket, reqheader [%s], len [%d]",
+               getLogId(), req.getOrgReqLine(), req.getHttpHeaderLen()));
     }
     return 0;
 }
 
-void L4Handler::doWrite() 
-{ 
-    onWriteEx();        
+void L4Handler::doWrite()
+{
+    onWriteEx();
 }
 
 void L4Handler::closeBothConnection()

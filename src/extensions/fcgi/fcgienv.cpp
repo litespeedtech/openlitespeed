@@ -24,47 +24,45 @@
 #include <sys/types.h>
 #include <netinet/in.h>
 
-int FcgiEnv::add( const char *name, size_t nameLen,
-                const char *value, size_t valLen )
+int FcgiEnv::add(const char *name, size_t nameLen,
+                 const char *value, size_t valLen)
 {
-    if (!name )
+    if (!name)
         return 0;
-    //assert( value );    
+    //assert( value );
     //assert( nameLen == strlen( name ) );
     //assert( valLen == strlen( value ) );
-    if ((nameLen > 1024 )||( valLen > 65535 ))
+    if ((nameLen > 1024) || (valLen > 65535))
         return 0;
     int bufLen = m_buf.available();
-    if ( bufLen < (int)(nameLen + valLen + 5) )
+    if (bufLen < (int)(nameLen + valLen + 5))
     {
-        int grow = (( nameLen + valLen + 5 - bufLen + 1023) >> 10 ) << 10;
-        int ret = m_buf.grow( grow );
-        if ( ret == -1 )
+        int grow = ((nameLen + valLen + 5 - bufLen + 1023) >> 10) << 10;
+        int ret = m_buf.grow(grow);
+        if (ret == -1)
             return ret;
     }
-    char * pBuf = m_buf.end();
+    char *pBuf = m_buf.end();
     *pBuf++ = nameLen;
-    if ( valLen < 128 )
-    {
+    if (valLen < 128)
         *pBuf++ = valLen ;
-    }
     else
     {
 #if defined( sparc )
         *pBuf++ = (valLen >> 24) | 0x80;
         *pBuf++ = (valLen >> 16) & 0xff;
         *pBuf++ = (valLen >> 8) & 0xff;
-        *pBuf++ = (valLen & 0xff );
+        *pBuf++ = (valLen & 0xff);
 #else
-        *(( uint32_t *)pBuf) = htonl( valLen | 0x80000000 );
+        *((uint32_t *)pBuf) = htonl(valLen | 0x80000000);
         pBuf += 4;
 #endif
     }
-    memcpy( pBuf, name, nameLen );
+    memcpy(pBuf, name, nameLen);
     pBuf += nameLen;
-    memcpy( pBuf, value, valLen );
-    m_buf.used( pBuf - m_buf.end() + valLen );
-    return 0;    
+    memcpy(pBuf, value, valLen);
+    m_buf.used(pBuf - m_buf.end() + valLen);
+    return 0;
 }
 
 

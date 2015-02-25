@@ -6,7 +6,7 @@ m4_include(ax_check_liblua.m4)
 
 dnl Process this file with autoconf to produce a configure script.
 AC_PREREQ([2.69])
-AC_INIT([openlitespeed],[1.4.4],[info@litespeedtech.com],[openlitespeed],[http://www.litespeedtech.com/])
+AC_INIT([openlitespeed],[1.4.5],[info@litespeedtech.com],[openlitespeed],[http://www.litespeedtech.com/])
 AM_INIT_AUTOMAKE([1.0 foreign no-define ])
 
 AM_CONFIG_HEADER(src/config.h:src/config.h.in)
@@ -92,6 +92,12 @@ AC_ARG_ENABLE([http2],
                [ AC_DEFINE([LS_ENABLE_SPDY], [1], [Define if need spdy/http2 feature]) 
                  echo "SPDY/http2 enabled!!!" ], [])
 
+AC_ARG_ENABLE([cacheredis],
+              [AC_HELP_STRING([--enable-redis],
+                              [Enable redis for cache module (Using redis is disabled by default)])],
+               [ AC_DEFINE([LS_ENABLE_REDIS], [1], [Define if cache module needs redis feature]) 
+                 echo "Cache redis enabled!!!" ], [])
+                 
 AC_ARG_ENABLE([debug],
               [AC_HELP_STRING([--enable-debug],
                               [Enable debugging symbols (Debug is disabled by default)])],
@@ -219,7 +225,7 @@ AC_FUNC_MMAP
 AC_FUNC_REALLOC
 AC_CHECK_FUNCS(malloc bzero dup2 ftruncate getcwd gethostbyaddr gethostbyname gettimeofday inet_ntoa localtime_r memchr memmove memset mkdir munmap select socket strcasecmp strchr strcspn strdup strerror strncasecmp strpbrk strrchr strspn strstr strtol)
 
-
+RT_LIB_OPTION=" -lrt" 
 DL_LIB_OPTION=" -ldl"
 if test `uname -s` = "Linux"
 then
@@ -235,11 +241,13 @@ fi
 if test `uname -s` = "Darwin"
 then
     LDFLAGS="$LDFLAGS -pagezero_size 10000 -image_base 100000000"
+    RT_LIB_OPTION=
 fi
 
 LDFLAGS="$LDFLAGS $PCRE_LDFLAGS"
 echo "Final LDFLAGS='$LDFLAGS'"
 AC_SUBST([DL_LIB_OPTION])
+AC_SUBST([RT_LIB_OPTION])
 
 AC_CONFIG_FILES(Makefile
                 src/Makefile

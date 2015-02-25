@@ -23,6 +23,9 @@
 #include <sys/stat.h>
 #include <util/autostr.h>
 #include <util/pool.h>
+#include <lsdef.h>
+
+
 typedef struct ssl_st SSL;
 typedef struct ssl_ctx_st SSL_CTX;
 
@@ -33,22 +36,20 @@ class ConfigCtx;
 class SSLContext
 {
 private:
-    SSL_CTX*    m_pCtx;
+    SSL_CTX    *m_pCtx;
     short       m_iMethod;
     char        m_iRenegProtect;
     char        m_iEnableSpdy;
     struct stat m_stKey;
     struct stat m_stCert;
-    
-    SslOcspStapling * m_pStapling;
-    
-    SSLContext( const SSLContext& rhs ) {}
-    void operator=( const SSLContext& rhs ) {}
+
+    SslOcspStapling *m_pStapling;
+
 
     void release();
-    int init( int method = SSL_ALL);
+    int init(int method = SSL_ALL);
     static int seedRand(int len);
-    void updateProtocol( int method );
+    void updateProtocol(int method);
 
 public:
     enum
@@ -65,61 +66,63 @@ public:
         FILETYPE_ASN1
     };
 
-    explicit SSLContext( int method = SSL_ALL );
+    explicit SSLContext(int method = SSL_ALL);
     ~SSLContext();
-    SSL_CTX* get() const    {   return m_pCtx;  }
-    SSL* newSSL();
-    int setKeyCertificateFile( const char * pKeyCertFile, int iType,
-                               int chained );
-    int setKeyCertificateFile( const char * pKeyFile, int iKeyType,
-                               const char * pCertFile, int iCertType,
-                               int chained );
-    int setCertificateFile( const char * pFile, int type, int chained );
-    int setCertificateChainFile( const char * pFile );
-    int setPrivateKeyFile( const char * pFile, int type );
+    SSL_CTX *get() const    {   return m_pCtx;  }
+    SSL *newSSL();
+    int setKeyCertificateFile(const char *pKeyCertFile, int iType,
+                              int chained);
+    int setKeyCertificateFile(const char *pKeyFile, int iKeyType,
+                              const char *pCertFile, int iCertType,
+                              int chained);
+    int setCertificateFile(const char *pFile, int type, int chained);
+    int setCertificateChainFile(const char *pFile);
+    int setPrivateKeyFile(const char *pFile, int type);
     int checkPrivateKey();
-    int  setSessionIdContext(unsigned char * sid, unsigned int len);
+    int  setSessionIdContext(unsigned char *sid, unsigned int len);
     void flushSessionCache(long tm);
-    int  setContextExData(int idx, void * arg);
-    void * getContextExData(int idx);
-    long setOptions( long options );
-    long getOptions( );
-    long setSessionCacheMode( long mode );
-    long setSessionCacheSize( long size );
-    long setSessionTimeout( long timeout );
-    void setProtocol( int method );
-    void setRenegProtect( int p )   {   m_iRenegProtect = p;    }
-    int  setCipherList( const char * pList );
-    int  setCALocation( const char * pCAFile, const char * pCAPath, int cv );
+    int  setContextExData(int idx, void *arg);
+    void *getContextExData(int idx);
+    long setOptions(long options);
+    long getOptions();
+    long setSessionCacheMode(long mode);
+    long setSessionCacheSize(long size);
+    long setSessionTimeout(long timeout);
+    void setProtocol(int method);
+    void setRenegProtect(int p)   {   m_iRenegProtect = p;    }
+    int  setCipherList(const char *pList);
+    int  setCALocation(const char *pCAFile, const char *pCAPath, int cv);
 
-    int  isKeyFileChanged( const char * pKeyFile ) const;
-    int  isCertFileChanged( const char * pCertFile ) const;
+    int  isKeyFileChanged(const char *pKeyFile) const;
+    int  isCertFileChanged(const char *pCertFile) const;
 
-    int initSNI( void * param );
+    int initSNI(void *param);
 
     static int  initSSL();
-    
-    static int  publickey_encrypt( const unsigned char * pPubKey, int keylen,
-                const char * content,
-                 int len, char * encrypted, int bufLen );
-    static int  publickey_decrypt( const unsigned char * pPubKey, int keylen,
-                const char * encrypted,
-                    int len, char * decrypted, int bufLen );
-    void setClientVerify( int mode, int depth);
-    int addCRL( const char * pCRLFile, const char * pCRLPath);
-    int enableSpdy( int level );
-    int getEnableSpdy() const   {   return m_iEnableSpdy;   } 
-    SslOcspStapling * getpStapling () {  return m_pStapling; }
-    void setpStapling (SslOcspStapling * pSslOcspStapling) {  m_pStapling = pSslOcspStapling;}
-    SSLContext * setKeyCertCipher( const char *pCertFile,
-                    const char *pKeyFile, const char * pCAFile, const char * pCAPath,
-                    const char * pCiphers, int certChain, int cv, int renegProtect );    
-    SSLContext *config( const XmlNode *pNode );
-    int configStapling( const XmlNode *pNode,
-                       const char *pCAFile, char *pachCert );
-    void configCRL( const XmlNode *pNode, SSLContext *pSSL );
+
+    static int  publickey_encrypt(const unsigned char *pPubKey, int keylen,
+                                  const char *content,
+                                  int len, char *encrypted, int bufLen);
+    static int  publickey_decrypt(const unsigned char *pPubKey, int keylen,
+                                  const char *encrypted,
+                                  int len, char *decrypted, int bufLen);
+    void setClientVerify(int mode, int depth);
+    int addCRL(const char *pCRLFile, const char *pCRLPath);
+    int enableSpdy(int level);
+    int getEnableSpdy() const   {   return m_iEnableSpdy;   }
+    SslOcspStapling *getpStapling() {  return m_pStapling; }
+    void setpStapling(SslOcspStapling *pSslOcspStapling) {  m_pStapling = pSslOcspStapling;}
+    SSLContext *setKeyCertCipher(const char *pCertFile,
+                                 const char *pKeyFile, const char *pCAFile, const char *pCAPath,
+                                 const char *pCiphers, int certChain, int cv, int renegProtect);
+    SSLContext *config(const XmlNode *pNode);
+    int configStapling(const XmlNode *pNode,
+                       const char *pCAFile, char *pachCert);
+    void configCRL(const XmlNode *pNode, SSLContext *pSSL);
     int  initECDH();
-    int  initDH( const char * pFile );
-    int  enableShmSessionCache( const char * pName, int maxEntries );
+    int  initDH(const char *pFile);
+    int  enableShmSessionCache(const char *pName, int maxEntries);
+    
+    LS_NO_COPY_ASSIGN(SSLContext);
 };
 #endif

@@ -19,6 +19,7 @@
 #define LSI_SERVER_CONTEXT_H_
 
 #include "pagespeed.h"
+#include <lsdef.h>
 
 #include "ls_message_handler.h"
 #include "net/instaweb/automatic/public/proxy_fetch.h"
@@ -27,42 +28,45 @@
 
 namespace net_instaweb
 {
-    class LsiRewriteDriverFactory;
-    class LsiRewriteOptions;
-    class SystemRequestContext;
+class LsiRewriteDriverFactory;
+class LsiRewriteOptions;
+class SystemRequestContext;
 
-    class LsiServerContext : public SystemServerContext
+class LsServerContext : public SystemServerContext
+{
+public:
+    LsServerContext(
+        LsiRewriteDriverFactory *factory, StringPiece hostname, int port);
+    virtual ~LsServerContext();
+
+    // We expect to use ProxyFetch with HTML.
+    virtual bool ProxiesHtml() const
     {
-    public:
-        LsiServerContext(
-            LsiRewriteDriverFactory* factory, StringPiece hostname, int port );
-        virtual ~LsiServerContext();
+        return true;
+    }
 
-        // We expect to use ProxyFetch with HTML.
-        virtual bool ProxiesHtml() const
-        {
-            return true;
-        }
+    LsiRewriteOptions *Config();
+    LsiRewriteDriverFactory *GetRewriteDriverFactory()
+    {
+        return m_pRewriteDriverFactory;
+    }
 
-        LsiRewriteOptions* config();
-        LsiRewriteDriverFactory* ls_rewrite_driver_factory()
-        {
-            return ls_factory_;
-        }
-        
-        SystemRequestContext* NewRequestContext( lsi_session_t* session );
+    SystemRequestContext *NewRequestContext(lsi_session_t *session);
 
-        LsiMessageHandler* lsi_message_handler()
-        {
-            return dynamic_cast<LsiMessageHandler*>( message_handler() );
-        }
-        
-        virtual GoogleString FormatOption( StringPiece option_name, StringPiece args );
-        
-    private:
-        LsiRewriteDriverFactory* ls_factory_;
+    LsiMessageHandler *MessageHandler()
+    {
+        return dynamic_cast<LsiMessageHandler *>(message_handler());
+    }
 
-    };
+    virtual GoogleString FormatOption(StringPiece option_name,
+                                      StringPiece args);
+
+private:
+    LsiRewriteDriverFactory *m_pRewriteDriverFactory;
+
+
+    LS_NO_COPY_ASSIGN(LsServerContext);
+};
 
 }  // namespace net_instaweb
 

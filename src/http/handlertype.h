@@ -54,10 +54,10 @@ public:
         ROLE_AUTHORIZER
     };
 private:
-    static const char * s_sHandlerType[HT_END];
+    static const char *s_sHandlerType[HT_END];
 public:
-    static int getHandlerType( const char * pType, int &role );
-    static const char * getHandlerTypeString( int type )
+    static int getHandlerType(const char *pType, int &role);
+    static const char *getHandlerTypeString(int type)
     {   return s_sHandlerType[type];    }
 };
 

@@ -21,11 +21,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-StringList::StringList( const StringList & rhs  )
+StringList::StringList(const StringList &rhs)
     : TPointerList<AutoStr2>()
 {
-    for( const_iterator iter = rhs.begin(); iter != rhs.end(); ++iter )
-        add( (*iter)->c_str(), (*iter)->len() );
+    for (const_iterator iter = rhs.begin(); iter != rhs.end(); ++iter)
+        add((*iter)->c_str(), (*iter)->len());
 }
 
 
@@ -33,42 +33,43 @@ StringList::StringList( const StringList & rhs  )
 
 StringList::~StringList()
 {
-    release_objects();
+    releaseObjects();
 }
 
-const AutoStr2 * StringList::add( const char * pStr, int len )
+const AutoStr2 *StringList::add(const char *pStr, int len)
 {
-    AutoStr2* pTemp = new AutoStr2();
-    if ( !pTemp )
+    AutoStr2 *pTemp = new AutoStr2();
+    if (!pTemp)
         return NULL;
-    pTemp->setStr( pStr, len );
-    push_back( pTemp );
+    pTemp->setStr(pStr, len);
+    push_back(pTemp);
     return pTemp;
 }
 
 
-const AutoStr2 * StringList::add( const char * pIndexFile )
+const AutoStr2 *StringList::add(const char *pIndexFile)
 {
-    AutoStr2* pTemp = new AutoStr2( pIndexFile );
-    if ( !pTemp )
+    AutoStr2 *pTemp = new AutoStr2(pIndexFile);
+    if (!pTemp)
         return NULL;
-    push_back( pTemp );
+    push_back(pTemp);
     return pTemp;
 }
 
 
-int StringList::split( const char * pBegin, const char * pEnd, const char * delim )
+int StringList::split(const char *pBegin, const char *pEnd,
+                      const char *delim)
 {
-    StrParse strparse( pBegin, pEnd, delim );
-    const char * p;
-    while( !strparse.isEnd() )
+    StrParse strparse(pBegin, pEnd, delim);
+    const char *p;
+    while (!strparse.isEnd())
     {
         p = strparse.trim_parse();
-        if ( !p )
+        if (!p)
             break;
-        if ( p != strparse.getStrEnd() )
+        if (p != strparse.getStrEnd())
         {
-            if ( !add( p, strparse.getStrEnd() - p ) )
+            if (!add(p, strparse.getStrEnd() - p))
                 break;
         }
     }
@@ -78,80 +79,80 @@ int StringList::split( const char * pBegin, const char * pEnd, const char * deli
 
 void StringList::clear()
 {
-    release_objects();
+    releaseObjects();
 }
 
-const AutoStr2 * StringList::find( const char * pString ) const
+const AutoStr2 *StringList::find(const char *pString) const
 {
-    if ( pString )
+    if (pString)
     {
-        for( const_iterator iter = begin(); iter != end(); ++iter )
+        for (const_iterator iter = begin(); iter != end(); ++iter)
         {
-            if ( strcmp( pString, (*iter)->c_str() ) == 0 )
+            if (strcmp(pString, (*iter)->c_str()) == 0)
                 return *iter;
         }
     }
     return NULL;
 }
 
-void StringList::remove( const char * pString )
+void StringList::remove(const char *pString)
 {
-    for( iterator iter = begin(); iter != end(); ++iter )
+    for (iterator iter = begin(); iter != end(); ++iter)
     {
-        if ( pString == (*iter)->c_str() )
+        if (pString == (*iter)->c_str())
         {
-            delete (*iter);
-            erase( iter );
+            delete(*iter);
+            erase(iter);
             break;
         }
     }
 }
 
-static int compare( const void * val1, const void * val2 )
+static int compare(const void *val1, const void *val2)
 {
-    return strcmp( (*(const AutoStr2 **)val1)->c_str(),
-                   (*(const AutoStr2 **)val2)->c_str() );
+    return strcmp((*(const AutoStr2 **)val1)->c_str(),
+                  (*(const AutoStr2 **)val2)->c_str());
 }
 
 void StringList::sort()
 {
-    ::qsort( begin(), size(), sizeof( AutoStr2 **), compare );
+    ::qsort(begin(), size(), sizeof(AutoStr2 **), compare);
 }
 
 
 
-void StringList::insert( AutoStr2 * pDir )
+void StringList::insert(AutoStr2 *pDir)
 {
-    push_back( pDir );
+    push_back(pDir);
     sort();
 }
 
-AutoStr2 * const* StringList::lower_bound( const char * pStr ) const
+AutoStr2 *const *StringList::lower_bound(const char *pStr) const
 {
-    if ( !pStr )
+    if (!pStr)
         return NULL;
     const_iterator e = end();
     const_iterator b = begin();
     int c = -1;
-    while( b < e )
+    while (b < e)
     {
-        const_iterator m = b + ( e - b ) / 2;
-        c = strcmp( pStr, (*m)->c_str() );
-        if ( c == 0 )
+        const_iterator m = b + (e - b) / 2;
+        c = strcmp(pStr, (*m)->c_str());
+        if (c == 0)
             return m;
-        else if ( c < 0 )
+        else if (c < 0)
             e = m;
         else
-            b = m+1;
+            b = m + 1;
     }
     return b;
 
 }
 
-AutoStr2 * StringList::bfind(const char * pPath ) const
+AutoStr2 *StringList::bfind(const char *pPath) const
 {
-    AutoStr2 * const * p = lower_bound( pPath );
-    if (( p != end() )&&( strcmp( pPath, (*p)->c_str() ) == 0 ))
+    AutoStr2 *const *p = lower_bound(pPath);
+    if ((p != end()) && (strcmp(pPath, (*p)->c_str()) == 0))
         return *p;
     return NULL;
 }

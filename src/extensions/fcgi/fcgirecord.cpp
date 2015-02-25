@@ -24,15 +24,15 @@ FcgiRecord::~FcgiRecord()
 {
 }
 
-void FcgiRecord::setRecordHeader( FCGI_Header &header, unsigned char iType,
-            uint16_t iRequestId, uint16_t iContentLength )
+void FcgiRecord::setRecordHeader(FCGI_Header &header, unsigned char iType,
+                                 uint16_t iRequestId, uint16_t iContentLength)
 {
     header.version = FCGI_VERSION_1;
     header.type = iType;
-    header.requestIdB1 = (iRequestId >> 8 ) & 0xff;
-    header.requestIdB0 = (iRequestId ) & 0xff;
-    header.contentLengthB1 = (iContentLength >> 8 ) & 0xff;
-    header.contentLengthB0 = (iContentLength ) & 0xff;
+    header.requestIdB1 = (iRequestId >> 8) & 0xff;
+    header.requestIdB0 = (iRequestId) & 0xff;
+    header.contentLengthB1 = (iContentLength >> 8) & 0xff;
+    header.contentLengthB0 = (iContentLength) & 0xff;
     header.paddingLength = (8 - iContentLength) & 0x7;
 
 }

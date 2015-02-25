@@ -29,77 +29,73 @@ class FcgiReqListData : public RequestList
 
 FcgiReqList::FcgiReqList()
     : m_iActiveReqs(0)
-    , m_pData( NULL )
+    , m_pData(NULL)
 {
     m_pData = new FcgiReqListData();
 }
 FcgiReqList::~FcgiReqList()
 {
-    if ( m_pData != NULL )
+    if (m_pData != NULL)
         delete m_pData;
 }
 
-int FcgiReqList::regist( FcgiRequest* pReq )
+int FcgiReqList::regist(FcgiRequest *pReq)
 {
-    assert( pReq != NULL );
+    assert(pReq != NULL);
     int size = m_pData->size();
     int i;
-    for( i = 0; i < size; i++ )
+    for (i = 0; i < size; i++)
     {
-        if ( (*m_pData)[i] != NULL )
+        if ((*m_pData)[i] != NULL)
         {
             (*m_pData)[i] = pReq;
             break;
         }
     }
-    if ( i == size )
-    {
-        m_pData->push_back( pReq );
-    }
-    pReq->setId( i + 1 );
+    if (i == size)
+        m_pData->push_back(pReq);
+    pReq->setId(i + 1);
     ++m_iActiveReqs;
-    return i+1;
+    return i + 1;
 }
 
-void FcgiReqList::unregist( FcgiRequest* pReq )
+void FcgiReqList::unregist(FcgiRequest *pReq)
 {
-    assert( pReq );
+    assert(pReq);
     int size = m_pData->size();
-    if ( size <= pReq->getId() )
+    if (size <= pReq->getId())
     {
-        assert( pReq->getId() > 0 );
-        assert( pReq == (*m_pData)[pReq->getId()-1] );
-        (*m_pData)[pReq->getId()-1] = NULL;
+        assert(pReq->getId() > 0);
+        assert(pReq == (*m_pData)[pReq->getId() - 1]);
+        (*m_pData)[pReq->getId() - 1] = NULL;
         --m_iActiveReqs;
     }
 
 }
 
-FcgiRequest* FcgiReqList::get( int iId )
+FcgiRequest *FcgiReqList::get(int iId)
 {
-    if (( iId < 1 )||( iId > (int)m_pData->size() ))
+    if ((iId < 1) || (iId > (int)m_pData->size()))
         return NULL;
-    FcgiRequest* pRet = (*m_pData)[iId - 1];
+    FcgiRequest *pRet = (*m_pData)[iId - 1];
     return pRet;
 }
 
-FcgiRequest* FcgiReqList::first()
+FcgiRequest *FcgiReqList::first()
 {
-    return next( 0 );
+    return next(0);
 }
 
-FcgiRequest* FcgiReqList::next( int id )
+FcgiRequest *FcgiReqList::next(int id)
 {
     int size = m_pData->size();
     int i;
-    FcgiRequest* pRet = NULL;
-    for(  i = id ; i < size; ++i )
+    FcgiRequest *pRet = NULL;
+    for (i = id ; i < size; ++i)
     {
         pRet = (*m_pData)[i];
-        if ( pRet )
-        {
+        if (pRet)
             break;
-        }
     }
     return pRet;
 }

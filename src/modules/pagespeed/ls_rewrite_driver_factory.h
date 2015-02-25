@@ -18,6 +18,7 @@
 #ifndef LSI_REWRITE_DRIVER_FACTORY_H_
 #define LSI_REWRITE_DRIVER_FACTORY_H_
 
+#include <lsdef.h>
 
 #include <set>
 
@@ -33,80 +34,82 @@
 
 namespace net_instaweb
 {
-    class LsiMessageHandler;
-    class LsiRewriteOptions;
-    class LsiServerContext;
-    class BlockingFetcher;
-    class SharedCircularBuffer;
-    class SharedMemRefererStatistics;
-    class SlowWorker;
-    class Statistics;
-    class SystemThreadSystem;
+class LsiMessageHandler;
+class LsiRewriteOptions;
+class LsServerContext;
+class BlockingFetcher;
+class SharedCircularBuffer;
+class SharedMemRefererStatistics;
+class SlowWorker;
+class Statistics;
+class SystemThreadSystem;
 
-    class LsiRewriteDriverFactory : public SystemRewriteDriverFactory
+class LsiRewriteDriverFactory : public SystemRewriteDriverFactory
+{
+public:
+    explicit LsiRewriteDriverFactory(
+        const ProcessContext &process_context,
+        SystemThreadSystem *system_thread_system, StringPiece hostname, int port);
+    virtual ~LsiRewriteDriverFactory();
+    virtual Hasher *NewHasher();
+    virtual UrlAsyncFetcher *AllocateFetcher(SystemRewriteOptions *config);
+    virtual MessageHandler *DefaultHtmlParseMessageHandler();
+    virtual MessageHandler *DefaultMessageHandler();
+    virtual FileSystem *DefaultFileSystem();
+    virtual Timer *DefaultTimer();
+    virtual NamedLockManager *DefaultLockManager();
+    virtual RewriteOptions *NewRewriteOptions();
+    virtual ServerContext *NewDecodingServerContext();
+    bool InitLsiUrlAsyncFetchers();
+
+    static void InitStats(Statistics *statistics);
+    LsServerContext *MakeLsiServerContext(StringPiece hostname, int port);
+    virtual ServerContext *NewServerContext();
+
+    void StartThreads();
+
+    void SetServerContextMessageHandler(ServerContext *server_context);
+
+    LsiMessageHandler *GetLsiMessageHandler()
     {
-    public:
-        explicit LsiRewriteDriverFactory(
-            const ProcessContext& process_context,
-            SystemThreadSystem* system_thread_system, StringPiece hostname, int port );
-        virtual ~LsiRewriteDriverFactory();
-        virtual Hasher* NewHasher();
-        virtual UrlAsyncFetcher* AllocateFetcher( SystemRewriteOptions* config );
-        virtual MessageHandler* DefaultHtmlParseMessageHandler();
-        virtual MessageHandler* DefaultMessageHandler();
-        virtual FileSystem* DefaultFileSystem();
-        virtual Timer* DefaultTimer();
-        virtual NamedLockManager* DefaultLockManager();
-        virtual RewriteOptions* NewRewriteOptions();
-        virtual ServerContext* NewDecodingServerContext();
-        bool InitLsiUrlAsyncFetchers();
+        return m_pLsiMessageHandler;
+    }
 
-        static void InitStats( Statistics* statistics );
-        LsiServerContext* MakeLsiServerContext( StringPiece hostname, int port );
-        virtual ServerContext* NewServerContext();
+    virtual void NonStaticInitStats(Statistics *statistics)
+    {
+        InitStats(statistics);
+    }
 
-        void StartThreads();
+    void SetMainConf(LsiRewriteOptions *main_conf)
+    {
+        m_mainConf = main_conf;
+    }
 
-        void SetServerContextMessageHandler( ServerContext* server_context );
+    void LoggingInit();
 
-        LsiMessageHandler* lsi_message_handler()
-        {
-            return lsi_message_handler_;
-        }
+    virtual void ShutDownMessageHandlers();
 
-        virtual void NonStaticInitStats( Statistics* statistics )
-        {
-            InitStats( statistics );
-        }
+    virtual void SetCircularBuffer(SharedCircularBuffer *buffer);
 
-        void set_main_conf( LsiRewriteOptions* main_conf )
-        {
-            main_conf_ = main_conf;
-        }
+private:
+    Timer *m_timer;
 
-        void LoggingInit();
+    LsiRewriteOptions *m_mainConf;
 
-        virtual void ShutDownMessageHandlers();
+    bool m_bThreadsStarted;
+    LsiMessageHandler *m_pLsiMessageHandler;
+    LsiMessageHandler *m_pHtmlParseLsiMessageHandler;
 
-        virtual void SetCircularBuffer( SharedCircularBuffer* buffer );
+    typedef std::set<LsiMessageHandler *> LsiMessageHandlerSet;
+    LsiMessageHandlerSet m_serverContextMessageHandlers;
 
-    private:
-        Timer* timer_;
+    SharedCircularBuffer *m_pSharedCircularBuffer;
 
-        LsiRewriteOptions* main_conf_;
+    GoogleString m_sHostname;
+    int m_iPort;
 
-        bool threads_started_;
-        LsiMessageHandler* lsi_message_handler_;
-        LsiMessageHandler* lsi_html_parse_message_handler_;
-
-        typedef std::set<LsiMessageHandler*> LsiMessageHandlerSet;
-        LsiMessageHandlerSet server_context_message_handlers_;
-
-        SharedCircularBuffer* lsi_shared_circular_buffer_;
-
-        GoogleString hostname_;
-        int port_;
-    };
+    LS_NO_COPY_ASSIGN(LsiRewriteDriverFactory);
+};
 
 }  // namespace net_instaweb
 

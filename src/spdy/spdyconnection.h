@@ -27,6 +27,7 @@
 #include <sys/time.h>
 
 #include <limits.h>
+#include <lsdef.h>
 
 #define SPDY_CONN_FLAG_GOAWAY           (1<<0)
 #define SPDY_CONN_FLAG_FLOW_CTRL        (1<<1)
@@ -35,7 +36,7 @@
 
 class SpdyStream;
 
-class SpdyConnection: public HioStreamHandler, public BufferedOS
+class SpdyConnection: public HioHandler, public BufferedOS
 {
 public:
     SpdyConnection();
@@ -45,30 +46,33 @@ public:
     int onWriteEx();
 
     int isOutBufFull() const
-    {   return ((m_iCurDataOutWindow <= 0 )||(getBuf()->size() >= SPDY_MAX_DATAFRAM_SIZE)); }
+    {
+        return ((m_iCurDataOutWindow <= 0)
+                || (getBuf()->size() >= SPDY_MAX_DATAFRAM_SIZE)); 
+    }
 
     int flush();
-    
+
     int onCloseEx();
 
     void recycle();
-    
+
     //Following functions are just placeholder
 
     //Placeholder
-    int init( HiosProtocol ver );
+    void init(HiosProtocol ver);
     int onInitConnected();
 
     int onTimerEx();
-    void move2ReponQue(SpdyStream* pSpdyStream);
+    void move2ReponQue(SpdyStream *pSpdyStream);
     int timerRoutine();
 
-    LOG4CXX_NS::Logger* getLogger() const   
+    LOG4CXX_NS::Logger *getLogger() const
     {
         return getStream()->getLogger();
     }
 
-    const char * getLogId() 
+    const char *getLogId()
     {
         return getStream()->getLogId();
     }
@@ -80,74 +84,79 @@ public:
 
     int32_t getStreamOutInitWindowSize() const
     {   return m_iStreamOutInitWindowSize;    }
-    
+
     int32_t getCurDataOutWindow() const
     {   return m_iCurDataOutWindow;         }
 
     int appendPing(uint32_t uiStreamID)
-    {   return sendFrame4Bytes( SPDY_FRAME_PING, uiStreamID );  }
+    {   return sendFrame4Bytes(SPDY_FRAME_PING, uiStreamID);  }
 
-    int addBufToGzip(char *hdrBuf, unsigned int& szHdrBuf, int iSpdyVer, struct iovec *iov, int iov_count, LoopBuf *buf, int &total, int flushWhenEnd = 0);
-    int addBufToGzip(char *hdrBuf, unsigned int& szHdrBuf, int iSpdyVer, const char *s, int len, LoopBuf *buf, int &total);
+    int addBufToGzip(char *hdrBuf, unsigned int &szHdrBuf, int iSpdyVer,
+                     struct iovec *iov, int iov_count, LoopBuf *buf, int &total,
+                     int flushWhenEnd = 0);
+    int addBufToGzip(char *hdrBuf, unsigned int &szHdrBuf, int iSpdyVer,
+                     const char *s, int len, LoopBuf *buf, int &total);
     int  sendRespHeaders(HttpRespHeaders *pRespHeaders, uint32_t uiStreamID);
 
-    int sendWindowUpdateFrame( uint32_t id, int32_t delta )
-    {   return sendFrame8Bytes( SPDY_FRAME_WINDOW_UPDATE,
-                                id, delta );        } 
-
-    int sendRstFrame( uint32_t uiStreamID, SpdyRstErrorCode code )
+    int sendWindowUpdateFrame(uint32_t id, int32_t delta)
     {
-        return sendFrame8Bytes( SPDY_FRAME_RST_STREAM, uiStreamID, code );
+        return sendFrame8Bytes(SPDY_FRAME_WINDOW_UPDATE,
+                               id, delta);
     }
-    int sendFinFrame( uint32_t uiStreamID )
+
+    int sendRstFrame(uint32_t uiStreamID, SpdyRstErrorCode code)
+    {
+        return sendFrame8Bytes(SPDY_FRAME_RST_STREAM, uiStreamID, code);
+    }
+    int sendFinFrame(uint32_t uiStreamID)
     {
         char achHeader[8];
-        *(uint32_t *)achHeader = htonl( uiStreamID );
+        *(uint32_t *)achHeader = htonl(uiStreamID);
         achHeader[4] = 1;
         achHeader[5] = 0;
         achHeader[6] = 0;
         achHeader[7] = 0;
-        return cacheWrite( achHeader, sizeof( achHeader ) );
+        return cacheWrite(achHeader, sizeof(achHeader));
     }
 
-    void dataFrameSent( int bytes )
-    {   
-        if ( isFlowCtrl() )
+    void dataFrameSent(int bytes)
+    {
+        if (isFlowCtrl())
             m_iCurDataOutWindow -= bytes;
     }
-    
-    
+
+
     void enableSessionFlowCtrl()    {   m_flag |= SPDY_CONN_FLAG_FLOW_CTRL;  }
     short isFlowCtrl() const    {   return m_flag & SPDY_CONN_FLAG_FLOW_CTRL;  }
-    
-    void recycleStream( uint32_t uiStreamID );
-    static void replaceZero( char* pValue, int ilength );
- 
-    NtwkIOLink * getNtwkIoLink();
-    
+
+    void recycleStream(uint32_t uiStreamID);
+    static void replaceZero(char *pValue, int ilength);
+
+    NtwkIOLink *getNtwkIoLink();
+
 private:
-    typedef THash< SpdyStream* > StreamMap;
-    
-    SpdyStream* findStream(uint32_t uiStreamID);
+    typedef THash< SpdyStream * > StreamMap;
+
+    SpdyStream *findStream(uint32_t uiStreamID);
     int releaseAllStream();
 
-    int processControlFrame( SpdyFrameHeader* pHeader);
-    void printLogMsg( SpdyFrameHeader* pHeader);
+    int processControlFrame(SpdyFrameHeader *pHeader);
+    void printLogMsg(SpdyFrameHeader *pHeader);
 
-    int checkReqline( char* pName, int ilength, uint8_t& flags);
-    
-    int processDataFrame( SpdyFrameHeader* pHeader);
-    int parseHeaders(char* pHeader, int ilength, int &NVPairCnt ); 
-    SpdyStream* getNewStream(uint32_t uiStreamID, 
+    int checkReqline(char *pName, int ilength, uint8_t &flags);
+
+    int processDataFrame(SpdyFrameHeader *pHeader);
+    int parseHeaders(char *pHeader, int ilength, int &NVPairCnt);
+    SpdyStream *getNewStream(uint32_t uiStreamID,
                              int iPriority, uint8_t ubSpdy_Flags);
-   
-    int processSettingFrame( SpdyFrameHeader * pHeader );
-    int processSynStreamFrame( SpdyFrameHeader* pHeader );
-    int processHeaderFrame( SpdyFrameHeader* pHeader );
-    int processPingFrame( SpdyFrameHeader * pHeader );
-    int processGoAwayFrame( SpdyFrameHeader * pHeader );
-    int processRstFrame( SpdyFrameHeader* pHeader );
-    int processWindowUpdateFrame( SpdyFrameHeader* pHeader );
+
+    int processSettingFrame(SpdyFrameHeader *pHeader);
+    int processSynStreamFrame(SpdyFrameHeader *pHeader);
+    int processHeaderFrame(SpdyFrameHeader *pHeader);
+    int processPingFrame(SpdyFrameHeader *pHeader);
+    int processGoAwayFrame(SpdyFrameHeader *pHeader);
+    int processRstFrame(SpdyFrameHeader *pHeader);
+    int processWindowUpdateFrame(SpdyFrameHeader *pHeader);
 
     int sendPing();
     int sendSingleSettings(uint32_t uiID, uint32_t uiValue, uint8_t flags);
@@ -155,23 +164,24 @@ private:
     int sendGoAwayFrame(SpdyGoAwayStatus status);
     int doGoAway(SpdyGoAwayStatus status);
     int append400BadReqReply(uint32_t uiStreamID);
-    void resetStream( SpdyStream * pStream, SpdyRstErrorCode code );
-    void resetStream( StreamMap::iterator it, SpdyRstErrorCode code );
+    void resetStream(SpdyStream *pStream, SpdyRstErrorCode code);
+    void resetStream(StreamMap::iterator it, SpdyRstErrorCode code);
 
-    int  appendCtrlFrameHeader(SpdyFrameType type, uint8_t len );
-    int  sendFrame8Bytes( SpdyFrameType type, uint32_t uiVal1, uint32_t uiVal2 );
-    int  sendFrame4Bytes( SpdyFrameType type, uint32_t uiVal1 );
+    int  appendCtrlFrameHeader(SpdyFrameType type, uint8_t len);
+    int  sendFrame8Bytes(SpdyFrameType type, uint32_t uiVal1, uint32_t uiVal2);
+    int  sendFrame4Bytes(SpdyFrameType type, uint32_t uiVal1);
 
-    void recycleStream( StreamMap::iterator it );
+    void recycleStream(StreamMap::iterator it);
     int isSpdy3() const     {   return (m_bVersion == 3);    }
-    void logDeflateInflateError( int n, int iDeflate );
-    int appendReqHeaders(SpdyStream* arg1, int arg2);
+    void logDeflateInflateError(int n, int iDeflate);
+    int appendReqHeaders(SpdyStream *arg1, int arg2);
     int extractCompressedData();
     void skipRemainData();
-    int compressHeaders(HttpRespHeaders* pRespHeaders);
-    
-    int deflateToBuffer(char *hdrBuf, unsigned int& szHdrBuf, char* pSource, uint32_t length, LoopBuf* ploopbuf, int flush);
-    
+    int compressHeaders(HttpRespHeaders *pRespHeaders);
+
+    int deflateToBuffer(char *hdrBuf, unsigned int &szHdrBuf, char *pSource,
+                        uint32_t length, LoopBuf *ploopbuf, int flush);
+
 private:
     LoopBuf         m_bufInput;
     AutoBuf         m_bufInflate;
@@ -190,7 +200,7 @@ private:
     short           m_state;
     short           m_flag;
     char            m_bVersion;
-    
+
     int32_t         m_iCurDataOutWindow;
     int32_t         m_iCurInBytesToUpdate;
     int32_t         m_iDataInWindow;
@@ -201,11 +211,10 @@ private:
     int32_t         m_iClientMaxStreams;
     int32_t         m_tmIdleBegin;
     int32_t         m_SpdyHeaderMem[10];
-    SpdyFrameHeader* m_pcurrentSpdyHeader;
+    SpdyFrameHeader *m_pcurrentSpdyHeader;
 
-private:
-    SpdyConnection(const SpdyConnection& other);
-    virtual SpdyConnection& operator=(const SpdyConnection& other);
+
+    LS_NO_COPY_ASSIGN(SpdyConnection);
 
 };
 

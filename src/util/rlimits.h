@@ -24,7 +24,7 @@
 #include <sys/resource.h>
 class XmlNode;
 class ConfigCtx;
-  
+
 class RLimits
 {
 #if defined(RLIMIT_AS) || defined(RLIMIT_DATA) || defined(RLIMIT_VMEM)
@@ -38,19 +38,33 @@ class RLimits
     struct rlimit   m_cpu;
 #endif
 
-public: 
-	RLimits();
-	~RLimits();
+    RLimits(const RLimits &rhs);
+public:
+    RLimits();
+    ~RLimits();
     int apply() const;
     int applyMemoryLimit() const;
     int applyProcLimit() const;
-    void setDataLimit( rlim_t cur, rlim_t max );
-    void setProcLimit( rlim_t cur, rlim_t max );
+    void setDataLimit(rlim_t cur, rlim_t max);
+    void setProcLimit(rlim_t cur, rlim_t max);
 #if defined(RLIMIT_NPROC)
-    struct rlimit * getProcLimit() {    return &m_nproc;    }
+    struct rlimit *getProcLimit() {    return &m_nproc;    }
 #endif
-    void setCPULimit( rlim_t cur, rlim_t max );
+    void setCPULimit(rlim_t cur, rlim_t max);
     void reset();
+
+    void operator=(const RLimits &rhs)
+    {
+#if defined(RLIMIT_AS) || defined(RLIMIT_DATA) || defined(RLIMIT_VMEM)
+        m_data = rhs.m_data;
+#endif
+#if defined(RLIMIT_NPROC)
+        m_nproc = rhs.m_nproc;
+#endif
+#if defined(RLIMIT_CPU)
+        m_cpu = rhs.m_cpu;
+#endif
+    }
 };
 
 #endif

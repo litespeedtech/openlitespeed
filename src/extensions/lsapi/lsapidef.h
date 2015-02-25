@@ -24,43 +24,43 @@
 extern "C" {
 #endif
 
-enum
-{
-    H_ACCEPT = 0,
-    H_ACC_CHARSET,
-    H_ACC_ENCODING,
-    H_ACC_LANG,
-    H_AUTHORIZATION,
-    H_CONNECTION,
-    H_CONTENT_TYPE,
-    H_CONTENT_LENGTH,
-    H_COOKIE,
-    H_COOKIE2,
-    H_HOST,
-    H_PRAGMA,
-    H_REFERER,
-    H_USERAGENT,
-    H_CACHE_CTRL,
-    H_IF_MODIFIED_SINCE,
-    H_IF_MATCH,
-    H_IF_NO_MATCH,
-    H_IF_RANGE,
-    H_IF_UNMOD_SINCE,
-    H_KEEP_ALIVE,
-    H_RANGE,
-    H_X_FORWARDED_FOR,
-    H_VIA,
-    H_TRANSFER_ENCODING
+    enum
+    {
+        H_ACCEPT = 0,
+        H_ACC_CHARSET,
+        H_ACC_ENCODING,
+        H_ACC_LANG,
+        H_AUTHORIZATION,
+        H_CONNECTION,
+        H_CONTENT_TYPE,
+        H_CONTENT_LENGTH,
+        H_COOKIE,
+        H_COOKIE2,
+        H_HOST,
+        H_PRAGMA,
+        H_REFERER,
+        H_USERAGENT,
+        H_CACHE_CTRL,
+        H_IF_MODIFIED_SINCE,
+        H_IF_MATCH,
+        H_IF_NO_MATCH,
+        H_IF_RANGE,
+        H_IF_UNMOD_SINCE,
+        H_KEEP_ALIVE,
+        H_RANGE,
+        H_X_FORWARDED_FOR,
+        H_VIA,
+        H_TRANSFER_ENCODING
 
-};
+    };
 #define LSAPI_SOCK_FILENO           0
 
 #define LSAPI_VERSION_B0            'L'
-#define LSAPI_VERSION_B1            'S'                
+#define LSAPI_VERSION_B1            'S'
 
 //Values for m_flag in lsapi_packet_header
 #define LSAPI_ENDIAN_LITTLE         0
-#define LSAPI_ENDIAN_BIG            1 
+#define LSAPI_ENDIAN_BIG            1
 #define LSAPI_ENDIAN_BIT            1
 
 #if defined(__i386__)||defined( __x86_64 )||defined( __x86_64__ )
@@ -85,18 +85,18 @@ enum
 #define LSAPI_RESP_HTTP_HEADER_MAX  4096
 #define LSAPI_PACKET_HEADER_LEN     8
 
-struct lsapi_packet_header
-{
-    char    m_versionB0;      //LSAPI protocol version 
-    char    m_versionB1;
-    char    m_type;
-    char    m_flag;
-    union
+    struct lsapi_packet_header
     {
-        int32_t m_iLen;    //include this header
-        char    m_bytes[4];
-    }m_packetLen;
-};
+        char    m_versionB0;      //LSAPI protocol version
+        char    m_versionB1;
+        char    m_type;
+        char    m_flag;
+        union
+        {
+            int32_t m_iLen;    //include this header
+            char    m_bytes[4];
+        } m_packetLen;
+    };
 
 // LSAPI request header packet
 //
@@ -106,47 +106,47 @@ struct lsapi_packet_header
 // 4. org http request header
 // 5. request body if available
 
-struct lsapi_req_header
-{
-    struct lsapi_packet_header m_pktHeader;
-        
-    int32_t m_httpHeaderLen;
-    int32_t m_reqBodyLen;
-    int32_t m_scriptFileOff;   //path to the script file.
-    int32_t m_scriptNameOff;   //decrypted URI, without pathinfo,
-    int32_t m_queryStringOff;  //Query string inside env 
-    int32_t m_requestMethodOff;
-    int32_t m_cntUnknownHeaders;
-    int32_t m_cntEnv;
-    int32_t m_cntSpecialEnv;
-} ;
+    struct lsapi_req_header
+    {
+        struct lsapi_packet_header m_pktHeader;
+
+        int32_t m_httpHeaderLen;
+        int32_t m_reqBodyLen;
+        int32_t m_scriptFileOff;   //path to the script file.
+        int32_t m_scriptNameOff;   //decrypted URI, without pathinfo,
+        int32_t m_queryStringOff;  //Query string inside env
+        int32_t m_requestMethodOff;
+        int32_t m_cntUnknownHeaders;
+        int32_t m_cntEnv;
+        int32_t m_cntSpecialEnv;
+    } ;
 
 
-struct lsapi_http_header_index
-{        
-    int16_t m_headerLen[H_TRANSFER_ENCODING+1];
-    int32_t m_headerOff[H_TRANSFER_ENCODING+1];
-} ;  
- 
-struct lsapi_header_offset
-{
-    int32_t nameOff;
-    int32_t nameLen;
-    int32_t valueOff;
-    int32_t valueLen;
-} ;
+    struct lsapi_http_header_index
+    {
+        int16_t m_headerLen[H_TRANSFER_ENCODING + 1];
+        int32_t m_headerOff[H_TRANSFER_ENCODING + 1];
+    } ;
 
-struct lsapi_resp_info
-{
-    int32_t m_cntHeaders;
-    int32_t m_status;
-};
+    struct lsapi_header_offset
+    {
+        int32_t nameOff;
+        int32_t nameLen;
+        int32_t valueOff;
+        int32_t valueLen;
+    } ;
 
-struct lsapi_resp_header
-{
-    struct  lsapi_packet_header  m_pktHeader;
-    struct  lsapi_resp_info      m_respInfo;
-};
+    struct lsapi_resp_info
+    {
+        int32_t m_cntHeaders;
+        int32_t m_status;
+    };
+
+    struct lsapi_resp_header
+    {
+        struct  lsapi_packet_header  m_pktHeader;
+        struct  lsapi_resp_info      m_respInfo;
+    };
 
 #if defined (c_plusplus) || defined (__cplusplus)
 }

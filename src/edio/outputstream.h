@@ -25,13 +25,13 @@ public:
     OutputStream() {};
     virtual ~OutputStream() {};
     // Output stream interfaces
-    virtual int write( const char * pBuf, int size ) = 0;
-    virtual int writev( const struct iovec * vector, int count ) = 0;
-    virtual int writev( IOVec& vector ); // = 0;
-    virtual int writev( IOVec& vector, int total );
+    virtual int write(const char *pBuf, int size) = 0;
+    virtual int writev(const struct iovec *vector, int count) = 0;
+    virtual int writev(IOVec &vector);   // = 0;
+    virtual int writev(IOVec &vector, int total);
     virtual int flush() = 0;
     virtual int close() = 0;
-    int writevToWrite( const struct iovec * vector, int count );
+    int writevToWrite(const struct iovec *vector, int count);
 
 };
 

@@ -18,6 +18,7 @@
 #ifndef LOADBALANCER_H
 #define LOADBALANCER_H
 
+#include <lsdef.h>
 #include <extensions/extworker.h>
 
 class HttpSession;
@@ -27,21 +28,22 @@ class LoadBalancer: public ExtWorker
 private:
     TPointerList<ExtWorker>     m_workers;
     int                         m_lastWorker;
-    
-protected:    
-    virtual ExtConn * newConn();
-    int workerLoadCompare( ExtWorker * pWorker, ExtWorker * pSelect );
+
+protected:
+    virtual ExtConn *newConn();
+    int workerLoadCompare(ExtWorker *pWorker, ExtWorker *pSelect);
 
 public:
-    LoadBalancer( const char * pName );
+    LoadBalancer(const char *pName);
     LoadBalancer();
 
     ~LoadBalancer();
-    ExtWorker * selectWorker(HttpSession *pSession, ExtRequest * pExtReq );
-    
+    ExtWorker *selectWorker(HttpSession *pSession, ExtRequest *pExtReq);
+
     int getWorkerCount() const      {   return m_workers.size();    }
-    int addWorker( ExtWorker * pWorker );
+    int addWorker(ExtWorker *pWorker);
     void clearWorkerList()          {   m_workers.clear();          }
+    LS_NO_COPY_ASSIGN(LoadBalancer);
 };
 
 #endif
