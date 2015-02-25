@@ -28,113 +28,113 @@ class IOVec;
 
 class LoopBuf
 {
-    char  * m_pBuf;
-    char  * m_pBufEnd;
-    char  * m_pHead;
-    char  * m_pEnd;
+    char   *m_pBuf;
+    char   *m_pBufEnd;
+    char   *m_pHead;
+    char   *m_pEnd;
     int     m_iCapacity;
 
-    int     allocate( int size );
+    int     allocate(int size);
     void    deallocate();
 
-    LoopBuf(const LoopBuf & rhs );
-    LoopBuf& operator=( const LoopBuf &rhs );
-    
+    LoopBuf(const LoopBuf &rhs);
+    LoopBuf &operator=(const LoopBuf &rhs);
+
 public:
     explicit LoopBuf(int size = LOOPBUFUNIT);
     ~LoopBuf();
     int available() const
-    {   
+    {
         register int ret = m_pHead - m_pEnd - 1;
-        if ( ret >= 0 )
+        if (ret >= 0)
             return ret;
         return ret + m_iCapacity;
     }
 
     // return the size of free memory block, could be smaller than available()
-    //   as it will start use the free space at the beginning once 
-    //   reach the end. 
+    //   as it will start use the free space at the beginning once
+    //   reach the end.
     int contiguous() const;
 
     // return the size of memory block, could be smaller than size()
-    //   as it will start use the free space at the beginning once 
-    //   reach the end. 
+    //   as it will start use the free space at the beginning once
+    //   reach the end.
     int blockSize() const
     {
-        return ( m_pHead > m_pEnd ) ? m_pBufEnd - m_pHead
-                                    : m_pEnd - m_pHead;
+        return (m_pHead > m_pEnd) ? m_pBufEnd - m_pHead
+               : m_pEnd - m_pHead;
     }
 
-    char * begin() const     {   return m_pHead;    }
-    char * end()   const     {   return m_pEnd;     }
+    char *begin() const     {   return m_pHead;    }
+    char *end()   const     {   return m_pEnd;     }
 
-    
-    char * getPointer(int size) const
-    {   return m_pBuf + ( m_pHead - m_pBuf + size ) % m_iCapacity ; }
 
-    int getOffset( const char * p ) const
+    char *getPointer(int size) const
+    {   return m_pBuf + (m_pHead - m_pBuf + size) % m_iCapacity ; }
+
+    int getOffset(const char *p) const
     {
-        return (( p < m_pBuf || p >= m_pBufEnd )? -1:
-               ( p - m_pHead + m_iCapacity ) % m_iCapacity ) ;
+        return ((p < m_pBuf || p >= m_pBufEnd) ? -1 :
+                (p - m_pHead + m_iCapacity) % m_iCapacity) ;
     }
 
-    void used( int size );
+    void used(int size);
 
     void clear()
     {   m_pHead = m_pEnd = m_pBuf;    }
 
     int capacity() const         {   return m_iCapacity; }
     int size() const
-    { 
+    {
         register int ret = m_pEnd - m_pHead;
-        if ( ret >= 0 )
+        if (ret >= 0)
             return ret;
-        return ret + m_iCapacity; 
+        return ret + m_iCapacity;
     }
-    
-    int reserve( int size )
+
+    int reserve(int size)
     {    return allocate(size) ;    }
 
-    int append( const char * pBuf, int size );
-    
-    // NOTICE: no boundary check for maximum performance, should make sure 
+    int append(const char *pBuf, int size);
+
+    // NOTICE: no boundary check for maximum performance, should make sure
     //         buffer has available space before calling this function.
-    void append( char ch ) 
+    void append(char ch)
     {
         *m_pEnd++ = ch;
-        if ( m_pEnd == m_pBufEnd )
+        if (m_pEnd == m_pBufEnd)
             m_pEnd = m_pBuf;
     }
 
     int guarantee(int size);
 
-    char* inc(char * &pPos) const
+    char *inc(char *&pPos) const
     {
-        if ( ++pPos == m_pBufEnd  )
+        if (++pPos == m_pBufEnd)
             pPos = m_pBuf ;
         return pPos ;
     }
 
 
-    bool empty() const           {   return ( m_pHead == m_pEnd );  }
+    bool empty() const           {   return (m_pHead == m_pEnd);  }
     bool full() const
     { return  size() == m_iCapacity - 1; }
 
-    int moveTo( char * pBuf, int size );
-    int pop_front( int size );
-    int pop_back( int size );
+    int moveTo(char *pBuf, int size);
+    int pop_front(int size);
+    int pop_back(int size);
 
-    void getIOvec( IOVec &vect ) const  {   iov_append( vect );    }
-    
-    void iov_insert( IOVec &vect ) const;
-    void iov_append( IOVec &vect ) const;
+    void getIOvec(IOVec &vect) const  {   iov_append(vect);    }
 
-    void swap( LoopBuf& rhs );
-    
-    void update( int offset, const char * pBuf, int size );
-    
-    char *search( int offset, const char *accept, int acceptLen );
-    
+    void iov_insert(IOVec &vect) const;
+    void iov_append(IOVec &vect) const;
+
+    void swap(LoopBuf &rhs);
+
+    void update(int offset, const char *pBuf, int size);
+
+    char *search(int offset, const char *accept, int acceptLen);
+
 };
 
 #endif

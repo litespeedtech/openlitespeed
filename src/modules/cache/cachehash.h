@@ -19,7 +19,7 @@
 #define CACHEHASH_H
 
 /**
-	@author Gang Wang <gwang@litespeedtech.com>
+    @author Gang Wang <gwang@litespeedtech.com>
 */
 
 #include <util/ghash.h>
@@ -31,16 +31,16 @@ public:
     CacheHash();
 
     ~CacheHash();
-    
+
     void init();
-    void init( const CacheHash &rhs )
-    {   *this = rhs;       } 
-    void hash( const char * pBuf, int len );
+    void init(const CacheHash &rhs)
+    {   *this = rhs;       }
+    void hash(const char *pBuf, int len);
 
-    const char * getKey() const   {   return m_key;     }
+    const char *getKey() const   {   return m_key;     }
 
-    static hash_key_t to_ghash_key(const void* __s);
-    static int  compare( const void * pVal1, const void * pVal2 );
+    static hash_key_t to_ghash_key(const void *__s);
+    static int  compare(const void *pVal1, const void *pVal2);
 
 private:
     char  m_key[HASH_KEY_LEN];

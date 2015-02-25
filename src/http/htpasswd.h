@@ -30,9 +30,10 @@ class PasswdFile : public FileStore
 {
 
 protected:
-    virtual KeyData * parseLine( char * pLine, char * pLineEnd );
-    virtual KeyData * parseLine( const char * pKey, int keyLen, char * pLine, char *pLineEnd );
-    virtual KeyData * newEmptyData( const char *pKey, int len );
+    virtual KeyData *parseLine(char *pLine, char *pLineEnd);
+    virtual KeyData *parseLine(const char *pKey, int keyLen, char *pLine,
+                               char *pLineEnd);
+    virtual KeyData *newEmptyData(const char *pKey, int len);
 
 public:
     PasswdFile() {}
@@ -44,9 +45,10 @@ class GroupFile : public FileStore
 {
 
 protected:
-    virtual KeyData * parseLine( char * pLine, char * pLineEnd );
-    virtual KeyData * parseLine( const char * pKey, int keyLen, char *pLine, char *pLineEnd );
-    virtual KeyData * newEmptyData( const char *pKey, int len );
+    virtual KeyData *parseLine(char *pLine, char *pLineEnd);
+    virtual KeyData *parseLine(const char *pKey, int keyLen, char *pLine,
+                               char *pLineEnd);
+    virtual KeyData *newEmptyData(const char *pKey, int len);
 
 public:
     GroupFile() {}

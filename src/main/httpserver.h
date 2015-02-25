@@ -53,84 +53,84 @@ class ConfigCtx;
 class HttpServer : public TSingleton<HttpServer>, public HttpLogSource
 {
     friend class TSingleton<HttpServer>;
-    
-    HttpServerImpl *    m_impl;
 
-    HttpServer( const HttpServer& rhs );
-    void operator=( const HttpServer& rhs );
+    HttpServerImpl     *m_impl;
+
+    HttpServer(const HttpServer &rhs);
+    void operator=(const HttpServer &rhs);
     HttpServer();
 public:
-    
+
     ~HttpServer();
 
     int start();
     int shutdown();
-    HttpListener* addListener( const char * pName, const char * pAddr );
-    int removeListener( const char * pName );
-    HttpListener* getListener( const char * pName ) const ;
+    HttpListener *addListener(const char *pName, const char *pAddr);
+    int removeListener(const char *pName);
+    HttpListener *getListener(const char *pName) const ;
 
-    int addVHost( HttpVHost* pVHost );
-    int updateVHost( const char *pName, HttpVHost * pVHost );
-    int removeVHost( const char *pName );
-    HttpVHost* getVHost( const char * pName ) const;
+    int addVHost(HttpVHost *pVHost);
+    int updateVHost(const char *pName, HttpVHost *pVHost);
+    int removeVHost(const char *pName);
+    HttpVHost *getVHost(const char *pName) const;
 
 //     int mapListenerToVHost( HttpListener * pListener,
 //                             const char * pKey,
 //                             const char * pVHostName );
-    int mapListenerToVHost( const char * pListenerName,
-                            const char * pKey,
-                            const char * pVHostName );
-    int mapListenerToVHost( HttpListener * pListener,
-                            HttpVHost   * pVHost,
-                            const char * pDomains );
-    int removeVHostFromListener( const char * pListenerName,
-                            const char * pVHostName );
+    int mapListenerToVHost(const char *pListenerName,
+                           const char *pKey,
+                           const char *pVHostName);
+    int mapListenerToVHost(HttpListener *pListener,
+                           HttpVHost    *pVHost,
+                           const char *pDomains);
+    int removeVHostFromListener(const char *pListenerName,
+                                const char *pVHostName);
     int allocatePidTracker();
-                                
-    AccessControl* getAccessCtrl() const;
+
+    AccessControl *getAccessCtrl() const;
     int  getVHostCounts() const;
     void beginConfig();
-    void endConfig( int error );
+    void endConfig(int error);
     void onTimer();
     void onVHostTimer();
-    int  enableVHost( const char * pVHostName, int enable );
+    int  enableVHost(const char *pVHostName, int enable);
     int  isServerOk();
     void offsetChroot();
-    void setProcNo( int proc );
-    void setBlackBoard( char * pBuf );
+    void setProcNo(int proc);
+    void setBlackBoard(char *pBuf);
     void passListeners();
     void recoverListeners();
 
-    int  initMultiplexer( const char * pType );
+    int  initMultiplexer(const char *pType);
     int  reinitMultiplexer();
     int  initAdns();
 
-    void setSwapDir( const char * pDir );
-    const char * getSwapDir();
+    void setSwapDir(const char *pDir);
+    const char *getSwapDir();
     int setupSwap();
 
-    const AutoStr2 * getErrDocUrl( int statusCode ) const;
+    const AutoStr2 *getErrDocUrl(int statusCode) const;
     void releaseAll();
-    virtual void setLogLevel( const char * pLevel );
-    virtual int setAccessLogFile( const char * pFileName, int pipe );
-    virtual int setErrorLogFile( const char * pFileName );
-    virtual void setErrorLogRollingSize( off_t size, int keep_days );
-    virtual AccessLog* getAccessLog() const;
-    const StringList * getIndexFileList() const;
-    int  test_main( const char * pArgv0);
+    virtual void setLogLevel(const char *pLevel);
+    virtual int setAccessLogFile(const char *pFileName, int pipe);
+    virtual int setErrorLogFile(const char *pFileName);
+    virtual void setErrorLogRollingSize(off_t size, int keep_days);
+    virtual AccessLog *getAccessLog() const;
+    const StringList *getIndexFileList() const;
+    int  test_main(const char *pArgv0);
     void generateStatusReport();
-    int  authAdminReq( char * pAuth );
-    HttpContext& getServerContext();
+    int  authAdminReq(char *pAuth);
+    HttpContext &getServerContext();
     static void cleanPid();
-    int configServerBasics( int reconfig, const XmlNode *pRoot);
-    int configServer( int reconfig, XmlNode *pRoot);
-    int changeUserChroot( );
+    int configServerBasics(int reconfig, const XmlNode *pRoot);
+    int configServer(int reconfig, XmlNode *pRoot);
+    int changeUserChroot();
 //    void reconfigVHost( char *pVHostName, XmlNode* pRoot );
-    void setServerRoot( const char *pRoot );
-    int initServer( XmlNode* pRoot, int &iReleaseXmlTree, int reconfig = 0 );
-    
+    void setServerRoot(const char *pRoot);
+    int initServer(XmlNode *pRoot, int &iReleaseXmlTree, int reconfig = 0);
+
 };
 
-extern int removeMatchFile( const char * pDir, const char * prefix );
+extern int removeMatchFile(const char *pDir, const char *prefix);
 
 #endif

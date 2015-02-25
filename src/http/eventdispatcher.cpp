@@ -44,38 +44,38 @@ EventDispatcher::~EventDispatcher()
     release();
 }
 
-int EventDispatcher::init( const char * pType )
+int EventDispatcher::init(const char *pType)
 {
-    if ( HttpGlobals::getMultiplexer() )
+    if (HttpGlobals::getMultiplexer())
         return 0;
-    HttpGlobals::s_iMultiplexerType = MultiplexerFactory::getType( pType );
-    Multiplexer * pMultiplexer =
-            MultiplexerFactory::get( HttpGlobals::s_iMultiplexerType );
-    if ( pMultiplexer != NULL )
+    HttpGlobals::s_iMultiplexerType = MultiplexerFactory::getType(pType);
+    Multiplexer *pMultiplexer =
+        MultiplexerFactory::get(HttpGlobals::s_iMultiplexerType);
+    if (pMultiplexer != NULL)
     {
-        if ( !pMultiplexer->init( DEFAULT_INIT_POLL_SIZE) )
+        if (!pMultiplexer->init(DEFAULT_INIT_POLL_SIZE))
         {
-            HttpGlobals::setMultiplexer( pMultiplexer );
-            pMultiplexer->setPriHandler( highPriorityTask );
+            HttpGlobals::setMultiplexer(pMultiplexer);
+            pMultiplexer->setPriHandler(highPriorityTask);
             return 0;
         }
     }
     return -1;
 }
 
-int EventDispatcher::reinit( )
+int EventDispatcher::reinit()
 {
-    if ( !HttpGlobals::getMultiplexer() )
+    if (!HttpGlobals::getMultiplexer())
         return -1;
-    MultiplexerFactory::recycle( HttpGlobals::getMultiplexer() );
-    Multiplexer * pMultiplexer =
-            MultiplexerFactory::get( HttpGlobals::s_iMultiplexerType );
-    if ( pMultiplexer != NULL )
+    MultiplexerFactory::recycle(HttpGlobals::getMultiplexer());
+    Multiplexer *pMultiplexer =
+        MultiplexerFactory::get(HttpGlobals::s_iMultiplexerType);
+    if (pMultiplexer != NULL)
     {
-        if ( !pMultiplexer->init( DEFAULT_INIT_POLL_SIZE) )
+        if (!pMultiplexer->init(DEFAULT_INIT_POLL_SIZE))
         {
-            HttpGlobals::setMultiplexer( pMultiplexer );
-            pMultiplexer->setPriHandler( highPriorityTask );
+            HttpGlobals::setMultiplexer(pMultiplexer);
+            pMultiplexer->setPriHandler(highPriorityTask);
             return 0;
         }
     }
@@ -84,7 +84,7 @@ int EventDispatcher::reinit( )
 
 void EventDispatcher::release()
 {
-    MultiplexerFactory::recycle( HttpGlobals::getMultiplexer() );
+    MultiplexerFactory::recycle(HttpGlobals::getMultiplexer());
 }
 
 int EventDispatcher::stop()
@@ -96,23 +96,23 @@ int EventDispatcher::stop()
 static void processTimer()
 {
     struct timeval tv;
-    gettimeofday( &tv, NULL );
+    gettimeofday(&tv, NULL);
 
     //FIXME: debug code
     //LOG_D(( "processTimer()" ));
-    
+
     DateTime::s_curTime = tv.tv_sec;
     DateTime::s_curTimeUs = tv.tv_usec;
     HttpGlobals::s_tmPrevToken = HttpGlobals::s_tmToken;
-    HttpGlobals::s_tmToken = tv.tv_usec / ( 1000000 / TIMER_PRECISION );
-    if ( HttpGlobals::s_tmToken < HttpGlobals::s_tmPrevToken )
+    HttpGlobals::s_tmToken = tv.tv_usec / (1000000 / TIMER_PRECISION);
+    if (HttpGlobals::s_tmToken < HttpGlobals::s_tmPrevToken)
         HttpServer::getInstance().onTimer();
     HttpGlobals::getMultiplexer()->timerExecute();
 }
 
 int highPriorityTask()
 {
-    if ( HttpSignals::gotSigAlarm() )
+    if (HttpSignals::gotSigAlarm())
     {
         HttpSignals::resetSigAlarm();
         processTimer();
@@ -121,18 +121,18 @@ int highPriorityTask()
     return 0;
 }
 
-static void startTimer( )
+static void startTimer()
 {
     struct itimerval tmv;
-    memset( &tmv, 0, sizeof( struct itimerval ) );
+    memset(&tmv, 0, sizeof(struct itimerval));
     tmv.it_interval.tv_usec = 1000000 / TIMER_PRECISION;
-    gettimeofday( &tmv.it_value, NULL );
+    gettimeofday(&tmv.it_value, NULL);
     tmv.it_value.tv_sec = 0;
-    HttpGlobals::s_tmPrevToken = HttpGlobals::s_tmToken = 
-            tmv.it_value.tv_usec / tmv.it_interval.tv_usec;
+    HttpGlobals::s_tmPrevToken = HttpGlobals::s_tmToken =
+                                     tmv.it_value.tv_usec / tmv.it_interval.tv_usec;
     tmv.it_value.tv_usec = tmv.it_interval.tv_usec -
-            tmv.it_value.tv_usec % tmv.it_interval.tv_usec;
-    setitimer (ITIMER_REAL, &tmv, NULL);
+                           tmv.it_value.tv_usec % tmv.it_interval.tv_usec;
+    setitimer(ITIMER_REAL, &tmv, NULL);
 }
 
 /*
@@ -182,30 +182,28 @@ int EventDispatcher::run()
 static inline void processTimerNew()
 {
     struct timeval tv;
-    gettimeofday( &tv, NULL );
+    gettimeofday(&tv, NULL);
 
     //FIXME: debug code
     //int n = tv.tv_usec / ( 1000000 / TIMER_PRECISION );
-    
+
     DateTime::s_curTime = tv.tv_sec;
     DateTime::s_curTimeUs = tv.tv_usec;
     HttpGlobals::s_tmPrevToken = HttpGlobals::s_tmToken;
-    HttpGlobals::s_tmToken = tv.tv_usec / ( 1000000 / TIMER_PRECISION );
-    if ( HttpGlobals::s_tmToken != HttpGlobals::s_tmPrevToken )
-    {   
-        if ( HttpGlobals::s_tmToken < HttpGlobals::s_tmPrevToken )
+    HttpGlobals::s_tmToken = tv.tv_usec / (1000000 / TIMER_PRECISION);
+    if (HttpGlobals::s_tmToken != HttpGlobals::s_tmPrevToken)
+    {
+        if (HttpGlobals::s_tmToken < HttpGlobals::s_tmPrevToken)
         {
-            if ( getppid() == 1 )
-            {   
+            if (getppid() == 1)
                 HttpSignals::setSigStop();
-            }
             HttpServer::getInstance().onTimer();
         }
         HttpGlobals::getMultiplexer()->timerExecute();
         HttpGlobals::getConnLimitCtrl()->checkWaterMark();
         //LOG_D(( "processTimer()" ));
     }
-    
+
     ModuleManager::getInstance().OnTimer100msec();
 }
 
@@ -215,33 +213,31 @@ int EventDispatcher::run()
 {
     register int ret;
     register int sigEvent;
-    while( true )
+    while (true)
     {
         ret = HttpGlobals::getMultiplexer()->waitAndProcessEvents(
-                    MLTPLX_TIMEOUT );
-        if (( ret == -1 )&& errno )
+                  MLTPLX_TIMEOUT);
+        if ((ret == -1) && errno)
         {
-            if (!((errno == EINTR )||(errno == EAGAIN)))
+            if (!((errno == EINTR) || (errno == EAGAIN)))
             {
-                LOG_ERR(( "Unexpected error inside event loop: %s", strerror( errno ) ));
+                LOG_ERR(("Unexpected error inside event loop: %s", strerror(errno)));
                 return 1;
             }
         }
         processTimerNew();
-        if ( (sigEvent = HttpSignals::gotEvent()) )
+        if ((sigEvent = HttpSignals::gotEvent()))
         {
             HttpSignals::resetEvents();
-            if ( sigEvent & HS_USR2 )
+            if (sigEvent & HS_USR2)
             {
                 HttpLog::toggleDebugLog();
                 ModuleManager::updateDebugLevel();
 
             }
-            if ( sigEvent & HS_CHILD )
-            {
-                HttpServer::cleanPid();   
-            }
-            if ( sigEvent & HS_STOP )
+            if (sigEvent & HS_CHILD)
+                HttpServer::cleanPid();
+            if (sigEvent & HS_STOP)
                 break;
         }
     }
@@ -249,35 +245,33 @@ int EventDispatcher::run()
 }
 
 
-int EventDispatcher::linger( int timeout )
+int EventDispatcher::linger(int timeout)
 {
     register int ret;
     long endTime = time(NULL) + timeout;
-    HttpGlobals::getMultiplexer()->setPriHandler( NULL );
+    HttpGlobals::getMultiplexer()->setPriHandler(NULL);
     startTimer();
-    while(( time( NULL ) < endTime )&&
-          ( HttpGlobals::getConnLimitCtrl()->getMaxConns() >
-            HttpGlobals::getConnLimitCtrl()->availConn() ))
+    while ((time(NULL) < endTime) &&
+           (HttpGlobals::getConnLimitCtrl()->getMaxConns() >
+            HttpGlobals::getConnLimitCtrl()->availConn()))
     {
         ret = HttpGlobals::getMultiplexer()->waitAndProcessEvents(
-                    MLTPLX_TIMEOUT );
-        if ( ret == -1 )
+                  MLTPLX_TIMEOUT);
+        if (ret == -1)
         {
-            if (!((errno == EINTR )||(errno == EAGAIN)))
+            if (!((errno == EINTR) || (errno == EAGAIN)))
             {
-                LOG_ERR(( "Unexpected error inside event loop: %s", strerror( errno ) ));
+                LOG_ERR(("Unexpected error inside event loop: %s", strerror(errno)));
                 return 1;
             }
         }
-        if ( HttpSignals::gotSigAlarm() )
+        if (HttpSignals::gotSigAlarm())
         {
             HttpSignals::resetEvents();
             processTimer();
         }
-        if ( HttpSignals::gotSigChild() )
-        {
+        if (HttpSignals::gotSigChild())
             HttpServer::cleanPid();
-        }
 
     }
     return 0;

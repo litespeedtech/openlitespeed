@@ -21,7 +21,7 @@
 
 BEGIN_LOG4CXX_NS
 
-const char * Level::s_levelName[] =
+const char *Level::s_levelName[] =
 {
     "FATAL",
     "ALERT",
@@ -33,17 +33,17 @@ const char * Level::s_levelName[] =
     "DEBUG",
     "TRACE",
     "NOTSET",
-    "UNKNOWN"    
+    "UNKNOWN"
 };
 
 
-int Level::toInt( const char * levelName )
+int Level::toInt(const char *levelName)
 {
-    if ( levelName )
+    if (levelName)
     {
-        for( int i = 0; i < UNKNOWN/1000; ++i )
+        for (int i = 0; i < UNKNOWN / 1000; ++i)
         {
-            if ( !strcasecmp( s_levelName[i], levelName ) )
+            if (!strcasecmp(s_levelName[i], levelName))
                 return i * 1000;
         }
     }

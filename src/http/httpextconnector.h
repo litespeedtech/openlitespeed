@@ -48,9 +48,9 @@ class VMemBuf;
 class HttpExtConnector : public ReqHandler, public ExtRequest
 {
 protected:
-    HttpSession         * m_pSession;
-    HttpExtProcessor    * m_pProcessor;
-    ExtWorker           * m_pWorker;
+    HttpSession          *m_pSession;
+    HttpExtProcessor     *m_pProcessor;
+    ExtWorker            *m_pWorker;
     AutoBuf               m_respHeaderBuf;
     int                   m_iState;
     int                   m_iRespState;
@@ -66,65 +66,65 @@ protected:
     int releaseProcessor();
 
     int prepareRespHeader();
-    int addToWriteBuffer( const char * pBuf, int len );
+    int addToWriteBuffer(const char *pBuf, int len);
     int setupGzipBuf();
-    
+
     int checkState();
 
-    int sendRespBody( const char * pBuf, int size );
-    int sendResp( );
+    int sendRespBody(const char *pBuf, int size);
+    int sendResp();
     void testEndOfReqBody();
     int checkRespSize();
-    void setHttpError( int error );
-        
+    void setHttpError(int error);
+
 public:
     HttpExtConnector();
     virtual ~HttpExtConnector();
 
-    void setState( int state ) { m_iState = state; }
+    void setState(int state) { m_iState = state; }
     int getState() const       { return m_iState;  }
-    void setProcessor( HttpExtProcessor * pProcessor )
+    void setProcessor(HttpExtProcessor *pProcessor)
     {   m_pProcessor = pProcessor; }
-    void setHttpSession( HttpSession  * pSession )
+    void setHttpSession(HttpSession   *pSession)
     {   m_pSession = pSession;    }
-    
-    HttpExtProcessor * getProcessor() const
+
+    HttpExtProcessor *getProcessor() const
     {   return m_pProcessor;    }
-    HttpSession* getHttpSession() const
+    HttpSession *getHttpSession() const
     {   return m_pSession;     }
 
-    ExtWorker* getWorker() const    {   return m_pWorker;   }
-    void setWorker( ExtWorker * pWorker )
+    ExtWorker *getWorker() const    {   return m_pWorker;   }
+    void setWorker(ExtWorker *pWorker)
     {   m_pWorker = pWorker;    }
-    
+
     void resetConnector();
 
-    int& getRespState()             {   return m_iRespState;    }
-    void setRespState( int state)   {   m_iRespState = state;   }
-    
+    int &getRespState()             {   return m_iRespState;    }
+    void setRespState(int state)   {   m_iRespState = state;   }
+
     //functions called by the HttpSession
     void abortReq();
     //defined in ReqHandler
-    virtual int process( HttpSession* pSession, const HttpHandler * pHandler );
-    virtual int onWrite( HttpSession* pSession );
-    virtual int cleanUp( HttpSession* pSession );
-    virtual int onRead( HttpSession* pSession );
+    virtual int process(HttpSession *pSession, const HttpHandler *pHandler);
+    virtual int onWrite(HttpSession *pSession);
+    virtual int cleanUp(HttpSession *pSession);
+    virtual int onRead(HttpSession *pSession);
     virtual void onTimer();
 
     //functions called by the HttpExtProcessor
     virtual void extProcessorReady();
-    virtual int processRespData( const char * pBuf, int len );
-    virtual int processErrData( const char * pBuf, int len );
-    virtual int endResponse( int endCode, int protocolStatus );
-    virtual int errResponse( int code, const char * pErr );
+    virtual int processRespData(const char *pBuf, int len);
+    virtual int processErrData(const char *pBuf, int len);
+    virtual int endResponse(int endCode, int protocolStatus);
+    virtual int errResponse(int code, const char *pErr);
     virtual int extOutputReady();
     virtual int extInputReady();
-    virtual int processRespHeaderData( const char * pBuf, int len ) {return len;}
+    virtual int processRespHeaderData(const char *pBuf, int len) {return len;}
     virtual void dump();
     virtual int  dumpAborted();
 
-    int  parseHeader( const char * &pBuf, int &len, int httpResp=0 );
-    int  processRespBodyData( const char * pBuf, int len );
+    int  parseHeader(const char *&pBuf, int &len, int httpResp = 0);
+    int  processRespBodyData(const char *pBuf, int len);
 
     int  respHeaderDone();
 
@@ -132,15 +132,15 @@ public:
     int  tryRecover();
     int  isAlive();
     void suspend();
-        
-    char * getRespBuf( size_t& len );
-    
+
+    char *getRespBuf(size_t &len);
+
     int reqHeaderDone();
     int reqBodyDone();
-    const char *  getLogId();  
-    LOG4CXX_NS::Logger* getLogger() const;  
+    const char   *getLogId();
+    LOG4CXX_NS::Logger *getLogger() const;
     bool wantWrite() const
-    {   return (m_iState & (HEC_FWD_REQ_HEADER|HEC_FWD_REQ_BODY));  }
+    {   return (m_iState & (HEC_FWD_REQ_HEADER | HEC_FWD_REQ_BODY));  }
     int getRespBodyLen() const {   return m_iRespBodyLen;   }
     int flushResp();
 };

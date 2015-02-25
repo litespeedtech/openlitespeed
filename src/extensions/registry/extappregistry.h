@@ -20,8 +20,8 @@
 
 
 #include <sys/types.h>
-#include <util/gpointerlist.h>  
-  
+#include <util/gpointerlist.h>
+
 class ExtWorker;
 class ExtAppMap;
 class XmlNode;
@@ -31,24 +31,24 @@ class HttpVHost;
 
 class ExtAppSubRegistry
 {
-    ExtAppMap * m_pRegistry;
-    ExtAppMap * m_pOldWorkers;
+    ExtAppMap *m_pRegistry;
+    ExtAppMap *m_pOldWorkers;
     TPointerList<ExtWorker> s_toBeStoped;
-public: 
+public:
     ExtAppSubRegistry();
     ~ExtAppSubRegistry();
 
-    ExtWorker * addWorker( int type, const char * pName );
-    ExtWorker * getWorker( const char * pName );
-    int stopWorker( ExtWorker * pApp );
+    ExtWorker *addWorker(int type, const char *pName);
+    ExtWorker *getWorker(const char *pName);
+    int stopWorker(ExtWorker *pApp);
     int stopAllWorkers();
     void beginConfig();
     void endConfig();
     void clear();
     void onTimer();
     void runOnStartUp();
-    int generateRTReport( int fd, int type );
-    
+    int generateRTReport(int fd, int type);
+
 };
 #define EA_CGID     0
 #define EA_FCGI     1
@@ -62,12 +62,12 @@ public:
 class ExtAppRegistry
 {
 private:
-    static RLimits       * s_pRLimits;
+    static RLimits        *s_pRLimits;
 public:
-    static ExtWorker * newWorker( int type, const char * pName );
-    static ExtWorker * addApp( int type, const char * pName );
-    static ExtWorker * getApp( int type, const char * pName );
-    static int stopApp( ExtWorker * pApp );
+    static ExtWorker *newWorker(int type, const char *pName);
+    static ExtWorker *addApp(int type, const char *pName);
+    static ExtWorker *getApp(int type, const char *pName);
+    static int stopApp(ExtWorker *pApp);
     static int stopAll();
     static void beginConfig();
     static void endConfig();
@@ -76,25 +76,26 @@ public:
     static void runOnStartUp();
     static void init();
     static void shutdown();
-    static int generateRTReport( int fd );
-    static ExtWorker * configExtApp( const XmlNode *pNode, int configUserGroup );
-    static int configLoadBalacner( const XmlNode *pNode, const HttpVHost *pVHost );
-    static int configExtApps( const XmlNode *pRoot, const HttpVHost *pVHost );
-    static RLimits* getRLimits()    {   return s_pRLimits;  }
+    static int generateRTReport(int fd);
+    static ExtWorker *configExtApp(const XmlNode *pNode, int configUserGroup);
+    static int configLoadBalacner(const XmlNode *pNode,
+                                  const HttpVHost *pVHost);
+    static int configExtApps(const XmlNode *pRoot, const HttpVHost *pVHost);
+    static RLimits *getRLimits()    {   return s_pRLimits;  }
     static void setRLimits(RLimits *pRLimits)   {   s_pRLimits = pRLimits;  }
 };
 
 class PidSimpleList;
 class PidRegistry
-{    
+{
 public:
     PidRegistry();
     ~PidRegistry();
-    static void setSimpleList( PidSimpleList * pList );
+    static void setSimpleList(PidSimpleList *pList);
 
-    static void add( pid_t pid, ExtWorker * pApp, long tm );
-    static ExtWorker * remove( pid_t pid);
-    static void markToStop( pid_t pid, int kill_type );
+    static void add(pid_t pid, ExtWorker *pApp, long tm);
+    static ExtWorker *remove(pid_t pid);
+    static void markToStop(pid_t pid, int kill_type);
 
 };
 

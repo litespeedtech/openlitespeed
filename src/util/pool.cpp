@@ -24,7 +24,7 @@
 
 #include <new>
 
-Pool::Pool( int max_unit_bytes )
+Pool::Pool(int max_unit_bytes)
 {
 }
 
@@ -40,30 +40,30 @@ Pool::~Pool()
 #define NO_POOL_NEW
 //#endif
 
-char * Pool::dupstr( const char * p )
+char *Pool::dupstr(const char *p)
 {
-    if ( p )
-        return dupstr( p, strlen( p ) + 1 );
+    if (p)
+        return dupstr(p, strlen(p) + 1);
     return NULL;
 }
 
-char * Pool::dupstr( const char * p, int len )
+char *Pool::dupstr(const char *p, int len)
 {
-    if ( p )
+    if (p)
     {
-        char * ps = (char *)allocate2( len );
-        if ( ps )
-            memmove( ps, p, len );
+        char *ps = (char *)allocate2(len);
+        if (ps)
+            memmove(ps, p, len);
         return ps;
     }
     return NULL;
 }
 
-void* Pool::allocate2(size_t num)
+void *Pool::allocate2(size_t num)
 {
     num += 4;
-    uint32_t * p = (uint32_t *)allocate( num );
-    if ( p )
+    uint32_t *p = (uint32_t *)allocate(num);
+    if (p)
     {
         *p = num;
         return p + 1;
@@ -71,35 +71,35 @@ void* Pool::allocate2(size_t num)
     return NULL;
 }
 
-void*
+void *
 Pool::allocate(size_t num)
 {
-    void* ret = 0;
+    void *ret = 0;
 
     num = roundUp(num);
-        ret = ::malloc(num);
+    ret = ::malloc(num);
     return ret;
 }
 
 #ifndef NO_POOL_NEW
-void operator delete( void * p) throw ()
-{   return g_pool.deallocate2( p );    }
-void operator delete( void * p, const std::nothrow_t& ) throw ()
-{   return g_pool.deallocate2( p );    }
+void operator delete(void *p) throw ()
+{   return g_pool.deallocate2(p);    }
+void operator delete(void *p, const std::nothrow_t &) throw ()
+{   return g_pool.deallocate2(p);    }
 
 #endif
 
-void Pool::deallocate2(void* p)
+void Pool::deallocate2(void *p)
 {
-    if ( p )
-        deallocate( ((uint32_t *)p) - 1, *(((uint32_t *)p) - 1 ) );
+    if (p)
+        deallocate(((uint32_t *)p) - 1, *(((uint32_t *)p) - 1));
 }
 
 // p may not be 0
 void
-Pool::deallocate(void* p, size_t num)
+Pool::deallocate(void *p, size_t num)
 {
-        ::free(p);
+    ::free(p);
 }
 
 
@@ -107,17 +107,17 @@ Pool::deallocate(void* p, size_t num)
 
 
 
-void* Pool::reallocate2(void* p, size_t new_sz)
+void *Pool::reallocate2(void *p, size_t new_sz)
 {
-    if ( p )
+    if (p)
     {
-        uint32_t * pNew = ((uint32_t *)p) - 1;
+        uint32_t *pNew = ((uint32_t *)p) - 1;
         uint32_t old_sz = *pNew;
         new_sz += 4;
-        if ( old_sz >= new_sz )
+        if (old_sz >= new_sz)
             return p;
-        pNew = (uint32_t *)reallocate( pNew, old_sz, new_sz );
-        if ( pNew )
+        pNew = (uint32_t *)reallocate(pNew, old_sz, new_sz);
+        if (pNew)
         {
             *pNew = new_sz;
             return pNew + 1;
@@ -126,19 +126,19 @@ void* Pool::reallocate2(void* p, size_t new_sz)
             return NULL;
     }
     else
-        return allocate2( new_sz );
+        return allocate2(new_sz);
 }
 
 
-void*
-Pool::reallocate(void* p,
-                       size_t old_sz,
-                       size_t new_sz)
+void *
+Pool::reallocate(void *p,
+                 size_t old_sz,
+                 size_t new_sz)
 {
     old_sz = roundUp(old_sz);
     new_sz = roundUp(new_sz);
-    if (old_sz == new_sz) return(p);
-    return(::realloc(p, new_sz));
+    if (old_sz == new_sz) return (p);
+    return (::realloc(p, new_sz));
 }
 
 

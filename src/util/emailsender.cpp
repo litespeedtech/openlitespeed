@@ -25,13 +25,15 @@
 #include <unistd.h>
 #include <util/ssnprintf.h>
 
-EmailSender::EmailSender(){
+EmailSender::EmailSender()
+{
 }
-EmailSender::~EmailSender(){
+EmailSender::~EmailSender()
+{
 }
 
 
-static int callShell( const char * command )
+static int callShell(const char *command)
 {
     int pid;
 
@@ -40,8 +42,9 @@ static int callShell( const char * command )
     pid = fork();
     if (pid == -1)
         return -1;
-    if (pid == 0) {
-        char * argv[4];
+    if (pid == 0)
+    {
+        char *argv[4];
         argv[0] = (char *)"sh";
         argv[1] = (char *)"-c";
         argv[2] = (char *)command;
@@ -53,7 +56,8 @@ static int callShell( const char * command )
 
     int status;
     //cout << "waiting pid:" << pid << endl;
-    do {
+    do
+    {
         if (waitpid(pid, &status, 0) == -1)
         {
             //cout << "waitpid() return -1, errno = " << errno << endl;
@@ -65,56 +69,57 @@ static int callShell( const char * command )
             //cout << "status = " << status << endl;
             return status;
         }
-    } while(1);
+    }
+    while (1);
 
 }
 
 
-int EmailSender::send( const char * pSubject, const char * to,
-               const char * content, const char * cc,
-               const char * bcc )
+int EmailSender::send(const char *pSubject, const char *to,
+                      const char *content, const char *cc,
+                      const char *bcc)
 {
     char achFileName[50] = "/tmp/m-XXXXXX";
-    int fd = mkstemp( achFileName );
-    if ( fd == -1 )
-    {
+    int fd = mkstemp(achFileName);
+    if (fd == -1)
         return -1;
-    }
-    write( fd, content, strlen( content ) );
-    close( fd );
-    int ret = sendFile( pSubject, to, achFileName, cc, bcc );
-    ::unlink( achFileName );
+    write(fd, content, strlen(content));
+    close(fd);
+    int ret = sendFile(pSubject, to, achFileName, cc, bcc);
+    ::unlink(achFileName);
     return ret;
 }
 
-int EmailSender::sendFile( const char * pSubject, const char * to,
-                   const char * pFileName, const char * cc ,
-                   const char * bcc)
+int EmailSender::sendFile(const char *pSubject, const char *to,
+                          const char *pFileName, const char *cc ,
+                          const char *bcc)
 {
-    static const char * pMailCmds[5] =
-            {   "/usr/bin/mailx", "/bin/mailx", "/usr/bin/mail",
-                "/bin/mail", "mailx" }; 
+    static const char *pMailCmds[5] =
+    {
+        "/usr/bin/mailx", "/bin/mailx", "/usr/bin/mail",
+        "/bin/mail", "mailx"
+    };
     char achCmd[2048];
-    if ((!pSubject)||( !to )||( !pFileName ))
+    if ((!pSubject) || (!to) || (!pFileName))
     {
         errno = EINVAL;
         return -1;
     }
-    const char * pMailCmd;
+    const char *pMailCmd;
     int i;
-    for( i = 0 ; i < 4; ++i )
+    for (i = 0 ; i < 4; ++i)
     {
-        if ( access( pMailCmds[i], X_OK ) == 0 )
+        if (access(pMailCmds[i], X_OK) == 0)
             break;
     }
     pMailCmd = pMailCmds[i];
-    if ( cc == NULL )
+    if (cc == NULL)
         cc = "";
-    if ( bcc == NULL )
+    if (bcc == NULL)
         bcc = "";
-    safe_snprintf( achCmd, sizeof( achCmd ),
-            "%s -b '%s' -c '%s' -s '%s' %s < %s",
-            pMailCmd, bcc, cc, pSubject, to, pFileName );
-    return callShell( achCmd ); 
+    safe_snprintf(achCmd, sizeof(achCmd),
+                  "%s -b '%s' -c '%s' -s '%s' %s < %s",
+                  pMailCmd, bcc, cc, pSubject, to, pFileName);
+    return callShell(achCmd);
 }
 

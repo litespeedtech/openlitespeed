@@ -60,27 +60,27 @@ public:
         HTTP_METHOD_END
     };
 
-    static http_method_t parse2( const char * pMethod );
-    static http_method_t parse( const char * pMethod );
-    static const char * get( http_method_t method )
+    static http_method_t parse2(const char *pMethod);
+    static http_method_t parse(const char *pMethod);
+    static const char *get(http_method_t method)
     {
         //assert(( method >= HTTP_OPTIONS )&&( method <= HTTP_MOVE ));
         return s_psMethod[method];
     }
 
-    static int getLen( http_method_t method )
+    static int getLen(http_method_t method)
     {
         //assert(( method >= HTTP_OPTIONS )&&( method <= HTTP_MOVE ));
         return s_iMethodLen[method];
 
     }
 
-private:    
-    static const char * s_psMethod[HTTP_METHOD_END];
+private:
+    static const char *s_psMethod[HTTP_METHOD_END];
     static int s_iMethodLen[HTTP_METHOD_END];
     HttpMethod() {};
     ~HttpMethod() {};
-    
+
 };
 
 #endif

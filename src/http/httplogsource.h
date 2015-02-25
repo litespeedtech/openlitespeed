@@ -30,25 +30,26 @@ class HttpLogSource
 {
 private:
     static AutoStr  s_sDefaultAccessLogFormat;
-public: 
+public:
     HttpLogSource() {};
     virtual ~HttpLogSource() {};
-    
-    virtual void setLogLevel( const char * pLevel ) = 0;
-    virtual int setAccessLogFile( const char * pFileName, int pipe ) = 0;
-    virtual int setErrorLogFile( const char * pFileName ) = 0;
-    virtual void setErrorLogRollingSize( off_t size, int keep_days ) = 0;
-    virtual void setBytesLogFilePath( const char * pFileName, off_t rollingSize ) {}
-    virtual void enableAccessLog( int size ) {}
-    virtual AccessLog* getAccessLog() const = 0;
-    int initAccessLog( const XmlNode *pNode,
-                                      off_t *pRollingSize );
-    int initAccessLog( const XmlNode *pRoot,
-                                      int setDebugLevel );
-    int initErrorLog2( const XmlNode *pNode,
-                                      int setDebugLevel );
-    int initErrorLog( const XmlNode *pRoot,
-                                     int setDebugLevel );
+
+    virtual void setLogLevel(const char *pLevel) = 0;
+    virtual int setAccessLogFile(const char *pFileName, int pipe) = 0;
+    virtual int setErrorLogFile(const char *pFileName) = 0;
+    virtual void setErrorLogRollingSize(off_t size, int keep_days) = 0;
+    virtual void setBytesLogFilePath(const char *pFileName,
+                                     off_t rollingSize) {}
+    virtual void enableAccessLog(int size) {}
+    virtual AccessLog *getAccessLog() const = 0;
+    int initAccessLog(const XmlNode *pNode,
+                      off_t *pRollingSize);
+    int initAccessLog(const XmlNode *pRoot,
+                      int setDebugLevel);
+    int initErrorLog2(const XmlNode *pNode,
+                      int setDebugLevel);
+    int initErrorLog(const XmlNode *pRoot,
+                     int setDebugLevel);
 };
 
 #endif

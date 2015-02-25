@@ -25,7 +25,7 @@ class LsapiConfig : public LocalWorkerConfig
 {
 
 public:
-    explicit LsapiConfig( const char * pName );
+    explicit LsapiConfig(const char *pName);
     LsapiConfig();
 
     ~LsapiConfig();

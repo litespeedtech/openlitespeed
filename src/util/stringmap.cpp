@@ -19,18 +19,18 @@
 
 struct StringMapSyntaxChecker
 {
-    const char * pKey;
-    
+    const char *pKey;
+
     void checkStringMapSyntax()
     {
         StringMapSyntaxChecker checker;
         StringMap< StringMapSyntaxChecker *> intlookup;
         intlookup.begin();
         intlookup.end();
-        intlookup.insert( "ABC", &checker );
-        intlookup.insertUpdate( "CDE", &checker );
-        intlookup.find( "ABC" );
-        intlookup.remove( "ABC" );
+        intlookup.insert("ABC", &checker);
+        intlookup.insertUpdate("CDE", &checker);
+        intlookup.find("ABC");
+        intlookup.remove("ABC");
         intlookup.release_objects();
     }
 

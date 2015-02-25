@@ -37,39 +37,39 @@ class PHPValue
 
 public:
     PHPValue()  {}
-    PHPValue( const PHPValue& rhs )
-        : m_sKey( rhs.m_sKey )
-        , m_sVal( rhs.m_sVal )
-        , m_iType( rhs.m_iType )
-        {}
-        
-    ~PHPValue() {}
-    int setValue( const char * pKey, const char * pValue,
-                short iType );
-    const char * getKey() const     {   return m_sKey.c_str();  }
-    const char * getValue() const   {   return m_sVal.c_str();  }
-    void setValue( const char * v)  {   m_sVal = v;             }
+    PHPValue(const PHPValue &rhs)
+        : m_sKey(rhs.m_sKey)
+        , m_sVal(rhs.m_sVal)
+        , m_iType(rhs.m_iType)
+    {}
 
-    void setType( short t )         {   m_iType = t;            }
+    ~PHPValue() {}
+    int setValue(const char *pKey, const char *pValue,
+                 short iType);
+    const char *getKey() const     {   return m_sKey.c_str();  }
+    const char *getValue() const   {   return m_sVal.c_str();  }
+    void setValue(const char *v)  {   m_sVal = v;             }
+
+    void setType(short t)         {   m_iType = t;            }
     short getType() const           {   return m_iType;         }
-    
+
 };
 
 class PHPConfig
 {
     HashStringMap<PHPValue *>   m_config;
     AutoBuf                     m_lsapiEnv;
-public: 
+public:
     PHPConfig();
     ~PHPConfig();
 
-    PHPConfig( const PHPConfig& rhs );
-    
-    int merge( const PHPConfig *pParent );
-    int parse( int id, const char * pArgs, 
-                    char * pErr, int errBufLen );
+    PHPConfig(const PHPConfig &rhs);
+
+    int merge(const PHPConfig *pParent);
+    int parse(int id, const char *pArgs,
+              char *pErr, int errBufLen);
     int buildLsapiEnv();
-    const AutoBuf& getLsapiEnv()    {   return m_lsapiEnv;  }
+    const AutoBuf &getLsapiEnv()    {   return m_lsapiEnv;  }
     int getCount() const        {   return m_config.size(); }
 };
 

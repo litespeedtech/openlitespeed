@@ -19,24 +19,24 @@
 #define SENDFILEINFO_H
 
 
-  
+
 #include <string.h>
 #include <sys/types.h>
 
 class StaticFileCacheData;
 class FileCacheDataEx;
 
-class SendFileInfo 
+class SendFileInfo
 {
-    StaticFileCacheData * m_pFileData;
-    FileCacheDataEx     * m_pECache;
-    void                * m_pParam;
-    
+    StaticFileCacheData *m_pFileData;
+    FileCacheDataEx      *m_pECache;
+    void                 *m_pParam;
+
     off_t     m_lCurPos;
     off_t     m_lCurEnd;
-    
-    SendFileInfo( const SendFileInfo& rhs );
-    void operator=( const SendFileInfo& rhs );
+
+    SendFileInfo(const SendFileInfo &rhs);
+    void operator=(const SendFileInfo &rhs);
 
 public:
 
@@ -47,29 +47,29 @@ public:
     {
         //m_pCache = NULL;
         //memset( &m_pCache, 0, (char *)(&m_pECache + 1) - (char *)&m_pCache );
-        memset( this, 0, sizeof( *this ) );
+        memset(this, 0, sizeof(*this));
     }
-    
-    
-    void * getParam() const     {   return m_pParam;    }
-    void setParam( void * p )   {   m_pParam = p;       }
-    
-    void setFileData( StaticFileCacheData* pData )
+
+
+    void *getParam() const     {   return m_pParam;    }
+    void setParam(void *p)   {   m_pParam = p;       }
+
+    void setFileData(StaticFileCacheData *pData)
     {   m_pFileData = pData;      }
-    StaticFileCacheData *& getFileData()
+    StaticFileCacheData *&getFileData()
     {   return m_pFileData;    }
 
-    void setECache( FileCacheDataEx* pCache ) {   m_pECache = pCache;   }
+    void setECache(FileCacheDataEx *pCache) {   m_pECache = pCache;   }
 
-    FileCacheDataEx * getECache() const
+    FileCacheDataEx *getECache() const
     {   return m_pECache;    }
-    FileCacheDataEx * &getECache() 
+    FileCacheDataEx *&getECache()
     {   return m_pECache;    }
-    
-    void setCurPos( off_t pos )  {   m_lCurPos = pos;    }
-    void incCurPos( off_t inc )  {   m_lCurPos += inc;   }
+
+    void setCurPos(off_t pos)  {   m_lCurPos = pos;    }
+    void incCurPos(off_t inc)  {   m_lCurPos += inc;   }
     off_t getCurPos() const      {   return m_lCurPos;   }
-    void setCurEnd( off_t end )  {   m_lCurEnd = end;    }
+    void setCurEnd(off_t end)  {   m_lCurEnd = end;    }
     off_t getCurEnd() const      {   return m_lCurEnd;   }
     off_t getRemain() const  {   return m_lCurEnd - m_lCurPos;   }
 };

@@ -31,49 +31,49 @@
 
 class IOVec;
 class IOVec;
-class ChunkOutputStream 
+class ChunkOutputStream
 {
-    OutputStream  * m_pOS;
+    OutputStream   *m_pOS;
     IOVec           m_iov;
     int             m_iCurSize;
     char            m_iBuffering;
     short           m_iSendFileLeft;
     int             m_iTotalPending;
     int             m_iLastBufLen;
-    const char    * m_pLastBufBegin;
-    
+    const char     *m_pLastBufBegin;
+
     char            m_headerBuf[ CHUNK_HEADER_SIZE ];
     char            m_bufChunk[ CHUNK_BUFSIZE ];
     int writeChunk();
-    int buildIovec( const char * pBuf, int size );
-    int chunkedWrite( const char * pBuf, int size );
-    int fillChunkBuf( const char * pBuf, int size );
-    int buildChunkHeader( int size );
+    int buildIovec(const char *pBuf, int size);
+    int chunkedWrite(const char *pBuf, int size);
+    int fillChunkBuf(const char *pBuf, int size);
+    int buildChunkHeader(int size);
 public:
     ChunkOutputStream();
     ~ChunkOutputStream();
-    void setStream( OutputStream* pOS )
+    void setStream(OutputStream *pOS)
     {   m_pOS = pOS;  }
     void open()     {   reset();        }
-    int write( const char * pBuf, int size );
+    int write(const char *pBuf, int size);
     int close();
     int flush2();
     int flush()
     {
-        if ( m_iCurSize > 0 )
+        if (m_iCurSize > 0)
         {
-            m_iTotalPending += buildIovec( NULL, 0 );
+            m_iTotalPending += buildIovec(NULL, 0);
             m_iCurSize = 0;
         }
-        if ( m_iTotalPending )
+        if (m_iTotalPending)
             return flush2();
         return 0;
     }
     void reset();
-    void setBuffering( int n )
+    void setBuffering(int n)
     {   m_iBuffering = n;    }
-    short& getSendFileLeft()  { return m_iSendFileLeft; }
-    void buildSendFileChunk( int size );
+    short &getSendFileLeft()  { return m_iSendFileLeft; }
+    void buildSendFileChunk(int size);
     void appendCRLF();
 };
 

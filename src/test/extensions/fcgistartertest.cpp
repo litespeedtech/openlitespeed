@@ -16,7 +16,7 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #ifdef RUN_TEST
- 
+
 #include "extensions/fcgi/fcgistarter.h"
 #include "extensions/fcgi/fcgiapp.h"
 #include "extensions/fcgi/fcgiappconfig.h"
@@ -73,7 +73,7 @@
 //     return 0;
 // }
 
-void testProtocol( const char * pURI, const char * pAppPath)
+void testProtocol(const char *pURI, const char *pAppPath)
 {
 //    FcgiApp * pApp = new FcgiApp( pURI );
 //    pApp->setURL( pURI );
@@ -100,21 +100,22 @@ void testProtocol( const char * pURI, const char * pAppPath)
 //
 //    //CPPUNIT_ASSERT( pApp->stop() == 0 );
 //    delete pApp;
-    
-    
+
+
 
 }
 
 TEST(FcgiStarterTesttest)
 {
-    const char * pURI = "localhost:5555";
-    const char * pApp ="/home/gwang/projects/httpd/httpd/serverroot/fcgi-bin/lt-echo-cpp";
+    const char *pURI = "localhost:5555";
+    const char *pApp =
+        "/home/gwang/projects/httpd/httpd/serverroot/fcgi-bin/lt-echo-cpp";
     //CPPUNIT_ASSERT( testStart( pURI, pApp ) == 0 );
-    testProtocol( pURI, pApp );
+    testProtocol(pURI, pApp);
     //printf( "fast cgi app PID=%d\n", pApp->getPid() );
     //ret = CoreSocket::connect( "localhost:5555", false, &fd );
     //assert( ret == -1 );
-    
+
 }
 
 

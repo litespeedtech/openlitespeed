@@ -27,24 +27,24 @@ class DeniedDir : public TPointerList<DirItem>
 {
 private:
 
-    DeniedDir( const DeniedDir& rhs );
-    void operator=( const DeniedDir& rhs );
+    DeniedDir(const DeniedDir &rhs);
+    void operator=(const DeniedDir &rhs);
 
-    const DirItem * find(const char *) const;
-    DirItem * find(const char *);
-    void insert( DirItem * pDir );
+    const DirItem *find(const char *) const;
+    DirItem *find(const char *);
+    void insert(DirItem *pDir);
     void sort();
 
 public:
     DeniedDir();
-    ~DeniedDir();    
-    int  addDir( const char* pDir );
-    bool isDenied( const char* pPath );
-    bool isDenied( iterator iter, const char *pPath );
+    ~DeniedDir();
+    int  addDir(const char *pDir);
+    bool isDenied(const char *pPath);
+    bool isDenied(iterator iter, const char *pPath);
     void clear();
-    iterator lower_bound( const char * pPath );
-    iterator next_included( iterator iter, const char * pPath );
-    const char * getPath( iterator iter );
+    iterator lower_bound(const char *pPath);
+    iterator next_included(iterator iter, const char *pPath);
+    const char *getPath(iterator iter);
 
 };
 

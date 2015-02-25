@@ -24,22 +24,22 @@
 
 
 
-hostent* getHostByName(const char* hostname)
+hostent *getHostByName(const char *hostname)
 {
     return ::gethostbyname(hostname);
 }
 
-void testOne(const hostent* h0)
+void testOne(const hostent *h0)
 {
     printf("start HostInfoTest::TestOne\n");
-    CHECK(h0!= NULL);
+    CHECK(h0 != NULL);
     HostInfo h1 = *h0 ;
     printf("h_name = %s (%s)\n", h0->h_name, h1.h_name);
     CHECK(0 == strcmp(h0->h_name, h1.h_name));
-    char** a0 = h0->h_aliases;
-    char** a1 = h1.h_aliases;
+    char **a0 = h0->h_aliases;
+    char **a1 = h1.h_aliases;
     int i = 0;
-    while ( *a0 != NULL )
+    while (*a0 != NULL)
     {
         CHECK(*a1 != NULL);
         CHECK(0 == strcmp(*a0, *a1));
@@ -55,12 +55,12 @@ void testOne(const hostent* h0)
     a0 = h0->h_addr_list;
     a1 = h1.h_addr_list;
     i = 0;
-    while ( *a0 != NULL )
+    while (*a0 != NULL)
     {
         CHECK(*a1 != NULL);
         CHECK(0 == memcmp(*a0, *a1, h0->h_length));
-        printf(" addr_list %d %s (%s)\n", i, inet_ntoa(*((in_addr*)*a0)),
-            inet_ntoa(*((in_addr*)*a1)));
+        printf(" addr_list %d %s (%s)\n", i, inet_ntoa(*((in_addr *)*a0)),
+               inet_ntoa(*((in_addr *)*a1)));
         a0 ++;
         a1 ++;
         i ++;
@@ -70,7 +70,7 @@ void testOne(const hostent* h0)
 }
 
 
-TEST( HostInfoTest_testAll)
+TEST(HostInfoTest_testAll)
 {
     testOne(getHostByName("localhost"));
     HostInfo h;

@@ -29,93 +29,93 @@
 #include <arpa/inet.h>
 
 ClientInfo::ClientInfo()
-    : m_pGeoInfo( NULL )
+    : m_pGeoInfo(NULL)
 {}
 
 
 ClientInfo::~ClientInfo()
 {
-    if ( m_pGeoInfo )
-        delete m_pGeoInfo;    
+    if (m_pGeoInfo)
+        delete m_pGeoInfo;
 }
 
 
-void ClientInfo::setAddr( const struct sockaddr * pAddr )
+void ClientInfo::setAddr(const struct sockaddr *pAddr)
 {
     int len, strLen;
-    if ( AF_INET == pAddr->sa_family )
+    if (AF_INET == pAddr->sa_family)
     {
-        len = 16; strLen = 17;
+        len = 16;
+        strLen = 17;
     }
     else
     {
-        len = 24; strLen = 41;
+        len = 24;
+        strLen = 41;
     }
-    memmove( m_achSockAddr, pAddr, len );
-    m_sAddr.resizeBuf( strLen );
-    if ( m_sAddr.buf() )
+    memmove(m_achSockAddr, pAddr, len);
+    m_sAddr.resizeBuf(strLen);
+    if (m_sAddr.buf())
     {
-        inet_ntop( pAddr->sa_family, ((char * )pAddr) + ((len >> 1) - 4),
-                m_sAddr.buf(), strLen );
-        m_sAddr.setLen( strlen( m_sAddr.c_str()) );
+        inet_ntop(pAddr->sa_family, ((char *)pAddr) + ((len >> 1) - 4),
+                  m_sAddr.buf(), strLen);
+        m_sAddr.setLen(strlen(m_sAddr.c_str()));
     }
-    memset( &m_iConns, 0, (char *)(&m_lastConnect + 1) - (char *)&m_iConns );
+    memset(&m_iConns, 0, (char *)(&m_lastConnect + 1) - (char *)&m_iConns);
     m_iAccess = 1;
 }
 
 int ClientInfo::checkAccess()
 {
-    switch ( m_iAccess )
+    switch (m_iAccess)
     {
     case AC_BLOCK:
     case AC_DENY:
-        if ( D_ENABLED( DL_LESS ))
-            LOG_D(( "[%s] Access is denied!", getAddrString() ));
+        if (D_ENABLED(DL_LESS))
+            LOG_D(("[%s] Access is denied!", getAddrString()));
         return 1;
     case AC_ALLOW:
-        if ( getOverLimitTime() )
+        if (getOverLimitTime())
         {
-            if ( DateTime::s_curTime - getOverLimitTime()
-                    >= HttpGlobals::s_iOverLimitGracePeriod )
+            if (DateTime::s_curTime - getOverLimitTime()
+                >= HttpGlobals::s_iOverLimitGracePeriod)
             {
-                LOG_NOTICE(( "[%s] is over per client soft connection limit: %d for %d seconds,"
-                             " close connection!",
-                    getAddrString(), HttpGlobals::s_iConnsPerClientSoftLimit,
-                    DateTime::s_curTime - getOverLimitTime() ));
-                setOverLimitTime( DateTime::s_curTime );
-                setAccess( AC_BLOCK );
+                LOG_NOTICE(("[%s] is over per client soft connection limit: %d for %d seconds,"
+                            " close connection!",
+                            getAddrString(), HttpGlobals::s_iConnsPerClientSoftLimit,
+                            DateTime::s_curTime - getOverLimitTime()));
+                setOverLimitTime(DateTime::s_curTime);
+                setAccess(AC_BLOCK);
                 return 1;
             }
             else
             {
-                if ( D_ENABLED( DL_LESS ))
-                    LOG_D(( "[%s] %d connections established, limit: %d.",
-                        getAddrString(), getConns(),
-                        HttpGlobals::s_iConnsPerClientSoftLimit ));
+                if (D_ENABLED(DL_LESS))
+                    LOG_D(("[%s] %d connections established, limit: %d.",
+                           getAddrString(), getConns(),
+                           HttpGlobals::s_iConnsPerClientSoftLimit));
             }
         }
-        else if ( (int)getConns() >= HttpGlobals::s_iConnsPerClientSoftLimit )
-            setOverLimitTime( DateTime::s_curTime );
-        if ( (int)getConns() >= HttpGlobals::s_iConnsPerClientHardLimit )
+        else if ((int)getConns() >= HttpGlobals::s_iConnsPerClientSoftLimit)
+            setOverLimitTime(DateTime::s_curTime);
+        if ((int)getConns() >= HttpGlobals::s_iConnsPerClientHardLimit)
         {
-            LOG_NOTICE(( "[%s] Reached per client connection hard limit: %d, close connection!",
-                    getAddrString(), HttpGlobals::s_iConnsPerClientHardLimit ));
-            setOverLimitTime( DateTime::s_curTime );
-            setAccess( AC_BLOCK );
+            LOG_NOTICE(("[%s] Reached per client connection hard limit: %d, close connection!",
+                        getAddrString(), HttpGlobals::s_iConnsPerClientHardLimit));
+            setOverLimitTime(DateTime::s_curTime);
+            setAccess(AC_BLOCK);
             return 1;
         }
-        //fall through
+    //fall through
     case AC_TRUST:
     default:
         break;
     }
     return 0;
 }
-GeoInfo * ClientInfo::allocateGeoInfo()
+GeoInfo *ClientInfo::allocateGeoInfo()
 {
-    if ( !m_pGeoInfo )
-    {
+    if (!m_pGeoInfo)
         m_pGeoInfo = new GeoInfo();
-    }
     return m_pGeoInfo;
 }

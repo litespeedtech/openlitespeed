@@ -17,7 +17,7 @@
 *****************************************************************************/
 #ifndef NI_FIO_H
 #define NI_FIO_H
- 
+
 #include <stddef.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -29,11 +29,11 @@ extern "C" {
 extern int nio_creat(const char *pathname, mode_t mode);
 extern int nio_open(const char *pathname, int flags, mode_t mode);
 
-extern int nio_close( int fd );
-extern int nio_read( int fd, void * pBuf, int len );
-extern int nio_write( int fd, const void * pBuf, int len );
-extern off_t nio_lseek(int fildes, off_t offset, int whence); 
-extern int nio_stat( const char * pathname, struct stat * st );
+extern int nio_close(int fd);
+extern int nio_read(int fd, void *pBuf, int len);
+extern int nio_write(int fd, const void *pBuf, int len);
+extern off_t nio_lseek(int fildes, off_t offset, int whence);
+extern int nio_stat(const char *pathname, struct stat *st);
 
 #ifdef __cplusplus
 }

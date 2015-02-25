@@ -36,73 +36,73 @@
 // <groups> is comma seperated list of group name
 
 
-KeyData * PasswdFile::newEmptyData( const char *pKey, int len )
-{   KeyData * pData = new AuthUser();
-    if ( pData )
-        pData->setKey( pKey, len );
+KeyData *PasswdFile::newEmptyData(const char *pKey, int len)
+{
+    KeyData *pData = new AuthUser();
+    if (pData)
+        pData->setKey(pKey, len);
     return pData;
 }
 
-KeyData * PasswdFile::parseLine( const char * pKey, int keyLen, char * pPos, char *pLineEnd )
+KeyData *PasswdFile::parseLine(const char *pKey, int keyLen, char *pPos,
+                               char *pLineEnd)
 {
-    char * pEnd;
-    char * pGroups;
-    AuthUser * pData;
+    char *pEnd;
+    char *pGroups;
+    AuthUser *pData;
     pData = new AuthUser();
-    if ( pData )
+    if (pData)
     {
-        pEnd = pGroups = strchr( pPos, ':' );
-        if ( !pEnd )
-        {
+        pEnd = pGroups = strchr(pPos, ':');
+        if (!pEnd)
             pEnd = pLineEnd;
-        }
         else
             *pEnd = 0;
-        StringTool::strtrim( (const char *&)pPos, (const char *&)pEnd );
-        pData->setKey( pKey, keyLen );
-        pData->setPasswd( pPos, pEnd - pPos );
-        if ( pGroups )
+        StringTool::strtrim((const char *&)pPos, (const char *&)pEnd);
+        pData->setKey(pKey, keyLen);
+        pData->setPasswd(pPos, pEnd - pPos);
+        if (pGroups)
         {
             ++pGroups;
-            pEnd = strchr( pGroups, ':' );
-            if ( !pEnd )
+            pEnd = strchr(pGroups, ':');
+            if (!pEnd)
                 pEnd = pLineEnd;
             else
                 *pEnd = 0;
-            pData->setGroups(pGroups, pEnd );
+            pData->setGroups(pGroups, pEnd);
         }
     }
     return pData;
-    
+
 }
 
-static char * parseKey( char * &pPos, char * pLineEnd, int &keyLen )
+static char *parseKey(char *&pPos, char *pLineEnd, int &keyLen)
 {
     register char ch;
-    char * pKey = NULL;
-    char * pKeyEnd;
-    while( (( ch = *pPos ) == ' ')||( ch == '\t' ))
+    char *pKey = NULL;
+    char *pKeyEnd;
+    while (((ch = *pPos) == ' ') || (ch == '\t'))
         ++pPos;
-    char * pValue = (char *)memchr( pPos, ':', pLineEnd - pPos );
-    if ( pValue )
+    char *pValue = (char *)memchr(pPos, ':', pLineEnd - pPos);
+    if (pValue)
     {
         pKey = pPos;
         pKeyEnd = pValue;
         pPos = pValue + 1;
-        while( (( ch = *(pKeyEnd-1) ) == ' ')||( ch == '\t' ))
+        while (((ch = *(pKeyEnd - 1)) == ' ') || (ch == '\t'))
             --pKeyEnd;
         keyLen = pKeyEnd - pKey;
     }
     return pKey;
 }
 
-KeyData * PasswdFile::parseLine( char * pPos, char * pLineEnd )
+KeyData *PasswdFile::parseLine(char *pPos, char *pLineEnd)
 {
-    char * pKey;
+    char *pKey;
     int keyLen;
-    pKey = parseKey( pPos, pLineEnd, keyLen );
-    if ( pKey )
-        return parseLine( pKey, keyLen, pPos, pLineEnd );
+    pKey = parseKey(pPos, pLineEnd, keyLen);
+    if (pKey)
+        return parseLine(pKey, keyLen, pPos, pLineEnd);
     return NULL;
 }
 
@@ -111,41 +111,41 @@ KeyData * PasswdFile::parseLine( char * pPos, char * pLineEnd )
 //
 // <groups> is a comma seperated list of group name
 
-KeyData * GroupFile::parseLine( char * pPos, char * pLineEnd )
+KeyData *GroupFile::parseLine(char *pPos, char *pLineEnd)
 {
-    char * pKey;
+    char *pKey;
     int keyLen;
-    pKey = parseKey( pPos, pLineEnd, keyLen );
-    if ( pKey )
-        return parseLine( pKey, keyLen, pPos, pLineEnd );
+    pKey = parseKey(pPos, pLineEnd, keyLen);
+    if (pKey)
+        return parseLine(pKey, keyLen, pPos, pLineEnd);
     return NULL;
 }
 
-KeyData * GroupFile::parseLine( const char * pKey, int keyLen, char * pPos, char * pLineEnd )
+KeyData *GroupFile::parseLine(const char *pKey, int keyLen, char *pPos,
+                              char *pLineEnd)
 {
-    char * pEnd;
-    AuthGroup * pData;
+    char *pEnd;
+    AuthGroup *pData;
     pData = new AuthGroup();
-    if ( pData )
+    if (pData)
     {
-        pData->setKey( pKey, keyLen );
-        pEnd = strchr( pPos, ':' );
-        if ( !pEnd )
-        {
+        pData->setKey(pKey, keyLen);
+        pEnd = strchr(pPos, ':');
+        if (!pEnd)
             pEnd = pLineEnd;
-        }
         else
             *pEnd = 0;
-        if ( pData->split( pPos, pEnd, ", " ) > 1 )
+        if (pData->split(pPos, pEnd, ", ") > 1)
             pData->sort();
     }
     return pData;
 }
 
-KeyData * GroupFile::newEmptyData( const char *pKey, int len )
-{   KeyData * pData = new AuthGroup();
-    if ( pData )
-        pData->setKey( pKey, len );
+KeyData *GroupFile::newEmptyData(const char *pKey, int len)
+{
+    KeyData *pData = new AuthGroup();
+    if (pData)
+        pData->setKey(pKey, len);
     return pData;
 }
 

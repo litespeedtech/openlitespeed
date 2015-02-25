@@ -27,11 +27,11 @@ class ExtWorker;
 class PidList : public GHash
 {
 public:
-    explicit PidList( int size = 13 )
-        : GHash( size, NULL, NULL )
-        {}
-    void add( pid_t pid, long tm );
-    long remove( pid_t pid);
+    explicit PidList(int size = 13)
+        : GHash(size, NULL, NULL)
+    {}
+    void add(pid_t pid, long tm);
+    long remove(pid_t pid);
 };
 
 class PidInfo
@@ -39,7 +39,7 @@ class PidInfo
 public:
     pid_t   m_pid;
     pid_t   m_parent;
-    ExtWorker * m_pWorker;    
+    ExtWorker *m_pWorker;
 };
 
 #define KILL_TYPE_TERM  -1
@@ -47,16 +47,16 @@ public:
 class PidSimpleList
 {
 public:
-    PidInfo * m_pBegin;
-    PidInfo * m_pCur;
-    char    * m_pEnd;
+    PidInfo *m_pBegin;
+    PidInfo *m_pCur;
+    char     *m_pEnd;
 
-    PidSimpleList( char * pBegin, char * pEnd);
+    PidSimpleList(char *pBegin, char *pEnd);
     ~PidSimpleList();
-    void add( pid_t pid, pid_t parent, ExtWorker * pWorker );
-    ExtWorker * remove( pid_t pid );
-    int markToStop( pid_t pid, int kill_type );
-    
+    void add(pid_t pid, pid_t parent, ExtWorker *pWorker);
+    ExtWorker *remove(pid_t pid);
+    int markToStop(pid_t pid, int kill_type);
+
 };
 
 #endif

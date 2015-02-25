@@ -19,25 +19,25 @@
 #include <util/pool.h>
 
 JWorkerConfig::JWorkerConfig()
-    : m_pSecret( NULL )
+    : m_pSecret(NULL)
 {}
 
-JWorkerConfig::JWorkerConfig( const char * pName )
-    : ExtWorkerConfig( pName )
-    , m_pSecret( NULL )
-    {}
+JWorkerConfig::JWorkerConfig(const char *pName)
+    : ExtWorkerConfig(pName)
+    , m_pSecret(NULL)
+{}
 
 JWorkerConfig::~JWorkerConfig()
 {
-    if ( m_pSecret )
-        g_pool.deallocate2( m_pSecret );
+    if (m_pSecret)
+        g_pool.deallocate2(m_pSecret);
 }
 
-void JWorkerConfig::setSecret( const char * pSecret )
+void JWorkerConfig::setSecret(const char *pSecret)
 {
-    if ( m_pSecret )
-         g_pool.deallocate2( m_pSecret );
-    m_secretLen = strlen( pSecret );
-    m_pSecret = g_pool.dupstr( pSecret, m_secretLen );
+    if (m_pSecret)
+        g_pool.deallocate2(m_pSecret);
+    m_secretLen = strlen(pSecret);
+    m_pSecret = g_pool.dupstr(pSecret, m_secretLen);
 }
 

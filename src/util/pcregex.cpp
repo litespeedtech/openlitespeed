@@ -33,26 +33,26 @@ static pthread_key_t s_jit_stack_key;
 void Pcregex::init_jit_stack()
 {
     s_jit_key_inited = 1;
-    pthread_key_create( &s_jit_stack_key, release_jit_stack );
+    pthread_key_create(&s_jit_stack_key, release_jit_stack);
 }
 
-void Pcregex::release_jit_stack( void * pValue)
+void Pcregex::release_jit_stack(void *pValue)
 {
-    pcre_jit_stack_free((pcre_jit_stack *) pValue );
+    pcre_jit_stack_free((pcre_jit_stack *) pValue);
 }
 
 
-pcre_jit_stack * Pcregex::get_jit_stack()
+pcre_jit_stack *Pcregex::get_jit_stack()
 {
     pcre_jit_stack *jit_stack;
 
-    if ( !s_jit_key_inited )
+    if (!s_jit_key_inited)
         init_jit_stack();
-    jit_stack = (pcre_jit_stack *)pthread_getspecific( s_jit_stack_key );
-    if ( !jit_stack )
+    jit_stack = (pcre_jit_stack *)pthread_getspecific(s_jit_stack_key);
+    if (!jit_stack)
     {
-        jit_stack = (pcre_jit_stack *)pcre_jit_stack_alloc(32*1024, 512*1024);
-        pthread_setspecific( s_jit_stack_key, jit_stack );
+        jit_stack = (pcre_jit_stack *)pcre_jit_stack_alloc(32 * 1024, 512 * 1024);
+        pthread_setspecific(s_jit_stack_key, jit_stack);
     }
     return jit_stack;
 }
@@ -60,9 +60,9 @@ pcre_jit_stack * Pcregex::get_jit_stack()
 #endif
 
 Pcregex::Pcregex()
-    : m_regex( NULL )
-    , m_extra( NULL )
-    , m_iSubStr( 0 )
+    : m_regex(NULL)
+    , m_extra(NULL)
+    , m_iSubStr(0)
 {
 }
 Pcregex::~Pcregex()
@@ -72,44 +72,45 @@ Pcregex::~Pcregex()
 
 void Pcregex::release()
 {
-    if ( m_regex )
+    if (m_regex)
     {
-        if ( m_extra )
+        if (m_extra)
         {
-        #if defined( _USE_PCRE_JIT_)&&!defined(__sparc__) && !defined(__sparc64__) && defined( PCRE_CONFIG_JIT )
+#if defined( _USE_PCRE_JIT_)&&!defined(__sparc__) && !defined(__sparc64__) && defined( PCRE_CONFIG_JIT )
             pcre_free_study(m_extra);
-        #else
-            pcre_free( m_extra );
-        #endif
+#else
+            pcre_free(m_extra);
+#endif
 
         }
-        pcre_free( m_regex );
+        pcre_free(m_regex);
         m_regex = NULL;
     }
 }
 
-int Pcregex::compile(const char * regex, int options, int matchLimit, int recursionLimit)
+int Pcregex::compile(const char *regex, int options, int matchLimit,
+                     int recursionLimit)
 {
-    const char * error;
+    const char *error;
     int          erroffset;
-    if ( m_regex )
+    if (m_regex)
         release();
     m_regex = pcre_compile(regex, options, &error, &erroffset, NULL);
     if (m_regex == NULL)
         return -1;
-    m_extra = pcre_study(m_regex, 
+    m_extra = pcre_study(m_regex,
 #if defined( _USE_PCRE_JIT_)&&!defined(__sparc__) && !defined(__sparc64__) && defined( PCRE_CONFIG_JIT )
-                         PCRE_STUDY_JIT_COMPILE, 
+                         PCRE_STUDY_JIT_COMPILE,
 #else
                          0,
 #endif
-                         &error);
-    if ( matchLimit > 0 )
+                         & error);
+    if (matchLimit > 0)
     {
         m_extra->match_limit = matchLimit;
         m_extra->flags |= PCRE_EXTRA_MATCH_LIMIT;
     }
-    if ( recursionLimit > 0 )
+    if (recursionLimit > 0)
     {
         m_extra->match_limit_recursion = recursionLimit;
         m_extra->flags |= PCRE_EXTRA_MATCH_LIMIT_RECURSION;
@@ -120,30 +121,30 @@ int Pcregex::compile(const char * regex, int options, int matchLimit, int recurs
 }
 
 RegSub::RegSub()
-    : m_pList( NULL )
-    , m_pListEnd( NULL )
+    : m_pList(NULL)
+    , m_pListEnd(NULL)
 {}
 
-RegSub::RegSub( const RegSub & rhs )
+RegSub::RegSub(const RegSub &rhs)
 {
-    m_parsed.setStr( rhs.m_parsed.c_str(),
-                (char *)rhs.m_pListEnd - rhs.m_parsed.c_str() );
+    m_parsed.setStr(rhs.m_parsed.c_str(),
+                    (char *)rhs.m_pListEnd - rhs.m_parsed.c_str());
     m_pList = (RegSubEntry *)(m_parsed.c_str() +
-                ( (char*)rhs.m_pList - rhs.m_parsed.c_str() ));
-    m_pListEnd = m_pList + (rhs.m_pListEnd - rhs.m_pList );
+                              ((char *)rhs.m_pList - rhs.m_parsed.c_str()));
+    m_pListEnd = m_pList + (rhs.m_pListEnd - rhs.m_pList);
 }
 
 
 RegSub::~RegSub()
 {
 }
- 
 
-int RegSub::compile( const char * rule )
+
+int RegSub::compile(const char *rule)
 {
-    if ( !rule )
+    if (!rule)
         return -1;
-    const char * p = rule;
+    const char *p = rule;
     register char c;
     int entries = 0;
     while ((c = *p++) != '\0')
@@ -159,34 +160,28 @@ int RegSub::compile( const char * rule )
             ++p;
     }
     ++entries;
-    int bufSize = strlen( rule ) + 1;
-    bufSize = ((bufSize + 7) >>3 ) << 3;
-    if ( m_parsed.resizeBuf( bufSize + entries * sizeof( RegSubEntry ) ) == NULL )
+    int bufSize = strlen(rule) + 1;
+    bufSize = ((bufSize + 7) >> 3) << 3;
+    if (m_parsed.resizeBuf(bufSize + entries * sizeof(RegSubEntry)) == NULL)
         return -1;
-    m_pList = (RegSubEntry *)( m_parsed.buf() + bufSize );
-    memset( m_pList, 0xff, entries * sizeof( RegSubEntry ) );
-    
-    char * pDest = m_parsed.buf();
+    m_pList = (RegSubEntry *)(m_parsed.buf() + bufSize);
+    memset(m_pList, 0xff, entries * sizeof(RegSubEntry));
+
+    char *pDest = m_parsed.buf();
     p = rule;
-    RegSubEntry * pEntry = m_pList;
+    RegSubEntry *pEntry = m_pList;
     pEntry->m_strBegin = 0;
     pEntry->m_strLen = 0;
-    while(( c = *p++ ) != '\0' )
+    while ((c = *p++) != '\0')
     {
-        if ( c == '&' )
-        {
+        if (c == '&')
             pEntry->m_param = 0;
-        }
-        else if ( c == '$' && isdigit( *p ))
-        {
+        else if (c == '$' && isdigit(*p))
             pEntry->m_param = *p++ - '0';
-        }
         else
         {
-            if ( c == '\\' && (*p == '$' || *p == '&' ))
-            {
+            if (c == '\\' && (*p == '$' || *p == '&'))
                 c = *p++;
-            }
             *pDest++ = c;
             ++(pEntry->m_strLen);
             continue;
@@ -196,56 +191,54 @@ int RegSub::compile( const char * rule )
         pEntry->m_strLen = 0;
     }
     *pDest = 0;
-    if ( pEntry->m_strLen == 0 )
-    {
+    if (pEntry->m_strLen == 0)
         --entries;
-    }
     else
         ++pEntry;
     m_pListEnd = pEntry;
-    assert( pEntry - m_pList == entries );
+    assert(pEntry - m_pList == entries);
     return 0;
 }
 
-int RegSub::exec( const char * input, const int *ovector, int ovec_num,
-                char * output, int &length )
+int RegSub::exec(const char *input, const int *ovector, int ovec_num,
+                 char *output, int &length)
 {
-    RegSubEntry * pEntry = m_pList;
-    char * p = output;
-    char * pBufEnd = output + length;
-    while( pEntry < m_pListEnd )
+    RegSubEntry *pEntry = m_pList;
+    char *p = output;
+    char *pBufEnd = output + length;
+    while (pEntry < m_pListEnd)
     {
-        if ( pEntry->m_strLen > 0 )
+        if (pEntry->m_strLen > 0)
         {
-            if ( p + pEntry->m_strLen < pBufEnd )
-                memmove( p, m_parsed.c_str() + pEntry->m_strBegin, pEntry->m_strLen );
+            if (p + pEntry->m_strLen < pBufEnd)
+                memmove(p, m_parsed.c_str() + pEntry->m_strBegin, pEntry->m_strLen);
             p += pEntry->m_strLen;
         }
-        if (( pEntry->m_param >= 0 )&&( pEntry->m_param < ovec_num ))
+        if ((pEntry->m_param >= 0) && (pEntry->m_param < ovec_num))
         {
-            const int * pParam = ovector + ( pEntry->m_param << 1 );
+            const int *pParam = ovector + (pEntry->m_param << 1);
             int len = *(pParam + 1) - *pParam;
-            if ( len > 0 )
+            if (len > 0)
             {
-                if ( p + len < pBufEnd )
-                    memmove( p, input + *pParam , len );
+                if (p + len < pBufEnd)
+                    memmove(p, input + *pParam , len);
                 p += len;
             }
         }
         ++pEntry;
     }
-    if ( p < pBufEnd )
+    if (p < pBufEnd)
         *p = 0;
     length = p - output;
-    return ( p < pBufEnd )? 0 : -1;
+    return (p < pBufEnd) ? 0 : -1;
 }
 
 
-int RegexResult::getSubstr( int i, char * &pValue ) const
+int RegexResult::getSubstr(int i, char *&pValue) const
 {
-    if ( i < m_matches )
+    if (i < m_matches)
     {
-        const int * pParam = &m_ovector[ i << 1 ];
+        const int *pParam = &m_ovector[ i << 1 ];
         pValue = (char *)m_pBuf + *pParam;
         return *(pParam + 1) - *pParam;
     }

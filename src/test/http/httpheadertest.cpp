@@ -36,7 +36,7 @@
 #include "test/unittest-cpp/UnitTest++/src/UnitTest++.h"
 #include <util/misc/profiletime.h>
 
-static const char * const s_pHeaders[] =
+static const char *const s_pHeaders[] =
 {
     //most common headers
     "Accept",
@@ -111,87 +111,89 @@ static const char * const s_pHeaders[] =
 SUITE(HttpHeaderTest)
 {
 
-TEST(headerIndexMatching)
-{
-    const char *p;
-    //int l;
-    
-    for (int i=0; i<LSI_RESP_HEADER_END; ++i)
+    TEST(headerIndexMatching)
     {
-        p = HttpRespHeaders::m_sPresetHeaders[i];
-        //l = HttpRespHeaders::m_iPresetHeaderLen[i];
-        
-        HttpRespHeaders::HEADERINDEX index = HttpRespHeaders::getRespHeaderIndex( p );
-        CHECK(i == index);
-    }
-    
-    printf("\nFinish checking resp headers indx matching. \n");
-}
+        const char *p;
+        //int l;
 
-TEST(testLookup)
-{
-    int size = sizeof( s_pHeaders ) / sizeof( char * );
-    int i;
-    for( i = 0; i < size; i++ )
-    {
-        if ( i < HttpHeader::H_TE )
+        for (int i = 0; i < LSI_RESP_HEADER_END; ++i)
         {
-            //printf( "%s\n", s_pHeaders[i] );
-            int index = HttpHeader::getIndex2( s_pHeaders[i] );
-            CHECK( i == index );
-            CHECK( (int)strlen( s_pHeaders[i] ) ==
-                        HttpHeader::getHeaderStringLen( i ) );
+            p = HttpRespHeaders::m_sPresetHeaders[i];
+            //l = HttpRespHeaders::m_iPresetHeaderLen[i];
+
+            HttpRespHeaders::HEADERINDEX index = HttpRespHeaders::getRespHeaderIndex(
+                    p);
+            CHECK(i == index);
+        }
+
+        printf("\nFinish checking resp headers indx matching. \n");
+    }
+
+    TEST(testLookup)
+    {
+        int size = sizeof(s_pHeaders) / sizeof(char *);
+        int i;
+        for (i = 0; i < size; i++)
+        {
+            if (i < HttpHeader::H_TE)
+            {
+                //printf( "%s\n", s_pHeaders[i] );
+                int index = HttpHeader::getIndex2(s_pHeaders[i]);
+                CHECK(i == index);
+                CHECK((int)strlen(s_pHeaders[i]) ==
+                      HttpHeader::getHeaderStringLen(i));
 //            CHECK( 0 == strncasecmp( s_pHeaders[i],
 //                                    HttpHeader::getHeader( i ),
 //                                    strlen( s_pHeaders[i]) ) );
-        }
-        else
-        {
+            }
+            else
+            {
 //            CHECK( NULL == HttpHeader::getHeader( i ));
-            CHECK( HttpHeader::H_HEADER_END ==
-                    HttpHeader::getIndex2( s_pHeaders[i] ) );
+                CHECK(HttpHeader::H_HEADER_END ==
+                      HttpHeader::getIndex2(s_pHeaders[i]));
+            }
+        }
+
+        static const char *respHeaders[] =
+        {
+            "content-type",
+            "content-length",
+            "content-encoding",
+            "cache-control",
+            "location",
+            "pragma",
+            "status",
+            "transfer-encoding",
+            "proxy-connection",
+            "server"
+        };
+        static int respHeaderIndex[] =
+        {
+            HttpRespHeaders::H_CONTENT_TYPE,
+            HttpRespHeaders::H_CONTENT_LENGTH,
+            HttpRespHeaders::H_CONTENT_ENCODING,
+            HttpRespHeaders::H_CACHE_CTRL,
+            HttpRespHeaders::H_LOCATION,
+            HttpRespHeaders::H_PRAGMA,
+            HttpRespHeaders::H_CGI_STATUS,
+            HttpRespHeaders::H_TRANSFER_ENCODING,
+            HttpRespHeaders::H_PROXY_CONNECTION,
+            HttpRespHeaders::H_SERVER
+        };
+        size = sizeof(respHeaders) / sizeof(char *);
+        for (i = 0; i < size; i++)
+        {
+            //printf( "%s\n", respHeaders[i] );
+            HttpRespHeaders::HEADERINDEX index = HttpRespHeaders::getRespHeaderIndex(
+                    respHeaders[i]);
+            CHECK(index == respHeaderIndex[i]);
+            CHECK((int)strlen(respHeaders[i]) ==
+                  HttpRespHeaders::getHeaderStringLen(index));
         }
     }
 
-    static const char * respHeaders[] =
+    TEST(testInstance)
     {
-        "content-type",
-        "content-length",
-        "content-encoding",
-        "cache-control",
-        "location",
-        "pragma",
-        "status",
-        "transfer-encoding",
-        "proxy-connection",
-        "server"
-    };
-    static int respHeaderIndex[] =
-    {
-        HttpRespHeaders::H_CONTENT_TYPE,
-        HttpRespHeaders::H_CONTENT_LENGTH,
-        HttpRespHeaders::H_CONTENT_ENCODING,
-        HttpRespHeaders::H_CACHE_CTRL,
-        HttpRespHeaders::H_LOCATION,
-        HttpRespHeaders::H_PRAGMA,
-        HttpRespHeaders::H_CGI_STATUS,
-        HttpRespHeaders::H_TRANSFER_ENCODING,
-        HttpRespHeaders::H_PROXY_CONNECTION,
-        HttpRespHeaders::H_SERVER
-    };
-    size = sizeof( respHeaders ) / sizeof( char * );
-    for( i = 0; i < size; i++ )
-    {
-        //printf( "%s\n", respHeaders[i] );
-        HttpRespHeaders::HEADERINDEX index = HttpRespHeaders::getRespHeaderIndex( respHeaders[i] );
-        CHECK( index == respHeaderIndex[i] );
-        CHECK( (int)strlen( respHeaders[i] ) ==
-                    HttpRespHeaders::getHeaderStringLen( index ) );
-    }    
-}
-
-TEST(testInstance)
-{
 //    HttpHeader header;
 //    const char * pSample[] =
 //    {
@@ -262,77 +264,80 @@ TEST(testInstance)
 //                pSample[i + 1], strlen( pSample[i + 1] ) ) ) ;
 //    }
 
-}
-
-
-TEST(benchmarkLookup)
-{
-    //ProfileTime prof( "HttpHeader lookup benchmark" );
-    int size = sizeof( s_pHeaders ) / sizeof( char * );
-    for( int i = 0; i < 1000000; i++ )
-    {
-        HttpHeader::getIndex( s_pHeaders[ rand() % size ] );
     }
-}
+
+
+    TEST(benchmarkLookup)
+    {
+        //ProfileTime prof( "HttpHeader lookup benchmark" );
+        int size = sizeof(s_pHeaders) / sizeof(char *);
+        for (int i = 0; i < 1000000; i++)
+            HttpHeader::getIndex(s_pHeaders[ rand() % size ]);
+    }
 
 #include <socket/gsockaddr.h>
 
-void displaySpdyHeaders(HttpRespHeaders *pRespHeaders)
-{
-    struct iovec iov[10];
-    int total = 0;
-    char *key;
-    int keyLen;
-    
-    printf("\r\n*******************************************************************\r\n\r\n");
-    for (int pos=pRespHeaders->HeaderBeginPos(); pos != pRespHeaders->HeaderEndPos(); pos = pRespHeaders->nextHeaderPos(pos))
+    void displaySpdyHeaders(HttpRespHeaders * pRespHeaders)
     {
-        int count = pRespHeaders->getHeader(pos, &key, &keyLen, iov, 10);
-        if (count >= 1)
+        struct iovec iov[10];
+        int total = 0;
+        char *key;
+        int keyLen;
+
+        printf("\r\n*******************************************************************\r\n\r\n");
+        for (int pos = pRespHeaders->HeaderBeginPos();
+             pos != pRespHeaders->HeaderEndPos();
+             pos = pRespHeaders->nextHeaderPos(pos))
         {
-            for (int i=0;i<keyLen; ++i)
-                printf("%c", *(key + i));
-            
-            printf(": ");
-            for (int j=0;j<count; ++j)
+            int count = pRespHeaders->getHeader(pos, &key, &keyLen, iov, 10);
+            if (count >= 1)
             {
-                for (size_t ii=0; ii<iov[j].iov_len; ++ii)
-                    printf("%c", *((char *)iov[j].iov_base + ii));
-            
-                printf("\r\n");
+                for (int i = 0; i < keyLen; ++i)
+                    printf("%c", *(key + i));
+
+                printf(": ");
+                for (int j = 0; j < count; ++j)
+                {
+                    for (size_t ii = 0; ii < iov[j].iov_len; ++ii)
+                        printf("%c", *((char *)iov[j].iov_base + ii));
+
+                    printf("\r\n");
+                }
+                total ++;
             }
-            total ++;
         }
+
+        printf("\r\nspdy totla= %d\r\n*******************************************************************\r\n\r\n",
+               total);
     }
-    
-    printf("\r\nspdy totla= %d\r\n*******************************************************************\r\n\r\n", total);
-}
 
 
-void DisplayBothHeader(IOVec io, int format, short count, HttpRespHeaders *pRespHeaders)
-{
-    IOVec::iterator it;
-    unsigned char *p = NULL;
-    it = io.begin();
-    p = (unsigned char *)it->iov_base;
-    //return;//comment this out to view header data
-    
-    
-    for (it = io.begin(); it != io.end(); ++it)
+    void DisplayBothHeader(IOVec io, int format, short count,
+                           HttpRespHeaders * pRespHeaders)
     {
+        IOVec::iterator it;
+        unsigned char *p = NULL;
+        it = io.begin();
         p = (unsigned char *)it->iov_base;
-        for (unsigned int i=0; i<it->iov_len; ++i)
+        //return;//comment this out to view header data
+
+
+        for (it = io.begin(); it != io.end(); ++it)
         {
-            if (format  != 0)
-                printf("%02X ",p[i]);
-            else
-                printf("%c",p[i]);
+            p = (unsigned char *)it->iov_base;
+            for (unsigned int i = 0; i < it->iov_len; ++i)
+            {
+                if (format  != 0)
+                    printf("%02X ", p[i]);
+                else
+                    printf("%c", p[i]);
+            }
         }
-    }
-    printf("\r\nplain http Count = %d\r\n======================================================\r\n", count);
-    
-    displaySpdyHeaders(pRespHeaders);
-    
+        printf("\r\nplain http Count = %d\r\n======================================================\r\n",
+               count);
+
+        displaySpdyHeaders(pRespHeaders);
+
 //     if (format != 0)
 //     {
 //         AutoBuf buf;
@@ -340,13 +345,13 @@ void DisplayBothHeader(IOVec io, int format, short count, HttpRespHeaders *pResp
 //         {
 //             buf.append( (const char *)it->iov_base, it->iov_len);
 //         }
-//         
+//
 //         if (format ==  1)
 //         {
 //             char *p = buf.begin();
 //             short *tempNumS;
 //             short tempNum;
-//             
+//
 //             for (int j=0; j<count; ++j)
 //             {
 //                 tempNumS = (short *)p;
@@ -357,7 +362,7 @@ void DisplayBothHeader(IOVec io, int format, short count, HttpRespHeaders *pResp
 //                 }
 //                 printf(": ");
 //                 p += tempNum;
-//                 
+//
 //                 tempNumS = (short *)p;
 //                 tempNum = ntohs(*tempNumS);
 //                 p += 2;
@@ -376,7 +381,7 @@ void DisplayBothHeader(IOVec io, int format, short count, HttpRespHeaders *pResp
 //             char *p = buf.begin();
 //             int32_t *tempNumS;
 //             int32_t tempNum;
-//             
+//
 //             for (int j=0; j<count; ++j)
 //             {
 //                 tempNumS = (int32_t *)p;
@@ -387,7 +392,7 @@ void DisplayBothHeader(IOVec io, int format, short count, HttpRespHeaders *pResp
 //                 }
 //                 printf(": ");
 //                 p += tempNum;
-//                 
+//
 //                 tempNumS = (int32_t *)p;
 //                 tempNum = ntohl(*tempNumS);
 //                 p += 4;
@@ -401,695 +406,730 @@ void DisplayBothHeader(IOVec io, int format, short count, HttpRespHeaders *pResp
 //                 p += tempNum;
 //             }
 //         }
-//         
+//
 //         printf("\r\n*******************************************************************\r\n\r\n");
-//         
+//
 //     }
-    
-}
-    
-void CheckIoHeader(IOVec io, char *phBuf)
-{
-    IOVec::iterator it;
-    unsigned char *p = NULL;
-    char *ph = phBuf;
 
-//printf("->&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&\n");    
-    
-
-    for (it=io.begin(); it != io.end(); ++it)
-    {
-        p = (unsigned char *)it->iov_base;
-        CHECK(memcmp(p, ph, it->iov_len) == 0);
-        
-        ph+=it->iov_len;
     }
 
-//printf("<-&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&\n");    
-}
-
-TEST (respHeaders)
-{
-    HttpRespHeaders h;
-    IOVec io;
-    char *pVal = NULL;
-    int valLen = 0;
-    char sTestHdr[1500];
-
-    printf("============= Response Header Test ==================\n");
-    
-    
-    
-    int kk = 0;// non-spdy case
-    //for (int kk=0; kk<1; ++kk)
+    void CheckIoHeader(IOVec io, char *phBuf)
     {
-        h.reset();
-        h.add(HttpRespHeaders::H_SERVER, "My_Server", 9);
-        h.add(HttpRespHeaders::H_ACCEPT_RANGES, "bytes", 5);
-        h.add(HttpRespHeaders::H_DATE, "Thu, 16 May 2013 20:32:23 GMT", strlen("Thu, 16 May 2013 20:32:23 GMT"));
-        h.add(HttpRespHeaders::H_X_POWERED_BY, "PHP/5.3.24", strlen("PHP/5.3.24"));
-        h.outputNonSpdyHeaders(&io);
-        DisplayBothHeader(io, kk, h.getHeadersCount(0), &h);
-        strcpy(sTestHdr, "HTTP/1.1 200 OK\r\nServer: My_Server\r\nAccept-Ranges: bytes\r\nDate: Thu, 16 May 2013 20:32:23 GMT\r\nX-Powered-By: PHP/5.3.24\r\nConnection: close\r\n\r\n");
-        CheckIoHeader(io,sTestHdr);
-        CHECK(h.getHeadersCount(0) == 5);   //Will add connection: close automatically
-            
-        h.reset();
-        h.add(HttpRespHeaders::H_SERVER, "My_Server", 9);
-        h.add(HttpRespHeaders::H_ACCEPT_RANGES, "bytes", 5);
-        h.add(HttpRespHeaders::H_DATE, "Thu, 16 May 2013 20:32:23 GMT", strlen("Thu, 16 May 2013 20:32:23 GMT"));
-        h.add(HttpRespHeaders::H_X_POWERED_BY, "PHP/5.3.24", strlen("PHP/5.3.24"));
-        h.addStatusLine( 0, 304, 1);  //when ver is 0 and keepalive is 1, Will NOT add connection: close automatically
-        h.outputNonSpdyHeaders(&io);
-        DisplayBothHeader(io, kk, h.getHeadersCount(0), &h);
-        strcpy(sTestHdr, "Server: My_Server\r\nAccept-Ranges: bytes\r\nDate: Thu, 16 May 2013 20:32:23 GMT\r\nX-Powered-By: PHP/5.3.24\r\n\r\n");
-        CheckIoHeader(io,sTestHdr);
-        CHECK(h.getHeadersCount(0) == 4);
-        
+        IOVec::iterator it;
+        unsigned char *p = NULL;
+        char *ph = phBuf;
+
+//printf("->&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&\n");
+
+
+        for (it = io.begin(); it != io.end(); ++it)
+        {
+            p = (unsigned char *)it->iov_base;
+            CHECK(memcmp(p, ph, it->iov_len) == 0);
+
+            ph += it->iov_len;
+        }
+
+//printf("<-&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&\n");
+    }
+
+    TEST(respHeaders)
+    {
+        HttpRespHeaders h;
+        IOVec io;
+        char *pVal = NULL;
+        int valLen = 0;
+        char sTestHdr[1500];
+
+        printf("============= Response Header Test ==================\n");
+
+
+
+        int kk = 0;// non-spdy case
+        //for (int kk=0; kk<1; ++kk)
+        {
+            h.reset();
+            h.add(HttpRespHeaders::H_SERVER, "My_Server", 9);
+            h.add(HttpRespHeaders::H_ACCEPT_RANGES, "bytes", 5);
+            h.add(HttpRespHeaders::H_DATE, "Thu, 16 May 2013 20:32:23 GMT",
+                  strlen("Thu, 16 May 2013 20:32:23 GMT"));
+            h.add(HttpRespHeaders::H_X_POWERED_BY, "PHP/5.3.24", strlen("PHP/5.3.24"));
+            h.outputNonSpdyHeaders(&io);
+            DisplayBothHeader(io, kk, h.getHeadersCount(0), &h);
+            strcpy(sTestHdr,
+                   "HTTP/1.1 200 OK\r\nServer: My_Server\r\nAccept-Ranges: bytes\r\nDate: Thu, 16 May 2013 20:32:23 GMT\r\nX-Powered-By: PHP/5.3.24\r\nConnection: close\r\n\r\n");
+            CheckIoHeader(io, sTestHdr);
+            CHECK(h.getHeadersCount(0) ==
+                  5);   //Will add connection: close automatically
+
+            h.reset();
+            h.add(HttpRespHeaders::H_SERVER, "My_Server", 9);
+            h.add(HttpRespHeaders::H_ACCEPT_RANGES, "bytes", 5);
+            h.add(HttpRespHeaders::H_DATE, "Thu, 16 May 2013 20:32:23 GMT",
+                  strlen("Thu, 16 May 2013 20:32:23 GMT"));
+            h.add(HttpRespHeaders::H_X_POWERED_BY, "PHP/5.3.24", strlen("PHP/5.3.24"));
+            h.addStatusLine(0, 304,
+                            1);   //when ver is 0 and keepalive is 1, Will NOT add connection: close automatically
+            h.outputNonSpdyHeaders(&io);
+            DisplayBothHeader(io, kk, h.getHeadersCount(0), &h);
+            strcpy(sTestHdr,
+                   "Server: My_Server\r\nAccept-Ranges: bytes\r\nDate: Thu, 16 May 2013 20:32:23 GMT\r\nX-Powered-By: PHP/5.3.24\r\n\r\n");
+            CheckIoHeader(io, sTestHdr);
+            CHECK(h.getHeadersCount(0) == 4);
+
+            h.reset();
+            h.add(HttpRespHeaders::H_SERVER,  "My_Server", 9);
+            h.add(HttpRespHeaders::H_ACCEPT_RANGES, "bytes", 5);
+            h.add(HttpRespHeaders::H_DATE, "Thu, 16 May 2013 20:32:23 GMT",
+                  strlen("Thu, 16 May 2013 20:32:23 GMT"));
+            h.add(HttpRespHeaders::H_DATE,  "Thu, 16 ", strlen("Thu, 16 "),
+                  LSI_HEADER_MERGE);
+            h.add(HttpRespHeaders::H_DATE,  "XXXX", 4, LSI_HEADER_MERGE);
+            h.add(HttpRespHeaders::H_X_POWERED_BY, "PHP/5.3.24", strlen("PHP/5.3.24"));
+            h.outputNonSpdyHeaders(&io);
+            DisplayBothHeader(io, kk, h.getHeadersCount(0), &h);
+            strcpy(sTestHdr,
+                   "HTTP/1.1 200 OK\r\nServer: My_Server\r\nAccept-Ranges: bytes\r\nDate: Thu, 16 May 2013 20:32:23 GMT,Thu, 16 ,XXXX\r\nX-Powered-By: PHP/5.3.24\r\nConnection: close\r\n\r\n");
+            CheckIoHeader(io, sTestHdr);
+
+            h.add(HttpRespHeaders::H_DATE,  "NEWDATE", 7, LSI_HEADER_ADD);
+            h.outputNonSpdyHeaders(&io);
+            DisplayBothHeader(io, kk, h.getHeadersCount(0), &h);
+            strcpy(sTestHdr,
+                   "HTTP/1.1 200 OK\r\nServer: My_Server\r\nAccept-Ranges: bytes\r\nDate: Thu, 16 May 2013 20:32:23 GMT,Thu, 16 ,XXXX\r\nX-Powered-By: PHP/5.3.24\r\nConnection: close\r\nDate: NEWDATE\r\n\r\n");
+            CheckIoHeader(io, sTestHdr);
+
+            h.add(HttpRespHeaders::H_DATE,  "NEWDATE2", 8, LSI_HEADER_ADD);
+            h.outputNonSpdyHeaders(&io);
+            DisplayBothHeader(io, kk, h.getHeadersCount(0), &h);
+            strcpy(sTestHdr,
+                   "HTTP/1.1 200 OK\r\nServer: My_Server\r\nAccept-Ranges: bytes\r\nDate: Thu, 16 May 2013 20:32:23 GMT,Thu, 16 ,XXXX\r\nX-Powered-By: PHP/5.3.24\r\nConnection: close\r\nDate: NEWDATE\r\nDate: NEWDATE2\r\n\r\n");
+            CheckIoHeader(io, sTestHdr);
+
+            h.add(HttpRespHeaders::H_DATE,  "NEWDATE3", 8, LSI_HEADER_ADD);
+            h.outputNonSpdyHeaders(&io);
+            DisplayBothHeader(io, kk, h.getHeadersCount(0), &h);
+            strcpy(sTestHdr,
+                   "HTTP/1.1 200 OK\r\nServer: My_Server\r\nAccept-Ranges: bytes\r\nDate: Thu, 16 May 2013 20:32:23 GMT,Thu, 16 ,XXXX\r\nX-Powered-By: PHP/5.3.24\r\nConnection: close\r\nDate: NEWDATE\r\nDate: NEWDATE2\r\nDate: NEWDATE3\r\n\r\n");
+            CheckIoHeader(io, sTestHdr);
+
+
+            h.del(HttpRespHeaders::H_DATE);
+            h.outputNonSpdyHeaders(&io);
+            DisplayBothHeader(io, kk, h.getHeadersCount(0), &h);
+            CHECK(h.getHeadersCount(0) == 4);
+            strcpy(sTestHdr,
+                   "HTTP/1.1 200 OK\r\nServer: My_Server\r\nAccept-Ranges: bytes\r\nX-Powered-By: PHP/5.3.24\r\nConnection: close\r\n\r\n");
+            CheckIoHeader(io, sTestHdr);
+
+
+            h.del("X-Powered-By", strlen("X-Powered-By"));
+            h.outputNonSpdyHeaders(&io);
+            DisplayBothHeader(io, kk, h.getHeadersCount(0), &h);
+            CHECK(h.getHeadersCount(0) == 3);
+            strcpy(sTestHdr,
+                   "HTTP/1.1 200 OK\r\nServer: My_Server\r\nAccept-Ranges: bytes\r\nConnection: close\r\n\r\n");
+            CheckIoHeader(io, sTestHdr);
+
+            h.add(HttpRespHeaders::H_SERVER,  "YY_Server", 9);
+            h.outputNonSpdyHeaders(&io);
+            DisplayBothHeader(io, kk, h.getHeadersCount(0), &h);
+            CHECK(h.getHeadersCount(0) == 3);
+            strcpy(sTestHdr,
+                   "HTTP/1.1 200 OK\r\nServer: YY_Server\r\nAccept-Ranges: bytes\r\nConnection: close\r\n\r\n");
+            CheckIoHeader(io, sTestHdr);
+
+
+            h.add(HttpRespHeaders::H_SERVER,  "XServer", 7);
+            h.outputNonSpdyHeaders(&io);
+            DisplayBothHeader(io, kk, h.getHeadersCount(0), &h);
+            CHECK(h.getHeadersCount(0) == 3);
+            strcpy(sTestHdr,
+                   "HTTP/1.1 200 OK\r\nServer: XServer  \r\nAccept-Ranges: bytes\r\nConnection: close\r\n\r\n");
+            CheckIoHeader(io, sTestHdr);
+
+            h.add(HttpRespHeaders::H_DATE,  "Thu, 16 May 2099 20:32:23 GMT",
+                  strlen("Thu, 16 May 2013 20:32:23 GMT"));
+            h.add(HttpRespHeaders::H_X_POWERED_BY, "PHP/9.9.99", strlen("PHP/5.3.24"));
+            h.outputNonSpdyHeaders(&io);
+            DisplayBothHeader(io, kk, h.getHeadersCount(0), &h);
+            CHECK(h.getHeadersCount(0) == 5);
+            strcpy(sTestHdr,
+                   "HTTP/1.1 200 OK\r\nServer: XServer  \r\nAccept-Ranges: bytes\r\nConnection: close\r\nDate: Thu, 16 May 2099 20:32:23 GMT\r\nX-Powered-By: PHP/9.9.99\r\n\r\n");
+            CheckIoHeader(io, sTestHdr);
+
+
+            h.add("Allow", 5, "*.*", 3);
+            h.appendLastVal("; .zip; .rar", strlen("; .zip; .rar"));
+            h.appendLastVal("; .exe; .flv", strlen("; .zip; .rar"));
+            h.outputNonSpdyHeaders(&io);
+            DisplayBothHeader(io, kk, h.getHeadersCount(0), &h);
+            CHECK(h.getHeadersCount(0) == 6);
+            strcpy(sTestHdr,
+                   "HTTP/1.1 200 OK\r\nServer: XServer  \r\nAccept-Ranges: bytes\r\nConnection: close\r\nDate: Thu, 16 May 2099 20:32:23 GMT\r\nX-Powered-By: PHP/9.9.99\r\nAllow: *.*; .zip; .rar; .exe; .flv\r\n\r\n");
+            CheckIoHeader(io, sTestHdr);
+
+
+            h.add(HttpRespHeaders::H_SET_COOKIE,
+                  "lsws_uid=a; expires=Mon, 13 May 2013 14:10:51 GMT; path=/",
+                  strlen("lsws_uid=a; expires=Mon, 13 May 2013 14:10:51 GMT; path=/"),
+                  LSI_HEADER_ADD);
+
+            h.add(HttpRespHeaders::H_SET_COOKIE,
+                  "lsws_pass=b; expires=Mon, 13 May 2013 14:10:51 GMT; path=/",
+                  strlen("lsws_pass=b; expires=Mon, 13 May 2013 14:10:51 GMT; path=/"),
+                  LSI_HEADER_ADD);
+
+            h.add("testBreak", 9, "----", 4);
+
+            h.add(HttpRespHeaders::H_SET_COOKIE,
+                  "lsws_uid=c; expires=Mon, 13 May 2013 14:10:51 GMT; path=/",
+                  strlen("lsws_uid=c; expires=Mon, 13 May 2013 14:10:51 GMT; path=/"),
+                  LSI_HEADER_ADD);
+            h.outputNonSpdyHeaders(&io);
+            DisplayBothHeader(io, kk, h.getHeadersCount(0), &h);
+            CHECK(h.getHeadersCount(1) == 8);
+            CHECK(h.getHeadersCount(0) == 10);
+            strcpy(sTestHdr,
+                   "HTTP/1.1 200 OK\r\nServer: XServer  \r\nAccept-Ranges: bytes\r\nConnection: close\r\nDate: Thu, 16 May 2099 20:32:23 GMT\r\nX-Powered-By: PHP/9.9.99\r\nAllow: *.*; .zip; .rar; .exe; .flv\r\n");
+            strcat(sTestHdr,
+                   "Set-Cookie: lsws_uid=a; expires=Mon, 13 May 2013 14:10:51 GMT; path=/\r\nSet-Cookie: lsws_pass=b; expires=Mon, 13 May 2013 14:10:51 GMT; path=/\r\ntestBreak: ----\r\nSet-Cookie: lsws_uid=c; expires=Mon, 13 May 2013 14:10:51 GMT; path=/\r\n\r\n");
+            CheckIoHeader(io, sTestHdr);
+
+
+            h.getFirstHeader("Date", 4, &pVal, valLen);
+            CHECK(memcmp(pVal, "Thu, 16 May 2099 20:32:23 GMT", valLen) == 0);
+
+            h.getFirstHeader("Allow", 5, &pVal, valLen);
+            CHECK(memcmp(pVal, "*.*; .zip; .rar; .exe; .flv", valLen) == 0);
+
+            h.parseAdd("MytestHeader: TTTTTTTTTTTT\r\nMyTestHeaderii: IIIIIIIIIIIIIIIIIIIII\r\n",
+                       strlen("MytestHeader: TTTTTTTTTTTT\r\nMyTestHeaderii: IIIIIIIIIIIIIIIIIIIII\r\n"));
+
+            CHECK(h.getHeadersCount(1) == 10);
+            CHECK(h.getHeadersCount(0) == 12);
+            h.getFirstHeader("MytestHeader", strlen("MytestHeader"), &pVal, valLen);
+            CHECK(memcmp(pVal, "TTTTTTTTTTTT", valLen) == 0);
+
+            //Same name, but since no check,  will be appended directly. But SPDY, will check and parse it.
+            h.parseAdd("MytestHeader: TTTTTTTTTTTT3\r\n",
+                       strlen("MytestHeader: TTTTTTTTTTTT3\r\n"));
+
+            CHECK(h.getHeadersCount(1) == 10);
+            CHECK(h.getHeadersCount(0) == 12);
+            h.getFirstHeader("MytestHeader", strlen("MytestHeader"), &pVal, valLen);
+            CHECK(memcmp(pVal, "TTTTTTTTTTTT3", valLen) == 0);
+
+            h.addStatusLine(0, SC_404, 1);
+
+            h.parseAdd("MytestHeader: XXX\r\n",
+                       strlen("MytestHeader: XXX\r\n"), LSI_HEADER_MERGE);
+            h.outputNonSpdyHeaders(&io);
+            DisplayBothHeader(io, kk, h.getHeadersCount(0), &h);
+            strcpy(sTestHdr,
+                   "HTTP/1.1 404 Not Found\r\nServer: XServer  \r\nAccept-Ranges: bytes\r\nConnection: close\r\nDate: Thu, 16 May 2099 20:32:23 GMT\r\nX-Powered-By: PHP/9.9.99\r\nAllow: *.*; .zip; .rar; .exe; .flv\r\n");
+            strcat(sTestHdr,
+                   "Set-Cookie: lsws_uid=a; expires=Mon, 13 May 2013 14:10:51 GMT; path=/\r\nSet-Cookie: lsws_pass=b; expires=Mon, 13 May 2013 14:10:51 GMT; path=/\r\ntestBreak: ----\r\nSet-Cookie: lsws_uid=c; expires=Mon, 13 May 2013 14:10:51 GMT; path=/\r\n");
+            strcat(sTestHdr,
+                   "MytestHeader: TTTTTTTTTTTT3,XXX\r\nMyTestHeaderii: IIIIIIIIIIIIIIIIIIIII\r\n\r\n");
+            CheckIoHeader(io, sTestHdr);
+
+            h.parseAdd("MytestHeader: XXX\r\n",
+                       strlen("MytestHeader: XXX\r\n"), LSI_HEADER_MERGE);
+            h.outputNonSpdyHeaders(&io);
+            DisplayBothHeader(io, kk, h.getHeadersCount(0), &h);
+            strcpy(sTestHdr,
+                   "HTTP/1.1 404 Not Found\r\nServer: XServer  \r\nAccept-Ranges: bytes\r\nConnection: close\r\nDate: Thu, 16 May 2099 20:32:23 GMT\r\nX-Powered-By: PHP/9.9.99\r\nAllow: *.*; .zip; .rar; .exe; .flv\r\n");
+            strcat(sTestHdr,
+                   "Set-Cookie: lsws_uid=a; expires=Mon, 13 May 2013 14:10:51 GMT; path=/\r\nSet-Cookie: lsws_pass=b; expires=Mon, 13 May 2013 14:10:51 GMT; path=/\r\ntestBreak: ----\r\nSet-Cookie: lsws_uid=c; expires=Mon, 13 May 2013 14:10:51 GMT; path=/\r\n");
+            strcat(sTestHdr,
+                   "MytestHeader: TTTTTTTTTTTT3,XXX\r\nMyTestHeaderii: IIIIIIIIIIIIIIIIIIIII\r\n\r\n");
+            CheckIoHeader(io, sTestHdr);
+
+            h.parseAdd("MytestHeader: XXX\r\n",
+                       strlen("MytestHeader: XXX\r\n"), LSI_HEADER_APPEND);
+            h.outputNonSpdyHeaders(&io);
+            DisplayBothHeader(io, kk, h.getHeadersCount(0), &h);
+            strcpy(sTestHdr,
+                   "HTTP/1.1 404 Not Found\r\nServer: XServer  \r\nAccept-Ranges: bytes\r\nConnection: close\r\nDate: Thu, 16 May 2099 20:32:23 GMT\r\nX-Powered-By: PHP/9.9.99\r\nAllow: *.*; .zip; .rar; .exe; .flv\r\n");
+            strcat(sTestHdr,
+                   "Set-Cookie: lsws_uid=a; expires=Mon, 13 May 2013 14:10:51 GMT; path=/\r\nSet-Cookie: lsws_pass=b; expires=Mon, 13 May 2013 14:10:51 GMT; path=/\r\ntestBreak: ----\r\nSet-Cookie: lsws_uid=c; expires=Mon, 13 May 2013 14:10:51 GMT; path=/\r\n");
+            strcat(sTestHdr,
+                   "MytestHeader: TTTTTTTTTTTT3,XXX,XXX\r\nMyTestHeaderii: IIIIIIIIIIIIIIIIIIIII\r\n\r\n");
+            CheckIoHeader(io, sTestHdr);
+        }
+
         h.reset();
         h.add(HttpRespHeaders::H_SERVER,  "My_Server", 9);
-        h.add(HttpRespHeaders::H_ACCEPT_RANGES, "bytes", 5);
-        h.add(HttpRespHeaders::H_DATE, "Thu, 16 May 2013 20:32:23 GMT", strlen("Thu, 16 May 2013 20:32:23 GMT"));
-        h.add(HttpRespHeaders::H_DATE,  "Thu, 16 ", strlen("Thu, 16 "), LSI_HEADER_MERGE);
-        h.add(HttpRespHeaders::H_DATE,  "XXXX", 4, LSI_HEADER_MERGE);
+        h.add(HttpRespHeaders::H_ACCEPT_RANGES,  "bytes", 5);
+        h.add(HttpRespHeaders::H_DATE,  "Thu, 16 May 2013 20:32:23 GMT",
+              strlen("Thu, 16 May 2013 20:32:23 GMT"));
+        h.add(HttpRespHeaders::H_DATE,  "AAAA", 4, LSI_HEADER_MERGE);
         h.add(HttpRespHeaders::H_X_POWERED_BY, "PHP/5.3.24", strlen("PHP/5.3.24"));
         h.outputNonSpdyHeaders(&io);
         DisplayBothHeader(io, kk, h.getHeadersCount(0), &h);
-        strcpy(sTestHdr, "HTTP/1.1 200 OK\r\nServer: My_Server\r\nAccept-Ranges: bytes\r\nDate: Thu, 16 May 2013 20:32:23 GMT,Thu, 16 ,XXXX\r\nX-Powered-By: PHP/5.3.24\r\nConnection: close\r\n\r\n");
-        CheckIoHeader(io,sTestHdr);
-        
-        h.add(HttpRespHeaders::H_DATE,  "NEWDATE", 7, LSI_HEADER_ADD);
+        strcpy(sTestHdr,
+               "HTTP/1.1 200 OK\r\nServer: My_Server\r\nAccept-Ranges: bytes\r\nDate: Thu, 16 May 2013 20:32:23 GMT,AAAA\r\nX-Powered-By: PHP/5.3.24\r\nConnection: close\r\n\r\n");
+        CheckIoHeader(io, sTestHdr);
+        h.add(HttpRespHeaders::H_DATE,  "AAA", 3, LSI_HEADER_MERGE);
+        strcpy(sTestHdr,
+               "HTTP/1.1 200 OK\r\nServer: My_Server\r\nAccept-Ranges: bytes\r\nDate: Thu, 16 May 2013 20:32:23 GMT,AAAA,AAA\r\nX-Powered-By: PHP/5.3.24\r\nConnection: close\r\n\r\n");
         h.outputNonSpdyHeaders(&io);
         DisplayBothHeader(io, kk, h.getHeadersCount(0), &h);
-        strcpy(sTestHdr, "HTTP/1.1 200 OK\r\nServer: My_Server\r\nAccept-Ranges: bytes\r\nDate: Thu, 16 May 2013 20:32:23 GMT,Thu, 16 ,XXXX\r\nX-Powered-By: PHP/5.3.24\r\nConnection: close\r\nDate: NEWDATE\r\n\r\n");
-        CheckIoHeader(io,sTestHdr);
-        
-        h.add(HttpRespHeaders::H_DATE,  "NEWDATE2", 8, LSI_HEADER_ADD);
+        CheckIoHeader(io, sTestHdr);
+        h.add(HttpRespHeaders::H_DATE,  "AAA", 3, LSI_HEADER_MERGE);
+        strcpy(sTestHdr,
+               "HTTP/1.1 200 OK\r\nServer: My_Server\r\nAccept-Ranges: bytes\r\nDate: Thu, 16 May 2013 20:32:23 GMT,AAAA,AAA\r\nX-Powered-By: PHP/5.3.24\r\nConnection: close\r\n\r\n");
         h.outputNonSpdyHeaders(&io);
         DisplayBothHeader(io, kk, h.getHeadersCount(0), &h);
-        strcpy(sTestHdr, "HTTP/1.1 200 OK\r\nServer: My_Server\r\nAccept-Ranges: bytes\r\nDate: Thu, 16 May 2013 20:32:23 GMT,Thu, 16 ,XXXX\r\nX-Powered-By: PHP/5.3.24\r\nConnection: close\r\nDate: NEWDATE\r\nDate: NEWDATE2\r\n\r\n");
-        CheckIoHeader(io,sTestHdr);
-        
-        h.add(HttpRespHeaders::H_DATE,  "NEWDATE3", 8, LSI_HEADER_ADD);
+        CheckIoHeader(io, sTestHdr);
+        h.add(HttpRespHeaders::H_DATE,  "AAA", 3, LSI_HEADER_APPEND);
+        strcpy(sTestHdr,
+               "HTTP/1.1 200 OK\r\nServer: My_Server\r\nAccept-Ranges: bytes\r\nDate: Thu, 16 May 2013 20:32:23 GMT,AAAA,AAA,AAA\r\nX-Powered-By: PHP/5.3.24\r\nConnection: close\r\n\r\n");
         h.outputNonSpdyHeaders(&io);
         DisplayBothHeader(io, kk, h.getHeadersCount(0), &h);
-        strcpy(sTestHdr, "HTTP/1.1 200 OK\r\nServer: My_Server\r\nAccept-Ranges: bytes\r\nDate: Thu, 16 May 2013 20:32:23 GMT,Thu, 16 ,XXXX\r\nX-Powered-By: PHP/5.3.24\r\nConnection: close\r\nDate: NEWDATE\r\nDate: NEWDATE2\r\nDate: NEWDATE3\r\n\r\n");
-        CheckIoHeader(io,sTestHdr);
-        
-        
-        h.del(HttpRespHeaders::H_DATE);
-        h.outputNonSpdyHeaders(&io);
-        DisplayBothHeader(io, kk, h.getHeadersCount(0), &h);
-        CHECK(h.getHeadersCount(0) == 4);
-        strcpy(sTestHdr, "HTTP/1.1 200 OK\r\nServer: My_Server\r\nAccept-Ranges: bytes\r\nX-Powered-By: PHP/5.3.24\r\nConnection: close\r\n\r\n");
-        CheckIoHeader(io,sTestHdr);
-        
-    
-        h.del("X-Powered-By", strlen("X-Powered-By"));
-        h.outputNonSpdyHeaders(&io);
-        DisplayBothHeader(io, kk, h.getHeadersCount(0), &h);
-        CHECK(h.getHeadersCount(0) == 3);
-        strcpy(sTestHdr, "HTTP/1.1 200 OK\r\nServer: My_Server\r\nAccept-Ranges: bytes\r\nConnection: close\r\n\r\n");
-        CheckIoHeader(io,sTestHdr);
-        
-        h.add(HttpRespHeaders::H_SERVER,  "YY_Server", 9);
-        h.outputNonSpdyHeaders(&io);
-        DisplayBothHeader(io, kk, h.getHeadersCount(0), &h);
-        CHECK(h.getHeadersCount(0) == 3);
-        strcpy(sTestHdr, "HTTP/1.1 200 OK\r\nServer: YY_Server\r\nAccept-Ranges: bytes\r\nConnection: close\r\n\r\n");
-        CheckIoHeader(io,sTestHdr);
-        
-    
-        h.add(HttpRespHeaders::H_SERVER,  "XServer", 7);
-        h.outputNonSpdyHeaders(&io);
-        DisplayBothHeader(io, kk, h.getHeadersCount(0), &h);
-        CHECK(h.getHeadersCount(0) == 3);
-        strcpy(sTestHdr, "HTTP/1.1 200 OK\r\nServer: XServer  \r\nAccept-Ranges: bytes\r\nConnection: close\r\n\r\n");
-        CheckIoHeader(io,sTestHdr);
-        
-        h.add(HttpRespHeaders::H_DATE,  "Thu, 16 May 2099 20:32:23 GMT", strlen("Thu, 16 May 2013 20:32:23 GMT"));
-        h.add(HttpRespHeaders::H_X_POWERED_BY, "PHP/9.9.99", strlen("PHP/5.3.24"));
-        h.outputNonSpdyHeaders(&io);
-        DisplayBothHeader(io, kk, h.getHeadersCount(0), &h);
-        CHECK(h.getHeadersCount(0) == 5);
-        strcpy(sTestHdr, "HTTP/1.1 200 OK\r\nServer: XServer  \r\nAccept-Ranges: bytes\r\nConnection: close\r\nDate: Thu, 16 May 2099 20:32:23 GMT\r\nX-Powered-By: PHP/9.9.99\r\n\r\n");
-        CheckIoHeader(io,sTestHdr);
-        
-        
-        h.add("Allow", 5, "*.*", 3);
-        h.appendLastVal( "; .zip; .rar", strlen("; .zip; .rar"));
-        h.appendLastVal( "; .exe; .flv", strlen("; .zip; .rar"));
-        h.outputNonSpdyHeaders(&io);
-        DisplayBothHeader(io, kk, h.getHeadersCount(0), &h);
-        CHECK(h.getHeadersCount(0) == 6);  
-        strcpy(sTestHdr, "HTTP/1.1 200 OK\r\nServer: XServer  \r\nAccept-Ranges: bytes\r\nConnection: close\r\nDate: Thu, 16 May 2099 20:32:23 GMT\r\nX-Powered-By: PHP/9.9.99\r\nAllow: *.*; .zip; .rar; .exe; .flv\r\n\r\n");
-        CheckIoHeader(io,sTestHdr);
-        
-        
-        h.add(HttpRespHeaders::H_SET_COOKIE, 
-              "lsws_uid=a; expires=Mon, 13 May 2013 14:10:51 GMT; path=/",
-              strlen("lsws_uid=a; expires=Mon, 13 May 2013 14:10:51 GMT; path=/"),
-              LSI_HEADER_ADD);
-        
-        h.add(HttpRespHeaders::H_SET_COOKIE, 
-              "lsws_pass=b; expires=Mon, 13 May 2013 14:10:51 GMT; path=/",
-              strlen("lsws_pass=b; expires=Mon, 13 May 2013 14:10:51 GMT; path=/"),
-              LSI_HEADER_ADD);
-        
-        h.add("testBreak", 9, "----", 4);
-        
-        h.add(HttpRespHeaders::H_SET_COOKIE, 
-              "lsws_uid=c; expires=Mon, 13 May 2013 14:10:51 GMT; path=/",
-              strlen("lsws_uid=c; expires=Mon, 13 May 2013 14:10:51 GMT; path=/"),
-              LSI_HEADER_ADD);
-        h.outputNonSpdyHeaders(&io);
-        DisplayBothHeader(io, kk, h.getHeadersCount(0), &h);
-        CHECK(h.getHeadersCount(1) == 8);  
-        CHECK(h.getHeadersCount(0) == 10);
-        strcpy(sTestHdr, "HTTP/1.1 200 OK\r\nServer: XServer  \r\nAccept-Ranges: bytes\r\nConnection: close\r\nDate: Thu, 16 May 2099 20:32:23 GMT\r\nX-Powered-By: PHP/9.9.99\r\nAllow: *.*; .zip; .rar; .exe; .flv\r\n");
-        strcat(sTestHdr, "Set-Cookie: lsws_uid=a; expires=Mon, 13 May 2013 14:10:51 GMT; path=/\r\nSet-Cookie: lsws_pass=b; expires=Mon, 13 May 2013 14:10:51 GMT; path=/\r\ntestBreak: ----\r\nSet-Cookie: lsws_uid=c; expires=Mon, 13 May 2013 14:10:51 GMT; path=/\r\n\r\n");
-        CheckIoHeader(io,sTestHdr);
-        
+        CheckIoHeader(io, sTestHdr);
 
-        h.getFirstHeader("Date", 4, &pVal, valLen); 
-        CHECK (memcmp(pVal, "Thu, 16 May 2099 20:32:23 GMT", valLen) == 0);
-        
-        h.getFirstHeader("Allow", 5,&pVal, valLen); 
-        CHECK (memcmp(pVal, "*.*; .zip; .rar; .exe; .flv", valLen) == 0);
-    
-        h.parseAdd("MytestHeader: TTTTTTTTTTTT\r\nMyTestHeaderii: IIIIIIIIIIIIIIIIIIIII\r\n", 
-                    strlen("MytestHeader: TTTTTTTTTTTT\r\nMyTestHeaderii: IIIIIIIIIIIIIIIIIIIII\r\n"));
- 
-        CHECK(h.getHeadersCount(1) == 10);
-        CHECK(h.getHeadersCount(0) == 12); 
-        h.getFirstHeader("MytestHeader", strlen("MytestHeader"), &pVal, valLen); 
-        CHECK (memcmp(pVal, "TTTTTTTTTTTT", valLen) == 0);
-        
-        //Same name, but since no check,  will be appended directly. But SPDY, will check and parse it.
-        h.parseAdd("MytestHeader: TTTTTTTTTTTT3\r\n", 
-                    strlen("MytestHeader: TTTTTTTTTTTT3\r\n"));
+        /*
 
-        CHECK(h.getHeadersCount(1) == 10);
-        CHECK(h.getHeadersCount(0) == 12); 
-        h.getFirstHeader("MytestHeader", strlen("MytestHeader"), &pVal, valLen); 
-        CHECK (memcmp(pVal, "TTTTTTTTTTTT3", valLen) == 0);
-        
-        h.addStatusLine(0, SC_404, 1);
-        
-        h.parseAdd("MytestHeader: XXX\r\n", 
-                    strlen("MytestHeader: XXX\r\n"), LSI_HEADER_MERGE);
-        h.outputNonSpdyHeaders(&io);
-        DisplayBothHeader(io, kk, h.getHeadersCount(0), &h);
-        strcpy(sTestHdr, "HTTP/1.1 404 Not Found\r\nServer: XServer  \r\nAccept-Ranges: bytes\r\nConnection: close\r\nDate: Thu, 16 May 2099 20:32:23 GMT\r\nX-Powered-By: PHP/9.9.99\r\nAllow: *.*; .zip; .rar; .exe; .flv\r\n");
-        strcat(sTestHdr, "Set-Cookie: lsws_uid=a; expires=Mon, 13 May 2013 14:10:51 GMT; path=/\r\nSet-Cookie: lsws_pass=b; expires=Mon, 13 May 2013 14:10:51 GMT; path=/\r\ntestBreak: ----\r\nSet-Cookie: lsws_uid=c; expires=Mon, 13 May 2013 14:10:51 GMT; path=/\r\n");
-        strcat(sTestHdr, "MytestHeader: TTTTTTTTTTTT3,XXX\r\nMyTestHeaderii: IIIIIIIIIIIIIIIIIIIII\r\n\r\n");
-        CheckIoHeader(io,sTestHdr);
-        
-        h.parseAdd("MytestHeader: XXX\r\n", 
-                    strlen("MytestHeader: XXX\r\n"), LSI_HEADER_MERGE);
-        h.outputNonSpdyHeaders(&io);
-        DisplayBothHeader(io, kk, h.getHeadersCount(0), &h);
-        strcpy(sTestHdr, "HTTP/1.1 404 Not Found\r\nServer: XServer  \r\nAccept-Ranges: bytes\r\nConnection: close\r\nDate: Thu, 16 May 2099 20:32:23 GMT\r\nX-Powered-By: PHP/9.9.99\r\nAllow: *.*; .zip; .rar; .exe; .flv\r\n");
-        strcat(sTestHdr, "Set-Cookie: lsws_uid=a; expires=Mon, 13 May 2013 14:10:51 GMT; path=/\r\nSet-Cookie: lsws_pass=b; expires=Mon, 13 May 2013 14:10:51 GMT; path=/\r\ntestBreak: ----\r\nSet-Cookie: lsws_uid=c; expires=Mon, 13 May 2013 14:10:51 GMT; path=/\r\n");
-        strcat(sTestHdr, "MytestHeader: TTTTTTTTTTTT3,XXX\r\nMyTestHeaderii: IIIIIIIIIIIIIIIIIIIII\r\n\r\n");
-        CheckIoHeader(io,sTestHdr);
-        
-        h.parseAdd("MytestHeader: XXX\r\n", 
-                    strlen("MytestHeader: XXX\r\n"), LSI_HEADER_APPEND);
-        h.outputNonSpdyHeaders(&io);
-        DisplayBothHeader(io, kk, h.getHeadersCount(0), &h);
-        strcpy(sTestHdr, "HTTP/1.1 404 Not Found\r\nServer: XServer  \r\nAccept-Ranges: bytes\r\nConnection: close\r\nDate: Thu, 16 May 2099 20:32:23 GMT\r\nX-Powered-By: PHP/9.9.99\r\nAllow: *.*; .zip; .rar; .exe; .flv\r\n");
-        strcat(sTestHdr, "Set-Cookie: lsws_uid=a; expires=Mon, 13 May 2013 14:10:51 GMT; path=/\r\nSet-Cookie: lsws_pass=b; expires=Mon, 13 May 2013 14:10:51 GMT; path=/\r\ntestBreak: ----\r\nSet-Cookie: lsws_uid=c; expires=Mon, 13 May 2013 14:10:51 GMT; path=/\r\n");
-        strcat(sTestHdr, "MytestHeader: TTTTTTTTTTTT3,XXX,XXX\r\nMyTestHeaderii: IIIIIIIIIIIIIIIIIIIII\r\n\r\n");
-        CheckIoHeader(io,sTestHdr);
-    }
-    
-    h.reset();
-    h.add(HttpRespHeaders::H_SERVER,  "My_Server", 9);
-    h.add(HttpRespHeaders::H_ACCEPT_RANGES,  "bytes", 5);
-    h.add(HttpRespHeaders::H_DATE,  "Thu, 16 May 2013 20:32:23 GMT", strlen("Thu, 16 May 2013 20:32:23 GMT"));
-    h.add(HttpRespHeaders::H_DATE,  "AAAA", 4, LSI_HEADER_MERGE);
-    h.add(HttpRespHeaders::H_X_POWERED_BY, "PHP/5.3.24", strlen("PHP/5.3.24"));
-    h.outputNonSpdyHeaders(&io);
-    DisplayBothHeader(io, kk, h.getHeadersCount(0), &h);
-    strcpy(sTestHdr, "HTTP/1.1 200 OK\r\nServer: My_Server\r\nAccept-Ranges: bytes\r\nDate: Thu, 16 May 2013 20:32:23 GMT,AAAA\r\nX-Powered-By: PHP/5.3.24\r\nConnection: close\r\n\r\n");
-    CheckIoHeader(io,sTestHdr);
-    h.add(HttpRespHeaders::H_DATE,  "AAA", 3, LSI_HEADER_MERGE);
-    strcpy(sTestHdr, "HTTP/1.1 200 OK\r\nServer: My_Server\r\nAccept-Ranges: bytes\r\nDate: Thu, 16 May 2013 20:32:23 GMT,AAAA,AAA\r\nX-Powered-By: PHP/5.3.24\r\nConnection: close\r\n\r\n");
-    h.outputNonSpdyHeaders(&io);
-    DisplayBothHeader(io, kk, h.getHeadersCount(0), &h);
-    CheckIoHeader(io,sTestHdr);
-    h.add(HttpRespHeaders::H_DATE,  "AAA", 3, LSI_HEADER_MERGE);
-    strcpy(sTestHdr, "HTTP/1.1 200 OK\r\nServer: My_Server\r\nAccept-Ranges: bytes\r\nDate: Thu, 16 May 2013 20:32:23 GMT,AAAA,AAA\r\nX-Powered-By: PHP/5.3.24\r\nConnection: close\r\n\r\n");
-    h.outputNonSpdyHeaders(&io);
-    DisplayBothHeader(io, kk, h.getHeadersCount(0), &h);
-    CheckIoHeader(io,sTestHdr);
-    h.add(HttpRespHeaders::H_DATE,  "AAA", 3, LSI_HEADER_APPEND);
-    strcpy(sTestHdr, "HTTP/1.1 200 OK\r\nServer: My_Server\r\nAccept-Ranges: bytes\r\nDate: Thu, 16 May 2013 20:32:23 GMT,AAAA,AAA,AAA\r\nX-Powered-By: PHP/5.3.24\r\nConnection: close\r\n\r\n");
-    h.outputNonSpdyHeaders(&io);
-    DisplayBothHeader(io, kk, h.getHeadersCount(0), &h);
-    CheckIoHeader(io,sTestHdr);
-    
-    /*
-    
-    int temp;
-    struct iovec ios[1000];
-    int i;
-    char *key;
-    int keyLen;
-    int totalLen = 0;
-    IOVec::iterator it;
-    char *ph;
-    char *p;
-    
-    static const char * const s_pHeaders[] =
-    {
-        "UNKNOWN",
-        "ACCEPT-RANGES",
-        "CONNECTION",
-        "CONTENT-TYPE",
-        "CONTENT-LENGTH",
-        "CONTENT-ENCODING",
-        "CONTENT-RANGE",
-        "CONTENT-DISPOSITION",
-        "CACHE-control",
-        "DATE",
-        "ETAG",
-        "EXPIRES",
-        "KEEP-ALIVE",
-        "LAST-MODIFIED",
-        "LOCATION",
-        "x-litespeed-location",
-        "X-LITESPEED-CACHE-CONTROL",
-        "PRAGMA",
-        "PROXY-CONNECTION",
-        "SERVER",
-        "SET-COOKIE",
-        "STATUS",
-        "TRANSFER-ENCODING",
-        "VARY",
-        "WWW-AUTHENTICATE",
-        "X-POWERED-BY"
-    };
-    static const char * const s_pHeaderVals[] =
-    {
-        "xUNKNOWN",
-        "xACCEPT-RANGES",
-        "xCONNECTION",
-        "xCONTENT-TYPE",
-        "xCONTENT-LENGTH",
-        "xCONTENT-ENCODING",
-        "xCONTENT-RANGE",
-        "xCONTENT-DISPOSITION",
-        "xCACHE-control",
-        "xDATE",
-        "xETAG",
-        "xEXPIRES",
-        "xKEEP-ALIVE",
-        "xLAST-MODIFIED",
-        "xLOCATION",
-        "xx-litespeed-location",
-        "xX-LITESPEED-CACHE-CONTROL",
-        "xPRAGMA",
-        "xPROXY-CONNECTION",
-        "xSERVER",
-        "xSET-COOKIE",
-        "xSTATUS",
-        "xTRANSFER-ENCODING",
-        "xVARY",
-        "xWWW-AUTHENTICATE",
-        "xX-POWERED-BY"
-    };
-    
-    char s_pOutputHdr[] =
-    {
-        "UNKNOWN: xUNKNOWN\r\n"
-        "ACCEPT-RANGES: xACCEPT-RANGES\r\n"
-        "CONNECTION: xCONNECTION\r\n"
-        "CONTENT-TYPE: xCONTENT-TYPE\r\n"
-        "CONTENT-LENGTH: xCONTENT-LENGTH\r\n"
-        "CONTENT-ENCODING: xCONTENT-ENCODING\r\n"
-        "CONTENT-RANGE: xCONTENT-RANGE\r\n"
-        "CONTENT-DISPOSITION: xCONTENT-DISPOSITION\r\n"
-        "CACHE-control: xCACHE-control\r\n"
-        "DATE: xDATE\r\n"
-        "ETAG: xETAG\r\n"
-        "EXPIRES: xEXPIRES\r\n"
-        "KEEP-ALIVE: xKEEP-ALIVE\r\n"
-        "LAST-MODIFIED: xLAST-MODIFIED\r\n"
-        "LOCATION: xLOCATION\r\n"
-        "x-litespeed-location: xx-litespeed-location\r\n"
-        "X-LITESPEED-CACHE-CONTROL: xLITESPEED-CACHE-CONTROL\r\n"
-        "PRAGMA: xPRAGMA\r\n"
-        "PROXY-CONNECTION: xPROXY-CONNECTION\r\n"
-        "SERVER: xSERVER\r\n"
-        "SET-COOKIE: xSET-COOKIE\r\n"
-        "STATUS: xSTATUS\r\n"
-        "TRANSFER-ENCODING: xTRANSFER-ENCODING\r\n"
-        "VARY: xVARY\r\n"
-        "WWW-AUTHENTICATE: xWWW-AUTHENTICATE\r\n"
-        "X-POWERED-BY: xX-POWERED-BY\r\n"
-    };
-        
-    
-    //fill the header array
-    http_header_t headerArray1[30];
-    for (i=-1; i<HttpRespHeaders::H_HEADER_END;i++)
-    {
-        headerArray1[i+1].index = (const HttpRespHeaders::HEADERINDEX)(i);
-        headerArray1[i+1].val = s_pHeaderVals[i+1];
-        headerArray1[i+1].valLen = strlen(s_pHeaderVals[i+1]);
-    }
-    h.reset();
-    //add using array add and check contents
-    temp = h.add(headerArray1, 26);
-    CHECK(h.getHeadersCount(0) == 26);
-    CHECK(temp == 0);
-    for ( i=h.HeaderBeginPos(); i!=h.HeaderEndPos(); i=h.nextHeaderPos(i) )
-    {
-        temp = h.getHeader(i, &key, &keyLen, ios, 26);
-        CHECK(memcmp(key, headerArray1[i].name, keyLen) == 0);
-        CHECK(temp == 1);//CTBTODO is this correct
-    }
-    
-    //add using header index and check counts and contents using getHeader
-    h.reset();
-    for (i=HttpRespHeaders::H_UNKNOWN; i<HttpRespHeaders::H_HEADER_END;i++)
-    {
-        temp = h.add((const HttpRespHeaders::HEADERINDEX)(i), s_pHeaders[i+1], strlen(s_pHeaders[i+1]), s_pHeaderVals[i+1], strlen(s_pHeaderVals[i+1]));
+        int temp;
+        struct iovec ios[1000];
+        int i;
+        char *key;
+        int keyLen;
+        int totalLen = 0;
+        IOVec::iterator it;
+        char *ph;
+        char *p;
+
+        static const char * const s_pHeaders[] =
+        {
+            "UNKNOWN",
+            "ACCEPT-RANGES",
+            "CONNECTION",
+            "CONTENT-TYPE",
+            "CONTENT-LENGTH",
+            "CONTENT-ENCODING",
+            "CONTENT-RANGE",
+            "CONTENT-DISPOSITION",
+            "CACHE-control",
+            "DATE",
+            "ETAG",
+            "EXPIRES",
+            "KEEP-ALIVE",
+            "LAST-MODIFIED",
+            "LOCATION",
+            "x-litespeed-location",
+            "X-LITESPEED-CACHE-CONTROL",
+            "PRAGMA",
+            "PROXY-CONNECTION",
+            "SERVER",
+            "SET-COOKIE",
+            "STATUS",
+            "TRANSFER-ENCODING",
+            "VARY",
+            "WWW-AUTHENTICATE",
+            "X-POWERED-BY"
+        };
+        static const char * const s_pHeaderVals[] =
+        {
+            "xUNKNOWN",
+            "xACCEPT-RANGES",
+            "xCONNECTION",
+            "xCONTENT-TYPE",
+            "xCONTENT-LENGTH",
+            "xCONTENT-ENCODING",
+            "xCONTENT-RANGE",
+            "xCONTENT-DISPOSITION",
+            "xCACHE-control",
+            "xDATE",
+            "xETAG",
+            "xEXPIRES",
+            "xKEEP-ALIVE",
+            "xLAST-MODIFIED",
+            "xLOCATION",
+            "xx-litespeed-location",
+            "xX-LITESPEED-CACHE-CONTROL",
+            "xPRAGMA",
+            "xPROXY-CONNECTION",
+            "xSERVER",
+            "xSET-COOKIE",
+            "xSTATUS",
+            "xTRANSFER-ENCODING",
+            "xVARY",
+            "xWWW-AUTHENTICATE",
+            "xX-POWERED-BY"
+        };
+
+        char s_pOutputHdr[] =
+        {
+            "UNKNOWN: xUNKNOWN\r\n"
+            "ACCEPT-RANGES: xACCEPT-RANGES\r\n"
+            "CONNECTION: xCONNECTION\r\n"
+            "CONTENT-TYPE: xCONTENT-TYPE\r\n"
+            "CONTENT-LENGTH: xCONTENT-LENGTH\r\n"
+            "CONTENT-ENCODING: xCONTENT-ENCODING\r\n"
+            "CONTENT-RANGE: xCONTENT-RANGE\r\n"
+            "CONTENT-DISPOSITION: xCONTENT-DISPOSITION\r\n"
+            "CACHE-control: xCACHE-control\r\n"
+            "DATE: xDATE\r\n"
+            "ETAG: xETAG\r\n"
+            "EXPIRES: xEXPIRES\r\n"
+            "KEEP-ALIVE: xKEEP-ALIVE\r\n"
+            "LAST-MODIFIED: xLAST-MODIFIED\r\n"
+            "LOCATION: xLOCATION\r\n"
+            "x-litespeed-location: xx-litespeed-location\r\n"
+            "X-LITESPEED-CACHE-CONTROL: xLITESPEED-CACHE-CONTROL\r\n"
+            "PRAGMA: xPRAGMA\r\n"
+            "PROXY-CONNECTION: xPROXY-CONNECTION\r\n"
+            "SERVER: xSERVER\r\n"
+            "SET-COOKIE: xSET-COOKIE\r\n"
+            "STATUS: xSTATUS\r\n"
+            "TRANSFER-ENCODING: xTRANSFER-ENCODING\r\n"
+            "VARY: xVARY\r\n"
+            "WWW-AUTHENTICATE: xWWW-AUTHENTICATE\r\n"
+            "X-POWERED-BY: xX-POWERED-BY\r\n"
+        };
+
+
+        //fill the header array
+        http_header_t headerArray1[30];
+        for (i=-1; i<HttpRespHeaders::H_HEADER_END;i++)
+        {
+            headerArray1[i+1].index = (const HttpRespHeaders::HEADERINDEX)(i);
+            headerArray1[i+1].val = s_pHeaderVals[i+1];
+            headerArray1[i+1].valLen = strlen(s_pHeaderVals[i+1]);
+        }
+        h.reset();
+        //add using array add and check contents
+        temp = h.add(headerArray1, 26);
+        CHECK(h.getHeadersCount(0) == 26);
         CHECK(temp == 0);
-        temp = h.getHeadersCount(0);
-        temp = h.getTotalCount();
-        CHECK(h.getHeadersCount(0) == i+2);//start at 1 and add 1 for connection close
-        CHECK(h.getTotalCount() == i+2);
+        for ( i=h.HeaderBeginPos(); i!=h.HeaderEndPos(); i=h.nextHeaderPos(i) )
+        {
+            temp = h.getHeader(i, &key, &keyLen, ios, 26);
+            CHECK(memcmp(key, headerArray1[i].name, keyLen) == 0);
+            CHECK(temp == 1);//CTBTODO is this correct
+        }
 
-        temp = h.getHeader(s_pHeaders[i+1], strlen(s_pHeaders[i+1]), &pVal, valLen);
-        CHECK (memcmp(pVal, s_pHeaderVals[i+1], strlen(s_pHeaderVals[i+1])) == 0);
-        CHECK (valLen == strlen(s_pHeaderVals[i+1]));
-        CHECK(temp == 0);//CTBTODO check this
-        
-        temp = h.getHeader(s_pHeaders[i+1], strlen(s_pHeaders[i+1]), ios, 30);
-        pVal = (char *)(ios[0].iov_base);
-        CHECK(memcmp(pVal, s_pHeaderVals[i+1], strlen(s_pHeaderVals[i+1])) == 0);
-        CHECK(ios[0].iov_len == strlen(s_pHeaderVals[i+1]));
-        CHECK(temp == 1);
-
-        temp = h.getHeader((const HttpRespHeaders::HEADERINDEX)(i), ios, 30);
-        CHECK(memcmp((char *)(ios[0].iov_base), s_pHeaderVals[i+1], strlen(s_pHeaderVals[i+1])) == 0);
-        CHECK(ios[0].iov_len == strlen(s_pHeaderVals[i+1]));
-        //for unknown, it is 0
-        if (i==HttpRespHeaders::H_UNKNOWN)
-            CHECK(temp == 0);
-        else
-            CHECK(temp == 1);
-    }
-    
-        
-    //check using getAllHeaders into io struct
-    temp = h.getAllHeaders( ios, 30 );
-    CHECK(temp == 26);
-    for (i=HttpRespHeaders::H_UNKNOWN; i<HttpRespHeaders::H_HEADER_END;i++)
-    {
-        pVal = (char *)(ios[i+1].iov_base);
-        CHECK(memcmp((char *)(ios[i+1].iov_base), s_pHeaders[i+1], strlen(s_pHeaders[i+1])) == 0);
-        CHECK(ios[i+1].iov_len == strlen(s_pHeaders[i+1])+strlen(s_pHeaderVals[i+1])+4);
-    }
-    
-    h.reset();
-    temp = h.add(headerArray1, 26);
-    CHECK(h.getHeadersCount(0) == 26);
-    CHECK(temp == 0);
-    //check del index
-    int count = h.getHeadersCount(0);;
-    for (i=HttpRespHeaders::H_UNKNOWN; i<HttpRespHeaders::H_HEADER_END;i++)
-    {
-        temp = h.del((const HttpRespHeaders::HEADERINDEX)(i));
-        if (i==HttpRespHeaders::H_UNKNOWN)
-            CHECK(temp == -1);
-        else
-            CHECK(temp == 0);
-        temp = h.getHeadersCount(0);
-        CHECK(h.getHeadersCount(0) == count);//add 1 for connection close
-        temp = h.getTotalCount();
-        //CHECK(h.getTotalCount() == count);//may be removed always returns 26
-        count--;
-        
-        temp = h.getHeader(s_pHeaders[i+1], strlen(s_pHeaders[i+1]), &pVal, valLen);//should fail - removed
-        if (i==HttpRespHeaders::H_UNKNOWN)
-            CHECK(temp == 0);
-        else
-            CHECK(temp == -1);//first pass 0 unknown not removed
-            
-    }
-
-    temp = h.outputNonSpdyHeaders(&io);
-    CHECK(temp == 0);
-    temp = h.getTotalLen();
-    CHECK(h.getTotalLen() == 57);
-    temp = h.getAllHeaders( ios, 30 );
-    CHECK(temp == 2);//unknown not removed and close
-    DisplayBothHeader(io, kk, h.getHeadersCount(0), &h);
-    strcpy(sTestHdr, "HTTP/1.1 200 OK\r\nUNKNOWN: xUNKNOWN\r\nConnection: close\r\n\r\n");
-    CheckIoHeader(io,sTestHdr);
-    
-    
-    
-    h.reset();
-    temp = h.add(headerArray1, 26);
-    count = h.getHeadersCount(0);;
-    //check del by name
-    for (i=HttpRespHeaders::H_UNKNOWN; i<HttpRespHeaders::H_HEADER_END;i++)
-    {
-        temp = h.del(s_pHeaders[i+1], strlen(s_pHeaders[i+1]));
-        count--;
-        CHECK(temp == 0);
-        temp = h.getHeadersCount(0);
-        CHECK(h.getHeadersCount(0) == count);//start at 1 and add 1 for connection close
-        
-        temp = h.getHeader(s_pHeaders[i+1], strlen(s_pHeaders[i+1]), &pVal, valLen);
-        CHECK(temp == -1);
-    }
-    
-    temp = h.outputNonSpdyHeaders(&io);
-    CHECK(temp == 0);
-    temp = h.getTotalLen();
-    CHECK(h.getTotalLen() == 38);//should be 57 the same as above?
-    temp = h.getAllHeaders( ios, 30 );
-    CHECK(temp == 1);//unknown was removed and close should be 2?
-    DisplayBothHeader(io, kk, h.getHeadersCount(0), &h);
-    strcpy(sTestHdr, "HTTP/1.1 200 OK\r\nConnection: close\r\n\r\n");
-    CheckIoHeader(io,sTestHdr);
-    
-    
-    //check resest and headers built flag
-    h.reset();
-    CHECK(h.getHeadersCount(0) == 0);
-    CHECK(h.isRespHeadersBuilt() == 0);
-    
-    //check del unknown
-    h.del(HttpRespHeaders::H_DATE);// it is correct behavior not to remove
-    h.del("X", strlen("X"));
-    h.add(HttpRespHeaders::H_UNKNOWN, "unknown", 7, "My_Server", 9);
-    h.add(HttpRespHeaders::H_ACCEPT_RANGES,  "bytes", 5);
-    h.add(HttpRespHeaders::H_DATE,  "Thu, 16 May 2013 20:32:23 GMT", strlen("Thu, 16 May 2013 20:32:23 GMT"));
-    h.add(HttpRespHeaders::H_X_POWERED_BY, ), "PHP/5.3.24", strlen("PHP/5.3.24"));
-    h.addStatusLine( 0, 304, 1);  //when ver is 0 and keepalive is 1, Will NOT add connection: close automatically
-    h.outputNonSpdyHeaders(&io);
-    
-    CHECK(h.isRespHeadersBuilt() == 1);
-    CHECK(h.getHeadersCount(0) == 4);
-    h.del(HttpRespHeaders::H_UNKNOWN);// it is correct behavior not to remove
-    CHECK(h.getHeadersCount(0) == 4);
-    h.del(HttpRespHeaders::H_ACCEPT_RANGES);
-    CHECK(h.getHeadersCount(0) == 3);
-    h.del("X", strlen("X"));
-    CHECK(h.getHeadersCount(0) == 3);
-    DisplayBothHeader(io, kk, h.getHeadersCount(0), &h);
-    strcpy(sTestHdr, "unknown: My_Server\r\nAccept-Ranges: bytes\r\nDate: Thu, 16 May 2013 20:32:23 GMT\r\nX-Powered-By: PHP/5.3.24\r\n\r\n");
-    CheckIoHeader(io,sTestHdr);
-    
-    //check content type
-    pVal = h.getContentTypeHeader(temp);//
-    CHECK(temp == -1);
-    h.add(HttpRespHeaders::H_CONTENT_TYPE, "Content-Type", strlen("content-type"), "typeA", strlen("typeA"));
-    pVal = h.getContentTypeHeader(temp);//
-    CHECK(temp == 5);
-    CHECK (memcmp(pVal, "typeA", 5) == 0);
-    
-    
-    h.reset();
-    http_header_t headerArray[5];
-    headerArray[0].index = HttpRespHeaders::H_CONTENT_ENCODING;
-    headerArray[0].val = "Hello";
-    headerArray[0].valLen = 5;
-    headerArray[1].index = HttpRespHeaders::H_ACCEPT_RANGES;
-    headerArray[1].val = "val";
-    headerArray[1].valLen = 3;
-    h.add(headerArray, 2);
-    CHECK(h.getHeadersCount(0) == 2);
-    h.getHeader("content-encoding", strlen("content-encoding"), &pVal, valLen); 
-    CHECK (memcmp(pVal, "Hello", valLen) == 0);
-    h.getHeader("Accept-Ranges", strlen("Accept-Ranges"), &pVal, valLen); 
-    CHECK (memcmp(pVal, "val", valLen) == 0);
-    h.getHeader("Not_A_Header", strlen("Accept-Ranges"), &pVal, valLen);
- 
-    for ( i=h.HeaderBeginPos(); i!=h.HeaderEndPos(); i=h.nextHeaderPos(i) )
-    {
-        temp = h.getHeader(i, &key, &keyLen, ios, 10);
-        CHECK(memcmp(key, headerArray[i].name, keyLen) == 0);
-    }
-    
-    //check http version and code defaults and set
-    temp = h.getHttpVersion();
-    CHECK(temp == 0); //default
-    temp = h.getHttpCode();
-    CHECK(temp == 4); //default
-    h.addStatusLine( 1, SC_304, 1); 
-    temp = h.getHttpVersion();
-    CHECK(temp == 1); 
-    temp = h.getHttpCode();
-    CHECK(temp == 17);
-
-    //check total count
-    temp = h.getTotalCount();
-    CHECK(temp == 2);
-    
-    //check string len
-    temp = h.getHeaderStringLen( HttpRespHeaders::H_CONTENT_ENCODING );
-    CHECK(temp == 16);
-
-    //check total length default and set
-    temp = h.getTotalLen();
-    CHECK(temp == 0);
-    h.outputNonSpdyHeaders(&io);
-    temp = h.getTotalLen();
-    CHECK(temp == 98);
-    
-    temp = h.getHeader("content-encoding", 16, ios, 10);
-    pVal = (char *)(ios[0].iov_base);
-    CHECK(memcmp((char *)(ios[0].iov_base), "Hello", 5) == 0);
-    CHECK(ios[0].iov_len == 5);
-    temp = h.getHeader(HttpRespHeaders::H_CONTENT_ENCODING, ios, 10);
-    CHECK(memcmp((char *)(ios[0].iov_base), "Hello", 5) == 0);
-    CHECK(ios[0].iov_len == 5);
-
-    temp = h.getAllHeaders( ios, 10 );
-    pVal = (char *)(ios[0].iov_base);
-    CHECK(memcmp((char *)(ios[0].iov_base), "content-encoding", 16) == 0);
-    CHECK(ios[0].iov_len == 25);
-    CHECK(memcmp((char *)(ios[1].iov_base), "Accept-Ranges", 13) == 0);
-    CHECK(ios[1].iov_len == 20);
-    
-    //test new functions 
-    //header len < 64k add 10k header lot of short headers
-    h.reset();
-    h.addGzipEncodingHeader();
-    h.appendChunked();
-    h.appendAcceptRange();
-    h.buildCommonHeaders();
-    h.addCommonHeaders();
-    h.del(HttpRespHeaders::H_DATE);//delete current date for testing
-    //h.updateDateHeader();// called in build...
-    temp = h.getHeader("server", 6, ios, 10);
-    pVal = (char *)(ios[0].iov_base);
-    CHECK(memcmp((char *)(ios[0].iov_base), "LiteSpeed", 9) == 0);
-    temp = ios[0].iov_len;
-    CHECK(ios[0].iov_len == 9);
-    DisplayBothHeader(io, kk, h.getHeadersCount(0), &h);
-    
-    h.reset();
-    h.hideServerSignature(0);
-    h.buildCommonHeaders();
-    h.addCommonHeaders();
-    h.del(HttpRespHeaders::H_DATE);
-    temp = h.getHeader("server", 6, ios, 10);
-    pVal = (char *)(ios[0].iov_base);
-    CHECK(memcmp((char *)(ios[0].iov_base), "LiteSpeed", 9) == 0);
-    CHECK(ios[0].iov_len == 9);
-    h.outputNonSpdyHeaders(&io);
-    DisplayBothHeader(io, kk, h.getHeadersCount(0), &h);
-    strcpy(sTestHdr, "HTTP/1.1 200 OK\r\nServer: LiteSpeed\r\nConnection: close\r\n\r\n");
-    CheckIoHeader(io,sTestHdr);
-    
-    h.reset();
-    h.hideServerSignature(1);
-    h.buildCommonHeaders();
-    h.addCommonHeaders();
-    h.del(HttpRespHeaders::H_DATE);
-    temp = h.getHeader("server", 6, ios, 10);
-    pVal = (char *)(ios[0].iov_base);
-    CHECK(memcmp((char *)(ios[0].iov_base), "LiteSpeed/1.2.4 Open", 20) == 0);
-    CHECK(ios[0].iov_len == 20);
-    h.outputNonSpdyHeaders(&io);
-    DisplayBothHeader(io, kk, h.getHeadersCount(0), &h);
-    strcpy(sTestHdr, "HTTP/1.1 200 OK\r\nServer: LiteSpeed/1.2.4 Open\r\nConnection: close\r\n\r\n");
-    CheckIoHeader(io,sTestHdr);
-    
-    h.reset();
-    h.hideServerSignature(2);
-    h.buildCommonHeaders();
-    h.addCommonHeaders();
-    h.del(HttpRespHeaders::H_DATE);
-    h.outputNonSpdyHeaders(&io);
-    DisplayBothHeader(io, kk, h.getHeadersCount(0), &h);
-    strcpy(sTestHdr, "HTTP/1.1 200 OK\r\nConnection: close\r\n\r\n");
-    CheckIoHeader(io,sTestHdr);
-    
-
-    //large header test 10k short headers
-    static const char * const s_bigStr1[] =
-    {"X1111111111111111111111111111111111111111111111111"};//"X"+49 "1"  
-    static const char * const s_bigStr2[] =
-    {"X2222222222222222222222222222222222222222222222222"};//"X"+49 "1"  
-    
-    h.reset();
-    h.buildCommonHeaders();
-    h.addStatusLine( 0, 304, 1);  //when ver is 0 and keepalive is 1, Will NOT add connection: close automatically
-    for (int j = 0; j<100; j++)
-    {
+        //add using header index and check counts and contents using getHeader
+        h.reset();
         for (i=HttpRespHeaders::H_UNKNOWN; i<HttpRespHeaders::H_HEADER_END;i++)
         {
-            //printf("i = %d j = %d \n",i,j);
-            temp = h.add((const HttpRespHeaders::HEADERINDEX)(i), s_pHeaders[i+1], strlen(s_pHeaders[i+1]), 
-                         s_pHeaderVals[i+1], strlen(s_pHeaderVals[i+1]),LSI_HEADER_ADD);
+            temp = h.add((const HttpRespHeaders::HEADERINDEX)(i), s_pHeaders[i+1], strlen(s_pHeaders[i+1]), s_pHeaderVals[i+1], strlen(s_pHeaderVals[i+1]));
             CHECK(temp == 0);
             temp = h.getHeadersCount(0);
             temp = h.getTotalCount();
-            CHECK(h.getHeadersCount(0) == (i+2)+26*(j));//start at 1 and add 1 for connection close
-            CHECK(h.getTotalCount() == (i+2)+26*(j));
+            CHECK(h.getHeadersCount(0) == i+2);//start at 1 and add 1 for connection close
+            CHECK(h.getTotalCount() == i+2);
+
+            temp = h.getHeader(s_pHeaders[i+1], strlen(s_pHeaders[i+1]), &pVal, valLen);
+            CHECK (memcmp(pVal, s_pHeaderVals[i+1], strlen(s_pHeaderVals[i+1])) == 0);
+            CHECK (valLen == strlen(s_pHeaderVals[i+1]));
+            CHECK(temp == 0);//CTBTODO check this
+
+            temp = h.getHeader(s_pHeaders[i+1], strlen(s_pHeaders[i+1]), ios, 30);
+            pVal = (char *)(ios[0].iov_base);
+            CHECK(memcmp(pVal, s_pHeaderVals[i+1], strlen(s_pHeaderVals[i+1])) == 0);
+            CHECK(ios[0].iov_len == strlen(s_pHeaderVals[i+1]));
+            CHECK(temp == 1);
+
+            temp = h.getHeader((const HttpRespHeaders::HEADERINDEX)(i), ios, 30);
+            CHECK(memcmp((char *)(ios[0].iov_base), s_pHeaderVals[i+1], strlen(s_pHeaderVals[i+1])) == 0);
+            CHECK(ios[0].iov_len == strlen(s_pHeaderVals[i+1]));
+            //for unknown, it is 0
+            if (i==HttpRespHeaders::H_UNKNOWN)
+                CHECK(temp == 0);
+            else
+                CHECK(temp == 1);
         }
-    }
 
-    temp = h.getTotalCount();
-    temp = h.getHeadersCount(0);
-    
 
-    //check header content
-    for ( i=h.HeaderBeginPos(); i!=h.HeaderEndPos(); i=h.nextHeaderPos(i) )
-    {
-        temp = h.getHeader(i, &key, &keyLen, ios, 1000);
-        //CHECK(memcmp(key, headerArray1[i%26].name, keyLen) == 0);//FIXME: CHANGED!!!
-        //CHECK(temp == 100);//FIXME this is 100
-    }
-    //check output
-    h.outputNonSpdyHeaders(&io);
-    DisplayBothHeader(io, kk, h.getHeadersCount(0), &h);
-    
+        //check using getAllHeaders into io struct
+        temp = h.getAllHeaders( ios, 30 );
+        CHECK(temp == 26);
+        for (i=HttpRespHeaders::H_UNKNOWN; i<HttpRespHeaders::H_HEADER_END;i++)
+        {
+            pVal = (char *)(ios[i+1].iov_base);
+            CHECK(memcmp((char *)(ios[i+1].iov_base), s_pHeaders[i+1], strlen(s_pHeaders[i+1])) == 0);
+            CHECK(ios[i+1].iov_len == strlen(s_pHeaders[i+1])+strlen(s_pHeaderVals[i+1])+4);
+        }
 
-    ph = s_pOutputHdr;
-    temp = sizeof(s_pOutputHdr);
-    it=io.begin();
-    p = (char *)it->iov_base;
-    for (i=0;i<100;i++)
-    {
-        CHECK(memcmp(p, s_pOutputHdr, sizeof(s_pOutputHdr)-1) == 0);
-        p+=sizeof(s_pOutputHdr)-1;
+        h.reset();
+        temp = h.add(headerArray1, 26);
+        CHECK(h.getHeadersCount(0) == 26);
+        CHECK(temp == 0);
+        //check del index
+        int count = h.getHeadersCount(0);;
+        for (i=HttpRespHeaders::H_UNKNOWN; i<HttpRespHeaders::H_HEADER_END;i++)
+        {
+            temp = h.del((const HttpRespHeaders::HEADERINDEX)(i));
+            if (i==HttpRespHeaders::H_UNKNOWN)
+                CHECK(temp == -1);
+            else
+                CHECK(temp == 0);
+            temp = h.getHeadersCount(0);
+            CHECK(h.getHeadersCount(0) == count);//add 1 for connection close
+            temp = h.getTotalCount();
+            //CHECK(h.getTotalCount() == count);//may be removed always returns 26
+            count--;
+
+            temp = h.getHeader(s_pHeaders[i+1], strlen(s_pHeaders[i+1]), &pVal, valLen);//should fail - removed
+            if (i==HttpRespHeaders::H_UNKNOWN)
+                CHECK(temp == 0);
+            else
+                CHECK(temp == -1);//first pass 0 unknown not removed
+
+        }
+
+        temp = h.outputNonSpdyHeaders(&io);
+        CHECK(temp == 0);
+        temp = h.getTotalLen();
+        CHECK(h.getTotalLen() == 57);
+        temp = h.getAllHeaders( ios, 30 );
+        CHECK(temp == 2);//unknown not removed and close
+        DisplayBothHeader(io, kk, h.getHeadersCount(0), &h);
+        strcpy(sTestHdr, "HTTP/1.1 200 OK\r\nUNKNOWN: xUNKNOWN\r\nConnection: close\r\n\r\n");
+        CheckIoHeader(io,sTestHdr);
+
+
+
+        h.reset();
+        temp = h.add(headerArray1, 26);
+        count = h.getHeadersCount(0);;
+        //check del by name
+        for (i=HttpRespHeaders::H_UNKNOWN; i<HttpRespHeaders::H_HEADER_END;i++)
+        {
+            temp = h.del(s_pHeaders[i+1], strlen(s_pHeaders[i+1]));
+            count--;
+            CHECK(temp == 0);
+            temp = h.getHeadersCount(0);
+            CHECK(h.getHeadersCount(0) == count);//start at 1 and add 1 for connection close
+
+            temp = h.getHeader(s_pHeaders[i+1], strlen(s_pHeaders[i+1]), &pVal, valLen);
+            CHECK(temp == -1);
+        }
+
+        temp = h.outputNonSpdyHeaders(&io);
+        CHECK(temp == 0);
+        temp = h.getTotalLen();
+        CHECK(h.getTotalLen() == 38);//should be 57 the same as above?
+        temp = h.getAllHeaders( ios, 30 );
+        CHECK(temp == 1);//unknown was removed and close should be 2?
+        DisplayBothHeader(io, kk, h.getHeadersCount(0), &h);
+        strcpy(sTestHdr, "HTTP/1.1 200 OK\r\nConnection: close\r\n\r\n");
+        CheckIoHeader(io,sTestHdr);
+
+
+        //check resest and headers built flag
+        h.reset();
+        CHECK(h.getHeadersCount(0) == 0);
+        CHECK(h.isRespHeadersBuilt() == 0);
+
+        //check del unknown
+        h.del(HttpRespHeaders::H_DATE);// it is correct behavior not to remove
+        h.del("X", strlen("X"));
+        h.add(HttpRespHeaders::H_UNKNOWN, "unknown", 7, "My_Server", 9);
+        h.add(HttpRespHeaders::H_ACCEPT_RANGES,  "bytes", 5);
+        h.add(HttpRespHeaders::H_DATE,  "Thu, 16 May 2013 20:32:23 GMT", strlen("Thu, 16 May 2013 20:32:23 GMT"));
+        h.add(HttpRespHeaders::H_X_POWERED_BY, ), "PHP/5.3.24", strlen("PHP/5.3.24"));
+        h.addStatusLine( 0, 304, 1);  //when ver is 0 and keepalive is 1, Will NOT add connection: close automatically
+        h.outputNonSpdyHeaders(&io);
+
+        CHECK(h.isRespHeadersBuilt() == 1);
+        CHECK(h.getHeadersCount(0) == 4);
+        h.del(HttpRespHeaders::H_UNKNOWN);// it is correct behavior not to remove
+        CHECK(h.getHeadersCount(0) == 4);
+        h.del(HttpRespHeaders::H_ACCEPT_RANGES);
+        CHECK(h.getHeadersCount(0) == 3);
+        h.del("X", strlen("X"));
+        CHECK(h.getHeadersCount(0) == 3);
+        DisplayBothHeader(io, kk, h.getHeadersCount(0), &h);
+        strcpy(sTestHdr, "unknown: My_Server\r\nAccept-Ranges: bytes\r\nDate: Thu, 16 May 2013 20:32:23 GMT\r\nX-Powered-By: PHP/5.3.24\r\n\r\n");
+        CheckIoHeader(io,sTestHdr);
+
+        //check content type
+        pVal = h.getContentTypeHeader(temp);//
+        CHECK(temp == -1);
+        h.add(HttpRespHeaders::H_CONTENT_TYPE, "Content-Type", strlen("content-type"), "typeA", strlen("typeA"));
+        pVal = h.getContentTypeHeader(temp);//
+        CHECK(temp == 5);
+        CHECK (memcmp(pVal, "typeA", 5) == 0);
+
+
+        h.reset();
+        http_header_t headerArray[5];
+        headerArray[0].index = HttpRespHeaders::H_CONTENT_ENCODING;
+        headerArray[0].val = "Hello";
+        headerArray[0].valLen = 5;
+        headerArray[1].index = HttpRespHeaders::H_ACCEPT_RANGES;
+        headerArray[1].val = "val";
+        headerArray[1].valLen = 3;
+        h.add(headerArray, 2);
+        CHECK(h.getHeadersCount(0) == 2);
+        h.getHeader("content-encoding", strlen("content-encoding"), &pVal, valLen);
+        CHECK (memcmp(pVal, "Hello", valLen) == 0);
+        h.getHeader("Accept-Ranges", strlen("Accept-Ranges"), &pVal, valLen);
+        CHECK (memcmp(pVal, "val", valLen) == 0);
+        h.getHeader("Not_A_Header", strlen("Accept-Ranges"), &pVal, valLen);
+
+        for ( i=h.HeaderBeginPos(); i!=h.HeaderEndPos(); i=h.nextHeaderPos(i) )
+        {
+            temp = h.getHeader(i, &key, &keyLen, ios, 10);
+            CHECK(memcmp(key, headerArray[i].name, keyLen) == 0);
+        }
+
+        //check http version and code defaults and set
+        temp = h.getHttpVersion();
+        CHECK(temp == 0); //default
+        temp = h.getHttpCode();
+        CHECK(temp == 4); //default
+        h.addStatusLine( 1, SC_304, 1);
+        temp = h.getHttpVersion();
+        CHECK(temp == 1);
+        temp = h.getHttpCode();
+        CHECK(temp == 17);
+
+        //check total count
+        temp = h.getTotalCount();
+        CHECK(temp == 2);
+
+        //check string len
+        temp = h.getHeaderStringLen( HttpRespHeaders::H_CONTENT_ENCODING );
+        CHECK(temp == 16);
+
+        //check total length default and set
+        temp = h.getTotalLen();
+        CHECK(temp == 0);
+        h.outputNonSpdyHeaders(&io);
+        temp = h.getTotalLen();
+        CHECK(temp == 98);
+
+        temp = h.getHeader("content-encoding", 16, ios, 10);
+        pVal = (char *)(ios[0].iov_base);
+        CHECK(memcmp((char *)(ios[0].iov_base), "Hello", 5) == 0);
+        CHECK(ios[0].iov_len == 5);
+        temp = h.getHeader(HttpRespHeaders::H_CONTENT_ENCODING, ios, 10);
+        CHECK(memcmp((char *)(ios[0].iov_base), "Hello", 5) == 0);
+        CHECK(ios[0].iov_len == 5);
+
+        temp = h.getAllHeaders( ios, 10 );
+        pVal = (char *)(ios[0].iov_base);
+        CHECK(memcmp((char *)(ios[0].iov_base), "content-encoding", 16) == 0);
+        CHECK(ios[0].iov_len == 25);
+        CHECK(memcmp((char *)(ios[1].iov_base), "Accept-Ranges", 13) == 0);
+        CHECK(ios[1].iov_len == 20);
+
+        //test new functions
+        //header len < 64k add 10k header lot of short headers
+        h.reset();
+        h.addGzipEncodingHeader();
+        h.appendChunked();
+        h.appendAcceptRange();
+        h.buildCommonHeaders();
+        h.addCommonHeaders();
+        h.del(HttpRespHeaders::H_DATE);//delete current date for testing
+        //h.updateDateHeader();// called in build...
+        temp = h.getHeader("server", 6, ios, 10);
+        pVal = (char *)(ios[0].iov_base);
+        CHECK(memcmp((char *)(ios[0].iov_base), "LiteSpeed", 9) == 0);
+        temp = ios[0].iov_len;
+        CHECK(ios[0].iov_len == 9);
+        DisplayBothHeader(io, kk, h.getHeadersCount(0), &h);
+
+        h.reset();
+        h.hideServerSignature(0);
+        h.buildCommonHeaders();
+        h.addCommonHeaders();
+        h.del(HttpRespHeaders::H_DATE);
+        temp = h.getHeader("server", 6, ios, 10);
+        pVal = (char *)(ios[0].iov_base);
+        CHECK(memcmp((char *)(ios[0].iov_base), "LiteSpeed", 9) == 0);
+        CHECK(ios[0].iov_len == 9);
+        h.outputNonSpdyHeaders(&io);
+        DisplayBothHeader(io, kk, h.getHeadersCount(0), &h);
+        strcpy(sTestHdr, "HTTP/1.1 200 OK\r\nServer: LiteSpeed\r\nConnection: close\r\n\r\n");
+        CheckIoHeader(io,sTestHdr);
+
+        h.reset();
+        h.hideServerSignature(1);
+        h.buildCommonHeaders();
+        h.addCommonHeaders();
+        h.del(HttpRespHeaders::H_DATE);
+        temp = h.getHeader("server", 6, ios, 10);
+        pVal = (char *)(ios[0].iov_base);
+        CHECK(memcmp((char *)(ios[0].iov_base), "LiteSpeed/1.2.4 Open", 20) == 0);
+        CHECK(ios[0].iov_len == 20);
+        h.outputNonSpdyHeaders(&io);
+        DisplayBothHeader(io, kk, h.getHeadersCount(0), &h);
+        strcpy(sTestHdr, "HTTP/1.1 200 OK\r\nServer: LiteSpeed/1.2.4 Open\r\nConnection: close\r\n\r\n");
+        CheckIoHeader(io,sTestHdr);
+
+        h.reset();
+        h.hideServerSignature(2);
+        h.buildCommonHeaders();
+        h.addCommonHeaders();
+        h.del(HttpRespHeaders::H_DATE);
+        h.outputNonSpdyHeaders(&io);
+        DisplayBothHeader(io, kk, h.getHeadersCount(0), &h);
+        strcpy(sTestHdr, "HTTP/1.1 200 OK\r\nConnection: close\r\n\r\n");
+        CheckIoHeader(io,sTestHdr);
+
+
+        //large header test 10k short headers
+        static const char * const s_bigStr1[] =
+        {"X1111111111111111111111111111111111111111111111111"};//"X"+49 "1"
+        static const char * const s_bigStr2[] =
+        {"X2222222222222222222222222222222222222222222222222"};//"X"+49 "1"
+
+        h.reset();
+        h.buildCommonHeaders();
+        h.addStatusLine( 0, 304, 1);  //when ver is 0 and keepalive is 1, Will NOT add connection: close automatically
+        for (int j = 0; j<100; j++)
+        {
+            for (i=HttpRespHeaders::H_UNKNOWN; i<HttpRespHeaders::H_HEADER_END;i++)
+            {
+                //printf("i = %d j = %d \n",i,j);
+                temp = h.add((const HttpRespHeaders::HEADERINDEX)(i), s_pHeaders[i+1], strlen(s_pHeaders[i+1]),
+                             s_pHeaderVals[i+1], strlen(s_pHeaderVals[i+1]),LSI_HEADER_ADD);
+                CHECK(temp == 0);
+                temp = h.getHeadersCount(0);
+                temp = h.getTotalCount();
+                CHECK(h.getHeadersCount(0) == (i+2)+26*(j));//start at 1 and add 1 for connection close
+                CHECK(h.getTotalCount() == (i+2)+26*(j));
+            }
+        }
+
+        temp = h.getTotalCount();
+        temp = h.getHeadersCount(0);
+
+
+        //check header content
+        for ( i=h.HeaderBeginPos(); i!=h.HeaderEndPos(); i=h.nextHeaderPos(i) )
+        {
+            temp = h.getHeader(i, &key, &keyLen, ios, 1000);
+            //CHECK(memcmp(key, headerArray1[i%26].name, keyLen) == 0);//FIXME: CHANGED!!!
+            //CHECK(temp == 100);//FIXME this is 100
+        }
+        //check output
+        h.outputNonSpdyHeaders(&io);
+        DisplayBothHeader(io, kk, h.getHeadersCount(0), &h);
+
+
+        ph = s_pOutputHdr;
+        temp = sizeof(s_pOutputHdr);
+        it=io.begin();
+        p = (char *)it->iov_base;
+        for (i=0;i<100;i++)
+        {
+            CHECK(memcmp(p, s_pOutputHdr, sizeof(s_pOutputHdr)-1) == 0);
+            p+=sizeof(s_pOutputHdr)-1;
+        }
+
+        //printf("End of response header testing\n");
+
+        */
     }
-    
-    //printf("End of response header testing\n");
-    
-    */
-}
 
 }
 

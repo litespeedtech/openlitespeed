@@ -29,12 +29,12 @@
 #include <new>
 
 
-ServerInfo::ServerInfo( char * pBegin, char * pEnd )
-    : m_pidList( pBegin, pEnd )
-    , m_pidLinger( -1 )
-    , m_pChroot( NULL )
-    , m_pBufEnd( pEnd )
-    , m_restart( 0 )
+ServerInfo::ServerInfo(char *pBegin, char *pEnd)
+    : m_pidList(pBegin, pEnd)
+    , m_pidLinger(-1)
+    , m_pChroot(NULL)
+    , m_pBufEnd(pEnd)
+    , m_restart(0)
 {
 }
 
@@ -42,31 +42,31 @@ ServerInfo::~ServerInfo()
 {
 }
 
-void ServerInfo::addUnixSocket( const char * pSock, struct stat * pStat )
+void ServerInfo::addUnixSocket(const char *pSock, struct stat *pStat)
 {
-    int len = strlen( pSock );
-    char * pBuf = allocate( len + sizeof( UnixSocketInfo ) );
-    if ( !pBuf )
+    int len = strlen(pSock);
+    char *pBuf = allocate(len + sizeof(UnixSocketInfo));
+    if (!pBuf)
         return;
-    UnixSocketInfo * pInfo = new (pBuf) UnixSocketInfo();
-    pInfo->m_pFileName = pBuf + sizeof( UnixSocketInfo );
-    memmove( pInfo->m_pFileName, pSock, len + 1 );
+    UnixSocketInfo *pInfo = new(pBuf) UnixSocketInfo();
+    pInfo->m_pFileName = pBuf + sizeof(UnixSocketInfo);
+    memmove(pInfo->m_pFileName, pSock, len + 1);
     pInfo->m_node = pStat->st_ino;
     pInfo->m_mtime = pStat->st_mtime;
-    m_unixSocketList.addNext( pInfo );
+    m_unixSocketList.addNext(pInfo);
 }
 
-void ServerInfo::updateUnixSocket( const char * pSock, struct stat * pStat )
+void ServerInfo::updateUnixSocket(const char *pSock, struct stat *pStat)
 {
-    DLinkedObj * pNext = m_unixSocketList.next();
-    while( pNext )
+    DLinkedObj *pNext = m_unixSocketList.next();
+    while (pNext)
     {
-        UnixSocketInfo * pInfo = (UnixSocketInfo *)pNext;
-        if ( strcmp( pInfo->m_pFileName, pSock ) == 0 )
+        UnixSocketInfo *pInfo = (UnixSocketInfo *)pNext;
+        if (strcmp(pInfo->m_pFileName, pSock) == 0)
         {
             pInfo->m_node = pStat->st_ino;
             pInfo->m_mtime = pStat->st_mtime;
-            break;            
+            break;
         }
         pNext = pNext->next();
     }
@@ -74,82 +74,78 @@ void ServerInfo::updateUnixSocket( const char * pSock, struct stat * pStat )
 
 int ServerInfo::cleanUnixSocketList()
 {
-    DLinkedObj * pNext = m_unixSocketList.next();
+    DLinkedObj *pNext = m_unixSocketList.next();
     char achBuf[2048];
     int chrootLen;
-    char * pSock;
+    char *pSock;
     struct stat st;
-    if ( m_pChroot)
+    if (m_pChroot)
     {
-        chrootLen = strlen( m_pChroot );
-        memmove( achBuf, m_pChroot, chrootLen );
+        chrootLen = strlen(m_pChroot);
+        memmove(achBuf, m_pChroot, chrootLen);
         pSock = achBuf;
     }
-    while( pNext )
+    while (pNext)
     {
-        UnixSocketInfo * pInfo = (UnixSocketInfo *)pNext;
-        if ( m_pChroot )
-        {
-            strcpy( &achBuf[chrootLen], pInfo->m_pFileName );
-        }
+        UnixSocketInfo *pInfo = (UnixSocketInfo *)pNext;
+        if (m_pChroot)
+            strcpy(&achBuf[chrootLen], pInfo->m_pFileName);
         else
             pSock = pInfo->m_pFileName;
-        if ( nio_stat( pSock, &st ) != -1 )
+        if (nio_stat(pSock, &st) != -1)
         {
-            if (( st.st_ino == pInfo->m_node )&&
-                ( st.st_mtime == pInfo->m_mtime ))
-                unlink( pSock );
+            if ((st.st_ino == pInfo->m_node) &&
+                (st.st_mtime == pInfo->m_mtime))
+                unlink(pSock);
         }
         pNext = pNext->next();
     }
     return 0;
 }
 
-char * ServerInfo::allocate( int len )
+char *ServerInfo::allocate(int len)
 {
-    int allocLen = ( len + 8 ) & 0xfffffff8;
-    if ( m_pidList.m_pEnd - (char *)m_pidList.m_pCur < allocLen )
+    int allocLen = (len + 8) & 0xfffffff8;
+    if (m_pidList.m_pEnd - (char *)m_pidList.m_pCur < allocLen)
         return NULL;
     m_pidList.m_pEnd -= allocLen;
-    return m_pidList.m_pEnd;    
+    return m_pidList.m_pEnd;
 }
 
-char * ServerInfo::dupStr( const char * pStr, int len )
+char *ServerInfo::dupStr(const char *pStr, int len)
 {
-    char * p = allocate( len );
-    if ( p )
-        memmove( p, pStr, len + 1 );
+    char *p = allocate(len);
+    if (p)
+        memmove(p, pStr, len + 1);
     return p;
 }
 
-int ServerInfo::cleanPidList( int toStopOnly )
+int ServerInfo::cleanPidList(int toStopOnly)
 {
-    PidInfo * pInfo;
+    PidInfo *pInfo;
     pid_t pids[4096];
-    pid_t * p = pids;
-    pid_t * pEnd = p + 4096;
-    for( pInfo = m_pidList.m_pBegin;
-            (pInfo < m_pidList.m_pCur)&&(p < pEnd); ++pInfo )
+    pid_t *p = pids;
+    pid_t *pEnd = p + 4096;
+    for (pInfo = m_pidList.m_pBegin;
+         (pInfo < m_pidList.m_pCur) && (p < pEnd); ++pInfo)
     {
-        if (( !toStopOnly )||( pInfo->m_parent == KILL_TYPE_TERM ))
-            if ( pInfo->m_pid > 0 )
+        if ((!toStopOnly) || (pInfo->m_parent == KILL_TYPE_TERM))
+            if (pInfo->m_pid > 0)
                 *p++ = pInfo->m_pid;
     }
-    pid_t * p1 = pids;
-    for( ; p1 != p; p1++ )
+    pid_t *p1 = pids;
+    for (; p1 != p; p1++)
     {
-        kill( *p1, SIGTERM );
-        kill( *p1, SIGUSR1 );
-        if ( D_ENABLED( DL_LESS ) )
-            LOG_D(( "[AutoRestater] Clean up child process with pid: %d", *p1 ));
+        kill(*p1, SIGTERM);
+        kill(*p1, SIGUSR1);
+        if (D_ENABLED(DL_LESS))
+            LOG_D(("[AutoRestater] Clean up child process with pid: %d", *p1));
     }
-    my_sleep( 100 );
+    my_sleep(100);
     p1 = pids;
-    for( ; p1 != p; p1++ )
-    {
-        kill( *p1, SIGKILL );
-    }
-    if ( !toStopOnly )
+    for (; p1 != p; p1++)
+        kill(*p1, SIGKILL);
+    if (!toStopOnly)
         m_pidList.m_pCur = m_pidList.m_pBegin;
     return 0;
 }
@@ -161,7 +157,7 @@ void ServerInfo::cleanUp()
     cleanPidList();
     cleanUnixSocketList();
     m_pidList.m_pEnd = m_pBufEnd;
-    m_unixSocketList.setNext( NULL );    
+    m_unixSocketList.setNext(NULL);
     m_pChroot = NULL;
 }
 

@@ -24,7 +24,7 @@
 
 class HttpListenerList;
 
-class ConnLimitCtrl 
+class ConnLimitCtrl
 {
     int32_t    m_iMaxConns;
     int32_t    m_iMaxSSLConns;
@@ -32,8 +32,8 @@ class ConnLimitCtrl
     int32_t    m_iAvailSSLConns;
     int32_t    m_iLowWaterMark;
     int32_t    m_iConnOverflow;
-    HttpListenerList  * m_pListeners;
-    
+    HttpListenerList   *m_pListeners;
+
     void testLimit();
     void testSSLLimit();
     void tryResume();
@@ -41,7 +41,7 @@ class ConnLimitCtrl
     void resumeSSL();
     void resumeAll();
     void resumeAllButSSL();
-    
+
 public:
     ConnLimitCtrl();
     ~ConnLimitCtrl();
@@ -50,16 +50,18 @@ public:
     {   --m_iAvailConns;        }
     void incSSLConn()
     {   --m_iAvailSSLConns;     }
-    void incConn( int n)
+    void incConn(int n)
     {   m_iAvailConns -= n;     }
-    void incSSLConn( int n)
-    {   m_iAvailSSLConns -=n;   }
+    void incSSLConn(int n)
+    {   m_iAvailSSLConns -= n;   }
     void decConn()
-    {   if ( !(m_iAvailConns++) )
+    {
+        if (!(m_iAvailConns++))
             tryResume();
     }
     void decSSLConn()
-    {   if ( !( m_iAvailSSLConns++) )
+    {
+        if (!(m_iAvailSSLConns++))
             tryResumeSSL();
     }
 
@@ -68,37 +70,39 @@ public:
 
     int  availSSLConn() const
     {   return m_iAvailSSLConns;  }
-    
+
     bool allowConn() const
     {   return m_iAvailConns > 0 ;  }
-    
+
     bool allowSSLConn() const
     {   return m_iAvailSSLConns > 0 ;   }
 
-    const int32_t * getAvailSSLConnAddr() const
+    const int32_t *getAvailSSLConnAddr() const
     {   return &m_iAvailSSLConns;   }
-    
-    const int32_t * getAvailConnAddr() const
+
+    const int32_t *getAvailConnAddr() const
     {   return &m_iAvailConns;      }
-        
+
     void suspendAll();
     void suspendSSL();
 
-    void setListeners( HttpListenerList * pListeners )
+    void setListeners(HttpListenerList *pListeners)
     {   m_pListeners = pListeners;  }
-    HttpListenerList * getListeners() const
+    HttpListenerList *getListeners() const
     {   return m_pListeners;        }
 
-    void setMaxConns( int32_t conns )
-    {   if ( conns > 0 )
+    void setMaxConns(int32_t conns)
+    {
+        if (conns > 0)
         {
             m_iAvailConns += conns - m_iMaxConns;
             m_iMaxConns = conns;
             m_iLowWaterMark = m_iMaxConns / 5;
         }
     }
-    void setMaxSSLConns( int32_t conns )
-    {   if ( conns > 0 )
+    void setMaxSSLConns(int32_t conns)
+    {
+        if (conns > 0)
         {
             m_iAvailSSLConns += conns - m_iMaxSSLConns;
             m_iMaxSSLConns = conns;
@@ -109,18 +113,18 @@ public:
     {   return m_iMaxConns;                     }
     int32_t getMaxSSLConns() const
     {   return m_iMaxSSLConns;                  }
-    void setConnOverflow( int over)
+    void setConnOverflow(int over)
     {   m_iConnOverflow = over;                 }
     int32_t getConnOverflow() const
     {   return m_iConnOverflow;                 }
 
     void checkWaterMark();
-        
+
     bool lowOnConnection() const
     {   return m_iAvailConns < m_iLowWaterMark;        }
-    
-    void tryAcceptNewConn(); 
-                                                        
+
+    void tryAcceptNewConn();
+
 };
 
 #endif

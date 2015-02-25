@@ -33,22 +33,22 @@ class FileAppender : public Appender
 {
     ino_t    m_ino;
 
-protected: 
-    explicit FileAppender( const char * pName )
-        : Appender( pName )
-        , m_ino( 0 )
-        {}
-    Duplicable * dup( const char * pName );
-                       
+protected:
+    explicit FileAppender(const char *pName)
+        : Appender(pName)
+        , m_ino(0)
+    {}
+    Duplicable *dup(const char *pName);
+
 public:
     virtual ~FileAppender() {};
     static int init();
-    
+
     virtual int open();
     virtual int close();
     virtual int reopenExist();
-    virtual int append( const char * pBuf, int len );
-    
+    virtual int append(const char *pBuf, int len);
+
 };
 
 END_LOG4CXX_NS

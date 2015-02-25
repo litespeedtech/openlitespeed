@@ -29,20 +29,22 @@
 #include "cgidconfig.h"
 #include "suexec.h"
 
-CgidConn::CgidConn(){
+CgidConn::CgidConn()
+{
 }
-CgidConn::~CgidConn(){
+CgidConn::~CgidConn()
+{
 }
 
-ExtRequest* CgidConn::getReq() const
+ExtRequest *CgidConn::getReq() const
 {
     return getConnector();
 }
 
 
-void CgidConn::init( int fd, Multiplexer* pMplx )
+void CgidConn::init(int fd, Multiplexer *pMplx)
 {
-    EdStream::init( fd, pMplx, POLLIN|POLLOUT|POLLHUP|POLLERR );
+    EdStream::init(fd, pMplx, POLLIN | POLLOUT | POLLHUP | POLLERR);
 }
 
 
@@ -51,82 +53,81 @@ void CgidConn::init( int fd, Multiplexer* pMplx )
 //interface defined by EdStream
 int CgidConn::doRead()
 {
-    if ( !getConnector() )
+    if (!getConnector())
         return -1;
-    if ( D_ENABLED( DL_MEDIUM ) )
-        LOG_D(( getLogger(), "[%s] CgidConn::onRead()\n", getLogId() ));
+    if (D_ENABLED(DL_MEDIUM))
+        LOG_D((getLogger(), "[%s] CgidConn::onRead()\n", getLogId()));
     int len = 0;
     int ret = 0;
     do
     {
-        len = ret = read( HttpGlobals::g_achBuf, G_BUF_SIZE );
-        if ( ret > 0 )
+        len = ret = read(HttpGlobals::g_achBuf, G_BUF_SIZE);
+        if (ret > 0)
         {
-            if ( D_ENABLED( DL_MEDIUM ) )
-                LOG_D(( getLogger(), "[%s] process STDOUT %d bytes",
-                    getLogId(), len ));
+            if (D_ENABLED(DL_MEDIUM))
+                LOG_D((getLogger(), "[%s] process STDOUT %d bytes",
+                       getLogId(), len));
             //printf( ">>read %d bytes from CGI\n", len );
             //achBuf[ ret ] = 0;
             //printf( "%s", achBuf );
-            ret = getConnector()->processRespData( HttpGlobals::g_achBuf, len );
-            if ( ret == -1 )
+            ret = getConnector()->processRespData(HttpGlobals::g_achBuf, len);
+            if (ret == -1)
                 break;
         }
         else
         {
-            if ( ret )
+            if (ret)
             {
-                getConnector()->endResponse( 0, 0 );
+                getConnector()->endResponse(0, 0);
                 return 0;
             }
             break;
         }
-    }while( len == G_BUF_SIZE );
-    if (( ret != -1 )&&( getConnector() ))
+    }
+    while (len == G_BUF_SIZE);
+    if ((ret != -1) && (getConnector()))
         getConnector()->flushResp();
     return ret;
 }
 
-int CgidConn::readResp( char * pBuf, int size )
+int CgidConn::readResp(char *pBuf, int size)
 {
-    int len = read( pBuf, size );
-    if ( len == -1 )
-    {
-        getConnector()->endResponse( 0, 0 );
-    }
+    int len = read(pBuf, size);
+    if (len == -1)
+        getConnector()->endResponse(0, 0);
     return len;
 
 }
 
 int CgidConn::doWrite()
 {
-    if ( !getConnector() )
+    if (!getConnector())
         return -1;
-    if ( D_ENABLED( DL_MEDIUM ) )
-        LOG_D(( getLogger(), "[%s] CgidConn::onWrite()\n", getLogId() ));
+    if (D_ENABLED(DL_MEDIUM))
+        LOG_D((getLogger(), "[%s] CgidConn::onWrite()\n", getLogId()));
     int ret = getConnector()->extOutputReady();
-    if (!( getConnector()->getState() & HEC_FWD_REQ_BODY ))
+    if (!(getConnector()->getState() & HEC_FWD_REQ_BODY))
     {
-        if ( m_iTotalPending > 0 )
+        if (m_iTotalPending > 0)
             return flush();
         else
         {
             suspendWrite();
-            ::shutdown( getfd(), SHUT_WR );
+            ::shutdown(getfd(), SHUT_WR);
         }
     }
     return ret;
 }
 
 
-int CgidConn::doError( int error)
+int CgidConn::doError(int error)
 {
-    if ( !getConnector() )
+    if (!getConnector())
         return -1;
-    if ( D_ENABLED( DL_MEDIUM ) )
-        LOG_D(( getLogger(), "[%s] CgidConn::onError()\n", getLogId() ));
+    if (D_ENABLED(DL_MEDIUM))
+        LOG_D((getLogger(), "[%s] CgidConn::onError()\n", getLogId()));
     //getState() = HEC_COMPLETE;
-    getConnector()->endResponse( 0, 0 );
+    getConnector()->endResponse(0, 0);
     return -1;
 }
 
@@ -145,15 +146,15 @@ bool CgidConn::wantWrite()
 //interface defined by HttpExtProcessor
 void CgidConn::abort()
 {
-    setState( CLOSING );
-    ::shutdown( getfd(), SHUT_RDWR );
+    setState(CLOSING);
+    ::shutdown(getfd(), SHUT_RDWR);
 }
 
 void CgidConn::cleanUp()
 {
-    setConnector( NULL );
-    setState( CLOSING );
-    ::shutdown( getfd(), SHUT_RDWR );
+    setConnector(NULL);
+    setState(CLOSING);
+    ::shutdown(getfd(), SHUT_RDWR);
 //    close();
     recycle();
 }
@@ -169,14 +170,14 @@ int CgidConn::beginReqBody()
 }
 int CgidConn::endOfReqBody()
 {
-    if ( m_iTotalPending )
+    if (m_iTotalPending)
     {
         int ret = flush();
-        if ( ret )
+        if (ret)
             return ret;
     }
     suspendWrite();
-    ::shutdown( getfd(), SHUT_WR );
+    ::shutdown(getfd(), SHUT_WR);
     return 0;
 }
 
@@ -188,53 +189,52 @@ int  CgidConn::sendReqHeader()
     return 1;
 }
 
-int CgidConn::sendReqBody( const char * pBuf, int size )
+int CgidConn::sendReqBody(const char *pBuf, int size)
 {
     int ret;
-    if ( m_iTotalPending == 0 )
-    {
-        ret = write( pBuf, size );
-    }
+    if (m_iTotalPending == 0)
+        ret = write(pBuf, size);
     else
     {
         IOVec iov;
-        iov.append( m_pPendingBuf, m_iTotalPending );
-        iov.append( pBuf, size );
-        ret = writev( iov );
-        if ( ret >= m_iTotalPending )
+        iov.append(m_pPendingBuf, m_iTotalPending);
+        iov.append(pBuf, size);
+        ret = writev(iov);
+        if (ret >= m_iTotalPending)
         {
             ret = ret - m_iTotalPending;
             m_iTotalPending = 0;
         }
-        else if ( ret > 0 )
+        else if (ret > 0)
         {
             m_iTotalPending -= ret;
             m_pPendingBuf += ret;
             ret = 0;
         }
     }
-    
+
     return ret;
 }
 
-int CgidConn::addRequest( ExtRequest * pReq )
+int CgidConn::addRequest(ExtRequest *pReq)
 {
-    assert( pReq );
-    setConnector( (HttpExtConnector *)pReq );
+    assert(pReq);
+    setConnector((HttpExtConnector *)pReq);
     int ret;
-    if ( getConnector()->getHttpSession()->getReq()->getContextState( EXEC_EXT_CMD ) )
+    if (getConnector()->getHttpSession()->getReq()->getContextState(
+            EXEC_EXT_CMD))
         ret = buildSSIExecHeader();
     else
         ret = buildReqHeader();
-    if ( ret )
+    if (ret)
     {
 //        if ( D_ENABLED( DL_LESS ) )
 //            LOG_D(( getLogger(),
 //                "[%s] Request header can't fit into 8K buffer, "
 //                "can't forward request to servlet engine",
 //                getLogId() ));
-        ((HttpExtConnector *)pReq)->setProcessor( NULL );
-        setConnector( NULL );
+        ((HttpExtConnector *)pReq)->setProcessor(NULL);
+        setConnector(NULL);
     }
     return ret;
 }
@@ -244,22 +244,22 @@ int CgidConn::buildSSIExecHeader()
 {
     static unsigned int s_id = 0;
     HttpSession *pSession = getConnector()->getHttpSession();
-    HttpReq * pReq = pSession->getReq();
-    const char * pReal;
-    const AutoStr2 * psChroot;
-    const char * pChroot;
+    HttpReq *pReq = pSession->getReq();
+    const char *pReal;
+    const AutoStr2 *psChroot;
+    const char *pChroot;
     int ret;
     uid_t uid;
     gid_t gid;
     pReal = pReq->getRealPath()->c_str();
-    ret = pReq->getUGidChroot( &uid, &gid, &psChroot );
-    if ( ret )
+    ret = pReq->getUGidChroot(&uid, &gid, &psChroot);
+    if (ret)
         return ret;
 //    if ( D_ENABLED( DL_LESS ) )
 //        LOG_D(( getLogger(),
 //            "[%s] UID: %d, GID: %d",
 //            getLogId(), pHeader->m_uid, pHeader->m_gid ));
-    if ( psChroot )
+    if (psChroot)
     {
 //        if ( D_ENABLED( DL_LESS ) )
 //            LOG_D(( getLogger(),
@@ -274,32 +274,33 @@ int CgidConn::buildSSIExecHeader()
         ret = 0;
     }
     char achBuf[4096];
-    memccpy( achBuf, pReal, 0, 4096 );
-    char * argv[256];
-    char ** p;
-    char * pDir ;
-    SUExec::buildArgv( achBuf, &pDir, argv, 256 );
-    if ( pDir )
-        *(argv[0]-1) = '/';
+    memccpy(achBuf, pReal, 0, 4096);
+    char *argv[256];
+    char **p;
+    char *pDir ;
+    SUExec::buildArgv(achBuf, &pDir, argv, 256);
+    if (pDir)
+        *(argv[0] - 1) = '/';
     else
         pDir = argv[0];
 
     int priority = ((CgidWorker *)getWorker())->getConfig().getPriority();
-    m_req.buildReqHeader( uid, gid, priority, pChroot, ret, pDir,
-                strlen( pDir ),
-                ((CgidWorker *)getWorker())->getConfig().getRLimits() );
+    m_req.buildReqHeader(uid, gid, priority, pChroot, ret, pDir,
+                         strlen(pDir),
+                         ((CgidWorker *)getWorker())->getConfig().getRLimits());
     p = &argv[1];
-    while( *p )
+    while (*p)
     {
-        m_req.appendArgv( *p, strlen( *p ) );
+        m_req.appendArgv(*p, strlen(*p));
         ++p;
     }
-    m_req.appendArgv( NULL, 0 );
+    m_req.appendArgv(NULL, 0);
 
-    HttpCgiTool::buildEnv( &m_req, pSession );
+    HttpCgiTool::buildEnv(&m_req, pSession);
 
-    m_req.finalize( s_id++, ((CgidWorker *)getWorker())->getConfig().getSecret(),
-                     LSCGID_TYPE_CGI );
+    m_req.finalize(s_id++, ((CgidWorker *)
+                            getWorker())->getConfig().getSecret(),
+                   LSCGID_TYPE_CGI);
     return 0;
 }
 
@@ -308,25 +309,25 @@ int CgidConn::buildReqHeader()
 {
     static unsigned int s_id = 0;
     HttpSession *pSession = getConnector()->getHttpSession();
-    HttpReq * pReq = pSession->getReq();
-    const char * pQueryString = pReq->getQueryString();
-    const char * pQsEnd = pReq->getQueryString() + pReq->getQueryStringLen();
-    const char * pReal;
-    const AutoStr2 * psChroot;
-    const AutoStr2 * realPath = pReq->getRealPath();
-    const char * pChroot;
+    HttpReq *pReq = pSession->getReq();
+    const char *pQueryString = pReq->getQueryString();
+    const char *pQsEnd = pReq->getQueryString() + pReq->getQueryStringLen();
+    const char *pReal;
+    const AutoStr2 *psChroot;
+    const AutoStr2 *realPath = pReq->getRealPath();
+    const char *pChroot;
     int ret;
     uid_t uid;
     gid_t gid;
     pReal = realPath->c_str();
-    ret = pReq->getUGidChroot( &uid, &gid, &psChroot );
-    if ( ret )
+    ret = pReq->getUGidChroot(&uid, &gid, &psChroot);
+    if (ret)
         return ret;
 //    if ( D_ENABLED( DL_LESS ) )
 //        LOG_D(( getLogger(),
 //            "[%s] UID: %d, GID: %d",
 //            getLogId(), pHeader->m_uid, pHeader->m_gid ));
-    if ( psChroot )
+    if (psChroot)
     {
 //        if ( D_ENABLED( DL_LESS ) )
 //            LOG_D(( getLogger(),
@@ -341,44 +342,46 @@ int CgidConn::buildReqHeader()
         ret = 0;
     }
     int priority = ((CgidWorker *)getWorker())->getConfig().getPriority();
-    m_req.buildReqHeader( uid, gid, priority, pChroot, ret, pReal,
-                pReq->getRealPath()->len(),
-                ((CgidWorker *)getWorker())->getConfig().getRLimits() );
-    if ( *pQueryString && (memchr( pQueryString, '=',
-                                pQsEnd - pQueryString ) == NULL ))
+    m_req.buildReqHeader(uid, gid, priority, pChroot, ret, pReal,
+                         pReq->getRealPath()->len(),
+                         ((CgidWorker *)getWorker())->getConfig().getRLimits());
+    if (*pQueryString && (memchr(pQueryString, '=',
+                                 pQsEnd - pQueryString) == NULL))
     {
-        char * pPlus;
+        char *pPlus;
         do
         {
-            pPlus = (char*)memchr( pQueryString, '+', pQsEnd - pQueryString);
-            if ( pPlus != pQueryString )
+            pPlus = (char *)memchr(pQueryString, '+', pQsEnd - pQueryString);
+            if (pPlus != pQueryString)
             {
                 int len;
-                if ( pPlus )
+                if (pPlus)
                     len = pPlus - pQueryString;
                 else
                     len = pQsEnd - pQueryString;
-                m_req.appendArgv( pQueryString, len );
+                m_req.appendArgv(pQueryString, len);
             }
-            if ( pPlus )
+            if (pPlus)
                 pQueryString = pPlus + 1;
-        }while( pPlus );
+        }
+        while (pPlus);
     }
-    m_req.appendArgv( NULL, 0 );
+    m_req.appendArgv(NULL, 0);
 
-    HttpCgiTool::buildEnv( &m_req, pSession );
+    HttpCgiTool::buildEnv(&m_req, pSession);
 
-    m_req.finalize( s_id++, ((CgidWorker *)getWorker())->getConfig().getSecret(),
-                    LSCGID_TYPE_CGI );
+    m_req.finalize(s_id++, ((CgidWorker *)
+                            getWorker())->getConfig().getSecret(),
+                   LSCGID_TYPE_CGI);
     return 0;
 }
 
-int CgidConn::removeRequest( ExtRequest* pReq )
+int CgidConn::removeRequest(ExtRequest *pReq)
 {
-    if ( getConnector() )
+    if (getConnector())
     {
-        getConnector()->setProcessor( NULL );
-        setConnector( NULL );
+        getConnector()->setProcessor(NULL);
+        setConnector(NULL);
     }
     return 0;
 }
@@ -393,13 +396,13 @@ void CgidConn::dump()
 
 int  CgidConn::flush()
 {
-    if ( m_iTotalPending )
+    if (m_iTotalPending)
     {
-        int ret = write( m_pPendingBuf, m_iTotalPending );
-        
-        if ( ret > 0)
+        int ret = write(m_pPendingBuf, m_iTotalPending);
+
+        if (ret > 0)
         {
-            if ( ret < m_iTotalPending )
+            if (ret < m_iTotalPending)
             {
                 m_pPendingBuf += ret;
                 m_iTotalPending -= ret;

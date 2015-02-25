@@ -39,16 +39,17 @@ class SSLConnection;
 class SSLContext;
 struct sockaddr;
 
-typedef int (*writev_fp)( LsiSession* pThis, const struct iovec *vector, int count );
-typedef int (*read_fp)( LsiSession* pThis, char *pBuf, int size );
+typedef int (*writev_fp)(LsiSession *pThis, const struct iovec *vector,
+                         int count);
+typedef int (*read_fp)(LsiSession *pThis, char *pBuf, int size);
 
 
-class NtwkIOLink : public LsiSession, public EventReactor, public HioStream 
+class NtwkIOLink : public LsiSession, public EventReactor, public HioStream
 {
 private:
-    typedef int (*onRW_fp)( NtwkIOLink * pThis );
-    typedef void (*onTimer_fp)( NtwkIOLink * pThis );
-    typedef int (*close_fp)( NtwkIOLink * pThis);
+    typedef int (*onRW_fp)(NtwkIOLink *pThis);
+    typedef void (*onTimer_fp)(NtwkIOLink *pThis);
+    typedef int (*close_fp)(NtwkIOLink *pThis);
     class fp_list
     {
     public:
@@ -58,28 +59,28 @@ private:
         onRW_fp         m_onRead_fp;
         close_fp        m_close_fp;
         onTimer_fp      m_onTimer_fp;
-        
-        fp_list( read_fp rfn, writev_fp wvfn, onRW_fp onwfn, onRW_fp onrfn,
-                close_fp cfn, onTimer_fp otfn )
-            : m_read_fp( rfn )
-            , m_writev_fp( wvfn )
-            , m_onWrite_fp( onwfn ) 
-            , m_onRead_fp( onrfn )
-            , m_close_fp( cfn )
-            , m_onTimer_fp( otfn )
-            {}
+
+        fp_list(read_fp rfn, writev_fp wvfn, onRW_fp onwfn, onRW_fp onrfn,
+                close_fp cfn, onTimer_fp otfn)
+            : m_read_fp(rfn)
+            , m_writev_fp(wvfn)
+            , m_onWrite_fp(onwfn)
+            , m_onRead_fp(onrfn)
+            , m_close_fp(cfn)
+            , m_onTimer_fp(otfn)
+        {}
     };
 
     class fp_list_list
     {
     public:
-        fp_list       * m_pNoSSL;
-        fp_list       * m_pSSL;
-        
-        fp_list_list( fp_list *lplain, fp_list *lssl )
-            : m_pNoSSL( lplain )
-            , m_pSSL( lssl )
-            {}
+        fp_list        *m_pNoSSL;
+        fp_list        *m_pSSL;
+
+        fp_list_list(fp_list *lplain, fp_list *lssl)
+            : m_pNoSSL(lplain)
+            , m_pSSL(lssl)
+        {}
     };
 
     static class fp_list        s_normal;
@@ -93,11 +94,11 @@ private:
     static class fp_list_list  *s_pCur_fp_list_list;
 
 
-      
+
     LsiModuleData       m_moduleData;
 
-    ClientInfo        * m_pClientInfo;
-    const VHostMap    * m_pVHostMap;
+    ClientInfo         *m_pClientInfo;
+    const VHostMap     *m_pVHostMap;
     unsigned short      m_iRemotePort;
 
     char                m_iInProcess;
@@ -107,21 +108,21 @@ private:
     int                 m_iHeaderToSend;
     SSLConnection       m_ssl;
 
-    class fp_list     * m_pFpList;
+    class fp_list      *m_pFpList;
     SessionHooks<LSI_HKPT_L4_BEGINSESSION, LSI_HKPT_L4_COUNT>  m_sessionHooks;
     short               m_hasBufferedData;
     IOVec               m_iov;
-    
+
 public:
     short               hasBufferedData()   {   return m_hasBufferedData; }
 
 private:
-    NtwkIOLink( const NtwkIOLink& rhs );
-    void operator=( const NtwkIOLink& rhs );
+    NtwkIOLink(const NtwkIOLink &rhs);
+    void operator=(const NtwkIOLink &rhs);
 
     int doRead()
     {
-        if ( isWantRead() )
+        if (isWantRead())
             return getHandler()->onReadEx();
         else
             suspendRead();
@@ -130,14 +131,14 @@ private:
 
     int doReadT()
     {
-        if ( isWantRead() )
+        if (isWantRead())
         {
-            if ( allowRead() )
+            if (allowRead())
                 return getHandler()->onReadEx();
             else
             {
                 suspendRead();
-                setFlag( HIO_FLAG_WANT_READ, 1 );
+                setFlag(HIO_FLAG_WANT_READ, 1);
             }
         }
         else
@@ -147,7 +148,7 @@ private:
 
     int doWrite()
     {
-        if ( isWantWrite() )
+        if (isWantWrite())
             if (getHandler())
                 return getHandler()->onWriteEx();
             else
@@ -155,77 +156,78 @@ private:
         else
         {
             suspendWrite();
-            if ( isSSL() || m_hasBufferedData )
+            if (isSSL() || m_hasBufferedData)
                 flush();
         }
         return 0;
     }
 
-    int checkWriteRet( int len );
-    int checkReadRet( int ret, int size );
+    int checkWriteRet(int len);
+    int checkReadRet(int ret, int size);
     void setSSLAgain();
 
-    static int writevEx     ( LsiSession* pThis, const iovec *vector, int count );
-    static int writevExT    ( LsiSession* pThis, const iovec *vector, int count );
-    static int writevExSSL  ( LsiSession* pThis, const iovec *vector, int count );
-    static int writevExSSL_T( LsiSession* pThis, const iovec *vector, int count );
+    static int writevEx(LsiSession *pThis, const iovec *vector, int count);
+    static int writevExT(LsiSession *pThis, const iovec *vector, int count);
+    static int writevExSSL(LsiSession *pThis, const iovec *vector, int count);
+    static int writevExSSL_T(LsiSession *pThis, const iovec *vector,
+                             int count);
 
-    static int readEx       ( LsiSession* pThis, char * pBuf, int size );
-    static int readExT      ( LsiSession* pThis, char * pBuf, int size );
-    static int readExSSL    ( LsiSession* pThis, char * pBuf, int size );
-    static int readExSSL_T  ( LsiSession* pThis, char * pBuf, int size );
+    static int readEx(LsiSession *pThis, char *pBuf, int size);
+    static int readExT(LsiSession *pThis, char *pBuf, int size);
+    static int readExSSL(LsiSession *pThis, char *pBuf, int size);
+    static int readExSSL_T(LsiSession *pThis, char *pBuf, int size);
 
-    static int onReadSSL( NtwkIOLink * pThis );
-    static int onReadSSL_T( NtwkIOLink * pThis );
-    static int onReadT( NtwkIOLink *pThis );
-    static int onRead(NtwkIOLink *pThis );
+    static int onReadSSL(NtwkIOLink *pThis);
+    static int onReadSSL_T(NtwkIOLink *pThis);
+    static int onReadT(NtwkIOLink *pThis);
+    static int onRead(NtwkIOLink *pThis);
 
-    static int onWriteSSL( NtwkIOLink * pThis );
-    static int onWriteSSL_T( NtwkIOLink * pThis );
-    static int onWriteT( NtwkIOLink *pThis );
-    static int onWrite(NtwkIOLink *pThis );
+    static int onWriteSSL(NtwkIOLink *pThis);
+    static int onWriteSSL_T(NtwkIOLink *pThis);
+    static int onWriteT(NtwkIOLink *pThis);
+    static int onWrite(NtwkIOLink *pThis);
 
-    static int close_( NtwkIOLink * pThis );
-    static int closeSSL( NtwkIOLink * pThis );
-    static void onTimer_T( NtwkIOLink * pThis );
-    static void onTimer_( NtwkIOLink * pThis );
-    static void onTimerSSL_T( NtwkIOLink * pThis );
+    static int close_(NtwkIOLink *pThis);
+    static int closeSSL(NtwkIOLink *pThis);
+    static void onTimer_T(NtwkIOLink *pThis);
+    static void onTimer_(NtwkIOLink *pThis);
+    static void onTimerSSL_T(NtwkIOLink *pThis);
 
     void drainReadBuf();
-        
+
     bool allowWrite() const
     {   return m_pClientInfo->allowWrite();  }
-    
 
-    int sendfileEx( int fdSrc, off_t off, size_t size );
 
-    
-    
+    int sendfileEx(int fdSrc, off_t off, size_t size);
+
+
+
     void updateSSLEvent();
-    void checkSSLReadRet( int ret );
-    
-    int setupHandler( HiosProtocol verSpdy );
+    void checkSSLReadRet(int ret);
+
+    int setupHandler(HiosProtocol verSpdy);
     int sslSetupHandler();
 
-    void dumpState(const char * pFuncName, const char * action);
-    void initSessionHooks( int index, LsiApiHooks ** pHooks );
+    void dumpState(const char *pFuncName, const char *action);
+    void initSessionHooks(int index, LsiApiHooks **pHooks);
 
 public:
-    void setRemotePort( unsigned short port )
-    {   
+    void setRemotePort(unsigned short port)
+    {
         m_iRemotePort = port;
-        clearLogId();  
+        clearLogId();
     };
-    
+
     unsigned short getRemotePort() const  {   return m_iRemotePort;       };
-        
-    int sendRespHeaders( HttpRespHeaders * pHeaders );
-    
-    const char * buildLogId();
-    LogTracker * getLogTracker()        {   return this;        }
-    
-    class fp_list     * getFnList() { return m_pFpList; }
-    
+
+    int sendRespHeaders(HttpRespHeaders *pHeaders);
+
+    const char *buildLogId();
+    LogTracker *getLogTracker()        {   return this;        }
+
+    class fp_list      *getFnList() { return m_pFpList; }
+
 public:
     void closeSocket();
     bool allowRead() const
@@ -242,58 +244,60 @@ public:
 
     char inProcess() const    {   return m_iInProcess;    }
 
-    int read( char * pBuf, int size );
+    int read(char *pBuf, int size);
 
     // Output stream interfaces
-    bool canHold( int size )    {   return allowWrite();        }
+    bool canHold(int size)    {   return allowWrite();        }
 
-    int write( const char * pBuf, int size );
-    int writev_internal( const struct iovec * vector, int len, int flush_flag );
-    int writev( const struct iovec * vector, int len );
-    
-    int sendfile( int fdSrc, off_t off, size_t size );
-    
+    int write(const char *pBuf, int size);
+    int writev_internal(const struct iovec *vector, int len, int flush_flag);
+    int writev(const struct iovec *vector, int len);
+
+    int sendfile(int fdSrc, off_t off, size_t size);
+
     int flush();
 
     void setNoSSL() {   m_pFpList = s_pCur_fp_list_list->m_pNoSSL;    }
-    
+
     // SSL interface
-    void setSSL( SSL* pSSL )
+    void setSSL(SSL *pSSL)
     {
         m_pFpList = s_pCur_fp_list_list->m_pSSL;
-        m_ssl.setSSL( pSSL );
-        m_ssl.setfd( getfd() );
+        m_ssl.setSSL(pSSL);
+        m_ssl.setfd(getfd());
     }
-    
-    SSLConnection* getSSL()     {   return &m_ssl;  }
+
+    SSLConnection *getSSL()     {   return &m_ssl;  }
     bool isSSL() const          {   return m_ssl.getSSL() != NULL;  }
-    
+
     int SSLAgain();
     int acceptSSL();
     void handle_acceptSSL_EIO_Err();
-    
-    int get_url_from_reqheader(char *buf, int length, char **puri, int *uri_len, char **phost, int *host_len);
-    
-    
-    int switchToHttp2Handler(HttpSession *pSession);
-    
-    int setLink( HttpListener *pListener, int fd, ClientInfo * pInfo, SSLContext * pSSLContext );
 
-    const char * getPeerAddrString() const
+    int get_url_from_reqheader(char *buf, int length, char **puri,
+                               int *uri_len, char **phost, int *host_len);
+
+
+    int switchToHttp2Handler(HioStreamHandler *pSession);
+
+    int setLink(HttpListener *pListener, int fd, ClientInfo *pInfo,
+                SSLContext  *pSSLContext);
+
+    const char *getPeerAddrString() const
     {   return m_pClientInfo->getAddrString();   }
     int getPeerAddrStrLen() const
     {   return m_pClientInfo->getAddrStrLen();   }
 
-    const struct sockaddr * getPeerAddr() const
+    const struct sockaddr *getPeerAddr() const
     {   return m_pClientInfo->getAddr();   }
 
-    void changeClientInfo( ClientInfo * pInfo );
-    
-    
-    //Event driven IO interface
-    int handleEvents( short event );
+    void changeClientInfo(ClientInfo *pInfo);
 
-    void setNotWantRead()   {   setFlag( HIO_FLAG_WANT_READ, 0 );  }
+
+    //Event driven IO interface
+    int handleEvents(short event);
+
+    void setNotWantRead()   {   setFlag(HIO_FLAG_WANT_READ, 0);  }
     void suspendRead();
     void continueRead();
     void suspendWrite();
@@ -309,30 +313,30 @@ public:
     //void stopThrottleTimer();
     //void startThrottleTimer();
 
-    ClientInfo * getClientInfo() const
+    ClientInfo *getClientInfo() const
     {   return m_pClientInfo;               }
-    ThrottleControl* getThrottleCtrl() const
-    {   return  &( m_pClientInfo->getThrottleCtrl() );  }
+    ThrottleControl *getThrottleCtrl() const
+    {   return  &(m_pClientInfo->getThrottleCtrl());  }
     int isClosing() const
     {   return getState() >= HIOS_SHUTDOWN;     }
-    static void enableThrottle( int enable );
+    static void enableThrottle(int enable);
     int isThrottle() const
     {   return m_pFpList->m_onTimer_fp != onTimer_; }
     void suspendEventNotify();
     void resumeEventNotify();
 
     void tryRead();
-    
+
     void tobeClosed() { setState(HIOS_CLOSING);  }
 
-    void setVHostMap( const VHostMap* pMap ){   m_pVHostMap = pMap;     }
-    const VHostMap * getVHostMap() const    {   return m_pVHostMap;     }
-    
-    LsiModuleData* getModuleData()      {   return &m_moduleData;   }
+    void setVHostMap(const VHostMap *pMap) {   m_pVHostMap = pMap;     }
+    const VHostMap *getVHostMap() const    {   return m_pVHostMap;     }
 
-    LsiApiHooks * getModSessionHooks( int index )
-    {   return m_sessionHooks.getCopy( index ); }
-    virtual NtwkIOLink * getNtwkIoLink()    {   return this;    }
+    LsiModuleData *getModuleData()      {   return &m_moduleData;   }
+
+    LsiApiHooks *getModSessionHooks(int index)
+    {   return m_sessionHooks.getCopy(index); }
+    virtual NtwkIOLink *getNtwkIoLink()    {   return this;    }
 };
 
 

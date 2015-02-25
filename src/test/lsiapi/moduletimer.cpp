@@ -30,23 +30,23 @@ void test_module_timer_cb_fp(void *p)
 {
     char buf[31];
     DateTime::getRFCTime(DateTime::s_curTime, buf);
-    printf("Current tiem is %s[%s]\n", buf, ((p)? (char *)p : "NULL param" ));
-    
+    printf("Current tiem is %s[%s]\n", buf, ((p) ? (char *)p : "NULL param"));
+
 }
 
 int Check_Timer()
 {
     int hasTimer = 0;
-    
+
     //Check module timer here and trigger timeout ones
     LinkedObj *headPos = HttpGlobals::s_ModuleTimerList.head();
     ModuleTimer *pNext = NULL;
-    while(1)
+    while (1)
     {
         pNext = (ModuleTimer *)(headPos->next());
         if (pNext)
             hasTimer = 1;
-        
+
         if (pNext && pNext->m_tmExpire <= DateTime::s_curTime)
         {
             pNext->m_TimerCb(pNext->m_pTimerCbParam);
@@ -56,14 +56,14 @@ int Check_Timer()
         else
             break;
     }
-    
-    
+
+
     return hasTimer;
 }
 
 void CheckTimerLoop()
 {
-    while(Check_Timer())
+    while (Check_Timer())
         DateTime::s_curTime ++;
 }
 
@@ -78,45 +78,70 @@ TEST(INIT_LSIAPI111)
 TEST(TEst_Module_Timer)
 {
     int tid1, tid2, tid3, tid4, tid5, tid6;
-    tid1 = LsiapiBridge::getLsiapiFunctions()->set_timer( 1000 * 3, test_module_timer_cb_fp, NULL);
+    tid1 = LsiapiBridge::getLsiapiFunctions()->set_timer(1000 * 3,
+            test_module_timer_cb_fp, NULL);
     CheckTimerLoop();
     //Check again if have one, should be no now
     CheckTimerLoop();
-    
-    
-    tid1 = LsiapiBridge::getLsiapiFunctions()->set_timer( 1000 * 3, test_module_timer_cb_fp, (void *)"3 1");
-    tid2 = LsiapiBridge::getLsiapiFunctions()->set_timer( 1000 * 2, test_module_timer_cb_fp, (void *)"2");
-    tid3 = LsiapiBridge::getLsiapiFunctions()->set_timer( 1000 * 3, test_module_timer_cb_fp, (void *)"3 2");
-    tid4 = LsiapiBridge::getLsiapiFunctions()->set_timer( 1000 * 4, test_module_timer_cb_fp, (void *)"4 1");
-    tid5 = LsiapiBridge::getLsiapiFunctions()->set_timer( 1000 * 5, test_module_timer_cb_fp, (void *)"5 1");
-    tid6 = LsiapiBridge::getLsiapiFunctions()->set_timer( 1000 * 5, test_module_timer_cb_fp, (void *)"5 2");
+
+
+    tid1 = LsiapiBridge::getLsiapiFunctions()->set_timer(1000 * 3,
+            test_module_timer_cb_fp, (void *)"3 1");
+    tid2 = LsiapiBridge::getLsiapiFunctions()->set_timer(1000 * 2,
+            test_module_timer_cb_fp, (void *)"2");
+    tid3 = LsiapiBridge::getLsiapiFunctions()->set_timer(1000 * 3,
+            test_module_timer_cb_fp, (void *)"3 2");
+    tid4 = LsiapiBridge::getLsiapiFunctions()->set_timer(1000 * 4,
+            test_module_timer_cb_fp, (void *)"4 1");
+    tid5 = LsiapiBridge::getLsiapiFunctions()->set_timer(1000 * 5,
+            test_module_timer_cb_fp, (void *)"5 1");
+    tid6 = LsiapiBridge::getLsiapiFunctions()->set_timer(1000 * 5,
+            test_module_timer_cb_fp, (void *)"5 2");
     LsiapiBridge::getLsiapiFunctions()->remove_timer(tid5);
     //"5 1 remove"
     CheckTimerLoop();
     //Check again if have one, should be no now
     CheckTimerLoop();
-    
-    tid1 = LsiapiBridge::getLsiapiFunctions()->set_timer( 1000 * 3, test_module_timer_cb_fp, (void *)"3 1");
-    tid2 = LsiapiBridge::getLsiapiFunctions()->set_timer( 1000 * 2, test_module_timer_cb_fp, (void *)"2 1");
-    tid3 = LsiapiBridge::getLsiapiFunctions()->set_timer( 1000 * 3, test_module_timer_cb_fp, (void *)"3 2");
-    tid4 = LsiapiBridge::getLsiapiFunctions()->set_timer( 1000 * 4, test_module_timer_cb_fp, (void *)"4 1");
-    tid5 = LsiapiBridge::getLsiapiFunctions()->set_timer( 1000 * 5, test_module_timer_cb_fp, (void *)"5 1");
-    tid6 = LsiapiBridge::getLsiapiFunctions()->set_timer( 1000 * 5, test_module_timer_cb_fp, (void *)"5 2");
-    
-    tid1 = LsiapiBridge::getLsiapiFunctions()->set_timer( 1000 * 3, test_module_timer_cb_fp, (void *)"3 3");
-    tid2 = LsiapiBridge::getLsiapiFunctions()->set_timer( 1000 * 2, test_module_timer_cb_fp, (void *)"2 2");
-    tid3 = LsiapiBridge::getLsiapiFunctions()->set_timer( 1000 * 3, test_module_timer_cb_fp, (void *)"3 4");
-    tid4 = LsiapiBridge::getLsiapiFunctions()->set_timer( 1000 * 4, test_module_timer_cb_fp, (void *)"4 2");
-    tid5 = LsiapiBridge::getLsiapiFunctions()->set_timer( 1000 * 5, test_module_timer_cb_fp, (void *)"5 3");
-    tid6 = LsiapiBridge::getLsiapiFunctions()->set_timer( 1000 * 5, test_module_timer_cb_fp, (void *)"5 4");
-    
-    LsiapiBridge::getLsiapiFunctions()->set_timer( 1000 * 3, test_module_timer_cb_fp, (void *)"3 5");
-    LsiapiBridge::getLsiapiFunctions()->set_timer( 1000 * 2, test_module_timer_cb_fp, (void *)"2 3");
-    LsiapiBridge::getLsiapiFunctions()->set_timer( 1000 * 3, test_module_timer_cb_fp, (void *)"3 6");
-    LsiapiBridge::getLsiapiFunctions()->set_timer( 1000 * 4, test_module_timer_cb_fp, (void *)"4 3");
-    LsiapiBridge::getLsiapiFunctions()->set_timer( 1000 * 5, test_module_timer_cb_fp, (void *)"5 5");
-    LsiapiBridge::getLsiapiFunctions()->set_timer( 1000 * 5, test_module_timer_cb_fp, (void *)"5 6");
-    
+
+    tid1 = LsiapiBridge::getLsiapiFunctions()->set_timer(1000 * 3,
+            test_module_timer_cb_fp, (void *)"3 1");
+    tid2 = LsiapiBridge::getLsiapiFunctions()->set_timer(1000 * 2,
+            test_module_timer_cb_fp, (void *)"2 1");
+    tid3 = LsiapiBridge::getLsiapiFunctions()->set_timer(1000 * 3,
+            test_module_timer_cb_fp, (void *)"3 2");
+    tid4 = LsiapiBridge::getLsiapiFunctions()->set_timer(1000 * 4,
+            test_module_timer_cb_fp, (void *)"4 1");
+    tid5 = LsiapiBridge::getLsiapiFunctions()->set_timer(1000 * 5,
+            test_module_timer_cb_fp, (void *)"5 1");
+    tid6 = LsiapiBridge::getLsiapiFunctions()->set_timer(1000 * 5,
+            test_module_timer_cb_fp, (void *)"5 2");
+
+    tid1 = LsiapiBridge::getLsiapiFunctions()->set_timer(1000 * 3,
+            test_module_timer_cb_fp, (void *)"3 3");
+    tid2 = LsiapiBridge::getLsiapiFunctions()->set_timer(1000 * 2,
+            test_module_timer_cb_fp, (void *)"2 2");
+    tid3 = LsiapiBridge::getLsiapiFunctions()->set_timer(1000 * 3,
+            test_module_timer_cb_fp, (void *)"3 4");
+    tid4 = LsiapiBridge::getLsiapiFunctions()->set_timer(1000 * 4,
+            test_module_timer_cb_fp, (void *)"4 2");
+    tid5 = LsiapiBridge::getLsiapiFunctions()->set_timer(1000 * 5,
+            test_module_timer_cb_fp, (void *)"5 3");
+    tid6 = LsiapiBridge::getLsiapiFunctions()->set_timer(1000 * 5,
+            test_module_timer_cb_fp, (void *)"5 4");
+
+    LsiapiBridge::getLsiapiFunctions()->set_timer(1000 * 3,
+            test_module_timer_cb_fp, (void *)"3 5");
+    LsiapiBridge::getLsiapiFunctions()->set_timer(1000 * 2,
+            test_module_timer_cb_fp, (void *)"2 3");
+    LsiapiBridge::getLsiapiFunctions()->set_timer(1000 * 3,
+            test_module_timer_cb_fp, (void *)"3 6");
+    LsiapiBridge::getLsiapiFunctions()->set_timer(1000 * 4,
+            test_module_timer_cb_fp, (void *)"4 3");
+    LsiapiBridge::getLsiapiFunctions()->set_timer(1000 * 5,
+            test_module_timer_cb_fp, (void *)"5 5");
+    LsiapiBridge::getLsiapiFunctions()->set_timer(1000 * 5,
+            test_module_timer_cb_fp, (void *)"5 6");
+
     LsiapiBridge::getLsiapiFunctions()->remove_timer(tid1);
     LsiapiBridge::getLsiapiFunctions()->remove_timer(tid2);
     LsiapiBridge::getLsiapiFunctions()->remove_timer(tid3);
@@ -127,15 +152,15 @@ TEST(TEst_Module_Timer)
     CheckTimerLoop();
     //Check again if have one, should be no now
     CheckTimerLoop();
-    
-    
-    
-    
-    
-    
-    
-    
-    
+
+
+
+
+
+
+
+
+
 }
 
 #endif

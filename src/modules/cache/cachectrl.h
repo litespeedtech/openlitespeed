@@ -19,7 +19,7 @@
 #define CACHECTRL_H
 
 /**
-	@author Gang Wang <gwang@litespeedtech.com>
+    @author Gang Wang <gwang@litespeedtech.com>
 */
 class CacheCtrl
 {
@@ -28,36 +28,36 @@ public:
 
     ~CacheCtrl();
 
-    enum 
+    enum
     {
-        no_cache = (1<<0),
-        no_store = (1<<1),
-        max_age = (1<<2),
-        max_stale = (1<<3),
-        min_fresh = (1<<4),
-        no_transform = (1<<5),
-        only_if_cached = (1<<6),
-        cache_public = (1<<7),
-        cache_private = (1<<8),
-        must_revalidate = (1<<9),
-        proxy_revalidate = (1<<10),
-        s_maxage = (1<<11),
-        has_cookie = ( 1<<12 )
+        no_cache = (1 << 0),
+        no_store = (1 << 1),
+        max_age = (1 << 2),
+        max_stale = (1 << 3),
+        min_fresh = (1 << 4),
+        no_transform = (1 << 5),
+        only_if_cached = (1 << 6),
+        cache_public = (1 << 7),
+        cache_private = (1 << 8),
+        must_revalidate = (1 << 9),
+        proxy_revalidate = (1 << 10),
+        s_maxage = (1 << 11),
+        has_cookie = (1 << 12)
     };
 
-    int isCacheOff() const  {   return (m_flags & (no_cache | no_store )) || (m_iMaxAge == 0);    }
-    int isPublicCacheable() const {   return !( m_flags & (no_cache | no_store | cache_private |has_cookie ) );   }
+    int isCacheOff() const  {   return (m_flags & (no_cache | no_store)) || (m_iMaxAge == 0);    }
+    int isPublicCacheable() const {   return !(m_flags & (no_cache | no_store | cache_private | has_cookie));   }
     int isPrivateCacheable() const  {   return m_flags & cache_private;   }
     void setHasCookie()     {   m_flags |= has_cookie;  }
     int getFlags() const    {   return m_flags;     }
     int getMaxAge() const   {   return m_iMaxAge;   }
     void init(int flags, int iMaxAge, int iMaxStale);
-    int parse(const char * pHeader, int len);
+    int parse(const char *pHeader, int len);
     int isMaxAgeSet() const {   return m_flags & (max_age | s_maxage);  }
     void setMaxAge(int age) {   m_iMaxAge = age;    }
     int isMaxStaleSet() const   {   return m_flags & max_stale;     }
     int getMaxStale() const     {   return m_iMaxStale;     }
-    void setMaxStale( int age ) {   m_iMaxStale = age;      }
+    void setMaxStale(int age) {   m_iMaxStale = age;      }
 
 private:
     int m_flags;

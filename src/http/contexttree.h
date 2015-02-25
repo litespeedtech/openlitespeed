@@ -25,36 +25,36 @@ class ContextNode;
 class HttpVHost;
 class ContextTree
 {
-    ContextNode         * m_pRootNode;
-    const HttpContext   * m_pRootContext;
-    ContextNode         * m_pLocRootNode;
-    char                * m_pLocRootPath;
+    ContextNode          *m_pRootNode;
+    const HttpContext    *m_pRootContext;
+    ContextNode          *m_pLocRootNode;
+    char                 *m_pLocRootPath;
     int                   m_iLocRootPathLen;
 
-    ContextTree( const ContextTree& rhs );
-    void operator=( const ContextTree& rhs );
-    
+    ContextTree(const ContextTree &rhs);
+    void operator=(const ContextTree &rhs);
+
 public:
     ContextTree();
     //ContextTree( const char * pPrefix, int len );
     ~ContextTree();
 
-    const HttpContext * getRootContext() const  {   return m_pRootContext;  }
+    const HttpContext *getRootContext() const  {   return m_pRootContext;  }
 
-    const char  * getPrefix( int &iPrefixLen );
-    ContextNode * getRootNode() const           {   return m_pRootNode;     }
+    const char   *getPrefix(int &iPrefixLen);
+    ContextNode *getRootNode() const           {   return m_pRootNode;     }
 
-    ContextNode * addNode(  const char * pPrefix, int len,
-                            ContextNode * pCurNode,
-                            char * pStart, long lastCheck = 0 );
+    ContextNode *addNode(const char *pPrefix, int len,
+                         ContextNode *pCurNode,
+                         char *pStart, long lastCheck = 0);
 
-    int add( HttpContext* pContext );
-    const HttpContext* bestMatch( const char * pURI ) const;
-    const HttpContext* matchLocation( const char * pLocation ) const;
-    HttpContext* getContext( const char * pURI ) const;
-    void setRootContext( const HttpContext * pContext )
+    int add(HttpContext *pContext);
+    const HttpContext *bestMatch(const char *pURI) const;
+    const HttpContext *matchLocation(const char *pLocation) const;
+    HttpContext *getContext(const char *pURI) const;
+    void setRootContext(const HttpContext *pContext)
     {   m_pRootContext = pContext;  }
-    void setRootLocation( const char * pLocation );
+    void setRootLocation(const char *pLocation);
     void contextInherit();
 
     //void merge( const ContextTree & rhs );

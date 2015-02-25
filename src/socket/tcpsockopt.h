@@ -27,34 +27,34 @@ class TcpSockOpt
 {
 private:
     TcpSockOpt() {};
-    ~TcpSockOpt(){};
+    ~TcpSockOpt() {};
 public:
-    static int     setReuseAddr( CoreSocket& sock, int reuse )
-        {   return sock.setSockOptInt( SO_REUSEADDR, reuse );  }
-    static int     setRcvBuf( CoreSocket& sock, int size )
-        {   return sock.setSockOptInt( SO_RCVBUF, size );   }
-    static int     setSndBuf( CoreSocket& sock, int size )
-        {   return sock.setSockOptInt( SO_SNDBUF, size );   }
-    static int     setTcpKeepAlive( CoreSocket& sock, int timeout );
-    static int     setTcpNoDelay( CoreSocket& sock, int nodelay )
-        {   return sock.setTcpSockOptInt( TCP_NODELAY, nodelay ); }
-    static int     setTcpCork( CoreSocket& sock, int cork )
-        {
+    static int     setReuseAddr(CoreSocket &sock, int reuse)
+    {   return sock.setSockOptInt(SO_REUSEADDR, reuse);  }
+    static int     setRcvBuf(CoreSocket &sock, int size)
+    {   return sock.setSockOptInt(SO_RCVBUF, size);   }
+    static int     setSndBuf(CoreSocket &sock, int size)
+    {   return sock.setSockOptInt(SO_SNDBUF, size);   }
+    static int     setTcpKeepAlive(CoreSocket &sock, int timeout);
+    static int     setTcpNoDelay(CoreSocket &sock, int nodelay)
+    {   return sock.setTcpSockOptInt(TCP_NODELAY, nodelay); }
+    static int     setTcpCork(CoreSocket &sock, int cork)
+    {
 #ifdef TCP_CORK
-            return sock.setTcpSockOptInt( TCP_CORK, cork );
+        return sock.setTcpSockOptInt(TCP_CORK, cork);
 #else
-            return CoreSocket::SUCCESS;
+        return CoreSocket::SUCCESS;
 #endif //TCP_CORK
-        }
-    static int     setKeepAlive( CoreSocket& sock, int keepalive )
-        {   return sock.setSockOptInt( SO_KEEPALIVE, keepalive );    }
-    static int     setLinger( CoreSocket& sock, int onoff, int lingertime )
-        {
-            struct linger l;
-            l.l_onoff = onoff;
-            l.l_linger = lingertime;
-            return sock.setSockOpt( SO_LINGER, &l, sizeof( l) );
-        }
+    }
+    static int     setKeepAlive(CoreSocket &sock, int keepalive)
+    {   return sock.setSockOptInt(SO_KEEPALIVE, keepalive);    }
+    static int     setLinger(CoreSocket &sock, int onoff, int lingertime)
+    {
+        struct linger l;
+        l.l_onoff = onoff;
+        l.l_linger = lingertime;
+        return sock.setSockOpt(SO_LINGER, &l, sizeof(l));
+    }
 };
 
 #endif

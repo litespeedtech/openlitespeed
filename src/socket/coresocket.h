@@ -34,62 +34,67 @@ protected:
 
     CoreSocket(int fd = INVALID_FD)
         : m_ifd(fd)
-        {}
+    {}
     CoreSocket(int domain, int type, int protocol = 0)
-    {   register int fd = ::socket( domain, type, protocol );
-        setfd( fd );   }
-    void    setfd( int ifd) { m_ifd = ifd;  }
+    {
+        register int fd = ::socket(domain, type, protocol);
+        setfd(fd);
+    }
+    void    setfd(int ifd) { m_ifd = ifd;  }
 
 public:
     enum
     {
         FAIL = -1,
-        SUCCESS= 0
+        SUCCESS = 0
     };
 
     virtual ~CoreSocket()
     {
-        if ( getfd() != INVALID_FD )
+        if (getfd() != INVALID_FD)
             close();
     }
     int     getfd() const   { return m_ifd;     }
 
     int     close();
- 
-    int     getSockName( SockAddr *name, socklen_t *namelen )
-        {   return ::getsockname( getfd(), name, namelen );   }
+
+    int     getSockName(SockAddr *name, socklen_t *namelen)
+    {   return ::getsockname(getfd(), name, namelen);   }
 
     int     getSockOpt(int level, int optname, void *optval, socklen_t *optlen)
-        {   return ::getsockopt( getfd(), level, optname, optval, optlen );   }
+    {   return ::getsockopt(getfd(), level, optname, optval, optlen);   }
 
-    int     setSockOpt(int level, int optname, const void*optval, socklen_t optlen)
-        {   return ::setsockopt( getfd(), level, optname, optval, optlen );   }
+    int     setSockOpt(int level, int optname, const void *optval,
+                       socklen_t optlen)
+    {   return ::setsockopt(getfd(), level, optname, optval, optlen);   }
 
-    int     setSockOpt( int optname, const void *optval, socklen_t optlen )
-        {   return setSockOpt( SOL_SOCKET, optname, optval, optlen );         }
+    int     setSockOpt(int optname, const void *optval, socklen_t optlen)
+    {   return setSockOpt(SOL_SOCKET, optname, optval, optlen);         }
 
-    int     setSockOptInt( int optname, int val )
-        {   return setSockOpt( optname, (void *)&val, sizeof( val ) );  }
+    int     setSockOptInt(int optname, int val)
+    {   return setSockOpt(optname, (void *)&val, sizeof(val));  }
 
-    int     setTcpSockOptInt( int optname, int val )
-        {   return ::setsockopt( getfd(), IPPROTO_TCP, optname, &val, sizeof( int ) ); }
+    int     setTcpSockOptInt(int optname, int val)
+    {   return ::setsockopt(getfd(), IPPROTO_TCP, optname, &val, sizeof(int)); }
 
-    int     setReuseAddr( int reuse )
-        {   return setSockOptInt( SO_REUSEADDR, reuse );  }
+    int     setReuseAddr(int reuse)
+    {   return setSockOptInt(SO_REUSEADDR, reuse);  }
 
-    int     setRcvBuf( int size )
-        {   return setSockOptInt( SO_RCVBUF, size );   }
+    int     setRcvBuf(int size)
+    {   return setSockOptInt(SO_RCVBUF, size);   }
 
-    int     setSndBuf( int size )
-        {   return setSockOptInt( SO_SNDBUF, size );   }
+    int     setSndBuf(int size)
+    {   return setSockOptInt(SO_SNDBUF, size);   }
 
-    static int  connect( const char * pURL, int iFLTag, int *fd, int dnslookup = 0, int nodelay = 1 );
-    static int  connect( const GSockAddr& server, int iFLTag, int* fd, int nodelay = 1 );
-    static int  bind( const GSockAddr& server, int type, int *fd );
-    static int  listen( const char * pURL, int backlog, int *fd,
-                int sndBuf = -1, int rcvBuf=-1 );
-    static int  listen( const GSockAddr& addr, int backlog, int *fd,
-                int sndBuf = -1, int rcvBuf=-1 );
+    static int  connect(const char *pURL, int iFLTag, int *fd,
+                        int dnslookup = 0, int nodelay = 1);
+    static int  connect(const GSockAddr &server, int iFLTag, int *fd,
+                        int nodelay = 1);
+    static int  bind(const GSockAddr &server, int type, int *fd);
+    static int  listen(const char *pURL, int backlog, int *fd,
+                       int sndBuf = -1, int rcvBuf = -1);
+    static int  listen(const GSockAddr &addr, int backlog, int *fd,
+                       int sndBuf = -1, int rcvBuf = -1);
 };
 
 #endif

@@ -27,25 +27,26 @@
 
 class AutoStr2;
 
-class StatusUrlMap {
+class StatusUrlMap
+{
 private:
-    AutoStr2*   m_pSC[SC_END];
+    AutoStr2   *m_pSC[SC_END];
 
-    int setUrl(int statusCode, const char* url);
-        
-public: 
+    int setUrl(int statusCode, const char *url);
+
+public:
     StatusUrlMap();
-    StatusUrlMap( const StatusUrlMap &rhs );
-    ~StatusUrlMap();                               
+    StatusUrlMap(const StatusUrlMap &rhs);
+    ~StatusUrlMap();
 
-    const AutoStr2* getUrl(int statusCode) const
+    const AutoStr2 *getUrl(int statusCode) const
     {
-        assert((statusCode >= SC_100 )&&( statusCode < SC_END));
+        assert((statusCode >= SC_100) && (statusCode < SC_END));
         return *(m_pSC + statusCode);
         //return NULL;
     }
-    int setStatusUrlMap(int statusCode, const char* url);
-    int inherit( const StatusUrlMap * pMap );
+    int setStatusUrlMap(int statusCode, const char *url);
+    int inherit(const StatusUrlMap *pMap);
 };
 
 #endif

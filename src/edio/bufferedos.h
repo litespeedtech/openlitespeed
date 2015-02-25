@@ -23,43 +23,43 @@
 #include <edio/outputstream.h>
 #include <edio/outputbuf.h>
 
-  
+
 class BufferedOS : public OutputStream
 {
 protected:
-    OutputStream *  m_pOS;
+    OutputStream   *m_pOS;
     OutputBuf       m_buf;
 
-    int writeEx( const char * pBuf, int size, int avoidCache );
-    int writevEx( IOVec &vector, int avoidCache );
+    int writeEx(const char *pBuf, int size, int avoidCache);
+    int writevEx(IOVec &vector, int avoidCache);
 public:
     BufferedOS()
-        : m_pOS( 0 )
-        {}
-    explicit BufferedOS( OutputStream* pOS, int initSize = 4096);
+        : m_pOS(0)
+    {}
+    explicit BufferedOS(OutputStream *pOS, int initSize = 4096);
     ~BufferedOS();
 
-    void setOS( OutputStream* pOS )
+    void setOS(OutputStream *pOS)
     {   m_pOS = pOS;    }
-    
-    LoopBuf* getBuf()               { return &m_buf;  }
-    const LoopBuf* getBuf() const   { return &m_buf;  }
+
+    LoopBuf *getBuf()               { return &m_buf;  }
+    const LoopBuf *getBuf() const   { return &m_buf;  }
 
     bool isEmpty() const    { return m_buf.empty(); }
 
-    int cacheWrite( const char * pBuf, int size )
-    {   return writeEx( pBuf, size, 0 );    }
-    int cacheWritev( IOVec &vector )
-    {   return writevEx( vector, 0 );       }
-    
-    virtual int write( const char * pBuf, int size );
-    virtual int writev( const struct iovec * vector, int len );
-    virtual int writev( IOVec &vector );
-    virtual int writev( IOVec &vector, int total )
-    {   return writev( vector );    }
+    int cacheWrite(const char *pBuf, int size)
+    {   return writeEx(pBuf, size, 0);    }
+    int cacheWritev(IOVec &vector)
+    {   return writevEx(vector, 0);       }
+
+    virtual int write(const char *pBuf, int size);
+    virtual int writev(const struct iovec *vector, int len);
+    virtual int writev(IOVec &vector);
+    virtual int writev(IOVec &vector, int total)
+    {   return writev(vector);    }
     virtual int flush();
     virtual int close();
-    
+
 };
 
 #endif

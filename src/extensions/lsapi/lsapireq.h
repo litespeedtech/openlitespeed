@@ -31,24 +31,24 @@ struct lsapi_packet_header;
 class LsapiReq
 {
     AutoBuf     m_bufReq;
-    IOVec     * m_pIovec;
+    IOVec      *m_pIovec;
 
-    int appendEnv( LsapiEnv * pEnv, HttpSession *pSession );
-    int appendSpecialEnv( LsapiEnv * pEnv, HttpSession *pSession, 
-                    struct lsapi_req_header * pHeader );
-    int appendHttpHeaderIndex( HttpReq * pReq, int cntUnknown );
-    int dumpReq( char * pFile );
+    int appendEnv(LsapiEnv *pEnv, HttpSession *pSession);
+    int appendSpecialEnv(LsapiEnv *pEnv, HttpSession *pSession,
+                         struct lsapi_req_header *pHeader);
+    int appendHttpHeaderIndex(HttpReq *pReq, int cntUnknown);
+    int dumpReq(char *pFile);
 
 public:
-    LsapiReq( IOVec * pIovec );
+    LsapiReq(IOVec *pIovec);
 
     ~LsapiReq();
 
-    static int addEnv( AutoBuf * pAutoBuf, const char *name,
-                size_t nameLen, const char *value, size_t valLen );
-    int buildReq( HttpSession *pSession, int * totalLen );
-    static void buildPacketHeader( struct lsapi_packet_header * pHeader, 
-                                char type, int len )
+    static int addEnv(AutoBuf *pAutoBuf, const char *name,
+                      size_t nameLen, const char *value, size_t valLen);
+    int buildReq(HttpSession *pSession, int *totalLen);
+    static void buildPacketHeader(struct lsapi_packet_header *pHeader,
+                                  char type, int len)
     {
         pHeader->m_versionB0 = LSAPI_VERSION_B0;      //LSAPI protocol version
         pHeader->m_versionB1 = LSAPI_VERSION_B1;

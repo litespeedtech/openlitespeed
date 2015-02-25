@@ -23,56 +23,56 @@
 
 class AutoBuf
 {
-    char  * m_pBuf;
-    char  * m_pEnd;
-    char  * m_pBufEnd;
-    
-    AutoBuf( const AutoBuf& rhs ) {}
-    void operator=( const AutoBuf& rhs ) {}
+    char   *m_pBuf;
+    char   *m_pEnd;
+    char   *m_pBufEnd;
 
-    int     allocate( int size );
+    AutoBuf(const AutoBuf &rhs) {}
+    void operator=(const AutoBuf &rhs) {}
+
+    int     allocate(int size);
     void    deallocate();
 public:
-    explicit AutoBuf( int size = 1024 );
+    explicit AutoBuf(int size = 1024);
     ~AutoBuf();
     int available() const { return m_pBufEnd - m_pEnd; }
 
-    char * begin() const { return m_pBuf; }
-    char * end() const  { return m_pEnd; }
+    char *begin() const { return m_pBuf; }
+    char *end() const  { return m_pEnd; }
 
-    char * getPointer( int offset ) const  { return m_pBuf + offset; }
+    char *getPointer(int offset) const  { return m_pBuf + offset; }
 
-    void used( int size )   {   m_pEnd += size;     }
+    void used(int size)   {   m_pEnd += size;     }
     void clear()            {   m_pEnd = m_pBuf;    }
 
     int capacity() const    {   return m_pBufEnd - m_pBuf; }
     int size()   const      {   return m_pEnd - m_pBuf;   }
 
-    int reserve( int size )  {   return allocate( size );    }
-    void resize( int size )  {   m_pEnd = m_pBuf + size;    }
+    int reserve(int size)  {   return allocate(size);    }
+    void resize(int size)  {   m_pEnd = m_pBuf + size;    }
 
-    int grow( int size );
-    int appendNoCheck( const char * pBuf, int size )
+    int grow(int size);
+    int appendNoCheck(const char *pBuf, int size)
     {
-        memmove( end(), pBuf, size );
-        used( size );
+        memmove(end(), pBuf, size);
+        used(size);
         return size;
     }
 
-    void append( char ch )
+    void append(char ch)
     {   *m_pEnd++ = ch; }
-    int append( const char * pBuf, int size );
-    int append( const char * pBuf )
-    {   return append( pBuf, strlen( pBuf ) ); }
-    bool empty()  const     {   return ( m_pBuf == m_pEnd );  }
-    bool full() const       {   return ( m_pEnd == m_pBufEnd ); }
-    int getOffset( const char * p ) const
+    int append(const char *pBuf, int size);
+    int append(const char *pBuf)
+    {   return append(pBuf, strlen(pBuf)); }
+    bool empty()  const     {   return (m_pBuf == m_pEnd);  }
+    bool full() const       {   return (m_pEnd == m_pBufEnd); }
+    int getOffset(const char *p) const
     {   return p - m_pBuf;    }
 
-    int moveTo( char * pBuf, int size );
-    int pop_front( int size );
-    int pop_end( int size );
-    void swap( AutoBuf& rhs );
+    int moveTo(char *pBuf, int size);
+    int pop_front(int size);
+    int pop_end(int size);
+    void swap(AutoBuf &rhs);
 };
 
 #endif

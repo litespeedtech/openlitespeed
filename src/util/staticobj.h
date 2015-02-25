@@ -23,15 +23,15 @@
 template< class T>
 class StaticObj
 {
-    char m_achObj[ sizeof( T ) ];
-    
-public: 
+    char m_achObj[ sizeof(T) ];
+
+public:
     StaticObj() {};
     ~StaticObj() {};
-    T * operator()()
-    {   return (T*)m_achObj;    }
+    T *operator()()
+    {   return (T *)m_achObj;    }
     void construct()
-    {   new (m_achObj) T(); }
+    {   new(m_achObj) T(); }
     void destruct()
     {   operator()()->~T(); }
 };

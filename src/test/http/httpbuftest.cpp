@@ -25,37 +25,37 @@
 TEST(HttpBufTest_test)
 {
     AutoBuf buf;
-    CHECK( 0 == buf.size() );
-    CHECK( 0 < buf.capacity() );
-    CHECK( 0 == buf.reserve(0) );
-    CHECK( 0 == buf.capacity() );
+    CHECK(0 == buf.size());
+    CHECK(0 < buf.capacity());
+    CHECK(0 == buf.reserve(0));
+    CHECK(0 == buf.capacity());
 
     // this is not true on Solaris 8, sparc platform.
     //CHECK( NULL == buf.begin() );
     //CHECK( NULL == buf.end() );
 
-    CHECK( 0 == buf.reserve( 1024 ) );
-    CHECK( 1024 == buf.capacity() );
-    CHECK( 0 == buf.grow( 1 ) );
-    CHECK( 1024 < buf.capacity() );
-    CHECK( 0 == buf.size() );
-    buf.used( 10 );
-    CHECK( 10 == buf.size() );
-    buf.used( 10 );
-    CHECK( 20 == buf.size() );
-    buf.resize( 15 );
-    CHECK( 15 == buf.size() );
-    
-    CHECK( buf.size() == buf.end() - buf.begin() );
-    CHECK( 10 == buf.getPointer( 10 ) - buf.begin() );
-    CHECK( buf.available() == buf.capacity() - buf.size() );
-    buf.clear();
-    CHECK( 0 == buf.size() );
-    const char * pStr = "Test String";
+    CHECK(0 == buf.reserve(1024));
+    CHECK(1024 == buf.capacity());
+    CHECK(0 == buf.grow(1));
+    CHECK(1024 < buf.capacity());
+    CHECK(0 == buf.size());
+    buf.used(10);
+    CHECK(10 == buf.size());
+    buf.used(10);
+    CHECK(20 == buf.size());
+    buf.resize(15);
+    CHECK(15 == buf.size());
 
-    CHECK( (int)strlen( pStr ) == buf.append( pStr, strlen( pStr ) ));
-    CHECK( buf.size() == (int)strlen( pStr ) );
-    CHECK( 0 == strncmp( pStr, buf.begin(), strlen( pStr )));
+    CHECK(buf.size() == buf.end() - buf.begin());
+    CHECK(10 == buf.getPointer(10) - buf.begin());
+    CHECK(buf.available() == buf.capacity() - buf.size());
+    buf.clear();
+    CHECK(0 == buf.size());
+    const char *pStr = "Test String";
+
+    CHECK((int)strlen(pStr) == buf.append(pStr, strlen(pStr)));
+    CHECK(buf.size() == (int)strlen(pStr));
+    CHECK(0 == strncmp(pStr, buf.begin(), strlen(pStr)));
 
 }
 

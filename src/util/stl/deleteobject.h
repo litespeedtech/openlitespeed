@@ -27,37 +27,37 @@ template<class T> class shared_ptr;
 
 struct DeleteObject
 {
-    template< typename T> void operator()(const T* ptr) const
+    template< typename T> void operator()(const T *ptr) const
     {   delete ptr; }
     template< typename T>
-    void operator()( boost::shared_ptr<T> ) const
+    void operator()(boost::shared_ptr<T>) const
     {}
 };
 
 struct FreeMem
 {
-    template< typename T> void operator()( const T* ptr) const
-    {   ::free( (void*)ptr );  }
+    template< typename T> void operator()(const T *ptr) const
+    {   ::free((void *)ptr);  }
 };
 
 struct DeletePair
 {
     template< typename T>
-    void operator()( T& pPair ) const
+    void operator()(T &pPair) const
     {   delete pPair.first; delete pPair.second;   }
 };
 
 struct DeletePairFirst
 {
     template< typename T>
-    void operator()( T& pPair ) const
+    void operator()(T &pPair) const
     {   delete pPair.first;   }
 };
 
 struct DeletePairSecond
 {
     template< typename T>
-    void operator()( T& pPair ) const
+    void operator()(T &pPair) const
     {   delete pPair.second;   }
 };
 

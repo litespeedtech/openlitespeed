@@ -30,20 +30,17 @@ EnvManager::~EnvManager()
     m_envList.release_objects();
 }
 
-int EnvManager::regEnvHandler(const char *name, unsigned int len, lsi_callback_pf cb)
+int EnvManager::regEnvHandler(const char *name, unsigned int len,
+                              lsi_callback_pf cb)
 {
     EnvHandler *pEnvHandler = new EnvHandler;
     pEnvHandler->m_name = strndup(name, len);
     pEnvHandler->m_len = len;
     pEnvHandler->m_cb = cb;
     if (strpbrk(pEnvHandler->m_name, "*?") == NULL)
-    {
         m_envHashT.insert(pEnvHandler->m_name, pEnvHandler);
-    }
     else
-    {
         m_envList.append(pEnvHandler);
-    }
     return 0;
 }
 
@@ -51,17 +48,17 @@ int EnvManager::delEnvHandler(const char *name, unsigned int len)
 {
     return 0;
 }
-    
+
 lsi_callback_pf EnvManager::findHandler(const char *name)
 {
     HashStringMap<EnvHandler *>::iterator iter = m_envHashT.find(name);
     if (iter != m_envHashT.end())
         return iter.second()->m_cb;
-    
-    else 
+
+    else
     {
         EnvHandler *pEnvHandler = m_envList.begin();
-        while( pEnvHandler)// ; pEnvHandler != m_envList.tail(); pEnvHandler = (EnvHandler *)(pEnvHandler->next()))
+        while (pEnvHandler)// ; pEnvHandler != m_envList.tail(); pEnvHandler = (EnvHandler *)(pEnvHandler->next()))
         {
             if (fnmatch(pEnvHandler->m_name, name, FNM_PATHNAME) == 0)
                 return pEnvHandler->m_cb;
@@ -69,11 +66,12 @@ lsi_callback_pf EnvManager::findHandler(const char *name)
                 pEnvHandler = (EnvHandler *)(pEnvHandler->next());
         }
     }
-    
+
     return NULL;
 }
 
-int EnvManager::execEnvHandler(LsiSession *session, lsi_callback_pf cb, void *val, long valLen)
+int EnvManager::execEnvHandler(LsiSession *session, lsi_callback_pf cb,
+                               void *val, long valLen)
 {
     lsi_cb_param_t param;
     memset(&param, 0, sizeof(lsi_cb_param_t));
@@ -83,4 +81,4 @@ int EnvManager::execEnvHandler(LsiSession *session, lsi_callback_pf cb, void *va
     return cb(&param);
 }
 
-  
+

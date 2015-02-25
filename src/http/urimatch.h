@@ -25,13 +25,13 @@ class URIMatch
 {
     Pcregex     m_regex;
     RegSub      m_subst;
-public: 
+public:
     URIMatch();
     ~URIMatch();
 
-    int set( const char * pExp, const char * subst );
-    int match( const char * pURI, int uriLen,  char * pResult, int &len );
-    int match( const char * pStr, int strLen );
+    int set(const char *pExp, const char *subst);
+    int match(const char *pURI, int uriLen,  char *pResult, int &len);
+    int match(const char *pStr, int strLen);
 };
 
 #endif

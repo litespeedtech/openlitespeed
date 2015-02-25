@@ -42,7 +42,7 @@ class PidList;
 
 class ExtWorker : public HttpHandler
 {
-    ExtWorkerConfig   * m_pConfig;
+    ExtWorkerConfig    *m_pConfig;
     DLinkQueue          m_reqQueue;
     ConnPool            m_connPool;
     unsigned short      m_iRole;
@@ -55,16 +55,16 @@ class ExtWorker : public HttpHandler
     long                m_lIdleTime;
     int                 m_iLingerConns;
     ReqStats            m_reqStats;
-    
-    
-    void processPending( );
+
+
+    void processPending();
     void failOutstandingReqs();
 
 protected:
-    void setConfigPointer( ExtWorkerConfig * pConfig )
+    void setConfigPointer(ExtWorkerConfig *pConfig)
     {   m_pConfig = pConfig;    }
-    virtual ExtConn * newConn() = 0;
-        
+    virtual ExtConn *newConn() = 0;
+
 public:
     enum
     {
@@ -72,88 +72,90 @@ public:
         ST_BAD,
         ST_GOOD
     };
-    
+
     ExtWorker();
     virtual ~ExtWorker();
-    ConnPool& getConnPool()     {   return m_connPool;  }
+    ConnPool &getConnPool()     {   return m_connPool;  }
 
-    ExtWorkerConfig * getConfigPointer() const
+    ExtWorkerConfig *getConfigPointer() const
     {   return m_pConfig;       }
-    
-    const char * getURL() const
+
+    const char *getURL() const
     {   return m_pConfig->getURL();  }
-    const char * getName() const
+    const char *getName() const
     {   return m_pConfig->getName();    }
-    const GSockAddr& getServerAddr() const
+    const GSockAddr &getServerAddr() const
     {   return m_pConfig->getServerAddr();  }
 
     bool wantManagementInfo() const
     {
-        return ( m_iWantManagementInfo == 1 );
+        return (m_iWantManagementInfo == 1);
     }
     void gotManagementInfo()            {   m_iWantManagementInfo = 0;  }
 
     unsigned short getRole() const      {   return m_iRole;             }
-    void setRole( unsigned short r )    {   m_iRole = r;                }
+    void setRole(unsigned short r)    {   m_iRole = r;                }
 
-    void setMultiplexConns( int val )   {   m_iMultiplexConns = val;    }
+    void setMultiplexConns(int val)   {   m_iMultiplexConns = val;    }
     unsigned char isMultiplexConns() const       {   return m_iMultiplexConns;   }
 
 
-        
+
     int getTimeout() const
     {   return m_pConfig->getTimeout();     }
 
-    void setMaxConns( int max)
-    {   m_pConfig->setMaxConns( max );
-        m_connPool.setMaxConns( max );  }
+    void setMaxConns(int max)
+    {
+        m_pConfig->setMaxConns(max);
+        m_connPool.setMaxConns(max);
+    }
     void clearCurConnPool();
-    ExtConn* getConn();
-    void recycleConn( ExtConn* conn );
-    int  removeReq( ExtRequest * pReq );
-    int  processRequest( ExtRequest * pReq, int retry = 0 );
+    ExtConn *getConn();
+    void recycleConn(ExtConn *conn);
+    int  removeReq(ExtRequest *pReq);
+    int  processRequest(ExtRequest *pReq, int retry = 0);
     void onTimer();
 
-    void setState( int state )  {   m_iState = state;   }
+    void setState(int state)  {   m_iState = state;   }
     int getState() const        {   return m_iState;    }
 
     bool notStarted() const {   return m_iState == ST_NOTSTARTED;   }
     bool isReady() const    {   return m_iState > ST_BAD;       }
-    
+
     int  getQueuedReqs() const  {   return m_reqQueue.size();   }
-    int  getUtilRatio() const  
-    {   return m_connPool.getUsedConns() * 1000 / (m_connPool.getMaxConns()+1); }
-    
+    int  getUtilRatio() const
+    {   return m_connPool.getUsedConns() * 1000 / (m_connPool.getMaxConns() + 1); }
+
     int start();
     virtual int restart()       {   return start();     }
     virtual int tryRestart()    {   return 0;           }
     virtual int startEx()       {   return 1;           }
     virtual int stop()          {   m_iState = ST_NOTSTARTED; return 0;  }
     virtual int addNewProcess() {   return 0;           }
-    virtual int startOnDemond(int force ) {   return 0;           }
+    virtual int startOnDemond(int force) {   return 0;           }
     virtual int runOnStartUp()  {   return 0;           }
     virtual void detectDiedPid() {}
     bool canStop()
     {
         return m_connPool.getTotalConns() == m_connPool.getFreeConns();
     }
-    int connectionError( ExtConn * pConn, int errCode );
-    int processConnError( ExtConn * pConn, ExtRequest * pReq, int errCode );
+    int connectionError(ExtConn *pConn, int errCode);
+    int processConnError(ExtConn *pConn, ExtRequest *pReq, int errCode);
 
-    static int startServerSock( ExtWorkerConfig * pConfig, int backlog );
-    int generateRTReport( int fd, const char * pTypeName );
+    static int startServerSock(ExtWorkerConfig *pConfig, int backlog);
+    int generateRTReport(int fd, const char *pTypeName);
 
-    ReqStats * getReqStats()    {   return &m_reqStats; }
+    ReqStats *getReqStats()    {   return &m_reqStats; }
 
-    virtual void addPid( pid_t pid )    {}
-    virtual void removePid( pid_t pid)  {}
+    virtual void addPid(pid_t pid)    {}
+    virtual void removePid(pid_t pid)  {}
     virtual void moveToStopList()       {}
     virtual void cleanStopPids()        {}
 
-    virtual int setURL( const char * pURL );
-    
+    virtual int setURL(const char *pURL);
+
     long getLastRestart() const         {   return m_lLastRestart;      }
-    void setLastRestart( long l )       {   m_lLastRestart = l;         }
+    void setLastRestart(long l)       {   m_lLastRestart = l;         }
 
     int getLingerConns() const          {   return m_iLingerConns;      }
 };

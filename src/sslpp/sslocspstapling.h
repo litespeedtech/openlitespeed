@@ -36,55 +36,57 @@ class SslOcspStapling
 public:
     SslOcspStapling();
     ~SslOcspStapling();
-    int init(SSL_CTX* pSslCtx);
+    int init(SSL_CTX *pSslCtx);
     int update();
-    int getCertId(X509* pCert);
+    int getCertId(X509 *pCert);
     int createRequest();
-    int getResponder( X509* pCert );
+    int getResponder(X509 *pCert);
     int callback(SSL *ssl);
     int processResponse(HttpFetch *pHttpFetch);
-    int verifyRespFile( int iNeedVerify = 1 );
-    int certVerify(OCSP_RESPONSE *pResponse, OCSP_BASICRESP *pBasicResp, X509_STORE *pXstore);
+    int verifyRespFile(int iNeedVerify = 1);
+    int certVerify(OCSP_RESPONSE *pResponse, OCSP_BASICRESP *pBasicResp,
+                   X509_STORE *pXstore);
     void updateRespData(OCSP_RESPONSE *pResponse);
     int getRequestData(unsigned char *pReqData);
-    void setCertFile( const char* Certfile );
-    int config( const XmlNode *pNode, SSL_CTX *pSSL,  
-                        const char *pCAFile, char *pachCert );
-    
-    void setOcspResponder( const char* url )    {   m_sOcspResponder.setStr( url );     }
-    void setCombineCAfile( const char* CAfile ) {   m_sCombineCAfile.setStr( CAfile );  }
-    void setCAFile( const char* CAfile )        {   m_sCAfile.setStr( CAfile );         }
-    void setRespMaxAge( const int iMaxAge )     {   m_iocspRespMaxAge = iMaxAge;        }  
-    void setRespfile( const char* Respfile )    {   m_sRespfile.setStr( Respfile );     }    
+    void setCertFile(const char *Certfile);
+    int config(const XmlNode *pNode, SSL_CTX *pSSL,
+               const char *pCAFile, char *pachCert);
 
-    static void setRespTempPath( const char * pPath )
-    {   if ( pPath && (*pPath == '/') )
+    void setOcspResponder(const char *url)    {   m_sOcspResponder.setStr(url);     }
+    void setCombineCAfile(const char *CAfile) {   m_sCombineCAfile.setStr(CAfile);  }
+    void setCAFile(const char *CAfile)        {   m_sCAfile.setStr(CAfile);         }
+    void setRespMaxAge(const int iMaxAge)     {   m_iocspRespMaxAge = iMaxAge;        }
+    void setRespfile(const char *Respfile)    {   m_sRespfile.setStr(Respfile);     }
+
+    static void setRespTempPath(const char *pPath)
+    {
+        if (pPath && (*pPath == '/'))
         {
-            s_pRespTempPath = strdup( pPath );    
-            s_iRespTempPathLen = strlen( pPath );
+            s_pRespTempPath = strdup(pPath);
+            s_iRespTempPathLen = strlen(pPath);
         }
     }
-    
+
 private:
-    HttpFetch*      m_pHttpFetch;
-    
+    HttpFetch      *m_pHttpFetch;
+
     uint32_t    m_iDataLen;
-    unsigned char*     m_pRespData;
+    unsigned char     *m_pRespData;
     GSockAddr   m_addrResponder;
-    
+
     AutoStr2    m_sCertfile;
-    AutoStr2    m_sCAfile; 
-    AutoStr2    m_sOcspResponder; 
-    AutoStr2    m_sCombineCAfile; 
-    AutoStr2    m_sRespfile; 
-    AutoStr2    m_sRespfileTmp; 
-    int         m_iocspRespMaxAge;  
-    SSL_CTX    *m_pCtx;  
+    AutoStr2    m_sCAfile;
+    AutoStr2    m_sOcspResponder;
+    AutoStr2    m_sCombineCAfile;
+    AutoStr2    m_sRespfile;
+    AutoStr2    m_sRespfileTmp;
+    int         m_iocspRespMaxAge;
+    SSL_CTX    *m_pCtx;
     time_t      m_RespTime;
-    OCSP_CERTID* m_pCertId;
-    
+    OCSP_CERTID *m_pCertId;
+
     static const char *s_pRespTempPath;
     static int   s_iRespTempPathLen;
 };
-const char* getStaplingErrMsg();
+const char *getStaplingErrMsg();
 #endif // SSLOCSPSTAPLING_H

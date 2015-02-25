@@ -25,14 +25,14 @@ class ProxyWorker : public ExtWorker
 {
 protected:
 
-    virtual ExtConn * newConn();
+    virtual ExtConn *newConn();
 
-public: 
-    explicit ProxyWorker( const char * pName );
+public:
+    explicit ProxyWorker(const char *pName);
     ~ProxyWorker();
-    ProxyConfig& getConfig()
+    ProxyConfig &getConfig()
     {   return *((ProxyConfig *)getConfigPointer());  }
-    
+
 };
 
 #endif

@@ -23,11 +23,11 @@
 
 class UdpSocket : public DatagramSocket
 {
-public: 
-	UdpSocket()
+public:
+    UdpSocket()
         : DatagramSocket(PF_INET)
-        {}
-	~UdpSocket() {};
+    {}
+    ~UdpSocket() {};
 };
 
 #endif

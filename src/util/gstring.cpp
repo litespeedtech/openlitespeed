@@ -19,56 +19,52 @@
 #include <util/pool.h>
 #include <assert.h>
 
-static Pool* s_stringPool = &g_pool;
+static Pool *s_stringPool = &g_pool;
 
-void GString::setStringPool( Pool * pPool )
+void GString::setStringPool(Pool *pPool)
 {   s_stringPool = pPool;   }
 
 GString::~GString()
 {
-    if ( m_pStr )
-        s_stringPool->deallocate( m_pStr, m_iBufSize );
+    if (m_pStr)
+        s_stringPool->deallocate(m_pStr, m_iBufSize);
 }
 
-int GString::allocate( int size )
+int GString::allocate(int size)
 {
-    int iBufSize = Pool::roundUp( size );
-    if ( iBufSize > m_iBufSize )
+    int iBufSize = Pool::roundUp(size);
+    if (iBufSize > m_iBufSize)
     {
-        char * pNewStr = (char *)s_stringPool->allocate( iBufSize );
-        if ( pNewStr )
+        char *pNewStr = (char *)s_stringPool->allocate(iBufSize);
+        if (pNewStr)
         {
             m_pStr = pNewStr;
             m_iBufSize = iBufSize;
         }
         else
-        {
             return -1;
-        }
     }
     return 0;
 }
 
-int GString::reallocate( int size )
+int GString::reallocate(int size)
 {
-    if ( m_iBufSize == 0 )
-        return allocate( size );
+    if (m_iBufSize == 0)
+        return allocate(size);
     else
     {
-        int iBufSize = Pool::roundUp( size + 1);
-        if ( iBufSize > m_iBufSize )
+        int iBufSize = Pool::roundUp(size + 1);
+        if (iBufSize > m_iBufSize)
         {
-            char * pNewStr = (char *)s_stringPool->reallocate( m_pStr,
-                    m_iBufSize, iBufSize );
-            if ( pNewStr )
+            char *pNewStr = (char *)s_stringPool->reallocate(m_pStr,
+                            m_iBufSize, iBufSize);
+            if (pNewStr)
             {
                 m_pStr = pNewStr;
                 m_iBufSize = iBufSize;
             }
             else
-            {
                 return -1;
-            }
         }
     }
     return 0;
@@ -76,109 +72,103 @@ int GString::reallocate( int size )
 
 void GString::deallocate()
 {
-    if ( m_pStr )
+    if (m_pStr)
     {
-        s_stringPool->deallocate( m_pStr, m_iBufSize );
+        s_stringPool->deallocate(m_pStr, m_iBufSize);
         m_pStr = NULL;
         m_iBufSize = 0;
         m_iStrLen = 0;
     }
 }
 
-GString::GString( int bufLen )
-    : m_pStr( NULL )
-    , m_iStrLen( 0 )
-    , m_iBufSize( 0 )
+GString::GString(int bufLen)
+    : m_pStr(NULL)
+    , m_iStrLen(0)
+    , m_iBufSize(0)
 {
-    if ( (int)bufLen > m_iBufSize )
+    if ((int)bufLen > m_iBufSize)
+        allocate(bufLen);
+}
+
+
+GString::GString(size_t bufLen, int val)
+    : m_pStr(NULL)
+    , m_iStrLen(0)
+    , m_iBufSize(0)
+{
+    if ((int)bufLen > m_iBufSize)
     {
-        allocate( bufLen );
+        if (!allocate(bufLen))
+            memset(m_pStr, val, bufLen);
     }
 }
 
 
-GString::GString( size_t bufLen, int val )
-    : m_pStr( NULL )
-    , m_iStrLen( 0 )
-    , m_iBufSize( 0 )
+GString::GString(const char *pStr)
+    : m_pStr(NULL)
+    , m_iStrLen(0)
+    , m_iBufSize(0)
 {
-    if ( (int)bufLen > m_iBufSize )
+    if (pStr)
     {
-        if ( !allocate( bufLen ) )
-            memset( m_pStr, val, bufLen );
-    }
-}
-
-
-GString::GString( const char * pStr )
-    : m_pStr( NULL )
-    , m_iStrLen( 0 )
-    , m_iBufSize( 0 )
-{
-    if ( pStr )
-    {
-        int iStrLen = strlen( pStr );
-        if ( !allocate( iStrLen + 1) )
+        int iStrLen = strlen(pStr);
+        if (!allocate(iStrLen + 1))
         {
-            if ( iStrLen )
-                memmove( m_pStr, pStr, iStrLen + 1 );
+            if (iStrLen)
+                memmove(m_pStr, pStr, iStrLen + 1);
             m_iStrLen = iStrLen;
         }
     }
 }
 
-GString::GString( const GString& rhs )
-    : m_pStr( NULL )
-    , m_iStrLen( 0 )
-    , m_iBufSize( 0 )
+GString::GString(const GString &rhs)
+    : m_pStr(NULL)
+    , m_iStrLen(0)
+    , m_iBufSize(0)
 {
-    if ( rhs.m_iBufSize > 0 )
+    if (rhs.m_iBufSize > 0)
     {
-        if ( !allocate( rhs.m_iBufSize ) )
+        if (!allocate(rhs.m_iBufSize))
         {
-            memmove( m_pStr, rhs.m_pStr, rhs.m_iBufSize );
+            memmove(m_pStr, rhs.m_pStr, rhs.m_iBufSize);
             m_iStrLen = rhs.m_iStrLen;
         }
     }
 }
 
-GString::GString( const char * pStr, int len )
-    : m_pStr( NULL )
-    , m_iStrLen( 0 )
-    , m_iBufSize( 0 )
+GString::GString(const char *pStr, int len)
+    : m_pStr(NULL)
+    , m_iStrLen(0)
+    , m_iBufSize(0)
 {
-    assign( pStr, len );
+    assign(pStr, len);
 }
 
 
-GString& GString::operator=( const GString& rhs )
+GString &GString::operator=(const GString &rhs)
 {
-    if ( this != &rhs )
-    {
-        assign( rhs.m_pStr, rhs.m_iStrLen );
-    }
+    if (this != &rhs)
+        assign(rhs.m_pStr, rhs.m_iStrLen);
     return *this;
 }
 
-GString & GString::assign( const char * pStr, int len )
+GString &GString::assign(const char *pStr, int len)
 {
-    if ( pStr )
+    if (pStr)
     {
-        if ( m_pStr != pStr )
+        if (m_pStr != pStr)
         {
-            if ( len + 1 > m_iBufSize )
-                if ( reallocate( len + 1 ) )
+            if (len + 1 > m_iBufSize)
+                if (reallocate(len + 1))
                     return *this;
-            if ( len )
-                memmove( m_pStr, pStr, len );
+            if (len)
+                memmove(m_pStr, pStr, len);
         }
-        *( m_pStr + len ) = 0;
+        *(m_pStr + len) = 0;
         m_iStrLen = len;
     }
     else
-    {
         deallocate();
-    }
     return *this;
 }
 /*
@@ -198,35 +188,35 @@ GString & GString::bassign( const char * pStr, int len )
 }
 */
 
-GString& GString::append( const char * pStr )
+GString &GString::append(const char *pStr)
 {
-    if ( pStr )
+    if (pStr)
     {
-        int iLen = strlen( pStr );
-        append( pStr, iLen );
+        int iLen = strlen(pStr);
+        append(pStr, iLen);
     }
     return *this;
 }
-GString& GString::append( const char * pStr, int len )
+GString &GString::append(const char *pStr, int len)
 {
-    if (( pStr )&&( len > 0))
+    if ((pStr) && (len > 0))
     {
         int iStrLen = m_iStrLen + len;
-        if ( iStrLen + 1 > m_iBufSize )
+        if (iStrLen + 1 > m_iBufSize)
         {
-            char * pOldBuf = m_pStr;
+            char *pOldBuf = m_pStr;
             int oldBufSize = m_iBufSize;
-            if ( allocate( iStrLen + 1 ) )
+            if (allocate(iStrLen + 1))
                 return *this;
-            ::memmove( m_pStr, pOldBuf, m_iStrLen );
-            ::memmove( m_pStr + m_iStrLen, pStr, len );
-            if ( pOldBuf )
-                s_stringPool->deallocate( pOldBuf, oldBufSize );
+            ::memmove(m_pStr, pOldBuf, m_iStrLen);
+            ::memmove(m_pStr + m_iStrLen, pStr, len);
+            if (pOldBuf)
+                s_stringPool->deallocate(pOldBuf, oldBufSize);
         }
         else
-            ::memmove( m_pStr + m_iStrLen, pStr, len );
+            ::memmove(m_pStr + m_iStrLen, pStr, len);
         m_iStrLen = iStrLen;
-        *( m_pStr + iStrLen ) = 0;
+        *(m_pStr + iStrLen) = 0;
     }
     return *this;
 }

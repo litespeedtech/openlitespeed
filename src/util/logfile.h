@@ -23,10 +23,10 @@
 #include <sys/uio.h>
 #include <unistd.h>
 
-  
+
 class LogFile
 {
-    char *      m_pFileName;
+    char       *m_pFileName;
     int         m_fd;
     int         m_iAppend;
     int         m_iBackupMode;
@@ -36,57 +36,59 @@ class LogFile
     enum
     {
         NONE,
-        SIZE=1,
-        DAILY=2
+        SIZE = 1,
+        DAILY = 2
     };
     int renameOldFile();
     int removeOldFiles();
 public:
-    LogFile( const char * pFileName, int iAppend = 0 );
-    LogFile( int fd );
+    LogFile(const char *pFileName, int iAppend = 0);
+    LogFile(int fd);
     ~LogFile();
     int open();
     int close();
     int getfd() const   {   return m_fd;    }
-    
-    int write( const char * pBuf, int len )
+
+    int write(const char *pBuf, int len)
     {
-        int ret = ::write( m_fd, pBuf, len );
-        if ( ret == -1 )
+        int ret = ::write(m_fd, pBuf, len);
+        if (ret == -1)
         {
-            close(); open();
-            ret = ::write( m_fd, pBuf, len );
+            close();
+            open();
+            ret = ::write(m_fd, pBuf, len);
         }
         return ret;
     }
-    int writev( const struct iovec *vector, int count )
+    int writev(const struct iovec *vector, int count)
     {
-        int ret = ::writev( m_fd, vector, count );
-        if ( ret == -1 )
+        int ret = ::writev(m_fd, vector, count);
+        if (ret == -1)
         {
-            close(); open();
-            ret = ::writev( m_fd, vector, count );
+            close();
+            open();
+            ret = ::writev(m_fd, vector, count);
         }
         return ret;
     }
-    int fprintf( const char * fmt, ... );
-    int vprintf( const char * fmt, va_list ap );
-    int setFileName( const char * pName );
-    const char * getFileName() const
+    int fprintf(const char *fmt, ...);
+    int vprintf(const char *fmt, va_list ap);
+    int setFileName(const char *pName);
+    const char *getFileName() const
     {   return m_pFileName; }
     int backup();
-    void setAppend( int iAppend )
+    void setAppend(int iAppend)
     {   m_iAppend = iAppend;    }
     void setDailyBackup()
     {   m_iBackupMode |= DAILY;  }
-    void setSizeBackup( long maxSize )
+    void setSizeBackup(long maxSize)
     {   m_iBackupMode |= SIZE; m_iMaxSize = maxSize; }
     void setNoBackup()
     {   m_iBackupMode = NONE;   }
-    void setKeepDays( int days )    {   m_iKeepDays = days;     }
+    void setKeepDays(int days)    {   m_iKeepDays = days;     }
     int getKeepDays() const         {   return m_iKeepDays;     }
 };
 
-extern int removeSimiliarFiles( const char * pPath, long tm );
+extern int removeSimiliarFiles(const char *pPath, long tm);
 
 #endif

@@ -17,9 +17,9 @@
 *****************************************************************************/
 #include "cgidconfig.h"
 
-CgidConfig::CgidConfig( const char * pName )
-    : ExtWorkerConfig( pName )
-    , m_priority( 10 )
+CgidConfig::CgidConfig(const char *pName)
+    : ExtWorkerConfig(pName)
+    , m_priority(10)
 {
 }
 

@@ -21,58 +21,58 @@
 #include <unistd.h>
 
 CacheEntry::CacheEntry()
-    : m_lastAccess( 0 )
-    , m_iHits( 0 )
-    , m_iMaxStale( 0 )
-    , m_startOffset( 0 )
-    , m_fdStore( -1 )
+    : m_lastAccess(0)
+    , m_iHits(0)
+    , m_iMaxStale(0)
+    , m_startOffset(0)
+    , m_fdStore(-1)
 {
 }
 
 
 CacheEntry::~CacheEntry()
 {
-    if ( m_fdStore != -1 )
-        close( m_fdStore );
+    if (m_fdStore != -1)
+        close(m_fdStore);
 }
 
 
-int CacheEntry::setKey( const CacheHash& hash,
-                const char * pURI, int iURILen, 
-                const char * pQS, int iQSLen,
-                const char * pIP, int ipLen,
-                const char * pCookie, int cookieLen )
+int CacheEntry::setKey(const CacheHash &hash,
+                       const char *pURI, int iURILen,
+                       const char *pQS, int iQSLen,
+                       const char *pIP, int ipLen,
+                       const char *pCookie, int cookieLen)
 {
-    m_hashKey.init( hash );
-    int len = iURILen + ((iQSLen > 0)? iQSLen + 1 : 0);
+    m_hashKey.init(hash);
+    int len = iURILen + ((iQSLen > 0) ? iQSLen + 1 : 0);
     int l;
-    if ( ipLen > 0 )
+    if (ipLen > 0)
     {
         len += ipLen + 1;
-        if ( cookieLen > 0 )
+        if (cookieLen > 0)
             len += cookieLen + 1;
     }
 
-    char * pBuf = m_sKey.resizeBuf( len + 1 );
-    if ( !pBuf )
+    char *pBuf = m_sKey.resizeBuf(len + 1);
+    if (!pBuf)
         return -1;
-    memmove( pBuf, pURI, iURILen + 1 );
+    memmove(pBuf, pURI, iURILen + 1);
     l = iURILen;
-    if ( iQSLen > 0)
+    if (iQSLen > 0)
     {
         pBuf[ l++ ] = '?';
-        memmove( pBuf + l , pQS, iQSLen+1 );
+        memmove(pBuf + l , pQS, iQSLen + 1);
         l += iQSLen;
     }
-    if ( ipLen > 0 )
+    if (ipLen > 0)
     {
         pBuf[l++] = '@';
-        memmove( pBuf + l, pIP, ipLen );
+        memmove(pBuf + l, pIP, ipLen);
         l += ipLen;
-        if ( cookieLen > 0 )
+        if (cookieLen > 0)
         {
             pBuf[l++] = '~';
-            memmove( pBuf + l , pCookie, cookieLen );
+            memmove(pBuf + l , pCookie, cookieLen);
             l += cookieLen;
         }
     }
@@ -80,41 +80,39 @@ int CacheEntry::setKey( const CacheHash& hash,
     return 0;
 }
 
-int CacheEntry::verifyKey( 
-                const char * pURI, int iURILen, 
-                const char * pQS, int iQSLen,
-                const char * pIP, int ipLen,
-                const char * pCookie, int cookieLen ) const
+int CacheEntry::verifyKey(
+    const char *pURI, int iURILen,
+    const char *pQS, int iQSLen,
+    const char *pIP, int ipLen,
+    const char *pCookie, int cookieLen) const
 {
-    const char * p = m_sKey.c_str();
-    if ( strncmp( pURI, p, iURILen ) != 0 )
+    const char *p = m_sKey.c_str();
+    if (strncmp(pURI, p, iURILen) != 0)
         return -1;
     p += iURILen;
-    if ( iQSLen > 0 )
+    if (iQSLen > 0)
     {
-        if ( ( *p  != '?') ||
-           (memcmp( p + 1, pQS, iQSLen ) != 0 ))
-        {
+        if ((*p  != '?') ||
+            (memcmp(p + 1, pQS, iQSLen) != 0))
             return -1;
-        }
         p += iQSLen + 1;
     }
-    
-    if ( ipLen > 0  )
+
+    if (ipLen > 0)
     {
-        if ( ( *p  != '@') ||
-           (memcmp( p + 1, pIP, ipLen ) != 0 ))
+        if ((*p  != '@') ||
+            (memcmp(p + 1, pIP, ipLen) != 0))
             return -1;
         p += ipLen + 1;
-        if ( cookieLen > 0 )
+        if (cookieLen > 0)
         {
-            if ( ( *p  != '~') ||
-               (memcmp( p + 1, pCookie, cookieLen ) != 0 ))
+            if ((*p  != '~') ||
+                (memcmp(p + 1, pCookie, cookieLen) != 0))
                 return -1;
             p += cookieLen + 1;
         }
     }
-    if ( m_header.m_keyLen > p - m_sKey.c_str() )
+    if (m_header.m_keyLen > p - m_sKey.c_str())
         return -1;
     return 0;
 }

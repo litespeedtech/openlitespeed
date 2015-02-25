@@ -20,7 +20,7 @@
 
 
 
-void    TcpConnection::setPeerAddr( const GSockAddr* pAddr)
+void    TcpConnection::setPeerAddr(const GSockAddr *pAddr)
 {
     if (pAddr)
         m_peerAddr = *pAddr ;

@@ -24,7 +24,7 @@
 #define HEADER_BUF_PAD          4
 #define DEFAULT_HTTP_PORT       80
 #define MAX_BUF_SIZE            8192
-#define MAX_URL_LEN             MAX_BUF_SIZE 
+#define MAX_URL_LEN             MAX_BUF_SIZE
 
 #define THROTTLE_UNIT           4096
 #define MAX_REQ_HEADER_BUF_LEN  (8192*2 - HEADER_BUF_PAD)

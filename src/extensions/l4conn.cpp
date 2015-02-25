@@ -30,7 +30,7 @@
 
 int L4conn::onEventDone()
 {
-    switch( m_iState )
+    switch (m_iState)
     {
     case CLOSING:
         m_pL4Handler->closeBothConnection();
@@ -42,15 +42,15 @@ int L4conn::onEventDone()
 int L4conn::onError()
 {
     int error = errno;
-    int ret = getSockError( &error );
-    if (( ret ==-1 )||( error != 0 ))
+    int ret = getSockError(&error);
+    if ((ret == -1) || (error != 0))
     {
-        if ( ret != -1 )
+        if (ret != -1)
             errno = error;
     }
-    if ( D_ENABLED( DL_LESS ) )
-        LOG_D(( getLogger(), "[%s] L4conn::onError()", getLogId() ));
-    if ( error != 0 )
+    if (D_ENABLED(DL_LESS))
+        LOG_D((getLogger(), "[%s] L4conn::onError()", getLogId()));
+    if (error != 0)
     {
         m_iState = CLOSING;
         //doError( error );
@@ -62,17 +62,17 @@ int L4conn::onError()
 
 int L4conn::onWrite()
 {
-    if ( D_ENABLED( DL_LESS ) )
-        LOG_D(( getLogger(), "[%s] L4conn::onWrite()", getLogId() ));
-    
+    if (D_ENABLED(DL_LESS))
+        LOG_D((getLogger(), "[%s] L4conn::onWrite()", getLogId()));
+
     int ret;
-    switch( m_iState )
+    switch (m_iState)
     {
     case CONNECTING:
         ret = onInitConnected();
-        if ( ret )
+        if (ret)
             break;
-        //fall through
+    //fall through
     case PROCESSING:
         ret = doWrite();
         break;
@@ -82,20 +82,18 @@ int L4conn::onWrite()
     default:
         return 0;
     }
-    if ( ret == -1 )
-    {
+    if (ret == -1)
         m_pL4Handler->closeBothConnection();
-    }
     return ret;
 }
 
 int L4conn::onInitConnected()
 {
     int error;
-    int ret = getSockError( &error );
-    if (( ret == -1 )||( error != 0 ))
+    int ret = getSockError(&error);
+    if ((ret == -1) || (error != 0))
     {
-        if ( ret != -1 )
+        if (ret != -1)
             errno = error;
         return -1;
     }
@@ -106,7 +104,7 @@ int L4conn::onInitConnected()
 //         char        achAddr[128]    = "";
 //         int         port            = 0;
 //         socklen_t   len             = 128;
-// 
+//
 //         if ( getsockname( getfd(), (struct sockaddr *)achSockAddr, &len ) == 0 )
 //         {
 //             GSockAddr::ntop( (struct sockaddr *)achSockAddr, achAddr, 128 );
@@ -122,11 +120,12 @@ int L4conn::onInitConnected()
 
 int L4conn::onRead()
 {
-    if ( D_ENABLED( DL_LESS ) )
-         LOG_D(( getLogger(), "[%s] L4conn::onRead() state: %d", getLogId(), m_iState ));
+    if (D_ENABLED(DL_LESS))
+        LOG_D((getLogger(), "[%s] L4conn::onRead() state: %d", getLogId(),
+               m_iState));
 
     int ret;
-    switch( m_iState )
+    switch (m_iState)
     {
     case CONNECTING:
         ret = onInitConnected();
@@ -141,10 +140,8 @@ int L4conn::onRead()
         // Not suppose to happen;
         return 0;
     }
-    if ( ret == -1 )
-    {
+    if (ret == -1)
         m_pL4Handler->closeBothConnection();
-    }
     return ret;
 }
 
@@ -153,17 +150,17 @@ int L4conn::close()
     if (m_iState != DISCONNECTED)
     {
         m_iState = DISCONNECTED;
-        if ( D_ENABLED( DL_LESS ) )
-            LOG_D(( getLogger(), "[%s] [ExtConn] close()", getLogId() ));
+        if (D_ENABLED(DL_LESS))
+            LOG_D((getLogger(), "[%s] [ExtConn] close()", getLogId()));
         EdStream::close();
         delete m_buf;
     }
-    
+
     return 0;
 }
 
-L4conn::L4conn(L4Handler*  pL4Handler) : m_iState( 0 )
-{    
+L4conn::L4conn(L4Handler  *pL4Handler) : m_iState(0)
+{
     m_pL4Handler = pL4Handler;
     m_buf = new LoopBuf(MAX_OUTGOING_BUF_ZISE);
 }
@@ -177,10 +174,10 @@ L4conn::~L4conn()
 int L4conn::init(const GSockAddr *pGSockAddr)
 {
     int ret = connectEx(pGSockAddr);
-    
-    if ( D_ENABLED( DL_LESS ) )
-        LOG_D (( getLogger(), "[%s] [L4conn] init ret = [%d]...", getLogId(), ret ));
-    
+
+    if (D_ENABLED(DL_LESS))
+        LOG_D((getLogger(), "[%s] [L4conn] init ret = [%d]...", getLogId(), ret));
+
     return ret;
 }
 
@@ -189,21 +186,19 @@ int L4conn::connectEx(const GSockAddr *pGSockAddr)
     int fd;
     int ret;
     Multiplexer *pMpl =  HttpGlobals::getMultiplexer();
-    ret = CoreSocket::connect( *pGSockAddr, pMpl->getFLTag(), &fd, 0 );
-    if (( fd == -1 )&&( errno == ECONNREFUSED ))
-    {
-        ret = CoreSocket::connect( *pGSockAddr, pMpl->getFLTag(), &fd, 0 );
-    }
-    
-    if ( fd != -1 )
-    {
-       if ( D_ENABLED( DL_LESS ) )
-            LOG_D(( getLogger(), "[%s] [L4conn] connecting to [%s]...",
-                    getLogId(), pGSockAddr->toString() ));
+    ret = CoreSocket::connect(*pGSockAddr, pMpl->getFLTag(), &fd, 0);
+    if ((fd == -1) && (errno == ECONNREFUSED))
+        ret = CoreSocket::connect(*pGSockAddr, pMpl->getFLTag(), &fd, 0);
 
-        ::fcntl( fd, F_SETFD, FD_CLOEXEC );
-        EdStream::init ( fd, pMpl, POLLIN|POLLOUT|POLLHUP|POLLERR );
-        if ( ret == 0 )
+    if (fd != -1)
+    {
+        if (D_ENABLED(DL_LESS))
+            LOG_D((getLogger(), "[%s] [L4conn] connecting to [%s]...",
+                   getLogId(), pGSockAddr->toString()));
+
+        ::fcntl(fd, F_SETFD, FD_CLOEXEC);
+        EdStream::init(fd, pMpl, POLLIN | POLLOUT | POLLHUP | POLLERR);
+        if (ret == 0)
         {
             m_iState = PROCESSING;
             onWrite();
@@ -219,99 +214,96 @@ int L4conn::doRead()
 {
     bool empty = m_pL4Handler->getBuf()->empty();
     int space;
-    
-    if ( (space = m_pL4Handler->getBuf()->contiguous()) > 0)
+
+    if ((space = m_pL4Handler->getBuf()->contiguous()) > 0)
     {
         int n = read(m_pL4Handler->getBuf()->end(), space);
-        if ( D_ENABLED( DL_LESS ) )
+        if (D_ENABLED(DL_LESS))
         {
-            LOG_D(( getLogger(), "[%s] [L4conn] doRead [%d]...",
-                getLogId(), n ));
+            LOG_D((getLogger(), "[%s] [L4conn] doRead [%d]...",
+                   getLogId(), n));
         }
-        
-        if (n > 0) 
-        {
+
+        if (n > 0)
             m_pL4Handler->getBuf()->used(n);
-        }
         else if (n < 0)
         {
             m_pL4Handler->closeBothConnection();
             return -1;
         }
     }
-    
-    if ( !m_pL4Handler->getBuf()->empty() )
+
+    if (!m_pL4Handler->getBuf()->empty())
     {
         m_pL4Handler->doWrite();
-        if ( !m_pL4Handler->getBuf()->empty() && empty)
+        if (!m_pL4Handler->getBuf()->empty() && empty)
             m_pL4Handler->continueWrite();
-        
-        if (m_pL4Handler->getBuf()->available() <= 0 )
+
+        if (m_pL4Handler->getBuf()->available() <= 0)
         {
             suspendRead();
-            if ( D_ENABLED( DL_LESS ) )
+            if (D_ENABLED(DL_LESS))
             {
-                LOG_D(( getLogger(), "[%s] [L4conn] suspendRead",
-                    getLogId() ));
+                LOG_D((getLogger(), "[%s] [L4conn] suspendRead",
+                       getLogId()));
             }
         }
     }
     return 0;
 }
-    
+
 int L4conn::doWrite()
 {
     bool full = ((getBuf()->available() == 0) ? true : false);
     int length;
-    
-    while ((length = getBuf()->blockSize()) > 0 )
+
+    while ((length = getBuf()->blockSize()) > 0)
     {
         int n = write(getBuf()->begin(), length);
-        if ( D_ENABLED( DL_LESS ) )
+        if (D_ENABLED(DL_LESS))
         {
-            LOG_D(( getLogger(), "[%s] [L4conn] doWrite [%d of %d]...",
-                getLogId(), n, length ));
+            LOG_D((getLogger(), "[%s] [L4conn] doWrite [%d of %d]...",
+                   getLogId(), n, length));
         }
-            
+
         if (n > 0)
-        {
             getBuf()->pop_front(n);
-        }
-        else if ( n == 0 )
+        else if (n == 0)
             break;
         else // if (n < 0)
         {
             m_pL4Handler->closeBothConnection();
-            return -1;            
+            return -1;
         }
-        
+
     }
-    
+
     if (getBuf()->available() != 0)
     {
         if (full)
             m_pL4Handler->continueRead();
 
-        if ( getBuf()->empty() )
+        if (getBuf()->empty())
         {
             suspendWrite();
-            if ( D_ENABLED( DL_LESS ) )
+            if (D_ENABLED(DL_LESS))
             {
-                LOG_D(( getLogger(), "[%s] [L4conn] suspendWrite && m_pL4Handler->continueRead",
-                    getLogId() ));
+                LOG_D((getLogger(),
+                       "[%s] [L4conn] suspendWrite && m_pL4Handler->continueRead",
+                       getLogId()));
             }
         }
     }
-    
+
     return 0;
 }
 
-LOG4CXX_NS::Logger * L4conn::getLogger() const
+LOG4CXX_NS::Logger *L4conn::getLogger() const
 {
     return m_pL4Handler->getLogger();
 }
 
-const char * L4conn::getLogId()
+const char *L4conn::getLogId()
 {
     return m_pL4Handler->getLogId();
 }

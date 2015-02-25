@@ -17,7 +17,8 @@
 *****************************************************************************/
 #include "h2protocol.h"
 
-static const char* s_sH2FrameName[] = { 
+static const char *s_sH2FrameName[] =
+{
     "DATA",
     "HEADERS",
     "PRIORITY",
@@ -30,7 +31,7 @@ static const char* s_sH2FrameName[] = {
     "CONTINUATION"
 };
 
-const char* getH2FrameName(unsigned char bframeType)
+const char *getH2FrameName(unsigned char bframeType)
 {
     if (bframeType < H2_FRAME_MAX_TYPE)
         return s_sH2FrameName[bframeType];

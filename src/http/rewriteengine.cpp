@@ -55,48 +55,46 @@ RewriteEngine::~RewriteEngine()
 }
 
 
-int RewriteEngine::parseRules( char * &pRules, RewriteRuleList * pRuleList,
-                        const RewriteMapList * pMapList )
+int RewriteEngine::parseRules(char *&pRules, RewriteRuleList *pRuleList,
+                              const RewriteMapList *pMapList)
 {
-    LinkedObj * pLast = pRuleList->tail();
-    if ( !pLast )
+    LinkedObj *pLast = pRuleList->tail();
+    if (!pLast)
         pLast = pRuleList->head();
-    while( *pRules )
+    while (*pRules)
     {
-        while( isspace( *pRules ) )
+        while (isspace(*pRules))
             ++pRules;
-        if ( !*pRules )
+        if (!*pRules)
             break;
-        if ((( strncasecmp( pRules, "RewriteCond", 11 ) == 0 )&&
-             ( isspace( *(pRules + 11)) ))||
-            (( strncasecmp( pRules, "RewriteRule", 11 ) == 0 )&&
-             ( isspace( *(pRules + 11)) )))
+        if (((strncasecmp(pRules, "RewriteCond", 11) == 0) &&
+             (isspace(*(pRules + 11)))) ||
+            ((strncasecmp(pRules, "RewriteRule", 11) == 0) &&
+             (isspace(*(pRules + 11)))))
         {
-            RewriteRule * pRule = new RewriteRule();
-            if ( !pRule )
+            RewriteRule *pRule = new RewriteRule();
+            if (!pRule)
             {
-                ERR_NO_MEM( "new RewriteRule()" );
+                ERR_NO_MEM("new RewriteRule()");
                 return -1;
             }
-            int ret = pRule->parse( pRules, pMapList );
-            if ( ret )
+            int ret = pRule->parse(pRules, pMapList);
+            if (ret)
             {
                 delete pRule;
                 return 0;
             }
-            pLast->addNext( pRule );
+            pLast->addNext(pRule);
             pLast = pRule;
         }
         else
         {
-            char * pLineEnd = strchr( pRules, '\n' );
-            if ( pLineEnd )
+            char *pLineEnd = strchr(pRules, '\n');
+            if (pLineEnd)
                 *pLineEnd = 0;
-            if ( *pRules != '#' )
-            {
-                LOG_ERR(( "Invalid rewrite directive: %s", pRules ));
-            }
-            if ( pLineEnd )
+            if (*pRules != '#')
+                LOG_ERR(("Invalid rewrite directive: %s", pRules));
+            if (pLineEnd)
                 *pLineEnd = '\n';
             else
                 break;
@@ -106,191 +104,193 @@ int RewriteEngine::parseRules( char * &pRules, RewriteRuleList * pRuleList,
     return 0;
 }
 
-int RewriteEngine::appendUnparsedRule( AutoStr2 & sDirective,
-                char * pBegin, char * pEnd )
+int RewriteEngine::appendUnparsedRule(AutoStr2 &sDirective,
+                                      char *pBegin, char *pEnd)
 {
-    if ( m_qsLen + sDirective.len() + (pEnd - pBegin ) + 2 > REWRITE_BUF_SIZE * 4 )
+    if (m_qsLen + sDirective.len() + (pEnd - pBegin) + 2 > REWRITE_BUF_SIZE *
+        4)
         return -1;
-    char * pBuf = m_rewriteBuf[0];
-    memmove( &pBuf[m_qsLen], sDirective.c_str(), sDirective.len() );
+    char *pBuf = m_rewriteBuf[0];
+    memmove(&pBuf[m_qsLen], sDirective.c_str(), sDirective.len());
     m_qsLen += sDirective.len();
     pBuf[m_qsLen++] = ' ';
-    memmove( &pBuf[m_qsLen], pBegin, pEnd - pBegin );
+    memmove(&pBuf[m_qsLen], pBegin, pEnd - pBegin);
     m_qsLen += pEnd - pBegin;
     pBuf[m_qsLen++] = '\n';
     pBuf[m_qsLen] = 0;
     return 0;
 }
 
-int RewriteEngine::parseUnparsedRules( RewriteRuleList *pRuleList,
-                const RewriteMapList * pMapList )
+int RewriteEngine::parseUnparsedRules(RewriteRuleList *pRuleList,
+                                      const RewriteMapList *pMapList)
 {
-    char * pRules = m_rewriteBuf[0];
-    int ret = parseRules( pRules, pRuleList, pMapList );
-    if ( pRules - m_rewriteBuf[0] >= m_qsLen )
+    char *pRules = m_rewriteBuf[0];
+    int ret = parseRules(pRules, pRuleList, pMapList);
+    if (pRules - m_rewriteBuf[0] >= m_qsLen)
         m_qsLen = 0;
     else
     {
-        memmove( m_rewriteBuf[0], pRules, m_qsLen - ( pRules - m_rewriteBuf[0] ) );
+        memmove(m_rewriteBuf[0], pRules, m_qsLen - (pRules - m_rewriteBuf[0]));
         m_qsLen -= pRules - m_rewriteBuf[0];
     }
     return ret;
-    
+
 }
 
 static const char s_hex[17] = "0123456789ABCDEF";
 
 
-static char * escape_uri( char * p, const char * pURI, int uriLen )
+static char *escape_uri(char *p, const char *pURI, int uriLen)
 {
-    const char * pURIEnd = pURI + uriLen;
+    const char *pURIEnd = pURI + uriLen;
     register char ch;
-    while( pURI < pURIEnd )
+    while (pURI < pURIEnd)
     {
         ch = *pURI++;
-        if ( isalnum(ch) || (ch == '_') )
+        if (isalnum(ch) || (ch == '_'))
             *p++ = ch;
-        else if ( ch == ' ' )
+        else if (ch == ' ')
             *p++ = '+';
         else
         {
             *p++ = '%';
-            *p++ = s_hex[ ((unsigned char )ch) >> 4 ];
+            *p++ = s_hex[((unsigned char)ch) >> 4 ];
             *p++ = s_hex[ ch & 0xf ];
         }
     }
     return p;
 }
 
-static int getSubstr( const char * pSource, const int *ovector, int matches, int i,
-                          char * &pValue, int escape )
+static int getSubstr(const char *pSource, const int *ovector, int matches,
+                     int i,
+                     char *&pValue, int escape)
 {
-    if ( i < matches )
+    if (i < matches)
     {
-        const int * pParam = ovector + ( i << 1 );
-        if ( !escape )
+        const int *pParam = ovector + (i << 1);
+        if (!escape)
         {
             pValue = (char *)pSource + *pParam;
             return *(pParam + 1) - *pParam;
         }
         else
         {
-            char * pEnd = pValue;
-            pEnd = escape_uri( pEnd, (char *)pSource + *pParam, *(pParam + 1) - *pParam );
+            char *pEnd = pValue;
+            pEnd = escape_uri(pEnd, (char *)pSource + *pParam,
+                              *(pParam + 1) - *pParam);
             return pEnd - pValue;
         }
     }
     return 0;
 }
 
-int RewriteEngine::getSubstValue( const RewriteSubstItem * pItem, HttpSession *pSession,
-                        char * &pValue, int bufLen )
+int RewriteEngine::getSubstValue(const RewriteSubstItem *pItem,
+                                 HttpSession *pSession,
+                                 char *&pValue, int bufLen)
 {
-    HttpReq * pReq = pSession->getReq();
+    HttpReq *pReq = pSession->getReq();
     int type = pItem->getType();
     int i;
-    if ( type < REF_STRING )
+    if (type < REF_STRING)
     {
-        pValue = (char *)pReq->getHeader( type );
-        if ( *pValue )
-            return pReq->getHeaderLen( type );
+        pValue = (char *)pReq->getHeader(type);
+        if (*pValue)
+            return pReq->getHeaderLen(type);
         else
             return 0;
     }
 
-/*
-    if ( type >= REF_TIME )
-    {
-        time_t t = time(NULL);
-        struct tm *tm = localtime(&t);
-        switch( type )
+    /*
+        if ( type >= REF_TIME )
         {
-        case REF_TIME:
-            i = snprintf( pValue, bufLen,
-                        "%04d%02d%02d%02d%02d%02d", tm->tm_year + 1900,
-                        tm->tm_mon+1, tm->tm_mday,
-                        tm->tm_hour, tm->tm_min, tm->tm_sec);
-            break;
-        case REF_TIME_YEAR:
-            i = snprintf( pValue, bufLen, "%04d", tm->tm_year + 1900);
-            break;
-        case REF_TIME_MON:
-            i = snprintf( pValue, bufLen, "%02d", tm->tm_mon+1 );
-            break;
-        case REF_TIME_DAY:
-            i = snprintf( pValue, bufLen, "%02d", tm->tm_mday);
-            break;
-        case REF_TIME_HOUR:
-            i = snprintf( pValue, bufLen, "%02d", tm->tm_hour);
-            break;
-        case REF_TIME_MIN:
-            i = snprintf( pValue, bufLen, "%02d", tm->tm_min);
-            break;
-        case REF_TIME_SEC:
-            i = snprintf( pValue, bufLen, "%02d", tm->tm_sec);
-            break;
-        case REF_TIME_WDAY:
-            i = snprintf( pValue, bufLen, "%d", tm->tm_wday);
-            break;
-        default:
-            return 0;
+            time_t t = time(NULL);
+            struct tm *tm = localtime(&t);
+            switch( type )
+            {
+            case REF_TIME:
+                i = snprintf( pValue, bufLen,
+                            "%04d%02d%02d%02d%02d%02d", tm->tm_year + 1900,
+                            tm->tm_mon+1, tm->tm_mday,
+                            tm->tm_hour, tm->tm_min, tm->tm_sec);
+                break;
+            case REF_TIME_YEAR:
+                i = snprintf( pValue, bufLen, "%04d", tm->tm_year + 1900);
+                break;
+            case REF_TIME_MON:
+                i = snprintf( pValue, bufLen, "%02d", tm->tm_mon+1 );
+                break;
+            case REF_TIME_DAY:
+                i = snprintf( pValue, bufLen, "%02d", tm->tm_mday);
+                break;
+            case REF_TIME_HOUR:
+                i = snprintf( pValue, bufLen, "%02d", tm->tm_hour);
+                break;
+            case REF_TIME_MIN:
+                i = snprintf( pValue, bufLen, "%02d", tm->tm_min);
+                break;
+            case REF_TIME_SEC:
+                i = snprintf( pValue, bufLen, "%02d", tm->tm_sec);
+                break;
+            case REF_TIME_WDAY:
+                i = snprintf( pValue, bufLen, "%d", tm->tm_wday);
+                break;
+            default:
+                return 0;
+            }
+            return i;
         }
-        return i;
-    }
-*/
-    switch( type )
+    */
+    switch (type)
     {
     case REF_STRING:
         pValue = (char *)pItem->getStr()->c_str();
         return pItem->getStr()->len();
     case REF_MAP:
         {
-            MapRefItem * pRef = pItem->getMapRef();
+            MapRefItem *pRef = pItem->getMapRef();
             int len = 1024;
             char achBuf[1024];
-            if ( buildString( pRef->getKeyFormat(), pSession, achBuf, len ) == NULL )
+            if (buildString(pRef->getKeyFormat(), pSession, achBuf, len) == NULL)
                 return 0;
-            if ( (len = pRef->getMap()->lookup( achBuf, len, pValue, bufLen )) == -1 )
+            if ((len = pRef->getMap()->lookup(achBuf, len, pValue, bufLen)) == -1)
             {
-                if ( pRef->getDefaultFormat() )
+                if (pRef->getDefaultFormat())
                 {
-                    if ( buildString( pRef->getDefaultFormat(), pSession,
-                                    pValue, bufLen ) == NULL )
+                    if (buildString(pRef->getDefaultFormat(), pSession,
+                                    pValue, bufLen) == NULL)
                         return 0;
                     len = bufLen;
-                }        
+                }
                 else
                     len = 0;
             }
             return len;
         }
-        break;             
+        break;
     case REF_RULE_SUBSTR:
-        return getSubstr( m_pSourceURL, m_ruleVec, m_ruleMatches, pItem->getIndex(),
-                    pValue, m_flag & RULE_FLAG_BR_ESCAPE );
+        return getSubstr(m_pSourceURL, m_ruleVec, m_ruleMatches, pItem->getIndex(),
+                         pValue, m_flag & RULE_FLAG_BR_ESCAPE);
     case REF_COND_SUBSTR:
-        return getSubstr( m_pCondBuf, m_condVec, m_condMatches, pItem->getIndex(),
-                    pValue, m_flag & RULE_FLAG_BR_ESCAPE );
+        return getSubstr(m_pCondBuf, m_condVec, m_condMatches, pItem->getIndex(),
+                         pValue, m_flag & RULE_FLAG_BR_ESCAPE);
     case REF_ENV:
-        pValue = (char *)RequestVars::getEnv( pSession, pItem->getStr()->c_str(), 
-                    pItem->getStr()->len(), i );
-        if ( !pValue )
-        {
+        pValue = (char *)RequestVars::getEnv(pSession, pItem->getStr()->c_str(),
+                                             pItem->getStr()->len(), i);
+        if (!pValue)
             i = 0;
-        }
         return i;
     case REF_HTTP_HEADER:
-        pValue = (char *)pReq->getHeader( pItem->getStr()->c_str(),
-                        pItem->getStr()->len(), i );
-        if ( !pValue )
+        pValue = (char *)pReq->getHeader(pItem->getStr()->c_str(),
+                                         pItem->getStr()->len(), i);
+        if (!pValue)
             i = 0;
         return i;
     case REF_REQUST_FN:
     case REF_SCRIPTFILENAME:
-        if ( m_iScriptLen == -1 )
+        if (m_iScriptLen == -1)
         {
-            pReq->checkPathInfo( m_pSourceURL, m_sourceURLLen, m_iFilePathLen,
-                            m_iScriptLen, m_iPathInfoLen, m_pContext );
+            pReq->checkPathInfo(m_pSourceURL, m_sourceURLLen, m_iFilePathLen,
+                                m_iScriptLen, m_iPathInfoLen, m_pContext);
         }
         pValue = HttpGlobals::g_achBuf;
         //if ( m_pStrip )
@@ -300,34 +300,34 @@ int RewriteEngine::getSubstValue( const RewriteSubstItem * pItem, HttpSession *p
         //   return m_iFilePathLen + m_iPathInfoLen;
         return m_iFilePathLen;
     case REF_PATH_INFO:
-        if ( m_iScriptLen == -1 )
+        if (m_iScriptLen == -1)
         {
-            pReq->checkPathInfo( m_pSourceURL, m_sourceURLLen, m_iFilePathLen,
-                            m_iScriptLen, m_iPathInfoLen, m_pContext );
+            pReq->checkPathInfo(m_pSourceURL, m_sourceURLLen, m_iFilePathLen,
+                                m_iScriptLen, m_iPathInfoLen, m_pContext);
         }
         pValue = &HttpGlobals::g_achBuf[ m_iFilePathLen ];
         return m_iPathInfoLen;
     case REF_SCRIPT_NAME:
-        if ( m_iScriptLen == -1 )
+        if (m_iScriptLen == -1)
         {
-            pReq->checkPathInfo( m_pSourceURL, m_sourceURLLen, m_iFilePathLen,
-                            m_iScriptLen, m_iPathInfoLen, m_pContext );
+            pReq->checkPathInfo(m_pSourceURL, m_sourceURLLen, m_iFilePathLen,
+                                m_iScriptLen, m_iPathInfoLen, m_pContext);
         }
         pValue = (char *)pReq->getOrgReqURL();
         return m_iScriptLen;
     case REF_REQ_URI:   //in rewrite rule, this does not include Query String part
-        if ( pReq->getRedirects() == 0 )
+        if (pReq->getRedirects() == 0)
         {
             pValue = (char *)pReq->getOrgReqURL();
             return pReq->getOrgReqURILen();
         }
-        if ( m_pStrip )
+        if (m_pStrip)
         {
-            memmove( pValue, m_pStrip->c_str(), m_pStrip->len() );
-            memmove( pValue + m_pStrip->len(), m_pSourceURL, m_sourceURLLen );
+            memmove(pValue, m_pStrip->c_str(), m_pStrip->len());
+            memmove(pValue + m_pStrip->len(), m_pSourceURL, m_sourceURLLen);
             return m_pStrip->len() + m_sourceURLLen;
         }
-        //fall through
+    //fall through
     case REF_CUR_REWRITE_URI:
         pValue = (char *)m_pSourceURL;
         return m_sourceURLLen;
@@ -335,56 +335,58 @@ int RewriteEngine::getSubstValue( const RewriteSubstItem * pItem, HttpSession *p
         pValue = (char *)m_pQS;
         return m_qsLen;
     default:
-        return RequestVars::getReqVar( pSession, type, pValue, bufLen );
+        return RequestVars::getReqVar(pSession, type, pValue, bufLen);
     }
     return 0;
 }
 
-extern int transform_urlDecode( const char * org, int org_len, char * dest, int dest_len, int * changed);
+extern int transform_urlDecode(const char *org, int org_len, char *dest,
+                               int dest_len, int *changed);
 
-int RewriteEngine::appendSubst( const RewriteSubstItem * pItem, HttpSession *pSession,
-                        char * &pBegin, char *pBufEnd, int &esc_uri, int noDupSlash )
+int RewriteEngine::appendSubst(const RewriteSubstItem *pItem,
+                               HttpSession *pSession,
+                               char *&pBegin, char *pBufEnd, int &esc_uri, int noDupSlash)
 {
-    char * pValue = pBegin;
-    int valLen = getSubstValue( pItem, pSession, pValue, pBufEnd - pValue );
-    if ( valLen <= 0 )
+    char *pValue = pBegin;
+    int valLen = getSubstValue(pItem, pSession, pValue, pBufEnd - pValue);
+    if (valLen <= 0)
         return valLen;
-    if ( pBufEnd <= pBegin + valLen )
+    if (pBufEnd <= pBegin + valLen)
         return 0;
-    if ( pValue != pBegin )
+    if (pValue != pBegin)
     {
-        if (( *pValue == '/' )&&( noDupSlash )&&(pBegin[-1] == '/'))
+        if ((*pValue == '/') && (noDupSlash) && (pBegin[-1] == '/'))
             --pBegin;
-        memmove( pBegin, pValue, valLen );
+        memmove(pBegin, pValue, valLen);
     }
     else
     {
-        if (( *pValue == '/' )&&( noDupSlash )&&(pBegin[-1] == '/'))
+        if ((*pValue == '/') && (noDupSlash) && (pBegin[-1] == '/'))
         {
             --valLen;
-            memmove( pBegin, pBegin+1, valLen );
+            memmove(pBegin, pBegin + 1, valLen);
         }
     }
-    if ( esc_uri && (valLen > 0 ))
+    if (esc_uri && (valLen > 0))
     {
         int len = valLen;
         char *pEnd;
-        pEnd = (char *)memchr( pBegin, '?', valLen );
-        if ( pEnd )
+        pEnd = (char *)memchr(pBegin, '?', valLen);
+        if (pEnd)
         {
             esc_uri = 0;
             len = pEnd - pBegin;
         }
-        if (( len > 0 )&&( pItem->needUrlDecode() ))
+        if ((len > 0) && (pItem->needUrlDecode()))
         {
             int c;
             //int l1 = transform_urlDecode( pBegin, len, pBegin, len, &c );
-            int l1 = HttpUtil::unescape_n( pBegin, len, pBegin, len );
+            int l1 = HttpUtil::unescape_n(pBegin, len, pBegin, len);
             c = len - l1;
-            if ( c > 0 )
+            if (c > 0)
             {
-                if ( len < valLen )
-                    memmove( pBegin + l1, pBegin + len, valLen - len );
+                if (len < valLen)
+                    memmove(pBegin + l1, pBegin + len, valLen - len);
                 valLen -= c;
             }
         }
@@ -393,13 +395,14 @@ int RewriteEngine::appendSubst( const RewriteSubstItem * pItem, HttpSession *pSe
     return 0;
 }
 
-char * RewriteEngine::buildString( const RewriteSubstFormat * pFormat, HttpSession *pSession,
-                          char * pBuf, int &len, int esc_uri, int noDupSlash )
+char *RewriteEngine::buildString(const RewriteSubstFormat *pFormat,
+                                 HttpSession *pSession,
+                                 char *pBuf, int &len, int esc_uri, int noDupSlash)
 {
-    char * pBegin = pBuf;
-    char * pBufEnd = pBuf + len - 1;
-    const RewriteSubstItem * pItem = pFormat->begin();
-    
+    char *pBegin = pBuf;
+    char *pBufEnd = pBuf + len - 1;
+    const RewriteSubstItem *pItem = pFormat->begin();
+
 //    if ( !pItem->next() )
 //    {
 //        int valLen = getSubstValue( pItem, pSession, pBegin, pBufEnd );
@@ -407,10 +410,10 @@ char * RewriteEngine::buildString( const RewriteSubstFormat * pFormat, HttpSessi
 //        //only one variable, no need to copy to buffer
 //    }
 
-    while( pItem )
+    while (pItem)
     {
-        if ( appendSubst( pItem, pSession, pBegin, pBufEnd, esc_uri,
-                        (pBegin>pBuf)?noDupSlash:0 ) == -1 )
+        if (appendSubst(pItem, pSession, pBegin, pBufEnd, esc_uri,
+                        (pBegin > pBuf) ? noDupSlash : 0) == -1)
             return NULL;
         pItem = (const RewriteSubstItem *)pItem->next();
     }
@@ -419,207 +422,215 @@ char * RewriteEngine::buildString( const RewriteSubstFormat * pFormat, HttpSessi
     return pBuf;
 }
 
-int RewriteEngine::processCond( const RewriteCond * pCond, HttpSession *pSession )
+int RewriteEngine::processCond(const RewriteCond *pCond,
+                               HttpSession *pSession)
 {
     int len = REWRITE_BUF_SIZE - 1;
-    char * pTest;
-    if ( m_pLastCondStr && m_pLastCondStr->equal( * pCond->getTestStringFormat() ) )
+    char *pTest;
+    if (m_pLastCondStr
+        && m_pLastCondStr->equal(* pCond->getTestStringFormat()))
     {
         pTest = m_pLastTestStr;
         len = m_lastTestStrLen;
     }
     else
     {
-        pTest = buildString( pCond->getTestStringFormat(),
-                                      pSession, m_pFreeBuf, len, 1, 1 );
+        pTest = buildString(pCond->getTestStringFormat(),
+                            pSession, m_pFreeBuf, len, 1, 1);
         m_pLastCondStr = pCond->getTestStringFormat();
         m_pLastTestStr = pTest;
         m_lastTestStrLen = len;
         m_noStat = 1;
     }
     int ret = 0;
-    if ( !pTest )
+    if (!pTest)
         return -1;
     int condVec[ MAX_REWRITE_MATCH * 3 ];
     int condMatches = 0;
     //m_condMatches = 0;
     int code = pCond->getOpcode();
-    if ( code == COND_OP_REGEX )
+    if (code == COND_OP_REGEX)
     {
-        ret = pCond->getRegex()->exec( pTest, len, 0, 0, condVec,
-                                       MAX_REWRITE_MATCH * 3);
-        if ( m_logLevel > 2 )
-            LOG_INFO(( pSession->getLogger(),
-                "[%s] [REWRITE] Cond: Match '%s' with pattern '%s', result: %d",
-                pSession->getLogId(), pTest, pCond->getPattern(), ret ));
-        if ( ret == 0 )
+        ret = pCond->getRegex()->exec(pTest, len, 0, 0, condVec,
+                                      MAX_REWRITE_MATCH * 3);
+        if (m_logLevel > 2)
+            LOG_INFO((pSession->getLogger(),
+                      "[%s] [REWRITE] Cond: Match '%s' with pattern '%s', result: %d",
+                      pSession->getLogId(), pTest, pCond->getPattern(), ret));
+        if (ret == 0)
             condMatches = 10;
         else
             condMatches = ret;
-        ret = (ret < 0 );
+        ret = (ret < 0);
     }
-    else if (( code >= COND_OP_LESS)&&( code <= COND_OP_EQ ))
+    else if ((code >= COND_OP_LESS) && (code <= COND_OP_EQ))
     {
-        if ( pCond->getFlag() & COND_FLAG_NOCASE )
-            ret = strcasecmp( pTest, pCond->getPattern() );
+        if (pCond->getFlag() & COND_FLAG_NOCASE)
+            ret = strcasecmp(pTest, pCond->getPattern());
         else
-            ret = strcmp( pTest, pCond->getPattern() );
-        if ( m_logLevel > 2 )
-            LOG_INFO(( pSession->getLogger(),
-                "[%s] [REWRITE] Cond: Compare '%s' with pattern '%s', result: %d",
-                pSession->getLogId(), pTest, pCond->getPattern(), ret ));
-        switch( code )
+            ret = strcmp(pTest, pCond->getPattern());
+        if (m_logLevel > 2)
+            LOG_INFO((pSession->getLogger(),
+                      "[%s] [REWRITE] Cond: Compare '%s' with pattern '%s', result: %d",
+                      pSession->getLogId(), pTest, pCond->getPattern(), ret));
+        switch (code)
         {
         case COND_OP_LESS:
-            ret = ( ret >= 0 );
+            ret = (ret >= 0);
             break;
         case COND_OP_GREATER:
-            ret = ( ret <= 0 );
+            ret = (ret <= 0);
             break;
         case COND_OP_EQ:
-            ret = ( ret != 0 );
+            ret = (ret != 0);
             break;
-        }        
+        }
     }
-    else if (( code >= COND_OP_DIR )&& (code <= COND_OP_FILE_ACC ))
+    else if ((code >= COND_OP_DIR) && (code <= COND_OP_FILE_ACC))
     {
-        if ( m_noStat == 1 )
-            m_noStat = nio_stat( pTest, &m_st );
-        if ( m_noStat == 0 )
+        if (m_noStat == 1)
+            m_noStat = nio_stat(pTest, &m_st);
+        if (m_noStat == 0)
         {
-            switch( code )
+            switch (code)
             {
             case COND_OP_DIR:
-                ret = !S_ISDIR( m_st.st_mode );
+                ret = !S_ISDIR(m_st.st_mode);
                 break;
             case COND_OP_FILE:
-                ret = !S_ISREG( m_st.st_mode );
+                ret = !S_ISREG(m_st.st_mode);
                 break;
             case COND_OP_SIZE:
-                ret = (!S_ISREG( m_st.st_mode )||( m_st.st_size == 0 ));
+                ret = (!S_ISREG(m_st.st_mode) || (m_st.st_size == 0));
                 break;
             case COND_OP_SYM:
-                ret = !S_ISLNK( m_st.st_mode );
+                ret = !S_ISLNK(m_st.st_mode);
                 break;
             case COND_OP_FILE_ACC:
-                ret = !S_ISREG( m_st.st_mode );
+                ret = !S_ISREG(m_st.st_mode);
                 break;
             default:
                 ret = -1;
             }
-            if ( m_logLevel > 2 )
-                LOG_INFO(( pSession->getLogger(),
-                    "[%s] [REWRITE] Cond: test '%s' with pattern '%s', result: %d",
-                    pSession->getLogId(), pTest, pCond->getPattern(), ret ));
+            if (m_logLevel > 2)
+                LOG_INFO((pSession->getLogger(),
+                          "[%s] [REWRITE] Cond: test '%s' with pattern '%s', result: %d",
+                          pSession->getLogId(), pTest, pCond->getPattern(), ret));
         }
         else
         {
-            if ( m_logLevel > 2 )
-                LOG_INFO(( pSession->getLogger(),
-                "[%s] [REWRITE] stat( %s ) failed ",
-                pSession->getLogId(), pTest ));
+            if (m_logLevel > 2)
+                LOG_INFO((pSession->getLogger(),
+                          "[%s] [REWRITE] stat( %s ) failed ",
+                          pSession->getLogId(), pTest));
             ret = -1;
         }
-        
+
     }
-    else if ( code == COND_OP_URL_ACC )
+    else if (code == COND_OP_URL_ACC)
     {
         //do nothing.
     }
     else
-        assert( 0 );
-    if (!(pCond->getFlag() & COND_FLAG_NOMATCH) )
+        assert(0);
+    if (!(pCond->getFlag() & COND_FLAG_NOMATCH))
     {
-        if ( condMatches > 0 )
+        if (condMatches > 0)
         {
-            if ( pTest == m_pFreeBuf )
+            if (pTest == m_pFreeBuf)
             {
                 m_pFreeBuf = m_pCondBuf;
                 m_pCondBuf = pTest;
             }
             m_condMatches = condMatches;
-            memmove( m_condVec, condVec, condMatches * 3 * sizeof( int ) );
+            memmove(m_condVec, condVec, condMatches * 3 * sizeof(int));
         }
         return ret;
     }
     else
         return !ret;
-    
+
 }
 
-int RewriteEngine::processRule( const RewriteRule * pRule, HttpSession *pSession )
+int RewriteEngine::processRule(const RewriteRule *pRule,
+                               HttpSession *pSession)
 {
     m_ruleMatches = 0;
-    int ret = pRule->getRegex()->exec( m_pSourceURL, m_sourceURLLen, 0,
-                                       0, m_ruleVec, MAX_REWRITE_MATCH * 3 );
-    if ( m_logLevel > 1 )
-        LOG_INFO(( pSession->getLogger(),
-            "[%s] [REWRITE] Rule: Match '%s' with pattern '%s', result: %d",
-            pSession->getLogId(), m_pSourceURL, pRule->getPattern(), ret ));
-    if ( ret < 0 )
+    int ret = pRule->getRegex()->exec(m_pSourceURL, m_sourceURLLen, 0,
+                                      0, m_ruleVec, MAX_REWRITE_MATCH * 3);
+    if (m_logLevel > 1)
+        LOG_INFO((pSession->getLogger(),
+                  "[%s] [REWRITE] Rule: Match '%s' with pattern '%s', result: %d",
+                  pSession->getLogId(), m_pSourceURL, pRule->getPattern(), ret));
+    if (ret < 0)
     {
-        if (!(pRule->getFlag() & RULE_FLAG_NOMATCH) )
+        if (!(pRule->getFlag() & RULE_FLAG_NOMATCH))
             return -1;
     }
     else
     {
-        if ((pRule->getFlag() & RULE_FLAG_NOMATCH) )
+        if ((pRule->getFlag() & RULE_FLAG_NOMATCH))
             return -1;
-        if ( ret == 0 )
+        if (ret == 0)
             m_ruleMatches = 10;
         else
             m_ruleMatches = ret;
     }
     m_pLastCondStr = NULL;
     m_condMatches = 0;
-    const RewriteCond * pCond = pRule->getFirstCond();
-    while( pCond )
+    const RewriteCond *pCond = pRule->getFirstCond();
+    while (pCond)
     {
-        if ( processCond( pCond, pSession ) )
+        if (processCond(pCond, pSession))
         {
-            if (!(( pCond->getFlag() & COND_FLAG_OR )&&
-                ( pCond->next() )) )
+            if (!((pCond->getFlag() & COND_FLAG_OR) &&
+                  (pCond->next())))
                 return -1;
         }
         else
         {
-            while(( pCond->getFlag() & COND_FLAG_OR )&&( pCond->next() ))
+            while ((pCond->getFlag() & COND_FLAG_OR) && (pCond->next()))
                 pCond = (RewriteCond *)pCond->next();
         }
         pCond = (RewriteCond *)pCond->next();
     }
-    return processRewrite( pRule, pSession );
+    return processRewrite(pRule, pSession);
 }
 
-static int isAbsoluteURI( const char * pURI, int len )
+static int isAbsoluteURI(const char *pURI, int len)
 {
-    if (( *pURI == '/' )||( len < 6 ))
+    if ((*pURI == '/') || (len < 6))
         return 0;
 
-    switch( *pURI++ )
+    switch (*pURI++)
     {
-    case 'f': case 'F':
-        if ( strncasecmp( pURI, "tp://", 5 ) == 0 )
+    case 'f':
+    case 'F':
+        if (strncasecmp(pURI, "tp://", 5) == 0)
             return 6;
         break;
-    case 'g': case 'G':
-        if ( strncasecmp( pURI, "opher://", 8 ) == 0 )
+    case 'g':
+    case 'G':
+        if (strncasecmp(pURI, "opher://", 8) == 0)
             return 9;
         break;
-    case 'h': case 'H':
-        if ( strncasecmp( pURI, "ttp://", 6 ) == 0 )
+    case 'h':
+    case 'H':
+        if (strncasecmp(pURI, "ttp://", 6) == 0)
             return 7;
-        if ( strncasecmp( pURI, "ttps://", 7 ) == 0 )
+        if (strncasecmp(pURI, "ttps://", 7) == 0)
             return 8;
         break;
-    case 'm': case 'M':
-        if ( strncasecmp( pURI, "ailto:", 6 ) == 0 )
+    case 'm':
+    case 'M':
+        if (strncasecmp(pURI, "ailto:", 6) == 0)
             return 7;
         break;
-    case 'n': case 'N':
-        if ( strncasecmp( pURI, "ews:", 4 ) == 0 )
+    case 'n':
+    case 'N':
+        if (strncasecmp(pURI, "ews:", 4) == 0)
             return 5;
-        if ( strncasecmp( pURI, "ntp://", 6 ) == 0 )
+        if (strncasecmp(pURI, "ntp://", 6) == 0)
             return 7;
         break;
     }
@@ -627,68 +638,68 @@ static int isAbsoluteURI( const char * pURI, int len )
 }
 
 
-int RewriteEngine::processQueryString( HttpSession *pSession, int flag )
+int RewriteEngine::processQueryString(HttpSession *pSession, int flag)
 {
-    char * pBuf = (char *)strchr( m_pSourceURL, '?' );
-    if ( flag & RULE_FLAG_QSDISCARD )
+    char *pBuf = (char *)strchr(m_pSourceURL, '?');
+    if (flag & RULE_FLAG_QSDISCARD)
     {
         m_pQS = m_qsBuf;
         m_qsLen = 0;
         m_qsBuf[m_qsLen] = 0;
-        pSession->getReq()->orContextState( REWRITE_QSD );
+        pSession->getReq()->orContextState(REWRITE_QSD);
     }
-    if ( !pBuf )
+    if (!pBuf)
         return 0;
     *pBuf = 0;
     int n = m_sourceURLLen - 1 - (pBuf - m_pSourceURL);
     m_sourceURLLen = pBuf - m_pSourceURL;
     pBuf++;
-    if ( n > 0 )
+    if (n > 0)
     {
-        if ( n > REWRITE_BUF_SIZE - 1 )
+        if (n > REWRITE_BUF_SIZE - 1)
             n = REWRITE_BUF_SIZE - 1;
-        if ( flag & RULE_FLAG_QSAPPEND )
+        if (flag & RULE_FLAG_QSAPPEND)
         {
-            if( REWRITE_BUF_SIZE < n + m_qsLen + 2 )
+            if (REWRITE_BUF_SIZE < n + m_qsLen + 2)
             {
                 m_qsLen = REWRITE_BUF_SIZE - n - 2;
-                if ( m_qsLen < 0 )
+                if (m_qsLen < 0)
                     m_qsLen = 0;
             }
-            if ( m_qsLen > 0 )
+            if (m_qsLen > 0)
             {
-                memmove( &m_qsBuf[n+1], m_pQS, m_qsLen );
+                memmove(&m_qsBuf[n + 1], m_pQS, m_qsLen);
                 m_qsBuf[n] = '&';
                 ++m_qsLen;
             }
-            if ( m_logLevel > 1 )
-                LOG_INFO(( pSession->getLogger(),
-                    "[%s] [REWRITE] append query string '%s'",
-                    pSession->getLogId(), pBuf ));
+            if (m_logLevel > 1)
+                LOG_INFO((pSession->getLogger(),
+                          "[%s] [REWRITE] append query string '%s'",
+                          pSession->getLogId(), pBuf));
         }
         else
         {
-            if ( m_logLevel > 1 )
-                LOG_INFO(( pSession->getLogger(),
-                    "[%s] [REWRITE] replace current query string with '%s'",
-                    pSession->getLogId(), pBuf ));
+            if (m_logLevel > 1)
+                LOG_INFO((pSession->getLogger(),
+                          "[%s] [REWRITE] replace current query string with '%s'",
+                          pSession->getLogId(), pBuf));
             m_qsLen = 0;
         }
-        memmove( m_qsBuf, pBuf, n );
+        memmove(m_qsBuf, pBuf, n);
         m_qsLen = n + m_qsLen;
         m_pQS = m_qsBuf;
-        if ( m_qsBuf[m_qsLen - 1] == '&' )
+        if (m_qsBuf[m_qsLen - 1] == '&')
             --m_qsLen;
         m_qsBuf[m_qsLen] = 0;
     }
     else
     {
-        if (!( flag & RULE_FLAG_QSAPPEND ))
+        if (!(flag & RULE_FLAG_QSAPPEND))
         {
-            if ( m_logLevel > 1 )
-                LOG_INFO(( pSession->getLogger(),
-                    "[%s] [REWRITE] remove current query string",
-                    pSession->getLogId() ));
+            if (m_logLevel > 1)
+                LOG_INFO((pSession->getLogger(),
+                          "[%s] [REWRITE] remove current query string",
+                          pSession->getLogId()));
             m_pQS = m_qsBuf;
             m_qsLen = 0;
             m_qsBuf[m_qsLen] = 0;
@@ -697,93 +708,96 @@ int RewriteEngine::processQueryString( HttpSession *pSession, int flag )
     return 0;
 }
 
-int RewriteEngine::setCookie( char * pBuf, int len, HttpSession *pSession )
+int RewriteEngine::setCookie(char *pBuf, int len, HttpSession *pSession)
 {
-    char * pName;
-    char * pVal;
-    char * pDomain;
-    char * pPath;
-    char * pSave;
+    char *pName;
+    char *pVal;
+    char *pDomain;
+    char *pPath;
+    char *pSave;
     int secure = 0;
     int httponly = 0;
     int age = 0;
-    pName = strtok_r( pBuf, ":", &pSave );
-    pVal = strtok_r( NULL, ":", &pSave );
-    pDomain = strtok_r( NULL, ":", &pSave );
-    char *p = strtok_r( NULL, ":", &pSave );
-    if ( p )
-        age = atoi( p );
-    pPath = strtok_r( NULL, ":", &pSave );
-    if ( pPath )
+    pName = strtok_r(pBuf, ":", &pSave);
+    pVal = strtok_r(NULL, ":", &pSave);
+    pDomain = strtok_r(NULL, ":", &pSave);
+    char *p = strtok_r(NULL, ":", &pSave);
+    if (p)
+        age = atoi(p);
+    pPath = strtok_r(NULL, ":", &pSave);
+    if (pPath)
     {
-        if ( *pPath != '/' )
+        if (*pPath != '/')
             pPath = NULL;
     }
-    p = strtok_r( NULL, ":", &pSave );
-    if ( p )
+    p = strtok_r(NULL, ":", &pSave);
+    if (p)
     {
-        secure = (( *p == '1' )||( strncasecmp( "true", p, 4 ) == 0 )
-                   ||( strncasecmp( "secure", p, 6 ) == 0 ));
+        secure = ((*p == '1') || (strncasecmp("true", p, 4) == 0)
+                  || (strncasecmp("secure", p, 6) == 0));
     }
-    p = strtok_r( NULL, ":", &pSave );
-    if ( p )
+    p = strtok_r(NULL, ":", &pSave);
+    if (p)
     {
-        httponly = (( *p == '1' )||( strncasecmp( "true", p, 4 ) == 0 )
-                   ||( strncasecmp( "HttpOnly", p, 8 ) == 0 )); 
+        httponly = ((*p == '1') || (strncasecmp("true", p, 4) == 0)
+                    || (strncasecmp("HttpOnly", p, 8) == 0));
     }
-    return pSession->getResp()->addCookie( pName, pVal, pPath, pDomain, age, secure, httponly );
-    
+    return pSession->getResp()->addCookie(pName, pVal, pPath, pDomain, age,
+                                          secure, httponly);
+
 }
 
-int RewriteEngine::expandEnv( const RewriteRule * pRule, HttpSession *pSession )
+int RewriteEngine::expandEnv(const RewriteRule *pRule,
+                             HttpSession *pSession)
 {
-    RewriteSubstFormat * pEnv = pRule->getEnv()->begin();
-    const char * pKey;
-    const char * pKeyEnd;
-    const char * pValue;
-    const char * pValEnd;
+    RewriteSubstFormat *pEnv = pRule->getEnv()->begin();
+    const char *pKey;
+    const char *pKeyEnd;
+    const char *pValue;
+    const char *pValEnd;
     int len = REWRITE_BUF_SIZE;
     char achBuf[REWRITE_BUF_SIZE];
-    if ( !pEnv )
+    if (!pEnv)
         return 0;
-    while( pEnv )
+    while (pEnv)
     {
         len = REWRITE_BUF_SIZE - 1;
-        buildString( pEnv, pSession, achBuf, len );
-        if ( pEnv->isCookie() )
+        buildString(pEnv, pSession, achBuf, len);
+        if (pEnv->isCookie())
         {
             //FIXME: enable it later
-            setCookie( achBuf, len, pSession );
+            setCookie(achBuf, len, pSession);
             pEnv = (RewriteSubstFormat *)pEnv->next();
             continue;
         }
-        pKeyEnd = strchr( achBuf, ':' );
-        if ( pKeyEnd )
+        pKeyEnd = strchr(achBuf, ':');
+        if (pKeyEnd)
         {
             pKey = achBuf;
             pValue = pKeyEnd + 1;
             pValEnd = &achBuf[len];
-            StringTool::strtrim( pKey, pKeyEnd );
-            StringTool::strtrim( pValue, pValEnd );
-            *(char*)pKeyEnd = 0;
-            *(char*)pValEnd = 0;
-            if (( pRule->getAction() == RULE_ACTION_PROXY)&&
-                ( strcasecmp( pKey, "Proxy-Host" ) == 0 ))
+            StringTool::strtrim(pKey, pKeyEnd);
+            StringTool::strtrim(pValue, pValEnd);
+            *(char *)pKeyEnd = 0;
+            *(char *)pValEnd = 0;
+            if ((pRule->getAction() == RULE_ACTION_PROXY) &&
+                (strcasecmp(pKey, "Proxy-Host") == 0))
             {
-                pSession->getReq()->setNewHost( pValue, 
-                        pValEnd - pValue );
-                if ( m_logLevel > 4 )
-                    LOG_INFO(( pSession->getLogger(),
-                        "[%s] [REWRITE] Set Proxy Host header to: '%s' ",
-                    pSession->getLogId(), pKey, pValue ));
+                pSession->getReq()->setNewHost(pValue,
+                                               pValEnd - pValue);
+                if (m_logLevel > 4)
+                    LOG_INFO((pSession->getLogger(),
+                              "[%s] [REWRITE] Set Proxy Host header to: '%s' ",
+                              pSession->getLogId(), pKey, pValue));
             }
             else
             {
-                RequestVars::setEnv( pSession, pKey, pKeyEnd - pKey, pValue, pValEnd - pValue );
-                if ( m_logLevel > 4 )
-                    LOG_INFO(( pSession->getLogger(),
-                        "[%s] [REWRITE] add ENV: '%s:%s' ",
-                        pSession->getLogId(), pKey, pValue ));
+                RequestVars::setEnv(pSession, pKey, pKeyEnd - pKey, pValue,
+                                    pValEnd - pValue);
+                if (m_logLevel > 4)
+                    LOG_INFO((pSession->getLogger(),
+                              "[%s] [REWRITE] add ENV: '%s:%s' ",
+                              pSession->getLogId(), pKey, pValue));
             }
         }
         pEnv = (RewriteSubstFormat *)pEnv->next();
@@ -791,27 +805,28 @@ int RewriteEngine::expandEnv( const RewriteRule * pRule, HttpSession *pSession )
     return 0;
 }
 
-int RewriteEngine::processRewrite( const RewriteRule * pRule, HttpSession *pSession )
+int RewriteEngine::processRewrite(const RewriteRule *pRule,
+                                  HttpSession *pSession)
 {
-    char * pBuf;
+    char *pBuf;
     int flag = pRule->getFlag();
-    expandEnv( pRule, pSession );
+    expandEnv(pRule, pSession);
     m_rewritten |= 1;
-    if (!( flag & RULE_FLAG_NOREWRITE ))
+    if (!(flag & RULE_FLAG_NOREWRITE))
     {
         int len = REWRITE_BUF_SIZE - 1;
         pBuf = m_pDestURL;
         m_pDestURL = m_pFreeBuf;
         m_pFreeBuf = pBuf;
         m_flag = flag;
-        pBuf = buildString( pRule->getTargetFmt(), pSession, m_pDestURL, len, 1, 1 );
+        pBuf = buildString(pRule->getTargetFmt(), pSession, m_pDestURL, len, 1, 1);
         // log rewrite result here
-        if ( !pBuf )
+        if (!pBuf)
         {
-            if ( m_logLevel > 0 )
-                LOG_ERR(( pSession->getLogger(),
-                    "[%s] [REWRITE] Failed to build the target URI",
-                        pSession->getLogId() ));
+            if (m_logLevel > 0)
+                LOG_ERR((pSession->getLogger(),
+                         "[%s] [REWRITE] Failed to build the target URI",
+                         pSession->getLogId()));
             return -1;
         }
 
@@ -828,10 +843,10 @@ int RewriteEngine::processRewrite( const RewriteRule * pRule, HttpSession *pSess
 //             len -= l - l1;
 //         }
 
-        if ( m_logLevel > 0 )
-            LOG_INFO(( pSession->getLogger(),
-                    "[%s] [REWRITE] Source URI: '%s' => Result URI: '%s'",
-                    pSession->getLogId(), m_pSourceURL, pBuf ));
+        if (m_logLevel > 0)
+            LOG_INFO((pSession->getLogger(),
+                      "[%s] [REWRITE] Source URI: '%s' => Result URI: '%s'",
+                      pSession->getLogId(), m_pSourceURL, pBuf));
         m_rewritten |= 2;
         m_pOrgSourceURL = m_pSourceURL;
         m_orgSourceURLLen = m_sourceURLLen;
@@ -839,67 +854,64 @@ int RewriteEngine::processRewrite( const RewriteRule * pRule, HttpSession *pSess
         m_sourceURLLen = len;
         m_iScriptLen = -1;
         m_iPathInfoLen = 0;
-        if ( flag & (RULE_FLAG_WITHQS|RULE_FLAG_QSDISCARD) )
-        {
-            processQueryString( pSession, flag );
-        }
-        const char * pCode;
-        if ( !m_statusCode )
+        if (flag & (RULE_FLAG_WITHQS | RULE_FLAG_QSDISCARD))
+            processQueryString(pSession, flag);
+        const char *pCode;
+        if (!m_statusCode)
             pCode = "200";
         else
-            pCode = HttpStatusCode::getCodeString( m_statusCode ) + 1;
-        pSession->getReq()->addEnv( "REDIRECT_STATUS", 15, pCode, 3 );
+            pCode = HttpStatusCode::getCodeString(m_statusCode) + 1;
+        pSession->getReq()->addEnv("REDIRECT_STATUS", 15, pCode, 3);
     }
-    else if ( m_logLevel > 0 )
-        LOG_INFO(( pSession->getLogger(),
-                "[%s] [REWRITE] No substition",
-                pSession->getLogId()));
-    
-    if ( pRule->getAction() != RULE_ACTION_NONE )
+    else if (m_logLevel > 0)
+        LOG_INFO((pSession->getLogger(),
+                  "[%s] [REWRITE] No substition",
+                  pSession->getLogId()));
+
+    if (pRule->getAction() != RULE_ACTION_NONE)
     {
         m_action = pRule->getAction();
         m_statusCode = pRule->getStatusCode();
         return 0;
     }
 
-    if ( pRule->getMimeType() )
+    if (pRule->getMimeType())
     {
-        if ( m_logLevel > 4 )
-            LOG_INFO(( pSession->getLogger(),
-                "[%s] [REWRITE] set forced type: '%s'",
-                pSession->getLogId(), pRule->getMimeType() ));
-        pSession->getReq()->setForcedType( pRule->getMimeType() );
+        if (m_logLevel > 4)
+            LOG_INFO((pSession->getLogger(),
+                      "[%s] [REWRITE] set forced type: '%s'",
+                      pSession->getLogId(), pRule->getMimeType()));
+        pSession->getReq()->setForcedType(pRule->getMimeType());
     }
     return 0;
 }
 
-const RewriteRule * RewriteEngine::getNextRule( const RewriteRule * pRule, 
-                    const HttpContext * &pContext, const HttpContext * &pRootContext )
+const RewriteRule *RewriteEngine::getNextRule(const RewriteRule *pRule,
+        const HttpContext *&pContext, const HttpContext *&pRootContext)
 {
-    const RewriteRule * pNext = NULL;
-    if ( pRule )
+    const RewriteRule *pNext = NULL;
+    if (pRule)
         pNext = (const RewriteRule *) pRule->next();
-    if ( pNext )
+    if (pNext)
         return pNext;
-    if ( !pContext && pRootContext )    //special case for inherit global rewrite rules
+    if (!pContext
+        && pRootContext)      //special case for inherit global rewrite rules
     {
         pContext = pRootContext;
         pRootContext = pContext->getParent();
-        const RewriteRuleList * pList = pContext->getRewriteRules();
-        if ( pList )
-        {
+        const RewriteRuleList *pList = pContext->getRewriteRules();
+        if (pList)
             return pList->begin();
-        }
         return NULL;
     }
-    while(( pContext && (pContext->getConfigBits() & BIT_REWRITE_INHERIT) )&&
-          ( pContext->getParent() != pRootContext ))   
+    while ((pContext && (pContext->getConfigBits() & BIT_REWRITE_INHERIT)) &&
+           (pContext->getParent() != pRootContext))
     {
         pContext = pContext->getParent();
-        if ( !pContext->hasRewriteConfig() )
+        if (!pContext->hasRewriteConfig())
             continue;
-        const RewriteRuleList * pList = pContext->getRewriteRules();
-        if ( pList )
+        const RewriteRuleList *pList = pContext->getRewriteRules();
+        if (pList)
         {
             pNext = pList->begin();
             break;
@@ -908,22 +920,23 @@ const RewriteRule * RewriteEngine::getNextRule( const RewriteRule * pRule,
     return pNext;
 }
 
-int RewriteEngine::processRuleSet( const RewriteRuleList * pRuleList, HttpSession *pSession,
-            const HttpContext * pContext, const HttpContext * pRootContext )
+int RewriteEngine::processRuleSet(const RewriteRuleList *pRuleList,
+                                  HttpSession *pSession,
+                                  const HttpContext *pContext, const HttpContext *pRootContext)
 {
-    const RewriteRule * pRule = NULL;
+    const RewriteRule *pRule = NULL;
     int loopCount = 0;
     int flag = 0;
     int ret;
     m_pContext = pContext;
-    if ( pRuleList )
+    if (pRuleList)
         pRule = pRuleList->begin();
     else
-        pRule = getNextRule( NULL, pContext, pRootContext );
-    if ( !pRule )
+        pRule = getNextRule(NULL, pContext, pRootContext);
+    if (!pRule)
         return 0;
-    HttpReq * pReq = pSession->getReq();
-    const AutoStr2 * pBase = NULL;
+    HttpReq *pReq = pSession->getReq();
+    const AutoStr2 *pBase = NULL;
     AutoStr2    sStrip;
     m_rewritten = 0;
     //initialize rewrite engine
@@ -934,50 +947,46 @@ int RewriteEngine::processRuleSet( const RewriteRuleList * pRuleList, HttpSessio
     m_pStrip = m_pBase = NULL;
     m_iScriptLen = -1;
     m_iPathInfoLen = 0;
-    if ( m_pContext )
+    if (m_pContext)
     {
         pBase = m_pContext->getContextURI();
-        if (( pBase )&&
-            ( strncmp( m_pSourceURL, pBase->c_str(), pBase->len() ) == 0 ))
-        {
+        if ((pBase) &&
+            (strncmp(m_pSourceURL, pBase->c_str(), pBase->len()) == 0))
             m_pStrip = m_pBase = pBase;
-        }
         else
         {
             m_pBase = pBase = m_pContext->getRewriteBase();
-            if (( pBase )&&
-                ( strncmp( m_pSourceURL, pBase->c_str(), pBase->len() ) == 0 ))
-            {
+            if ((pBase) &&
+                (strncmp(m_pSourceURL, pBase->c_str(), pBase->len()) == 0))
                 m_pStrip = m_pBase = pBase;
-            }
-            
+
         }
-        
-        if ( m_pContext->getRewriteBase() )
+
+        if (m_pContext->getRewriteBase())
             m_pBase = m_pContext->getRewriteBase();
-        if ( m_pStrip )
+        if (m_pStrip)
         {
-            if ( m_logLevel > 4 )
-                LOG_INFO(( pSession->getLogger(),
-                        "[%s] [REWRITE] strip base: '%s' from URI: '%s'",
-                        pSession->getLogId(), m_pStrip->c_str(), m_pSourceURL ));
+            if (m_logLevel > 4)
+                LOG_INFO((pSession->getLogger(),
+                          "[%s] [REWRITE] strip base: '%s' from URI: '%s'",
+                          pSession->getLogId(), m_pStrip->c_str(), m_pSourceURL));
             m_pSourceURL += m_pStrip->len();
             m_sourceURLLen -= m_pStrip->len();
         }
         else
         {
-            if ( pSession->getReq()->isMatched() )
+            if (pSession->getReq()->isMatched())
             {
-                const char * pURL;
+                const char *pURL;
                 int len;
-                pSession->getReq()->stripRewriteBase( m_pContext,
-                    pURL, len );
-                if (( len < m_sourceURLLen )&&( strncmp( 
-                        m_pSourceURL + m_sourceURLLen - len, pURL, len ) == 0 ))
+                pSession->getReq()->stripRewriteBase(m_pContext,
+                                                     pURL, len);
+                if ((len < m_sourceURLLen) && (strncmp(
+                                                   m_pSourceURL + m_sourceURLLen - len, pURL, len) == 0))
                 {
-                    sStrip.setStr( m_pSourceURL, m_sourceURLLen - len );
+                    sStrip.setStr(m_pSourceURL, m_sourceURLLen - len);
                     m_pStrip = &sStrip;
-                    if ( !m_pBase )
+                    if (!m_pBase)
                         m_pBase = m_pStrip;
                 }
                 m_pSourceURL = pURL;
@@ -1000,95 +1009,95 @@ int RewriteEngine::processRuleSet( const RewriteRuleList * pRuleList, HttpSessio
     m_action   = RULE_ACTION_NONE;
     m_flag     = 0;
     m_statusCode = 0;
-    while( pRule )
+    while (pRule)
     {
         flag = pRule->getFlag();
 //        if (( flag & RULE_FLAG_NOSUBREQ )&&( pReq->isSubReq() > 0 ))
 //            ret = -1;
 //        else
-            ret = processRule( pRule, pSession );
-        if ( ret )
+        ret = processRule(pRule, pSession);
+        if (ret)
         {
-            pRule = getNextRule( pRule, pContext, pRootContext );
-            while( pRule && ( flag & RULE_FLAG_CHAIN ))
+            pRule = getNextRule(pRule, pContext, pRootContext);
+            while (pRule && (flag & RULE_FLAG_CHAIN))
             {
-                if ( m_logLevel > 5 )
-                    LOG_INFO(( pSession->getLogger(),
-                        "[%s] [REWRITE] skip chained rule: '%s'",
-                        pSession->getLogId(), pRule->getPattern() ));
+                if (m_logLevel > 5)
+                    LOG_INFO((pSession->getLogger(),
+                              "[%s] [REWRITE] skip chained rule: '%s'",
+                              pSession->getLogId(), pRule->getPattern()));
                 flag = pRule->getFlag();
-                pRule = getNextRule( pRule, pContext, pRootContext );
-                            //(const RewriteRule *) pRule->next();
+                pRule = getNextRule(pRule, pContext, pRootContext);
+                //(const RewriteRule *) pRule->next();
             }
             continue;
         }
-        if (( flag & RULE_FLAG_LAST )&&!pRule->getSkip())
+        if ((flag & RULE_FLAG_LAST) && !pRule->getSkip())
         {
-            if ( m_logLevel > 5 )
-                LOG_INFO(( pSession->getLogger(),
-                    "[%s] [REWRITE] Last Rule, stop!",
-                    pSession->getLogId() ));
-            if ( flag & RULE_FLAG_END )
+            if (m_logLevel > 5)
+                LOG_INFO((pSession->getLogger(),
+                          "[%s] [REWRITE] Last Rule, stop!",
+                          pSession->getLogId()));
+            if (flag & RULE_FLAG_END)
             {
-                if ( m_logLevel > 5 )
-                    LOG_INFO(( pSession->getLogger(),
-                        "[%s] [REWRITE] End rewrite!",
-                        pSession->getLogId() ));
-                pSession->getReq()->orContextState( SKIP_REWRITE );
+                if (m_logLevel > 5)
+                    LOG_INFO((pSession->getLogger(),
+                              "[%s] [REWRITE] End rewrite!",
+                              pSession->getLogId()));
+                pSession->getReq()->orContextState(SKIP_REWRITE);
             }
             break;
         }
 NEXT_RULE:
-        if ( flag & RULE_FLAG_NEXT )
+        if (flag & RULE_FLAG_NEXT)
         {
             pContext = m_pContext;
-            if ( pRuleList )
+            if (pRuleList)
                 pRule = pRuleList->begin();
             else
-                pRule = getNextRule( NULL, pContext, pRootContext );
-            if ( ++loopCount > 10 )
+                pRule = getNextRule(NULL, pContext, pRootContext);
+            if (++loopCount > 10)
             {
-                LOG_ERR(( pSession->getLogger(),
-                        "[%s] [REWRITE] Rules loop 10 times, possible infinite loop!",
-                        pSession->getLogId() ));
+                LOG_ERR((pSession->getLogger(),
+                         "[%s] [REWRITE] Rules loop 10 times, possible infinite loop!",
+                         pSession->getLogId()));
                 break;
             }
-            if ( m_logLevel > 5 )
-                LOG_INFO(( pSession->getLogger(),
-                    "[%s] [REWRITE] Next round, restart from the first rule",
-                    pSession->getLogId() ));
+            if (m_logLevel > 5)
+                LOG_INFO((pSession->getLogger(),
+                          "[%s] [REWRITE] Next round, restart from the first rule",
+                          pSession->getLogId()));
             continue;
         }
-        if ( !pRule )
+        if (!pRule)
             break;
-        int n = pRule->getSkip()+1;
-        if (( n > 1 )&&( m_logLevel > 5 ))
-            LOG_INFO(( pSession->getLogger(),
-                "[%s] [REWRITE] skip next %d rules",
-                pSession->getLogId(), n - 1 ));
-        while( pRule && n > 0 )
+        int n = pRule->getSkip() + 1;
+        if ((n > 1) && (m_logLevel > 5))
+            LOG_INFO((pSession->getLogger(),
+                      "[%s] [REWRITE] skip next %d rules",
+                      pSession->getLogId(), n - 1));
+        while (pRule && n > 0)
         {
-            pRule = getNextRule( pRule, pContext, pRootContext );
-                    //(const RewriteRule *) pRule->next();
+            pRule = getNextRule(pRule, pContext, pRootContext);
+            //(const RewriteRule *) pRule->next();
             --n;
         }
     }
-    if ( m_rewritten )
+    if (m_rewritten)
     {
-        if (( m_action == RULE_ACTION_FORBID )||
-            ( m_action == RULE_ACTION_GONE   ))
+        if ((m_action == RULE_ACTION_FORBID) ||
+            (m_action == RULE_ACTION_GONE))
             return m_statusCode;
-        if ( m_rewritten & 2 )
+        if (m_rewritten & 2)
         {
             //set the final URL and query string
-            if ( ! isAbsoluteURI( m_pSourceURL, m_sourceURLLen ) )
+            if (! isAbsoluteURI(m_pSourceURL, m_sourceURLLen))
             {
-                if ( *m_pSourceURL != '/' )
+                if (*m_pSourceURL != '/')
                 {
                     // add missing prefix (RewriteBase)
-                    char * pBuf = m_pFreeBuf;
+                    char *pBuf = m_pFreeBuf;
                     int baseLen;
-                    if ( !m_pBase )
+                    if (!m_pBase)
                     {
                         baseLen   = 1;
                         *pBuf = '/';
@@ -1096,52 +1105,52 @@ NEXT_RULE:
                     else
                     {
                         baseLen = m_pBase->len();
-                        memmove( pBuf, m_pBase->c_str(), baseLen );
+                        memmove(pBuf, m_pBase->c_str(), baseLen);
                     }
-                    if ( m_sourceURLLen > REWRITE_BUF_SIZE - 1 - baseLen )
+                    if (m_sourceURLLen > REWRITE_BUF_SIZE - 1 - baseLen)
                         m_sourceURLLen = REWRITE_BUF_SIZE - 1 - baseLen;
-                    memmove( pBuf + baseLen, m_pSourceURL, m_sourceURLLen );
+                    memmove(pBuf + baseLen, m_pSourceURL, m_sourceURLLen);
                     m_pFreeBuf = (char *)m_pSourceURL;
                     m_pSourceURL = pBuf;
                     m_sourceURLLen += baseLen;
                     pBuf[m_sourceURLLen] = 0;
-                    if (( m_logLevel > 4 )&&( m_pBase ))
-                        LOG_INFO(( pSession->getLogger(),
-                                "[%s] [REWRITE] prepend rewrite base: '%s', final URI: '%s'",
-                                pSession->getLogId(), m_pBase->c_str(), m_pSourceURL ));
+                    if ((m_logLevel > 4) && (m_pBase))
+                        LOG_INFO((pSession->getLogger(),
+                                  "[%s] [REWRITE] prepend rewrite base: '%s', final URI: '%s'",
+                                  pSession->getLogId(), m_pBase->c_str(), m_pSourceURL));
                 }
             }
-            else if ( m_action == RULE_ACTION_NONE )
+            else if (m_action == RULE_ACTION_NONE)
             {
                 m_action = RULE_ACTION_REDIRECT;
                 m_statusCode = SC_302;
             }
-            if ( m_action == RULE_ACTION_NONE )
+            if (m_action == RULE_ACTION_NONE)
             {
-                if ( !pReq->getRedirects() || pBase)
+                if (!pReq->getRedirects() || pBase)
                 {
                     ret = pReq->saveCurURL();
-                    if ( ret )
+                    if (ret)
                         return ret;
                 }
-                if ( m_pQS == m_qsBuf )
-                    pReq->setRewriteQueryString( m_pQS, m_qsLen );
+                if (m_pQS == m_qsBuf)
+                    pReq->setRewriteQueryString(m_pQS, m_qsLen);
                 m_statusCode = -3;  //rewritten to another url
             }
-            else if ( m_action == RULE_ACTION_REDIRECT )
+            else if (m_action == RULE_ACTION_REDIRECT)
             {
-                if ( pReq->detectLoopRedirect( (char *)m_pSourceURL, m_sourceURLLen,
-                                        m_pQS, m_qsLen, pSession->isSSL() ) == 0 )
+                if (pReq->detectLoopRedirect((char *)m_pSourceURL, m_sourceURLLen,
+                                             m_pQS, m_qsLen, pSession->isSSL()) == 0)
                 {
-                    pReq->setRewriteLocation( (char *)m_pSourceURL, m_sourceURLLen,
-                                        m_pQS, m_qsLen, m_flag & RULE_FLAG_NOESCAPE );
-                    pReq->orContextState( REWRITE_REDIR );
+                    pReq->setRewriteLocation((char *)m_pSourceURL, m_sourceURLLen,
+                                             m_pQS, m_qsLen, m_flag & RULE_FLAG_NOESCAPE);
+                    pReq->orContextState(REWRITE_REDIR);
                 }
                 else
                 {
-                    LOG_INFO(( pSession->getLogger(),
-                            "[%s] [REWRITE] detect external loop redirection with target URL: %s, skip.",
-                                pSession->getLogId(), m_pSourceURL ));
+                    LOG_INFO((pSession->getLogger(),
+                              "[%s] [REWRITE] detect external loop redirection with target URL: %s, skip.",
+                              pSession->getLogId(), m_pSourceURL));
                     m_rewritten = m_statusCode = 0;
                     m_pSourceURL = m_pOrgSourceURL;
                     m_sourceURLLen = m_orgSourceURLLen ;
@@ -1149,61 +1158,59 @@ NEXT_RULE:
                     goto NEXT_RULE;
                 }
             }
-            else if ( m_action == RULE_ACTION_PROXY )
+            else if (m_action == RULE_ACTION_PROXY)
             {
                 int https = 0;
-                if ( strncasecmp( m_pSourceURL, "https://", 8 ) == 0 )
-                {
+                if (strncasecmp(m_pSourceURL, "https://", 8) == 0)
                     https = 1;
-                }
-                else if ( strncasecmp( m_pSourceURL, "http://", 7 ) != 0 )
+                else if (strncasecmp(m_pSourceURL, "http://", 7) != 0)
                 {
-                    LOG_ERR(( "[REWRITE] Absolute URL with leading 'http://' or 'https://' is "
-                              "required for proxy, URL: %s", m_pSourceURL ));
+                    LOG_ERR(("[REWRITE] Absolute URL with leading 'http://' or 'https://' is "
+                             "required for proxy, URL: %s", m_pSourceURL));
                     return SC_500;
                 }
-                char * pHost = (char *)m_pSourceURL + 7 + https;
-                char * pHostEnd = strchr( pHost, '/' );
-                if (( !pHostEnd )||(pHostEnd == pHost))
+                char *pHost = (char *)m_pSourceURL + 7 + https;
+                char *pHostEnd = strchr(pHost, '/');
+                if ((!pHostEnd) || (pHostEnd == pHost))
                 {
-                    LOG_ERR(( "[REWRITE] Can not determine proxy host name" ));
+                    LOG_ERR(("[REWRITE] Can not determine proxy host name"));
                     return SC_500;
                 }
                 *pHostEnd = 0;
-                const HttpHandler * pHandler = HandlerFactory::getInstance(
-                        HandlerType::HT_PROXY, pHost );
-                if ( !pHandler )
+                const HttpHandler *pHandler = HandlerFactory::getInstance(
+                                                  HandlerType::HT_PROXY, pHost);
+                if (!pHandler)
                 {
-                    LOG_ERR(( "[REWRITE] Proxy target is not defined on "
-                              "external application list, please add a 'web server'"
-                              " with name '%s'", pHost ));
+                    LOG_ERR(("[REWRITE] Proxy target is not defined on "
+                             "external application list, please add a 'web server'"
+                             " with name '%s'", pHost));
                     return SC_500;
                 }
-                if ( https && !((ProxyWorker *)pHandler)->getConfig().getSsl() )
+                if (https && !((ProxyWorker *)pHandler)->getConfig().getSsl())
                 {
-                    LOG_ERR(( "[REWRITE] Rewrite target require HTTPS, Proxy target is not HTTPS, "
-                              "please change 'web server' '%s' using https://... address "
-                              , pHost ));
+                    LOG_ERR(("[REWRITE] Rewrite target require HTTPS, Proxy target is not HTTPS, "
+                             "please change 'web server' '%s' using https://... address "
+                             , pHost));
                     return SC_500;
-                    
+
                 }
                 *pHostEnd = '/';
-                pReq->setHandler( pHandler );
+                pReq->setHandler(pHandler);
 
                 //FIXME: change request header
-                ret = pReq->internalRedirectURI( pHostEnd, 
-                        m_pSourceURL + m_sourceURLLen - pHostEnd, 0,
-                        m_flag & RULE_FLAG_NOESCAPE );
-                if ( ret )
+                ret = pReq->internalRedirectURI(pHostEnd,
+                                                m_pSourceURL + m_sourceURLLen - pHostEnd, 0,
+                                                m_flag & RULE_FLAG_NOESCAPE);
+                if (ret)
                     return SC_500;
 
-                if ( m_pQS == m_qsBuf )
-                    pReq->setRewriteQueryString( m_pQS, m_qsLen );
+                if (m_pQS == m_qsBuf)
+                    pReq->setRewriteQueryString(m_pQS, m_qsLen);
             }
         }
-        else if ( m_action == RULE_ACTION_REDIRECT )
+        else if (m_action == RULE_ACTION_REDIRECT)
         {
-            if (( m_statusCode >= SC_301 )&&( m_statusCode < SC_400 ))
+            if ((m_statusCode >= SC_301) && (m_statusCode < SC_400))
                 return 0;
         }
         return m_statusCode;

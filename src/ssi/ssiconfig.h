@@ -31,8 +31,8 @@ public:
 
     ~SSITagConfig() {}
 
-    const AutoStr2& getStartTag() const {   return m_sStartTag;     }
-    const AutoStr2& getEndTag() const   {   return m_sEndTag;       }
+    const AutoStr2 &getStartTag() const {   return m_sStartTag;     }
+    const AutoStr2 &getEndTag() const   {   return m_sEndTag;       }
 private:
     AutoStr2    m_sStartTag;
     AutoStr2    m_sEndTag;
@@ -44,26 +44,26 @@ public:
     SSIConfig();
 
     ~SSIConfig();
-    
 
-    void setEchoMsg( const char * pVal, int len )
-    {   m_sEchoMsg.setStr( pVal, len );     }
-    void setErrMsg( const char * pVal, int len )
-    {   m_sErrMsg.setStr( pVal, len );      }
-    void setTimeFmt( const char * pVal, int len )
-    {   m_sTimeFmt.setStr( pVal, len );     }
-    void setSizeFmt( const char * pVal, int len );
 
-    const AutoStr2 * getEchoMsg() const
+    void setEchoMsg(const char *pVal, int len)
+    {   m_sEchoMsg.setStr(pVal, len);     }
+    void setErrMsg(const char *pVal, int len)
+    {   m_sErrMsg.setStr(pVal, len);      }
+    void setTimeFmt(const char *pVal, int len)
+    {   m_sTimeFmt.setStr(pVal, len);     }
+    void setSizeFmt(const char *pVal, int len);
+
+    const AutoStr2 *getEchoMsg() const
     {   return &m_sEchoMsg;     }
-    const AutoStr2 * getErrMsg() const
+    const AutoStr2 *getErrMsg() const
     {   return &m_sErrMsg;      }
-    const AutoStr2 *  getTimeFmt() const 
+    const AutoStr2   *getTimeFmt() const
     {   return &m_sTimeFmt;     }
-    int getSizeFmt( ) const
+    int getSizeFmt() const
     {   return m_iSizeFmt;      }
-    
-    void copy( const SSIConfig * config );
+
+    void copy(const SSIConfig *config);
 
 
 private:

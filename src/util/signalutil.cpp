@@ -16,18 +16,20 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include <util/signalutil.h>
-SignalUtil::SignalUtil(){
+SignalUtil::SignalUtil()
+{
 }
-SignalUtil::~SignalUtil(){
+SignalUtil::~SignalUtil()
+{
 }
-sighandler_t SignalUtil::signal(int sig, sighandler_t f )
+sighandler_t SignalUtil::signal(int sig, sighandler_t f)
 {
     struct sigaction act, oact;
 
     act.sa_handler = f;
     sigemptyset(&act.sa_mask);
     act.sa_flags = 0;
-    if ( sig == SIGALRM )
+    if (sig == SIGALRM)
     {
 #ifdef SA_INTERRUPT
         act.sa_flags |= SA_INTERRUPT; /* SunOS */
@@ -39,7 +41,7 @@ sighandler_t SignalUtil::signal(int sig, sighandler_t f )
         act.sa_flags |= SA_RESTART;
 #endif
     }
-    if ( sigaction( sig, &act, &oact) < 0 )
-        return (SIG_ERR );
-    return ( oact.sa_handler );
+    if (sigaction(sig, &act, &oact) < 0)
+        return (SIG_ERR);
+    return (oact.sa_handler);
 }

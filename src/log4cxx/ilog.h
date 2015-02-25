@@ -26,11 +26,11 @@ class Logger;
 
 class ILog
 {
-public: 
+public:
     ILog() {};
     virtual ~ILog() {};
-    virtual const char *  getLogId() = 0;
-    virtual Logger* getLogger() const = 0;
+    virtual const char   *getLogId() = 0;
+    virtual Logger *getLogger() const = 0;
 };
 END_LOG4CXX_NS
 

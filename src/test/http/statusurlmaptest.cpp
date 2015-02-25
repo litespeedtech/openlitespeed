@@ -24,46 +24,32 @@
 #include "test/unittest-cpp/UnitTest++/src/UnitTest++.h"
 
 
-TEST( StatusUrlMapTest_test)
+TEST(StatusUrlMapTest_test)
 {
     StatusUrlMap map1;
     int i;
-    for( i = SC_300; i < SC_END; ++i )
-    {
-        CHECK(  map1.getUrl( i ) == NULL );
-    }
-    for( i = 300; i < 308; ++i )
-    {
-        CHECK( map1.setStatusUrlMap( i, "/url3xx" ) == 0 );
-    }
-    for( i = 400; i < 425; ++i )
-    {
-        CHECK( map1.setStatusUrlMap( i, "/url4xx" ) == 0 );
-    }
-    for( i = 500; i < 511; ++i )
-    {
-        CHECK( map1.setStatusUrlMap( i, "/url5xx" ) == 0 );
-    }
+    for (i = SC_300; i < SC_END; ++i)
+        CHECK(map1.getUrl(i) == NULL);
+    for (i = 300; i < 308; ++i)
+        CHECK(map1.setStatusUrlMap(i, "/url3xx") == 0);
+    for (i = 400; i < 425; ++i)
+        CHECK(map1.setStatusUrlMap(i, "/url4xx") == 0);
+    for (i = 500; i < 511; ++i)
+        CHECK(map1.setStatusUrlMap(i, "/url5xx") == 0);
 
-    for( i = SC_300; i < SC_400; ++i )
-    {
-        CHECK( strcmp( map1.getUrl( i )->c_str(), "/url3xx" ) == 0 );
-    }
-    for( i = SC_400; i < SC_500; ++i )
-    {
-        CHECK( strcmp( map1.getUrl( i )->c_str(), "/url4xx" ) == 0 );
-    }
-    for( i = SC_500; i < SC_END; ++i )
-    {
-        CHECK( strcmp( map1.getUrl( i )->c_str(), "/url5xx" ) == 0 );
-    }
-    CHECK( map1.setStatusUrlMap( 100, "/url100" ) == 0 );
-    CHECK( map1.setStatusUrlMap( 299, "/url299" ) == -1 );
-    CHECK( map1.setStatusUrlMap( 308, "/url308" ) == -1 );
-    CHECK( map1.setStatusUrlMap( 399, "/url308" ) == -1 );
-    CHECK( map1.setStatusUrlMap( 425, "/url418" ) == -1 );
-    CHECK( map1.setStatusUrlMap( 499, "/url499" ) == -1 );
-    CHECK( map1.setStatusUrlMap( 511, "/url506" ) == -1 );
+    for (i = SC_300; i < SC_400; ++i)
+        CHECK(strcmp(map1.getUrl(i)->c_str(), "/url3xx") == 0);
+    for (i = SC_400; i < SC_500; ++i)
+        CHECK(strcmp(map1.getUrl(i)->c_str(), "/url4xx") == 0);
+    for (i = SC_500; i < SC_END; ++i)
+        CHECK(strcmp(map1.getUrl(i)->c_str(), "/url5xx") == 0);
+    CHECK(map1.setStatusUrlMap(100, "/url100") == 0);
+    CHECK(map1.setStatusUrlMap(299, "/url299") == -1);
+    CHECK(map1.setStatusUrlMap(308, "/url308") == -1);
+    CHECK(map1.setStatusUrlMap(399, "/url308") == -1);
+    CHECK(map1.setStatusUrlMap(425, "/url418") == -1);
+    CHECK(map1.setStatusUrlMap(499, "/url499") == -1);
+    CHECK(map1.setStatusUrlMap(511, "/url506") == -1);
 
 }
 

@@ -27,84 +27,92 @@
 //TEST(httpfetchTest_Test)
 void VOID_TEST()//httpfetchTest_Test)
 {
-    printf ("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
-    printf ("THIS TEST CAN ONLY TEST BY DEBUG with breakpoints\n");
-    printf ("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
-    
+    printf("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+    printf("THIS TEST CAN ONLY TEST BY DEBUG with breakpoints\n");
+    printf("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+
     void *p = NULL;
     HttpFetch *pHttpFetch = new HttpFetch;
     pHttpFetch->setCallBack(NULL, p);
     //pHttpFetch->setTimeout(100);
-    
+
     int nonblock = 0;
-    const char * pBody = NULL;
+    const char *pBody = NULL;
     int bodyLen = 0;
-    const char * pSaveFile = "./lswslogo3.png";
-    
-    
+    const char *pSaveFile = "./lswslogo3.png";
+
+
     pHttpFetch->setProxyServerAddr("127.0.0.1:8000");
-    int ret = pHttpFetch->startReq( "http://www.litespeedtech.com/templates/litespeed/images/lswslogo3.png",
-              nonblock, 1,
-              pBody, 
-              bodyLen, 
-              pSaveFile);
+    int ret = pHttpFetch->startReq("http://www.litespeedtech.com/templates/litespeed/images/lswslogo3.png",
+                                   nonblock, 1,
+                                   pBody,
+                                   bodyLen,
+                                   pSaveFile);
     delete pHttpFetch;
     pHttpFetch = NULL;
-    
+
     pHttpFetch = new HttpFetch;
-    ret = pHttpFetch->startReq( "http://www.litespeedtech.com/templates/litespeed/images/lswslogo3.png",
-              nonblock, 1,
-              pBody, 
-              bodyLen, 
-              pSaveFile, NULL, "www.litespeedtech.com:80");
+    ret = pHttpFetch->startReq("http://www.litespeedtech.com/templates/litespeed/images/lswslogo3.png",
+                               nonblock, 1,
+                               pBody,
+                               bodyLen,
+                               pSaveFile, NULL, "www.litespeedtech.com:80");
     delete pHttpFetch;
     pHttpFetch = NULL;
-    
+
     pHttpFetch = new HttpFetch;
     GSockAddr gsock;
-    gsock.setHttpUrl("http://www.litespeedtech.com/", strlen("http://www.litespeedtech.com/"));
-    
+    gsock.setHttpUrl("http://www.litespeedtech.com/",
+                     strlen("http://www.litespeedtech.com/"));
+
     GSockAddr gsock1;
-    gsock1.setHttpUrl("https://www.litespeedtech.com/", strlen("https://www.litespeedtech.com/"));
-    
+    gsock1.setHttpUrl("https://www.litespeedtech.com/",
+                      strlen("https://www.litespeedtech.com/"));
+
     GSockAddr gsock2;
-    gsock2.setHttpUrl("http://www.litespeedtech.com:888", strlen("http://www.litespeedtech.com:998"));
-    
+    gsock2.setHttpUrl("http://www.litespeedtech.com:888",
+                      strlen("http://www.litespeedtech.com:998"));
+
     GSockAddr gsock3;
-    gsock3.setHttpUrl("https://www.litespeedtech.com:444", strlen("https://www.litespeedtech.com:998"));
-    
+    gsock3.setHttpUrl("https://www.litespeedtech.com:444",
+                      strlen("https://www.litespeedtech.com:998"));
+
     GSockAddr gsock4;
-    gsock4.setHttpUrl("http://www.litespeedtech.com/dfgfdgfdgfdg", strlen("http://www.litespeedtech.com/dfgfdgfdgfdg"));
-    
+    gsock4.setHttpUrl("http://www.litespeedtech.com/dfgfdgfdgfdg",
+                      strlen("http://www.litespeedtech.com/dfgfdgfdgfdg"));
+
     GSockAddr gsock5;
-    gsock5.setHttpUrl("http://www.litespeedtech.com:888/dfgfdgfdgfdg", strlen("http://www.litespeedtech.com:888/dfgfdgfdgfdg"));
+    gsock5.setHttpUrl("http://www.litespeedtech.com:888/dfgfdgfdgfdg",
+                      strlen("http://www.litespeedtech.com:888/dfgfdgfdgfdg"));
 
     GSockAddr gsock6;
-    gsock6.setHttpUrl("https://www.litespeedtech.com/dfgfdgfdgfdg", strlen("https://www.litespeedtech.com/dfgfdgfdgfdg"));
-    
-    GSockAddr gsock7;
-    gsock7.setHttpUrl("https://www.litespeedtech.com:444/dfgfdgfdgfdg", strlen("https://www.litespeedtech.com:888/dfgfdgfdgfdg"));
+    gsock6.setHttpUrl("https://www.litespeedtech.com/dfgfdgfdgfdg",
+                      strlen("https://www.litespeedtech.com/dfgfdgfdgfdg"));
 
-    ret = pHttpFetch->startReq( "http://www.litespeedtech.com/templates/litespeed/images/lswslogo3.png",
-              nonblock, 1,
-              pBody, 
-              bodyLen, 
-              pSaveFile, 0, gsock);
+    GSockAddr gsock7;
+    gsock7.setHttpUrl("https://www.litespeedtech.com:444/dfgfdgfdgfdg",
+                      strlen("https://www.litespeedtech.com:888/dfgfdgfdgfdg"));
+
+    ret = pHttpFetch->startReq("http://www.litespeedtech.com/templates/litespeed/images/lswslogo3.png",
+                               nonblock, 1,
+                               pBody,
+                               bodyLen,
+                               pSaveFile, 0, gsock);
     delete pHttpFetch;
     pHttpFetch = NULL;
-    
-    pHttpFetch = new HttpFetch;    
+
+    pHttpFetch = new HttpFetch;
     pHttpFetch->setProxyServerAddr("127.0.0.1:8000");
-    ret = pHttpFetch->startReq( "http://www.litespeedtech.com/templates/litespeed/images/lswslogo3.png",
-              nonblock, 1,
-              pBody, 
-              bodyLen, 
-              pSaveFile, 0, gsock);
+    ret = pHttpFetch->startReq("http://www.litespeedtech.com/templates/litespeed/images/lswslogo3.png",
+                               nonblock, 1,
+                               pBody,
+                               bodyLen,
+                               pSaveFile, 0, gsock);
     delete pHttpFetch;
     pHttpFetch = NULL;
- 
+
     CHECK(ret == 0);
-    
+
 }
 
 #endif

@@ -18,44 +18,44 @@
 #include "accesscache.h"
 
 
-AccessCache::AccessCache( int initSize )
-    : m_cache( initSize )
-    //, m_cache6( initSize, GHash::hf_ipv6, GHash::cmp_ipv6 )    
+AccessCache::AccessCache(int initSize)
+    : m_cache(initSize)
+      //, m_cache6( initSize, GHash::hf_ipv6, GHash::cmp_ipv6 )
 {}
 
 
-int  AccessCache::isAllowed( const struct sockaddr * pAddr )
+int  AccessCache::isAllowed(const struct sockaddr *pAddr)
 {
-    switch( pAddr->sa_family )
+    switch (pAddr->sa_family)
     {
     case AF_INET:
         {
-            in_addr_t addr =  ((sockaddr_in *)pAddr)->sin_addr.s_addr;
-            IPAcc acc = m_cache.find( addr );
-            if ( acc.isNull() )
+            in_addr_t addr = ((sockaddr_in *)pAddr)->sin_addr.s_addr;
+            IPAcc acc = m_cache.find(addr);
+            if (acc.isNull())
             {
-                int ret = m_accessCtrl.hasAccess( addr );
-                m_cache.update( addr, ret );
+                int ret = m_accessCtrl.hasAccess(addr);
+                m_cache.update(addr, ret);
                 return ret;
             }
             return (int)acc.getAccess();
         }
     case AF_INET6:
         {
-            in6_addr * addr = &((sockaddr_in6 *)pAddr)->sin6_addr;
-            return m_accessCtrl.hasAccess( *addr );
+            in6_addr *addr = &((sockaddr_in6 *)pAddr)->sin6_addr;
+            return m_accessCtrl.hasAccess(*addr);
         }
-/*        {
-            in6_addr * addr = &((sockaddr_in6 *)pAddr)->sin6_addr;
-            IPAcc acc = m_cache6.find( *addr );
-            if ( acc.isNull() )
-            {
-                int ret = m_accessCtrl.hasAccess( *addr );
-                m_cache6.add( *addr, ret );
-                return ret;
-            }
-            return (int)acc.getAccess();
-        }*/
+        /*        {
+                    in6_addr * addr = &((sockaddr_in6 *)pAddr)->sin6_addr;
+                    IPAcc acc = m_cache6.find( *addr );
+                    if ( acc.isNull() )
+                    {
+                        int ret = m_accessCtrl.hasAccess( *addr );
+                        m_cache6.add( *addr, ret );
+                        return ret;
+                    }
+                    return (int)acc.getAccess();
+                }*/
     }
     return 0;
 }
@@ -63,7 +63,7 @@ int  AccessCache::isAllowed( const struct sockaddr * pAddr )
 
 void AccessCache::onTimer()
 {
-    if ( m_cache.size() > 10000 )
+    if (m_cache.size() > 10000)
         m_cache.clear();
     //if ( m_cache6.size() > 10000 )
     //    m_cache6.clear();

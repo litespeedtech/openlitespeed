@@ -23,13 +23,13 @@
 #include <stdio.h>
 
 ConnLimitCtrl::ConnLimitCtrl()
-    : m_iMaxConns( DEFAULT_MAX_CONNS )
-    , m_iMaxSSLConns( DEFAULT_MAX_SSL_CONNS )
-    , m_iAvailConns( DEFAULT_MAX_CONNS )
-    , m_iAvailSSLConns( DEFAULT_MAX_SSL_CONNS )
-    , m_iLowWaterMark( DEFAULT_CONN_LOW_MARK )
-    , m_iConnOverflow( 0 )
-    , m_pListeners( NULL )
+    : m_iMaxConns(DEFAULT_MAX_CONNS)
+    , m_iMaxSSLConns(DEFAULT_MAX_SSL_CONNS)
+    , m_iAvailConns(DEFAULT_MAX_CONNS)
+    , m_iAvailSSLConns(DEFAULT_MAX_SSL_CONNS)
+    , m_iLowWaterMark(DEFAULT_CONN_LOW_MARK)
+    , m_iConnOverflow(0)
+    , m_pListeners(NULL)
 {}
 
 ConnLimitCtrl::~ConnLimitCtrl()
@@ -39,19 +39,19 @@ ConnLimitCtrl::~ConnLimitCtrl()
 
 void ConnLimitCtrl::testLimit()
 {
-    if ( !allowConn() )
+    if (!allowConn())
         suspendAll();
 }
 
 void ConnLimitCtrl::testSSLLimit()
 {
-    if ( !allowSSLConn() && allowConn() )
+    if (!allowSSLConn() && allowConn())
         suspendSSL();
 }
 
 void ConnLimitCtrl::tryResume()
 {
-    if ( allowSSLConn() )
+    if (allowSSLConn())
     {
 //        printf( "allow new connection!\n" );
         resumeAll();
@@ -62,7 +62,7 @@ void ConnLimitCtrl::tryResume()
 
 void ConnLimitCtrl::tryResumeSSL()
 {
-    if ( allowConn() )
+    if (allowConn())
         resumeSSL();
 }
 
@@ -70,52 +70,52 @@ void ConnLimitCtrl::suspendAll()
 {
 //    static int i = 0;
 //    printf( "%d:stop accepting new connection!\n", i++ );
-    assert( m_pListeners );
+    assert(m_pListeners);
     m_pListeners->suspendAll();
 }
 
 void ConnLimitCtrl::suspendSSL()
 {
-    assert( m_pListeners );
+    assert(m_pListeners);
     m_pListeners->suspendSSL();
 }
 
 void ConnLimitCtrl::resumeSSL()
 {
-    assert( m_pListeners );
+    assert(m_pListeners);
     m_pListeners->resumeSSL();
 }
 
 void ConnLimitCtrl::resumeAll()
 {
-    assert( m_pListeners );
+    assert(m_pListeners);
     m_pListeners->resumeAll();
 }
 
 void ConnLimitCtrl::resumeAllButSSL()
 {
-    assert( m_pListeners );
+    assert(m_pListeners);
     m_pListeners->resumeAllButSSL();
 }
 
 void ConnLimitCtrl::tryAcceptNewConn()
 {
     HttpListenerList::iterator iter = m_pListeners->begin();
-    for( ; iter != m_pListeners->end(); ++iter )
+    for (; iter != m_pListeners->end(); ++iter)
     {
-        if ( !(*iter)->isAdmin() )
+        if (!(*iter)->isAdmin())
         {
-            if ( m_iAvailConns <= 0 )
+            if (m_iAvailConns <= 0)
                 break;
-            if ( (*iter)->isSSL() && m_iAvailSSLConns <= 0 )
+            if ((*iter)->isSSL() && m_iAvailSSLConns <= 0)
                 continue;
-            if ((*iter)->getfd() != -1 )
-                (*iter)->handleEvents( 0 );
+            if ((*iter)->getfd() != -1)
+                (*iter)->handleEvents(0);
         }
     }
 }
 
 void ConnLimitCtrl::checkWaterMark()
 {
-    m_iConnOverflow &= ( m_iAvailConns < m_iMaxConns - m_iLowWaterMark );
+    m_iConnOverflow &= (m_iAvailConns < m_iMaxConns - m_iLowWaterMark);
 }

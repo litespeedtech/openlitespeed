@@ -93,19 +93,20 @@ class RewriteSubstItem : public SubstItem
 public:
     RewriteSubstItem();
     ~RewriteSubstItem();
-    RewriteSubstItem( const RewriteSubstItem & rhs );
+    RewriteSubstItem(const RewriteSubstItem &rhs);
 
-    void setMapRef( MapRefItem * p )    {   setAny( p );      }
-    MapRefItem * getMapRef() const
+    void setMapRef(MapRefItem *p)    {   setAny(p);      }
+    MapRefItem *getMapRef() const
     {   return (MapRefItem *) getAny();   }
 
     int needUrlDecode() const;
 };
 
-class RewriteSubstFormat : public TLinkList< RewriteSubstItem >, public LinkedObj
+class RewriteSubstFormat : public TLinkList< RewriteSubstItem >,
+    public LinkedObj
 {
     int m_type;
-public:    
+public:
     enum
     {
         ENV,
@@ -113,64 +114,68 @@ public:
     };
     RewriteSubstFormat();
     ~RewriteSubstFormat();
-    RewriteSubstFormat( const RewriteSubstFormat& rhs );
-    int parse( const char * pFormatStr, const char * pEnd, const RewriteMapList * pMaps );
-    int equal( const RewriteSubstFormat& rhs ) const;
+    RewriteSubstFormat(const RewriteSubstFormat &rhs);
+    int parse(const char *pFormatStr, const char *pEnd,
+              const RewriteMapList *pMaps);
+    int equal(const RewriteSubstFormat &rhs) const;
 
     int isEnv() const       {   return m_type == ENV;       }
     int isCookie() const    {   return m_type == COOKIE;    }
 
-    void setType( int t)    {   m_type = t;     }
+    void setType(int t)    {   m_type = t;     }
 };
 
 class MapRefItem
 {
-    RewriteMap  * m_pMap;
-    RewriteSubstFormat * m_pKeyFormat;
-    RewriteSubstFormat * m_pDefaultFormat;
+    RewriteMap   *m_pMap;
+    RewriteSubstFormat *m_pKeyFormat;
+    RewriteSubstFormat *m_pDefaultFormat;
 public:
     MapRefItem();
     ~MapRefItem();
-    MapRefItem( const MapRefItem& rhs );
-    const RewriteSubstFormat * getKeyFormat() const        {   return m_pKeyFormat;        }
-    const RewriteSubstFormat * getDefaultFormat() const    {   return m_pDefaultFormat;    }
-    RewriteMap * getMap() const                     {   return m_pMap;              }
-    
-    int parse( const char * &pFormatStr, const char * pEnd, const RewriteMapList * pMaps );
+    MapRefItem(const MapRefItem &rhs);
+    const RewriteSubstFormat *getKeyFormat() const        {   return m_pKeyFormat;        }
+    const RewriteSubstFormat *getDefaultFormat() const    {   return m_pDefaultFormat;    }
+    RewriteMap *getMap() const                     {   return m_pMap;              }
+
+    int parse(const char *&pFormatStr, const char *pEnd,
+              const RewriteMapList *pMaps);
 };
 
-  
+
 class RewriteCond : public LinkedObj
 {
     Pcregex     m_regex;
     AutoStr     m_pattern;
-    
+
     RewriteSubstFormat m_testStringFormat;
     char        m_opcode;
     char        dummy;
     short       m_flag;
-    
-    int parseTestString( const char * &pRuleStr, const char *pEnd, const RewriteMapList *pMaps );
-    int parseCondPattern( const char * &pRuleStr, const char *pEnd );
-    int praseFlag( const char * &pRuleStr, const char *pEnd );
+
+    int parseTestString(const char *&pRuleStr, const char *pEnd,
+                        const RewriteMapList *pMaps);
+    int parseCondPattern(const char *&pRuleStr, const char *pEnd);
+    int praseFlag(const char *&pRuleStr, const char *pEnd);
     int compilePattern();
-    
+
 public:
     RewriteCond();
     ~RewriteCond();
-    RewriteCond( const RewriteCond& rhs );
+    RewriteCond(const RewriteCond &rhs);
     char getOpcode() const          {   return m_opcode;            }
     short getFlag() const           {   return m_flag;              }
-    const char * getPattern() const {   return m_pattern.c_str();   }
-    const Pcregex* getRegex() const {   return &m_regex;            }
-    
-    const RewriteSubstFormat * getTestStringFormat() const     {   return &m_testStringFormat; }
-    
-    
-    int parse( const char * pCondStr, const char * pEnd, const RewriteMapList * pMaps );
+    const char *getPattern() const {   return m_pattern.c_str();   }
+    const Pcregex *getRegex() const {   return &m_regex;            }
+
+    const RewriteSubstFormat *getTestStringFormat() const     {   return &m_testStringFormat; }
+
+
+    int parse(const char *pCondStr, const char *pEnd,
+              const RewriteMapList *pMaps);
 };
 
-  
+
 class RewriteRule : public LinkedObj
 {
     Pcregex                     m_regex;
@@ -184,34 +189,35 @@ class RewriteRule : public LinkedObj
     TLinkList<RewriteSubstFormat> m_env;
     AutoStr                     m_pattern;
 
-                  
-    int parseRuleSubst( const char * &pRuleStr, const char *pEnd,
-                    const RewriteMapList * pMaps );
-    int parseRuleFlag( const char * &pRuleStr, const char * pEnd );
-    int parseOneFlag( const char *&pRuleStr, const char * pEnd );
+
+    int parseRuleSubst(const char *&pRuleStr, const char *pEnd,
+                       const RewriteMapList *pMaps);
+    int parseRuleFlag(const char *&pRuleStr, const char *pEnd);
+    int parseOneFlag(const char *&pRuleStr, const char *pEnd);
     int compilePattern();
-    
-public: 
+
+public:
     RewriteRule();
     ~RewriteRule();
-    RewriteRule( const RewriteRule & rhs );
-    int parseRule( char * pRuleStr, const char * pEnd, const RewriteMapList * pMaps );
-    int parse( char * &pRuleStr, const RewriteMapList * pMaps );
-    
-    const Pcregex * getRegex() const        {   return &m_regex;            }
-    const RewriteCond * getFirstCond() const{   return m_conds.begin();     }
-    const RewriteSubstFormat * getTargetFmt() const{   return &m_targetFormat;     }
-    const char *   getMimeType() const  {   return m_sMimeType.c_str();     }
+    RewriteRule(const RewriteRule &rhs);
+    int parseRule(char *pRuleStr, const char *pEnd,
+                  const RewriteMapList *pMaps);
+    int parse(char *&pRuleStr, const RewriteMapList *pMaps);
+
+    const Pcregex *getRegex() const        {   return &m_regex;            }
+    const RewriteCond *getFirstCond() const {   return m_conds.begin();     }
+    const RewriteSubstFormat *getTargetFmt() const {   return &m_targetFormat;     }
+    const char    *getMimeType() const  {   return m_sMimeType.c_str();     }
     short          getAction() const    {   return m_action;                }
     short          getFlag() const      {   return m_flag;                  }
     int     getStatusCode() const       {   return m_statusCode;            }
     int     getSkip() const             {   return m_skipRules;             }
-    const TLinkList<RewriteSubstFormat> * getEnv() const
+    const TLinkList<RewriteSubstFormat> *getEnv() const
     {   return &m_env;      }
-    const char * getPattern() const {   return m_pattern.c_str();   }
-    int parseCookieAction( const char *pRuleStr, const char * pEnd );
-    static void setLogger( LOG4CXX_NS::Logger * pLogger, const char * pId);
-    static void error( const char * pError );
+    const char *getPattern() const {   return m_pattern.c_str();   }
+    int parseCookieAction(const char *pRuleStr, const char *pEnd);
+    static void setLogger(LOG4CXX_NS::Logger *pLogger, const char *pId);
+    static void error(const char *pError);
 };
 
 

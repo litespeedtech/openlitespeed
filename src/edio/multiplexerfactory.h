@@ -22,14 +22,14 @@
 #include <util/tsingleton.h>
 
 class Multiplexer;
-class MultiplexerFactory 
+class MultiplexerFactory
 {
     friend class TSingleton< MultiplexerFactory >;
     MultiplexerFactory();
     ~MultiplexerFactory();
-    
+
     static int s_iMaxFds;
-    
+
 public:
     enum
     {
@@ -41,9 +41,9 @@ public:
         EPOLL,
         BEST
     };
-    static int getType( const char * pType );
-    static Multiplexer* get( int type );
-    static void recycle( Multiplexer * ptr );
+    static int getType(const char *pType);
+    static Multiplexer *get(int type);
+    static void recycle(Multiplexer *ptr);
 };
 
 #endif

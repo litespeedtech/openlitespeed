@@ -20,9 +20,9 @@
 /*
 # "{" and "}" to quot a module, in a module, keys shouldn't be duplicate
 #
-# Comment begins with #  
+# Comment begins with #
 #
-# Backslash "\" can be used as the last character on a line to indicate to continues onto the next line 
+# Backslash "\" can be used as the last character on a line to indicate to continues onto the next line
 # There must be no other characters or space between the backslash and the end of the line
 # The next line will be added one space in the beginning
 # Use "\" for a real "\"
@@ -40,13 +40,13 @@ module {
 
         include         1.conf
         include         /conf
-        
+
         key3            v3
 
         submodule1 {
                 skey1   svalue1 s2
                 skey2   sv2
-                
+
         }
 }
 */
@@ -58,7 +58,7 @@ module {
  * release() to release all the resources of the config tree
  * getConfDeepValue() to get the value of a multi level branch, such as "security|fileAccessControl|checkSymbolLink"
  * use XmlNode::getChild to get the XmlNode pointer of a node
- * use the XmlNodeList * XmlNode::getAllChildren to get a list of a certen node, and 
+ * use the XmlNodeList * XmlNode::getAllChildren to get a list of a certen node, and
  *      use the iterator to check all the value in this list
 */
 
@@ -69,31 +69,32 @@ module {
 
 struct plainconfKeywords
 {
-    const char* name;
-    const char* alias;
+    const char *name;
+    const char *alias;
 };
 
-namespace plainconf {
-    
-    void initKeywords();
-    void setRootPath(const char *root);
-    const char *getRealName(char *name);
-    
-    
-    //internnal calling functions
-    void LoadConfFile(const char *path);
-    
-    
-    XmlNode* parseFile(const char* configFilePath);
-    void release(XmlNode *pNode);
-    const char *getConfDeepValue(const XmlNode *pNode, const char *name);
-    
-    
-    //testing functions
-    void testOutputConfigFile(const XmlNode *pNode, const char *file);
-    
-    void flushErrorLog();
-    
+namespace plainconf
+{
+
+void initKeywords();
+void setRootPath(const char *root);
+const char *getRealName(char *name);
+
+
+//internnal calling functions
+void LoadConfFile(const char *path);
+
+
+XmlNode *parseFile(const char *configFilePath);
+void release(XmlNode *pNode);
+const char *getConfDeepValue(const XmlNode *pNode, const char *name);
+
+
+//testing functions
+void testOutputConfigFile(const XmlNode *pNode, const char *file);
+
+void flushErrorLog();
+
 }
 
 #endif  //__PLCONF__

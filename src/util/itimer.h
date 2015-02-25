@@ -22,7 +22,7 @@
 
 class ITimer
 {
-public: 
+public:
     ITimer()    {};
     virtual ~ITimer()   {};
     virtual void onTimer() = 0;

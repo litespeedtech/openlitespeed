@@ -25,27 +25,27 @@ typedef struct x509_st X509;
 class SSLCert
 {
 private:
-    X509 * m_cert;
-    char * m_pSubjectName;
-    char * m_pIssuer;
+    X509 *m_cert;
+    char *m_pSubjectName;
+    char *m_pIssuer;
     void release();
-    SSLCert( const SSLCert& rhs ) {}
-    void operator=( const SSLCert& rhs ) {}
+    SSLCert(const SSLCert &rhs) {}
+    void operator=(const SSLCert &rhs) {}
 public:
     SSLCert();
-    explicit SSLCert( X509 * pCert );
+    explicit SSLCert(X509 *pCert);
 
     ~SSLCert();
-    void operator=( X509 * pCert );
-    bool operator==( X509 * pCert ) const
+    void operator=(X509 *pCert);
+    bool operator==(X509 *pCert) const
     {   return m_cert == pCert ;    }
-    bool operator!=( X509 * pCert ) const
+    bool operator!=(X509 *pCert) const
     {   return m_cert != pCert ;    }
-    X509* get() const
+    X509 *get() const
     {   return m_cert;  }
-    const char * getSubjectName();
-    const char * getIssuer();
-    static int PEMWriteCert( X509 * pCert, char * pBuf, int len );
+    const char *getSubjectName();
+    const char *getIssuer();
+    static int PEMWriteCert(X509 *pCert, char *pBuf, int len);
 };
 
 #endif

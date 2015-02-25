@@ -25,19 +25,19 @@ class HttpFetch;
 
 class HttpFetchDriver : public EventReactor
 {
-    HttpFetch * m_pHttpFetch;
+    HttpFetch *m_pHttpFetch;
     time_t m_tmStart;
-    HttpFetchDriver(const HttpFetchDriver& other);
-    
+    HttpFetchDriver(const HttpFetchDriver &other);
+
 public:
     virtual int handleEvents(short int event);
     virtual void onTimer();
-    
-    HttpFetchDriver(HttpFetch * pHttpFetch);
+
+    HttpFetchDriver(HttpFetch *pHttpFetch);
     virtual ~HttpFetchDriver()                      {   };
     void start();
     void stop();
-    
+
 };
 
 #endif // HTTPFETCHDRIVER_H

@@ -16,7 +16,7 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #ifdef RUN_TEST
- 
+
 #include "xmlnodetest.h"
 #include <util/xmlnode.h>
 #include <unistd.h>
@@ -25,17 +25,17 @@
 
 
 
-TEST( XmlNodeTest_test)
+TEST(XmlNodeTest_test)
 {
     char achError[1024];
     char achBuf[256];
-    char * p = achBuf;
-    strcpy( p, HttpGlobals::s_pServerRoot );
-    CHECK( p != NULL );
-    strcat( achBuf, "/conf/myconfig.xml" );
+    char *p = achBuf;
+    strcpy(p, HttpGlobals::s_pServerRoot);
+    CHECK(p != NULL);
+    strcat(achBuf, "/conf/myconfig.xml");
 
     XmlTreeBuilder builder;
-    XmlNode* pRoot = builder.parse(achBuf, achError, 1024);
+    XmlNode *pRoot = builder.parse(achBuf, achError, 1024);
     CHECK(pRoot != NULL);
     //pRoot->xmlOutput(stdout, 0);
     delete pRoot;

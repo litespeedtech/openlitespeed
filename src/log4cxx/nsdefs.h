@@ -25,11 +25,11 @@
 class GFactory;
 
 BEGIN_LOG4CXX_NS
-extern GFactory * s_pFactory;
+extern GFactory *s_pFactory;
 
 END_LOG4CXX_NS
 
 #endif //NSDEFS_H_
 
- 
+
 

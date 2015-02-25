@@ -16,7 +16,7 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #ifdef RUN_TEST
- 
+
 #include "gpathtest.h"
 #include <util/gpath.h>
 
@@ -29,60 +29,63 @@
 TEST(GPathTest_test)
 {
     char buf[256];
-    char * pBufEnd = &buf[256];
+    char *pBufEnd = &buf[256];
     strcpy(buf, "/b/./");
-    CHECK(GPath::clean(buf)==0);
-    CHECK(strcmp(buf, "/b/")==0);
-    
+    CHECK(GPath::clean(buf) == 0);
+    CHECK(strcmp(buf, "/b/") == 0);
+
     strcpy(buf, "//home/user//a/b/./");
-    CHECK(GPath::clean(buf)==0);
-    CHECK(strcmp(buf, "/home/user/a/b/")==0);
-    
+    CHECK(GPath::clean(buf) == 0);
+    CHECK(strcmp(buf, "/home/user/a/b/") == 0);
+
     strcpy(buf, "//home/user//a/b/./...");
-    CHECK(GPath::clean(buf)==0);
-    CHECK(strcmp(buf, "/home/user/a/b/...")==0);
+    CHECK(GPath::clean(buf) == 0);
+    CHECK(strcmp(buf, "/home/user/a/b/...") == 0);
 
 //    strcpy( buf, "/examples/../examples/../../../../index.html" );
 //    GPath::clean( buf );
 //    //CHECK( GPath::clean( buf ) == 0 );
 //    CHECK( strcmp( buf, "/../../../index.html" ) == 0 );
-    
+
     strcpy(buf, "//home/user//a/b/./../c");
-    CHECK(GPath::clean(buf)==0);
-    CHECK(strcmp(buf, "/home/user/a/c")==0);
+    CHECK(GPath::clean(buf) == 0);
+    CHECK(strcmp(buf, "/home/user/a/c") == 0);
 
     strcpy(buf, "/home/user/a/b/./../../proj/httpd/httpd/wwwroot/../../");
-    CHECK(GPath::clean(buf)==0);
-    CHECK(strcmp(buf, "/home/user/proj/httpd/") == 0 );
-    
+    CHECK(GPath::clean(buf) == 0);
+    CHECK(strcmp(buf, "/home/user/proj/httpd/") == 0);
+
     strcpy(buf, "///path//path1////path3 path4/../../../");
-    CHECK(GPath::clean(buf)==0);
-    CHECK(strcmp(buf, "/") == 0 );
+    CHECK(GPath::clean(buf) == 0);
+    CHECK(strcmp(buf, "/") == 0);
 
     CHECK(GPath::getAbsolutePath(buf, 256, "/home/user/proj/httpd",
-                            "httpd/wwwroot/conf")==0);
-    CHECK(strcmp(buf, "/home/user/proj/httpd/httpd/wwwroot/conf/")==0);
+                                 "httpd/wwwroot/conf") == 0);
+    CHECK(strcmp(buf, "/home/user/proj/httpd/httpd/wwwroot/conf/") == 0);
 
     CHECK(GPath::getAbsolutePath(buf, 256, "/home/user/proj/httpd/",
-                            "/httpd/wwwroot/conf")==0);
-    CHECK(strcmp(buf, "/httpd/wwwroot/conf/")==0);
+                                 "/httpd/wwwroot/conf") == 0);
+    CHECK(strcmp(buf, "/httpd/wwwroot/conf/") == 0);
 
-    CHECK(GPath::getAbsolutePath(buf, 256, "/home/user/proj/httpd/httpd/wwwroot/conf",
-                                    "./../../vh/conf")==0);
-    CHECK(strcmp(buf, "/home/user/proj/httpd/httpd/vh/conf/")==0);
+    CHECK(GPath::getAbsolutePath(buf, 256,
+                                 "/home/user/proj/httpd/httpd/wwwroot/conf",
+                                 "./../../vh/conf") == 0);
+    CHECK(strcmp(buf, "/home/user/proj/httpd/httpd/vh/conf/") == 0);
 
-    CHECK(GPath::getAbsoluteFile(buf, 256, "/home/user/proj/httpd/httpd/serverroot/",
-                            "conf/mime.properties")==0);
-    CHECK(strcmp(buf, "/home/user/proj/httpd/httpd/serverroot/conf/mime.properties")==0);
+    CHECK(GPath::getAbsoluteFile(buf, 256,
+                                 "/home/user/proj/httpd/httpd/serverroot/",
+                                 "conf/mime.properties") == 0);
+    CHECK(strcmp(buf,
+                 "/home/user/proj/httpd/httpd/serverroot/conf/mime.properties") == 0);
 
     char curPath[1024] = {0};
     getcwd(curPath, sizeof(curPath));
-    
-    strcpy( buf, curPath);
-    strcat( buf, "/serverroot/wwwroot/index.html" );
-    GPath::checkSymLinks( buf, buf + strlen( buf ), pBufEnd, buf, 0 );
+
+    strcpy(buf, curPath);
+    strcat(buf, "/serverroot/wwwroot/index.html");
+    GPath::checkSymLinks(buf, buf + strlen(buf), pBufEnd, buf, 0);
 //    CHECK( n == -1 );
-    
+
 //     char * p = getcwd( buf, 256 );
 //     strcat( buf, "/serverroot/" );
 //     char * pEnd = p + strlen( p );
@@ -92,7 +95,7 @@ TEST(GPathTest_test)
 //     symlink( buf2, buf );
 //     strcpy( buf2, buf );
 //     strcpy( &buf2[pEnd - buf], "wwwroot/small.html" );
-// 
+//
 //     bool ret = GPath::hasSymLinks( buf, buf + strlen( buf ), pEnd );
 //     CHECK( ret == true );
 //     n = GPath::checkSymLinks( buf, buf + strlen( buf ), pBufEnd, pEnd, 0);
@@ -101,13 +104,13 @@ TEST(GPathTest_test)
 //     n = GPath::checkSymLinks( buf, buf + strlen( buf ), pBufEnd, pEnd, 1 );
 //     CHECK( n == (int)strlen( buf2 ) );
 //     CHECK( strcmp( buf2, buf ) == 0 );
-// 
+//
 //     strcpy( pEnd, "wwwroot/small_symlink.html" );
 //     n = GPath::checkSymLinks( buf, buf + strlen( buf ), pBufEnd, pEnd, 2 );
 //     CHECK( n == (int)strlen( buf2 ) );
 //     CHECK( strcmp( buf2, buf ) == 0 );
-// 
-// 
+//
+//
 //     strcpy( pEnd, "root_sym" );
 //     strcpy( buf2, "///" );
 //     symlink( buf2, buf );
@@ -115,31 +118,31 @@ TEST(GPathTest_test)
 //     n = GPath::checkSymLinks( buf, buf + strlen( buf ), pBufEnd, pEnd, 1 );
 //     CHECK( n == 1 );
 //     CHECK( strcmp( "/", buf ) == 0 );
-// 
+//
 //     strcpy( buf, buf2 );
 //     strcpy( pEnd, "root_sym" );
 //     n = GPath::checkSymLinks( buf, buf + strlen( buf ), pBufEnd, pEnd, 2 );
 //     CHECK( n == -1 );
 //     CHECK( strcmp( "/", buf ) == 0 );
-// 
+//
 //     strcpy( buf, buf2 );
 //     strcpy( pEnd, "root_sym///" );
 //     n = GPath::checkSymLinks( buf, buf + strlen( buf ), pBufEnd, pEnd, 1 );
 //     CHECK( n == 1 );
 //     CHECK( strcmp( "/", buf ) == 0 );
-// 
+//
 //     strcpy( buf, buf2 );
 //     strcpy( pEnd, "root_sym///usr//" );
 //     n = GPath::checkSymLinks( buf, buf + strlen( buf ), pBufEnd, pEnd, 1 );
 //     CHECK( n == 5 );
 //     CHECK( strcmp( "/usr/", buf ) == 0 );
-// 
+//
 //     strcpy( buf, buf2 );
 //     strcpy( pEnd, "root_sym///usr//" );
 //     n = GPath::checkSymLinks( buf, buf + strlen( buf ), pBufEnd, pEnd, 2 );
 //     CHECK( n == -1 );
 //     //CHECK( strcmp( "/", buf ) == 0 );
-// 
+//
 //     strcpy( buf, buf2 );
 //     strcpy( pEnd, "parent_to_root_sym" );
 //     strcpy( buf2, ".././../../../../../../../.." );
@@ -148,7 +151,7 @@ TEST(GPathTest_test)
 //     n = GPath::checkSymLinks( buf, buf + strlen( buf ), pBufEnd, pEnd, 1 );
 //     CHECK( n == 1 );
 //     CHECK( strcmp( "/", buf ) == 0 );
-// 
+//
 //     strcpy( buf, buf2 );
 //     strcpy( pEnd, "wwwroot/parent_sym" );
 //     strcpy( buf2, "..//." );
@@ -157,8 +160,8 @@ TEST(GPathTest_test)
 //     n = GPath::checkSymLinks( buf, buf + strlen( buf ), pBufEnd, pEnd, 1 );
 //     CHECK( n == pEnd - buf );
 //     CHECK( strncmp( buf2, buf, n ) == 0 );
-// 
-// 
+//
+//
 //     strcpy( buf, buf2 );
 //     strcpy( pEnd, "home_sym" );
 //     strcpy( buf2, "/home" );
@@ -170,39 +173,39 @@ TEST(GPathTest_test)
 //     n = GPath::checkSymLinks( buf, buf + strlen( buf ), pBufEnd, pEnd, 1 );
 //     CHECK( n == 11 );
 //     CHECK( strcmp( "/home/gwang", buf ) == 0 );
-// 
+//
 //     strcpy( buf, buf2 );
 //     strcpy( pEnd, "//home_sym////gwang" );
-// 
+//
 //     n = GPath::checkSymLinks( buf, buf + strlen( buf ), pBufEnd, pEnd, 2 );
 //     CHECK( n == -1 );
 //     CHECK( strcmp( "/home/gwang", buf ) == 0 );
-// 
+//
 //     strcpy( buf, buf2 );
 //     strcpy( pEnd, "//home_sym////gwang///" );
-// 
+//
 //     n = GPath::checkSymLinks( buf, buf + strlen( buf ), pBufEnd, pEnd, 1 );
 //     CHECK( n == 12 );
 //     CHECK( strcmp( "/home/gwang/", buf ) == 0 );
-// 
+//
 //     strcpy( buf, buf2 );
 //     strcpy( pEnd, "home_sym_sym" );
 //     strcpy( buf2, "home_sym" );
 //     symlink( buf2, buf );
 //     strcpy( buf2, buf );
 //     strcpy( pEnd, "/home_sym_sym////gwang/." );
-// 
+//
 //     n = GPath::checkSymLinks( buf, buf + strlen( buf ), pBufEnd, pEnd, 1 );
 //     CHECK( n == 12 );
 //     CHECK( strcmp( "/home/gwang/", buf ) == 0 );
-// 
+//
 //     strcpy( buf, buf2 );
 //     strcpy( pEnd, "/home_sym_sym////gwang/.." );
-// 
+//
 //     n = GPath::checkSymLinks( buf, buf + strlen( buf ), pBufEnd, pEnd, 1 );
 //     CHECK( n == 6 );
 //     CHECK( strcmp( "/home/", buf ) == 0 );
-//     
+//
 //     strcpy( buf, buf2 );
 //     strcpy( pEnd, "home_sym_sym" );
 //     unlink( buf );
@@ -216,9 +219,9 @@ TEST(GPathTest_test)
 //     unlink( buf );
 //     strcpy( pEnd, "wwwroot/small_symlink.html" );
 //     unlink( buf );
-// 
-// 
-//                             
+//
+//
+//
 //     strcpy( buf, buf2 );
 //     *pEnd = 0;
 //     strcpy( buf2, buf );
@@ -233,8 +236,8 @@ TEST(GPathTest_test)
 //     CHECK( ret == true );
 //     strcpy( pEnd, "wwwroot/test_symlink" );
 //     unlink( buf );
-    
-    
+
+
 }
 
 #endif

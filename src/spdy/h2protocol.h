@@ -18,7 +18,7 @@
 #ifndef H2PROTOCOL_H
 #define H2PROTOCOL_H
 #include <sys/types.h>
-//#include <algorithm> 
+//#include <algorithm>
 #include <arpa/inet.h>
 #include <spdy/protocoldef.h>
 
@@ -32,7 +32,7 @@ enum H2FrameType
     H2_FRAME_PRIORITY       = 2,
     H2_FRAME_RST_STREAM     = 3,
     H2_FRAME_SETTINGS       = 4,
-    H2_FRAME_PUSH_PROMISE   = 5,  
+    H2_FRAME_PUSH_PROMISE   = 5,
     H2_FRAME_PING           = 6,
     H2_FRAME_GOAWAY         = 7,
     H2_FRAME_WINDOW_UPDATE  = 8,
@@ -68,7 +68,7 @@ enum H2FrameFlags
     H2_FLAG_END_HEADERS = 0x4,
     H2_FLAG_PADDED      = 0x8,
     H2_FLAG_PRIORITY    = 0x20,
-    
+
 };
 
 // List of known settings.
@@ -116,74 +116,76 @@ class H2FrameHeader
     unsigned char m_bType;
     unsigned char m_bFlags;
     unsigned char m_iStreamId[4];
-    
+
     uint32_t      m_data[];
-public: 
+public:
     H2FrameHeader() {}
-    ~H2FrameHeader() {}  
-    H2FrameHeader( uint32_t len, H2FrameType type, uint8_t flags )
-        : m_bType( type )
-        , m_bFlags( flags )
+    ~H2FrameHeader() {}
+    H2FrameHeader(uint32_t len, H2FrameType type, uint8_t flags)
+        : m_bType(type)
+        , m_bFlags(flags)
     {
-        setLength( len );
-        memset( m_iStreamId, 0, 4 );
+        setLength(len);
+        memset(m_iStreamId, 0, 4);
     }
 
-    H2FrameHeader( uint32_t len, H2FrameType type, uint8_t flags, uint32_t uiStreamId )
-        : m_bType( type )
-        , m_bFlags( flags )
+    H2FrameHeader(uint32_t len, H2FrameType type, uint8_t flags,
+                  uint32_t uiStreamId)
+        : m_bType(type)
+        , m_bFlags(flags)
     {
-        setLength( len );
-        setStreamId( uiStreamId );
+        setLength(len);
+        setStreamId(uiStreamId);
     }
-    
-    
+
+
     unsigned char getType() const   {   return m_bType;  }
     unsigned char getFlags() const  {   return m_bFlags; }
 
     uint32_t getStreamId() const
     {
-        return ( ((uint32_t)m_iStreamId[0]) << 24 ) | 
-               ( ((uint32_t)m_iStreamId[1]) << 16 ) |
-               ( ((uint32_t)m_iStreamId[2]) << 8  ) |
-               ( m_iStreamId[3] );
+        return (((uint32_t)m_iStreamId[0]) << 24) |
+               (((uint32_t)m_iStreamId[1]) << 16) |
+               (((uint32_t)m_iStreamId[2]) << 8) |
+               (m_iStreamId[3]);
     }
-    
-    void setStreamId( uint32_t id ) 
+
+    void setStreamId(uint32_t id)
     {
-        m_iStreamId[ 0 ] = ( id >> 24 ) & 0xff;
-        m_iStreamId[ 1 ] = ( id >> 16 ) & 0xff;
-        m_iStreamId[ 2 ] = ( id >> 8 ) & 0xff;
+        m_iStreamId[ 0 ] = (id >> 24) & 0xff;
+        m_iStreamId[ 1 ] = (id >> 16) & 0xff;
+        m_iStreamId[ 2 ] = (id >> 8) & 0xff;
         m_iStreamId[ 3 ] = id & 0xff;
     }
 
-    
-    uint32_t getLength() const       
-    {   return ( ((uint32_t)m_bLength[0]) << 16 ) | 
-               ( ((uint32_t)m_bLength[1]) << 8 ) |
-               ( m_bLength[2] );
-    }           
-    void setLength( uint32_t l )
+
+    uint32_t getLength() const
     {
-        m_bLength[ 0 ] = ( l >> 16 ) & 0xff;
-        m_bLength[ 1 ] = ( l >> 8 ) & 0xff;
+        return (((uint32_t)m_bLength[0]) << 16) |
+               (((uint32_t)m_bLength[1]) << 8) |
+               (m_bLength[2]);
+    }
+    void setLength(uint32_t l)
+    {
+        m_bLength[ 0 ] = (l >> 16) & 0xff;
+        m_bLength[ 1 ] = (l >> 8) & 0xff;
         m_bLength[ 2 ] = l & 0xff;
     }
-    uint32_t getData( int n ) const   {   return m_data[n];   }
-    uint32_t getHboData( int n ) const     {   return ntohl( m_data[n] );  }
+    uint32_t getData(int n) const   {   return m_data[n];   }
+    uint32_t getHboData(int n) const     {   return ntohl(m_data[n]);  }
 };
 
 
-const char* getH2FrameName(unsigned char bframeType);
+const char *getH2FrameName(unsigned char bframeType);
 
 class H2SettingPairs
 {
     uint16_t      m_id;
     uint32_t      m_uiValue;
-    
-public: 
+
+public:
     uint32_t getValue() const { return ntohl(m_uiValue); }
-    uint16_t getID() const  { return ( ntohs(m_id) ); }
+    uint16_t getID() const  { return (ntohs(m_id)); }
 };
 
 struct Priority_st

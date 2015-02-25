@@ -47,7 +47,7 @@ void HttpResp::reset()
 void HttpResp::appendContentLenHeader()
 {
     static char sLength[44] = {0};
-    int n = StringTool::str_off_t( sLength, 43, m_lEntityLength ); 
+    int n = StringTool::str_off_t(sLength, 43, m_lEntityLength);
     m_respHeaders.add(HttpRespHeaders::H_CONTENT_LENGTH, sLength, n);
 }
 
@@ -58,9 +58,9 @@ void HttpResp::appendContentLenHeader()
 //     m_iHeaderLeft += bufSize;
 //     m_iHeaderTotalLen = m_iHeaderLeft;
 // }
-    
-int HttpResp::appendHeader( const char * pName, int nameLen,
-                        const char * pValue, int valLen )
+
+int HttpResp::appendHeader(const char *pName, int nameLen,
+                           const char *pValue, int valLen)
 {
     m_respHeaders.add(pName, nameLen, pValue, valLen, LSI_HEADER_ADD);
     return 0;
@@ -74,46 +74,48 @@ int HttpResp::appendHeader( const char * pName, int nameLen,
 //}
 //
 
-int HttpResp::appendLastMod( long tmMod )
+int HttpResp::appendLastMod(long tmMod)
 {
     static char sTimeBuf[RFC_1123_TIME_LEN + 1] = {0};
-    DateTime::getRFCTime( tmMod, sTimeBuf );
-    m_respHeaders.add(HttpRespHeaders::H_LAST_MODIFIED, sTimeBuf, RFC_1123_TIME_LEN );
+    DateTime::getRFCTime(tmMod, sTimeBuf);
+    m_respHeaders.add(HttpRespHeaders::H_LAST_MODIFIED, sTimeBuf,
+                      RFC_1123_TIME_LEN);
     return 0;
 }
 
-int HttpResp::addCookie( const char * pName, const char * pVal,
-                 const char * path, const char * domain, int expires,
-                 int secure, int httponly )
+int HttpResp::addCookie(const char *pName, const char *pVal,
+                        const char *path, const char *domain, int expires,
+                        int secure, int httponly)
 {
     char achBuf[8192] = {0};
-    char * p = achBuf;
+    char *p = achBuf;
 
-    if ( !pName || !pVal || !domain )
+    if (!pName || !pVal || !domain)
         return -1;
-    
-    if ( path == NULL )
+
+    if (path == NULL)
         path = "/";
-    p += safe_snprintf( achBuf, 8091, "%s=%s; path=%s; domain=%s",
-                        pName, pVal, path, domain );
-    if ( expires )
+    p += safe_snprintf(achBuf, 8091, "%s=%s; path=%s; domain=%s",
+                       pName, pVal, path, domain);
+    if (expires)
     {
-        memcpy( p, "; expires=", 10 );
+        memcpy(p, "; expires=", 10);
         p += 10;
         long t = DateTime::s_curTime + expires * 60;
-        DateTime::getRFCTime( t, p );
+        DateTime::getRFCTime(t, p);
     }
-    if ( secure )
+    if (secure)
     {
-        memcpy(achBuf, "; secure", 8 );
+        memcpy(achBuf, "; secure", 8);
         p += 8;
     }
-    if ( httponly )
+    if (httponly)
     {
-        memcpy(achBuf, "; HttpOnly", 10 );
+        memcpy(achBuf, "; HttpOnly", 10);
         p += 10;
     }
-    m_respHeaders.add(HttpRespHeaders::H_SET_COOKIE, achBuf, p - achBuf, LSI_HEADER_ADD);
+    m_respHeaders.add(HttpRespHeaders::H_SET_COOKIE, achBuf, p - achBuf,
+                      LSI_HEADER_ADD);
     return 0;
 }
 

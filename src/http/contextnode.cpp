@@ -23,118 +23,117 @@
 #include <http/httpcontext.h>
 
 
-ContextNode::ContextNode( const char* pchLabel, ContextNode* pParentNode)
-    : HashStringMap< ContextNode* >( 10 )
-    , m_pParentNode(pParentNode )
-    , m_pContext( NULL )
-    , m_pLabel( NULL )
-    , m_lHTALastCheck( 0 )
-    , m_iHTAState( HTA_UNKNOWN )
-    , m_iRelease( 1 )
+ContextNode::ContextNode(const char *pchLabel, ContextNode *pParentNode)
+    : HashStringMap< ContextNode * >(10)
+    , m_pParentNode(pParentNode)
+    , m_pContext(NULL)
+    , m_pLabel(NULL)
+    , m_lHTALastCheck(0)
+    , m_iHTAState(HTA_UNKNOWN)
+    , m_iRelease(1)
 {
-    m_pLabel = g_pool.dupstr( pchLabel );
+    m_pLabel = g_pool.dupstr(pchLabel);
 }
 
 ContextNode::~ContextNode()
 {
-    if ( m_iRelease && m_pContext )
+    if (m_iRelease && m_pContext)
         delete m_pContext;
-    if ( m_pLabel )
-        g_pool.deallocate2( m_pLabel );
+    if (m_pLabel)
+        g_pool.deallocate2(m_pLabel);
     release_objects();
 }
 
-void ContextNode::setLabel( const char* l)
+void ContextNode::setLabel(const char *l)
 {   m_pLabel = g_pool.dupstr(l);  }
 
-void ContextNode::setContextUpdateParent( HttpContext* pContext, int noRedirect )
+void ContextNode::setContextUpdateParent(HttpContext *pContext,
+        int noRedirect)
 {
-    if ( pContext == m_pContext )
+    if (pContext == m_pContext)
         return;
-    HttpContext * pNewParent = pContext;
-    HttpContext * pOldParent = m_pContext;
-    if ( !pNewParent )
+    HttpContext *pNewParent = pContext;
+    HttpContext *pOldParent = m_pContext;
+    if (!pNewParent)
         pNewParent = getParentContext();
-    if ( !pOldParent )
+    if (!pOldParent)
         pOldParent = getParentContext();
-    setChildrenParentContext( pOldParent, pNewParent, noRedirect );
-    if ( pContext )
+    setChildrenParentContext(pOldParent, pNewParent, noRedirect);
+    if (pContext)
     {
-        if ( m_pContext )
-            pContext->setParent( m_pContext->getParent() );
+        if (m_pContext)
+            pContext->setParent(m_pContext->getParent());
         else
-            pContext->setParent( getParentContext() );
+            pContext->setParent(getParentContext());
     }
     m_pContext = pContext;
 
 }
 
-void ContextNode::setChildrenParentContext( const HttpContext * pOldParent,
-                    const HttpContext * pNewParent, int noRedirect )
+void ContextNode::setChildrenParentContext(const HttpContext *pOldParent,
+        const HttpContext *pNewParent, int noRedirect)
 {
     iterator iter = begin();
-    while( iter != end() )
+    while (iter != end())
     {
-        HttpContext * pContext = iter.second()->getContext();
-        if (( pContext )&&((!noRedirect)
-            ||( pContext->getHandlerType() != HandlerType::HT_REDIRECT )))
+        HttpContext *pContext = iter.second()->getContext();
+        if ((pContext) && ((!noRedirect)
+                           || (pContext->getHandlerType() != HandlerType::HT_REDIRECT)))
         {
-            if ( pContext->getParent() == pOldParent )
-                pContext->setParent( pNewParent );
+            if (pContext->getParent() == pOldParent)
+                pContext->setParent(pNewParent);
         }
         else
         {
-            iter.second()->setChildrenParentContext( pOldParent, pNewParent,
-                        noRedirect );
+            iter.second()->setChildrenParentContext(pOldParent, pNewParent,
+                                                    noRedirect);
         }
-        iter = next( iter );
+        iter = next(iter);
     }
 }
 
-void ContextNode::removeRedirectContext( HttpContext * pParent )
+void ContextNode::removeRedirectContext(HttpContext *pParent)
 {
     iterator iter = begin();
-    while( iter != end() )
+    while (iter != end())
     {
-        HttpContext * pContext = iter.second()->getContext();
-        if ( pContext )
+        HttpContext *pContext = iter.second()->getContext();
+        if (pContext)
         {
-            if (( pContext->getHandlerType() == HandlerType::HT_REDIRECT )&&
-                ( pContext->getParent() == pParent ))
+            if ((pContext->getHandlerType() == HandlerType::HT_REDIRECT) &&
+                (pContext->getParent() == pParent))
             {
                 delete pContext;
-                iter.second()->setContext( NULL );
+                iter.second()->setContext(NULL);
             }
         }
-        iter.second()->removeRedirectContext( pParent );
-        iter = next( iter );
+        iter.second()->removeRedirectContext(pParent);
+        iter = next(iter);
     }
 }
 
-void ContextNode::contextInherit( const HttpContext * pRootContext )
+void ContextNode::contextInherit(const HttpContext *pRootContext)
 {
-    if ( m_pContext )
-    {
-        m_pContext->inherit( pRootContext );
-    }
+    if (m_pContext)
+        m_pContext->inherit(pRootContext);
     iterator iter = begin();
-    while( iter != end() )
+    while (iter != end())
     {
-        iter.second()->contextInherit( pRootContext );
-        iter = next( iter );
+        iter.second()->contextInherit(pRootContext);
+        iter = next(iter);
     }
 }
 
 
-HttpContext * ContextNode::getParentContext()
+HttpContext *ContextNode::getParentContext()
 {
-    if ( m_pParentNode != NULL )
+    if (m_pParentNode != NULL)
     {
-        if ( m_pParentNode->getContext() )
+        if (m_pParentNode->getContext())
         {
-            if (( !m_pParentNode->getContext()->getHandler())||
-                ( m_pParentNode->getContext()->getHandlerType()
-                    != HandlerType::HT_REDIRECT ))
+            if ((!m_pParentNode->getContext()->getHandler()) ||
+                (m_pParentNode->getContext()->getHandlerType()
+                 != HandlerType::HT_REDIRECT))
                 return m_pParentNode->getContext();
         }
         return m_pParentNode->getParentContext();
@@ -145,26 +144,26 @@ HttpContext * ContextNode::getParentContext()
 
 
 
-ContextNode* ContextNode::insertChild(const char* pchLabel)
+ContextNode *ContextNode::insertChild(const char *pchLabel)
 {
-    ContextNode* pNewChild = new ContextNode(pchLabel, this);
-    if ( pNewChild )
-        insert( pNewChild->getLabel(), pNewChild );
+    ContextNode *pNewChild = new ContextNode(pchLabel, this);
+    if (pNewChild)
+        insert(pNewChild->getLabel(), pNewChild);
     return pNewChild;
 }
 
 
-void ContextNode::getAllContexts( ContextList &list )
+void ContextNode::getAllContexts(ContextList &list)
 {
-    if ( m_pContext )
-        list.add( m_pContext, 0 );
+    if (m_pContext)
+        list.add(m_pContext, 0);
     iterator iter = begin();
-    while( iter != end() )
+    while (iter != end())
     {
-        iter.second()->getAllContexts( list );
-        iter = next( iter );
+        iter.second()->getAllContexts(list);
+        iter = next(iter);
     }
-    
+
 }
 
 

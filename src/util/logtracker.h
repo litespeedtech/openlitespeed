@@ -24,35 +24,35 @@
 #include <util/autostr.h>
 
 #define MAX_LOGID_LEN   127
-  
-class LogTracker 
+
+class LogTracker
 {
     AutoStr2            m_logId;
-    LOG4CXX_NS::Logger* m_pLogger;
-    
-public: 
+    LOG4CXX_NS::Logger *m_pLogger;
+
+public:
     LogTracker();
     ~LogTracker();
-    
-    AutoStr2& getIdBuf()             {   return m_logId;     }
-    //const char * getLogId() const    
-    //{      
+
+    AutoStr2 &getIdBuf()             {   return m_logId;     }
+    //const char * getLogId() const
+    //{
     //return m_logID.c_str();  }
-    const char * getLogId()          
-    {   
-        if ( isLogIdBuilt() )
+    const char *getLogId()
+    {
+        if (isLogIdBuilt())
             return m_logId.c_str();
         return buildLogId();
     }
-    
-    LOG4CXX_NS::Logger* getLogger() const   {   return m_pLogger;   }
-    void setLogger( LOG4CXX_NS::Logger* pLogger)
+
+    LOG4CXX_NS::Logger *getLogger() const   {   return m_pLogger;   }
+    void setLogger(LOG4CXX_NS::Logger *pLogger)
     {   m_pLogger = pLogger;    }
-    
+
     void clearLogId()     {   *m_logId.buf() = 0;      }
     int  isLogIdBuilt() const       {   return *m_logId.c_str() != '\0';   }
-    virtual const char * buildLogId() = 0;
-    
+    virtual const char *buildLogId() = 0;
+
 };
 
 #endif

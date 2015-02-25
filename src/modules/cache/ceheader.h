@@ -19,7 +19,7 @@
 #define CEHEADER_H
 
 /**
-	@author Gang Wang <gwang@litespeedtech.com>
+    @author Gang Wang <gwang@litespeedtech.com>
 */
 
 #include <inttypes.h>
@@ -27,7 +27,8 @@
 
 #define CE_ID "LSCH"
 
-struct CeHeader{
+struct CeHeader
+{
 public:
     CeHeader();
 
@@ -36,11 +37,11 @@ public:
     enum
     {
         CEH_COMPRESSIBLE = 1,
-        CEH_COMPRESSED   = 1<<1,
-        CEH_IN_CONSTRUCT = 1<<2,
-        CEH_PRIVATE      = 1<<3,
-        CEH_STALE        = 1<<4,
-        CEH_UPDATING     = 1<<5
+        CEH_COMPRESSED   = 1 << 1,
+        CEH_IN_CONSTRUCT = 1 << 2,
+        CEH_PRIVATE      = 1 << 3,
+        CEH_STALE        = 1 << 4,
+        CEH_UPDATING     = 1 << 5
     };
 
     int32_t m_tmCreated;        //Created Time

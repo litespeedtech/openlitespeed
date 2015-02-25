@@ -22,7 +22,7 @@ CacheConfig::CacheConfig()
     , m_iCacheFlag(0)
     , m_defaultAge(86400)
     , m_privateAge(60)
-    , m_iMaxStale( 0 )
+    , m_iMaxStale(0)
     , m_sStoragePath("")
 {
 }
@@ -32,36 +32,36 @@ CacheConfig::~CacheConfig()
 {
 }
 
-void CacheConfig::inherit( const CacheConfig * pParent )
+void CacheConfig::inherit(const CacheConfig *pParent)
 {
-    if ( pParent )
+    if (pParent)
     {
-        if (!( m_iCacheConfigBits & CACHE_MAX_AGE_SET ))
+        if (!(m_iCacheConfigBits & CACHE_MAX_AGE_SET))
             m_defaultAge = pParent->m_defaultAge;
-        if (!( m_iCacheConfigBits & CACHE_PRIVATE_AGE_SET ))
+        if (!(m_iCacheConfigBits & CACHE_PRIVATE_AGE_SET))
             m_privateAge = pParent->m_privateAge;
-        if (!( m_iCacheConfigBits & CACHE_STALE_AGE_SET ))
+        if (!(m_iCacheConfigBits & CACHE_STALE_AGE_SET))
             m_iMaxStale = pParent->m_iMaxStale;
-        m_iCacheFlag = (m_iCacheFlag & m_iCacheConfigBits)|
-                  (pParent->m_iCacheFlag & ~m_iCacheConfigBits );
+        m_iCacheFlag = (m_iCacheFlag & m_iCacheConfigBits) |
+                       (pParent->m_iCacheFlag & ~m_iCacheConfigBits);
         m_sStoragePath.setStr(pParent->getStoragePath());
     }
 
 }
 
-void CacheConfig::apply( const CacheConfig * pParent )
+void CacheConfig::apply(const CacheConfig *pParent)
 {
-    if ( pParent )
+    if (pParent)
     {
-        if (  pParent->m_iCacheConfigBits & CACHE_MAX_AGE_SET )
+        if (pParent->m_iCacheConfigBits & CACHE_MAX_AGE_SET)
             m_defaultAge = pParent->m_defaultAge;
-        if ( pParent->m_iCacheConfigBits & CACHE_PRIVATE_AGE_SET )
+        if (pParent->m_iCacheConfigBits & CACHE_PRIVATE_AGE_SET)
             m_privateAge = pParent->m_privateAge;
-        if ( pParent->m_iCacheConfigBits & CACHE_STALE_AGE_SET )
+        if (pParent->m_iCacheConfigBits & CACHE_STALE_AGE_SET)
             m_iMaxStale = pParent->m_iMaxStale;
 
-        m_iCacheFlag = (pParent->m_iCacheFlag & pParent->m_iCacheConfigBits)|
-                  (m_iCacheFlag & ~pParent->m_iCacheConfigBits );  
+        m_iCacheFlag = (pParent->m_iCacheFlag & pParent->m_iCacheConfigBits) |
+                       (m_iCacheFlag & ~pParent->m_iCacheConfigBits);
     }
 
 }

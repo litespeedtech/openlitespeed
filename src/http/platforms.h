@@ -22,13 +22,13 @@
 #if defined(__i386__)
 #if defined(linux) || defined(__linux) || defined(__linux__)
 #define LS_PLATFORM "i386-linux"
-#elif defined(__FreeBSD__) 
+#elif defined(__FreeBSD__)
 #if __FreeBSD__ == 6
 #define LS_PLATFORM "i386-freebsd6"
 #else
 #define LS_PLATFORM "i386-freebsd"
 #endif
-#elif defined(__NetBSD__) 
+#elif defined(__NetBSD__)
 #define LS_PLATFORM "i386-netbsd"
 
 #elif defined(__OpenBSD__)
@@ -49,9 +49,9 @@
 
 #if defined(linux) || defined(__linux) || defined(__linux__)
 #define LS_PLATFORM "x86_64-linux"
-#elif defined(__FreeBSD__) 
+#elif defined(__FreeBSD__)
 #define LS_PLATFORM "x86_64-freebsd6"
-#elif defined(__NetBSD__) 
+#elif defined(__NetBSD__)
 #define LS_PLATFORM "x86_64-netbsd"
 
 #elif defined(__OpenBSD__)
@@ -66,7 +66,7 @@
 #endif
 
 
-#elif defined(__sparc) || defined(__sparc__) 
+#elif defined(__sparc) || defined(__sparc__)
 #if defined(sun) || defined(__sun)
 #define LS_PLATFORM "sparc-solaris"
 

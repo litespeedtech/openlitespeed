@@ -27,7 +27,7 @@
 #define MAX_CHUNK_LEN_BUF_SIZE 80
 class ChunkInputStream : public InputStream
 {
-    InputStream* m_pIS;
+    InputStream *m_pIS;
     int     m_iChunkLen;
     int     m_iRemain;
     int     m_iBufLen;
@@ -35,29 +35,29 @@ class ChunkInputStream : public InputStream
     char    m_achChunkLenBuf[MAX_CHUNK_LEN_BUF_SIZE];
     //char    m_achLastBytes[8];
 
-    int bufRead( char * pBuf, int len, int prefetch );
+    int bufRead(char *pBuf, int len, int prefetch);
     int nextChunk();
     int readTrailingCRLF();
-    int readChunkContent( char * &pBuf, int &size, int &len );
+    int readChunkContent(char *&pBuf, int &size, int &len);
     int parseChunkLen();
     int skipTrailer();
 
-    void updateLastBytes( char * pBuf, int len ) {}
-    
+    void updateLastBytes(char *pBuf, int len) {}
+
 public:
     ChunkInputStream();
     ~ChunkInputStream();
     void open();
-    void setStream( InputStream* pIS )   {   m_pIS = pIS;   }
-    virtual int read( char * pBuf, int size );
-    int readv( struct iovec *vector, size_t count);
+    void setStream(InputStream *pIS)   {   m_pIS = pIS;   }
+    virtual int read(char *pBuf, int size);
+    int readv(struct iovec *vector, size_t count);
     void close() {};
     bool eos()  const  {  return m_iChunkLen == CHUNK_EOF ;       }
     bool fail() const  {  return m_iChunkLen == INVALID_CHUNK;    }
     int getChunkLen()       const   {   return m_iChunkLen;     }
     int getBufSize()        const   {   return m_iBufLen;       }
     int getChunkRemain()    const   {   return m_iRemain;       }
-    const char * getChunkLenBuf() const   {   return m_achChunkLenBuf;    }
+    const char *getChunkLenBuf() const   {   return m_achChunkLenBuf;    }
     //const char* getLastBytes() const      {   return m_achLastBytes;  }
 };
 

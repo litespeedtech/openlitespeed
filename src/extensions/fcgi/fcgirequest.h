@@ -46,44 +46,44 @@ class FcgiRequest : public HttpExtProcessor, public ExtRequest
     IOVec   m_iovec;
     int     m_iTotalPending;
     FcgiEnv m_env;
-    char    m_streamHeaders[sizeof( FCGI_Header ) * 8 ];
+    char    m_streamHeaders[sizeof(FCGI_Header) * 8 ];
     //FCGI_Header             m_streamHeaders[5];
     //FCGI_BeginRequestRecord m_beginReqRec;
 
-    FcgiConnection  * m_pFcgiConn;
+    FcgiConnection   *m_pFcgiConn;
 
-    int  pendingEndStream( int type );
-    int  pendingWrite( const char * pBuf, int size, int type );
+    int  pendingEndStream(int type);
+    int  pendingWrite(const char *pBuf, int size, int type);
     int  sendAbortRec();
 
     enum
     {
-        WANT_READ=1,
-        WANT_WRITE=2
+        WANT_READ = 1,
+        WANT_WRITE = 2
     };
-    
+
 public:
 
-    explicit FcgiRequest( HttpExtConnector * pConnector = 0);
+    explicit FcgiRequest(HttpExtConnector *pConnector = 0);
     ~FcgiRequest();
     void reset();
-    
-    void setFcgiConn( FcgiConnection *pConn )
+
+    void setFcgiConn(FcgiConnection *pConn)
     {   m_pFcgiConn = pConn;    }
 
-    FcgiConnection* getFcgiConn() const
+    FcgiConnection *getFcgiConn() const
     {   return m_pFcgiConn;     }
-    
-    void setId( int id )    {   m_iId = id; }
+
+    void setId(int id)    {   m_iId = id; }
     int  getId() const      {   return m_iId;   }
     int  begin();
-    int  beginRequest( int Role, int iKeepConn = FCGI_KEEP_CONN );
-    int  sendSpecial( const char * pBuf, int size );
-    int  sendReqBody( const char * pBuf, int size );
+    int  beginRequest(int Role, int iKeepConn = FCGI_KEEP_CONN);
+    int  sendSpecial(const char *pBuf, int size);
+    int  sendReqBody(const char *pBuf, int size);
     int  sendReqHeader();
-    int  beginReqBody( );
-    int  endOfReqBody( );
-    int  readResp( char * pBuf, int size );
+    int  beginReqBody();
+    int  endOfReqBody();
+    int  readResp(char *pBuf, int size);
     void abort();
     void cleanUp();
     int  flush();
@@ -101,16 +101,16 @@ public:
     //int  onExtWrite();
     int  onStdOut();
     int  onError();
-    int  processStdOut( char * pBuf, int size );
-    int  processStdErr( char * pBuf, int size );
-    int  endOfRequest(  int code, int status);
-    int  sendEndOfStream( int type );
+    int  processStdOut(char *pBuf, int size);
+    int  processStdErr(char *pBuf, int size);
+    int  endOfRequest(int code, int status);
+    int  sendEndOfStream(int type);
 
     int  connUnavail();
 
     void finishRecvBuf();
     void onProcessorTimer();
-    virtual HttpExtConnector * getExtConnector()
+    virtual HttpExtConnector *getExtConnector()
     {   return HttpExtProcessor::getConnector();    }
 
 };

@@ -20,12 +20,12 @@
 
 
 
-class EventDispatcher 
+class EventDispatcher
 {
     void release();
-    EventDispatcher( const EventDispatcher& rhs ); 
-    void operator=( const EventDispatcher& rhs );
-     
+    EventDispatcher(const EventDispatcher &rhs);
+    void operator=(const EventDispatcher &rhs);
+
 public:
 
     EventDispatcher();
@@ -37,11 +37,11 @@ public:
 
     //bool isStopped() const   { return ( m_iStatus == STOPPED );  }
     //bool isRunning() const   { return ( m_iStatus == RUNNING );  }
-    int init( const char * pType );
+    int init(const char *pType);
     int reinit();
     int run();
     int stop();
-    int linger( int timeout );
+    int linger(int timeout);
     void updateDebugLevel();
     //HttpResourceManager * getResManager()
     //{   return &m_ResManager;   }

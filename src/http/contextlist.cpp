@@ -23,11 +23,11 @@
 #include <string.h>
 
 ContextList::ContextList()
-    : TPointerList< HttpContext >( 4 )
+    : TPointerList< HttpContext >(4)
 {
     m_size = capacity();
-    m_sTags.resizeBuf( m_size );
-    memset( m_sTags.buf(), 0, m_size );
+    m_sTags.resizeBuf(m_size);
+    memset(m_sTags.buf(), 0, m_size);
 }
 
 ContextList::~ContextList()
@@ -39,63 +39,61 @@ void ContextList::release()
 {
     iterator iter;
     iterator iterEnd = end();
-    char * p = m_sTags.buf();
-    for( iter = begin(); iter != iterEnd; ++iter, ++p )
+    char *p = m_sTags.buf();
+    for (iter = begin(); iter != iterEnd; ++iter, ++p)
     {
-        if ( *p )
-            delete (*iter );
+        if (*p)
+            delete(*iter);
     }
     clear();
 }
 
-int ContextList::add( HttpContext * pContext, int release )
+int ContextList::add(HttpContext *pContext, int release)
 {
     int n = size();
-    if ( m_size <= n )
+    if (m_size <= n)
     {
-        if ( m_sTags.resizeBuf( m_size * 2 ) )
+        if (m_sTags.resizeBuf(m_size * 2))
         {
-            memset( m_sTags.buf() + m_size, 0, m_size );
+            memset(m_sTags.buf() + m_size, 0, m_size);
             m_size = m_size * 2;
         }
         else
             return -1;
     }
-    push_back( pContext );
+    push_back(pContext);
     m_sTags.buf()[n] = release;
     return 0;
 }
 
 
-int ContextList::merge( const ContextList * rhs, int release )
+int ContextList::merge(const ContextList *rhs, int release)
 {
     const_iterator iter;
     const_iterator iterEnd;
-    if ( !rhs )
+    if (!rhs)
         return 0;
     iterEnd = rhs->end();
-    for( iter = rhs->begin(); iter != iterEnd; ++iter )
+    for (iter = rhs->begin(); iter != iterEnd; ++iter)
     {
-        if ( add( *iter, 0 ))
+        if (add(*iter, 0))
             return -1;
     }
     return 0;
 }
 
-void ContextList::releaseUnused( long curTime, long timeout )
+void ContextList::releaseUnused(long curTime, long timeout)
 {
     iterator iter;
-    for( iter = begin(); iter != end();  )
+    for (iter = begin(); iter != end();)
     {
-        if (curTime - (*iter)->getLastMod() > timeout )
+        if (curTime - (*iter)->getLastMod() > timeout)
         {
-            delete (*iter );
-            erase( iter );
+            delete(*iter);
+            erase(iter);
         }
         else
-        {
             ++iter;
-        }
     }
 }
 

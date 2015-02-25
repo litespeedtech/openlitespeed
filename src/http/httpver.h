@@ -30,16 +30,16 @@ typedef int http_ver_t;
 
 class HttpVer
 {
-    static const char * const s_sHttpVer[2];
+    static const char *const s_sHttpVer[2];
     HttpVer();
     ~HttpVer();
 public:
-    static const char * getVersionString( http_ver_t ver )
+    static const char *getVersionString(http_ver_t ver)
     {
         //assert(( ver >= HTTP_1_1 )&&( ver <= HTTP_0_9 ));
         return s_sHttpVer[ver];
     }
-    static inline int getVersionStringLen( http_ver_t ver )
+    static inline int getVersionStringLen(http_ver_t ver)
     {   return 8;   }
 };
 

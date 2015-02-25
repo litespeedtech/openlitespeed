@@ -35,28 +35,28 @@ public:
     enum {_ALIGN = 4 };
     static size_t
     roundUp(size_t bytes)
-    { return (((bytes) + (size_t) _ALIGN-1) & ~((size_t) _ALIGN - 1)); }
+    { return (((bytes) + (size_t) _ALIGN - 1) & ~((size_t) _ALIGN - 1)); }
 
 private:
 
 public:
 
-    explicit Pool( int max_unit_bytes = 256 );
+    explicit Pool(int max_unit_bytes = 256);
     ~Pool();
 
     // num must be > 0
-    void * allocate(size_t num);
+    void *allocate(size_t num);
 
     // p may not be 0
-    void deallocate(void* p, size_t num);
+    void deallocate(void *p, size_t num);
 
-    void * reallocate(void* p, size_t old_sz, size_t new_sz);
+    void *reallocate(void *p, size_t old_sz, size_t new_sz);
 
-    void * allocate2(size_t num);
-    void   deallocate2(void* p);
-    void * reallocate2(void* p, size_t new_sz);
-    char * dupstr( const char * p );
-    char * dupstr( const char * p, int len );
+    void *allocate2(size_t num);
+    void   deallocate2(void *p);
+    void *reallocate2(void *p, size_t new_sz);
+    char *dupstr(const char *p);
+    char *dupstr(const char *p, int len);
 };
 
 extern Pool g_pool;

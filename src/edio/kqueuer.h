@@ -28,60 +28,61 @@
 #include <sys/types.h>
 #include <sys/event.h>
 
-struct kevent;  
+struct kevent;
 class KQueuer : public Multiplexer
 {
     int m_fdKQ;
     ReactorIndex    m_reactorIndex;
     int m_changeCapacity;
     int m_curChange;
-    struct kevent * m_pChanges;
+    struct kevent *m_pChanges;
     //struct kevent   m_trace;
     //int             m_traceCounter;
-    
-    int allocateChangeBuf( int capacity );
+
+    int allocateChangeBuf(int capacity);
     int deallocateChangeBuf();
-    int appendEvent( EventReactor* pHandler, short filter, unsigned short flag );
-	int addEvent( EventReactor* pHandler, short mask );
-    int appendEvent( EventReactor* pHandler, int fd, short filter, unsigned short flags )
+    int appendEvent(EventReactor *pHandler, short filter, unsigned short flag);
+    int addEvent(EventReactor *pHandler, short mask);
+    int appendEvent(EventReactor *pHandler, int fd, short filter,
+                    unsigned short flags)
     {
-        if ( fd == -1 )
+        if (fd == -1)
             return 0;
-        if ( m_curChange == m_changeCapacity )
+        if (m_curChange == m_changeCapacity)
         {
-            if ( allocateChangeBuf( m_changeCapacity + 64 ) == -1 )
+            if (allocateChangeBuf(m_changeCapacity + 64) == -1)
                 return -1;
         }
-        struct kevent * pEvent = m_pChanges + m_curChange++;
+        struct kevent *pEvent = m_pChanges + m_curChange++;
         pEvent->ident  = fd;
         pEvent->filter = filter;
         pEvent->flags  = flags;
         pEvent->udata  = pHandler;
         return 0;
     }
-       
-public: 
+
+public:
     KQueuer();
     ~KQueuer();
-    virtual int init( int capacity = DEFAULT_CAPACITY );
-    virtual int add( EventReactor* pHandler, short mask );
-    virtual int remove( EventReactor* pHandler );
-    virtual int waitAndProcessEvents( int iTimeoutMilliSec );
+    virtual int init(int capacity = DEFAULT_CAPACITY);
+    virtual int add(EventReactor *pHandler, short mask);
+    virtual int remove(EventReactor *pHandler);
+    virtual int waitAndProcessEvents(int iTimeoutMilliSec);
     virtual void timerExecute();
-    virtual void setPriHandler( EventReactor::pri_handler handler );
+    virtual void setPriHandler(EventReactor::pri_handler handler);
 
-    virtual void continueRead( EventReactor* pHandler );
-    virtual void suspendRead( EventReactor* pHandler );
-    virtual void continueWrite( EventReactor* pHandler );
-    virtual void suspendWrite( EventReactor* pHandler );
-    virtual void switchWriteToRead( EventReactor * pHandler );
-    virtual void switchReadToWrite( EventReactor * pHandler );
-    
-    
+    virtual void continueRead(EventReactor *pHandler);
+    virtual void suspendRead(EventReactor *pHandler);
+    virtual void continueWrite(EventReactor *pHandler);
+    virtual void suspendWrite(EventReactor *pHandler);
+    virtual void switchWriteToRead(EventReactor *pHandler);
+    virtual void switchReadToWrite(EventReactor *pHandler);
+
+
 };
 
 #endif //defined(__FreeBSD__ ) || defined(__NetBSD__) || defined(__OpenBSD__) 
-       //|| defined(macintosh) || defined(__APPLE__) || defined(__APPLE_CC__)
+//|| defined(macintosh) || defined(__APPLE__) || defined(__APPLE_CC__)
 
 
 #endif

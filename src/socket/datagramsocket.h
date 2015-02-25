@@ -24,20 +24,20 @@
 class DatagramSocket : public CoreSocket
 {
 protected:
-    DatagramSocket( int iDomain )
-        :CoreSocket( iDomain, SOCK_DGRAM )
-        {}
+    DatagramSocket(int iDomain)
+        : CoreSocket(iDomain, SOCK_DGRAM)
+    {}
 public:
-    ~DatagramSocket(){}
+    ~DatagramSocket() {}
 
     int     sendTo(const void *msg, size_t len, int flags,
-                        const SockAddr *to, socklen_t tolen)
-        {   return ::sendto( getfd(), msg, len, flags, to, tolen );    }
+                   const SockAddr *to, socklen_t tolen)
+    {   return ::sendto(getfd(), msg, len, flags, to, tolen);    }
 
     int     recvFrom(void  *buf,  size_t len, int flags,
-                    SockAddr *from, socklen_t *fromlen)
-        {   return ::recvfrom( getfd(), buf, len, flags, from, fromlen );  }
-	
+                     SockAddr *from, socklen_t *fromlen)
+    {   return ::recvfrom(getfd(), buf, len, flags, from, fromlen);  }
+
 };
 
 #endif

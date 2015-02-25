@@ -25,23 +25,23 @@ SSLError::SSLError() throw()
 {
     m_achMsg[MSG_MAX_LEN] = 0;
     m_iError = ERR_peek_error();
-    ERR_error_string_n( m_iError, m_achMsg, MSG_MAX_LEN );
+    ERR_error_string_n(m_iError, m_achMsg, MSG_MAX_LEN);
 }
 
-SSLError::SSLError( int err ) throw()
+SSLError::SSLError(int err) throw()
 {
     m_achMsg[MSG_MAX_LEN] = 0;
     m_iError = err;
-    ERR_error_string_n( m_iError, m_achMsg, MSG_MAX_LEN );
+    ERR_error_string_n(m_iError, m_achMsg, MSG_MAX_LEN);
 }
 
-SSLError::SSLError( const char * pErr ) throw()
+SSLError::SSLError(const char *pErr) throw()
 {
-    if ( pErr )
+    if (pErr)
     {
         m_achMsg[MSG_MAX_LEN] = 0;
         m_iError = -1;
-        memccpy( m_achMsg, pErr, 0, MSG_MAX_LEN );
+        memccpy(m_achMsg, pErr, 0, MSG_MAX_LEN);
     }
     else
         m_achMsg[0] = 0;

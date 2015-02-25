@@ -19,8 +19,8 @@
 #include <util/datetime.h>
 
 
-HttpCache::HttpCache( int initSize )
-    : CacheDataMap( initSize )
+HttpCache::HttpCache(int initSize)
+    : CacheDataMap(initSize)
 {
 }
 
@@ -30,29 +30,27 @@ HttpCache::~HttpCache()
 void HttpCache::releaseAll()
 {
     dirtyAll();
-    for( DirtyCacheList::iterator iter = m_dirty.begin();
-         iter != m_dirty.end(); ++iter )
-         recycle( *iter );
+    for (DirtyCacheList::iterator iter = m_dirty.begin();
+         iter != m_dirty.end(); ++iter)
+        recycle(*iter);
 }
 
-int HttpCache::dirty( CacheElement* data )
+int HttpCache::dirty(CacheElement *data)
 {
-    assert( data );
-    remove( data->getKey() );
-    if ( data->isInUse() )
-        m_dirty.push_back( data );
+    assert(data);
+    remove(data->getKey());
+    if (data->isInUse())
+        m_dirty.push_back(data);
     else
-        recycle( data );
+        recycle(data);
     return 0;
 }
 
 void HttpCache::dirtyAll()
 {
     iterator iterEnd = end();
-    for( iterator iter = begin(); iter != iterEnd; iter = next( iter ) )
-    {
-        m_dirty.push_back( iter.second() );
-    }
+    for (iterator iter = begin(); iter != iterEnd; iter = next(iter))
+        m_dirty.push_back(iter.second());
     clear();
 }
 
@@ -61,35 +59,33 @@ void HttpCache::dirtyAll()
 
 void HttpCache::clean()
 {
-    CacheElement* pData;
+    CacheElement *pData;
     iterator iterEnd = end();
-    for( iterator iter = begin(); iter != iterEnd; )
+    for (iterator iter = begin(); iter != iterEnd;)
     {
         pData = iter.second();
-        if ( pData->getRef() == 0 )
+        if (pData->getRef() == 0)
         {
             long t = DateTime::s_curTime - pData->getLastAccess();
-            if ( t > CACHE_TIMEOUT )
+            if (t > CACHE_TIMEOUT)
             {
                 iterator iterDel = iter;
-                iter = next( iter );
-                erase( iterDel );
-                recycle( pData );
+                iter = next(iter);
+                erase(iterDel);
+                recycle(pData);
                 continue;
             }
-            else if ( t > CACHE_DATA_TIMEOUT )
-            {
+            else if (t > CACHE_DATA_TIMEOUT)
                 pData->release();
-            }
         }
-        iter = next( iter );
+        iter = next(iter);
     }
-    for( DirtyCacheList::iterator it = m_dirty.begin(); it != m_dirty.end(); )
+    for (DirtyCacheList::iterator it = m_dirty.begin(); it != m_dirty.end();)
     {
-        if ( !(*it)->isInUse() )
+        if (!(*it)->isInUse())
         {
-            recycle( *it );
-            it = m_dirty.erase( it );
+            recycle(*it);
+            it = m_dirty.erase(it);
         }
         else
             ++it;

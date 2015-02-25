@@ -29,16 +29,16 @@ class PipeAppender : public LOG4CXX_NS::Appender, public EventReactor
     OutputBuf       m_buf;
     int             m_pid;
     int             m_error;
-    
+
     int     flush();
-    
+
 public:
-    explicit PipeAppender( const char * pName )
-        : Appender( pName )
-        , m_pid( -1 )
-        , m_error( 0 )
-        {}
-    Duplicable * dup( const char * pName );
+    explicit PipeAppender(const char *pName)
+        : Appender(pName)
+        , m_pid(-1)
+        , m_error(0)
+    {}
+    Duplicable *dup(const char *pName);
 
     ~PipeAppender() {};
     static int init();
@@ -46,8 +46,8 @@ public:
     virtual int open();
     virtual int close();
     virtual int reopenExist();
-    virtual int append( const char * pBuf, int len );
-    virtual int handleEvents( short event );
+    virtual int append(const char *pBuf, int len);
+    virtual int handleEvents(short event);
     virtual int isFull();
     virtual int isFail();
 };

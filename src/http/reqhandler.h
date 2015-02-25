@@ -26,25 +26,26 @@ class ReqHandler
 {
     int                 m_iType;
 
-    ReqHandler( const ReqHandler& rhs );
-    void operator=( const ReqHandler& rhs );
+    ReqHandler(const ReqHandler &rhs);
+    void operator=(const ReqHandler &rhs);
 public:
-    ReqHandler(): m_iType( 1 )  {};
+    ReqHandler(): m_iType(1)  {};
     virtual ~ReqHandler()       {};
-    virtual int process( HttpSession* pSession, const HttpHandler * pHandler ) = 0;
-    virtual int onWrite( HttpSession* pSession ) = 0;
-    virtual int cleanUp( HttpSession* pSession ) = 0;
-    virtual int onRead( HttpSession* pSession )
-        {   return 0;   }
+    virtual int process(HttpSession *pSession,
+                        const HttpHandler *pHandler) = 0;
+    virtual int onWrite(HttpSession *pSession) = 0;
+    virtual int cleanUp(HttpSession *pSession) = 0;
+    virtual int onRead(HttpSession *pSession)
+    {   return 0;   }
     virtual void abortReq()     {};
-    virtual bool notAllowed( int Method ) const;
+    virtual bool notAllowed(int Method) const;
     virtual void reset()        {}
     virtual void onTimer()      {}
     virtual void dump()         {}
     virtual int  dumpAborted()  {   return 0;           }
-    void setType( int iType )   {   m_iType = iType;    }
+    void setType(int iType)   {   m_iType = iType;    }
     int  getType() const        {   return m_iType;     }
-    
+
 };
 
 #endif

@@ -22,15 +22,15 @@
 #include <netinet/tcp.h>
 
 // class TcpConnection;
-// 
+//
 // class TcpServerSocket : public ServerSocket
 // {
-// public: 
+// public:
 //     TcpServerSocket() : ServerSocket( PF_INET ) {}
-// 
+//
 //     TcpServerSocket( struct sockaddr * pAddr, int backlog = 10 );
 //     ~TcpServerSocket(){};
-// 
+//
 //     int     listen( struct sockaddr * pAddr, int backlog );
 //     int     setDeferAccept( int defer )
 //         {

@@ -33,25 +33,25 @@ class LoggingEvent
 public:
     int             m_level;
     int             m_flag;
-    const char *    m_pLoggerName;
-    const char *    m_pMessageBuf;
+    const char     *m_pLoggerName;
+    const char     *m_pMessageBuf;
     int             m_iMessageLen;
-    Layout *        m_pLayout;
+    Layout         *m_pLayout;
     struct timeval  m_timestamp;
-    
-    
-    LoggingEvent( int level, const char * pLoggerName,
-                const char * pMessage,  int iMessageLen)
-        : m_level( level )
-        , m_flag( 0 )
-        , m_pLoggerName( pLoggerName )
-        , m_pMessageBuf( pMessage )
-        , m_iMessageLen( iMessageLen )
-        , m_pLayout( NULL )
-        {
-        }
-    ~LoggingEvent(){}
-    
+
+
+    LoggingEvent(int level, const char *pLoggerName,
+                 const char *pMessage,  int iMessageLen)
+        : m_level(level)
+        , m_flag(0)
+        , m_pLoggerName(pLoggerName)
+        , m_pMessageBuf(pMessage)
+        , m_iMessageLen(iMessageLen)
+        , m_pLayout(NULL)
+    {
+    }
+    ~LoggingEvent() {}
+
 };
 
 END_LOG4CXX_NS

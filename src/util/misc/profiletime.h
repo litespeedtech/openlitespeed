@@ -25,9 +25,9 @@ class ProfileTime
 {
 private:
     struct timeval m_tv;
-    char * m_pDesc;
+    char *m_pDesc;
 public:
-    ProfileTime( const char * pDesc );
+    ProfileTime(const char *pDesc);
     ~ProfileTime();
 };
 

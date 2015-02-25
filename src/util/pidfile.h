@@ -19,25 +19,25 @@
 #define PIDFILE_H
 
 
-  
+
 #include <sys/stat.h>
-  
+
 class PidFile
 {
     int             m_fdPid;
     struct stat     m_stPid;
-    
-public: 
+
+public:
 
     PidFile();
     ~PidFile();
-    int openPidFile(const char * pPidFile );
-    int lockPidFile(const char * pPidFile );
-    int writePidFile( const char * pPidFile, int pid );
-    int writePid( int pid );
-    void closePidFile( );
-    int testAndRelockPidFile( const char * pPidFile, int pid );
-    int testAndRemovePidFile( const char * pPidFile );
+    int openPidFile(const char *pPidFile);
+    int lockPidFile(const char *pPidFile);
+    int writePidFile(const char *pPidFile, int pid);
+    int writePid(int pid);
+    void closePidFile();
+    int testAndRelockPidFile(const char *pPidFile, int pid);
+    int testAndRemovePidFile(const char *pPidFile);
 };
 
 #endif

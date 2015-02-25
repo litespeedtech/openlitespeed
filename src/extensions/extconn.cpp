@@ -29,13 +29,13 @@
 #include <fcntl.h>
 
 ExtConn::ExtConn()
-    : m_iState( 0 )
-    , m_iToStop( 0 )
-    , m_iInProcess( 0 )
-    , m_iCPState( 0 )
-    , m_tmLastAccess( 0 )
-    , m_iReqProcessed( 0 )
-    , m_pWorker( NULL )
+    : m_iState(0)
+    , m_iToStop(0)
+    , m_iInProcess(0)
+    , m_iCPState(0)
+    , m_tmLastAccess(0)
+    , m_iReqProcessed(0)
+    , m_pWorker(NULL)
 {
 }
 
@@ -52,24 +52,24 @@ ExtConn::~ExtConn()
 
 void ExtConn::recycle()
 {
-    if ( getState() >= ABORT )
+    if (getState() >= ABORT)
         close();
-    m_pWorker->recycleConn( this );
+    m_pWorker->recycleConn(this);
 }
 
 void ExtConn::checkInProcess()
 {
-    assert( !m_iInProcess );
+    assert(!m_iInProcess);
 }
 
 
-int ExtConn::assignReq( ExtRequest * pReq )
+int ExtConn::assignReq(ExtRequest *pReq)
 {
     int ret;
-    
-    if ( getState() > PROCESSING )
+
+    if (getState() > PROCESSING)
         close();
-    assert( !m_iInProcess );
+    assert(!m_iInProcess);
 //    if ( m_iInProcess )
 //    {
 //        LOG_WARN(( "[%s] [ExtConn] connection is still in middle of a request, close before "
@@ -77,35 +77,33 @@ int ExtConn::assignReq( ExtRequest * pReq )
 //        close();
 //    }
     m_iCPState = 0;
-    ret = addRequest( pReq );
-    if ( ret )
+    ret = addRequest(pReq);
+    if (ret)
     {
-        if ( ret == -1 )
+        if (ret == -1)
             ret = SC_500;
-        pReq->setHttpError( ret );
+        pReq->setHttpError(ret);
         return ret;
     }
     m_tmLastAccess = DateTime::s_curTime;
-    if ( getState() == PROCESSING )
+    if (getState() == PROCESSING)
     {
         ret = doWrite();
         onEventDone();
         //pConn->continueWrite();
     }
-    else if ( getState() != CONNECTING  )
+    else if (getState() != CONNECTING)
         ret = reconnect();
-    if ( ret == -1 )
-    {
-        return connError( errno );
-    }
+    if (ret == -1)
+        return connError(errno);
     return 0;
 
 }
 
 int ExtConn::close()
 {
-    if ( D_ENABLED( DL_LESS ) )
-        LOG_D(( getLogger(), "[%s] [ExtConn] close()", getLogId() ));
+    if (D_ENABLED(DL_LESS))
+        LOG_D((getLogger(), "[%s] [ExtConn] close()", getLogId()));
     EdStream::close();
     m_iState = DISCONNECTED;
     m_iInProcess = 0;
@@ -114,44 +112,44 @@ int ExtConn::close()
 
 int ExtConn::reconnect()
 {
-    if ( D_ENABLED( DL_LESS ) )
-        LOG_D(( getLogger(), "[%s] [ExtConn] reconnect()", getLogId() ));
-    if ( m_iState != DISCONNECTED )
+    if (D_ENABLED(DL_LESS))
+        LOG_D((getLogger(), "[%s] [ExtConn] reconnect()", getLogId()));
+    if (m_iState != DISCONNECTED)
         close();
-    if ( m_pWorker )
-        return connect( HttpGlobals::getMultiplexer() );
+    if (m_pWorker)
+        return connect(HttpGlobals::getMultiplexer());
     else
         return -1;
 }
 
 
-int ExtConn::connect( Multiplexer * pMplx )
+int ExtConn::connect(Multiplexer *pMplx)
 {
     m_pWorker->startOnDemond(0);
-    return connectEx( pMplx );
+    return connectEx(pMplx);
 }
 
-int ExtConn::connectEx( Multiplexer * pMplx )
+int ExtConn::connectEx(Multiplexer *pMplx)
 {
     int fd;
     int ret;
-    ret = CoreSocket::connect( m_pWorker->getServerAddr(), pMplx->getFLTag(), &fd, 1 );
+    ret = CoreSocket::connect(m_pWorker->getServerAddr(), pMplx->getFLTag(),
+                              &fd, 1);
     m_iReqProcessed = 0;
     m_iCPState = 0;
     m_iToStop = 0;
-    if (( fd == -1 )&&( errno == ECONNREFUSED ))
+    if ((fd == -1) && (errno == ECONNREFUSED))
+        ret = CoreSocket::connect(m_pWorker->getServerAddr(), pMplx->getFLTag(),
+                                  &fd, 1);
+    if (fd != -1)
     {
-        ret = CoreSocket::connect( m_pWorker->getServerAddr(), pMplx->getFLTag(), &fd, 1 );
-    }
-    if ( fd != -1 )
-    {
-        if ( D_ENABLED( DL_LESS ) )
-            LOG_D(( getLogger(), "[%s] [ExtConn] connecting to [%s]...",
-                    getLogId(), m_pWorker->getURL() ));
+        if (D_ENABLED(DL_LESS))
+            LOG_D((getLogger(), "[%s] [ExtConn] connecting to [%s]...",
+                   getLogId(), m_pWorker->getURL()));
         m_tmLastAccess = DateTime::s_curTime;
-        ::fcntl( fd, F_SETFD, FD_CLOEXEC );
-        init( fd, pMplx );
-        if ( ret == 0 )
+        ::fcntl(fd, F_SETFD, FD_CLOEXEC);
+        init(fd, pMplx);
+        if (ret == 0)
         {
             m_iState = PROCESSING;
             onWrite();
@@ -167,29 +165,30 @@ int ExtConn::connectEx( Multiplexer * pMplx )
 int ExtConn::onInitConnected()
 {
     int error;
-    int ret = getSockError( &error );
-    if (( ret == -1 )||( error != 0 ))
+    int ret = getSockError(&error);
+    if ((ret == -1) || (error != 0))
     {
-        if ( ret != -1 )
+        if (ret != -1)
             errno = error;
         return -1;
     }
     m_iState = PROCESSING;
-    if ( D_ENABLED( DL_LESS ) )
+    if (D_ENABLED(DL_LESS))
     {
         char        achSockAddr[128];
         char        achAddr[128]    = "";
         int         port            = 0;
         socklen_t   len             = 128;
 
-        if ( getsockname( getfd(), (struct sockaddr *)achSockAddr, &len ) == 0 )
+        if (getsockname(getfd(), (struct sockaddr *)achSockAddr, &len) == 0)
         {
-            GSockAddr::ntop( (struct sockaddr *)achSockAddr, achAddr, 128 );
-            port = GSockAddr::getPort( (struct sockaddr *)achSockAddr );
+            GSockAddr::ntop((struct sockaddr *)achSockAddr, achAddr, 128);
+            port = GSockAddr::getPort((struct sockaddr *)achSockAddr);
         }
 
-        LOG_D(( getLogger(), "[%s] connected to [%s] on local addres [%s:%d]!", getLogId(),
-                m_pWorker->getURL(), achAddr, port ));
+        LOG_D((getLogger(), "[%s] connected to [%s] on local addres [%s:%d]!",
+               getLogId(),
+               m_pWorker->getURL(), achAddr, port));
     }
     return 0;
 }
@@ -197,11 +196,11 @@ int ExtConn::onInitConnected()
 
 int ExtConn::onRead()
 {
-    if ( D_ENABLED( DL_LESS ) )
-        LOG_D(( getLogger(), "[%s] ExtConn::onRead()", getLogId() ));
+    if (D_ENABLED(DL_LESS))
+        LOG_D((getLogger(), "[%s] ExtConn::onRead()", getLogId()));
     m_tmLastAccess = DateTime::s_curTime;
     int ret;
-    switch( m_iState )
+    switch (m_iState)
     {
     case CONNECTING:
         ret = onInitConnected();
@@ -217,28 +216,26 @@ int ExtConn::onRead()
         // Not suppose to happen;
         return 0;
     }
-    if ( ret == -1 )
-    {
-        ret = connError( errno );
-    }
+    if (ret == -1)
+        ret = connError(errno);
     return ret;
 }
 
 
 int ExtConn::onWrite()
 {
-    if ( D_ENABLED( DL_LESS ) )
-        LOG_D(( getLogger(), "[%s] ExtConn::onWrite()",
-                getLogId() ));
+    if (D_ENABLED(DL_LESS))
+        LOG_D((getLogger(), "[%s] ExtConn::onWrite()",
+               getLogId()));
     m_tmLastAccess = DateTime::s_curTime;
     int ret;
-    switch( m_iState )
+    switch (m_iState)
     {
     case CONNECTING:
         ret = onInitConnected();
-        if ( ret )
+        if (ret)
             break;
-        //fall through
+    //fall through
     case PROCESSING:
         ret = doWrite();
         break;
@@ -249,28 +246,26 @@ int ExtConn::onWrite()
     default:
         return 0;
     }
-    if ( ret == -1 )
-    {
-        ret = connError( errno );
-    }
+    if (ret == -1)
+        ret = connError(errno);
     return ret;
 }
 
 int ExtConn::onError()
 {
     int error = errno;
-    int ret = getSockError( &error );
-    if (( ret ==-1 )||( error != 0 ))
+    int ret = getSockError(&error);
+    if ((ret == -1) || (error != 0))
     {
-        if ( ret != -1 )
+        if (ret != -1)
             errno = error;
     }
-    if ( D_ENABLED( DL_LESS ) )
-        LOG_D(( getLogger(), "[%s] ExtConn::onError()", getLogId() ));
-    if ( error != 0 )
+    if (D_ENABLED(DL_LESS))
+        LOG_D((getLogger(), "[%s] ExtConn::onError()", getLogId()));
+    if (error != 0)
     {
         m_iState = CLOSING;
-        doError( error );
+        doError(error);
     }
     else
         onRead();
@@ -284,70 +279,74 @@ void ExtConn::onTimer()
 void ExtConn::onSecTimer()
 {
     int secs = DateTime::s_curTime - m_tmLastAccess;
-    if ( m_iState == CONNECTING )
+    if (m_iState == CONNECTING)
     {
-        if (  secs >= 2 )
+        if (secs >= 2)
         {
-            LOG_NOTICE(( getLogger(), "[%s] ExtConn timed out while connecting.", getLogId() ));
-            connError( ETIMEDOUT );
+            LOG_NOTICE((getLogger(), "[%s] ExtConn timed out while connecting.",
+                        getLogId()));
+            connError(ETIMEDOUT);
         }
     }
-    else if ( m_iState == DISCONNECTED )
+    else if (m_iState == DISCONNECTED)
     {
     }
-    else if ( getReq() )
+    else if (getReq())
     {
-        if (  !m_iCPState && m_iReqProcessed == 0 )
+        if (!m_iCPState && m_iReqProcessed == 0)
         {
-            if (secs >= m_pWorker->getTimeout() )
+            if (secs >= m_pWorker->getTimeout())
             {
-                LOG_NOTICE(( getLogger(), "[%s] ExtConn timed out while processing.",
-                        getLogId() ));
-                connError( ETIMEDOUT );
+                LOG_NOTICE((getLogger(), "[%s] ExtConn timed out while processing.",
+                            getLogId()));
+                connError(ETIMEDOUT);
             }
-            else if ((secs == 10 )&&(getReq()->isRecoverable()))
+            else if ((secs == 10) && (getReq()->isRecoverable()))
             {
-/*                if ( D_ENABLED( DL_LESS ) )
-                    LOG_D(( getLogger(), "[%s] No response in 10 seconds, possible dead lock, "
-                            "try starting a new instance.", getLogId() ));
-                m_pWorker->addNewProcess(); */
+                /*                if ( D_ENABLED( DL_LESS ) )
+                                    LOG_D(( getLogger(), "[%s] No response in 10 seconds, possible dead lock, "
+                                            "try starting a new instance.", getLogId() ));
+                                m_pWorker->addNewProcess(); */
             }
         }
     }
-    else if (( m_iState == PROCESSING )&&( secs > m_pWorker->getConfigPointer()->getKeepAliveTimeout() ))
+    else if ((m_iState == PROCESSING)
+             && (secs > m_pWorker->getConfigPointer()->getKeepAliveTimeout()))
     {
-        if ( D_ENABLED( DL_LESS ) )
-            LOG_D(( getLogger(), "[%s] Idle connection timed out, close!",
-                    getLogId() ));
+        if (D_ENABLED(DL_LESS))
+            LOG_D((getLogger(), "[%s] Idle connection timed out, close!",
+                   getLogId()));
         close();
     }
-    
+
 }
 
-int ExtConn::connError( int errCode )
+int ExtConn::connError(int errCode)
 {
-    if ( D_ENABLED( DL_LESS ) )
-        LOG_D(( getLogger(), "[%s] connection to [%s] on request #%d, comfirmed %d, error: %s!",
-                getLogId(), m_pWorker->getURL(), m_iReqProcessed, (int)m_iCPState,
-                strerror( errCode ) ));
-	if ( errCode == EINTR )
-		return 0;
+    if (D_ENABLED(DL_LESS))
+        LOG_D((getLogger(),
+               "[%s] connection to [%s] on request #%d, comfirmed %d, error: %s!",
+               getLogId(), m_pWorker->getURL(), m_iReqProcessed, (int)m_iCPState,
+               strerror(errCode)));
+    if (errCode == EINTR)
+        return 0;
     close();
-    ExtRequest * pReq = getReq();
-    if ( pReq )
+    ExtRequest *pReq = getReq();
+    if (pReq)
     {
-        if (((m_pWorker->getConnPool().getFreeConns() == 0)||( (pReq->getAttempts() % 3) == 0 ))&&
-            (( errCode == EPIPE )||( errCode == ECONNRESET))&&
-             (pReq->isRecoverable())&&( m_iReqProcessed )&&(!m_iCPState))
+        if (((m_pWorker->getConnPool().getFreeConns() == 0)
+             || ((pReq->getAttempts() % 3) == 0)) &&
+            ((errCode == EPIPE) || (errCode == ECONNRESET)) &&
+            (pReq->isRecoverable()) && (m_iReqProcessed) && (!m_iCPState))
         {
             pReq->incAttempts();
             pReq->resetConnector();
-            if ( reconnect() == 0 )
+            if (reconnect() == 0)
                 return 0;
             close();
         }
     }
-    return m_pWorker->connectionError( this, errCode );
+    return m_pWorker->connectionError(this, errCode);
 //    if ( !m_pWorker->connectionError( this, errCode ) )
 //    {
 //        //if (( errCode != ENOMEM )&&(errCode != EMFILE )
@@ -357,17 +356,15 @@ int ExtConn::connError( int errCode )
 
 int ExtConn::onEventDone()
 {
-    switch( m_iState )
+    switch (m_iState)
     {
     case ABORT:
     case CLOSING:
         close();
-        if ( !getReq() )
-        {
-            m_pWorker->getConnPool().removeConn( this );
-        }
+        if (!getReq())
+            m_pWorker->getConnPool().removeConn(this);
         else
-            getReq()->endResponse( 0, 0 );
+            getReq()->endResponse(0, 0);
         //reconnect();
         break;
     }
@@ -378,34 +375,34 @@ int ExtConn::onEventDone()
 #ifndef _NDEBUG
 void ExtConn::continueRead()
 {
-    if ( D_ENABLED( DL_LESS ) )
-        LOG_D(( getLogger(), "[%s] ExtConn::continueRead()", getLogId() ));
+    if (D_ENABLED(DL_LESS))
+        LOG_D((getLogger(), "[%s] ExtConn::continueRead()", getLogId()));
     EdStream::continueRead();
 }
 
 void ExtConn::suspendRead()
 {
-    if ( D_ENABLED( DL_LESS ) )
-        LOG_D(( getLogger(), "[%s] ExtConn::suspendRead()", getLogId() ));
+    if (D_ENABLED(DL_LESS))
+        LOG_D((getLogger(), "[%s] ExtConn::suspendRead()", getLogId()));
     EdStream::suspendRead();
 }
 
 void ExtConn::continueWrite()
 {
-    if ( D_ENABLED( DL_LESS ) )
-        LOG_D(( getLogger(), "[%s] ExtConn::continueWrite()", getLogId() ));
-/*    if ( getRevents() & POLLOUT )
-    {
-        onWrite();
-    }
-    else*/
-        EdStream::continueWrite();
+    if (D_ENABLED(DL_LESS))
+        LOG_D((getLogger(), "[%s] ExtConn::continueWrite()", getLogId()));
+    /*    if ( getRevents() & POLLOUT )
+        {
+            onWrite();
+        }
+        else*/
+    EdStream::continueWrite();
 }
 
 void ExtConn::suspendWrite()
 {
-    if ( D_ENABLED( DL_LESS ) )
-        LOG_D(( getLogger(), "[%s] ExtConn::suspendWrite()", getLogId() ));
+    if (D_ENABLED(DL_LESS))
+        LOG_D((getLogger(), "[%s] ExtConn::suspendWrite()", getLogId()));
     EdStream::suspendWrite();
 }
 #endif

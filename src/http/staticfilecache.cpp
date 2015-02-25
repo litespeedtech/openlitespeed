@@ -26,8 +26,8 @@
 #include <unistd.h>
 
 
-StaticFileCache::StaticFileCache( int initSize)
-    : HttpCache( initSize )
+StaticFileCache::StaticFileCache(int initSize)
+    : HttpCache(initSize)
 {
 }
 StaticFileCache::~StaticFileCache()
@@ -35,24 +35,22 @@ StaticFileCache::~StaticFileCache()
 }
 
 
-int StaticFileCache::getCacheElement( const char * pPath, int pathLen,
-                                      const struct stat& fileStat, int fd, 
-                                      StaticFileCacheData* &pData,
-                                      FileCacheDataEx *  &pECache )
+int StaticFileCache::getCacheElement(const char *pPath, int pathLen,
+                                     const struct stat &fileStat, int fd,
+                                     StaticFileCacheData *&pData,
+                                     FileCacheDataEx *&pECache)
 {
-    if ( !pData )
+    if (!pData)
     {
-        HttpCache::iterator iter = find( pPath );
-        if ( iter )
-        {
-            pData = (StaticFileCacheData* )(iter.second());
-        }
+        HttpCache::iterator iter = find(pPath);
+        if (iter)
+            pData = (StaticFileCacheData *)(iter.second());
     }
-    if ( pData )
+    if (pData)
     {
-        if ( pData->isDirty( fileStat ) )
+        if (pData->isDirty(fileStat))
         {
-            if ( dirty( pData ) )
+            if (dirty(pData))
                 return SC_500;
 
             pData = NULL;
@@ -62,26 +60,26 @@ int StaticFileCache::getCacheElement( const char * pPath, int pathLen,
             return 0;
     }
 
-    int ret = newCache( pPath, pathLen, fileStat, fd, pData );
-    if ( ret  )
+    int ret = newCache(pPath, pathLen, fileStat, fd, pData);
+    if (ret)
         return ret;
-    add( pData );
-    
+    add(pData);
+
     return 0;
 }
 
-int StaticFileCache::newCache( const char * pPath, int pathLen,
-                               const struct stat& fileStat, int fd, 
-                               StaticFileCacheData *& pData )
+int StaticFileCache::newCache(const char *pPath, int pathLen,
+                              const struct stat &fileStat, int fd,
+                              StaticFileCacheData *&pData)
 {
     int ret = SC_500;
-    pData = ( StaticFileCacheData* )allocElement();
-    if ( pData != NULL )
+    pData = (StaticFileCacheData *)allocElement();
+    if (pData != NULL)
     {
         //pData->setMimeType( pMime );
         //pData->setCharset( pReq->getDefaultCharset() );
-        ret = pData->build( fd, pPath, pathLen, fileStat );        
-        if ( ret )
+        ret = pData->build(fd, pPath, pathLen, fileStat);
+        if (ret)
         {
             delete pData;
             pData = NULL;
@@ -91,13 +89,13 @@ int StaticFileCache::newCache( const char * pPath, int pathLen,
 }
 
 
-CacheElement* StaticFileCache::allocElement()
+CacheElement *StaticFileCache::allocElement()
 {
     return new StaticFileCacheData();
 }
 
-void StaticFileCache::recycle( CacheElement* pElement )
+void StaticFileCache::recycle(CacheElement *pElement)
 {
-    if ( pElement )
+    if (pElement)
         delete pElement;
 }

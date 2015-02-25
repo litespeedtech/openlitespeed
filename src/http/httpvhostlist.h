@@ -21,7 +21,7 @@
 
 
 #include <util/gpointerlist.h>
-  
+
 class HttpVHost;
 class HttpVHostMapImpl;
 
@@ -35,29 +35,29 @@ public:
 class HttpVHostMap
 {
 private:
-    HttpVHostMapImpl * m_impl;
-    HttpVHostMap( const HttpVHostMap& rhs ) {}
-    void operator=( const HttpVHostMap& rhs ) {}
+    HttpVHostMapImpl *m_impl;
+    HttpVHostMap(const HttpVHostMap &rhs) {}
+    void operator=(const HttpVHostMap &rhs) {}
 public:
     HttpVHostMap();
     ~HttpVHostMap();
-    int add( HttpVHost * pHost );
-    int remove( HttpVHost* pHost );
-    HttpVHost* get( const char * pName ) const;
+    int add(HttpVHost *pHost);
+    int remove(HttpVHost *pHost);
+    HttpVHost *get(const char *pName) const;
     int size() const;
-    void appendTo( VHostList& list );
-    void swap( HttpVHostMap& rhs );
-    void moveNonExist( HttpVHostMap& rhs );
+    void appendTo(VHostList &list);
+    void swap(HttpVHostMap &rhs);
+    void moveNonExist(HttpVHostMap &rhs);
     void onTimer();
     void onTimer30Secs();
-    void offsetChroot( const char * pChroot, int len );
-    int  writeStatusReport( int fd ) const;
-    int  writeRTReport( int fd ) const;
+    void offsetChroot(const char *pChroot, int len);
+    int  writeStatusReport(int fd) const;
+    int  writeRTReport(int fd) const;
     void release_objects();
-    static void incRef( HttpVHost * pHost );
-    static void decRef( HttpVHost * pHost );
-    static const char * getName( HttpVHost * pHost );
-    static const char * addMatchName( HttpVHost * pHost, const char * pName );
+    static void incRef(HttpVHost *pHost);
+    static void decRef(HttpVHost *pHost);
+    static const char *getName(HttpVHost *pHost);
+    static const char *addMatchName(HttpVHost *pHost, const char *pName);
 };
 
 #endif

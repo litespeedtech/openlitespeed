@@ -21,9 +21,9 @@
 #include <util/datetime.h>
 
 CacheStore::CacheStore()
-    :HashStringMap<CacheEntry *>( 29, 
-                CacheHash::to_ghash_key,
-                CacheHash::compare )
+    : HashStringMap<CacheEntry * >(29,
+                                   CacheHash::to_ghash_key,
+                                   CacheHash::compare)
 
 {
 }
@@ -35,46 +35,46 @@ CacheStore::~CacheStore()
 }
 
 
-int CacheStore::stale( CacheEntry * pEntry )
+int CacheStore::stale(CacheEntry *pEntry)
 {
-    pEntry->setStale( 1 );
-    if ( renameDiskEntry( pEntry, NULL, NULL, ".S", 1 ) == -1 )
+    pEntry->setStale(1);
+    if (renameDiskEntry(pEntry, NULL, NULL, ".S", 1) == -1)
     {
-        iterator iter = find( pEntry->getHashKey().getKey() );
-        if ( iter != end() )
-            dispose( iter, 0 );
+        iterator iter = find(pEntry->getHashKey().getKey());
+        if (iter != end())
+            dispose(iter, 0);
     }
     return 0;
 }
 
 
-int CacheStore::dispose( CacheStore::iterator iter, int isRemovePermEntry )
+int CacheStore::dispose(CacheStore::iterator iter, int isRemovePermEntry)
 {
-    CacheEntry * pEntry = iter.second();
-    erase( iter );
-    if ( isRemovePermEntry )
-        removePermEntry( pEntry );
-    if ( pEntry->getRef() <= 0 )
+    CacheEntry *pEntry = iter.second();
+    erase(iter);
+    if (isRemovePermEntry)
+        removePermEntry(pEntry);
+    if (pEntry->getRef() <= 0)
         delete pEntry;
     else
-        m_dirtyList.push_back( pEntry );
+        m_dirtyList.push_back(pEntry);
     return 0;
 }
 
-int CacheStore::purge( CacheEntry*  pEntry )
+int CacheStore::purge(CacheEntry  *pEntry)
 {
-    iterator iter = find( pEntry->getHashKey().getKey() );
-    if ( iter != end() )
+    iterator iter = find(pEntry->getHashKey().getKey());
+    if (iter != end())
     {
-        dispose( iter, 1 );
+        dispose(iter, 1);
         return 1;
     }
     return 0;
 }
 
-int CacheStore::refresh( CacheEntry*  pEntry )
+int CacheStore::refresh(CacheEntry  *pEntry)
 {
-    return stale( pEntry );
+    return stale(pEntry);
     /*
     iterator iter = find( pEntry->getHashKey().getKey() );
     if ( iter != end() )
@@ -89,30 +89,30 @@ int CacheStore::refresh( CacheEntry*  pEntry )
 
 void CacheStore::houseKeeping()
 {
-    CacheEntry * pEntry;
+    CacheEntry *pEntry;
     iterator iterEnd = end();
     iterator iterNext;
-    for( iterator iter = begin(); iter != iterEnd; iter = iterNext )
+    for (iterator iter = begin(); iter != iterEnd; iter = iterNext)
     {
         pEntry = (CacheEntry *)iter.second();
-        iterNext = GHash::next( iter );
-        if ( pEntry->getRef() == 0 )
+        iterNext = GHash::next(iter);
+        if (pEntry->getRef() == 0)
         {
-            if ( DateTime_s_curTime > pEntry->getExpireTime() + pEntry->getMaxStale() )
+            if (DateTime_s_curTime > pEntry->getExpireTime() + pEntry->getMaxStale())
             {
-                dispose( iter, 1 );
+                dispose(iter, 1);
                 continue;
             }
             else
             {
                 int idle = DateTime_s_curTime - pEntry->getLastAccess();
-                if ( idle > 120 )
+                if (idle > 120)
                 {
-                    erase( iter );
+                    erase(iter);
                     delete pEntry;
                     continue;
                 }
-                if ( idle > 10 )
+                if (idle > 10)
                     pEntry->releaseTmpResource();
             }
         }
@@ -124,13 +124,13 @@ void CacheStore::houseKeeping()
         //    delete pEntry;
         //}
     }
-    for( TPointerList< CacheEntry >::iterator it = m_dirtyList.begin();
-             it != m_dirtyList.end(); )
+    for (TPointerList< CacheEntry >::iterator it = m_dirtyList.begin();
+         it != m_dirtyList.end();)
     {
-        if ( (*it)->getRef() == 0 )
+        if ((*it)->getRef() == 0)
         {
             delete *it;
-            it = m_dirtyList.erase( it );
+            it = m_dirtyList.erase(it);
         }
         //else if (DateTime_s_curTime - (*it)->getLastAccess() > 300 )
         //{

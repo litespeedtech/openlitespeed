@@ -24,27 +24,27 @@ BEGIN_LOG4CXX_NS
 
 int Layout::init()
 {
-    return s_pFactory->registType( new Layout( "layout.plain" ) );
+    return s_pFactory->registType(new Layout("layout.plain"));
 }
 
-Layout* Layout::getLayout( const char * pName, const char * pType )
+Layout *Layout::getLayout(const char *pName, const char *pType)
 {
-    return (Layout *)s_pFactory->getObj( pName, pType );
+    return (Layout *)s_pFactory->getObj(pName, pType);
 }
 
 
-Duplicable * Layout::dup( const char * pName )
+Duplicable *Layout::dup(const char *pName)
 {
-    return new Layout( pName );
+    return new Layout(pName);
 }
 
-int Layout::format( LoggingEvent * pEvent, char * pBuf, int len )
+int Layout::format(LoggingEvent *pEvent, char *pBuf, int len)
 {
-    if ( pEvent->m_iMessageLen < len )
+    if (pEvent->m_iMessageLen < len)
         len = pEvent->m_iMessageLen;
-    memcpy( pBuf, pEvent->m_pMessageBuf, len );
+    memcpy(pBuf, pEvent->m_pMessageBuf, len);
     return len;
-            
+
 }
 
 END_LOG4CXX_NS

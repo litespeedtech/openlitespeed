@@ -23,11 +23,18 @@ void AllGlobalDataHashTInit();
 void releaseGDataContainer(__LsiGDataItemHashT *containerInfo);
 void AllGlobalDataHashTUnInit();
 
-void erase_gdata_element(lsi_gdata_cont_val_t* containerInfo, __LsiGDataItemHashT::iterator iter);
-LSIAPI void * get_gdata(lsi_gdata_cont_val_t *containerInfo, const char *key, int key_len, lsi_release_callback_pf release_cb, int renew_TTL, lsi_deserialize_pf deserialize_cb);
-LSIAPI int delete_gdata(lsi_gdata_cont_val_t *containerInfo, const char *key, int key_len);
-LSIAPI int set_gdata(lsi_gdata_cont_val_t *containerInfo, const char *key, int key_len, void *val, int TTL, lsi_release_callback_pf release_cb, int force_update, lsi_serialize_pf serialize_cb);
-LSIAPI lsi_gdata_cont_val_t *get_gdata_container(int type, const char *key, int key_len);
+void erase_gdata_element(lsi_gdata_cont_val_t *containerInfo,
+                         __LsiGDataItemHashT::iterator iter);
+LSIAPI void *get_gdata(lsi_gdata_cont_val_t *containerInfo,
+                       const char *key, int key_len, lsi_release_callback_pf release_cb,
+                       int renew_TTL, lsi_deserialize_pf deserialize_cb);
+LSIAPI int delete_gdata(lsi_gdata_cont_val_t *containerInfo,
+                        const char *key, int key_len);
+LSIAPI int set_gdata(lsi_gdata_cont_val_t *containerInfo, const char *key,
+                     int key_len, void *val, int TTL, lsi_release_callback_pf release_cb,
+                     int force_update, lsi_serialize_pf serialize_cb);
+LSIAPI lsi_gdata_cont_val_t *get_gdata_container(int type, const char *key,
+        int key_len);
 LSIAPI int empty_gdata_container(lsi_gdata_cont_val_t *containerInfo);
 LSIAPI int purge_gdata_container(lsi_gdata_cont_val_t *containerInfo);
 

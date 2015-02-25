@@ -23,11 +23,11 @@
 
 class CrashGuard
 {
-    GuardedApp * m_pGuardedApp;
-public: 
-    CrashGuard( GuardedApp * pApp )
-        : m_pGuardedApp( pApp )
-        {}
+    GuardedApp *m_pGuardedApp;
+public:
+    CrashGuard(GuardedApp *pApp)
+        : m_pGuardedApp(pApp)
+    {}
     ~CrashGuard() {};
     int guardCrash();
 };

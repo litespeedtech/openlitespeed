@@ -24,15 +24,15 @@
 struct iovec;
 class OutputBuf : public LoopBuf
 {
-public: 
+public:
     OutputBuf();
-    OutputBuf( int initSize )
-        : LoopBuf( initSize )
+    OutputBuf(int initSize)
+        : LoopBuf(initSize)
     {}
     ~OutputBuf();
 
-    int cache( const char * pBuf, int total, int written );
-    int cache( const struct iovec * vector, int count, int written );
+    int cache(const char *pBuf, int total, int written);
+    int cache(const struct iovec *vector, int count, int written);
 
 };
 

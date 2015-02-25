@@ -39,36 +39,36 @@
 
 using namespace LOG4CXX_NS;
 #define ACCESS_INIT 1
-static char achAccessLog[ sizeof( AccessLog ) ];
-static Logger * s_pLogger       = NULL;
+static char achAccessLog[ sizeof(AccessLog) ];
+static Logger *s_pLogger       = NULL;
 static char s_logPattern[40]    = "%d [%p] %m";
 
-static const char *         s_pLogId            = NULL;
-static LOG4CXX_NS::Logger *  s_pCurLogger  = NULL;
+static const char          *s_pLogId            = NULL;
+static LOG4CXX_NS::Logger   *s_pCurLogger  = NULL;
 
-void HttpLog::parse_error( const char * pCurLine, const char * pError )
+void HttpLog::parse_error(const char *pCurLine, const char *pError)
 {
-    LOG_ERR(( s_pCurLogger, "[%s] rewrite: %s while parsing: %s",
-                    s_pLogId, pError, pCurLine ));    
+    LOG_ERR((s_pCurLogger, "[%s] rewrite: %s while parsing: %s",
+             s_pLogId, pError, pCurLine));
 }
 
-void HttpLog::setCurLogger( LOG4CXX_NS::Logger * pLogger, const char * pId)
+void HttpLog::setCurLogger(LOG4CXX_NS::Logger *pLogger, const char *pId)
 {
     s_pCurLogger = pLogger;
     s_pLogId = pId;
 }
 
-void HttpLog::perror( const char * pStr, const char * pError )
+void HttpLog::perror(const char *pStr, const char *pError)
 {
-    LOG_ERR(( s_pCurLogger, "[%s] %s: %s.",
-                    s_pLogId, (pStr)?pStr:"", pError ));
+    LOG_ERR((s_pCurLogger, "[%s] %s: %s.",
+             s_pLogId, (pStr) ? pStr : "", pError));
 }
 
 
-static inline AccessLog * accessLog()
-{   return ( AccessLog *)achAccessLog;     }
+static inline AccessLog *accessLog()
+{   return (AccessLog *)achAccessLog;     }
 
-static inline Logger * logger()
+static inline Logger *logger()
 {   return s_pLogger;       }
 
 
@@ -81,358 +81,356 @@ HttpLog::~HttpLog()
 
 void HttpLog::init()
 {
-    
+
     s_pLogger = Logger::getRootLogger() ;
-    new ( achAccessLog ) AccessLog( "" );
-    Appender * appender
-        = Appender::getAppender( "stderr", "appender.ps" );
-    Layout* layout = Layout::getLayout( ERROR_LOG_PATTERN, "layout.pattern" );
-    layout->setUData( s_logPattern );
-    appender->setLayout( layout );
-    logger()->setLevel( Level::DEBUG );
-    logger()->setAppender( appender );
+    new(achAccessLog) AccessLog("");
+    Appender *appender
+        = Appender::getAppender("stderr", "appender.ps");
+    Layout *layout = Layout::getLayout(ERROR_LOG_PATTERN, "layout.pattern");
+    layout->setUData(s_logPattern);
+    appender->setLayout(layout);
+    logger()->setLevel(Level::DEBUG);
+    logger()->setAppender(appender);
 }
 
-bool HttpLog::isEnabled( Logger * pLogger, int level )
+bool HttpLog::isEnabled(Logger *pLogger, int level)
 {
-    if ( pLogger )
-        return pLogger->isEnabled( level );
+    if (pLogger)
+        return pLogger->isEnabled(level);
     else
-        return logger()->isEnabled( level );
+        return logger()->isEnabled(level);
 }
 
 
 
-bool HttpLog::isDebugEnabled( Logger * pLogger, int level )
+bool HttpLog::isDebugEnabled(Logger *pLogger, int level)
 {
-    return (level < s_debugLevel)&&( isEnabled( pLogger, Level::DEBUG ));
+    return (level < s_debugLevel) && (isEnabled(pLogger, Level::DEBUG));
 }
 
-void HttpLog::setDebugLevel( int level )
+void HttpLog::setDebugLevel(int level)
 {
     s_debugLevel = level;
 }
 
 void HttpLog::toggleDebugLog()
 {
-    if ( s_debugLevel )
+    if (s_debugLevel)
         s_debugLevel = 0;
     else
     {
-        logger()->setLevel( Level::DEBUG );
+        logger()->setLevel(Level::DEBUG);
         s_debugLevel = 10;
     }
 }
 
 
-void HttpLog::setLogLevel( int level )
+void HttpLog::setLogLevel(int level)
 {
-    logger()->setLevel( level );
+    logger()->setLevel(level);
 }
 
-void HttpLog::setLogLevel( const char * pLevel )
+void HttpLog::setLogLevel(const char *pLevel)
 {
-    logger()->setLevel( pLevel );
+    logger()->setLevel(pLevel);
 }
 
 
-void HttpLog::setLogPattern( const char * pPattern )
+void HttpLog::setLogPattern(const char *pPattern)
 {
-    if ( strlen( pPattern ) < sizeof( s_logPattern ) - 1 )
-    {
-        strncpy( s_logPattern, pPattern, 39 );
-    }
+    if (strlen(pPattern) < sizeof(s_logPattern) - 1)
+        strncpy(s_logPattern, pPattern, 39);
 }
 
-const char * HttpLog::getLogPattern()
+const char *HttpLog::getLogPattern()
 {
     return s_logPattern;
 }
 
-LOG4CXX_NS::Logger * HttpLog::getErrorLogger()
+LOG4CXX_NS::Logger *HttpLog::getErrorLogger()
 {
     return logger();
 }
 
 
 #define MAX_LOG_LINE_LEN 4096
-int HttpLog::logAccess( const char * pVHost, int len, HttpSession* pSession )
+int HttpLog::logAccess(const char *pVHost, int len, HttpSession *pSession)
 {
-    accessLog()->log( pVHost, len, pSession );
+    accessLog()->log(pVHost, len, pSession);
     return 0;
 }
 
-int HttpLog::setAccessLogFile( const char * pFileName, int pipe )
+int HttpLog::setAccessLogFile(const char *pFileName, int pipe)
 {
-    int ret = accessLog()->init( pFileName, pipe );
+    int ret = accessLog()->init(pFileName, pipe);
     return ret;
 }
 
-AccessLog * HttpLog::getAccessLog()
+AccessLog *HttpLog::getAccessLog()
 {
     return accessLog();
 }
 
 
-int HttpLog::setErrorLogFile( const char * pFileName )
+int HttpLog::setErrorLogFile(const char *pFileName)
 {
-    Appender * appender
-        = Appender::getAppender( pFileName, "appender.ps" );
-    if ( appender )
+    Appender *appender
+        = Appender::getAppender(pFileName, "appender.ps");
+    if (appender)
     {
-        Appender * pOld = logger()->getAppender();
-        if (( pOld )&&( pOld != appender ))
+        Appender *pOld = logger()->getAppender();
+        if ((pOld) && (pOld != appender))
             pOld->close();
-        Layout* layout = Layout::getLayout( ERROR_LOG_PATTERN, "layout.pattern" );
-        appender->setLayout( layout );
-        logger()->setAppender( appender );
+        Layout *layout = Layout::getLayout(ERROR_LOG_PATTERN, "layout.pattern");
+        appender->setLayout(layout);
+        logger()->setAppender(appender);
         return 0;
     }
     else
         return -1;
 }
 
-const char * HttpLog::getAccessLogFileName()
+const char *HttpLog::getAccessLogFileName()
 {
     return accessLog()->getLogPath();
 }
 
-const char * HttpLog::getErrorLogFileName()
+const char *HttpLog::getErrorLogFileName()
 {
     return logger()->getAppender()->getName();
 }
 
-void HttpLog::offsetChroot( const char * pRoot, int len)
+void HttpLog::offsetChroot(const char *pRoot, int len)
 {
     char achTemp[2048];
-    if ( !accessLog()->isPipedLog() &&
-        (strncmp( pRoot, getAccessLogFileName(), len ) == 0) )
+    if (!accessLog()->isPipedLog() &&
+        (strncmp(pRoot, getAccessLogFileName(), len) == 0))
     {
-        memccpy( achTemp, getAccessLogFileName() + len, 0, sizeof( achTemp ) - 1 );
-        accessLog()->getAppender()->setName( achTemp );
+        memccpy(achTemp, getAccessLogFileName() + len, 0, sizeof(achTemp) - 1);
+        accessLog()->getAppender()->setName(achTemp);
     }
-    if ( strncmp( pRoot, getErrorLogFileName(), len ) == 0 )
+    if (strncmp(pRoot, getErrorLogFileName(), len) == 0)
     {
         logger()->getAppender()->close();
         off_t rollSize = logger()->getAppender()->getRollingSize();
-        memccpy( achTemp, getErrorLogFileName() + len, 0, sizeof( achTemp ) - 1 );
-        setErrorLogFile( achTemp );
-        logger()->getAppender()->setRollingSize( rollSize );
+        memccpy(achTemp, getErrorLogFileName() + len, 0, sizeof(achTemp) - 1);
+        setErrorLogFile(achTemp);
+        logger()->getAppender()->setRollingSize(rollSize);
     }
 
 }
 
-void HttpLog::error_num( int __errnum, const char * __file,
-                        unsigned int __line, const char * __function )
+void HttpLog::error_num(int __errnum, const char *__file,
+                        unsigned int __line, const char *__function)
 {
     logger()->error(
-                 "errno: (%d)%s in file:%s line:%d function:%s\n",
-            __errnum, strerror( __errnum ),
-            __file, __line, __function );
+        "errno: (%d)%s in file:%s line:%d function:%s\n",
+        __errnum, strerror(__errnum),
+        __file, __line, __function);
 }
 
-void HttpLog::error_detail( const char * __errstr, const char * __file,
-                        unsigned int __line, const char * __function )
+void HttpLog::error_detail(const char *__errstr, const char *__file,
+                           unsigned int __line, const char *__function)
 {
-    logger()->error( "error:%s in file:%s line:%d function:%s\n",
-            __errstr, __file, __line, __function );
+    logger()->error("error:%s in file:%s line:%d function:%s\n",
+                    __errstr, __file, __line, __function);
 }
 
-void HttpLog::error( const char * fmt, ... )
+void HttpLog::error(const char *fmt, ...)
 {
-    if ( logger()->isEnabled( LOG4CXX_NS::Level::ERROR ) )
+    if (logger()->isEnabled(LOG4CXX_NS::Level::ERROR))
     {
         va_list ap;
-        va_start( ap, fmt );
-        logger()->verror( fmt, ap );
-        va_end( ap );
+        va_start(ap, fmt);
+        logger()->verror(fmt, ap);
+        va_end(ap);
     }
 }
 
-void HttpLog::warn( const char * fmt, ... )
+void HttpLog::warn(const char *fmt, ...)
 {
-    if ( logger()->isEnabled( LOG4CXX_NS::Level::WARN ) )
+    if (logger()->isEnabled(LOG4CXX_NS::Level::WARN))
     {
         va_list ap;
-        va_start( ap, fmt );
-        logger()->vwarn( fmt, ap );
-        va_end( ap );
+        va_start(ap, fmt);
+        logger()->vwarn(fmt, ap);
+        va_end(ap);
     }
 }
 
-void HttpLog::debug( const char * fmt, ... )
+void HttpLog::debug(const char *fmt, ...)
 {
-    if ( s_debugLevel > 0 )
+    if (s_debugLevel > 0)
     {
-        if ( logger()->isEnabled( LOG4CXX_NS::Level::DEBUG ) )
+        if (logger()->isEnabled(LOG4CXX_NS::Level::DEBUG))
         {
             va_list ap;
-            va_start( ap, fmt );
-            logger()->vdebug( fmt, ap );
-            va_end( ap );
+            va_start(ap, fmt);
+            logger()->vdebug(fmt, ap);
+            va_end(ap);
         }
     }
 }
 
 
-void HttpLog::notice( const char * fmt, ... )
+void HttpLog::notice(const char *fmt, ...)
 {
-    if ( logger()->isEnabled( LOG4CXX_NS::Level::NOTICE ) )
+    if (logger()->isEnabled(LOG4CXX_NS::Level::NOTICE))
     {
         va_list ap;
-        va_start( ap, fmt );
-        logger()->vnotice( fmt, ap );
-        va_end( ap );
+        va_start(ap, fmt);
+        logger()->vnotice(fmt, ap);
+        va_end(ap);
     }
 }
 
-void HttpLog::info( const char * fmt, ... )
+void HttpLog::info(const char *fmt, ...)
 {
-    if ( logger()->isEnabled( LOG4CXX_NS::Level::INFO ) )
+    if (logger()->isEnabled(LOG4CXX_NS::Level::INFO))
     {
         va_list ap;
-        va_start( ap, fmt );
-        logger()->vinfo( fmt, ap );
-        va_end( ap );
+        va_start(ap, fmt);
+        logger()->vinfo(fmt, ap);
+        va_end(ap);
     }
 }
 
-void HttpLog::vlog( int level, const char * format, va_list args )
+void HttpLog::vlog(int level, const char *format, va_list args)
 {
-    logger()->vlog( level,  format, args );
+    logger()->vlog(level,  format, args);
 }
 
-void HttpLog::log( int level, const char * fmt, ... )
+void HttpLog::log(int level, const char *fmt, ...)
 {
     va_list ap;
-    va_start( ap, fmt );
-    logger()->vlog( level,  fmt, ap );
-    va_end( ap );
-    
+    va_start(ap, fmt);
+    logger()->vlog(level,  fmt, ap);
+    va_end(ap);
+
 }
 
-void HttpLog::vlog( LOG4CXX_NS::Logger * pLogger, int level, const char * format, va_list args, int no_linefeed )
+void HttpLog::vlog(LOG4CXX_NS::Logger *pLogger, int level,
+                   const char *format, va_list args, int no_linefeed)
 {
-    if ( !pLogger )
+    if (!pLogger)
         pLogger = logger();
-    if ( pLogger->isEnabled( level ) )
-    {
-        pLogger->vlog( level, format, args, no_linefeed );
-    }
+    if (pLogger->isEnabled(level))
+        pLogger->vlog(level, format, args, no_linefeed);
 }
 
-void HttpLog::lograw( LOG4CXX_NS::Logger * pLogger, const char * pBuf, int len )
+void HttpLog::lograw(LOG4CXX_NS::Logger *pLogger, const char *pBuf,
+                     int len)
 {
-    if ( !pLogger )
+    if (!pLogger)
         pLogger = logger();
-    pLogger->lograw( pBuf, len );
+    pLogger->lograw(pBuf, len);
 }
 
 
-void HttpLog::error( Logger * pLogger, const char * fmt, ... )
+void HttpLog::error(Logger *pLogger, const char *fmt, ...)
 {
-    if ( !pLogger )
+    if (!pLogger)
         pLogger = logger();
-    if ( pLogger->isEnabled( LOG4CXX_NS::Level::ERROR ) )
-    {
-        va_list ap;
-        va_start( ap, fmt );
-        pLogger->verror( fmt, ap );
-        va_end( ap );
-    }
-}
-
-void HttpLog::warn( Logger * pLogger, const char * fmt, ... )
-{
-    if ( !pLogger )
-        pLogger = logger();
-    if ( pLogger->isEnabled( LOG4CXX_NS::Level::WARN ) )
+    if (pLogger->isEnabled(LOG4CXX_NS::Level::ERROR))
     {
         va_list ap;
-        va_start( ap, fmt );
-        pLogger->vwarn( fmt, ap );
-        va_end( ap );
+        va_start(ap, fmt);
+        pLogger->verror(fmt, ap);
+        va_end(ap);
     }
 }
 
-void HttpLog::debug( Logger * pLogger, const char * fmt, ... )
+void HttpLog::warn(Logger *pLogger, const char *fmt, ...)
 {
-    if ( s_debugLevel > 0 )
+    if (!pLogger)
+        pLogger = logger();
+    if (pLogger->isEnabled(LOG4CXX_NS::Level::WARN))
     {
-        if ( !pLogger )
+        va_list ap;
+        va_start(ap, fmt);
+        pLogger->vwarn(fmt, ap);
+        va_end(ap);
+    }
+}
+
+void HttpLog::debug(Logger *pLogger, const char *fmt, ...)
+{
+    if (s_debugLevel > 0)
+    {
+        if (!pLogger)
             pLogger = logger();
-        if ( pLogger->isEnabled( LOG4CXX_NS::Level::DEBUG ) )
+        if (pLogger->isEnabled(LOG4CXX_NS::Level::DEBUG))
         {
             va_list ap;
-            va_start( ap, fmt );
-            pLogger->vdebug( fmt, ap );
-            va_end( ap );
+            va_start(ap, fmt);
+            pLogger->vdebug(fmt, ap);
+            va_end(ap);
         }
     }
 }
 
 
-void HttpLog::notice( Logger * pLogger, const char * fmt, ... )
+void HttpLog::notice(Logger *pLogger, const char *fmt, ...)
 {
-    if ( !pLogger )
+    if (!pLogger)
         pLogger = logger();
-    if ( pLogger->isEnabled( LOG4CXX_NS::Level::NOTICE ) )
+    if (pLogger->isEnabled(LOG4CXX_NS::Level::NOTICE))
     {
         va_list ap;
-        va_start( ap, fmt );
-        pLogger->vnotice( fmt, ap );
-        va_end( ap );
+        va_start(ap, fmt);
+        pLogger->vnotice(fmt, ap);
+        va_end(ap);
     }
 }
 
-void HttpLog::info( Logger * pLogger, const char * fmt, ... )
+void HttpLog::info(Logger *pLogger, const char *fmt, ...)
 {
-    if ( !pLogger )
+    if (!pLogger)
         pLogger = logger();
-    if ( pLogger->isEnabled( LOG4CXX_NS::Level::INFO ) )
+    if (pLogger->isEnabled(LOG4CXX_NS::Level::INFO))
     {
         va_list ap;
-        va_start( ap, fmt );
-        pLogger->vinfo( fmt, ap );
-        va_end( ap );
+        va_start(ap, fmt);
+        pLogger->vinfo(fmt, ap);
+        va_end(ap);
     }
 }
 
-void HttpLog::errmem( const char * pSource )
+void HttpLog::errmem(const char *pSource)
 {
-    LOG_ERR(( "Out of memory: %s", pSource ));
+    LOG_ERR(("Out of memory: %s", pSource));
 }
 
 
 void syntax_check()
 {
-    LOG_D(( "This is a test, %s %d \n", "string", 23423 ));
-    LOG_ERR(( "This is a test, %s %d \n", "string", 23423 ));
-    LOG_ERR_CODE( 1 );
-    LOG_DERR( "errstr" );
+    LOG_D(("This is a test, %s %d \n", "string", 23423));
+    LOG_ERR(("This is a test, %s %d \n", "string", 23423));
+    LOG_ERR_CODE(1);
+    LOG_DERR("errstr");
 }
 
 
 void HttpLog::onTimer()
 {
-    if ( HttpGlobals::s_iProcNo )
+    if (HttpGlobals::s_iProcNo)
     {
         accessLog()->reopenExist();
         accessLog()->flush();
         logger()->getAppender()->reopenExist();
-		HttpGlobals::getStdErrLogger()->getAppender()->reopenExist();
+        HttpGlobals::getStdErrLogger()->getAppender()->reopenExist();
     }
     else
     {
-        if ( !accessLog()->isPipedLog() )
-            LogRotate::testAndRoll( accessLog()->getAppender(),
-                        HttpGlobals::s_uid, HttpGlobals::s_gid );
-        LogRotate::testAndRoll( logger()->getAppender(),
-                        HttpGlobals::s_uid, HttpGlobals::s_gid );
-        LogRotate::testAndRoll( HttpGlobals::getStdErrLogger()->getAppender(),
-                        HttpGlobals::s_uid, HttpGlobals::s_gid );
+        if (!accessLog()->isPipedLog())
+            LogRotate::testAndRoll(accessLog()->getAppender(),
+                                   HttpGlobals::s_uid, HttpGlobals::s_gid);
+        LogRotate::testAndRoll(logger()->getAppender(),
+                               HttpGlobals::s_uid, HttpGlobals::s_gid);
+        LogRotate::testAndRoll(HttpGlobals::getStdErrLogger()->getAppender(),
+                               HttpGlobals::s_uid, HttpGlobals::s_gid);
 
-     }
+    }
 }
 
 

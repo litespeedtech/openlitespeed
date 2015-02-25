@@ -34,32 +34,30 @@ BEGIN_LOG4CXX_NS
 
 int FileAppender::init()
 {
-    return s_pFactory->registType( new FileAppender( "appender.ps" ) );
+    return s_pFactory->registType(new FileAppender("appender.ps"));
 }
 
-Duplicable * FileAppender::dup( const char * pName )
+Duplicable *FileAppender::dup(const char *pName)
 {
-    Appender * pAppender = new FileAppender( pName );
-    if ( strcasecmp( pName, "stdout" ) == 0 )
-        pAppender->setfd( ::dup( 1 ) );
-    else if ( strcasecmp( pName, "stderr" ) == 0)
-        pAppender->setfd( ::dup( 2 ) );
+    Appender *pAppender = new FileAppender(pName);
+    if (strcasecmp(pName, "stdout") == 0)
+        pAppender->setfd(::dup(1));
+    else if (strcasecmp(pName, "stderr") == 0)
+        pAppender->setfd(::dup(2));
     else
         return pAppender;
-    fcntl( pAppender->getfd(), F_SETFD, FD_CLOEXEC );
+    fcntl(pAppender->getfd(), F_SETFD, FD_CLOEXEC);
     return pAppender;
 }
 
 
 int FileAppender::reopenExist()
 {
-    const char * pName = getName();
+    const char *pName = getName();
     struct stat st;
-    if ( nio_stat( pName, &st) == -1 )
-    {
+    if (nio_stat(pName, &st) == -1)
         return 0;
-    }
-    if ( m_ino != st.st_ino )
+    if (m_ino != st.st_ino)
     {
         close();
         return open();
@@ -70,28 +68,26 @@ int FileAppender::reopenExist()
 
 int FileAppender::open()
 {
-    if ( getfd() != -1 )
+    if (getfd() != -1)
         return 0;
-    const char * pName = getName();
-    if ( !pName )
+    const char *pName = getName();
+    if (!pName)
     {
         errno = EINVAL;
         return -1;
     }
     int flag = O_WRONLY | O_CREAT;
-    if ( !getAppendMode() )
+    if (!getAppendMode())
         flag |= O_TRUNC ;
     else
         flag |= O_APPEND;
-    setfd( nio_open( pName, flag, 0644 ) );
-    if ( getfd() != -1 )
+    setfd(nio_open(pName, flag, 0644));
+    if (getfd() != -1)
     {
         struct stat st;
-        if ( ::fstat( getfd(), &st) != -1 )
-        {
+        if (::fstat(getfd(), &st) != -1)
             m_ino = st.st_ino;
-        }
-        fcntl( getfd(), F_SETFD, FD_CLOEXEC );
+        fcntl(getfd(), F_SETFD, FD_CLOEXEC);
         return 0;
     }
     return -1;
@@ -99,18 +95,18 @@ int FileAppender::open()
 
 int FileAppender::close()
 {
-    nio_close( getfd() );
-    setfd( -1 );
+    nio_close(getfd());
+    setfd(-1);
     return 0;
 }
 
 
-int FileAppender::append( const char * pBuf, int len )
+int FileAppender::append(const char *pBuf, int len)
 {
-    if ( getfd() == -1 )
-        if ( open() == -1 )
+    if (getfd() == -1)
+        if (open() == -1)
             return -1;
-    return nio_write( getfd(), pBuf, len );
+    return nio_write(getfd(), pBuf, len);
 }
 
 

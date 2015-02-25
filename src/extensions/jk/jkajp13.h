@@ -134,19 +134,20 @@ class HttpSession;
 
 class JWorker;
 
-class JkAjp13 {
-    static const char * s_pRespHeaders[AJP_RESP_HEADERS_NUM + 1];
+class JkAjp13
+{
+    static const char *s_pRespHeaders[AJP_RESP_HEADERS_NUM + 1];
     static int          s_iRespHeaderLen[AJP_RESP_HEADERS_NUM + 1];
-public: 
-	JkAjp13();
-	~JkAjp13();
-    static int buildReq( HttpSession *pSession, char * &p, char * pEnd );
-    static int buildWorkerHeader( JWorker * pWorker, char * &p, char * pEnd );
-    static void buildAjpHeader( char * pBuf, int size );
-    static void buildAjpReqBodyHeader( char * pBuf, int size );
-    static const char * getRespHeaderById( unsigned char id )
+public:
+    JkAjp13();
+    ~JkAjp13();
+    static int buildReq(HttpSession *pSession, char *&p, char *pEnd);
+    static int buildWorkerHeader(JWorker *pWorker, char *&p, char *pEnd);
+    static void buildAjpHeader(char *pBuf, int size);
+    static void buildAjpReqBodyHeader(char *pBuf, int size);
+    static const char *getRespHeaderById(unsigned char id)
     {   return s_pRespHeaders[ id ];    }
-    static int getRespHeaderLenById( unsigned char id )
+    static int getRespHeaderLenById(unsigned char id)
     {   return s_iRespHeaderLen[id];    }
 };
 

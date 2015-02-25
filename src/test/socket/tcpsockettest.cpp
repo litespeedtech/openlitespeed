@@ -16,7 +16,7 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #ifdef RUN_TEST
- 
+
 #include "tcpsockettest.h"
 
 #include <socket/tcpsockopt.h>
@@ -28,27 +28,29 @@
 #include "test/unittest-cpp/UnitTest++/src/UnitTest++.h"
 
 
-inline  int     setNonBlock( int fd, int nonblock = 1 )
-    {   int val = fcntl( fd, F_GETFL, 0 );
-        if ( nonblock )
-            return fcntl( fd, F_SETFL, val | O_NONBLOCK );
-        else
-            return fcntl( fd, F_SETFL, val &(~O_NONBLOCK) );
-    }
+inline  int     setNonBlock(int fd, int nonblock = 1)
+{
+    int val = fcntl(fd, F_GETFL, 0);
+    if (nonblock)
+        return fcntl(fd, F_SETFL, val | O_NONBLOCK);
+    else
+        return fcntl(fd, F_SETFL, val & (~O_NONBLOCK));
+}
 
-inline int      isSet( int fd, int arg )
-    {   int val = fcntl( fd, F_GETFL, 0 );
-        return ( val != -1 )
-                    ?((val&arg) == arg )
-                    : val;
-    }
+inline int      isSet(int fd, int arg)
+{
+    int val = fcntl(fd, F_GETFL, 0);
+    return (val != -1)
+           ? ((val & arg) == arg)
+           : val;
+}
 
 
 TEST(TcpSocketTest_testAll)
 {
 
 //     CHECK( -1 != m_client.getfd() );
-// 
+//
 //     CHECK( 0 == setNonBlock( m_listener.getfd() ) );
 //     CHECK( 0 == m_listener.listen( 3452, 15 ) );
 //     TcpConnection conn( INVALID_FD );

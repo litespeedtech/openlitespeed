@@ -94,20 +94,20 @@ void test_mmap()
 //    return 0;
 //}
 
-static LshttpdMain * s_pLshttpd = NULL;
+static LshttpdMain *s_pLshttpd = NULL;
 int main(int argc, char *argv[])
 {
     //test_mmap();
     //testExec();
 //    testNICDetect();
     s_pLshttpd = new LshttpdMain();
-    if ( !s_pLshttpd )
+    if (!s_pLshttpd)
     {
-        perror( "new LshttpdMain()" );
-        exit( 1 );
+        perror("new LshttpdMain()");
+        exit(1);
     }
-    int ret = s_pLshttpd->main( argc, argv );
+    int ret = s_pLshttpd->main(argc, argv);
     delete s_pLshttpd;
-    exit( ret );
+    exit(ret);
 }
 

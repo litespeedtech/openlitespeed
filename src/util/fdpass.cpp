@@ -20,7 +20,7 @@
 #include <stddef.h>
 #include <string.h>
 #include <sys/types.h>
-#include <sys/socket.h> 
+#include <sys/socket.h>
 #include <sys/uio.h>
 
 #ifndef __CMSG_ALIGN
@@ -38,9 +38,11 @@ length len */
 #define CMSG_SPACE(len) (__CMSG_ALIGN(sizeof(struct cmsghdr)) + __CMSG_ALIGN(len))
 #endif
 
-FDPass::FDPass(){
+FDPass::FDPass()
+{
 }
-FDPass::~FDPass(){
+FDPass::~FDPass()
+{
 }
 
 int FDPass::read_fd(int fd, void *ptr, int nbytes, int *recvfd)
@@ -51,9 +53,10 @@ int FDPass::read_fd(int fd, void *ptr, int nbytes, int *recvfd)
 
 #if (!defined(sun) && !defined(__sun)) || defined(_XPG4_2) || defined(_KERNEL)
     int             control_space = CMSG_SPACE(sizeof(int));
-    union {
-      struct cmsghdr    cm;
-      char                control[ sizeof( struct cmsghdr ) + sizeof(int) + 8];
+    union
+    {
+        struct cmsghdr    cm;
+        char                control[ sizeof(struct cmsghdr) + sizeof(int) + 8];
     } control_un;
     struct cmsghdr    *cmptr;
 
@@ -74,18 +77,18 @@ int FDPass::read_fd(int fd, void *ptr, int nbytes, int *recvfd)
     msg.msg_iov = iov;
     msg.msg_iovlen = 1;
 
-    if ( (n = recvmsg(fd, &msg, 0)) <= 0)
-        return(n);
+    if ((n = recvmsg(fd, &msg, 0)) <= 0)
+        return (n);
 
 #if (!defined(sun) && !defined(__sun)) || defined(_XPG4_2) || defined(_KERNEL)
-    if ( (cmptr = CMSG_FIRSTHDR(&msg)) != NULL &&
-        cmptr->cmsg_len >= CMSG_LEN( sizeof( int ) ) ) 
+    if ((cmptr = CMSG_FIRSTHDR(&msg)) != NULL &&
+        cmptr->cmsg_len >= CMSG_LEN(sizeof(int)))
     {
         if (cmptr->cmsg_level != SOL_SOCKET)
             return -1;
         if (cmptr->cmsg_type != SCM_RIGHTS)
             return -2;
-        memmove( recvfd, CMSG_DATA(cmptr), sizeof( int ) );
+        memmove(recvfd, CMSG_DATA(cmptr), sizeof(int));
     }
     else
         *recvfd = -1;        /* descriptor was not passed */
@@ -98,46 +101,47 @@ int FDPass::read_fd(int fd, void *ptr, int nbytes, int *recvfd)
 /* *INDENT-ON* */
 #endif
 
-    return(n);
+return (n);
 }
 /* end read_fd */
 
 int FDPass::write_fd(int fd, void *ptr, int nbytes, int sendfd)
 {
-    struct msghdr    msg;
-    struct iovec    iov[1];
+struct msghdr    msg;
+struct iovec    iov[1];
 
 #if (!defined(sun) && !defined(__sun)) || defined(_XPG4_2) || defined(_KERNEL)
-    int             control_space = CMSG_SPACE(sizeof(int));
-    union {
-      struct cmsghdr    cm;
-      char                control[ sizeof( struct cmsghdr ) + sizeof(int) + 8];
-    } control_un;
-    struct cmsghdr    *cmptr;
+int             control_space = CMSG_SPACE(sizeof(int));
+union
+{
+struct cmsghdr    cm;
+char                control[ sizeof(struct cmsghdr) + sizeof(int) + 8];
+} control_un;
+struct cmsghdr    *cmptr;
 
-    msg.msg_control = control_un.control;
-    msg.msg_controllen = control_space;
+msg.msg_control = control_un.control;
+msg.msg_controllen = control_space;
 
-    cmptr = CMSG_FIRSTHDR(&msg);
-    cmptr->cmsg_len = CMSG_LEN( sizeof( int ) );
-    cmptr->cmsg_level = SOL_SOCKET;
-    cmptr->cmsg_type = SCM_RIGHTS;
-    memmove( CMSG_DATA(cmptr), &sendfd, sizeof( int ) );
+cmptr = CMSG_FIRSTHDR(&msg);
+cmptr->cmsg_len = CMSG_LEN(sizeof(int));
+cmptr->cmsg_level = SOL_SOCKET;
+cmptr->cmsg_type = SCM_RIGHTS;
+memmove(CMSG_DATA(cmptr), &sendfd, sizeof(int));
 #else
-    msg.msg_accrights = (caddr_t) &sendfd;
-    msg.msg_accrightslen = sizeof(int);
+msg.msg_accrights = (caddr_t) &sendfd;
+msg.msg_accrightslen = sizeof(int);
 #endif
 
-    msg.msg_name = NULL;
-    msg.msg_namelen = 0;
-    msg.msg_flags = 0;
+msg.msg_name = NULL;
+msg.msg_namelen = 0;
+msg.msg_flags = 0;
 
-    iov[0].iov_base = (char *)ptr;
-    iov[0].iov_len = nbytes;
-    msg.msg_iov = iov;
-    msg.msg_iovlen = 1;
+iov[0].iov_base = (char *)ptr;
+iov[0].iov_len = nbytes;
+msg.msg_iov = iov;
+msg.msg_iovlen = 1;
 
-    return(sendmsg(fd, &msg, 0));
+return (sendmsg(fd, &msg, 0));
 }
 
 
@@ -145,31 +149,31 @@ int FDPass::write_fd(int fd, void *ptr, int nbytes, int sendfd)
 #include <unistd.h>
 int test_fdpass()
 {
-    int fd = dup( 1 );
-    int intercommfds[2];
-    int ret;
-    socketpair( AF_UNIX, SOCK_STREAM, 0, intercommfds );
-    ret = fork();
-    if ( ret == 0 )
-    {
-        //child
-        int n = 10;
-        close( intercommfds[0] );
-        //FDPass::send_fd( intercommfds[1], fd, &n, sizeof( int )  );
-        FDPass::write_fd( intercommfds[1], &n, sizeof( int ), fd  );
-        _exit( 0 );
-    }
-    else
-    {
-        close( intercommfds[1] );
-        close( fd );
-        int n = 0;
-        int fd1;
-        FDPass::read_fd( intercommfds[0], &n, sizeof( int ), &fd1 );
-        printf( "recv fd: %d, n: %d\n", fd1, n );
-        if ( fd1 != -1 )
-            return 0;
-    }
-    return -1;
+int fd = dup(1);
+int intercommfds[2];
+int ret;
+socketpair(AF_UNIX, SOCK_STREAM, 0, intercommfds);
+ret = fork();
+if (ret == 0)
+{
+//child
+int n = 10;
+close(intercommfds[0]);
+//FDPass::send_fd( intercommfds[1], fd, &n, sizeof( int )  );
+FDPass::write_fd(intercommfds[1], &n, sizeof(int), fd);
+_exit(0);
+}
+else
+{
+close(intercommfds[1]);
+close(fd);
+int n = 0;
+int fd1;
+FDPass::read_fd(intercommfds[0], &n, sizeof(int), &fd1);
+printf("recv fd: %d, n: %d\n", fd1, n);
+if (fd1 != -1)
+return 0;
+}
+return -1;
 }
 

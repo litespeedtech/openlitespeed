@@ -40,75 +40,74 @@ CgiConnection::~CgiConnection()
 //interface defined by EdStream
 int CgiConnection::onRead()
 {
-    if ( !getConnector() )
+    if (!getConnector())
         return -1;
-    if ( D_ENABLED( DL_MEDIUM ) )
-        LOG_D(( getLogger(), "[%s] CgiConnection::onRead()\n", getLogId() ));
+    if (D_ENABLED(DL_MEDIUM))
+        LOG_D((getLogger(), "[%s] CgiConnection::onRead()\n", getLogId()));
     int len = 0;
     int ret = 0;
     do
     {
-        len = ret = read( HttpGlobals::g_achBuf, G_BUF_SIZE );
-        if ( ret > 0 )
+        len = ret = read(HttpGlobals::g_achBuf, G_BUF_SIZE);
+        if (ret > 0)
         {
-            if ( D_ENABLED( DL_MEDIUM ) )
-                LOG_D(( getLogger(), "[%s] process STDOUT %d bytes",
-                    getLogId(), len ));
+            if (D_ENABLED(DL_MEDIUM))
+                LOG_D((getLogger(), "[%s] process STDOUT %d bytes",
+                       getLogId(), len));
             //printf( ">>read %d bytes from CGI\n", len );
             //achBuf[ ret ] = 0;
             //printf( "%s", achBuf );
-            ret = getConnector()->processRespData( HttpGlobals::g_achBuf, len );
-            if ( ret == -1 )
+            ret = getConnector()->processRespData(HttpGlobals::g_achBuf, len);
+            if (ret == -1)
                 break;
         }
         else
         {
-            if ( ret )
-                getConnector()->endResponse( 0, 0 );
+            if (ret)
+                getConnector()->endResponse(0, 0);
             break;
-        }    
-    }while( len == G_BUF_SIZE );
-    if (( ret != -1 )&&( getConnector() ))
+        }
+    }
+    while (len == G_BUF_SIZE);
+    if ((ret != -1) && (getConnector()))
         getConnector()->flushResp();
     return ret;
 }
 
-int CgiConnection::readResp( char * pBuf, int size )
+int CgiConnection::readResp(char *pBuf, int size)
 {
-    int len = read( pBuf, size );
-    if ( len == -1 )
-        getConnector()->endResponse( 0, 0 );
+    int len = read(pBuf, size);
+    if (len == -1)
+        getConnector()->endResponse(0, 0);
     return len;
-    
+
 }
 
 int CgiConnection::onWrite()
 {
-    if ( !getConnector() )
+    if (!getConnector())
         return -1;
-    if ( D_ENABLED( DL_MEDIUM ) )
-        LOG_D(( getLogger(), "[%s] CgiConnection::onWrite()\n", getLogId() ));
+    if (D_ENABLED(DL_MEDIUM))
+        LOG_D((getLogger(), "[%s] CgiConnection::onWrite()\n", getLogId()));
     int ret = extOutputReady();
-    if (!( getConnector()->getState() & HEC_FWD_REQ_BODY ))
-    {
+    if (!(getConnector()->getState() & HEC_FWD_REQ_BODY))
         suspendWrite();
-    }
     return ret;
 }
 
 
 int CgiConnection::onError()
 {
-    if ( !getConnector() )
+    if (!getConnector())
         return -1;
-    if ( D_ENABLED( DL_MEDIUM ) )
-        LOG_D(( getLogger(), "[%s] CgiConnection::onError()\n", getLogId() ));
+    if (D_ENABLED(DL_MEDIUM))
+        LOG_D((getLogger(), "[%s] CgiConnection::onError()\n", getLogId()));
     //getState() = HEC_COMPLETE;
-    getConnector()->endResponse( SC_500, 0 );
+    getConnector()->endResponse(SC_500, 0);
     return -1;
 }
 
-int CgiConnection::onEventDone( short event)
+int CgiConnection::onEventDone(short event)
 {
     return true;
 }
@@ -127,18 +126,18 @@ bool CgiConnection::wantWrite()
 //interface defined by HttpExtProcessor
 void CgiConnection::abort()
 {
-    ::shutdown( getfd(), SHUT_RDWR );
+    ::shutdown(getfd(), SHUT_RDWR);
 }
 
 
-int CgiConnection::init( int fd, Multiplexer* pMultiplexer,
-                    HttpExtConnector *pConn )
+int CgiConnection::init(int fd, Multiplexer *pMultiplexer,
+                        HttpExtConnector *pConn)
 {
-    assert( fd != -1 );
-    assert( pMultiplexer );
-    assert( pConn != NULL );
-    setConnector( pConn );
-    EdStream::init( fd, pMultiplexer, POLLIN | POLLOUT | POLLHUP | POLLERR );
+    assert(fd != -1);
+    assert(pMultiplexer);
+    assert(pConn != NULL);
+    setConnector(pConn);
+    EdStream::init(fd, pMultiplexer, POLLIN | POLLOUT | POLLHUP | POLLERR);
     return 0;
 }
 
@@ -160,7 +159,7 @@ int CgiConnection::beginReqBody()
 int CgiConnection::endOfReqBody()
 {
     suspendWrite();
-    ::shutdown( getfd(), SHUT_WR );
+    ::shutdown(getfd(), SHUT_WR);
     return 0;
 }
 
@@ -168,11 +167,11 @@ int CgiConnection::endOfReqBody()
 int  CgiConnection::sendReqHeader()
 {   return 0;   }
 
-int CgiConnection::sendReqBody( const char * pBuf, int size )
+int CgiConnection::sendReqBody(const char *pBuf, int size)
 {
-    int ret = write( pBuf, size );
+    int ret = write(pBuf, size);
     //printf( ">>write %d bytes to CGI\n", ret );
-    
+
     return ret;
 }
 
@@ -180,13 +179,16 @@ int CgiConnection::sendReqBody( const char * pBuf, int size )
 
 int CgiConnection::s_iCgiCount = 0;
 
-void *CgiConnection::operator new( size_t sz )
-{   void * ret = g_pool.allocate( sizeof( CgiConnection ) );
-    if ( ret )
+void *CgiConnection::operator new(size_t sz)
+{
+    void *ret = g_pool.allocate(sizeof(CgiConnection));
+    if (ret)
         ++s_iCgiCount;
     return ret;
 }
-void CgiConnection::operator delete( void * p)
-{   --s_iCgiCount;
-    return g_pool.deallocate( p, sizeof( CgiConnection ) );    }
+void CgiConnection::operator delete(void *p)
+{
+    --s_iCgiCount;
+    return g_pool.deallocate(p, sizeof(CgiConnection));
+}
 

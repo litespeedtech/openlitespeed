@@ -20,10 +20,10 @@
 #ifdef RUN_TEST
 #include "httpdtest.h"
 #include "test/unittest-cpp/UnitTest++/src/UnitTest++.h"
-    
+
 int HttpdTest::runTest()
 {
-    UnitTest::RunAllTests();    
+    UnitTest::RunAllTests();
     return 0;
 }
 #endif

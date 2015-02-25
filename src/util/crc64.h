@@ -15,12 +15,12 @@
 *    You should have received a copy of the GNU General Public License       *
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
-#define __STDC_CONSTANT_MACROS 
+#define __STDC_CONSTANT_MACROS
 #include <inttypes.h>
 #include <sys/types.h>
 
 #ifndef CRC64_H
 #define CRC64_H
-extern uint64_t ls_crc64( uint64_t crc, const uint8_t * buf, size_t size);
+extern uint64_t ls_crc64(uint64_t crc, const uint8_t *buf, size_t size);
 //extern void ls_crc64_init(void);
 #endif

@@ -21,7 +21,7 @@
 #include <cacheentry.h>
 
 /**
-	@author Gang Wang <gwang@litespeedtech.com>
+    @author Gang Wang <gwang@litespeedtech.com>
 */
 class DirHashCacheStore;
 class DirHashCacheEntry : public CacheEntry
@@ -36,7 +36,7 @@ public:
 
     int saveCeHeader();
 
-    int allocate( int size );
+    int allocate(int size);
 
     int releaseTmpResource();
 

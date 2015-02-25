@@ -20,14 +20,14 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <unistd.h>
- 
+
 int nio_creat(const char *pathname, mode_t mode)
 {
     int ret;
-    while( 1 )
+    while (1)
     {
-        ret = creat( pathname, mode );
-        if (( ret == -1 )&&( errno == EINTR ))
+        ret = creat(pathname, mode);
+        if ((ret == -1) && (errno == EINTR))
             continue;
         return ret;
     }
@@ -36,47 +36,47 @@ int nio_creat(const char *pathname, mode_t mode)
 int nio_open(const char *pathname, int flags, mode_t mode)
 {
     int ret;
-    while( 1 )
+    while (1)
     {
-        ret = open( pathname, flags, mode );
-        if (( ret == -1 )&&( errno == EINTR ))
+        ret = open(pathname, flags, mode);
+        if ((ret == -1) && (errno == EINTR))
             continue;
         return ret;
     }
 }
 
-int nio_close( int fd )
+int nio_close(int fd)
 {
     int ret;
-    while( 1 )
+    while (1)
     {
-        ret = close( fd );
-        if (( ret == -1 )&&( errno == EINTR ))
+        ret = close(fd);
+        if ((ret == -1) && (errno == EINTR))
             continue;
         return ret;
     }
 }
 
-int nio_read( int fd, void * pBuf, int len )
+int nio_read(int fd, void *pBuf, int len)
 {
     int ret;
-    while( 1 )
+    while (1)
     {
-        ret = read( fd, pBuf, len );
-        if (( ret == -1 )&&( errno == EINTR ))
+        ret = read(fd, pBuf, len);
+        if ((ret == -1) && (errno == EINTR))
             continue;
         return ret;
     }
 }
 
 
-int nio_write( int fd, const void * pBuf, int len )
+int nio_write(int fd, const void *pBuf, int len)
 {
     int ret;
-    while( 1 )
+    while (1)
     {
-        ret = write( fd, pBuf, len );
-        if (( ret == -1 )&&( errno == EINTR ))
+        ret = write(fd, pBuf, len);
+        if ((ret == -1) && (errno == EINTR))
             continue;
         return ret;
     }
@@ -85,22 +85,22 @@ int nio_write( int fd, const void * pBuf, int len )
 off_t nio_lseek(int fd, off_t offset, int whence)
 {
     off_t ret;
-    while( 1 )
+    while (1)
     {
-        ret = lseek( fd, offset, whence );
-        if (( ret == -1 )&&( errno == EINTR ))
+        ret = lseek(fd, offset, whence);
+        if ((ret == -1) && (errno == EINTR))
             continue;
         return ret;
     }
 }
 
-int nio_stat( const char * pathname, struct stat * st )
+int nio_stat(const char *pathname, struct stat *st)
 {
     int ret;
-    while( 1 )
+    while (1)
     {
-        ret = stat( pathname, st );
-        if (( ret == -1 )&&(( errno == EINTR )||(errno == EAGAIN)))
+        ret = stat(pathname, st);
+        if ((ret == -1) && ((errno == EINTR) || (errno == EAGAIN)))
             continue;
         return ret;
     }

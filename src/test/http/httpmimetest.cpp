@@ -27,62 +27,62 @@
 
 #include <http/httpglobals.h>
 
-TEST( HttpMimeTest_runTest)
+TEST(HttpMimeTest_runTest)
 {
     HttpMime m;
-    const char* pOldType ;
-    const char* pNewType;
-    const char* pOldType2 ;
-    const char* pNewType2;
-    int ret; 
+    const char *pOldType ;
+    const char *pNewType;
+    const char *pOldType2 ;
+    const char *pNewType2;
+    int ret;
     char achBuf[256];
-    char * p = achBuf;
-    strcpy( p, HttpGlobals::s_pServerRoot );
-    CHECK( p != NULL );
-    char * pEnd = p + strlen( p );
+    char *p = achBuf;
+    strcpy(p, HttpGlobals::s_pServerRoot);
+    CHECK(p != NULL);
+    char *pEnd = p + strlen(p);
 
- //   CHECK(m.loadMime("/proj/httpd/httpd/serverroot/conf/m2")!=0);
-    strcpy( pEnd, "/conf/m2" );
+//   CHECK(m.loadMime("/proj/httpd/httpd/serverroot/conf/m2")!=0);
+    strcpy(pEnd, "/conf/m2");
     ret = m.loadMime(achBuf);
-    CHECK( ret == 0 );
-    if ( ret != 0 )
+    CHECK(ret == 0);
+    if (ret != 0)
         return;
     //printf( "m.getFileMime(\"as/dadf/abc.doc\") return %s\n", m.getFileMime("as/dadf/abc.doc"));
     CHECK(strcmp(m.getFileMime("as/dadf/abc.doc")->getMIME()->c_str(),
-                "application/msword") == 0 );
+                 "application/msword") == 0);
     CHECK(strcmp(m.getFileMime("as/dadf/abc.html")->getMIME()->c_str(),
-                "text/html") == 0 );
+                 "text/html") == 0);
     CHECK(strcmp(m.getFileMime("as/dadf/abc.htm")->getMIME()->c_str(),
-                "text/html") == 0 );
-    CHECK(m.getFileMime("as/dadf/abc") == NULL );
-    CHECK(m.getFileMime("as/dadf/abc.") == NULL );
-    CHECK(m.getFileMime("as/dadf/abc") == NULL );
+                 "text/html") == 0);
+    CHECK(m.getFileMime("as/dadf/abc") == NULL);
+    CHECK(m.getFileMime("as/dadf/abc.") == NULL);
+    CHECK(m.getFileMime("as/dadf/abc") == NULL);
 
     pOldType = m.getFileMime("f/abc.jpg")->getMIME()->c_str();
-    CHECK(strcmp(pOldType, "image/jpeg") == 0 );
+    CHECK(strcmp(pOldType, "image/jpeg") == 0);
     pOldType2 = m.getFileMime("asdsa/sda3.gzip")->getMIME()->c_str();
-    CHECK(strcmp(pOldType2, "application/gzip0") == 0 );
-    strcpy( pEnd, "/conf/m1" );
+    CHECK(strcmp(pOldType2, "application/gzip0") == 0);
+    strcpy(pEnd, "/conf/m1");
     m.loadMime(achBuf);
     CHECK(strcmp(m.getFileMime("as/dadf/abc.html")->getMIME()->c_str(),
-                "text/html") == 0 );
+                 "text/html") == 0);
     CHECK(strcmp(m.getFileMime("as/dadf/abc.htm")->getMIME()->c_str(),
-                "text/html") == 0 );
+                 "text/html") == 0);
     pNewType = m.getFileMime("f/abc.jpg")->getMIME()->c_str();
     CHECK(pOldType == pNewType);
     pNewType2 = m.getFileMime("asdsa/sda3.gzip")->getMIME()->c_str();
-    CHECK(strcmp(pNewType2, "application/gzip")== 0 );
-    CHECK( pNewType2 != pOldType2 );
-    CHECK(strcmp(pOldType2, "application/gzip0") == 0 );
-    strcpy( pEnd, "/conf/m2" );
+    CHECK(strcmp(pNewType2, "application/gzip") == 0);
+    CHECK(pNewType2 != pOldType2);
+    CHECK(strcmp(pOldType2, "application/gzip0") == 0);
+    strcpy(pEnd, "/conf/m2");
     m.loadMime(achBuf);
     pNewType = m.getFileMime("asdsa/sda3.gzip")->getMIME()->c_str();
-    CHECK(strcmp(pNewType, "application/gzip0")== 0 );
+    CHECK(strcmp(pNewType, "application/gzip0") == 0);
     CHECK(pNewType != pNewType2);
     CHECK(pNewType == pOldType2);
-    CHECK(strcmp(pOldType2, "application/gzip0") == 0 );
-    CHECK(strcmp(pNewType2, "application/gzip") == 0 );
-    strcpy( pEnd, "/conf/m2" );
+    CHECK(strcmp(pOldType2, "application/gzip0") == 0);
+    CHECK(strcmp(pNewType2, "application/gzip") == 0);
+    strcpy(pEnd, "/conf/m2");
     m.loadMime(achBuf);
     pNewType2 = m.getFileMime("asdsa/sda3.gzip")->getMIME()->c_str();
     CHECK(pNewType == pNewType2);

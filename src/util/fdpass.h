@@ -22,12 +22,12 @@
 
 class FDPass
 {
-public: 
-	FDPass();
-	~FDPass();
+public:
+    FDPass();
+    ~FDPass();
     static int read_fd(int fd, void *ptr, int nbytes, int *recvfd);
     static int write_fd(int fd, void *ptr, int nbytes, int sendfd);
-    
+
 };
 
 #endif

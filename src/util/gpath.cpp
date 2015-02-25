@@ -41,42 +41,38 @@ public:
 class ReadLinkCache : public HashStringMap< ReadLinkInfo * >
 {
 public:
-    ReadLinkCache( int initSize)
-        : HashStringMap< ReadLinkInfo * >( initSize )
+    ReadLinkCache(int initSize)
+        : HashStringMap< ReadLinkInfo * >(initSize)
     {}
     ~ReadLinkCache()
     {}
-    int readlink( const char *path, char *buf, size_t bufsiz )
+    int readlink(const char *path, char *buf, size_t bufsiz)
     {
         int ret;
-        iterator iter = find( path );
-        if ( iter )
+        iterator iter = find(path);
+        if (iter)
         {
             ret = iter.second()->m_iRet;
-            if ( ret != -1 )
-            {
-                memccpy( buf, iter.second()->m_sRes.c_str(), 0, bufsiz );
-            }
+            if (ret != -1)
+                memccpy(buf, iter.second()->m_sRes.c_str(), 0, bufsiz);
             else
-            {
                 errno = iter.second()->m_iErrno;
-            }
         }
         else
         {
-            ret = ::readlink( path, buf, bufsiz );
-            ReadLinkInfo * pInfo = new ReadLinkInfo();
-            if ( pInfo )
+            ret = ::readlink(path, buf, bufsiz);
+            ReadLinkInfo *pInfo = new ReadLinkInfo();
+            if (pInfo)
             {
-                pInfo->m_sPath.setStr( path );
+                pInfo->m_sPath.setStr(path);
                 pInfo->m_iRet = ret;
                 pInfo->m_iErrno = errno;
-                if ( ret != -1 )
+                if (ret != -1)
                 {
-                    *(buf + ret ) = 0;
-                    pInfo->m_sRes.setStr( buf );
+                    *(buf + ret) = 0;
+                    pInfo->m_sRes.setStr(buf);
                 }
-                insert( pInfo->m_sPath.c_str(), pInfo );
+                insert(pInfo->m_sPath.c_str(), pInfo);
             }
         }
         return ret;
@@ -86,7 +82,7 @@ public:
     {   release_objects();  }
 };
 
-static ReadLinkCache * s_readLinkCache = NULL;
+static ReadLinkCache *s_readLinkCache = NULL;
 
 int GPath::initReadLinkCache()
 {
@@ -96,226 +92,219 @@ int GPath::initReadLinkCache()
 
 void GPath::clearReadLinkCache()
 {
-    if ( s_readLinkCache )
-         s_readLinkCache->clear();
+    if (s_readLinkCache)
+        s_readLinkCache->clear();
 
 }
 
-bool GPath::isValid(const char* path)
+bool GPath::isValid(const char *path)
 {
-    return( access( path, F_OK ) == 0 );
+    return (access(path, F_OK) == 0);
 }
 
-bool GPath::isWritable(const char* path)
+bool GPath::isWritable(const char *path)
 {
     char buf[256];
-    strcpy( buf, path );
-    char* pEnd = strrchr( buf, '/' );
-    if ( pEnd != NULL )
+    strcpy(buf, path);
+    char *pEnd = strrchr(buf, '/');
+    if (pEnd != NULL)
     {
         *pEnd = 0;
-        return( access( buf, F_OK|W_OK ) == 0 );
+        return (access(buf, F_OK | W_OK) == 0);
     }
     return false;
 }
 int GPath::clean(char *path)
 {
-    clean( path, strlen( path ) );
+    clean(path, strlen(path));
     return 0;
 }
 int GPath::clean(char *path, int len)
 {
-/**
-    State:                        /      a  
-                       remove <------[3]---> [0] 
-                         |            ^   /
-                         |            |  /
-                         |           .| /
-                    /    V    .       |/    /
-            a[0] -----> [1] -------> [2] -------> remove './' ----> [1]
-                <------  ^\           |
-                    a    | \/         |a
-                         |  \        [0]
-                         remove '/'
-*/
+    /**
+        State:                        /      a
+                           remove <------[3]---> [0]
+                             |            ^   /
+                             |            |  /
+                             |           .| /
+                        /    V    .       |/    /
+                a[0] -----> [1] -------> [2] -------> remove './' ----> [1]
+                    <------  ^\           |
+                        a    | \/         |a
+                             |  \        [0]
+                             remove '/'
+    */
     char ch;
-    char * p0 = path;
+    char *p0 = path;
     char *p1 = NULL;
-    int state = ( *p0 != '/' );
-    char * pEnd = p0 + len + 1 ;
-    while ( (ch=*p0++ ) )
+    int state = (*p0 != '/');
+    char *pEnd = p0 + len + 1 ;
+    while ((ch = *p0++))
     {
-        switch(state)
+        switch (state)
         {
-        case 0: if ( ch == '/' )
+        case 0:
+            if (ch == '/')
+                state = 1;
+            break;
+        case 1:
+            if (ch == '.')
+                state = 2;
+            else if (ch == '/')
+            {
+                memmove(p0 - 1, p0, pEnd - p0);
+                --p0;
+                //if (( p0 > path ) && (p0[-1] != '/' ))
+                //    state = 0;
+                --pEnd;
+            }
+            else
+                state = 0;
+            break;
+        case 2:
+            if (ch == '.')
+                state = 3;
+            else if (ch == '/')
+            {
+                state = 1;
+                memmove(p0 - 2, p0, pEnd - p0);
+                p0 -= 2;
+                pEnd -= 2;
+            }
+            else
+                state = 0;
+            break;
+        case 3:
+            if (ch == '/')
+            {
+                if (p0 - 4 == path)
+                    return -1;
+                for (p1 = p0 - 5 ; p1 >= path ; --p1)
                 {
-                    state = 1;
+                    if (*p1 == '/')
+                        break;
                 }
-                break;
-        case 1: if ( ch == '.' )
+                if (p1 >= path - 1)
                 {
-                    state = 2;
+                    memmove(p1 + 1, p0, pEnd - p0);
+                    pEnd -= p0 - (p1 + 1);
+                    p0 = p1 + 1;
                 }
-                else if ( ch == '/' )
-                {
-                    memmove(p0 -1, p0, pEnd - p0);
-                    --p0;
-                    //if (( p0 > path ) && (p0[-1] != '/' ))
-                    //    state = 0;
-                    --pEnd;
-                }
-                else
-                {
-                    state = 0;
-                }
-                break;
-        case 2: if ( ch == '.' )
-                {
-                    state = 3;
-                }
-                else if ( ch == '/' )
-                {
-                    state = 1;
-                    memmove(p0 - 2, p0, pEnd - p0);
-                    p0 -= 2;
-                    pEnd -= 2;
-                }
-                else
-                {
-                    state = 0;
-                }
-                break;
-        case 3: if ( ch == '/' )
-                {
-                    if(p0 - 4 == path)
-                        return -1;
-                    for ( p1 = p0-5 ; p1 >= path ; --p1 )
-                    {
-                        if ( *p1 == '/' )
-                            break;
-                    }
-                    if ( p1 >= path - 1)
-                    {
-                        memmove( p1 + 1, p0, pEnd - p0 );
-                        pEnd -= p0 - (p1+1);
-                        p0 = p1+1;
-                    }
-                    state = 1;
-                }
-                else
-                {
-                    state = 0;
-                }
-                break;
+                state = 1;
+            }
+            else
+                state = 0;
+            break;
         }
     }
     return p0 - path - 1;
 }
 
-int GPath::concat(char* dest, size_t size, const char* pRoot, const char* pAppend)
+int GPath::concat(char *dest, size_t size, const char *pRoot,
+                  const char *pAppend)
 {
-    int len1 = strlen( pRoot );
-    int len2 = strlen( pAppend );
-    if ( len1 + len2 + 2 >= (int)size )
+    int len1 = strlen(pRoot);
+    int len2 = strlen(pAppend);
+    if (len1 + len2 + 2 >= (int)size)
         return -1;
-    strcpy( dest, pRoot );
+    strcpy(dest, pRoot);
     char *pEnd = dest + len1 - 1;
-    if ( *pEnd != '/' )
+    if (*pEnd != '/')
     {
         *(++pEnd) = '/';
         *(++pEnd) = 0;
     }
     else
         ++pEnd;
-    char *p2 = (char*)pAppend;
-    if ( *p2 == '/' )
+    char *p2 = (char *)pAppend;
+    if (*p2 == '/')
     {
         len2 -- ;
         p2 ++;
     }
-    memmove( pEnd, p2, len2 + 1 );
-    
+    memmove(pEnd, p2, len2 + 1);
+
     return 0;
 }
 
-int GPath::getAbsolutePath(char* dest, size_t size, 
-                            const char* relativeRoot, const char* path)
+int GPath::getAbsolutePath(char *dest, size_t size,
+                           const char *relativeRoot, const char *path)
 {
-    if ( path == NULL )
+    if (path == NULL)
         return -1;
     int iLen;
-    if ((relativeRoot)&&(*relativeRoot)&&(*path != '/' ))
+    if ((relativeRoot) && (*relativeRoot) && (*path != '/'))
     {
-        if ( concat(dest, size, relativeRoot, path)  )
+        if (concat(dest, size, relativeRoot, path))
             return -1;
         iLen = strlen(dest);
     }
     else
     {
         iLen = strlen(path);
-        if ( iLen + 1 >= (int)size )
+        if (iLen + 1 >= (int)size)
             return -1;
-        
-        strcpy( dest, path );
+
+        strcpy(dest, path);
     }
     char *pEnd = dest + iLen - 1;
-    if ( *pEnd != '/' )
+    if (*pEnd != '/')
     {
         *(++pEnd) = '/';
         *(++pEnd) = 0;
     }
-    
-    return clean( dest );
+
+    return clean(dest);
 }
 
-int GPath::getAbsoluteFile(char* dest, size_t size, 
-                           const char* relativeRoot, const char* file)
+int GPath::getAbsoluteFile(char *dest, size_t size,
+                           const char *relativeRoot, const char *file)
 {
-    if ( file == NULL )
+    if (file == NULL)
         return -1;
-    while( isspace( *file ) )
+    while (isspace(*file))
         ++file;
-    if ((relativeRoot)&&(*relativeRoot)&&( *file != '/' ))
+    if ((relativeRoot) && (*relativeRoot) && (*file != '/'))
     {
-        if ( concat(dest, size, relativeRoot, file) )
+        if (concat(dest, size, relativeRoot, file))
             return -1;
     }
     else
     {
         int iLen = strlen(file);
-        if ( iLen + 1 >= (int)size )
+        if (iLen + 1 >= (int)size)
             return -1;
 
-        strcpy( dest, file );
+        strcpy(dest, file);
     }
-    return clean( dest );
+    return clean(dest);
 }
 
-bool GPath::hasSymLinks( char *path, char * pEnd, char * pStart )
+bool GPath::hasSymLinks(char *path, char *pEnd, char *pStart)
 {
     struct stat st;
     int ret;
-    char * p;
-    if ( !pStart )
+    char *p;
+    if (!pStart)
         pStart = path + 1;
-    else if ( pStart == path )
+    else if (pStart == path)
         ++pStart;
-    while( pStart < pEnd )
+    while (pStart < pEnd)
     {
-        p = (char *)memchr( pStart, '/', pEnd - pStart );
-        if ( p )
+        p = (char *)memchr(pStart, '/', pEnd - pStart);
+        if (p)
             *p = 0;
-        ret = lstat( path, &st );
-        if ( p )
+        ret = lstat(path, &st);
+        if (p)
         {
             *p = '/';
             pStart = p + 1;
         }
         else
             pStart = pEnd;
-        if ( ret == -1 )
+        if (ret == -1)
             return false;
-        if ( S_ISLNK( st.st_mode ) )
+        if (S_ISLNK(st.st_mode))
             return true;
     }
     return false;
@@ -323,65 +312,59 @@ bool GPath::hasSymLinks( char *path, char * pEnd, char * pStart )
 
 #define GPATH_PATH_MAX  4096
 #define MAX_LINKS       8
-int GPath::checkSymLinks( char *path, char * pEnd, const char * pathBufEnd,
-                        char * pStart, int getRealPath, int *hasLink )
+int GPath::checkSymLinks(char *path, char *pEnd, const char *pathBufEnd,
+                         char *pStart, int getRealPath, int *hasLink)
 {
     struct stat st, stLink;
     int links = 0;
     int ret;
     int r;
-    char * p;
+    char *p;
     int skip = 0;
     int retrace = 0;
-    char * pCur = pStart;
-    char * pBuf;
-    char * pBufEnd;
-    char * pStoreEnd;
+    char *pCur = pStart;
+    char *pBuf;
+    char *pBufEnd;
+    char *pStoreEnd;
     char achBuf[GPATH_PATH_MAX];
     achBuf[0] = 0;
-    if ( hasLink )
+    if (hasLink)
         *hasLink = 0;
-    if (( !path )||( !pEnd ))
+    if ((!path) || (!pEnd))
     {
         errno = EINVAL;
         return -1;
     }
-    if (( !*path )||( *path != '/' ))
+    if ((!*path) || (*path != '/'))
     {
         errno = ENOENT;
         return -1;
     }
-    if ( !pStart )
-    {
+    if (!pStart)
         pStart = path;
-    }
-    else if ((*pStart)&&( *pStart != '/' ))
+    else if ((*pStart) && (*pStart != '/'))
     {
-        if ( *(--pStart) != '/' )
+        if (*(--pStart) != '/')
         {
             //errno = ENOENT;
             //return -1;
             pStart = path;
         }
     }
-    if ( *pCur == '/' )
-    {
+    if (*pCur == '/')
         ++pCur;
-    }
     pStoreEnd = &achBuf[GPATH_PATH_MAX] - 1;
-    while( 1 )
+    while (1)
     {
-        if ( *pStart )
+        if (*pStart)
         {
-            if( pCur >= pEnd )
-            {
+            if (pCur >= pEnd)
                 return pEnd - path;
-            }
-            while( *(pCur + skip) == '/' )
+            while (*(pCur + skip) == '/')
                 ++skip;
-            if ( *(pCur + skip) == '.' )
+            if (*(pCur + skip) == '.')
             {
-                switch( *( pCur + skip + 1 ) )
+                switch (*(pCur + skip + 1))
                 {
                 case 0:
                     ++skip;
@@ -390,92 +373,88 @@ int GPath::checkSymLinks( char *path, char * pEnd, const char * pathBufEnd,
                     skip += 2;
                     continue;
                 case '.':
-                    if (( *(pCur + skip + 2) == '/' )||( *(pCur + skip + 2) == 0 ))
+                    if ((*(pCur + skip + 2) == '/') || (*(pCur + skip + 2) == 0))
                     {
-                        skip += 2 + *(pCur + skip + 2)?1:0;
-                        if ( pStart + retrace > path )
+                        skip += 2 + *(pCur + skip + 2) ? 1 : 0;
+                        if (pStart + retrace > path)
                         {
                             --retrace;
-                            while(( pStart + retrace > path )&&( pStart[ retrace ] != '/' ))
+                            while ((pStart + retrace > path) && (pStart[ retrace ] != '/'))
                                 --retrace;
                         }
                         continue;
                     }
                 }
             }
-            if ( skip || retrace )
+            if (skip || retrace)
             {
-                memmove( pStart + retrace + 1, pCur + skip, pEnd - pCur - skip + 1 );
+                memmove(pStart + retrace + 1, pCur + skip, pEnd - pCur - skip + 1);
                 pStart += retrace;
                 pCur = pStart + 1;
                 pEnd -= skip - retrace;
                 skip = retrace = 0;
-                if ( pCur >= pEnd )
-                {
+                if (pCur >= pEnd)
                     return pEnd - path;
-                }
             }
-            p = (char *)strchr( pCur + 1, '/' );
-            if ( p )
-            {
+            p = (char *)strchr(pCur + 1, '/');
+            if (p)
                 *p = 0;
-            }
         }
         else
             p = NULL;
         pBuf = &achBuf[1];
 
-        ret = ::readlink( path, pBuf, pStoreEnd - pBuf );
-        if ( ret == -1 )
+        ret = ::readlink(path, pBuf, pStoreEnd - pBuf);
+        if (ret == -1)
         {
-            if ( errno != EINVAL )
+            if (errno != EINVAL)
             {
                 //fprintf( stderr, "readlink() errno: %d, != %d\n", errno, EINVAL );
                 ret = pEnd - path;
-                if (( errno == ENOENT )||( errno == ENOTDIR ))
+                if ((errno == ENOENT) || (errno == ENOTDIR))
                 {
-                    if ( p ) 
+                    if (p)
                     {
                         ret = p - path;
                         p = NULL;
                     }
                 }
-                assert( ret >= 0 );
+                assert(ret >= 0);
                 break;
             }
         }
         else
         {
-            if ( hasLink )
+            if (hasLink)
                 *hasLink = 1;
-            if ( !getRealPath )
+            if (!getRealPath)
             {
                 errno = EACCES;
                 ret = -1;
                 break;
             }
-            if ( ++links > MAX_LINKS )
+            if (++links > MAX_LINKS)
             {
                 errno = ELOOP;
                 ret = -1;
                 break;
             }
-            if ( getRealPath == 2 )
-                lstat( path, &stLink );
+            if (getRealPath == 2)
+                lstat(path, &stLink);
             pBufEnd = pBuf + ret;
-            if ( *(pBufEnd - 1) == '/' )
+            if (*(pBufEnd - 1) == '/')
             {
-                while( *( pBufEnd - 2 ) == '/' )
+                while (*(pBufEnd - 2) == '/')
                     --pBufEnd;
             }
             (*pBufEnd) = 0;
-            if ( pBuf[0] == '/' )
+            if (pBuf[0] == '/')
             {
                 do
                 {
                     ++pBuf;
                 }
-                while( *pBuf == '/' );
+                while (*pBuf == '/');
                 pStart = path;
                 *pStart = '/';
                 pCur = pStart + 1;
@@ -483,156 +462,147 @@ int GPath::checkSymLinks( char *path, char * pEnd, const char * pathBufEnd,
             }
             else
             {
-                if ( pBuf[0] == '.' )
+                if (pBuf[0] == '.')
                 {
-                    if ( pBuf[1] == '/' )
+                    if (pBuf[1] == '/')
                     {
                         pBuf += 2;
-                        while( *pBuf == '/' )
+                        while (*pBuf == '/')
                             ++pBuf;
                     }
                 }
             }
-            if ( p )
+            if (p)
             {
                 ret = pBufEnd - pBuf;
-                while( *(p+1) == '/' )
+                while (*(p + 1) == '/')
                     ++p;
-                if( *(pBufEnd - 1 ) == '/' )
+                if (*(pBufEnd - 1) == '/')
                     ++p;
                 else
                     *p = '/';
-                if ( pCur + ret + (pEnd - p) >= pathBufEnd )
+                if (pCur + ret + (pEnd - p) >= pathBufEnd)
                 {
                     errno = ENAMETOOLONG;
                     return -1;
                 }
-                memmove( pCur + ret, p , pEnd - p + 1 );
+                memmove(pCur + ret, p , pEnd - p + 1);
                 pEnd = pCur + ret + (pEnd - p);
             }
             else
             {
                 ret = pBufEnd - pBuf;
-                *( pCur + ret ) = 0;
+                *(pCur + ret) = 0;
                 pEnd = pCur + ret;
-                if ( pEnd >= pathBufEnd )
+                if (pEnd >= pathBufEnd)
                 {
                     errno = ENAMETOOLONG;
                     return -1;
                 }
             }
-            memmove( pCur, pBuf, ret );
-            if (( getRealPath == 2 )&&( stLink.st_uid ))    //link is not owned by root user
+            memmove(pCur, pBuf, ret);
+            if ((getRealPath == 2)
+                && (stLink.st_uid))      //link is not owned by root user
             {
-                register char ch = *(pCur + ret );
-                *(pCur + ret ) = 0;
-                r = lstat( path, &st );
-                *(pCur + ret ) = ch;
-                if ( r == -1 )
+                register char ch = *(pCur + ret);
+                *(pCur + ret) = 0;
+                r = lstat(path, &st);
+                *(pCur + ret) = ch;
+                if (r == -1)
                 {
                     ret = -1;
                     break;
                 }
-                if ( st.st_uid != stLink.st_uid )
+                if (st.st_uid != stLink.st_uid)
                 {
                     errno = EACCES;
                     ret = -1;
                     break;
                 }
-                
+
             }
-            
+
             continue;
         }
-            
-        if ( p )
+
+        if (p)
         {
             *p = '/';
             pStart = p;
             pCur = p + 1;
         }
         else
-        {
             return pEnd - path;
-        }
     }
-    if ( p )
+    if (p)
         *p = '/';
     return ret;
 }
 
 
-bool GPath::isChanged( struct stat* stNew, struct stat* stOld )
+bool GPath::isChanged(struct stat *stNew, struct stat *stOld)
 {
-    return ((stNew->st_size != stOld->st_size)||
-            (stNew->st_ino != stOld->st_ino )||
-            (stNew->st_mtime != stOld->st_mtime ));
+    return ((stNew->st_size != stOld->st_size) ||
+            (stNew->st_ino != stOld->st_ino) ||
+            (stNew->st_mtime != stOld->st_mtime));
 }
 
 #include <util/ni_fio.h>
 
-int  GPath::readFile( char * pBuf, int bufLen, const char *pName, const char *pBase)
+int  GPath::readFile(char *pBuf, int bufLen, const char *pName,
+                     const char *pBase)
 {
     char achFilePath[512];
     int fd;
-    if ( getAbsoluteFile( achFilePath, 512, pBase, pName ) == -1 )
-    {
-         return -1;
-    }
-    fd = nio_open( achFilePath, O_RDONLY, 0644 );
-    if ( fd == -1 )
-    {
+    if (getAbsoluteFile(achFilePath, 512, pBase, pName) == -1)
         return -1;
-    }
-    int ret = nio_read( fd, pBuf, bufLen );
-    nio_close( fd );
+    fd = nio_open(achFilePath, O_RDONLY, 0644);
+    if (fd == -1)
+        return -1;
+    int ret = nio_read(fd, pBuf, bufLen);
+    nio_close(fd);
     return ret;
 }
 
-int  GPath::writeFile( const char * pBuf, int bufLen, const char *pName, int mode, const char *pBase)
+int  GPath::writeFile(const char *pBuf, int bufLen, const char *pName,
+                      int mode, const char *pBase)
 {
     char achFilePath[512];
     int fd;
-    if ( getAbsoluteFile( achFilePath, 512, pBase, pName ) == -1 )
-    {
-         return -1;
-    }
-    fd = nio_creat( achFilePath, mode );
-    if ( fd == -1 )
-    {
+    if (getAbsoluteFile(achFilePath, 512, pBase, pName) == -1)
         return -1;
-    }
+    fd = nio_creat(achFilePath, mode);
+    if (fd == -1)
+        return -1;
     int total = 0;
-    while( total < bufLen )
+    while (total < bufLen)
     {
-        int ret = nio_write( fd, pBuf + total, bufLen - total );
-        if ( ret > 0 )
+        int ret = nio_write(fd, pBuf + total, bufLen - total);
+        if (ret > 0)
             total += ret;
         else
             break;
     }
-    nio_close( fd );
+    nio_close(fd);
     return total;
 }
 
-int GPath::createMissingPath( char * pBuf, int mode )
+int GPath::createMissingPath(char *pBuf, int mode)
 {
     struct stat st;
-    if ( !GPath::isValid( pBuf ) )
+    if (!GPath::isValid(pBuf))
     {
-        char * p = strchr( pBuf+1, '/' );
-        while( p )
+        char *p = strchr(pBuf + 1, '/');
+        while (p)
         {
             *p = 0;
-            if ( nio_stat( pBuf, &st ) == -1 )
+            if (nio_stat(pBuf, &st) == -1)
             {
-                if ( mkdir( pBuf, mode ) == -1 )
-                {
+                if (mkdir(pBuf, mode) == -1)
                     return -1;
-                }
             }
             *p++ = '/';
-            p = strchr( p, '/' );
+            p = strchr(p, '/');
         }
     }
     return 0;

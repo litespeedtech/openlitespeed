@@ -24,28 +24,29 @@
 class XmlNode;
 
 
-class HttpConfigLoader {
+class HttpConfigLoader
+{
 private:
-    XmlNode       * m_pRoot;
+    XmlNode        *m_pRoot;
 
     AutoStr         m_sConfigFilePath;
     AutoStr         m_sPlainconfPath;
-   
+
 public:
-    HttpConfigLoader( )
+    HttpConfigLoader()
         : m_pRoot(NULL)
-        , m_sPlainconfPath ( "" )
-        {};
+        , m_sPlainconfPath("")
+    {};
 
     ~HttpConfigLoader();
     void releaseConfigXmlTree();
-    int loadConfigFile( const char * pConfigFile = NULL);
+    int loadConfigFile(const char *pConfigFile = NULL);
     int loadPlainConfigFile();
-    void setConfigFilePath(const char * pConfig)
+    void setConfigFilePath(const char *pConfig)
     {   m_sConfigFilePath = pConfig;      }
-    void setPlainConfigFilePath(const char * pConfig)
+    void setPlainConfigFilePath(const char *pConfig)
     {   m_sPlainconfPath = pConfig;      }
-    XmlNode* getRoot()                  {   return m_pRoot;         }
+    XmlNode *getRoot()                  {   return m_pRoot;         }
 };
 
 #endif

@@ -31,14 +31,12 @@ HashDataCache::~HashDataCache()
 {
 }
 
-const KeyData * HashDataCache::getData( const char * pKey )
+const KeyData *HashDataCache::getData(const char *pKey)
 {
     const_iterator iter;
-    iter = find( pKey );
-    if ( iter != end() )
-    {
+    iter = find(pKey);
+    if (iter != end())
         return iter.second();
-    }
     return NULL;
 }
 
@@ -46,49 +44,49 @@ const KeyData * HashDataCache::getData( const char * pKey )
 
 DataStore::~DataStore()
 {
-    if ( m_uriDataStore )
-        g_pool.deallocate2( m_uriDataStore );
+    if (m_uriDataStore)
+        g_pool.deallocate2(m_uriDataStore);
 }
 
-void DataStore::setDataStoreURI( const char * pURI )
+void DataStore::setDataStoreURI(const char *pURI)
 {
-    if ( m_uriDataStore )
-        g_pool.deallocate2( m_uriDataStore );
-    m_uriDataStore = g_pool.dupstr( pURI );
+    if (m_uriDataStore)
+        g_pool.deallocate2(m_uriDataStore);
+    m_uriDataStore = g_pool.dupstr(pURI);
 }
 
 
 
-int FileStore::isStoreChanged( long time )
+int FileStore::isStoreChanged(long time)
 {
-    long curTime = ::time( NULL );
-    if ( curTime != m_lLastCheckTime )
+    long curTime = ::time(NULL);
+    if (curTime != m_lLastCheckTime)
     {
         struct stat st;
         m_lLastCheckTime = curTime;
-        if ( nio_stat( getDataStoreURI(), &st ) == -1 )
+        if (nio_stat(getDataStoreURI(), &st) == -1)
             return -1;
-        if ( m_lModifiedTime != st.st_mtime )
+        if (m_lModifiedTime != st.st_mtime)
             return 1;
     }
-    if ( time < m_lModifiedTime )
+    if (time < m_lModifiedTime)
         return 1;
     return 0;
 }
 
 int FileStore::open()
 {
-    if ( m_fp == NULL )
+    if (m_fp == NULL)
     {
         struct stat st;
-        if ( nio_stat( getDataStoreURI(), &st ) == -1 )
+        if (nio_stat(getDataStoreURI(), &st) == -1)
             return errno;
-        if ( S_ISDIR( st.st_mode ) )
+        if (S_ISDIR(st.st_mode))
             return EINVAL;
-        m_fp = fopen( getDataStoreURI(), "r");
-        if ( m_fp == NULL )
+        m_fp = fopen(getDataStoreURI(), "r");
+        if (m_fp == NULL)
         {
-            LOG_NOTICE(( "Failed to open file: '%s'", getDataStoreURI() ));
+            LOG_NOTICE(("Failed to open file: '%s'", getDataStoreURI()));
             return errno;
         }
         m_lModifiedTime = st.st_mtime;
@@ -98,7 +96,7 @@ int FileStore::open()
 
 void FileStore::close()
 {
-    if ( m_fp )
+    if (m_fp)
     {
         fclose(m_fp);
         m_fp = NULL;
@@ -109,54 +107,50 @@ void FileStore::close()
 
 #define TEMP_BUF_LEN 4096
 
-KeyData * FileStore::getNext()
+KeyData *FileStore::getNext()
 {
-    char pBuf[TEMP_BUF_LEN+1];
-    if ( !m_fp )
+    char pBuf[TEMP_BUF_LEN + 1];
+    if (!m_fp)
         return NULL;
-    while( !feof(m_fp) )
+    while (!feof(m_fp))
     {
-        if ( fgets(pBuf, TEMP_BUF_LEN, m_fp) )
+        if (fgets(pBuf, TEMP_BUF_LEN, m_fp))
         {
-            KeyData * pData = parseLine( pBuf, &pBuf[strlen( pBuf )] );
-            if ( pData )
-            {
+            KeyData *pData = parseLine(pBuf, &pBuf[strlen(pBuf)]);
+            if (pData)
                 return pData;
-            }
         }
     }
     return NULL;
 }
 
-KeyData * FileStore::getDataFromStore( const char * pKey, int keyLen )
+KeyData *FileStore::getDataFromStore(const char *pKey, int keyLen)
 {
 
-    char * pPos;
-    char pBuf[TEMP_BUF_LEN+1];
-    KeyData * pData = NULL;
-    if ( open() )
+    char *pPos;
+    char pBuf[TEMP_BUF_LEN + 1];
+    KeyData *pData = NULL;
+    if (open())
         return NULL;
-    fseeko( m_fp, 0, SEEK_SET );
-    while( !feof(m_fp) )
+    fseeko(m_fp, 0, SEEK_SET);
+    while (!feof(m_fp))
     {
-        if ( fgets(pBuf, TEMP_BUF_LEN, m_fp) )
+        if (fgets(pBuf, TEMP_BUF_LEN, m_fp))
         {
-            if ( strncmp( pBuf, pKey, keyLen ) == 0 )
+            if (strncmp(pBuf, pKey, keyLen) == 0)
             {
                 register char ch;
                 pPos = pBuf + keyLen;
-                while( (( ch = *pPos ) == ' ')||( ch == '\t' ))
+                while (((ch = *pPos) == ' ') || (ch == '\t'))
                     ++pPos;
-                if ( *pPos++ == ':' )
+                if (*pPos++ == ':')
                 {
-                    char * pLineEnd = strlen( pPos ) + pPos;
-                    while( ((ch = pLineEnd[-1] ) == '\n' )||(ch == '\r' ))
-                        *(--pLineEnd) = 0;
-                    pData = parseLine( pKey, keyLen, pPos, pLineEnd );
-                    if ( pData )
-                    {
+                    char *pLineEnd = strlen(pPos) + pPos;
+                    while (((ch = pLineEnd[-1]) == '\n') || (ch == '\r'))
+                        * (--pLineEnd) = 0;
+                    pData = parseLine(pKey, keyLen, pPos, pLineEnd);
+                    if (pData)
                         break;
-                    }
                 }
             }
         }

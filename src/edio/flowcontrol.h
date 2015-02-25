@@ -39,9 +39,9 @@ public:
 };
 
 class IOFlowControl : virtual public OutputFlowControl
-                    , virtual public InputFlowControl
+    , virtual public InputFlowControl
 {
-public: 
+public:
     IOFlowControl() {};
     virtual ~IOFlowControl() {};
 };

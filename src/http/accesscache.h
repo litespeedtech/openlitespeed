@@ -22,19 +22,19 @@
 
 #include <util/accesscontrol.h>
 
-class AccessCache 
+class AccessCache
 {
     IPAccessControl     m_cache;
     //IP6AccessControl     m_cache6;
     AccessControl       m_accessCtrl;
-    
+
 public:
-    AccessCache( int initSize );
+    AccessCache(int initSize);
     ~AccessCache() {};
 
-    int  isAllowed( const struct sockaddr * pAddr );
+    int  isAllowed(const struct sockaddr *pAddr);
     void onTimer();
-    AccessControl* getAccessCtrl()
+    AccessControl *getAccessCtrl()
     {   return &m_accessCtrl;    }
 };
 

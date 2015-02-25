@@ -21,6 +21,7 @@
 
 
 #include <util/objpool.h>
+#include <http/hiostream.h>
 
 class ChunkInputStream;
 class ChunkOutputStream;
@@ -48,23 +49,23 @@ class HttpResourceManager
     GunzipBufPool           m_poolGunzipBuf;
     HttpSessionPool         m_poolHttpSession;
     NtwkIoLinkPool          m_poolNtwkIoLink;
-    
+
 public:
     HttpResourceManager();
     ~HttpResourceManager();
 
-    GzipBuf * getGzipBuf()
+    GzipBuf *getGzipBuf()
     {   return m_poolGzipBuf.get();         }
 
-    void recycle( GzipBuf * pBuf )
-    {   m_poolGzipBuf.recycle( pBuf );      }
-    
-    GzipBuf * getGunzipBuf()
-    {   return m_poolGunzipBuf.get();         }  
-    void recycleGunzip( GzipBuf * pBuf )
-    {   m_poolGunzipBuf.recycle( pBuf );      }    
-    
-    MMapVMemBuf * getVMemBuf()
+    void recycle(GzipBuf *pBuf)
+    {   m_poolGzipBuf.recycle(pBuf);      }
+
+    GzipBuf *getGunzipBuf()
+    {   return m_poolGunzipBuf.get();         }
+    void recycleGunzip(GzipBuf *pBuf)
+    {   m_poolGunzipBuf.recycle(pBuf);      }
+
+    MMapVMemBuf *getVMemBuf()
     {   return m_poolVMemBuf.get();         }
 
     int getVMemBufPoolSize()
@@ -72,54 +73,51 @@ public:
     int getVMemBufPoolCapacity()
     {   return m_poolVMemBuf.getPoolCapacity();     }
 
-    void recycle( VMemBuf * pBuf )
-    {   m_poolVMemBuf.recycle((MMapVMemBuf*) pBuf );    }
+    void recycle(VMemBuf *pBuf)
+    {   m_poolVMemBuf.recycle((MMapVMemBuf *) pBuf);    }
 
-    ChunkInputStream* getChunkInputStream()
+    ChunkInputStream *getChunkInputStream()
     {   return m_poolChunkInputStream.get();    }
-    
-    void recycle( ChunkInputStream* pStream )
-    {   m_poolChunkInputStream.recycle( pStream );  }
-    
-    ChunkOutputStream* getChunkOutputStream()
+
+    void recycle(ChunkInputStream *pStream)
+    {   m_poolChunkInputStream.recycle(pStream);  }
+
+    ChunkOutputStream *getChunkOutputStream()
     {   return m_poolChunkOutputStream.get();   }
-    
-    void recycle( ChunkOutputStream* pStream )
-    {   m_poolChunkOutputStream.recycle( pStream ); }
 
-    
-    
-    void recycle( NtwkIOLink* pConn )
-    {   m_poolNtwkIoLink.recycle( pConn );    }
+    void recycle(ChunkOutputStream *pStream)
+    {   m_poolChunkOutputStream.recycle(pStream); }
 
-    NtwkIOLink* getNtwkIOLink()
+
+
+    void recycle(NtwkIOLink *pConn)
+    {   m_poolNtwkIoLink.recycle(pConn);    }
+
+    NtwkIOLink *getNtwkIOLink()
     {    return m_poolNtwkIoLink.get();    }
 
-    void recycle( NtwkIOLink** pConn, int n )
-    {   m_poolNtwkIoLink.recycle( (void **)pConn, n );    }
+    void recycle(NtwkIOLink **pConn, int n)
+    {   m_poolNtwkIoLink.recycle((void **)pConn, n);    }
 
-    int getNtwkIOLinks( NtwkIOLink** pConn, int n)
-    {    return m_poolNtwkIoLink.get( pConn, n);    }
-        
-    
-    
-    void recycle( HttpSession* pSession )
-    {   m_poolHttpSession.recycle( pSession );    }
+    int getNtwkIOLinks(NtwkIOLink **pConn, int n)
+    {    return m_poolNtwkIoLink.get(pConn, n);    }
 
-    HttpSession* getConnection()
-    {    return m_poolHttpSession.get();   }
 
-    HioStreamHandler* getHioStreamHandler();
-    
-    void recycle( HttpSession** pSession, int n )
-    {   m_poolHttpSession.recycle( (void **)pSession, n );    }
 
-    int getConnections( HttpSession** pSession, int n)
-    {    return m_poolHttpSession.get( pSession, n);          }
+    void recycle(HttpSession *pSession)
+    {   m_poolHttpSession.recycle(pSession);    }
 
-    
+    HioStreamHandler *getHioStreamHandler(HiosProtocol ver);
+
+    void recycle(HttpSession **pSession, int n)
+    {   m_poolHttpSession.recycle((void **)pSession, n);    }
+
+    int getConnections(HttpSession **pSession, int n)
+    {    return m_poolHttpSession.get(pSession, n);          }
+
+
     void releaseAll();
-    
+
     void onTimer();
 };
 

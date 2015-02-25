@@ -32,24 +32,24 @@ CacheHash::~CacheHash()
 void CacheHash::init()
 {
     //uint64_t *pKey = (uint64_t *)m_key;
-    //*pKey = ls_crc64( 0, NULL, 0 );  
+    //*pKey = ls_crc64( 0, NULL, 0 );
     memset(m_key, 0, 8);
 }
 
-void CacheHash::hash( const char * pBuf, int len )
+void CacheHash::hash(const char *pBuf, int len)
 {
-    //*((uint64_t *)m_key) = ls_crc64( *((uint64_t *)m_key), (const unsigned char *)pBuf, len ); 
+    //*((uint64_t *)m_key) = ls_crc64( *((uint64_t *)m_key), (const unsigned char *)pBuf, len );
     uint64_t *pKey = (uint64_t *)m_key;
-    *pKey = ls_crc64( *pKey, (const unsigned char *)pBuf, len ); 
+    *pKey = ls_crc64(*pKey, (const unsigned char *)pBuf, len);
 }
 
-hash_key_t CacheHash::to_ghash_key(const void* __s)
+hash_key_t CacheHash::to_ghash_key(const void *__s)
 {
-  register hash_key_t __h = *((uint64_t *)__s);
+    register hash_key_t __h = *((uint64_t *)__s);
 
-  return __h;
+    return __h;
 }
 
-int CacheHash::compare( const void * pVal1, const void * pVal2 )
+int CacheHash::compare(const void *pVal1, const void *pVal2)
 {   return  *((uint64_t *)pVal1) - *((uint64_t *)pVal2);    }
 

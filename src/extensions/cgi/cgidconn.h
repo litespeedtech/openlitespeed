@@ -24,27 +24,27 @@
 #include <extensions/cgi/cgidreq.h>
 
 class CgidConn  : public ExtConn
-                , public HttpExtProcessor
+    , public HttpExtProcessor
 {
 
-    const char *    m_pPendingBuf;
+    const char     *m_pPendingBuf;
     int             m_iTotalPending;
     CgidReq         m_req;
-    
+
     int buildReqHeader();
     int buildSSIExecHeader();
 
 protected:
     virtual int doRead();
     virtual int doWrite();
-    virtual int doError( int err );
-    virtual int addRequest( ExtRequest * pReq );
-    virtual ExtRequest* getReq() const;
-    virtual void init( int fd, Multiplexer* pMplx );
+    virtual int doError(int err);
+    virtual int addRequest(ExtRequest *pReq);
+    virtual ExtRequest *getReq() const;
+    virtual void init(int fd, Multiplexer *pMplx);
     virtual void onTimer();
-    virtual int removeRequest( ExtRequest* pReq );
+    virtual int removeRequest(ExtRequest *pReq);
 
-public: 
+public:
     CgidConn();
     ~CgidConn();
 
@@ -58,17 +58,17 @@ public:
     virtual int  begin();
     virtual int  beginReqBody();
     virtual int  endOfReqBody();
-    virtual int  sendReqBody( const char * pBuf, int size );
-    virtual int  readResp( char * pBuf, int size );
+    virtual int  sendReqBody(const char *pBuf, int size);
+    virtual int  readResp(char *pBuf, int size);
     virtual int  flush();
     virtual void cleanUp();
     virtual void dump();
-    virtual int writeConnStatus( char * pBuf, int len ) { return 0; }
+    virtual int writeConnStatus(char *pBuf, int len) { return 0; }
     //{   return ExtConn::writeConnStatus( pBuf, len );   }
 
     virtual int sendReqHeader();
     void reset();
-    
+
 };
 
 #endif

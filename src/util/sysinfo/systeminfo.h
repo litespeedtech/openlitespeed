@@ -25,9 +25,9 @@ class SystemInfo
     static int s_iPageSize;
 
 public:
-	SystemInfo();
-	~SystemInfo();
-    static unsigned long long maxOpenFile( unsigned long long max);
+    SystemInfo();
+    ~SystemInfo();
+    static unsigned long long maxOpenFile(unsigned long long max);
     static int getPageSize();
 };
 

@@ -26,34 +26,34 @@ GFactory::~GFactory()
     m_objRegistry.release_objects();
 }
 
-Duplicable * GFactory::getObj( const char * pName, const char * pType )
+Duplicable *GFactory::getObj(const char *pName, const char *pType)
 {
-    _store::iterator iter = m_objRegistry.find( pName );
-    if ( iter != m_objRegistry.end() )
+    _store::iterator iter = m_objRegistry.find(pName);
+    if (iter != m_objRegistry.end())
         return iter.second();
-    _store::iterator proto = m_typeRegistry.find( pType );
-    if ( proto == m_typeRegistry.end() )
+    _store::iterator proto = m_typeRegistry.find(pType);
+    if (proto == m_typeRegistry.end())
         return NULL;
     Duplicable *pObj = proto.second()->dup(pName);
-    if ( pObj )
-        m_objRegistry.insert( pObj->getName(), pObj );
+    if (pObj)
+        m_objRegistry.insert(pObj->getName(), pObj);
     return pObj;
 }
 
-Duplicable * GFactory::remove( _store * pStore, const char * pName )
+Duplicable *GFactory::remove(_store *pStore, const char *pName)
 {
-    _store::iterator iter = pStore->remove( pName );
-    if ( iter != pStore->end() )
+    _store::iterator iter = pStore->remove(pName);
+    if (iter != pStore->end())
         return iter.second();
     else
         return NULL;
 }
 
-int GFactory::registType( Duplicable * pType )
+int GFactory::registType(Duplicable *pType)
 {
-    if ( !pType )
-        return -1; 
-    m_typeRegistry.insert( pType->getName(), pType );
+    if (!pType)
+        return -1;
+    m_typeRegistry.insert(pType->getName(), pType);
     return 0;
 }
 

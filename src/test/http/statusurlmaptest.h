@@ -16,8 +16,8 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #ifdef RUN_TEST
- 
- 
+
+
 #ifndef STATUSURLMAPTEST_H
 #define STATUSURLMAPTEST_H
 

@@ -24,23 +24,24 @@
 inline int safe_snprintf(char *str, size_t size, const char *format, ...)
 {
     va_list ap;
-    va_start( ap, format );
+    va_start(ap, format);
     int ret = vsnprintf(str, size, format, ap);
-    va_end( ap );
-    
-    if ( ( unsigned int )ret > size)
+    va_end(ap);
+
+    if ((unsigned int)ret > size)
         ret = size;
-    
+
     return ret;
 }
 
-inline int safe_vsnprintf(char *str, size_t size, const char *format, va_list args )
+inline int safe_vsnprintf(char *str, size_t size, const char *format,
+                          va_list args)
 {
-    int ret = vsnprintf(str, size, format, args );
-    
-    if ( ( unsigned int )ret > size)
+    int ret = vsnprintf(str, size, format, args);
+
+    if ((unsigned int)ret > size)
         ret = size;
-    
+
     return ret;
 }
 

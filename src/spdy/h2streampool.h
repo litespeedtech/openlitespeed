@@ -22,15 +22,15 @@
 class H2Stream;
 typedef ObjPool<H2Stream>       Pool;
 class H2StreamPool : public ObjPool<H2Stream>
-{  
-    static Pool s_pool; 
+{
+    static Pool s_pool;
     H2StreamPool();
     ~H2StreamPool();
 public:
-    static void recycle( H2Stream* pStream );
-    static H2Stream* getH2Stream();
-    static void recycle( H2Stream** pStream, int n );
-    static int getH2Streams( H2Stream** pStream, int n );    
+    static void recycle(H2Stream *pStream);
+    static H2Stream *getH2Stream();
+    static void recycle(H2Stream **pStream, int n);
+    static int getH2Streams(H2Stream **pStream, int n);
 };
 
 #endif // H2STREAMPOOL_H

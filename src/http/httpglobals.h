@@ -58,23 +58,23 @@ public:
     time_t                  m_tmExpire;
     time_t                  m_tmExpireUs;
     lsi_timer_callback_pf   m_TimerCb;
-    void*                   m_pTimerCbParam;
+    void                   *m_pTimerCbParam;
 };
 
 
 class HttpGlobals
 {
     //static EventDispatcher      * s_pDispatcher;
-    static Multiplexer          * s_pMultiplexer;
-    static AccessControl        * s_pAccessCtrl;
-    static HttpMime             * s_pMime;
+    static Multiplexer           *s_pMultiplexer;
+    static AccessControl         *s_pAccessCtrl;
+    static HttpMime              *s_pMime;
     static DeniedDir              s_deniedDir;
     static ConnLimitCtrl          s_connLimitCtrl;
-    static ClientCache          * s_pClients;
+    static ClientCache           *s_pClients;
     static HttpResourceManager    s_ResManager;
     static StaticFileCache        s_staticFileCache;
     static StdErrLogger           s_stdErrLogger;
-    static ServerInfo           * s_pServerInfo;
+    static ServerInfo            *s_pServerInfo;
 
     HttpGlobals() {};
     ~HttpGlobals() {};
@@ -92,12 +92,12 @@ public:
     static int                    s_priority;
     static pid_t                  s_pidCgid;
     static int                    s_umask;
-    static AutoStr2             * s_psChroot;
-    static const char           * s_pServerRoot;
-    static const char           * s_pAdminSock;
-    static SUExec               * s_pSUExec;
-    static CgidWorker           * s_pCgid;
-    
+    static AutoStr2              *s_psChroot;
+    static const char            *s_pServerRoot;
+    static const char            *s_pAdminSock;
+    static SUExec                *s_pSUExec;
+    static CgidWorker            *s_pCgid;
+
     static int                    s_iProcNo;
     static long                   s_lBytesRead;
     static long                   s_lBytesWritten;
@@ -116,17 +116,17 @@ public:
     static int                    s_dnsLookup;
 
     static RewriteEngine          s_RewriteEngine;
-    static IpToGeo *              s_pIpToGeo;
-    static HttpVHost *            s_pGlobalVHost;
+    static IpToGeo               *s_pIpToGeo;
+    static HttpVHost             *s_pGlobalVHost;
 
     static int                    s_rubyProcLimit;
     static int                    s_railsAppLimit;
 
-    
+
     //module timer linklist
     static TLinkList<ModuleTimer>    s_ModuleTimerList;
-    
-   
+
+
 #ifdef USE_UDNS
     static Adns                   s_adns;
 #endif
@@ -134,47 +134,47 @@ public:
     static char g_achBuf[G_BUF_SIZE + 8];
     //static void setDispatcher( EventDispatcher * pDispatcher )
     //{   s_pDispatcher = pDispatcher;    }
-    static void setMultiplexer( Multiplexer * pMultiplexer )
+    static void setMultiplexer(Multiplexer *pMultiplexer)
     {   s_pMultiplexer = pMultiplexer;  }
-    static void setAccessControl( AccessControl * pControl )
+    static void setAccessControl(AccessControl *pControl)
     {   s_pAccessCtrl = pControl;   }
-    static void setHttpMime( HttpMime * pMime )
+    static void setHttpMime(HttpMime *pMime)
     {   s_pMime = pMime;            }
-        
-    
+
+
     //static EventDispatcher * getDispatcher()
     //{   return s_pDispatcher;   }
-    static Multiplexer * getMultiplexer()
+    static Multiplexer *getMultiplexer()
     {   return s_pMultiplexer;      }
-    static HttpResourceManager * getResManager()
+    static HttpResourceManager *getResManager()
     {   return &s_ResManager;       }
-    static AccessControl * getAccessCtrl()
+    static AccessControl *getAccessCtrl()
     {   return s_pAccessCtrl;       }
-    static ClientCache * getClientCache()
+    static ClientCache *getClientCache()
     {   return s_pClients;          }
-    static void setClientCache( ClientCache * p )
+    static void setClientCache(ClientCache *p)
     {   s_pClients = p;      }
-    
+
     static StaticFileCache *getStaticFileCache()
     {   return &s_staticFileCache;  }
-    static HttpMime * getMime()
+    static HttpMime *getMime()
     {   return s_pMime;             }
-    static ConnLimitCtrl* getConnLimitCtrl()
+    static ConnLimitCtrl *getConnLimitCtrl()
     {   return &s_connLimitCtrl;    }
 
-    static DeniedDir* getDeniedDir()
+    static DeniedDir *getDeniedDir()
     {   return &s_deniedDir;        }
 
-    static StdErrLogger* getStdErrLogger()
+    static StdErrLogger *getStdErrLogger()
     {   return &s_stdErrLogger;     }
-    
-    static ServerInfo * getServerInfo()
+
+    static ServerInfo *getServerInfo()
     {   return s_pServerInfo;        }
-    static void setServerInfo( ServerInfo * pInfo )
+    static void setServerInfo(ServerInfo *pInfo)
     {   s_pServerInfo = pInfo;      }
-    
-    static const char * getCgidSecret();
-    
+
+    static const char *getCgidSecret();
+
 };
 
 #endif

@@ -27,40 +27,40 @@
 
 TEST(HttpListenersTest_testHttpSockListener)
 {
-    HttpListener listener( "*:3880", "*:3880" );
+    HttpListener listener("*:3880", "*:3880");
     //listener.setIpAddr( INADDR_ANY );
     //listener.setPort( 3880 );
 
     //CHECK( listener.getPort() == 3880 );
     //CHECK( ((sockaddr_in *)listener.getIpAddr().get())->sin_addr.s_addr == INADDR_ANY );
-    CHECK( strcmp( listener.getAddrStr(), "*:3880") == 0 );
-    CHECK( listener.getfd() == -1 );
+    CHECK(strcmp(listener.getAddrStr(), "*:3880") == 0);
+    CHECK(listener.getfd() == -1);
 
-    CHECK( listener.suspend() != 0 );
-    CHECK( listener.resume() != 0 );
+    CHECK(listener.suspend() != 0);
+    CHECK(listener.resume() != 0);
 
-    Multiplexer * pOld = HttpGlobals::getMultiplexer();
-    Multiplexer * pMultiplexer =
-            MultiplexerFactory::get(
-            MultiplexerFactory::getType( "poll" ) );
-    if ( pMultiplexer != NULL )
+    Multiplexer *pOld = HttpGlobals::getMultiplexer();
+    Multiplexer *pMultiplexer =
+        MultiplexerFactory::get(
+            MultiplexerFactory::getType("poll"));
+    if (pMultiplexer != NULL)
     {
-        pMultiplexer->init( 1024 );
-        HttpGlobals::setMultiplexer( pMultiplexer );
+        pMultiplexer->init(1024);
+        HttpGlobals::setMultiplexer(pMultiplexer);
     }
-    
-    CHECK( listener.start() == 0 );
-    CHECK( listener.getfd() != -1 );
 
-/*    TcpServerSocket serverSock;
-    CHECK( serverSock.listen( 3880, 10, INADDR_ANY ) != 0 );
+    CHECK(listener.start() == 0);
+    CHECK(listener.getfd() != -1);
 
-    CHECK( listener.suspend() == 0 );
-    CHECK( listener.resume() == 0 );
-    CHECK( listener.stop() == 0 );
-    CHECK( serverSock.listen( 3880, 10, INADDR_ANY ) == 0 );*/
-    HttpGlobals::setMultiplexer( pOld );
-    MultiplexerFactory::recycle( pMultiplexer );
+    /*    TcpServerSocket serverSock;
+        CHECK( serverSock.listen( 3880, 10, INADDR_ANY ) != 0 );
+
+        CHECK( listener.suspend() == 0 );
+        CHECK( listener.resume() == 0 );
+        CHECK( listener.stop() == 0 );
+        CHECK( serverSock.listen( 3880, 10, INADDR_ANY ) == 0 );*/
+    HttpGlobals::setMultiplexer(pOld);
+    MultiplexerFactory::recycle(pMultiplexer);
 }
 
 #endif

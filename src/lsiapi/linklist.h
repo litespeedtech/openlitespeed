@@ -27,7 +27,7 @@ extern "C" {
 struct _link_obj;
 struct _link_list;
 
-typedef void (* _linkobj_free)( void *data);
+typedef void (* _linkobj_free)(void *data);
 
 
 typedef struct _link_obj
@@ -45,26 +45,29 @@ typedef struct _link_list
 } link_list;
 
 
-void _linklist_init( struct _link_list *list, _linkobj_free freecb );
+void _linklist_init(struct _link_list *list, _linkobj_free freecb);
 
-static inline int _linklist_getSize( struct _link_list *list )         {   return list->size;   }
-static inline int _linklist_isEmpty( struct _link_list *list )         {   return (list->size == 0); }
-static inline struct _link_obj * _linklist_begin( struct _link_list *list )  {  return ((list->head) ?  list->head->next : NULL); }
+static inline int _linklist_getSize(struct _link_list *list)         {   return list->size;   }
+static inline int _linklist_isEmpty(struct _link_list *list)         {   return (list->size == 0); }
+static inline struct _link_obj *_linklist_begin(struct _link_list *list)  {  return ((list->head) ?  list->head->next : NULL); }
 
-static inline int _linklist_isEnd( struct _link_list *list, struct _link_obj *obj )     {   return (obj == NULL); }
-
-
-
-int _linklist_push( struct _link_list *list, struct _link_obj *obj );
-int _linklist_insert( struct _link_list *list, struct _link_obj *obj, struct _link_obj *objToInsert );
-
-int _linklist_pushData( struct _link_list *list, void *data );
-int _linklist_insertData( struct _link_list *list, struct _link_obj *obj, void *data );
+static inline int _linklist_isEnd(struct _link_list *list,
+                                  struct _link_obj *obj)     {   return (obj == NULL); }
 
 
-void _linklist_del( struct _link_list *list, struct _link_obj *obj );
-void _linklist_delAllNext( struct _link_list *list, struct _link_obj *obj );
-void _linklist_release( struct _link_list *list );
+
+int _linklist_push(struct _link_list *list, struct _link_obj *obj);
+int _linklist_insert(struct _link_list *list, struct _link_obj *obj,
+                     struct _link_obj *objToInsert);
+
+int _linklist_pushData(struct _link_list *list, void *data);
+int _linklist_insertData(struct _link_list *list, struct _link_obj *obj,
+                         void *data);
+
+
+void _linklist_del(struct _link_list *list, struct _link_obj *obj);
+void _linklist_delAllNext(struct _link_list *list, struct _link_obj *obj);
+void _linklist_release(struct _link_list *list);
 
 
 #ifdef __cplusplus

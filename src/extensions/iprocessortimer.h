@@ -20,8 +20,9 @@
 
 
 
-class IProcessorTimer {
-public: 
+class IProcessorTimer
+{
+public:
     IProcessorTimer() {}
     virtual ~IProcessorTimer() {}
     virtual void onProcessorTimer() = 0;

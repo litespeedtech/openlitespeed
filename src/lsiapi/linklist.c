@@ -19,39 +19,41 @@
 #include <stdlib.h>
 #include <string.h>
 
-void _linklist_init( struct _link_list *list, _linkobj_free freecb )
+void _linklist_init(struct _link_list *list, _linkobj_free freecb)
 {
-    struct _link_obj *obj = (struct _link_obj *)malloc(sizeof(struct _link_obj));
+    struct _link_obj *obj = (struct _link_obj *)malloc(sizeof(
+                                struct _link_obj));
     list->head = obj;
     list->head->data = NULL;
     list->head->next = NULL;
     list->head->prev = NULL;
     list->size = 0;
-    list->freecb = freecb;  
+    list->freecb = freecb;
 }
 
 int _linklist_push(struct _link_list *list, struct _link_obj *obj)
 {
-    struct _link_obj * p = list->head;
+    struct _link_obj *p = list->head;
     while (p->next)
         p = p->next;
-    
+
     obj->prev = p;
     obj->next = NULL;
     p->next = obj;
     ++list->size;
     return 0;
 }
-    
-int _linklist_insert(struct _link_list *list, struct _link_obj *obj, struct _link_obj *objToInsert)
+
+int _linklist_insert(struct _link_list *list, struct _link_obj *obj,
+                     struct _link_obj *objToInsert)
 {
-    if ( obj == list->head)
+    if (obj == list->head)
         return -1;
-    
+
     if (obj == NULL)
-        return _linklist_push( list, objToInsert);
-        
-    struct _link_obj * prev = obj->prev;
+        return _linklist_push(list, objToInsert);
+
+    struct _link_obj *prev = obj->prev;
     prev->next = objToInsert;
     objToInsert->prev = prev;
     objToInsert->next = obj;
@@ -62,38 +64,41 @@ int _linklist_insert(struct _link_list *list, struct _link_obj *obj, struct _lin
 
 int _linklist_pushData(struct _link_list *list, void *data)
 {
-    struct _link_obj *obj = (struct _link_obj *)malloc(sizeof(struct _link_obj));
+    struct _link_obj *obj = (struct _link_obj *)malloc(sizeof(
+                                struct _link_obj));
     if (obj == NULL)
         return -1;
-    
+
     obj->data = data;
     return _linklist_push(list, obj);
 }
 
-int _linklist_insertData(struct _link_list *list, struct _link_obj *obj, void *data)
+int _linklist_insertData(struct _link_list *list, struct _link_obj *obj,
+                         void *data)
 {
-    struct _link_obj *objToInsert = (struct _link_obj *)malloc(sizeof(struct _link_obj));
+    struct _link_obj *objToInsert = (struct _link_obj *)malloc(sizeof(
+                                        struct _link_obj));
     if (objToInsert == NULL)
-        return -1;   
-    
+        return -1;
+
     objToInsert->data = data;
-    return _linklist_insert(list, obj, objToInsert);    
+    return _linklist_insert(list, obj, objToInsert);
 }
 
 void _linklist_del(struct _link_list *list, struct _link_obj *obj)
 {
     if (list->size == 0 || obj == list->head)
         return ;
-    
+
     struct _link_obj *prev = obj->prev;
     prev->next = obj->next;
     if (obj->next)
         obj->next->prev = prev;
-    
+
     if (list->freecb)
         list->freecb(obj->data);
     free(obj);
-    
+
     --list->size;
 }
 
@@ -113,7 +118,7 @@ void _linklist_release(struct _link_list *list)
 {
     if (list->size == 0)
         return ;
-    
+
     list->size = 0;
     list->freecb = NULL;
     _linklist_delAllNext(list, list->head);

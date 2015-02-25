@@ -25,59 +25,59 @@
 
 
 HotlinkCtrl::HotlinkCtrl()
-    : m_iAllowDirectAcc( false )
-    , m_iOnlySelf( true )
-    , m_pRegex( NULL )
+    : m_iAllowDirectAcc(false)
+    , m_iOnlySelf(true)
+    , m_pRegex(NULL)
 {
 }
 HotlinkCtrl::~HotlinkCtrl()
 {
-    if ( m_pRegex )
+    if (m_pRegex)
         delete m_pRegex;
 }
 
-int HotlinkCtrl::allowed( const char * pRef, int len ) const
+int HotlinkCtrl::allowed(const char *pRef, int len) const
 {
     StringList::const_iterator iter;
-    for( iter = m_listHosts.begin(); iter != m_listHosts.end(); ++iter )
+    for (iter = m_listHosts.begin(); iter != m_listHosts.end(); ++iter)
     {
-        if ( strncasecmp( pRef, (*iter)->c_str(), (*iter)->len() ) == 0 )
+        if (strncasecmp(pRef, (*iter)->c_str(), (*iter)->len()) == 0)
             return 1;
     }
-    if ( m_pRegex )
+    if (m_pRegex)
     {
         int ovector[30];
-        return m_pRegex->exec( pRef, len, 0, 0, ovector, 30 ) > 0;
+        return m_pRegex->exec(pRef, len, 0, 0, ovector, 30) > 0;
     }
     return 0;
 }
 
-int HotlinkCtrl::setSuffixes( const char * suffix )
+int HotlinkCtrl::setSuffixes(const char *suffix)
 {
-    if ( !suffix )
-        return -1; 
-    return m_listSuffix.split( suffix, suffix + strlen( suffix ), " ,|" );
+    if (!suffix)
+        return -1;
+    return m_listSuffix.split(suffix, suffix + strlen(suffix), " ,|");
 }
 
-int  HotlinkCtrl::setHosts( const char * pHosts )
+int  HotlinkCtrl::setHosts(const char *pHosts)
 {
-    if ( !pHosts )
+    if (!pHosts)
         return -1;
-    return m_listHosts.split( pHosts, pHosts + strlen( pHosts ), " ,|" );
+    return m_listHosts.split(pHosts, pHosts + strlen(pHosts), " ,|");
 }
 
-int  HotlinkCtrl::setRegex( const char * pRegex )
+int  HotlinkCtrl::setRegex(const char *pRegex)
 {
-    if ( !pRegex )
+    if (!pRegex)
         return -1;
-    if ( !m_pRegex )
+    if (!m_pRegex)
     {
         m_pRegex = new Pcregex();
-        if ( !m_pRegex )
+        if (!m_pRegex)
             return -1;
     }
-    int ret = m_pRegex->compile( pRegex, REG_EXTENDED | REG_ICASE );
-    if ( ret == -1 )
+    int ret = m_pRegex->compile(pRegex, REG_EXTENDED | REG_ICASE);
+    if (ret == -1)
     {
         delete m_pRegex;
         m_pRegex = NULL;
@@ -85,45 +85,47 @@ int  HotlinkCtrl::setRegex( const char * pRegex )
     return ret;
 
 }
-int HotlinkCtrl::config( const XmlNode *pNode )
+int HotlinkCtrl::config(const XmlNode *pNode)
 {
-    if ( setSuffixes( pNode->getChildValue( "suffixes" ) ) <= 0 )
+    if (setSuffixes(pNode->getChildValue("suffixes")) <= 0)
     {
-        ConfigCtx::getCurConfigCtx()->log_error( "no suffix is configured, disable hotlink protection." );
+        ConfigCtx::getCurConfigCtx()->log_error("no suffix is configured, disable hotlink protection.");
         return -1;
     }
 
-    setDirectAccess( ConfigCtx::getCurConfigCtx()->getLongValue( pNode, "allowDirectAccess", 0, 1, 0 ) );
-    const char *pRedirect = pNode->getChildValue( "redirectUri" );
+    setDirectAccess(ConfigCtx::getCurConfigCtx()->getLongValue(pNode,
+                    "allowDirectAccess", 0, 1, 0));
+    const char *pRedirect = pNode->getChildValue("redirectUri");
 
-    if ( pRedirect )
-        setRedirect( pRedirect );
+    if (pRedirect)
+        setRedirect(pRedirect);
 
-    int self = ConfigCtx::getCurConfigCtx()->getLongValue( pNode, "onlySelf", 0, 1, 0 );
+    int self = ConfigCtx::getCurConfigCtx()->getLongValue(pNode, "onlySelf", 0,
+               1, 0);
 
-    if ( !self )
+    if (!self)
     {
         char achBuf[4096];
-        const char *pValue = pNode->getChildValue( "allowedHosts" );
+        const char *pValue = pNode->getChildValue("allowedHosts");
 
-        if ( pValue )
+        if (pValue)
         {
-            ConfigCtx::getCurConfigCtx()->expandDomainNames( pValue, achBuf, 4096, ',' );
+            ConfigCtx::getCurConfigCtx()->expandDomainNames(pValue, achBuf, 4096, ',');
             pValue = achBuf;
         }
 
-        int ret = setHosts( pValue );
-        int ret2 = setRegex( pNode->getChildValue( "matchedHosts" ) );
+        int ret = setHosts(pValue);
+        int ret2 = setRegex(pNode->getChildValue("matchedHosts"));
 
-        if ( ( ret <= 0 ) &&
-                ( ret2 < 0 ) )
+        if ((ret <= 0) &&
+            (ret2 < 0))
         {
-            ConfigCtx::getCurConfigCtx()->log_warn( "no valid host is configured, only self"
-                                       " reference is allowed." );
+            ConfigCtx::getCurConfigCtx()->log_warn("no valid host is configured, only self"
+                                                   " reference is allowed.");
             self = 1;
         }
     }
-    setOnlySelf( self );
+    setOnlySelf(self);
     return 0;
 }
 

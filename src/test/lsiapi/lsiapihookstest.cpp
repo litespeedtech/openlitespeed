@@ -44,32 +44,32 @@ TEST(LsiApiHooksTest)
     LsiApiHooks hooks;
     LsiApiHook *pHook;
 
-    int resultData[]={0x6,0x7,0x8,0xa,0xb,0xd,0xe,0xf,0x5,0x3,0x4,0x9,0x2,0x1,0xc};
-    int result2Data[]={0x7,0x8,0xa,0xb,0xd,0xf,0x5,0x3,0x4,0x9,0x2,0x1};
-   
+    int resultData[] = {0x6, 0x7, 0x8, 0xa, 0xb, 0xd, 0xe, 0xf, 0x5, 0x3, 0x4, 0x9, 0x2, 0x1, 0xc};
+    int result2Data[] = {0x7, 0x8, 0xa, 0xb, 0xd, 0xf, 0x5, 0x3, 0x4, 0x9, 0x2, 0x1};
 
-    lsi_module_t * pModule1 = (lsi_module_t *)(void *)0x01;
-    lsi_module_t * pModule2 = (lsi_module_t *)(void *)0x02;
-    lsi_module_t * pModule3 = (lsi_module_t *)(void *)0x03;
-    lsi_module_t * pModule4 = (lsi_module_t *)(void *)0x04;
-    lsi_module_t * pModule5 = (lsi_module_t *)(void *)0x05;
-    lsi_module_t * pModule6 = (lsi_module_t *)(void *)0x06;
-    lsi_module_t * pModule7 = (lsi_module_t *)(void *)0x07;
-    lsi_module_t * pModule8 = (lsi_module_t *)(void *)0x08;
-    lsi_module_t * pModule9 = (lsi_module_t *)(void *)0x09;
-    lsi_module_t * pModule10 = (lsi_module_t *)(void *)0x0a;
-    lsi_module_t * pModule11 = (lsi_module_t *)(void *)0x0b;
-    lsi_module_t * pModule12 = (lsi_module_t *)(void *)0x0c;
-    lsi_module_t * pModule13 = (lsi_module_t *)(void *)0x0d;
-    lsi_module_t * pModule14 = (lsi_module_t *)(void *)0x0e;
-    lsi_module_t * pModule15 = (lsi_module_t *)(void *)0x0f;
-    
+
+    lsi_module_t *pModule1 = (lsi_module_t *)(void *)0x01;
+    lsi_module_t *pModule2 = (lsi_module_t *)(void *)0x02;
+    lsi_module_t *pModule3 = (lsi_module_t *)(void *)0x03;
+    lsi_module_t *pModule4 = (lsi_module_t *)(void *)0x04;
+    lsi_module_t *pModule5 = (lsi_module_t *)(void *)0x05;
+    lsi_module_t *pModule6 = (lsi_module_t *)(void *)0x06;
+    lsi_module_t *pModule7 = (lsi_module_t *)(void *)0x07;
+    lsi_module_t *pModule8 = (lsi_module_t *)(void *)0x08;
+    lsi_module_t *pModule9 = (lsi_module_t *)(void *)0x09;
+    lsi_module_t *pModule10 = (lsi_module_t *)(void *)0x0a;
+    lsi_module_t *pModule11 = (lsi_module_t *)(void *)0x0b;
+    lsi_module_t *pModule12 = (lsi_module_t *)(void *)0x0c;
+    lsi_module_t *pModule13 = (lsi_module_t *)(void *)0x0d;
+    lsi_module_t *pModule14 = (lsi_module_t *)(void *)0x0e;
+    lsi_module_t *pModule15 = (lsi_module_t *)(void *)0x0f;
+
     //defaults
-    CHECK( hooks.size() == 0 );
-    CHECK( hooks.capacity() == 4 );
-    CHECK( hooks.begin() - hooks.get( 0 ) == 2 );
-    
-    
+    CHECK(hooks.size() == 0);
+    CHECK(hooks.capacity() == 4);
+    CHECK(hooks.begin() - hooks.get(0) == 2);
+
+
     //fill hooks
     hooks.add(pModule1, (lsi_callback_pf)pModule1, 6);
     hooks.add(pModule2, (lsi_callback_pf)pModule1, 5);
@@ -86,27 +86,27 @@ TEST(LsiApiHooksTest)
     hooks.add(pModule13, (lsi_callback_pf)pModule1, 1);
     hooks.add(pModule14, (lsi_callback_pf)pModule1, 1);
     hooks.add(pModule15, (lsi_callback_pf)pModule1, 1);
-    
+
     //debug data
     //printf ("add\n");
     int i = 0;
-    for (pHook = hooks.begin(); pHook < hooks.end(); ++pHook )
+    for (pHook = hooks.begin(); pHook < hooks.end(); ++pHook)
     {
         //printf ("hook %x ",(*(int*)pHook));
-        CHECK( (*(int*)pHook) == resultData[i]);
+        CHECK((*(int *)pHook) == resultData[i]);
         i++;
     }
-    
+
 
     //constructor with optional parameter
     //printf ("const opt param\n");
-    LsiApiHooks hooks3(hooks );    
+    LsiApiHooks hooks3(hooks);
     //debug data
     i = 0;
-    for (pHook = hooks3.begin(); pHook < hooks3.end(); ++pHook )
+    for (pHook = hooks3.begin(); pHook < hooks3.end(); ++pHook)
     {
         //printf ("hook %x ",(*(int*)pHook));
-        CHECK( (*(int*)pHook) == resultData[i]);
+        CHECK((*(int *)pHook) == resultData[i]);
         i++;
     }
 
@@ -116,13 +116,13 @@ TEST(LsiApiHooksTest)
     {
         pHook = hooks.get(i);
         //printf ("hook %x ",(*(int*)pHook));
-        CHECK( (*(int*)pHook) == resultData[i-1]);
+        CHECK((*(int *)pHook) == resultData[i - 1]);
     }
-    
+
     //size
-    CHECK (hooks.size() == 15);
-    
- 
+    CHECK(hooks.size() == 15);
+
+
     //remove
     hooks3.remove((hooks3.find(pModule14, (lsi_callback_pf)pModule1)));
     hooks3.remove((hooks3.find(pModule6, (lsi_callback_pf)pModule1)));
@@ -130,48 +130,48 @@ TEST(LsiApiHooksTest)
     //debug data
     //printf ("remove\n");
     i = 0;
-    for (pHook = hooks3.begin(); pHook < hooks3.end(); ++pHook )
+    for (pHook = hooks3.begin(); pHook < hooks3.end(); ++pHook)
     {
         //printf ("hook %x ",(*(int*)pHook));
-        CHECK( (*(int*)pHook) == result2Data[i]);
+        CHECK((*(int *)pHook) == result2Data[i]);
         i++;
     }
-    
+
     //dup
-    LsiApiHooks *hooks2 = hooks.dup(  );
+    LsiApiHooks *hooks2 = hooks.dup();
     //debug data
     //printf ("dup\n");
     i = 0;
-    for (pHook = hooks2->begin(); pHook < hooks2->end(); ++pHook )
+    for (pHook = hooks2->begin(); pHook < hooks2->end(); ++pHook)
     {
         //printf ("hook %x ",(*(int*)pHook));
-        CHECK( (*(int*)pHook) == resultData[i]);
+        CHECK((*(int *)pHook) == resultData[i]);
         i++;
     }
-    
+
 
     //copy
     LsiApiHooks hooks4;
     hooks4.copy(hooks);
     //printf ("copy\n");
     i = 0;
-    for (pHook = hooks4.begin(); pHook < hooks4.end(); ++pHook )
+    for (pHook = hooks4.begin(); pHook < hooks4.end(); ++pHook)
     {
         //printf ("hook %x ",(*(int*)pHook));
-        CHECK( (*(int*)pHook) == resultData[i]);
+        CHECK((*(int *)pHook) == resultData[i]);
         i++;
     }
-    
+
     //find
     pHook = hooks.find(pModule12, (lsi_callback_pf)pModule1);
-    CHECK (pHook->_module == (lsi_module_t *)pModule12);
+    CHECK(pHook->_module == (lsi_module_t *)pModule12);
     pHook = hooks.find(pModule12, (lsi_callback_pf)pModule5);
-    CHECK (pHook == (LsiApiHook *)NULL);
+    CHECK(pHook == (LsiApiHook *)NULL);
     pHook = hooks.find(pModule6, (lsi_callback_pf)pModule1);
-    CHECK (pHook->_module == (lsi_module_t *)pModule6);
+    CHECK(pHook->_module == (lsi_module_t *)pModule6);
     pHook = hooks.find(pModule4, (lsi_callback_pf)pModule1);
-    CHECK (pHook->_module == (lsi_module_t *)pModule4);
-        
+    CHECK(pHook->_module == (lsi_module_t *)pModule4);
+
     //printf("\n\n=============End Hook Test==================\n\n");
 
 }

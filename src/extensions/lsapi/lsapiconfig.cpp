@@ -17,8 +17,8 @@
 *****************************************************************************/
 #include "lsapiconfig.h"
 
-LsapiConfig::LsapiConfig( const char * pName )
-    : LocalWorkerConfig( pName )
+LsapiConfig::LsapiConfig(const char *pName)
+    : LocalWorkerConfig(pName)
 {
 
 }

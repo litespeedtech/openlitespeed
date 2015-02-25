@@ -20,22 +20,24 @@
 
 #include <string.h>
 
-SSLEngine::SSLEngine(){
+SSLEngine::SSLEngine()
+{
 }
-SSLEngine::~SSLEngine(){
+SSLEngine::~SSLEngine()
+{
 }
 
-int SSLEngine::init( const char * pID )
+int SSLEngine::init(const char *pID)
 {
     /* Load all bundled ENGINEs into memory and make them visible */
-    if ( !pID )
+    if (!pID)
         return 0;
-    if (( strcasecmp( pID, "null" ) == 0 )||
-        ( strcasecmp( pID, "builtin" ) == 0 ))
+    if ((strcasecmp(pID, "null") == 0) ||
+        (strcasecmp(pID, "builtin") == 0))
         return 0;
     ENGINE_load_builtin_engines();
-    if (( strcasecmp( pID, "auto" ) == 0)||
-        ( strcasecmp( pID, "all" ) == 0 ))
+    if ((strcasecmp(pID, "auto") == 0) ||
+        (strcasecmp(pID, "all") == 0))
     {
         ENGINE_register_all_complete();
         return 0;
@@ -43,15 +45,11 @@ int SSLEngine::init( const char * pID )
     ENGINE *e;
     int ret = 0;
     e = ENGINE_by_id(pID);
-    if(!e)
-    {
+    if (!e)
         return -1;
-    }
-    if ( strcmp(pID, "chil") == 0 )
-    {
-        ENGINE_ctrl_cmd_string( e, "FORK_CHECK", "1", 0 );
-    }
-    if ( !ENGINE_set_default(e, ENGINE_METHOD_ALL) )
+    if (strcmp(pID, "chil") == 0)
+        ENGINE_ctrl_cmd_string(e, "FORK_CHECK", "1", 0);
+    if (!ENGINE_set_default(e, ENGINE_METHOD_ALL))
         ret = -1;
     /* Release the structural reference from ENGINE_by_id() */
     ENGINE_free(e);

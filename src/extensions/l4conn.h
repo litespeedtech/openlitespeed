@@ -29,7 +29,7 @@ class L4Handler;
 class L4conn : public EdStream
 {
 public:
-    L4conn(L4Handler*  pL4Handler);
+    L4conn(L4Handler  *pL4Handler);
     virtual ~L4conn();
 
     int onEventDone();
@@ -37,25 +37,25 @@ public:
     int onWrite();
     int onRead();
     int close();
-    int readv(iovec* vector, size_t count)  {    return 0;  }
-   
+    int readv(iovec *vector, size_t count)  {    return 0;  }
+
     int onInitConnected();
-    
+
     int doRead();
     int doWrite();
-    
-    
+
+
     //Return 0 is OK
     int init(const GSockAddr *pGSockAddr);
     int connectEx(const GSockAddr *pGSockAddr);
-    
-     LoopBuf*  getBuf()             {   return m_buf;  }
+
+    LoopBuf  *getBuf()             {   return m_buf;  }
 
 private:
     char            m_iState;
-    L4Handler*      m_pL4Handler;
-    LoopBuf *       m_buf;
-    
+    L4Handler      *m_pL4Handler;
+    LoopBuf        *m_buf;
+
     enum
     {
         DISCONNECTED,
@@ -63,9 +63,9 @@ private:
         PROCESSING,
         CLOSING,
     };
-    
-    LOG4CXX_NS::Logger * getLogger() const;
-    const char * getLogId();
+
+    LOG4CXX_NS::Logger *getLogger() const;
+    const char *getLogId();
 
 };
 

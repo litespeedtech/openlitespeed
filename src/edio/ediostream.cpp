@@ -34,22 +34,22 @@ EdStream::~EdStream()
     close();
 }
 
-int EdStream::regist( Multiplexer * pMultiplexer, int events )
+int EdStream::regist(Multiplexer *pMultiplexer, int events)
 {
-    if ( pMultiplexer )
-        return pMultiplexer->add( this, events );
+    if (pMultiplexer)
+        return pMultiplexer->add(this, events);
     return 0;
 }
 
 int EdStream::close()
 {
-    if ( getfd() != -1 )
+    if (getfd() != -1)
     {
-        if ( m_pMplex )
-            m_pMplex->remove( this );
+        if (m_pMplex)
+            m_pMplex->remove(this);
         //::shutdown( getfd(), SHUT_RDWR );
-        ::close( getfd() );
-        setfd( -1 );
+        ::close(getfd());
+        setfd(-1);
     }
     return 0;
 }
@@ -69,81 +69,81 @@ int EdStream::close()
 //    }
 //}
 
-int EdStream::handleEvents( short event )
+int EdStream::handleEvents(short event)
 {
     int ret = 0;
-    if ( D_ENABLED( DL_LESS ) )
-         LOG_D(( "EdStream::handleEvent(), fd: %d, event: %hd", getfd(), event ));
-    if ( event & POLLIN )
+    if (D_ENABLED(DL_LESS))
+        LOG_D(("EdStream::handleEvent(), fd: %d, event: %hd", getfd(), event));
+    if (event & POLLIN)
     {
         ret = onRead();
-        if ( !getAssignedRevent() )
+        if (!getAssignedRevent())
             return 0;
     }
-    if ( event & POLLHUP )
+    if (event & POLLHUP)
     {
-        if (( ret != -1 )||( getHupCounter() > 50 ))
+        if ((ret != -1) || (getHupCounter() > 50))
             ret = onHangup();
-        else if ( getHupCounter() > 100 )
+        else if (getHupCounter() > 100)
             abort();
-        if ( !getAssignedRevent() )
+        if (!getAssignedRevent())
             return 0;
-        
+
     }
-    if((ret != -1 )&&(event & POLLHUP ))
+    if ((ret != -1) && (event & POLLHUP))
     {
         ret = onHangup();
-        if ( !getAssignedRevent() )
+        if (!getAssignedRevent())
             return 0;
     }
-    if ((ret != -1 )&&(event & POLLOUT ))
+    if ((ret != -1) && (event & POLLOUT))
     {
         ret = onWrite();
-        if ( !getAssignedRevent() )
+        if (!getAssignedRevent())
             return 0;
     }
-    if ((ret != -1 )&&( event & POLLERR ))
+    if ((ret != -1) && (event & POLLERR))
     {
         ret = onError();
-        if ( !getAssignedRevent() )
+        if (!getAssignedRevent())
             return 0;
     }
-    if ( ret != -1 )
+    if (ret != -1)
         onEventDone();
     return 0;
 }
 
-int EdStream::read( char * pBuf, int size )
+int EdStream::read(char *pBuf, int size)
 {
-    int ret = ::read( getfd(), pBuf, size );
-    if ( ret < size )
-        resetRevent( POLLIN );
-    if ( !ret )
+    int ret = ::read(getfd(), pBuf, size);
+    if (ret < size)
+        resetRevent(POLLIN);
+    if (!ret)
     {
         errno = ECONNRESET;
         return -1;
     }
-    if (( ret == -1 )&&((errno == EAGAIN )||(errno == EINTR )))
+    if ((ret == -1) && ((errno == EAGAIN) || (errno == EINTR)))
         return 0;
     return ret;
 }
 
-int EdStream::readv( struct iovec *vector, size_t count)
+int EdStream::readv(struct iovec *vector, size_t count)
 {
-    int ret = ::readv( getfd(), vector, count );
-    if ( !ret )
+    int ret = ::readv(getfd(), vector, count);
+    if (!ret)
     {
         errno = ECONNRESET;
         return -1;
     }
-    if ( ret == -1 )
+    if (ret == -1)
     {
-        resetRevent( POLLIN );
-        if ((errno == EAGAIN)||(errno == EINTR ))
+        resetRevent(POLLIN);
+        if ((errno == EAGAIN) || (errno == EINTR))
             return 0;
     }
     return ret;
-    
+
 }
 
 
@@ -156,22 +156,22 @@ int EdStream::onHangup()
 /** No descriptions */
 int EdStream::getSockError(int32_t *error)
 {
-    socklen_t len = sizeof( int32_t );
-    return getsockopt( getfd(), SOL_SOCKET, SO_ERROR, error, &len );
+    socklen_t len = sizeof(int32_t);
+    return getsockopt(getfd(), SOL_SOCKET, SO_ERROR, error, &len);
 }
 
-int EdStream::write( LoopBuf* pBuf )
+int EdStream::write(LoopBuf *pBuf)
 {
-    if ( pBuf == NULL )
+    if (pBuf == NULL)
     {
         errno = EFAULT;
         return -1;
     }
     IOVec iov;
-    pBuf->getIOvec( iov );
-    int ret = writev( iov );
-    if ( ret > 0 )
-        pBuf->pop_front( ret );
+    pBuf->getIOvec(iov);
+    int ret = writev(iov);
+    if (ret > 0)
+        pBuf->pop_front(ret);
     return ret;
 }
 

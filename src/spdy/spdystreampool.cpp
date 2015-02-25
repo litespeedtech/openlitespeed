@@ -18,26 +18,26 @@
 #include "spdystreampool.h"
 #include "spdystream.h"
 
-Pool SpdyStreamPool::s_pool; 
-void SpdyStreamPool::recycle( SpdyStream* pStream )
+Pool SpdyStreamPool::s_pool;
+void SpdyStreamPool::recycle(SpdyStream *pStream)
 {
-    s_pool.recycle( pStream );    
+    s_pool.recycle(pStream);
 }
 
-SpdyStream* SpdyStreamPool::getSpdyStream()
+SpdyStream *SpdyStreamPool::getSpdyStream()
 {
-    SpdyStream * p = s_pool.get();
+    SpdyStream *p = s_pool.get();
     return p;
 }
 
-void SpdyStreamPool::recycle( SpdyStream** pStream, int n )
+void SpdyStreamPool::recycle(SpdyStream **pStream, int n)
 {
-    s_pool.recycle( (void **)pStream, n );    
+    s_pool.recycle((void **)pStream, n);
 }
 
-int SpdyStreamPool::getSpdyStreams( SpdyStream** pStream, int n)
+int SpdyStreamPool::getSpdyStreams(SpdyStream **pStream, int n)
 {
-    int ret = s_pool.get( pStream, n);
+    int ret = s_pool.get(pStream, n);
     return ret;
 }
 

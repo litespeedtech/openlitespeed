@@ -18,8 +18,8 @@
 #include "reqstats.h"
 
 ReqStats::ReqStats()
-    : m_iReqPerSec( 0 )
-    , m_iTotalReqs( 0 )
+    : m_iReqPerSec(0)
+    , m_iTotalReqs(0)
 {
 }
 

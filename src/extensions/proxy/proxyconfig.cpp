@@ -18,13 +18,13 @@
 #include "proxyconfig.h"
 
 ProxyConfig::ProxyConfig()
-    : m_iSsl( 0 )
+    : m_iSsl(0)
 {}
 
 ProxyConfig::~ProxyConfig()
 {}
 
-ProxyConfig::ProxyConfig( const char * pName )
-    : ExtWorkerConfig( pName )
-    , m_iSsl( 0 )
+ProxyConfig::ProxyConfig(const char *pName)
+    : ExtWorkerConfig(pName)
+    , m_iSsl(0)
 {}

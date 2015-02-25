@@ -24,21 +24,21 @@
 
 template< typename T> class TPointerList;
 
-inline void skipLeadingSpace( const char ** p )
+inline void skipLeadingSpace(const char **p)
 {
     register char ch;
-    while( (( ch = **p ) == ' ')||(ch == '\t'))
+    while (((ch = **p) == ' ') || (ch == '\t'))
         ++(*p);
 }
 
-inline void skipTrailingSpace( const char ** p )
+inline void skipTrailingSpace(const char **p)
 {
     register char ch;
-    while( (( ch = (*p)[-1] ) == ' ')||(ch == '\t'))
+    while (((ch = (*p)[-1]) == ' ') || (ch == '\t'))
         --(*p);
 }
 
-inline char hexdigit( char ch )
+inline char hexdigit(char ch)
 {
     return (((ch) <= '9') ? (ch) - '0' : ((ch) & 7) + 9);
 }
@@ -46,31 +46,31 @@ inline char hexdigit( char ch )
 
 class StrParse
 {
-    const char * m_pBegin;
-    const char * m_pEnd;
-    const char * m_delim;
-    const char * m_pStrEnd;
+    const char *m_pBegin;
+    const char *m_pEnd;
+    const char *m_delim;
+    const char *m_pStrEnd;
 public:
-    StrParse( const char * pBegin, const char * pEnd, const char * delim )
-        : m_pBegin( pBegin )
-        , m_pEnd( pEnd )
-        , m_delim( delim )
+    StrParse(const char *pBegin, const char *pEnd, const char *delim)
+        : m_pBegin(pBegin)
+        , m_pEnd(pEnd)
+        , m_delim(delim)
     {}
-    ~StrParse() {}  
+    ~StrParse() {}
     int isEnd() const { return m_pEnd <= m_pBegin ;  }
-    
-    const char * parse();
 
-    const char * trim_parse()
+    const char *parse();
+
+    const char *trim_parse()
     {
-        skipLeadingSpace( &m_pBegin );
-        const char * p = parse();
-        if ( p &&( p != m_pStrEnd ) )
-            skipTrailingSpace( &m_pStrEnd );
+        skipLeadingSpace(&m_pBegin);
+        const char *p = parse();
+        if (p && (p != m_pStrEnd))
+            skipTrailingSpace(&m_pStrEnd);
         return p;
     }
 
-    const char * getStrEnd() const  {   return m_pStrEnd;   }
+    const char *getStrEnd() const  {   return m_pStrEnd;   }
 
 };
 
@@ -83,33 +83,33 @@ class StringTool
     ~StringTool();
 public:
     static const char s_hex[17];
-    static char * strupper( const char * pSrc, char * pDest );
-    static char * strnupper( const char * p, char * pDest, int &n );
-    static char * strlower( const char * pSrc, char * pDest );
-    static char * strnlower( const char * pSrc, char * pDest, int &n );
-    static char * strtrim( char * p );
-    static int    strtrim( const char *&pBegin, const char *&pEnd );
-    static int    hexEncode( const char * pSrc, int len, char * pDest );
-    static int    hexDecode( const char * pSrc, int len, char * pDest );
-    static int    strmatch( const char * pSrc, const char * pEnd,
-                   AutoStr2 *const*begin, AutoStr2 *const*end, int case_sens );
-    static StringList * parseMatchPattern( const char * pPattern );
-    static const char * strNextArg( const char * &s, const char * pDelim = NULL );
-    static char * strNextArg( char * &s, const char * pDelim = NULL );
-    static const char * getLine( const char * pBegin,
-                        const char * pEnd  );
-    static int parseNextArg( const char * &pRuleStr, const char * pEnd,
-                const char * &argBegin, const char * &argEnd, const char * &pError );
-    static char * convertMatchToReg( char * pStr, char * pBufEnd );
-    static const char * findCloseBracket( const char * pBegin, 
-                                          const char * pEnd );
+    static char *strupper(const char *pSrc, char *pDest);
+    static char *strnupper(const char *p, char *pDest, int &n);
+    static char *strlower(const char *pSrc, char *pDest);
+    static char *strnlower(const char *pSrc, char *pDest, int &n);
+    static char *strtrim(char *p);
+    static int    strtrim(const char *&pBegin, const char *&pEnd);
+    static int    hexEncode(const char *pSrc, int len, char *pDest);
+    static int    hexDecode(const char *pSrc, int len, char *pDest);
+    static int    strmatch(const char *pSrc, const char *pEnd,
+                           AutoStr2 *const *begin, AutoStr2 *const *end, int case_sens);
+    static StringList *parseMatchPattern(const char *pPattern);
+    static const char *strNextArg(const char *&s, const char *pDelim = NULL);
+    static char *strNextArg(char *&s, const char *pDelim = NULL);
+    static const char *getLine(const char *pBegin,
+                               const char *pEnd);
+    static int parseNextArg(const char *&pRuleStr, const char *pEnd,
+                            const char *&argBegin, const char *&argEnd, const char *&pError);
+    static char *convertMatchToReg(char *pStr, char *pBufEnd);
+    static const char *findCloseBracket(const char *pBegin,
+                                        const char *pEnd);
 
-    static const char * findCharInBracket( const char * pBegin, 
-                                 const char * pEnd, char searched );
-    static int str_off_t( char * pBuf, int len, off_t val );
-    static int unescapeQuote( char * pBegin, char * pEnd, int ch );
-    
-    static void getMd5(const char *src, int len, unsigned char * dstBin);
+    static const char *findCharInBracket(const char *pBegin,
+                                         const char *pEnd, char searched);
+    static int str_off_t(char *pBuf, int len, off_t val);
+    static int unescapeQuote(char *pBegin, char *pEnd, int ch);
+
+    static void getMd5(const char *src, int len, unsigned char *dstBin);
 };
 
 #endif

@@ -20,22 +20,24 @@
 
 
 #include <limits.h>
-  
+
 class HttpUtil
 {
     HttpUtil() {};
     ~HttpUtil() {};
 public:
-    static int unescape_inplace( char * pDest, int& uriLen,
-                                 const char * &pOrgSrc );
-    static int unescape( char * pDest, int& uriLen,
-                        const char * &pOrgSrc );
+    static int unescape_inplace(char *pDest, int &uriLen,
+                                const char *&pOrgSrc);
+    static int unescape(char *pDest, int &uriLen,
+                        const char *&pOrgSrc);
     //static int unescape(const char *pSrc, char *pDest);
     static int unescape_n(const char *pSrc, char *pDest, int n);
-    static int escape( const char * pSrc, char * pDest, int n );
-    static int unescape_n(const char *pSrc, int srcLen, char *pDest, int destLen );
-    static int escapeHtml(const char *pSrc, const char * pSrcEnd, char * pDest, int n);
-    static int escape( const char * pSrc, int srcLen, char * pDest, int n );
+    static int escape(const char *pSrc, char *pDest, int n);
+    static int unescape_n(const char *pSrc, int srcLen, char *pDest,
+                          int destLen);
+    static int escapeHtml(const char *pSrc, const char *pSrcEnd, char *pDest,
+                          int n);
+    static int escape(const char *pSrc, int srcLen, char *pDest, int n);
 };
 
 #endif

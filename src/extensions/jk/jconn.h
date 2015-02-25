@@ -27,10 +27,10 @@
 #define AJP_MIN_PACKET_SIZE 6
 
 class JConn : public ExtConn
-            , public HttpExtProcessor
+    , public HttpExtProcessor
 {
-    char  *         m_pReqHeaderEnd;
-    char  *         m_pBufEnd;
+    char           *m_pReqHeaderEnd;
+    char           *m_pBufEnd;
     int             m_iPendingBody;
     int             m_iTotalPending;
     IOVec           m_iovec;
@@ -40,12 +40,12 @@ class JConn : public ExtConn
     int             m_packetLeft;
     int             m_chunkLeft;
     int             m_iNumHeader;
-    unsigned char * m_pCurPos;
+    unsigned char *m_pCurPos;
     int             m_packetType;
     int             m_iPacketState;
-    unsigned char * m_pRespBufEnd;
+    unsigned char *m_pRespBufEnd;
     unsigned char   m_respBuf[AJP_MAX_PACKET_SIZE];
-        
+
     enum
     {
         PACKET_HEADER,
@@ -57,25 +57,25 @@ class JConn : public ExtConn
         RESP_HEADER
     };
     int processRespData();
-    int processPacketData( unsigned char * &p );
-    int processPacketHeader( unsigned char * &p );
-    int processPacketContent( unsigned char * &p, unsigned char * pEnd );
-    int readRespHeader( unsigned char *&p, unsigned char *pEnd );
+    int processPacketData(unsigned char *&p);
+    int processPacketHeader(unsigned char *&p);
+    int processPacketContent(unsigned char *&p, unsigned char *pEnd);
+    int readRespHeader(unsigned char *&p, unsigned char *pEnd);
     int sendReqBodyPacket();
-        
+
 protected:
     virtual int doRead();
     virtual int doWrite();
-    virtual int doError( int err );
-    virtual int addRequest( ExtRequest * pReq );
-    virtual ExtRequest* getReq() const;
-    virtual void init( int fd, Multiplexer* pMplx );
-    
-public: 
-    virtual int removeRequest( ExtRequest * pReq );
+    virtual int doError(int err);
+    virtual int addRequest(ExtRequest *pReq);
+    virtual ExtRequest *getReq() const;
+    virtual void init(int fd, Multiplexer *pMplx);
+
+public:
+    virtual int removeRequest(ExtRequest *pReq);
     JConn();
     ~JConn();
-    
+
     virtual void finishRecvBuf();
 
     virtual bool wantRead();
@@ -86,8 +86,8 @@ public:
     virtual int  begin();
     virtual int  beginReqBody();
     virtual int  endOfReqBody();
-    virtual int  sendReqBody( const char * pBuf, int size );
-    virtual int  readResp( char * pBuf, int size );
+    virtual int  sendReqBody(const char *pBuf, int size);
+    virtual int  readResp(char *pBuf, int size);
     virtual int  flush();
     virtual void cleanUp();
 

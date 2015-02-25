@@ -27,34 +27,35 @@ HttpConfigLoader::~HttpConfigLoader()
 int HttpConfigLoader::loadPlainConfigFile()
 {
     plainconf::initKeywords();
-    plainconf::setRootPath( MainServerConfig::getInstance().getServerRoot() );
+    plainconf::setRootPath(MainServerConfig::getInstance().getServerRoot());
 
-    if ( !m_pRoot )
-        m_pRoot = plainconf::parseFile( m_sPlainconfPath.c_str() );
+    if (!m_pRoot)
+        m_pRoot = plainconf::parseFile(m_sPlainconfPath.c_str());
 
 #ifdef TEST_OUTPUT_PLAIN_CONF
     char sPlainFile[512] = {0};
-    strcpy( sPlainFile, m_sPlainconfPath.c_str() );
-    strcat( sPlainFile, ".txt" );
-    plainconf::testOutputConfigFile( m_pRoot, sPlainFile );
+    strcpy(sPlainFile, m_sPlainconfPath.c_str());
+    strcat(sPlainFile, ".txt");
+    plainconf::testOutputConfigFile(m_pRoot, sPlainFile);
 #endif
-    return ( m_pRoot == NULL ) ? -1 : 0;
+    return (m_pRoot == NULL) ? -1 : 0;
 }
 
-int HttpConfigLoader::loadConfigFile( const char *pConfigFilePath )
+int HttpConfigLoader::loadConfigFile(const char *pConfigFilePath)
 {
-    if ( pConfigFilePath == NULL )
+    if (pConfigFilePath == NULL)
         pConfigFilePath = m_sConfigFilePath.c_str();
 
-    if ( !m_pRoot )
-        m_pRoot = ConfigCtx::getCurConfigCtx()->parseFile( pConfigFilePath, "httpServerConfig" );
+    if (!m_pRoot)
+        m_pRoot = ConfigCtx::getCurConfigCtx()->parseFile(pConfigFilePath,
+                  "httpServerConfig");
 
-    return ( m_pRoot == NULL ) ? -1 : 0;
+    return (m_pRoot == NULL) ? -1 : 0;
 }
 
 void HttpConfigLoader::releaseConfigXmlTree()
 {
-    if ( m_pRoot )
+    if (m_pRoot)
     {
         delete m_pRoot;
         m_pRoot = NULL;

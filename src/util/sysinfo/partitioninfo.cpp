@@ -29,11 +29,12 @@ PartitionInfo::~PartitionInfo()
 
 }
 
-int PartitionInfo::getPartitionInfo(const char *path, uint64_t *outTotal, uint64_t *outFree)
+int PartitionInfo::getPartitionInfo(const char *path, uint64_t *outTotal,
+                                    uint64_t *outFree)
 {
 #if defined(__linux) || defined(sun)
     struct statvfs st;
-    if ( statvfs(path, &st) != 0 )
+    if (statvfs(path, &st) != 0)
     {
         *outFree = 0;
         *outTotal = 0;
@@ -41,7 +42,7 @@ int PartitionInfo::getPartitionInfo(const char *path, uint64_t *outTotal, uint64
     }
 #elif defined(__FreeBSD__) || defined(__APPLE__)
     struct statfs st;
-    if ( statfs(path, &st) != 0 )
+    if (statfs(path, &st) != 0)
     {
         *outFree = 0;
         *outTotal = 0;

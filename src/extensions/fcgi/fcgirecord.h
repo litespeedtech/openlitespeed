@@ -27,28 +27,28 @@
 
 class FcgiRecord
 {
-	FcgiRecord();
-	~FcgiRecord();
+    FcgiRecord();
+    ~FcgiRecord();
 public:
-    static void setRecordHeader( FCGI_Header &header, unsigned char iType,
-            uint16_t iRequestId, uint16_t iContentLength );
-    static bool testRecord( FCGI_Header &header )
+    static void setRecordHeader(FCGI_Header &header, unsigned char iType,
+                                uint16_t iRequestId, uint16_t iContentLength);
+    static bool testRecord(FCGI_Header &header)
     {
-        return (( header.version == FCGI_VERSION_1 )
-            &&(header.type > 0 )&&(header.type <= FCGI_MAXTYPE ));
+        return ((header.version == FCGI_VERSION_1)
+                && (header.type > 0) && (header.type <= FCGI_MAXTYPE));
     }
 
-    static uint16_t  getContentLength( FCGI_Header &header )
+    static uint16_t  getContentLength(FCGI_Header &header)
     {
-        uint16_t len = (((uint16_t)header.contentLengthB1) << 8 )
-                        | header.contentLengthB0;
+        uint16_t len = (((uint16_t)header.contentLengthB1) << 8)
+                       | header.contentLengthB0;
         return len;
     }
 
-    static uint16_t  getId( FCGI_Header &header )
+    static uint16_t  getId(FCGI_Header &header)
     {
-        uint16_t id = (((uint16_t)header.requestIdB1 ) << 8 )
-                        | header.requestIdB0;
+        uint16_t id = (((uint16_t)header.requestIdB1) << 8)
+                      | header.requestIdB0;
         return id;
     }
 };

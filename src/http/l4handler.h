@@ -31,34 +31,35 @@ public:
     L4Handler();
     ~L4Handler() {};
 
-    int  init(HttpReq &req, const GSockAddr *pGSockAddr, const char *pIP, int iIpLen);
-    
-    LoopBuf*    getBuf()            {   return m_buf;  }
+    int  init(HttpReq &req, const GSockAddr *pGSockAddr, const char *pIP,
+              int iIpLen);
+
+    LoopBuf    *getBuf()            {   return m_buf;  }
     void        continueRead()      {   getStream()->continueRead();   }
     void        suspendRead()       {   getStream()->suspendRead();   }
     void        suspendWrite()      {   getStream()->suspendWrite();    }
     void        continueWrite()     {   getStream()->continueWrite();    }
-    
+
     void        doWrite();
     void        closeBothConnection();
-    
+
 private:
-    L4conn  *       m_pL4conn;
-    LoopBuf *       m_buf;
+    L4conn         *m_pL4conn;
+    LoopBuf        *m_buf;
     int             m_iState;
 
-    
+
     void recycle();
     int onTimerEx()         {   return 0;   }
     int onCloseEx()         {   return 0;   }
     int onWriteEx();
     int onReadEx();
     int onInitConnected()   {   return 0;   };
-    
+
 public:
-    LOG4CXX_NS::Logger* getLogger() const   {   return getStream()->getLogger();   }
-    const char * getLogId() {   return getStream()->getLogId();     }
-   
+    LOG4CXX_NS::Logger *getLogger() const   {   return getStream()->getLogger();   }
+    const char *getLogId() {   return getStream()->getLogId();     }
+
 };
 
 #endif // L4TUNNEL_H

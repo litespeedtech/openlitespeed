@@ -20,84 +20,79 @@
 
 
 #include <util/dlinkqueue.h>
-  
+
 template <class _Obj >
-class LinkObjPool 
+class LinkObjPool
 {
     LinkQueue   m_pool;
     int         m_chunk;
-    _Obj * newObj()
+    _Obj *newObj()
     {   return new _Obj();  }
 
-    void releaseObj( void * pObj)
-    {   delete (_Obj*)pObj; }
+    void releaseObj(void *pObj)
+    {   delete(_Obj *)pObj; }
 
-    int allocate( int size )
+    int allocate(int size)
     {
-        while( size-- > 0 )
-        {
-            m_pool.push( newObj() );
-        }
+        while (size-- > 0)
+            m_pool.push(newObj());
         return 0;
     }
-    
+
     void release()
     {
-        _Obj * pObj;
-        while( ( pObj = (_Obj*)m_pool.pop() ) )
-        {
+        _Obj *pObj;
+        while ((pObj = (_Obj *)m_pool.pop()))
             delete pObj;
-        }
     }
-    
-public: 
-    explicit LinkObjPool( int initSize = 10, int chunkSize = 10)
-        : m_chunk( chunkSize )
+
+public:
+    explicit LinkObjPool(int initSize = 10, int chunkSize = 10)
+        : m_chunk(chunkSize)
     {
-        if ( initSize )
-            allocate( initSize );
+        if (initSize)
+            allocate(initSize);
     }
-    
+
     ~LinkObjPool()
     {   release();  }
-    
-    _Obj * get()
-    {   _Obj* pObj = (_Obj *)m_pool.pop();
-        if ( !pObj )
+
+    _Obj *get()
+    {
+        _Obj *pObj = (_Obj *)m_pool.pop();
+        if (!pObj)
         {
-            allocate( m_chunk );
+            allocate(m_chunk);
             pObj = (_Obj *)m_pool.pop();
         }
         return pObj;
     }
-    
-    int get( _Obj ** pObj, int n)
+
+    int get(_Obj **pObj, int n)
     {
         int i;
-        for( i = 0; i < n; ++i )
+        for (i = 0; i < n; ++i)
         {
             *pObj = get();
-            if ( !*pObj )
+            if (!*pObj)
                 break;
             ++pObj;
         }
         return i;
     }
 
-    void recycle( LinkedObj * pObj)
+    void recycle(LinkedObj *pObj)
     {
-        if ( pObj )
-        {
-            m_pool.push( pObj );
-        }
+        if (pObj)
+            m_pool.push(pObj);
     }
-    
-    void recycle( LinkedObj ** pObj, int n)
+
+    void recycle(LinkedObj **pObj, int n)
     {
-        LinkedObj ** pEnd = pObj + n;
-        while( pObj < pEnd )
+        LinkedObj **pEnd = pObj + n;
+        while (pObj < pEnd)
         {
-            recycle( *pObj );
+            recycle(*pObj);
             ++pObj;
         }
     }

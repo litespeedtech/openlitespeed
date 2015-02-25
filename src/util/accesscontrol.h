@@ -29,15 +29,15 @@ class IPAcc
 {
     GHash::const_iterator data;
 public:
-    IPAcc( GHash::const_iterator iter )
-        : data( iter )
-        {}
-    IPAcc( const IPAcc& rhs )
-        : data( rhs.data )
-        {}
+    IPAcc(GHash::const_iterator iter)
+        : data(iter)
+    {}
+    IPAcc(const IPAcc &rhs)
+        : data(rhs.data)
+    {}
     int getAccess() const
     {   return (long)(data->second());  }
-    const void * key() const
+    const void *key() const
     {   return data->first();           }
     bool isNull() const {   return data == NULL; }
 };
@@ -46,27 +46,28 @@ public:
 class IPAccessControl : private GHash
 {
 public:
-    explicit IPAccessControl( int initSize, GHash::hash_fn hf = NULL, GHash::val_comp vc = NULL )
-        : GHash( initSize, hf, vc )
-        {}
-        
+    explicit IPAccessControl(int initSize, GHash::hash_fn hf = NULL,
+                             GHash::val_comp vc = NULL)
+        : GHash(initSize, hf, vc)
+    {}
+
     ~IPAccessControl() {};
 
     int update(in_addr_t ip, long allow)
     {
-        return (GHash::update( (void *)(unsigned long)ip, (void *)allow ) == NULL );
+        return (GHash::update((void *)(unsigned long)ip, (void *)allow) == NULL);
     }
-    
+
     void remove(in_addr_t ip)
     {
-        GHash::iterator iter = GHash::find( (void*)(unsigned long)ip );
-        if ( iter != end() )
-            GHash::erase( iter );
+        GHash::iterator iter = GHash::find((void *)(unsigned long)ip);
+        if (iter != end())
+            GHash::erase(iter);
     }
-    
-    IPAcc find( in_addr_t addr ) const
+
+    IPAcc find(in_addr_t addr) const
     {
-        return GHash::find( (void *)(unsigned long)addr );
+        return GHash::find((void *)(unsigned long)addr);
     }
 
 
@@ -85,48 +86,48 @@ class ConfigCtx;
 class AccessControl
 {
 private:
-    SubNetNode        * m_pRoot;
+    SubNetNode         *m_pRoot;
     IPAccessControl     m_ipCtrl;
-    
-    SubNet6Node       * m_pRoot6;
-    IP6AccessControl  * m_pIp6Ctrl;
 
-    int insSubNetControl( in_addr_t subNet,
-                          in_addr_t mask,
-                          int allowed );
+    SubNet6Node        *m_pRoot6;
+    IP6AccessControl   *m_pIp6Ctrl;
+
+    int insSubNetControl(in_addr_t subNet,
+                         in_addr_t mask,
+                         int allowed);
 
     int addIPControl(in_addr_t ip, int allowed)
-    {   return m_ipCtrl.update( ip, allowed );     }
+    {   return m_ipCtrl.update(ip, allowed);     }
     void removeIPControl(in_addr_t ip)
-    {   m_ipCtrl.remove( ip );  }
-    int addIPv4( const char * ip, int allowed );
-    int parseNetmask( const char * netMask, int max, void *mask );
-    
+    {   m_ipCtrl.remove(ip);  }
+    int addIPv4(const char *ip, int allowed);
+    int parseNetmask(const char *netMask, int max, void *mask);
+
     int addSubNetControl(in_addr_t ip, in_addr_t netMask, int allowed);
 
-    int addSubNetControl( const in6_addr &subNet,
-                          const in6_addr &mask, int allowed);
-    int insSubNetControl( const in6_addr &subNet,
-                          const in6_addr &mask, int allowed);
-    int addIPControl( const in6_addr &ip, int allowed);
-    
+    int addSubNetControl(const in6_addr &subNet,
+                         const in6_addr &mask, int allowed);
+    int insSubNetControl(const in6_addr &subNet,
+                         const in6_addr &mask, int allowed);
+    int addIPControl(const in6_addr &ip, int allowed);
+
 public:
     AccessControl();
     ~AccessControl();
 
     int hasAccess(in_addr_t ip) const;
-    int hasAccess( const in6_addr &ip) const;
-    int hasAccess( const struct sockaddr * pAddr ) const;
-    int hasAccess(const char* pchIP) const;
-    int addIPControl(const char* pchIP, int allowed);
-    void removeIPControl(const char* pchIP);
+    int hasAccess(const in6_addr &ip) const;
+    int hasAccess(const struct sockaddr *pAddr) const;
+    int hasAccess(const char *pchIP) const;
+    int addIPControl(const char *pchIP, int allowed);
+    void removeIPControl(const char *pchIP);
 
-    int addSubNetControl(const char* ip, const char* netMask, int allowed);
-    int addSubNetControl(const char* ip_mask, int allowed);
+    int addSubNetControl(const char *ip, const char *netMask, int allowed);
+    int addSubNetControl(const char *ip_mask, int allowed);
     void clear();
-    int addList( const char * pList, int allow );
-    int config( const XmlNode *pNode );
-    static int isAvailable( const XmlNode *pNode );
+    int addList(const char *pList, int allow);
+    int config(const XmlNode *pNode);
+    static int isAvailable(const XmlNode *pNode);
 };
 
 

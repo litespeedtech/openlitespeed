@@ -24,7 +24,7 @@ class ClientInfo;
 
 class Adns
 {
-    
+
 public:
 
     Adns();
@@ -32,8 +32,8 @@ public:
 
     static int init();
     static int shutdown();
-    static void getHostByName( const char * pName, void * arg );
-    static void getHostByAddr( ClientInfo * pInfo, const struct sockaddr * pAddr );
+    static void getHostByName(const char *pName, void *arg);
+    static void getHostByAddr(ClientInfo *pInfo, const struct sockaddr *pAddr);
     static void process();
 };
 
@@ -48,8 +48,8 @@ class ClientInfo;
 class Adns : public EventReactor
 {
     static int          s_inited;
-    struct dns_ctx * m_pCtx;
-    
+    struct dns_ctx *m_pCtx;
+
 public:
 
     Adns();
@@ -57,12 +57,12 @@ public:
 
     int  init();
     int  shutdown();
-    void getHostByName( const char * pName, void * arg );
-    void getHostByAddr( ClientInfo * pInfo, const struct sockaddr * pAddr );
-    void getHostByNameV6( const char * pName, void *arg );
-    int  handleEvents( short events );
+    void getHostByName(const char *pName, void *arg);
+    void getHostByAddr(ClientInfo *pInfo, const struct sockaddr *pAddr);
+    void getHostByNameV6(const char *pName, void *arg);
+    int  handleEvents(short events);
     void onTimer();
-    
+
 };
 
 #endif

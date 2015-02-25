@@ -31,7 +31,7 @@
 class AutoBuf;
 class ClientInfo;
 
-class ClientCache 
+class ClientCache
 {
 public:
     typedef THash<ClientInfo *>      Cache;
@@ -39,25 +39,25 @@ public:
 
 private:
     typedef TPointerList<ClientInfo> ClientList;
-    
+
     Cache                   m_v4;
     Cache                   m_v6;
     ClientList              m_toBeRemoved;
-    
-    static int appendDirtyList( GHash::iterator iter, void * pList );
-    void       clean( Cache * pCache );
-    int     writeBlockedIP( AutoBuf * pBuf, Cache * pCache );
-    void    recycle( ClientInfo * pInfo );
-    
+
+    static int appendDirtyList(GHash::iterator iter, void *pList);
+    void       clean(Cache *pCache);
+    int     writeBlockedIP(AutoBuf *pBuf, Cache *pCache);
+    void    recycle(ClientInfo *pInfo);
+
 public:
-    
-    ClientCache( int initSize );
+
+    ClientCache(int initSize);
     ~ClientCache();
-    ClientInfo * newClient( const struct sockaddr * pAddr );
-    const_iterator find( const struct sockaddr * pAddr ) const;
-    void add( ClientInfo * pInfo );
-    void del( ClientInfo * pInfo );
-    ClientInfo * del( const struct sockaddr * pAddr );
+    ClientInfo *newClient(const struct sockaddr *pAddr);
+    const_iterator find(const struct sockaddr *pAddr) const;
+    void add(ClientInfo *pInfo);
+    void del(ClientInfo *pInfo);
+    ClientInfo *del(const struct sockaddr *pAddr);
     //void clear();
     void clean();
     void dirtyAll();
@@ -68,11 +68,11 @@ public:
 
     static void initObjPool();
     static void clearObjPool();
-    
-    ClientInfo * getClientInfo( struct sockaddr * pPeer );
 
-    int generateBlockedIPReport( int fd );
-    
+    ClientInfo *getClientInfo(struct sockaddr *pPeer);
+
+    int generateBlockedIPReport(int fd);
+
 };
 
 #endif

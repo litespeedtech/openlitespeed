@@ -16,28 +16,28 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #ifdef RUN_TEST
- 
+
 #include "denieddirtest.h"
 #include <http/denieddir.h>
 #include "test/unittest-cpp/UnitTest++/src/UnitTest++.h"
 
 
-TEST( DeniedDirTest_runTest)
+TEST(DeniedDirTest_runTest)
 {
     DeniedDir instance;
-    instance.addDir( "/etc/*" );
-    instance.addDir( "/home/gwang/projects/httpd/dist/conf/*" );
-    CHECK(instance.addDir("/")==0);
-    instance.isDenied( "/home/gwang/projects/httpd/dist/vhosts/example/html/" );
-    
-    CHECK(instance.addDir("/usr/*")==0);
-    CHECK(instance.addDir("/home/lsong")==0);
-    CHECK(instance.addDir("/sbin/*")==0);
-    CHECK(instance.addDir("/home/lsong/*")==0);
-    CHECK(instance.addDir("/home/lsong/*")==0);
-    CHECK(instance.addDir("/opt/jdk/bin")==0);
-    CHECK(instance.addDir("/opt/jdk/lib/*")==0);
-    CHECK(instance.addDir("/bin/*")==0);
+    instance.addDir("/etc/*");
+    instance.addDir("/home/gwang/projects/httpd/dist/conf/*");
+    CHECK(instance.addDir("/") == 0);
+    instance.isDenied("/home/gwang/projects/httpd/dist/vhosts/example/html/");
+
+    CHECK(instance.addDir("/usr/*") == 0);
+    CHECK(instance.addDir("/home/lsong") == 0);
+    CHECK(instance.addDir("/sbin/*") == 0);
+    CHECK(instance.addDir("/home/lsong/*") == 0);
+    CHECK(instance.addDir("/home/lsong/*") == 0);
+    CHECK(instance.addDir("/opt/jdk/bin") == 0);
+    CHECK(instance.addDir("/opt/jdk/lib/*") == 0);
+    CHECK(instance.addDir("/bin/*") == 0);
     CHECK(instance.isDenied("/bin/ls") == true);
     CHECK(instance.isDenied("/bin/local/") == true);
     CHECK(instance.isDenied("/opt/jdk/bin/") == true);

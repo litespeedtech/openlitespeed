@@ -18,10 +18,10 @@
 #include "timertask.h"
 
 TimerTask::TimerTask()
-    : m_scheduled( 0 )
-    , m_event( 0 )
-    , m_pTimer ( 0 )
-    , m_pProcessor( 0 )
+    : m_scheduled(0)
+    , m_event(0)
+    , m_pTimer(0)
+    , m_pProcessor(0)
 {
 }
 TimerTask::~TimerTask()

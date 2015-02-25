@@ -17,10 +17,10 @@
 *****************************************************************************/
 #include <util/gmap.h>
 
-GMap::GMap( val_comp vc )
-    :m_size( 0 ),
-    m_root( NULL ),
-    m_vc( vc )
+GMap::GMap(val_comp vc)
+    : m_size(0),
+      m_root(NULL),
+      m_vc(vc)
 {
     m_insert = insertNode;
     m_update = updateNode;
@@ -34,34 +34,34 @@ GMap::~GMap()
 
 void GMap::clear()
 {
-    releaseNodes( m_root );
+    releaseNodes(m_root);
     m_root = NULL;
     m_size = 0;
 }
 
-void GMap::swap( GMap& rhs )
+void GMap::swap(GMap &rhs)
 {
-    char temp[ sizeof( GMap ) ];
-    memmove( temp, this, sizeof( GMap ) );
-    memmove( this, &rhs, sizeof( GMap ) );
-    memmove( &rhs, temp, sizeof( GMap ) );
+    char temp[ sizeof(GMap) ];
+    memmove(temp, this, sizeof(GMap));
+    memmove(this, &rhs, sizeof(GMap));
+    memmove(&rhs, temp, sizeof(GMap));
 }
 
-void GMap::releaseNodes( iterator node )
+void GMap::releaseNodes(iterator node)
 {
-    if ( node == NULL )
+    if (node == NULL)
         return;
-    if ( node->m_left != NULL )
-        releaseNodes( node->m_left );
-    if ( node->m_right != NULL )
-        releaseNodes( node->m_right );
-    free( node );
+    if (node->m_left != NULL)
+        releaseNodes(node->m_left);
+    if (node->m_right != NULL)
+        releaseNodes(node->m_right);
+    free(node);
 }
 
 GMap::iterator GMap::begin()
 {
     iterator ptr = this->m_root;
-    while( ptr->m_left != NULL )
+    while (ptr->m_left != NULL)
         ptr = ptr->m_left;
     return ptr;
 }
@@ -69,20 +69,20 @@ GMap::iterator GMap::begin()
 GMap::iterator GMap::end()
 {
     iterator ptr = this->m_root;
-    while( ptr->m_right != NULL )
+    while (ptr->m_right != NULL)
         ptr = ptr->m_right;
     return ptr;
 }
 
-GMap::iterator GMap::next( iterator iter )
+GMap::iterator GMap::next(iterator iter)
 {
-    if ( iter == NULL )
+    if (iter == NULL)
         return NULL;
-    if ( iter->m_right == NULL )
+    if (iter->m_right == NULL)
     {
-        if ( iter->m_parent != NULL )
+        if (iter->m_parent != NULL)
         {
-            if ( m_vc( iter->m_pKey, iter->m_parent->m_pKey ) > 0 )
+            if (m_vc(iter->m_pKey, iter->m_parent->m_pKey) > 0)
                 return NULL;
             else
                 return iter->m_parent;
@@ -91,225 +91,227 @@ GMap::iterator GMap::next( iterator iter )
             return NULL;
     }
     iter = iter->m_right;
-    while( iter->m_left != NULL )
+    while (iter->m_left != NULL)
         iter = iter->m_left;
     return iter;
 }
 
-int GMap::for_each( iterator beg, iterator end, for_each_fn fun )
+int GMap::for_each(iterator beg, iterator end, for_each_fn fun)
 {
     int iCount = 0;
     iterator iterNext = beg;
     iterator iter ;
-    
-    if ( !fun )
+
+    if (!fun)
     {
         errno = EINVAL;
         return -1;
     }
-    if ( !beg )
+    if (!beg)
         return 0;
-    
-    if ( !end )
+
+    if (!end)
         return 0;
-    
-    while( iterNext && (m_vc( iterNext->getKey(), end->getKey() ) <= 0) )
+
+    while (iterNext && (m_vc(iterNext->getKey(), end->getKey()) <= 0))
     {
         iter = iterNext;
-        iterNext = next( iterNext );
-        if ( fun( iter ) )
+        iterNext = next(iterNext);
+        if (fun(iter))
             break;
         ++iCount;
     }
     return iCount;
 }
 
-int GMap::for_each2( iterator beg, iterator end, for_each_fn2 fun, void* pUData )
+int GMap::for_each2(iterator beg, iterator end, for_each_fn2 fun,
+                    void *pUData)
 {
     int iCount = 0;
     iterator iterNext = beg;
     iterator iter ;
-    if ( !fun )
+    if (!fun)
     {
         errno = EINVAL;
         return -1;
     }
-    if ( !beg )
+    if (!beg)
         return 0;
-    
-    if ( !end )
+
+    if (!end)
         return 0;
-    
-    while( iterNext && (m_vc( iterNext->getKey(), end->getKey() ) <= 0) )
+
+    while (iterNext && (m_vc(iterNext->getKey(), end->getKey()) <= 0))
     {
         iter = iterNext;
-        iterNext = next( iterNext );
-        if ( fun( iter, pUData ) )
+        iterNext = next(iterNext);
+        if (fun(iter, pUData))
             break;
         ++iCount;
     }
     return iCount;
 }
 
-GMap::iterator GMap::findNode( GMap* pThis, const void* pKey )
+GMap::iterator GMap::findNode(GMap *pThis, const void *pKey)
 {
     register iterator ptr = pThis->m_root;
     register int iComp;
-    if ( pThis == NULL )
+    if (pThis == NULL)
         return NULL;
-    if ( pThis->m_vc == NULL )
+    if (pThis->m_vc == NULL)
         return NULL;
-    while( ptr != NULL && (iComp = pThis->m_vc( ptr->m_pKey, pKey )) != 0)
+    while (ptr != NULL && (iComp = pThis->m_vc(ptr->m_pKey, pKey)) != 0)
         ptr = (iComp > 0 ? ptr->m_left : ptr->m_right);
     return ptr;
 }
 
-void* GMap::updateNode( GMap* pThis, const void* pKey, void* pValue, iterator node )
+void *GMap::updateNode(GMap *pThis, const void *pKey, void *pValue,
+                       iterator node)
 {
     void *pOldValue;
-    if ( node != NULL )
+    if (node != NULL)
     {
-        if ( pThis->m_vc( node->m_pKey, pKey ) != 0 )
+        if (pThis->m_vc(node->m_pKey, pKey) != 0)
             return NULL;
     }
-    else if ( (node = findNode( pThis, pKey )) == NULL )
+    else if ((node = findNode(pThis, pKey)) == NULL)
         return NULL;
-    
+
     node->m_pKey = pKey;
     pOldValue = node->m_pValue;
     node->m_pValue = pValue;
     return pOldValue;
 }
 
-void GMap::fixTree( GMap* pThis, iterator node )
+void GMap::fixTree(GMap *pThis, iterator node)
 {
     iterator pGrandparent, pUncle;
-    if ( node->m_parent == NULL )
+    if (node->m_parent == NULL)
     {
         node->m_color = GMapNode::black;
         return;
     }
-    else if ( node->m_parent->m_color == GMapNode::black )
+    else if (node->m_parent->m_color == GMapNode::black)
         return;
-    else if ( ((pUncle = getUncle( node ) ) != NULL) 
-        && (pUncle->m_color == GMapNode::red) 
-    )
+    else if (((pUncle = getUncle(node)) != NULL)
+             && (pUncle->m_color == GMapNode::red)
+            )
     {
         node->m_parent->m_color = GMapNode::black;
         pUncle->m_color = GMapNode::black;
-        pGrandparent = getGrandparent( node );
+        pGrandparent = getGrandparent(node);
         pGrandparent->m_color = GMapNode::red;
-        fixTree( pThis, pGrandparent );
+        fixTree(pThis, pGrandparent);
     }
     else
     {
-        pGrandparent = getGrandparent( node );
-        if ( (node == node->m_parent->m_right)
+        pGrandparent = getGrandparent(node);
+        if ((node == node->m_parent->m_right)
             && (node->m_parent == pGrandparent->m_left)
-        )
+           )
         {
-            rotateLeft( pThis, node->m_parent );
+            rotateLeft(pThis, node->m_parent);
             node = node->m_left;
         }
-        else if ( (node == node->m_parent->m_left)
-            && (node->m_parent == pGrandparent->m_right)
-        )
+        else if ((node == node->m_parent->m_left)
+                 && (node->m_parent == pGrandparent->m_right)
+                )
         {
-            rotateRight( pThis, node->m_parent );
+            rotateRight(pThis, node->m_parent);
             node = node->m_right;
         }
-        pGrandparent = getGrandparent( node );
+        pGrandparent = getGrandparent(node);
         node->m_parent->m_color = GMapNode::black;
         pGrandparent->m_color = GMapNode::red;
-        
-        if ( node == node->m_parent->m_left )
-            rotateRight( pThis, pGrandparent );
+
+        if (node == node->m_parent->m_left)
+            rotateRight(pThis, pGrandparent);
         else
-            rotateLeft( pThis, pGrandparent );
+            rotateLeft(pThis, pGrandparent);
     }
 }
 
-int GMap::insertNode( GMap* pThis, const void* pKey, void* pValue )
+int GMap::insertNode(GMap *pThis, const void *pKey, void *pValue)
 {
     iterator pNode;
-    pNode = (iterator)malloc( sizeof(GMapNode) );
-    if ( !pNode )
+    pNode = (iterator)malloc(sizeof(GMapNode));
+    if (!pNode)
         return -1;
-    
+
     pNode->m_pKey = pKey;
     pNode->m_pValue = pValue;
     pNode->m_left = NULL;
     pNode->m_right = NULL;
     pNode->m_parent = NULL;
-    if ( pThis->m_root == NULL )
+    if (pThis->m_root == NULL)
     {
         pNode->m_color = GMapNode::black;
         pThis->m_root = pNode;
         ++pThis->m_size;
         return 0;
     }
-    
+
     pNode->m_color = GMapNode::red;
-    if ( insertIntoTree( pThis->m_root, pNode, pThis->m_vc ) < 0 )
+    if (insertIntoTree(pThis->m_root, pNode, pThis->m_vc) < 0)
     {
-        free( pNode );
+        free(pNode);
         return -1;
     }
-    
-    fixTree( pThis, pNode );
+
+    fixTree(pThis, pNode);
     pThis->m_root->m_color = GMapNode::black;
     ++pThis->m_size;
     return 0;
 }
 
-int GMap::insertIntoTree( iterator pCurrent, iterator pNew, val_comp vc )
+int GMap::insertIntoTree(iterator pCurrent, iterator pNew, val_comp vc)
 {
-    int iComp = vc( pCurrent->m_pKey, pNew->m_pKey );
-    if ( iComp < 0 )
-        if ( pCurrent->m_right == NULL )
+    int iComp = vc(pCurrent->m_pKey, pNew->m_pKey);
+    if (iComp < 0)
+        if (pCurrent->m_right == NULL)
         {
             pCurrent->m_right = pNew;
             pNew->m_parent = pCurrent;
             return 0;
         }
         else
-            return insertIntoTree( pCurrent->m_right, pNew, vc );
-    else if ( iComp > 0 )
-        if ( pCurrent->m_left == NULL )
+            return insertIntoTree(pCurrent->m_right, pNew, vc);
+    else if (iComp > 0)
+        if (pCurrent->m_left == NULL)
         {
             pCurrent->m_left = pNew;
             pNew->m_parent = pCurrent;
             return 0;
         }
         else
-            return insertIntoTree( pCurrent->m_left, pNew, vc );
+            return insertIntoTree(pCurrent->m_left, pNew, vc);
     else
         return -1;
 }
 
-void* GMap::deleteNode( iterator node )
+void *GMap::deleteNode(iterator node)
 {
     void *val;
     iterator ptr;
-    if ( node == NULL )
+    if (node == NULL)
         return NULL;
     val = node->m_pValue;
-    
-    ptr = removeNodeFromTree( this, node );
+
+    ptr = removeNodeFromTree(this, node);
     --this->m_size;
-    free( ptr );
+    free(ptr);
     return val;
 }
 
-GMap::iterator GMap::removeNodeFromTree( GMap* pThis, iterator node )
+GMap::iterator GMap::removeNodeFromTree(GMap *pThis, iterator node)
 {
     iterator pPtrParent, pChild, ptr = node;
     //Replace with successor if there are 2 children.
-    if ( node->m_left != NULL && node->m_right != NULL )
+    if (node->m_left != NULL && node->m_right != NULL)
     {
         pPtrParent = ptr;
         ptr = ptr->m_right;
-        while( ptr->m_left != NULL )
+        while (ptr->m_left != NULL)
         {
             pPtrParent = ptr;
             ptr = ptr->m_left;
@@ -319,201 +321,201 @@ GMap::iterator GMap::removeNodeFromTree( GMap* pThis, iterator node )
     }
     else
         pPtrParent = node->m_parent;
-    
+
     //Now we want to delete Ptr from tree
-    if ( ptr->m_color == GMapNode::red )
+    if (ptr->m_color == GMapNode::red)
     {
-        if ( ptr == pPtrParent->m_left )
+        if (ptr == pPtrParent->m_left)
             pPtrParent->m_left = NULL;
         else
             pPtrParent->m_right = NULL;
         return ptr;
     }
-    
-    pChild = ( ptr->m_left == NULL ? ptr->m_right : ptr->m_left );
-    
-    if ( (pChild != NULL) 
-        && (pChild->m_color == GMapNode::red) 
-    )
+
+    pChild = (ptr->m_left == NULL ? ptr->m_right : ptr->m_left);
+
+    if ((pChild != NULL)
+        && (pChild->m_color == GMapNode::red)
+       )
     {
-        if ( pPtrParent == NULL )
+        if (pPtrParent == NULL)
             pThis->m_root = pChild;
+        else if (ptr == pPtrParent->m_left)
+            pPtrParent->m_left = pChild;
         else
-            if ( ptr == pPtrParent->m_left )
-                pPtrParent->m_left = pChild;
-            else
-                pPtrParent->m_right = pChild;
-        
+            pPtrParent->m_right = pChild;
+
         pChild->m_parent = pPtrParent;
         pChild->m_color = GMapNode::black;
         return ptr;
     }
-    
-    //At this point, we know ptr has no children, otherwise there will 
+
+    //At this point, we know ptr has no children, otherwise there will
     //be some invalid properties in the tree.
-    return removeEndNode( pThis, ptr, 1 );
+    return removeEndNode(pThis, ptr, 1);
 }
 
-GMap::iterator GMap::removeEndNode( GMap* pThis, iterator node, char nullify )
+GMap::iterator GMap::removeEndNode(GMap *pThis, iterator node,
+                                   char nullify)
 {
     iterator pSibling, pParent = node->m_parent;
-    if ( pParent == NULL )
+    if (pParent == NULL)
     {
         pThis->m_root = NULL;
         return node;
     }
-    
-    /* A sibling must exist because there can't be two black nodes 
+
+    /* A sibling must exist because there can't be two black nodes
      * in a row without two on the other side to balance it.
      */
-    pSibling = ( node == pParent->m_left ? pParent->m_right : pParent->m_left );
-    
-    if ( pSibling->m_color == GMapNode::red )
+    pSibling = (node == pParent->m_left ? pParent->m_right : pParent->m_left);
+
+    if (pSibling->m_color == GMapNode::red)
     {
         pParent->m_color = GMapNode::red;
         pSibling->m_color = GMapNode::black;
-        if ( node == pParent->m_left )
-            rotateLeft( pThis, pParent );
+        if (node == pParent->m_left)
+            rotateLeft(pThis, pParent);
         else
-            rotateRight( pThis, pParent );
-        pSibling = ( node == pParent->m_left ? pParent->m_right : pParent->m_left );
+            rotateRight(pThis, pParent);
+        pSibling = (node == pParent->m_left ? pParent->m_right : pParent->m_left);
     }
-    
+
     // From this point on, Sibling must be black.
-    if ( ((pSibling->m_left == NULL) || (pSibling->m_left->m_color == GMapNode::black))
-        && ((pSibling->m_right == NULL) || (pSibling->m_right->m_color == GMapNode::black))
-    ) 
+    if (((pSibling->m_left == NULL)
+         || (pSibling->m_left->m_color == GMapNode::black))
+        && ((pSibling->m_right == NULL)
+            || (pSibling->m_right->m_color == GMapNode::black))
+       )
     {
         pSibling->m_color = GMapNode::red;
-        if ( nullify == 1 )
+        if (nullify == 1)
         {
-            if ( node == pParent->m_left )
+            if (node == pParent->m_left)
                 pParent->m_left = NULL;
             else
                 pParent->m_right = NULL;
         }
-        
-        if ( pParent->m_color == GMapNode::black ) 
-            removeEndNode( pThis, pParent, 0 );
+
+        if (pParent->m_color == GMapNode::black)
+            removeEndNode(pThis, pParent, 0);
         else
             pParent->m_color = GMapNode::black;
-        
+
         return node;
     }
-    
+
     // From this point on, at least one of Sibling's children is red.
-    if ( (node == pParent->m_left)
+    if ((node == pParent->m_left)
         && (pSibling->m_left != NULL)
         && (pSibling->m_left->m_color == GMapNode::red)
-    ) 
+       )
     {
         pSibling->m_color = GMapNode::red;
         pSibling->m_left->m_color = GMapNode::black;
-        rotateRight( pThis, pSibling );
+        rotateRight(pThis, pSibling);
     }
-    else if ( (node == pParent->m_right)
-        && (pSibling->m_right != NULL)
-        && (pSibling->m_right->m_color == GMapNode::red)
-    ) 
+    else if ((node == pParent->m_right)
+             && (pSibling->m_right != NULL)
+             && (pSibling->m_right->m_color == GMapNode::red)
+            )
     {
         pSibling->m_color = GMapNode::red;
         pSibling->m_right->m_color = GMapNode::black;
-        rotateLeft( pThis, pSibling );
+        rotateLeft(pThis, pSibling);
     }
-    
-    pSibling = ( node == pParent->m_left ? pParent->m_right : pParent->m_left );
-    
+
+    pSibling = (node == pParent->m_left ? pParent->m_right : pParent->m_left);
+
     /* From earlier, sibling must be black and we have two cases here:
      * - Node is Parent's left child and Sibling's right child is red.
      * - Node is Parent's right child and Sibling's left child is red.
      */
-    
+
     pSibling->m_color = pParent->m_color;
     pParent->m_color = GMapNode::black;
-    
-    if ( node == pParent->m_left ) 
+
+    if (node == pParent->m_left)
     {
         pSibling->m_right->m_color = GMapNode::black;
-        rotateLeft( pThis, pParent );
-        if ( nullify == 1 )
+        rotateLeft(pThis, pParent);
+        if (nullify == 1)
             pParent->m_left = NULL;
     }
-    else 
+    else
     {
         pSibling->m_left->m_color = GMapNode::black;
-        rotateRight( pThis, pParent );
-        if ( nullify == 1 )
+        rotateRight(pThis, pParent);
+        if (nullify == 1)
             pParent->m_right = NULL;
     }
     return node;
 }
 
-GMap::iterator GMap::getGrandparent( iterator node )
+GMap::iterator GMap::getGrandparent(iterator node)
 {
-    if ( node != NULL && node->m_parent != NULL )
+    if (node != NULL && node->m_parent != NULL)
         return node->m_parent->m_parent;
     return NULL;
 }
 
-GMap::iterator GMap::getUncle( iterator node )
+GMap::iterator GMap::getUncle(iterator node)
 {
-    iterator pGrandparent = getGrandparent( node );
-    if ( pGrandparent == NULL )
+    iterator pGrandparent = getGrandparent(node);
+    if (pGrandparent == NULL)
         return NULL;
-    if ( node->m_parent == pGrandparent->m_left )
+    if (node->m_parent == pGrandparent->m_left)
         return pGrandparent->m_right;
     return pGrandparent->m_left;
 }
 
-void GMap::rotateLeft( GMap* pThis, iterator node )
+void GMap::rotateLeft(GMap *pThis, iterator node)
 {
     iterator pSwap = node->m_right;
     node->m_right = pSwap->m_left;
-    if ( pSwap->m_left != NULL )
+    if (pSwap->m_left != NULL)
         pSwap->m_left->m_parent = node;
-    
+
     pSwap->m_parent = node->m_parent;
-    if ( node->m_parent == NULL )
+    if (node->m_parent == NULL)
         pThis->m_root = pSwap;
+    else if (node == node->m_parent->m_left)
+        node->m_parent->m_left = pSwap;
     else
-        if ( node == node->m_parent->m_left )
-            node->m_parent->m_left = pSwap;
-        else
-            node->m_parent->m_right = pSwap;
-    
+        node->m_parent->m_right = pSwap;
+
     pSwap->m_left = node;
     node->m_parent = pSwap;
 }
 
-void GMap::rotateRight( GMap* pThis, iterator node )
+void GMap::rotateRight(GMap *pThis, iterator node)
 {
     iterator pSwap = node->m_left;
     node->m_left = pSwap->m_right;
-    if ( pSwap->m_right != NULL )
+    if (pSwap->m_right != NULL)
         pSwap->m_right->m_parent = node;
-    
+
     pSwap->m_parent = node->m_parent;
-    if ( node->m_parent == NULL )
+    if (node->m_parent == NULL)
         pThis->m_root = pSwap;
+    else if (node == node->m_parent->m_left)
+        node->m_parent->m_left = pSwap;
     else
-        if ( node == node->m_parent->m_left )
-            node->m_parent->m_left = pSwap;
-        else
-            node->m_parent->m_right = pSwap;
-    
+        node->m_parent->m_right = pSwap;
+
     pSwap->m_right = node;
     node->m_parent = pSwap;
 }
 
 #ifdef GMAP_DEBUG
-void GMap::print( iterator node, int layer )
+void GMap::print(iterator node, int layer)
 {
     int iLeft, iRight, iMyLayer = layer;
     const char *sColor, *sLColor, *sRColor;
-    if ( node == NULL )
+    if (node == NULL)
         return;
     sColor = node->m_color == GMapNode::black ? "B" : "R";
-    if ( node->m_left == NULL )
+    if (node->m_left == NULL)
     {
         iLeft = 0;
         sLColor = "";
@@ -523,8 +525,8 @@ void GMap::print( iterator node, int layer )
         iLeft = (int)node->m_left->m_pKey;
         sLColor = node->m_left->m_color == GMapNode::black ? "B" : "R";
     }
-    
-    if ( node->m_right == NULL )
+
+    if (node->m_right == NULL)
     {
         iRight = 0;
         sRColor = "";
@@ -534,10 +536,10 @@ void GMap::print( iterator node, int layer )
         iRight = (int)node->m_right->m_pKey;
         sRColor = node->m_right->m_color == GMapNode::black ? "B" : "R";
     }
-    printf( "Layer: %d, %d%s [ left = %d%s; right = %d%s ]\n", 
-           iMyLayer, (int)node->getKey(), sColor, iLeft, sLColor, iRight, sRColor );
-    print( node->m_left, ++layer );
-    print( node->m_right, layer );
+    printf("Layer: %d, %d%s [ left = %d%s; right = %d%s ]\n",
+           iMyLayer, (int)node->getKey(), sColor, iLeft, sLColor, iRight, sRColor);
+    print(node->m_left, ++layer);
+    print(node->m_right, layer);
 }
 #endif
 

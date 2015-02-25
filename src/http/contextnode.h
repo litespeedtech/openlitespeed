@@ -28,71 +28,71 @@
 class HttpContext;
 class ContextList;
 
-class ContextNode : public HashStringMap< ContextNode* >
+class ContextNode : public HashStringMap< ContextNode * >
 {
 
-    ContextNode       * m_pParentNode;
-    HttpContext       * m_pContext;
-    char *              m_pLabel;
+    ContextNode        *m_pParentNode;
+    HttpContext        *m_pContext;
+    char               *m_pLabel;
     long                m_lHTALastCheck;
     short               m_iHTAState;
     short               m_iRelease;
 
-    ContextNode( const ContextNode& rhs );
-    void operator=( const ContextNode& rhs );
+    ContextNode(const ContextNode &rhs);
+    void operator=(const ContextNode &rhs);
 
 public:
 
-    ContextNode(const char* pchLabel, ContextNode* pParentNode);
+    ContextNode(const char *pchLabel, ContextNode *pParentNode);
 
-    const HttpContext * getContext() const  {   return m_pContext ;     }
-    HttpContext * getContext()              {   return m_pContext ;     }
-    ContextNode * getParentNode() const     {   return m_pParentNode ;  }
-    HttpContext * getParentContext();
-    void setChildrenParentContext( const HttpContext * pOldParent,
-                const HttpContext * pNewParent, int noUpdateRedirect );
-    const char* getLabel() const            {   return m_pLabel ;       }
-    void setLabel( const char* l);
+    const HttpContext *getContext() const  {   return m_pContext ;     }
+    HttpContext *getContext()              {   return m_pContext ;     }
+    ContextNode *getParentNode() const     {   return m_pParentNode ;  }
+    HttpContext *getParentContext();
+    void setChildrenParentContext(const HttpContext *pOldParent,
+                                  const HttpContext *pNewParent, int noUpdateRedirect);
+    const char *getLabel() const            {   return m_pLabel ;       }
+    void setLabel(const char *l);
 
-    void removeRedirectContext( HttpContext * pParent );
-    void contextInherit(const HttpContext * pRootContext);
+    void removeRedirectContext(HttpContext *pParent);
+    void contextInherit(const HttpContext *pRootContext);
 
-    void setRelease( short r )              {   m_iRelease = r;         }
+    void setRelease(short r)              {   m_iRelease = r;         }
     short getRelease() const                {   return m_iRelease;      }
 
-    void setHTAState( char state )          {   m_iHTAState = state;    }
+    void setHTAState(char state)          {   m_iHTAState = state;    }
     short getHTAState()  const              {   return m_iHTAState;     }
 
     long getLastCheck() const               {   return m_lHTALastCheck; }
-    void setLastCheck( long check )         {   m_lHTALastCheck = check;}
+    void setLastCheck(long check)         {   m_lHTALastCheck = check;}
 
-    void setContext( HttpContext* pContext ) {  m_pContext = pContext;  }
-    void setContextUpdateParent( HttpContext* pContext, int noUpdateRedirect );
-    ContextNode* insertChild(const char* pchLabel);
-    ContextNode * match( const char * pStart );
+    void setContext(HttpContext *pContext) {  m_pContext = pContext;  }
+    void setContextUpdateParent(HttpContext *pContext, int noUpdateRedirect);
+    ContextNode *insertChild(const char *pchLabel);
+    ContextNode *match(const char *pStart);
     ContextNode()
-        : HashStringMap< ContextNode* >( 10 )
-        , m_pLabel( NULL )
-        , m_lHTALastCheck( 0 )
-        , m_iHTAState( HTA_UNKNOWN )
-        {}
+        : HashStringMap< ContextNode * >(10)
+        , m_pLabel(NULL)
+        , m_lHTALastCheck(0)
+        , m_iHTAState(HTA_UNKNOWN)
+    {}
 
     ~ContextNode();
-    ContextNode * getChildNode( const char * pStart, long lastCheck = 0 )
+    ContextNode *getChildNode(const char *pStart, long lastCheck = 0)
     {
         iterator iter ;
         iter = find(pStart);
-        if ( iter == end() )
+        if (iter == end())
         {
-            ContextNode * pNode = insertChild(pStart);
-            if ( pNode )
-                pNode->setLastCheck( lastCheck );
+            ContextNode *pNode = insertChild(pStart);
+            if (pNode)
+                pNode->setLastCheck(lastCheck);
             return pNode;
         }
         else
             return iter.second();
     }
-    void getAllContexts( ContextList &list );
+    void getAllContexts(ContextList &list);
 };
 
 #endif

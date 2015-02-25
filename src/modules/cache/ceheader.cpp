@@ -18,16 +18,16 @@
 #include "ceheader.h"
 
 CeHeader::CeHeader()
-    : m_tmCreated( 0 )
-    , m_tmExpire( 0 )
-    , m_flag( CEH_IN_CONSTRUCT )
-    , m_keyLen( 0 )
-    , m_statusCode( 0 )
-    , m_valPart1Len( 0 )
-    , m_valPart2Len( 0 )
-    , m_tmLastMod( 0 )
-    , m_offETag( 0 )
-    , m_lenETag( 0 )
+    : m_tmCreated(0)
+    , m_tmExpire(0)
+    , m_flag(CEH_IN_CONSTRUCT)
+    , m_keyLen(0)
+    , m_statusCode(0)
+    , m_valPart1Len(0)
+    , m_valPart2Len(0)
+    , m_tmLastMod(0)
+    , m_offETag(0)
+    , m_lenETag(0)
 {
 }
 

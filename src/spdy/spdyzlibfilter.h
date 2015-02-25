@@ -17,7 +17,7 @@
 *****************************************************************************/
 #ifndef SPDYZLIBFILTER_H
 #define SPDYZLIBFILTER_H
-#include  <netinet/in.h> 
+#include  <netinet/in.h>
 #include  <iostream>
 #include <assert.h>
 #include <stdio.h>
@@ -42,17 +42,17 @@ private:
     short    m_isInflator;
 
 private:
-    SpdyZlibFilter(const SpdyZlibFilter& other);
-    SpdyZlibFilter& operator=(const SpdyZlibFilter& other);
-    bool operator==(const SpdyZlibFilter& other) const;
-    
+    SpdyZlibFilter(const SpdyZlibFilter &other);
+    SpdyZlibFilter &operator=(const SpdyZlibFilter &other);
+    bool operator==(const SpdyZlibFilter &other) const;
+
 public:
     SpdyZlibFilter();
     ~SpdyZlibFilter();
-    int init( int isInflator, int verSpdy );
+    int init(int isInflator, int verSpdy);
     int release();
-    int decompress(char* pSource, uint32_t length, AutoBuf& bufInflate);
-    int compress(char* pSource, uint32_t length, LoopBuf* pBuf, int flush);
+    int decompress(char *pSource, uint32_t length, AutoBuf &bufInflate);
+    int compress(char *pSource, uint32_t length, LoopBuf *pBuf, int flush);
 };
 
 #endif // SPDYZLIBFILTER_H

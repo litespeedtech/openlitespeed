@@ -33,17 +33,20 @@ class RailsAppConfig
 private:
     static AutoStr      s_sRailsRunner;
     static int          s_iRailsEnv;
-    static LocalWorkerConfig * s_railsDefault; 
+    static LocalWorkerConfig *s_railsDefault;
     RailsAppConfig() {}
     ~RailsAppConfig() {}
 public:
     static int getRailsEnv()  { return s_iRailsEnv;}
-    static const LocalWorkerConfig* getpRailsDefault()  { return s_railsDefault; } 
-    static LocalWorker *newRailsApp( HttpVHost* pvhost, const char *pAppName, const char *pName, 
-    const char *appPath, int maxConns, const char *pRailsEnv, int maxIdle, const Env *pEnv,
-    int runOnStart, const char *pRubyPath = NULL );
-    static int configRailsRunner( char *pRunnerCmd, int cmdLen, const char *pRubyBin );
-    static int loadRailsDefault( const XmlNode *pNode );    
+    static const LocalWorkerConfig *getpRailsDefault()  { return s_railsDefault; }
+    static LocalWorker *newRailsApp(HttpVHost *pvhost, const char *pAppName,
+                                    const char *pName,
+                                    const char *appPath, int maxConns, const char *pRailsEnv, int maxIdle,
+                                    const Env *pEnv,
+                                    int runOnStart, const char *pRubyPath = NULL);
+    static int configRailsRunner(char *pRunnerCmd, int cmdLen,
+                                 const char *pRubyBin);
+    static int loadRailsDefault(const XmlNode *pNode);
 };
 
 #endif // RAILSAPPCONFIG_H

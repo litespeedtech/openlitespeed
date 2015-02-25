@@ -33,164 +33,165 @@
 BEGIN_LOG4CXX_NS
 
 #define __logger_log( level, format ) \
-     do { \
+    do { \
         if ( isEnabled( level ) ) { \
             va_list  va; va_start( va, format ); \
             vlog( level, format, va ); \
             va_end( va ); \
         } \
-     }while(0)
+    }while(0)
 
 class Layout;
 class Logger : public Duplicable
 {
     int         m_iLevel;
-    Appender *  m_pAppender;
+    Appender   *m_pAppender;
     int         m_iAdditive;
-    Layout *    m_pLayout;
-    Logger *    m_pParent;
+    Layout     *m_pLayout;
+    Logger     *m_pParent;
 
 protected:
-    explicit Logger( const char * pName);
-    Duplicable * dup( const char * pName );
-    
-public: 
+    explicit Logger(const char *pName);
+    Duplicable *dup(const char *pName);
+
+public:
     ~Logger() {};
     static void init();
-    
-    static Logger* getRootLogger()
-    {   return getLogger( ROOT_LOGGER_NAME ); }
-    
-    static Logger* getLogger( const char * pName );
-    
-    void vlog( int level, const char * format, va_list args, int no_linefeed = 0 );
 
-    void log( int level, const char * format, ... )
+    static Logger *getRootLogger()
+    {   return getLogger(ROOT_LOGGER_NAME); }
+
+    static Logger *getLogger(const char *pName);
+
+    void vlog(int level, const char *format, va_list args,
+              int no_linefeed = 0);
+
+    void log(int level, const char *format, ...)
     {
-        __logger_log( level, format );
+        __logger_log(level, format);
     }
 
-    void vdebug( const char * format, va_list args )
+    void vdebug(const char *format, va_list args)
     {
-        vlog( Level::DEBUG, format, args );
+        vlog(Level::DEBUG, format, args);
     }
 
-    void debug( const char * format, ... )
+    void debug(const char *format, ...)
     {
-        __logger_log( Level::DEBUG, format );
+        __logger_log(Level::DEBUG, format);
     }
 
-    void vtrace( const char * format, va_list args )
+    void vtrace(const char *format, va_list args)
     {
-        vlog( Level::TRACE, format, args );
+        vlog(Level::TRACE, format, args);
     }
 
-    void trace( const char * format, ... )
+    void trace(const char *format, ...)
     {
-        __logger_log( Level::TRACE, format );
+        __logger_log(Level::TRACE, format);
     }
 
-    void vinfo( const char * format, va_list args )
+    void vinfo(const char *format, va_list args)
     {
-        vlog( Level::INFO, format, args );
+        vlog(Level::INFO, format, args);
     }
 
-    void info( const char * format, ... )
+    void info(const char *format, ...)
     {
-        __logger_log( Level::INFO, format );
+        __logger_log(Level::INFO, format);
     }
 
-    void vnotice( const char * format, va_list args )
+    void vnotice(const char *format, va_list args)
     {
-        vlog( Level::NOTICE, format, args );
+        vlog(Level::NOTICE, format, args);
     }
 
-    void notice( const char * format, ... )
+    void notice(const char *format, ...)
     {
-        __logger_log( Level::NOTICE, format );
+        __logger_log(Level::NOTICE, format);
     }
 
-    void vwarn( const char * format, va_list args )
+    void vwarn(const char *format, va_list args)
     {
-        vlog( Level::WARN, format, args );
+        vlog(Level::WARN, format, args);
     }
 
-    void warn( const char * format, ... )
+    void warn(const char *format, ...)
     {
-        __logger_log( Level::WARN, format );
+        __logger_log(Level::WARN, format);
     }
 
-    void verror( const char * format, va_list args )
+    void verror(const char *format, va_list args)
     {
-        vlog( Level::ERROR, format, args );
+        vlog(Level::ERROR, format, args);
     }
-    void error( const char * format, ... )
+    void error(const char *format, ...)
     {
-        __logger_log( Level::ERROR, format );
-    }
-
-    void vfatal( const char * format, va_list args )
-    {
-        vlog( Level::FATAL, format, args );
-    }
-    void fatal( const char * format, ... )
-    {
-        __logger_log( Level::FATAL, format );
+        __logger_log(Level::ERROR, format);
     }
 
-    void valert( const char * format, va_list args )
+    void vfatal(const char *format, va_list args)
     {
-        vlog( Level::ALERT, format, args );
+        vlog(Level::FATAL, format, args);
+    }
+    void fatal(const char *format, ...)
+    {
+        __logger_log(Level::FATAL, format);
     }
 
-    void alert( const char * format, ... )
+    void valert(const char *format, va_list args)
     {
-        __logger_log( Level::ALERT, format );
+        vlog(Level::ALERT, format, args);
     }
 
-    void vcrit( const char * format, va_list args )
+    void alert(const char *format, ...)
     {
-        vlog( Level::CRIT, format, args );
+        __logger_log(Level::ALERT, format);
     }
 
-    void crit( const char * format, ... )
+    void vcrit(const char *format, va_list args)
     {
-        __logger_log( Level::CRIT, format );
+        vlog(Level::CRIT, format, args);
     }
 
-    void lograw( const char * pBuf, int len );
+    void crit(const char *format, ...)
+    {
+        __logger_log(Level::CRIT, format);
+    }
 
-    bool isEnabled( int level ) const
+    void lograw(const char *pBuf, int len);
+
+    bool isEnabled(int level) const
     {   return level <= m_iLevel; }
 
 
     int getLevel() const
     {   return m_iLevel;  }
 
-    void setLevel( int level )
+    void setLevel(int level)
     {   m_iLevel = level;  }
 
-    void setLevel( const char * pLevel )
-    {   setLevel( Level::toInt( pLevel ) ); }
-    
+    void setLevel(const char *pLevel)
+    {   setLevel(Level::toInt(pLevel)); }
+
     int getAdditivity() const
     {   return m_iAdditive;  }
 
-    void setAdditivity( int additive )
+    void setAdditivity(int additive)
     {   m_iAdditive = additive;   }
-        
-    Appender * getAppender()
+
+    Appender *getAppender()
     {   return m_pAppender;  }
-    void setAppender( Appender * pAppender )
+    void setAppender(Appender *pAppender)
     {   m_pAppender = pAppender;    }
 
-    const Layout * getLaout() const
+    const Layout *getLaout() const
     {   return m_pLayout;  }
-    void setLayout( Layout * pLayout )
+    void setLayout(Layout *pLayout)
     {   m_pLayout = pLayout;    }
 
-    void setParent( Logger * pParent )    {   m_pParent = pParent;    }
-    
+    void setParent(Logger *pParent)    {   m_pParent = pParent;    }
+
 };
 
 

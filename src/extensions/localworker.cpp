@@ -44,104 +44,98 @@
 #define KILL_TIMEOUT 25
 
 LocalWorker::LocalWorker()
-    : m_fdApp( -1 )
-    , m_sigGraceStop( SIGTERM )
-    , m_pidList( NULL )
-    , m_pidListStop( NULL )
+    : m_fdApp(-1)
+    , m_sigGraceStop(SIGTERM)
+    , m_pidList(NULL)
+    , m_pidListStop(NULL)
 {
     m_pidList = new PidList();
     m_pidListStop = new PidList();
-    
+
 }
 
-LocalWorkerConfig& LocalWorker::getConfig() const
+LocalWorkerConfig &LocalWorker::getConfig() const
 {   return *(static_cast<LocalWorkerConfig *>(getConfigPointer()));  }
 
 
 LocalWorker::~LocalWorker()
 {
-    if ( m_pidList )
+    if (m_pidList)
         delete m_pidList;
-    if ( m_pidListStop )
+    if (m_pidListStop)
         delete m_pidListStop;
 }
 
 
-static void killProcess( pid_t pid )
+static void killProcess(pid_t pid)
 {
-    if ((( kill( pid, SIGTERM ) == -1 )&&( errno == EPERM ))||
-        (( kill( pid, SIGUSR1 ) == -1 )&&( errno == EPERM )))
-    {
-        PidRegistry::markToStop( pid, KILL_TYPE_TERM );
-    }    
+    if (((kill(pid, SIGTERM) == -1) && (errno == EPERM)) ||
+        ((kill(pid, SIGUSR1) == -1) && (errno == EPERM)))
+        PidRegistry::markToStop(pid, KILL_TYPE_TERM);
 }
 
 
 void LocalWorker::moveToStopList()
 {
     PidList::iterator iter;
-    for( iter = m_pidList->begin(); iter != m_pidList->end();
-            iter = m_pidList->next( iter ) )
-    {
-        m_pidListStop->add( (int)(long)iter->first(), DateTime::s_curTime );
-    }
+    for (iter = m_pidList->begin(); iter != m_pidList->end();
+         iter = m_pidList->next(iter))
+        m_pidListStop->add((int)(long)iter->first(), DateTime::s_curTime);
     m_pidList->clear();
 }
 
-void LocalWorker::moveToStopList( int pid)
+void LocalWorker::moveToStopList(int pid)
 {
-    PidList::iterator iter = m_pidList->find( (void *)(long)pid );
-    if ( iter != m_pidList->end() )
+    PidList::iterator iter = m_pidList->find((void *)(long)pid);
+    if (iter != m_pidList->end())
     {
-        killProcess( pid );
-        m_pidListStop->add( pid, DateTime::s_curTime - GRACE_TIMEOUT );
-        m_pidList->erase( iter );
+        killProcess(pid);
+        m_pidListStop->add(pid, DateTime::s_curTime - GRACE_TIMEOUT);
+        m_pidList->erase(iter);
     }
 }
 
-void LocalWorker::cleanStopPids( )
+void LocalWorker::cleanStopPids()
 {
-    if (( m_pidListStop )&&
-        ( m_pidListStop->size() > 0 ))
+    if ((m_pidListStop) &&
+        (m_pidListStop->size() > 0))
     {
         pid_t pid;
         PidList::iterator iter, iterDel;
-        for( iter = m_pidListStop->begin(); iter != m_pidListStop->end();  )
+        for (iter = m_pidListStop->begin(); iter != m_pidListStop->end();)
         {
             pid = (pid_t)(long)iter->first();
             long delta = DateTime::s_curTime - (long)iter->second();
             int sig = 0;
             iterDel = iter;
-            iter = m_pidListStop->next( iter );
-            if ( delta > GRACE_TIMEOUT )
+            iter = m_pidListStop->next(iter);
+            if (delta > GRACE_TIMEOUT)
             {
-                if (( kill(  pid, 0 ) == -1 )&&( errno == ESRCH ))
+                if ((kill(pid, 0) == -1) && (errno == ESRCH))
                 {
-                    m_pidListStop->erase( iterDel );
-                    PidRegistry::remove( pid );
+                    m_pidListStop->erase(iterDel);
+                    PidRegistry::remove(pid);
                     continue;
                 }
-                if ( delta > KILL_TIMEOUT )
+                if (delta > KILL_TIMEOUT)
                 {
                     sig = SIGKILL;
-                    LOG_NOTICE(( "[%s] Send SIGKILL to process [%d] that won't stop.",
-                            getName(), pid ));
+                    LOG_NOTICE(("[%s] Send SIGKILL to process [%d] that won't stop.",
+                                getName(), pid));
                 }
-                else 
+                else
                 {
                     sig = m_sigGraceStop;
-                    LOG_NOTICE(( "[%s] Send SIGTERM to process [%d].",
-                            getName(), pid ));
+                    LOG_NOTICE(("[%s] Send SIGTERM to process [%d].",
+                                getName(), pid));
                 }
-                if ( kill(  pid , sig ) != -1 )
+                if (kill(pid , sig) != -1)
                 {
-                    if ( D_ENABLED( DL_LESS ) )
-                        LOG_D(( "[%s] kill pid: %d", getName(), pid ));
+                    if (D_ENABLED(DL_LESS))
+                        LOG_D(("[%s] kill pid: %d", getName(), pid));
                 }
-                else if ( errno == EPERM )
-                {
-                    PidRegistry::markToStop( pid, KILL_TYPE_TERM );
-                }
+                else if (errno == EPERM)
+                    PidRegistry::markToStop(pid, KILL_TYPE_TERM);
             }
         }
     }
@@ -150,33 +144,33 @@ void LocalWorker::cleanStopPids( )
 void LocalWorker::detectDiedPid()
 {
     PidList::iterator iter;
-    for( iter = m_pidList->begin(); iter != m_pidList->end(); )
+    for (iter = m_pidList->begin(); iter != m_pidList->end();)
     {
         pid_t pid = (pid_t)(long)iter->first();
-        if (( kill( pid, 0 ) == -1 )&& (errno == ESRCH ))
+        if ((kill(pid, 0) == -1) && (errno == ESRCH))
         {
-            LOG_INFO(( "Process with PID: %d is dead ", pid ));
-            PidList::iterator iterNext = m_pidList->next( iter );
-            m_pidList->erase( iter );
-            PidRegistry::remove( pid );
+            LOG_INFO(("Process with PID: %d is dead ", pid));
+            PidList::iterator iterNext = m_pidList->next(iter);
+            m_pidList->erase(iter);
+            PidRegistry::remove(pid);
 
             iter = iterNext;
 
         }
         else
-            iter = m_pidList->next( iter );
+            iter = m_pidList->next(iter);
     }
 }
 
-void LocalWorker::addPid( pid_t pid )
+void LocalWorker::addPid(pid_t pid)
 {
-    m_pidList->insert( (void *)(unsigned long )pid, this );
+    m_pidList->insert((void *)(unsigned long)pid, this);
 }
 
-void LocalWorker::removePid( pid_t pid)
+void LocalWorker::removePid(pid_t pid)
 {
-    m_pidList->remove( pid );
-    m_pidListStop->remove( pid );
+    m_pidList->remove(pid);
+    m_pidListStop->remove(pid);
 }
 
 int LocalWorker::selfManaged() const
@@ -184,34 +178,35 @@ int LocalWorker::selfManaged() const
 
 int LocalWorker::runOnStartUp()
 {
-    if ( getConfig().getRunOnStartUp() )
+    if (getConfig().getRunOnStartUp())
         return startEx();
     return 0;
 }
 
 
-int LocalWorker::startOnDemond( int force )
+int LocalWorker::startOnDemond(int force)
 {
-    if ( !m_pidList )
+    if (!m_pidList)
         return -1;
     int nProc = m_pidList->size();
-    if (( getConfig().getRunOnStartUp() )&&(nProc > 0 ))
+    if ((getConfig().getRunOnStartUp()) && (nProc > 0))
         return 0;
-    if ( force )
+    if (force)
     {
-        if ( nProc >= getConfig().getInstances() )
+        if (nProc >= getConfig().getInstances())
         {
 //            if ( getConfig().getInstances() > 1 )
 //                return restart();
 //            else
-                return -1;
+            return -1;
         }
     }
     else
     {
-        if ( nProc >= getConnPool().getTotalConns() )
+        if (nProc >= getConnPool().getTotalConns())
             return 0;
-        if (( nProc == 0 )&& ( getConnPool().getTotalConns() > 2 ))  //server socket is in use.
+        if ((nProc == 0)
+            && (getConnPool().getTotalConns() > 2))     //server socket is in use.
             return 0;
     }
     return startEx();
@@ -223,54 +218,54 @@ int LocalWorker::stop()
     pid_t pid;
     PidList::iterator iter;
     removeUnixSocket();
-    LOG_NOTICE(( "[%s] stop worker processes", getName() ));
-    for( iter = getPidList()->begin(); iter != getPidList()->end();  )
+    LOG_NOTICE(("[%s] stop worker processes", getName()));
+    for (iter = getPidList()->begin(); iter != getPidList()->end();)
     {
         pid = (pid_t)(long)iter->first();
-        iter = getPidList()->next( iter );
-        killProcess( pid );
-        if ( D_ENABLED( DL_LESS ) )
-            LOG_D(( "[%s] kill pid: %d", getName(), pid ));
+        iter = getPidList()->next(iter);
+        killProcess(pid);
+        if (D_ENABLED(DL_LESS))
+            LOG_D(("[%s] kill pid: %d", getName(), pid));
     }
     moveToStopList();
-    setState( ST_NOTSTARTED );
+    setState(ST_NOTSTARTED);
 
     return 0;
 }
 
 void LocalWorker::removeUnixSocket()
 {
-    const GSockAddr &addr = ((LocalWorkerConfig *)getConfigPointer())->getServerAddr();
-    if (( m_fdApp >= 0 )&&( getPidList()->size() > 0 )&&
-        ( addr.family() == PF_UNIX ))
+    const GSockAddr &addr = ((LocalWorkerConfig *)
+                             getConfigPointer())->getServerAddr();
+    if ((m_fdApp >= 0) && (getPidList()->size() > 0) &&
+        (addr.family() == PF_UNIX))
     {
-        if ( D_ENABLED( DL_LESS ) )
-            LOG_D(( "[%s] remove unix socket: %s", getName(),
-                addr.getUnix() ));
-        unlink( addr.getUnix() );
-        close( m_fdApp );
+        if (D_ENABLED(DL_LESS))
+            LOG_D(("[%s] remove unix socket: %s", getName(),
+                   addr.getUnix()));
+        unlink(addr.getUnix());
+        close(m_fdApp);
         m_fdApp = -2;
-        getConfigPointer()->altServerAddr();        
+        getConfigPointer()->altServerAddr();
     }
 }
 
 
 int LocalWorker::addNewProcess()
 {
-    if (( getConfigPointer()->getURL() )&&
-        ( ((LocalWorkerConfig *)getConfigPointer())->getCommand() ))
-    {
+    if ((getConfigPointer()->getURL()) &&
+        (((LocalWorkerConfig *)getConfigPointer())->getCommand()))
         return startEx();
-    }
     return 1;
 }
 
 
 int LocalWorker::tryRestart()
 {
-    if ( DateTime::s_curTime - getLastRestart() > 10 )
+    if (DateTime::s_curTime - getLastRestart() > 10)
     {
-        LOG_NOTICE(( "[%s] try to fix 503 error by restarting external application", getName() ));
+        LOG_NOTICE(("[%s] try to fix 503 error by restarting external application",
+                    getName()));
         return restart();
     }
     return 0;
@@ -279,10 +274,10 @@ int LocalWorker::tryRestart()
 
 int LocalWorker::restart()
 {
-    setLastRestart( DateTime::s_curTime );
+    setLastRestart(DateTime::s_curTime);
     clearCurConnPool();
-    if (( getConfigPointer()->getURL() )&&
-        ( ((LocalWorkerConfig *)getConfigPointer())->getCommand() ))
+    if ((getConfigPointer()->getURL()) &&
+        (((LocalWorkerConfig *)getConfigPointer())->getCommand()))
     {
         removeUnixSocket();
         moveToStopList();
@@ -317,7 +312,7 @@ int LocalWorker::getCurInstances() const
 //     if (( uid == HttpGlobals::s_uid )&&
 //         ( gid == HttpGlobals::s_gid ))
 //         return -1;
-//     
+//
 //     if (( uid < HttpGlobals::s_uidMin )||
 //         ( gid < HttpGlobals::s_gidMin ))
 //     {
@@ -360,18 +355,18 @@ int LocalWorker::getCurInstances() const
 // //    }
 //     if ( rfd != -1 )
 //         close( rfd );
-// 
+//
 //     return pid;
 // }
 
-int LocalWorker::workerExec( LocalWorkerConfig& config, int fd )
+int LocalWorker::workerExec(LocalWorkerConfig &config, int fd)
 {
-    if ( !HttpGlobals::s_pSUExec )
+    if (!HttpGlobals::s_pSUExec)
         return -1;
     uid_t uid;
     gid_t gid;
-    const HttpVHost * pVHost = config.getVHost();
-    if ( !pVHost )
+    const HttpVHost *pVHost = config.getVHost();
+    if (!pVHost)
     {
 //        if ( config.getRunOnStartUp() == 2 )
 //        {
@@ -382,90 +377,86 @@ int LocalWorker::workerExec( LocalWorkerConfig& config, int fd )
         {
             uid = config.getUid();
             gid = config.getGid();
-            if ( (int)uid == -1 )
+            if ((int)uid == -1)
                 uid = HttpGlobals::s_uid;
-            if  ( (int)gid == -1 )
+            if ((int)gid == -1)
                 gid = HttpGlobals::s_gid;
         }
     }
     else
     {
         int mode = pVHost->getRootContext().getSetUidMode();
-        if ( mode != UID_DOCROOT )
+        if (mode != UID_DOCROOT)
             return -1;
         uid = pVHost->getUid();
         gid = pVHost->getGid();
-        if ( HttpGlobals::s_ForceGid )
-        {
+        if (HttpGlobals::s_ForceGid)
             gid = HttpGlobals::s_ForceGid;
-        }
-        
-        if (( uid < HttpGlobals::s_uidMin )||
-            ( gid < HttpGlobals::s_gidMin ))
+
+        if ((uid < HttpGlobals::s_uidMin) ||
+            (gid < HttpGlobals::s_gidMin))
         {
-            if ( D_ENABLED( DL_LESS ) )
-                LOG_INFO(( "[VHost:%s] Fast CGI [%s]: suExec access denied,"
-                " UID or GID of VHost document root is smaller "
-                "than minimum UID, GID configured. ", pVHost->getName(),
-                           config.getName() ));
-                return -1;
+            if (D_ENABLED(DL_LESS))
+                LOG_INFO(("[VHost:%s] Fast CGI [%s]: suExec access denied,"
+                          " UID or GID of VHost document root is smaller "
+                          "than minimum UID, GID configured. ", pVHost->getName(),
+                          config.getName()));
+            return -1;
         }
     }
     //if (( uid == HttpGlobals::s_uid )&&
     //    ( gid == HttpGlobals::s_gid ))
     //    return -1;
-    const AutoStr2 * pChroot = NULL;
-    const char * pChrootPath = NULL;
+    const AutoStr2 *pChroot = NULL;
+    const char *pChrootPath = NULL;
     int chrootLen = 0;
     int chMode = 0;
-    if ( pVHost )
+    if (pVHost)
     {
         chMode = pVHost->getRootContext().getChrootMode();
-        switch( chMode )
+        switch (chMode)
         {
-            case CHROOT_VHROOT:
-                pChroot = pVHost->getVhRoot();
-                break;
-            case CHROOT_PATH:
-                pChroot = pVHost->getChroot();
-                if ( !pChroot->c_str() )
-                    pChroot = NULL;
+        case CHROOT_VHROOT:
+            pChroot = pVHost->getVhRoot();
+            break;
+        case CHROOT_PATH:
+            pChroot = pVHost->getChroot();
+            if (!pChroot->c_str())
+                pChroot = NULL;
         }
-        //Since we already in the chroot jail, do not use the global jail path    
+        //Since we already in the chroot jail, do not use the global jail path
         //If start external app with lscgid, apply global chroot path,
         //  as lscgid is not inside chroot
-        if ( config.getStartByServer() == 2 )
+        if (config.getStartByServer() == 2)
         {
-            if ( !pChroot )
-            {
+            if (!pChroot)
                 pChroot = HttpGlobals::s_psChroot;
-            }
         }
-        if ( pChroot )
+        if (pChroot)
         {
             pChrootPath = pChroot->c_str();
             chrootLen = pChroot->len();
         }
     }
     char achBuf[4096];
-    memccpy( achBuf, config.getCommand(), 0, 4096 );
-    char * argv[256];
-    char * pDir ;
-    SUExec::buildArgv( achBuf, &pDir, argv, 256 );
-    if ( pDir )
-        *(argv[0]-1) = '/';
+    memccpy(achBuf, config.getCommand(), 0, 4096);
+    char *argv[256];
+    char *pDir ;
+    SUExec::buildArgv(achBuf, &pDir, argv, 256);
+    if (pDir)
+        *(argv[0] - 1) = '/';
     else
         pDir = argv[0];
-    HttpGlobals::s_pSUExec->prepare( uid, gid, config.getPriority(),
-                                     pChrootPath, chrootLen,
-                                     pDir, strlen( pDir ), config.getRLimits() );
+    HttpGlobals::s_pSUExec->prepare(uid, gid, config.getPriority(),
+                                    pChrootPath, chrootLen,
+                                    pDir, strlen(pDir), config.getRLimits());
     int rfd = -1;
     int pid;
     //if ( config.getStartByServer() == 2 )
     //{
-        pid = HttpGlobals::s_pSUExec->cgidSuEXEC(
-            HttpGlobals::s_pServerRoot, &rfd, fd, argv,
-            config.getEnv()->get(), NULL );
+    pid = HttpGlobals::s_pSUExec->cgidSuEXEC(
+              HttpGlobals::s_pServerRoot, &rfd, fd, argv,
+              config.getEnv()->get(), NULL);
     //}
     //else
     //{
@@ -474,19 +465,20 @@ int LocalWorker::workerExec( LocalWorkerConfig& config, int fd )
     //        config.getEnv()->get(), NULL );
     //}
 
-    if ( pid == -1 )
-        pid = SUExec::spawnChild( config.getCommand(), fd, -1, config.getEnv()->get(),
-                    config.getPriority(), config.getRLimits());
-    if ( rfd != -1 )
-        close( rfd );
-        
-    return pid;    
+    if (pid == -1)
+        pid = SUExec::spawnChild(config.getCommand(), fd, -1,
+                                 config.getEnv()->get(),
+                                 config.getPriority(), config.getRLimits());
+    if (rfd != -1)
+        close(rfd);
+
+    return pid;
 }
 
-int LocalWorker::startWorker( )
+int LocalWorker::startWorker()
 {
     int fd = getfd();
-    LocalWorkerConfig& config = getConfig();
+    LocalWorkerConfig &config = getConfig();
     struct stat st;
 //    if (( stat( config.getCommand(), &st ) == -1 )||
 //        ( access(config.getCommand(), X_OK) == -1 ))
@@ -503,17 +495,17 @@ int LocalWorker::startWorker( )
 //                config.getName(), config.getCommand() ));
 //        return -1;
 //    }
-    if ( fd < 0 )
+    if (fd < 0)
     {
-        fd = ExtWorker::startServerSock( &config, config.getBackLog() );
-        if ( fd != -1 )
+        fd = ExtWorker::startServerSock(&config, config.getBackLog());
+        if (fd != -1)
         {
-            setfd( fd );
-            if ( config.getServerAddr().family() == PF_UNIX )
+            setfd(fd);
+            if (config.getServerAddr().family() == PF_UNIX)
             {
-                nio_stat( config.getServerAddr().getUnix(), &st );
+                nio_stat(config.getServerAddr().getUnix(), &st);
                 HttpGlobals::getServerInfo()->addUnixSocket(
-                     config.getServerAddr().getUnix(), &st );
+                    config.getServerAddr().getUnix(), &st);
             }
         }
         else
@@ -522,56 +514,59 @@ int LocalWorker::startWorker( )
     int instances = config.getInstances();
     int cur_instances = getCurInstances();
     int new_instances = getConnPool().getTotalConns() + 2 - cur_instances;
-    if ( new_instances <= 0 )
+    if (new_instances <= 0)
         new_instances = 1;
-    if ( instances < new_instances + cur_instances )
-    {
+    if (instances < new_instances + cur_instances)
         new_instances = instances - cur_instances;
-    }
-    if ( new_instances <= 0 )
+    if (new_instances <= 0)
         return 0;
     int i;
-    for( i = 0; i < new_instances; ++i )
+    for (i = 0; i < new_instances; ++i)
     {
         int pid;
-        pid = workerExec( config, fd );
-        if ( pid > 0 )
+        pid = workerExec(config, fd);
+        if (pid > 0)
         {
-            if ( D_ENABLED( DL_LESS ) )
-                LOG_D(( "[%s] add child process pid: %d", getName(), pid ));
-           PidRegistry::add( pid, this, 0 );
+            if (D_ENABLED(DL_LESS))
+                LOG_D(("[%s] add child process pid: %d", getName(), pid));
+            PidRegistry::add(pid, this, 0);
         }
         else
         {
             LOG_ERR(("Start FCGI [%s]: failed to start the # %d of %d instances.",
-                config.getName(), i+1, instances ));
+                     config.getName(), i + 1, instances));
             break;
         }
     }
-    return (i==0)?-1:0;
+    return (i == 0) ? -1 : 0;
 }
-void LocalWorker::configRlimit(RLimits* pRLimits, const XmlNode *pNode )
+void LocalWorker::configRlimit(RLimits *pRLimits, const XmlNode *pNode)
 {
-    if ( !pNode )
+    if (!pNode)
         return;
 
     pRLimits->setProcLimit(
-        ConfigCtx::getCurConfigCtx()->getLongValue( pNode, "procSoftLimit", 0, INT_MAX, 0 ),
-        ConfigCtx::getCurConfigCtx()->getLongValue( pNode, "procHardLimit", 0, INT_MAX, 0 ) );
+        ConfigCtx::getCurConfigCtx()->getLongValue(pNode, "procSoftLimit", 0,
+                INT_MAX, 0),
+        ConfigCtx::getCurConfigCtx()->getLongValue(pNode, "procHardLimit", 0,
+                INT_MAX, 0));
 
     pRLimits->setCPULimit(
-        ConfigCtx::getCurConfigCtx()->getLongValue( pNode, "CPUSoftLimit", 0, INT_MAX, 0 ),
-        ConfigCtx::getCurConfigCtx()->getLongValue( pNode, "CPUHardLimit", 0, INT_MAX, 0 ) );
-    long memSoft = ConfigCtx::getCurConfigCtx()->getLongValue( pNode, "memSoftLimit", 0, INT_MAX, 0 );
-    long memHard = ConfigCtx::getCurConfigCtx()->getLongValue( pNode, "memHardLimit", 0, INT_MAX, 0 );
+        ConfigCtx::getCurConfigCtx()->getLongValue(pNode, "CPUSoftLimit", 0,
+                INT_MAX, 0),
+        ConfigCtx::getCurConfigCtx()->getLongValue(pNode, "CPUHardLimit", 0,
+                INT_MAX, 0));
+    long memSoft = ConfigCtx::getCurConfigCtx()->getLongValue(pNode,
+                   "memSoftLimit", 0, INT_MAX, 0);
+    long memHard = ConfigCtx::getCurConfigCtx()->getLongValue(pNode,
+                   "memHardLimit", 0, INT_MAX, 0);
 
-    if ( ( memSoft & ( memSoft < 1024 * 1024 ) ) ||
-            ( memHard & ( memHard < 1024 * 1024 ) ) )
-    {
-        ConfigCtx::getCurConfigCtx()->log_error( "Memory limit is too low with %ld/%ld", memSoft, memHard );
-    }
+    if ((memSoft & (memSoft < 1024 * 1024)) ||
+        (memHard & (memHard < 1024 * 1024)))
+        ConfigCtx::getCurConfigCtx()->log_error("Memory limit is too low with %ld/%ld",
+                                                memSoft, memHard);
     else
-        pRLimits->setDataLimit( memSoft, memHard );      
+        pRLimits->setDataLimit(memSoft, memHard);
 }
 
 

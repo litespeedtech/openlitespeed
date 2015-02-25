@@ -31,16 +31,16 @@ private:
 public:
     ErrorNo()
         : m_iErrNo(0)
-        {}
+    {}
     ~ErrorNo()
-        {}
+    {}
     int freezeErrno()
-        {   return m_iErrNo = errno;  }
+    {   return m_iErrNo = errno;  }
     int getFreezedErrno() const
-        {   return m_iErrNo;    }
+    {   return m_iErrNo;    }
     int getErrno() const
-        {   return errno;     }
-    const char * getErrStr();
-    const char * getFreezedErrStr();
+    {   return errno;     }
+    const char *getErrStr();
+    const char *getFreezedErrStr();
 };
 #endif

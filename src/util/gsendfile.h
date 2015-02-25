@@ -22,13 +22,13 @@
 extern "C" {
 #endif
 
-#if defined(__FreeBSD__ ) || defined(__NetBSD__) || defined(__OpenBSD__) 
-ssize_t gsendfile( int fdOut, int fdIn, off_t* off, size_t size )
+#if defined(__FreeBSD__ ) || defined(__NetBSD__) || defined(__OpenBSD__)
+ssize_t gsendfile(int fdOut, int fdIn, off_t *off, size_t size)
 {
     ssize_t ret;
     off_t written;
-    ret = ::sendfile( fdIn, fdOut, *off, size, NULL, &written, 0 );
-    if ( written > 0 )
+    ret = ::sendfile(fdIn, fdOut, *off, size, NULL, &written, 0);
+    if (written > 0)
     {
         ret = written;
         *off += ret;
@@ -38,12 +38,12 @@ ssize_t gsendfile( int fdOut, int fdIn, off_t* off, size_t size )
 #endif
 
 #if defined(macintosh) || defined(__APPLE__) || defined(__APPLE_CC__)
-ssize_t gsendfile( int fdOut, int fdIn, off_t* off, size_t size )
+ssize_t gsendfile(int fdOut, int fdIn, off_t *off, size_t size)
 {
     ssize_t ret;
     off_t len = size;
-    ret = ::sendfile( fdIn, fdOut, *off, &len, NULL, 0 );
-    if (( ret == 0 )&&( len > 0 ))
+    ret = ::sendfile(fdIn, fdOut, *off, &len, NULL, 0);
+    if ((ret == 0) && (len > 0))
     {
         ret = len;
         *off += len;
@@ -51,10 +51,10 @@ ssize_t gsendfile( int fdOut, int fdIn, off_t* off, size_t size )
     return ret;
 }
 #endif
-    
+
 #if defined(sun) || defined(__sun)
 #include <sys/sendfile.h>
-ssize_t gsendfile( int fdOut, int fdIn, off_t *off, size_t size )
+ssize_t gsendfile(int fdOut, int fdIn, off_t *off, size_t size)
 {
     int n = 0 ;
     sendfilevec_t vec[1];
@@ -66,10 +66,10 @@ ssize_t gsendfile( int fdOut, int fdIn, off_t *off, size_t size )
     ++n;
 
     size_t written;
-    ssize_t ret = ::sendfilev( fdOut, vec, n, &written );
-    if (( !ret )||( errno == EAGAIN ))
+    ssize_t ret = ::sendfilev(fdOut, vec, n, &written);
+    if ((!ret) || (errno == EAGAIN))
         ret = written;
-    if ( ret > 0 )
+    if (ret > 0)
         *off += ret;
     return ret;
 }
@@ -81,9 +81,9 @@ ssize_t gsendfile( int fdOut, int fdIn, off_t *off, size_t size )
 #define gsendfile ::sendfile
 #endif
 #if defined(HPUX)
-ssize_t gsendfile( int fdOut, int fdIn, off_t * off, size_t size )
+ssize_t gsendfile(int fdOut, int fdIn, off_t *off, size_t size)
 {
-    return ::sendfile( fdOut, fdIn, off, size, NULL, 0 );
+    return ::sendfile(fdOut, fdIn, off, size, NULL, 0);
 }
 #endif
 

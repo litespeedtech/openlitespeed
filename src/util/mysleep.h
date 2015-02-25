@@ -23,7 +23,7 @@ extern "C"
 {
 #endif
 
-extern void my_sleep( int millisec );
+extern void my_sleep(int millisec);
 
 #ifdef __cplusplus
 }

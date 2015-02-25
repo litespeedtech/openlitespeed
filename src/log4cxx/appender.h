@@ -38,7 +38,7 @@ class Appender : public Duplicable
     friend class ::GFactory;
 private:
 
-    Layout * m_pLayout;
+    Layout *m_pLayout;
     off_t    m_iRollingSize;
     int      m_fd;
     short    m_iAppend;
@@ -47,49 +47,49 @@ private:
     int      m_iLastDay;
     int      m_iKeepDays;
 
-protected: 
-    explicit Appender( const char * pName )
-        : Duplicable( pName )
-        , m_pLayout( NULL )
-        , m_iRollingSize( -1 )
-        , m_fd( -1 )
-        , m_iAppend( 1 )
-        , m_iCompress( 0 )
-        , m_iRotate( 1 )
-        , m_iLastDay( 0 )
-        , m_iKeepDays( 0 )
-        {}
-                       
+protected:
+    explicit Appender(const char *pName)
+        : Duplicable(pName)
+        , m_pLayout(NULL)
+        , m_iRollingSize(-1)
+        , m_fd(-1)
+        , m_iAppend(1)
+        , m_iCompress(0)
+        , m_iRotate(1)
+        , m_iLastDay(0)
+        , m_iKeepDays(0)
+    {}
+
 public:
     virtual ~Appender() {};
-    static Appender* getAppender( const char * pName );
-    static Appender* getAppender( const char * pName, const char *pType );
-    
-    const Layout* getLayout() const {   return m_pLayout;   }
-    Layout* getLayout()             {   return m_pLayout;   }
+    static Appender *getAppender(const char *pName);
+    static Appender *getAppender(const char *pName, const char *pType);
 
-    void setLayout( Layout* layout )
+    const Layout *getLayout() const {   return m_pLayout;   }
+    Layout *getLayout()             {   return m_pLayout;   }
+
+    void setLayout(Layout *layout)
     {   m_pLayout = layout;     }
-    void setAppendMode( int mode )  {   m_iAppend = mode;   }
+    void setAppendMode(int mode)  {   m_iAppend = mode;   }
     int  getAppendMode() const      {   return m_iAppend;   }
     int  getfd() const              {   return m_fd;        }
-    void setfd( int fd )            {   m_fd = fd;          }
+    void setfd(int fd)            {   m_fd = fd;          }
 
     virtual int isopen();
     virtual int open()  = 0;
     virtual int close() = 0;
     virtual int reopenExist() = 0;
-    virtual int append( const char * pBuf, int len ) = 0 ;
-    virtual int append( LoggingEvent * pEvent );
+    virtual int append(const char *pBuf, int len) = 0 ;
+    virtual int append(LoggingEvent *pEvent);
     virtual int isFull()                {   return 0;               }
     virtual int isFail()                {   return 0;               }
-    void setRollingSize( off_t size )   {   m_iRollingSize = size;  }
+    void setRollingSize(off_t size)   {   m_iRollingSize = size;  }
     off_t getRollingSize() const        {   return m_iRollingSize;  }
 
-    void setCompress( int compress )    {   m_iCompress = compress; }
+    void setCompress(int compress)    {   m_iCompress = compress; }
     char getCompress() const            {   return m_iCompress;     }
 
-    void setKeepDays( int days )    {   m_iKeepDays = days;     }
+    void setKeepDays(int days)    {   m_iKeepDays = days;     }
     int getKeepDays() const         {   return m_iKeepDays;     }
 };
 

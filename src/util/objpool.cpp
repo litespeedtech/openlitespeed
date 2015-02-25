@@ -17,32 +17,30 @@
 *****************************************************************************/
 #include <util/objpool.h>
 
-GObjPool::GObjPool( int chunkSize )
-    : m_chunkSize( chunkSize )
-    , m_poolSize( 0 )
+GObjPool::GObjPool(int chunkSize)
+    : m_chunkSize(chunkSize)
+    , m_poolSize(0)
 {
 }
 
-int GObjPool::allocate( int size )
+int GObjPool::allocate(int size)
 {
-    if ( (int)m_freeList.capacity() < m_poolSize + size )
-        if ( m_freeList.reserve( m_poolSize + size ) )
+    if ((int)m_freeList.capacity() < m_poolSize + size)
+        if (m_freeList.reserve(m_poolSize + size))
             return -1;
     int i = 0;
     try
     {
-        for( ; i < size; ++i )
+        for (; i < size; ++i)
         {
-            void * pObj = newObj();
-            if ( pObj )
+            void *pObj = newObj();
+            if (pObj)
             {
-                m_freeList.safe_push_back( pObj );
+                m_freeList.safe_push_back(pObj);
                 ++m_poolSize;
             }
             else
-            {
                 return -1;
-            }
         }
     }
     catch (...)

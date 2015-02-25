@@ -22,10 +22,10 @@
 
 class SSLEngine
 {
-public: 
-	SSLEngine();
-	~SSLEngine();
-    static int init( const char * pID );
+public:
+    SSLEngine();
+    ~SSLEngine();
+    static int init(const char *pID);
     static void shutdown();
 };
 

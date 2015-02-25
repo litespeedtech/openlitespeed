@@ -37,38 +37,36 @@ int Appender::isopen()
     return m_fd != -1;
 }
 
-Appender* Appender::getAppender( const char * pName )
+Appender *Appender::getAppender(const char *pName)
 {
-    return getAppender( pName, "appender.ps" );
+    return getAppender(pName, "appender.ps");
 }
 
-Appender* Appender::getAppender( const char * pName, const char *pType )
+Appender *Appender::getAppender(const char *pName, const char *pType)
 {
-    return (Appender *)s_pFactory->getObj( pName, pType );
+    return (Appender *)s_pFactory->getObj(pName, pType);
 }
 
-int Appender::append( LoggingEvent * pEvent )
+int Appender::append(LoggingEvent *pEvent)
 {
     char achBuf[9000];
-    char * pMessage = achBuf;
+    char *pMessage = achBuf;
     int len;
-    if ( !pEvent )
+    if (!pEvent)
         return -1;
-    Layout * pLayout;
-    if ( pEvent->m_pLayout )
+    Layout *pLayout;
+    if (pEvent->m_pLayout)
         pLayout = pEvent->m_pLayout;
     else
         pLayout = m_pLayout;
-    if ( pLayout )
-    {
-         len = pLayout->format( pEvent, pMessage, sizeof( achBuf ) );
-    }
+    if (pLayout)
+        len = pLayout->format(pEvent, pMessage, sizeof(achBuf));
     else
     {
         pMessage = (char *)pEvent->m_pMessageBuf;
         len = pEvent->m_iMessageLen;
     }
-    return append( pMessage, len );
+    return append(pMessage, len);
 }
 
 END_LOG4CXX_NS

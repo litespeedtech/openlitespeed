@@ -21,19 +21,19 @@
 #include <ctype.h>
 #include <string.h>
 
-int HttpUtil::unescape_inplace( char * pDest, int& uriLen,
-                                const char * &pOrgSrc  )
+int HttpUtil::unescape_inplace(char *pDest, int &uriLen,
+                               const char *&pOrgSrc)
 {
-    register const char * pSrc = pOrgSrc;
-    register const char * pEnd = pOrgSrc + uriLen;
-    register char * p = pDest;
-    
-    while ( pSrc < pEnd )
+    register const char *pSrc = pOrgSrc;
+    register const char *pEnd = pOrgSrc + uriLen;
+    register char *p = pDest;
+
+    while (pSrc < pEnd)
     {
         register char c = *pSrc++;
-        switch(c)
+        switch (c)
         {
-            case '%':
+        case '%':
             {
                 register char x1, x2;
                 x1 = *pSrc++;
@@ -45,37 +45,37 @@ int HttpUtil::unescape_inplace( char * pDest, int& uriLen,
                 c = (hexdigit(x1) << 4) + hexdigit(x2);
                 break;
             }
-            case '?':
-                uriLen = p - pDest;
+        case '?':
+            uriLen = p - pDest;
+            *p++ = 0;
+            if (pOrgSrc != pDest)
+            {
+                pOrgSrc = p;
+                memmove(p, pSrc, pEnd - pSrc);
+                p += pEnd - pSrc;
                 *p++ = 0;
-                if ( pOrgSrc != pDest )
-                {
-                    pOrgSrc = p;
-                    memmove( p, pSrc, pEnd - pSrc );
-                    p+= pEnd - pSrc;
-                    *p++ = 0;
-                }
-                else
-                {
-                    pOrgSrc = pSrc;
-                    p = (char *)pEnd + 1;
-                }
-                return p - pDest;
+            }
+            else
+            {
+                pOrgSrc = pSrc;
+                p = (char *)pEnd + 1;
+            }
+            return p - pDest;
         }
-        switch( c )
+        switch (c)
         {
-            case '.':
-                if ( *(p - 1) == '/' )
-                    return -1;
-                *p++ = c;
+        case '.':
+            if (*(p - 1) == '/')
+                return -1;
+            *p++ = c;
+            break;
+        case '/':
+            //get rid of duplicate '/'s.
+            if (*pSrc == '/')
                 break;
-            case '/':
-                //get rid of duplicate '/'s.
-                if ( *pSrc == '/' )
-                    break;
-                //fall through
-            default:
-                *p++ = c;
+        //fall through
+        default:
+            *p++ = c;
         }
     }
     pOrgSrc = p;
@@ -85,47 +85,47 @@ int HttpUtil::unescape_inplace( char * pDest, int& uriLen,
 }
 
 
-int HttpUtil::unescape( char * pDest, int& uriLen,
-                        const char * &pOrgSrc  )
+int HttpUtil::unescape(char *pDest, int &uriLen,
+                       const char *&pOrgSrc)
 {
-    register const char * pSrc = pOrgSrc;
-    register const char * pEnd = pOrgSrc + uriLen;
-    register char * p = pDest;
+    register const char *pSrc = pOrgSrc;
+    register const char *pEnd = pOrgSrc + uriLen;
+    register char *p = pDest;
 
-    while ( pSrc < pEnd )
+    while (pSrc < pEnd)
     {
         register char c = *pSrc++;
-        switch(c)
+        switch (c)
         {
         case '%':
-        {
-            register char x1, x2;
-            x1 = *pSrc++;
-            if (!isxdigit(x1))
             {
-                *p++ = '%';
-                c = x1;
+                register char x1, x2;
+                x1 = *pSrc++;
+                if (!isxdigit(x1))
+                {
+                    *p++ = '%';
+                    c = x1;
+                    break;
+                }
+                x2 = *pSrc++;
+                if (!isxdigit(x2))
+                {
+                    *p++ = '%';
+                    *p++ = x1;
+                    c = x2;
+                    break;
+                }
+                c = (hexdigit(x1) << 4) + hexdigit(x2);
                 break;
             }
-            x2 = *pSrc++;
-            if (!isxdigit(x2))
-            {
-                *p++ = '%';
-                *p++ = x1;
-                c = x2;
-                break;
-            }
-            c = (hexdigit(x1) << 4) + hexdigit(x2);
-            break;
-        }
         case '?':
             uriLen = p - pDest;
             *p++ = 0;
-            if ( pOrgSrc != pDest )
+            if (pOrgSrc != pDest)
             {
                 pOrgSrc = p;
-                memmove( p, pSrc, pEnd - pSrc );
-                p+= pEnd - pSrc;
+                memmove(p, pSrc, pEnd - pSrc);
+                p += pEnd - pSrc;
                 *p++ = 0;
             }
             else
@@ -196,28 +196,28 @@ int HttpUtil::unescape( char * pDest, int& uriLen,
 int HttpUtil::unescape_n(const char *pSrc, char *pDest, int n)
 {
     register char c;
-    register char * p = pDest;
+    register char *p = pDest;
 
     while (n-- && ((c = *pSrc++) != 0))
     {
-        switch(c)
+        switch (c)
         {
         case '%':
-        {
-            register char x1, x2;
-            x1 = *pSrc++;
-            if (!isxdigit(x1))
+            {
+                register char x1, x2;
+                x1 = *pSrc++;
+                if (!isxdigit(x1))
                     return -1;
-            x2 = *pSrc++;
-            if (!isxdigit(x2))
+                x2 = *pSrc++;
+                if (!isxdigit(x2))
                     return -1;
-            *p++ = (hexdigit(x1) << 4) + hexdigit(x2);
-            n -= 2;
-            break;
-        }
+                *p++ = (hexdigit(x1) << 4) + hexdigit(x2);
+                n -= 2;
+                break;
+            }
         case '/':
             //get rid of duplicate '/'s.
-            if ( *pSrc == '/' )
+            if (*pSrc == '/')
                 break;
         default:
             *p++ = c;
@@ -227,11 +227,11 @@ int HttpUtil::unescape_n(const char *pSrc, char *pDest, int n)
     return p - pDest;
 }
 
-int HttpUtil::escape( const char * pSrc, char * pDest, int n )
+int HttpUtil::escape(const char *pSrc, char *pDest, int n)
 {
     register char ch;
-    register char * p = pDest;
-    while ( --n&&((ch = *pSrc++) != 0))
+    register char *p = pDest;
+    while (--n && ((ch = *pSrc++) != 0))
     {
         switch (ch)
         {
@@ -245,12 +245,12 @@ int HttpUtil::escape( const char * pSrc, char * pDest, int n )
         case '?':
         case '+':
         case '&':
-            if ( n < 3 )
-            {        
+            if (n < 3)
+            {
                 *p++ = '%';
                 *p++ = StringTool::s_hex[(ch >> 4) & 15];
                 *p++ = StringTool::s_hex[ch & 15];
-                n -=2;
+                n -= 2;
             }
             else
                 n = 1;
@@ -268,44 +268,44 @@ int HttpUtil::escape( const char * pSrc, char * pDest, int n )
 int HttpUtil::unescape_n(const char *pSrc, int srcLen, char *pDest, int n)
 {
     register char c;
-    register char * p = pDest;
-    register const char * pSrcEnd = pSrc + srcLen;
+    register char *p = pDest;
+    register const char *pSrcEnd = pSrc + srcLen;
 
-    while (n-- && (pSrc < pSrcEnd ))
+    while (n-- && (pSrc < pSrcEnd))
     {
         c = *pSrc++;
-        if ( c == '%' && pSrc + 2 < pSrcEnd )
+        if (c == '%' && pSrc + 2 < pSrcEnd)
         {
             register char x1, x2;
             x1 = *pSrc++;
             if (!isxdigit(x1))
-                    return -1;
+                return -1;
             x2 = *pSrc++;
             if (!isxdigit(x2))
-                    return -1;
+                return -1;
             *p++ = (hexdigit(x1) << 4) + hexdigit(x2);
             n -= 2;
         }
-        else if ( c == '/' && pSrc < pSrcEnd && *pSrc == '/' )
+        else if (c == '/' && pSrc < pSrcEnd && *pSrc == '/')
         {
             //handle "://" case, keep them
-            if (n + 2 <= srcLen && pSrc[-2] == ':') 
+            if (n + 2 <= srcLen && pSrc[-2] == ':')
                 *p++ = c;
             //else
-                //; //Do nothing so that get rid of duplicate '/'s.
+            //; //Do nothing so that get rid of duplicate '/'s.
         }
         else
             *p++ = c;
     }
-        
+
     return p - pDest;
 }
-int HttpUtil::escape( const char * pSrc, int len, char * pDest, int n )
+int HttpUtil::escape(const char *pSrc, int len, char *pDest, int n)
 {
     register char ch;
-    register char * p = pDest;
-    register const char * pEnd = pSrc + len;
-    while ( --n&&(pSrc < pEnd ))
+    register char *p = pDest;
+    register const char *pEnd = pSrc + len;
+    while (--n && (pSrc < pEnd))
     {
         ch = *pSrc++;
         switch (ch)
@@ -320,12 +320,12 @@ int HttpUtil::escape( const char * pSrc, int len, char * pDest, int n )
         case '?':
         case '+':
         case '&':
-            if ( n < 3 )
-            {        
+            if (n < 3)
+            {
                 *p++ = '%';
                 *p++ = StringTool::s_hex[(ch >> 4) & 15];
                 *p++ = StringTool::s_hex[ch & 15];
-                n -=2;
+                n -= 2;
             }
             else
                 n = 1;
@@ -339,29 +339,30 @@ int HttpUtil::escape( const char * pSrc, int len, char * pDest, int n )
     return p - pDest;
 
 }
-int HttpUtil::escapeHtml(const char *pSrc, const char * pSrcEnd, char * pDest, int n)
+int HttpUtil::escapeHtml(const char *pSrc, const char *pSrcEnd,
+                         char *pDest, int n)
 {
-    char * pBegin = pDest;
-    char * pEnd = pDest + n - 6;
+    char *pBegin = pDest;
+    char *pEnd = pDest + n - 6;
     char ch;
-    while( (pSrc < pSrcEnd )&&(ch = *pSrc)&&( pDest < pEnd ) )
+    while ((pSrc < pSrcEnd) && (ch = *pSrc) && (pDest < pEnd))
     {
-        switch( ch )
+        switch (ch)
         {
         case '<':
-            memmove( pDest, "&lt;", 4 );
+            memmove(pDest, "&lt;", 4);
             pDest += 4;
             break;
         case '>':
-            memmove( pDest, "&gt;", 4 );
+            memmove(pDest, "&gt;", 4);
             pDest += 4;
             break;
         case '&':
-            memmove( pDest, "&amp;", 5 );
+            memmove(pDest, "&amp;", 5);
             pDest += 5;
             break;
         case '"':
-            memmove( pDest, "&quot;", 6 );
+            memmove(pDest, "&quot;", 6);
             pDest += 6;
             break;
         default:

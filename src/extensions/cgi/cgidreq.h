@@ -30,29 +30,29 @@ class CgidReq : public IEnv
 public:
     CgidReq();
     ~CgidReq();
-    int add( const char *name, const char *value )
-    {   return IEnv::add( name, value );    }
+    int add(const char *name, const char *value)
+    {   return IEnv::add(name, value);    }
 
-    int add( const char *name, size_t nameLen,
-            const char *value, size_t valLen );
-    int add( const char * buf, size_t len )
-    {   return m_buf.append( buf, len );    }
-    
+    int add(const char *name, size_t nameLen,
+            const char *value, size_t valLen);
+    int add(const char *buf, size_t len)
+    {   return m_buf.append(buf, len);    }
+
     void clear();
-    
-    const char * get() const    {   return m_buf.begin();       }
-    int size() const            {   return m_buf.size();        }
-    int appendString( const char * pBuf, size_t len );
-    
-    lscgid_req * getCgidReq()   {   return (lscgid_req *)m_buf.begin();   }
 
-    int appendArgv( const char * pArgv, int len );
-    int appendEnv( const char * pEnv, int len );
-    int buildReqHeader(  int uid, int gid, int priority,
-                    const char * pChroot, int chrootLen,
-                    const char * pReal, int pathLen, const RLimits * pLimits);
-    int finalize( int req_id, const char * pSecret, int type );
-    
+    const char *get() const    {   return m_buf.begin();       }
+    int size() const            {   return m_buf.size();        }
+    int appendString(const char *pBuf, size_t len);
+
+    lscgid_req *getCgidReq()   {   return (lscgid_req *)m_buf.begin();   }
+
+    int appendArgv(const char *pArgv, int len);
+    int appendEnv(const char *pEnv, int len);
+    int buildReqHeader(int uid, int gid, int priority,
+                       const char *pChroot, int chrootLen,
+                       const char *pReal, int pathLen, const RLimits *pLimits);
+    int finalize(int req_id, const char *pSecret, int type);
+
 };
 
 #endif

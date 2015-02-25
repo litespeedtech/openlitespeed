@@ -30,9 +30,9 @@ class Attr;
 class XmlNodeList : public TPointerList<XmlNode>
 {
 public:
-    explicit XmlNodeList( int n )
-        : TPointerList<XmlNode>( n )
-        {}
+    explicit XmlNodeList(int n)
+        : TPointerList<XmlNode>(n)
+    {}
     XmlNodeList() {}
 };
 
@@ -41,41 +41,41 @@ class AttrMap;
 class XmlNode
 {
 private:
-    XmlNode( const XmlNode& rhs ) {}
-    void operator=( const XmlNode& rhs ) {}
-    XmlNodeImpl * m_impl;
+    XmlNode(const XmlNode &rhs) {}
+    void operator=(const XmlNode &rhs) {}
+    XmlNodeImpl *m_impl;
 
-public: 
+public:
     XmlNode();
     ~XmlNode();
 
-    int init(const char* name, const char** attr);
-    int addChild(const char* name, XmlNode* pChild);
-    const XmlNode* getChild(const char* name, int bOptional  = 0) const;
-    XmlNode* getChild(const char* name, int bOptional = 0);
-    const XmlNodeList * getChildren(const char* name ) const;
-    int getAllChildren(XmlNodeList& list) const;
-    int getAllChildren(XmlNodeList& list);
-    const char* getChildValue( const char *name, int bKeyName = 0) const;
-    const char* getAttr(const char* name) const;
-    const AttrMap * getAllAttr() const;
-    const char* getName() const;
-    const char* getValue() const;
-    long long getLongValue( const char * pTag,
-            long long min, long long max, long long def, int base = 10 ) const ;
-    
-    int setValue(const char* value, int len);
-    XmlNode * getParent() const;
-    int xmlOutput(FILE* fd, int depth) const;
+    int init(const char *name, const char **attr);
+    int addChild(const char *name, XmlNode *pChild);
+    const XmlNode *getChild(const char *name, int bOptional  = 0) const;
+    XmlNode *getChild(const char *name, int bOptional = 0);
+    const XmlNodeList *getChildren(const char *name) const;
+    int getAllChildren(XmlNodeList &list) const;
+    int getAllChildren(XmlNodeList &list);
+    const char *getChildValue(const char *name, int bKeyName = 0) const;
+    const char *getAttr(const char *name) const;
+    const AttrMap *getAllAttr() const;
+    const char *getName() const;
+    const char *getValue() const;
+    long long getLongValue(const char *pTag,
+                           long long min, long long max, long long def, int base = 10) const ;
+
+    int setValue(const char *value, int len);
+    XmlNode *getParent() const;
+    int xmlOutput(FILE *fd, int depth) const;
 };
 
 class XmlTreeBuilder
 {
 public:
-    XmlTreeBuilder(){};
-    ~XmlTreeBuilder(){};
+    XmlTreeBuilder() {};
+    ~XmlTreeBuilder() {};
 
-    XmlNode* parse(const char* fileName, char * pErrBuf, int errBufLen);
+    XmlNode *parse(const char *fileName, char *pErrBuf, int errBufLen);
 };
-    
+
 #endif

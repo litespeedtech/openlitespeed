@@ -30,8 +30,8 @@ class RTSigData;
 class RTsigio : public Poller
 {
     sigset_t        m_sigset;
-    FdIndex         m_fdindex;        
-    int allocate( int iInitCapacity );
+    FdIndex         m_fdindex;
+    int allocate(int iInitCapacity);
     int deallocate();
     int enableSigio();
 
@@ -39,10 +39,10 @@ public:
 
     RTsigio();
     virtual ~RTsigio();
-    virtual int init( int capacity );
-    virtual int add( EventReactor* pHandler, short mask );
-    virtual int remove( EventReactor* pHandler );
-    virtual int waitAndProcessEvents( int iTimeoutMilliSec );
+    virtual int init(int capacity);
+    virtual int add(EventReactor *pHandler, short mask);
+    virtual int remove(EventReactor *pHandler);
+    virtual int waitAndProcessEvents(int iTimeoutMilliSec);
 
 };
 

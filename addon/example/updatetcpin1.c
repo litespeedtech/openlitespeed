@@ -4,18 +4,18 @@ All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
-met: 
+met:
 
     * Redistributions of source code must retain the above copyright
-      notice, this list of conditions and the following disclaimer. 
+      notice, this list of conditions and the following disclaimer.
     * Redistributions in binary form must reproduce the above
       copyright notice, this list of conditions and the following
       disclaimer in the documentation and/or other materials provided
-      with the distribution. 
+      with the distribution.
     * Neither the name of the Lite Speed Technologies Inc nor the
       names of its contributors may be used to endorse or promote
       products derived from this software without specific prior
-      written permission.  
+      written permission.
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
@@ -27,7 +27,7 @@ LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
 DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
 THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 #include "../include/ls.h"
 #include "loopbuff.h"
@@ -38,49 +38,49 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ///////////////////////////////////
 static const unsigned char s_decodeTable[128] =
 {
-    255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,  /* 00-0F */
-    255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,  /* 10-1F */
-    255,255,255,255,255,255,255,255,255,255,255,62,255,255,255,63,  /* 20-2F */
-    52,53,54,55,56,57,58,59,60,61,255,255,255,255,255,255,          /* 30-3F */
-    255, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13,14,               /* 40-4F */
-    15,16,17,18,19,20,21,22,23,24,25,255,255,255,255,255,           /* 50-5F */
-    255,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,               /* 60-6F */
-    41,42,43,44,45,46,47,48,49,50,51,255,255,255,255,255            /* 70-7F */
+    255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, /* 00-0F */
+    255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, /* 10-1F */
+    255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 62, 255, 255, 255, 63, /* 20-2F */
+    52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 255, 255, 255, 255, 255, 255, /* 30-3F */
+    255, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14,          /* 40-4F */
+    15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 255, 255, 255, 255, 255, /* 50-5F */
+    255, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, /* 60-6F */
+    41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 255, 255, 255, 255, 255 /* 70-7F */
 };
 
 static const unsigned char s_encodeTable[] =
-            "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-            
-int Base64_decode( const char * encoded, int size, char * decoded )
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+int Base64_decode(const char *encoded, int size, char *decoded)
 {
-    register const char * pEncoded = encoded;
+    register const char *pEncoded = encoded;
     register unsigned char e1, prev_e = 0;
     register char           phase = 0;
-    register unsigned char * pDecoded = (unsigned char *)decoded;
-    register const char * pEnd = encoded + size ;
-    
-    while(  pEncoded < pEnd )
+    register unsigned char *pDecoded = (unsigned char *)decoded;
+    register const char *pEnd = encoded + size ;
+
+    while (pEncoded < pEnd)
     {
         register int ch = *pEncoded++;
-        if ( ch < 0 )
+        if (ch < 0)
             continue;
         e1 = s_decodeTable[ ch ];
-        if ( e1 != 255 )
+        if (e1 != 255)
         {
-            switch ( phase )
+            switch (phase)
             {
             case 0:
                 break;
             case 1:
-                *pDecoded++ = ( ( prev_e << 2 ) | ( ( e1 & 0x30 ) >> 4 ) );
+                *pDecoded++ = ((prev_e << 2) | ((e1 & 0x30) >> 4));
                 break;
             case 2:
-                *pDecoded++ = ( ( ( prev_e & 0xf ) << 4 ) | ( ( e1 & 0x3c ) >> 2 ) );
+                *pDecoded++ = (((prev_e & 0xf) << 4) | ((e1 & 0x3c) >> 2));
                 break;
             case 3:
-                *pDecoded++ = ( ( ( prev_e & 0x03 ) << 6 ) | e1 );
+                *pDecoded++ = (((prev_e & 0x03) << 6) | e1);
                 phase = -1;
-            break;
+                break;
             }
             phase++;
             prev_e = e1;
@@ -90,39 +90,40 @@ int Base64_decode( const char * encoded, int size, char * decoded )
     return pDecoded - (unsigned char *)decoded;
 }
 
-int Base64_encode( const char *decoded, int size, char * encoded )
+int Base64_encode(const char *decoded, int size, char *encoded)
 {
-    register const unsigned char * pDecoded = (const unsigned char *)decoded;
-    register const unsigned char * pEnd = (const unsigned char *)decoded + size ;    
-    register char * pEncoded = encoded;
+    register const unsigned char *pDecoded = (const unsigned char *)decoded;
+    register const unsigned char *pEnd = (const unsigned char *)decoded + size
+                                         ;
+    register char *pEncoded = encoded;
     register unsigned char ch;
-    
+
     size %= 3;
     pEnd -= size;
 
-    while ( pEnd > pDecoded ) 
+    while (pEnd > pDecoded)
     {
-        *pEncoded++ = s_encodeTable[( ( ch = *pDecoded++ ) >> 2 ) & 0x3f];
-        *pEncoded++ = s_encodeTable[(( ch & 0x03 ) << 4 ) | ( *pDecoded >> 4 )];
+        *pEncoded++ = s_encodeTable[((ch = *pDecoded++) >> 2) & 0x3f];
+        *pEncoded++ = s_encodeTable[((ch & 0x03) << 4) | (*pDecoded >> 4)];
         ch = *pDecoded++;
-        *pEncoded++ = s_encodeTable[(( ch & 0x0f ) << 2 ) | ( *pDecoded >> 6 )];
+        *pEncoded++ = s_encodeTable[((ch & 0x0f) << 2) | (*pDecoded >> 6)];
         *pEncoded++ = s_encodeTable[ *pDecoded++ & 0x3f];
     }
 
-    if ( size > 0 )
+    if (size > 0)
     {
-        *pEncoded++ = s_encodeTable[( (ch = *pDecoded++) >> 2 ) & 0x3f];
+        *pEncoded++ = s_encodeTable[((ch = *pDecoded++) >> 2) & 0x3f];
 
         if (size == 1)
         {
-            *pEncoded++ = s_encodeTable[( ch & 0x03 ) << 4];
+            *pEncoded++ = s_encodeTable[(ch & 0x03) << 4];
             *pEncoded++ = '=';
 
         }
         else
         {
-            *pEncoded++ = s_encodeTable[(( ch & 0x03 ) << 4) | ( *pDecoded >> 4 )];
-            *pEncoded++ = s_encodeTable[( *pDecoded & 0x0f ) << 2];
+            *pEncoded++ = s_encodeTable[((ch & 0x03) << 4) | (*pDecoded >> 4)];
+            *pEncoded++ = s_encodeTable[(*pDecoded & 0x0f) << 2];
         }
         *pEncoded++ = '=';
     }
@@ -149,22 +150,24 @@ typedef struct _MyData
 int l4release(void *data)
 {
     MyData *myData = (MyData *)data;
-    g_api->log( NULL, LSI_LOG_DEBUG, "#### updatetcpin1 test %s\n", "l4release" );
-    
+    g_api->log(NULL, LSI_LOG_DEBUG, "#### updatetcpin1 test %s\n",
+               "l4release");
+
     if (myData)
     {
         _loopbuff_dealloc(&myData->inBuf);
         _loopbuff_dealloc(&myData->outBuf);
-        free (myData);
+        free(myData);
     }
-    
+
     return 0;
 }
 
 
-int l4init1( lsi_cb_param_t * rec )
+int l4init1(lsi_cb_param_t *rec)
 {
-    MyData *myData = (MyData *)g_api->get_module_data(rec->_session, &MNAME, LSI_MODULE_DATA_L4);
+    MyData *myData = (MyData *)g_api->get_module_data(rec->_session, &MNAME,
+                     LSI_MODULE_DATA_L4);
     if (!myData)
     {
         myData = (MyData *) malloc(sizeof(MyData));
@@ -172,40 +175,43 @@ int l4init1( lsi_cb_param_t * rec )
         _loopbuff_init(&myData->outBuf);
         _loopbuff_alloc(&myData->inBuf, MAX_BLOCK_BUFSIZE);
         _loopbuff_alloc(&myData->outBuf, MAX_BLOCK_BUFSIZE);
-        
-        g_api->log( NULL, LSI_LOG_DEBUG, "#### updatetcpin1 test %s\n", "l4init" );
-        g_api->set_module_data(rec->_session, &MNAME, LSI_MODULE_DATA_L4, (void *)myData);
+
+        g_api->log(NULL, LSI_LOG_DEBUG, "#### updatetcpin1 test %s\n", "l4init");
+        g_api->set_module_data(rec->_session, &MNAME, LSI_MODULE_DATA_L4,
+                               (void *)myData);
     }
     else
     {
         _loopbuff_cleardata(&myData->inBuf);
         _loopbuff_cleardata(&myData->outBuf);
     }
-    
+
     return 0;
 }
 
 //expand the recieved data to base64 encode
-int l4recv1(lsi_cb_param_t * rec)
+int l4recv1(lsi_cb_param_t *rec)
 {
 #define PLAIN_BLOCK_SIZE 600
 #define ENCODE_BLOCK_SIZE (PLAIN_BLOCK_SIZE * 4 / 3 + 1)
-  
+
     MyData *myData = NULL;
     char *pBegin;
     char tmpBuf[ENCODE_BLOCK_SIZE];
     int len, sz;
-    
-    myData = (MyData *)g_api->get_module_data(rec->_session, &MNAME, LSI_MODULE_DATA_L4);
+
+    myData = (MyData *)g_api->get_module_data(rec->_session, &MNAME,
+             LSI_MODULE_DATA_L4);
     if (!myData)
         return -1;
-        
-    while((len = g_api->stream_read_next( rec, tmpBuf, ENCODE_BLOCK_SIZE )) > 0)
+
+    while ((len = g_api->stream_read_next(rec, tmpBuf, ENCODE_BLOCK_SIZE)) > 0)
     {
-        g_api->log( NULL, LSI_LOG_DEBUG, "#### updatetcpin1 test l4recv, inLn = %d\n", len );
+        g_api->log(NULL, LSI_LOG_DEBUG,
+                   "#### updatetcpin1 test l4recv, inLn = %d\n", len);
         _loopbuff_append(&myData->inBuf, tmpBuf, len);
     }
-    
+
     while (_loopbuff_hasdata(&myData->inBuf))
     {
         _loopbuff_reorder(&myData->inBuf);
@@ -213,7 +219,7 @@ int l4recv1(lsi_cb_param_t * rec)
         sz = _loopbuff_getdatasize(&myData->inBuf);
         if (sz > PLAIN_BLOCK_SIZE)
             sz = PLAIN_BLOCK_SIZE;
-        len = Base64_encode( (const char *)pBegin, sz, tmpBuf );
+        len = Base64_encode((const char *)pBegin, sz, tmpBuf);
         if (len > 0)
         {
             _loopbuff_append(&myData->outBuf, tmpBuf, len);
@@ -222,31 +228,30 @@ int l4recv1(lsi_cb_param_t * rec)
         else
             break;
     }
-    
+
     ////////////////////////////////////////////////////////////////////////////////
     if (_loopbuff_getdatasize(&myData->outBuf) < rec->_param_len)
-    {
         rec->_param_len = _loopbuff_getdatasize(&myData->outBuf);
-    }
-    
+
     if (rec->_param_len > 0)
     {
         _loopbuff_getdata(&myData->outBuf, (char *)rec->_param, rec->_param_len);
         _loopbuff_erasedata(&myData->outBuf, rec->_param_len);
     }
-    
+
     return rec->_param_len;
 }
 
-static lsi_serverhook_t serverHooks[] = {
+static lsi_serverhook_t serverHooks[] =
+{
     {LSI_HKPT_L4_BEGINSESSION, l4init1, LSI_HOOK_NORMAL, 0},
     {LSI_HKPT_L4_RECVING, l4recv1, LSI_HOOK_EARLY, LSI_HOOK_FLAG_TRANSFORM},
     lsi_serverhook_t_END   //Must put this at the end position
 };
 
-static int init( lsi_module_t * pModule )
+static int init(lsi_module_t *pModule)
 {
-    g_api->init_module_data(pModule, l4release, LSI_MODULE_DATA_L4 );
+    g_api->init_module_data(pModule, l4release, LSI_MODULE_DATA_L4);
     return 0;
 }
 

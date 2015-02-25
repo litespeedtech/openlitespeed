@@ -32,25 +32,25 @@
 static int s_iRunning = 0;
 static int s_iSigChild = 0;
 static int s_pid    = 0;
-static void sigchild( int sig )
+static void sigchild(int sig)
 {
     //printf( "signchild()!\n" );
     s_iSigChild = 1;
 }
 
-static void sig_broadcast( int sig )
+static void sig_broadcast(int sig)
 {
     //printf( "sig_broadcast(%d)!\n", sig );
-    kill( s_pid, sig );
-    if ( sig == SIGTERM )
+    kill(s_pid, sig);
+    if (sig == SIGTERM)
         s_iRunning = false;
 }
 
 static void init()
 {
-    SignalUtil::signal( SIGTERM, sig_broadcast );
-    SignalUtil::signal( SIGHUP, sig_broadcast );
-    SignalUtil::signal( SIGCHLD, sigchild );
+    SignalUtil::signal(SIGTERM, sig_broadcast);
+    SignalUtil::signal(SIGHUP, sig_broadcast);
+    SignalUtil::signal(SIGCHLD, sigchild);
 }
 
 int CrashGuard::guardCrash()
@@ -60,15 +60,15 @@ int CrashGuard::guardCrash()
     int  rpid   = 0;
     int  ret;
     int  stat;
-    assert( m_pGuardedApp );
+    assert(m_pGuardedApp);
     init();
     s_iRunning = 1;
-    while( s_iRunning )
+    while (s_iRunning)
     {
-        if ( s_pid == rpid )
+        if (s_pid == rpid)
         {
             long curTime = time(NULL);
-            if ( curTime - lLastForkTime > 10 )
+            if (curTime - lLastForkTime > 10)
             {
                 iForkCount = 0;
                 lLastForkTime = curTime;
@@ -76,70 +76,68 @@ int CrashGuard::guardCrash()
             else
             {
                 ++iForkCount;
-                if ( iForkCount > 20 )
+                if (iForkCount > 20)
                 {
                     ret = m_pGuardedApp->forkTooFreq();
-                    if ( ret > 0 )
+                    if (ret > 0)
                         break;
-                    sleep( 60 );
+                    sleep(60);
                 }
             }
             m_pGuardedApp->preFork();
             s_pid = fork();
-            if ( s_pid == -1 )
+            if (s_pid == -1)
             {
-                m_pGuardedApp->forkError( errno );
+                m_pGuardedApp->forkError(errno);
                 return -1;
             }
-            else if ( s_pid == 0 )
+            else if (s_pid == 0)
                 return 0;
             else
-                m_pGuardedApp->postFork( s_pid );
+                m_pGuardedApp->postFork(s_pid);
             rpid = 0;
-            
+
         }
-        ::sleep( 1 );
-        if ( s_iSigChild )
+        ::sleep(1);
+        if (s_iSigChild)
         {
             s_iSigChild = 0;
             //printf( "waitpid()\n" );
-            rpid = ::waitpid( -1, &stat, WNOHANG );
-            if ( rpid > 0 )
+            rpid = ::waitpid(-1, &stat, WNOHANG);
+            if (rpid > 0)
             {
-                if ( WIFEXITED( stat ) )
+                if (WIFEXITED(stat))
                 {
-                    ret = WEXITSTATUS( stat );
-                    m_pGuardedApp->childExit( rpid, ret );
+                    ret = WEXITSTATUS(stat);
+                    m_pGuardedApp->childExit(rpid, ret);
                     break;
                 }
-                else if ( WIFSIGNALED( stat ))
+                else if (WIFSIGNALED(stat))
                 {
-                    int sig_num = WTERMSIG( stat );
-                    if ( sig_num == SIGKILL )
+                    int sig_num = WTERMSIG(stat);
+                    if (sig_num == SIGKILL)
                         break;
-                    ret = m_pGuardedApp->childSignaled( rpid, sig_num,
+                    ret = m_pGuardedApp->childSignaled(rpid, sig_num,
 #ifdef WCOREDUMP
-                                                 WCOREDUMP( stat )
+                                                       WCOREDUMP(stat)
 #else
-                                                 -1 
+                                                       - 1
 #endif
-                                                 );
-                    if ( ret != 0 )
+                                                      );
+                    if (ret != 0)
                         break;
                 }
             }
         }
         else
-        {
             m_pGuardedApp->onGuardTimer();
-        }
     }
-    if ( s_pid > 0 )
-        if ( ::kill( s_pid, 0 ) == 0 )
+    if (s_pid > 0)
+        if (::kill(s_pid, 0) == 0)
         {
-            sleep( 1 );
-            ::kill( s_pid, SIGKILL );
+            sleep(1);
+            ::kill(s_pid, SIGKILL);
         }
-    exit( ret );    
+    exit(ret);
 }
 

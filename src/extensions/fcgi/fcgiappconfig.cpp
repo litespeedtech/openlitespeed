@@ -23,8 +23,8 @@
 #include <string.h>
 #include <stdlib.h>
 
-FcgiAppConfig::FcgiAppConfig( const char * pName )
-    : LocalWorkerConfig( pName )
+FcgiAppConfig::FcgiAppConfig(const char *pName)
+    : LocalWorkerConfig(pName)
 {
 }
 
@@ -32,8 +32,8 @@ FcgiAppConfig::FcgiAppConfig()
 {
 }
 
-FcgiAppConfig::FcgiAppConfig( const FcgiAppConfig& rhs )
-    : LocalWorkerConfig( rhs )
+FcgiAppConfig::FcgiAppConfig(const FcgiAppConfig &rhs)
+    : LocalWorkerConfig(rhs)
 {
 }
 

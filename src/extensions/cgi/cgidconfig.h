@@ -29,21 +29,21 @@ class CgidConfig : public ExtWorkerConfig
     AutoStr2    m_sSocket;
     RLimits     m_limits;
     int         m_priority;
-public: 
-    CgidConfig( const char * pName );
+public:
+    CgidConfig(const char *pName);
     CgidConfig();
     ~CgidConfig();
-    const char * getSecret() const  {   return m_achSecret;     }
-    char * getSecretBuf()           {   return m_achSecret;     }
-    RLimits * getRLimits()          {   return &m_limits;       }
+    const char *getSecret() const  {   return m_achSecret;     }
+    char *getSecretBuf()           {   return m_achSecret;     }
+    RLimits *getRLimits()          {   return &m_limits;       }
 
-    void setPriority( int pri )     {   m_priority = pri;       }
+    void setPriority(int pri)     {   m_priority = pri;       }
     int getPriority() const         {   return m_priority;      }
 
-    const char * getSocket() const  {   return m_sSocket.c_str();   }
-    void setSocket( const char * p ){   m_sSocket.setStr( p );      }
+    const char *getSocket() const  {   return m_sSocket.c_str();   }
+    void setSocket(const char *p) {   m_sSocket.setStr(p);      }
     int  getSocketLen() const       {   return m_sSocket.len(); }
-    
+
 };
 
 #endif

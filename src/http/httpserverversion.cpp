@@ -18,15 +18,17 @@
 #include "httpserverversion.h"
 
 
-const char HttpServerVersion::s_pVersion[] = "LiteSpeed/" PACKAGE_VERSION " Open";
+const char HttpServerVersion::s_pVersion[] = "LiteSpeed/" PACKAGE_VERSION
+        " Open";
 
-int        HttpServerVersion::s_iVersionLen = 9; //sizeof( s_pVersion ) - 1;
+int        HttpServerVersion::s_iVersionLen =
+    9; //sizeof( s_pVersion ) - 1;
 
-void HttpServerVersion::hideDetail( int hide )
+void HttpServerVersion::hideDetail(int hide)
 {
-    if ( hide )
+    if (hide)
         s_iVersionLen = 9;
     else
-        s_iVersionLen = sizeof( s_pVersion ) - 1;
+        s_iVersionLen = sizeof(s_pVersion) - 1;
 }
 

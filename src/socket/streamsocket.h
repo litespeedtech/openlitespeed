@@ -28,34 +28,34 @@ class StreamSocket : public CoreSocket
 public:
     StreamSocket() {};
     StreamSocket(int iDomain)
-        :CoreSocket( iDomain, SOCK_STREAM )
-        {}
+        : CoreSocket(iDomain, SOCK_STREAM)
+    {}
     ~StreamSocket() {};
 
 
     int     connect(const SockAddr *serv_addr, socklen_t addrlen)
-        {   return ::connect( getfd(), serv_addr, addrlen ); }
+    {   return ::connect(getfd(), serv_addr, addrlen); }
 
-    int     shutdown(int how = SHUT_RDWR )
-        {   return ::shutdown( getfd(), how );              }
+    int     shutdown(int how = SHUT_RDWR)
+    {   return ::shutdown(getfd(), how);              }
 
     int     send(const void *msg, size_t len, int flags = 0)
-        {   return ::send( getfd(), msg, len , flags );     }
+    {   return ::send(getfd(), msg, len , flags);     }
 
     int     recv(void *buf, size_t len, int flags = 0)
-        {   return ::recv( getfd(), buf, len, flags );      }
+    {   return ::recv(getfd(), buf, len, flags);      }
 
     ssize_t read(void *buf, size_t count)
-        {   return ::read( getfd(), buf, count );           }
+    {   return ::read(getfd(), buf, count);           }
 
     ssize_t write(const void *buf, size_t count)
-        {   return ::write( getfd(), buf, count );          }
+    {   return ::write(getfd(), buf, count);          }
 
-    int     readv(const struct iovec * vector, int count)
-        {   return ::readv( getfd(), vector, count );       }
+    int     readv(const struct iovec *vector, int count)
+    {   return ::readv(getfd(), vector, count);       }
 
-    int     writev(const struct iovec * vector, int count)
-        {   return ::writev( getfd(), vector, count );      }
+    int     writev(const struct iovec *vector, int count)
+    {   return ::writev(getfd(), vector, count);      }
 
 };
 

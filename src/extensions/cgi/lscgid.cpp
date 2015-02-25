@@ -51,73 +51,72 @@ static uid_t        s_uid;
 #if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
 #include <lve/lve-ctl.h>
 static int s_enable_lve = 0;
-static struct liblve * s_lve = NULL;
+static struct liblve *s_lve = NULL;
 
 static void *s_liblve;
 static int (*fp_lve_is_available)(void) = NULL;
 static int (*fp_lve_instance_init)(struct liblve *) = NULL;
 static int (*fp_lve_destroy)(struct liblve *) = NULL;
-static int (*fp_lve_enter)(struct liblve *, uint32_t, int32_t, int32_t, uint32_t *) = NULL;
+static int (*fp_lve_enter)(struct liblve *, uint32_t, int32_t, int32_t,
+                           uint32_t *) = NULL;
 static int (*fp_lve_leave)(struct liblve *, uint32_t *) = NULL;
-static int (*fp_lve_jail)( struct passwd *, char *) = NULL;
+static int (*fp_lve_jail)(struct passwd *, char *) = NULL;
 static int load_lve_lib()
 {
     s_liblve = dlopen("liblve.so.0", RTLD_LAZY);
     if (s_liblve)
     {
         fp_lve_is_available = dlsym(s_liblve, "lve_is_available");
-        if (dlerror() == NULL) 
+        if (dlerror() == NULL)
         {
-            if ( !(*fp_lve_is_available)() )
+            if (!(*fp_lve_is_available)())
             {
                 int uid = getuid();
-                if ( uid )
+                if (uid)
                 {
-                    setreuid( s_uid, uid );
-                    if ( !(*fp_lve_is_available)() )
+                    setreuid(s_uid, uid);
+                    if (!(*fp_lve_is_available)())
                         s_enable_lve = 0;
-                    setreuid( uid, s_uid );
+                    setreuid(uid, s_uid);
                 }
             }
         }
     }
     else
-    {
         s_enable_lve = 0;
-    }
-    return (s_liblve)? 0 : -1;
+    return (s_liblve) ? 0 : -1;
 }
 
 static int init_lve()
 {
     int rc;
-    if ( !s_liblve )
-        return -1; 
+    if (!s_liblve)
+        return -1;
     fp_lve_instance_init = dlsym(s_liblve, "lve_instance_init");
     fp_lve_destroy = dlsym(s_liblve, "lve_destroy");
     fp_lve_enter = dlsym(s_liblve, "lve_enter");
     fp_lve_leave = dlsym(s_liblve, "lve_leave");
-    if ( s_enable_lve >= 2 )
-        fp_lve_jail = dlsym(s_liblve, "jail" );
+    if (s_enable_lve >= 2)
+        fp_lve_jail = dlsym(s_liblve, "jail");
 
-    if ( s_lve == NULL ) 
+    if (s_lve == NULL)
     {
         rc = (*fp_lve_instance_init)(NULL);
         s_lve = malloc(rc);
     }
     rc = (*fp_lve_instance_init)(s_lve);
-    if (rc != 0) 
+    if (rc != 0)
     {
-        perror( "lscgid: Unable to initialize LVE" );
-        free( s_lve );
+        perror("lscgid: Unable to initialize LVE");
+        free(s_lve);
         s_lve = NULL;
         return -1;
     }
     //fprintf( stderr, "lscgid (%d) LVE initialized !\n", getpid() );
-    
+
     //fprintf( stderr, "lscgid (%d) LVE initialized: %d, %p !\n", getpid(), s_enable_lve, fp_lve_jail );
     return 0;
-    
+
 }
 
 #endif
@@ -126,7 +125,7 @@ static int init_lve()
 static char         s_pSecret[24];
 static pid_t        s_parent;
 static int          s_run = 1;
-static const char * s_pError = "";
+static const char *s_pError = "";
 static char         s_sError[128];
 static char         s_sDataBuf[16384];
 static int          s_fdControl = -1;
@@ -134,13 +133,14 @@ static int          s_fdControl = -1;
 
 
 
-static void set_cgi_error( char * p, char *p2 )
+static void set_cgi_error(char *p, char *p2)
 {
-    int n = snprintf( s_sError, 127, "%s:%s: %s\n", p, (p2)?p2:"", strerror( errno ) );
-    write( STDERR_FILENO, s_sError, n );
+    int n = snprintf(s_sError, 127, "%s:%s: %s\n", p, (p2) ? p2 : "",
+                     strerror(errno));
+    write(STDERR_FILENO, s_sError, n);
     s_pError = s_sError;
 }
-static int timed_read( int fd, char * pBuf, int len, int timeout )
+static int timed_read(int fd, char *pBuf, int len, int timeout)
 {
     struct pollfd   pfd;
     time_t          begin;
@@ -152,40 +152,40 @@ static int timed_read( int fd, char * pBuf, int len, int timeout )
     pfd.fd      = fd;
     pfd.events  = POLLIN;
 
-    while( left > 0 )
+    while (left > 0)
     {
-        ret = poll( &pfd, 1, 1000 );
-        if ( ret == 1 )
+        ret = poll(&pfd, 1, 1000);
+        if (ret == 1)
         {
-            if ( pfd.revents & POLLIN )
-            {  
-                ret = read( fd, pBuf, left );
-                if ( ret > 0 )
+            if (pfd.revents & POLLIN)
+            {
+                ret = read(fd, pBuf, left);
+                if (ret > 0)
                 {
                     left -= ret;
                     pBuf += ret;
                 }
-                else if ( ret <= 0 )
+                else if (ret <= 0)
                 {
-                    if ( ret )
-                        set_cgi_error( (char *)"scgid: read()", NULL );
+                    if (ret)
+                        set_cgi_error((char *)"scgid: read()", NULL);
                     else
                         s_pError = "scgid: pre-mature request.";
                     return -1;
                 }
             }
         }
-        if ( ret == -1 )
+        if (ret == -1)
         {
-            if ( errno != EINTR )
+            if (errno != EINTR)
             {
-                set_cgi_error( (char *)"scgid: poll()", NULL );
+                set_cgi_error((char *)"scgid: poll()", NULL);
                 return -1;
             }
         }
 
         cur = time(NULL);
-        if ( cur - begin >= timeout )
+        if (cur - begin >= timeout)
         {
             s_pError = "scgid: request timed out!";
             return -1;
@@ -194,20 +194,20 @@ static int timed_read( int fd, char * pBuf, int len, int timeout )
     return len;
 }
 
-static int writeall( int fd, const char * pBuf, int len )
+static int writeall(int fd, const char *pBuf, int len)
 {
     int left = len;
     int ret;
-    while( left > 0 )
+    while (left > 0)
     {
-        ret = write( fd, pBuf, left );
-        if ( ret == -1 )
+        ret = write(fd, pBuf, left);
+        if (ret == -1)
         {
-            if ( errno == EINTR )
+            if (errno == EINTR)
                 continue;
             return -1;
         }
-        if ( ret > 0 )
+        if (ret > 0)
         {
             left -= ret;
             pBuf += ret;
@@ -216,35 +216,35 @@ static int writeall( int fd, const char * pBuf, int len )
     return len;
 }
 
-static int cgiError( int fd, int status )
+static int cgiError(int fd, int status)
 {
     char achBuf[ 256 ];
-    int ret = snprintf( achBuf, sizeof( achBuf ) - 1, "Status:%d\n\n%s",
-                        status, s_pError );
-    writeall( fd, achBuf, ret );
-    close( fd );
+    int ret = snprintf(achBuf, sizeof(achBuf) - 1, "Status:%d\n\n%s",
+                       status, s_pError);
+    writeall(fd, achBuf, ret);
+    close(fd);
     return 0;
 }
 
 
-static int setUIDs(uid_t uid, gid_t gid, char * pChroot )
+static int setUIDs(uid_t uid, gid_t gid, char *pChroot)
 {
     int rv;
 
-    //if ( !uid || !gid )  //do not allow root 
+    //if ( !uid || !gid )  //do not allow root
     //{
     //    return -1;
     //}
-    struct passwd * pw = getpwuid( uid );
+    struct passwd *pw = getpwuid(uid);
     rv = setgid(gid);
     if (rv == -1)
     {
         set_cgi_error((char *)"lscgid: setgid()", NULL);
         return -1;
     }
-    if ( pw && (pw->pw_gid == gid ))
+    if (pw && (pw->pw_gid == gid))
     {
-        rv = initgroups( pw->pw_name, gid );
+        rv = initgroups(pw->pw_name, gid);
         if (rv == -1)
         {
             set_cgi_error((char *)"lscgid: initgroups()", NULL);
@@ -255,14 +255,12 @@ static int setUIDs(uid_t uid, gid_t gid, char * pChroot )
     {
         rv = setgroups(1, &gid);
         if (rv == -1)
-        {
             set_cgi_error((char *)"lscgid: setgroups()", NULL);
-        }
     }
-    if ( pChroot )
+    if (pChroot)
     {
-        rv = chroot( pChroot );
-        if ( rv == -1 )
+        rv = chroot(pChroot);
+        if (rv == -1)
         {
             set_cgi_error((char *)"lscgid: chroot()", NULL);
             return -1;
@@ -278,48 +276,48 @@ static int setUIDs(uid_t uid, gid_t gid, char * pChroot )
     return 0;
 }
 
-static int applyLimits( lscgid_req * pCGI)
+static int applyLimits(lscgid_req *pCGI)
 {
     //fprintf( stderr, "Proc: %ld, data: %ld\n", pCGI->m_nproc.rlim_cur,
     //                        pCGI->m_data.rlim_cur );
 #if defined(RLIMIT_AS) || defined(RLIMIT_DATA) || defined(RLIMIT_VMEM)
-    if ( pCGI->m_data.rlim_cur )
+    if (pCGI->m_data.rlim_cur)
     {
 #if defined(RLIMIT_AS)
-        setrlimit( RLIMIT_AS, &pCGI->m_data );
+        setrlimit(RLIMIT_AS, &pCGI->m_data);
 #elif defined(RLIMIT_DATA)
-        setrlimit( RLIMIT_DATA, &pCGI->m_data );
+        setrlimit(RLIMIT_DATA, &pCGI->m_data);
 #elif defined(RLIMIT_VMEM)
-        setrlimit( RLIMIT_VMEM, &pCGI->m_data );
+        setrlimit(RLIMIT_VMEM, &pCGI->m_data);
 #endif
     }
 #endif
 
 #if defined(RLIMIT_NPROC)
-    if ( pCGI->m_nproc.rlim_cur )
-        setrlimit( RLIMIT_NPROC, &pCGI->m_nproc );
+    if (pCGI->m_nproc.rlim_cur)
+        setrlimit(RLIMIT_NPROC, &pCGI->m_nproc);
 #endif
 
 #if defined(RLIMIT_CPU)
-    if ( pCGI->m_cpu.rlim_cur )
-        setrlimit( RLIMIT_CPU, &pCGI->m_cpu );
+    if (pCGI->m_cpu.rlim_cur)
+        setrlimit(RLIMIT_CPU, &pCGI->m_cpu);
 #endif
 
     return 0;
 }
 
 
-static int execute_cgi( lscgid_t * pCGI)
+static int execute_cgi(lscgid_t *pCGI)
 {
     register char ch;
-    if ( setpriority(PRIO_PROCESS, 0, pCGI->m_data.m_priority ) )
-        perror( "lscgid: setpriority()" );
-    applyLimits( &pCGI->m_data );
+    if (setpriority(PRIO_PROCESS, 0, pCGI->m_data.m_priority))
+        perror("lscgid: setpriority()");
+    applyLimits(&pCGI->m_data);
 
 #ifdef HAS_CLOUD_LINUX
-    
+
 #if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
-    if ( s_lve && pCGI->m_data.m_uid ) //root user should not do that
+    if (s_lve && pCGI->m_data.m_uid)   //root user should not do that
     {
         uint32_t cookie;
         int ret = -1;
@@ -331,28 +329,31 @@ static int execute_cgi( lscgid_t * pCGI)
             //    break;
             //usleep( 10000 );
         }
-        if ( ret < 0 )
+        if (ret < 0)
         {
-            fprintf( stderr, "lscgid (%d): enter LVE (%d) : result: %d !\n", getpid(), pCGI->m_data.m_uid, ret );
-            set_cgi_error( "lscgid: lve_enter() failure, reached resource limit.", NULL );
+            fprintf(stderr, "lscgid (%d): enter LVE (%d) : result: %d !\n", getpid(),
+                    pCGI->m_data.m_uid, ret);
+            set_cgi_error("lscgid: lve_enter() failure, reached resource limit.",
+                          NULL);
             return 500;
         }
     }
 #endif
 
 #if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
-    if ( !s_uid && pCGI->m_data.m_uid && fp_lve_jail )
+    if (!s_uid && pCGI->m_data.m_uid && fp_lve_jail)
     {
         char  error_msg[1024] = "";
         int ret;
-        struct passwd * pw = getpwuid( pCGI->m_data.m_uid );
-        if ( pw )
+        struct passwd *pw = getpwuid(pCGI->m_data.m_uid);
+        if (pw)
         {
-            ret = (*fp_lve_jail)( pw, error_msg );
-            if ( ret < 0 )
+            ret = (*fp_lve_jail)(pw, error_msg);
+            if (ret < 0)
             {
-                fprintf( stderr, "lscgid (%d): LVE jail(%d) ressult: %d, error: %s !\n", getpid(), pCGI->m_data.m_uid, ret, error_msg );
-                set_cgi_error( "lscgid: jail() failure.", NULL );
+                fprintf(stderr, "lscgid (%d): LVE jail(%d) ressult: %d, error: %s !\n",
+                        getpid(), pCGI->m_data.m_uid, ret, error_msg);
+                set_cgi_error("lscgid: jail() failure.", NULL);
                 return 500;
             }
         }
@@ -360,20 +361,20 @@ static int execute_cgi( lscgid_t * pCGI)
 #endif
 
 #endif
-    
-    if (( !s_uid )&& (pCGI->m_data.m_uid || pCGI->m_data.m_gid ))
+
+    if ((!s_uid) && (pCGI->m_data.m_uid || pCGI->m_data.m_gid))
     {
-        if ( setUIDs( pCGI->m_data.m_uid, pCGI->m_data.m_gid,
-                    pCGI->m_pChroot ) == -1 )
+        if (setUIDs(pCGI->m_data.m_uid, pCGI->m_data.m_gid,
+                    pCGI->m_pChroot) == -1)
             return 403;
     }
     ch = *(pCGI->m_argv[0]);
     * pCGI->m_argv[0] = 0;
-    if ( chdir( pCGI->m_pCGIDir ) == -1 )
+    if (chdir(pCGI->m_pCGIDir) == -1)
     {
         int error = errno;
-        set_cgi_error( (char *)"lscgid: chdir()", pCGI->m_pCGIDir );
-        switch( error )
+        set_cgi_error((char *)"lscgid: chdir()", pCGI->m_pCGIDir);
+        switch (error)
         {
         case ENOENT:
             return 404;
@@ -384,10 +385,10 @@ static int execute_cgi( lscgid_t * pCGI)
         }
     }
     *(pCGI->m_argv[0]) = ch;
-    if ( ch == '&' )
+    if (ch == '&')
     {
         static const char sHeader[] = "Status: 200\r\n\r\n";
-        writeall( STDOUT_FILENO, sHeader, sizeof(sHeader ) -1 );
+        writeall(STDOUT_FILENO, sHeader, sizeof(sHeader) - 1);
         pCGI->m_pCGIDir = (char *)"/bin/sh";
         pCGI->m_argv[0] = (char *)"/bin/sh";
     }
@@ -398,21 +399,21 @@ static int execute_cgi( lscgid_t * pCGI)
     }
 
 
-    if ( execve( pCGI->m_pCGIDir, pCGI->m_argv, pCGI->m_env ) == -1 )
+    if (execve(pCGI->m_pCGIDir, pCGI->m_argv, pCGI->m_env) == -1)
     {
-        set_cgi_error( (char *)"lscgid: execve()", pCGI->m_pCGIDir );
+        set_cgi_error((char *)"lscgid: execve()", pCGI->m_pCGIDir);
         return 500;
     }
     return 0;
 }
 
-static int process_req_data( lscgid_t * cgi_req )
+static int process_req_data(lscgid_t *cgi_req)
 {
-    char * p = cgi_req->m_pBuf;
-    char * pEnd = p + cgi_req->m_data.m_szData;
+    char *p = cgi_req->m_pBuf;
+    char *pEnd = p + cgi_req->m_data.m_szData;
     int i;
     unsigned short len;
-    if ( cgi_req->m_data.m_chrootPathLen > 0 )
+    if (cgi_req->m_data.m_chrootPathLen > 0)
     {
         cgi_req->m_pChroot = p;
         p += cgi_req->m_data.m_chrootPathLen;
@@ -421,9 +422,9 @@ static int process_req_data( lscgid_t * cgi_req )
         cgi_req->m_pChroot = NULL;
     cgi_req->m_pCGIDir = p;
     p += cgi_req->m_data.m_exePathLen;
-    if ( p > pEnd )
+    if (p > pEnd)
     {
-        fprintf( stderr, "exePathLen=%d\n", cgi_req->m_data.m_exePathLen );
+        fprintf(stderr, "exePathLen=%d\n", cgi_req->m_data.m_exePathLen);
         return 500;
     }
     cgi_req->m_argv[0] = p;
@@ -435,56 +436,56 @@ static int process_req_data( lscgid_t * cgi_req )
 //    fprintf( stderr, "exePath ends with %s\n",
 //            cgi_req->m_pCGIDir + cgi_req->m_data.m_exePathLen );
 
-    for( i = 1; i < cgi_req->m_data.m_nargv - 1; ++i )
+    for (i = 1; i < cgi_req->m_data.m_nargv - 1; ++i)
     {
 #if defined( sparc )
         *(unsigned char *)&len = *p++;
-        *(((unsigned char *)&len)+1) = *p++;
+        *(((unsigned char *)&len) + 1) = *p++;
 #else
         len = *((unsigned short *)p);
-        p += sizeof( short );
+        p += sizeof(short);
 #endif
         cgi_req->m_argv[i] = p;
         p += len;
-        if ( p > pEnd )
+        if (p > pEnd)
             return 500;
 //        fprintf( stderr, "arg %d, len=%d, str=%s\n", i, len, cgi_req->m_argv[i] );
     }
-    if ( *p != 0 || *(p+1) != 0)
+    if (*p != 0 || *(p + 1) != 0)
     {
-        fprintf( stderr, "argv is not terminated with \\0\\0\n" );
+        fprintf(stderr, "argv is not terminated with \\0\\0\n");
         return 500;
     }
-    p+= sizeof( short );
-    if ( p > pEnd )
+    p += sizeof(short);
+    if (p > pEnd)
         return 500;
     cgi_req->m_argv[i] = NULL;
 
 //    fprintf( stderr, "nenv=%d\n", cgi_req->m_data.m_nenv );
-    for( i = 0; i < cgi_req->m_data.m_nenv - 1; ++i )
+    for (i = 0; i < cgi_req->m_data.m_nenv - 1; ++i)
     {
 #if defined( sparc )
         *(unsigned char *)&len = *p++;
-        *(((unsigned char *)&len)+1) = *p++;
+        *(((unsigned char *)&len) + 1) = *p++;
 #else
         len = *((unsigned short *)p);
-        p += sizeof( short );
+        p += sizeof(short);
 #endif
         cgi_req->m_env[i] = p;
         p += len;
-        if ( p > pEnd )
+        if (p > pEnd)
             return 500;
 //        fprintf( stderr, "env %d, len=%d, str=%s\n", i, len, cgi_req->m_env[i] );
     }
-    if ( *p != 0 || *(p+1) != 0)
+    if (*p != 0 || *(p + 1) != 0)
     {
-        fprintf( stderr, "env is not terminated with \\0\\0\n" );
+        fprintf(stderr, "env is not terminated with \\0\\0\n");
         return 500;
     }
-    p+= sizeof( short );
-    if ( p != pEnd )
+    p += sizeof(short);
+    if (p != pEnd)
     {
-        fprintf( stderr, "header is too big\n" );
+        fprintf(stderr, "header is too big\n");
         return 500;
     }
     cgi_req->m_env[i] = NULL;
@@ -494,47 +495,46 @@ static int process_req_data( lscgid_t * cgi_req )
 
 #define MAX_CGI_DATA_LEN 65536
 
-static int process_req_header( lscgid_t *cgi_req )
+static int process_req_header(lscgid_t *cgi_req)
 {
     char achMD5[16];
     int totalBufLen;
-    memmove( achMD5, cgi_req->m_data.m_md5, 16 );
-    memmove( cgi_req->m_data.m_md5, s_pSecret, 16 );
+    memmove(achMD5, cgi_req->m_data.m_md5, 16);
+    memmove(cgi_req->m_data.m_md5, s_pSecret, 16);
     StringTool::getMd5((const char *)&cgi_req->m_data,
-                sizeof( lscgid_req ), cgi_req->m_data.m_md5);
-    if ( memcmp( cgi_req->m_data.m_md5, achMD5, 16 ) != 0 )
+                       sizeof(lscgid_req), cgi_req->m_data.m_md5);
+    if (memcmp(cgi_req->m_data.m_md5, achMD5, 16) != 0)
     {
         s_pError = "lscgid: request validation failed!";
         return 500;
     }
-    totalBufLen = cgi_req->m_data.m_szData + sizeof( char * ) *
-                (cgi_req->m_data.m_nargv + cgi_req->m_data.m_nenv);
-    if ( (unsigned int)totalBufLen < sizeof( s_sDataBuf ) )
-    {
+    totalBufLen = cgi_req->m_data.m_szData + sizeof(char *) *
+                  (cgi_req->m_data.m_nargv + cgi_req->m_data.m_nenv);
+    if ((unsigned int)totalBufLen < sizeof(s_sDataBuf))
         cgi_req->m_pBuf = s_sDataBuf;
-    }
     else
     {
-        if ( totalBufLen > MAX_CGI_DATA_LEN )
+        if (totalBufLen > MAX_CGI_DATA_LEN)
         {
-            set_cgi_error( (char *)"lscgid: cgi header data is too big" , NULL);
+            set_cgi_error((char *)"lscgid: cgi header data is too big" , NULL);
             return 500;
 
         }
-        cgi_req->m_pBuf = (char *)malloc( totalBufLen );
-        if ( !cgi_req->m_pBuf )
+        cgi_req->m_pBuf = (char *)malloc(totalBufLen);
+        if (!cgi_req->m_pBuf)
         {
-            set_cgi_error( (char *)"lscgid: malloc()", NULL );
+            set_cgi_error((char *)"lscgid: malloc()", NULL);
             return 500;
         }
     }
-    cgi_req->m_argv = (char **)(cgi_req->m_pBuf + ((cgi_req->m_data.m_szData+7) & ~7L) );
-    cgi_req->m_env = (char **)(cgi_req->m_argv + sizeof( char *) *
-                    cgi_req->m_data.m_nargv);
+    cgi_req->m_argv = (char **)(cgi_req->m_pBuf + ((cgi_req->m_data.m_szData +
+                                7) & ~7L));
+    cgi_req->m_env = (char **)(cgi_req->m_argv + sizeof(char *) *
+                               cgi_req->m_data.m_nargv);
     return 0;
 }
 
-static int recv_req( int fd, lscgid_t * cgi_req, int timeout )
+static int recv_req(int fd, lscgid_t *cgi_req, int timeout)
 {
 
     time_t          begin;
@@ -542,116 +542,110 @@ static int recv_req( int fd, lscgid_t * cgi_req, int timeout )
     int             ret;
 
     begin = time(NULL);
-    cgi_req->m_fdReceived=-1;
-    ret = timed_read( fd, (char *)&cgi_req->m_data,
-                sizeof( lscgid_req ), timeout - 1 );
-    if ( ret == -1 )
+    cgi_req->m_fdReceived = -1;
+    ret = timed_read(fd, (char *)&cgi_req->m_data,
+                     sizeof(lscgid_req), timeout - 1);
+    if (ret == -1)
         return 500;
-    ret = process_req_header( cgi_req );
-    if ( ret )
+    ret = process_req_header(cgi_req);
+    if (ret)
         return ret;
     //fprintf( stderr, "1 Proc: %ld, data: %ld\n", cgi_req->m_data.m_nproc.rlim_cur,
     //                        cgi_req->m_data.m_data.rlim_cur );
 
-    if ( cgi_req->m_data.m_type == LSCGID_TYPE_SUEXEC )
+    if (cgi_req->m_data.m_type == LSCGID_TYPE_SUEXEC)
     {
         uint32_t pid = (uint32_t)getpid();
-        write( STDOUT_FILENO, &pid, 4 );
+        write(STDOUT_FILENO, &pid, 4);
     }
 
     cur = time(NULL);
     timeout -= cur - begin;
-    ret = timed_read( fd, cgi_req->m_pBuf,
-                cgi_req->m_data.m_szData, timeout );
-    if ( ret == -1 )
+    ret = timed_read(fd, cgi_req->m_pBuf,
+                     cgi_req->m_data.m_szData, timeout);
+    if (ret == -1)
         return 500;
 
-    ret = process_req_data( cgi_req );
-    if ( ret )
+    ret = process_req_data(cgi_req);
+    if (ret)
     {
         s_pError = "lscgid: data error!";
         return ret;
     }
-    if ( cgi_req->m_data.m_type == LSCGID_TYPE_SUEXEC )
+    if (cgi_req->m_data.m_type == LSCGID_TYPE_SUEXEC)
     {
         //cgi_req->m_fdReceived = recv_fd( fd );
         char nothing;
-        if (( FDPass::read_fd( fd, &nothing, 1, &cgi_req->m_fdReceived) == -1 )||
-            ( cgi_req->m_fdReceived == -1 ))
+        if ((FDPass::read_fd(fd, &nothing, 1, &cgi_req->m_fdReceived) == -1) ||
+            (cgi_req->m_fdReceived == -1))
         {
-            fprintf( stderr, "lscgid: read_fd() failed: %s\n", 
-                                    strerror( errno ) );
+            fprintf(stderr, "lscgid: read_fd() failed: %s\n",
+                    strerror(errno));
             return 500;
         }
-        if ( cgi_req->m_fdReceived != STDIN_FILENO )
+        if (cgi_req->m_fdReceived != STDIN_FILENO)
         {
-            dup2( cgi_req->m_fdReceived, STDIN_FILENO );
-            close( cgi_req->m_fdReceived );
+            dup2(cgi_req->m_fdReceived, STDIN_FILENO);
+            close(cgi_req->m_fdReceived);
             cgi_req->m_fdReceived = -1;
         }
     }
     //fprintf( stderr, "2 Proc: %ld, data: %ld\n", cgi_req->m_data.m_nproc.rlim_cur,
     //                        cgi_req->m_data.m_data.rlim_cur );
-    return 0;    
-        
+    return 0;
+
 }
 
 
-static int processreq( int fd)
+static int processreq(int fd)
 {
     lscgid_t cgi_req;
     int ret;
 
-    ret = recv_req( fd, &cgi_req, 10 );
-    if ( ret )
-        cgiError( fd, ret );
+    ret = recv_req(fd, &cgi_req, 10);
+    if (ret)
+        cgiError(fd, ret);
     else
     {
-        ret = execute_cgi( &cgi_req );
-        if ( ret )
-            cgiError( fd, ret );
+        ret = execute_cgi(&cgi_req);
+        if (ret)
+            cgiError(fd, ret);
     }
     return ret;
 }
 
 
-static void child_main( int fd )
+static void child_main(int fd)
 {
     int closeit = 1;
     //close( LSCGID_LISTENSOCK_FD );
-    if ( s_fdControl != -1 )
-        close( s_fdControl );
-    if ( fd != STDIN_FILENO )
-        dup2( fd, STDIN_FILENO );
+    if (s_fdControl != -1)
+        close(s_fdControl);
+    if (fd != STDIN_FILENO)
+        dup2(fd, STDIN_FILENO);
     else
         closeit = 0;
-    if ( fd != STDOUT_FILENO )
-        dup2( fd, STDOUT_FILENO );
+    if (fd != STDOUT_FILENO)
+        dup2(fd, STDOUT_FILENO);
     else
         closeit = 0;
-    if ( closeit )
-        close( fd );
-    processreq( STDOUT_FILENO );
-    exit( 0 );
+    if (closeit)
+        close(fd);
+    processreq(STDOUT_FILENO);
+    exit(0);
 }
 
-static int new_conn( int fd )
+static int new_conn(int fd)
 {
     pid_t pid;
     pid = fork();
-    if ( !pid )
-    {
-        child_main( fd );
-    }
-    close( fd );
-    if ( pid > 0 )
-    {
+    if (!pid)
+        child_main(fd);
+    close(fd);
+    if (pid > 0)
         pid = 0;
-    }
     else
-    {
-        perror( "lscgid: fork() failed" );
-    }
+        perror("lscgid: fork() failed");
     return pid;
 }
 
@@ -661,22 +655,20 @@ static int run(int fdServerSock)
     struct pollfd pfd;
     pfd.fd = fdServerSock;
     pfd.events = POLLIN;
-    while( s_run )
+    while (s_run)
     {
-        ret = poll( &pfd, 1, 1000 );
-        if ( ret == 1 )
+        ret = poll(&pfd, 1, 1000);
+        if (ret == 1)
         {
-            int fd = accept( fdServerSock, NULL, NULL );
-            if ( fd != -1 )
-            {
-                new_conn( fd );
-            }
+            int fd = accept(fdServerSock, NULL, NULL);
+            if (fd != -1)
+                new_conn(fd);
             else
-                perror( "lscgid: accept() failed" );
+                perror("lscgid: accept() failed");
         }
         else
         {
-            if ( getppid() == 1 )
+            if (getppid() == 1)
                 return 1;
         }
     }
@@ -684,71 +676,68 @@ static int run(int fdServerSock)
 }
 
 
-static void sigterm( int sig )
+static void sigterm(int sig)
 {
     s_run = 0;
 }
 
-static void sigusr1( int sig )
+static void sigusr1(int sig)
 {
     pid_t pid = getppid();
-    if ( pid != -1 )
-    {
-        kill( pid, SIGHUP );
-    }
+    if (pid != -1)
+        kill(pid, SIGHUP);
 }
 
 
 
-static void sigchild( int sig )
+static void sigchild(int sig)
 {
     int status[2];
-    while( 1 )
+    while (1)
     {
-        status[0] = waitpid( -1, &status[1], WNOHANG );
-        if ( status[0] <= 0 )
+        status[0] = waitpid(-1, &status[1], WNOHANG);
+        if (status[0] <= 0)
         {
             //if ((pid < 1)&&( errno == EINTR ))
             //    continue;
             break;
         }
-        if ( s_fdControl != -1 )
+        if (s_fdControl != -1)
+            write(s_fdControl, status, sizeof(status));
+        if (WIFSIGNALED(status[1]))
         {
-            write( s_fdControl, status, sizeof( status ) );
-        }
-        if ( WIFSIGNALED( status[1] ))
-        {
-            int sig_num = WTERMSIG( status[1] );
-            if ( sig_num != 15 )
+            int sig_num = WTERMSIG(status[1]);
+            if (sig_num != 15)
             {
-                fprintf( stderr, "Cgid: Child process with pid: %d was killed by signal: %d, core dump: %d\n", 
-                                status[0], sig_num,
+                fprintf(stderr,
+                        "Cgid: Child process with pid: %d was killed by signal: %d, core dump: %d\n",
+                        status[0], sig_num,
 #ifdef WCOREDUMP
-                                WCOREDUMP( status[1] )
+                        WCOREDUMP(status[1])
 #else
-                                -1
+                        - 1
 #endif
 
-                );
+                       );
             }
         }
         //fprintf( stderr, "reape child %d: status: %d\n", pid, status );
     }
-    
+
 }
 //#define LOCAL_TEST
 
 #ifndef sighandler_t
 typedef void (*sighandler_t)(int);
 #endif
-sighandler_t my_signal(int sig, sighandler_t f )
+sighandler_t my_signal(int sig, sighandler_t f)
 {
     struct sigaction act, oact;
 
     act.sa_handler = f;
     sigemptyset(&act.sa_mask);
     act.sa_flags = 0;
-    if ( sig == SIGALRM )
+    if (sig == SIGALRM)
     {
 #ifdef SA_INTERRUPT
         act.sa_flags |= SA_INTERRUPT; /* SunOS */
@@ -760,62 +749,60 @@ sighandler_t my_signal(int sig, sighandler_t f )
         act.sa_flags |= SA_RESTART;
 #endif
     }
-    if ( sigaction( sig, &act, &oact) < 0 )
-        return (SIG_ERR );
-    return ( oact.sa_handler );
+    if (sigaction(sig, &act, &oact) < 0)
+        return (SIG_ERR);
+    return (oact.sa_handler);
 }
 
 
-int lscgid_main(int fd, char *argv0, const char *secret, char * pSock)
+int lscgid_main(int fd, char *argv0, const char *secret, char *pSock)
 {
     int ret;
- 
+
     s_parent = getppid();
-    my_signal( SIGCHLD, sigchild );
-    my_signal( SIGINT, sigterm );
-    my_signal( SIGTERM, sigterm );
-    my_signal( SIGHUP, sigusr1 );
-    my_signal( SIGUSR1, sigusr1 );
-    signal( SIGPIPE, SIG_IGN );
+    my_signal(SIGCHLD, sigchild);
+    my_signal(SIGINT, sigterm);
+    my_signal(SIGTERM, sigterm);
+    my_signal(SIGHUP, sigusr1);
+    my_signal(SIGUSR1, sigusr1);
+    signal(SIGPIPE, SIG_IGN);
     s_uid = geteuid();
-    
+
     memcpy(s_pSecret, secret, 16);
-    
+
 #ifdef HAS_CLOUD_LINUX
-    
+
 #if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
-    if ( (pSock = getenv( "LVE_ENABLE" ))!= NULL )
+    if ((pSock = getenv("LVE_ENABLE")) != NULL)
     {
-        s_enable_lve = atol( pSock );
-        unsetenv( "LVE_ENABLE" );
+        s_enable_lve = atol(pSock);
+        unsetenv("LVE_ENABLE");
         pSock = NULL;
     }
-    if ( s_enable_lve && !s_uid )
+    if (s_enable_lve && !s_uid)
     {
         load_lve_lib();
-        if ( s_enable_lve )
-        {
+        if (s_enable_lve)
             init_lve();
-        }
 
     }
 #endif
 
 #endif
-    
+
 #if defined(__FreeBSD__)
     //setproctitle( "%s", "httpd" );
 #else
     memset(argv0, 0, strlen(argv0));
-    strcpy( argv0, "openlitespeed (lscgid)" );
+    strcpy(argv0, "openlitespeed (lscgid)");
 #endif
 
     ret = run(fd);
-    if ((ret)&&( pSock )&&( strncasecmp( pSock, "uds:/", 5 ) == 0 ))
+    if ((ret) && (pSock) && (strncasecmp(pSock, "uds:/", 5) == 0))
     {
         pSock += 5;
-        close( STDIN_FILENO );
-        unlink( pSock );
+        close(STDIN_FILENO);
+        unlink(pSock);
     }
     return ret;
 }

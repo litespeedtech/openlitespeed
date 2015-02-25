@@ -39,70 +39,71 @@
 #include "http/httprespheaders.h"
 
 HTAuth::HTAuth()
-    : m_pName( NULL )
-    , m_authHeader( NULL )
-    , m_authHeaderLen( 0 )
-    , m_pUserDir( NULL )
-    , m_iAuthType( AUTH_DEFAULT )
+    : m_pName(NULL)
+    , m_authHeader(NULL)
+    , m_authHeaderLen(0)
+    , m_pUserDir(NULL)
+    , m_iAuthType(AUTH_DEFAULT)
 {
 }
 
-HTAuth::HTAuth( const char * pRealm )
-    : m_pName( NULL )
-    , m_authHeader( NULL )
-    , m_authHeaderLen( 0 )
-    , m_pUserDir( NULL )
-    , m_iAuthType( AUTH_DEFAULT )
+HTAuth::HTAuth(const char *pRealm)
+    : m_pName(NULL)
+    , m_authHeader(NULL)
+    , m_authHeaderLen(0)
+    , m_pUserDir(NULL)
+    , m_iAuthType(AUTH_DEFAULT)
 {}
 
 HTAuth::~HTAuth()
 {
-    if ( m_pName )
-        g_pool.deallocate2( m_pName );
-    if ( m_authHeader )
-        g_pool.deallocate2( m_authHeader );
+    if (m_pName)
+        g_pool.deallocate2(m_pName);
+    if (m_authHeader)
+        g_pool.deallocate2(m_authHeader);
 }
 
-void HTAuth::setName( const char * pName )
+void HTAuth::setName(const char *pName)
 {
-    m_pName = (char *)g_pool.dupstr( pName );
-    buildWWWAuthHeader( pName );
+    m_pName = (char *)g_pool.dupstr(pName);
+    buildWWWAuthHeader(pName);
 }
 
 
 
-int HTAuth::buildWWWAuthHeader( const char * pName )
+int HTAuth::buildWWWAuthHeader(const char *pName)
 {
-    if ( m_iAuthType & AUTH_DIGEST )
+    if (m_iAuthType & AUTH_DIGEST)
     {
-        m_authHeader = (char *)g_pool.dupstr( pName );
+        m_authHeader = (char *)g_pool.dupstr(pName);
         return 0;
     }
-    else if ( m_iAuthType & AUTH_BASIC )
+    else if (m_iAuthType & AUTH_BASIC)
     {
-        int len = strlen( pName ) + 40;
+        int len = strlen(pName) + 40;
 
-        m_authHeader = (char *)g_pool.reallocate2( m_authHeader, len );
-        if ( m_authHeader )
+        m_authHeader = (char *)g_pool.reallocate2(m_authHeader, len);
+        if (m_authHeader)
         {
-            m_authHeaderLen = safe_snprintf( m_authHeader, len,
-                    "Basic realm=\"%s\"", pName );
+            m_authHeaderLen = safe_snprintf(m_authHeader, len,
+                                            "Basic realm=\"%s\"", pName);
             return 0;
         }
     }
     return -1;
 }
 
-int HTAuth::addWWWAuthHeader( HttpRespHeaders &buf ) const
+int HTAuth::addWWWAuthHeader(HttpRespHeaders &buf) const
 {
-    if ( m_iAuthType & AUTH_BASIC )
-        buf.add(HttpRespHeaders::H_WWW_AUTHENTICATE, m_authHeader, m_authHeaderLen);
-    else if ( m_iAuthType & AUTH_DIGEST )
+    if (m_iAuthType & AUTH_BASIC)
+        buf.add(HttpRespHeaders::H_WWW_AUTHENTICATE, m_authHeader,
+                m_authHeaderLen);
+    else if (m_iAuthType & AUTH_DIGEST)
     {
         char sTemp[256] = {0};
-        int n = safe_snprintf( sTemp, 255, "Digest realm=\"%s\" nonce=\"%lu\"\r\n",
-                    m_authHeader, time(NULL) );
-        
+        int n = safe_snprintf(sTemp, 255, "Digest realm=\"%s\" nonce=\"%lu\"\r\n",
+                              m_authHeader, time(NULL));
+
         buf.add(HttpRespHeaders::H_WWW_AUTHENTICATE, sTemp, n);
     }
     return 0;
@@ -113,41 +114,43 @@ int HTAuth::addWWWAuthHeader( HttpRespHeaders &buf ) const
 #define MAX_DIGEST_AUTH_LEN  4096
 
 
-int HTAuth::basicAuth( HttpSession *pSession, const char * pAuthorization, int size,
-                        char * pAuthUser, int bufLen,
-                        const AuthRequired * pRequired ) const
+int HTAuth::basicAuth(HttpSession *pSession, const char *pAuthorization,
+                      int size,
+                      char *pAuthUser, int bufLen,
+                      const AuthRequired *pRequired) const
 {
 
     char buf[MAX_BASIC_AUTH_LEN];
-    char * pUser = buf;
-    int ret = Base64::decode( pAuthorization, size, pUser );
-    if ( ret == -1 )
+    char *pUser = buf;
+    int ret = Base64::decode(pAuthorization, size, pUser);
+    if (ret == -1)
         return SC_401;
-    while( isspace( *pUser ) )
+    while (isspace(*pUser))
         ++pUser;
-    if ( *pUser == ':' )
+    if (*pUser == ':')
         return SC_401;
-    char * passReq = strchr(pUser+1, ':');
-    if ( passReq == NULL)
+    char *passReq = strchr(pUser + 1, ':');
+    if (passReq == NULL)
         return SC_401;
-    char * p = passReq++;
-    while( isspace( p[-1] ) )
+    char *p = passReq++;
+    while (isspace(p[-1]))
         --p;
     *p = 0;
     int userLen = p - pUser;
-    memccpy( pAuthUser, pUser, 0, bufLen - 1 );
+    memccpy(pAuthUser, pUser, 0, bufLen - 1);
     *(pAuthUser + bufLen - 1) = 0;
-    
-    while( isspace( *passReq ) )
+
+    while (isspace(*passReq))
         ++passReq;
     p = (char *)buf + ret;
-    if ( passReq >= p )
+    if (passReq >= p)
         return SC_401;
-    while( ( p > passReq ) && isspace( p[-1] ) )
+    while ((p > passReq) && isspace(p[-1]))
         --p;
     *p = 0;
-    ret = m_pUserDir->authenticate( pSession, pUser, userLen, passReq, ENCRYPT_PLAIN,
-                        pRequired );
+    ret = m_pUserDir->authenticate(pSession, pUser, userLen, passReq,
+                                   ENCRYPT_PLAIN,
+                                   pRequired);
     return ret;
 }
 
@@ -165,95 +168,83 @@ int HTAuth::basicAuth( HttpSession *pSession, const char * pAuthorization, int s
 //    DIGEST_ALGORITHM,
 //};
 
-int HTAuth::digestAuth( HttpSession *pSession, const char * pAuthorization,
-                        int size, char * pAuthUser, int bufLen,
-                        const AuthRequired * pRequired ) const
+int HTAuth::digestAuth(HttpSession *pSession, const char *pAuthorization,
+                       int size, char *pAuthUser, int bufLen,
+                       const AuthRequired *pRequired) const
 {
-    const char *    username = NULL;
+    const char     *username = NULL;
     int             username_len;
-    const char *    realm = NULL;
-    const char *    nonce = NULL;
-    const char *    requri = NULL;
-    const char *    resp_digest = NULL;
-    const char * p = pAuthorization;
-    const char * pEnd = p + size;
-    const char * pNameEnd;
-    const char * pNameBegin;
-    const char * pValueBegin;
-    const char * pValueEnd;
-    while( p < pEnd )
+    const char     *realm = NULL;
+    const char     *nonce = NULL;
+    const char     *requri = NULL;
+    const char     *resp_digest = NULL;
+    const char *p = pAuthorization;
+    const char *pEnd = p + size;
+    const char *pNameEnd;
+    const char *pNameBegin;
+    const char *pValueBegin;
+    const char *pValueEnd;
+    while (p < pEnd)
     {
-        pNameEnd = strchr( p, '=' );
-        if ( !pNameEnd )
+        pNameEnd = strchr(p, '=');
+        if (!pNameEnd)
             break;
         pNameBegin = p;
         p = pNameEnd + 1;
-        while( isspace( pNameEnd[-1] ) )
+        while (isspace(pNameEnd[-1]))
             --pNameEnd;
-        
-        while( isspace( *p ) )
+
+        while (isspace(*p))
             ++p;
         pValueBegin = p;
-        if ( *p == '"' )
+        if (*p == '"')
         {
             ++pValueBegin;
-            pValueEnd = strchr( p, '"' );
-            if (!pValueEnd )
+            pValueEnd = strchr(p, '"');
+            if (!pValueEnd)
                 break;
             p = pValueEnd + 1;
-            while( isspace( *p ) || (*p == ','))
+            while (isspace(*p) || (*p == ','))
                 ++p;
         }
         else
         {
-            pValueEnd = strchr( p, ',' );
-            if ( pValueEnd )
+            pValueEnd = strchr(p, ',');
+            if (pValueEnd)
             {
                 p = pValueEnd + 1;
-                while( isspace( *p ))
+                while (isspace(*p))
                     ++p;
             }
             else
-            {
                 p = pValueEnd = pEnd;
-            }
         }
-        if ( strncasecmp( pNameBegin, "username", 8 ) == 0 )
+        if (strncasecmp(pNameBegin, "username", 8) == 0)
         {
             username = pValueBegin;
             username_len = pValueEnd - pValueBegin;
         }
-        else if ( strncasecmp( pNameBegin, "realm", 5 ) == 0 )
-        {
+        else if (strncasecmp(pNameBegin, "realm", 5) == 0)
             realm = pValueBegin;
-        }
-        else if ( strncasecmp( pNameBegin, "nonce", 5 ) == 0 )
-        {
+        else if (strncasecmp(pNameBegin, "nonce", 5) == 0)
             nonce = pValueBegin;
-        }
-        else if ( strncasecmp( pNameBegin, "uri", 3 ) == 0 )
-        {
+        else if (strncasecmp(pNameBegin, "uri", 3) == 0)
             requri = pValueBegin;
-        }
-        else if ( strncasecmp( pNameBegin, "response", 8 ) == 0 )
-        {
+        else if (strncasecmp(pNameBegin, "response", 8) == 0)
             resp_digest = pValueBegin;
-        }
-        else if ( strncasecmp( pNameBegin, "nc", 2 ) == 0 )
+        else if (strncasecmp(pNameBegin, "nc", 2) == 0)
         {
-            
+
         }
     }
-    if (( username )&&( username_len < bufLen ))
+    if ((username) && (username_len < bufLen))
     {
-        memccpy( pAuthUser, username, 0, username_len );
+        memccpy(pAuthUser, username, 0, username_len);
         *(pAuthUser + username_len) = 0;
 
     }
-    if (( !username )||( !realm )||( !nonce )||( !requri )||( !resp_digest ))
-    {
+    if ((!username) || (!realm) || (!nonce) || (!requri) || (!resp_digest))
         return SC_401;
-    }
 //    const AuthUser * pUserData = getUser( pAuthUser, username_len );
 //    if ( pUserData )
 //    {
@@ -278,36 +269,32 @@ int HTAuth::digestAuth( HttpSession *pSession, const char * pAuthorization,
     return SC_401;
 }
 
-int HTAuth::authenticate( HttpSession *pSession, const char * pAuthHeader,
-       int authHeaderLen, char * pAuthUser, int userBufLen,
-       const AuthRequired * pRequired ) const
+int HTAuth::authenticate(HttpSession *pSession, const char *pAuthHeader,
+                         int authHeaderLen, char *pAuthUser, int userBufLen,
+                         const AuthRequired *pRequired) const
 {
-    if ( strncasecmp( pAuthHeader, "Basic ", 6 ) == 0 )
+    if (strncasecmp(pAuthHeader, "Basic ", 6) == 0)
     {
         pAuthHeader += 6;
         authHeaderLen -= 6;
-        if (!( m_iAuthType & AUTH_BASIC )||( authHeaderLen > MAX_BASIC_AUTH_LEN ))
-        {
+        if (!(m_iAuthType & AUTH_BASIC) || (authHeaderLen > MAX_BASIC_AUTH_LEN))
             return SC_401;
-        }
-        return basicAuth( pSession, pAuthHeader,
-                    authHeaderLen, pAuthUser,
-                    AUTH_USER_SIZE - 1, pRequired );
+        return basicAuth(pSession, pAuthHeader,
+                         authHeaderLen, pAuthUser,
+                         AUTH_USER_SIZE - 1, pRequired);
     }
-    else if ( strncasecmp( pAuthHeader, "Digest ", 7 ) == 0 )
+    else if (strncasecmp(pAuthHeader, "Digest ", 7) == 0)
     {
         pAuthHeader += 7;
         authHeaderLen -= 7;
-        if ( authHeaderLen > MAX_DIGEST_AUTH_LEN )
-        {
+        if (authHeaderLen > MAX_DIGEST_AUTH_LEN)
             return SC_401;
-        }
-        return digestAuth( pSession, pAuthHeader,
-                    authHeaderLen, pAuthUser,
-                    AUTH_USER_SIZE - 1, pRequired );
+        return digestAuth(pSession, pAuthHeader,
+                          authHeaderLen, pAuthUser,
+                          AUTH_USER_SIZE - 1, pRequired);
     }
     return SC_401;
-    
+
 }
 
 

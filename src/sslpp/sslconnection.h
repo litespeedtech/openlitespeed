@@ -28,12 +28,12 @@ typedef struct ssl_session_st SSL_SESSION;
 
 class SSLConnection
 {
-    SSL*    m_ssl;
+    SSL    *m_ssl;
     int     m_iStatus;
     int     m_iWant;
-    
-    SSLConnection( const SSLConnection& rhs ) {}
-    void operator=( const SSLConnection& rhs ) {}
+
+    SSLConnection(const SSLConnection &rhs) {}
+    void operator=(const SSLConnection &rhs) {}
 public:
     enum
     {
@@ -55,56 +55,56 @@ public:
     int wantWrite() const   {   return m_iWant & WRITE; }
     int lastRead() const    {   return m_iWant & LAST_READ; }
     int lastWrite() const   {   return m_iWant & LAST_WRITE; }
-    
+
     SSLConnection();
-    explicit SSLConnection(SSL* ssl);
-    SSLConnection( SSL* ssl, int fd );
-    SSLConnection( SSL* ssl, int rfd, int wfd );
+    explicit SSLConnection(SSL *ssl);
+    SSLConnection(SSL *ssl, int fd);
+    SSLConnection(SSL *ssl, int rfd, int wfd);
     ~SSLConnection();
 
-    void setSSL( SSL* ssl );
-    SSL* getSSL() const    {   return m_ssl;   }
-    
+    void setSSL(SSL *ssl);
+    SSL *getSSL() const    {   return m_ssl;   }
+
     void release();
-    int setfd( int fd );
-    int setfd( int rfd, int wfd );
+    int setfd(int fd);
+    int setfd(int rfd, int wfd);
 
     void toAccept();
     int accept();
     int connect();
-    int read( char * pBuf, int len );
-    int write( const char * pBuf, int len );
-    int writev( const struct iovec * vect, int count, int *finished );
+    int read(char *pBuf, int len);
+    int write(const char *pBuf, int len);
+    int writev(const struct iovec *vect, int count, int *finished);
     int flush();
-    int shutdown( int bidirectional );
-    int checkError( int ret );
+    int shutdown(int bidirectional);
+    int checkError(int ret);
     bool isConnected()      {   return m_iStatus == CONNECTED;  }
     int tryagain();
 
     int getStatus() const   {   return m_iStatus;   }
 
-    X509 * getPeerCertificate() const;
+    X509 *getPeerCertificate() const;
     long getVerifyResult() const;
     int  getVerifyMode() const;
     int  isVerifyOk() const;
-    int  buildVerifyErrorString( char * pBuf, int len ) const;
+    int  buildVerifyErrorString(char *pBuf, int len) const;
 
-    const char * getCipherName() const;
+    const char *getCipherName() const;
 
-    const SSL_CIPHER * getCurrentCipher() const;
+    const SSL_CIPHER *getCurrentCipher() const;
 
-    SSL_SESSION * getSession() const;
+    SSL_SESSION *getSession() const;
 
-    const char * getVersion() const;
-    
-    int setTlsExtHostName( const char * pName );
+    const char *getVersion() const;
+
+    int setTlsExtHostName(const char *pName);
 
     int getSpdyVersion();
-    
-    static int getSessionIdLen( SSL_SESSION * s );
-    static const unsigned char * getSessionId( SSL_SESSION * s );
-    static int getCipherBits( const SSL_CIPHER * pCipher, int *algkeysize );
-    static int isClientVerifyOptional( int i );
+
+    static int getSessionIdLen(SSL_SESSION *s);
+    static const unsigned char *getSessionId(SSL_SESSION *s);
+    static int getCipherBits(const SSL_CIPHER *pCipher, int *algkeysize);
+    static int isClientVerifyOptional(int i);
 };
 
 #endif

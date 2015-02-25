@@ -15,7 +15,7 @@
 *    You should have received a copy of the GNU General Public License       *
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
-#if 0 
+#if 0
 #if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
 
 #include "rtsigio.h"
@@ -42,43 +42,43 @@
 
 RTsigio::RTsigio()
 {
-    setFLTag( O_NONBLOCK | O_RDWR | O_ASYNC );
+    setFLTag(O_NONBLOCK | O_RDWR | O_ASYNC);
 }
 
 RTsigio::~RTsigio()
 {
-    signal( RTSIGNUM, SIG_IGN );
+    signal(RTSIGNUM, SIG_IGN);
 }
 
 
 
-int RTsigio::init( int capacity )
+int RTsigio::init(int capacity)
 {
-    if ((m_fdindex.allocate( capacity ) == 0 )&&
-        (Poller::init( capacity ) == 0 ))
+    if ((m_fdindex.allocate(capacity) == 0) &&
+        (Poller::init(capacity) == 0))
         return enableSigio();
     return -1;
 }
 
 int RTsigio::enableSigio()
 {
-    if (( !sigemptyset(&m_sigset) )&&
-        ( !sigaddset(&m_sigset, SIGIO) )&&
-        ( !sigaddset(&m_sigset, RTSIGNUM) )&&
-        ( !sigprocmask(SIG_BLOCK, &m_sigset, NULL)))
+    if ((!sigemptyset(&m_sigset)) &&
+        (!sigaddset(&m_sigset, SIGIO)) &&
+        (!sigaddset(&m_sigset, RTSIGNUM)) &&
+        (!sigprocmask(SIG_BLOCK, &m_sigset, NULL)))
         return 0;
     return -1;
 }
 
-int RTsigio::add( EventReactor* pHandler, short mask )
+int RTsigio::add(EventReactor *pHandler, short mask)
 {
-    int index = getPfdReactor().add(pHandler, mask );
-    if ( index == -1 )
+    int index = getPfdReactor().add(pHandler, mask);
+    if (index == -1)
         return index;
     int fd = pHandler->getfd();
-    if ( m_fdindex.set( fd, index ) == -1 )
+    if (m_fdindex.set(fd, index) == -1)
     {
-        getPfdReactor().remove( pHandler );
+        getPfdReactor().remove(pHandler);
         return -1;
     }
 
@@ -100,69 +100,65 @@ int RTsigio::add( EventReactor* pHandler, short mask )
 //        getPfdReactor().processEvent( fd, index, pfd.revents );
 //
 //    }
-    
+
     return 0;
 }
 
 
-int RTsigio::remove( EventReactor* pHandler )
+int RTsigio::remove(EventReactor *pHandler)
 {
-    if ( !pHandler )
+    if (!pHandler)
     {
         errno = EINVAL;
         return -1;
     }
     int fd = pHandler->getfd();
-    if ( fd >= m_fdindex.getCapacity() )
+    if (fd >= m_fdindex.getCapacity())
         return 0;
-    if ( getPfdReactor().remove( pHandler ) )
-    {
+    if (getPfdReactor().remove(pHandler))
         return -1;
-    }
     //remove O_ASYNC flag, stop generate signal
     //::fcntl( fd, F_SETFL, O_NONBLOCK );
-    m_fdindex.set( fd, 65535 );        
+    m_fdindex.set(fd, 65535);
     return 0;
-            
+
 }
 
 
 
-int RTsigio::waitAndProcessEvents( int iTimeoutMilliSec )
+int RTsigio::waitAndProcessEvents(int iTimeoutMilliSec)
 {
     struct timespec timeout;
     timeout.tv_sec  = iTimeoutMilliSec / 1000;
     timeout.tv_nsec = (iTimeoutMilliSec % 1000) * 1000000;
 
     siginfo_t info;
-    while( 1 )
+    while (1)
     {
-        int ret = sigtimedwait( &m_sigset, &info, &timeout);
-        if ( ret == RTSIGNUM )
+        int ret = sigtimedwait(&m_sigset, &info, &timeout);
+        if (ret == RTSIGNUM)
         {
             int fd = info.si_fd;
             //printf( "Receive RTSIG for fd: %d, Event: %d\n", fd, (int)(info.si_band & 0x3f) );
-            if ( fd < m_fdindex.getCapacity() )
+            if (fd < m_fdindex.getCapacity())
             {
 //                int index = m_pIndexes[fd];
 //                printf( "fd: %d, index:%d, pollfd.fd: %d, pollfd.event: %d\n", fd, index,
 //                          getPfdReactor().getPollfd( index )->fd,
 //                          getPfdReactor().getPollfd( index )->revents    );
-                getPfdReactor().processEvent( fd,
-                        m_fdindex.get( fd ), info.si_band & 0x3f );
+                getPfdReactor().processEvent(fd,
+                                             m_fdindex.get(fd), info.si_band & 0x3f);
 //                    printf( "Ignore RTSIG for fd: %d, Event: %d\n", fd, (int)(info.si_band & 0x3f) );
             }
         }
-        else if( ret == -1 )
-        {
+        else if (ret == -1)
             return ret;
-        }
-        else if ( ret == SIGIO )
+        else if (ret == SIGIO)
         {
-            printf( "Real time signal queue over flow!\n" );
-            ret = Poller::waitAndProcessEvents( 0 );
-            signal( RTSIGNUM, SIG_IGN );
-            signal( RTSIGNUM, SIG_DFL );
+            printf("Real time signal queue over flow!\n");
+            ret = Poller::waitAndProcessEvents(0);
+            signal(RTSIGNUM, SIG_IGN);
+            signal(RTSIGNUM, SIG_DFL);
             return ret;
         }
     }

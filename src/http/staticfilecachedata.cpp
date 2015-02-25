@@ -60,41 +60,41 @@ static int      s_iGzipCompressLevel    = 6;
 static int      s_iMaxFileSize          = 1024 * 1024;
 static int      s_iMinFileSize          = 300;
 
-static const char * s_gzipCachePath = "/tmp/lshttpd/";
+static const char *s_gzipCachePath = "/tmp/lshttpd/";
 
 
-void FileCacheDataEx::setTotalInMemCacheSize( size_t max)
+void FileCacheDataEx::setTotalInMemCacheSize(size_t max)
 {
     s_iMaxTotalInMemCache = max;
 }
 
-void FileCacheDataEx::setTotalMMapCacheSize( size_t max)
+void FileCacheDataEx::setTotalMMapCacheSize(size_t max)
 {
     s_iMaxTotalMMAPCache = max;
 }
 
 
-void FileCacheDataEx::setMaxInMemCacheSize( size_t max)
+void FileCacheDataEx::setMaxInMemCacheSize(size_t max)
 {
     //FIXME: use page size
-    if ( max <= 16384 )
+    if (max <= 16384)
         s_iMaxInMemCacheSize = max;
 }
 
-void FileCacheDataEx::setMaxMMapCacheSize( size_t max)
+void FileCacheDataEx::setMaxMMapCacheSize(size_t max)
 {
     s_iMaxMMapCacheSize = max;
 }
 
-static int openFile( const char * pPath, int& fd )
+static int openFile(const char *pPath, int &fd)
 {
-    fd = nio_open( pPath, O_RDONLY, 0 );
-    if ( fd == -1 )
+    fd = nio_open(pPath, O_RDONLY, 0);
+    if (fd == -1)
     {
         int err = errno;
-        LOG_INFO(( "Failed to open file [%s], error: %s", pPath,
-                strerror( err ) ));
-        switch( err )
+        LOG_INFO(("Failed to open file [%s], error: %s", pPath,
+                  strerror(err)));
+        switch (err)
         {
         case EACCES:
             return SC_403;
@@ -109,10 +109,10 @@ static int openFile( const char * pPath, int& fd )
 }
 
 FileCacheDataEx::FileCacheDataEx()
-    : m_fd( -1 )
+    : m_fd(-1)
 {
-    memset( &m_iStatus, 0,
-            (char *)(&m_pCache + 1) - (char *)&m_iStatus );
+    memset(&m_iStatus, 0,
+           (char *)(&m_pCache + 1) - (char *)&m_iStatus);
 }
 
 FileCacheDataEx::~FileCacheDataEx()
@@ -122,107 +122,101 @@ FileCacheDataEx::~FileCacheDataEx()
 }
 
 
-void FileCacheDataEx::setFileStat( const struct stat &st )
+void FileCacheDataEx::setFileStat(const struct stat &st)
 {
     m_lSize     = st.st_size;
     m_lastMod   = st.st_mtime;
     m_inode     = st.st_ino;
 }
 
-int  FileCacheDataEx::allocateCache( size_t size )
+int  FileCacheDataEx::allocateCache(size_t size)
 {
-    assert( m_pCache == NULL );
-    int newSize = (( size + 128) >> 7 ) << 7;
-    if ( size + s_iCurTotalInMemCache > s_iMaxTotalInMemCache )
+    assert(m_pCache == NULL);
+    int newSize = ((size + 128) >> 7) << 7;
+    if (size + s_iCurTotalInMemCache > s_iMaxTotalInMemCache)
         return ENOMEM;
-    m_pCache = ( char *)malloc( newSize );
-    if ( !m_pCache )
-    {
+    m_pCache = (char *)malloc(newSize);
+    if (!m_pCache)
         return ENOMEM;
-    }
-    setStatus( CACHED );
+    setStatus(CACHED);
     s_iCurTotalInMemCache += size;
     return 0;
 }
 
 void FileCacheDataEx::release()
 {
-    switch( getStatus() )
+    switch (getStatus())
     {
     case MMAPED:
-        if ( m_pCache )
+        if (m_pCache)
         {
-            if ( D_ENABLED( DL_MORE ))
-                LOG_D(( "[MMAP] Release mapped data at %p", m_pCache ));
-            munmap( m_pCache, m_lSize );
+            if (D_ENABLED(DL_MORE))
+                LOG_D(("[MMAP] Release mapped data at %p", m_pCache));
+            munmap(m_pCache, m_lSize);
             s_iCurTotalMMAPCache -= m_lSize;
         }
         break;
     case CACHED:
-        if ( m_pCache )
+        if (m_pCache)
         {
             s_iCurTotalInMemCache -= m_lSize;
-            free( m_pCache );
+            free(m_pCache);
         }
         break;
     }
     closefd();
-    memset( &m_iStatus, 0,
-            (char *)(&m_pCache + 1) - (char *)&m_iStatus );
+    memset(&m_iStatus, 0,
+           (char *)(&m_pCache + 1) - (char *)&m_iStatus);
 }
 
 void FileCacheDataEx::closefd()
 {
-    if ( m_fd != -1 )
+    if (m_fd != -1)
     {
-        close( m_fd );
+        close(m_fd);
         m_fd = -1;
     }
 }
 
 
-int FileCacheDataEx::readyData(const char * pPath)
+int FileCacheDataEx::readyData(const char *pPath)
 {
     int ret;
-    if ( m_fd == -1 )
+    if (m_fd == -1)
     {
-        ret = openFile( pPath, m_fd );
-        if ( ret )
+        ret = openFile(pPath, m_fd);
+        if (ret)
             return ret;
-        fcntl( m_fd, F_SETFD, FD_CLOEXEC );
+        fcntl(m_fd, F_SETFD, FD_CLOEXEC);
     }
-    if ( (size_t)m_lSize < s_iMaxInMemCacheSize )
+    if ((size_t)m_lSize < s_iMaxInMemCacheSize)
     {
-        ret = allocateCache( m_lSize );
-        if ( ret == 0 )
+        ret = allocateCache(m_lSize);
+        if (ret == 0)
         {
-            ret = nio_read( m_fd, m_pCache, m_lSize );
-            if ( ret == m_lSize )
+            ret = nio_read(m_fd, m_pCache, m_lSize);
+            if (ret == m_lSize)
             {
                 closefd();
                 return 0;
             }
             else
-            {
                 release();
-            }
         }
     }
-    else if (( (size_t)m_lSize < s_iMaxMMapCacheSize )
-            &&((size_t)m_lSize + s_iCurTotalMMAPCache < s_iMaxTotalMMAPCache ))
+    else if (((size_t)m_lSize < s_iMaxMMapCacheSize)
+             && ((size_t)m_lSize + s_iCurTotalMMAPCache < s_iMaxTotalMMAPCache))
     {
-        m_pCache = (char *)mmap( 0, m_lSize, PROT_READ,
-                MAP_PRIVATE, m_fd, 0 );
+        m_pCache = (char *)mmap(0, m_lSize, PROT_READ,
+                                MAP_PRIVATE, m_fd, 0);
         s_iCurTotalMMAPCache += m_lSize;
-        if ( D_ENABLED( DL_MORE ))
-            LOG_D(( "[MMAP] Map %p to file:%s", m_pCache, pPath ));
-        if ( m_pCache == MAP_FAILED )
-        {
+        if (D_ENABLED(DL_MORE))
+            LOG_D(("[MMAP] Map %p to file:%s", m_pCache, pPath));
+        if (m_pCache == MAP_FAILED)
             m_pCache = 0;
-        }
         else
         {
-            setStatus( MMAPED );
+            setStatus(MMAPED);
             closefd();
             return 0;
         }
@@ -230,34 +224,30 @@ int FileCacheDataEx::readyData(const char * pPath)
     return 0;
 }
 
-const char * FileCacheDataEx::getCacheData(
-    off_t offset, off_t& wanted, char *pBuf, long len )
+const char *FileCacheDataEx::getCacheData(
+    off_t offset, off_t &wanted, char *pBuf, long len)
 {
-    if ( isCached() )
+    if (isCached())
     {
-        if ( offset > m_lSize )
+        if (offset > m_lSize)
         {
             wanted = 0;
             return pBuf;
         }
-        if ( wanted > m_lSize - offset )
+        if (wanted > m_lSize - offset)
             wanted = m_lSize - offset;
         return m_pCache + offset;
     }
     else
     {
-        assert( m_fd != -1 );
-        off_t off = nio_lseek( m_fd, offset, SEEK_SET );
-/*        if ( D_ENABLED( DL_MORE ))
-            LOG_D(( "lseek() return %d", (int)off ));*/
-        if ( off == offset )
-        {
-            wanted = nio_read( m_fd, pBuf, len );
-        }
+        assert(m_fd != -1);
+        off_t off = nio_lseek(m_fd, offset, SEEK_SET);
+        /*        if ( D_ENABLED( DL_MORE ))
+                    LOG_D(( "lseek() return %d", (int)off ));*/
+        if (off == offset)
+            wanted = nio_read(m_fd, pBuf, len);
         else
-        {
             wanted = -1;
-        }
         return pBuf;
     }
 
@@ -265,174 +255,173 @@ const char * FileCacheDataEx::getCacheData(
 
 StaticFileCacheData::StaticFileCacheData()
 {
-    memset( &m_pMimeType, 0,
-            (char *)(&m_pGziped + 1) - (char *)&m_pMimeType );
+    memset(&m_pMimeType, 0,
+           (char *)(&m_pGziped + 1) - (char *)&m_pMimeType);
 }
 
 StaticFileCacheData::~StaticFileCacheData()
 {
-    LsiapiBridge::releaseModuleData( LSI_MODULE_DATA_FILE, getModuleData());
-    if ( m_pGziped )
+    LsiapiBridge::releaseModuleData(LSI_MODULE_DATA_FILE, getModuleData());
+    if (m_pGziped)
         delete m_pGziped;
-    if ( m_pSSIScript )
-        delete m_pSSIScript;    
+    if (m_pSSIScript)
+        delete m_pSSIScript;
 }
 
-int StaticFileCacheData::testMod( HttpReq * pReq )
+int StaticFileCacheData::testMod(HttpReq *pReq)
 {
-    const char * pNonMatch;
-    if ( pReq->isHeaderSet( HttpHeader::H_IF_NO_MATCH ) )
+    const char *pNonMatch;
+    if (pReq->isHeaderSet(HttpHeader::H_IF_NO_MATCH))
     {
-        pNonMatch = pReq->getHeader( HttpHeader::H_IF_NO_MATCH );
-        int len = pReq->getHeaderLen( HttpHeader::H_IF_NO_MATCH );
-        if ( *pNonMatch == 'W' )
+        pNonMatch = pReq->getHeader(HttpHeader::H_IF_NO_MATCH);
+        int len = pReq->getHeaderLen(HttpHeader::H_IF_NO_MATCH);
+        if (*pNonMatch == 'W')
         {
             len -= 2;
             pNonMatch += 2;
         }
-        if ((( m_iETagLen == len)
-            &&( memcmp( pNonMatch, m_pETag, m_iETagLen ) == 0 ))
-            ||( *pNonMatch == '*' ))
+        if (((m_iETagLen == len)
+             && (memcmp(pNonMatch, m_pETag, m_iETagLen) == 0))
+            || (*pNonMatch == '*'))
             return SC_304;
     }
     else
     {
-        if ( pReq->isHeaderSet( HttpHeader::H_IF_MODIFIED_SINCE ))
+        if (pReq->isHeaderSet(HttpHeader::H_IF_MODIFIED_SINCE))
         {
-            pNonMatch = pReq->getHeader( HttpHeader::H_IF_MODIFIED_SINCE );
-            long IMS = DateTime::parseHttpTime( pNonMatch );
-            if ( IMS >= m_fileData.getLastMod() )
+            pNonMatch = pReq->getHeader(HttpHeader::H_IF_MODIFIED_SINCE);
+            long IMS = DateTime::parseHttpTime(pNonMatch);
+            if (IMS >= m_fileData.getLastMod())
                 return SC_304;
         }
     }
     return 0;
 }
 
-int StaticFileCacheData::testIfRange( const char * pMatch, int len )
+int StaticFileCacheData::testIfRange(const char *pMatch, int len)
 {
-    if (( *(pMatch+1) == '/' )||( m_fileData.getLastMod() == DateTime::s_curTime ))
-    {
+    if ((*(pMatch + 1) == '/')
+        || (m_fileData.getLastMod() == DateTime::s_curTime))
         return SC_412;
-    }
-    if ( *pMatch == '"' )
+    if (*pMatch == '"')
     {
-        if (( m_iETagLen != len)
-            ||( memcmp( pMatch, m_pETag, m_iETagLen ) != 0 ))
+        if ((m_iETagLen != len)
+            || (memcmp(pMatch, m_pETag, m_iETagLen) != 0))
             return SC_412;
     }
     else
     {
-        long IUMS = DateTime::parseHttpTime( pMatch );
-        if ( IUMS < m_fileData.getLastMod() )
-             return SC_412;
-    }
-    return 0;
-}
-
-int StaticFileCacheData::testUnMod( HttpReq * pReq )
-{
-    if ( m_fileData.getLastMod() == DateTime::s_curTime )
-    {
-        return SC_412;
-    }
-    const char * pMatch;
-    if ( pReq->isHeaderSet( HttpHeader::H_IF_MATCH ))
-    {
-        pMatch = pReq->getHeader( HttpHeader::H_IF_MATCH );
-        if ( *pMatch != '*' )
-        {
-            int len = pReq->getHeaderLen( HttpHeader::H_IF_MATCH );
-            if ( *pMatch == 'W' )
-            {
-                return SC_412;
-            }
-            if (( m_iETagLen != len)
-                ||( memcmp( pMatch, m_pETag, m_iETagLen ) != 0 ))
-                return SC_412;
-        }
-        return 0;
-    }
-    if ( pReq->isHeaderSet( HttpHeader::H_IF_UNMOD_SINCE ) )
-    {
-        pMatch = pReq->getHeader( HttpHeader::H_IF_UNMOD_SINCE );
-        long IMS = DateTime::parseHttpTime( pMatch );
-        if ( IMS < m_fileData.getLastMod() )
+        long IUMS = DateTime::parseHttpTime(pMatch);
+        if (IUMS < m_fileData.getLastMod())
             return SC_412;
     }
     return 0;
 }
 
-static int appendEtagPart(char *p, int maxLen, int& firstPartExist, unsigned long value)
+int StaticFileCacheData::testUnMod(HttpReq *pReq)
 {
-    int len = safe_snprintf( p, maxLen, (firstPartExist ? "-%lx" : "%lx"), value);
+    if (m_fileData.getLastMod() == DateTime::s_curTime)
+        return SC_412;
+    const char *pMatch;
+    if (pReq->isHeaderSet(HttpHeader::H_IF_MATCH))
+    {
+        pMatch = pReq->getHeader(HttpHeader::H_IF_MATCH);
+        if (*pMatch != '*')
+        {
+            int len = pReq->getHeaderLen(HttpHeader::H_IF_MATCH);
+            if (*pMatch == 'W')
+                return SC_412;
+            if ((m_iETagLen != len)
+                || (memcmp(pMatch, m_pETag, m_iETagLen) != 0))
+                return SC_412;
+        }
+        return 0;
+    }
+    if (pReq->isHeaderSet(HttpHeader::H_IF_UNMOD_SINCE))
+    {
+        pMatch = pReq->getHeader(HttpHeader::H_IF_UNMOD_SINCE);
+        long IMS = DateTime::parseHttpTime(pMatch);
+        if (IMS < m_fileData.getLastMod())
+            return SC_412;
+    }
+    return 0;
+}
+
+static int appendEtagPart(char *p, int maxLen, int &firstPartExist,
+                          unsigned long value)
+{
+    int len = safe_snprintf(p, maxLen, (firstPartExist ? "-%lx" : "%lx"),
+                            value);
     firstPartExist = 1;
     return len;
 }
 
-int StaticFileCacheData::buildFixedHeaders( int etag )
+int StaticFileCacheData::buildFixedHeaders(int etag)
 {
     int size = 6 + 30 + 17 + RFC_1123_TIME_LEN
-            + 20 + m_pMimeType->getMIME()->len() + 10 ;
-    const char * pCharset;
-    if ( m_pCharset && HttpMime::needCharset(m_pMimeType->getMIME()->c_str()) )
+               + 20 + m_pMimeType->getMIME()->len() + 10 ;
+    const char *pCharset;
+    if (m_pCharset && HttpMime::needCharset(m_pMimeType->getMIME()->c_str()))
     {
         pCharset = m_pCharset->c_str();
         size += m_pCharset->len();
     }
     else
         pCharset = "";
-    if ( !m_sHeaders.resizeBuf( size ) )
+    if (!m_sHeaders.resizeBuf(size))
         return SC_500;
-    
-    char * pEnd = m_sHeaders.buf() + size;
+
+    char *pEnd = m_sHeaders.buf() + size;
     char *p = m_sHeaders.buf();
     m_iFileETag = etag;
-    
+
     if (m_iFileETag & ETAG_ALL)
     {
-        memcpy( p, "ETag: \"", 7 );
+        memcpy(p, "ETag: \"", 7);
         m_pETag = p + 6;  //Start the etag from the \"
-        
+
         p += 7;
         int firstPartExist = 0;
         if (m_iFileETag & ETAG_SIZE)
-            p += appendEtagPart(p, pEnd - p, firstPartExist, (unsigned long)m_fileData.getFileSize());
-        
+            p += appendEtagPart(p, pEnd - p, firstPartExist,
+                                (unsigned long)m_fileData.getFileSize());
+
         if (m_iFileETag & ETAG_MTIME)
             p += appendEtagPart(p, pEnd - p, firstPartExist, m_fileData.getLastMod());
-        
+
         if (m_iFileETag & ETAG_INODE)
             p += appendEtagPart(p, pEnd - p, firstPartExist, m_fileData.getINode());
-        
-        memcpy( p, "\"\r\n", 3);
+
+        memcpy(p, "\"\r\n", 3);
         p += 3;
         m_iETagLen = p - m_pETag - 2; //the \r\n not belong to etag
     }
     else
         m_iETagLen = 0;
-    
-    memcpy( p, "Last-Modified: ", 15 );
+
+    memcpy(p, "Last-Modified: ", 15);
     p += 15;
-    DateTime::getRFCTime( m_fileData.getLastMod(), p );
+    DateTime::getRFCTime(m_fileData.getLastMod(), p);
     p += RFC_1123_TIME_LEN;
 
-    p += safe_snprintf( p, pEnd - p ,
-            "\r\nContent-Type: %s%s\r\n",
-             m_pMimeType->getMIME()->c_str(), pCharset );
-            
-    m_sHeaders.setLen( p - m_sHeaders.buf() );
-    m_iValidateHeaderLen = (m_iETagLen ? (6 + m_iETagLen + 2) : 0) + 15 + 2 + RFC_1123_TIME_LEN ;
+    p += safe_snprintf(p, pEnd - p ,
+                       "\r\nContent-Type: %s%s\r\n",
+                       m_pMimeType->getMIME()->c_str(), pCharset);
+
+    m_sHeaders.setLen(p - m_sHeaders.buf());
+    m_iValidateHeaderLen = (m_iETagLen ? (6 + m_iETagLen + 2) : 0) + 15 + 2 +
+                           RFC_1123_TIME_LEN ;
     return 0;
 }
 
-int  FileCacheDataEx::buildCLHeader( bool gziped )
+int  FileCacheDataEx::buildCLHeader(bool gziped)
 {
     int size = 40;
     //if ( gziped )
     //    size += 24;
-    if ( !m_sCLHeader.resizeBuf( size ) )
+    if (!m_sCLHeader.resizeBuf(size))
         return SC_500;
-    char * p = m_sCLHeader.buf();
+    char *p = m_sCLHeader.buf();
 //    if ( gziped )
 //    {
 //        p += safe_snprintf( p, size,
@@ -441,42 +430,43 @@ int  FileCacheDataEx::buildCLHeader( bool gziped )
 //    }
 //    else
     {
-        if ( sizeof( off_t) == 8 )
+        if (sizeof(off_t) == 8)
         {
-            p += safe_snprintf( p, size,
-                "Content-Length: %lld\r\n", (long long )getFileSize() );
+            p += safe_snprintf(p, size,
+                               "Content-Length: %lld\r\n", (long long)getFileSize());
         }
         else
         {
-            p += safe_snprintf( p, size,
-                "Content-Length: %ld\r\n", (long)getFileSize() );
+            p += safe_snprintf(p, size,
+                               "Content-Length: %ld\r\n", (long)getFileSize());
         }
     }
-    m_sCLHeader.setLen( p - m_sCLHeader.buf() );
+    m_sCLHeader.setLen(p - m_sCLHeader.buf());
     return 0;
 }
 
-int StaticFileCacheData::buildHeaders( const MIMESetting * pMIME,
-            const AutoStr2 * pCharset, short etag )
+int StaticFileCacheData::buildHeaders(const MIMESetting *pMIME,
+                                      const AutoStr2 *pCharset, short etag)
 {
     int ret;
     m_pMimeType = pMIME;
     m_pCharset = pCharset;
-    ret = buildFixedHeaders( etag );
-    if ( ret )
+    ret = buildFixedHeaders(etag);
+    if (ret)
         return ret;
-    ret = m_fileData.buildCLHeader( false );
+    ret = m_fileData.buildCLHeader(false);
     return ret;
 }
 
 
 
-int StaticFileCacheData::build( int fd, const char *  pPath, int pathLen, const struct stat& fileStat)
+int StaticFileCacheData::build(int fd, const char   *pPath, int pathLen,
+                               const struct stat &fileStat)
 {
-    m_fileData.setfd( fd );
-    m_fileData.setFileStat( fileStat );
-    m_real.setStr( pPath, pathLen );
-    if ( !m_real.c_str() )
+    m_fileData.setfd(fd);
+    m_fileData.setFileStat(fileStat);
+    m_real.setStr(pPath, pathLen);
+    if (!m_real.c_str())
         return -1;
     return 0;
 }
@@ -485,23 +475,23 @@ int StaticFileCacheData::build( int fd, const char *  pPath, int pathLen, const 
 #include <sys/time.h>
 #include <sys/resource.h>
 
-static int createLockFile( const char * pReal, char * p )
+static int createLockFile(const char *pReal, char *p)
 {
     *p = 'l';       // filename "*.lszl"
     struct stat st;
-    int ret = nio_stat( pReal, &st );
-    if ( ret != -1 )  //compression in progress
+    int ret = nio_stat(pReal, &st);
+    if (ret != -1)    //compression in progress
     {
         //LOG_INFO((
-        if ( DateTime::s_curTime - st.st_mtime > 60 )
-            unlink( pReal );
+        if (DateTime::s_curTime - st.st_mtime > 60)
+            unlink(pReal);
         else
         {
             *p = 0;
             return -1;
         }
     }
-    ret = ::open( pReal, O_RDWR | O_CREAT | O_EXCL, 0600 );
+    ret = ::open(pReal, O_RDWR | O_CREAT | O_EXCL, 0600);
     *p = 0;
     return ret;
 }
@@ -510,22 +500,22 @@ static int createLockFile( const char * pReal, char * p )
 
 int StaticFileCacheData::tryCreateGziped()
 {
-    if ( !s_iAutoUpdateStaticGzip )
+    if (!s_iAutoUpdateStaticGzip)
         return -1;
     off_t size = m_fileData.getFileSize();
-    if (( size > s_iMaxFileSize )||( size < s_iMinFileSize ))
+    if ((size > s_iMaxFileSize) || (size < s_iMinFileSize))
         return -1;
     char *p = m_gzippedPath.buf() + m_gzippedPath.len() + 4;
-    int fd = createLockFile( m_gzippedPath.buf(), p );
-    if ( fd == -1 )
+    int fd = createLockFile(m_gzippedPath.buf(), p);
+    if (fd == -1)
         return -1;
-    close( fd );
-    if ( size < 409600 )
+    close(fd);
+    if (size < 409600)
     {
 
         long ret = compressFile();
         *p = 'l';
-        unlink( m_gzippedPath.buf() );
+        unlink(m_gzippedPath.buf());
         *p = 0;
         return ret;
 
@@ -535,28 +525,24 @@ int StaticFileCacheData::tryCreateGziped()
         //IMPROVE: move this to a standalone process,
         //          fork() is too expensive.
 
-        if ( D_ENABLED( DL_MORE ))
+        if (D_ENABLED(DL_MORE))
         {
-            LOG_D(( "To compressed file %s in another process.",
-                    m_real.c_str() ));
+            LOG_D(("To compressed file %s in another process.",
+                   m_real.c_str()));
         }
         int forkResult;
         forkResult = fork();
-        if( forkResult )  //error or parent process
-        {
+        if (forkResult)   //error or parent process
             return -1;
-        }
         //child process
-        setpriority( PRIO_PROCESS, 0, 5 );
+        setpriority(PRIO_PROCESS, 0, 5);
 
         long ret = compressFile();
-        if ( ret == -1 )
-        {
-            LOG_WARN(( "Failed to compress file %s!", m_real.c_str() ));
+        if (ret == -1)
+            LOG_WARN(("Failed to compress file %s!", m_real.c_str()));
 
-        }
         *p = 'l';
-        unlink( m_gzippedPath.buf() );
+        unlink(m_gzippedPath.buf());
         *p = 0;
         exit(1);
     }
@@ -569,32 +555,30 @@ int StaticFileCacheData::tryCreateGziped()
 
 int StaticFileCacheData::detectTrancate()
 {
-    if ( !m_fileData.isMapped() )
+    if (!m_fileData.isMapped())
         return 0;
     char ch;
     int fd = m_fileData.getfd();
-    if ( fd == -1 )
-    {   
+    if (fd == -1)
+    {
         struct stat st;
-        int ret = openFile( m_real.c_str(), fd );
-        if ( ret )
+        int ret = openFile(m_real.c_str(), fd);
+        if (ret)
             return -1;
-        fstat( fd, &st );
-        close( fd );
-        if ( !m_fileData.isDirty( st ) )
-        {
+        fstat(fd, &st);
+        close(fd);
+        if (!m_fileData.isDirty(st))
             return 0;
-        }
-        
+
     }
     else
     {
-        if ( pread( fd, &ch, 1, 0 ) == 1 )
+        if (pread(fd, &ch, 1, 0) == 1)
             return 0;
     }
     m_fileData.release();
     return -1;
-    
+
 }
 
 int StaticFileCacheData::compressFile()
@@ -602,67 +586,63 @@ int StaticFileCacheData::compressFile()
     int ret;
     GzipBuf gzBuf;
     VMemBuf gzFile;
-    if (    //detectTrancate() || 
-        ( 0 != gzBuf.init( GzipBuf::GZIP_DEFLATE, s_iGzipCompressLevel ) ))
-    {
+    if (    //detectTrancate() ||
+        (0 != gzBuf.init(GzipBuf::GZIP_DEFLATE, s_iGzipCompressLevel)))
         return -1;
-    }
-    if (( !m_fileData.isCached() &&
-        ( m_fileData.getfd() == -1 )))
+    if ((!m_fileData.isCached() &&
+         (m_fileData.getfd() == -1)))
     {
-        if ( m_fileData.readyData( m_real.c_str() ) != 0 )
-        {
+        if (m_fileData.readyData(m_real.c_str()) != 0)
             return -1;
-        }
     }
 
     char achFileName[4096];
-    snprintf( achFileName, 4096, "%s.XXXXXX", m_gzippedPath.c_str() );
-    int fd = mkstemp( achFileName);
-    ret= gzFile.setfd( achFileName, fd );
-    if ( ret )
+    snprintf(achFileName, 4096, "%s.XXXXXX", m_gzippedPath.c_str());
+    int fd = mkstemp(achFileName);
+    ret = gzFile.setfd(achFileName, fd);
+    if (ret)
     {
-        close( fd );
+        close(fd);
         return ret;
     }
-    gzBuf.setCompressCache( &gzFile );
-    if ( gzBuf.beginStream() )
+    gzBuf.setCompressCache(&gzFile);
+    if (gzBuf.beginStream())
         return -1;
     off_t offset = 0;
     int len;
     off_t wanted;
-    const char * pData;
+    const char *pData;
     char achBuf[8192];
-    while( true )
+    while (true)
     {
         wanted = getFileSize() - offset;
-        if ( wanted <= 0 )
+        if (wanted <= 0)
             break;
-        if ( wanted < 8192 )
+        if (wanted < 8192)
             len = wanted;
         else
             len = 8192;
-        pData = m_fileData.getCacheData( offset, wanted, achBuf, len );
-        if ( wanted <= 0 )
+        pData = m_fileData.getCacheData(offset, wanted, achBuf, len);
+        if (wanted <= 0)
             return -1;
-        if ( gzBuf.write( pData, wanted ) )
+        if (gzBuf.write(pData, wanted))
             return -1;
         offset += wanted;
 
     }
-    if ( 0 == gzBuf.endStream() )
+    if (0 == gzBuf.endStream())
     {
         long size;
-        if ( gzFile.exactSize( &size ) == 0 )
+        if (gzFile.exactSize(&size) == 0)
         {
             gzFile.close();
-            unlink( m_gzippedPath.buf() );
-            rename( achFileName, m_gzippedPath.buf() );
+            unlink(m_gzippedPath.buf());
+            rename(achFileName, m_gzippedPath.buf());
 
             struct utimbuf utmbuf;
             utmbuf.actime = m_fileData.getLastMod();
             utmbuf.modtime = m_fileData.getLastMod();
-            utime( m_gzippedPath.buf(), &utmbuf );
+            utime(m_gzippedPath.buf(), &utmbuf);
 
             return size;
         }
@@ -671,20 +651,20 @@ int StaticFileCacheData::compressFile()
 }
 
 
-int StaticFileCacheData::buildGzipCache( const struct stat &st)
+int StaticFileCacheData::buildGzipCache(const struct stat &st)
 {
-    FileCacheDataEx * pData = m_pGziped;
-    if ( !pData )
+    FileCacheDataEx *pData = m_pGziped;
+    if (!pData)
     {
         pData = new FileCacheDataEx();
-        if ( !pData )
+        if (!pData)
             return -1;
     }
     else
         pData->release();
 
-    pData->setFileStat( st );
-    if ( pData->buildCLHeader( true ))
+    pData->setFileStat(st);
+    if (pData->buildCLHeader(true))
     {
         m_pGziped = NULL;
         delete pData;
@@ -704,26 +684,26 @@ int StaticFileCacheData::buildGzipPath()
     char achPath[4096];
     StringTool::getMd5(m_real.c_str(), m_real.len(), achHash);
     struct stat st;
-    int n = snprintf( achPath, 4096, "%s/%x/%x/", s_gzipCachePath, achHash[0]>>4, achHash[0]&0xf );
-    if (( nio_stat( achPath, &st ) == -1 )&&( errno == ENOENT ))
+    int n = snprintf(achPath, 4096, "%s/%x/%x/", s_gzipCachePath,
+                     achHash[0] >> 4, achHash[0] & 0xf);
+    if ((nio_stat(achPath, &st) == -1) && (errno == ENOENT))
     {
-        achPath[n-3] = 0;
-        mkdir( achPath, 0700 );
-        achPath[n-3] = '/';
-        if (( mkdir( achPath, 0700 ) == -1 )&&( errno != EEXIST ))
-        {
+        achPath[n - 3] = 0;
+        mkdir(achPath, 0700);
+        achPath[n - 3] = '/';
+        if ((mkdir(achPath, 0700) == -1) && (errno != EEXIST))
             return -1;
-        }
     }
-    
-    StringTool::hexEncode( (const char *)&achHash[1], MD5_DIGEST_LENGTH-1, &achPath[n] );
-    n+= 30;
-    char * pReal = m_gzippedPath.resizeBuf( n + 6 );
-    if ( !pReal )
+
+    StringTool::hexEncode((const char *)&achHash[1], MD5_DIGEST_LENGTH - 1,
+                          &achPath[n]);
+    n += 30;
+    char *pReal = m_gzippedPath.resizeBuf(n + 6);
+    if (!pReal)
         return -1;
-    strncpy( pReal, achPath, n );
-    m_gzippedPath.setLen( n );
-    memmove( pReal + n , ".lsz\0\0", 6 );
+    strncpy(pReal, achPath, n);
+    m_gzippedPath.setLen(n);
+    memmove(pReal + n , ".lsz\0\0", 6);
     return 0;
 }
 
@@ -732,30 +712,30 @@ int StaticFileCacheData::buildGzipPath()
 
 int StaticFileCacheData::readyGziped()
 {
-    time_t tm = time( NULL );
-    if ( tm == getLastMod() )
+    time_t tm = time(NULL);
+    if (tm == getLastMod())
         return -1;
-    if ( tm != m_tmLastCheckGzip )
+    if (tm != m_tmLastCheckGzip)
     {
         struct stat st;
         m_tmLastCheckGzip = tm;
-        if ( !m_gzippedPath.c_str() || !*m_gzippedPath.c_str() )
+        if (!m_gzippedPath.c_str() || !*m_gzippedPath.c_str())
         {
-            if ( buildGzipPath() == -1 )
+            if (buildGzipPath() == -1)
                 return -1;
         }
 
-        int ret = nio_stat( m_gzippedPath.c_str(), &st );
-        if (( ret == -1 )||( st.st_mtime != getLastMod() )) 
+        int ret = nio_stat(m_gzippedPath.c_str(), &st);
+        if ((ret == -1) || (st.st_mtime != getLastMod()))
         {
-            if (( !m_pGziped )||( m_pGziped->getRef() == 0 ))
+            if ((!m_pGziped) || (m_pGziped->getRef() == 0))
             {
-                if ( ret != -1 )
-                    unlink( m_gzippedPath.c_str() );
+                if (ret != -1)
+                    unlink(m_gzippedPath.c_str());
                 ret = tryCreateGziped();
-                if ( ret == -1 )
+                if (ret == -1)
                 {
-                    if ( m_pGziped )
+                    if (m_pGziped)
                     {
                         delete m_pGziped;
                         m_pGziped = NULL;
@@ -764,36 +744,36 @@ int StaticFileCacheData::readyGziped()
                 }
                 else
                 {
-                    ret = nio_stat( m_gzippedPath.c_str(), &st );
-                    if ( ret )
+                    ret = nio_stat(m_gzippedPath.c_str(), &st);
+                    if (ret)
                         return -1;
                 }
             }
             else
                 return -1;
         }
-        if (( !m_pGziped )||( m_pGziped->isDirty( st ) ))
-            buildGzipCache( st );        
+        if ((!m_pGziped) || (m_pGziped->isDirty(st)))
+            buildGzipCache(st);
     }
-    if ( m_pGziped )
+    if (m_pGziped)
     {
-        if (( m_pGziped->isCached() ||
-            ( m_pGziped->getfd() != -1 )))
+        if ((m_pGziped->isCached() ||
+             (m_pGziped->getfd() != -1)))
             return 0;
-        return m_pGziped->readyData( m_gzippedPath.c_str() );
+        return m_pGziped->readyData(m_gzippedPath.c_str());
     }
     return -1;
 }
 
 int StaticFileCacheData::readyCacheData(
-            FileCacheDataEx *&pECache, char compress )
+    FileCacheDataEx *&pECache, char compress)
 {
-    char * pFileName = m_real.buf();
+    char *pFileName = m_real.buf();
     int ret;
-    if (( compress )&&(m_pMimeType->getExpires()->compressable() ))
+    if ((compress) && (m_pMimeType->getExpires()->compressable()))
     {
         ret = readyGziped();
-        if ( ret == 0 )
+        if (ret == 0)
         {
             pECache = m_pGziped;
             pECache->incRef();
@@ -802,22 +782,22 @@ int StaticFileCacheData::readyCacheData(
     }
     pECache = &m_fileData;
     pECache->incRef();
-    if (( m_fileData.isCached() ||
-        ( m_fileData.getfd() != -1 )))
+    if ((m_fileData.isCached() ||
+         (m_fileData.getfd() != -1)))
         return 0;
-    return m_fileData.readyData( pFileName );
+    return m_fileData.readyData(pFileName);
 }
 
 int StaticFileCacheData::release()
 {
     m_fileData.release();
-    if ( m_pGziped )
+    if (m_pGziped)
         m_pGziped->release();
     return 0;
 }
 
-void StaticFileCacheData::setUpdateStaticGzipFile( int enable, int level,
-                                    size_t min, size_t max )
+void StaticFileCacheData::setUpdateStaticGzipFile(int enable, int level,
+        size_t min, size_t max)
 {
     s_iAutoUpdateStaticGzip = enable;
     s_iGzipCompressLevel = level;
@@ -825,12 +805,12 @@ void StaticFileCacheData::setUpdateStaticGzipFile( int enable, int level,
     s_iMinFileSize      = min;
 }
 
-void StaticFileCacheData::setGzipCachePath( const char * pPath )
+void StaticFileCacheData::setGzipCachePath(const char *pPath)
 {
-    s_gzipCachePath = strdup( pPath );
+    s_gzipCachePath = strdup(pPath);
 }
 
-const char * StaticFileCacheData::getGzipCachePath()
+const char *StaticFileCacheData::getGzipCachePath()
 {
     return s_gzipCachePath;
 }

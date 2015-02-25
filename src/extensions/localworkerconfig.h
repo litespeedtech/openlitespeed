@@ -24,7 +24,7 @@
 class ConfigCtx;
 class LocalWorkerConfig : public ExtWorkerConfig
 {
-    char      * m_pCommand;
+    char       *m_pCommand;
     int         m_iBackLog;
     int         m_iInstances;
     int         m_iPriority;
@@ -32,22 +32,22 @@ class LocalWorkerConfig : public ExtWorkerConfig
     RLimits     m_rlimits;
 
 public:
-    explicit LocalWorkerConfig( const char * pName );
+    explicit LocalWorkerConfig(const char *pName);
     LocalWorkerConfig();
 
     ~LocalWorkerConfig();
 
-    LocalWorkerConfig( const LocalWorkerConfig& rhs );
-    
-    void setAppPath( const char * pPath );
-    void setBackLog( int backlog )
-    {   if ( backlog > 0 ) m_iBackLog = backlog;   }
+    LocalWorkerConfig(const LocalWorkerConfig &rhs);
 
-    void setInstances( int instances )
+    void setAppPath(const char *pPath);
+    void setBackLog(int backlog)
+    {   if (backlog > 0) m_iBackLog = backlog;   }
+
+    void setInstances(int instances)
     {   m_iInstances = instances;   }
 
 
-    const char * getCommand() const
+    const char *getCommand() const
     {   return m_pCommand;  }
 
     int getBackLog() const
@@ -55,25 +55,25 @@ public:
 
     int getInstances() const
     {   return m_iInstances;    }
-    
+
     void beginConfig();
     void endConfig();
 
     int getRunOnStartUp() const     {   return m_iRunOnStartUp;  }
-    void setRunOnStartUp( int r )   {   m_iRunOnStartUp = r;     }  
+    void setRunOnStartUp(int r)   {   m_iRunOnStartUp = r;     }
 
-    void setRLimits( const RLimits * pRLimits );
-    const RLimits* getRLimits() const    {   return &m_rlimits;   }
-    RLimits* getRLimits()           {   return &m_rlimits;   }
-    
+    void setRLimits(const RLimits *pRLimits);
+    const RLimits *getRLimits() const    {   return &m_rlimits;   }
+    RLimits *getRLimits()           {   return &m_rlimits;   }
+
     int getPriority() const         {   return m_iPriority; }
-    void setPriority( int p)        {   m_iPriority = p;    }
+    void setPriority(int p)        {   m_iPriority = p;    }
 
 
     int isProcPerConn() const       {   return m_iInstances >= getMaxConns();   }
-    int checkExtAppSelfManagedAndFixEnv( );
-    int config( const XmlNode *pNode );
-    void configExtAppUserGroup(  const XmlNode *pNode, int iType );
+    int checkExtAppSelfManagedAndFixEnv();
+    int config(const XmlNode *pNode);
+    void configExtAppUserGroup(const XmlNode *pNode, int iType);
 };
 
 #endif

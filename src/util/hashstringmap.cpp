@@ -19,17 +19,17 @@
 
 struct HashStringMapSyntaxChecker
 {
-    const char * pKey;
+    const char *pKey;
     void checkHashStringMapSyntax()
     {
         HashStringMapSyntaxChecker checker;
         HashStringMap< HashStringMapSyntaxChecker * > intlookup;
         intlookup.begin();
         intlookup.end();
-        intlookup.insert( "ABC", &checker );
-        intlookup.update( "CDE", &checker );
-        intlookup.find( "ABC" );
-        intlookup.remove( "ABC" );
+        intlookup.insert("ABC", &checker);
+        intlookup.update("CDE", &checker);
+        intlookup.find("ABC");
+        intlookup.remove("ABC");
         intlookup.release_objects();
     }
 };

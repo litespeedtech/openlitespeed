@@ -23,76 +23,75 @@
 
 // For Linux, need to get IPv6 address info from /proc/net/if_inet6
 //    sample: 00000000000000000000000000000001 01 80 10 80 lo
-//    
+//
 //    fields: address, index, prefix length, scope
 //    (net/ipv6.h), interface flags (linux/rtnetlink.h), interface name.
- 
-struct ifi_info * parse_proc_net()
+
+struct ifi_info *parse_proc_net()
 {
     struct ifi_info   *ifi, *ifihead, **ifipnext;
     int fd;
     char achBuf[8192];
-    fd = nio_open( "/proc/net/if_inet6", O_RDONLY, 0644 );
-    if ( fd == -1 )
-    {
+    fd = nio_open("/proc/net/if_inet6", O_RDONLY, 0644);
+    if (fd == -1)
         return NULL;
-    }
     int ret, total = 0;
-    while( (ret = nio_read( fd, &achBuf[total], sizeof( achBuf ) - total - 1 )) > 0 )
+    while ((ret = nio_read(fd, &achBuf[total],
+                           sizeof(achBuf) - total - 1)) > 0)
     {
         total += ret;
-        if ( total >= (int)sizeof( achBuf ) - 1 )
+        if (total >= (int)sizeof(achBuf) - 1)
             break;
     }
-    nio_close( fd );
-    
+    nio_close(fd);
+
     struct sockaddr_in6 addr;
-    char * pEnd = &achBuf[total];
-    char * pLineEnd;
-    char * p = achBuf;
+    char *pEnd = &achBuf[total];
+    char *pLineEnd;
+    char *p = achBuf;
     *pEnd = 0;
     addr.sin6_family = AF_INET6;
-    
+
     ifihead = NULL;
     ifipnext = &ifihead;
-    while( p < pEnd )
+    while (p < pEnd)
     {
-        pLineEnd = strchr( p, '\n' );
-        if ( !pLineEnd )
+        pLineEnd = strchr(p, '\n');
+        if (!pLineEnd)
             pLineEnd = pEnd;
         *pLineEnd = 0;
-        if ( pLineEnd - p > 45 )
-        {    
+        if (pLineEnd - p > 45)
+        {
             int index, prefix, scope, flag;
             char achName[256];
-            StringTool::hexDecode( p, 32, (char *)&addr.sin6_addr );
-            if ( sscanf( p + 32, " %x %x %x %x %s", &index, &prefix, 
-                    &scope, &flag, achName ) == 5 )
+            StringTool::hexDecode(p, 32, (char *)&addr.sin6_addr);
+            if (sscanf(p + 32, " %x %x %x %x %s", &index, &prefix,
+                       &scope, &flag, achName) == 5)
             {
-                if ( scope != 32 )
+                if (scope != 32)
                 {
                     ifi = (struct ifi_info *)calloc(1, sizeof(struct ifi_info));
                     *ifipnext = ifi;            /* prev points to this new one */
                     ifipnext = &ifi->ifi_next;    /* pointer to next one goes here */
-            
+
                     ifi->ifi_flags = flag;        /* IFF_xxx values */
                     memmove(ifi->ifi_name, achName, IFI_NAME);
-                    ifi->ifi_name[IFI_NAME-1] = '\0';
-                    if (ifi->ifi_addr == NULL) 
+                    ifi->ifi_name[IFI_NAME - 1] = '\0';
+                    if (ifi->ifi_addr == NULL)
                     {
                         ifi->ifi_addr = (sockaddr *)calloc(1, sizeof(struct sockaddr_in6));
                         memmove(ifi->ifi_addr, &addr, sizeof(struct sockaddr_in6));
-                    }            
-                    
+                    }
+
                 }
-            } 
+            }
         }
-        
+
         p = pLineEnd + 1;
     }
-    return ifihead;    
+    return ifihead;
 
-} 
+}
 
 struct ifi_info *
 NICDetect::get_ifi_info(int family, int doaliases)
@@ -103,23 +102,23 @@ NICDetect::get_ifi_info(int family, int doaliases)
     struct ifconf       ifc;
     struct ifreq        *ifr, ifrcopy;
     struct sockaddr_in  *sinptr;
-    if ( family == AF_INET6 )
-        return parse_proc_net(); 
+    if (family == AF_INET6)
+        return parse_proc_net();
     sockfd = ::socket(AF_INET, SOCK_DGRAM, 0);
 
     len = 100 * IFRSIZE;    /* initial buffer size guess */
-    for ( ; ; )
+    for (; ;)
     {
         buf = (char *)malloc(len);
-        if ( buf )
+        if (buf)
         {
             ifc.ifc_len = len;
             ifc.ifc_buf = buf;
             if (ioctl(sockfd, SIOCGIFCONF, &ifc) < 0)
             {
-                if (errno != EINVAL )
+                if (errno != EINVAL)
                 {
-                    close( sockfd );
+                    close(sockfd);
                     return NULL;
                 }
             }
@@ -133,7 +132,7 @@ NICDetect::get_ifi_info(int family, int doaliases)
         }
         else
         {
-            close( sockfd );
+            close(sockfd);
             return NULL;
         }
     }
@@ -141,16 +140,17 @@ NICDetect::get_ifi_info(int family, int doaliases)
     ifipnext = &ifihead;
     lastname[0] = 0;
     ifr = (struct ifreq *)buf;
-    for (; (char *)ifr < &buf[ifc.ifc_len]; ++ifr )
+    for (; (char *)ifr < &buf[ifc.ifc_len]; ++ifr)
     {
 
         if (ifr->ifr_addr.sa_family != family)
             continue;    /* ignore if not desired address family */
 
         myflags = 0;
-        if ( (cptr = strchr(ifr->ifr_name, ':')) != NULL)
-            *cptr = 0;        /* replace colon will null */
-        if (strncmp(lastname, ifr->ifr_name, IFNAMSIZ) == 0) {
+        if ((cptr = strchr(ifr->ifr_name, ':')) != NULL)
+            * cptr = 0;       /* replace colon will null */
+        if (strncmp(lastname, ifr->ifr_name, IFNAMSIZ) == 0)
+        {
             if (doaliases == 0)
                 continue;    /* already processed this interface */
             myflags = IFI_ALIAS;
@@ -170,18 +170,20 @@ NICDetect::get_ifi_info(int family, int doaliases)
         ifi->ifi_flags = flags;        /* IFF_xxx values */
         ifi->ifi_myflags = myflags;    /* IFI_xxx values */
         memmove(ifi->ifi_name, ifr->ifr_name, IFI_NAME);
-        ifi->ifi_name[IFI_NAME-1] = '\0';
+        ifi->ifi_name[IFI_NAME - 1] = '\0';
 
-        switch (ifr->ifr_addr.sa_family) 
+        switch (ifr->ifr_addr.sa_family)
         {
         case AF_INET:
             sinptr = (struct sockaddr_in *) &ifr->ifr_addr;
-            if (ifi->ifi_addr == NULL) {
+            if (ifi->ifi_addr == NULL)
+            {
                 ifi->ifi_addr = (sockaddr *)calloc(1, sizeof(struct sockaddr_in));
                 memmove(ifi->ifi_addr, sinptr, sizeof(struct sockaddr_in));
 
 #ifdef    SIOCGIFBRDADDR
-                if (flags & IFF_BROADCAST) {
+                if (flags & IFF_BROADCAST)
+                {
                     ioctl(sockfd, SIOCGIFBRDADDR, &ifrcopy);
                     sinptr = (struct sockaddr_in *) &ifrcopy.ifr_broadaddr;
                     ifi->ifi_brdaddr = (sockaddr *)calloc(1, sizeof(struct sockaddr_in));
@@ -190,7 +192,8 @@ NICDetect::get_ifi_info(int family, int doaliases)
 #endif
 
 #ifdef    SIOCGIFDSTADDR
-                if (flags & IFF_POINTOPOINT) {
+                if (flags & IFF_POINTOPOINT)
+                {
                     ioctl(sockfd, SIOCGIFDSTADDR, &ifrcopy);
                     sinptr = (struct sockaddr_in *) &ifrcopy.ifr_dstaddr;
                     ifi->ifi_dstaddr = (sockaddr *)calloc(1, sizeof(struct sockaddr_in));
@@ -200,26 +203,26 @@ NICDetect::get_ifi_info(int family, int doaliases)
             }
             if ((flags & IFF_LOOPBACK) == 0)
             {
-                if ( !ioctl( sockfd, SIOCGIFHWADDR, &ifrcopy ) )
+                if (!ioctl(sockfd, SIOCGIFHWADDR, &ifrcopy))
                 {
-                    memmove(ifi->ifi_haddr, ifrcopy.ifr_hwaddr.sa_data, 6 );
+                    memmove(ifi->ifi_haddr, ifrcopy.ifr_hwaddr.sa_data, 6);
                     ifi->ifi_hlen = 6;
                 }
             }
             break;
         case AF_INET6:
-            if (ifi->ifi_addr == NULL) 
+            if (ifi->ifi_addr == NULL)
             {
                 ifi->ifi_addr = (sockaddr *)calloc(1, sizeof(struct sockaddr_in6));
                 memmove(ifi->ifi_addr, sinptr, sizeof(struct sockaddr_in6));
-            }            
+            }
             break;
         default:
             break;
         }
     }
-    close( sockfd );
+    close(sockfd);
     free(buf);
-    return(ifihead);    /* pointer to first structure in linked list */
+    return (ifihead);   /* pointer to first structure in linked list */
 }
 

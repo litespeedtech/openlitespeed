@@ -18,26 +18,26 @@
 #include "h2streampool.h"
 #include "h2stream.h"
 
-Pool H2StreamPool::s_pool; 
-void H2StreamPool::recycle( H2Stream* pStream )
+Pool H2StreamPool::s_pool;
+void H2StreamPool::recycle(H2Stream *pStream)
 {
-    s_pool.recycle( pStream );    
+    s_pool.recycle(pStream);
 }
 
-H2Stream* H2StreamPool::getH2Stream()
+H2Stream *H2StreamPool::getH2Stream()
 {
-    H2Stream * p = s_pool.get();
+    H2Stream *p = s_pool.get();
     return p;
 }
 
-void H2StreamPool::recycle( H2Stream** pStream, int n )
+void H2StreamPool::recycle(H2Stream **pStream, int n)
 {
-    s_pool.recycle( (void **)pStream, n );    
+    s_pool.recycle((void **)pStream, n);
 }
 
-int H2StreamPool::getH2Streams( H2Stream** pStream, int n)
+int H2StreamPool::getH2Streams(H2Stream **pStream, int n)
 {
-    int ret = s_pool.get( pStream, n);
+    int ret = s_pool.get(pStream, n);
     return ret;
 }
 

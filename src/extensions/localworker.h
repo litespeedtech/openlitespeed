@@ -27,8 +27,8 @@ class LocalWorker : public ExtWorker
 {
     int                 m_fdApp;
     int                 m_sigGraceStop;
-    PidList           * m_pidList;
-    PidList           * m_pidListStop;
+    PidList            *m_pidList;
+    PidList            *m_pidListStop;
 
     void        moveToStopList();
 public:
@@ -36,36 +36,36 @@ public:
 
     ~LocalWorker();
 
-    LocalWorkerConfig& getConfig() const;
+    LocalWorkerConfig &getConfig() const;
 
-    PidList * getPidList() const    {   return m_pidList;   }
-    void    addPid( pid_t pid );
-    void    removePid( pid_t pid);
-    int     startOnDemond( int force);
+    PidList *getPidList() const    {   return m_pidList;   }
+    void    addPid(pid_t pid);
+    void    removePid(pid_t pid);
+    int     startOnDemond(int force);
 
     void    cleanStopPids();
     void detectDiedPid();
 
-    void setfd( int fd )            {   m_fdApp = fd;       }
+    void setfd(int fd)            {   m_fdApp = fd;       }
     int getfd() const               {   return m_fdApp;     }
 
     int selfManaged() const;
 
     int runOnStartUp();
-    
+
     void removeUnixSocket();
     int getCurInstances() const;
     int stop();
-    void moveToStopList( int pid );
+    void moveToStopList(int pid);
     int tryRestart();
     int restart();
     int addNewProcess();
 
     int startWorker();
-    
-    static int workerExec( LocalWorkerConfig& config, int fd );
-    static void configRlimit(RLimits* pRLimits, const XmlNode *pNode );
-    
+
+    static int workerExec(LocalWorkerConfig &config, int fd);
+    static void configRlimit(RLimits *pRLimits, const XmlNode *pNode);
+
 };
 
 #endif

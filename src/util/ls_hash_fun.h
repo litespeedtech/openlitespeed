@@ -31,7 +31,8 @@
 
 /*
 
- static long mix_master[/* 0:255 */]  = {
+ static long mix_master[/* 0:255 */]  =
+{
     /* 000 */ 0x7043a46fL, 0x6e7eac19L, 0xcf055952L,
     /*     */ 0xbf010101L, 0x128e8a64L,
     /* 005 */ 0x8adcfef2L, 0x42e20c6cL, 0xb1095c58L,
@@ -134,18 +135,18 @@
     /*     */ 0x5581fbb8L, 0x728a05cbL,
     /* 250 */ 0x64a31712L, 0xc2f6acfaL, 0x6e560b10L,
     /*     */ 0x9d8d7ce1L, 0x0d2b2adeL, 0x0bbaa936L
-              };
+};
 
 
-inline size_t my_hash_string(const char * arg)
+inline size_t my_hash_string(const char *arg)
 {
     register unsigned long h = 0;
     register unsigned char ch = *arg;
-    for ( ; (ch = *arg) != 0 ; ++arg )
+    for (; (ch = *arg) != 0 ; ++arg)
     {
-       h = ((h<<1) | (h >> 31 )) ^
-           mix_master[ *arg ];
+        h = ((h << 1) | (h >> 31)) ^
+            mix_master[ *arg ];
     }
     return h;
 }
-*/
+* /

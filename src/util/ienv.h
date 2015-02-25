@@ -23,10 +23,10 @@ class IEnv
 public:
     IEnv() {}
     virtual ~IEnv() {}
-    int add( const char *name, const char *value )
-    {   return add( name, strlen( name ), value, strlen( value ) ); }
-    virtual int add( const char *name, size_t nameLen,
-            const char *value, size_t valLen ) = 0;
+    int add(const char *name, const char *value)
+    {   return add(name, strlen(name), value, strlen(value)); }
+    virtual int add(const char *name, size_t nameLen,
+                    const char *value, size_t valLen) = 0;
     virtual void clear() = 0;
 };
 

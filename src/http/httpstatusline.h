@@ -27,11 +27,11 @@
 class StatusLineString
 {
     int     m_iLineLen;
-    char*   m_pLine;
+    char   *m_pLine;
 public:
-    StatusLineString( int version, int code );
+    StatusLineString(int version, int code);
     int getLen() const          {   return m_iLineLen;  }
-    const char * get() const    {   return m_pLine;     }
+    const char *get() const    {   return m_pLine;     }
 };
 
 class HttpStatusLine
@@ -39,11 +39,11 @@ class HttpStatusLine
     static StatusLineString m_cache[2][SC_END];
     HttpStatusLine();
     ~HttpStatusLine();
-    
+
 public:
 
 
-    static const StatusLineString& getStatusLine( int ver, int code)
+    static const StatusLineString &getStatusLine(int ver, int code)
     {   return m_cache[ver][code];  }
 };
 

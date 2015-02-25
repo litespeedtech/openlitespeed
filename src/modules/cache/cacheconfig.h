@@ -41,31 +41,33 @@ public:
     CacheConfig();
 
     ~CacheConfig();
-    
-    void inherit( const CacheConfig * pParent );
-    void setConfigBit( int bit, int enable )
-    {   m_iCacheConfigBits |= bit;
-        m_iCacheFlag = (m_iCacheFlag & ~bit) | ((enable)?bit:0); }
-    
-    void setDefaultAge( int age )       {   m_defaultAge = age;     }
+
+    void inherit(const CacheConfig *pParent);
+    void setConfigBit(int bit, int enable)
+    {
+        m_iCacheConfigBits |= bit;
+        m_iCacheFlag = (m_iCacheFlag & ~bit) | ((enable) ? bit : 0);
+    }
+
+    void setDefaultAge(int age)       {   m_defaultAge = age;     }
     int  getDefaultAge() const          {   return m_defaultAge;    }
-    
-    void setPrivateAge( int age )       {   m_privateAge = age;     }
+
+    void setPrivateAge(int age)       {   m_privateAge = age;     }
     int  getPrivateAge() const          {   return m_privateAge;    }
 
-    void setMaxStale( int age )         {   m_iMaxStale = age;       }
+    void setMaxStale(int age)         {   m_iMaxStale = age;       }
     int  getMaxStale() const            {   return m_iMaxStale;      }
-    
-    void setStoragePath( const char * s, int len){   m_sStoragePath.setStr(s, len);    }
-    const char* getStoragePath() const  {   return m_sStoragePath.c_str(); }
+
+    void setStoragePath(const char *s, int len) {   m_sStoragePath.setStr(s, len);    }
+    const char *getStoragePath() const  {   return m_sStoragePath.c_str(); }
 
     int  isPrivateEnabled() const   {   return m_iCacheFlag & CACHE_PRIVATE_ENABLED;    }
-    int  isPublicPrivateEnabled() const 
-    {   return m_iCacheFlag & ( CACHE_PRIVATE_ENABLED | CACHE_ENABLED ); }
+    int  isPublicPrivateEnabled() const
+    {   return m_iCacheFlag & (CACHE_PRIVATE_ENABLED | CACHE_ENABLED); }
     int  isEnabled() const          {   return m_iCacheFlag & CACHE_ENABLED; }
-    int  isSet( int bit ) const     {   return m_iCacheFlag & bit;     }
-    int  getConfigBits( int bit) const  {   return m_iCacheConfigBits & bit; }
-    void apply( const CacheConfig * pParent );
+    int  isSet(int bit) const     {   return m_iCacheFlag & bit;     }
+    int  getConfigBits(int bit) const  {   return m_iCacheConfigBits & bit; }
+    void apply(const CacheConfig *pParent);
 
 private:
 

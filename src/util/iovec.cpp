@@ -23,46 +23,44 @@
 int IOVec::bytes() const
 {
     int total = 0;
-    const struct iovec * p;
-    for( p = begin(); p != end(); ++p )
-    {
+    const struct iovec *p;
+    for (p = begin(); p != end(); ++p)
         total += p->iov_len;
-    }
     return total;
 }
 
-int IOVec::shrinkTo( unsigned int newSize, unsigned int additional )
+int IOVec::shrinkTo(unsigned int newSize, unsigned int additional)
 {
     iterator iter, iterEnd = end();
     unsigned int all = newSize + additional;
     unsigned int total = 0;
-    for( iter = begin(); iter != iterEnd; ++iter )
+    for (iter = begin(); iter != iterEnd; ++iter)
     {
-        if ( total + iter->iov_len > all )
+        if (total + iter->iov_len > all)
         {
             iter->iov_len = newSize - total;
-            if ( *((char *)iter->iov_base + iter->iov_len ) == '\n' )
+            if (*((char *)iter->iov_base + iter->iov_len) == '\n')
                 ++(iter->iov_len);
         }
         total += iter->iov_len;
-        if ( total >= newSize  )
-            break;            
+        if (total >= newSize)
+            break;
     }
-    if ( iter != iterEnd )
+    if (iter != iterEnd)
     {
         ++iter;
         m_pEnd = iter;
         //erase( iter, iterEnd );
     }
-    return total; 
+    return total;
 }
 
 
-int IOVec::finish( int &finishedLen )
+int IOVec::finish(int &finishedLen)
 {
-    while( m_pEnd > m_pBegin )
+    while (m_pEnd > m_pBegin)
     {
-        if ( (int)m_pBegin->iov_len > finishedLen )
+        if ((int)m_pBegin->iov_len > finishedLen)
         {
             m_pBegin->iov_len -= finishedLen;
             m_pBegin->iov_base = (char *)(m_pBegin->iov_base) + finishedLen;
@@ -79,16 +77,14 @@ int IOVec::finish( int &finishedLen )
     return 0;
 }
 
-void IOVec::adjust( const char* pOld, const char* pNew, int len )
+void IOVec::adjust(const char *pOld, const char *pNew, int len)
 {
     iterator iter, iterEnd = end();
-    for( iter = begin(); iter != iterEnd; ++iter )
+    for (iter = begin(); iter != iterEnd; ++iter)
     {
-        if ( iter->iov_base >= pOld && iter->iov_base < pOld + len )
-        {
-            iter->iov_base = (char *)iter->iov_base + (pNew - pOld);  
-        }
-    }    
+        if (iter->iov_base >= pOld && iter->iov_base < pOld + len)
+            iter->iov_base = (char *)iter->iov_base + (pNew - pOld);
+    }
 }
 
 

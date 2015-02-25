@@ -26,21 +26,21 @@ class Appender;
 END_LOG4CXX_NS
 
 class Multiplexer;
-class StdErrLogger : public EventReactor 
+class StdErrLogger : public EventReactor
 {
     int m_iEnabled;
     int m_fdStdErr;
-    LOG4CXX_NS::Appender * m_pAppender;
-public: 
+    LOG4CXX_NS::Appender *m_pAppender;
+public:
     StdErrLogger();
     ~StdErrLogger();
-    int setLogFileName( const char * pName );
-    const char * getLogFileName() const;
-    virtual int handleEvents( short event );
+    int setLogFileName(const char *pName);
+    const char *getLogFileName() const;
+    virtual int handleEvents(short event);
     int getStdErr() const   {   return m_fdStdErr;    }
-    int initLogger( Multiplexer * pMultiplexer);
-	LOG4CXX_NS::Appender * getAppender() const {	return m_pAppender; }
-	int isEnabled() const   {   return m_iEnabled;  }
+    int initLogger(Multiplexer *pMultiplexer);
+    LOG4CXX_NS::Appender *getAppender() const {    return m_pAppender; }
+    int isEnabled() const   {   return m_iEnabled;  }
 };
 
 #endif

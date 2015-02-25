@@ -16,7 +16,7 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #ifdef RUN_TEST
- 
+
 #include "base64test.h"
 #include <util/base64.h>
 
@@ -24,24 +24,24 @@
 #include <string.h>
 #include "test/unittest-cpp/UnitTest++/src/UnitTest++.h"
 
-TEST( Base64Test_test)
+TEST(Base64Test_test)
 {
-    const char * pEncoded = "QWxhZGRpbjpvcGVuIHNlc2FtZQ==";
+    const char *pEncoded = "QWxhZGRpbjpvcGVuIHNlc2FtZQ==";
     char achDecoded[50];
-    const char * pResult = "Aladdin:open sesame";
-    CHECK( -1 != Base64::decode( pEncoded, 50, achDecoded ) );
-    CHECK( 0 == strcmp( pResult, achDecoded ) );
-    
+    const char *pResult = "Aladdin:open sesame";
+    CHECK(-1 != Base64::decode(pEncoded, 50, achDecoded));
+    CHECK(0 == strcmp(pResult, achDecoded));
+
     const char *pDecoded = "Aladdin:open sesame";
     char achEncoded[50];
     unsigned int len = Base64::encode(pDecoded, strlen(pDecoded), achEncoded);
     achEncoded[len] = 0;
     printf("%s\n", achEncoded);
-    
-    CHECK (len == strlen(pEncoded));
-    CHECK (0 == memcmp(achEncoded, pEncoded, len));
-    
-    
+
+    CHECK(len == strlen(pEncoded));
+    CHECK(0 == memcmp(achEncoded, pEncoded, len));
+
+
 }
 
 #endif

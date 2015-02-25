@@ -26,13 +26,13 @@
 #include <assert.h>
 
 
-PollfdReactor::PollfdReactor( )
-    : m_pfds( NULL )
-    , m_pReactors( NULL )
-    , m_pEnd( NULL )
-    , m_pStoreEnd( NULL )
-    , m_iFirstRecycled( 65535 )
-    , m_priHandler( NULL )
+PollfdReactor::PollfdReactor()
+    : m_pfds(NULL)
+    , m_pReactors(NULL)
+    , m_pEnd(NULL)
+    , m_pStoreEnd(NULL)
+    , m_iFirstRecycled(65535)
+    , m_priHandler(NULL)
 {
 }
 
@@ -42,28 +42,28 @@ PollfdReactor::~PollfdReactor()
 }
 
 /** No descriptions */
-int PollfdReactor::allocate( int capacity )
+int PollfdReactor::allocate(int capacity)
 {
-    EventReactor **clients= (EventReactor **) realloc(m_pReactors,
-                        capacity * sizeof(EventReactor *));
+    EventReactor **clients = (EventReactor **) realloc(m_pReactors,
+                             capacity * sizeof(EventReactor *));
     if (!clients)
         return -1;
     m_pReactors = clients;
     struct pollfd *pfds = (struct pollfd *) realloc(m_pfds,
-                        capacity * sizeof(struct pollfd));
+                          capacity * sizeof(struct pollfd));
     if (!pfds)
         return -1;
-    m_pCur = pfds + ( m_pCur - m_pfds );
-    m_pEnd = pfds + ( m_pEnd - m_pfds );
+    m_pCur = pfds + (m_pCur - m_pfds);
+    m_pEnd = pfds + (m_pEnd - m_pfds);
     m_pfds = pfds;
     m_pStoreEnd = m_pfds + capacity;
-    memset( m_pEnd, 0, sizeof( struct pollfd) * (m_pStoreEnd - m_pEnd ) );
-    EventReactor ** pEnd = m_pReactors + ( m_pEnd - m_pfds );
-    while( clients < pEnd )
-        (*clients++)->setPollfd( pfds++ );
-    memset( pEnd, 0, sizeof( EventReactor *) * ( m_pStoreEnd - m_pEnd ) );
+    memset(m_pEnd, 0, sizeof(struct pollfd) * (m_pStoreEnd - m_pEnd));
+    EventReactor **pEnd = m_pReactors + (m_pEnd - m_pfds);
+    while (clients < pEnd)
+        (*clients++)->setPollfd(pfds++);
+    memset(pEnd, 0, sizeof(EventReactor *) * (m_pStoreEnd - m_pEnd));
     pfds = m_pEnd;
-    while( pfds < m_pStoreEnd )
+    while (pfds < m_pStoreEnd)
         (pfds++)->fd = -1;
     return 0;
 }
@@ -73,12 +73,12 @@ int PollfdReactor::deallocate()
 {
     m_pStoreEnd = NULL;
     m_pEnd = NULL;
-    if ( m_pReactors )
+    if (m_pReactors)
     {
         free(m_pReactors);
         m_pReactors = NULL;
     }
-    if ( m_pfds )
+    if (m_pfds)
     {
         free(m_pfds);
         m_pfds = NULL;
@@ -89,21 +89,21 @@ int PollfdReactor::deallocate()
 int PollfdReactor::grow()
 {
     int n = (m_pStoreEnd - m_pfds) * 2;
-    if ( n == 0 )
+    if (n == 0)
         n = DEFAULT_CAPACITY;
-    return allocate( n );
+    return allocate(n);
 }
 
 
-int PollfdReactor::remove( EventReactor *pHandler )
+int PollfdReactor::remove(EventReactor *pHandler)
 {
-    struct pollfd * pRm = pHandler->getPollfd();
+    struct pollfd *pRm = pHandler->getPollfd();
     int fd = pHandler->getfd();
-    pHandler->setPollfd( NULL );
+    pHandler->setPollfd(NULL);
     //assert( pRm == m_pCur );
-    if (( pRm >= m_pfds )&&( pRm < m_pEnd)&&(fd == pRm->fd))
+    if ((pRm >= m_pfds) && (pRm < m_pEnd) && (fd == pRm->fd))
     {
-        if ( pRm->revents )
+        if (pRm->revents)
         {
             pRm->revents = 0;
             --m_iEvents;
@@ -111,10 +111,10 @@ int PollfdReactor::remove( EventReactor *pHandler )
         pRm->fd = -1;
         m_pReactors[pRm - m_pfds] = NULL;
 
-        if ( pRm == m_pEnd - 1)
+        if (pRm == m_pEnd - 1)
         {
             --m_pEnd;
-            while( m_pEnd > m_pfds && m_pEnd[-1].fd == -1 )
+            while (m_pEnd > m_pfds && m_pEnd[-1].fd == -1)
                 --m_pEnd;
         }
         else

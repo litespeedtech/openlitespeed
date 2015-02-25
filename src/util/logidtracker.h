@@ -24,13 +24,13 @@ class LogIdTracker
 {
     static char  s_sLogId[128];
     static int   s_iIdLen;
-    
+
     AutoStr m_sOldId;
 public:
-    LogIdTracker( const char * pNewId )
+    LogIdTracker(const char *pNewId)
     {
         m_sOldId = getLogId();
-        setLogId( pNewId );
+        setLogId(pNewId);
     }
     LogIdTracker()
     {
@@ -38,23 +38,23 @@ public:
     }
     ~LogIdTracker()
     {
-        setLogId( m_sOldId.c_str() );
+        setLogId(m_sOldId.c_str());
     }
-    static const char * getLogId()
+    static const char *getLogId()
     {   return s_sLogId;    }
-    
-    static void setLogId( const char * pId )
+
+    static void setLogId(const char *pId)
     {
-        strncpy( s_sLogId, pId, sizeof( s_sLogId ) - 1 );
-        s_sLogId[ sizeof( s_sLogId ) - 1 ] = 0;
-        s_iIdLen = strlen( s_sLogId ); 
+        strncpy(s_sLogId, pId, sizeof(s_sLogId) - 1);
+        s_sLogId[ sizeof(s_sLogId) - 1 ] = 0;
+        s_iIdLen = strlen(s_sLogId);
     }
-    
-    static void appendLogId( const char * pId )
+
+    static void appendLogId(const char *pId)
     {
-        strncpy( s_sLogId + s_iIdLen, pId, sizeof( s_sLogId ) -1 - s_iIdLen );
-        s_sLogId[ sizeof( s_sLogId ) - 1 ] = 0;
-        s_iIdLen += strlen( s_sLogId + s_iIdLen );
+        strncpy(s_sLogId + s_iIdLen, pId, sizeof(s_sLogId) - 1 - s_iIdLen);
+        s_sLogId[ sizeof(s_sLogId) - 1 ] = 0;
+        s_iIdLen += strlen(s_sLogId + s_iIdLen);
     }
 };
 
