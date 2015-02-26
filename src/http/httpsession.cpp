@@ -232,12 +232,13 @@ void HttpSession::logAccess(int cancelled)
             pVHost->logBytes(bytes);
         }
         if (((!cancelled) || (isRespHeaderSent()))
-            && pVHost->enableAccessLog())
+            && pVHost->enableAccessLog()
+            && shouldLogAccess())
             pVHost->logAccess(this);
         else
             setAccessLogOff();
     }
-    else if (m_pNtwkIOLink)
+    else if (m_pNtwkIOLink && shouldLogAccess())
         HttpLog::logAccess(NULL, 0, this);
 }
 
@@ -1879,8 +1880,7 @@ void HttpSession::closeConnection()
 
     m_request.keepAlive(0);
 
-    if (shouldLogAccess())
-        logAccess(getStream()->getFlag(HIO_FLAG_PEER_SHUTDOWN));
+    logAccess(getStream()->getFlag(HIO_FLAG_PEER_SHUTDOWN));
 
     if (m_pSubResp)
     {

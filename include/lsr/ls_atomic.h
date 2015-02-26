@@ -26,29 +26,6 @@
  */
 
 
-#define ls_atomic_f_add    __sync_fetch_and_add
-#define ls_atomic_f_sub    __sync_fetch_and_sub
-#define ls_atomic_f_or     __sync_fetch_and_or
-#define ls_atomic_f_and    __sync_fetch_and_and
-#define ls_atomic_f_xor    __sync_fetch_and_xor
-#define ls_atomic_f_nand   __sync_fetch_and_nand
-
-#define ls_atomic_add      __sync_add_and_fetch
-#define ls_atomic_sub      __sync_sub_and_fetch
-#define ls_atomic_or       __sync_or_and_fetch
-#define ls_atomic_and      __sync_and_and_fetch
-#define ls_atomic_xor      __sync_xor_and_fetch
-#define ls_atomic_nand     __sync_nand_and_fetch
-
-#define ls_atomic_cas      __sync_bool_compare_and_swap
-#define ls_atomic_casv     __sync_val_compare_and_swap
-
-#define ls_barrier         __sync_synchronize
-
-#define ls_atomic_lock_set     __sync_lock_test_and_set
-#define ls_atomic_lock_release __sync_lock_release
-
-
 typedef volatile int32_t ls_atom_32_t;
 typedef volatile int64_t ls_atom_64_t;
 typedef volatile int     ls_atom_int_t;
@@ -58,9 +35,6 @@ typedef volatile uint32_t ls_atom_u32_t;
 typedef volatile uint64_t ls_atom_u64_t;
 typedef volatile unsigned int    ls_atom_uint_t;
 typedef volatile unsigned long   ls_atom_ulong_t;
-
-#define LSR_ATOMIC_LOAD( v, px )  {   v = *px; ls_barrier();     }
-#define LSR_ATOMIC_STORE( pv, x ) {   ls_barrier(); *pv = x;     }
 
 typedef union
 {
@@ -85,6 +59,44 @@ typedef union
                      16
 #endif
                  ))) ls_atom_ptr_t;
+
+
+static inline int32_t ls_atomic_add(ls_atom_32_t *ptr, int32_t val)
+{   return __sync_add_and_fetch(ptr, val);  }
+
+static inline int32_t ls_atomic_sub(ls_atom_32_t *ptr, int32_t val)
+{   return __sync_sub_and_fetch(ptr, val);  }
+
+static inline int32_t ls_atomic_set(ls_atom_32_t *ptr, int32_t val)
+{   return __sync_lock_test_and_set(ptr, val);  }
+
+static inline void ls_atomic_clr(ls_atom_32_t *p)
+{   __sync_lock_release(p);  }
+
+static inline uint8_t ls_atomic_cas(ls_atom_32_t *ptr, int32_t oldval, int32_t newval)
+{   return __sync_bool_compare_and_swap(ptr, oldval, newval);  }
+
+static inline int32_t ls_atomic_casv(ls_atom_32_t *ptr, int32_t oldval, int32_t newval)
+{   return __sync_val_compare_and_swap(ptr, oldval, newval);  }
+
+static inline void *ls_atomic_setptr(void **ptr, void *val)
+{   return __sync_lock_test_and_set(ptr, val);  }
+
+static inline void ls_atomic_clrptr(void **p)
+{   __sync_lock_release(p);  }
+
+static inline uint8_t ls_atomic_casptr(void **ptr, void *oldval, void *newval)
+{   return __sync_bool_compare_and_swap(ptr, oldval, newval);  }
+
+static inline void *ls_atomic_casvptr(void **ptr, void *oldval, void *newval)
+{   return __sync_val_compare_and_swap(ptr, oldval, newval);  }
+
+static inline void ls_barrier()
+{   __sync_synchronize();  }
+
+
+#define LSR_ATOMIC_LOAD( v, px )  {   v = *px; ls_barrier();     }
+#define LSR_ATOMIC_STORE( pv, x ) {   ls_barrier(); *pv = x;     }
 
 
 #if defined( __i386__ )

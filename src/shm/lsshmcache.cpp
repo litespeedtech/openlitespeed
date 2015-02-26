@@ -27,7 +27,6 @@
 #include <shm/lsshmpool.h>
 #include <shm/lsshmhash.h>
 #include <shm/lsshmcache.h>
-#include <http/httplog.h>
 
 
 //

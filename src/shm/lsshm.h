@@ -24,6 +24,7 @@
 #include <pthread.h>
 #include <sys/types.h>
 
+#include <lsdef.h>
 #include <util/hashstringmap.h>
 #include <shm/lsshmtypes.h>
 #include <shm/lsshmlock.h>
@@ -32,6 +33,12 @@
  * @file
  * LsShm - LiteSpeed Shared Memory
  */
+
+#define SHM_DBG(format, ...) \
+        LOG4CXX_NS::Logger::getRootLogger()->debug(format, ##__VA_ARGS__ )
+        
+#define SHM_NOTICE(format, ...) \
+        LOG4CXX_NS::Logger::getRootLogger()->notice(format, ##__VA_ARGS__ )
 
 
 #ifdef LSSHM_DEBUG_ENABLE

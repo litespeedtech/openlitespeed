@@ -25,15 +25,9 @@
 
 #include <shm/lsshmpool.h>
 #include <shm/lsshmhash.h>
-#include <http/httplog.h>
 #include <lsr/xxhash.h>
-#if 0
 #include <log4cxx/logger.h>
-#endif
 
-#ifdef DEBUG_RUN
-using namespace LOG4CXX_NS;
-#endif
 
 
 const uint8_t LsShmHash::s_bitMask[] =
@@ -198,7 +192,7 @@ void LsShmHash::remap()
         m_pTable = (LsShmHTable *)m_pPool->offset2ptr(m_iOffset);
 
 #if 0
-        HttpLog::notice(
+        SHM_NOTICE(
             "LsShmHash::remap %6d %X %X SIZE %X %X size %d cap %d [%d]",
             getpid(), m_pShmMap,
             m_pPool->getShmMap(),
@@ -226,7 +220,7 @@ void LsShmHash::remap()
     else
     {
 #ifdef DEBUG_RUN
-        HttpLog::notice(
+        SHM_NOTICE(
             "LsShmHash::remapXXX NOCHANGE %6d %X %X SIZE %X %X size %d cap %d",
             getpid(), m_pShmMap,
             m_pPool->getShmMap(),
@@ -391,7 +385,7 @@ LsShmHash::LsShmHash(LsShmPool *pool, const char *name, size_t init_size,
         m_iRef = 1;
         m_status = LSSHM_READY;
 #ifdef DEBUG_RUN
-        HttpLog::notice("LsShmHash::LsShmHash insert %s <%p>",
+        SHM_NOTICE("LsShmHash::LsShmHash insert %s <%p>",
                         m_pName, &m_objBase);
 #endif
         m_pPool->getShm()->getObjBase().insert(m_pName, this);
@@ -408,7 +402,7 @@ LsShmHash::~LsShmHash()
         if (m_iRef == 0)
         {
 #ifdef DEBUG_RUN
-            HttpLog::notice("LsShmHash::~LsShmHash remove %s <%p>",
+            SHM_NOTICE("LsShmHash::~LsShmHash remove %s <%p>",
                             m_pName, &m_objBase);
 #endif
             m_pPool->getShm()->getObjBase().remove(m_pName);
@@ -438,16 +432,16 @@ LsShmHash *LsShmHash::checkHTable(GHash::iterator itor, LsShmPool *pool,
 
 void LsShmHash::close()
 {
-    LsShmPool *p = NULL;
-    if (m_iPoolOwner != 0)
-    {
-        m_iPoolOwner = 0;
-        p = m_pPool;
-    }
+//     LsShmPool *p = NULL;
+//     if (m_iPoolOwner != 0)
+//     {
+//         m_iPoolOwner = 0;
+//         p = m_pPool;
+//     }
     if (downRef() == 0)
         delete this;
-    if (p != NULL)
-        p->close();
+//     if (p != NULL)
+//         p->close();
 }
 
 
@@ -494,7 +488,7 @@ int LsShmHash::rehash()
     int newSize = s_primeList[range + m_pTable->x_iGrowFactor];
 
 #ifdef DEBUG_RUN
-    HttpLog::notice("LsShmHash::rehash %6d %X %X size %d cap %d NEW %d",
+    SHM_NOTICE("LsShmHash::rehash %6d %X %X size %d cap %d NEW %d",
                     getpid(), m_pShmMap, m_pPool->getShmMap(),
                     m_pTable->x_iSize,
                     m_pTable->x_iCapacity,
@@ -584,7 +578,7 @@ void LsShmHash::eraseIteratorHelper(iterator iter)
 #ifdef DEBUG_RUN
     if (offset == 0)
     {
-        HttpLog::notice(
+        SHM_NOTICE(
             "LsShmHash::eraseIteratorHelper %6d %X %X size %d cap %d",
             getpid(), m_pShmMap, m_pPool->getShmMap(),
             m_pTable->x_iSize,
@@ -628,7 +622,7 @@ LsShmHash::iterator LsShmHash::find2(
     LsShmHIdx *pIdx = m_pIdxStart + getIndex(key, m_pTable->x_iCapacity);
 
 #ifdef DEBUG_RUN
-    HttpLog::notice("LsShmHash::find %6d %X %X size %d cap %d <%p> %d",
+    SHM_NOTICE("LsShmHash::find %6d %X %X size %d cap %d <%p> %d",
                     getpid(), m_pShmMap, m_pPool->getShmMap(),
                     m_pTable->x_iSize,
                     m_pTable->x_iCapacity,
@@ -694,7 +688,7 @@ LsShmHash::iterator LsShmHash::insert2(
     setBitMapEnt(key);
 
 #ifdef DEBUG_RUN
-    HttpLog::notice("LsShmHash::insert %6d %X %X size %d cap %d <%p> %d",
+    SHM_NOTICE("LsShmHash::insert %6d %X %X size %d cap %d <%p> %d",
                     getpid(), m_pShmMap, m_pPool->getShmMap(),
                     m_pTable->x_iSize,
                     m_pTable->x_iCapacity,
@@ -930,7 +924,7 @@ LsShmHash::iterator LsShmHash::next(iterator iter)
                     || (xiter->x_hkey == 0)
                     || (xiter->x_iLen == 0))
                 {
-                    HttpLog::notice(
+                    SHM_NOTICE(
                         "LsShmHash::next PROBLEM %6d %X %X SIZE %X SLEEPING",
                         getpid(), m_pShmMap,
                         m_pPool->getShmMap(),

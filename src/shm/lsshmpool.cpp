@@ -25,16 +25,11 @@
 #include <shm/lsshmhash.h>
 #include <shm/lsshmlruhash.h>
 #include <shm/lsshm.h>
-#include <http/httplog.h>
-#if 0
 #include <log4cxx/logger.h>
-#endif
+
 
 #define MIN_POOL_DATAUNITSIZE   8
 
-#ifdef DEBUG_RUN
-using namespace LOG4CXX_NS;
-#endif
 
 
 LsShmStatus_t LsShmPool::createStaticData(const char *name)
@@ -197,7 +192,7 @@ LsShmPool::LsShmPool(LsShm *shm, const char *name, LsShmPool *gpool)
         if (m_pPoolName != NULL)
         {
 #ifdef DEBUG_RUN
-            HttpLog::notice("LsShmPool::LsShmPool insert %s <%p>",
+            SHM_NOTICE("LsShmPool::LsShmPool insert %s <%p>",
                             m_pPoolName, &m_objBase);
 #endif
             m_pShm->getObjBase().insert(m_pPoolName, this);
@@ -213,7 +208,7 @@ LsShmPool::~LsShmPool()
     if (m_pPoolName != NULL)
     {
 #ifdef DEBUG_RUN
-        HttpLog::notice("LsShmPool::~LsShmPool remove %s <%p>",
+        SHM_NOTICE("LsShmPool::~LsShmPool remove %s <%p>",
                         m_pPoolName, &m_objBase);
 #endif
         m_pShm->getObjBase().remove(m_pPoolName);
@@ -233,7 +228,7 @@ LsShmHash *LsShmPool::getNamedHash(const char *name,
         name = LSSHM_SYSHASH;
     
 #ifdef DEBUG_RUN
-    HttpLog::notice("LsShmPool::getNamedHash find %s <%p>",
+    SHM_NOTICE("LsShmPool::getNamedHash find %s <%p>",
                     name, &getObjBase());
 #endif
     itor = getObjBase().find(name);
@@ -263,7 +258,7 @@ LsShmHash *LsShmPool::getNamedLruHash(const char *name,
         name = LSSHM_SYSHASH;
     
 #ifdef DEBUG_RUN
-    HttpLog::notice("LsShmPool::getNamedLruHash find %s <%p>",
+    SHM_NOTICE("LsShmPool::getNamedLruHash find %s <%p>",
                     name, &getObjBase());
 #endif
     itor = getObjBase().find(name);
@@ -293,7 +288,7 @@ LsShmHash *LsShmPool::getNamedXLruHash(const char *name,
         name = LSSHM_SYSHASH;
     
 #ifdef DEBUG_RUN
-    HttpLog::notice("LsShmPool::getNamedXLruHash find %s <%p>",
+    SHM_NOTICE("LsShmPool::getNamedXLruHash find %s <%p>",
                     name, &getObjBase());
 #endif
     itor = getObjBase().find(name);

@@ -22,9 +22,11 @@
 class debugBase;
 #endif
 
-#include <string.h>
+#include <lsdef.h>
 #include <shm/lsshmpool.h>
 #include <socket/gsockaddr.h>
+
+#include <string.h>
 
 /**
  * @file
@@ -529,7 +531,6 @@ protected:
     hash_find           m_find;
     hash_get            m_get;
 
-    int8_t              m_iPoolOwner;
     int8_t              m_iLockEnable;
     int8_t              m_iMode;        // mode 0=Num, 1=Ptr
     int8_t              m_notused;

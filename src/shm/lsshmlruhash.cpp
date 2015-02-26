@@ -23,11 +23,6 @@
 #include <shm/lsshmpool.h>
 #include <shm/lsshmhash.h>
 #include <shm/lsshmlruhash.h>
-#include <http/httplog.h>
-
-#ifdef DEBUG_RUN
-using namespace LOG4CXX_NS;
-#endif
 
 
 LsShmLruHash::LsShmLruHash(LsShmPool *pool, const char *name,

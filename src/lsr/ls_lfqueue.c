@@ -81,8 +81,7 @@ void ls_lfqueue_delete(ls_lfqueue_t *pThis)
 int ls_lfqueue_put(ls_lfqueue_t *pThis, ls_lfnodei_t *data)
 {
     data->next = NULL;
-    ls_lfnodei_t *prev =
-        ls_atomic_lock_set((ls_lfnodei_t **)&pThis->phead, data);
+    ls_lfnodei_t *prev = ls_atomic_setptr((void **)&pThis->phead, data);
     prev->next = data;
 
     return 0;
@@ -92,8 +91,7 @@ int ls_lfqueue_putn(
     ls_lfqueue_t *pThis, ls_lfnodei_t *data1, ls_lfnodei_t *datan)
 {
     datan->next = NULL;
-    ls_lfnodei_t *prev =
-        ls_atomic_lock_set((ls_lfnodei_t **)&pThis->phead, datan);
+    ls_lfnodei_t *prev = ls_atomic_setptr((void **)&pThis->phead, datan);
     prev->next = data1;
 
     return 0;
@@ -144,8 +142,8 @@ ls_lfnodei_t *ls_lfqueue_get(ls_lfqueue_t *pThis)
             if ((prev.m_ptr == tail.m_ptr)
                 && (prev.m_seq == tail.m_seq))
             {
-                ls_lfnodei_t *prevhead = (ls_lfnodei_t *)ls_atomic_casv(
-                                             (ls_lfnodei_t **)&pThis->phead, pnode, &pThis->tail.m_ptr);
+                ls_lfnodei_t *prevhead = (ls_lfnodei_t *)ls_atomic_casvptr(
+                                             (void **)&pThis->phead, pnode, (void *)&pThis->tail.m_ptr);
 
                 if (prevhead == pnode)
                     return pnode;
