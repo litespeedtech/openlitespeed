@@ -35,6 +35,7 @@
 #include <http/contextlist.h>
 #include <util/datetime.h>
 #include <http/eventdispatcher.h>
+#include <http/httpaiosendfile.h>
 #include <http/httpcgitool.h>
 #include <http/httpcontext.h>
 #include <http/httpdefs.h>

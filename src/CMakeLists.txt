@@ -95,7 +95,7 @@ SET(util_SRCS
    util/logidtracker.cpp
    util/datetime.cpp
    util/resourcepool.cpp
-   util/linkqueue.cpp
+   util/linkedqueue.cpp
    util/httputil.cpp
    util/misc/profiletime.cpp
    util/sysinfo/partitioninfo.cpp

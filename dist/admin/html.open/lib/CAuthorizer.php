@@ -259,7 +259,7 @@ class CAuthorizer
         $ip = $_SERVER['REMOTE_ADDR'] ;
         $url = UIBase::GrabGoodInput('server', 'SCRIPT_URI') ;
 
-        error_log("[WebAdmin Console] Failed Login Attempt - username: $authUser ip: $ip url: $url\n") ;
+        error_log("[WebAdmin Console] Failed Login Attempt - username:$authUser ip:$ip url:$url\n") ;
 
         $emails = Service::ServiceData(SInfo::DATA_ADMIN_EMAIL) ;
         if ( $emails != NULL ) {

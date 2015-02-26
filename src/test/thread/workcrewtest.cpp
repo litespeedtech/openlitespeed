@@ -53,7 +53,7 @@ TEST(THREAD_WORKCREW_TEST)
     for (i = 0; i < 50; ++i)
     {
         workcrewtest_t *wct = (workcrewtest_t *)ls_palloc(sizeof(workcrewtest_t));
-        wct->m_node.m_pNext = NULL;
+        wct->m_node.next = NULL;
         wct->m_val = i;
         CHECK(wc->addJob((ls_lfnodei_t *)((char *)wct + offsetof(workcrewtest_t,
                                           m_node))) == 0);
@@ -65,7 +65,7 @@ TEST(THREAD_WORKCREW_TEST)
     for (; i < 100; ++i)
     {
         workcrewtest_t *wct = (workcrewtest_t *)ls_palloc(sizeof(workcrewtest_t));
-        wct->m_node.m_pNext = NULL;
+        wct->m_node.next = NULL;
         wct->m_val = i;
         CHECK(wc->addJob((ls_lfnodei_t *)((char *)wct + offsetof(workcrewtest_t,
                                           m_node))) == 0);

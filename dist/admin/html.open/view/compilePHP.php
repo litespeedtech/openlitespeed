@@ -263,6 +263,7 @@ class CompilePHPUI
 		$tip = DMsg::GetAttrTip('configureparams')->Render();
 		$buf .= $this->form_group(DMsg::ALbl('buildphp_confparam'), true, $input, $tip, '', $err);
 
+        $input = '';
         if ($supported['mailheader']) {
             $input = $this->input_checkbox('addonMailHeader', $options->GetValue('AddOnMailHeader'),
                     '<a href="http://choon.net/php-mail-header.php" target="_blank">' . DMsg::ALbl('buildphp_mailheader1')

@@ -24,6 +24,10 @@
 #include <lsr/ls_lfqueue.h>
 #include <util/objarray.h>
 
+#ifndef LS_WORKCREW_LF
+#include <thread/pthreadworkqueue.h>
+#endif
+
 //#define LS_WORKCREW_DEBUG
 #ifdef LS_WORKCREW_DEBUG
 #include <stdio.h>
@@ -63,8 +67,12 @@ typedef void *(*WorkCrewProcessFn)(ls_lfnodei_t *item);
 
 class WorkCrew
 {
-    ls_lfqueue_t        *m_pJobQueue;
-    ls_lfqueue_t        *m_pFinishedQueue;
+#ifdef LS_WORKCREW_LF
+    ls_lfqueue_t       *m_pJobQueue;
+#else
+    PThreadWorkQueue   *m_pJobQueue;
+#endif
+    ls_lfqueue_t       *m_pFinishedQueue;
     EventNotifier      *m_pNotifier;
     TObjArray<Worker>   m_crew;
     WorkCrewProcessFn   m_pProcess;
@@ -105,7 +113,16 @@ private:
      */
     inline ls_lfnodei_t *getJob()
     {
+#ifdef LS_WORKCREW_LF
         return ls_lfqueue_get(m_pJobQueue);
+#else
+        int size = 1;
+        ls_lfnodei_t *pWork;
+        pWork = NULL;
+        if (m_pJobQueue->get(&pWork, size, 250) != 0)
+            return NULL;
+        return pWork;
+#endif
     }
 
     /** @putFinishedItem
@@ -114,7 +131,8 @@ private:
      */
     int putFinishedItem(ls_lfnodei_t *item)
     {
-        int ret = ls_lfqueue_put(m_pFinishedQueue, item);
+        int ret;
+        ret = ls_lfqueue_put(m_pFinishedQueue, item);
         if (m_pNotifier)
             m_pNotifier->notify();
         return ret;
@@ -133,7 +151,11 @@ public:
         , m_crew()
         , m_pProcess(NULL)
     {
+#ifdef LS_WORKCREW_LF
         m_pJobQueue = ls_lfqueue_new();
+#else
+        m_pJobQueue = new PThreadWorkQueue();
+#endif
     }
 
     /** @~WorkCrew
@@ -144,7 +166,11 @@ public:
     ~WorkCrew()
     {
         stopProcessing();
+#ifdef LS_WORKCREW_LF
         ls_lfqueue_delete(m_pJobQueue);
+#else
+        delete m_pJobQueue;
+#endif
     }
 
     /** @startJobProcessor
@@ -165,6 +191,9 @@ public:
         assert(processor && pFinishedQueue);
         m_pProcess = processor;
         m_pFinishedQueue = pFinishedQueue;
+#ifndef LS_WORKCREW_LF
+        m_pJobQueue->start();
+#endif
         return resize(numWorkers);
     }
 
@@ -176,6 +205,9 @@ public:
     inline void stopProcessing()
     {
         decreaseTo(0);
+#ifndef LS_WORKCREW_LF
+        m_pJobQueue->shutdown();
+#endif
         m_pFinishedQueue = NULL;
     }
 
@@ -202,7 +234,11 @@ public:
      */
     inline int addJob(ls_lfnodei_t *item)
     {
+#ifdef LS_WORKCREW_LF
         return ls_lfqueue_put(m_pJobQueue, item);
+#else
+        return m_pJobQueue->append(&item, 1);
+#endif
     }
 
 
