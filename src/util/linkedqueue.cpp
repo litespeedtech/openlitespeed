@@ -15,15 +15,15 @@
 *    You should have received a copy of the GNU General Public License       *
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
-#include <util/linkqueue.h>
+#include <util/linkedqueue.h>
 #include <lsdef.h>
 
-int LinkQueue::put(ls_lfnodei_t *pNode)
+int LinkedQueue::put(ls_lfnodei_t *pNode)
 {
     return ls_lfqueue_put(m_pQueue, pNode);
 }
 
-int LinkQueue::put(ls_lfnodei_t **pNodes, int size)
+int LinkedQueue::put(ls_lfnodei_t **pNodes, int size)
 {
     if (pNodes == NULL || size <= 0)
         return LS_FAIL;
@@ -37,12 +37,12 @@ int LinkQueue::put(ls_lfnodei_t **pNodes, int size)
     return size;
 }
 
-ls_lfnodei_t *LinkQueue::get()
+ls_lfnodei_t *LinkedQueue::get()
 {
     return ls_lfqueue_get(m_pQueue);
 }
 
-int LinkQueue::get(ls_lfnodei_t **pNodes, int size)
+int LinkedQueue::get(ls_lfnodei_t **pNodes, int size)
 {
     int iGot = 0;
     ls_lfnodei_t *ptr;

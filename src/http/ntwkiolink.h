@@ -23,7 +23,6 @@
 #include <edio/eventreactor.h>
 #include <http/clientinfo.h>
 #include <http/hiostream.h>
-#include <http/httpaiosendfile.h>
 
 #include <sslpp/sslconnection.h>
 #include <util/dlinkqueue.h>
@@ -36,6 +35,7 @@
 #include <lsiapi/lsimoduledata.h>
 #include <lsiapi/lsiapihooks.h>
 
+class Aiosfcb;
 class HttpListener;
 class VHostMap;
 class SSLConnection;

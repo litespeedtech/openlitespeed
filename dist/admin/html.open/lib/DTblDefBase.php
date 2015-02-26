@@ -203,7 +203,7 @@ class DTblDefBase
 			'extraHeaders' => DTblDefBase::NewTextAreaAttr('extraHeaders', DMsg::ALbl('l_extraHeaders'), 'cust', true, 2, NULL, 1, 1),
 
 			'scriptHandler_type' => DTblDefBase::NewSelAttr('type', DMsg::ALbl('l_handlertype'), $this->_options['scriptHandler'], false, 'shType',
-											  'onChange="document.confform.a.value=\'c\';document.confform.submit()"'),
+                        'onChange="lst_conf(\'c\')"'),
 
 			'scriptHandler' => DTblDefBase::NewSelAttr('handler', DMsg::ALbl('l_handlername'), 'extprocessor:$$type', false, 'shHandlerName'),
 

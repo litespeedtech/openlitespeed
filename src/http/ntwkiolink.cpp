@@ -21,6 +21,7 @@
 #include <edio/multiplexerfactory.h>
 #include <http/connlimitctrl.h>
 #include <util/datetime.h>
+#include <http/httpaiosendfile.h>
 #include <http/httplog.h>
 #include <http/httpsession.h>
 #include <http/httpresourcemanager.h>
@@ -261,7 +262,7 @@ int NtwkIOLink::setupHandler(HiosProtocol verSpdy)
     pHandler = HttpResourceManager::getInstance().getHioHandler(verSpdy);
     if (!pHandler)
         return LS_FAIL;
-    
+
     clearLogId();
     setProtocol(verSpdy);
     pHandler->assignStream(this);
@@ -272,11 +273,11 @@ int NtwkIOLink::setupHandler(HiosProtocol verSpdy)
 int NtwkIOLink::switchToHttp2Handler(HioHandler *pSession)
 {
     assert(pSession == getHandler());
-    HioHandler *pHandler = 
+    HioHandler *pHandler =
         HttpResourceManager::getInstance().getHioHandler(HIOS_PROTO_HTTP2);
     if (!pHandler)
         return LS_FAIL;
-    
+
     clearLogId();
     setProtocol(HIOS_PROTO_HTTP2);
     pHandler->assignStream(this);

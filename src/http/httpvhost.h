@@ -34,7 +34,6 @@
 #include <util/stringlist.h>
 
 #include <sys/types.h>
-#include <lsiapi/lsiapihooks.h>
 
 BEGIN_LOG4CXX_NS
 class Logger;

@@ -24,21 +24,21 @@
 
 #include <cstddef>
 
-class LinkQueue
+class LinkedQueue
 {
 private:
     ls_lfqueue_t *m_pQueue;
 
-    LinkQueue(const LinkQueue &rhs);
-    void operator=(LinkQueue &rhs);
+    LinkedQueue(const LinkedQueue &rhs);
+    void operator=(LinkedQueue &rhs);
 
 public:
-    LinkQueue()
+    LinkedQueue()
     {
         m_pQueue = ls_lfqueue_new();
     }
 
-    ~LinkQueue()
+    ~LinkedQueue()
     {
         ls_lfqueue_delete(m_pQueue);
     }

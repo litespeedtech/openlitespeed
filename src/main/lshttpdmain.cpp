@@ -885,7 +885,10 @@ int LshttpdMain::init(int argc, char *argv[])
         allocatePidTracker();
         m_pServer->initAdns();
         m_pServer->enableAioLogging();
-        m_pServer->initAioSendFile();
+        if ((HttpServerConfig::getInstance().getUseSendfile() == 0)
+            && (HttpServerConfig::getInstance().getUseAio())
+            && (m_pServer->initAioSendFile() != 0))
+            return LS_FAIL;
     }
     //if ( fcntl( 5, F_GETFD, 0 ) > 0 )
     //    printf( "find it!\n" );
@@ -1063,7 +1066,9 @@ int LshttpdMain::startChild(ChildProc *pProc)
         releaseExcept(pProc);
         m_pServer->reinitMultiplexer();
         m_pServer->enableAioLogging();
-        if (m_pServer->initAioSendFile())
+        if ((HttpServerConfig::getInstance().getUseSendfile() == 0)
+            && (HttpServerConfig::getInstance().getUseAio())
+            && (m_pServer->initAioSendFile() != 0))
             return LS_FAIL;
         close(m_fdAdmin);
         snprintf(argv0, 80, "openlitespeed (lshttpd - #%02d)", pProc->m_iProcNo);

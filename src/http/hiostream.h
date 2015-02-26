@@ -20,13 +20,13 @@
 
 #include <inttypes.h>
 #include <sys/types.h>
-#include <edio/aiosendfile.h>
 #include <edio/inputstream.h>
 #include <edio/outputstream.h>
 #include <util/logtracker.h>
 
 class IOVec;
 
+class Aiosfcb;
 class HioHandler;
 class HttpRespHeaders;
 class NtwkIOLink;
@@ -182,7 +182,7 @@ public:
     virtual int onTimerEx() = 0;
 
     virtual void recycle() = 0;
-    
+
     virtual void init(HiosProtocol ver) {};
     virtual void upgradedStream(HioHandler *) {};
 

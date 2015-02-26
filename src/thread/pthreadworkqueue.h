@@ -20,7 +20,7 @@
 
 #include <errno.h>
 #include <lsr/ls_lfqueue.h>
-#include <util/linkqueue.h>
+#include <util/linkedqueue.h>
 #include <thread/pthreadmutex.h>
 #include <thread/pthreadcond.h>
 #include <limits.h>
@@ -31,7 +31,7 @@ class PThreadWorkQueue
 private:
     PThreadMutex m_mutex;
     PThreadCond  m_ready;
-    LinkQueue    m_queue;
+    LinkedQueue    m_queue;
     bool         m_bShutdown;
     int          m_iWaiting;
 

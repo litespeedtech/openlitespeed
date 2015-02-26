@@ -17,35 +17,34 @@
 *****************************************************************************/
 #include "httpcontext.h"
 
+#include <extensions/extworker.h>
 #include <http/contextlist.h>
 #include <http/contexttree.h>
+#include <http/handlerfactory.h>
 #include <http/handlertype.h>
 #include <http/htauth.h>
 #include <http/httplog.h>
 #include <http/httpmime.h>
+#include <http/httpvhost.h>
 #include <http/phpconfig.h>
+#include <http/rewriteengine.h>
+#include <http/rewriterule.h>
 #include <http/rewriterulelist.h>
 #include <http/statusurlmap.h>
 #include <http/urimatch.h>
 #include <http/userdir.h>
-#include <http/rewriterule.h>
-#include <http/rewriteengine.h>
-#include <http/handlerfactory.h>
-#include "httpvhost.h"
-#include <extensions/extworker.h>
-
 #include <lsiapi/modulemanager.h>
-#include <util/configctx.h>
-#include <util/xmlnode.h>
+#include <lsr/ls_strtool.h>
 #include <util/accesscontrol.h>
+#include <util/configctx.h>
 #include <util/pool.h>
 #include <util/stringlist.h>
 #include <util/stringtool.h>
+#include <util/xmlnode.h>
 #include <ctype.h>
 #include <errno.h>
 #include <stdio.h>
 #include <string.h>
-#include <lsr/ls_strtool.h>
 
 CtxInt HttpContext::s_defaultInternal =
 {

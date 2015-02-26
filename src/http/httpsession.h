@@ -21,6 +21,7 @@
 
 #include <edio/aiooutputstream.h>
 #include <edio/aioeventhandler.h>
+#include <edio/aiosendfile.h>
 #include <edio/inputstream.h>
 #include <http/httpreq.h>
 #include <http/httpresp.h>
