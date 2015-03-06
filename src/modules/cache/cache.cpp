@@ -1156,9 +1156,8 @@ static int myhandler_process(lsi_session_t *session)
     }
 
     char *buff = NULL;
-    int needMMapping = 0;
-    if (myData->pEntry->getPart2Offset() - myData->pEntry->getPart1Offset() >
-        0)
+    char *pBuffOrg = NULL;
+    if (myData->pEntry->getPart2Offset() - myData->pEntry->getPart1Offset() > 0)
     {
 #ifdef CACHE_RESP_HEADER
         if (myData->m_pEntry->m_sRespHeader.len() > 0) //has it
@@ -1166,11 +1165,15 @@ static int myhandler_process(lsi_session_t *session)
         else
 #endif
         {
-            needMMapping = 1;
             buff  = (char *)mmap((caddr_t)0, myData->pEntry->getPart2Offset(),
                                  PROT_READ, MAP_SHARED, fd, 0);
             if (buff == (char *)(-1))
+            {
+                g_api->free_module_data(session, &MNAME, LSI_MODULE_DATA_HTTP,
+                                httpRelease);
                 return 500;
+            }
+            pBuffOrg = buff;
             buff += myData->pEntry->getPart1Offset();
         }
 
@@ -1188,8 +1191,8 @@ static int myhandler_process(lsi_session_t *session)
                                             LSI_HEADER_SET);
 
                 g_api->set_status_code(session, 304);
-                if (needMMapping)
-                    munmap((caddr_t)buff, myData->pEntry->getPart2Offset());
+                if (pBuffOrg)
+                    munmap((caddr_t)pBuffOrg, myData->pEntry->getPart2Offset());
                 g_api->free_module_data(session, &MNAME, LSI_MODULE_DATA_HTTP,
                                         httpRelease);
                 g_api->end_resp(session);
@@ -1255,8 +1258,8 @@ static int myhandler_process(lsi_session_t *session)
     else //HEAD
         g_api->end_resp(session);
 
-    if (needMMapping)
-        munmap((caddr_t)buff, myData->pEntry->getPart2Offset());
+    if (pBuffOrg)
+        munmap((caddr_t)pBuffOrg, myData->pEntry->getPart2Offset());
 
     g_api->free_module_data(session, &MNAME, LSI_MODULE_DATA_HTTP,
                             httpRelease);
