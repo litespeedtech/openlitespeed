@@ -18,6 +18,7 @@
 #include "hpack.h"
 //#include <assert.h>
 #include "stdio.h"
+#include <ctype.h>
 
 #define LS_STR_TO_IOVEC(a) (a), (sizeof(a) -1)
 #define MAX_HEADER_LENGTH   4096
@@ -5531,6 +5532,15 @@ unsigned char *Hpack::encHeader(unsigned char *dst, unsigned char *dstEnd,
     }
     else
     {
+        //Convert name to lower case to store it only when not in both table
+        char *pName = name;
+        char *pNameEnd = name + nameLen;
+        while (pName < pNameEnd)
+        {
+            *pName = tolower(*pName);
+            ++pName;
+        }
+        
         *dst++ = indexedPrefixNumber[indexedType];
         dst += encStr(dst, dstEnd - dst, (const unsigned char *)name, nameLen);
     }
