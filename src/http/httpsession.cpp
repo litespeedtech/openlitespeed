@@ -3169,8 +3169,10 @@ int HttpSession::sendStaticFileEx(SendFileInfo *pData)
 #if !defined( NO_SENDFILE )
     int fd = pData->getECache()->getfd();
     if (HttpServerConfig::getInstance().getUseSendfile() &&
-        pData->getECache()->getfd() != -1 && !isSSL()
-        && (!getGzipBuf() ||
+        fd != -1 &&
+        !isSSL() && 
+        !getStream()->isSpdy() &&
+        (!getGzipBuf() ||
             (pData->getECache() == pData->getFileData()->getGziped())))
     {
         len = writeRespBodySendFile(fd, pData->getCurPos(), pData->getRemain());

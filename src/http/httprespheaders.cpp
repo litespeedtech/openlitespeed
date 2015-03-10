@@ -22,6 +22,7 @@
 
 #include <socket/gsockaddr.h>
 #include <util/datetime.h>
+#include <ctype.h>
 
 //FIXME: need to update the comments
 /*******************************************************************************
@@ -171,7 +172,19 @@ int HttpRespHeaders::appendHeader(resp_kvpair *pKv, const char *pName,
 
     pUpdKv->keyOff = m_buf.size();
     pUpdKv->keyLen = nameLen;
+
     m_buf.appendNoCheck(pName, nameLen);
+    m_buf.used(-1 * nameLen);
+    //Convert name to lower case to store it
+    char *pCur = (char *)m_buf.end();
+    char *pNameEnd = pCur + nameLen;
+    while (pCur < pNameEnd)
+    {
+        *pCur = tolower(*pCur);
+        ++pCur;
+    }
+    m_buf.used(nameLen);
+    
     m_buf.appendNoCheck(": ", 2);
 
     if (pUpdKv->valLen > 0)  //only apply when append and merge

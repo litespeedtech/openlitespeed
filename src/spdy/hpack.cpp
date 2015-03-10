@@ -18,7 +18,6 @@
 #include "hpack.h"
 //#include <assert.h>
 #include "stdio.h"
-#include <ctype.h>
 
 #define LS_STR_TO_IOVEC(a) (a), (sizeof(a) -1)
 #define MAX_HEADER_LENGTH   4096
@@ -5473,10 +5472,10 @@ int Hpack::getStaticTableId(char *name, uint16_t name_len, char *val,
     for (i = 1 ; i < 16; ++i)
     {
         if (g_HPackStaticTable_t[i].val_len == val_len
-            && strncasecmp(val, g_HPackStaticTable_t[i].val, val_len) == 0)
+            && memcmp(val, g_HPackStaticTable_t[i].val, val_len) == 0)
         {
             if (g_HPackStaticTable_t[i].name_len == name_len
-                && strncasecmp(name, g_HPackStaticTable_t[i].name, name_len) == 0)
+                && memcmp(name, g_HPackStaticTable_t[i].name, name_len) == 0)
             {
                 val_matched = 1;
                 return i + 1;
@@ -5487,7 +5486,7 @@ int Hpack::getStaticTableId(char *name, uint16_t name_len, char *val,
     for (i = 0 ; i < HPackStaticTableCount; ++i)
     {
         if (g_HPackStaticTable_t[i].name_len == name_len
-            && strncasecmp(name, g_HPackStaticTable_t[i].name, name_len) == 0)
+            && memcmp(name, g_HPackStaticTable_t[i].name, name_len) == 0)
             return i + 1;
     }
 
@@ -5532,15 +5531,6 @@ unsigned char *Hpack::encHeader(unsigned char *dst, unsigned char *dstEnd,
     }
     else
     {
-        //Convert name to lower case to store it only when not in both table
-        char *pName = name;
-        char *pNameEnd = name + nameLen;
-        while (pName < pNameEnd)
-        {
-            *pName = tolower(*pName);
-            ++pName;
-        }
-        
         *dst++ = indexedPrefixNumber[indexedType];
         dst += encStr(dst, dstEnd - dst, (const unsigned char *)name, nameLen);
     }

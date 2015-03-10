@@ -90,10 +90,10 @@ public:
                       uint16_t val_len)
     {
         int state = 0;
-        if (m_nameLen == name_len && strncasecmp(m_name, name, name_len) == 0)
+        if (m_nameLen == name_len && memcmp(m_name, name, name_len) == 0)
         {
             state = 1;
-            if (val_len == m_valLen  && strncasecmp(m_val, val, val_len) == 0)
+            if (val_len == m_valLen  && memcmp(m_val, val, val_len) == 0)
                 state = 2;
         }
         return state;
