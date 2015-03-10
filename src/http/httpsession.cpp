@@ -3357,7 +3357,8 @@ int HttpSession::sendStaticFileEx(SendFileInfo *pData)
 #if !defined( NO_SENDFILE )
     int fd = pData->getECache()->getfd();
     int iModeSF = HttpServerConfig::getInstance().getUseSendfile();
-    if (iModeSF && pData->getECache()->getfd() != -1 && !isSSL()
+    if (iModeSF && fd != -1 && !isSSL()
+        && !getStream()->isSpdy() 
         && (!getGzipBuf() ||
             (pData->getECache() == pData->getFileData()->getGziped()))
         && getStream()->getFlag(HIO_FLAG_SENDFILE))
