@@ -182,7 +182,7 @@ int HttpCgiTool::processHeaderLine(HttpExtConnector *pExtConn,
             {
                 if (pReq->getLocation() != NULL)
                 {
-                    pResp->appendHeader("Location: ", 10,
+                    pResp->appendHeader("location: ", 10,
                                         pReq->getLocation(), pReq->getLocationLen());
                     pReq->clearLocation();
                 }

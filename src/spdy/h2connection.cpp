@@ -1277,9 +1277,9 @@ int H2Connection::onWriteEx()
 //             return 0;
 //     }
     
-    if (m_dqueStreamRespon.empty())
-        return 0;
-    
+//     if (m_dqueStreamRespon.empty())
+//         return 0;
+
     DLinkedObj *it = m_dqueStreamRespon.begin();//H2Stream*
     DLinkedObj *itn;
     for (; it != m_dqueStreamRespon.end();)
@@ -1296,8 +1296,6 @@ int H2Connection::onWriteEx()
             recycleStream(pH2Stream->getStreamID());
         it = itn;
     }
-    if (getStream()->canWrite() & HIO_FLAG_BUFF_FULL)
-        return 0;
 
     if (wantWrite == 0)
         getStream()->suspendWrite();
