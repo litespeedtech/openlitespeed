@@ -264,7 +264,7 @@ public:
     static unsigned char *encInt(unsigned char *dst, uint32_t value,
                                  uint32_t prefix_bits);
     static uint32_t decInt(unsigned char *&src, const unsigned char *src_end,
-                           uint32_t prefix_bits);
+                           uint32_t prefix_bits, int& error_code);
     static int encStr(unsigned char *dst, size_t dst_len,
                       const unsigned char *str, uint16_t str_len);
     static int decStr(unsigned char *dst, size_t dst_len, unsigned char *&src,

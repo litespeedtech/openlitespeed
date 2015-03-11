@@ -5348,11 +5348,11 @@ void HPackDynamicTable::removeOverflowEntries()
         popEntry();
 }
 
-//https://tools.ietf.org/html/draft-ietf-httpbis-header-compression-10#section-5.1
+////https://tools.ietf.org/html/draft-ietf-httpbis-header-compression-12#section-5.1
 unsigned char *Hpack::encInt(unsigned char *dst, uint32_t value,
                              uint32_t prefix_bits)
 {
-    if (value < (uint32_t)(1 << prefix_bits))
+    if (value < (uint32_t)(1 << prefix_bits) -1)
         *dst++ |= value;
     else
     {
@@ -5368,20 +5368,33 @@ unsigned char *Hpack::encInt(unsigned char *dst, uint32_t value,
     return dst;
 }
 
-//https://tools.ietf.org/html/draft-ietf-httpbis-header-compression-10#section-5.1
+//https://tools.ietf.org/html/draft-ietf-httpbis-header-compression-12#section-5.1
 uint32_t Hpack::decInt(unsigned char *&src, const unsigned char *src_end,
-                       uint32_t prefix_bits)
+                       uint32_t prefix_bits, int& error_code)
 {
+    error_code = 0;
     uint32_t I, B, M;
     uint8_t prefix_max = (1 << prefix_bits) - 1;
     I = (*src++ & prefix_max);
     if (I < prefix_max)
         return I;
 
+    if (src >= src_end)
+    {
+        error_code = -1;
+        return 0;
+    }
+    
     M = 0;
     do
     {
         B = *src++;
+        if (src > src_end)
+        {
+            error_code = -1;
+            return 0;
+        }
+
         I += (B & 0xFF) << M;
         M += 7;
         if (M > 31)
@@ -5431,7 +5444,11 @@ int Hpack::decStr(unsigned char *dst, size_t dst_len, unsigned char *&src,
         return 0;
 
     bool is_huffman = ((*src & 0x80) == 0x80);
-    uint32_t len = decInt(src, src_end, 7);
+    int error_code = 0;
+    uint32_t len = decInt(src, src_end, 7, error_code);
+    if (error_code != 0)
+        return -2;  //wrong int
+        
     int ret = 0;
     if (src + len > src_end)
         return -2;  //wrong int
@@ -5553,9 +5570,12 @@ int Hpack::decHeader(unsigned char *&src, unsigned char *srcEnd,
     if (src == srcEnd)
         return 0;
 
+    int error_code = 0;
     if ((*src & 0xe0) == 0x20)    //001 xxxxx
     {
-        int newCapcity = decInt(src, srcEnd, 5);
+        int newCapcity = decInt(src, srcEnd, 5, error_code);
+        if (error_code != 0)
+            return -1;  //wrong int
         getReqDynamicTable().updateMaxCapacity(newCapcity);
         return 1;
     }
@@ -5566,12 +5586,18 @@ int Hpack::decHeader(unsigned char *&src, unsigned char *srcEnd,
 
     if (*src & 0x80) //1 xxxxxxx
     {
-        index = decInt(src, srcEnd, 7);
+        index = decInt(src, srcEnd, 7, error_code);
+        if (error_code != 0)
+            return -1;  //wrong int
+
         indexedType = 3; //need to parse value
     }
     else if (*src > 0x40) //01 xxxxxx
     {
-        index = decInt(src, srcEnd, 6);
+        index = decInt(src, srcEnd, 6, error_code);
+        if (error_code != 0)
+            return -1;  //wrong int
+            
         indexedType = 0;
     }
     else if (*src == 0x40) //custmized //0100 0000
@@ -5583,7 +5609,9 @@ int Hpack::decHeader(unsigned char *&src, unsigned char *srcEnd,
 
     else if ((*src & 0xf0) == 0x10)  //0001 xxxx
     {
-        index = decInt(src, srcEnd, 4);
+        index = decInt(src, srcEnd, 4, error_code);
+        if (error_code != 0)
+            return -1;  //wrong int
         indexedType = 2;
     }
 
@@ -5593,7 +5621,9 @@ int Hpack::decHeader(unsigned char *&src, unsigned char *srcEnd,
 
     else // 0000 xxxx
     {
-        index = decInt(src, srcEnd, 4);
+        index = decInt(src, srcEnd, 4, error_code);
+        if (error_code != 0)
+            return -1;  //wrong int
         indexedType = 1;
     }
 
