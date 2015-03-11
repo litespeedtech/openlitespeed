@@ -21,6 +21,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+
 void addEntry(HPackDynamicTable &dynTab, const char *name,
               const char *value, uint8_t nameId)
 {
@@ -456,6 +457,236 @@ TEST(hapck_self_enc_dec_test)
 }
 
 
+
+
+
+/*
+00000000: 88 F9 64 96 DF 69 7E 94 0B AA 68 1D 8A 08 01 6D 
+00000010: 40 BF 70 00 B8 07 54 C5 A3 7F 62 92 FE 42 21 BA 
+00000020: B3 6D 4A 52 CB 23 6B 0D E1 3E 17 05 2F F3 FF 04 
+00000030: 5F 87 35 23 98 AC 57 54 DF 5C 83 69 D7 5B 61 96 
+00000040: DF 69 7E 94 08 14 D0 3B 14 10 02 DA 81 7E E0 01 
+00000050: 70 0E A9 8B 46 FF FF 01 FF
+
+index 61: content-length 2145                                 
+index 62: etag "1e0c-54feefd5-7bfd383f"                       
+index 63: content-length 31793                                
+index 64: etag "3235d-54feefd5-9d7c08af"                      
+index 65: content-length 407                                  
+index 66: content-type text/css                               
+index 67: etag "6bc-54feefd5-a7725cbd"                        
+index 68: content-length 1884                                 
+index 69: etag "1b5a-54feefd5-b6a3dc2a"                       
+index 70: content-length 2308                                 
+index 71: etag "1aee-54feefd5-1d91a5e4"                       
+index 72: content-length 702                                  
+index 73: etag "5f8-54feefd5-197a93f1"                        
+index 74: content-length 556                                  
+index 75: etag "52b-54feefd5-e6075901"                        
+index 76: content-length 6913                                 
+index 77: etag "5767-54feefd5-4a868698"                       
+index 78: content-length 6724                                 
+index 79: etag "64de-54feefd5-fb73534f"                       
+index 80: content-length 2568                                 
+index 81: etag "2530-54feefd5-cccfff57"                       
+index 82: content-length 973                                  
+index 83: etag "b00-54feefd5-e48546d"                         
+index 84: content-length 709                                  
+index 85: etag "6a4-54feefd5-82d8609d"                        
+index 86: content-length 6520                                 
+index 87: etag "5b0d-54feefd5-44735f27"                       
+index 88: content-length 3954                                 
+index 89: etag "22ac-54feefd5-600b05fd"                       
+index 90: content-length 32825                                
+index 91: etag "16bb3-54feefd5-d669865d"                      
+index 92: content-length 1055                                 
+index 93: etag "a37-54feefd5-59e4760e"                        
+index 94: date Tue, 10 Mar 2015 19:00:06 GMT                  
+index 95: content-length 737                                  
+index 96: etag "63d-54feefd5-c244a03a"                        
+index 97: expires Tue, 17 Mar 2015 19:00:06 GMT               
+index 98: content-length 3205                                 
+index 99: etag "37cf-54feefd5-10e8e54"                        
+index 100: content-length 6336                                
+index 101: etag "58d9-54feefd5-f0d60c72"                      
+index 102: content-length 2707                                
+index 103: etag "285b-54feefd5-2e2834bf"                      
+index 104: content-length 9050                                
+index 105: etag "87ed-54feefd5-741b49ef"                      
+index 106: content-length 7562                                
+index 107: etag "795a-54feefd5-9e535995"                      
+index 108: content-length 8780                                
+index 109: etag "9759-54feefd5-6c09a64d"                      
+index 110: content-length 1842                                
+index 111: etag "1288-54feefd5-51ae6c5a"                      
+index 112: content-length 9153                                
+index 113: etag "a2af-54feefd5-83098d2b"                      
+index 114: content-length 437                                 
+index 115: etag "2eb-54feefd5-26eef95"                        
+index 116: content-length 37451                               
+index 117: content-type application/javascript                
+index 118: etag "27df1-54feefd5-fe76c415"                     
+index 119: expires Tue, 17 Mar 2015 19:00:05 GMT              
+index 120: cache-control public, max-age=604800               
+index 121: server LiteSpeed                                   
+index 122: accept-ranges bytes                                
+index 123: date Tue, 10 Mar 2015 19:00:05 GMT                 
+index 124: vary Accept-Encoding                               
+index 125: content-encoding gzip                              
+index 126: content-length 5298                                
+index 127: content-type text/html                             
+index 128: last-modified Tue, 10 Mar 2015 13:21:25 GMT        
+index 129: etag "748f-54feefd5-dca65763"                      
+
+***/
+
+#define LS_STR_TO_IOVEC(a) (a), (sizeof(a) -1)
+static HPackHeaderTable_t g_HPackDynInitTable_t[] = {
+{LS_STR_TO_IOVEC("content-length"),    LS_STR_TO_IOVEC("2145") },
+{LS_STR_TO_IOVEC("etag"),    LS_STR_TO_IOVEC("\"1e0c-54feefd5-7bfd383f\"") },
+{LS_STR_TO_IOVEC("content-length"),    LS_STR_TO_IOVEC("31793") },
+{LS_STR_TO_IOVEC("etag"),    LS_STR_TO_IOVEC("\"3235d-54feefd5-9d7c08af\"") },
+{LS_STR_TO_IOVEC("content-length"),    LS_STR_TO_IOVEC("407") },
+{LS_STR_TO_IOVEC("content-type"),    LS_STR_TO_IOVEC("text/css") },
+{LS_STR_TO_IOVEC("etag"),    LS_STR_TO_IOVEC("\"6bc-54feefd5-a7725cbd\"") },
+{LS_STR_TO_IOVEC("content-length"),    LS_STR_TO_IOVEC("1884") },
+{LS_STR_TO_IOVEC("etag"),    LS_STR_TO_IOVEC("\"1b5a-54feefd5-b6a3dc2a\"") },
+{LS_STR_TO_IOVEC("content-length"),    LS_STR_TO_IOVEC("2308") },
+{LS_STR_TO_IOVEC("etag"),    LS_STR_TO_IOVEC("\"1aee-54feefd5-1d91a5e4\"") },
+{LS_STR_TO_IOVEC("content-length"),    LS_STR_TO_IOVEC("702") },
+{LS_STR_TO_IOVEC("etag"),    LS_STR_TO_IOVEC("\"5f8-54feefd5-197a93f1\"") },
+{LS_STR_TO_IOVEC("content-length"),    LS_STR_TO_IOVEC("556") },
+{LS_STR_TO_IOVEC("etag"),    LS_STR_TO_IOVEC("\"52b-54feefd5-e6075901\"") },
+{LS_STR_TO_IOVEC("content-length"),    LS_STR_TO_IOVEC("6913") },
+{LS_STR_TO_IOVEC("etag"),    LS_STR_TO_IOVEC("\"5767-54feefd5-4a868698\"") },
+{LS_STR_TO_IOVEC("content-length"),    LS_STR_TO_IOVEC("6724") },
+{LS_STR_TO_IOVEC("etag"),    LS_STR_TO_IOVEC("\"64de-54feefd5-fb73534f\"") },
+{LS_STR_TO_IOVEC("content-length"),    LS_STR_TO_IOVEC("2568") },
+{LS_STR_TO_IOVEC("etag"),    LS_STR_TO_IOVEC("\"2530-54feefd5-cccfff57\"") },
+{LS_STR_TO_IOVEC("content-length"),    LS_STR_TO_IOVEC("973") },
+{LS_STR_TO_IOVEC("etag"),    LS_STR_TO_IOVEC("\"b00-54feefd5-e48546d\"") },
+{LS_STR_TO_IOVEC("content-length"),    LS_STR_TO_IOVEC("709") },
+{LS_STR_TO_IOVEC("etag"),    LS_STR_TO_IOVEC("\"6a4-54feefd5-82d8609d\"") },
+{LS_STR_TO_IOVEC("content-length"),    LS_STR_TO_IOVEC("6520") },
+{LS_STR_TO_IOVEC("etag"),    LS_STR_TO_IOVEC("\"5b0d-54feefd5-44735f27\"") },
+{LS_STR_TO_IOVEC("content-length"),    LS_STR_TO_IOVEC("3954") },
+{LS_STR_TO_IOVEC("etag"),    LS_STR_TO_IOVEC("\"22ac-54feefd5-600b05fd\"") },
+{LS_STR_TO_IOVEC("content-length"),    LS_STR_TO_IOVEC("32825") },
+{LS_STR_TO_IOVEC("etag"),    LS_STR_TO_IOVEC("\"16bb3-54feefd5-d669865d\"") },
+{LS_STR_TO_IOVEC("content-length"),    LS_STR_TO_IOVEC("1055") },
+{LS_STR_TO_IOVEC("etag"),    LS_STR_TO_IOVEC("\"a37-54feefd5-59e4760e\"") },
+{LS_STR_TO_IOVEC("date"),    LS_STR_TO_IOVEC("Tue, 10 Mar 2015 19:00:06 GMT") },
+{LS_STR_TO_IOVEC("content-length"),    LS_STR_TO_IOVEC("737") },
+{LS_STR_TO_IOVEC("etag"),    LS_STR_TO_IOVEC("\"63d-54feefd5-c244a03a\"") },
+{LS_STR_TO_IOVEC("expires"),    LS_STR_TO_IOVEC("Tue, 17 Mar 2015 19:00:06 GMT") },
+{LS_STR_TO_IOVEC("content-length"),    LS_STR_TO_IOVEC("3205") },
+{LS_STR_TO_IOVEC("etag"),    LS_STR_TO_IOVEC("\"37cf-54feefd5-10e8e54\"") },
+{LS_STR_TO_IOVEC("content-length"),    LS_STR_TO_IOVEC("6336") },
+{LS_STR_TO_IOVEC("etag"),    LS_STR_TO_IOVEC("\"58d9-54feefd5-f0d60c72\"") },
+{LS_STR_TO_IOVEC("content-length"),    LS_STR_TO_IOVEC("2707") },
+{LS_STR_TO_IOVEC("etag"),    LS_STR_TO_IOVEC("\"285b-54feefd5-2e2834bf\"") },
+{LS_STR_TO_IOVEC("content-length"),    LS_STR_TO_IOVEC("9050") },
+{LS_STR_TO_IOVEC("etag"),    LS_STR_TO_IOVEC("\"87ed-54feefd5-741b49ef\"") },
+{LS_STR_TO_IOVEC("content-length"),    LS_STR_TO_IOVEC("7562") },
+{LS_STR_TO_IOVEC("etag"),    LS_STR_TO_IOVEC("\"795a-54feefd5-9e535995\"") },
+{LS_STR_TO_IOVEC("content-length"),    LS_STR_TO_IOVEC("8780") },
+{LS_STR_TO_IOVEC("etag"),    LS_STR_TO_IOVEC("\"9759-54feefd5-6c09a64d\"") },
+{LS_STR_TO_IOVEC("content-length"),    LS_STR_TO_IOVEC("1842") },
+{LS_STR_TO_IOVEC("etag"),    LS_STR_TO_IOVEC("\"1288-54feefd5-51ae6c5a\"") },
+{LS_STR_TO_IOVEC("content-length"),    LS_STR_TO_IOVEC("9153") },
+{LS_STR_TO_IOVEC("etag"),    LS_STR_TO_IOVEC("\"a2af-54feefd5-83098d2b\"") },
+{LS_STR_TO_IOVEC("content-length"),    LS_STR_TO_IOVEC("437") },
+{LS_STR_TO_IOVEC("etag"),    LS_STR_TO_IOVEC("\"2eb-54feefd5-26eef95\"") },
+{LS_STR_TO_IOVEC("content-length"),    LS_STR_TO_IOVEC("37451") },
+{LS_STR_TO_IOVEC("content-type"),    LS_STR_TO_IOVEC("application/javascript") },
+{LS_STR_TO_IOVEC("etag"),    LS_STR_TO_IOVEC("\"27df1-54feefd5-fe76c415\"") },
+{LS_STR_TO_IOVEC("expires"),    LS_STR_TO_IOVEC("Tue, 17 Mar 2015 19:00:05 GMT") },
+{LS_STR_TO_IOVEC("cache-control"),    LS_STR_TO_IOVEC("public, max-age=604800") },
+{LS_STR_TO_IOVEC("server"),    LS_STR_TO_IOVEC("LiteSpeed") },
+{LS_STR_TO_IOVEC("accept-ranges"),    LS_STR_TO_IOVEC("bytes") },
+{LS_STR_TO_IOVEC("date"),    LS_STR_TO_IOVEC("Tue, 10 Mar 2015 19:00:05 GMT") },
+{LS_STR_TO_IOVEC("vary"),    LS_STR_TO_IOVEC("Accept-Encoding") },
+{LS_STR_TO_IOVEC("content-encoding"),    LS_STR_TO_IOVEC("gzip") },
+{LS_STR_TO_IOVEC("content-length"),    LS_STR_TO_IOVEC("5298") },
+{LS_STR_TO_IOVEC("content-type"),    LS_STR_TO_IOVEC("text/html") },
+{LS_STR_TO_IOVEC("last-modified"),    LS_STR_TO_IOVEC("Tue, 10 Mar 2015 13:21:25 GMT") },
+{LS_STR_TO_IOVEC("etag"),    LS_STR_TO_IOVEC("\"748f-54feefd5-dca65763\"") },
+};
+
+
+
+TEST(hapck_self_enc_dec_test_firefox_error)
+{
+    unsigned char respBuf[8192] = {0};
+    unsigned char *respBufEnd = respBuf + 8192;
+    Hpack hpack;
+    int nCount = sizeof(g_HPackDynInitTable_t) / sizeof(HPackHeaderTable_t);
+    for ( int i=nCount -1; i>=0; --i )
+    {
+        int val_match;
+        int staticTableIndex = Hpack::getStaticTableId((char *)g_HPackDynInitTable_t[i].name, 
+                                                       g_HPackDynInitTable_t[i].name_len,
+                                                       (char *)g_HPackDynInitTable_t[i].val,
+                                                       g_HPackDynInitTable_t[i].val_len,
+                                                       val_match);
+        
+        if (staticTableIndex <= 0)
+            printf("Error, not in static table. \n");
+        
+        hpack.getReqDynamicTable().pushEntry((char *)g_HPackDynInitTable_t[i].name, 
+                                             g_HPackDynInitTable_t[i].name_len,
+                                             (char *)g_HPackDynInitTable_t[i].val,
+                                             g_HPackDynInitTable_t[i].val_len,
+                                             staticTableIndex);
+        
+        hpack.getRespDynamicTable().pushEntry((char *)g_HPackDynInitTable_t[i].name, 
+                                             g_HPackDynInitTable_t[i].name_len,
+                                             (char *)g_HPackDynInitTable_t[i].val,
+                                             g_HPackDynInitTable_t[i].val_len,
+                                             staticTableIndex);
+        
+    }
+    printTable(hpack.getReqDynamicTable());
+    
+    
+    char buf[] = "\x88\xF9\x64\x96\xDF\x69\x7E\x94\x0B\xAA\x68\x1D\x8A\x08\x01\x6D"
+                "\x40\xBF\x70\x00\xB8\x07\x54\xC5\xA3\x7F\x62\x92\xFE\x42\x21\xBA"
+                "\xB3\x6D\x4A\x52\xCB\x23\x6B\x0D\xE1\x3E\x17\x05\x2F\xF3\xFF\x04"
+                "\x5F\x87\x35\x23\x98\xAC\x57\x54\xDF\x5C\x83\x69\xD7\x5B\x61\x96"
+                "\xDF\x69\x7E\x94\x08\x14\xD0\x3B\x14\x10\x02\xDA\x81\x7E\xE0\x01"
+                "\x70\x0E\xA9\x8B\x46\xFF\xFF\x01\xFF\x00";
+
+    int rc;
+    unsigned char *pSrc = (unsigned char *)buf;
+    unsigned char *bufEnd =  (unsigned char *)buf + 90;
+    char name[1024], val[1024];
+    uint16_t name_len, val_len;
+
+    unsigned char *pBuf = respBuf;
+    respBufEnd = respBuf + 8192;
+    
+    while (pSrc < bufEnd)
+    {
+        rc = hpack.decHeader(pSrc, bufEnd, (char *)name, name_len, (char *)val, val_len);
+        CHECK (rc > 0);
+
+        name[name_len] = 0x00;
+        val[val_len] = 0x00;
+        printf("[%d %d]%s: %s\n", name_len, val_len, name, val);
+        pBuf = hpack.encHeader(pBuf, respBufEnd, (char *)name, name_len, (char *)val, val_len);
+        
+        name_len = 1024;
+        val_len = 1024;
+    }
+    
+    displayHeader(respBuf, pBuf - respBuf);
+    CHECK(memcmp(respBuf, buf, 90) ==0);
+    
+    printf("\nhapck_self_enc_dec_test_firefox_error Done\n");
+    
+    
+
+}
 
 
 #endif
