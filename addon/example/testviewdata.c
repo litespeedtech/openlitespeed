@@ -48,10 +48,9 @@ static int viewData2(lsi_cb_param_t *rec) {   return viewData0(rec, "SEND");  }
 
 static int beginSession(lsi_cb_param_t *rec)
 {
-    g_api->set_session_hook_enable_flag(rec->_session, LSI_HKPT_RECV_RESP_BODY,
-                                        &MNAME, 1);
-    g_api->set_session_hook_enable_flag(rec->_session, LSI_HKPT_SEND_RESP_BODY,
-                                        &MNAME, 1);
+    int aEnableHkpts[] = {LSI_HKPT_RECV_RESP_BODY, LSI_HKPT_SEND_RESP_BODY};
+    g_api->set_session_hook_enable_flag(rec->_session, &MNAME, 1,
+                                        &aEnableHkpts, 2);
     return 0;
 }
 

@@ -19,17 +19,14 @@
 #define HTTPRESP_H
 
 
-#include <util/autobuf.h>
-#include <http/httpstatusline.h>
-#include <util/iovec.h>
 #include <http/httprespheaders.h>
-#include <lsr/ls_types.h>
 
 #define RANGE_HEADER_LEN    22
 #define LSI_RESP_BODY_SIZE_CHUNKED (-1)
 #define LSI_RESP_BODY_SIZE_UNKNOWN (-2)
 
 class HttpReq;
+typedef struct ls_xpool_s ls_xpool_t;
 
 class HttpResp
 {
@@ -37,9 +34,7 @@ public:
 
 
 private:
-    HttpRespHeaders         m_respHeaders;
-
-
+    HttpRespHeaders m_respHeaders;
     off_t           m_lEntityLength;
     off_t           m_lEntityFinished;
 

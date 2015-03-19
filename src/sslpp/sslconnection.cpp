@@ -16,9 +16,12 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "sslconnection.h"
+// #include "sslerror.h"
+
+#include <lsdef.h>
+
 #include <openssl/ssl.h>
 #include <openssl/bio.h>
-#include "sslerror.h"
 #include <openssl/err.h>
 
 #include <errno.h>
@@ -26,7 +29,6 @@
 #include <assert.h>
 #include <config.h>
 #include <sys/uio.h>
-#include "lsdef.h"
 
 
 //static const char * s_pErrInvldSSL = "Invalid Parameter, SSL* ssl is null\n";
@@ -38,12 +40,14 @@ SSLConnection::SSLConnection()
 {
 }
 
+
 SSLConnection::SSLConnection(SSL *ssl)
     : m_ssl(ssl)
     , m_iStatus(DISCONNECTED)
     , m_iWant(0)
 {
 }
+
 
 SSLConnection::SSLConnection(SSL *ssl, int fd)
     : m_ssl(ssl)
@@ -52,6 +56,7 @@ SSLConnection::SSLConnection(SSL *ssl, int fd)
 {
     SSL_set_fd(m_ssl, fd);
 }
+
 
 SSLConnection::SSLConnection(SSL *ssl, int rfd, int wfd)
     : m_ssl(ssl)
@@ -62,11 +67,13 @@ SSLConnection::SSLConnection(SSL *ssl, int rfd, int wfd)
     SSL_set_wfd(m_ssl, wfd);
 }
 
+
 SSLConnection::~SSLConnection()
 {
     if (m_ssl)
         release();
 }
+
 
 void SSLConnection::setSSL(SSL *ssl)
 {
@@ -83,6 +90,7 @@ void SSLConnection::release()
     m_ssl = NULL;
 }
 
+
 int SSLConnection::setfd(int fd)
 {
     m_iWant = 0;
@@ -91,6 +99,7 @@ int SSLConnection::setfd(int fd)
         m_iStatus = DISCONNECTED;
     return ret == 0;
 }
+
 
 int SSLConnection::setfd(int rfd, int wfd)
 {
@@ -117,6 +126,7 @@ int SSLConnection::read(char *pBuf, int len)
         return checkError(ret);
     }
 }
+
 
 int SSLConnection::write(const char *pBuf, int len)
 {
@@ -196,6 +206,7 @@ int SSLConnection::writev(const struct iovec *vect, int count,
     return ret;
 }
 
+
 int SSLConnection::flush()
 {
     BIO *pBIO = SSL_get_wbio(m_ssl);
@@ -203,7 +214,7 @@ int SSLConnection::flush()
         return 0;
     m_iWant = 0;
     int ret = BIO_flush(pBIO);
-    if (ret != 1) 
+    if (ret != 1)
         ret = checkError(ret);
 
     //1 means BIO_flush succeed.
@@ -218,6 +229,7 @@ int SSLConnection::flush()
             return LS_FAIL;
     }
 }
+
 
 int SSLConnection::shutdown(int bidirectional)
 {
@@ -247,11 +259,13 @@ int SSLConnection::shutdown(int bidirectional)
     return 0;
 }
 
+
 void SSLConnection::toAccept()
 {
     m_iStatus = ACCEPTING;
     m_iWant = READ;
 }
+
 
 int SSLConnection::accept()
 {
@@ -267,6 +281,7 @@ int SSLConnection::accept()
     else
         return checkError(ret);
 }
+
 
 int SSLConnection::checkError(int ret)
 {
@@ -288,6 +303,7 @@ int SSLConnection::checkError(int ret)
     return LS_FAIL;
 }
 
+
 int SSLConnection::connect()
 {
     assert(m_ssl);
@@ -302,6 +318,7 @@ int SSLConnection::connect()
     else
         return checkError(ret);
 }
+
 
 int SSLConnection::tryagain()
 {
@@ -318,28 +335,34 @@ int SSLConnection::tryagain()
     return 0;
 }
 
+
 X509 *SSLConnection::getPeerCertificate() const
 {   return SSL_get_peer_certificate(m_ssl);   }
 
+
 long SSLConnection::getVerifyResult() const
 {   return SSL_get_verify_result(m_ssl);      }
+
 
 int SSLConnection::getVerifyMode() const
 {   return SSL_get_verify_mode(m_ssl);        }
 
 
-
 const char *SSLConnection::getCipherName() const
 {   return SSL_get_cipher_name(m_ssl);    }
+
 
 const SSL_CIPHER *SSLConnection::getCurrentCipher() const
 {   return SSL_get_current_cipher(m_ssl); }
 
+
 SSL_SESSION *SSLConnection::getSession() const
 {   return SSL_get_session(m_ssl);        }
 
+
 const char *SSLConnection::getVersion() const
 {   return SSL_get_version(m_ssl);        }
+
 
 static const char NPN_SPDY_PREFIX[] = { 's', 'p', 'd', 'y', '/' };
 int SSLConnection::getSpdyVersion()
@@ -375,11 +398,14 @@ int SSLConnection::getSpdyVersion()
     return v;
 }
 
+
 int SSLConnection::getSessionIdLen(SSL_SESSION *s)
 {   return s->session_id_length;     }
 
+
 const unsigned char *SSLConnection::getSessionId(SSL_SESSION *s)
 {   return s->session_id;           }
+
 
 int SSLConnection::getCipherBits(const SSL_CIPHER *pCipher,
                                  int *algkeysize)
@@ -387,17 +413,21 @@ int SSLConnection::getCipherBits(const SSL_CIPHER *pCipher,
     return SSL_CIPHER_get_bits((SSL_CIPHER *)pCipher, algkeysize);
 }
 
+
 int SSLConnection::isClientVerifyOptional(int i)
 {   return i == SSL_VERIFY_PEER;    }
 
+
 int SSLConnection::isVerifyOk() const
 {   return SSL_get_verify_result(m_ssl) == X509_V_OK;     }
+
 
 int SSLConnection::buildVerifyErrorString(char *pBuf, int len) const
 {
     return snprintf(pBuf, len, "FAILED: %s", X509_verify_cert_error_string(
                         SSL_get_verify_result(m_ssl)));
 }
+
 
 int SSLConnection::setTlsExtHostName(const char *pName)
 {

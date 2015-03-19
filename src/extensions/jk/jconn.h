@@ -18,11 +18,11 @@
 #ifndef JCONN_H
 #define JCONN_H
 
+#include "jkajp13.h"
 
 #include <lsdef.h>
 #include <extensions/extconn.h>
 #include <extensions/httpextprocessor.h>
-#include <extensions/jk/jkajp13.h>
 #include <util/iovec.h>
 
 #define AJP_MIN_PACKET_SIZE 6

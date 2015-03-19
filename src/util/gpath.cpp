@@ -17,7 +17,6 @@
 *****************************************************************************/
 #include <util/gpath.h>
 #include <lsdef.h>
-#include <util/gpointerlist.h>
 #include <util/hashstringmap.h>
 
 #include <lsr/ls_fileio.h>

@@ -20,21 +20,23 @@
  */
 
 #include "plainconf.h"
-#include <stdlib.h>
-#include <dirent.h>
-#include <fnmatch.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <unistd.h>
-#include <string.h>
-#include <stdarg.h>
-#include <errno.h>
 
-#include "util/stringtool.h"
-#include "util/gpointerlist.h"
-#include "util/logtracker.h"
-#include "http/httpreq.h"
-#include "http/httplog.h"
+#include <http/httplog.h>
+#include <util/gpointerlist.h>
+#include <util/hashstringmap.h>
+#include <util/logtracker.h>
+#include <util/xmlnode.h>
+
+#include <dirent.h>
+#include <errno.h>
+#include <fnmatch.h>
+#include <stdarg.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
+
 
 //Special case
 //:: means module and module name
@@ -106,7 +108,6 @@ plainconfKeywords plainconf::sKeywords[] =
     {"domain",                                   NULL},
     {"dynreqpersec",                             NULL},
     {"enable",                                   NULL},
-    {"enableaio",                                NULL},
     {"enableaiolog",                             NULL},
     {"enablechroot",                             NULL},
     {"enablecoredump",                           NULL},
@@ -403,6 +404,7 @@ void plainconf::logToMem(char errorLevel, const char *format, ...)
     }
 }
 
+
 static int for_each_fn(void *s)
 {
     const char *p = ((AutoStr2 *)s)->c_str();
@@ -423,6 +425,7 @@ static int for_each_fn(void *s)
 
     return 0;
 }
+
 
 void plainconf::flushErrorLog()
 {
@@ -445,6 +448,7 @@ void plainconf::tolowerstr(char *sLine)
     }
 }
 
+
 void plainconf::initKeywords()
 {
     if (bKeywordsInited)
@@ -462,6 +466,7 @@ void plainconf::initKeywords()
 
     bKeywordsInited = true;
 }
+
 
 void plainconf::setRootPath(const char *root)
 {
@@ -487,6 +492,7 @@ void plainconf::trimWhiteSpace(const char **p)
         ++(*p);
 }
 
+
 //Get the first ono-space position of a string
 const char *plainconf::getStrNoSpace(const char *sLine, size_t &length)
 {
@@ -511,6 +517,7 @@ const char *plainconf::getStrNoSpace(const char *sLine, size_t &length)
     length = i - (offset + 1);
     return sLine + offset + 1;
 }
+
 
 //pos: 0, start position, 1: end position
 void plainconf::removeSpace(char *sLine, int pos)
@@ -541,6 +548,7 @@ void plainconf::removeSpace(char *sLine, int pos)
         sLine[len - offset - 1] = 0x00;
 }
 
+
 bool plainconf::isChunkedLine(const char *sLine)
 {
     int len = strlen(sLine);
@@ -563,6 +571,7 @@ bool plainconf::isChunkedLine(const char *sLine)
     return (continuesBackSlashCount == 1);
 }
 
+
 bool plainconf::strcatchr(char *s, char c, int maxStrLen)
 {
     int len = strlen(s);
@@ -574,6 +583,7 @@ bool plainconf::strcatchr(char *s, char c, int maxStrLen)
     s[len + 1] = 0x00;
     return true;
 }
+
 
 void plainconf::saveUnknownItems(const char *fileName, int lineNumber,
                                  XmlNode *pCurNode, const char *name, const char *value)
@@ -597,6 +607,7 @@ void plainconf::saveUnknownItems(const char *fileName, int lineNumber,
     pParamNode->setValue(newvalue, strlen(newvalue));
     pCurNode->addChild(pParamNode->getName(), pParamNode);
 }
+
 
 void plainconf::appendModuleParam(XmlNode *pModuleNode, const char *param)
 {
@@ -624,6 +635,7 @@ void plainconf::appendModuleParam(XmlNode *pModuleNode, const char *param)
               pModuleNode->getParent()->getValue() : ""),
              pModuleNode->getValue(), param);
 }
+
 
 void plainconf::addModuleWithParam(XmlNode *pCurNode,
                                    const char *moduleName, const char *param)
@@ -658,6 +670,7 @@ void plainconf::addModuleWithParam(XmlNode *pCurNode,
 
     appendModuleParam(pModuleNode, param);
 }
+
 
 void plainconf::handleSpecialCase(XmlNode *pNode)
 {
@@ -727,6 +740,7 @@ void plainconf::handleSpecialCase(XmlNode *pNode)
     }
 }
 
+
 void plainconf::handleSpecialCaseLoop(XmlNode *pNode)
 {
     XmlNodeList list;
@@ -743,11 +757,13 @@ void plainconf::handleSpecialCaseLoop(XmlNode *pNode)
     }
 }
 
+
 void plainconf::clearNameAndValue(char *name, char *value)
 {
     name[0] = 0;
     value[0] = 0;
 }
+
 
 void plainconf::parseLine(const char *fileName, int lineNumber,
                           const char *sLine)
@@ -869,6 +885,7 @@ void plainconf::parseLine(const char *fileName, int lineNumber,
     }
 }
 
+
 bool plainconf::isValidline(const char *sLine)
 {
     int len = strlen(sLine);
@@ -891,6 +908,7 @@ bool plainconf::isValidline(const char *sLine)
     return bValid;
 }
 
+
 //Return the length copied the sign, 0 means not a mulline mode
 int plainconf::checkMultiLineMode(const char *sLine,
                                   char *sMultiLineModeSign, int maxSize)
@@ -910,6 +928,7 @@ int plainconf::checkMultiLineMode(const char *sLine,
     return 0;
 }
 
+
 //if true return true, and also set the path
 bool plainconf::isInclude(const char *sLine, AutoStr2 &path)
 {
@@ -923,6 +942,7 @@ bool plainconf::isInclude(const char *sLine, AutoStr2 &path)
 
     return false;
 }
+
 
 //return 0: not exist, 1: file, 2: directory, 3: directory with wildchar
 int plainconf::checkFiletype(const char *path)
@@ -944,6 +964,7 @@ int plainconf::checkFiletype(const char *path)
     else
         return 1;
 }
+
 
 void plainconf::loadDirectory(const char *pPath, const char *pPattern)
 {
@@ -995,6 +1016,7 @@ void plainconf::loadDirectory(const char *pPath, const char *pPattern)
     }
 }
 
+
 void plainconf::getIncludeFile(const char *orgFile, char *targetFile)
 {
     int len = strlen(orgFile);
@@ -1026,6 +1048,7 @@ void plainconf::getIncludeFile(const char *orgFile, char *targetFile)
         strcat(targetFile, orgFile);
     }
 }
+
 
 //When checking we use lock for may need to update the conf file later
 //If user RCS checkout a revision, a unlock should be used for next time checkin.
@@ -1071,6 +1094,7 @@ void plainconf::checkInFile(const char *path)
 
     unlink(new_path);
 }
+
 
 //This function may be recruse called
 void plainconf::loadConfFile(const char *path)
@@ -1205,6 +1229,7 @@ void plainconf::loadConfFile(const char *path)
     }
 }
 
+
 //return the root node of the tree
 XmlNode *plainconf::parseFile(const char *configFilePath,
                               const char *rootTag)
@@ -1242,6 +1267,7 @@ XmlNode *plainconf::parseFile(const char *configFilePath,
     return rootNode;
 }
 
+
 void plainconf::release(XmlNode *pNode)
 {
     XmlNodeList list;
@@ -1258,6 +1284,7 @@ void plainconf::release(XmlNode *pNode)
     if (!pNode->getParent())
         delete pNode;
 }
+
 
 //name: form like "moduleName|submodlue|itemname"
 const char *plainconf::getConfDeepValue(const XmlNode *pNode,
@@ -1280,6 +1307,7 @@ const char *plainconf::getConfDeepValue(const XmlNode *pNode,
     }
 }
 
+
 //The below functions are only for test.
 void plainconf::outputSpaces(int level, FILE *fp)
 {
@@ -1287,10 +1315,12 @@ void plainconf::outputSpaces(int level, FILE *fp)
         fprintf(fp, "    ");
 }
 
+
 void plainconf::outputValue(FILE *fp, const char *value, int length)
 {
     fwrite(value, length, 1, fp);
 }
+
 
 void plainconf::outputSigleNode(FILE *fp, const XmlNode *pNode, int level)
 {
@@ -1315,6 +1345,7 @@ void plainconf::outputSigleNode(FILE *fp, const XmlNode *pNode, int level)
     fprintf(fp, "\n");
 }
 
+
 static int s_compare(const void *p1, const void *p2)
 {
     //return (*((XmlNode**)p1))->getName() - (*((XmlNode**)p2))->getName();
@@ -1327,6 +1358,7 @@ static int s_compare(const void *p1, const void *p2)
     //strcasecmp( (*((XmlNode**)p1))->getName(), (*((XmlNode**)p2))->getName() );
     return ret;
 }
+
 
 void plainconf::outputConfigFile(const XmlNode *pNode, FILE *fp, int level)
 {
@@ -1362,6 +1394,7 @@ void plainconf::outputConfigFile(const XmlNode *pNode, FILE *fp, int level)
     else
         outputSigleNode(fp, pNode, level);
 }
+
 
 void plainconf::testOutputConfigFile(const XmlNode *pNode,
                                      const char *file)

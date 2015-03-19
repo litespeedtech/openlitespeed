@@ -69,8 +69,8 @@ struct ls_hashelem_s
 struct ls_lfqueue_s
 {
     volatile ls_lfnodei_t   *volatile *phead;
-    char                                pad[HW_CACHE_SIZE];
-    volatile ls_atom_ptr_t              tail;
+    char                               pad[HW_CACHE_SIZE];
+    volatile ls_atom_xptr_t            tail;
 };
 
 /**
@@ -79,7 +79,7 @@ struct ls_lfqueue_s
  */
 struct ls_lfstack_s
 {
-    volatile ls_atom_ptr_t  head;
+    volatile ls_atom_xptr_t  head;
 };
 
 /**

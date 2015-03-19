@@ -27,11 +27,13 @@ SSIConfig::~SSIConfig()
 {
 }
 
+
 void SSIConfig::setSizeFmt(const char *pVal, int len)
 {
     if (strncasecmp(pVal, "bytes", 4) == 0)
         m_iSizeFmt = 1;
 }
+
 
 void SSIConfig::copy(const SSIConfig *config)
 {

@@ -27,7 +27,10 @@
 FcgiNameValuePair::FcgiNameValuePair()
 {
 }
+
+
 FcgiNameValuePair::~FcgiNameValuePair() {}
+
 
 int FcgiNameValuePair::append(char *pBuf, int &size,
                               const char *pName, const char *pValue)
@@ -35,6 +38,7 @@ int FcgiNameValuePair::append(char *pBuf, int &size,
     return append(pBuf, size, pName, strlen(pName),
                   pValue, strlen(pValue));
 }
+
 
 int FcgiNameValuePair::append(char *pBuf, int &size,
                               const char *pName, int nameLen, const char *pValue, int valLen)
@@ -82,6 +86,7 @@ int FcgiNameValuePair::append(char *pBuf, int &size,
     memmove(pBuf, pValue, valLen);
     return totalSize;
 }
+
 
 int FcgiNameValuePair::decode(char *pBuf, int size,
                               char *&pName, int &nameLen,

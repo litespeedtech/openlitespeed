@@ -16,7 +16,6 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "ssiruntime.h"
-#include <util/pcregex.h>
 
 SSIRuntime::SSIRuntime()
     : m_flag(0)
@@ -28,6 +27,7 @@ SSIRuntime::SSIRuntime()
 SSIRuntime::~SSIRuntime()
 {
 }
+
 
 int SSIRuntime::initConfig(SSIConfig *pConfig)
 {
@@ -41,6 +41,7 @@ int SSIRuntime::initConfig(SSIConfig *pConfig)
         m_config.setEchoMsg("(none)", 6);
     return 0;
 }
+
 
 int SSIRuntime::execRegex(Pcregex *pReg, const char *pSubj, int len)
 {

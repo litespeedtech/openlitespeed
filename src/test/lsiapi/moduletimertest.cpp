@@ -17,14 +17,13 @@
 *****************************************************************************/
 #ifdef RUN_TEST
 
-#include "lsiapi/lsiapi.h"
-#include "ls.h"
+#include <lsiapi/lsiapi.h>
+#include <ls.h>
 #include "test/unittest-cpp/UnitTest++/src/UnitTest++.h"
 #include <unistd.h>
 #include <assert.h>
 #include <lsiapi/moduletimer.h>
 #include <util/datetime.h>
-#include <util/tlinklist.h>
 
 void test_module_timer_cb_fp(void *p)
 {

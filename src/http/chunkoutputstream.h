@@ -20,8 +20,6 @@
 
 
 #include <lsdef.h>
-#include <edio/outputstream.h>
-#include <util/autobuf.h>
 #include <util/iovec.h>
 
 
@@ -30,8 +28,8 @@
 #define CHUNK_BUFSIZE       (1450 - CHUNK_HEADER_SIZE - CHUNK_TAIL_SIZE)
 #define MAX_CHUNK_SIZE      4096
 
-class IOVec;
-class IOVec;
+class OutputStream;
+
 class ChunkOutputStream
 {
     OutputStream   *m_pOS;

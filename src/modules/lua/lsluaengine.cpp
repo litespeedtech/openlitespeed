@@ -15,17 +15,18 @@
 *    You should have received a copy of the GNU General Public License       *
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
-#include <modules/lua/lsluaengine.h>
+#include "lsluaengine.h"
 
-#include <http/httplog.h>
-#include <log4cxx/logger.h>
-#include <lsr/ls_strtool.h>
+#include "lsluaapi.h"
+#include "lsluadefs.h"
+#include "lsluasession.h"
+
 #include <lsr/ls_confparser.h>
-#include <modules/lua/edluastream.h>
-#include <modules/lua/lsluaapi.h>
-#include <modules/lua/lsluasession.h>
-#include <sys/stat.h>
+#include <lsr/ls_loopbuf.h>
+#include <lsr/ls_strtool.h>
+
 #include <stdlib.h>
+#include <sys/stat.h>
 #include <unistd.h>
 
 #define LS_LUA_BEGINSTR "package.preload['apache2'] = function() end\n" \
@@ -71,9 +72,11 @@ LsLuaEngine::LsLuaEngine()
 {
 }
 
+
 LsLuaEngine::~LsLuaEngine()
 {
 }
+
 
 int LsLuaEngine::init()
 {
@@ -138,10 +141,12 @@ int LsLuaEngine::init()
     return 0;
 }
 
+
 int LsLuaEngine::isReady(lsi_session_t *session)
 {
     return s_iReady;
 }
+
 
 int LsLuaEngine::checkResume(LsLuaSession *pSession, int iRet)
 {
@@ -187,11 +192,13 @@ int LsLuaEngine::checkResume(LsLuaSession *pSession, int iRet)
     return iRet;
 }
 
+
 int LsLuaEngine::resumeNcheck(LsLuaSession *pSession, int iArgs)
 {
     int ret = LsLuaApi::resume(pSession->getLuaState(), iArgs);
     return LsLuaEngine::checkResume(pSession, ret);
 }
+
 
 int LsLuaEngine::setupSandBox(lua_State *L)
 {
@@ -200,6 +207,7 @@ int LsLuaEngine::setupSandBox(lua_State *L)
         return 1;
     return 0;
 }
+
 
 void LsLuaEngine::ref(LsLuaSession *pSession)
 {
@@ -211,6 +219,7 @@ void LsLuaEngine::ref(LsLuaSession *pSession)
     r = pSession->getRefPtr();
     *r = LsLuaApi::ref(getSystemState(), LSLUA_REGISTRYINDEX);
 }
+
 
 void LsLuaEngine::unref(LsLuaSession *pSession)
 {
@@ -242,6 +251,7 @@ void LsLuaEngine::unref(LsLuaSession *pSession)
     *r = LUA_REFNIL;
 }
 
+
 int LsLuaEngine::loadRef(LsLuaSession *pSession, lua_State *L)
 {
     int *r;
@@ -266,6 +276,7 @@ int LsLuaEngine::loadRef(LsLuaSession *pSession, lua_State *L)
         return 0;
     }
 }
+
 
 LsLuaSession *LsLuaEngine::prepState(lsi_session_t *session,
                                      const char *scriptpath,
@@ -313,6 +324,7 @@ LsLuaSession *LsLuaEngine::prepState(lsi_session_t *session,
     return pSandbox;
 }
 
+
 int LsLuaEngine::runState(lsi_session_t *session, LsLuaSession *pSandbox,
                           int iCurHook)
 {
@@ -343,6 +355,7 @@ int LsLuaEngine::runState(lsi_session_t *session, LsLuaSession *pSandbox,
     return LsLuaApi::resume(L, 1);
 }
 
+
 int LsLuaEngine::filterOut(lsi_cb_param_t *rec, const char *pBuf, int iLen)
 {
     int iWritten, iOffset = 0;
@@ -352,6 +365,7 @@ int LsLuaEngine::filterOut(lsi_cb_param_t *rec, const char *pBuf, int iLen)
         iOffset += iWritten;
     return iOffset;
 }
+
 
 int LsLuaEngine::writeToNextFilter(lsi_cb_param_t *rec,
                                    LsLuaUserParam *pUser,
@@ -393,6 +407,7 @@ int LsLuaEngine::writeToNextFilter(lsi_cb_param_t *rec,
     }
     return 1;
 }
+
 
 int LsLuaEngine::runScript(lsi_session_t *session, const char *scriptpath,
                            LsLuaUserParam *pUser, LsLuaSession **ppSession,
@@ -446,6 +461,7 @@ int LsLuaEngine::runScript(lsi_session_t *session, const char *scriptpath,
     return ret;
 }
 
+
 int LsLuaEngine::runFilterScript(lsi_cb_param_t *rec,
                                  const char *scriptpath,
                                  LsLuaUserParam *pUser,
@@ -482,15 +498,18 @@ int LsLuaEngine::runFilterScript(lsi_cb_param_t *rec,
     return len;
 }
 
+
 lua_State *LsLuaEngine::newLuaConnection()
 {
     return LsLuaApi::newstate();
 }
 
+
 lua_State *LsLuaEngine::newLuaThread(lua_State *L)
 {
     return LsLuaApi::newthread(L);
 }
+
 
 lua_State *LsLuaEngine::injectLsiapi(lua_State *L)
 {
@@ -505,6 +524,7 @@ lua_State *LsLuaEngine::injectLsiapi(lua_State *L)
     }
     return pState;
 }
+
 
 void *LsLuaEngine::parseParam(const char *param, int param_len,
                               void *initial_config, int level,
@@ -741,6 +761,7 @@ void *LsLuaEngine::parseParam(const char *param, int param_len,
     return (void *)pUser;
 }
 
+
 void LsLuaEngine::removeParam(void *config)
 {
     g_api->log(NULL, LSI_LOG_DEBUG, "REMOVE PARAMETERS [%p]\n", config);
@@ -750,6 +771,7 @@ void LsLuaEngine::removeParam(void *config)
         s_pLuaLib = NULL;
     }
 }
+
 
 int LsLuaEngine::execLuaCmd(const char *cmd)
 {
@@ -766,6 +788,7 @@ int LsLuaEngine::execLuaCmd(const char *cmd)
     LsLuaApi::resume(L, 0);
     return 0;
 }
+
 
 //
 //  Test driver
@@ -848,8 +871,10 @@ int LsLuaEngine::testCmd()
     return 0;
 }
 
+
 LsLuaFuncMap *LsLuaFuncMap::s_pMap = {NULL};
 int LsLuaFuncMap::s_iMapCnt = 0;
+
 
 int LsLuaFuncMap::loadLuaScript(lsi_session_t *session, lua_State *L,
                                 const char *scriptName)
@@ -906,6 +931,7 @@ typedef struct
     size_t  size;
     int     state;          // 0 - not ready, 1 - begin, 2 - data, 3 - end
 } luaFile_t;
+
 
 LsLuaFuncMap::LsLuaFuncMap(lsi_session_t *session, lua_State *L,
                            const char *scriptName)
@@ -971,6 +997,7 @@ errout:
                             strlen(LUA_ERRSTR_SCRIPT));
 }
 
+
 LsLuaFuncMap::~LsLuaFuncMap()
 {
     if (m_pScriptName)
@@ -980,12 +1007,14 @@ LsLuaFuncMap::~LsLuaFuncMap()
     m_iStatus = 0;
 }
 
+
 void LsLuaFuncMap::loadLuaFunc(lua_State *L)
 {
     LsLuaApi::getglobal(L, LS_LUA_FUNCTABLE);
     LsLuaApi::getfield(L, -1, m_pFuncName);
     LsLuaApi::remove(L, -2);
 }
+
 
 void LsLuaFuncMap::unloadLuaFunc(lua_State *L)
 {
@@ -995,11 +1024,13 @@ void LsLuaFuncMap::unloadLuaFunc(lua_State *L)
     LsLuaApi::remove(L, -1);
 }
 
+
 void LsLuaFuncMap::add()
 {
     m_pNext = s_pMap;
     s_pMap = this;
 }
+
 
 void LsLuaFuncMap::remove()
 {
@@ -1020,6 +1051,7 @@ void LsLuaFuncMap::remove()
         }
     }
 }
+
 
 const char *LsLuaFuncMap::textFileReader(lua_State *L, void *d,
         size_t *retSize)
@@ -1049,6 +1081,7 @@ const char *LsLuaFuncMap::textFileReader(lua_State *L, void *d,
     }
     return p_d->buf;
 }
+
 
 ls_str_t *LsLuaUserParam::getPathBuf(int index)
 {

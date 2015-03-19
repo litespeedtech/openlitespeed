@@ -18,13 +18,14 @@
 #include "extconn.h"
 #include "extrequest.h"
 #include "extworker.h"
+
 #include <edio/multiplexer.h>
 #include <edio/multiplexerfactory.h>
-#include <socket/gsockaddr.h>
-#include <socket/coresocket.h>
-#include <util/datetime.h>
 #include <http/httplog.h>
 #include <http/httpstatuscode.h>
+#include <socket/coresocket.h>
+#include <socket/gsockaddr.h>
+#include <util/datetime.h>
 
 #include <fcntl.h>
 
@@ -39,9 +40,11 @@ ExtConn::ExtConn()
 {
 }
 
+
 ExtConn::~ExtConn()
 {
 }
+
 
 //void ExtConn::reset()
 //{
@@ -50,12 +53,14 @@ ExtConn::~ExtConn()
 //
 //}
 
+
 void ExtConn::recycle()
 {
     if (getState() >= ABORT)
         close();
     m_pWorker->recycleConn(this);
 }
+
 
 void ExtConn::checkInProcess()
 {
@@ -100,6 +105,7 @@ int ExtConn::assignReq(ExtRequest *pReq)
 
 }
 
+
 int ExtConn::close()
 {
     if (D_ENABLED(DL_LESS))
@@ -109,6 +115,7 @@ int ExtConn::close()
     m_iInProcess = 0;
     return 0;
 }
+
 
 int ExtConn::reconnect()
 {
@@ -128,6 +135,7 @@ int ExtConn::connect(Multiplexer *pMplx)
     m_pWorker->startOnDemond(0);
     return connectEx(pMplx);
 }
+
 
 int ExtConn::connectEx(Multiplexer *pMplx)
 {
@@ -251,6 +259,7 @@ int ExtConn::onWrite()
     return ret;
 }
 
+
 int ExtConn::onError()
 {
     int error = errno;
@@ -272,9 +281,11 @@ int ExtConn::onError()
     return LS_FAIL;
 }
 
+
 void ExtConn::onTimer()
 {
 }
+
 
 void ExtConn::onSecTimer()
 {
@@ -321,6 +332,7 @@ void ExtConn::onSecTimer()
 
 }
 
+
 int ExtConn::connError(int errCode)
 {
     if (D_ENABLED(DL_LESS))
@@ -354,6 +366,7 @@ int ExtConn::connError(int errCode)
 //    }
 }
 
+
 int ExtConn::onEventDone()
 {
     switch (m_iState)
@@ -380,12 +393,14 @@ void ExtConn::continueRead()
     EdStream::continueRead();
 }
 
+
 void ExtConn::suspendRead()
 {
     if (D_ENABLED(DL_LESS))
         LOG_D((getLogger(), "[%s] ExtConn::suspendRead()", getLogId()));
     EdStream::suspendRead();
 }
+
 
 void ExtConn::continueWrite()
 {
@@ -398,6 +413,7 @@ void ExtConn::continueWrite()
         else*/
     EdStream::continueWrite();
 }
+
 
 void ExtConn::suspendWrite()
 {

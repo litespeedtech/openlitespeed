@@ -20,7 +20,6 @@
 
 #include <lsdef.h>
 #include <edio/aiosendfile.h>
-#include <edio/multiplexer.h>
 
 class HttpAioSendFile : public AioSendFile
 {

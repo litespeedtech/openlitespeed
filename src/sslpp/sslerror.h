@@ -18,8 +18,8 @@
 #ifndef SSLERROR_H
 #define SSLERROR_H
 
-
 #include <lsdef.h>
+
 #include <exception>
 
 class SSLError : public std::exception
@@ -34,7 +34,7 @@ public:
     const char *what() const throw()
     {   return m_achMsg;  }
     int get() const     {   return m_iError;    }
-    
+
     LS_NO_COPY_ASSIGN(SSLError);
 };
 

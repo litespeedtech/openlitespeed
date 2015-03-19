@@ -17,13 +17,9 @@
 *****************************************************************************/
 #include "rewriterule.h"
 
-#include <http/httpheader.h>
-#include <http/rewritemap.h>
 #include <http/httplog.h>
 #include <http/httpstatuscode.h>
-#include <http/requestvars.h>
-
-#include <log4cxx/logger.h>
+#include <http/rewritemap.h>
 #include <util/stringtool.h>
 
 #include <assert.h>
@@ -40,26 +36,32 @@ static LOG4CXX_NS::Logger   *s_pLogger  = NULL;
 //                     s_pLogId, pError, s_pCurLine ));
 // }
 
+
 void RewriteRule::setLogger(LOG4CXX_NS::Logger *pLogger, const char *pId)
 {
     s_pLogger = pLogger;
     s_pLogId = pId;
 }
 
+
 void RewriteRule::error(const char *pError)
 {
     LOG_ERR((s_pLogger, "[%s] rewrite: %s.",
              s_pLogId, pError));
 }
+
+
 RewriteSubstItem::RewriteSubstItem()
 {
 }
+
 
 RewriteSubstItem::~RewriteSubstItem()
 {
     if (getType() == REF_MAP)
         delete getMapRef();
 }
+
 
 int RewriteSubstItem::needUrlDecode() const
 {
@@ -82,17 +84,16 @@ RewriteSubstItem::RewriteSubstItem(const RewriteSubstItem &rhs)
 }
 
 
-
-
-
 RewriteSubstFormat::RewriteSubstFormat()
 {
 }
+
 
 RewriteSubstFormat::~RewriteSubstFormat()
 {
     releaseObjects();
 }
+
 
 RewriteSubstFormat::RewriteSubstFormat(const RewriteSubstFormat &rhs)
     : TLinkList<RewriteSubstItem>(rhs)
@@ -100,6 +101,7 @@ RewriteSubstFormat::RewriteSubstFormat(const RewriteSubstFormat &rhs)
 {
 
 }
+
 
 int RewriteSubstFormat::equal(const RewriteSubstFormat &rhs) const
 {
@@ -234,13 +236,13 @@ int RewriteSubstFormat::parse(const char *pFormatStr, const char *pEnd,
 }
 
 
-
 MapRefItem::MapRefItem()
     : m_pMap(NULL)
     , m_pKeyFormat(NULL)
     , m_pDefaultFormat(NULL)
 {
 }
+
 
 MapRefItem::~MapRefItem()
 {
@@ -249,6 +251,7 @@ MapRefItem::~MapRefItem()
     if (m_pDefaultFormat)
         delete m_pDefaultFormat;
 }
+
 
 MapRefItem::MapRefItem(const MapRefItem &rhs)
     : m_pMap(rhs.m_pMap)
@@ -325,12 +328,13 @@ int MapRefItem::parse(const char *&pFormatStr, const char *pEnd,
     return m_pKeyFormat->parse(pColon, pDefault, pMaps);
 }
 
+
 RewriteCond::RewriteCond()
     : m_opcode(COND_OP_REGEX)
     , dummy(0)
     , m_flag(0)
-
 {}
+
 
 RewriteCond::RewriteCond(const RewriteCond &rhs)
     : LinkedObj()
@@ -372,6 +376,7 @@ int RewriteCond::parseTestString(const char *&pRuleStr, const char *pEnd,
 //    }
     return m_testStringFormat.parse(argBegin, argEnd, pMaps);
 }
+
 
 int RewriteCond::parseCondPattern(const char *&pRuleStr, const char *pEnd)
 {
@@ -465,6 +470,7 @@ int RewriteCond::parseCondPattern(const char *&pRuleStr, const char *pEnd)
     return 0;
 }
 
+
 int RewriteCond::praseFlag(const char *&pRuleStr, const char *pEnd)
 {
     while ((pRuleStr < pEnd) && (isspace(*pRuleStr)))
@@ -521,6 +527,7 @@ int RewriteCond::praseFlag(const char *&pRuleStr, const char *pEnd)
     return LS_FAIL;
 }
 
+
 int RewriteCond::compilePattern()
 {
     int flag = REG_EXTENDED;
@@ -528,6 +535,7 @@ int RewriteCond::compilePattern()
         flag = REG_EXTENDED | REG_ICASE;
     return m_regex.compile(m_pattern.c_str(), flag);
 }
+
 
 int RewriteCond::parse(const char *pRuleStr, const char *pEnd,
                        const RewriteMapList *pMaps)
@@ -548,15 +556,14 @@ int RewriteCond::parse(const char *pRuleStr, const char *pEnd,
 }
 
 
-
 RewriteRule::RewriteRule()
     : m_action(0)
     , m_flag(0)
     , m_statusCode(0)
     , m_skipRules(0)
-
 {
 }
+
 
 RewriteRule::RewriteRule(const RewriteRule &rhs)
     : LinkedObj()
@@ -978,6 +985,7 @@ int RewriteRule::parseOneFlag(const char *&pRuleStr, const char *pEnd)
     return 0;
 }
 
+
 int RewriteRule::parseRuleFlag(const char *&pRuleStr, const char *pEnd)
 {
     while ((pRuleStr < pEnd) && (isspace(*pRuleStr)))
@@ -1017,6 +1025,7 @@ int RewriteRule::parseRuleFlag(const char *&pRuleStr, const char *pEnd)
 
 }
 
+
 int RewriteRule::compilePattern()
 {
     int flag = REG_EXTENDED;
@@ -1024,6 +1033,7 @@ int RewriteRule::compilePattern()
         flag = REG_EXTENDED | REG_ICASE;
     return m_regex.compile(m_pattern.c_str(), flag);
 }
+
 
 int RewriteRule::parseRule(char *pRule, const char *pEnd,
                            const RewriteMapList *pMaps)

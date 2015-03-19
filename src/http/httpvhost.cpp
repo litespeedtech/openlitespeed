@@ -16,46 +16,41 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include <http/httpvhost.h>
+
 #include <http/accesscache.h>
 #include <http/accesslog.h>
 #include <http/awstats.h>
-#include <http/contextlist.h>
-#include <http/contexttree.h>
-#include <util/datetime.h>
+#include <http/denieddir.h>
 #include <http/handlerfactory.h>
 #include <http/handlertype.h>
 #include <http/hotlinkctrl.h>
-#include <http/htpasswd.h>
+#include <http/htauth.h>
 #include <http/httplog.h>
-#include <http/moduserdir.h>
+#include <http/httpmime.h>
+#include <http/httpserverconfig.h>
+#include <http/httpstatuscode.h>
 #include <http/rewriteengine.h>
 #include <http/rewriterule.h>
 #include <http/rewritemap.h>
-#include <http/userdir.h>
-#include <http/htauth.h>
-#include <http/httpserverconfig.h>
-#include <http/httpstatuscode.h>
-#include <http/httpmime.h>
-#include <http/denieddir.h>
 #include <http/serverprocessconfig.h>
-#include <log4cxx/logrotate.h>
-#include <log4cxx/logger.h>
+#include <http/userdir.h>
+#include <log4cxx/appender.h>
 #include <log4cxx/layout.h>
-#include <lsiapi/modulemanager.h>
+#include <log4cxx/logger.h>
+#include <log4cxx/logrotate.h>
 #include <lsiapi/internal.h>
+#include <lsiapi/lsiapi.h>
+#include <lsiapi/modulemanager.h>
+#include <lsr/ls_fileio.h>
+#include <lsr/ls_strtool.h>
+#include <main/configctx.h>
+#include <main/httpserver.h>
+#include <main/mainserverconfig.h>
+#include <main/plainconf.h>
 #include <sslpp/sslcontext.h>
 #include <util/accesscontrol.h>
-#include <util/hashstringmap.h>
-#include <lsr/ls_fileio.h>
-#include <util/stringlist.h>
-#include <util/stringtool.h>
-#include "util/configctx.h"
+#include <util/datetime.h>
 #include <util/xmlnode.h>
-#include <util/gpath.h>
-#include <lsr/ls_strtool.h>
-#include <main/httpserver.h>
-#include "main/mainserverconfig.h"
-#include "main/plainconf.h"
 
 #include <extensions/localworker.h>
 #include <extensions/localworkerconfig.h>
@@ -67,17 +62,18 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#include <lsiapi/lsiapihooks.h>
 
 
 RealmMap::RealmMap(int initSize)
     : _shmap(initSize)
 {}
 
+
 RealmMap::~RealmMap()
 {
     releaseObjects();
 }
+
 
 const UserDir *RealmMap::find(const char *pScript) const
 {
@@ -86,6 +82,7 @@ const UserDir *RealmMap::find(const char *pScript) const
            ? iter.second()
            : NULL;
 }
+
 
 UserDir *RealmMap::get(const char *pFile, const char *pGroup)
 {
@@ -105,6 +102,7 @@ UserDir *RealmMap::get(const char *pFile, const char *pGroup)
     }
     return NULL;
 }
+
 
 UserDir *HttpVHost::getFileUserDir(
     const char *pName, const char *pFile, const char *pGroup)
@@ -187,6 +185,7 @@ int HttpVHost::setErrorLogFile(const char *pFileName)
         return LS_FAIL;
 }
 
+
 int HttpVHost::setAccessLogFile(const char *pFileName, int pipe)
 {
     int ret = 0;
@@ -209,6 +208,7 @@ int HttpVHost::setAccessLogFile(const char *pFileName, int pipe)
     }
     return ret;
 }
+
 
 const char *HttpVHost::getAccessLogPath() const
 {
@@ -253,6 +253,7 @@ HttpVHost::HttpVHost(const char *pHostName)
     m_contexts.setRootContext(&m_rootContext);
 }
 
+
 HttpVHost::~HttpVHost()
 {
     if (m_pLogger)
@@ -278,6 +279,7 @@ HttpVHost::~HttpVHost()
 
 }
 
+
 int HttpVHost::setDocRoot(const char *psRoot)
 {
     assert(psRoot != NULL);
@@ -286,15 +288,18 @@ int HttpVHost::setDocRoot(const char *psRoot)
     return 0;
 }
 
+
 AccessControl *HttpVHost::getAccessCtrl()
 {
     return m_pAccessCache->getAccessCtrl();
 }
 
+
 void HttpVHost::enableAccessCtrl()
 {
     m_pAccessCache = new AccessCache(1543);
 }
+
 
 //const StringList* HttpVHost::getIndexFileList() const
 //{
@@ -331,17 +336,18 @@ UserDir *HttpVHost::getRealm(const char *pRealm)
     return (UserDir *)m_realmMap.find(pRealm);
 }
 
+
 const UserDir *HttpVHost::getRealm(const char *pRealm) const
 {
     return m_realmMap.find(pRealm);
 }
+
 
 void HttpVHost::setLogLevel(const char *pLevel)
 {
     if (m_pLogger)
         m_pLogger->setLevel(pLevel);
 }
-
 
 
 void HttpVHost::setErrorLogRollingSize(off_t size, int keep_days)
@@ -352,7 +358,6 @@ void HttpVHost::setErrorLogRollingSize(off_t size, int keep_days)
         m_pLogger->getAppender()->setKeepDays(keep_days);
     }
 }
-
 
 
 void  HttpVHost::logAccess(HttpSession *pSession) const
@@ -372,6 +377,7 @@ void HttpVHost::setBytesLogFilePath(const char *pPath, off_t rollingSize)
     m_pBytesLog->setRollingSize(rollingSize);
 }
 
+
 void HttpVHost::logBytes(long long bytes)
 {
     char achBuf[80];
@@ -381,14 +387,15 @@ void HttpVHost::logBytes(long long bytes)
 }
 
 
-
 // const char * HttpVHost::getAdminEmails() const
 // {   return m_sAdminEmails.c_str();  }
+
 
 void HttpVHost::setAdminEmails(const char *pEmails)
 {
     m_sAdminEmails = pEmails;
 }
+
 
 void HttpVHost::onTimer30Secs()
 {
@@ -442,10 +449,12 @@ void HttpVHost::onTimer()
     }
 }
 
+
 void HttpVHost::setChroot(const char *pRoot)
 {
     m_sChroot = pRoot;
 }
+
 
 void HttpVHost::addRewriteMap(const char *pName, const char *pLocation)
 {
@@ -479,10 +488,12 @@ void HttpVHost::addRewriteMap(const char *pName, const char *pLocation)
     m_pRewriteMaps->insert(pMap->getName(), pMap);
 }
 
+
 void HttpVHost::addRewriteRule(char *pRules)
 {
     RewriteEngine::parseRules(pRules, &m_rewriteRules, m_pRewriteMaps);
 }
+
 
 void HttpVHost::updateUGid(const char *pLogId, const char *pPath)
 {
@@ -528,6 +539,7 @@ void HttpVHost::updateUGid(const char *pLogId, const char *pPath)
         setGid(st.st_gid);
     }
 }
+
 
 HttpContext *HttpVHost::setContext(HttpContext *pContext,
                                    const char *pUri, int type, const char *pLocation, const char *pHandler,
@@ -581,6 +593,7 @@ HttpContext *HttpVHost::addContext(const char *pUri, int type,
 
 }
 
+
 const HttpContext *HttpVHost::matchLocation(const char *pURI,
         int regex) const
 {
@@ -600,6 +613,7 @@ const HttpContext *HttpVHost::matchLocation(const char *pURI,
 
 }
 
+
 HttpContext *HttpVHost::getContext(const char *pURI, int regex) const
 {
     if (!regex)
@@ -610,6 +624,7 @@ HttpContext *HttpVHost::getContext(const char *pURI, int regex) const
 
 }
 
+
 void HttpVHost::setSSLContext(SSLContext *pCtx)
 {
     if (pCtx == m_pSSLCtx)
@@ -618,6 +633,8 @@ void HttpVHost::setSSLContext(SSLContext *pCtx)
         delete m_pSSLCtx;
     m_pSSLCtx = pCtx;
 }
+
+
 HTAuth *HttpVHost::configAuthRealm(HttpContext *pContext,
                                    const char *pRealmName)
 {
@@ -655,6 +672,7 @@ HTAuth *HttpVHost::configAuthRealm(HttpContext *pContext,
     return pAuth;
 }
 
+
 int HttpVHost::configContextAuth(HttpContext *pContext,
                                  const XmlNode *pContextNode)
 {
@@ -685,6 +703,7 @@ int HttpVHost::configContextAuth(HttpContext *pContext,
 
     return 0;
 }
+
 
 int HttpVHost::configBasics(const XmlNode *pVhConfNode, int iChrootLen)
 {
@@ -740,6 +759,7 @@ int HttpVHost::configBasics(const XmlNode *pVhConfNode, int iChrootLen)
 
 }
 
+
 int HttpVHost::configWebsocket(const XmlNode *pWebsocketNode)
 {
     const char *pUri = ConfigCtx::getCurConfigCtx()->getTag(pWebsocketNode,
@@ -771,6 +791,7 @@ int HttpVHost::configWebsocket(const XmlNode *pWebsocketNode)
     return 0;
 }
 
+
 int HttpVHost::configVHWebsocketList(const XmlNode *pVhConfNode)
 {
     const XmlNode *p0 = pVhConfNode->getChild("websocketlist", 1);
@@ -787,6 +808,7 @@ int HttpVHost::configVHWebsocketList(const XmlNode *pVhConfNode)
 
     return 0;
 }
+
 
 int HttpVHost::configHotlinkCtrl(const XmlNode *pNode)
 {
@@ -812,6 +834,7 @@ int HttpVHost::configHotlinkCtrl(const XmlNode *pNode)
     return 0;
 }
 
+
 int HttpVHost::configSecurity(const XmlNode *pVhConfNode)
 {
     const XmlNode *p0 = pVhConfNode->getChild("security", 1);
@@ -823,7 +846,7 @@ int HttpVHost::configSecurity(const XmlNode *pVhConfNode)
         if (AccessControl::isAvailable(p0))
         {
             enableAccessCtrl();
-            getAccessCtrl()->config(p0);
+            currentCtx.configSecurity(getAccessCtrl(), p0);
         }
 
         configRealmList(p0);
@@ -836,6 +859,7 @@ int HttpVHost::configSecurity(const XmlNode *pVhConfNode)
     return 0;
 }
 
+
 int HttpVHost::setAuthCache(const XmlNode *pNode,
                             HashDataCache *pAuth)
 {
@@ -847,6 +871,7 @@ int HttpVHost::setAuthCache(const XmlNode *pNode,
     pAuth->setMaxSize(maxSize);
     return 0;
 }
+
 
 int HttpVHost::configRealm(const XmlNode *pRealmNode)
 {
@@ -940,6 +965,7 @@ int HttpVHost::configRealmList(const XmlNode *pRoot)
     return 0;
 }
 
+
 void HttpVHost::configRewriteMap(const XmlNode *pNode)
 {
     const XmlNodeList *pList = pNode->getChildren("map");
@@ -970,6 +996,7 @@ void HttpVHost::configRewriteMap(const XmlNode *pNode)
     }
 }
 
+
 int HttpVHost::configRewrite(const XmlNode *pNode)
 {
     getRootContext().enableRewrite(ConfigCtx::getCurConfigCtx()->getLongValue(
@@ -987,6 +1014,8 @@ int HttpVHost::configRewrite(const XmlNode *pNode)
 
     return 0;
 }
+
+
 const XmlNode *HttpVHost::configIndex(const XmlNode *pVhConfNode,
                                       const StringList *pStrList)
 {
@@ -1024,6 +1053,8 @@ const XmlNode *HttpVHost::configIndex(const XmlNode *pVhConfNode,
     getRootContext().configAutoIndex(pNode);
     return pNode;
 }
+
+
 int HttpVHost::configIndexFile(const XmlNode *pVhConfNode,
                                const StringList *pStrList, const char *strIndexURI)
 {
@@ -1043,6 +1074,7 @@ int HttpVHost::configIndexFile(const XmlNode *pVhConfNode,
     pContext->enableScript(1);
     return 0;
 }
+
 
 HttpContext *HttpVHost::addContext(int match, const char *pUri, int type,
                                    const char *pLocation, const char *pHandler, int allowBrowse)
@@ -1084,6 +1116,8 @@ HttpContext *HttpVHost::addContext(int match, const char *pUri, int type,
         return addContext(pUri, type, pLocation, pHandler, allowBrowse);
     }
 }
+
+
 HttpContext *HttpVHost::configContext(const char *pUri, int type,
                                       const char *pLocation,
                                       const char *pHandler, int allowBrowse)
@@ -1190,6 +1224,8 @@ HttpContext *HttpVHost::configContext(const char *pUri, int type,
 
     return addContext(match, pUri, type, pLocation, pHandler, allowBrowse);
 }
+
+
 int HttpVHost::configAwstats(const char *vhDomain, int vhAliasesLen,
                              const XmlNode *pNode)
 {
@@ -1268,6 +1304,8 @@ int HttpVHost::configAwstats(const char *vhDomain, int vhAliasesLen,
                      iconURI, vhDomain, vhAliasesLen);
     return 0;
 }
+
+
 #define MAX_URI_LEN  1024
 HttpContext *HttpVHost::addRailsContext(const char *pURI,
                                         const char *pLocation, LocalWorker *pWorker)
@@ -1316,6 +1354,7 @@ HttpContext *HttpVHost::addRailsContext(const char *pURI,
     return pContext;
 }
 
+
 HttpContext *HttpVHost::configRailsContext(const char *contextUri,
         const char *appPath,
         int maxConns, const char *pRailsEnv, int maxIdle, const Env *pEnv,
@@ -1348,6 +1387,7 @@ HttpContext *HttpVHost::configRailsContext(const char *contextUri,
                            pWorker);
 }
 
+
 HttpContext *HttpVHost::configRailsContext(const XmlNode *pNode,
         const char *contextUri, const char *appPath)
 {
@@ -1372,6 +1412,7 @@ HttpContext *HttpVHost::configRailsContext(const XmlNode *pNode,
     return configRailsContext(contextUri, appPath,
                               maxConns, pRailsEnv, maxIdle, NULL, pRubyPath);
 }
+
 
 HttpContext *HttpVHost::importWebApp(const char *contextUri,
                                      const char *appPath,
@@ -1467,6 +1508,7 @@ HttpContext *HttpVHost::importWebApp(const char *contextUri,
     return pContext;
 }
 
+
 void HttpVHost::configServletMapping(XmlNode *pRoot, char *pachURI,
                                      int iUriLen,
                                      const char *pWorkerName, int allowBrowse)
@@ -1508,6 +1550,8 @@ void HttpVHost::configServletMapping(XmlNode *pRoot, char *pachURI,
         }
     }
 }
+
+
 static int getRedirectCode(const XmlNode *pContextNode, int &code,
                            const char *pLocation)
 {
@@ -1545,6 +1589,7 @@ static int getRedirectCode(const XmlNode *pContextNode, int &code,
 
     return 0;
 }
+
 
 int HttpVHost::configContext(const XmlNode *pContextNode)
 {
@@ -1639,6 +1684,7 @@ int HttpVHost::configContext(const XmlNode *pContextNode)
     return LS_FAIL;
 }
 
+
 int HttpVHost::configRedirectContext(const XmlNode *pContextNode,
                                      const char *pLocation,
                                      const char *pUri, const char *pHandler, bool allowBrowse, int match,
@@ -1669,6 +1715,7 @@ static int compareContext(const void *p1, const void *p2)
     return strcmp((*((XmlNode **)p1))->getChildValue("uri", 1),
                   (*((XmlNode **)p2))->getChildValue("uri", 1));
 }
+
 
 int HttpVHost::configVHContextList(const XmlNode *pVhConfNode,
                                    const XmlNodeList *pModuleList)
@@ -1702,6 +1749,7 @@ int HttpVHost::configVHContextList(const XmlNode *pVhConfNode,
     contextInherit();
     return 0;
 }
+
 
 void HttpVHost::checkAndAddNewUriFormModuleList(const XmlNodeList
         *pModuleList)
@@ -1749,6 +1797,7 @@ void HttpVHost::checkAndAddNewUriFormModuleList(const XmlNodeList
         }
     }
 }
+
 
 //only save the param, not parse it and do not inherit the sessionhooks
 int HttpVHost::configVHModuleUrlFilter1(lsi_module_t *pModule,
@@ -1813,6 +1862,7 @@ int HttpVHost::configVHModuleUrlFilter1(lsi_module_t *pModule,
     return ret;
 }
 
+
 lsi_module_config_t *parseModuleConfigParam(lsi_module_t *pModule,
         const HttpContext *pContext)
 {
@@ -1852,6 +1902,7 @@ lsi_module_config_t *parseModuleConfigParam(lsi_module_t *pModule,
 
     return config;
 }
+
 
 int HttpVHost::configVHModuleUrlFilter2(lsi_module_t *pModule,
                                         const XmlNodeList *pfilterList)
@@ -1965,6 +2016,7 @@ int HttpVHost::configModuleConfigInContext(const XmlNode *pContextNode,
     return 0;
 }
 
+
 int HttpVHost::parseVHModulesParams(const XmlNode *pVhConfNode,
                                     const XmlNodeList *pModuleList, int saveParam)
 {
@@ -2019,6 +2071,7 @@ int HttpVHost::parseVHModulesParams(const XmlNode *pVhConfNode,
 
     return ret;
 }
+
 
 /****
  * COMMENT: About the context under a VHost
@@ -2149,6 +2202,7 @@ int HttpVHost::config(const XmlNode *pVhConfNode)
     return 0;
 }
 
+
 int HttpVHost::configVHScriptHandler(const XmlNode *pVhConfNode)
 {
     const XmlNode *p0 = pVhConfNode->getChild("scriptHandler");
@@ -2166,6 +2220,7 @@ int HttpVHost::configVHScriptHandler(const XmlNode *pVhConfNode)
 
     return 0;
 }
+
 
 const HttpHandler *HttpVHost::isHandlerAllowed(const HttpHandler *pHdlr,
         int type,
@@ -2187,6 +2242,8 @@ const HttpHandler *HttpVHost::isHandlerAllowed(const HttpHandler *pHdlr,
     }
     return pHdlr;
 }
+
+
 void HttpVHost::configVHChrootMode(const XmlNode *pNode)
 {
     int val = ConfigCtx::getCurConfigCtx()->getLongValue(pNode, "chrootMode",
@@ -2227,6 +2284,8 @@ void HttpVHost::configVHChrootMode(const XmlNode *pNode)
     setChrootMode(val);
 
 }
+
+
 HttpVHost *HttpVHost::configVHost(const XmlNode *pNode, const char *pName,
                                   const char *pDomain, const char *pAliases, const char *pVhRoot,
                                   const XmlNode *pConfigNode)
@@ -2303,6 +2362,8 @@ HttpVHost *HttpVHost::configVHost(const XmlNode *pNode, const char *pName,
 
     return NULL;
 }
+
+
 HttpVHost *HttpVHost::configVHost(XmlNode *pNode)
 {
     XmlNode *pVhConfNode = NULL;
@@ -2363,6 +2424,8 @@ HttpVHost *HttpVHost::configVHost(XmlNode *pNode)
 
     return pVHost;
 }
+
+
 int HttpVHost::checkDeniedSubDirs(const char *pUri, const char *pLocation)
 {
     int len = strlen(pLocation);

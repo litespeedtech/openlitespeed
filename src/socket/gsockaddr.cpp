@@ -16,15 +16,16 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "gsockaddr.h"
+
+#include <lsdef.h>
+#include <util/pool.h>
+
 #include <assert.h>
 #include <netdb.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <strings.h>
 #include <sys/types.h>
-
-#include <util/pool.h>
-#include <lsr/ls_strtool.h>
-#include <lsdef.h>
 
 
 GSockAddr::GSockAddr(const GSockAddr &rhs)
@@ -33,6 +34,7 @@ GSockAddr::GSockAddr(const GSockAddr &rhs)
     *this = rhs;
 }
 
+
 GSockAddr &GSockAddr::operator=(const struct sockaddr &rhs)
 {
     if ((!m_pSockAddr) || (m_pSockAddr->sa_family != rhs.sa_family))
@@ -40,6 +42,7 @@ GSockAddr &GSockAddr::operator=(const struct sockaddr &rhs)
     memmove(m_pSockAddr, &rhs, m_len);
     return *this;
 }
+
 
 static int sockAddrLen(int family)
 {
@@ -60,8 +63,6 @@ static int sockAddrLen(int family)
 }
 
 
-
-
 int GSockAddr::allocate(int family)
 {
     if (m_pSockAddr)
@@ -79,11 +80,13 @@ int GSockAddr::allocate(int family)
         return LS_FAIL;
 }
 
+
 void GSockAddr::release()
 {
     if (m_pSockAddr)
         Pool::deallocate(m_pSockAddr, m_len);
 }
+
 
 /**
   * @param pURL  the destination of the connection, format of the string is:
@@ -131,6 +134,7 @@ const char *parseURL(const char *pURL, int *domain)
     }
     return pURL;
 }
+
 
 //Only deal with "http://" and "https://" cases
 //ie: "http://www.litespeedtech.com/about-litespeed-technologies-inc.html"
@@ -181,6 +185,7 @@ int GSockAddr::setHttpUrl(const char *pHttpUrl, const int len)
     return set(url, NO_ANY | DO_NSLOOKUP);
 }
 
+
 int GSockAddr::set(const char *pURL, int tag)
 {
     int domain;
@@ -189,6 +194,7 @@ int GSockAddr::set(const char *pURL, int tag)
         return LS_FAIL;
     return set(domain, p, tag);
 }
+
 
 int GSockAddr::set(int family, const char *pURL, int tag)
 {
@@ -301,6 +307,7 @@ int GSockAddr::set(int family, const char *pURL, int tag)
     return 0;
 }
 
+
 int GSockAddr::parseAddr(const char *pString)
 {
     int family = AF_INET;
@@ -338,6 +345,7 @@ const char *GSockAddr::ntop(const struct sockaddr *pAddr, char *pBuf,
 
 }
 
+
 const char *GSockAddr::toString(char *pBuf, int len) const
 {
     if (m_pSockAddr->sa_family == AF_INET6)
@@ -358,6 +366,7 @@ const char *GSockAddr::toString(char *pBuf, int len) const
     return pBuf;
 }
 
+
 const char *GSockAddr::toString() const
 {
     static char s_buf[256];
@@ -373,6 +382,7 @@ void GSockAddr::set(const in_addr_t addr, const in_port_t port)
     m_v4->sin_port = htons(port);
 }
 
+
 void GSockAddr::set(const in6_addr *addr, const in_port_t port,
                     uint32_t flowinfo)
 {
@@ -382,10 +392,12 @@ void GSockAddr::set(const in6_addr *addr, const in_port_t port,
     m_v6->sin6_flowinfo = flowinfo;
 }
 
+
 int GSockAddr::getPort() const
 {
     return getPort(m_pSockAddr);
 }
+
 
 int GSockAddr::getPort(const sockaddr *pAddr)
 {
@@ -399,6 +411,7 @@ int GSockAddr::getPort(const sockaddr *pAddr)
         return 0;
     }
 }
+
 
 void GSockAddr::setPort(short port)
 {

@@ -16,13 +16,33 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include <lsr/ls_str.h>
+
+#include <lsdef.h>
+#include <lsr/ls_pool.h>
 #include <lsr/ls_strtool.h>
 #include <lsr/ls_strlist.h>
 
 #include <ctype.h>
+#include <stdio.h>
 #include <string.h>
 #include <openssl/md5.h>
-#include <lsdef.h>
+
+ls_parse_t *ls_parse_new(const char *pBegin, const char *pEnd,
+                         const char *delim)
+{
+    ls_parse_t *pThis;
+    if ((pThis = (ls_parse_t *)ls_palloc(sizeof(*pThis))) != NULL)
+        ls_parse(pThis, pBegin, pEnd, delim);
+    return pThis;
+}
+
+
+void ls_parse_delete(ls_parse_t *pThis)
+{
+    ls_parse_d(pThis);
+    ls_pfree(pThis);
+}
+
 
 char *ls_strupper(const char *pSrc, char *pDest)
 {

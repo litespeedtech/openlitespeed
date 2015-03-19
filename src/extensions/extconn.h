@@ -18,12 +18,12 @@
 #ifndef EXTCONN_H
 #define EXTCONN_H
 
-
 #include <lsdef.h>
-#include <time.h>
 #include <edio/ediostream.h>
-#include <util/iconnection.h>
 #include <log4cxx/ilog.h>
+#include <util/iconnection.h>
+
+#include <time.h>
 
 class ExtRequest;
 class ExtWorker;

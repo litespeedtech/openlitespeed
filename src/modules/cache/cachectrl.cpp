@@ -39,6 +39,7 @@ CacheCtrl::~CacheCtrl()
 {
 }
 
+
 static const char *s_directives[directivesCount] =
 {
     "no-cache",
@@ -55,8 +56,10 @@ static const char *s_directives[directivesCount] =
     "s-maxage"
 };
 
+
 static const int s_dirLen[directivesCount] =
 {   8, 8, 7, 9, 9, 12, 14, 6, 7, 15, 16, 8    };
+
 
 void CacheCtrl::init(int flags, int iMaxAge, int iMaxStale)
 {
@@ -64,6 +67,7 @@ void CacheCtrl::init(int flags, int iMaxAge, int iMaxStale)
     m_iMaxAge = iMaxAge;
     m_iMaxStale = iMaxStale;
 }
+
 
 int CacheCtrl::parse(const char *pHeader, int len)
 {
@@ -74,42 +78,42 @@ int CacheCtrl::parse(const char *pHeader, int len)
         p = parser.trim_parse();
         if (!p)
             break;
-        if (p != parser.getStrEnd())
+        if (p == parser.getStrEnd())
+            continue;
+        AutoStr2 s(p, parser.getStrEnd() - p);
+        int i;
+        for (i = 0; i < 12; ++i)
         {
-            AutoStr2 s(p, parser.getStrEnd() - p);
-            int i;
-            for (i = 0; i < 12; ++i)
+            if (strncasecmp(s.c_str(), s_directives[i], s_dirLen[i]) == 0)
+                break;
+        }
+        if (i >= 12)
+            continue;
+
+        m_iFlags |= (1 << i);
+        if (((i == 2) && !(m_iFlags & (i << 11))) ||
+            (i == 11) || (i == 3))
+        {
+            p += s_dirLen[i];
+            while ((*p == ' ') || (*p == '=') || (*p == '"'))
+                ++p;
+            if (!isdigit(*p))
+                continue;
+            if (i == 3)
             {
-                if (strncasecmp(s.c_str(), s_directives[i], s_dirLen[i]) == 0)
-                    break;
+                m_iMaxStale = atoi(p);
+                continue;
             }
-            if (i < 12)
+            m_iMaxAge = atoi(p);
+            if (m_iMaxAge > 0)
+                m_iFlags |= cache_public;
+            else
             {
-                m_iFlags |= (1 << i);
-                if (((i == 2) && !(m_iFlags & (i << 11))) ||
-                    (i == 11) || (i == 3))
-                {
-                    p += s_dirLen[i];
-                    while ((*p == ' ') || (*p == '=') || (*p == '"'))
-                        ++p;
-                    if (isdigit(*p))
-                    {
-                        if (i == 3)
-                            m_iMaxStale = atoi(p);
-                        else
-                        {
-                            m_iMaxAge = atoi(p);
-                            if (m_iMaxAge > 0)
-                                m_iFlags |= cache_public;
-                            else
-                            {
-                                m_iFlags &= ~cache_public;
-                                m_iFlags &= ~cache_private;
-                            }
-                        }
-                    }
-                }
+                m_iFlags &= ~cache_public;
+                m_iFlags &= ~cache_private;
             }
+
+
         }
     }
     return 0;

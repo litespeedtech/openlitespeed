@@ -16,22 +16,24 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "proxyconn.h"
+#include "proxyworker.h"
+#include "proxyconfig.h"
+
+#include <edio/multiplexer.h>
 #include <edio/multiplexerfactory.h>
 #include <extensions/extworker.h>
-#include <extensions/proxy/proxyworker.h>
-#include <extensions/proxy/proxyconfig.h>
-#include <http/httpsession.h>
-#include <http/httpextconnector.h>
+#include <http/chunkinputstream.h>
 #include <http/httpdefs.h>
+#include <http/httpextconnector.h>
 #include <http/httplog.h>
 #include <http/httpreq.h>
 #include <http/httpresourcemanager.h>
-#include <http/chunkinputstream.h>
-
-#include <sys/socket.h>
-
+#include <http/httpsession.h>
+#include <http/httpstatuscode.h>
 #include <sslpp/sslcontext.h>
 #include <sslpp/sslerror.h>
+
+#include <sys/socket.h>
 
 
 static char s_achForwardHttps[] = "X-Forwarded-Proto: https\r\n";
@@ -44,9 +46,11 @@ ProxyConn::ProxyConn()
            ((char *)(&m_pChunkIS + 1)) - (char *)&m_iTotalPending);
 }
 
+
 ProxyConn::~ProxyConn()
 {
 }
+
 
 void ProxyConn::init(int fd, Multiplexer *pMplx)
 {
@@ -60,6 +64,7 @@ void ProxyConn::init(int fd, Multiplexer *pMplx)
     //Increase the number of successful request to avoid max connections reduction.
     incReqProcessed();
 }
+
 
 static SSL *getSslConn()
 {
@@ -76,6 +81,7 @@ static SSL *getSslConn()
     }
     return s_pProxyCtx->newSSL();
 }
+
 
 void ProxyConn::setSSLAgain()
 {
@@ -134,6 +140,7 @@ int ProxyConn::connectSSL()
 
     return ret;
 }
+
 
 int ProxyConn::doWrite()
 {
@@ -347,11 +354,13 @@ int  ProxyConn::sendReqBody(const char *pBuf, int size)
     return ret;
 }
 
+
 void ProxyConn::abort()
 {
     setState(ABORT);
     //::shutdown( getfd(), SHUT_RDWR );
 }
+
 
 int ProxyConn::close()
 {
@@ -364,6 +373,7 @@ int ProxyConn::close()
     }
     return ExtConn::close();
 }
+
 
 void ProxyConn::reset()
 {
@@ -379,6 +389,7 @@ int  ProxyConn::begin()
 {
     return 1;
 }
+
 
 int  ProxyConn::beginReqBody()
 {
@@ -421,6 +432,7 @@ int ProxyConn::read(char *pBuf , int size)
         return len;
     return ret;
 }
+
 
 int ProxyConn::readvSsl(const struct iovec *vector,
                         const struct iovec *pEnd)
@@ -520,6 +532,7 @@ int ProxyConn::doRead()
     }
     return ret;
 }
+
 
 int ProxyConn::processResp()
 {
@@ -709,6 +722,7 @@ int ProxyConn::readRespBody()
 
 }
 
+
 void ProxyConn::setupChunkIS()
 {
     assert(m_pChunkIS == NULL);
@@ -749,6 +763,7 @@ int ProxyConn::addRequest(ExtRequest *pReq)
     m_lReqBeginTime = time(NULL);
     return 0;
 }
+
 
 ExtRequest *ProxyConn::getReq() const
 {
@@ -811,10 +826,12 @@ int  ProxyConn::flush()
     return 0;
 }
 
+
 void ProxyConn::finishRecvBuf()
 {
     //doRead();
 }
+
 
 void ProxyConn::cleanUp()
 {
@@ -822,6 +839,7 @@ void ProxyConn::cleanUp()
     reset();
     recycle();
 }
+
 
 void ProxyConn::onTimer()
 {
@@ -886,15 +904,18 @@ bool ProxyConn::wantRead()
     return false;
 }
 
+
 bool ProxyConn::wantWrite()
 {
     return false;
 }
 
+
 int  ProxyConn::readResp(char *pBuf, int size)
 {
     return 0;
 }
+
 
 void ProxyConn::dump()
 {

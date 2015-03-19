@@ -19,7 +19,6 @@
 #define HTTPSERVERVERSION_H
 
 #include <lsdef.h>
-#include <config.h>
 
 class HttpServerVersion
 {

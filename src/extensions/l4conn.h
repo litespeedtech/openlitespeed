@@ -19,13 +19,17 @@
 #define L4CONN_H
 
 #include <lsdef.h>
-#include <http/httplog.h>
 #include <edio/ediostream.h>
-#define MAX_OUTGOING_BUF_ZISE    8192
-#include <util/loopbuf.h>
-#include "socket/gsockaddr.h"
+#include <log4cxx/nsdefs.h>
 
+#define MAX_OUTGOING_BUF_ZISE    8192
+
+class GSockAddr;
 class L4Handler;
+class LoopBuf;
+BEGIN_LOG4CXX_NS
+class Logger;
+END_LOG4CXX_NS
 
 class L4conn : public EdStream
 {

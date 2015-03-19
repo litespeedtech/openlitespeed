@@ -17,25 +17,22 @@
 *****************************************************************************/
 #include "accesslog.h"
 
-#include <extensions/fcgi/fcgiapp.h>
-#include <extensions/fcgi/fcgiappconfig.h>
-#include <extensions/fcgi/fcgistarter.h>
-#include <extensions/registry/extappregistry.h>
-
-#include <util/datetime.h>
-#include <http/httpsession.h>
 #include <http/httpreq.h>
 #include <http/httpresp.h>
+#include <http/httpsession.h>
+#include <http/httpstatuscode.h>
+#include <http/httpver.h>
 #include <http/pipeappender.h>
 #include <http/requestvars.h>
-
 #include <log4cxx/appender.h>
 #include <log4cxx/appendermanager.h>
-
-#include <util/stringtool.h>
 #include <lsr/ls_strtool.h>
+#include <util/datetime.h>
+#include <util/stringtool.h>
 
-
+#include <extensions/fcgi/fcgiapp.h>
+#include <extensions/fcgi/fcgiappconfig.h>
+#include <extensions/registry/extappregistry.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -45,6 +42,7 @@ struct LogFormatItem
     AutoStr2    m_sExtra;
 };
 
+
 class CustomFormat : public TPointerList<LogFormatItem>
 {
 public:
@@ -53,6 +51,7 @@ public:
 
     int parseFormat(const char *psFormat);
 };
+
 
 int CustomFormat::parseFormat(const char *psFormat)
 {
@@ -267,6 +266,7 @@ int CustomFormat::parseFormat(const char *psFormat)
     return 0;
 }
 
+
 static int logTime(char *pBuf, int len, time_t lTime, const char *pFmt)
 {
     struct tm gmt;
@@ -300,6 +300,7 @@ int AccessLog::appendStrNoQuote(char *pBuf, int len, const char *pSrc,
     }
     return 0;
 }
+
 
 int AccessLog::customLog(HttpSession *pSession, CustomFormat *pLogFmt,
                          char *pOutBuf, int buf_len, AccessLog *pLogger)
@@ -402,7 +403,6 @@ int AccessLog::customLog(HttpSession *pSession, CustomFormat *pLogFmt,
 }
 
 
-
 void AccessLog::customLog(HttpSession *pSession, CustomFormat *pLogFmt)
 {
     int n = customLog(pSession, pLogFmt, m_buf.end(), m_buf.available(), this);
@@ -436,6 +436,7 @@ int AccessLog::setCustomLog(const char *pFmt)
     return m_pCustomFormat->parseFormat(pFmt);
 }
 
+
 AccessLog::AccessLog()
     : m_pAppender(NULL)
     , m_pManager(NULL)
@@ -446,6 +447,7 @@ AccessLog::AccessLog()
     , m_buf(LOG_BUF_SIZE)
 {
 }
+
 
 AccessLog::AccessLog(const char *pPath)
     : m_pAppender(NULL)
@@ -526,6 +528,7 @@ int AccessLog::init(const char *pName, int pipe)
     return ret;
 }
 
+
 const char *AccessLog::getLogPath() const
 {
     if (m_iPipedLog)
@@ -534,13 +537,13 @@ const char *AccessLog::getLogPath() const
         return m_pAppender->getName();
 }
 
+
 int AccessLog::reopenExist()
 {
     if ((!m_iPipedLog) && (m_pAppender))
         return m_pAppender->reopenExist();
     return 0;
 }
-
 
 
 void AccessLog::log(const char *pVHostName, int len, HttpSession *pSession)
@@ -638,6 +641,7 @@ void AccessLog::log(HttpSession *pSession)
         flush();
 }
 
+
 int AccessLog::appendStr(const char *pStr, int len)
 {
     if (*pStr)
@@ -668,6 +672,7 @@ void AccessLog::flush()
     }
 }
 
+
 void AccessLog::accessLogReferer(int referer)
 {
     if (referer)
@@ -675,6 +680,7 @@ void AccessLog::accessLogReferer(int referer)
     else
         m_iAccessLogHeader &= ~LOG_REFERER;
 }
+
 
 void AccessLog::accessLogAgent(int agent)
 {
@@ -684,14 +690,17 @@ void AccessLog::accessLogAgent(int agent)
         m_iAccessLogHeader &= ~LOG_USERAGENT;
 }
 
+
 char AccessLog::getCompress() const
 {   return m_pAppender->getCompress();  }
+
 
 void AccessLog::closeNonPiped()
 {
     if ((!m_iPipedLog) && (m_pAppender->getfd() != -1))
         m_pAppender->close();
 }
+
 
 void AccessLog::setRollingSize(off_t size)
 {

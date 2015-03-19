@@ -36,6 +36,8 @@ DirHashCacheEntry::~DirHashCacheEntry()
         close(getFdStore());
 
 }
+
+
 //<"LSCH"><CeHeader><CacheKey><ResponseHeader><ResponseBody>
 int DirHashCacheEntry::loadCeHeader()
 {
@@ -92,6 +94,7 @@ int DirHashCacheEntry::loadCeHeader()
 
 }
 
+
 int DirHashCacheEntry::saveCeHeader()
 {
     int fd = getFdStore();
@@ -118,6 +121,7 @@ int DirHashCacheEntry::saveCeHeader()
     return 0;
 }
 
+
 int DirHashCacheEntry::allocate(int size)
 {
     int fd = getFdStore();
@@ -136,6 +140,7 @@ int DirHashCacheEntry::allocate(int size)
     }
     return 0;
 }
+
 
 int DirHashCacheEntry::releaseTmpResource()
 {

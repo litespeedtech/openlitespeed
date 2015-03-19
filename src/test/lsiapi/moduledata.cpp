@@ -17,9 +17,11 @@
 *****************************************************************************/
 #ifdef RUN_TEST
 
-#include "lsiapi/lsiapi.h"
-#include "ls.h"
+#include <lsiapi/lsiapi.h>
+#include <ls.h>
 #include "test/unittest-cpp/UnitTest++/src/UnitTest++.h"
+#include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 #include <assert.h>
 

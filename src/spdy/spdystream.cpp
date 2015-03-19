@@ -16,12 +16,11 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "spdystream.h"
-
 #include "spdyconnection.h"
 
-#include <util/datetime.h>
 #include <http/httplog.h>
 #include <lsr/ls_strtool.h>
+#include <util/datetime.h>
 #include <util/iovec.h>
 
 SpdyStream::SpdyStream()
@@ -44,7 +43,7 @@ const char *SpdyStream::buildLogId()
 }
 
 
-int SpdyStream::init(uint32_t StreamID, int Priority, SpdyConnection *pSpdyConn, 
+int SpdyStream::init(uint32_t StreamID, int Priority, SpdyConnection *pSpdyConn,
                      uint8_t flags, HioHandler *pHandler)
 {
     HioStream::reset(DateTime::s_curTime);
@@ -159,7 +158,7 @@ void SpdyStream::onTimer()
 
 NtwkIOLink *SpdyStream::getNtwkIoLink()
 {
-    return m_pSpdyConn->getNtwkIoLink();    
+    return m_pSpdyConn->getNtwkIoLink();
 }
 
 int SpdyStream::sendFin()

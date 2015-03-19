@@ -16,16 +16,13 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "httpresp.h"
-#include <util/datetime.h>
-#include <http/htauth.h>
-#include <http/httpheader.h>
-#include <http/httpreq.h>
-#include <http/httprespheaders.h>
+
+// #include <http/httpheader.h> //setheader commented out.
 #include <lsr/ls_strtool.h>
+#include <util/datetime.h>
 #include <util/stringtool.h>
-#include <assert.h>
-#include <stdio.h>
-#include <lsiapi/lsiapi.h>
+
+#include <string.h>
 
 
 HttpResp::HttpResp(ls_xpool_t *pool)
@@ -34,9 +31,12 @@ HttpResp::HttpResp(ls_xpool_t *pool)
     m_lEntityLength = 0;
     m_lEntityFinished = 0;
 }
+
+
 HttpResp::~HttpResp()
 {
 }
+
 
 void HttpResp::reset()
 {
@@ -46,13 +46,13 @@ void HttpResp::reset()
 }
 
 
-
 void HttpResp::appendContentLenHeader()
 {
     static char sLength[44] = {0};
     int n = StringTool::offsetToStr(sLength, 43, m_lEntityLength);
     m_respHeaders.add(HttpRespHeaders::H_CONTENT_LENGTH, sLength, n);
 }
+
 
 // void HttpResp::outputHeader()
 // {
@@ -62,6 +62,7 @@ void HttpResp::appendContentLenHeader()
 //     m_iHeaderTotalLen = m_iHeaderLeft;
 // }
 
+
 int HttpResp::appendHeader(const char *pName, int nameLen,
                            const char *pValue, int valLen)
 {
@@ -69,13 +70,14 @@ int HttpResp::appendHeader(const char *pName, int nameLen,
     return 0;
 }
 
+
 //void HttpResp::setHeader( int headerCode, long lVal )
 //{
 //    char buf[80];
 //    int len = sprintf( buf, "%s%ld\r\n", HttpHeader::getHeader( headerCode ), lVal );
 //    m_outputBuf.append( buf, len );
 //}
-//
+
 
 int HttpResp::appendLastMod(long tmMod)
 {
@@ -85,6 +87,7 @@ int HttpResp::appendLastMod(long tmMod)
                       RFC_1123_TIME_LEN);
     return 0;
 }
+
 
 int HttpResp::addCookie(const char *pName, const char *pVal,
                         const char *path, const char *domain, int expires,

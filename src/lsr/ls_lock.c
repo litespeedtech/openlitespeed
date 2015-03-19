@@ -42,12 +42,29 @@ int ls_futex_setup(ls_mutex_t *p)
 #endif
 
 
+/*
+ *   atomic spin
+ */
 
 #ifdef USE_ATOMIC_SPIN
 int ls_atomic_spin_setup(ls_atom_spinlock_t *p)
 {
     *((int *)p) = lock_Avail;
     return 0;
+}
+
+
+int ls_spin_pid = 0;        /* process id used with ls_atomic_pidspin */
+static void child_func()    /* clear pid in child after fork() */
+{
+    ls_spin_pid = 0;
+}
+
+
+void ls_atomic_pidspin_init()
+{
+    ls_spin_pid = getpid();
+    pthread_atfork(NULL, NULL, child_func);
 }
 #endif
 

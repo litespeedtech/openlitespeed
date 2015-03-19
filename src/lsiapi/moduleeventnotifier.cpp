@@ -18,6 +18,19 @@
 
 #include "moduleeventnotifier.h"
 
+#include <lsiapi/internal.h>
+#include <util/linkedobj.h>
+
+class EventObj : public DLinkedObj
+{
+public:
+    int                     m_iId;
+    short                   m_iLevel;
+    short                   m_iState;  //1 = OK, 0 = removed
+    LsiSession             *m_pSession;
+    lsi_module_t           *m_pModule;
+};
+
 
 void ModuleEventNotifier::removeEventObj(EventObj **pEventObj)
 {
@@ -33,6 +46,7 @@ void ModuleEventNotifier::removeEventObj(EventObj **pEventObj)
         *pEventObj = NULL;
     }
 }
+
 
 int ModuleEventNotifier::onNotified(int count)
 {
@@ -51,6 +65,7 @@ int ModuleEventNotifier::onNotified(int count)
     return 0;
 }
 
+
 EventObj *ModuleEventNotifier::addEventObj(lsi_session_t *pSession,
         lsi_module_t *pModule, int level)
 {
@@ -67,10 +82,12 @@ EventObj *ModuleEventNotifier::addEventObj(lsi_session_t *pSession,
     return pEventObj;
 }
 
+
 int ModuleEventNotifier::isEventObjValid(EventObj *pEventObj)
 {
     return (pEventObj->next() != NULL && pEventObj->prev() != NULL);
 }
+
 
 int ModuleEventNotifier::notifyEventObj(EventObj **pEventObj)
 {

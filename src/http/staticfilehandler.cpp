@@ -16,26 +16,28 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "staticfilehandler.h"
-#include <util/datetime.h>
-#include <http/expiresctrl.h>
-#include <http/httpsession.h>
-#include <http/httplog.h>
-#include <http/handlertype.h>
-#include <http/httpmime.h>
-#include <http/httpreq.h>
-#include <http/httpresourcemanager.h>
-#include <http/httpresp.h>
-#include <http/httprange.h>
-#include <http/httpserverconfig.h>
-#include <http/staticfilecache.h>
-#include <http/staticfilecachedata.h>
-#include <http/sendfileinfo.h>
-#include <http/moov.h>
-#include <util/gzipbuf.h>
-#include <util/iovec.h>
-#include <util/stringtool.h>
-#include <lsr/ls_xpool.h>
 
+#include <http/expiresctrl.h>
+#include <http/handlertype.h>
+#include <http/httplog.h>
+#include <http/httpmethod.h>
+#include <http/httpmime.h>
+#include <http/httprange.h>
+#include <http/httpreq.h>
+#include <http/httpresp.h>
+#include <http/httpserverconfig.h>
+#include <http/httpsession.h>
+#include <http/httpstatuscode.h>
+#include <http/moov.h>
+#include <http/sendfileinfo.h>
+#include <http/staticfilecachedata.h>
+#include <lsr/ls_strtool.h>
+#include <lsr/ls_xpool.h>
+#include <util/datetime.h>
+#include <util/gzipbuf.h>
+#include <util/stringtool.h>
+
+#include <arpa/inet.h>
 #include <fcntl.h>
 #include <errno.h>
 #include <stdio.h>
@@ -43,15 +45,18 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include <lsr/ls_strtool.h>
 
 
 RedirectHandler::RedirectHandler()
 {
     setHandlerType(HandlerType::HT_REDIRECT);
 }
+
+
 RedirectHandler::~RedirectHandler()
 {}
+
+
 const char *RedirectHandler::getName() const
 {
     return "redirect";
@@ -63,10 +68,12 @@ StaticFileHandler::StaticFileHandler()
     setType(0);
 }
 
+
 const char *StaticFileHandler::getName() const
 {
     return "static";
 }
+
 
 StaticFileHandler::~StaticFileHandler()
 {}
@@ -116,6 +123,7 @@ static int addExpiresHeader(HttpResp *pResp, StaticFileCacheData *pData,
     return 0;
 }
 
+
 #define FLV_MIME "video/x-flv"
 #define FLV_HEADER "FLV\x1\x1\0\0\0\x9\0\0\0\x9"
 #define FLV_HEADER_LEN (sizeof(FLV_HEADER)-1)
@@ -148,7 +156,6 @@ static int processFlvStream(HttpSession *pSession, off_t start)
     return ret;
 }
 
-#include <arpa/inet.h>
 
 int calcMoovContentLen(HttpSession *pSession, off_t &contentLen)
 {
@@ -316,6 +323,7 @@ int buildMoov(HttpSession *pSession)
 
 }
 
+
 int processH264Stream(HttpSession *pSession, double start)
 {
     HttpReq *pReq = pSession->getReq();
@@ -378,6 +386,7 @@ int processH264Stream(HttpSession *pSession, double start)
         ret = pSession->flush();
     return ret;
 }
+
 
 static int processRange(HttpSession *pSession, HttpReq *pReq,
                         const char *pRange);
@@ -560,12 +569,15 @@ int StaticFileHandler::process(HttpSession *pSession,
 
 }
 
+
 int StaticFileHandler::cleanUp(HttpSession *pSession)
 {
     return 0;
 }
 
+
 static int sendMultipart(HttpSession *pSession, HttpRange &range);
+
 
 int StaticFileHandler::onWrite(HttpSession *pSession)
 {
@@ -581,6 +593,7 @@ int StaticFileHandler::onWrite(HttpSession *pSession)
     pSession->setRespBodyDone();
     return ret;
 }
+
 
 bool StaticFileHandler::notAllowed(int Method) const
 {
@@ -631,7 +644,6 @@ static int buildRangeHeaders(HttpSession *pSession, HttpRange &range)
     pResp->appendContentLenHeader();
     return 0;
 }
-
 
 
 static int sendMultipart(HttpSession *pSession, HttpRange &range)
@@ -705,6 +717,7 @@ static int sendMultipart(HttpSession *pSession, HttpRange &range)
     return 0;
 
 }
+
 
 static int processRange(HttpSession *pSession, HttpReq *pReq,
                         const char *pRange)

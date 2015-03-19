@@ -16,10 +16,11 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "ediostream.h"
-#include <util/iovec.h>
+
+#include <edio/multiplexer.h>
+#include <http/httplog.h>
 #include <util/loopbuf.h>
 
-#include <http/httplog.h>
 
 #include <assert.h>
 #include <stdio.h>
@@ -34,12 +35,51 @@ EdStream::~EdStream()
     close();
 }
 
+
 int EdStream::regist(Multiplexer *pMultiplexer, int events)
 {
     if (pMultiplexer)
         return pMultiplexer->add(this, events);
     return 0;
 }
+
+
+EdStream::EdStream()
+    : m_pMplex(0)
+{};
+
+
+EdStream::EdStream(int fd, Multiplexer *pMplx, int events)
+    : EventReactor(fd)
+    , m_pMplex(pMplx)
+{
+    regist(pMplx, events);
+};
+
+
+void EdStream::continueRead()
+{
+    m_pMplex->continueRead(this);
+}
+
+
+void EdStream::suspendRead()
+{
+    m_pMplex->suspendRead(this);
+}
+
+
+void EdStream::continueWrite()
+{
+    m_pMplex->continueWrite(this);
+}
+
+
+void EdStream::suspendWrite()
+{
+    m_pMplex->suspendWrite(this);
+}
+
 
 int EdStream::close()
 {
@@ -68,6 +108,7 @@ int EdStream::close()
 //        setMask( newEvent );
 //    }
 //}
+
 
 int EdStream::handleEvents(short event)
 {
@@ -113,6 +154,7 @@ int EdStream::handleEvents(short event)
     return 0;
 }
 
+
 int EdStream::read(char *pBuf, int size)
 {
     int ret = ::read(getfd(), pBuf, size);
@@ -127,6 +169,7 @@ int EdStream::read(char *pBuf, int size)
         return 0;
     return ret;
 }
+
 
 int EdStream::readv(struct iovec *vector, size_t count)
 {
@@ -153,12 +196,14 @@ int EdStream::onHangup()
     return 0;
 }
 
+
 /** No descriptions */
 int EdStream::getSockError(int32_t *error)
 {
     socklen_t len = sizeof(int32_t);
     return getsockopt(getfd(), SOL_SOCKET, SO_ERROR, error, &len);
 }
+
 
 int EdStream::write(LoopBuf *pBuf)
 {

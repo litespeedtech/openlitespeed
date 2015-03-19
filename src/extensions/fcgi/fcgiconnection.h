@@ -18,13 +18,13 @@
 #ifndef FCGICONNECTION_H
 #define FCGICONNECTION_H
 
+#include "fcgidef.h"
+#include "fcgienv.h"
 
 #include <lsdef.h>
 #include <edio/bufferedos.h>
 #include <extensions/extconn.h>
 #include <extensions/httpextprocessor.h>
-#include <extensions/fcgi/fcgirecord.h>
-#include <extensions/fcgi/fcgienv.h>
 #include <util/autobuf.h>
 
 //#define FCGI_MPLX

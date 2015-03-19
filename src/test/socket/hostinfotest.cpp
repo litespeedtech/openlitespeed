@@ -18,8 +18,9 @@
 #ifdef RUN_TEST
 
 #include "hostinfotest.h"
-#include <socket/gsockaddr.h>
+// #include <socket/gsockaddr.h>
 #include <stdio.h>
+#include <string.h>
 #include "test/unittest-cpp/UnitTest++/src/UnitTest++.h"
 
 
@@ -28,6 +29,7 @@ hostent *getHostByName(const char *hostname)
 {
     return ::gethostbyname(hostname);
 }
+
 
 void testOne(const hostent *h0)
 {

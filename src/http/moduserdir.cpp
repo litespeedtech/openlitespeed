@@ -18,20 +18,23 @@
 #include "moduserdir.h"
 
 #include <http/httpstatuscode.h>
+#include <lsr/ls_strtool.h>
 
 #include <pwd.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/types.h>
-#include <lsr/ls_strtool.h>
 
 ModUserdir::ModUserdir()
     : m_disabled(0)
 {
 }
+
+
 ModUserdir::~ModUserdir()
 {
 }
+
 
 int ModUserdir::parse(char *pBegin, char *pEnd)
 {
@@ -75,6 +78,7 @@ int ModUserdir::parse(char *pBegin, char *pEnd)
     return 0;
 }
 
+
 int ModUserdir::buildPath(char *pURL, int urlLen, char *pPath, int &len)
 {
     char *p = strchr(pURL + 2, '/');
@@ -89,6 +93,7 @@ int ModUserdir::buildPath(char *pURL, int urlLen, char *pPath, int &len)
 
     return ret;
 }
+
 
 int ModUserdir::buildPath(char *pURL, int urlLen, char *p, char *pPath,
                           int &len)

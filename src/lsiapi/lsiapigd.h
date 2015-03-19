@@ -18,6 +18,7 @@
 #ifndef LSIAPILIB_GD_H
 #define LSIAPILIB_GD_H
 #include <lsiapi/lsiapi.h>
+#include <util/ghash.h>
 
 void init_gdata_hashes();
 void release_gdata_container(GDataHash *containerInfo);

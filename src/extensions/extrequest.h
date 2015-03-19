@@ -18,12 +18,10 @@
 #ifndef EXTREQUEST_H
 #define EXTREQUEST_H
 
-
-
 #include <lsdef.h>
+#include <log4cxx/ilog.h>
 #include <util/linkedobj.h>
 
-#include <log4cxx/ilog.h>
 
 class HttpExtConnector;
 class LoadBalancer;

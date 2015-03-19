@@ -15,22 +15,23 @@
 *    You should have received a copy of the GNU General Public License       *
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
-#include <ctype.h>
-#include <time.h>
-#include <stdint.h>
+#include "lsluasession.h"
+#include "edluastream.h"
+#include "lsluaapi.h"
+#include "lsluaengine.h"
+
 #include <ls.h>
-#include <log4cxx/logger.h>
 #include <lsr/ls_base64.h>
 #include <lsr/ls_md5.h>
 #include <lsr/ls_sha1.h>
 #include <lsr/ls_str.h>
 #include <lsr/ls_strtool.h>
-#include <modules/lua/edluastream.h>
-#include <modules/lua/lsluaapi.h>
-#include <modules/lua/lsluaengine.h>
-#include <modules/lua/lsluasession.h>
+#include <lsr/ls_xpool.h>
 #include <util/httputil.h>
 
+#include <ctype.h>
+#include <time.h>
+#include <stdint.h>
 
 
 static void LsLuaCreateGlobal(lua_State *);
@@ -58,6 +59,7 @@ LsLuaSession::LsLuaSession()
     // add();
 }
 
+
 LsLuaSession::~LsLuaSession()
 {
     m_iKey = 0;          // no more timer callback
@@ -69,12 +71,14 @@ LsLuaSession::~LsLuaSession()
     // remove();
 }
 
+
 void LsLuaSession::clearLuaStatus()
 {
     m_iExitCode = 0;
     m_iFlags = 0;
     m_iLuaLineCount = 0;
 }
+
 
 void LsLuaSession::closeAllStream()
 {
@@ -83,6 +87,7 @@ void LsLuaSession::closeAllStream()
     for (p_data = m_pStream; p_data; p_data = p_data->next())
         p_data->close(m_pState);
 }
+
 
 //
 //  this is slow linear search...
@@ -109,6 +114,7 @@ void LsLuaSession::markCloseStream(lua_State *L, EdLuaStream *sock)
     }
 }
 
+
 EdLuaStream *LsLuaSession::newEdLuaStream(lua_State *L)
 {
     LsLuaSession *pSession = LsLuaGetSession(L);
@@ -131,6 +137,7 @@ EdLuaStream *LsLuaSession::newEdLuaStream(lua_State *L)
 
     return (p_sock);
 }
+
 
 void LsLuaStreamData::close(lua_State *L)
 {
@@ -165,6 +172,7 @@ int LsLuaSession::onWrite(lsi_session_t *httpSession)
         return 1;
 }
 
+
 int LsLuaSession::wait4RespBuffer(lua_State *L)
 {
     setFlag(LLF_WAITRESPBUF);                 // enable callback
@@ -172,6 +180,7 @@ int LsLuaSession::wait4RespBuffer(lua_State *L)
     m_wait4RespBuf_L = L;
     return LsLuaApi::yield(L, 0);
 }
+
 
 //
 //  static callback for general purpose LsLuaSession Timer
@@ -199,6 +208,7 @@ void LsLuaSession::timerCb(void *data)
     delete _data;
 }
 
+
 //
 //  reach User specified endtime - forcely abort here
 //
@@ -213,6 +223,7 @@ void LsLuaSession::maxRunTimeCb(LsLuaSession *pSession, lua_State *L)
     pSession->m_pMaxTimer = NULL; // remove myself from check
 }
 
+
 void LsLuaSession::luaLineLooper(LsLuaSession *pSession, lua_State *L)
 {
     if (LsLuaEngine::debug() & 0x10)
@@ -220,6 +231,7 @@ void LsLuaSession::luaLineLooper(LsLuaSession *pSession, lua_State *L)
     pSession->clearFlag(LLF_WAITLINEEXEC);          // enable further again
     LsLuaEngine::resumeNcheck(pSession, 0);
 }
+
 
 void LsLuaSession::luaLineHookCb(lua_State *L, lua_Debug *ar)
 {
@@ -263,6 +275,7 @@ void LsLuaSession::luaLineHookCb(lua_State *L, lua_Debug *ar)
     }
 }
 
+
 void LsLuaSession::setTimer(int msec, pf_sleeprestart f, lua_State *L,
                             int flag)
 {
@@ -285,6 +298,7 @@ void LsLuaSession::setTimer(int msec, pf_sleeprestart f, lua_State *L,
         addTimerToList(data);
     }
 }
+
 
 void LsLuaSession::releaseTimer()
 {
@@ -318,6 +332,7 @@ void LsLuaSession::releaseTimer()
 
 }
 
+
 //
 //  Add normal LUA timer to session list
 //
@@ -333,6 +348,7 @@ void LsLuaSession::addTimerToList(LsLuaTimerData *pTimerData)
     dumpTimerList(buf);
 #endif
 }
+
 
 //
 //  remove normal LUA timer from session list
@@ -374,6 +390,7 @@ void LsLuaSession::rmTimerFromList(LsLuaTimerData *pTimerData)
         }
     }
 }
+
 
 void LsLuaSession::releaseTimerList()
 {
@@ -417,6 +434,7 @@ void LsLuaSession::dumpTimerList(const char *tag)
     }
 }
 
+
 //
 //  RESUME LUA SESSION
 //
@@ -429,6 +447,7 @@ void LsLuaSession::resume(lua_State *L, int nargs)
         return;
     }
 }
+
 
 int LsLuaSession::setupLuaEnv(lua_State *L, LsLuaUserParam *pUser)
 {
@@ -499,6 +518,7 @@ int LsLuaSession::setupLuaEnv(lua_State *L, LsLuaUserParam *pUser)
     return 0;
 }
 
+
 LsLuaSession *LsLuaSession::getSelf(lua_State *L)
 {
 //     LsLuaApi::checkudata( L, 1, LS_LUA_UDMETA );
@@ -506,6 +526,7 @@ LsLuaSession *LsLuaSession::getSelf(lua_State *L)
         LsLuaApi::remove(L, 1);
     return LsLuaGetSession(L);
 }
+
 
 //
 //  Meta to track LsLuaSession
@@ -519,12 +540,14 @@ static int LsLuaSessionToString(lua_State *L)
     return 1;
 }
 
+
 typedef struct ls_luasess_s
 {
     LsLuaSession   *pSession;
     int             active;
     int             key;
 } ls_luasess_t;
+
 
 static int LsLuaSessionGc(lua_State *L)
 {
@@ -551,6 +574,7 @@ static int LsLuaSessionGc(lua_State *L)
     return 0;
 }
 
+
 void LsLuaCreateSessionmeta(lua_State *L)
 {
     LsLuaApi::newmetatable(L, LSLUA_SESSION_META);        // meta
@@ -560,6 +584,7 @@ void LsLuaCreateSessionmeta(lua_State *L)
     LsLuaApi::setfield(L, -2, "__tostring");              // meta
     LsLuaApi::pop(L, 1);
 }
+
 
 LsLuaSession   *LsLuaGetSession(lua_State *L)
 {
@@ -580,6 +605,7 @@ LsLuaSession   *LsLuaGetSession(lua_State *L)
     return pSession;
 }
 
+
 static void LsLuaClearSession(lua_State *L)
 {
     ls_luasess_t *p;
@@ -591,6 +617,7 @@ static void LsLuaClearSession(lua_State *L)
         LsLuaApi::pop(L, 1);
     }
 }
+
 
 int LsLuaSetSession(lua_State *L, LsLuaSession *pSession)
 {
@@ -616,6 +643,7 @@ typedef struct ls_lualog_s
     int            _level;
 } ls_lualog_t;
 
+
 int LsLuaLogFlush(void *param, const char *pBuf, int len, int *flag)
 {
     ls_lualog_t *pLog = (ls_lualog_t *)param;
@@ -635,6 +663,7 @@ int LsLuaLogFlush(void *param, const char *pBuf, int len, int *flag)
     return 0;
 }
 
+
 int  LsLuaLogEx(lua_State *L, int level)
 {
     LsLuaSession *p_req = LsLuaGetSession(L);
@@ -644,6 +673,7 @@ int  LsLuaLogEx(lua_State *L, int level)
     return 0;
 }
 
+
 static int  LsLuaSessLog(lua_State *L)
 {
     int level;
@@ -651,6 +681,7 @@ static int  LsLuaSessLog(lua_State *L)
     LsLuaApi::remove(L, 1);
     return LsLuaLogEx(L, level);
 }
+
 
 //
 //  For Internal debugging purpose
@@ -693,6 +724,7 @@ static int  LsLuaSessDebug(lua_State *L)
     return 1;
 }
 
+
 int LsLuaRespBodyFlush(void *param, const char *pBuf, int len, int *flag)
 {
     LsLuaSession *pSession = (LsLuaSession *)param;
@@ -708,6 +740,7 @@ int LsLuaRespBodyFlush(void *param, const char *pBuf, int len, int *flag)
 
     return 0;
 }
+
 
 //
 //  The last place when I remove all the LUA and LsLuaSession
@@ -757,6 +790,7 @@ static inline void killThisSession(LsLuaSession *pSession)
     }
 }
 
+
 //
 //  Detected http end condition - abort current operation
 //  This called by module handler
@@ -783,6 +817,7 @@ void CleanupLuaSession(void *pHttpSession, LsLuaSession *pSession)
         ;
     }
 }
+
 
 //
 //  LsLuaSleepResume - called from lsi_api timerCb
@@ -854,6 +889,7 @@ static void LsLuaSleepResume(LsLuaSession *pSession, lua_State *L)
     }
 }
 
+
 //
 //
 //
@@ -870,6 +906,7 @@ int LsLuaSession::endSession(LsLuaSession *pSession)
     return 0;
 }
 
+
 //
 // Special end inject by LiteSpeed
 //
@@ -879,6 +916,7 @@ static int  LsLuaSess_End(lua_State *L)
 
     return LsLuaSession::endSession(pSession);
 }
+
 
 /**
  * Returns 1 on success, 0 and error message on failure.
@@ -898,6 +936,7 @@ static int  LsLuaSessEof(lua_State *L)
     LsLuaApi::pushinteger(L, 1);
     return 1;
 }
+
 
 // Table index must be positive.
 static int LsLuaParseQsTable(lua_State *L, int iTableIdx,
@@ -1009,6 +1048,7 @@ static int LsLuaParseQsTable(lua_State *L, int iTableIdx,
     return 0;
 }
 
+
 static int LsLuaGetQs(lua_State *L, int iQsOff, char *pQs, size_t &iQsLen)
 {
     const char *ptr;
@@ -1026,6 +1066,7 @@ static int LsLuaGetQs(lua_State *L, int iQsOff, char *pQs, size_t &iQsLen)
     }
     return 0;
 }
+
 
 /**
  * The table must be the top of the stack when the function is called.
@@ -1079,6 +1120,7 @@ static int LsLuaAddKvToTable(lua_State *L, const char *pKey, int iKeyLen,
     return 1;
 }
 
+
 //
 //  set/get elements from header
 //
@@ -1090,6 +1132,7 @@ static int  LsLuaReqStartTime(lua_State *L)
     LsLuaLog(L, LSI_LOG_NOTICE, 0, "req_start_time  not supported yet");
     return LsLuaApi::error(L, "req_start_time not supported yet");
 }
+
 
 static int LsLuaReqHttpVersion(lua_State *L)
 {
@@ -1106,6 +1149,7 @@ static int LsLuaReqHttpVersion(lua_State *L)
     return 1;
 }
 
+
 static int LsLuaReqRawHeader(lua_State *L)
 {
     int iHeadersLen;
@@ -1119,6 +1163,7 @@ static int LsLuaReqRawHeader(lua_State *L)
     LsLuaApi::pushlstring(L, pHeaders, iHeadersLen);
     return 1;
 }
+
 
 static int LsLuaReqClearHeader(lua_State *L)
 {
@@ -1139,6 +1184,7 @@ static int LsLuaReqClearHeader(lua_State *L)
     return LsLuaHeaderSet(L);
 }
 
+
 static int LsLuaReqSetHeader(lua_State *L)
 {
     int    avail;
@@ -1156,6 +1202,7 @@ static int LsLuaReqSetHeader(lua_State *L)
     LsLuaApi::insert(L, -3);
     return LsLuaHeaderSet(L);
 }
+
 
 static int LsLuaReqGetHeaders(lua_State *L)
 {
@@ -1224,6 +1271,7 @@ static int LsLuaReqGetHeaders(lua_State *L)
     return 1;
 }
 
+
 static int LsLuaReqGetMethod(lua_State *L)
 {
     int iBufSize = TMPBUFSIZE;
@@ -1239,11 +1287,13 @@ static int LsLuaReqGetMethod(lua_State *L)
     return 1;
 }
 
+
 static int LsLuaReqSetMethod(lua_State *L)
 {
     LsLuaLog(L, LSI_LOG_NOTICE, 0, "req_set_method  not supported yet");
     return LsLuaApi::error(L, "req_set_method not supported yet");
 }
+
 
 static int LsLuaReqSetUri(lua_State *L)
 {
@@ -1276,6 +1326,7 @@ static int LsLuaReqSetUri(lua_State *L)
     return 0;
 }
 
+
 static int LsLuaReqSetUriArgs(lua_State *L)
 {
     char pQs[LSLUA_SESS_MAXQSLEN];
@@ -1295,6 +1346,7 @@ static int LsLuaReqSetUriArgs(lua_State *L)
 
     return 0;
 }
+
 
 static int LsLuaFillTable(lua_State *L, ls_xpool_t *pool,
                           const char *pBegin, const char *pEnd, int iMax)
@@ -1342,6 +1394,7 @@ static int LsLuaFillTable(lua_State *L, ls_xpool_t *pool,
     return 1;
 }
 
+
 static int LsLuaReqGetUriArgs(lua_State *L)
 {
     int iKeyLen, iMax, iCount = LsLuaApi::gettop(L);
@@ -1363,6 +1416,7 @@ static int LsLuaReqGetUriArgs(lua_State *L)
     LsLuaApi::createtable(L, 0, 0);
     return LsLuaFillTable(L, pool, pBegin, pBegin + iKeyLen, iMax);
 }
+
 
 static int LsLuaReqGetPostArgs(lua_State *L)
 {
@@ -1399,6 +1453,7 @@ static int LsLuaReqGetPostArgs(lua_State *L)
     return 1;
 }
 
+
 static int LsLuaReqReadBody(lua_State *L)
 {
     LsLuaSession   *pSession = LsLuaGetSession(L);
@@ -1421,6 +1476,7 @@ static int LsLuaReqReadBody(lua_State *L)
     return 0;
 }
 
+
 static int LsLuaReqDiscardBody(lua_State *L)
 {
     LsLuaSession *pSession = LsLuaGetSession(L);
@@ -1433,6 +1489,7 @@ static int LsLuaReqDiscardBody(lua_State *L)
         return iRet;
     return 0;
 }
+
 
 static int LsLuaReqGetBodyData(lua_State *L)
 {
@@ -1474,6 +1531,7 @@ static int LsLuaReqGetBodyData(lua_State *L)
     return 1;
 }
 
+
 static int LsLuaReqGetBodyFile(lua_State *L)
 {
     //TODO: Currently, we do not store file names.  May change in future.
@@ -1488,6 +1546,7 @@ static int LsLuaReqGetBodyFile(lua_State *L)
     LsLuaApi::pushnil(L);
     return 1;
 }
+
 
 static int LsLuaReqSetBodyData(lua_State *L)
 {
@@ -1519,6 +1578,7 @@ static int LsLuaReqSetBodyData(lua_State *L)
     return 0;
 }
 
+
 static int LsLuaReqSetBodyFile(lua_State *L)
 {
     LsLuaSession *pSession = LsLuaGetSession(L);
@@ -1532,6 +1592,7 @@ static int LsLuaReqSetBodyFile(lua_State *L)
     LsLuaLog(L, LSI_LOG_NOTICE, 0, "req_set_body_file  not supported yet");
     return LsLuaApi::error(L, "req_set_body_file not supported yet");
 }
+
 
 static int LsLuaReqInitBody(lua_State *L)
 {
@@ -1565,6 +1626,7 @@ static int LsLuaReqInitBody(lua_State *L)
     return 0;
 }
 
+
 static int LsLuaReqAppendBody(lua_State *L)
 {
     void *pBuf;
@@ -1597,6 +1659,7 @@ static int LsLuaReqAppendBody(lua_State *L)
     return 0;
 }
 
+
 static int LsLuaReqFinishBody(lua_State *L)
 {
     void *pBuf;
@@ -1616,6 +1679,7 @@ static int LsLuaReqFinishBody(lua_State *L)
     return 0;
 }
 
+
 static int LsLuaReqSocket(lua_State *L)
 {
     LsLuaSession *pSession = LsLuaGetSession(L);
@@ -1630,6 +1694,7 @@ static int LsLuaReqSocket(lua_State *L)
     return LsLuaApi::error(L, "req_socket not supported yet");
 }
 
+
 static int LsLuaReqToString(lua_State *L)
 {
     char    buf[0x100];
@@ -1639,11 +1704,13 @@ static int LsLuaReqToString(lua_State *L)
     return 1;
 }
 
+
 static int LsLuaReqGc(lua_State *L)
 {
     LsLuaLog(L, LSI_LOG_NOTICE, 0, "<ls.req GC>");
     return 0;
 }
+
 
 static const luaL_Reg lsluaReqFuncs[] =
 {
@@ -1672,12 +1739,14 @@ static const luaL_Reg lsluaReqFuncs[] =
     {NULL, NULL}
 };
 
+
 static const luaL_Reg lsluaReqMetaSub[] =
 {
     {"__gc",        LsLuaReqGc},
     {"__tostring",  LsLuaReqToString},
     {NULL, NULL}
 };
+
 
 void LsLuaCreateReqmeta(lua_State *L)
 {
@@ -1697,6 +1766,7 @@ void LsLuaCreateReqmeta(lua_State *L)
     LsLuaApi::settop(L, -3);       // pop 2
 
 }
+
 
 static int  LsLuaSessExec(lua_State *L)
 {
@@ -1762,6 +1832,7 @@ static int  LsLuaSessExec(lua_State *L)
     return LsLuaApi::yield(L, 0);
 }
 
+
 //
 // @belief LsLuaSessRedirect
 // @param[in] uri - redirected uri
@@ -1818,6 +1889,7 @@ static int  LsLuaSessRedirect(lua_State *L)
     return LsLuaApi::yield(L, 0);
 }
 
+
 static int  LsLuaSessSendHeaders(lua_State *L)
 {
     LsLuaSession *pSession = LsLuaGetSession(L);
@@ -1840,6 +1912,7 @@ static int  LsLuaSessSendHeaders(lua_State *L)
     return 1;
 }
 
+
 static int  LsLuaSessHeadersSent(lua_State *L)
 {
     LsLuaSession *pSession = LsLuaGetSession(L);
@@ -1855,6 +1928,7 @@ static int  LsLuaSessHeadersSent(lua_State *L)
     return 1;
 }
 
+
 static int  LsLuaSessPrintHelper(lua_State *L, ls_luaprint_t &s,
                                  LsLuaSession  *pSession)
 {
@@ -1868,6 +1942,7 @@ static int  LsLuaSessPrintHelper(lua_State *L, ls_luaprint_t &s,
         return pSession->wait4RespBuffer(L);
     return 0;
 }
+
 
 static int  LsLuaSessPrint(lua_State *L)
 {
@@ -1885,8 +1960,10 @@ static int  LsLuaSessPrint(lua_State *L)
     return (LsLuaSessPrintHelper(L, stream, pSession));
 }
 
+
 static int  LsLuaSessPuts(lua_State *L)
 {    return LsLuaSessPrint(L);  }
+
 
 static int  LsLuaSessSay(lua_State *L)
 {
@@ -1903,8 +1980,10 @@ static int  LsLuaSessSay(lua_State *L)
     return (LsLuaSessPrintHelper(L, stream, pSession));
 }
 
+
 static int  LsLuaSessWrite(lua_State *L)
 {   return LsLuaSessSay(L); }
+
 
 static int  LsLuaSessFlush(lua_State *L)
 {
@@ -1919,6 +1998,7 @@ static int  LsLuaSessFlush(lua_State *L)
     g_api->flush(pSession->getHttpSession());
     return 0;
 }
+
 
 static int  LsLuaSessExit(lua_State *L)
 {
@@ -1946,6 +2026,7 @@ static int  LsLuaSessExit(lua_State *L)
     return 0;
 }
 
+
 static int  LsLuaSessTime(lua_State *L)
 {
     time_t  t;
@@ -1956,6 +2037,7 @@ static int  LsLuaSessTime(lua_State *L)
     LsLuaApi::pushinteger(L, (int)us);
     return 2;
 }
+
 
 static int LsLuaSessClock(lua_State *L)
 {
@@ -1969,6 +2051,7 @@ static int LsLuaSessClock(lua_State *L)
     return 1;
 }
 
+
 static int  LsLuaSessSetVersion(lua_State *L)
 {
     const char *cp;
@@ -1978,6 +2061,7 @@ static int  LsLuaSessSetVersion(lua_State *L)
         LsLuaEngine::setVersion(cp, len);
     return 0;
 }
+
 
 static int  LsLuaSessLogtime(lua_State *L)
 {
@@ -1997,6 +2081,7 @@ static int  LsLuaSessLogtime(lua_State *L)
         LsLuaApi::pushnil(L);
     return 1;
 }
+
 
 static int  LsLuaSessSleep(lua_State *L)
 {
@@ -2025,6 +2110,7 @@ static int  LsLuaSessSleep(lua_State *L)
     return LsLuaApi::yield(L, 2);
 }
 
+
 static int  LsLuaSessUSleep(lua_State *L)
 {
     LsLuaSession *pSession = LsLuaGetSession(L);
@@ -2052,11 +2138,13 @@ static int  LsLuaSessUSleep(lua_State *L)
     return LsLuaApi::yield(L, 2);
 }
 
+
 static int  LsLuaSessIsSubrequest(lua_State *L)
 {
     LsLuaLog(L, LSI_LOG_NOTICE, 0, "sess_is_subrequest  not supported yet");
     return LsLuaApi::error(L, "is_subrequest not supported yet");
 }
+
 
 static int  LsLuaSessOnAbort(lua_State *L)
 {
@@ -2071,6 +2159,7 @@ static int  LsLuaSessOnAbort(lua_State *L)
     LsLuaLog(L, LSI_LOG_NOTICE, 0, "sess_on_abort  not supported yet");
     return LsLuaApi::error(L, "onAbort not supported yet");
 }
+
 
 static int LsLuaSessRequestbody(lua_State *L)
 {
@@ -2092,6 +2181,8 @@ static int LsLuaSessRequestbody(lua_State *L)
     }
     return LsLuaReqGetBodyData(L);
 }
+
+
 static const int LSLUA_NUM_STATS = 6;
 static void LsLuaSessFillStat(lua_State *L, struct stat st)
 {
@@ -2143,6 +2234,7 @@ static void LsLuaSessFillStat(lua_State *L, struct stat st)
     LsLuaApi::setfield(L, -2, "protection");
 }
 
+
 static int LsLuaSessStat(lua_State *L)
 {
     int iRet;
@@ -2168,6 +2260,7 @@ static int LsLuaSessStat(lua_State *L)
     LsLuaSessFillStat(L, st);
     return 1;
 }
+
 
 static int  LsLuaSessSendFile(lua_State *L)
 {
@@ -2204,6 +2297,7 @@ static int  LsLuaSessSendFile(lua_State *L)
     return 1;
 }
 
+
 static int LsLuaSessEscapeHtml(lua_State *L)
 {
     const char *pSrc;
@@ -2230,6 +2324,7 @@ static int LsLuaSessEscapeHtml(lua_State *L)
     return 1;
 }
 
+
 static int LsLuaSessEscapeUri(lua_State *L)
 {
     const char *pSrc;
@@ -2254,6 +2349,7 @@ static int LsLuaSessEscapeUri(lua_State *L)
     LsLuaApi::pushlstring(L, pDest, iDestLen);
     return 1;
 }
+
 
 static int LsLuaSessUnescapeUri(lua_State *L)
 {
@@ -2280,6 +2376,7 @@ static int LsLuaSessUnescapeUri(lua_State *L)
     return 1;
 }
 
+
 static int LsLuaSessEscape(lua_State *L)
 {
     const char *pSrc;
@@ -2304,6 +2401,7 @@ static int LsLuaSessEscape(lua_State *L)
     return 1;
 }
 
+
 static int LsLuaSessUnescape(lua_State *L)
 {
     const char *pSrc;
@@ -2327,6 +2425,7 @@ static int LsLuaSessUnescape(lua_State *L)
     LsLuaApi::pushlstring(L, pDest, iDestLen);
     return 1;
 }
+
 
 static int LsLuaSessParseArgs(lua_State *L)
 {
@@ -2355,6 +2454,7 @@ static int LsLuaSessParseArgs(lua_State *L)
 
     return 2;
 }
+
 
 static int LsLuaSessSetCookie(lua_State *L)
 {
@@ -2425,6 +2525,7 @@ static int LsLuaSessSetCookie(lua_State *L)
     return 1;
 }
 
+
 static int LsLuaSessGetCookie(lua_State *L)
 {
     size_t iKeyLen;
@@ -2450,6 +2551,7 @@ static int LsLuaSessGetCookie(lua_State *L)
     return 1;
 }
 
+
 // Keepalive should be set by server only.
 static int LsLuaSessSetKeepAlive(lua_State *L)
 {
@@ -2457,12 +2559,14 @@ static int LsLuaSessSetKeepAlive(lua_State *L)
     return 1;
 }
 
+
 // No ETags for dynamic responses.
 static int LsLuaSessMakeEtag(lua_State *L)
 {
     LsLuaApi::pushinteger(L, 0);
     return 1;
 }
+
 
 static int LsLuaSessEncodeBase64(lua_State *L)
 {
@@ -2491,6 +2595,7 @@ static int LsLuaSessEncodeBase64(lua_State *L)
     return 1;
 }
 
+
 static int LsLuaSessDecodeBase64(lua_State *L)
 {
     int iRet;
@@ -2514,6 +2619,7 @@ static int LsLuaSessDecodeBase64(lua_State *L)
     LsLuaApi::pushlstring(L, pDecodedBuf, iLen);
     return 1;
 }
+
 
 static int LsLuaSessMd5(lua_State *L)
 {
@@ -2544,6 +2650,7 @@ static int LsLuaSessMd5(lua_State *L)
                           , iLen);
     return 1;
 }
+
 
 static int LsLuaSessMd5Bin(lua_State *L)
 {
@@ -2578,6 +2685,7 @@ static int LsLuaSessMd5Bin(lua_State *L)
     return 1;
 }
 
+
 //
 //  Using OPENSSL SHA1 implementation
 //
@@ -2611,6 +2719,7 @@ static int LsLuaSessSha1Bin(lua_State *L)
     return 1;
 }
 
+
 static int LsLuaSessToString(lua_State *L)
 {
     char    buf[0x100];
@@ -2619,6 +2728,7 @@ static int LsLuaSessToString(lua_State *L)
     LsLuaApi::pushstring(L, buf);
     return 1;
 }
+
 
 static int LsLuaSessGc(lua_State *L)
 {
@@ -2630,6 +2740,7 @@ static int LsLuaSessGc(lua_State *L)
     }
     return 0;
 }
+
 
 extern int LsLuaRegexRegex(lua_State *);
 static const luaL_Reg lsluaSessionFuncs[] =
@@ -2684,6 +2795,7 @@ static const luaL_Reg lsluaSessionFuncs[] =
     {NULL, NULL}
 };
 
+
 //
 //  ls.status SESSION
 //
@@ -2715,6 +2827,7 @@ static int LsLuaGet(lua_State *L)
     return 1;
 }
 
+
 static int LsLuaSet(lua_State *L)
 {
     size_t          len;
@@ -2743,6 +2856,7 @@ static int LsLuaSet(lua_State *L)
     return 1;
 }
 
+
 void LsLuaCreateSession(lua_State *L)
 {
     LsLuaApi::openlib(L, LS_LUA, lsluaSessionFuncs, 0);
@@ -2751,6 +2865,7 @@ void LsLuaCreateSession(lua_State *L)
     LsLuaApi::pushlightuserdata(L, NULL);
     LsLuaApi::setfield(L, -2, "null");
 }
+
 
 void LsLuaCreateGlobal(lua_State *L)
 {
@@ -2767,6 +2882,7 @@ void LsLuaCreateGlobal(lua_State *L)
     else
         LsLuaApi::setglobal(L, LS_LUA_BOX);
 }
+
 
 void LsLuaCreateSessMeta(lua_State *L)
 {
@@ -2824,6 +2940,7 @@ static int LsLuaRespGetHeaders(lua_State *L)
     return 1;
 }
 
+
 static int LsLuaRespToString(lua_State *L)
 {
     char    buf[0x100];
@@ -2833,11 +2950,13 @@ static int LsLuaRespToString(lua_State *L)
     return 1;
 }
 
+
 static int LsLuaRespGc(lua_State *L)
 {
     LsLuaLog(L, LSI_LOG_NOTICE, 0, "<ls.resp GC>");
     return 0;
 }
+
 
 static const luaL_Reg lsluaRespFuncs[] =
 {
@@ -2845,12 +2964,14 @@ static const luaL_Reg lsluaRespFuncs[] =
     {NULL, NULL}
 };
 
+
 static const luaL_Reg lsluaRespMetaSub[] =
 {
     {"__gc",        LsLuaRespGc},
     {"__tostring",  LsLuaRespToString},
     {NULL, NULL}
 };
+
 
 void LsLuaCreateRespmeta(lua_State *L)
 {
@@ -2870,6 +2991,7 @@ void LsLuaCreateRespmeta(lua_State *L)
     LsLuaApi::settop(L, -3);       // pop 2
 }
 
+
 void LsLuaCreateConstants(lua_State *L)
 {
     LsLuaApi::pushinteger(L, 0);
@@ -2882,6 +3004,7 @@ void LsLuaCreateConstants(lua_State *L)
     LsLuaApi::setfield(L, -2, "DENY");
 }
 
+
 void LsLuaCreateUD(lua_State *L)
 {
     LsLuaApi::newuserdata(L, sizeof(char));
@@ -2893,6 +3016,7 @@ void LsLuaCreateUD(lua_State *L)
     LsLuaApi::pop(L, 1);
     LsLuaApi::getglobal(L, LS_LUA_UD);
 }
+
 
 static int LsLuaGetArg(lua_State *L)
 {
@@ -2926,6 +3050,7 @@ static int LsLuaGetArg(lua_State *L)
         return LsLuaApi::userError(L, "getArg", "Invalid index.");
     return 1;
 }
+
 
 static int LsLuaSetArg(lua_State *L)
 {
@@ -2967,6 +3092,7 @@ static int LsLuaSetArg(lua_State *L)
                                      " resulted in an error");
     return 0;
 }
+
 
 void LsLuaCreateArgTable(lua_State *L)
 {

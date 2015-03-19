@@ -18,7 +18,8 @@
 #ifndef LS_MODULE_H
 #define LS_MODULE_H
 
-#include <lsr/ls_xpool.h>
+#include <lsr/ls_types.h>
+
 #include <stdio.h>
 #include <sys/stat.h>
 #include <sys/uio.h>
@@ -1425,8 +1426,9 @@ struct lsi_serverhook_s
 #define lsi_serverhook_t_END    {0, NULL, 0, 0}
 
 
-#define LSI_MODULE_RESERVED_SIZE   ( sizeof( void *) + ( LSI_HKPT_TOTAL_COUNT + 1 ) * sizeof( int32_t ) \
-                                     + LSI_MODULE_DATA_COUNT * sizeof( int16_t ) )
+#define LSI_MODULE_RESERVED_SIZE    ((2 * sizeof(void *)) \
+                                  + ((LSI_HKPT_TOTAL_COUNT + 1) * sizeof(int32_t)) \
+                                  + (LSI_MODULE_DATA_COUNT * sizeof(int16_t)))
 
 
 
@@ -1573,14 +1575,20 @@ struct lsi_api_s
      *
      * @since 1.0
      *
-     * @param[in] pSession - a pointer to the HttpSession, obtained from callback parameters.
-     * @param[in] index - as defined in the enum of Hook Point level definitions #lsi_hkpt_level.
+     * @param[in] pSession - a pointer to the HttpSession, obtained from
+     *   callback parameters.
      * @param[in] pModule - a pointer to the lsi_module_t struct.
-     * @param[in] enable - a value that the flag is set to, it is 0 to disable, otherwise is to enable.
+     * @param[in] enable - a value that the flag is set to, it is 0 to disable,
+     *   otherwise is to enable.
+     * @param[in] index - A list of indices to set, as defined in the enum of
+     *   Hook Point level definitions #lsi_hkpt_level.
+     * @param[in] iNumIndices - The number of indices to set in index.
      * @return -1 on failure.
      */
-    int (*set_session_hook_enable_flag)(lsi_session_t *pSession, int index,
-                                        const lsi_module_t *pModule, int enable);
+    int (*set_session_hook_enable_flag)(lsi_session_t *session,
+                                        const lsi_module_t *pModule,
+                                        int enable, int *index,
+                                        int iNumIndices);
 
     /**
      * @brief get_module is used to retrieve module information associated with a hook point based on callback parameters.

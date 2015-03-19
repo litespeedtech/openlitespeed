@@ -16,14 +16,15 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "railsappconfig.h"
-#include <http/httpvhost.h>
+#include "extappregistry.h"
+
 #include <http/serverprocessconfig.h>
+#include <main/configctx.h>
 #include <main/mainserverconfig.h>
-#include "util/configctx.h"
 #include <util/xmlnode.h>
+
 #include <extensions/localworker.h>
 #include <extensions/localworkerconfig.h>
-#include <extensions/registry/extappregistry.h>
 #include <unistd.h>
 #include <limits.h>
 
@@ -32,6 +33,7 @@ int         RailsAppConfig::s_iRailsEnv = 1;
 LocalWorkerConfig *RailsAppConfig::s_pRailsDefault = NULL;
 int         RailsAppConfig::s_iRubyProcLimit = 10;
 int         RailsAppConfig::s_iRailsAppLimit = 1;
+
 
 LocalWorker *RailsAppConfig::newRailsApp(HttpVHost *pvhost,
         const char *pAppName, const char *pName,
@@ -144,6 +146,8 @@ LocalWorker *RailsAppConfig::newRailsApp(HttpVHost *pvhost,
     config.setRunOnStartUp(runOnStart);
     return pWorker;
 }
+
+
 int RailsAppConfig::configRailsRunner(char *pRunnerCmd, int cmdLen,
                                       const char *pRubyBin)
 {
@@ -178,6 +182,7 @@ int RailsAppConfig::configRailsRunner(char *pRunnerCmd, int cmdLen,
              MainServerConfig::getInstance().getServerRoot());
     return 0;
 }
+
 
 int RailsAppConfig::loadRailsDefault(const XmlNode *pNode)
 {

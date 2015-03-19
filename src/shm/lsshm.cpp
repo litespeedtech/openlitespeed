@@ -15,23 +15,20 @@
 *    You should have received a copy of the GNU General Public License       *
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
-#include <assert.h>
+#include <shm/lsshm.h>
+
+#include <shm/lsshmpool.h>
+#include <util/gpath.h>
+
 #include <fcntl.h>
-#include <stdio.h>
-#include <stdlib.h>
+#include <stdarg.h>
 #include <string.h>
-#include <unistd.h>
 #include <errno.h>
 #include <signal.h>
-#include <sys/time.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
-#include <shm/lsshmtypes.h>
-#include <shm/lsshm.h>
-#include <shm/lsshmlock.h>
-#include <shm/lsshmpool.h>
-#include <log4cxx/logger.h>
-#include <util/gpath.h>
 
 
 extern "C" {
@@ -215,7 +212,6 @@ LsShm::LsShm(const char *mapName, LsShmSize_t size, const char *pBaseDir)
     , m_pFileName(NULL)
     , m_pMapName(strdup(mapName))
     , m_iFd(0)
-    , m_iRemoveFlag(0)
     , m_pShmLock(NULL)
     , m_pRegLock(NULL)
     , m_pShmReg(NULL)
@@ -322,7 +318,7 @@ LsShm *LsShm::open(const char *mapName, int initsize, const char *pBaseDir)
     snprintf(buf, sizeof(buf), "%s/%s.%s",
              (pBaseDir != NULL) ? pBaseDir : getDefaultShmDir(),
              mapName, LSSHM_SYSSHM_FILE_EXT);
-    
+
     itor = getBase()->find(buf);
 #ifdef DEBUG_RUN
     SHM_NOTICE("LsShm::get find %s <%p>", buf, s_pBase);
@@ -407,6 +403,15 @@ LsShmStatus_t LsShm::checkMagic(LsShmMap *mp, const char *mName) const
 }
 
 
+void LsShm::deleteFile()
+{
+    if (m_pFileName != NULL)
+    {
+        unlink(m_pFileName);
+        LsShmLock::deleteFile();
+    }
+}
+
 void LsShm::cleanup()
 {
     unmap();
@@ -417,11 +422,6 @@ void LsShm::cleanup()
     }
     if (m_pFileName != NULL)
     {
-        if (m_iRemoveFlag)
-        {
-            m_iRemoveFlag = 0;
-            unlink(m_pFileName);
-        }
         free(m_pFileName);
         m_pFileName = NULL;
     }
@@ -471,12 +471,11 @@ LsShmStatus_t LsShm::init(const char *name, LsShmSize_t size)
         setErrMsg("Unable to stat [%s], %s.", m_pFileName, strerror(errno));
         return LSSHM_BADMAPFILE;
     }
-    
+
     ::fcntl( m_iFd, F_SETFD, FD_CLOEXEC );
 
     if (mystat.st_size == 0)
     {
-        m_iRemoveFlag = 1;
         // New File!!!
         //  creating a new map
         if (size < s_iPageSize)
@@ -559,7 +558,6 @@ LsShmStatus_t LsShm::init(const char *name, LsShmSize_t size)
 
     syncData2Obj();
 
-    m_iRemoveFlag = 0;
     return LSSHM_OK;
 }
 

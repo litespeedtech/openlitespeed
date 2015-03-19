@@ -18,15 +18,12 @@
 #ifndef HTTPCONTEXT_H
 #define HTTPCONTEXT_H
 
-
-#include <util/autostr.h>
 #include <http/expiresctrl.h>
 #include <http/httphandler.h>
-#include "socket/gsockaddr.h"
+#include <socket/gsockaddr.h>
+#include <util/autostr.h>
+
 #include <stddef.h>
-#include <lsiapi/lsiapi.h>
-#include <lsiapi/lsiapihooks.h>
-#include <lsiapi/lsimoduledata.h>
 
 
 typedef struct lsi_module_config_s lsi_module_config_t;
@@ -51,6 +48,7 @@ class HttpVHost;
 class RewriteMapList;
 class HttpSession;
 class ModuleConfig;
+class HttpSessionHooks;
 
 #define UID_SERVER          0
 #define UID_FILE            1

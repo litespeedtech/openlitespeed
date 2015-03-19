@@ -18,12 +18,12 @@
 #ifndef LSAPICONN_H
 #define LSAPICONN_H
 
+#include "lsapidef.h"
+#include "lsapireq.h"
 
 #include <lsdef.h>
 #include <extensions/extconn.h>
 #include <extensions/httpextprocessor.h>
-#include <extensions/lsapi/lsapidef.h>
-#include <extensions/lsapi/lsapireq.h>
 
 #define LSAPI_CONN_IDLE             0
 #define LSAPI_CONN_READ_RESP_INFO   1

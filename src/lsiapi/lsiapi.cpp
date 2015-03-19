@@ -16,33 +16,20 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include <lsiapi/lsiapi.h>
-#include <http/httpsession.h>
-#include <http/httprespheaders.h>
-#include <http/httpvhost.h>
-#include <util/vmembuf.h>
-#include <fcntl.h>
-#include <sys/stat.h>
-#include <unistd.h>
-#include <lsiapi/modulehandler.h>
+
 #include <lsiapi/internal.h>
-#include <lsiapi/lsiapilib.h>
 #include <lsiapi/lsiapigd.h>
-#include <http/requestvars.h>
-#include <http/staticfilecachedata.h>
-#include <lsiapi/lsiapi.h>
-#include <dirent.h>
-#include <dlfcn.h>
-#include <errno.h>
-#include "modulemanager.h"
-#include "util/ghash.h"
-#include <lsr/ls_fileio.h>
-#include <util/gpath.h>
+#include <lsiapi/lsiapihooks.h>
+#include <lsiapi/lsiapilib.h>
+#include <lsiapi/lsimoduledata.h>
 #include <util/datetime.h>
-#include <stdio.h>
+#include <util/ghash.h>
+
 
 lsi_api_t LsiapiBridge::g_lsiapiFunctions;
 const lsi_api_t *g_api = &LsiapiBridge::g_lsiapiFunctions;
 GDataContainer *LsiapiBridge::g_aGDataContainer[LSI_CONTAINER_COUNT] = {0};
+
 
 void  LsiapiBridge::releaseModuleData(int level, LsiModuleData *pData)
 {
@@ -61,6 +48,7 @@ void  LsiapiBridge::releaseModuleData(int level, LsiModuleData *pData)
         }
     }
 }
+
 
 void LsiapiBridge::checkExpiredGData()
 {
@@ -108,92 +96,11 @@ int LsiapiBridge::initLsiapi()
     return 0;
 }
 
+
 void LsiapiBridge::uninitLsiapi()
 {
     uninit_gdata_hashes();
 }
-
-
-// void ModuleEventNotifier::removeEventObj(EventObj **pEventObj)
-// {
-//     if ((*pEventObj) && (*pEventObj)->m_iState == 1)
-//     {
-//         (*pEventObj)->remove();
-//         (*pEventObj)->m_iId = 0;
-//         (*pEventObj)->m_iLevel = 0;
-//         (*pEventObj)->m_pModule = 0;
-//         (*pEventObj)->m_pSession = 0;
-//         (*pEventObj)->m_iState = 0;
-//         delete *pEventObj;
-//         *pEventObj = NULL;
-//     }
-// }
-//
-// int ModuleEventNotifier::onNotified(int count)
-// {
-//     while (!m_eventObjListDone.empty())
-//     {
-//         EventObj *pObj = (EventObj *)m_eventObjListDone.begin();
-//         if (pObj)
-//         {
-//             if (pObj->m_pModule)
-//                 pObj->m_pSession->hookResumeCallback(pObj->m_iLevel, pObj->m_pModule);
-//             removeEventObj(&pObj);
-//         }
-//         else
-//             break;
-//     }
-//     return 0;
-// }
-//
-// EventObj *ModuleEventNotifier::addEventObj(lsi_session_t *pSession,
-//         lsi_module_t *pModule, int level)
-// {
-//     EventObj *pEventObj = new EventObj;
-//     if (pEventObj)
-//     {
-//         pEventObj->m_iId = m_iId ++;
-//         pEventObj->m_iLevel = level;
-//         pEventObj->m_pModule = pModule;
-//         pEventObj->m_pSession = (LsiSession *)pSession;
-//         pEventObj->m_iState = 1;
-//         m_eventObjListWait.push_front(pEventObj);
-//     }
-//     return pEventObj;
-// }
-//
-// int ModuleEventNotifier::isEventObjValid(EventObj *pEventObj)
-// {
-//     return (pEventObj->next() != NULL && pEventObj->prev() != NULL);
-// }
-//
-// int ModuleEventNotifier::notifyEventObj(EventObj **pEventObj)
-// {
-//     //pEventObj should be in Wait list
-//     //assert();
-//
-//     if (*pEventObj == NULL)
-//         return -1;
-//
-//     if (!isEventObjValid(*pEventObj))
-//         removeEventObj(pEventObj);
-//
-//     //Move from Wait list to Done list
-//     EventObj *pNewObj = new EventObj;
-//     if (!pNewObj)
-//         return -1; //ERROR
-//
-//     pNewObj->m_iId = (*pEventObj)->m_iId;
-//     pNewObj->m_iLevel = (*pEventObj)->m_iLevel;
-//     pNewObj->m_pModule = (*pEventObj)->m_pModule;
-//     pNewObj->m_pSession = (*pEventObj)->m_pSession;
-//     pNewObj->m_iState = 1;
-//     m_eventObjListDone.push_front(pNewObj);
-//     removeEventObj(pEventObj);
-//
-//     notify();
-//     return 0;
-// }
 
 
 

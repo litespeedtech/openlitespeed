@@ -16,17 +16,16 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "l4conn.h"
-#include "http/l4handler.h"
+
+#include <edio/multiplexer.h>
+#include <edio/multiplexerfactory.h>
+#include <http/httplog.h>
+#include <http/l4handler.h>
 #include <socket/gsockaddr.h>
 #include <socket/coresocket.h>
-#include <util/datetime.h>
-
-#include <edio/multiplexerfactory.h>
-#include <socket/gsockaddr.h>
+#include <util/loopbuf.h>
 
 #include <fcntl.h>
-#include <lsr/ls_strtool.h>
-#include <util/loopbuf.h>
 
 int L4conn::onEventDone()
 {
@@ -38,6 +37,7 @@ int L4conn::onEventDone()
     }
     return 0;
 }
+
 
 int L4conn::onError()
 {
@@ -59,6 +59,7 @@ int L4conn::onError()
         onRead();
     return LS_FAIL;
 }
+
 
 int L4conn::onWrite()
 {
@@ -86,6 +87,7 @@ int L4conn::onWrite()
         m_pL4Handler->closeBothConnection();
     return ret;
 }
+
 
 int L4conn::onInitConnected()
 {
@@ -145,6 +147,7 @@ int L4conn::onRead()
     return ret;
 }
 
+
 int L4conn::close()
 {
     if (m_iState != DISCONNECTED)
@@ -159,17 +162,20 @@ int L4conn::close()
     return 0;
 }
 
+
 L4conn::L4conn(L4Handler  *pL4Handler) : m_iState(0)
 {
     m_pL4Handler = pL4Handler;
     m_buf = new LoopBuf(MAX_OUTGOING_BUF_ZISE);
 }
 
+
 L4conn::~L4conn()
 {
     if (m_iState != DISCONNECTED)
         close();
 }
+
 
 int L4conn::init(const GSockAddr *pGSockAddr)
 {
@@ -180,6 +186,7 @@ int L4conn::init(const GSockAddr *pGSockAddr)
 
     return ret;
 }
+
 
 int L4conn::connectEx(const GSockAddr *pGSockAddr)
 {
@@ -209,6 +216,7 @@ int L4conn::connectEx(const GSockAddr *pGSockAddr)
     }
     return LS_FAIL;
 }
+
 
 int L4conn::doRead()
 {
@@ -251,6 +259,7 @@ int L4conn::doRead()
     }
     return 0;
 }
+
 
 int L4conn::doWrite()
 {
@@ -298,10 +307,12 @@ int L4conn::doWrite()
     return 0;
 }
 
+
 LOG4CXX_NS::Logger *L4conn::getLogger() const
 {
     return m_pL4Handler->getLogger();
 }
+
 
 const char *L4conn::getLogId()
 {

@@ -117,7 +117,7 @@ typedef ls_lock_t   LOCK_TYPE5;
 typedef struct
 {
     pthread_t   m_thread;
-    int         m_exit;
+    void       *m_exit;
     int         m_id;
     int         m_bigValue;
     int         m_myCount;
@@ -133,12 +133,12 @@ static void showEnd(int numthreads)
     p = threadMap;
     for (i = 0; i < numthreads; i++, p++)
     {
-        printf("DONE %d [bigValue = %d myCount = %d waitCount=%d] %d\n",
+        printf("DONE %d [bigValue = %d myCount = %d waitCount=%d] %ld\n",
                p->m_id,
                p->m_bigValue,
                p->m_myCount,
                p->m_waitCount,
-               p->m_exit);
+               (long)p->m_exit);
     }
 }
 
@@ -389,7 +389,7 @@ int testlock(int numthreads, int index)
     Timer x(testinfo[index].pName);
     for (i = 0; i < numthreads; i++, p++)
     {
-        p->m_exit = 0;
+        p->m_exit = (void *)0;
         p->m_id = i;
         p->m_bigValue = 0;
         p->m_myCount = 0;

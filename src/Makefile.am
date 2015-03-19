@@ -46,7 +46,6 @@ openlitespeed_SOURCES = modules/prelinkedmods.cpp httpdtest.cpp main.cpp \
    util/pcutil.cpp \
    util/daemonize.cpp \
    util/configentry.cpp \
-   util/configctx.cpp \
    util/logidtracker.cpp \
    util/datetime.cpp \
    util/resourcepool.cpp \
@@ -78,10 +77,12 @@ openlitespeed_SOURCES = modules/prelinkedmods.cpp httpdtest.cpp main.cpp \
    lsr/ls_pool.c \
    lsr/ls_ptrlist.c \
    lsr/ls_sha1.c \
+   lsr/ls_stack.c \
    lsr/ls_str.c \
    lsr/ls_strlist.c \
    lsr/ls_strtool.c \
    lsr/ls_time.c \
+   lsr/ls_tsstack.c \
    lsr/ls_xpool.c \
    lsr/xxhash.c \
    thread/pthreadcond.cpp \

@@ -20,7 +20,6 @@
 #include "fcginamevaluepair.h"
 #include "fcgirecord.h"
 
-#include <edio/multiplexer.h>
 #include <http/httpcgitool.h>
 #include <http/httpextconnector.h>
 #include <http/httplog.h>
@@ -50,9 +49,11 @@ FcgiConnection::FcgiConnection()
     memset(m_streamHeaders, 0, sizeof(m_streamHeaders));
 }
 
+
 FcgiConnection::~FcgiConnection()
 {
 }
+
 
 void FcgiConnection::init(int fd, Multiplexer *pMplx)
 {
@@ -68,6 +69,7 @@ bool FcgiConnection::isOutputBufEmpty()
     return m_bufOS.isEmpty();
 }
 
+
 // Return Value:
 //      -1 error occured while sending the data,
 //      > 0     bytes sent + cached
@@ -78,6 +80,7 @@ int FcgiConnection::sendRecord(const char *rec, int size)
     int ret = m_bufOS.cacheWrite(rec, size);
     return ret;
 }
+
 
 /**
   * @return -1 error, > 0 success.
@@ -91,6 +94,7 @@ int FcgiConnection::endOfStream(int streamType, int id)
     int ret = sendRecord((char *)&rec, sizeof(rec));
     return ret;
 }
+
 
 // Return Value:
 //      -1 if error,
@@ -117,6 +121,7 @@ int FcgiConnection::sendStreamPacket(int streamType, int id,
     return ret;
 
 }
+
 
 /**
   * @param streamType the type of stream, FCGI_STDIN, FCGI_PARAM
@@ -166,6 +171,7 @@ int FcgiConnection::doRead()
     return processFcgiData();
 }
 
+
 /**
   * @return -1 if error occur
   *         0   if buffer is not empty
@@ -178,6 +184,7 @@ int FcgiConnection::flushOutBuf()
         return LS_FAIL;
     return m_bufOS.isEmpty();
 }
+
 
 int FcgiConnection::doWrite()
 {
@@ -195,6 +202,7 @@ int FcgiConnection::doWrite()
     suspendWrite();
     return 0;
 }
+
 
 int FcgiConnection::doError(int err)
 {
@@ -217,6 +225,7 @@ int FcgiConnection::doError(int err)
     }
     return 0;
 }
+
 
 int FcgiConnection::processEndOfRequestRecord(char *pBuf, int size)
 {
@@ -249,6 +258,7 @@ int FcgiConnection::processEndOfRequestRecord(char *pBuf, int size)
         setState(PROCESSING);
     return endOfRequest(code, status);
 }
+
 
 int FcgiConnection::buildFcgiRecHeader(char *pBuf, int size, int &len)
 {
@@ -291,6 +301,7 @@ int FcgiConnection::buildFcgiRecHeader(char *pBuf, int size, int &len)
     }
 }
 
+
 int FcgiConnection::processFcgiRecData(char *pBuf, int size, int &end)
 {
     if (m_iRecId == 0)
@@ -322,6 +333,7 @@ int FcgiConnection::processFcgiRecData(char *pBuf, int size, int &end)
     }
     return 0;
 }
+
 
 //int FcgiConnection::processFcgiDataNew()
 //{
@@ -453,6 +465,7 @@ int FcgiConnection::processFcgiData()
     return 0;
 }
 
+
 #define FCGI_MAX_CONNS  "FCGI_MAX_CONNS"
 #define FCGI_MAX_REQS   "FCGI_MAX_REQS"
 #define FCGI_MPXS_CONNS "FCGI_MPXS_CONNS"
@@ -478,6 +491,7 @@ int FcgiConnection::queryAppAttr()
     return sendRecord(achBuf, sizeof(FCGI_Header) + len);
 }
 
+
 void FcgiConnection::processManagementVal(
     char *pName, int nameLen, char *pValue, int valLen)
 {
@@ -502,6 +516,7 @@ void FcgiConnection::processManagementVal(
         ((FcgiApp *)getWorker())->setMultiplexConns(val);
     }
 }
+
 
 int FcgiConnection::processManagementRec(char *pBuf, int size)
 {
@@ -542,16 +557,17 @@ int FcgiConnection::processManagementRec(char *pBuf, int size)
 }
 
 
-
 bool FcgiConnection::wantRead()
 {
     return true;
 }
 
+
 bool FcgiConnection::wantWrite()
 {
     return ((!m_bufOS.isEmpty()) || m_iWantWrite);
 }
+
 
 int FcgiConnection::addRequest(ExtRequest *pReq)
 {
@@ -569,6 +585,7 @@ int FcgiConnection::addRequest(ExtRequest *pReq)
     m_lReqSentTime = 0;
     return 0;
 }
+
 
 ExtRequest *FcgiConnection::getReq() const
 {
@@ -593,6 +610,7 @@ void FcgiConnection::finishRecvBuf()
     processFcgiData();
 }
 
+
 int FcgiConnection::readStdOut(int iReqId, char *pBuf, int size)
 {
     //FIXME:
@@ -609,6 +627,7 @@ void FcgiConnection::suspendWrite()
         EdStream::suspendWrite();
 }
 
+
 int  FcgiConnection::sendReqHeader()
 {
     int size = m_env.size();
@@ -621,6 +640,7 @@ int  FcgiConnection::sendReqHeader()
     setInProcess(1);
     return ret;
 }
+
 
 /**
   * @return 0, connection busy
@@ -645,6 +665,7 @@ int  FcgiConnection::sendReqBody(const char *pBuf, int size)
     return ret;
 }
 
+
 int FcgiConnection::beginReqBody()
 {
     if (D_ENABLED(DL_MEDIUM))
@@ -658,6 +679,7 @@ int FcgiConnection::beginReqBody()
     else
         return endOfStream(FCGI_PARAMS, m_iId);
 }
+
 
 int FcgiConnection::endOfReqBody()
 {
@@ -702,6 +724,7 @@ int  FcgiConnection::endOfRequest(int endCode, int status)
     return 0;
 }
 
+
 int FcgiConnection::onStdOut()
 {
     HttpExtConnector *pConnector = getConnector();
@@ -714,6 +737,7 @@ int FcgiConnection::onStdOut()
 
 }
 
+
 int  FcgiConnection::processStdOut(char *pBuf, int size)
 {
     HttpExtConnector *pConnector = getConnector();
@@ -724,6 +748,7 @@ int  FcgiConnection::processStdOut(char *pBuf, int size)
                getLogId(), size));
     return pConnector->processRespData(pBuf, size);
 }
+
 
 int  FcgiConnection::processStdErr(char *pBuf, int size)
 {
@@ -759,7 +784,6 @@ void FcgiConnection::continueWrite()
 }
 
 
-
 void  FcgiConnection::abort()
 {
     if (D_ENABLED(DL_MEDIUM))
@@ -768,7 +792,6 @@ void  FcgiConnection::abort()
     setState(ABORT);
     //sendAbortRec();
 }
-
 
 
 int FcgiConnection::begin()
@@ -790,7 +813,6 @@ int FcgiConnection::begin()
     m_iovec.append(m_streamHeaders, sizeof(FCGI_BeginRequestRecord));
     return 1;
 }
-
 
 
 int FcgiConnection::connUnavail()
@@ -858,6 +880,7 @@ int FcgiConnection::pendingWrite(const char *pBuf, int size, int type)
     return ret;
 }
 
+
 int  FcgiConnection::sendSpecial(const char *pBuf, int size)
 {
     int ret = 1;
@@ -865,6 +888,7 @@ int  FcgiConnection::sendSpecial(const char *pBuf, int size)
         ret = pendingWrite(pBuf, size, FCGI_PARAMS);
     return ret;
 }
+
 
 int  FcgiConnection::flush()
 {
@@ -885,6 +909,7 @@ int  FcgiConnection::flush()
     return 0;
 }
 
+
 int FcgiConnection::sendAbortRec()
 {
     if (D_ENABLED(DL_LESS))
@@ -895,10 +920,12 @@ int FcgiConnection::sendAbortRec()
     return sendRecord((const char *)&rec, sizeof(rec));
 }
 
+
 int FcgiConnection::readResp(char *pBuf, int size)
 {
     return readStdOut(m_iId, pBuf, size);
 }
+
 
 void FcgiConnection::dump()
 {

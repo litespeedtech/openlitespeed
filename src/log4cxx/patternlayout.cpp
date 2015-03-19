@@ -19,21 +19,23 @@
 #include "loggingevent.h"
 #include "level.h"
 
+#include <util/gfactory.h>
+
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
-#include <util/gfactory.h>
-#include <lsr/ls_strtool.h>
 
 BEGIN_LOG4CXX_NS
 struct timeval PatternLayout::s_startTime;
+
 
 int PatternLayout::init()
 {
     gettimeofday(& s_startTime, NULL);
     return s_pFactory->registerType(new PatternLayout("layout.pattern"));
 }
+
 
 Duplicable *PatternLayout::dup(const char *pName)
 {

@@ -15,19 +15,15 @@
 *    You should have received a copy of the GNU General Public License       *
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
-#include <assert.h>
-#include <stdint.h>
-#include <time.h>
-#include <unistd.h>
-#include <http/httplog.h>
-#include <util/datetime.h>
-#include <util/configctx.h>
-#include <sslpp/sslcontext.h>
 #include <sslpp/sslsession.h>
-#include <shm/lsi_shm.h>
-#include <shm/lsshmtypes.h>
+
+#include <http/httplog.h>
+#include <main/configctx.h>
 #include <shm/lsshmhash.h>
-#include <shm/lsshmcache.h>
+#include <shm/lsshmtypes.h>
+#include <sslpp/sslcontext.h>
+#include <util/datetime.h>
+
 
 #define shmSslCache "SSLCache"
 #define shmSslHash  "SSL"
@@ -72,12 +68,14 @@ static char *obj2String(TSSLSession *pObj)
 }
 #endif
 
+
 int SSLSession::shmData_init(lsShm_hCacheData_t *p, void *pUParam)
 {
     TSSLSession *pObj = (TSSLSession *)p;
     pObj->x_iValueLen = 0;
     return 0;
 }
+
 
 int SSLSession::shmData_remove(lsShm_hCacheData_t *p, void *pUParam)
 {
@@ -86,11 +84,13 @@ int SSLSession::shmData_remove(lsShm_hCacheData_t *p, void *pUParam)
     return 0;
 }
 
+
 void SSLSession::add()
 {
     m_next = s_base;
     s_base = this;
 }
+
 
 void SSLSession::remove()
 {
@@ -110,6 +110,7 @@ void SSLSession::remove()
     }
 }
 
+
 void SSLSession::unget()
 {
     HttpLog::notice("SSLSesion::unget <%p> %d %d context %p" , this, m_ready,
@@ -122,6 +123,7 @@ void SSLSession::unget()
         delete this;
     }
 }
+
 
 SSLSession *SSLSession::get(SSLContext *pSSLContext
                             , const char *name
@@ -154,6 +156,7 @@ SSLSession *SSLSession::get(SSLContext *pSSLContext
     }
     return NULL;
 }
+
 
 SSLSession::SSLSession(SSLContext *pSSLContext
                        , const char *name
@@ -193,6 +196,7 @@ SSLSession::SSLSession(SSLContext *pSSLContext
     }
 }
 
+
 SSLSession::~SSLSession()
 {
     HttpLog::notice("~SSLSesion <%p> %d %d context %p" , this, m_ready, m_ref,
@@ -205,6 +209,7 @@ SSLSession::~SSLSession()
         m_ready = 0;
     }
 }
+
 
 //
 // OPEN SSL interface
@@ -295,6 +300,7 @@ int SSLSession::watchCtx(SSLContext *pSSLContext
     return 0; // always good!
 }
 
+
 static inline int id2ascii(unsigned char *frombuf, int size, char *tobuf,
                            int maxsize)
 {
@@ -326,6 +332,7 @@ static inline int id2ascii(unsigned char *frombuf, int size, char *tobuf,
     return oldsize - maxsize;
 }
 
+
 //
 //  @brief show_SSLSessionId
 //  @brief print out the session id
@@ -346,6 +353,7 @@ void SSLSession::show_SSLSessionId(const char *tag
     ;
 }
 
+
 SSL_SESSION *SSLSession::sess_get_cb(SSL *pSSL, unsigned char *id, int len,
                                      int *ref)
 {
@@ -356,6 +364,7 @@ SSL_SESSION *SSLSession::sess_get_cb(SSL *pSSL, unsigned char *id, int len,
     // if the SSLSession is not ready...
     return pSSLSession->sess_get_func(pSSL, id, len, ref);
 }
+
 
 SSL_SESSION *SSLSession::sess_get_func(SSL *pSSL, unsigned char *id,
                                        int len, int *ref)
@@ -434,6 +443,7 @@ again:
     return pSess;
 }
 
+
 int SSLSession::sess_new_cb(SSL *pSSL, SSL_SESSION *pSess)
 {
     SSL_CTX *pCtx = SSL_get_SSL_CTX(pSSL);
@@ -443,6 +453,7 @@ int SSLSession::sess_new_cb(SSL *pSSL, SSL_SESSION *pSess)
     // if the SSLSession is not ready...
     return pSSLSession->sess_new_func(pSSL, pSess);
 }
+
 
 int SSLSession::sess_new_func(SSL *pSSL, SSL_SESSION *pSess)
 {
@@ -517,6 +528,7 @@ out:
     // return 0 ; //session will not be cached
 }
 
+
 //
 //  @brief sess_remove_cb
 //  @brief     NOTE: this code has not been tested; because openssl never called this?.
@@ -529,6 +541,7 @@ void SSLSession::sess_remove_cb(SSL_CTX *pCtx, SSL_SESSION *pSess)
     // if the SSLSession is not ready...
     pSSLSession->sess_remove_func(pSess);
 }
+
 
 void SSLSession::sess_remove_func(SSL_SESSION *pSess)
 {
@@ -553,6 +566,7 @@ void SSLSession::sess_remove_func(SSL_SESSION *pSess)
     sessionFlush(); // flush out the SHM expired sessions
 }
 
+
 //
 //  SessionCache Cleanup here
 //
@@ -567,6 +581,7 @@ int SSLSession::sessionFlushAll()
     return num;
 }
 
+
 static int checkStatElement(lsShm_hCacheData_t *p , void *pUParam)
 {
 #ifdef DEBUG_RUN
@@ -577,6 +592,7 @@ static int checkStatElement(lsShm_hCacheData_t *p , void *pUParam)
     return 0;
 }
 
+
 int SSLSession::sessionFlush()
 {
     // lock
@@ -586,6 +602,7 @@ int SSLSession::sessionFlush()
     m_base->unlock();
     return num;
 }
+
 
 int SSLSession::stat()
 {

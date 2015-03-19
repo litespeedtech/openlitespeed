@@ -18,7 +18,8 @@
 #ifndef LSLUAAPI_H
 #define LSLUAAPI_H
 
-#include <modules/lua/lsluaengine.h>
+#include "lsluadefs.h"
+
 #include <ls.h>
 
 #include <string.h>

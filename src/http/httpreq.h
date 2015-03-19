@@ -18,12 +18,7 @@
 #ifndef HTTPREQ_H
 #define HTTPREQ_H
 
-#include <http/contextlist.h>
 #include <http/httpheader.h>
-#include <http/httpmethod.h>
-#include <http/httpstatuscode.h>
-#include <http/httpver.h>
-#include <lsr/ls_hash.h>
 #include <lsr/ls_str.h>
 #include <lsr/ls_types.h>
 #include <util/autobuf.h>
@@ -63,7 +58,6 @@
 #define UPSTREAM_DEFLATE        8
 
 
-
 struct AAAData;
 class AuthRequired;
 class ClientInfo;
@@ -83,6 +77,7 @@ class SSIConfig;
 class VHostMap;
 class VMemBuf;
 class HttpRespHeaders;
+typedef struct ls_hash_s ls_hash_t;
 
 
 typedef struct
@@ -432,21 +427,21 @@ public:
 
     char noRespBody() const                 {   return m_iNoRespBody;       }
     void setNoRespBody()                    {   m_iNoRespBody = 1;          }
-    void updateNoRespBodyByStatus(int code)
-    {
-        if (!(m_iContextState & KEEP_AUTH_INFO))
-        {
-            switch (m_code = code)
-            {
-            case SC_100:
-            case SC_101:
-            case SC_204:
-            case SC_205:
-            case SC_304:
-                m_iNoRespBody = 1;
-            }
-        }
-    }
+    void updateNoRespBodyByStatus(int code);
+//     {
+//         if (!(m_iContextState & KEEP_AUTH_INFO))
+//         {
+//             switch (m_code = code)
+//             {
+//             case SC_100:
+//             case SC_101:
+//             case SC_204:
+//             case SC_205:
+//             case SC_304:
+//                 m_iNoRespBody = 1;
+//             }
+//         }
+//     }
 
 
     void processReqBodyInReqHeaderBuf();
@@ -496,13 +491,8 @@ public:
     ls_str_pair_t *addEnv(const char *pKey, int keyLen, const char *pValue,
                           int valLen);
     const char *getEnv(const char *pKey, int keyLen, int &valLen);
-    const ls_hash_t *getEnvHash() const     {   return m_envHash;           }
-    int  getEnvCount()
-    {
-        if (m_envHash)
-            return ls_hash_size(m_envHash);
-        return 0;
-    }
+    const ls_hash_t *getEnvHash() const;
+    int  getEnvCount();
     void unsetEnv(const char *pKey, int keyLen);
 
     int  getUnknownHeaderCount()

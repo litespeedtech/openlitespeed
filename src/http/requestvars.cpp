@@ -16,20 +16,23 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "requestvars.h"
-#include "httpheader.h"
-#include "httpsession.h"
-#include "httpvhost.h"
-#include "util/datetime.h"
-#include <http/httplog.h>
-#include <http/httpserverversion.h>
-#include <http/iptogeo.h>
-#include <http/platforms.h>
-#include <util/httputil.h>
 
+#include <http/httpheader.h>
+#include <http/httplog.h>
+#include <http/httpmethod.h>
+#include <http/httpserverversion.h>
+#include <http/httpsession.h>
+#include <http/httpstatuscode.h>
+#include <http/httpver.h>
+#include <http/httpvhost.h>
+#include <http/iptogeo.h>
+#include <lsr/ls_strtool.h>
 #include <ssi/ssiruntime.h>
 #include <ssi/ssiscript.h>
-
-#include <util/pcregex.h>
+#include <sslpp/sslcert.h>
+#include <util/autostr.h>
+#include <util/datetime.h>
+#include <util/httputil.h>
 #include <util/stringtool.h>
 
 #include <ctype.h>
@@ -40,8 +43,6 @@
 #include <sys/time.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include <lsr/ls_strtool.h>
-#include <sslpp/sslcert.h>
 
 
 SubstItem::SubstItem()
@@ -50,6 +51,7 @@ SubstItem::SubstItem()
 {
     m_value.m_pStr = NULL;
 }
+
 
 SubstItem::~SubstItem()
 {
@@ -61,6 +63,7 @@ SubstItem::~SubstItem()
             delete(SubstFormat *)m_value.m_pAny;
     }
 }
+
 
 SubstItem::SubstItem(const SubstItem &rhs)
     : LinkedObj(), m_type(rhs.m_type)
@@ -94,6 +97,7 @@ AutoStr2 *SubstItem::setStr(const char *pStr, int len)
 
     return m_value.m_pStr;
 }
+
 
 void SubstItem::parseString(const char *&pBegin, const char *pEnd,
                             const char *stopChars)
@@ -227,16 +231,19 @@ SubstFormat::SubstFormat()
 {
 }
 
+
 SubstFormat::~SubstFormat()
 {
     releaseObjects();
 }
+
 
 SubstFormat::SubstFormat(const SubstFormat &rhs)
     : TLinkList<SubstItem>(rhs)
 {
 
 }
+
 
 int SubstFormat::equal(const SubstFormat &rhs) const
 {
@@ -309,8 +316,6 @@ int SubstFormat::parse(const char *pCurLine, const char *pFormatStr,
     }
     return 0;
 }
-
-
 
 
 RequestVars::RequestVars()
@@ -392,6 +397,7 @@ static const char *ServerVarNames[REF_EXT_COUNT] =
 
 };
 
+
 static int ServerVarNameLen[REF_EXT_COUNT] =
 {
     11, 11, 11, 11, 12, 14, 12, 9, 9, 15, 16, 11, 13, 12,
@@ -401,6 +407,7 @@ static int ServerVarNameLen[REF_EXT_COUNT] =
     7, 10, 8, 10, 13, 12, 13, 22, 11
 };
 
+
 const char *RequestVars::getVarNameStr(int var_id, int &len)
 {
     var_id -= REF_BEGIN;
@@ -409,6 +416,7 @@ const char *RequestVars::getVarNameStr(int var_id, int &len)
     len = ServerVarNameLen[ var_id ];
     return ServerVarNames[ var_id ];
 }
+
 
 int RequestVars::parseBuiltIn(const char *pVar, int len, int ext)
 {
@@ -421,8 +429,12 @@ int RequestVars::parseBuiltIn(const char *pVar, int len, int ext)
     }
     return LS_FAIL;
 }
+
+
 static char s_sForward[] = "forwarded";
 static char s_sProxyConn[] = "proxy-connection";
+
+
 int RequestVars::parseHttpHeader(const char *pName, int len,
                                  const char *&pHeaderName, int &headerLen)
 {
@@ -798,6 +810,7 @@ int RequestVars::getReqVar(HttpSession *pSession, int type, char *&pValue,
 
 }
 
+
 //Only for types from LSI_REQ_SSL_VERSION to LSI_REQ_PATH_TRANSLATED which are defined in ls.h
 int RequestVars::getReqVar2(HttpSession *pSession, int type, char *&pValue,
                             int bufLen)
@@ -879,6 +892,7 @@ int RequestVars::getReqVar2(HttpSession *pSession, int type, char *&pValue,
         return 0;
 }
 
+
 const char *RequestVars::getUnknownHeader(HttpReq *pReq, const char *pName,
         int nameLen, int &headerLen)
 {
@@ -926,6 +940,7 @@ const char *RequestVars::getEnv(HttpSession *pSession, const char *pKey,
     }
     return pSession->getReq()->getEnv(pKey, keyLen, valLen);
 }
+
 
 int RequestVars::getCookieCount(HttpReq *pReq)
 {
@@ -1024,6 +1039,7 @@ static const char *const s_pHeaders[] =
     "via",
     "transfer-encoding"
 };
+
 
 const char *RequestVars::getHeaderString(int iIndex)
 {
@@ -1129,6 +1145,7 @@ int RequestVars::appendSubst(const SubstItem *pItem, HttpSession *pSession,
     return 0;
 }
 
+
 char *RequestVars::buildString(const SubstFormat *pFormat,
                                HttpSession *pSession,
                                char *pBuf, int &len, int noDupSlash,
@@ -1156,6 +1173,7 @@ char *RequestVars::buildString(const SubstFormat *pFormat,
     len = pBegin - pBuf;
     return pBuf;
 }
+
 
 int RequestVars::setEnv(HttpSession *pSession, const char *pName,
                         int nameLen,

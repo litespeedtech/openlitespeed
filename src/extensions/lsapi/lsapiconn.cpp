@@ -16,21 +16,22 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "lsapiconn.h"
+#include "lsapiworker.h"
+#include "lsapiconfig.h"
 
-#include <extensions/extworker.h>
 #include <extensions/localworker.h>
-#include <extensions/lsapi/lsapiworker.h>
-#include <extensions/lsapi/lsapiconfig.h>
 #include <extensions/registry/extappregistry.h>
 
-#include <util/datetime.h>
+#include <edio/multiplexer.h>
 #include <edio/multiplexerfactory.h>
 #include <http/httpcgitool.h>
-#include <http/httpsession.h>
-#include <http/httpextconnector.h>
 #include <http/httpdefs.h>
+#include <http/httpextconnector.h>
 #include <http/httplog.h>
 #include <http/httpreq.h>
+#include <http/httpsession.h>
+#include <http/httpstatuscode.h>
+#include <util/datetime.h>
 
 #include <fcntl.h>
 #include <sys/socket.h>
@@ -71,12 +72,14 @@ LsapiConn::~LsapiConn()
 {
 }
 
+
 void LsapiConn::init(int fd, Multiplexer *pMplx)
 {
     EdStream::init(fd, pMplx, POLLIN | POLLOUT | POLLHUP | POLLERR);
     reset();
 
 }
+
 
 int LsapiConn::connect(Multiplexer *pMplx)
 {
@@ -122,6 +125,7 @@ int LsapiConn::connect(Multiplexer *pMplx)
     return 1;
 }
 
+
 int LsapiConn::close()
 {
     ExtConn::close();
@@ -160,6 +164,7 @@ int LsapiConn::doWrite()
     return 0;
 }
 
+
 int LsapiConn::sendReqHeader()
 {
     int ret = m_lsreq.buildReq(getConnector()->getHttpSession(),
@@ -178,6 +183,7 @@ int LsapiConn::sendReqHeader()
     m_lReqSentTime = DateTime::s_curTime;
     return 1;
 }
+
 
 int  LsapiConn::sendReqBody(const char *pBuf, int size)
 {
@@ -211,12 +217,14 @@ int  LsapiConn::sendReqBody(const char *pBuf, int size)
     return ret;
 }
 
+
 void LsapiConn::abort()
 {
     setState(ABORT);
     sendAbortReq();
     //::shutdown( getfd(), SHUT_RDWR );
 }
+
 
 int LsapiConn::sendAbortReq()
 {
@@ -229,6 +237,7 @@ int LsapiConn::sendAbortReq()
     return write((char *)&rec, sizeof(rec));
 }
 
+
 void LsapiConn::reset()
 {
     m_iovec.clear();
@@ -238,6 +247,7 @@ void LsapiConn::reset()
     //memset( &m_iTotalPending, 0,
     //        ((char *)(&m_pChunkIS + 1)) - (char *)&m_iTotalPending );
 }
+
 
 int  LsapiConn::begin()
 {
@@ -249,6 +259,7 @@ int  LsapiConn::begin()
 
     return 1;
 }
+
 
 int  LsapiConn::beginReqBody()
 {
@@ -300,7 +311,6 @@ int  LsapiConn::flush()
 }
 
 
-
 int LsapiConn::doRead()
 {
     if (D_ENABLED(DL_LESS))
@@ -322,6 +332,7 @@ int LsapiConn::doRead()
     return ret;
 }
 
+
 inline int verifyPacketHeader(struct lsapi_packet_header *pHeader)
 {
     if ((LSAPI_VERSION_B0 != pHeader->m_versionB0) ||
@@ -342,6 +353,7 @@ inline int verifyPacketHeader(struct lsapi_packet_header *pHeader)
     return pHeader->m_packetLen.m_iLen;
 }
 
+
 void LsapiConn::setRespBuf(char *pStart)
 {
     m_pRespHeader       = pStart;
@@ -350,6 +362,7 @@ void LsapiConn::setRespBuf(char *pStart)
     if (m_pRespHeaderBufEnd > &m_respBuf[sizeof(m_respBuf)])
         m_pRespHeaderBufEnd = &m_respBuf[sizeof(m_respBuf)];
 }
+
 
 int LsapiConn::processPacketHeader(char *pBuf, int len)
 {
@@ -411,6 +424,7 @@ int LsapiConn::processPacketHeader(char *pBuf, int len)
     }
     return len;
 }
+
 
 int LsapiConn::processRespBuffed()
 {
@@ -539,6 +553,7 @@ int LsapiConn::processRespBuffed()
     return 1;
 }
 
+
 int LsapiConn::processResp()
 {
     int ret;
@@ -644,6 +659,7 @@ int LsapiConn::processResp()
     return LS_FAIL;
 }
 
+
 int LsapiConn::processRespHeader(char *pEnd, int &status)
 {
     switch (m_respState)
@@ -720,7 +736,6 @@ int LsapiConn::processRespHeader(char *pEnd, int &status)
     }
     return 0;
 }
-
 
 
 int LsapiConn::processRespHeader()
@@ -980,6 +995,7 @@ int LsapiConn::addRequest(ExtRequest *pReq)
     return 0;
 }
 
+
 ExtRequest *LsapiConn::getReq() const
 {
     return getConnector();
@@ -998,11 +1014,11 @@ int LsapiConn::removeRequest(ExtRequest *pReq)
 }
 
 
-
 void LsapiConn::finishRecvBuf()
 {
     //doRead();
 }
+
 
 void LsapiConn::cleanUp()
 {
@@ -1012,6 +1028,7 @@ void LsapiConn::cleanUp()
         close();
     recycle();
 }
+
 
 void LsapiConn::onTimer()
 {
@@ -1069,15 +1086,18 @@ bool LsapiConn::wantRead()
     return false;
 }
 
+
 bool LsapiConn::wantWrite()
 {
     return false;
 }
 
+
 int  LsapiConn::readResp(char *pBuf, int size)
 {
     return 0;
 }
+
 
 void LsapiConn::dump()
 {

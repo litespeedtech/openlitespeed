@@ -18,15 +18,16 @@
 #ifndef SSLSESSION_H
 #define SSLSESSION_H
 
+#include <lsdef.h>
+#include <shm/lsshmcache.h>
+
 #include <openssl/ssl.h>
 #include <openssl/bio.h>
 #include <openssl/err.h>
 #include <openssl/rand.h>
 #include <stdint.h>
 #include <unistd.h>
-#include <lsdef.h>
 
-#include <shm/lsshmcache.h>
 
 class LsShmHash;
 class SSLContext;
@@ -90,7 +91,7 @@ private:
                         , int expireSec);
     ~SSLSession();
 
-    
+
     bool operator==(const SSLSession &other);
 
 
@@ -125,7 +126,7 @@ private:
     static SSLSession      *s_base;
     static uint32_t         s_shmMagic;
     static int32_t          s_idxContext;
-    
+
     LS_NO_COPY_ASSIGN(SSLSession);
 };
 

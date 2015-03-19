@@ -38,9 +38,6 @@ long PidList::remove(pid_t pid)
 }
 
 
-
-
-
 PidSimpleList::PidSimpleList(char *pBegin, char *pEnd)
     : m_pBegin((PidInfo *)pBegin)
     , m_pCur((PidInfo *)pBegin)
@@ -48,8 +45,10 @@ PidSimpleList::PidSimpleList(char *pBegin, char *pEnd)
 {
 }
 
+
 PidSimpleList::~PidSimpleList()
 {}
+
 
 static PidInfo *lower_bound(PidInfo *b, PidInfo *e, pid_t pid)
 {
@@ -87,6 +86,7 @@ void PidSimpleList::add(pid_t pid, pid_t parent, ExtWorker *pWorker)
     pInsert->m_pWorker = pWorker;
 }
 
+
 ExtWorker *PidSimpleList::remove(pid_t pid)
 {
     ExtWorker *pWorker = NULL;
@@ -102,6 +102,7 @@ ExtWorker *PidSimpleList::remove(pid_t pid)
     }
     return pWorker;
 }
+
 
 int PidSimpleList::markToStop(pid_t pid, int kill_type)
 {

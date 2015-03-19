@@ -15,8 +15,9 @@
 *    You should have received a copy of the GNU General Public License       *
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
-#if (defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)) && !defined( NDEBUG )
 #include "pthreadmutex.h"
+#if (defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)) && !defined( NDEBUG )
+
 #ifndef PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP
 # define PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP \
     {0, 0, 0, PTHREAD_MUTEX_ERRORCHECK_NP, __LOCK_INITIALIZER}
@@ -27,7 +28,7 @@ pthread_mutex_t PThreadMutex::s_proto =
 
 #else
 
-#include "pthreadmutex.h"
 pthread_mutex_t PThreadMutex::s_proto = PTHREAD_MUTEX_INITIALIZER;
+
 #endif
 

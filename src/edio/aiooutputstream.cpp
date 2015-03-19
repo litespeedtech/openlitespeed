@@ -18,10 +18,14 @@
 
 #include <edio/aiooutputstream.h>
 #include <lsr/ls_fileio.h>
+#include <util/autobuf.h>
 #include <util/resourcepool.h>
 
 #include <errno.h>
 #include <fcntl.h>
+#include <signal.h>
+#include <stdarg.h>
+#include <stddef.h>
 #include <sys/stat.h>
 #include <unistd.h>
 
@@ -48,6 +52,7 @@ void AioReq::setcb(int fildes, void *buf, size_t nbytes, int offset,
 #endif
 }
 
+
 AioReq::AioReq()
 {
     memset(&m_aiocb, 0, sizeof(struct aiocb));
@@ -61,6 +66,7 @@ AioReq::AioReq()
 #endif
 }
 
+
 int AioOutputStream::open(const char *pathname, int flags, mode_t mode)
 {
     if (m_closeRequested)
@@ -69,6 +75,7 @@ int AioOutputStream::open(const char *pathname, int flags, mode_t mode)
         setfd(ls_fio_open(pathname, flags, mode));
     return getfd();
 }
+
 
 int AioOutputStream::close()
 {
@@ -87,6 +94,7 @@ int AioOutputStream::close()
     }
     return 0;
 }
+
 
 int AioOutputStream::syncWrite(const char *pBuf, int len)
 {
@@ -110,6 +118,7 @@ int AioOutputStream::syncWrite(const char *pBuf, int len)
 
 }
 
+
 int AioOutputStream::append(const char *pBuf, int len)
 {
     if (getfd() == -1)
@@ -130,6 +139,7 @@ int AioOutputStream::append(const char *pBuf, int len)
     return m_pRecv->append(pBuf, len);
 }
 
+
 #define LS_AIO_MAXBUF 4096
 int AioOutputStream::onAioEvent()
 {
@@ -141,6 +151,7 @@ int AioOutputStream::onAioEvent()
         return close();
     return 0;
 }
+
 
 int AioOutputStream::flush()
 {

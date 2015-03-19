@@ -21,10 +21,8 @@
 
 #include <stddef.h>
 #include <ctype.h>
-#include <stdio.h>
 #include <stdarg.h>
 #include <sys/types.h>
-#include <lsr/ls_pool.h>
 #include <lsr/ls_types.h>
 
 
@@ -126,14 +124,8 @@ ls_inline void ls_parse(
  *
  * @see ls_parse, ls_parse_delete
  */
-ls_inline ls_parse_t *ls_parse_new(
-    const char *pBegin, const char *pEnd, const char *delim)
-{
-    ls_parse_t *pThis;
-    if ((pThis = (ls_parse_t *)ls_palloc(sizeof(*pThis))) != NULL)
-        ls_parse(pThis, pBegin, pEnd, delim);
-    return pThis;
-}
+ls_parse_t *ls_parse_new(const char *pBegin, const char *pEnd,
+                         const char *delim);
 
 /**
  * @ls_parse_d
@@ -158,9 +150,7 @@ ls_inline void ls_parse_d(ls_parse_t *pThis)
  *
  * @see ls_parse_new
  */
-ls_inline void ls_parse_delete(
-    ls_parse_t *pThis)
-{   ls_parse_d(pThis);  ls_pfree(pThis);   }
+void ls_parse_delete(ls_parse_t *pThis);
 
 /**
  * @ls_parse_isend

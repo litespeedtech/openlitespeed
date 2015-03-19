@@ -18,7 +18,6 @@
 #ifdef RUN_TEST
 
 #include "contexttreetest.h"
-#include <http/httpvhost.h>
 #include <http/contexttree.h>
 #include <http/httpcontext.h>
 #include "test/unittest-cpp/UnitTest++/src/UnitTest++.h"

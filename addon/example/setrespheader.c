@@ -144,13 +144,14 @@ int check_if_remove_session_hook(lsi_cb_param_t *rec)
 {
     const char *qs;
     int sessionHookType = 0;
+    int iEnableHkpt = LSI_HKPT_SEND_RESP_HEADER;
     qs = g_api->get_req_query_string(rec->_session, NULL);
     if (qs && strncasecmp(qs, testurl, sizeof(testurl) - 1) == 0)
     {
         sessionHookType = strtol(qs + sizeof(testurl) - 1, NULL, 10);
         if (sessionHookType & 0x0f)
-            g_api->set_session_hook_enable_flag(rec->_session,
-                                                LSI_HKPT_SEND_RESP_HEADER, &MNAME, 1);
+            g_api->set_session_hook_enable_flag(rec->_session, &MNAME, 1,
+                                                &iEnableHkpt, 1);
     }
     return LSI_HK_RET_OK;
 }

@@ -28,7 +28,7 @@ int PThreadCond::wait(pthread_mutex_t *pMutex, long lMilliSec)
     gettimeofday(&curtime, NULL);
     struct timespec timeout;
     timeout.tv_sec = curtime.tv_sec + lMilliSec / 1000;
-    timeout.tv_nsec = curtime.tv_usec * 1000 + lMilliSec % 1000 * 100000;
+    timeout.tv_nsec = curtime.tv_usec * 1000 + lMilliSec % 1000 * 1000000;
     if (timeout.tv_nsec > 1000000000)
     {
         timeout.tv_sec ++;

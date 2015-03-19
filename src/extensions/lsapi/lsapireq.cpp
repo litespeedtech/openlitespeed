@@ -16,12 +16,18 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "lsapireq.h"
-#include <http/httpsession.h>
 #include <http/httpcontext.h>
 #include <http/httpcgitool.h>
+#include <http/httpmethod.h>
 #include <http/httpserverversion.h>
+#include <http/httpsession.h>
+#include <http/httpver.h>
 #include <http/phpconfig.h>
 #include <util/ienv.h>
+#include <util/iovec.h>
+
+#include <fcntl.h>
+#include <unistd.h>
 
 class LsapiEnv : public IEnv
 {
@@ -44,6 +50,7 @@ public:
     int bufSize() const      {  return m_pBuf->size();      }
     LS_NO_COPY_ASSIGN(LsapiEnv);
 };
+
 
 int LsapiReq::addEnv(AutoBuf *pAutoBuf, const char *name, size_t nameLen,
                      const char *value, size_t valLen)
@@ -79,7 +86,6 @@ int LsapiReq::addEnv(AutoBuf *pAutoBuf, const char *name, size_t nameLen,
 }
 
 
-
 LsapiReq::LsapiReq(IOVec *pVec)
     : m_bufReq(4096)
     , m_pIovec(pVec)
@@ -91,7 +97,6 @@ LsapiReq::LsapiReq(IOVec *pVec)
 LsapiReq::~LsapiReq()
 {
 }
-
 
 
 int LsapiReq::appendEnv(LsapiEnv *pEnv, HttpSession *pSession)
@@ -132,6 +137,7 @@ int LsapiReq::appendEnv(LsapiEnv *pEnv, HttpSession *pSession)
     return 0;
 }
 
+
 int LsapiReq::appendSpecialEnv(LsapiEnv *pEnv, HttpSession *pSession,
                                struct lsapi_req_header *pHeader)
 {
@@ -150,6 +156,7 @@ int LsapiReq::appendSpecialEnv(LsapiEnv *pEnv, HttpSession *pSession,
     m_bufReq.append("\0\0\0\0", 4);
     return 0;
 }
+
 
 int LsapiReq::appendHttpHeaderIndex(HttpReq *pReq, int cntUnknown)
 {
@@ -200,8 +207,7 @@ int LsapiReq::buildReq(HttpSession *pSession, int *totalLen)
     return 0;
 }
 
-#include <fcntl.h>
-#include <unistd.h>
+
 int LsapiReq::dumpReq(char *pFile)
 {
     //test code

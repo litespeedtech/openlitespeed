@@ -16,34 +16,35 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "httpcgitool.h"
-#include "httpsession.h"
-#include "httpdefs.h"
-#include "httpmime.h"
-#include "httpreq.h"
-#include "httpresp.h"
-#include "httpserverversion.h"
-#include "httpextconnector.h"
-#include "requestvars.h"
-#include <extensions/fcgi/fcgienv.h>
-#include <sslpp/sslconnection.h>
-#include <sslpp/sslcert.h>
-#include <openssl/x509.h>
 
-#include <util/autobuf.h>
-#include <util/autostr.h>
-#include <util/env.h>
-#include <util/stringtool.h>
-
+#include <http/httpdefs.h>
+#include <http/httpextconnector.h>
+#include <http/httpmethod.h>
+#include <http/httpmime.h>
+#include <http/httpreq.h>
+#include <http/httpresp.h>
+#include <http/httpserverversion.h>
+#include <http/httpsession.h>
+#include <http/httpstatuscode.h>
+#include <http/httpver.h>
+#include <http/iptogeo.h>
+#include <http/requestvars.h>
 #include <lsr/ls_hash.h>
 #include <lsr/ls_str.h>
+#include <lsr/ls_strtool.h>
+#include <sslpp/sslconnection.h>
+// #include <sslpp/sslcert.h>
+#include <util/autostr.h>
+#include <util/ienv.h>
+#include <util/stringtool.h>
 
+#include <extensions/fcgi/fcgienv.h>
+#include <openssl/x509.h>
 #include <ctype.h>
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <lsr/ls_strtool.h>
 
-#include "iptogeo.h"
 int HttpCgiTool::processHeaderLine(HttpExtConnector *pExtConn,
                                    const char  *pLineBegin,
                                    const char *pLineEnd, int &status)
@@ -235,6 +236,7 @@ int HttpCgiTool::processHeaderLine(HttpExtConnector *pExtConn,
                                pLineEnd - pValue);
 }
 
+
 int HttpCgiTool::parseRespHeader(HttpExtConnector *pExtConn,
                                  const char *pBuf, int size, int &status)
 {
@@ -282,7 +284,6 @@ int HttpCgiTool::parseRespHeader(HttpExtConnector *pExtConn,
     }
     return pCur - pBuf;
 }
-
 
 
 static char DEFAULT_PATH[] =
@@ -367,6 +368,7 @@ void HttpCgiTool::buildServerEnv()
     GISS_ENV_LEN += HttpServerVersion::getVersionLen();
 }
 
+
 int HttpCgiTool::buildFcgiEnv(FcgiEnv *pEnv, HttpSession *pSession)
 {
     static const char *SP_ENVs[] =
@@ -413,6 +415,7 @@ int HttpCgiTool::buildFcgiEnv(FcgiEnv *pEnv, HttpSession *pSession)
     return 0;
 }
 
+
 int HttpCgiTool::addSpecialEnv(IEnv *pEnv, HttpReq *pReq)
 {
     const AutoStr2 *psTemp = pReq->getRealPath();
@@ -425,6 +428,7 @@ int HttpCgiTool::addSpecialEnv(IEnv *pEnv, HttpReq *pReq)
     pEnv->add("SCRIPT_NAME", 11, pTemp, pReq->getScriptNameLen());
     return 0;
 }
+
 
 static int lookup_ssl_cert_serial(X509 *pCert, char *pBuf, int len)
 {
@@ -620,6 +624,7 @@ int HttpCgiTool::buildCommonEnv(IEnv *pEnv, HttpSession *pSession)
     return count;
 }
 
+
 int HttpCgiTool::addHttpHeaderEnv(IEnv *pEnv, HttpReq *pReq)
 {
     int i, n;
@@ -671,6 +676,8 @@ int HttpCgiTool::addHttpHeaderEnv(IEnv *pEnv, HttpReq *pReq)
     }
     return 0;
 }
+
+
 //Fix me:   Xuedong copy this new function from litespeed side, since this function
 //          is calling the new function "void setContentTypeHeaderInfo( int offset, int len )"
 //          in "class HttpResp", which is related to the new variable "m_iContentTypeStarts",

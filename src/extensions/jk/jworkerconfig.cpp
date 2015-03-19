@@ -22,16 +22,19 @@ JWorkerConfig::JWorkerConfig()
     : m_pSecret(NULL)
 {}
 
+
 JWorkerConfig::JWorkerConfig(const char *pName)
     : ExtWorkerConfig(pName)
     , m_pSecret(NULL)
 {}
+
 
 JWorkerConfig::~JWorkerConfig()
 {
     if (m_pSecret)
         Pool::deallocate2(m_pSecret);
 }
+
 
 void JWorkerConfig::setSecret(const char *pSecret)
 {

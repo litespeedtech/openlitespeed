@@ -20,7 +20,6 @@
 #include "httpmimetest.h"
 
 #include <http/httpmime.h>
-#include <http/httplog.h>
 #include <unistd.h>
 #include <stdio.h>
 #include "test/unittest-cpp/UnitTest++/src/UnitTest++.h"

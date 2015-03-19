@@ -15,20 +15,18 @@
 *    You should have received a copy of the GNU General Public License       *
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
-#include <assert.h>
+#include <shm/lsshmlock.h>
+
+#include <shm/lsshm.h>
+#include <util/gpath.h>
+
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 #include <errno.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
-
-#include <shm/lsshmtypes.h>
-#include <shm/lsshmlock.h>
-#include <shm/lsshm.h>
-#include <util/gpath.h>
 
 extern "C" {
     int ls_expandfile(int fd, size_t fromsize, size_t incrsize);
@@ -45,7 +43,6 @@ LsShmLock::LsShmLock(const char *dirName, const char *mapName,
     , m_pFileName(NULL)
     , m_pMapName(NULL)
     , m_iFd(0)
-    , m_iRemoveFlag(0)
     , m_pShmLockMap(NULL)
     , m_pShmLockElem(NULL)
     , m_iMaxSizeO(0)
@@ -98,6 +95,15 @@ LsShmLock::~LsShmLock()
 }
 
 
+void LsShmLock::deleteFile()
+{
+    if (m_pFileName != NULL)
+    {
+        unlink(m_pFileName);
+    }
+}
+
+
 const char *LsShmLock::getDefaultShmDir()
 {
     static int isDirTected = 0;
@@ -133,6 +139,7 @@ int LsShmLock::freeLock(lsi_shmlock_t *pLock)
 
     pElem = m_pShmLockElem + num;
     pElem->x_iNext = getShmLockMap()->x_iFreeOffset;
+    getShmLockMap()->x_iFreeOffset = num;
     return 0;
 }
 
@@ -170,11 +177,6 @@ void LsShmLock::cleanup()
     }
     if (m_pFileName != NULL)
     {
-        if (m_iRemoveFlag != 0)
-        {
-            unlink(m_pFileName);
-            m_iRemoveFlag = 0;
-        }
         free(m_pFileName);
         m_pFileName = NULL;
     }
@@ -216,7 +218,6 @@ LsShmStatus_t LsShmLock::init(const char *name, LsShmSize_t size)
 
     if (mystat.st_size == 0)
     {
-        m_iRemoveFlag = 1;
         // creating a new map
         if ((expandFile(0, roundToPageSize(size)) != LSSHM_OK)
             || (map(size) != LSSHM_OK))
@@ -230,7 +231,6 @@ LsShmStatus_t LsShmLock::init(const char *name, LsShmSize_t size)
         strcpy((char *)getShmLockMap()->x_aName, name);
 
         setupFreeList(size);
-        m_iRemoveFlag = 0;
     }
     else
     {

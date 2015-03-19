@@ -18,12 +18,10 @@
 #ifndef SSLCONTEXT_H
 #define SSLCONTEXT_H
 
+#include <lsdef.h>
 
 #include <stdio.h>
 #include <sys/stat.h>
-#include <util/autostr.h>
-#include <util/pool.h>
-#include <lsdef.h>
 
 
 typedef struct ssl_st SSL;
@@ -122,7 +120,7 @@ public:
     int  initECDH();
     int  initDH(const char *pFile);
     int  enableShmSessionCache(const char *pName, int maxEntries);
-    
+
     LS_NO_COPY_ASSIGN(SSLContext);
 };
 #endif

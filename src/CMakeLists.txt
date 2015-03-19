@@ -91,7 +91,6 @@ SET(util_SRCS
    util/pcutil.cpp
    util/daemonize.cpp
    util/configentry.cpp
-   util/configctx.cpp
    util/logidtracker.cpp
    util/datetime.cpp
    util/resourcepool.cpp
@@ -128,10 +127,12 @@ SET(lsr_SRCS
    lsr/ls_pool.c
    lsr/ls_ptrlist.c
    lsr/ls_sha1.c
+   lsr/ls_stack.c
    lsr/ls_str.c
    lsr/ls_strlist.c
    lsr/ls_strtool.c
    lsr/ls_time.c
+   lsr/ls_tsstack.c
    lsr/ls_xpool.c
    lsr/xxhash.c
 )
@@ -247,6 +248,7 @@ SET(thread_STAT_SRCS
 )
 
 SET(shm_STAT_SRCS
+   test/shm/shmbaselrutest.cpp
    test/shm/shmlrutest.cpp
    test/shm/shmxtest.cpp
 )
@@ -265,14 +267,15 @@ add_executable(openlitespeed ${openlitespeed_SRCS} ${util_SRCS} ${lsr_SRCS}
 #httpdtest.cpp
 #)
 
-add_executable(shmlru_test
-test/shm/shmlru_test.c
-modules/prelinkedmods.cpp
-httpdtest.cpp
-${util_SRCS}
-${lsr_SRCS}
-${thread_SRCS}
-)
+# add_executable(shmlru_test
+# test/shm/shmlru_test.c
+# modules/prelinkedmods.cpp
+# httpdtest.cpp
+# ${util_SRCS}
+# ${lsr_SRCS}
+# ${thread_SRCS}
+# ${http_STAT_SRCS}
+# )
 
 # add_executable(shmtest
 # test/shm/testshmapi.cpp
@@ -288,44 +291,44 @@ ${thread_SRCS}
 # ${util_SRCS}
 # )
 
-add_executable(ls_lfqueuetest
-test/lsr/ls_lfqueuetest.c
-${lsr_SRCS}
-)
+# add_executable(ls_lfqueuetest
+# test/lsr/ls_lfqueuetest.c
+# ${lsr_SRCS}
+# )
 
-add_executable(ls_lfstacktest
-test/lsr/ls_lfstacktest.cpp
-util/misc/profiletime.cpp
-${lsr_SRCS}
-${test_SRCS}
-)
+# add_executable(ls_lfstacktest
+# test/lsr/ls_lfstacktest.cpp
+# util/misc/profiletime.cpp
+# ${lsr_SRCS}
+# ${test_SRCS}
+# )
 
-add_executable(ls_llmqtest
-test/lsr/ls_llmqtest.c
-${lsr_SRCS}
-)
+# add_executable(ls_llmqtest
+# test/lsr/ls_llmqtest.c
+# ${lsr_SRCS}
+# )
 
-add_executable(ls_locktest
-test/lsr/ls_locktest.cpp
-${lsr_SRCS}
-)
+# add_executable(ls_locktest
+# test/lsr/ls_locktest.cpp
+# ${lsr_SRCS}
+# )
 
-add_executable(ls_stacktest
-test/lsr/ls_stacktest.cpp
-util/misc/profiletime.cpp
-${lsr_SRCS}
-${test_SRCS}
-)
+# add_executable(ls_stacktest
+# test/lsr/ls_stacktest.cpp
+# util/misc/profiletime.cpp
+# ${lsr_SRCS}
+# ${test_SRCS}
+# )
 
-add_executable(ls_thrsafetest
-test/lsr/ls_thrsafetest.cpp
-${lsr_SRCS}
-)
+# add_executable(ls_thrsafetest
+# test/lsr/ls_thrsafetest.cpp
+# ${lsr_SRCS}
+# )
 
-add_executable(ls_valgrindtest
-test/lsr/ls_valgrindtest.c
-${lsr_SRCS}
-)
+# add_executable(ls_valgrindtest
+# test/lsr/ls_valgrindtest.c
+# ${lsr_SRCS}
+# )
 
 
 
@@ -341,21 +344,21 @@ target_link_libraries(openlitespeed ${litespeedlib} )
 
 # target_link_libraries(shmtest ${litespeedlib} )
 
-target_link_libraries(shmlru_test ${litespeedlib} )
+# target_link_libraries(shmlru_test ${litespeedlib} )
 
-target_link_libraries(ls_lfqueuetest pthread ssl crypto pcre )
+# target_link_libraries(ls_lfqueuetest pthread ssl crypto pcre )
 
-target_link_libraries(ls_lfstacktest pthread ssl crypto pcre )
+# target_link_libraries(ls_lfstacktest pthread ssl crypto pcre )
 
-target_link_libraries(ls_llmqtest pthread ssl crypto pcre )
+# target_link_libraries(ls_llmqtest pthread ssl crypto pcre )
 
-target_link_libraries(ls_locktest pthread ssl crypto pcre )
+# target_link_libraries(ls_locktest pthread ssl crypto pcre )
 
-target_link_libraries(ls_stacktest pthread ssl crypto pcre )
+# target_link_libraries(ls_stacktest pthread ssl crypto pcre )
 
-target_link_libraries(ls_thrsafetest pthread ssl crypto pcre )
+# target_link_libraries(ls_thrsafetest pthread ssl crypto pcre )
 
-target_link_libraries(ls_valgrindtest pthread ssl crypto pcre )
+# target_link_libraries(ls_valgrindtest pthread ssl crypto pcre )
 
 install(TARGETS openlitespeed DESTINATION bin)
 

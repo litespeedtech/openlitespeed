@@ -27,7 +27,6 @@
 #include <edio/inputstream.h>
 #include <edio/outputstream.h>
 #include <util/iovec.h>
-#include <edio/multiplexer.h>
 
 
 class EdIS : public InputStream, virtual public InputFlowControl
@@ -64,12 +63,8 @@ protected:
     void setMultiplexer(Multiplexer *pMplx)
     {   m_pMplex = pMplx; }
 public:
-    EdStream()
-        : m_pMplex(0) {};
-    EdStream(int fd, Multiplexer *pMplx, int events = 0)
-        : EventReactor(fd)
-        , m_pMplex(pMplx)
-    {   regist(pMplx, events);  };
+    EdStream();
+    EdStream(int fd, Multiplexer *pMplx, int events = 0);
     ~EdStream();
     void init(int fd, Multiplexer *pMplx, int events)
     {
@@ -78,15 +73,15 @@ public:
         regist(pMplx, events);
     }
 
-    virtual void continueRead()     {   m_pMplex->continueRead(this);   }
-    virtual void suspendRead()      {   m_pMplex->suspendRead(this); }
+    virtual void continueRead();
+    virtual void suspendRead();
 
     int read(char *pBuf, int size);
     int readv(struct iovec *vector, size_t count);
     virtual int onRead() = 0;
 
-    virtual void continueWrite()    {   m_pMplex->continueWrite(this);  }
-    virtual void suspendWrite()     {   m_pMplex->suspendWrite(this);}
+    virtual void continueWrite();
+    virtual void suspendWrite();
     virtual int onWrite() = 0;
     int write(const char *buf, int len)
     {

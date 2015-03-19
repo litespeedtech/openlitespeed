@@ -17,12 +17,16 @@
 *****************************************************************************/
 #include "stderrlogger.h"
 
+#include <edio/multiplexer.h>
 #include <http/httplog.h>
-#include <log4cxx/logger.h>
 #include <log4cxx/appender.h>
+#include <log4cxx/logger.h>
+
 #include <assert.h>
 #include <fcntl.h>
 #include <string.h>
+#include <sys/socket.h>
+#include <sys/types.h>
 #include <unistd.h>
 
 
@@ -32,9 +36,11 @@ StdErrLogger::StdErrLogger()
 {
 }
 
+
 StdErrLogger::~StdErrLogger()
 {
 }
+
 
 int StdErrLogger::handleEvents(short event)
 {
@@ -61,6 +67,7 @@ int StdErrLogger::handleEvents(short event)
 
 }
 
+
 int StdErrLogger::setLogFileName(const char *pName)
 {
     if (!pName)
@@ -80,13 +87,11 @@ int StdErrLogger::setLogFileName(const char *pName)
     return 0;
 }
 
+
 const char *StdErrLogger::getLogFileName() const
 {   return m_pAppender->getName();     }
 
 
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <edio/multiplexer.h>
 int StdErrLogger::initLogger(Multiplexer *pMultiplexer)
 {
     int fds[2];

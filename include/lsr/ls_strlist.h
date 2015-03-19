@@ -20,8 +20,6 @@
 
 
 #include <lsr/ls_ptrlist.h>
-#include <lsr/ls_str.h>
-#include <lsr/ls_pool.h>
 #include <lsr/ls_types.h>
 
 
@@ -102,14 +100,7 @@ void ls_strlist_copy(ls_strlist_t *pThis, const ls_strlist_t *pRhs);
  *
  * @see ls_strlist, ls_strlist_delete
  */
-ls_inline ls_strlist_t *ls_strlist_new(size_t initSize)
-{
-    ls_strlist_t *pThis;
-    if ((pThis = (ls_strlist_t *)
-                 ls_palloc(sizeof(*pThis))) != NULL)
-        ls_strlist(pThis, initSize);
-    return pThis;
-}
+ls_strlist_t *ls_strlist_new(size_t initSize);
 
 /**
  * @ls_strlist_d
@@ -134,8 +125,7 @@ void ls_strlist_d(ls_strlist_t *pThis);
  *
  * @see ls_strlist_new
  */
-ls_inline void ls_strlist_delete(ls_strlist_t *pThis)
-{   ls_strlist_d(pThis);  ls_pfree(pThis);   }
+void ls_strlist_delete(ls_strlist_t *pThis);
 
 /* derived from ls_ptrlist */
 
@@ -392,16 +382,7 @@ ls_inline int ls_strlist_popfront(
  *
  * @see ls_strlist_add, ls_strlist_remove, ls_strlist_clear
  */
-ls_inline void ls_strlist_releaseobjs(ls_strlist_t *pThis)
-{
-    ls_strlist_iter iter = ls_strlist_begin(pThis);
-    for (; iter < ls_strlist_end(pThis); ++iter)
-    {
-        if (*iter)
-            ls_str_delete(*iter);
-    }
-    ls_ptrlist_clear(pThis);
-}
+void ls_strlist_releaseobjs(ls_strlist_t *pThis);
 
 /**
  * @ls_strlist_foreach

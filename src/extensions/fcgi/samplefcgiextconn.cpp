@@ -16,14 +16,13 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "samplefcgiextconn.h"
-#include "fcginamevaluepair.h"
-#include <extensions/httpextprocessor.h>
+
+#include <lsr/ls_strtool.h>
 
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <lsr/ls_strtool.h>
 
 SampleFcgiExtConn::SampleFcgiExtConn()
     : HttpExtConnector()
@@ -50,13 +49,18 @@ SampleFcgiExtConn::SampleFcgiExtConn()
     m_env.add("CONTENT_LENGTH", achBuf);
     m_env.add("CONTENT_TYPE", "text/plain");
 }
+
+
 SampleFcgiExtConn::~SampleFcgiExtConn()
 {
 }
+
+
 int SampleFcgiExtConn::processRespData(const char *pBuf, int len)
 {
     return processResp(pBuf, len);
 }
+
 
 int SampleFcgiExtConn::processResp(const char *pBuf, int len)
 {
@@ -70,6 +74,7 @@ int SampleFcgiExtConn::processResp(const char *pBuf, int len)
     return len;
 }
 
+
 int SampleFcgiExtConn::processErrData(const char *pBuf, int len)
 {
     assert(pBuf);
@@ -82,6 +87,7 @@ int SampleFcgiExtConn::processErrData(const char *pBuf, int len)
     return 0;
 }
 
+
 int SampleFcgiExtConn::endResponse(int endCode, int protocolStatus)
 {
     printf("\n\nEndResponse( endCode=%d, protocolStatus=%d )\n",
@@ -90,10 +96,12 @@ int SampleFcgiExtConn::endResponse(int endCode, int protocolStatus)
     return 0;
 }
 
+
 int SampleFcgiExtConn::writeReqBody()
 {
     return sendReqBody();
 }
+
 
 int SampleFcgiExtConn::sendReqBody()
 {
@@ -115,6 +123,7 @@ int SampleFcgiExtConn::sendReqBody()
     return 0;
 }
 
+
 //int SampleFcgiExtConn::sendReqHeader()
 //{
 //    printf( "enter sendReqHeader()!\n" );
@@ -126,15 +135,18 @@ int SampleFcgiExtConn::sendReqBody()
 //    return ret;
 //}
 
+
 int SampleFcgiExtConn::onWrite(HttpSession *pSession)
 {
     return 0;
 }
 
+
 int SampleFcgiExtConn::onRead(HttpSession *pSession)
 {
     return 0;
 }
+
 
 void SampleFcgiExtConn::extProcessorReady()
 {
@@ -142,16 +154,19 @@ void SampleFcgiExtConn::extProcessorReady()
     printf("begin to forward request!\n");
 }
 
+
 int SampleFcgiExtConn::process(HttpSession *pSession)
 {
     return 0;
 }
+
 
 void SampleFcgiExtConn::extProcessorError(int errCode)
 {
     printf("ext processor error: %d!\n", errCode);
     setState(HEC_COMPLETE);
 }
+
 
 int  SampleFcgiExtConn::cleanUp(HttpSession *pSession)
 {

@@ -16,7 +16,6 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "fcgienv.h"
-#include "fcginamevaluepair.h"
 
 #include <assert.h>
 #include <inttypes.h>

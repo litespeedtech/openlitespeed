@@ -17,8 +17,8 @@
 *****************************************************************************/
 #include "hotlinkctrl.h"
 
+#include <main/configctx.h>
 #include <util/pcregex.h>
-#include "util/configctx.h"
 #include <util/xmlnode.h>
 #include <pcreposix.h>
 #include <string.h>
@@ -30,11 +30,14 @@ HotlinkCtrl::HotlinkCtrl()
     , m_pRegex(NULL)
 {
 }
+
+
 HotlinkCtrl::~HotlinkCtrl()
 {
     if (m_pRegex)
         delete m_pRegex;
 }
+
 
 int HotlinkCtrl::allowed(const char *pRef, int len) const
 {
@@ -52,6 +55,7 @@ int HotlinkCtrl::allowed(const char *pRef, int len) const
     return 0;
 }
 
+
 int HotlinkCtrl::setSuffixes(const char *suffix)
 {
     if (!suffix)
@@ -59,12 +63,14 @@ int HotlinkCtrl::setSuffixes(const char *suffix)
     return m_listSuffix.split(suffix, suffix + strlen(suffix), " ,|");
 }
 
+
 int  HotlinkCtrl::setHosts(const char *pHosts)
 {
     if (!pHosts)
         return LS_FAIL;
     return m_listHosts.split(pHosts, pHosts + strlen(pHosts), " ,|");
 }
+
 
 int  HotlinkCtrl::setRegex(const char *pRegex)
 {
@@ -85,6 +91,8 @@ int  HotlinkCtrl::setRegex(const char *pRegex)
     return ret;
 
 }
+
+
 int HotlinkCtrl::config(const XmlNode *pNode)
 {
     if (setSuffixes(pNode->getChildValue("suffixes")) <= 0)

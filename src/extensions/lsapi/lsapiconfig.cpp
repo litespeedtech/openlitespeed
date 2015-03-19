@@ -23,6 +23,7 @@ LsapiConfig::LsapiConfig(const char *pName)
 
 }
 
+
 LsapiConfig::LsapiConfig()
 {
 }

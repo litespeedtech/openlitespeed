@@ -16,11 +16,13 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "httpfetch.h"
+
+#include <lsr/ls_fileio.h>
 #include <lsr/ls_strtool.h>
 #include <socket/coresocket.h>
 #include <socket/gsockaddr.h>
+#include <util/httpfetchdriver.h>
 #include <util/vmembuf.h>
-#include <lsr/ls_fileio.h>
 
 #include <ctype.h>
 #include <errno.h>

@@ -43,12 +43,14 @@ DirHashCacheStore::~DirHashCacheStore()
     releaseObjects();
 }
 
+
 int DirHashCacheStore::clearStrage()
 {
     //rename root directory
     //fork and delete root directory
     return 0;
 }
+
 
 int DirHashCacheStore::updateEntryState(DirHashCacheEntry *pEntry)
 {
@@ -62,6 +64,7 @@ int DirHashCacheStore::updateEntryState(DirHashCacheEntry *pEntry)
     pEntry->m_iSize     = st.st_size;
     return 0;
 }
+
 
 int DirHashCacheStore::isEntryExist(CacheHash &hash, const char *pSuffix,
                                     struct stat *pStat)
@@ -78,6 +81,7 @@ int DirHashCacheStore::isEntryExist(CacheHash &hash, const char *pSuffix,
     return 0;
 }
 
+
 int DirHashCacheStore::isEntryUpdating(CacheHash &hash)
 {
     struct stat st;
@@ -86,6 +90,7 @@ int DirHashCacheStore::isEntryUpdating(CacheHash &hash)
         return 1;
     return 0;
 }
+
 
 int DirHashCacheStore::isEntryStale(CacheHash &hash)
 {
@@ -228,6 +233,7 @@ CacheEntry *DirHashCacheStore::getCacheEntry(CacheHash &hash,
 
 }
 
+
 int DirHashCacheStore::buildCacheLocation(char *pBuf, int len,
         const CacheHash &hash)
 {
@@ -323,6 +329,7 @@ CacheEntry *DirHashCacheStore::createCacheEntry(const CacheHash &hash,
     return pEntry;
 }
 
+
 // remove:  0  do not remove temp file
 //          1  remove temp file without checking
 //          -1 check temp file inode then remove
@@ -359,17 +366,20 @@ CacheEntry *DirHashCacheStore::getCacheEntry(const char *pKey,
     return NULL;
 }
 
+
 CacheEntry *DirHashCacheStore::getWriteEntry(const char *pKey,
         int keyLen, const char *pHash)
 {
     return NULL;
 }
 
+
 int DirHashCacheStore::saveEntry(CacheEntry *pEntry)
 {
 
     return 0;
 }
+
 
 void DirHashCacheStore::removePermEntry(CacheEntry *pEntry)
 {
@@ -396,6 +406,7 @@ int DirHashCacheStore::dirty( const char * pKey, int keyLen )
 
 }
 */
+
 
 int DirHashCacheStore::isChanged(CacheEntry *pEntry, const char *pPath,
                                  int len)
@@ -425,6 +436,7 @@ int DirHashCacheStore::isChanged(CacheEntry *pEntry, const char *pPath,
         return 1;
     return 0;
 }
+
 
 int DirHashCacheStore::renameDiskEntry(CacheEntry *pEntry, char *pFrom,
                                        const char *pFromSuffix, const char *pToSuffix, int validate)
@@ -469,6 +481,7 @@ int DirHashCacheStore::renameDiskEntry(CacheEntry *pEntry, char *pFrom,
     return 0;
 
 }
+
 
 int DirHashCacheStore::publish(CacheEntry *pEntry)
 {

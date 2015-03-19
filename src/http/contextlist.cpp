@@ -16,8 +16,9 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "contextlist.h"
-#include "httpcontext.h"
-#include <util/pool.h>
+
+#include <lsdef.h>
+#include <http/httpcontext.h>
 
 #include <errno.h>
 #include <string.h>
@@ -30,10 +31,12 @@ ContextList::ContextList()
     memset(m_sTags.buf(), 0, m_size);
 }
 
+
 ContextList::~ContextList()
 {
     release();
 }
+
 
 void ContextList::release()
 {
@@ -47,6 +50,7 @@ void ContextList::release()
     }
     clear();
 }
+
 
 int ContextList::add(HttpContext *pContext, int release)
 {
@@ -81,6 +85,7 @@ int ContextList::merge(const ContextList *rhs, int release)
     }
     return 0;
 }
+
 
 void ContextList::releaseUnused(long curTime, long timeout)
 {

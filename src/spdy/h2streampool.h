@@ -17,8 +17,10 @@
 *****************************************************************************/
 #ifndef H2STREAMPOOL_H
 #define H2STREAMPOOL_H
-#include <util/objpool.h>
+
 #include <util/dlinkqueue.h>
+#include <util/objpool.h>
+
 class H2Stream;
 typedef ObjPool<H2Stream>       Pool;
 class H2StreamPool : public ObjPool<H2Stream>
@@ -31,7 +33,7 @@ public:
     static H2Stream *getH2Stream();
     static void recycle(H2Stream **pStream, int n);
     static int getH2Streams(H2Stream **pStream, int n);
-    
+
     LS_NO_COPY_ASSIGN(H2StreamPool);
 };
 

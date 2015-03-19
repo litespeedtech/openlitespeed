@@ -26,7 +26,6 @@
 
 #include <assert.h>
 #include <stddef.h>
-class EventReactor;
 
 class PollfdReactor
 {

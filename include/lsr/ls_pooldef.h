@@ -367,10 +367,10 @@ ls_inline void ls_lfq_chkinit(int *pInit)
 {
     if (*pInit != PINIT_DONE)
     {
-        if (ls_atomic_set(pInit, PINIT_INPROG) == PINIT_NEED)
+        if (ls_atomic_setint(pInit, PINIT_INPROG) == PINIT_NEED)
         {
             ls_pinit();
-            LSR_ATOMIC_STORE(pInit, PINIT_DONE);
+            ls_atomic_store(pInit, PINIT_DONE);
         }
         else
         {
@@ -427,7 +427,7 @@ ls_inline void ls_lfq_putnblk(ls_blkctrl_t *p, void *pNew, void *pTail)
  */
 ls_inline ls_xpool_bblk_t *ls_lfq_getlist(ls_xpool_bblk_t **pList)
 {
-    return (ls_xpool_bblk_t *)ls_atomic_set(pList, NULL);
+    return (ls_xpool_bblk_t *)ls_atomic_setptr(pList, NULL);
 }
 
 /**
@@ -438,7 +438,7 @@ ls_inline void ls_lfq_inslist(
 {
     do
     {
-        LSR_ATOMIC_LOAD(pTail->next, pList);
+        ls_atomic_load(pTail->next, pList);
     }
     while (!ls_atomic_casptr(pList, pTail->next, pNew));
     return;
@@ -451,7 +451,7 @@ ls_inline void ls_lfq_insptr(volatile ls_pool_blk_t **pBase,
                              ls_pool_blk_t *pNew)
 {
     pNew->next = NULL;
-    ls_pool_blk_t *pPrev = (ls_pool_blk_t *)ls_atomic_set(pBase, pNew);
+    ls_pool_blk_t *pPrev = (ls_pool_blk_t *)ls_atomic_setptr(pBase, pNew);
     pNew->next = pPrev;
     return;
 }
@@ -464,11 +464,11 @@ ls_inline int ls_lfs_xchkinit(
 {
     if (*pPtr == NULL)
     {
-        if (ls_atomic_set(pFlag, 1) == 0)
+        if (ls_atomic_setint(pFlag, 1) == 0)
         {
             if (xpool_freelistinit(pPool) < 0)
             {
-                ls_atomic_clr(pFlag);
+                ls_atomic_clrint(pFlag);
                 return -1;
             }
         }

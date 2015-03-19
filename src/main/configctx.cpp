@@ -16,19 +16,19 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "configctx.h"
-#include <http/httplog.h>
+
 #include <http/denieddir.h>
-#include <http/handlertype.h>
+#include <http/httplog.h>
 #include <http/httpserverconfig.h>
 #include <http/serverprocessconfig.h>
+#include <log4cxx/level.h>
+#include <lsr/ls_fileio.h>
+#include <lsr/ls_strtool.h>
+#include <main/mainserverconfig.h>
+// #include <main/plainconf.h>
+#include <util/accesscontrol.h>
 #include <util/gpath.h>
 #include <util/xmlnode.h>
-#include <lsr/ls_fileio.h>
-
-
-#include <log4cxx/level.h>
-#include "main/mainserverconfig.h"
-#include "main/plainconf.h"
 
 #include <errno.h>
 #include <limits.h>
@@ -71,6 +71,7 @@ long long getLongValue(const char *pValue, int base)
     return strtoll(pValue, (char **) NULL, base) * m;
 }
 
+
 void ConfigCtx::vlog(int level, const char *pFmt, va_list args)
 {
     char achBuf[8192];
@@ -79,6 +80,7 @@ void ConfigCtx::vlog(int level, const char *pFmt, va_list args)
     achBuf[len] = 0;
     HttpLog::log(level, "[%s] %s", m_logIdTracker.getLogId(), achBuf);
 }
+
 
 void ConfigCtx::logError(const char *pFmt, ...)
 {
@@ -91,12 +93,15 @@ void ConfigCtx::logError(const char *pFmt, ...)
     }
 }
 
+
 void ConfigCtx::logErrorPath(const char *pstr1,  const char *pstr2)
 {
     if (HttpLog::isEnabled(NULL, LOG4CXX_NS::Level::ERROR))
         HttpLog::log(LOG4CXX_NS::Level::ERROR, "[%s] Path for %s is invalid: %s",
                      m_logIdTracker.getLogId(), pstr1, pstr2);
 }
+
+
 void ConfigCtx::logErrorInvalTag(const char *pstr1,  const char *pstr2)
 {
     if (HttpLog::isEnabled(NULL, LOG4CXX_NS::Level::ERROR))
@@ -104,12 +109,15 @@ void ConfigCtx::logErrorInvalTag(const char *pstr1,  const char *pstr2)
                      m_logIdTracker.getLogId(), pstr1, pstr2);
 }
 
+
 void ConfigCtx::logErrorMissingTag(const char *pstr1)
 {
     if (HttpLog::isEnabled(NULL, LOG4CXX_NS::Level::ERROR))
         HttpLog::log(LOG4CXX_NS::Level::ERROR, "[%s] missing <%s>",
                      m_logIdTracker.getLogId(), pstr1);
 }
+
+
 void ConfigCtx::logWarn(const char *pFmt, ...)
 {
     if (HttpLog::isEnabled(NULL, LOG4CXX_NS::Level::WARN))
@@ -120,6 +128,8 @@ void ConfigCtx::logWarn(const char *pFmt, ...)
         va_end(ap);
     }
 }
+
+
 void ConfigCtx::logNotice(const char *pFmt, ...)
 {
     if (HttpLog::isEnabled(NULL, LOG4CXX_NS::Level::NOTICE))
@@ -130,6 +140,7 @@ void ConfigCtx::logNotice(const char *pFmt, ...)
         va_end(ap);
     }
 }
+
 
 void ConfigCtx::logInfo(const char *pFmt, ...)
 {
@@ -142,6 +153,7 @@ void ConfigCtx::logInfo(const char *pFmt, ...)
     }
 }
 
+
 void ConfigCtx::logDebug(const char *pFmt, ...)
 {
     if (HttpLog::isEnabled(NULL, LOG4CXX_NS::Level::DEBUG))
@@ -152,6 +164,8 @@ void ConfigCtx::logDebug(const char *pFmt, ...)
         va_end(ap);
     }
 }
+
+
 const char *ConfigCtx::getTag(const XmlNode *pNode, const char *pName,
                               int bKeyName)
 {
@@ -167,6 +181,7 @@ const char *ConfigCtx::getTag(const XmlNode *pNode, const char *pName,
 
     return pRet;
 }
+
 
 long long ConfigCtx::getLongValue(const XmlNode *pNode, const char *pTag,
                                   long long min, long long max, long long def, int base)
@@ -197,6 +212,7 @@ long long ConfigCtx::getLongValue(const XmlNode *pNode, const char *pTag,
         return def;
 
 }
+
 
 int ConfigCtx::getRootPath(const char *&pRoot, const char *&pFile)
 {
@@ -249,6 +265,8 @@ int ConfigCtx::getRootPath(const char *&pRoot, const char *&pFile)
 
     return 0;
 }
+
+
 int ConfigCtx::expandVariable(const char *pValue, char *pBuf,
                               int bufLen, int allVariable)
 {
@@ -320,6 +338,8 @@ int ConfigCtx::expandVariable(const char *pValue, char *pBuf,
     *pCur = 0;
     return pCur - pBuf;
 }
+
+
 int ConfigCtx::getAbsolute(char *res, const char *path, int pathOnly)
 {
     const char *pChroot = MainServerConfig::getInstance().getChroot();
@@ -367,15 +387,19 @@ int ConfigCtx::getAbsolute(char *res, const char *path, int pathOnly)
 
     return ret;
 }
+
+
 int ConfigCtx::getAbsoluteFile(char *dest, const char *file)
 {
     return getAbsolute(dest, file, 0);
 }
 
+
 int ConfigCtx::getAbsolutePath(char *dest, const char *path)
 {
     return getAbsolute(dest, path, 1);
 }
+
 
 char *ConfigCtx::getExpandedTag(const XmlNode *pNode,
                                 const char *pName, char *pBuf, int bufLen, int bKeyName)
@@ -406,6 +430,7 @@ int ConfigCtx::getValidFile(char *dest, const char *file, const char *desc)
     return 0;
 }
 
+
 int ConfigCtx::getValidPath(char *dest, const char *path, const char *desc)
 {
     if (getAbsolutePath(dest, path) != 0)
@@ -423,6 +448,7 @@ int ConfigCtx::getValidPath(char *dest, const char *path, const char *desc)
     return 0;
 }
 
+
 int ConfigCtx::getValidChrootPath(const char *path, const char *desc)
 {
     const char *pChroot = MainServerConfig::getInstance().getChroot();
@@ -438,6 +464,7 @@ int ConfigCtx::getValidChrootPath(const char *path, const char *desc)
     }
     return 0;
 }
+
 
 int ConfigCtx::getLogFilePath(char *pBuf, const XmlNode *pNode)
 {
@@ -460,6 +487,8 @@ int ConfigCtx::getLogFilePath(char *pBuf, const XmlNode *pNode)
 
     return 0;
 }
+
+
 int ConfigCtx::expandDomainNames(const char *pDomainNames,
                                  char *pDestDomains, int len, char dilemma)
 {
@@ -524,6 +553,8 @@ int ConfigCtx::expandDomainNames(const char *pDomainNames,
     *pEnd = 0;
     return pDest - pDestDomains;
 }
+
+
 int ConfigCtx::checkPath(char *pPath, const char *desc, int follow)
 {
     char achOld[MAX_PATH_LEN];
@@ -573,6 +604,8 @@ int ConfigCtx::checkPath(char *pPath, const char *desc, int follow)
 
     return 0;
 }
+
+
 int ConfigCtx::checkAccess(char *pReal)
 {
     if (HttpServerConfig::getInstance().getDeniedDir()->isDenied(pReal))
@@ -583,6 +616,7 @@ int ConfigCtx::checkAccess(char *pReal)
 
     return 0;
 }
+
 
 int ConfigCtx::convertToRegex(const char   *pOrg, char *pDestBuf,
                               int bufLen)
@@ -657,6 +691,7 @@ int ConfigCtx::convertToRegex(const char   *pOrg, char *pDestBuf,
     return pDest - pDestBuf;
 }
 
+
 XmlNode *ConfigCtx::parseFile(const char *configFilePath,
                               const char *rootTag)
 {
@@ -688,6 +723,49 @@ XmlNode *ConfigCtx::parseFile(const char *configFilePath,
 
     return pRoot;
 
+}
+
+
+int ConfigCtx::configSecurity(AccessControl *pCtrl, const XmlNode *pNode)
+{
+    int c;
+    const char *pValue;
+    const XmlNode *pNode1 = pNode->getChild("accessControl");
+    pCtrl->clear();
+
+    if (pNode1)
+    {
+        pValue = pNode1->getChildValue("allow");
+
+        if (pValue)
+        {
+            c = pCtrl->addList(pValue, true);
+
+            if (D_ENABLED(DL_LESS))
+                logDebug("add %d entries into allowed "
+                                            "list.", c);
+        }
+        else
+            logWarn("Access Control: No entries in allowed "
+                                       "list");
+
+        pValue = pNode1->getChildValue("deny");
+
+        if (pValue)
+        {
+            c = pCtrl->addList(pValue, false);
+
+            if (D_ENABLED(DL_LESS))
+                logDebug("add %d entries into denied list.",
+                                            c);
+        }
+    }
+    else
+    {
+        if (D_ENABLED(DL_LESS))
+            logDebug("no rule for access control.");
+    }
+    return 0;
 }
 
 

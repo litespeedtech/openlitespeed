@@ -16,19 +16,23 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "logrotate.h"
+
 #include <log4cxx/appender.h>
-
 #include <lsr/ls_fileio.h>
+#include <lsr/ls_strtool.h>
+#include <util/gzipbuf.h>
 
+#include <dirent.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/resource.h>
 #include <sys/stat.h>
+#include <sys/time.h>
 #include <time.h>
 #include <unistd.h>
 
 
-#include <dirent.h>
 int removeSimiliarFiles(const char *pPath, long tm)
 {
     char achBuf[256];
@@ -69,10 +73,6 @@ int removeSimiliarFiles(const char *pPath, long tm)
     return 0;
 }
 
-#include <util/gzipbuf.h>
-#include <sys/time.h>
-#include <sys/resource.h>
-#include <lsr/ls_strtool.h>
 
 int archiveFile(const char *pFileName, const char *pSuffix,
                 int compress, uid_t uid, gid_t gid)
@@ -138,14 +138,14 @@ int archiveFile(const char *pFileName, const char *pSuffix,
 
 BEGIN_LOG4CXX_NS
 
-
 LogRotate::LogRotate()
 {
 }
+
+
 LogRotate::~LogRotate()
 {
 }
-
 
 
 int LogRotate::roll(Appender *pAppender, uid_t uid, gid_t gid,
@@ -160,6 +160,7 @@ int LogRotate::roll(Appender *pAppender, uid_t uid, gid_t gid,
     }
     return ret;
 }
+
 
 int LogRotate::testRolling(Appender *pAppender, off_t rollingSize,
                            uid_t uid, gid_t gid)
@@ -184,6 +185,7 @@ int LogRotate::testRolling(Appender *pAppender, off_t rollingSize,
     return (st.st_size > rollingSize);
 }
 
+
 int LogRotate::postRotate(Appender *pAppender, uid_t uid, gid_t gid)
 {
     pAppender->close();
@@ -197,12 +199,14 @@ int LogRotate::postRotate(Appender *pAppender, uid_t uid, gid_t gid)
     return 0;
 }
 
+
 int LogRotate::testAndRoll(Appender *pAppender, uid_t uid, gid_t gid)
 {
     if (testRolling(pAppender, pAppender->getRollingSize(), uid, gid))
         return roll(pAppender, uid, gid, pAppender->getRollingSize());
     return 0;
 }
+
 
 int LogRotate::testRolling(Appender *pAppender, uid_t uid, gid_t gid)
 {   return testRolling(pAppender, pAppender->getRollingSize(), uid, gid);   }

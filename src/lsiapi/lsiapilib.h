@@ -17,7 +17,7 @@
 *****************************************************************************/
 #ifndef LSIAPILIB_H
 #define LSIAPILIB_H
-#include <lsiapi/lsiapi.h>
+#include <ls.h>
 
 void lsiapi_init_server_api();
 int add_global_hook(int index, const lsi_module_t *pModule,

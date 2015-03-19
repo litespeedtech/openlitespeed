@@ -16,25 +16,23 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "httpextconnector.h"
-#include "handlerfactory.h"
-#include "handlertype.h"
-#include "httpcgitool.h"
-#include "httpsession.h"
-#include "httpdefs.h"
-#include "httphandler.h"
-#include "httplog.h"
-#include "httpreq.h"
-#include "httpresourcemanager.h"
-#include "httpserverconfig.h"
-#include <extensions/httpextprocessor.h>
-#include <extensions/extworker.h>
-#include <extensions/extrequest.h>
-#include <extensions/loadbalancer.h>
-#include <extensions/registry/extappregistry.h>
+#include <http/handlerfactory.h>
+#include <http/handlertype.h>
+#include <http/httpcgitool.h>
+#include <http/httpdefs.h>
+#include <http/httphandler.h>
+#include <http/httplog.h>
+#include <http/httpreq.h>
+#include <http/httpresourcemanager.h>
+#include <http/httpserverconfig.h>
+#include <http/httpsession.h>
+#include <http/httpstatuscode.h>
+#include <http/stderrlogger.h>
 #include <util/gzipbuf.h>
-#include <util/objpool.h>
 #include <util/vmembuf.h>
 
+#include <extensions/httpextprocessor.h>
+#include <extensions/loadbalancer.h>
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -53,6 +51,7 @@ HttpExtConnector::HttpExtConnector()
     , m_iRespBodySent(0)
 {
 }
+
 
 HttpExtConnector::~HttpExtConnector()
 {
@@ -77,6 +76,7 @@ int HttpExtConnector::cleanUp(HttpSession *pSession)
     return 0;
 }
 
+
 int HttpExtConnector::releaseProcessor()
 {
     if (D_ENABLED(DL_MEDIUM))
@@ -100,14 +100,11 @@ int HttpExtConnector::releaseProcessor()
 }
 
 
-
 void HttpExtConnector::resetConnector()
 {
     memset(&m_iState, 0, (char *)(&m_iRespBodySent + 1) - (char *)&m_iState);
     m_respHeaderBuf.clear();
 }
-
-
 
 
 int HttpExtConnector::parseHeader(const char *&pBuf, int &len, int proxy)
@@ -183,7 +180,6 @@ int HttpExtConnector::parseHeader(const char *&pBuf, int &len, int proxy)
 }
 
 
-
 int  HttpExtConnector::respHeaderDone()
 {
     int ret = m_pSession->respHeaderDone();
@@ -199,6 +195,7 @@ int  HttpExtConnector::respHeaderDone()
     }
     return ret;
 }
+
 
 int HttpExtConnector::processRespData(const char *pBuf, int len)
 {
@@ -218,6 +215,7 @@ int HttpExtConnector::processRespData(const char *pBuf, int len)
         return 0;
 }
 
+
 char *HttpExtConnector::getRespBuf(size_t &len)
 {
     if ((m_iRespState & 0xff) && m_pSession->getRespCache()
@@ -230,6 +228,7 @@ char *HttpExtConnector::getRespBuf(size_t &len)
     len = GLOBAL_BUF_SIZE;
     return HttpResourceManager::getGlobalBuf();
 }
+
 
 int HttpExtConnector::flushResp()
 {
@@ -259,12 +258,12 @@ int HttpExtConnector::processRespBodyData(const char *pBuf, int len)
     return ret;
 }
 
+
 int HttpExtConnector::extInputReady()
 {
     return 0;
 
 }
-
 
 
 void HttpExtConnector::abortReq()
@@ -279,6 +278,7 @@ void HttpExtConnector::abortReq()
             m_pProcessor->abort();
     }
 }
+
 
 int HttpExtConnector::extOutputReady()
 {
@@ -306,12 +306,12 @@ int HttpExtConnector::extOutputReady()
     return ret;
 }
 
+
 void HttpExtConnector::extProcessorReady()
 {
     setState(HEC_FWD_REQ_HEADER);
 }
 
-#include <http/stderrlogger.h>
 
 int HttpExtConnector::processErrData(const char *pBuf, int len)
 {
@@ -330,6 +330,7 @@ int HttpExtConnector::processErrData(const char *pBuf, int len)
     return 0;
 
 }
+
 
 int HttpExtConnector::endResponse(int endCode, int protocolStatus)
 {
@@ -367,8 +368,6 @@ int HttpExtConnector::endResponse(int endCode, int protocolStatus)
 }
 
 
-
-
 int HttpExtConnector::onWrite(HttpSession *pSession)
 {
     if ((m_iState & (HEC_COMPLETE | HEC_ERROR)) == 0)
@@ -391,6 +390,7 @@ int HttpExtConnector::onWrite(HttpSession *pSession)
         return 0;
     }
 }
+
 
 int HttpExtConnector::process(HttpSession *pSession,
                               const HttpHandler *pHandler)
@@ -442,6 +442,7 @@ int HttpExtConnector::process(HttpSession *pSession,
     }
     return ret;
 }
+
 
 int  HttpExtConnector::tryRecover()
 {
@@ -537,6 +538,7 @@ int HttpExtConnector::reqHeaderDone()
     }
 }
 
+
 int HttpExtConnector::reqBodyDone()
 {
     if (D_ENABLED(DL_MEDIUM))
@@ -544,6 +546,7 @@ int HttpExtConnector::reqBodyDone()
     //getProcessor()->suspendWrite();
     return getProcessor()->endOfReqBody();
 }
+
 
 int HttpExtConnector::sendReqBody()
 {
@@ -602,6 +605,7 @@ int HttpExtConnector::onRead(HttpSession *pSession)
     return 0;
 }
 
+
 bool HttpExtConnector::isRecoverable()
 {
     if (m_iState & HEC_FWD_RESP_BODY)
@@ -611,6 +615,7 @@ bool HttpExtConnector::isRecoverable()
     //HttpReq * pReq = getHttpSession()->getReq();
     return true;
 }
+
 
 int HttpExtConnector::errResponse(int code, const char *pErr)
 {
@@ -627,11 +632,13 @@ int HttpExtConnector::errResponse(int code, const char *pErr)
     return LS_FAIL;
 }
 
+
 void HttpExtConnector::onTimer()
 {
 //    if ( m_pProcessor )
 //        m_pProcessor->onProcessorTimer();
 }
+
 
 void HttpExtConnector::suspend()
 {
@@ -657,6 +664,7 @@ void HttpExtConnector::extProcessorError(int errCode)
     }
 }
 
+
 const char   *HttpExtConnector::getLogId()
 {
     if (m_pSession)
@@ -664,6 +672,7 @@ const char   *HttpExtConnector::getLogId()
     else
         return "idle";
 }
+
 
 LOG4CXX_NS::Logger *HttpExtConnector::getLogger() const
 {
@@ -673,6 +682,7 @@ LOG4CXX_NS::Logger *HttpExtConnector::getLogger() const
         return NULL;
 
 }
+
 
 void HttpExtConnector::dump()
 {
@@ -690,6 +700,7 @@ void HttpExtConnector::dump()
                   getLogId()));
 }
 
+
 int HttpExtConnector::dumpAborted()
 {
     return (m_pProcessor != NULL);
@@ -700,6 +711,7 @@ int HttpExtConnector::isAlive()
 {
     return getHttpSession()->isAlive();
 }
+
 
 void HttpExtConnector::setHttpError(int error)
 {

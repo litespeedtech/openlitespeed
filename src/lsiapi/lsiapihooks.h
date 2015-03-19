@@ -18,17 +18,25 @@
 #ifndef LSIAPIHOOKS_H
 #define LSIAPIHOOKS_H
 
-//#include "lsiapi/modulemanager.h"
-#include "lsiapi/internal.h"
-#include "lsiapi/lsiapi.h"
-#include "lsiapi/lsimoduledata.h"
+#include <ls.h>
+#include <lsdef.h>
+
 #include <stdlib.h>
 
-
 class LsiSession;
+class LsiApiHooks;
 
-template< int B, int S >
-class SessionHooks;
+class IolinkSessionHooks;
+class HttpSessionHooks;
+class ServerSessionHooks;
+
+typedef int (* filter_term_fn)(LsiSession *, void *, int);
+
+#define LSI_HKPT_L4_COUNT       (LSI_HKPT_HTTP_BEGIN - LSI_HKPT_L4_BEGINSESSION)
+#define LSI_HKPT_HTTP_COUNT     (LSI_HKPT_HTTP_END - LSI_HKPT_HTTP_BEGIN + 1)
+#define LSI_HKPT_SESSION_COUNT  (LSI_HKPT_HTTP_COUNT + LSI_HKPT_L4_COUNT)
+#define LSI_HKPT_SERVER_COUNT   (LSI_HKPT_TOTAL_COUNT - LSI_HKPT_L4_COUNT - LSI_HKPT_HTTP_COUNT)
+
 
 typedef struct lsiapi_hook_s
 {
@@ -38,17 +46,6 @@ typedef struct lsiapi_hook_s
     short               flag;
 } lsiapi_hook_t;
 
-#define LSI_HKPT_L4_COUNT       (LSI_HKPT_HTTP_BEGIN - LSI_HKPT_L4_BEGINSESSION)
-#define LSI_HKPT_HTTP_COUNT     (LSI_HKPT_HTTP_END - LSI_HKPT_HTTP_BEGIN + 1)
-#define LSI_HKPT_SERVER_COUNT   (LSI_HKPT_TOTAL_COUNT - LSI_HKPT_L4_COUNT - LSI_HKPT_HTTP_COUNT)
-
-typedef SessionHooks<0, LSI_HKPT_L4_COUNT>   IolinkSessionHooks;
-typedef SessionHooks<LSI_HKPT_HTTP_BEGIN, LSI_HKPT_HTTP_COUNT>
-HttpSessionHooks;
-typedef SessionHooks<LSI_HKPT_MAIN_INITED, LSI_HKPT_SERVER_COUNT>
-ServerSessionHooks;
-
-class LsiApiHooks;
 
 typedef struct lsiapi_hookinfo_s
 {
@@ -79,11 +76,11 @@ public:
 
     LsiApiHooks(const LsiApiHooks &other);
 
-    short size() const              {   return m_iEnd - m_iBegin;   }
-    short capacity() const          {   return m_iCapacity;         }
+    short size() const                      {   return m_iEnd - m_iBegin;   }
+    short capacity() const                  {   return m_iCapacity;         }
 
-    short getGlobalFlag() const     {   return m_iFlag;             }
-    void  setGlobalFlag(short f)    {   m_iFlag |= f;               }
+    short getGlobalFlag() const             {   return m_iFlag;             }
+    void  setGlobalFlag(short f)            {   m_iFlag |= f;               }
 
     short add(const lsi_module_t *pModule, lsi_callback_pf cb, short priority,
               short flag = 0);
@@ -93,15 +90,12 @@ public:
 
     lsiapi_hook_t *find(const lsi_module_t *pModule, lsi_callback_pf cb);
     lsiapi_hook_t *find(const lsi_module_t *pModule) const;
-    lsiapi_hook_t *find(const lsi_module_t *pModule, int *index) const;
+    //lsiapi_hook_t *find(const lsi_module_t *pModule, int *index) const;
 
 
-    lsiapi_hook_t *get(int index) const
-    {
-        return m_pHooks + index;
-    }
-    lsiapi_hook_t *begin() const  {   return m_pHooks + m_iBegin; }
-    lsiapi_hook_t *end() const    {   return m_pHooks + m_iEnd;   }
+    lsiapi_hook_t *get(int index) const     {   return m_pHooks + index;    }
+    lsiapi_hook_t *begin() const            {   return m_pHooks + m_iBegin; }
+    lsiapi_hook_t *end() const              {   return m_pHooks + m_iEnd;   }
     LsiApiHooks *dup() const
     {   return new LsiApiHooks(*this);    }
 
@@ -111,28 +105,7 @@ public:
     int runCallback(int level, lsi_cb_param_t *param) const;
     int runCallback(int level, int8_t *pEnableArray, LsiSession *session,
                     void *param1, int paramLen1, int *flag_out, int flag_in,
-                    lsi_module_t *pModule = NULL) const
-    {
-        if (pModule && find(pModule) == NULL)
-        {
-            //ERROR
-            pModule = NULL;
-        }
-
-        lsiapi_hookinfo_t info = { this, pEnableArray, NULL };
-        lsi_cb_param_t param =
-        {
-            session,
-            &info,
-            (pModule ?  find(pModule) + 1 : begin()),
-            param1,
-            paramLen1,
-            flag_out,
-            flag_in
-        };
-
-        return runCallback(level, &param);
-    }
+                    lsi_module_t *pModule = NULL) const;
 
     int runCallbackNoParam(int level, int8_t *pEnableArray,
                            LsiSession *session,
@@ -150,7 +123,10 @@ public:
 
     static ServerSessionHooks *s_pServerSessionHooks;
     static ServerSessionHooks *getServerSessionHooks()
-    {   return s_pServerSessionHooks;    }
+    {   return s_pServerSessionHooks;   }
+
+    static int initModuleEnableHooks();
+
 
 
     static const LsiApiHooks *getGlobalApiHooks(int index)
@@ -179,6 +155,25 @@ public:
     static const char  *s_pHkptName[LSI_HKPT_TOTAL_COUNT];
     static LsiApiHooks  s_hooks[LSI_HKPT_TOTAL_COUNT];
 };
+
+
+class ModIndex
+{
+    int16_t  m_aIndices[LSI_HKPT_TOTAL_COUNT];
+
+    void operator=(const ModIndex &rhs);
+    ModIndex(const ModIndex &rhs);
+
+public:
+    ModIndex();
+    ~ModIndex();
+
+    void setLevel(int level, int16_t value) {   m_aIndices[level] = value;  }
+    int getLevel(int level)                 {   return m_aIndices[level];   }
+
+    static ModIndex *getModIndex(const lsi_module_t *pModule);
+};
+
 
 
 template< int B, int S >
@@ -215,6 +210,7 @@ private:
         memcpy(m_iFlag, parentSessionHooks->m_iFlag, S * sizeof(short));
     }
 
+
     void updateFlag(int level)
     {
         int index = level - B;
@@ -225,18 +221,20 @@ private:
 
         for (int j = 0; j < level_size; ++j)
         {
-            //For the disabled hook, just ignor it
+            //For the disabled hook, just ignore it
             if (pEnableArray[j])
                 m_iFlag[index] |= pHook->flag | LSI_HOOK_FLAG_ENABLED;
             ++pHook;
         }
     }
 
+
     void updateFlag()
     {
         for (int i = 0; i < S; ++i)
             updateFlag(B + i);
     }
+
 
     void inheritFromGlobal()
     {
@@ -262,7 +260,8 @@ private:
         updateFlag();
     }
 
-    //int and set the disable array from the global(in the LsiApiHook flag)
+
+    //init and set the disable array from the global(in the LsiApiHook flag)
     int initSessionHooks()
     {
         if (m_iStatus != UNINIT)
@@ -295,6 +294,7 @@ public:
         }
     }
 
+
     void disableAll()
     {
         int level_size;
@@ -309,6 +309,7 @@ public:
             m_iStatus = INITED;
         }
     }
+
 
     void inherit(SessionHooks<B, S> *parentRt, int isGlobal)
     {
@@ -332,38 +333,53 @@ public:
     }
 
 
-
     int8_t *getEnableArray(int level)
     {   return m_pEnableArray[level - B]; }
 
-    int setEnable(int level, const lsi_module_t *pModule, int enable)
+
+    int setEnable(const lsi_module_t *pModule, int enable,
+                  int *aEnableHkpts, int iEnableCount)
     {
         if (m_iStatus < INITED)
             return LS_FAIL;
-
-        int level_index = -1;
+        int i, iIdx, iSet = enable ? 1 : 0;
+        ModIndex *p;
         lsiapi_hook_t *pHook;
-        pHook = LsiApiHooks::getGlobalApiHooks(level)->find(pModule,
-                &level_index);
-        if (pHook == NULL)
+
+        p = ModIndex::getModIndex(pModule);
+        if (p == NULL)
             return LS_FAIL;
 
-        assert(level_index >= 0);
-        int8_t *pEnableArray = m_pEnableArray[level - B];
-        pEnableArray[level_index] = (enable ? 1 : 0);
+        for (i = 0; i < iEnableCount; ++i)
+        {
+            if ((iIdx = p->getLevel(aEnableHkpts[i])) == -1)
+                return LS_FAIL;
 
-        if (enable)
-            m_iFlag[level - B] |= (pHook->flag | LSI_HOOK_FLAG_ENABLED);
-        else
-            updateFlag(level);
+            m_pEnableArray[aEnableHkpts[i] - B][iIdx] = iSet;
+            pHook = LsiApiHooks::getGlobalApiHooks(aEnableHkpts[i])->get(iIdx);
+            if (iSet)
+                m_iFlag[aEnableHkpts[i] - B] |= (pHook->flag
+                                                | LSI_HOOK_FLAG_ENABLED);
+            else
+                updateFlag(aEnableHkpts[i]);
+        }
         m_iStatus = HASOWN;
-        return 0;
+        return LS_OK;
     }
+
 
     void setModuleEnable(const lsi_module_t *pModule, int enable)
     {
-        for (int level = B; level < B + S; ++level)
-            setEnable(level, pModule, enable);
+        int i, levels[S], count = 0;
+        ModIndex *pIndex = ModIndex::getModIndex(pModule);
+        if (pIndex == NULL)
+            return;
+        for (i = B; i < B + S; ++i)
+        {
+            if (pIndex->getLevel(i) != -1)
+                levels[count++] = i;
+        }
+        setEnable(pModule, enable, levels, count);
     }
 
 
@@ -373,18 +389,18 @@ public:
             m_iStatus = INITED;
     };
 
+
     int getBase()   { return B;  }
     int getSize()   { return S;  }
 
-    int isNotInited() const   {   return (m_iStatus == UNINIT); }
 
-    int isAllDisabled() const   {   return isNotInited(); }
-
-
-    short getFlag(int hookLevel) { return m_iFlag[hookLevel - B]; }
+    short getFlag(int hookLevel)        { return m_iFlag[hookLevel - B];    }
 //     void  setFlag( int hookLevel, short f )
 //     {   m_iFlag[hookLevel - B] |= f;               }
 
+
+    int isNotInited() const             {   return (m_iStatus == UNINIT);   }
+    int isAllDisabled() const           {   return isNotInited();           }
 
     int isDisabled(int hookLevel) const
     {
@@ -393,7 +409,7 @@ public:
         return ((m_iFlag[hookLevel - B] & LSI_HOOK_FLAG_ENABLED) == 0);
     }
 
-    int isEnabled(int hookLevel) const {  return !isDisabled(hookLevel); }
+    int isEnabled(int hookLevel) const  {  return !isDisabled(hookLevel);   }
 
 
 //     int runCallback( int level, LsiSession *session, void *param1,
@@ -411,6 +427,46 @@ public:
                 m_pEnableArray[level - B], session, pModule);
     }
 
+};
+
+class IolinkSessionHooks : public SessionHooks<0, LSI_HKPT_L4_COUNT>
+{
+    IolinkSessionHooks(const IolinkSessionHooks &rhs);
+    IolinkSessionHooks(const SessionHooks<0, LSI_HKPT_L4_COUNT> &rhs);
+    void operator=(const IolinkSessionHooks &rhs);
+public:
+    IolinkSessionHooks()
+        : SessionHooks<0, LSI_HKPT_L4_COUNT>()
+    {}
+    ~IolinkSessionHooks() {}
+};
+
+class HttpSessionHooks
+    : public SessionHooks<LSI_HKPT_HTTP_BEGIN, LSI_HKPT_HTTP_COUNT>
+{
+    HttpSessionHooks(const HttpSessionHooks &rhs);
+    HttpSessionHooks(const SessionHooks<LSI_HKPT_HTTP_BEGIN,
+                                        LSI_HKPT_HTTP_COUNT> &rhs);
+    void operator=(const HttpSessionHooks &rhs);
+public:
+    HttpSessionHooks()
+        : SessionHooks<LSI_HKPT_HTTP_BEGIN, LSI_HKPT_HTTP_COUNT>()
+    {}
+    ~HttpSessionHooks() {}
+};
+
+class ServerSessionHooks
+    : public SessionHooks<LSI_HKPT_MAIN_INITED, LSI_HKPT_SERVER_COUNT>
+{
+    ServerSessionHooks(const ServerSessionHooks &rhs);
+    ServerSessionHooks(const SessionHooks<LSI_HKPT_MAIN_INITED,
+                                          LSI_HKPT_SERVER_COUNT> &rhs);
+    void operator=(const ServerSessionHooks &rhs);
+public:
+    ServerSessionHooks()
+        : SessionHooks<LSI_HKPT_MAIN_INITED, LSI_HKPT_SERVER_COUNT>()
+    {}
+    ~ServerSessionHooks() {}
 };
 
 

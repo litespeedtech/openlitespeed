@@ -15,21 +15,22 @@
 *    You should have received a copy of the GNU General Public License       *
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
-#include <util/hashdatacache.h>
-#include <util/pool.h>
-#include <util/keydata.h>
-#include <http/httplog.h>
+#include "hashdatacache.h"
+
 #include <lsr/ls_fileio.h>
+#include <util/keydata.h>
+#include <util/pool.h>
 
 #include <errno.h>
-#include <sys/stat.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <time.h>
 
 
 HashDataCache::~HashDataCache()
 {
 }
+
 
 const KeyData *HashDataCache::getData(const char *pKey)
 {
@@ -41,12 +42,12 @@ const KeyData *HashDataCache::getData(const char *pKey)
 }
 
 
-
 DataStore::~DataStore()
 {
     if (m_pDataStoreUri)
         Pool::deallocate2(m_pDataStoreUri);
 }
+
 
 void DataStore::setDataStoreURI(const char *pURI)
 {
@@ -54,7 +55,6 @@ void DataStore::setDataStoreURI(const char *pURI)
         Pool::deallocate2(m_pDataStoreUri);
     m_pDataStoreUri = Pool::dupstr(pURI);
 }
-
 
 
 int FileStore::isStoreChanged(long time)
@@ -74,30 +74,24 @@ int FileStore::isStoreChanged(long time)
     return 0;
 }
 
+
 int FileStore::open()
 {
     if (m_pFile == NULL)
     {
         struct stat st;
         if (ls_fio_stat(getDataStoreURI(), &st) == -1)
-        {
-            LOG_ERR(("Failed to get file stat: '%s', errno %d.", getDataStoreURI(),
-                     errno));
             return errno;
-        }
         if (S_ISDIR(st.st_mode))
             return EINVAL;
         m_pFile = fopen(getDataStoreURI(), "r");
         if (m_pFile == NULL)
-        {
-            LOG_NOTICE(("Failed to open file: '%s', errno %d.", getDataStoreURI(),
-                        errno));
             return errno;
-        }
         m_modifiedTime = st.st_mtime;
     }
     return 0;
 }
+
 
 void FileStore::close()
 {
@@ -109,8 +103,8 @@ void FileStore::close()
 }
 
 
-
 #define TEMP_BUF_LEN 4096
+
 
 KeyData *FileStore::getNext()
 {
@@ -129,6 +123,7 @@ KeyData *FileStore::getNext()
     return NULL;
 }
 
+
 KeyData *FileStore::getDataFromStore(const char *pKey, int keyLen)
 {
 
@@ -140,24 +135,21 @@ KeyData *FileStore::getDataFromStore(const char *pKey, int keyLen)
     fseeko(m_pFile, 0, SEEK_SET);
     while (!feof(m_pFile))
     {
-        if (fgets(pBuf, TEMP_BUF_LEN, m_pFile))
+        if ((fgets(pBuf, TEMP_BUF_LEN, m_pFile) == NULL)
+          || (strncmp(pBuf, pKey, keyLen) != 0))
+            continue;
+        char ch;
+        pPos = pBuf + keyLen;
+        while (((ch = *pPos) == ' ') || (ch == '\t'))
+            ++pPos;
+        if (*pPos++ == ':')
         {
-            if (strncmp(pBuf, pKey, keyLen) == 0)
-            {
-                char ch;
-                pPos = pBuf + keyLen;
-                while (((ch = *pPos) == ' ') || (ch == '\t'))
-                    ++pPos;
-                if (*pPos++ == ':')
-                {
-                    char *pLineEnd = strlen(pPos) + pPos;
-                    while (((ch = pLineEnd[-1]) == '\n') || (ch == '\r'))
-                        * (--pLineEnd) = 0;
-                    pData = parseLine(pKey, keyLen, pPos, pLineEnd);
-                    if (pData)
-                        break;
-                }
-            }
+            char *pLineEnd = strlen(pPos) + pPos;
+            while (((ch = pLineEnd[-1]) == '\n') || (ch == '\r'))
+                * (--pLineEnd) = 0;
+            pData = parseLine(pKey, keyLen, pPos, pLineEnd);
+            if (pData)
+                break;
         }
     }
     close();

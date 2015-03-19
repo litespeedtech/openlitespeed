@@ -19,7 +19,7 @@
 #define PATTERNLAYOUT_H
 
 #include <lsdef.h>
-#include "layout.h"
+#include <log4cxx/layout.h>
 #include <log4cxx/nsdefs.h>
 #include <stdarg.h>
 

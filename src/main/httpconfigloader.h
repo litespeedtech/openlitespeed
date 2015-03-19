@@ -19,7 +19,7 @@
 #define HTTPCONFIGLOADER_H
 
 #include <lsdef.h>
-#include <util/logidtracker.h>
+#include <util/autostr.h>
 
 #include <limits.h>
 class XmlNode;

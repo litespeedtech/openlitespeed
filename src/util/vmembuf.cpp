@@ -44,11 +44,13 @@ void VMemBuf::initAnonPool()
     s_pAnonPool = new BufList();
 }
 
+
 void VMemBuf::setMaxAnonMapSize(int sz)
 {
     if (sz >= 0)
         s_iMaxAnonMapBlocks = sz / s_iBlockSize;
 }
+
 
 void VMemBuf::setTempFileTemplate(const char *pTemp)
 {
@@ -62,16 +64,19 @@ void VMemBuf::setTempFileTemplate(const char *pTemp)
     }
 }
 
+
 VMemBuf::VMemBuf(int target_size)
     : m_bufList(4)
 {
     reset();
 }
 
+
 VMemBuf::~VMemBuf()
 {
     deallocate();
 }
+
 
 void VMemBuf::releaseBlocks()
 {
@@ -93,6 +98,7 @@ void VMemBuf::releaseBlocks()
     m_iCurTotalSize = 0;
 }
 
+
 void VMemBuf::deallocate()
 {
     if (VMBUF_FILE_MAP == m_iType)
@@ -106,6 +112,7 @@ void VMemBuf::deallocate()
     }
     releaseBlocks();
 }
+
 
 void VMemBuf::recycle(BlockBuf *pBuf)
 {
@@ -160,6 +167,7 @@ int VMemBuf::shrinkBuf(long size)
     return 0;
 }
 
+
 void VMemBuf::releaseBlock(BlockBuf *pBlock)
 {
     if (pBlock->getBuf())
@@ -169,6 +177,7 @@ void VMemBuf::releaseBlock(BlockBuf *pBlock)
     }
 
 }
+
 
 int VMemBuf::remapBlock(BlockBuf *pBlock, int pos)
 {
@@ -246,6 +255,7 @@ int VMemBuf::reinit(int TargetSize)
     return 0;
 }
 
+
 void VMemBuf::reset()
 {
     m_iFd = -1;
@@ -257,6 +267,7 @@ void VMemBuf::reset()
         m_fileName.setLen(0);
     }
 }
+
 
 BlockBuf *VMemBuf::getAnonMapBlock(int size)
 {
@@ -352,6 +363,7 @@ int VMemBuf::set(int type, int size)
     return 0;
 }
 
+
 int VMemBuf::appendBlock(BlockBuf *pBlock)
 {
     if (m_bufList.full())
@@ -417,6 +429,7 @@ int VMemBuf::convertFileBackedToInMemory()
     return LS_FAIL;
 }
 
+
 int VMemBuf::set(BlockBuf *pBlock)
 {
     assert(pBlock);
@@ -427,6 +440,7 @@ int VMemBuf::set(BlockBuf *pBlock)
     m_iCurTotalSize = m_curRBlkPos = m_iCurWBlkPos = pBlock->getBlockSize();
     return 0;
 }
+
 
 int VMemBuf::set(const char *pFileName, int size)
 {
@@ -449,6 +463,7 @@ int VMemBuf::set(const char *pFileName, int size)
     }
     return 0;
 }
+
 
 int VMemBuf::setFd(const char *pFileName, int fd)
 {
@@ -482,6 +497,7 @@ void VMemBuf::rewindWriteBuf()
 
 }
 
+
 void VMemBuf::rewindReadBuf()
 {
 #ifdef _RELEASE_MMAP
@@ -503,6 +519,7 @@ void VMemBuf::rewindReadBuf()
     m_pCurRPos = (*m_pCurRBlock)->getBuf();
 }
 
+
 int VMemBuf::setROffset(size_t offset)
 {
     if (offset > m_iCurTotalSize)
@@ -516,6 +533,7 @@ int VMemBuf::setROffset(size_t offset)
     m_pCurRPos += offset;
     return 0;
 }
+
 
 int VMemBuf::mapNextWBlock()
 {
@@ -559,6 +577,7 @@ int VMemBuf::mapNextWBlock()
     m_pCurWPos = (*m_pCurWBlock)->getBuf();
     return 0;
 }
+
 
 int VMemBuf::grow()
 {
@@ -628,6 +647,35 @@ char *VMemBuf::getReadBuffer(size_t &size)
     return m_pCurRPos;
 }
 
+
+char *VMemBuf::getWriteBuffer(size_t &size)
+{
+    if ((!m_pCurWBlock) || (m_pCurWPos >= (*m_pCurWBlock)->getBufEnd()))
+    {
+        if (mapNextWBlock() != 0)
+            return NULL;
+    }
+    size = (*m_pCurWBlock)->getBufEnd() - m_pCurWPos;
+    return m_pCurWPos;
+}
+
+
+size_t VMemBuf::getCurROffset() const
+{
+    return (m_pCurRBlock)
+            ? (m_curRBlkPos - ((*m_pCurRBlock)->getBufEnd() - m_pCurRPos))
+            : 0;
+}
+
+
+size_t VMemBuf::getCurWOffset() const
+{
+    return m_pCurWBlock
+           ? (m_iCurWBlkPos - ((*m_pCurWBlock)->getBufEnd() - m_pCurWPos))
+           : 0;
+}
+
+
 int VMemBuf::mapNextRBlock()
 {
     if (m_curRBlkPos >= m_iCurWBlkPos)
@@ -657,7 +705,6 @@ int VMemBuf::mapNextRBlock()
 }
 
 
-
 long VMemBuf::writeBufSize() const
 {
     if (m_pCurWBlock == m_pCurRBlock)
@@ -669,6 +716,7 @@ long VMemBuf::writeBufSize() const
         diff -= m_pCurRPos - (*m_pCurRBlock)->getBuf();
     return diff;
 }
+
 
 int VMemBuf::write(const char *pBuf, int size)
 {
@@ -710,6 +758,7 @@ int VMemBuf::write(const char *pBuf, int size)
     while (true);
 }
 
+
 int VMemBuf::exactSize(long *pSize)
 {
     long size = m_iCurTotalSize;
@@ -722,6 +771,7 @@ int VMemBuf::exactSize(long *pSize)
     return 0;
 }
 
+
 int VMemBuf::close()
 {
     if (m_iFd != -1)
@@ -730,6 +780,7 @@ int VMemBuf::close()
     reset();
     return 0;
 }
+
 
 MMapVMemBuf::MMapVMemBuf(int TargetSize)
 {
@@ -743,6 +794,7 @@ MMapVMemBuf::MMapVMemBuf(int TargetSize)
         abort(); //throw -1;
 }
 
+
 // int VMemBuf::setFd( int fd )
 // {
 //     struct stat st;
@@ -754,6 +806,7 @@ MMapVMemBuf::MMapVMemBuf(int TargetSize)
 //
 //     return 0;
 // }
+
 
 char *VMemBuf::mapTmpBlock(int fd, BlockBuf &buf, size_t offset, int write)
 {
@@ -778,6 +831,7 @@ int VMemBuf::eof(off_t offset)
     else
         return 0;
 }
+
 
 const char *VMemBuf::acquireBlockBuf(off_t offset, int *size)
 {
@@ -809,6 +863,7 @@ const char *VMemBuf::acquireBlockBuf(off_t offset, int *size)
     return pSrcPos;
 }
 
+
 void VMemBuf::releaseBlockBuf(off_t offset)
 {
     BlockBuf *pSrcBlock = NULL;
@@ -821,6 +876,7 @@ void VMemBuf::releaseBlockBuf(off_t offset)
         && (pSrcBlock != *m_pCurWBlock))
         releaseBlock(pSrcBlock);
 }
+
 
 int VMemBuf::copyToFile(size_t startOff, size_t len,
                         int fd, size_t destStartOff)

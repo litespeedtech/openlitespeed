@@ -17,6 +17,8 @@
 *****************************************************************************/
 #include "httpstatusline.h"
 
+#include <http/httpver.h>
+
 #include <string.h>
 
 #define STATUS_LINE_BUF_SIZE 64 * SC_END * 2
@@ -54,6 +56,7 @@ HttpStatusLine::HttpStatusLine()
     for(code = 0; code < SC_END; ++code)
         m_aCache[version][code] = new StatusLineString(version, code);
 }
+
 
 HttpStatusLine::~HttpStatusLine()
 {

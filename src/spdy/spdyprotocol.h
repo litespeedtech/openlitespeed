@@ -17,10 +17,11 @@
 *****************************************************************************/
 #ifndef SPDYPROTOCOL_H
 #define SPDYPROTOCOL_H
-#include <sys/types.h>
-#include <arpa/inet.h>
-#include <spdy/protocoldef.h>
+
 #include <lsdef.h>
+
+#include <arpa/inet.h>
+#include <sys/types.h>
 // Types of SPDY frames.
 
 enum SpdyFrameType
@@ -138,11 +139,11 @@ public:
     ~SpdyFrameHeader() {}
 
     int isControlFrame() const      {   return m_un.m_ctl.m_b80 == 0x80;  }
-    unsigned char getType() const   
+    unsigned char getType() const
     {
-        return (m_un.m_ctl.m_b80 == 0x80) ? (m_un.m_ctl.m_bType) : (0);  
+        return (m_un.m_ctl.m_b80 == 0x80) ? (m_un.m_ctl.m_bType) : (0);
     }
-    
+
     unsigned char getFlags() const  {   return m_bFlags; }
     unsigned char getVersion() const {   return m_un.m_ctl.m_bVer;   }
 
@@ -164,7 +165,7 @@ public:
     }
     uint32_t getData(int n) const   {   return m_data[n];   }
     uint32_t getHboData(int n) const     {   return ntohl(m_data[n]);  }
-    
+
     LS_NO_COPY_ASSIGN(SpdyFrameHeader);
 };
 

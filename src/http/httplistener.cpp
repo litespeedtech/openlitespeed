@@ -18,20 +18,17 @@
 #include "httplistener.h"
 #include <edio/multiplexer.h>
 #include <edio/multiplexerfactory.h>
-#include <http/adns.h>
-#include <util/datetime.h>
 #include <http/clientcache.h>
+#include <http/clientinfo.h>
 #include <http/connlimitctrl.h>
-#include <http/eventdispatcher.h>
-#include <http/httpsession.h>
 #include <http/httplog.h>
 #include <http/httpresourcemanager.h>
 #include <http/httpvhost.h>
+#include <http/ntwkiolink.h>
 #include <http/smartsettings.h>
 #include <http/vhostmap.h>
 #include <socket/coresocket.h>
 #include <socket/gsockaddr.h>
-#include <sslpp/sslcontext.h>
 #include <util/accessdef.h>
 
 #include <assert.h>
@@ -63,6 +60,7 @@ HttpListener::HttpListener(const char *pName, const char *pAddr)
     m_pMapVHost->setAddrStr(pAddr);
 }
 
+
 HttpListener::HttpListener()
     : m_pMapVHost(new VHostMap())
     , m_pSubIpMap(NULL)
@@ -88,6 +86,7 @@ void HttpListener::beginConfig()
 {
 }
 
+
 void HttpListener::endConfig()
 {
     m_pMapVHost->endConfig();
@@ -100,15 +99,18 @@ void HttpListener::endConfig()
         m_isSSL = 1;
 }
 
+
 const char *HttpListener::getAddrStr() const
 {
     return m_pMapVHost->getAddrStr()->c_str();
 }
 
+
 int  HttpListener::getPort() const
 {
     return m_pMapVHost->getPort();
 }
+
 
 int HttpListener::assign(int fd, struct sockaddr *pAddr)
 {
@@ -146,6 +148,7 @@ int HttpListener::start()
     return setSockAttr(fd, addr);
 }
 
+
 int HttpListener::setSockAttr(int fd, GSockAddr &addr)
 {
     setfd(fd);
@@ -180,6 +183,7 @@ int HttpListener::setSockAttr(int fd, GSockAddr &addr)
             POLLIN | POLLHUP | POLLERR);
 }
 
+
 int HttpListener::suspend()
 {
     if (getfd() != -1)
@@ -190,6 +194,7 @@ int HttpListener::suspend()
     return EBADF;
 }
 
+
 int HttpListener::resume()
 {
     if (getfd() != -1)
@@ -199,6 +204,7 @@ int HttpListener::resume()
     }
     return EBADF;
 }
+
 
 int HttpListener::stop()
 {
@@ -213,11 +219,13 @@ int HttpListener::stop()
     return EBADF;
 }
 
+
 static void no_timewait(int fd)
 {
     struct linger l = { 1, 0 };
     setsockopt(fd, SOL_SOCKET, SO_LINGER, &l, sizeof(l));
 }
+
 
 struct conn_data
 {
@@ -225,6 +233,7 @@ struct conn_data
     char            achPeerAddr[24];
     ClientInfo     *pInfo;
 };
+
 
 #define CONN_BATCH_SIZE 10
 int HttpListener::handleEvents(short event)
@@ -428,6 +437,7 @@ int HttpListener::batchAddConn(struct conn_data *pBegin,
     return 0;
 }
 
+
 VHostMap *HttpListener::getSubMap(int fd)
 {
     VHostMap *pMap;
@@ -483,10 +493,10 @@ int HttpListener::addConnection(struct conn_data *pCur, int *iCount)
 }
 
 
-
 void HttpListener::onTimer()
 {
 }
+
 
 VHostMap *HttpListener::addIpMap(const char *pIP)
 {
@@ -502,6 +512,7 @@ VHostMap *HttpListener::addIpMap(const char *pIP)
     return pMap;
 }
 
+
 int HttpListener::addDefaultVHost(HttpVHost *pVHost)
 {
     int count = 0;
@@ -511,6 +522,7 @@ int HttpListener::addDefaultVHost(HttpVHost *pVHost)
         count += m_pSubIpMap->addDefaultVHost(pVHost);
     return count;
 }
+
 
 int HttpListener::writeStatusReport(int fd)
 {
@@ -529,6 +541,8 @@ int HttpListener::writeStatusReport(int fd)
     return 0;
 
 }
+
+
 int HttpListener::mapDomainList(HttpVHost *pVHost, const char *pDomains)
 {
     return m_pMapVHost->mapDomainList(pVHost, pDomains);

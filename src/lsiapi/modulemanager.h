@@ -18,15 +18,12 @@
 #ifndef MODULEMANAGER_H
 #define MODULEMANAGER_H
 
-#include "ls.h"
-#include <lsiapi/lsiapihooks.h>
-#include <lsiapi/lsiapi.h>
-#include <lsiapi/lsimoduledata.h>
-
-#include <util/hashstringmap.h>
-#include <http/handlertype.h>
+#include <ls.h>
 #include <http/httphandler.h>
+#include <lsiapi/lsimoduledata.h>
+#include <util/hashstringmap.h>
 #include <util/tsingleton.h>
+
 #include <stdint.h>
 
 
@@ -39,6 +36,9 @@ class XmlNode;
 class ModuleHandler;
 class ModuleConfig;
 class HttpContext;
+class IolinkSessionHooks;
+class HttpSessionHooks;
+class ServerSessionHooks;
 
 typedef lsi_module_t *ModulePointer;
 
@@ -46,11 +46,7 @@ class LsiModule : public HttpHandler
 {
     friend class ModuleHandler;
 public:
-    explicit LsiModule(lsi_module_t *pModule)
-    {
-        setHandlerType(HandlerType::HT_MODULE);
-        m_pModule = pModule;
-    }
+    explicit LsiModule(lsi_module_t *pModule);
 
     const char *getName() const     {   return "module";    }
     lsi_module_t *getModule() const {   return m_pModule;   }

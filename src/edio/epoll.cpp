@@ -19,7 +19,7 @@
 
 #include "epoll.h"
 
-#include "http/httplog.h"
+// #include <http/httplog.h>
 
 #include <assert.h>
 #include <fcntl.h>
@@ -28,9 +28,10 @@
 #include <stdlib.h>
 #include <sys/epoll.h>
 #include <sys/syscall.h>
+#include <sys/types.h>
 #include <unistd.h>
 
-#include <sys/types.h>
+// #include <typeinfo>
 
 
 static int s_loop_fd = -1;
@@ -44,6 +45,7 @@ epoll::epoll()
 
 }
 
+
 epoll::~epoll()
 {
     if (m_epfd != -1)
@@ -51,6 +53,7 @@ epoll::~epoll()
     if (m_pResults)
         free(m_pResults);
 }
+
 
 #define EPOLL_RESULT_BUF_SIZE   4096
 //#define EPOLL_RESULT_MAX        EPOLL_RESULT_BUF_SIZE / sizeof( struct epoll_event )
@@ -75,6 +78,7 @@ int epoll::init(int capacity)
     ::fcntl(m_epfd, F_SETFD, FD_CLOEXEC);
     return LS_OK;
 }
+
 
 int epoll::reinit()
 {
@@ -101,7 +105,6 @@ int epoll::reinit()
     return 0;
 }
 /*
-#include <typeinfo>
 void dump_type_info( EventReactor * pHandler, const char * pMsg )
 {
     LOG_INFO(( "[%d] %s EventReactor: %p, fd: %d, type: %s", getpid(), pMsg, pHandler, pHandler->getfd(),
@@ -131,6 +134,7 @@ int epoll::add(EventReactor *pHandler, short mask)
     return epoll_ctl(m_epfd, EPOLL_CTL_ADD, fd, &epevt);
 }
 
+
 int epoll::updateEvents(EventReactor *pHandler, short mask)
 {
     struct epoll_event epevt;
@@ -147,6 +151,7 @@ int epoll::updateEvents(EventReactor *pHandler, short mask)
     //return (syscall(__NR_epoll_ctl, m_epfd, EPOLL_CTL_MOD, fd, &epevt));
     return epoll_ctl(m_epfd, EPOLL_CTL_MOD, fd, &epevt);
 }
+
 
 int epoll::remove(EventReactor *pHandler)
 {
@@ -170,6 +175,7 @@ int epoll::remove(EventReactor *pHandler)
     //return (syscall(__NR_epoll_ctl, m_epfd, EPOLL_CTL_DEL, fd, &epevt ));
     return epoll_ctl(m_epfd, EPOLL_CTL_DEL, fd, &epevt);
 }
+
 
 int epoll::waitAndProcessEvents(int iTimeoutMilliSec)
 {
@@ -279,11 +285,13 @@ void epoll::timerExecute()
     m_reactorIndex.timerExec();
 }
 
+
 void epoll::continueRead(EventReactor *pHandler)
 {
     if (!(pHandler->getEvents() & POLLIN))
         addEvent(pHandler, POLLIN);
 }
+
 
 void epoll::suspendRead(EventReactor *pHandler)
 {
@@ -291,11 +299,13 @@ void epoll::suspendRead(EventReactor *pHandler)
         removeEvent(pHandler, POLLIN);
 }
 
+
 void epoll::continueWrite(EventReactor *pHandler)
 {
     if (!(pHandler->getEvents() & POLLOUT))
         addEvent(pHandler, POLLOUT);
 }
+
 
 void epoll::suspendWrite(EventReactor *pHandler)
 {
@@ -303,14 +313,17 @@ void epoll::suspendWrite(EventReactor *pHandler)
         removeEvent(pHandler, POLLOUT);
 }
 
+
 void epoll::switchWriteToRead(EventReactor *pHandler)
 {
     setEvents(pHandler, POLLIN | POLLHUP | POLLERR);
 }
 
+
 void epoll::switchReadToWrite(EventReactor *pHandler)
 {
     setEvents(pHandler, POLLOUT | POLLHUP | POLLERR);
 }
+
 
 #endif

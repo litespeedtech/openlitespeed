@@ -18,23 +18,14 @@
 #ifndef MODULEEVENTNOTIFIER_H
 #define MODULEEVENTNOTIFIER_H
 
-#include "lsiapihooks.h"
 #include <lsdef.h>
 #include <ls.h>
 #include <edio/eventnotifier.h>
 #include <util/dlinkqueue.h>
-#include <util/linkedobj.h>
 #include <util/tsingleton.h>
 
-class EventObj : public DLinkedObj
-{
-public:
-    int                     m_iId;
-    short                   m_iLevel;
-    short                   m_iState;  //1 = OK, 0 = removed
-    LsiSession             *m_pSession;
-    lsi_module_t           *m_pModule;
-};
+class LsiSession;
+class EventObj;
 
 class ModuleEventNotifier : public EventNotifier,
                             public TSingleton<ModuleEventNotifier>

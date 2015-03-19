@@ -16,10 +16,12 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "cgiconnection.h"
-#include <http/httpextconnector.h>
+
+// #include <http/httpextconnector.h>
 #include <http/httplog.h>
 #include <http/httpstatuscode.h>
 #include <http/httpresourcemanager.h>
+#include <util/pool.h>
 
 #include <assert.h>
 #include <errno.h>
@@ -31,6 +33,7 @@
 CgiConnection::CgiConnection()
 {
 }
+
 
 CgiConnection::~CgiConnection()
 {
@@ -75,6 +78,7 @@ int CgiConnection::onRead()
     return ret;
 }
 
+
 int CgiConnection::readResp(char *pBuf, int size)
 {
     int len = read(pBuf, size);
@@ -83,6 +87,7 @@ int CgiConnection::readResp(char *pBuf, int size)
     return len;
 
 }
+
 
 int CgiConnection::onWrite()
 {
@@ -108,6 +113,7 @@ int CgiConnection::onError()
     return LS_FAIL;
 }
 
+
 int CgiConnection::onEventDone(short event)
 {
     return true;
@@ -119,10 +125,12 @@ bool CgiConnection::wantRead()
     return false;
 }
 
+
 bool CgiConnection::wantWrite()
 {
     return false;
 }
+
 
 //interface defined by HttpExtProcessor
 void CgiConnection::abort()
@@ -142,21 +150,26 @@ int CgiConnection::init(int fd, Multiplexer *pMultiplexer,
     return 0;
 }
 
+
 void CgiConnection::cleanUp()
 {
     close();
     delete this;
 }
 
+
 int CgiConnection::begin()
 {
     return 0;
 }
 
+
 int CgiConnection::beginReqBody()
 {
     return 0;
 }
+
+
 int CgiConnection::endOfReqBody()
 {
     suspendWrite();
@@ -168,6 +181,7 @@ int CgiConnection::endOfReqBody()
 int  CgiConnection::sendReqHeader()
 {   return 0;   }
 
+
 int CgiConnection::sendReqBody(const char *pBuf, int size)
 {
     int ret = write(pBuf, size);
@@ -176,7 +190,6 @@ int CgiConnection::sendReqBody(const char *pBuf, int size)
     return ret;
 }
 
-#include <util/pool.h>
 
 int CgiConnection::s_iCgiCount = 0;
 
@@ -187,6 +200,8 @@ void *CgiConnection::operator new(size_t sz)
         ++s_iCgiCount;
     return ret;
 }
+
+
 void CgiConnection::operator delete(void *p)
 {
     --s_iCgiCount;

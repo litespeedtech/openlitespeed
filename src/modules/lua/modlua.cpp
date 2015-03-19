@@ -15,9 +15,11 @@
 *    You should have received a copy of the GNU General Public License       *
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
+#include "lsluaengine.h"
+#include "lsluasession.h"
+
 #include <ls.h>
-#include <modules/lua/lsluaengine.h>
-#include <modules/lua/lsluasession.h>
+
 #include <string.h>
 #include <unistd.h>
 #include <time.h>
@@ -105,6 +107,7 @@ static int runLuaFilter(lsi_cb_param_t *rec, int index)
 
 int prepLuaFilter(lsi_cb_param_t *rec)
 {
+    int aEnableHkpt[4], iEnableCount = 0;
     lsi_session_t *session = rec->_session;
     LsLuaUserParam *pUser = (LsLuaUserParam *)g_api->get_module_param(session,
                             &MNAME);
@@ -112,32 +115,20 @@ int prepLuaFilter(lsi_cb_param_t *rec)
     //TODO: set resp wait full body?
 
     if (pUser->isFilterActive(LSLUA_HOOK_REWRITE))
-    {
-        g_api->set_session_hook_enable_flag(session,
-                                            LSI_HKPT_URI_MAP,
-                                            &MNAME, LSI_HOOK_FLAG_ENABLED);
-    }
+        aEnableHkpt[iEnableCount++] = LSI_HKPT_URI_MAP;
 
     if (pUser->isFilterActive(LSLUA_HOOK_AUTH))
-    {
-        g_api->set_session_hook_enable_flag(session,
-                                            LSI_HKPT_HTTP_AUTH,
-                                            &MNAME, LSI_HOOK_FLAG_ENABLED);
-    }
+        aEnableHkpt[iEnableCount++] = LSI_HKPT_HTTP_AUTH;
 
     if (pUser->isFilterActive(LSLUA_HOOK_HEADER))
-    {
-        g_api->set_session_hook_enable_flag(session,
-                                            LSI_HKPT_RCVD_RESP_HEADER,
-                                            &MNAME, LSI_HOOK_FLAG_ENABLED);
-    }
+        aEnableHkpt[iEnableCount++] = LSI_HKPT_RCVD_RESP_HEADER;
 
     if (pUser->isFilterActive(LSLUA_HOOK_BODY))
-    {
-        g_api->set_session_hook_enable_flag(session,
-                                            LSI_HKPT_RECV_RESP_BODY,
-                                            &MNAME, LSI_HOOK_FLAG_ENABLED);
-    }
+        aEnableHkpt[iEnableCount++] = LSI_HKPT_RECV_RESP_BODY;
+
+    if ( iEnableCount > 0)
+        return g_api->set_session_hook_enable_flag(session, &MNAME, 1,
+                                                   aEnableHkpt, iEnableCount );
     return LSI_HK_RET_OK;
 }
 

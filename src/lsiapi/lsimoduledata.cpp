@@ -16,7 +16,9 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "lsimoduledata.h"
-#include "lsiapi.h"
+#include <lsiapi/lsiapi.h>
+
+#include <string.h>
 
 typedef void *void_pointer;
 

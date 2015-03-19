@@ -17,9 +17,10 @@
 *****************************************************************************/
 #ifdef RUN_TEST
 
+#include <spdy/spdydebug.h>
 #include <spdy/spdyzlibfilter.h>
-#include "spdy/spdyconnection.h"
-#include "util/autobuf.h"
+#include <spdy/spdyconnection.h>
+#include <util/autobuf.h>
 #include "test/unittest-cpp/UnitTest++/src/UnitTest++.h"
 unsigned char c2s_SYN_STREAM1[] =
 {

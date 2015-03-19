@@ -16,8 +16,9 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "staticfilecache.h"
-#include "staticfilecachedata.h"
-#include "httpstatuscode.h"
+
+#include <http/httpstatuscode.h>
+#include <http/staticfilecachedata.h>
 
 #include <errno.h>
 #include <fcntl.h>
@@ -32,6 +33,8 @@ StaticFileCache::StaticFileCache()
     : HttpCache(LS_STATICFILECACHE_INITSIZE)
 {
 }
+
+
 StaticFileCache::~StaticFileCache()
 {
 }
@@ -70,6 +73,7 @@ int StaticFileCache::getCacheElement(const char *pPath, int pathLen,
     return 0;
 }
 
+
 int StaticFileCache::newCache(const char *pPath, int pathLen,
                               const struct stat &fileStat, int fd,
                               StaticFileCacheData *&pData)
@@ -95,6 +99,7 @@ CacheElement *StaticFileCache::allocElement()
 {
     return new StaticFileCacheData();
 }
+
 
 void StaticFileCache::recycle(CacheElement *pElement)
 {

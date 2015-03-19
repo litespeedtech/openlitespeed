@@ -43,7 +43,6 @@ class HttpServerConfig : public TSingleton<HttpServerConfig>
     int8_t          m_iGzipCompress;
     int8_t          m_iDynGzipCompress;
     int8_t          m_iCompressLevel;
-    int8_t          m_iUseAio;
 
     int32_t         m_iCheckDeniedSymLink;
 
@@ -155,9 +154,6 @@ public:
     void    setDirForbiddenBits(int32_t bit)
     { m_iDirForbiddenBits = bit;    }
     int32_t getDirForbiddenBits() const     {   return m_iDirForbiddenBits; }
-
-    void setUseAio(int8_t val)              {   m_iUseAio = val;            }
-    int8_t getUseAio()                      {   return m_iUseAio;           }
 
     void setDnsLookup(int val)              {   m_iDnsLookup = val;         }
     int getDnsLookup() const                {   return m_iDnsLookup;        }

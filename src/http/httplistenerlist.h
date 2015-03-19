@@ -20,7 +20,6 @@
 
 
 
-#include <util/hashstringmap.h>
 #include <util/gpointerlist.h>
 class HttpListener;
 class HttpVHost;

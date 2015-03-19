@@ -29,12 +29,46 @@
 #include <sched.h>
 #include <unistd.h>
 
+#if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
+#include <linux/futex.h>
+#include <sys/syscall.h>
+
+
+static inline int do_wait(void * volatile *ptr, struct timespec *timeout)
+{
+    int ret = 0;
+    if (syscall(SYS_futex, (int *)ptr, FUTEX_WAIT, 0, timeout, NULL, 0) < 0)
+    {
+        if ((errno == ETIMEDOUT) || (errno == EINVAL))
+            ret = -1;
+#ifdef notdef
+        else if (errno == EWOULDBLOCK)
+            ;
+#endif
+    }
+    return ret;
+}
+
+
+static inline void do_wake(void * volatile *ptr)
+{
+    int retry = 3;
+    while ((syscall(SYS_futex, (int *)ptr, FUTEX_WAKE, 1, NULL, NULL, 0) < 1)
+          && (--retry > 0))
+        ;
+    return;
+}
+
+
+static inline int no_wait(struct timespec *timeout)
+{
+    return (timeout && (timeout->tv_sec == 0) && (timeout->tv_nsec == 0));
+}
+#endif
+
+
 #define MYPAUSE     sched_yield()
 //#define MYPAUSE     usleep( 250 )
-
-#ifdef LSR_LLQ_DEBUG
-static int MYINDX;
-#endif
 
 
 ls_lfqueue_t *ls_lfqueue_new()
@@ -52,6 +86,7 @@ ls_lfqueue_t *ls_lfqueue_new()
     return pThis;
 }
 
+
 int ls_lfqueue_init(ls_lfqueue_t *pThis)
 {
     pThis->tail.m_ptr = NULL;
@@ -61,12 +96,14 @@ int ls_lfqueue_init(ls_lfqueue_t *pThis)
     return 0;
 }
 
+
 void ls_lfqueue_destroy(ls_lfqueue_t *pThis)
 {
     if (pThis)
         memset(pThis, 0, sizeof(*pThis));
     return;
 }
+
 
 void ls_lfqueue_delete(ls_lfqueue_t *pThis)
 {
@@ -78,14 +115,20 @@ void ls_lfqueue_delete(ls_lfqueue_t *pThis)
     return;
 }
 
+
 int ls_lfqueue_put(ls_lfqueue_t *pThis, ls_lfnodei_t *data)
 {
     data->next = NULL;
     ls_lfnodei_t *prev = ls_atomic_setptr((void **)&pThis->phead, data);
     prev->next = data;
+#if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
+    if (prev == (ls_lfnodei_t *)&pThis->tail.m_ptr)
+        do_wake(&pThis->tail.m_ptr);
+#endif
 
     return 0;
 }
+
 
 int ls_lfqueue_putn(
     ls_lfqueue_t *pThis, ls_lfnodei_t *data1, ls_lfnodei_t *datan)
@@ -93,20 +136,25 @@ int ls_lfqueue_putn(
     datan->next = NULL;
     ls_lfnodei_t *prev = ls_atomic_setptr((void **)&pThis->phead, datan);
     prev->next = data1;
+#if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
+    if (prev == (ls_lfnodei_t *)&pThis->tail.m_ptr)
+        do_wake(&pThis->tail.m_ptr);
+#endif
 
     return 0;
 }
 
+
 ls_lfnodei_t *ls_lfqueue_get(ls_lfqueue_t *pThis)
 {
-    ls_atom_ptr_t tail;
+    ls_atom_xptr_t tail;
 
     tail.m_ptr = pThis->tail.m_ptr;
     tail.m_seq = pThis->tail.m_seq;
     while (1)
     {
-        ls_atom_ptr_t prev;
-        ls_atom_ptr_t xchg;
+        ls_atom_xptr_t prev;
+        ls_atom_xptr_t xchg;
         ls_lfnodei_t *pnode = (ls_lfnodei_t *)tail.m_ptr;
         if (pnode == NULL)
             return NULL;
@@ -117,10 +165,9 @@ ls_lfnodei_t *ls_lfqueue_get(ls_lfqueue_t *pThis)
             xchg.m_seq = tail.m_seq + 1;
 
             ls_atomic_dcasv(
-                (ls_atom_ptr_t *)&pThis->tail, &tail, &xchg, &prev);
+                (ls_atom_xptr_t *)&pThis->tail, &tail, &xchg, &prev);
 
-            if ((prev.m_ptr == tail.m_ptr)
-                && (prev.m_seq == tail.m_seq))
+            if ((prev.m_ptr == tail.m_ptr) && (prev.m_seq == tail.m_seq))
                 return pnode;
         }
         else
@@ -137,13 +184,12 @@ ls_lfnodei_t *ls_lfqueue_get(ls_lfqueue_t *pThis)
             xchg.m_seq = tail.m_seq + 1;
 
             ls_atomic_dcasv(
-                (ls_atom_ptr_t *)&pThis->tail, &tail, &xchg, &prev);
+                (ls_atom_xptr_t *)&pThis->tail, &tail, &xchg, &prev);
 
-            if ((prev.m_ptr == tail.m_ptr)
-                && (prev.m_seq == tail.m_seq))
+            if ((prev.m_ptr == tail.m_ptr) && (prev.m_seq == tail.m_seq))
             {
                 ls_lfnodei_t *prevhead = (ls_lfnodei_t *)ls_atomic_casvptr(
-                                             (void **)&pThis->phead, pnode, (void *)&pThis->tail.m_ptr);
+                  (volatile void **)&pThis->phead, pnode, (void *)&pThis->tail.m_ptr);
 
                 if (prevhead == pnode)
                     return pnode;
@@ -159,6 +205,23 @@ ls_lfnodei_t *ls_lfqueue_get(ls_lfqueue_t *pThis)
         tail.m_seq = prev.m_seq;
     }
 }
+
+
+#if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
+ls_lfnodei_t *ls_lfqueue_timedget(ls_lfqueue_t *pThis, struct timespec *timeout)
+{
+    ls_lfnodei_t *data;
+    while ((data = ls_lfqueue_get(pThis)) == NULL)
+    {
+        if (no_wait(timeout))       /* no wait timeout */
+            break;
+        if (do_wait(&pThis->tail.m_ptr, timeout) < 0)
+            break;
+    }
+    return data;
+}
+#endif
+
 
 int ls_lfqueue_empty(ls_lfqueue_t *pThis)
 {

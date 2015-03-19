@@ -19,13 +19,13 @@
 #define HTTPMIME_H
 
 
-#include <util/autostr.h>
 #include <http/expiresctrl.h>
 
 #include <stddef.h>
 
 #define MAX_MIME_LEN 256
 
+class AutoStr2;
 class HttpHandler;
 class MimeMap;
 class MIList;

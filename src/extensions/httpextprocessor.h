@@ -18,8 +18,6 @@
 #ifndef HTTPEXTPROCESSOR_H
 #define HTTPEXTPROCESSOR_H
 
-
-
 #include <lsdef.h>
 #include <edio/flowcontrol.h>
 #include <log4cxx/ilog.h>

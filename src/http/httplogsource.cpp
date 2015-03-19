@@ -19,14 +19,13 @@
 #include <http/accesslog.h>
 #include <http/httplog.h>
 #include <http/stderrlogger.h>
-#include <util/autostr.h>
-#include "util/configctx.h"
-#include <util/xmlnode.h>
-#include <util/gpath.h>
 #include <log4cxx/appender.h>
 //#include <log4cxx/appendermanager.h>
-
 //#include <log4cxx/level.h>
+#include <main/configctx.h>
+#include <util/autostr.h>
+#include <util/xmlnode.h>
+#include <util/gpath.h>
 //#include <unistd.h>
 #include <limits.h>
 #include <stdlib.h>
@@ -98,6 +97,8 @@ int HttpLogSource::initAccessLog(const XmlNode *pRoot,
 
     return 0;
 }
+
+
 int HttpLogSource::initAccessLog(const XmlNode *pNode,
                                  off_t *pRollingSize)
 {
@@ -174,6 +175,8 @@ int HttpLogSource::initAccessLog(const XmlNode *pNode,
 
     return ret;
 }
+
+
 int HttpLogSource::initErrorLog2(const XmlNode *pNode,
                                  int setDebugLevel)
 {
@@ -227,6 +230,8 @@ int HttpLogSource::initErrorLog2(const XmlNode *pNode,
 
     return 0;
 }
+
+
 int HttpLogSource::initErrorLog(const XmlNode *pRoot,
                                 int setDebugLevel)
 {

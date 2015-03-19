@@ -27,7 +27,6 @@
 #include <time.h>
 #include <unistd.h>
 #include <util/gfactory.h>
-#include <lsr/ls_fileio.h>
 
 
 BEGIN_LOG4CXX_NS

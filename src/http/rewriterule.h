@@ -18,13 +18,12 @@
 #ifndef REWRITERULE_H
 #define REWRITERULE_H
 
+#include <http/requestvars.h>
+#include <log4cxx/nsdefs.h>
 #include <util/pcregex.h>
 #include <util/autostr.h>
 #include <util/tlinklist.h>
 
-#include <log4cxx/nsdefs.h>
-
-#include <http/requestvars.h>
 
 BEGIN_LOG4CXX_NS
 class Logger;

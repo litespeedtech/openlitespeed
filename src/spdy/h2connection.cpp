@@ -17,15 +17,17 @@
 *****************************************************************************/
 #include "h2connection.h"
 
-#include <edio/inputstream.h>
+#include "h2stream.h"
+// #include "h2streampool.h"
+
+#include <http/hiohandlerfactory.h>
 #include <http/httplog.h>
-#include <http/httpresourcemanager.h>
-//#include <http/httpsession.h>
 #include <http/httprespheaders.h>
-#include <lsr/ls_strtool.h>
-#include <spdy/h2stream.h>
-#include <spdy/h2streampool.h>
+//#include <http/httpsession.h>
+#include <http/httpstatuscode.h>
 #include <util/iovec.h>
+
+#include <time.h>
 
 
 static const char s_h2sUpgradeResponse[] =
@@ -111,6 +113,7 @@ int H2Connection::onInitConnected()
 H2Connection::~H2Connection()
 {
 }
+
 
 int H2Connection::onReadEx()
 {
@@ -198,7 +201,7 @@ int H2Connection::parseFrame()
                 m_iCurrentFrameRemain = -H2_FRAME_HEADER_SIZE;
         }
     }
-    
+
     if (isFlowCtrl() &&
         m_iDataInWindow / 2 < m_iCurInBytesToUpdate)
     {
@@ -388,7 +391,7 @@ int H2Connection::processSettingFrame(H2FrameHeader *pHeader)
         switch (iEntryID)
         {
         case H2_SETTINGS_HEADER_TABLE_SIZE:
-            m_hpack.getReqDynamicTable().updateMaxCapacity(iEntryValue);
+            m_hpack.getReqDynTab().updateMaxCapacity(iEntryValue);
             break;
         case H2_SETTINGS_MAX_FRAME_SIZE:
             if ((iEntryValue < H2_DEFAULT_DATAFRAME_SIZE) ||
@@ -627,7 +630,7 @@ int H2Connection::processContinuationFrame(H2FrameHeader *pHeader)
     }
     unsigned char *bufEnd =  pSrc + iDatalen;
 
-    int rc = decodeData(pSrc, bufEnd);
+    int rc = decodeData(pSrc, bufEnd, NULL, NULL, NULL, NULL);
 
     if (pNewSrc)
         free(pNewSrc);
@@ -638,7 +641,8 @@ int H2Connection::processContinuationFrame(H2FrameHeader *pHeader)
     if (rc < 0)
         return LS_FAIL;
 
-    appendReqHeaders(pStream, false);
+    appendReqHeaders(pStream);
+
     if (iHeaderFlag & H2_FLAG_END_HEADERS)
     {
         pStream->setReqHeaderEnd(1);
@@ -715,7 +719,11 @@ int H2Connection::processHeadersFrame(H2FrameHeader *pHeader)
     else
         memset(&priority, 0, sizeof(priority));
 
-    int rc = decodeData(pSrc, bufEnd);
+    char method[10] = {0};
+    int methodLen = 0;
+    char *uri = NULL;
+    int uriLen = 0;
+    int rc = decodeData(pSrc, bufEnd, method, &methodLen, &uri, &uriLen);
 
     if (pNewSrc)
         free(pNewSrc);
@@ -729,13 +737,14 @@ int H2Connection::processHeadersFrame(H2FrameHeader *pHeader)
     if (m_mapStream.size() >= (uint)m_iServerMaxStreams)
     {
         sendRstFrame(id, H2_ERROR_REFUSED_STREAM);
+        free(uri);
         return 0;
     }
 
     pStream = getNewStream(id, iHeaderFlag, priority);
     if (pStream)
     {
-        appendReqHeaders(pStream, true);
+        appendReqHeaders(pStream, method, methodLen, uri, uriLen);
 
         if (iHeaderFlag & H2_FLAG_END_HEADERS)
         {
@@ -749,56 +758,59 @@ int H2Connection::processHeadersFrame(H2FrameHeader *pHeader)
     }
     else
         sendRstFrame(id, H2_ERROR_INTERNAL_ERROR);
+    free(uri);
     return 0;
 }
 
 
-int H2Connection::decodeData(unsigned char *pSrc,
-                                        unsigned char *bufEnd)
+int H2Connection::decodeData(unsigned char *pSrc, unsigned char *bufEnd,
+                             char *method, int *methodLen, char **uri, int *uriLen)
 {
     int rc, n = 0;
     m_bufInflate.clear();
 
-    char name[1024];
-    char val[8192];
-    uint16_t name_len = 1024;
-    uint16_t val_len = 8192;
+    AutoBuf namevaleBuf(8192);
+    uint16_t name_len = 0 ;
+    uint16_t val_len = 0;
     AutoStr2 cookieStr = "";
 
-    while ((rc = m_hpack.decHeader(pSrc, bufEnd, name, name_len, val,
-                                    val_len)) > 0)
+    /*
+     * TODO: right now we just assume method and uri will be both in headerframe
+     */
+    bool needParseMethod = (method && methodLen && uri && uriLen);
+
+    while ((rc = m_hpack.decHeader(pSrc, bufEnd, namevaleBuf,
+                                   name_len, val_len)) > 0)
     {
-        name[name_len] = 0x00;
-        val[val_len] = 0x00;
-        //printf("name[%s] val[%s]\n", name, val);
+        char *name = namevaleBuf.begin();
+        char *val = name + name_len;
 
         if (name[0] == ':')
         {
+            name_len = 0;
             if (memcmp(name, ":authority", 10) == 0)
             {
-                strcpy(name, "host");
+                name = (char *)"host";
                 name_len = 4;
             }
-            else if (memcmp(name, ":method", 7) == 0)
+            else if (needParseMethod && memcmp(name, ":method", 7) == 0)
             {
-                m_NameValuePairListReqline[0].pValue = strdup(val);
-                m_NameValuePairListReqline[0].ValueLen = val_len;
-                name_len = 0;
+                if (val_len < 10 && val_len > 2)
+                {
+                    strncpy(method, val, val_len);
+                    *methodLen = val_len;
+                }
             }
-            else if (memcmp(name, ":path", 5) == 0)
+            else if (needParseMethod && memcmp(name, ":path", 5) == 0)
             {
-                m_NameValuePairListReqline[1].pValue = strdup(val);
-                m_NameValuePairListReqline[1].ValueLen = val_len;
-                name_len = 0;
+                *uri = strndup(val, val_len);
+                *uriLen = val_len;
             }
-            else if (memcmp(name, ":scheme", 7) == 0)
-            {
-                m_NameValuePairListReqline[2].pValue = (char *)"HTTP/1.1";
-                m_NameValuePairListReqline[2].ValueLen = 8;
-                name_len = 0;
-            }
-            else //unknown
-                name_len = 0;
+            //else if (memcmp(name, ":scheme", 7) == 0)
+            //{
+                //Do nothing
+                //We set to (char *)"HTTP/1.1"
+            //}
         }
         else if (name_len == 6 && memcmp(name, "cookie", 6) == 0)
         {
@@ -817,10 +829,19 @@ int H2Connection::decodeData(unsigned char *pSrc,
             m_bufInflate.append("\r\n", 2);
             n += name_len + val_len + 4;
         }
-        name_len = 1024;
-        val_len = 8192;
     }
 
+    if (rc < 0 || 
+        (needParseMethod && (methodLen == 0 || uriLen == 0 || *uri == NULL)))
+    {
+        if (*uri)
+            free(*uri);
+        return -1;
+    }
+
+    /*TODO: we suppose cookies are in one frame, if in another frame, it will
+     * create multi-line cookie in req header.
+     */
     if (cookieStr.len() > 0)
     {
         m_bufInflate.append("cookie", 6);
@@ -834,28 +855,20 @@ int H2Connection::decodeData(unsigned char *pSrc,
 }
 
 
-int H2Connection::appendReqHeaders(H2Stream *pStream, int isFirstAppend)
+int H2Connection::appendReqHeaders(H2Stream *pStream, char *method, 
+                                   int methodLen, char *uri, int uriLen)
 {
-    if (isFirstAppend)
+    if (method && methodLen && uri && uriLen)
     {
-        for (int i = 0; i < 3; i++)
-        {
-            pStream->appendInputData(m_NameValuePairListReqline[i].pValue,
-                                     m_NameValuePairListReqline[i].ValueLen);
-            if (i == 2)
-                pStream->appendInputData("\r\n", 2);
-            else
-            {
-                pStream->appendInputData(" ", 1);
-                free(m_NameValuePairListReqline[i].pValue);
-            }
-        }
+        pStream->appendInputData(method, methodLen);
+        pStream->appendInputData(" ", 1);
+        pStream->appendInputData(uri, uriLen);
+        pStream->appendInputData(" HTTP/1.1\r\n", 11);
     }
 
     pStream->appendInputData(m_bufInflate.begin(), m_bufInflate.size());
 
     return 0;
-
 }
 
 
@@ -864,7 +877,7 @@ H2Stream *H2Connection::getNewStream(uint32_t uiStreamID,
 {
     H2Stream *pStream;
     HioHandler *pSession =
-        HttpResourceManager::getInstance().getHioHandler(HIOS_PROTO_HTTP);
+        HioHandlerFactory::getHioHandler(HIOS_PROTO_HTTP);
     if (!pSession)
         return NULL;
     pStream = new H2Stream();
@@ -912,7 +925,7 @@ void H2Connection::recycleStream(StreamMap::iterator it)
     H2Stream *pH2Stream = it.second();
     m_mapStream.erase(it);
     pH2Stream->close();
-    
+
     //TODO: use array for m_dqueStreamRespon
     //m_dqueStreamRespon[pH2Stream->getPriority()].remove(pH2Stream);
     m_dqueStreamRespon.remove(pH2Stream);
@@ -951,7 +964,7 @@ int H2Connection::sendFrame4Bytes(H2FrameType type, uint32_t uiStreamId,
 {
     getBuf()->guarantee(13);
     appendCtrlFrameHeader(type, 4, 0, uiStreamId);
-    
+
     appendNbo4Bytes(getBuf(), uiVal1);
     flush();
     if (D_ENABLED(DL_MORE))
@@ -1013,7 +1026,7 @@ int H2Connection::sendSettingsFrame()
                , getLogId(), m_iServerMaxStreams, m_iStreamInInitWindowSize));
     }
     m_iFlag |= H2_CONN_FLAG_SETTING_SENT;
-    
+
     if (isFlowCtrl())
     {
         sendWindowUpdateFrame( 0, H2_FCW_INIT_SIZE );
@@ -1021,7 +1034,7 @@ int H2Connection::sendSettingsFrame()
     }
     else
         flush();
-    
+
     return 0;
 }
 
@@ -1160,7 +1173,7 @@ int H2Connection::timerRoutine()
 }
 
 
-#define H2_TMP_HDR_BUFF_SIZE 2048
+#define H2_TMP_HDR_BUFF_SIZE 16384
 #define MAX_LINE_COUNT_OF_MULTILINE_HEADER  100
 
 int H2Connection::encodeHeaders(HttpRespHeaders *pRespHeaders,
@@ -1276,7 +1289,7 @@ int H2Connection::onWriteEx()
 //         if (getStream()->canWrite() & HIO_FLAG_BUFF_FULL)
 //             return 0;
 //     }
-    
+
 //     if (m_dqueStreamRespon.empty())
 //         return 0;
 

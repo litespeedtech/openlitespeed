@@ -17,6 +17,7 @@
 *****************************************************************************/
 #include "fcgireqlist.h"
 #include "fcgirequest.h"
+
 #include <util/gpointerlist.h>
 
 #include <assert.h>
@@ -27,17 +28,21 @@ class FcgiReqListData : public RequestList
 {
 };
 
+
 FcgiReqList::FcgiReqList()
     : m_iActiveReqs(0)
     , m_pData(NULL)
 {
     m_pData = new FcgiReqListData();
 }
+
+
 FcgiReqList::~FcgiReqList()
 {
     if (m_pData != NULL)
         delete m_pData;
 }
+
 
 int FcgiReqList::regist(FcgiRequest *pReq)
 {
@@ -59,6 +64,7 @@ int FcgiReqList::regist(FcgiRequest *pReq)
     return i + 1;
 }
 
+
 void FcgiReqList::unregist(FcgiRequest *pReq)
 {
     assert(pReq);
@@ -73,6 +79,7 @@ void FcgiReqList::unregist(FcgiRequest *pReq)
 
 }
 
+
 FcgiRequest *FcgiReqList::get(int iId)
 {
     if ((iId < 1) || (iId > (int)m_pData->size()))
@@ -81,10 +88,12 @@ FcgiRequest *FcgiReqList::get(int iId)
     return pRet;
 }
 
+
 FcgiRequest *FcgiReqList::first()
 {
     return next(0);
 }
+
 
 FcgiRequest *FcgiReqList::next(int id)
 {

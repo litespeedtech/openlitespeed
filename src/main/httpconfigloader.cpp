@@ -16,13 +16,15 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "httpconfigloader.h"
-#include "mainserverconfig.h"
-#include "util/configctx.h"
-#include "plainconf.h"
+
+#include <main/mainserverconfig.h>
+#include <main/plainconf.h>
+#include <util/xmlnode.h>
 
 HttpConfigLoader::~HttpConfigLoader()
 {
 }
+
 
 int HttpConfigLoader::loadConfigFile()
 {
@@ -35,6 +37,7 @@ int HttpConfigLoader::loadConfigFile()
 
     return (m_pRoot == NULL) ? -1 : 0;
 }
+
 
 void HttpConfigLoader::releaseConfigXmlTree()
 {

@@ -15,17 +15,14 @@
 *    You should have received a copy of the GNU General Public License       *
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
-#include <assert.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <string.h>
-
 #include <shm/lsshmpool.h>
+
 #include <shm/lsshmhash.h>
 #include <shm/lsshmlruhash.h>
-#include <shm/lsshm.h>
-#include <log4cxx/logger.h>
+
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
 
 
 #define MIN_POOL_DATAUNITSIZE   8
@@ -223,10 +220,10 @@ LsShmHash *LsShmPool::getNamedHash(const char *name,
 {
     LsShmHash *pObj;
     GHash::iterator itor;
-    
+
     if (name == NULL)
         name = LSSHM_SYSHASH;
-    
+
 #ifdef DEBUG_RUN
     SHM_NOTICE("LsShmPool::getNamedHash find %s <%p>",
                     name, &getObjBase());
@@ -236,7 +233,7 @@ LsShmHash *LsShmPool::getNamedHash(const char *name,
         && ((pObj = LsShmHash::checkHTable(itor, this, name, hf,
                                 vc)) != (LsShmHash *)-1))
         return pObj;
-   
+
     pObj = new LsShmHash(this, name, init_size, hf, vc);
     if (pObj != NULL)
     {
@@ -248,15 +245,15 @@ LsShmHash *LsShmPool::getNamedHash(const char *name,
 }
 
 
-LsShmHash *LsShmPool::getNamedLruHash(const char *name,
+LsShmLruHash *LsShmPool::getNamedLruHash(const char *name,
                           size_t init_size, hash_fn hf, val_comp vc)
 {
     LsShmLruHash *pObj;
     GHash::iterator itor;
-    
+
     if (name == NULL)
         name = LSSHM_SYSHASH;
-    
+
 #ifdef DEBUG_RUN
     SHM_NOTICE("LsShmPool::getNamedLruHash find %s <%p>",
                     name, &getObjBase());
@@ -266,7 +263,7 @@ LsShmHash *LsShmPool::getNamedLruHash(const char *name,
         && ((pObj = (LsShmLruHash *)LsShmHash::checkHTable(itor, this, name, hf,
                                 vc)) != (LsShmHash *)-1))
         return pObj;
-   
+
     pObj = new LsShmLruHash(this, name, init_size, hf, vc);
     if (pObj != NULL)
     {
@@ -278,15 +275,45 @@ LsShmHash *LsShmPool::getNamedLruHash(const char *name,
 }
 
 
-LsShmHash *LsShmPool::getNamedXLruHash(const char *name,
+LsShmWLruHash *LsShmPool::getNamedWLruHash(const char *name,
+                          size_t init_size, hash_fn hf, val_comp vc)
+{
+    LsShmWLruHash *pObj;
+    GHash::iterator itor;
+
+    if (name == NULL)
+        name = LSSHM_SYSHASH;
+
+#ifdef DEBUG_RUN
+    SHM_NOTICE("LsShmPool::getNamedWLruHash find %s <%p>",
+                    name, &getObjBase());
+#endif
+    itor = getObjBase().find(name);
+    if ((itor != NULL)
+        && ((pObj = (LsShmWLruHash *)LsShmHash::checkHTable(itor, this, name, hf,
+                                vc)) != (LsShmHash *)-1))
+        return pObj;
+
+    pObj = new LsShmWLruHash(this, name, init_size, hf, vc);
+    if (pObj != NULL)
+    {
+        if (pObj->getRef() != 0)
+            return pObj;
+        delete pObj;
+    }
+    return NULL;
+}
+
+
+LsShmXLruHash *LsShmPool::getNamedXLruHash(const char *name,
                           size_t init_size, hash_fn hf, val_comp vc)
 {
     LsShmXLruHash *pObj;
     GHash::iterator itor;
-    
+
     if (name == NULL)
         name = LSSHM_SYSHASH;
-    
+
 #ifdef DEBUG_RUN
     SHM_NOTICE("LsShmPool::getNamedXLruHash find %s <%p>",
                     name, &getObjBase());
@@ -296,7 +323,7 @@ LsShmHash *LsShmPool::getNamedXLruHash(const char *name,
         && ((pObj = (LsShmXLruHash *)LsShmHash::checkHTable(itor, this, name, hf,
                                 vc)) != (LsShmHash *)-1))
         return pObj;
-   
+
     pObj = new LsShmXLruHash(this, name, init_size, hf, vc);
     if (pObj != NULL)
     {
@@ -550,11 +577,16 @@ void LsShmPool::mapLock()
         if ((m_pShmLock = m_pShm->allocLock()) == NULL)
             m_status = LSSHM_ERROR;
         else
+        {
             m_pPool->x_iLockOffset = m_pShm->pLock2offset(m_pShmLock);
+            //FIX FOR BELOW BUG
+            setupLock();
+        }
     }
     else
         m_pShmLock = m_pShm->offset2pLock(m_pPool->x_iLockOffset);
-    setupLock();
+    //BUG: reset lock for existing lock, could be locked by another process.
+    //setupLock();
 }
 
 

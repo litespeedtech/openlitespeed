@@ -26,8 +26,6 @@
 
 #include <assert.h>
 
-class CacheElement;
-
 typedef HashStringMap<CacheElement *> CacheDataMap;
 typedef TPointerList<CacheElement> DirtyCacheList;
 

@@ -19,10 +19,7 @@
 #define HTTPRESPHEADERS_H
 
 #include <util/autobuf.h>
-#include <http/httpheader.h>
-#include <util/iovec.h>
-#include <http/httpstatusline.h>
-#include <http/httpreq.h>
+#include <util/objarray.h>
 #include <ls.h>
 
 // namespace RespHeader {
@@ -45,6 +42,8 @@ typedef struct
 
 
 struct http_header_t;
+struct iovec;
+class IOVec;
 
 class HttpRespHeaders
 {

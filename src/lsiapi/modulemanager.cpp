@@ -16,24 +16,30 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "modulemanager.h"
+
+#include <http/handlertype.h>
 #include <http/httplog.h>
-#include <log4cxx/logger.h>
-#include <lsiapi/lsiapi.h>
-#include <lsiapi/lsiapilib.h>
 #include <lsiapi/internal.h>
-#include <lsiapi/moduletimer.h>
-#include <dlfcn.h>
-#include <errno.h>
-#include <time.h>
-#include <util/xmlnode.h>
+#include <lsiapi/lsiapi.h>
 #include <lsiapi/lsiapihooks.h>
-#include <util/datetime.h>
+#include <lsiapi/lsiapilib.h>
+#include <lsiapi/moduletimer.h>
 #include <main/mainserverconfig.h>
-#include <main/plainconf.h>
+#include <util/xmlnode.h>
+
+#include <dlfcn.h>
 
 #define INITIAL_MODULE_COUNT   10
 
 ModuleConfig ModuleManager::g_moduleConfig;
+
+
+LsiModule::LsiModule(lsi_module_t *pModule)
+{
+    setHandlerType(HandlerType::HT_MODULE);
+    m_pModule = pModule;
+}
+
 
 int ModuleManager::initModule()
 {
@@ -44,6 +50,7 @@ int ModuleManager::initModule()
     clear();
     return 0;
 }
+
 
 int ModuleManager::getModulePath(const char *name, char *path, int max_len)
 {
@@ -57,6 +64,7 @@ int ModuleManager::getModulePath(const char *name, char *path, int max_len)
     }
     return n;
 }
+
 
 // int ModuleManager::testModuleCount(const XmlNodeList *pList)
 // {
@@ -84,6 +92,7 @@ int ModuleManager::getModulePath(const char *name, char *path, int max_len)
 //     return count;
 // }
 
+
 int ModuleManager::storeModulePointer(int index, lsi_module_t *pModule)
 {
     static int module_count = INITIAL_MODULE_COUNT;
@@ -97,6 +106,7 @@ int ModuleManager::storeModulePointer(int index, lsi_module_t *pModule)
     return 0;
 }
 
+
 ModuleManager::iterator ModuleManager::addModule(const char *name,
         const char *pType, lsi_module_t *pModule)
 {
@@ -106,6 +116,7 @@ ModuleManager::iterator ModuleManager::addModule(const char *name,
     MODULE_ID(pModule) = getModuleCount();
     memset(MODULE_DATA_ID(pModule), 0xFF,
            sizeof(short) * LSI_MODULE_DATA_COUNT); //value is -1 now.
+    MODULE_HOOKINDEX(pModule) = new ModIndex();
     //m_gModuleArray[pModule->_id] = pModule;
     storeModulePointer(MODULE_ID(pModule), pModule);
 
@@ -118,6 +129,7 @@ ModuleManager::iterator ModuleManager::addModule(const char *name,
                (int16_t)pModule->_signature));
     return iter;
 }
+
 
 //extern lsi_module_t * getPrelinkedModule( const char * pModule );
 extern int getPrelinkedModuleCount();
@@ -145,6 +157,7 @@ int ModuleManager::loadPrelinkedModules()
     }
     return count;
 }
+
 
 lsi_module_t *ModuleManager::loadModule(const char *name)
 {
@@ -186,6 +199,7 @@ lsi_module_t *ModuleManager::loadModule(const char *name)
     return NULL;
 }
 
+
 void ModuleManager::disableModule(lsi_module_t *pModule)
 {
     int i;
@@ -195,6 +209,7 @@ void ModuleManager::disableModule(lsi_module_t *pModule)
         ((LsiApiHooks *)(LsiApiHooks::getGlobalApiHooks(i)))->remove(pModule);
 
 }
+
 
 static void checkModuleDef(lsi_module_t *pModule)
 {
@@ -335,6 +350,7 @@ int ModuleManager::runModuleInit()
     return 0;
 }
 
+
 int ModuleManager::loadModules(const XmlNodeList *pModuleNodeList)
 {
     m_pModuleArray = (ModulePointer *)malloc(INITIAL_MODULE_COUNT * sizeof(
@@ -362,6 +378,7 @@ int ModuleManager::loadModules(const XmlNodeList *pModuleNodeList)
     return count;
 }
 
+
 int ModuleManager::unloadModules()
 {
     LsiModule *pLmHttpHandler;
@@ -378,6 +395,7 @@ int ModuleManager::unloadModules()
     return 0;
 }
 
+
 short ModuleManager::getModuleDataCount(unsigned int level)
 {
     if (level < LSI_MODULE_DATA_COUNT)
@@ -386,26 +404,31 @@ short ModuleManager::getModuleDataCount(unsigned int level)
         return LS_FAIL;//Error, should not access this value
 }
 
+
 void ModuleManager::incModuleDataCount(unsigned int level)
 {
     if (level < LSI_MODULE_DATA_COUNT)
         ++ m_aModuleDataCount[level];
 }
 
+
 void ModuleManager::updateDebugLevel()
 {
     LsiapiBridge::getLsiapiFunctions()->_debugLevel = HttpLog::getDebugLevel();
 }
+
 
 void ModuleManager::OnTimer10sec()
 {
     LsiapiBridge::checkExpiredGData();
 }
 
+
 void ModuleManager::OnTimer100msec()
 {
     ModTimerList::getInstance().checkExpired();
 }
+
 
 void ModuleManager::applyConfigToIolinkRt(IolinkSessionHooks
         *pSessionHooks, ModuleConfig *moduleConfig)
@@ -417,6 +440,7 @@ void ModuleManager::applyConfigToIolinkRt(IolinkSessionHooks
             pSessionHooks->setModuleEnable(m_pModuleArray[module_id], 0);
     }
 }
+
 
 void ModuleManager::applyConfigToServerRt(ServerSessionHooks
         *pSessionHooks, ModuleConfig *moduleConfig)
@@ -441,12 +465,14 @@ void ModuleManager::applyConfigToHttpRt(HttpSessionHooks *pSessionHooks,
     }
 }
 
+
 void ModuleManager::updateHttpApiHook(HttpSessionHooks *pRtHooks,
                                       ModuleConfig *moduleConfig, int module_id)
 {
     if (!moduleConfig->getFilterEnable(module_id))
         pRtHooks->setModuleEnable(m_pModuleArray[module_id], 0);
 }
+
 
 void ModuleConfig::init(int count)
 {
@@ -458,6 +484,7 @@ void ModuleConfig::init(int count)
         LsiModuleData::set(i, (void *) pConfig);
     }
 }
+
 
 ModuleConfig::~ModuleConfig()
 {
@@ -473,15 +500,18 @@ ModuleConfig::~ModuleConfig()
     }
 }
 
+
 void ModuleConfig::setFilterEnable(short _module_id, int v)
 {
     ModuleConfig::setFilterEnable(get(_module_id), v);
 }
 
+
 int ModuleConfig::getFilterEnable(short _module_id)
 {
     return ModuleConfig::getFilterEnable(get(_module_id));
 }
+
 
 int ModuleConfig::compare(lsi_module_config_t *config1,
                           lsi_module_config_t *config2)
@@ -492,6 +522,7 @@ int ModuleConfig::compare(lsi_module_config_t *config1,
     else
         return 1;
 }
+
 
 void ModuleConfig::inherit(const ModuleConfig *parentConfig)
 {
@@ -504,6 +535,7 @@ void ModuleConfig::inherit(const ModuleConfig *parentConfig)
     }
 }
 
+
 //Return 0, no match. 1, match root
 int ModuleConfig::isMatchGlobal()
 {
@@ -514,6 +546,7 @@ int ModuleConfig::isMatchGlobal()
     }
     return 1;
 }
+
 
 int ModuleConfig::parsePriority(const XmlNode *pModuleNode, int *priority)
 {
@@ -530,6 +563,7 @@ int ModuleConfig::parsePriority(const XmlNode *pModuleNode, int *priority)
     }
     return 0;
 }
+
 
 int ModuleConfig::saveConfig(const XmlNode *pNode, lsi_module_t *pModule,
                              lsi_module_config_t *module_config)
@@ -567,6 +601,7 @@ int ModuleConfig::saveConfig(const XmlNode *pNode, lsi_module_t *pModule,
     return 0;
 }
 
+
 // int ModuleConfig::parseOutsideModuleParam(const XmlNode *pNode)
 // {
 //     XmlNodeList::const_iterator iter;
@@ -586,6 +621,7 @@ int ModuleConfig::saveConfig(const XmlNode *pNode, lsi_module_t *pModule,
 //         pRootContext->setModuleConfig(pConfig, 1);
 //
 // }
+
 
 int ModuleConfig::parseConfig(const XmlNode *pNode, lsi_module_t *pModule,
                               ModuleConfig *pModuleConfig, int level, const char *name)
@@ -627,6 +663,7 @@ int ModuleConfig::parseConfig(const XmlNode *pNode, lsi_module_t *pModule,
     config->sparam = NULL;
     return 0;
 }
+
 
 int ModuleConfig::parseConfigList(const XmlNodeList *moduleConfigNodeList,
                                   ModuleConfig *pModuleConfig, int level, const char *name)

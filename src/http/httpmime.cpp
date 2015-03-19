@@ -16,15 +16,17 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "httpmime.h"
-#include <http/httplog.h>
-#include <http/httphandler.h>
+
 #include <http/handlerfactory.h>
-#include <util/gpointerlist.h>
+#include <http/httphandler.h>
+#include <http/httplog.h>
+#include <main/configctx.h>
+#include <util/autostr.h>
 #include <util/hashstringmap.h>
 #include <util/stringlist.h>
 #include <util/stringtool.h>
 #include <util/xmlnode.h>
-#include "util/configctx.h"
+
 #include <assert.h>
 #include <ctype.h>
 #include <errno.h>
@@ -46,6 +48,7 @@ static StringList *getMIMEList()
         s_pMIMEList = new StringList();
     return s_pMIMEList;
 }
+
 
 void HttpMime::releaseMIMEList()
 {
@@ -70,6 +73,7 @@ static AutoStr2 *getMIME(const char *pMIME)
     return pStr;
 }
 
+
 //static MIMESettingList * s_pOldSettings = NULL;
 //static MIMESettingList* getOldSettings()
 //{
@@ -80,11 +84,13 @@ static AutoStr2 *getMIME(const char *pMIME)
 //    return s_pOldSettings;
 //}
 
+
 static const char SEPARATORS[] =
 {
     '(', ')', '<', '>', '@', ',', ';', ':', '\\', '"', '/', '[', ']', '?', '=',
     '{', '}', ' ', '\t'
 };
+
 
 static bool isValidToken(const char *pToken, int len)
 {
@@ -101,6 +107,7 @@ static bool isValidToken(const char *pToken, int len)
 
 }
 
+
 static bool isValidType(const char *pType)
 {
     int len = strlen(pType) ;
@@ -108,6 +115,7 @@ static bool isValidType(const char *pType)
         return false;
     return isValidToken(pType, len);
 }
+
 
 int HttpMime::isValidMimeType(const char *pDescr)
 {
@@ -134,10 +142,12 @@ int HttpMime::isValidMimeType(const char *pDescr)
     return 1;
 }
 
+
 MIMESetting::MIMESetting()
     : m_psMIME(NULL)
     , m_pHandler(HandlerFactory::getInstance(0, NULL))
 {}
+
 
 MIMESetting::MIMESetting(const MIMESetting &rhs)
     : m_psMIME(rhs.m_psMIME)
@@ -151,10 +161,12 @@ MIMESetting::~MIMESetting()
 {
 }
 
+
 void MIMESetting::setHandler(const HttpHandler *pHdlr)
 {
     m_pHandler = pHdlr;
 }
+
 
 void MIMESetting::inherit(const MIMESetting *pParent, int updateOnly)
 {
@@ -166,7 +178,6 @@ void MIMESetting::inherit(const MIMESetting *pParent, int updateOnly)
     if (!m_expires.cfgExpires())
         m_expires.copyExpires(pParent->m_expires);
 }
-
 
 
 class MIMESubMap : public HashStringMap<MIMESetting *>
@@ -192,6 +203,7 @@ public:
 
 };
 
+
 MIMESubMap::MIMESubMap(const MIMESubMap &rhs)
     : HashStringMap<MIMESetting * >(10), m_sMainType(rhs.m_sMainType)
 {
@@ -204,6 +216,7 @@ MIMESubMap::MIMESubMap(const MIMESubMap &rhs)
     }
 
 }
+
 
 int MIMESubMap::inherit(iterator iter, int existedOnly)
 {
@@ -224,6 +237,7 @@ int MIMESubMap::inherit(iterator iter, int existedOnly)
     return 0;
 }
 
+
 int MIMESubMap::inherit(const MIMESubMap *pParent, int existedOnly)
 {
     iterator iter;
@@ -240,6 +254,7 @@ const char *MIMESubMap::setMainType(const char *pType, int len)
     m_sMainType.setStr(pType, len);
     return m_sMainType.c_str();
 }
+
 
 void MIMESubMap::updateMIME(FnUpdate fpUpdate, void *pValue)
 {
@@ -294,6 +309,7 @@ public:
     int inherit(iterator iter, int existedOnly);
 };
 
+
 MIMEMap::MIMEMap(const MIMEMap &rhs)
     : HashStringMap<MIMESubMap * >(10)
 {
@@ -325,6 +341,7 @@ int MIMEMap::inherit(iterator iter, int existedOnly)
         iter2.second()->inherit(iter.second(), existedOnly);
     return 0;
 }
+
 
 int MIMEMap::inherit(const MIMEMap *pParent, int existedOnly,
                      char *pFilter)
@@ -387,6 +404,7 @@ MIMEMap::iterator MIMEMap::findSubMap(const char *pMIME, char *&p) const
     return iter;
 }
 
+
 MIMESubMap *MIMEMap::addSubMap(char *pMIME, int len)
 {
     MIMESubMap *pMap = new MIMESubMap();
@@ -396,6 +414,7 @@ MIMESubMap *MIMEMap::addSubMap(char *pMIME, int len)
     insert(pKey, pMap);
     return pMap;
 }
+
 
 MIMESetting *MIMEMap::addMIME(char *pMIME)
 {
@@ -420,6 +439,7 @@ MIMESetting *MIMEMap::addMIME(char *pMIME)
         return iterSub.second();
 
 }
+
 
 MIMESetting *MIMEMap::findMIME(char *pMIME) const
 {
@@ -449,6 +469,7 @@ MIMESetting *MIMEMap::findMIME(char *pMIME) const
 
 }
 
+
 void MIMEMap::removeMIME(MIMESetting *pMIME)
 {
     char *p;
@@ -457,6 +478,7 @@ void MIMEMap::removeMIME(MIMESetting *pMIME)
         return;
     iter.second()->remove(p + 1);
 }
+
 
 int MIMEMap::updateMIME(char *pMIME, FnUpdate fnUpdate, void *pValue)
 {
@@ -493,6 +515,7 @@ int MIMEMap::updateMIME(char *pMIME, FnUpdate fnUpdate, void *pValue)
     return 0;
 }
 
+
 class MIMESuffix
 {
     MIMESuffix(const MIMESuffix &rhs);
@@ -513,10 +536,12 @@ private:
 
 };
 
+
 MIMESuffix::MIMESuffix(const char *pSuffix, MIMESetting *pSetting)
     : m_sSuffix(pSuffix)
     , m_pSetting(pSetting)
 {}
+
 
 class MIMESuffixMap : public HashStringMap<MIMESuffix *>
 {
@@ -534,6 +559,7 @@ public:
                                  int update = 1);
 
 };
+
 
 MIMESuffix *MIMESuffixMap::addUpdateMapping(
     const char *pSuffix, MIMESetting *pSetting, int update)
@@ -565,6 +591,7 @@ HttpMime::HttpMime()
 
 }
 
+
 HttpMime::HttpMime(const HttpMime &rhs)
 {
     m_pMIMEMap = new MIMEMap(*rhs.m_pMIMEMap);
@@ -576,6 +603,7 @@ HttpMime::HttpMime(const HttpMime &rhs)
     m_pSuffixMap = new MIMESuffixMap();
     inheritSuffix(&rhs);
 }
+
 
 int HttpMime::inheritSuffix(const HttpMime *pParent)
 {
@@ -592,6 +620,7 @@ int HttpMime::inheritSuffix(const HttpMime *pParent)
     return 0;
 }
 
+
 int HttpMime::updateMIME(char *pMIME, FnUpdate fn, void *pValue,
                          const HttpMime *pParent)
 {
@@ -599,7 +628,6 @@ int HttpMime::updateMIME(char *pMIME, FnUpdate fn, void *pValue,
         m_pMIMEMap->inherit(pParent->m_pMIMEMap, 0, pMIME);
     return m_pMIMEMap->updateMIME(pMIME, fn, pValue);
 }
-
 
 
 MIMESetting *HttpMime::initDefault(char *pMIME)
@@ -616,6 +644,7 @@ MIMESetting *HttpMime::initDefault(char *pMIME)
     }
     return m_pDefault;
 }
+
 
 const MIMESetting *HttpMime::getMIMESetting(char *pMime) const
 {
@@ -652,6 +681,7 @@ const MIMESetting *HttpMime::getFileMime(const char *pPath, int len) const
     return getFileMimeByType(p);
 }
 
+
 const MIMESetting *HttpMime::getFileMime(const char *pPath) const
 {
     const char *pSuffix = strrchr(pPath, '.');
@@ -662,6 +692,7 @@ const MIMESetting *HttpMime::getFileMime(const char *pPath) const
     }
     return NULL;
 }
+
 
 const MIMESetting *HttpMime::getFileMimeByType(const char *pType) const
 {
@@ -674,6 +705,7 @@ const MIMESetting *HttpMime::getFileMimeByType(const char *pType) const
     return NULL;
 }
 
+
 char HttpMime::compressable(const char *pMIME) const
 {
     const MIMESetting *pSetting = m_pMIMEMap->findMIME((char *)pMIME);
@@ -685,6 +717,7 @@ char HttpMime::compressable(const char *pMIME) const
     else
         return pSetting->getExpires()->compressable();
 }
+
 
 int HttpMime::inherit(HttpMime *pParent, int existedOnly)
 {
@@ -732,6 +765,7 @@ int HttpMime::loadMime(const char *pPropertyPath)
     fclose(fpMime);
     return 0;
 }
+
 
 int HttpMime::addUpdateMIME(char *pType, char *pDesc, const char *&reason,
                             int update)
@@ -796,6 +830,7 @@ int HttpMime::addUpdateMIME(char *pType, char *pDesc, const char *&reason,
     }
 }
 
+
 int HttpMime::processOneLine(const char *pFilePath, char *pLine,
                              int lineNo)
 {
@@ -830,11 +865,13 @@ int HttpMime::processOneLine(const char *pFilePath, char *pLine,
     return LS_FAIL;
 }
 
+
 void HttpMime::setCompressable(MIMESetting *pSetting, void *pValue)
 {
     pSetting->getExpires()->setCompressable((long)pValue);
     pSetting->getExpires()->setBit(CONFIG_COMPRESS);
 }
+
 
 int HttpMime::setCompressableByType(const char *pValue,
                                     const HttpMime *pParent,
@@ -875,6 +912,7 @@ void HttpMime::setExpire(MIMESetting *pSetting, void *pValue)
     pSetting->getExpires()->parse((const char *)pValue);
 }
 
+
 int HttpMime::setExpiresByType(const char *pValue, const HttpMime *pParent,
                                const char *pLogId)
 {
@@ -907,6 +945,7 @@ int HttpMime::setExpiresByType(const char *pValue, const HttpMime *pParent,
     }
     return 0;
 }
+
 
 int HttpMime::addType(const HttpMime *pDefault, const char *pValue,
                       const char *pLogId)
@@ -941,10 +980,12 @@ int HttpMime::addType(const HttpMime *pDefault, const char *pValue,
     return 0;
 }
 
+
 void HttpMime::setHandler(MIMESetting *pSetting, void *pValue)
 {
     pSetting->setHandler((HttpHandler *)pValue);
 }
+
 
 int HttpMime::needCharset(const char *pMIME)
 {
@@ -956,6 +997,7 @@ int HttpMime::needCharset(const char *pMIME)
     return 1;
 }
 
+
 int HttpMime::shouldKeepAlive(const char *pMIME)
 {
     if (strncmp(pMIME, "image/", 6) == 0)
@@ -966,6 +1008,7 @@ int HttpMime::shouldKeepAlive(const char *pMIME)
         return 1;
     return 0;
 }
+
 
 int HttpMime::addMimeHandler(const char *pSuffix, char *pMime,
                              const HttpHandler *pHdlr,
@@ -1000,6 +1043,7 @@ int HttpMime::addMimeHandler(const char *pSuffix, char *pMime,
     updateMIME(pMime, HttpMime::setHandler, (void *)pHdlr, pParent);
     return 0;
 }
+
 
 int HttpMime::configScriptHandler(const XmlNodeList *pList,
                                   HttpMime *pHttpMime)
@@ -1058,6 +1102,8 @@ int HttpMime::configScriptHandler(const XmlNodeList *pList,
 
     return 0;
 }
+
+
 void HttpMime::addMimeHandler(const HttpHandler *pHdlr, char *pMime,
                               HttpMime *pHttpMime,
                               const char *pSuffix)

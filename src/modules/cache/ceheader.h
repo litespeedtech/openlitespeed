@@ -20,7 +20,6 @@
 
 
 #include <inttypes.h>
-#include <http/platforms.h>
 
 #define CE_ID "LSCH"
 

@@ -16,17 +16,17 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include <http/pipeappender.h>
+
 #include <edio/multiplexer.h>
 #include <edio/multiplexerfactory.h>
+#include <http/httplog.h>
+#include <lsr/ls_fileio.h>
+#include <util/iovec.h>
+
 #include <extensions/fcgi/fcgiapp.h>
 #include <extensions/fcgi/fcgiappconfig.h>
 #include <extensions/localworker.h>
 #include <extensions/registry/extappregistry.h>
-#include <http/httplog.h>
-#include <log4cxx/layout.h>
-#include <log4cxx/loggingevent.h>
-#include <util/iovec.h>
-
 #include <errno.h>
 #include <fcntl.h>
 #include <signal.h>
@@ -36,8 +36,6 @@
 #include <sys/socket.h>
 #include <time.h>
 #include <unistd.h>
-#include <util/gfactory.h>
-#include <lsr/ls_fileio.h>
 
 
 using namespace LOG4CXX_NS;

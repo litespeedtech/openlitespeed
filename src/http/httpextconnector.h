@@ -30,7 +30,6 @@
 class HttpSession;
 class HttpExtProcessor;
 class ExtWorker;
-class ExtRequest;
 class GzipBuf;
 class VMemBuf;
 

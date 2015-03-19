@@ -17,6 +17,7 @@
 *****************************************************************************/
 #ifndef SSLENGINE_H
 #define SSLENGINE_H
+
 #include <lsdef.h>
 
 
@@ -27,7 +28,7 @@ public:
     ~SSLEngine();
     static int init(const char *pID);
     static void shutdown();
-    
+
     LS_NO_COPY_ASSIGN(SSLEngine);
 };
 

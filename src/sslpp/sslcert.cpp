@@ -25,16 +25,20 @@ SSLCert::SSLCert()
     , m_pIssuer(NULL)
 {
 }
+
+
 SSLCert::SSLCert(X509 *pCert)
     : m_cert(pCert)
     , m_pSubjectName(NULL)
     , m_pIssuer(NULL)
 {}
 
+
 SSLCert::~SSLCert()
 {
     release();
 }
+
 
 void SSLCert::release()
 {
@@ -58,11 +62,13 @@ void SSLCert::release()
     }
 }
 
+
 void SSLCert::operator=(X509 *pCert)
 {
     release();
     m_cert = pCert;
 }
+
 
 const char *SSLCert::getSubjectName()
 {
@@ -75,6 +81,7 @@ const char *SSLCert::getSubjectName()
     return m_pSubjectName;
 }
 
+
 const char *SSLCert::getIssuer()
 {
     if (!m_pIssuer)
@@ -85,6 +92,7 @@ const char *SSLCert::getIssuer()
     }
     return m_pIssuer;
 }
+
 
 int SSLCert::PEMWriteCert(X509 *pCert, char *pBuf, int len)
 {

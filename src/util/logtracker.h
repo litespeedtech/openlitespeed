@@ -21,10 +21,14 @@
 
 
 #include <lsdef.h>
-#include <log4cxx/ilog.h>
+#include <log4cxx/nsdefs.h>
 #include <util/autostr.h>
 
 #define MAX_LOGID_LEN   127
+
+BEGIN_LOG4CXX_NS
+class Logger;
+END_LOG4CXX_NS
 
 class LogTracker
 {

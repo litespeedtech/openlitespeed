@@ -18,7 +18,7 @@
 #ifndef DUMMYIOSTREAM_H
 #define DUMMYIOSTREAM_H
 #include "spdy/spdyconnection.h"
-#include "http/hiostream.h"
+#include <http/hiostream.h>
 #include <util/loopbuf.h>
 
 class DummySpdyConnStream: public HioStream

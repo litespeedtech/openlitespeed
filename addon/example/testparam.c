@@ -16,9 +16,9 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #define _GNU_SOURCE
-#include "../include/ls.h"
-#include "lsr/ls_strtool.h"
-#include "lsr/ls_confparser.h"
+#include <ls.h>
+#include <lsr/ls_strtool.h>
+#include <lsr/ls_confparser.h>
 #include <string.h>
 #include <stdlib.h>
 #include <memory.h>

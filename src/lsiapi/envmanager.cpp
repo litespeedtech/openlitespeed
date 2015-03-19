@@ -16,6 +16,8 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "envmanager.h"
+#include <lsiapi/internal.h>
+
 #include <unistd.h>
 #include <fnmatch.h>
 
@@ -24,11 +26,13 @@ EnvManager::EnvManager()
 
 }
 
+
 EnvManager::~EnvManager()
 {
     m_envHashT.releaseObjects();
     m_envList.releaseObjects();
 }
+
 
 int EnvManager::regEnvHandler(const char *name, unsigned int len,
                               lsi_callback_pf cb)
@@ -44,10 +48,12 @@ int EnvManager::regEnvHandler(const char *name, unsigned int len,
     return 0;
 }
 
+
 int EnvManager::delEnvHandler(const char *name, unsigned int len)
 {
     return 0;
 }
+
 
 lsi_callback_pf EnvManager::findHandler(const char *name)
 {
@@ -69,6 +75,7 @@ lsi_callback_pf EnvManager::findHandler(const char *name)
 
     return NULL;
 }
+
 
 int EnvManager::execEnvHandler(LsiSession *session, lsi_callback_pf cb,
                                void *val, long valLen)

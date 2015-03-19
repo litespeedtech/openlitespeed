@@ -19,7 +19,7 @@
 
 #include <http/denieddir.h>
 #include <http/httpdefs.h>
-#include "httplog.h"
+#include <http/httplog.h>
 #include <stdio.h>
 #include <sys/stat.h>
 
@@ -36,7 +36,6 @@ HttpServerConfig::HttpServerConfig()
     , m_iGzipCompress(0)
     , m_iDynGzipCompress(0)
     , m_iCompressLevel(4)
-    , m_iUseAio(0)
     , m_iMaxFcgiInstances(2000)
     , m_iMaxTempFileSize(10240)
     , m_iConnTimeout(300)
@@ -57,6 +56,7 @@ HttpServerConfig::HttpServerConfig()
     m_pDeniedDir = new DeniedDir();
 }
 
+
 HttpServerConfig::~HttpServerConfig()
 {
     delete m_pDeniedDir;
@@ -75,11 +75,13 @@ void HttpServerConfig::setMaxURLLen(int len)
         m_iMaxURLLen = len + 20;
 }
 
+
 void HttpServerConfig::setMaxHeaderBufLen(int len)
 {
     if ((len >= 1024) && (len <= MAX_REQ_HEADER_BUF_LEN))
         m_iMaxHeaderBufLen = len ;
 }
+
 
 void HttpServerConfig::setMaxReqBodyLen(int64_t len)
 {
@@ -87,11 +89,13 @@ void HttpServerConfig::setMaxReqBodyLen(int64_t len)
         m_iMaxReqBodyLen = len ;
 }
 
+
 void HttpServerConfig::setMaxDynRespLen(int64_t len)
 {
     if ((len >= 4096) && (len <= MAX_DYN_RESP_LEN))
         m_iMaxDynRespLen = len ;
 }
+
 
 void HttpServerConfig::setMaxDynRespHeaderLen(int len)
 {

@@ -19,6 +19,7 @@
 #include <ls.h>
 #include <lsr/ls_loopbuf.h>
 #include <lsr/ls_objpool.h>
+#include <lsr/ls_xpool.h>
 #include <stdlib.h>
 #include <string.h>
 #include <zlib.h>
@@ -67,6 +68,7 @@ static void ls_zpool_manage(void *)
     ls_objpool_shrinkto(&zpoolinflate, 10);
 }
 
+
 static void *ls_zbufinfo_new()
 {
     zbufinfo_t *pNew = (zbufinfo_t*)malloc(sizeof(zbufinfo_t));
@@ -84,6 +86,7 @@ static void *ls_zbufinfo_new()
     return pNew;
 }
 
+
 static void ls_zbufinfo_release(void *pObj)
 {
     zbufinfo_t *pBuf = (zbufinfo_t *)pObj;
@@ -96,6 +99,7 @@ static void ls_zbufinfo_release(void *pObj)
             deflateEnd(&pBuf->zstream);
     }
 }
+
 
 static void ls_zbufinfo_recycle(zbufinfo_t *pBuf)
 {
@@ -113,6 +117,7 @@ static void ls_zbufinfo_recycle(zbufinfo_t *pBuf)
     }
 }
 
+
 static zbufinfo_t *ls_zbufinfo_get(lsi_session_t *session,
                                    lsi_module_t *pModule,
                                    uint8_t compresslevel)
@@ -128,6 +133,7 @@ static zbufinfo_t *ls_zbufinfo_get(lsi_session_t *session,
     return pBuf;
 }
 
+
 static int ls_zmoddata_release(void *data)
 {
     zmoddata_t *myData = (zmoddata_t*)data;
@@ -140,6 +146,7 @@ static int ls_zmoddata_release(void *data)
     }
     return LS_OK;
 }
+
 
 static int initstream(z_stream *pStream, uint8_t compresslevel)
 {
@@ -158,6 +165,7 @@ static int initstream(z_stream *pStream, uint8_t compresslevel)
     }
     return LS_OK;
 }
+
 
 int flushloopbuf(lsi_cb_param_t *rec, int iState, ls_loopbuf_t *pBuf)
 {
@@ -186,6 +194,7 @@ int flushloopbuf(lsi_cb_param_t *rec, int iState, ls_loopbuf_t *pBuf)
 
     return written;
 }
+
 
 static int compressbuf(lsi_cb_param_t *rec, lsi_module_t *pModule, int isSend)
 {
@@ -220,8 +229,9 @@ static int compressbuf(lsi_cb_param_t *rec, lsi_module_t *pModule, int isSend)
             g_api->log(rec->_session, LSI_LOG_ERROR,
                        "[%s%s] initZstream init method [%s], failed.\n",
                        pModuleStr, pCompressStr, pZipStr);
-            g_api->set_session_hook_enable_flag(rec->_session,
-                    LSI_HKPT_RECV_RESP_BODY, pModule, 0); //disable
+            ret = LSI_HKPT_RECV_RESP_BODY;
+            g_api->set_session_hook_enable_flag(rec->_session, pModule, 0,
+                                                &ret, 1); // Disable
             return g_api->stream_write_next(rec, (const char *)rec->_param,
                                             rec->_param_len);
         }
@@ -310,8 +320,7 @@ static int compressbuf(lsi_cb_param_t *rec, lsi_module_t *pModule, int isSend)
             if (ret != Z_BUF_ERROR)
                 return LSI_HK_RET_ERROR;
         }
-    }
-    while (pBufInfo->zstate != Z_END && pStream->avail_out == 0);
+    } while (pBufInfo->zstate != Z_END && pStream->avail_out == 0);
 
     if (!(ls_loopbuf_empty(pBuf)) || (pBufInfo->zstate != Z_END
                                       && pStream->avail_out == 0))
@@ -328,14 +337,18 @@ static int compressbuf(lsi_cb_param_t *rec, lsi_module_t *pModule, int isSend)
     return consumed;
 }
 
+
 static int sendinghook(lsi_cb_param_t *rec)
 {
     return compressbuf(rec, (lsi_module_t *)g_api->get_module(rec), 1);
 }
+
+
 static int recvinghook(lsi_cb_param_t *rec)
 {
     return compressbuf(rec, (lsi_module_t *)g_api->get_module(rec), 0);
 }
+
 
 static int clearrecv(lsi_cb_param_t *rec)
 {
@@ -356,12 +369,14 @@ static int clearrecv(lsi_cb_param_t *rec)
     return LSI_HK_RET_OK;
 }
 
+
 static int cleardata(lsi_cb_param_t *rec)
 {
     g_api->free_module_data(rec->_session, g_api->get_module(rec),
                             LSI_MODULE_DATA_HTTP, ls_zmoddata_release);
     return LSI_HK_RET_OK;
 }
+
 
 static int init(lsi_module_t *pModule)
 {
@@ -374,6 +389,7 @@ static int init(lsi_module_t *pModule)
     return g_api->init_module_data(pModule, ls_zmoddata_release,
                                    LSI_MODULE_DATA_HTTP);
 }
+
 
 static lsi_serverhook_t compresshooks[] =
 {
@@ -403,10 +419,11 @@ lsi_module_t modcompress = { LSI_MODULE_SIGNATURE, init, NULL, NULL,
 lsi_module_t moddecompress = { LSI_MODULE_SIGNATURE, init, NULL, NULL,
                                MODULE_VERSION, decompresshooks, {0} };
 
+
 static int enablehook(lsi_session_t *session, lsi_module_t *pModule,
                       int isSend, uint8_t compresslevel)
 {
-    int ret;
+    int ret, aEnableHkpt[5], iEnableCount = 0;
     zmoddata_t *myData = (zmoddata_t *)g_api->get_module_data(session,
                                     pModule, LSI_MODULE_DATA_HTTP);
     ls_xpool_t *pPool = g_api->get_session_pool(session);
@@ -431,8 +448,7 @@ static int enablehook(lsi_session_t *session, lsi_module_t *pModule,
           || ((myData->send = ls_zbufinfo_get(session, pModule,
                                               compresslevel)) != NULL))
         {
-            ret = g_api->set_session_hook_enable_flag(session,
-                        LSI_HKPT_SEND_RESP_BODY, pModule, 1);
+            aEnableHkpt[iEnableCount++] = LSI_HKPT_SEND_RESP_BODY;
         }
     }
     else
@@ -441,25 +457,20 @@ static int enablehook(lsi_session_t *session, lsi_module_t *pModule,
           || ((myData->recv = ls_zbufinfo_get(session, pModule,
                                               compresslevel)) != NULL))
         {
-            ret = g_api->set_session_hook_enable_flag(session,
-                        LSI_HKPT_RECV_RESP_BODY, pModule, 1);
-            if ( ret == LS_OK)
-            {
-                ret = g_api->set_session_hook_enable_flag(session,
-                            LSI_HKPT_RCVD_RESP_BODY, pModule, 1);
-            }
+            aEnableHkpt[iEnableCount++] = LSI_HKPT_RECV_RESP_BODY;
+            aEnableHkpt[iEnableCount++] = LSI_HKPT_RCVD_RESP_BODY;
         }
     }
 
+    aEnableHkpt[iEnableCount++] = LSI_HKPT_HTTP_END;
+    aEnableHkpt[iEnableCount++] = LSI_HKPT_HANDLER_RESTART;
+    ret = g_api->set_session_hook_enable_flag(session, pModule, 1, aEnableHkpt,
+                                              iEnableCount );
     if (ret == LS_OK)
     {
         g_api->set_module_data(session, pModule, LSI_MODULE_DATA_HTTP,
-                               (void *)myData);
-        g_api->set_session_hook_enable_flag(session, LSI_HKPT_HTTP_END,
-                                            pModule, 1);
-        g_api->set_session_hook_enable_flag(session, LSI_HKPT_HANDLER_RESTART,
-                                            pModule, 1);
-        return LS_OK;
+                                (void *)myData);
+        return ret;
     }
     if (myData->recv != NULL)
     {

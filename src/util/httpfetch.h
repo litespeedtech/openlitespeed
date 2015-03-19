@@ -19,11 +19,12 @@
 #define HTTPFETCH_H
 
 #include <lsdef.h>
-#include "httpfetchdriver.h"
 #include <log4cxx/logger.h>
 #include <stddef.h>
 
 class GSockAddr;
+class HttpFetch;
+class HttpFetchDriver;
 using namespace LOG4CXX_NS;
 
 typedef int (*HFProcessFn)(void *, HttpFetch *);

@@ -18,16 +18,16 @@
 #ifndef EXTWORKER_H
 #define EXTWORKER_H
 
+#include "extworkerconfig.h"
 
+#include <lsdef.h>
+#include <http/httphandler.h>
+#include <http/reqstats.h>
+#include <util/connpool.h>
+#include <util/dlinkqueue.h>
 
 #include <sys/types.h>
 
-#include <lsdef.h>
-#include <extensions/extworkerconfig.h>
-#include <http/reqstats.h>
-#include <http/httphandler.h>
-#include <util/dlinkqueue.h>
-#include <util/connpool.h>
 
 #define EXTAPP_RESPONDER    1
 #define EXTAPP_AUTHORIZER   2

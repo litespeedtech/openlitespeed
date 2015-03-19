@@ -19,6 +19,7 @@
 #define LS_LFQUEUE_H
 
 #include <lsr/ls_node.h>
+#include <sys/time.h>
 
 
 /**
@@ -195,6 +196,18 @@ int ls_lfqueue_putn(ls_lfqueue_t *pThis, ls_lfnodei_t *data1,
  * @return a pointer to the node on success, else NULL on error.
  */
 ls_lfnodei_t *ls_lfqueue_get(ls_lfqueue_t *pThis);
+
+/**
+ * @ls_lfqueue_timedget
+ * @brief Get a node from an mpmc lockless queue.
+ *
+ * @param[in] pThis - A pointer to an initialized mpmc lockless queue object.
+ * @param[in] timeout - The duration of time before returning if data is not
+ *  available from the queue; a NULL pointer specifies a blocking call.
+ * @return a pointer to the object on success,
+ *  else NULL on error including timeout.
+ */
+ls_lfnodei_t *ls_lfqueue_timedget(ls_lfqueue_t *pThis, struct timespec *timeout);
 
 /**
  * @ls_lfqueue_empty

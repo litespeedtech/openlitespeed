@@ -18,17 +18,21 @@
 #include "extworker.h"
 #include "extconn.h"
 #include "extrequest.h"
-#include "extworkerconfig.h"
-#include "pidlist.h"
 
-#include <util/datetime.h>
 #include <http/httplog.h>
 #include <http/httpstatuscode.h>
-
-#include <limits.h>
-
-#include <signal.h>
+#include <http/httpvhost.h>
 #include <lsr/ls_strtool.h>
+#include <socket/coresocket.h>
+#include <socket/gsockaddr.h>
+#include <util/datetime.h>
+
+#include <fcntl.h>
+#include <limits.h>
+#include <signal.h>
+#include <stdio.h>
+#include <unistd.h>
+
 
 ExtWorker::ExtWorker()
     : m_pConfig(NULL)
@@ -44,12 +48,12 @@ ExtWorker::ExtWorker()
 {
 }
 
+
 ExtWorker::~ExtWorker()
 {
     if (m_pConfig)
         delete m_pConfig;
 }
-
 
 
 int ExtWorker::setURL(const char *pURL)
@@ -92,12 +96,14 @@ int ExtWorker::start()
     return ret;
 }
 
+
 static int setToStop(void *p)
 {
     ExtConn *pConn = (ExtConn *)(IConnection *)p;
     pConn->setToStop(1);
     return 0;
 }
+
 
 void ExtWorker::clearCurConnPool()
 {
@@ -110,6 +116,7 @@ void ExtWorker::clearCurConnPool()
     m_iLingerConns += m_connPool.getTotalConns();
     m_connPool.for_each(setToStop);
 }
+
 
 ExtConn *ExtWorker::getConn()
 {
@@ -148,6 +155,7 @@ ExtConn *ExtWorker::getConn()
     }
     return pConn;
 }
+
 
 void ExtWorker::recycleConn(ExtConn *pConn)
 {
@@ -202,6 +210,7 @@ void ExtWorker::recycleConn(ExtConn *pConn)
                m_pConfig->getURL()));
 }
 
+
 int  ExtWorker::removeReq(ExtRequest *pReq)
 {
     if (D_ENABLED(DL_LESS))
@@ -217,7 +226,6 @@ int  ExtWorker::removeReq(ExtRequest *pReq)
 //      1: in the request queue
 //     >1: Http status code
 //
-
 int  ExtWorker::processRequest(ExtRequest *pReq, int retry)
 {
     int ret;
@@ -322,6 +330,7 @@ void ExtWorker::processPending()
         getConnPool().reuse(pConn);
 
 }
+
 
 int ExtWorker::connectionError(ExtConn *pConn, int errCode)
 {
@@ -436,6 +445,7 @@ int ExtWorker::connectionError(ExtConn *pConn, int errCode)
     return ret;
 }
 
+
 static int onConnTimer(void *p)
 {
     ExtConn *pConn = (ExtConn *)(IConnection *)p;
@@ -448,8 +458,7 @@ void ExtWorker::onTimer()
 {
 }
 
-#include <http/httpvhost.h>
-#include <stdio.h>
+
 int ExtWorker::generateRTReport(int fd, const char *pTypeName)
 {
     char *p;
@@ -541,11 +550,6 @@ int ExtWorker::generateRTReport(int fd, const char *pTypeName)
     return 0;
 }
 
-
-#include <socket/coresocket.h>
-#include <socket/gsockaddr.h>
-#include <fcntl.h>
-#include <unistd.h>
 
 int ExtWorker::startServerSock(ExtWorkerConfig *pConfig, int backlog)
 {

@@ -15,18 +15,14 @@
 *    You should have received a copy of the GNU General Public License       *
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
-#include <stdlib.h>
-#include <unistd.h>
 
-#include <assert.h>
-#include <errno.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-#include <shm/lsshmpool.h>
-#include <shm/lsshmhash.h>
 #include <shm/lsshmcache.h>
+
+#include <http/httplog.h>
+#include <shm/lsshmpool.h>
+#include <util/datetime.h>
+
+#include <string.h>
 
 
 //
@@ -54,7 +50,7 @@ LsShmCache::LsShmCache(
 {
     LsShm *pShm;
     LsShmPool *pPool;
-    
+
     if ((pShm = LsShm::open(shmHashName, 0)) == NULL)
         return;
     if ((pPool = pShm->getGlobalPool()) == NULL)
@@ -86,7 +82,7 @@ LsShmCache::LsShmCache(
         }
         if (m_status == LSSHM_NOTREADY)
             m_status = LSSHM_READY;
-        m_pShmHash->enableManualLock(); // we will be responsible for the lock
+        m_pShmHash->disableLock(); // we will be responsible for the lock
     }
 }
 
@@ -198,6 +194,23 @@ void LsShmCache::setLast(lsShm_hCacheData_t *pObj)
 }
 
 
+void LsShmCache::removeObjData(lsShm_hCacheData_t *pObj, void *pUParam)
+{
+#ifdef DEBUG_RUN
+    LsShmHash::iterator iter =
+        m_pShmHash->offset2iterator(pObj->x_iIteratorOffset);
+    HttpLog::notice(
+        "LsShmCache::removeObjData %6d iter <%p> obj <%p> size %d",
+        getpid(), iter, pObj, (long)pObj - (long)iter);
+#endif
+    if (m_dataRemove_cb != NULL)
+        (*m_dataRemove_cb)(pObj, pUParam);
+//     m_pShmHash->eraseIteratorHelper(
+//         m_pShmHash->offset2iterator(pObj->x_iIteratorOffset));
+    m_pShmHash->eraseIterator(pObj->x_iIteratorOffset);
+}
+
+
 //
 //  @brief disconnectObj
 //  @brief disconnect the forward and backward links to the queue
@@ -257,16 +270,17 @@ lsShm_hCacheData_t *LsShmCache::getObj(const void *pKey, int keyLen,
     if (pObj != NULL)
         return pObj;
 #endif
-    LsShmHash::iterator iter;
-    if ((iter =
-             m_pShmHash->insertIterator(pKey, keyLen, NULL, valueLen)) == NULL)
+    LsShmHash::iteroffset iterOff;
+    ls_str_pair_t parms;
+    if ((iterOff = m_pShmHash->insertIterator(
+        m_pShmHash->setParms(&parms, pKey, keyLen, NULL, valueLen))) == 0)
         return NULL;
-    pObj = (lsShm_hCacheData_t *)iter->getVal();
+    pObj = (lsShm_hCacheData_t *)m_pShmHash->offset2iteratorData(iterOff);
     ::memset(pObj, 0, valueLen);
     pObj->x_iMagic = m_iMagic;
     pObj->x_iExpireTime = DateTime::s_curTime;
     pObj->x_iExpireTimeMs = DateTime::s_curTimeUs / 1000;
-    pObj->x_iIteratorOffset = m_pShmHash->ptr2offset(iter);
+    pObj->x_iIteratorOffset = iterOff;
 #if 0
     // memset take care of these already...
     pObj->x_iNext = 0;
@@ -276,13 +290,22 @@ lsShm_hCacheData_t *LsShmCache::getObj(const void *pKey, int keyLen,
 #endif
 
 #ifdef DEBUG_RUN
-    HttpLog::notice("LsShmCache::getObj %6d iter <%p> obj <%p> size %d",
-                    ::getpid(), iter, pObj, (long)pObj - (long)iter);
+    HttpLog::notice("LsShmCache::getObj %6d iterOff <%d> obj <%p>",
+                    ::getpid(), iterOff, pObj);
 #endif
 
     if (m_dataInit_cb != NULL)
         (*m_dataInit_cb)(pObj, pUParam);
     return pObj;
+}
+
+
+int LsShmCache::isElementExpired(lsShm_hCacheData_t *pObj)
+{
+    return (pObj->x_iExpired
+            || ((((DateTime::s_curTime - pObj->x_iExpireTime) * 1000)
+                    + ((DateTime::s_curTimeUs / 1000) - pObj->x_iExpireTimeMs)) > 0)
+            );
 }
 
 

@@ -21,6 +21,9 @@
 #include <lsr/ls_map.h>
 #include <lsr/ls_internal.h>
 #include <lsr/ls_pool.h>
+#include <lsr/ls_xpool.h>
+
+#include <stdio.h>
 
 
 const void *ls_map_getnodekey(ls_map_iter node)
@@ -674,7 +677,7 @@ void ls_map_print(ls_map_iter node, int layer)
         sRColor = "";
     else
         sRColor = node->right->color == BLACK ? "B" : "R";
-    
+
     printf("Layer: %d, %p%s [ left = %p%s; right = %p%s ]\n",
            iMyLayer, node, sColor, node->left, sLColor, node->right, sRColor);
     ls_map_print(node->left, ++layer);

@@ -17,22 +17,26 @@
 *****************************************************************************/
 #include <util/rlimits.h>
 #include <util/xmlnode.h>
+
 #include <string.h>
-#include "util/configctx.h"
 #include <limits.h>
+
 RLimits::RLimits()
 {
     reset();
 }
 
+
 RLimits::~RLimits()
 {
 }
+
 
 void RLimits::reset()
 {
     memset(this, 0, sizeof(RLimits));
 }
+
 
 void RLimits::setDataLimit(rlim_t cur, rlim_t max)
 {
@@ -42,9 +46,9 @@ void RLimits::setDataLimit(rlim_t cur, rlim_t max)
     if (max)
         m_data.rlim_max = max;
 #endif
-
-
 }
+
+
 void RLimits::setProcLimit(rlim_t cur, rlim_t max)
 {
 #if defined(RLIMIT_NPROC)
@@ -54,6 +58,8 @@ void RLimits::setProcLimit(rlim_t cur, rlim_t max)
         m_nproc.rlim_max = max;
 #endif
 }
+
+
 void RLimits::setCPULimit(rlim_t cur, rlim_t max)
 {
 #if defined(RLIMIT_CPU)
@@ -63,6 +69,7 @@ void RLimits::setCPULimit(rlim_t cur, rlim_t max)
         m_cpu.rlim_max = max;
 #endif
 }
+
 
 int RLimits::applyMemoryLimit() const
 {
@@ -82,6 +89,7 @@ int RLimits::applyMemoryLimit() const
     return 0;
 }
 
+
 int RLimits::applyProcLimit() const
 {
 #if defined(RLIMIT_NPROC)
@@ -90,6 +98,7 @@ int RLimits::applyProcLimit() const
 #endif
     return 0;
 }
+
 
 int RLimits::apply() const
 {

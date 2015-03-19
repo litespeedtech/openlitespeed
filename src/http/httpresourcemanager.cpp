@@ -17,18 +17,16 @@
 *****************************************************************************/
 #include "httpresourcemanager.h"
 
+#include <edio/aioeventhandler.h>
+#include <edio/aiosendfile.h>
 #include <http/chunkinputstream.h>
 #include <http/chunkoutputstream.h>
-
-#include <sslpp/sslconnection.h>
-#include <util/vmembuf.h>
-#include <util/gzipbuf.h>
-
 #include <http/httpsession.h>
 #include <http/ntwkiolink.h>
 #include <lsiapi/modulemanager.h>
-#include <spdy/h2connection.h>
-#include <spdy/spdyconnection.h>
+#include <util/vmembuf.h>
+#include <util/gzipbuf.h>
+
 
 char HttpResourceManager::g_aBuf[GLOBAL_BUF_SIZE + 8];
 
@@ -39,12 +37,26 @@ HttpResourceManager::HttpResourceManager()
     , m_poolGzipBuf(0, 10)
     , m_poolHttpSession(20, 20)
     , m_poolNtwkIoLink(20, 20)
+    , m_pPoolAiosfcb(NULL)
 {
 }
+
 
 HttpResourceManager::~HttpResourceManager()
 {
 }
+
+
+int HttpResourceManager::initAiosfcbPool()
+{
+#ifdef LS_AIO_USE_AIO
+    m_pPoolAiosfcb = new AiosfcbPool(10, 10);
+    return LS_OK;
+#else
+    return LS_FAIL;
+#endif
+}
+
 
 void HttpResourceManager::releaseAll()
 {
@@ -54,6 +66,8 @@ void HttpResourceManager::releaseAll()
     m_poolGzipBuf.shrinkTo(0);
     m_poolHttpSession.shrinkTo(0);
     m_poolNtwkIoLink.shrinkTo(0);
+    if (m_pPoolAiosfcb != NULL)
+        m_pPoolAiosfcb->shrinkTo(0);
 }
 
 
@@ -64,6 +78,7 @@ static int reduceBuf(void *pObj, void *size)
     return 0;
 }
 
+
 void HttpResourceManager::onTimer()
 {
     m_poolVMemBuf.shrinkTo(20);
@@ -73,32 +88,11 @@ void HttpResourceManager::onTimer()
 
     m_poolHttpSession.shrinkTo(20);
     m_poolNtwkIoLink.shrinkTo(20);
+    if (m_pPoolAiosfcb != NULL)
+        m_pPoolAiosfcb->shrinkTo(20);
 
     //Call module manger timer to check and release some resource
     ModuleManager::getInstance().OnTimer10sec();
-}
-
-HioHandler *HttpResourceManager::getHioHandler(HiosProtocol ver)
-{
-    HioHandler *pHioHandler;
-    switch (ver)
-    {
-    case HIOS_PROTO_HTTP:
-        pHioHandler = m_poolHttpSession.get();
-        break;
-    case HIOS_PROTO_HTTP2:
-        pHioHandler = (HioHandler *)(new H2Connection());
-        break;
-    default:
-        pHioHandler = (HioHandler *)(new SpdyConnection());
-        break;
-    }
-    
-    if (!pHioHandler)
-        return NULL;
-    
-    pHioHandler->init(ver);
-    return pHioHandler;
 }
 
 

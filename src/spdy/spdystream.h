@@ -18,11 +18,11 @@
 #ifndef SPDYSTREAM_H
 #define SPDYSTREAM_H
 
+#include <lsdef.h>
 #include <http/hiostream.h>
-
 #include <util/linkedobj.h>
 #include <util/loopbuf.h>
-#include <lsdef.h>
+
 #include <inttypes.h>
 
 
@@ -35,7 +35,7 @@ public:
     SpdyStream();
     ~SpdyStream();
 
-    int init(uint32_t StreamID, int Priority, SpdyConnection *pSpdyConn, 
+    int init(uint32_t StreamID, int Priority, SpdyConnection *pSpdyConn,
              uint8_t Spdy_Flags, HioHandler *pHandler);
     int onInitConnected();
 
@@ -55,7 +55,7 @@ public:
 
     int sendfile(int fdSrc, off_t off, size_t size)
     {        return 0;    };
-    
+
     void switchWriteToRead() {};
 
     int flush();
@@ -114,7 +114,7 @@ private:
     int32_t     m_iWindowIn;
     SpdyConnection *m_pSpdyConn;
     LoopBuf     m_bufIn;
-    
+
     LS_NO_COPY_ASSIGN(SpdyStream);
 };
 

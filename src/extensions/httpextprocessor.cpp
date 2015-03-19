@@ -26,6 +26,7 @@ void HttpExtProcessor::setConnector(HttpExtConnector *pConnector)
         pConnector->setProcessor(this);
 }
 
+
 LOG4CXX_NS::Logger *HttpExtProcessor::getLogger() const
 {
     if (m_pConnector)
@@ -33,6 +34,7 @@ LOG4CXX_NS::Logger *HttpExtProcessor::getLogger() const
     else
         return NULL;
 }
+
 
 const char *HttpExtProcessor::getLogId()
 {

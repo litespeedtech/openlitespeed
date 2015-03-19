@@ -18,15 +18,18 @@
 #include "h2stream.h"
 
 #include "h2connection.h"
+#include "h2protocol.h"
 
-#include <util/datetime.h>
 #include <http/httplog.h>
 #include <lsr/ls_strtool.h>
+#include <util/datetime.h>
 #include <util/iovec.h>
 
 H2Stream::H2Stream()
     : m_uiStreamID(0)
     , m_iPriority(0)
+    , m_iWindowOut(H2_FCW_INIT_SIZE)
+    , m_iWindowIn(H2_FCW_INIT_SIZE)
     , m_pH2Conn(NULL)
     , m_reqHeaderEnd(0)
 {

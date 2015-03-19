@@ -16,22 +16,25 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "modulehandler.h"
-#include "http/handlertype.h"
+
+#include <http/handlertype.h>
+#include <http/httphandler.h>
 #include <http/httplog.h>
-#include <http/httpreq.h>
-#include <http/httpresp.h>
-#include "modulemanager.h"
+#include <http/httpsession.h>
+#include <http/httpstatuscode.h>
 #include <lsiapi/internal.h>
-#include <util/vmembuf.h>
+#include <lsiapi/modulemanager.h>
 
 ModuleHandler::ModuleHandler()
 {
     ReqHandler::setType(HandlerType::HT_MODULE);
 }
 
+
 ModuleHandler::~ModuleHandler()
 {
 }
+
 
 static const lsi_handler_t *getHandler(const HttpHandler *pHandler)
 {
@@ -49,6 +52,7 @@ static const lsi_handler_t *getHandler(const HttpHandler *pHandler)
 
     return pModuleHandler;
 }
+
 
 int ModuleHandler::cleanUp(HttpSession *pSession)
 {
@@ -73,6 +77,7 @@ int ModuleHandler::cleanUp(HttpSession *pSession)
     }
     return 0;
 }
+
 
 int ModuleHandler::onWrite(HttpSession *pSession)
 {
@@ -113,6 +118,7 @@ int ModuleHandler::onWrite(HttpSession *pSession)
     }
 }
 
+
 int ModuleHandler::process(HttpSession *pSession,
                            const HttpHandler *pHandler)
 {
@@ -131,7 +137,7 @@ int ModuleHandler::process(HttpSession *pSession,
         return SC_500;
     }
 
-    pSession->resetResp();
+//     pSession->resetResp();
 //    pSession->setupRespCache();
 
     int ret = pModuleHandler->begin_process(pSession);
@@ -157,6 +163,7 @@ int ModuleHandler::process(HttpSession *pSession,
         return 0;
     }
 }
+
 
 int ModuleHandler::onRead(HttpSession *pSession)
 {

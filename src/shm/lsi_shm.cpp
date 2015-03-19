@@ -18,17 +18,15 @@
 /*
  *   LiteSpeed SHM interface
  */
+#include <shm/lsi_shm.h>
+
+#include <shm/lsshmlruhash.h>
+#include <shm/lsshmpool.h>
+
 #include <assert.h>
 #include <stdint.h>
-#include <unistd.h>
-#include <pthread.h>
 #include <sys/types.h>
-
-#include <shm/lsshm.h>
-#include <shm/lsshmpool.h>
-#include <shm/lsshmhash.h>
-#include <shm/lsshmlruhash.h>
-#include <shm/lsi_shm.h>
+#include <unistd.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -173,7 +171,7 @@ lsi_shmhash_t *lsi_shmlruhash_open(lsi_shmpool_t *poolhandle,
 {
     check_defaults(&initialsize, &hf, &vc);
     if (mode == 0)
-        return ((LsShmPool *)poolhandle)->getNamedLruHash(
+        return ((LsShmPool *)poolhandle)->getNamedWLruHash(
                    hash_table_name, initialsize, hf, vc);
     else
         return ((LsShmPool *)poolhandle)->getNamedXLruHash(

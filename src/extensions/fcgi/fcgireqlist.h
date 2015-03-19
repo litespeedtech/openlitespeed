@@ -18,8 +18,8 @@
 #ifndef FCGIREQLIST_H
 #define FCGIREQLIST_H
 
-
 #include <lsdef.h>
+
 class FcgiRequest;
 class FcgiReqListData;
 class FcgiReqList

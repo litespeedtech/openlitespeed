@@ -19,11 +19,11 @@
 #include <sslpp/sslerror.h>
 
 #include <lsr/ls_base64.h>
-#include <util/configctx.h>
+#include <main/configctx.h>
 #include <util/httpfetch.h>
-#include <util/vmembuf.h>
 #include <util/stringtool.h>
 #include <util/xmlnode.h>
+
 #include <openssl/crypto.h>
 #include <openssl/err.h>
 #include <openssl/evp.h>
@@ -46,6 +46,7 @@ int   SslOcspStapling::s_iRespTempPathLen = 15;
 
 static AutoStr2 s_ErrMsg = "";
 const char *getStaplingErrMsg() { return s_ErrMsg.c_str(); }
+
 
 static void setLastErrMsg(const char *format, ...)
 {
@@ -82,6 +83,7 @@ static unsigned int escapeBase64Uri(unsigned char *s, size_t size,
     return (unsigned int)(d - begin);
 }
 
+
 static X509 *load_cert(const char *pPath)
 {
     X509 *pCert;
@@ -93,12 +95,14 @@ static X509 *load_cert(const char *pPath)
     return pCert;
 }
 
+
 static int OcspRespCb(void *pArg, HttpFetch *pHttpFetch)
 {
     SslOcspStapling *pSslOcspStapling = (SslOcspStapling *)pArg;
     pSslOcspStapling->processResponse(pHttpFetch);
     return 0;
 }
+
 
 int SslOcspStapling::callback(SSL *ssl)
 {
@@ -118,6 +122,7 @@ int SslOcspStapling::callback(SSL *ssl)
     update();
     return iResult;
 }
+
 
 int SslOcspStapling::processResponse(HttpFetch *pHttpFetch)
 {
@@ -143,6 +148,7 @@ int SslOcspStapling::processResponse(HttpFetch *pHttpFetch)
     return 0;
 }
 
+
 SslOcspStapling::SslOcspStapling()
     : m_pHttpFetch(NULL)
     , m_iDataLen(0)
@@ -151,6 +157,7 @@ SslOcspStapling::SslOcspStapling()
     , m_pCertId(NULL)
 {
 }
+
 
 SslOcspStapling::~SslOcspStapling()
 {
@@ -161,6 +168,7 @@ SslOcspStapling::~SslOcspStapling()
     if (m_pCertId != NULL)
         OCSP_CERTID_free(m_pCertId);
 }
+
 
 int SslOcspStapling::init(SSL_CTX *pSslCtx)
 {
@@ -196,6 +204,7 @@ int SslOcspStapling::init(SSL_CTX *pSslCtx)
     X509_free(pCert);
     return iResult;
 }
+
 
 int SslOcspStapling::update()
 {
@@ -283,6 +292,7 @@ int SslOcspStapling::getResponder(X509 *pCert)
     return LS_FAIL;
 }
 
+
 int SslOcspStapling::getRequestData(unsigned char *pReqData)
 {
     int             len = -1;
@@ -305,6 +315,7 @@ int SslOcspStapling::getRequestData(unsigned char *pReqData)
     OCSP_REQUEST_free(ocsp);
     return  len;
 }
+
 
 int SslOcspStapling::createRequest()
 {
@@ -345,6 +356,7 @@ int SslOcspStapling::createRequest()
     return 0;
 }
 
+
 void SslOcspStapling::updateRespData(OCSP_RESPONSE *pResponse)
 {
     unsigned char *pbuff;
@@ -365,6 +377,7 @@ void SslOcspStapling::updateRespData(OCSP_RESPONSE *pResponse)
         }
     }
 }
+
 
 int SslOcspStapling::certVerify(OCSP_RESPONSE *pResponse,
                                 OCSP_BASICRESP *pBasicResp, X509_STORE *pXstore)
@@ -401,6 +414,7 @@ int SslOcspStapling::certVerify(OCSP_RESPONSE *pResponse,
     }
     return iResult;
 }
+
 
 int SslOcspStapling::verifyRespFile(int iNeedVerify)
 {
@@ -443,6 +457,7 @@ int SslOcspStapling::verifyRespFile(int iNeedVerify)
     OCSP_RESPONSE_free(pResponse);
     return iResult;
 }
+
 
 int SslOcspStapling::getCertId(X509 *pCert)
 {
@@ -495,6 +510,7 @@ int SslOcspStapling::getCertId(X509 *pCert)
     return 0;
 }
 
+
 void SslOcspStapling::setCertFile(const char *Certfile)
 {
     char RespFile[4096];
@@ -517,6 +533,7 @@ void SslOcspStapling::setCertFile(const char *Certfile)
     p += 3;
     m_sRespfileTmp.setStr(RespFile, p - RespFile);
 }
+
 
 int SslOcspStapling::config(const XmlNode *pNode, SSL_CTX *pSSL,
                             const char *pCAFile, char *pachCert)

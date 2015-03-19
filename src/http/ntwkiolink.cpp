@@ -17,19 +17,26 @@
 *****************************************************************************/
 #include "ntwkiolink.h"
 
+#include <ls.h>
+#include <lsdef.h>
 #include <edio/multiplexer.h>
 #include <edio/multiplexerfactory.h>
 #include <http/connlimitctrl.h>
-#include <util/datetime.h>
+#include <http/hiohandlerfactory.h>
 #include <http/httpaiosendfile.h>
 #include <http/httplog.h>
-#include <http/httpsession.h>
 #include <http/httpresourcemanager.h>
+#include <http/httprespheaders.h>
 #include <http/httplistener.h>
-#include <http/httpdefs.h>
 #include <http/httpstats.h>
+#include <lsiapi/lsiapi.h>
+#include <lsr/ls_strtool.h>
+#include <sslpp/sslcontext.h>
+#include <sslpp/sslerror.h>
+#include <util/accessdef.h>
+#include <util/datetime.h>
+#include <util/stringtool.h>
 
-#include <socket/gsockaddr.h>
 #include <sys/poll.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -39,21 +46,12 @@
 #include <errno.h>
 #include <stdio.h>
 #include <string.h>
-
-#include <sslpp/sslconnection.h>
-#include <sslpp/sslcontext.h>
-#include <sslpp/sslerror.h>
-
-#include <util/accessdef.h>
-#include <util/iovec.h>
-#include "lsr/ls_strtool.h"
-#include "util/stringtool.h"
-
 #include <netinet/tcp.h>
 #include <openssl/ssl.h>
 
-#include "lsdef.h"
-
+#if !defined(NO_SENDFILE)
+#include <util/gsendfile.h>
+#endif
 
 #define IO_THROTTLE_READ    8
 #define IO_THROTTLE_WRITE   16
@@ -62,12 +60,6 @@
 //#define HTTP2_PLAIN_DEV
 
 //#define SPDY_PLAIN_DEV
-
-
-#include <ls.h>
-#include <lsiapi/lsiapihooks.h>
-#include <main/httpserver.h>
-
 
 int NtwkIOLink::s_iPrevTmToken = 0;
 int NtwkIOLink::s_iTmToken = 0;
@@ -141,6 +133,7 @@ NtwkIOLink::~NtwkIOLink()
     LsiapiBridge::releaseModuleData(LSI_MODULE_DATA_L4, getModuleData());
 }
 
+
 int NtwkIOLink::writev(const struct iovec *vector, int len)
 {
     int written = 0;
@@ -205,6 +198,7 @@ int NtwkIOLink::writev_internal(const struct iovec *vector, int len,
     return ret;
 }
 
+
 int NtwkIOLink::read(char *pBuf, int size)
 {
     const LsiApiHooks *pReadHooks = LsiApiHooks::getGlobalApiHooks(
@@ -238,6 +232,7 @@ int NtwkIOLink::write(const char *pBuf, int size)
     return writev(iov.get(), iov.len());
 }
 
+
 void NtwkIOLink::enableThrottle(int enable)
 {
     if (enable)
@@ -245,6 +240,7 @@ void NtwkIOLink::enableThrottle(int enable)
     else
         s_pCur_fp_list_list = &NtwkIOLink::s_fp_list_list_normal;
 }
+
 
 int NtwkIOLink::setupHandler(HiosProtocol verSpdy)
 {
@@ -259,7 +255,7 @@ int NtwkIOLink::setupHandler(HiosProtocol verSpdy)
         verSpdy = HIOS_PROTO_HTTP2;
 #endif
 
-    pHandler = HttpResourceManager::getInstance().getHioHandler(verSpdy);
+    pHandler = HioHandlerFactory::getHioHandler(verSpdy);
     if (!pHandler)
         return LS_FAIL;
 
@@ -270,11 +266,12 @@ int NtwkIOLink::setupHandler(HiosProtocol verSpdy)
     return 0;
 }
 
+
 int NtwkIOLink::switchToHttp2Handler(HioHandler *pSession)
 {
     assert(pSession == getHandler());
     HioHandler *pHandler =
-        HttpResourceManager::getInstance().getHioHandler(HIOS_PROTO_HTTP2);
+        HioHandlerFactory::getHioHandler(HIOS_PROTO_HTTP2);
     if (!pHandler)
         return LS_FAIL;
 
@@ -284,6 +281,7 @@ int NtwkIOLink::switchToHttp2Handler(HioHandler *pSession)
     pHandler->upgradedStream(pSession);
     return 0;
 }
+
 
 int NtwkIOLink::setLink(HttpListener *pListener,  int fd,
                         ClientInfo *pInfo, SSLContext *pSSLContext)
@@ -345,6 +343,7 @@ int NtwkIOLink::setLink(HttpListener *pListener,  int fd,
     return 0;
 }
 
+
 void NtwkIOLink::drainReadBuf()
 {
     //clear the inbound data buffer
@@ -356,12 +355,14 @@ void NtwkIOLink::drainReadBuf()
         closeSocket();
 }
 
+
 void NtwkIOLink::tryRead()
 {
     char ch;
     if (::recv(getfd(), &ch, 1, MSG_PEEK) == 1)
         handleEvents(POLLIN);
 }
+
 
 int NtwkIOLink::handleEvents(short evt)
 {
@@ -404,6 +405,7 @@ int NtwkIOLink::handleEvents(short evt)
     return 0;
 }
 
+
 int NtwkIOLink::close()
 {
     if (getHandler())
@@ -419,6 +421,7 @@ int NtwkIOLink::close()
     return (*m_pFpList->m_close_fp)(this);
 }
 
+
 void NtwkIOLink::suspendRead()
 {
     if (D_ENABLED(DL_LESS))
@@ -426,6 +429,7 @@ void NtwkIOLink::suspendRead()
     if (!((isSSL()) && (m_ssl.wantRead())))
         MultiplexerFactory::getMultiplexer()->suspendRead(this);
 }
+
 
 void NtwkIOLink::continueRead()
 {
@@ -440,6 +444,7 @@ void NtwkIOLink::continueRead()
     }
 }
 
+
 void NtwkIOLink::suspendWrite()
 {
     if (D_ENABLED(DL_LESS))
@@ -452,6 +457,7 @@ void NtwkIOLink::suspendWrite()
             LOG_D((getLogger(), "[%s] write suspended", getLogId()));
     }
 }
+
 
 void NtwkIOLink::continueWrite()
 {
@@ -471,6 +477,7 @@ void NtwkIOLink::continueWrite()
         MultiplexerFactory::getMultiplexer()->continueWrite(this);
     }
 }
+
 
 void NtwkIOLink::switchWriteToRead()
 {
@@ -520,6 +527,7 @@ void NtwkIOLink::checkSSLReadRet(int ret)
         setState(HIOS_CLOSING);
 }
 
+
 int NtwkIOLink::readExSSL(LsiSession *pIS, char *pBuf, int size)
 {
     NtwkIOLink *pThis = static_cast<NtwkIOLink *>(pIS);
@@ -532,6 +540,7 @@ int NtwkIOLink::readExSSL(LsiSession *pIS, char *pBuf, int size)
 //        ::write( 1, pBuf, ret );
     return ret;
 }
+
 
 int NtwkIOLink::writevExSSL(LsiSession *pOS, const iovec *vector,
                             int count)
@@ -614,6 +623,7 @@ int NtwkIOLink::writevExSSL(LsiSession *pOS, const iovec *vector,
     return ret;
 }
 
+
 void NtwkIOLink::setSSLAgain()
 {
     if (m_ssl.wantRead() || getFlag(HIO_FLAG_WANT_READ))
@@ -638,6 +648,7 @@ void NtwkIOLink::setSSLAgain()
         MultiplexerFactory::getMultiplexer()->suspendWrite(this);
     }
 }
+
 
 int NtwkIOLink::flush()
 {
@@ -699,6 +710,7 @@ int NtwkIOLink::flush()
 
     return ret;
 }
+
 
 int NtwkIOLink::onWriteSSL(NtwkIOLink *pThis)
 {
@@ -780,11 +792,14 @@ int NtwkIOLink::close_(NtwkIOLink *pThis)
     return LS_FAIL;
 }
 
+
 void NtwkIOLink::closeSocket()
 {
-    ConnLimitCtrl &ctrl = ConnLimitCtrl::getInstance();
     if (getfd() == -1)
         return;
+
+    ConnLimitCtrl &ctrl = ConnLimitCtrl::getInstance();
+
     if (D_ENABLED(DL_LESS))
         LOG_D((getLogger(), "[%s] Close socket ...", getLogId()));
 
@@ -808,11 +823,13 @@ void NtwkIOLink::closeSocket()
                    getLogId(), ctrl.availConn(), m_pClientInfo->getConns()));
     }
 
-    m_aioSFQ.pop_all();
 
     //printf( "socket: %d closed\n", getfd() );
     ::close(getfd());
     setfd(-1);
+    m_aioSFQ.pop_all();
+    m_hasBufferedData = 0;
+    m_pModuleConfig = NULL;
     if (getHandler())
     {
         getHandler()->recycle();
@@ -824,12 +841,14 @@ void NtwkIOLink::closeSocket()
     HttpResourceManager::getInstance().recycle(this);
 }
 
+
 int NtwkIOLink::onRead(NtwkIOLink *pThis)
 {
     if (pThis->getHandler())
         return pThis->getHandler()->onReadEx();
     return LS_FAIL;
 }
+
 
 int NtwkIOLink::onWrite(NtwkIOLink *pThis)
 {
@@ -847,6 +866,7 @@ static int matchToken(int token)
                 || (token <= NtwkIOLink::getToken()));
 }
 
+
 void NtwkIOLink::onTimer()
 {
     if (matchToken(this->m_tmToken))
@@ -863,6 +883,7 @@ void NtwkIOLink::onTimer()
     }
 }
 
+
 void NtwkIOLink::onTimer_(NtwkIOLink *pThis)
 {
     if (pThis->detectClose())
@@ -870,6 +891,7 @@ void NtwkIOLink::onTimer_(NtwkIOLink *pThis)
     if (pThis->getHandler())
         pThis->getHandler()->onTimerEx();
 }
+
 
 int NtwkIOLink::checkReadRet(int ret, int size)
 {
@@ -915,8 +937,7 @@ int NtwkIOLink::checkReadRet(int ret, int size)
         case EINTR:
             ret = 0;
             break;
-        default
-                :
+        default:
             if (getState() != HIOS_SHUTDOWN)
                 setState(HIOS_CLOSING);
             if (D_ENABLED(DL_LESS))
@@ -930,6 +951,7 @@ int NtwkIOLink::checkReadRet(int ret, int size)
 
 }
 
+
 int NtwkIOLink::readEx(LsiSession *pIS, char *pBuf, int size)
 {
     NtwkIOLink *pThis = static_cast<NtwkIOLink *>(pIS);
@@ -942,9 +964,9 @@ int NtwkIOLink::readEx(LsiSession *pIS, char *pBuf, int size)
     return ret;
 }
 
+
 #if !defined( NO_SENDFILE )
 
-#include <util/gsendfile.h>
 size_t NtwkIOLink::sendfileSetUp(size_t size)
 {
     if (m_iHeaderToSend > 0)
@@ -968,6 +990,7 @@ size_t NtwkIOLink::sendfileSetUp(size_t size)
 
     return size;
 }
+
 
 int NtwkIOLink::sendfileFinish(int written)
 {
@@ -997,6 +1020,7 @@ int NtwkIOLink::sendfileFinish(int written)
     return len;
 }
 
+
 int NtwkIOLink::sendfile(int fdSrc, off_t off, size_t size)
 {
     int written;
@@ -1007,6 +1031,7 @@ int NtwkIOLink::sendfile(int fdSrc, off_t off, size_t size)
 
     return sendfileFinish(written);
 }
+
 
 int NtwkIOLink::addAioSFJob(Aiosfcb *cb)
 {
@@ -1022,6 +1047,7 @@ int NtwkIOLink::addAioSFJob(Aiosfcb *cb)
         cb->clearFlag(AIOSFCB_FLAG_TRYAGAIN);
     return ret;
 }
+
 
 int NtwkIOLink::aiosendfile(Aiosfcb *cb)
 {
@@ -1041,6 +1067,7 @@ int NtwkIOLink::aiosendfile(Aiosfcb *cb)
                getLogId()));
     return 1;
 }
+
 
 int NtwkIOLink::aiosendfiledone(Aiosfcb *cb)
 {
@@ -1119,8 +1146,7 @@ int NtwkIOLink::checkWriteRet(int len)
                        strerror(errno)));
             len = 0;
             break;
-        default
-                :
+        default:
             if (getState() != HIOS_SHUTDOWN)
             {
                 if (m_hasBufferedData == 0)
@@ -1138,6 +1164,7 @@ int NtwkIOLink::checkWriteRet(int len)
         LOG_D((getLogger(),  "[%s] Written to client: %d\n", getLogId(), len));
     return len;
 }
+
 
 int NtwkIOLink::detectClose()
 {
@@ -1165,6 +1192,7 @@ int NtwkIOLink::detectClose()
     return 0;
 }
 
+
 int NtwkIOLink::detectCloseNow()
 {
     char ch;
@@ -1180,6 +1208,7 @@ int NtwkIOLink::detectCloseNow()
     return 0;
 }
 
+
 ///////////////////////////////////////////////////////////////////////
 // Throttle
 ///////////////////////////////////////////////////////////////////////
@@ -1189,6 +1218,7 @@ int NtwkIOLink::onReadT(NtwkIOLink *pThis)
     return pThis->doReadT();
 }
 
+
 int NtwkIOLink::onWriteT(NtwkIOLink *pThis)
 {
     if (pThis->allowWrite())
@@ -1197,6 +1227,7 @@ int NtwkIOLink::onWriteT(NtwkIOLink *pThis)
         MultiplexerFactory::getMultiplexer()->suspendWrite(pThis);
     return 0;
 }
+
 
 void NtwkIOLink::dumpState(const char *pFuncName, const char *action)
 {
@@ -1212,6 +1243,7 @@ void NtwkIOLink::dumpState(const char *pFuncName, const char *action)
               ));
 
 }
+
 
 void NtwkIOLink::onTimer_T(NtwkIOLink *pThis)
 {
@@ -1280,7 +1312,6 @@ int NtwkIOLink::readExT(LsiSession *pIS, char *pBuf, int size)
 }
 
 
-
 int NtwkIOLink::writevExT(LsiSession *pOS, const iovec *vector, int count)
 {
     NtwkIOLink *pThis = static_cast<NtwkIOLink *>(pOS);
@@ -1324,6 +1355,7 @@ int NtwkIOLink::writevExT(LsiSession *pOS, const iovec *vector, int count)
 
 }
 
+
 ///////////////////////////////////////////////////////////////////////
 // Throttle + SSL
 ///////////////////////////////////////////////////////////////////////
@@ -1343,6 +1375,7 @@ int NtwkIOLink::writevExT(LsiSession *pOS, const iovec *vector, int count)
 //    }
 //    pThis->onTimerEx();
 //}
+
 
 void NtwkIOLink::onTimerSSL_T(NtwkIOLink *pThis)
 {
@@ -1390,6 +1423,7 @@ int NtwkIOLink::onReadSSL_T(NtwkIOLink *pThis)
     return pThis->doReadT();
 }
 
+
 int NtwkIOLink::onWriteSSL_T(NtwkIOLink *pThis)
 {
     //pThis->dumpState( "onWriteSSL_T", "none" );
@@ -1410,6 +1444,7 @@ int NtwkIOLink::onWriteSSL_T(NtwkIOLink *pThis)
         MultiplexerFactory::getMultiplexer()->suspendWrite(pThis);
     return 0;
 }
+
 
 static char s_errUseSSL[] =
     "HTTP/1.0 200 OK\r\n"
@@ -1436,6 +1471,7 @@ static char s_redirectSSL2[] =
     "Server:LiteSpeed\r\n"
     "Content-Length: 0\r\n"
     "Connection: Close\r\n\r\n";
+
 
 int NtwkIOLink::get_url_from_reqheader(char *buf, int length, char **puri,
                                        int *uri_len, char **phost, int *host_len)
@@ -1477,6 +1513,7 @@ int NtwkIOLink::get_url_from_reqheader(char *buf, int length, char **puri,
     *uri_len = strlen(*puri);
     return 0;
 }
+
 
 void NtwkIOLink::handle_acceptSSL_EIO_Err()
 {
@@ -1520,6 +1557,7 @@ void NtwkIOLink::handle_acceptSSL_EIO_Err()
     }
 }
 
+
 int NtwkIOLink::acceptSSL()
 {
     int ret = m_ssl.accept();
@@ -1546,6 +1584,7 @@ int NtwkIOLink::acceptSSL()
     return ret;
 }
 
+
 int NtwkIOLink::sslSetupHandler()
 {
     unsigned int spdyVer = m_ssl.getSpdyVersion();
@@ -1563,6 +1602,7 @@ int NtwkIOLink::sslSetupHandler()
     }
     return setupHandler((HiosProtocol)spdyVer);
 }
+
 
 int NtwkIOLink::SSLAgain()
 {
@@ -1605,6 +1645,7 @@ int NtwkIOLink::SSLAgain()
     return ret;
 
 }
+
 
 int NtwkIOLink::readExSSL_T(LsiSession *pIS, char *pBuf, int size)
 {
@@ -1741,6 +1782,7 @@ int NtwkIOLink::writevExSSL_T(LsiSession *pOS, const iovec *vector,
     return ret;
 }
 
+
 void NtwkIOLink::suspendEventNotify()
 {
     if (!MultiplexerFactory::s_iMultiplexerType)
@@ -1752,6 +1794,7 @@ void NtwkIOLink::suspendEventNotify()
     }
 }
 
+
 void NtwkIOLink::resumeEventNotify()
 {
     if (!MultiplexerFactory::s_iMultiplexerType)
@@ -1762,6 +1805,7 @@ void NtwkIOLink::resumeEventNotify()
         MultiplexerFactory::getMultiplexer()->add(this, POLLHUP | POLLERR);
     }
 }
+
 
 void NtwkIOLink::changeClientInfo(ClientInfo *pInfo)
 {

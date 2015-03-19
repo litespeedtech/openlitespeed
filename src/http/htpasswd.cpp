@@ -16,10 +16,9 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "htpasswd.h"
-#include "httplog.h"
-#include "authuser.h"
+
+#include <http/authuser.h>
 #include <util/stringtool.h>
-#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -43,6 +42,7 @@ KeyData *PasswdFile::newEmptyData(const char *pKey, int len)
         pData->setKey(pKey, len);
     return pData;
 }
+
 
 KeyData *PasswdFile::parseLine(const char *pKey, int keyLen, char *pPos,
                                char *pLineEnd)
@@ -76,6 +76,7 @@ KeyData *PasswdFile::parseLine(const char *pKey, int keyLen, char *pPos,
 
 }
 
+
 static char *parseKey(char *&pPos, char *pLineEnd, int &keyLen)
 {
     char ch;
@@ -96,6 +97,7 @@ static char *parseKey(char *&pPos, char *pLineEnd, int &keyLen)
     return pKey;
 }
 
+
 KeyData *PasswdFile::parseLine(char *pPos, char *pLineEnd)
 {
     char *pKey;
@@ -106,10 +108,12 @@ KeyData *PasswdFile::parseLine(char *pPos, char *pLineEnd)
     return NULL;
 }
 
+
 // <group_name>:<member list>
 // <group_name>:<member list>:comments
 //
 // <groups> is a comma seperated list of group name
+
 
 KeyData *GroupFile::parseLine(char *pPos, char *pLineEnd)
 {
@@ -120,6 +124,7 @@ KeyData *GroupFile::parseLine(char *pPos, char *pLineEnd)
         return parseLine(pKey, keyLen, pPos, pLineEnd);
     return NULL;
 }
+
 
 KeyData *GroupFile::parseLine(const char *pKey, int keyLen, char *pPos,
                               char *pLineEnd)
@@ -140,6 +145,7 @@ KeyData *GroupFile::parseLine(const char *pKey, int keyLen, char *pPos,
     }
     return pData;
 }
+
 
 KeyData *GroupFile::newEmptyData(const char *pKey, int len)
 {

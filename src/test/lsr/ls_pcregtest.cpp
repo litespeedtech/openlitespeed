@@ -18,6 +18,7 @@
 #ifdef RUN_TEST
 
 #include <lsr/ls_pcreg.h>
+#include <string.h>
 #include "test/unittest-cpp/UnitTest++/src/UnitTest++.h"
 
 

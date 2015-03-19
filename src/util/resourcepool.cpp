@@ -17,6 +17,8 @@
 *****************************************************************************/
 #include <util/resourcepool.h>
 
+#include <util/autobuf.h>
+
 ResourcePool::ResourcePool()
     : m_poolAutoBuf(5, 5)
 {
@@ -35,6 +37,13 @@ void ResourcePool::onTimer()
 {
 }
 
-
+void ResourcePool::recycle(AutoBuf *pBuf)
+{
+    if (pBuf->capacity() >= 4096)
+        pBuf->reserve(0);
+    else
+        pBuf->clear();
+    m_poolAutoBuf.recycle(pBuf);
+}
 
 

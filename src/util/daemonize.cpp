@@ -16,19 +16,16 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include <util/daemonize.h>
-#include "util/configctx.h"
+
+#include <lsr/ls_strtool.h>
+
 #include <ctype.h>
-#include <errno.h>
 #include <fcntl.h>
 #include <grp.h>
 #include <pwd.h>
 #include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include <lsr/ls_strtool.h>
 
 int Daemonize::daemonize(int nochdir, int noclose)
 {
@@ -53,6 +50,7 @@ int Daemonize::daemonize(int nochdir, int noclose)
 #endif
 }
 
+
 int Daemonize::close()
 {
     int fd = open("/dev/null", O_RDWR);
@@ -67,6 +65,7 @@ int Daemonize::close()
     return LS_FAIL;
 }
 
+
 //int Daemonize::writePIDFile( const char * pFileName )
 //{
 //    FILE* pidfp = fopen( pFileName, "w" );
@@ -77,6 +76,7 @@ int Daemonize::close()
 //    return 0;
 //}
 
+
 int Daemonize::changeUserGroupRoot(const char *pUser, uid_t uid, gid_t gid,
                                    gid_t pri_gid, const char *pChroot, char *pErr, int errLen)
 {
@@ -84,6 +84,7 @@ int Daemonize::changeUserGroupRoot(const char *pUser, uid_t uid, gid_t gid,
         return LS_FAIL;
     return changeUserChroot(pUser, uid, pChroot, pErr, errLen);
 }
+
 
 int Daemonize::initGroups(const char *pUser, gid_t gid, gid_t pri_gid,
                           char *pErr, int errLen)
@@ -104,6 +105,7 @@ int Daemonize::initGroups(const char *pUser, gid_t gid, gid_t pri_gid,
     }
     return 0;
 }
+
 
 int Daemonize::changeUserChroot(const char *pUser, uid_t uid,
                                 const char *pChroot, char *pErr, int errLen)
@@ -151,10 +153,7 @@ struct passwd *Daemonize::configUserGroup(const char *pUser,
         }
 
         if (!pw)
-        {
-            ConfigCtx::getCurConfigCtx()->logError("Invalid user name:%s!", pUser);
             return NULL;
-        }
     }
 
     struct group *gr;
@@ -166,10 +165,7 @@ struct passwd *Daemonize::configUserGroup(const char *pUser,
         if (isdigit(*pGroup))
             gid = atoi(pGroup);
         else
-        {
-            ConfigCtx::getCurConfigCtx()->logError("Invalid group name:%s!", pGroup);
             return NULL;
-        }
     }
     else
         gid = gr->gr_gid;

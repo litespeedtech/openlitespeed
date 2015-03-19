@@ -20,14 +20,11 @@
 
 #include <util/ghash.h>
 #include <util/gmap.h>
-#include <util/linkedobj.h>
 #include <util/objpool.h>
-#include <util/tlinklist.h>
 #include <util/tsingleton.h>
 
 #include <ls.h>
 
-#include <time.h>
 
 class ModTimer;
 class ModTimerList : public TSingleton<ModTimerList>

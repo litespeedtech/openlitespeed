@@ -16,18 +16,31 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include <edio/aiosendfile.h>
+#include <http/httplog.h>
+#include <lsr/ls_lfqueue.h>
 #include <util/gsendfile.h>
+
+static void debugLog(const char *pFunctionName, const char *pMsg)
+{
+    if (D_ENABLED(DL_MORE))
+        LOG_D(("AioSendFile::%s(), %s"));
+}
+
 
 Aiosfcb *Aiosfcb::getCbPtr(ls_lfnodei_t *pNode)
 {
     return (Aiosfcb *)((char *)pNode - offsetof(Aiosfcb, m_node));
 }
 
+
 void *AioSendFile::aioSendFile(ls_lfnodei_t *item)
 {
     Aiosfcb *cb = Aiosfcb::getCbPtr(item);
     if (cb->getFlag(AIOSFCB_FLAG_CANCEL))
+    {
+        debugLog("aioSendFile", "Job Cancelled!");
         cb->setRet(0);
+    }
     else
     {
         off_t iOff = cb->getOffset();
@@ -35,12 +48,28 @@ void *AioSendFile::aioSendFile(ls_lfnodei_t *item)
         cb->setRet(gsendfile(cb->getSendFd(), cb->getReadFd(),
                              &iOff, cb->getSize()));
 #else
+        debugLog("aioSendFile", "No SendFile! Automatically fail.");
         cb->setRet(-1);
 #endif
         cb->setOffset(iOff);
     }
     return NULL;
 }
+
+
+AioSendFile::AioSendFile()
+    : m_wc(this)
+{
+    m_pFinishedQueue = ls_lfqueue_new();
+}
+
+
+AioSendFile::~AioSendFile()
+{
+    m_wc.stopProcessing();
+    ls_lfqueue_delete(m_pFinishedQueue);
+}
+
 
 int AioSendFile::onNotified(int count)
 {
@@ -50,7 +79,10 @@ int AioSendFile::onNotified(int count)
     {
         event = Aiosfcb::getCbPtr(ls_lfqueue_get(m_pFinishedQueue));
         if (!event)
+        {
+            debugLog("onNotified", "Bad Event Object Returned!");
             return LS_FAIL;
+        }
         processEvent(event);
     }
     return 0;

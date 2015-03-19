@@ -33,8 +33,10 @@
 #include <errno.h>
 #include <lsdef.h>
 
-
-#if defined(__i386__) || defined(__ia64__)
+#ifdef cpu_relax
+#undef cpu_relax
+#endif
+#if defined(__i386__) || defined(__ia64__) || defined(__x86_64) || defined(__x86_64__)
 #define cpu_relax()         asm volatile("pause\n": : :"memory")
 #else
 #define cpu_relax()         ;
@@ -44,7 +46,7 @@ static inline bool llxq_atom_cmp_and_swap(
     ls_atom_uint_t *pVal, unsigned *pcmp, unsigned swap)
 {
     unsigned prev = (unsigned)
-      ls_atomic_casv((ls_atom_32_t *)pVal, (int32_t)(*pcmp), (int32_t)swap);
+      ls_atomic_casvint((ls_atom_32_t *)pVal, (int32_t)(*pcmp), (int32_t)swap);
     if (prev == *pcmp)
         return true;
     *pcmp = prev;
@@ -163,7 +165,7 @@ static inline void wake_producers(ls_atom_uint_t *pCnt, llxqinfo_t *pInfo,
                                   int indx)
 {
     ls_atom_uint_t cnt;
-    LSR_ATOMIC_LOAD(cnt, pCnt);
+    ls_atomic_load(cnt, pCnt);
     if (cnt != 0)
     {
         do_wake(((indx <= 0) ? cnt + 5 : 1), &pInfo->m_iGetIndx
@@ -180,7 +182,7 @@ static inline void wake_consumers(ls_atom_uint_t *pCnt, llxqinfo_t *pInfo,
                                   int indx)
 {
     ls_atom_uint_t cnt;
-    LSR_ATOMIC_LOAD(cnt, pCnt);
+    ls_atomic_load(cnt, pCnt);
     if (cnt != 0)
     {
         do_wake(((indx <= 0) ? cnt + 5 : 1), &pInfo->m_iPutIndx
@@ -208,7 +210,7 @@ static inline void adv_getqueue(ls_llxq_t *pThis, llxqinfo_t *pInfo,
 #ifdef LSR_LLQ_DEBUG
     int indx = pInfo->m_iGetIndx;
 #endif
-    LSR_ATOMIC_STORE(&pThis->m_iQGetIndx, qgindx + 1);
+    ls_atomic_store(&pThis->m_iQGetIndx, qgindx + 1);
 #ifdef LSR_LLQ_DEBUG
     pInfo = (llxqinfo_t *)*indx2pqinfo(pThis, (int)pThis->m_iQGetIndx);
     printf("%d] SWAP(%d)%d, new %d/%d\n",
@@ -237,7 +239,7 @@ ls_llxq_t *ls_llxq_new(unsigned int size)
 int ls_llxq_init(ls_llxq_t *pThis, unsigned int size)
 {
     memset(pThis, 0, sizeof(*pThis));
-    LSR_ATOMIC_STORE(&pThis->m_iQPutIndx, -1);
+    ls_atomic_store(&pThis->m_iQPutIndx, -1);
     ls_lock_setup(&llxqlock);
     return ls_llxq_newqueue(pThis, size);
 }
@@ -249,16 +251,16 @@ int ls_llxq_newqueue(ls_llxq_t *pThis, unsigned int size)
     int qpindx;
     int qgindx;
     int nowindx;
-    LSR_ATOMIC_LOAD(qpindx, &pThis->m_iQPutIndx);
+    ls_atomic_load(qpindx, &pThis->m_iQPutIndx);
     ls_lock_lock(&llxqlock);
-    LSR_ATOMIC_LOAD(nowindx, &pThis->m_iQPutIndx);
+    ls_atomic_load(nowindx, &pThis->m_iQPutIndx);
     if (nowindx != qpindx)      /* someone else added a newqueue */
     {
         ls_lock_unlock(&llxqlock);
         return 1;
     }
     llxqinfo_t *oldpinfo;
-    LSR_ATOMIC_LOAD(qgindx, &pThis->m_iQGetIndx);
+    ls_atomic_load(qgindx, &pThis->m_iQGetIndx);
     if ((qpindx - qgindx) >= (NUM_QUEUES - 1))  /* prevent wrap around */
     {
 #ifdef LSR_LLQ_DEBUG
@@ -280,8 +282,8 @@ int ls_llxq_newqueue(ls_llxq_t *pThis, unsigned int size)
     int gindx;
     if ((oldpinfo = (llxqinfo_t *)*indx2pqinfo(pThis, qpindx)) != NULL)
     {
-        LSR_ATOMIC_LOAD(pindx, &oldpinfo->m_iPutIndx);
-        LSR_ATOMIC_LOAD(gindx, &oldpinfo->m_iGetIndx);
+        ls_atomic_load(pindx, &oldpinfo->m_iPutIndx);
+        ls_atomic_load(gindx, &oldpinfo->m_iGetIndx);
         if (((unsigned int)(oldpinfo->m_mask + 1) == size)
             && ((pindx - gindx) < 3))
         {
@@ -302,17 +304,17 @@ int ls_llxq_newqueue(ls_llxq_t *pThis, unsigned int size)
     qobj_t *pPtr = pinfo->m_QObjs;
     for (i = 0; i < size; ++i)
     {
-        LSR_ATOMIC_STORE(&pPtr->m_iSeq, i);
+        ls_atomic_store(&pPtr->m_iSeq, i);
         ++pPtr;
     }
-    LSR_ATOMIC_STORE(&pinfo->m_iPutIndx, 0);
-    LSR_ATOMIC_STORE(&pinfo->m_iGetIndx, 0);
+    ls_atomic_store(&pinfo->m_iPutIndx, 0);
+    ls_atomic_store(&pinfo->m_iGetIndx, 0);
     pinfo->m_mask = size - 1;
     pprev = ls_atomic_setptr(
-                (void **)indx2pqinfo(pThis, qpindx + 1), (void *)pinfo);
+      (void **)indx2pqinfo(pThis, qpindx + 1), (void *)pinfo);
     if (pprev != NULL)
         ls_pfree((void *)pprev);
-    LSR_ATOMIC_STORE(&pThis->m_iQPutIndx, qpindx + 1);
+    ls_atomic_store(&pThis->m_iQPutIndx, qpindx + 1);
     ls_lock_unlock(&llxqlock);
 #ifdef LSR_LLQ_DEBUG
     printf("%d] NEWQUEUE(%d) size=%d\n",
@@ -321,7 +323,7 @@ int ls_llxq_newqueue(ls_llxq_t *pThis, unsigned int size)
 #endif
 
     wake_producers(&pThis->m_iPutWait, oldpinfo, 0);
-    LSR_ATOMIC_LOAD(qgindx, &pThis->m_iQGetIndx);
+    ls_atomic_load(qgindx, &pThis->m_iQGetIndx);
     oldpinfo = (llxqinfo_t *)*indx2pqinfo(pThis, qgindx);
     wake_consumers(&pThis->m_iGetWait, oldpinfo, 0);
 
@@ -370,19 +372,19 @@ static int llxq_put(ls_llxq_t *pThis, void *data, llxqinfo_t **pPInfo,
     int diff;
     while (1)
     {
-        LSR_ATOMIC_LOAD(qgindx, &pThis->m_iQGetIndx);
-        LSR_ATOMIC_LOAD(qpindx, &pThis->m_iQPutIndx);
+        ls_atomic_load(qgindx, &pThis->m_iQGetIndx);
+        ls_atomic_load(qpindx, &pThis->m_iQPutIndx);
         pinfo = (llxqinfo_t *)*indx2pqinfo(pThis, qpindx);
         add_refcnt(pinfo);
-        LSR_ATOMIC_LOAD(indx, &pinfo->m_iPutIndx);
+        ls_atomic_load(indx, &pinfo->m_iPutIndx);
         pPtr = indx2qobj(pinfo, indx);
-        LSR_ATOMIC_LOAD(seq, &pPtr->m_iSeq);
+        ls_atomic_load(seq, &pPtr->m_iSeq);
         diff = (int)seq - (int)indx;
         /* if queue get index changed,
          * we should not put more on the old queue.
          */
         ginfo = (llxqinfo_t *)*indx2pqinfo(pThis, qgindx);
-        LSR_ATOMIC_LOAD(qgindx2, &pThis->m_iQGetIndx);
+        ls_atomic_load(qgindx2, &pThis->m_iQGetIndx);
         if (qgindx != qgindx2)
         {
 #ifdef LSR_LLQ_DEBUG
@@ -414,7 +416,7 @@ static int llxq_put(ls_llxq_t *pThis, void *data, llxqinfo_t **pPInfo,
     int myIndx = ls_atomic_add(&MYINDX, 1);
 #endif
     ++indx;
-    LSR_ATOMIC_STORE(&pPtr->m_iSeq, indx);
+    ls_atomic_store(&pPtr->m_iSeq, indx);
     sub_refcnt(pinfo);
 
 #ifdef LSR_LLQ_DEBUG
@@ -471,7 +473,7 @@ int ls_llxq_timedput(ls_llxq_t *pThis, void *data,
 static void *llxq_get(ls_llxq_t *pThis, llxqinfo_t **pPInfo, int *pWaitVal)
 {
     unsigned int qgindx;
-    LSR_ATOMIC_LOAD(qgindx, &pThis->m_iQGetIndx);
+    ls_atomic_load(qgindx, &pThis->m_iQGetIndx);
     llxqinfo_t *pinfo = (llxqinfo_t *)*indx2pqinfo(pThis, qgindx);
     unsigned int indx;
     qobj_t *pPtr;
@@ -479,9 +481,9 @@ static void *llxq_get(ls_llxq_t *pThis, llxqinfo_t **pPInfo, int *pWaitVal)
     int diff;
     while (1)
     {
-        LSR_ATOMIC_LOAD(indx, &pinfo->m_iGetIndx);
+        ls_atomic_load(indx, &pinfo->m_iGetIndx);
         pPtr = indx2qobj(pinfo, indx);
-        LSR_ATOMIC_LOAD(seq, &pPtr->m_iSeq);
+        ls_atomic_load(seq, &pPtr->m_iSeq);
         diff = (int)seq - (int)(indx + 1);
         if (diff == 0)
         {
@@ -493,14 +495,14 @@ static void *llxq_get(ls_llxq_t *pThis, llxqinfo_t **pPInfo, int *pWaitVal)
             unsigned int curqindx;
             unsigned int curpindx;
             unsigned int refcnt;
-            LSR_ATOMIC_LOAD(curqindx, &pThis->m_iQPutIndx);
-            LSR_ATOMIC_LOAD(curpindx, &pinfo->m_iPutIndx);
-            LSR_ATOMIC_LOAD(refcnt, &pinfo->m_iRefCnt);
+            ls_atomic_load(curqindx, &pThis->m_iQPutIndx);
+            ls_atomic_load(curpindx, &pinfo->m_iPutIndx);
+            ls_atomic_load(refcnt, &pinfo->m_iRefCnt);
             if ((qgindx < curqindx) && (indx == curpindx) && (refcnt == 0))
             {
                 adv_getqueue(pThis, pinfo, qgindx);
                 wake_consumers(&pThis->m_iGetWait, pinfo, 0);
-                LSR_ATOMIC_LOAD(qgindx, &pThis->m_iQGetIndx);
+                ls_atomic_load(qgindx, &pThis->m_iQGetIndx);
                 pinfo = (llxqinfo_t *)*indx2pqinfo(pThis, qgindx);
             }
             else
@@ -518,7 +520,7 @@ static void *llxq_get(ls_llxq_t *pThis, llxqinfo_t **pPInfo, int *pWaitVal)
     int myIndx = ls_atomic_add(&MYINDX, 1);
 #endif
     indx += (1 + pinfo->m_mask);
-    LSR_ATOMIC_STORE(&pPtr->m_iSeq, indx);
+    ls_atomic_store(&pPtr->m_iSeq, indx);
 
 #ifdef LSR_LLQ_DEBUG
     printf("%d] GOT=%d,%d: %d/%d\n",

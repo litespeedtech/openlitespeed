@@ -18,24 +18,22 @@
 #ifndef LSLUAENGINE_H
 #define LSLUAENGINE_H
 
+#include <ls.h>
+#include <lsr/ls_str.h>
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/stat.h>
+
+class lua_State;
 class LsLuaFuncMap;
 class LsLuaScript;
 class LsLuaState;
 class LsLuaSession;
-
-#include <sys/stat.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-#include <ls.h>
-#include <lsr/ls_loopbuf.h>
-#include <lsr/ls_str.h>
-#include <modules/lua/lsluadefs.h>
-#include <socket/gsockaddr.h>
-
 class LsLuaFunc;
 class LsLuaUserParam;
+typedef struct ls_xloopbuf_s ls_xloopbuf_t;
 
 class LsLuaEngine
 {

@@ -20,7 +20,7 @@
 
 #include <lsdef.h>
 #include <thread/thread.h>
-#include <lsdef.h>
+
 #include <assert.h>
 
 typedef void *(*workFn)(void *arg);

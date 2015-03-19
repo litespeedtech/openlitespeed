@@ -22,13 +22,14 @@
 #include "ssiconfig.h"
 
 #include <http/handlertype.h>
-#include <http/httpsession.h>
-#include <http/httplog.h>
-#include <util/httputil.h>
 #include <http/httpcgitool.h>
+#include <http/httplog.h>
+#include <http/httpsession.h>
+#include <http/httpstatuscode.h>
 #include <http/requestvars.h>
-
 #include <lsr/ls_fileio.h>
+#include <util/httputil.h>
+#include <util/ienv.h>
 
 #include <stdio.h>
 
@@ -42,10 +43,12 @@ SSIEngine::~SSIEngine()
 {
 }
 
+
 const char *SSIEngine::getName() const
 {
     return "ssi";
 }
+
 
 void SSIEngine::printError(HttpSession *pSession, char *pError)
 {
@@ -55,6 +58,7 @@ void SSIEngine::printError(HttpSession *pSession, char *pError)
 
     pSession->appendDynBody(pError, strlen(pError));
 }
+
 
 int SSIEngine::startExecute(HttpSession *pSession,
                             SSIScript *pScript)
@@ -95,6 +99,7 @@ int SSIEngine::startExecute(HttpSession *pSession,
     pScript->resetRuntime();
     return resumeExecute(pSession);
 }
+
 
 int SSIEngine::updateSSIConfig(HttpSession *pSession,
                                SSIComponent *pComponent,
@@ -138,6 +143,7 @@ int SSIEngine::updateSSIConfig(HttpSession *pSession,
     }
     return 0;
 }
+
 
 int SSIEngine::processEcho(HttpSession *pSession, SSIComponent *pComponent)
 {
@@ -194,6 +200,7 @@ int SSIEngine::processEcho(HttpSession *pSession, SSIComponent *pComponent)
     return 0;
 }
 
+
 int SSIEngine::processExec(HttpSession *pSession, SSIComponent *pComponent)
 {
     if (pSession->getReq()->isIncludesNoExec())
@@ -205,6 +212,7 @@ int SSIEngine::processExec(HttpSession *pSession, SSIComponent *pComponent)
     return processSubReq(pSession, pItem);
 
 }
+
 
 int SSIEngine::processFileAttr(HttpSession *pSession,
                                SSIComponent *pComponent)
@@ -273,6 +281,7 @@ int SSIEngine::processFileAttr(HttpSession *pSession,
     pSession->appendDynBody(achBuf, len);
     return 0;
 }
+
 
 int SSIEngine::processSubReq(HttpSession *pSession, SubstItem *pItem)
 {
@@ -368,6 +377,7 @@ int SSIEngine::processSubReq(HttpSession *pSession, SubstItem *pItem)
     return 0;
 }
 
+
 int SSIEngine::processInclude(HttpSession *pSession,
                               SSIComponent *pComponent)
 {
@@ -375,7 +385,7 @@ int SSIEngine::processInclude(HttpSession *pSession,
     return processSubReq(pSession, pItem);
 }
 
-#include <util/ienv.h>
+
 class SSIEnv : public IEnv
 {
     HttpSession *m_pSession;
@@ -396,6 +406,7 @@ public:
     int addVar(int var_id);
 };
 
+
 int SSIEnv::add(const char *name, size_t nameLen,
                 const char *value, size_t valLen)
 {
@@ -413,6 +424,7 @@ int SSIEnv::add(const char *name, size_t nameLen,
     return 0;
 }
 
+
 int SSIEnv::add(const char *buf, size_t len)
 {
     char achBuf[40960];
@@ -421,6 +433,7 @@ int SSIEnv::add(const char *buf, size_t len)
     m_pSession->appendDynBody(achBuf, ret + 1);
     return 0;
 }
+
 
 int SSIEnv::addVar(int var_id)
 {
@@ -437,6 +450,7 @@ int SSIEnv::addVar(int var_id)
     return add(pName, nameLen, pValue, valLen);
 }
 
+
 int SSIEngine::processPrintEnv(HttpSession *pSession)
 {
     SSIEnv env(pSession);
@@ -450,6 +464,7 @@ int SSIEngine::processPrintEnv(HttpSession *pSession)
     env.addVar(REF_QS_UNESCAPED);
     return 0;
 }
+
 
 int SSIEngine::processSet(HttpSession *pSession, SSIComponent *pComponent)
 {
@@ -486,6 +501,7 @@ int SSIEngine::processSet(HttpSession *pSession, SSIComponent *pComponent)
     return 0;
 }
 
+
 int SSIEngine::appendLocation(HttpSession *pSession, const char *pLocation,
                               int len)
 {
@@ -503,6 +519,7 @@ int SSIEngine::appendLocation(HttpSession *pSession, const char *pLocation,
     pSession->appendDynBody(achBuf, p - achBuf);
     return 0;
 }
+
 
 static int  shortCurcuit(ExprToken *&pTok)
 {
@@ -536,6 +553,7 @@ static int  shortCurcuit(ExprToken *&pTok)
     }
     return 1;
 }
+
 
 static int compString(HttpSession *pSession, int type, ExprToken *&pTok)
 {
@@ -659,6 +677,7 @@ int SSIEngine::evalOperator(HttpSession *pSession, ExprToken *&pTok)
     return compString(pSession, type, pTok);
 }
 
+
 int SSIEngine::evalExpr(HttpSession *pSession, SubstItem *pItem)
 {
     int ret = 0;
@@ -669,7 +688,6 @@ int SSIEngine::evalExpr(HttpSession *pSession, SubstItem *pItem)
     ret = evalOperator(pSession, pTok);
     return ret;
 }
-
 
 
 int SSIEngine::processIf(HttpSession *pSession, SSI_If *pComponent)

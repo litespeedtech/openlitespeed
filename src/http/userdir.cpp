@@ -16,10 +16,10 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "userdir.h"
-#include <http/authuser.h>
-#include <util/datetime.h>
+
 #include <http/htpasswd.h>
 #include <http/httpstatuscode.h>
+#include <util/datetime.h>
 #include <util/pool.h>
 
 #if !defined( __FreeBSD__ ) && \
@@ -51,12 +51,14 @@ UserDir::~UserDir()
         Pool::deallocate2(m_pName);
 }
 
+
 void UserDir::setName(const char *pName)
 {
     if (m_pName)
         Pool::deallocate2(m_pName);
     m_pName = Pool::dupstr(pName);
 }
+
 
 const AuthUser *UserDir::getUserIfMatchGroup(HttpSession *pSession,
         const char *pUser,
@@ -106,6 +108,7 @@ void UserDir::setUserCache(HashDataCache *pCache)
 
 }
 
+
 void UserDir::setGroupCache(HashDataCache *pCache)
 {
     if (m_pCacheGroup)
@@ -115,6 +118,7 @@ void UserDir::setGroupCache(HashDataCache *pCache)
     }
     m_pCacheGroup = pCache;
 }
+
 
 const AuthUser *UserDir::getRequiredUser(HttpSession *pSession,
         const char  *pUser, int userLen,
@@ -199,6 +203,7 @@ const AuthUser *UserDir::getUser(HttpSession *pSession,
 
 }
 
+
 const StringList *UserDir::getGroup(HttpSession *pSession,
                                     HashDataCache *pCache, const char *pKey,
                                     int len, int *ready)
@@ -248,6 +253,7 @@ const StringList *UserDir::getGroup(HttpSession *pSession,
 
 }
 
+
 static int verifyMD5(const char *pStored, const char *pPasswd, int seeded)
 {
     unsigned char achHash[MD5_DIGEST_LENGTH];
@@ -260,6 +266,7 @@ static int verifyMD5(const char *pStored, const char *pPasswd, int seeded)
     MD5_Final(achHash, &ctx);
     return memcmp(achHash, pStored, MD5_DIGEST_LENGTH);
 }
+
 
 static int verifySHA(const char *pStored, const char *pPasswd, int seeded)
 {
@@ -286,6 +293,7 @@ void ApTo64(char *s, unsigned long v, int n)
         v >>= 6;
     }
 }
+
 
 void ApMD5Encode(const unsigned char *pw,
                  const unsigned char *sp, int sl,
@@ -381,6 +389,7 @@ void ApMD5Encode(const unsigned char *pw,
 
 }
 
+
 static int verifyApMD5(const char *pStored, const char *pPasswd)
 {
     char result[120];
@@ -450,22 +459,24 @@ int UserDir::authenticate(HttpSession *pSession, const char *pUserName,
 }
 
 
-
 void UserDir::onTimer()
 {
     //TODO: to be done
 }
+
 
 AuthRequired::AuthRequired()
     : m_iRequiredType(REQ_VALID_USER)
     , m_pRequired(NULL)
 {}
 
+
 AuthRequired::~AuthRequired()
 {
     if (m_pRequired)
         delete m_pRequired;
 }
+
 
 int AuthRequired::parse(const char *pRequired)
 {
@@ -505,6 +516,7 @@ int AuthRequired::parse(const char *pRequired)
     return 0;
 }
 
+
 const AutoStr2 *AuthRequired::find(const char *p) const
 {
     if (m_pRequired)
@@ -527,6 +539,7 @@ PlainFileUserDir::~PlainFileUserDir()
     if (m_pGroupStore)
         delete m_pGroupStore;
 }
+
 
 int PlainFileUserDir::setDataStore(const char *pFile, const char *pGroup)
 {

@@ -15,15 +15,9 @@
 *    You should have received a copy of the GNU General Public License       *
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
-#include <unistd.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <time.h>
-#include <lsdef.h>
-
-#include <shm/lsi_shm.h>
 #include <shm/lsshmlru.h>
+
+#include <lsdef.h>
 
 
 int shmlru_init(shmlru_t *pShmLru,
@@ -54,7 +48,7 @@ int shmlru_set(shmlru_t *pShmLru,
 
     int ret;
     int mylen = valLen;
-    int flag = (LSSHM_FLAG_NONE | LSSHM_FLAG_SETTOP);
+    int flag = LSSHM_FLAG_NONE;
     lsi_shm_off_t offVal;
     lsi_shmhash_lock(pHash);
     if ((offVal = lsi_shmhash_get(pHash, pKey, keyLen, &mylen, &flag)) == 0)

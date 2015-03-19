@@ -18,16 +18,14 @@
 #ifndef LSSHM_H
 #define LSSHM_H
 
+#include <lsdef.h>
+#include <shm/lsshmlock.h>
+#include <shm/lsshmtypes.h>
+#include <util/hashstringmap.h>
+
 #include <assert.h>
 #include <stdint.h>
-#include <stdarg.h>
-#include <pthread.h>
 #include <sys/types.h>
-
-#include <lsdef.h>
-#include <util/hashstringmap.h>
-#include <shm/lsshmtypes.h>
-#include <shm/lsshmlock.h>
 
 /**
  * @file
@@ -36,7 +34,7 @@
 
 #define SHM_DBG(format, ...) \
         LOG4CXX_NS::Logger::getRootLogger()->debug(format, ##__VA_ARGS__ )
-        
+
 #define SHM_NOTICE(format, ...) \
         LOG4CXX_NS::Logger::getRootLogger()->notice(format, ##__VA_ARGS__ )
 
@@ -46,6 +44,9 @@ class debugBase;// These two should be the same size...
 #endif
 class LsShmPool;
 class LsShmHash;
+class LsShmLruHash;
+class LsShmWLruHash;
+class LsShmXLruHash;
 
 typedef union
 {
@@ -176,6 +177,9 @@ public:
             delete this;
     }
 
+    void deleteFile();
+
+
 private:
     explicit LsShm(const char *mapName, LsShmSize_t initialSize,
                    const char *pBaseDir = NULL);
@@ -208,7 +212,7 @@ public:
     {
         s_aErrMsg[0] = '\0';
     }
-    
+
     void setShmMaxSize(LsShmSize_t size)
     {
         m_iMaxShmSize = size > LSSHM_MINSPACE ? size : LSSHM_MINSPACE;
@@ -476,7 +480,6 @@ private:
     char                   *m_pFileName;    // dir + mapName + ext
     char                   *m_pMapName;
     int                     m_iFd;
-    int                     m_iRemoveFlag;  // remove file
     lsi_shmlock_t          *m_pShmLock;
     lsi_shmlock_t          *m_pRegLock;
 

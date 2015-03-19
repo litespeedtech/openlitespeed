@@ -163,18 +163,6 @@ void ls_hash_delete(ls_hash_t *pThis)
 
 ls_hash_key_t ls_hash_hfstring(const void *__s)
 {
-    ls_hash_key_t __h = 0;
-    const char *p = (const char *)__s;
-    char ch = *(const char *)p++;
-    for (; ch ; ch = *((const char *)p++))
-        __h = __h * 31 + (ch);
-
-    return __h;
-}
-
-
-ls_hash_key_t ls_hash_hfxxstring(const void *__s)
-{
     return XXH32((const char *)__s, strlen((const char *)__s), 0);
 }
 

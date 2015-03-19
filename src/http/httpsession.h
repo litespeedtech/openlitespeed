@@ -19,17 +19,14 @@
 #define HTTPCONNECTION_H
 
 
-#include <edio/aiooutputstream.h>
 #include <edio/aioeventhandler.h>
-#include <edio/aiosendfile.h>
-#include <edio/inputstream.h>
+#include <edio/aiooutputstream.h>
 #include <http/httpreq.h>
 #include <http/httpresp.h>
-#include <http/sendfileinfo.h>
 #include <http/ntwkiolink.h>
+#include <http/sendfileinfo.h>
+#include <lsiapi/internal.h>
 #include <lsiapi/lsimoduledata.h>
-
-#include <util/linkedobj.h>
 
 class ReqHandler;
 class VHostMap;
@@ -39,8 +36,8 @@ class ExtWorker;
 class VMemBuf;
 class GzipBuf;
 class SSIScript;
-class NtwkIOLink;
 class LsiApiHooks;
+class Aiosfcb;
 
 enum  HttpSessionState
 {
@@ -156,7 +153,7 @@ class HttpSession : public LsiSession, public HioHandler,
     //int                   m_accessGranted;
 
     AioReq                m_aioReq;
-    Aiosfcb               m_aiosfcb;
+    Aiosfcb              *m_pAiosfcb;
 
     HttpSession(const HttpSession &rhs);
     void operator=(const HttpSession &rhs);
@@ -356,13 +353,7 @@ public:
 
     //const char * buildLogId();
 
-    void httpError(int code, const char *pAdditional = NULL)
-    {
-        if (code < 0)
-            code = SC_500;
-        m_request.setStatusCode(code);
-        sendHttpError(pAdditional);
-    }
+    void httpError(int code, const char *pAdditional = NULL);
     int read(char *pBuf, int size);
     int readv(struct iovec *vector, size_t count);
     ReqHandler *getCurHandler() const  {   return m_pHandler;  }

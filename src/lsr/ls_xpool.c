@@ -234,7 +234,14 @@ void ls_xpool_destroy(ls_xpool_t *pool)
 void ls_xpool_reset(ls_xpool_t *pool)
 {
     ls_xpool_destroy(pool);
-    ls_xpool_init(pool);
+#ifdef USE_THRSAFE_POOL
+#if ( lock_Avail != 0 )
+    NEED TO SETUP LOCKS
+#endif
+#endif
+#ifdef USE_VALGRIND
+    VALGRIND_CREATE_MEMPOOL(pool, 0, 0);
+#endif
 }
 
 

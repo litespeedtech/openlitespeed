@@ -19,8 +19,7 @@
 #define HTPASSWD_H
 
 
-
-#include <http/userdir.h>
+#include <util/hashdatacache.h>
 
 
 struct stat;

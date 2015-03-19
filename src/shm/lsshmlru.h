@@ -18,10 +18,10 @@
 #ifndef LSSHMLRU_H
 #define LSSHMLRU_H
 
+#include <shm/lsi_shm.h>
+
 #include <unistd.h>
 #include <time.h>
-
-#include <shm/lsi_shm.h>
 
 /**
  * @file

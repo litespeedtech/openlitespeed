@@ -19,7 +19,6 @@
 #include <edio/multiplexer.h>
 #include <edio/multiplexerfactory.h>
 #include <edio/sigeventdispatcher.h>
-#include <http/adns.h>
 #include <util/datetime.h>
 #include <http/httpdefs.h>
 #include <http/httplog.h>
@@ -41,10 +40,12 @@ EventDispatcher::EventDispatcher()
 {
 }
 
+
 EventDispatcher::~EventDispatcher()
 {
     release();
 }
+
 
 int EventDispatcher::init(const char *pType)
 {
@@ -67,6 +68,7 @@ int EventDispatcher::init(const char *pType)
     return LS_FAIL;
 }
 
+
 int EventDispatcher::reinit()
 {
     if (!MultiplexerFactory::getMultiplexer())
@@ -87,16 +89,19 @@ int EventDispatcher::reinit()
     return LS_FAIL;
 }
 
+
 void EventDispatcher::release()
 {
     MultiplexerFactory::recycle(MultiplexerFactory::getMultiplexer());
 }
+
 
 int EventDispatcher::stop()
 {
     HttpSignals::setSigStop();
     return 0;
 }
+
 
 static void processTimer()
 {
@@ -115,6 +120,7 @@ static void processTimer()
     MultiplexerFactory::getMultiplexer()->timerExecute();
 }
 
+
 int highPriorityTask()
 {
     if (HttpSignals::gotSigAlarm())
@@ -125,6 +131,7 @@ int highPriorityTask()
     ConnLimitCtrl::getInstance().tryAcceptNewConn();
     return 0;
 }
+
 
 static void startTimer()
 {
@@ -139,6 +146,7 @@ static void startTimer()
                            tmv.it_value.tv_usec % tmv.it_interval.tv_usec;
     setitimer(ITIMER_REAL, &tmv, NULL);
 }
+
 
 /*
 #define MLTPLX_TIMEOUT 1000
@@ -183,6 +191,7 @@ int EventDispatcher::run()
     return 0;
 }
 */
+
 
 static inline void processTimerNew()
 {

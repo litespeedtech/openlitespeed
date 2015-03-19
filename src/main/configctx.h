@@ -19,13 +19,15 @@
 #define CONFIGCTX_H
 
 #include <lsdef.h>
-#include <lsr/ls_strtool.h>
 #include <util/logidtracker.h>
+
+#include <stdarg.h>
 
 //class HttpContext;
 //class HttpVHost;
 class XmlNode;
 class HttpHandler;
+class AccessControl;
 #define MAX_PATH_LEN                4096
 long long getLongValue(const char *pValue, int base = 10);
 class ConfigCtx
@@ -84,6 +86,7 @@ public:
     int checkPath(char *pPath, const char *desc, int follow);
     int convertToRegex(const char   *pOrg, char *pDestBuf, int bufLen);
     XmlNode *parseFile(const char *configFilePath, const char *rootTag);
+    int configSecurity(AccessControl *pCtrl, const XmlNode *pNode);
     static const AutoStr2 *getVhName()               {   return &s_vhName;          }
     static const AutoStr2 *getVhDomain()             {   return &s_vhDomain;         }
     static const AutoStr2 *getVhAliases()            {   return &s_vhAliases;        }

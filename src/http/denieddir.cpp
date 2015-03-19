@@ -18,8 +18,6 @@
 #include "denieddir.h"
 
 #include <lsdef.h>
-#include <httplog.h>
-#include <util/gpath.h>
 #include <util/autostr.h>
 
 #include <stdio.h>
@@ -43,6 +41,7 @@ private:
     LS_NO_COPY_ASSIGN(DirItem);
 };
 
+
 bool DirItem::isDenied(const char *path)
 {
     if (m_bIncludeSub)
@@ -52,17 +51,18 @@ bool DirItem::isDenied(const char *path)
 }
 
 
-
 static int compare(const void *val1, const void *val2)
 {
     return strcmp((*(const DirItem **)val1)->getPath(),
                   (*(const DirItem **)val2)->getPath());
 }
 
+
 void DeniedDir::sort()
 {
     ::qsort(begin(), size(), sizeof(DirItem **), compare);
 }
+
 
 DeniedDir::iterator DeniedDir::lower_bound(const char *pPath)
 {
@@ -87,6 +87,7 @@ DeniedDir::iterator DeniedDir::lower_bound(const char *pPath)
 
 }
 
+
 DirItem *DeniedDir::find(const char *pPath)
 {
     DirItem **p = lower_bound(pPath);
@@ -102,13 +103,16 @@ void DeniedDir::insert(DirItem *pDir)
     sort();
 }
 
+
 DeniedDir::DeniedDir()
 {}
+
 
 DeniedDir::~DeniedDir()
 {
     clear();
 }
+
 
 int DeniedDir::addDir(const char *pDir)
 {
@@ -158,11 +162,13 @@ int DeniedDir::addDir(const char *pDir)
 
 }
 
+
 bool DeniedDir::isDenied(const char *pPath)
 {
     DirItem **pos = lower_bound(pPath);
     return isDenied(pos, pPath);
 }
+
 
 bool DeniedDir::isDenied(iterator iter, const char *pPath)
 {
@@ -173,6 +179,7 @@ bool DeniedDir::isDenied(iterator iter, const char *pPath)
     }
     return false;
 }
+
 
 void DeniedDir::clear()
 {
@@ -194,6 +201,7 @@ DeniedDir::iterator DeniedDir::next_included(iterator iter,
     }
     return end();
 }
+
 
 const char *DeniedDir::getPath(iterator iter)
 {   return (*iter)->getPath();  }

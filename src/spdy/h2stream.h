@@ -18,14 +18,14 @@
 #ifndef H2STREAM_H
 #define H2STREAM_H
 
+#include <lsdef.h>
 #include <http/hiostream.h>
 #include <util/linkedobj.h>
 #include <util/loopbuf.h>
+
 #include <inttypes.h>
-#include "h2protocol.h"
-#include <lsdef.h>
 
-
+struct Priority_st;
 class H2Connection;
 class NtwkIOLink;
 
@@ -129,7 +129,7 @@ private:
     LoopBuf     m_bufIn;
 
     uint8_t     m_reqHeaderEnd;
-    
+
     LS_NO_COPY_ASSIGN(H2Stream);
 };
 

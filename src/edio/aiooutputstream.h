@@ -20,18 +20,15 @@
 
 #include <lsdef.h>
 #include <edio/aioeventhandler.h>
-#include <util/autobuf.h>
 
 #include <aio.h>
-#include <signal.h>
-#include <stddef.h>
-#include <stdarg.h>
 #include <sys/types.h>
 
 #ifdef LS_AIO_USE_KQ
 #include <sys/event.h>
 #endif
 
+class AutoBuf;
 
 class AioReq
 {

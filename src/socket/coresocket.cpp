@@ -50,6 +50,7 @@ int  CoreSocket::connect(const char *pURL, int iFLTag, int *fd,
     return connect(server, iFLTag, fd, nodelay);
 }
 
+
 int  CoreSocket::connect(const GSockAddr &server, int iFLTag, int *fd,
                          int nodelay)
 {
@@ -75,8 +76,8 @@ int  CoreSocket::connect(const GSockAddr &server, int iFLTag, int *fd,
         return LS_FAIL;
     }
     return ret;
-
 }
+
 
 int CoreSocket::listen(const char *pURL, int backlog, int *fd, int sndBuf,
                        int rcvBuf)
@@ -88,6 +89,7 @@ int CoreSocket::listen(const char *pURL, int backlog, int *fd, int sndBuf,
         return LS_FAIL;
     return listen(server, backlog, fd, sndBuf, rcvBuf);
 }
+
 
 int CoreSocket::listen(const GSockAddr &server, int backLog, int *fd,
                        int sndBuf, int rcvBuf)
@@ -109,7 +111,6 @@ int CoreSocket::listen(const GSockAddr &server, int backLog, int *fd,
     ::close(*fd);
     *fd = -1;
     return ret;
-
 }
 
 
@@ -133,7 +134,6 @@ int CoreSocket::bind(const GSockAddr &server, int type, int *fd)
     ::close(*fd);
     *fd = -1;
     return ret;
-
 }
 
 

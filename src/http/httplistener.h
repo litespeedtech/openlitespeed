@@ -18,14 +18,13 @@
 #ifndef HTTPLISTENER_H
 #define HTTPLISTENER_H
 
-
 #include <edio/eventreactor.h>
+#include <lsiapi/lsiapihooks.h>
+#include <lsiapi/modulemanager.h>
 #include <util/autostr.h>
 #include <util/logtracker.h>
 
 #include <sys/types.h>
-#include <lsiapi/lsiapi.h>
-#include <lsiapi/modulemanager.h>
 
 class HttpVHost;
 class SSLContext;

@@ -16,17 +16,20 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "lsjsengine.h"
-#include "ls.h"
-#include <http/httplog.h>
-#include <log4cxx/logger.h>
-#include <lsr/ls_strtool.h>
+
+#include <ls.h>
 #include <lsr/ls_confparser.h>
+#include <lsr/ls_strtool.h>
 #include <util/fdpass.h>
-#include <sys/stat.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <fcntl.h>
+
 #include <errno.h>
+#include <fcntl.h>
+#include <stdlib.h>
+#include <sys/socket.h>
+#include <sys/stat.h>
+#include <sys/un.h>
+#include <unistd.h>
+
 // #include "/home/user/simon/unixdomain/nethelper.c"
 
 // Node search path:
@@ -56,9 +59,11 @@ LsJsEngine::LsJsEngine()
 {
 }
 
+
 LsJsEngine::~LsJsEngine()
 {
 }
+
 
 int LsJsEngine::init()
 {
@@ -82,12 +87,14 @@ int LsJsEngine::init()
     return 0 ;
 }
 
+
 int LsJsEngine::isReady(lsi_session_t *session)
 {
     if (!s_ready)
         return 0;
     return 1;
 }
+
 
 //
 //  runScript - working code.
@@ -182,6 +189,7 @@ int    LsJsEngine::runScript(lsi_session_t *session
     return 0;
 }
 
+
 //
 //  Configuration parameters for LiteSpeed js driver
 //
@@ -275,11 +283,13 @@ void *LsJsEngine::parseParam(const char *param
     return (void *)pUser;
 }
 
+
 void LsJsEngine::removeParam(void *config)
 {
     g_api->log(NULL , LSI_LOG_NOTICE
                , "REMOVE PARAMETERS [%p]\n", config);
 }
+
 
 int LsJsEngine::tcpDomainSocket(const char *path)
 {
