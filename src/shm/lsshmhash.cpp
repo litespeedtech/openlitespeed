@@ -15,25 +15,18 @@
 *    You should have received a copy of the GNU General Public License       *
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
-#include <stdlib.h>
-#include <unistd.h>
+#include <shm/lsshmhash.h>
+
+#include <lsr/xxhash.h>
+#include <shm/lsshmpool.h>
 
 #include <assert.h>
 #include <errno.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
-#include <shm/lsshmpool.h>
-#include <shm/lsshmhash.h>
-#include <http/httplog.h>
-#include <lsr/xxhash.h>
-#if 0
-#include <log4cxx/logger.h>
-#endif
-
-#ifdef DEBUG_RUN
-using namespace LOG4CXX_NS;
-#endif
 
 
 const uint8_t LsShmHash::s_bitMask[] =
@@ -198,7 +191,7 @@ void LsShmHash::remap()
         m_pTable = (LsShmHTable *)m_pPool->offset2ptr(m_iOffset);
 
 #if 0
-        HttpLog::notice(
+        SHM_NOTICE(
             "LsShmHash::remap %6d %X %X SIZE %X %X size %d cap %d [%d]",
             getpid(), m_pShmMap,
             m_pPool->getShmMap(),
@@ -226,7 +219,7 @@ void LsShmHash::remap()
     else
     {
 #ifdef DEBUG_RUN
-        HttpLog::notice(
+        SHM_NOTICE(
             "LsShmHash::remapXXX NOCHANGE %6d %X %X SIZE %X %X size %d cap %d",
             getpid(), m_pShmMap,
             m_pPool->getShmMap(),
@@ -308,23 +301,8 @@ LsShmHash::LsShmHash(LsShmPool *pool, const char *name, size_t init_size,
         m_iOffset = m_pPool->alloc2(sizeof(LsShmHTable), remapped);
         if (m_iOffset == 0)
             return;
-        LsShmOffset_t iOffset =
-            m_pPool->alloc2(sz2TableSz(init_size), remapped);
-        if (iOffset == 0)
-        {
-            m_pPool->release2(m_iOffset, sizeof(LsShmHTable));
-            m_iOffset = 0;
-            return;
-        }
-        LsShmOffset_t bOffset =
-            m_pPool->alloc2(sz2BitMapSz(init_size), remapped);
-        if (bOffset == 0)
-        {
-            m_pPool->release2(iOffset, sz2TableSz(init_size));
-            m_pPool->release2(m_iOffset, sizeof(LsShmHTable));
-            m_iOffset = 0;
-            return;
-        }
+        LsShmOffset_t iTable = m_pPool->alloc2(sz2TableSz(init_size), remapped);
+        LsShmOffset_t iBitMap = m_pPool->alloc2(sz2BitMapSz(init_size), remapped);
 
         // MAP in the system here...
         m_pShmMap = m_pPool->getShmMap();
@@ -335,27 +313,31 @@ LsShmHash::LsShmHash(LsShmPool *pool, const char *name, size_t init_size,
         m_pTable->x_iSize = 0;
         m_pTable->x_iFullFactor = 2;
         m_pTable->x_iGrowFactor = 2;
-        m_pTable->x_iTable = iOffset;
-        m_pTable->x_iBitMap = bOffset;
+        m_pTable->x_iTable = iTable;
+        m_pTable->x_iBitMap = iBitMap;
         m_pTable->x_iLockOffset = 0;
         m_pTable->x_iLruOffset = 0;
 
-        m_pShmLock = m_pPool->lockPool()->allocLock();
-        if (m_pShmLock == NULL)
+        if ((iTable == 0) || (iBitMap == 0))
         {
-            m_pPool->release2(m_iOffset, sizeof(LsShmHTable));
-            m_iOffset = 0;
+            initErrCleanUp();
+            return;
+        }
+
+        // setup local and global lock only if new
+        m_pShmLock = m_pPool->lockPool()->allocLock();
+        m_pShmGLock = m_pPool->lockPool()->allocLock();
+        if ((m_pShmLock == NULL) || (m_pShmGLock == NULL))
+        {
+            initErrCleanUp();
+            return;
+        }
+        if ((setupLock() != 0) || (setupGLock() != 0))
+        {
+            initErrCleanUp();
             return;
         }
         m_pTable->x_iLockOffset = m_pPool->lockPool()->pLock2offset(m_pShmLock);
-
-        m_pShmGLock = m_pPool->lockPool()->allocLock();
-        if (m_pShmGLock == NULL)
-        {
-            m_pPool->release2(m_iOffset, sizeof(LsShmHTable));
-            m_iOffset = 0;
-            return;
-        }
         m_pTable->x_iGLockOffset =
             m_pPool->lockPool()->pLock2offset(m_pShmGLock);
 
@@ -383,21 +365,12 @@ LsShmHash::LsShmHash(LsShmPool *pool, const char *name, size_t init_size,
             return;
     }
 
-    // setup local and global lock
-    m_pShmLock = m_pPool->lockPool()->offset2pLock(m_pTable->x_iLockOffset);
-    m_pShmGLock = m_pPool->lockPool()->offset2pLock(m_pTable->x_iGLockOffset);
-    if ((m_iOffset != 0) && (setupLock() == 0) && (setupGLock() == 0))
-    {
-        m_iRef = 1;
-        m_status = LSSHM_READY;
+    m_iRef = 1;
+    m_status = LSSHM_READY;
 #ifdef DEBUG_RUN
-        HttpLog::notice("LsShmHash::LsShmHash insert %s <%p>",
-                        m_pName, &m_objBase);
+    SHM_NOTICE("LsShmHash::LsShmHash insert %s <%p>", m_pName, &m_objBase);
 #endif
-        m_pPool->getShm()->getObjBase().insert(m_pName, this);
-    }
-    else
-        m_status = LSSHM_ERROR;
+    m_pPool->getShm()->getObjBase().insert(m_pName, this);
 }
 
 
@@ -408,7 +381,7 @@ LsShmHash::~LsShmHash()
         if (m_iRef == 0)
         {
 #ifdef DEBUG_RUN
-            HttpLog::notice("LsShmHash::~LsShmHash remove %s <%p>",
+            SHM_NOTICE("LsShmHash::~LsShmHash remove %s <%p>",
                             m_pName, &m_objBase);
 #endif
             m_pPool->getShm()->getObjBase().remove(m_pName);
@@ -436,18 +409,67 @@ LsShmHash *LsShmHash::checkHTable(GHash::iterator itor, LsShmPool *pool,
 }
 
 
+void LsShmHash::setFullFactor(int f)   
+{   
+    if (f > 0)
+    {
+        getHTable()->x_iFullFactor = f;  
+    }
+}
+
+
+void LsShmHash::setGrowFactor(int f)   
+{   
+    if (f > 0) 
+    {
+        getHTable()->x_iGrowFactor = f;  
+    }
+}
+
+
+void LsShmHash::initErrCleanUp()
+{
+    size_t size = m_pTable->x_iCapacity;
+    if (m_pTable->x_iTable != 0)
+    {
+        m_pPool->release2(m_pTable->x_iTable, sz2TableSz(size));
+        m_pTable->x_iTable = 0;
+    }
+    if (m_pTable->x_iBitMap != 0)
+    {
+        m_pPool->release2(m_pTable->x_iBitMap, sz2BitMapSz(size));
+        m_pTable->x_iBitMap = 0;
+    }
+    if (m_iOffset != 0)
+    {
+        m_pPool->release2(m_iOffset, sizeof(LsShmHTable));
+        m_iOffset = 0;
+    }
+    if (m_pShmLock != NULL)
+    {
+        m_pPool->lockPool()->freeLock(m_pShmLock);
+        m_pShmLock = NULL;
+    }
+    if (m_pShmGLock != NULL)
+    {
+        m_pPool->lockPool()->freeLock(m_pShmGLock);
+        m_pShmGLock = NULL;
+    }
+}
+
+
 void LsShmHash::close()
 {
-    LsShmPool *p = NULL;
-    if (m_iPoolOwner != 0)
-    {
-        m_iPoolOwner = 0;
-        p = m_pPool;
-    }
+//     LsShmPool *p = NULL;
+//     if (m_iPoolOwner != 0)
+//     {
+//         m_iPoolOwner = 0;
+//         p = m_pPool;
+//     }
     if (downRef() == 0)
         delete this;
-    if (p != NULL)
-        p->close();
+//     if (p != NULL)
+//         p->close();
 }
 
 
@@ -489,12 +511,12 @@ void LsShmHash::destroy()
 
 int LsShmHash::rehash()
 {
-    remap();
+    checkRemap();
     int range = findRange(m_pTable->x_iCapacity);
     int newSize = s_primeList[range + m_pTable->x_iGrowFactor];
 
 #ifdef DEBUG_RUN
-    HttpLog::notice("LsShmHash::rehash %6d %X %X size %d cap %d NEW %d",
+    SHM_NOTICE("LsShmHash::rehash %6d %X %X size %d cap %d NEW %d",
                     getpid(), m_pShmMap, m_pPool->getShmMap(),
                     m_pTable->x_iSize,
                     m_pTable->x_iCapacity,
@@ -516,53 +538,64 @@ int LsShmHash::rehash()
     remap();
     LsShmHIdx *pIdx = (LsShmHIdx *)m_pPool->offset2ptr(newIdxOff);
     ::memset(pIdx, 0, sz2TableSz(newSize));
-    uint8_t *pBitMap = (uint8_t *)m_pPool->offset2ptr(newBitOff);
-    ::memset(pBitMap, 0, sz2BitMapSz(newSize));
 
-    iterator iterNext = begin();
-    while (iterNext != end())
-    {
-        iterator iter = iterNext;
-        iterNext = next(iter);
-
-        LsShmHIdx *npIdx = pIdx + getIndex(iter->x_hkey, newSize);
-        assert(npIdx->x_iOffset < m_pPool->getShmMap()->x_iMaxSize);
-        iter->x_iNext = npIdx->x_iOffset;
-        npIdx->x_iOffset = m_pPool->ptr2offset(iter);
-    }
-    m_pPool->release2(
-        m_pTable->x_iTable, sz2TableSz(m_pTable->x_iCapacity));
+    // change bitmap now, so setBitMapEnt may be called in loop.
     m_pPool->release2(
         m_pTable->x_iBitMap, sz2BitMapSz(m_pTable->x_iCapacity));
-
-    m_pTable->x_iTable = newIdxOff;
     m_pTable->x_iBitMap = newBitOff;
+    m_pBitMap = (uint8_t *)m_pPool->offset2ptr(newBitOff);
+    ::memset(m_pBitMap, 0, sz2BitMapSz(newSize));
+
+    iterator iter;
+    iteroffset iterOff;
+    for (iterOff = begin(); iterOff != end(); iterOff = next(iterOff))
+    {
+        iter = offset2iterator(iterOff);
+        uint32_t hashIndx = getIndex(iter->x_hkey, newSize);
+        LsShmHIdx *npIdx = pIdx + hashIndx;
+        setBitMapEnt(hashIndx);
+        assert(npIdx->x_iOffset < m_pPool->getShmMap()->x_iMaxSize);
+        iter->x_iNext = npIdx->x_iOffset;
+        npIdx->x_iOffset = iterOff;
+    }
+
+    m_pPool->release2(
+        m_pTable->x_iTable, sz2TableSz(m_pTable->x_iCapacity));
+    m_pTable->x_iTable = newIdxOff;
     m_pTable->x_iCapacity = newSize;
     m_iCapacity = newSize;
-    m_pIdxStart = (LsShmHIdx *)m_pPool->offset2ptr(m_pTable->x_iTable);
-    m_pIdxEnd = m_pIdxStart + m_pTable->x_iCapacity;
-    m_pBitMap = (uint8_t *)m_pPool->offset2ptr(m_pTable->x_iBitMap);
+    m_pIdxStart = pIdx;
+    m_pIdxEnd = m_pIdxStart + newSize;
     remap();
     return 0;
 }
 
 
-int LsShmHash::release_hash_elem(LsShmHash::iterator iter, void *pUData)
+int LsShmHash::release_hash_elem(LsShmHash::iteroffset iterOff, void *pUData)
 {
     LsShmHash *pThis = (LsShmHash *)pUData;
-    pThis->m_pPool->release2(pThis->m_pPool->ptr2offset(iter), iter->x_iLen);
+    LsShmHash::iterator iter = pThis->offset2iterator(iterOff);
+    pThis->release2(iterOff, iter->x_iLen);
     return 0;
 }
 
 
 void LsShmHash::clear()
 {
+    checkRemap();
     int n = for_each2(begin(), end(), release_hash_elem, this);
     assert(n == (int)m_pTable->x_iSize);
 
     ::memset(m_pIdxStart, 0, sz2TableSz(m_pTable->x_iCapacity));
     ::memset(m_pBitMap, 0, sz2BitMapSz(m_pTable->x_iCapacity));
     m_pTable->x_iSize = 0;
+    if (m_pLru != NULL)
+    {
+        m_pLru->linkFirst = 0;
+        m_pLru->linkLast = 0;
+        m_pLru->nvalset = 0;
+        m_pLru->ndataset = 0;
+    }
 }
 
 
@@ -575,16 +608,16 @@ void LsShmHash::eraseIteratorHelper(iterator iter)
     if (iter == NULL)
         return;
 
-    LsShmOffset_t iterOffset = m_pPool->ptr2offset(iter);
-    LsShmHIdx *pIdx =
-        m_pIdxStart + getIndex(iter->x_hkey, m_pTable->x_iCapacity);
+    iteroffset iterOff = m_pPool->ptr2offset(iter);
+    uint32_t hashIndx = getIndex(iter->x_hkey, m_pTable->x_iCapacity);
+    LsShmHIdx *pIdx = m_pIdxStart + hashIndx;
     LsShmOffset_t offset = pIdx->x_iOffset;
     LsShmHElem *pElem;
 
 #ifdef DEBUG_RUN
     if (offset == 0)
     {
-        HttpLog::notice(
+        SHM_NOTICE(
             "LsShmHash::eraseIteratorHelper %6d %X %X size %d cap %d",
             getpid(), m_pShmMap, m_pPool->getShmMap(),
             m_pTable->x_iSize,
@@ -594,17 +627,18 @@ void LsShmHash::eraseIteratorHelper(iterator iter)
     }
 #endif
 
-    if (offset == iterOffset)
+    unlinkHElem(iter);
+    if (offset == iterOff)
     {
         if ((pIdx->x_iOffset = iter->x_iNext) == 0) // last one
-            clrBitMapEnt(iter->x_hkey);
+            clrBitMapEnt(hashIndx);
     }
     else
     {
         do
         {
             pElem = (LsShmHElem *)m_pPool->offset2ptr(offset);
-            if (pElem->x_iNext == iterOffset)
+            if (pElem->x_iNext == iterOff)
             {
                 pElem->x_iNext = iter->x_iNext;
                 break;
@@ -615,20 +649,20 @@ void LsShmHash::eraseIteratorHelper(iterator iter)
         while (offset != 0);
     }
 
-    m_pPool->release2(iterOffset, iter->x_iLen);
+    m_pPool->release2(iterOff, iter->x_iLen);
     --m_pTable->x_iSize;
 }
 
 
-LsShmHash::iterator LsShmHash::find2(
-    const void *pKey, int keyLen, LsShmHKey key)
+LsShmHash::iteroffset LsShmHash::find2( LsShmHKey key, ls_str_pair_t *pParms)
 {
-    if (getBitMapEnt(key) == 0)     // quick check
-        return end();
-    LsShmHIdx *pIdx = m_pIdxStart + getIndex(key, m_pTable->x_iCapacity);
+    uint32_t hashIndx = getIndex(key, m_pTable->x_iCapacity);
+    if (getBitMapEnt(hashIndx) == 0)     // quick check
+        return 0;
+    LsShmHIdx *pIdx = m_pIdxStart + hashIndx;
 
 #ifdef DEBUG_RUN
-    HttpLog::notice("LsShmHash::find %6d %X %X size %d cap %d <%p> %d",
+    SHM_NOTICE("LsShmHash::find %6d %X %X size %d cap %d <%p> %d",
                     getpid(), m_pShmMap, m_pPool->getShmMap(),
                     m_pTable->x_iSize,
                     m_pTable->x_iCapacity,
@@ -643,28 +677,28 @@ LsShmHash::iterator LsShmHash::find2(
     {
         pElem = (LsShmHElem *)m_pPool->offset2ptr(offset);
         if ((pElem->x_hkey == key)
-            && (pElem->getKeyLen() == keyLen)
-            && ((*m_vc)(pKey, pElem->getKey(), keyLen) == 0))
-            return pElem;
+            && (pElem->getKeyLen() == ls_str_len(&pParms->key))
+            && ((*m_vc)(ls_str_buf(&pParms->key), pElem->getKey(),
+                        ls_str_len(&pParms->key)) == 0))
+            return offset;
         offset = pElem->x_iNext;
         remap();
     }
-    return end();
+    return 0;
 }
 
 
-LsShmHash::iterator LsShmHash::insert2(
-    const void *pKey, int keyLen, const void *pValue, int valueLen,
-    LsShmHKey key)
+LsShmHash::iteroffset LsShmHash::insert2(LsShmHKey key, ls_str_pair_t *pParms)
 {
-    uint32_t valueOff = sizeof(ls_vardata_t) + round4(keyLen);
-    valueSetup(&valueOff, &valueLen);
+    uint32_t valueOff = sizeof(ls_vardata_t) + round4(ls_str_len(&pParms->key));
+    int valLen = ls_str_len(&pParms->value);
+    valueSetup(&valueOff, &valLen);
     int elementSize = sizeof(LsShmHElem) + valueOff
-      + sizeof(ls_vardata_t) + round4(valueLen);
+      + sizeof(ls_vardata_t) + round4(valLen);
     int remapped = 0;
     LsShmOffset_t offset = m_pPool->alloc2(elementSize, remapped);
     if (offset == 0)
-        return end();
+        return 0;
 
     remap();
     if (m_pTable->x_iSize * m_pTable->x_iFullFactor > m_pTable->x_iCapacity)
@@ -672,7 +706,7 @@ LsShmHash::iterator LsShmHash::insert2(
         if (rehash() < 0)
         {
             if (m_pTable->x_iSize == m_pTable->x_iCapacity)
-                return end();
+                return 0;
         }
     }
     LsShmHElem *pNew = (LsShmHElem *)m_pPool->offset2ptr(offset);
@@ -681,20 +715,21 @@ LsShmHash::iterator LsShmHash::insert2(
     pNew->x_iValOff = valueOff;
     // pNew->x_iNext = 0;
     pNew->x_hkey = key;
-    pNew->setKeyLen(keyLen);
-    pNew->setValLen(valueLen);
+    pNew->setKeyLen(ls_str_len(&pParms->key));
+    pNew->setValLen(valLen);
 
-    setIterKey(pNew, pKey);
-    setIterData(pNew, pValue);
+    setIterKey(pNew, ls_str_buf(&pParms->key));
+    setIterData(pNew, ls_str_buf(&pParms->value));
     linkHElem(pNew, offset);
 
-    LsShmHIdx *pIdx = m_pIdxStart + getIndex(key, m_pTable->x_iCapacity);
+    uint32_t hashIndx = getIndex(key, m_pTable->x_iCapacity);
+    LsShmHIdx *pIdx = m_pIdxStart + hashIndx;
     pNew->x_iNext = pIdx->x_iOffset;
     pIdx->x_iOffset = offset;
-    setBitMapEnt(key);
+    setBitMapEnt(hashIndx);
 
 #ifdef DEBUG_RUN
-    HttpLog::notice("LsShmHash::insert %6d %X %X size %d cap %d <%p> %d",
+    SHM_NOTICE("LsShmHash::insert %6d %X %X size %d cap %d <%p> %d",
                     getpid(), m_pShmMap, m_pPool->getShmMap(),
                     m_pTable->x_iSize,
                     m_pTable->x_iCapacity,
@@ -704,68 +739,18 @@ LsShmHash::iterator LsShmHash::insert2(
 #endif
     ++m_pTable->x_iSize;
 
-    return pNew;
+    return offset;
 }
 
 
-LsShmHash::iterator LsShmHash::insertNum(LsShmHash *pThis,
-        const void *pKey, int keyLen, const void *pValue, int valueLen)
+LsShmHash::iteroffset LsShmHash::findNum(LsShmHash *pThis,
+                                       ls_str_pair_t *pParms)
 {
-    iterator iter = findNum(pThis, pKey, sizeof(LsShmHKey));
-    return (iter != pThis->end()) ?
-           pThis->end() :
-           pThis->insert2(&pKey, sizeof(LsShmHKey), pValue, valueLen, (LsShmHKey)(long)pKey);
-}
-
-
-LsShmHash::iterator LsShmHash::setNum(LsShmHash *pThis,
-                                      const void *pKey, int keyLen, const void *pValue, int valueLen)
-{
-    LSSHM_CHECKSIZE(valueLen);
-    iterator iter = findNum(pThis, pKey, sizeof(LsShmHKey));
-    if (iter != pThis->end())
-    {
-        if (iter->realValLen() >= valueLen)
-        {
-            iter->setValLen(valueLen);
-            pThis->setIterData(iter, pValue);
-            return iter;
-        }
-        else
-            pThis->eraseIteratorHelper(iter);
-    }
-    return pThis->insert2(
-               &pKey, sizeof(LsShmHKey), pValue, valueLen, (LsShmHKey)(long)pKey);
-}
-
-
-LsShmHash::iterator LsShmHash::updateNum(LsShmHash *pThis,
-        const void *pKey, int keyLen, const void *pValue, int valueLen)
-{
-    LSSHM_CHECKSIZE(valueLen);
-    iterator iter = findNum(pThis, pKey, sizeof(LsShmHKey));
-    if (iter == pThis->end())
-        return pThis->end();
-
-    if (iter->realValLen() >= valueLen)
-    {
-        iter->setValLen(valueLen);
-        pThis->setIterData(iter, pValue);
-        return iter;
-    }
-    pThis->eraseIteratorHelper(iter);
-    return pThis->insert2(
-               &pKey, sizeof(LsShmHKey), pValue, valueLen, (LsShmHKey)(long)pKey);
-}
-
-
-LsShmHash::iterator LsShmHash::findNum(LsShmHash *pThis,
-                                       const void *pKey, int keyLen)
-{
-    if (pThis->getBitMapEnt((LsShmHKey)(long)pKey) == 0)     // quick check
-        return pThis->end();
-    LsShmHIdx *pIdx = pThis->m_pIdxStart +
-                      pThis->getIndex((LsShmHKey)(long)pKey, pThis->m_pTable->x_iCapacity);
+    LsShmHKey key = (LsShmHKey)(long)ls_str_buf(&pParms->key);
+    uint32_t hashIndx = pThis->getIndex(key, pThis->m_pTable->x_iCapacity);
+    if (pThis->getBitMapEnt(hashIndx) == 0)     // quick check
+        return 0;
+    LsShmHIdx *pIdx = pThis->m_pIdxStart + hashIndx;
     LsShmOffset_t offset = pIdx->x_iOffset;
     LsShmHElem *pElem;
 
@@ -773,150 +758,142 @@ LsShmHash::iterator LsShmHash::findNum(LsShmHash *pThis,
     {
         pElem = (LsShmHElem *)pThis->m_pPool->offset2ptr(offset);
         // check to see if the key is the same
-        if ((pElem->x_hkey == (LsShmHKey)(long)pKey)
-            && ((*(LsShmHKey *)pElem->getKey()) == (LsShmHKey)(long)pKey))
-            return pElem;
+        if ((pElem->x_hkey == key) && ((*(LsShmHKey *)pElem->getKey()) == key))
+            return offset;
         offset = pElem->x_iNext;
     }
-    return pThis->end();
+    return 0;
 }
 
 
-LsShmHash::iterator LsShmHash::getNum(LsShmHash *pThis,
-                                      const void *pKey, int keyLen, const void *pValue, int valueLen, int *pFlag)
+LsShmHash::iteroffset LsShmHash::getNum(LsShmHash *pThis,
+                                        ls_str_pair_t *pParms, int *pFlag)
 {
-    LSSHM_CHECKSIZE(valueLen);
+    iteroffset iterOff = findNum(pThis, pParms);
+    char *keyptr = ls_str_buf(&pParms->key);
+    ls_str_pair_t nparms;
+    ls_str_unsafeset(&nparms.key, (char *)&keyptr, sizeof(LsShmHKey));
+    nparms.value = pParms->value;
 
-    iterator iter = findNum(pThis, pKey, sizeof(LsShmHKey));
-    if (iter != pThis->end())
-    {
-        *pFlag = LSSHM_FLAG_NONE;
-        return iter;
-    }
-
-    iter = pThis->insert2(
-               &pKey, sizeof(LsShmHKey), pValue, valueLen, (LsShmHKey)(long)pKey);
-    if (iter != pThis->end())
-    {
-        if (*pFlag & LSSHM_FLAG_INIT)
-        {
-            // initialize the memory
-            ::memset(iter->getVal(), 0, valueLen);
-        }
-        *pFlag = LSSHM_FLAG_CREATED;
-    }
-    else
-    {
-        ;   // dont need to set pFlag...
-    }
-    return iter;
+    return doGet(pThis, iterOff, (LsShmHKey)(long)keyptr, &nparms, pFlag);
 }
 
 
-LsShmHash::iterator LsShmHash::insertPtr(LsShmHash *pThis,
-        const void *pKey, int keyLen, const void *pValue, int valueLen)
+LsShmHash::iteroffset LsShmHash::insertNum(LsShmHash *pThis,
+                                           ls_str_pair_t *pParms)
 {
-    LSSHM_CHECKSIZE(valueLen);
-    LsShmHKey key = (*pThis->m_hf)(pKey, keyLen);
-    iterator iter = pThis->find2(pKey, keyLen, key);
-    return (iter != pThis->end()) ?
-           pThis->end() :
-           pThis->insert2(pKey, keyLen, pValue, valueLen, key);
+    iteroffset iterOff = findNum(pThis, pParms);
+    char *keyptr = ls_str_buf(&pParms->key);
+    ls_str_pair_t nparms;
+    ls_str_unsafeset(&nparms.key, (char *)&keyptr, sizeof(LsShmHKey));
+    nparms.value = pParms->value;
+
+    return doInsert(pThis, iterOff, (LsShmHKey)(long)keyptr, &nparms);
 }
 
 
-LsShmHash::iterator LsShmHash::setPtr(LsShmHash *pThis,
-                                      const void *pKey, int keyLen, const void *pValue, int valueLen)
+LsShmHash::iteroffset LsShmHash::setNum(LsShmHash *pThis,
+                                        ls_str_pair_t *pParms)
 {
-    LSSHM_CHECKSIZE(valueLen);
-    LsShmHKey key = (*pThis->m_hf)(pKey, keyLen);
-    iterator iter = pThis->find2(pKey, keyLen, key);
-    if (iter != pThis->end())
-    {
-        if (iter->realValLen() >= valueLen)
-        {
-            iter->setValLen(valueLen);
-            pThis->setIterData(iter, pValue);
-            return iter;
-        }
-        else
-        {
-            // remove the iter and install new one
-            pThis->eraseIteratorHelper(iter);
-        }
-    }
-    return pThis->insert2(pKey, keyLen, pValue, valueLen, key);
+    iteroffset iterOff = findNum(pThis, pParms);
+    char *keyptr = ls_str_buf(&pParms->key);
+    ls_str_pair_t nparms;
+    ls_str_unsafeset(&nparms.key, (char *)&keyptr, sizeof(LsShmHKey));
+    nparms.value = pParms->value;
+
+    return doSet(pThis, iterOff, (LsShmHKey)(long)keyptr, &nparms);
 }
 
 
-LsShmHash::iterator LsShmHash::updatePtr(LsShmHash *pThis,
-        const void *pKey, int keyLen, const void *pValue, int valueLen)
+LsShmHash::iteroffset LsShmHash::updateNum(LsShmHash *pThis,
+                                           ls_str_pair_t *pParms)
 {
-    LSSHM_CHECKSIZE(valueLen);
-    LsShmHKey key = (*pThis->m_hf)(pKey, keyLen);
-    iterator iter = pThis->find2(pKey, keyLen, key);
-    if (iter == pThis->end())
-        return pThis->end();
+    iteroffset iterOff = findNum(pThis, pParms);
+    char *keyptr = ls_str_buf(&pParms->key);
+    ls_str_pair_t nparms;
+    ls_str_unsafeset(&nparms.key, (char *)&keyptr, sizeof(LsShmHKey));
+    nparms.value = pParms->value;
 
-    if (iter->realValLen() >= valueLen)
-    {
-        iter->setValLen(valueLen);
-        pThis->setIterData(iter, pValue);
-        return iter;
-    }
-    // remove the iter and install new one
-    pThis->eraseIteratorHelper(iter);
-    return pThis->insert2(pKey, keyLen, pValue, valueLen, key);
+    return doUpdate(pThis, iterOff, (LsShmHKey)(long)keyptr, &nparms);
 }
 
 
-LsShmHash::iterator LsShmHash::findPtr(LsShmHash *pThis,
-                                       const void *pKey, int keyLen)
+LsShmHash::iteroffset LsShmHash::findPtr(LsShmHash *pThis,
+                                         ls_str_pair_t *pParms)
 {
-    return pThis->find2(pKey, keyLen, (*pThis->m_hf)(pKey, keyLen));
+    return pThis->find2((*pThis->m_hf)(
+        ls_str_buf(&pParms->key), ls_str_len(&pParms->key)), pParms);
 }
 
 
-LsShmHash::iterator LsShmHash::getPtr(LsShmHash *pThis,
-                                      const void *pKey, int keyLen, const void *pValue, int valueLen, int *pFlag)
+LsShmHash::iteroffset LsShmHash::getPtr(LsShmHash *pThis,
+                                      ls_str_pair_t *pParms, int *pFlag)
 {
-    LSSHM_CHECKSIZE(valueLen);
+    LsShmHKey key = (*pThis->m_hf)(
+        ls_str_buf(&pParms->key), ls_str_len(&pParms->key));
+    iteroffset iterOff = pThis->find2(key, pParms);
 
-    LsShmHKey key = (*pThis->m_hf)(pKey, keyLen);
-    iterator iter = pThis->find2(pKey, keyLen, key);
-
-    if (iter != pThis->end())
-    {
-        *pFlag = LSSHM_FLAG_NONE;
-        return iter;
-    }
-
-    iter = pThis->insert2(pKey, keyLen, pValue, valueLen, key);
-    if (iter != pThis->end())
-    {
-        if (*pFlag & LSSHM_FLAG_INIT)
-        {
-            // initialize the memory
-            ::memset(iter->getVal(), 0, valueLen);
-        }
-        *pFlag = LSSHM_FLAG_CREATED;
-    }
-    else
-    {
-        ;   // dont need to set pFlag...
-    }
-    return iter;
+    return doGet(pThis, iterOff, key, pParms, pFlag);
 }
 
 
-LsShmHash::iterator LsShmHash::next(iterator iter)
+LsShmHash::iteroffset LsShmHash::insertPtr(LsShmHash *pThis, ls_str_pair_t *pParms)
 {
-    if (iter == end())
+    LsShmHKey key = (*pThis->m_hf)(
+        ls_str_buf(&pParms->key), ls_str_len(&pParms->key));
+    iteroffset iterOff = pThis->find2(key, pParms);
+
+    return doInsert(pThis, iterOff, key, pParms);
+}
+
+
+LsShmHash::iteroffset LsShmHash::setPtr(LsShmHash *pThis, ls_str_pair_t *pParms)
+{
+    LsShmHKey key = (*pThis->m_hf)(
+        ls_str_buf(&pParms->key), ls_str_len(&pParms->key));
+    iteroffset iterOff = pThis->find2(key, pParms);
+
+    return doSet(pThis, iterOff, key, pParms);
+}
+
+
+LsShmHash::iteroffset LsShmHash::updatePtr(LsShmHash *pThis, ls_str_pair_t *pParms)
+{
+    LsShmHKey key = (*pThis->m_hf)(
+        ls_str_buf(&pParms->key), ls_str_len(&pParms->key));
+    iteroffset iterOff = pThis->find2(key, pParms);
+
+    return doUpdate(pThis, iterOff, key, pParms);
+}
+
+
+LsShmHash::iteroffset LsShmHash::begin()
+{
+    checkRemap();
+    if (m_pTable->x_iSize == 0)
         return end();
+
+    LsShmHIdx *p = m_pIdxStart;
+    while (p < m_pIdxEnd)
+    {
+        if (p->x_iOffset != 0)
+            return (iteroffset)p->x_iOffset;
+        ++p;
+    }
+    return end();
+}
+
+
+LsShmHash::iteroffset LsShmHash::next(iteroffset iterOff)
+{
+    if (iterOff == end())
+        return end();
+    iterator iter = offset2iterator(iterOff);
     if (iter->x_iNext != 0)
-        return (iterator)m_pPool->offset2ptr(iter->x_iNext);
+        return (iteroffset)iter->x_iNext;
 
     LsShmHIdx *p;
+    checkRemap();
     p = m_pIdxStart + getIndex(iter->x_hkey, m_pTable->x_iCapacity) + 1;
     while (p < m_pIdxEnd)
     {
@@ -930,7 +907,7 @@ LsShmHash::iterator LsShmHash::next(iterator iter)
                     || (xiter->x_hkey == 0)
                     || (xiter->x_iLen == 0))
                 {
-                    HttpLog::notice(
+                    SHM_NOTICE(
                         "LsShmHash::next PROBLEM %6d %X %X SIZE %X SLEEPING",
                         getpid(), m_pShmMap,
                         m_pPool->getShmMap(),
@@ -939,7 +916,7 @@ LsShmHash::iterator LsShmHash::next(iterator iter)
                 }
             }
 #endif
-            return (iterator)m_pPool->offset2ptr(p->x_iOffset);
+            return (iteroffset)p->x_iOffset;
         }
         ++p;
     }
@@ -947,23 +924,21 @@ LsShmHash::iterator LsShmHash::next(iterator iter)
 }
 
 
-int LsShmHash::for_each(iterator beg, iterator end, for_each_fn fun)
+int LsShmHash::for_each(iteroffset beg, iteroffset end, for_each_fn fun)
 {
     if (fun == NULL)
     {
         errno = EINVAL;
         return LS_FAIL;
     }
-    if (beg == NULL)
-        return 0;
     int n = 0;
-    iterator iterNext = beg;
-    iterator iter;
-    while ((iterNext != NULL) && (iterNext != end))
+    iteroffset iterNext = beg;
+    iteroffset iterOff;
+    while ((iterNext != 0) && (iterNext != end))
     {
-        iter = iterNext;
-        iterNext = next(iterNext);
-        if (fun(iter) != 0)
+        iterOff = iterNext;
+        iterNext = next(iterNext);      // get next before fun
+        if (fun(iterOff) != 0)
             break;
         ++n;
     }
@@ -972,23 +947,21 @@ int LsShmHash::for_each(iterator beg, iterator end, for_each_fn fun)
 
 
 int LsShmHash::for_each2(
-    iterator beg, iterator end, for_each_fn2 fun, void *pUData)
+    iteroffset beg, iteroffset end, for_each_fn2 fun, void *pUData)
 {
     if (fun == NULL)
     {
         errno = EINVAL;
         return LS_FAIL;
     }
-    if (beg == NULL)
-        return 0;
     int n = 0;
-    iterator iterNext = beg;
-    iterator iter ;
-    while ((iterNext != NULL) && (iterNext != end))
+    iteroffset iterNext = beg;
+    iteroffset iterOff;
+    while ((iterNext != 0) && (iterNext != end))
     {
-        iter = iterNext;
-        iterNext = next(iterNext);
-        if (fun(iter, pUData) != 0)
+        iterOff = iterNext;
+        iterNext = next(iterNext);      // get next before fun
+        if (fun(iterOff, pUData) != 0)
             break;
         ++n;
     }
@@ -999,7 +972,7 @@ int LsShmHash::for_each2(
 //
 //  @brief statIdx - helper function which return num of elements in this link
 //
-int LsShmHash::statIdx(iterator iter, for_each_fn2 fun, void *pUdata)
+int LsShmHash::statIdx(iteroffset iterOff, for_each_fn2 fun, void *pUdata)
 {
     LsHashStat *pHashStat = (LsHashStat *)pUdata;
 #define NUM_SAMPLE  0x20
@@ -1014,8 +987,9 @@ int LsShmHash::statIdx(iterator iter, for_each_fn2 fun, void *pUdata)
     int curDup = 0; // keep track the number of dup!
 
     int numInIdx = 0;
-    while (iter != end())
+    while (iterOff != 0)
     {
+        iterator iter = offset2iterator(iterOff);
         int i;
         p_keyTable = keyTable;
         for (i = 0; i < numKey; ++i, ++p_keyTable)
@@ -1035,8 +1009,8 @@ int LsShmHash::statIdx(iterator iter, for_each_fn2 fun, void *pUdata)
         }
 
         ++numInIdx;
-        fun(iter, pUdata);
-        iter = (iterator)m_pPool->offset2ptr(iter->x_iNext);
+        fun(iterOff, pUdata);
+        iterOff = iter->x_iNext;
     }
 
     pHashStat->numDup += curDup;
@@ -1067,7 +1041,7 @@ int LsShmHash::stat(LsHashStat *pHashStat, for_each_fn2 fun)
         {
             ++pHashStat->numIdxOccupied;
             int num;
-            if ((num = statIdx((iterator)m_pPool->offset2ptr(p->x_iOffset),
+            if ((num = statIdx((iteroffset)p->x_iOffset,
                                fun, (void *)pHashStat)) != 0)
             {
                 pHashStat->num += num;
@@ -1095,21 +1069,4 @@ int LsShmHash::stat(LsHashStat *pHashStat, for_each_fn2 fun)
     }
     return pHashStat->num;
 }
-
-
-LsShmHash::iterator LsShmHash::begin()
-{
-    if (m_pTable->x_iSize == 0)
-        return end();
-
-    LsShmHIdx *p = m_pIdxStart;
-    while (p < m_pIdxEnd)
-    {
-        if (p->x_iOffset != 0)
-            return (iterator)m_pPool->offset2ptr(p->x_iOffset);
-        ++p;
-    }
-    return NULL;
-}
-
 

@@ -18,14 +18,14 @@
 #ifndef LSAPIREQ_H
 #define LSAPIREQ_H
 
+#include "lsapidef.h"
 
 #include <lsdef.h>
 #include <util/autobuf.h>
-#include <util/iovec.h>
-#include <extensions/lsapi/lsapidef.h>
 
 class HttpSession;
 class HttpReq;
+class IOVec;
 class LsapiEnv;
 struct lsapi_packet_header;
 

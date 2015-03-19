@@ -16,30 +16,27 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include <http/httpsession.h>
-#include <socket/gsockaddr.h>
 
-#include <extensions/cgi/lscgiddef.h>
-#include <extensions/extworker.h>
-#include <extensions/l4conn.h>
-#include <extensions/registry/extappregistry.h>
+#include <lsdef.h>
+#include <edio/aiosendfile.h>
 #include <http/chunkinputstream.h>
 #include <http/chunkoutputstream.h>
 #include <http/clientcache.h>
 #include <http/connlimitctrl.h>
-#include <util/datetime.h>
-#include <http/eventdispatcher.h>
 #include <http/handlerfactory.h>
 #include <http/handlertype.h>
 #include <http/htauth.h>
 #include <http/httphandler.h>
 #include <http/httplog.h>
+#include <http/httpmethod.h>
 #include <http/httpmime.h>
 #include <http/httpresourcemanager.h>
 #include <http/httpserverconfig.h>
 #include <http/httpstats.h>
+#include <http/httpstatuscode.h>
+#include <http/httpver.h>
 #include <http/httpvhost.h>
 #include <http/l4handler.h>
-#include <http/ntwkiolink.h>
 #include <http/reqhandler.h>
 #include <http/rewriteengine.h>
 #include <http/smartsettings.h>
@@ -47,31 +44,36 @@
 #include <http/staticfilecachedata.h>
 #include <http/userdir.h>
 #include <http/vhostmap.h>
-#include <lsiapi/lsiapihooks.h>
 #include <lsiapi/envmanager.h>
+#include <lsiapi/lsiapi.h>
+#include <lsiapi/lsiapihooks.h>
+#include <lsr/ls_pool.h>
 #include <lsr/ls_strtool.h>
-
+#include <socket/gsockaddr.h>
 #include <ssi/ssiengine.h>
-#include <ssi/ssiruntime.h>
+// #include <ssi/ssiruntime.h>
 #include <ssi/ssiscript.h>
 #include <util/accesscontrol.h>
 #include <util/accessdef.h>
+#include <util/datetime.h>
 #include <util/gzipbuf.h>
 #include <util/vmembuf.h>
 
-#include <lsiapi/internal.h>
-#include <lsdef.h>
-
+#include <extensions/extworker.h>
+#include <extensions/cgi/lscgiddef.h>
+#include <extensions/registry/extappregistry.h>
+#include <arpa/inet.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <inttypes.h>
+#include <netinet/in.h>
+#include <netinet/in_systm.h>
+#include <netinet/tcp.h>
 #include <stdio.h>
 #include <sys/poll.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include <arpa/inet.h>
-#include <errno.h>
-#include <inttypes.h>
-#include <netinet/in.h>
-#include <netinet/in_systm.h>
 
 
 HttpSession::HttpSession()
@@ -79,16 +81,26 @@ HttpSession::HttpSession()
     , m_response(m_request.getPool())
     , m_processState(HSPS_READ_REQ_HEADER)
     , m_curHookLevel(0)
+    , m_pAiosfcb(NULL)
 {
     memset(&m_pChunkIS, 0, (char *)(&m_iReqServed + 1) -
            (char *)&m_pChunkIS);
     m_pModuleConfig = NULL;
+    m_response.reset();
+    m_request.reset();
 }
+
 
 HttpSession::~HttpSession()
 {
     LsiapiBridge::releaseModuleData(LSI_MODULE_DATA_HTTP, getModuleData());
+#ifdef LS_AIO_USE_AIO
+    if (m_pAiosfcb != NULL)
+        HttpResourceManager::getInstance().recycle(m_pAiosfcb);
+    m_pAiosfcb = NULL;
+#endif
 }
+
 
 int HttpSession::onInitConnected()
 {
@@ -106,11 +118,15 @@ int HttpSession::onInitConnected()
     m_request.setILog(getStream());
     if (m_request.getBodyBuf())
         m_request.getBodyBuf()->reinit();
-    m_response.reset();
-    m_request.reset();
-    m_aiosfcb.reset();
+#ifdef LS_AIO_USE_AIO
+    if (HttpServerConfig::getInstance().getUseSendfile() == 2)
+        m_pAiosfcb = HttpResourceManager::getInstance().getAiosfcb();
+#endif
+//     m_response.reset();
+//     m_request.reset();
     return 0;
 }
+
 
 inline int HttpSession::getModuleDenyCode(int iHookLevel)
 {
@@ -126,6 +142,7 @@ inline int HttpSession::getModuleDenyCode(int iHookLevel)
 
     return ret;
 }
+
 
 inline int HttpSession::processHkptResult(int iHookLevel, int ret)
 {
@@ -146,9 +163,9 @@ inline int HttpSession::processHkptResult(int iHookLevel, int ret)
     return ret;
 }
 
+
 int HttpSession::runEventHkpt(int hookLevel, HSPState nextState)
 {
-
     if (m_curHookLevel != hookLevel)
     {
         if (!m_sessionHooks.isEnabled(hookLevel))
@@ -214,8 +231,6 @@ const char * HttpSession::buildLogId()
 }
 */
 
-#include <netinet/in_systm.h>
-#include <netinet/tcp.h>
 
 void HttpSession::logAccess(int cancelled)
 {
@@ -232,14 +247,16 @@ void HttpSession::logAccess(int cancelled)
             pVHost->logBytes(bytes);
         }
         if (((!cancelled) || (isRespHeaderSent()))
-            && pVHost->enableAccessLog())
+            && pVHost->enableAccessLog()
+            && shouldLogAccess())
             pVHost->logAccess(this);
         else
             setAccessLogOff();
     }
-    else if (m_pNtwkIOLink)
+    else if (m_pNtwkIOLink && shouldLogAccess())
         HttpLog::logAccess(NULL, 0, this);
 }
+
 
 void HttpSession::resumeSSI()
 {
@@ -256,12 +273,14 @@ void HttpSession::resumeSSI()
     return;
 }
 
+
 inline void HttpSession::releaseStaticFileCacheData(StaticFileCacheData
         * &pCache)
 {
     if (pCache && pCache->decRef() == 0)
         pCache->setLastAccess(DateTime::s_curTime);
 }
+
 
 inline void HttpSession::releaseFileCacheDataEx(FileCacheDataEx *&pECache)
 {
@@ -271,6 +290,7 @@ inline void HttpSession::releaseFileCacheDataEx(FileCacheDataEx *&pECache)
             pECache->closefd();
     }
 }
+
 
 void HttpSession::releaseSendFileInfo()
 {
@@ -283,6 +303,7 @@ void HttpSession::releaseSendFileInfo()
         memset(&m_sendFileInfo, 0, sizeof(m_sendFileInfo));
     }
 }
+
 
 void HttpSession::nextRequest()
 {
@@ -365,6 +386,16 @@ void HttpSession::nextRequest()
     }
 }
 
+
+void HttpSession::httpError(int code, const char *pAdditional)
+{
+    if (code < 0)
+        code = SC_500;
+    m_request.setStatusCode(code);
+    sendHttpError(pAdditional);
+}
+
+
 int HttpSession::read(char *pBuf, int size)
 {
     int len = m_request.pendingHeaderDataLen();
@@ -379,6 +410,7 @@ int HttpSession::read(char *pBuf, int size)
     }
     return getStream()->read(pBuf, size);
 }
+
 
 int HttpSession::readv(struct iovec *vector, size_t count)
 {
@@ -427,6 +459,7 @@ bool HttpSession::endOfReqBody()
         return (m_request.getBodyRemain() <= 0);
 }
 
+
 int HttpSession::reqBodyDone()
 {
     suspendRead();
@@ -450,6 +483,7 @@ int HttpSession::reqBodyDone()
 
     return 0;
 }
+
 
 int HttpSession::readReqBody()
 {
@@ -552,6 +586,7 @@ int HttpSession::readReqBody()
     return reqBodyDone();
 }
 
+
 int HttpSession::resumeHandlerProcess()
 {
     if (!(m_iFlag & HSF_URI_PROCESSED))
@@ -566,6 +601,7 @@ int HttpSession::resumeHandlerProcess()
     return 0;
 
 }
+
 
 int HttpSession::restartHandlerProcess()
 {
@@ -637,8 +673,7 @@ int HttpSession::readToHeaderBuf()
         if (avail > 2048)
             avail = 2048;
         char *pBuf = headerBuf.end();
-        sz = getStream()->read(pBuf,
-                               avail);
+        sz = getStream()->read(pBuf, avail);
         if (sz > 0)
         {
             if (D_ENABLED(DL_LESS))
@@ -685,6 +720,7 @@ int HttpSession::readToHeaderBuf()
     while (1);
 }
 
+
 void HttpSession::processPending(int ret)
 {
     if ((getState() != HSS_READING) ||
@@ -712,6 +748,7 @@ void HttpSession::processPending(int ret)
     }
 
 }
+
 
 int HttpSession::updateClientInfoFromProxyHeader(const char *pProxyHeader)
 {
@@ -754,6 +791,7 @@ int HttpSession::updateClientInfoFromProxyHeader(const char *pProxyHeader)
     return 0;
 }
 
+
 int HttpSession::processWebSocketUpgrade(const HttpVHost *pVHost)
 {
     HttpContext *pContext = pVHost->getContext(m_request.getURI(), 0);
@@ -786,6 +824,7 @@ int HttpSession::processWebSocketUpgrade(const HttpVHost *pVHost)
     }
 }
 
+
 int HttpSession::processHttp2Upgrade(const HttpVHost *pVHost)
 {
     getNtwkIOLink()->switchToHttp2Handler(this);
@@ -797,6 +836,7 @@ int HttpSession::hookResumeCallback(int level, lsi_module_t *pModule)
 {
     return resumeProcess(0, 0);
 }
+
 
 int HttpSession::processNewReqInit()
 {
@@ -858,6 +898,7 @@ int HttpSession::processNewReqInit()
     HttpContext *pContext0 = ((HttpContext *) & (pVHost->getRootContext()));
     m_sessionHooks.inherit(pContext0->getSessionHooks(), 0);
     m_pModuleConfig = pContext0->getModuleConfig();
+    resetResp();
 
     ret = m_request.processNewReqData(getPeerAddr());
     if (ret)
@@ -955,6 +996,7 @@ int HttpSession::processNewReqBody()
     return ret;
 }
 
+
 int HttpSession::checkAuthentication(const HTAuth *pHTAuth,
                                      const AuthRequired *pRequired, int resume)
 {
@@ -997,12 +1039,14 @@ int HttpSession::checkAuthentication(const HTAuth *pHTAuth,
 
 }
 
+
 // void HttpSession::resumeAuthentication()
 // {
 //     int ret = processURI( 1 );
 //     if ( ret )
 //         httpError( ret );
 // }
+
 
 int HttpSession::checkAuthorizer(const HttpHandler *pHandler)
 {
@@ -1023,6 +1067,7 @@ void HttpSession::authorized()
 
 }
 
+
 void HttpSession::addEnv(const char *pKey, int keyLen, const char *pValue,
                          long valLen)
 {
@@ -1037,6 +1082,7 @@ void HttpSession::addEnv(const char *pKey, int keyLen, const char *pValue,
         return ;
 }
 
+
 int HttpSession::redirect(const char *pNewURL, int len, int alloc)
 {
     int ret = m_request.redirect(pNewURL, len, alloc);
@@ -1050,6 +1096,7 @@ int HttpSession::redirect(const char *pNewURL, int len, int alloc)
     m_processState = HSPS_PROCESS_NEW_URI;
     return smProcessReq();
 }
+
 
 int HttpSession::processVHostRewrite()
 {
@@ -1085,6 +1132,7 @@ int HttpSession::processVHostRewrite()
     return ret;
 }
 
+
 int HttpSession::processContextMap()
 {
     int ret;
@@ -1105,6 +1153,7 @@ int HttpSession::processContextMap()
         m_processState = HSPS_CONTEXT_REWRITE;
     return ret;
 }
+
 
 int HttpSession::processContextRewrite()
 {
@@ -1158,6 +1207,7 @@ int HttpSession::processContextRewrite()
     return ret;
 }
 
+
 int HttpSession::processFileMap()
 {
     if (getReq()->getHttpHandler() == NULL ||
@@ -1181,8 +1231,8 @@ int HttpSession::processFileMap()
     return 0;
 }
 
-//404 error must go through authentication first
 
+//404 error must go through authentication first
 int HttpSession::processContextAuth()
 {
     AAAData     aaa;
@@ -1235,10 +1285,12 @@ int HttpSession::processContextAuth()
     return 0;
 }
 
+
 int HttpSession::processAuthorizer()
 {
     return 0;
 }
+
 
 int HttpSession::processNewUri()
 {
@@ -1255,6 +1307,7 @@ bool ReqHandler::notAllowed(int Method) const
 {
     return (Method > HttpMethod::HTTP_POST);
 }
+
 
 int HttpSession::setUpdateStaticFileCache(StaticFileCacheData *&pCache,
         FileCacheDataEx *&pECache,
@@ -1276,6 +1329,7 @@ int HttpSession::setUpdateStaticFileCache(StaticFileCacheData *&pCache,
     pCache->incRef();
     return 0;
 }
+
 
 int HttpSession::getParsedScript(SSIScript *&pScript)
 {
@@ -1385,13 +1439,18 @@ int HttpSession::handlerProcess(const HttpHandler *pHandler)
 
     ret = m_pHandler->process(this, m_request.getHttpHandler());
 
-    if ((ret == 0) && (HSS_COMPLETE == getState()))
-        nextRequest();
-    else if (ret == 1)
+
+    if (ret == 1)
     {
-        continueWrite();
+#ifdef LS_AIO_USE_AIO
+        if (getFlag(HSF_AIO_READING) == 0)
+#endif
+            continueWrite();
         ret = 0;
     }
+//     NOTICE removed because of double call
+//     else if ((ret == 0) && (HSS_COMPLETE == getState()))
+//         nextRequest();
     return ret;
 }
 
@@ -1453,9 +1512,6 @@ int HttpSession::assignHandler(const HttpHandler *pHandler)
 //             m_pSubResp = new HttpResp();
 //         }
 //         else
-            {
-                resetResp();
-            }
 
             const char *pType = HandlerType::getHandlerTypeString(handlerType);
             if (D_ENABLED(DL_LESS))
@@ -1489,7 +1545,6 @@ int HttpSession::assignHandler(const HttpHandler *pHandler)
     }
     return 0;
 }
-
 
 
 void HttpSession::sendHttpError(const char *pAdditional)
@@ -1588,6 +1643,7 @@ void HttpSession::sendHttpError(const char *pAdditional)
     HttpStats::getReqStats()->incReqProcessed();
 }
 
+
 int HttpSession::buildErrorResponse(const char *errMsg)
 {
     int errCode = m_request.getStatusCode();
@@ -1648,6 +1704,7 @@ int HttpSession::buildErrorResponse(const char *errMsg)
     }
     return 0;
 }
+
 
 int HttpSession::onReadEx()
 {
@@ -1765,6 +1822,7 @@ int HttpSession::doWrite()
     return ret;
 }
 
+
 int HttpSession::onWriteEx()
 {
     //printf( "^^^HttpSession::onWrite()!\n" );
@@ -1844,6 +1902,7 @@ int HttpSession::onWriteEx()
     return 0;
 }
 
+
 void HttpSession::cleanUpHandler()
 {
     ReqHandler *pHandler = m_pHandler;
@@ -1879,8 +1938,7 @@ void HttpSession::closeConnection()
 
     m_request.keepAlive(0);
 
-    if (shouldLogAccess())
-        logAccess(getStream()->getFlag(HIO_FLAG_PEER_SHUTDOWN));
+    logAccess(getStream()->getFlag(HIO_FLAG_PEER_SHUTDOWN));
 
     if (m_pSubResp)
     {
@@ -1889,7 +1947,7 @@ void HttpSession::closeConnection()
     }
 
     m_lReqTime = DateTime::s_curTime;
-    m_response.reset();
+//     m_response.reset();
     m_request.reset();
     m_request.resetHeaderBuf();
     releaseSendFileInfo();
@@ -1917,20 +1975,30 @@ void HttpSession::closeConnection()
     getStream()->close();
 }
 
+
 void HttpSession::recycle()
 {
     if (getFlag(HSF_AIO_READING))
     {
         if (D_ENABLED(DL_MEDIUM))
             LOG_D((getLogger(), "[%s] Setting Cancel Flag! \n", getLogId()));
-        m_aiosfcb.setFlag(AIOSFCB_FLAG_CANCEL);
+        m_pAiosfcb->setFlag(AIOSFCB_FLAG_CANCEL);
         return;
     }
     if (D_ENABLED(DL_MORE))
         LOG_D((getLogger(), "[%s] HttpSession::recycle()\n", getLogId()));
-    m_aiosfcb.reset();
+#ifdef LS_AIO_USE_AIO
+    if (m_pAiosfcb != NULL)
+    {
+        m_pAiosfcb->reset();
+        HttpResourceManager::getInstance().recycle(m_pAiosfcb);
+        m_pAiosfcb = NULL;
+    }
+#endif
     HttpResourceManager::getInstance().recycle(this);
 }
+
+
 void HttpSession::setupChunkOS(int nobuffer)
 {
     if (!m_request.isKeepAlive())
@@ -1953,6 +2021,7 @@ void HttpSession::setupChunkOS(int nobuffer)
     else
         m_request.keepAlive(false);
 }
+
 
 void HttpSession::releaseChunkOS()
 {
@@ -1995,6 +2064,7 @@ int HttpSession::chunkSendfile(int fdSrc, off_t off, size_t size)
     return off - begin;
 }
 
+
 int HttpSession::writeRespBodySendFile(int fdFile, off_t offset,
                                        size_t size)
 {
@@ -2003,12 +2073,12 @@ int HttpSession::writeRespBodySendFile(int fdFile, off_t offset,
         written = chunkSendfile(fdFile, offset, size);
     else if (HttpServerConfig::getInstance().getUseSendfile() == 2)
     {
-        m_aiosfcb.setReadFd(fdFile);
-        m_aiosfcb.setOffset(offset);
-        m_aiosfcb.setSize(size);
-        m_aiosfcb.setRet(0);
-        m_aiosfcb.setUData(this);
-        return getStream()->aiosendfile(&m_aiosfcb);
+        m_pAiosfcb->setReadFd(fdFile);
+        m_pAiosfcb->setOffset(offset);
+        m_pAiosfcb->setSize(size);
+        m_pAiosfcb->setRet(0);
+        m_pAiosfcb->setUData(this);
+        return getStream()->aiosendfile(m_pAiosfcb);
     }
     else
         written = getStream()->sendfile(fdFile, offset, size);
@@ -2064,6 +2134,7 @@ static char s_errTimeout[] =
 //    "<a href='http://www.litespeedtech.com'><i>http://www.litespeedtech.com</i></a>\n"
     "</body></html>\n";
 
+
 int HttpSession::detectKeepAliveTimeout(int delta)
 {
     const HttpServerConfig &config = HttpServerConfig::getInstance();
@@ -2104,6 +2175,7 @@ int HttpSession::detectKeepAliveTimeout(int delta)
     }
     return c;
 }
+
 
 int HttpSession::detectConnectionTimeout(int delta)
 {
@@ -2149,6 +2221,7 @@ int HttpSession::detectConnectionTimeout(int delta)
         return 0;
 }
 
+
 int HttpSession::isAlive()
 {
     if (getStream()->isSpdy())
@@ -2178,6 +2251,7 @@ int HttpSession::detectTimeout()
     return 0;
 }
 
+
 int HttpSession::onTimerEx()
 {
     if (getState() ==  HSS_THROTTLING)
@@ -2189,6 +2263,7 @@ int HttpSession::onTimerEx()
     return 0;
 }
 
+
 void HttpSession::releaseRespCache()
 {
     if (m_pRespBodyBuf)
@@ -2198,11 +2273,13 @@ void HttpSession::releaseRespCache()
     }
 }
 
+
 static int writeRespBodyTermination(LsiSession *session, const char *pBuf,
                                     int len)
 {
     return ((HttpSession *)session)->writeRespBodyDirect(pBuf, len);
 }
+
 
 int HttpSession::writeRespBody(const char *pBuf, int len)
 {
@@ -2212,7 +2289,6 @@ int HttpSession::writeRespBody(const char *pBuf, int len)
     return runFilter(LSI_HKPT_SEND_RESP_BODY,
                      (filter_term_fn)writeRespBodyTermination, pBuf, len, 0);
 }
-
 
 
 int HttpSession::sendDynBody()
@@ -2267,6 +2343,7 @@ int HttpSession::sendDynBody()
     return 0;
 }
 
+
 int HttpSession::setupRespCache()
 {
     if (!m_pRespBodyBuf)
@@ -2296,6 +2373,7 @@ int HttpSession::setupRespCache()
     }
     return 0;
 }
+
 
 extern int addModgzipFilter(lsi_session_t *session, int isSend,
                             uint8_t compressLevel);
@@ -2401,8 +2479,6 @@ int HttpSession::setupGzipBuf()
 }
 
 
-
-
 void HttpSession::releaseGzipBuf()
 {
     if (m_pGzipBuf)
@@ -2443,6 +2519,7 @@ int HttpSession::appendDynBodyEx(const char *pBuf, int len)
     return ret;
 
 }
+
 
 int appendDynBodyTermination(HttpSession *conn, const char *pBuf, int len)
 {
@@ -2490,6 +2567,7 @@ int HttpSession::runFilter(int hookLevel,
 
 }
 
+
 int HttpSession::appendDynBody(const char *pBuf, int len)
 {
     if (!m_pRespBodyBuf)
@@ -2513,6 +2591,7 @@ int HttpSession::appendDynBody(const char *pBuf, int len)
     return runFilter(LSI_HKPT_RECV_RESP_BODY,
                      (filter_term_fn)appendDynBodyTermination, pBuf, len, 0);
 }
+
 
 int HttpSession::appendRespBodyBuf(const char *pBuf, int len)
 {
@@ -2544,6 +2623,7 @@ int HttpSession::appendRespBodyBuf(const char *pBuf, int len)
     }
     return pBuf - pBufOrg;
 }
+
 
 int HttpSession::appendRespBodyBufV(const iovec *vector, int count)
 {
@@ -2599,6 +2679,7 @@ int HttpSession::appendRespBodyBufV(const iovec *vector, int count)
     return 0;
 }
 
+
 int HttpSession::shouldSuspendReadingResp()
 {
     if (m_pRespBodyBuf)
@@ -2609,6 +2690,7 @@ int HttpSession::shouldSuspendReadingResp()
     }
     return 0;
 }
+
 
 void HttpSession::resetRespBodyBuf()
 {
@@ -2623,12 +2705,16 @@ void HttpSession::resetRespBodyBuf()
         }
     }
 }
+
+
 static char achOverBodyLimitError[] =
     "<p>The size of dynamic response body is over the "
     "limit, response is truncated by web server. "
     "The limit is set by the "
     "'Max Dynamic Response Body Size' in tuning section "
     " of server configuration.";
+
+
 int HttpSession::checkRespSize(int nobuffer)
 {
     int ret = 0;
@@ -2654,6 +2740,8 @@ int HttpSession::checkRespSize(int nobuffer)
     }
     return ret;
 }
+
+
 //return 0 , caller should continue
 //return !=0, the request has been redirected, should break the normal flow
 
@@ -2677,6 +2765,7 @@ int HttpSession::respHeaderDone()
     //setupDynRespBodyBuf( iRespState );
 
 }
+
 
 int HttpSession::endResponseInternal(int success)
 {
@@ -2725,6 +2814,7 @@ int HttpSession::endResponseInternal(int success)
     }
     return ret;
 }
+
 
 int HttpSession::endResponse(int success)
 {
@@ -2822,6 +2912,7 @@ int HttpSession::flushBody()
     return LS_DONE;
 }
 
+
 int HttpSession::flush()
 {
     int ret = LS_DONE;
@@ -2903,7 +2994,6 @@ int HttpSession::flush()
 }
 
 
-
 void HttpSession::addLocationHeader()
 {
     HttpRespHeaders &headers = m_response.getRespHeaders();
@@ -2921,6 +3011,7 @@ void HttpSession::addLocationHeader()
     }
     headers.appendLastVal(pLocation, m_request.getLocationLen());
 }
+
 
 void HttpSession::prepareHeaders()
 {
@@ -2970,6 +3061,7 @@ int HttpSession::sendRespHeaders()
     return 0;
 }
 
+
 int HttpSession::setupDynRespBodyBuf()
 {
     if (D_ENABLED(DL_LESS))
@@ -3004,6 +3096,8 @@ int HttpSession::flushDynBodyChunk()
     return 0;
 
 }
+
+
 int HttpSession::execExtCmd(const char *pCmd, int len)
 {
 
@@ -3106,6 +3200,7 @@ int HttpSession::execExtCmd(const char *pCmd, int len)
 //
 // }
 
+
 int HttpSession::getServerAddrStr(char *pBuf, int len)
 {
     char achAddr[128];
@@ -3129,7 +3224,6 @@ int HttpSession::getServerAddrStr(char *pBuf, int len)
 
 
 #define STATIC_FILE_BLOCK_SIZE 16384
-#include <fcntl.h>
 
 int HttpSession::openStaticFile(const char *pPath, int pathLen,
                                 int *status)
@@ -3168,6 +3262,7 @@ int HttpSession::openStaticFile(const char *pPath, int pathLen,
     return fd;
 }
 
+
 int HttpSession::initSendFileInfo(const char *pPath, int pathLen)
 {
     int ret;
@@ -3204,11 +3299,13 @@ int HttpSession::initSendFileInfo(const char *pPath, int pathLen)
     return m_sendFileInfo.getFileData()->readyCacheData(pECache, 0);
 }
 
+
 void HttpSession::setSendFileOffsetSize(off_t start, off_t size)
 {
     setSendFileBeginEnd(start,
                         size >= 0 ? (start + size) : m_sendFileInfo.getECache()->getFileSize());
 }
+
 
 void HttpSession::setSendFileBeginEnd(off_t start, off_t end)
 {
@@ -3227,6 +3324,7 @@ void HttpSession::setSendFileBeginEnd(off_t start, off_t end)
 //         respHeaderDone();
 
 }
+
 
 int HttpSession::writeRespBodyBlockInternal(SendFileInfo *pData,
         const char *pBuf,
@@ -3252,6 +3350,7 @@ int HttpSession::writeRespBodyBlockInternal(SendFileInfo *pData,
         pData->incCurPos(len);
     return len;
 }
+
 
 int HttpSession::writeRespBodyBlockFilterInternal(SendFileInfo *pData,
         const char *pBuf,
@@ -3279,6 +3378,7 @@ int HttpSession::writeRespBodyBlockFilterInternal(SendFileInfo *pData,
     return len;
 }
 
+
 #ifdef LS_AIO_USE_AIO
 int HttpSession::aioRead(SendFileInfo *pData, void *pBuf)
 {
@@ -3294,6 +3394,7 @@ int HttpSession::aioRead(SendFileInfo *pData, void *pBuf)
     setFlag(HSF_AIO_READING);
     return 1;
 }
+
 
 //returns -1 on error, 1 on success, 0 for didn't do anything new (cached)
 int HttpSession::sendStaticFileAio(SendFileInfo *pData)
@@ -3347,6 +3448,7 @@ int HttpSession::sendStaticFileAio(SendFileInfo *pData)
 }
 #endif // LS_AIO_USE_AIO
 
+
 int HttpSession::sendStaticFileEx(SendFileInfo *pData)
 {
     const char *pBuf;
@@ -3357,8 +3459,7 @@ int HttpSession::sendStaticFileEx(SendFileInfo *pData)
 #if !defined( NO_SENDFILE )
     int fd = pData->getECache()->getfd();
     int iModeSF = HttpServerConfig::getInstance().getUseSendfile();
-    if (iModeSF && fd != -1 && !isSSL()
-        && !getStream()->isSpdy() 
+    if (iModeSF && fd != -1 && !isSSL() && !getStream()->isSpdy()
         && (!getGzipBuf() ||
             (pData->getECache() == pData->getFileData()->getGziped()))
         && getStream()->getFlag(HIO_FLAG_SENDFILE))
@@ -3382,7 +3483,7 @@ int HttpSession::sendStaticFileEx(SendFileInfo *pData)
     }
 #endif
 #ifdef LS_AIO_USE_AIO
-    if (HttpServerConfig::getInstance().getUseAio())
+    if (HttpServerConfig::getInstance().getUseSendfile() == 2)
     {
         len = sendStaticFileAio(pData);
         if (D_ENABLED(DL_MEDIUM))
@@ -3428,7 +3529,7 @@ int HttpSession::sendStaticFile(SendFileInfo *pData)
     off_t remain;
     long len;
 #ifdef LS_AIO_USE_AIO
-    if (HttpServerConfig::getInstance().getUseAio())
+    if (HttpServerConfig::getInstance().getUseSendfile() == 2)
     {
         len = sendStaticFileAio(pData);
         LOG_D((getLogger(), "[%s] sendStaticFileAio() return %ld.\n",
@@ -3478,6 +3579,7 @@ int HttpSession::sendStaticFile(SendFileInfo *pData)
 
 }
 
+
 int HttpSession::finalizeHeader(int ver, int code)
 {
     //setup Send Level gzip filters
@@ -3508,6 +3610,7 @@ int HttpSession::finalizeHeader(int ver, int code)
     return 0;
 }
 
+
 int HttpSession::updateContentCompressible()
 {
     int compressible = 0;
@@ -3528,6 +3631,7 @@ int HttpSession::updateContentCompressible()
     }
     return compressible;
 }
+
 
 int HttpSession::contentEncodingFixup()
 {
@@ -3594,6 +3698,7 @@ int HttpSession::handoff(char **pData, int *pDataLen)
 
 }
 
+
 int HttpSession::onAioEvent()
 {
 #ifdef LS_AIO_USE_AIO
@@ -3659,6 +3764,7 @@ int HttpSession::onAioEvent()
     return LS_FAIL;
 }
 
+
 int HttpSession::handleAioSFEvent(Aiosfcb *event)
 {
     int ret;
@@ -3706,6 +3812,7 @@ int HttpSession::handleAioSFEvent(Aiosfcb *event)
     }
     return onWriteEx();
 }
+
 
 int HttpSession::smProcessReq()
 {
@@ -3873,6 +3980,7 @@ int HttpSession::smProcessReq()
     }
     return ret;
 }
+
 
 int HttpSession::resumeProcess(int passCode, int retcode)
 {

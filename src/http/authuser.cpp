@@ -16,20 +16,21 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "authuser.h"
-#include <util/stringlist.h>
-#include <util/stringtool.h>
-#include <../include/lsr/ls_base64.h>
+
+#include <lsr/ls_base64.h>
 
 AuthUser::AuthUser()
     : m_pGroups(NULL)
 {
 }
 
+
 AuthUser::~AuthUser()
 {
     if (m_pGroups)
         delete m_pGroups;
 }
+
 
 int AuthUser::setGroups(const char *pGroups, const char *pEnd)
 {
@@ -64,6 +65,7 @@ int AuthUser::setGroups(const char *pGroups, const char *pEnd)
     return size;
 }
 
+
 int AuthUser::addGroup(const char *pGroup)
 {
     if (!m_pGroups)
@@ -77,6 +79,7 @@ int AuthUser::addGroup(const char *pGroup)
     return 0;
 
 }
+
 
 void AuthUser::updatePasswdEncMethod()
 {
@@ -94,6 +97,7 @@ void AuthUser::updatePasswdEncMethod()
         }
     }
 }
+
 
 int AuthGroup::add(const char *pUser)
 {

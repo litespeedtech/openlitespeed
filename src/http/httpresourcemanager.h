@@ -19,22 +19,19 @@
 #define HTTPRESOURCEMANAGER_H
 
 #include <lsdef.h>
-#include <util/autobuf.h>
 #include <util/objpool.h>
 #include <util/tsingleton.h>
-#include <http/hiostream.h>
 
 #define GLOBAL_BUF_SIZE 16384
 
+class Aiosfcb;
 class ChunkInputStream;
 class ChunkOutputStream;
 class MMapVMemBuf;
 class VMemBuf;
 class GzipBuf;
 class HttpSession;
-class HioHandler;
 class NtwkIOLink;
-
 
 typedef ObjPool<ChunkInputStream>       ChunkInputStreamPool;
 typedef ObjPool<ChunkOutputStream>      ChunkOutputStreamPool;
@@ -43,6 +40,7 @@ typedef ObjPool<GzipBuf>                GzipBufPool;
 typedef ObjPool<GzipBuf>                GunzipBufPool;
 typedef ObjPool<HttpSession>            HttpSessionPool;
 typedef ObjPool<NtwkIOLink>             NtwkIoLinkPool;
+typedef ObjPool<Aiosfcb>                AiosfcbPool;
 
 class HttpResourceManager : public TSingleton<HttpResourceManager>
 {
@@ -55,6 +53,7 @@ class HttpResourceManager : public TSingleton<HttpResourceManager>
     GunzipBufPool           m_poolGunzipBuf;
     HttpSessionPool         m_poolHttpSession;
     NtwkIoLinkPool          m_poolNtwkIoLink;
+    AiosfcbPool            *m_pPoolAiosfcb;
     static char             g_aBuf[GLOBAL_BUF_SIZE + 8];
 
     HttpResourceManager();
@@ -117,13 +116,17 @@ public:
     HttpSession *getConnection()
     {    return m_poolHttpSession.get();   }
 
-    HioHandler *getHioHandler(HiosProtocol ver);
-
     void recycle(HttpSession **pSession, int n)
     {   m_poolHttpSession.recycle((void **)pSession, n);    }
 
     int getConnections(HttpSession **pSession, int n)
-    {    return m_poolHttpSession.get(pSession, n);          }
+    {   return m_poolHttpSession.get(pSession, n);          }
+
+    int initAiosfcbPool();
+    void recycle(Aiosfcb *pAiosfcb)
+    {   m_pPoolAiosfcb->recycle(pAiosfcb);  }
+    Aiosfcb *getAiosfcb()
+    {   return m_pPoolAiosfcb->get();       }
 
     void releaseAll();
 

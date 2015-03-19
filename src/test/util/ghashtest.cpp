@@ -19,6 +19,7 @@
 
 #include "ghashtest.h"
 
+#include <lsr/ls_xpool.h>
 #include <util/ghash.h>
 #include "test/unittest-cpp/UnitTest++/src/UnitTest++.h"
 

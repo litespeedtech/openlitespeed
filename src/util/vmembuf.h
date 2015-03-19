@@ -22,7 +22,6 @@
 
 #include <util/autostr.h>
 #include <util/gpointerlist.h>
-#include <util/blockbuf.h>
 
 #include <stddef.h>
 
@@ -30,6 +29,7 @@
 #define VMBUF_ANON_MAP  1
 #define VMBUF_FILE_MAP  2
 
+class BlockBuf;
 typedef TPointerList<BlockBuf> BufList;
 
 class VMemBuf
@@ -95,25 +95,14 @@ public:
     int set(const char *pFileName, int size);
     int setFd(const char *pFileName, int fd);
     char *getReadBuffer(size_t &size);
-    char *getWriteBuffer(size_t &size)
-    {
-        if ((!m_pCurWBlock) || (m_pCurWPos >= (*m_pCurWBlock)->getBufEnd()))
-        {
-            if (mapNextWBlock() != 0)
-                return NULL;
-        }
-        size = (*m_pCurWBlock)->getBufEnd() - m_pCurWPos;
-        return m_pCurWPos;
-    }
+    char *getWriteBuffer(size_t &size);
 
     void readUsed(size_t len)     {   m_pCurRPos += len;      }
     void writeUsed(size_t len)    {   m_pCurWPos += len;      }
     char *getCurRPos() const       {   return m_pCurRPos;      }
-    size_t getCurROffset() const
-    {   return (m_pCurRBlock) ? (m_curRBlkPos - ((*m_pCurRBlock)->getBufEnd() - m_pCurRPos)) : 0;   }
+    size_t getCurROffset() const;
     char *getCurWPos() const       {   return m_pCurWPos;      }
-    size_t getCurWOffset() const
-    {   return m_pCurWBlock ? (m_iCurWBlkPos - ((*m_pCurWBlock)->getBufEnd() - m_pCurWPos)) : 0;   }
+    size_t getCurWOffset() const;
     int write(const char *pBuf, int size);
     bool isMmaped() const {   return m_iType >= VMBUF_ANON_MAP;  }
     //int  seekRPos( size_t pos );

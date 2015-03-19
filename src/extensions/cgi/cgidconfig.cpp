@@ -23,9 +23,12 @@ CgidConfig::CgidConfig(const char *pName)
 {
 }
 
+
 CgidConfig::CgidConfig()
 {
 }
+
+
 CgidConfig::~CgidConfig()
 {
 }

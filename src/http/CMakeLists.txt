@@ -80,6 +80,7 @@ SET(http_STAT_SRCS
    moov.cpp
    #requestvars.cpp
    hiostream.cpp
+   hiohandlerfactory.cpp
    httprespheaders.cpp
    l4handler.cpp
    httpaiosendfile.cpp

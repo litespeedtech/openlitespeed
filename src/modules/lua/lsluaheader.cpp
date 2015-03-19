@@ -15,19 +15,20 @@
 *    You should have received a copy of the GNU General Public License       *
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
-#include <ctype.h>
-#include <modules/lua/lsluaapi.h>
-#include <modules/lua/lsluaengine.h>
-#include <modules/lua/lsluasession.h>
+#include "lsluaapi.h"
+#include "lsluasession.h"
+
 #include <ls.h>
-#include <log4cxx/logger.h>
-#include <http/httpsession.h>
+#include <lsr/ls_xpool.h>
+
+#include <ctype.h>
 
 static int LsLuaHeaderDummy(lua_State *L)
 {
     LsLuaApi::dumpStack(L, "ls.header dummy ", 10);
     return 0;
 }
+
 
 static int LsLuaHeaderToString(lua_State *L)
 {
@@ -38,17 +39,20 @@ static int LsLuaHeaderToString(lua_State *L)
     return 1;
 }
 
+
 static int LsLuaHeaderGc(lua_State *L)
 {
     LsLuaLog(L, LSI_LOG_INFO, 0, "<ls.header GC>");
     return 0;
 }
 
+
 static const luaL_Reg LsLuaHeaderFuncs[] =
 {
     {   "dummy",       LsLuaHeaderDummy       },
     {NULL, NULL}
 };
+
 
 static const luaL_Reg LsLuaHeaderMetaSub[] =
 {
@@ -78,6 +82,7 @@ static const char *LsLuaHeaderTransformKey(lsi_session_t *session,
     }
     return pTmp;
 }
+
 
 int LsLuaHeaderGet(lua_State *L)
 {
@@ -119,6 +124,7 @@ int LsLuaHeaderGet(lua_State *L)
     }
     return 1;
 }
+
 
 int LsLuaHeaderSet(lua_State *L)
 {
@@ -188,6 +194,7 @@ int LsLuaHeaderSet(lua_State *L)
     }
     return 0;
 }
+
 
 void LsLuaCreateHeader(lua_State *L)
 {

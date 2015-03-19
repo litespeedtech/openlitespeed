@@ -22,15 +22,8 @@
 class debugBase;
 #endif
 
-#include <sys/time.h>
-#include <string.h>
-#include <unistd.h>
-
-#include <http/httplog.h>
-#include <util/datetime.h>
-#include <shm/lsi_shm.h>
-#include <shm/lsshmtypes.h>
 #include <shm/lsshmhash.h>
+#include <shm/lsshmtypes.h>
 
 /**
  * @file
@@ -91,11 +84,11 @@ public:
                , const char     *cacheName
                , const char     *shmHashName
                , size_t          initHashSize = 101
-                       , LsShmSize_t     uDataSize = 0
-                               , LsShmHash::hash_fn hf = LsShmHash::hashBuf
-                                       , LsShmHash::val_comp vc = LsShmHash::compBuf
-                                               , udata_init_fn   udataInitCallback = NULL
-                                                       , udata_remove_fn udataRemoveCallback = NULL
+               , LsShmSize_t     uDataSize = 0
+               , LsShmHash::hash_fn hf = LsShmHash::hashBuf
+               , LsShmHash::val_comp vc = LsShmHash::compBuf
+               , udata_init_fn   udataInitCallback = NULL
+               , udata_remove_fn udataRemoveCallback = NULL
               );
 
     ~LsShmCache()
@@ -142,10 +135,12 @@ public:
 
     lsShm_hCacheData_t *findObj(const void *pKey, int keyLen)
     {
-        LsShmHash::iterator iter;
-        iter = m_pShmHash->findIterator(pKey, keyLen);
-        return ((iter != NULL) ?
-                (lsShm_hCacheData_t *)iter->getVal() : NULL);
+        LsShmHash::iteroffset iterOff;
+        ls_str_pair_t parms;
+        ls_str_unsafeset(&parms.key, (char *)pKey, keyLen);
+        iterOff = m_pShmHash->findIterator(&parms);
+        return (lsShm_hCacheData_t *)((iterOff != 0) ?
+                m_pShmHash->offset2iteratorData(iterOff) : NULL);
     }
 
     //
@@ -156,13 +151,7 @@ public:
     lsShm_hCacheData_t *getObj(const void *pKey, int keyLen,
                                const void *pValue , int valueLen, void *pUParam = NULL);
 
-    int isElementExpired(lsShm_hCacheData_t *pObj)
-    {
-        return (pObj->x_iExpired
-                || ((((DateTime::s_curTime - pObj->x_iExpireTime) * 1000)
-                     + ((DateTime::s_curTimeUs / 1000) - pObj->x_iExpireTimeMs)) > 0)
-               );
-    }
+    int isElementExpired(lsShm_hCacheData_t *pObj);
 
     //
     //  @brief remove2NonExpired -
@@ -225,20 +214,7 @@ private:
     //  @brief (1) call user callback if defined.
     //  @brief (2) remove the hash entry of the item.
     //
-    void removeObjData(lsShm_hCacheData_t *pObj, void *pUParam = NULL)
-    {
-#ifdef DEBUG_RUN
-        LsShmHash::iterator iter =
-            m_pShmHash->offset2iterator(pObj->x_iIteratorOffset);
-        HttpLog::notice(
-            "LsShmCache::removeObjData %6d iter <%p> obj <%p> size %d",
-            getpid(), iter, pObj, (long)pObj - (long)iter);
-#endif
-        if (m_dataRemove_cb != NULL)
-            (*m_dataRemove_cb)(pObj, pUParam);
-        m_pShmHash->eraseIteratorHelper(
-            m_pShmHash->offset2iterator(pObj->x_iIteratorOffset));
-    }
+    void removeObjData(lsShm_hCacheData_t *pObj, void *pUParam = NULL);
 
     //
     //  @brief disconnectObj

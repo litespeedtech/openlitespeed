@@ -16,8 +16,11 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "l4handler.h"
-#include <socket/gsockaddr.h>
+
+#include <extensions/l4conn.h>
 #include <http/httplog.h>
+#include <http/httpreq.h>
+#include <util/loopbuf.h>
 
 L4Handler::L4Handler()
 {
@@ -26,12 +29,14 @@ L4Handler::L4Handler()
     m_iState = 0;
 }
 
+
 void L4Handler::recycle()
 {
     delete m_buf;
     delete m_pL4conn;
     delete this;
 }
+
 
 int L4Handler::onReadEx()
 {
@@ -71,6 +76,7 @@ int L4Handler::onReadEx()
 
     return 0;
 }
+
 
 int L4Handler::onWriteEx()
 {
@@ -114,6 +120,7 @@ int L4Handler::onWriteEx()
     return 0;
 }
 
+
 int L4Handler::init(HttpReq &req, const GSockAddr *pGSockAddr,
                     const char *pIP, int iIpLen)
 {
@@ -150,10 +157,12 @@ int L4Handler::init(HttpReq &req, const GSockAddr *pGSockAddr,
     return 0;
 }
 
+
 void L4Handler::doWrite()
 {
     onWriteEx();
 }
+
 
 void L4Handler::closeBothConnection()
 {

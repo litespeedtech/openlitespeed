@@ -21,8 +21,9 @@
 #include <http/httplog.h>
 #include <http/httpvhost.h>
 #include <http/httpvhostlist.h>
+#include <lsr/ls_strtool.h>
+#include <socket/gsockaddr.h>
 #include <sslpp/sslcontext.h>
-
 #include <util/stringlist.h>
 #include <util/stringtool.h>
 
@@ -30,7 +31,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
-#include <lsr/ls_strtool.h>
 
 
 class WildMatch
@@ -65,6 +65,7 @@ public:
     LS_NO_COPY_ASSIGN(WildMatch);
 };
 
+
 VHostMap::VHostMap()
     : m_pCatchAll(NULL)
     , m_pDedicated(NULL)
@@ -74,6 +75,7 @@ VHostMap::VHostMap()
     , m_iStripWWW(1)
 {}
 
+
 VHostMap::~VHostMap()
 {
 
@@ -82,6 +84,7 @@ VHostMap::~VHostMap()
     clear();
 
 }
+
 
 HttpVHost *VHostMap::wildMatch(const char *pHost, const char *pEnd) const
 {
@@ -94,10 +97,12 @@ HttpVHost *VHostMap::wildMatch(const char *pHost, const char *pEnd) const
     return m_pCatchAll;
 }
 
+
 static inline int isWildMatch(const char *pchKey)
 {
     return (strpbrk(pchKey, "*?") != NULL);
 }
+
 
 int VHostMap::addWildMatch(const char *pchKey, HttpVHost *pHost)
 {
@@ -134,6 +139,7 @@ int VHostMap::addWildMatch(const char *pchKey, HttpVHost *pHost)
     return 0;
 }
 
+
 void VHostMap::removeWildMatch(WildMatchList::iterator iter)
 {
     WildMatch *pMatch = *iter;
@@ -141,6 +147,7 @@ void VHostMap::removeWildMatch(WildMatchList::iterator iter)
     m_pWildMatches->erase(iter);
     delete pMatch;
 }
+
 
 int VHostMap::removeWildMatch(const char *pName)
 {
@@ -187,6 +194,7 @@ int VHostMap::addMap(const char *pchKey, HttpVHost *pHost)
     return 0;
 }
 
+
 int VHostMap::removeVHost(HttpVHost *pHost)
 {
     if (!pHost)
@@ -225,6 +233,7 @@ int VHostMap::removeVHost(HttpVHost *pHost)
     return 0;
 }
 
+
 void VHostMap::remove(const char *pName)
 {
     iterator iter1 = find(pName);
@@ -237,6 +246,7 @@ void VHostMap::remove(const char *pName)
         removeWildMatch(pName);
 }
 
+
 void VHostMap::removeMapping(const char *pName)
 {
     if (strcmp(pName, "*") == 0)
@@ -248,6 +258,7 @@ void VHostMap::removeMapping(const char *pName)
     else
         remove(pName);
 }
+
 
 void VHostMap::findDedicated()
 {
@@ -305,6 +316,7 @@ void VHostMap::clear()
 
 }
 
+
 void VHostMap::setPort(int p)
 {
     char achBuf[20];
@@ -312,6 +324,7 @@ void VHostMap::setPort(int p)
     p = ls_snprintf(achBuf, 20, "%d", m_port);
     m_sPort.setStr(achBuf, p);
 }
+
 
 void VHostMap::updateMapping(HttpVHostMap &vhosts)
 {
@@ -371,6 +384,7 @@ void VHostMap::updateMapping(HttpVHostMap &vhosts)
     findDedicated();
 }
 
+
 int VHostMap::writeStatusReport(int fd)
 {
     char achBuf[1024];
@@ -406,6 +420,7 @@ int VHostMap::writeStatusReport(int fd)
     return 0;
 }
 
+
 HttpVHost *VHostMap::exactMatchVHost(const char *pHost) const
 {
     if (strcmp(pHost, "*") == 0)
@@ -425,6 +440,7 @@ HttpVHost *VHostMap::exactMatchVHost(const char *pHost) const
     return NULL;
 }
 
+
 void VHostMap::setSSLContext(SSLContext *pContext)
 {
     if (pContext == m_pSSLContext)
@@ -433,6 +449,7 @@ void VHostMap::setSSLContext(SSLContext *pContext)
         delete m_pSSLContext;
     m_pSSLContext = pContext;
 }
+
 
 int VHostMap::addMaping(HttpVHost *pVHost,
                         const char *pDomain, int optional)
@@ -539,9 +556,6 @@ int VHostMap::mapDomainList(HttpVHost    *pVHost,
 }
 
 
-
-#include <socket/gsockaddr.h>
-
 typedef union
     {
         in6_addr    m_addr6;
@@ -554,10 +568,12 @@ SubIpMap::SubIpMap()
 {
 }
 
+
 SubIpMap::~SubIpMap()
 {
     m_map.releaseObjects();
 }
+
 
 VHostMap *SubIpMap::getMap(uint32_t ipv4) const
 {
@@ -566,6 +582,7 @@ VHostMap *SubIpMap::getMap(uint32_t ipv4) const
         return NULL;
     return iter.second();
 }
+
 
 uint32_t addrConvert(struct sockaddr *pAddr)
 {
@@ -616,6 +633,7 @@ VHostMap *SubIpMap::addIP(const char *pIP)
     return pMap;
 }
 
+
 int SubIpMap::addDefaultVHost(HttpVHost *pVHost)
 {
     int count = 0;
@@ -631,6 +649,7 @@ int SubIpMap::addDefaultVHost(HttpVHost *pVHost)
     return count;
 }
 
+
 int SubIpMap::writeStatusReport(int fd)
 {
     IpMap::iterator iter = m_map.begin();
@@ -642,12 +661,14 @@ int SubIpMap::writeStatusReport(int fd)
     return 0;
 }
 
+
 void SubIpMap::endConfig()
 {
     IpMap::iterator iter = m_map.begin();
     for (; iter != m_map.end(); iter = m_map.next(iter))
         iter.second()->endConfig();
 }
+
 
 int SubIpMap::hasSSL()
 {
@@ -659,6 +680,7 @@ int SubIpMap::hasSSL()
     }
     return 0;
 }
+
 
 SSLContext *VHostMapFindSSLContext(void *arg, const char *pName)
 {

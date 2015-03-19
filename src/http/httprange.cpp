@@ -16,8 +16,10 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "httprange.h"
-#include "httpstatuscode.h"
 
+#include <http/httpstatuscode.h>
+#include <lsr/ls_strtool.h>
+#include <lsr/ls_xpool.h>
 #include <util/autostr.h>
 #include <util/stringtool.h>
 
@@ -28,7 +30,6 @@
 #include <sys/time.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include <lsr/ls_strtool.h>
 
 class ByteRange
 {

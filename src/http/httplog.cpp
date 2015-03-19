@@ -18,18 +18,14 @@
 #include "httplog.h"
 
 #include <http/accesslog.h>
-#include <util/datetime.h>
-#include <http/httpreq.h>
-#include <http/httpresp.h>
 #include <http/httpserverconfig.h>
 #include <http/serverprocessconfig.h>
 #include <http/stderrlogger.h>
 
+#include <log4cxx/appender.h>
 #include <log4cxx/layout.h>
 #include <log4cxx/logger.h>
 #include <log4cxx/logrotate.h>
-
-#include <util/iovec.h>
 
 #include <new>
 
@@ -40,14 +36,15 @@
 
 using namespace LOG4CXX_NS;
 #define ACCESS_INIT 1
-static char achAccessLog[ sizeof(AccessLog) ];
-static Logger *s_pLogger       = NULL;
-static char s_logPattern[40]    = "%d [%p] %m";
+static char                 achAccessLog[ sizeof(AccessLog) ];
+static Logger              *s_pLogger = NULL;
+static char                 s_logPattern[40] = "%d [%p] %m";
 
-static const char          *s_pLogId            = NULL;
-static LOG4CXX_NS::Logger   *s_pCurLogger  = NULL;
+static const char          *s_pLogId = NULL;
+static LOG4CXX_NS::Logger  *s_pCurLogger  = NULL;
 
-int    HttpLog::s_debugLevel        = DL_IODATA;
+int HttpLog::s_debugLevel = DL_IODATA;
+
 
 void HttpLog::parse_error(const char *pCurLine, const char *pError)
 {
@@ -55,11 +52,13 @@ void HttpLog::parse_error(const char *pCurLine, const char *pError)
              s_pLogId, pError, pCurLine));
 }
 
+
 void HttpLog::setCurLogger(LOG4CXX_NS::Logger *pLogger, const char *pId)
 {
     s_pCurLogger = pLogger;
     s_pLogId = pId;
 }
+
 
 void HttpLog::perror(const char *pStr, const char *pError)
 {
@@ -71,6 +70,7 @@ void HttpLog::perror(const char *pStr, const char *pError)
 static inline AccessLog *accessLog()
 {   return (AccessLog *)achAccessLog;     }
 
+
 static inline Logger *logger()
 {   return s_pLogger;       }
 
@@ -78,9 +78,12 @@ static inline Logger *logger()
 HttpLog::HttpLog()
 {
 }
+
+
 HttpLog::~HttpLog()
 {
 }
+
 
 void HttpLog::init()
 {
@@ -96,6 +99,7 @@ void HttpLog::init()
     logger()->setAppender(appender);
 }
 
+
 bool HttpLog::isEnabled(Logger *pLogger, int level)
 {
     if (pLogger)
@@ -105,16 +109,17 @@ bool HttpLog::isEnabled(Logger *pLogger, int level)
 }
 
 
-
 bool HttpLog::isDebugEnabled(Logger *pLogger, int level)
 {
     return (level < s_debugLevel) && (isEnabled(pLogger, Level::DEBUG));
 }
 
+
 void HttpLog::setDebugLevel(int level)
 {
     s_debugLevel = level;
 }
+
 
 void HttpLog::toggleDebugLog()
 {
@@ -133,6 +138,7 @@ void HttpLog::setLogLevel(int level)
     logger()->setLevel(level);
 }
 
+
 void HttpLog::setLogLevel(const char *pLevel)
 {
     logger()->setLevel(pLevel);
@@ -145,10 +151,12 @@ void HttpLog::setLogPattern(const char *pPattern)
         strncpy(s_logPattern, pPattern, 39);
 }
 
+
 const char *HttpLog::getLogPattern()
 {
     return s_logPattern;
 }
+
 
 LOG4CXX_NS::Logger *HttpLog::getErrorLogger()
 {
@@ -163,11 +171,13 @@ int HttpLog::logAccess(const char *pVHost, int len, HttpSession *pSession)
     return 0;
 }
 
+
 int HttpLog::setAccessLogFile(const char *pFileName, int pipe)
 {
     int ret = accessLog()->init(pFileName, pipe);
     return ret;
 }
+
 
 AccessLog *HttpLog::getAccessLog()
 {
@@ -193,15 +203,18 @@ int HttpLog::setErrorLogFile(const char *pFileName)
         return LS_FAIL;
 }
 
+
 const char *HttpLog::getAccessLogFileName()
 {
     return accessLog()->getLogPath();
 }
 
+
 const char *HttpLog::getErrorLogFileName()
 {
     return logger()->getAppender()->getName();
 }
+
 
 void HttpLog::offsetChroot(const char *pRoot, int len)
 {
@@ -223,6 +236,7 @@ void HttpLog::offsetChroot(const char *pRoot, int len)
 
 }
 
+
 void HttpLog::error_num(int __errnum, const char *__file,
                         unsigned int __line, const char *__function)
 {
@@ -232,12 +246,14 @@ void HttpLog::error_num(int __errnum, const char *__file,
         __file, __line, __function);
 }
 
+
 void HttpLog::error_detail(const char *__errstr, const char *__file,
                            unsigned int __line, const char *__function)
 {
     logger()->error("error:%s in file:%s line:%d function:%s\n",
                     __errstr, __file, __line, __function);
 }
+
 
 void HttpLog::error(const char *fmt, ...)
 {
@@ -250,6 +266,7 @@ void HttpLog::error(const char *fmt, ...)
     }
 }
 
+
 void HttpLog::warn(const char *fmt, ...)
 {
     if (logger()->isEnabled(LOG4CXX_NS::Level::WARN))
@@ -260,6 +277,7 @@ void HttpLog::warn(const char *fmt, ...)
         va_end(ap);
     }
 }
+
 
 void HttpLog::debug(const char *fmt, ...)
 {
@@ -287,6 +305,7 @@ void HttpLog::notice(const char *fmt, ...)
     }
 }
 
+
 void HttpLog::info(const char *fmt, ...)
 {
     if (logger()->isEnabled(LOG4CXX_NS::Level::INFO))
@@ -298,10 +317,12 @@ void HttpLog::info(const char *fmt, ...)
     }
 }
 
+
 void HttpLog::vlog(int level, const char *format, va_list args)
 {
     logger()->vlog(level,  format, args);
 }
+
 
 void HttpLog::log(int level, const char *fmt, ...)
 {
@@ -312,6 +333,7 @@ void HttpLog::log(int level, const char *fmt, ...)
 
 }
 
+
 void HttpLog::vlog(LOG4CXX_NS::Logger *pLogger, int level,
                    const char *format, va_list args, int no_linefeed)
 {
@@ -320,6 +342,7 @@ void HttpLog::vlog(LOG4CXX_NS::Logger *pLogger, int level,
     if (pLogger->isEnabled(level))
         pLogger->vlog(level, format, args, no_linefeed);
 }
+
 
 void HttpLog::lograw(LOG4CXX_NS::Logger *pLogger, const char *pBuf,
                      int len)
@@ -343,6 +366,7 @@ void HttpLog::error(Logger *pLogger, const char *fmt, ...)
     }
 }
 
+
 void HttpLog::warn(Logger *pLogger, const char *fmt, ...)
 {
     if (!pLogger)
@@ -355,6 +379,7 @@ void HttpLog::warn(Logger *pLogger, const char *fmt, ...)
         va_end(ap);
     }
 }
+
 
 void HttpLog::debug(Logger *pLogger, const char *fmt, ...)
 {
@@ -386,6 +411,7 @@ void HttpLog::notice(Logger *pLogger, const char *fmt, ...)
     }
 }
 
+
 void HttpLog::info(Logger *pLogger, const char *fmt, ...)
 {
     if (!pLogger)
@@ -398,6 +424,7 @@ void HttpLog::info(Logger *pLogger, const char *fmt, ...)
         va_end(ap);
     }
 }
+
 
 void HttpLog::errmem(const char *pSource)
 {

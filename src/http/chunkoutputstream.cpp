@@ -17,12 +17,11 @@
 *****************************************************************************/
 #include "chunkoutputstream.h"
 
-#include <util/iovec.h>
+#include <edio/outputstream.h>
 
 #include <assert.h>
 #include <stdio.h>
 #include <sys/uio.h>
-#include <lsr/ls_strtool.h>
 
 static const char *s_CHUNK_END = "0\r\n\r\n";
 
@@ -36,8 +35,10 @@ ChunkOutputStream::ChunkOutputStream()
     m_iov.clear();
 }
 
+
 ChunkOutputStream::~ChunkOutputStream()
 {}
+
 
 int ChunkOutputStream::buildChunkHeader(int size)
 {
@@ -46,6 +47,7 @@ int ChunkOutputStream::buildChunkHeader(int size)
     m_iov.append(m_headerBuf, total);
     return total;
 }
+
 
 int ChunkOutputStream::buildIovec(const char *pBuf, int size)
 {
@@ -69,11 +71,13 @@ int ChunkOutputStream::buildIovec(const char *pBuf, int size)
     return total;
 }
 
+
 void ChunkOutputStream::appendCRLF()
 {
     m_iov.append("\r\n", 2);
     m_iTotalPending += 2;
 }
+
 
 int ChunkOutputStream::fillChunkBuf(const char *pBuf, int size)
 {
@@ -102,6 +106,7 @@ int ChunkOutputStream::chunkedWrite(const char *pBuf, int size)
         return ret;
     }
 }
+
 
 int ChunkOutputStream::write(const char *pBuf, int size)
 {
@@ -171,6 +176,7 @@ void ChunkOutputStream::reset()
     m_iov.clear();
 }
 
+
 int ChunkOutputStream::flush2()
 {
     int ret = m_pOS->writev(m_iov, m_iTotalPending);
@@ -193,6 +199,7 @@ int ChunkOutputStream::flush2()
     return LS_FAIL;
 }
 
+
 int ChunkOutputStream::close()
 {
     if (m_iCurSize > 0)
@@ -201,6 +208,7 @@ int ChunkOutputStream::close()
     m_iov.append(s_CHUNK_END, 5);
     return flush2();
 }
+
 
 void ChunkOutputStream::buildSendFileChunk(int size)
 {

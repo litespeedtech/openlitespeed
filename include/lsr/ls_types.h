@@ -26,8 +26,8 @@
 extern "C" {
 #endif
 
-#define ls_inline      static inline
-
+#include <lsdef.h>    
+    
 typedef unsigned long          ls_hash_key_t;
 typedef struct ls_ptrlist_s    ls_ptrlist_t;
 typedef ls_ptrlist_t           ls_strlist_t;

@@ -24,9 +24,11 @@ JWorker::JWorker(const char *pName)
     setConfigPointer(new JWorkerConfig(pName));
 }
 
+
 JWorker::~JWorker()
 {
 }
+
 
 ExtConn *JWorker::newConn()
 {

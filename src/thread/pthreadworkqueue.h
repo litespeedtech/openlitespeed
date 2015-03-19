@@ -18,11 +18,11 @@
 #ifndef PTHREADWORKQUEUE_H
 #define PTHREADWORKQUEUE_H
 
-#include <errno.h>
-#include <lsr/ls_lfqueue.h>
 #include <util/linkedqueue.h>
 #include <thread/pthreadmutex.h>
 #include <thread/pthreadcond.h>
+#include <assert.h>
+#include <errno.h>
 #include <limits.h>
 
 

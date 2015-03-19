@@ -28,12 +28,14 @@ SSLError::SSLError() throw()
     ERR_error_string_n(m_iError, m_achMsg, MSG_MAX_LEN);
 }
 
+
 SSLError::SSLError(int err) throw()
 {
     m_achMsg[MSG_MAX_LEN] = 0;
     m_iError = err;
     ERR_error_string_n(m_iError, m_achMsg, MSG_MAX_LEN);
 }
+
 
 SSLError::SSLError(const char *pErr) throw()
 {
@@ -46,6 +48,7 @@ SSLError::SSLError(const char *pErr) throw()
     else
         m_achMsg[0] = 0;
 }
+
 
 SSLError::~SSLError() throw()
 {

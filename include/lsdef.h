@@ -38,5 +38,8 @@
     T(const T&);               \
     void operator=(const T&);
 
+#define ls_inline           static inline
+#define ls_always_inline    static inline __attribute__((always_inline)) 
+#define ls_attr_inline      __attribute__((always_inline))
 
 #endif //_LSDEF_H_

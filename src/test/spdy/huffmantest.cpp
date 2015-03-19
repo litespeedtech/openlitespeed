@@ -26,7 +26,7 @@ void testBothEncAndDec(uint8_t *src, size_t src_len)
     if (src_len == 0)
         src_len = strlen((char *)src);
 
-    size_t dst_len = HuffmanCode::huffmanEncBufSize(src, src + src_len) + 1;
+    size_t dst_len = HuffmanCode::calcHuffmanEncBufSize(src, src + src_len) + 1;
     unsigned char *dst = (unsigned char *)malloc(dst_len);
     int real_dst_len = HuffmanCode::huffmanEnc(src, src + src_len, dst,
                        dst_len);

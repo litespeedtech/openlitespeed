@@ -17,6 +17,7 @@
 *****************************************************************************/
 #ifndef SSLOCSPSTAPLING_H
 #define SSLOCSPSTAPLING_H
+
 #include <socket/gsockaddr.h>
 #include <util/autostr.h>
 
@@ -88,7 +89,7 @@ private:
 
     static const char *s_pRespTempPath;
     static int   s_iRespTempPathLen;
-    
+
     LS_NO_COPY_ASSIGN(SslOcspStapling);
 };
 const char *getStaplingErrMsg();

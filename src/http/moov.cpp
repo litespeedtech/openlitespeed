@@ -15,6 +15,11 @@
 *    You should have received a copy of the GNU General Public License       *
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
+#include "moov.h"
+#include "moovP.h"
+
+#include <lsdef.h>
+
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -22,10 +27,7 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#include <lsdef.h>
 
-#include "moov.h"
-#include "moovP.h"
 
 #ifndef MAP_FILE
 #define MAP_FILE 0
@@ -97,6 +99,7 @@ static int moov_getpagesize()
         s_pagesize = sysconf(_SC_PAGESIZE);
     return s_pagesize;
 }
+
 
 /*    return: -1 -- error. not an mp4/mov/f4v file or invalid file
  *             1 -- return mini_moov
@@ -244,6 +247,7 @@ int get_mini_moov(int fd,                    //in - video file descriptor
     }
 }
 
+
 int get_moov(int
              fd,                            //in - video file descriptor
              float start_time,            //in - seconds
@@ -300,6 +304,7 @@ int get_moov(int
             return (0);
     }
 }
+
 
 int get_mdat(int
              fd,                            //in - video file descriptor
@@ -368,6 +373,7 @@ static uint64_t bytes_read(unsigned char *buf, int count)
     return r;
 }
 
+
 //0:exceed boundry;
 //1:successful
 static int boxheader_read(unsigned char *buf, boxheader_t *header,
@@ -403,6 +409,7 @@ static int boxheader_read(unsigned char *buf, boxheader_t *header,
     return (1);
 }
 
+
 static int boxheader_read_file(int fd, off_t pos, box_in_file_t *box)
 {
     unsigned char buf[32];
@@ -436,6 +443,7 @@ static int boxheader_read_file(int fd, off_t pos, box_in_file_t *box)
 
     return (1);
 }
+
 
 static int moov_read(unsigned char *buf, void *box)
 {
@@ -535,6 +543,7 @@ static int moov_read(unsigned char *buf, void *box)
     }
 }
 
+
 static int mvhd_read(unsigned char *buf, void *box)
 {
     mvhd_t *mvhd_box = (mvhd_t *)box;
@@ -588,6 +597,7 @@ static int mvhd_read(unsigned char *buf, void *box)
     }
     return (1);
 }
+
 
 static int trak_read(unsigned char *buf, void *box)
 {
@@ -714,6 +724,7 @@ static int tkhd_read(unsigned char *buf, void *box)
     return (1);
 }
 
+
 static int mdia_read(unsigned char *buf, void *box)
 {
 //Header BOXHEADER BoxType = 'mdia' (0x6D646961)
@@ -777,6 +788,7 @@ static int mdia_read(unsigned char *buf, void *box)
     }
 }
 
+
 static int mdhd_read(unsigned char *buf, void *box)
 {
     mdhd_t *mdhd_box = (mdhd_t *)box;
@@ -832,6 +844,7 @@ static int mdhd_read(unsigned char *buf, void *box)
     return (1);
 }
 
+
 static int minf_read(unsigned char *buf, void *box)
 {
 //Header BOXHEADER BoxType = 'minf' (0x6D696E66)
@@ -883,6 +896,7 @@ static int minf_read(unsigned char *buf, void *box)
         return (0);
     }
 }
+
 
 static int stbl_read(unsigned char *buf, void *box)
 {
@@ -1003,6 +1017,7 @@ static int stbl_read(unsigned char *buf, void *box)
     }
 }
 
+
 static int stsc_read(unsigned char *buf, void *box)
 {
     stsc_t *stsc_box = (stsc_t *)box;
@@ -1037,6 +1052,7 @@ static int stsc_read(unsigned char *buf, void *box)
     return (1);
 }
 
+
 static int stts_read(unsigned char *buf, void *box)
 {
     stts_t *stts_box = (stts_t *)box;
@@ -1069,6 +1085,7 @@ static int stts_read(unsigned char *buf, void *box)
     stts_box->Entries = sub_buf;
     return (1);
 }
+
 
 static int stsz_read(unsigned char *buf, void *box)
 {
@@ -1113,6 +1130,7 @@ static int stsz_read(unsigned char *buf, void *box)
     return (1);
 }
 
+
 static int stco_co64_read(unsigned char *buf, void *box)
 {
     stco_co64_t *stco_co64_box = (stco_co64_t *)box;
@@ -1156,6 +1174,7 @@ static int stco_co64_read(unsigned char *buf, void *box)
     return (1);
 }
 
+
 static int stss_read(unsigned char *buf, void *box)
 {
     stss_t *stss_box = (stss_t *)box;
@@ -1188,6 +1207,7 @@ static int stss_read(unsigned char *buf, void *box)
     stss_box->SyncTable = (void *)sub_buf;
     return (1);
 }
+
 
 static int ctts_read(unsigned char *buf, void *box)
 {
@@ -1222,6 +1242,7 @@ static int ctts_read(unsigned char *buf, void *box)
     return (1);
 }
 
+
 static int stsd_read(unsigned char *buf, void *box)
 {
     stsd_t *stsd_box = (stsd_t *)box;
@@ -1238,6 +1259,7 @@ static int stsd_read(unsigned char *buf, void *box)
     return (1);
 }
 
+
 //count = one of [1,2,3,4,8]
 static unsigned char *bytes_write(unsigned char *buf, int count,
                                   uint64_t ui)
@@ -1250,6 +1272,7 @@ static unsigned char *bytes_write(unsigned char *buf, int count,
 
     return (buf + count);
 }
+
 
 static unsigned char *boxheader_write(unsigned char *buf,
                                       boxheader_t *header)
@@ -1276,6 +1299,7 @@ static unsigned char *boxheader_write(unsigned char *buf,
 #endif
     return (buf);
 }
+
 
 static unsigned char *stsc_write(unsigned char *dst, void *box)
 {
@@ -1314,6 +1338,7 @@ static unsigned char *stsc_write(unsigned char *dst, void *box)
     return (dst);
 }
 
+
 static unsigned char *stts_write(unsigned char *dst, void *box)
 {
     stts_t *stts_box = (stts_t *)box;
@@ -1342,6 +1367,7 @@ static unsigned char *stts_write(unsigned char *dst, void *box)
 
     return (dst);
 }
+
 
 static unsigned char *stsz_write(unsigned char *dst, void *box,
                                  int no_size_table)
@@ -1378,6 +1404,7 @@ static unsigned char *stsz_write(unsigned char *dst, void *box,
     }
     return (dst);
 }
+
 
 static unsigned char *stco_co64_write(unsigned char *dst, void *box)
 {
@@ -1427,6 +1454,7 @@ static unsigned char *stco_co64_write(unsigned char *dst, void *box)
     return (dst);
 }
 
+
 static unsigned char *stss_write(unsigned char *dst, void *box)
 {
     stss_t *stss_box = (stss_t *)box;
@@ -1460,6 +1488,7 @@ static unsigned char *stss_write(unsigned char *dst, void *box)
 
     return (dst);
 }
+
 
 static int calc_new_moov_diff(moov_t *moov_box, float start_time,
                               float end_time)
@@ -1555,6 +1584,7 @@ static int calc_new_moov_diff(moov_t *moov_box, float start_time,
     return (1);
 }
 
+
 static uint32_t duration_to_sample(uint64_t duration,
                                    unsigned char *stts_entries, uint32_t count)
 {
@@ -1571,6 +1601,7 @@ static uint32_t duration_to_sample(uint64_t duration,
     }
     return (samp_acc);
 }
+
 
 static uint32_t sample_to_chunk(uint32_t sample,
                                 unsigned char *stsc_entries, uint32_t count, uint32_t max_chunk,
@@ -1628,6 +1659,7 @@ static uint32_t sample_to_chunk(uint32_t sample,
     }
 }
 
+
 static uint32_t sample_to_duration(uint32_t s1, uint32_t s2,
                                    unsigned char  *stts_entries, uint32_t count)
 {
@@ -1660,6 +1692,7 @@ static uint32_t sample_to_duration(uint32_t s1, uint32_t s2,
     return (acc);
 }
 
+
 static uint32_t stsc_adjust(stsc_t *stsc, uint32_t c1, uint32_t c2,
                             unsigned char *stsc_entries)
 {
@@ -1687,6 +1720,7 @@ static uint32_t stsc_adjust(stsc_t *stsc, uint32_t c1, uint32_t c2,
 
     return (1);
 }
+
 
 static uint32_t stts_adjust(stts_t *stts, uint32_t s1, uint32_t s2,
                             unsigned char *stts_entries)
@@ -1731,6 +1765,7 @@ static uint32_t stts_adjust(stts_t *stts, uint32_t s1, uint32_t s2,
     return (1);
 }
 
+
 static uint32_t stsz_adjust(stsz_t *stsz, uint32_t s1, uint32_t s2)
 {
     if (stsz->ConstantSize > 0)
@@ -1742,6 +1777,7 @@ static uint32_t stsz_adjust(stsz_t *stsz, uint32_t s1, uint32_t s2)
     stsz->header.deltaSize = -1 * ((stsz->SizeCount - (s2 - s1 + 1)) * 4);
     return (1);
 }
+
 
 static uint32_t stco_co64_adjust(stco_co64_t *stco_co64, uint32_t c1,
                                  uint32_t c2)
@@ -1772,6 +1808,7 @@ static uint32_t stco_co64_adjust(stco_co64_t *stco_co64, uint32_t c1,
     return (1);
 }
 
+
 static uint32_t stss_adjust(stss_t *stss, uint32_t s1, uint32_t s2)
 {
     uint32_t t, i, newCount = 0, count;
@@ -1801,6 +1838,7 @@ static uint32_t stss_adjust(stss_t *stss, uint32_t s1, uint32_t s2)
     return (1);
 }
 
+
 static uint32_t ctts_adjust(ctts_t *ctts, uint32_t s1, uint32_t s2)
 {
     if (ctts->header.ExtendedSize == 0) //ctts not exist
@@ -1809,6 +1847,7 @@ static uint32_t ctts_adjust(ctts_t *ctts, uint32_t s1, uint32_t s2)
     ctts->header.deltaSize = -1 * ctts->header.ExtendedSize;
     return (1);
 }
+
 
 //called when stsz table not in memory
 static uint64_t trak_max_offset_new(stbl_t *stbl, uint32_t chunk,
@@ -1837,6 +1876,7 @@ static uint64_t trak_max_offset_new(stbl_t *stbl, uint32_t chunk,
 
     return (ot);
 }
+
 
 static int mini_moov_calc_size(moov_t *moov_box)
 {
@@ -1876,6 +1916,7 @@ static int mini_moov_calc_size(moov_t *moov_box)
 
     return (1);
 }
+
 
 static int mini_moov_write(unsigned char *buf, moov_t *box)
 {
@@ -1949,6 +1990,7 @@ static int mini_moov_write(unsigned char *buf, moov_t *box)
 
     return (1);
 }
+
 
 static int mini_moov_read(unsigned char *buf, moov_t *moov_box)
 {
@@ -2078,6 +2120,7 @@ static int mini_moov_read(unsigned char *buf, moov_t *moov_box)
     else
         return (0);
 }
+
 
 static int moov_write_chunk(moov_data_t     *moov_data, moov_t *moov_box)
 {
@@ -2225,6 +2268,7 @@ static int moov_write_chunk(moov_data_t     *moov_data, moov_t *moov_box)
     else
         return (0);
 }
+
 
 uint64_t get_new_moov_total_size(void *moov_ctrl)
 {

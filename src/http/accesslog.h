@@ -20,7 +20,10 @@
 
 
 #include <lsdef.h>
+#include <log4cxx/nsdefs.h>
 #include <util/autobuf.h>
+
+#include <sys/types.h>
 
 #define MAX_BUFFERED_LEN 8192
 #define MAX_LOG_LINE_LEN 4096
@@ -30,9 +33,6 @@
 #define LOG_USERAGENT   2
 #define LOG_VHOST       4
 
-#include <sys/types.h>
-
-#include <log4cxx/nsdefs.h>
 
 BEGIN_LOG4CXX_NS
 class Appender;

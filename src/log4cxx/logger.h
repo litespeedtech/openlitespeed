@@ -25,8 +25,6 @@
 #include <lsdef.h>
 #include <log4cxx/nsdefs.h>
 #include <log4cxx/level.h>
-#include <log4cxx/appender.h>
-#include <util/autostr.h>
 #include <util/duplicable.h>
 
 #define ROOT_LOGGER_NAME "__root"
@@ -42,6 +40,7 @@ BEGIN_LOG4CXX_NS
         } \
     }while(0)
 
+class Appender;
 class Layout;
 class Logger : public Duplicable
 {

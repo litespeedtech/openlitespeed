@@ -22,17 +22,19 @@
 
 #define H_BUF_SIZE      8192
 #define H_MAX_ENTRIES   36
+
 HostInfo::HostInfo()
 {
     init();
 }
+
+
 HostInfo::HostInfo(const hostent &rhs)
 {
     init();
     *this = rhs;
-
-
 }
+
 
 int HostInfo::init()
 {
@@ -49,11 +51,13 @@ int HostInfo::init()
     return 0;
 }
 
+
 HostInfo::~HostInfo()
 {
     if (m_pBuf)
         delete[] m_pBuf;
 }
+
 
 char *HostInfo::buf_memcpy(char *&pBuf, const char *pSrc, int n)
 {
@@ -63,11 +67,13 @@ char *HostInfo::buf_memcpy(char *&pBuf, const char *pSrc, int n)
     return p;
 }
 
+
 char *HostInfo::buf_strncpy(char *&pBuf, const char *pSrc, int n)
 {
     int len = strlen(pSrc) + 1;
     return buf_memcpy(pBuf, pSrc, (len > n) ? n : len);
 }
+
 
 void HostInfo::copyMemArray(char **const pDestArray,
                             const char *const *const pArray, int length, char *&pBuf)
@@ -104,6 +110,7 @@ HostInfo &HostInfo::operator=(const hostent &rhs)
     return *this;
 }
 
+
 bool HostInfo::getHostByName(const char *name)
 {
     struct hostent *pHosts = NULL;
@@ -132,6 +139,7 @@ bool HostInfo::getHostByName(const char *name)
 
 #endif
 }
+
 
 bool HostInfo::getHostByAddr(const void *addr, int len, int type)
 {

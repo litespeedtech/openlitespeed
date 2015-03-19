@@ -28,7 +28,6 @@
 #include <util/dlinkqueue.h>
 #include <util/logtracker.h>
 #include <util/iovec.h>
-#include <spdy/spdyprotocol.h>
 
 #include <sys/types.h>
 #include <lsiapi/internal.h>
@@ -38,7 +37,6 @@
 class Aiosfcb;
 class HttpListener;
 class VHostMap;
-class SSLConnection;
 class SSLContext;
 struct sockaddr;
 

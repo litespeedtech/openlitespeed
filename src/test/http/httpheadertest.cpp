@@ -30,7 +30,9 @@
 #include "httpheadertest.h"
 #include <http/httpheader.h>
 #include <http/httprespheaders.h>
-#include <util/autobuf.h>
+#include <http/httpstatuscode.h>
+#include <lsr/ls_xpool.h>
+#include <util/iovec.h>
 
 #include <stdlib.h>
 #include "test/unittest-cpp/UnitTest++/src/UnitTest++.h"
@@ -275,7 +277,6 @@ SUITE(HttpHeaderTest)
             HttpHeader::getIndex(s_pHeaders[ rand() % size ]);
     }
 
-#include <socket/gsockaddr.h>
 
     void displaySpdyHeaders(HttpRespHeaders * pRespHeaders)
     {
@@ -427,6 +428,8 @@ SUITE(HttpHeaderTest)
             p = (unsigned char *)it->iov_base;
             printf( "Check: %.*s, %.*s\n", it->iov_len, p, it->iov_len, ph );
             CHECK(memcmp(p, ph, it->iov_len) == 0);
+            if (memcmp(p, ph, it->iov_len) != 0)
+                printf("p:\n%.*s\nph:\n%.*s\n", it->iov_len, p, it->iov_len, ph);
             ph += it->iov_len;
         }
 
@@ -568,7 +571,7 @@ SUITE(HttpHeaderTest)
             DisplayBothHeader(io, kk, h.getHeadersCount(0), &h);
             CHECK(h.getHeadersCount(0) == 6);
             strcpy(sTestHdr,
-                   "HTTP/1.1 200 OK\r\nserver: XServer  \r\naccept-ranges: bytes\r\nconnection: close\r\ndate: Thu, 16 May 2099 20:32:23 GMT\r\nx-powered-by: PHP/9.9.99\r\nAllow: *.*; .zip; .rar; .exe; .flv\r\n\r\n");
+                   "HTTP/1.1 200 OK\r\nserver: XServer  \r\naccept-ranges: bytes\r\nconnection: close\r\ndate: Thu, 16 May 2099 20:32:23 GMT\r\nx-powered-by: PHP/9.9.99\r\nallow: *.*; .zip; .rar; .exe; .flv\r\n\r\n");
             CheckIoHeader(io, sTestHdr);
 
 
@@ -593,9 +596,9 @@ SUITE(HttpHeaderTest)
             CHECK(h.getHeadersCount(1) == 8);
             CHECK(h.getHeadersCount(0) == 10);
             strcpy(sTestHdr,
-                   "HTTP/1.1 200 OK\r\nserver: XServer  \r\naccept-ranges: bytes\r\nconnection: close\r\ndate: Thu, 16 May 2099 20:32:23 GMT\r\nx-powered-by: PHP/9.9.99\r\nAllow: *.*; .zip; .rar; .exe; .flv\r\n");
+                   "HTTP/1.1 200 OK\r\nserver: XServer  \r\naccept-ranges: bytes\r\nconnection: close\r\ndate: Thu, 16 May 2099 20:32:23 GMT\r\nx-powered-by: PHP/9.9.99\r\nallow: *.*; .zip; .rar; .exe; .flv\r\n");
             strcat(sTestHdr,
-                   "set-cookie: lsws_uid=a; expires=Mon, 13 May 2013 14:10:51 GMT; path=/\r\nset-cookie: lsws_pass=b; expires=Mon, 13 May 2013 14:10:51 GMT; path=/\r\ntestBreak: ----\r\nset-cookie: lsws_uid=c; expires=Mon, 13 May 2013 14:10:51 GMT; path=/\r\n\r\n");
+                   "set-cookie: lsws_uid=a; expires=Mon, 13 May 2013 14:10:51 GMT; path=/\r\nset-cookie: lsws_pass=b; expires=Mon, 13 May 2013 14:10:51 GMT; path=/\r\ntestbreak: ----\r\nset-cookie: lsws_uid=c; expires=Mon, 13 May 2013 14:10:51 GMT; path=/\r\n\r\n");
             CheckIoHeader(io, sTestHdr);
 
 
@@ -629,11 +632,11 @@ SUITE(HttpHeaderTest)
             h.outputNonSpdyHeaders(&io);
             DisplayBothHeader(io, kk, h.getHeadersCount(0), &h);
             strcpy(sTestHdr,
-                   "HTTP/1.1 404 Not Found\r\nserver: XServer  \r\naccept-ranges: bytes\r\nconnection: close\r\ndate: Thu, 16 May 2099 20:32:23 GMT\r\nx-powered-by: PHP/9.9.99\r\nAllow: *.*; .zip; .rar; .exe; .flv\r\n");
+                   "HTTP/1.1 404 Not Found\r\nserver: XServer  \r\naccept-ranges: bytes\r\nconnection: close\r\ndate: Thu, 16 May 2099 20:32:23 GMT\r\nx-powered-by: PHP/9.9.99\r\nallow: *.*; .zip; .rar; .exe; .flv\r\n");
             strcat(sTestHdr,
-                   "set-cookie: lsws_uid=a; expires=Mon, 13 May 2013 14:10:51 GMT; path=/\r\nset-cookie: lsws_pass=b; expires=Mon, 13 May 2013 14:10:51 GMT; path=/\r\ntestBreak: ----\r\nset-cookie: lsws_uid=c; expires=Mon, 13 May 2013 14:10:51 GMT; path=/\r\n");
+                   "set-cookie: lsws_uid=a; expires=Mon, 13 May 2013 14:10:51 GMT; path=/\r\nset-cookie: lsws_pass=b; expires=Mon, 13 May 2013 14:10:51 GMT; path=/\r\ntestbreak: ----\r\nset-cookie: lsws_uid=c; expires=Mon, 13 May 2013 14:10:51 GMT; path=/\r\n");
             strcat(sTestHdr,
-                   "MytestHeader: TTTTTTTTTTTT3,XXX\r\nMyTestHeaderii: IIIIIIIIIIIIIIIIIIIII\r\n\r\n");
+                   "mytestheader: TTTTTTTTTTTT3,XXX\r\nmytestheaderii: IIIIIIIIIIIIIIIIIIIII\r\n\r\n");
             CheckIoHeader(io, sTestHdr);
 
             h.parseAdd("MytestHeader: XXX\r\n",
@@ -641,11 +644,11 @@ SUITE(HttpHeaderTest)
             h.outputNonSpdyHeaders(&io);
             DisplayBothHeader(io, kk, h.getHeadersCount(0), &h);
             strcpy(sTestHdr,
-                   "HTTP/1.1 404 Not Found\r\nserver: XServer  \r\naccept-ranges: bytes\r\nconnection: close\r\ndate: Thu, 16 May 2099 20:32:23 GMT\r\nx-powered-by: PHP/9.9.99\r\nAllow: *.*; .zip; .rar; .exe; .flv\r\n");
+                   "HTTP/1.1 404 Not Found\r\nserver: XServer  \r\naccept-ranges: bytes\r\nconnection: close\r\ndate: Thu, 16 May 2099 20:32:23 GMT\r\nx-powered-by: PHP/9.9.99\r\nallow: *.*; .zip; .rar; .exe; .flv\r\n");
             strcat(sTestHdr,
-                   "set-cookie: lsws_uid=a; expires=Mon, 13 May 2013 14:10:51 GMT; path=/\r\nset-cookie: lsws_pass=b; expires=Mon, 13 May 2013 14:10:51 GMT; path=/\r\ntestBreak: ----\r\nset-cookie: lsws_uid=c; expires=Mon, 13 May 2013 14:10:51 GMT; path=/\r\n");
+                   "set-cookie: lsws_uid=a; expires=Mon, 13 May 2013 14:10:51 GMT; path=/\r\nset-cookie: lsws_pass=b; expires=Mon, 13 May 2013 14:10:51 GMT; path=/\r\ntestbreak: ----\r\nset-cookie: lsws_uid=c; expires=Mon, 13 May 2013 14:10:51 GMT; path=/\r\n");
             strcat(sTestHdr,
-                   "MytestHeader: TTTTTTTTTTTT3,XXX\r\nMyTestHeaderii: IIIIIIIIIIIIIIIIIIIII\r\n\r\n");
+                   "mytestheader: TTTTTTTTTTTT3,XXX\r\nmytestheaderii: IIIIIIIIIIIIIIIIIIIII\r\n\r\n");
             CheckIoHeader(io, sTestHdr);
 
             h.parseAdd("MytestHeader: XXX\r\n",
@@ -653,11 +656,11 @@ SUITE(HttpHeaderTest)
             h.outputNonSpdyHeaders(&io);
             DisplayBothHeader(io, kk, h.getHeadersCount(0), &h);
             strcpy(sTestHdr,
-                   "HTTP/1.1 404 Not Found\r\nserver: XServer  \r\naccept-ranges: bytes\r\nconnection: close\r\ndate: Thu, 16 May 2099 20:32:23 GMT\r\nx-powered-by: PHP/9.9.99\r\nAllow: *.*; .zip; .rar; .exe; .flv\r\n");
+                   "HTTP/1.1 404 Not Found\r\nserver: XServer  \r\naccept-ranges: bytes\r\nconnection: close\r\ndate: Thu, 16 May 2099 20:32:23 GMT\r\nx-powered-by: PHP/9.9.99\r\nallow: *.*; .zip; .rar; .exe; .flv\r\n");
             strcat(sTestHdr,
-                   "set-cookie: lsws_uid=a; expires=Mon, 13 May 2013 14:10:51 GMT; path=/\r\nset-cookie: lsws_pass=b; expires=Mon, 13 May 2013 14:10:51 GMT; path=/\r\ntestBreak: ----\r\nset-cookie: lsws_uid=c; expires=Mon, 13 May 2013 14:10:51 GMT; path=/\r\n");
+                   "set-cookie: lsws_uid=a; expires=Mon, 13 May 2013 14:10:51 GMT; path=/\r\nset-cookie: lsws_pass=b; expires=Mon, 13 May 2013 14:10:51 GMT; path=/\r\ntestbreak: ----\r\nset-cookie: lsws_uid=c; expires=Mon, 13 May 2013 14:10:51 GMT; path=/\r\n");
             strcat(sTestHdr,
-                   "MytestHeader: TTTTTTTTTTTT3,XXX,XXX\r\nMyTestHeaderii: IIIIIIIIIIIIIIIIIIIII\r\n\r\n");
+                   "mytestheader: TTTTTTTTTTTT3,XXX,XXX\r\nmytestheaderii: IIIIIIIIIIIIIIIIIIIII\r\n\r\n");
             CheckIoHeader(io, sTestHdr);
         }
 

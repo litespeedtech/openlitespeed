@@ -16,25 +16,31 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "httpserver.h"
-#include "mainserverconfig.h"
+
+#include <config.h>
+
 #include <edio/multiplexer.h>
 #include <edio/multiplexerfactory.h>
 #include <edio/sigeventdispatcher.h>
-#include <extensions/registry/extappregistry.h>
-#include <extensions/registry/railsappconfig.h>
+
 #include <extensions/extworker.h>
 #include <extensions/localworker.h>
 #include <extensions/localworkerconfig.h>
-#include <extensions/cgi/lscgiddef.h>
 #include <extensions/cgi/cgidworker.h>
+#include <extensions/cgi/lscgiddef.h>
 #include <extensions/cgi/suexec.h>
+#include <extensions/registry/extappregistry.h>
+#include <extensions/registry/railsappconfig.h>
+
 #include <http/accesslog.h>
 #include <http/adns.h>
 #include <http/clientcache.h>
 #include <http/connlimitctrl.h>
 #include <http/contextlist.h>
-#include <util/datetime.h>
+#include <http/denieddir.h>
 #include <http/eventdispatcher.h>
+#include <http/handlerfactory.h>
+#include <http/handlertype.h>
 #include <http/httpaiosendfile.h>
 #include <http/httpcgitool.h>
 #include <http/httpcontext.h>
@@ -43,66 +49,84 @@
 #include <http/httplistenerlist.h>
 #include <http/httplog.h>
 #include <http/httpmime.h>
-#include <http/httpresp.h>
 #include <http/httpresourcemanager.h>
+#include <http/httprespheaders.h>
 #include <http/httpserverconfig.h>
 #include <http/httpserverversion.h>
+#include <http/httpsignals.h>
 #include <http/httpstats.h>
+#include <http/httpstatuscode.h>
 #include <http/httpvhost.h>
 #include <http/httpvhostlist.h>
-#include <http/httpsignals.h>
+#include <http/iptogeo.h>
+#include <http/ntwkiolink.h>
+#include <http/platforms.h>
 #include <http/serverprocessconfig.h>
 #include <http/staticfilecache.h>
+#include <http/staticfilecachedata.h>
 #include <http/stderrlogger.h>
 #include <http/vhostmap.h>
-#include <http/platforms.h>
-#include <http/handlerfactory.h>
-#include <http/handlertype.h>
-#include <http/iptogeo.h>
 
-#include <http/staticfilecachedata.h>
-#include <http/denieddir.h>
-#include <http/ntwkiolink.h>
-
+#include <log4cxx/appender.h>
 #include <log4cxx/logger.h>
+#include <lsr/ls_strtool.h>
+#include <lsr/ls_time.h>
 
-#include <main/serverinfo.h>
+#include <main/configctx.h>
+#include <main/mainserverconfig.h>
 #include <main/plainconf.h>
+#include <main/serverinfo.h>
 
 #include <sslpp/sslcontext.h>
-#include <sslpp/sslerror.h>
-
 #include <sslpp/sslengine.h>
+#include <sslpp/sslocspstapling.h>
 
 #include <util/accesscontrol.h>
 #include <util/autostr.h>
+#include <util/daemonize.h>
+#include <util/datetime.h>
 #include <util/gpath.h>
-#include <lsr/ls_time.h>
-#include <util/stringtool.h>
+#include <util/pcutil.h>
 #include <util/vmembuf.h>
-#include "util/configctx.h"
 #include <util/xmlnode.h>
-#include <lsr/ls_strtool.h>
 #include <util/sysinfo/nicdetect.h>
 #include <util/sysinfo/systeminfo.h>
-#include <util/daemonize.h>
-#include <util/pcutil.h>
+
 #include <ctype.h>
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <pwd.h>
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
-#include <pwd.h>
 
+#include <new>
+
+#ifdef RUN_TEST
+#include <httpdtest.h>
+#include <extensions/fcgi/fcgiapp.h>
+#include <extensions/fcgi/fcgiappconfig.h>
+#include <extensions/jk/jworker.h>
+#include <extensions/jk/jworkerconfig.h>
+#include <http/htauth.h>
+#include <http/httpresp.h>
+#include <http/httpsession.h>
+#include <util/httpfetch.h>
+#endif
+
+#if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
+#include <sys/prctl.h>
+#endif
+
+#if defined(__FreeBSD__ ) || defined(__NetBSD__) || defined(__OpenBSD__) \
+    || defined(macintosh) || defined(__APPLE__) || defined(__APPLE_CC__)
+#include <sys/sysctl.h>
+#endif
 
 #define STATUS_FILE         DEFAULT_TMP_DIR "/.status"
 #define FILEMODE            0644
-
-#include "sslpp/sslocspstapling.h"
-
 
 static int s_achPid[256];
 static int s_curPid = 0;
@@ -219,7 +243,7 @@ private:
         else if (pHasf->startProcessor())
             return LS_FAIL;
         HttpAioSendFile::setHttpAioSendFile(pHasf);
-        return 0;
+        return HttpResourceManager::getInstance().initAiosfcbPool();
     }
 
     void releaseAll();
@@ -405,7 +429,6 @@ void HttpServerImpl::setSwapDir(const char *pDir)
 }
 
 
-
 int HttpServerImpl::start()
 {
     m_pid = getpid();
@@ -431,6 +454,7 @@ int HttpServerImpl::start()
     return 0;
 
 }
+
 
 int HttpServerImpl::shutdown()
 {
@@ -472,6 +496,7 @@ int HttpServerImpl::generateStatusReport()
     return 0;
 }
 
+
 int generateConnReport(int fd)
 {
     ConnLimitCtrl &ctrl = ConnLimitCtrl::getInstance();
@@ -510,6 +535,7 @@ int generateConnReport(int fd)
     return 0;
 }
 
+
 int HttpServerImpl::generateProcessReport(int fd)
 {
     char achBuf[4096];
@@ -538,6 +564,7 @@ int HttpServerImpl::generateProcessReport(int fd)
     return 0;
 
 }
+
 
 void HttpServerImpl::setRTReportName(int proc)
 {
@@ -639,8 +666,6 @@ HttpListener *HttpServerImpl::addListener(const char *pName,
 }
 
 
-
-
 int HttpServerImpl::removeListener(const char *pName)
 {
     HttpListener *pListener = m_listeners.get(pName, NULL);
@@ -658,6 +683,7 @@ int HttpServerImpl::removeListener(const char *pName)
     return 0;
 }
 
+
 int HttpServerImpl::addVHost(HttpVHost *pVHost)
 {
     assert(pVHost);
@@ -668,6 +694,7 @@ int HttpServerImpl::addVHost(HttpVHost *pVHost)
     int ret = m_vhosts.add(pVHost);
     return ret;
 }
+
 
 int HttpServerImpl::updateVHost(const char *pVHostName, HttpVHost *pVHost)
 {
@@ -689,6 +716,7 @@ int HttpServerImpl::updateVHost(const char *pVHostName, HttpVHost *pVHost)
     return addVHost(pVHost);
 
 }
+
 
 int HttpServerImpl::removeVHost(const char *pName)
 {
@@ -714,8 +742,6 @@ int HttpServerImpl::removeVHost(const char *pName)
 }
 
 
-
-
 int HttpServerImpl::mapListenerToVHost(HttpListener *pListener,
                                        HttpVHost    *pVHost,
                                        const char *pDomains)
@@ -725,6 +751,7 @@ int HttpServerImpl::mapListenerToVHost(HttpListener *pListener,
     return pListener->getVHostMap()->mapDomainList(pVHost, pDomains);
 }
 
+
 int HttpServerImpl::mapListenerToVHost(HttpListener *pListener,
                                        const char *pKey,
                                        const char *pVHostName)
@@ -733,6 +760,7 @@ int HttpServerImpl::mapListenerToVHost(HttpListener *pListener,
     return mapListenerToVHost(pListener, pVHost, pKey);
 }
 
+
 int HttpServerImpl::mapListenerToVHost(const char *pListenerName,
                                        const char *pKey,
                                        const char *pVHostName)
@@ -740,6 +768,7 @@ int HttpServerImpl::mapListenerToVHost(const char *pListenerName,
     HttpListener *pListener = getListener(pListenerName);
     return mapListenerToVHost(pListener, pKey, pVHostName);
 }
+
 
 int HttpServerImpl::removeVHostFromListener(const char *pListenerName,
         const char *pVHostName)
@@ -763,6 +792,7 @@ int HttpServerImpl::removeVHostFromListener(const char *pListenerName,
     return ret;
 }
 
+
 void HttpServerImpl::beginConfig()
 {
     assert(m_oldListeners.size() == 0);
@@ -784,6 +814,7 @@ void HttpServerImpl::updateMapping()
     for (int i = 0; i < n; ++i)
         m_listeners[i]->getVHostMap()->updateMapping(m_vhosts);
 }
+
 
 void HttpServerImpl::endConfig(int error)
 {
@@ -811,7 +842,6 @@ int HttpServerImpl::enableVHost(const char *pVHostName, int enable)
 }
 
 
-
 void HttpServerImpl::onTimerSecond()
 {
     HttpRespHeaders::updateDateHeader();
@@ -821,6 +851,7 @@ void HttpServerImpl::onTimerSecond()
     if (m_lStartTime > 0)
         generateRTReport();
 }
+
 
 void HttpServerImpl::onTimer10Secs()
 {
@@ -834,6 +865,7 @@ void HttpServerImpl::onTimer10Secs()
         onTimer30Secs();
     }
 }
+
 
 void HttpServerImpl::onTimer30Secs()
 {
@@ -857,6 +889,7 @@ void HttpServerImpl::onTimer30Secs()
     HttpStats::set503Errors(0);
 }
 
+
 void HttpServerImpl::onTimer60Secs()
 {
 
@@ -866,6 +899,7 @@ void HttpServerImpl::onTimer60Secs()
             HttpServerConfig::getInstance().getConnTimeout());
 
 }
+
 
 void HttpServerImpl::onTimer()
 {
@@ -881,8 +915,6 @@ void HttpServerImpl::onTimer()
 }
 
 
-
-
 void HttpServerImpl::offsetChroot()
 {
 
@@ -895,6 +927,7 @@ void HttpServerImpl::offsetChroot()
         ServerInfo::getServerInfo()->dupStr(pChroot->c_str(), pChroot->len());
     m_vhosts.offsetChroot(pChroot->c_str(), pChroot->len());
 }
+
 
 void HttpServerImpl::releaseAll()
 {
@@ -913,6 +946,7 @@ void HttpServerImpl::releaseAll()
     HttpMime::releaseMIMEList();
 }
 
+
 int HttpServerImpl::isServerOk()
 {
     if (m_listeners.size() == 0)
@@ -927,6 +961,7 @@ int HttpServerImpl::isServerOk()
     }
     return 0;
 }
+
 
 int removeMatchFile(const char *pDir, const char *prefix)
 {
@@ -962,6 +997,7 @@ int removeMatchFile(const char *pDir, const char *prefix)
     return i ;
 }
 
+
 int HttpServerImpl::gracefulShutdown()
 {
     //suspend listener socket,
@@ -983,6 +1019,7 @@ int HttpServerImpl::gracefulShutdown()
                                * 2);
 
 }
+
 
 int HttpServerImpl::reinitMultiplexer()
 {
@@ -1055,7 +1092,8 @@ int HttpServerImpl::setupSwap()
     return 0;
 
 }
-#include <new>
+
+
 void HttpServerImpl::setBlackBoard(char *pBuf)
 {
     ServerInfo *pInfo = new(pBuf) ServerInfo(
@@ -1067,6 +1105,8 @@ void HttpServerImpl::setBlackBoard(char *pBuf)
         ServerInfo::setServerInfo(pInfo);
     }
 }
+
+
 int HttpServerImpl::addVirtualHostMapping(HttpListener *pListener,
         const char *value,
         const char *pVHostName)
@@ -1108,6 +1148,7 @@ int HttpServerImpl::addVirtualHostMapping(HttpListener *pListener,
     return pListener->mapDomainList(getVHost(pVHost), pDomains);
 }
 
+
 int HttpServerImpl::addVirtualHostMapping(HttpListener *pListener,
         const XmlNode *pNode,
         const char *pVHostName)
@@ -1140,6 +1181,7 @@ int HttpServerImpl::addVirtualHostMapping(HttpListener *pListener,
     return pListener->mapDomainList(getVHost(pVHost), pDomains);
 }
 
+
 int HttpServerImpl::configVirtualHostMappings(HttpListener *pListener,
         const XmlNode *pNode,
         const char *pVHostName)
@@ -1165,6 +1207,7 @@ int HttpServerImpl::configVirtualHostMappings(HttpListener *pListener,
 
     return add;
 }
+
 
 int HttpServerImpl::configListenerVHostMap(const XmlNode *pRoot,
         const char *pVHostName)
@@ -1197,6 +1240,7 @@ int HttpServerImpl::configListenerVHostMap(const XmlNode *pRoot,
 
     return 0;
 }
+
 
 HttpListener *HttpServerImpl::configListener(const XmlNode *pNode,
         int isAdmin)
@@ -1299,6 +1343,7 @@ HttpListener *HttpServerImpl::configListener(const XmlNode *pNode,
     return NULL;
 }
 
+
 int HttpServerImpl::configListeners(const XmlNode *pRoot, int isAdmin)
 {
     XmlNodeList list;
@@ -1315,6 +1360,8 @@ int HttpServerImpl::configListeners(const XmlNode *pRoot, int isAdmin)
 
     return add;
 }
+
+
 //#define ADMIN_CONFIG_NODE           "AdminConfigNode"
 int HttpServerImpl::startListeners(const XmlNode *pRoot, const char *pName)
 {
@@ -1339,6 +1386,7 @@ int HttpServerImpl::startListeners(const XmlNode *pRoot, const char *pName)
 #define DEFAULT_ADMIN_PHP_FCGI      "$VH_ROOT/fcgi-bin/admin_php"
 #define DEFAULT_ADMIN_PHP_FCGI_URI  "UDS://tmp/lshttpd/admin_php.sock"
 #define ADMIN_PHP_SESSION           "$SERVER_ROOT/admin/tmp"
+
 
 int HttpServerImpl::configAdminConsole(const XmlNode *pNode)
 {
@@ -1380,6 +1428,8 @@ int HttpServerImpl::configAdminConsole(const XmlNode *pNode)
     mapDomainList(pNode, pVHostAdmin);
     return 0;
 }
+
+
 const char *HttpServerImpl::configAdminPhpUri(const XmlNode *pNode)
 {
     const char *pURI;
@@ -1412,6 +1462,7 @@ const char *HttpServerImpl::configAdminPhpUri(const XmlNode *pNode)
     return pURI;
 }
 
+
 static void setPHPHandler(HttpContext *pCtx, HttpHandler *pHandler,
                           char *pSuffix)
 {
@@ -1421,6 +1472,7 @@ static void setPHPHandler(HttpContext *pCtx, HttpHandler *pHandler,
     pCtx->getMIME()->addMimeHandler(pSuffix, achMime,
                                     pHandler, NULL,  LogIdTracker::getLogId());
 }
+
 
 static int detectIP(char family, char *str, char *pEnd)
 {
@@ -1465,6 +1517,7 @@ static int detectIP(char family, char *str, char *pEnd)
 
     return 0;
 }
+
 
 LocalWorker *HttpServerImpl::createAdminPhpApp(const char *pChroot,
         int iChrootLen,
@@ -1537,6 +1590,7 @@ LocalWorker *HttpServerImpl::createAdminPhpApp(const char *pChroot,
     return pFcgiApp;
 }
 
+
 HttpVHost *HttpServerImpl::createAdminVhost(LocalWorker *pFcgiApp,
         int iChrootLen,
         char *pchPHPBin)
@@ -1595,7 +1649,8 @@ HttpVHost *HttpServerImpl::createAdminVhost(LocalWorker *pFcgiApp,
                             &achRootPath[iChrootLen]);
 
     pAdminSock = HttpServerConfig::getInstance().getAdminSock();
-    chown(&pAdminSock[5], pVHostAdmin->getUid(), pVHostAdmin->getGid());
+    if (pAdminSock != NULL)
+        chown(&pAdminSock[5], pVHostAdmin->getUid(), pVHostAdmin->getGid());
     const char *pUserFile = "$SERVER_ROOT/admin/conf/htpasswd";
 
     if (ConfigCtx::getCurConfigCtx()->getValidFile(pchPHPBin, pUserFile,
@@ -1610,6 +1665,7 @@ HttpVHost *HttpServerImpl::createAdminVhost(LocalWorker *pFcgiApp,
     }
     return pVHostAdmin;
 }
+
 
 void HttpServerImpl::setAdminThrottleLimits(HttpVHost *pVHostAdmin)
 {
@@ -1634,6 +1690,7 @@ void HttpServerImpl::setAdminThrottleLimits(HttpVHost *pVHostAdmin)
     }
 }
 
+
 int HttpServerImpl::enableWebConsole()
 {
     char theWebConsolePathe[MAX_PATH_LEN];
@@ -1643,6 +1700,7 @@ int HttpServerImpl::enableWebConsole()
         return 0;
     return 1;
 }
+
 
 void HttpServerImpl::mapDomainList(const XmlNode *pListenerNodes,
                                    HttpVHost *pVHost)
@@ -1668,6 +1726,7 @@ void HttpServerImpl::mapDomainList(const XmlNode *pListenerNodes,
     }
 }
 
+
 void HttpServerImpl::setMaxConns(int32_t conns)
 {
     if (conns > DEFAULT_MAX_CONNS)
@@ -1675,12 +1734,14 @@ void HttpServerImpl::setMaxConns(int32_t conns)
     ConnLimitCtrl::getInstance().setMaxConns(conns);
 }
 
+
 void HttpServerImpl::setMaxSSLConns(int32_t conns)
 {
     if (conns > DEFAULT_MAX_SSL_CONNS)
         conns = DEFAULT_MAX_SSL_CONNS;
     ConnLimitCtrl::getInstance().setMaxSSLConns(conns);
 }
+
 
 int HttpServerImpl::configTuning(const XmlNode *pRoot)
 {
@@ -1742,19 +1803,14 @@ int HttpServerImpl::configTuning(const XmlNode *pRoot)
     HttpServer::getInstance().getServerContext().setFileEtag(etag);
 
     int val = currentCtx.getLongValue(pNode, "useSendfile", 0, 2, 0);
+#if defined(LS_AIO_USE_AIO) && defined(LS_AIO_USE_KQ)
+    if (val == 2 && !SigEventDispatcher::aiokoIsLoaded())
+        val = 0;
+#endif
     config.setUseSendfile(val);
 
     if (val)
         FileCacheDataEx::setMaxMMapCacheSize(0);
-
-    val = 0;
-#if defined(LS_AIO_USE_AIO)
-#if defined(LS_AIO_USE_KQ)
-    if (SigEventDispatcher::aiokoIsLoaded())
-#endif
-        val = currentCtx.getLongValue(pNode, "enableAio", 0, 1, 0);
-    config.setUseAio(val);
-#endif
 
     const char *pValue = pNode->getChildValue("SSLCryptoDevice");
 
@@ -1819,6 +1875,7 @@ int HttpServerImpl::configTuning(const XmlNode *pRoot)
     return 0;
 }
 
+
 int HttpServerImpl::configAccessDeniedDir(const XmlNode *pNode)
 {
     int add = 0;
@@ -1842,6 +1899,7 @@ int HttpServerImpl::configAccessDeniedDir(const XmlNode *pNode)
 
     return (add > 0);
 }
+
 
 int HttpServerImpl::configSecurity(const XmlNode *pRoot)
 {
@@ -1921,7 +1979,7 @@ int HttpServerImpl::configSecurity(const XmlNode *pRoot)
 
         if (AccessControl::isAvailable(pNode))
         {
-            m_accessCtrl.config(pNode);
+            currentCtx.configSecurity(&m_accessCtrl, pNode);
             AccessControl::setAccessCtrl(&m_accessCtrl);
         }
         else
@@ -1929,6 +1987,7 @@ int HttpServerImpl::configSecurity(const XmlNode *pRoot)
     }
     return 0;
 }
+
 
 int HttpServerImpl::configMime(const XmlNode *pRoot)
 {
@@ -1978,6 +2037,7 @@ int HttpServerImpl::denyAccessFiles(HttpVHost *pVHost, const char *pFile,
     return LS_FAIL;
 }
 
+
 static const char *getAutoIndexURI(const XmlNode *pNode)
 {
     const char *pURI = pNode->getChildValue("autoIndexURI");
@@ -1993,6 +2053,7 @@ static const char *getAutoIndexURI(const XmlNode *pNode)
 
     return pURI;
 }
+
 
 int HttpServerImpl::configServerBasic2(const XmlNode *pRoot,
                                        const char *pSwapDir)
@@ -2071,6 +2132,7 @@ int HttpServerImpl::configServerBasic2(const XmlNode *pRoot,
 
 }
 
+
 int HttpServerImpl::configMultiplexer(const XmlNode *pNode)
 {
     const char *pType = NULL;
@@ -2095,6 +2157,7 @@ int HttpServerImpl::configMultiplexer(const XmlNode *pNode)
 
     return 0;
 }
+
 
 void HttpServerImpl::configVHTemplateToListenerMap(
     const XmlNodeList *pList, TPointerList<HttpListener> &listeners,
@@ -2155,6 +2218,7 @@ void HttpServerImpl::configVHTemplateToListenerMap(
 
     }
 }
+
 
 int HttpServerImpl::configVHTemplate(const XmlNode *pNode)
 {
@@ -2227,6 +2291,7 @@ int HttpServerImpl::configVHTemplate(const XmlNode *pNode)
     return 0;
 }
 
+
 int HttpServerImpl::configVHTemplates(const XmlNode *pRoot)
 {
     ConfigCtx currentCtx("template");
@@ -2244,6 +2309,7 @@ int HttpServerImpl::configVHTemplates(const XmlNode *pRoot)
 
     return 0;
 }
+
 
 int HttpServerImpl::configVHosts(const XmlNode *pRoot)
 {
@@ -2274,6 +2340,7 @@ int HttpServerImpl::configVHosts(const XmlNode *pRoot)
 
     return 0;
 }
+
 
 int HttpServerImpl::configServerBasics(int reconfig, const XmlNode *pRoot)
 {
@@ -2312,7 +2379,11 @@ int HttpServerImpl::configServerBasics(int reconfig, const XmlNode *pRoot)
             struct passwd *pw = Daemonize::configUserGroup(pUser, pGroup, gid);
             procConf.setGid(gid);
             if (!pw)
+            {
+                ConfigCtx::getCurConfigCtx()->logError("Invalid User Name(%s) "
+                        "or Group Name(%s)!", pUser, pGroup );
                 break;
+            }
 
             procConf.setUid(pw->pw_uid);
             m_pri_gid = pw->pw_gid;
@@ -2371,6 +2442,7 @@ int HttpServerImpl::configServerBasics(int reconfig, const XmlNode *pRoot)
     return LS_FAIL;
 }
 
+
 //Global level module config
 int HttpServerImpl::configModules(const XmlNode *pRoot)
 {
@@ -2398,8 +2470,10 @@ int HttpServerImpl::configModules(const XmlNode *pRoot)
         LsiApiHooks::s_pServerSessionHooks,
         ModuleManager::getGlobalModuleConfig());
 
+    LsiApiHooks::initModuleEnableHooks();
     return 0;
 }
+
 
 int HttpServerImpl::initGroups()
 {
@@ -2416,6 +2490,7 @@ int HttpServerImpl::initGroups()
 
     return 0;
 }
+
 
 #define DEFAULT_ADMIN_CONFIG_FILE   "$VH_ROOT/conf/admin_config.conf"
 #define ADMIN_CONFIG_NODE           "AdminConfigNode"
@@ -2460,6 +2535,7 @@ int HttpServerImpl::loadAdminConfig(XmlNode *pRoot)
     return 0;
 }
 
+
 int HttpServerImpl::configIpToGeo(const XmlNode *pNode)
 {
     const XmlNodeList *pList = pNode->getChildren("geoipDB");
@@ -2476,6 +2552,7 @@ int HttpServerImpl::configIpToGeo(const XmlNode *pNode)
 
     return 0;
 }
+
 
 int HttpServerImpl::configChroot(const XmlNode *pRoot)
 {
@@ -2541,6 +2618,7 @@ int HttpServerImpl::configChroot(const XmlNode *pRoot)
 
     return 0;
 }
+
 
 int HttpServerImpl::configServer(int reconfig, XmlNode *pRoot)
 {
@@ -2649,14 +2727,7 @@ int HttpServerImpl::configServer(int reconfig, XmlNode *pRoot)
 
     return ret;
 }
-#if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
-#include <sys/prctl.h>
-#endif
 
-#if defined(__FreeBSD__ ) || defined(__NetBSD__) || defined(__OpenBSD__) \
-    || defined(macintosh) || defined(__APPLE__) || defined(__APPLE_CC__)
-#include <sys/sysctl.h>
-#endif
 
 int HttpServerImpl::changeUserChroot()
 {
@@ -2696,6 +2767,7 @@ int HttpServerImpl::changeUserChroot()
 
     return 0;
 }
+
 
 void HttpServerImpl::enableCoreDump()
 {
@@ -2749,6 +2821,7 @@ void HttpServerImpl::enableCoreDump()
 #endif
 }
 
+
 /* COMMENT: Not support reconfigVHost NOW.
 void HttpServerImpl::reconfigVHost( char *pVHostName, XmlNode* pRoot )
 {
@@ -2801,10 +2874,13 @@ void HttpServerImpl::setServerRoot(const char *pRoot)
 {
     MainServerConfig::getInstance().setServerRoot(pRoot);
 }
+
+
 static void setupSUExec()
 {
     SUExec::initSUExec();
 }
+
 
 int HttpServerImpl::initServer(XmlNode *pRoot, int &iReleaseXmlTree,
                                int reconfig)
@@ -2843,18 +2919,9 @@ int HttpServerImpl::initServer(XmlNode *pRoot, int &iReleaseXmlTree,
     //releaseConfigXmlTree();
     return ret;
 }
+
+
 #ifdef RUN_TEST
-
-
-#include <extensions/cgi/cgidworker.h>
-#include <extensions/fcgi/fcgiapp.h>
-#include <extensions/fcgi/fcgiappconfig.h>
-#include <extensions/jk/jworker.h>
-#include <extensions/jk/jworkerconfig.h>
-#include <http/handlertype.h>
-#include <http/htauth.h>
-#include <http/staticfilecachedata.h>
-#include <util/sysinfo/systeminfo.h>
 
 
 int HttpServerImpl::initSampleServer()
@@ -3146,9 +3213,7 @@ int HttpServerImpl::initSampleServer()
     return 0;
 }
 
-#include <httpdtest.h>
-#include <http/httpsession.h>
-#include <util/httpfetch.h>
+
 int HttpServer::test_main(const char *pArgv0)
 {
     char achServerRoot[1024];
@@ -3207,8 +3272,6 @@ int HttpServer::test_main(const char *pArgv0)
 #endif
 
 
-
-
 /////////////////////////////////////////////////////////////////
 //      Interface function
 /////////////////////////////////////////////////////////////////
@@ -3218,11 +3281,13 @@ HttpServer::HttpServer()
     m_impl = new HttpServerImpl(this);
 }
 
+
 HttpServer::~HttpServer()
 {
 //    if ( m_impl )
 //        delete m_impl;
 }
+
 
 HttpListener *HttpServer::addListener(const char *pName, const char *pAddr)
 {
@@ -3235,25 +3300,30 @@ int HttpServer::removeListener(const char *pName)
     return m_impl->removeListener(pName);
 }
 
+
 HttpListener *HttpServer::getListener(const char *pName) const
 {
     return m_impl->getListener(pName);
 }
+
 
 int HttpServer::addVHost(HttpVHost *pVHost)
 {
     return m_impl->addVHost(pVHost);
 }
 
+
 int HttpServer::removeVHost(const char *pName)
 {
     return m_impl->removeVHost(pName);
 }
 
+
 HttpVHost *HttpServer::getVHost(const char *pName) const
 {
     return m_impl->getVHost(pName);
 }
+
 
 void HttpServer::checkSuspendedVHostList(HttpVHost *pVHost)
 {
@@ -3265,12 +3335,14 @@ void HttpServer::checkSuspendedVHostList(HttpVHost *pVHost)
     }
 }
 
+
 int HttpServer::mapListenerToVHost(const char *pListener,
                                    const char *pKey,
                                    const char *pVHost)
 {
     return m_impl->mapListenerToVHost(pListener, pKey, pVHost);
 }
+
 
 int HttpServer::mapListenerToVHost(HttpListener *pListener,
                                    HttpVHost    *pVHost, const char *pDomains)
@@ -3285,35 +3357,42 @@ int HttpServer::removeVHostFromListener(const char *pListener,
     return m_impl->removeVHostFromListener(pListener, pVHost);
 }
 
+
 int HttpServer::start()
 {
     return m_impl->start();
 }
+
 
 int HttpServer::shutdown()
 {
     return m_impl->shutdown();
 }
 
+
 AccessControl *HttpServer::getAccessCtrl() const
 {
     return &(m_impl->m_accessCtrl);
 }
+
 
 int HttpServer::getVHostCounts() const
 {
     return m_impl->m_vhosts.size();
 }
 
+
 HttpVHost *HttpServer::getVHost(int index) const
 {
     return m_impl->m_vhosts.get(index);
 }
 
+
 void HttpServer::beginConfig()
 {
     m_impl->beginConfig();
 }
+
 
 void HttpServer::endConfig(int error)
 {
@@ -3332,6 +3411,7 @@ const AutoStr2 *HttpServer::getErrDocUrl(int statusCode) const
     return m_impl->m_serverContext.getErrDocUrl(statusCode);
 }
 
+
 void HttpServer::releaseAll()
 {
     if (m_impl)
@@ -3342,15 +3422,18 @@ void HttpServer::releaseAll()
     }
 }
 
+
 void HttpServer::setLogLevel(const char *pLevel)
 {
     HttpLog::setLogLevel(pLevel);
 }
 
+
 int HttpServer::setErrorLogFile(const char *pFileName)
 {
     return HttpLog::setErrorLogFile(pFileName);
 }
+
 
 int HttpServer::setAccessLogFile(const char *pFileName, int pipe)
 {
@@ -3369,6 +3452,7 @@ AccessLog *HttpServer::getAccessLog() const
 {
     return HttpLog::getAccessLog();
 }
+
 
 void HttpServer::enableAioLogging()
 {
@@ -3401,11 +3485,11 @@ void HttpServer::enableAioLogging()
     LOG_NOTICE(("AIO is not supported on this machine!"));
 }
 
+
 const StringList *HttpServer::getIndexFileList() const
 {
     return m_impl->m_serverContext.getIndexFileList();
 }
-
 
 
 void HttpServer::setSwapDir(const char *pDir)
@@ -3413,10 +3497,12 @@ void HttpServer::setSwapDir(const char *pDir)
     m_impl->setSwapDir(pDir);
 }
 
+
 const char *HttpServer::getSwapDir()
 {
     return m_impl->getSwapDir();
 }
+
 
 int HttpServer::setupSwap()
 {
@@ -3429,20 +3515,24 @@ void HttpServer::onVHostTimer()
     m_impl->m_vhosts.onTimer();
 }
 
+
 int HttpServer::enableVHost(const char *pVHostName, int enable)
 {
     return m_impl->enableVHost(pVHostName, enable);
 }
+
 
 int HttpServer::isServerOk()
 {
     return m_impl->isServerOk();
 }
 
+
 void HttpServer::offsetChroot()
 {
     return m_impl->offsetChroot();
 }
+
 
 void HttpServer::setProcNo(int proc)
 {
@@ -3450,69 +3540,86 @@ void HttpServer::setProcNo(int proc)
     m_impl->setRTReportName(proc);
 }
 
+
 void HttpServer::setBlackBoard(char *pBuf)
 {   m_impl->setBlackBoard(pBuf);      }
 
+
 void HttpServer::generateStatusReport()
 {   m_impl->generateStatusReport();     }
+
 
 int HttpServer::updateVHost(const char *pName, HttpVHost *pVHost)
 {
     return m_impl->updateVHost(pName, pVHost);
 }
 
+
 void HttpServer::passListeners()
 {
     m_impl->m_listeners.passListeners();
 }
+
 
 void HttpServer::recoverListeners()
 {
     m_impl->m_oldListeners.recvListeners();
 }
 
+
 int HttpServer::initMultiplexer(const char *pType)
 {
     return m_impl->m_dispatcher.init(pType);
 }
+
 
 int HttpServer::reinitMultiplexer()
 {
     return m_impl->reinitMultiplexer();
 }
 
+
 int HttpServer::initAdns()
 {
     return m_impl->initAdns();
 }
+
 
 int HttpServer::initAioSendFile()
 {
     return m_impl->initAioSendFile();
 }
 
+
 int HttpServer::authAdminReq(char *pAuth)
 {
     return m_impl->authAdminReq(pAuth);
 }
+
 
 HttpContext &HttpServer::getServerContext()
 {
     return m_impl->m_serverContext;
 }
 
+
 int HttpServer::configServerBasics(int reconfig, const XmlNode *pRoot)
 {
     return m_impl->configServerBasics(reconfig, pRoot);
 }
+
+
 int HttpServer::configServer(int reconfig, XmlNode *pRoot)
 {
     return m_impl->configServer(reconfig, pRoot);
 }
+
+
 int HttpServer::changeUserChroot()
 {
     return m_impl->changeUserChroot();
 }
+
 
 //COMMENT: Not support reconfigVHost NOW.
 // void HttpServer::reconfigVHost( char *pVHostName, XmlNode* pRoot )
@@ -3524,6 +3631,8 @@ void HttpServer::setServerRoot(const char *pRoot)
 {
     return m_impl->setServerRoot(pRoot);
 }
+
+
 int HttpServer::initServer(XmlNode *pRoot, int &iReleaseXmlTree,
                            int reconfig)
 {

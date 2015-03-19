@@ -17,17 +17,20 @@
 *****************************************************************************/
 #ifndef H2CONNECTION_H
 #define H2CONNECTION_H
-#include <spdy/h2protocol.h>
-#include <spdy/hpack.h>
+
+#include "h2protocol.h"
+#include "hpack.h"
+#include "protocoldef.h"
+
+#include <lsdef.h>
 #include <edio/bufferedos.h>
+#include <http/hiostream.h>
 #include <util/autobuf.h>
 #include <util/dlinkqueue.h>
 #include <util/ghash.h>
-#include <http/hiostream.h>
-#include <sys/time.h>
 
 #include <limits.h>
-#include <lsdef.h>
+#include <sys/time.h>
 
 #define H2_CONN_FLAG_GOAWAY         (1<<0)
 #define H2_CONN_FLAG_PREFACE        (1<<1)
@@ -53,7 +56,7 @@ public:
     int isOutBufFull() const
     {
         return ((m_iCurDataOutWindow <= 0)
-                || (getBuf()->size() >= H2_MAX_DATAFRAM_SIZE)); 
+                || (getBuf()->size() >= H2_MAX_DATAFRAM_SIZE));
     }
 
     int flush();
@@ -102,7 +105,7 @@ public:
     {
         return sendFrame4Bytes(H2_FRAME_RST_STREAM, uiStreamID, code);
     }
-    
+
     int sendFinFrame(uint32_t uiStreamID)
     {
         char achHeader[9];
@@ -116,7 +119,7 @@ public:
         if (isFlowCtrl())
             m_iCurDataOutWindow -= bytes;
     }
-    
+
     void enableSessionFlowCtrl()    {   m_iFlag |= H2_CONN_FLAG_FLOW_CTRL;  }
     short isFlowCtrl() const    {   return m_iFlag & H2_CONN_FLAG_FLOW_CTRL;  }
 
@@ -175,8 +178,10 @@ private:
 
 
     void recycleStream(StreamMap::iterator it);
-    int appendReqHeaders(H2Stream *arg1, int isFirstAppend);
-    int decodeData(unsigned char *pSrc, unsigned char *bufEnd);
+    int appendReqHeaders(H2Stream *arg1, char *method = NULL, int methodLen = 0, 
+                         char *uri = NULL, int uriLen = 0);
+    int decodeData(unsigned char *pSrc, unsigned char *bufEnd, 
+                    char *method, int* methodLen, char **uri, int* uriLen);
     void skipRemainData();
     int encodeHeaders(HttpRespHeaders *pRespHeaders, unsigned char *buf,
                         int maxSize);
@@ -193,7 +198,6 @@ private:
     uint32_t        m_uiGoAwayId;
     int32_t         m_iCurrentFrameRemain;
     struct timeval  m_timevalPing;
-    NameValuePair   m_NameValuePairListReqline[3];
 
     //TODO: use array for m_dqueStreamRespon
     //DLinkQueue      m_dqueStreamRespon[H2_STREAM_PRIORITYS];

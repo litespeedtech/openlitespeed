@@ -19,7 +19,6 @@
 #define REQUESTVARS_H
 
 
-#include <util/autostr.h>
 #include <util/tlinklist.h>
 
 
@@ -111,6 +110,7 @@
 #define REF_RESP_BODY               174
 #define REF_MATCHED_VAR             175
 
+class AutoStr2;
 
 class HttpSession;
 class HttpReq;

@@ -22,7 +22,6 @@
 
 #include <lsdef.h>
 #include <log4cxx/nsdefs.h>
-#include <util/autostr.h>
 #include <util/duplicable.h>
 #include <stddef.h>
 #include <stdarg.h>

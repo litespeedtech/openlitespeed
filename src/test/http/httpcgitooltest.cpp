@@ -17,12 +17,12 @@
 *****************************************************************************/
 #ifdef RUN_TEST
 
-#include "httpcgitooltest.h"
-#include <http/httpsession.h>
-#include <http/httpextconnector.h>
-#include <http/httpcgitool.h>
-#include "test/unittest-cpp/UnitTest++/src/UnitTest++.h"
-
+// #include "httpcgitooltest.h"
+// #include <http/httpsession.h>
+// #include <http/httpextconnector.h>
+// #include <http/httpcgitool.h>
+// #include "test/unittest-cpp/UnitTest++/src/UnitTest++.h"
+//
 // TEST( HttpCgiToolTest_test)
 // {
 //     HttpSession session;

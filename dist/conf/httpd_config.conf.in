@@ -40,8 +40,8 @@ expires {
 }
 
 tuning{
-    maxConnections               300 
-    maxSSLConnections            200 
+    maxConnections               2000 
+    maxSSLConnections            1000 
     connTimeout                  300 
     maxKeepAliveReq              1000 
     smartKeepAlive               0 

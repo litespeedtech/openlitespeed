@@ -19,13 +19,11 @@
 
 #include <extensions/extworker.h>
 #include <http/contextlist.h>
-#include <http/contexttree.h>
 #include <http/handlerfactory.h>
 #include <http/handlertype.h>
 #include <http/htauth.h>
 #include <http/httplog.h>
 #include <http/httpmime.h>
-#include <http/httpvhost.h>
 #include <http/phpconfig.h>
 #include <http/rewriteengine.h>
 #include <http/rewriterule.h>
@@ -33,14 +31,16 @@
 #include <http/statusurlmap.h>
 #include <http/urimatch.h>
 #include <http/userdir.h>
+#include <lsiapi/lsiapihooks.h>
 #include <lsiapi/modulemanager.h>
 #include <lsr/ls_strtool.h>
+#include <main/configctx.h>
 #include <util/accesscontrol.h>
-#include <util/configctx.h>
 #include <util/pool.h>
 #include <util/stringlist.h>
 #include <util/stringtool.h>
 #include <util/xmlnode.h>
+
 #include <ctype.h>
 #include <errno.h>
 #include <stdio.h>
@@ -52,6 +52,7 @@ CtxInt HttpContext::s_defaultInternal =
     NULL, NULL, NULL, NULL, NULL, NULL,
     NULL, NULL, NULL, GSockAddr()
 } ;
+
 
 HttpContext::HttpContext()
     : m_iConfigBits(0)
@@ -74,6 +75,7 @@ HttpContext::HttpContext()
     m_pInternal = &s_defaultInternal;
 }
 
+
 HttpContext::~HttpContext()
 {
     if (m_pMatchList)
@@ -94,6 +96,7 @@ HttpContext::~HttpContext()
     if ((m_iConfigBits & BIT_SESSIONHOOKS))
         delete m_pInternal->m_pSessionHooks;
 }
+
 
 void HttpContext::releaseHTAConf()
 {
@@ -124,7 +127,6 @@ void HttpContext::releaseHTAConf()
     else
         clearConfigBit();
 }
-
 
 
 int HttpContext::set(const char *pURI, const char *pLocation,
@@ -177,6 +179,7 @@ int HttpContext::set(const char *pURI, const char *pLocation,
     allowBrowse(browse);
     return 0;
 }
+
 
 int HttpContext::setFilesMatch(const char *pURI, int regex)
 {
@@ -236,7 +239,6 @@ const HttpContext *HttpContext::matchFilesContext(const char *pFile,
 }
 
 
-
 int HttpContext::addFilesMatchContext(HttpContext *pContext)
 {
     if (!(m_iConfigBits & BIT_FILES_MATCH))
@@ -255,6 +257,7 @@ int HttpContext::addFilesMatchContext(HttpContext *pContext)
     return 0;
 }
 
+
 int HttpContext::setURIMatch(const char *pRegex, const char *pSubst)
 {
     if (m_pURIMatch)
@@ -270,10 +273,12 @@ int HttpContext::setURIMatch(const char *pRegex, const char *pSubst)
     return 0;
 }
 
+
 void HttpContext::setRoot(const char *pRoot)
 {
     m_sLocation.setStr(pRoot, strlen(pRoot));
 }
+
 
 int HttpContext::allocateInternal()
 {
@@ -288,6 +293,7 @@ int HttpContext::allocateInternal()
     return 0;
 }
 
+
 void HttpContext::releaseMIME()
 {
     if ((m_iConfigBits & BIT_MIME) && m_pInternal->m_pMIME)
@@ -297,6 +303,7 @@ void HttpContext::releaseMIME()
         m_pInternal->m_pMIME = NULL;
     }
 }
+
 
 int HttpContext::initMIME()
 {
@@ -314,8 +321,6 @@ int HttpContext::initMIME()
 }
 
 
-
-
 static AutoStr2 *s_pDefaultCharset = NULL;
 
 void HttpContext::releaseDefaultCharset()
@@ -329,6 +334,7 @@ void HttpContext::releaseDefaultCharset()
     if (m_pInternal)
         m_pInternal->m_pDefaultCharset = NULL;
 }
+
 
 void HttpContext::setDefaultCharset(const char *pCharset)
 {
@@ -344,6 +350,7 @@ void HttpContext::setDefaultCharset(const char *pCharset)
     }
     m_iConfigBits |= BIT_DEF_CHARSET;
 }
+
 
 void HttpContext::setDefaultCharsetOn()
 {
@@ -369,6 +376,7 @@ void HttpContext::setHTAuth(HTAuth *pHTAuth)
     m_pInternal->m_pHTAuth = pHTAuth;
     m_iConfigBits |= BIT_AUTH;
 }
+
 
 int HttpContext::setExtraHeaders(const char *pLogId, const char *pHeaders,
                                  int len)
@@ -465,6 +473,7 @@ int HttpContext::setAccessControl(AccessControl *pAccess)
     return 0;
 }
 
+
 void HttpContext::releaseAccessControl()
 {
     if ((m_iConfigBits & BIT_ACCESS) && m_pInternal->m_pAccessCtrl)
@@ -473,6 +482,7 @@ void HttpContext::releaseAccessControl()
         m_pInternal->m_pAccessCtrl = NULL;
     }
 }
+
 
 int HttpContext::addAccessRule(const char *pRule, int allow)
 {
@@ -486,6 +496,7 @@ int HttpContext::addAccessRule(const char *pRule, int allow)
     return 0;
 }
 
+
 int HttpContext::setAuthorizer(const HttpHandler *pHandler)
 {
     if (allocateInternal())
@@ -494,7 +505,6 @@ int HttpContext::setAuthorizer(const HttpHandler *pHandler)
     m_iConfigBits |= BIT_AUTHORIZER;
     return 0;
 }
-
 
 
 static RewriteRuleList *getValidRewriteRules(
@@ -510,6 +520,7 @@ static RewriteRuleList *getValidRewriteRules(
     }
     return NULL;
 }
+
 
 void HttpContext::inherit(const HttpContext *pRootContext)
 {
@@ -665,6 +676,7 @@ void HttpContext::inherit(const HttpContext *pRootContext)
     }
 }
 
+
 int HttpContext::addMatchContext(HttpContext *pContext)
 {
     //assert( !m_iFilesMatchCtx );
@@ -680,6 +692,7 @@ int HttpContext::addMatchContext(HttpContext *pContext)
     return 0;
 }
 
+
 const HttpContext *HttpContext::match(const char *pURI, int iURILen,
                                       char *pBuf, int &bufLen) const
 {
@@ -694,6 +707,7 @@ const HttpContext *HttpContext::match(const char *pURI, int iURILen,
     }
     return NULL;
 }
+
 
 const HttpContext *HttpContext::findMatchContext(const char *pURI,
         int useLocation) const
@@ -717,7 +731,6 @@ const HttpContext *HttpContext::findMatchContext(const char *pURI,
 }
 
 
-
 int HttpContext::addMIME(const char *pValue)
 {
     if (initMIME())
@@ -726,6 +739,7 @@ int HttpContext::addMIME(const char *pValue)
                                          m_sLocation.c_str());
 
 }
+
 
 int HttpContext::setExpiresByType(const char *pValue)
 {
@@ -736,6 +750,7 @@ int HttpContext::setExpiresByType(const char *pValue)
             m_sLocation.c_str());
 }
 
+
 int HttpContext::setCompressByType(const char *pValue)
 {
     if (initMIME())
@@ -744,6 +759,7 @@ int HttpContext::setCompressByType(const char *pValue)
             HttpMime::getMime(),
             m_sLocation.c_str());
 }
+
 
 int HttpContext::setForceType(char *pValue, const char *pLogId)
 {
@@ -767,6 +783,7 @@ int HttpContext::setForceType(char *pValue, const char *pLogId)
     setConfigBit(BIT_FORCE_TYPE, 1);
     return 0;
 }
+
 
 const MIMESetting *HttpContext::determineMime(const char *pSuffix,
         char *pForcedType) const
@@ -880,6 +897,7 @@ void HttpContext::setPHPConfig(PHPConfig *pConfig)
     }
 }
 
+
 int HttpContext::initExternalSessionHooks()
 {
     if (!(m_iConfigBits & BIT_SESSIONHOOKS))
@@ -913,6 +931,7 @@ int HttpContext::setModuleConfig(ModuleConfig  *pModuleConfig,
     return 0;
 }
 
+
 int HttpContext::setOneModuleConfig(int moduel_id,
                                     lsi_module_config_t  *module_config)
 {
@@ -936,10 +955,12 @@ int HttpContext::setOneModuleConfig(int moduel_id,
     return 0;
 }
 
+
 void HttpContext::getAAAData(struct AAAData &data) const
 {
     memmove(&data, &m_pInternal->m_pHTAuth, sizeof(AAAData));
 }
+
 
 void HttpContext::setWebSockAddr(GSockAddr &gsockAddr)
 {
@@ -949,6 +970,8 @@ void HttpContext::setWebSockAddr(GSockAddr &gsockAddr)
         m_iConfigBits |= BIT_GSOCKADDR;
     }
 }
+
+
 int HttpContext::configAccess(const XmlNode *pContextNode)
 {
     AccessControl *pAccess = NULL;
@@ -956,12 +979,13 @@ int HttpContext::configAccess(const XmlNode *pContextNode)
     if (AccessControl::isAvailable(pContextNode))
     {
         pAccess = new AccessControl();
-        pAccess->config(pContextNode);
+        ConfigCtx::getCurConfigCtx()->configSecurity(pAccess, pContextNode);
         setAccessControl(pAccess);
     }
 
     return 0;
 }
+
 
 void HttpContext::configAutoIndex(const XmlNode *pContextNode)
 {
@@ -969,6 +993,7 @@ void HttpContext::configAutoIndex(const XmlNode *pContextNode)
         setAutoIndex(ConfigCtx::getCurConfigCtx()->getLongValue(pContextNode,
                      "autoIndex", 0, 1, 0));
 }
+
 
 int HttpContext::configDirIndex(const XmlNode *pContextNode)
 {
@@ -980,6 +1005,7 @@ int HttpContext::configDirIndex(const XmlNode *pContextNode)
 
     return 0;
 }
+
 
 int HttpContext::configErrorPages(const XmlNode *pNode)
 {
@@ -1007,6 +1033,7 @@ int HttpContext::configErrorPages(const XmlNode *pNode)
     return (add == 0);
 }
 
+
 int HttpContext::configRewriteRule(const RewriteMapList *pMapList,
                                    char *pRule)
 {
@@ -1032,6 +1059,7 @@ int HttpContext::configRewriteRule(const RewriteMapList *pMapList,
     return 0;
 }
 
+
 int HttpContext::configMime(const XmlNode *pContextNode)
 {
     const char *pValue = pContextNode->getChildValue("addMIMEType");
@@ -1054,6 +1082,8 @@ int HttpContext::configMime(const XmlNode *pContextNode)
 
     return 0;
 }
+
+
 int HttpContext::configExtAuthorizer(const XmlNode *pContextNode)
 {
     const HttpHandler *pAuth;
@@ -1085,6 +1115,7 @@ int HttpContext::configExtAuthorizer(const XmlNode *pContextNode)
     setAuthorizer(pAuth);
     return 0;
 }
+
 
 int HttpContext::config(const RewriteMapList *pMapList,
                         const XmlNode *pContextNode,

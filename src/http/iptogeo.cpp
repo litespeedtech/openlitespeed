@@ -16,10 +16,12 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "iptogeo.h"
+
 #include <http/httplog.h>
+#include <main/configctx.h>
 #include <util/ienv.h>
-#include "util/configctx.h"
 #include <util/xmlnode.h>
+
 #include <fcntl.h>
 #include <sys/socket.h>
 #include <netinet/in.h>

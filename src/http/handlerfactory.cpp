@@ -16,24 +16,21 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "handlerfactory.h"
-#include "handlertype.h"
-#include "httpextconnector.h"
-#include "staticfilehandler.h"
+
+#include <http/handlertype.h>
+#include <http/httpextconnector.h>
+#include <http/staticfilehandler.h>
 #include <lsiapi/modulehandler.h>
-#include "lsiapi/modulemanager.h"
+#include <lsiapi/modulemanager.h>
+#include <main/configctx.h>
+#include <ssi/ssiengine.h>
+#include <util/objpool.h>
+#include <util/xmlnode.h>
 
 #include <extensions/extworker.h>
 #include <extensions/registry/extappregistry.h>
-
-#include <http/httpvhost.h>
-#include <http/httplog.h>
-#include <util/objpool.h>
-#include "util/configctx.h"
-#include <util/xmlnode.h>
-
 #include <stdio.h>
 
-#include "ssi/ssiengine.h"
 // extern StaticFileHandler        s_staticFileHandler;
 // extern RedirectHandler          s_redirectHandler;
 // extern SSIEngine                s_ssiHandler;
@@ -75,6 +72,7 @@ void HandlerFactory::recycle(HttpExtConnector *pHandler)
     s_extConnectorPool.recycle(pHandler);
 }
 
+
 const HttpHandler *HandlerFactory::getInstance(int type, const char *pName)
 {
     ModuleManager::iterator iter;
@@ -110,6 +108,7 @@ const HttpHandler *HandlerFactory::getInstance(int type, const char *pName)
     return NULL;
 }
 
+
 const HttpHandler *HandlerFactory::getHandler(
     const char *pType, const char *pHandler)
 {
@@ -129,6 +128,7 @@ const HttpHandler *HandlerFactory::getHandler(
 
     return pHdlr;
 }
+
 
 const HttpHandler *HandlerFactory::getHandler(const XmlNode *pNode)
 {

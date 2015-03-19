@@ -133,9 +133,9 @@ am_libhttp_a_OBJECTS = httpstatuscode.$(OBJEXT) moduserdir.$(OBJEXT) \
 	smartsettings.$(OBJEXT) httplistener.$(OBJEXT) \
 	httpresp.$(OBJEXT) httpreq.$(OBJEXT) httpsession.$(OBJEXT) \
 	iptogeo.$(OBJEXT) moov.$(OBJEXT) hiostream.$(OBJEXT) \
-	httprespheaders.$(OBJEXT) l4handler.$(OBJEXT) \
-	httpaiosendfile.$(OBJEXT) serverprocessconfig.$(OBJEXT) \
-	httpstats.$(OBJEXT)
+	hiohandlerfactory.$(OBJEXT) httprespheaders.$(OBJEXT) \
+	l4handler.$(OBJEXT) httpaiosendfile.$(OBJEXT) \
+	serverprocessconfig.$(OBJEXT) httpstats.$(OBJEXT)
 libhttp_a_OBJECTS = $(am_libhttp_a_OBJECTS)
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
@@ -355,8 +355,8 @@ libhttp_a_SOURCES = httpstatuscode.cpp moduserdir.cpp contextnode.cpp phpconfig.
    staticfilecachedata.cpp  staticfilecache.cpp cacheelement.cpp httpcache.cpp chunkoutputstream.cpp chunkinputstream.cpp  httplog.cpp \
    httpmime.cpp sendfileinfo.cpp httpcontext.cpp httpserverversion.cpp vhostmap.cpp eventdispatcher.cpp staticfilehandler.cpp reqhandler.cpp \
    httpvhost.cpp httpresourcemanager.cpp ntwkiolink.cpp httpmethod.cpp httpver.cpp  httpstatusline.cpp httpheader.cpp \
-   smartsettings.cpp httplistener.cpp httpresp.cpp httpreq.cpp httpsession.cpp iptogeo.cpp moov.cpp  hiostream.cpp httprespheaders.cpp \
-   l4handler.cpp httpaiosendfile.cpp serverprocessconfig.cpp httpstats.cpp
+   smartsettings.cpp httplistener.cpp httpresp.cpp httpreq.cpp httpsession.cpp iptogeo.cpp moov.cpp  hiostream.cpp hiohandlerfactory.cpp \
+   httprespheaders.cpp l4handler.cpp httpaiosendfile.cpp serverprocessconfig.cpp httpstats.cpp
 
 
 ####### kdevelop will overwrite this part!!! (end)############
@@ -429,6 +429,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/expiresctrl.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/handlerfactory.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/handlertype.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/hiohandlerfactory.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/hiostream.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/hotlinkctrl.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/htauth.Po@am__quote@

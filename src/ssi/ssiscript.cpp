@@ -20,10 +20,9 @@
 
 #include <http/httplog.h>
 #include <http/requestvars.h>
-
 #include <lsr/ls_fileio.h>
-#include <util/pcregex.h>
 #include <util/gpointerlist.h>
+#include <util/pcregex.h>
 #include <util/stringtool.h>
 
 #include <pcreposix.h>
@@ -61,7 +60,6 @@ ExprToken::~ExprToken()
 }
 
 
-
 int Expression::appendToken(int token)
 {
     ExprToken *pTok = new ExprToken();
@@ -71,6 +69,7 @@ int Expression::appendToken(int token)
     push_front(pTok);
     return 0;
 }
+
 
 int Expression::appendString(const char *pBegin, int len)
 {
@@ -105,6 +104,7 @@ int Expression::appendString(const char *pBegin, int len)
 
 }
 
+
 int Expression::appendRegex(const char *pBegin, int len, int flag)
 {
     ExprToken *pTok = new ExprToken();
@@ -117,6 +117,7 @@ int Expression::appendRegex(const char *pBegin, int len, int flag)
     push_front(pTok);
     return 0;
 }
+
 
 int Expression::parse(const char *pBegin, const char *pEnd)
 {
@@ -272,6 +273,7 @@ int Expression::parse(const char *pBegin, const char *pEnd)
     return 0;
 }
 
+
 int ExprToken::s_priority[EXP_END] =
 {
     0, 0, 0, 0,
@@ -369,7 +371,6 @@ int Expression::buildPrefix()
 }
 
 
-
 SSIComponent::~SSIComponent()
 {
     LinkedObj *pNext, *p1 = m_parsed;
@@ -381,6 +382,7 @@ SSIComponent::~SSIComponent()
         p1 = pNext;
     }
 }
+
 
 void SSIComponent::appendPrased(LinkedObj *p)
 {
@@ -403,6 +405,7 @@ SSI_If::SSI_If()
     , m_blockElse(NULL)
 {}
 
+
 SSI_If::~SSI_If()
 {
     if (m_blockIf)
@@ -410,7 +413,6 @@ SSI_If::~SSI_If()
     if (m_blockElse)
         delete m_blockElse;
 }
-
 
 
 SSIScript::SSIScript()
@@ -422,6 +424,7 @@ SSIScript::SSIScript()
 SSIScript::~SSIScript()
 {
 }
+
 
 int SSIScript::append_html_content(const char *pBegin, const char *pEnd)
 {
@@ -437,6 +440,7 @@ int SSIScript::append_html_content(const char *pBegin, const char *pEnd)
     m_pCurComponent->getContentBuf()->append(pBegin, pEnd - pBegin);
     return 0;
 }
+
 
 static const char *s_SSI_Cmd[] =
 {
@@ -457,6 +461,7 @@ static const char *s_SSI_Attrs[] =
 
 static int s_SSI_Attrs_len[] =
 {   0, 7, 6, 7, 7, 3, 8, 3, 3, 4, 7, 5, 4, 3, 4, 3, 6  };
+
 
 int SSIScript::getAttr(const char *&pBegin, const char *pEnd,
                        char *pAttrName, const char *&pValue, int &valLen)
@@ -601,6 +606,7 @@ int SSIScript::addBlock(SSI_If *pSSI_If, int is_else)
     return 0;
 }
 
+
 SSI_If *SSIScript::getComponentIf(SSIBlock *&pBlock)
 {
     SSI_If *pComp = m_pCurBlock->getParentComp();
@@ -613,6 +619,7 @@ SSI_If *SSIScript::getComponentIf(SSIBlock *&pBlock)
     }
     return pComp;
 }
+
 
 int SSIScript::parseIf(int cmd, const char *pBegin, const char *pEnd)
 {
@@ -671,7 +678,6 @@ int SSIScript::parseIf(int cmd, const char *pBegin, const char *pEnd)
     }
     return 0;
 }
-
 
 
 int SSIScript::parse_ssi_directive(const char *pBegin, const char *pEnd)
@@ -830,6 +836,7 @@ int SSIScript::processSSIFile(SSITagConfig *pConfig, int fd)
 
 }
 
+
 int SSIScript::parse(SSITagConfig *pConfig, const char *pScriptPath)
 {
     struct stat st;
@@ -857,12 +864,14 @@ int SSIScript::parse(SSITagConfig *pConfig, const char *pScriptPath)
 
 }
 
+
 int SSIScript::testParse()
 {
     SSIScript script;
     script.parse(NULL, "/home/gwang/proj/httpd/test_data/local_time.shtml");
     return 0;
 }
+
 
 SSIComponent *SSIScript::nextComponent()
 {
@@ -884,6 +893,7 @@ SSIComponent *SSIScript::nextComponent()
     }
     return pComponent;
 }
+
 
 void SSIScript::setCurrentBlock(SSIBlock *pBlock)
 {

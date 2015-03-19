@@ -15,12 +15,12 @@
 *    You should have received a copy of the GNU General Public License       *
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
-#include <modules/lua/lsluaapi.h>
-#include <modules/lua/lsluaengine.h>
-#include <modules/lua/lsluasession.h>
+
+#include "lsluaapi.h"
 
 #include <shm/lsshmhash.h>
-#include <shm/lsi_shm.h>
+#include <shm/lsshmpool.h>
+
 #include <fcntl.h>
 #include <time.h>
 #include <sys/time.h>
@@ -173,7 +173,8 @@ static ls_luashm_t *LsLuaShmSetval(LsShmHash *pHash,
             offset = pHash->alloc2(size, remap);
             if (offset == 0)
                 return NULL; // no memory
-
+            if (remap)
+                pShmValue = (ls_luashm_t *)pHash->offset2ptr(key);
             if (pShmValue->m_iValueLen > sizeof(double))
                 pHash->release2(pShmValue->m_iOffset, pShmValue->m_iValueLen);
 
@@ -689,9 +690,10 @@ typedef struct ls_luashm_scanner_s
 } ls_luashm_scanner_t;
 
 
-int LsLuaShmFlushAllCb(LsShmHash::iterator iter, void *pUData)
+int LsLuaShmFlushAllCb(LsShmHash::iteroffset iterOff, void *pUData)
 {
     ls_luashm_scanner_t *pScanner = (ls_luashm_scanner_t *)pUData;
+    LsShmHash::iterator iter = pScanner->handle->offset2iterator(iterOff);
     ls_luashm_t *pVal = (ls_luashm_t *)iter->getVal();
 //     printf( "%s, %x\n", iter->getKey(), pVal->m_iMagic);
     if ((iter->getValLen() != sizeof(ls_luashm_t))
@@ -706,11 +708,11 @@ int LsLuaShmFlushAllCb(LsShmHash::iterator iter, void *pUData)
 }
 
 
-int LsLuaShmFlushExpCb(LsShmHash::iterator iter, void *pUData)
+int LsLuaShmFlushExpCb(LsShmHash::iteroffset iterOff, void *pUData)
 {
     ls_luashm_scanner_t *pScanner = (ls_luashm_scanner_t *)pUData;
+    LsShmHash::iterator iter = pScanner->handle->offset2iterator(iterOff);
     ls_luashm_t *pVal = (ls_luashm_t *)iter->getVal();
-    LsShmHash *pHash = pScanner->handle;
 
     if ((iter->getValLen() != sizeof(ls_luashm_t))
         || (pVal->m_iMagic != LS_LUASHM_MAGIC))
@@ -720,8 +722,8 @@ int LsLuaShmFlushExpCb(LsShmHash::iterator iter, void *pUData)
     {
         pVal->m_iMagic = 0;
         if (pVal->m_iValueLen > sizeof(double))
-            pHash->release2(pVal->m_iOffset, pVal->m_iValueLen);
-        pHash->eraseIterator(iter);
+            pScanner->handle->release2(pVal->m_iOffset, pVal->m_iValueLen);
+        pScanner->handle->eraseIterator(iterOff);
         ++pScanner->numchecked;
         if ((pScanner->maxcheck)
             && (pScanner->numchecked >= pScanner->maxcheck))

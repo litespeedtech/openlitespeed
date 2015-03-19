@@ -16,6 +16,10 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "spdyzlibfilter.h"
+#include "spdydebug.h"
+
+#include <util/autobuf.h>
+#include <util/loopbuf.h>
 
 // SPDY 2 dictionary.
 // This is just a hacked dictionary to use for shrinking HTTP-like headers.
@@ -221,12 +225,14 @@ static const unsigned char s_spdyV3Dictionary[] =
 static const unsigned char *s_dicts[] = { NULL, s_spdyV2Dictionary, s_spdyV3Dictionary };
 static int  s_dictsLen[] = { 0, sizeof(s_spdyV2Dictionary), sizeof(s_spdyV3Dictionary) };
 
+
 SpdyZlibFilter::SpdyZlibFilter()
     : m_iVersion(2)
     , m_isInflator(0)
 {
     memset(&m_stream, 0, sizeof(m_stream));
 }
+
 
 int SpdyZlibFilter::init(int isInflator, int verSpdy)
 {
@@ -256,10 +262,12 @@ int SpdyZlibFilter::init(int isInflator, int verSpdy)
     return ret;
 }
 
+
 SpdyZlibFilter::~SpdyZlibFilter()
 {
     release();
 }
+
 
 int SpdyZlibFilter::release()
 {
@@ -269,6 +277,7 @@ int SpdyZlibFilter::release()
         deflateEnd(&m_stream);
     return 0;
 }
+
 
 int SpdyZlibFilter::decompress(char *pSource, uint32_t length, AutoBuf &bufInflate)
 {
@@ -323,6 +332,7 @@ int SpdyZlibFilter::decompress(char *pSource, uint32_t length, AutoBuf &bufInfla
     }
     return bufInflate.size();
 }
+
 
 int SpdyZlibFilter::compress(char *pSource, uint32_t length,
                              LoopBuf *ploopbuf, int flush)

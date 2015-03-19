@@ -16,9 +16,11 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "cgidreq.h"
-#include <util/stringtool.h>
-#include <openssl/rand.h>
+
 #include <util/rlimits.h>
+#include <util/stringtool.h>
+
+#include <openssl/rand.h>
 #include <stdio.h>
 
 CgidReq::CgidReq()
@@ -26,9 +28,12 @@ CgidReq::CgidReq()
 {
     m_buf.resize(sizeof(lscgid_req));
 }
+
+
 CgidReq::~CgidReq()
 {
 }
+
 
 int CgidReq::add(const char *name, size_t nameLen,
                  const char *value, size_t valLen)
@@ -77,6 +82,7 @@ int CgidReq::add(const char *name, size_t nameLen,
     return 0;
 }
 
+
 int CgidReq::appendString(const char *pStr, size_t strlen)
 {
     int bufLen = m_buf.available();
@@ -114,6 +120,7 @@ int CgidReq::appendString(const char *pStr, size_t strlen)
     return 0;
 }
 
+
 int CgidReq::appendArgv(const char *pArgv, int len)
 {
     if (appendString(pArgv, len))
@@ -121,6 +128,7 @@ int CgidReq::appendArgv(const char *pArgv, int len)
     ++getCgidReq()->m_nargv;
     return 0;
 }
+
 
 int CgidReq::appendEnv(const char *pEnv, int len)
 {
@@ -181,6 +189,7 @@ int CgidReq::buildReqHeader(int uid, int gid, int priority, int umaskVal,
 
     return 0;
 }
+
 
 int CgidReq::finalize(int req_id, const char *pSecret, int type)
 {

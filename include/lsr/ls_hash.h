@@ -233,14 +233,6 @@ ls_hashelem_t *ls_hash_getnext(ls_hashelem_t *pElem);
  */
 ls_hash_key_t ls_hash_hfstring(const void *__s);
 
-/** @ls_hash_hfxxstring
- * @brief A provided hash function for strings using xxhash.  Case sensitive.
- *
- * @param[in] __s - The string to calculate.
- * @return The hash key.
- */
-ls_hash_key_t ls_hash_hfxxstring(const void *__s);
-
 /** @ls_hash_cmpstring
  * @brief A provided comparison function for strings.  Case sensitive.
  *

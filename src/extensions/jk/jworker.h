@@ -18,8 +18,6 @@
 #ifndef JWORKER_H
 #define JWORKER_H
 
-
-
 #include <lsdef.h>
 #include <extensions/extworker.h>
 

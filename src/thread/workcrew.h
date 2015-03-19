@@ -19,13 +19,11 @@
 #define WORKCREW_H
 
 #include <lsdef.h>
-#include <edio/eventnotifier.h>
 #include <thread/worker.h>
-#include <lsr/ls_lfqueue.h>
 #include <util/objarray.h>
 
-#ifndef LS_WORKCREW_LF
-#include <thread/pthreadworkqueue.h>
+#if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
+#define LS_WORKCREW_LF
 #endif
 
 //#define LS_WORKCREW_DEBUG
@@ -49,6 +47,14 @@
  * StopProcessing and resize may be called at any time after construction.
  */
 
+
+class EventNotifier;
+typedef struct ls_lfnodei_s ls_lfnodei_t;
+typedef struct ls_lfqueue_s ls_lfqueue_t;
+
+#ifndef LS_WORKCREW_LF
+class PThreadWorkQueue;
+#endif
 
 #define LS_WORKCREW_MINWORKER 1
 #define LS_WORKCREW_MAXWORKER 1
@@ -79,22 +85,27 @@ class WorkCrew
 
 private:
 
-    /** @startCrewWork
+    /** wcWorkerFn
      * @internal This function is the work function passed into the worker.
      * This is used so the thread knows which work crew to get the parameters
      * from.
      */
-    static void *startCrewWork(void *arg)
+    static void *wcWorkerFn(void *arg)
     {
         WorkCrew *wc = (WorkCrew *)arg;
-        return wc->doWork();
+        return wc->getAndProcessJob();
     }
 
-    /** @doWork
+    /** @getJob
+     * @internal This function attempts to get a job from the job queue.
+     */
+    ls_lfnodei_t *getJob();
+
+    /** @getAndProcessJob
      * @internal This function tries to get a job from the job queue,
      * and if there is one, processes it and puts it in the finished queue.
      */
-    void *doWork();
+    void *getAndProcessJob();
 
     /** @increaseTo
      * @internal This function increases the number of worker threads to
@@ -108,35 +119,11 @@ private:
      */
     int decreaseTo(int numMembers);
 
-    /** @getJob
-     * @internal This function attempts to get a job from the job queue.
-     */
-    inline ls_lfnodei_t *getJob()
-    {
-#ifdef LS_WORKCREW_LF
-        return ls_lfqueue_get(m_pJobQueue);
-#else
-        int size = 1;
-        ls_lfnodei_t *pWork;
-        pWork = NULL;
-        if (m_pJobQueue->get(&pWork, size, 250) != 0)
-            return NULL;
-        return pWork;
-#endif
-    }
-
     /** @putFinishedItem
      * @internal This function puts an item into the finished queue and
      * notifies the Event Notifier if there is one.
      */
-    int putFinishedItem(ls_lfnodei_t *item)
-    {
-        int ret;
-        ret = ls_lfqueue_put(m_pFinishedQueue, item);
-        if (m_pNotifier)
-            m_pNotifier->notify();
-        return ret;
-    }
+    int putFinishedItem(ls_lfnodei_t *item);
 
 public:
     /** @WorkCrew
@@ -146,32 +133,14 @@ public:
      *
      * @param[in] en - An optional initialized event notifier.
      */
-    WorkCrew(EventNotifier *en = NULL)
-        : m_pNotifier(en)
-        , m_crew()
-        , m_pProcess(NULL)
-    {
-#ifdef LS_WORKCREW_LF
-        m_pJobQueue = ls_lfqueue_new();
-#else
-        m_pJobQueue = new PThreadWorkQueue();
-#endif
-    }
+    WorkCrew(EventNotifier *en = NULL);
 
     /** @~WorkCrew
      * @brief The Work Crew Destructor.
      * @details This function will end any thread still running and delete the
      * job queue.  This function will \b not free anything left in the queue.
      */
-    ~WorkCrew()
-    {
-        stopProcessing();
-#ifdef LS_WORKCREW_LF
-        ls_lfqueue_delete(m_pJobQueue);
-#else
-        delete m_pJobQueue;
-#endif
-    }
+    ~WorkCrew();
 
     /** @startJobProcessor
      * @brief Starts the Workers to begin processing the jobs.
@@ -186,30 +155,14 @@ public:
      * @see WorkCrewProcessFn
      */
     int startJobProcessor(int numWorkers, ls_lfqueue_t *pFinishedQueue,
-                          WorkCrewProcessFn processor)
-    {
-        assert(processor && pFinishedQueue);
-        m_pProcess = processor;
-        m_pFinishedQueue = pFinishedQueue;
-#ifndef LS_WORKCREW_LF
-        m_pJobQueue->start();
-#endif
-        return resize(numWorkers);
-    }
+                          WorkCrewProcessFn processor);
 
     /** @stopProcessing
      * @brief Stops any worker threads and resets the finished queue.
      *
      * @return Void.
      */
-    inline void stopProcessing()
-    {
-        decreaseTo(0);
-#ifndef LS_WORKCREW_LF
-        m_pJobQueue->shutdown();
-#endif
-        m_pFinishedQueue = NULL;
-    }
+    void stopProcessing();
 
     /** @resize
      * @brief Resizes the number of workers to the number provided.
@@ -232,14 +185,7 @@ public:
      * @param[in] item - The job item to pass into the processing function.
      * @return 0 if successful, else -1 if unsuccessful.
      */
-    inline int addJob(ls_lfnodei_t *item)
-    {
-#ifdef LS_WORKCREW_LF
-        return ls_lfqueue_put(m_pJobQueue, item);
-#else
-        return m_pJobQueue->append(&item, 1);
-#endif
-    }
+    int addJob(ls_lfnodei_t *item);
 
 
 

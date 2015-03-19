@@ -19,21 +19,18 @@
 #define CACHEENTRY_H
 
 #include <lsdef.h>
+#include <ceheader.h>
+#include <cachehash.h>
+#include <util/autostr.h>
+#include <util/refcounter.h>
+
+#include <sys/types.h>
 
 
 #define DateTime_s_curTime  ( DateTime::s_curTime )
 //#define DateTime_s_curTime  ( time(NULL) )
 
 //#define CACHE_RESP_HEADER   1
-
-
-
-#include <sys/types.h>
-
-#include <ceheader.h>
-#include <cachehash.h>
-#include <util/autostr.h>
-#include <util/refcounter.h>
 
 #define CE_UPDATING     (1<<0)
 #define CE_STALE        (1<<1)

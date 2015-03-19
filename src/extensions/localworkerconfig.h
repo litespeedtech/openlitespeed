@@ -20,7 +20,9 @@
 
 #include <extensions/extworkerconfig.h>
 #include <util/rlimits.h>
+
 #include <sys/types.h>
+
 class ConfigCtx;
 class LocalWorkerConfig : public ExtWorkerConfig
 {

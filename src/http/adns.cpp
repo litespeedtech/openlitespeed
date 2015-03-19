@@ -43,10 +43,12 @@ Adns::Adns()
 {
 }
 
+
 Adns::~Adns()
 {
     shutdown();
 }
+
 
 int Adns::init()
 {
@@ -66,6 +68,7 @@ int Adns::init()
     setfd(dns_sock(m_pCtx));
     return 0;
 }
+
 
 int Adns::shutdown()
 {
@@ -126,6 +129,8 @@ static void namelookupA4_callback(struct dns_ctx *ctx,
     free(rr);
     return;
 }
+
+
 static void namelookupA6_callback(struct dns_ctx *ctx,
                                   struct dns_rr_a6 *rr, void *data)
 {
@@ -134,6 +139,7 @@ static void namelookupA6_callback(struct dns_ctx *ctx,
     return;
 }
 
+
 void Adns::getHostByName(const char *pName, void *arg)
 {
     dns_submit_a4(m_pCtx, pName, DNS_NOSRCH,
@@ -141,12 +147,14 @@ void Adns::getHostByName(const char *pName, void *arg)
 
 }
 
+
 void Adns::getHostByNameV6(const char *pName, void *arg)
 {
     dns_submit_a6(m_pCtx, pName, DNS_NOSRCH,
                   namelookupA6_callback, arg);
 
 }
+
 
 void Adns::getHostByAddr(ClientInfo *pInfo, const struct sockaddr *pAddr)
 {
@@ -161,6 +169,7 @@ void Adns::getHostByAddr(ClientInfo *pInfo, const struct sockaddr *pAddr)
                          addrlookup_callback, pInfo);
     }
 }
+
 
 int Adns::handleEvents(short events)
 {
@@ -179,8 +188,8 @@ void Adns::onTimer()
     dns_timeouts(m_pCtx, -1, time(NULL));
 }
 
-#endif
 
+#endif
 
 
 #ifdef  USE_CARES
@@ -207,11 +216,14 @@ Adns::Adns()
 {
 }
 
+
 Adns::~Adns()
 {
 }
 
+
 static  ares_channel    s_channel = 0;
+
 
 int Adns::init()
 {
@@ -229,6 +241,7 @@ int Adns::init()
     return 0;
 }
 
+
 int Adns::shutdown()
 {
     if (s_channel)
@@ -238,6 +251,7 @@ int Adns::shutdown()
     }
     return 0;
 }
+
 
 static void addrlookup_callback(void *arg, int status,
                                 struct hostent *host)
@@ -261,16 +275,19 @@ static void addrlookup_callback(void *arg, int status,
     }
 }
 
+
 static void namelookup_callback(void *arg, int status,
                                 struct hostent *hostent)
 {
     return;
 }
 
+
 void Adns::getHostByName(const char *pName, void *arg)
 {
     ares_gethostbyname(s_channel, pName, AF_INET, namelookup_callback, arg);
 }
+
 
 void Adns::getHostByAddr(ClientInfo *pInfo, const struct sockaddr *pAddr)
 {
@@ -285,6 +302,7 @@ void Adns::getHostByAddr(ClientInfo *pInfo, const struct sockaddr *pAddr)
                            sizeof(in6_addr), pAddr->sa_family, addrlookup_callback, pInfo);
     }
 }
+
 
 void Adns::process()
 {

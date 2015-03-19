@@ -20,7 +20,6 @@
 
 #include <lsr/ls_hash.h>
 #include <lsr/ls_internal.h>
-#include <lsr/ls_xpool.h>
 
 #include <stddef.h>
 
@@ -78,8 +77,6 @@ public:
 
     ~GHash()
     {
-        if (xpool)
-            assert(!ls_xpool_isempty(xpool));
         ls_hash_d(this);
     }
 

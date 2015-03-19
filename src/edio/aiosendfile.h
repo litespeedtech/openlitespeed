@@ -19,7 +19,7 @@
 #define AIOSENDFILE_H
 
 #include <edio/eventnotifier.h>
-#include <lsr/ls_lfqueue.h>
+#include <lsr/ls_node.h>
 #include <thread/workcrew.h>
 #include <util/linkedobj.h>
 
@@ -29,6 +29,8 @@
 
 #define AIOSFCB_FLAG_CANCEL       (1<<0)
 #define AIOSFCB_FLAG_TRYAGAIN     (1<<1)
+
+typedef struct ls_lfqueue_s ls_lfqueue_t;
 
 class Aiosfcb : public DLinkedObj
 {
@@ -106,17 +108,9 @@ private:
 
 public:
 
-    AioSendFile()
-        : m_wc(this)
-    {
-        m_pFinishedQueue = ls_lfqueue_new();
-    }
+    AioSendFile();
 
-    ~AioSendFile()
-    {
-        m_wc.stopProcessing();
-        ls_lfqueue_delete(m_pFinishedQueue);
-    }
+    ~AioSendFile();
 
     int startProcessor()
     {

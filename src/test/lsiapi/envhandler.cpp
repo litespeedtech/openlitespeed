@@ -17,12 +17,11 @@
 *****************************************************************************/
 #ifdef RUN_TEST
 
-#include "lsiapi/lsiapi.h"
-#include "lsiapi/envmanager.h"
-#include "ls.h"
+#include <ls.h>
+#include <lsiapi/lsiapi.h>
+#include <lsiapi/envmanager.h>
 #include "test/unittest-cpp/UnitTest++/src/UnitTest++.h"
 #include <unistd.h>
-#include "lsiapi/lsiapi.h"
 
 int cb1(lsi_cb_param_t *param)
 {

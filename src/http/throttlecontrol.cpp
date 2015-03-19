@@ -16,8 +16,9 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "throttlecontrol.h"
-#include "util/configctx.h"
 #include <http/httpdefs.h>
+#include <main/configctx.h>
+
 #include <assert.h>
 
 ThrottleLimits ThrottleControl::s_default;
@@ -29,6 +30,7 @@ void ThrottleControl::resetQuotas()
     m_req[0].reset();
     m_req[1].reset();
 }
+
 
 void ThrottleLimits::config(const XmlNode *pNode1,
                             const ThrottleLimits *pDefault,

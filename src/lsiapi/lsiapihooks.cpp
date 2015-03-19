@@ -16,11 +16,10 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "lsiapihooks.h"
-#include "lsiapi.h"
+
 #include <http/httplog.h>
-#include <http/httpsession.h>
-#include <util/logtracker.h>
 #include <lsiapi/internal.h>
+#include <util/logtracker.h>
 
 #include <string.h>
 
@@ -97,6 +96,7 @@ int LsiApiHooks::runForwardCb(lsi_cb_param_t *param)
                (LsiSession *)param->_session, (void *)param->_param, param->_param_len);
 }
 
+
 int LsiApiHooks::runBackwardCb(lsi_cb_param_t *param)
 {
     lsiapi_hookinfo_t *hookInfo = param->_hook_info;
@@ -122,6 +122,7 @@ int LsiApiHooks::runBackwardCb(lsi_cb_param_t *param)
 LsiApiHooks *LsiApiHooks::getReleaseDataHooks(int index)
 {   return &s_releaseDataHooks[index];   }
 
+
 LsiApiHooks::LsiApiHooks(const LsiApiHooks &other)
     : m_pHooks(NULL)
     , m_iCapacity(0)
@@ -136,6 +137,7 @@ LsiApiHooks::LsiApiHooks(const LsiApiHooks &other)
         m_iEnd = m_iBegin + other.size();
     }
 }
+
 
 int LsiApiHooks::copy(const LsiApiHooks &other)
 {
@@ -176,6 +178,7 @@ int LsiApiHooks::reallocate(int capacity, int newBegin)
     return capacity;
 
 }
+
 
 //For same cb and same priority in same module, it will fail to add, but return 0
 short LsiApiHooks::add(const lsi_module_t *pModule, lsi_callback_pf cb,
@@ -232,6 +235,7 @@ short LsiApiHooks::add(const lsi_module_t *pModule, lsi_callback_pf cb,
     return pHook - begin();
 }
 
+
 lsiapi_hook_t *LsiApiHooks::find(const lsi_module_t *pModule,
                                  lsi_callback_pf cb)
 {
@@ -243,6 +247,7 @@ lsiapi_hook_t *LsiApiHooks::find(const lsi_module_t *pModule,
     }
     return NULL;
 }
+
 
 int LsiApiHooks::remove(lsiapi_hook_t *pHook)
 {
@@ -259,6 +264,7 @@ int LsiApiHooks::remove(lsiapi_hook_t *pHook)
     return 0;
 }
 
+
 //COMMENT: if one module add more hooks at this level, the return is the first one!!!!
 lsiapi_hook_t *LsiApiHooks::find(const lsi_module_t *pModule) const
 {
@@ -272,14 +278,16 @@ lsiapi_hook_t *LsiApiHooks::find(const lsi_module_t *pModule) const
 
 }
 
-lsiapi_hook_t *LsiApiHooks::find(const lsi_module_t *pModule,
-                                 int *index) const
-{
-    lsiapi_hook_t *pHook = find(pModule);
-    if (pHook)
-        *index = pHook - begin();
-    return pHook;
-}
+
+// lsiapi_hook_t *LsiApiHooks::find(const lsi_module_t *pModule,
+//                                  int *index) const
+// {
+//     lsiapi_hook_t *pHook = find(pModule);
+//     if (pHook)
+//         *index = pHook - begin();
+//     return pHook;
+// }
+
 
 //COMMENT: if one module add more hooks at this level, the return of
 //LsiApiHooks::find( const lsi_module_t *pModule ) is the first one!!!!
@@ -362,6 +370,71 @@ int LsiApiHooks::runCallback(int level, lsi_cb_param_t *param) const
 
     return ret;
 }
+
+int LsiApiHooks::runCallback(int level, int8_t *pEnableArray, LsiSession *session,
+                    void *param1, int paramLen1, int *flag_out, int flag_in,
+                    lsi_module_t *pModule) const
+{
+    lsiapi_hook_t *pHook = NULL;
+
+    if (pModule)
+    {
+        ModIndex *pModIndex = MODULE_HOOKINDEX(pModule);
+        pHook = get(pModIndex->getLevel(level));
+//         pHook = find(pModule);
+    }
+
+    lsiapi_hookinfo_t info = { this, pEnableArray, NULL };
+    lsi_cb_param_t param =
+    {
+        session,
+        &info,
+        (pHook ?  pHook + 1 : begin()),
+        param1,
+        paramLen1,
+        flag_out,
+        flag_in
+    };
+
+    return runCallback(level, &param);
+}
+
+
+int LsiApiHooks::initModuleEnableHooks()
+{
+    const LsiApiHooks *pLevel;
+    lsiapi_hook_t *pBegin, *pEnd;
+    int i, iIdx;
+    for (i = LSI_HKPT_L4_BEGINSESSION; i < LSI_HKPT_SESSION_COUNT; ++i)
+    {
+        iIdx = 0;
+        pLevel = LsiApiHooks::getGlobalApiHooks(i);
+        if (pLevel->size() < 1)
+            continue;
+        pEnd = pLevel->end();
+        for (pBegin = pLevel->begin(); pBegin < pEnd; ++pBegin)
+        {
+            MODULE_HOOKINDEX(pBegin->module)->setLevel(i, iIdx);
+            ++iIdx;
+        }
+    }
+    return LS_OK;
+}
+
+
+ModIndex::ModIndex()
+{
+    int i;
+    for (i = 0; i < LSI_HKPT_TOTAL_COUNT; ++i)
+        m_aIndices[i] = -1;
+}
+
+
+ModIndex *ModIndex::getModIndex(const lsi_module_t *pModule)
+{
+    return MODULE_HOOKINDEX(pModule);
+}
+
 
 
 

@@ -104,7 +104,7 @@ libmain_a_LIBADD =
 am_libmain_a_OBJECTS = mainserverconfig.$(OBJEXT) \
 	lshttpdmain.$(OBJEXT) serverinfo.$(OBJEXT) \
 	httpconfigloader.$(OBJEXT) httpserver.$(OBJEXT) \
-	plainconf.$(OBJEXT)
+	plainconf.$(OBJEXT) configctx.$(OBJEXT)
 libmain_a_OBJECTS = $(am_libmain_a_OBJECTS)
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
@@ -316,7 +316,7 @@ noinst_LIBRARIES = libmain.a
 INCLUDES = -I$(top_srcdir)/include -I$(top_srcdir)/src
 libmain_a_METASOURCES = AUTO
 libmain_a_SOURCES = mainserverconfig.cpp lshttpdmain.cpp serverinfo.cpp httpconfigloader.cpp \
-	httpserver.cpp plainconf.cpp 
+	httpserver.cpp plainconf.cpp configctx.cpp
 
 all: all-am
 
@@ -367,6 +367,7 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/configctx.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/httpconfigloader.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/httpserver.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lshttpdmain.Po@am__quote@

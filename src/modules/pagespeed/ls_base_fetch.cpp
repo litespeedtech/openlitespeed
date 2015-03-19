@@ -18,6 +18,8 @@
 
 #include "ls_base_fetch.h"
 
+#include <lsr/ls_atomic.h>
+
 #include "net/instaweb/http/public/response_headers.h"
 #include "net/instaweb/rewriter/public/rewrite_stats.h"
 #include "net/instaweb/util/public/google_message_handler.h"
@@ -159,7 +161,7 @@ void LsiBaseFetch::Release()
 
 void LsiBaseFetch::DecrefAndDeleteIfUnreferenced()
 {
-    if (__sync_add_and_fetch(&m_iReferences, -1) == 0)
+    if (ls_atomic_add(&m_iReferences, -1) == 0)
         delete this;
 }
 

@@ -16,37 +16,35 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "httpreq.h"
+
 #include <http/accesscache.h>
-#include <http/clientinfo.h>
 #include <http/denieddir.h>
-#include <http/handlerfactory.h>
 #include <http/handlertype.h>
 #include <http/hotlinkctrl.h>
 #include <http/htauth.h>
 #include <http/httpcontext.h>
 #include <http/httpdefs.h>
 #include <http/httplog.h>
+#include <http/httpmethod.h>
 #include <http/httpmime.h>
-#include <http/httprange.h>
 #include <http/httpresourcemanager.h>
 #include <http/httpserverconfig.h>
+#include <http/httpstatuscode.h>
+#include <http/httpver.h>
 #include <http/httpvhost.h>
-#include <http/platforms.h>
 #include <http/serverprocessconfig.h>
-#include <http/smartsettings.h>
 #include <http/vhostmap.h>
 #include <lsr/ls_fileio.h>
+#include <lsr/ls_hash.h>
 #include <lsr/ls_strtool.h>
 #include <lsr/ls_xpool.h>
-#include <main/httpserver.h>
 #include <ssi/ssiruntime.h>
-#include <util/datetime.h>
+#include <util/blockbuf.h>
 #include <util/gpath.h>
 #include <util/httputil.h>
 #include <util/iovec.h>
-#include <util/pool.h>
-#include <util/stringtool.h>
 #include <util/vmembuf.h>
+
 #include <ctype.h>
 #include <errno.h>
 #include <stdio.h>
@@ -137,8 +135,7 @@ HttpReq::HttpReq()
     ls_str_unsafeset(&m_location, NULL, 0);
     ls_str_unsafeset(&m_pathInfo, NULL, 0);
     ls_str_unsafeset(&m_newHost, NULL, 0);
-    m_pUrls = (ls_str_pair_t *)ls_xpool_alloc(m_pPool,
-              sizeof(ls_str_pair_t) * (MAX_REDIRECTS + 1));
+    m_pUrls = (ls_str_pair_t *)malloc(sizeof(ls_str_pair_t) * (MAX_REDIRECTS + 1));
     memset(m_pUrls, 0, sizeof(ls_str_pair_t) * (MAX_REDIRECTS + 1));
     m_envHash = NULL;
     m_pAuthUser = NULL;
@@ -157,6 +154,8 @@ HttpReq::~HttpReq()
     ls_str_unsafeset(&m_location, NULL, 0);
     ls_str_unsafeset(&m_pathInfo, NULL, 0);
     ls_str_unsafeset(&m_newHost, NULL, 0);
+    if (m_pUrls)
+        free(m_pUrls);
     m_pUrls = NULL;
     m_envHash = NULL;
     m_unknHeaders.init();
@@ -189,8 +188,6 @@ void HttpReq::reset()
     ls_str_unsafeset(&m_location, NULL, 0);
     ls_str_unsafeset(&m_pathInfo, NULL, 0);
     ls_str_unsafeset(&m_newHost, NULL, 0);
-    m_pUrls = (ls_str_pair_t *)ls_xpool_alloc(m_pPool,
-              sizeof(ls_str_pair_t) * (MAX_REDIRECTS + 1));
     memset(m_pUrls, 0, sizeof(ls_str_pair_t) * (MAX_REDIRECTS + 1));
     m_envHash = NULL;
     m_unknHeaders.init();
@@ -208,6 +205,9 @@ void HttpReq::resetHeaderBuf()
 
 void HttpReq::reset2()
 {
+    if (m_iReqHeaderBufFinished == HEADER_BUF_PAD)
+        return;
+
     reset();
     if (m_headerBuf.size() - m_iReqHeaderBufFinished > 0)
     {
@@ -1929,7 +1929,6 @@ int HttpReq::setLocation(const char *pLoc, int len)
 
 
 #define HTTP_PAGE_SIZE 4096
-#include <util/blockbuf.h>
 int HttpReq::prepareReqBodyBuf()
 {
     if ((m_lEntityLength != CHUNKED) &&
@@ -1969,6 +1968,23 @@ void HttpReq::replaceBodyBuf(VMemBuf *pBuf)
             HttpResourceManager::getInstance().recycle(pOld);
         else
             delete pOld;
+    }
+}
+
+
+void HttpReq::updateNoRespBodyByStatus(int code)
+{
+    if (!(m_iContextState & KEEP_AUTH_INFO))
+    {
+        switch (m_code = code)
+        {
+        case SC_100:
+        case SC_101:
+        case SC_204:
+        case SC_205:
+        case SC_304:
+            m_iNoRespBody = 1;
+        }
     }
 }
 
@@ -2294,6 +2310,20 @@ const char *HttpReq::getEnv(const char *pOrgKey, int orgKeyLen,
         }
     }
     return NULL;
+}
+
+
+const ls_hash_t *HttpReq::getEnvHash() const
+{
+    return m_envHash;
+}
+
+
+int HttpReq::getEnvCount()
+{
+    if (m_envHash)
+        return ls_hash_size(m_envHash);
+    return 0;
 }
 
 

@@ -16,16 +16,13 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "httpheader.h"
-#include "platforms.h"
-#include <util/autobuf.h>
-#include <util/gpointerlist.h>
+
 #include <util/stringtool.h>
 
 #include <ctype.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/types.h>
-#include <lsr/ls_strtool.h>
 
 
 int HttpHeader::s_iHeaderLen[H_HEADER_END + 1] =
@@ -36,6 +33,7 @@ int HttpHeader::s_iHeaderLen[H_HEADER_END + 1] =
     //13,3,4,8,18,16,11,6,4,16,10,11,6,20,19,25,
     0
 };
+
 
 size_t HttpHeader::getIndex(const char *pHeader)
 {
@@ -74,7 +72,6 @@ size_t HttpHeader::getIndex(const char *pHeader)
                 idx = H_COOKIE2;
             else
                 idx = H_COOKIE;
-
         }
         else if (strncasecmp(pHeader, "ache-control", 12) == 0)
             idx = H_CACHE_CTRL;
@@ -130,9 +127,7 @@ size_t HttpHeader::getIndex(const char *pHeader)
         if (strncasecmp(pHeader, "-forwarded-for", 14) == 0)
             idx = H_X_FORWARDED_FOR;
         break;
-
     }
-
 
     return idx;
 }
@@ -149,7 +144,6 @@ size_t HttpHeader::getIndex2(const char *pHeader)
     }
     return H_HEADER_END;
 }
-
 
 
 /*

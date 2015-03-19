@@ -16,13 +16,17 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "http/httprespheaders.h"
-#include <arpa/inet.h>
-#include <http/httpver.h>
-#include <http/httpserverversion.h>
 
-#include <socket/gsockaddr.h>
+#include <http/httpserverversion.h>
+#include <http/httpstatusline.h>
+#include <http/httpver.h>
+#include <http/httpserverconfig.h>
 #include <util/datetime.h>
+#include <util/iovec.h>
 #include <ctype.h>
+
+
+#include <arpa/inet.h>
 
 /*******************************************************************************
  *          Some comments about the resp_kvpair
@@ -36,6 +40,9 @@
 
 #define HIGHEST_BIT_NUMBER                  0x80000000
 #define BYPASS_HIGHEST_BIT_MASK             0x7FFFFFFF
+#define MAX_RESP_HEADER_LEN                 8192
+
+
 
 char HttpRespHeaders::s_sDateHeaders[30] = "Tue, 09 Jul 2013 13:43:01 GMT";
 int             HttpRespHeaders::s_commonHeadersCount = 2;
@@ -75,6 +82,7 @@ const char *HttpRespHeaders::m_sPresetHeaders[H_HEADER_END] =
     "x-powered-by"
 };
 
+
 int HttpRespHeaders::s_iHeaderLen[H_HEADER_END + 1] =
 {
     13, 10, 12, 14, 16, 13, 19, 13, //cache-control
@@ -83,34 +91,44 @@ int HttpRespHeaders::s_iHeaderLen[H_HEADER_END + 1] =
     0
 };
 
+
 HttpRespHeaders::HttpRespHeaders(ls_xpool_t *pool)
+    : m_buf()
+    , m_aKVPairs()
+    , m_iHttpCode(SC_200)
 {
     m_pool = pool;
     incKVPairs(16); //init 16 kvpair spaces
-    reset();
+    memset(&m_hasHole, 0, &m_iKeepAlive + 1 - &m_hasHole);
 }
+
 
 void HttpRespHeaders::reset()
 {
+    if (m_hLastHeaderKVPairIndex == -1 && m_buf.size() == 0)
+        return ;
+
     m_buf.clear();
     memset(m_KVPairindex, 0xFF, H_HEADER_END);
-    m_hLastHeaderKVPairIndex = -1;
     m_iHttpCode = SC_200;
     memset(&m_hasHole, 0, &m_iKeepAlive + 1 - &m_hasHole);
+    m_hLastHeaderKVPairIndex = -1;
     m_aKVPairs.init();
     m_aKVPairs.setSize(0);
-
 }
+
 
 inline void HttpRespHeaders::incKVPairs(int num)
 {
     m_aKVPairs.guarantee(m_pool, m_aKVPairs.getSize() + num);
 }
 
+
 inline resp_kvpair *HttpRespHeaders::getKV(int index) const
 {
     return m_aKVPairs.getObj(index);
 }
+
 
 inline resp_kvpair *HttpRespHeaders::getNewKV()
 {
@@ -118,6 +136,7 @@ inline resp_kvpair *HttpRespHeaders::getNewKV()
     memset(tmp, 0, sizeof(resp_kvpair));
     return tmp;
 }
+
 
 //Replace the value with new value in pKv, in this case must have enough space
 void HttpRespHeaders::replaceHeader(resp_kvpair *pKv, const char *pVal,
@@ -128,10 +147,15 @@ void HttpRespHeaders::replaceHeader(resp_kvpair *pKv, const char *pVal,
     memset(pOldVal + valLen, ' ', pKv->valLen - valLen);
 }
 
+
 int HttpRespHeaders::appendHeader(resp_kvpair *pKv, const char *pName,
                                   unsigned int nameLen, const char *pVal,
                                   unsigned int valLen, int method)
 {
+    if ( nameLen + valLen > MAX_RESP_HEADER_LEN
+        || m_buf.size() >= HttpServerConfig::getInstance().getMaxDynRespHeaderLen())
+        return LS_FAIL;
+
     if (method == LSI_HEADER_SET)
         memset(pKv, 0, sizeof(resp_kvpair));
 
@@ -177,7 +201,6 @@ int HttpRespHeaders::appendHeader(resp_kvpair *pKv, const char *pName,
         ++pCur;
     }
     m_buf.used(nameLen);
-    
     m_buf.appendUnsafe(": ", 2);
 
     if (pUpdKv->valLen > 0)  //only apply when append and merge
@@ -202,6 +225,7 @@ void HttpRespHeaders::verifyHeaderLength(HEADERINDEX headerIndex,
     assert((int)nameLen == getHeaderStringLen(headerIndex));
 #endif
 }
+
 
 //
 static int hasValue(const char *existVal, int existValLen, const char *val,
@@ -268,6 +292,7 @@ int HttpRespHeaders::_add(int kvOrderNum, const char *pName, int nameLen,
     return appendHeader(pKv, pName, nameLen, pVal, valLen, method);
 }
 
+
 int HttpRespHeaders::add(HEADERINDEX headerIndex, const char *pVal,
                          unsigned int valLen, int method)
 {
@@ -302,6 +327,7 @@ int HttpRespHeaders::add(const char *pName, int nameLen, const char *pVal,
     return _add(kvOrderNum, pName, nameLen, pVal, valLen, method);
 }
 
+
 //This will only append value to the last item
 int HttpRespHeaders::appendLastVal(const char *pVal, int valLen)
 {
@@ -333,6 +359,7 @@ int HttpRespHeaders::appendLastVal(const char *pVal, int valLen)
     return 0;
 }
 
+
 int HttpRespHeaders::add(http_header_t *headerArray, int size, int method)
 {
     int ret = 0;
@@ -349,6 +376,7 @@ int HttpRespHeaders::add(http_header_t *headerArray, int size, int method)
     return ret;
 }
 
+
 void HttpRespHeaders::_del(int kvOrderNum)
 {
     if (kvOrderNum <= -1)
@@ -362,6 +390,7 @@ void HttpRespHeaders::_del(int kvOrderNum)
     m_hasHole = 1;
     ++m_iHeaderRemovedCount;
 }
+
 
 //del( const char * pName, int nameLen ) is lower than  del( int headerIndex )
 //
@@ -380,6 +409,7 @@ int HttpRespHeaders::del(const char *pName, int nameLen)
     return 0;
 }
 
+
 //del() will make some {0,0,0,0} kvpair in the list and make hole
 int HttpRespHeaders::del(HEADERINDEX headerIndex)
 {
@@ -395,6 +425,7 @@ int HttpRespHeaders::del(HEADERINDEX headerIndex)
     return 0;
 }
 
+
 char *HttpRespHeaders::getContentTypeHeader(int &len)
 {
     int index = m_KVPairindex[HttpRespHeaders::H_CONTENT_TYPE];
@@ -408,6 +439,7 @@ char *HttpRespHeaders::getContentTypeHeader(int &len)
     len = pKv->valLen;
     return getVal(pKv);
 }
+
 
 //The below calling will not maintance the kvpaire when regular case
 int HttpRespHeaders::parseAdd(const char *pStr, int len, int method)
@@ -450,6 +482,7 @@ int HttpRespHeaders::parseAdd(const char *pStr, int len, int method)
     return 0;
 }
 
+
 int HttpRespHeaders::getHeaderKvOrder(const char *pName,
                                       unsigned int nameLen)
 {
@@ -470,6 +503,7 @@ int HttpRespHeaders::getHeaderKvOrder(const char *pName,
 
     return index;
 }
+
 
 int HttpRespHeaders::_getHeader(int kvOrderNum, char **pName, int *nameLen,
                                 struct iovec *iov, int maxIovCount)
@@ -496,6 +530,7 @@ int HttpRespHeaders::_getHeader(int kvOrderNum, char **pName, int *nameLen,
     return count;
 }
 
+
 int  HttpRespHeaders::getHeader(HEADERINDEX index, struct iovec *iov,
                                 int maxIovCount)
 {
@@ -505,6 +540,7 @@ int  HttpRespHeaders::getHeader(HEADERINDEX index, struct iovec *iov,
 
     return _getHeader(kvOrderNum, NULL, NULL, iov, maxIovCount);
 }
+
 
 int HttpRespHeaders::getHeader(const char *pName, int nameLen,
                                struct iovec *iov, int maxIovCount)
@@ -517,6 +553,7 @@ int HttpRespHeaders::getHeader(const char *pName, int nameLen,
     return _getHeader(kvOrderNum, NULL, NULL, iov, maxIovCount);
 }
 
+
 const char *HttpRespHeaders::getHeader(HEADERINDEX index,
                                        int *valLen) const
 {
@@ -527,6 +564,7 @@ const char *HttpRespHeaders::getHeader(HEADERINDEX index,
     *valLen = pKv->valLen;
     return getVal(pKv);
 }
+
 
 int HttpRespHeaders::getFirstHeader(const char *pName, int nameLen,
                                     char **val, int &valLen)
@@ -541,6 +579,7 @@ int HttpRespHeaders::getFirstHeader(const char *pName, int nameLen,
     else
         return LS_FAIL;
 }
+
 
 HttpRespHeaders::HEADERINDEX HttpRespHeaders::getRespHeaderIndex(
     const char *pHeader)
@@ -629,6 +668,7 @@ HttpRespHeaders::HEADERINDEX HttpRespHeaders::getRespHeaderIndex(
     return idx;
 }
 
+
 int HttpRespHeaders::nextHeaderPos(int pos)
 {
     int ret = -1;
@@ -644,6 +684,7 @@ int HttpRespHeaders::nextHeaderPos(int pos)
     }
     return ret;
 }
+
 
 int HttpRespHeaders::getAllHeaders(struct iovec *iov_key,
                                    struct iovec *iov_val, int maxIovCount)
@@ -681,6 +722,7 @@ int HttpRespHeaders::getAllHeaders(struct iovec *iov_key,
     return count;
 }
 
+
 int HttpRespHeaders::appendToIovExclude(IOVec *iovec, const char *pName,
                                         int nameLen) const
 {
@@ -715,6 +757,7 @@ int HttpRespHeaders::appendToIov(IOVec *iovec) const
         total = appendToIovExclude(iovec, NULL, 0);
     return total;
 }
+
 
 /***
  *
@@ -791,6 +834,7 @@ void HttpRespHeaders::buildCommonHeaders()
     updateDateHeader();
 }
 
+
 void HttpRespHeaders::updateDateHeader()
 {
     char achDateTime[60];
@@ -798,6 +842,7 @@ void HttpRespHeaders::updateDateHeader()
     if (p)
         memcpy(HttpRespHeaders::s_sDateHeaders, achDateTime, 29);
 }
+
 
 void HttpRespHeaders::hideServerSignature(int hide)
 {

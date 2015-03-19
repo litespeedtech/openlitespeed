@@ -18,9 +18,9 @@
 #ifndef SUEXEC_H
 #define SUEXEC_H
 
+#include "cgidreq.h"
 
 #include <lsdef.h>
-#include <extensions/cgi/cgidreq.h>
 
 class RLimits;
 class SUExec

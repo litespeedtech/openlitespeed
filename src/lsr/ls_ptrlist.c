@@ -19,12 +19,22 @@
 #include <lsdef.h>
 #include <lsr/ls_ptrlist.h>
 #include <lsr/ls_pool.h>
+#include <util/swap.h>
 
 #include <errno.h>
 #include <string.h>
 #include <stdlib.h>
 
 #include <assert.h>
+
+ls_ptrlist_t *ls_ptrlist_new(size_t initSize)
+{
+    ls_ptrlist_t *pThis;
+    if ((pThis = (ls_ptrlist_t *)
+                 ls_palloc(sizeof(*pThis))) != NULL)
+        ls_ptrlist(pThis, initSize);
+    return pThis;
+}
 
 
 void ls_ptrlist(ls_ptrlist_t *pThis, size_t initSize)
@@ -62,6 +72,13 @@ void ls_ptrlist_d(ls_ptrlist_t *pThis)
 {
     if (pThis->pstore != NULL)
         ls_pfree(pThis->pstore);
+}
+
+
+void ls_ptrlist_delete(ls_ptrlist_t *pThis)
+{
+    ls_ptrlist_d(pThis);
+    ls_pfree(pThis);
 }
 
 
@@ -212,8 +229,6 @@ ls_const_ptrlist_iter ls_ptrlist_bfind(
     return ls_ptrlist_end((ls_ptrlist_t *)pThis);
 }
 
-
-#include <util/swap.h>
 
 void ls_ptrlist_swap(
     ls_ptrlist_t *pThis, ls_ptrlist_t *pRhs)

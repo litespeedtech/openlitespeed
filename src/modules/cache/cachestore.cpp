@@ -61,6 +61,7 @@ int CacheStore::dispose(CacheStore::iterator iter, int isRemovePermEntry)
     return 0;
 }
 
+
 int CacheStore::purge(CacheEntry  *pEntry)
 {
     iterator iter = find(pEntry->getHashKey().getKey());
@@ -71,6 +72,7 @@ int CacheStore::purge(CacheEntry  *pEntry)
     }
     return 0;
 }
+
 
 int CacheStore::refresh(CacheEntry  *pEntry)
 {

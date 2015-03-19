@@ -23,11 +23,13 @@ LoadBalancer::LoadBalancer()
 {
 }
 
+
 LoadBalancer::LoadBalancer(const char *pName)
     : m_lastWorker(0)
 {
     setConfigPointer(new ExtWorkerConfig(pName));
 }
+
 
 LoadBalancer::~LoadBalancer()
 {
@@ -38,6 +40,7 @@ ExtConn *LoadBalancer::newConn()
 {
     return NULL;
 }
+
 
 int LoadBalancer::addWorker(ExtWorker *pWorker)
 {

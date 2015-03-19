@@ -16,26 +16,30 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "cgidconn.h"
-#include <http/httpcgitool.h>
-#include <http/httpsession.h>
-#include <http/httpextconnector.h>
-#include <http/httplog.h>
-#include <sys/socket.h>
-#include <http/httpstatuscode.h>
-#include <http/httpresourcemanager.h>
-#include <http/serverprocessconfig.h>
 
-#include <openssl/md5.h>
 #include "cgidworker.h"
 #include "cgidconfig.h"
 #include "suexec.h"
 
+#include <http/httpcgitool.h>
+#include <http/httpextconnector.h>
+#include <http/httplog.h>
+#include <http/httpresourcemanager.h>
+#include <http/httpsession.h>
+#include <http/serverprocessconfig.h>
+
+#include <sys/socket.h>
+#include <openssl/md5.h>
+
 CgidConn::CgidConn()
 {
 }
+
+
 CgidConn::~CgidConn()
 {
 }
+
 
 ExtRequest *CgidConn::getReq() const
 {
@@ -47,6 +51,7 @@ void CgidConn::init(int fd, Multiplexer *pMplx)
 {
     EdStream::init(fd, pMplx, POLLIN | POLLOUT | POLLHUP | POLLERR);
 }
+
 
 //interface defined by EdStream
 int CgidConn::doRead()
@@ -89,6 +94,7 @@ int CgidConn::doRead()
     return ret;
 }
 
+
 int CgidConn::readResp(char *pBuf, int size)
 {
     int len = read(pBuf, size);
@@ -97,6 +103,7 @@ int CgidConn::readResp(char *pBuf, int size)
     return len;
 
 }
+
 
 int CgidConn::doWrite()
 {
@@ -131,16 +138,17 @@ int CgidConn::doError(int error)
 }
 
 
-
 bool CgidConn::wantRead()
 {
     return false;
 }
 
+
 bool CgidConn::wantWrite()
 {
     return false;
 }
+
 
 //interface defined by HttpExtProcessor
 void CgidConn::abort()
@@ -148,6 +156,7 @@ void CgidConn::abort()
     setState(CLOSING);
     ::shutdown(getfd(), SHUT_RDWR);
 }
+
 
 void CgidConn::cleanUp()
 {
@@ -158,15 +167,19 @@ void CgidConn::cleanUp()
     recycle();
 }
 
+
 int CgidConn::begin()
 {
     return 1;
 }
 
+
 int CgidConn::beginReqBody()
 {
     return 1;
 }
+
+
 int CgidConn::endOfReqBody()
 {
     if (m_iTotalPending)
@@ -187,6 +200,7 @@ int  CgidConn::sendReqHeader()
     m_iTotalPending = m_req.size();
     return 1;
 }
+
 
 int CgidConn::sendReqBody(const char *pBuf, int size)
 {
@@ -214,6 +228,7 @@ int CgidConn::sendReqBody(const char *pBuf, int size)
 
     return ret;
 }
+
 
 int CgidConn::addRequest(ExtRequest *pReq)
 {
@@ -379,6 +394,7 @@ int CgidConn::buildReqHeader()
     return 0;
 }
 
+
 int CgidConn::removeRequest(ExtRequest *pReq)
 {
     if (getConnector())
@@ -389,13 +405,16 @@ int CgidConn::removeRequest(ExtRequest *pReq)
     return 0;
 }
 
+
 void CgidConn::onTimer()
 {
 }
 
+
 void CgidConn::dump()
 {
 }
+
 
 int  CgidConn::flush()
 {

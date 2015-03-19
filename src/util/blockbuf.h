@@ -25,7 +25,6 @@
 #include <sys/mman.h>
 
 #include <lsdef.h>
-#include <util/gpointerlist.h>
 //#include <util/linkedobj.h>
 
 #ifndef MAP_FILE

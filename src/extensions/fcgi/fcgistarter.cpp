@@ -16,17 +16,14 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "fcgistarter.h"
-#include "socket/coresocket.h"
 #include "fcgidef.h"
 #include "fcgiapp.h"
 #include "fcgiappconfig.h"
+
 #include <extensions/registry/extappregistry.h>
 #include <http/httplog.h>
-#include <socket/gsockaddr.h>
-
-#include <main/serverinfo.h>
-
 #include <lsr/ls_fileio.h>
+#include <main/serverinfo.h>
 
 #include <errno.h>
 #include <fcntl.h>
@@ -36,6 +33,8 @@
 FcgiStarter::FcgiStarter()
 {
 }
+
+
 FcgiStarter::~FcgiStarter()
 {
 }

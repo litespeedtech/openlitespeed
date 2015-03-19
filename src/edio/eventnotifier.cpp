@@ -16,7 +16,7 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "eventnotifier.h"
-#include "edio/multiplexer.h"
+#include <edio/multiplexer.h>
 
 #include <unistd.h>
 #include <fcntl.h>
@@ -31,6 +31,7 @@ EventNotifier::~EventNotifier()
     if (getfd() != -1)
         close(getfd());
 }
+
 
 int EventNotifier::handleEvents(short int event)
 {
@@ -58,6 +59,7 @@ int EventNotifier::handleEvents(short int event)
 
     return 0;
 }
+
 
 int EventNotifier::initNotifier(Multiplexer *pMultiplexer)
 {

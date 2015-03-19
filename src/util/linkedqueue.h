@@ -18,9 +18,7 @@
 #ifndef LINKQUEUE_H
 #define LINKQUEUE_H
 
-#include <lsr/ls_lock.h>
 #include <lsr/ls_lfqueue.h>
-#include <lsr/ls_pool.h>
 
 #include <cstddef>
 

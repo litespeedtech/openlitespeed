@@ -24,6 +24,7 @@
 #include <log4cxx/nsdefs.h>
 
 #include <stdarg.h>
+#include <sys/types.h>
 
 
 BEGIN_LOG4CXX_NS
@@ -165,7 +166,6 @@ public:
 #define LOG_ENABLED( logger, level ) HttpLog::isEnabled( logger, level )
 #define D_ENABLED( level ) HttpLog::isDebugEnabled( level )
 
-#include <sys/types.h>
 
 extern int archiveFile(const char *pFileName, const char *pSuffix,
                        int compress, uid_t uid, gid_t gid);

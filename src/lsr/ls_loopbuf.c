@@ -23,6 +23,10 @@
 #include <lsr/ls_xpool.h>
 
 #include <errno.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
 
 static int ls_loopbuf_iAppend(ls_loopbuf_t *pThis, const char *pBuf,
                               int size, ls_xpool_t *pool);

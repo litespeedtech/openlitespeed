@@ -16,7 +16,6 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #ifndef LSSHMDEBUG_H
-#include <http/httplog.h>
 
 #include <fcntl.h>
 #include <stdlib.h>

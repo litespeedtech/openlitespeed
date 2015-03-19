@@ -18,15 +18,13 @@
 #ifndef FCGIREQUEST_H
 #define FCGIREQUEST_H
 
-
+#include "fcgidef.h"
+#include "fcgienv.h"
 
 #include <lsdef.h>
 #include <extensions/extrequest.h>
-#include <extensions/fcgi/fcgienv.h>
-#include <extensions/fcgi/fcgirecord.h>
 #include <extensions/httpextprocessor.h>
 #include <util/iovec.h>
-
 
 /*
  * Mask for flags component of FCGI_BeginRequestBody

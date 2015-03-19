@@ -16,10 +16,12 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "pipenotifier.h"
-#include <../../http/httpsession.h>
+#include <../include/ls.h>
+#include "../../edio/multiplexer.h"
+
+#include <sys/socket.h>
 #include <unistd.h>
 #include <fcntl.h>
-#include "../../edio/multiplexer.h"
 
 
 PipeNotifier::~PipeNotifier()

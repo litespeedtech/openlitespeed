@@ -556,7 +556,7 @@ void InitDir(const StringPiece &directive,
     if (path.size() == 0 || path[0] != '/')
     {
         g_api->log(NULL, LSI_LOG_ERROR, "[%s] %s %s must start with a slash.\n",
-                   ModuleName, directive.as_string().c_str(), 
+                   ModuleName, directive.as_string().c_str(),
                    path.as_string().c_str());
         return ;
     }
@@ -604,7 +604,7 @@ void InitDir(const StringPiece &directive,
         {
             g_api->log(NULL, LSI_LOG_ERROR,
                        "[%s] %s path %s unable to set permissions.\n",
-                       ModuleName, directive.as_string().c_str(), 
+                       ModuleName, directive.as_string().c_str(),
                        path.as_string().c_str());
             return ;
         }
@@ -797,7 +797,7 @@ static int PostConfig(lsi_cb_param_t *rec)
             cfg_s->serverContext->global_options()->Merge(*vhost_option);
             cfg_s->handler =
                 g_pMainConf->driverFactory->message_handler();
-                // LsiMessageHandler(pMainConf->driver_factory->thread_system()->NewMutex());  
+                // LsiMessageHandler(pMainConf->driver_factory->thread_system()->NewMutex());
                 //Why GoogleMessageHandler() but not LsMessageHandler
 
             if (cfg_s->serverContext->global_options()->enabled())
@@ -1125,7 +1125,7 @@ bool DetermineOptions(lsi_session_t *session,
     // Request-specific options, nearly always null.  If set they need to be
     // rebased on the directory options.
     RewriteOptions *request_options = DetermineRequestOptions(
-                                          session, options, request_headers, 
+                                          session, options, request_headers,
                                           response_headers, request_context,
                                           cfg_s, url, pagespeed_query_params,
                                           pagespeed_option_cookies);
@@ -1763,7 +1763,7 @@ int HtmlRewriteFixHeadersFilter(PsMData *pMyData,
     return 0;
 }
 
-int InPlaceCheckHeaderFilter(PsMData *pMyData, lsi_session_t *session, 
+int InPlaceCheckHeaderFilter(PsMData *pMyData, lsi_session_t *session,
                              ps_request_ctx_t *ctx)
 {
 
@@ -1874,7 +1874,7 @@ int InPlaceCheckHeaderFilter(PsMData *pMyData, lsi_session_t *session,
     {
         server_context->rewrite_stats()->ipro_not_rewritable()->Add(1);
         message_handler->Message(kInfo,
-                                 "Could not rewrite resource in-place: %s", 
+                                 "Could not rewrite resource in-place: %s",
                                  url.c_str());
     }
 
@@ -2018,7 +2018,7 @@ void UpdateEtag(lsi_cb_param_t *rec)
         g_api->remove_resp_header(rec->_session, -1, kInternalEtagName,
                                   strlen(kInternalEtagName));
         g_api->set_resp_header(rec->_session, LSI_RESP_HEADER_ETAG, NULL, 0,
-                               (const char *) iov[0].iov_base, 
+                               (const char *) iov[0].iov_base,
                                iov[0].iov_len, LSI_HEADER_SET);
     }
 }
@@ -2177,7 +2177,7 @@ static int UriMapFilter(lsi_cb_param_t *rec)
         //statuc_code already set.
         g_api->register_req_handler(rec->_session, &MNAME, 0);
         g_api->log(rec->_session, LSI_LOG_INFO,
-                   "[%s]ps_uri_map_filter register_req_handler OK.\n", 
+                   "[%s]ps_uri_map_filter register_req_handler OK.\n",
                    ModuleName);
     }
     return 0;
@@ -2248,7 +2248,7 @@ static int RecvReqHeaderCheck(lsi_cb_param_t *rec)
     if (method == HTTP_UNKNOWN)
     {
         g_api->log(rec->_session, LSI_LOG_INFO,
-                   "[%s]recv_req_header_check returned, method %s.\n", 
+                   "[%s]recv_req_header_check returned, method %s.\n",
                    ModuleName,
                    httpMethod);
         return 0;
@@ -2301,11 +2301,13 @@ static int RecvReqHeaderCheck(lsi_cb_param_t *rec)
     //Disable cache module
     g_api->set_req_env(rec->_session, "cache-control", 13, "no-cache", 8);
 
+    int iEnableHkpt;
     switch (response_category)
     {
     case RequestRouting::kBeacon:
-        g_api->set_session_hook_enable_flag(rec->_session, LSI_HKPT_URI_MAP,
-                                            &MNAME, 1); 
+        iEnableHkpt = LSI_HKPT_URI_MAP;
+        g_api->set_session_hook_enable_flag(rec->_session, &MNAME, 1,
+                                            &iEnableHkpt, 1);
         //Go to URI_MAP and next step and this is the reason of
         //why URI_MAP does not check the response_category, if
         //in the future we need to do more thing in URI_MAP, check.
@@ -2384,7 +2386,7 @@ void EventCb(void *session_)
     }
 
     g_api->log(session, LSI_LOG_DEBUG,
-               "[%s]ps_event_cb triggered, session=%ld\n", 
+               "[%s]ps_event_cb triggered, session=%ld\n",
                ModuleName, (long) session_);
 
     if (pMyData->notifier_pointer)
@@ -2476,6 +2478,6 @@ static int Init(lsi_module_t *pModule)
 
 lsi_config_t dealConfig = { ParseConfig, FreeConfig, paramArray };
 lsi_handler_t _handler = { PsHandlerProcess, NULL, NULL, NULL };
-lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, Init, &_handler, &dealConfig, 
+lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, Init, &_handler, &dealConfig,
     "v1.4-1.9.32.3", serverHooks, {0} };
 

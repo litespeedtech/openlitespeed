@@ -19,8 +19,9 @@
 #define MODULEHANDLER_H
 
 #include <http/reqhandler.h>
-#include <http/httphandler.h>
-#include <http/httpsession.h>
+
+class HttpHandler;
+class HttpSession;
 
 class ModuleHandler : public ReqHandler
 {

@@ -16,11 +16,13 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 
-#include "../include/ls.h"
+#include <ls.h>
+#include <lsdef.h>
+#include <lsr/ls_loopbuf.h>
+#include <lsr/ls_xpool.h>
+
 #include <stdlib.h>
 #include <string.h>
-#include <lsr/ls_loopbuf.h>
-#include <lsdef.h>
 
 /**
  * Define the module name, MUST BE the same as .so file name;

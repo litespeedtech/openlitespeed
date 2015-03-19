@@ -21,7 +21,6 @@
 
 
 #include <lsdef.h>
-#include <http/httpcgitool.h>
 #include <http/httpextconnector.h>
 #include <extensions/fcgi/fcgienv.h>
 

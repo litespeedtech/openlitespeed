@@ -29,11 +29,13 @@ CacheHash::~CacheHash()
 {
 }
 
+
 #ifdef notdef
 void CacheHash::init()
 {
     memset(m_key, 0, 8);
 }
+
 
 void CacheHash::hash(const char *pBuf, int len)
 {
@@ -43,12 +45,14 @@ void CacheHash::hash(const char *pBuf, int len)
 }
 #endif
 
+
 hash_key_t CacheHash::to_ghash_key(const void *__s)
 {
     hash_key_t __h = *((uint64_t *)__s);
 
     return __h;
 }
+
 
 int CacheHash::compare(const void *pVal1, const void *pVal2)
 {   return  *((uint64_t *)pVal1) - *((uint64_t *)pVal2);    }

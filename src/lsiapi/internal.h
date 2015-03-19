@@ -22,6 +22,7 @@
 #define LSAPI_INTERNAL_H
 
 struct lsi_session_s;
+class ModIndex;
 class ModuleConfig;
 class LogTracker;
 
@@ -54,12 +55,19 @@ typedef struct lsi_module_internal_s
      * @since 1.0
      */
     int32_t                      priority[LSI_HKPT_TOTAL_COUNT];
+
+    /**
+     * @brief Initially set to NULL.  After a module is loaded,
+     * it will be set to the index for each hook level.
+     */
+    ModIndex                    *hook_index;
 } lsi_module_internal_t;
 
 #define MODULE_NAME(x)      (((lsi_module_internal_t *)x->_reserved)->name )
 #define MODULE_ID(x)        (((lsi_module_internal_t *)x->_reserved)->id )
 #define MODULE_DATA_ID(x)   ((lsi_module_internal_t *)x->_reserved)->data_id
 #define MODULE_PRIORITY(x)  ((lsi_module_internal_t *)x->_reserved)->priority
+#define MODULE_HOOKINDEX(x) ((lsi_module_internal_t *)x->_reserved)->hook_index
 
 
 //#if sizeof( struct lsi_module_internal_t ) > LSI_MODULE_RESERVED_SIZE
@@ -90,5 +98,4 @@ protected:
     LS_NO_COPY_ASSIGN(LsiSession);
 };
 
-typedef int (* filter_term_fn)(LsiSession *, void *, int);
 #endif

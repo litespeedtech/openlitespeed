@@ -134,7 +134,6 @@ public:
     int addSubNetControl(const char *ip_mask, int allowed);
     void clear();
     int addList(const char *pList, int allow);
-    int config(const XmlNode *pNode);
     static int isAvailable(const XmlNode *pNode);
 
     static AccessControl *getAccessCtrl()

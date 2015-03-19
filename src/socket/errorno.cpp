@@ -26,6 +26,8 @@ const char *ErrorNo::getFreezedErrStr()
 {
     return memccpy(m_achErrStr, ::strerror(m_iErrNo), 0, ERROR_STR_LEN - 1);
 }
+
+
 const char *ErrorNo::getErrStr()
 {
     return memccpy(m_achErrStr, ::strerror(errno), 0, ERROR_STR_LEN - 1);

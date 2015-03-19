@@ -22,6 +22,9 @@
 #endif
 
 #include "lscgid.h"
+
+#include <lsdef.h>
+#include <util/fdpass.h>
 #include <util/stringtool.h>
 
 #include <dlfcn.h>
@@ -42,8 +45,6 @@
 #include <pwd.h>
 #include <time.h>
 #include <unistd.h>
-#include "util/fdpass.h"
-#include <lsdef.h>
 
 
 #define uint32_t unsigned long
@@ -89,6 +90,7 @@ static int load_lve_lib()
     return (s_liblve) ? 0 : -1;
 }
 
+
 static int init_lve()
 {
     int rc;
@@ -133,8 +135,6 @@ static char         s_sDataBuf[16384];
 static int          s_fdControl = -1;
 
 
-
-
 static void set_cgi_error(char *p, char *p2)
 {
     int n = snprintf(s_sError, 127, "%s:%s: %s\n", p, (p2) ? p2 : "",
@@ -142,6 +142,8 @@ static void set_cgi_error(char *p, char *p2)
     write(STDERR_FILENO, s_sError, n);
     s_pError = s_sError;
 }
+
+
 static int timed_read(int fd, char *pBuf, int len, int timeout)
 {
     struct pollfd   pfd;
@@ -196,6 +198,7 @@ static int timed_read(int fd, char *pBuf, int len, int timeout)
     return len;
 }
 
+
 static int writeall(int fd, const char *pBuf, int len)
 {
     int left = len;
@@ -217,6 +220,7 @@ static int writeall(int fd, const char *pBuf, int len)
     }
     return len;
 }
+
 
 static int cgiError(int fd, int status)
 {
@@ -277,6 +281,7 @@ static int setUIDs(uid_t uid, gid_t gid, char *pChroot)
     }
     return 0;
 }
+
 
 static int applyLimits(lscgid_req *pCGI)
 {
@@ -411,6 +416,7 @@ static int execute_cgi(lscgid_t *pCGI)
     return 0;
 }
 
+
 static int process_req_data(lscgid_t *cgi_req)
 {
     char *p = cgi_req->m_pBuf;
@@ -497,6 +503,7 @@ static int process_req_data(lscgid_t *cgi_req)
 
 }
 
+
 #define MAX_CGI_DATA_LEN 65536
 
 static int process_req_header(lscgid_t *cgi_req)
@@ -537,6 +544,8 @@ static int process_req_header(lscgid_t *cgi_req)
                                cgi_req->m_data.m_nargv);
     return 0;
 }
+
+
 
 static int recv_req(int fd, lscgid_t *cgi_req, int timeout)
 {
@@ -639,6 +648,7 @@ static void child_main(int fd)
     exit(0);
 }
 
+
 static int new_conn(int fd)
 {
     pid_t pid;
@@ -652,6 +662,7 @@ static int new_conn(int fd)
         perror("lscgid: fork() failed");
     return pid;
 }
+
 
 static int run(int fdServerSock)
 {
@@ -685,13 +696,13 @@ static void sigterm(int sig)
     s_run = 0;
 }
 
+
 static void sigusr1(int sig)
 {
     pid_t pid = getppid();
     if (pid != -1)
         kill(pid, SIGHUP);
 }
-
 
 
 static void sigchild(int sig)
@@ -729,6 +740,8 @@ static void sigchild(int sig)
     }
 
 }
+
+
 //#define LOCAL_TEST
 
 #ifndef sighandler_t

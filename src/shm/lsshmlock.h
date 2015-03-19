@@ -18,12 +18,10 @@
 #ifndef LSSHMLOCK_H
 #define LSSHMLOCK_H
 
+#include <shm/lsshmtypes.h>
+
 #include <assert.h>
 #include <stdint.h>
-#include <pthread.h>
-#include <sys/types.h>
-
-#include "lsshmtypes.h"
 
 /**
  * @file
@@ -71,6 +69,8 @@ public:
     ~LsShmLock();
 
     static const char *getDefaultShmDir();
+
+    void deleteFile();
 
     const char *fileName() const
     {   return m_pFileName; }
@@ -159,7 +159,6 @@ private:
     char               *m_pFileName;
     char               *m_pMapName;
     int                 m_iFd;
-    int                 m_iRemoveFlag;
     LsShmLockMap       *m_pShmLockMap;
     LsShmLockElem      *m_pShmLockElem;
     LsShmSize_t         m_iMaxSizeO;

@@ -16,14 +16,14 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include <util/accesscontrol.h>
+
 #include <util/accessdef.h>
 #include <util/gpointerlist.h>
-#include <util/stringtool.h>
+#include <util/pool.h>
 #include <util/poolalloc.h>
-#include <util/sysinfo/systeminfo.h>
-#include <http/httplog.h>
-#include "util/configctx.h"
+#include <util/stringtool.h>
 #include <util/xmlnode.h>
+#include <util/sysinfo/systeminfo.h>
 
 #include <assert.h>
 #include <ctype.h>
@@ -40,10 +40,12 @@ typedef union
 
 AccessControl *AccessControl::s_pAccessCtrl = NULL;
 
+
 static int isIPv6(const char *ip_mask)
 {
     return (('[' == *ip_mask) || (strchr(ip_mask, ':')));
 }
+
 
 static int strToIPv6(char *ip, in6_addr *pAddr)
 {
@@ -58,8 +60,6 @@ static int strToIPv6(char *ip, in6_addr *pAddr)
     return inet_pton(AF_INET6, ip, pAddr);
 }
 
-
-#include <util/pool.h>
 
 class IP6Acc
 {
@@ -106,7 +106,6 @@ public:
 };
 
 
-
 class IP6AccessControl : public THash< IP6Acc * >
 {
     typedef THash< IP6Acc * > IP6Hash;
@@ -136,7 +135,6 @@ public:
 };
 
 
-
 int IP6AccessControl::addUpdate(const in6_addr &ip, long allow)
 {
     iterator iter = find(&ip);
@@ -151,8 +149,6 @@ int IP6AccessControl::addUpdate(const in6_addr &ip, long allow)
         iter.second()->setAccess(allow);
     return 0;
 }
-
-
 
 
 class SubNetNode
@@ -188,10 +184,12 @@ public:
     LS_NO_COPY_ASSIGN(SubNetNode);
 };
 
+
 SubNetNode::~SubNetNode()
 {
     clear();
 }
+
 
 void SubNetNode::clear()
 {
@@ -201,6 +199,7 @@ void SubNetNode::clear()
     m_children.clear();
 }
 
+
 SubNetNode *SubNetNode::insertChild(in_addr_t ip, in_addr_t mask,
                                     int allowed)
 {
@@ -209,6 +208,7 @@ SubNetNode *SubNetNode::insertChild(in_addr_t ip, in_addr_t mask,
     return insertChild(pNewChild);
 
 }
+
 
 SubNetNode *SubNetNode::insertChild(SubNetNode *pNode)
 {
@@ -246,6 +246,7 @@ SubNetNode *SubNetNode::insertChild(SubNetNode *pNode)
     return pNode;
 }
 
+
 SubNetNode *SubNetNode::matchNode(in_addr_t ip)
 {
     NodeList::const_iterator pos;
@@ -258,7 +259,6 @@ SubNetNode *SubNetNode::matchNode(in_addr_t ip)
     }
     return NULL;
 }
-
 
 
 class SubNet6Node
@@ -305,10 +305,12 @@ public:
     LS_NO_COPY_ASSIGN(SubNet6Node);
 };
 
+
 SubNet6Node::~SubNet6Node()
 {
     clear();
 }
+
 
 void SubNet6Node::clear()
 {
@@ -317,6 +319,7 @@ void SubNet6Node::clear()
         delete *iter;
     m_children.clear();
 }
+
 
 SubNet6Node *SubNet6Node::insertChild(const in6_addr &ip,
                                       const in6_addr &mask, int allowed)
@@ -327,6 +330,7 @@ SubNet6Node *SubNet6Node::insertChild(const in6_addr &ip,
     return insertChild(pNewChild);
 
 }
+
 
 SubNet6Node *SubNet6Node::insertChild(SubNet6Node *pNode)
 {
@@ -367,6 +371,7 @@ SubNet6Node *SubNet6Node::insertChild(SubNet6Node *pNode)
     return pNode;
 }
 
+
 SubNet6Node *SubNet6Node::matchNode(const in6_addr &ip)
 {
     NodeList::const_iterator pos;
@@ -383,8 +388,6 @@ SubNet6Node *SubNet6Node::matchNode(const in6_addr &ip)
 }
 
 
-
-
 AccessControl::AccessControl()
     : m_ipCtrl(13)
     , m_pIp6Ctrl(NULL)
@@ -394,6 +397,8 @@ AccessControl::AccessControl()
     memset(&addr, 0, sizeof(addr));
     m_pRoot6 = new SubNet6Node(addr, addr, true);
 }
+
+
 AccessControl::~AccessControl()
 {
     delete m_pRoot;
@@ -401,6 +406,7 @@ AccessControl::~AccessControl()
     if (m_pIp6Ctrl)
         delete m_pIp6Ctrl;
 }
+
 
 int AccessControl::hasAccess(const struct sockaddr *pAddr) const
 {
@@ -421,6 +427,7 @@ int AccessControl::hasAccess(const struct sockaddr *pAddr) const
     return false;
 }
 
+
 int AccessControl::hasAccess(in_addr_t ip) const
 {
     if (m_ipCtrl.size())
@@ -438,6 +445,7 @@ int AccessControl::hasAccess(in_addr_t ip) const
 
     return pCurNode->hasAccess();
 }
+
 
 int AccessControl::hasAccess(const char *pchIP) const
 {
@@ -459,6 +467,7 @@ int AccessControl::hasAccess(const char *pchIP) const
         return hasAccess(ip);
     }
 }
+
 
 static int checkTrust(char *ip_mask, int allowed)
 {
@@ -521,6 +530,7 @@ void AccessControl::removeIPControl(const char *pchIP)
     }
 }
 
+
 int AccessControl::addSubNetControl(in_addr_t subNet,
                                     in_addr_t mask,
                                     int allowed)
@@ -535,6 +545,7 @@ int AccessControl::addSubNetControl(in_addr_t subNet,
 
     return insSubNetControl(subNet, mask, allowed);
 }
+
 
 int AccessControl::insSubNetControl(in_addr_t subNet,
                                     in_addr_t mask,
@@ -557,6 +568,7 @@ int AccessControl::insSubNetControl(in_addr_t subNet,
     return 0;
 }
 
+
 static unsigned char s_maskbits[8] = { 0x00, 0x80, 0xC0, 0xE0, 0xF0, 0xF8, 0xFC, 0xFE };
 int AccessControl::parseNetmask(const char *netMask, int maxbits,
                                 void *pMask)
@@ -575,9 +587,8 @@ int AccessControl::parseNetmask(const char *netMask, int maxbits,
     }
     else
         return ((maxbits != 32) || (0 >= inet_pton(AF_INET, netMask, pMask)));
-
-
 }
+
 
 int AccessControl::addSubNetControl(const char *ip, const char *netMask,
                                     int allowed)
@@ -602,6 +613,7 @@ int AccessControl::addSubNetControl(const char *ip, const char *netMask,
         return LS_FAIL;
     return addSubNetControl(addr, mask, allowed);
 }
+
 
 int AccessControl::addIPv4(const char *ip_mask, int allowed)
 {
@@ -689,12 +701,14 @@ int AccessControl::addSubNetControl(const char *ip_mask, int allowed)
 
 }
 
+
 void AccessControl::clear()
 {
     m_pRoot->clear();
     m_pRoot6->clear();
     m_ipCtrl.clear();
 }
+
 
 int AccessControl::addList(const char *pList, int allow)
 {
@@ -728,6 +742,7 @@ int AccessControl::addList(const char *pList, int allow)
     return added;
 }
 
+
 int AccessControl::hasAccess(const in6_addr &ip) const
 {
     if (m_pIp6Ctrl)
@@ -744,6 +759,7 @@ int AccessControl::hasAccess(const in6_addr &ip) const
 
     return pCurNode->hasAccess();
 }
+
 
 int AccessControl::addIPControl(const in6_addr &ip, int allowed)
 {
@@ -762,7 +778,6 @@ int AccessControl::addIPControl(const in6_addr &ip, int allowed)
         return m_pIp6Ctrl->addUpdate(ip, allowed);
     return LS_FAIL;
 }
-
 
 
 int AccessControl::addSubNetControl(const in6_addr &subNet,
@@ -792,6 +807,7 @@ int AccessControl::addSubNetControl(const in6_addr &subNet,
     return insSubNetControl(subNet, mask, allowed);
 }
 
+
 int AccessControl::insSubNetControl(const in6_addr &subNet,
                                     const in6_addr &mask,
                                     int allowed)
@@ -812,46 +828,7 @@ int AccessControl::insSubNetControl(const in6_addr &subNet,
     return 0;
 }
 
-int AccessControl::config(const XmlNode *pNode)
-{
-    int c;
-    const char *pValue;
-    const XmlNode *pNode1 = pNode->getChild("accessControl");
-    clear();
 
-    if (pNode1)
-    {
-        pValue = pNode1->getChildValue("allow");
-
-        if (pValue)
-        {
-            c = addList(pValue, true);
-
-            if (D_ENABLED(DL_LESS))
-                ConfigCtx::getCurConfigCtx()->logDebug("add %d entries into allowed list.",
-                                                       c);
-        }
-        else
-            ConfigCtx::getCurConfigCtx()->logWarn("Access Control: No entries in allowed list");
-
-        pValue = pNode1->getChildValue("deny");
-
-        if (pValue)
-        {
-            c = addList(pValue, false);
-
-            if (D_ENABLED(DL_LESS))
-                ConfigCtx::getCurConfigCtx()->logDebug("add %d entries into denied list.",
-                                                       c);
-        }
-    }
-    else
-    {
-        if (D_ENABLED(DL_LESS))
-            ConfigCtx::getCurConfigCtx()->logDebug("no rule for access control.");
-    }
-    return 0;
-}
 int AccessControl::isAvailable(const XmlNode *pNode)
 {
     const XmlNode *pNode1 = pNode->getChild("accessControl");

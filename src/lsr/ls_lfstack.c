@@ -61,28 +61,28 @@ void ls_lfstack_delete(ls_lfstack_t *pThis)
 
 static int ls_lfstack_trypush(ls_lfstack_t *pThis, ls_lfnodei_t *pNode)
 {
-    ls_atom_ptr_t oldHead;
-    ls_atom_ptr_t newHead;
-    LSR_ATOMIC_LOAD(oldHead, (ls_atom_ptr_t *) & (pThis->head));
+    ls_atom_xptr_t oldHead;
+    ls_atom_xptr_t newHead;
+    ls_atomic_load(oldHead, (ls_atom_xptr_t *) & (pThis->head));
     pNode->next = oldHead.m_ptr;
     newHead.m_ptr = pNode;
     newHead.m_seq = oldHead.m_seq + 1;
-    return ls_atomic_dcas((ls_atom_ptr_t *) & (pThis->head), &oldHead,
+    return ls_atomic_dcas((ls_atom_xptr_t *) & (pThis->head), &oldHead,
                           &newHead);
 }
 
 static int ls_lfstack_trypop(ls_lfstack_t *pThis, ls_lfnodei_t **ret)
 {
-    ls_atom_ptr_t oldHead;
-    ls_atom_ptr_t newHead;
+    ls_atom_xptr_t oldHead;
+    ls_atom_xptr_t newHead;
     *ret = NULL;
-    LSR_ATOMIC_LOAD(oldHead, (ls_atom_ptr_t *) & (pThis->head));
+    ls_atomic_load(oldHead, (ls_atom_xptr_t *) & (pThis->head));
     if (oldHead.m_ptr == NULL)
         return 1;
     *ret = oldHead.m_ptr;
-    LSR_ATOMIC_LOAD(newHead.m_ptr, (void **) & ((*ret)->next));
+    ls_atomic_load(newHead.m_ptr, (void **) & ((*ret)->next));
     newHead.m_seq = oldHead.m_seq + 1;
-    if (ls_atomic_dcas((ls_atom_ptr_t *) & (pThis->head), &oldHead, &newHead))
+    if (ls_atomic_dcas((ls_atom_xptr_t *) & (pThis->head), &oldHead, &newHead))
     {
         (*ret)->next = NULL;
         return 1;

@@ -16,11 +16,14 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "connlimitctrl.h"
-#include "httpdefs.h"
-#include "httplistener.h"
-#include "httplistenerlist.h"
+
+#include <http/httpdefs.h>
+#include <http/httplistener.h>
+#include <http/httplistenerlist.h>
+
 #include <assert.h>
 #include <stdio.h>
+
 
 ConnLimitCtrl::ConnLimitCtrl()
     : m_iMaxConns(DEFAULT_MAX_CONNS)
@@ -32,9 +35,9 @@ ConnLimitCtrl::ConnLimitCtrl()
     , m_pListeners(NULL)
 {}
 
+
 ConnLimitCtrl::~ConnLimitCtrl()
 {}
-
 
 
 void ConnLimitCtrl::testLimit()
@@ -43,11 +46,13 @@ void ConnLimitCtrl::testLimit()
         suspendAll();
 }
 
+
 void ConnLimitCtrl::testSSLLimit()
 {
     if (!allowSSLConn() && allowConn())
         suspendSSL();
 }
+
 
 void ConnLimitCtrl::tryResume()
 {
@@ -60,11 +65,13 @@ void ConnLimitCtrl::tryResume()
         resumeAllButSSL();
 }
 
+
 void ConnLimitCtrl::tryResumeSSL()
 {
     if (allowConn())
         resumeSSL();
 }
+
 
 void ConnLimitCtrl::suspendAll()
 {
@@ -74,11 +81,13 @@ void ConnLimitCtrl::suspendAll()
     m_pListeners->suspendAll();
 }
 
+
 void ConnLimitCtrl::suspendSSL()
 {
     assert(m_pListeners);
     m_pListeners->suspendSSL();
 }
+
 
 void ConnLimitCtrl::resumeSSL()
 {
@@ -86,17 +95,20 @@ void ConnLimitCtrl::resumeSSL()
     m_pListeners->resumeSSL();
 }
 
+
 void ConnLimitCtrl::resumeAll()
 {
     assert(m_pListeners);
     m_pListeners->resumeAll();
 }
 
+
 void ConnLimitCtrl::resumeAllButSSL()
 {
     assert(m_pListeners);
     m_pListeners->resumeAllButSSL();
 }
+
 
 void ConnLimitCtrl::tryAcceptNewConn()
 {
@@ -114,6 +126,7 @@ void ConnLimitCtrl::tryAcceptNewConn()
         }
     }
 }
+
 
 void ConnLimitCtrl::checkWaterMark()
 {

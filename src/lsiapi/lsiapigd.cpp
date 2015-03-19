@@ -15,36 +15,27 @@
 *    You should have received a copy of the GNU General Public License       *
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
-#include <lsiapi/lsiapi.h>
-#include <lsiapi/lsiapigd.h>
-#include <util/vmembuf.h>
-#include <fcntl.h>
-#include <sys/stat.h>
-#include <unistd.h>
-#include "modulemanager.h"
-#include "util/ghash.h"
-#include <http/staticfilecachedata.h>
-#include <lsiapi/lsiapi.h>
+#include "lsiapigd.h"
+
+#include <lsdef.h>
+#include <lsr/xxhash.h>
 #include <main/mainserverconfig.h>
-#include <dirent.h>
-#include <dlfcn.h>
-#include <errno.h>
-#include <lsr/ls_fileio.h>
-#include <util/gpath.h>
 #include <util/datetime.h>
-#include <stdio.h>
+#include <util/gpath.h>
+
+#include <fcntl.h>
+#include <sys/mman.h>
+#include <unistd.h>
 
 static hash_key_t  lsi_global_data_hash_fn(const void *val)
 {
     const gdata_key_t *key = (const gdata_key_t *)val;
-    hash_key_t __h = 0;
     const char *p = (const char *)key->key_str;
     int count = key->key_str_len;
-    while (count-- > 0)
-        __h = __h * 37 + *((const char *)p++);
 
-    return __h;
+    return XXH32((const char *)p, count, 0);
 }
+
 
 static int  lsi_global_data_cmp(const void *pVal1, const void *pVal2)
 {
@@ -56,12 +47,14 @@ static int  lsi_global_data_cmp(const void *pVal1, const void *pVal2)
     return memcmp(pKey1->key_str, pKey2->key_str, pKey1->key_str_len);
 }
 
+
 void init_gdata_hashes()
 {
     for (int i = 0; i < LSI_CONTAINER_COUNT; ++i)
         LsiapiBridge::g_aGDataContainer[i] = new GDataContainer(30,
                 lsi_global_data_hash_fn, lsi_global_data_cmp);
 }
+
 
 void release_gdata_container(GDataHash *containerInfo)
 {
@@ -73,6 +66,7 @@ void release_gdata_container(GDataHash *containerInfo)
         free(iter.second()->key.key_str);
     }
 }
+
 
 void uninit_gdata_hashes()
 {
@@ -171,6 +165,7 @@ void erase_gdata_elem(lsi_gdata_cont_t *containerInfo,
     containerInfo->container->erase(iter);
 }
 
+
 static FILE *open_file_to_write_n_check_dir(const char *file_path)
 {
     FILE *fp = fopen(file_path, "wb");
@@ -182,7 +177,7 @@ static FILE *open_file_to_write_n_check_dir(const char *file_path)
     return fp;
 }
 
-//-1 error
+
 static int recover_file_gdata(lsi_gdata_cont_t *containerInfo,
                               const char *key, int key_len, const char *file_path,
                               GDataHash::iterator &iter, lsi_release_callback_pf release_cb,
@@ -275,8 +270,8 @@ static int recover_file_gdata(lsi_gdata_cont_t *containerInfo,
 //Should use gdata_container_val_st instead of GDataHash
 //cahe FILE mtim should always be NEWer or the same (>=) than cache buffer
 LSIAPI void *get_gdata(lsi_gdata_cont_t *containerInfo, const char *key,
-                       int key_len, lsi_release_callback_pf release_cb, int renew_TTL,
-                       lsi_deserialize_pf deserialize_cb)
+                       int key_len, lsi_release_callback_pf release_cb,
+                       int renew_TTL, lsi_deserialize_pf deserialize_cb)
 {
     GDataHash *pCont = containerInfo->container;
     GDataHash::iterator iter = get_gdata_iterator(pCont, key, key_len);
@@ -285,80 +280,83 @@ LSIAPI void *get_gdata(lsi_gdata_cont_t *containerInfo, const char *key,
     time_t  tm = DateTime::s_curTime;
     char file_path[LSI_MAX_FILE_PATH_LEN] = {0};
 
-    //item exists
-    if (iter != pCont->end())
+    if (iter == pCont->end())
     {
+        if (containerInfo->type == LSI_CONTAINER_MEMORY)
+            return NULL;
+
+        gdata_key_t key_st = {(char *)key, key_len};
+        buildFileDataLocation(file_path, LSI_MAX_FILE_PATH_LEN, key_st, "i",
+                                containerInfo->type);
+        if (recover_file_gdata(containerInfo, key, key_len, file_path, iter,
+                                release_cb, deserialize_cb) != 0)
+        {
+            unlink(file_path);
+            return NULL;
+        }
         pItem = iter.second();
-        //container emptied
-        if (pItem->tmcreate < containerInfo->tmcreate)
+        pItem->tmaccess = tm;
+        return pItem->value;
+    }
+
+    //item exists
+    pItem = iter.second();
+    //container emptied
+    if (pItem->tmcreate < containerInfo->tmcreate)
+    {
+        erase_gdata_elem(containerInfo, iter);
+        return NULL;
+    }
+
+    TTL = pItem->tmexpire - pItem->tmcreate;
+    if (containerInfo->type == LSI_CONTAINER_MEMORY)
+    {
+        if (renew_TTL)
+            renew_gdata_TTL(iter, TTL, LSI_CONTAINER_MEMORY, NULL);
+        pItem->tmaccess = tm;
+        return pItem->value;
+    }
+    //if last access time is still same as tm
+    if (pItem->tmaccess == tm)
+    {
+        pItem->tmaccess = tm;
+        return pItem->value;
+    }
+
+    buildFileDataLocation(file_path, LSI_MAX_FILE_PATH_LEN, pItem->key, "i",
+                        containerInfo->type);
+
+    if (renew_TTL)
+    {
+        renew_gdata_TTL(iter, TTL, LSI_CONTAINER_FILE, file_path);
+        pItem->tmaccess = tm;
+        return pItem->value;
+    }
+
+    if (tm > GDATA_FILE_NOCHECK_TIMEOUT + pItem->tmaccess)
+    {
+        struct stat st;
+        if (stat(file_path, &st) == -1)
         {
             erase_gdata_elem(containerInfo, iter);
             return NULL;
         }
-
-        TTL = pItem->tmexpire - pItem->tmcreate;
-        if (containerInfo->type == LSI_CONTAINER_MEMORY)
+        else if (pItem->tmcreate != st.st_mtime)
         {
-            if (renew_TTL)
-                renew_gdata_TTL(iter, TTL, LSI_CONTAINER_MEMORY, NULL);
-        }
-        else
-        {
-            //if last access time is still same as tm
-            if (pItem->tmaccess != tm)
+            pItem->release_cb(pItem->value);
+            if (recover_file_gdata(containerInfo, key, key_len, file_path,
+                                   iter, release_cb, deserialize_cb) != 0)
             {
-                buildFileDataLocation(file_path, LSI_MAX_FILE_PATH_LEN, pItem->key, "i",
-                                      containerInfo->type);
-
-                if (renew_TTL)
-                    renew_gdata_TTL(iter, TTL, LSI_CONTAINER_FILE, file_path);
-                else
-                {
-                    if (tm > GDATA_FILE_NOCHECK_TIMEOUT + pItem->tmaccess)
-                    {
-                        struct stat st;
-                        if (stat(file_path, &st) == -1)
-                        {
-                            erase_gdata_elem(containerInfo, iter);
-                            return NULL;
-                        }
-                        else if (pItem->tmcreate != st.st_mtime)
-                        {
-                            pItem->release_cb(pItem->value);
-                            if (recover_file_gdata(containerInfo, key, key_len, file_path, iter,
-                                                   release_cb, deserialize_cb) != 0)
-                            {
-                                erase_gdata_elem(containerInfo, iter);
-                                return NULL;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-    else //not exists
-    {
-        if (containerInfo->type == LSI_CONTAINER_MEMORY)
-            return NULL;
-        else
-        {
-            gdata_key_t key_st = {(char *)key, key_len};
-            buildFileDataLocation(file_path, LSI_MAX_FILE_PATH_LEN, key_st, "i",
-                                  containerInfo->type);
-            if (recover_file_gdata(containerInfo, key, key_len, file_path, iter,
-                                   release_cb, deserialize_cb) != 0)
-            {
-                unlink(file_path);
+                erase_gdata_elem(containerInfo, iter);
                 return NULL;
             }
-            pItem = iter.second();
         }
     }
 
     pItem->tmaccess = tm;
     return pItem->value;
 }
+
 
 LSIAPI int delete_gdata(lsi_gdata_cont_t *containerInfo, const char *key,
                         int key_len)
@@ -371,6 +369,7 @@ LSIAPI int delete_gdata(lsi_gdata_cont_t *containerInfo, const char *key,
 
     return 0;
 }
+
 
 LSIAPI int set_gdata(lsi_gdata_cont_t *containerInfo, const char *key,
                      int key_len, void *val, int TTL, lsi_release_callback_pf release_cb,
@@ -442,7 +441,6 @@ LSIAPI int set_gdata(lsi_gdata_cont_t *containerInfo, const char *key,
 }
 
 
-
 LSIAPI lsi_gdata_cont_t *get_gdata_container(int type, const char *key,
         int key_len)
 {
@@ -502,6 +500,7 @@ LSIAPI lsi_gdata_cont_t *get_gdata_container(int type, const char *key,
     return containerInfo;
 }
 
+
 //empty will re-set the create time, and all items create time older than the container will be pruged when call purge_gdata_container
 LSIAPI int empty_gdata_container(lsi_gdata_cont_t *containerInfo)
 {
@@ -518,6 +517,7 @@ LSIAPI int empty_gdata_container(lsi_gdata_cont_t *containerInfo)
     fclose(fp);
     return 0;
 }
+
 
 //purge will delete the item and also will remove the file if exist
 LSIAPI int purge_gdata_container(lsi_gdata_cont_t *containerInfo)

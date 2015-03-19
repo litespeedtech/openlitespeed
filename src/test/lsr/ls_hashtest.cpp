@@ -217,7 +217,7 @@ TEST(ls_hashtest_test)
     ls_hash_t xxhash;
     ls_hash_iter xxiter;
     const char *pKey = "hello world";
-    ls_hash(&xxhash, 10, ls_hash_hfxxstring, ls_hash_cmpstring, NULL);
+    ls_hash(&xxhash, 10, ls_hash_hfstring, ls_hash_cmpstring, NULL);
     CHECK((xxiter = ls_hash_find(&xxhash, pKey)) == NULL);
     CHECK((xxiter = ls_hash_insert(&xxhash, pKey, NULL)) != NULL);
     CHECK(ls_hash_find(&xxhash, pKey) == xxiter);

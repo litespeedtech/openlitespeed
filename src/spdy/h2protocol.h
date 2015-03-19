@@ -17,11 +17,12 @@
 *****************************************************************************/
 #ifndef H2PROTOCOL_H
 #define H2PROTOCOL_H
-#include <sys/types.h>
-#include <arpa/inet.h>
-#include <spdy/protocoldef.h>
-#include <string.h>
+
 #include <lsdef.h>
+
+#include <arpa/inet.h>
+#include <string.h>
+#include <sys/types.h>
 
 // Types of HTTP2 frames.
 enum H2FrameType

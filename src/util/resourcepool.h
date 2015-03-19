@@ -18,10 +18,10 @@
 #ifndef RESOURCEPOOL_H
 #define RESOURCEPOOL_H
 
-#include <util/autobuf.h>
 #include <util/objpool.h>
 #include <util/tsingleton.h>
 
+class AutoBuf;
 typedef ObjPool<AutoBuf>                AutoBufPool;
 
 class ResourcePool : public TSingleton<ResourcePool>
@@ -36,14 +36,7 @@ public:
     ResourcePool();
     ~ResourcePool();
 
-    void recycle(AutoBuf *pBuf)
-    {
-        if (pBuf->capacity() >= 4096)
-            pBuf->reserve(0);
-        else
-            pBuf->clear();
-        m_poolAutoBuf.recycle(pBuf);
-    }
+    void recycle(AutoBuf *pBuf);
 
     AutoBuf *getAutoBuf()
     {   return m_poolAutoBuf.get();     }

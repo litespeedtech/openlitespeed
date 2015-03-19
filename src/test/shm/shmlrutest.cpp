@@ -25,7 +25,7 @@
 #include "test/unittest-cpp/UnitTest++/src/UnitTest++.h"
 
 static const char *shmdir = LSSHM_SYSSHM_DIR1;
-static const char *shmname = "SHMLRUTEST";
+static const char *shmname = "SHMXLRUTEST";
 static shmlru_t shmlru[2];
 static struct mylru
 {
@@ -34,7 +34,7 @@ static struct mylru
     const char *name;
 } mylru[] =
 {
-    { &shmlru[0],    0,    "SHMLRUCACHE" },
+    { &shmlru[0],    0,    "SHMWLRU" },
     { &shmlru[1],    1,    "SHMXLRU" },
 };
 

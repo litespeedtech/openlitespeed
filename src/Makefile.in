@@ -113,7 +113,7 @@ am_openlitespeed_OBJECTS = prelinkedmods.$(OBJEXT) httpdtest.$(OBJEXT) \
 	env.$(OBJEXT) xmlnode.$(OBJEXT) iovec.$(OBJEXT) \
 	accesscontrol.$(OBJEXT) signalutil.$(OBJEXT) loopbuf.$(OBJEXT) \
 	stringtool.$(OBJEXT) tsingleton.$(OBJEXT) pcutil.$(OBJEXT) \
-	daemonize.$(OBJEXT) configentry.$(OBJEXT) configctx.$(OBJEXT) \
+	daemonize.$(OBJEXT) configentry.$(OBJEXT) \
 	logidtracker.$(OBJEXT) datetime.$(OBJEXT) \
 	resourcepool.$(OBJEXT) linkedqueue.$(OBJEXT) \
 	httputil.$(OBJEXT) profiletime.$(OBJEXT) \
@@ -125,11 +125,12 @@ am_openlitespeed_OBJECTS = prelinkedmods.$(OBJEXT) httpdtest.$(OBJEXT) \
 	ls_lock.$(OBJEXT) ls_loopbuf.$(OBJEXT) ls_map.$(OBJEXT) \
 	ls_md5.$(OBJEXT) ls_mpscq.$(OBJEXT) ls_objarray.$(OBJEXT) \
 	ls_objpool.$(OBJEXT) ls_pcreg.$(OBJEXT) ls_pool.$(OBJEXT) \
-	ls_ptrlist.$(OBJEXT) ls_sha1.$(OBJEXT) ls_str.$(OBJEXT) \
-	ls_strlist.$(OBJEXT) ls_strtool.$(OBJEXT) ls_time.$(OBJEXT) \
-	ls_xpool.$(OBJEXT) xxhash.$(OBJEXT) pthreadcond.$(OBJEXT) \
-	pthreadmutex.$(OBJEXT) pthreadworkqueue.$(OBJEXT) \
-	thread.$(OBJEXT) workcrew.$(OBJEXT) worker.$(OBJEXT)
+	ls_ptrlist.$(OBJEXT) ls_sha1.$(OBJEXT) ls_stack.$(OBJEXT) \
+	ls_str.$(OBJEXT) ls_strlist.$(OBJEXT) ls_strtool.$(OBJEXT) \
+	ls_time.$(OBJEXT) ls_tsstack.$(OBJEXT) ls_xpool.$(OBJEXT) \
+	xxhash.$(OBJEXT) pthreadcond.$(OBJEXT) pthreadmutex.$(OBJEXT) \
+	pthreadworkqueue.$(OBJEXT) thread.$(OBJEXT) workcrew.$(OBJEXT) \
+	worker.$(OBJEXT)
 openlitespeed_OBJECTS = $(am_openlitespeed_OBJECTS)
 am__DEPENDENCIES_1 =
 openlitespeed_DEPENDENCIES = ./main/libmain.a ./http/libhttp.a \
@@ -455,7 +456,6 @@ openlitespeed_SOURCES = modules/prelinkedmods.cpp httpdtest.cpp main.cpp \
    util/pcutil.cpp \
    util/daemonize.cpp \
    util/configentry.cpp \
-   util/configctx.cpp \
    util/logidtracker.cpp \
    util/datetime.cpp \
    util/resourcepool.cpp \
@@ -487,10 +487,12 @@ openlitespeed_SOURCES = modules/prelinkedmods.cpp httpdtest.cpp main.cpp \
    lsr/ls_pool.c \
    lsr/ls_ptrlist.c \
    lsr/ls_sha1.c \
+   lsr/ls_stack.c \
    lsr/ls_str.c \
    lsr/ls_strlist.c \
    lsr/ls_strtool.c \
    lsr/ls_time.c \
+   lsr/ls_tsstack.c \
    lsr/ls_xpool.c \
    lsr/xxhash.c \
    thread/pthreadcond.cpp \
@@ -626,7 +628,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/accesscontrol.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/autostr.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/blockbuf.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/configctx.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/configentry.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/connpool.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/crashguard.Po@am__quote@
@@ -680,10 +681,12 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ls_pool.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ls_ptrlist.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ls_sha1.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ls_stack.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ls_str.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ls_strlist.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ls_strtool.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ls_time.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ls_tsstack.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ls_xpool.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/main.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/nicdetect.Po@am__quote@
@@ -1046,6 +1049,20 @@ ls_sha1.obj: lsr/ls_sha1.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ls_sha1.obj `if test -f 'lsr/ls_sha1.c'; then $(CYGPATH_W) 'lsr/ls_sha1.c'; else $(CYGPATH_W) '$(srcdir)/lsr/ls_sha1.c'; fi`
 
+ls_stack.o: lsr/ls_stack.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ls_stack.o -MD -MP -MF $(DEPDIR)/ls_stack.Tpo -c -o ls_stack.o `test -f 'lsr/ls_stack.c' || echo '$(srcdir)/'`lsr/ls_stack.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/ls_stack.Tpo $(DEPDIR)/ls_stack.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/ls_stack.c' object='ls_stack.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ls_stack.o `test -f 'lsr/ls_stack.c' || echo '$(srcdir)/'`lsr/ls_stack.c
+
+ls_stack.obj: lsr/ls_stack.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ls_stack.obj -MD -MP -MF $(DEPDIR)/ls_stack.Tpo -c -o ls_stack.obj `if test -f 'lsr/ls_stack.c'; then $(CYGPATH_W) 'lsr/ls_stack.c'; else $(CYGPATH_W) '$(srcdir)/lsr/ls_stack.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/ls_stack.Tpo $(DEPDIR)/ls_stack.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/ls_stack.c' object='ls_stack.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ls_stack.obj `if test -f 'lsr/ls_stack.c'; then $(CYGPATH_W) 'lsr/ls_stack.c'; else $(CYGPATH_W) '$(srcdir)/lsr/ls_stack.c'; fi`
+
 ls_str.o: lsr/ls_str.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ls_str.o -MD -MP -MF $(DEPDIR)/ls_str.Tpo -c -o ls_str.o `test -f 'lsr/ls_str.c' || echo '$(srcdir)/'`lsr/ls_str.c
 @am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/ls_str.Tpo $(DEPDIR)/ls_str.Po
@@ -1101,6 +1118,20 @@ ls_time.obj: lsr/ls_time.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/ls_time.c' object='ls_time.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ls_time.obj `if test -f 'lsr/ls_time.c'; then $(CYGPATH_W) 'lsr/ls_time.c'; else $(CYGPATH_W) '$(srcdir)/lsr/ls_time.c'; fi`
+
+ls_tsstack.o: lsr/ls_tsstack.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ls_tsstack.o -MD -MP -MF $(DEPDIR)/ls_tsstack.Tpo -c -o ls_tsstack.o `test -f 'lsr/ls_tsstack.c' || echo '$(srcdir)/'`lsr/ls_tsstack.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/ls_tsstack.Tpo $(DEPDIR)/ls_tsstack.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/ls_tsstack.c' object='ls_tsstack.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ls_tsstack.o `test -f 'lsr/ls_tsstack.c' || echo '$(srcdir)/'`lsr/ls_tsstack.c
+
+ls_tsstack.obj: lsr/ls_tsstack.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ls_tsstack.obj -MD -MP -MF $(DEPDIR)/ls_tsstack.Tpo -c -o ls_tsstack.obj `if test -f 'lsr/ls_tsstack.c'; then $(CYGPATH_W) 'lsr/ls_tsstack.c'; else $(CYGPATH_W) '$(srcdir)/lsr/ls_tsstack.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/ls_tsstack.Tpo $(DEPDIR)/ls_tsstack.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/ls_tsstack.c' object='ls_tsstack.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ls_tsstack.obj `if test -f 'lsr/ls_tsstack.c'; then $(CYGPATH_W) 'lsr/ls_tsstack.c'; else $(CYGPATH_W) '$(srcdir)/lsr/ls_tsstack.c'; fi`
 
 ls_xpool.o: lsr/ls_xpool.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ls_xpool.o -MD -MP -MF $(DEPDIR)/ls_xpool.Tpo -c -o ls_xpool.o `test -f 'lsr/ls_xpool.c' || echo '$(srcdir)/'`lsr/ls_xpool.c
@@ -1808,20 +1839,6 @@ configentry.obj: util/configentry.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='util/configentry.cpp' object='configentry.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o configentry.obj `if test -f 'util/configentry.cpp'; then $(CYGPATH_W) 'util/configentry.cpp'; else $(CYGPATH_W) '$(srcdir)/util/configentry.cpp'; fi`
-
-configctx.o: util/configctx.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT configctx.o -MD -MP -MF $(DEPDIR)/configctx.Tpo -c -o configctx.o `test -f 'util/configctx.cpp' || echo '$(srcdir)/'`util/configctx.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/configctx.Tpo $(DEPDIR)/configctx.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='util/configctx.cpp' object='configctx.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o configctx.o `test -f 'util/configctx.cpp' || echo '$(srcdir)/'`util/configctx.cpp
-
-configctx.obj: util/configctx.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT configctx.obj -MD -MP -MF $(DEPDIR)/configctx.Tpo -c -o configctx.obj `if test -f 'util/configctx.cpp'; then $(CYGPATH_W) 'util/configctx.cpp'; else $(CYGPATH_W) '$(srcdir)/util/configctx.cpp'; fi`
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/configctx.Tpo $(DEPDIR)/configctx.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='util/configctx.cpp' object='configctx.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o configctx.obj `if test -f 'util/configctx.cpp'; then $(CYGPATH_W) 'util/configctx.cpp'; else $(CYGPATH_W) '$(srcdir)/util/configctx.cpp'; fi`
 
 logidtracker.o: util/logidtracker.cpp
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT logidtracker.o -MD -MP -MF $(DEPDIR)/logidtracker.Tpo -c -o logidtracker.o `test -f 'util/logidtracker.cpp' || echo '$(srcdir)/'`util/logidtracker.cpp

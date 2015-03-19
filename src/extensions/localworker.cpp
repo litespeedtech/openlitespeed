@@ -16,24 +16,22 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "localworker.h"
+
 #include "localworkerconfig.h"
 #include "pidlist.h"
+#include "cgi/suexec.h"
+#include "registry/extappregistry.h"
 
-#include <extensions/registry/extappregistry.h>
-#include <extensions/cgi/suexec.h>
-#include <util/datetime.h>
 #include <http/httplog.h>
 #include <http/httpvhost.h>
 #include <http/serverprocessconfig.h>
-
-#include <main/serverinfo.h>
-#include <main/mainserverconfig.h>
-
-#include <socket/gsockaddr.h>
-#include <util/env.h>
 #include <lsr/ls_fileio.h>
-#include <util/stringtool.h>
-#include "util/configctx.h"
+#include <main/configctx.h>
+#include <main/mainserverconfig.h>
+#include <main/serverinfo.h>
+#include <socket/gsockaddr.h>
+#include <util/datetime.h>
+#include <util/env.h>
 
 #include <errno.h>
 #include <signal.h>
@@ -54,6 +52,7 @@ LocalWorker::LocalWorker()
     m_pidListStop = new PidList();
 
 }
+
 
 LocalWorkerConfig &LocalWorker::getConfig() const
 {   return *(static_cast<LocalWorkerConfig *>(getConfigPointer()));  }
@@ -85,6 +84,7 @@ void LocalWorker::moveToStopList()
     m_pidList->clear();
 }
 
+
 void LocalWorker::moveToStopList(int pid)
 {
     PidList::iterator iter = m_pidList->find((void *)(long)pid);
@@ -95,6 +95,7 @@ void LocalWorker::moveToStopList(int pid)
         m_pidList->erase(iter);
     }
 }
+
 
 void LocalWorker::cleanStopPids()
 {
@@ -142,6 +143,7 @@ void LocalWorker::cleanStopPids()
     }
 }
 
+
 void LocalWorker::detectDiedPid()
 {
     PidList::iterator iter;
@@ -163,10 +165,12 @@ void LocalWorker::detectDiedPid()
     }
 }
 
+
 void LocalWorker::addPid(pid_t pid)
 {
     m_pidList->insert((void *)(unsigned long)pid, this);
 }
+
 
 void LocalWorker::removePid(pid_t pid)
 {
@@ -174,8 +178,10 @@ void LocalWorker::removePid(pid_t pid)
     m_pidListStop->remove(pid);
 }
 
+
 int LocalWorker::selfManaged() const
 {   return getConfig().getSelfManaged();    }
+
 
 int LocalWorker::runOnStartUp()
 {
@@ -234,6 +240,7 @@ int LocalWorker::stop()
     return 0;
 }
 
+
 void LocalWorker::removeUnixSocket()
 {
     const GSockAddr &addr = ((LocalWorkerConfig *)
@@ -288,9 +295,9 @@ int LocalWorker::restart()
 }
 
 
-
 int LocalWorker::getCurInstances() const
 {   return getPidList()->size();  }
+
 
 // void LocalWorker::setPidList( PidList * l)
 // {
@@ -359,6 +366,7 @@ int LocalWorker::getCurInstances() const
 //
 //     return pid;
 // }
+
 
 int LocalWorker::workerExec(LocalWorkerConfig &config, int fd)
 {
@@ -479,6 +487,7 @@ int LocalWorker::workerExec(LocalWorkerConfig &config, int fd)
     return pid;
 }
 
+
 int LocalWorker::startWorker()
 {
     int fd = getfd();
@@ -544,6 +553,8 @@ int LocalWorker::startWorker()
     }
     return (i == 0) ? LS_FAIL : LS_OK;
 }
+
+
 void LocalWorker::configRlimit(RLimits *pRLimits, const XmlNode *pNode)
 {
     if (!pNode)

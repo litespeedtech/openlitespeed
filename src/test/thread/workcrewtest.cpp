@@ -18,6 +18,7 @@
 #ifdef RUN_TEST
 
 #include <lsr/ls_lfqueue.h>
+#include <lsr/ls_pool.h>
 #include <thread/workcrew.h>
 
 #include <stdio.h>

@@ -15,25 +15,25 @@
 *    You should have received a copy of the GNU General Public License       *
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
+#include "lsluaapi.h"
 
-#include <modules/lua/lsluaapi.h>
+#include "edluastream.h"
+#include "lsluaengine.h"
+#include "lsluasession.h"
 
-#include <errno.h>
-#include <string.h>
-#include <sys/stat.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
+#include <log4cxx/layout.h>
+#include <log4cxx/logger.h>
+
 #include <ctype.h>
 #include <dlfcn.h>
-#include <modules/lua/edluastream.h>
-#include <modules/lua/lsluasession.h>
-#include <log4cxx/logger.h>
-#include <log4cxx/layout.h>
-
-/* Generic LUA headers
-*/
+#include <errno.h>
 #include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/stat.h>
+#include <unistd.h>
+
 
 // #define LSLUAAPI_DEBUGPRINT
 

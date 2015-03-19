@@ -24,10 +24,10 @@
 #include <http/serverprocessconfig.h>
 #include <log4cxx/logrotate.h>
 #include <lsr/ls_fileio.h>
-#include "util/configctx.h"
-#include <util/xmlnode.h>
-#include <main/mainserverconfig.h>
 #include <lsr/ls_strtool.h>
+#include <main/configctx.h>
+#include <main/mainserverconfig.h>
+#include <util/xmlnode.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
@@ -50,9 +50,11 @@ Awstats::Awstats()
 {
 }
 
+
 Awstats::~Awstats()
 {
 }
+
 
 static int copyFile(const char *pSrc, const char *pDest)
 {
@@ -88,6 +90,8 @@ static int copyFile(const char *pSrc, const char *pDest)
     close(fdDest);
     return ret;
 }
+
+
 static const char *s_pList[] =
 {
     "LogFile=\"%s.awstats\"\n",
@@ -99,8 +103,10 @@ static const char *s_pList[] =
     "DirIcons=\"/awstats/icon\"\n"
 };
 
+
 static int s_pKeyLen[] =
 {   7, 7, 10, 11, 7, 6, 8    };
+
 
 static int s_pLineLen[] =
 {   0, 10, 10, 11, 7, 6, 25    };
@@ -122,6 +128,7 @@ static int findKeyInList(const char *pCur)
     }
     return i;
 }
+
 
 int renameLogFile(const char *pLogPath, const char *pSrcSuffix,
                   const char *pDestSuffix)
@@ -470,6 +477,7 @@ int Awstats::update(const HttpVHost *pVHost)
     exit(0);
 }
 
+
 int Awstats::shouldBuildStatic(const char *pName)
 {
     struct stat st;
@@ -515,6 +523,8 @@ int Awstats::updateIfNeed(long curTime, const HttpVHost *pVHost)
     }
     return ret;
 }
+
+
 void Awstats::config(HttpVHost *pVHost, int val, char *achBuf,
                      const XmlNode *pAwNode,
                      char *iconURI, const char *vhDomain, int vhAliasesLen)

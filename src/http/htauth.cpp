@@ -16,27 +16,26 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "htauth.h"
+
 #include <http/authuser.h>
-#include <util/autobuf.h>
+#include <http/httprespheaders.h>
 #include <http/httpstatuscode.h>
 #include <http/userdir.h>
-
 #include <lsr/ls_base64.h>
+#include <lsr/ls_strtool.h>
 #include <util/pool.h>
 #include <util/stringlist.h>
 #include <util/stringtool.h>
 
-#include <assert.h>
 #include <openssl/md5.h>
 
+#include <assert.h>
 #include <ctype.h>
 #include <errno.h>
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
-#include <lsr/ls_strtool.h>
-#include "http/httprespheaders.h"
 
 HTAuth::HTAuth()
     : m_pName(NULL)
@@ -47,6 +46,7 @@ HTAuth::HTAuth()
 {
 }
 
+
 HTAuth::HTAuth(const char *pRealm)
     : m_pName(NULL)
     , m_authHeader(NULL)
@@ -54,6 +54,7 @@ HTAuth::HTAuth(const char *pRealm)
     , m_pUserDir(NULL)
     , m_iAuthType(AUTH_DEFAULT)
 {}
+
 
 HTAuth::~HTAuth()
 {
@@ -63,12 +64,12 @@ HTAuth::~HTAuth()
         Pool::deallocate2(m_authHeader);
 }
 
+
 void HTAuth::setName(const char *pName)
 {
     m_pName = (char *)Pool::dupstr(pName);
     buildWWWAuthHeader(pName);
 }
-
 
 
 int HTAuth::buildWWWAuthHeader(const char *pName)
@@ -93,6 +94,7 @@ int HTAuth::buildWWWAuthHeader(const char *pName)
     return LS_FAIL;
 }
 
+
 int HTAuth::addWWWAuthHeader(HttpRespHeaders &buf) const
 {
     if (m_iAuthType & AUTH_BASIC)
@@ -108,6 +110,7 @@ int HTAuth::addWWWAuthHeader(HttpRespHeaders &buf) const
     }
     return 0;
 }
+
 
 #define MAX_PASSWD_LEN      128
 #define MAX_BASIC_AUTH_LEN  256
@@ -154,6 +157,7 @@ int HTAuth::basicAuth(HttpSession *pSession, const char *pAuthorization,
     return ret;
 }
 
+
 //enum
 //{
 //    DIGEST_USERNAME,
@@ -167,6 +171,7 @@ int HTAuth::basicAuth(HttpSession *pSession, const char *pAuthorization,
 //    DIGEST_OPAQUE,
 //    DIGEST_ALGORITHM,
 //};
+
 
 int HTAuth::digestAuth(HttpSession *pSession, const char *pAuthorization,
                        int size, char *pAuthUser, int bufLen,
@@ -268,6 +273,7 @@ int HTAuth::digestAuth(HttpSession *pSession, const char *pAuthorization,
 //    }
     return SC_401;
 }
+
 
 int HTAuth::authenticate(HttpSession *pSession, const char *pAuthHeader,
                          int authHeaderLen, char *pAuthUser, int userBufLen,

@@ -17,11 +17,14 @@
 *****************************************************************************/
 #include "expiresctrl.h"
 
+#include <lsdef.h>
+#include <http/httpcontext.h>
 #include <util/stringtool.h>
+#include <util/xmlnode.h>
+
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
-#include <lsdef.h>
 
 ExpiresCtrl::ExpiresCtrl()
     : m_iEnabled(0)
@@ -30,6 +33,7 @@ ExpiresCtrl::ExpiresCtrl()
     , m_iBits(0)
     , m_iAge(0)
 {}
+
 
 ExpiresCtrl::ExpiresCtrl(const ExpiresCtrl &rhs)
     : m_iEnabled(rhs.m_iEnabled)
@@ -43,6 +47,7 @@ ExpiresCtrl::ExpiresCtrl(const ExpiresCtrl &rhs)
 
 ExpiresCtrl::~ExpiresCtrl()
 {}
+
 
 int ExpiresCtrl::parse(const char *pConfig)
 {
@@ -146,6 +151,7 @@ int ExpiresCtrl::parse(const char *pConfig)
     return 0;
 }
 
+
 void ExpiresCtrl::copyExpires(const ExpiresCtrl &rhs)
 {
     m_iEnabled = rhs.m_iEnabled;
@@ -153,8 +159,6 @@ void ExpiresCtrl::copyExpires(const ExpiresCtrl &rhs)
     m_iAge = rhs.m_iAge;
 }
 
-#include <util/xmlnode.h>
-#include <http/httpcontext.h>
 
 int ExpiresCtrl::config(const XmlNode *pExpires,
                         const ExpiresCtrl *pDefault,
@@ -186,6 +190,7 @@ int ExpiresCtrl::config(const XmlNode *pExpires,
     }
     return 0;
 }
+
 
 int ExpiresCtrlConfig::operator()(ExpiresCtrl *pCtrl,
                                   const XmlNode *pExpires)

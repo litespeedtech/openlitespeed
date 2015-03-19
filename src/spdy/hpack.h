@@ -18,14 +18,19 @@
 #ifndef HPACK_H
 #define HPACK_H
 
+#include <lsdef.h>
+#include <util/loopbuf.h>
+#include <util/ghash.h>
+#include <util/autobuf.h>
+
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
-#include <util/loopbuf.h>
-#include <lsdef.h>
 
 #define INITIAL_DYNAMIC_TABLE_SIZE  4096
-#define HPackStaticTableCount   61
+#define HPackStxTabCount   61
+
+
 
 enum
 {
@@ -62,18 +67,17 @@ struct HPackHuffDecodeStatus_t
     uint8_t eos;
 };
 
-class DynamicTableEntry
+class DynTabEntry
 {
 public:
-    DynamicTableEntry() { reset();  };
-    DynamicTableEntry(char *name, uint32_t name_len, char *val,
-                      uint32_t val_len, uint32_t nameIndex)
+    DynTabEntry(char *name, uint32_t name_len, char *val,
+                      uint32_t val_len, uint8_t stxTabId)
     {
         reset();
-        init(name, name_len, val, val_len, nameIndex);
+        init(name, name_len, val, val_len, stxTabId);
     }
 
-    ~DynamicTableEntry()
+    ~DynTabEntry()
     {
         if (m_valLen && m_val)
             delete []m_val;
@@ -84,147 +88,100 @@ public:
         reset();
     };
 
-    //return 0: no match, 1: name match, 2: both match
-    int getMatchState(char *name, uint16_t name_len, char *val, uint16_t val_len)
-    {
-        int state = 0;
-        if (m_nameLen == name_len && memcmp(m_name, name, name_len) == 0)
-        {
-            state = 1;
-            if (val_len == m_valLen  && memcmp(m_val, val, val_len) == 0)
-                state = 2;
-        }
-        return state;
-    }
-
-    uint32_t getEntrySize() { return m_valLen + m_nameLen + 32; }
-    char       *getName()           { return m_name;   }
+    uint32_t getEntrySize()         { return m_valLen + m_nameLen + 32; }
+    char       *getName() const     { return m_name;   }
     uint16_t    getNameLen()        { return m_nameLen; }
-    char       *getValue()          { return m_val;     }
+    char       *getValue() const    { return m_val;     }
     uint16_t    getValueLen()       { return m_valLen; }
 
     void init(char *name, uint32_t name_len, char *val, uint32_t val_len,
-              uint32_t nameIndex);
+              uint8_t stxTabId);
 
-protected:
+private:
     char       *m_name;
     uint8_t     m_nameStxTabId  : 6;  // < 64, if in StxTab, is 1~61; other 0.
     uint16_t    m_nameLen       : 13; // < 8192
     uint16_t    m_valLen        : 13; // < 8192
     char       *m_val;
 
-    void reset() 
+    void reset()
     {
-        memset(&m_name, 0, (char *)&m_val + sizeof(char *) - (char *)&m_name); 
+        memset(&m_name, 0, (char *)&m_val + sizeof(char *) - (char *)&m_name);
     }
-    
-    LS_NO_COPY_ASSIGN(DynamicTableEntry);
+
+    LS_NO_COPY_ASSIGN(DynTabEntry);
 };
 
 
-#define ENTRYPSIZE (sizeof(DynamicTableEntry *))
-class HPackDynamicTable
+#define ENTRYPSIZE (sizeof(DynTabEntry *))
+class HPackDynTab
 {
 public:
+    HPackDynTab();
+    ~HPackDynTab();
+
+
     size_t getTotalTableSize()  { return m_curCapacity; }
-    size_t getEntryCount()      { return (uint32_t)(m_dynTabLoopbuf.size()) / ENTRYPSIZE; }
+    size_t getEntryCount()      { return (uint32_t)(m_loopbuf.size()) / ENTRYPSIZE; }
     void updateMaxCapacity(size_t maxCapacity)
     {
         m_maxCapacity = maxCapacity;
         removeOverflowEntries();
     }
+    void reset();
 
-    void reset()
+    int getDynTabId(char *name, uint16_t name_len, char *value, 
+                    uint16_t value_len, int &val_matched, uint8_t stxTabId);
+
+    DynTabEntry *getEntry(uint32_t dynTabId)
     {
-        int count = getEntryCount();
-        for (int i = 0; i < count; ++i)
-            delete getEntry(i);
-
-        m_dynTabLoopbuf.clear();
-        m_curCapacity = 0;
-        m_maxCapacity = INITIAL_DYNAMIC_TABLE_SIZE;
+        if (dynTabId < HPackStxTabCount + 1
+            || dynTabId > HPackStxTabCount + getEntryCount())
+            return NULL;
+        return getEntryInternal(dynTabIdToInternalIndex(dynTabId));
     }
+
+    void removeNameValueHashTEntry(DynTabEntry *pEntry);
+    void removeNameHashTEntry(DynTabEntry *pEntry);
+    void popEntry();
+    void pushEntry(char *name, uint16_t name_len, char *val, uint16_t val_len,
+                   uint32_t nameIndex);
 
 public:
-    HPackDynamicTable()     {   reset(); };
-    ~HPackDynamicTable()    {   reset(); };
+    static hash_key_t hfName(const void *__s);
+    static hash_key_t hfNameVal(const void *__s);
+    static int cmpName(const void *pVal1, const void *pVal2);
+    static int cmpNameVal(const void *pVal1, const void *pVal2);
 
-    /*
-     * through the name to search the entry, return enrey * and 
-     * index of table(base HPackStaticTableCount + 1)
-     */
-    DynamicTableEntry *find(char *name, uint16_t name_len, char *value,
-                            uint16_t value_len, int &index)
-    {
-        int state;
-        index = 0;  //inited it.
-        DynamicTableEntry *pEntry;
-        int count = getEntryCount();
-
-        for (int i = 0; i < count; ++i)
-        {
-            pEntry = getEntry(i);
-            state = pEntry->getMatchState(name, name_len, value, value_len);
-            if (state == 2)
-            {
-                index = count - i + HPackStaticTableCount;
-                return pEntry;
-            }
-            else if (state == 1)
-            {
-                //If only the name match, use the lowest index
-                if (index == 0)
-                    index = count - i + HPackStaticTableCount;
-            }
-        }
-        return NULL;
-    }
-
-    DynamicTableEntry *getEntryByTabId(uint32_t id);
-
-    void popEntry() //remove oldest
-    {
-        DynamicTableEntry *pEntry = getEntry(0);
-        m_dynTabLoopbuf.pop_front(ENTRYPSIZE);
-        m_curCapacity -= pEntry->getEntrySize();
-        delete pEntry;
-    }
-
-    /****
-     * the new one will be append to the end of the loopbuf, so the index need to be paied more attention.
-     */
-    void pushEntry(char *name, uint16_t name_len, char *val, uint16_t val_len,
-                   uint32_t nameIndex)
-    {
-        DynamicTableEntry *pEntry = new DynamicTableEntry(name, name_len, val,
-                val_len, nameIndex);
-        m_dynTabLoopbuf.append((char *)(&pEntry), ENTRYPSIZE);
-        m_curCapacity += pEntry->getEntrySize();
-        removeOverflowEntries();
-    }
-
-
-protected:
-    size_t      m_maxCapacity;  //set by SETTINGS_HEADER_TABLE_SIZE
-    size_t      m_curCapacity;
-    
-    // it contains DynamicTableEntry * as each chars
-    LoopBuf     m_dynTabLoopbuf;
-
-
-protected:
+private:
     void        removeOverflowEntries();
-    DynamicTableEntry *getEntry(int index)
+    DynTabEntry *getEntryInternal(int index)
     {
-        if (index < 0 || index * (int)ENTRYPSIZE >= m_dynTabLoopbuf.size())
-            return NULL;
-        DynamicTableEntry **pEntry = 
-            (DynamicTableEntry **)(m_dynTabLoopbuf.getPointer(index * ENTRYPSIZE));
+//      if (index < 0 || index * (int)ENTRYPSIZE >= m_loopbuf.size())
+//          return NULL;
+        DynTabEntry **pEntry =
+            (DynTabEntry **)(m_loopbuf.getPointer(index * ENTRYPSIZE));
         return *pEntry;
     }
-    
-    
-    LS_NO_COPY_ASSIGN(HPackDynamicTable);
+
+    int dynTabIdToInternalIndex(uint32_t dynTabId)
+    {
+        assert(dynTabId >= HPackStxTabCount + 1 
+            && dynTabId <= HPackStxTabCount + getEntryCount());
+        return getEntryCount() - (dynTabId - HPackStxTabCount);
+    }
+
+private:
+    size_t      m_maxCapacity;  //set by SETTINGS_HEADER_TABLE_SIZE
+    size_t      m_curCapacity;
+    uint32_t    m_nextFlowId;
+
+    //It contains DynamicTableEntry * as each chars
+    LoopBuf     m_loopbuf;
+    GHash      *m_pNameHashT;
+    GHash      *m_pNameValueHashT;
+
+    LS_NO_COPY_ASSIGN(HPackDynTab);
 };
 
 
@@ -243,7 +200,7 @@ public:
     HuffmanCode() {};
     ~HuffmanCode() {};
 
-    static size_t huffmanEncBufSize(const unsigned char *src,
+    static size_t calcHuffmanEncBufSize(const unsigned char *src,
                                     const unsigned char *src_end);
     static int huffmanEnc(const unsigned char *src, const unsigned char *src_end,
                           unsigned char *dst, int dst_len);
@@ -254,7 +211,7 @@ public:
 
     static HPackHuffEncode_t m_HPackHuffEncode_t[257];
     static HPackHuffDecode_t m_HPackHuffDecode_t[256][16];
-    
+
     LS_NO_COPY_ASSIGN(HuffmanCode);
 };
 
@@ -265,33 +222,32 @@ public:
     Hpack() {};
     ~Hpack() {};
 
-    HPackDynamicTable &getReqDynamicTable()  { return m_reqDynTab;    }
-    HPackDynamicTable &getRespDynamicTable() { return m_respDynTab;   }
+    HPackDynTab &getReqDynTab()  { return m_reqDynTab;    }
+    HPackDynTab &getRespDynTab() { return m_respDynTab;   }
 
-    static int getStaticTableId(char *name, uint16_t name_len, char *val,
+    static uint8_t getStxTabId(char *name, uint16_t name_len, char *val,
                                 uint16_t val_len, int &val_matched);
 
-
-    static unsigned char *encInt(unsigned char *dst, uint32_t value,
+    unsigned char *encInt(unsigned char *dst, uint32_t value,
                                  uint32_t prefix_bits);
-    static uint32_t decInt(unsigned char *&src, const unsigned char *src_end,
-                           uint32_t prefix_bits, int& error_code);
-    static int encStr(unsigned char *dst, size_t dst_len,
+    int decInt(unsigned char *&src, const unsigned char *src_end,
+                           uint32_t prefix_bits, uint32_t& value);
+    int encStr(unsigned char *dst, size_t dst_len,
                       const unsigned char *str, uint16_t str_len);
-    static int decStr(unsigned char *dst, size_t dst_len, unsigned char *&src,
+    int decStr(unsigned char *dst, size_t dst_len, unsigned char *&src,
                       const unsigned char *src_end);
 
     //indexedType: 0, Add, 1,: without, 2: never
-    unsigned char *encHeader(unsigned char *dst, unsigned char *dstEnd, 
-                             char *name, uint16_t nameLen, char *value, 
+    unsigned char *encHeader(unsigned char *dst, unsigned char *dstEnd,
+                             char *name, uint16_t nameLen, char *value,
                              uint16_t valueLen, int indexedType = 0);
-    int decHeader(unsigned char *&src, unsigned char *srcEnd, char *name,
-                  uint16_t &name_len, char *val, uint16_t &val_len);
+    int decHeader(unsigned char *&src, unsigned char *srcEnd, AutoBuf &nameValBuf,
+                  uint16_t &name_len, uint16_t &val_len);
 
 
-protected:
-    HPackDynamicTable m_reqDynTab;
-    HPackDynamicTable m_respDynTab;
+private:
+    HPackDynTab m_reqDynTab;
+    HPackDynTab m_respDynTab;
 
     LS_NO_COPY_ASSIGN(Hpack);
 };

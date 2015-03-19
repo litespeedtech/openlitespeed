@@ -8,7 +8,7 @@ OS := $(shell uname)
 ifeq ($(OS), Darwin)
         LDFLAGS= -fPIC -g -undefined dynamic_lookup  -Wall $(LFSFLAGS) -shared
 else
-        LDFLAGS= -fPIC -g -Wall $(LFSFLAGS) -shared
+        LDFLAGS= -fPIC -pg -O2  -g -Wall $(LFSFLAGS) -shared
 endif
 
 SOURCES =cache.cpp cacheentry.cpp cachehash.cpp cachestore.cpp ceheader.cpp dirhashcacheentry.cpp dirhashcachestore.cpp \

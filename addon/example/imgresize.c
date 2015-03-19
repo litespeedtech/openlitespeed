@@ -18,6 +18,7 @@
 
 #include "../include/ls.h"
 #include <lsr/ls_loopbuf.h>
+#include <lsr/ls_xpool.h>
 
 #include "gd.h"
 #include <stdio.h>

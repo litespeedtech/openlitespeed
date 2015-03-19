@@ -84,8 +84,8 @@ static int get_testtype(lsi_cb_param_t *param)
     g_api->set_resp_wait_full_body(param->_session);
     if (type <= 8)
     {
-        g_api->set_session_hook_enable_flag(
-            param->_session, type2hook[type - 1], &MNAME, 1);
+        g_api->set_session_hook_enable_flag( param->_session, &MNAME, 1,
+                                             &type2hook[type - 1], 1);
     }
 
     return 0;

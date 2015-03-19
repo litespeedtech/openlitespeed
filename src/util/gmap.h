@@ -19,8 +19,6 @@
 #define GMAP_H
 
 #include <lsr/ls_map.h>
-#include <lsr/ls_internal.h>
-#include <lsr/ls_xpool.h>
 
 //#define GMAP_DEBUG
 

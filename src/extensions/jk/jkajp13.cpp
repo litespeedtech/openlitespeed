@@ -16,29 +16,28 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "jkajp13.h"
+#include "jworker.h"
+#include "jworkerconfig.h"
 
-#include <extensions/jk/jworker.h>
-#include <extensions/jk/jworkerconfig.h>
-
-#include <http/httpsession.h>
 #include <http/httpreq.h>
-#include <http/httpmethod.h>
-
-//#include <openssl/ssl.h>
+#include <http/httpsession.h>
+#include <http/httpver.h>
+#include <lsr/ls_strtool.h>
 #include <sslpp/sslconnection.h>
 #include <sslpp/sslcert.h>
 
-#include <util/stringtool.h>
-
+//#include <openssl/ssl.h>
 #include <stdio.h>
-#include <lsr/ls_strtool.h>
 
 JkAjp13::JkAjp13()
 {
 }
+
+
 JkAjp13::~JkAjp13()
 {
 }
+
 
 static const char *s_pForwardHeaderName[9] =
 {
@@ -53,10 +52,12 @@ static const char *s_pForwardHeaderName[9] =
     "transfer-encoding"
 };
 
+
 static int s_iForwardHeaderLen[9] =
 {
     13, 17, 8, 13, 19, 8, 10, 5, 17
 };
+
 
 const char *JkAjp13::s_pRespHeaders[AJP_RESP_HEADERS_NUM + 1] =
 {
@@ -74,10 +75,12 @@ const char *JkAjp13::s_pRespHeaders[AJP_RESP_HEADERS_NUM + 1] =
     "www-authenticate"
 };
 
+
 int JkAjp13::s_iRespHeaderLen[AJP_RESP_HEADERS_NUM + 1] =
 {
     0, 12, 16, 14, 4, 13, 8, 10, 11, 14, 6, 16
 };
+
 
 /*
 For messages from the server to the container of type "Forward Request":
@@ -116,11 +119,13 @@ attribute_value := (string)
 Not that the all-important header is "content-length', because it determines whether or not the container looks for another packet immediately.
 */
 
+
 inline void appendInt(char *&p, int n)
 {
     *p++ = (unsigned char)((n >> 8) & 0xff);
     *p++ = (unsigned char)(n & 0xff);
 }
+
 
 inline void appendLong(char *&p, int n)
 {
@@ -130,6 +135,7 @@ inline void appendLong(char *&p, int n)
     *p++ = (unsigned char)(n & 0xff);
 }
 
+
 inline void appendString(char *&p, const char *s, int n)
 {
     appendInt(p, n);
@@ -138,12 +144,14 @@ inline void appendString(char *&p, const char *s, int n)
     *p++ = 0;
 }
 
+
 void JkAjp13::buildAjpHeader(char *pBuf, int size)
 {
     *pBuf++ = AJP_REQ_PREFIX_B1;
     *pBuf++ = AJP_REQ_PREFIX_B2;
     appendInt(pBuf, size);
 }
+
 
 void JkAjp13::buildAjpReqBodyHeader(char *pBuf, int size)
 {
@@ -152,6 +160,7 @@ void JkAjp13::buildAjpReqBodyHeader(char *pBuf, int size)
     appendInt(pBuf, size + 2);
     appendInt(pBuf, size);
 }
+
 
 int JkAjp13::buildReq(HttpSession *pSession, char *&p, char *pEnd)
 {
@@ -267,9 +276,8 @@ int JkAjp13::buildReq(HttpSession *pSession, char *&p, char *pEnd)
                 return LS_FAIL;
             *p++ = AJP_A_SSL_SESSION;
             appendInt(p, n);
-            StringTool::hexEncode(
-                (char *)SSLConnection::getSessionId(pSession),
-                idLen, p);
+            ls_hexencode((char *)SSLConnection::getSessionId(pSession),
+                         idLen, p);
             p += n;
             *p++ = 0;
         }
@@ -309,6 +317,7 @@ int JkAjp13::buildReq(HttpSession *pSession, char *&p, char *pEnd)
 
     return 0;
 }
+
 
 int JkAjp13::buildWorkerHeader(JWorker *pWorker, char *&p, char *pEnd)
 {

@@ -93,9 +93,11 @@ public:
     typedef int (*val_comp)(const void *pVal1, const void *pVal2, int len);
     LsShmHash *getNamedHash(const char *name,
                            size_t init_size, hash_fn hf, val_comp vc);
-    LsShmHash *getNamedLruHash(const char *name,
+    LsShmLruHash *getNamedLruHash(const char *name,
                            size_t init_size, hash_fn hf, val_comp vc);
-    LsShmHash *getNamedXLruHash(const char *name,
+    LsShmWLruHash *getNamedWLruHash(const char *name,
+                           size_t init_size, hash_fn hf, val_comp vc);
+    LsShmXLruHash *getNamedXLruHash(const char *name,
                            size_t init_size, hash_fn hf, val_comp vc);
     void close();
     void destroyShm();
@@ -109,10 +111,10 @@ public:
     LsShmStatus_t status() const
     {   return m_status; };
 
-    void *offset2ptr(LsShmOffset_t offset) const
+    ls_attr_inline void *offset2ptr(LsShmOffset_t offset) const  
     {   return (void *)m_pShm->offset2ptr(offset); }
 
-    LsShmOffset_t ptr2offset(const void *ptr) const
+    ls_attr_inline LsShmOffset_t ptr2offset(const void *ptr) const
     {   return m_pShm->ptr2offset(ptr); }
 
     LsShmOffset_t  alloc2(LsShmSize_t size, int &remapped);
@@ -137,13 +139,13 @@ public:
     LsShmReg *addReg(const char *name)
     {   return m_pShm->addReg(name); }
 
-    LsShmMap *getShmMap() const
+    ls_attr_inline LsShmMap *getShmMap() const
     {   return m_pShm->getShmMap(); }
 
-    LsShmSize_t getShmMapMaxSize() const
+    ls_attr_inline LsShmSize_t getShmMapMaxSize() const
     {   return m_pShm->maxSize(); }
 
-    LsShmSize_t getShmMapOldMaxSize() const
+    ls_attr_inline LsShmSize_t getShmMapOldMaxSize() const
     {   return m_pShm->oldMaxSize(); }
 
     LsShmLock *lockPool()

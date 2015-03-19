@@ -18,10 +18,9 @@
 #ifndef EXTWORKERCONFIG_H
 #define EXTWORKERCONFIG_H
 
-
-
 #include <util/autostr.h>
 #include <util/env.h>
+
 #include <sys/types.h>
 
 class HttpVHost;

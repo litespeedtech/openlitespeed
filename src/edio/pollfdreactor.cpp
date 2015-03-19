@@ -16,7 +16,6 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "pollfdreactor.h"
-#include "eventreactor.h"
 
 #include <errno.h>
 #include <stdio.h>
@@ -36,10 +35,12 @@ PollfdReactor::PollfdReactor()
 {
 }
 
+
 PollfdReactor::~PollfdReactor()
 {
     deallocate();
 }
+
 
 /** No descriptions */
 int PollfdReactor::allocate(int capacity)
@@ -68,6 +69,7 @@ int PollfdReactor::allocate(int capacity)
     return 0;
 }
 
+
 /** No descriptions */
 int PollfdReactor::deallocate()
 {
@@ -85,6 +87,7 @@ int PollfdReactor::deallocate()
     }
     return 0;
 }
+
 
 int PollfdReactor::grow()
 {

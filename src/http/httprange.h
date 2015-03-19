@@ -20,7 +20,6 @@
 
 
 #include <lsdef.h>
-#include <lsr/ls_xpool.h>
 #include <util/objarray.h>
 #include <sys/types.h>
 
@@ -30,6 +29,8 @@
 
 class AutoStr2;
 class ByteRange;
+typedef struct ls_xpool_s ls_xpool_t;
+
 class HttpRange
 {
     TObjArray< ByteRange > m_array;

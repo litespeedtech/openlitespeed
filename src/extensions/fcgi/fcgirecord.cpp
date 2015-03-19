@@ -20,9 +20,12 @@
 FcgiRecord::FcgiRecord()
 {
 }
+
+
 FcgiRecord::~FcgiRecord()
 {
 }
+
 
 void FcgiRecord::setRecordHeader(FCGI_Header &header, unsigned char iType,
                                  uint16_t iRequestId, uint16_t iContentLength)

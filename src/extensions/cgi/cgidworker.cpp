@@ -18,21 +18,21 @@
 #include "cgidworker.h"
 #include "cgidconfig.h"
 #include "cgidconn.h"
-#include "lscgiddef.h"
-#include "suexec.h"
 #include "lscgid.h"
+
+#include <http/handlerfactory.h>
+#include <http/handlertype.h>
 #include <http/httpdefs.h>
 #include <http/httplog.h>
-#include <http/handlerfactory.h>
-#include <http/httpserverconfig.h>
-#include <http/handlertype.h>
 #include <http/httpmime.h>
+#include <http/httpserverconfig.h>
 #include <http/serverprocessconfig.h>
+#include <main/configctx.h>
 #include <main/mainserverconfig.h>
-#include <socket/coresocket.h>
-#include "util/configctx.h"
 #include <util/xmlnode.h>
 #include <extensions/localworker.h>
+#include <extensions/registry/extappregistry.h>
+
 #include <fcntl.h>
 #include <signal.h>
 #include <stdio.h>
@@ -53,16 +53,18 @@ CgidWorker::CgidWorker(const char *pName)
     setConfigPointer(new CgidConfig(pName));
 }
 
+
 CgidWorker::~CgidWorker()
 {
 }
+
 
 ExtConn *CgidWorker::newConn()
 {
     return new CgidConn();
 }
 
-#include <extensions/registry/extappregistry.h>
+
 extern void generateSecret(char *pBuf);
 extern int removeSimiliarFiles(const char *pPath, long tm);
 
@@ -123,6 +125,7 @@ int CgidWorker::start(const char *pServerRoot, const char *pChroot,
     return ret;
 }
 
+
 static void CloseUnusedFd(int fd)
 {
     for (int i = 3; i < 1024; ++i)
@@ -132,6 +135,7 @@ static void CloseUnusedFd(int fd)
             close(i);
     }
 }
+
 
 //return 0 means OK, -1 means ERROR
 int CgidWorker::spawnCgid(int fd, char *pData, const char *secret)
@@ -163,12 +167,14 @@ int CgidWorker::spawnCgid(int fd, char *pData, const char *secret)
     }
 }
 
+
 int CgidWorker::getCgidPid()
 {
     CgidWorker *pWorker = (CgidWorker *)ExtAppRegistry::getApp(
                               EA_CGID, LSCGID_NAME);
     return pWorker->m_pid;
 }
+
 
 int CgidWorker::checkRestartCgid(const char *pServerRoot,
                                  const char *pChroot,
@@ -178,6 +184,7 @@ int CgidWorker::checkRestartCgid(const char *pServerRoot,
                               EA_CGID, LSCGID_NAME);
     return pWorker->watchDog(pServerRoot, pChroot, priority, switchToLscgid);
 }
+
 
 int CgidWorker::watchDog(const char *pServerRoot, const char *pChroot,
                          int priority, int switchToLscgid)
@@ -207,6 +214,8 @@ int CgidWorker::watchDog(const char *pServerRoot, const char *pChroot,
     return ret;
 
 }
+
+
 int CgidWorker::config(const XmlNode *pNode1)
 {
     int iChrootlen = 0;
@@ -292,6 +301,7 @@ int CgidWorker::config(const XmlNode *pNode1)
                   procConfig.getPriority()));
     return CgidWorker::getCgidWorkerPid();
 }
+
 
 void CgidWorker::closeFdCgid()
 {

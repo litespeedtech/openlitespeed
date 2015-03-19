@@ -16,8 +16,8 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "statusurlmap.h"
-#include "httplog.h"
 
+#include <http/httplog.h>
 #include <util/autostr.h>
 
 #include <stdlib.h>
@@ -29,6 +29,7 @@ StatusUrlMap::StatusUrlMap()
 {
     memset(m_pSC, 0, sizeof(m_pSC));
 }
+
 
 StatusUrlMap::StatusUrlMap(const StatusUrlMap &rhs)
 {
@@ -48,6 +49,7 @@ StatusUrlMap::~StatusUrlMap()
             delete m_pSC[i];
 
 }
+
 
 int StatusUrlMap::setUrl(int statusCode, const char *url)
 {
@@ -71,6 +73,7 @@ int StatusUrlMap::setUrl(int statusCode, const char *url)
     return 0;
 }
 
+
 int StatusUrlMap::setStatusUrlMap(int statusCode, const char *url)
 {
     if (url == NULL)
@@ -83,6 +86,7 @@ int StatusUrlMap::setStatusUrlMap(int statusCode, const char *url)
     return setUrl(statusCode, url);
 
 }
+
 
 int StatusUrlMap::inherit(const StatusUrlMap *pMap)
 {

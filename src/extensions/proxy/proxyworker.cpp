@@ -22,8 +22,11 @@ ProxyWorker::ProxyWorker(const char *pName)
 {
     setConfigPointer(new ProxyConfig(pName));
 }
+
+
 ProxyWorker::~ProxyWorker()
 {}
+
 
 ExtConn *ProxyWorker::newConn()
 {

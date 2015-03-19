@@ -18,12 +18,16 @@
 #ifndef LS_LOCK_H
 #define LS_LOCK_H
 
+#include <lsr/ls_atomic.h>
+#include <lsr/ls_types.h>
+
 #include <assert.h>
 #include <stdint.h>
 #include <pthread.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include <lsr/ls_types.h>
+#include <errno.h>
+#include <signal.h>
 
 #if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
 #include <linux/futex.h>
@@ -66,12 +70,13 @@ extern "C" {
 #endif /* defined(linux) || defined(__FreeBSD__ ) */
 
 
-#define MAX_SPIN_COUNT      10
+#define MAX_FUTEX_SPINCNT      10
+#define MAX_SPINCNT_CHECK      50000
 
 /* LiteSpeed general purpose lock/unlock/trylock
  */
 #ifdef USE_F_MUTEX
-typedef int                 ls_mutex_t;
+typedef int32_t             ls_mutex_t;
 #else
 typedef pthread_mutex_t     ls_mutex_t;
 #endif
@@ -94,7 +99,7 @@ typedef pthread_spinlock_t ls_pspinlock_t;
 #else
 #define cpu_relax()         ;
 #endif
-typedef int             ls_atom_spinlock_t;
+typedef int32_t             ls_atom_spinlock_t;
 
 #ifdef USE_ATOMIC_SPIN
 typedef ls_atom_spinlock_t   ls_spinlock_t;
@@ -201,14 +206,14 @@ ls_inline int ls_futex_lock(ls_mutex_t *p)
 
 #if defined( USE_MUTEX_ADAPTIVE )
     int i;
-    for (i = 0; i < MAX_SPIN_COUNT; ++i)
-        if (__sync_bool_compare_and_swap(p, 0, 1))
+    for (i = 0; i < MAX_FUTEX_SPINCNT; ++i)
+        if (ls_atomic_casint(p, 0, 1))
             return 0;
 #endif
 
     while (1)
     {
-        if ((val = __sync_add_and_fetch(p, 1)) == 1)
+        if ((val = ls_atomic_add(p, 1)) == 1)
             return 0;
         if ((val & 0x80000001) == 0x80000001)
             *p &= ~0x80000000;  /* do not let count wrap to zero */
@@ -233,7 +238,7 @@ ls_inline int ls_futex_lock(ls_mutex_t *p)
  */
 ls_inline int ls_futex_trylock(ls_mutex_t *p)
 {
-    return !__sync_bool_compare_and_swap(p, 0, 1);
+    return !ls_atomic_casint(p, 0, 1);
 }
 
 /**
@@ -251,7 +256,7 @@ ls_inline int ls_futex_unlock(ls_mutex_t *p)
     int *lp = p;
 
     assert(*lp != 0);
-    if (__sync_lock_test_and_set(p, 0) == 1)
+    if (ls_atomic_setint(p, 0) == 1)
         return 0;
     
     //return syscall(SYS_futex, p, FUTEX_WAKE, 1, NULL, NULL, 0);
@@ -274,6 +279,9 @@ int ls_futex_setup(ls_mutex_t *p);
 #endif
 
 #ifdef USE_ATOMIC_SPIN
+extern int ls_spin_pid;    /* process id used with ls_atomic_pidspin */
+void ls_atomic_pidspin_init();
+
 
 /**
  * @ls_atomic_spin_lock
@@ -284,16 +292,59 @@ int ls_futex_setup(ls_mutex_t *p);
  * @param[in] p - A pointer to the lock.
  * @return 0 when able to acquire the lock.
  *
- * @see ls_atomic_spin_setup, ls_atomic_spin_trylock, ls_atomic_spin_unlock
+ * @see ls_atomic_spin_setup, ls_atomic_spin_trylock, ls_atomic_spin_unlock,
+ *   ls_atomic_pidspin_lock
  */
 ls_inline int ls_atomic_spin_lock(ls_atom_spinlock_t *p)
 {
     while (1)
     {
         if ((*p == lock_Avail)
-            && __sync_bool_compare_and_swap(p, lock_Avail, lock_Inuse))
+            && ls_atomic_casint(p, lock_Avail, lock_Inuse))
             return 0;
         cpu_relax();
+    }
+}
+
+/**
+ * @ls_atomic_pidspin_lock
+ * @brief Locks
+ *   a spinlock set up with built-in functions for atomic memory access
+ *   using a Process Id lock.
+ * @details The routine \e spins until it is able to acquire the lock.
+ *   This version additionally attempts to determine if the process
+ *   owning the lock is still in execution.
+ *
+ * @param[in] p - A pointer to the lock.
+ * @return 0 when able to acquire the lock.
+ *
+ * @see ls_atomic_spin_lock
+ */
+ls_inline int ls_atomic_pidspin_lock(ls_atom_spinlock_t *p)
+{
+    int waitpid;
+    if (ls_spin_pid == 0)
+        ls_atomic_pidspin_init();
+    int cnt = MAX_SPINCNT_CHECK;
+    while (1)
+    {
+        if ((waitpid = *p) == lock_Avail)
+        {
+            if (ls_atomic_casint(p, lock_Avail, ls_spin_pid))
+                return 0;
+            cnt = MAX_SPINCNT_CHECK;
+        }
+        else if (--cnt == 0)
+        {
+            if ((kill(waitpid, 0) < 0) && (errno == ESRCH)
+              && ls_atomic_casint(p, waitpid, ls_spin_pid))
+                return 0;
+            cnt = MAX_SPINCNT_CHECK;
+        }
+        else
+        {
+            cpu_relax();
+        }
     }
 }
 
@@ -305,11 +356,30 @@ ls_inline int ls_atomic_spin_lock(ls_atom_spinlock_t *p)
  * @param[in] p - A pointer to the lock.
  * @return 0 on success, else 1 if unable to acquire the lock.
  *
- * @see ls_atomic_spin_setup, ls_atomic_spin_lock, ls_atomic_spin_unlock
+ * @see ls_atomic_spin_setup, ls_atomic_spin_lock, ls_atomic_spin_unlock,
+ *   ls_atomic_pidspin_trylock
  */
 ls_inline int ls_atomic_spin_trylock(ls_atom_spinlock_t *p)
 {
-    return !__sync_bool_compare_and_swap(p, lock_Avail, lock_Inuse);
+    return !ls_atomic_casint(p, lock_Avail, lock_Inuse);
+}
+
+/**
+ * @ls_atomic_pidspin_trylock
+ * @brief Tries to lock
+ *   a spinlock set up with built-in functions for atomic memory access
+ *   using a Process Id lock.
+ *
+ * @param[in] p - A pointer to the lock.
+ * @return 0 on success, else 1 if unable to acquire the lock.
+ *
+ * @see ls_atomic_spin_trylock
+ */
+ls_inline int ls_atomic_pidspin_trylock(ls_atom_spinlock_t *p)
+{
+    if (ls_spin_pid == 0)
+        ls_atomic_pidspin_init();
+    return !ls_atomic_casint(p, lock_Avail, ls_spin_pid);
 }
 
 /**
@@ -324,7 +394,7 @@ ls_inline int ls_atomic_spin_trylock(ls_atom_spinlock_t *p)
  */
 ls_inline int ls_atomic_spin_unlock(ls_atom_spinlock_t *p)
 {
-    __sync_lock_release(p);
+    ls_atomic_clrint(p);
     return 0;
 }
 

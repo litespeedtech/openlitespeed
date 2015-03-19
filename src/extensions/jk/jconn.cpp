@@ -17,8 +17,6 @@
 *****************************************************************************/
 #include "jconn.h"
 
-#include "jkajp13.h"
-
 #include <extensions/extworker.h>
 
 #include <http/httpextconnector.h>
@@ -37,9 +35,11 @@ JConn::JConn()
 {
 }
 
+
 JConn::~JConn()
 {
 }
+
 
 inline int getInt(unsigned char *&p)
 {
@@ -53,10 +53,12 @@ inline int peekInt(unsigned char *p)
     return ((((int) * p) << 8) | (*(p + 1)));
 }
 
+
 //inline unsigned long getLong( unsigned chsr * &p )
 //{
 //
 //}
+
 
 void JConn::init(int fd, Multiplexer *pMplx)
 {
@@ -80,6 +82,7 @@ int JConn::doWrite()
         suspendWrite();
     return 0;
 }
+
 
 int JConn::processPacketHeader(unsigned char *&p)
 {
@@ -136,6 +139,7 @@ int JConn::processPacketHeader(unsigned char *&p)
     return 0;
 }
 
+
 int JConn::processPacketData(unsigned char *&p)
 {
     if (m_iPacketState == PACKET_HEADER)
@@ -168,6 +172,7 @@ int JConn::processPacketData(unsigned char *&p)
         m_iPacketState = PACKET_HEADER;
     return 0;
 }
+
 
 int JConn::processPacketContent(unsigned char *&p, unsigned char *pEnd)
 {
@@ -249,6 +254,7 @@ int JConn::processPacketContent(unsigned char *&p, unsigned char *pEnd)
 
 }
 
+
 int JConn::readRespHeader(unsigned char *&p, unsigned char *pEnd)
 {
     while (m_iNumHeader > 0)
@@ -320,6 +326,7 @@ int JConn::readRespHeader(unsigned char *&p, unsigned char *pEnd)
     return getConnector()->respHeaderDone();
 }
 
+
 int JConn::processRespData()
 {
     int ret;
@@ -342,6 +349,7 @@ int JConn::processRespData()
     m_pCurPos = m_respBuf;
     return 0;
 }
+
 
 int JConn::doRead()
 {
@@ -416,6 +424,7 @@ int JConn::addRequest(ExtRequest *pReq)
     //return 0;
 }
 
+
 ExtRequest *JConn::getReq() const
 {
     return getConnector();
@@ -432,26 +441,31 @@ int JConn::removeRequest(ExtRequest *pReq)
     return 0;
 }
 
+
 void JConn::reset()
 {
     memset(&m_pReqHeaderEnd, 0, (char *)(&m_iTotalPending + 1) -
            (char *)(&m_pReqHeaderEnd));
 }
 
+
 void JConn::abort()
 {
     setState(ABORT);
 }
+
 
 int  JConn::begin()
 {
     return 1;
 }
 
+
 int  JConn::beginReqBody()
 {
     return 1;
 }
+
 
 int  JConn::sendReqBodyPacket()
 {
@@ -460,6 +474,7 @@ int  JConn::sendReqBodyPacket()
     m_iPendingBody = 0;
     return 0;
 }
+
 
 int  JConn::sendReqBody(const char *pBuf, int size)
 {
@@ -487,6 +502,7 @@ int  JConn::sendReqBody(const char *pBuf, int size)
     }
 }
 
+
 int  JConn::endOfReqBody()
 {
     if (m_iPendingBody)
@@ -502,6 +518,7 @@ int  JConn::endOfReqBody()
     suspendWrite();
     return 0;
 }
+
 
 int  JConn::flush()
 {
@@ -534,6 +551,7 @@ int  JConn::readResp(char *pBuf, int size)
     return 0;
 }
 
+
 void JConn::cleanUp()
 {
     setConnector(NULL);
@@ -541,19 +559,23 @@ void JConn::cleanUp()
     recycle();
 }
 
+
 void JConn::finishRecvBuf()
 {
 }
+
 
 bool JConn::wantRead()
 {
     return true;
 }
 
+
 bool JConn::wantWrite()
 {
     return true;
 }
+
 
 int JConn::buildReqHeader()
 {
@@ -571,6 +593,7 @@ int JConn::buildReqHeader()
     JkAjp13::buildAjpHeader(m_buf, m_pBufEnd - m_buf - 4);
     return 0;
 }
+
 
 int JConn::sendReqHeader()
 {

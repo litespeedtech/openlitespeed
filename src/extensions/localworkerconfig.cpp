@@ -16,14 +16,16 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "localworkerconfig.h"
+#include "localworker.h"
+#include "registry/extappregistry.h"
+
 #include <http/httpserverconfig.h>
 #include <http/serverprocessconfig.h>
+#include <main/configctx.h>
 #include <util/rlimits.h>
-#include "util/configctx.h"
 #include <util/xmlnode.h>
 #include <util/daemonize.h>
-#include <extensions/localworker.h>
-#include <extensions/registry/extappregistry.h>
+
 #include <assert.h>
 #include <string.h>
 #include <stdlib.h>
@@ -44,6 +46,7 @@ LocalWorkerConfig::LocalWorkerConfig(const char *pName)
 {
 }
 
+
 LocalWorkerConfig::LocalWorkerConfig()
     : m_pCommand(NULL)
     , m_iBackLog(10)
@@ -52,6 +55,7 @@ LocalWorkerConfig::LocalWorkerConfig()
     , m_iRunOnStartUp(0)
 {
 }
+
 
 LocalWorkerConfig::LocalWorkerConfig(const LocalWorkerConfig &rhs)
     : ExtWorkerConfig(rhs)
@@ -75,6 +79,7 @@ LocalWorkerConfig::~LocalWorkerConfig()
         free(m_pCommand);
 }
 
+
 void LocalWorkerConfig::setAppPath(const char *pPath)
 {
     if ((pPath != NULL) && (strlen(pPath) > 0))
@@ -85,15 +90,18 @@ void LocalWorkerConfig::setAppPath(const char *pPath)
     }
 }
 
+
 void LocalWorkerConfig::beginConfig()
 {
     clearEnv();
 }
 
+
 void LocalWorkerConfig::endConfig()
 {
 
 }
+
 
 void LocalWorkerConfig::setRLimits(const RLimits *pRLimits)
 {
@@ -102,6 +110,8 @@ void LocalWorkerConfig::setRLimits(const RLimits *pRLimits)
     m_rlimits = *pRLimits;
 
 }
+
+
 int LocalWorkerConfig::checkExtAppSelfManagedAndFixEnv()
 {
     static const char *instanceEnv[] =
@@ -143,6 +153,8 @@ int LocalWorkerConfig::checkExtAppSelfManagedAndFixEnv()
     pEnv->add(0, 0, 0, 0);
     return selfManaged;
 }
+
+
 int LocalWorkerConfig::config(const XmlNode *pNode)
 {
     ServerProcessConfig &procConfig =ServerProcessConfig::getInstance();
@@ -232,6 +244,8 @@ int LocalWorkerConfig::config(const XmlNode *pNode)
 
     return 0;
 }
+
+
 void LocalWorkerConfig::configExtAppUserGroup(const XmlNode *pNode,
         int iType)
 {
@@ -257,4 +271,6 @@ void LocalWorkerConfig::configExtAppUserGroup(const XmlNode *pNode,
         else
             setUGid(pw->pw_uid, gid);
     }
+    ConfigCtx::getCurConfigCtx()->logError("Invalid User Name(%s) or Group "
+                                           "Name(%s)!", pUser, pGroup );
 }

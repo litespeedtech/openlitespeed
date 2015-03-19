@@ -19,39 +19,48 @@
 # define _XPG4_2
 #endif
 
-
 #include "suexec.h"
 #include "cgidworker.h"
 #include "cgidconfig.h"
+
 #include <http/httplog.h>
 #include <http/serverprocessconfig.h>
-
-#include <socket/gsockaddr.h>
 #include <lsr/ls_fileio.h>
+#include <socket/coresocket.h>
 #include <util/pcutil.h>
+#include <util/rlimits.h>
+#include <util/stringtool.h>
 
 #include <errno.h>
 #include <fcntl.h>
+#include <pthread.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <time.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/uio.h>
+#include <time.h>
 #include <unistd.h>
 
+
+#if defined(__FreeBSD__)
+# include <sys/param.h>
+#endif
+
+
 SUExec *SUExec::s_pSUExec = NULL;
+
 
 SUExec::SUExec()
 {
 }
 
+
 SUExec::~SUExec()
 {
 }
 
-#include <util/stringtool.h>
-#include <util/rlimits.h>
 
 int SUExec::buildArgv(char *pCmd, char **pDir,
                       char **pArgv, int argvLen)
@@ -94,8 +103,6 @@ int SUExec::buildArgv(char *pCmd, char **pDir,
     return 0;
 }
 
-#include <signal.h>
-#include <pthread.h>
 
 int SUExec::spawnChild(const char *pAppCmd, int fdIn, int fdOut,
                        char *const *env, int priority, const RLimits *pLimits,
@@ -184,6 +191,7 @@ void generateSecret(char *pBuf)
     pBuf[16] = 0;
 }
 
+
 int SUExec::checkLScgid(const char *path)
 {
     struct stat st;
@@ -211,8 +219,10 @@ int SUExec::checkLScgid(const char *path)
     return 0;
 }
 
+
 static char sDefaultPath[] = "PATH=/bin:/usr/bin:/usr/local/bin";
 //static char sLVE[] = "LVE_ENABLE=1";
+
 
 int SUExec::suEXEC(const char *pServerRoot, int *pfd, int listenFd,
                    char *const *pArgv, char *const *env, const RLimits *pLimits)
@@ -298,9 +308,6 @@ int SUExec::suEXEC(const char *pServerRoot, int *pfd, int listenFd,
     return pid;
 }
 
-#if defined(__FreeBSD__)
-# include <sys/param.h>
-#endif
 
 /*
 int
@@ -345,6 +352,7 @@ length len */
 #define CMSG_SPACE(len) (__CMSG_ALIGN(sizeof(struct cmsghdr)) + __CMSG_ALIGN(len))
 #endif
 
+
 int send_fd(int fd, int sendfd)
 {
     struct msghdr    msg;
@@ -385,8 +393,6 @@ int send_fd(int fd, int sendfd)
     return (sendmsg(fd, &msg, 0));
 }
 
-
-#include <socket/coresocket.h>
 
 int SUExec::cgidSuEXEC(const char *pServerRoot, int *pfd, int listenFd,
                        char *const *pArgv, char *const *env, const RLimits *pLimits)

@@ -131,7 +131,7 @@ TEST(shmPerProcess_test)
     const int iKeyLen = sizeof(aKey) - 1;
     xxx_t xxx;
     TShmHash<xxx_t> *pTHash;
-    TShmHash<xxx_t>::iterator it;
+    ls_str_pair_t parms;
     LsShmOffset_t off;
     int iValLen;
     int ret;
@@ -149,14 +149,20 @@ TEST(shmPerProcess_test)
     CHECK(ret == sizeof(xxx));
 
     xxx.x[0] = 0x5678;
-    CHECK(pTHash->insertIterator(aKey, iKeyLen, &xxx) == NULL);
-    CHECK((it = pTHash->getIterator(aKey, iKeyLen, &xxx, &ret)) != NULL);
+    ls_str_unsafeset(&parms.key, (char *)aKey, iKeyLen);
+    ls_str_unsafeset(&parms.value, (char *)&xxx, sizeof(xxx));
+    CHECK(pTHash->insertIterator(&parms) == 0);
+    CHECK((off = pTHash->getIterator(&parms, &ret)) != 0);
     CHECK(ret == LSSHM_FLAG_NONE);
-    CHECK(memcmp(it.first(), aKey, iKeyLen) == 0);
-    CHECK(((xxx_t *)it.second())->x[0] == 0x1234);
-    CHECK(pTHash->setIterator(aKey, iKeyLen, &xxx) == it);
-    CHECK(pTHash->findIterator(aKey, iKeyLen) == it);
-    CHECK(((xxx_t *)it.second())->x[0] == 0x5678);
+    if (off != 0)
+    {
+        TShmHash<xxx_t>::iterator it(pTHash->offset2iterator(off));
+        CHECK(memcmp(it.first(), aKey, iKeyLen) == 0);
+        CHECK(((xxx_t *)it.second())->x[0] == 0x1234);
+        CHECK(pTHash->setIterator(&parms) == off);
+        CHECK(pTHash->findIterator(&parms) == off);
+        CHECK(((xxx_t *)it.second())->x[0] == 0x5678);
+    }
 
     pPool1->disableLock();
     pPool2->disableLock();

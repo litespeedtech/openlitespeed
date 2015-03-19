@@ -35,8 +35,8 @@
 static inline bool llmq_atom_cmp_and_swap(
     ls_atom_uint_t *pVal, unsigned *pcmp, unsigned swap)
 {
-    unsigned prev =
-        (unsigned)ls_atomic_casv(pVal, (unsigned) * pcmp, (unsigned)swap);
+    unsigned prev = (unsigned)
+      ls_atomic_casvint((ls_atom_32_t *)pVal, (int32_t)(*pcmp), (int32_t)swap);
     if (prev == *pcmp)
         return true;
     *pcmp = prev;
@@ -137,7 +137,7 @@ static inline void do_wake(int cnt, ls_atom_uint_t *ptr)
 static inline void wake_producers(ls_llmq_t *pThis, int indx)
 {
     ls_atom_uint_t val;
-    LSR_ATOMIC_LOAD(val, &pThis->m_iPutWait);
+    ls_atomic_load(val, &pThis->m_iPutWait);
     if (val != 0)
     {
         do_wake(1, &pThis->m_iGetIndx
@@ -152,7 +152,7 @@ static inline void wake_producers(ls_llmq_t *pThis, int indx)
 static inline void wake_consumers(ls_llmq_t *pThis, int indx)
 {
     ls_atom_uint_t val;
-    LSR_ATOMIC_LOAD(val, &pThis->m_iGetWait);
+    ls_atomic_load(val, &pThis->m_iGetWait);
     if (val != 0)
     {
         do_wake(1, &pThis->m_iPutIndx
@@ -191,11 +191,11 @@ int ls_llmq_init(ls_llmq_t *pThis, unsigned int size)
     unsigned int i;
     for (i = 0; i < size; ++i)
     {
-        LSR_ATOMIC_STORE(&pPtr->m_iSeq, i);
+        ls_atomic_store(&pPtr->m_iSeq, i);
         ++pPtr;
     }
-    LSR_ATOMIC_STORE(&pThis->m_iPutIndx, 0);
-    LSR_ATOMIC_STORE(&pThis->m_iGetIndx, 0);
+    ls_atomic_store(&pThis->m_iPutIndx, 0);
+    ls_atomic_store(&pThis->m_iGetIndx, 0);
     pThis->m_mask = size - 1;
 
     return 0;
@@ -230,9 +230,9 @@ static int llmq_put(ls_llmq_t *pThis, void *data, int *pWaitVal)
     int diff;
     while (1)
     {
-        LSR_ATOMIC_LOAD(indx, &pThis->m_iPutIndx);
+        ls_atomic_load(indx, &pThis->m_iPutIndx);
         pPtr = indx2qobj(pThis, indx);
-        LSR_ATOMIC_LOAD(seq, &pPtr->m_iSeq);
+        ls_atomic_load(seq, &pPtr->m_iSeq);
         diff = (int)seq - (int)indx;
         if (diff == 0)
         {
@@ -252,7 +252,7 @@ static int llmq_put(ls_llmq_t *pThis, void *data, int *pWaitVal)
     int myIndx = ls_atomic_add(&MYINDX, 1);
 #endif
     ++indx;
-    LSR_ATOMIC_STORE(&pPtr->m_iSeq, indx);
+    ls_atomic_store(&pPtr->m_iSeq, indx);
 #ifdef LSR_LLQ_DEBUG
     printf("%d] PUT=%d,%d: %d/%d\n",
            myIndx,
@@ -290,9 +290,9 @@ static void *llmq_get(ls_llmq_t *pThis, int *pWaitVal)
     int diff;
     while (1)
     {
-        LSR_ATOMIC_LOAD(indx, &pThis->m_iGetIndx);
+        ls_atomic_load(indx, &pThis->m_iGetIndx);
         pPtr = indx2qobj(pThis, indx);
-        LSR_ATOMIC_LOAD(seq, &pPtr->m_iSeq);
+        ls_atomic_load(seq, &pPtr->m_iSeq);
         diff = (int)seq - (int)(indx + 1);
         if (diff == 0)
         {
@@ -312,7 +312,7 @@ static void *llmq_get(ls_llmq_t *pThis, int *pWaitVal)
     int myIndx = ls_atomic_add(&MYINDX, 1);
 #endif
     indx += (1 + pThis->m_mask);
-    LSR_ATOMIC_STORE(&pPtr->m_iSeq, indx);
+    ls_atomic_store(&pPtr->m_iSeq, indx);
 
 #ifdef LSR_LLQ_DEBUG
     printf("%d] GOT=%d,%d: %d/%d\n",

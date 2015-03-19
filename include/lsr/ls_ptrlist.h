@@ -23,7 +23,6 @@
 #include <string.h>
 #include <sys/types.h>
 #include <stdbool.h>
-#include <lsr/ls_pool.h>
 #include <lsr/ls_types.h>
 
 
@@ -119,14 +118,7 @@ void ls_ptrlist_copy(ls_ptrlist_t *pThis, const ls_ptrlist_t *pRhs);
  *
  * @see ls_ptrlist, ls_ptrlist_delete
  */
-ls_inline ls_ptrlist_t *ls_ptrlist_new(size_t initSize)
-{
-    ls_ptrlist_t *pThis;
-    if ((pThis = (ls_ptrlist_t *)
-                 ls_palloc(sizeof(*pThis))) != NULL)
-        ls_ptrlist(pThis, initSize);
-    return pThis;
-}
+ls_ptrlist_t *ls_ptrlist_new(size_t initSize);
 
 /**
  * @ls_ptrlist_d
@@ -150,8 +142,7 @@ void ls_ptrlist_d(ls_ptrlist_t *pThis);
  *
  * @see ls_ptrlist_new
  */
-ls_inline void ls_ptrlist_delete(ls_ptrlist_t *pThis)
-{   ls_ptrlist_d(pThis);  ls_pfree(pThis);   }
+void ls_ptrlist_delete(ls_ptrlist_t *pThis);
 
 /**
  * @ls_ptrlist_resize

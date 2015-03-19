@@ -16,6 +16,7 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 
+#include <lsdef.h>
 #include <lsr/ls_lfqueue.h>
 #include <lsr/ls_atomic.h>
 
@@ -25,7 +26,6 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <assert.h>
-#include <lsdef.h>
 
 #define NUMCONSUMERS    5       /* number of consumer threads */
 #define NUMPRODUCERS    5       /* number of producer threads */
@@ -79,7 +79,14 @@ static int mpmc_put(job_t *pjob, long val)
 static long mpmc_get()
 {
     ls_lfnodei_t *ptr;
+#if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
+    struct timespec tv;
+    tv.tv_sec = 1;
+    tv.tv_nsec = 0;
+    if ((ptr = ls_lfqueue_timedget((ls_lfqueue_t *)pThis, &tv)) == NULL)
+#else
     if ((ptr = ls_lfqueue_get((ls_lfqueue_t *)pThis)) == NULL)
+#endif
         return LS_FAIL;
     return *((long *)(ptr + 1));
 }

@@ -18,10 +18,10 @@
 #ifndef LS_STACK_H
 #define LS_STACK_H
 
-#include <lsr/ls_lock.h>
 #include <lsr/ls_node.h>
-#include <lsr/ls_pool.h>
 #include <lsr/ls_types.h>
+
+#include <stdlib.h>
 
 /**
  * @file
@@ -87,13 +87,7 @@ ls_inline void ls_stack_destroy(ls_stack_t *pThis)
  *
  * @see ls_stack_delete
  */
-ls_inline ls_stack_t *ls_stack_new()
-{
-    ls_stack_t *pThis;
-    if ((pThis = (ls_stack_t *)ls_palloc(sizeof(ls_stack_t))) != NULL)
-        ls_stack_init(pThis);
-    return pThis;
-}
+ls_stack_t *ls_stack_new();
 
 /** @ls_stack_delete
  * @brief Destroys then deletes a stack object.
@@ -105,15 +99,7 @@ ls_inline ls_stack_t *ls_stack_new()
  *
  * @see ls_stack_new
  */
-ls_inline void ls_stack_delete(ls_stack_t *pThis)
-{
-    if (pThis)
-    {
-        ls_stack_destroy(pThis);
-        ls_pfree(pThis);
-    }
-    return;
-}
+void ls_stack_delete(ls_stack_t *pThis);
 
 /** @ls_stack_push
  * @brief Pushes an object onto the top of a stack.

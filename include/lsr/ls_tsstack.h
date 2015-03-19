@@ -20,7 +20,6 @@
 
 #include <lsr/ls_lock.h>
 #include <lsr/ls_node.h>
-#include <lsr/ls_pool.h>
 #include <lsr/ls_stack.h>
 #include <lsr/ls_types.h>
 
@@ -47,8 +46,8 @@ extern "C" {
 
 typedef struct ls_tsstack_s
 {
-    ls_stack_t          stack;
-    ls_atom_spinlock_t  lock;
+    ls_stack_t      stack;
+    ls_spinlock_t   lock;
 } ls_tsstack_t;
 
 /** @ls_tsstack_init
@@ -64,7 +63,7 @@ typedef struct ls_tsstack_s
 ls_inline void ls_tsstack_init(ls_tsstack_t *pThis)
 {
     ls_stack_init(&pThis->stack);
-    ls_atomic_spin_setup(&pThis->lock);
+    ls_spinlock_setup(&pThis->lock);
 }
 
 /** @ls_tsstack_destroy
@@ -76,9 +75,9 @@ ls_inline void ls_tsstack_init(ls_tsstack_t *pThis)
  */
 ls_inline void ls_tsstack_destroy(ls_tsstack_t *pThis)
 {
-    ls_atomic_spin_lock(&pThis->lock);
+    ls_spinlock_lock(&pThis->lock);
     ls_stack_destroy(&pThis->stack);
-    ls_atomic_spin_unlock(&pThis->lock);
+    ls_spinlock_unlock(&pThis->lock);
 }
 
 /** @ls_tsstack_new
@@ -91,13 +90,7 @@ ls_inline void ls_tsstack_destroy(ls_tsstack_t *pThis)
  *
  * @see ls_tsstack_delete
  */
-ls_tsstack_t *ls_tsstack_new()
-{
-    ls_tsstack_t *pThis;
-    if ((pThis = (ls_tsstack_t *)ls_palloc(sizeof(ls_tsstack_t))) != NULL)
-        ls_tsstack_init(pThis);
-    return pThis;
-}
+ls_tsstack_t *ls_tsstack_new();
 
 /** @ls_tsstack_delete
  * @brief Destroys then deletes a thread safe stack object.
@@ -109,15 +102,7 @@ ls_tsstack_t *ls_tsstack_new()
  *
  * @see ls_tsstack_new
  */
-ls_inline void ls_tsstack_delete(ls_tsstack_t *pThis)
-{
-    if (pThis)
-    {
-        ls_tsstack_destroy(pThis);
-        ls_pfree(pThis);
-    }
-    return;
-}
+void ls_tsstack_delete(ls_tsstack_t *pThis);
 
 /** @ls_tsstack_trypush
  * @brief Tries to push an object onto the top of a thread safe stack.
@@ -131,10 +116,10 @@ ls_inline void ls_tsstack_delete(ls_tsstack_t *pThis)
  */
 ls_inline int ls_tsstack_trypush(ls_tsstack_t *pThis, ls_nodei_t *pNode)
 {
-    if (ls_atomic_spin_trylock(&pThis->lock))
+    if (ls_spinlock_trylock(&pThis->lock))
         return -1;
     ls_stack_push(&pThis->stack, pNode);
-    ls_atomic_spin_unlock(&pThis->lock);
+    ls_spinlock_unlock(&pThis->lock);
     return 0;
 }
 
@@ -170,10 +155,10 @@ ls_inline void ls_tsstack_push(ls_tsstack_t *pThis, ls_nodei_t *pNode)
  */
 ls_inline int ls_tsstack_trypop(ls_tsstack_t *pThis, ls_nodei_t **pRet)
 {
-    if (ls_atomic_spin_trylock(&pThis->lock))
+    if (ls_spinlock_trylock(&pThis->lock))
         return -1;
     *pRet = ls_stack_pop(&pThis->stack);
-    ls_atomic_spin_unlock(&pThis->lock);
+    ls_spinlock_unlock(&pThis->lock);
     return 0;
 }
 

@@ -16,7 +16,8 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include <util/ghash.h>
-#include <util/pool.h>
+
+#include <lsr/xxhash.h>
 
 #include <new>
 
@@ -28,17 +29,13 @@
 
 hash_key_t GHash::hfString(const void *__s)
 {
-    hash_key_t __h = 0;
-    const char *p = (const char *)__s;
-    char ch = *(const char *)p++;
-    for (; ch; ch = *((const char *)p++))
-        __h = __h * 31 + (ch);
-
-    return __h;
+    return XXH32((const char *)__s, strlen((const char *)__s), 0);
 }
+
 
 int  GHash::cmpString(const void *pVal1, const void *pVal2)
 {   return strcmp((const char *)pVal1, (const char *)pVal2);  }
+
 
 hash_key_t GHash::hfCiString(const void *__s)
 {
@@ -54,8 +51,10 @@ hash_key_t GHash::hfCiString(const void *__s)
     return __h;
 }
 
+
 int  GHash::cmpCiString(const void *pVal1, const void *pVal2)
 {   return strncasecmp((const char *)pVal1, (const char *)pVal2, strlen((const char *)pVal1));  }
+
 
 hash_key_t GHash::hfIpv6(const void *pKey)
 {
@@ -74,6 +73,7 @@ hash_key_t GHash::hfIpv6(const void *pKey)
     }
     return key;
 }
+
 
 int  GHash::cmpIpv6(const void *pVal1, const void *pVal2)
 {

@@ -39,9 +39,11 @@ FcgiRequest::FcgiRequest(HttpExtConnector *pConnector)
     setConnector(pConnector);
 }
 
+
 FcgiRequest::~FcgiRequest()
 {
 }
+
 
 void FcgiRequest::reset()
 {
@@ -51,6 +53,7 @@ void FcgiRequest::reset()
     m_iCurStreamHeader = 0;
     m_env.clear();
 }
+
 
 int  FcgiRequest::beginRequest(int Role, int iKeepConn)
 {
@@ -75,6 +78,7 @@ void  FcgiRequest::abort()
     //sendAbortRec();
 }
 
+
 int  FcgiRequest::sendReqHeader()
 {
     int size = m_env.size();
@@ -88,6 +92,7 @@ int  FcgiRequest::sendReqHeader()
     return ret;
 
 }
+
 
 /**
   * @return 0, connection busy
@@ -125,6 +130,7 @@ int FcgiRequest::beginReqBody()
         return m_pFcgiConn->endOfStream(FCGI_PARAMS, m_iId);
 }
 
+
 int FcgiRequest::endOfReqBody()
 {
     if (!m_iovec.empty())
@@ -154,6 +160,7 @@ int  FcgiRequest::endOfRequest(int endCode, int status)
     return 0;
 }
 
+
 int FcgiRequest::begin()
 {
     return beginRequest(FCGI_RESPONDER,
@@ -174,6 +181,7 @@ int FcgiRequest::begin()
 //    return ret;
 //}
 
+
 int FcgiRequest::onStdOut()
 {
     HttpExtConnector *pConnector = getConnector();
@@ -185,6 +193,7 @@ int FcgiRequest::onStdOut()
 
 }
 
+
 int  FcgiRequest::processStdOut(char *pBuf, int size)
 {
     HttpExtConnector *pConnector = getConnector();
@@ -194,6 +203,7 @@ int  FcgiRequest::processStdOut(char *pBuf, int size)
                pConnector->getLogId(), size));
     return pConnector->processRespData(pBuf, size);
 }
+
 
 int  FcgiRequest::processStdErr(char *pBuf, int size)
 {
@@ -205,11 +215,13 @@ int  FcgiRequest::processStdErr(char *pBuf, int size)
     return pConnector->processErrData(pBuf, size);
 }
 
+
 int  FcgiRequest::onError()
 {
     endOfRequest(SC_500, -1);
     return 0;
 }
+
 
 void FcgiRequest::cleanUp()
 {
@@ -223,6 +235,7 @@ void FcgiRequest::cleanUp()
     reset();
 }
 
+
 void FcgiRequest::finishRecvBuf()
 {
     if (m_pFcgiConn)
@@ -230,16 +243,20 @@ void FcgiRequest::finishRecvBuf()
     m_iProtocolStatus = 0;
 }
 
+
 //void FcgiRequest::continueRead()
 //{
 //    m_iWantRead = 1;
 //    m_pFcgiConn->continueRead();
 //}
+
+
 void FcgiRequest::continueWrite()
 {
     m_iWantWrite = 1;
     m_pFcgiConn->continueWrite();
 }
+
 
 int FcgiRequest::connUnavail()
 {
@@ -295,6 +312,7 @@ int FcgiRequest::pendingWrite(const char *pBuf, int size, int type)
     return ret;
 }
 
+
 int  FcgiRequest::sendSpecial(const char *pBuf, int size)
 {
     int ret = 1;
@@ -302,6 +320,7 @@ int  FcgiRequest::sendSpecial(const char *pBuf, int size)
         ret = pendingWrite(pBuf, size, FCGI_PARAMS);
     return ret;
 }
+
 
 int  FcgiRequest::flush()
 {
@@ -319,6 +338,7 @@ int  FcgiRequest::flush()
     return ret;
 }
 
+
 int FcgiRequest::sendAbortRec()
 {
     if (D_ENABLED(DL_LESS))
@@ -329,10 +349,12 @@ int FcgiRequest::sendAbortRec()
     return m_pFcgiConn->sendRecord((const char *)&rec, sizeof(rec));
 }
 
+
 int FcgiRequest::readResp(char *pBuf, int size)
 {
     return m_pFcgiConn->readStdOut(m_iId, pBuf, size);
 }
+
 
 void FcgiRequest::onProcessorTimer()
 {

@@ -17,24 +17,25 @@
 *****************************************************************************/
 #include "spdyconnection.h"
 #include "spdystream.h"
-#include "spdystreampool.h"
-#include <http/httplog.h>
-#include <http/httpresourcemanager.h>
-#include <http/httprespheaders.h>
+// #include "spdystreampool.h"
 
-#include <edio/inputstream.h>
+#include <http/hiohandlerfactory.h>
+#include <http/httplog.h>
+#include <http/httprespheaders.h>
+#include <http/httpstatuscode.h>
 #include <util/iovec.h>
-#include <lsr/ls_strtool.h>
 
 static hash_key_t int_hash(const void *p)
 {
     return (int)(long)p;
 }
 
+
 static int  int_comp(const void *pVal1, const void *pVal2)
 {
     return (int)(long)pVal1 - (int)(long)pVal2;
 }
+
 
 static inline void appendNbo4Bytes(LoopBuf *pBuf, uint32_t val)
 {
@@ -44,6 +45,7 @@ static inline void appendNbo4Bytes(LoopBuf *pBuf, uint32_t val)
     pBuf->append(val & 0xff);
 }
 
+
 static inline void append4Bytes(LoopBuf *pBuf, const char *val)
 {
     pBuf->append(*val++);
@@ -51,6 +53,7 @@ static inline void append4Bytes(LoopBuf *pBuf, const char *val)
     pBuf->append(*val++);
     pBuf->append(*val);
 }
+
 
 SpdyConnection::SpdyConnection()
     : m_bufInput(4096)
@@ -73,6 +76,7 @@ SpdyConnection::SpdyConnection()
 {
 }
 
+
 void SpdyConnection::init(HiosProtocol ver)
 {
     if (ver == HIOS_PROTO_SPDY31)
@@ -80,7 +84,7 @@ void SpdyConnection::init(HiosProtocol ver)
         ver = HIOS_PROTO_SPDY3;
         enableSessionFlowCtrl();
     }
-    
+
     m_iCurDataOutWindow = SPDY_FCW_INIT_SIZE;
     m_deflator.init(0, ver);
     m_inflator.init(1, ver);
@@ -114,9 +118,11 @@ int SpdyConnection::onInitConnected()
     return 0;
 }
 
+
 SpdyConnection::~SpdyConnection()
 {
 }
+
 
 int SpdyConnection::onReadEx()
 {
@@ -125,6 +131,7 @@ int SpdyConnection::onReadEx()
         flush();
     return ret;
 }
+
 
 int SpdyConnection::onReadEx2()
 {
@@ -199,6 +206,7 @@ int SpdyConnection::onReadEx2()
     return 0;
 }
 
+
 int SpdyConnection::processControlFrame(SpdyFrameHeader *pHeader)
 {
     static int extraHeaderLen[2][11] =
@@ -258,6 +266,7 @@ int SpdyConnection::processControlFrame(SpdyFrameHeader *pHeader)
     return 0;
 }
 
+
 void SpdyConnection::printLogMsg(SpdyFrameHeader *pHeader)
 {
     if (D_ENABLED(DL_LESS))
@@ -267,6 +276,7 @@ void SpdyConnection::printLogMsg(SpdyFrameHeader *pHeader)
                pHeader->getHboData(0),  pHeader->getHboData(1)));
     }
 }
+
 
 int SpdyConnection::processSettingFrame(SpdyFrameHeader *pHeader)
 {
@@ -326,6 +336,7 @@ int SpdyConnection::processSettingFrame(SpdyFrameHeader *pHeader)
     return 0;
 }
 
+
 int SpdyConnection::processWindowUpdateFrame(SpdyFrameHeader *pHeader)
 {
     int32_t id = pHeader->getHboData(0);
@@ -365,6 +376,7 @@ int SpdyConnection::processRstFrame(SpdyFrameHeader *pHeader)
     return 0;
 }
 
+
 void SpdyConnection::skipRemainData()
 {
     int len = m_bufInput.size();
@@ -376,6 +388,7 @@ void SpdyConnection::skipRemainData()
     if (isFlowCtrl())
         m_iCurInBytesToUpdate += len;
 }
+
 
 int SpdyConnection::processDataFrame(SpdyFrameHeader *pHeader)
 {
@@ -425,6 +438,7 @@ int SpdyConnection::processDataFrame(SpdyFrameHeader *pHeader)
     }
     return 0;
 }
+
 
 int SpdyConnection::processSynStreamFrame(SpdyFrameHeader *pHeader)
 {
@@ -507,6 +521,7 @@ int SpdyConnection::extractCompressedData()
     return n1;
 }
 
+
 static int IstheKey(const char *str1, int Length1, const char *str2,
                     int Length2)
 {
@@ -515,6 +530,7 @@ static int IstheKey(const char *str1, int Length1, const char *str2,
     else
         return 0;
 }
+
 
 int SpdyConnection::checkReqline(char *pName, int ilength, uint8_t &flags)
 {
@@ -549,6 +565,7 @@ int SpdyConnection::checkReqline(char *pName, int ilength, uint8_t &flags)
     }
     return 0;
 }
+
 
 int SpdyConnection::parseHeaders(char *pHeader, int ilength,
                                  int &NVPairCnt)
@@ -620,6 +637,7 @@ int SpdyConnection::parseHeaders(char *pHeader, int ilength,
     return 0;
 }
 
+
 void SpdyConnection::replaceZero(char *pValue, int ilength)
 {
     char *pEnd = pValue + ilength;
@@ -659,12 +677,13 @@ int SpdyConnection::appendReqHeaders(SpdyStream *pStream, int NVPairCnt)
 
 }
 
+
 SpdyStream *SpdyConnection::getNewStream(uint32_t uiStreamID,
         int iPriority, uint8_t ubSpdy_Flags)
 {
     SpdyStream *pStream;
     HioHandler *pSession =
-        HttpResourceManager::getInstance().getHioHandler(HIOS_PROTO_HTTP);
+        HioHandlerFactory::getHioHandler(HIOS_PROTO_HTTP);
     if (!pSession)
         return NULL;
     pStream = new SpdyStream();
@@ -740,6 +759,7 @@ int SpdyConnection::sendFrame8Bytes(SpdyFrameType type, uint32_t uiVal1,
     return 0;
 }
 
+
 int SpdyConnection::sendFrame4Bytes(SpdyFrameType type, uint32_t uiVal1)
 {
     getBuf()->guarantee(12);
@@ -754,6 +774,7 @@ int SpdyConnection::sendFrame4Bytes(SpdyFrameType type, uint32_t uiVal1)
     return 0;
 }
 
+
 int SpdyConnection::sendPing()
 {
     //Server initiate a Ping
@@ -762,6 +783,7 @@ int SpdyConnection::sendPing()
     gettimeofday(&m_timevalPing, NULL);
     return appendPing(m_uiServerStreamID);
 }
+
 
 int SpdyConnection::sendSingleSettings(uint32_t uiID, uint32_t uiValue,
                                        uint8_t flags)
@@ -779,6 +801,7 @@ int SpdyConnection::sendSingleSettings(uint32_t uiID, uint32_t uiValue,
     flush();
     return 0;
 }
+
 
 int SpdyConnection::sendSettings(uint32_t uiMaxStreamNum,
                                  uint32_t uiWindowSize)
@@ -827,6 +850,7 @@ int SpdyConnection::sendSettings(uint32_t uiMaxStreamNum,
     return 0;
 }
 
+
 int SpdyConnection::processPingFrame(SpdyFrameHeader *pHeader)
 {
     struct timeval CurTime;
@@ -851,10 +875,12 @@ int SpdyConnection::processPingFrame(SpdyFrameHeader *pHeader)
     return 0;
 }
 
+
 int SpdyConnection::append400BadReqReply(uint32_t uiStreamID)
 {
     return 0;
 }
+
 
 SpdyStream *SpdyConnection::findStream(uint32_t uiStreamID)
 {
@@ -864,6 +890,7 @@ SpdyStream *SpdyConnection::findStream(uint32_t uiStreamID)
     return it.second();
 }
 
+
 int SpdyConnection::flush()
 {
     BufferedOS::flush();
@@ -872,6 +899,7 @@ int SpdyConnection::flush()
     getStream()->flush();
     return LS_DONE;
 }
+
 
 int SpdyConnection::onCloseEx()
 {
@@ -883,6 +911,7 @@ int SpdyConnection::onCloseEx()
     releaseAllStream();
     return 0;
 };
+
 
 int SpdyConnection::onTimerEx()
 {
@@ -902,6 +931,7 @@ int SpdyConnection::processGoAwayFrame(SpdyFrameHeader *pHeader)
     onCloseEx();
     return true;
 }
+
 
 int SpdyConnection::doGoAway(SpdyGoAwayStatus status)
 {
@@ -939,6 +969,7 @@ int SpdyConnection::releaseAllStream()
     return 0;
 }
 
+
 int SpdyConnection::timerRoutine()
 {
     StreamMap::iterator itn, it = m_mapStream.begin();
@@ -962,11 +993,13 @@ int SpdyConnection::timerRoutine()
     return 0;
 }
 
+
 void SpdyConnection::logDeflateInflateError(int n, int iDeflate)
 {
     LOG_INFO((getLogger(), "[%s] Protocol Error, %s Error, Error code = %d, go away!"
               , getLogId(), (iDeflate == 0 ? "Inflate" : "Deflate"), n));
 }
+
 
 /*
 //#define WRITE_TO_ZLIB_DIRECTLY
@@ -1084,6 +1117,7 @@ int SpdyConnection::addBufToGzip(char *hdrBuf, unsigned int& szHdrBuf, int iSpdy
 
     return 0;
 }
+
 
 int SpdyConnection::addBufToGzip(char *hdrBuf, unsigned int& szHdrBuf, int iSpdyVer, const char *s, int len, LoopBuf *buf, int &total)
 {
@@ -1212,6 +1246,7 @@ int SpdyConnection::sendRespHeaders( HttpRespHeaders *pRespHeaders, uint32_t uiS
 #define SPDY_TMP_HDR_BUFF_SIZE 2048
 #define MAX_LINE_COUNT_OF_MULTILINE_HEADER  100
 
+
 int SpdyConnection::compressHeaders(HttpRespHeaders *pRespHeaders)
 {
     static char s_achSpdy2StatusLine[] =
@@ -1323,6 +1358,7 @@ int SpdyConnection::compressHeaders(HttpRespHeaders *pRespHeaders)
                                Z_SYNC_FLUSH);
 }
 
+
 int SpdyConnection::sendRespHeaders(HttpRespHeaders *pRespHeaders,
                                     uint32_t uiStreamID)
 {
@@ -1352,6 +1388,8 @@ void SpdyConnection::move2ReponQue(SpdyStream *pSpdyStream)
 {
     m_dqueStreamRespon[pSpdyStream->getPriority()].append(pSpdyStream);
 }
+
+
 int SpdyConnection::onWriteEx()
 {
     SpdyStream *pSpdyStream = NULL;
@@ -1408,6 +1446,7 @@ void SpdyConnection::recycle()
     delete this;
 }
 
+
 void SpdyConnection::resetStream(SpdyStream *pStream,
                                  SpdyRstErrorCode code)
 {
@@ -1416,12 +1455,14 @@ void SpdyConnection::resetStream(SpdyStream *pStream,
 
 }
 
+
 void SpdyConnection::resetStream(StreamMap::iterator it,
                                  SpdyRstErrorCode code)
 {
     sendRstFrame(it.second()->getStreamID(), code);
     recycleStream(it);
 }
+
 
 NtwkIOLink *SpdyConnection::getNtwkIoLink()
 {

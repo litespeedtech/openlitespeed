@@ -16,6 +16,7 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "sslengine.h"
+
 #include <openssl/engine.h>
 
 #include <string.h>
@@ -23,9 +24,12 @@
 SSLEngine::SSLEngine()
 {
 }
+
+
 SSLEngine::~SSLEngine()
 {
 }
+
 
 int SSLEngine::init(const char *pID)
 {
@@ -55,6 +59,7 @@ int SSLEngine::init(const char *pID)
     ENGINE_free(e);
     return ret;
 }
+
 
 void SSLEngine::shutdown()
 {

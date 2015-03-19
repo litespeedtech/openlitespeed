@@ -16,10 +16,11 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "moduletimer.h"
+
 #include <lsdef.h>
 #include <util/datetime.h>
 
-#include <stdio.h>
+#include <time.h>
 
 typedef struct timerkey_s
 {
@@ -36,6 +37,7 @@ public:
     void                   *m_pTimerCbParam;
     unsigned int            m_repeat;
 };
+
 
 int timerCmp(const void *pKey1, const void *pKey2)
 {
@@ -59,10 +61,12 @@ int timerCmp(const void *pKey1, const void *pKey2)
     return 0;
 }
 
+
 void ModTimerList::timerCleanup(void *notused)
 {
     ModTimerList::getInstance().m_timerPool.shrinkTo(10);
 }
+
 
 ModTimerList::ModTimerList()
     : m_iTimerIds(1)
@@ -73,8 +77,10 @@ ModTimerList::ModTimerList()
     addTimer(10000, 1, ModTimerList::timerCleanup, NULL);
 }
 
+
 ModTimerList::~ModTimerList()
 {}
+
 
 int ModTimerList::addTimer(unsigned int msTimeout, int repeat,
                            lsi_timer_callback_pf timerCb,
@@ -104,6 +110,7 @@ int ModTimerList::addTimer(unsigned int msTimeout, int repeat,
     return pTimer->m_key.id;
 }
 
+
 int ModTimerList::removeTimer(int iId)
 {
     ModTimer *pTimer;
@@ -120,6 +127,7 @@ int ModTimerList::removeTimer(int iId)
     m_timerPool.recycle(pTimer);
     return LS_OK;
 }
+
 
 int ModTimerList::checkExpired()
 {
@@ -160,12 +168,5 @@ int ModTimerList::checkExpired()
     }
     return count;
 }
-
-
-
-
-
-
-
 
 

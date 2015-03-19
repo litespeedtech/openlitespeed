@@ -16,16 +16,15 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "clientcache.h"
-#include "clientinfo.h"
-#include "util/datetime.h"
-#include "httplog.h"
-#include <http/iptogeo.h>
-#include <socket/gsockaddr.h>
-#include <lsiapi/lsiapi.h>
 
+#include <http/clientinfo.h>
+#include <http/httplog.h>
+#include <http/iptogeo.h>
+#include <lsiapi/lsiapi.h>
 #include <util/accesscontrol.h>
 #include <util/accessdef.h>
 #include <util/autobuf.h>
+#include <util/datetime.h>
 #include <util/objpool.h>
 #include <util/staticobj.h>
 
@@ -40,6 +39,7 @@ void ClientCache::initObjPool()
     s_pool.construct();
 }
 
+
 void ClientCache::clearObjPool()
 {
     s_pool()->release();
@@ -47,15 +47,16 @@ void ClientCache::clearObjPool()
 }
 
 
-
 ClientCache::ClientCache(int initSize)
     : m_v4(initSize, NULL, NULL)
     , m_v6(initSize, GHash::hfIpv6, GHash::cmpIpv6)
 {}
 
+
 ClientCache::~ClientCache()
 {
 }
+
 
 ClientCache::const_iterator ClientCache::find(const struct sockaddr *pAddr)
 const
@@ -89,10 +90,12 @@ void ClientCache::add(ClientInfo *pInfo)
     }
 }
 
+
 void ClientCache::del(ClientInfo *pInfo)
 {
     del(pInfo->getAddr());
 }
+
 
 ClientInfo *ClientCache::del(const struct sockaddr *pAddr)
 {
@@ -123,6 +126,7 @@ ClientInfo *ClientCache::del(const struct sockaddr *pAddr)
     return NULL;
 }
 
+
 void ClientCache::recycle(ClientInfo *pInfo)
 {
     LsiapiBridge::releaseModuleData(LSI_MODULE_DATA_IP,
@@ -130,6 +134,7 @@ void ClientCache::recycle(ClientInfo *pInfo)
     s_pool()->recycle(pInfo);
 
 }
+
 
 void ClientCache::clean(Cache *pCache)
 {
@@ -176,11 +181,13 @@ void ClientCache::clean(Cache *pCache)
 
 }
 
+
 void ClientCache::clean()
 {
     clean(&m_v4);
     clean(&m_v6);
 }
+
 
 int ClientCache::writeBlockedIP(AutoBuf *pBuf, Cache *pCache)
 {
@@ -215,6 +222,7 @@ int ClientCache::writeBlockedIP(AutoBuf *pBuf, Cache *pCache)
     return 0;
 }
 
+
 int ClientCache::generateBlockedIPReport(int fd)
 {
     AutoBuf buf(1024);
@@ -225,7 +233,6 @@ int ClientCache::generateBlockedIPReport(int fd)
     write(fd, buf.begin(), buf.size());
     return 0;
 }
-
 
 
 ClientInfo *ClientCache::newClient(const struct sockaddr *pAddr)
@@ -239,7 +246,7 @@ ClientInfo *ClientCache::newClient(const struct sockaddr *pAddr)
     return pInfo;
 }
 
-#include <util/accessdef.h>
+
 static int resetQuotas(const void *pKey, void *pData)
 {
     ClientInfo *pInfo = ((ClientInfo *)pData);
@@ -266,6 +273,7 @@ static int resetQuotas(const void *pKey, void *pData)
     return 0;
 }
 
+
 static int setThrottleLimit(const void *pKey, void *pData)
 {
     ClientInfo *pInfo = ((ClientInfo *)pData);
@@ -273,6 +281,7 @@ static int setThrottleLimit(const void *pKey, void *pData)
         pInfo->getThrottleCtrl().adjustLimits(ThrottleControl::getDefault());
     return 0;
 }
+
 
 void ClientCache::resetThrottleLimit()
 {
@@ -287,12 +296,14 @@ void ClientCache::onTimer()
     m_v6.for_each(m_v6.begin(), m_v6.end(), resetQuotas);
 }
 
+
 int ClientCache::appendDirtyList(const void *pKey, void *pData,
                                  void *pList)
 {
     ((ClientCache::ClientList *)pList)->push_back(pData);
     return 0;
 }
+
 
 void ClientCache::dirtyAll()
 {

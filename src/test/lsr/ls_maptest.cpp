@@ -18,6 +18,7 @@
 #ifdef RUN_TEST
 
 #include <lsr/ls_map.h>
+#include <lsr/ls_xpool.h>
 #include "test/unittest-cpp/UnitTest++/src/UnitTest++.h"
 
 

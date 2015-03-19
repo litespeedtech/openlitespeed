@@ -20,10 +20,11 @@
 
 #include <lsdef.h>
 #include <http/hiostream.h>
-#include <http/httpreq.h>
-#include <extensions/l4conn.h>
-#include <util/loopbuf.h>
-#include "socket/gsockaddr.h"
+
+class GSockAddr;
+class HttpReq;
+class LoopBuf;
+class L4conn;
 
 class L4Handler : public HioHandler
 {

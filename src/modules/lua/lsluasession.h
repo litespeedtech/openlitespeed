@@ -18,13 +18,15 @@
 #ifndef LSLUAREQ_H
 #define LSLUAREQ_H
 
-#include <stddef.h>
-#include <inttypes.h>
-#include <socket/gsockaddr.h>
+#include "edluastream.h"
+#include "lsluaapi.h"
+#include "lsluaengine.h"
 
 #include <ls.h>
-#include <modules/lua/edluastream.h>
-#include <modules/lua/lsluaapi.h>
+
+#include <stddef.h>
+#include <inttypes.h>
+
 
 class LsLuaStreamData;
 class LsLuaTimerData;

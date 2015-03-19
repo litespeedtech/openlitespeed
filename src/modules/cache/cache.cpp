@@ -15,27 +15,28 @@
 *    You should have received a copy of the GNU General Public License       *
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
-#include "ls.h"
 #include "cacheconfig.h"
 #include "cachectrl.h"
+#include "cacheentry.h"
+#include "cachehash.h"
+#include "dirhashcachestore.h"
+
+#include <ls.h>
+#include <lsr/ls_confparser.h>
+#include <util/autostr.h>
+#include <util/datetime.h>
+#include <util/stringtool.h>
+
+#include <errno.h>
+#include <fcntl.h>
+#include <limits.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
-#include <unistd.h>
-#include "cacheentry.h"
-#include "dirhashcachestore.h"
-#include "dirhashcacheentry.h"
-#include "cachehash.h"
-#include <lsr/ls_confparser.h>
-#include "util/autostr.h"
-#include <util/datetime.h>
-#include <util/stringtool.h>
 #include <sys/stat.h>
 #include <sys/mman.h>
 #include <sys/types.h>
-#include <fcntl.h>
-#include <limits.h>
-#include <errno.h>
+#include <unistd.h>
 
 #define MAX_CACHE_CONTROL_LENGTH    128
 #define MAX_RESP_HEADERS_NUMBER     50
@@ -131,6 +132,7 @@ const char *paramArray[paramArrayCount + 1] =
     "storagepath",
     NULL //Must have NULL in the last item
 };
+
 
 // Parses the key and value given.  If key is storagepath, returns 1, otherwise returns 0
 static int parseLine(CacheConfig *pConfig, const char *key, int keyLen,
@@ -237,6 +239,7 @@ static void matchDirectoryPermissions(const char *src, const char *dest)
         chown(dest, st.st_uid, st.st_gid);
 }
 
+
 static void *ParseConfig(const char *param, int param_len,
                          void *_initial_config, int level, const char *name)
 {
@@ -341,16 +344,19 @@ static void *ParseConfig(const char *param, int param_len,
     return (void *)pConfig;
 }
 
+
 static void FreeConfig(void *_config)
 {
     delete(CacheConfig *)_config;
 }
+
 
 static int releaseCb(void *p)
 {
     delete(DirHashCacheStore *)p;
     return 0;
 }
+
 
 //return 0 OK, -1 error
 static int initGData()
@@ -387,6 +393,7 @@ static int initGData()
     }
 }
 
+
 void calcCacheHash(const char *pUri, int iUriLen, const char *pQS, int iQSLen,
                    const char *pIp, int iIpLen, const char *pCookie,
                    int iCookieLen, CacheHash *pCeHash, CacheHash *pPrvCeHash)
@@ -413,6 +420,7 @@ void calcCacheHash(const char *pUri, int iUriLen, const char *pQS, int iQSLen,
         pPrvCeHash->saveHash(&state);
     }
 }
+
 
 short hasCache(lsi_cb_param_t *rec, const char *uri, int uriLen,
                DirHashCacheStore *pDirHashCacheStore,
@@ -449,6 +457,7 @@ short hasCache(lsi_cb_param_t *rec, const char *uri, int uriLen,
     return CE_STATE_NOCACHE;
 }
 
+
 int httpRelease(void *data)
 {
     MyMData *myData = (MyMData *)data;
@@ -460,6 +469,7 @@ int httpRelease(void *data)
     }
     return 0;
 }
+
 
 int checkBypassHeader(const char *header, int len)
 {
@@ -485,6 +495,7 @@ int checkBypassHeader(const char *header, int len)
     return 0;
 }
 
+
 int writeHttpHeader(int fd, AutoStr2 *str, const char *key, int key_len,
                     const char *val, int val_len)
 {
@@ -504,6 +515,7 @@ int writeHttpHeader(int fd, AutoStr2 *str, const char *key, int key_len,
     return key_len + val_len + 4;
 }
 
+
 void getRespHeader(lsi_session_t *session, int header_index, char **buf,
                    int *length)
 {
@@ -521,8 +533,10 @@ void getRespHeader(lsi_session_t *session, int header_index, char **buf,
     }
 }
 
+
 void clearHooks(lsi_session_t *session)
 {
+    int aEnableHkpts[4], iEnableCount = 0;
     MyMData *myData = (MyMData *) g_api->get_module_data(session, &MNAME,
                       LSI_MODULE_DATA_HTTP);
     if (myData)
@@ -530,20 +544,19 @@ void clearHooks(lsi_session_t *session)
         if (myData->iHaveAddedHook)
         {
             if (myData->iHaveAddedHook == 2)
-                g_api->set_session_hook_enable_flag(session, LSI_HKPT_RCVD_RESP_BODY,
-                                                    &MNAME, 0);
-
-            g_api->set_session_hook_enable_flag(session, LSI_HKPT_RCVD_RESP_HEADER,
-                                                &MNAME, 0);
-            g_api->set_session_hook_enable_flag(session, LSI_HKPT_HANDLER_RESTART,
-                                                &MNAME, 0);
-            g_api->set_session_hook_enable_flag(session, LSI_HKPT_HTTP_END, &MNAME, 0);
+                aEnableHkpts[iEnableCount++] = LSI_HKPT_RCVD_RESP_BODY;
+            aEnableHkpts[iEnableCount++] = LSI_HKPT_RCVD_RESP_HEADER;
+            aEnableHkpts[iEnableCount++] = LSI_HKPT_HANDLER_RESTART;
+            aEnableHkpts[iEnableCount++] = LSI_HKPT_HTTP_END;
+            g_api->set_session_hook_enable_flag(session, &MNAME, 0,
+                                                aEnableHkpts, iEnableCount);
             myData->iHaveAddedHook = 0;
         }
         g_api->free_module_data(session, &MNAME, LSI_MODULE_DATA_HTTP,
                                 httpRelease);
     }
 }
+
 
 static int cancelCache(lsi_cb_param_t *rec)
 {
@@ -556,6 +569,7 @@ static int cancelCache(lsi_cb_param_t *rec)
                ModuleNameStr);
     return 0;
 }
+
 
 static int createEntry(lsi_cb_param_t *rec)
 {
@@ -636,8 +650,9 @@ static int createEntry(lsi_cb_param_t *rec)
 
     //Now we can store it
     myData->iCacheState = CE_STATE_WILLCACHE;
-    g_api->set_session_hook_enable_flag(rec->_session, LSI_HKPT_RCVD_RESP_BODY,
-                                        &MNAME, 1);
+    int iEnableHkpt = LSI_HKPT_RCVD_RESP_BODY;
+    g_api->set_session_hook_enable_flag(rec->_session, &MNAME, 1,
+                                        &iEnableHkpt, 1);
     myData->iHaveAddedHook = 2;
     return 0;
 }
@@ -834,6 +849,7 @@ int setCacheUserData(lsi_cb_param_t *rec)
     return 0;
 }
 
+
 //get the part3 data
 int getCacheUserData(lsi_cb_param_t *rec)
 {
@@ -850,6 +866,7 @@ int getCacheUserData(lsi_cb_param_t *rec)
 
     return 0;
 }
+
 
 static int checkAssignHandler(lsi_cb_param_t *rec)
 {
@@ -1061,10 +1078,10 @@ static int checkAssignHandler(lsi_cb_param_t *rec)
              && myData->iCacheState == CE_STATE_NOCACHE)
     {
         //only GET need to store, HEAD won't
-        g_api->set_session_hook_enable_flag(rec->_session,
-                                            LSI_HKPT_RCVD_RESP_HEADER, &MNAME, 1);
-        g_api->set_session_hook_enable_flag(rec->_session,
-                                            LSI_HKPT_HANDLER_RESTART, &MNAME, 1);
+        int aEnableHkpt[] = {LSI_HKPT_RCVD_RESP_HEADER,
+                             LSI_HKPT_HANDLER_RESTART};
+        g_api->set_session_hook_enable_flag(rec->_session, &MNAME, 1,
+                                            aEnableHkpt, 2);
         myData->iHaveAddedHook = 1;
 
         //g_api->set_session_hook_flag( rec->_session, LSI_HKPT_RCVD_RESP_BODY, &MNAME, 1 );
@@ -1081,6 +1098,7 @@ static int checkAssignHandler(lsi_cb_param_t *rec)
 
     return 0;
 }
+
 
 int releaseIpCounter(void *data)
 {
@@ -1099,6 +1117,7 @@ static lsi_serverhook_t serverHooks[] =
     lsi_serverhook_t_END   //Must put this at the end position
 };
 
+
 static int init(lsi_module_t *pModule)
 {
     if (initGData() != 0)
@@ -1112,6 +1131,7 @@ static int init(lsi_module_t *pModule)
 
     return 0;
 }
+
 
 int isModified(lsi_session_t *session, CeHeader &CeHeader, char *etag,
                int etagLen)
@@ -1133,6 +1153,7 @@ int isModified(lsi_session_t *session, CeHeader &CeHeader, char *etag,
 
     return 1;
 }
+
 
 static int handlerProcess(lsi_session_t *session)
 {
@@ -1212,7 +1233,11 @@ static int handlerProcess(lsi_session_t *session)
             buff  = (char *)mmap((caddr_t)0, myData->pEntry->getPart2Offset(),
                                  PROT_READ, MAP_SHARED, fd, 0);
             if (buff == (char *)(-1))
+            {
+                g_api->free_module_data(session, &MNAME, LSI_MODULE_DATA_HTTP,
+                                httpRelease);
                 return 500;
+            }
             pBuffOrg = buff;
             buff += myData->pEntry->getPart1Offset();
         }

@@ -17,9 +17,7 @@
 *****************************************************************************/
 #include "poller.h"
 
-#include "eventreactor.h"
-#include "lookupfd.h"
-#include "pollfdreactor.h"
+#include <edio/lookupfd.h>
 
 #include <assert.h>
 #include <errno.h>
@@ -28,14 +26,17 @@
 #include <string.h>
 #include <sys/poll.h>
 
+
 Poller::Poller()
     : m_pfdReactors()
 {
 }
 
+
 Poller::~Poller()
 {
 }
+
 
 int Poller::allocate(int capacity)
 {
@@ -48,12 +49,14 @@ int Poller::init(int capacity)
     return allocate(capacity);
 }
 
+
 int Poller::add(EventReactor *pHandler, short mask)
 {
     assert(pHandler);
     m_pfdReactors.add(pHandler, mask);
     return 0;
 }
+
 
 int Poller::remove(EventReactor *pHandler)
 {
@@ -76,6 +79,7 @@ int Poller::waitAndProcessEvents(int iTimeoutMilliSec)
     }
     return events;
 }
+
 
 void Poller::timerExecute()
 {

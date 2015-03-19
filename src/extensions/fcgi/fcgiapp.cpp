@@ -18,10 +18,6 @@
 #include "fcgiapp.h"
 #include "fcgiappconfig.h"
 #include "fcgiconnection.h"
-#include "fcgistarter.h"
-#include <edio/multiplexer.h>
-#include <http/httplog.h>
-#include <socket/gsockaddr.h>
 #include <lsr/ls_time.h>
 
 #include <signal.h>
@@ -50,7 +46,6 @@ int FcgiApp::startEx()
         ret = startWorker();
     return ret;
 }
-
 
 
 ExtConn *FcgiApp::newConn()

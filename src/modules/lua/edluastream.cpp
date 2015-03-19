@@ -15,17 +15,15 @@
 *    You should have received a copy of the GNU General Public License       *
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
-#include <modules/lua/edluastream.h>
+#include "edluastream.h"
+#include "lsluaapi.h"
+#include "lsluaengine.h"
+#include "lsluasession.h"
 
 #include <ls.h>
 #include <edio/multiplexer.h>
-#include <modules/lua/lsluaapi.h>
-#include <modules/lua/lsluaengine.h>
-#include <modules/lua/lsluasession.h>
 #include <socket/coresocket.h>
 #include <socket/gsockaddr.h>
-#include <util/loopbuf.h>
-#include <util/datetime.h>
 
 #include <fcntl.h>
 

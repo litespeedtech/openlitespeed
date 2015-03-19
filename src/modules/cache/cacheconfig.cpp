@@ -32,6 +32,7 @@ CacheConfig::~CacheConfig()
 {
 }
 
+
 void CacheConfig::inherit(const CacheConfig *pParent)
 {
     if (pParent)
@@ -48,6 +49,7 @@ void CacheConfig::inherit(const CacheConfig *pParent)
     }
 
 }
+
 
 void CacheConfig::apply(const CacheConfig *pParent)
 {

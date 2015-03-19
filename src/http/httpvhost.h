@@ -19,7 +19,6 @@
 #define HTTPVHOST_H
 
 #include <http/contexttree.h>
-#include <http/expiresctrl.h>
 #include <http/httpcontext.h>
 #include <http/httplogsource.h>
 #include <http/reqstats.h>
@@ -55,33 +54,31 @@ END_LOG4CXX_NS
 
 #define DEFAULT_ADMIN_SERVER_NAME   "_AdminVHost"
 
-
-class HttpSession;
-class HttpContext;
-class AccessControl;
+typedef struct lsi_module_s lsi_module_t;
 class AccessCache;
-class Awstats;
-class FcgiApp;
-class UserDir;
-class StringList;
+class AccessControl;
 class AccessLog;
-class HttpHandler;
+class Awstats;
+class ConfigCtx;
+class Env;
+class ExpiresCtrl;
+class FcgiApp;
+class HashDataCache;
 class HotlinkCtrl;
+class HTAuth;
+class HttpHandler;
 class HttpMime;
+class HttpServerImpl;
+class HttpSession;
+class LocalWorker;
+class LocalWorkerConfig;
+class LsiApiHooks;
 class ModUserdir;
-class RewriteRuleList;
 class RewriteMapList;
+class RLimits;
 class SSITagConfig;
 class SSLContext;
-class HTAuth;
-class ConfigCtx;
-class HashDataCache;
-class LocalWorkerConfig;
-class LocalWorker;
-class Env;
-class RLimits;
-class HttpServerImpl;
-class LsiApiHooks;
+class UserDir;
 class XmlNodeList;
 
 class RealmMap : public HashStringMap< UserDir * >

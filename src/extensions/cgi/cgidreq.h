@@ -18,11 +18,10 @@
 #ifndef CGIDREQ_H
 #define CGIDREQ_H
 
-
 #include <lsdef.h>
 #include <util/autobuf.h>
 #include <util/ienv.h>
-#include <extensions/cgi/lscgiddef.h>
+#include "lscgiddef.h"
 
 class RLimits;
 class CgidReq : public IEnv

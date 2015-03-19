@@ -17,17 +17,20 @@
 *****************************************************************************/
 #ifndef SPDYCONNECTION_H
 #define SPDYCONNECTION_H
-#include "spdyzlibfilter.h"
+
+#include "protocoldef.h"
 #include "spdyprotocol.h"
+#include "spdyzlibfilter.h"
+
+#include <lsdef.h>
 #include <edio/bufferedos.h>
-#include "util/autobuf.h"
+#include <http/hiostream.h>
+#include <util/autobuf.h>
 #include <util/dlinkqueue.h>
 #include <util/ghash.h>
-#include "http/hiostream.h"
-#include <sys/time.h>
 
 #include <limits.h>
-#include <lsdef.h>
+#include <sys/time.h>
 
 #define SPDY_CONN_FLAG_GOAWAY           (1<<0)
 #define SPDY_CONN_FLAG_FLOW_CTRL        (1<<1)
@@ -48,7 +51,7 @@ public:
     int isOutBufFull() const
     {
         return ((m_iCurDataOutWindow <= 0)
-                || (getBuf()->size() >= SPDY_MAX_DATAFRAM_SIZE)); 
+                || (getBuf()->size() >= SPDY_MAX_DATAFRAM_SIZE));
     }
 
     int flush();

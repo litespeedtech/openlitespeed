@@ -18,11 +18,10 @@
 #ifndef LSSHMTYPES_H
 #define LSSHMTYPES_H
 
-#include <assert.h>
+#include <shm/lslock.h>
+
 #include <stdint.h>
-#include <pthread.h>
 #include <sys/types.h>
-#include "lslock.h"
 
 /**
  * @file
@@ -40,6 +39,7 @@ extern "C"
 // #define DEBUG_SHOW_MORE
 #define LSSHM_DEBUG_ENABLE
 // #define LSSHM_USE_SPINLOCK      // enable for spinlock otherwise mutex
+// #define USE_PIDSPINLOCK         // enable for pid based spinlock
 
 // C to C++ wrapper
 struct ls_shm_s {};
@@ -53,10 +53,17 @@ typedef struct ls_shmobject_s  lsi_shmobject_t;
 
 #ifdef LSSHM_USE_SPINLOCK
 typedef ls_spinlock_t          lsi_shmlock_t;
+#ifdef USE_PIDSPINLOCK
+#define lsi_shmlock_setup       ls_atomic_spin_setup
+#define lsi_shmlock_lock        ls_atomic_pidspin_lock
+#define lsi_shmlock_trylock     ls_atomic_pidspin_trylock
+#define lsi_shmlock_unlock      ls_atomic_spin_unlock
+#else
 #define lsi_shmlock_setup       ls_spinlock_setup
 #define lsi_shmlock_lock        ls_spinlock_lock
 #define lsi_shmlock_trylock     ls_spinlock_trylock
 #define lsi_shmlock_unlock      ls_spinlock_unlock
+#endif
 #else
 typedef ls_mutex_t             lsi_shmlock_t;
 #define lsi_shmlock_setup       ls_mutex_setup
@@ -109,7 +116,6 @@ typedef uint32_t                LsShmSize_t ;
 // bit mash from ls.h
 #define LSSHM_FLAG_NONE         0x0000          // no flag values
 #define LSSHM_FLAG_INIT         0x0001          // used to indicate for memset
-#define LSSHM_FLAG_SETTOP       0x0002          // set to top of linked list
 #define LSSHM_FLAG_CREATED      0x0001          // return flag if SHM created
 
 #define LSSHM_CHECKSIZE(x) { if ((x&0x80000000) || (x>LSSHM_MAXSIZE)) return 0;}

@@ -16,33 +16,34 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include <http/staticfilecachedata.h>
-#include <util/datetime.h>
+
+#include <http/httpcontext.h>
 #include <http/httpheader.h>
 #include <http/httplog.h>
 #include <http/httpmime.h>
 #include <http/httpreq.h>
 #include <http/httpstatuscode.h>
-#include <http/httpcontext.h>
-#include <ssi/ssiscript.h>
-
+#include <lsiapi/lsiapi.h>
 #include <lsr/ls_fileio.h>
+#include <lsr/ls_strtool.h>
+#include <ssi/ssiscript.h>
+#include <util/datetime.h>
+#include <util/gzipbuf.h>
 #include <util/stringtool.h>
+#include <util/vmembuf.h>
 
 #include <openssl/md5.h>
-
-
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/mman.h>
+#include <sys/resource.h>
+#include <sys/time.h>
 #include <sys/types.h>
 #include <unistd.h>
 #include <utime.h>
-#include <lsr/ls_strtool.h>
-#include "http/httprespheaders.h"
-#include <lsiapi/lsiapi.h>
 
 static size_t   s_iMaxInMemCacheSize = 4096;
 static size_t   s_iMaxMMapCacheSize = 256 * 1024;
@@ -68,6 +69,7 @@ void FileCacheDataEx::setTotalInMemCacheSize(size_t max)
     s_iMaxTotalInMemCache = max;
 }
 
+
 void FileCacheDataEx::setTotalMMapCacheSize(size_t max)
 {
     s_iMaxTotalMMAPCache = max;
@@ -80,10 +82,12 @@ void FileCacheDataEx::setMaxInMemCacheSize(size_t max)
         s_iMaxInMemCacheSize = max;
 }
 
+
 void FileCacheDataEx::setMaxMMapCacheSize(size_t max)
 {
     s_iMaxMMapCacheSize = max;
 }
+
 
 static int openFile(const char *pPath, int &fd)
 {
@@ -107,12 +111,14 @@ static int openFile(const char *pPath, int &fd)
     return 0;
 }
 
+
 FileCacheDataEx::FileCacheDataEx()
     : m_fd(-1)
 {
     memset(&m_iStatus, 0,
            (char *)(&m_pCache + 1) - (char *)&m_iStatus);
 }
+
 
 FileCacheDataEx::~FileCacheDataEx()
 {
@@ -128,6 +134,7 @@ void FileCacheDataEx::setFileStat(const struct stat &st)
     m_inode     = st.st_ino;
 }
 
+
 int  FileCacheDataEx::allocateCache(size_t size)
 {
     assert(m_pCache == NULL);
@@ -141,6 +148,7 @@ int  FileCacheDataEx::allocateCache(size_t size)
     s_iCurTotalInMemCache += size;
     return 0;
 }
+
 
 void FileCacheDataEx::release()
 {
@@ -167,6 +175,7 @@ void FileCacheDataEx::release()
     memset(&m_iStatus, 0,
            (char *)(&m_pCache + 1) - (char *)&m_iStatus);
 }
+
 
 void FileCacheDataEx::closefd()
 {
@@ -223,6 +232,7 @@ int FileCacheDataEx::readyData(const char *pPath)
     return 0;
 }
 
+
 const char *FileCacheDataEx::getCacheData(
     off_t offset, off_t &wanted, char *pBuf, long len)
 {
@@ -252,11 +262,13 @@ const char *FileCacheDataEx::getCacheData(
 
 }
 
+
 StaticFileCacheData::StaticFileCacheData()
 {
     memset(&m_pMimeType, 0,
            (char *)(&m_pGziped + 1) - (char *)&m_pMimeType);
 }
+
 
 StaticFileCacheData::~StaticFileCacheData()
 {
@@ -266,6 +278,7 @@ StaticFileCacheData::~StaticFileCacheData()
     if (m_pSSIScript)
         delete m_pSSIScript;
 }
+
 
 int StaticFileCacheData::testMod(HttpReq *pReq)
 {
@@ -297,6 +310,7 @@ int StaticFileCacheData::testMod(HttpReq *pReq)
     return 0;
 }
 
+
 int StaticFileCacheData::testIfRange(const char *pMatch, int len)
 {
     if ((*(pMatch + 1) == '/')
@@ -316,6 +330,7 @@ int StaticFileCacheData::testIfRange(const char *pMatch, int len)
     }
     return 0;
 }
+
 
 int StaticFileCacheData::testUnMod(HttpReq *pReq)
 {
@@ -346,6 +361,7 @@ int StaticFileCacheData::testUnMod(HttpReq *pReq)
     return 0;
 }
 
+
 static int appendEtagPart(char *p, int maxLen, int &firstPartExist,
                           unsigned long value)
 {
@@ -353,6 +369,7 @@ static int appendEtagPart(char *p, int maxLen, int &firstPartExist,
     firstPartExist = 1;
     return len;
 }
+
 
 int StaticFileCacheData::buildFixedHeaders(int etag)
 {
@@ -412,6 +429,7 @@ int StaticFileCacheData::buildFixedHeaders(int etag)
     return 0;
 }
 
+
 int  FileCacheDataEx::buildCLHeader(bool gziped)
 {
     int size = 40;
@@ -443,6 +461,7 @@ int  FileCacheDataEx::buildCLHeader(bool gziped)
     return 0;
 }
 
+
 int StaticFileCacheData::buildHeaders(const MIMESetting *pMIME,
                                       const AutoStr2 *pCharset, short etag)
 {
@@ -457,7 +476,6 @@ int StaticFileCacheData::buildHeaders(const MIMESetting *pMIME,
 }
 
 
-
 int StaticFileCacheData::build(int fd, const char   *pPath, int pathLen,
                                const struct stat &fileStat)
 {
@@ -469,9 +487,6 @@ int StaticFileCacheData::build(int fd, const char   *pPath, int pathLen,
     return 0;
 }
 
-
-#include <sys/time.h>
-#include <sys/resource.h>
 
 static int createLockFile(const char *pReal, char *p)
 {
@@ -493,7 +508,6 @@ static int createLockFile(const char *pReal, char *p)
     *p = 0;
     return ret;
 }
-
 
 
 int StaticFileCacheData::tryCreateGziped()
@@ -547,10 +561,6 @@ int StaticFileCacheData::tryCreateGziped()
 }
 
 
-
-#include <util/gzipbuf.h>
-#include <util/vmembuf.h>
-
 int StaticFileCacheData::detectTrancate()
 {
     if (!m_fileData.isMapped())
@@ -578,6 +588,7 @@ int StaticFileCacheData::detectTrancate()
     return LS_FAIL;
 
 }
+
 
 int StaticFileCacheData::compressFile()
 {
@@ -674,8 +685,6 @@ int StaticFileCacheData::buildGzipCache(const struct stat &st)
 }
 
 
-
-
 int StaticFileCacheData::buildGzipPath()
 {
     unsigned char achHash[MD5_DIGEST_LENGTH];
@@ -704,8 +713,6 @@ int StaticFileCacheData::buildGzipPath()
     memmove(pReal + n , ".lsz\0\0", 6);
     return 0;
 }
-
-
 
 
 int StaticFileCacheData::readyGziped()
@@ -763,6 +770,7 @@ int StaticFileCacheData::readyGziped()
     return LS_FAIL;
 }
 
+
 int StaticFileCacheData::readyCacheData(
     FileCacheDataEx *&pECache, char compress)
 {
@@ -786,6 +794,7 @@ int StaticFileCacheData::readyCacheData(
     return m_fileData.readyData(pFileName);
 }
 
+
 int StaticFileCacheData::release()
 {
     m_fileData.release();
@@ -793,6 +802,7 @@ int StaticFileCacheData::release()
         m_pGziped->release();
     return 0;
 }
+
 
 void StaticFileCacheData::setUpdateStaticGzipFile(int enable, int level,
         size_t min, size_t max)
@@ -803,10 +813,12 @@ void StaticFileCacheData::setUpdateStaticGzipFile(int enable, int level,
     s_iMinFileSize      = min;
 }
 
+
 void StaticFileCacheData::setGzipCachePath(const char *pPath)
 {
     s_gzipCachePath = strdup(pPath);
 }
+
 
 const char *StaticFileCacheData::getGzipCachePath()
 {

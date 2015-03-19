@@ -18,7 +18,6 @@
 #ifdef RUN_TEST
 
 #include "httpreqheaderstest.h"
-#include <util/autobuf.h>
 #include "test/unittest-cpp/UnitTest++/src/UnitTest++.h"
 
 

@@ -16,13 +16,14 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "hpack.h"
-#include "stdio.h"
+
+#include <stdio.h>
 
 #define LS_STR_TO_IOVEC(a) (a), (sizeof(a) -1)
 #define MAX_HEADER_LENGTH   4096
 
 //ref: https://www.mnot.net/talks/http2-expectations/hpack.html
-static HPackHeaderTable_t g_HPackStaticTable_t[HPackStaticTableCount] =
+static HPackHeaderTable_t g_HPackStxTab[HPackStxTabCount] =
 {
     { LS_STR_TO_IOVEC(":authority"),         LS_STR_TO_IOVEC("") },
     { LS_STR_TO_IOVEC(":method"),            LS_STR_TO_IOVEC("GET") },
@@ -5219,7 +5220,7 @@ HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
     },
 };
 
-size_t HuffmanCode::huffmanEncBufSize(const unsigned char *src,
+size_t HuffmanCode::calcHuffmanEncBufSize(const unsigned char *src,
                                       const unsigned char *src_end)
 {
     size_t bufSizeBits = 0;
@@ -5228,7 +5229,8 @@ size_t HuffmanCode::huffmanEncBufSize(const unsigned char *src,
     return (bufSizeBits + 7) / 8;
 }
 
-int HuffmanCode::huffmanEnc(const unsigned char *src, const unsigned char *src_end, 
+
+int HuffmanCode::huffmanEnc(const unsigned char *src, const unsigned char *src_end,
                             unsigned char *dst, int dst_len)
 {
     unsigned char *p_src = (unsigned char *)src;
@@ -5262,6 +5264,7 @@ int HuffmanCode::huffmanEnc(const unsigned char *src, const unsigned char *src_e
     return p_dst - dst;
 }
 
+
 unsigned char *HuffmanCode::huffmanDec4bits(uint8_t src_4bits,
         unsigned char *dst, HPackHuffDecodeStatus_t &status)
 {
@@ -5276,6 +5279,7 @@ unsigned char *HuffmanCode::huffmanDec4bits(uint8_t src_4bits,
     status.eos = ((curDecCode.flags & HPACK_HUFFMAN_FLAG_ACCEPTED) != 0);
     return dst;
 }
+
 
 int HuffmanCode::huffmanDec(unsigned char *src, int src_len,
                             unsigned char *dst, int dst_len)
@@ -5304,8 +5308,9 @@ int HuffmanCode::huffmanDec(unsigned char *src, int src_len,
     return p_dst - dst;
 }
 
-void DynamicTableEntry::init(char *name, uint32_t name_len, char *val,
-                             uint32_t val_len, uint32_t nameIndex)
+
+void DynTabEntry::init(char *name, uint32_t name_len, char *val,
+                             uint32_t val_len, uint8_t stxTabId)
 {
     if (m_valLen && m_val)
         delete []m_val;
@@ -5316,10 +5321,10 @@ void DynamicTableEntry::init(char *name, uint32_t name_len, char *val,
     m_nameLen = name_len;
     m_valLen = val_len;
     m_nameStxTabId = 0;
-    if (nameIndex > 0 && nameIndex <= HPackStaticTableCount)
+    if (stxTabId > 0 && stxTabId <= HPackStxTabCount)
     {
-        m_nameStxTabId = (uint8_t)nameIndex;
-        m_name = (char *)g_HPackStaticTable_t[m_nameStxTabId - 1].name;
+        m_nameStxTabId = stxTabId;
+        m_name = (char *)g_HPackStxTab[m_nameStxTabId - 1].name;
     }
     else
     {
@@ -5333,18 +5338,181 @@ void DynamicTableEntry::init(char *name, uint32_t name_len, char *val,
     m_val[val_len] = 0x00;
 }
 
-DynamicTableEntry *HPackDynamicTable::getEntryByTabId(uint32_t id)
+hash_key_t HPackDynTab::hfName(const void *__s)
 {
-    //assert(id >= HPackStaticTableCount + 1 && id <= HPackStaticTableCount + getEntryCount() );
-    int index = getEntryCount() - (id - HPackStaticTableCount);
-    return getEntry(index);
+    hash_key_t __h = 0;
+    DynTabEntry *pEntrey = (DynTabEntry *)__s;
+    char *p = pEntrey->getName();
+    for(int i=0; i<pEntrey->getNameLen(); ++i)
+        __h = __h * 37 + (*p++);
+    return __h;
 }
 
-void HPackDynamicTable::removeOverflowEntries()
+hash_key_t HPackDynTab::hfNameVal(const void *__s)
+{
+    hash_key_t __h = HPackDynTab::hfName(__s);
+    DynTabEntry *pEntrey = (DynTabEntry *)__s;
+    char *p = pEntrey->getValue();
+    for (int i=0; i<pEntrey->getValueLen(); ++i)
+        __h = __h * 47 + (*p++);
+    return __h;
+}
+
+int HPackDynTab::cmpName(const void *pVal1, const void *pVal2)
+{
+    DynTabEntry *pEntrey1 = (DynTabEntry *)pVal1;
+    DynTabEntry *pEntrey2 = (DynTabEntry *)pVal2;
+    if (pEntrey1->getNameLen() == pEntrey2->getNameLen() 
+        && memcmp(pEntrey1->getName(), pEntrey2->getName(), pEntrey1->getNameLen()) == 0)
+        return 0;
+    else
+        return 1;
+}
+
+int HPackDynTab::cmpNameVal(const void *pVal1, const void *pVal2)
+{
+    if (HPackDynTab::cmpName(pVal1, pVal2) == 0)
+    {
+        DynTabEntry *pEntrey1 = (DynTabEntry *)pVal1;
+        DynTabEntry *pEntrey2 = (DynTabEntry *)pVal2;
+        if (pEntrey1->getValueLen() == pEntrey2->getValueLen() 
+            && memcmp(pEntrey1->getValue(), pEntrey2->getValue(), pEntrey1->getValueLen()) == 0)
+        return 0;
+    }
+    return 1;
+}
+
+
+HPackDynTab::HPackDynTab()
+{
+    m_curCapacity = 0;
+    m_maxCapacity = INITIAL_DYNAMIC_TABLE_SIZE;
+    m_nextFlowId = 0;
+    m_pNameHashT = new GHash(15, HPackDynTab::hfName, HPackDynTab::cmpName);
+    m_pNameValueHashT = new GHash(15, HPackDynTab::hfNameVal, HPackDynTab::cmpNameVal);
+}
+
+HPackDynTab::~HPackDynTab()
+{
+    int count = getEntryCount();
+    for (int i = count - 1; i >= 0; --i)
+        delete getEntryInternal(i);
+    
+    if (m_pNameHashT)
+    {
+        m_pNameHashT->clear();
+        delete m_pNameHashT;
+        m_pNameHashT = NULL;
+    }
+    if(m_pNameValueHashT)
+    {
+        m_pNameValueHashT->clear();
+        delete m_pNameValueHashT;
+        m_pNameValueHashT = NULL;
+    }
+    m_loopbuf.clear();
+}
+
+void HPackDynTab::reset()
+{
+    int count = getEntryCount();
+    for (int i = count - 1; i >= 0; --i)
+        delete getEntryInternal(i);
+
+    m_pNameHashT->clear();
+    m_pNameValueHashT->clear();
+    m_loopbuf.clear();
+    m_curCapacity = 0;
+    m_maxCapacity = INITIAL_DYNAMIC_TABLE_SIZE;
+    m_nextFlowId = 0;
+}
+
+/*
+ * through the name/val to search the entry
+ * return id(name index) of the table(base HPackStxTabCount + 1)
+ *      when both macthed, set val_matched to 1
+ *      otherwise set val_matched to 0;
+ * return 0 for not found
+ * return -1 for out of memory error
+ */
+int HPackDynTab::getDynTabId(char *name, uint16_t name_len, char *value,
+                        uint16_t value_len, int &val_matched, uint8_t stxTabId)
+{
+    int id = 0;
+    val_matched = 0;
+    DynTabEntry *pTmpEntry = new DynTabEntry(name, name_len,
+                        value, value_len, stxTabId);
+    if (pTmpEntry == NULL)
+        return -1;
+
+    GHash::iterator iter;
+    iter = m_pNameValueHashT->find((void *)pTmpEntry);
+    if (iter != m_pNameValueHashT->end())
+    {
+        val_matched = 1;
+        id = m_nextFlowId - (uint32_t)(long)iter->second() + HPackStxTabCount;
+    }
+    else if (stxTabId == 0) //If have stxTabId, so needn't go further
+    {
+        //May have many entries, use the first matched one is all right
+        iter = m_pNameHashT->find((void *)pTmpEntry);
+        if (iter != m_pNameHashT->end())
+            id = m_nextFlowId - (uint32_t)(long)iter->second() + HPackStxTabCount;
+    }
+
+    delete pTmpEntry;
+    return id;
+}
+
+void HPackDynTab::removeNameValueHashTEntry(DynTabEntry *pEntry)
+{
+    GHash::iterator iter;
+    iter = m_pNameValueHashT->find((void *)pEntry);
+    if (iter != m_pNameValueHashT->end())
+        m_pNameValueHashT->erase(iter);
+}
+
+void HPackDynTab::removeNameHashTEntry(DynTabEntry *pEntry)
+{
+    GHash::iterator iter;
+    iter = m_pNameHashT->find((void *)pEntry);
+    if (iter != m_pNameHashT->end() 
+        && (uint32_t)(long)iter->second() == m_nextFlowId - getEntryCount())
+        m_pNameHashT->erase(iter);
+}
+
+void HPackDynTab::popEntry() //remove oldest
+{
+    DynTabEntry *pEntry = getEntryInternal(0);
+    removeNameHashTEntry(pEntry);
+    removeNameValueHashTEntry(pEntry);
+    m_loopbuf.pop_front(ENTRYPSIZE);
+    m_curCapacity -= pEntry->getEntrySize();
+    delete pEntry;
+}
+
+/****
+ * the new one will be append to the end of the loopbuf, so the index need to be paied more attention.
+ */
+void HPackDynTab::pushEntry(char *name, uint16_t name_len, char *val, uint16_t val_len,
+               uint32_t nameIndex)
+{
+    DynTabEntry *pEntry = new DynTabEntry(name, name_len, val,
+            val_len, nameIndex);
+    m_loopbuf.append((char *)(&pEntry), ENTRYPSIZE);
+    m_curCapacity += pEntry->getEntrySize();
+    m_pNameHashT->update(pEntry, (void *)m_nextFlowId);
+    m_pNameValueHashT->insert(pEntry, (void *)m_nextFlowId);
+    ++m_nextFlowId;
+    removeOverflowEntries();
+}
+
+void HPackDynTab::removeOverflowEntries()
 {
     while (m_maxCapacity < m_curCapacity)
         popEntry();
 }
+
 
 ////https://tools.ietf.org/html/draft-ietf-httpbis-header-compression-12#section-5.1
 unsigned char *Hpack::encInt(unsigned char *dst, uint32_t value,
@@ -5366,40 +5534,35 @@ unsigned char *Hpack::encInt(unsigned char *dst, uint32_t value,
     return dst;
 }
 
+
 //https://tools.ietf.org/html/draft-ietf-httpbis-header-compression-12#section-5.1
-uint32_t Hpack::decInt(unsigned char *&src, const unsigned char *src_end,
-                       uint32_t prefix_bits, int& error_code)
+int Hpack::decInt(unsigned char *&src, const unsigned char *src_end,
+                       uint32_t prefix_bits, uint32_t& value)
 {
-    error_code = 0;
-    uint32_t I, B, M;
+    uint32_t B, M;
     uint8_t prefix_max = (1 << prefix_bits) - 1;
-    I = (*src++ & prefix_max);
-    if (I < prefix_max)
-        return I;
+    value = (*src++ & prefix_max);
+    if (value < prefix_max)
+        return 0;
 
     if (src >= src_end)
-    {
-        error_code = -1;
-        return 0;
-    }
-    
+        return -1;
+
     M = 0;
     do
     {
         B = *src++;
         if (src > src_end)
-        {
-            error_code = -1;
-            return 0;
-        }
+            return -1;
 
-        I += (B & 0xFF) << M;
+        value += (B & 0xFF) << M;
         M += 7;
         if (M > 31)
             break; //Something wrong, the result will be more than 2 << 31;
     } while ((B & 0x80) == 0x80);
-    return I;
+    return 0;
 }
+
 
 int Hpack::encStr(unsigned char *dst, size_t dst_len,
                   const unsigned char *str, uint16_t str_len)
@@ -5434,6 +5597,7 @@ int Hpack::encStr(unsigned char *dst, size_t dst_len,
     return p_dst - dst;
 }
 
+
 //reutrn the length in the dst, also update the src
 int Hpack::decStr(unsigned char *dst, size_t dst_len, unsigned char *&src,
                   const unsigned char *src_end)
@@ -5442,9 +5606,8 @@ int Hpack::decStr(unsigned char *dst, size_t dst_len, unsigned char *&src,
         return 0;
 
     bool is_huffman = ((*src & 0x80) == 0x80);
-    int error_code = 0;
-    uint32_t len = decInt(src, src_end, 7, error_code);
-    if (error_code != 0)
+    uint32_t len;
+    if (0 != decInt(src, src_end, 7, len))
         return -2;  //wrong int
         
     int ret = 0;
@@ -5457,6 +5620,9 @@ int Hpack::decStr(unsigned char *dst, size_t dst_len, unsigned char *&src,
             return -2;
 
         ret = HuffmanCode::huffmanDec(src, len, dst, dst_len);
+        if (ret < 0)
+            return -3; //Wrong code
+            
         src += len;
     }
     else
@@ -5475,38 +5641,323 @@ int Hpack::decStr(unsigned char *dst, size_t dst_len, unsigned char *&src,
 }
 
 //not find return 0, otherwise return the index
-int Hpack::getStaticTableId(char *name, uint16_t name_len, char *val,
+uint8_t Hpack::getStxTabId(char *name, uint16_t name_len, char *val,
                             uint16_t val_len, int &val_matched)
 {
     if (name_len < 3)
         return 0;
 
-    int i;
     val_matched = 0;
+
     //check value first
-    for (i = 1 ; i < 16; ++i)
+    int i = -1;
+    switch (*val)
     {
-        if (g_HPackStaticTable_t[i].val_len == val_len
-            && memcmp(val, g_HPackStaticTable_t[i].val, val_len) == 0)
+    case 'G':
+        i = 1;
+        break;
+    case 'P':
+        i = 2;
+        break;
+    case '/':
+        if (val_len == 1)
+            i = 3;
+        else if (val_len == 11)
+            i = 4;
+        break;
+    case 'h':
+        if (val_len == 4)
+            i = 5;
+        else if (val_len == 5)
+            i = 6;
+        break;
+    case '2':
+        if ( val_len == 3)
         {
-            if (g_HPackStaticTable_t[i].name_len == name_len
-                && memcmp(name, g_HPackStaticTable_t[i].name, name_len) == 0)
+            switch(*(val + 2))
             {
-                val_matched = 1;
-                return i + 1;
+            case '0':
+                i = 7;
+                break;
+            case '4':
+                i = 8;
+                break;
+            case '6':
+                i = 9;
+                break;
+            default:
+                break;
             }
         }
+        break;
+    case '3':
+        i = 10;
+        break;
+    case '4':
+        if ( val_len == 3)
+        {
+            switch(*(val + 2))
+            {
+            case '0':
+                i = 11;
+                break;
+            case '4':
+                i = 12;
+            default:
+                break;
+            }
+        }
+        break;
+    case '5':
+        i = 13;
+        break;
+    case 'g':
+        i = 15;
+        break;
+    default:
+        break;
     }
 
-    for (i = 0 ; i < HPackStaticTableCount; ++i)
+    if ( i > 0 && g_HPackStxTab[i].val_len == val_len
+        && g_HPackStxTab[i].name_len == name_len
+        && memcmp(val, g_HPackStxTab[i].val, val_len) == 0
+        && memcmp(name, g_HPackStxTab[i].name, name_len) == 0)
     {
-        if (g_HPackStaticTable_t[i].name_len == name_len
-            && memcmp(name, g_HPackStaticTable_t[i].name, name_len) == 0)
-            return i + 1;
+        val_matched = 1;
+        return i + 1;
     }
+
+    //macth name only checking
+    i = -1;
+    switch (*name)
+    {
+    case ':':
+        switch (*(name + 1))
+        {
+        case 'a':
+            i = 0;
+            break;
+        case 'm':
+            i = 1;
+            break;
+        case 'p':
+            i = 3;
+            break;
+        case 's':
+            if (*(name + 2) == 'c') //:scheme
+                i = 5;
+            else
+                i = 7;
+            break;
+        default:
+            break;
+        }
+        break;
+    case 'a':
+        switch (name_len)
+        {
+        case 3:
+            i = 20; //age
+            break;
+        case 5:
+            i = 21; //allow
+            break;
+        case 6:
+            i = 18; //accept
+            break;
+        case 13:
+            if (*(name + 1) == 'u')
+                i = 22; //authorization
+            else
+                i = 17; //accept-ranges
+            break;
+        case 14:
+            i  = 14; //accept-charset
+            break;
+        case 15:
+            if ( *(name + 7) == 'l')
+                i = 16; //accept-language, 
+            else 
+                i = 15;// accept-encoding
+            break;
+        case 27:
+            i = 19;//access-control-allow-origin
+            break;
+        default:
+            break;
+        }
+        break;
+    case 'c':
+        switch (name_len)
+        {
+        case 6:
+            i = 31; //cookie
+            break;
+        case 12:
+            i = 30; //content-type
+            break;
+        case 13:
+            if ( *(name + 1) == 'a')
+                i = 23; //cache-control
+            else
+                i = 29; //content-range
+            break;
+        case 14:
+            i = 27; //content-length
+            break;
+        case 16:
+            switch (*(name + 9))
+            {
+            case 'n':
+                i = 25 ;//content-encoding
+                break;
+            case 'a':
+                i = 26; //content-language
+                break;
+            case 'o':
+                i = 28; //content-location
+            default:
+                break;
+            }
+            break;
+        case 19:
+            i = 24; //content-disposition
+            break;
+        }
+        break;
+    case 'd':
+        i = 32 ;//date
+        break;
+    case 'e':
+        switch (name_len)
+        {
+        case 4:
+            i = 33; //etag
+            break;
+        case 6:
+            i = 34;
+            break;
+        case 7:
+            i = 35;
+            break;
+        default:
+            break;
+        }
+        break;
+    case 'f':
+        i = 36; //from
+        break;
+    case 'h':
+        i = 37; //host
+        break;
+    case 'i':
+        switch (name_len)
+        {
+        case 8:
+            if (*(name + 3) == 'm')
+                i = 38; //if-match
+            else
+                i = 41; //if-range
+            break;
+        case 13:
+            i = 40; //if-none-match
+            break;
+        case 17:
+            i = 39; //if-modified-since
+            break;
+        case 19:
+            i = 42; //if-unmodified-since
+            break;
+        default:
+            break;
+        }
+        break;
+    case 'l':
+        switch (name_len)
+        {
+        case 4:
+            i = 44; //link
+            break;
+        case 8:
+            i = 45; //location
+            break;
+        case 13:
+            i = 43; //last-modified
+            break;
+        default:
+            break;
+        }
+        break;
+    case 'm':
+        i = 46; //max-forwards
+        break;
+    case 'p':
+        if (name_len == 18)
+            i = 47; //proxy-authenticate
+        else
+            i = 48; //proxy-authorization
+        break;
+    case 'r':
+        switch (*(name + 4))
+        {
+            case 'e':
+                if (name_len == 5)
+                    i = 49; //range
+                else
+                    i = 51; //refresh
+                break;
+            case 'r':
+                i = 50; //referer
+                break;
+            case 'y':
+                i = 52; //retry-after
+                break;
+            default:
+                break;
+        }
+        break;
+    case 's':
+        switch (name_len)
+        {
+        case 6:
+            i = 53; //server
+            break;
+        case 10:
+            i = 54; //set-cookie
+            break;
+        case 25:
+            i = 55; //strict-transport-security
+            break;
+        default:
+            break;
+        }
+        break;
+    case 't':
+        i = 56;//transfer-encoding
+        break;
+    case 'u':
+        i = 57; //user-agent
+        break;
+    case 'v':
+        if (name_len ==4)
+            i = 58;
+        else
+            i = 59;
+        break;
+    case 'w':
+        i = 60;
+        break;
+    default:
+        break;
+    }
+    
+    if (g_HPackStxTab[i].name_len == name_len
+        && memcmp(name, g_HPackStxTab[i].name, name_len) == 0)
+        return i + 1;
 
     return 0;
 }
+
 
 //responseTable
 unsigned char *Hpack::encHeader(unsigned char *dst, unsigned char *dstEnd,
@@ -5514,66 +5965,80 @@ unsigned char *Hpack::encHeader(unsigned char *dst, unsigned char *dstEnd,
                                 uint16_t valueLen, int indexedType)
 {
     //assert(indexedType >= 0 && indexedType <= 2);
-    int val_match = 0;
-    int staticTableIndex = getStaticTableId(name, nameLen, value, valueLen,
-                                            val_match);
+    unsigned char *dstOrg = dst;
+    int val_matched = 0;
+    int rc;
+    uint8_t stxTabId = getStxTabId(name, nameLen, value, valueLen,
+                                            val_matched);
 
     //If both name and value matched
-    if (val_match == 1)
+    if (val_matched == 1)
     {
         *dst = 0x80;
-        dst = encInt(dst, staticTableIndex, 7);
+        dst = encInt(dst, stxTabId, 7);
         return dst;
     }
 
-    int dynTabIndex = 0;
-    DynamicTableEntry *pRespEntry = getRespDynamicTable().find(name, nameLen,
-                                    value, valueLen, dynTabIndex);
-    if (pRespEntry)
+    val_matched = 0;
+    int dynTabId = getRespDynTab().getDynTabId(name, nameLen,
+                                    value, valueLen, val_matched, stxTabId);
+    if (val_matched == 1)
     {
         *dst = 0x80;
-        dst = encInt(dst, dynTabIndex, 7);
+        dst = encInt(dst, dynTabId, 7);
         return dst;
     }
 
+    /**
+     * When val_matched==0, either stxTabId or dynTabId must be 0.
+     * we can use (stxTabId + dynTabId) to choose either value.
+     */
+    assert(dynTabId == 0  || stxTabId == 0);
+    
     //indexedType: 0, Add, 1,: without, 2: never
     char indexedPrefixNumber[] = {0x40, 0x00, 0x10};
-    if (staticTableIndex > 0 || dynTabIndex > 0)
+    if (stxTabId + dynTabId > 0)
     {
         *dst = indexedPrefixNumber[indexedType];
-        dst = encInt(dst, ((staticTableIndex > 0) ? staticTableIndex :
-                           dynTabIndex), ((indexedType == 0) ? 6 : 4));
+        dst = encInt(dst, stxTabId + dynTabId, ((indexedType == 0) ? 6 : 4));
     }
     else
     {
         *dst++ = indexedPrefixNumber[indexedType];
-        dst += encStr(dst, dstEnd - dst, (const unsigned char *)name, nameLen);
+        rc = encStr(dst, dstEnd - dst, (const unsigned char *)name, nameLen);;
+        if (rc < 0)
+            return dstOrg; //Failed to enc this header, return unchanged ptr.
+        dst += rc;
     }
 
-    dst += encStr(dst, dstEnd - dst, (const unsigned char *)value, valueLen);
+    rc = encStr(dst, dstEnd - dst, (const unsigned char *)value, valueLen);
+    if (rc < 0)
+        return dstOrg; //Failed to enc this header, return unchanged ptr.
+    dst += rc;
 
     if (indexedType == 0)
-        getRespDynamicTable().pushEntry(name, nameLen, value, valueLen,
-                                        staticTableIndex);
+        getRespDynTab().pushEntry(name, nameLen, value, valueLen,
+                                        stxTabId);
 
     return dst;
 }
 
+
 //src will be changed
 //return 1: OK, 0: end, -1: failed.
-int Hpack::decHeader(unsigned char *&src, unsigned char *srcEnd, char *name,
-                     uint16_t &name_len, char *val, uint16_t &val_len)
+int Hpack::decHeader(unsigned char *&src, unsigned char *srcEnd, AutoBuf &nameValBuf,
+                     uint16_t &name_len, uint16_t &val_len)
 {
     if (src == srcEnd)
         return 0;
 
-    int error_code = 0;
     if ((*src & 0xe0) == 0x20)    //001 xxxxx
     {
-        int newCapcity = decInt(src, srcEnd, 5, error_code);
-        if (error_code != 0)
-            return -1;  //wrong int
-        getReqDynamicTable().updateMaxCapacity(newCapcity);
+        uint32_t newCapcity;
+        if (0 != decInt(src, srcEnd, 5, newCapcity))
+            return -1;
+
+        getReqDynTab().updateMaxCapacity(newCapcity);
         return 1;
     }
 
@@ -5583,18 +6048,16 @@ int Hpack::decHeader(unsigned char *&src, unsigned char *srcEnd, char *name,
 
     if (*src & 0x80) //1 xxxxxxx
     {
-        index = decInt(src, srcEnd, 7, error_code);
-        if (error_code != 0)
-            return -1;  //wrong int
+        if (0 != decInt(src, srcEnd, 7, index))
+            return -1;
 
         indexedType = 3; //need to parse value
     }
     else if (*src > 0x40) //01 xxxxxx
     {
-        index = decInt(src, srcEnd, 6, error_code);
-        if (error_code != 0)
-            return -1;  //wrong int
-            
+        if (0 != decInt(src, srcEnd, 6, index))
+            return -1;
+
         indexedType = 0;
     }
     else if (*src == 0x40) //custmized //0100 0000
@@ -5606,9 +6069,9 @@ int Hpack::decHeader(unsigned char *&src, unsigned char *srcEnd, char *name,
 
     else if ((*src & 0xf0) == 0x10)  //0001 xxxx
     {
-        index = decInt(src, srcEnd, 4, error_code);
-        if (error_code != 0)
-            return -1;  //wrong int
+        if (0 != decInt(src, srcEnd, 4, index))
+            return -1;
+
         indexedType = 2;
     }
 
@@ -5618,46 +6081,54 @@ int Hpack::decHeader(unsigned char *&src, unsigned char *srcEnd, char *name,
 
     else // 0000 xxxx
     {
-        index = decInt(src, srcEnd, 4, error_code);
-        if (error_code != 0)
-            return -1;  //wrong int
+        if (0 != decInt(src, srcEnd, 4, index))
+            return -1;
+
         indexedType = 1;
     }
 
+    //huffman encode at most compression ratio is 0.625, 
+    //      add 30 to handle the longest static table name
+    //So that in next dyn table checking, should re-chek
+    int enoughSpaceLen = (srcEnd - src) * 2 + 30;
+    if (nameValBuf.available() < enoughSpaceLen)
+        nameValBuf.grow(enoughSpaceLen);
+    nameValBuf.clear();
+    
+    char *name = nameValBuf.begin();
     if (index > 0)
     {
-        if (index <= HPackStaticTableCount) //static table
+        if (index <= HPackStxTabCount) //static table
         {
-            strcpy(name, g_HPackStaticTable_t[index - 1].name);
-            name_len = g_HPackStaticTable_t[index - 1].name_len;
+            name_len = g_HPackStxTab[index - 1].name_len;
+            memcpy(name, g_HPackStxTab[index - 1].name, name_len);
             if (indexedType == 3)
             {
-                strcpy(val, g_HPackStaticTable_t[index - 1].val);
-                val_len = g_HPackStaticTable_t[index - 1].val_len;
+                val_len = g_HPackStxTab[index - 1].val_len;
+                memcpy(name + name_len, g_HPackStxTab[index - 1].val, val_len);
                 return 1;
             }
         }
         else
         {
-            DynamicTableEntry *pRespEntry = getReqDynamicTable().getEntryByTabId(
+            DynTabEntry *pRespEntry = getReqDynTab().getEntry(
                                                 index);
             if (pRespEntry == NULL)
-            {
-                //Error
                 return LS_FAIL;
-            }
-            if (name_len < pRespEntry->getNameLen())
-                return -2; //bypass this too long header
+
+            //If the dyn table have a long name and value, this may break the 
+            //prevoius length checking, so need to check it again
+            enoughSpaceLen = (srcEnd - src) * 2 + pRespEntry->getNameLen() 
+                                + pRespEntry->getValueLen();
+            if (nameValBuf.available() < enoughSpaceLen)
+                nameValBuf.grow(enoughSpaceLen);
 
             name_len = pRespEntry->getNameLen();
             memcpy(name, pRespEntry->getName(), name_len);
             if (indexedType == 3)
             {
-                if (val_len < pRespEntry->getValueLen())
-                    return -2;
-
                 val_len = pRespEntry->getValueLen();
-                memcpy(val, pRespEntry->getValue(), val_len);
+                memcpy(name + name_len, pRespEntry->getValue(), val_len);
                 return 1;
             }
         }
@@ -5665,15 +6136,20 @@ int Hpack::decHeader(unsigned char *&src, unsigned char *srcEnd, char *name,
     else
     {
         ++src;
-        len = decStr((unsigned char *)name, name_len, src, srcEnd);
+        len = decStr((unsigned char *)name, nameValBuf.available(), src, srcEnd);
+        if ( len < 0)
+            return len; //error
         name_len = len;
     }
 
-    len = decStr((unsigned char *)val, val_len, src, srcEnd);
+    len = decStr((unsigned char *)name + name_len, 
+                 nameValBuf.available() - name_len, src, srcEnd);
+    if ( len < 0)
+        return len; //error
     val_len = len;
 
     if (indexedType == 0)
-        getReqDynamicTable().pushEntry(name, name_len, val, val_len, index);
+        getReqDynTab().pushEntry(name, name_len, name + name_len, val_len, index);
 
     return 1;
 }

@@ -15,16 +15,16 @@
 *    You should have received a copy of the GNU General Public License       *
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
+#include "lsluaapi.h"
+#include "lsluasession.h"
 
-#include <ctype.h>
-#include <modules/lua/lsluaapi.h>
-#include <modules/lua/lsluaengine.h>
-#include <modules/lua/lsluasession.h>
 #include <ls.h>
 #include <lsr/ls_pcreg.h>
+#include <lsr/ls_pool.h>
 #include <lsr/ls_str.h>
-#include <log4cxx/logger.h>
-#include <http/httpsession.h>
+#include <lsr/ls_xpool.h>
+
+#include <ctype.h>
 
 
 typedef struct ls_luaregex_s
@@ -33,7 +33,7 @@ typedef struct ls_luaregex_s
     const char         *pattern;
     ls_str_pair_t      *namedpats;    // Named patterns
     ls_pcre_t          *pcre;
-    ls_pcreres_t    res;
+    ls_pcreres_t        res;
     unsigned long       flags;
     int                 inputlen;
     int                 startpos;
@@ -50,17 +50,22 @@ static int LsLuaRegexMatchHelper(lua_State *L, char iFind);
 static int LsLuaRegexSubHelper(lua_State *L, char iGlobal);
 static int LsLuaRegexGmatch(lua_State *L);
 
+
 static int LsLuaRegexMatch(lua_State *L)
 {   return LsLuaRegexMatchHelper(L, 0);    }
+
 
 static int LsLuaRegexFind(lua_State *L)
 {    return LsLuaRegexMatchHelper(L, 1);   }
 
+
 static int LsLuaRegexSub(lua_State *L)
 {    return LsLuaRegexSubHelper(L, 0);     }
 
+
 static int LsLuaRegexGsub(lua_State *L)
 {    return LsLuaRegexSubHelper(L, 1);     }
+
 
 static int LsLuaRegexToString(lua_State *L)
 {
@@ -71,11 +76,13 @@ static int LsLuaRegexToString(lua_State *L)
     return 1;
 }
 
+
 static int LsLuaRegexGc(lua_State *L)
 {
     LsLuaLog(L, LSI_LOG_NOTICE, 0, "<ls.re GC>");
     return 0;
 }
+
 
 static const luaL_Reg lsluaRegexFuncs[] =
 {
@@ -87,12 +94,14 @@ static const luaL_Reg lsluaRegexFuncs[] =
     {NULL, NULL}
 };
 
+
 static const luaL_Reg lsluaRegexMetaSub[] =
 {
     {"__gc",        LsLuaRegexGc},
     {"__tostring",  LsLuaRegexToString},
     {NULL, NULL}
 };
+
 
 void LsLuaCreateRegexmeta(lua_State *L)
 {
@@ -111,6 +120,7 @@ void LsLuaCreateRegexmeta(lua_State *L)
 
     LsLuaApi::settop(L, -3);       // pop 2
 }
+
 
 //
 // Internal funcs.
@@ -175,6 +185,7 @@ static int LsLuaRegexFillTable(lua_State *L, ls_luaregex_t *r,
     return 1;
 }
 
+
 static int LsLuaRegexInitPcre(lua_State *L, ls_luaregex_t *r)
 {
     if (r->cachemode)
@@ -196,6 +207,7 @@ static int LsLuaRegexInitPcre(lua_State *L, ls_luaregex_t *r)
     return 1;
 }
 
+
 static void LsLuaRegexFreePcre(ls_luaregex_t *r)
 {
     if (r->cachemode
@@ -208,6 +220,7 @@ static void LsLuaRegexFreePcre(ls_luaregex_t *r)
         ls_pcre_d(r->pcre);
     r->pcre = NULL;
 }
+
 
 static int LsLuaRegexDoPcre(lua_State *L, LsLuaSession *pSession,
                             ls_luaregex_t *r)
@@ -249,6 +262,7 @@ static int LsLuaRegexDoPcre(lua_State *L, LsLuaSession *pSession,
     return iRet;
 }
 
+
 static int LsLuaRegexParseRet(lua_State *L, ls_luaregex_t *r, int iRet)
 {
     int *pVec;
@@ -283,6 +297,7 @@ static int LsLuaRegexParseRet(lua_State *L, ls_luaregex_t *r, int iRet)
 
     return LsLuaRegexFillTable(L, r, iRet);
 }
+
 
 static int LsLuaRegexParseRule(ls_pcresub_t *pThis, const char *pRule)
 {
@@ -377,6 +392,7 @@ static int LsLuaRegexParseRule(ls_pcresub_t *pThis, const char *pRule)
     return 0;
 }
 
+
 static int LsLuaRegexMatchLoad(lua_State *L, ls_luaregex_t *r)
 {
     int iRet;
@@ -439,6 +455,7 @@ static int LsLuaRegexMatchLoad(lua_State *L, ls_luaregex_t *r)
     return 1;
 }
 
+
 static int LsLuaRegexMatchHelper(lua_State *L, char iFind)
 {
     int iRet;
@@ -464,6 +481,7 @@ static int LsLuaRegexMatchHelper(lua_State *L, char iFind)
     LsLuaRegexFreePcre(&r);
     return iRet;
 }
+
 
 static int LsLuaRegexSubstitute(lua_State *L, LsLuaSession *pSession,
                                 ls_luaregex_t *r, const char *pSubRule,
@@ -559,6 +577,7 @@ static int LsLuaRegexSubstitute(lua_State *L, LsLuaSession *pSession,
     return 2;
 }
 
+
 static int LsLuaRegexSubHelper(lua_State *L, char iGlobal)
 {
     ls_luaregex_t r;
@@ -606,6 +625,7 @@ static int LsLuaRegexSubHelper(lua_State *L, char iGlobal)
     return LsLuaRegexSubstitute(L, pSession, &r, pSubRule, iFunc);
 }
 
+
 static int LsLuaRegexGmatchIter(lua_State *L)
 {
     int iRet;
@@ -633,6 +653,7 @@ static int LsLuaRegexGmatchIter(lua_State *L)
 
     return iRet;
 }
+
 
 //
 // Alternate Implementations.
@@ -663,6 +684,7 @@ int LsLuaRegexGmatch(lua_State *L)
     LsLuaApi::pushcclosure(L, LsLuaRegexGmatchIter, 1);
     return 1;
 }
+
 
 int LsLuaRegexRegex(lua_State *L)
 {

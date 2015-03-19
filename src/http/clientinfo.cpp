@@ -16,11 +16,11 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "clientinfo.h"
-#include <http/iptogeo.h>
-#include <util/datetime.h>
+
 #include <http/httplog.h>
-#include <util/pool.h>
+#include <http/iptogeo.h>
 #include <util/accessdef.h>
+#include <util/datetime.h>
 
 #include <string.h>
 #include <sys/types.h>
@@ -67,6 +67,7 @@ int ClientInfo::shmData_remove(lsShm_hCacheData_t *p, void *pUParam)
     return 0;
 }
 #endif
+
 
 ClientInfo::ClientInfo()
     : m_pGeoInfo(NULL)
@@ -156,6 +157,7 @@ void ClientInfo::setAddr(const struct sockaddr *pAddr)
     m_iAccess = 1;
 }
 
+
 int ClientInfo::checkAccess()
 {
     int iSoftLimit = ClientInfo::getPerClientSoftLimit();
@@ -204,6 +206,8 @@ int ClientInfo::checkAccess()
     }
     return 0;
 }
+
+
 GeoInfo *ClientInfo::allocateGeoInfo()
 {
     if (!m_pGeoInfo)

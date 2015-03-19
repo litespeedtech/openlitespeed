@@ -15,34 +15,25 @@
 *    You should have received a copy of the GNU General Public License       *
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
-#include <assert.h>
+#include <shm/lsshm.h>
+
+#include <shm/lsshmpool.h>
+#include <util/gpath.h>
+
 #include <fcntl.h>
-#include <stdio.h>
-#include <stdlib.h>
+#include <stdarg.h>
 #include <string.h>
-#include <unistd.h>
 #include <errno.h>
 #include <signal.h>
-#include <sys/time.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
-#include <shm/lsshmtypes.h>
-#include <shm/lsshm.h>
-#include <shm/lsshmlock.h>
-#include <shm/lsshmpool.h>
-#include <http/httplog.h>
-#if 0
-#include <log4cxx/logger.h>
-#endif
-#include <util/gpath.h>
+
 
 extern "C" {
     int ls_expandfile(int fd, size_t fromsize, size_t incrsize);
 };
-
-#ifdef DEBUG_RUN
-using namespace LOG4CXX_NS;
-#endif
 
 
 LsShmVersion LsShm::s_version =
@@ -194,7 +185,7 @@ LsShmStatus_t LsShm::setErrMsg(const char *fmt, ...)
 //         m_iRef = 1;
 //
 // #ifdef DEBUG_RUN
-//         HttpLog::notice("LsShm::LsShm insert %s <%p>", m_pMapName, &s_base);
+//         SHM_NOTICE("LsShm::LsShm insert %s <%p>", m_pMapName, &s_base);
 // #endif
 //         s_base.insert(m_pMapName, this);
 //     }
@@ -221,7 +212,6 @@ LsShm::LsShm(const char *mapName, LsShmSize_t size, const char *pBaseDir)
     , m_pFileName(NULL)
     , m_pMapName(strdup(mapName))
     , m_iFd(0)
-    , m_iRemoveFlag(0)
     , m_pShmLock(NULL)
     , m_pRegLock(NULL)
     , m_pShmReg(NULL)
@@ -291,7 +281,7 @@ LsShm::LsShm(const char *mapName, LsShmSize_t size, const char *pBaseDir)
         m_iRef = 1;
 
 #ifdef DEBUG_RUN
-        HttpLog::notice("LsShm::LsShm insert %s <%p>", m_pMapName, s_pBase);
+        SHM_NOTICE("LsShm::LsShm insert %s <%p>", m_pMapName, s_pBase);
 #endif
         getBase()->insert(m_pFileName, this);
     }
@@ -309,7 +299,7 @@ LsShm::~LsShm()
     if (m_pFileName != NULL)
     {
 #ifdef DEBUG_RUN
-        HttpLog::notice("LsShm::~LsShm remove %s <%p>", m_pFileName, s_pBase);
+        SHM_NOTICE("LsShm::~LsShm remove %s <%p>", m_pFileName, s_pBase);
 #endif
         getBase()->remove(m_pFileName);
     }
@@ -328,15 +318,15 @@ LsShm *LsShm::open(const char *mapName, int initsize, const char *pBaseDir)
     snprintf(buf, sizeof(buf), "%s/%s.%s",
              (pBaseDir != NULL) ? pBaseDir : getDefaultShmDir(),
              mapName, LSSHM_SYSSHM_FILE_EXT);
-    
+
     itor = getBase()->find(buf);
 #ifdef DEBUG_RUN
-    HttpLog::notice("LsShm::get find %s <%p>", buf, s_pBase);
+    SHM_NOTICE("LsShm::get find %s <%p>", buf, s_pBase);
 #endif
     if (itor != NULL)
     {
 #ifdef DEBUG_RUN
-        HttpLog::notice("LsShm::get find %s <%p> return <%p>",
+        SHM_NOTICE("LsShm::get find %s <%p> return <%p>",
                         buf, s_pBase, itor);
 #endif
         pObj = (LsShm *)itor->second();
@@ -353,10 +343,10 @@ LsShm *LsShm::open(const char *mapName, int initsize, const char *pBaseDir)
             return pObj;
         }
 
-        HttpLog::notice(
-            "ERROR: FAILED TO CREATE SHARED MEMORY %d MAPNAME [%s] DIR [%s] ",
-            pObj->status(), mapName,
-            (pBaseDir ? pBaseDir : getDefaultShmDir()));
+//         SHM_NOTICE(
+//             "ERROR: FAILED TO CREATE SHARED MEMORY %d MAPNAME [%s] DIR [%s] ",
+//             pObj->status(), mapName,
+//             (pBaseDir ? pBaseDir : getDefaultShmDir()));
         delete pObj;
     }
     if (*getErrMsg() == '\0')       // if no error message, set generic one
@@ -374,13 +364,13 @@ LsShm *LsShm::open(const char *mapName, int initsize, const char *pBaseDir)
 //
 //     GHash::iterator itor;
 // #ifdef DEBUG_RUN
-//     HttpLog::notice("LsShm::get find %s <%p>", mapName, &s_base);
+//     SHM_NOTICE("LsShm::get find %s <%p>", mapName, &s_base);
 // #endif
 //     itor = s_base.find(mapName);
 //     if (itor != NULL)
 //     {
 // #ifdef DEBUG_RUN
-//         HttpLog::notice("LsShm::get find %s <%p> return <%p>",
+//         SHM_NOTICE("LsShm::get find %s <%p> return <%p>",
 //           mapName, &s_base, itor);
 // #endif
 //         pObj = (LsShm *)itor->second();
@@ -394,7 +384,7 @@ LsShm *LsShm::open(const char *mapName, int initsize, const char *pBaseDir)
 //         if (pObj->status() == LSSHM_READY)
 //             return pObj;
 //
-//         HttpLog::notice(
+//         SHM_NOTICE(
 //           "ERROR: FAILED TO CREATE SHARE MEMORY %d MAPNAME [%s] DIR [%s] ",
 //           pObj->status(), mapName,
 //           (s_pDirBase? s_pDirBase: getDefaultShmDir()));
@@ -413,6 +403,15 @@ LsShmStatus_t LsShm::checkMagic(LsShmMap *mp, const char *mName) const
 }
 
 
+void LsShm::deleteFile()
+{
+    if (m_pFileName != NULL)
+    {
+        unlink(m_pFileName);
+        LsShmLock::deleteFile();
+    }
+}
+
 void LsShm::cleanup()
 {
     unmap();
@@ -423,11 +422,6 @@ void LsShm::cleanup()
     }
     if (m_pFileName != NULL)
     {
-        if (m_iRemoveFlag)
-        {
-            m_iRemoveFlag = 0;
-            unlink(m_pFileName);
-        }
         free(m_pFileName);
         m_pFileName = NULL;
     }
@@ -477,12 +471,11 @@ LsShmStatus_t LsShm::init(const char *name, LsShmSize_t size)
         setErrMsg("Unable to stat [%s], %s.", m_pFileName, strerror(errno));
         return LSSHM_BADMAPFILE;
     }
-    
+
     ::fcntl( m_iFd, F_SETFD, FD_CLOEXEC );
 
     if (mystat.st_size == 0)
     {
-        m_iRemoveFlag = 1;
         // New File!!!
         //  creating a new map
         if (size < s_iPageSize)
@@ -565,7 +558,6 @@ LsShmStatus_t LsShm::init(const char *name, LsShmSize_t size)
 
     syncData2Obj();
 
-    m_iRemoveFlag = 0;
     return LSSHM_OK;
 }
 
@@ -620,7 +612,7 @@ LsShmStatus_t LsShm::remap()
     if (getShmMap()->x_iMaxSize != m_iMaxSizeO)
     {
 #ifdef DEBUG_RUN
-        HttpLog::notice("LsShm::remap %6d %X %X %X",
+        SHM_NOTICE("LsShm::remap %6d %X %X %X",
                         getpid(), getShmMap(), getShmMap()->x_iMaxSize, m_iMaxSizeO);
 #endif
 
@@ -1232,14 +1224,14 @@ LsShmPool *LsShm::getNamedPool(const char *name)
         return getGlobalPool();
 
 #ifdef DEBUG_RUN
-    HttpLog::notice("LsShm::getNamedPool find %s <%p>",
+    SHM_NOTICE("LsShm::getNamedPool find %s <%p>",
                     name, &getObjBase());
 #endif
     iter = getObjBase().find(name);
     if (iter != NULL)
     {
 #ifdef DEBUG_RUN
-        HttpLog::notice("LsShm::getNamedPool %s <%p> return %p ",
+        SHM_NOTICE("LsShm::getNamedPool %s <%p> return %p ",
                         name, &getObjBase(), iter);
 #endif
         pObj = (LsShmPool *)iter->second();

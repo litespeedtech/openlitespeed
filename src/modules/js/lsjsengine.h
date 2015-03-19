@@ -18,13 +18,13 @@
 #ifndef LSJSENGINE_H
 #define LSJSENGINE_H
 
+#include <ls.h>
+
 #include <sys/stat.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include <ls.h>
-#include <socket/gsockaddr.h>
 
 class LsJsUserParam;
 

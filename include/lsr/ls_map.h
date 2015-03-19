@@ -19,14 +19,8 @@
 #define LS_MAP_H
 
 #include <lsr/ls_types.h>
-#include <lsr/ls_xpool.h>
 
-#include <assert.h>
-#include <errno.h>
 #include <stddef.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 
 /**
  * @file

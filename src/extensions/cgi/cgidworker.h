@@ -20,7 +20,7 @@
 
 #include <lsdef.h>
 #include <extensions/extworker.h>
-#include <util/autostr.h>
+
 #include <sys/types.h>
 
 

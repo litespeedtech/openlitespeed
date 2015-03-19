@@ -16,45 +16,39 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "lshttpdmain.h"
-#include "mainserverconfig.h"
-#include "util/configctx.h"
-#include <extensions/cgi/cgidworker.h>
-#include <extensions/cgi/suexec.h>
-#include <extensions/registry/extappregistry.h>
-#include <util/datetime.h>
-#include <http/accesslog.h>
+
 #include <http/httpaiosendfile.h>
-#include <http/httpdefs.h>
 #include <http/httplog.h>
 #include <http/httpserverconfig.h>
 #include <http/httpserverversion.h>
 #include <http/httpsignals.h>
-#include <http/platforms.h>
 #include <http/serverprocessconfig.h>
 #include <http/stderrlogger.h>
-
 #include <log4cxx/logger.h>
 #include <log4cxx/logrotate.h>
-
+#include <lsiapi/lsiapihooks.h>
+#include <lsr/ls_time.h>
+#include <lsr/ls_fileio.h>
+#include <lsr/ls_strtool.h>
+#include <main/configctx.h>
 #include <main/httpserver.h>
 #include <main/httpconfigloader.h>
+#include <main/mainserverconfig.h>
+#include <main/plainconf.h>
 #include <main/serverinfo.h>
-
-#include <lsiapi/lsiapihooks.h>
-
+#include <socket/coresocket.h>
+#include <util/datetime.h>
 #include <util/daemonize.h>
 #include <util/emailsender.h>
 #include <util/gpath.h>
-#include <lsr/ls_time.h>
-#include <lsr/ls_fileio.h>
-#include <util/pidfile.h>
+#include <util/pcutil.h>
 #include <util/stringlist.h>
-#include <util/stringtool.h>
 #include <util/signalutil.h>
 #include <util/vmembuf.h>
 
+#include <extensions/cgi/cgidworker.h>
+#include <extensions/registry/extappregistry.h>
 #include <openssl/crypto.h>
-
 #include <assert.h>
 #include <ctype.h>
 #include <dirent.h>
@@ -66,16 +60,13 @@
 #include <sys/mman.h>
 #include <sys/resource.h>
 #include <sys/stat.h>
+#include <sys/sysctl.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/utsname.h>
 #include <sys/wait.h>
 #include <time.h>
 #include <unistd.h>
-#include <lsr/ls_strtool.h>
-#include <lsiapi/lsiapi.h>
-#include <sys/sysctl.h>
-#include <plainconf.h>
 
 #define GlobalServerSessionHooks (LsiApiHooks::getServerSessionHooks())
 
@@ -97,6 +88,8 @@ LshttpdMain::LshttpdMain()
     m_pServer = &HttpServer::getInstance();
     m_pBuilder = new HttpConfigLoader();
 }
+
+
 LshttpdMain::~LshttpdMain()
 {
     if (HttpServerConfig::getInstance().getChildren() >= 32)
@@ -112,6 +105,7 @@ int LshttpdMain::forkTooFreq()
     return 0;
 }
 
+
 int LshttpdMain::preFork()
 {
     if (D_ENABLED(DL_LESS))
@@ -122,10 +116,12 @@ int LshttpdMain::preFork()
     return 0;
 }
 
+
 int LshttpdMain::forkError(int err)
 {
     return 0;
 }
+
 
 int LshttpdMain::postFork(pid_t pid)
 {
@@ -133,6 +129,7 @@ int LshttpdMain::postFork(pid_t pid)
                 pid));
     return 0;
 }
+
 
 int LshttpdMain::childExit(pid_t ch_pid, int stat)
 {
@@ -173,6 +170,7 @@ int LshttpdMain::childSignaled(pid_t pid, int signal, int coredump)
     }
     return 0;
 }
+
 
 int LshttpdMain::SendCrashNotification(pid_t pid, int signal, int coredump,
                                        char *pCoreFile)
@@ -245,6 +243,7 @@ int LshttpdMain::SendCrashNotification(pid_t pid, int signal, int coredump,
     return 0;
 }
 
+
 void LshttpdMain::onGuardTimer()
 {
     MainServerConfig  &MainServerConfigObj =  MainServerConfig::getInstance();
@@ -270,8 +269,6 @@ void LshttpdMain::onGuardTimer()
 
     checkRestartReq();
 }
-
-
 
 
 int LshttpdMain::processAdminCmd(char *pCmd, char *pEnd, int &apply)
@@ -336,6 +333,7 @@ int LshttpdMain::processAdminCmd(char *pCmd, char *pEnd, int &apply)
     return 0;
 }
 
+
 int LshttpdMain::getFullPath(const char *pRelativePath, char *pBuf,
                              int bufLen)
 {
@@ -347,6 +345,7 @@ int LshttpdMain::getFullPath(const char *pRelativePath, char *pBuf,
 
 }
 
+
 int LshttpdMain::execute(const char *pExecCmd, const char *pParam)
 {
     char achBuf[512];
@@ -356,7 +355,7 @@ int LshttpdMain::execute(const char *pExecCmd, const char *pParam)
     return ret;
 }
 
-#include <socket/coresocket.h>
+
 int LshttpdMain::startAdminSocket()
 {
     int i;
@@ -390,6 +389,7 @@ int LshttpdMain::startAdminSocket()
     return 0;
 }
 
+
 int LshttpdMain::closeAdminSocket()
 {
     const char *pAdminSock = HttpServerConfig::getInstance().getAdminSock();
@@ -401,6 +401,7 @@ int LshttpdMain::closeAdminSocket()
     close(m_fdAdmin);
     return 0;
 }
+
 
 int LshttpdMain::acceptAdminSockConn()
 {
@@ -451,6 +452,7 @@ int LshttpdMain::processAdminSockConn(int fd)
 
 }
 
+
 int LshttpdMain::processAdminBuffer(char *p, char *pEnd)
 {
     while ((pEnd > p) && isspace(pEnd[-1]))
@@ -486,7 +488,6 @@ int LshttpdMain::processAdminBuffer(char *p, char *pEnd)
         applyChanges();
     return 0;
 }
-
 
 
 #define DEFAULT_CONFIG_FILE         "conf/httpd_config.conf"
@@ -526,6 +527,7 @@ int LshttpdMain::testServerRoot(const char *pRoot)
     return 0;
 }
 
+
 int LshttpdMain::getServerRootFromExecutablePath(const char *command,
         char  *pBuf, int len)
 {
@@ -547,6 +549,7 @@ int LshttpdMain::getServerRootFromExecutablePath(const char *command,
     return 0;
 
 }
+
 
 int LshttpdMain::guessCommonServerRoot()
 {
@@ -611,7 +614,6 @@ int LshttpdMain::getServerRoot(int argc, char *argv[])
 }
 
 
-
 int LshttpdMain::config()
 {
     int iReleaseXmlTree;
@@ -632,6 +634,7 @@ int LshttpdMain::config()
     return 0;
 
 }
+
 
 int LshttpdMain::reconfig()
 {
@@ -656,6 +659,7 @@ static void perr(const char *pErr)
 {
     fprintf(stderr,  "[ERROR] %s\n", pErr);
 }
+
 
 int LshttpdMain::testRunningServer()
 {
@@ -729,8 +733,6 @@ void LshttpdMain::parseOpt(int argc, char *argv[])
 }
 
 
-
-
 static void enableCoreDump()
 {
     struct  rlimit rl;
@@ -748,6 +750,7 @@ static void enableCoreDump()
     ::chdir(DEFAULT_TMP_DIR);
 }
 
+
 void LshttpdMain::changeOwner()
 {
     ServerProcessConfig &procConfig = ServerProcessConfig::getInstance();
@@ -755,6 +758,7 @@ void LshttpdMain::changeOwner()
     //chown( PID_FILE, procConfig.getUid(), procConfig.getGid() );
     chown(DEFAULT_SWAP_DIR, procConfig.getUid(), procConfig.getGid());
 }
+
 
 void LshttpdMain::removeOldRtreport()
 {
@@ -773,6 +777,7 @@ void LshttpdMain::removeOldRtreport()
         snprintf(&achBuf[len + 1], sizeof(achBuf) - len - 1, "%d", i);
     };
 }
+
 
 int LshttpdMain::init(int argc, char *argv[])
 {
@@ -885,8 +890,7 @@ int LshttpdMain::init(int argc, char *argv[])
         allocatePidTracker();
         m_pServer->initAdns();
         m_pServer->enableAioLogging();
-        if ((HttpServerConfig::getInstance().getUseSendfile() == 0)
-            && (HttpServerConfig::getInstance().getUseAio())
+        if ((HttpServerConfig::getInstance().getUseSendfile() == 2)
             && (m_pServer->initAioSendFile() != 0))
             return LS_FAIL;
     }
@@ -947,7 +951,6 @@ static void sigchild(int sig)
 }
 
 
-
 #define BB_SIZE 32768
 int LshttpdMain::allocatePidTracker()
 {
@@ -970,6 +973,7 @@ char *LshttpdMain::allocateBlackBoard()
     return pBuf;
 }
 
+
 void LshttpdMain::deallocateBlackBoard(char *pBuf)
 {
     munmap(pBuf, BB_SIZE);
@@ -988,6 +992,7 @@ void LshttpdMain::releaseExcept(ChildProc *pCurProc)
         pProc = (ChildProc *)m_childrenList.pop();
     }
 }
+
 
 int LshttpdMain::getFirstAvailSlot()
 {
@@ -1066,8 +1071,7 @@ int LshttpdMain::startChild(ChildProc *pProc)
         releaseExcept(pProc);
         m_pServer->reinitMultiplexer();
         m_pServer->enableAioLogging();
-        if ((HttpServerConfig::getInstance().getUseSendfile() == 0)
-            && (HttpServerConfig::getInstance().getUseAio())
+        if ((HttpServerConfig::getInstance().getUseSendfile() == 2)
             && (m_pServer->initAioSendFile() != 0))
             return LS_FAIL;
         close(m_fdAdmin);
@@ -1116,6 +1120,7 @@ void LshttpdMain::waitChildren()
     }
 }
 
+
 int LshttpdMain::cleanUp(int pid, char *pBB)
 {
     if (pBB)
@@ -1126,6 +1131,7 @@ int LshttpdMain::cleanUp(int pid, char *pBB)
     }
     return 0;
 }
+
 
 int LshttpdMain::checkRestartReq()
 {
@@ -1261,6 +1267,7 @@ void LshttpdMain::applyChanges()
     broadcastSig(SIGTERM, 1);
 }
 
+
 void LshttpdMain::gracefulRestart()
 {
     if (D_ENABLED(DL_LESS))
@@ -1381,6 +1388,7 @@ int LshttpdMain::guardCrash()
     exit(ret);
 }
 
+
 void LshttpdMain::processSignal()
 {
     if (HttpSignals::gotSigAlarm())
@@ -1409,6 +1417,7 @@ void LshttpdMain::processSignal()
         waitChildren();
     HttpSignals::resetEvents();
 }
+
 
 int LshttpdMain::getNumCores()
 {

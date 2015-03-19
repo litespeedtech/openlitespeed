@@ -16,28 +16,25 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "rewriteengine.h"
+
 #include <http/handlertype.h>
 #include <http/handlerfactory.h>
-#include <http/httpsession.h>
-#include <http/httpresourcemanager.h>
+#include <http/httpcontext.h>
 #include <http/httplog.h>
-#include <http/httpserverversion.h>
-#include <http/httpvhost.h>
+#include <http/httpresourcemanager.h>
+#include <http/httpsession.h>
+#include <http/httpstatuscode.h>
 #include <http/requestvars.h>
 #include <http/rewritemap.h>
 #include <http/rewriterule.h>
 #include <http/rewriterulelist.h>
-
-#include <extensions/extworker.h>
-#include <extensions/proxy/proxyworker.h>
-#include <extensions/proxy/proxyconfig.h>
-#include <extensions/registry/extappregistry.h>
-
-
+#include <lsr/ls_fileio.h>
 #include <util/accessdef.h>
 #include <util/httputil.h>
-#include <lsr/ls_fileio.h>
 #include <util/stringtool.h>
+
+#include <extensions/proxy/proxyworker.h>
+#include <extensions/proxy/proxyconfig.h>
 
 #include <ctype.h>
 #include <stdio.h>
@@ -50,6 +47,8 @@
 RewriteEngine::RewriteEngine()
 {
 }
+
+
 RewriteEngine::~RewriteEngine()
 {
 }
@@ -104,6 +103,7 @@ int RewriteEngine::parseRules(char *&pRules, RewriteRuleList *pRuleList,
     return 0;
 }
 
+
 int RewriteEngine::appendUnparsedRule(AutoStr2 &sDirective,
                                       char *pBegin, char *pEnd)
 {
@@ -121,6 +121,7 @@ int RewriteEngine::appendUnparsedRule(AutoStr2 &sDirective,
     return 0;
 }
 
+
 int RewriteEngine::parseUnparsedRules(RewriteRuleList *pRuleList,
                                       const RewriteMapList *pMapList)
 {
@@ -136,6 +137,7 @@ int RewriteEngine::parseUnparsedRules(RewriteRuleList *pRuleList,
     return ret;
 
 }
+
 
 static const char s_hex[17] = "0123456789ABCDEF";
 
@@ -161,6 +163,7 @@ static char *escape_uri(char *p, const char *pURI, int uriLen)
     return p;
 }
 
+
 static int getSubstr(const char *pSource, const int *ovector, int matches,
                      int i,
                      char *&pValue, int escape)
@@ -183,6 +186,7 @@ static int getSubstr(const char *pSource, const int *ovector, int matches,
     }
     return 0;
 }
+
 
 int RewriteEngine::getSubstValue(const RewriteSubstItem *pItem,
                                  HttpSession *pSession,
@@ -340,8 +344,10 @@ int RewriteEngine::getSubstValue(const RewriteSubstItem *pItem,
     return 0;
 }
 
+
 extern int transform_urlDecode(const char *org, int org_len, char *dest,
                                int dest_len, int *changed);
+
 
 int RewriteEngine::appendSubst(const RewriteSubstItem *pItem,
                                HttpSession *pSession,
@@ -395,6 +401,7 @@ int RewriteEngine::appendSubst(const RewriteSubstItem *pItem,
     return 0;
 }
 
+
 char *RewriteEngine::buildString(const RewriteSubstFormat *pFormat,
                                  HttpSession *pSession,
                                  char *pBuf, int &len, int esc_uri, int noDupSlash)
@@ -421,6 +428,7 @@ char *RewriteEngine::buildString(const RewriteSubstFormat *pFormat,
     len = pBegin - pBuf;
     return pBuf;
 }
+
 
 int RewriteEngine::processCond(const RewriteCond *pCond,
                                HttpSession *pSession)
@@ -552,6 +560,7 @@ int RewriteEngine::processCond(const RewriteCond *pCond,
 
 }
 
+
 int RewriteEngine::processRule(const RewriteRule *pRule,
                                HttpSession *pSession)
 {
@@ -596,6 +605,7 @@ int RewriteEngine::processRule(const RewriteRule *pRule,
     }
     return processRewrite(pRule, pSession);
 }
+
 
 static int isAbsoluteURI(const char *pURI, int len)
 {
@@ -708,6 +718,7 @@ int RewriteEngine::processQueryString(HttpSession *pSession, int flag)
     return 0;
 }
 
+
 int RewriteEngine::setCookie(char *pBuf, int len, HttpSession *pSession)
 {
     char *pName;
@@ -746,6 +757,7 @@ int RewriteEngine::setCookie(char *pBuf, int len, HttpSession *pSession)
                                           secure, httponly);
 
 }
+
 
 int RewriteEngine::expandEnv(const RewriteRule *pRule,
                              HttpSession *pSession)
@@ -804,6 +816,7 @@ int RewriteEngine::expandEnv(const RewriteRule *pRule,
     }
     return 0;
 }
+
 
 int RewriteEngine::processRewrite(const RewriteRule *pRule,
                                   HttpSession *pSession)
@@ -887,6 +900,7 @@ int RewriteEngine::processRewrite(const RewriteRule *pRule,
     return 0;
 }
 
+
 const RewriteRule *RewriteEngine::getNextRule(const RewriteRule *pRule,
         const HttpContext *&pContext, const HttpContext *&pRootContext)
 {
@@ -920,6 +934,7 @@ const RewriteRule *RewriteEngine::getNextRule(const RewriteRule *pRule,
     }
     return pNext;
 }
+
 
 int RewriteEngine::processRuleSet(const RewriteRuleList *pRuleList,
                                   HttpSession *pSession,

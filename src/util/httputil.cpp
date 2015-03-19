@@ -242,15 +242,15 @@ int HttpUtil::unescape(char *pDest, int &iUriLen,
     const char *pSrc = pOrgSrc;
     const char *pEnd = pOrgSrc + iUriLen;
     char *p = pDest;
+    char c, x1, x2;
 
     while (pSrc < pEnd)
     {
-        char c = *pSrc++;
+        c = *pSrc++;
         switch (c)
         {
         case '%':
             {
-                char x1, x2;
                 x1 = *pSrc++;
                 if (!isxdigit(x1))
                 {

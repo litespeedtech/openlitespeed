@@ -16,22 +16,39 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "extappregistry.h"
-#include <extensions/extworker.h>
-#include <extensions/localworkerconfig.h>
+
+#include <http/handlerfactory.h>
 #include <http/handlertype.h>
 #include <http/serverprocessconfig.h>
-#include <http/handlerfactory.h>
-#include <util/configctx.h>
+#include <main/configctx.h>
+#include <socket/gsockaddr.h>
+#include <util/hashstringmap.h>
+#include <util/rlimits.h>
+#include <util/staticobj.h>
 #include <util/stringlist.h>
 #include <util/stringtool.h>
-#include <util/hashstringmap.h>
 #include <util/xmlnode.h>
-#include <util/rlimits.h>
-#include <socket/gsockaddr.h>
+
+#include <extensions/extworker.h>
+#include <extensions/loadbalancer.h>
+#include <extensions/localworkerconfig.h>
+#include <extensions/pidlist.h>
+#include <extensions/cgi/cgidworker.h>
+#include <extensions/fcgi/fcgiapp.h>
+#include <extensions/jk/jworker.h>
+#include <extensions/lsapi/lsapiworker.h>
+#include <extensions/proxy/proxyconfig.h>
+#include <extensions/proxy/proxyworker.h>
 #include <unistd.h>
 
+
 static ExtWorker *newWorker(int type, const char *pName);
+static StaticObj< ExtAppSubRegistry > s_registry[EA_NUM_APP];
+static StaticObj< PidList > s_pidList;
+static PidSimpleList *s_pSimpleList = NULL;
+
 RLimits *ExtAppRegistry::s_pRLimits = NULL;
+
 class ExtAppMap : public HashStringMap< ExtWorker * >
 {
 public:
@@ -49,11 +66,13 @@ void ExtAppMap::removeAll()
     releaseObjects();
 }
 
+
 ExtAppSubRegistry::ExtAppSubRegistry()
     : m_pRegistry(new ExtAppMap())
     , m_pOldWorkers(new ExtAppMap())
 {
 }
+
 
 ExtAppSubRegistry::~ExtAppSubRegistry()
 {
@@ -63,6 +82,7 @@ ExtAppSubRegistry::~ExtAppSubRegistry()
         delete m_pOldWorkers;
     s_toBeStoped.releaseObjects();
 }
+
 
 ExtWorker *ExtAppSubRegistry::addWorker(int type, const char *pName)
 {
@@ -88,6 +108,7 @@ ExtWorker *ExtAppSubRegistry::addWorker(int type, const char *pName)
     }
 }
 
+
 ExtWorker *ExtAppSubRegistry::getWorker(const char *pName)
 {
     if ((pName == NULL) || (strlen(pName) == 0))
@@ -111,6 +132,7 @@ int ExtAppSubRegistry::stopWorker(ExtWorker *pApp)
         return pApp->stop();
     return 0;
 }
+
 
 int ExtAppSubRegistry::stopAllWorkers()
 {
@@ -140,6 +162,7 @@ void ExtAppSubRegistry::beginConfig()
 
 }
 
+
 void ExtAppSubRegistry::endConfig()
 {
     ExtAppMap::iterator iter;
@@ -155,6 +178,7 @@ void ExtAppSubRegistry::endConfig()
     m_pOldWorkers->clear();
 }
 
+
 void ExtAppSubRegistry::onTimer()
 {
     ExtAppMap::iterator iter;
@@ -164,11 +188,13 @@ void ExtAppSubRegistry::onTimer()
         iter.second()->onTimer();
 }
 
+
 void ExtAppSubRegistry::clear()
 {
     m_pRegistry->releaseObjects();
     m_pOldWorkers->releaseObjects();
 }
+
 
 int ExtAppSubRegistry::generateRTReport(int fd, int type)
 {
@@ -190,14 +216,6 @@ int ExtAppSubRegistry::generateRTReport(int fd, int type)
     return 0;
 }
 
-
-#include <extensions/cgi/cgidworker.h>
-#include <extensions/jk/jworker.h>
-#include <extensions/fcgi/fcgiapp.h>
-#include <extensions/proxy/proxyworker.h>
-#include <extensions/proxy/proxyconfig.h>
-#include <extensions/lsapi/lsapiworker.h>
-#include <extensions/loadbalancer.h>
 
 static ExtWorker *newWorker(int type, const char *pName)
 {
@@ -233,13 +251,6 @@ static ExtWorker *newWorker(int type, const char *pName)
     return pWorker;
 }
 
-#include <util/staticobj.h>
-static StaticObj< ExtAppSubRegistry > s_registry[EA_NUM_APP];
-
-#include <extensions/pidlist.h>
-static StaticObj< PidList > s_pidList;
-static PidSimpleList *s_pSimpleList = NULL;
-
 
 ExtWorker *ExtAppRegistry::addApp(int type, const char *pName)
 {
@@ -247,11 +258,13 @@ ExtWorker *ExtAppRegistry::addApp(int type, const char *pName)
     return s_registry[type]()->addWorker(type, pName);
 }
 
+
 ExtWorker *ExtAppRegistry::getApp(int type, const char *pName)
 {
     assert(type >= 0 && type < EA_NUM_APP);
     return s_registry[type]()->getWorker(pName);
 }
+
 
 int ExtAppRegistry::stopApp(ExtWorker *pApp)
 {
@@ -259,6 +272,7 @@ int ExtAppRegistry::stopApp(ExtWorker *pApp)
         return pApp->stop();
     return 0;
 }
+
 
 int ExtAppRegistry::stopAll()
 {
@@ -274,11 +288,13 @@ void ExtAppRegistry::beginConfig()
         s_registry[i]()->beginConfig();
 }
 
+
 void ExtAppRegistry::endConfig()
 {
     for (int i = 0; i < EA_NUM_APP; ++i)
         s_registry[i]()->endConfig();
 }
+
 
 void ExtAppRegistry::clear()
 {
@@ -286,11 +302,13 @@ void ExtAppRegistry::clear()
         s_registry[i]()->clear();
 }
 
+
 void ExtAppRegistry::onTimer()
 {
     for (int i = 0; i < EA_NUM_APP; ++i)
         s_registry[i]()->onTimer();
 }
+
 
 void ExtAppRegistry::init()
 {
@@ -298,6 +316,7 @@ void ExtAppRegistry::init()
         s_registry[i].construct();
     s_pidList.construct();
 }
+
 
 void ExtAppRegistry::shutdown()
 {
@@ -309,6 +328,7 @@ void ExtAppRegistry::shutdown()
         s_registry[i].destruct();
     }
 }
+
 
 void ExtAppRegistry::runOnStartUp()
 {
@@ -330,6 +350,7 @@ int ExtAppRegistry::generateRTReport(int fd)
     }
     return 0;
 }
+
 
 ExtWorker *ExtAppRegistry::configExtApp(const XmlNode *pNode,
                                         int configUserGroup)
@@ -505,6 +526,7 @@ ExtWorker *ExtAppRegistry::configExtApp(const XmlNode *pNode,
 
 }
 
+
 int ExtAppRegistry::configLoadBalacner(const XmlNode *pNode,
                                        const HttpVHost *pVHost)
 {
@@ -605,6 +627,7 @@ int ExtAppRegistry::configLoadBalacner(const XmlNode *pNode,
 
 }
 
+
 int ExtAppRegistry::configExtApps(const XmlNode *pRoot,
                                   const HttpVHost *pVHost)
 {
@@ -639,14 +662,16 @@ int ExtAppRegistry::configExtApps(const XmlNode *pRoot,
 
 }
 
-#include <unistd.h>
+
 PidRegistry::PidRegistry()
 {
 }
 
+
 PidRegistry::~PidRegistry()
 {
 }
+
 
 void PidRegistry::add(pid_t pid, ExtWorker *pApp, long tm)
 {
@@ -657,6 +682,7 @@ void PidRegistry::add(pid_t pid, ExtWorker *pApp, long tm)
     if (s_pSimpleList)
         s_pSimpleList->add(pid, getpid(), pApp);
 }
+
 
 ExtWorker *PidRegistry::remove(pid_t pid)
 {
@@ -671,11 +697,11 @@ ExtWorker *PidRegistry::remove(pid_t pid)
 }
 
 
-
 void PidRegistry::setSimpleList(PidSimpleList *pList)
 {
     s_pSimpleList = pList;
 }
+
 
 void PidRegistry::markToStop(pid_t pid, int kill_type)
 {

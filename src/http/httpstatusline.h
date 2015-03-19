@@ -21,7 +21,6 @@
 
 #include <lsdef.h>
 #include <http/httpstatuscode.h>
-#include <http/httpver.h>
 #include <util/tsingleton.h>
 
 #define MAX_STATUS_LINE_LEN 64

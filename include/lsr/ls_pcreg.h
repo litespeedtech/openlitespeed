@@ -19,7 +19,6 @@
 #define LS_PCREG_H
 
 
-#include <lsr/ls_str.h>
 #include <lsr/ls_types.h>
 #include <pcre.h>
 

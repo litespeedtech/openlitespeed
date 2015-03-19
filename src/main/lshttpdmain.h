@@ -24,7 +24,6 @@
 #include <util/guardedapp.h>
 #include <util/linkobjpool.h>
 #include <util/pidfile.h>
-#include <util/pcutil.h>
 
 #include <sys/types.h>
 

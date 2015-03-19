@@ -18,15 +18,13 @@
 #ifndef LSIAPI_H
 #define LSIAPI_H
 #include <ls.h>
-#include <util/hashstringmap.h>
-#include <util/dlinkqueue.h>
-#include "lsiapihooks.h"
 
 #define LSIAPI extern "C"
 
 
 
-
+template< class T >
+class THash;
 class LsiModuleData;
 
 typedef struct gdata_key_s

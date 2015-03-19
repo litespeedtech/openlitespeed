@@ -16,11 +16,13 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "extworkerconfig.h"
+
 #include <http/httpdefs.h>
-#include <socket/gsockaddr.h>
-#include "util/configctx.h"
 #include <lsr/ls_strtool.h>
+#include <main/configctx.h>
+#include <socket/gsockaddr.h>
 #include <util/xmlnode.h>
+
 #include <assert.h>
 #include <limits.h>
 #include <stdio.h>
@@ -48,6 +50,7 @@ ExtWorkerConfig::ExtWorkerConfig(const char *pName)
 {
 }
 
+
 ExtWorkerConfig::ExtWorkerConfig()
     : m_pVHost(NULL)
     , m_iMaxConns(1)
@@ -59,11 +62,13 @@ ExtWorkerConfig::ExtWorkerConfig()
     , m_pServerAddr(new GSockAddr())
 {}
 
+
 ExtWorkerConfig::~ExtWorkerConfig()
 {
     if (!m_iRefAddr && m_pServerAddr)
         delete m_pServerAddr;
 }
+
 
 ExtWorkerConfig::ExtWorkerConfig(const ExtWorkerConfig &rhs)
 {
@@ -82,6 +87,7 @@ ExtWorkerConfig::ExtWorkerConfig(const ExtWorkerConfig &rhs)
         m_pServerAddr = new GSockAddr(*rhs.m_pServerAddr);
 }
 
+
 int ExtWorkerConfig::setURL(const char *pURL)
 {
     if (pURL != NULL)
@@ -95,6 +101,7 @@ int ExtWorkerConfig::setURL(const char *pURL)
     return LS_FAIL;
 }
 
+
 void ExtWorkerConfig::setServerAddr(const GSockAddr *pAddr)
 {
     if ((m_iRefAddr == 0) && (m_pServerAddr))
@@ -103,6 +110,7 @@ void ExtWorkerConfig::setServerAddr(const GSockAddr *pAddr)
     m_pServerAddr = (GSockAddr *)pAddr;
 }
 
+
 int ExtWorkerConfig::updateServerAddr(const char *pURL)
 {
     if (m_iRefAddr)
@@ -110,11 +118,13 @@ int ExtWorkerConfig::updateServerAddr(const char *pURL)
     return m_pServerAddr->set(pURL, NO_ANY | DO_NSLOOKUP);
 }
 
+
 void ExtWorkerConfig::setName(const char *pName)
 {
     if (pName != NULL)
         m_sName = pName;
 }
+
 
 const char *ExtWorkerConfig::getServerAddrUnixSock() const
 {
@@ -122,7 +132,6 @@ const char *ExtWorkerConfig::getServerAddrUnixSock() const
         return (const char *)m_pServerAddr->getUnix();
     return NULL;
 }
-
 
 
 void ExtWorkerConfig::altServerAddr()
@@ -149,13 +158,16 @@ void ExtWorkerConfig::altServerAddr()
     }
 }
 
+
 extern int removeSimiliarFiles(const char *pPath, long tm);
+
 
 void ExtWorkerConfig::removeUnusedSocket()
 {
     removeSimiliarFiles(m_sURL.c_str() + 5, 0);
     unlink(m_sURL.c_str() + 5);
 }
+
 
 void ExtWorkerConfig::config(const XmlNode *pNode)
 {

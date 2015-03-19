@@ -28,10 +28,12 @@
  *      use the iterator to check all the value in this list
 */
 
-#include <util/xmlnode.h>
-#include "util/autostr.h"
-#include <util/hashstringmap.h>
+#include <util/autostr.h>
 #include <util/stringlist.h>
+
+#include <stdio.h>
+
+class XmlNode;
 
 enum
 {

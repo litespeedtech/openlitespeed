@@ -82,8 +82,7 @@ void ls_mpscq_delete(ls_mpscq_t *pThis)
 int ls_mpscq_put(ls_mpscq_t *pThis, ls_lfnoden_t *data)
 {
     data->next = NULL;
-    ls_lfnoden_t *prev =
-        ls_atomic_lock_set((ls_lfnoden_t **)&pThis->m_pHead, data);
+    ls_lfnoden_t *prev = ls_atomic_setptr((void **)&pThis->m_pHead, data);
     prev->next = data;
 
     return 0;

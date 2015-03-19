@@ -18,10 +18,9 @@
 #ifdef RUN_TEST
 
 #include "httprequestlinetest.h"
-#include <util/autobuf.h>
 #include <http/httpmethod.h>
-#include <http/httpver.h>
-#include <http/httpstatuscode.h>
+// #include <http/httpver.h>
+// #include <http/httpstatuscode.h>
 #include <stdio.h>
 #include "test/unittest-cpp/UnitTest++/src/UnitTest++.h"
 
