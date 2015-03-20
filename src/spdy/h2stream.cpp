@@ -29,6 +29,8 @@
 H2Stream::H2Stream()
     : m_uiStreamID(0)
     , m_iPriority(0)
+    , m_iWindowOut(H2_FCW_INIT_SIZE)
+    , m_iWindowIn(H2_FCW_INIT_SIZE)
     , m_pH2Conn(NULL)
     , m_reqHeaderEnd(0)
 {
@@ -166,7 +168,10 @@ void H2Stream::onTimer()
 }
 
 NtwkIOLink *H2Stream::getNtwkIoLink()
-{   return m_pH2Conn->getNtwkIoLink();    }
+{
+    return m_pH2Conn->getNtwkIoLink();
+}
+
 
 int H2Stream::sendFin()
 {
@@ -209,8 +214,7 @@ int H2Stream::flush()
 {
     if (D_ENABLED(DL_LESS))
     {
-        LOG_D((getLogger(), "[%s] H2Stream::flush()",
-               getLogId()));
+        LOG_D((getLogger(), "[%s] H2Stream::flush()", getLogId()));
     }
     return 0;
 }
@@ -374,7 +378,4 @@ int H2Stream::adjWindowOut(int32_t n)
     }
     return 0;
 }
-
-
-
 

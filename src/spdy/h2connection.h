@@ -50,7 +50,10 @@ public:
     int onWriteEx();
 
     int isOutBufFull() const
-    {   return ((m_iCurDataOutWindow <= 0) || (getBuf()->size() >= H2_MAX_DATAFRAM_SIZE)); }
+    {
+        return ((m_iCurDataOutWindow <= 0)
+                || (getBuf()->size() >= H2_MAX_DATAFRAM_SIZE));
+    }
 
     int flush();
 
@@ -89,11 +92,6 @@ public:
     int32_t getCurDataOutWindow() const
     {   return m_iCurDataOutWindow;         }
 
-    int addBufToGzip(char *hdrBuf, unsigned int &szHdrBuf, int iH2Ver,
-                     struct iovec *iov, int iov_count, LoopBuf *buf, int &total,
-                     int flushWhenEnd = 0);
-    int addBufToGzip(char *hdrBuf, unsigned int &szHdrBuf, int iH2Ver,
-                     const char *s, int len, LoopBuf *buf, int &total);
     int sendRespHeaders(HttpRespHeaders *pRespHeaders, uint32_t uiStreamID);
 
     int sendWindowUpdateFrame(uint32_t id, int32_t delta)
@@ -103,6 +101,7 @@ public:
     {
         return sendFrame4Bytes(H2_FRAME_RST_STREAM, uiStreamID, code);
     }
+
     int sendFinFrame(uint32_t uiStreamID)
     {
         char achHeader[9];
@@ -111,8 +110,6 @@ public:
         return cacheWrite(achHeader, 9);
     }
 
-
-    void upgradedStream(HioStreamHandler *pSession);
     void dataFrameSent(int bytes)
     {
         if (isFlowCtrl())
@@ -122,8 +119,9 @@ public:
     void enableSessionFlowCtrl()    {   m_iFlag |= H2_CONN_FLAG_FLOW_CTRL;  }
     short isFlowCtrl() const    {   return m_iFlag & H2_CONN_FLAG_FLOW_CTRL;  }
 
+    void upgradedStream(HioStreamHandler *pSession);
+
     void recycleStream(uint32_t uiStreamID);
-    static void replaceZero(char *pValue, int ilength);
 
     NtwkIOLink *getNtwkIoLink();
 
@@ -159,9 +157,7 @@ private:
     int sendSettingsFrame();
     int sendGoAwayFrame(H2ErrorCode status);
     int doGoAway(H2ErrorCode status);
-    int append400BadReqReply(uint32_t uiStreamID);
-    void resetStream(H2Stream *pStream, H2ErrorCode code);
-    void resetStream(StreamMap::iterator it, H2ErrorCode code);
+
 
     int appendCtrlFrameHeader(H2FrameType type, uint32_t len,
                               unsigned char flags = 0, uint32_t uiStreamID = 0)
@@ -178,11 +174,12 @@ private:
 
 
     void recycleStream(StreamMap::iterator it);
-    void logDeflateInflateError(int n, int iDeflate);
-    int appendReqHeaders(H2Stream *arg1, int isFirstAppend);
-    int extractCompressedData(unsigned char *pSrc, unsigned char *bufEnd);
+    int appendReqHeaders(H2Stream *arg1, char *method = NULL, int methodLen = 0, 
+                         char *uri = NULL, int uriLen = 0);
+    int decodeData(unsigned char *pSrc, unsigned char *bufEnd, 
+                    char *method, int* methodLen, char **uri, int* uriLen);
     void skipRemainData();
-    int compressHeaders(HttpRespHeaders *pRespHeaders, unsigned char *buf,
+    int encodeHeaders(HttpRespHeaders *pRespHeaders, unsigned char *buf,
                         int maxSize);
 
     int verifyClientPreface();
@@ -197,14 +194,13 @@ private:
     uint32_t        m_uiGoAwayId;
     int32_t         m_iCurrentFrameRemain;
     struct timeval  m_timevalPing;
-    NameValuePair   m_NameValuePairListReqline[3];
 
     //TODO: use array for m_dqueStreamRespon
     //DLinkQueue      m_dqueStreamRespon[H2_STREAM_PRIORITYS];
     DLinkQueue      m_dqueStreamRespon;
 
     StreamMap       m_mapStream;
-    short           m_state;
+    short           m_iState;
     short           m_iFlag;
     char            m_bVersion;
 
@@ -218,13 +214,11 @@ private:
     int32_t         m_iClientMaxStreams;
     int32_t         m_iPeerMaxFrameSize;
     int32_t         m_tmIdleBegin;
-    int32_t         m_H2HeaderMem[10];
+    int32_t         m_iaH2HeaderMem[10];
     H2FrameHeader  *m_pCurH2Header;
 
 private:
-    H2Connection(const H2Connection &other);
-    Hpack m_hp;
-    virtual H2Connection &operator=(const H2Connection &other);
+    Hpack m_hpack;
 
 };
 

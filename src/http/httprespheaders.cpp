@@ -19,6 +19,7 @@
 #include <arpa/inet.h>
 #include <http/httpver.h>
 #include <http/httpserverversion.h>
+#include <http/httpserverconfig.h>
 
 #include <socket/gsockaddr.h>
 #include <util/datetime.h>
@@ -37,6 +38,7 @@
 
 #define HIGHEST_BIT_NUMBER                  0x80000000
 #define BYPASS_HIGHEST_BIT_MASK             0x7FFFFFFF
+#define MAX_RESP_HEADER_LEN                 8192
 
 const char *HttpRespHeaders::m_sPresetHeaders[H_HEADER_END] =
 {
@@ -140,6 +142,10 @@ int HttpRespHeaders::appendHeader(resp_kvpair *pKv, const char *pName,
                                   unsigned int nameLen,
                                   const char *pVal, unsigned int valLen, int method)
 {
+    if ( nameLen + valLen > MAX_RESP_HEADER_LEN
+        || m_buf.size() >= HttpServerConfig::getInstance().getMaxDynRespHeaderLen())
+        return -1;
+
     if (method == LSI_HEADER_SET)
         memset(pKv, 0, sizeof(resp_kvpair));
 

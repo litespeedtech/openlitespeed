@@ -21,13 +21,12 @@
 #include <http/hiostream.h>
 #include <util/linkedobj.h>
 #include <util/loopbuf.h>
+
 #include <inttypes.h>
-#include "h2protocol.h"
 
-
+struct Priority_st;
 class H2Connection;
 class NtwkIOLink;
-
 
 class H2Stream: public DLinkedObj, public HioStream
 {
@@ -67,6 +66,7 @@ public:
 
     void suspendRead()
     {   setFlag(HIO_FLAG_WANT_READ, 0);     }
+
     void suspendWrite()
     {   setFlag(HIO_FLAG_WANT_WRITE, 0);    }
 
@@ -110,15 +110,11 @@ public:
 
 
 private:
-    H2Stream(const H2Stream &other);
-    H2Stream &operator=(const H2Stream &other);
     bool operator==(const H2Stream &other) const;
 
     void buildDataFrameHeader(char *pHeader, int length);
     int sendData(IOVec *pIov, int total);
     int sendFin();
-
-
 
 protected:
     virtual const char *buildLogId();
@@ -132,10 +128,8 @@ private:
     LoopBuf     m_bufIn;
 
     uint8_t     m_reqHeaderEnd;
+
 };
 
 
-
-
-
-#endif // SPDYSTREAM_H
+#endif // H2STREAM_H
