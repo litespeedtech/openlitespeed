@@ -16,7 +16,6 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include <lsr/ls_hash.h>
-#include <lsr/xxhash.h>
 #include "ls_internal.h"
 #include <lsr/ls_pool.h>
 #include <lsr/ls_xpool.h>
@@ -530,5 +529,6 @@ static ls_hash_iter ls_hash_find_p(ls_hash_t *pThis, const void *pKey)
 {
     return ls_hash_find2(pThis, pKey, (*pThis->hf_fn)(pKey));
 }
+
 
 

@@ -32,132 +32,19 @@ class debugBase;
 
 class LsShmPool;
 
-class LsShmLruHash : public LsShmHash
+class LsShmWLruHash : public LsShmHash
 {
 public:
-    LsShmLruHash(LsShmPool *pool,
-                 const char *name, size_t init_size, hash_fn hf, val_comp vc);
-    virtual ~LsShmLruHash() {}
-
-    LsShmOffset_t getLruTop()
-    {   return ((m_pLru != NULL) ? m_pLru->linkFirst : (LsShmOffset_t)-1);  }
-
-    int trim(time_t tmCutoff);
-    int check();
-
-    virtual int setLruData(LsShmOffset_t offVal, const uint8_t *pVal, int valLen)
-    {   return LS_FAIL;  }
-
-    virtual int getLruData(LsShmOffset_t offVal, LsShmOffset_t *pData, int cnt)
-    {   return LS_FAIL;  }
-
-    virtual int getLruDataPtrs(LsShmOffset_t offVal, int (*func)(void *pData))
-    {   return LS_FAIL;  }
-
-protected:
-    void err_cleanup();
-
-    virtual int clrdata(uint8_t *pValue)
-    {   return 0;  }        // no data entries; only iterator value
-    virtual int chkdata(uint8_t *pValue)
-    {   return 0;  }        // no data entries; only iterator value
-
-    // auxiliary double linked list of hash elements
-    void set_linkNext(LsShmOffset_t offThis, LsShmOffset_t offNext)
-    {
-        ((LsShmHElem *)offset2ptr(offThis))->setLruLinkNext(offNext);
-    }
-
-    void set_linkPrev(LsShmOffset_t offThis, LsShmOffset_t offPrev)
-    {
-        ((LsShmHElem *)offset2ptr(offThis))->setLruLinkPrev(offPrev);
-    }
-
-    void linkHElem(LsShmHElem *pElem, LsShmOffset_t offElem)
-    {
-        LsShmHElemLink *pLink = pElem->getLruLinkPtr();
-        if (m_pLru->linkFirst)
-        {
-            set_linkNext(m_pLru->linkFirst, offElem);
-            pLink->x_iLinkPrev = m_pLru->linkFirst;
-        }
-        else
-        {
-            pLink->x_iLinkPrev = 0;
-            m_pLru->linkLast = offElem;
-        }
-        pLink->x_iLinkNext = 0;
-        pLink->x_lasttime = time((time_t *)NULL);
-        m_pLru->linkFirst = offElem;
-        ++m_pLru->nvalset;
-    }
-
-    void unlinkHElem(LsShmHElem *pElem)
-    {
-        LsShmHElemLink *pLink = pElem->getLruLinkPtr();
-        if (pLink->x_iLinkNext)
-            set_linkPrev(pLink->x_iLinkNext, pLink->x_iLinkPrev);
-        else
-            m_pLru->linkFirst = pLink->x_iLinkPrev;
-        if (pLink->x_iLinkPrev)
-            set_linkNext(pLink->x_iLinkPrev, pLink->x_iLinkNext);
-        else
-            m_pLru->linkLast = pLink->x_iLinkNext;
-        --m_pLru->nvalset;
-    }
-
-    void linkSetTop(LsShmHElem *pElem)
-    {
-        LsShmHElemLink *pLink = pElem->getLruLinkPtr();
-        LsShmOffset_t next = pLink->x_iLinkNext;
-        if (next != 0)      // not top of list already
-        {
-            LsShmOffset_t offElem = ptr2offset(pElem);
-            LsShmOffset_t prev = pLink->x_iLinkPrev;
-            if (prev == 0)  // last one
-                m_pLru->linkLast = next;
-            else
-                set_linkNext(prev, next);
-            set_linkPrev(next, prev);
-            pLink->x_iLinkNext = 0;
-            pLink->x_iLinkPrev = m_pLru->linkFirst;
-            set_linkNext(m_pLru->linkFirst, offElem);
-            m_pLru->linkFirst = offElem;
-        }
-        pLink->x_lasttime = time((time_t *)NULL);
-    }
-
-    int entryValMatch(const uint8_t *pVal, int valLen, shmlru_data_t *pData);
-
-private:
-    LsShmLruHash(const LsShmLruHash &other);
-    LsShmLruHash &operator=(const LsShmLruHash &other);
-
-    void valueSetup(uint32_t *pValOff, int *pValLen)
-    {
-        *pValOff += sizeof(LsShmHElemLink);
-        return;
-    }
-};
-
-class LsShmWLruHash : public LsShmLruHash
-{
-public:
-    LsShmWLruHash(LsShmPool *pool,
-                 const char *name, size_t init_size, hash_fn hf, val_comp vc);
+    LsShmWLruHash(LsShmPool *pool, const char *name, size_t init_size,
+                  hash_fn hf, val_comp vc)
+    : LsShmHash(pool, name, init_size, hf, vc, LSSHM_LRU_MODE2)
+    {   return;  }
     virtual ~LsShmWLruHash() {}
 
 private:
     LsShmWLruHash(const LsShmWLruHash &other);
     LsShmWLruHash &operator=(const LsShmWLruHash &other);
 
-    void lruSpecial(iteroffset iterOff)
-    {
-        shmlru_data_t *pData = (shmlru_data_t *)offset2iteratorData(iterOff);
-        pData->maxsize = 0;
-        pData->offiter = iterOff;
-        return;
-    }
     void valueSetup(uint32_t *pValOff, int *pValLen)
     {
         *pValOff += sizeof(LsShmHElemLink);
@@ -169,8 +56,6 @@ private:
 
     int setLruData(LsShmOffset_t offVal, const uint8_t *pVal, int valLen)
     {
-        if (m_pLru == NULL)
-            return LS_FAIL;
         int ret = 0;
         shmlru_data_t *pData = (shmlru_data_t *)offset2ptr(offVal);
         if ((pData->maxsize == 0)
@@ -181,15 +66,11 @@ private:
 
     int getLruData(LsShmOffset_t offVal, LsShmOffset_t *pData, int cnt)
     {
-        if (m_pLru == NULL)
-            return LS_FAIL;
         return ((cnt > 0) ? (*pData = offVal, 1) : 0);
     }
 
     int getLruDataPtrs(LsShmOffset_t offVal, int (*func)(void *pData))
     {
-        if (m_pLru == NULL)
-            return LS_FAIL;
         (*func)((void *)offset2ptr(offVal));
         return 1;
     }
@@ -198,22 +79,19 @@ private:
     int chkdata(uint8_t *pValue);
 };
 
-class LsShmXLruHash : public LsShmLruHash
+class LsShmXLruHash : public LsShmHash
 {
 public:
-    LsShmXLruHash(LsShmPool *pool,
-                  const char *name, size_t init_size, hash_fn hf, val_comp vc);
+    LsShmXLruHash(LsShmPool *pool, const char *name, size_t init_size,
+                  hash_fn hf, val_comp vc)
+    : LsShmHash(pool, name, init_size, hf, vc, LSSHM_LRU_MODE3)
+    {   return;  }
     virtual ~LsShmXLruHash() {}
 
 private:
     LsShmXLruHash(const LsShmXLruHash &other);
     LsShmXLruHash &operator=(const LsShmXLruHash &other);
 
-    void lruSpecial(iteroffset iterOff)
-    {
-        ((shmlru_val_t *)offset2iteratorData(iterOff))->offdata = 0;
-        return;
-    }
     void valueSetup(uint32_t *pValOff, int *pValLen)
     {
         *pValOff += sizeof(LsShmHElemLink);
@@ -225,8 +103,6 @@ private:
 
     int setLruData(LsShmOffset_t offVal, const uint8_t *pVal, int valLen)
     {
-        if (m_pLru == NULL)
-            return LS_FAIL;
         int ret = 0;
         shmlru_val_t *pShmval = (shmlru_val_t *)offset2ptr(offVal);
         if ((pShmval->offdata == 0)
@@ -238,8 +114,6 @@ private:
 
     int getLruData(LsShmOffset_t offVal, LsShmOffset_t *pData, int cnt)
     {
-        if (m_pLru == NULL)
-            return LS_FAIL;
         int ret = 0;
         LsShmOffset_t data = ((shmlru_val_t *)offset2ptr(offVal))->offdata;
         while ((--cnt >= 0) && (data != 0))
@@ -253,8 +127,6 @@ private:
 
     int getLruDataPtrs(LsShmOffset_t offVal, int (*func)(void *pData))
     {
-        if (m_pLru == NULL)
-            return LS_FAIL;
         int ret = 0;
         LsShmOffset_t data = ((shmlru_val_t *)offset2ptr(offVal))->offdata;
         while (data != 0)

@@ -25,6 +25,7 @@ class debugBase;
 #include <lsdef.h>
 #include <shm/lsshm.h>
 #include <shm/lsshmpool.h>
+#include <shm/lsshmlru.h>
 #include <util/ghash.h>
 #include <lsr/ls_str.h>
 
@@ -129,13 +130,15 @@ typedef struct
     LsShmSize_t     x_iSize;
     LsShmSize_t     x_iFullFactor;
     LsShmSize_t     x_iGrowFactor;
-    LsShmOffset_t   x_iTable;
+    LsShmOffset_t   x_iHIdx;
     LsShmOffset_t   x_iBitMap;
+    LsShmOffset_t   x_iHIdxNew; // in rehash()
+    LsShmSize_t     x_iCapacityNew;
+    LsShmOffset_t   x_iWorkIterOff;
+    LsShmOffset_t   x_iLruHdr;
     LsShmOffset_t   x_iLockOffset;
-    LsShmOffset_t   x_iGLockOffset;
-    LsShmOffset_t   x_iLruOffset;
     uint8_t         x_iMode;
-    uint8_t         x_iLruMode; // lru wlru=1, xlru=2
+    uint8_t         x_iLruMode; // lru=1, wlru=2, xlru=3
     uint8_t         x_unused[2];
 } LsShmHTable;
 
@@ -170,7 +173,7 @@ public:
 
 public:
     LsShmHash(LsShmPool *pool,
-              const char *name, size_t init_size, hash_fn hf, val_comp vc);
+              const char *name, size_t init_size, hash_fn hf, val_comp vc, int lru_mode);
     virtual ~LsShmHash();
 
     static LsShmHash *checkHTable(GHash::iterator itor, LsShmPool *pool,
@@ -206,12 +209,6 @@ public:
     const char *name() const
     {   return m_pName; }
 
-    ls_attr_inline void checkRemap()
-    {
-        if (m_pShmMap != m_pPool->getShmMap())
-            remap(); 
-    }
-
     void close();
 
     void clear();
@@ -219,8 +216,8 @@ public:
     ls_str_pair_t *setParms(ls_str_pair_t *pParms,
         const void *pKey, int keyLen, const void *pValue, int valueLen)
     {
-        ls_str_unsafeset(&pParms->key, (char *)pKey, keyLen);
-        ls_str_unsafeset(&pParms->value, (char *)pValue, valueLen);
+        ls_str_set(&pParms->key, (char *)pKey, keyLen);
+        ls_str_set(&pParms->value, (char *)pValue, valueLen);
         return pParms;
     }
 
@@ -228,7 +225,7 @@ public:
     {
         iteroffset iterOff;
         ls_str_pair_t parms;
-        ls_str_unsafeset(&parms.key, (char *)pKey, keyLen);
+        ls_str_set(&parms.key, (char *)pKey, keyLen);
         if ((iterOff = findIterator(&parms)) != 0)
             eraseIterator(iterOff);
     }
@@ -237,7 +234,7 @@ public:
     {
         iteroffset iterOff;
         ls_str_pair_t parms;
-        ls_str_unsafeset(&parms.key, (char *)pKey, keyLen);
+        ls_str_set(&parms.key, (char *)pKey, keyLen);
         if ((iterOff = findIterator(&parms)) == 0)
         {
             *valLen = 0;
@@ -297,7 +294,6 @@ public:
     void eraseIterator(iteroffset iterOff)
     {
         autoLock();
-        checkRemap();
         eraseIteratorHelper(offset2iterator(iterOff));
         autoUnlock();
     }
@@ -309,7 +305,6 @@ public:
     iteroffset findIterator(ls_str_pair_t *pParms)
     {
         autoLock();
-        checkRemap();
         iteroffset iterOff = (*m_find)(this, pParms);
         autoUnlock();
         return iterOff;
@@ -318,7 +313,6 @@ public:
     iteroffset getIterator(ls_str_pair_t *pParms, int *pFlag)
     {
         autoLock();
-        checkRemap();
         iteroffset iterOff = (*m_get)(this, pParms, pFlag);
         autoUnlock();
         return iterOff;
@@ -327,7 +321,6 @@ public:
     iteroffset insertIterator(ls_str_pair_t *pParms)
     {
         autoLock();
-        checkRemap();
         iteroffset iterOff = (*m_insert)(this, pParms);
         autoUnlock();
         return iterOff;
@@ -336,7 +329,6 @@ public:
     iteroffset setIterator(ls_str_pair_t *pParms)
     {
         autoLock();
-        checkRemap();
         iteroffset iterOff = (*m_set)(this, pParms);
         autoUnlock();
         return iterOff;
@@ -345,7 +337,6 @@ public:
     iteroffset updateIterator(ls_str_pair_t *pParms)
     {
         autoLock();
-        checkRemap();
         iteroffset iterOff = (*m_update)(this, pParms);
         autoUnlock();
         return iterOff;
@@ -357,8 +348,6 @@ public:
     void setFullFactor(int f);
     void setGrowFactor(int f);
 
-    
-    
     bool empty() const
     {   
         return getHTable()->x_iSize == 0; 
@@ -368,13 +357,25 @@ public:
     {   
         return getHTable()->x_iSize;      
     }
+
+    void incrTableSize()
+    {   
+        ++(getHTable()->x_iSize);      
+    }
+
+    void decrTableSize()
+    {   
+        --(getHTable()->x_iSize);      
+    }
+
     size_t capacity() const         
     {   
         return getHTable()->x_iCapacity;  
     }
+
     LsShmOffset_t lruHdrOff() const 
     {   
-        return getHTable()->x_iLruOffset; 
+        return getHTable()->x_iLruHdr; 
     }
 
     iteroffset begin();
@@ -401,6 +402,27 @@ public:
     LsShmReg *addReg(const char *name)
     {   return m_pPool->addReg(name); }
 
+    // LRU stuff
+    ls_attr_inline LsHashLruInfo *getLru() const
+    {   return (LsHashLruInfo *)m_pPool->offset2ptr(getHTable()->x_iLruHdr);   }
+
+    LsShmOffset_t getLruTop()
+    {
+        return ((m_iLruMode != LSSHM_LRU_NONE) ?
+            getLru()->linkFirst : (LsShmOffset_t)-1);
+    }
+
+    int trim(time_t tmCutoff);
+    int check();
+
+    virtual int setLruData(LsShmOffset_t offVal, const uint8_t *pVal, int valLen)
+    {   return LS_FAIL;  }
+
+    virtual int getLruData(LsShmOffset_t offVal, LsShmOffset_t *pData, int cnt)
+    {   return LS_FAIL;  }
+
+    virtual int getLruDataPtrs(LsShmOffset_t offVal, int (*func)(void *pData))
+    {   return LS_FAIL;  }
 
 
 //     void enableManualLock()
@@ -437,17 +459,32 @@ protected:
     uint32_t getIndex(uint32_t k, uint32_t n)
     {   return k % n ; }
 
+    ls_attr_inline LsShmHTable *getHTable() const
+    {   return (LsShmHTable *)m_pPool->offset2ptr(m_iOffset);   }
+
+    LsShmSize_t fullFactor() const             
+    {   return getHTable()->x_iFullFactor;   }
+
+    LsShmSize_t growFactor() const             
+    {   return getHTable()->x_iGrowFactor;   }
+
+    ls_attr_inline LsShmHIdx *getHIdx() const
+    {   return (LsShmHIdx *)m_pPool->offset2ptr(getHTable()->x_iHIdx);   }
+
+    ls_attr_inline uint8_t *getBitMap() const
+    {   return (uint8_t *)m_pPool->offset2ptr(getHTable()->x_iBitMap);   }
+
     int getBitMapEnt(uint32_t indx)
     {
-        return m_pBitMap[indx / s_bitsPerChar] & s_bitMask[indx % s_bitsPerChar];
+        return getBitMap()[indx / s_bitsPerChar] & s_bitMask[indx % s_bitsPerChar];
     }
     void setBitMapEnt(uint32_t indx)
     {
-        m_pBitMap[indx / s_bitsPerChar] |= s_bitMask[indx % s_bitsPerChar];
+        getBitMap()[indx / s_bitsPerChar] |= s_bitMask[indx % s_bitsPerChar];
     }
     void clrBitMapEnt(uint32_t indx)
     {
-        m_pBitMap[indx / s_bitsPerChar] &= ~(s_bitMask[indx % s_bitsPerChar]);
+        getBitMap()[indx / s_bitsPerChar] &= ~(s_bitMask[indx % s_bitsPerChar]);
     }
 
     int sz2TableSz(LsShmSize_t sz)
@@ -477,17 +514,15 @@ protected:
     //  @brief  should only be called after SHM-HASH-LOCK has been acquired.
     //
     void eraseIteratorHelper(iterator iter);
-    
-    ls_attr_inline LsShmHTable * getHTable() const
-    {   return (LsShmHTable *)m_pPool->offset2ptr(m_iOffset);   }
-    
+
     static inline iteroffset doGet(
         LsShmHash *pThis, iteroffset iterOff, LsShmHKey key, ls_str_pair_t *pParms, int *pFlag)
     {
         if (iterOff != 0)
         {
             iterator iter = pThis->offset2iterator(iterOff);
-            pThis->linkSetTop(iter);
+            if (pThis->m_iLruMode != LSSHM_LRU_NONE)
+                pThis->linkSetTop(iter);
             *pFlag = LSSHM_FLAG_NONE;
             return iterOff;
         }
@@ -501,8 +536,18 @@ protected:
                 ::memset(pThis->offset2iteratorData(iterOff),
                          0, ls_str_len(&pParms->value));
             }
+            // some special lru initialization
+            if (pThis->m_iLruMode == LSSHM_LRU_MODE2)
+            {
+                shmlru_data_t *pData = (shmlru_data_t *)pThis->offset2iteratorData(iterOff);
+                pData->maxsize = 0;
+                pData->offiter = iterOff;
+            }
+            else if (pThis->m_iLruMode == LSSHM_LRU_MODE3)
+            {
+                ((shmlru_val_t *)pThis->offset2iteratorData(iterOff))->offdata = 0;
+            }
             *pFlag = LSSHM_FLAG_CREATED;
-            pThis->lruSpecial(iterOff);
         }
         return iterOff;
     }
@@ -515,7 +560,7 @@ protected:
         LSSHM_CHECKSIZE(ls_str_len(&pParms->value));
         return pThis->insert2(key, pParms);
     }
-    
+
     static inline iteroffset doSet(
         LsShmHash *pThis, iteroffset iterOff, LsShmHKey key, ls_str_pair_t *pParms)
     {
@@ -527,7 +572,8 @@ protected:
             {
                 iter->setValLen(ls_str_len(&pParms->value));
                 pThis->setIterData(iter, ls_str_buf(&pParms->value));
-                pThis->linkSetTop(iter);
+                if (pThis->m_iLruMode != LSSHM_LRU_NONE)
+                    pThis->linkSetTop(iter);
                 return iterOff;
             }
             else
@@ -538,7 +584,7 @@ protected:
         }
         return pThis->insert2(key, pParms);
     }
-    
+
     static inline iteroffset doUpdate(
         LsShmHash *pThis, iteroffset iterOff, LsShmHKey key, ls_str_pair_t *pParms)
     {
@@ -550,7 +596,8 @@ protected:
         {
             iter->setValLen(ls_str_len(&pParms->value));
             pThis->setIterData(iter, ls_str_buf(&pParms->value));
-            pThis->linkSetTop(iter);
+            if (pThis->m_iLruMode != LSSHM_LRU_NONE)
+                pThis->linkSetTop(iter);
         }
         else
         {
@@ -560,7 +607,7 @@ protected:
         }
         return iterOff;
     }
-    
+
     void setIterData(iterator iter, const void *pValue)
     {
         if (pValue != NULL)
@@ -570,7 +617,7 @@ protected:
     void setIterKey(iterator iter, const void *pKey)
     {   ::memcpy(iter->getKey(), pKey, iter->getKeyLen()); }
 
-    void remap();
+
     static int release_hash_elem(iteroffset iterOff, void *pUData);
 
     int autoLock()
@@ -585,28 +632,89 @@ protected:
     int setupLock()
     {   return m_iLockEnable && lsi_shmlock_setup(m_pShmLock); }
 
-    int setupGLock()
-    {   return lsi_shmlock_setup(m_pShmGLock); }
+    virtual int clrdata(uint8_t *pValue)
+    {   return 0;  }        // no data entries; only iterator value
+    virtual int chkdata(uint8_t *pValue)
+    {   return 0;  }        // no data entries; only iterator value
+
+    // auxiliary double linked list of hash elements
+    void set_linkNext(LsShmOffset_t offThis, LsShmOffset_t offNext)
+    {
+        ((LsShmHElem *)offset2ptr(offThis))->setLruLinkNext(offNext);
+    }
+
+    void set_linkPrev(LsShmOffset_t offThis, LsShmOffset_t offPrev)
+    {
+        ((LsShmHElem *)offset2ptr(offThis))->setLruLinkPrev(offPrev);
+    }
+
+    void linkHElem(LsShmHElem *pElem, LsShmOffset_t offElem)
+    {
+        LsHashLruInfo *pLru = getLru();
+        LsShmHElemLink *pLink = pElem->getLruLinkPtr();
+        if (pLru->linkFirst)
+        {
+            set_linkNext(pLru->linkFirst, offElem);
+            pLink->x_iLinkPrev = pLru->linkFirst;
+        }
+        else
+        {
+            pLink->x_iLinkPrev = 0;
+            pLru->linkLast = offElem;
+        }
+        pLink->x_iLinkNext = 0;
+        pLink->x_lasttime = time((time_t *)NULL);
+        pLru->linkFirst = offElem;
+        ++pLru->nvalset;
+    }
+
+    void unlinkHElem(LsShmHElem *pElem)
+    {
+        LsHashLruInfo *pLru = getLru();
+        LsShmHElemLink *pLink = pElem->getLruLinkPtr();
+        if (pLink->x_iLinkNext)
+            set_linkPrev(pLink->x_iLinkNext, pLink->x_iLinkPrev);
+        else
+            pLru->linkFirst = pLink->x_iLinkPrev;
+        if (pLink->x_iLinkPrev)
+            set_linkNext(pLink->x_iLinkPrev, pLink->x_iLinkNext);
+        else
+            pLru->linkLast = pLink->x_iLinkNext;
+        --pLru->nvalset;
+    }
+
+    void linkSetTop(LsShmHElem *pElem)
+    {
+        LsShmHElemLink *pLink = pElem->getLruLinkPtr();
+        LsShmOffset_t next = pLink->x_iLinkNext;
+        if (next != 0)      // not top of list already
+        {
+            LsHashLruInfo *pLru = getLru();
+            LsShmOffset_t offElem = ptr2offset(pElem);
+            LsShmOffset_t prev = pLink->x_iLinkPrev;
+            if (prev == 0)  // last one
+                pLru->linkLast = next;
+            else
+                set_linkNext(prev, next);
+            set_linkPrev(next, prev);
+            pLink->x_iLinkNext = 0;
+            pLink->x_iLinkPrev = pLru->linkFirst;
+            set_linkNext(pLru->linkFirst, offElem);
+            pLru->linkFirst = offElem;
+        }
+        pLink->x_lasttime = time((time_t *)NULL);
+    }
 
     virtual void valueSetup(uint32_t *pValOff, int *pValLen)
-    {   return; }
-    virtual void linkHElem(LsShmHElem *pElem, LsShmOffset_t offElem)
-    {   return; }
-    virtual void unlinkHElem(LsShmHElem *pElem)
-    {   return; }
-    virtual void linkSetTop(LsShmHElem *pElem)
-    {   return; }
-    virtual void lruSpecial(iteroffset iterOff)
-    {   return; }
+    {
+        *pValOff += sizeof(LsShmHElemLink);
+        return;
+    }
+
+    int entryValMatch(const uint8_t *pVal, int valLen, shmlru_data_t *pData);
 
 protected:
     uint32_t            m_iMagic;
-    LsShmHTable        *m_pTable;
-    LsShmHIdx          *m_pIdxStart;
-    LsShmHIdx          *m_pIdxEnd;
-    uint8_t            *m_pBitMap;
-    LsHashLruInfo      *m_pLru;
-
     LsShmPool          *m_pPool;
     LsShmOffset_t       m_iOffset;
     char               *m_pName;
@@ -621,12 +729,10 @@ protected:
 
     int8_t              m_iLockEnable;
     int8_t              m_iMode;        // mode 0=Num, 1=Ptr
-    int8_t              m_notused;
+    uint8_t             m_iLruMode;     // lru=1, wlru=2, xlru=3
     LsShmMap           *m_pShmMap;      // keep track of map
     lsi_shmlock_t      *m_pShmLock;     // local lock for Hash
-    lsi_shmlock_t      *m_pShmGLock;    // global lock
     LsShmStatus_t       m_status;
-    LsShmSize_t         m_iCapacity;
 
     // house keeping
     int m_iRef;
@@ -639,7 +745,7 @@ private:
     LsShmHash(const LsShmHash &other);
     LsShmHash &operator=(const LsShmHash &other);
 
-    void initErrCleanUp();
+    void releaseHTableShm();
 
 #ifdef LSSHM_DEBUG_ENABLE
     // for debug purpose - should debug this later

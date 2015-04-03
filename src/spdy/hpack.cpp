@@ -16,14 +16,13 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "hpack.h"
-
 #include <stdio.h>
 
 #define LS_STR_TO_IOVEC(a) (a), (sizeof(a) -1)
 #define MAX_HEADER_LENGTH   4096
 
 //ref: https://www.mnot.net/talks/http2-expectations/hpack.html
-static HPackHeaderTable_t g_HPackStxTab[HPackStxTabCount] =
+static HpackHdrTbl_t g_HpackStxTab[HPACK_STATIC_TABLE_SIZE] =
 {
     { LS_STR_TO_IOVEC(":authority"),         LS_STR_TO_IOVEC("") },
     { LS_STR_TO_IOVEC(":method"),            LS_STR_TO_IOVEC("GET") },
@@ -90,7 +89,7 @@ static HPackHeaderTable_t g_HPackStxTab[HPackStxTabCount] =
 
 
 
-HPackHuffEncode_t HuffmanCode::m_HPackHuffEncode_t[257] =
+HpackHuffEncode_t HuffmanCode::m_HpackHuffEncode_t[257] =
 {
     {     0x1ff8,    13},    //        (  0)
     {   0x7fffd8,    23},    //        (  1)
@@ -352,7 +351,7 @@ HPackHuffEncode_t HuffmanCode::m_HPackHuffEncode_t[257] =
 };
 
 
-HPackHuffDecode_t HuffmanCode::m_HPackHuffDecode_t[256][16] =
+HpackHuffDecode_t HuffmanCode::m_HpackHuffDecode_t[256][16] =
 {
     /* 0 */
     {
@@ -5225,7 +5224,7 @@ size_t HuffmanCode::calcHuffmanEncBufSize(const unsigned char *src,
 {
     size_t bufSizeBits = 0;
     while (src < src_end)
-        bufSizeBits += m_HPackHuffEncode_t[*src ++].bits;
+        bufSizeBits += m_HpackHuffEncode_t[*src ++].bits;
     return (bufSizeBits + 7) / 8;
 }
 
@@ -5241,7 +5240,7 @@ int HuffmanCode::huffmanEnc(const unsigned char *src, const unsigned char *src_e
 
     while (p_src != src_end)
     {
-        const HPackHuffEncode_t &curEncCode = m_HPackHuffEncode_t[*p_src++];
+        const HpackHuffEncode_t &curEncCode = m_HpackHuffEncode_t[*p_src++];
         bits |= (uint64_t)curEncCode.code << (bits_left - curEncCode.bits);
         bits_left -= curEncCode.bits;
         while (bits_left <= 32)
@@ -5266,14 +5265,19 @@ int HuffmanCode::huffmanEnc(const unsigned char *src, const unsigned char *src_e
 
 
 unsigned char *HuffmanCode::huffmanDec4bits(uint8_t src_4bits,
-        unsigned char *dst, HPackHuffDecodeStatus_t &status)
+        unsigned char *dst, HpackHuffDecodeStatus_t &status, bool lowerCase)
 {
-    const HPackHuffDecode_t &curDecCode =
-        m_HPackHuffDecode_t[status.state][src_4bits];
+    const HpackHuffDecode_t &curDecCode =
+        m_HpackHuffDecode_t[status.state][src_4bits];
     if (curDecCode.flags & HPACK_HUFFMAN_FLAG_FAIL)
         return NULL; //failed
     if (curDecCode.flags & HPACK_HUFFMAN_FLAG_SYM)
-        *dst++ = curDecCode.sym;
+    {
+        *dst = curDecCode.sym;
+        if (lowerCase && isupper(*dst))
+            return NULL;
+        dst++;
+    }
 
     status.state = curDecCode.state;
     status.eos = ((curDecCode.flags & HPACK_HUFFMAN_FLAG_ACCEPTED) != 0);
@@ -5282,19 +5286,21 @@ unsigned char *HuffmanCode::huffmanDec4bits(uint8_t src_4bits,
 
 
 int HuffmanCode::huffmanDec(unsigned char *src, int src_len,
-                            unsigned char *dst, int dst_len)
+                            unsigned char *dst, int dst_len, bool lowerCase)
 {
     unsigned char *p_src = src;
     unsigned char *src_end = src + src_len;
     unsigned char *p_dst = dst;
     unsigned char *dst_end = dst + dst_len;
-    HPackHuffDecodeStatus_t status = { 0, 1 };
+    HpackHuffDecodeStatus_t status = { 0, 1 };
 
     while (p_src != src_end)
     {
-        if ((p_dst = huffmanDec4bits(*p_src >> 4, p_dst, status)) == NULL)
+        if ((p_dst = huffmanDec4bits(*p_src >> 4, p_dst, status, lowerCase))
+            == NULL)
             return LS_FAIL;
-        if ((p_dst = huffmanDec4bits(*p_src & 0xf, p_dst, status)) == NULL)
+        if ((p_dst = huffmanDec4bits(*p_src & 0xf, p_dst, status, lowerCase))
+            == NULL)
             return LS_FAIL;
         if (p_dst == dst_end)
             return -2;
@@ -5309,22 +5315,22 @@ int HuffmanCode::huffmanDec(unsigned char *src, int src_len,
 }
 
 
-void DynTabEntry::init(char *name, uint32_t name_len, char *val,
+void DynTblEntry::init(char *name, uint32_t name_len, char *val,
                              uint32_t val_len, uint8_t stxTabId)
 {
     if (m_valLen && m_val)
         delete []m_val;
 
-    if (m_nameLen && m_nameStxTabId == 0 && m_name)
+    if (m_nameLen && m_nameId == 0 && m_name)
         delete []m_name;
 
     m_nameLen = name_len;
     m_valLen = val_len;
-    m_nameStxTabId = 0;
-    if (stxTabId > 0 && stxTabId <= HPackStxTabCount)
+    m_nameId = 0;
+    if (stxTabId > 0 && stxTabId <= HPACK_STATIC_TABLE_SIZE)
     {
-        m_nameStxTabId = stxTabId;
-        m_name = (char *)g_HPackStxTab[m_nameStxTabId - 1].name;
+        m_nameId = stxTabId;
+        m_name = (char *)g_HpackStxTab[m_nameId - 1].name;
     }
     else
     {
@@ -5338,61 +5344,54 @@ void DynTabEntry::init(char *name, uint32_t name_len, char *val,
     m_val[val_len] = 0x00;
 }
 
-hash_key_t HPackDynTab::hfName(const void *__s)
+hash_key_t HpackDynTbl::hfName(const void *__s)
 {
-    hash_key_t __h = 0;
-    DynTabEntry *pEntrey = (DynTabEntry *)__s;
-    char *p = pEntrey->getName();
-    for(int i=0; i<pEntrey->getNameLen(); ++i)
-        __h = __h * 37 + (*p++);
-    return __h;
+    DynTblEntry *pEntry = (DynTblEntry *)__s;
+    return XXH((const char *)pEntry->getName(), pEntry->getNameLen(), 0);
 }
 
-hash_key_t HPackDynTab::hfNameVal(const void *__s)
+hash_key_t HpackDynTbl::hfNameVal(const void *__s)
 {
-    hash_key_t __h = HPackDynTab::hfName(__s);
-    DynTabEntry *pEntrey = (DynTabEntry *)__s;
-    char *p = pEntrey->getValue();
-    for (int i=0; i<pEntrey->getValueLen(); ++i)
-        __h = __h * 47 + (*p++);
-    return __h;
+    hash_key_t __h = HpackDynTbl::hfName(__s);
+    DynTblEntry *pEntry = (DynTblEntry *)__s;
+    return XXH((const char *)pEntry->getName(), pEntry->getNameLen(), __h);
 }
 
-int HPackDynTab::cmpName(const void *pVal1, const void *pVal2)
+int HpackDynTbl::cmpName(const void *pVal1, const void *pVal2)
 {
-    DynTabEntry *pEntrey1 = (DynTabEntry *)pVal1;
-    DynTabEntry *pEntrey2 = (DynTabEntry *)pVal2;
-    if (pEntrey1->getNameLen() == pEntrey2->getNameLen() 
-        && memcmp(pEntrey1->getName(), pEntrey2->getName(), pEntrey1->getNameLen()) == 0)
+    DynTblEntry *pEntry1 = (DynTblEntry *)pVal1;
+    DynTblEntry *pEntry2 = (DynTblEntry *)pVal2;
+    if (pEntry1->getNameLen() == pEntry2->getNameLen() 
+        && memcmp(pEntry1->getName(), pEntry2->getName(), pEntry1->getNameLen()) == 0)
         return 0;
     else
         return 1;
 }
 
-int HPackDynTab::cmpNameVal(const void *pVal1, const void *pVal2)
+int HpackDynTbl::cmpNameVal(const void *pVal1, const void *pVal2)
 {
-    if (HPackDynTab::cmpName(pVal1, pVal2) == 0)
+    if (HpackDynTbl::cmpName(pVal1, pVal2) == 0)
     {
-        DynTabEntry *pEntrey1 = (DynTabEntry *)pVal1;
-        DynTabEntry *pEntrey2 = (DynTabEntry *)pVal2;
-        if (pEntrey1->getValueLen() == pEntrey2->getValueLen() 
-            && memcmp(pEntrey1->getValue(), pEntrey2->getValue(), pEntrey1->getValueLen()) == 0)
+        DynTblEntry *pEntry1 = (DynTblEntry *)pVal1;
+        DynTblEntry *pEntry2 = (DynTblEntry *)pVal2;
+        if (pEntry1->getValueLen() == pEntry2->getValueLen() 
+            && memcmp(pEntry1->getValue(), pEntry2->getValue(), pEntry1->getValueLen()) == 0)
         return 0;
     }
     return 1;
 }
 
 
-HPackDynTab::HPackDynTab()
+HpackDynTbl::HpackDynTbl()
 {
     m_curCapacity = 0;
     m_maxCapacity = INITIAL_DYNAMIC_TABLE_SIZE;
     m_nextFlowId = 0;
-    m_pNameHashT = new GHash(15, HPackDynTab::hfName, HPackDynTab::cmpName);
-    m_pNameValueHashT = new GHash(15, HPackDynTab::hfNameVal, HPackDynTab::cmpNameVal);
+    m_pNameHashT = new GHash(15, HpackDynTbl::hfName, HpackDynTbl::cmpName);
+    m_pNameValueHashT = new GHash(15, HpackDynTbl::hfNameVal, HpackDynTbl::cmpNameVal);
 }
 
-HPackDynTab::~HPackDynTab()
+HpackDynTbl::~HpackDynTbl()
 {
     int count = getEntryCount();
     for (int i = count - 1; i >= 0; --i)
@@ -5413,7 +5412,7 @@ HPackDynTab::~HPackDynTab()
     m_loopbuf.clear();
 }
 
-void HPackDynTab::reset()
+void HpackDynTbl::reset()
 {
     int count = getEntryCount();
     for (int i = count - 1; i >= 0; --i)
@@ -5429,18 +5428,18 @@ void HPackDynTab::reset()
 
 /*
  * through the name/val to search the entry
- * return id(name index) of the table(base HPackStxTabCount + 1)
+ * return id(name index) of the table(base HPACK_STATIC_TABLE_SIZE + 1)
  *      when both macthed, set val_matched to 1
  *      otherwise set val_matched to 0;
  * return 0 for not found
  * return -1 for out of memory error
  */
-int HPackDynTab::getDynTabId(char *name, uint16_t name_len, char *value,
+int HpackDynTbl::getDynTabId(char *name, uint16_t name_len, char *value,
                         uint16_t value_len, int &val_matched, uint8_t stxTabId)
 {
     int id = 0;
     val_matched = 0;
-    DynTabEntry *pTmpEntry = new DynTabEntry(name, name_len,
+    DynTblEntry *pTmpEntry = new DynTblEntry(name, name_len,
                         value, value_len, stxTabId);
     if (pTmpEntry == NULL)
         return -1;
@@ -5450,21 +5449,21 @@ int HPackDynTab::getDynTabId(char *name, uint16_t name_len, char *value,
     if (iter != m_pNameValueHashT->end())
     {
         val_matched = 1;
-        id = m_nextFlowId - (uint32_t)(long)iter->second() + HPackStxTabCount;
+        id = m_nextFlowId - (uint32_t)(long)iter->second() + HPACK_STATIC_TABLE_SIZE;
     }
     else if (stxTabId == 0) //If have stxTabId, so needn't go further
     {
         //May have many entries, use the first matched one is all right
         iter = m_pNameHashT->find((void *)pTmpEntry);
         if (iter != m_pNameHashT->end())
-            id = m_nextFlowId - (uint32_t)(long)iter->second() + HPackStxTabCount;
+            id = m_nextFlowId - (uint32_t)(long)iter->second() + HPACK_STATIC_TABLE_SIZE;
     }
 
     delete pTmpEntry;
     return id;
 }
 
-void HPackDynTab::removeNameValueHashTEntry(DynTabEntry *pEntry)
+void HpackDynTbl::removeNameValueHashTEntry(DynTblEntry *pEntry)
 {
     GHash::iterator iter;
     iter = m_pNameValueHashT->find((void *)pEntry);
@@ -5472,7 +5471,7 @@ void HPackDynTab::removeNameValueHashTEntry(DynTabEntry *pEntry)
         m_pNameValueHashT->erase(iter);
 }
 
-void HPackDynTab::removeNameHashTEntry(DynTabEntry *pEntry)
+void HpackDynTbl::removeNameHashTEntry(DynTblEntry *pEntry)
 {
     GHash::iterator iter;
     iter = m_pNameHashT->find((void *)pEntry);
@@ -5481,33 +5480,33 @@ void HPackDynTab::removeNameHashTEntry(DynTabEntry *pEntry)
         m_pNameHashT->erase(iter);
 }
 
-void HPackDynTab::popEntry() //remove oldest
+void HpackDynTbl::popEntry() //remove oldest
 {
-    DynTabEntry *pEntry = getEntryInternal(0);
+    DynTblEntry *pEntry = getEntryInternal(0);
     removeNameHashTEntry(pEntry);
     removeNameValueHashTEntry(pEntry);
-    m_loopbuf.pop_front(ENTRYPSIZE);
     m_curCapacity -= pEntry->getEntrySize();
+    m_loopbuf.pop_front(ENTRYPSIZE);
     delete pEntry;
 }
 
 /****
  * the new one will be append to the end of the loopbuf, so the index need to be paied more attention.
  */
-void HPackDynTab::pushEntry(char *name, uint16_t name_len, char *val, uint16_t val_len,
+void HpackDynTbl::pushEntry(char *name, uint16_t name_len, char *val, uint16_t val_len,
                uint32_t nameIndex)
 {
-    DynTabEntry *pEntry = new DynTabEntry(name, name_len, val,
+    DynTblEntry *pEntry = new DynTblEntry(name, name_len, val,
             val_len, nameIndex);
     m_loopbuf.append((char *)(&pEntry), ENTRYPSIZE);
     m_curCapacity += pEntry->getEntrySize();
-    m_pNameHashT->update(pEntry, (void *)m_nextFlowId);
-    m_pNameValueHashT->insert(pEntry, (void *)m_nextFlowId);
+    m_pNameHashT->update(pEntry, (void *)(long)m_nextFlowId);
+    m_pNameValueHashT->insert(pEntry, (void *)(long)m_nextFlowId);
     ++m_nextFlowId;
     removeOverflowEntries();
 }
 
-void HPackDynTab::removeOverflowEntries()
+void HpackDynTbl::removeOverflowEntries()
 {
     while (m_maxCapacity < m_curCapacity)
         popEntry();
@@ -5555,7 +5554,7 @@ int Hpack::decInt(unsigned char *&src, const unsigned char *src_end,
         if (src > src_end)
             return -1;
 
-        value += (B & 0xFF) << M;
+        value += (B & 0x7F) << M;
         M += 7;
         if (M > 31)
             break; //Something wrong, the result will be more than 2 << 31;
@@ -5600,12 +5599,12 @@ int Hpack::encStr(unsigned char *dst, size_t dst_len,
 
 //reutrn the length in the dst, also update the src
 int Hpack::decStr(unsigned char *dst, size_t dst_len, unsigned char *&src,
-                  const unsigned char *src_end)
+                  const unsigned char *src_end, bool lowerCase)
 {
     if (src == src_end)
         return 0;
 
-    bool is_huffman = ((*src & 0x80) == 0x80);
+    int is_huffman = (*src & 0x80);
     uint32_t len;
     if (0 != decInt(src, src_end, 7, len))
         return -2;  //wrong int
@@ -5619,7 +5618,7 @@ int Hpack::decStr(unsigned char *dst, size_t dst_len, unsigned char *&src,
         if ((uint32_t)(src_end - src) < len)
             return -2;
 
-        ret = HuffmanCode::huffmanDec(src, len, dst, dst_len);
+        ret = HuffmanCode::huffmanDec(src, len, dst, dst_len, lowerCase);
         if (ret < 0)
             return -3; //Wrong code
             
@@ -5631,6 +5630,15 @@ int Hpack::decStr(unsigned char *dst, size_t dst_len, unsigned char *&src,
             ret = -3;  //dst not enough space
         else
         {
+            if (lowerCase)
+            {
+                unsigned char *psrc = src;
+                for (uint32_t i=0; i<len; ++i)
+                {
+                    if (isupper(*psrc++))
+                        return -4;
+                }
+            }
             memcpy(dst, src, len);
             src += len;
             ret = len;
@@ -5718,10 +5726,10 @@ uint8_t Hpack::getStxTabId(char *name, uint16_t name_len, char *val,
         break;
     }
 
-    if ( i > 0 && g_HPackStxTab[i].val_len == val_len
-        && g_HPackStxTab[i].name_len == name_len
-        && memcmp(val, g_HPackStxTab[i].val, val_len) == 0
-        && memcmp(name, g_HPackStxTab[i].name, name_len) == 0)
+    if ( i > 0 && g_HpackStxTab[i].val_len == val_len
+        && g_HpackStxTab[i].name_len == name_len
+        && memcmp(val, g_HpackStxTab[i].val, val_len) == 0
+        && memcmp(name, g_HpackStxTab[i].name, name_len) == 0)
     {
         val_matched = 1;
         return i + 1;
@@ -5951,8 +5959,9 @@ uint8_t Hpack::getStxTabId(char *name, uint16_t name_len, char *val,
         break;
     }
     
-    if (g_HPackStxTab[i].name_len == name_len
-        && memcmp(name, g_HPackStxTab[i].name, name_len) == 0)
+    if (i > 0 
+        && g_HpackStxTab[i].name_len == name_len
+        && memcmp(name, g_HpackStxTab[i].name, name_len) == 0)
         return i + 1;
 
     return 0;
@@ -5980,27 +5989,27 @@ unsigned char *Hpack::encHeader(unsigned char *dst, unsigned char *dstEnd,
     }
 
     val_matched = 0;
-    int dynTabId = getRespDynTab().getDynTabId(name, nameLen,
+    int dynTblId = getRespDynTbl().getDynTabId(name, nameLen,
                                     value, valueLen, val_matched, stxTabId);
     if (val_matched == 1)
     {
         *dst = 0x80;
-        dst = encInt(dst, dynTabId, 7);
+        dst = encInt(dst, dynTblId, 7);
         return dst;
     }
 
     /**
-     * When val_matched==0, either stxTabId or dynTabId must be 0.
-     * we can use (stxTabId + dynTabId) to choose either value.
+     * When val_matched==0, either stxTabId or dynTblId must be 0.
+     * we can use (stxTabId + dynTblId) to choose either value.
      */
-    assert(dynTabId == 0  || stxTabId == 0);
+    assert(dynTblId == 0  || stxTabId == 0);
     
     //indexedType: 0, Add, 1,: without, 2: never
     char indexedPrefixNumber[] = {0x40, 0x00, 0x10};
-    if (stxTabId + dynTabId > 0)
+    if (stxTabId + dynTblId > 0)
     {
         *dst = indexedPrefixNumber[indexedType];
-        dst = encInt(dst, stxTabId + dynTabId, ((indexedType == 0) ? 6 : 4));
+        dst = encInt(dst, stxTabId + dynTblId, ((indexedType == 0) ? 6 : 4));
     }
     else
     {
@@ -6017,7 +6026,7 @@ unsigned char *Hpack::encHeader(unsigned char *dst, unsigned char *dstEnd,
     dst += rc;
 
     if (indexedType == 0)
-        getRespDynTab().pushEntry(name, nameLen, value, valueLen,
+        getRespDynTbl().pushEntry(name, nameLen, value, valueLen,
                                         stxTabId);
 
     return dst;
@@ -6038,7 +6047,7 @@ int Hpack::decHeader(unsigned char *&src, unsigned char *srcEnd, AutoBuf &nameVa
         if (0 != decInt(src, srcEnd, 5, newCapcity))
             return -1;
 
-        getReqDynTab().updateMaxCapacity(newCapcity);
+        getReqDynTbl().updateMaxCapacity(newCapcity);
         return 1;
     }
 
@@ -6061,11 +6070,15 @@ int Hpack::decHeader(unsigned char *&src, unsigned char *srcEnd, AutoBuf &nameVa
         indexedType = 0;
     }
     else if (*src == 0x40) //custmized //0100 0000
+    {
         indexedType = 0;
+    }
 
     //Never indexed
     else if (*src == 0x10)  //00010000
+    {
         indexedType = 2;
+    }
 
     else if ((*src & 0xf0) == 0x10)  //0001 xxxx
     {
@@ -6077,7 +6090,9 @@ int Hpack::decHeader(unsigned char *&src, unsigned char *srcEnd, AutoBuf &nameVa
 
     //without indexed
     else if (*src == 0x00)  //0000 0000
+    {
         indexedType = 1;
+    }
 
     else // 0000 xxxx
     {
@@ -6098,20 +6113,23 @@ int Hpack::decHeader(unsigned char *&src, unsigned char *srcEnd, AutoBuf &nameVa
     char *name = nameValBuf.begin();
     if (index > 0)
     {
-        if (index <= HPackStxTabCount) //static table
+        if (index <= HPACK_STATIC_TABLE_SIZE) //static table
         {
-            name_len = g_HPackStxTab[index - 1].name_len;
-            memcpy(name, g_HPackStxTab[index - 1].name, name_len);
+            if (index == 8) //If is ":status", ERROR
+                return LS_FAIL;
+
+            name_len = g_HpackStxTab[index - 1].name_len;
+            memcpy(name, g_HpackStxTab[index - 1].name, name_len);
             if (indexedType == 3)
             {
-                val_len = g_HPackStxTab[index - 1].val_len;
-                memcpy(name + name_len, g_HPackStxTab[index - 1].val, val_len);
+                val_len = g_HpackStxTab[index - 1].val_len;
+                memcpy(name + name_len, g_HpackStxTab[index - 1].val, val_len);
                 return 1;
             }
         }
         else
         {
-            DynTabEntry *pRespEntry = getReqDynTab().getEntry(
+            DynTblEntry *pRespEntry = getReqDynTbl().getEntry(
                                                 index);
             if (pRespEntry == NULL)
                 return LS_FAIL;
@@ -6121,7 +6139,10 @@ int Hpack::decHeader(unsigned char *&src, unsigned char *srcEnd, AutoBuf &nameVa
             enoughSpaceLen = (srcEnd - src) * 2 + pRespEntry->getNameLen() 
                                 + pRespEntry->getValueLen();
             if (nameValBuf.available() < enoughSpaceLen)
+            {
                 nameValBuf.grow(enoughSpaceLen);
+                name = nameValBuf.begin();
+            }
 
             name_len = pRespEntry->getNameLen();
             memcpy(name, pRespEntry->getName(), name_len);
@@ -6136,20 +6157,24 @@ int Hpack::decHeader(unsigned char *&src, unsigned char *srcEnd, AutoBuf &nameVa
     else
     {
         ++src;
-        len = decStr((unsigned char *)name, nameValBuf.available(), src, srcEnd);
+        len = decStr((unsigned char *)name, nameValBuf.available(),
+                     src, srcEnd, true);
         if ( len < 0)
             return len; //error
         name_len = len;
     }
 
     len = decStr((unsigned char *)name + name_len, 
-                 nameValBuf.available() - name_len, src, srcEnd);
+                 nameValBuf.available() - name_len, src, srcEnd, false);
     if ( len < 0)
         return len; //error
     val_len = len;
 
     if (indexedType == 0)
-        getReqDynTab().pushEntry(name, name_len, name + name_len, val_len, index);
-
+    {
+        if (name_len == 10 && memcmp(name, "connection", 10) == 0)
+            return LS_FAIL;
+        getReqDynTbl().pushEntry(name, name_len, name + name_len, val_len, index);
+    }
     return 1;
 }

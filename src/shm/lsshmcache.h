@@ -137,7 +137,7 @@ public:
     {
         LsShmHash::iteroffset iterOff;
         ls_str_pair_t parms;
-        ls_str_unsafeset(&parms.key, (char *)pKey, keyLen);
+        ls_str_set(&parms.key, (char *)pKey, keyLen);
         iterOff = m_pShmHash->findIterator(&parms);
         return (lsShm_hCacheData_t *)((iterOff != 0) ?
                 m_pShmHash->offset2iteratorData(iterOff) : NULL);
@@ -169,9 +169,6 @@ public:
     //
     int removeAllExpired(void *pUParam = NULL);
 
-    void remap()
-    {   m_pShmHash->checkRemap(); }
-
     LsShmStatus_t status() const
     {   return m_status; }
 
@@ -189,15 +186,9 @@ public:
     int loop(udata_callback_fn _cb, void *pUParam);
 
     int lock()
-    {
-        int retValue = m_pShmHash->lock();
-        m_pShmHash->checkRemap();
-        return retValue;
-    };
+    {   return m_pShmHash->lock(); };
     int unlock()
-    {
-        return m_pShmHash->unlock();
-    };
+    {   return m_pShmHash->unlock(); };
 
 private:
     LsShmCache(const LsShmCache &other);

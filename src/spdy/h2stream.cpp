@@ -27,10 +27,11 @@
 
 H2Stream::H2Stream()
     : m_uiStreamID(0)
-    , m_iPriority(0)
     , m_iWindowOut(H2_FCW_INIT_SIZE)
     , m_iWindowIn(H2_FCW_INIT_SIZE)
     , m_pH2Conn(NULL)
+    , m_iContentLen(-1)
+    , m_iContentRead(0)
     , m_reqHeaderEnd(0)
 {
 }
@@ -105,13 +106,17 @@ int H2Stream::appendReqData(char *pData, int len, uint8_t flags)
 {
     if (m_bufIn.append(pData, len) == -1)
         return LS_FAIL;
+    m_iContentRead += len;
     if (isFlowCtrl())
         m_iWindowIn -= len;
     //Note: H2_CTRL_FLAG_FIN is directly mapped to HIO_FLAG_PEER_SHUTDOWN
     //      H2_CTRL_FLAG_UNIDIRECTIONAL is directly mapped to HIO_FLAG_LOCAL_SHUTDOWN
     if (flags & (H2_CTRL_FLAG_FIN | H2_CTRL_FLAG_UNIDIRECTIONAL))
+    {
         setFlag(flags & (H2_CTRL_FLAG_FIN | H2_CTRL_FLAG_UNIDIRECTIONAL), 1);
-
+        if (m_iContentLen != -1 && m_iContentLen != m_iContentRead)
+            return LS_FAIL;
+    }
     if (isWantRead())
         getHandler()->onReadEx();
     return len;
@@ -243,11 +248,10 @@ int H2Stream::getDataFrameSize(int wanted)
 
     if (wanted > m_iWindowOut)
         wanted = m_iWindowOut;
-    if (m_pH2Conn->isFlowCtrl()
-        && (wanted > m_pH2Conn->getCurDataOutWindow()))
+    if (wanted > m_pH2Conn->getCurDataOutWindow())
         wanted = m_pH2Conn->getCurDataOutWindow();
-    if (wanted > H2_MAX_DATAFRAM_SIZE)
-        wanted = H2_MAX_DATAFRAM_SIZE;
+    if (wanted > m_pH2Conn->getPeerMaxFrameSize())
+        wanted = m_pH2Conn->getPeerMaxFrameSize();
     return wanted;
 }
 
@@ -369,7 +373,7 @@ int H2Stream::sendRespHeaders(HttpRespHeaders *pHeaders)
     if (getState() == HIOS_DISCONNECTED)
         return LS_FAIL;
 
-    m_pH2Conn->move2ReponQue(this);
+    m_pH2Conn->add2PriorityQue(this);
     return m_pH2Conn->sendRespHeaders(pHeaders, m_uiStreamID);
 }
 

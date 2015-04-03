@@ -32,6 +32,7 @@ class SSLConnection
     SSL    *m_ssl;
     int     m_iStatus;
     int     m_iWant;
+    int     m_iFlag;
 
 public:
     enum
@@ -63,6 +64,9 @@ public:
 
     void setSSL(SSL *ssl);
     SSL *getSSL() const    {   return m_ssl;   }
+    
+    int getFlag()   { return m_iFlag;  }
+    void setFlag(int v) { m_iFlag = v; }
 
     void release();
     int setfd(int fd);

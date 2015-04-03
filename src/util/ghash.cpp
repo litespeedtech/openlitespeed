@@ -17,8 +17,6 @@
 *****************************************************************************/
 #include <util/ghash.h>
 
-#include <lsr/xxhash.h>
-
 #include <new>
 
 #include <assert.h>
@@ -29,7 +27,7 @@
 
 hash_key_t GHash::hfString(const void *__s)
 {
-    return XXH32((const char *)__s, strlen((const char *)__s), 0);
+    return XXH((const char *)__s, strlen((const char *)__s), 0);
 }
 
 

@@ -70,13 +70,13 @@ public:
 
     AutoStr2 &operator=(const char *pStr)
     {
-        ls_str_setstr(this, pStr, strlen(pStr));
+        ls_str_dup(this, pStr, strlen(pStr));
         return *this;
     }
 
     AutoStr2 &operator=(const AutoStr2 &rhs)
     {
-        ls_str_setstr(this, rhs.c_str(), rhs.len());
+        ls_str_dup(this, rhs.c_str(), rhs.len());
         return *this;
     }
 
@@ -87,10 +87,10 @@ public:
 
     char   *prealloc(int size)                       {   return ls_str_prealloc(this, size);    }
     void    append(const char *pStr, const int len)  {   ls_str_append(this, pStr, len);  }
-    int     setStr(const char *pStr, int len)        {   return ls_str_setstr(this, pStr, len);   }
+    int     setStr(const char *pStr, int len)        {   return ls_str_dup(this, pStr, len);   }
     int     setStr(const char *pStr)
     {
-        return ls_str_setstr(this, pStr, strlen(pStr));
+        return ls_str_dup(this, pStr, strlen(pStr));
     }
 
     //operator const char *() const   {   return m_pStr;  }

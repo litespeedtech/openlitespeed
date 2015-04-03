@@ -196,7 +196,7 @@ void ls_xpool_init(ls_xpool_t *pool)
 {
     memset(pool, 0, sizeof(ls_xpool_t));
 #ifdef USE_THRSAFE_POOL
-#if ( lock_Avail != 0 )
+#if ( LS_LOCK_AVAIL != 0 )
     NEED TO SETUP LOCKS
 #endif
 #endif
@@ -235,7 +235,7 @@ void ls_xpool_reset(ls_xpool_t *pool)
 {
     ls_xpool_destroy(pool);
 #ifdef USE_THRSAFE_POOL
-#if ( lock_Avail != 0 )
+#if ( LS_LOCK_AVAIL != 0 )
     NEED TO SETUP LOCKS
 #endif
 #endif

@@ -22,6 +22,7 @@
 #include <ctype.h>
 #include <stddef.h>
 #include <lsr/ls_types.h>
+#include <lsr/xxhash.h>
 
 /**
  * @file
@@ -466,6 +467,12 @@ int ls_hash_foreach2(ls_hash_t *pThis,
                      ls_hash_iter beg, ls_hash_iter end, ls_hash_foreach2_fn fun,
                      void *pUData);
 
+
+#if defined( __x86_64 )||defined( __x86_64__ )
+#define XXH   XXH64
+#else
+#define XXH   XXH32
+#endif
 
 #ifdef __cplusplus
 }

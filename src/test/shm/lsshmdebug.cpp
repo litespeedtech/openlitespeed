@@ -77,7 +77,7 @@ void debugBase::dumpMapFreeList(LsShm *pShm)
     LsShmOffset_t offset;
     LShmFreeTop *ap;
     LsShmMap *hp;
-    hp = pShm->m_pShmMap;
+    hp = pShm->x_pShmMap;
 
     for (offset = hp->x_iFreeOffset; offset;)
     {
@@ -121,7 +121,7 @@ void debugBase::dumpMapCheckFree(LsShm *pShm)
 void debugBase::dumpMapHeader(LsShm *pShm)
 {
     LsShmMap *hp;
-    hp = pShm->m_pShmMap;
+    hp = pShm->x_pShmMap;
     fprintf(m_fp,
             "%.12s %X %d.%d.%d CUR %8X %8X DATA %8X AVAIL %X UNIT %X FREE %X\n",
             hp->x_aName,
@@ -156,11 +156,11 @@ void debugBase::dumpHeader(LsShm *pShm)
     fprintf(m_fp, "%d %s %p %p MAXSIZE[%X] %p hdrsize %X\n",
             pShm->m_status,
             pShm->m_pFileName,
-            pShm->m_pShmMap,
+            pShm->x_pShmMap,
             pShm->m_pShmMapO,
             pShm->m_iMaxSizeO,
             pShm->m_pShmData,
-            (unsigned int)((char *)pShm->m_pShmData - (char *)pShm->m_pShmMap)
+            (unsigned int)((char *)pShm->m_pShmData - (char *)pShm->x_pShmMap)
            );
 }
 
@@ -224,8 +224,8 @@ void debugBase::dumpPoolDataFreeList(LsShmPool *pool)
     LsShmFreeList *pFree;
 
     fprintf(debugBase::fp(), "FreeList %8X ",
-            pool->m_pDataMap->x_iFreeList);
-    for (offset = pool->m_pDataMap->x_iFreeList; offset;)
+            pool->x_pDataMap->x_iFreeList);
+    for (offset = pool->x_pDataMap->x_iFreeList; offset;)
     {
         pFree = (LsShmFreeList *) pool->offset2ptr(offset);
         fprintf(debugBase::fp(), "<%4X %4X %4X>",
@@ -240,7 +240,7 @@ void debugBase::dumpPoolDataFreeBucket(LsShmPool *pool)
     LsShmOffset_t offset;
     LsShmOffset_t *pBucket;
     int i;
-    pBucket = pool->m_pDataMap->x_aFreeBucket;
+    pBucket = pool->x_pDataMap->x_aFreeBucket;
     for (i = 0; i < LSSHM_POOL_NUMBUCKET; i++)
     {
         if ((offset = *pBucket))
@@ -279,26 +279,26 @@ void debugBase::dumpPoolHeader(LsShmPool *pool)
             pool, pool->name(),
             (pool->status() == LSSHM_READY) ? "READY" : "NOTREADY",
             pool->m_pShm,
-            pool->m_pPool,
-            pool->m_pPageMap,
-            pool->m_pDataMap
+            pool->x_pPool,
+            pool->x_pPageMap,
+            pool->x_pDataMap
            );
 
     fprintf(debugBase::fp(), "MAGIC %8X SIZE %8X AVAIL %8X FREE %8X\n",
-            pool->m_pPool->x_iMagic,
-            pool->m_pPool->x_iSize,
+            pool->x_pPool->x_iMagic,
+            pool->x_pPool->x_iSize,
             pool->m_pShm->getShmMap()->x_iXdataSize,
-            pool->m_pShm->getShmMap()->x_iXdataSize - pool->m_pPool->x_iSize
+            pool->m_pShm->getShmMap()->x_iXdataSize - pool->x_pPool->x_iSize
            );
 
     fprintf(debugBase::fp(),
             "DATA UNIT [%X %X] NUMBUCKET %X CHUNK [%X %X] FREE %X\n",
-            pool->m_pDataMap->x_iUnitSize,
-            pool->m_pDataMap->x_iMaxUnitSize,
-            pool->m_pDataMap->x_iNumFreeBucket,
-            pool->m_pDataMap->x_chunk.x_iStart,
-            pool->m_pDataMap->x_chunk.x_iEnd,
-            pool->m_pDataMap->x_iFreeList
+            pool->x_pDataMap->x_iUnitSize,
+            pool->x_pDataMap->x_iMaxUnitSize,
+            pool->x_pDataMap->x_iNumFreeBucket,
+            pool->x_pDataMap->x_chunk.x_iStart,
+            pool->x_pDataMap->x_chunk.x_iEnd,
+            pool->x_pDataMap->x_iFreeList
            );
     fprintf(debugBase::fp(),
             "=====================================================\n");

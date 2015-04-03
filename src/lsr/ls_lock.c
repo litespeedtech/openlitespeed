@@ -32,10 +32,10 @@ int ls_futex_setup(ls_mutex_t *p)
 {
 #if 0
     int *lp = (int *)p;
-    assert(*lp != lock_Inuse);
+    assert(*lp != LS_LOCK_INUSE);
 #endif
 
-    *((int *)p) = lock_Avail;
+    *((int *)p) = LS_LOCK_AVAIL;
     return 0;
 }
 
@@ -49,7 +49,7 @@ int ls_futex_setup(ls_mutex_t *p)
 #ifdef USE_ATOMIC_SPIN
 int ls_atomic_spin_setup(ls_atom_spinlock_t *p)
 {
-    *((int *)p) = lock_Avail;
+    *((int *)p) = LS_LOCK_AVAIL;
     return 0;
 }
 

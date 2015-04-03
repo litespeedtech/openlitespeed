@@ -62,12 +62,28 @@ typedef struct
 
 typedef struct
 {
+    LsShmSize_t     m_iShmAllocated;    // total direct shm allocated (bytes)
+    LsShmSize_t     m_iShmReleased;     // total direct shm released (bytes)
+    LsShmSize_t     m_iFromChunk;       // allocated for pool (bytes)
+    LsShmSize_t     m_iFlAllocated;     // allocated from free list (bytes)
+    LsShmSize_t     m_iFlReleased;      // released to free list (bytes)
+    LsShmSize_t     m_iFlCnt;           // entries on free list
+    struct
+    {
+        LsShmSize_t m_iBkAllocated;     // total allocations from bucket (count)
+        LsShmSize_t m_iBkReleased;      // total releases to bucket (count)
+    } m_bckt[LSSHM_POOL_NUMBUCKET];
+} LsShmPoolMapStat;
+
+typedef struct
+{
     LsShmSize_t     x_iUnitSize;
     LsShmSize_t     x_iMaxUnitSize;
     LsShmSize_t     x_iNumFreeBucket;
     ShmMapChunk     x_chunk;             // unused after alloc2
     LsShmOffset_t   x_iFreeList;         // the big free list
     LsShmOffset_t   x_aFreeBucket[LSSHM_POOL_NUMBUCKET];
+    LsShmPoolMapStat    x_stat;          // map statistics
 } LsShmPoolMap;
 
 typedef struct
@@ -75,7 +91,6 @@ typedef struct
     uint32_t        x_iMagic;
     uint8_t         x_aName[LSSHM_MAXNAMELEN];
     uint32_t        x_iSize;
-    LsShmPoolMap    x_page;
     LsShmPoolMap    x_data;
     LsShmOffset_t   x_iLockOffset;
     pid_t           x_pid;
@@ -91,14 +106,8 @@ public:
     typedef uint32_t     LsShmHKey;
     typedef LsShmHKey(*hash_fn)(const void *pVal, int len);
     typedef int (*val_comp)(const void *pVal1, const void *pVal2, int len);
-    LsShmHash *getNamedHash(const char *name,
-                           size_t init_size, hash_fn hf, val_comp vc);
-    LsShmLruHash *getNamedLruHash(const char *name,
-                           size_t init_size, hash_fn hf, val_comp vc);
-    LsShmWLruHash *getNamedWLruHash(const char *name,
-                           size_t init_size, hash_fn hf, val_comp vc);
-    LsShmXLruHash *getNamedXLruHash(const char *name,
-                           size_t init_size, hash_fn hf, val_comp vc);
+    LsShmHash *getNamedHash(const char *name, size_t init_size,
+                            hash_fn hf, val_comp vc, int lru_mode);
     void close();
     void destroyShm();
 
@@ -106,7 +115,7 @@ public:
     LsShm *getShm() const       {   return m_pShm;      }
 
     const char *name() const
-    {   return (const char *)m_pPool->x_aName; };
+    {   return (const char *)getPool()->x_aName; };
 
     LsShmStatus_t status() const
     {   return m_status; };
@@ -120,9 +129,9 @@ public:
     LsShmOffset_t  alloc2(LsShmSize_t size, int &remapped);
     void  release2(LsShmOffset_t offset, LsShmSize_t size);
     void  mvFreeList();
-    void  addFreeList(LsShmOffset_t *pSrc);
+    void  addFreeList(LsShmPoolMap *pSrcMap);
     void  mvFreeBucket();
-    void  addFreeBucket(LsShmOffset_t *pSrc);
+    void  addFreeBucket(LsShmPoolMap *pSrcMap);
 
     void enableLock()
     {   m_iLockEnable = 1; }
@@ -148,6 +157,9 @@ public:
     ls_attr_inline LsShmSize_t getShmMapOldMaxSize() const
     {   return m_pShm->oldMaxSize(); }
 
+    LsShmOffset_t getPoolMapStatOffset() const
+    { return (LsShmOffset_t)(long)&((LsShmPoolMem *)m_iOffset)->x_data.x_stat; }
+
     LsShmLock *lockPool()
     {   return m_pShm->lockPool(); }
 
@@ -168,14 +180,17 @@ public:
     int unlock()
     {   return m_iLockEnable && lsi_shmlock_unlock(m_pShmLock); }
 
-    void checkRemap()
-    {   remap(); }
-
     int getRef()  { return m_iRef; }
     int upRef()   { return ++m_iRef; }
     int downRef() { return --m_iRef; }
 
 private:
+    ls_attr_inline LsShmPoolMem *getPool() const
+    {   return (LsShmPoolMem *)m_pShm->offset2ptr(m_iOffset);   }
+
+    ls_attr_inline LsShmPoolMap *getDataMap() const
+    {   return (LsShmPoolMap *)&(getPool()->x_data);   }
+
     int setupLock()
     {   return m_iLockEnable && lsi_shmlock_setup(m_pShmLock); }
 
@@ -187,7 +202,6 @@ private:
 
     LsShmStatus_t checkStaticData(const char *name);
     LsShmStatus_t createStaticData(const char *name);
-    void          remap();
 
     //
     // data related
@@ -226,27 +240,32 @@ private:
                 / m_iDataUnitSize) * m_iDataUnitSize;
     };
 
+    void incrCheck(LsShmSize_t *ptr, LsShmSize_t size)
+    {
+        LsShmSize_t prev = *ptr;
+        *ptr += size;
+        if (*ptr < prev)    // cnt wrapped
+            *ptr = (LsShmSize_t)-1;
+        return;
+    }
+
 private:
     LsShmPool(const LsShmPool &other);
     LsShmPool &operator=(const LsShmPool &other);
     bool operator==(const LsShmPool &other);
 
     uint32_t            m_iMagic;
-    char               *m_pPoolName;     // Name
-    LsShm              *m_pShm;          // SHM handle
-    LsShmPoolMem       *m_pPool;
-    LsShmPoolMap       *m_pPageMap;
-    LsShmPoolMap       *m_pDataMap;
+    char               *m_pPoolName;    // Name
+    LsShm              *m_pShm;         // SHM handle
     LsShmStatus_t       m_status;       // Ready ...
     LsShmOffset_t       m_iOffset;      // find from SHM registry
-    LsShmMap           *m_pShmMap;
     lsi_shmlock_t      *m_pShmLock;
     int8_t              m_iLockEnable;
     int8_t              m_iShmOwner;    // indicated if I own the SHM
     uint16_t            m_iRegNum;      // registry number
     LsShmSize_t         m_iPageUnitSize;
     LsShmSize_t         m_iDataUnitSize;
-    LsShmPool          *m_pParent;        // parent global pool
+    LsShmPool          *m_pParent;      // parent global pool
     int                 m_iRef;
 #ifdef LSSHM_DEBUG_ENABLE
     friend class debugBase;

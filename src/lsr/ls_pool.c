@@ -95,10 +95,10 @@ static ls_pool_t ls_pool_g =
     { }, { },
     NULL, NULL, 0,
 #ifdef USE_THRSAFE_POOL
-#if ( lock_Avail != 0 )
+#if ( LS_LOCK_AVAIL != 0 )
     NEED TO SETUP LOCKS
-#endif /* ( lock_Avail != 0 ) */
-    lock_Avail,
+#endif /* ( LS_LOCK_AVAIL != 0 ) */
+    LS_LOCK_AVAIL,
 #endif /* USE_THRSAFE_POOL */
     NULL,
     PINIT_NEED

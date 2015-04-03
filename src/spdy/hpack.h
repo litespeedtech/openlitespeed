@@ -23,12 +23,13 @@
 #include <util/ghash.h>
 #include <util/autobuf.h>
 
+#include <assert.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
 
 #define INITIAL_DYNAMIC_TABLE_SIZE  4096
-#define HPackStxTabCount   61
+#define HPACK_STATIC_TABLE_SIZE   61
 
 
 
@@ -40,7 +41,7 @@ enum
 };
 
 //static table
-struct HPackHeaderTable_t
+struct HpackHdrTbl_t
 {
     const char *name;
     uint16_t name_len;
@@ -48,60 +49,60 @@ struct HPackHeaderTable_t
     uint16_t val_len;
 };
 
-struct HPackHuffEncode_t
+struct HpackHuffEncode_t
 {
     uint32_t code;
     int      bits;
 };
 
-struct HPackHuffDecode_t
+struct HpackHuffDecode_t
 {
     uint8_t state;
     uint8_t flags;
     uint8_t sym;
 };
 
-struct HPackHuffDecodeStatus_t
+struct HpackHuffDecodeStatus_t
 {
     uint8_t state;
     uint8_t eos;
 };
 
-class DynTabEntry
+class DynTblEntry
 {
 public:
-    DynTabEntry(char *name, uint32_t name_len, char *val,
+    DynTblEntry(char *name, uint32_t name_len, char *val,
                       uint32_t val_len, uint8_t stxTabId)
     {
         reset();
         init(name, name_len, val, val_len, stxTabId);
     }
 
-    ~DynTabEntry()
+    ~DynTblEntry()
     {
         if (m_valLen && m_val)
             delete []m_val;
 
         //only when name in static table, use a pointer to it, otherwise new one
-        if (m_nameLen && m_nameStxTabId == 0 && m_name)
+        if (m_nameLen && m_nameId == 0 && m_name)
             delete []m_name;
         reset();
     };
 
-    uint32_t getEntrySize()         { return m_valLen + m_nameLen + 32; }
-    char       *getName() const     { return m_name;   }
-    uint16_t    getNameLen()        { return m_nameLen; }
-    char       *getValue() const    { return m_val;     }
-    uint16_t    getValueLen()       { return m_valLen; }
+    uint32_t    getEntrySize() const    { return m_valLen + m_nameLen + 32; }
+    char       *getName() const         { return m_name;   }
+    uint16_t    getNameLen() const      { return m_nameLen; }
+    char       *getValue() const        { return m_val;     }
+    uint16_t    getValueLen()           { return m_valLen; }
 
     void init(char *name, uint32_t name_len, char *val, uint32_t val_len,
               uint8_t stxTabId);
 
 private:
     char       *m_name;
-    uint8_t     m_nameStxTabId  : 6;  // < 64, if in StxTab, is 1~61; other 0.
-    uint16_t    m_nameLen       : 13; // < 8192
-    uint16_t    m_valLen        : 13; // < 8192
+    uint8_t     m_nameId;   // < 64, if in StxTab, is 1~61; other 0.
+    uint16_t    m_nameLen;  // < 8192
+    uint16_t    m_valLen;   // < 8192
     char       *m_val;
 
     void reset()
@@ -109,16 +110,16 @@ private:
         memset(&m_name, 0, (char *)&m_val + sizeof(char *) - (char *)&m_name);
     }
 
-    LS_NO_COPY_ASSIGN(DynTabEntry);
+    LS_NO_COPY_ASSIGN(DynTblEntry);
 };
 
 
-#define ENTRYPSIZE (sizeof(DynTabEntry *))
-class HPackDynTab
+#define ENTRYPSIZE (sizeof(DynTblEntry *))
+class HpackDynTbl
 {
 public:
-    HPackDynTab();
-    ~HPackDynTab();
+    HpackDynTbl();
+    ~HpackDynTbl();
 
 
     size_t getTotalTableSize()  { return m_curCapacity; }
@@ -133,16 +134,16 @@ public:
     int getDynTabId(char *name, uint16_t name_len, char *value, 
                     uint16_t value_len, int &val_matched, uint8_t stxTabId);
 
-    DynTabEntry *getEntry(uint32_t dynTabId)
+    DynTblEntry *getEntry(uint32_t dynTblId)
     {
-        if (dynTabId < HPackStxTabCount + 1
-            || dynTabId > HPackStxTabCount + getEntryCount())
+        if (dynTblId < HPACK_STATIC_TABLE_SIZE + 1
+            || dynTblId > HPACK_STATIC_TABLE_SIZE + getEntryCount())
             return NULL;
-        return getEntryInternal(dynTabIdToInternalIndex(dynTabId));
+        return getEntryInternal(dynTblIdToInternalIndex(dynTblId));
     }
 
-    void removeNameValueHashTEntry(DynTabEntry *pEntry);
-    void removeNameHashTEntry(DynTabEntry *pEntry);
+    void removeNameValueHashTEntry(DynTblEntry *pEntry);
+    void removeNameHashTEntry(DynTblEntry *pEntry);
     void popEntry();
     void pushEntry(char *name, uint16_t name_len, char *val, uint16_t val_len,
                    uint32_t nameIndex);
@@ -153,25 +154,25 @@ public:
     static int cmpName(const void *pVal1, const void *pVal2);
     static int cmpNameVal(const void *pVal1, const void *pVal2);
 
-private:
+protected:
     void        removeOverflowEntries();
-    DynTabEntry *getEntryInternal(int index)
+    DynTblEntry *getEntryInternal(int index)
     {
 //      if (index < 0 || index * (int)ENTRYPSIZE >= m_loopbuf.size())
 //          return NULL;
-        DynTabEntry **pEntry =
-            (DynTabEntry **)(m_loopbuf.getPointer(index * ENTRYPSIZE));
+        DynTblEntry **pEntry =
+            (DynTblEntry **)(m_loopbuf.getPointer(index * ENTRYPSIZE));
         return *pEntry;
     }
 
-    int dynTabIdToInternalIndex(uint32_t dynTabId)
+    int dynTblIdToInternalIndex(uint32_t dynTblId)
     {
-        assert(dynTabId >= HPackStxTabCount + 1 
-            && dynTabId <= HPackStxTabCount + getEntryCount());
-        return getEntryCount() - (dynTabId - HPackStxTabCount);
+        assert(dynTblId >= HPACK_STATIC_TABLE_SIZE + 1 
+            && dynTblId <= HPACK_STATIC_TABLE_SIZE + getEntryCount());
+        return getEntryCount() - (dynTblId - HPACK_STATIC_TABLE_SIZE);
     }
 
-private:
+protected:
     size_t      m_maxCapacity;  //set by SETTINGS_HEADER_TABLE_SIZE
     size_t      m_curCapacity;
     uint32_t    m_nextFlowId;
@@ -181,7 +182,7 @@ private:
     GHash      *m_pNameHashT;
     GHash      *m_pNameValueHashT;
 
-    LS_NO_COPY_ASSIGN(HPackDynTab);
+    LS_NO_COPY_ASSIGN(HpackDynTbl);
 };
 
 
@@ -205,12 +206,13 @@ public:
     static int huffmanEnc(const unsigned char *src, const unsigned char *src_end,
                           unsigned char *dst, int dst_len);
     static unsigned char *huffmanDec4bits(uint8_t src_4bits, unsigned char *dst,
-                                          HPackHuffDecodeStatus_t &status);
+                                          HpackHuffDecodeStatus_t &status, 
+                                          bool lowerCase);
     static int huffmanDec(unsigned char *src, int src_len, unsigned char *dst,
-                          int dst_len);
+                          int dst_len, bool lowerCase);
 
-    static HPackHuffEncode_t m_HPackHuffEncode_t[257];
-    static HPackHuffDecode_t m_HPackHuffDecode_t[256][16];
+    static HpackHuffEncode_t m_HpackHuffEncode_t[257];
+    static HpackHuffDecode_t m_HpackHuffDecode_t[256][16];
 
     LS_NO_COPY_ASSIGN(HuffmanCode);
 };
@@ -222,8 +224,8 @@ public:
     Hpack() {};
     ~Hpack() {};
 
-    HPackDynTab &getReqDynTab()  { return m_reqDynTab;    }
-    HPackDynTab &getRespDynTab() { return m_respDynTab;   }
+    HpackDynTbl &getReqDynTbl()  { return m_reqDynTbl;    }
+    HpackDynTbl &getRespDynTbl() { return m_respDynTbl;   }
 
     static uint8_t getStxTabId(char *name, uint16_t name_len, char *val,
                                 uint16_t val_len, int &val_matched);
@@ -235,7 +237,7 @@ public:
     int encStr(unsigned char *dst, size_t dst_len,
                       const unsigned char *str, uint16_t str_len);
     int decStr(unsigned char *dst, size_t dst_len, unsigned char *&src,
-                      const unsigned char *src_end);
+                      const unsigned char *src_end, bool lowerCase);
 
     //indexedType: 0, Add, 1,: without, 2: never
     unsigned char *encHeader(unsigned char *dst, unsigned char *dstEnd,
@@ -246,8 +248,8 @@ public:
 
 
 private:
-    HPackDynTab m_reqDynTab;
-    HPackDynTab m_respDynTab;
+    HpackDynTbl m_reqDynTbl;
+    HpackDynTbl m_respDynTbl;
 
     LS_NO_COPY_ASSIGN(Hpack);
 };

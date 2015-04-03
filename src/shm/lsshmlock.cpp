@@ -28,6 +28,10 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 
+#ifdef x_iMaxSize
+#undef x_iMaxSize
+#endif
+
 extern "C" {
     int ls_expandfile(int fd, size_t fromsize, size_t incrsize);
 };
@@ -206,13 +210,18 @@ LsShmStatus_t LsShmLock::init(const char *name, LsShmSize_t size)
         if ((GPath::createMissingPath(m_pFileName, 0750) < 0)
             || ((m_iFd = open(m_pFileName, O_RDWR | O_CREAT, 0750)) < 0))
         {
-            LsShm::setErrMsg("Unable to open/create [%s], %s.", m_pFileName, strerror(errno));
+            LsShm::setErrMsg(LSSHM_SYSERROR, "Unable to open/create [%s], %s.",
+                             m_pFileName, strerror(errno));
             return LSSHM_BADMAPFILE;
         }
     }
+
+    ::fcntl( m_iFd, F_SETFD, FD_CLOEXEC );
+
     if (stat(m_pFileName, &mystat) < 0)
     {
-        LsShm::setErrMsg("Unable to stat [%s], %s.", m_pFileName, strerror(errno));
+        LsShm::setErrMsg(LSSHM_SYSERROR, "Unable to stat [%s], %s.",
+                         m_pFileName, strerror(errno));
         return LSSHM_BADMAPFILE;
     }
 
@@ -236,7 +245,7 @@ LsShmStatus_t LsShmLock::init(const char *name, LsShmSize_t size)
     {
         if (mystat.st_size < s_iHdrSize)
         {
-            LsShm::setErrMsg("Bad LockFile format [%s], size=%lld.",
+            LsShm::setErrMsg(LSSHM_BADMAPFILE, "Bad LockFile format [%s], size=%lld.",
                       m_pFileName, (uint64_t)mystat.st_size);
             return LSSHM_BADMAPFILE;
         }
@@ -248,9 +257,10 @@ LsShmStatus_t LsShmLock::init(const char *name, LsShmSize_t size)
         if ((getShmLockMap()->x_iMaxSize != mystat.st_size)
             || (checkMagic(getShmLockMap(), name) != LSSHM_OK))
         {
-            LsShm::setErrMsg("Bad LockFile format [%s], size=%lld, magic=%08X(%08X).",
+            LsShm::setErrMsg(LSSHM_BADVERSION,
+                      "Bad LockFile format [%s], size=%lld, magic=%08X(%08X).",
                       m_pFileName, (uint64_t)mystat.st_size, getShmLockMap()->x_iMagic, m_iMagic);
-            return LSSHM_BADMAPFILE;
+            return LSSHM_BADVERSION;
         }
 
         // expand the file if needed... won't shrink
@@ -276,9 +286,9 @@ LsShmStatus_t LsShmLock::map(LsShmSize_t size)
         (uint8_t *)mmap(0, size, PROT_READ | PROT_WRITE, MAP_SHARED, m_iFd, 0);
     if (p == MAP_FAILED)
     {
-        LsShm::setErrMsg("Unable to mmap [%s], size=%d, %s.",
+        LsShm::setErrMsg(LSSHM_SYSERROR, "Unable to mmap [%s], size=%d, %s.",
                   m_pFileName, size, strerror(errno));
-        return LSSHM_ERROR;
+        return LSSHM_SYSERROR;
     }
 
     m_pShmLockMap = (LsShmLockMap *)p;

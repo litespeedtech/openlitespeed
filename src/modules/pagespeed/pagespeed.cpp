@@ -38,7 +38,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-//#include "../../../addon/example/loopbuff.h"
 #include "pipenotifier.h"
 #include "log_message_handler.h"
 #include "../../src/http/serverprocessconfig.h"
@@ -138,7 +137,7 @@ struct ps_main_conf_t
 //VHost level data
 struct ps_vh_conf_t
 {
-    LsServerContext           *serverContext;
+    LsServerContext            *serverContext;
     ProxyFetchFactory          *proxyFetchFactory;
     MessageHandler             *handler;
 };
@@ -665,7 +664,7 @@ static void ParseOption(LsiRewriteOptions *pOption, const char *sLine,
     {
         if (pEnd - sLine > 0)
         {
-            g_api->log(NULL, LSI_LOG_INFO,
+            g_api->log(NULL, LSI_LOG_DEBUG,
                        "[%s]parseOption do not parse %s in level %s\n",
                        ModuleName, AutoStr2(sLine, (int)(pEnd - sLine)).c_str(), name);
         }
@@ -1275,12 +1274,12 @@ void QueryParamsHandler(lsi_session_t *session, StringPiece *data,
         {
             if (!bReqBodyStart)
             {
-                std::string sp("&", 1);
+                GoogleString sp("&", 1);
                 (*data).AppendToString(&sp);
                 bReqBodyStart = true;
             }
 
-            std::string sbuf(buf, ret);
+            GoogleString sbuf(buf, ret);
             (*data).AppendToString(&sbuf);
         }
     }
@@ -2176,7 +2175,7 @@ static int UriMapFilter(lsi_cb_param_t *rec)
     {
         //statuc_code already set.
         g_api->register_req_handler(rec->_session, &MNAME, 0);
-        g_api->log(rec->_session, LSI_LOG_INFO,
+        g_api->log(rec->_session, LSI_LOG_DEBUG,
                    "[%s]ps_uri_map_filter register_req_handler OK.\n",
                    ModuleName);
     }
@@ -2247,7 +2246,7 @@ static int RecvReqHeaderCheck(lsi_cb_param_t *rec)
 
     if (method == HTTP_UNKNOWN)
     {
-        g_api->log(rec->_session, LSI_LOG_INFO,
+        g_api->log(rec->_session, LSI_LOG_DEBUG,
                    "[%s]recv_req_header_check returned, method %s.\n",
                    ModuleName,
                    httpMethod);
@@ -2268,7 +2267,7 @@ static int RecvReqHeaderCheck(lsi_cb_param_t *rec)
 
     if (pMyData == NULL)
     {
-        g_api->log(rec->_session, LSI_LOG_INFO,
+        g_api->log(rec->_session, LSI_LOG_DEBUG,
                    "[%s]recv_req_header_check returned, pMyData == NULL.\n",
                    ModuleName);
         return LSI_HK_RET_OK;
@@ -2320,7 +2319,7 @@ static int RecvReqHeaderCheck(lsi_cb_param_t *rec)
         if (ret == 0)
         {
             g_api->register_req_handler(rec->_session, &MNAME, 0);
-            g_api->log(rec->_session, LSI_LOG_INFO,
+            g_api->log(rec->_session, LSI_LOG_DEBUG,
                        "[%s]recv_req_header_check register_req_handler OK after call ps_simple_handler.\n",
                        ModuleName);
         }
@@ -2389,6 +2388,7 @@ void EventCb(void *session_)
                "[%s]ps_event_cb triggered, session=%ld\n",
                ModuleName, (long) session_);
 
+    //For suspended case, use the following to resume
     if (pMyData->notifier_pointer)
     {
         int status_code =
@@ -2398,11 +2398,16 @@ void EventCb(void *session_)
         {
             pMyData->statusCode = status_code;
             g_api->register_req_handler(session, &MNAME, 0);
-            g_api->log(session, LSI_LOG_INFO,
+            g_api->log(session, LSI_LOG_DEBUG,
                        "[%s]ps_event_cb register_req_handler OK.\n", ModuleName);
         }
         g_api->notify_event_notifier(&pMyData->notifier_pointer);
-        //      g_api->remove_event_notifier(&pMyData->notifier_pointer);
+
+        /**
+         * Do not call remove_event_notifier because after notify_event_notifier  
+         * called, it will be removed.
+         */
+        //g_api->remove_event_notifier(&pMyData->notifier_pointer);
         assert(pMyData->notifier_pointer == 0);
     }
 }

@@ -418,8 +418,8 @@ int ls_pcre_getnamedsubs(const ls_pcre_t *pThis, const ls_pcreres_t *pRes,
         iSubLen = ls_pcreres_getsubstr(pRes,
                                        ls_pcre_map_name(pCurEntry, &pName),
                                        &pSubStr);
-        ls_str_unsafeset(&pSubPats[i].key, pName, strlen(pName));
-        ls_str_unsafeset(&pSubPats[i].value, pSubStr, iSubLen);
+        ls_str_set(&pSubPats[i].key, pName, strlen(pName));
+        ls_str_set(&pSubPats[i].value, pSubStr, iSubLen);
     }
 
     return i;

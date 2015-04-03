@@ -61,7 +61,7 @@ static void doit(LsShm *pShm)
     const char keyX[] = "KEYX5678901234567";
     const char valX[] = "VALX56789012345678901";
     LsShmPool *pGPool;
-    LsShmLruHash *pHash;
+    LsShmHash *pHash;
     LsShmHElem *pTop;
     LsShmHash::iterator iter;
     LsShmHash::iteroffset iterOff0;
@@ -76,23 +76,23 @@ static void doit(LsShm *pShm)
     CHECK((pGPool = pShm->getGlobalPool()) != NULL);
     if (pGPool == NULL)
         return;
-    CHECK((pHash = pGPool->getNamedLruHash(
-      g_pHashName, 0, LsShmHash::hashXXH32, LsShmHash::compBuf)) != NULL);
+    CHECK((pHash = pGPool->getNamedHash(
+      g_pHashName, 0, LsShmHash::hashXXH32, LsShmHash::compBuf, LSSHM_LRU_MODE1)) != NULL);
     if (pHash == NULL)
         return;
-    ls_str_unsafeset(&parms.key, (char *)key0, sizeof(key0) - 1);
-    ls_str_unsafeset(&parms.value, NULL, 0);
+    ls_str_set(&parms.key, (char *)key0, sizeof(key0) - 1);
+    ls_str_set(&parms.value, NULL, 0);
     flags = LSSHM_FLAG_NONE;
     CHECK((iterOff0 = pHash->getIterator(&parms, &flags)) != 0);
     CHECK(flags == LSSHM_FLAG_CREATED);
 
-    ls_str_unsafeset(&parms.key, (char *)key1, sizeof(key1) - 1);
+    ls_str_set(&parms.key, (char *)key1, sizeof(key1) - 1);
     CHECK((iterOff1 = pHash->findIterator(&parms)) == 0);
     CHECK((iterOff1 = pHash->updateIterator(&parms)) == 0);
 
     CHECK((iterOff1 = pHash->insertIterator(&parms)) != 0);
     CHECK(pHash->findIterator(&parms) == iterOff1);
-    ls_str_unsafeset(&parms.value, (char *)valX, sizeof(valX) - 1);
+    ls_str_set(&parms.value, (char *)valX, sizeof(valX) - 1);
     CHECK((iterOff1 = pHash->updateIterator(&parms)) != 0);  // may change
     if (iterOff1 != 0)
     {
@@ -100,11 +100,11 @@ static void doit(LsShm *pShm)
         CHECK(iter->getValLen() == sizeof(valX) - 1);
         CHECK(memcmp(iter->getVal(), valX, iter->getValLen()) == 0);
     }
-    ls_str_unsafeset(&parms.value, (char *)valX, 5);
+    ls_str_set(&parms.value, (char *)valX, 5);
     CHECK(pHash->setIterator(&parms) == iterOff1);  // should use same memory
     CHECK(iter->getValLen() == 5);
     
-    ls_str_unsafeset(&parms.key, (char *)keyX, sizeof(keyX) - 1);
+    ls_str_set(&parms.key, (char *)keyX, sizeof(keyX) - 1);
     flags = LSSHM_FLAG_NONE;
     CHECK((iterOffX = pHash->getIterator(&parms, &flags)) != 0);
     CHECK(flags == LSSHM_FLAG_CREATED);
@@ -113,7 +113,7 @@ static void doit(LsShm *pShm)
     CHECK(pHash->size() == 3);
     CHECK(pHash->getLruTop() == iterOffX);
 
-    ls_str_unsafeset(&parms.key, (char *)key0, sizeof(key0) - 1);
+    ls_str_set(&parms.key, (char *)key0, sizeof(key0) - 1);
     flags = LSSHM_FLAG_NONE;
     CHECK(pHash->getIterator(&parms, &flags) == iterOff0);
     CHECK(flags == LSSHM_FLAG_NONE);

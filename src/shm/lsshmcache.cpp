@@ -55,7 +55,7 @@ LsShmCache::LsShmCache(
         return;
     if ((pPool = pShm->getGlobalPool()) == NULL)
         return;
-    if ((m_pShmHash = pPool->getNamedHash(shmHashName, initHashSize, hf, vc)) != NULL)
+    if ((m_pShmHash = pPool->getNamedHash(shmHashName, initHashSize, hf, vc, LSSHM_LRU_NONE)) != NULL)
     {
         LsShmReg *pReg;
         if ((pReg = m_pShmHash->findReg(cacheName)) == NULL)
@@ -64,7 +64,7 @@ LsShmCache::LsShmCache(
         {
             if ((m_iHdrOffset = pReg->x_iValue) == 0)
             {
-                int remapped = 0;
+                int remapped;
                 m_iHdrOffset =
                     m_pShmHash->alloc2(sizeof(lsShm_hCacheHdr_t), remapped);
                 if (m_iHdrOffset == 0)
@@ -74,8 +74,6 @@ LsShmCache::LsShmCache(
                 }
                 else
                 {
-                    if (remapped != 0)
-                        remap();
                     pReg->x_iValue = m_iHdrOffset;
                 }
             }

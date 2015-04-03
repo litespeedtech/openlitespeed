@@ -36,7 +36,7 @@ TEST(ls_strtest_test)
 
     ls_str_t *pFive = ls_str_new(NULL, 0);
     CHECK(ls_str_len(pFive) == 0);
-    CHECK(ls_str_setstr(pFive, "apple", 5) == 5);
+    CHECK(ls_str_dup(pFive, "apple", 5) == 5);
     CHECK(memcmp(ls_str_cstr(pFive), "apple", 5) == 0);
     ls_str_append(pFive, "grape", 5);
     CHECK(memcmp(ls_str_cstr(pFive), "applegrape", 10) == 0);

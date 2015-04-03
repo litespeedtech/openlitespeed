@@ -61,7 +61,6 @@ public:
     explicit LsiApiHooks(int capacity = 4)
         : m_pHooks(NULL)
         , m_iCapacity(0)
-        , m_iBegin(0)
         , m_iEnd(0)
         , m_iFlag(0)
     {
@@ -76,7 +75,7 @@ public:
 
     LsiApiHooks(const LsiApiHooks &other);
 
-    short size() const                      {   return m_iEnd - m_iBegin;   }
+    short size() const                      {   return m_iEnd;              }
     short capacity() const                  {   return m_iCapacity;         }
 
     short getGlobalFlag() const             {   return m_iFlag;             }
@@ -94,7 +93,7 @@ public:
 
 
     lsiapi_hook_t *get(int index) const     {   return m_pHooks + index;    }
-    lsiapi_hook_t *begin() const            {   return m_pHooks + m_iBegin; }
+    lsiapi_hook_t *begin() const            {   return m_pHooks;            }
     lsiapi_hook_t *end() const              {   return m_pHooks + m_iEnd;   }
     LsiApiHooks *dup() const
     {   return new LsiApiHooks(*this);    }
@@ -142,12 +141,11 @@ private:
     LsiApiHooks &operator=(const LsiApiHooks &other);
     bool operator==(const LsiApiHooks &other) const;
 
-    int reallocate(int capacity, int newBegin = -1);
+    int reallocate(int capacity);
 
 private:
     lsiapi_hook_t   *m_pHooks;
     short            m_iCapacity;
-    short            m_iBegin;
     short            m_iEnd;
     short            m_iFlag;
 
@@ -174,7 +172,10 @@ public:
     static ModIndex *getModIndex(const lsi_module_t *pModule);
 };
 
-
+#define LSIHOOKS_BITS 8
+#define LSIHOOKS_POWER 3
+#define LSIHOOKS_GETINDEX(levelSize) ((levelSize) >> LSIHOOKS_POWER)
+#define LSIHOOKS_GETOFFSET(levelSize) ((levelSize) & (LSIHOOKS_BITS - 1))
 
 template< int B, int S >
 class SessionHooks
@@ -193,19 +194,27 @@ private:
     short   m_iFlag[S];
     short   m_iStatus;
 
+    static int getLevelSize(int iNumMods)
+    {
+        return ((iNumMods + (LSIHOOKS_BITS - 1))
+                & ~(LSIHOOKS_BITS - 1)) >> LSIHOOKS_POWER;
+    }
 
     void inheritFromParent(SessionHooks<B, S> *parentSessionHooks)
     {
+        int i, level, iLevelSize;
         assert(m_iStatus != UNINIT);
         if (m_iStatus == HASOWN)
             return;
 
-        for (int i = 0; i < S; ++i)
+        for (i = 0; i < S; ++i)
         {
-            int level = B + i;
-            int level_size = LsiApiHooks::getGlobalApiHooks(level)->size();
-            memcpy(m_pEnableArray[i], parentSessionHooks->getEnableArray(level),
-                   level_size * sizeof(int8_t));
+            level = B + i;
+            iLevelSize = getLevelSize(
+                                LsiApiHooks::getGlobalApiHooks(level)->size());
+            memcpy(m_pEnableArray[i],
+                   parentSessionHooks->getEnableArray(level),
+                   iLevelSize * sizeof(int8_t));
         }
         memcpy(m_iFlag, parentSessionHooks->m_iFlag, S * sizeof(short));
     }
@@ -213,18 +222,20 @@ private:
 
     void updateFlag(int level)
     {
+        int i;
         int index = level - B;
         m_iFlag[index] = 0;
-        int level_size = LsiApiHooks::getGlobalApiHooks(level)->size();
-        lsiapi_hook_t *pHook = LsiApiHooks::getGlobalApiHooks(level)->begin();
+        const LsiApiHooks *pLevel = LsiApiHooks::getGlobalApiHooks(level);
+        int iLevelSize = pLevel->size();
         int8_t *pEnableArray = m_pEnableArray[index];
 
-        for (int j = 0; j < level_size; ++j)
+        for (i = 0; i < iLevelSize; ++i)
         {
-            //For the disabled hook, just ignore it
-            if (pEnableArray[j])
-                m_iFlag[index] |= pHook->flag | LSI_HOOK_FLAG_ENABLED;
-            ++pHook;
+            if (pEnableArray[LSIHOOKS_GETINDEX(i)]
+                & (1 << LSIHOOKS_GETOFFSET(i)))
+            {
+                m_iFlag[index] |= pLevel->get(i)->flag | LSI_HOOK_FLAG_ENABLED;
+            }
         }
     }
 
@@ -238,22 +249,25 @@ private:
 
     void inheritFromGlobal()
     {
-        int level_size;
+        int iLevelSize, i, j;
         lsiapi_hook_t *pHook;
         int8_t *pEnableArray;
         assert(m_iStatus != UNINIT);
         if (m_iStatus == HASOWN)
             return;
 
-        for (int i = 0; i < S; ++i)
+        for (i = 0; i < S; ++i)
         {
-            level_size = LsiApiHooks::getGlobalApiHooks(B + i)->size();
+            iLevelSize = LsiApiHooks::getGlobalApiHooks(B + i)->size();
             pHook = LsiApiHooks::getGlobalApiHooks(B + i)->begin();
             pEnableArray = m_pEnableArray[i];
-            for (int j = 0; j < level_size; ++j)
+            for (j = 0; j < iLevelSize; ++j)
             {
-                pEnableArray[j] = ((pHook->flag & LSI_HOOK_FLAG_ENABLED)
-                                   ? 1 : 0);
+                if (pHook->flag & LSI_HOOK_FLAG_ENABLED)
+                {
+                    pEnableArray[LSIHOOKS_GETINDEX(j)]
+                            |= 1 << LSIHOOKS_GETOFFSET(j);
+                }
                 ++pHook;
             }
         }
@@ -264,14 +278,15 @@ private:
     //init and set the disable array from the global(in the LsiApiHook flag)
     int initSessionHooks()
     {
+        int iSize;
         if (m_iStatus != UNINIT)
             return 1;
 
         for (int i = 0; i < S; ++i)
         {
-            //int level = base + i;
-            int level_size = LsiApiHooks::getGlobalApiHooks(B + i)->size();
-            m_pEnableArray[i] = new int8_t[level_size];
+            iSize = getLevelSize(
+                            LsiApiHooks::getGlobalApiHooks(B + i)->size());
+            m_pEnableArray[i] = new int8_t[iSize]();
         }
         m_iStatus = INITED;
 
@@ -297,13 +312,14 @@ public:
 
     void disableAll()
     {
-        int level_size;
+        int iLevelSize;
         if (m_iStatus > UNINIT)
         {
             for (int i = 0; i < S; ++i)
             {
-                level_size = LsiApiHooks::getGlobalApiHooks(B + i)->size();
-                memset(m_pEnableArray[i], 0, level_size);
+                iLevelSize = getLevelSize(
+                                LsiApiHooks::getGlobalApiHooks(B + i)->size());
+                memset(m_pEnableArray[i], 0, iLevelSize * sizeof(int8_t));
                 m_iFlag[i] = 0;
             }
             m_iStatus = INITED;
@@ -342,7 +358,7 @@ public:
     {
         if (m_iStatus < INITED)
             return LS_FAIL;
-        int i, iIdx, iSet = enable ? 1 : 0;
+        int i, iModIdx, iSet = enable ? 1 : 0;
         ModIndex *p;
         lsiapi_hook_t *pHook;
 
@@ -352,11 +368,12 @@ public:
 
         for (i = 0; i < iEnableCount; ++i)
         {
-            if ((iIdx = p->getLevel(aEnableHkpts[i])) == -1)
+            if ((iModIdx = p->getLevel(aEnableHkpts[i])) == -1)
                 return LS_FAIL;
-
-            m_pEnableArray[aEnableHkpts[i] - B][iIdx] = iSet;
-            pHook = LsiApiHooks::getGlobalApiHooks(aEnableHkpts[i])->get(iIdx);
+            m_pEnableArray[aEnableHkpts[i] - B][LSIHOOKS_GETINDEX(iModIdx)]
+                    = iSet << LSIHOOKS_GETOFFSET(iModIdx);
+            pHook =
+                LsiApiHooks::getGlobalApiHooks(aEnableHkpts[i])->get(iModIdx);
             if (iSet)
                 m_iFlag[aEnableHkpts[i] - B] |= (pHook->flag
                                                 | LSI_HOOK_FLAG_ENABLED);
