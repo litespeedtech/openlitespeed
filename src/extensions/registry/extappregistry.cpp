@@ -413,7 +413,7 @@ ExtWorker *ExtAppRegistry::configExtApp(const XmlNode *pNode,
             iAutoStart = 1;
         else
             iAutoStart = ConfigCtx::getCurConfigCtx()->getLongValue(pNode, "autoStart",
-                         0, 1, 0);
+                         0, 2, 0);
 
         pPath = pNode->getChildValue("path");
 

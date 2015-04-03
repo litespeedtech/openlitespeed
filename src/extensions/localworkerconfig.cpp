@@ -168,7 +168,7 @@ int LocalWorkerConfig::config(const XmlNode *pNode)
     setMaxIdleTime(l);
 
     setRunOnStartUp(ConfigCtx::getCurConfigCtx()->getLongValue(pNode,
-                    "runOnStartUp", 0, 1, 0));
+                    "runOnStartUp", 0, 2, 0));
 
     RLimits limits;
     limits = *(ExtAppRegistry::getRLimits());
