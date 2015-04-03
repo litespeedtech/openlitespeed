@@ -46,7 +46,7 @@ static inline int ls_xxx_spin_unlock(ls_spinlock_t *p)
 static inline int ls_yyy_spin_unlock(ls_spinlock_t *p)
 {
     barrier();
-    *p = lock_Avail;
+    *p = LS_LOCK_AVAIL;
     return 0;
 }
 
@@ -54,8 +54,8 @@ static inline int ls_xxx_spin_lock(ls_spinlock_t *p)
 {
     while (1)
     {
-        if ((*p == lock_Avail)
-            && __sync_bool_compare_and_swap(p, lock_Avail, lock_Inuse))
+        if ((*p == LS_LOCK_AVAIL)
+            && __sync_bool_compare_and_swap(p, LS_LOCK_AVAIL, LS_LOCK_INUSE))
             return 0;
         cpu_relax();
     }
@@ -65,7 +65,7 @@ static inline int ls_yyy_spin_lock(ls_spinlock_t *p)
 {
     while (1)
     {
-        if (__sync_bool_compare_and_swap(p, lock_Avail, lock_Inuse))
+        if (__sync_bool_compare_and_swap(p, LS_LOCK_AVAIL, LS_LOCK_INUSE))
             return 0;
         cpu_relax();
     }
@@ -76,8 +76,8 @@ static inline int ls_zzz_spin_lock(ls_spinlock_t *p)
     while (1)
     {
         barrier();
-        if ((*p == lock_Avail)
-            && __sync_bool_compare_and_swap(p, lock_Avail, lock_Inuse))
+        if ((*p == LS_LOCK_AVAIL)
+            && __sync_bool_compare_and_swap(p, LS_LOCK_AVAIL, LS_LOCK_INUSE))
             return 0;
     }
 }
@@ -94,23 +94,29 @@ typedef int          LOCK_TYPE1;
 #define LSI_UNLOCK2  ls_futex_unlock
 typedef int          LOCK_TYPE2;
 
-#define LSI_SETUP3   ls_pspinlock_setup
-#define LSI_TRYLOCK3 ls_pspinlock_trylock
-#define LSI_LOCK3    ls_pspinlock_lock
-#define LSI_UNLOCK3  ls_pspinlock_unlock
-typedef ls_pspinlock_t  LOCK_TYPE3;
+#define LSI_SETUP3   ls_futex_setup
+#define LSI_TRYLOCK3 ls_futex_trylock
+#define LSI_LOCK3    ls_futex_safe_lock
+#define LSI_UNLOCK3  ls_futex_safe_unlock
+typedef int          LOCK_TYPE3;
 
-#define LSI_SETUP4   ls_pthread_mutex_setup
-#define LSI_TRYLOCK4 pthread_mutex_trylock
-#define LSI_LOCK4    pthread_mutex_lock
-#define LSI_UNLOCK4  pthread_mutex_unlock
-typedef pthread_mutex_t     LOCK_TYPE4;
+#define LSI_SETUP4   ls_pspinlock_setup
+#define LSI_TRYLOCK4 ls_pspinlock_trylock
+#define LSI_LOCK4    ls_pspinlock_lock
+#define LSI_UNLOCK4  ls_pspinlock_unlock
+typedef ls_pspinlock_t  LOCK_TYPE4;
 
-#define LSI_SETUP5   ls_lock_setup
-#define LSI_TRYLOCK5 ls_lock_trylock
-#define LSI_LOCK5    ls_lock_lock
-#define LSI_UNLOCK5  ls_lock_unlock
-typedef ls_lock_t   LOCK_TYPE5;
+#define LSI_SETUP5   ls_pthread_mutex_setup
+#define LSI_TRYLOCK5 pthread_mutex_trylock
+#define LSI_LOCK5    pthread_mutex_lock
+#define LSI_UNLOCK5  pthread_mutex_unlock
+typedef pthread_mutex_t  LOCK_TYPE5;
+
+#define LSI_SETUP6   ls_lock_setup
+#define LSI_TRYLOCK6 ls_lock_trylock
+#define LSI_LOCK6    ls_lock_lock
+#define LSI_UNLOCK6  ls_lock_unlock
+typedef ls_lock_t    LOCK_TYPE6;
 
 //#define TRYLOCK
 
@@ -142,6 +148,7 @@ static void showEnd(int numthreads)
     }
 }
 
+
 /*
  * NOTE: the runTest routines exist separately
  *   so that the lock functions may be called inline
@@ -149,7 +156,6 @@ static void showEnd(int numthreads)
 static void   *runTest1(void *o)
 {
     myThread_t  *p = (myThread_t *)o;
-
     printf("runTest1 %d\n", p->m_id);
 
     int    i;
@@ -183,10 +189,10 @@ static void   *runTest1(void *o)
     return NULL;
 }
 
+
 static void   *runTest2(void *o)
 {
     myThread_t  *p = (myThread_t *)o;
-
     printf("runTest2 %d\n", p->m_id);
 
     int    i;
@@ -220,10 +226,10 @@ static void   *runTest2(void *o)
     return NULL;
 }
 
+
 static void   *runTest3(void *o)
 {
     myThread_t  *p = (myThread_t *)o;
-
     printf("runTest3 %d\n", p->m_id);
 
     int    i;
@@ -257,10 +263,10 @@ static void   *runTest3(void *o)
     return NULL;
 }
 
+
 static void   *runTest4(void *o)
 {
     myThread_t  *p = (myThread_t *)o;
-
     printf("runTest4 %d\n", p->m_id);
 
     int    i;
@@ -294,10 +300,10 @@ static void   *runTest4(void *o)
     return NULL;
 }
 
+
 static void   *runTest5(void *o)
 {
     myThread_t  *p = (myThread_t *)o;
-
     printf("runTest5 %d\n", p->m_id);
 
     int    i;
@@ -331,11 +337,50 @@ static void   *runTest5(void *o)
     return NULL;
 }
 
+
+static void   *runTest6(void *o)
+{
+    myThread_t  *p = (myThread_t *)o;
+    printf("runTest6 %d\n", p->m_id);
+
+    int    i;
+    for (i = 0; i < loopCount; i++)
+    {
+#ifdef TRYLOCK
+        if (LSI_TRYLOCK6((LOCK_TYPE6 *)p->m_data) != 0)
+        {
+            p->m_waitCount++;
+            LSI_LOCK6((LOCK_TYPE6 *)p->m_data);
+        }
+#else
+        LSI_LOCK6((LOCK_TYPE6 *)p->m_data);
+#endif
+        if (++bigCount > loopCount)
+        {
+            p->m_myCount = i;
+            i = loopCount;
+        }
+        else
+        {
+            bigValue += p->m_id;
+            p->m_bigValue = bigValue;
+        }
+        LSI_UNLOCK6((LOCK_TYPE6 *)p->m_data);
+    }
+    if (i == loopCount)     /* bigCount did *not* terminate loop */
+        p->m_myCount = i;
+
+    pthread_exit((void *)(long) - p->m_id);
+    return NULL;
+}
+
+
 int         myLock1;
 int         myLock2;
-pthread_spinlock_t  myLock3;
-pthread_mutex_t     myLock4;
-ls_lock_t  myLock5;
+int         myLock3;
+pthread_spinlock_t  myLock4;
+pthread_mutex_t     myLock5;
+ls_lock_t  myLock6;
 
 static struct testinfo
 {
@@ -346,10 +391,12 @@ static struct testinfo
 {
     { runTest1, (void *) &myLock1, "ATOMIC-SPIN" },
     { runTest2, (void *) &myLock2, "FUTEX" },
-    { runTest3, (void *) &myLock3, "PTHREAD-SPIN" },
-    { runTest4, (void *) &myLock4, "PTHREAD-MUTEX" },
-    { runTest5, (void *) &myLock5, "LSR-LOCK" },
+    { runTest3, (void *) &myLock3, "PID-FUTEX" },
+    { runTest4, (void *) &myLock4, "PTHREAD-SPIN" },
+    { runTest5, (void *) &myLock5, "PTHREAD-MUTEX" },
+    { runTest6, (void *) &myLock6, "LSR-LOCK" },
 };
+
 
 int testlock(int numthreads, int index)
 {
@@ -378,6 +425,9 @@ int testlock(int numthreads, int index)
         break;
     case 4:
         LSI_SETUP5((LOCK_TYPE5 *)plock);
+        break;
+    case 5:
+        LSI_SETUP6((LOCK_TYPE6 *)plock);
         break;
     default:
         return LS_FAIL;
@@ -427,6 +477,7 @@ int testlock(int numthreads, int index)
     }
     return 0;
 }
+
 
 /*
  *  Simple lock test

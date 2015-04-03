@@ -34,14 +34,15 @@ static struct mylru
     const char *name;
 } mylru[] =
 {
-    { &shmlru[0],    0,    "SHMWLRU" },
-    { &shmlru[1],    1,    "SHMXLRU" },
+    { &shmlru[0],    LSSHM_LRU_MODE2,    "SHMWLRU" },
+    { &shmlru[1],    LSSHM_LRU_MODE3,    "SHMXLRU" },
 };
 
 static void doit(struct mylru *pLru);
 
 TEST(ls_ShmLruTest_test)
 {
+    int ret;
     char shmfilename[255];
     char lockfilename[255];
     snprintf(shmfilename, sizeof(shmfilename), "%s/%s.shm", shmdir, shmname);
@@ -50,12 +51,16 @@ TEST(ls_ShmLruTest_test)
     unlink(shmfilename);
     unlink(lockfilename);
 
-    CHECK(shmlru_init(mylru[0].base, shmname, 0,
+    CHECK((ret = shmlru_init(mylru[0].base, shmname, 0,
                       mylru[0].name, 0, LsShmHash::hashXXH32, LsShmHash::compBuf,
-                      mylru[0].mode) == 0);
-    CHECK(shmlru_init(mylru[1].base, shmname, 0,
+                      mylru[0].mode)) == 0);
+    if (ret != 0)
+        return;
+    CHECK((ret = shmlru_init(mylru[1].base, shmname, 0,
                       mylru[1].name, 0, LsShmHash::hashXXH32, LsShmHash::compBuf,
-                      mylru[1].mode) == 0);
+                      mylru[1].mode)) == 0);
+    if (ret != 0)
+        return;
 
     if (unlink(shmfilename) != 0)
         perror(shmfilename);
@@ -111,7 +116,7 @@ static void doit(struct mylru *pLru)
                          (uint8_t *)key0, sizeof(key0) - 1, (uint8_t *)val2,
                          sizeof(val2) - 1) == 0);
     }
-    exp = ((pLru->mode == 0) ? 1 : 2);
+    exp = ((pLru->mode == LSSHM_LRU_MODE2) ? 1 : 2);
     CHECK((ret = shmlru_get(pLru->base, (uint8_t *)key0, sizeof(key0) - 1,
                             retbuf, sizeof(retbuf) / sizeof(retbuf[0]))) == exp);
     if (ret == exp)
@@ -124,7 +129,7 @@ static void doit(struct mylru *pLru)
         CHECK(pData->count == SHMLRU_MINSAVECNT - 1);
         CHECK(pData->size == sizeof(val2) - 1);
         CHECK(memcmp(pData->data, val2, pData->size) == 0);
-        if (pLru->mode == 0)    /* allocs larger data, then releases old */
+        if (pLru->mode == LSSHM_LRU_MODE2)    /* allocs larger data, then releases old */
             CHECK(retsave != retbuf[0]);
         else
         {
@@ -154,7 +159,7 @@ static void doit(struct mylru *pLru)
                      (uint8_t *)key0, sizeof(key0) - 1, (uint8_t *)val3,
                      sizeof(val3) - 1) == 0);
     /* should not save previous data entry, count < min */
-    exp = ((pLru->mode == 0) ? 1 : 2);
+    exp = ((pLru->mode == LSSHM_LRU_MODE2) ? 1 : 2);
     CHECK((ret = shmlru_get(pLru->base, (uint8_t *)key0, sizeof(key0) - 1,
                             retbuf, sizeof(retbuf) / sizeof(retbuf[0]))) == exp);
     if (ret == exp)
@@ -174,7 +179,7 @@ static void doit(struct mylru *pLru)
                      (uint8_t *)key0, sizeof(key0) - 1, (uint8_t *)val4,
                      sizeof(val4) - 1) == 0);
     /* should reuse previous data entry, size < maxsize */
-    exp = ((pLru->mode == 0) ? 1 : 2);
+    exp = ((pLru->mode == LSSHM_LRU_MODE2) ? 1 : 2);
     CHECK((ret = shmlru_get(pLru->base, (uint8_t *)key0, sizeof(key0) - 1,
                             retbuf, sizeof(retbuf) / sizeof(retbuf[0]))) == exp);
     if (ret == exp)

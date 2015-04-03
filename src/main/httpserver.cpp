@@ -1681,7 +1681,7 @@ void HttpServerImpl::setAdminThrottleLimits(HttpVHost *pVHostAdmin)
     if (ThrottleControl::getDefault()->getOutputLimit() != INT_MAX)
     {
         pTC->setOutputLimit(40960000);
-        pTC->setInputLimit(20480);
+        pTC->setInputLimit(204800);
     }
     else
     {
@@ -1809,8 +1809,8 @@ int HttpServerImpl::configTuning(const XmlNode *pRoot)
 #endif
     config.setUseSendfile(val);
 
-    if (val)
-        FileCacheDataEx::setMaxMMapCacheSize(0);
+//     if (val)
+//         FileCacheDataEx::setMaxMMapCacheSize(0);
 
     const char *pValue = pNode->getChildValue("SSLCryptoDevice");
 

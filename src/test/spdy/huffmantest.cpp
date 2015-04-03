@@ -36,7 +36,7 @@ void testBothEncAndDec(uint8_t *src, size_t src_len)
                       1; //at most 30 bit each char, so at most times 4.
     unsigned char *src2 = (unsigned char *)malloc(src_len2);
     int real_src_len2 = HuffmanCode::huffmanDec(dst, real_dst_len, src2,
-                        src_len2);
+                        src_len2, false);
 
     CHECK(real_src_len2 == (int)src_len);
     CHECK(memcmp(src, src2, src_len) == 0);

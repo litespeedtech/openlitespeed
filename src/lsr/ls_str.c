@@ -90,7 +90,7 @@ char *ls_str_prealloc(ls_str_t *pThis, int size)
 }
 
 
-int ls_str_setstr(ls_str_t *pThis, const char *pStr, int len)
+int ls_str_dup(ls_str_t *pThis, const char *pStr, int len)
 {
     return ls_str_iSetStr(pThis, pStr, len, NULL);
 }

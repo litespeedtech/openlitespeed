@@ -18,6 +18,7 @@
 #ifndef H2PROTOCOL_H
 #define H2PROTOCOL_H
 
+#include <spdy/protocoldef.h>
 #include <lsdef.h>
 
 #include <arpa/inet.h>
@@ -117,7 +118,7 @@ class H2FrameHeader
     unsigned char m_bFlags;
     unsigned char m_iStreamId[4];
 
-    uint32_t      m_data[];
+    uint32_t      m_payload[];
 public:
     H2FrameHeader() {}
     ~H2FrameHeader() {}
@@ -171,8 +172,7 @@ public:
         m_bLength[ 1 ] = (l >> 8) & 0xff;
         m_bLength[ 2 ] = l & 0xff;
     }
-    uint32_t getData(int n) const   {   return m_data[n];   }
-    uint32_t getHboData(int n) const     {   return ntohl(m_data[n]);  }
+    const uint32_t *getPayload() const  {   return m_payload;      }
 
     LS_NO_COPY_ASSIGN(H2FrameHeader);
 };
@@ -201,5 +201,6 @@ struct Priority_st
 #define H2_MAX_DATAFRAM_SIZE        16777215
 #define H2_DEFAULT_DATAFRAME_SIZE   16384
 #define H2_FCW_INIT_SIZE            65535
+#define H2_FCW_MAX_SIZE             (2147483647)
 
 #endif // H2PROTOCOL_H

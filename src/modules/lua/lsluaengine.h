@@ -26,7 +26,7 @@
 #include <string.h>
 #include <sys/stat.h>
 
-class lua_State;
+struct lua_State;
 class LsLuaFuncMap;
 class LsLuaScript;
 class LsLuaState;
@@ -274,7 +274,7 @@ public:
         ls_str_t *pBuf = getPathBuf(index);
         if (!pBuf)
             return;
-        ls_str_setstr(pBuf, path, iPathLen);
+        ls_str_dup(pBuf, path, iPathLen);
     }
 
     ls_xloopbuf_t *getPendingBuf()

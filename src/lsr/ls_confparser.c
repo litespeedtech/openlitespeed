@@ -222,7 +222,7 @@ static void ls_add_to_list(ls_confparser_t *pThis, const char *pBegin,
     else
         len = 0;
 
-    ls_str_unsafeset(p, pBuf, len);
+    ls_str_set(p, pBuf, len);
 }
 
 

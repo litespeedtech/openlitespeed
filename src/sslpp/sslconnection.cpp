@@ -29,6 +29,8 @@
 #include <assert.h>
 #include <config.h>
 #include <sys/uio.h>
+#include <unistd.h>
+
 
 
 //static const char * s_pErrInvldSSL = "Invalid Parameter, SSL* ssl is null\n";
@@ -37,6 +39,7 @@ SSLConnection::SSLConnection()
     : m_ssl(NULL)
     , m_iStatus(DISCONNECTED)
     , m_iWant(0)
+    , m_iFlag(0)
 {
 }
 
@@ -45,7 +48,9 @@ SSLConnection::SSLConnection(SSL *ssl)
     : m_ssl(ssl)
     , m_iStatus(DISCONNECTED)
     , m_iWant(0)
+    , m_iFlag(0)
 {
+    SSL_set_ex_data(ssl, 0, (void *)this);
 }
 
 
@@ -53,8 +58,10 @@ SSLConnection::SSLConnection(SSL *ssl, int fd)
     : m_ssl(ssl)
     , m_iStatus(DISCONNECTED)
     , m_iWant(0)
+    , m_iFlag(0)
 {
     SSL_set_fd(m_ssl, fd);
+    SSL_set_ex_data(ssl, 0, (void *)this);
 }
 
 
@@ -80,6 +87,7 @@ void SSLConnection::setSSL(SSL *ssl)
     assert(!m_ssl);
     //m_iWant = 0;
     m_ssl = ssl;
+    SSL_set_ex_data(m_ssl, 0, (void *)this);
 }
 void SSLConnection::release()
 {
@@ -234,6 +242,7 @@ int SSLConnection::flush()
 int SSLConnection::shutdown(int bidirectional)
 {
     assert(m_ssl);
+    m_iFlag = 0;
     if (m_iStatus == ACCEPTING)
     {
         ERR_clear_error();

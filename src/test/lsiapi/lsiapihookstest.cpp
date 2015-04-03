@@ -67,7 +67,7 @@ TEST(LsiApiHooksTest)
     //defaults
     CHECK(hooks.size() == 0);
     CHECK(hooks.capacity() == 4);
-    CHECK(hooks.begin() - hooks.get(0) == 2);
+    CHECK(hooks.begin() - hooks.get(0) == 0);
 
 
     //fill hooks
@@ -112,11 +112,11 @@ TEST(LsiApiHooksTest)
 
     //get
     //printf ("get\n");
-    for (int i = 1; i < 16; i++)
+    for (int i = 0; i < 15; i++)
     {
         pHook = hooks.get(i);
         //printf ("hook %x ",(*(int*)pHook));
-        CHECK((*(int *)pHook) == resultData[i - 1]);
+        CHECK((*(int *)pHook) == resultData[i]);
     }
 
     //size

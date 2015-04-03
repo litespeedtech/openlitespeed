@@ -131,10 +131,10 @@ HttpReq::HttpReq()
     m_pRealPath = NULL;
     m_pPool = ls_xpool_new();
     uSetURI(NULL, 0);
-    ls_str_unsafeset(&m_curUrl.value, NULL, 0);
-    ls_str_unsafeset(&m_location, NULL, 0);
-    ls_str_unsafeset(&m_pathInfo, NULL, 0);
-    ls_str_unsafeset(&m_newHost, NULL, 0);
+    ls_str_set(&m_curUrl.value, NULL, 0);
+    ls_str_set(&m_location, NULL, 0);
+    ls_str_set(&m_pathInfo, NULL, 0);
+    ls_str_set(&m_newHost, NULL, 0);
     m_pUrls = (ls_str_pair_t *)malloc(sizeof(ls_str_pair_t) * (MAX_REDIRECTS + 1));
     memset(m_pUrls, 0, sizeof(ls_str_pair_t) * (MAX_REDIRECTS + 1));
     m_envHash = NULL;
@@ -150,10 +150,10 @@ HttpReq::~HttpReq()
     ls_xpool_delete(m_pPool);
     m_pPool = NULL;
     uSetURI(NULL, 0);
-    ls_str_unsafeset(&m_curUrl.value, NULL, 0);
-    ls_str_unsafeset(&m_location, NULL, 0);
-    ls_str_unsafeset(&m_pathInfo, NULL, 0);
-    ls_str_unsafeset(&m_newHost, NULL, 0);
+    ls_str_set(&m_curUrl.value, NULL, 0);
+    ls_str_set(&m_location, NULL, 0);
+    ls_str_set(&m_pathInfo, NULL, 0);
+    ls_str_set(&m_newHost, NULL, 0);
     if (m_pUrls)
         free(m_pUrls);
     m_pUrls = NULL;
@@ -184,10 +184,10 @@ void HttpReq::reset()
     m_pRealPath = NULL;
     ls_xpool_reset(m_pPool);
     uSetURI(NULL, 0);
-    ls_str_unsafeset(&m_curUrl.value, NULL, 0);
-    ls_str_unsafeset(&m_location, NULL, 0);
-    ls_str_unsafeset(&m_pathInfo, NULL, 0);
-    ls_str_unsafeset(&m_newHost, NULL, 0);
+    ls_str_set(&m_curUrl.value, NULL, 0);
+    ls_str_set(&m_location, NULL, 0);
+    ls_str_set(&m_pathInfo, NULL, 0);
+    ls_str_set(&m_newHost, NULL, 0);
     memset(m_pUrls, 0, sizeof(ls_str_pair_t) * (MAX_REDIRECTS + 1));
     m_envHash = NULL;
     m_unknHeaders.init();
@@ -231,7 +231,7 @@ int HttpReq::setQS(const char *qs, int qsLen)
 
 void HttpReq::uSetURI(char *pURI, int uriLen)
 {
-    ls_str_unsafeset(&m_curUrl.key, pURI, uriLen);
+    ls_str_set(&m_curUrl.key, pURI, uriLen);
 }
 
 
@@ -442,7 +442,7 @@ int HttpReq::parseURL(const char *pCur, const char *pBEnd)
     }
     else
     {
-        ls_str_unsafeset(&m_curUrl.value, NULL, 0);
+        ls_str_set(&m_curUrl.value, NULL, 0);
         pMark = pBEnd;
     }
     result = parseURI(pFound, pMark);
@@ -531,7 +531,7 @@ int HttpReq::parseMethod(const char *pCur, const char *pBEnd)
 void HttpReq::setScriptNameLen(int n)
 {
     m_iScriptNameLen = n;
-    ls_str_unsafeset(&m_pathInfo, (char *)getURI() + m_iScriptNameLen,
+    ls_str_set(&m_pathInfo, (char *)getURI() + m_iScriptNameLen,
                      getURILen() - n);
 }
 
@@ -968,7 +968,7 @@ int HttpReq::setCurrentURL(const char *pURL, int len, int alloc)
     {
         //share the buffer of location
         pURI = (char *)getLocation();
-        ls_str_unsafeset(&m_location, NULL, 0);
+        ls_str_set(&m_location, NULL, 0);
     }
     else
         pURI = (char *)ls_xpool_alloc(m_pPool, len + URL_INDEX_PAD);
@@ -1040,7 +1040,7 @@ int HttpReq::setRewriteLocation(char *pURI, int uriLen,
 
     char *p = (char *)ls_xpool_alloc(m_pPool, totalLen + URL_INDEX_PAD);
     char *pEnd = p + totalLen - 1;
-    ls_str_unsafeset(&m_location, p, totalLen);
+    ls_str_set(&m_location, p, totalLen);
     if (escape)
         p += HttpUtil::escape(pURI, p, pEnd - p - 4);
     else
@@ -2273,7 +2273,7 @@ ls_str_pair_t *HttpReq::addEnv(const char *pOrgKey, int orgKeyLen,
     if (!m_envHash)
         m_envHash = ls_hash_new(10, ls_str_hfci, ls_str_cmpci, m_pPool);
 
-    ls_str_unsafeset(&pCompKey, (char *)pKey, keyLen);
+    ls_str_set(&pCompKey, (char *)pKey, keyLen);
     if ((iter = ls_hash_find(m_envHash, &pCompKey)) != NULL)
     {
         sp = (ls_str_pair_t *)ls_hash_getdata(iter);
@@ -2301,7 +2301,7 @@ const char *HttpReq::getEnv(const char *pOrgKey, int orgKeyLen,
     ls_hash_iter iter;
     if (m_envHash != NULL)
     {
-        ls_str_unsafeset(&pKeyStr, (char *)pKey, keyLen);
+        ls_str_set(&pKeyStr, (char *)pKey, keyLen);
         if ((iter = ls_hash_find(m_envHash, &pKeyStr)) != NULL)
         {
             sp = (ls_str_pair_t *)ls_hash_getdata(iter);
@@ -2334,7 +2334,7 @@ void HttpReq::unsetEnv(const char *pKey, int keyLen)
     ls_hash_iter iter;
     if (m_envHash)
     {
-        ls_str_unsafeset(&ptr, (char *)pKey, keyLen);
+        ls_str_set(&ptr, (char *)pKey, keyLen);
         iter = ls_hash_find(m_envHash, &ptr);
         if (!iter)
             return;

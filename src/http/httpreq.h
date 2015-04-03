@@ -396,7 +396,7 @@ public:
     const char *getLocation()
     {   return ls_str_cstr(&m_location);    }
     void clearLocation()
-    {   ls_str_unsafeset(&m_location, NULL, 0); }
+    {   ls_str_set(&m_location, NULL, 0); }
 
     int  addWWWAuthHeader(HttpRespHeaders &buf) const;
     const AuthRequired *getAuthRequired() const

@@ -182,79 +182,21 @@ int LsShmHash::cmpIpv6(const void *pVal1, const void *pVal2, int len)
 }
 
 
-void LsShmHash::remap()
-{
-    m_pPool->checkRemap();
-    if ((m_pShmMap != m_pPool->getShmMap())
-        || (m_iCapacity != m_pTable->x_iCapacity))
-    {
-        m_pTable = (LsShmHTable *)m_pPool->offset2ptr(m_iOffset);
-
-#if 0
-        SHM_NOTICE(
-            "LsShmHash::remap %6d %X %X SIZE %X %X size %d cap %d [%d]",
-            getpid(), m_pShmMap,
-            m_pPool->getShmMap(),
-            m_pPool->getShmMapMaxSize(),
-            m_pPool->getShmMapOldMaxSize(),
-            m_pTable->x_iSize,
-            m_pTable->x_iCapacity,
-            m_iCapacity
-        );
-#endif
-        m_pIdxStart = (LsShmHIdx *)m_pPool->offset2ptr(m_pTable->x_iTable);
-        m_pIdxEnd = m_pIdxStart + m_pTable->x_iCapacity;
-        m_pBitMap = (uint8_t *)m_pPool->offset2ptr(m_pTable->x_iBitMap);
-        if (m_pTable->x_iLruOffset != 0)
-        {
-            m_pLru =
-                (LsHashLruInfo *)m_pPool->offset2ptr(m_pTable->x_iLruOffset);
-        }
-        m_pShmMap = m_pPool->getShmMap();
-        m_iCapacity = m_pTable->x_iCapacity;
-        m_pShmLock = m_pPool->lockPool()->offset2pLock(m_pTable->x_iLockOffset);
-        m_pShmGLock =
-            m_pPool->lockPool()->offset2pLock(m_pTable->x_iGLockOffset);
-    }
-    else
-    {
-#ifdef DEBUG_RUN
-        SHM_NOTICE(
-            "LsShmHash::remapXXX NOCHANGE %6d %X %X SIZE %X %X size %d cap %d",
-            getpid(), m_pShmMap,
-            m_pPool->getShmMap(),
-            m_pPool->getShmMapMaxSize(),
-            m_pPool->getShmMapOldMaxSize(),
-            m_pTable->x_iSize,
-            m_pTable->x_iCapacity
-        );
-#endif
-    }
-}
-
-
 LsShmHash::LsShmHash(LsShmPool *pool, const char *name, size_t init_size,
-                     LsShmHash::hash_fn hf, LsShmHash::val_comp vc)
+                     LsShmHash::hash_fn hf, LsShmHash::val_comp vc, int lru_mode)
     : m_iMagic(LSSHM_HASH_MAGIC)
-    , m_pTable(NULL)
-    , m_pIdxStart(NULL)
-    , m_pIdxEnd(NULL)
-    , m_pBitMap(NULL)
-    , m_pLru(NULL)
-
     , m_pPool(pool)
     , m_iOffset(0)
     , m_pName(strdup(name))
-
     , m_hf(hf)
     , m_vc(vc)
+    , m_iLruMode(lru_mode)
 {
     m_iRef = 0;
-    m_iCapacity = 0;
     m_status = LSSHM_NOTREADY;
     m_pShmMap = NULL;
     m_pShmLock = NULL;
-    m_iLockEnable = 1;
+    m_iLockEnable = 1;      // enableLock()
 
     if ((m_pName == NULL) || (strlen(m_pName) >= LSSHM_MAXNAMELEN))
         return;
@@ -295,76 +237,79 @@ LsShmHash::LsShmHash(LsShmPool *pool, const char *name, size_t init_size,
         LsShmOffset_t regOffset = m_pPool->ptr2offset(p_reg);
 
         // Create new HASH Table
-        int remapped = 0;
+        int remapped;
 
         // NOTE: system is not up yet... ignore remap here
         m_iOffset = m_pPool->alloc2(sizeof(LsShmHTable), remapped);
         if (m_iOffset == 0)
             return;
-        LsShmOffset_t iTable = m_pPool->alloc2(sz2TableSz(init_size), remapped);
+        LsShmOffset_t iHIdx = m_pPool->alloc2(sz2TableSz(init_size), remapped);
         LsShmOffset_t iBitMap = m_pPool->alloc2(sz2BitMapSz(init_size), remapped);
+        LsShmOffset_t iLruHdr = ((m_iLruMode != LSSHM_LRU_NONE) ?
+            m_pPool->alloc2(sizeof(LsHashLruInfo), remapped) : 0);
 
         // MAP in the system here...
         m_pShmMap = m_pPool->getShmMap();
-        m_pTable = (LsShmHTable *)m_pPool->offset2ptr(m_iOffset);
+        LsShmHTable *pTable = getHTable();
 
-        m_pTable->x_iMagic = LSSHM_HASH_MAGIC;
-        m_pTable->x_iCapacity = init_size;
-        m_pTable->x_iSize = 0;
-        m_pTable->x_iFullFactor = 2;
-        m_pTable->x_iGrowFactor = 2;
-        m_pTable->x_iTable = iTable;
-        m_pTable->x_iBitMap = iBitMap;
-        m_pTable->x_iLockOffset = 0;
-        m_pTable->x_iLruOffset = 0;
+        pTable->x_iMagic = LSSHM_HASH_MAGIC;
+        pTable->x_iCapacity = init_size;
+        pTable->x_iSize = 0;
+        pTable->x_iFullFactor = 2;
+        pTable->x_iGrowFactor = 2;
+        pTable->x_iHIdx = iHIdx;
+        pTable->x_iBitMap = iBitMap;
+        pTable->x_iHIdxNew = iHIdx;
+        pTable->x_iCapacityNew = 0;
+        pTable->x_iWorkIterOff = 0;
+        pTable->x_iLruHdr = iLruHdr;
+        pTable->x_iLockOffset = 0;
 
-        if ((iTable == 0) || (iBitMap == 0))
+        if ((iHIdx == 0) || (iBitMap == 0)
+            || ((m_iLruMode != LSSHM_LRU_NONE) && (iLruHdr == 0)))
         {
-            initErrCleanUp();
+            releaseHTableShm();
             return;
         }
 
-        // setup local and global lock only if new
+        // setup lock only if new
         m_pShmLock = m_pPool->lockPool()->allocLock();
-        m_pShmGLock = m_pPool->lockPool()->allocLock();
-        if ((m_pShmLock == NULL) || (m_pShmGLock == NULL))
+        if ((m_pShmLock == NULL) || (setupLock() != 0))
         {
-            initErrCleanUp();
+            releaseHTableShm();
             return;
         }
-        if ((setupLock() != 0) || (setupGLock() != 0))
-        {
-            initErrCleanUp();
-            return;
-        }
-        m_pTable->x_iLockOffset = m_pPool->lockPool()->pLock2offset(m_pShmLock);
-        m_pTable->x_iGLockOffset =
-            m_pPool->lockPool()->pLock2offset(m_pShmGLock);
+        pTable->x_iLockOffset = m_pPool->lockPool()->pLock2offset(m_pShmLock);
 
-        m_pIdxStart = (LsShmHIdx *)m_pPool->offset2ptr(m_pTable->x_iTable);
-        m_pIdxEnd = m_pIdxStart + m_pTable->x_iCapacity;
-        m_pBitMap = (uint8_t *)m_pPool->offset2ptr(m_pTable->x_iBitMap);
-        m_iCapacity = m_pTable->x_iCapacity;
+        if (m_iLruMode != LSSHM_LRU_NONE)
+            ::memset(offset2ptr(iLruHdr), 0, sizeof(LsHashLruInfo));
 
         // clear all idx
-        ::memset(m_pIdxStart, 0, sz2TableSz(m_pTable->x_iCapacity));
-        ::memset(m_pBitMap, 0, sz2BitMapSz(m_pTable->x_iCapacity));
+        ::memset(offset2ptr(iHIdx), 0, sz2TableSz(pTable->x_iCapacity));
+        ::memset(offset2ptr(iBitMap), 0, sz2BitMapSz(pTable->x_iCapacity));
 
-        LsShmReg *xp_reg = (LsShmReg *)m_pPool->offset2ptr(regOffset);
+        LsShmReg *xp_reg = (LsShmReg *)offset2ptr(regOffset);
 
         xp_reg->x_iValue = m_iOffset;
-        m_pTable->x_iMode = m_iMode;
-        m_pTable->x_iLruMode = 0;
+        pTable->x_iMode = m_iMode;
+        pTable->x_iLruMode = m_iLruMode;
     }
     else
     {
-        remap();
+        LsShmHTable *pTable = getHTable();
 
         // check the magic and mode
-        if ((m_iMagic != m_pTable->x_iMagic) || (m_iMode != m_pTable->x_iMode))
+        if ((m_iMagic != pTable->x_iMagic)
+            || (m_iMode != pTable->x_iMode)
+            || (m_iLruMode != pTable->x_iLruMode))
             return;
+        m_pShmLock = m_pPool->lockPool()->offset2pLock(pTable->x_iLockOffset);
+        if (pTable->x_iHIdx != pTable->x_iHIdxNew)
+            rehash();
     }
 
+    if ((m_iLruMode == LSSHM_LRU_MODE2) || (m_iLruMode == LSSHM_LRU_MODE3))
+        m_iLockEnable = 0;  // shmlru routines lock manually on higher level
     m_iRef = 1;
     m_status = LSSHM_READY;
 #ifdef DEBUG_RUN
@@ -427,33 +372,30 @@ void LsShmHash::setGrowFactor(int f)
 }
 
 
-void LsShmHash::initErrCleanUp()
+void LsShmHash::releaseHTableShm()
 {
-    size_t size = m_pTable->x_iCapacity;
-    if (m_pTable->x_iTable != 0)
-    {
-        m_pPool->release2(m_pTable->x_iTable, sz2TableSz(size));
-        m_pTable->x_iTable = 0;
-    }
-    if (m_pTable->x_iBitMap != 0)
-    {
-        m_pPool->release2(m_pTable->x_iBitMap, sz2BitMapSz(size));
-        m_pTable->x_iBitMap = 0;
-    }
     if (m_iOffset != 0)
     {
+        LsShmHTable *pTable = getHTable();
+        if (pTable->x_iHIdx != 0)
+        {
+            m_pPool->release2(pTable->x_iHIdx, sz2TableSz(pTable->x_iCapacity));
+        }
+        if (pTable->x_iBitMap != 0)
+        {
+            m_pPool->release2(pTable->x_iBitMap, sz2BitMapSz(pTable->x_iCapacity));
+        }
+        if (pTable->x_iLruHdr != 0)
+        {
+            m_pPool->release2(pTable->x_iLruHdr, sizeof(LsHashLruInfo));
+        }
+        if (m_pShmLock != NULL)
+        {
+            m_pPool->lockPool()->freeLock(m_pShmLock);
+            m_pShmLock = NULL;
+        }
         m_pPool->release2(m_iOffset, sizeof(LsShmHTable));
         m_iOffset = 0;
-    }
-    if (m_pShmLock != NULL)
-    {
-        m_pPool->lockPool()->freeLock(m_pShmLock);
-        m_pShmLock = NULL;
-    }
-    if (m_pShmGLock != NULL)
-    {
-        m_pPool->lockPool()->freeLock(m_pShmGLock);
-        m_pShmGLock = NULL;
     }
 }
 
@@ -480,93 +422,103 @@ void LsShmHash::destroy()
 {
     if (m_iOffset != 0)
     {
-        // all elements
-        clear();
-        if (m_pTable->x_iTable != 0)
-        {
-            m_pPool->release2(
-                m_pTable->x_iTable, sz2TableSz(m_pTable->x_iCapacity));
-        }
-        if (m_pTable->x_iBitMap != 0)
-        {
-            m_pPool->release2(
-                m_pTable->x_iBitMap, sz2BitMapSz(m_pTable->x_iCapacity));
-        }
-        if (m_pTable->x_iLruOffset != 0)
-            m_pPool->release2(m_pTable->x_iLruOffset, sizeof(LsHashLruInfo));
-        m_pPool->release2(m_iOffset, sizeof(LsShmHTable));
-
         // remove from regMap
         LsShmReg *p_reg = m_pPool->findReg(m_pName);
         p_reg->x_iValue = 0;
-        m_iOffset = 0;
-        m_pTable = NULL;
-        m_pIdxStart = NULL;
-        m_pIdxEnd = NULL;
-        m_pBitMap = NULL;
-        m_pLru = NULL;
+
+        // all elements
+        clear();
+
+        releaseHTableShm();
     }
 }
 
 
 int LsShmHash::rehash()
 {
-    checkRemap();
-    int range = findRange(m_pTable->x_iCapacity);
-    int newSize = s_primeList[range + m_pTable->x_iGrowFactor];
-
+    int oldSize = capacity();
+    int newSize;;
+    LsShmOffset_t newIdxOff;
+    LsShmOffset_t newBitOff;
+    LsShmHIdx *pIdxOld;
+    LsShmHIdx *pIdxNew;
+    LsShmHIdx *opIdx;
+    LsShmHIdx *npIdx;
+    iterator iter;
+    iteroffset iterOff;
+    iteroffset iterNextOff;
 #ifdef DEBUG_RUN
     SHM_NOTICE("LsShmHash::rehash %6d %X %X size %d cap %d NEW %d",
                     getpid(), m_pShmMap, m_pPool->getShmMap(),
-                    m_pTable->x_iSize,
-                    m_pTable->x_iCapacity,
-                    newSize
+                    size(),
+                    oldSize,
+                    s_primeList[findRange(oldSize) + growFactor()]
                    );
 #endif
-    int remapped = 0;
-    LsShmOffset_t newIdxOff = m_pPool->alloc2(sz2TableSz(newSize), remapped);
-    if (newIdxOff == 0)
-        return LS_FAIL;
-    LsShmOffset_t newBitOff = m_pPool->alloc2(sz2BitMapSz(newSize), remapped);
-    if (newBitOff == 0)
+    LsShmHTable *pTable = getHTable();
+    pIdxOld = (LsShmHIdx *)m_pPool->offset2ptr(pTable->x_iHIdx);
+    if (pTable->x_iHIdx != pTable->x_iHIdxNew)          // rehash in progress
     {
-        m_pPool->release2(newIdxOff, sz2TableSz(newSize));
-        return LS_FAIL;
+        newSize = pTable->x_iCapacityNew;
+        newIdxOff = pTable->x_iHIdxNew;
+        pIdxNew = (LsShmHIdx *)m_pPool->offset2ptr(newIdxOff);
+        if ((iterOff = pTable->x_iWorkIterOff) != 0)    // iter in progress
+        {
+            iter = offset2iterator(iterOff);
+            npIdx = pIdxNew + getIndex(iter->x_hkey, newSize);
+            if (npIdx->x_iOffset != iterOff)            // not there yet
+            {
+                opIdx = pIdxOld + getIndex(iter->x_hkey, oldSize);
+                if (opIdx->x_iOffset == iterOff)
+                    opIdx->x_iOffset = iter->x_iNext;   // remove from old
+                iter->x_iNext = npIdx->x_iOffset;
+                npIdx->x_iOffset = iterOff;
+            }
+
+        }
+    }
+    else
+    {
+        int remapped;
+        newSize = s_primeList[findRange(oldSize) + growFactor()];
+        if ((newBitOff = m_pPool->alloc2(sz2BitMapSz(newSize), remapped)) == 0)
+            return LS_FAIL;
+        if ((newIdxOff = m_pPool->alloc2(sz2TableSz(newSize), remapped)) == 0)
+        {
+            m_pPool->release2(newBitOff, sz2BitMapSz(newSize));
+            return LS_FAIL;
+        }
+        pTable = getHTable();
+        pIdxNew = (LsShmHIdx *)m_pPool->offset2ptr(newIdxOff);
+        ::memset(pIdxNew, 0, sz2TableSz(newSize));
+        // change bitmap now, so setBitMapEnt may be called in loop.
+        m_pPool->release2(pTable->x_iBitMap, sz2BitMapSz(oldSize));
+        pTable->x_iBitMap = newBitOff;
+        ::memset(getBitMap(), 0, sz2BitMapSz(newSize));
+        pTable->x_iCapacityNew = newSize;
+        pTable->x_iHIdxNew = newIdxOff;
     }
 
-    // if (remapped)
-    remap();
-    LsShmHIdx *pIdx = (LsShmHIdx *)m_pPool->offset2ptr(newIdxOff);
-    ::memset(pIdx, 0, sz2TableSz(newSize));
-
-    // change bitmap now, so setBitMapEnt may be called in loop.
-    m_pPool->release2(
-        m_pTable->x_iBitMap, sz2BitMapSz(m_pTable->x_iCapacity));
-    m_pTable->x_iBitMap = newBitOff;
-    m_pBitMap = (uint8_t *)m_pPool->offset2ptr(newBitOff);
-    ::memset(m_pBitMap, 0, sz2BitMapSz(newSize));
-
-    iterator iter;
-    iteroffset iterOff;
-    for (iterOff = begin(); iterOff != end(); iterOff = next(iterOff))
+    for (iterOff = begin(); iterOff != end(); )
     {
+        uint32_t hashIndx;
         iter = offset2iterator(iterOff);
-        uint32_t hashIndx = getIndex(iter->x_hkey, newSize);
-        LsShmHIdx *npIdx = pIdx + hashIndx;
+        iterNextOff = next(iterOff);
+        hashIndx = getIndex(iter->x_hkey, newSize);
+        npIdx = pIdxNew + hashIndx;
         setBitMapEnt(hashIndx);
         assert(npIdx->x_iOffset < m_pPool->getShmMap()->x_iMaxSize);
+        pTable->x_iWorkIterOff = iterOff;
+        (pIdxOld + getIndex(iter->x_hkey, oldSize))->x_iOffset = iter->x_iNext;
         iter->x_iNext = npIdx->x_iOffset;
         npIdx->x_iOffset = iterOff;
+        iterOff = iterNextOff;
     }
+    pTable->x_iWorkIterOff = 0;
 
-    m_pPool->release2(
-        m_pTable->x_iTable, sz2TableSz(m_pTable->x_iCapacity));
-    m_pTable->x_iTable = newIdxOff;
-    m_pTable->x_iCapacity = newSize;
-    m_iCapacity = newSize;
-    m_pIdxStart = pIdx;
-    m_pIdxEnd = m_pIdxStart + newSize;
-    remap();
+    m_pPool->release2(pTable->x_iHIdx, sz2TableSz(oldSize));
+    pTable->x_iCapacity = newSize;
+    pTable->x_iHIdx = newIdxOff;
     return 0;
 }
 
@@ -582,19 +534,20 @@ int LsShmHash::release_hash_elem(LsShmHash::iteroffset iterOff, void *pUData)
 
 void LsShmHash::clear()
 {
-    checkRemap();
+    LsShmHTable *pTable = getHTable();
     int n = for_each2(begin(), end(), release_hash_elem, this);
-    assert(n == (int)m_pTable->x_iSize);
+    assert(n == (int)size());
 
-    ::memset(m_pIdxStart, 0, sz2TableSz(m_pTable->x_iCapacity));
-    ::memset(m_pBitMap, 0, sz2BitMapSz(m_pTable->x_iCapacity));
-    m_pTable->x_iSize = 0;
-    if (m_pLru != NULL)
+    ::memset(getHIdx(), 0, sz2TableSz(pTable->x_iCapacity));
+    ::memset(getBitMap(), 0, sz2BitMapSz(pTable->x_iCapacity));
+    pTable->x_iSize = 0;
+    if (m_iLruMode != LSSHM_LRU_NONE)
     {
-        m_pLru->linkFirst = 0;
-        m_pLru->linkLast = 0;
-        m_pLru->nvalset = 0;
-        m_pLru->ndataset = 0;
+        LsHashLruInfo *pLru = getLru();
+        pLru->linkFirst = 0;
+        pLru->linkLast = 0;
+        pLru->nvalset = 0;
+        pLru->ndataset = 0;
     }
 }
 
@@ -609,8 +562,8 @@ void LsShmHash::eraseIteratorHelper(iterator iter)
         return;
 
     iteroffset iterOff = m_pPool->ptr2offset(iter);
-    uint32_t hashIndx = getIndex(iter->x_hkey, m_pTable->x_iCapacity);
-    LsShmHIdx *pIdx = m_pIdxStart + hashIndx;
+    uint32_t hashIndx = getIndex(iter->x_hkey, capacity());
+    LsShmHIdx *pIdx = getHIdx() + hashIndx;
     LsShmOffset_t offset = pIdx->x_iOffset;
     LsShmHElem *pElem;
 
@@ -620,14 +573,15 @@ void LsShmHash::eraseIteratorHelper(iterator iter)
         SHM_NOTICE(
             "LsShmHash::eraseIteratorHelper %6d %X %X size %d cap %d",
             getpid(), m_pShmMap, m_pPool->getShmMap(),
-            m_pTable->x_iSize,
-            m_pTable->x_iCapacity
+            size(),
+            capacity()
         );
         sleep(10);
     }
 #endif
 
-    unlinkHElem(iter);
+    if (m_iLruMode != LSSHM_LRU_NONE)
+        unlinkHElem(iter);
     if (offset == iterOff)
     {
         if ((pIdx->x_iOffset = iter->x_iNext) == 0) // last one
@@ -650,24 +604,24 @@ void LsShmHash::eraseIteratorHelper(iterator iter)
     }
 
     m_pPool->release2(iterOff, iter->x_iLen);
-    --m_pTable->x_iSize;
+    decrTableSize();
 }
 
 
 LsShmHash::iteroffset LsShmHash::find2( LsShmHKey key, ls_str_pair_t *pParms)
 {
-    uint32_t hashIndx = getIndex(key, m_pTable->x_iCapacity);
+    uint32_t hashIndx = getIndex(key, capacity());
     if (getBitMapEnt(hashIndx) == 0)     // quick check
         return 0;
-    LsShmHIdx *pIdx = m_pIdxStart + hashIndx;
+    LsShmHIdx *pIdx = getHIdx() + hashIndx;
 
 #ifdef DEBUG_RUN
     SHM_NOTICE("LsShmHash::find %6d %X %X size %d cap %d <%p> %d",
                     getpid(), m_pShmMap, m_pPool->getShmMap(),
-                    m_pTable->x_iSize,
-                    m_pTable->x_iCapacity,
+                    size(),
+                    capacity(),
                     pIdx,
-                    getIndex(key, m_pTable->x_iCapacity)
+                    hashIndx
                    );
 #endif
     LsShmOffset_t offset = pIdx->x_iOffset;
@@ -682,7 +636,6 @@ LsShmHash::iteroffset LsShmHash::find2( LsShmHKey key, ls_str_pair_t *pParms)
                         ls_str_len(&pParms->key)) == 0))
             return offset;
         offset = pElem->x_iNext;
-        remap();
     }
     return 0;
 }
@@ -692,20 +645,20 @@ LsShmHash::iteroffset LsShmHash::insert2(LsShmHKey key, ls_str_pair_t *pParms)
 {
     uint32_t valueOff = sizeof(ls_vardata_t) + round4(ls_str_len(&pParms->key));
     int valLen = ls_str_len(&pParms->value);
-    valueSetup(&valueOff, &valLen);
+    if (m_iLruMode != LSSHM_LRU_NONE)
+        valueSetup(&valueOff, &valLen);
     int elementSize = sizeof(LsShmHElem) + valueOff
       + sizeof(ls_vardata_t) + round4(valLen);
-    int remapped = 0;
+    int remapped;
     LsShmOffset_t offset = m_pPool->alloc2(elementSize, remapped);
     if (offset == 0)
         return 0;
 
-    remap();
-    if (m_pTable->x_iSize * m_pTable->x_iFullFactor > m_pTable->x_iCapacity)
+    if (size() * fullFactor() > capacity())
     {
         if (rehash() < 0)
         {
-            if (m_pTable->x_iSize == m_pTable->x_iCapacity)
+            if (size() == capacity())
                 return 0;
         }
     }
@@ -720,10 +673,11 @@ LsShmHash::iteroffset LsShmHash::insert2(LsShmHKey key, ls_str_pair_t *pParms)
 
     setIterKey(pNew, ls_str_buf(&pParms->key));
     setIterData(pNew, ls_str_buf(&pParms->value));
-    linkHElem(pNew, offset);
+    if (m_iLruMode != LSSHM_LRU_NONE)
+        linkHElem(pNew, offset);
 
-    uint32_t hashIndx = getIndex(key, m_pTable->x_iCapacity);
-    LsShmHIdx *pIdx = m_pIdxStart + hashIndx;
+    uint32_t hashIndx = getIndex(key, capacity());
+    LsShmHIdx *pIdx = getHIdx() + hashIndx;
     pNew->x_iNext = pIdx->x_iOffset;
     pIdx->x_iOffset = offset;
     setBitMapEnt(hashIndx);
@@ -731,13 +685,13 @@ LsShmHash::iteroffset LsShmHash::insert2(LsShmHKey key, ls_str_pair_t *pParms)
 #ifdef DEBUG_RUN
     SHM_NOTICE("LsShmHash::insert %6d %X %X size %d cap %d <%p> %d",
                     getpid(), m_pShmMap, m_pPool->getShmMap(),
-                    m_pTable->x_iSize,
-                    m_pTable->x_iCapacity,
+                    size(),
+                    capacity(),
                     pIdx,
-                    getIndex(key, m_pTable->x_iCapacity)
+                    hashIndx
                    );
 #endif
-    ++m_pTable->x_iSize;
+    incrTableSize();
 
     return offset;
 }
@@ -747,10 +701,10 @@ LsShmHash::iteroffset LsShmHash::findNum(LsShmHash *pThis,
                                        ls_str_pair_t *pParms)
 {
     LsShmHKey key = (LsShmHKey)(long)ls_str_buf(&pParms->key);
-    uint32_t hashIndx = pThis->getIndex(key, pThis->m_pTable->x_iCapacity);
+    uint32_t hashIndx = pThis->getIndex(key, pThis->capacity());
     if (pThis->getBitMapEnt(hashIndx) == 0)     // quick check
         return 0;
-    LsShmHIdx *pIdx = pThis->m_pIdxStart + hashIndx;
+    LsShmHIdx *pIdx = pThis->getHIdx() + hashIndx;
     LsShmOffset_t offset = pIdx->x_iOffset;
     LsShmHElem *pElem;
 
@@ -772,7 +726,7 @@ LsShmHash::iteroffset LsShmHash::getNum(LsShmHash *pThis,
     iteroffset iterOff = findNum(pThis, pParms);
     char *keyptr = ls_str_buf(&pParms->key);
     ls_str_pair_t nparms;
-    ls_str_unsafeset(&nparms.key, (char *)&keyptr, sizeof(LsShmHKey));
+    ls_str_set(&nparms.key, (char *)&keyptr, sizeof(LsShmHKey));
     nparms.value = pParms->value;
 
     return doGet(pThis, iterOff, (LsShmHKey)(long)keyptr, &nparms, pFlag);
@@ -785,7 +739,7 @@ LsShmHash::iteroffset LsShmHash::insertNum(LsShmHash *pThis,
     iteroffset iterOff = findNum(pThis, pParms);
     char *keyptr = ls_str_buf(&pParms->key);
     ls_str_pair_t nparms;
-    ls_str_unsafeset(&nparms.key, (char *)&keyptr, sizeof(LsShmHKey));
+    ls_str_set(&nparms.key, (char *)&keyptr, sizeof(LsShmHKey));
     nparms.value = pParms->value;
 
     return doInsert(pThis, iterOff, (LsShmHKey)(long)keyptr, &nparms);
@@ -798,7 +752,7 @@ LsShmHash::iteroffset LsShmHash::setNum(LsShmHash *pThis,
     iteroffset iterOff = findNum(pThis, pParms);
     char *keyptr = ls_str_buf(&pParms->key);
     ls_str_pair_t nparms;
-    ls_str_unsafeset(&nparms.key, (char *)&keyptr, sizeof(LsShmHKey));
+    ls_str_set(&nparms.key, (char *)&keyptr, sizeof(LsShmHKey));
     nparms.value = pParms->value;
 
     return doSet(pThis, iterOff, (LsShmHKey)(long)keyptr, &nparms);
@@ -811,7 +765,7 @@ LsShmHash::iteroffset LsShmHash::updateNum(LsShmHash *pThis,
     iteroffset iterOff = findNum(pThis, pParms);
     char *keyptr = ls_str_buf(&pParms->key);
     ls_str_pair_t nparms;
-    ls_str_unsafeset(&nparms.key, (char *)&keyptr, sizeof(LsShmHKey));
+    ls_str_set(&nparms.key, (char *)&keyptr, sizeof(LsShmHKey));
     nparms.value = pParms->value;
 
     return doUpdate(pThis, iterOff, (LsShmHKey)(long)keyptr, &nparms);
@@ -869,12 +823,12 @@ LsShmHash::iteroffset LsShmHash::updatePtr(LsShmHash *pThis, ls_str_pair_t *pPar
 
 LsShmHash::iteroffset LsShmHash::begin()
 {
-    checkRemap();
-    if (m_pTable->x_iSize == 0)
+    if (size() == 0)
         return end();
 
-    LsShmHIdx *p = m_pIdxStart;
-    while (p < m_pIdxEnd)
+    LsShmHIdx *p = getHIdx();
+    LsShmHIdx *pIdxEnd = p + capacity();
+    while (p < pIdxEnd)
     {
         if (p->x_iOffset != 0)
             return (iteroffset)p->x_iOffset;
@@ -892,10 +846,10 @@ LsShmHash::iteroffset LsShmHash::next(iteroffset iterOff)
     if (iter->x_iNext != 0)
         return (iteroffset)iter->x_iNext;
 
-    LsShmHIdx *p;
-    checkRemap();
-    p = m_pIdxStart + getIndex(iter->x_hkey, m_pTable->x_iCapacity) + 1;
-    while (p < m_pIdxEnd)
+    LsShmHIdx *p = getHIdx();
+    LsShmHIdx *pIdxEnd = p + capacity();
+    p += (getIndex(iter->x_hkey, capacity()) + 1);
+    while (p < pIdxEnd)
     {
         if (p->x_iOffset != 0)
         {
@@ -1033,8 +987,9 @@ int LsShmHash::stat(LsHashStat *pHashStat, for_each_fn2 fun)
     ::memset(pHashStat, 0, sizeof(LsHashStat));
 
     // search each idx
-    LsShmHIdx *p = m_pIdxStart;
-    while (p < m_pIdxEnd)
+    LsShmHIdx *p = getHIdx();
+    LsShmHIdx *pIdxEnd = p + capacity();
+    while (p < pIdxEnd)
     {
         ++pHashStat->numIdx;
         if (p->x_iOffset != 0)

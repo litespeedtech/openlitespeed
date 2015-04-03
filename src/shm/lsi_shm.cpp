@@ -158,7 +158,7 @@ lsi_shmhash_t *lsi_shmhash_open(lsi_shmpool_t *poolhandle,
                                 lsi_val_comp vc)
 {
     check_defaults(&initialsize, &hf, &vc);
-    return ((LsShmPool *)poolhandle)->getNamedHash(hash_table_name, initialsize, hf, vc);
+    return ((LsShmPool *)poolhandle)->getNamedHash(hash_table_name, initialsize, hf, vc, LSSHM_LRU_NONE);
 }
 
 
@@ -170,12 +170,15 @@ lsi_shmhash_t *lsi_shmlruhash_open(lsi_shmpool_t *poolhandle,
                                    int mode)
 {
     check_defaults(&initialsize, &hf, &vc);
-    if (mode == 0)
-        return ((LsShmPool *)poolhandle)->getNamedWLruHash(
-                   hash_table_name, initialsize, hf, vc);
-    else
-        return ((LsShmPool *)poolhandle)->getNamedXLruHash(
-                   hash_table_name, initialsize, hf, vc);
+    switch (mode)
+    {
+    case LSSHM_LRU_MODE2:
+    case LSSHM_LRU_MODE3:
+        return ((LsShmPool *)poolhandle)->getNamedHash(
+                   hash_table_name, initialsize, hf, vc, mode);
+    default:
+        return NULL;
+    }
 }
 
 
@@ -286,41 +289,39 @@ void lsi_shmhash_clear(lsi_shmhash_t *hashhandle)
 int lsi_shmhash_setdata(lsi_shmhash_t *hashhandle,
                         LsShmOffset_t offVal, const uint8_t *value, int valuelen)
 {
-    return ((LsShmLruHash *)hashhandle)->setLruData(offVal, value, valuelen);
+    return ((LsShmHash *)hashhandle)->setLruData(offVal, value, valuelen);
 }
 
 
 int lsi_shmhash_getdata(lsi_shmhash_t *hashhandle,
                         LsShmOffset_t offVal, LsShmOffset_t *pvalue, int cnt)
 {
-    return ((LsShmLruHash *)hashhandle)->getLruData(offVal, pvalue, cnt);
+    return ((LsShmHash *)hashhandle)->getLruData(offVal, pvalue, cnt);
 }
 
 
 int lsi_shmhash_getdataptrs(lsi_shmhash_t *hashhandle,
                             LsShmOffset_t offVal, int (*func)(void *pData))
 {
-    return ((LsShmLruHash *)hashhandle)->getLruDataPtrs(offVal, func);
+    return ((LsShmHash *)hashhandle)->getLruDataPtrs(offVal, func);
 }
 
 
 int lsi_shmhash_trim(lsi_shmhash_t *hashhandle, time_t tmcutoff)
 {
-    return ((LsShmLruHash *)hashhandle)->trim(tmcutoff);
+    return ((LsShmHash *)hashhandle)->trim(tmcutoff);
 }
 
 
 int lsi_shmhash_check(lsi_shmhash_t *hashhandle)
 {
-    return ((LsShmLruHash *)hashhandle)->check();
+    return ((LsShmHash *)hashhandle)->check();
 }
 
 
 int lsi_shmhash_lock(lsi_shmhash_t *hashhandle)
 {
-    int ret = ((LsShmHash *)hashhandle)->lock();
-    ((LsShmHash *)hashhandle)->checkRemap();
-    return ret;
+    return ((LsShmHash *)hashhandle)->lock();
 }
 
 

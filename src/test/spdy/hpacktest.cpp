@@ -16,28 +16,28 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #ifdef RUN_TEST
+#include "hpacktest.h"
 #include "test/unittest-cpp/UnitTest++/src/UnitTest++.h"
-#include "spdy/hpack.h"
 #include <util/autostr.h>
 #include <stdlib.h>
 #include <stdio.h>
 
 
-void addEntry(HPackDynTab &dynTab, const char *name,
+void addEntry(HpackDynTbl &dynTab, const char *name,
               const char *value, uint8_t nameId)
 {
     dynTab.pushEntry((char *)name, strlen(name), (char *)value, strlen(value),
                      nameId);
 }
 
-void printTable(HPackDynTab &dynTab)
+void printTable(HpackDynTbl &dynTab)
 {
     printf("Dynamic Table : \n");
     int count = dynTab.getEntryCount();
     for (int i = 1 ; i <= count; ++i)
     {
-        int tabId = i + HPackStxTabCount;
-        DynTabEntry *pEntry = (DynTabEntry *)dynTab.getEntry(
+        int tabId = i + HPACK_STATIC_TABLE_SIZE;
+        DynTblEntry *pEntry = (DynTblEntry *)dynTab.getEntry(
                                         tabId);
 
         printf("[%3d]  (s = %3d) %s: %s\n",
@@ -48,8 +48,10 @@ void printTable(HPackDynTab &dynTab)
 
 TEST(hapck_test_1)
 {
-    HPackDynTab dynTable;
+    HpackDynTbl dynTable;
     dynTable.updateMaxCapacity(256);
+    
+    printf( "size of DynTblEntry is %d\n", sizeof( DynTblEntry ));
 
     addEntry(dynTable, ":authority", "www.example.com", 1);
     printTable(dynTable);
@@ -180,7 +182,7 @@ TEST(hapck_test_RFC_EXample)
     unsigned char respBuf[8192] = {0};
     unsigned char *respBufEnd = respBuf + 8192;
     Hpack hpack;
-    hpack.getRespDynTab().updateMaxCapacity(256);
+    hpack.getRespDynTbl().updateMaxCapacity(256);
 
     unsigned char *pBuf = respBuf;
     pBuf = hpack.encHeader(pBuf, respBufEnd, STR_TO_IOVEC_TEST(":status"),
@@ -192,7 +194,7 @@ TEST(hapck_test_RFC_EXample)
     pBuf = hpack.encHeader(pBuf, respBufEnd, STR_TO_IOVEC_TEST("location"),
                            STR_TO_IOVEC_TEST("https://www.example.com"));
     displayHeader(respBuf, pBuf - respBuf);
-    printTable(hpack.getRespDynTab());
+    printTable(hpack.getRespDynTbl());
     char bufSample1[] =
         "\x48\x82\x64\x02\x58\x85\xae\xc3\x77\x1a\x4b\x61\x96\xd0\x7a\xbe"
         "\x94\x10\x54\xd4\x44\xa8\x20\x05\x95\x04\x0b\x81\x66\xe0\x82\xa6"
@@ -204,39 +206,39 @@ TEST(hapck_test_RFC_EXample)
     pBuf = respBuf;
     pBuf = hpack.encHeader(pBuf, respBufEnd, STR_TO_IOVEC_TEST(":status"),
                            STR_TO_IOVEC_TEST("307"));
-    printTable(hpack.getRespDynTab());
+    printTable(hpack.getRespDynTbl());
     pBuf = hpack.encHeader(pBuf, respBufEnd,
                            STR_TO_IOVEC_TEST("cache-control"), STR_TO_IOVEC_TEST("private"));
-    printTable(hpack.getRespDynTab());
+    printTable(hpack.getRespDynTbl());
     pBuf = hpack.encHeader(pBuf, respBufEnd, STR_TO_IOVEC_TEST("date"),
                            STR_TO_IOVEC_TEST("Mon, 21 Oct 2013 20:13:21 GMT"));
-    printTable(hpack.getRespDynTab());
+    printTable(hpack.getRespDynTbl());
     pBuf = hpack.encHeader(pBuf, respBufEnd, STR_TO_IOVEC_TEST("location"),
                            STR_TO_IOVEC_TEST("https://www.example.com"));
     displayHeader(respBuf, pBuf - respBuf);
-    printTable(hpack.getRespDynTab());
+    printTable(hpack.getRespDynTbl());
     char bufSample2[] = "\x48\x83\x64\x0e\xff\xc1\xc0\xbf";
     CHECK(memcmp(bufSample2, respBuf, pBuf - respBuf) == 0);
 
     pBuf = respBuf;
     pBuf = hpack.encHeader(pBuf, respBufEnd, STR_TO_IOVEC_TEST(":status"),
                            STR_TO_IOVEC_TEST("200"));
-    printTable(hpack.getRespDynTab());
+    printTable(hpack.getRespDynTbl());
     pBuf = hpack.encHeader(pBuf, respBufEnd,
                            STR_TO_IOVEC_TEST("cache-control"), STR_TO_IOVEC_TEST("private"));
-    printTable(hpack.getRespDynTab());
+    printTable(hpack.getRespDynTbl());
     pBuf = hpack.encHeader(pBuf, respBufEnd, STR_TO_IOVEC_TEST("date"),
                            STR_TO_IOVEC_TEST("Mon, 21 Oct 2013 20:13:22 GMT"));
-    printTable(hpack.getRespDynTab());
+    printTable(hpack.getRespDynTbl());
     pBuf = hpack.encHeader(pBuf, respBufEnd, STR_TO_IOVEC_TEST("location"),
                            STR_TO_IOVEC_TEST("https://www.example.com"));
-    printTable(hpack.getRespDynTab());
+    printTable(hpack.getRespDynTbl());
     pBuf = hpack.encHeader(pBuf, respBufEnd,
                            STR_TO_IOVEC_TEST("content-encoding"), STR_TO_IOVEC_TEST("gzip"));
-    printTable(hpack.getRespDynTab());
+    printTable(hpack.getRespDynTbl());
     pBuf = hpack.encHeader(pBuf, respBufEnd, STR_TO_IOVEC_TEST("set-cookie"),
                            STR_TO_IOVEC_TEST("foo=ASDJKHQKBZXOQWEOPIUAXQWEOIU; max-age=3600; version=1"));
-    printTable(hpack.getRespDynTab());
+    printTable(hpack.getRespDynTbl());
     displayHeader(respBuf, pBuf - respBuf);
 
 
@@ -272,7 +274,7 @@ TEST(hapck_test_RFC_EXample)
                AutoStr2(name,name_len).c_str(),
                AutoStr2(val, val_len).c_str());
     }
-    printTable(hpack.getReqDynTab());
+    printTable(hpack.getReqDynTbl());
 
 
     unsigned char *bufSamp = (unsigned char *)
@@ -287,7 +289,7 @@ TEST(hapck_test_RFC_EXample)
                AutoStr2(name,name_len).c_str(),
                AutoStr2(val, val_len).c_str());
     }
-    printTable(hpack.getReqDynTab());
+    printTable(hpack.getReqDynTbl());
 
     bufSamp = (unsigned char *)
               "\x82\x87\x85\xbf\x40\x88\x25\xa8\x49\xe9\x5b\xa9\x7d\x7f\x89\x25\xa8\x49\xe9\x5b\xb8\xe8\xb4\xbf";
@@ -301,7 +303,7 @@ TEST(hapck_test_RFC_EXample)
                AutoStr2(name,name_len).c_str(),
                AutoStr2(val, val_len).c_str());
     }
-    printTable(hpack.getReqDynTab());
+    printTable(hpack.getReqDynTbl());
 
 }
 
@@ -311,8 +313,8 @@ TEST(hapck_self_enc_dec_test)
     unsigned char respBuf[8192] = {0};
     unsigned char *respBufEnd = respBuf + 8192;
     Hpack hpack;
-    hpack.getRespDynTab().updateMaxCapacity(256);
-    hpack.getReqDynTab().updateMaxCapacity(256);
+    hpack.getRespDynTbl().updateMaxCapacity(256);
+    hpack.getReqDynTbl().updateMaxCapacity(256);
 
     //1:
     unsigned char *pBuf = respBuf;
@@ -330,7 +332,7 @@ TEST(hapck_self_enc_dec_test)
     pBuf = hpack.encHeader(pBuf, respBufEnd, STR_TO_IOVEC_TEST("my-test_key"),
                            STR_TO_IOVEC_TEST("my-test-values1111"));
     displayHeader(respBuf, pBuf - respBuf);
-    printTable(hpack.getRespDynTab());
+    printTable(hpack.getRespDynTbl());
 
 
     /****************************
@@ -352,7 +354,7 @@ TEST(hapck_self_enc_dec_test)
                AutoStr2(name,name_len).c_str(),
                AutoStr2(val, val_len).c_str());
     }
-    printTable(hpack.getReqDynTab());
+    printTable(hpack.getReqDynTbl());
 
 
 
@@ -383,7 +385,7 @@ TEST(hapck_self_enc_dec_test)
     pBuf = hpack.encHeader(pBuf, respBufEnd,
                            STR_TO_IOVEC_TEST("my-test_key44"), STR_TO_IOVEC_TEST("my-test-value444"));
     displayHeader(respBuf, pBuf - respBuf);
-    printTable(hpack.getRespDynTab());
+    printTable(hpack.getRespDynTbl());
 
 
     /****************************
@@ -399,7 +401,7 @@ TEST(hapck_self_enc_dec_test)
                AutoStr2(name,name_len).c_str(),
                AutoStr2(val, val_len).c_str());
     }
-    printTable(hpack.getReqDynTab());
+    printTable(hpack.getReqDynTbl());
 
     //3:
     pBuf = respBuf;
@@ -425,7 +427,7 @@ TEST(hapck_self_enc_dec_test)
     pBuf = hpack.encHeader(pBuf, respBufEnd,
                            STR_TO_IOVEC_TEST("my-test_key44"), STR_TO_IOVEC_TEST("my-test-value444"));
     displayHeader(respBuf, pBuf - respBuf);
-    printTable(hpack.getRespDynTab());
+    printTable(hpack.getRespDynTbl());
 
 
     /****************************
@@ -441,7 +443,7 @@ TEST(hapck_self_enc_dec_test)
                AutoStr2(name,name_len).c_str(),
                AutoStr2(val, val_len).c_str());
     }
-    printTable(hpack.getReqDynTab());
+    printTable(hpack.getReqDynTbl());
 
 
 
@@ -450,7 +452,7 @@ TEST(hapck_self_enc_dec_test)
 
 
 #define LS_STR_TO_IOVEC(a) (a), (sizeof(a) -1)
-static HPackHeaderTable_t g_HPackDynInitTable_t[] = {
+static HpackHdrTbl_t g_HpackDynInitTable_t[] = {
 {LS_STR_TO_IOVEC("content-length"),    LS_STR_TO_IOVEC("2145") },
 {LS_STR_TO_IOVEC("etag"),    LS_STR_TO_IOVEC("\"1e0c-54feefd5-7bfd383f\"") },
 {LS_STR_TO_IOVEC("content-length"),    LS_STR_TO_IOVEC("31793") },
@@ -529,33 +531,34 @@ TEST(hapck_self_enc_dec_test_firefox_error)
     unsigned char respBuf[8192] = {0};
     unsigned char *respBufEnd = respBuf + 8192;
     Hpack hpack;
-    int nCount = sizeof(g_HPackDynInitTable_t) / sizeof(HPackHeaderTable_t);
-    for ( int i=nCount -1; i>=0; --i )
+    int nCount = sizeof(g_HpackDynInitTable_t) / sizeof(HpackHdrTbl_t);
+    int i;
+    for ( i=nCount -1; i>=0; --i )
     {
         int val_match;
-        int staticTableIndex = Hpack::getStxTabId((char *)g_HPackDynInitTable_t[i].name, 
-                                                       g_HPackDynInitTable_t[i].name_len,
-                                                       (char *)g_HPackDynInitTable_t[i].val,
-                                                       g_HPackDynInitTable_t[i].val_len,
+        int staticTableIndex = Hpack::getStxTabId((char *)g_HpackDynInitTable_t[i].name, 
+                                                       g_HpackDynInitTable_t[i].name_len,
+                                                       (char *)g_HpackDynInitTable_t[i].val,
+                                                       g_HpackDynInitTable_t[i].val_len,
                                                        val_match);
         
         if (staticTableIndex <= 0)
             printf("Error, not in static table. \n");
         
-        hpack.getReqDynTab().pushEntry((char *)g_HPackDynInitTable_t[i].name, 
-                                             g_HPackDynInitTable_t[i].name_len,
-                                             (char *)g_HPackDynInitTable_t[i].val,
-                                             g_HPackDynInitTable_t[i].val_len,
+        hpack.getReqDynTbl().pushEntry((char *)g_HpackDynInitTable_t[i].name, 
+                                             g_HpackDynInitTable_t[i].name_len,
+                                             (char *)g_HpackDynInitTable_t[i].val,
+                                             g_HpackDynInitTable_t[i].val_len,
                                              staticTableIndex);
         
-        hpack.getRespDynTab().pushEntry((char *)g_HPackDynInitTable_t[i].name, 
-                                             g_HPackDynInitTable_t[i].name_len,
-                                             (char *)g_HPackDynInitTable_t[i].val,
-                                             g_HPackDynInitTable_t[i].val_len,
+        hpack.getRespDynTbl().pushEntry((char *)g_HpackDynInitTable_t[i].name, 
+                                             g_HpackDynInitTable_t[i].name_len,
+                                             (char *)g_HpackDynInitTable_t[i].val,
+                                             g_HpackDynInitTable_t[i].val_len,
                                              staticTableIndex);
         
     }
-    printTable(hpack.getReqDynTab());
+    printTable(hpack.getReqDynTbl());
     
     
     char buf[] = "\x88\xF9\x64\x96\xDF\x69\x7E\x94\x0B\xAA\x68\x1D\x8A\x08\x01\x6D"
@@ -594,14 +597,153 @@ TEST(hapck_self_enc_dec_test_firefox_error)
     
     displayHeader(respBuf, pBuf - respBuf);
     CHECK(memcmp(respBuf, buf, 90) ==0);
+}
+
+
+TEST(getDynTblId_testing)
+{
+    HpackDynTbl dynTbl0;
+    HpackDynTbl_Forloop dynTbl1;
+    int nCount = sizeof(g_HpackDynInitTable_t) / sizeof(HpackHdrTbl_t);
+    int i;
+    for ( i=nCount -1; i>=0; --i )
+    {
+        int val_match;
+        int staticTableIndex = Hpack::getStxTabId((char *)g_HpackDynInitTable_t[i].name, 
+                                                       g_HpackDynInitTable_t[i].name_len,
+                                                       (char *)g_HpackDynInitTable_t[i].val,
+                                                       g_HpackDynInitTable_t[i].val_len,
+                                                       val_match);
+        
+        if (staticTableIndex <= 0)
+            printf("Error, not in static table. \n");
+        
+        dynTbl0.pushEntry((char *)g_HpackDynInitTable_t[i].name, 
+                                             g_HpackDynInitTable_t[i].name_len,
+                                             (char *)g_HpackDynInitTable_t[i].val,
+                                             g_HpackDynInitTable_t[i].val_len,
+                                             staticTableIndex);
+        
+        dynTbl1.pushEntry((char *)g_HpackDynInitTable_t[i].name, 
+                                             g_HpackDynInitTable_t[i].name_len,
+                                             (char *)g_HpackDynInitTable_t[i].val,
+                                             g_HpackDynInitTable_t[i].val_len,
+                                             staticTableIndex);
+    }
     
+    printf("\nSpeed test of getDynTblId:");
+    printf("\nWith hashTable testing ");
+    
+    time_t t0 = time(NULL);
+    char name[20];
+    char val[20];
+    int name_len =14;
+    int val_len = 13;
+    int val_matched;
+    for (int k = 0; k < 8000 ; ++k)
+    {
+        for (i = 0; i< 97; ++i)
+        {
+            sprintf(name, "TESTHEADER%04d", i);
+            sprintf(val, "TESTVALUE%04d", i);
+            dynTbl0.getDynTabId((char *)name, name_len, (char *)val, val_len, val_matched, 0);
+            dynTbl0.pushEntry(name, name_len, val, val_len, 0);
+            
+            sprintf(name, "TESTHEADER%04d", i+1);
+            sprintf(val, "TESTVALUE%04d", i+1);
+            dynTbl0.getDynTabId(name, name_len, val, val_len, val_matched, 0);
+            
+            sprintf(name, "TESTHEADER%04d", i+2);
+            sprintf(val, "TESTVALUE%04d", i+2);
+            dynTbl0.getDynTabId(name, name_len, val, val_len, val_matched, 0);
+        }
+    }
+    time_t t1 = time(NULL);
+    printf("(100 headers)----time: %ds\n", (int)(t1 - t0));
+
+    printf("Without hashTable testing (use for loop) ");
+    
+    t0 = time(NULL);
+    for (int k = 0; k < 8000 ; ++k)
+    {
+        for (i = 0; i< 97; ++i)
+        {
+            sprintf(name, "TESTHEADER%04d", i);
+            sprintf(val, "TESTVALUE%04d", i);
+            dynTbl1.getDynTabId(name, name_len, val, val_len, val_matched, 0);
+            dynTbl1.pushEntry(name, name_len, val, val_len, 0);
+            
+            sprintf(name, "TESTHEADER%04d", i+1);
+            sprintf(val, "TESTVALUE%04d", i+1);
+            dynTbl1.getDynTabId(name, name_len, val, val_len, val_matched, 0);
+            
+            sprintf(name, "TESTHEADER%04d", i+2);
+            sprintf(val, "TESTVALUE%04d", i+2);
+            dynTbl1.getDynTabId(name, name_len, val, val_len, val_matched, 0);
+        }
+    }
+    t1 = time(NULL);
+    printf("(100 headers)----time: %ds\n", (int)(t1 - t0));
+    
+    //============================================
+    printf("\nWith hashTable testing ");
+    t0 = time(NULL);
+    for (int k = 0; k < 4000 ; ++k)
+    {
+        for (i = 0; i< 997; ++i)
+        {
+            sprintf(name, "TESTHEADER%04d", i);
+            sprintf(val, "TESTVALUE%04d", i);
+            dynTbl0.getDynTabId((char *)name, name_len, (char *)val, val_len, val_matched, 0);
+            dynTbl0.pushEntry(name, name_len, val, val_len, 0);
+            
+            sprintf(name, "TESTHEADER%04d", i+1);
+            sprintf(val, "TESTVALUE%04d", i+1);
+            dynTbl0.getDynTabId(name, name_len, val, val_len, val_matched, 0);
+            
+            sprintf(name, "TESTHEADER%04d", i+2);
+            sprintf(val, "TESTVALUE%04d", i+2);
+            dynTbl0.getDynTabId(name, name_len, val, val_len, val_matched, 0);
+        }
+    }
+    t1 = time(NULL);
+    printf("(1000 headers)----time: %ds\n", (int)(t1 - t0));
+
+    printf("Without hashTable testing (use for loop) ");
+    
+    t0 = time(NULL);
+    for (int k = 0; k < 4000 ; ++k)
+    {
+        for (i = 0; i< 997; ++i)
+        {
+            sprintf(name, "TESTHEADER%04d", i);
+            sprintf(val, "TESTVALUE%04d", i);
+            dynTbl1.getDynTabId(name, name_len, val, val_len, val_matched, 0);
+            dynTbl1.pushEntry(name, name_len, val, val_len, 0);
+            
+            sprintf(name, "TESTHEADER%04d", i+1);
+            sprintf(val, "TESTVALUE%04d", i+1);
+            dynTbl1.getDynTabId(name, name_len, val, val_len, val_matched, 0);
+            
+            sprintf(name, "TESTHEADER%04d", i+2);
+            sprintf(val, "TESTVALUE%04d", i+2);
+            dynTbl1.getDynTabId(name, name_len, val, val_len, val_matched, 0);
+        }
+    }
+    t1 = time(NULL);
+    printf("(1000 headers)----time: %ds\n", (int)(t1 - t0));
+    
+    
+    
+    
+
     printf("\nhapck_self_enc_dec_test_firefox_error Done\n");
     
     
-
 }
 
-static HPackHeaderTable_t g_HPackStaticTableTset[] =
+
+static HpackHdrTbl_t g_HpackStaticTableTset[] =
 {
     { LS_STR_TO_IOVEC(":authority"),         LS_STR_TO_IOVEC("") },
     { LS_STR_TO_IOVEC(":method"),            LS_STR_TO_IOVEC("GET") },
@@ -668,17 +810,17 @@ static HPackHeaderTable_t g_HPackStaticTableTset[] =
 
 TEST(hapck_getStaticTableId)
 {
-    int count = sizeof(g_HPackStaticTableTset) / sizeof(HPackHeaderTable_t);
+    int count = sizeof(g_HpackStaticTableTset) / sizeof(HpackHdrTbl_t);
     CHECK(count == 61);
     
     int val_matched;
     int id;
     for (int i = 0; i< count; ++i)
     {
-        id = Hpack::getStxTabId((char *)g_HPackStaticTableTset[i].name,
-                                         g_HPackStaticTableTset[i].name_len,
-                                         (char *)g_HPackStaticTableTset[i].val,
-                                         g_HPackStaticTableTset[i].val_len,
+        id = Hpack::getStxTabId((char *)g_HpackStaticTableTset[i].name,
+                                         g_HpackStaticTableTset[i].name_len,
+                                         (char *)g_HpackStaticTableTset[i].val,
+                                         g_HpackStaticTableTset[i].val_len,
                                          val_matched);
         CHECK(id == i + 1);
         if (i >= 1 && i <= 15 && i != 14)

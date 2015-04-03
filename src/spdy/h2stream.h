@@ -40,11 +40,6 @@ public:
              HioHandler *pHandler, Priority_st *pPriority = NULL);
     int onInitConnected(bool bUpgraded = false);
 
-    int getPriority() const
-    {
-        return m_iPriority;
-    }
-
     int appendReqData(char *pData, int len, uint8_t H2_Flags);
 
     int read(char *buf, int len);
@@ -89,7 +84,7 @@ public:
     int adjWindowOut(int32_t n);
 
     int32_t getWindowIn() const     {   return m_iWindowIn;     }
-    void adjWindowIn(int32_t n)  {   m_iWindowIn += n;       }
+    void adjWindowIn(int32_t n)     {   m_iWindowIn += n;       }
 
     void clearBufIn()               {   m_bufIn.clear();        }
     LoopBuf *getBufIn()             {   return &m_bufIn;        }
@@ -107,8 +102,9 @@ public:
     }
 
     uint8_t getReqHeaderEnd() {   return m_reqHeaderEnd;  }
-    void    setReqHeaderEnd(uint8_t v) {   m_reqHeaderEnd = v;  }
+    void    setReqHeaderEnd(uint8_t v)  {   m_reqHeaderEnd = v;  }
 
+    void setContentlen( int32_t len )   {   m_iContentLen = len;    }
 
 private:
     bool operator==(const H2Stream &other) const;
@@ -122,11 +118,12 @@ protected:
 
 private:
     uint32_t    m_uiStreamID;
-    int         m_iPriority;
     int32_t     m_iWindowOut;
     int32_t     m_iWindowIn;
     H2Connection *m_pH2Conn;
     LoopBuf     m_bufIn;
+    int32_t     m_iContentLen;
+    int32_t     m_iContentRead;
 
     uint8_t     m_reqHeaderEnd;
 

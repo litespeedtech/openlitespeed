@@ -3003,11 +3003,14 @@ void HttpSession::addLocationHeader()
     if (*pLocation == '/')
     {
         const char *pHost = m_request.getHeader(HttpHeader::H_HOST);
-        if (isSSL())
-            headers.appendLastVal("https://", 8);
-        else
-            headers.appendLastVal("http://", 7);
-        headers.appendLastVal(pHost, m_request.getHeaderLen(HttpHeader::H_HOST));
+        if (*pHost)
+        {
+            if (isSSL())
+                headers.appendLastVal("https://", 8);
+            else
+                headers.appendLastVal("http://", 7);
+            headers.appendLastVal(pHost, m_request.getHeaderLen(HttpHeader::H_HOST));
+        }
     }
     headers.appendLastVal(pLocation, m_request.getLocationLen());
 }

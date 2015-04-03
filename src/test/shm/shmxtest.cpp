@@ -33,6 +33,7 @@ static const char *g_pHashName = "XPOOLHASH";
 
 #define SZ_TESTBCKT     32
 #define SZ_TESTLIST     256
+#define SZ_LISTMIN      256
 
 typedef struct xxx_s {
     int x[10];
@@ -69,7 +70,8 @@ TEST(shmPerProcess_test)
     CHECK((pShm = LsShm::open(g_pShmName, 0, "/etc")) == NULL);
     pMsg = LsShm::getErrMsg();
     CHECK(*pMsg != '\0');
-    printf("pShm=%p, Expected Msg: [%s]\n", pShm, pMsg);
+    printf("pShm=%p, Expected Msg: [%s], stat=%d, errno=%d.\n",
+           pShm, pMsg, LsShm::getErrStat(), LsShm::getErrNo());
     LsShm::clrErrMsg();
     CHECK(*pMsg == '\0');
 
@@ -115,14 +117,14 @@ TEST(shmPerProcess_test)
     if (pPool2 == NULL)
         return;
 
-    CHECK((pHash1 = pPool1->getNamedHash(g_pHashName, 0, NULL, NULL)) != NULL);
+    CHECK((pHash1 = pPool1->getNamedHash(g_pHashName, 0, NULL, NULL, LSSHM_LRU_NONE)) != NULL);
     if (pHash1 == NULL)
         return;
     const void *pKey = (const void *)0x11223344;
     int val = 0x01020304;
     CHECK(pHash1->insert(pKey, 0, (const void *)&val, sizeof(val)) != 0);
     CHECK(pHash1->insert(pKey, 0, (const void *)&val, sizeof(val)) == 0); // dup
-    CHECK((pHash2 = pPool2->getNamedHash(g_pHashName, 0, NULL, NULL)) != NULL);
+    CHECK((pHash2 = pPool2->getNamedHash(g_pHashName, 0, NULL, NULL, LSSHM_LRU_NONE)) != NULL);
     if (pHash2 == NULL)
         return;
 
@@ -137,7 +139,7 @@ TEST(shmPerProcess_test)
     int ret;
 
     pTHash = (TShmHash <xxx_t> *)pGPool->getNamedHash(
-      "tmplHash", 0, LsShmHash::hashXXH32, LsShmHash::compBuf);
+      "tmplHash", 0, LsShmHash::hashXXH32, LsShmHash::compBuf, LSSHM_LRU_NONE);
     xxx.x[0] = 0x1234;
     CHECK(pTHash->update(aKey, iKeyLen, &xxx) == 0);
     CHECK((off = pTHash->get(aKey, iKeyLen, &iValLen, &ret)) != 0);
@@ -149,8 +151,8 @@ TEST(shmPerProcess_test)
     CHECK(ret == sizeof(xxx));
 
     xxx.x[0] = 0x5678;
-    ls_str_unsafeset(&parms.key, (char *)aKey, iKeyLen);
-    ls_str_unsafeset(&parms.value, (char *)&xxx, sizeof(xxx));
+    ls_str_set(&parms.key, (char *)aKey, iKeyLen);
+    ls_str_set(&parms.value, (char *)&xxx, sizeof(xxx));
     CHECK(pTHash->insertIterator(&parms) == 0);
     CHECK((off = pTHash->getIterator(&parms, &ret)) != 0);
     CHECK(ret == LSSHM_FLAG_NONE);
@@ -163,9 +165,6 @@ TEST(shmPerProcess_test)
         CHECK(pTHash->findIterator(&parms) == off);
         CHECK(((xxx_t *)it.second())->x[0] == 0x5678);
     }
-
-    pPool1->disableLock();
-    pPool2->disableLock();
 
     int remap = 0;
     CHECK((off0 = pGPool->alloc2(SZ_TESTBCKT, remap)) != 0);
@@ -218,6 +217,78 @@ TEST(shmPerProcess_test)
     CHECK(pShm->findReg(g_pPool2Name) == NULL);
     CHECK(pGPool->alloc2(SZ_TESTBCKT, remap) == off1);
     CHECK(pShm->recoverOrphanShm() == 0);
+
+    // shm statistics
+    int cnt;
+    LsShmSize_t acnt;
+    LsShmSize_t rcnt;
+    off0 = pGPool->alloc2(1*LSSHM_MINUNIT, remap);
+    off1 = pGPool->alloc2(2*LSSHM_MINUNIT+1, remap);
+    off2 = pGPool->alloc2(2*LSSHM_MINUNIT, remap);
+    off3 = pGPool->alloc2(1*LSSHM_MINUNIT, remap);
+    acnt = (6*LSSHM_MINUNIT) + 8;   // rounded byte count
+    rcnt = 0;
+
+    LsShmMapStat *pStat =
+        (LsShmMapStat *)pShm->offset2ptr(pShm->getMapStatOffset());
+    LsShmPoolMapStat *pStat2 =
+        (LsShmPoolMapStat *)pShm->offset2ptr(pGPool->getPoolMapStatOffset());
+    // in real life, should always use offset2ptr when accessing.
+    // in this case, for simplicity, use same pointer, assume no remapping.
+
+    cnt = pStat->m_iAllocated;
+    pGPool->release2(off0, 1*LSSHM_MINUNIT);
+    pGPool->release2(off2, 2*LSSHM_MINUNIT);
+    rcnt += (3*LSSHM_MINUNIT);
+    CHECK(pStat->m_iReleased == 3);     // 3 blocks
+    CHECK(pStat->m_iFreeListCnt == 2);  // 2 entries
+    CHECK(pStat2->m_iShmAllocated == acnt);  // bytes (rounded)
+    CHECK(pStat2->m_iShmReleased == rcnt);
+    pGPool->release2(off1, 2*LSSHM_MINUNIT+1);
+    rcnt += (2*LSSHM_MINUNIT+8);        // rounded
+    CHECK(pStat->m_iReleased == 6);     // 6 blocks
+    CHECK(pStat->m_iFreeListCnt == 1);  // 1 entry
+    CHECK(pStat2->m_iShmReleased == rcnt);
+    pGPool->alloc2(2*LSSHM_MINUNIT, remap); // alloc 2 blocks from shm freelist
+    acnt += (2*LSSHM_MINUNIT);
+    cnt += 2;
+    CHECK(pStat->m_iAllocated == (LsShmSize_t)cnt);
+    CHECK(pStat->m_iFreeListCnt == 1);  // still 1 entry
+    CHECK(pStat2->m_iShmAllocated == acnt);
+
+    // shmpool freelist
+    acnt = pStat2->m_iFlAllocated;      // bytes
+    rcnt = pStat2->m_iFlReleased;
+    off0 = pGPool->alloc2(2*SZ_TESTLIST, remap);
+    acnt += (2*SZ_TESTLIST);
+    int diff = (int)(pStat2->m_iFlAllocated - acnt);
+    if ((diff > 0) && (diff < SZ_LISTMIN))  // might move residual to bucket
+        acnt += diff;
+    CHECK(pStat2->m_iFlAllocated == acnt);
+    cnt = pStat2->m_iFlCnt;
+    pGPool->release2(off0, 2*SZ_TESTLIST);
+    rcnt += (2*SZ_TESTLIST);
+    CHECK(pStat2->m_iFlReleased == rcnt);
+    CHECK(pStat2->m_iFlCnt == (LsShmSize_t)(cnt + 1));
+    pGPool->alloc2(SZ_TESTLIST, remap); // piece of a freelist block
+    acnt += SZ_TESTLIST;
+    CHECK(pStat2->m_iFlAllocated == acnt);
+    CHECK(pStat2->m_iFlReleased == rcnt);
+    CHECK(pStat2->m_iFlCnt == (LsShmSize_t)(cnt + 1));
+    pGPool->alloc2(SZ_TESTLIST, remap); // remainder of freelist block
+    acnt += SZ_TESTLIST;
+    CHECK(pStat2->m_iFlAllocated == acnt);
+    CHECK(pStat2->m_iFlCnt == (LsShmSize_t)cnt);
+
+    // shmpool bucket
+    acnt = pStat2->m_bckt[SZ_TESTBCKT/8].m_iBkAllocated;    // count
+    off0 = pGPool->alloc2(SZ_TESTBCKT, remap);
+    ++acnt;
+    CHECK(pStat2->m_bckt[SZ_TESTBCKT/8].m_iBkAllocated == acnt);
+    rcnt = pStat2->m_bckt[SZ_TESTBCKT/8].m_iBkReleased;
+    pGPool->release2(off0, SZ_TESTBCKT);
+    ++rcnt;
+    CHECK(pStat2->m_bckt[SZ_TESTBCKT/8].m_iBkReleased == rcnt);
 }
 
 #endif

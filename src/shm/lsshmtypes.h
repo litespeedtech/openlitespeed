@@ -55,7 +55,7 @@ typedef struct ls_shmobject_s  lsi_shmobject_t;
 typedef ls_spinlock_t          lsi_shmlock_t;
 #ifdef USE_PIDSPINLOCK
 #define lsi_shmlock_setup       ls_atomic_spin_setup
-#define lsi_shmlock_lock        ls_atomic_pidspin_lock
+#define lsi_shmlock_lock        ls_atomic_spin_pidlock
 #define lsi_shmlock_trylock     ls_atomic_pidspin_trylock
 #define lsi_shmlock_unlock      ls_atomic_spin_unlock
 #else
@@ -77,10 +77,10 @@ typedef ls_mutex_t             lsi_shmlock_t;
 typedef uint32_t                LsShmOffset_t ;
 typedef uint32_t                LsShmSize_t ;
 
-#define LSSHM_MAGIC             0x20140115   // 32 bits
+#define LSSHM_MAGIC             0x20150327   // 32 bits
 #define LSSHM_LOCK_MAGIC        0x20140116   // 32 bits
-#define LSSHM_HASH_MAGIC        0x20150213   // 32 bits
-#define LSSHM_POOL_MAGIC        0x20140118   // 32 bits
+#define LSSHM_HASH_MAGIC        0x20150403   // 32 bits
+#define LSSHM_POOL_MAGIC        0x20150331   // 32 bits
 
 #define LSSHM_VER_MAJOR         0x0     // 16 bits
 #define LSSHM_VER_MINOR         0x0     // 8 bits
@@ -122,6 +122,7 @@ typedef uint32_t                LsShmSize_t ;
 
 enum LsShmStatus_t
 {
+    LSSHM_SYSERROR = -101,
     LSSHM_ERROR = -100,
     LSSHM_BADNOSPACE = -7,
     LSSHM_BADMAXSPACE = -6,
@@ -146,7 +147,7 @@ struct LsHashStat_s
     int num;            // total elements
     int numExpired;     // user supplied
     int numDup;         // num of duplicated keys
-    int top[10];        // 1,2,3,4,5,10,20,40,80,160
+    int top[10];        // 1,2,3,4,5,10,20,50,100,100+
 };
 typedef struct LsHashStat_s LsHashStat;
 

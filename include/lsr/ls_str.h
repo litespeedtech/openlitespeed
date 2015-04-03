@@ -189,7 +189,7 @@ ls_inline const char   *ls_str_cstr(const ls_str_t *pThis)
  */
 char   *ls_str_prealloc(ls_str_t *pThis, int size);
 
-/** @ls_str_setstr
+/** @ls_str_dup
  * @brief Sets the lsr str object to \e pStr.  Will create a deep copy.
  *
  * @param[in] pThis - A pointer to an initialized lsr str object.
@@ -197,7 +197,7 @@ char   *ls_str_prealloc(ls_str_t *pThis, int size);
  * @param[in] len - The length of the string.
  * @return The number of bytes set.
  */
-int     ls_str_setstr(ls_str_t *pThis, const char *pStr, int len);
+int     ls_str_dup(ls_str_t *pThis, const char *pStr, int len);
 
 /** @ls_str_append
  * @brief Appends the current lsr str object with \e pStr.  Will allocate a deep copy.
@@ -256,7 +256,7 @@ int             ls_str_cmpci(const void *pVal1, const void *pVal2);
  */
 ls_hash_key_t  ls_str_hfci(const void *pKey);
 
-/** @ls_str_unsafeset
+/** @ls_str_set
  * @brief Sets the lsr str object to the \e pStr.  WILL NOT MAKE A DEEP COPY!
  * @warning This may be used if the user does not want to create a deep
  * copy of the string.  However, with that said, the user is responsible
@@ -268,7 +268,7 @@ ls_hash_key_t  ls_str_hfci(const void *pKey);
  * @param[in] len - The length of the string.
  * @return Void.
  */
-ls_inline void ls_str_unsafeset(ls_str_t *pThis, char *pStr, int len)
+ls_inline void ls_str_set(ls_str_t *pThis, char *pStr, int len)
 {
     pThis->pstr = pStr;
     pThis->length = len;

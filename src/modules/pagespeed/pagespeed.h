@@ -25,14 +25,13 @@
 #include "net/instaweb/http/public/response_headers.h"
 #include "net/instaweb/util/public/string_util.h"
 
-
-#define     MNAME           modpagespeed
-#define     ModuleName      "modpagespeed"
+#define STRINGIFY0(x) #x
+#define STRINGIFY(x) STRINGIFY0(x)
+#define MNAME      modpagespeed
+#define ModuleName STRINGIFY(MNAME)
 
 #define PAGESPEED_MODULEKEY     ModuleName
 #define PAGESPEED_MODULEKEYLEN  (sizeof(ModuleName) -1)
-
-//#define AprTimer   PosixTimer
 
 extern lsi_module_t MNAME;
 
