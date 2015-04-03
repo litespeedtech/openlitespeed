@@ -1809,8 +1809,8 @@ int HttpServerImpl::configTuning(const XmlNode *pRoot)
 #endif
     config.setUseSendfile(val);
 
-    if (val)
-        FileCacheDataEx::setMaxMMapCacheSize(0);
+//    if (val)
+//        FileCacheDataEx::setMaxMMapCacheSize(0);
 
     const char *pValue = pNode->getChildValue("SSLCryptoDevice");
 
