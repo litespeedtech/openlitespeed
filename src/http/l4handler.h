@@ -24,7 +24,7 @@
 #include <util/loopbuf.h>
 #include "socket/gsockaddr.h"
 
-class L4Handler : public HioStreamHandler
+class L4Handler : public HioHandler
 {
 
 public:

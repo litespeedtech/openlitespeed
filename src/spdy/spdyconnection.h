@@ -35,7 +35,7 @@
 
 class SpdyStream;
 
-class SpdyConnection: public HioStreamHandler, public BufferedOS
+class SpdyConnection: public HioHandler, public BufferedOS
 {
 public:
     SpdyConnection();

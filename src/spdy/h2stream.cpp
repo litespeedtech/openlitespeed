@@ -18,23 +18,22 @@
 #include "h2stream.h"
 
 #include "h2connection.h"
+#include "h2protocol.h"
 
-#include <util/datetime.h>
 #include <http/httplog.h>
-#include <util/ssnprintf.h>
+#include <util/datetime.h>
 #include <util/iovec.h>
-
-
+#include <util/ssnprintf.h>
 
 H2Stream::H2Stream()
     : m_uiStreamID(0)
-    , m_iPriority(0)
     , m_iWindowOut(H2_FCW_INIT_SIZE)
     , m_iWindowIn(H2_FCW_INIT_SIZE)
     , m_pH2Conn(NULL)
+    , m_iContentLen(-1)
+    , m_iContentRead(0)
     , m_reqHeaderEnd(0)
 {
-
 }
 
 
@@ -44,14 +43,14 @@ const char *H2Stream::buildLogId()
     AutoStr2 &id = getIdBuf();
 
     len = safe_snprintf(id.buf(), MAX_LOGID_LEN, "%s-%d",
-                        m_pH2Conn->getStream()->getLogId(), m_uiStreamID);
+                      m_pH2Conn->getStream()->getLogId(), m_uiStreamID);
     id.setLen(len);
     return id.c_str();
 }
 
 
 int H2Stream::init(uint32_t StreamID, H2Connection *pH2Conn, uint8_t flags,
-                   HioStreamHandler *pHandler, Priority_st *pPriority)
+                   HioHandler *pHandler, Priority_st *pPriority)
 {
     HioStream::reset(DateTime::s_curTime);
     pHandler->assignStream(this);
@@ -82,6 +81,8 @@ int H2Stream::init(uint32_t StreamID, H2Connection *pH2Conn, uint8_t flags,
     }
     return 0;
 }
+
+
 int H2Stream::onInitConnected(bool bUpgraded)
 {
     if (!bUpgraded)
@@ -94,26 +95,34 @@ int H2Stream::onInitConnected(bool bUpgraded)
     return 0;
 }
 
+
 H2Stream::~H2Stream()
 {
     m_bufIn.clear();
 }
 
+
 int H2Stream::appendReqData(char *pData, int len, uint8_t flags)
 {
     if (m_bufIn.append(pData, len) == -1)
         return -1;
+    m_iContentRead += len;
     if (isFlowCtrl())
         m_iWindowIn -= len;
     //Note: H2_CTRL_FLAG_FIN is directly mapped to HIO_FLAG_PEER_SHUTDOWN
     //      H2_CTRL_FLAG_UNIDIRECTIONAL is directly mapped to HIO_FLAG_LOCAL_SHUTDOWN
     if (flags & (H2_CTRL_FLAG_FIN | H2_CTRL_FLAG_UNIDIRECTIONAL))
+    {
         setFlag(flags & (H2_CTRL_FLAG_FIN | H2_CTRL_FLAG_UNIDIRECTIONAL), 1);
-
+        if (m_iContentLen != -1 && m_iContentLen != m_iContentRead)
+            return -1;
+    }
     if (isWantRead())
         getHandler()->onReadEx();
     return len;
 }
+
+
 //***int H2Stream::read( char * buf, int len )***//
 // return > 0:  number of bytes of that has been read
 // return = 0:  0 byte of data has been read, but there will be more data coming,
@@ -140,6 +149,7 @@ int H2Stream::read(char *buf, int len)
     return ReadCount;
 }
 
+
 void H2Stream::continueRead()
 {
     if (D_ENABLED(DL_LESS))
@@ -151,6 +161,8 @@ void H2Stream::continueRead()
     if (m_bufIn.size() > 0)
         getHandler()->onReadEx();
 }
+
+
 void H2Stream:: continueWrite()
 {
     if (D_ENABLED(DL_LESS))
@@ -162,10 +174,13 @@ void H2Stream:: continueWrite()
     m_pH2Conn->continueWrite();
 
 }
+
+
 void H2Stream::onTimer()
 {
     getHandler()->onTimerEx();
 }
+
 
 NtwkIOLink *H2Stream::getNtwkIoLink()
 {
@@ -189,6 +204,7 @@ int H2Stream::sendFin()
     m_pH2Conn->flush();
     return 0;
 }
+
 
 int H2Stream::close()
 {
@@ -219,6 +235,7 @@ int H2Stream::flush()
     return 0;
 }
 
+
 int H2Stream::getDataFrameSize(int wanted)
 {
     if ((m_pH2Conn->isOutBufFull()) ||
@@ -231,13 +248,13 @@ int H2Stream::getDataFrameSize(int wanted)
 
     if (wanted > m_iWindowOut)
         wanted = m_iWindowOut;
-    if (m_pH2Conn->isFlowCtrl()
-        && (wanted > m_pH2Conn->getCurDataOutWindow()))
+    if (wanted > m_pH2Conn->getCurDataOutWindow())
         wanted = m_pH2Conn->getCurDataOutWindow();
-    if (wanted > H2_MAX_DATAFRAM_SIZE)
-        wanted = H2_MAX_DATAFRAM_SIZE;
+    if (wanted > m_pH2Conn->getPeerMaxFrameSize())
+        wanted = m_pH2Conn->getPeerMaxFrameSize();
     return wanted;
 }
+
 
 int H2Stream::writev(IOVec &vector, int total)
 {
@@ -264,6 +281,7 @@ int H2Stream::writev(IOVec &vector, int total)
     return size;
 
 }
+
 
 int H2Stream::writev(const struct iovec *vec, int count)
 {
@@ -308,6 +326,7 @@ int H2Stream::onWrite()
         m_pH2Conn->continueWrite();
     return 0;
 }
+
 
 void H2Stream::buildDataFrameHeader(char *pHeader, int length)
 {
@@ -354,9 +373,10 @@ int H2Stream::sendRespHeaders(HttpRespHeaders *pHeaders)
     if (getState() == HIOS_DISCONNECTED)
         return -1;
 
-    m_pH2Conn->move2ReponQue(this);
+    m_pH2Conn->add2PriorityQue(this);
     return m_pH2Conn->sendRespHeaders(pHeaders, m_uiStreamID);
 }
+
 
 int H2Stream::adjWindowOut(int32_t n)
 {

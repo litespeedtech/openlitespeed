@@ -73,7 +73,7 @@ enum  HttpSessionState
 
 
 
-class HttpSession : public LsiSession, public HioStreamHandler
+class HttpSession : public LsiSession, public HioHandler
 {
     HttpReq               m_request;
     HttpResp              m_response;

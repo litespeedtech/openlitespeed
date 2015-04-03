@@ -29,7 +29,7 @@ class MMapVMemBuf;
 class VMemBuf;
 class GzipBuf;
 class HttpSession;
-class HioStreamHandler;
+class HioHandler;
 class NtwkIOLink;
 
 typedef ObjPool<ChunkInputStream>       ChunkInputStreamPool;
@@ -107,7 +107,7 @@ public:
     void recycle(HttpSession *pSession)
     {   m_poolHttpSession.recycle(pSession);    }
 
-    HioStreamHandler *getHioStreamHandler(HiosProtocol ver);
+    HioHandler *getHioHandler(HiosProtocol ver);
 
     void recycle(HttpSession **pSession, int n)
     {   m_poolHttpSession.recycle((void **)pSession, n);    }

@@ -26,7 +26,7 @@
 
 class IOVec;
 
-class HioStreamHandler;
+class HioHandler;
 class HttpRespHeaders;
 class NtwkIOLink;
 
@@ -61,7 +61,7 @@ enum HiosProtocol
 class HioStream : public InputStream, public OutputStream,
     public LogTracker
 {
-    HioStreamHandler   *m_pHandler;
+    HioHandler   *m_pHandler;
     off_t               m_lBytesRecv;
     off_t               m_lBytesSent;
     char                m_iState;
@@ -104,8 +104,8 @@ public:
         m_tmLastActive = timeStamp;
     }
 
-    HioStreamHandler *getHandler() const   {   return m_pHandler;  }
-    void setHandler(HioStreamHandler *p) {   m_pHandler = p;     }
+    HioHandler *getHandler() const   {   return m_pHandler;  }
+    void setHandler(HioHandler *p) {   m_pHandler = p;     }
 
     short isWantRead() const    {   return m_iFlag & HIO_FLAG_WANT_READ;     }
     short isWantWrite() const   {   return m_iFlag & HIO_FLAG_WANT_WRITE;    }
@@ -152,15 +152,15 @@ private:
 
 };
 
-class HioStreamHandler
+class HioHandler
 {
     HioStream *m_pStream;
 
 public:
-    HioStreamHandler()
+    HioHandler()
         : m_pStream(NULL)
     {}
-    virtual ~HioStreamHandler();
+    virtual ~HioHandler();
 
     HioStream *getStream() const           {   return m_pStream;   }
     void setStream(HioStream *p)         {   m_pStream = p;      }
@@ -180,12 +180,12 @@ public:
     
         
     virtual void init(HiosProtocol ver) {};
-    virtual void upgradedStream(HioStreamHandler *) {};
+    virtual void upgradedStream(HioHandler *) {};
 
 private:
-    HioStreamHandler(const HioStreamHandler &other);
-    HioStreamHandler &operator=(const HioStreamHandler &other);
-    bool operator==(const HioStreamHandler &other) const;
+    HioHandler(const HioHandler &other);
+    HioHandler &operator=(const HioHandler &other);
+    bool operator==(const HioHandler &other) const;
 };
 
 

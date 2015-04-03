@@ -41,7 +41,7 @@ HioStream::~HioStream()
 
 
 
-HioStreamHandler::~HioStreamHandler()
+HioHandler::~HioHandler()
 {
 
 }

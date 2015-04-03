@@ -37,7 +37,7 @@ public:
 
     int init(uint32_t StreamID,
              int Priority, SpdyConnection *pSpdyConn, uint8_t Spdy_Flags,
-             HioStreamHandler *pHandler);
+             HioHandler *pHandler);
     int onInitConnected();
 
     int getPriority() const

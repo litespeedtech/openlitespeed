@@ -173,7 +173,7 @@ void NtwkIOLink::enableThrottle(int enable)
 
 int NtwkIOLink::setupHandler(HiosProtocol verSpdy)
 {
-    HioStreamHandler *pHandler;
+    HioHandler *pHandler;
 #ifdef SPDY_PLAIN_DEV
     if (!isSSL() && (verSpdy == HIOS_PROTO_HTTP))
         verSpdy = HIOS_PROTO_SPDY3;
@@ -184,7 +184,7 @@ int NtwkIOLink::setupHandler(HiosProtocol verSpdy)
         verSpdy = HIOS_PROTO_HTTP2;
 #endif
 
-    pHandler = HttpGlobals::getResManager()->getHioStreamHandler(verSpdy);
+    pHandler = HttpGlobals::getResManager()->getHioHandler(verSpdy);
     if (!pHandler)
         return -1;
 
@@ -195,11 +195,11 @@ int NtwkIOLink::setupHandler(HiosProtocol verSpdy)
     return 0;
 }
 
-int NtwkIOLink::switchToHttp2Handler(HioStreamHandler *pSession)
+int NtwkIOLink::switchToHttp2Handler(HioHandler *pSession)
 {
     assert(pSession == getHandler());
-    HioStreamHandler *pHandler = 
-        HttpGlobals::getResManager()->getHioStreamHandler(HIOS_PROTO_HTTP2);
+    HioHandler *pHandler = 
+        HttpGlobals::getResManager()->getHioHandler(HIOS_PROTO_HTTP2);
     if (!pHandler)
         return -1;
     clearLogId();

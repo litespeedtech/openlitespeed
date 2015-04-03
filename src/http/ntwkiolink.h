@@ -278,7 +278,7 @@ public:
                                int *uri_len, char **phost, int *host_len);
 
 
-    int switchToHttp2Handler(HioStreamHandler *pSession);
+    int switchToHttp2Handler(HioHandler *pSession);
 
     int setLink(HttpListener *pListener, int fd, ClientInfo *pInfo,
                 SSLContext  *pSSLContext);

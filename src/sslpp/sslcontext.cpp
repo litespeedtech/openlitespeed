@@ -21,6 +21,7 @@
 
 #include <sslpp/sslocspstapling.h>
 #include <util/configctx.h>
+#include "sslpp/sslconnection.h"
 #include <util/xmlnode.h>
 
 #include <openssl/err.h>
@@ -114,15 +115,6 @@ int SSLContext::seedRand(int len)
     return 0;
 }
 
-static void SSLConnection_ssl_info_cb(const SSL *pSSL, int where, int ret)
-{
-    //if ((where & SSL_CB_HANDSHAKE_START) != 0)
-    //{
-    //    //close connection, may not needed for 0.9.8m and later
-    //}
-    if ((where & SSL_CB_HANDSHAKE_DONE) != 0)
-        pSSL->s3->flags |= SSL3_FLAGS_NO_RENEGOTIATE_CIPHERS;
-}
 
 void SSLContext::setProtocol(int method)
 {
@@ -239,6 +231,26 @@ int SSLContext::initECDH()
     return 0;
 }
 
+static void SSLConnection_ssl_info_cb(const SSL *pSSL, int where, int ret)
+{
+    SSLConnection *pConnection = (SSLConnection *)SSL_get_ex_data(pSSL, 0);
+    if ((where & SSL_CB_HANDSHAKE_START) && pConnection->getFlag() == 1)
+    {
+        close(SSL_get_fd(pSSL));
+        ((SSL*)pSSL)->error_code = 1;
+        return ;
+    }
+    
+    if ((where & SSL_CB_HANDSHAKE_DONE) != 0)
+    {
+#ifdef SSL3_FLAGS_NO_RENEGOTIATE_CIPHERS
+        pSSL->s3->flags |= SSL3_FLAGS_NO_RENEGOTIATE_CIPHERS;
+#endif
+        pConnection->setFlag(1);
+    }
+}
+
+
 int SSLContext::init(int iMethod)
 {
     if (m_pCtx != NULL)
@@ -277,6 +289,7 @@ int SSLContext::init(int iMethod)
             setOptions(SSL_OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION);
             SSL_CTX_set_info_callback(m_pCtx, SSLConnection_ssl_info_cb);
         }
+
         //initECDH();
 
         return 0;
@@ -587,7 +600,7 @@ int SSLContext::setCipherList(const char *pList)
 #if OPENSSL_VERSION_NUMBER >= 0x10001000L
             strcpy(cipher, "EECDH+ECDSA+AESGCM EECDH+aRSA+AESGCM EECDH+ECDSA+SHA384 "
                    "EECDH+ECDSA+SHA256 EECDH+aRSA+SHA384 EECDH+aRSA+SHA256 "
-                   "EECDH+aRSA+RC4 EECDH EDH+aRSA RC4 !aNULL !eNULL !LOW "
+                   "EECDH+aRSA+RC4 EECDH EDH+aRSA RC4 !aNULL !eNULL !LOW !SSLv2"
                    "!3DES !MD5 !EXP !PSK !SRP !DSSTLS_ECDHE_RSA_WITH_AES_128_CBC_SHA:"
                   );
             //strcpy( cipher, "HIGH:!MD5:!aNULL:!EDH@strength" );
@@ -1076,7 +1089,7 @@ SSLContext *SSLContext::config(const XmlNode *pNode)
     }
 
     protocol = ConfigCtx::getCurConfigCtx()->getLongValue(pNode, "sslProtocol",
-               1, 15, 15);
+               1, 15, 14);
     setProtocol(protocol);
 
     int enableDH = ConfigCtx::getCurConfigCtx()->getLongValue(pNode,
@@ -1090,7 +1103,7 @@ SSLContext *SSLContext::config(const XmlNode *pNode)
         const char *pDHParam = pNode->getChildValue("DHParam");
         if (pDHParam)
         {
-            if (ConfigCtx::getCurConfigCtx()->getValidPath(achCAPath, pDHParam,
+            if (ConfigCtx::getCurConfigCtx()->getValidFile(achCAPath, pDHParam,
                     "DH Parameter file") != 0)
             {
                 ConfigCtx::getCurConfigCtx()->log_warn("invalid path for DH paramter: %s, ignore and use built-in DH parameter!",

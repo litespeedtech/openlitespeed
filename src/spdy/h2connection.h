@@ -17,16 +17,18 @@
 *****************************************************************************/
 #ifndef H2CONNECTION_H
 #define H2CONNECTION_H
-#include "h2protocol.h"
-#include "hpack.h"
+
 #include <edio/bufferedos.h>
-#include "util/autobuf.h"
+#include <http/hiostream.h>
+#include <spdy/h2protocol.h>
+#include <spdy/hpack.h>
+#include <util/autobuf.h>
 #include <util/dlinkqueue.h>
 #include <util/ghash.h>
-#include "http/hiostream.h"
-#include <sys/time.h>
 
+#include <sys/time.h>
 #include <limits.h>
+
 
 #define H2_CONN_FLAG_GOAWAY         (1<<0)
 #define H2_CONN_FLAG_PREFACE        (1<<1)
@@ -34,13 +36,15 @@
 #define H2_CONN_FLAG_SETTING_SENT   (1<<3)
 #define H2_CONN_FLAG_CONFIRMED      (1<<4)
 #define H2_CONN_FLAG_FLOW_CTRL      (1<<5)
+#define H2_CONN_HEADERS_START       (1<<6)
+#define H2_CONN_HEADERS_END         (1<<7)
 
 #define H2_STREAM_PRIORITYS         (256 + 1)
 
 
 class H2Stream;
 
-class H2Connection: public HioStreamHandler, public BufferedOS
+class H2Connection: public HioHandler, public BufferedOS
 {
 public:
     H2Connection();
@@ -68,7 +72,7 @@ public:
     int onInitConnected();
 
     int onTimerEx();
-    void move2ReponQue(H2Stream *pH2Stream);
+    void add2PriorityQue(H2Stream *pH2Stream);
     int timerRoutine();
 
     LOG4CXX_NS::Logger *getLogger() const
@@ -92,6 +96,9 @@ public:
     int32_t getCurDataOutWindow() const
     {   return m_iCurDataOutWindow;         }
 
+    int32_t getPeerMaxFrameSize() const
+    {   return m_iPeerMaxFrameSize;         }
+    
     int sendRespHeaders(HttpRespHeaders *pRespHeaders, uint32_t uiStreamID);
 
     int sendWindowUpdateFrame(uint32_t id, int32_t delta)
@@ -112,14 +119,10 @@ public:
 
     void dataFrameSent(int bytes)
     {
-        if (isFlowCtrl())
-            m_iCurDataOutWindow -= bytes;
+        m_iCurDataOutWindow -= bytes;
     }
 
-    void enableSessionFlowCtrl()    {   m_iFlag |= H2_CONN_FLAG_FLOW_CTRL;  }
-    short isFlowCtrl() const    {   return m_iFlag & H2_CONN_FLAG_FLOW_CTRL;  }
-
-    void upgradedStream(HioStreamHandler *pSession);
+    void upgradedStream(HioHandler *pSession);
 
     void recycleStream(uint32_t uiStreamID);
 
@@ -142,6 +145,7 @@ private:
     H2Stream *getNewStream(uint32_t uiStreamID, uint8_t ubH2_Flags,
                            Priority_st &priority);
 
+    int decodeHeaders(H2Stream *pStream, unsigned char *src, int length);
     int processPriorityFrame(H2FrameHeader *pHeader);
     int processSettingFrame(H2FrameHeader *pHeader);
     int processHeadersFrame(H2FrameHeader *pHeader);
@@ -177,7 +181,8 @@ private:
     int appendReqHeaders(H2Stream *arg1, char *method = NULL, int methodLen = 0, 
                          char *uri = NULL, int uriLen = 0);
     int decodeData(unsigned char *pSrc, unsigned char *bufEnd, 
-                    char *method, int* methodLen, char **uri, int* uriLen);
+                   char *method, int *methodLen, char **uri, int *uriLen,
+                   int *contentLen );
     void skipRemainData();
     int encodeHeaders(HttpRespHeaders *pRespHeaders, unsigned char *buf,
                         int maxSize);

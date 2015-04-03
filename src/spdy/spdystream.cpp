@@ -48,7 +48,7 @@ const char *SpdyStream::buildLogId()
 
 int SpdyStream::init(uint32_t StreamID,
                      int Priority, SpdyConnection *pSpdyConn, uint8_t flags,
-                     HioStreamHandler *pHandler)
+                     HioHandler *pHandler)
 {
     HioStream::reset(DateTime::s_curTime);
     pHandler->assignStream(this);

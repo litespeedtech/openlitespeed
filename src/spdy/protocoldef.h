@@ -18,6 +18,8 @@
 #ifndef SPDYPROTOCOLDEF_H
 #define SPDYPROTOCOLDEF_H
 
+#include <inttypes.h>
+
 
 typedef struct
 {

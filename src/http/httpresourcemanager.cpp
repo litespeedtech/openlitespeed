@@ -77,27 +77,27 @@ void HttpResourceManager::onTimer()
     ModuleManager::getInstance().OnTimer10sec();
 }
 
-HioStreamHandler *HttpResourceManager::getHioStreamHandler(HiosProtocol ver)
+HioHandler *HttpResourceManager::getHioHandler(HiosProtocol ver)
 {
-    HioStreamHandler *pHioStreamHandler;
+    HioHandler *pHioHandler;
     switch (ver)
     {
     case HIOS_PROTO_HTTP:
-        pHioStreamHandler = m_poolHttpSession.get();
+        pHioHandler = m_poolHttpSession.get();
         break;
     case HIOS_PROTO_HTTP2:
-        pHioStreamHandler = (HioStreamHandler *)(new H2Connection());
+        pHioHandler = (HioHandler *)(new H2Connection());
         break;
     default:
-        pHioStreamHandler = (HioStreamHandler *)(new SpdyConnection());
+        pHioHandler = (HioHandler *)(new SpdyConnection());
         break;
     }
     
-    if (!pHioStreamHandler)
+    if (!pHioHandler)
         return NULL;
     
-    pHioStreamHandler->init(ver);
-    return pHioStreamHandler;
+    pHioHandler->init(ver);
+    return pHioHandler;
 }
 
 

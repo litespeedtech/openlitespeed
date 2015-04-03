@@ -676,8 +676,8 @@ SpdyStream *SpdyConnection::getNewStream(uint32_t uiStreamID,
         int iPriority, uint8_t ubSpdy_Flags)
 {
     SpdyStream *pStream;
-    HioStreamHandler *pSession =
-        HttpGlobals::getResManager()->getHioStreamHandler(HIOS_PROTO_HTTP);
+    HioHandler *pSession =
+        HttpGlobals::getResManager()->getHioHandler(HIOS_PROTO_HTTP);
     if (!pSession)
         return NULL;
     pStream = new SpdyStream();

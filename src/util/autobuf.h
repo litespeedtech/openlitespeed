@@ -33,7 +33,13 @@ class AutoBuf
     int     allocate(int size);
     void    deallocate();
 public:
+//#define DAVID_VALGRIND_TEST
+#ifdef DAVID_VALGRIND_TEST
+    explicit AutoBuf(int size = 20);
+#else
     explicit AutoBuf(int size = 1024);
+#endif
+    
     ~AutoBuf();
     int available() const { return m_pBufEnd - m_pEnd; }
 
