@@ -75,7 +75,8 @@ int shmlru_get(shmlru_t *pShmLru,
 int shmlru_getptrs(shmlru_t *pShmLru,
                    const uint8_t *pKey, int keyLen, int (*func)(void *pData));
 int shmlru_check(shmlru_t *pShmLru);
-int shmlru_trim(shmlru_t *pShmLru, time_t tmCutoff);
+int shmlru_trim(shmlru_t *pShmLru,
+                time_t tmCutoff, int (*func)(iterator iter, void *arg), void *arg);
 
 #ifdef __cplusplus
 }

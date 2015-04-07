@@ -341,9 +341,10 @@ int H2Stream::sendData(IOVec *pIov, int total)
     char achHeader[9];
     int ret;
     buildDataFrameHeader(achHeader, total);
-    pIov->push_front(achHeader, 9);
-    ret = m_pH2Conn->cacheWritev(*pIov);
-    pIov->pop_front(1);
+    if ( (ret = m_pH2Conn->cacheWrite(achHeader, 9)) == 9 )
+    {
+        ret = m_pH2Conn->cacheWritev(*pIov, total);
+    }
     if (D_ENABLED(DL_LESS))
     {
         LOG_D((getLogger(), "[%s] H2Stream::sendData(), total: %d, ret: %d",

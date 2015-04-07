@@ -97,7 +97,7 @@ int main(int ac, char *av[])
         }
         else if (strcmp(buf1, "trim") == 0)
         {
-            ret = shmlru_trim(&ShmLru, (time_t)atol(buf2));
+            ret = shmlru_trim(&ShmLru, (time_t)atol(buf2), NULL, NULL);
             fprintf(stdout, "Trim: [ret=%d].\n", ret);
         }
         else if (strcmp(buf1, "get") == 0)

@@ -48,7 +48,18 @@ public:
     bool isEmpty() const    { return m_buf.empty(); }
 
     int cacheWrite(const char *pBuf, int size)
-    {   return writeEx(pBuf, size, 0);    }
+    {
+        if (m_buf.size() + size < 40960)
+        {
+            m_buf.append(pBuf, size);
+            return size;
+        }
+        else
+            return writeEx( pBuf, size, 0 );
+    }
+
+    int cacheWritev( IOVec &vector, int total );
+
     int cacheWritev(IOVec &vector)
     {   return writevEx(vector, 0);       }
 

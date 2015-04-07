@@ -307,9 +307,10 @@ int lsi_shmhash_getdataptrs(lsi_shmhash_t *hashhandle,
 }
 
 
-int lsi_shmhash_trim(lsi_shmhash_t *hashhandle, time_t tmcutoff)
+int lsi_shmhash_trim(lsi_shmhash_t *hashhandle,
+                     time_t tmcutoff, int (*func)(iterator iter, void *arg), void *arg)
 {
-    return ((LsShmHash *)hashhandle)->trim(tmcutoff);
+    return ((LsShmHash *)hashhandle)->trim(tmcutoff, func, arg);
 }
 
 

@@ -307,6 +307,7 @@ void HttpSession::releaseSendFileInfo()
 
 void HttpSession::nextRequest()
 {
+    setState(HSS_WAITING);
 
     if (D_ENABLED(DL_LESS))
         LOG_D((getLogger(), "[%s] HttpSession::nextRequest()!",

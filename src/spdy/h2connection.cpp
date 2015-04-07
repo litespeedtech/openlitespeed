@@ -113,7 +113,7 @@ H2Connection::~H2Connection()
 int H2Connection::onReadEx()
 {
     int ret = onReadEx2();
-    if (!isEmpty())
+    if (getBuf()->size() > 32768)
         flush();
     return ret;
 }

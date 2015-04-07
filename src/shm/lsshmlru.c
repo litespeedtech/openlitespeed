@@ -113,14 +113,14 @@ int shmlru_check(shmlru_t *pShmLru)
 }
 
 
-int shmlru_trim(shmlru_t *pShmLru, time_t tmCutoff)
+int shmlru_trim(shmlru_t *pShmLru, time_t tmCutoff, int (*func)(iterator iter, void *arg), void *arg)
 {
     lsi_shmhash_t *pHash;
     if ((pShmLru == NULL) || ((pHash = pShmLru->phash) == NULL))
         return LS_FAIL;
 
     lsi_shmhash_lock(pHash);
-    int ret = lsi_shmhash_trim(pHash, tmCutoff);
+    int ret = lsi_shmhash_trim(pHash, tmCutoff, func, arg);
     lsi_shmhash_unlock(pHash);
     return ret;
 }
