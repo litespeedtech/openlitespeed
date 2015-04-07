@@ -304,8 +304,8 @@ LsShmHash::LsShmHash(LsShmPool *pool, const char *name, size_t init_size,
             || (m_iLruMode != pTable->x_iLruMode))
             return;
         m_pShmLock = m_pPool->lockPool()->offset2pLock(pTable->x_iLockOffset);
-        if (pTable->x_iHIdx != pTable->x_iHIdxNew)
-            rehash();
+        //if (pTable->x_iHIdx != pTable->x_iHIdxNew)
+        //    rehash();
     }
 
     if ((m_iLruMode == LSSHM_LRU_MODE2) || (m_iLruMode == LSSHM_LRU_MODE3))
@@ -499,6 +499,7 @@ int LsShmHash::rehash()
         pTable->x_iHIdxNew = newIdxOff;
     }
 
+    pIdxOld = (LsShmHIdx *)m_pPool->offset2ptr(pTable->x_iHIdx);
     for (iterOff = begin(); iterOff != end(); )
     {
         uint32_t hashIndx;

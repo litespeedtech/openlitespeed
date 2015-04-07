@@ -34,14 +34,14 @@ int LsShmHash::entryValMatch(
 }
 
 
-int LsShmHash::trim(time_t tmCutoff)
+int LsShmHash::trim(time_t tmCutoff, int (*func)(iterator iter, void *arg), void *arg)
 {
     if (m_iLruMode == LSSHM_LRU_NONE)
         return LS_FAIL;
     int del = 0;
     LsShmHElem *pElem;
     LsShmOffset_t next;
-    autoLock();
+    autoLockChkRehash();
     LsHashLruInfo *pLru = getLru();
     LsShmOffset_t offElem = pLru->linkLast;
     while (offElem != 0)
@@ -50,6 +50,8 @@ int LsShmHash::trim(time_t tmCutoff)
         if (pElem->getLruLasttime() >= tmCutoff)
             break;
 
+        if (func != NULL)
+            (*func)(pElem, arg);
         int ret = clrdata(pElem->getVal());
         next = pElem->getLruLinkNext();
         eraseIteratorHelper(pElem);
@@ -73,7 +75,7 @@ int LsShmHash::check()
     int datacnt = 0;
     int ret;
     LsShmHElem *pElem;
-    autoLock();
+    autoLockChkRehash();
     LsHashLruInfo *pLru = getLru();
     LsShmOffset_t offElem = pLru->linkLast;
     while (offElem != 0)

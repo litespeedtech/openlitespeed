@@ -247,7 +247,9 @@ ls_inline int ls_futex_lock(ls_mutex_t *p)
  *   a lock set up using futexes.
  *
  * @param[in] p - A pointer to the lock.
- * @return 0 when able to acquire the lock.
+ * @return 0 when able to acquire the lock normally,
+ *   or a negative process id number if the lock was acquired from
+ *   a non-running process.
  *
  * @see ls_futex_setup, ls_futex_trylock, ls_futex_unlock
  */
@@ -265,7 +267,7 @@ ls_inline int ls_futex_safe_lock(ls_mutex_t *p)
     {
         if ((kill(lockpid & LS_FUTEX_PID_MASK, 0) < 0) && (errno == ESRCH)
             && ls_atomic_casint(p, lockpid, ls_spin_pid | LS_FUTEX_HAS_WAITER))
-            return 0;
+            return -(lockpid & LS_FUTEX_PID_MASK);
         if ((lockpid & LS_FUTEX_HAS_WAITER)
             || ls_atomic_casint(p, lockpid, lockpid | LS_FUTEX_HAS_WAITER ) != 0)
             ls_futex_wait(p, lockpid | LS_FUTEX_HAS_WAITER, &x_time);
@@ -385,7 +387,9 @@ ls_inline int ls_atomic_spin_lock(ls_atom_spinlock_t *p)
  *   owning the lock is still in execution.
  *
  * @param[in] p - A pointer to the lock.
- * @return 0 when able to acquire the lock.
+ * @return 0 when able to acquire the lock normally,
+ *   or a negative process id number if the lock was acquired from
+ *   a non-running process.
  *
  * @see ls_atomic_spin_lock
  */
@@ -407,7 +411,7 @@ ls_inline int ls_atomic_spin_pidlock(ls_atom_spinlock_t *p)
         {
             if ((kill(waitpid, 0) < 0) && (errno == ESRCH)
               && ls_atomic_casint(p, waitpid, ls_spin_pid))
-                return 0;
+                return -waitpid;
             cnt = MAX_SPINCNT_CHECK;
         }
         else
@@ -466,6 +470,24 @@ ls_inline int ls_atomic_spin_unlock(ls_atom_spinlock_t *p)
     ls_atomic_clrint(p);
     return 0;
 }
+
+/**
+ * @ls_atomic_spin_pidunlock
+ * @brief Unlocks
+ *   a spinlock set up with built-in functions for atomic memory access.
+ *
+ * @param[in] p - A pointer to the lock.
+ * @return 0.
+ *
+ * @see ls_atomic_spin_setup, ls_atomic_spin_lock, ls_atomic_spin_trylock
+ */
+ls_inline int ls_atomic_spin_pidunlock(ls_atom_spinlock_t *p)
+{
+    assert( *p == ls_spin_pid);
+    ls_atomic_clrint(p);
+    return 0;
+}
+
 
 /**
  * @ls_atomic_spin_setup

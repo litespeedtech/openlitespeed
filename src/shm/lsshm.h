@@ -287,9 +287,11 @@ public:
     {
         if (offset == 0)
             return NULL;
+#ifdef notdef
         if (m_iMaxSizeO != x_pShmMap->x_iMaxSize)
             ((LsShm *)this)->remap();
-        assert(offset < x_pShmMap->x_iMaxSize);
+#endif
+        assert(offset < m_iMaxSizeO);
         return (void *)(((uint8_t *)x_pShmMap) + offset);
     }  // map size
 
@@ -322,6 +324,11 @@ public:
         return this;
     };
 
+    ls_attr_inline LsShmStatus_t chkRemap()
+    {
+        return (x_pShmMap->x_iMaxSize == m_iMaxSizeO) ? LSSHM_OK : remap();
+    }
+        
     LsShmStatus_t remap();
 
     //
@@ -334,19 +341,6 @@ public:
     int            expandReg(int maxRegNum); // expand the current reg
 
     int            recoverOrphanShm();
-
-    int lockShm()
-    {
-        return lock();
-    }
-    int trylockShm()
-    {
-        return trylock();
-    }
-    int unlockShm()
-    {
-        return unlock();
-    }
 
     int ref() const
     {
@@ -379,12 +373,7 @@ private:
 
     int lock()
     {
-        return lsi_shmlock_lock(m_pShmLock);
-    }
-
-    int trylock()
-    {
-        return lsi_shmlock_trylock(m_pShmLock);
+        return doLock();
     }
 
     int unlock()
@@ -408,6 +397,13 @@ private:
                LSSHM_ERROR : LSSHM_OK;
     }
 
+    ls_attr_inline int doLock()
+    {
+        int ret = lsi_shmlock_lock(m_pShmLock);
+        chkRemap();
+        return ret;
+    }
+ 
     // only use by physical mapping
     LsShmSize_t roundToPageSize(LsShmSize_t size) const
     {

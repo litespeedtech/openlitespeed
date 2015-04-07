@@ -608,22 +608,18 @@ LsShmStatus_t LsShm::map(LsShmSize_t size)
 
 LsShmStatus_t LsShm::remap()
 {
-    if (x_pShmMap->x_iMaxSize != m_iMaxSizeO)
-    {
 #ifdef DEBUG_RUN
-        SHM_NOTICE("LsShm::remap %6d %X %X %X",
-                        getpid(), x_pShmMap, x_pShmMap->x_iMaxSize, m_iMaxSizeO);
+    SHM_NOTICE("LsShm::remap %6d %X %X %X",
+                getpid(), x_pShmMap, x_pShmMap->x_iMaxSize, m_iMaxSizeO);
 #endif
 
-        LsShmSize_t size = x_pShmMap->x_iMaxSize;
+    LsShmSize_t size = x_pShmMap->x_iMaxSize;
 #ifdef DELAY_UNMAP
-        unmapLater();
+    unmapLater();
 #else
-        unmap();
+    unmap();
 #endif
-        return map(size);
-    }
-    return LSSHM_OK;
+    return map(size);
 }
 
 
@@ -830,7 +826,7 @@ LsShmOffset_t LsShm::allocPage(LsShmSize_t pagesize, int &remap)
     //  MUTEX SHOULD BE HERE for multi process/thread environment
     // Only use lock when m_status is Ready.
     if (m_status == LSSHM_READY)
-        if (lock())
+        if (lock() > 0)
             return 0; // no lock acquired...
 
     // Allocate from free space

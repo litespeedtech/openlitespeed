@@ -47,10 +47,22 @@ TEST(ls_ShmBaseLru_test)
         perror(shmfilename);
     if (unlink(lockfilename) != 0)
         perror(lockfilename);
+
     if (pShm == NULL)
         return;
 
     doit(pShm);
+}
+
+
+static int trimfunc(iterator iter, void *arg)
+{
+    LsShmHash *pHash = (LsShmHash *)arg;
+    fprintf(stdout, "trim: [%.*s][%.*s] size=%d\n",
+            iter->getKeyLen(), iter->getKey(),
+            iter->getValLen(), iter->getVal(),
+            pHash->size());
+    return 0;
 }
 
 
@@ -126,13 +138,39 @@ static void doit(LsShm *pShm)
         fprintf(stdout, "[%.*s] %s",
                pTop->getKeyLen(), pTop->getKey(), ctime(&tmval));
         num = pHash->size();
-        CHECK((cnt = pHash->trim(tmval)) < num);
+        CHECK((cnt = pHash->trim(tmval, trimfunc, (void *)pHash)) < num);
         num -= cnt;
         CHECK(pHash->size() == (size_t)num);
-        CHECK(pHash->trim(tmval + 1) == num);
+        CHECK(pHash->trim(tmval + 1, trimfunc, (void *)pHash) == num);
         CHECK(pHash->size() == (size_t)0);
         CHECK(pHash->getLruTop() == 0);
     }
+
+    // large hash test
+    char keyBuf[16];
+    char valBuf[16];
+    LsShmOffset_t off;
+    int i;
+    int valLen;
+    num = 80000;
+    for (i = 0; i < num; ++i)
+    {
+        sprintf(keyBuf, "KEY%06d", i);
+        sprintf(valBuf, "VAL%06d", i);
+        if ((off = pHash->insert(keyBuf, 9, valBuf, 9)) == 0)
+            break;
+        if (pHash->find(keyBuf, 9, &valLen) != off)
+            break;
+        if (strncmp((const char *)pHash->offset2ptr(off), valBuf, 9) != 0)
+            break;
+    }
+    CHECK(pHash->size() == (size_t)num);
+    offTop = pHash->getLruTop();
+    pTop = pHash->offset2iterator(offTop);
+    time_t tmval = pTop->getLruLasttime();
+    CHECK(pHash->trim(tmval + 1, NULL, NULL) == num);
+    CHECK(pHash->size() == (size_t)0);
+
     pHash->close();
 
     return;

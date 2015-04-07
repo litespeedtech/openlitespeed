@@ -38,6 +38,8 @@ typedef LsShmOffset_t      lsi_shm_key_t;        /* SHM offset    */
 typedef LsShmOffset_t      lsi_shmhash_datakey_t;
 typedef LsShmOffset_t      lsi_shm_off_t;
 
+typedef struct lsShm_hElem_s    *iterator;
+
 /* USER Hash key generator and compare functions */
 typedef uint32_t (*lsi_hash_fn)(const void *p, int len);
 typedef int (*lsi_val_comp)(const void *p1, const void *p2, int len);
@@ -152,7 +154,7 @@ int             lsi_shmhash_getdata(lsi_shmhash_t *hashhandle,
 int             lsi_shmhash_getdataptrs(lsi_shmhash_t *hashhandle,
                                         LsShmOffset_t offVal, int (*func)(void *pData));
 int             lsi_shmhash_trim(lsi_shmhash_t *hashhandle,
-                                 time_t tmcutoff);
+                                 time_t tmcutoff, int (*func)(iterator iter, void *arg), void *arg);
 int             lsi_shmhash_check(lsi_shmhash_t *hashhandle);
 int             lsi_shmhash_lock(lsi_shmhash_t *hashhandle);
 int             lsi_shmhash_unlock(lsi_shmhash_t *hashhandle);

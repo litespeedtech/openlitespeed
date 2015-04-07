@@ -196,7 +196,7 @@ static void doit(struct mylru *pLru)
     }
 
     CHECK(shmlru_check(pLru->base) == SHMLRU_CHECKOK);
-    CHECK(shmlru_trim(pLru->base, time((time_t *)NULL) + 1) == 2);
+    CHECK(shmlru_trim(pLru->base, time((time_t *)NULL) + 1, NULL, NULL) == 2);
     CHECK(shmlru_check(pLru->base) == SHMLRU_CHECKOK);
 }
 

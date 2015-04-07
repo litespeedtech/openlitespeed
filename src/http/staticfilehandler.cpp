@@ -544,7 +544,10 @@ int StaticFileHandler::process(HttpSession *pSession,
 
                 buildStaticFileHeaders(pResp, pReq, pData);
                 if (pECache == pCache->getGziped())
+                {
                     pResp->addGzipEncodingHeader();
+                    pReq->orGzip(UPSTREAM_GZIP);
+                }
                 pSession->setSendFileBeginEnd(0, pData->getECache()->getFileSize());
             }
         } //Xuedong Add for SSI Start

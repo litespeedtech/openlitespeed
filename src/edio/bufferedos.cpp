@@ -68,6 +68,18 @@ int BufferedOS::writeEx(const char *pBuf, int size, int avoidCache)
 }
 
 
+int BufferedOS::cacheWritev( IOVec &vector, int total )
+{   
+    if (m_buf.size() + total < 40960)
+    {
+        m_buf.cache( vector.get(), vector.len(), 0);
+        return total;
+    }
+    else
+        return writevEx( vector, 0 );       
+}
+
+
 int BufferedOS::writev(IOVec &vec)
 {
     return writevEx(vec, 1);

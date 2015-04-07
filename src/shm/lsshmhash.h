@@ -293,7 +293,7 @@ public:
 
     void eraseIterator(iteroffset iterOff)
     {
-        autoLock();
+        autoLockChkRehash();
         eraseIteratorHelper(offset2iterator(iterOff));
         autoUnlock();
     }
@@ -304,7 +304,7 @@ public:
     //
     iteroffset findIterator(ls_str_pair_t *pParms)
     {
-        autoLock();
+        autoLockChkRehash();
         iteroffset iterOff = (*m_find)(this, pParms);
         autoUnlock();
         return iterOff;
@@ -312,7 +312,7 @@ public:
 
     iteroffset getIterator(ls_str_pair_t *pParms, int *pFlag)
     {
-        autoLock();
+        autoLockChkRehash();
         iteroffset iterOff = (*m_get)(this, pParms, pFlag);
         autoUnlock();
         return iterOff;
@@ -320,7 +320,7 @@ public:
 
     iteroffset insertIterator(ls_str_pair_t *pParms)
     {
-        autoLock();
+        autoLockChkRehash();
         iteroffset iterOff = (*m_insert)(this, pParms);
         autoUnlock();
         return iterOff;
@@ -328,7 +328,7 @@ public:
 
     iteroffset setIterator(ls_str_pair_t *pParms)
     {
-        autoLock();
+        autoLockChkRehash();
         iteroffset iterOff = (*m_set)(this, pParms);
         autoUnlock();
         return iterOff;
@@ -336,7 +336,7 @@ public:
 
     iteroffset updateIterator(ls_str_pair_t *pParms)
     {
-        autoLock();
+        autoLockChkRehash();
         iteroffset iterOff = (*m_update)(this, pParms);
         autoUnlock();
         return iterOff;
@@ -412,7 +412,7 @@ public:
             getLru()->linkFirst : (LsShmOffset_t)-1);
     }
 
-    int trim(time_t tmCutoff);
+    int trim(time_t tmCutoff, int (*func)(iterator iter, void *arg), void *arg);
     int check();
 
     virtual int setLruData(LsShmOffset_t offVal, const uint8_t *pVal, int valLen)
@@ -424,12 +424,6 @@ public:
     virtual int getLruDataPtrs(LsShmOffset_t offVal, int (*func)(void *pData))
     {   return LS_FAIL;  }
 
-
-//     void enableManualLock()
-//     {   m_pPool->disableLock(); disableLock(); }
-//     void disableManualLock()
-//     {   m_pPool->enableLock(); enableLock(); }
-
     void enableLock()
     {   m_iLockEnable = 1; };
 
@@ -437,10 +431,11 @@ public:
     {   m_iLockEnable = 0; };
 
     int lock()
-    {   return m_iLockEnable ? 0 : lsi_shmlock_lock(m_pShmLock); }
-
-    int trylock()
-    {   return m_iLockEnable ? 0 : lsi_shmlock_trylock(m_pShmLock); }
+    {
+        if (m_iLockEnable != 0)
+            return 0;
+        return doLock();
+    }
 
     int unlock()
     {   return m_iLockEnable ? 0 : lsi_shmlock_unlock(m_pShmLock); }
@@ -621,10 +616,20 @@ protected:
     static int release_hash_elem(iteroffset iterOff, void *pUData);
 
     int autoLock()
-    {   return m_iLockEnable && lsi_shmlock_lock(m_pShmLock); }
+    {
+        if (m_iLockEnable == 0)
+            return 0;
+        return doLock();
+    }
 
     int autoUnlock()
     {   return m_iLockEnable && lsi_shmlock_unlock(m_pShmLock); }
+
+    void autoLockChkRehash()
+    {
+        if ((autoLock() < 0) && (getHTable()->x_iHIdx != getHTable()->x_iHIdxNew))
+            rehash();
+    }
 
     // stat helper
     int statIdx(iteroffset iterOff, for_each_fn2 fun, void *pUData);
@@ -747,6 +752,13 @@ private:
 
     void releaseHTableShm();
 
+    ls_attr_inline int doLock()
+    {
+        int ret = lsi_shmlock_lock(m_pShmLock);
+        m_pPool->chkRemap();
+        return ret;
+    }
+    
 #ifdef LSSHM_DEBUG_ENABLE
     // for debug purpose - should debug this later
     friend class debugBase;

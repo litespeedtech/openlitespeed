@@ -126,6 +126,9 @@ public:
     ls_attr_inline LsShmOffset_t ptr2offset(const void *ptr) const
     {   return m_pShm->ptr2offset(ptr); }
 
+    ls_attr_inline LsShmStatus_t chkRemap()
+    {   return m_pShm->chkRemap(); }
+
     LsShmOffset_t  alloc2(LsShmSize_t size, int &remapped);
     void  release2(LsShmOffset_t offset, LsShmSize_t size);
     void  mvFreeList();
@@ -158,7 +161,7 @@ public:
     {   return m_pShm->oldMaxSize(); }
 
     LsShmOffset_t getPoolMapStatOffset() const
-    { return (LsShmOffset_t)(long)&((LsShmPoolMem *)m_iOffset)->x_data.x_stat; }
+    { return (LsShmOffset_t)(long)&((LsShmPoolMem *)(long)m_iOffset)->x_data.x_stat; }
 
     LsShmLock *lockPool()
     {   return m_pShm->lockPool(); }
@@ -172,10 +175,11 @@ public:
     {   return m_pShm->getObjBase(); }
 
     int lock()
-    {   return m_iLockEnable && lsi_shmlock_lock(m_pShmLock); }
-
-    int trylock()
-    {   return m_iLockEnable && lsi_shmlock_trylock(m_pShmLock); }
+    {
+        if (m_iLockEnable == 0)
+            return 0;
+        return doLock();
+    }
 
     int unlock()
     {   return m_iLockEnable && lsi_shmlock_unlock(m_pShmLock); }
@@ -193,6 +197,14 @@ private:
 
     int setupLock()
     {   return m_iLockEnable && lsi_shmlock_setup(m_pShmLock); }
+    
+    ls_attr_inline int doLock()
+    {
+        int ret = lsi_shmlock_lock(m_pShmLock);
+        chkRemap();
+        return ret;
+    }
+
 
     void syncData();
     void mapLock();
