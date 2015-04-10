@@ -625,7 +625,7 @@ int StaticFileCacheData::compressFile()
         pData = m_fileData.getCacheData(offset, wanted, achBuf, len);
         if (wanted <= 0)
             return -1;
-        if (gzBuf.write(pData, wanted))
+        if (gzBuf.write(pData, wanted) == -1)
             return -1;
         offset += wanted;
 

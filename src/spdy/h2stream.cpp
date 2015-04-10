@@ -171,7 +171,7 @@ void H2Stream:: continueWrite()
                getLogId()));
     }
     setFlag(HIO_FLAG_WANT_WRITE, 1);
-    m_pH2Conn->continueWrite();
+    m_pH2Conn->setPendingWrite();
 
 }
 
@@ -188,7 +188,7 @@ NtwkIOLink *H2Stream::getNtwkIoLink()
 }
 
 
-int H2Stream::sendFin()
+int H2Stream::shutdown()
 {
     if (getState() == HIOS_SHUTDOWN)
         return 0;
@@ -201,21 +201,19 @@ int H2Stream::sendFin()
                getLogId()));
     }
     m_pH2Conn->sendFinFrame(m_uiStreamID);
-    m_pH2Conn->flush();
     return 0;
 }
 
 
 int H2Stream::close()
 {
-    if (getState() != HIOS_CONNECTED)
+    if (getState() == HIOS_DISCONNECTED)
         return 0;
     if (getHandler())
         getHandler()->onCloseEx();
-    sendFin();
-    setFlag(HIO_FLAG_WANT_WRITE, 1);
+    shutdown();
+    setFlag(HIO_FLAG_WANT_WRITE, 0);
     setState(HIOS_DISCONNECTED);
-    m_pH2Conn->continueWrite();
     //if (getHandler())
     //{
     //    getHandler()->recycle();
@@ -242,7 +240,7 @@ int H2Stream::getDataFrameSize(int wanted)
         (0 >= m_iWindowOut))
     {
         setFlag(HIO_FLAG_BUFF_FULL | HIO_FLAG_WANT_WRITE, 1);
-        m_pH2Conn->continueWrite();
+        m_pH2Conn->setPendingWrite();
         return 0;
     }
 
@@ -323,27 +321,15 @@ int H2Stream::onWrite()
     if (isWantWrite())
         getHandler()->onWriteEx();
     if (isWantWrite())
-        m_pH2Conn->continueWrite();
+        m_pH2Conn->setPendingWrite();
     return 0;
-}
-
-
-void H2Stream::buildDataFrameHeader(char *pHeader, int length)
-{
-    H2FrameHeader header(length, H2_FRAME_DATA, /*H2_FLAG_END_STREAM*/ 0,
-                         m_uiStreamID);
-    memcpy(pHeader, (char *)&header, 9);
 }
 
 
 int H2Stream::sendData(IOVec *pIov, int total)
 {
-    char achHeader[9];
     int ret;
-    buildDataFrameHeader(achHeader, total);
-    pIov->push_front(achHeader, 9);
-    ret = m_pH2Conn->cacheWritev(*pIov);
-    pIov->pop_front(1);
+    ret = m_pH2Conn->sendDataFrame(m_uiStreamID, 0, pIov, total);
     if (D_ENABLED(DL_LESS))
     {
         LOG_D((getLogger(), "[%s] H2Stream::sendData(), total: %d, ret: %d",
@@ -357,7 +343,6 @@ int H2Stream::sendData(IOVec *pIov, int total)
 
     setActiveTime(DateTime::s_curTime);
     bytesSent(total);
-    m_pH2Conn->dataFrameSent(total);
     if (isFlowCtrl())
     {
         m_iWindowOut -= total;

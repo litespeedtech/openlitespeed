@@ -505,8 +505,8 @@ int StaticFileHandler::process(HttpSession *pSession,
     }
 
     //pECache = pData->getECache();
-    ret = pCache->readyCacheData(pECache,
-                                 pReq->gzipAcceptable() == GZIP_REQUIRED);
+    char compressed = (pReq->gzipAcceptable() == GZIP_REQUIRED);
+    ret = pCache->readyCacheData(pECache, compressed);
     if (D_ENABLED(DL_LESS))
         LOG_D((pReq->getLogger(), "[%s] readyCacheData() return %d",
                pReq->getLogId(), ret));
@@ -539,7 +539,10 @@ int StaticFileHandler::process(HttpSession *pSession,
 
                 buildStaticFileHeaders(pResp, pReq, pData);
                 if (pECache == pCache->getGziped())
+                {
                     pResp->addGzipEncodingHeader();
+                    pReq->orGzip(UPSTREAM_GZIP);
+                }
                 pSession->setSendFileBeginEnd(0, pData->getECache()->getFileSize());
             }
         } //Xuedong Add for SSI Start

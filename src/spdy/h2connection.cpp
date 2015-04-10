@@ -115,8 +115,15 @@ H2Connection::~H2Connection()
 int H2Connection::onReadEx()
 {
     int ret = onReadEx2();
-    if (!isEmpty())
+    if (getBuf()->size() > 1024)
         flush();
+    
+    if (D_ENABLED(DL_LESS))
+    {
+        LOG_D((getLogger(), "[%s] H2Connection::onReadEx() buffered data sise = %d",
+            getLogId(), getBuf()->size()));
+    }
+    
     return ret;
 }
 
@@ -233,6 +240,9 @@ int H2Connection::onReadEx2()
             m_bufInput.guarantee(1024);
         avaiLen = m_bufInput.contiguous();
         n = getStream()->read(m_bufInput.end(), avaiLen);
+        if (D_ENABLED(DL_LESS))
+            LOG_D((getLogger(), "[%s] read() return %d",
+                    getLogId(), n));
 
         if (n == -1)
             break;
@@ -471,7 +481,7 @@ int H2Connection::processSettingFrame(H2FrameHeader *pHeader)
     m_iFlag |= H2_CONN_FLAG_SETTING_RCVD;
 
     sendSettingsFrame();
-    sendFrame0Bytes(H2_FRAME_SETTINGS, H2_FLAG_ACK);
+    sendFrame0Bytes(H2_FRAME_SETTINGS, H2_FLAG_ACK, 0);
 
     if (windowsSizeDiff != 0)
     {
@@ -527,14 +537,13 @@ int H2Connection::processWindowUpdateFrame(H2FrameHeader *pHeader)
             doGoAway(H2_ERROR_FLOW_CONTROL_ERROR);
             return 0;
         }
-        m_iCurDataOutWindow = tmpVal;
-        StreamMap::iterator itn, it = m_mapStream.begin();
-        for (; it != m_mapStream.end();)
+        if (m_iCurDataOutWindow < 0 && tmpVal > 0)
         {
-            it.second()->continueWrite();
-            itn = m_mapStream.next(it);
-            it = itn;
+            m_iCurDataOutWindow = tmpVal;
+            onWriteEx();
         }
+        else
+            m_iCurDataOutWindow = tmpVal;
     }
     else
     {
@@ -556,13 +565,12 @@ int H2Connection::processWindowUpdateFrame(H2FrameHeader *pHeader)
         }
         else
         {
-            if (id <= m_uiLastStreamID)
-                sendRstFrame(id, H2_ERROR_STREAM_CLOSED);
-            else
+            if (id > m_uiLastStreamID)
                 return -1;
+            //sendRstFrame(id, H2_ERROR_STREAM_CLOSED);
         }
 
-        flush();
+        //flush();
     }
     skipRemainData();
     m_iCurrentFrameRemain = 0;
@@ -1045,6 +1053,7 @@ void H2Connection::upgradedStream(HioHandler *pSession)
     pStream->setFlag(HIO_FLAG_FLOWCTRL, 1);
     pStream->setReqHeaderEnd(1);
     onInitConnected();
+    setPendingWrite();
     getBuf()->append(s_h2sUpgradeResponse, sizeof(s_h2sUpgradeResponse) - 1);
     sendSettingsFrame();
     pStream->onInitConnected(true);
@@ -1068,7 +1077,7 @@ void H2Connection::recycleStream(StreamMap::iterator it)
 
     //TODO: use array for m_dqueStreamRespon
     //m_dqueStreamRespon[pH2Stream->getPriority()].remove(pH2Stream);
-    m_dqueStreamRespon.remove(pH2Stream);
+    m_priQue.remove(pH2Stream);
     if (pH2Stream->getHandler())
         pH2Stream->getHandler()->recycle();
 
@@ -1082,6 +1091,21 @@ void H2Connection::recycleStream(StreamMap::iterator it)
 }
 
 
+
+int H2Connection::sendDataFrame(uint32_t uiStreamId, int flag, 
+                                IOVec *pIov, int total )
+{
+    int ret = 0;
+    getBuf()->guarantee(9);
+    appendCtrlFrameHeader(H2_FRAME_DATA, total, flag, uiStreamId);
+    if (pIov)
+        ret = cacheWritev(*pIov, total);
+    if (ret != -1)
+        m_iCurDataOutWindow -= total;
+    return ret;
+}
+
+
 int H2Connection::sendFrame8Bytes(H2FrameType type, uint32_t uiStreamId,
                                   uint32_t uiVal1, uint32_t uiVal2)
 {
@@ -1089,7 +1113,6 @@ int H2Connection::sendFrame8Bytes(H2FrameType type, uint32_t uiStreamId,
     appendCtrlFrameHeader(type, 8, 0, uiStreamId);
     appendNbo4Bytes(getBuf(), uiVal1);
     appendNbo4Bytes(getBuf(), uiVal2);
-    flush();
     if (D_ENABLED(DL_MORE))
     {
         LOG_D((getLogger(), "[%s] send %s frame, stream: %d, value: %d"
@@ -1106,7 +1129,6 @@ int H2Connection::sendFrame4Bytes(H2FrameType type, uint32_t uiStreamId,
     appendCtrlFrameHeader(type, 4, 0, uiStreamId);
 
     appendNbo4Bytes(getBuf(), uiVal1);
-    flush();
     if (D_ENABLED(DL_MORE))
     {
         LOG_D((getLogger(), "[%s] send %s frame, value: %d", getLogId(),
@@ -1116,11 +1138,11 @@ int H2Connection::sendFrame4Bytes(H2FrameType type, uint32_t uiStreamId,
 }
 
 
-int H2Connection::sendFrame0Bytes(H2FrameType type, unsigned char flags)
+int H2Connection::sendFrame0Bytes(H2FrameType type, unsigned char flags,
+                                  uint32_t uiStreamId)
 {
     getBuf()->guarantee(9);
-    appendCtrlFrameHeader(type, 0, flags);
-    flush();
+    appendCtrlFrameHeader(type, 0, flags, uiStreamId);
     if (D_ENABLED(DL_MORE))
     {
         LOG_D((getLogger(), "[%s] send %s frame, with Flag: %d"
@@ -1136,7 +1158,6 @@ int H2Connection::sendPingFrame(uint8_t flags, uint8_t *pPayload)
     getBuf()->guarantee(17);
     appendCtrlFrameHeader(H2_FRAME_PING, 8, flags);
     getBuf()->append((char *)pPayload, H2_PING_FRAME_PAYLOAD_SIZE);
-    flush();
     return 0;
 }
 
@@ -1225,6 +1246,12 @@ int H2Connection::flush()
 }
 
 
+void H2Connection::setPendingWrite()
+{
+    if (isEmpty())
+        getStream()->continueWrite();
+}
+
 int H2Connection::onCloseEx()
 {
     if (getStream()->isReadyToRelease())
@@ -1276,6 +1303,7 @@ int H2Connection::doGoAway(H2ErrorCode status)
 int H2Connection::sendGoAwayFrame(H2ErrorCode status)
 {
     sendFrame8Bytes(H2_FRAME_GOAWAY, 0, m_uiLastStreamID, status);
+    flush();
     return 0;
 }
 
@@ -1380,7 +1408,6 @@ int H2Connection::sendRespHeaders(HttpRespHeaders *pRespHeaders,
     appendCtrlFrameHeader(H2_FRAME_HEADERS, rc,   H2_FLAG_END_HEADERS,
                           uiStreamID);   //H2_FLAG_END_STREAM
     getBuf()->append((const char *)achHdrBuf, rc);
-    flush();
     return 0;
 }
 
@@ -1389,7 +1416,7 @@ void H2Connection::add2PriorityQue(H2Stream *pH2Stream)
 {
     //TODO: use array for m_dqueStreamRespon
     //m_dqueStreamRespon[pH2Stream->getPriority()].append(pH2Stream);
-    m_dqueStreamRespon.append(pH2Stream);
+    m_priQue.append(pH2Stream);
 }
 
 
@@ -1403,9 +1430,12 @@ int H2Connection::onWriteEx()
         LOG_D((getLogger(), "[%s] onWriteEx() state: %d, output buffer size=%d\n ",
                getLogId(), m_iState, getBuf()->size()));
     }
-    flush();
-    if (!isEmpty())
-        return 0;
+    if ( getBuf()->size() > 32768 )
+    {   
+        flush();
+        if (!isEmpty())
+            return 0;
+    }
     if (getStream()->canWrite() & HIO_FLAG_BUFF_FULL)
         return 0;
 
@@ -1438,9 +1468,9 @@ int H2Connection::onWriteEx()
 //     if (m_dqueStreamRespon.empty())
 //         return 0;
 
-    DLinkedObj *it = m_dqueStreamRespon.begin();//H2Stream*
+    DLinkedObj *it = m_priQue.begin();//H2Stream*
     DLinkedObj *itn;
-    for (; it != m_dqueStreamRespon.end();)
+    for (; it != m_priQue.end();)
     {
         pH2Stream = (H2Stream *)it;
         itn = it->next();
@@ -1455,7 +1485,10 @@ int H2Connection::onWriteEx()
         it = itn;
     }
 
-    if (wantWrite == 0)
+    if (!isEmpty())
+        flush();
+    
+    if (wantWrite == 0 && isEmpty())
         getStream()->suspendWrite();
     return 0;
 }

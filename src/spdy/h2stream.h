@@ -72,6 +72,8 @@ public:
 
     virtual NtwkIOLink *getNtwkIoLink();
 
+    int shutdown();
+
     int close();
 
     int onWrite();
@@ -108,9 +110,7 @@ public:
 private:
     bool operator==(const H2Stream &other) const;
 
-    void buildDataFrameHeader(char *pHeader, int length);
     int sendData(IOVec *pIov, int total);
-    int sendFin();
 
 protected:
     virtual const char *buildLogId();
