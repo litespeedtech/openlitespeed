@@ -25,6 +25,7 @@ struct lsi_session_s;
 class ModIndex;
 class ModuleConfig;
 class LogTracker;
+class LsiModule;
 
 typedef struct lsi_module_internal_s
 {
@@ -61,6 +62,12 @@ typedef struct lsi_module_internal_s
      * it will be set to the index for each hook level.
      */
     ModIndex                    *hook_index;
+
+    /**
+     * @brief Initially set to NULL.  If the module has a handler,
+     * it will be set to that handler object.
+     */
+    LsiModule                   *mod_handler;
 } lsi_module_internal_t;
 
 #define MODULE_NAME(x)      (((lsi_module_internal_t *)x->_reserved)->name )
@@ -68,6 +75,7 @@ typedef struct lsi_module_internal_s
 #define MODULE_DATA_ID(x)   ((lsi_module_internal_t *)x->_reserved)->data_id
 #define MODULE_PRIORITY(x)  ((lsi_module_internal_t *)x->_reserved)->priority
 #define MODULE_HOOKINDEX(x) ((lsi_module_internal_t *)x->_reserved)->hook_index
+#define MODULE_HANDLER(x)   ((lsi_module_internal_t *)x->_reserved)->mod_handler
 
 
 //#if sizeof( struct lsi_module_internal_t ) > LSI_MODULE_RESERVED_SIZE

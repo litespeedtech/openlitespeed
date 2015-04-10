@@ -117,6 +117,7 @@ ModuleManager::iterator ModuleManager::addModule(const char *name,
     memset(MODULE_DATA_ID(pModule), 0xFF,
            sizeof(short) * LSI_MODULE_DATA_COUNT); //value is -1 now.
     MODULE_HOOKINDEX(pModule) = new ModIndex();
+    MODULE_HANDLER(pModule) = pLmHttpHandler;
     //m_gModuleArray[pModule->_id] = pModule;
     storeModulePointer(MODULE_ID(pModule), pModule);
 

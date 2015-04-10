@@ -60,7 +60,6 @@ lsi_callback_pf EnvManager::findHandler(const char *name)
     HashStringMap<EnvHandler *>::iterator iter = m_envHashT.find(name);
     if (iter != m_envHashT.end())
         return iter.second()->m_cb;
-
     else
     {
         EnvHandler *pEnvHandler = m_envList.begin();

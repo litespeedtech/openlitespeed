@@ -29,7 +29,7 @@
 ExpiresCtrl::ExpiresCtrl()
     : m_iEnabled(0)
     , m_iBase(0)
-    , m_iCompressable(0)
+    , m_iCompressible(0)
     , m_iBits(0)
     , m_iAge(0)
 {}
@@ -38,7 +38,7 @@ ExpiresCtrl::ExpiresCtrl()
 ExpiresCtrl::ExpiresCtrl(const ExpiresCtrl &rhs)
     : m_iEnabled(rhs.m_iEnabled)
     , m_iBase(rhs.m_iBase)
-    , m_iCompressable(rhs.m_iCompressable)
+    , m_iCompressible(rhs.m_iCompressible)
     , m_iBits(0)
     , m_iAge(rhs.m_iAge)
 {

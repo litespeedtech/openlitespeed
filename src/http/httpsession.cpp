@@ -82,6 +82,7 @@ HttpSession::HttpSession()
     , m_processState(HSPS_READ_REQ_HEADER)
     , m_curHookLevel(0)
     , m_pAiosfcb(NULL)
+    , m_pModHandler(NULL)
 {
     memset(&m_pChunkIS, 0, (char *)(&m_iReqServed + 1) -
            (char *)&m_pChunkIS);
@@ -307,7 +308,6 @@ void HttpSession::releaseSendFileInfo()
 
 void HttpSession::nextRequest()
 {
-    setState(HSS_WAITING);
 
     if (D_ENABLED(DL_LESS))
         LOG_D((getLogger(), "[%s] HttpSession::nextRequest()!",
@@ -1078,8 +1078,7 @@ void HttpSession::addEnv(const char *pKey, int keyLen, const char *pValue,
     m_request.addEnv(pKey, keyLen, pValue, (int)valLen);
     lsi_callback_pf cb = EnvManager::getInstance().findHandler(pKey);
     if (cb && (0 != EnvManager::getInstance().execEnvHandler((
-                   LsiSession *)this,
-               cb, (void *)pValue, valLen)))
+                   LsiSession *)this, cb, (void *)pValue, valLen)))
         return ;
 }
 
@@ -1952,6 +1951,7 @@ void HttpSession::closeConnection()
     m_request.reset();
     m_request.resetHeaderBuf();
     releaseSendFileInfo();
+    m_pModHandler = NULL;
 
     if (m_pChunkOS)
     {
@@ -1970,7 +1970,7 @@ void HttpSession::closeConnection()
         m_pChunkIS = NULL;
     }
 
-    //For reuse condition, need to reste the sessionhooks
+    //For reuse condition, need to reset the sessionhooks
     m_sessionHooks.reset();
     getStream()->handlerReadyToRelease();
     getStream()->close();
@@ -3627,7 +3627,7 @@ int HttpSession::updateContentCompressible()
         {
             char ch = pContentType[len];
             pContentType[len] = 0;
-            compressible = HttpMime::getMime()->compressable(pContentType);
+            compressible = HttpMime::getMime()->compressible(pContentType);
             pContentType[len] = ch;
         }
         if (!compressible)

@@ -104,7 +104,7 @@ int HttpCgiTool::processHeaderLine(HttpExtConnector *pExtConn,
                 p1 = (char *)pLineEnd;
             ch = *p1;
             *p1 = 0;
-            if (!HttpMime::getMime()->compressable(pValue))
+            if (!HttpMime::getMime()->compressible(pValue))
                 pReq->andGzip(~GZIP_ENABLED);
             *p1 = ch;
         }
@@ -700,7 +700,7 @@ int HttpCgiTool::processContentType(HttpReq *pReq, HttpResp *pResp,
                 p1 = (char *)pValue + valLen;
             ch = *p1;
             *p1 = 0;
-            if (!HttpMime::getMime()->compressable(pValue))
+            if (!HttpMime::getMime()->compressible(pValue))
                 pReq->andGzip(~GZIP_ENABLED);
             *p1 = ch;
         }

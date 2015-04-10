@@ -775,8 +775,8 @@ int HttpRespHeaders::outputNonSpdyHeaders(IOVec *iovec)
 
     iovec->clear();
     const StatusLineString &statusLine =
-            HttpStatusLine::getInstance().getStatusLine( m_iHttpVersion,
-                                                         m_iHttpCode);
+            HttpStatusLine::getInstance().getStatusLine(m_iHttpVersion,
+                                                        m_iHttpCode);
     iovec->push_front(statusLine.get(), statusLine.getLen());
     m_iHeadersTotalLen = statusLine.getLen();
     m_iHeadersTotalLen += appendToIov(iovec);

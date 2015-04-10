@@ -50,7 +50,7 @@ typedef struct
     uint8_t             x_aName[LSSHM_MAXNAMELEN];
     LsShmSize_t         x_iMaxSize;      // the file size
     LsShmSize_t         x_iMaxElem;
-    int16_t             x_iUnitSize;     // each of each lsi_shmlock_t
+    int16_t             x_iUnitSize;     // NOT USED
     int16_t             x_iElemSize;
     LsShmOffset_t       x_iFreeOffset;   // first free lock
 } LsShmLockMap;

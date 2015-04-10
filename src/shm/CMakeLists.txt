@@ -21,5 +21,5 @@ SET(shm_STAT_SRCS
 
 add_library(lsshm STATIC ${shm_STAT_SRCS} )
 
-add_library(lsshm SHARED ${shm_STAT_SRCS} )
+#add_library(lsshm SHARED ${shm_STAT_SRCS} )
 

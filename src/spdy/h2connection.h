@@ -113,23 +113,18 @@ public:
 
     int sendFinFrame(uint32_t uiStreamID)
     {
-        char achHeader[9];
-        H2FrameHeader header(0, H2_FRAME_DATA, H2_FLAG_END_STREAM, uiStreamID);
-        memcpy(achHeader, (char *)&header, 9);
-        return cacheWrite(achHeader, 9);
+        return sendFrame0Bytes(H2_FRAME_DATA, H2_FLAG_END_STREAM, uiStreamID);
     }
 
-    void dataFrameSent(int bytes)
-    {
-        m_iCurDataOutWindow -= bytes;
-    }
-
+    int sendDataFrame(uint32_t uiStreamID, int flag, IOVec *pIov, int total );
+    
     void upgradedStream(HioHandler *pSession);
 
     void recycleStream(uint32_t uiStreamID);
 
     NtwkIOLink *getNtwkIoLink();
 
+    void setPendingWrite();
 
 private:
     typedef THash< H2Stream * > StreamMap;
@@ -169,6 +164,7 @@ private:
                               unsigned char flags = 0, uint32_t uiStreamID = 0)
     {
         H2FrameHeader header(len, type, flags, uiStreamID);
+        setPendingWrite();
         getBuf()->append((char *)&header, 9);
         return 0;
     }
@@ -176,7 +172,7 @@ private:
                          uint32_t uiVal1, uint32_t uiVal2);
     int  sendFrame4Bytes(H2FrameType type, uint32_t uiStreamId,
                          uint32_t uiVal2);
-    int  sendFrame0Bytes(H2FrameType type, uint8_t  flags);
+    int  sendFrame0Bytes(H2FrameType type, uint8_t  flags, uint32_t uiStreamId);
 
 
     void recycleStream(StreamMap::iterator it);
@@ -204,7 +200,7 @@ private:
 
     //TODO: use array for m_dqueStreamRespon
     //DLinkQueue      m_dqueStreamRespon[H2_STREAM_PRIORITYS];
-    DLinkQueue      m_dqueStreamRespon;
+    DLinkQueue      m_priQue;
 
     StreamMap       m_mapStream;
     short           m_iState;

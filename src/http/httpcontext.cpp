@@ -755,7 +755,7 @@ int HttpContext::setCompressByType(const char *pValue)
 {
     if (initMIME())
         return LS_FAIL;
-    return m_pInternal->m_pMIME->setCompressableByType(pValue,
+    return m_pInternal->m_pMIME->setCompressibleByType(pValue,
             HttpMime::getMime(),
             m_sLocation.c_str());
 }

@@ -38,7 +38,7 @@
 StaticFileHandler        s_staticFileHandler;
 RedirectHandler          s_redirectHandler;
 SSIEngine                s_ssiHandler;
-ModuleHandler           s_ModuleHandler;
+ModuleHandler            s_ModuleHandler;
 
 typedef ObjPool<HttpExtConnector>   ExtConnectorPool;
 static ExtConnectorPool             s_extConnectorPool(0, 10);

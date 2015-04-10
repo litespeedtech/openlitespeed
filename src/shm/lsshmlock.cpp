@@ -235,7 +235,6 @@ LsShmStatus_t LsShmLock::init(const char *name, LsShmSize_t size)
         getShmLockMap()->x_iMaxSize = size;
         getShmLockMap()->x_iFreeOffset = 0;
         getShmLockMap()->x_iMaxElem = 0;
-        getShmLockMap()->x_iUnitSize = sizeof(lsi_shmlock_t);
         getShmLockMap()->x_iElemSize = sizeof(LsShmRegElem);
         strcpy((char *)getShmLockMap()->x_aName, name);
 

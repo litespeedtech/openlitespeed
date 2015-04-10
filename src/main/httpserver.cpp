@@ -1828,7 +1828,7 @@ int HttpServerImpl::configTuning(const XmlNode *pRoot)
                               0, 1, 0));
     config.setCompressLevel(currentCtx.getLongValue(pNode, "gzipCompressLevel",
                             1, 9, 4));
-    HttpMime::getMime()->setCompressableByType(
+    HttpMime::getMime()->setCompressibleByType(
         pNode->getChildValue("compressibleTypes"), NULL, LogIdTracker::getLogId());
     StaticFileCacheData::setUpdateStaticGzipFile(
         currentCtx.getLongValue(pNode, "gzipAutoUpdateStatic", 0, 1, 0),
@@ -3018,7 +3018,7 @@ int HttpServerImpl::initSampleServer()
     }
     char achMIMEHtml[] = "text/html";
     HttpMime::getMime()->updateMIME(achMIMEHtml,
-                                       HttpMime::setCompressable, (void *)1, NULL);
+                                       HttpMime::setCompressible, (void *)1, NULL);
     StaticFileCacheData::setUpdateStaticGzipFile(1, 6, 300, 1024 * 1024);
 
     //protected context

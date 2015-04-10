@@ -18,7 +18,7 @@
 #ifndef HTTPCONNECTION_H
 #define HTTPCONNECTION_H
 
-
+#include <ls.h>
 #include <edio/aioeventhandler.h>
 #include <edio/aiooutputstream.h>
 #include <http/httpreq.h>
@@ -121,6 +121,7 @@ class HttpSession : public LsiSession, public HioHandler,
     HttpResp              m_response;
 
     LsiModuleData         m_moduleData; //lsiapi user data of http level
+    const lsi_handler_t  *m_pModHandler;
 
     HttpSessionHooks      m_sessionHooks;
     HSPState              m_processState;
@@ -132,7 +133,7 @@ class HttpSession : public LsiSession, public HioHandler,
     HttpResp             *m_pSubResp;
     ReqHandler           *m_pHandler;
 
-    lsiapi_hookinfo_t       m_curHookInfo;
+    lsiapi_hookinfo_t     m_curHookInfo;
     lsi_cb_param_t        m_curHkptParam;
     int                   m_curHookRet;
 
@@ -463,6 +464,12 @@ public:
 
     virtual int onAioEvent();
     int handleAioSFEvent(Aiosfcb *event);
+
+    void setModHandler(const lsi_handler_t *pHandler)
+    {   m_pModHandler = pHandler;   }
+
+    const lsi_handler_t *getModHandler()
+    {   return m_pModHandler;}
 };
 
 #endif

@@ -130,6 +130,7 @@ HttpReq::HttpReq()
     m_upgradeProto = UPD_PROTO_NONE;
     m_pRealPath = NULL;
     m_pPool = ls_xpool_new();
+    ls_xpool_skipfree(m_pPool);
     uSetURI(NULL, 0);
     ls_str_set(&m_curUrl.value, NULL, 0);
     ls_str_set(&m_location, NULL, 0);
@@ -147,6 +148,7 @@ HttpReq::~HttpReq()
 {
     if (m_fdReqFile != -1)
         ::close(m_fdReqFile);
+    m_unknHeaders.release(m_pPool);
     ls_xpool_delete(m_pPool);
     m_pPool = NULL;
     uSetURI(NULL, 0);
@@ -158,7 +160,6 @@ HttpReq::~HttpReq()
         free(m_pUrls);
     m_pUrls = NULL;
     m_envHash = NULL;
-    m_unknHeaders.init();
     m_pAuthUser = NULL;
     m_pRange = NULL;
 }
@@ -166,7 +167,6 @@ HttpReq::~HttpReq()
 
 void HttpReq::reset()
 {
-    ls_xpool_skipfree(m_pPool);
     if (m_fdReqFile != -1)
     {
         ::close(m_fdReqFile);
@@ -183,6 +183,8 @@ void HttpReq::reset()
              (char *)(&m_code + 1) - (char *)m_commonHeaderOffset);
     m_pRealPath = NULL;
     ls_xpool_reset(m_pPool);
+    ls_xpool_skipfree(m_pPool);
+    m_unknHeaders.init();
     uSetURI(NULL, 0);
     ls_str_set(&m_curUrl.value, NULL, 0);
     ls_str_set(&m_location, NULL, 0);
@@ -190,7 +192,6 @@ void HttpReq::reset()
     ls_str_set(&m_newHost, NULL, 0);
     memset(m_pUrls, 0, sizeof(ls_str_pair_t) * (MAX_REDIRECTS + 1));
     m_envHash = NULL;
-    m_unknHeaders.init();
     m_pAuthUser = NULL;
     m_pRange = NULL;
 }

@@ -25,10 +25,6 @@
 #include <unistd.h>
 
 
-#define MIN_POOL_DATAUNITSIZE   8
-
-
-
 LsShmStatus_t LsShmPool::createStaticData(const char *name)
 {
     LsShmOffset_t i;
@@ -46,10 +42,7 @@ LsShmStatus_t LsShmPool::createStaticData(const char *name)
     pDataMap->x_chunk.x_iStart = 0;
     pDataMap->x_chunk.x_iEnd = 0;
     pDataMap->x_iFreeList = 0;
-    pDataMap->x_iUnitSize = MIN_POOL_DATAUNITSIZE;      // 8 bytes
-    pDataMap->x_iMaxUnitSize = pDataMap->x_iUnitSize * LSSHM_POOL_NUMBUCKET;
-    pDataMap->x_iNumFreeBucket = LSSHM_POOL_NUMBUCKET;
-    for (i = 0; i < pDataMap->x_iNumFreeBucket; ++i)
+    for (i = 0; i < LSSHM_POOL_NUMBUCKET; ++i)
         pDataMap->x_aFreeBucket[i] = 0;
     ::memset(&pDataMap->x_stat, 0, sizeof(LsShmPoolMapStat));
 
@@ -87,8 +80,6 @@ LsShmPool::LsShmPool(LsShm *shm, const char *name, LsShmPool *gpool)
         return;
     }
 
-    m_iPageUnitSize = 0;
-    m_iDataUnitSize = 0;
     m_iLockEnable = 1;
     m_pShm = shm;
 
@@ -123,7 +114,7 @@ LsShmPool::LsShmPool(LsShm *shm, const char *name, LsShmPool *gpool)
             // allocate header from SYS POOL
             LsShmOffset_t offset;
             int remapped;
-            offset = shm->allocPage(shm->unitSize(), remapped);
+            offset = shm->allocPage(LSSHM_SHM_UNITSIZE, remapped);
             if (offset == 0)
             {
                 m_status = LSSHM_BADMAPFILE;
@@ -134,7 +125,7 @@ LsShmPool::LsShmPool(LsShm *shm, const char *name, LsShmPool *gpool)
             p_reg->x_iValue = m_iOffset;
 
             extraOffset = offset + sizeof(LsShmPoolMem);
-            extraSize = shm->unitSize() - sizeof(LsShmPoolMem);
+            extraSize = LSSHM_SHM_UNITSIZE - sizeof(LsShmPoolMem);
         }
     }
 
@@ -151,10 +142,9 @@ LsShmPool::LsShmPool(LsShm *shm, const char *name, LsShmPool *gpool)
     {
         m_status = createStaticData(name);
         // NOTE release extra to freeList
-        if ((extraOffset != 0) && (extraSize > getDataMap()->x_iMaxUnitSize))
+        if ((extraOffset != 0) && (extraSize > LSSHM_POOL_MAXBCKTSIZE))
             releaseData(extraOffset, extraSize);
     }
-    syncData();
     mapLock();
 
     if (m_status == LSSHM_OK)
@@ -280,24 +270,26 @@ LsShmOffset_t LsShmPool::alloc2(LsShmSize_t size, int &remapped)
 
     remapped = 0;
     size = roundDataSize(size);
-    if (size >= m_iPageUnitSize)
+    if (size >= LSSHM_SHM_UNITSIZE)
     {
         if ((offset = m_pShm->allocPage(size, remapped)) != 0)
         {
             lock();
-            incrCheck(&getDataMap()->x_stat.m_iShmAllocated, size);
+            incrCheck(&getDataMap()->x_stat.m_iShmAllocated, roundSize2pages(size));
             unlock();
         }
     }
     else
     {
         lock();
-        if (size >= getDataMap()->x_iMaxUnitSize)
+        if (size >= LSSHM_POOL_MAXBCKTSIZE)
             // allocate from FreeList
             offset = allocFromDataFreeList(size);
         else
             // allocate from bucket
             offset = allocFromDataBucket(size);
+        if (offset != 0)
+            getDataMap()->x_stat.m_iPoolInUse += size;
         unlock();
     }
     if (map_o != m_pShm->getShmMap())
@@ -310,17 +302,18 @@ LsShmOffset_t LsShmPool::alloc2(LsShmSize_t size, int &remapped)
 void LsShmPool::release2(LsShmOffset_t offset, LsShmSize_t size)
 {
     size = roundDataSize(size);
-    if (size >= m_iPageUnitSize)
+    if (size >= LSSHM_SHM_UNITSIZE)
     {
         m_pShm->releasePage(offset, size);
         lock();
-        incrCheck(&getDataMap()->x_stat.m_iShmReleased, size);
+        incrCheck(&getDataMap()->x_stat.m_iShmReleased, roundSize2pages(size));
         unlock();
     }
     else
     {
         lock();
         releaseData(offset, size);
+        getDataMap()->x_stat.m_iPoolInUse -= size;
         unlock();
     }
 }
@@ -433,7 +426,7 @@ void LsShmPool::addFreeBucket(LsShmPoolMap *pSrcMap)
 void LsShmPool::releaseData(LsShmOffset_t offset, LsShmSize_t size)
 {
     LsShmPoolMap *pDataMap = getDataMap();
-    if (size >= pDataMap->x_iMaxUnitSize)
+    if (size >= LSSHM_POOL_MAXBCKTSIZE)
     {
         // release to FreeList
         LsShmFreeList *pFree;
@@ -477,16 +470,6 @@ void LsShmPool::releaseData(LsShmOffset_t offset, LsShmSize_t size)
 
 
 //
-// @brief syncData - load static SHM data to object memory
-//
-void LsShmPool::syncData()
-{
-    m_iPageUnitSize = m_pShm->getShmMap()->x_iUnitSize;
-    m_iDataUnitSize = getDataMap()->x_iUnitSize;
-}
-
-
-//
 // @brief map the lock into Object space
 //
 void LsShmPool::mapLock()
@@ -512,7 +495,7 @@ void LsShmPool::mapLock()
 
 
 //
-//  @brief allocFromDataFreeList - only for size >= data.x_iMaxUnitSize
+//  @brief allocFromDataFreeList - only for size >= LSSHM_POOL_MAXBCKTSIZE
 //  @brief linear search the FreeList for it.
 //  @brief if no match from FreeList then allocate from data.x_chunk
 //
@@ -529,7 +512,7 @@ LsShmOffset_t LsShmPool::allocFromDataFreeList(LsShmSize_t size)
         {
             pFree->x_iSize = (LsShmSize_t)left;
             incrCheck(&getDataMap()->x_stat.m_iFlAllocated, size);
-            if ((LsShmSize_t)left < getDataMap()->x_iMaxUnitSize)
+            if ((LsShmSize_t)left < LSSHM_POOL_MAXBCKTSIZE)
                 mvDataFreeListToBucket(pFree, offset);
             return offset + left;
         }
@@ -609,7 +592,7 @@ LsShmOffset_t LsShmPool::fillDataBucket(
 {
     LsShmSize_t num;
     // allocated according to data size
-    num = (getDataMap()->x_iMaxUnitSize << 2) / size;
+    num = (LSSHM_POOL_MAXBCKTSIZE << 2) / size;
     if (num > LSSHM_MAX_BUCKET_SLOT)
         num = LSSHM_MAX_BUCKET_SLOT;
 
@@ -669,8 +652,10 @@ LsShmOffset_t LsShmPool::allocFromDataChunk(LsShmSize_t size,
     {
         if (numAvail < num) // shrink the num
             num = numAvail;
+        size *= num;
         offset = pDataMap->x_chunk.x_iStart;
-        pDataMap->x_chunk.x_iStart += (num * size);
+        pDataMap->x_chunk.x_iStart += size;
+        pDataMap->x_stat.m_iFreeChunk -= size;
         return offset;
     }
 
@@ -693,8 +678,8 @@ LsShmOffset_t LsShmPool::allocFromDataChunk(LsShmSize_t size,
 
     // figure pagesize needed - round to SHM page unit to avoid waste
     LsShmSize_t needed = roundPageSize(size * num);
-    if (needed < m_iPageUnitSize)
-        needed = m_iPageUnitSize;
+    if (needed < LSSHM_SHM_UNITSIZE)
+        needed = LSSHM_SHM_UNITSIZE;
 
     int remapped = 0;
     if ((offset = m_pShm->allocPage(needed, remapped)) == 0)
@@ -704,7 +689,7 @@ LsShmOffset_t LsShmPool::allocFromDataChunk(LsShmSize_t size,
     }
     if (remapped != 0)
         pDataMap = getDataMap();
-    pDataMap->x_stat.m_iFromChunk += needed;
+    pDataMap->x_stat.m_iFreeChunk += needed;
     
     if (releaseOffset != 0)
     {
@@ -715,7 +700,10 @@ LsShmOffset_t LsShmPool::allocFromDataChunk(LsShmSize_t size,
             needed += releaseSize;
         }
         else
+        {
             releaseData(releaseOffset, releaseSize);
+            pDataMap->x_stat.m_iFreeChunk -= releaseSize;
+        }
     }
     pDataMap->x_chunk.x_iStart = offset;
     pDataMap->x_chunk.x_iEnd = offset + needed;
