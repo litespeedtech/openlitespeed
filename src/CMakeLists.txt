@@ -23,18 +23,21 @@ add_definitions( ${LFS_CFLAGS} )
 #INCLUDE( ${PROJECT_SOURCE_DIR}/CMakeModules/common.cmake)
 
 #add_subdirectory(test)
-add_subdirectory(spdy)
 add_subdirectory(edio)
-add_subdirectory(socket)
-add_subdirectory(http)
-add_subdirectory(shm)
-add_subdirectory(sslpp)
 add_subdirectory(extensions)
+add_subdirectory(http)
 add_subdirectory(log4cxx)
-add_subdirectory(main)
-add_subdirectory(ssi)
 add_subdirectory(lsiapi)
+add_subdirectory(lsr)
+add_subdirectory(main)
 add_subdirectory(modules)
+add_subdirectory(shm)
+add_subdirectory(socket)
+add_subdirectory(spdy)
+add_subdirectory(sslpp)
+add_subdirectory(ssi)
+add_subdirectory(thread)
+add_subdirectory(util)
 
 ########### next target ###############
 
@@ -44,118 +47,11 @@ SET(openlitespeed_SRCS
    main.cpp
 )
 
-SET(util_SRCS
-   util/httpfetchdriver.cpp
-   util/httpfetch.cpp
-   util/linkobjpool.cpp
-   util/pidfile.cpp
-   util/hashdatacache.cpp
-   util/keydata.cpp
-   util/tlinklist.cpp
-   util/rlimits.cpp
-   util/duplicable.cpp
-   util/gfactory.cpp
-   util/fdpass.cpp
-   util/pcregex.cpp
-   util/autostr.cpp
-   util/staticobj.cpp
-   util/pool.cpp
-   util/hashstringmap.cpp
-   util/ghash.cpp
-   util/emailsender.cpp
-   util/guardedapp.cpp
-   util/crashguard.cpp
-   util/iconnection.cpp
-   util/dlinkqueue.cpp
-   util/connpool.cpp
-   util/gzipbuf.cpp
-   util/vmembuf.cpp
-   util/blockbuf.cpp
-   util/stringlist.cpp
-   util/semaphore.cpp
-   util/refcounter.cpp
-   util/gpointerlist.cpp
-   util/linkedobj.cpp
-   util/objpool.cpp
-   util/gpath.cpp
-   util/logtracker.cpp
-   util/poolalloc.cpp
-   util/env.cpp
-   util/xmlnode.cpp
-   util/iovec.cpp
-   util/accesscontrol.cpp
-   util/signalutil.cpp
-   util/loopbuf.cpp
-   util/stringtool.cpp
-   util/tsingleton.cpp
-   util/pcutil.cpp
-   util/daemonize.cpp
-   util/configentry.cpp
-   util/logidtracker.cpp
-   util/datetime.cpp
-   util/resourcepool.cpp
-   util/linkedqueue.cpp
-   util/httputil.cpp
-   util/misc/profiletime.cpp
-   util/sysinfo/partitioninfo.cpp
-   util/sysinfo/nicdetect.cpp
-   util/sysinfo/systeminfo.cpp
-)
 
-SET(lsr_SRCS
-   lsr/ls_aho.c
-   lsr/ls_base64.c
-   lsr/ls_buf.c
-   lsr/ls_confparser.c
-   lsr/ls_crc64.c
-   lsr/ls_dlinkq.c
-   lsr/ls_fileio.c
-   lsr/ls_hash.c
-   lsr/ls_lfqueue.c
-   lsr/ls_lfstack.c
-   lsr/ls_link.c
-   lsr/ls_llmq.c
-   lsr/ls_llxq.c
-   lsr/ls_lock.c
-   lsr/ls_loopbuf.c
-   lsr/ls_map.c
-   lsr/ls_md5.c
-   lsr/ls_mpscq.c
-   lsr/ls_objarray.c
-   lsr/ls_objpool.c
-   lsr/ls_pcreg.c
-   lsr/ls_pool.c
-   lsr/ls_ptrlist.c
-   lsr/ls_sha1.c
-   lsr/ls_stack.c
-   lsr/ls_str.c
-   lsr/ls_strlist.c
-   lsr/ls_strtool.c
-   lsr/ls_time.c
-   lsr/ls_tsstack.c
-   lsr/ls_xpool.c
-   lsr/xxhash.c
-)
-
-SET(thread_SRCS
-   thread/pthreadcond.cpp
-   thread/pthreadmutex.cpp
-   thread/pthreadworkqueue.cpp
-   thread/thread.cpp
-   thread/workcrew.cpp
-   thread/worker.cpp
-)
-
-SET(edio_STAT_SRCS
+SET(unittest_STAT_SRCS
    test/edio/bufferedostest.cpp
    test/edio/multiplexertest.cpp
-)
-
-SET(extensions_STAT_SRCS
    test/extensions/fcgistartertest.cpp
-)
-
-SET(http_STAT_SRCS
    test/http/expirestest.cpp
    test/http/rewritetest.cpp
    test/http/httprequestlinetest.cpp
@@ -174,14 +70,9 @@ SET(http_STAT_SRCS
    test/http/httpbuftest.cpp
    test/http/httpheadertest.cpp
    test/http/datetimetest.cpp
-)
-SET(socket_STAT_SRCS
    test/socket/hostinfotest.cpp
    test/socket/tcpsockettest.cpp
    test/socket/coresockettest.cpp
-)
-
-SET(util_STAT_SRCS
    test/util/pcregextest.cpp
    test/util/ghashtest.cpp
    test/util/linkedobjtest.cpp
@@ -201,24 +92,15 @@ SET(util_STAT_SRCS
    test/util/stringtooltest.cpp
    test/util/gpointerlisttest.cpp
    test/util/objarraytest.cpp
-)
-
-SET(spdy_STAT_SRCS
    test/spdy/huffmantest.cpp
    test/spdy/hpacktest.cpp
    test/spdy/spdyzlibfiltertest.cpp
    test/spdy/spdyconnectiontest.cpp
    test/spdy/dummiostream.cpp
-)
-
-SET(MODULE_DATAS_SRCS
    test/lsiapi/moduledata.cpp
    test/lsiapi/moduletimertest.cpp
    test/lsiapi/lsiapihookstest.cpp
    test/lsiapi/envhandler.cpp
-)
-
-SET(lsr_STAT_SRCS
    test/lsr/ls_ahotest.cpp
    test/lsr/ls_confparsertest.cpp
    test/lsr/ls_base64test.cpp
@@ -234,20 +116,15 @@ SET(lsr_STAT_SRCS
    test/lsr/ls_pcregtest.cpp
    test/lsr/ls_pooltest.cpp
    test/lsr/ls_ptrlisttest.cpp
+   test/lsr/ls_radixtest.cpp
    test/lsr/ls_sha1test.cpp
    test/lsr/ls_strtest.cpp
    test/lsr/ls_strlisttest.cpp
    test/lsr/ls_strtooltest.cpp
    test/lsr/ls_xpooltest.cpp
-)
-
-SET(thread_STAT_SRCS
    test/thread/pthreadworkqueuetest.cpp
    test/thread/threadtest.cpp
    test/thread/workcrewtest.cpp
-)
-
-SET(shm_STAT_SRCS
    test/shm/shmbaselrutest.cpp
    test/shm/shmlrutest.cpp
    test/shm/shmxtest.cpp
@@ -255,11 +132,17 @@ SET(shm_STAT_SRCS
 
 link_directories(/usr/local/lib ${PROJECT_SOURCE_DIR}/src/test/unittest-cpp/UnitTest++)
 
-add_executable(openlitespeed ${openlitespeed_SRCS} ${util_SRCS} ${lsr_SRCS}
-    ${thread_SRCS} ${edio_STAT_SRCS}
-    ${extensions_STAT_SRCS} ${http_STAT_SRCS} ${socket_STAT_SRCS}
-    ${util_STAT_SRCS} ${spdy_STAT_SRCS} ${MODULE_DATAS_SRCS}
-    ${lsr_STAT_SRCS} ${thread_STAT_SRCS} ${shm_STAT_SRCS})
+add_executable(openlitespeed ${openlitespeed_SRCS}
+    ${unittest_STAT_SRCS} 
+)
+
+add_executable(ls_shmstat
+    shm/ls_shmstat.cpp
+)
+
+add_executable(ls_shmhashstat
+    shm/ls_shmhashstat.cpp
+)
 
 #add_executable(luatest
 #modules/prelinkedmods.cpp
@@ -330,17 +213,19 @@ add_executable(openlitespeed ${openlitespeed_SRCS} ${util_SRCS} ${lsr_SRCS}
 # ${lsr_SRCS}
 # )
 
-
-
 SET( litespeedlib
-    lsshm main http main modgzip spdy ssi
+    main http main modgzip spdy ssi
     lsiapi registry cgi fcgi jk extensions
     lsapi proxy edio log4cxx socket
-    sslpp  http edio GeoIP pthread rt
-    cache
-    ${CMAKE_DL_LIBS} ${libUnitTest} )
+    sslpp lsshm http edio thread GeoIP 
+    -Wl,--whole-archive util lsr -Wl,--no-whole-archive
+    pthread rt ${CMAKE_DL_LIBS} ${libUnitTest} )
 
 target_link_libraries(openlitespeed ${litespeedlib} )
+
+target_link_libraries(ls_shmstat lsshm util lsr pthread )
+
+target_link_libraries(ls_shmhashstat lsshm util lsr pthread )
 
 # target_link_libraries(shmtest ${litespeedlib} )
 

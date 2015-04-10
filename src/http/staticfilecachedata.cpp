@@ -776,7 +776,7 @@ int StaticFileCacheData::readyCacheData(
 {
     char *pFileName = m_real.buf();
     int ret;
-    if ((compress) && (m_pMimeType->getExpires()->compressable()))
+    if ((compress) && (m_pMimeType->getExpires()->compressible()))
     {
         ret = readyGziped();
         if (ret == 0)

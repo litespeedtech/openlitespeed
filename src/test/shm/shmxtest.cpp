@@ -222,11 +222,14 @@ TEST(shmPerProcess_test)
     int cnt;
     LsShmSize_t acnt;
     LsShmSize_t rcnt;
-    off0 = pGPool->alloc2(1*LSSHM_MINUNIT, remap);
-    off1 = pGPool->alloc2(2*LSSHM_MINUNIT+1, remap);
-    off2 = pGPool->alloc2(2*LSSHM_MINUNIT, remap);
-    off3 = pGPool->alloc2(1*LSSHM_MINUNIT, remap);
-    acnt = (6*LSSHM_MINUNIT) + 8;   // rounded byte count
+    off0 = pGPool->alloc2(1*LSSHM_SHM_UNITSIZE, remap);
+    off1 = pGPool->alloc2(2*LSSHM_SHM_UNITSIZE+1, remap);
+    off2 = pGPool->alloc2(2*LSSHM_SHM_UNITSIZE, remap);
+    off3 = pGPool->alloc2(1*LSSHM_SHM_UNITSIZE, remap);
+    acnt = pGPool->roundSize2pages(1*LSSHM_SHM_UNITSIZE)
+        + pGPool->roundSize2pages(2*LSSHM_SHM_UNITSIZE+1)
+        + pGPool->roundSize2pages(2*LSSHM_SHM_UNITSIZE)
+        + pGPool->roundSize2pages(1*LSSHM_SHM_UNITSIZE);
     rcnt = 0;
 
     LsShmMapStat *pStat =
@@ -237,20 +240,20 @@ TEST(shmPerProcess_test)
     // in this case, for simplicity, use same pointer, assume no remapping.
 
     cnt = pStat->m_iAllocated;
-    pGPool->release2(off0, 1*LSSHM_MINUNIT);
-    pGPool->release2(off2, 2*LSSHM_MINUNIT);
-    rcnt += (3*LSSHM_MINUNIT);
+    pGPool->release2(off0, 1*LSSHM_SHM_UNITSIZE);
+    pGPool->release2(off2, 2*LSSHM_SHM_UNITSIZE);
+    rcnt += pGPool->roundSize2pages(3*LSSHM_SHM_UNITSIZE);
     CHECK(pStat->m_iReleased == 3);     // 3 blocks
     CHECK(pStat->m_iFreeListCnt == 2);  // 2 entries
-    CHECK(pStat2->m_iShmAllocated == acnt);  // bytes (rounded)
+    CHECK(pStat2->m_iShmAllocated == acnt);
     CHECK(pStat2->m_iShmReleased == rcnt);
-    pGPool->release2(off1, 2*LSSHM_MINUNIT+1);
-    rcnt += (2*LSSHM_MINUNIT+8);        // rounded
+    pGPool->release2(off1, 2*LSSHM_SHM_UNITSIZE+1);
+    rcnt += pGPool->roundSize2pages(2*LSSHM_SHM_UNITSIZE+1);
     CHECK(pStat->m_iReleased == 6);     // 6 blocks
     CHECK(pStat->m_iFreeListCnt == 1);  // 1 entry
     CHECK(pStat2->m_iShmReleased == rcnt);
-    pGPool->alloc2(2*LSSHM_MINUNIT, remap); // alloc 2 blocks from shm freelist
-    acnt += (2*LSSHM_MINUNIT);
+    pGPool->alloc2(2*LSSHM_SHM_UNITSIZE, remap); // alloc 2 blocks from shm freelist
+    acnt += pGPool->roundSize2pages(2*LSSHM_SHM_UNITSIZE);
     cnt += 2;
     CHECK(pStat->m_iAllocated == (LsShmSize_t)cnt);
     CHECK(pStat->m_iFreeListCnt == 1);  // still 1 entry
@@ -281,11 +284,11 @@ TEST(shmPerProcess_test)
     CHECK(pStat2->m_iFlCnt == (LsShmSize_t)cnt);
 
     // shmpool bucket
-    acnt = pStat2->m_bckt[SZ_TESTBCKT/8].m_iBkAllocated;    // count
+    acnt = pStat2->m_bckt[SZ_TESTBCKT/LSSHM_POOL_UNITSIZE].m_iBkAllocated;
     off0 = pGPool->alloc2(SZ_TESTBCKT, remap);
     ++acnt;
-    CHECK(pStat2->m_bckt[SZ_TESTBCKT/8].m_iBkAllocated == acnt);
-    rcnt = pStat2->m_bckt[SZ_TESTBCKT/8].m_iBkReleased;
+    CHECK(pStat2->m_bckt[SZ_TESTBCKT/LSSHM_POOL_UNITSIZE].m_iBkAllocated == acnt);
+    rcnt = pStat2->m_bckt[SZ_TESTBCKT/LSSHM_POOL_UNITSIZE].m_iBkReleased;
     pGPool->release2(off0, SZ_TESTBCKT);
     ++rcnt;
     CHECK(pStat2->m_bckt[SZ_TESTBCKT/8].m_iBkReleased == rcnt);

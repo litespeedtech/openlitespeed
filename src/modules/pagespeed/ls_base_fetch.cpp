@@ -123,11 +123,11 @@ void LsiBaseFetch::RequestCollection()
     int rc;
     char c = 'A';
     rc = write(m_iPipeFd, &c, 1);
-    g_api->log(NULL, LSI_LOG_DEBUG,
-               "[Module:modpagespeed]RequestCollection called, errno %d, "
-               "pipe_fd_=%d, rc=%d, session=%ld, m_bLastBufSent=%s\n\n",
-               errno, m_iPipeFd, rc, (long) m_session, 
-               (m_bLastBufSent ? "true" : "false"));
+//     g_api->log(NULL, LSI_LOG_DEBUG,
+//                "[Module:modpagespeed]RequestCollection called, errno %d, "
+//                "pipe_fd_=%d, rc=%d, session=%ld, m_bLastBufSent=%s\n\n",
+//                errno, m_iPipeFd, rc, (long) m_session, 
+//                (m_bLastBufSent ? "true" : "false"));
 }
 
 void LsiBaseFetch::HandleHeadersComplete()
@@ -168,9 +168,9 @@ void LsiBaseFetch::DecrefAndDeleteIfUnreferenced()
 void LsiBaseFetch::HandleDone(bool success)
 {
     m_bSuccess = success;
-    g_api->log(m_session, LSI_LOG_DEBUG,
-               "[Module:modpagespeed]HandleDone called, success=%d, m_bDoneCalled=%d!\n",
-               success, m_bDoneCalled);
+//     g_api->log(m_session, LSI_LOG_DEBUG,
+//                "[Module:modpagespeed]HandleDone called, success=%d, m_bDoneCalled=%d!\n",
+//                success, m_bDoneCalled);
 
     Lock();
     m_bDoneCalled = true;

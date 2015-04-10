@@ -122,7 +122,7 @@ typedef union
 // NOTE: offset element[0] == header
 typedef struct
 {
-#define LSSHM_MAX_REG_PERUNIT   (LSSHM_MINUNIT/sizeof(LsShmRegElem))
+#define LSSHM_MAX_REG_PERUNIT   (LSSHM_SHM_UNITSIZE/sizeof(LsShmRegElem))
     LsShmRegElem x_aEntries[LSSHM_MAX_REG_PERUNIT];
 } LsShmRegBlk;
 
@@ -141,7 +141,6 @@ typedef struct
     uint32_t          x_iMagic;
     LsShmVersion      x_version;
     uint8_t           x_aName[LSSHM_MAXNAMELEN];
-    LsShmSize_t       x_iUnitSize ;         // 1k
     LsShmOffset_t     x_iLockOffset[2];     // 0=Shm, 1=Reg
     LsShmOffset_t     x_iFreeOffset;
     LsShmOffset_t     x_iRegBlkOffset;      // 1st reg Offset
@@ -273,11 +272,6 @@ public:
     LsShmOffset_t allocPage(LsShmSize_t pagesize, int &remapped);
     void releasePage(LsShmOffset_t offset, LsShmSize_t pagesize);
 
-    LsShmSize_t unitSize() const
-    {
-        return m_iUnitSize;
-    }
-
     LsShmPool *getGlobalPool();
     LsShmPool *getNamedPool(const char *pName);
 
@@ -287,10 +281,6 @@ public:
     {
         if (offset == 0)
             return NULL;
-#ifdef notdef
-        if (m_iMaxSizeO != x_pShmMap->x_iMaxSize)
-            ((LsShm *)this)->remap();
-#endif
         assert(offset < m_iMaxSizeO);
         return (void *)(((uint8_t *)x_pShmMap) + offset);
     }  // map size
@@ -324,6 +314,13 @@ public:
         return this;
     };
 
+    ls_attr_inline int lockRemap(lsi_shmlock_t * pLock)
+    {
+        int ret = lsi_shmlock_lock(pLock);
+        chkRemap();
+        return ret;
+    }
+    
     ls_attr_inline LsShmStatus_t chkRemap()
     {
         return (x_pShmMap->x_iMaxSize == m_iMaxSizeO) ? LSSHM_OK : remap();
@@ -363,17 +360,15 @@ private:
     LsShm &operator=(const LsShm &other);
     bool operator==(const LsShm &other);
 
-    void syncData2Obj(); // sync data to Object memory
-
     LsShmRegBlk    *allocRegBlk(LsShmRegBlkHdr *pFrom);
     LsShmRegBlk    *findRegBlk(LsShmRegBlkHdr *pFrom, int num);
     void            chkRegBlk(LsShmRegBlkHdr *pFrom, int *pCnt);
 
     LsShmStatus_t   expand(LsShmSize_t newsize);
 
-    int lock()
+    ls_attr_inline int lock()
     {
-        return doLock();
+        return lockRemap(m_pShmLock);
     }
 
     int unlock()
@@ -396,13 +391,6 @@ private:
         return (lsi_shmlock_setup(m_pShmLock) || lsi_shmlock_setup(m_pRegLock)) ?
                LSSHM_ERROR : LSSHM_OK;
     }
-
-    ls_attr_inline int doLock()
-    {
-        int ret = lsi_shmlock_lock(m_pShmLock);
-        chkRemap();
-        return ret;
-    }
  
     // only use by physical mapping
     LsShmSize_t roundToPageSize(LsShmSize_t size) const
@@ -412,7 +400,8 @@ private:
 
     LsShmSize_t roundUnitSize(LsShmSize_t pagesize) const
     {
-        return ((pagesize + unitSize() - 1) / unitSize()) * unitSize();
+        return ((pagesize + (LSSHM_SHM_UNITSIZE-1))
+               / LSSHM_SHM_UNITSIZE) * LSSHM_SHM_UNITSIZE;
     }
 
     void incrCheck(LsShmSize_t *ptr, LsShmSize_t size)
@@ -489,7 +478,6 @@ private:
     static LsShmStatus_t    s_errStat;
     static int              s_iErrNo;
     static char             s_aErrMsg[];
-    LsShmSize_t             m_iUnitSize;
     LsShmSize_t             m_iMaxShmSize;
 
     LsShmStatus_t           m_status;

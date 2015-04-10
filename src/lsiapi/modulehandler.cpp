@@ -56,8 +56,8 @@ static const lsi_handler_t *getHandler(const HttpHandler *pHandler)
 
 int ModuleHandler::cleanUp(HttpSession *pSession)
 {
-    const HttpHandler *pHandler = pSession->getReq()->getHttpHandler();
-    const lsi_handler_t *pModuleHandler = getHandler(pHandler);
+    const HttpHandler *pHandler;
+    const lsi_handler_t *pModuleHandler = pSession->getModHandler();
 
     if (!pModuleHandler)
         return SC_500;
@@ -67,6 +67,7 @@ int ModuleHandler::cleanUp(HttpSession *pSession)
         int ret = pModuleHandler->on_clean_up(pSession);
         if (D_ENABLED(DL_MEDIUM))
         {
+            pHandler = pSession->getReq()->getHttpHandler();
             LOG_D((pSession->getLogger(),
                    "[%s] [%s] _handler->on_clean_up() return %d",
                    pSession->getLogId(),
@@ -81,9 +82,8 @@ int ModuleHandler::cleanUp(HttpSession *pSession)
 
 int ModuleHandler::onWrite(HttpSession *pSession)
 {
-    const HttpHandler *pHandler = pSession->getReq()->getHttpHandler();
-    const lsi_handler_t *pModuleHandler = getHandler(
-            pSession->getReq()->getHttpHandler());
+    const HttpHandler *pHandler;
+    const lsi_handler_t *pModuleHandler = pSession->getModHandler();
 
     if (!pModuleHandler)
         return SC_500;
@@ -93,6 +93,7 @@ int ModuleHandler::onWrite(HttpSession *pSession)
         int status = pModuleHandler->on_write_resp(pSession);
         if (D_ENABLED(DL_MEDIUM))
         {
+            pHandler = pSession->getReq()->getHttpHandler();
             LOG_D((pSession->getLogger(),
                    "[%s] [%s] _handler->on_write_resp() return %d",
                    pSession->getLogId(),
@@ -107,6 +108,7 @@ int ModuleHandler::onWrite(HttpSession *pSession)
     {
         if (D_ENABLED(DL_MEDIUM))
         {
+            pHandler = pSession->getReq()->getHttpHandler();
             LOG_D((pSession->getLogger(),
                    "[%s] [%s] _handler->on_write_resp() is not available,"
                    " suspend WRITE event", pSession->getLogId(),
@@ -130,8 +132,9 @@ int ModuleHandler::process(HttpSession *pSession,
     if (!pModuleHandler->begin_process)
     {
         LOG_ERR((pSession->getLogger(),
-                 "[%s] Internal Server Error, Module %s misses begin_process()"
-                 " callback function, cannot be used as a handler",
+                 "[%s] Internal Server Error, Module %s missing"
+                 " begin_process() callback function, cannot be used"
+                 " as a handler",
                  pSession->getLogger(), MODULE_NAME(((const LsiModule *)
                          pHandler)->getModule())));
         return SC_500;
@@ -139,6 +142,8 @@ int ModuleHandler::process(HttpSession *pSession,
 
 //     pSession->resetResp();
 //    pSession->setupRespCache();
+
+    pSession->setModHandler(pModuleHandler);
 
     int ret = pModuleHandler->begin_process(pSession);
     if (D_ENABLED(DL_MEDIUM))
@@ -156,20 +161,16 @@ int ModuleHandler::process(HttpSession *pSession,
         else
             return HttpStatusCode::getInstance().codeToIndex(ret);
     }
-    else
-    {
-        if (!pSession->getFlag(HSF_HANDLER_WRITE_SUSPENDED | HSF_HANDLER_DONE))
-            pSession->continueWrite();
-        return 0;
-    }
+    if (!pSession->getFlag(HSF_HANDLER_WRITE_SUSPENDED | HSF_HANDLER_DONE))
+        pSession->continueWrite();
+    return 0;
 }
 
 
 int ModuleHandler::onRead(HttpSession *pSession)
 {
-    const HttpHandler *pHandler = pSession->getReq()->getHttpHandler();
-    const lsi_handler_t *pModuleHandler = getHandler(
-            pSession->getReq()->getHttpHandler());
+    const HttpHandler *pHandler;
+    const lsi_handler_t *pModuleHandler = pSession->getModHandler();
 
     if (!pModuleHandler)
         return SC_500;
@@ -179,6 +180,7 @@ int ModuleHandler::onRead(HttpSession *pSession)
         int ret = pModuleHandler->on_read_req_body(pSession);
         if (D_ENABLED(DL_MEDIUM))
         {
+            pHandler = pSession->getReq()->getHttpHandler();
             LOG_D((pSession->getLogger(),
                    "[%s] [%s] _handler->on_write_resp() return %d",
                    pSession->getLogId(),

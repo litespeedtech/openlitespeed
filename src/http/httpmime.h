@@ -94,7 +94,7 @@ public:
     MIMESetting *getDefault() {   return m_pDefault;  }
     int updateMIME(char *pMIME, FnUpdate fn, void *pValue,
                    const HttpMime *pParent);
-    int setCompressableByType(const char *pValue, const HttpMime *pParent,
+    int setCompressibleByType(const char *pValue, const HttpMime *pParent,
                               const char *pLogId);
     int setExpiresByType(const char *pValue, const HttpMime *pParent,
                          const char *pLogId);
@@ -105,8 +105,8 @@ public:
                        const HttpMime *pParent, const char *pLogId);
 
     static void releaseMIMEList();
-    char compressable(const char *pMIME) const;
-    static void setCompressable(MIMESetting *pSetting, void *pValue);
+    char compressible(const char *pMIME) const;
+    static void setCompressible(MIMESetting *pSetting, void *pValue);
     static void setExpire(MIMESetting *pSetting, void *pValue);
     static void setHandler(MIMESetting *pSetting, void *pValue);
     static int  needCharset(const char *pMIME);

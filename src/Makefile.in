@@ -125,12 +125,12 @@ am_openlitespeed_OBJECTS = prelinkedmods.$(OBJEXT) httpdtest.$(OBJEXT) \
 	ls_lock.$(OBJEXT) ls_loopbuf.$(OBJEXT) ls_map.$(OBJEXT) \
 	ls_md5.$(OBJEXT) ls_mpscq.$(OBJEXT) ls_objarray.$(OBJEXT) \
 	ls_objpool.$(OBJEXT) ls_pcreg.$(OBJEXT) ls_pool.$(OBJEXT) \
-	ls_ptrlist.$(OBJEXT) ls_sha1.$(OBJEXT) ls_stack.$(OBJEXT) \
-	ls_str.$(OBJEXT) ls_strlist.$(OBJEXT) ls_strtool.$(OBJEXT) \
-	ls_time.$(OBJEXT) ls_tsstack.$(OBJEXT) ls_xpool.$(OBJEXT) \
-	xxhash.$(OBJEXT) pthreadcond.$(OBJEXT) pthreadmutex.$(OBJEXT) \
-	pthreadworkqueue.$(OBJEXT) thread.$(OBJEXT) workcrew.$(OBJEXT) \
-	worker.$(OBJEXT)
+	ls_ptrlist.$(OBJEXT) ls_radix.$(OBJEXT) ls_sha1.$(OBJEXT) \
+	ls_stack.$(OBJEXT) ls_str.$(OBJEXT) ls_strlist.$(OBJEXT) \
+	ls_strtool.$(OBJEXT) ls_time.$(OBJEXT) ls_tsstack.$(OBJEXT) \
+	ls_xpool.$(OBJEXT) xxhash.$(OBJEXT) pthreadcond.$(OBJEXT) \
+	pthreadmutex.$(OBJEXT) pthreadworkqueue.$(OBJEXT) \
+	thread.$(OBJEXT) workcrew.$(OBJEXT) worker.$(OBJEXT)
 openlitespeed_OBJECTS = $(am_openlitespeed_OBJECTS)
 am__DEPENDENCIES_1 =
 openlitespeed_DEPENDENCIES = ./main/libmain.a ./http/libhttp.a \
@@ -486,6 +486,7 @@ openlitespeed_SOURCES = modules/prelinkedmods.cpp httpdtest.cpp main.cpp \
    lsr/ls_pcreg.c \
    lsr/ls_pool.c \
    lsr/ls_ptrlist.c \
+   lsr/ls_radix.c \
    lsr/ls_sha1.c \
    lsr/ls_stack.c \
    lsr/ls_str.c \
@@ -680,6 +681,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ls_pcreg.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ls_pool.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ls_ptrlist.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ls_radix.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ls_sha1.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ls_stack.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ls_str.Po@am__quote@
@@ -1034,6 +1036,20 @@ ls_ptrlist.obj: lsr/ls_ptrlist.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/ls_ptrlist.c' object='ls_ptrlist.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ls_ptrlist.obj `if test -f 'lsr/ls_ptrlist.c'; then $(CYGPATH_W) 'lsr/ls_ptrlist.c'; else $(CYGPATH_W) '$(srcdir)/lsr/ls_ptrlist.c'; fi`
+
+ls_radix.o: lsr/ls_radix.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ls_radix.o -MD -MP -MF $(DEPDIR)/ls_radix.Tpo -c -o ls_radix.o `test -f 'lsr/ls_radix.c' || echo '$(srcdir)/'`lsr/ls_radix.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/ls_radix.Tpo $(DEPDIR)/ls_radix.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/ls_radix.c' object='ls_radix.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ls_radix.o `test -f 'lsr/ls_radix.c' || echo '$(srcdir)/'`lsr/ls_radix.c
+
+ls_radix.obj: lsr/ls_radix.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ls_radix.obj -MD -MP -MF $(DEPDIR)/ls_radix.Tpo -c -o ls_radix.obj `if test -f 'lsr/ls_radix.c'; then $(CYGPATH_W) 'lsr/ls_radix.c'; else $(CYGPATH_W) '$(srcdir)/lsr/ls_radix.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/ls_radix.Tpo $(DEPDIR)/ls_radix.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lsr/ls_radix.c' object='ls_radix.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ls_radix.obj `if test -f 'lsr/ls_radix.c'; then $(CYGPATH_W) 'lsr/ls_radix.c'; else $(CYGPATH_W) '$(srcdir)/lsr/ls_radix.c'; fi`
 
 ls_sha1.o: lsr/ls_sha1.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ls_sha1.o -MD -MP -MF $(DEPDIR)/ls_sha1.Tpo -c -o ls_sha1.o `test -f 'lsr/ls_sha1.c' || echo '$(srcdir)/'`lsr/ls_sha1.c

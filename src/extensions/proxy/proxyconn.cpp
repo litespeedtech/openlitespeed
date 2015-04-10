@@ -74,6 +74,7 @@ static SSL *getSslConn()
         s_pProxyCtx = new SSLContext();
         if (s_pProxyCtx)
         {
+            s_pProxyCtx->setRenegProtect(0);            
             //s_pProxyCtx->setCipherList();
         }
         else

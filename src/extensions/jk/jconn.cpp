@@ -313,7 +313,7 @@ int JConn::readRespHeader(unsigned char *&p, unsigned char *pEnd)
                     char ch;
                     ch = *p;
                     *p = 0;
-                    if (!HttpMime::getMime()->compressable(pHeaderVal))
+                    if (!HttpMime::getMime()->compressible(pHeaderVal))
                         pReq->andGzip(~GZIP_ENABLED);
                     *p = ch;
                 }

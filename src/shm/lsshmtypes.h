@@ -77,10 +77,10 @@ typedef ls_mutex_t             lsi_shmlock_t;
 typedef uint32_t                LsShmOffset_t ;
 typedef uint32_t                LsShmSize_t ;
 
-#define LSSHM_MAGIC             0x20150327   // 32 bits
+#define LSSHM_MAGIC             0x20150411   // 32 bits
 #define LSSHM_LOCK_MAGIC        0x20140116   // 32 bits
-#define LSSHM_HASH_MAGIC        0x20150403   // 32 bits
-#define LSSHM_POOL_MAGIC        0x20150331   // 32 bits
+#define LSSHM_HASH_MAGIC        0x20150410   // 32 bits
+#define LSSHM_POOL_MAGIC        0x20150409   // 32 bits
 
 #define LSSHM_VER_MAJOR         0x0     // 16 bits
 #define LSSHM_VER_MINOR         0x0     // 8 bits
@@ -102,7 +102,9 @@ typedef uint32_t                LsShmSize_t ;
 
 #define LSSHM_INITSIZE          LSSHM_PAGESIZE   // default SHM SIZE
 
-#define LSSHM_MINUNIT           0x400
+#define LSSHM_SHM_UNITSIZE      0x400           // 1K byte increments
+#define LSSHM_POOL_UNITSIZE     8               //  8 byte increments
+#define LSSHM_POOL_BCKTINCR     8               // byte increment for buckets
 #define LSSHM_MINHASH           0x400
 #define LSSHM_MINLOCK           0x400
 #define LSSHM_HASHINITSIZE      97
@@ -148,6 +150,7 @@ struct LsHashStat_s
     int numExpired;     // user supplied
     int numDup;         // num of duplicated keys
     int top[10];        // 1,2,3,4,5,10,20,50,100,100+
+    void *userData;     // defined by user
 };
 typedef struct LsHashStat_s LsHashStat;
 

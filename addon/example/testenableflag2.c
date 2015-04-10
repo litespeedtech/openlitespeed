@@ -16,35 +16,53 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 
-#include "../include/ls.h"
-#include <stdlib.h>
+#include <ls.h>
+
+#include <lsr/ls_xpool.h>
+
 #include <string.h>
 
-#define     MNAME       testviewdata
+/**
+ * This module tests setting the enable flag during the session.
+ * It is recommended to use this along with testenableflag 1, 3, and 4.
+ *
+ * This one tests: Enabling statically disabled callback functions.
+ *
+ * To test: After compiling and installing this module, access a dynamically
+ * processed page.
+ *
+ * i.e. curl -i http://localhost:8088/phpinfo.php
+ */
+
+#define     MNAME       testenableflag2
 lsi_module_t MNAME;
 /////////////////////////////////////////////////////////////////////////////
 #define     VERSION         "V1.0"
 
-static int viewData0(lsi_cb_param_t *rec, const char *level)
+static int addoutput(lsi_cb_param_t *rec, const char *level)
 {
-    if (rec->_param_len < 100)
-        g_api->log(rec->_session, LSI_LOG_INFO,
-                   "[testautocompress] viewData [%s] %s\n",
-                   level, (const char *)rec->_param);
-    else
-    {
-        g_api->log(rec->_session, LSI_LOG_INFO,
-                   "[testautocompress] viewData [%s] ",  level);
-        g_api->lograw(rec->_session, rec->_param, 40);
-        g_api->lograw(rec->_session, "(...)", 5);
-        g_api->lograw(rec->_session, rec->_param + rec->_param_len - 40, 40);
-        g_api->lograw(rec->_session, "\n", 1);
-    }
-    return g_api->stream_write_next(rec, rec->_param, rec->_param_len);
+    int len = 0, lenNew;
+    char *pBuf;
+    if (rec->_param_len <= 0)
+        return g_api->stream_write_next(rec, rec->_param, rec->_param_len);
+    pBuf = ls_xpool_alloc(g_api->get_session_pool(rec->_session), rec->_param_len + strlen(level) + 1);
+    snprintf(pBuf, rec->_param_len + strlen(level) + 1, "%.*s%.*s",
+                rec->_param_len, (const char *)rec->_param, strlen(level) + 1, level);
+    lenNew = rec->_param_len + strlen(level);
+    len = g_api->stream_write_next(rec, pBuf, lenNew);
+    if (len < lenNew)
+        *rec->_flag_out = LSI_CB_FLAG_OUT_BUFFERED_DATA;
+    if (len < rec->_param_len)
+        return len;
+    return rec->_param_len;
 }
 
-static int viewData1(lsi_cb_param_t *rec) {   return viewData0(rec, "RECV");  }
-static int viewData2(lsi_cb_param_t *rec) {   return viewData0(rec, "SEND");  }
+static int addrecvresp(lsi_cb_param_t *rec)
+{   return addoutput(rec, "RECV2: If this appears, good.\n");  }
+
+
+static int addsendresp(lsi_cb_param_t *rec)
+{   return addoutput(rec, "SEND2: If this appears, good.\n");  }
 
 static int beginSession(lsi_cb_param_t *rec)
 {
@@ -57,8 +75,10 @@ static int beginSession(lsi_cb_param_t *rec)
 static lsi_serverhook_t serverHooks[] =
 {
     {LSI_HKPT_HTTP_BEGIN, beginSession, LSI_HOOK_NORMAL, LSI_HOOK_FLAG_ENABLED},
-    {LSI_HKPT_RECV_RESP_BODY, viewData1, LSI_HOOK_NORMAL, LSI_HOOK_FLAG_DECOMPRESS_REQUIRED },
-    {LSI_HKPT_SEND_RESP_BODY, viewData2, LSI_HOOK_NORMAL, LSI_HOOK_FLAG_DECOMPRESS_REQUIRED},
+    {LSI_HKPT_RECV_RESP_BODY, addrecvresp, LSI_HOOK_NORMAL,
+        LSI_HOOK_FLAG_TRANSFORM},
+    {LSI_HKPT_SEND_RESP_BODY, addsendresp, LSI_HOOK_NORMAL,
+        LSI_HOOK_FLAG_TRANSFORM},
     lsi_serverhook_t_END   //Must put this at the end position
 };
 

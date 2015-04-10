@@ -61,7 +61,7 @@ static int trimfunc(iterator iter, void *arg)
     fprintf(stdout, "trim: [%.*s][%.*s] size=%d\n",
             iter->getKeyLen(), iter->getKey(),
             iter->getValLen(), iter->getVal(),
-            pHash->size());
+            (int)pHash->size());
     return 0;
 }
 

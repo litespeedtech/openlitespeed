@@ -66,13 +66,11 @@ typedef struct
     time_t               x_lasttime;      // last update time (sec)
 } LsShmHElemLink;
 
-
 typedef struct ls_vardata_s
 {
     int32_t         x_size;
     uint8_t         x_data[0];
 } ls_vardata_t;
-
 
 typedef struct lsShm_hElem_s
 {
@@ -125,6 +123,11 @@ typedef struct
 
 typedef struct
 {
+    LsShmSize_t     m_iHashInUse;   // shm allocated to hash (bytes)
+} LsShmHTableStat;
+
+typedef struct
+{
     uint32_t        x_iMagic;
     LsShmSize_t     x_iCapacity;
     LsShmSize_t     x_iSize;
@@ -140,6 +143,7 @@ typedef struct
     uint8_t         x_iMode;
     uint8_t         x_iLruMode; // lru=1, wlru=2, xlru=3
     uint8_t         x_unused[2];
+    LsShmHTableStat x_stat;         // hash statistics
 } LsShmHTable;
 
 class LsShmHash : public ls_shmhash_s, ls_shmobject_s
@@ -179,7 +183,7 @@ public:
     static LsShmHash *checkHTable(GHash::iterator itor, LsShmPool *pool,
                                   const char *name, LsShmHash::hash_fn hf, LsShmHash::val_comp vc);
 
-    LsShmPool *getPool() const
+    ls_attr_inline LsShmPool *getPool() const
     {   return m_pPool;     }
 
     ls_attr_inline LsShmOffset_t ptr2offset(const void *ptr) const
@@ -195,10 +199,21 @@ public:
     {   return ((iterator)m_pPool->offset2ptr(offset))->getVal(); }
 
     LsShmOffset_t alloc2(LsShmSize_t size, int &remapped)
-    {   return m_pPool->alloc2(size, remapped); }
+    {
+        LsShmOffset_t ret = m_pPool->alloc2(size, remapped);
+        if (ret != 0)
+            getHTable()->x_stat.m_iHashInUse += m_pPool->size2roundSize(size);
+        return ret;
+    }
 
     void release2(LsShmOffset_t offset, LsShmSize_t size)
-    {   m_pPool->release2(offset, size); }
+    {
+        m_pPool->release2(offset, size);
+        getHTable()->x_stat.m_iHashInUse -= m_pPool->size2roundSize(size);
+    }
+
+    LsShmOffset_t getHTableStatOffset() const
+    {   return (LsShmOffset_t)(long)&((LsShmHTable *)(long)m_iOffset)->x_stat; }
 
     int round4(int x) const
     {   return (x + 0x3) & ~0x3; }
@@ -388,7 +403,7 @@ public:
 
     //  @brief stat
     //  @brief gether statistic on HashTable
-    int stat(LsHashStat *pHashStat, for_each_fn2 fun);
+    int stat(LsHashStat *pHashStat, for_each_fn2 fun, void *pData);
 
     // Special section for registries entries
 #ifdef notdef
@@ -434,7 +449,7 @@ public:
     {
         if (m_iLockEnable != 0)
             return 0;
-        return doLock();
+        return getPool()->getShm()->lockRemap(m_pShmLock);
     }
 
     int unlock()
@@ -619,7 +634,7 @@ protected:
     {
         if (m_iLockEnable == 0)
             return 0;
-        return doLock();
+        return getPool()->getShm()->lockRemap(m_pShmLock);
     }
 
     int autoUnlock()
@@ -752,12 +767,6 @@ private:
 
     void releaseHTableShm();
 
-    ls_attr_inline int doLock()
-    {
-        int ret = lsi_shmlock_lock(m_pShmLock);
-        m_pPool->chkRemap();
-        return ret;
-    }
     
 #ifdef LSSHM_DEBUG_ENABLE
     // for debug purpose - should debug this later

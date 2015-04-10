@@ -44,7 +44,7 @@ public:
     char    isEnabled() const   {   return m_iEnabled;      }
     char    getBase() const     {   return m_iBase;         }
     int     getAge() const      {   return m_iAge;          }
-    char    compressable() const {   return m_iCompressable; }
+    char    compressible() const {   return m_iCompressible; }
     char    cfgHandler() const  {   return m_iBits & CONFIG_HANDLER;    }
     char    cfgCompress() const {   return m_iBits & CONFIG_COMPRESS;   }
     char    cfgExpires() const  {   return m_iBits & CONFIG_EXPIRES;    }
@@ -53,7 +53,7 @@ public:
     void    enable(int enable)    {   m_iEnabled = enable;    }
     void    setBase(int base)     {   m_iBase = base;         }
     void    setAge(int age)       {   m_iAge = age;           }
-    void    setCompressable(int c)  {   m_iCompressable = c;    }
+    void    setCompressible(int c)  {   m_iCompressible = c;    }
     void    setBit(char bit)      {   m_iBits |= bit;         }
     void    clearBit(char bit)    {   m_iBits &= ~bit;        }
 
@@ -64,7 +64,7 @@ public:
 private:
     char    m_iEnabled;
     char    m_iBase;
-    char    m_iCompressable;
+    char    m_iCompressible;
     char    m_iBits;
     int     m_iAge;
 };

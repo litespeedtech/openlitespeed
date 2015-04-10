@@ -757,12 +757,11 @@ static int register_req_handler(lsi_session_t *session,
     if (pSession == NULL)
         return LS_FAIL;
     HttpReq *pReq = pSession->getReq();
-    ModuleManager::iterator iter;
-    iter = ModuleManager::getInstance().find(MODULE_NAME(pModule));
-    if (iter != ModuleManager::getInstance().end() &&
-        ((LsiModule *)iter.second())->getModule()->_handler)
+    LsiModule *pHandler = MODULE_HANDLER(pModule);
+    if ((pHandler != NULL)
+        && (pModule->_handler != NULL))
     {
-        pReq->setHandler((LsiModule *)iter.second());
+        pReq->setHandler(pHandler);
         pReq->setScriptNameLen(scriptLen);
         return 0;
     }

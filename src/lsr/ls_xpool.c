@@ -23,11 +23,14 @@
 #include <valgrind/memcheck.h>
 #endif
 
-#define LS_XPOOL_SBLK_SIZE          (4*1024)
-#define LS_XPOOL_DATA_ALIGN         8
-#define LS_XPOOL_FREELISTINTERVAL   16
-#define LS_XPOOL_FREELIST_MAXBYTES  256
-#define LS_XPOOL_NUMFREELISTS       16
+#define LS_XPOOL_DATA_ALIGN         (8)
+#define LS_XPOOL_NUMFREELISTS       (16)
+#define LS_XPOOL_FLINTERVAL         (16)
+#define LS_XPOOL_FLINTERVAL_SHIFT   (4)
+#define LS_XPOOL_FLMAXBYTES         (256)
+#define LS_XPOOL_SUPBLK_SIZE        (4*1024)
+#define LS_XPOOL_MAXLGBLK_SIZE      (LS_XPOOL_SUPBLK_SIZE)
+#define LS_XPOOL_MAXSMBLK_SIZE      1024
 
 #define LS_XPOOL_NOFREE    1
 
@@ -47,9 +50,6 @@ static int xpool_maxgetablk_trys =
     3;   /* how many attempts to find a suitable block */
 static int xpool_maxblk_trys =
     3;       /* how many attempts until moving block */
-
-#define LS_XPOOL_MAXLGBLK_SIZE      (LS_XPOOL_SBLK_SIZE)
-#define LS_XPOOL_MAXSMBLK_SIZE      1024
 
 #ifdef USE_VALGRIND
 ls_inline void vg_xpool_alloc(
@@ -100,7 +100,7 @@ ls_inline void ls_xpool_bblkfree(ls_xpool_bblk_t *pBblk)
 
 /* Manage freelist pointers */
 ls_inline int xpool_freelistindx(size_t size)
-{   return ((size >> 4) - 1);   }
+{   return ((size >> LS_XPOOL_FLINTERVAL_SHIFT) - 1);   }
 
 
 ls_inline ls_xblkctrl_t *size2xfreelistptr(ls_xpool_t *pool, size_t size)
@@ -219,7 +219,7 @@ void ls_xpool_destroy(ls_xpool_t *pool)
         }
     }
 
-    ls_plistfree((ls_pool_blk_t *)pool->psuperblk, LS_XPOOL_SBLK_SIZE);
+    ls_plistfree((ls_pool_blk_t *)pool->psuperblk, LS_XPOOL_SUPBLK_SIZE);
 
     ls_psavepending(pool->pbigblk);
     ls_pfreepending();
@@ -260,9 +260,11 @@ void *ls_xpool_alloc(ls_xpool_t *pool, uint32_t size)
 #if !defined( LS_VG_DEBUG )
     if (nsize > LS_XPOOL_MAXLGBLK_SIZE)
 #endif
+    {
         return ls_xpool_bblkalloc(pool, size, nsize);
+    }
 
-    if (nsize <= LS_XPOOL_FREELIST_MAXBYTES && (pool->pfreelists != NULL))
+    if (nsize <= LS_XPOOL_FLMAXBYTES && (pool->pfreelists != NULL))
     {
         if ((pNew = xfreelistget(pool, nsize)) != NULL)
         {
@@ -345,7 +347,7 @@ static xpool_alink_t *xpool_blkget(ls_xpool_t *pool, uint32_t size)
     pPtr->header.size -= size;
     remain = (int)pPtr->header.size;
     if (remain < (int)(((LS_XPOOL_NUMFREELISTS + 1)
-                        *LS_XPOOL_FREELISTINTERVAL)))
+                        *LS_XPOOL_FLINTERVAL)))
     {
         /* return the full residual (or could have added to freelist)
          */
@@ -390,7 +392,7 @@ static xpool_alink_t *xpool_getablk(
         {
             pPtr->header.size = remain;
             if (remain <
-                (int)(((LS_XPOOL_NUMFREELISTS + 1)*LS_XPOOL_FREELISTINTERVAL)))
+                (int)(((LS_XPOOL_NUMFREELISTS + 1)*LS_XPOOL_FLINTERVAL)))
             {
                 /* return the full residual (or could have added to freelist)
                  */
@@ -450,12 +452,13 @@ static xpool_alink_t *xpool_getablk(
  */
 static xpool_alink_t *ls_xpool_getsuperblk(ls_xpool_t *pool)
 {
-    xpool_alink_t *pNew = (xpool_alink_t *)ls_palloc(LS_XPOOL_SBLK_SIZE);
+    xpool_alink_t *pNew = (xpool_alink_t *)ls_palloc(LS_XPOOL_SUPBLK_SIZE);
     ls_pool_blk_t *pBlk = ((ls_pool_blk_t *)pNew) -
                           1;  /* ptr to real gpool block */
 #ifdef USE_VALGRIND
-    VALGRIND_MAKE_MEM_NOACCESS(pNew->data,
-                               pBlk->header.size - sizeof(ls_pool_blk_t) - sizeof(ls_xpool_header_t));
+    VALGRIND_MAKE_MEM_NOACCESS(pNew->data, pBlk->header.size
+                                            - sizeof(ls_pool_blk_t)
+                                            - sizeof(ls_xpool_header_t));
 #endif
     ls_pool_insptr(&pool->psuperblk,
                    pBlk);    /* overwrites size/magic with link */
@@ -534,7 +537,7 @@ void ls_xpool_free(ls_xpool_t *pool, void *data)
     }
     if (pool->flag & LS_XPOOL_NOFREE)
         return;
-    if (size <= LS_XPOOL_FREELIST_MAXBYTES)
+    if (size <= LS_XPOOL_FLMAXBYTES)
     {
         if (ls_xpool_chkinit(pool, &pool->pfreelists, &pool->init) == LS_OK)
             xfreelistput(pool, (xpool_alink_t *)pHeader, size);

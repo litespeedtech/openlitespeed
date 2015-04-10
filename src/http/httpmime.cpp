@@ -174,7 +174,7 @@ void MIMESetting::inherit(const MIMESetting *pParent, int updateOnly)
                                     || !updateOnly))
         m_pHandler = (HttpHandler *)pParent->getHandler();
     if (!m_expires.cfgCompress())
-        m_expires.setCompressable(pParent->m_expires.compressable());
+        m_expires.setCompressible(pParent->m_expires.compressible());
     if (!m_expires.cfgExpires())
         m_expires.copyExpires(pParent->m_expires);
 }
@@ -706,16 +706,16 @@ const MIMESetting *HttpMime::getFileMimeByType(const char *pType) const
 }
 
 
-char HttpMime::compressable(const char *pMIME) const
+char HttpMime::compressible(const char *pMIME) const
 {
     const MIMESetting *pSetting = m_pMIMEMap->findMIME((char *)pMIME);
     if (!pSetting)
         if (m_pDefault)
-            return m_pDefault->getExpires()->compressable();
+            return m_pDefault->getExpires()->compressible();
         else
             return 0;
     else
-        return pSetting->getExpires()->compressable();
+        return pSetting->getExpires()->compressible();
 }
 
 
@@ -866,14 +866,14 @@ int HttpMime::processOneLine(const char *pFilePath, char *pLine,
 }
 
 
-void HttpMime::setCompressable(MIMESetting *pSetting, void *pValue)
+void HttpMime::setCompressible(MIMESetting *pSetting, void *pValue)
 {
-    pSetting->getExpires()->setCompressable((long)pValue);
+    pSetting->getExpires()->setCompressible((long)pValue);
     pSetting->getExpires()->setBit(CONFIG_COMPRESS);
 }
 
 
-int HttpMime::setCompressableByType(const char *pValue,
+int HttpMime::setCompressibleByType(const char *pValue,
                                     const HttpMime *pParent,
                                     const char *pLogId)
 {
@@ -885,22 +885,22 @@ int HttpMime::setCompressableByType(const char *pValue,
     for (iter = list.begin(); iter != list.end(); ++iter)
     {
         char *pType = (*iter)->buf();
-        long compressable = 1;
+        long compressible = 1;
         if (*pType == '!')
         {
-            compressable = 0;
+            compressible = 0;
             ++pType;
         }
-        if (updateMIME(pType, HttpMime::setCompressable,
-                       (void *)compressable, pParent) == -1)
+        if (updateMIME(pType, HttpMime::setCompressible,
+                       (void *)compressible, pParent) == -1)
         {
             LOG_NOTICE(("[%s] Can not find compressible MIME type: %s, add it!",
                         pLogId, pType));
             const char *pReason;
             char achTmp[] = "";
             addUpdateMIME(achTmp, pType, pReason, 0);
-            updateMIME(pType, HttpMime::setCompressable,
-                       (void *)compressable, pParent);
+            updateMIME(pType, HttpMime::setCompressible,
+                       (void *)compressible, pParent);
         }
     }
     return 0;

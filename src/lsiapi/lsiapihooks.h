@@ -358,7 +358,7 @@ public:
     {
         if (m_iStatus < INITED)
             return LS_FAIL;
-        int i, iModIdx, iSet = enable ? 1 : 0;
+        int i, iModIdx;
         ModIndex *p;
         lsiapi_hook_t *pHook;
 
@@ -370,15 +370,21 @@ public:
         {
             if ((iModIdx = p->getLevel(aEnableHkpts[i])) == -1)
                 return LS_FAIL;
-            m_pEnableArray[aEnableHkpts[i] - B][LSIHOOKS_GETINDEX(iModIdx)]
-                    = iSet << LSIHOOKS_GETOFFSET(iModIdx);
             pHook =
                 LsiApiHooks::getGlobalApiHooks(aEnableHkpts[i])->get(iModIdx);
-            if (iSet)
+            if (enable)
+            {
+                m_pEnableArray[aEnableHkpts[i] - B][LSIHOOKS_GETINDEX(iModIdx)]
+                    |= (1 << LSIHOOKS_GETOFFSET(iModIdx));
                 m_iFlag[aEnableHkpts[i] - B] |= (pHook->flag
                                                 | LSI_HOOK_FLAG_ENABLED);
+            }
             else
+            {
+                m_pEnableArray[aEnableHkpts[i] - B][LSIHOOKS_GETINDEX(iModIdx)]
+                    &= ~(1 << LSIHOOKS_GETOFFSET(iModIdx));
                 updateFlag(aEnableHkpts[i]);
+            }
         }
         m_iStatus = HASOWN;
         return LS_OK;

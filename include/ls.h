@@ -1426,7 +1426,7 @@ struct lsi_serverhook_s
 #define lsi_serverhook_t_END    {0, NULL, 0, 0}
 
 
-#define LSI_MODULE_RESERVED_SIZE    ((2 * sizeof(void *)) \
+#define LSI_MODULE_RESERVED_SIZE    ((3 * sizeof(void *)) \
                                   + ((LSI_HKPT_TOTAL_COUNT + 1) * sizeof(int32_t)) \
                                   + (LSI_MODULE_DATA_COUNT * sizeof(int16_t)))
 

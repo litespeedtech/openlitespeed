@@ -336,7 +336,7 @@ int lsi_shmhash_unlock(lsi_shmhash_t *hashhandle)
 int lsi_shmhash_stat(lsi_shmhash_t *hashhandle, LsHashStat *phashstat)
 {
     LsShmHash *pLsShmHash = (LsShmHash *)hashhandle;
-    return pLsShmHash->stat(phashstat, NULL);
+    return pLsShmHash->stat(phashstat, NULL, 0);
 }
 
 
