@@ -15,13 +15,13 @@ else
 	ifeq ($(MACHINE_TYPE), x86_64)
 	    INCLUDE_ARCH = arch/linux/x64
 	    PSOLPATH = $(shell pwd)/psol/lib/Release/linux/x64/
-	    CFLAGS= -fPIC -g  -Wall -c -D_REENTRANT $(LFSFLAGS)
+	    CFLAGS= -fPIC -g -O2 -Wall -c -D_REENTRANT $(LFSFLAGS)
 	else
 	    INCLUDE_ARCH = arch/linux/ia32
 	    PSOLPATH = $(shell pwd)/psol/lib/Release/linux/ia32/
-	    CFLAGS= -fPIC -g  -Wall -c -D_REENTRANT $(LFSFLAGS) -march=$(MACHINE_TYPE)
+	    CFLAGS= -fPIC -g -O2 -Wall -c -D_REENTRANT $(LFSFLAGS) -march=$(MACHINE_TYPE)
 	endif
-	LDFLAGS= -fPIC -g -Wall $(LFSFLAGS) -shared
+	LDFLAGS= -fPIC -g -O2 -Wall $(LFSFLAGS) -shared
 endif
 
 INCLUDEFILES =-I. -I../.. -I.. -I../../util -I../../../include \
