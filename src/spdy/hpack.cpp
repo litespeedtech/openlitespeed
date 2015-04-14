@@ -5959,7 +5959,7 @@ uint8_t Hpack::getStxTabId(char *name, uint16_t name_len, char *val,
         break;
     }
     
-    if (i > 0 
+    if (i >= 0 
         && g_HpackStxTab[i].name_len == name_len
         && memcmp(name, g_HpackStxTab[i].name, name_len) == 0)
         return i + 1;
