@@ -565,7 +565,7 @@ int H2Connection::processWindowUpdateFrame(H2FrameHeader *pHeader)
         {
             if (id > m_uiLastStreamID)
                 return LS_FAIL;
-            //sendRstFrame(id, H2_ERROR_STREAM_CLOSED);
+            sendRstFrame(id, H2_ERROR_FLOW_CONTROL_ERROR);
         }
 
         //flush();
