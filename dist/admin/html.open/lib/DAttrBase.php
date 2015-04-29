@@ -160,7 +160,7 @@ class DAttrBase
 
 		if ( $err ) {
 			$node->SetErr($err);
-			$o .= '<span class="field_error">*' . $this->check_split($err, 70) . '</span><br>';
+			$o .= '<span class="field_error">*' . $err . '</span><br>';
 		}
 
 		if ( $this->_href ) {
@@ -191,9 +191,7 @@ class DAttrBase
 				.')" class="btn bg-color-blueLight btn-xs txt-color-white"><i class="fa fa-minus"></i></a>';
 		}
 		else if($this->_key == "note") {
-			$o .= '<textarea readonly style="width:100%;height:auto">';
-			$o .= htmlspecialchars($value,ENT_QUOTES);
-			$o .= "</textarea>";
+			$o .= '<textarea readonly style="width:100%;height:auto">' . htmlspecialchars($value,ENT_QUOTES) . '</textarea>';
 		}
 		elseif ( $this->_type === 'sel' || $this->_type === 'sel1' ) {
 			if ( $this->_maxVal != NULL && array_key_exists($value, $this->_maxVal) ) {
@@ -223,7 +221,7 @@ class DAttrBase
 		    $o .= '<textarea readonly style="width:100%;"'. $this->_inputAttr .'>' . htmlspecialchars($value,ENT_QUOTES) . '</textarea>';
 		}
 		elseif ( $this->_inputType === 'text' ) {
-		    $o .= htmlspecialchars($this->check_split($value, 60), ENT_QUOTES);
+		    $o .= '<span class="field_text">' . htmlspecialchars($value, ENT_QUOTES) . '</span>';
 		}
 		else {
 			$o .= htmlspecialchars($value);
@@ -248,27 +246,6 @@ class DAttrBase
 				return ATTR_NOTE_NUM_RANGE . ' >= '. $this->_minVal ;
 		}
 		return NULL;
-	}
-
-	protected function check_split($value, $width)
-	{
-		if ( $value == NULL )
-			return NULL;
-
-		$changed = false;
-		$val = explode(' ', $value);
-		for( $i = 0 ; $i < count($val) ; ++$i )
-		{
-			if ( strlen($val[$i]) > $width )
-			{
-				$val[$i] = chunk_split($val[$i], $width, ' ');
-				$changed = true;
-			}
-		}
-		if ( $changed )
-			return implode(' ', $val);
-		else
-			return $value;
 	}
 
 	public function extractPost($parent)
@@ -338,7 +315,7 @@ class DAttrBase
 		if (is_array($node)) {
 			foreach( $node as $d ) {
 				$value[] = $d->Get(CNode::FLD_VAL);
-				$e1 = $this->check_split($d->Get(CNode::FLD_ERR), 70);
+				$e1 = $d->Get(CNode::FLD_ERR);
 				if ( $e1 != NULL )
 					$err .= $e1 .'<br>';
 			}
@@ -346,7 +323,7 @@ class DAttrBase
 		else {
 			if ($node != NULL) {
 				$value = $node->Get(CNode::FLD_VAL);
-				$err = $this->check_split($node->Get(CNode::FLD_ERR), 70);
+				$err = $node->Get(CNode::FLD_ERR);
 			}
 			else {
 				$value = NULL;

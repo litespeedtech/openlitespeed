@@ -60,7 +60,12 @@ public:
     int grow(size_t sz)   {   return allocate(sz + capacity()); }
 
     iterator erase(iterator iter)
-    {   *iter = *(--pend);  return iter; }
+    {
+        /** Do not use *(-- to avoid trigger compiler bug */
+        --pend; 
+        *iter = *pend; 
+        return iter; 
+    }
 
     int  push_back(void *pPointer)
     {   return ls_ptrlist_pushback(this, pPointer);   }
@@ -73,7 +78,12 @@ public:
     void unsafe_push_back(void **pPointer, int n)
     {   ls_ptrlist_unsafepushbackn(this, pPointer, n);   }
 
-    void *pop_back()        {  return *(--pend);         }
+    void *pop_back()        
+    {
+        /** Do not use *(-- to avoid trigger compiler bug */
+        --pend; 
+        return *pend; 
+    }
     void unsafe_pop_back(void **pPointer, int n)
     {   ls_ptrlist_unsafepopbackn(this, pPointer, n);   }
     int pop_front(void **pPointer, int n)

@@ -104,8 +104,7 @@ liblsiapi_a_LIBADD =
 am_liblsiapi_a_OBJECTS = lsiapi.$(OBJEXT) lsimoduledata.$(OBJEXT) \
 	lsiapihooks.$(OBJEXT) modulehandler.$(OBJEXT) \
 	modulemanager.$(OBJEXT) lsiapilib.$(OBJEXT) lsiapigd.$(OBJEXT) \
-	envmanager.$(OBJEXT) moduleeventnotifier.$(OBJEXT) \
-	moduletimer.$(OBJEXT)
+	envmanager.$(OBJEXT) moduletimer.$(OBJEXT)
 liblsiapi_a_OBJECTS = $(am_liblsiapi_a_OBJECTS)
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
@@ -317,7 +316,7 @@ noinst_LIBRARIES = liblsiapi.a
 INCLUDES = -I$(top_srcdir)/include -I$(top_srcdir)/src
 liblsiapi_a_METASOURCES = AUTO
 liblsiapi_a_SOURCES = lsiapi.cpp lsimoduledata.cpp lsiapihooks.cpp modulehandler.cpp modulemanager.cpp lsiapilib.cpp lsiapigd.cpp envmanager.cpp \
-moduleeventnotifier.cpp moduletimer.cpp
+moduletimer.cpp
 
 all: all-am
 
@@ -374,7 +373,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lsiapihooks.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lsiapilib.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lsimoduledata.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/moduleeventnotifier.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/modulehandler.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/modulemanager.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/moduletimer.Po@am__quote@

@@ -173,8 +173,8 @@ int LsShmXLruHash::newDataEntry(
             if (valLen > pData->maxsize)
             {
                 offData = pData->offprev;
-                release2(
-                    pShmval->offdata, sizeof(shmlru_data_t) + pData->maxsize);
+                release2(pShmval->offdata,
+                         (LsShmSize_t)(sizeof(shmlru_data_t) + pData->maxsize));
                 pShmval->offdata = 0;
             }
         }
@@ -183,7 +183,8 @@ int LsShmXLruHash::newDataEntry(
     {
         int remapped;
         LsShmOffset_t offNew;
-        if ((offNew = alloc2(sizeof(shmlru_data_t) + valLen, remapped)) == 0)
+        if ((offNew = alloc2(
+            (LsShmSize_t)(sizeof(shmlru_data_t) + valLen), remapped)) == 0)
             return LS_FAIL;
         pData = (shmlru_data_t *)offset2ptr(offNew);
         pData->magic = LSSHM_LRU_MAGIC;
@@ -213,7 +214,7 @@ int LsShmXLruHash::clrdata(uint8_t *pValue)
     {
         pData = (shmlru_data_t *)offset2ptr(offData);
         prev = pData->offprev;
-        release2(offData, sizeof(shmlru_data_t) + pData->maxsize);
+        release2(offData, (LsShmSize_t)(sizeof(shmlru_data_t) + pData->maxsize));
         ++cnt;
         offData = prev;
     }

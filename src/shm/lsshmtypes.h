@@ -74,17 +74,21 @@ typedef ls_mutex_t             lsi_shmlock_t;
 
 
 // shared memory types
-typedef uint32_t                LsShmOffset_t ;
-typedef uint32_t                LsShmSize_t ;
+typedef uint32_t                LsShmOffset_t;
+typedef LsShmOffset_t           LsShmXSize_t;
+typedef uint32_t                LsShmSize_t;
+typedef uint32_t                LsShmCnt_t;
 
-#define LSSHM_MAGIC             0x20150411   // 32 bits
-#define LSSHM_LOCK_MAGIC        0x20140116   // 32 bits
+#define LSSHM_MAGIC             0x20150415   // 32 bits
+#define LSSHM_LOCK_MAGIC        0x20150414   // 32 bits
 #define LSSHM_HASH_MAGIC        0x20150410   // 32 bits
 #define LSSHM_POOL_MAGIC        0x20150409   // 32 bits
 
-#define LSSHM_VER_MAJOR         0x0     // 16 bits
+#define LSSHM_VER_MAJOR         0x0     // 8 bits
 #define LSSHM_VER_MINOR         0x0     // 8 bits
 #define LSSHM_VER_REL           0x1     // 8 bits
+#define LSSHM_VER_TYPE          \
+    (((sizeof(LsShmOffset_t)<<4) | sizeof(LsShmXSize_t)) & (0xff)) // 8 bits
 
 #define LSSHM_PAGESIZE          0x2000  // min pagesize 8k
 #define LSSHM_PAGEMASK          0xFFFFE000
@@ -115,7 +119,7 @@ typedef uint32_t                LsShmSize_t ;
 
 #define LSSHM_MAXERRMSG         4096            // max error message len
 
-// bit mash from ls.h
+// bit mask from ls.h
 #define LSSHM_FLAG_NONE         0x0000          // no flag values
 #define LSSHM_FLAG_INIT         0x0001          // used to indicate for memset
 #define LSSHM_FLAG_CREATED      0x0001          // return flag if SHM created

@@ -280,7 +280,12 @@ int ls_ptrlist_grow(ls_ptrlist_t *pThis, size_t sz);
  */
 ls_inline ls_ptrlist_iter ls_ptrlist_erase(
     ls_ptrlist_t *pThis, ls_ptrlist_iter iter)
-{   *iter = *(--pThis->pend);  return iter;   }
+{
+    /** Do not use *(-- to avoid trigger compiler bug */
+    --pThis->pend; 
+    *iter = *(pThis->pend);  
+    return iter;   
+}
 
 /**
  * @ls_ptrlist_unsafepushback

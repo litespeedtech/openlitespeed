@@ -25,12 +25,12 @@
 #include <http/httpsignals.h>
 #include <http/ntwkiolink.h>
 #include <http/connlimitctrl.h>
+#include "http/usereventnotifier.h"
 #include <main/httpserver.h>
 #include <errno.h>
 #include <string.h>
 #include <sys/time.h>
 #include <unistd.h>
-#include <lsiapi/moduleeventnotifier.h>
 #include <lsiapi/modulemanager.h>
 
 int highPriorityTask();
@@ -61,7 +61,7 @@ int EventDispatcher::init(const char *pType)
         {
             MultiplexerFactory::setMultiplexer(pMultiplexer);
             pMultiplexer->setPriHandler(highPriorityTask);
-            ModuleEventNotifier::getInstance().initNotifier(pMultiplexer);
+            //UserEventNotifier::getInstance().initNotifier(pMultiplexer);
             return 0;
         }
     }
@@ -82,7 +82,7 @@ int EventDispatcher::reinit()
         {
             MultiplexerFactory::setMultiplexer(pMultiplexer);
             pMultiplexer->setPriHandler(highPriorityTask);
-            ModuleEventNotifier::getInstance().initNotifier(pMultiplexer);
+            //UserEventNotifier::getInstance().initNotifier(pMultiplexer);
             return 0;
         }
     }
@@ -243,6 +243,9 @@ int EventDispatcher::run()
 #ifdef LS_AIO_USE_SIGNAL
         SigEventDispatcher::processSigEvent();
 #endif
+        
+        UserEventNotifier::getInstance().runAllScheduledEvent();
+
         if ((sigEvent = HttpSignals::gotEvent()))
         {
             HttpSignals::resetEvents();

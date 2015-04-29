@@ -258,7 +258,28 @@ int HttpListener::handleEvents(short event)
     while (iCount < allowed)
     {
         socklen_t len = 24;
-        pCur->fd = accept(getfd(), (struct sockaddr *)(pCur->achPeerAddr), &len);
+#ifdef SOCK_CLOEXEC
+        static int isUseAccept4 = 1;
+        if (isUseAccept4)
+        {
+            pCur->fd = accept4(getfd(), (struct sockaddr *)(pCur->achPeerAddr), 
+                               &len, SOCK_NONBLOCK | SOCK_CLOEXEC);
+            if (pCur->fd == -1 && errno == ENOSYS)
+            {
+                isUseAccept4 = 0;
+                continue;
+            }
+        }
+        else
+#endif
+        {
+            pCur->fd = accept(getfd(), (struct sockaddr *)(pCur->achPeerAddr), &len);
+            if (pCur->fd != -1)
+            {
+                fcntl(pCur->fd, F_SETFD, FD_CLOEXEC);
+                fcntl(pCur->fd, F_SETFL, MultiplexerFactory::getMultiplexer()->getFLTag());
+            }
+        }
         if (pCur->fd == -1)
         {
             resetRevent(POLLIN);
@@ -417,8 +438,6 @@ int HttpListener::batchAddConn(struct conn_data *pBegin,
             //    }
             if (!pConn->setLink(this, fd, pCur->pInfo, pMap->getSSLContext()))
             {
-                fcntl(fd, F_SETFD, FD_CLOEXEC);
-                fcntl(fd, F_SETFL, flag);
                 ++pConnCur;
                 //pConn->tryRead();
             }
@@ -486,8 +505,6 @@ int HttpListener::addConnection(struct conn_data *pCur, int *iCount)
         --(*iCount);
         return LS_FAIL;
     }
-    fcntl(fd, F_SETFD, FD_CLOEXEC);
-    fcntl(fd, F_SETFL, MultiplexerFactory::getMultiplexer()->getFLTag());
     //pConn->tryRead();
     return 0;
 }

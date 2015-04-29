@@ -29,7 +29,7 @@ echo
 
 SYS_NAME=`uname -s`
 if [ "x$SYS_NAME" = "xDarwin" ] ; then
-	UNDEFINED_FLAG="-undefined dynamic_lookup"	
+    UNDEFINED_FLAG="-undefined dynamic_lookup"
 else
 	UNDEFINED_FLAG=""
 fi
@@ -57,7 +57,7 @@ else
     echo -e "\033[38;5;203mError, $TARGET.so does not exist.\033[39m"
 fi
 
-if [ -f $TARGET.o ] ; then 
+if [ -f $TARGET.o ] ; then
   rm $TARGET.o
 fi
 

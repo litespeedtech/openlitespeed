@@ -33,12 +33,12 @@ const uint8_t LsShmHash::s_bitMask[] =
 {
     0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80
 };
-const size_t LsShmHash::s_bitsPerChar =
+const uint32_t LsShmHash::s_bitsPerChar =
   sizeof(LsShmHash::s_bitMask)/sizeof(LsShmHash::s_bitMask[0]);
 
 
 enum { prime_count = 31    };
-static const size_t s_primeList[prime_count] =
+static const LsShmSize_t s_primeList[prime_count] =
 {
     7ul,          13ul,         29ul,
     53ul,         97ul,         193ul,       389ul,       769ul,
@@ -50,7 +50,7 @@ static const size_t s_primeList[prime_count] =
 };
 
 
-static int findRange(size_t sz)
+static int findRange(LsShmSize_t sz)
 {
     int i = 1;
     for (; i < prime_count - 1; ++i)
@@ -62,7 +62,7 @@ static int findRange(size_t sz)
 }
 
 
-static size_t roundUp(size_t sz)
+static LsShmSize_t roundUp(LsShmSize_t sz)
 {
     return s_primeList[findRange(sz)];
 }
@@ -182,7 +182,7 @@ int LsShmHash::cmpIpv6(const void *pVal1, const void *pVal2, int len)
 }
 
 
-LsShmHash::LsShmHash(LsShmPool *pool, const char *name, size_t init_size,
+LsShmHash::LsShmHash(LsShmPool *pool, const char *name, LsShmSize_t init_size,
                      LsShmHash::hash_fn hf, LsShmHash::val_comp vc, int lru_mode)
     : m_iMagic(LSSHM_HASH_MAGIC)
     , m_pPool(pool)
@@ -440,8 +440,8 @@ void LsShmHash::destroy()
 
 int LsShmHash::rehash()
 {
-    int oldSize = capacity();
-    int newSize;;
+    LsShmSize_t oldSize = capacity();
+    LsShmSize_t newSize;;
     LsShmOffset_t newIdxOff;
     LsShmOffset_t newBitOff;
     LsShmHIdx *pIdxOld;
@@ -512,7 +512,7 @@ int LsShmHash::rehash()
         hashIndx = getIndex(iter->x_hkey, newSize);
         npIdx = pIdxNew + hashIndx;
         setBitMapEnt(hashIndx);
-        assert(npIdx->x_iOffset < m_pPool->getShmMap()->x_iMaxSize);
+        assert(npIdx->x_iOffset < m_pPool->getShmMap()->x_stat.m_iFileSize);
         pTable->x_iWorkIterOff = iterOff;
         (pIdxOld + getIndex(iter->x_hkey, oldSize))->x_iOffset = iter->x_iNext;
         iter->x_iNext = npIdx->x_iOffset;
@@ -532,7 +532,7 @@ int LsShmHash::release_hash_elem(LsShmHash::iteroffset iterOff, void *pUData)
 {
     LsShmHash *pThis = (LsShmHash *)pUData;
     LsShmHash::iterator iter = pThis->offset2iterator(iterOff);
-    pThis->release2(iterOff, iter->x_iLen);
+    pThis->release2(iterOff, (LsShmSize_t)iter->x_iLen);
     return 0;
 }
 
@@ -608,7 +608,7 @@ void LsShmHash::eraseIteratorHelper(iterator iter)
         while (offset != 0);
     }
 
-    release2(iterOff, iter->x_iLen);
+    release2(iterOff, (LsShmSize_t)iter->x_iLen);
     decrTableSize();
 }
 
@@ -648,11 +648,11 @@ LsShmHash::iteroffset LsShmHash::find2( LsShmHKey key, ls_str_pair_t *pParms)
 
 LsShmHash::iteroffset LsShmHash::insert2(LsShmHKey key, ls_str_pair_t *pParms)
 {
-    uint32_t valueOff = sizeof(ls_vardata_t) + round4(ls_str_len(&pParms->key));
+    LsShmHElemOffs_t valueOff = sizeof(ls_vardata_t) + round4(ls_str_len(&pParms->key));
     int valLen = ls_str_len(&pParms->value);
     if (m_iLruMode != LSSHM_LRU_NONE)
         valueSetup(&valueOff, &valLen);
-    int elementSize = sizeof(LsShmHElem) + valueOff
+    LsShmHElemLen_t elementSize = sizeof(LsShmHElem) + valueOff
       + sizeof(ls_vardata_t) + round4(valLen);
     int remapped;
     LsShmOffset_t offset = alloc2(elementSize, remapped);
@@ -867,10 +867,8 @@ LsShmHash::iteroffset LsShmHash::next(iteroffset iterOff)
                     || (xiter->x_iLen == 0))
                 {
                     SHM_NOTICE(
-                        "LsShmHash::next PROBLEM %6d %X %X SIZE %X SLEEPING",
-                        getpid(), m_pShmMap,
-                        m_pPool->getShmMap(),
-                        m_pPool->getShmMapMaxSize());
+                        "LsShmHash::next PROBLEM %6d %X %X SLEEPING",
+                        getpid(), m_pShmMap, m_pPool->getShmMap());
                     sleep(10);
                 }
             }

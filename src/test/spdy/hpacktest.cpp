@@ -113,7 +113,7 @@ void testNameValue(const char *name, const char *val, int result,
     int val_match;
     int index = Hpack::getStxTabId((char *)name, (uint16_t)strlen(name) ,
                                         (char *)val, (uint16_t)strlen(val), val_match);
-    printf("name: %s, val: %s, index = %d\n", name, val, index);
+    printf("name: %s, val: %s, index = %d match = %d\n", name, val, index, val_match);
     CHECK(index == result && val_match == val_match_result);
 }
 
@@ -599,7 +599,7 @@ TEST(hapck_self_enc_dec_test_firefox_error)
     CHECK(memcmp(respBuf, buf, 90) ==0);
 }
 
-
+/*
 TEST(getDynTblId_testing)
 {
     HpackDynTbl dynTbl0;
@@ -740,7 +740,7 @@ TEST(getDynTblId_testing)
     printf("\nhapck_self_enc_dec_test_firefox_error Done\n");
     
     
-}
+}*/
 
 
 static HpackHdrTbl_t g_HpackStaticTableTset[] =

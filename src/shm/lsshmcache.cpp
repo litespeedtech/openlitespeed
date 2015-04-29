@@ -33,7 +33,7 @@ LsShmCache::LsShmCache(
     uint32_t              magic,
     const char           *cacheName,
     const char           *shmHashName,
-    size_t                initHashSize,
+    LsShmSize_t           initHashSize,
     LsShmSize_t           uDataSize,
     LsShmHash::hash_fn    hf,
     LsShmHash::val_comp   vc,
@@ -55,7 +55,8 @@ LsShmCache::LsShmCache(
         return;
     if ((pPool = pShm->getGlobalPool()) == NULL)
         return;
-    if ((m_pShmHash = pPool->getNamedHash(shmHashName, initHashSize, hf, vc, LSSHM_LRU_NONE)) != NULL)
+    if ((m_pShmHash = pPool->getNamedHash(
+        shmHashName, initHashSize, hf, vc, LSSHM_LRU_NONE)) != NULL)
     {
         LsShmReg *pReg;
         if ((pReg = m_pShmHash->findReg(cacheName)) == NULL)

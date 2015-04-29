@@ -92,6 +92,8 @@ SET(unittest_STAT_SRCS
    test/util/stringtooltest.cpp
    test/util/gpointerlisttest.cpp
    test/util/objarraytest.cpp
+   test/util/objpooltest.cpp
+   test/util/radixtreetest.cpp
    test/spdy/huffmantest.cpp
    test/spdy/hpacktest.cpp
    test/spdy/spdyzlibfiltertest.cpp
@@ -116,7 +118,6 @@ SET(unittest_STAT_SRCS
    test/lsr/ls_pcregtest.cpp
    test/lsr/ls_pooltest.cpp
    test/lsr/ls_ptrlisttest.cpp
-   test/lsr/ls_radixtest.cpp
    test/lsr/ls_sha1test.cpp
    test/lsr/ls_strtest.cpp
    test/lsr/ls_strlisttest.cpp
@@ -133,7 +134,7 @@ SET(unittest_STAT_SRCS
 link_directories(/usr/local/lib ${PROJECT_SOURCE_DIR}/src/test/unittest-cpp/UnitTest++)
 
 add_executable(openlitespeed ${openlitespeed_SRCS}
-    ${unittest_STAT_SRCS} 
+    ${unittest_STAT_SRCS}
 )
 
 add_executable(ls_shmstat
@@ -143,6 +144,16 @@ add_executable(ls_shmstat
 add_executable(ls_shmhashstat
     shm/ls_shmhashstat.cpp
 )
+
+add_executable(shmmemcachedtest
+    test/shm/shmmemcachedtest.cpp
+)
+
+# add_executable(ctbench
+#     modules/prelinkedmods.cpp
+#     test/http/contexttreebench.cpp
+#     httpdtest.cpp
+# )
 
 #add_executable(luatest
 #modules/prelinkedmods.cpp
@@ -213,11 +224,17 @@ add_executable(ls_shmhashstat
 # ${lsr_SRCS}
 # )
 
+
+# NOTE: When creating a new directory, the order it is placed in this list
+# matters.  Everything listed depends on things listed AFTER it, though
+# it won't depend on everything after it.  Inter-dependency may be fixed
+# by listing one directory twice, though this isn't recommended.
+# So for example, if edio depends on your new directory, your directory
+# should be listed AFTER edio.  PLEASE TRY TO KEEP THIS NEAT!
 SET( litespeedlib
-    main http main modgzip spdy ssi
-    lsiapi registry cgi fcgi jk extensions
-    lsapi proxy edio log4cxx socket
-    sslpp lsshm http edio thread GeoIP 
+    modgzip lsiapi main http lsiapi spdy ssi
+    registry cgi fcgi jk extensions lsapi proxy
+    edio socket sslpp lsshm thread log4cxx GeoIP
     -Wl,--whole-archive util lsr -Wl,--no-whole-archive
     pthread rt ${CMAKE_DL_LIBS} ${libUnitTest} )
 
@@ -226,6 +243,10 @@ target_link_libraries(openlitespeed ${litespeedlib} )
 target_link_libraries(ls_shmstat lsshm util lsr pthread )
 
 target_link_libraries(ls_shmhashstat lsshm util lsr pthread )
+
+target_link_libraries(shmmemcachedtest lsshm util lsr pthread )
+
+# target_link_libraries(ctbench ${litespeedlib} )
 
 # target_link_libraries(shmtest ${litespeedlib} )
 

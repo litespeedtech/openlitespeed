@@ -1624,7 +1624,7 @@ HttpVHost *HttpServerImpl::createAdminVhost(LocalWorker *pFcgiApp,
             "$SERVER_ROOT/docs/");
     HttpContext *pDocs = pVHostAdmin->addContext("/docs/",
                          HandlerType::HT_NULL, &achRootPath[iChrootLen], NULL, 1);
-    pVHostAdmin->addContext(pDocs);
+//     pVHostAdmin->addContext(pDocs);
     pDocs = &pVHostAdmin->getRootContext();
     pDocs->addDirIndexes("index.html, index.php");
     char achPHPSuffix[10] = "php";
@@ -2407,9 +2407,11 @@ int HttpServerImpl::configServerBasics(int reconfig, const XmlNode *pRoot)
         procConf.setPriority(ConfigCtx::getCurConfigCtx()->getLongValue(pRoot,
                                      "priority", -20, 20, 0));
 
+        int iNumProc = PCUtil::getNumProcessors();
+        iNumProc = (iNumProc > 8 ? 8 : iNumProc);
         HttpServerConfig::getInstance().setChildren(
                 ConfigCtx::getCurConfigCtx()->getLongValue(pRoot,
-                        "httpdWorkers", 1, 16, PCUtil::getNumProcessors()));
+                        "httpdWorkers", 1, 16, iNumProc));
 
         const char *pGDBPath = pRoot->getChildValue("gdbPath");
 

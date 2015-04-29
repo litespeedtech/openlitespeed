@@ -44,8 +44,8 @@ int PipeNotifier::handleEvents(short int event)
             count += len;
 
         g_api->log(NULL, LSI_LOG_DEBUG,
-                   "[PipeNotifier] handleEvents called, fd = %d, read %d byte(s), session=%ld\n ",
-                   getfd(), count, (long) session_);
+                   "[PipeNotifier] handleEvents called, fd = %d, read %d byte(s), session=%p\n",
+                   getfd(), count, session_);
 
         if (m_cb)
             m_cb(session_);

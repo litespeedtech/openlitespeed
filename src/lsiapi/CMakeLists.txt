@@ -9,7 +9,6 @@ SET(lsiapi_STAT_SRCS
     lsiapilib.cpp
     lsiapigd.cpp
     modulemanager.cpp
-    moduleeventnotifier.cpp
     moduletimer.cpp
 )
 

@@ -22,9 +22,9 @@ class BuildConfig
 		switch ($field) {
 
 			case self::PHP_VERSION:	return
-			array('5.6.6',
-			'5.5.22',
-			'5.4.38',
+			array('5.6.8',
+			'5.5.24',
+			'5.4.40',
 			'5.3.29',
 			'5.2.17',
 			'4.4.9');
@@ -41,7 +41,7 @@ class BuildConfig
 
 			//('MEMCACHED_VERSION', '1.0.2');
 
-			case self::OPCACHE_VERSION: return '7.0.4';
+			case self::OPCACHE_VERSION: return '7.0.5';
 			default: die("illegal field");
 		}
 

@@ -474,7 +474,11 @@ static int loadPemWithMissingDash(const char *pFile, char *buf, int bufLen,
     while (*p == '-')
         ++p;
     while (p < *pBegin + 5)
-        *(--*pBegin) = '-';
+    {
+        /** Do not use *(-- to avoid trigger compiler bug */
+        --*pBegin;
+        *(*pBegin) = '-';
+    }
 
     while (isspace(pEnd[-1]))
         pEnd--;
@@ -497,6 +501,7 @@ static int loadCertFile(SSL_CTX *pCtx, const char *pFile, int type)
     BIO *in;
     X509 *cert = NULL;
     int len;
+    int ret;
 
     /* THIS FILE TYPE WILL NOT BE HANDLED HERE.
      * Just left this here in case of future implementation.*/
@@ -512,7 +517,9 @@ static int loadCertFile(SSL_CTX *pCtx, const char *pFile, int type)
     BIO_free(in);
     if (!cert)
         return LS_FAIL;
-    return SSL_CTX_use_certificate(pCtx, cert);
+    ret = SSL_CTX_use_certificate(pCtx, cert);
+    X509_free(cert);
+    return ret;
 }
 
 

@@ -55,31 +55,31 @@ http_header_t       HttpRespHeaders::s_acceptRangeHeader;
 
 const char *HttpRespHeaders::m_sPresetHeaders[H_HEADER_END] =
 {
-    "accept-ranges",
-    "connection",
-    "content-type",
-    "content-length",
-    "content-encoding",
-    "content-range",
-    "content-disposition",
-    "cache-control",
-    "date",
-    "etag",
-    "expires",
-    "keep-alive",
-    "last-modified",
-    "location",
-    "x-litespeed-location",
-    "x-litespeed-cache-control",
-    "pragma",
-    "proxy-connection",
-    "server",
-    "set-cookie",
-    "status",
-    "transfer-encoding",
-    "vary",
-    "www-authenticate",
-    "x-powered-by"
+    "Accept-Ranges",
+    "Connection",
+    "Content-Type",
+    "Content-Length",
+    "Content-Encoding",
+    "Content-Range",
+    "Content-Disposition",
+    "Cache-Control",
+    "Date",
+    "Etag",
+    "Expires",
+    "Keep-Alive",
+    "Last-Modified",
+    "Location",
+    "X-Litespeed-Location",
+    "X-Litespeed-Cache-Control",
+    "Pragma",
+    "Proxy-Connection",
+    "Server",
+    "Set-Cookie",
+    "Status",
+    "Transfer-Encoding",
+    "Vary",
+    "Www-Authenticate",
+    "X-Powered-By"
 };
 
 
@@ -191,16 +191,6 @@ int HttpRespHeaders::appendHeader(resp_kvpair *pKv, const char *pName,
     pUpdKv->keyLen = nameLen;
 
     m_buf.appendUnsafe(pName, nameLen);
-    m_buf.used(-1 * nameLen);
-    //Convert name to lower case to store it
-    char *pCur = (char *)m_buf.end();
-    char *pNameEnd = pCur + nameLen;
-    while (pCur < pNameEnd)
-    {
-        *pCur = tolower(*pCur);
-        ++pCur;
-    }
-    m_buf.used(nameLen);
     m_buf.appendUnsafe(": ", 2);
 
     if (pUpdKv->valLen > 0)  //only apply when append and merge
@@ -808,12 +798,12 @@ void HttpRespHeaders::buildCommonHeaders()
     HttpRespHeaders::s_gzipHeaders[0].valLen   = 4;
 
     HttpRespHeaders::s_gzipHeaders[1].index    = HttpRespHeaders::H_VARY;
-    HttpRespHeaders::s_gzipHeaders[1].val      = "accept-encoding";
+    HttpRespHeaders::s_gzipHeaders[1].val      = "Accept-Encoding";
     HttpRespHeaders::s_gzipHeaders[1].valLen   = 15;
 
     HttpRespHeaders::s_keepaliveHeader.index    =
         HttpRespHeaders::H_CONNECTION;
-    HttpRespHeaders::s_keepaliveHeader.val      = "keep-alive";
+    HttpRespHeaders::s_keepaliveHeader.val      = "Keep-Alive";
     HttpRespHeaders::s_keepaliveHeader.valLen   = 10;
 
     HttpRespHeaders::s_concloseHeader.index    = HttpRespHeaders::H_CONNECTION;

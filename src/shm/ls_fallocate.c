@@ -26,6 +26,7 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <lsdef.h>
+#include <lsshmtypes.h>
 
 
 /*
@@ -35,13 +36,13 @@
  *
  *   if incrsize < 0 the file will be reduced.
  */
-int ls_expandfile(int fd, size_t fromsize, size_t incrsize)
+int ls_expandfile(int fd, LsShmOffset_t fromsize, LsShmXSize_t incrsize)
 {
-    size_t fromloc;
+    LsShmOffset_t fromloc;
     int pagesize = getpagesize();
-    size_t newsize = fromsize + incrsize;
+    LsShmOffset_t newsize = fromsize + incrsize;
 
-    if (ftruncate(fd, newsize) < 0)
+    if (ftruncate(fd, (off_t)newsize) < 0)
         return LS_FAIL;
 
     if (newsize <= fromsize)
@@ -52,7 +53,7 @@ int ls_expandfile(int fd, size_t fromsize, size_t incrsize)
     {
         if (pwrite(fd, "", 1, fromsize) != 1)
         {
-            ftruncate(fd, fromloc);
+            ftruncate(fd, (off_t)fromloc);
             return LS_FAIL;
         }
         fromsize += pagesize;

@@ -143,7 +143,7 @@ public:
     {
         for (iterator iter = begin(); iter != end(); ++iter)
             if (*iter)
-                delete((T *)*iter);
+                releaseObj(*iter);
         GObjPool::clear();
     }
 };

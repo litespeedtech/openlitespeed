@@ -18,48 +18,42 @@
 #ifndef CONTEXTTREE_H
 #define CONTEXTTREE_H
 
+#include <cstddef>
 
 
 class HttpContext;
-class ContextNode;
 class HttpVHost;
+class RadixNode;
+class RadixTree;
+
 class ContextTree
 {
-    ContextNode          *m_pRootNode;
-    const HttpContext    *m_pRootContext;
-    ContextNode          *m_pLocRootNode;
-    char                 *m_pLocRootPath;
-    int                   m_iLocRootPathLen;
+    RadixTree          *m_pURITree;
+    RadixTree          *m_pLocTree;
+    const HttpContext  *m_pRootContext;
+
+    static int updateChildren(void *pObj, void *pUData);
+    static int inherit(void *pObj, void *pUData);
+
+    HttpContext *getParentContext(RadixNode *pCurNode);
+    void updateTreeAfterAdd(RadixNode *pRadixNode, HttpContext *pContext);
 
     ContextTree(const ContextTree &rhs);
     void operator=(const ContextTree &rhs);
-
 public:
     ContextTree();
-    //ContextTree( const char * pPrefix, int len );
     ~ContextTree();
 
     const HttpContext *getRootContext() const  {   return m_pRootContext;  }
-
-    const char   *getPrefix(int &iPrefixLen);
-    ContextNode *getRootNode() const           {   return m_pRootNode;     }
-
-    ContextNode *addNode(const char *pPrefix, int len,
-                         ContextNode *pCurNode,
-                         char *pStart, long lastCheck = 0);
+    void setRootContext(const HttpContext *pContext);
+    void setRootLocation(const char *pLocation, size_t iLocLen);
 
     int add(HttpContext *pContext);
-    const HttpContext *bestMatch(const char *pURI) const;
-    const HttpContext *matchLocation(const char *pLocation) const;
-    HttpContext *getContext(const char *pURI) const;
-    void setRootContext(const HttpContext *pContext)
-    {   m_pRootContext = pContext;  }
-    void setRootLocation(const char *pLocation);
+    const HttpContext *bestMatch(const char *pURI, size_t iUriLen) const;
+    const HttpContext *matchLocation(const char *pLoc, size_t iLocLen) const;
+    HttpContext *getContext(const char *pURI, size_t iUriLen) const;
     void contextInherit();
-
-    //void merge( const ContextTree & rhs );
 };
-
 
 
 #endif

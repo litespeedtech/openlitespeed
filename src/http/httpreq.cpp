@@ -898,7 +898,7 @@ int HttpReq::translatePath(const char *pURI, int uriLen, char *pReal,
     *pReal = 0;
     if ((!pContext) ||
         (strncmp(pContext->getURI(), pURI, pContext->getURILen()) != 0))
-        pContext = m_pVHost->bestMatch(pURI);
+        pContext = m_pVHost->bestMatch(pURI, uriLen);
 
     if (pContext && pContext->getHandlerType() > HandlerType::HT_STATIC)
         pContext = NULL;
@@ -1364,7 +1364,7 @@ int HttpReq::locationToUrl(const char *pLocation, int len)
 {
     char achURI[8192];
     const HttpContext *pNewCtx;
-    pNewCtx = m_pVHost->matchLocation(pLocation);
+    pNewCtx = m_pVHost->matchLocation(pLocation, len);
     if (pNewCtx)
     {
         int n = snprintf(achURI, 8192, "%s%s", pNewCtx->getURI(),
@@ -1385,7 +1385,7 @@ int HttpReq::postRewriteProcess(const char *pURI, int len)
 {
     //if is rewriten to file path, reverse lookup context from file path
     const HttpContext *pNewCtx;
-    pNewCtx = m_pVHost->matchLocation(pURI);
+    pNewCtx = m_pVHost->matchLocation(pURI, len);
     if (pNewCtx)
     {
         // should skip context processing;
@@ -1407,7 +1407,7 @@ int HttpReq::postRewriteProcess(const char *pURI, int len)
         setRewriteURI(pURI, len);
         if (m_pContext && len > m_pContext->getURILen())
         {
-            const HttpContext *pContext = m_pVHost->bestMatch(pURI);
+            const HttpContext *pContext = m_pVHost->bestMatch(pURI, len);
             if (pContext != m_pContext)
             {
                 m_pContext = pContext;
@@ -1441,7 +1441,7 @@ int HttpReq::processContext()
 
     if (!m_iMatchedLen)
     {
-        m_pContext = m_pVHost->bestMatch(pURI);
+        m_pContext = m_pVHost->bestMatch(pURI, iURILen);
         if (!m_pContext)
         {
             if (D_ENABLED(DL_LESS))
@@ -1840,7 +1840,7 @@ int HttpReq::checkPathInfo(const char *pURI, int iURILen, int &pathLen,
 {
     if (!pContext)
     {
-        pContext = m_pVHost->bestMatch(pURI);
+        pContext = m_pVHost->bestMatch(pURI, iURILen);
         if (!pContext)
             pContext = &m_pVHost->getRootContext();
     }

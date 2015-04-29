@@ -191,12 +191,14 @@ public:
     int addContext(HttpContext *pContext)
     {   return m_contexts.add(pContext);          }
 
-    const HttpContext *bestMatch(const char *pURI) const
-    {   return m_contexts.bestMatch(pURI);        }
+    const HttpContext *bestMatch(const char *pURI, size_t iUriLen) const
+    {   return m_contexts.bestMatch(pURI, iUriLen);        }
 
-    const HttpContext *matchLocation(const char *pURI, int regex = 0) const;
+    const HttpContext *matchLocation(const char *pURI, size_t iUriLen,
+                                     int regex = 0) const;
 
-    HttpContext *getContext(const char *pURI, int regex = 0) const;
+    HttpContext *getContext(const char *pURI, size_t iUriLen,
+                            int regex = 0) const;
 
     ContextTree *getContextTree()
     {   return &m_contexts;     }

@@ -31,13 +31,7 @@
 extern "C" {
 #endif
 
-/*
- *   Shared memory handle
- */
-typedef LsShmOffset_t      lsi_shm_key_t;        /* SHM offset    */
-typedef LsShmOffset_t      lsi_shmhash_datakey_t;
-typedef LsShmOffset_t      lsi_shm_off_t;
-
+typedef LsShmOffset_t            lsi_shm_off_t;
 typedef struct lsShm_hElem_s    *iterator;
 
 /* USER Hash key generator and compare functions */
@@ -69,31 +63,26 @@ typedef int (*lsi_val_comp)(const void *p1, const void *p2, int len);
  *   LiteSpeed SHM memory container
  */
 lsi_shm_t      *lsi_shm_open(const char *shmname, size_t initialsize);
-int             lsi_shm_close(lsi_shm_t
-                              *shmhandle);    /* close connection */
-int             lsi_shm_destroy(lsi_shm_t
-                                *shmhandle);  /* remove hash map */
+int             lsi_shm_close(lsi_shm_t *shmhandle);    /* close connection */
+int             lsi_shm_destroy(lsi_shm_t *shmhandle);  /* remove hash map */
 
 /*
  *   SHM memory allocator
  */
-lsi_shmpool_t *lsi_shmpool_open(lsi_shm_t *shmhandle,
-                                const char *poolname);
-lsi_shmpool_t *lsi_shmpool_openbyname(const char *shmname,
-                                      size_t initialsize);
+lsi_shmpool_t  *lsi_shmpool_open(lsi_shm_t *shmhandle, const char *poolname);
+lsi_shmpool_t  *lsi_shmpool_openbyname(const char *shmname, size_t initialsize);
 int             lsi_shmpool_close(lsi_shmpool_t *poolhandle);
 int             lsi_shmpool_destroy(lsi_shmpool_t *poolhandle);
 
-lsi_shm_off_t   lsi_shmpool_alloc2(
-    lsi_shmpool_t *poolhandle, size_t size);
-void            lsi_shmpool_release2(
-    lsi_shmpool_t *poolhandle, lsi_shm_off_t key, size_t size);
-uint8_t        *lsi_shmpool_key2ptr(
-    lsi_shmpool_t *poolhandle, lsi_shm_off_t key);
-lsi_shm_off_t   lsi_shmpool_getreg(
-    lsi_shmpool_t *poolhandle, const char *name);
-int             lsi_shmpool_setreg(
-    lsi_shmpool_t *poolhandle, const char *name, lsi_shm_off_t off);
+lsi_shm_off_t   lsi_shmpool_alloc2(lsi_shmpool_t *poolhandle, size_t size);
+void            lsi_shmpool_release2(lsi_shmpool_t *poolhandle,
+                                     lsi_shm_off_t key, size_t size);
+uint8_t        *lsi_shmpool_key2ptr(lsi_shmpool_t *poolhandle,
+                                    lsi_shm_off_t key);
+lsi_shm_off_t   lsi_shmpool_getreg(lsi_shmpool_t *poolhandle,
+                                   const char *name);
+int             lsi_shmpool_setreg(lsi_shmpool_t *poolhandle,
+                                   const char *name, lsi_shm_off_t off);
 
 /*
  *    SHM HASH
@@ -104,29 +93,29 @@ int             lsi_shmpool_setreg(
  *
  * Hash open/close lsi_shmhash_data_t
  */
-lsi_shmhash_t *lsi_shmhash_open(lsi_shmpool_t *poolhandle,
-                                const char *hash_table_name,
-                                size_t initialsize,
-                                lsi_hash_fn hf,
-                                lsi_val_comp vc);
-lsi_shmhash_t *lsi_shmlruhash_open(lsi_shmpool_t *poolhandle,
-                                   const char *hash_table_name,
-                                   size_t initialsize,
-                                   lsi_hash_fn hf,
-                                   lsi_val_comp vc,
-                                   int mode);
+lsi_shmhash_t  *lsi_shmhash_open(lsi_shmpool_t *poolhandle,
+                                 const char *hash_table_name,
+                                 size_t initialsize,
+                                 lsi_hash_fn hf,
+                                 lsi_val_comp vc);
+lsi_shmhash_t  *lsi_shmlruhash_open(lsi_shmpool_t *poolhandle,
+                                    const char *hash_table_name,
+                                    size_t initialsize,
+                                    lsi_hash_fn hf,
+                                    lsi_val_comp vc,
+                                    int mode);
 int             lsi_shmhash_close(lsi_shmhash_t *hashhandle);
 int             lsi_shmhash_destroy(lsi_shmhash_t *hashhandle);
 
 /* Hash Shared memory access */
 lsi_shm_off_t   lsi_shmhash_hdroff(lsi_shmhash_t *hashhandle);
-lsi_shm_key_t   lsi_shmhash_alloc2(lsi_shmhash_t *hashhandle,
+lsi_shm_off_t   lsi_shmhash_alloc2(lsi_shmhash_t *hashhandle,
                                    size_t size);
 void            lsi_shmhash_release2(lsi_shmhash_t *hashhandle,
-                                     lsi_shm_key_t key,
+                                     lsi_shm_off_t key,
                                      size_t size);
 uint8_t        *lsi_shmhash_key2ptr(lsi_shmhash_t *hashhandle,
-                                    lsi_shm_key_t);
+                                    lsi_shm_off_t key);
 
 /* Hash Element memory access */
 uint8_t        *lsi_shmhash_datakey2ptr(lsi_shmhash_t *hashhandle,
@@ -148,11 +137,11 @@ void            lsi_shmhash_remove(lsi_shmhash_t *hashhandle,
                                    const uint8_t *key, int len);
 void            lsi_shmhash_clear(lsi_shmhash_t *hashhandle);
 int             lsi_shmhash_setdata(lsi_shmhash_t *hashhandle,
-                                    LsShmOffset_t offVal, const uint8_t *value, int valuelen);
+                                    lsi_shm_off_t offVal, const uint8_t *value, int valuelen);
 int             lsi_shmhash_getdata(lsi_shmhash_t *hashhandle,
-                                    LsShmOffset_t offVal, LsShmOffset_t *pvalue, int cnt);
+                                    lsi_shm_off_t offVal, lsi_shm_off_t *pvalue, int cnt);
 int             lsi_shmhash_getdataptrs(lsi_shmhash_t *hashhandle,
-                                        LsShmOffset_t offVal, int (*func)(void *pData));
+                                        lsi_shm_off_t offVal, int (*func)(void *pData));
 int             lsi_shmhash_trim(lsi_shmhash_t *hashhandle,
                                  time_t tmcutoff, int (*func)(iterator iter, void *arg), void *arg);
 int             lsi_shmhash_check(lsi_shmhash_t *hashhandle);
@@ -171,7 +160,7 @@ int             lsi_shmhash_stat(lsi_shmhash_t *hashhandle,
  *  get    = return first available lock
  *  remove = return the given lock
  */
-lsi_shmlock_t *lsi_shmlock_get(lsi_shm_t *handle);
+lsi_shmlock_t  *lsi_shmlock_get(lsi_shm_t *handle);
 int             lsi_shmlock_remove(lsi_shm_t *handle, lsi_shmlock_t *lock);
 
 

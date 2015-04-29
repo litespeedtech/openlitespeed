@@ -69,7 +69,7 @@ echo UI::content_header('fa-list', DMsg::UIStr('menu_tools'), DMsg::UIStr('menu_
 
 	<table id="dash_logtbl" class="table table-condensed table-hover" width="100%">
 		<thead><tr><th width="150"><?php DMsg::EchoUIStr('service_time')?></th><th width="60"><?php DMsg::EchoUIStr('service_level')?></th><th><?php DMsg::EchoUIStr('service_mesg')?></th></tr></thead>
-		<tbody id="dash_logbody" class="font-sm">
+		<tbody id="dash_logbody" class="font-lstlog">
 			<tr><td></td><td></td><td></td></tr>
 		</tbody>
 	</table>

@@ -503,7 +503,7 @@ static int ReleaseMydata(void *data)
         delete pData->respHeaders;
 
     if (pData->notifier_pointer)
-        g_api->remove_event_notifier(&pData->notifier_pointer);
+        g_api->remove_event(&pData->notifier_pointer);
 
     ls_loopbuf_d(&pData->buff);
 
@@ -518,13 +518,15 @@ int EndSession(lsi_cb_param_t *rec)
 
     if (pData != NULL)
     {
+        g_api->log(rec->_session, LSI_LOG_DEBUG, "[%s]ps_end_session, session=%p pEventObj=%p pData=%p.\n",
+               ModuleName, rec->_session, pData->notifier_pointer, pData);
+
         g_api->free_module_data(rec->_session, &MNAME, LSI_MODULE_DATA_HTTP,
                                 ReleaseMydata);
         g_api->set_module_data(rec->_session, &MNAME, LSI_MODULE_DATA_HTTP, NULL);
     }
 
-    g_api->log(rec->_session, LSI_LOG_DEBUG, "[%s]ps_end_session.\n",
-               ModuleName);
+    
     return 0;
 }
 
@@ -912,8 +914,8 @@ int CreateBaseFetch(PsMData *pMyData, lsi_session_t *session,
     pMyData->pNotifier->initNotifier((Multiplexer *) g_api->get_multiplexer(),
                                      session);
     g_api->log(session, LSI_LOG_DEBUG,
-               "[Module:ModPagespeed]ps_create_base_fetch created event notifier, session=%ld\n",
-               (long) session);
+               "[Module:ModPagespeed]ps_create_base_fetch created event notifier, session=%p\n",
+               session);
 
     pMyData->ctx->baseFetch = new LsiBaseFetch(
         session, pMyData->pNotifier->getFdIn(), pMyData->cfg_s->serverContext,
@@ -1979,6 +1981,9 @@ int BodyFilter(lsi_cb_param_t *rec)
             rec->_flag_in = LSI_CB_FLAG_IN_FLUSH;
 
         int written = g_api->stream_write_next(rec, buf, len);
+        if (written < 0)
+            return LS_FAIL;
+        
         ls_loopbuf_popfront(&pMyData->buff, written);
         writtenTotal += written;
     }
@@ -2336,10 +2341,10 @@ static int RecvReqHeaderCheck(lsi_cb_param_t *rec)
                                   response_category);
         if (ret == 1) //suspended
         {
+            pMyData->notifier_pointer = g_api->create_session_resume_event(rec->_session, &MNAME);
             g_api->log(rec->_session, LSI_LOG_DEBUG,
-                       "[%s]recv_req_header_check suspend hook.\n", ModuleName);
-            pMyData->notifier_pointer = g_api->set_event_notifier(rec->_session,
-                                        &MNAME, LSI_HKPT_RECV_REQ_HEADER);
+                       "[%s]recv_req_header_check suspend hook, eventObj=%p pData=%p.\n",
+                       ModuleName, pMyData->notifier_pointer, pMyData);
             return LSI_HK_RET_SUSPEND;
         }
         break;
@@ -2357,8 +2362,8 @@ int BaseFetchHandler(PsMData *pMyData, lsi_session_t *session)
     ps_request_ctx_t *ctx = pMyData->ctx;
     int rc = ctx->baseFetch->CollectAccumulatedWrites(session);
     g_api->log(session, LSI_LOG_DEBUG,
-               "ps_base_fetch_handler called CollectAccumulatedWrites, ret %d, %ld\n",
-               rc, (long) session);
+               "ps_base_fetch_handler called CollectAccumulatedWrites, ret %d, session=%p\n",
+               rc, session);
 
     if (rc == LSI_HK_RET_OK)
         ctx->fetchDone = true;
@@ -2385,8 +2390,8 @@ void EventCb(void *session_)
     }
 
     g_api->log(session, LSI_LOG_DEBUG,
-               "[%s]ps_event_cb triggered, session=%ld\n",
-               ModuleName, (long) session_);
+               "[%s]ps_event_cb triggered, session=%p\n",
+               ModuleName, session_);
 
     //For suspended case, use the following to resume
     if (pMyData->notifier_pointer)
@@ -2401,14 +2406,17 @@ void EventCb(void *session_)
             g_api->log(session, LSI_LOG_DEBUG,
                        "[%s]ps_event_cb register_req_handler OK.\n", ModuleName);
         }
-        g_api->notify_event_notifier(&pMyData->notifier_pointer);
+        g_api->notify_event(&pMyData->notifier_pointer);
+        g_api->log(session, LSI_LOG_DEBUG,
+                   "[%s]EventCb called, eventObj=%p pData=%p.\n",
+                       ModuleName, pMyData->notifier_pointer, pMyData);
 
         /**
-         * Do not call remove_event_notifier because after notify_event_notifier  
+         * Do not call remove_event because after notify_event  
          * called, it will be removed.
          */
-        //g_api->remove_event_notifier(&pMyData->notifier_pointer);
-        assert(pMyData->notifier_pointer == 0);
+        //g_api->remove_event(&pMyData->notifier_pointer);
+        //assert(pMyData->notifier_pointer == 0);
     }
 }
 

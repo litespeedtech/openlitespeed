@@ -22,6 +22,7 @@
 #include <http/httpstatuscode.h>
 #include <spdy/h2stream.h>
 #include <util/iovec.h>
+#include <util/stringtool.h>
 
 #include <time.h>
 
@@ -203,7 +204,10 @@ int H2Connection::parseFrame()
             if (processFrame(m_pCurH2Header) == -1)
                 return LS_FAIL;
             if (m_iCurrentFrameRemain > 0)
+            {
                 m_bufInput.pop_front(m_iCurrentFrameRemain);
+                m_iCurrentFrameRemain = 0;
+            }
             m_iCurrentFrameRemain = -H2_FRAME_HEADER_SIZE;
         }
         else
@@ -287,7 +291,8 @@ int H2Connection::processFrame(H2FrameHeader *pHeader)
     }
     memset((char *)pHeader + H2_FRAME_HEADER_SIZE, 0, 10);
     printLogMsg(pHeader);
-    
+
+
     switch (type)
     {
     case H2_FRAME_HEADERS:
@@ -501,7 +506,7 @@ int H2Connection::processWindowUpdateFrame(H2FrameHeader *pHeader)
     m_bufInput.moveTo(sTemp, 4);
     m_iCurrentFrameRemain -= 4;
     uint32_t id = pHeader->getStreamId();
-    int32_t delta = beReadUint32((const unsigned char *)sTemp);
+    uint32_t delta = beReadUint32((const unsigned char *)sTemp);
     delta &= 0x7FFFFFFFu;
     if (delta == 0)
     {
@@ -681,9 +686,9 @@ int H2Connection::processDataFrame(H2FrameHeader *pHeader)
 
 int H2Connection::processContinuationFrame(H2FrameHeader *pHeader)
 {
-    uint32_t id = pHeader->getStreamId();
     if (m_iFlag & H2_CONN_FLAG_GOAWAY)
         return 0;
+    uint32_t id = pHeader->getStreamId();
     if ((id != m_uiLastStreamID)
         || (m_iFlag & (H2_CONN_HEADERS_START | H2_CONN_HEADERS_END))
                 != H2_CONN_HEADERS_START )
@@ -691,44 +696,63 @@ int H2Connection::processContinuationFrame(H2FrameHeader *pHeader)
         return LS_FAIL;
     }
 
+    return processReqHeader(pHeader->getFlags(), false);
+}
+
+int H2Connection::processReqHeader(unsigned char iHeaderFlag, bool isFirstPart)
+{
     int iDatalen = (m_bufInput.size() < m_iCurrentFrameRemain) ?
                    (m_bufInput.size()) : (m_iCurrentFrameRemain);
     if (iDatalen <= 0)
         return 0;
 
-    H2Stream *pStream = findStream(id);
-    if (pStream == NULL)
+    //Check if we need to move the buffer to stream bufinflat
+    bool needToMove = false;
+    int bufPart1Len = m_bufInput.blockSize();
+    if (!isFirstPart
+        || (((iHeaderFlag & H2_FLAG_END_HEADERS) == 0)
+            || iDatalen > bufPart1Len))
     {
-        return LS_FAIL;
-    }
+        needToMove = true;
+        if (isFirstPart)
+            m_bufInflate.clear();
 
-    if (iDatalen > m_bufInput.blockSize())
-    {
-        int len = m_bufInput.blockSize();
-        m_bufInflate.append(m_bufInput.begin(), len);
-        m_bufInput.pop_front(len);
-        m_iCurrentFrameRemain -= len;
-        m_bufInflate.append(m_bufInput.begin(), iDatalen - len);
-    }
-    else
-    {
-        m_bufInflate.append(m_bufInput.begin(), iDatalen);
+        if (iDatalen > bufPart1Len)
+        {
+            m_bufInflate.append(m_bufInput.begin(), bufPart1Len);
+            m_bufInput.pop_front(bufPart1Len);
+            m_bufInflate.append(m_bufInput.begin(), iDatalen - bufPart1Len);
+            m_bufInput.pop_front(iDatalen - bufPart1Len);
+        }
+        else
+        {
+            m_bufInflate.append(m_bufInput.begin(), iDatalen);
+            m_bufInput.pop_front(iDatalen);
+        }
+        m_iCurrentFrameRemain -= iDatalen;
     }
     
-    if (pHeader->getFlags() & H2_FLAG_END_HEADERS)
+    if (iHeaderFlag & H2_FLAG_END_HEADERS)
     {
         m_iFlag |= H2_CONN_HEADERS_END;
+        unsigned char *pSrc = NULL;
         AutoBuf tmpBuf;
-        tmpBuf.swap(m_bufInflate);
-        unsigned char *pSrc = (unsigned char *)tmpBuf.begin();
-        return decodeHeaders(pStream, pSrc, tmpBuf.size());
+        if (needToMove)
+        {
+            tmpBuf.swap(m_bufInflate);
+            pSrc = (unsigned char *)tmpBuf.begin();
+            iDatalen = tmpBuf.size();
+        }
+        else
+            pSrc = (unsigned char *)m_bufInput.begin();
+        return decodeHeaders(pSrc, iDatalen, iHeaderFlag, isFirstPart);
     }
     else
         return 0;
 }
 
 
-int H2Connection::decodeHeaders(H2Stream *pStream, unsigned char *pSrc, int length)
+int H2Connection::decodeHeaders(unsigned char *pSrc, int length, unsigned char iHeaderFlag, bool isFirstPart)
 {
     char method[10] = {0};
     int methodLen = 0;
@@ -738,15 +762,16 @@ int H2Connection::decodeHeaders(H2Stream *pStream, unsigned char *pSrc, int leng
 
     unsigned char *bufEnd = pSrc + length;
     int rc = decodeData(pSrc, bufEnd, method, &methodLen, &uri, &uriLen, &contentLen);
-
     if (rc < 0)
         return LS_FAIL;
 
-    if (m_mapStream.size() >= (uint)m_iServerMaxStreams)
+    H2Stream *pStream = NULL;
+    if (isFirstPart
+        || (pStream = findStream(m_uiLastStreamID)) == NULL)
     {
-        sendRstFrame(pStream->getStreamID(), H2_ERROR_REFUSED_STREAM);
-        free(uri);
-        return 0;
+        pStream = getNewStream(iHeaderFlag);
+        if (!pStream)
+            return LS_FAIL;
     }
 
     appendReqHeaders(pStream, method, methodLen, uri, uriLen);
@@ -765,28 +790,20 @@ int H2Connection::decodeHeaders(H2Stream *pStream, unsigned char *pSrc, int leng
 
 int H2Connection::processHeadersFrame(H2FrameHeader *pHeader)
 {
-    uint32_t id = pHeader->getStreamId();
     if (m_iFlag & H2_CONN_FLAG_GOAWAY)
         return 0;
-
-    if (id == 0)
-    {
-        LOG_INFO(("[%s] Protocol error, HEADER frame STREAM ID is 0",
-                  getLogId()));
-        return LS_FAIL;
-    }
-
+    uint32_t id = pHeader->getStreamId();
     if (id <= m_uiLastStreamID)
     {
-        sendRstFrame(id, H2_ERROR_PROTOCOL_ERROR);
+        if ( id != 0)
+            sendRstFrame(id, H2_ERROR_PROTOCOL_ERROR);
         LOG_INFO(("[%s] Protocol error, STREAM ID: %d is less the"
                   " previously received stream ID: %d, go away!",
                   getLogId(), id, m_uiLastStreamID));
         return LS_FAIL;
     }
-
     m_uiLastStreamID = id;
-    Priority_st priority;
+    
     unsigned char iHeaderFlag = pHeader->getFlags();
 
     m_iFlag |= H2_CONN_HEADERS_START;
@@ -802,66 +819,19 @@ int H2Connection::processHeadersFrame(H2FrameHeader *pHeader)
     if (iHeaderFlag & H2_FLAG_PRIORITY)
     {
         pSrc = (unsigned char *)m_bufInput.begin();
-        priority.m_exclusive = *pSrc >> 7;
-        priority.m_dependStreamId = beReadUint32((const unsigned char *)pSrc) &
+        m_priority.m_exclusive = *pSrc >> 7;
+        m_priority.m_dependStreamId = beReadUint32((const unsigned char *)pSrc) &
                                     0x7FFFFFFFu;
 
         //Add one to the value to obtain a weight between 1 and 256.
-        priority.m_weight = *(pSrc + 4) + 1;
+        m_priority.m_weight = *(pSrc + 4) + 1;
         m_bufInput.pop_front(5);
         m_iCurrentFrameRemain -= 5;
     }
     else
-        memset(&priority, 0, sizeof(priority));
+        memset(&m_priority, 0, sizeof(m_priority));
 
-    int iDatalen = (m_bufInput.size() < m_iCurrentFrameRemain) ?
-                   (m_bufInput.size()) : (m_iCurrentFrameRemain);
-    if (iDatalen <= 0)
-        return 0;
-
-    H2Stream *pStream = getNewStream(id, iHeaderFlag, priority);
-    if (!pStream)
-    {
-        sendRstFrame(id, H2_ERROR_INTERNAL_ERROR);
-        return 0;
-    }
-    
-    //Check if we need to move the buffer to stream bufinflat
-    bool needToMove = false;
-    int bufPart1Len = m_bufInput.blockSize();
-    if (((iHeaderFlag & H2_FLAG_END_HEADERS) == 0)
-        || iDatalen > bufPart1Len)
-    {
-        needToMove = true;
-        m_bufInflate.clear();
-        if (iDatalen > bufPart1Len)
-        {
-            m_bufInflate.append(m_bufInput.begin(), bufPart1Len);
-            m_bufInput.pop_front(bufPart1Len);
-            m_iCurrentFrameRemain -= bufPart1Len;
-            m_bufInflate.append(m_bufInput.begin(), iDatalen - bufPart1Len);
-        }
-        else
-        {
-            m_bufInflate.append(m_bufInput.begin(), iDatalen);
-        }
-    }
-
-    if (iHeaderFlag & H2_FLAG_END_HEADERS)
-    {
-        m_iFlag |= H2_CONN_HEADERS_END;
-        if (needToMove)
-        {
-            AutoBuf tmpBuf;
-            tmpBuf.swap(m_bufInflate);
-            pSrc = (unsigned char *)tmpBuf.begin();
-        }
-        else
-            pSrc = (unsigned char *)m_bufInput.begin();
-        return decodeHeaders(pStream, pSrc, iDatalen);
-    }
-    else
-        return 0;
+    return processReqHeader(iHeaderFlag, true);
 }
 
 
@@ -1018,22 +988,24 @@ int H2Connection::appendReqHeaders(H2Stream *pStream, char *method,
 }
 
 
-H2Stream *H2Connection::getNewStream(uint32_t uiStreamID,
-                                     uint8_t ubH2_Flags, Priority_st &priority)
+H2Stream *H2Connection::getNewStream(uint8_t ubH2_Flags)
 {
     H2Stream *pStream;
-    HioHandler *pSession =
-        HioHandlerFactory::getHioHandler(HIOS_PROTO_HTTP);
+    HioHandler *pSession = HioHandlerFactory::getHioHandler(HIOS_PROTO_HTTP);
     if (!pSession)
         return NULL;
+
+    if (m_mapStream.size() >= (uint)m_iServerMaxStreams)
+        return NULL;
+
     pStream = new H2Stream();
-    m_mapStream.insert((void *)(long)uiStreamID, pStream);
+    m_mapStream.insert((void *)(long)m_uiLastStreamID, pStream);
     if (D_ENABLED(DL_MORE))
     {
         LOG_D((getLogger(), "[%s] getNewStream(), ID: %d, stream map size: %d ",
-               getLogId(), uiStreamID, m_mapStream.size()));
+               getLogId(), m_uiLastStreamID, m_mapStream.size()));
     }
-    pStream->init(uiStreamID, this, ubH2_Flags, pSession, &priority);
+    pStream->init(m_uiLastStreamID, this, ubH2_Flags, pSession, &m_priority);
     pStream->setProtocol(HIOS_PROTO_HTTP2);
     pStream->setFlag(HIO_FLAG_FLOWCTRL, 1);
     return pStream;
@@ -1380,8 +1352,11 @@ int H2Connection::encodeHeaders(HttpRespHeaders *pRespHeaders,
         pIov = iov;
         pIovEnd = &iov[count];
         for (pIov = iov; pIov < pIovEnd; ++pIov)
+        {
+            StringTool::strLower(key, key, keyLen);
             pCur = m_hpack.encHeader(pCur, pBufEnd, key, keyLen,
                                      (char *)pIov->iov_base, pIov->iov_len, 0);
+        }
     }
 
     return pCur - buf;;

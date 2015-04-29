@@ -132,7 +132,7 @@ int main(int ac, char *av[])
         return 4;
     }
     if ((pHash = pGPool->getNamedHash(g_pHashName, 0,
-        (LsShmHash::hash_fn)mode, (LsShmHash::val_comp)mode, lruMode)) == NULL)
+        (LsShmHash::hash_fn)(long)mode, (LsShmHash::val_comp)(long)mode, lruMode)) == NULL)
     {
         fprintf(stderr, "getNamedHash(%s,lru=%d) FAILED!\n",
                 g_pHashName, lruMode);
@@ -177,9 +177,9 @@ void doStatShmHash(LsShmHash *pHash)
         (LsShmHTableStat *)pHash->offset2ptr(pHash->getHTableStatOffset());
 
     fprintf(stdout, "SHMHASH [%s]\n\
-current total hash memory: %u\n",
+current total hash memory: %lu\n",
         pHash->name(),
-        pStat->m_iHashInUse
+        (unsigned long)pStat->m_iHashInUse
     );
 
     fprintf(stdout, "checking iterators... ");

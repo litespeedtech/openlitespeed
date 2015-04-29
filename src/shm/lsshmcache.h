@@ -83,7 +83,7 @@ public:
     LsShmCache(uint32_t   magic
                , const char     *cacheName
                , const char     *shmHashName
-               , size_t          initHashSize = 101
+               , LsShmSize_t     initHashSize = 101
                , LsShmSize_t     uDataSize = 0
                , LsShmHash::hash_fn hf = LsShmHash::hashBuf
                , LsShmHash::val_comp vc = LsShmHash::compBuf
