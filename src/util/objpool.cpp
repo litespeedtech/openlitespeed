@@ -21,6 +21,7 @@
 GObjPool::GObjPool(int chunkSize)
     : m_iChunkSize(chunkSize)
     , m_iPoolSize(0)
+    , m_freeList()
 {
 }
 

@@ -49,7 +49,12 @@ TEST(ls_ShmBaseLru_test)
         perror(lockfilename);
 
     if (pShm == NULL)
+    {
+        printf("Msg: [%s], stat=%d, errno=%d.\n",
+            LsShm::getErrMsg(), LsShm::getErrStat(), LsShm::getErrNo());
+        LsShm::clrErrMsg();
         return;
+    }
 
     doit(pShm);
 }
@@ -75,10 +80,10 @@ static void doit(LsShm *pShm)
     LsShmPool *pGPool;
     LsShmHash *pHash;
     LsShmHElem *pTop;
-    LsShmHash::iterator iter;
-    LsShmHash::iteroffset iterOff0;
-    LsShmHash::iteroffset iterOff1;
-    LsShmHash::iteroffset iterOffX;
+    LsShmHash::iterator iter = NULL;
+    LsShmHash::iteroffset iterOff0 = 0;
+    LsShmHash::iteroffset iterOff1 = 0;
+    LsShmHash::iteroffset iterOffX = 0;
     LsShmOffset_t offTop;
     ls_str_pair_t parms;
     int flags;
@@ -158,7 +163,13 @@ static void doit(LsShm *pShm)
         sprintf(keyBuf, "KEY%06d", i);
         sprintf(valBuf, "VAL%06d", i);
         if ((off = pHash->insert(keyBuf, 9, valBuf, 9)) == 0)
+        {
+            printf("Insert [%.*s] failed: [%s], stat=%d, errno=%d.\n",
+                9, keyBuf,
+                LsShm::getErrMsg(), LsShm::getErrStat(), LsShm::getErrNo());
+            LsShm::clrErrMsg();
             break;
+        }
         if (pHash->find(keyBuf, 9, &valLen) != off)
             break;
         if (strncmp((const char *)pHash->offset2ptr(off), valBuf, 9) != 0)

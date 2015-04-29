@@ -27,11 +27,11 @@
 #include <http/httpvhost.h>
 #include <http/requestvars.h>
 #include <http/staticfilecachedata.h>
+#include <http/usereventnotifier.h>
 #include <log4cxx/logger.h>
 #include <lsiapi/envmanager.h>
 #include <lsiapi/internal.h>
 #include <lsiapi/lsiapi.h>
-#include <lsiapi/moduleeventnotifier.h>
 #include <lsiapi/modulehandler.h>
 #include <lsiapi/modulemanager.h>
 #include <lsiapi/moduletimer.h>
@@ -808,24 +808,30 @@ static int lsi_remove_timer(int timer_id)
 }
 
 
-static void *set_event_notifier(lsi_session_t *pSession,
-                                lsi_module_t *pModule, int level)
+static void *create_event(lsi_event_callback_pf cb, long lParam, void *pParam)
 {
-    return (void *)ModuleEventNotifier::getInstance().addEventObj(pSession,
-            pModule, level);
+    return (void *)UserEventNotifier::getInstance().createEventObj(cb,
+                                                                   lParam,
+                                                                   pParam);
+}
+
+static void *create_session_resume_event(lsi_session_t *session, lsi_module_t *pModule)
+{
+    HttpSession *pSession = (HttpSession *)((LsiSession *)session);
+    lsi_event_callback_pf cb = (lsi_event_callback_pf)(&HttpSession::hookResumeCallback);
+    return create_event(cb, pSession->getSn(), (LsiSession *)session);
+}
+
+static void remove_event(void **event_obj_pointer)
+{
+    UserEventNotifier::getInstance().removeEventObj((EventObj **)
+             event_obj_pointer);
 }
 
 
-static void remove_event_notifier(void **event_obj_pointer)
+static int notify_event(void **event_obj_pointer)
 {
-    ModuleEventNotifier::getInstance().removeEventObj((EventObj **)
-            event_obj_pointer);
-}
-
-
-static int notify_event_notifier(void **event_obj_pointer)
-{
-    return ModuleEventNotifier::getInstance().notifyEventObj((
+    return UserEventNotifier::getInstance().notifyEventObj((
                 EventObj **)event_obj_pointer);
 }
 
@@ -1924,9 +1930,10 @@ void lsiapi_init_server_api()
     pApi->set_timer = lsi_set_timer;
     pApi->remove_timer = lsi_remove_timer;
 
-    pApi->set_event_notifier = set_event_notifier;
-    pApi->remove_event_notifier = remove_event_notifier;
-    pApi->notify_event_notifier = notify_event_notifier;
+    pApi->create_event = create_event;
+    pApi->create_session_resume_event = create_session_resume_event;
+    pApi->remove_event = remove_event;
+    pApi->notify_event = notify_event;
 
     pApi->get_req_raw_headers_length = get_req_raw_headers_length;
     pApi->get_req_raw_headers = get_req_raw_headers;

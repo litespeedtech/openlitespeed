@@ -156,6 +156,8 @@ class HttpSession : public LsiSession, public HioHandler,
     AioReq                m_aioReq;
     Aiosfcb              *m_pAiosfcb;
 
+    uint32_t              m_sn;
+
     HttpSession(const HttpSession &rhs);
     void operator=(const HttpSession &rhs);
 
@@ -173,6 +175,9 @@ class HttpSession : public LsiSession, public HioHandler,
                                       int size);
 
 public:
+    
+    uint32_t getSn()    { return m_sn;}
+    
     void closeConnection();
     void recycle();
 
@@ -189,7 +194,7 @@ public:
     int32_t getFlag() const       {   return m_iFlag;             }
     int32_t getFlag(int mask)    {   return m_iFlag & mask;      }
 
-    virtual int hookResumeCallback(int level, lsi_module_t *pModule);
+    static int hookResumeCallback(long lParam, LsiSession *pSession);
 
 
 private:

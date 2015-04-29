@@ -44,6 +44,7 @@
 #include <http/staticfilecachedata.h>
 #include <http/userdir.h>
 #include <http/vhostmap.h>
+#include "usereventnotifier.h"
 #include <lsiapi/envmanager.h>
 #include <lsiapi/lsiapi.h>
 #include <lsiapi/lsiapihooks.h>
@@ -79,10 +80,11 @@
 HttpSession::HttpSession()
     : m_request()
     , m_response(m_request.getPool())
+    , m_pModHandler(NULL)
     , m_processState(HSPS_READ_REQ_HEADER)
     , m_curHookLevel(0)
     , m_pAiosfcb(NULL)
-    , m_pModHandler(NULL)
+    , m_sn(1)
 {
     memset(&m_pChunkIS, 0, (char *)(&m_iReqServed + 1) -
            (char *)&m_pChunkIS);
@@ -125,6 +127,7 @@ int HttpSession::onInitConnected()
 #endif
 //     m_response.reset();
 //     m_request.reset();
+    ++m_sn;
     return 0;
 }
 
@@ -313,6 +316,7 @@ void HttpSession::nextRequest()
         LOG_D((getLogger(), "[%s] HttpSession::nextRequest()!",
                getLogId()));
     getStream()->flush();
+    setState(HSS_WAITING);
 
     if (m_pHandler)
     {
@@ -347,6 +351,7 @@ void HttpSession::nextRequest()
                 m_sessionHooks.runCallbackNoParam(LSI_HKPT_HTTP_END, (LsiSession *)this);
         }
 
+        ++m_sn;
         m_sessionHooks.reset();
         m_sessionHooks.disableAll();
         m_iFlag = 0;
@@ -394,6 +399,7 @@ void HttpSession::httpError(int code, const char *pAdditional)
         code = SC_500;
     m_request.setStatusCode(code);
     sendHttpError(pAdditional);
+    ++m_sn;
 }
 
 
@@ -633,6 +639,7 @@ int HttpSession::restartHandlerProcess()
         releaseGzipBuf();
 
     m_response.reset();
+    ++m_sn;
     return 0;
 }
 
@@ -795,7 +802,8 @@ int HttpSession::updateClientInfoFromProxyHeader(const char *pProxyHeader)
 
 int HttpSession::processWebSocketUpgrade(const HttpVHost *pVHost)
 {
-    HttpContext *pContext = pVHost->getContext(m_request.getURI(), 0);
+    HttpContext *pContext = pVHost->getContext(m_request.getURI(),
+                                               m_request.getURILen(), 0);
     LOG_D((getLogger(), "[%s] VH: web socket, name: [%s] URI: [%s]",
            getLogId(),
            pVHost->getName(), m_request.getURI()));
@@ -833,9 +841,17 @@ int HttpSession::processHttp2Upgrade(const HttpVHost *pVHost)
 }
 
 
-int HttpSession::hookResumeCallback(int level, lsi_module_t *pModule)
+int HttpSession::hookResumeCallback(long lParam, LsiSession *pSession)
 {
-    return resumeProcess(0, 0);
+    if ((uint32_t)lParam != ((HttpSession *)pSession)->getSn())
+    {
+        if (D_ENABLED(DL_LESS))
+            LOG_D((((HttpSession *)pSession)->getLogger(),
+                   "[%s] hookResumeCallback called, but sn=%d",
+                   ((HttpSession *)pSession)->getLogId(), (uint32_t)lParam));
+        return -1;
+    }
+    return ((HttpSession *)pSession)->resumeProcess(0, 0);
 }
 
 
@@ -1920,6 +1936,7 @@ int HttpSession::onCloseEx()
 
 void HttpSession::closeConnection()
 {
+    ++m_sn;
     if (m_pHandler)
     {
         HttpStats::getReqStats()->incReqProcessed();
@@ -1979,6 +1996,7 @@ void HttpSession::closeConnection()
 
 void HttpSession::recycle()
 {
+    ++m_sn;
     if (getFlag(HSF_AIO_READING))
     {
         if (D_ENABLED(DL_MEDIUM))
@@ -2974,6 +2992,7 @@ int HttpSession::flush()
     if (ret == LS_DONE)
     {
         if (getFlag(HSF_HANDLER_DONE
+                    | HSF_SUSPENDED
                     | HSF_RECV_RESP_BUFFERED
                     | HSF_SEND_RESP_BUFFERED) == HSF_HANDLER_DONE)
         {

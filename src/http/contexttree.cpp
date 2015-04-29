@@ -16,210 +16,142 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "contexttree.h"
-#include <http/contextnode.h>
+#include <http/handlertype.h>
 #include <http/httpcontext.h>
 #include <util/pool.h>
+#include <util/radixtree.h>
 
 #include <errno.h>
 #include <string.h>
 
 
-
 ContextTree::ContextTree()
     : m_pRootContext(NULL)
-    , m_iLocRootPathLen(1)
 {
-    m_pRootNode = new ContextNode("", NULL);
-    m_pLocRootNode = new ContextNode("", NULL);
-    m_pLocRootPath = Pool::dupstr("/");
+    m_pURITree = new RadixTree();
+    m_pLocTree = new RadixTree();
+    m_pURITree->setRootLabel("/", 1);
+    m_pLocTree->setRootLabel("/", 1);
 }
+
 
 ContextTree::~ContextTree()
 {
-    delete m_pRootNode;
-    delete m_pLocRootNode;
-    Pool::deallocate2(m_pLocRootPath);
-}
-
-void ContextTree::setRootLocation(const char *pLocation)
-{
-    Pool::deallocate2(m_pLocRootPath);
-    m_pLocRootPath = Pool::dupstr(pLocation);
-    m_iLocRootPathLen =  strlen(pLocation);
+    delete m_pURITree;
+    delete m_pLocTree;
 }
 
 
-const HttpContext *ContextTree::bestMatch(const char *pURI) const
+void ContextTree::setRootContext(const HttpContext *pContext)
 {
-    if (*pURI != '/')
-        return NULL;
-    return m_pRootNode->match(pURI + 1)->getContext();
-}
-
-const HttpContext *ContextTree::matchLocation(const char *pLocation) const
-{
-    if (strncmp(pLocation, m_pLocRootPath, m_iLocRootPathLen) != 0)
-        return NULL;
-    return m_pLocRootNode->match(pLocation + m_iLocRootPathLen)->getContext();
-}
-
-ContextNode *ContextNode::match(const char *pStart)
-{
-    char *pEnd = (char *)pStart;
-    ContextNode *pCurNode = this;
-    iterator iter ;
-    ContextNode *pLastMatch = this;
-    while (pEnd)
-    {
-        pEnd = (char *) strchr(pStart, '/');
-        if (pEnd == NULL)
-            iter = pCurNode->find(pStart);
-        else
-        {
-            *pEnd = 0;
-            iter = pCurNode->find(pStart);
-            *pEnd = '/';
-            pStart = pEnd + 1;
-        }
-        if (iter == pCurNode->end())
-            break;
-        if (iter.second()->getContext() != NULL)
-            pLastMatch = iter.second();
-        pCurNode = iter.second() ;
-
-    }
-    return pLastMatch;
-
+    m_pRootContext = pContext;
+    m_pURITree->setRootLabel(pContext->getURI(), pContext->getURILen());
 }
 
 
-HttpContext *ContextTree::getContext(const char *pURI) const
+void ContextTree::setRootLocation(const char *pLocation, size_t iLocLen)
 {
-    HttpContext *pMatched = m_pRootNode->match(pURI + 1)->getContext();
-    if (pMatched)
-    {
-        if (strcmp(pMatched->getURI(), pURI) == 0)
-            return pMatched;
-    }
-    return NULL;
-}
-
-void ContextTree::contextInherit()
-{
-    m_pRootNode->contextInherit(m_pRootContext);
-    ((HttpContext *)m_pRootContext)->inherit(m_pRootContext);
-}
-
-
-const char *ContextTree::getPrefix(int &iPrefixLen)
-{
-    const char *pPrefix;
-    if (m_pRootContext)
-    {
-        pPrefix = getRootContext()->getURI();
-        iPrefixLen = getRootContext()->getURILen();
-    }
-    else
-    {
-        pPrefix = "/";
-        iPrefixLen = 1;
-    }
-    return pPrefix;
+    m_pLocTree->setRootLabel(pLocation, iLocLen);
 }
 
 
 int ContextTree::add(HttpContext *pContext)
 {
-    if (pContext == NULL)
-        return EINVAL;
+    RadixNode *pRadixNode;
     const char *pURI = pContext->getURI();
-    const char *pPrefix;
-    int          iPrefixLen;
-    pPrefix = getPrefix(iPrefixLen);
-    ContextNode *pCurNode = addNode(pPrefix, iPrefixLen,
-                                    m_pRootNode, (char *)pURI);
-    if (!pCurNode)
+    size_t iUriLen = pContext->getURILen();
+
+    pRadixNode = m_pURITree->insert(pURI, iUriLen, pContext);
+    if (pRadixNode == NULL)
         return EINVAL;
-    if (pCurNode->getContext() != NULL)
-        return EINVAL;
-    pCurNode->setContextUpdateParent(pContext, 0);
-    if (!pContext->getParent())
+    updateTreeAfterAdd(pRadixNode, pContext);
+    if (pContext->getParent() == NULL)
         pContext->setParent(m_pRootContext);
-    pURI = pContext->getLocation();
-    if (pURI)
+    if (pContext->getLocation() != NULL)
     {
-        pCurNode = addNode(m_pLocRootPath, m_iLocRootPathLen,
-                           m_pLocRootNode, (char *)pURI);
-        if (pCurNode)
-        {
-            pCurNode->setContext(pContext);
-            pCurNode->setRelease(0);
-        }
+        pURI = pContext->getLocation();
+        iUriLen = pContext->getLocationLen();
+        pRadixNode = m_pLocTree->insert(pURI, iUriLen, pContext);
     }
-    return 0;
+    return LS_OK;
 }
 
 
-ContextNode *ContextTree::addNode(const char *pPrefix, int iPrefixLen,
-                                  ContextNode *pCurNode, char *pURI,
-                                  long lastCheck)
+const HttpContext *ContextTree::bestMatch(const char *pURI,
+                                          size_t iUriLen) const
 {
-    if (strncmp(pPrefix, pURI, iPrefixLen) != 0)
-        return NULL;
-    const char *pStart = pURI + iPrefixLen;
-    char *pEnd ;
-    while (*pStart)
-    {
-        pEnd = (char *) strchr(pStart, '/');
-        if (pEnd)
-            *pEnd = 0;
-        pCurNode = pCurNode->getChildNode(pStart, lastCheck);
-        if (pEnd)
-        {
-            *pEnd++ = '/';
-            pStart = pEnd;
-        }
-        else
-            break;
-    }
-    return pCurNode;
+    return (HttpContext *)m_pURITree->bestMatch(pURI, iUriLen);
 }
-/*
-void ContextTree::merge( const ContextTree & rhs )
-{
-    ContextList list;
-    rhs.m_pRootNode->getAllContexts( &list );
-    ContextList::iter;
 
-    for( iter = list.begin(); iter != list.end(); ++iter )
-    {
-        const char * pURI = (*iter)->getURI();
-        if ( strcmp( pURI, '/' ) == 0 )
-        {
-            ContextList * pMatch = getMatchList();
-            if (( pMatch )&&( m_pRootContext ))
-            {
-                ContextList::iter1;
-                for( iter1 = pMatch->begin(); iter1 != pMatch->end(); ++iter1 )
-                {
-                    if ( m_pRootContext->findMatchContext(
-                                (*iter1)->getURI() ) == NULL )
-                    {
-                        HttpContext * pContext = (*iter1)->dup();
-                        m_pRootContext->addMatchContext( pContext );
-                    }
-                }
-            }
-        }
-        else
-        {
-            if ( getContext( pURI ) == NULL )
-            {
-                HttpContext * pContext = (*iter)->dup();
-                addContext( pContext );
-            }
-        }
-    }
-    list.clear();
+
+const HttpContext *ContextTree::matchLocation(const char *pLoc,
+                                              size_t iLocLen) const
+{
+    return (HttpContext *)m_pLocTree->bestMatch(pLoc, iLocLen);
 }
-*/
+
+
+HttpContext *ContextTree::getContext(const char *pURI, size_t iUriLen) const
+{
+    return (HttpContext *)m_pURITree->find(pURI, iUriLen);
+}
+
+
+void ContextTree::contextInherit()
+{
+    m_pURITree->for_each2(inherit, (void *)m_pRootContext);
+}
+
+
+int ContextTree::inherit(void *pObj, void *pUData)
+{
+    HttpContext *pContext = (HttpContext *)pObj;
+    const HttpContext *pRootContext = (const HttpContext *)pUData;
+    pContext->inherit(pRootContext);
+    return LS_OK;
+}
+
+
+int ContextTree::updateChildren(void *pObj, void *pUData)
+{
+    HttpContext *pNewParent = (HttpContext *)pUData;
+    HttpContext *pContext = (HttpContext *)pObj;
+    if ((pContext != NULL)
+        && ((pContext->getHandler() == NULL)
+            || (pContext->getHandlerType() != HandlerType::HT_REDIRECT)))
+    {
+        if (pContext->getParent() == pNewParent->getParent())
+            pContext->setParent(pNewParent);
+    }
+    return LS_OK;
+}
+
+
+HttpContext *ContextTree::getParentContext(RadixNode *pCurNode)
+{
+    RadixNode *pParent;
+    HttpContext *pParentContext;
+    if ((pParent = pCurNode->getParent()) != NULL)
+    {
+        if (((pParentContext = (HttpContext *)pParent->getObj()) != NULL)
+            && ((pParentContext->getHandler() == NULL)
+                || (pParentContext->getHandlerType()
+                    != HandlerType::HT_REDIRECT)))
+        {
+            return pParentContext;
+        }
+        return getParentContext(pParent);
+    }
+    return NULL;
+}
+
+
+void ContextTree::updateTreeAfterAdd(RadixNode *pRadixNode,
+                                     HttpContext *pContext)
+{
+    HttpContext *pOldParent = getParentContext(pRadixNode);
+    pContext->setParent(pOldParent);
+    pRadixNode->for_each_child2(updateChildren, pContext);
+}
+
+

@@ -427,8 +427,8 @@ SUITE(HttpHeaderTest)
         {
             p = (unsigned char *)it->iov_base;
             printf( "Check: %.*s, %.*s\n", it->iov_len, p, it->iov_len, ph );
-            CHECK(memcmp(p, ph, it->iov_len) == 0);
-            if (memcmp(p, ph, it->iov_len) != 0)
+            CHECK(strncasecmp((const char *)p, ph, it->iov_len) == 0);
+            if (strncasecmp((const char *)p, ph, it->iov_len) != 0)
                 printf("p:\n%.*s\nph:\n%.*s\n", it->iov_len, p, it->iov_len, ph);
             ph += it->iov_len;
         }

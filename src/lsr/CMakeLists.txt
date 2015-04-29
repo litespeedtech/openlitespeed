@@ -28,7 +28,6 @@ SET(lsr_STAT_SRCS
    ls_pcreg.c
    ls_pool.c
    ls_ptrlist.c
-   ls_radix.c
    ls_sha1.c
    ls_stack.c
    ls_str.c

@@ -15,6 +15,7 @@ SET(shm_STAT_SRCS
     lsshmlruhash.cpp 
     lsshmpool.cpp 
     lsshm.cpp
+    lsshmmemcached.cpp
     lsi_shm.cpp
     ls_fallocate.c
 )

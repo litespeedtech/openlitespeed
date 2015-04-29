@@ -594,16 +594,16 @@ HttpContext *HttpVHost::addContext(const char *pUri, int type,
 }
 
 
-const HttpContext *HttpVHost::matchLocation(const char *pURI,
+const HttpContext *HttpVHost::matchLocation(const char *pURI, size_t iUriLen,
         int regex) const
 {
     const HttpContext *pContext;
     if (!regex)
-        pContext = m_contexts.matchLocation(pURI);
+        pContext = m_contexts.matchLocation(pURI, iUriLen);
     else
     {
         char achTmp[] = "/";
-        HttpContext *pOld = getContext(achTmp);
+        HttpContext *pOld = getContext(achTmp, strlen(achTmp));
         if (!pOld)
             return NULL;
         pContext = pOld->findMatchContext(pURI, 1);
@@ -614,10 +614,11 @@ const HttpContext *HttpVHost::matchLocation(const char *pURI,
 }
 
 
-HttpContext *HttpVHost::getContext(const char *pURI, int regex) const
+HttpContext *HttpVHost::getContext(const char *pURI, size_t iUriLen,
+                                   int regex) const
 {
     if (!regex)
-        return m_contexts.getContext(pURI);
+        return m_contexts.getContext(pURI, iUriLen);
     const HttpContext *pContext = m_contexts.getRootContext();
     pContext = pContext->findMatchContext(pURI);
     return (HttpContext *)pContext;
@@ -772,7 +773,7 @@ int HttpVHost::configWebsocket(const XmlNode *pWebsocketNode)
     if (pUri == NULL || pAddress == NULL)
         return LS_FAIL;
 
-    HttpContext *pContext = getContext(pUri, 0);
+    HttpContext *pContext = getContext(pUri, strlen(pUri), 0);
 
     if (pContext == NULL)
     {
@@ -1087,7 +1088,7 @@ HttpContext *HttpVHost::addContext(int match, const char *pUri, int type,
         if (isGlobalMatchContext())
             pOld = &getRootContext();
         else
-            pOld = getContext(achTmp);
+            pOld = getContext(achTmp, strlen(achTmp));
 
         if (!pOld)
             return NULL;
@@ -1100,7 +1101,7 @@ HttpContext *HttpVHost::addContext(int match, const char *pUri, int type,
     else
     {
         setGlobalMatchContext(1);
-        HttpContext *pOld = getContext(pUri);
+        HttpContext *pOld = getContext(pUri, strlen(pUri));
 
         if (pOld)
         {
@@ -1777,7 +1778,7 @@ void HttpVHost::checkAndAddNewUriFormModuleList(const XmlNodeList
                 if (pValue[0] != '/')
                     bRegex = 1;
 
-                pContext = getContext(pValue, bRegex);
+                pContext = getContext(pValue, strlen(pValue), bRegex);
                 if (pContext == NULL)
                 {
                     char achVPath[MAX_PATH_LEN];
@@ -1824,7 +1825,7 @@ int HttpVHost::configVHModuleUrlFilter1(lsi_module_t *pModule,
         if (pValue[0] != '/')
             bRegex = 1;
 
-        pContext = getContext(pValue, bRegex);
+        pContext = getContext(pValue, strlen(pValue), bRegex);
         assert(pContext != NULL
                && "this Context should have already been added to context by checkAndAddNewUriFormModuleList().\n");
 
@@ -1931,7 +1932,7 @@ int HttpVHost::configVHModuleUrlFilter2(lsi_module_t *pModule,
         if (pValue[0] != '/')
             bRegex = 1;
 
-        pContext = getContext(pValue, bRegex);
+        pContext = getContext(pValue, strlen(pValue), bRegex);
         parseModuleConfigParam(pModule, (const HttpContext *)pContext);
     }
     return ret;
@@ -1963,7 +1964,7 @@ int HttpVHost::configModuleConfigInContext(const XmlNode *pContextNode,
     if (pUri[0] != '/')
         bRegex = 1;
 
-    HttpContext *pContext = getContext(pUri, bRegex);
+    HttpContext *pContext = getContext(pUri, strlen(pUri), bRegex);
     if (!pContext)
         return LS_FAIL;
 
@@ -2450,7 +2451,7 @@ int HttpVHost::checkDeniedSubDirs(const char *pUri, const char *pLocation)
             return LS_FAIL;
         }
 
-        if (getContext(achNewURI))
+        if (getContext(achNewURI, strlen(achNewURI)))
             continue;
 
         if (!addContext(achNewURI, HandlerType::HT_NULL, pDenied,

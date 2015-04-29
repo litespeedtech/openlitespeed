@@ -1318,8 +1318,11 @@ int LshttpdMain::guardCrash()
     struct pollfd   pfds[2];
     HttpSignals::init(sigchild);
     if (iNumChildren >= 32)
+    {
         m_pProcState = (int *)malloc(((iNumChildren >> 5) + 1) * sizeof(
                                          int));
+        memset(m_pProcState, 0, ((iNumChildren >> 5) + 1) * sizeof(int));
+    }
     startAdminSocket();
     pfds[0].fd = m_fdAdmin;
     pfds[0].events = POLLIN;

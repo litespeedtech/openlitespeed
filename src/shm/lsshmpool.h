@@ -64,17 +64,17 @@ typedef struct
 
 typedef struct
 {
-    LsShmSize_t     m_iShmAllocated;    // total direct shm allocated (blocks)
-    LsShmSize_t     m_iShmReleased;     // total direct shm released (blocks)
-    LsShmSize_t     m_iPoolInUse;       // currently allocated from pool (bytes)
-    LsShmSize_t     m_iFreeChunk;       // chunk to be allocated (bytes)
-    LsShmSize_t     m_iFlAllocated;     // allocated from free list (bytes)
-    LsShmSize_t     m_iFlReleased;      // released to free list (bytes)
-    LsShmSize_t     m_iFlCnt;           // entries on free list (count)
+    LsShmXSize_t     m_iShmAllocated;   // total direct shm allocated (blocks)
+    LsShmXSize_t     m_iShmReleased;    // total direct shm released (blocks)
+    LsShmXSize_t     m_iPoolInUse;      // currently allocated from pool (bytes)
+    LsShmXSize_t     m_iFreeChunk;      // chunk to be allocated (bytes)
+    LsShmXSize_t     m_iFlAllocated;    // allocated from free list (bytes)
+    LsShmXSize_t     m_iFlReleased;     // released to free list (bytes)
+    LsShmXSize_t     m_iFlCnt;          // entries on free list (count)
     struct bcktstat
     {
-        LsShmSize_t m_iBkAllocated;     // total allocations from bucket (count)
-        LsShmSize_t m_iBkReleased;      // total releases to bucket (count)
+        LsShmXSize_t m_iBkAllocated;    // total allocations from bucket (count)
+        LsShmXSize_t m_iBkReleased;     // total releases to bucket (count)
     } m_bckt[LSSHM_POOL_NUMBUCKET];
 } LsShmPoolMapStat;
 
@@ -90,7 +90,7 @@ typedef struct
 {
     uint32_t        x_iMagic;
     uint8_t         x_aName[LSSHM_MAXNAMELEN];
-    uint32_t        x_iSize;
+    LsShmSize_t     x_iSize;            // set but never updated
     LsShmPoolMap    x_data;
     LsShmOffset_t   x_iLockOffset;
     pid_t           x_pid;
@@ -106,13 +106,17 @@ public:
     typedef uint32_t     LsShmHKey;
     typedef LsShmHKey(*hash_fn)(const void *pVal, int len);
     typedef int (*val_comp)(const void *pVal1, const void *pVal2, int len);
-    LsShmHash *getNamedHash(const char *name, size_t init_size,
+
+    LsShmHash *getNamedHash(const char *name, LsShmSize_t init_size,
                             hash_fn hf, val_comp vc, int lru_mode);
     void close();
     void destroyShm();
 
-    uint32_t getMagic() const   {   return m_iMagic;    }
-    ls_attr_inline LsShm *getShm() const       {   return m_pShm;      }
+    uint32_t getMagic() const
+    {   return m_iMagic;    }
+
+    ls_attr_inline LsShm *getShm() const
+    {   return m_pShm;      }
 
     const char *name() const
     {   return (const char *)getPool()->x_aName; };
@@ -177,22 +181,11 @@ public:
     ls_attr_inline LsShmMap *getShmMap() const
     {   return m_pShm->getShmMap(); }
 
-    ls_attr_inline LsShmSize_t getShmMapMaxSize() const
-    {   return m_pShm->maxSize(); }
-
-    ls_attr_inline LsShmSize_t getShmMapOldMaxSize() const
-    {   return m_pShm->oldMaxSize(); }
-
     LsShmOffset_t getPoolMapStatOffset() const
     { return (LsShmOffset_t)(long)&((LsShmPoolMem *)(long)m_iOffset)->x_data.x_stat; }
 
     LsShmLock *lockPool()
     {   return m_pShm->lockPool(); }
-
-#ifdef notdef
-    void setMapOwner(int o)
-    {   m_iShmOwner = o; }
-#endif
 
     HashStringMap< lsi_shmobject_t *> &getObjBase()
     {   return m_pShm->getObjBase(); }
@@ -234,17 +227,16 @@ private:
     //
     LsShmOffset_t allocFromDataFreeList(LsShmSize_t size);
     LsShmOffset_t allocFromDataBucket(LsShmSize_t size);
-    LsShmOffset_t allocFromGlobalBucket(
-        LsShmOffset_t bucketNum, LsShmSize_t &num);
-    LsShmOffset_t fillDataBucket(LsShmOffset_t bucketNum, LsShmOffset_t size);
+    LsShmOffset_t allocFromGlobalBucket(LsShmSize_t bucketNum, LsShmSize_t &num);
+    LsShmOffset_t fillDataBucket(LsShmSize_t bucketNum, LsShmSize_t size);
     LsShmOffset_t allocFromDataChunk(LsShmSize_t size, LsShmSize_t &num);
     void mvDataFreeListToBucket(LsShmFreeList *pFree, LsShmOffset_t offset);
     void rmFromDataFreeList(LsShmFreeList *pFree);
 
-    LsShmOffset_t dataSize2Bucket(LsShmSize_t size) const
+    LsShmSize_t dataSize2Bucket(LsShmSize_t size) const
     {   return (size / LSSHM_POOL_BCKTINCR); }
 
-    void incrCheck(LsShmSize_t *ptr, LsShmSize_t size)
+    void incrCheck(LsShmXSize_t *ptr, LsShmSize_t size)
     {
         LsShmSize_t prev = *ptr;
         *ptr += size;

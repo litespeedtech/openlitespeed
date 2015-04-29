@@ -86,6 +86,7 @@ SET(http_STAT_SRCS
    httpaiosendfile.cpp
    serverprocessconfig.cpp
    httpstats.cpp
+   usereventnotifier.cpp
 )
 
 add_library(http STATIC ${http_STAT_SRCS})

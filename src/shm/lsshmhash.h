@@ -55,8 +55,6 @@ class debugBase;
 typedef uint32_t     LsShmHKey;
 typedef int32_t      LsShmHElemLen_t;
 typedef uint32_t     LsShmHElemOffs_t;
-typedef int32_t      LsShmHRkeyLen_t;
-typedef int32_t      LsShmHValueLen_t;
 
 
 typedef struct
@@ -75,7 +73,7 @@ typedef struct ls_vardata_s
 typedef struct lsShm_hElem_s
 {
     LsShmHElemLen_t      x_iLen;          // element size
-    uint32_t             x_iValOff;
+    LsShmHElemOffs_t     x_iValOff;
     LsShmOffset_t        x_iNext;         // offset to next in element list
     LsShmHKey            x_hkey;          // the key itself
     uint8_t              x_aData[0];
@@ -110,7 +108,7 @@ typedef struct lsShm_hElem_s
     uint8_t         *second() const  { return getVal(); }
 
     // real value len
-    int32_t          realValLen() const
+    LsShmSize_t      realValLen() const
     {
         return (x_iLen - sizeof(struct lsShm_hElem_s) - x_iValOff - sizeof(ls_vardata_t));
     }
@@ -123,7 +121,7 @@ typedef struct
 
 typedef struct
 {
-    LsShmSize_t     m_iHashInUse;   // shm allocated to hash (bytes)
+    LsShmXSize_t    m_iHashInUse;   // shm allocated to hash (bytes)
 } LsShmHTableStat;
 
 typedef struct
@@ -177,7 +175,7 @@ public:
 
 public:
     LsShmHash(LsShmPool *pool,
-              const char *name, size_t init_size, hash_fn hf, val_comp vc, int lru_mode);
+              const char *name, LsShmSize_t init_size, hash_fn hf, val_comp vc, int lru_mode);
     virtual ~LsShmHash();
 
     static LsShmHash *checkHTable(GHash::iterator itor, LsShmPool *pool,
@@ -368,7 +366,7 @@ public:
         return getHTable()->x_iSize == 0; 
     }
 
-    size_t size() const             
+    LsShmSize_t size() const             
     {   
         return getHTable()->x_iSize;      
     }
@@ -383,7 +381,7 @@ public:
         --(getHTable()->x_iSize);      
     }
 
-    size_t capacity() const         
+    LsShmSize_t capacity() const         
     {   
         return getHTable()->x_iCapacity;  
     }
@@ -497,10 +495,10 @@ protected:
         getBitMap()[indx / s_bitsPerChar] &= ~(s_bitMask[indx % s_bitsPerChar]);
     }
 
-    int sz2TableSz(LsShmSize_t sz)
+    LsShmSize_t sz2TableSz(LsShmSize_t sz)
     {   return (sz * sizeof(LsShmHIdx)); }
 
-    int sz2BitMapSz(LsShmSize_t sz)
+    LsShmSize_t sz2BitMapSz(LsShmSize_t sz)
     {   return ((sz + s_bitsPerChar - 1) / s_bitsPerChar); }
 
     int         rehash();
@@ -578,7 +576,7 @@ protected:
         if (iterOff != 0)
         {
             iterator iter = pThis->offset2iterator(iterOff);
-            if (iter->realValLen() >= ls_str_len(&pParms->value))
+            if (iter->realValLen() >= (LsShmSize_t)ls_str_len(&pParms->value))
             {
                 iter->setValLen(ls_str_len(&pParms->value));
                 pThis->setIterData(iter, ls_str_buf(&pParms->value));
@@ -602,7 +600,7 @@ protected:
             return 0;
         LSSHM_CHECKSIZE(ls_str_len(&pParms->value));
         iterator iter = pThis->offset2iterator(iterOff);
-        if (iter->realValLen() >= ls_str_len(&pParms->value))
+        if (iter->realValLen() >= (LsShmSize_t)ls_str_len(&pParms->value))
         {
             iter->setValLen(ls_str_len(&pParms->value));
             pThis->setIterData(iter, ls_str_buf(&pParms->value));
@@ -725,7 +723,7 @@ protected:
         pLink->x_lasttime = time((time_t *)NULL);
     }
 
-    virtual void valueSetup(uint32_t *pValOff, int *pValLen)
+    virtual void valueSetup(LsShmHElemOffs_t *pValOff, int *pValLen)
     {
         *pValOff += sizeof(LsShmHElemLink);
         return;
@@ -758,7 +756,7 @@ protected:
     int m_iRef;
 
     static const uint8_t s_bitMask[];
-    static const size_t s_bitsPerChar;
+    static const uint32_t s_bitsPerChar;
 
 private:
     // disable the bad boys!

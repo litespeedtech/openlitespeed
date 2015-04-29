@@ -96,7 +96,7 @@ public:
     ModuleConfig *getModuleConfig()    { return m_pModuleConfig; };
     virtual LogTracker *getLogTracker() = 0;
 
-    virtual int hookResumeCallback(int level, lsi_module_t *pModule) { return 0;};
+    static int hookResumeCallback(long lParam, LsiSession *pSession) { return 0;};
 
 
 protected:

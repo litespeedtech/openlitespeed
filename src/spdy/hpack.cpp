@@ -6115,9 +6115,10 @@ int Hpack::decHeader(unsigned char *&src, unsigned char *srcEnd, AutoBuf &nameVa
     {
         if (index <= HPACK_STATIC_TABLE_SIZE) //static table
         {
+#ifndef RUN_TEST
             if (index == 8) //If is ":status", ERROR
                 return LS_FAIL;
-
+#endif
             name_len = g_HpackStxTab[index - 1].name_len;
             memcpy(name, g_HpackStxTab[index - 1].name, name_len);
             if (indexedType == 3)
@@ -6169,11 +6170,12 @@ int Hpack::decHeader(unsigned char *&src, unsigned char *srcEnd, AutoBuf &nameVa
     if ( len < 0)
         return len; //error
     val_len = len;
+        
+    if (name_len == 10 && memcmp(name, "connection", 10) == 0)
+        return LS_FAIL;
 
     if (indexedType == 0)
     {
-        if (name_len == 10 && memcmp(name, "connection", 10) == 0)
-            return LS_FAIL;
         getReqDynTbl().pushEntry(name, name_len, name + name_len, val_len, index);
     }
     return 1;

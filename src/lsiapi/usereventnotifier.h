@@ -27,16 +27,16 @@
 class LsiSession;
 class EventObj;
 
-class ModuleEventNotifier : public EventNotifier,
-                            public TSingleton<ModuleEventNotifier>
+class UserEventNotifier : public EventNotifier,
+                            public TSingleton<UserEventNotifier>
 {
-    friend class TSingleton<ModuleEventNotifier>;
+    friend class TSingleton<UserEventNotifier>;
 
     DLinkQueue  m_eventObjListWait;
     DLinkQueue  m_eventObjListDone;
     int         m_iId;
 
-    ModuleEventNotifier() { m_iId = 0; }
+    UserEventNotifier() { m_iId = 0; }
 public:
 
     void removeEventObj(EventObj **pEventObj);
@@ -51,7 +51,7 @@ public:
     int notifyEventObj(EventObj **pEventObj);
 
 
-    LS_NO_COPY_ASSIGN(ModuleEventNotifier);
+    LS_NO_COPY_ASSIGN(UserEventNotifier);
 };
 
 

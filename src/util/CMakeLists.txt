@@ -4,7 +4,7 @@ cmake_minimum_required(VERSION 2.8)
 
 ########### next target ###############
 
-SET(util_STAT_SRCS 
+SET(util_STAT_SRCS
    httpfetchdriver.cpp
    httpfetch.cpp
    linkobjpool.cpp
@@ -56,6 +56,7 @@ SET(util_STAT_SRCS
    resourcepool.cpp
    linkedqueue.cpp
    httputil.cpp
+   radixtree.cpp
    misc/profiletime.cpp
    sysinfo/partitioninfo.cpp
    sysinfo/nicdetect.cpp

@@ -24,33 +24,33 @@
 
 class XPool : private ls_xpool_t
 {
-
-
     XPool(const XPool &rhs);
     void operator=(const XPool &rhs);
 
 public:
     XPool()
-    {
-        ls_xpool_init(this);
-    }
+    {   ls_xpool_init(this);    }
 
     ~XPool()
-    {
-        ls_xpool_reset(this);
-    }
+    {   ls_xpool_destroy(this); }
 
     void reset()
-    {   ls_xpool_reset(this);    }
+    {   ls_xpool_reset(this);   }
 
     void *alloc(uint32_t size)
     {   return ls_xpool_alloc(this, size);   }
+
+    void *calloc(uint32_t items, uint32_t size)
+    {   return ls_xpool_calloc(this, items, size);  }
 
     void *realloc(void *pOld, uint32_t new_size)
     {   return ls_xpool_realloc(this, pOld, new_size);    }
 
     void free(void *data)
-    {   ls_xpool_free(this, data);   }
+    {   ls_xpool_free(this, data);  }
+
+    void skipfree()
+    {   ls_xpool_skipfree(this);    }
 };
 
 #endif

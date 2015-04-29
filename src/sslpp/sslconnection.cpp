@@ -87,6 +87,7 @@ void SSLConnection::setSSL(SSL *ssl)
     assert(!m_ssl);
     //m_iWant = 0;
     m_ssl = ssl;
+    m_iFlag = 0;
     SSL_set_ex_data(m_ssl, 0, (void *)this);
 }
 void SSLConnection::release()
@@ -135,24 +136,34 @@ int SSLConnection::read(char *pBuf, int len)
     }
 }
 
-
+#define MAX_SSL_WRITE_SIZE 8192
 int SSLConnection::write(const char *pBuf, int len)
 {
     assert(m_ssl);
     m_iWant = 0;
     if (len <= 0)
         return 0;
-    int ret = SSL_write(m_ssl, pBuf, len);
-    if (ret > 0)
+    
+    int writeLen, ret = 0;
+    do 
     {
-        m_iWant &= ~LAST_WRITE;
-        return ret;
-    }
-    else
-    {
-        m_iWant = LAST_WRITE;
-        return checkError(ret);
-    }
+        writeLen = (len > MAX_SSL_WRITE_SIZE ? MAX_SSL_WRITE_SIZE : len);
+        int rc = SSL_write(m_ssl, pBuf, writeLen);
+        if (rc > 0)
+        {
+            ret += rc;
+            len -= rc;
+            pBuf += rc;
+        }
+        else
+        {
+            m_iWant = LAST_WRITE;
+            return checkError(rc);
+        }
+    } while (len > 0);
+    
+    m_iWant &= ~LAST_WRITE;
+    return ret;
 }
 
 

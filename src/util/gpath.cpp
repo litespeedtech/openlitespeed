@@ -349,7 +349,9 @@ int GPath::checkSymLinks(char *path, char *pEnd, const char *pathBufEnd,
         pStart = path;
     else if ((*pStart) && (*pStart != '/'))
     {
-        if (*(--pStart) != '/')
+        /** Do not use *(-- to avoid trigger compiler bug */
+        --pStart;
+        if (*pStart != '/')
         {
             //errno = ENOENT;
             //return LS_FAIL;

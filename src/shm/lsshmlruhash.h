@@ -35,7 +35,7 @@ class LsShmPool;
 class LsShmWLruHash : public LsShmHash
 {
 public:
-    LsShmWLruHash(LsShmPool *pool, const char *name, size_t init_size,
+    LsShmWLruHash(LsShmPool *pool, const char *name, LsShmSize_t init_size,
                   hash_fn hf, val_comp vc)
     : LsShmHash(pool, name, init_size, hf, vc, LSSHM_LRU_MODE2)
     {   return;  }
@@ -45,7 +45,7 @@ private:
     LsShmWLruHash(const LsShmWLruHash &other);
     LsShmWLruHash &operator=(const LsShmWLruHash &other);
 
-    void valueSetup(uint32_t *pValOff, int *pValLen)
+    void valueSetup(LsShmHElemOffs_t *pValOff, int *pValLen)
     {
         *pValOff += sizeof(LsShmHElemLink);
         *pValLen += sizeof(shmlru_data_t);
@@ -82,7 +82,7 @@ private:
 class LsShmXLruHash : public LsShmHash
 {
 public:
-    LsShmXLruHash(LsShmPool *pool, const char *name, size_t init_size,
+    LsShmXLruHash(LsShmPool *pool, const char *name, LsShmSize_t init_size,
                   hash_fn hf, val_comp vc)
     : LsShmHash(pool, name, init_size, hf, vc, LSSHM_LRU_MODE3)
     {   return;  }
@@ -92,7 +92,7 @@ private:
     LsShmXLruHash(const LsShmXLruHash &other);
     LsShmXLruHash &operator=(const LsShmXLruHash &other);
 
-    void valueSetup(uint32_t *pValOff, int *pValLen)
+    void valueSetup(LsShmHElemOffs_t *pValOff, int *pValLen)
     {
         *pValOff += sizeof(LsShmHElemLink);
         *pValLen = sizeof(shmlru_val_t);

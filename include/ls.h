@@ -1229,6 +1229,13 @@ typedef int (*lsi_hash_value_comp_pf)(const void *pVal1, const void *pVal2,
                                       int len);
 
 
+/**
+ * @typedef lsi_event_callback_pf
+ * @brief The event notifier callback function will be called when event is triggered.
+ * @since 1.0
+ */
+typedef int (* lsi_event_callback_pf)(const long lParam, void *pParam);
+
 /**************************************************************************************************
  *                                       API Structures
  **************************************************************************************************/
@@ -1995,21 +2002,12 @@ struct lsi_api_s
      */
     int (*remove_timer)(int time_id);
 
-    /**
-     * return notifier pointer
-     */
-    void *(*set_event_notifier)(lsi_session_t *pSession, lsi_module_t *pModule,
-                                int level);
-    /**
-     * return 0 for no error, otherwise an error code is returned
-     */
-    int (*notify_event_notifier)(void **event_notifier_pointer);
-    void (*remove_event_notifier)(void **event_notifier_pointer);
 
-
-
-
-
+    void *(*create_event)(lsi_event_callback_pf cb, long lParam, void *pParam);
+    void *(*create_session_resume_event)(lsi_session_t *session, lsi_module_t *pModule);
+    
+    int (*notify_event)(void **event_notifier_pointer);
+    void (*remove_event)(void **event_notifier_pointer);
 
 
     /**

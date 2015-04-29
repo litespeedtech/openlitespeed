@@ -58,7 +58,10 @@ enum HiosProtocol
 #define HIO_FLAG_HANDLER_RELEASE    (1<<6)
 #define HIO_FLAG_BUFF_FULL          (1<<7)
 #define HIO_FLAG_FLOWCTRL           (1<<8)
-#define HIO_FLAG_SENDFILE           (1<<9)
+#define HIO_FLAG_BLACK_HOLE         (1<<9)
+#define HIO_FLAG_PASS_THROUGH       (1<<10)
+#define HIO_FLAG_PASS_SETCOOKIE     (1<<11)
+#define HIO_FLAG_SENDFILE           (1<<12)
 
 class HioStream : public InputStream, public OutputStream,
     public LogTracker
@@ -111,6 +114,38 @@ public:
 
     HioHandler *getHandler() const   {   return m_pHandler;  }
     void setHandler(HioHandler *p) {   m_pHandler = p;     }
+
+    void wantRead( int want )
+    {
+        if ( !(m_iFlag & HIO_FLAG_WANT_READ) == !want )
+            return;
+        if ( want )
+        {
+            m_iFlag |= HIO_FLAG_WANT_READ;
+            continueRead();
+        }
+        else
+        {
+            m_iFlag &= ~HIO_FLAG_WANT_READ;
+            suspendRead();
+        }
+    }
+    
+    void wantWrite( int want )
+    {
+        if ( !(m_iFlag & HIO_FLAG_WANT_WRITE) == !want )
+            return;
+        if ( want )
+        {
+            m_iFlag |= HIO_FLAG_WANT_WRITE;
+            continueWrite();
+        }
+        else
+        {
+            m_iFlag &= ~HIO_FLAG_WANT_WRITE;
+            suspendWrite();
+        }
+    }
 
     short isWantRead() const    {   return m_iFlag & HIO_FLAG_WANT_READ;     }
     short isWantWrite() const   {   return m_iFlag & HIO_FLAG_WANT_WRITE;    }

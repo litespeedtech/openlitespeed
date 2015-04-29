@@ -75,7 +75,8 @@ SUITE(ContextTreeTest)
         pRoot = new HttpContext();
         pRoot->set(u0, r1, NULL);
         tree.setRootContext(pRoot);
-        tree.setRootLocation(r1);
+        tree.setRootLocation(r1, strlen(r1));
+
         c0 = new HttpContext();
         c0->set(u0, r1, NULL);
         c1 = new HttpContext();
@@ -115,38 +116,38 @@ SUITE(ContextTreeTest)
         CHECK(c2->getParent() == c7);
         CHECK(c1->getParent() == c6);
 
-        CHECK(tree.bestMatch(u0) == c0);
-        CHECK(tree.bestMatch(u1) == c1);
-        CHECK(tree.bestMatch(u2) == c2);
-        CHECK(tree.bestMatch(u3) == c3);
-        CHECK(tree.bestMatch(u4) == c4);
-        CHECK(tree.bestMatch(u5) == c5);
-        CHECK(tree.bestMatch(u6) == c6);
+        CHECK(tree.bestMatch(u0, strlen(u0)) == c0);
+        CHECK(tree.bestMatch(u1, strlen(u1)) == c1);
+        CHECK(tree.bestMatch(u2, strlen(u2)) == c2);
+        CHECK(tree.bestMatch(u3, strlen(u3)) == c3);
+        CHECK(tree.bestMatch(u4, strlen(u4)) == c4);
+        CHECK(tree.bestMatch(u5, strlen(u5)) == c5);
+        CHECK(tree.bestMatch(u6, strlen(u6)) == c6);
 
-        CHECK(tree.matchLocation(r1) == c0);
-        CHECK(tree.matchLocation(l1) == c1);
-        CHECK(tree.matchLocation(l2) == c2);
-        CHECK(tree.matchLocation(l3) == c3);
-        CHECK(tree.matchLocation(l4) == c4);
-        CHECK(tree.matchLocation(l5) == c5);
-        CHECK(tree.matchLocation(l6) == c6);
+        CHECK(tree.matchLocation(r1, strlen(r1)) == c0);
+        CHECK(tree.matchLocation(l1, strlen(l1)) == c1);
+        CHECK(tree.matchLocation(l2, strlen(l2)) == c2);
+        CHECK(tree.matchLocation(l3, strlen(l3)) == c3);
+        CHECK(tree.matchLocation(l4, strlen(l4)) == c4);
+        CHECK(tree.matchLocation(l5, strlen(l5)) == c5);
+        CHECK(tree.matchLocation(l6, strlen(l6)) == c6);
 
-        CHECK(tree.bestMatch(t1) == c0);
-        CHECK(tree.bestMatch(t2) == c6);
-        CHECK(tree.bestMatch(t3) == c6);
-        CHECK(tree.bestMatch(t4) == c3);
-        CHECK(tree.bestMatch(t5) == c0);
-        CHECK(tree.bestMatch(t6) == c0);
-        CHECK(tree.bestMatch(t7) == c4);
+        CHECK(tree.bestMatch(t1, strlen(t1)) == c0);
+        CHECK(tree.bestMatch(t2, strlen(t2)) == c6);
+        CHECK(tree.bestMatch(t3, strlen(t3)) == c6);
+        CHECK(tree.bestMatch(t4, strlen(t4)) == c3);
+        CHECK(tree.bestMatch(t5, strlen(t5)) == c0);
+        CHECK(tree.bestMatch(t6, strlen(t6)) == c0);
+        CHECK(tree.bestMatch(t7, strlen(t7)) == c4);
 
-        CHECK(tree.matchLocation(s1) == c0);
-        CHECK(tree.matchLocation(s2) == c6);
-        CHECK(tree.matchLocation(s3) == c6);
-        CHECK(tree.matchLocation(s4) == c3);
-        CHECK(tree.matchLocation(s5) == c0);
-        CHECK(tree.matchLocation(s6) == c0);
-        CHECK(tree.matchLocation(s7) == c4);
-        CHECK(tree.matchLocation(s8) == NULL);
+        CHECK(tree.matchLocation(s1, strlen(s1)) == c0);
+        CHECK(tree.matchLocation(s2, strlen(s2)) == c6);
+        CHECK(tree.matchLocation(s3, strlen(s3)) == c6);
+        CHECK(tree.matchLocation(s4, strlen(s4)) == c3);
+        CHECK(tree.matchLocation(s5, strlen(s5)) == c0);
+        CHECK(tree.matchLocation(s6, strlen(s6)) == c0);
+        CHECK(tree.matchLocation(s7, strlen(s7)) == c4);
+        CHECK(tree.matchLocation(s8, strlen(s8)) == NULL);
 
         delete pRoot;
     }
@@ -165,7 +166,7 @@ SUITE(ContextTreeTest)
         pRoot = new HttpContext();
         pRoot->set(u0, p0, NULL);
         tree.setRootContext(pRoot);
-        tree.setRootLocation(p0);
+        tree.setRootLocation(p0, strlen(p0));
         pRoot1 = new HttpContext();
         pRoot1->set(u0, p0, NULL);
         pAdmin = new HttpContext();
@@ -173,7 +174,7 @@ SUITE(ContextTreeTest)
         tree.add(pRoot1);
         tree.add(pAdmin);
         char l1[] = "/xingwww/html/support/kayako_mod/submit.php";
-        CHECK(pRoot1 == tree.matchLocation(l1));
+        CHECK(pRoot1 == tree.matchLocation(l1, strlen(l1)));
 
     }
 }

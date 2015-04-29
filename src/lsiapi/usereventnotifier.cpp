@@ -32,7 +32,7 @@ public:
 };
 
 
-void ModuleEventNotifier::removeEventObj(EventObj **pEventObj)
+void UserEventNotifier::removeEventObj(EventObj **pEventObj)
 {
     if ((*pEventObj) && (*pEventObj)->m_iState == 1)
     {
@@ -48,7 +48,7 @@ void ModuleEventNotifier::removeEventObj(EventObj **pEventObj)
 }
 
 
-int ModuleEventNotifier::onNotified(int count)
+int UserEventNotifier::onNotified(int count)
 {
     while (!m_eventObjListDone.empty())
     {
@@ -66,7 +66,7 @@ int ModuleEventNotifier::onNotified(int count)
 }
 
 
-EventObj *ModuleEventNotifier::addEventObj(lsi_session_t *pSession,
+EventObj *UserEventNotifier::addEventObj(lsi_session_t *pSession,
         lsi_module_t *pModule, int level)
 {
     EventObj *pEventObj = new EventObj;
@@ -83,13 +83,13 @@ EventObj *ModuleEventNotifier::addEventObj(lsi_session_t *pSession,
 }
 
 
-int ModuleEventNotifier::isEventObjValid(EventObj *pEventObj)
+int UserEventNotifier::isEventObjValid(EventObj *pEventObj)
 {
     return (pEventObj->next() != NULL && pEventObj->prev() != NULL);
 }
 
 
-int ModuleEventNotifier::notifyEventObj(EventObj **pEventObj)
+int UserEventNotifier::notifyEventObj(EventObj **pEventObj)
 {
     //pEventObj should be in Wait list
     //assert();

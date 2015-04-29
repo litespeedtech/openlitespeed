@@ -27,7 +27,7 @@
 
 LsShmStatus_t LsShmPool::createStaticData(const char *name)
 {
-    LsShmOffset_t i;
+    LsShmCnt_t i;
     LsShmPoolMem *pPool = getPool();
 
     pPool->x_iMagic = LSSHM_POOL_MAGIC;
@@ -181,7 +181,7 @@ LsShmPool::~LsShmPool()
 
 
 LsShmHash *LsShmPool::getNamedHash(const char *name,
-                          size_t init_size, hash_fn hf, val_comp vc, int lru_mode)
+                          LsShmSize_t init_size, hash_fn hf, val_comp vc, int lru_mode)
 {
     LsShmHash *pObj;
     GHash::iterator itor;
@@ -533,24 +533,24 @@ LsShmOffset_t LsShmPool::allocFromDataBucket(LsShmSize_t size)
     LsShmOffset_t offset;
     LsShmOffset_t *np, *pBucket;
 
-    LsShmOffset_t num = dataSize2Bucket(size);
-    pBucket = &getDataMap()->x_aFreeBucket[num];
+    LsShmSize_t bucketNum = dataSize2Bucket(size);
+    pBucket = &getDataMap()->x_aFreeBucket[bucketNum];
     if ((offset = *pBucket) != 0)
     {
         np = (LsShmOffset_t *)offset2ptr(offset);
         *pBucket = *np;
     }
-    else if ((offset = fillDataBucket(num, size)) == 0)
+    else if ((offset = fillDataBucket(bucketNum, size)) == 0)
     {
         return 0;
     }
-    incrCheck(&getDataMap()->x_stat.m_bckt[num].m_iBkAllocated, 1);
+    incrCheck(&getDataMap()->x_stat.m_bckt[bucketNum].m_iBkAllocated, 1);
     return offset;
 }
 
 
 LsShmOffset_t LsShmPool::allocFromGlobalBucket(
-    LsShmOffset_t bucketNum, LsShmSize_t &num)
+    LsShmSize_t bucketNum, LsShmSize_t &num)
 {
     LsShmOffset_t first;
     LsShmOffset_t next;
@@ -587,8 +587,7 @@ LsShmOffset_t LsShmPool::allocFromGlobalBucket(
 // @brief freeBucket[bucketNum] will be set to the new allocated pool.
 // @brief return the offset of the newly allocated memory.
 //
-LsShmOffset_t LsShmPool::fillDataBucket(
-    LsShmOffset_t bucketNum, LsShmSize_t size)
+LsShmOffset_t LsShmPool::fillDataBucket(LsShmSize_t bucketNum, LsShmSize_t size)
 {
     LsShmSize_t num;
     // allocated according to data size
@@ -638,8 +637,7 @@ LsShmOffset_t LsShmPool::fillDataBucket(
 // @brief could cause remap.
 // @brief always check return num and offset.
 //
-LsShmOffset_t LsShmPool::allocFromDataChunk(LsShmSize_t size,
-        LsShmSize_t  &num)
+LsShmOffset_t LsShmPool::allocFromDataChunk(LsShmSize_t size, LsShmSize_t &num)
 {
     LsShmOffset_t offset;
     LsShmSize_t numAvail;
@@ -711,14 +709,13 @@ LsShmOffset_t LsShmPool::allocFromDataChunk(LsShmSize_t size,
 }
 
 
-void LsShmPool::mvDataFreeListToBucket(
-    LsShmFreeList *pFree, LsShmOffset_t offset)
+void LsShmPool::mvDataFreeListToBucket(LsShmFreeList *pFree, LsShmOffset_t offset)
 {
     rmFromDataFreeList(pFree);
     if (pFree->x_iSize > 0)
     {
         incrCheck(&getDataMap()->x_stat.m_iFlAllocated, pFree->x_iSize);
-        LsShmOffset_t bucketNum = dataSize2Bucket(pFree->x_iSize);
+        LsShmSize_t bucketNum = dataSize2Bucket(pFree->x_iSize);
         LsShmOffset_t *np;
         np = (LsShmOffset_t *)pFree; // cast to offset
         *np = getDataMap()->x_aFreeBucket[bucketNum];

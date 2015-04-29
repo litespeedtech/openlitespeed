@@ -56,9 +56,10 @@ typedef union
 {
     struct
     {
-        uint16_t    m_iMajor;
+        uint8_t     m_iMajor;
         uint8_t     m_iMinor;
         uint8_t     m_iRel;
+        uint8_t     m_iType;
     } x;
     uint32_t    m_iVer;
 } LsShmVersion;
@@ -94,7 +95,7 @@ typedef struct
 {
     uint16_t          x_iRegNum;   // max 64k registry
     uint16_t          x_iFlag;     // 0x1 - assigned
-    uint32_t          x_iValue;    // typical offset
+    LsShmOffset_t     x_iValue;    // typical offset
     uint8_t           x_aName[LSSHM_MAXNAMELEN];
 } LsShmReg;
 
@@ -105,7 +106,7 @@ typedef struct
     uint16_t          x_iCapacity; // max
     uint16_t          x_iSize;     // current size
     LsShmOffset_t     x_iNext;     // next block
-    uint32_t          x_iStartNum; // start reg number
+    LsShmCnt_t        x_iStartNum; // start reg number
 } LsShmRegBlkHdr;
 
 typedef union
@@ -120,19 +121,19 @@ typedef union
 #define LSSHM_REGFLAG_PID       0x0002
 
 // NOTE: offset element[0] == header
+#define LSSHM_REGPERBLK     (LSSHM_SHM_UNITSIZE/sizeof(LsShmRegElem))
 typedef struct
 {
-#define LSSHM_MAX_REG_PERUNIT   (LSSHM_SHM_UNITSIZE/sizeof(LsShmRegElem))
-    LsShmRegElem x_aEntries[LSSHM_MAX_REG_PERUNIT];
+    LsShmRegElem x_aEntries[LSSHM_REGPERBLK];
 } LsShmRegBlk;
 
 typedef struct
 {
-    LsShmSize_t       m_iFileSize;          // file size (bytes)
-    LsShmSize_t       m_iUsedSize;          // file size allocated (bytes)
-    LsShmSize_t       m_iAllocated;         // total allocated (blocks)
-    LsShmSize_t       m_iReleased;          // total released (blocks)
-    LsShmSize_t       m_iFreeListCnt;       // entries on free list
+    LsShmXSize_t      m_iFileSize;          // file size (bytes)
+    LsShmXSize_t      m_iUsedSize;          // file size allocated (bytes)
+    LsShmXSize_t      m_iAllocated;         // total allocated (blocks)
+    LsShmXSize_t      m_iReleased;          // total released (blocks)
+    LsShmXSize_t      m_iFreeListCnt;       // entries on free list
 } LsShmMapStat;
 // NOTE: UsedSize - Allocated + Released = FreeList bytes
 
@@ -145,13 +146,9 @@ typedef struct
     LsShmOffset_t     x_iFreeOffset;
     LsShmOffset_t     x_iRegBlkOffset;      // 1st reg Offset
     LsShmOffset_t     x_iRegLastBlkOffset;  // last reg Offset
-    LsShmOffset_t     x_iRegPerBlk;         // num Reg Per Blk
-    LsShmOffset_t     x_iMaxRegNum;         // current max Reg number
+    LsShmCnt_t        x_iMaxRegNum;         // current max Reg number
     LsShmMapStat      x_stat;               // map statistics
 } LsShmMap;
-
-#define x_iMaxSize  x_stat.m_iFileSize
-#define x_iCurSize  x_stat.m_iUsedSize
 
 //
 // Internal for free link
@@ -163,7 +160,7 @@ typedef struct
 //
 typedef struct
 {
-    LsShmSize_t      x_iAMarker;
+    uint32_t         x_iAMarker;
     LsShmSize_t      x_iFreeSize;           // size of the freeblock
     LsShmOffset_t    x_iFreeNext;
     LsShmOffset_t    x_iFreePrev;
@@ -172,7 +169,7 @@ typedef struct
 typedef struct
 {
     LsShmOffset_t    x_iFreeOffset;         // back to the begin
-    LsShmSize_t      x_iBMarker;
+    uint32_t         x_iBMarker;
 } LShmFreeBot;
 
 /*
@@ -181,7 +178,7 @@ typedef struct
 class LsShm : public ls_shm_s, public LsShmLock
 {
 public:
-    static LsShm *open(const char *mapName, int initialSize,
+    static LsShm *open(const char *mapName, LsShmXSize_t initSize,
                        const char *pBaseDir = NULL);
     void close()
     {
@@ -193,9 +190,8 @@ public:
 
 
 private:
-    explicit LsShm(const char *mapName, LsShmSize_t initialSize,
+    explicit LsShm(const char *mapName, LsShmXSize_t initSize,
                    const char *pBaseDir = NULL);
-    //explicit LsShm(const char *mapName, LsShmSize_t initialSize);
     ~LsShm();
 
 public:
@@ -225,21 +221,21 @@ public:
         s_aErrMsg[0] = '\0';
     }
 
-    void setShmMaxSize(LsShmSize_t size)
+    void setShmMaxSize(LsShmXSize_t size)
     {
         m_iMaxShmSize = size > LSSHM_MINSPACE ? size : LSSHM_MINSPACE;
     }
-    LsShmSize_t shmMaxSize() const
+    LsShmXSize_t shmMaxSize() const
     {
         return m_iMaxShmSize;
     }
 
-    LsShmSize_t maxSize() const
+    LsShmXSize_t maxSize() const
     {
-        return x_pShmMap->x_iMaxSize;
+        return x_pShmMap->x_stat.m_iFileSize;
     }
 
-    LsShmSize_t oldMaxSize() const
+    LsShmXSize_t oldMaxSize() const
     {
         return m_iMaxSizeO;
     };
@@ -289,14 +285,14 @@ public:
     {
         if (ptr == NULL)
             return 0;
-        assert((ptr < (((uint8_t *)x_pShmMap) + x_pShmMap->x_iMaxSize))
+        assert((ptr < (((uint8_t *)x_pShmMap) + x_pShmMap->x_stat.m_iFileSize))
                && (ptr > (const void *)x_pShmMap));
         return (LsShmOffset_t)((uint8_t *)ptr - (uint8_t *)x_pShmMap);
     }
 
-    LsShmSize_t avail() const
+    LsShmXSize_t avail() const
     {
-        return x_pShmMap->x_iMaxSize - x_pShmMap->x_iCurSize;
+        return x_pShmMap->x_stat.m_iFileSize - x_pShmMap->x_stat.m_iUsedSize;
     }
 
     LsShmStatus_t status() const
@@ -306,7 +302,7 @@ public:
 
     LsShmOffset_t xdataOffset() const
     {
-        return s_iShmHdrSize;
+        return (LsShmOffset_t)s_iShmHdrSize;
     };
 
     LsShmLock *lockPool()
@@ -314,7 +310,7 @@ public:
         return this;
     };
 
-    ls_attr_inline int lockRemap(lsi_shmlock_t * pLock)
+    ls_attr_inline int lockRemap(lsi_shmlock_t *pLock)
     {
         int ret = lsi_shmlock_lock(pLock);
         chkRemap();
@@ -323,7 +319,7 @@ public:
     
     ls_attr_inline LsShmStatus_t chkRemap()
     {
-        return (x_pShmMap->x_iMaxSize == m_iMaxSizeO) ? LSSHM_OK : remap();
+        return (x_pShmMap->x_stat.m_iFileSize == m_iMaxSizeO) ? LSSHM_OK : remap();
     }
         
     LsShmStatus_t remap();
@@ -331,11 +327,11 @@ public:
     //
     //   registry
     //
-    LsShmReg      *getReg(int regNum); // user should check name and x_iFlag
+    LsShmReg      *getReg(int regNum);  // user should check name and x_iFlag
     int            clrReg(int regNum);
     LsShmReg      *findReg(const char *name);
     LsShmReg      *addReg(const char *name);
-    int            expandReg(int maxRegNum); // expand the current reg
+    void           expandReg();         // expand the current reg
 
     int            recoverOrphanShm();
 
@@ -364,7 +360,7 @@ private:
     LsShmRegBlk    *findRegBlk(LsShmRegBlkHdr *pFrom, int num);
     void            chkRegBlk(LsShmRegBlkHdr *pFrom, int *pCnt);
 
-    LsShmStatus_t   expand(LsShmSize_t newsize);
+    LsShmStatus_t   expand(LsShmXSize_t incrSize);
 
     ls_attr_inline int lock()
     {
@@ -393,7 +389,7 @@ private:
     }
  
     // only use by physical mapping
-    LsShmSize_t roundToPageSize(LsShmSize_t size) const
+    LsShmXSize_t roundToPageSize(LsShmXSize_t size) const
     {
         return ((size + s_iPageSize - 1) / s_iPageSize) * s_iPageSize;
     }
@@ -404,9 +400,9 @@ private:
                / LSSHM_SHM_UNITSIZE) * LSSHM_SHM_UNITSIZE;
     }
 
-    void incrCheck(LsShmSize_t *ptr, LsShmSize_t size)
+    void incrCheck(LsShmXSize_t *ptr, LsShmSize_t size)
     {
-        LsShmSize_t prev = *ptr;
+        LsShmXSize_t prev = *ptr;
         *ptr += size;
         if (*ptr < prev)    // cnt wrapped
             *ptr = (LsShmSize_t)-1;
@@ -415,7 +411,7 @@ private:
 
     void used(LsShmSize_t size)
     {
-        x_pShmMap->x_iCurSize += size;
+        x_pShmMap->x_stat.m_iUsedSize += size;
     }
 
     bool isFreeBlockAbove(LsShmOffset_t offset, LsShmSize_t size,
@@ -435,9 +431,9 @@ private:
 
     void            cleanup();
     LsShmStatus_t   checkMagic(LsShmMap *mp, const char *mName) const;
-    LsShmStatus_t   init(const char *name, LsShmSize_t size);
-    LsShmStatus_t   map(LsShmSize_t size);
-    LsShmStatus_t   expandFile(LsShmOffset_t from, LsShmSize_t incrSize);
+    LsShmStatus_t   init(const char *name, LsShmXSize_t size);
+    LsShmStatus_t   map(LsShmXSize_t size);
+    LsShmStatus_t   expandFile(LsShmOffset_t from, LsShmXSize_t incrSize);
     void            unmap();
 
 #ifdef DELAY_UNMAP
@@ -472,13 +468,13 @@ private:
 
     uint32_t                m_iMagic;
     static LsShmVersion     s_version;
-    static uint32_t         s_iShmHdrSize;
-    static uint32_t         s_iPageSize;
+    static LsShmSize_t      s_iPageSize;
+    static LsShmSize_t      s_iShmHdrSize;
     static const char      *s_pDirBase;
     static LsShmStatus_t    s_errStat;
     static int              s_iErrNo;
     static char             s_aErrMsg[];
-    LsShmSize_t             m_iMaxShmSize;
+    LsShmXSize_t            m_iMaxShmSize;
 
     LsShmStatus_t           m_status;
     char                   *m_pFileName;    // dir + mapName + ext
@@ -489,7 +485,7 @@ private:
 
     LsShmMap               *x_pShmMap;
     LsShmMap               *m_pShmMapO;
-    LsShmSize_t             m_iMaxSizeO;
+    LsShmXSize_t            m_iMaxSizeO;
 
     LsShmPool              *m_pGPool;
     int                     m_iRef;

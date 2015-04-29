@@ -139,10 +139,9 @@ private:
 
     int processDataFrame(H2FrameHeader *pHeader);
     int parseHeaders(char *pHeader, int ilength, int &NVPairCnt);
-    H2Stream *getNewStream(uint32_t uiStreamID, uint8_t ubH2_Flags,
-                           Priority_st &priority);
+    H2Stream *getNewStream(uint8_t ubH2_Flags);
 
-    int decodeHeaders(H2Stream *pStream, unsigned char *src, int length);
+    int decodeHeaders(unsigned char *src, int length, unsigned char iHeaderFlag, bool isFirstPart);
     int processPriorityFrame(H2FrameHeader *pHeader);
     int processSettingFrame(H2FrameHeader *pHeader);
     int processHeadersFrame(H2FrameHeader *pHeader);
@@ -154,6 +153,8 @@ private:
     int processPushPromiseFrame(H2FrameHeader *pHeader);
     int processContinuationFrame(H2FrameHeader *pHeader);
 
+    int processReqHeader(unsigned char iHeaderFlag, bool isFirstPart);
+    
     int sendPingFrame(uint8_t flags, uint8_t *pPayload);
     int sendSettingsFrame();
     int sendGoAwayFrame(H2ErrorCode status);
@@ -205,7 +206,7 @@ private:
     StreamMap       m_mapStream;
     short           m_iState;
     short           m_iFlag;
-    char            m_bVersion;
+    Priority_st     m_priority;
 
     int32_t         m_iCurDataOutWindow;
     int32_t         m_iCurInBytesToUpdate;
@@ -219,6 +220,7 @@ private:
     int32_t         m_tmIdleBegin;
     int32_t         m_iaH2HeaderMem[10];
     H2FrameHeader  *m_pCurH2Header;
+    
 
 private:
     Hpack m_hpack;

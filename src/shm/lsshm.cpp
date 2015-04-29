@@ -32,16 +32,16 @@
 
 
 extern "C" {
-    int ls_expandfile(int fd, size_t fromsize, size_t incrsize);
+    int ls_expandfile(int fd, LsShmOffset_t fromsize, LsShmXSize_t incrsize);
 };
 
 
 LsShmVersion LsShm::s_version =
 {
-    {LSSHM_VER_MAJOR, LSSHM_VER_MINOR, LSSHM_VER_REL}
+    { LSSHM_VER_MAJOR, LSSHM_VER_MINOR, LSSHM_VER_REL, LSSHM_VER_TYPE }
 };
-uint32_t LsShm::s_iPageSize = LSSHM_PAGESIZE;
-uint32_t LsShm::s_iShmHdrSize = ((sizeof(LsShmMap) + 0xf) & ~0xf); // align 16
+LsShmSize_t LsShm::s_iPageSize = LSSHM_PAGESIZE;
+LsShmSize_t LsShm::s_iShmHdrSize = ((sizeof(LsShmMap) + 0xf) & ~0xf); // align 16
 const char *LsShm::s_pDirBase = NULL;
 LsShmStatus_t LsShm::s_errStat = LSSHM_OK;
 int LsShm::s_iErrNo = 0;
@@ -107,7 +107,7 @@ LsShmStatus_t LsShm::setErrMsg(LsShmStatus_t stat, const char *fmt, ...)
 }
 
 
-LsShm::LsShm(const char *mapName, LsShmSize_t size, const char *pBaseDir)
+LsShm::LsShm(const char *mapName, LsShmXSize_t initSize, const char *pBaseDir)
     : LsShmLock(pBaseDir, mapName, LSSHM_MINLOCK)
     , m_iMagic(LSSHM_MAGIC)
     , m_iMaxShmSize(0)
@@ -162,9 +162,9 @@ LsShm::LsShm(const char *mapName, LsShmSize_t size, const char *pBaseDir)
 #endif
 
     // set the size
-    size = ((size + s_iPageSize - 1) / s_iPageSize) * s_iPageSize;
+    initSize = roundToPageSize(initSize);
 
-    m_status = init(m_pMapName, size);
+    m_status = init(m_pMapName, initSize);
     if (m_status == LSSHM_NOTREADY)
     {
         m_status = LSSHM_READY;
@@ -196,7 +196,7 @@ LsShm::~LsShm()
 }
 
 
-LsShm *LsShm::open(const char *mapName, int initsize, const char *pBaseDir)
+LsShm *LsShm::open(const char *mapName, LsShmXSize_t initSize, const char *pBaseDir)
 {
     LsShm *pObj;
     if (mapName == NULL)
@@ -224,7 +224,7 @@ LsShm *LsShm::open(const char *mapName, int initsize, const char *pBaseDir)
     }
 
     LsShmStatus_t stat;
-    pObj = new LsShm(mapName, initsize, pBaseDir);
+    pObj = new LsShm(mapName, initSize, pBaseDir);
     if (pObj != NULL)
     {
         if ((stat = pObj->status()) == LSSHM_READY)
@@ -333,23 +333,30 @@ void LsShm::cleanup()
 //
 // expand the file to a particular size
 //
-LsShmStatus_t LsShm::expandFile(LsShmOffset_t from,
-                                LsShmOffset_t incrSize)
+LsShmStatus_t LsShm::expandFile(LsShmOffset_t from, LsShmXSize_t incrSize)
 {
     if (m_iMaxShmSize && ((from + incrSize) > m_iMaxShmSize))
         return LSSHM_BADMAXSPACE;
 
+    if ((from + incrSize) < from)   // wrapped
+    {
+        setErrMsg(LSSHM_BADMAXSPACE,
+            "Unable to expand [%s], Exceeded internal data size [%lld].",
+            m_pFileName, (uint64_t)from + (uint64_t)incrSize);
+        return LSSHM_BADMAXSPACE;
+    }
+
     if (ls_expandfile(m_iFd, from, incrSize) < 0)
     {
-        setErrMsg(LSSHM_BADNOSPACE, "Unable to expand [%s], incr=%d, %s.",
-                  m_pFileName, incrSize, strerror(errno));
+        setErrMsg(LSSHM_BADNOSPACE, "Unable to expand [%s], incr=%lu, %s.",
+                  m_pFileName, (unsigned long)incrSize, strerror(errno));
         return LSSHM_BADNOSPACE;
     }
     return LSSHM_OK;
 }
 
 
-LsShmStatus_t LsShm::init(const char *name, LsShmSize_t size)
+LsShmStatus_t LsShm::init(const char *name, LsShmXSize_t size)
 {
     LsShmReg *p_reg;
     struct stat mystat;
@@ -386,7 +393,6 @@ LsShmStatus_t LsShm::init(const char *name, LsShmSize_t size)
         x_pShmMap->x_version.m_iVer = s_version.m_iVer;
 
         x_pShmMap->x_iFreeOffset = 0;     // no free list yet
-        x_pShmMap->x_iRegPerBlk = LSSHM_MAX_REG_PERUNIT;
         x_pShmMap->x_iRegBlkOffset = 0;
         x_pShmMap->x_iRegLastBlkOffset = 0;
         x_pShmMap->x_iMaxRegNum = 0;
@@ -424,11 +430,10 @@ LsShmStatus_t LsShm::init(const char *name, LsShmSize_t size)
         }
 
         // only map the header size to ensure the file is good.
-        if (map(s_iShmHdrSize) != LSSHM_OK)
+        if (map((LsShmXSize_t)s_iShmHdrSize) != LSSHM_OK)
             return LSSHM_ERROR;
 
-        if ((x_pShmMap->x_iMaxSize != mystat.st_size)
-            || (checkMagic(x_pShmMap, name) != LSSHM_OK))
+        if (checkMagic(x_pShmMap, name) != LSSHM_OK)
         {
             setErrMsg(LSSHM_BADVERSION,
                       "Bad SHM file format [%s], size=%lld, magic=%08X(%08X).",
@@ -438,13 +443,12 @@ LsShmStatus_t LsShm::init(const char *name, LsShmSize_t size)
         }
 
         // expand the file if needed... won't shrink
-        int incrSize;
-        if ((incrSize = size - x_pShmMap->x_iMaxSize) > 0)
+        if (size > x_pShmMap->x_stat.m_iFileSize)
         {
-            if (expandFile(x_pShmMap->x_iMaxSize, (LsShmOffset_t)incrSize)
-                != LSSHM_OK)
+            if (expandFile((LsShmOffset_t)x_pShmMap->x_stat.m_iFileSize,
+                (LsShmXSize_t)(size - x_pShmMap->x_stat.m_iFileSize)) != LSSHM_OK)
                 return LSSHM_ERROR;
-            x_pShmMap->x_iMaxSize = size;
+            x_pShmMap->x_stat.m_iFileSize = size;
         }
         else
             size = mystat.st_size;
@@ -462,11 +466,11 @@ LsShmStatus_t LsShm::init(const char *name, LsShmSize_t size)
 
 
 // will not shrink at the current moment
-LsShmStatus_t LsShm::expand(LsShmSize_t incrSize)
+LsShmStatus_t LsShm::expand(LsShmXSize_t incrSize)
 {
-    LsShmSize_t xsize = x_pShmMap->x_iMaxSize;
+    LsShmXSize_t xsize = x_pShmMap->x_stat.m_iFileSize;
 
-    if (expandFile(xsize, incrSize) != LSSHM_OK)
+    if (expandFile((LsShmOffset_t)xsize, incrSize) != LSSHM_OK)
         return LSSHM_ERROR;
 
 #ifdef DELAY_UNMAP
@@ -476,21 +480,26 @@ LsShmStatus_t LsShm::expand(LsShmSize_t incrSize)
 #endif
     xsize += incrSize;
     if (map(xsize) != LSSHM_OK)
+    {
+        xsize -= incrSize;
+        if (xsize != 0)
+            map(xsize);     // try to map old size for cleanup
         return LSSHM_ERROR;
-    x_pShmMap->x_iMaxSize = xsize;
+    }
+    x_pShmMap->x_stat.m_iFileSize = xsize;
 
     return LSSHM_OK;
 }
 
 
-LsShmStatus_t LsShm::map(LsShmSize_t size)
+LsShmStatus_t LsShm::map(LsShmXSize_t size)
 {
     uint8_t *p =
-        (uint8_t *)mmap(0, size, PROT_READ | PROT_WRITE, MAP_SHARED, m_iFd, 0);
+        (uint8_t *)mmap(0, (size_t)size, PROT_READ | PROT_WRITE, MAP_SHARED, m_iFd, 0);
     if (p == MAP_FAILED)
     {
-        setErrMsg(LSSHM_SYSERROR, "Unable to mmap [%s], size=%d, %s.",
-                  m_pFileName, size, strerror(errno));
+        setErrMsg(LSSHM_SYSERROR, "Unable to mmap [%s], size=%lu, %s.",
+                  m_pFileName, (unsigned long)size, strerror(errno));
         return LSSHM_SYSERROR;
     }
 
@@ -504,10 +513,10 @@ LsShmStatus_t LsShm::remap()
 {
 #ifdef DEBUG_RUN
     SHM_NOTICE("LsShm::remap %6d %X %X %X",
-                getpid(), x_pShmMap, x_pShmMap->x_iMaxSize, m_iMaxSizeO);
+                getpid(), x_pShmMap, x_pShmMap->x_stat.m_iFileSize, m_iMaxSizeO);
 #endif
 
-    LsShmSize_t size = x_pShmMap->x_iMaxSize;
+    LsShmXSize_t size = x_pShmMap->x_stat.m_iFileSize;
 #ifdef DELAY_UNMAP
     unmapLater();
 #else
@@ -651,7 +660,7 @@ bool LsShm::isFreeBlockBelow(
     {
         // the bottom free offset
         LsShmOffset_t e_offset = belowOffset + ap->x_iFreeSize;
-        if ((e_offset < LSSHM_SHM_UNITSIZE) || (e_offset > x_pShmMap->x_iMaxSize))
+        if ((e_offset < LSSHM_SHM_UNITSIZE) || (e_offset > x_pShmMap->x_stat.m_iFileSize))
             return false;
 
         e_offset -= sizeof(LShmFreeBot);
@@ -730,7 +739,7 @@ LsShmOffset_t LsShm::allocPage(LsShmSize_t pagesize, int &remap)
     availSize = avail();
     if (pagesize > availSize)
     {
-        LsShmSize_t needSize;
+        LsShmXSize_t needSize;
         // min 16 unit at a time
         needSize = ((pagesize - availSize) > (16*LSSHM_SHM_UNITSIZE)) ?
                     (pagesize - availSize) : (16*LSSHM_SHM_UNITSIZE);
@@ -742,7 +751,7 @@ LsShmOffset_t LsShm::allocPage(LsShmSize_t pagesize, int &remap)
         if (x_pShmMap != m_pShmMapO)
             remap = 1;
     }
-    offset = x_pShmMap->x_iCurSize;
+    offset = x_pShmMap->x_stat.m_iUsedSize;
     markTopUsed((LShmFreeTop *)offset2ptr(offset));
     used(pagesize);
 out:
@@ -765,9 +774,9 @@ void LsShm::releasePage(LsShmOffset_t offset, LsShmSize_t pagesize)
     lock();
 
     incrCheck(&x_pShmMap->x_stat.m_iReleased, (pagesize / LSSHM_SHM_UNITSIZE));
-    if ((offset + pagesize) == x_pShmMap->x_iCurSize)
+    if ((offset + pagesize) == x_pShmMap->x_stat.m_iUsedSize)
     {
-        x_pShmMap->x_iCurSize -= pagesize;
+        x_pShmMap->x_stat.m_iUsedSize -= pagesize;
         goto out;
     }
     if (isFreeBlockAbove(offset, pagesize, 1))
@@ -822,12 +831,11 @@ LsShmRegBlk *LsShm::allocRegBlk(LsShmRegBlkHdr *pFrom)
     LsShmRegBlkHdr *p_regBlkHdr;
 
     int remap;
-    offset = allocPage(sizeof(LsShmRegElem) * x_pShmMap->x_iRegPerBlk,
-                       remap);
+    offset = allocPage(sizeof(LsShmRegElem) * LSSHM_REGPERBLK, remap);
     if (offset == 0)
         return NULL;
     p_regBlkHdr = (LsShmRegBlkHdr *)offset2ptr(offset);
-    p_regBlkHdr->x_iCapacity = x_pShmMap->x_iRegPerBlk;
+    p_regBlkHdr->x_iCapacity = LSSHM_REGPERBLK;
     p_regBlkHdr->x_iSize = 1;
     p_regBlkHdr->x_iNext = 0;
 
@@ -843,7 +851,7 @@ LsShmRegBlk *LsShm::allocRegBlk(LsShmRegBlkHdr *pFrom)
     }
 
     x_pShmMap->x_iRegLastBlkOffset = offset;
-    x_pShmMap->x_iMaxRegNum += (x_pShmMap->x_iRegPerBlk - 1);
+    x_pShmMap->x_iMaxRegNum += (LSSHM_REGPERBLK - 1);
 
     // initialize the block data
     LsShmReg *p_reg = (LsShmReg *)(((LsShmRegElem *)p_regBlkHdr) + 1);
@@ -913,25 +921,19 @@ int LsShm::clrReg(int num)
 }
 
 
-int LsShm::expandReg(int maxRegNum)
+void LsShm::expandReg()
 {
+    LsShmCnt_t maxRegNum = x_pShmMap->x_iMaxRegNum + LSSHM_REGPERBLK - 1;
     LsShmRegBlkHdr *p_regBlkHdr = NULL;
 
-    if (maxRegNum <= 0)
-        maxRegNum = x_pShmMap->x_iMaxRegNum + x_pShmMap->x_iRegPerBlk - 1;
+    p_regBlkHdr = (LsShmRegBlkHdr *)((x_pShmMap->x_iRegLastBlkOffset == 0) ?
+        allocRegBlk(0) : offset2ptr(x_pShmMap->x_iRegLastBlkOffset));
 
-    if (x_pShmMap->x_iRegLastBlkOffset == 0)
-        p_regBlkHdr = (LsShmRegBlkHdr *)allocRegBlk(0);
-    else
-    {
-        p_regBlkHdr =
-            (LsShmRegBlkHdr *)offset2ptr(x_pShmMap->x_iRegLastBlkOffset);
-    }
     while ((p_regBlkHdr != NULL)
            && (x_pShmMap->x_iMaxRegNum <= (LsShmOffset_t)maxRegNum))
         p_regBlkHdr = (LsShmRegBlkHdr *)allocRegBlk(p_regBlkHdr);
 
-    return x_pShmMap->x_iMaxRegNum;
+    return;
 }
 
 
@@ -1018,14 +1020,13 @@ LsShmReg *LsShm::addReg(const char *name)
         {
             if (p_regBlkHdr->x_iNext != 0)
             {
-                p_regBlkHdr =
-                    (LsShmRegBlkHdr *)offset2ptr(p_regBlkHdr->x_iNext);
+                p_regBlkHdr = (LsShmRegBlkHdr *)offset2ptr(p_regBlkHdr->x_iNext);
             }
             else
             {
-                expandReg(0);
-                p_regBlkHdr = ((p_regBlkHdr->x_iNext != 0) ?
-                               (LsShmRegBlkHdr *)offset2ptr(p_regBlkHdr->x_iNext) : NULL);
+                expandReg();
+                p_regBlkHdr = (LsShmRegBlkHdr *)((p_regBlkHdr->x_iNext != 0) ?
+                               offset2ptr(p_regBlkHdr->x_iNext) : NULL);
             }
         }
     }
