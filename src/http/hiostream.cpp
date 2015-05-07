@@ -40,6 +40,17 @@ HioStream::~HioStream()
 }
 
 
+void HioStream::handlerOnClose()
+{
+    if (!isReadyToRelease())
+        m_pHandler->onCloseEx();
+    if (m_pHandler && isReadyToRelease())
+    {
+        m_pHandler->recycle();
+        m_pHandler = NULL;
+    }
+}
+
 
 HioHandler::~HioHandler()
 {

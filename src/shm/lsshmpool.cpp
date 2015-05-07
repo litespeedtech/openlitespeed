@@ -207,7 +207,7 @@ LsShmHash *LsShmPool::getNamedHash(const char *name,
         pObj = new LsShmHash(this, name, init_size, hf, vc, lru_mode);
     if (pObj != NULL)
     {
-        if (pObj->getRef() != 0)
+        if (pObj->init( init_size) == LS_OK)
             return pObj;
         delete pObj;
     }

@@ -2006,8 +2006,8 @@ struct lsi_api_s
     void *(*create_event)(lsi_event_callback_pf cb, long lParam, void *pParam);
     void *(*create_session_resume_event)(lsi_session_t *session, lsi_module_t *pModule);
     
-    int (*notify_event)(void **event_notifier_pointer);
-    void (*remove_event)(void **event_notifier_pointer);
+    int (*notify_event)(void *event_notifier_pointer);
+    void (*remove_event)(void *event_notifier_pointer);
 
 
     /**

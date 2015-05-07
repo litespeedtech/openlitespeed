@@ -122,7 +122,6 @@ int eventLoop()
 }
 
 #include <modules/lua/lsluaengine.h>
-#include <modules/lua/lsluascript.h>
 int main(int argc, char *argv[])
 {
     HttpLog::init();

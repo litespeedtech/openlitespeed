@@ -141,6 +141,7 @@ typedef struct
 {
     uint32_t          x_iMagic;
     LsShmVersion      x_version;
+    uint64_t          x_id;
     uint8_t           x_aName[LSSHM_MAXNAMELEN];
     LsShmOffset_t     x_iLockOffset[2];     // 0=Shm, 1=Reg
     LsShmOffset_t     x_iFreeOffset;
@@ -175,7 +176,7 @@ typedef struct
 /*
  *   data struct all the library routines to access the map
  */
-class LsShm : public ls_shm_s, public LsShmLock
+class LsShm : public ls_shm_s
 {
 public:
     static LsShm *open(const char *mapName, LsShmXSize_t initSize,
@@ -190,8 +191,7 @@ public:
 
 
 private:
-    explicit LsShm(const char *mapName, LsShmXSize_t initSize,
-                   const char *pBaseDir = NULL);
+    LsShm();
     ~LsShm();
 
 public:
@@ -200,6 +200,8 @@ public:
     {
         return s_pDirBase;
     }
+
+    static const char *getDefaultShmDir();
 
     static LsShmStatus_t setErrMsg(LsShmStatus_t stat, const char *fmt, ...);
     static LsShmStatus_t getErrStat()
@@ -307,9 +309,22 @@ public:
 
     LsShmLock *lockPool()
     {
-        return this;
+        return &m_locks;
     };
 
+    lsi_shmlock_t *allocLock()
+    {   return m_locks.allocLock();         }
+    
+    int freeLock(lsi_shmlock_t *pLock)
+    {   return m_locks.freeLock(pLock);     }
+    
+    lsi_shmlock_t *offset2pLock(LsShmOffset_t offset) const
+    {   return m_locks.offset2pLock(offset);    }
+    
+    LsShmOffset_t pLock2offset(lsi_shmlock_t *pLock)
+    {   return m_locks.pLock2offset(pLock);     }
+
+    
     ls_attr_inline int lockRemap(lsi_shmlock_t *pLock)
     {
         int ret = lsi_shmlock_lock(pLock);
@@ -351,7 +366,6 @@ public:
 #endif
 
 private:
-    LsShm();
     LsShm(const LsShm &other);
     LsShm &operator=(const LsShm &other);
     bool operator==(const LsShm &other);
@@ -431,7 +445,10 @@ private:
 
     void            cleanup();
     LsShmStatus_t   checkMagic(LsShmMap *mp, const char *mName) const;
-    LsShmStatus_t   init(const char *name, LsShmXSize_t size);
+    LsShmStatus_t   initShm(const char *mapName, LsShmXSize_t initialSize,
+                            const char *pBaseDir = NULL);
+    LsShmStatus_t   openLockShmFile();
+
     LsShmStatus_t   map(LsShmXSize_t size);
     LsShmStatus_t   expandFile(LsShmOffset_t from, LsShmXSize_t incrSize);
     void            unmap();
@@ -466,6 +483,7 @@ private:
     // various objects within the SHM
     HashStringMap < lsi_shmobject_t *> m_objBase;
 
+    LsShmLock               m_locks;
     uint32_t                m_iMagic;
     static LsShmVersion     s_version;
     static LsShmSize_t      s_iPageSize;

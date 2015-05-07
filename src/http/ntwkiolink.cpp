@@ -261,7 +261,7 @@ int NtwkIOLink::setupHandler(HiosProtocol verSpdy)
 
     clearLogId();
     setProtocol(verSpdy);
-    pHandler->assignStream(this);
+    pHandler->attachStream(this);
     pHandler->onInitConnected();
     return 0;
 }
@@ -277,7 +277,7 @@ int NtwkIOLink::switchToHttp2Handler(HioHandler *pSession)
 
     clearLogId();
     setProtocol(HIOS_PROTO_HTTP2);
-    pHandler->assignStream(this);
+    pHandler->attachStream(this);
     pHandler->upgradedStream(pSession);
     return 0;
 }
@@ -392,32 +392,21 @@ int NtwkIOLink::handleEvents(short evt)
         (*m_pFpList->m_onRead_fp)(this);
     if (event & (POLLHUP | POLLERR))
     {
-        setFlag(HIO_FLAG_PEER_SHUTDOWN, 1);
         m_iInProcess = 0;
-        close();
+        onPeerClose();
         return 0;
     }
     if (event & POLLOUT)
         (*m_pFpList->m_onWrite_fp)(this);
     m_iInProcess = 0;
     if (getState() >= HIOS_CLOSING)
-        close();
+        onPeerClose();
     return 0;
 }
 
 
 int NtwkIOLink::close()
 {
-    if (getHandler())
-    {
-        if (isReadyToRelease())
-        {
-            getHandler()->recycle();
-            setHandler(NULL);
-        }
-        else
-            getHandler()->onCloseEx();
-    }
     return (*m_pFpList->m_close_fp)(this);
 }
 
@@ -879,15 +868,20 @@ void NtwkIOLink::onTimer()
             if (cb->getFlag(AIOSFCB_FLAG_TRYAGAIN))
                 addAioSFJob(cb);
         }
+        if (detectClose())
+            return;
         (*m_pFpList->m_onTimer_fp)(this);
+        if ( getState() == HIOS_CLOSING )
+        {
+            onPeerClose();
+        }
+        
     }
 }
 
 
 void NtwkIOLink::onTimer_(NtwkIOLink *pThis)
 {
-    if (pThis->detectClose())
-        return;
     if (pThis->getHandler())
         pThis->getHandler()->onTimerEx();
 }
@@ -1184,8 +1178,7 @@ int NtwkIOLink::detectClose()
             if (D_ENABLED(DL_LESS))
                 LOG_D((getLogger(), "[%s] peer connection close detected!\n", getLogId()));
             //have the connection closed faster
-            setFlag(HIO_FLAG_PEER_SHUTDOWN, 1);
-            close();
+            onPeerClose();
             return 1;
         }
     }
@@ -1250,8 +1243,6 @@ void NtwkIOLink::onTimer_T(NtwkIOLink *pThis)
 //    if ( D_ENABLED( DL_MORE ))
 //        LOG_D(( pThis->getLogger(),  "[%s] conn token:%d, global Token: %d\n",
 //                    pThis->getLogId(), pThis->m_tmToken, HttpGlobals::s_tmToken ));
-    if (pThis->detectClose())
-        return;
 //        if ( D_ENABLED( DL_MORE ))
 //            LOG_D(( pThis->getLogger(),  "[%s] output avail:%d. state: %d \n",
 //                    pThis->getLogId(),
@@ -1379,8 +1370,6 @@ int NtwkIOLink::writevExT(LsiSession *pOS, const iovec *vector, int count)
 
 void NtwkIOLink::onTimerSSL_T(NtwkIOLink *pThis)
 {
-    if (pThis->detectClose())
-        return;
     if (pThis->allowWrite() && (pThis->m_ssl.wantWrite()))
         onWriteSSL_T(pThis);
     if (pThis->allowRead() && (pThis->m_ssl.wantRead()))
@@ -1639,7 +1628,7 @@ int NtwkIOLink::SSLAgain()
         setSSLAgain();
         break;
     case -1:
-        close();
+        setState(HIOS_CLOSING);
         break;
     }
     return ret;

@@ -47,9 +47,9 @@ class debugBase;
 typedef struct
 {
     uint32_t            x_iMagic;
-    uint8_t             x_aName[LSSHM_MAXNAMELEN];
-    LsShmXSize_t        x_iMaxSize;      // the file size
     LsShmCnt_t          x_iMaxElem;
+    uint64_t            x_id;
+    LsShmXSize_t        x_iMaxSize;      // the file size
     LsShmOffset_t       x_iFreeOffset;   // first free lock
 } LsShmLockMap;
 
@@ -61,26 +61,17 @@ typedef union
 
 class LsShmLock : public ls_shmobject_s
 {
+    friend class LsShm;
+
 public:
-    explicit LsShmLock(
-        const char *dirName, const char *mapName, LsShmXSize_t initSize);
+    LsShmLock();
     ~LsShmLock();
 
     static const char *getDefaultShmDir();
 
-    void deleteFile();
-
-    const char *fileName() const
-    {   return m_pFileName; }
-
-    const char *mapName() const
-    {   return m_pMapName; }
 
     LsShmLockMap *getShmLockMap() const
     {   return m_pShmLockMap; }
-
-    const char *name() const
-    {    return getShmLockMap() ? (char *)getShmLockMap()->x_aName : NULL; }
 
     lsi_shmlock_t *offset2pLock(LsShmOffset_t offset) const
     {
@@ -130,7 +121,6 @@ public:
     int freeLock(lsi_shmlock_t *pLock);
 
 private:
-    LsShmLock();
     LsShmLock(const LsShmLock &other);
     LsShmLock &operator=(const LsShmLock &other);
     bool operator==(const LsShmLock &other);
@@ -144,8 +134,10 @@ private:
     LsShmStatus_t       expandFile(LsShmOffset_t from, LsShmXSize_t incrSize);
 
     void                cleanup();
-    LsShmStatus_t       checkMagic(LsShmLockMap *mp, const char *mName) const;
-    LsShmStatus_t       init(const char *name, LsShmXSize_t size);
+    LsShmStatus_t       checkMagic(LsShmLockMap *mp) const;
+    LsShmStatus_t       init(const char * pFile, int fd, 
+                              LsShmXSize_t size, uint64_t id);
+    uint64_t            getId() const;
     LsShmStatus_t       map(LsShmXSize_t size);
     void                unmap();
     void                setupFreeList(LsShmOffset_t to);
@@ -154,8 +146,6 @@ private:
     static LsShmSize_t  s_iPageSize;
     static LsShmSize_t  s_iHdrSize;
     LsShmStatus_t       m_status;
-    char               *m_pFileName;
-    char               *m_pMapName;
     int                 m_iFd;
     LsShmLockMap       *m_pShmLockMap;
     LsShmLockElem      *m_pShmLockElem;

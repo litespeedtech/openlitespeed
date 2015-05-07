@@ -26,34 +26,49 @@
 #include <stdarg.h>
 
 
-#define MCCMD_ADD       0x01
-#define MCCMD_SET       0x02
-#define MCCMD_REPLACE   0x03
-#define MCCMD_PREPEND   0x04
-#define MCCMD_APPEND    0x05
-#define MCCMD_MASK      0xff
+int LsShmMemCached::notImplemented(LsShmMemCached *pThis, char *pStr, int arg)
+{
+    pThis->respond("NOT_IMPLEMENTED");
+    return 0;
+}
 
-#define MCCMD_WITHCAS   0x0100
 
 LsMcCmdFunc LsShmMemCached::s_LsMcCmdFuncs[] =
 {
-    { "get",        0,  doCmdGet },
-    { "bget",       0,  doCmdGet },
-    { "gets",       MCCMD_WITHCAS,  doCmdGet },
-    { "add",        MCCMD_ADD,      doCmdUpdate },
-    { "set",        MCCMD_SET,      doCmdUpdate },
-    { "replace",    MCCMD_REPLACE,  doCmdUpdate },
-    { "prepend",    MCCMD_PREPEND,  doCmdUpdate },
-    { "append",     MCCMD_APPEND,   doCmdUpdate },
-    { "cas",        0,  doCmdUpdate },
-    { "delete",     0,  doCmdDelete },
-    { "quit",       0,  doCmdQuit },
+    { "get",        0,              doCmdGet },
+    { "bget",       0,              doCmdGet },
+    { "gets",       LSMC_WITHCAS,   doCmdGet },
+    { "add",        LSMC_ADD,       doCmdUpdate },
+    { "set",        LSMC_SET,       doCmdUpdate },
+    { "replace",    LSMC_REPLACE,   doCmdUpdate },
+    { "append",     LSMC_APPEND,    doCmdUpdate },
+    { "prepend",    LSMC_PREPEND,   doCmdUpdate },
+    { "cas",        LSMC_CAS,       doCmdUpdate },
+    { "incr",       LSMC_INCR,      doCmdArithmetic },
+    { "decr",       LSMC_DECR,      doCmdArithmetic },
+    { "delete",     0,              doCmdDelete },
+    { "touch",      0,              doCmdTouch },
+    { "stat",       0,              notImplemented },
+    { "flush_all",  0,              notImplemented },
+    { "version",    0,              doCmdVersion },
+    { "quit",       0,              doCmdQuit },
+    { "shutdown",   0,              notImplemented },
+    { "verbosity",  0,              doCmdVerbosity },
 };
 
+const char badCmdLineFmt[] = "CLIENT_ERROR bad command line format";
 
-static uint64_t getCas()
+const char tokNoreply[] = "noreply";
+static inline bool chkNoreply(char *tokPtr, int tokLen)
 {
-    return (uint64_t)12345678;
+    return ((tokLen == sizeof(tokNoreply)-1) && (strcmp(tokPtr, tokNoreply) == 0));
+}
+
+
+uint64_t LsShmMemCached::getCas()
+{
+    return ((m_iHdrOff != 0) ? ++*(uint64_t *)m_pHash->offset2ptr(
+        (LsShmOffset_t)(long)&((LsMcHdr *)m_iHdrOff)->x_data->cas) : 0);
 }
 
 
@@ -75,6 +90,38 @@ void LsShmMemCached::sendResult(const char *fmt, ...)
 }
 
 
+LsShmMemCached::LsShmMemCached(LsShmHash *pHash, bool usecas)
+    : m_pHash(pHash)
+    , m_iterOff(0)
+    , m_needed(0)
+    , m_noreply(false)
+    , m_usecas(usecas)
+{
+    ls_str_blank(&m_parms.key);
+    ls_str_blank(&m_parms.value);
+    LsShmOffset_t off;
+    if ((off = pHash->getUserOff()) == 0)
+    {
+        int remapped;
+        LsMcHdr *pHdr;
+        LsShmSize_t size = sizeof(*pHdr);
+        if (m_usecas)
+            size += sizeof(pHdr->x_data->cas);
+        if ((off = pHash->alloc2(size, remapped)) != 0)
+        {
+            pHdr = (LsMcHdr *)pHash->offset2ptr(off);
+            pHdr->x_verbose = 0;
+            pHdr->x_withcas = m_usecas;
+            if (m_usecas)
+                pHdr->x_data->cas = 0;
+            pHash->setUserOff(off);
+            pHash->setUserSize(size);
+        }
+    }
+    m_iHdrOff = off;
+}
+
+
 int LsShmMemCached::processCmd(char *pStr)
 {
     char *pCmd;
@@ -93,6 +140,9 @@ int LsShmMemCached::processCmd(char *pStr)
 }
 
 
+/*
+ * this code needs the lock continued from the parsed command function.
+ */
 int LsShmMemCached::doDataUpdate(char *pBuf)
 {
     if (m_parms.key.length <= 0)
@@ -100,32 +150,45 @@ int LsShmMemCached::doDataUpdate(char *pBuf)
         respond("CLIENT_ERROR invalid data update");
         return -1;
     }
+
     if (m_iterOff != 0)
     {
         int valLen;
-        char *valPtr;
+        uint8_t *valPtr;
         iterator iter = m_pHash->offset2iterator(m_iterOff);
-        LsMcDataItem *pItem = (LsMcDataItem *)iter->getVal();
-        ::memcpy((void *)pItem, (void *)&m_item, sizeof(m_item));
-        valLen = m_parms.value.length - sizeof(*pItem);
-        if (m_usecas)
+        LsMcDataItem *pItem = mcIter2data(iter, m_usecas, &valPtr, &valLen);
+        if (m_retcode == UPDRET_APPEND)
         {
-            pItem->x_data->withcas.cas = getCas();
-            valLen -= sizeof(pItem->x_data->withcas.cas);
-            valPtr = (char *)pItem->x_data->withcas.val;
+            valLen = m_parms.value.length;
+            valPtr = iter->getVal() + iter->getValLen() - valLen;
         }
+        else if (m_retcode == UPDRET_PREPEND)
+            valLen = m_parms.value.length;
         else
         {
-            valPtr = (char *)pItem->x_data->val;
+            if ((m_item.x_exptime != 0)
+              && (m_item.x_exptime <= LSMC_MAXDELTATIME))
+            {
+                m_item.x_exptime += iter->getLruLasttime();
+            }
+            ::memcpy((void *)pItem, (void *)&m_item, sizeof(m_item));
         }
+        if (m_usecas)
+            pItem->x_data->withcas.cas = getCas();
         if (valLen > 0)
             ::memcpy(valPtr, (void *)pBuf, valLen);
         m_needed = 0;
         m_iterOff = 0;
-        respond("STORED");
+        if (m_retcode != UPDRET_NONE)
+            respond("STORED");
     }
+    else if (m_retcode == UPDRET_NOTFOUND)
+        respond("NOT_FOUND");
+    else if (m_retcode == UPDRET_CASFAIL)
+        respond("EXISTS");
     else
         respond("NOT_STORED");
+
     m_parms.key.length = 0;
     return 0;
 }
@@ -138,7 +201,7 @@ int LsShmMemCached::doCmdGet(LsShmMemCached *pThis, char *pStr, int arg)
     LsShmHash::iteroffset iterOff;
     LsMcDataItem *pItem;
     int valLen;
-    char *valPtr;
+    uint8_t *valPtr;
     while (1)
     {
         pStr = pThis->advToken(pStr, &pThis->m_parms.key.pstr,
@@ -148,18 +211,13 @@ int LsShmMemCached::doCmdGet(LsShmMemCached *pThis, char *pStr, int arg)
         if ((iterOff = pHash->findIterator(&pThis->m_parms)) != 0)
         {
             iter = pHash->offset2iterator(iterOff);
-            pItem = (LsMcDataItem *)iter->getVal();
-            valLen = iter->getValLen() - sizeof(*pItem);
-            if (pThis->m_usecas)
+            pItem = mcIter2data(iter, pThis->m_usecas, &valPtr, &valLen);
+            if ((pItem->x_exptime != 0)
+                && (pItem->x_exptime <= time((time_t *)NULL)))
             {
-                valLen -= sizeof(pItem->x_data->withcas.cas);
-                valPtr = (char *)pItem->x_data->withcas.val;
+                pHash->eraseIterator(iterOff);
             }
-            else
-            {
-                valPtr = (char *)pItem->x_data->val;
-            }
-            if (arg & MCCMD_WITHCAS)
+            else if (arg & LSMC_WITHCAS)
             {
                 pThis->sendResult("VALUE %.*s %d %d %llu\r\n%.*s\r\n",
                   iter->getKeyLen(), iter->getKey(),
@@ -192,9 +250,12 @@ int LsShmMemCached::doCmdUpdate(LsShmMemCached *pThis, char *pStr, int arg)
     char *pFlags;
     char *pExptime;
     char *pLength;
+    char *pCas;
     unsigned long flags;
-    long exptime;
+    unsigned long exptime;
     long length;
+    unsigned long long cas;
+    LsShmUpdOpt updOpt;
     pStr = pThis->advToken(pStr, &pThis->m_parms.key.pstr,
                            &pThis->m_parms.key.length);
     pStr = pThis->advToken(pStr, &pFlags, &tokLen);
@@ -202,35 +263,71 @@ int LsShmMemCached::doCmdUpdate(LsShmMemCached *pThis, char *pStr, int arg)
     pStr = pThis->advToken(pStr, &pLength, &tokLen);
     if ((tokLen <= 0)
         || (!pThis->myStrtoul(pFlags, &flags))
-        || (!pThis->myStrtol(pExptime, &exptime))
+        || (!pThis->myStrtoul(pExptime, &exptime))
         || (!pThis->myStrtol(pLength, &length))
     )
     {
-        pThis->respond("CLIENT_ERROR bad command format");
+        pThis->respond(badCmdLineFmt);
         return -1;
     }
-    pThis->m_parms.value.pstr = NULL;
-    pThis->m_parms.value.length = sizeof(m_item) + length;
-    if (pThis->m_usecas)
-        pThis->m_parms.value.length += sizeof(pThis->m_item.x_data->withcas.cas);
     pThis->m_item.x_flags = (uint32_t)flags;
-    pThis->m_item.x_exptime = (uint32_t)exptime;
+    pThis->m_item.x_exptime = (time_t)exptime;
+    pThis->m_parms.value.pstr = NULL;
+    pThis->m_parms.value.length = length;   // adjusted later
+    updOpt.m_iFlags = arg;
+    if ((arg == LSMC_APPEND) || (arg == LSMC_PREPEND))
+    {
+        if (pThis->m_usecas)
+            updOpt.m_iFlags |= LSMC_WITHCAS;
+    }
+    else
+    {
+        pThis->m_parms.value.length += sizeof(pThis->m_item);
+        if (pThis->m_usecas)
+            pThis->m_parms.value.length += sizeof(pThis->m_item.x_data->withcas.cas);
+    }
+    if (arg == LSMC_CAS)
+    {
+        pStr = pThis->advToken(pStr, &pCas, &tokLen);
+        if ((tokLen <= 0) || (!pThis->myStrtoull(pCas, &cas)))
+        {
+            pThis->respond(badCmdLineFmt);
+            return -1;
+        }
+        updOpt.m_value = (uint64_t)cas;
+    }
     pStr = pThis->advToken(pStr, &tokPtr, &tokLen);     // optional noreply
-    pThis->m_noreply = ((tokLen == 7) && (strcmp(tokPtr, "noreply") == 0));
+    pThis->m_noreply = chkNoreply(tokPtr, tokLen);
 
     switch (arg)
     {
-        case MCCMD_ADD:
+        case LSMC_ADD:
             pThis->m_iterOff = pThis->m_pHash->insertIterator(&pThis->m_parms);
+            pThis->m_retcode = UPDRET_DONE;
             break;
-        case MCCMD_SET:
+        case LSMC_SET:
             pThis->m_iterOff = pThis->m_pHash->setIterator(&pThis->m_parms);
+            pThis->m_retcode = UPDRET_DONE;
             break;
-        case MCCMD_REPLACE:
+        case LSMC_REPLACE:
             pThis->m_iterOff = pThis->m_pHash->updateIterator(&pThis->m_parms);
+            pThis->m_retcode = UPDRET_DONE;
             break;
-        case MCCMD_PREPEND:
-        case MCCMD_APPEND:
+        case LSMC_APPEND:
+            pThis->m_iterOff = pThis->m_pHash->updateIterator(&pThis->m_parms,
+                                                              &updOpt);
+            pThis->m_retcode = UPDRET_APPEND;
+            break;
+        case LSMC_PREPEND:
+            pThis->m_iterOff = pThis->m_pHash->updateIterator(&pThis->m_parms,
+                                                              &updOpt);
+            pThis->m_retcode = UPDRET_PREPEND;
+            break;
+        case LSMC_CAS:
+            pThis->m_iterOff = pThis->m_pHash->updateIterator(&pThis->m_parms,
+                                                              &updOpt);
+            pThis->m_retcode = updOpt.m_iRetcode;
+            break;
         default:
             pThis->respond("SERVER_ERROR unhandled type");
             return -1;
@@ -242,18 +339,72 @@ int LsShmMemCached::doCmdUpdate(LsShmMemCached *pThis, char *pStr, int arg)
 }
 
 
+int LsShmMemCached::doCmdArithmetic(LsShmMemCached *pThis, char *pStr, int arg)
+{
+    char *tokPtr;
+    int tokLen;
+    char *pDelta;
+    unsigned long long delta;
+    LsShmUpdOpt updOpt;
+    char numBuf[ULL_MAXLEN+1];
+    pStr = pThis->advToken(pStr, &pThis->m_parms.key.pstr,
+                           &pThis->m_parms.key.length);
+    pStr = pThis->advToken(pStr, &pDelta, &tokLen);
+    if (tokLen <= 0)
+    {
+        pThis->respond(badCmdLineFmt);
+        return -1;
+    }
+    if (!pThis->myStrtoull(pDelta, &delta))
+    {
+        pThis->respond("CLIENT_ERROR invalid numeric delta argument");
+        return -1;
+    }
+    pStr = pThis->advToken(pStr, &tokPtr, &tokLen);     // optional noreply
+    pThis->m_noreply = chkNoreply(tokPtr, tokLen);
+    pThis->m_parms.value.pstr = NULL;
+    pThis->m_parms.value.length = sizeof(pThis->m_item);
+    updOpt.m_iFlags = arg;
+    updOpt.m_value = (uint64_t)delta;
+    updOpt.m_pRet = (void *)&pThis->m_item;
+    updOpt.m_pMisc = (void *)numBuf;
+    if (pThis->m_usecas)
+    {
+        pThis->m_parms.value.length += sizeof(pThis->m_item.x_data->withcas.cas);
+        updOpt.m_iFlags |= LSMC_WITHCAS;
+    }
+
+    if ((pThis->m_iterOff =
+        pThis->m_pHash->updateIterator(&pThis->m_parms, &updOpt)) != 0)
+    {
+        pThis->m_retcode = UPDRET_NONE;
+        pThis->doDataUpdate(numBuf);
+        pThis->respond(numBuf);
+    }
+    else if (updOpt.m_iRetcode == UPDRET_NOTFOUND)
+        pThis->respond("NOT_FOUND");
+    else if (updOpt.m_iRetcode == UPDRET_NONNUMERIC)
+        pThis->respond(
+          "CLIENT_ERROR cannot increment or decrement non-numeric value");
+    else
+        pThis->respond("SERVER_ERROR unable to update");
+    return 0;
+}
+
+
 int LsShmMemCached::doCmdDelete(LsShmMemCached *pThis, char *pStr, int arg)
 {
     char *tokPtr;
     int tokLen;
     LsShmHash::iteroffset iterOff;
+    bool expired;
     pStr = pThis->advToken(pStr, &pThis->m_parms.key.pstr,
                            &pThis->m_parms.key.length);
     pStr = pThis->advToken(pStr, &tokPtr, &tokLen);     // optional
     if ((tokLen == 1) && (strcmp(tokPtr, "0") == 0))    // hold_is_zero???
         pStr = pThis->advToken(pStr, &tokPtr, &tokLen);
 
-    pThis->m_noreply = ((tokLen == 7) && (strcmp(tokPtr, "noreply") == 0));
+    pThis->m_noreply = chkNoreply(tokPtr, tokLen);
     if (pThis->m_noreply)
         pThis->advToken(pStr, &tokPtr, &tokLen);
 
@@ -263,14 +414,97 @@ int LsShmMemCached::doCmdDelete(LsShmMemCached *pThis, char *pStr, int arg)
         return -1;
     }
     if ((iterOff = pThis->m_pHash->findIterator(&pThis->m_parms)) != 0)
+    {
+        expired = pThis->isExpired(
+            (LsMcDataItem *)pThis->m_pHash->offset2iteratorData(iterOff));
         pThis->m_pHash->eraseIterator(iterOff);
-    pThis->respond((iterOff != 0) ? "DELETED" : "NOT_FOUND");
+    }
+    pThis->respond(((iterOff != 0) && !expired) ? "DELETED" : "NOT_FOUND");
+    return 0;
+}
+
+
+int LsShmMemCached::doCmdTouch(LsShmMemCached *pThis, char *pStr, int arg)
+{
+    char *tokPtr;
+    int tokLen;
+    char *pExptime;
+    unsigned long exptime;
+    LsShmHash::iteroffset iterOff;
+    LsMcDataItem *pItem;
+    pStr = pThis->advToken(pStr, &pThis->m_parms.key.pstr,
+                           &pThis->m_parms.key.length);
+    pStr = pThis->advToken(pStr, &pExptime, &tokLen);
+    if (tokLen <= 0)
+    {
+        pThis->respond(badCmdLineFmt);
+        return -1;
+    }
+    if (!pThis->myStrtoul(pExptime, &exptime))
+    {
+        pThis->respond("CLIENT_ERROR invalid exptime argument");
+        return -1;
+    }
+    pStr = pThis->advToken(pStr, &tokPtr, &tokLen);     // optional noreply
+    pThis->m_noreply = chkNoreply(tokPtr, tokLen);
+    if ((iterOff = pThis->m_pHash->findIterator(&pThis->m_parms)) != 0)
+    {
+        pItem = (LsMcDataItem *)pThis->m_pHash->offset2iteratorData(iterOff);
+        if (pThis->isExpired(pItem))
+            pThis->m_pHash->eraseIterator(iterOff);
+        else
+        {
+            if ((exptime != 0) && (exptime <= LSMC_MAXDELTATIME))
+                exptime += time((time_t *)NULL);
+            pItem->x_exptime = (time_t)exptime;
+            pThis->respond("TOUCHED");
+            return 0;
+        }
+    }
+    pThis->respond("NOT_FOUND");
+    return 0;
+}
+
+
+int LsShmMemCached::doCmdVersion(LsShmMemCached *pThis, char *pStr, int arg)
+{
+    pThis->respond("VERSION " VERSION);
     return 0;
 }
 
 
 int LsShmMemCached::doCmdQuit(LsShmMemCached *pThis, char *pStr, int arg)
 {
+    return 0;
+}
+
+
+int LsShmMemCached::doCmdVerbosity(LsShmMemCached *pThis, char *pStr, int arg)
+{
+    char *tokPtr;
+    int tokLen;
+    char *pVerbose;
+    unsigned long verbose;
+    pStr = pThis->advToken(pStr, &pVerbose, &tokLen);
+    if (tokLen <= 0)
+    {
+        pThis->respond(badCmdLineFmt);
+        return -1;
+    }
+    if (!pThis->myStrtoul(pVerbose, &verbose))
+    {
+        pThis->respond("CLIENT_ERROR invalid verbosity argument");
+        return -1;
+    }
+    pStr = pThis->advToken(pStr, &tokPtr, &tokLen);     // optional noreply
+    pThis->m_noreply = chkNoreply(tokPtr, tokLen);
+    if (pThis->m_iHdrOff != 0)
+    {
+        ((LsMcHdr *)pThis->m_pHash->offset2ptr(pThis->m_iHdrOff))->x_verbose = verbose;
+        pThis->respond("OK");
+    }
+    else
+        pThis->respond("FAILED");
     return 0;
 }
 

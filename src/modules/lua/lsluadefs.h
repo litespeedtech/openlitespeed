@@ -22,8 +22,8 @@
 extern "C" {
 #endif
 /* need lua_State * */
-#include <luajit-2.0/luajit.h>
-#include <luajit-2.0/lauxlib.h>
+#include <luajit.h>
+#include <lauxlib.h>
 #ifdef __cplusplus
 };
 #endif

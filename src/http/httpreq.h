@@ -62,21 +62,22 @@ struct AAAData;
 class AuthRequired;
 class ClientInfo;
 class ExpiresCtrl;
-class HTAuth;
-class HttpSession;
-class HttpContext;
-class HttpRange;
-class HttpHandler;
-class HttpVHost;
 class HotlinkCtrl;
+class HTAuth;
+class HttpContext;
+class HttpHandler;
+class HttpRange;
+class HttpRespHeaders;
+class HttpSession;
+class HttpVHost;
 class IOVec;
 class MIMESetting;
-class StaticFileCacheData;
-class SSIRuntime;
+class RadixNode;
 class SSIConfig;
+class SSIRuntime;
+class StaticFileCacheData;
 class VHostMap;
 class VMemBuf;
-class HttpRespHeaders;
 typedef struct ls_hash_s ls_hash_t;
 
 
@@ -109,7 +110,7 @@ private:
     char               *m_pAuthUser;
     ls_str_t            m_pathInfo;
     ls_str_t            m_newHost;
-    ls_hash_t          *m_envHash;
+    RadixNode          *m_pEnv;
     KVPairArray         m_unknHeaders;
 
     //Comment:The order of the below 3 varibles should NOT be changed!!!
@@ -127,6 +128,7 @@ private:
     int                 m_iHS2;
     int                 m_method;
     unsigned int        m_ver;
+    int                 m_iEnvCount;
     short               m_iKeepAlive;
     char                m_iAcceptGzip;
     char                m_iNoRespBody;
@@ -491,7 +493,7 @@ public:
     ls_str_pair_t *addEnv(const char *pKey, int keyLen, const char *pValue,
                           int valLen);
     const char *getEnv(const char *pKey, int keyLen, int &valLen);
-    const ls_hash_t *getEnvHash() const;
+    const RadixNode *getEnvNode() const;
     int  getEnvCount();
     void unsetEnv(const char *pKey, int keyLen);
 

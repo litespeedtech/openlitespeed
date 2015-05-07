@@ -22,7 +22,7 @@
 #include <string.h>
 #include <errno.h>
 
-static const char *g_pShmDirName = LsShmLock::getDefaultShmDir();
+static const char *g_pShmDirName = LsShm::getDefaultShmDir();
 static const char *g_pShmName = "SHMMCTEST";
 static const char *g_pHashName = "SHMMCHASH";
 
@@ -78,7 +78,7 @@ int main(int ac, char *av[])
         return 3;
     }
 
-    pMC = new LsShmMemCached(pHash);
+    pMC = new LsShmMemCached(pHash, true);
     while (fgets(cmdbuf, sizeof(cmdbuf), stdin) != NULL)
     {
         int ret;

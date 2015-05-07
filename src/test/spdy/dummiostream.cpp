@@ -29,7 +29,7 @@ DummySpdyConnStream::DummySpdyConnStream(char *buff, int length)
     m_Datalen = length;
     //m_InputBuff.append(m_pDatabuff, length);
     SpdyConnection *pConn = new SpdyConnection();
-    pConn->assignStream(this);
+    pConn->attachStream(this);
     pConn->init(HIOS_PROTO_SPDY2);
     onInitConnected();
 }

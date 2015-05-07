@@ -157,8 +157,13 @@ int SSLConnection::write(const char *pBuf, int len)
         }
         else
         {
-            m_iWant = LAST_WRITE;
-            return checkError(rc);
+            if (ret == 0)
+            {
+                m_iWant = LAST_WRITE;
+                return checkError(rc);
+            }
+            else
+                return ret; //Do not change the state since not finished
         }
     } while (len > 0);
     

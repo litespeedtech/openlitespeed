@@ -288,12 +288,12 @@ int LsiApiHooks::runCallback(int level, lsi_cb_param_t *param) const
         rec1 = *param;
         rec1._cur_hook = (void *)hook;
 
+        LogTracker *pTracker = NULL;
         if (D_ENABLED(DL_MORE))
         {
-            if (param->_session)
+            if (param->_session && 
+                (pTracker =((LsiSession *)param->_session)->getLogTracker()) != NULL)
             {
-                LogTracker *pTracker =
-                        ((LsiSession *)param->_session)->getLogTracker();
                 LOG_D((pTracker->getLogger(),
                        "[%s] [%s] run Hook function for [Module:%s] session=%p",
                        pTracker->getLogId(), s_pHkptName[ level ],
@@ -311,10 +311,8 @@ int LsiApiHooks::runCallback(int level, lsi_cb_param_t *param) const
 
         if (D_ENABLED(DL_MORE))
         {
-            if (param->_session)
+            if (param->_session && pTracker)
             {
-                LogTracker *pTracker =
-                        ((LsiSession *)param->_session)->getLogTracker();
                 LOG_D((pTracker->getLogger(), "[%s] [%s] [Module:%s]  session=%p ret %d",
                        pTracker->getLogId(), s_pHkptName[ level ],
                        MODULE_NAME(hook->module), param->_session, ret));

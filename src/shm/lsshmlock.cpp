@@ -36,48 +36,15 @@ extern "C" {
 LsShmSize_t LsShmLock::s_iPageSize = LSSHM_PAGESIZE;
 LsShmSize_t LsShmLock::s_iHdrSize  = ((sizeof(LsShmLockMap) + 0xf) & ~0xf); // align 16
 
-LsShmLock::LsShmLock(const char *dirName, const char *mapName,
-                     LsShmXSize_t initSize)
+LsShmLock::LsShmLock()
     : m_iMagic(LSSHM_LOCK_MAGIC)
     , m_status(LSSHM_NOTREADY)
-    , m_pFileName(NULL)
-    , m_pMapName(NULL)
-    , m_iFd(0)
+    , m_iFd(-1)
     , m_pShmLockMap(NULL)
     , m_pShmLockElem(NULL)
     , m_iMaxSizeO(0)
 {
-    char buf[0x1000];
-    if (dirName == NULL)
-        dirName = getDefaultShmDir();
-    if (mapName == NULL)
-        mapName = LSSHM_SYSSHM_FILENAME;
 
-    snprintf(buf, sizeof(buf), "%s/%s.%s",
-             dirName, mapName, LSSHM_SYSLOCK_FILE_EXT);
-
-    m_pFileName = strdup(buf);
-    m_pMapName = strdup(mapName);
-
-    // set the size
-    initSize = roundToPageSize(initSize);
-    if ((m_pFileName == NULL)
-        || (m_pMapName == NULL)
-        || (strlen(m_pMapName) >= LSSHM_MAXNAMELEN))
-    {
-        m_status = LSSHM_BADPARAM;
-        return;
-    }
-
-    m_status = init(m_pMapName, initSize);
-
-    if (m_status == LSSHM_NOTREADY)
-        m_status = LSSHM_READY;
-#if 0
-    // destructor should take care of this
-    else
-        cleanup();
-#endif
 }
 
 
@@ -87,51 +54,35 @@ LsShmLock::~LsShmLock()
 }
 
 
-void LsShmLock::deleteFile()
-{
-    if (m_pFileName != NULL)
-    {
-        unlink(m_pFileName);
-    }
-}
-
-
-const char *LsShmLock::getDefaultShmDir()
-{
-    static int isDirTected = 0;
-    if (isDirTected == 0)
-    {
-        const char *pathname = "/dev/shm";
-        struct stat sb;
-        isDirTected =
-            ((stat(pathname, &sb) == 0) && S_ISDIR(sb.st_mode)) ? 1 : 2;
-    }
-
-    return (isDirTected == 1) ? LSSHM_SYSSHM_DIR1 : LSSHM_SYSSHM_DIR2;
-}
-
-
 lsi_shmlock_t *LsShmLock::allocLock()
 {
     LsShmLockElem *pElem;
     LsShmOffset_t offset;
+    lsi_shmlock_lock(&m_pShmLockElem->x_lock);
     if ((offset = getShmLockMap()->x_iFreeOffset) == 0)
+    {
+        lsi_shmlock_unlock(&m_pShmLockElem->x_lock);
         return NULL;
-
+    }
     pElem = m_pShmLockElem + offset;
     m_pShmLockMap->x_iFreeOffset = pElem->x_iNext;
-    return (lsi_shmlock_t *)pElem;
+    lsi_shmlock_unlock(&m_pShmLockElem->x_lock);
+    if (sizeof(pElem->x_lock) == sizeof(int))   // optimized out by compiler
+        *(int *)&pElem->x_lock = 0;
+    else
+        ::memset((void *)&pElem->x_lock, 0, sizeof(pElem->x_lock));
+    return &pElem->x_lock;
 }
 
 
 int LsShmLock::freeLock(lsi_shmlock_t *pLock)
 {
     int num = pLock2LockNum(pLock);
-    LsShmLockElem *pElem;
-
-    pElem = m_pShmLockElem + num;
+    LsShmLockElem *pElem = m_pShmLockElem + num;
+    lsi_shmlock_lock(&m_pShmLockElem->x_lock);
     pElem->x_iNext = getShmLockMap()->x_iFreeOffset;
     getShmLockMap()->x_iFreeOffset = num;
+    lsi_shmlock_unlock(&m_pShmLockElem->x_lock);
     return 0;
 }
 
@@ -139,69 +90,57 @@ int LsShmLock::freeLock(lsi_shmlock_t *pLock)
 void LsShmLock::cleanup()
 {
     unmap();
-    if (m_iFd > 0)
+    if (m_iFd != -1)
     {
         close(m_iFd);
-        m_iFd = 0;
-    }
-    if (m_pFileName != NULL)
-    {
-        free(m_pFileName);
-        m_pFileName = NULL;
-    }
-    if (m_pMapName == NULL)
-    {
-        free(m_pMapName);
-        m_pMapName = NULL;
+        m_iFd = -1;
     }
 }
 
 
-LsShmStatus_t LsShmLock::checkMagic(LsShmLockMap *mp, const char *mName) const
+LsShmStatus_t LsShmLock::checkMagic(LsShmLockMap *mp) const
 {
-    return ((mp->x_iMagic != m_iMagic)
-            || (strncmp((char *)mp->x_aName, mName, LSSHM_MAXNAMELEN) != 0)) ?
-           LSSHM_BADMAPFILE : LSSHM_OK;
+    return (mp->x_iMagic != m_iMagic) ?
+            LSSHM_BADVERSION : LSSHM_OK;
 }
 
 
-LsShmStatus_t LsShmLock::init(const char *name, LsShmXSize_t size)
+LsShmStatus_t LsShmLock::init(const char * pFileName, int fd, 
+                              LsShmXSize_t size, uint64_t id)
 {
     struct stat mystat;
+    bool needsetup;
 
-    if ((m_iFd = open(m_pFileName, O_RDWR | O_CREAT, 0750)) < 0)
-    {
-        if ((GPath::createMissingPath(m_pFileName, 0750) < 0)
-            || ((m_iFd = open(m_pFileName, O_RDWR | O_CREAT, 0750)) < 0))
-        {
-            LsShm::setErrMsg(LSSHM_SYSERROR, "Unable to open/create [%s], %s.",
-                             m_pFileName, strerror(errno));
-            return LSSHM_BADMAPFILE;
-        }
-    }
+    m_iFd = fd;
+    size = ((size + s_iPageSize - 1) / s_iPageSize) * s_iPageSize;
+    
 
-    ::fcntl( m_iFd, F_SETFD, FD_CLOEXEC );
-
-    if (stat(m_pFileName, &mystat) < 0)
+    if (fstat(m_iFd, &mystat) < 0)
     {
         LsShm::setErrMsg(LSSHM_SYSERROR, "Unable to stat [%s], %s.",
-                         m_pFileName, strerror(errno));
+                         pFileName, strerror(errno));
         return LSSHM_BADMAPFILE;
     }
 
+    needsetup = false;
     if (mystat.st_size == 0)
     {
+        if (id == 0)
+        {
+            LsShm::setErrMsg(LSSHM_BADVERSION,
+                "Missing LockFile [%s]", pFileName );
+            return LSSHM_BADVERSION;
+        }
         // creating a new map
         if ((expandFile(0, roundToPageSize(size)) != LSSHM_OK)
             || (map(size) != LSSHM_OK))
             return LSSHM_ERROR;
-        getShmLockMap()->x_iMagic = m_iMagic;
-        getShmLockMap()->x_iMaxSize = size;
-        getShmLockMap()->x_iFreeOffset = 0;
-        getShmLockMap()->x_iMaxElem = 0;
-        strcpy((char *)getShmLockMap()->x_aName, name);
-
-        setupFreeList((LsShmOffset_t)size);
+        getShmLockMap()->x_iMagic       = m_iMagic;
+        getShmLockMap()->x_id           = id;
+        getShmLockMap()->x_iMaxSize     = size;
+        getShmLockMap()->x_iFreeOffset  = 0;
+        getShmLockMap()->x_iMaxElem     = 0;
+        needsetup = true;
     }
     else
     {
@@ -209,7 +148,7 @@ LsShmStatus_t LsShmLock::init(const char *name, LsShmXSize_t size)
         {
             LsShm::setErrMsg(LSSHM_BADMAPFILE,
                              "Bad LockFile format [%s], size=%lld.",
-                             m_pFileName, (uint64_t)mystat.st_size);
+                             pFileName, (uint64_t)mystat.st_size);
             return LSSHM_BADMAPFILE;
         }
 
@@ -217,11 +156,11 @@ LsShmStatus_t LsShmLock::init(const char *name, LsShmXSize_t size)
         if (map(s_iHdrSize) != LSSHM_OK)
             return LSSHM_ERROR;
 
-        if (checkMagic(getShmLockMap(), name) != LSSHM_OK)
+        if (checkMagic(getShmLockMap()) != LSSHM_OK)
         {
             LsShm::setErrMsg(LSSHM_BADVERSION,
                       "Bad LockFile format [%s], size=%lld, magic=%08X(%08X).",
-                      m_pFileName, (uint64_t)mystat.st_size,
+                      pFileName, (uint64_t)mystat.st_size,
                       getShmLockMap()->x_iMagic, m_iMagic);
             return LSSHM_BADVERSION;
         }
@@ -233,12 +172,14 @@ LsShmStatus_t LsShmLock::init(const char *name, LsShmXSize_t size)
                 (LsShmXSize_t)(size - getShmLockMap()->x_iMaxSize)) != LSSHM_OK)
                 return LSSHM_ERROR;
             getShmLockMap()->x_iMaxSize = size;
-            unmap();
-            if (map(size) != LSSHM_OK)
-                return LSSHM_ERROR;
-            setupFreeList((LsShmOffset_t)size);
+            needsetup = true;
         }
+        unmap();
+        if (map(size) != LSSHM_OK)
+            return LSSHM_ERROR;
     }
+    if (needsetup)
+        setupFreeList((LsShmOffset_t)size);
     return LSSHM_OK;
 }
 
@@ -270,14 +211,20 @@ LsShmStatus_t LsShmLock::expandFile(LsShmOffset_t from, LsShmXSize_t incrSize)
 }
 
 
+uint64_t  LsShmLock::getId() const
+{
+    return getShmLockMap()->x_id;
+}
+
+
 LsShmStatus_t LsShmLock::map(LsShmXSize_t size)
 {
     uint8_t *p =
         (uint8_t *)mmap(0, (size_t)size, PROT_READ | PROT_WRITE, MAP_SHARED, m_iFd, 0);
     if (p == MAP_FAILED)
     {
-        LsShm::setErrMsg(LSSHM_SYSERROR, "Unable to mmap [%s], size=%lu, %s.",
-                  m_pFileName, (unsigned long)size, strerror(errno));
+        LsShm::setErrMsg(LSSHM_SYSERROR, "Unable to mmap, size=%lu, %s.",
+                  (unsigned long)size, strerror(errno));
         return LSSHM_SYSERROR;
     }
 
@@ -323,7 +270,10 @@ void LsShmLock::setupFreeList(LsShmOffset_t to)
     }
 
     if (lastNum == 0)
+    {
+        lsi_shmlock_setup(&m_pShmLockElem->x_lock); // lock for lockfile
         ++lastNum;      // keep this for myself
+    }
     getShmLockMap()->x_iFreeOffset = lastNum;
     getShmLockMap()->x_iMaxElem = x_lastNum;
 }

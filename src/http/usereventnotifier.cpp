@@ -18,58 +18,57 @@
 #include "usereventnotifier.h"
 #include <http/httpsession.h>
 #include <http/httplog.h>
+#include <http/httpsession.h>
 
 EventObjPool UserEventNotifier::m_eventObjPool;
 
-UserEventNotifier::~UserEventNotifier()
-{
-   m_eventObjPool.shrinkTo(0);
-}
 
-void UserEventNotifier::runAllScheduledEvent()
+void UserEventNotifier::runAllScheduledEvent(EventObj *pFirstObj, void *pParamFilter)
 {
-    while (!m_eventObjList.empty())
+    EventObj *pObj;
+    EventObj *pObjNext;
+
+    if (pFirstObj == NULL)
+        pObj = (EventObj *)m_eventObjList.begin();
+    else
+        pObj = pFirstObj;
+
+    while (pObj && pObj != (EventObj *)m_eventObjList.end()
+        && (!pParamFilter || pObj->m_pParam == pParamFilter))
     {
-        EventObj *pObj = (EventObj *)m_eventObjList.begin();
-        m_eventObjList.pop_front();
-
+        pObjNext = (EventObj *)pObj->next();
+        
         if (D_ENABLED(DL_MEDIUM))
             LOG_D(("UserEventNotifier::runAllScheduledEvent() pEventObj=%p pParam=%p state=%d\n",
                pObj, pObj->m_pParam, pObj->m_state ));
 
-        if (pObj && (pObj->m_state & 0x03) == EVENTOBJ_ST_WAIT)
+        if (pObj && pObj->m_state == EVENTOBJ_ST_WAIT)
         {
             pObj->m_state = EVENTOBJ_ST_DONE;
+            m_eventObjList.remove(pObj);
             pObj->m_eventCb(pObj->m_lParam, pObj->m_pParam);
 
             /**
              * Comment: the above cb may release the data, so checking here to avoid 
              * recycle again!
              */
-            if ((pObj->m_state & EVENTOBJ_ST_AUTOMATIC) == EVENTOBJ_ST_AUTOMATIC)
-            {
-                memset(pObj, 0, sizeof(EventObj));
-                m_eventObjPool.recycle(pObj);
-            }
+            recycle(pObj);
+            //pObj = NULL;
         }
         else
         {
             if (D_ENABLED(DL_MEDIUM))
-                LOG_ERR(("UserEventNotifier::runAllScheduledEvent() wrong state\n"));
+                LOG_ERR(("UserEventNotifier::runAllScheduledEvent() wrong state:%d\n",
+                         pObj->m_state));
         }
+        pObj = pObjNext;
     }
 }
 
-void UserEventNotifier::addToList(EventObj *pObj, bool isAuto)
-{
-    pObj->m_state = EVENTOBJ_ST_WAIT | (isAuto ? EVENTOBJ_ST_AUTOMATIC : 0);
-    m_eventObjList.append(pObj);
-}
 
-EventObj *UserEventNotifier::addEventObj(lsi_event_callback_pf eventCb, 
+EventObj *UserEventNotifier::createEventObj(lsi_event_callback_pf eventCb, 
                                          long lParam, 
-                                         void *pParam,
-                                         bool isAuto)
+                                         void *pParam)
 {
     EventObj *pEventObj = m_eventObjPool.get(); //new EventObj;// 
     if (pEventObj)
@@ -78,52 +77,106 @@ EventObj *UserEventNotifier::addEventObj(lsi_event_callback_pf eventCb,
         pEventObj->m_lParam = lParam;
         pEventObj->m_pParam = pParam;
         pEventObj->m_state = EVENTOBJ_ST_INITED;
-        if (isAuto)
-            addToList(pEventObj, true);
     }
 
     if (D_ENABLED(DL_MEDIUM))
-        LOG_D(("UserEventNotifier::addEventObj() pEventObj=%p pParam=%p\n", 
+        LOG_D(("UserEventNotifier::createEventObj() pEventObj=%p pParam=%p\n", 
                pEventObj, pEventObj->m_pParam));
 
     return pEventObj;
 }
 
+EventObj *UserEventNotifier::scheduleSessionEvent(lsi_event_callback_pf eventCb, long lParam, HttpSession *pSession)
+{
+    EventObj *pObj = createEventObj(eventCb, lParam, (void *)pSession);
+    pObj->m_state = EVENTOBJ_ST_WAIT;
+    
+    if (D_ENABLED(DL_MEDIUM))
+        LOG_D(("UserEventNotifier::scheduleSessionEvent() session=%p pEventObj=%p pParam=%p to '%s'\n", 
+               pSession, pObj, pObj->m_pParam, 
+               (pSession->getEventObjHead() ? "exist" : "new") ));
+    
+    if (pSession->getEventObjHead() == NULL)
+    {
+        pSession->setEventObjHead(pObj);
+        m_eventObjList.append(pObj);
+    }
+    else
+    {
+        m_eventObjList.append(pSession->getEventObjHead(), pObj);
 
-int UserEventNotifier::notifyEventObj(EventObj **pEventObj)
+        pObj = pSession->getEventObjHead();
+        if (D_ENABLED(DL_MEDIUM))
+            LOG_D(("UserEventNotifier::scheduleSessionEvent() EXIST event: session=%p pEventObj=%p pParam=%p\n", 
+               pSession, pObj, pObj->m_pParam ));
+    }
+    return pObj;
+}
+
+
+int UserEventNotifier::notifyEventObj(EventObj *pEventObj)
 {
     if (D_ENABLED(DL_MEDIUM))
         LOG_D(( "UserEventNotifier::notifyEventObj() pEventObj=%p pParam=%p state=%d\n",
-                *pEventObj, (*pEventObj)->m_pParam, (*pEventObj)->m_state ));
+                pEventObj, pEventObj->m_pParam, pEventObj->m_state ));
 
-     if (*pEventObj == NULL || (*pEventObj)->m_state != EVENTOBJ_ST_INITED)
+     if (pEventObj == NULL || pEventObj->m_state != EVENTOBJ_ST_INITED)
          return LS_FAIL;
 
-    addToList(*pEventObj, false);
+    pEventObj->m_state = EVENTOBJ_ST_WAIT;
+    m_eventObjList.append(pEventObj);
     return 0;
 }
 
-void UserEventNotifier::removeEventObj(EventObj **pEventObj)
+void UserEventNotifier::removeEventObj(EventObj *pEventObj)
 {
+    if (!pEventObj)
+        return;
+
     if (D_ENABLED(DL_MEDIUM))
         LOG_D(( "UserEventNotifier::removeEventObj( ) pEventObj=%p pParam=%p state=%d\n",
-                *pEventObj, (*pEventObj)->m_pParam, (*pEventObj)->m_state ));
+                pEventObj, pEventObj->m_pParam, pEventObj->m_state ));
 
-    switch ((*pEventObj)->m_state)
+    switch (pEventObj->m_state)
     {
-        case EVENTOBJ_ST_WAIT:
             /**
              * To test if this still in the list
              */
-            if ((*pEventObj)->next() && (*pEventObj)->prev())
-                m_eventObjList.remove(*pEventObj);
+            //if ((*pEventObj)->next() && (*pEventObj)->prev())
+            //    m_eventObjList.remove(*pEventObj);
+        case EVENTOBJ_ST_WAIT:
+            m_eventObjList.remove(pEventObj);
 
-        case EVENTOBJ_ST_DONE:
         case EVENTOBJ_ST_INITED:
-            memset(*pEventObj, 0, sizeof(EventObj));
-            m_eventObjPool.recycle(*pEventObj);//delete *pEventObj;//
+            recycle(pEventObj);
             break;
+        case EVENTOBJ_ST_DONE:
         default:
             break;
     }
+   // *pEventObj = NULL;
 }
+
+void UserEventNotifier::removeSessionEvents(EventObj *pFirstObj, HttpSession *pSession)
+{
+    EventObj *pObj = pFirstObj;
+    EventObj *pObjNext;
+
+    if (!pObj)
+        pObj = (EventObj *)m_eventObjList.begin();
+            
+    while (pObj && pObj != (EventObj *)m_eventObjList.end())
+    {
+        pObjNext = (EventObj *)pObj->next();
+        if (pObj->m_pParam == (void *)pSession)
+        {
+            if (D_ENABLED(DL_MEDIUM))
+                LOG_D(("UserEventNotifier::removeSessionEvents() pEventObj=%p pParam=%p state=%d\n",
+                   pObj, pObj->m_pParam, pObj->m_state ));
+
+            removeEventObj(pObj);
+        }
+        pObj = pObjNext;
+    }
+}
+

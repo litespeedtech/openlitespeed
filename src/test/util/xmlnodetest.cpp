@@ -37,7 +37,7 @@ TEST(XmlNodeTest_test)
     XmlTreeBuilder builder;
     XmlNode *pRoot = builder.parse(achBuf, achError, 1024);
     CHECK(pRoot != NULL);
-    //pRoot->xmlOutput(stdout, 0);
+//     pRoot->xmlOutput(stdout, 0);
     delete pRoot;
 }
 

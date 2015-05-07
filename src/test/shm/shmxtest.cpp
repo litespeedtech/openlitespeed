@@ -25,7 +25,7 @@
 #include <errno.h>
 #include "test/unittest-cpp/UnitTest++/src/UnitTest++.h"
 
-static const char *g_pShmDirName = LsShmLock::getDefaultShmDir();
+static const char *g_pShmDirName = LsShm::getDefaultShmDir();
 static const char *g_pShmName = "SHMXTEST";
 static const char *g_pPool1Name = "XPOOL1";
 static const char *g_pPool2Name = "XPOOL2";

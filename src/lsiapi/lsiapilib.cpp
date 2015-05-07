@@ -822,17 +822,17 @@ static void *create_session_resume_event(lsi_session_t *session, lsi_module_t *p
     return create_event(cb, pSession->getSn(), (LsiSession *)session);
 }
 
-static void remove_event(void **event_obj_pointer)
+static void remove_event(void *event_obj_pointer)
 {
-    UserEventNotifier::getInstance().removeEventObj((EventObj **)
+    UserEventNotifier::getInstance().removeEventObj((EventObj *)
              event_obj_pointer);
 }
 
 
-static int notify_event(void **event_obj_pointer)
+static int notify_event(void *event_obj_pointer)
 {
     return UserEventNotifier::getInstance().notifyEventObj((
-                EventObj **)event_obj_pointer);
+                EventObj *)event_obj_pointer);
 }
 
 

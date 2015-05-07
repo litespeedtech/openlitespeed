@@ -84,6 +84,18 @@ public:
         ++m_iTotal;
     }
 
+    void insert(DLinkedObj *pReq, DLinkedObj *pReqToInsert)
+    {
+        pReq->addPrev(pReqToInsert);
+        ++m_iTotal; 
+    }
+
+    void append(DLinkedObj *pReq, DLinkedObj *pReqToAppend)
+    {
+        pReq->addNext(pReqToAppend);
+        ++m_iTotal; 
+    }
+
     void remove(DLinkedObj *pReq)
     {
         assert(pReq != &m_head);

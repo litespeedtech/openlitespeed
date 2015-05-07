@@ -85,6 +85,7 @@ HttpSession::HttpSession()
     , m_curHookLevel(0)
     , m_pAiosfcb(NULL)
     , m_sn(1)
+    , m_pEventObjHead(NULL)
 {
     memset(&m_pChunkIS, 0, (char *)(&m_iReqServed + 1) -
            (char *)&m_pChunkIS);
@@ -114,7 +115,7 @@ int HttpSession::onInitConnected()
         setVHostMap(m_pNtwkIOLink->getVHostMap());
 
     m_iFlag = 0;
-    setState(HSS_READING);
+    setState(HSS_WAITING);
     m_processState = HSPS_READ_REQ_HEADER;
     m_curHookLevel = 0;
     getStream()->setFlag(HIO_FLAG_WANT_READ, 1);
@@ -128,6 +129,7 @@ int HttpSession::onInitConnected()
 //     m_response.reset();
 //     m_request.reset();
     ++m_sn;
+    m_pEventObjHead = NULL;
     return 0;
 }
 
@@ -264,11 +266,6 @@ void HttpSession::logAccess(int cancelled)
 
 void HttpSession::resumeSSI()
 {
-    if (m_pSubResp)
-    {
-        delete m_pSubResp;
-        m_pSubResp = NULL;
-    }
     m_request.restorePathInfo();
     releaseSendFileInfo();
     if ((m_pGzipBuf) && (!m_pGzipBuf->isStreamStarted()))
@@ -311,7 +308,12 @@ void HttpSession::releaseSendFileInfo()
 
 void HttpSession::nextRequest()
 {
-
+    if (m_pEventObjHead)
+    {
+        UserEventNotifier::getInstance().removeSessionEvents(m_pEventObjHead, this);
+        m_pEventObjHead = NULL;
+    }
+    
     if (D_ENABLED(DL_LESS))
         LOG_D((getLogger(), "[%s] HttpSession::nextRequest()!",
                getLogId()));
@@ -812,7 +814,7 @@ int HttpSession::processWebSocketUpgrade(const HttpVHost *pVHost)
         m_request.setStatusCode(SC_101);
         logAccess(0);
         L4Handler *pL4Handler = new L4Handler();
-        pL4Handler->assignStream(getStream());
+        pL4Handler->attachStream(getStream());
         pL4Handler->init(m_request, pContext->getWebSockAddr(),
                          getPeerAddrString(),
                          getPeerAddrStrLen());
@@ -847,8 +849,11 @@ int HttpSession::hookResumeCallback(long lParam, LsiSession *pSession)
     {
         if (D_ENABLED(DL_LESS))
             LOG_D((((HttpSession *)pSession)->getLogger(),
-                   "[%s] hookResumeCallback called, but sn=%d",
-                   ((HttpSession *)pSession)->getLogId(), (uint32_t)lParam));
+                   "[%s] hookResumeCallback called, sn mismatch[%d %d], Session=%p",
+                   ((HttpSession *)pSession)->getLogId(), (uint32_t)lParam, 
+                   ((HttpSession *)pSession)->getSn(), pSession));
+
+    //  abort();
         return -1;
     }
     return ((HttpSession *)pSession)->resumeProcess(0, 0);
@@ -1791,11 +1796,13 @@ int HttpSession::onReadEx()
         return 0;
     }
 
-    if (HSS_COMPLETE == getState())
-        nextRequest();
+//     if (HSS_COMPLETE == getState())
+//         nextRequest();
 
+    runAllEventNotifier();    
     //processPending( ret );
 //    printf( "onRead loops %d times\n", iCount );
+    
     return 0;
 }
 
@@ -1861,6 +1868,7 @@ int HttpSession::onWriteEx()
         doWrite();
         break;
     case HSS_COMPLETE:
+        getStream()->wantWrite(false);
         break;
     case HSS_REDIRECT:
     case HSS_EXT_REDIRECT:
@@ -1868,6 +1876,7 @@ int HttpSession::onWriteEx()
         if (isRespHeaderSent())
         {
             closeConnection();
+            //runAllEventNotifier();
             return LS_FAIL;
         }
 
@@ -1908,13 +1917,18 @@ int HttpSession::onWriteEx()
         break;
     }
     if (HSS_COMPLETE == getState())
-        nextRequest();
+    {
+        ;//nextRequest();
+        //runAllEventNotifier();
+        //UserEventNotifier::getInstance().scheduleSessionEvent(stx_nextRequest, 0, this);
+    }
     else if ((m_iFlag & HSF_HANDLER_DONE) && (m_pHandler))
     {
         HttpStats::getReqStats()->incReqProcessed();
         cleanUpHandler();
     }
     //processPending( ret );
+    runAllEventNotifier();
     return 0;
 }
 
@@ -1943,25 +1957,20 @@ void HttpSession::closeConnection()
         cleanUpHandler();
     }
 
+    if ( getStream()->getState() != HIOS_CLOSING )
+        getStream()->setState( HIOS_CLOSING );
+    if (getStream()->isReadyToRelease())
+        return;
+
     if (m_iFlag & HSF_HOOK_SESSION_STARTED)
     {
         if (m_sessionHooks.isEnabled(LSI_HKPT_HTTP_END))
             m_sessionHooks.runCallbackNoParam(LSI_HKPT_HTTP_END, (LsiSession *)this);
     }
-    if (getStream()->getState() == HIOS_CLOSING)
-        getStream()->setState(HIOS_CLOSING);
-    if (getStream()->isReadyToRelease())
-        return;
-
+    
     m_request.keepAlive(0);
 
     logAccess(getStream()->getFlag(HIO_FLAG_PEER_SHUTDOWN));
-
-    if (m_pSubResp)
-    {
-        delete m_pSubResp;
-        m_pSubResp = NULL;
-    }
 
     m_lReqTime = DateTime::s_curTime;
 //     m_response.reset();
@@ -1989,19 +1998,29 @@ void HttpSession::closeConnection()
 
     //For reuse condition, need to reset the sessionhooks
     m_sessionHooks.reset();
+    
+    getStream()->wantWrite(0);
     getStream()->handlerReadyToRelease();
-    getStream()->close();
+    //getStream()->close();
 }
 
 
 void HttpSession::recycle()
 {
+    if (m_pEventObjHead)
+    {
+        UserEventNotifier::getInstance().removeSessionEvents(m_pEventObjHead, this);
+        m_pEventObjHead = NULL;
+    }
+    
     ++m_sn;
     if (getFlag(HSF_AIO_READING))
     {
+        m_iState = HSS_RECYCLING;
         if (D_ENABLED(DL_MEDIUM))
             LOG_D((getLogger(), "[%s] Setting Cancel Flag! \n", getLogId()));
         m_pAiosfcb->setFlag(AIOSFCB_FLAG_CANCEL);
+        detachStream();
         return;
     }
     if (D_ENABLED(DL_MORE))
@@ -2014,6 +2033,8 @@ void HttpSession::recycle()
         m_pAiosfcb = NULL;
     }
 #endif
+    m_iState = HSS_FREE;
+    detachStream();
     HttpResourceManager::getInstance().recycle(this);
 }
 
@@ -2998,7 +3019,13 @@ int HttpSession::flush()
         {
             if (D_ENABLED(DL_LESS))
                 LOG_D((getLogger(), "[%s] set HSS_COMPLETE flag.", getLogId()));
-            setState(HSS_COMPLETE);
+
+            if (getState() != HSS_COMPLETE)
+            {
+                setState(HSS_COMPLETE);
+                UserEventNotifier::getInstance().scheduleSessionEvent(stx_nextRequest, 0, this);
+            }
+            return ret;
         }
         else
         {
@@ -4053,5 +4080,44 @@ int HttpSession::suspendProcess()
     suspendRead();
     suspendWrite();
     return m_suspendPasscode;
+}
+
+/*
+void HttpSession::runAllEventNotifier()
+{
+    EventObj *pObj;
+    lsi_event_callback_pf   cb;
+
+    while( m_pEventObjHead && m_pEventObjHead->m_pParam == this)
+    {
+        pObj = m_pEventObjHead;
+        if (pObj->m_eventCb)
+        {
+            cb = pObj->m_eventCb;
+            pObj->m_eventCb = NULL;
+            (*cb)(pObj->m_lParam, pObj->m_pParam);
+            if ( !m_pEventObjHead )
+                return;  //all pending events removed
+        }
+        else
+            return;  //recurrsive call of runAllEventNotifier
+        assert(pObj==m_pEventObjHead);
+        m_pEventObjHead = (EventObj *)m_pEventObjHead->remove();
+        UserEventNotifier::getInstance().recycle(pObj);
+        if ( m_pEventObjHead == (EventObj *)UserEventNotifier::getInstance().end())
+            break;
+    }
+    m_pEventObjHead = NULL;
+}
+*/
+
+
+void HttpSession::runAllEventNotifier()
+{
+    if (!m_pEventObjHead || m_pEventObjHead->m_pParam != this)
+        return;
+    EventObj *pObj = m_pEventObjHead;
+    m_pEventObjHead = NULL;
+    UserEventNotifier::getInstance().runAllScheduledEvent(pObj, this);
 }
 

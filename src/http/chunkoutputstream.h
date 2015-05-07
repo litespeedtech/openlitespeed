@@ -26,7 +26,7 @@
 #define CHUNK_HEADER_SIZE   20
 #define CHUNK_TAIL_SIZE     2   //"\r\n"
 #define CHUNK_BUFSIZE       (1450 - CHUNK_HEADER_SIZE - CHUNK_TAIL_SIZE)
-#define MAX_CHUNK_SIZE      4096
+#define MAX_CHUNK_SIZE      8192
 
 class OutputStream;
 

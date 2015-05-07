@@ -16,21 +16,29 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include <util/xmlnode.h>
-#include <util/autostr.h>
-#include <util/hashstringmap.h>
 
 #include <assert.h>
 #include <ctype.h>
 #include <expat.h>
-#include <stdio.h>
 #include <string.h>
 #include <lsr/ls_strtool.h>
+#include <util/autostr.h>
+#include <util/radixtree.h>
 
 #include <limits.h>
 #include <fcntl.h>
 #include <unistd.h>
 
 #define BUF_SIZE 4096
+#define MAX_XML_VALUE_LEN (1024 * 1024 - 2)
+const int iXmlNodeRTFlag = RTFLAG_NOCONTEXT | RTFLAG_GLOBALPOOL | RTFLAG_CICMP;
+
+typedef struct xmlouthelper_s
+{
+    FILE *fd;
+    int depth;
+} xmlouthelper_t;
+
 
 class Attr
 {
@@ -45,64 +53,11 @@ public:
 
 };
 
+
 Attr::Attr(const char *name, const char *value)
     : m_name(name), m_value(value)
 {}
 
-class AttrMap: public HashStringMap<Attr *>
-{
-public:
-    AttrMap()
-        : HashStringMap<Attr * >(5)
-    {}
-    ~AttrMap();
-};
-
-AttrMap::~AttrMap()
-{
-    releaseObjects();
-}
-
-class NodeMap: public HashStringMap<XmlNodeList *>
-{
-public:
-    static int releaseNode(const void *pKey, void *pData)
-    {
-        ((XmlNodeList *)pData)->releaseObjects();
-        return 0;
-    }
-
-    NodeMap()
-        : HashStringMap<XmlNodeList * >(10, GHash::hfCiString, GHash::cmpCiString)
-    {}
-
-    ~NodeMap()
-    {
-        GHash::for_each(begin(), end(), releaseNode);
-        releaseObjects();
-    }
-    int addChild(const char *name, XmlNode *pChild);
-
-};
-
-int NodeMap::addChild(const char *name, XmlNode *pChild)
-{
-    iterator iter = find(name);
-    if (iter != end())
-        iter.second()->push_back(pChild);
-    else
-    {
-        XmlNodeList *pList = new XmlNodeList(4);
-        if (pList)
-        {
-            pList->push_back(pChild);
-            insert(name, pList);
-        }
-        else
-            return LS_FAIL;
-    }
-    return 0;
-}
 
 class XmlNodeImpl
 {
@@ -111,53 +66,94 @@ class XmlNodeImpl
 
     AutoStr m_name;
     AutoStr2 m_value;
-    XmlNode *m_pParentNode;
-    NodeMap *m_pChildrenMap;
-    AttrMap *m_pAttrMap;
+    RadixNode  *m_pNode;
+    RadixTree  *m_pAttrMap;
 
     XmlNodeImpl()
-        : m_pParentNode(NULL)
-        , m_pChildrenMap(NULL)
+        : m_pNode(NULL)
         , m_pAttrMap(NULL)
     {};
+
+
     ~XmlNodeImpl()
     {
         if (m_pAttrMap)
             delete m_pAttrMap;
-        if (m_pChildrenMap)
-            delete m_pChildrenMap;
     };
 
     int init(const char *el, const char **attr);
-    int addChild(const char *name, XmlNode *pChild)
+    int addChild(const char *name, XmlNode *pChild);
+    void initNode(XmlNodeImpl *pParent, XmlNode *pSelf)
     {
-        if (!m_pChildrenMap)
-            m_pChildrenMap = new NodeMap();
-        return m_pChildrenMap->addChild(name, pChild);
+        RadixNode *parent = (pParent == NULL ? NULL : pParent->m_pNode);
+        if (m_pNode == NULL)
+            m_pNode = RadixNode::newNode(NULL, parent, pSelf);
+        else
+        {
+            assert(m_pNode->getParent() == NULL);
+            m_pNode->setParent(parent);
+        }
     }
-
+    int nodeInited()
+    {
+        return (m_pNode == NULL ? 0 : 1);
+    }
 };
-
 
 
 int XmlNodeImpl::init(const char *el, const char **attr)
 {
+    int i;
     m_name = el;
     if ((attr[0]) && (!m_pAttrMap))
-        m_pAttrMap = new AttrMap();
-    for (int i = 0; attr[i]; i += 2)
+    {
+        m_pAttrMap = new RadixTree();
+        m_pAttrMap->setNoContext();
+        m_pAttrMap->setUseGlobalPool();
+    }
+
+    for (i = 0; attr[i]; i += 2)
     {
         Attr *pAttr = new Attr(attr[i], attr[i + 1]);
-        m_pAttrMap->insert(pAttr->getName(), pAttr);
+        if (m_pAttrMap->insert(pAttr->getName(), strlen(pAttr->getName()),
+                               pAttr) == NULL)
+            return LS_FAIL;
     }
-    return 0;
+    return LS_OK;
 }
+
+
+int XmlNodeImpl::addChild(const char *name, XmlNode *pChild)
+{
+    XmlNodeList *pList;
+    if ((pList = (XmlNodeList *)m_pNode->find(name, strlen(name),
+                                              iXmlNodeRTFlag)) != NULL)
+    {
+        pList->push_back(pChild);
+        return LS_OK;
+    }
+
+    pList = new XmlNodeList(4);
+    if (pList == NULL)
+        return LS_FAIL;
+    pList->push_back(pChild);
+    if (m_pNode->insert(NULL, name, strlen(name), pList,
+                        iXmlNodeRTFlag) == NULL)
+    {
+        delete pList;
+        return LS_FAIL;
+    }
+    return LS_OK;
+}
+
 
 XmlNode::XmlNode()
     : m_pImpl(NULL)
 {
     m_pImpl = new XmlNodeImpl();
 }
+
+
 XmlNode::~XmlNode()
 {
     delete m_pImpl;
@@ -169,33 +165,43 @@ int XmlNode::init(const char *name, const char **attr)
     return m_pImpl->init(name, attr);
 }
 
+
 const char *XmlNode::getName() const
 {
     return m_pImpl->m_name.c_str();
 }
+
 
 const char *XmlNode::getValue() const
 {
     return m_pImpl->m_value.c_str();
 }
 
+
 int XmlNode::getValueLen() const
 {
     return m_pImpl->m_value.len();
 }
 
+
 int XmlNode::addChild(const char *name, XmlNode *pChild)
 {
-    m_pImpl->addChild(name, pChild);
-    assert(pChild->m_pImpl->m_pParentNode == NULL);
-    pChild->m_pImpl->m_pParentNode = this;
+    if (m_pImpl->nodeInited() == 0)
+        m_pImpl->initNode(NULL, this);
+    if (m_pImpl->addChild(name, pChild) == LS_FAIL)
+        return LS_FAIL;
+    pChild->m_pImpl->initNode(m_pImpl, pChild);
     return 0;
 }
 
+
 XmlNode *XmlNode::getParent() const
 {
-    return m_pImpl->m_pParentNode;
+    if (m_pImpl->m_pNode == NULL)
+        return NULL;
+    return (XmlNode *)m_pImpl->m_pNode->getParentObj();
 }
+
 
 int XmlNode::setValue(const char *value, int len)
 {
@@ -203,24 +209,22 @@ int XmlNode::setValue(const char *value, int len)
     return 0;
 }
 
+
 const XmlNode *XmlNode::getChild(const char *name, int bOptional) const
 {
-    //FIXME: When we start to stop using the XML,
-    //Change back to the right value
-    //const XmlNode* defaultValue = NULL;
-    const XmlNode *defaultValue = NULL;
+    XmlNodeList *ptr;
+    if (m_pImpl->m_pNode->getNumChildren() != 0)
+    {
+        ptr = (XmlNodeList *)m_pImpl->m_pNode->find(name, strlen(name),
+                                                    iXmlNodeRTFlag);
+        if (ptr != NULL)
+            return *(ptr->begin());
+    }
     if (bOptional)
-        defaultValue = this;
-    NodeMap::iterator pos;
-    if (!m_pImpl->m_pChildrenMap)
-        return defaultValue;
-
-    pos = m_pImpl->m_pChildrenMap->find(name);
-    if (pos != m_pImpl->m_pChildrenMap->end())
-        return *(pos.second()->begin());
-    else
-        return defaultValue;
+        return this;
+    return NULL;
 }
+
 
 const char *XmlNode::getChildValue(const char *name, int bKeyName) const
 {
@@ -236,6 +240,7 @@ const char *XmlNode::getChildValue(const char *name, int bKeyName) const
     return NULL;
 }
 
+
 int XmlNode::getChildValueLen(const char *name, int bKeyName) const
 {
     if (bKeyName)
@@ -245,6 +250,7 @@ int XmlNode::getChildValueLen(const char *name, int bKeyName) const
         return pNode->getValueLen();
     return 0;
 }
+
 
 static long long getLongValue(const char *pValue, int base = 10)
 {
@@ -278,9 +284,7 @@ long long XmlNode::getLongValue(const char *pTag,
         //        getLogId(), pTag, pValue, def ));
         return def;
     }
-
     return val;
-
 }
 
 
@@ -289,93 +293,108 @@ XmlNode *XmlNode::getChild(const char *name, int bOptional)
     return (XmlNode *)((const XmlNode *)this)->getChild(name, bOptional);
 }
 
+
 const XmlNodeList *XmlNode::getChildren(const char *name) const
 {
-    NodeMap::iterator pos;
-    if (!m_pImpl->m_pChildrenMap)
+    if (m_pImpl->m_pNode->getNumChildren() == 0)
         return NULL;
-    pos = m_pImpl->m_pChildrenMap->find(name);
-    if (pos != m_pImpl->m_pChildrenMap->end())
-        return pos.second();
-    else
-        return NULL;
+    return (XmlNodeList *)m_pImpl->m_pNode->find(name, strlen(name),
+                                                 iXmlNodeRTFlag);
 }
+
 
 int XmlNode::hasChild()
 {
-    if (!m_pImpl->m_pChildrenMap)
+    if (m_pImpl->m_pNode == NULL)
         return 0;
-    else
-        return 1;
+    return (m_pImpl->m_pNode->getNumChildren() > 0 ? 1 : 0);
 }
+
 
 int XmlNode::getAllChildren(XmlNodeList &list)
 {
     return ((const XmlNode *)this)->getAllChildren(list);
 }
 
+
+static int addListToList(void *pObj, void *pUData, const char *pKey,
+                         size_t iKeyLen)
+{
+    XmlNodeList *pChild = (XmlNodeList *)pObj;
+    XmlNodeList *pList = (XmlNodeList *)pUData;
+    pList->push_back(*pChild);
+    return LS_OK;
+}
+
+
 int XmlNode::getAllChildren(XmlNodeList &list) const
 {
-    int count = 0;
-    NodeMap::iterator pos;
-    if (!m_pImpl->m_pChildrenMap)
+    int count = list.size();
+    if (m_pImpl->m_pNode == NULL)
         return 0;
-    for (pos = m_pImpl->m_pChildrenMap->begin();
-         pos != m_pImpl->m_pChildrenMap->end();
-         pos = m_pImpl->m_pChildrenMap->next(pos))
-    {
-        const XmlNodeList *pList = pos.second();
-        count += pList->size();
-        list.push_back(*pList);
-    }
-    return count;
+    else if (m_pImpl->m_pNode->getNumChildren() == 0)
+        return 0;
+    else if (m_pImpl->m_pNode->for_each_child2(addListToList, &list) == 0)
+        return 0;
+    return list.size() - count;
 }
+
 
 const char *XmlNode::getAttr(const char *name) const
 {
-    AttrMap::iterator pos;
-    if (!m_pImpl->m_pAttrMap)
+    Attr *ptr;
+    if (m_pImpl->m_pAttrMap == NULL)
         return NULL;
-    pos = m_pImpl->m_pAttrMap->find(name);
-    if (pos != m_pImpl->m_pAttrMap->end())
-        return pos.second()->getValue();
-    else
-        return NULL;
+    ptr = (Attr *)m_pImpl->m_pAttrMap->find(name, strlen(name));
+    if (ptr != NULL)
+        return ptr->getValue();
+    return NULL;
 }
 
-const AttrMap *XmlNode::getAllAttr() const
+
+static int printAttrChild(void *pObj, void *pUData, const char *pKey,
+                          size_t iKeyLen)
 {
-    return m_pImpl->m_pAttrMap;
+    Attr *ptr = (Attr *)pObj;
+    FILE *fd = (FILE *)pUData;
+    fprintf(fd, " %.*s=\"%s\"", iKeyLen, pKey, ptr->getValue());
+    return LS_OK;
 }
+
+
+static int printChild(void *pObj, void *pUData, const char *pKey,
+                      size_t iKeyLen)
+{
+    XmlNodeList::const_iterator iter;
+    XmlNodeList *pList = (XmlNodeList *)pObj;
+    xmlouthelper_t *pHelper = (xmlouthelper_t *)pUData;
+    FILE *fd = pHelper->fd;
+    int depth = pHelper->depth;
+    for (iter = pList->begin(); iter != pList->end(); ++iter)
+        (*iter)->xmlOutput(fd, depth + 1);
+    return LS_OK;
+}
+
 
 int XmlNode::xmlOutput(FILE *fd, int depth) const
 {
+    xmlouthelper_t helper;
     for (int i = 0; i <= depth; ++ i)
         fprintf(fd, " ");
     fprintf(fd, "<%s", getName());
-    if (m_pImpl->m_pAttrMap && !m_pImpl->m_pAttrMap->empty())
-    {
-        AttrMap::iterator pos;
-        for (pos = m_pImpl->m_pAttrMap->begin();
-             pos != m_pImpl->m_pAttrMap->end();
-             pos = m_pImpl->m_pAttrMap->next(pos))
-            fprintf(fd, " %s=\"%s\"", pos.first(), pos.second()->getValue());
-    }
+    if (m_pImpl->m_pAttrMap != NULL)
+        m_pImpl->m_pAttrMap->for_each2(printAttrChild, fd);
+
     fprintf(fd, ">");
-    fprintf(fd, "%s", getValue());
-    if (m_pImpl->m_pChildrenMap && !m_pImpl->m_pChildrenMap->empty())
+    if (m_pImpl->m_value.len() != 0)
+        fprintf(fd, "%s", getValue());
+
+    if (m_pImpl->m_pNode->getNumChildren() != 0)
     {
         fprintf(fd, "\n");
-        NodeMap::iterator pos;
-        for (pos = m_pImpl->m_pChildrenMap->begin();
-             pos != m_pImpl->m_pChildrenMap->end();
-             pos = m_pImpl->m_pChildrenMap->next(pos))
-        {
-            const XmlNodeList *pList = pos.second();
-            XmlNodeList::const_iterator iter;
-            for (iter = pList->begin(); iter != pList->end(); ++iter)
-                (*iter)->xmlOutput(fd, depth + 1);
-        }
+        helper.depth = depth;
+        helper.fd = fd;
+        m_pImpl->m_pNode->for_each_child2(printChild, &helper);
         for (int i = 0; i <= depth; ++ i)
             fprintf(fd, " ");
     }
@@ -383,7 +402,6 @@ int XmlNode::xmlOutput(FILE *fd, int depth) const
     return 0;
 }
 
-#define MAX_XML_VALUE_LEN (1024 * 1024 - 2)
 
 class XmlTree
 {
@@ -396,8 +414,7 @@ public:
         m_curValue.prealloc(MAX_XML_VALUE_LEN);
     }
     ~XmlTree()
-    {
-    };
+    {};
 
     void startElement(const char *el, const char **attr);
     void endElement(const char *el);
@@ -408,6 +425,7 @@ public:
     AutoStr2 m_curValue;
     bool    m_setValue;
 };
+
 
 void XmlTree::startElement(const char *el, const char **attr)
 {
@@ -421,6 +439,7 @@ void XmlTree::startElement(const char *el, const char **attr)
         m_pCurNode = pNewNode;
     }
 }
+
 
 void XmlTree::endElement(const char *el)
 {
@@ -444,6 +463,7 @@ void XmlTree::endElement(const char *el)
     m_pCurNode = m_pCurNode->getParent();
 }
 
+
 void XmlTree::charHandler(const char *el, int len)
 {
     if (!m_setValue)
@@ -465,11 +485,13 @@ void XmlTree::charHandler(const char *el, int len)
     }
 }
 
+
 static void startElement(void *data, const char *el, const char **attr)
 {
     XmlTree *pTree = (XmlTree *)data;
     pTree->startElement(el, attr);
 }
+
 
 static void endElement(void *data, const char *el)
 {
@@ -477,11 +499,13 @@ static void endElement(void *data, const char *el)
     pTree->endElement(el);
 }
 
+
 static void charHandler(void *data, const char *el, int len)
 {
     XmlTree *pTree = (XmlTree *)data;
     pTree->charHandler(el, len);
 }
+
 
 XmlNode *XmlTreeBuilder::parse(const char *pFilePath, char *pError,
                                int errBufLen)

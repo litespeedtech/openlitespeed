@@ -43,6 +43,7 @@
 #include <util/gpath.h>
 #include <util/httputil.h>
 #include <util/iovec.h>
+#include <util/radixtree.h>
 #include <util/vmembuf.h>
 
 #include <ctype.h>
@@ -138,7 +139,7 @@ HttpReq::HttpReq()
     ls_str_set(&m_newHost, NULL, 0);
     m_pUrls = (ls_str_pair_t *)malloc(sizeof(ls_str_pair_t) * (MAX_REDIRECTS + 1));
     memset(m_pUrls, 0, sizeof(ls_str_pair_t) * (MAX_REDIRECTS + 1));
-    m_envHash = NULL;
+    m_pEnv = NULL;
     m_pAuthUser = NULL;
     m_pRange = NULL;
 }
@@ -159,7 +160,7 @@ HttpReq::~HttpReq()
     if (m_pUrls)
         free(m_pUrls);
     m_pUrls = NULL;
-    m_envHash = NULL;
+    m_pEnv = NULL;
     m_pAuthUser = NULL;
     m_pRange = NULL;
 }
@@ -191,7 +192,7 @@ void HttpReq::reset()
     ls_str_set(&m_pathInfo, NULL, 0);
     ls_str_set(&m_newHost, NULL, 0);
     memset(m_pUrls, 0, sizeof(ls_str_pair_t) * (MAX_REDIRECTS + 1));
-    m_envHash = NULL;
+    m_pEnv = NULL;
     m_pAuthUser = NULL;
     m_pRange = NULL;
 }
@@ -2268,26 +2269,23 @@ ls_str_pair_t *HttpReq::addEnv(const char *pOrgKey, int orgKeyLen,
 {
     int keyLen = 0;
     const char *pKey = findEnvAlias(pOrgKey, orgKeyLen, keyLen);
-    ls_hash_iter iter;
-    ls_str_t pCompKey;
     ls_str_pair_t *sp;
-    if (!m_envHash)
-        m_envHash = ls_hash_new(10, ls_str_hfci, ls_str_cmpci, m_pPool);
 
-    ls_str_set(&pCompKey, (char *)pKey, keyLen);
-    if ((iter = ls_hash_find(m_envHash, &pCompKey)) != NULL)
-    {
-        sp = (ls_str_pair_t *)ls_hash_getdata(iter);
-        if (strncasecmp(ls_str_cstr(&sp->value), pValue, valLen) != 0)
-            ls_str_xsetstr(&sp->value, pValue, valLen, m_pPool);
-    }
-    else
+    if (m_pEnv == NULL)
+        m_pEnv = RadixNode::newNode(m_pPool, NULL, NULL);
+
+    if ((sp = (ls_str_pair_t *)m_pEnv->find(pKey, keyLen)) == NULL)
     {
         sp = (ls_str_pair_t *)ls_xpool_alloc(m_pPool, sizeof(ls_str_pair_t));
         ls_str_x(&sp->key, pKey, keyLen, m_pPool);
         ls_str_x(&sp->value, pValue, valLen, m_pPool);
-        ls_hash_insert(m_envHash, &sp->key, sp);
+        if (m_pEnv->insert(m_pPool, ls_str_cstr(&sp->key),
+                           ls_str_len(&sp->key), sp) == NULL)
+            return NULL;
     }
+    else if (strncasecmp(ls_str_cstr(&sp->value), pValue, valLen) != 0)
+        ls_str_xsetstr(&sp->value, pValue, valLen, m_pPool);
+    ++m_iEnvCount;
     return sp;
 }
 
@@ -2297,53 +2295,43 @@ const char *HttpReq::getEnv(const char *pOrgKey, int orgKeyLen,
 {
     int keyLen = 0;
     const char *pKey = findEnvAlias(pOrgKey, orgKeyLen, keyLen);
-    ls_str_t pKeyStr;
     ls_str_pair_t *sp;
-    ls_hash_iter iter;
-    if (m_envHash != NULL)
+
+    if ((m_pEnv != NULL)
+        && ((sp = (ls_str_pair_t *)m_pEnv->find(pKey, keyLen)) != NULL))
     {
-        ls_str_set(&pKeyStr, (char *)pKey, keyLen);
-        if ((iter = ls_hash_find(m_envHash, &pKeyStr)) != NULL)
-        {
-            sp = (ls_str_pair_t *)ls_hash_getdata(iter);
-            valLen = ls_str_len(&sp->value);
-            return ls_str_cstr(&sp->value);
-        }
+        valLen = ls_str_len(&sp->value);
+        return ls_str_cstr(&sp->value);
     }
     return NULL;
 }
 
 
-const ls_hash_t *HttpReq::getEnvHash() const
+const RadixNode *HttpReq::getEnvNode() const
 {
-    return m_envHash;
+    return m_pEnv;
 }
 
 
 int HttpReq::getEnvCount()
 {
-    if (m_envHash)
-        return ls_hash_size(m_envHash);
-    return 0;
+    return m_iEnvCount;
 }
 
 
 void HttpReq::unsetEnv(const char *pKey, int keyLen)
 {
-    ls_str_t ptr;
     ls_str_pair_t *sp;
-    ls_hash_iter iter;
-    if (m_envHash)
+
+    if (m_pEnv != NULL)
     {
-        ls_str_set(&ptr, (char *)pKey, keyLen);
-        iter = ls_hash_find(m_envHash, &ptr);
-        if (!iter)
+        sp = (ls_str_pair_t *)m_pEnv->erase(pKey, keyLen);
+        if (sp == NULL)
             return;
-        sp = (ls_str_pair_t *)ls_hash_getdata(iter);
-        ls_hash_erase(m_envHash, iter);
         ls_str_xd(&sp->key, m_pPool);
         ls_str_xd(&sp->value, m_pPool);
         ls_xpool_free(m_pPool, sp);
+        --m_iEnvCount;
     }
 }
 

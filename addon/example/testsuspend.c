@@ -45,7 +45,7 @@ int httpRelease(void *data)
     MyMData *myData = (MyMData *)data;
     if (myData)
     {
-        g_api->remove_event(&myData->notifier_pointer);
+        //g_api->remove_event(&myData->notifier_pointer);
         free(myData);
     }
 
@@ -66,7 +66,7 @@ void timer_callback(void *session)
     if (len > 1 && strstr(qs, "11"))
         g_api->register_req_handler((lsi_session_t *)session, &MNAME, 12);
 
-    g_api->notify_event(&myData->notifier_pointer);
+    g_api->notify_event(myData->notifier_pointer);
 }
 
 void *thread_callback(void *session)
@@ -108,7 +108,7 @@ int suspendFunc(lsi_cb_param_t *rec)
 // #endif
 
         pthread_t mythread;
-        myData->notifier_pointer = g_api->add_session_resume_event(rec->_session, &MNAME);
+        myData->notifier_pointer = g_api->create_session_resume_event(rec->_session, &MNAME);
         if (myData->notifier_pointer)
         {
             int rc = pthread_create(&mythread, NULL, thread_callback,
