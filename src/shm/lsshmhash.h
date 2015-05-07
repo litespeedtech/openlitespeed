@@ -131,6 +131,7 @@ typedef struct
     LsShmSize_t     x_iSize;
     LsShmSize_t     x_iFullFactor;
     LsShmSize_t     x_iGrowFactor;
+    LsShmSize_t     x_iUserSize;
     LsShmOffset_t   x_iHIdx;
     LsShmOffset_t   x_iBitMap;
     LsShmOffset_t   x_iHIdxNew; // in rehash()
@@ -138,11 +139,31 @@ typedef struct
     LsShmOffset_t   x_iWorkIterOff;
     LsShmOffset_t   x_iLruHdr;
     LsShmOffset_t   x_iLockOffset;
+    LsShmOffset_t   x_iUserOff;
     uint8_t         x_iMode;
     uint8_t         x_iLruMode; // lru=1, wlru=2, xlru=3
     uint8_t         x_unused[2];
     LsShmHTableStat x_stat;         // hash statistics
 } LsShmHTable;
+
+typedef struct
+{
+    uint16_t    m_iFlags;
+    uint8_t     m_iRetcode;
+    uint8_t     m_notused;
+    void       *m_pRet;     // returned stuff
+    void       *m_pMisc;    // miscellaneous stuff
+    uint64_t    m_value;
+} LsShmUpdOpt;
+
+#define UPDRET_DONE         0
+#define UPDRET_NOTFOUND     1
+#define UPDRET_NONNUMERIC   2
+#define UPDRET_CASFAIL      3
+#define UPDRET_APPEND       10
+#define UPDRET_PREPEND      11
+#define UPDRET_NONE         20
+
 
 class LsShmHash : public ls_shmhash_s, ls_shmobject_s
 {
@@ -178,6 +199,8 @@ public:
               const char *name, LsShmSize_t init_size, hash_fn hf, val_comp vc, int lru_mode);
     virtual ~LsShmHash();
 
+    int init(size_t init_size);
+    
     static LsShmHash *checkHTable(GHash::iterator itor, LsShmPool *pool,
                                   const char *name, LsShmHash::hash_fn hf, LsShmHash::val_comp vc);
 
@@ -347,10 +370,10 @@ public:
         return iterOff;
     }
 
-    iteroffset updateIterator(ls_str_pair_t *pParms)
+    iteroffset updateIterator(ls_str_pair_t *pParms, LsShmUpdOpt *pOpt = NULL)
     {
         autoLockChkRehash();
-        iteroffset iterOff = (*m_update)(this, pParms);
+        iteroffset iterOff = (*m_update)(this, pParms, pOpt);
         autoUnlock();
         return iterOff;
     }
@@ -387,8 +410,28 @@ public:
     }
 
     LsShmOffset_t lruHdrOff() const 
-    {   
+    {
         return getHTable()->x_iLruHdr; 
+    }
+
+    LsShmOffset_t getUserOff() const
+    {   
+        return getHTable()->x_iUserOff; 
+    }
+
+    void setUserOff(LsShmOffset_t off)
+    {   
+        getHTable()->x_iUserOff = off; 
+    }
+
+    LsShmSize_t getUserSize() const
+    {   
+        return getHTable()->x_iUserSize; 
+    }
+
+    void setUserSize(LsShmSize_t size)
+    {   
+        getHTable()->x_iUserSize = size; 
     }
 
     iteroffset begin();
@@ -462,7 +505,7 @@ protected:
     typedef iteroffset (*hash_get)(LsShmHash *pThis, ls_str_pair_t *pParms, int *pFlag);
     typedef iteroffset (*hash_insert)(LsShmHash *pThis, ls_str_pair_t *pParms);
     typedef iteroffset (*hash_set)(LsShmHash *pThis, ls_str_pair_t *pParms);
-    typedef iteroffset (*hash_update)(LsShmHash *pThis, ls_str_pair_t *pParms);
+    typedef iteroffset (*hash_update)(LsShmHash *pThis, ls_str_pair_t *pParms, LsShmUpdOpt *pOpt);
 
     uint32_t getIndex(uint32_t k, uint32_t n)
     {   return k % n ; }
@@ -509,13 +552,13 @@ protected:
     static iteroffset getNum(LsShmHash *pThis, ls_str_pair_t *pParms, int *pFlag);
     static iteroffset insertNum(LsShmHash *pThis, ls_str_pair_t *pParms);
     static iteroffset setNum(LsShmHash *pThis, ls_str_pair_t *pParms);
-    static iteroffset updateNum(LsShmHash *pThis, ls_str_pair_t *pParms);
+    static iteroffset updateNum(LsShmHash *pThis, ls_str_pair_t *pParms, LsShmUpdOpt *pOpt);
 
     static iteroffset findPtr(LsShmHash *pThis, ls_str_pair_t *pParms);
     static iteroffset getPtr(LsShmHash *pThis, ls_str_pair_t *pParms, int *pFlag);
     static iteroffset insertPtr(LsShmHash *pThis,ls_str_pair_t *pParms);
     static iteroffset setPtr(LsShmHash *pThis, ls_str_pair_t *pParms);
-    static iteroffset updatePtr(LsShmHash *pThis, ls_str_pair_t *pParms);
+    static iteroffset updatePtr(LsShmHash *pThis, ls_str_pair_t *pParms, LsShmUpdOpt *pOpt);
 
     //
     //  @brief eraseIterator_helper
@@ -615,6 +658,9 @@ protected:
         }
         return iterOff;
     }
+
+    static iteroffset doExpand(LsShmHash *pThis,
+        iteroffset iterOff, LsShmHKey key, ls_str_pair_t *pParms, uint16_t flags);
 
     void setIterData(iterator iter, const void *pValue)
     {

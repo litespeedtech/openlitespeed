@@ -505,6 +505,8 @@ static int ReleaseMydata(void *data)
     if (pData->notifier_pointer)
         g_api->remove_event(&pData->notifier_pointer);
 
+    pData->notifier_pointer = NULL;
+
     ls_loopbuf_d(&pData->buff);
 
     delete pData;
@@ -2293,7 +2295,7 @@ static int RecvReqHeaderCheck(lsi_cb_param_t *rec)
     pMyData->cfg_s = cfg_s;
     pMyData->userAgent = g_api->get_req_header_by_id(rec->_session,
                           LSI_REQ_HEADER_USERAGENT, &pMyData->uaLen);
-    pMyData->notifier_pointer = 0;
+    pMyData->notifier_pointer = NULL;
     g_api->set_module_data(rec->_session, &MNAME, LSI_MODULE_DATA_HTTP,
                            pMyData);
     RequestRouting::Response response_category =
@@ -2406,7 +2408,7 @@ void EventCb(void *session_)
             g_api->log(session, LSI_LOG_DEBUG,
                        "[%s]ps_event_cb register_req_handler OK.\n", ModuleName);
         }
-        g_api->notify_event(&pMyData->notifier_pointer);
+        g_api->notify_event(pMyData->notifier_pointer);
         g_api->log(session, LSI_LOG_DEBUG,
                    "[%s]EventCb called, eventObj=%p pData=%p.\n",
                        ModuleName, pMyData->notifier_pointer, pMyData);
@@ -2416,7 +2418,7 @@ void EventCb(void *session_)
          * called, it will be removed.
          */
         //g_api->remove_event(&pMyData->notifier_pointer);
-        //assert(pMyData->notifier_pointer == 0);
+        pMyData->notifier_pointer = NULL;
     }
 }
 

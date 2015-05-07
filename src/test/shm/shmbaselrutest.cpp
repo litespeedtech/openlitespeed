@@ -23,7 +23,7 @@
 #include <string.h>
 #include "test/unittest-cpp/UnitTest++/src/UnitTest++.h"
 
-static const char *g_pShmDirName = LsShmLock::getDefaultShmDir();
+static const char *g_pShmDirName = LsShm::getDefaultShmDir();
 static const char *g_pShmName = "SHMLRUTEST";
 static const char *g_pHashName = "SHMLRUHASH";
 

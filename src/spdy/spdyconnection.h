@@ -70,15 +70,6 @@ public:
     void move2ReponQue(SpdyStream *pSpdyStream);
     int timerRoutine();
 
-    LOG4CXX_NS::Logger *getLogger() const
-    {
-        return getStream()->getLogger();
-    }
-
-    const char *getLogId()
-    {
-        return getStream()->getLogId();
-    }
     void continueWrite()
     {   getStream()->continueWrite();   }
 

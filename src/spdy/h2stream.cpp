@@ -53,7 +53,7 @@ int H2Stream::init(uint32_t StreamID, H2Connection *pH2Conn, uint8_t flags,
                    HioHandler *pHandler, Priority_st *pPriority)
 {
     HioStream::reset(DateTime::s_curTime);
-    pHandler->assignStream(this);
+    pHandler->attachStream(this);
     clearLogId();
 
     setState(HIOS_CONNECTED);
@@ -219,7 +219,7 @@ int H2Stream::close()
     //    getHandler()->recycle();
     //    setHandler( NULL );
     //}
-    //m_pH2Conn->recycleStream( m_uiStreamID );
+    m_pH2Conn->recycleStream( m_uiStreamID );
     return 0;
 }
 

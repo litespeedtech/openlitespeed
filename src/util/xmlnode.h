@@ -18,8 +18,6 @@
 #ifndef XMLNODE_H
 #define XMLNODE_H
 
-
-
 #include <stdio.h>
 #include <util/gpointerlist.h>
 
@@ -37,7 +35,6 @@ public:
 };
 
 
-class AttrMap;
 class XmlNode
 {
 private:
@@ -60,7 +57,6 @@ public:
     const char *getChildValue(const char *name, int bKeyName = 0) const;
     int getChildValueLen(const char *name, int bKeyName = 0) const;
     const char *getAttr(const char *name) const;
-    const AttrMap *getAllAttr() const;
     const char *getName() const;
     const char *getValue() const;
     int getValueLen() const;
@@ -70,7 +66,6 @@ public:
     int setValue(const char *value, int len);
     XmlNode *getParent() const;
     int xmlOutput(FILE *fd, int depth) const;
-
 };
 
 class XmlTreeBuilder

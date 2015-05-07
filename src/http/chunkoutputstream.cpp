@@ -128,6 +128,8 @@ int ChunkOutputStream::write(const char *pBuf, int size)
         case 0:
             left -= m_iLastBufLen;
             pBuf += m_iLastBufLen;
+            m_pLastBufBegin = NULL;
+            m_iLastBufLen = 0;
             if (!left)
                 return size;
             break;

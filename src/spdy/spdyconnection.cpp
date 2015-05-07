@@ -491,7 +491,7 @@ int SpdyConnection::processSynStreamFrame(SpdyFrameHeader *pHeader)
     {
         appendReqHeaders(pStream, headerCount);
         pStream->onInitConnected();
-        if (pStream->getState() == HIOS_DISCONNECTED)
+        if (pStream->getState() != HIOS_CONNECTED)
             recycleStream(pStream->getStreamID());
     }
     else
@@ -977,7 +977,7 @@ int SpdyConnection::timerRoutine()
     {
         itn = m_mapStream.next(it);
         it.second()->onTimer();
-        if (it.second()->getState() == HIOS_DISCONNECTED)
+        if (it.second()->getState() != HIOS_CONNECTED)
             recycleStream(it);
         it = itn;
     }
@@ -1423,7 +1423,7 @@ int SpdyConnection::onWriteEx()
                 if (pSpdyStream->isWantWrite() && (pSpdyStream->getWindowOut() > 0))
                     ++wantWrite;
             }
-            if (pSpdyStream->getState() == HIOS_DISCONNECTED)
+            if (pSpdyStream->getState() != HIOS_CONNECTED)
                 recycleStream(pSpdyStream->getStreamID());
             it = itn;
         }
@@ -1443,6 +1443,9 @@ void SpdyConnection::recycle()
         LOG_D((getLogger(), "[%s] SpdyConnection::recycle()",
                getLogId()));
     }
+    if ( m_mapStream.size() > 0 )
+        releaseAllStream();
+    detachStream();
     delete this;
 }
 

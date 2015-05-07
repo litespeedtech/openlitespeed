@@ -779,12 +779,13 @@ int H2Connection::decodeHeaders(unsigned char *pSrc, int length, unsigned char i
         pStream->setContentlen(contentLen);
     pStream->setReqHeaderEnd(1);
     pStream->appendInputData("\r\n", 2);
+    free(uri);
+
     pStream->onInitConnected();
 
-    if (pStream->getState() == HIOS_DISCONNECTED)
+    if (pStream->getState() != HIOS_CONNECTED)
         recycleStream(pStream->getStreamID());
 
-    free(uri);
     return 0;
 }
 
@@ -1299,7 +1300,7 @@ int H2Connection::timerRoutine()
     {
         itn = m_mapStream.next(it);
         it.second()->onTimer();
-        if (it.second()->getState() == HIOS_DISCONNECTED)
+        if (it.second()->getState() != HIOS_CONNECTED)
             recycleStream(it);
         it = itn;
     }
@@ -1453,7 +1454,7 @@ int H2Connection::onWriteEx()
             if (pH2Stream->isWantWrite() && (pH2Stream->getWindowOut() > 0))
                 ++wantWrite;
         }
-        if (pH2Stream->getState() == HIOS_DISCONNECTED)
+        if (pH2Stream->getState() != HIOS_CONNECTED)
             recycleStream(pH2Stream->getStreamID());
         it = itn;
     }
@@ -1471,6 +1472,9 @@ void H2Connection::recycle()
 {
     if (D_ENABLED(DL_MORE))
         LOG_D((getLogger(), "[%s] H2Connection::recycle()", getLogId()));
+    if ( m_mapStream.size() > 0 )
+        releaseAllStream();
+    detachStream();
     delete this;
 }
 

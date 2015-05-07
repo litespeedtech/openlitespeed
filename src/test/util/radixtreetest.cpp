@@ -60,7 +60,7 @@ const char *pInputs[] =
 };
 const int iInputLen = 27;
 
-static int test_for_each(void *pObj)
+static int test_for_each(void *pObj, const char *pKey, size_t iKeyLen)
 {
 #ifdef RADIXTREE_DEBUG
     printf("%p\n", pObj);
@@ -69,7 +69,8 @@ static int test_for_each(void *pObj)
 }
 
 
-static int test_for_each2(void *pObj, void *pUData)
+static int test_for_each2(void *pObj, void *pUData, const char *pKey,
+                          size_t iKeyLen)
 {
     int *p = (int *)pUData;
 #ifdef RADIXTREE_DEBUG
@@ -83,7 +84,9 @@ void doTest(RadixTree *pTree, char **pDynamicInputs, int count)
 {
     int i;
     RadixTree tree2;
+#ifdef RADIXTREE_DEBUG
     pTree->printTree();
+#endif
     for (i = 0; i < count; ++i)
     {
 #ifdef RADIXTREE_DEBUG
@@ -131,19 +134,36 @@ void doTest(RadixTree *pTree, char **pDynamicInputs, int count)
     const char *pNext = (const char *)memchr(pBegin + 1, '/',
                                              strlen(pBegin) - 1);
     void *pOut, *data = pTree->bestMatch(pDynamicInputs[4],
-                                  strlen(pDynamicInputs[4]));
-
+                                         strlen(pDynamicInputs[4]));
     CHECK((pOut = pTree->bestMatch(pBegin, pNext - pBegin)) == NULL);
 #ifdef RADIXTREE_DEBUG
     printf("Should be null: %p\n", pOut);
 #endif
-    while ((pNext = (const char *)memchr(pNext + 1, '/',
-                                         strlen(pNext) - 1)) != NULL)
+    if (pTree->getNoContext() == 0)
     {
-        CHECK((pOut = pTree->bestMatch(pBegin, pNext - pBegin)) == data);
+        while ((pNext = (const char *)memchr(pNext + 1, '/',
+                                             strlen(pNext) - 1)) != NULL)
+        {
+            CHECK((pOut = pTree->bestMatch(pBegin, pNext - pBegin)) == data);
 #ifdef RADIXTREE_DEBUG
-        printf("Should match: %p %p\n", pOut, data);
+            printf("Should match: %p %p\n", pOut, data);
 #endif
+        }
+    }
+    else
+    {
+        pNext = (const char *)memchr(pNext + 1, '/', strlen(pNext) - 1);
+        CHECK((pOut = pTree->bestMatch(pBegin, pNext - pBegin)) == data);
+        while ((pNext = (const char *)memchr(pNext + 1, '/',
+                                             strlen(pNext) - 2)) != NULL)
+        {
+            CHECK((pOut = pTree->bestMatch(pBegin, pNext - pBegin)) == NULL);
+#ifdef RADIXTREE_DEBUG
+            printf("Should be NULL: %p\n", pOut);
+#endif
+        }
+        CHECK((pOut = pTree->bestMatch(pBegin, strlen(pBegin))) == &tree2);
+
     }
 
     CHECK(pTree->for_each(test_for_each) == count);
@@ -151,7 +171,53 @@ void doTest(RadixTree *pTree, char **pDynamicInputs, int count)
     CHECK(pTree->for_each2(test_for_each2, &p) == count);
 }
 
-TEST(stringtreetest)
+void setupTest(char **pDynamicInputs, int count)
+{
+    int i, iNumFlags = 1 << 3;
+    RadixTree *pContTree, *pPtrTree;
+    for (i = 0; i < iNumFlags; ++i)
+    {
+        pContTree = new RadixTree(RTMODE_CONTIGUOUS);
+        pPtrTree = new RadixTree(RTMODE_POINTER);
+        if ((i & RTFLAG_REGEXCMP) != 0)
+        {
+            pContTree->setRegexCmp();
+            pPtrTree->setRegexCmp();
+        }
+        if ((i & RTFLAG_NOCONTEXT) != 0)
+        {
+            pContTree->setNoContext();
+            pPtrTree->setNoContext();
+        }
+        else
+        {
+            pContTree->setRootLabel("/", 1);
+            pPtrTree->setRootLabel("/", 1);
+        }
+        if ((i & RTFLAG_GLOBALPOOL) != 0)
+        {
+            pContTree->setUseGlobalPool();
+            pPtrTree->setUseGlobalPool();
+        }
+
+        printf("CONTIGUOUS TEST: RegexCmp: %d, NoContext: %d, GlobalPool: %d\n",
+               pContTree->getRegexCmp() != 0, pContTree->getNoContext() != 0,
+               pContTree->getUseGlobalPool() != 0);
+        doTest(pContTree, pDynamicInputs, count);
+        printf("END CONTIGUOUS TEST\n");
+
+        printf("POINTER TEST: RegexCmp: %d, NoContext: %d, GlobalPool: %d\n",
+               pPtrTree->getRegexCmp() != 0, pPtrTree->getNoContext() != 0,
+               pPtrTree->getUseGlobalPool() != 0);
+        doTest(pPtrTree, pDynamicInputs, count);
+        printf("END POINTER TEST\n");
+
+        delete pContTree;
+        delete pPtrTree;
+    }
+}
+
+TEST(radixtreetest)
 {
     printf("Start Radix Tree Test!\n");
     int i, count = iInputLen, iDynamicCount = iInputLen;
@@ -159,18 +225,7 @@ TEST(stringtreetest)
     for (i = 0; i < iDynamicCount; ++i)
         pDynamicInputs[i] = strdup(pInputs[i]);
 
-    RadixTree *pContTree = new RadixTree(RTMODE_CONTIGUOUS);
-    RadixTree *pPtrTree = new RadixTree(RTMODE_POINTER);
-    pContTree->setRootLabel("/", 1);
-    pPtrTree->setRootLabel("/", 1);
-    printf("CONTIGUOUS TEST\n");
-    doTest(pContTree, pDynamicInputs, count);
-    printf("END CONTIGUOUS TEST\n");
-    printf("POINTER TEST\n");
-    doTest(pPtrTree, pDynamicInputs, count);
-    printf("END POINTER TEST\n");
-    delete pContTree;
-    delete pPtrTree;
+    setupTest(pDynamicInputs, count);
 
     for (i = 0; i < iDynamicCount; ++i)
         free(pDynamicInputs[i]);

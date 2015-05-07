@@ -25,6 +25,7 @@
 #include <http/httpresp.h>
 #include <http/ntwkiolink.h>
 #include <http/sendfileinfo.h>
+#include <http/usereventnotifier.h>
 #include <lsiapi/internal.h>
 #include <lsiapi/lsimoduledata.h>
 
@@ -41,6 +42,7 @@ class Aiosfcb;
 
 enum  HttpSessionState
 {
+    HSS_FREE,
     HSS_WAITING,
     HSS_READING,
     HSS_READING_BODY,
@@ -54,6 +56,7 @@ enum  HttpSessionState
     HSS_AIO_PENDING,
     HSS_AIO_COMPLETE,
     HSS_COMPLETE,
+    HSS_RECYCLING,
 };
 
 enum HSPState
@@ -130,7 +133,6 @@ class HttpSession : public LsiSession, public HioHandler,
 
     ChunkInputStream     *m_pChunkIS;
     ChunkOutputStream    *m_pChunkOS;
-    HttpResp             *m_pSubResp;
     ReqHandler           *m_pHandler;
 
     lsiapi_hookinfo_t     m_curHookInfo;
@@ -157,6 +159,7 @@ class HttpSession : public LsiSession, public HioHandler,
     Aiosfcb              *m_pAiosfcb;
 
     uint32_t              m_sn;
+    EventObj             *m_pEventObjHead;
 
     HttpSession(const HttpSession &rhs);
     void operator=(const HttpSession &rhs);
@@ -174,9 +177,25 @@ class HttpSession : public LsiSession, public HioHandler,
     static int readReqBodyTermination(LsiSession *pSession, char *pBuf,
                                       int size);
 
+    static int stx_nextRequest(long l, void *p)
+    {
+        HttpSession *pSession = (HttpSession *)p;
+        pSession->nextRequest();
+        return 0;
+    }
+    
 public:
     
     uint32_t getSn()    { return m_sn;}
+    void setEventObjHead(EventObj *v) 
+    {
+        assert(v->m_pParam == this);
+        m_pEventObjHead = v;
+    }
+    
+    EventObj *getEventObjHead() { return m_pEventObjHead; }
+    
+    void runAllEventNotifier();
     
     void closeConnection();
     void recycle();
@@ -410,16 +429,12 @@ public:
     int getParsedScript(SSIScript *&pScript);
     int startServerParsed();
     HttpResp *getResp()
-    {   return (m_pSubResp) ? m_pSubResp : &m_response; }
+    {   return &m_response; }
     int flushDynBodyChunk();
     //int writeConnStatus( char * pBuf, int bufLen );
 
     void resetResp()
     {   getResp()->reset(); }
-
-    LOG4CXX_NS::Logger *getLogger() const   {   return getStream()->getLogger();   }
-
-    const char *getLogId() {   return getStream()->getLogId();     }
 
     LogTracker *getLogTracker()    {   return getStream();     }
 

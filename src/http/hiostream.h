@@ -179,6 +179,16 @@ public:
     {   m_tmLastActive = lTime;              }
     uint32_t getActiveTime() const
     {   return m_tmLastActive;               }
+    
+    void onPeerClose() 
+    {   
+        m_iFlag |= HIO_FLAG_PEER_SHUTDOWN;
+        if (m_pHandler)
+        {
+            handlerOnClose();
+        }
+        close();
+    }
 
     short isPeerShutdown() const {  return m_iFlag & HIO_FLAG_PEER_SHUTDOWN;    }
 
@@ -190,6 +200,8 @@ private:
     HioStream &operator=(const HioStream &other);
     bool operator==(const HioStream &other) const;
 
+    void handlerOnClose();
+    
 };
 
 class HioHandler
@@ -203,13 +215,31 @@ public:
     virtual ~HioHandler();
 
     HioStream *getStream() const           {   return m_pStream;   }
-    void setStream(HioStream *p)         {   m_pStream = p;      }
-    void assignStream(HioStream *p)
+
+    void attachStream(HioStream *p)
     {
         m_pStream  = p;
         p->setHandler(this);
     }
 
+    HioStream *detachStream()  
+    {
+        HioStream * pStream = m_pStream;
+        if ( pStream )
+        {
+            m_pStream = NULL;
+            pStream->setHandler(NULL);
+        }
+        return pStream;
+    }
+
+    LOG4CXX_NS::Logger* getLogger() const   
+    {   return m_pStream?m_pStream->getLogger():NULL;   }
+
+    const char * getLogId() 
+    {   return m_pStream?m_pStream->getLogId():"DETACHED";     }
+
+    
     virtual int onInitConnected() = 0;
     virtual int onReadEx()  = 0;
     virtual int onWriteEx() = 0;

@@ -103,7 +103,8 @@ void ContextTree::contextInherit()
 }
 
 
-int ContextTree::inherit(void *pObj, void *pUData)
+int ContextTree::inherit(void *pObj, void *pUData, const char *pKey,
+                         size_t iKeyLen)
 {
     HttpContext *pContext = (HttpContext *)pObj;
     const HttpContext *pRootContext = (const HttpContext *)pUData;
@@ -112,7 +113,8 @@ int ContextTree::inherit(void *pObj, void *pUData)
 }
 
 
-int ContextTree::updateChildren(void *pObj, void *pUData)
+int ContextTree::updateChildren(void *pObj, void *pUData, const char *pKey,
+                                size_t iKeyLen)
 {
     HttpContext *pNewParent = (HttpContext *)pUData;
     HttpContext *pContext = (HttpContext *)pObj;

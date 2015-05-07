@@ -23,7 +23,7 @@
 #include <unistd.h>
 
 
-static const char *g_pShmDirName = LsShmLock::getDefaultShmDir();
+static const char *g_pShmDirName = LsShm::getDefaultShmDir();
 static const char *g_pShmName = NULL;
 
 

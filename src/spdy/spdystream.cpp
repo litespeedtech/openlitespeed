@@ -47,7 +47,7 @@ int SpdyStream::init(uint32_t StreamID, int Priority, SpdyConnection *pSpdyConn,
                      uint8_t flags, HioHandler *pHandler)
 {
     HioStream::reset(DateTime::s_curTime);
-    pHandler->assignStream(this);
+    pHandler->attachStream(this);
     clearLogId();
 
     setState(HIOS_CONNECTED);
@@ -193,7 +193,7 @@ int SpdyStream::close()
     //    getHandler()->recycle();
     //    setHandler( NULL );
     //}
-    //m_pSpdyConn->recycleStream( m_uiStreamID );
+    m_pSpdyConn->recycleStream( m_uiStreamID );
     return 0;
 }
 

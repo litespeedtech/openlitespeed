@@ -25,15 +25,13 @@
 #include <edio/eventnotifier.h>
 #include <util/tsingleton.h>
 
-
+class HttpSession;
 
 enum {
     EVENTOBJ_ST_UNINITED = 0,
     EVENTOBJ_ST_INITED,
     EVENTOBJ_ST_WAIT,
     EVENTOBJ_ST_DONE,
-    
-    EVENTOBJ_ST_AUTOMATIC = 8,
 };
 
 class EventObj : public DLinkedObj
@@ -53,32 +51,32 @@ class UserEventNotifier : public TSingleton<UserEventNotifier>
 
     DLinkQueue  m_eventObjList;
 
-    EventObj *addEventObj(lsi_event_callback_pf eventCb, long lParam, void *pParam, bool isAuto);
-    
 public:
     static EventObjPool m_eventObjPool;
     UserEventNotifier() {};
-    ~UserEventNotifier();
-
-    void runAllScheduledEvent();
-    EventObj *createAutoEventObj(lsi_event_callback_pf eventCb, long lParam, void *pParam)
-    {
-        return addEventObj(eventCb, lParam, pParam, true);
-    }
+    ~UserEventNotifier() { m_eventObjPool.shrinkTo(0); }
 
     /**
      * Non-auto EventObj need to be created, notified and removed
      */
-    EventObj *createEventObj(lsi_event_callback_pf eventCb, long lParam, void *pParam)
+    EventObj *createEventObj(lsi_event_callback_pf eventCb, long lParam, void *pParam);
+    int notifyEventObj(EventObj *pEventObj);
+    void removeEventObj(EventObj *pEventObj);
+    void recycle(EventObj *pObj)
     {
-        return addEventObj(eventCb, lParam, pParam, false);
+        memset(pObj, 0, sizeof(EventObj));
+        m_eventObjPool.recycle(pObj);//delete *pEventObj;//
     }
-    int notifyEventObj(EventObj **pEventObj);
-    void removeEventObj(EventObj **pEventObj);
 
-private:
-    void addToList(EventObj *pObj, bool isAuto);
     
+    void runAllScheduledEvent(EventObj *pFirstObj, void *pParamFilter);
+
+    /**
+     * Special function for session
+     */
+    EventObj *scheduleSessionEvent(lsi_event_callback_pf eventCb, long lParam, HttpSession *pSession);
+    void removeSessionEvents(EventObj *pFirstObj, HttpSession *pSession);
+
     LS_NO_COPY_ASSIGN(UserEventNotifier);
 };
 #endif

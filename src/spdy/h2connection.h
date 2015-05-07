@@ -77,15 +77,6 @@ public:
     void add2PriorityQue(H2Stream *pH2Stream);
     int timerRoutine();
 
-    LOG4CXX_NS::Logger *getLogger() const
-    {
-        return getStream()->getLogger();
-    }
-
-    const char *getLogId()
-    {
-        return getStream()->getLogId();
-    }
     void continueWrite()
     {   getStream()->continueWrite();   }
 

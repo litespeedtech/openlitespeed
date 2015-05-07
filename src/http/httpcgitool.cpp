@@ -36,6 +36,7 @@
 // #include <sslpp/sslcert.h>
 #include <util/autostr.h>
 #include <util/ienv.h>
+#include <util/radixtree.h>
 #include <util/stringtool.h>
 
 #include <extensions/fcgi/fcgienv.h>
@@ -446,6 +447,16 @@ static int lookup_ssl_cert_serial(X509 *pCert, char *pBuf, int len)
 }
 
 
+static int addEnv(void *pObj, void *pUData, const char *pKey, size_t iKeyLen)
+{
+    IEnv *pEnv = (IEnv *)pUData;
+    ls_str_pair_t *pPair = (ls_str_pair_t *)pObj;
+    pEnv->add(ls_str_cstr(&pPair->key), ls_str_len(&pPair->key),
+              ls_str_cstr(&pPair->value), ls_str_len(&pPair->value));
+    return 0;
+}
+
+
 int HttpCgiTool::buildCommonEnv(IEnv *pEnv, HttpSession *pSession)
 {
     int count = 0;
@@ -453,9 +464,7 @@ int HttpCgiTool::buildCommonEnv(IEnv *pEnv, HttpSession *pSession)
     const char *pTemp;
     int n;
     char buf[128];
-    ls_hash_t *pEnvHash;
-    ls_hash_iter iter;
-    const ls_str_pair_t *pPair;
+    RadixNode *pNode;
 
     pTemp = pReq->getAuthUser();
     if (pTemp)
@@ -516,18 +525,8 @@ int HttpCgiTool::buildCommonEnv(IEnv *pEnv, HttpSession *pSession)
     }
     n = pReq->getEnvCount();
     count += n;
-    if ((pEnvHash = (ls_hash_t *)pReq->getEnvHash()) != NULL)
-    {
-        iter = ls_hash_begin(pEnvHash);
-        do
-        {
-            pPair = (ls_str_pair_t *)ls_hash_getdata(iter);
-            pEnv->add(ls_str_cstr(&pPair->key), ls_str_len(&pPair->key),
-                      ls_str_cstr(&pPair->value), ls_str_len(&pPair->value)
-                     );
-        }
-        while ((iter = ls_hash_next(pEnvHash, iter)) != NULL);
-    }
+    if ((pNode = (RadixNode *)pReq->getEnvNode()) != NULL)
+        pNode->for_each2(addEnv, pEnv);
 
     if (pSession->isSSL())
     {

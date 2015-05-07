@@ -244,7 +244,7 @@ int EventDispatcher::run()
         SigEventDispatcher::processSigEvent();
 #endif
         
-        UserEventNotifier::getInstance().runAllScheduledEvent();
+        UserEventNotifier::getInstance().runAllScheduledEvent(NULL, NULL);
 
         if ((sigEvent = HttpSignals::gotEvent()))
         {

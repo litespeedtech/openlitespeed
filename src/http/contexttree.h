@@ -32,8 +32,10 @@ class ContextTree
     RadixTree          *m_pLocTree;
     const HttpContext  *m_pRootContext;
 
-    static int updateChildren(void *pObj, void *pUData);
-    static int inherit(void *pObj, void *pUData);
+    static int updateChildren(void *pObj, void *pUData, const char *pKey,
+                              size_t iKeyLen);
+    static int inherit(void *pObj, void *pUData, const char *pKey,
+                       size_t iKeyLen);
 
     HttpContext *getParentContext(RadixNode *pCurNode);
     void updateTreeAfterAdd(RadixNode *pRadixNode, HttpContext *pContext);
