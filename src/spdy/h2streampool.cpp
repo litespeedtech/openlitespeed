@@ -24,16 +24,19 @@ void H2StreamPool::recycle(H2Stream *pStream)
     s_pool.recycle(pStream);
 }
 
+
 H2Stream *H2StreamPool::getH2Stream()
 {
     H2Stream *p = s_pool.get();
     return p;
 }
 
+
 void H2StreamPool::recycle(H2Stream **pStream, int n)
 {
     s_pool.recycle((void **)pStream, n);
 }
+
 
 int H2StreamPool::getH2Streams(H2Stream **pStream, int n)
 {

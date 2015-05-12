@@ -61,17 +61,17 @@ static int s_iForwardHeaderLen[9] =
 const char *JkAjp13::s_pRespHeaders[AJP_RESP_HEADERS_NUM + 1] =
 {
     "",
-    "content-type",
-    "content-language",
-    "content-length",
-    "date",
-    "last-modified",
-    "location",
-    "set-cookie",
-    "set-cookie2",
-    "servlet-engine",
-    "status",
-    "www-authenticate"
+    "Content-Type",
+    "Content-Language",
+    "Content-Length",
+    "Date",
+    "Last-Modified",
+    "Location",
+    "Set-Cookie",
+    "Set-Cookie2",
+    "Servlet-Engine",
+    "Status",
+    "WWW-Authenticate"
 };
 
 int JkAjp13::s_iRespHeaderLen[AJP_RESP_HEADERS_NUM + 1] =

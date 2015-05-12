@@ -239,6 +239,7 @@ void HttpSession::nextRequest()
         LOG_D((getLogger(), "[%s] HttpSession::nextRequest()!",
                getLogId()));
     getStream()->flush();
+    setState(HSS_WAITING);
 
     if (m_pHandler)
     {
@@ -1367,9 +1368,11 @@ int HttpSession::handlerProcess(const HttpHandler *pHandler)
 
     ret = m_pHandler->process(this, m_request.getHttpHandler());
 
-    if ((ret == 0) && (HSS_COMPLETE == getState()))
+    //     NOTICE removed because of double call
+    /*if ((ret == 0) && (HSS_COMPLETE == getState()))
         nextRequest();
-    else if (ret == 1)
+    else */
+    if (ret == 1)
     {
         continueWrite();
         ret = 0;
@@ -1733,7 +1736,7 @@ int HttpSession::doWrite()
         flush();
     }
     else if (ret == -1)
-        getStream()->setState(HIOS_CLOSING);
+        getStream()->tobeClosed();
 
     return ret;
 }
@@ -1840,20 +1843,16 @@ void HttpSession::closeConnection()
         cleanUpHandler();
     }
 
-    if (m_iFlag & HSF_HOOK_SESSION_STARTED)    //m_sessionHooks.isTriggered() )
+    getStream()->tobeClosed();
+    if (getStream()->isReadyToRelease())
+        return;
+
+    if (m_iFlag & HSF_HOOK_SESSION_STARTED)
     {
         //m_sessionHooks.clearTriggered();
         if (m_sessionHooks.isEnabled(LSI_HKPT_HTTP_END))
             m_sessionHooks.runCallbackNoParam(LSI_HKPT_HTTP_END, (LsiSession *)this);
     }
-
-    if (getStream()->getState() == HIOS_CLOSING)
-        getStream()->setState(HIOS_CLOSING);
-    if (getStream()->isReadyToRelease())
-        return;
-    //FIXME: could be double counted in here.
-    //if ( getState() == HSS_WAITING )
-    //    --HttpGlobals::s_iIdleConns;
 
     m_request.keepAlive(0);
 
@@ -2733,6 +2732,8 @@ int HttpSession::flushBody()
             flush = LSI_CB_FLAG_IN_EOF;
         ret = runFilter(LSI_HKPT_SEND_RESP_BODY, (void *)writeRespBodyTermination,
                         NULL, 0, flush);
+        if (m_iFlag & HSF_SEND_RESP_BUFFERED)
+            return 1;
     }
 
     //int nodelay = 1;
@@ -2812,12 +2813,12 @@ int HttpSession::flush()
                 LOG_D((getLogger(), "[%s] set HSS_COMPLETE flag.", getLogId()));
             setState(HSS_COMPLETE);
         }
-        else if (getFlag(HSF_RECV_RESP_BUFFERED)
-                 || getFlag(HSF_SEND_RESP_BUFFERED))
-        {
-            //Do not change anything and hold
-            return 0;
-        }
+//         else if (getFlag(HSF_RECV_RESP_BUFFERED)
+//                  || getFlag(HSF_SEND_RESP_BUFFERED))
+//         {
+//             //Do not change anything and hold
+//             return 0;
+//         }
         else
         {
             if (D_ENABLED(DL_LESS))
@@ -3273,7 +3274,7 @@ int HttpSession::sendStaticFile(SendFileInfo *pData)
         else
         {
             if (len < 0)
-                return -1;
+                return len;
             break;
         }
     }

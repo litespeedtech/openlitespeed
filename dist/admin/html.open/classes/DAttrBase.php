@@ -131,7 +131,7 @@ class DAttrBase
 
 		if ( $err ) {
 			$cval->SetErr($err);
-			$o .= '<span class="field_error">*' . $this->check_split($err, 70) . '</span><br>';
+			$o .= '<span class="field_error">*' . $err . '</span><br>';
 		}
 
 		if ( $this->_href ) {
@@ -157,9 +157,9 @@ class DAttrBase
 			}
 		}
 		else if($this->_key == "note") {
-			$o .= "<textarea readonly rows=4 cols=60 style='width:100%'>";
-			$o .= htmlspecialchars($value,ENT_QUOTES);
-			$o .= "</textarea>";
+			$o .= '<textarea readonly rows=4 cols=60 style="width:100%">'
+                    . htmlspecialchars($value,ENT_QUOTES)
+                    . '</textarea>';
 		}
 		elseif ( $this->_type === 'sel' || $this->_type === 'sel1' ) {
 			if ( $this->_maxVal != NULL && array_key_exists($value, $this->_maxVal) ) {
@@ -189,7 +189,7 @@ class DAttrBase
 		    $o .= '<textarea readonly '. $this->_inputAttr .'>' . htmlspecialchars($value,ENT_QUOTES) . '</textarea>';
 		}
 		elseif ( $this->_inputType === 'text' ) {
-		    $o .= htmlspecialchars($this->check_split($value, 60), ENT_QUOTES);
+		    $o .= '<span class="field_text">' . htmlspecialchars($value, ENT_QUOTES) . '</span>';
 		}
 		elseif ( $this->_type == 'ctxseq' ) {
 			$o = $value . '&nbsp;&nbsp;<a href=' . $this->_hrefLink . $value . '>&nbsp;+&nbsp;</a>' ;
@@ -222,28 +222,6 @@ class DAttrBase
 		}
 		return null;
 	}
-
-	protected function check_split($value, $width)
-	{
-		if ( $value == NULL )
-			return NULL;
-
-		$changed = false;
-		$val = explode(' ', $value);
-		for( $i = 0 ; $i < count($val) ; ++$i )
-		{
-			if ( strlen($val[$i]) > $width )
-			{
-				$val[$i] = chunk_split($val[$i], $width, ' ');
-				$changed = true;
-			}
-		}
-		if ( $changed )
-			return implode(' ', $val);
-		else
-			return $value;
-	}
-
 
 	protected function genOptions($options, $selValue)
 	{
@@ -330,7 +308,7 @@ class DAttrBase
 			foreach( $data as $d )
 			{
 				$value[] = $d->GetVal();
-				$e1 = $this->check_split($d->GetErr(), 70);
+				$e1 = $d->GetErr();
 				if ( $e1 != NULL )
 					$err .= $e1 .'<br>';
 			}
@@ -339,7 +317,7 @@ class DAttrBase
 		{
 			if($data != NULL) {
 				$value = $data->GetVal();
-				$err = $this->check_split($data->GetErr(), 70);
+				$err = $data->GetErr();
 			}
 			else {
 				$value = NULL;

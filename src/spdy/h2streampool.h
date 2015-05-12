@@ -17,8 +17,10 @@
 *****************************************************************************/
 #ifndef H2STREAMPOOL_H
 #define H2STREAMPOOL_H
-#include <util/objpool.h>
+
 #include <util/dlinkqueue.h>
+#include <util/objpool.h>
+
 class H2Stream;
 typedef ObjPool<H2Stream>       Pool;
 class H2StreamPool : public ObjPool<H2Stream>

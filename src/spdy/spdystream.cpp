@@ -175,9 +175,9 @@ int SpdyStream::sendFin()
 
 int SpdyStream::close()
 {
-    if (getState() != HIOS_CONNECTED)
+    if (getState() == HIOS_DISCONNECTED)
         return 0;
-    if (getHandler())
+    if (getHandler() && !isReadyToRelease())
         getHandler()->onCloseEx();
     sendFin();
     setFlag(HIO_FLAG_WANT_WRITE, 1);

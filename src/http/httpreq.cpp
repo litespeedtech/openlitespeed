@@ -312,6 +312,9 @@ int HttpReq::processRequestLine()
         return result;
     p += m_iHostLen;
     pCur = (char *)memchr(p, '/', (pLineEnd - p));
+    //FIXME:should we handle other cases?
+    if (!pCur)
+        return SC_400;
     while ((p < pLineEnd) && ((*p != ' ') && (*p != '\t')))
         ++p;
     if (p == pLineEnd)

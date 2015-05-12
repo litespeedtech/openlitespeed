@@ -102,13 +102,18 @@ background: -o-linear-gradient(top, #2a6186 0%, #20334e 100%);
 }
 
 .field_note {
-	color: #009926
+	color: #009926;
+    word-wrap: break-word;
 }
 
 .field_error {
 	color: red;
+    word-wrap: break-word;
 }
 
+.field_text {
+    word-break: break-all;
+}
 /* not set */
 .field_novalue {
 	color: #e8e8e8;

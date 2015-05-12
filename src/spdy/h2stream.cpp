@@ -209,7 +209,7 @@ int H2Stream::close()
 {
     if (getState() == HIOS_DISCONNECTED)
         return 0;
-    if (getHandler())
+    if (getHandler() && !isReadyToRelease())
         getHandler()->onCloseEx();
     shutdown();
     setFlag(HIO_FLAG_WANT_WRITE, 0);
@@ -219,7 +219,7 @@ int H2Stream::close()
     //    getHandler()->recycle();
     //    setHandler( NULL );
     //}
-    //m_pH2Conn->recycleStream( m_uiStreamID );
+    m_pH2Conn->recycleStream( m_uiStreamID );
     return 0;
 }
 

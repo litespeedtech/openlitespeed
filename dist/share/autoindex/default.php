@@ -7,19 +7,26 @@ class UserSettings
     var $HeaderName = 'HEADER';
     var $ReadmeName = 'README';
 
-    var $Exclude_Patterns = 
-        array( "/^(\.)|(_vti_)/", 
-               '/(\~)|(\#)|(\,v)|(\,t)|(\.lsz)$/',
-               "/^HEADER/",
-               "/^README/",
-               '/^(RCS)|(CVS)$/');
+    var $Exclude_Patterns =
+        array(  ".",
+                "..",
+                ".??*",
+                "*~",
+                "*#",
+                "HEADER*",
+                "README*",
+                "RCS",
+                "CVS",
+                "*,v",
+                "*,t",
+                "*.lsz"
+                );
 
     var $Time_Format = " d-M-Y H:i ";
-    var $Time_Zone = 'UTC';
     var $IconPath = "/_autoindex/icons";
-    var $nameWidth = 35;
+    var $nameWidth = 45;
     var $nameFormat;
-    
+
     function UserSettings()
     {
         $this->nameFormat = '%-' . ($this->nameWidth + 4) . '.' . ($this->nameWidth + 4) .'s';
@@ -51,24 +58,24 @@ class AllImgs
 
     function AllImgs()
     {
-        $this->mapping = array( 
+        $this->mapping = array(
             new IMG_Mapping( array( 'gif', 'png', 'jpg', 'jpeg', 'tif', 'tiff', 'bmp'),
                              'image.png', '[IMG]', '' ),
-            new IMG_Mapping( array( 'html', 'htm', 'shtml', 'php', 'phtml', 
+            new IMG_Mapping( array( 'html', 'htm', 'shtml', 'php', 'phtml',
                                     'css', 'js' ),
                              'html.png',  '[HTM]', '' ),
             new IMG_Mapping( array( 'txt', 'md5', 'c', 'cpp', 'cc', 'h', 'sh' ),
                              'text.png',  '[TXT]', '' ),
-            new IMG_Mapping( array( 'gz', 'tgz', 'zip', 'Z', 'z'),  
+            new IMG_Mapping( array( 'gz', 'tgz', 'zip', 'Z', 'z'),
                              'compress.png', '[CMP]', '' ),
             new IMG_Mapping( array( 'bin', 'exe' ),
                              'binary.png','[BIN]', '' ),
             new IMG_Mapping( array( 'mpg', 'avi', 'mpeg', 'ram', 'wmv' ),
                              'movie.png','[VID]', '' ),
-            new IMG_Mapping( array( 'mp3', 'mp2', 'ogg', 'wav', 'wma', 
-                                    'aac', 'mp4', 'rm'),    
+            new IMG_Mapping( array( 'mp3', 'mp2', 'ogg', 'wav', 'wma',
+                                    'aac', 'mp4', 'rm'),
                              'sound.png', '[SND]', '' )
-    
+
             );
 
         $this->default_img = new IMG_Mapping( NULL, 'unknown.png', 'unknown', '' );
@@ -76,7 +83,7 @@ class AllImgs
         $this->parent_img = new IMG_Mapping( NULL, 'up.png', 'up', '' );
     }
 
-    function &findImgMapping($file)
+    function findImgMapping($file)
     {
         $found = NULL;
         $pos = strrpos( $file, '.' );
@@ -90,14 +97,14 @@ class AllImgs
                 {
                     if ( in_array($ext, $this->mapping[$i]->suffixes) )
                     {
-                        $found = &$this->mapping[$i];
+                        $found = $this->mapping[$i];
                         break;
                     }
                 }
             }
         }
         if ( !isset($found) )
-            $found = &$this->default_img;
+            $found = $this->default_img;
         return $found;
     }
 }
@@ -114,19 +121,18 @@ class FileStat
     var $isdir;
     var $img;
 
-    function FileStat($filename) 
-    { 
-        $this->name = $filename; 
+    function FileStat($filename)
+    {
+        $this->name = $filename;
     }
 }
-
 
 function shouldExclude( $file, &$excludes )
 {
     $ex = reset( $excludes );
     foreach( $excludes as $ex )
     {
-        if ( preg_match( $ex, $file ) )
+        if ( fnmatch( $ex, $file ) )
             return true;
     }
     return false;
@@ -141,7 +147,11 @@ function readDirList( $path, &$excludes, &$map )
     }
     clearstatcache();
     $list = array();
-
+    if ( isset( $_SERVER['LS_AI_INDEX_IGNORE'] ) )
+    {
+        $ignore = explode( ' ', $_SERVER['LS_AI_INDEX_IGNORE'] );
+        $excludes = array_merge( $ignore, $excludes );
+    }
     while( false !== ($file=readdir($handle)) )
     {
         if ( shouldExclude( $file, $excludes ) )
@@ -166,7 +176,7 @@ function readDirList( $path, &$excludes, &$map )
             $fileStat->img = $map->findImgMapping($file);
         }
 
-        $list[] = $fileStat;    
+        $list[] = $fileStat;
     }
     closedir( $handle );
     return $list;
@@ -174,17 +184,17 @@ function readDirList( $path, &$excludes, &$map )
 
 function printOneEntry( $base, $name, $fileStat, $setting )
 {
-    $sc = array( '%', '+', '?' );
-    $sc_enc= array( '%25', '%2B', '%3F' );
-    if ( isset($_SERVER['LS_FI_OFF'])&&$_SERVER['LS_FI_OFF'] )
+    $encoded = str_replace(array('%2F', '%26amp%3B'), array('/', '%26'), 
+                           rawurlencode( $base . $fileStat->name ));
+    if ( isset($_SERVER['LS_FI_OFF'])&& $_SERVER['LS_FI_OFF'] )
     {
-        $buf = '<li>' . '<A HREF="' . str_replace( $sc, $sc_enc, $base . $fileStat->name) . 
-                 $fileStat->isdir.'">' . sprintf( $setting->nameFormat, $name."</A></li>\n");
+        $buf = '<li>' . '<a href="' . $encoded .
+                 $fileStat->isdir.'">' . sprintf( $setting->nameFormat, $name."</a></li>\n");
     }
     else
     {
-        $buf = '<img SRC="' . $setting->IconPath . '/' . $fileStat->img->imageName . 
-            '" ALT="' . $fileStat->img->alt . '"> <A HREF="' . str_replace( $sc, $sc_enc, $base . $fileStat->name) . $fileStat->isdir.'">';
+        $buf = '<img src="' . $setting->IconPath . '/' . $fileStat->img->imageName .
+            '" alt="' . $fileStat->img->alt . '"> <a href="' . $encoded . $fileStat->isdir.'">';
         if ( strlen( $name ) > $setting->nameWidth )
         {
             $name = substr( $name, 0, $setting->nameWidth - 3 ). '...';
@@ -211,14 +221,14 @@ function printIncludes( $path, $name )
     foreach ( $testNames as $n )
     {
         $filename = $path . $n;
-        
+
         if ( file_exists($filename) )
         {
             if ( $n == $name )
             {
                 echo "<pre>\n";
                 include "$path$n";
-                echo "</pre>\n";            
+                echo "</pre>\n";
             }
             else
                 include "$path$n";
@@ -231,7 +241,18 @@ function printFileList( $list, $base_uri, $setting )
 {
     foreach( $list as $fileStat )
     {
-        printOneEntry( $base_uri, $fileStat->name, $fileStat, $setting );
+        if ( $fileStat->isdir )
+        {
+            printOneEntry( $base_uri, $fileStat->name, $fileStat, $setting );
+        }
+    }
+
+    foreach( $list as $fileStat )
+    {
+        if ( !$fileStat->isdir )
+        {
+            printOneEntry( $base_uri, $fileStat->name, $fileStat, $setting );
+        }
     }
 
 }
@@ -263,7 +284,7 @@ function cmpSD( $a, $b )
 function cmpMA( $a, $b )
 {
     return $a->mtime - $b->mtime;
-    
+
 }
 
 function cmpMD( $a, $b )
@@ -287,8 +308,7 @@ function cmpDD( $a, $b )
 
 
 
-
-//phpinfo(); 
+//phpinfo();
 $pos = strpos( $_SERVER['REQUEST_URI'], '?' );
 if ( $pos === FALSE )
 {
@@ -301,6 +321,10 @@ else
 
 $uri = urldecode( $uri );
 $path = $_SERVER['LS_AI_PATH'];
+
+$mime_type = $_SERVER['LS_AI_MIME_TYPE'];
+if ( $mime_type )
+    header( "Content-Type: $mime_type" );
 
 if ( !$path )
 {
@@ -318,48 +342,19 @@ if (get_magic_quotes_gpc())
 $uri = htmlentities($uri,ENT_COMPAT,"UTF-8");
 
 $setting = new UserSettings();
-date_default_timezone_set($setting->Time_Zone);
-
 $map = new AllImgs();
 $sortOrder = $_SERVER['QUERY_STRING'];
-if ( strcmp( $sortOrder, '') == 0 )
-{
-    $sortOrder = 'NA';
+if ( $sortOrder == ''
+        || strlen($sortOrder) > 2
+        || ! in_array($sortOrder, array('NA','ND','MA','MD','SA','SD','DA','DD'))) {
+    $sortOrder = 'NA'; // set to default
 }
 
-if ( strcmp( $sortOrder, 'NA') == 0 )
-{
-    $NameSort = 'ND';
-}
-else
-{
-    $NameSort = 'NA';
-}
+$NameSort = ($sortOrder == 'NA') ? 'ND' : 'NA';
+$ModSort = ($sortOrder == 'MA') ? 'MD' : 'MA';
+$SizeSort = ($sortOrder == 'SA') ? 'SD' : 'SA';
+$DescSort = ($sortOrder == 'DA') ? 'DD' : 'DA';
 
-if ( strcmp( $sortOrder, 'MA') == 0 )
-{
-    $ModSort = 'MD';
-}
-else
-{
-    $ModSort = 'MA';
-}
-if ( strcmp( $sortOrder, 'SA' ) == 0 )
-{
-    $SizeSort = 'SD';
-}
-else
-{
-    $SizeSort = 'SA';
-}
-if ( strcmp( $sortOrder, 'DA' ) == 0 )
-{
-    $DescSort = 'DD';
-}
-else
-{
-    $DescSort = 'DA';
-}
 echo "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 3.2 Final//EN\">
 <html>
   <head>
@@ -368,16 +363,16 @@ echo "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 3.2 Final//EN\">
   <body>
     <h1>Index of ", $uri, "</h1>";
 
-if ( isset($setting->HeaderName) ) 
+if ( isset($setting->HeaderName) )
     printIncludes( $path, $setting->HeaderName );
 
-if ( isset($_SERVER['LS_FI_OFF'])&&$_SERVER['LS_FI_OFF'] )
+if ( isset($_SERVER['LS_FI_OFF'])&& $_SERVER['LS_FI_OFF'] )
 {
     $header = "<ul>\n";
 }
 else
 {
-    $header = "<pre><img SRC=\"$setting->IconPath/blank.png\" ALT=\"     \"> <a href='?$NameSort'>";
+    $header = "<pre><img src=\"$setting->IconPath/blank.png\" alt=\"     \"> <a href='?$NameSort'>";
     $header .= sprintf( $setting->nameFormat, 'Name</a>' );
     $header .= " <a href='?$ModSort'>Last modified</a>         <a href='?$SizeSort'>Size</a>  <a href='?$DescSort'>Description </a>\n   <hr>";
 }
@@ -408,19 +403,19 @@ else
             if ( $off !== FALSE )
             {
                 $base = substr( $base, 0, $off + 1 );
-                printOneEntry(  $base, "Parent Directory", $fileStat, $setting ); 
+                printOneEntry(  $base, "Parent Directory", $fileStat, $setting );
             }
 
         }
         $cmpFunc = "cmp$sortOrder";
         usort( $list, $cmpFunc );
         printFileList( $list, $uri, $setting );
-    
-        
+
+
     }
 }
 
-if ( isset($_SERVER['LS_FI_OFF'])&&$_SERVER['LS_FI_OFF'] )
+if ( isset($_SERVER['LS_FI_OFF'])&& $_SERVER['LS_FI_OFF'] )
 {
     echo "</ul>\n";
 }
@@ -429,10 +424,10 @@ else
     echo "</pre><hr>";
 }
 
-if ( isset($setting->ReadmeName) )
+if ( isset($setting->ReadmeName) ) {
     printIncludes( $path, $setting->ReadmeName );
+}
 
 echo "<address>Proudly Served by LiteSpeed Web Server at ".$_SERVER['SERVER_NAME']." Port ".$_SERVER['SERVER_PORT']."</address>
 </body>
 </html>";
-

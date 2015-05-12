@@ -894,7 +894,7 @@ int SpdyConnection::onCloseEx()
         return 0;
     if (D_ENABLED(DL_LESS))
         LOG_D((getLogger(), "[%s] SpdyConnection::onCloseEx() ", getLogId()));
-    getStream()->setState(HIOS_CLOSING);
+    getStream()->tobeClosed();
     releaseAllStream();
     return 0;
 };
@@ -925,7 +925,7 @@ int SpdyConnection::doGoAway(SpdyGoAwayStatus status)
                getLogId(), status));
     sendGoAwayFrame(status);
     releaseAllStream();
-    getStream()->setState(HIOS_CLOSING);
+    getStream()->tobeClosed();
     getStream()->continueWrite();
     return 0;
 }

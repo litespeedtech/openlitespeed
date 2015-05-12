@@ -435,8 +435,9 @@ void NtwkIOLink::checkSSLReadRet(int ret)
             HttpGlobals::getMultiplexer()->continueWrite(this);
         }
     }
-    else if (getState() != HIOS_SHUTDOWN)
-        setState(HIOS_CLOSING);
+    else 
+        tobeClosed();
+    
 }
 
 int NtwkIOLink::readExSSL(LsiSession *pIS, char *pBuf, int size)
@@ -614,7 +615,7 @@ int NtwkIOLink::flush()
     case 1:
         return 0;
     case -1:
-        setState(HIOS_CLOSING);
+        tobeClosed();
         break;
     }
     return ret;
@@ -824,8 +825,7 @@ int NtwkIOLink::checkReadRet(int ret, int size)
             ret = 0;
             break;
         default:
-            if (getState() != HIOS_SHUTDOWN)
-                setState(HIOS_CLOSING);
+            tobeClosed();
             if (D_ENABLED(DL_LESS))
                 LOG_D((getLogger(), "[%s] read error: %s\n",
                        getLogId(), strerror(errno)));
@@ -1470,7 +1470,7 @@ int NtwkIOLink::SSLAgain()
         setSSLAgain();
         break;
     case -1:
-        close();
+        tobeClosed();
         break;
     }
     return ret;

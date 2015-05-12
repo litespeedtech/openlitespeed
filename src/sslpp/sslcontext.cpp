@@ -439,6 +439,7 @@ static int loadCertFile(SSL_CTX *pCtx, const char *pFile, int type)
     BIO *in;
     X509 *cert = NULL;
     int len;
+    int ret;
 
     /* THIS FILE TYPE WILL NOT BE HANDLED HERE.
      * Just left this here in case of future implementation.*/
@@ -454,7 +455,9 @@ static int loadCertFile(SSL_CTX *pCtx, const char *pFile, int type)
     BIO_free(in);
     if (!cert)
         return -1;
-    return SSL_CTX_use_certificate(pCtx, cert);
+    ret = SSL_CTX_use_certificate(pCtx, cert);
+    X509_free(cert);
+    return ret;
 }
 
 int SSLContext::setCertificateFile(const char *pFile, int type,
@@ -908,15 +911,15 @@ static const char *NEXT_PROTO_STRING[8] =
     "\x06spdy/2\x08http/1.1",
     "\x08spdy/3.1\x06spdy/3\x08http/1.1",
     "\x08spdy/3.1\x06spdy/3\x06spdy/2\x08http/1.1",
-    "\x05h2-14\x08http/1.1",
-    "\x05h2-14\x06spdy/2\x08http/1.1",
-    "\x05h2-14\x08spdy/3.1\x06spdy/3\x08http/1.1",
-    "\x05h2-14\x08spdy/3.1\x06spdy/3\x06spdy/2\x08http/1.1",
+    "\x02h2\x03h2c\x05h2-17\x05h2-14\x08http/1.1",
+    "\x02h2\x03h2c\x05h2-17\x05h2-14\x06spdy/2\x08http/1.1",
+    "\x02h2\x03h2c\x05h2-17\x05h2-14\x08spdy/3.1\x06spdy/3\x08http/1.1",
+    "\x02h2\x03h2c\x05h2-17\x05h2-14\x08spdy/3.1\x06spdy/3\x06spdy/2\x08http/1.1",
 };
 
 static unsigned int NEXT_PROTO_STRING_LEN[8] =
 {
-    9, 16, 25, 32, 15, 22, 31, 38,
+    9, 16, 25, 32, 28, 35, 44, 51,
 };
 
 //static const char NEXT_PROTO_STRING[] = "\x06spdy/2\x08http/1.1\x08http/1.0";
@@ -1111,7 +1114,8 @@ SSLContext *SSLContext::config(const XmlNode *pNode)
 
                 pDHParam = NULL;
             }
-            pDHParam = achCAPath;
+            else
+                pDHParam = achCAPath;
         }
         pSSL->initDH(pDHParam);
     }

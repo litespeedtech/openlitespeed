@@ -140,6 +140,12 @@ public:
     uint32_t getActiveTime() const
     {   return m_tmLastActive;               }
 
+    void tobeClosed() 
+    { 
+        if (m_iState != HIOS_SHUTDOWN)
+            m_iState = HIOS_CLOSING;  
+    }
+
     short isPeerShutdown() const {  return m_iFlag & HIO_FLAG_PEER_SHUTDOWN;    }
 
     static const char *getProtocolName(HiosProtocol proto);
