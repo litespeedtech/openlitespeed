@@ -1840,7 +1840,7 @@ int HttpSession::doWrite()
         flush();
     }
     else if (ret == -1)
-        getStream()->setState(HIOS_CLOSING);
+        getStream()->tobeClosed();
 
     return ret;
 }
@@ -1957,8 +1957,7 @@ void HttpSession::closeConnection()
         cleanUpHandler();
     }
 
-    if ( getStream()->getState() != HIOS_CLOSING )
-        getStream()->setState( HIOS_CLOSING );
+    getStream()->tobeClosed();
     if (getStream()->isReadyToRelease())
         return;
 
@@ -2001,7 +2000,7 @@ void HttpSession::closeConnection()
     
     getStream()->wantWrite(0);
     getStream()->handlerReadyToRelease();
-    //getStream()->close();
+    getStream()->shutdown();
 }
 
 

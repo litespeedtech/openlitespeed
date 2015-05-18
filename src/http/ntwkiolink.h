@@ -252,6 +252,7 @@ public:
     bool allowRead() const
     {   return m_pClientInfo->allowRead();   }
     int close();
+    int  shutdown();
     int  detectClose();
     int  detectCloseNow();
 
@@ -297,6 +298,8 @@ public:
 
     SSLConnection *getSSL()     {   return &m_ssl;  }
     bool isSSL() const          {   return m_ssl.getSSL() != NULL;  }
+    
+    int shutdownSsl();
 
     int SSLAgain();
     int acceptSSL();
@@ -344,17 +347,14 @@ public:
     {   return m_pClientInfo;               }
     ThrottleControl *getThrottleCtrl() const
     {   return  &(m_pClientInfo->getThrottleCtrl());  }
-    int isClosing() const
-    {   return getState() >= HIOS_SHUTDOWN;     }
     static void enableThrottle(int enable);
     int isThrottle() const
     {   return m_pFpList->m_onTimer_fp != onTimer_; }
+
     void suspendEventNotify();
     void resumeEventNotify();
 
     void tryRead();
-
-    void tobeClosed() { setState(HIOS_CLOSING);  }
 
     void setVHostMap(const VHostMap *pMap) {   m_pVHostMap = pMap;     }
     const VHostMap *getVHostMap() const    {   return m_pVHostMap;     }

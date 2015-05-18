@@ -197,7 +197,7 @@ int H2Stream::shutdown()
 
     if (D_ENABLED(DL_LESS))
     {
-        LOG_D((getLogger(), "[%s] H2Stream::sendFin()",
+        LOG_D((getLogger(), "[%s] H2Stream::shutdown()",
                getLogId()));
     }
     m_pH2Conn->sendFinFrame(m_uiStreamID);
@@ -209,7 +209,7 @@ int H2Stream::close()
 {
     if (getState() == HIOS_DISCONNECTED)
         return 0;
-    if (getHandler())
+    if (getHandler() && !isReadyToRelease())
         getHandler()->onCloseEx();
     shutdown();
     setFlag(HIO_FLAG_WANT_WRITE, 0);

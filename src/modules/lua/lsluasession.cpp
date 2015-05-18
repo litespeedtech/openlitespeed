@@ -1936,6 +1936,7 @@ static int  LsLuaSessPrintHelper(lua_State *L, ls_luaprint_t &s,
     {
         if (LsLuaPrint(L, &s) == -1)
         {
+            return -1;
         }
     }
     else
