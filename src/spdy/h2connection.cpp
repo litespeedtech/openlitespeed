@@ -204,6 +204,7 @@ int H2Connection::parseFrame()
         {
             if (m_iCurrentFrameRemain > m_bufInput.size())
                 return 0;
+
             if (processFrame(m_pCurH2Header) == -1)
                 return -1;
             if (m_iCurrentFrameRemain > 0)
@@ -215,7 +216,8 @@ int H2Connection::parseFrame()
         }
         else
         {
-            processDataFrame(m_pCurH2Header);
+            if (processDataFrame(m_pCurH2Header) == -1)
+                return -1;
             if (m_iCurrentFrameRemain == 0)
                 m_iCurrentFrameRemain = -H2_FRAME_HEADER_SIZE;
         }
@@ -303,8 +305,7 @@ int H2Connection::processFrame(H2FrameHeader *pHeader)
     case H2_FRAME_PRIORITY:
         return processPriorityFrame(pHeader);
     case H2_FRAME_RST_STREAM:
-        processRstFrame(pHeader);
-        break;
+        return processRstFrame(pHeader);
     case H2_FRAME_SETTINGS:
         return processSettingFrame(pHeader);
     case H2_FRAME_PUSH_PROMISE:
@@ -357,14 +358,12 @@ int H2Connection::processPriorityFrame(H2FrameHeader *pHeader)
         
     }
 
-    skipRemainData();
     return 0;
 }
 
 
 int H2Connection::processPushPromiseFrame(H2FrameHeader *pHeader)
 {
-    skipRemainData();
     doGoAway(H2_ERROR_PROTOCOL_ERROR);
     return 0;
 }
@@ -578,7 +577,6 @@ int H2Connection::processWindowUpdateFrame(H2FrameHeader *pHeader)
 
         //flush();
     }
-    skipRemainData();
     m_iCurrentFrameRemain = 0;
     return 0;
 }
@@ -587,12 +585,13 @@ int H2Connection::processWindowUpdateFrame(H2FrameHeader *pHeader)
 int H2Connection::processRstFrame(H2FrameHeader *pHeader)
 {
     uint32_t streamID = pHeader->getStreamId();
+    
+    if (streamID == 0 || streamID > m_uiLastStreamID)
+        return -1;
+    
     H2Stream *pH2Stream = findStream(streamID);
     if (pH2Stream == NULL)
     {
-        skipRemainData();
-        doGoAway(H2_ERROR_PROTOCOL_ERROR);
-        //sendRstFrame(streamID, H2_ERROR_PROTOCOL_ERROR);
         return 0;
     }
 
@@ -623,19 +622,14 @@ void H2Connection::skipRemainData()
 int H2Connection::processDataFrame(H2FrameHeader *pHeader)
 {
     uint32_t streamID = pHeader->getStreamId();
+    if ( streamID == 0 || streamID > m_uiLastStreamID)
+        return -1;
+    
     H2Stream *pH2Stream = findStream(streamID);
-    if (pH2Stream == NULL)
+    if (pH2Stream == NULL || pH2Stream->isPeerShutdown())
     {
         skipRemainData();
-        doGoAway(H2_ERROR_PROTOCOL_ERROR);
-        //sendRstFrame(streamID, H2_ERROR_PROTOCOL_ERROR);
-        return 0;
-    }
-    if (pH2Stream->isPeerShutdown())
-    {
-        skipRemainData();
-        doGoAway(H2_ERROR_PROTOCOL_ERROR);
-        //sendRstFrame(streamID, H2_ERROR_STREAM_CLOSED);
+        sendRstFrame(streamID, H2_ERROR_STREAM_CLOSED);
         return 0;
     }
 

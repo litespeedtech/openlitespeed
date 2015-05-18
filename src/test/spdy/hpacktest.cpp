@@ -18,7 +18,6 @@
 #ifdef RUN_TEST
 #include "hpacktest.h"
 #include "test/unittest-cpp/UnitTest++/src/UnitTest++.h"
-#include "spdy/hpack.h"
 #include <util/autostr.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -114,7 +113,7 @@ void testNameValue(const char *name, const char *val, int result,
     int val_match;
     int index = Hpack::getStxTabId((char *)name, (uint16_t)strlen(name) ,
                                         (char *)val, (uint16_t)strlen(val), val_match);
-    printf("name: %s, val: %s, index = %d\n", name, val, index);
+    printf("name: %s, val: %s, index = %d match = %d\n", name, val, index, val_match);
     CHECK(index == result && val_match == val_match_result);
 }
 
@@ -314,11 +313,44 @@ TEST(hapck_self_enc_dec_test)
     unsigned char respBuf[8192] = {0};
     unsigned char *respBufEnd = respBuf + 8192;
     Hpack hpack;
+    unsigned char *pSrc = respBuf;
+    unsigned char *bufEnd;
+    int rc;
+    AutoBuf autoBuf(2048);
+//     char name[1024];
+//     char val[1024];
+    uint16_t name_len = 0;
+    uint16_t val_len = 0;
+    
     hpack.getRespDynTbl().updateMaxCapacity(256);
     hpack.getReqDynTbl().updateMaxCapacity(256);
 
-    //1:
     unsigned char *pBuf = respBuf;
+    
+    //Reproduce bug with special charset
+    pBuf = hpack.encHeader(pBuf, respBufEnd, STR_TO_IOVEC_TEST("content-disposition"),
+                           STR_TO_IOVEC_TEST( "inline; filename=\"Ekran Alıntısı.PNG\""));
+    displayHeader(respBuf, pBuf - respBuf);
+    printTable(hpack.getRespDynTbl());
+
+    /****************************
+    * decHeader testing
+    ****************************/
+    pSrc = respBuf;
+    bufEnd =  pBuf;
+    while ((rc = hpack.decHeader(pSrc, bufEnd, autoBuf, name_len, val_len)) > 0)
+    {
+        char *name = autoBuf.begin();
+        char *val = name + name_len;
+        printf("[%d %d]%s: %s\n", name_len, val_len, 
+               AutoStr2(name,name_len).c_str(),
+               AutoStr2(val, val_len).c_str());
+    }
+    printTable(hpack.getReqDynTbl());
+
+    
+    //1:
+    pBuf = respBuf;
     pBuf = hpack.encHeader(pBuf, respBufEnd, STR_TO_IOVEC_TEST(":status"),
                            STR_TO_IOVEC_TEST("200"));
     pBuf = hpack.encHeader(pBuf, respBufEnd,
@@ -339,14 +371,8 @@ TEST(hapck_self_enc_dec_test)
     /****************************
     * decHeader testing
     ****************************/
-    unsigned char *pSrc = respBuf;
-    unsigned char *bufEnd =  pBuf;
-    int rc;
-    AutoBuf autoBuf(2048);
-//     char name[1024];
-//     char val[1024];
-    uint16_t name_len = 0;
-    uint16_t val_len = 0;
+    pSrc = respBuf;
+    bufEnd =  pBuf;
     while ((rc = hpack.decHeader(pSrc, bufEnd, autoBuf, name_len, val_len)) > 0)
     {
         char *name = autoBuf.begin();
@@ -601,6 +627,65 @@ TEST(hapck_self_enc_dec_test_firefox_error)
 }
 
 
+// TEST(hapck_dec_test_firefox_error2)
+// {
+//     unsigned char respBuf[8192] = {0};
+//     unsigned char *respBufEnd = respBuf + 8192;
+//     Hpack hpack;
+//   
+//     
+//     char buf[] = 
+//     "\x88\x40\x89\xF2\xB5\x67\xF0\x5B\x0B\x22\xD1\xFA\x88\xD7\x8F\x5B"
+//     "\x0D\xAE\xDA\xE2\x6B\x77\xB3\xF3\x2A\x45\x12\x0A\x84\x18\xF5\x40"
+//     "\x17\xDF\x71\xC2\x08\x12\x0C\x12\x38\x30\x3D\x20\x63\x0C\x62\x8D"
+//     "\xD2\x3C\xDB\x2E\x0A\x50\x7D\xA9\x58\xD3\x3C\x0C\x7D\xA8\x82\x92"
+//     "\xDB\x0B\xF6\xA4\xE9\x4D\x67\xAA\x8F\x5F\x58\x85\xAE\xC3\x77\x1A"
+//     "\x4B\x40\x8B\xF2\xB4\xB6\x0E\x92\xAC\x7A\xD2\x63\xD4\x8F\x89\xDD"
+//     "\x0E\x8C\x1A\xB6\xE4\xC5\x93\x4F\x6C\x96\xDC\x34\xFD\x28\x17\x14"
+//     "\xD0\x3F\x4A\x08\x01\x6D\x41\x02\xE3\x4F\xDC\x65\xB5\x31\x68\xDF"
+//     "\x5F\x87\x35\x23\x98\xAC\x57\x54\xDF\x59\x2B\x69\x6E\x6C\x69\x6E"
+//     "\x65\x3B\x20\x66\x69\x6C\x65\x6E\x61\x6D\x65\x3D\x22\x45\x6B\x72"
+//     "\x61\x6E\x20\x41\x6C\xC4\xB1\x6E\x74\xC4\xB1\x73\xC4\xB1\x2E\x50"
+//     "\x4E\x47\x22\x62\x8A\xFE\x42\xD3\x21\x6C\x2F\x09\xB7\xFF\x9F\x40"
+//     "\x90\xF2\xB1\x0F\x52\x4B\x52\x56\x4F\xAA\xCA\xB1\xEB\x49\x8F\x52"
+//     "\x3F\x85\xA8\xE8\xA8\xD2\xCB\x5C\x84\x6C\x00\x68\x00\x61\x96\xDC"
+//     "\x34\xFD\x28\x17\x14\xD0\x3F\x4A\x08\x01\x6D\x41\x02\xE3\x4F\xDC"
+//     "\x65\xB5\x31\x68\xDF\x52\x84\x8F\xD2\x4A\x8F\x76\x87\xCE\x64\x97"
+//     "\x75\x65\x2C\x9F";
+//     int rc;
+//     unsigned char *pSrc = (unsigned char *)buf;
+//     unsigned char *bufEnd = (unsigned char *)buf + sizeof( buf ) - 1; 
+// 
+//     AutoBuf autoBuf(2048);
+//     uint16_t name_len, val_len;
+// 
+//     unsigned char *pBuf = respBuf;
+//     respBufEnd = respBuf + 8192;
+//     
+//     while (pSrc < bufEnd)
+//     {
+//         rc = hpack.decHeader(pSrc, bufEnd, autoBuf, name_len, val_len);
+//         CHECK (rc > 0);
+// 
+//         char *name = autoBuf.begin();
+//         char *val = name + name_len;
+//         printf("[%d %d]%s: %s\n", name_len, val_len, 
+//                AutoStr2(name,name_len).c_str(),
+//                AutoStr2(val, val_len).c_str());
+//         
+//         pBuf = hpack.encHeader(pBuf, respBufEnd, (char *)name, name_len, (char *)val, val_len);
+//         
+//         name_len = 1024;
+//         val_len = 1024;
+//     }
+//     
+//     displayHeader(respBuf, pBuf - respBuf);
+//     CHECK(memcmp(respBuf, buf, 90) ==0);
+// }
+
+
+
+/*
 TEST(getDynTblId_testing)
 {
     HpackDynTbl dynTbl0;
@@ -741,7 +826,7 @@ TEST(getDynTblId_testing)
     printf("\nhapck_self_enc_dec_test_firefox_error Done\n");
     
     
-}
+}*/
 
 
 static HpackHdrTbl_t g_HpackStaticTableTset[] =

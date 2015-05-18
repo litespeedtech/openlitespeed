@@ -2770,6 +2770,7 @@ int HttpSession::flush()
         if (D_ENABLED(DL_LESS))
             LOG_D((getLogger(), "[%s] HSF_RESP_FLUSHED flag is set, skip flush.",
                    getLogId()));
+        //suspendWrite(); //FIXME: should have this here?!
         return 0;
     }
     if (!sendBody() && !getFlag(HSF_HANDLER_DONE))

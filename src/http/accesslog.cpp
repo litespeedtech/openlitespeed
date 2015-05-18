@@ -643,7 +643,7 @@ int AccessLog::appendStr(const char *pStr, int len)
     if (*pStr)
     {
         m_buf.append('"');
-        if ((len > 4096) || (m_buf.capacity() <= len + 2))
+        if ((len > 4096) || (m_buf.available() <= len + 2))
         {
             flush();
             m_pAppender->append(pStr, len);
