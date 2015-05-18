@@ -28,6 +28,12 @@ static const char *g_pHashName = "SHMMCHASH";
 
 char *argv0 = NULL;
 
+union binbuf
+{
+    McBinCmdHdr binhdr;
+    uint8_t data[1024];
+} binbuf;
+
 
 int main(int ac, char *av[])
 {
@@ -85,8 +91,13 @@ int main(int ac, char *av[])
         char *p;
         if ((p = strchr(cmdbuf, '\n')) != NULL)
             *p = '\0';
-        fprintf(stdout, "cmd:[%s]\n", cmdbuf);
-        if ((ret = pMC->processCmd(cmdbuf)) < 0)
+        if (memcmp(cmdbuf, "bin", 3) == 0)
+        {
+            if ((pMC->convertCmd(&cmdbuf[3], (uint8_t *)&binbuf.binhdr) < 0)
+              || (pMC->processBinCmd((uint8_t *)&binbuf.binhdr) < 0))
+                fprintf(stdout, "FAILED!\n");
+        }
+        else if ((ret = pMC->processCmd(cmdbuf)) < 0)
             fprintf(stdout, "FAILED!\n");
         else if (ret > 0)   // need more data
         {
@@ -95,7 +106,7 @@ int main(int ac, char *av[])
             if ((p = strchr(databuf, '\n')) != NULL)
                 *p = '\0';
             fprintf(stdout, "data:[%s]\n", databuf);
-            if (pMC->doDataUpdate(databuf) < 0)
+            if (pMC->doDataUpdate((uint8_t *)databuf) < 0)
                 fprintf(stdout, "FAILED!\n");
         }
     }

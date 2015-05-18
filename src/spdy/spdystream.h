@@ -70,6 +70,8 @@ public:
     void onTimer();
 
     virtual NtwkIOLink *getNtwkIoLink();
+    
+    int shutdown();
 
     int close();
 
@@ -101,7 +103,6 @@ private:
 
     void buildDataFrameHeader(char *pHeader, int length);
     int sendData(IOVec *pIov, int total);
-    int sendFin();
 
 
 protected:

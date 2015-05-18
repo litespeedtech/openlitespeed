@@ -5570,6 +5570,8 @@ int Hpack::encStr(unsigned char *dst, size_t dst_len,
     unsigned char buf[MAX_HEADER_LENGTH];
     int rc = HuffmanCode::huffmanEnc(str, str + str_len, buf,
                                      MAX_HEADER_LENGTH);
+    int realLen = -1;
+    bool useHuffmenCode;
 
     /*
      * Check if need huffman encodeing or not
@@ -5578,22 +5580,30 @@ int Hpack::encStr(unsigned char *dst, size_t dst_len,
      */
     if (rc > 0 && (size_t)rc < dst_len && (size_t)rc <= str_len)
     {
+        useHuffmenCode = true;
         *p_dst = 0x80;
-        p_dst = encInt(p_dst, rc, 7);
-        memcpy(p_dst, buf, rc);
-        p_dst += rc;
+        realLen = rc;
     }
     else if (str_len < dst_len)
     {
+        useHuffmenCode = false;
         *p_dst = 0x00;
-        p_dst = encInt(p_dst, rc, 7);
-        memcpy(p_dst, str, str_len);
-        p_dst += str_len;
+        realLen = str_len;
     }
-    else
-        return LS_FAIL; //No enough space
 
-    return p_dst - dst;
+    if (realLen != -1)
+    {
+        unsigned char *tmp = encInt(p_dst, realLen, 7);
+        if (tmp - p_dst + realLen <= dst_len)
+        {
+            p_dst = tmp;
+            memcpy(p_dst, (useHuffmenCode ? buf : str), realLen);
+            p_dst += realLen;
+            return p_dst - dst;
+        }
+    }
+
+    return LS_FAIL; //No enough space
 }
 
 

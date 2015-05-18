@@ -30,6 +30,8 @@ ContextTree::ContextTree()
 {
     m_pURITree = new RadixTree();
     m_pLocTree = new RadixTree();
+    m_pURITree->setUseWildCard();
+    m_pLocTree->setUseWildCard();
     m_pURITree->setRootLabel("/", 1);
     m_pLocTree->setRootLabel("/", 1);
 }

@@ -399,7 +399,7 @@ int NtwkIOLink::handleEvents(short evt)
     if (event & POLLOUT)
         (*m_pFpList->m_onWrite_fp)(this);
     m_iInProcess = 0;
-    if (getState() >= HIOS_CLOSING)
+    if (getState() == HIOS_CLOSING)
         onPeerClose();
     return 0;
 }
@@ -512,8 +512,9 @@ void NtwkIOLink::checkSSLReadRet(int ret)
             MultiplexerFactory::getMultiplexer()->continueWrite(this);
         }
     }
-    else if (getState() != HIOS_SHUTDOWN)
-        setState(HIOS_CLOSING);
+    else 
+        tobeClosed();
+    
 }
 
 
@@ -695,7 +696,7 @@ int NtwkIOLink::flush()
         }
     }
     else if (ret == LS_FAIL)
-        setState(HIOS_CLOSING);
+        tobeClosed();
 
     return ret;
 }
@@ -733,15 +734,24 @@ int NtwkIOLink::onReadSSL(NtwkIOLink *pThis)
 }
 
 
-int NtwkIOLink::closeSSL(NtwkIOLink *pThis)
+int NtwkIOLink::shutdownSsl()
 {
     if (D_ENABLED(DL_LESS))
-        LOG_D((pThis->getLogger(), "[%s] Shutting down SSL ...",
-               pThis->getLogId()));
-    pThis->m_ssl.shutdown(0);
-    pThis->m_ssl.release();
+        LOG_D((getLogger(), "[%s] Shutting down SSL ...",
+            getLogId()));
+    m_ssl.shutdown(0);
+    m_ssl.release();
     ConnLimitCtrl::getInstance().decSSLConn();
-    pThis->setNoSSL();
+    setNoSSL();
+    return 0;
+}
+
+int NtwkIOLink::closeSSL(NtwkIOLink *pThis)
+{
+    if (pThis->m_ssl.getSSL())
+    {
+        pThis->shutdownSsl();
+    }
     return close_(pThis);
 }
 
@@ -751,18 +761,35 @@ int NtwkIOLink::closeSSL(NtwkIOLink *pThis)
 ///////////////////////////////////////////////////////////////////////
 
 
+int NtwkIOLink::shutdown()
+{
+    if (getState() == HIOS_SHUTDOWN)
+        return 0;
+    setState(HIOS_SHUTDOWN);
+
+    if (m_ssl.getSSL())
+    {
+        shutdownSsl();
+    }
+    if (D_ENABLED(DL_LESS))
+        LOG_D((getLogger(), "[%s] Shutting down out-bound socket ...",
+               getLogId()));
+
+    ::shutdown(getfd(), SHUT_WR);
+    return 0;
+}
+
 int NtwkIOLink::close_(NtwkIOLink *pThis)
 {
-    pThis->setState(HIOS_SHUTDOWN);
 
     if (pThis->getFlag(HIO_FLAG_PEER_SHUTDOWN | HIO_FLAG_ABORT))
+    {
+        pThis->setState(HIOS_SHUTDOWN);
         pThis->closeSocket();
+    }
     else
     {
-        if (D_ENABLED(DL_LESS))
-            LOG_D((pThis->getLogger(), "[%s] Shutting down out-bound socket ...",
-                   pThis->getLogId()));
-        ::shutdown(pThis->getfd(), SHUT_WR);
+        pThis->shutdown();
         MultiplexerFactory::getMultiplexer()->switchWriteToRead(pThis);
         if (!(pThis->m_iPeerShutdown & IO_COUNTED))
         {
@@ -932,8 +959,7 @@ int NtwkIOLink::checkReadRet(int ret, int size)
             ret = 0;
             break;
         default:
-            if (getState() != HIOS_SHUTDOWN)
-                setState(HIOS_CLOSING);
+            tobeClosed();
             if (D_ENABLED(DL_LESS))
                 LOG_D((getLogger(), "[%s] read error: %s\n",
                        getLogId(), strerror(errno)));
@@ -1628,7 +1654,7 @@ int NtwkIOLink::SSLAgain()
         setSSLAgain();
         break;
     case -1:
-        setState(HIOS_CLOSING);
+        tobeClosed();
         break;
     }
     return ret;

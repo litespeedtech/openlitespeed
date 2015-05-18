@@ -70,7 +70,7 @@ EventObj *UserEventNotifier::createEventObj(lsi_event_callback_pf eventCb,
                                          long lParam, 
                                          void *pParam)
 {
-    EventObj *pEventObj = m_eventObjPool.get(); //new EventObj;// 
+    EventObj *pEventObj = m_eventObjPool.get();
     if (pEventObj)
     {
         pEventObj->m_eventCb = eventCb;
@@ -86,7 +86,9 @@ EventObj *UserEventNotifier::createEventObj(lsi_event_callback_pf eventCb,
     return pEventObj;
 }
 
-EventObj *UserEventNotifier::scheduleSessionEvent(lsi_event_callback_pf eventCb, long lParam, HttpSession *pSession)
+
+EventObj *UserEventNotifier::scheduleSessionEvent(lsi_event_callback_pf eventCb,
+                                                  long lParam, HttpSession *pSession)
 {
     EventObj *pObj = createEventObj(eventCb, lParam, (void *)pSession);
     pObj->m_state = EVENTOBJ_ST_WAIT;
@@ -164,16 +166,16 @@ void UserEventNotifier::removeSessionEvents(EventObj *pFirstObj, HttpSession *pS
 
     if (!pObj)
         pObj = (EventObj *)m_eventObjList.begin();
-            
+
+    if (D_ENABLED(DL_MEDIUM))
+        LOG_D(("UserEventNotifier::removeSessionEvents() start with pFirstObj=%p pParam=%p state=%d\n",
+              pObj, pObj->m_pParam, pObj->m_state ));
+
     while (pObj && pObj != (EventObj *)m_eventObjList.end())
     {
         pObjNext = (EventObj *)pObj->next();
         if (pObj->m_pParam == (void *)pSession)
         {
-            if (D_ENABLED(DL_MEDIUM))
-                LOG_D(("UserEventNotifier::removeSessionEvents() pEventObj=%p pParam=%p state=%d\n",
-                   pObj, pObj->m_pParam, pObj->m_state ));
-
             removeEventObj(pObj);
         }
         pObj = pObjNext;

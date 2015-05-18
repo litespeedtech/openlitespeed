@@ -589,8 +589,8 @@ static int createEntry(lsi_cb_param_t *rec)
     {
         clearHooks(rec->_session);
         g_api->log(rec->_session, LSI_LOG_DEBUG,
-                   "[%s]cacheTofile to be cancelled for error page.\n",
-                   ModuleNameStr);
+                   "[%s]cacheTofile to be cancelled for error page, code=%d.\n",
+                   ModuleNameStr, code);
         return 0;
     }
 

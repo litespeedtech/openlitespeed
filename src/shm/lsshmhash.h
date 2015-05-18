@@ -154,6 +154,7 @@ typedef struct
     void       *m_pRet;     // returned stuff
     void       *m_pMisc;    // miscellaneous stuff
     uint64_t    m_value;
+    uint64_t    m_cas;
 } LsShmUpdOpt;
 
 #define UPDRET_DONE         0
@@ -354,10 +355,10 @@ public:
         return iterOff;
     }
 
-    iteroffset insertIterator(ls_str_pair_t *pParms)
+    iteroffset insertIterator(ls_str_pair_t *pParms, LsShmUpdOpt *pOpt = NULL)
     {
         autoLockChkRehash();
-        iteroffset iterOff = (*m_insert)(this, pParms);
+        iteroffset iterOff = (*m_insert)(this, pParms, pOpt);
         autoUnlock();
         return iterOff;
     }
@@ -496,6 +497,12 @@ public:
     int unlock()
     {   return m_iLockEnable ? 0 : lsi_shmlock_unlock(m_pShmLock); }
 
+    void lockChkRehash()
+    {
+        if ((lock() < 0) && (getHTable()->x_iHIdx != getHTable()->x_iHIdxNew))
+            rehash();
+    }
+
     int getRef()     { return m_iRef; }
     int upRef()      { return ++m_iRef; }
     int downRef()    { return --m_iRef; }
@@ -503,7 +510,7 @@ public:
 protected:
     typedef iteroffset (*hash_find)(LsShmHash *pThis, ls_str_pair_t *pParms);
     typedef iteroffset (*hash_get)(LsShmHash *pThis, ls_str_pair_t *pParms, int *pFlag);
-    typedef iteroffset (*hash_insert)(LsShmHash *pThis, ls_str_pair_t *pParms);
+    typedef iteroffset (*hash_insert)(LsShmHash *pThis, ls_str_pair_t *pParms, LsShmUpdOpt *pOpt);
     typedef iteroffset (*hash_set)(LsShmHash *pThis, ls_str_pair_t *pParms);
     typedef iteroffset (*hash_update)(LsShmHash *pThis, ls_str_pair_t *pParms, LsShmUpdOpt *pOpt);
 
@@ -550,15 +557,17 @@ protected:
 
     static iteroffset findNum(LsShmHash *pThis, ls_str_pair_t *pParms);
     static iteroffset getNum(LsShmHash *pThis, ls_str_pair_t *pParms, int *pFlag);
-    static iteroffset insertNum(LsShmHash *pThis, ls_str_pair_t *pParms);
+    static iteroffset insertNum(LsShmHash *pThis, ls_str_pair_t *pParms, LsShmUpdOpt *pOpt);
     static iteroffset setNum(LsShmHash *pThis, ls_str_pair_t *pParms);
     static iteroffset updateNum(LsShmHash *pThis, ls_str_pair_t *pParms, LsShmUpdOpt *pOpt);
 
     static iteroffset findPtr(LsShmHash *pThis, ls_str_pair_t *pParms);
     static iteroffset getPtr(LsShmHash *pThis, ls_str_pair_t *pParms, int *pFlag);
-    static iteroffset insertPtr(LsShmHash *pThis,ls_str_pair_t *pParms);
+    static iteroffset insertPtr(LsShmHash *pThis,ls_str_pair_t *pParms, LsShmUpdOpt *pOpt);
     static iteroffset setPtr(LsShmHash *pThis, ls_str_pair_t *pParms);
     static iteroffset updatePtr(LsShmHash *pThis, ls_str_pair_t *pParms, LsShmUpdOpt *pOpt);
+
+    iterator chkMcIter(iteroffset iterOff, LsShmUpdOpt *pOpt);
 
     //
     //  @brief eraseIterator_helper

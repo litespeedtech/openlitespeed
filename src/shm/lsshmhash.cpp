@@ -750,7 +750,7 @@ LsShmHash::iteroffset LsShmHash::getNum(
 
 
 LsShmHash::iteroffset LsShmHash::insertNum(
-    LsShmHash *pThis, ls_str_pair_t *pParms)
+    LsShmHash *pThis, ls_str_pair_t *pParms, LsShmUpdOpt *pOpt)
 {
     iteroffset iterOff = findNum(pThis, pParms);
     char *keyptr = ls_str_buf(&pParms->key);
@@ -808,11 +808,19 @@ LsShmHash::iteroffset LsShmHash::getPtr(
 
 
 LsShmHash::iteroffset LsShmHash::insertPtr(
-    LsShmHash *pThis, ls_str_pair_t *pParms)
+    LsShmHash *pThis, ls_str_pair_t *pParms, LsShmUpdOpt *pOpt)
 {
     LsShmHKey key = (*pThis->m_hf)(
         ls_str_buf(&pParms->key), ls_str_len(&pParms->key));
     iteroffset iterOff = pThis->find2(key, pParms);
+    if ((pOpt != NULL) && (iterOff != 0))
+    {
+        if (LsShmMemCached::isExpired(
+            (LsMcDataItem *)pThis->offset2iteratorData(iterOff)))
+        {
+            return doUpdate(pThis, iterOff, key, pParms);
+        }
+    }
 
     return doInsert(pThis, iterOff, key, pParms);
 }
@@ -837,32 +845,19 @@ LsShmHash::iteroffset LsShmHash::updatePtr(
     iteroffset iterOff = pThis->find2(key, pParms);
     if (pOpt != NULL)
     {
-        LsMcDataItem *pItem;
+        iterator iter;
+        if ((iter = pThis->chkMcIter(iterOff, pOpt)) == NULL)
+            return 0;
+
         int cmd = (pOpt->m_iFlags & LSMC_CMDMASK);
-        if (cmd == LSMC_CAS)
+        if (cmd == MC_BINCMD_REPLACE)
         {
-            if (iterOff == 0)
-            {
-                pOpt->m_iRetcode = UPDRET_NOTFOUND;
-                return 0;
-            }
-            pItem = (LsMcDataItem *)pThis->offset2iteratorData(iterOff);
-            if (pItem->x_data->withcas.cas != pOpt->m_value)
-            {
-                pOpt->m_iRetcode = UPDRET_CASFAIL;
-                return 0;
-            }
             pOpt->m_iRetcode = UPDRET_DONE;
         }
-        else if ((cmd == LSMC_INCR) || (cmd == LSMC_DECR))
+        else if ((cmd == MC_BINCMD_INCREMENT) || (cmd == MC_BINCMD_DECREMENT))
         {
-            if (iterOff == 0)
-            {
-                pOpt->m_iRetcode = UPDRET_NOTFOUND;
-                return 0;
-            }
             uint64_t num;
-            iterator iter = pThis->offset2iterator(iterOff);
+            LsMcDataItem *pItem;
             pItem = LsShmMemCached::mcIter2num(iter,
               pOpt->m_iFlags & LSMC_WITHCAS, (char *)pOpt->m_pMisc, &num);
             if (pItem == NULL)
@@ -870,11 +865,11 @@ LsShmHash::iteroffset LsShmHash::updatePtr(
                 pOpt->m_iRetcode = UPDRET_NONNUMERIC;
                 return 0;
             }
-            if (cmd == LSMC_INCR)
+            if (cmd == MC_BINCMD_INCREMENT)
             {
                 num += pOpt->m_value;
             }
-            else /* if (cmd == LSMC_DECR) */
+            else /* if (cmd == MC_BINCMD_DECREMENT) */
             {
                 if (pOpt->m_value > num)
                     num = 0;
@@ -885,9 +880,8 @@ LsShmHash::iteroffset LsShmHash::updatePtr(
                 (char *)pOpt->m_pMisc, ULL_MAXLEN+1, "%llu", (unsigned long long)num);
             *((LsMcDataItem *)pOpt->m_pRet) = *pItem;
         }
-        else if ((cmd == LSMC_APPEND) || (cmd == LSMC_PREPEND))
+        else if ((cmd == MC_BINCMD_APPEND) || (cmd == MC_BINCMD_PREPEND))
         {
-            pOpt->m_iRetcode = UPDRET_DONE;
             return doExpand(pThis, iterOff, key, pParms, pOpt->m_iFlags);
         }
     }
@@ -896,11 +890,33 @@ LsShmHash::iteroffset LsShmHash::updatePtr(
 }
 
 
+iterator LsShmHash::chkMcIter(iteroffset iterOff, LsShmUpdOpt *pOpt)
+{
+    if (iterOff == 0)
+    {
+        pOpt->m_iRetcode = UPDRET_NOTFOUND;
+        return NULL;
+    }
+    iterator iter = offset2iterator(iterOff);
+    LsMcDataItem *pItem = (LsMcDataItem *)iter->getVal();
+    if (LsShmMemCached::isExpired(pItem))
+    {
+        eraseIteratorHelper(iter);
+        pOpt->m_iRetcode = UPDRET_NOTFOUND;
+        return NULL;
+    }
+    if ((pOpt->m_cas != 0) && (pItem->x_data->withcas.cas != pOpt->m_cas))
+    {
+        pOpt->m_iRetcode = UPDRET_CASFAIL;
+        return NULL;
+    }
+    return iter;
+}
+
+
 LsShmHash::iteroffset LsShmHash::doExpand(LsShmHash *pThis,
     iteroffset iterOff, LsShmHKey key, ls_str_pair_t *pParms, uint16_t flags)
 {
-    if (iterOff == 0)
-        return 0;
     iterator iter = pThis->offset2iterator(iterOff);
     int32_t lenExp = ls_str_len(&pParms->value);
     int32_t lenNew = iter->getValLen() + lenExp;
@@ -928,7 +944,7 @@ LsShmHash::iteroffset LsShmHash::doExpand(LsShmHash *pThis,
         iterOff = iterOffNew;
         iter = iterNew;
     }
-    if ((flags & LSMC_CMDMASK) == LSMC_PREPEND)
+    if ((flags & LSMC_CMDMASK) == MC_BINCMD_PREPEND)
     {
         int valLen;
         uint8_t *valPtr;

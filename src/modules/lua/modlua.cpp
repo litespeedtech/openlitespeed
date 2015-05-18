@@ -149,21 +149,10 @@ int luaBodyFilter(lsi_cb_param_t *rec)
 {   return runLuaFilter(rec, LSLUA_HOOK_BODY);  }
 
 
-int registerLua(lsi_cb_param_t *rec)
-{
-    int len;
-    const char *uri = g_api->get_req_uri(rec->_session, &len);
-    if ((len > 5) && (memcmp(uri + len - 4, ".lua", 4) == 0))
-        g_api->register_req_handler(rec->_session, &MNAME, 0);
-    return LSI_HK_RET_OK;
-}
-
-
 static int luaHandler(lsi_session_t *session)
 {
     char *uri;
     char luafile[MAXFILENAMELEN];
-    char buf[0x1000];
     int n;
     LsLuaUserParam *pUser;
     luaData_t *pData;
@@ -184,15 +173,10 @@ static int luaHandler(lsi_session_t *session)
     pUser = (LsLuaUserParam *)g_api->get_module_param(session, &MNAME);
     uri = (char *)g_api->get_req_uri(session, NULL);
 
-    if (g_api->get_uri_file_path(session, uri, strlen(uri),
-                                 luafile, MAXFILENAMELEN) != 0)
-    {
-        n = snprintf(buf, 0x1000, "luahandler: FAILED TO COMPOSE LUA"
-                     " script path %s\r\n", uri);
-        g_api->append_resp_body(session, buf, n);
-        g_api->end_resp(session);
-        return 0;
-    }
+    n = g_api->get_req_var_by_id(session, LSI_REQ_VAR_DOC_ROOT, luafile,
+                                 MAXFILENAMELEN);
+    memmove(luafile + n, uri, strlen(uri));
+    n += strlen(uri);
 
     g_api->set_handler_write_state(session, 0);
     LsLuaEngine::setDebugLevel((int)g_api->_debugLevel);
@@ -256,7 +240,6 @@ static lsi_serverhook_t serverHooks[] =
         LSI_HOOK_FLAG_ENABLED
     },
     { LSI_HKPT_URI_MAP, luaRewrite, LSI_HOOK_EARLY, 0 },
-    { LSI_HKPT_URI_MAP, registerLua, LSI_HOOK_NORMAL, LSI_HOOK_FLAG_ENABLED },
     { LSI_HKPT_HTTP_AUTH, luaAuthFilter, LSI_HOOK_EARLY, 0 },
     { LSI_HKPT_RCVD_RESP_HEADER, luaHeaderFilter, LSI_HOOK_EARLY, 0 },
     { LSI_HKPT_RECV_RESP_BODY, luaBodyFilter, LSI_HOOK_EARLY, 0 },
@@ -298,5 +281,5 @@ lsi_module_t MNAME = { LSI_MODULE_SIGNATURE,
                        &lslua_mod_config,
                        "v1.0",
                        serverHooks,
-{0}
+                       {0}
                      };

@@ -161,7 +161,8 @@ NtwkIOLink *SpdyStream::getNtwkIoLink()
     return m_pSpdyConn->getNtwkIoLink();
 }
 
-int SpdyStream::sendFin()
+
+int SpdyStream::shutdown()
 {
     if (getState() == HIOS_SHUTDOWN)
         return 0;
@@ -170,7 +171,7 @@ int SpdyStream::sendFin()
 
     if (D_ENABLED(DL_LESS))
     {
-        LOG_D((getLogger(), "[%s] SpdyStream::sendFin()",
+        LOG_D((getLogger(), "[%s] H2Stream::shutdown()",
                getLogId()));
     }
     m_pSpdyConn->sendFinFrame(m_uiStreamID);
@@ -178,13 +179,14 @@ int SpdyStream::sendFin()
     return 0;
 }
 
+
 int SpdyStream::close()
 {
-    if (getState() != HIOS_CONNECTED)
+    if (getState() == HIOS_DISCONNECTED)
         return 0;
-    if (getHandler())
+    if (getHandler() && !isReadyToRelease())
         getHandler()->onCloseEx();
-    sendFin();
+    shutdown();
     setFlag(HIO_FLAG_WANT_WRITE, 1);
     setState(HIOS_DISCONNECTED);
     m_pSpdyConn->continueWrite();

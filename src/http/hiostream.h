@@ -96,6 +96,7 @@ public:
 
     virtual int sendRespHeaders(HttpRespHeaders *pHeaders) = 0;
 
+    virtual int  shutdown() = 0;
     virtual void suspendRead()  = 0;
     virtual void continueRead() = 0;
     virtual void suspendWrite() = 0;
@@ -188,6 +189,12 @@ public:
             handlerOnClose();
         }
         close();
+    }
+    
+    void tobeClosed() 
+    { 
+        if (m_iState != HIOS_SHUTDOWN)
+            m_iState = HIOS_CLOSING;  
     }
 
     short isPeerShutdown() const {  return m_iFlag & HIO_FLAG_PEER_SHUTDOWN;    }
