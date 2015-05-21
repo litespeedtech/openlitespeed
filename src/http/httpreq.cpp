@@ -733,7 +733,6 @@ key_value_pair *HttpReq::newKeyValueBuf(int &idxOff)
         int pad = m_reqBuf.size() % 4;
         if (pad)
             m_reqBuf.used(4 - pad);
-        idxOff = m_reqBuf.size();
         if (m_reqBuf.available() < total)
         {
             if (m_reqBuf.grow(total))
@@ -741,6 +740,7 @@ key_value_pair *HttpReq::newKeyValueBuf(int &idxOff)
             //After grow, need to re-get the pointer since it may be changed.
             p = m_reqBuf.getPointer(idxOff);
         }
+        idxOff = m_reqBuf.size();
         char *pNewBuf = m_reqBuf.end();
         m_reqBuf.used(total);
         if (orgSize > 0)
