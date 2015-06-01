@@ -1462,7 +1462,7 @@ Optional Features:
                           disabled by default)
   --enable-http2          Enable SPDY and http2 over HTTPS (Spdy and http2 are
                           disabled by default)
-  --enable-redis          Enable redis for cache module (Using redis is
+  --enable-cacheredis          Enable redis for cache module (Using redis is
                           disabled by default)
   --enable-debug          Enable debugging symbols (Debug is disabled by
                           default)
