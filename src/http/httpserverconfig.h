@@ -22,6 +22,7 @@
 
 #include <inttypes.h>
 #include <sys/types.h>
+#include <http/reqparserparam.h>
 
 class DeniedDir;
 class ConnLimitCtrl;
@@ -65,6 +66,7 @@ class HttpServerConfig : public TSingleton<HttpServerConfig>
     const char     *m_pAdminSock;
     DeniedDir      *m_pDeniedDir;
     HttpVHost      *m_pGlobalVHost;
+    ReqParserParam  m_ReqParserParam;
 
     void operator=(const HttpServerConfig &rhs);
     HttpServerConfig(const HttpServerConfig &rhs);
@@ -177,6 +179,9 @@ public:
 
     void setGlobalVHost(HttpVHost *pVal)    {   m_pGlobalVHost = pVal;      }
     HttpVHost *getGlobalVHost()             {   return m_pGlobalVHost;      }
+    
+    ReqParserParam& getReqParserParam()     {   return m_ReqParserParam;    }
+
 };
 
 #endif

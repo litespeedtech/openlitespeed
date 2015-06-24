@@ -18,6 +18,14 @@
 #ifndef HTTPREQ_H
 #define HTTPREQ_H
 
+enum
+{
+    REQ_BODY_UNKNOWN,
+    REQ_BODY_FORM,
+    REQ_BODY_MULTIPART
+};
+
+
 #include <http/httpheader.h>
 #include <lsr/ls_str.h>
 #include <lsr/ls_types.h>
@@ -163,7 +171,7 @@ private:
     int                 m_fdReqFile;
     struct stat         m_fileStat;
     int                 m_iScriptNameLen;
-
+    short               m_pReqBodyType;
     LogTracker         *m_pILog;
 
 
@@ -420,8 +428,11 @@ public:
     void setRange(HttpRange *pRange)        {   m_pRange = pRange;          }
 
     VMemBuf *getBodyBuf() const             {   return m_pReqBodyBuf;       }
+    short getBodyType() const               {   return m_pReqBodyType;  }
+
     int prepareReqBodyBuf();
     void replaceBodyBuf(VMemBuf *pBuf);
+    void updateContentType(char *buf);
 
     char gzipAcceptable() const             {   return m_iAcceptGzip;       }
     void andGzip(char b)                    {   m_iAcceptGzip &= b;         }

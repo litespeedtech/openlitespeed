@@ -66,9 +66,10 @@ static inline void append4Bytes(LoopBuf *pBuf, const char *val)
 H2Connection::H2Connection()
     : m_bufInput(4096)
     , m_uiServerStreamID(2)
-    , m_uiLastPingID(0)
     , m_uiLastStreamID(0)
     , m_uiGoAwayId(0)
+    , m_iCurrentFrameRemain(-H2_FRAME_HEADER_SIZE)
+    , m_tmLastFrameIn(0)
     , m_mapStream(50, int_hash, int_comp)
     , m_iFlag(0)
     , m_iCurDataOutWindow(H2_FCW_INIT_SIZE)
@@ -81,6 +82,8 @@ H2Connection::H2Connection()
     , m_iPeerMaxFrameSize(H2_DEFAULT_DATAFRAME_SIZE)
     , m_tmIdleBegin(0)
 {
+    m_timevalPing.tv_sec = 0;
+    m_pCurH2Header = (H2FrameHeader *)m_iaH2HeaderMem;
 }
 
 
@@ -88,6 +91,7 @@ void H2Connection::init(HiosProtocol ver)
 {
     m_iCurDataOutWindow = H2_FCW_INIT_SIZE;
     m_uiLastStreamID = 0;
+    m_timevalPing.tv_sec = 0;
     m_iStreamOutInitWindowSize = H2_FCW_INIT_SIZE;
     m_iServerMaxStreams = 100;
     m_iClientMaxStreams = 100;
@@ -190,8 +194,7 @@ int H2Connection::parseFrame()
             }
         }
 
-        if ((m_iFlag & (H2_CONN_HEADERS_START | H2_CONN_HEADERS_END))
-                == H2_CONN_HEADERS_START
+        if ((m_iFlag & H2_CONN_HEADERS_START) == H2_CONN_HEADERS_START
             && m_pCurH2Header->getType() != H2_FRAME_CONTINUATION)
         {
             return LS_FAIL;
@@ -223,8 +226,8 @@ int H2Connection::parseFrame()
     {
         if (D_ENABLED(DL_LESS))
         {
-            LOG_D((getLogger(), "[%s] send WINDOW_UPDATE, for %d bytes.",
-                   getLogId(), m_iDataInWindow));
+            LOG_D((getLogger(), "[%s] send WINDOW_UPDATE, window: %d, consumed: %d.",
+                   getLogId(), m_iDataInWindow, m_iCurInBytesToUpdate));
         }
         sendWindowUpdateFrame(0, m_iCurInBytesToUpdate);
         m_iCurInBytesToUpdate = 0;
@@ -278,6 +281,8 @@ int H2Connection::processFrame(H2FrameHeader *pHeader)
 {
     static uint32_t requiredLength[11] =
     {  0, 0, 5, 4, 0, 0, 8, 0, 4, 0, 0 };
+    
+    m_tmLastFrameIn = DateTime::s_curTime;
     
     int type = pHeader->getType();
     //m_bufInput.moveTo((char *)pHeader + H2_FRAME_HEADER_SIZE, extraHeader);
@@ -560,7 +565,7 @@ int H2Connection::processWindowUpdateFrame(H2FrameHeader *pHeader)
             int ret = pStream->adjWindowOut(delta);
             if (ret < 0)
                 sendRstFrame(id, H2_ERROR_FLOW_CONTROL_ERROR);
-            else if ( pStream->adjWindowOut(delta) <= delta )
+            else if ( pStream->adjWindowOut(delta) <= (int)delta )
                 pStream->continueWrite();
             
         }
@@ -683,16 +688,24 @@ int H2Connection::processContinuationFrame(H2FrameHeader *pHeader)
         return 0;
     uint32_t id = pHeader->getStreamId();
     if ((id != m_uiLastStreamID)
-        || (m_iFlag & (H2_CONN_HEADERS_START | H2_CONN_HEADERS_END))
-                != H2_CONN_HEADERS_START )
+        || (m_iFlag & H2_CONN_HEADERS_START) == 0 )
     {
+        if (D_ENABLED(DL_LESS))
+        {
+            LOG_D((getLogger(),
+                   "[%s] received unexpected CONTINUATION frame, expect id: %d, "
+                   " connection flag: %d",
+                   getLogId(), m_uiLastStreamID, m_iFlag));
+        }
         return LS_FAIL;
     }
+    if (pHeader->getFlags() & H2_FLAG_END_HEADERS)
+        m_iFlag &= ~H2_CONN_HEADERS_START;
 
-    return processReqHeader(pHeader->getFlags(), false);
+    return processReqHeader(pHeader->getFlags());
 }
 
-int H2Connection::processReqHeader(unsigned char iHeaderFlag, bool isFirstPart)
+int H2Connection::processReqHeader(unsigned char iHeaderFlag)
 {
     int iDatalen = (m_bufInput.size() < m_iCurrentFrameRemain) ?
                    (m_bufInput.size()) : (m_iCurrentFrameRemain);
@@ -702,14 +715,11 @@ int H2Connection::processReqHeader(unsigned char iHeaderFlag, bool isFirstPart)
     //Check if we need to move the buffer to stream bufinflat
     bool needToMove = false;
     int bufPart1Len = m_bufInput.blockSize();
-    if (!isFirstPart
-        || (((iHeaderFlag & H2_FLAG_END_HEADERS) == 0)
-            || iDatalen > bufPart1Len))
+    if ((iHeaderFlag & H2_FLAG_END_HEADERS) == 0
+        || iDatalen > bufPart1Len
+        || m_bufInflate.size() > 0)
     {
         needToMove = true;
-        if (isFirstPart)
-            m_bufInflate.clear();
-
         if (iDatalen > bufPart1Len)
         {
             m_bufInflate.append(m_bufInput.begin(), bufPart1Len);
@@ -727,7 +737,6 @@ int H2Connection::processReqHeader(unsigned char iHeaderFlag, bool isFirstPart)
     
     if (iHeaderFlag & H2_FLAG_END_HEADERS)
     {
-        m_iFlag |= H2_CONN_HEADERS_END;
         unsigned char *pSrc = NULL;
         AutoBuf tmpBuf;
         if (needToMove)
@@ -738,14 +747,14 @@ int H2Connection::processReqHeader(unsigned char iHeaderFlag, bool isFirstPart)
         }
         else
             pSrc = (unsigned char *)m_bufInput.begin();
-        return decodeHeaders(pSrc, iDatalen, iHeaderFlag, isFirstPart);
+        return decodeHeaders(pSrc, iDatalen, iHeaderFlag);
     }
     else
         return 0;
 }
 
 
-int H2Connection::decodeHeaders(unsigned char *pSrc, int length, unsigned char iHeaderFlag, bool isFirstPart)
+int H2Connection::decodeHeaders(unsigned char *pSrc, int length, unsigned char iHeaderFlag)
 {
     char method[10] = {0};
     int methodLen = 0;
@@ -756,18 +765,23 @@ int H2Connection::decodeHeaders(unsigned char *pSrc, int length, unsigned char i
     unsigned char *bufEnd = pSrc + length;
     int rc = decodeData(pSrc, bufEnd, method, &methodLen, &uri, &uriLen, &contentLen);
     if (rc < 0)
+    {
+        if (uri)
+            free(uri);
+        if (D_ENABLED(DL_LESS))
+        {
+            LOG_D((getLogger(), "[%s] decodeData() failure, return %d", 
+                   getLogId(), rc));
+        }
         return LS_FAIL;
+    }
 
     H2Stream *pStream = NULL;
-    if (isFirstPart
-        || (pStream = findStream(m_uiLastStreamID)) == NULL)
+    pStream = getNewStream(iHeaderFlag);
+    if (!pStream)
     {
-        pStream = getNewStream(iHeaderFlag);
-        if (!pStream)
-        {
-            sendRstFrame(m_uiLastStreamID, H2_ERROR_PROTOCOL_ERROR);
-            return 0;
-        }
+        sendRstFrame(m_uiLastStreamID, H2_ERROR_PROTOCOL_ERROR);
+        return 0;
     }
 
     appendReqHeaders(pStream, method, methodLen, uri, uriLen);
@@ -803,7 +817,6 @@ int H2Connection::processHeadersFrame(H2FrameHeader *pHeader)
     
     unsigned char iHeaderFlag = pHeader->getFlags();
 
-    m_iFlag |= H2_CONN_HEADERS_START;
     unsigned char *pSrc = (unsigned char *)m_bufInput.begin();
     if (iHeaderFlag & H2_FLAG_PADDED)
     {
@@ -828,7 +841,11 @@ int H2Connection::processHeadersFrame(H2FrameHeader *pHeader)
     else
         memset(&m_priority, 0, sizeof(m_priority));
 
-    return processReqHeader(iHeaderFlag, true);
+    if ((iHeaderFlag & H2_FLAG_END_HEADERS) == 0)
+        m_iFlag |= H2_CONN_HEADERS_START;
+
+    m_bufInflate.clear();
+    return processReqHeader(iHeaderFlag);
 }
 
 
@@ -948,7 +965,10 @@ int H2Connection::decodeData(unsigned char *pSrc, unsigned char *bufEnd,
     if (error || rc < 0 || methodLen == 0 || uriLen == 0 || *uri == NULL)
     {
         if (*uri)
+        {
             free(*uri);
+            *uri = NULL;
+        }
         return -1;
     }
 
@@ -1175,21 +1195,29 @@ int H2Connection::processPingFrame(H2FrameHeader *pHeader)
         return LS_FAIL;
     }
 
-    if (!(pHeader->getFlags() & H2_FLAG_ACK))
+    if (!(pHeader->getFlags() & H2_FLAG_ACK) || m_timevalPing.tv_sec == 0)
     {
         uint8_t payload[H2_PING_FRAME_PAYLOAD_SIZE];
         m_bufInput.moveTo((char *)payload, H2_PING_FRAME_PAYLOAD_SIZE);
+        if (pHeader->getFlags() & H2_FLAG_ACK)
+        {
+            if (D_ENABLED(DL_LESS))
+                LOG_D((getLogger(), "[%s] unexpected PING frame, %.*s",
+                        getLogId(), 8, payload));
+            return 0;
+        }
         return sendPingFrame(H2_FLAG_ACK, payload);
     }
-
+    
     gettimeofday(&CurTime, NULL);
     msec = (CurTime.tv_sec - m_timevalPing.tv_sec) * 1000;
     msec += (CurTime.tv_usec - m_timevalPing.tv_usec) / 1000;
     if (D_ENABLED(DL_MORE))
     {
-        LOG_D((getLogger(), "[%s] Received PING, ID=%d, Round trip "
-               "times=%d milli-seconds", getLogId(), m_uiLastPingID, msec));
+        LOG_D((getLogger(), "[%s] Received PING, Round trip "
+               "times=%d milli-seconds", getLogId(), msec));
     }
+    m_timevalPing.tv_sec = 0;
     return 0;
 }
 
@@ -1291,6 +1319,7 @@ int H2Connection::releaseAllStream()
 
 int H2Connection::timerRoutine()
 {
+    int stuckRead = 0;
     StreamMap::iterator itn, it = m_mapStream.begin();
     for (; it != m_mapStream.end();)
     {
@@ -1298,6 +1327,8 @@ int H2Connection::timerRoutine()
         it.second()->onTimer();
         if (it.second()->getState() != HIOS_CONNECTED)
             recycleStream(it);
+        else if (it.second()->isStuckOnRead())
+            ++stuckRead;
         it = itn;
     }
     if (m_mapStream.size() == 0)
@@ -1308,7 +1339,30 @@ int H2Connection::timerRoutine()
             doGoAway(H2_ERROR_NO_ERROR);
     }
     else
+    {
+        if (stuckRead > 0)
+        {
+            if ( m_timevalPing.tv_sec == 0)
+            {
+                if (D_ENABLED(DL_LESS))
+                    LOG_D((getLogger(), "[%s] send PING to check if peer is still alive.",
+                            getLogId()));
+                sendPingFrame(0, (uint8_t *)"RUALIVE?");
+                m_timevalPing.tv_sec = DateTime::s_curTime;
+                m_timevalPing.tv_usec = DateTime::s_curTimeUs;
+                
+            }
+            else if (DateTime::s_curTime - m_timevalPing.tv_sec > 20) 
+            {
+                doGoAway(H2_ERROR_PROTOCOL_ERROR);
+                if (D_ENABLED(DL_LESS))
+                    LOG_D((getLogger(), "[%s] PING timeout.",
+                            getLogId()));
+            }
+        }
         m_tmIdleBegin = 0;
+    }
+    
     return 0;
 }
 

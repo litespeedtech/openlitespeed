@@ -48,6 +48,7 @@ class DPageDef
 						new DTblMap(array('logging:accessLog','accesslog$fileName'), 'S_ACLOG'),
 						'S_INDEX',
 						new DTblMap('expires', 'A_EXPIRES'),
+                        'S_FILEUPLOAD',
 						new DTblMap(array('ipToGeo:geoipDB','*geoipdb$geoipDBFile'), 'S_GEOIP'),
 						new DTblMap('tuning',
 								array('S_TUNING_OS', 'S_TUNING_CONN', 'S_TUNING_REQ', 'S_TUNING_STATIC', 'S_TUNING_GZIP')),
@@ -85,6 +86,7 @@ class DPageDef
 						new DTblMap(array('scriptHandlerList','scripthandler'),
 								new DTblMap(array('*scriptHandler','*addsuffix$suffix'), 'A_SCRIPT')),
 						new DTblMap('expires', 'A_EXPIRES'),
+                    'VT_FILEUPLOAD',
 						new DTblMap(array('security:accessControl','accessControl'), 'A_SEC_AC'),
 						new DTblMap(array('security:realmList:*realm','*realm$name'), 'V_REALM_FILE'),
 						new DTblMap(array('extProcessorList:*extProcessor','*extprocessor$name'), 'A_EXT_SEL'),
@@ -168,6 +170,7 @@ class DPageDef
 		$page = new DPage($id, DMsg::UIStr('tab_g'), new DTblMap('',
 				array('S_PROCESS','S_GENERAL','S_INDEX',
 						new DTblMap('expires', 'A_EXPIRES'),
+                        'S_FILEUPLOAD',
 						new DTblMap('*geoipdb$geoipDBFile', 'S_GEOIP_TOP', 'S_GEOIP')),
 				new DTblMap('*index', array('S_MIME_TOP', 'S_MIME'))));
 		$this->_pageDef['serv'][$id] = $page;
@@ -251,7 +254,8 @@ class DPageDef
 				array('V_GENERAL',
 						new DTblMap('index', 'VT_INDXF'),
 						new DTblMap('*errorpage$errCode', 'VT_ERRPG_TOP', 'VT_ERRPG'),
-						new DTblMap('expires', 'A_EXPIRES'))));
+						new DTblMap('expires', 'A_EXPIRES'),
+                    'VT_FILEUPLOAD')));
 		$this->_pageDef['vh_'][$id] = $page;
 
 		$page = new DPage($id, DMsg::UIStr('tab_g'), new DTblMap('',
@@ -260,7 +264,8 @@ class DPageDef
 								new DTblMap('index', 'VT_INDXF'),
 								new DTblMap('*errorpage$errCode',  'VT_ERRPG_TOP', 'VT_ERRPG'),
 								new DTblMap('scripthandler', new DTblMap(array('*scriptHandler','*addsuffix$suffix'), 'A_SCRIPT')),
-								new DTblMap('expires', 'A_EXPIRES'))))));
+								new DTblMap('expires', 'A_EXPIRES'),
+                            'VT_FILEUPLOAD')))));
 		$this->_pageDef['tp_'][$id] = $page;
 
 		$id = 'log';

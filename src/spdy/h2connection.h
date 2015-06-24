@@ -39,7 +39,6 @@
 #define H2_CONN_FLAG_CONFIRMED      (1<<4)
 #define H2_CONN_FLAG_FLOW_CTRL      (1<<5)
 #define H2_CONN_HEADERS_START       (1<<6)
-#define H2_CONN_HEADERS_END         (1<<7)
 
 #define H2_STREAM_PRIORITYS         (256 + 1)
 
@@ -132,7 +131,7 @@ private:
     int parseHeaders(char *pHeader, int ilength, int &NVPairCnt);
     H2Stream *getNewStream(uint8_t ubH2_Flags);
 
-    int decodeHeaders(unsigned char *src, int length, unsigned char iHeaderFlag, bool isFirstPart);
+    int decodeHeaders(unsigned char *src, int length, unsigned char iHeaderFlag);
     int processPriorityFrame(H2FrameHeader *pHeader);
     int processSettingFrame(H2FrameHeader *pHeader);
     int processHeadersFrame(H2FrameHeader *pHeader);
@@ -144,7 +143,7 @@ private:
     int processPushPromiseFrame(H2FrameHeader *pHeader);
     int processContinuationFrame(H2FrameHeader *pHeader);
 
-    int processReqHeader(unsigned char iHeaderFlag, bool isFirstPart);
+    int processReqHeader(unsigned char iHeaderFlag);
     
     int sendPingFrame(uint8_t flags, uint8_t *pPayload);
     int sendSettingsFrame();
@@ -184,10 +183,10 @@ private:
     LoopBuf         m_bufInput;
     AutoBuf         m_bufInflate;
     uint32_t        m_uiServerStreamID;
-    uint32_t        m_uiLastPingID;
     uint32_t        m_uiLastStreamID;
     uint32_t        m_uiGoAwayId;
     int32_t         m_iCurrentFrameRemain;
+    uint32_t        m_tmLastFrameIn;
     struct timeval  m_timevalPing;
 
     //TODO: use array for m_dqueStreamRespon

@@ -185,7 +185,7 @@ am__define_uniq_tagged_files = \
   done | $(am__uniquify_input)`
 ETAGS = etags
 CTAGS = ctags
-DIST_SUBDIRS = cache lua
+DIST_SUBDIRS = cache uploadprogress lua
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 am__relativize = \
   dir0=`pwd`; \
@@ -357,8 +357,8 @@ noinst_LIBRARIES = libmodules.a
 INCLUDES = -I$(top_srcdir)/include -I$(top_srcdir)/src
 libmodules_a_METASOURCES = AUTO
 libmodules_a_SOURCES = modgzip/modgzip.cpp
-@HAVE_LIBLUA_FALSE@SUBDIRS = cache
-@HAVE_LIBLUA_TRUE@SUBDIRS = cache lua
+@HAVE_LIBLUA_FALSE@SUBDIRS = cache uploadprogress
+@HAVE_LIBLUA_TRUE@SUBDIRS = cache uploadprogress lua
 all: all-recursive
 
 .SUFFIXES:

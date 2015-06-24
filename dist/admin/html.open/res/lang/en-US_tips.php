@@ -1,4 +1,4 @@
-<?php 
+<?php
 
 global $_tipsdb;
 
@@ -71,6 +71,8 @@ $_tipsdb['TABLEcgiResource'] = new DAttrHelp('CGI Settings', 'The following sett
 $_tipsdb['TABLEerrPage'] = new DAttrHelp('Customized Error Pages', 'Whenever the server has a problem processing a request,  the server will return an error code and an html page as the error message  to the web client. Error codes are defined in the HTTP protocol (see RFC 2616).  LiteSpeed web server has a built-in default error page for each error code, but  a customized page can be configured for each error code.   error pages can also be further customized to be unique for each virtual host.', '', '', '');
 
 $_tipsdb['TABLEfcgiContext'] = new DAttrHelp('FastCGI Context', 'FastCGI applications cannot be used directly. A FastCGI application must be either configured as  a script handler or mapped to a URL through FastCGI context. A FastCGI context will  associate a URI with a FastCGI application.', '', '', '');
+
+$_tipsdb['TABLEfileUpload'] = new DAttrHelp('File Upload', 'Provides additional security functionality when uploading files by using a Request Body  Parser to parse files to a server local directory where they can be easily scanned for malicious  intent by third party modules. Request Body Parser is used when &quot;Pass Upload Data by File Path&quot; is  enabled or a module calls LSIAPI’s set_parse_req_body in the LSI_HKPT_HTTP_BEGIN level.  API examples provided in source package.', '', '', '');
 
 $_tipsdb['TABLEgeneralContext'] = new DAttrHelp('Static Context', 'Context settings are used to specify special settings for files in a  certain location. These settings can be used to bring in files outside of  the document root (like Apache&#039;s Alias or AliasMatch directives),   or to protect a particular directory using authorization realms, or to  block or restrict access to a particular directory within the document root.', '', '', '');
 
@@ -311,6 +313,8 @@ $_tipsdb['fcgiContext'] = new DAttrHelp('FastCGI Context', 'FastCGI applications
 $_tipsdb['fcgiapp'] = new DAttrHelp('FastCGI App', 'Specifies the name of the FastCGI application.  This application must be defined in the &quot;External Application&quot; section at the server or virtual host level.', '', 'Select from drop down list', '');
 
 $_tipsdb['fileETag'] = new DAttrHelp('File ETag', 'Specifies whether to use a file&#039;s inode, last-modified time, and size attributes  to generate the ETag HTTP response header for static files.   All three attributes are enabled by default.  If you plan to serve the same file out of mirrored servers, you should not include  inode; otherwise, the ETag generated for one file will be different on different servers.', '', 'Select from checkbox', '');
+
+$_tipsdb['fileUpload'] = new DAttrHelp('File Upload', 'Provides additional security functionality when uploading files by using a Request Body  Parser to parse files to a server local directory where they can be easily scanned for malicious  intent by third party modules. Request Body Parser is used when &quot;Pass Upload Data by File Path&quot; is  enabled or a module calls LSIAPI’s set_parse_req_body in the LSI_HKPT_HTTP_BEGIN level.  API examples provided in source package.', '', '', '');
 
 $_tipsdb['followSymbolLink'] = new DAttrHelp('Follow Symbolic Link', 'Specifies the server-level default setting of following symbolic links  when serving static files. <br/><br/>Choices are Yes, If Owner Match and No. <br/><br/>Yes sets the server to always follow symbolic links.  If Owner Match sets the server to follow a symbolic link only if the owner of the link and of the target are same.  No means the server will never follow a symbolic link.  This setting can be overridden in the virtual host configurations but cannot be overridden from an .htaccess file.', '[Performance & security] For best security select No or If Owner Match.  For best performance, select Yes.', 'Select from drop down list', '');
 
@@ -627,6 +631,12 @@ $_tipsdb['totalInMemCacheSize'] = new DAttrHelp('Total Small File Cache Size', '
 $_tipsdb['totalMMapCacheSize'] = new DAttrHelp('Total MMAP Cache Size', 'Specifies the total memory that can be allocated for memory- mapped cache in order to cache/serve medium sized static files.', '', 'Integer number', '');
 
 $_tipsdb['umask'] = new DAttrHelp('umask', 'Sets default umask for CGI processes.   See  man 2 umask  for details. This also serves as the default value for external applications   &quot;umask&quot;.', '', 'value valid range [000]-[777].', '');
+
+$_tipsdb['uploadPassByPath'] = new DAttrHelp('Pass Upload Data by File Path', 'Specify whether or not to pass upload file data by path. If enabled, file path along with  some other information is sent to backend handler instead of file itself when uploading.  This saves on CPU resources and file transfer time but requires some updates to  backend to implement. If disabled, file content will be transferred to backend handler,  request body is still parsed to files.', '[performance] Enable this to speed up file upload processing if backward compatibility is not an issue.', 'Select from radio box', '');
+
+$_tipsdb['uploadTmpDir'] = new DAttrHelp('Temporary File Directory', 'Temporary directory where files being uploaded to server will be stored  while request body parser is working. Default value is /tmp/lshttpd/.', '', 'Absolute path or path starting with $SERVER_ROOT (for Server and VHost levels) or $VH_ROOT (for VHost levels).', '');
+
+$_tipsdb['uploadTmpFilePermission'] = new DAttrHelp('Temporary File Permissions', 'Determines file permissions used for files stored in temporary directory.  Server level setting is global, can be overridden at VHost level.', '', '3 digits octet number. Default value is 666.', '');
 
 $_tipsdb['uri'] = new DAttrHelp('URI', 'Specifies the URI for this context. The URI should start with a &quot;/&quot;.  If a URI ends with a &quot;/&quot;, then this context will include all sub-URIs under this URI.', '', 'URI', '');
 

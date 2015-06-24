@@ -30,11 +30,9 @@ int HttpUtil::escape(const char *pSrc, char *pDest, int iDestlen)
     {
         switch (ch)
         {
-        case '/':
+        case '+':
         case '?':
-        case '#':
-        case '[':
-        case ']':
+        case '&':
         case '%':
         case ' ':
             if (iDestlen > 3)
@@ -68,11 +66,86 @@ int HttpUtil::escape(const char *pSrc, int iSrcLen, char *pDest,
         ch = *pSrc++;
         switch (ch)
         {
+        case '+':
+        case '?':
+        case '&':
+        case '%':
+        case ' ':
+            if (iDestLen > 3)
+            {
+                *p++ = '%';
+                *p++ = StringTool::s_aHex[(ch >> 4) & 15];
+                *p++ = StringTool::s_aHex[ch & 15];
+                iDestLen -= 2;
+            }
+            else
+                iDestLen = 1;
+            break;
+        default:
+            *p++ = ch;
+            break;
+        }
+    }
+    *p = 0;
+    return p - pDest;
+}
+
+
+int HttpUtil::escapeRFC3986(const char *pSrc, char *pDest, int iDestlen)
+{
+    char ch;
+    char *p = pDest;
+    while (--iDestlen && ((ch = *pSrc++) != 0))
+    {
+        switch (ch)
+        {
+        //gen-delims missing ':' and '@'
         case '/':
         case '?':
         case '#':
         case '[':
         case ']':
+        //special
+        case '%':
+        case ' ':
+            if (iDestlen > 3)
+            {
+                *p++ = '%';
+                *p++ = StringTool::s_aHex[(ch >> 4) & 15];
+                *p++ = StringTool::s_aHex[ch & 15];
+                iDestlen -= 2;
+            }
+            else
+                iDestlen = 1;
+            break;
+        default:
+            *p++ = ch;
+            break;
+        }
+    }
+    *p = 0;
+    return p - pDest;
+}
+
+
+int HttpUtil::escapeRFC3986(const char *pSrc, int iSrcLen, char *pDest,
+                     int iDestLen)
+{
+    char ch;
+    char *p = pDest;
+    const char *pEnd = pSrc + iSrcLen;
+    while (--iDestLen && (pSrc < pEnd))
+    {
+        ch = *pSrc++;
+        switch (ch)
+        {
+        //gen-delims missing ':' and '@'
+        case '/':
+        case '?':
+        case '#':
+        case '[':
+        case ']':
+        //special
         case '%':
         case ' ':
             if (iDestLen > 3)

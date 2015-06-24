@@ -639,63 +639,63 @@ class BuildTool
 		$php_version = $this->options->GetValue('PHPVersion');
 
 		// extension
-		$ext = array('{EXTENSION_NAME}' => 'Suhosin');
+		$ext = array('__extension_name__' => 'Suhosin');
 		$ver = 'suhosin-'. BuildConfig::GetVersion(BuildConfig::SUHOSIN_VERSION);
-		$ext['{EXTENSION_DIR}'] = $ver;
-		$ext['{EXTENSION_SRC}'] = $ver .'.tar.gz';
-		$ext['{EXTENSION_DOWNLOAD_URL}'] = 'http://download.suhosin.org/' . $ver . '.tar.gz';
-		$ext['{EXTRACT_METHOD}'] = 'tar -zxf';
-		$ext['{EXTENSION_EXTRA_CONFIG}'] = '';
+		$ext['__extension_dir__'] = $ver;
+		$ext['__extension_src__'] = $ver .'.tar.gz';
+		$ext['__extension_download_url__'] = 'http://download.suhosin.org/' . $ver . '.tar.gz';
+		$ext['__extract_method__'] = 'tar -zxf';
+		$ext['__extension_extra_config__'] = '';
 
 		$this->ext_options['Suhosin'] = $ext;
 
-		$ext = array('{EXTENSION_NAME}' => 'APC');
+		$ext = array('__extension_name__' => 'APC');
 		$ver = 'APC-' . BuildConfig::GetVersion(BuildConfig::APC_VERSION);
-		$ext['{EXTENSION_DIR}'] = $ver;
-		$ext['{EXTENSION_SRC}'] = $ver . '.tgz';
-		$ext['{EXTENSION_DOWNLOAD_URL}'] = 'http://pecl.php.net/get/'. $ver . '.tgz';
-		$ext['{EXTRACT_METHOD}'] = 'tar -zxf';
-		$ext['{EXTENSION_EXTRA_CONFIG}'] = '--enable-apc';
+		$ext['__extension_dir__'] = $ver;
+		$ext['__extension_src__'] = $ver . '.tgz';
+		$ext['__extension_download_url__'] = 'http://pecl.php.net/get/'. $ver . '.tgz';
+		$ext['__extract_method__'] = 'tar -zxf';
+		$ext['__extension_extra_config__'] = '--enable-apc';
 
 		$this->ext_options['APC'] = $ext;
 
-		$ext = array('{EXTENSION_NAME}' => 'XCache');
+		$ext = array('__extension_name__' => 'XCache');
 		$ver = 'xcache-' . BuildConfig::GetVersion(BuildConfig::XCACHE_VERSION);
-		$ext['{EXTENSION_DIR}'] = $ver;
-		$ext['{EXTENSION_SRC}'] = $ver . '.tar.gz';
-		$ext['{EXTENSION_DOWNLOAD_URL}'] = 'http://xcache.lighttpd.net/pub/Releases/' . XCACHE_VERSION . '/' . $ver . '.tar.gz';
-		$ext['{EXTRACT_METHOD}'] = 'tar -zxf';
-		$ext['{EXTENSION_EXTRA_CONFIG}'] = '--enable-xcache';
+		$ext['__extension_dir__'] = $ver;
+		$ext['__extension_src__'] = $ver . '.tar.gz';
+		$ext['__extension_download_url__'] = 'http://xcache.lighttpd.net/pub/Releases/' . XCACHE_VERSION . '/' . $ver . '.tar.gz';
+		$ext['__extract_method__'] = 'tar -zxf';
+		$ext['__extension_extra_config__'] = '--enable-xcache';
 
 		$this->ext_options['XCache'] = $ext;
 
-		$ext = array('{EXTENSION_NAME}' => 'MemCache');
+		$ext = array('__extension_name__' => 'MemCache');
 		$ver = 'memcache-' . BuildConfig::GetVersion(BuildConfig::MEMCACHE_VERSION);
-		$ext['{EXTENSION_DIR}'] = $ver;
-		$ext['{EXTENSION_SRC}'] = $ver . '.tgz';
-		$ext['{EXTENSION_DOWNLOAD_URL}'] = 'http://pecl.php.net/get/'. $ver . '.tgz';
-		$ext['{EXTRACT_METHOD}'] = 'tar -zxf';
-		$ext['{EXTENSION_EXTRA_CONFIG}'] = '--enable-memcache';
+		$ext['__extension_dir__'] = $ver;
+		$ext['__extension_src__'] = $ver . '.tgz';
+		$ext['__extension_download_url__'] = 'http://pecl.php.net/get/'. $ver . '.tgz';
+		$ext['__extract_method__'] = 'tar -zxf';
+		$ext['__extension_extra_config__'] = '--enable-memcache';
 
 		$this->ext_options['MemCache'] = $ext;
 
-//		$ext = array('{EXTENSION_NAME}' => 'MemCached');
+//		$ext = array('__extension_name__' => 'MemCached');
 //		$ver = 'memcached-' . MEMCACHED_VERSION;
-//		$ext['{EXTENSION_DIR}'] = $ver;
-//		$ext['{EXTENSION_SRC}'] = $ver . '.tgz';
-//		$ext['{EXTENSION_DOWNLOAD_URL}'] = 'http://pecl.php.net/get/'. $ver . '.tgz';
-//		$ext['{EXTRACT_METHOD}'] = 'tar -zxf';
-//		$ext['{EXTENSION_EXTRA_CONFIG}'] = '--enable-memcached';
+//		$ext['__extension_dir__'] = $ver;
+//		$ext['__extension_src__'] = $ver . '.tgz';
+//		$ext['__extension_download_url__'] = 'http://pecl.php.net/get/'. $ver . '.tgz';
+//		$ext['__extract_method__'] = 'tar -zxf';
+//		$ext['__extension_extra_config__'] = '--enable-memcached';
 //
 //		$this->ext_options['MemCached'] = $ext;
 
-		$ext = array('{EXTENSION_NAME}' => 'OPcache');
+		$ext = array('__extension_name__' => 'OPcache');
 		$ver = 'zendopcache-' . BuildConfig::GetVersion(BuildConfig::OPCACHE_VERSION);
-		$ext['{EXTENSION_DIR}'] = $ver;
-		$ext['{EXTENSION_SRC}'] = $ver . '.tgz';
-		$ext['{EXTENSION_DOWNLOAD_URL}'] = 'http://pecl.php.net/get/'. $ver . '.tgz';
-		$ext['{EXTRACT_METHOD}'] = 'tar -zxf';
-		$ext['{EXTENSION_EXTRA_CONFIG}'] = '--enable-opcache';
+		$ext['__extension_dir__'] = $ver;
+		$ext['__extension_src__'] = $ver . '.tgz';
+		$ext['__extension_download_url__'] = 'http://pecl.php.net/get/'. $ver . '.tgz';
+		$ext['__extract_method__'] = 'tar -zxf';
+		$ext['__extension_extra_config__'] = '--enable-opcache';
 
 		$this->ext_options['OPcache'] = $ext;
 	}
@@ -785,23 +785,23 @@ opcache.enable_cli=1
 			}
 		}
 		$params = array();
-		$params['{PHP_VERSION}'] = $this->options->GetValue('PHPVersion');
-		$params['{PROGRESS_F}'] = $this->progress_file;
-		$params['{LOG_FILE}'] = $this->log_file;
+		$params['__php_version__'] = $this->options->GetValue('PHPVersion');
+		$params['__progress_f__'] = $this->progress_file;
+		$params['__log_file__'] = $this->log_file;
         $processUser = posix_getpwuid(posix_geteuid());
         $gidinfo = posix_getgrgid($processUser['gid']);
-		$params['{PHP_USR}'] = $processUser['name'];
-        $params['{PHP_USRGROUP}'] = $gidinfo['name'];
-		$params['{EXTRA_PATH_ENV}'] = $this->options->GetValue('ExtraPathEnv');
-		$params['{PHP_BUILD_DIR}'] = BuildConfig::Get(BuildConfig::BUILD_DIR);
-		$params['{DL_METHOD}'] = $this->dlmethod;
-		$params['{INSTALL_DIR}'] = $this->options->GetValue('InstallPath');
-		$params['{COMPILER_FLAGS}'] = $this->options->GetValue('CompilerFlags');
-		$params['{ENABLE_MAILHEADER}'] = ($this->options->GetValue('AddOnMailHeader')) ? 1 : 0;
-		$params['{LSAPI_VERSION}'] = BuildConfig::GetVersion(BuildConfig::LSAPI_VERSION);
-		$params['{PHP_CONF_OPTIONS}'] = $this->options->GetValue('ConfigParam');
-		$params['{LSWS_HOME}'] = SERVER_ROOT;
-		$params['{INSTALL_SCRIPT}'] = $this->build_install_script;
+		$params['__php_usr__'] = $processUser['name'];
+        $params['__php_usrgroup__'] = $gidinfo['name'];
+		$params['__extra_path_env__'] = $this->options->GetValue('ExtraPathEnv');
+		$params['__php_build_dir__'] = BuildConfig::Get(BuildConfig::BUILD_DIR);
+		$params['__dl_method__'] = $this->dlmethod;
+		$params['__install_dir__'] = $this->options->GetValue('InstallPath');
+		$params['__compiler_flags__'] = $this->options->GetValue('CompilerFlags');
+		$params['__enable_mailheader__'] = ($this->options->GetValue('AddOnMailHeader')) ? 1 : 0;
+		$params['__lsapi_version__'] = BuildConfig::GetVersion(BuildConfig::LSAPI_VERSION);
+		$params['__php_conf_options__'] = $this->options->GetValue('ConfigParam');
+		$params['__lsws_home__'] = SERVER_ROOT;
+		$params['__install_script__'] = $this->build_install_script;
 
 		$search = array_keys($params);
 		$replace = array_values($params);

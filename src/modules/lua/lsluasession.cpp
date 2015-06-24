@@ -2342,7 +2342,7 @@ static int LsLuaSessEscapeUri(lua_State *L)
     if (iSrcLen <= 0)
         return LsLuaApi::userError(L, "escape_uri", "Invalid arg.");
 
-    iDestLen = HttpUtil::escape(pSrc, iSrcLen, pDest,
+    iDestLen = HttpUtil::escapeRFC3986(pSrc, iSrcLen, pDest,
                                 LSLUA_SESS_MAXURILEN);
     if (iDestLen <= 0)
         return LsLuaApi::serverError(L, "escape_uri", "Error escaping.");

@@ -355,7 +355,12 @@ plainconfKeywords plainconf::sKeywords[] =
 
     {"umask",          NULL},
     {"blockbadreq",      NULL},  //Add to avoid error notice in errorlog
-
+    
+    {"uploadpassbypath",          NULL},
+    {"uploadtmpdir",          NULL},
+    {"uploadtmpfilepermission",          NULL},
+    
+    
 };
 
 static HashStringMap<plainconfKeywords *> allKeyword(29, GHash::hfCiString,

@@ -528,6 +528,14 @@ int HttpCgiTool::buildCommonEnv(IEnv *pEnv, HttpSession *pSession)
     if ((pNode = (RadixNode *)pReq->getEnvNode()) != NULL)
         pNode->for_each2(addEnv, pEnv);
 
+    if (pSession->getStream()->isSpdy())
+    {
+        const char * pProto = HioStream::getProtocolName( (HiosProtocol)
+                                pSession->getStream()->getProtocol());
+        pEnv->add( "X_SPDY", 6, pProto, strlen(pProto) );
+        ++count;
+    }
+    
     if (pSession->isSSL())
     {
         SSLConnection *pSSL = pSession->getSSL();
