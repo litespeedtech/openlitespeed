@@ -5594,7 +5594,7 @@ int Hpack::encStr(unsigned char *dst, size_t dst_len,
     if (realLen != -1)
     {
         unsigned char *tmp = encInt(p_dst, realLen, 7);
-        if (tmp - p_dst + realLen <= dst_len)
+        if (tmp - p_dst + realLen <= (int)dst_len)
         {
             p_dst = tmp;
             memcpy(p_dst, (useHuffmenCode ? buf : str), realLen);

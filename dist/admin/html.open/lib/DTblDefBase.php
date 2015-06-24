@@ -84,7 +84,7 @@ class DTblDefBase
 		return new DAttr($key, $type, $label, $inputtype, $allowNull, NULL, NULL, $inputAttr, $multiInd, $helpKey);
 	}
 
-	public static function NewPathAttr($key, $label, $type, $reflevel, $rwc, $allowNull=true, $helpKey=NULL, $multiInd=0)
+	public static function NewPathAttr($key, $label, $type, $reflevel, $rwc='', $allowNull=true, $helpKey=NULL, $multiInd=0)
 	{
 		return new DAttr($key, $type, $label, 'text', $allowNull, $reflevel, $rwc, NULL, $multiInd, $helpKey);
 	}
@@ -144,6 +144,12 @@ class DTblDefBase
 
 		$this->_options['logLevel'] = array('ERROR'=>'ERROR', 'WARN'=>'WARNING',
 									'NOTICE'=>'NOTICE', 'INFO'=>'INFO', 'DEBUG'=>'DEBUG');
+
+        // for shared parse format
+        $this->_options['parseFormat'] = array(
+            'filePermission4' => '/^0?[0-7]{3,4}$/',
+            'filePermission3' => '/^0?[0-7]{3}$/'
+        );
 
 		$ipv6str = isset($_SERVER['LSWS_IPV6_ADDRS']) ? $_SERVER['LSWS_IPV6_ADDRS'] : '';
 		$ipv6 = array();
@@ -230,7 +236,7 @@ class DTblDefBase
 			'ext_user' => DTblDefBase::NewTextAttr('extUser', DMsg::ALbl('l_suexecuser'), 'cust'),
 			'ext_group' => DTblDefBase::NewTextAttr('extGroup', DMsg::ALbl('l_suexecgrp'), 'cust'),
 
-			'cgiUmask' => DTblDefBase::NewParseTextAttr('umask', DMsg::ALbl('l_umask'), "/^[0-7][0-7][0-7]$/", DMsg::ALbl('parse_umask')),
+			'cgiUmask' => DTblDefBase::NewParseTextAttr('umask', DMsg::ALbl('l_umask'), $this->_options['parseFormat']['filePermission3'], DMsg::ALbl('parse_umask')),
 			'memSoftLimit' => DTblDefBase::NewIntAttr('memSoftLimit', DMsg::ALbl('l_memsoftlimit'), true, 0),
 			'memHardLimit' => DTblDefBase::NewIntAttr('memHardLimit', DMsg::ALbl('l_memhardlimit'), true, 0),
 			'procSoftLimit' => DTblDefBase::NewIntAttr('procSoftLimit', DMsg::ALbl('l_procsoftlimit'), true, 0),
@@ -418,18 +424,17 @@ class DTblDefBase
 
 	protected function add_S_SEC_FILE($id)
 	{
-		$parseFormat = "/^[0-7]{3,4}/";
-		$parseHelp1 = DMsg::ALbl('parse_requiredpermissionmask');
-		$parseHelp2 = DMsg::ALbl('parse_restrictedpermissionmask');
+		$parseFormat = $this->_options['parseFormat']['filePermission4'];
+		$parseHelp = DMsg::ALbl('parse_secpermissionmask');
 
 		$attrs = array(
 				DTblDefBase::NewSelAttr('followSymbolLink', DMsg::ALbl('l_followsymbollink'), $this->_options['symbolLink'], false),
 				DTblDefBase::NewBoolAttr('checkSymbolLink', DMsg::ALbl('l_checksymbollink'), false),
 				DTblDefBase::NewBoolAttr('forceStrictOwnership', DMsg::ALbl('l_forcestrictownership'), false),
-				DTblDefBase::NewParseTextAttr('requiredPermissionMask', DMsg::ALbl('l_requiredpermissionmask'),	$parseFormat, $parseHelp1),
-				DTblDefBase::NewParseTextAttr('restrictedPermissionMask', DMsg::ALbl('l_restrictedpermissionmask'), $parseFormat, $parseHelp2),
-				DTblDefBase::NewParseTextAttr('restrictedScriptPermissionMask', DMsg::ALbl('l_restrictedscriptpermissionmask'), $parseFormat, $parseHelp2),
-				DTblDefBase::NewParseTextAttr('restrictedDirPermissionMask', DMsg::ALbl('l_restricteddirpermissionmask'), $parseFormat, $parseHelp2)
+				DTblDefBase::NewParseTextAttr('requiredPermissionMask', DMsg::ALbl('l_requiredpermissionmask'),	$parseFormat, $parseHelp),
+				DTblDefBase::NewParseTextAttr('restrictedPermissionMask', DMsg::ALbl('l_restrictedpermissionmask'), $parseFormat, $parseHelp),
+				DTblDefBase::NewParseTextAttr('restrictedScriptPermissionMask', DMsg::ALbl('l_restrictedscriptpermissionmask'), $parseFormat, $parseHelp),
+				DTblDefBase::NewParseTextAttr('restrictedDirPermissionMask', DMsg::ALbl('l_restricteddirpermissionmask'), $parseFormat, $parseHelp)
 		);
 
 		$this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_fileaccess'), $attrs);

@@ -2245,6 +2245,10 @@ struct lsi_api_s
      * @return
      */
     int (*set_req_wait_full_body)(lsi_session_t *pSession);
+    
+    
+    
+    int (*set_parse_req_body)(lsi_session_t *pSession);
 
     /**
      * @brief set_resp_wait_full_body is used to make the server wait for
@@ -2264,6 +2268,22 @@ struct lsi_api_s
      */
     int (*set_resp_wait_full_body)(lsi_session_t *pSession);
 
+    /**
+     * return 0 for no body
+     *    1 for one part
+     *    else for multipart
+     * 
+     */
+    int (*get_req_body_part_count)(lsi_session_t *session);
+    
+    int (*get_req_body_part)(lsi_session_t *session, int index, char **name, int* nameLen, char **val, int* valLen, char** filePath);
+    
+    int (*is_req_body_part_file)(lsi_session_t *session, int index);
+    
+                              
+    
+    
+    
     /**
      * @brief set_status_code is used to set the response status code of an HTTP session.
      * It can be used in hook point and handler processing functions,

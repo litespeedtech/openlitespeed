@@ -28,6 +28,7 @@
 #include <http/requestvars.h>
 #include <http/staticfilecachedata.h>
 #include <http/usereventnotifier.h>
+#include <http/reqparser.h>
 #include <log4cxx/logger.h>
 #include <lsiapi/envmanager.h>
 #include <lsiapi/internal.h>
@@ -1153,6 +1154,28 @@ static int is_req_body_finished(lsi_session_t *session)
 }
 
 
+static int get_req_body_part_count(lsi_session_t *session)
+{
+    HttpSession *pSession = (HttpSession *)((LsiSession *)session);
+    if (pSession->getReqParser() == NULL)
+        return 0;
+    else
+        return pSession->getReqParser()->getArgCount();
+}
+
+static int get_req_body_part(lsi_session_t *session, int index, char **name, int* nameLen, char **val, int* valLen, char** filePath)
+{
+    HttpSession *pSession = (HttpSession *)((LsiSession *)session);
+    return pSession->getReqParser()->getArgs(index, *name, *nameLen, *val, *valLen, *filePath);
+}
+
+static int is_req_body_part_file(lsi_session_t *session, int index)
+{
+    HttpSession *pSession = (HttpSession *)((LsiSession *)session);
+    return pSession->getReqParser()->isFile(index);
+}
+
+
 static int set_req_wait_full_body(lsi_session_t *session)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
@@ -1163,6 +1186,15 @@ static int set_req_wait_full_body(lsi_session_t *session)
     return 0;
 }
 
+static int set_parse_req_body(lsi_session_t *session)
+{
+    HttpSession *pSession = (HttpSession *)((LsiSession *)session);
+    if (pSession == NULL)
+        return LS_FAIL;
+
+    pSession->setFlag(HSF_PARSE_REQ_BODY);
+    return 0;
+}
 
 static int set_resp_wait_full_body(lsi_session_t *session)
 {
@@ -1173,7 +1205,6 @@ static int set_resp_wait_full_body(lsi_session_t *session)
     pSession->setFlag(HSF_RESP_WAIT_FULL_BODY);
     return 0;
 }
-
 
 static int is_resp_buffer_available(lsi_session_t *session)
 {
@@ -1961,8 +1992,14 @@ void lsiapi_init_server_api()
     pApi->read_req_body = read_req_body;
     pApi->is_req_body_finished = is_req_body_finished;
     pApi->is_resp_buffer_gzippped = is_resp_buffer_gzippped;
+
+    pApi->get_req_body_part_count = get_req_body_part_count;
+    pApi->get_req_body_part = get_req_body_part;
+    pApi->is_req_body_part_file = is_req_body_part_file;
+
     pApi->set_resp_buffer_gzip_flag = set_resp_buffer_gzip_flag;
     pApi->set_req_wait_full_body = set_req_wait_full_body;
+    pApi->set_parse_req_body = set_parse_req_body;
     pApi->set_resp_wait_full_body = set_resp_wait_full_body;
 
     pApi->is_resp_buffer_available = is_resp_buffer_available;

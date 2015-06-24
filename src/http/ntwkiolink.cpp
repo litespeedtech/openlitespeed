@@ -895,6 +895,16 @@ void NtwkIOLink::onTimer()
             if (cb->getFlag(AIOSFCB_FLAG_TRYAGAIN))
                 addAioSFJob(cb);
         }
+
+        if (m_ssl.getSSL() && m_ssl.getStatus() == SSLConnection::ACCEPTING
+            && DateTime::s_curTime - getActiveTime() >= 10 )
+        {
+            if ( D_ENABLED( DL_LESS ))
+                LOG_D((getLogger(), "[%s] SSL handshake timed out, close SSL.",
+                       getLogId() ));
+            closeSSL(this);
+        }
+        
         if (detectClose())
             return;
         (*m_pFpList->m_onTimer_fp)(this);

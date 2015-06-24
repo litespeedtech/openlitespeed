@@ -87,6 +87,7 @@ SET(http_STAT_SRCS
    serverprocessconfig.cpp
    httpstats.cpp
    usereventnotifier.cpp
+   reqparser.cpp
 )
 
 add_library(http STATIC ${http_STAT_SRCS})

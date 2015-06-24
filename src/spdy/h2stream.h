@@ -22,6 +22,7 @@
 #include <http/hiostream.h>
 #include <util/linkedobj.h>
 #include <util/loopbuf.h>
+#include <util/datetime.h>
 
 #include <inttypes.h>
 
@@ -70,6 +71,11 @@ public:
     void continueWrite();
 
     void onTimer();
+    
+    int isStuckOnRead()
+    {
+        return (isWantRead() && DateTime::s_curTime - getActiveTime() >= 5);
+    }
 
     virtual NtwkIOLink *getNtwkIoLink();
 

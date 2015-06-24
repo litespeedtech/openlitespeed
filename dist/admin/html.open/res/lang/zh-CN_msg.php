@@ -556,8 +556,7 @@ $_gmsg['parse_expiresByType'] = 'MEME类型=A|Mseconds, MIME可以是 */*, text/
 $_gmsg['parse_expiresdefault'] = '[A|M]###, A 代表用户登入时间, M 代表文件修改时间, ### 为秒数';
 $_gmsg['parse_forcemimetype'] = 'MEME类型如text/html,或输入 \"NONE\" 来禁止强制继承的类型。';
 $_gmsg['parse_mimetype'] = '如 text/html';
-$_gmsg['parse_requiredpermissionmask'] = '3位以上的八字节数字，默认限制权限掩码为 004 (任何人可读)';
-$_gmsg['parse_restrictedpermissionmask'] = '3位以上的八字节数字，默认限制权限掩码为 041111 - executable+sticky+directory';
+$_gmsg['parse_secpermissionmask'] = '3位以上的八进制数，默认限制权限掩码为 000';
 $_gmsg['parse_rewritemaplocation'] = 'txt:/location 或者 rnd:/location 或者 int:(toupper|tolower|escape|unescape)';
 $_gmsg['parse_spdyadheader'] = '格式要求: ssl_port:npn-spdy/version 如 443:npn-spdy/3';
 $_gmsg['parse_suffix'] = '逗号隔开的列表，允许字符[A-z0-9_\\-]';
@@ -672,7 +671,7 @@ $_gmsg['buildphp_mailheader2'] = '确认邮件源';
 $_gmsg['buildphp_mainstatus'] = '主状态';
 $_gmsg['buildphp_manualrunnotice'] = '<p>出于安全原因，请登入您的服务器并从shell运行预设置的脚本。你可以通过这个界面监控脚本运行。</p>
 	<p>如果编译成功，请根据需求更新php.ini。为了让更新生效，请进行一次平滑重启。</p>
-	<p>如果由于错误停止，可能是由于丢失了安装包，当你安装完丢失的安装包，重新运行相同命令，该页面将会显示更新后的日志。</p>
+	<p>如果由于错误停止，可能是由于丢失了安装包，当你安装完丢失的安装包，重新运行相同命令，该页面将会显示更新后的日志。更多详情，请查看<a href="https://www.litespeedtech.com/support/wiki/doku.php/litespeed_wiki:php" target="_blank">LiteSpeed wiki</a></p>
 	<p>如果你以root身份登入，你可以直接运行命令：<br><code>%%manual_script%%</code></p>
 	<p>如果你是以具有sudo权限的用户登入，你可以通过sudo运行命令并输入root密码：
 	<code>sudo %%manual_script%%</code></p>';

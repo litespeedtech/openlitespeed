@@ -213,7 +213,6 @@ class ControllerBase
 		$needTrim = 0;
 		$tblDef = DTblDef::GetInstance();
 		$disp_act = $this->_disp->Get(DInfo::FLD_ACT);
-
 		if ( $disp_act == 's' )
 		{
 			$validator = new ConfValidation();
@@ -234,7 +233,7 @@ class ControllerBase
 			return $added;
 		}
 		elseif ( $disp_act == 'c' || $disp_act == 'n')
-		{ // what is 'c': create
+		{ // 'c': change, 'n': next
 			$validator = new ConfValidation();
 			$extracted = $validator->ExtractPost($this->_disp );
 			if ($disp_act == 'n')

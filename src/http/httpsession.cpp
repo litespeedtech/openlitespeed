@@ -45,6 +45,7 @@
 #include <http/userdir.h>
 #include <http/vhostmap.h>
 #include "usereventnotifier.h"
+#include "reqparser.h"
 #include <lsiapi/envmanager.h>
 #include <lsiapi/lsiapi.h>
 #include <lsiapi/lsiapihooks.h>
@@ -86,6 +87,7 @@ HttpSession::HttpSession()
     , m_pAiosfcb(NULL)
     , m_sn(1)
     , m_pEventObjHead(NULL)
+    , m_pReqParser(NULL)
 {
     memset(&m_pChunkIS, 0, (char *)(&m_iReqServed + 1) -
            (char *)&m_pChunkIS);
@@ -115,7 +117,10 @@ int HttpSession::onInitConnected()
         setVHostMap(m_pNtwkIOLink->getVHostMap());
 
     m_iFlag = 0;
+
     setState(HSS_WAITING);
+    HttpStats::incIdleConns();
+
     m_processState = HSPS_READ_REQ_HEADER;
     m_curHookLevel = 0;
     getStream()->setFlag(HIO_FLAG_WANT_READ, 1);
@@ -130,6 +135,11 @@ int HttpSession::onInitConnected()
 //     m_request.reset();
     ++m_sn;
     m_pEventObjHead = NULL;
+    if (m_pReqParser)
+    {
+        delete m_pReqParser;
+        m_pReqParser = NULL;
+    }
     return 0;
 }
 
@@ -313,13 +323,20 @@ void HttpSession::nextRequest()
         UserEventNotifier::getInstance().removeSessionEvents(m_pEventObjHead, this);
         m_pEventObjHead = NULL;
     }
-    
+
+
     if (D_ENABLED(DL_LESS))
         LOG_D((getLogger(), "[%s] HttpSession::nextRequest()!",
                getLogId()));
     getStream()->flush();
     setState(HSS_WAITING);
 
+    if (m_pReqParser)
+    {
+        delete m_pReqParser;
+        m_pReqParser = NULL;
+    }
+    
     if (m_pHandler)
     {
         HttpStats::getReqStats()->incReqProcessed();
@@ -473,10 +490,42 @@ int HttpSession::reqBodyDone()
 {
     suspendRead();
     setFlag(HSF_REQ_BODY_DONE, 1);
+
+    if (m_pReqParser)
+    {
+        int rc = m_pReqParser->parseDone();
+        if (D_ENABLED(DL_LESS))
+            LOG_D((getLogger(), "[%s] HttpSession::reqBodyDone, parseArgsFinish: %d",
+                   getLogId(), rc ));
+    }
+
     if (m_processState == HSPS_HANDLER_PROCESSING)
         m_processState = HSPS_HKPT_RCVD_REQ_BODY_PROCESSING;
     else
         m_processState = HSPS_HKPT_RCVD_REQ_BODY;
+
+//#define DAVID_OUTPUT_VMBUF
+#ifdef DAVID_OUTPUT_VMBUF
+    VMemBuf *pVMBuf = m_request.getBodyBuf();
+    if (pVMBuf)
+    {
+        FILE *f = fopen("/tmp/vmbuf", "wb");
+        if (f)
+        {
+            pVMBuf->rewindReadBuf();
+            char *pBuf;
+            size_t size;
+            while (((pBuf = pVMBuf->getReadBuffer(size)) != NULL)
+               && (size > 0))
+            {
+                fwrite(pBuf, size, 1, f);
+                pVMBuf->readUsed(size);
+            }
+            fclose(f);
+        }
+    }
+#endif //DAVID_OUTPUT_VMBUF
+
 //     smProcessReq();
 
 
@@ -497,11 +546,11 @@ int HttpSession::reqBodyDone()
 int HttpSession::readReqBody()
 {
     char *pBuf;
+    char tmpBuf[8192];
     size_t size = 0;
     int ret = 0;
     if (D_ENABLED(DL_LESS))
-        LOG_D((getLogger(), "[%s] Read Request Body!",
-               getLogId()));
+        LOG_D((getLogger(), "[%s] Read Request Body!", getLogId()));
 
     const LsiApiHooks *pReadHooks = LsiApiHooks::getGlobalApiHooks(
                                         LSI_HKPT_RECV_REQ_BODY);
@@ -517,12 +566,20 @@ int HttpSession::readReqBody()
                 return 0;
         }
 
-        pBuf = m_request.getBodyBuf()->getWriteBuffer(size);
-        if (!pBuf)
+        if (m_pReqParser && m_pReqParser->getEnableUploadFile())
         {
-            LOG_ERR((getLogger(),
-                     "[%s] out of swapping space while reading request body!", getLogId()));
-            return SC_400;
+            pBuf = tmpBuf;
+            size = 8192;
+        }
+        else
+        {
+            pBuf = m_request.getBodyBuf()->getWriteBuffer(size);
+            if (!pBuf)
+            {
+                LOG_ERR((getLogger(),
+                         "[%s] out of swapping space while reading request body!", getLogId()));
+                return SC_400;
+            }
         }
 
         if (!pReadHooks || m_sessionHooks.isDisabled(LSI_HKPT_RECV_REQ_BODY))
@@ -548,18 +605,33 @@ int HttpSession::readReqBody()
         }
         if (ret > 0)
         {
-            m_request.getBodyBuf()->writeUsed(ret);
+            if (!m_pReqParser || !m_pReqParser->getEnableUploadFile())
+                m_request.getBodyBuf()->writeUsed(ret);
+
+            if (m_pReqParser)
+            {
+                //Update buf
+                ret = m_pReqParser->parseUpdate(pBuf, ret);
+                if (ret != 0)
+                {
+                    LOG_ERR((getLogger(),
+                         "[%s] m_pReqParser->parseUpdate() internal error(%d).",
+                             getLogId(), ret));
+                    return SC_500;
+                }
+            }
+
             if (D_ENABLED(DL_LESS))
                 LOG_D((getLogger(), "[%s] Finsh request body %ld/%ld bytes!",
                        getLogId(), m_request.getContentFinished(),
                        m_request.getContentLength()));
+
             if (m_pHandler && !getFlag(HSF_REQ_WAIT_FULL_BODY))
             {
                 m_pHandler->onRead(this);
                 if (getState() == HSS_REDIRECT)
                     return 0;
             }
-
         }
         else if (ret == -1)
             return SC_400;
@@ -850,7 +922,7 @@ int HttpSession::hookResumeCallback(long lParam, LsiSession *pSession)
         if (D_ENABLED(DL_LESS))
             LOG_D((((HttpSession *)pSession)->getLogger(),
                    "[%s] hookResumeCallback called, sn mismatch[%d %d], Session=%p",
-                   ((HttpSession *)pSession)->getLogId(), (uint32_t)lParam, 
+                   ((HttpSession *)pSession)->getLogId(), (uint32_t)lParam,
                    ((HttpSession *)pSession)->getSn(), pSession));
 
     //  abort();
@@ -937,11 +1009,11 @@ int HttpSession::processNewReqInit()
         processHttp2Upgrade(pVHost);
     }
 
-
     if ((m_pNtwkIOLink->isThrottle())
         && (m_pNtwkIOLink->getClientInfo()->getAccess() != AC_TRUST))
         m_pNtwkIOLink->getThrottleCtrl()->adjustLimits(
             pVHost->getThrottleLimits());
+
 
     if (m_request.isKeepAlive())
     {
@@ -979,6 +1051,32 @@ int HttpSession::processNewReqInit()
     return 0;
 }
 
+int HttpSession::setupReqParser()
+{
+    assert(m_pReqParser == NULL);
+
+    HttpVHost *pVHost = m_request.getVHost();
+    ReqParserParam &reqParam = pVHost->getReqParserParam();
+
+    if ( (!reqParam.m_iEnableUploadFile && !getFlag(HSF_PARSE_REQ_BODY))
+        || m_request.getContentLength() == 0)
+        return 0;
+
+    const char *pReqContentType = m_request.getHeader(HttpHeader::H_CONTENT_TYPE);
+    if (pReqContentType)
+    {
+        m_request.updateContentType((char *)pReqContentType);
+        m_pReqParser = new ReqParser();
+        if (m_pReqParser
+            && 0 != m_pReqParser->parseInit(&m_request, reqParam) )
+        {
+            delete m_pReqParser;
+            m_pReqParser = NULL;
+        }
+    }
+
+    return 0;
+}
 
 int HttpSession::processNewReqBody()
 {
@@ -1006,8 +1104,9 @@ int HttpSession::processNewReqBody()
         ret = readReqBody();
         if (!ret)
         {
-            if (getFlag(HSF_REQ_WAIT_FULL_BODY | HSF_REQ_BODY_DONE) ==
-                HSF_REQ_WAIT_FULL_BODY)
+            if ((m_pReqParser && !m_pReqParser->isParseDone())
+                || getFlag(HSF_REQ_WAIT_FULL_BODY | HSF_REQ_BODY_DONE) ==
+                        HSF_REQ_WAIT_FULL_BODY)
                 m_processState = HSPS_READ_REQ_BODY;
             else if (m_processState != HSPS_HKPT_RCVD_REQ_BODY)
                 m_processState = HSPS_PROCESS_NEW_URI;
@@ -1799,10 +1898,10 @@ int HttpSession::onReadEx()
 //     if (HSS_COMPLETE == getState())
 //         nextRequest();
 
-    runAllEventNotifier();    
+    runAllEventNotifier();
     //processPending( ret );
 //    printf( "onRead loops %d times\n", iCount );
-    
+
     return 0;
 }
 
@@ -1966,7 +2065,7 @@ void HttpSession::closeConnection()
         if (m_sessionHooks.isEnabled(LSI_HKPT_HTTP_END))
             m_sessionHooks.runCallbackNoParam(LSI_HKPT_HTTP_END, (LsiSession *)this);
     }
-    
+
     m_request.keepAlive(0);
 
     logAccess(getStream()->getFlag(HIO_FLAG_PEER_SHUTDOWN));
@@ -1997,7 +2096,7 @@ void HttpSession::closeConnection()
 
     //For reuse condition, need to reset the sessionhooks
     m_sessionHooks.reset();
-    
+
     getStream()->wantWrite(0);
     getStream()->handlerReadyToRelease();
     getStream()->shutdown();
@@ -2011,7 +2110,12 @@ void HttpSession::recycle()
         UserEventNotifier::getInstance().removeSessionEvents(m_pEventObjHead, this);
         m_pEventObjHead = NULL;
     }
-    
+    if (m_pReqParser)
+    {
+        delete m_pReqParser;
+        m_pReqParser = NULL;
+    }
+
     ++m_sn;
     if (getFlag(HSF_AIO_READING))
     {
@@ -3044,7 +3148,7 @@ void HttpSession::addLocationHeader()
 {
     HttpRespHeaders &headers = m_response.getRespHeaders();
     const char *pLocation = m_request.getLocation();
-    //int len = m_request.getLocationLen();
+//     int len = m_request.getLocationLen();
     headers.add(HttpRespHeaders::H_LOCATION, "", 0);
     if (*pLocation == '/')
     {
@@ -3307,6 +3411,8 @@ int HttpSession::openStaticFile(const char *pPath, int pathLen,
             close(fd);
             fd = -1;
         }
+        else
+            fcntl( fd, F_SETFD, FD_CLOEXEC );
     }
     return fd;
 }
@@ -3893,6 +3999,7 @@ int HttpSession::smProcessReq()
             ret = runEventHkpt(LSI_HKPT_HTTP_BEGIN, HSPS_HKPT_RECV_REQ_HEADER);
             if (ret || m_processState != HSPS_HKPT_RECV_REQ_HEADER)
                 break;
+            setupReqParser();
         //fall through
         case HSPS_HKPT_RECV_REQ_HEADER:
             ret = runEventHkpt(LSI_HKPT_RECV_REQ_HEADER, HSPS_PROCESS_NEW_REQ_BODY);

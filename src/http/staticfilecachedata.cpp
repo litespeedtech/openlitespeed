@@ -108,6 +108,8 @@ static int openFile(const char *pPath, int &fd)
             return SC_500;
         }
     }
+    fcntl(fd, F_SETFD, FD_CLOEXEC);
+
     return 0;
 }
 
@@ -195,7 +197,6 @@ int FileCacheDataEx::readyData(const char *pPath)
         ret = openFile(pPath, m_fd);
         if (ret)
             return ret;
-        fcntl(m_fd, F_SETFD, FD_CLOEXEC);
     }
     if ((size_t)m_lSize < s_iMaxInMemCacheSize)
     {

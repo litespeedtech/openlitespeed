@@ -28,10 +28,17 @@ class CValidation
 
 			if ( $needCheck ) {
 				if ($attr->_type == 'sel1' || $attr->_type == 'sel2') {
-					$attr->SetDerivedSelOptions($disp->GetDerivedSelOptions($tid, $attr->_minVal, $extracted));
+                    if ($this->_disp->Get(DInfo::FLD_ACT) == 'c') {
+                        $needCheck = false; // for changed top category
+                    }
+                    else {
+                        $attr->SetDerivedSelOptions($disp->GetDerivedSelOptions($tid, $attr->_minVal, $extracted));
+                    }
 				}
 				$dlayer = $extracted->GetChildren($attr->GetKey());
-				$this->validateAttr($attr, $dlayer);
+                if ($needCheck) {
+                    $this->validateAttr($attr, $dlayer);
+                }
 				if (($tid == 'V_TOPD' || $tid == 'V_BASE') && $attr->_type == 'vhname') {
 					$vhname = $dlayer->Get(CNode::FLD_VAL);
 					$disp->Set(DInfo::FLD_ViewName, $vhname);
@@ -402,6 +409,9 @@ class CValidation
 
 	protected function test_file(&$absname, &$err, $attr)
 	{
+        if ($attr->_maxVal == NULL)
+            return 1; // no permission test
+
 		$absname = PathTool::clean($absname);
 		if ( isset( $_SERVER['LS_CHROOT'] ) )	{
 			$root = $_SERVER['LS_CHROOT'];

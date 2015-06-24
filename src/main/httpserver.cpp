@@ -371,6 +371,7 @@ public:
 };
 
 #include <http/userdir.h>
+#include <http/reqparserparam.h>
 
 int HttpServerImpl::authAdminReq(char *pAuth)
 {
@@ -2418,6 +2419,41 @@ int HttpServerImpl::configServerBasics(int reconfig, const XmlNode *pRoot)
         if (pGDBPath)
             MainServerConfigObj.setGDBPath(pGDBPath);
 
+        
+        ReqParserParam& reqParserParam = HttpServerConfig::getInstance().getReqParserParam();
+        memset(&reqParserParam, 0, sizeof(ReqParserParam));
+        const char *pParam = pRoot->getChildValue("uploadpassbypath");
+        if (pParam)
+            reqParserParam.m_iEnableUploadFile = atoi(pParam);
+
+        char achBuf[MAX_PATH_LEN] = {0};
+        pParam = pRoot->getChildValue("uploadtmpdir");
+        if (!pParam 
+            || ConfigCtx::getCurConfigCtx()->getAbsoluteFile(achBuf, pParam) != 0)
+        {
+            strcpy(achBuf, "/tmp/lshttpd/");
+        }
+        reqParserParam.m_sUploadFilePathTemplate.setStr(achBuf);
+        
+        //If not exist, create it
+        struct stat stBuf;
+        int st = stat(reqParserParam.m_sUploadFilePathTemplate.c_str(), &stBuf);
+        if (st == -1)
+        {
+            mkdir(reqParserParam.m_sUploadFilePathTemplate.c_str(), 0777);
+            /**
+             * Comment: call chmod because the mkdir will use the umask 
+             * so that the mod may not be 0777.
+             */
+            chmod(reqParserParam.m_sUploadFilePathTemplate.c_str(), 0777);
+        }
+
+        pParam = pRoot->getChildValue("uploadtmpfilepermission");
+        if (pParam)
+            reqParserParam.m_iFileMod = strtol(pParam, NULL, 8);
+        else
+            reqParserParam.m_iFileMod = 0666;
+        
         MainServerConfigObj.setDisableLogRotateAtStartup(
             ConfigCtx::getCurConfigCtx()->getLongValue(pRoot, "disableInitLogRotation",
                     0, 1, 0));

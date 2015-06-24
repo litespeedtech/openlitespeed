@@ -34,6 +34,7 @@
 #include <http/httpvhost.h>
 #include <http/serverprocessconfig.h>
 #include <http/vhostmap.h>
+#include <http/reqparser.h>
 #include <lsr/ls_fileio.h>
 #include <lsr/ls_hash.h>
 #include <lsr/ls_strtool.h>
@@ -142,6 +143,7 @@ HttpReq::HttpReq()
     m_pEnv = NULL;
     m_pAuthUser = NULL;
     m_pRange = NULL;
+    m_pReqBodyType = REQ_BODY_UNKNOWN;
 }
 
 
@@ -1930,6 +1932,20 @@ int HttpReq::setLocation(const char *pLoc, int len)
 {
     assert(pLoc);
     return ls_str_xsetstr(&m_location, pLoc, len, m_pPool);
+}
+
+
+void HttpReq::updateContentType(char *pHeader)
+{
+    if ( strncasecmp( pHeader,
+         "application/x-www-form-urlencoded", 33 ) == 0 )
+    {
+        m_pReqBodyType = REQ_BODY_FORM;
+    }
+    else if ( strncasecmp( pHeader, "multipart/form-data", 19 ) == 0 )
+    {
+        m_pReqBodyType = REQ_BODY_MULTIPART;
+    }
 }
 
 

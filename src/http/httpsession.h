@@ -39,6 +39,7 @@ class GzipBuf;
 class SSIScript;
 class LsiApiHooks;
 class Aiosfcb;
+class ReqParser;
 
 enum  HttpSessionState
 {
@@ -115,6 +116,7 @@ enum HSPState
 #define HSF_SUSPENDED               (1<<15)
 #define HSF_SC_404                  (1<<16)
 #define HSF_AIO_READING             (1<<17)
+#define HSF_PARSE_REQ_BODY          (1<<18)
 
 
 class HttpSession : public LsiSession, public HioHandler,
@@ -160,6 +162,7 @@ class HttpSession : public LsiSession, public HioHandler,
 
     uint32_t              m_sn;
     EventObj             *m_pEventObjHead;
+    ReqParser            *m_pReqParser;
 
     HttpSession(const HttpSession &rhs);
     void operator=(const HttpSession &rhs);
@@ -212,6 +215,8 @@ public:
     void clearFlag(int f)     {   m_iFlag &= ~f;               }
     int32_t getFlag() const       {   return m_iFlag;             }
     int32_t getFlag(int mask)    {   return m_iFlag & mask;      }
+
+    ReqParser  *getReqParser()  {   return m_pReqParser;    }
 
     static int hookResumeCallback(long lParam, LsiSession *pSession);
 
@@ -281,6 +286,8 @@ private:
     int processAuthorizer();
     int processFileMap();
     int processNewUri();
+    
+    int setupReqParser();
 
 
 public:

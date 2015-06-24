@@ -70,6 +70,7 @@ SET(unittest_STAT_SRCS
    test/http/httpbuftest.cpp
    test/http/httpheadertest.cpp
    test/http/datetimetest.cpp
+   test/http/reqparsertest.cpp
    test/socket/hostinfotest.cpp
    test/socket/tcpsockettest.cpp
    test/socket/coresockettest.cpp

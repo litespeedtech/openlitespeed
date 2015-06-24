@@ -91,6 +91,26 @@ class DTblDef extends DTblDefBase
 		$this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_generalsettings'), $attrs);
 	}
 
+    protected function add_S_FILEUPLOAD($id)
+    {
+		$attrs = array(
+            DTblDefBase::NewPathAttr('uploadTmpDir', DMsg::ALbl('l_uploadtmpdir'), 'path', 2),
+            DTblDefBase::NewParseTextAttr('uploadTmpFilePermission', DMsg::ALbl('l_uploadtmpfilepermission'), $this->_options['parseFormat']['filePermission3'], DMsg::ALbl('parse_uploadtmpfilepermission')),
+            DTblDefBase::NewBoolAttr('uploadPassByPath', DMsg::ALbl('l_uploadpassbypath'))
+		);
+		$this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_uploadfile'), $attrs, 'TABLEfileUpload');
+    }
+
+    protected function add_VT_FILEUPLOAD($id)
+    {
+		$attrs = array(
+            DTblDefBase::NewPathAttr('uploadTmpDir', DMsg::ALbl('l_uploadtmpdir'), 'path', 3),
+            DTblDefBase::NewParseTextAttr('uploadTmpFilePermission', DMsg::ALbl('l_uploadtmpfilepermission'), $this->_options['parseFormat']['filePermission3'], DMsg::ALbl('parse_uploadtmpfilepermission')),
+            DTblDefBase::NewBoolAttr('uploadPassByPath', DMsg::ALbl('l_uploadpassbypath'))
+		);
+		$this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_uploadfile'), $attrs, 'TABLEfileUpload');
+    }
+
 	protected function add_S_TUNING_OS($id) //keep
 	{
 		$ssloptions = array( 'null' => DMsg::ALbl('l_ssloptnull'),

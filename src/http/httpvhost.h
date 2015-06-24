@@ -24,7 +24,7 @@
 #include <http/reqstats.h>
 #include <http/rewriterulelist.h>
 #include <http/throttlecontrol.h>
-
+#include <http/reqparserparam.h>
 #include <log4cxx/nsdefs.h>
 #include <lsiapi/lsimoduledata.h>
 
@@ -136,6 +136,7 @@ private:
     SSLContext         *m_pSSLCtx;
     SSITagConfig       *m_pSSITagConfig;
     AutoStr2            m_sSpdyAdHeader;
+    ReqParserParam      m_ReqParserParam;
     LsiModuleData       m_moduleData;
 
     HttpVHost(const HttpVHost &rhs);
@@ -420,6 +421,8 @@ public:
 
     LsiModuleData *getModuleData()      {   return &m_moduleData;   }
 
+    ReqParserParam &getReqParserParam() {   return  m_ReqParserParam;   }
+    
     void enableAioLogging();
 };
 

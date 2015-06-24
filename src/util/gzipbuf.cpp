@@ -99,6 +99,10 @@ int GzipBuf::beginStream()
     if (!m_pCompressCache)
         return LS_FAIL;
     size_t size;
+
+    m_zstr.next_in = NULL;
+    m_zstr.avail_in = 0;
+
     m_zstr.next_out = (unsigned char *)
                       m_pCompressCache->getWriteBuffer(size);
     m_zstr.avail_out = size;

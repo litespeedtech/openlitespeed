@@ -476,6 +476,10 @@ $_gmsg['l_umask'] = 'umask';
 $_gmsg['l_updateinterval'] = 'Update Interval';
 $_gmsg['l_updatemode'] = 'Update Mode';
 $_gmsg['l_updateoffsetsecs'] = 'Update Offset (secs)';
+$_gmsg['l_uploadfile'] = 'File Upload';
+$_gmsg['l_uploadtmpdir'] = 'Temporary File Path';
+$_gmsg['l_uploadtmpfilepermission'] = 'Temporary File Permission';
+$_gmsg['l_uploadpassbypath'] = 'Pass Upload Data by File Path';
 $_gmsg['l_uri'] = 'URI';
 $_gmsg['l_url'] = 'URL';
 $_gmsg['l_urlfilter'] = 'Context';
@@ -555,8 +559,7 @@ $_gmsg['parse_expiresByType'] = 'MIME_type=A|Mseconds, MIME type can be like */*
 $_gmsg['parse_expiresdefault'] = '[A|M]###, A means client access time, M means file modified time, ### is number of seconds';
 $_gmsg['parse_forcemimetype'] = 'MEME_type like text/html, or put \"NONE\" to disable inherited Force Type.';
 $_gmsg['parse_mimetype'] = 'like text/html';
-$_gmsg['parse_requiredpermissionmask'] = '3 digits or more octet number, Default required permission mask is 004 - readable by everyone';
-$_gmsg['parse_restrictedpermissionmask'] = '3 digits or more octet number, Default restricted permission mask is 041111 - executable+sticky+directory';
+$_gmsg['parse_secpermissionmask'] = '3 digits or more octet number. Default is 000';
 $_gmsg['parse_rewritemaplocation'] = 'txt:/location or rnd:/location or int:(toupper|tolower|escape|unescape)';
 $_gmsg['parse_spdyadheader'] = 'required format: ssl_port:npn-spdy/version like 443:npn-spdy/3';
 $_gmsg['parse_suffix'] = 'comma-separated list, allowed character[A-z0-9_\\-]';
@@ -565,6 +568,7 @@ $_gmsg['parse_tpname'] = 'requiring variable $VH_NAME';
 $_gmsg['parse_tpvhconffile'] = 'Requiring variable $VH_NAME and end with .conf. Suggested location is $SERVER_ROOT/conf/vhosts/$VH_NAME/vhconf.conf';
 $_gmsg['parse_umask'] = '[000-777]';
 $_gmsg['parse_userdblocation'] = 'start with ldap:// or ldaps://';
+$_gmsg['parse_uploadtmpfilepermission'] = '3 digits octet number, Default value is 666';
 
 
 $_gmsg['service_active'] = 'Active';
@@ -674,7 +678,7 @@ $_gmsg['buildphp_mainstatus'] = 'Main Status';
 $_gmsg['buildphp_manualrunnotice'] = '<p>For security reasons, please log in to your server and run the pre-generated script from shell.
 	You can monitor the progress from this screen.</p>
 	<p>If build successfully, please update php.ini accordingly if needed. To apply changes, please do a graceful restart.</p>
-	<p>If it stops due to errors, it may caused by missing packages, after you install it, rerun the same command and this page will show the updated log.</p>
+	<p>If it stops due to errors, it may caused by missing packages, after you install it, rerun the same command and this page will show the updated log. For more information regarding LSPHP, please visit <a href="https://www.litespeedtech.com/support/wiki/doku.php/litespeed_wiki:php" target="_blank">LiteSpeed wiki</a>.</p>
 	<p>If you log in as root, you can directly run the command: <br><code>%%manual_script%%</code></p>
 	<p>If you log in as a user who has sudo permission, you can run the command with sudo and input root password after prompt.
 	<code>sudo %%manual_script%%</code></p>';

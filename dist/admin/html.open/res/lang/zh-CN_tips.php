@@ -1,4 +1,4 @@
-<?php 
+<?php
 
 global $_tipsdb;
 
