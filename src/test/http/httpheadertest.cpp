@@ -433,6 +433,47 @@ SUITE(HttpHeaderTest)
 //printf("<-&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&\n");
     }
 
+ /*   
+TEST (respHeadersCrash)
+{
+    char headerData[] = 
+"X-Powered-By: PHP/5.3.29\r\n"
+"Set-Cookie: PHPSESSID=us6sr4noanp02s0its2dgv35m1; path=/\r\n"
+"Expires: Thu, 19 Nov 1981 08:52:00 GMT\r\n"
+"X-Pingback: http://www.theeverafterbridal.com/xmlrpc.php\r\n"
+"Content-Type: text/html; charset=UTF-8\r\n"
+"Set-Cookie: wordpress_fa5eb9fde7bf3f7f3fd8640562242bba=+; expires=Fri, 06-Jun-2014 04:43:43 GMT; path=/wp-admin\r\n"
+"Set-Cookie: wordpress_sec_fa5eb9fde7bf3f7f3fd8640562242bba=+; expires=Fri, 06-Jun-2014 04:43:43 GMT; path=/wp-admin\r\n"
+"Set-Cookie: wordpress_fa5eb9fde7bf3f7f3fd8640562242bba=+; expires=Fri, 06-Jun-2014 04:43:43 GMT; path=/wp-content/plugins\r\n"
+"Set-Cookie: wordpress_sec_fa5eb9fde7bf3f7f3fd8640562242bba=+; expires=Fri, 06-Jun-2014 04:43:43 GMT; path=/wp-content/plugins\r\n"
+"Set-Cookie: wordpress_logged_in_fa5eb9fde7bf3f7f3fd8640562242bba=+; expires=Fri, 06-Jun-2014 04:43:43 GMT; path=/\r\n"
+"Set-Cookie: wordpress_logged_in_fa5eb9fde7bf3f7f3fd8640562242bba=+; expires=Fri, 06-Jun-2014 04:43:43 GMT; path=/\r\n"
+"Set-Cookie: wordpress_fa5eb9fde7bf3f7f3fd8640562242bba=+; expires=Fri, 06-Jun-2014 04:43:43 GMT; path=/\r\n"
+"Set-Cookie: wordpress_fa5eb9fde7bf3f7f3fd8640562242bba=+; expires=Fri, 06-Jun-2014 04:43:43 GMT; path=/\r\n"
+"Set-Cookie: wordpress_sec_fa5eb9fde7bf3f7f3fd8640562242bba=+; expires=Fri, 06-Jun-2014 04:43:43 GMT; path=/\r\n"
+"Set-Cookie: wordpress_sec_fa5eb9fde7bf3f7f3fd8640562242bba=+; expires=Fri, 06-Jun-2014 04:43:43 GMT; path=/\r\n"
+"Set-Cookie: wordpressuser_fa5eb9fde7bf3f7f3fd8640562242bba=+; expires=Fri, 06-Jun-2014 04:43:43 GMT; path=/\r\n"
+"Set-Cookie: wordpresspass_fa5eb9fde7bf3f7f3fd8640562242bba=+; expires=Fri, 06-Jun-2014 04:43:43 GMT; path=/\r\n"
+"Set-Cookie: wordpressuser_fa5eb9fde7bf3f7f3fd8640562242bba=+; expires=Fri, 06-Jun-2014 04:43:43 GMT; path=/\r\n"
+"Set-Cookie: wordpresspass_fa5eb9fde7bf3f7f3fd8640562242bba=+; expires=Fri, 06-Jun-2014 04:43:43 GMT; path=/\r\n"
+"Cache-Control: no-store, no-cache, must-revalidate, max-age=0\r\n";
+
+    char headerData1[] = 
+"Cache-Control: post-check=0, pre-check=0\r\n";
+
+    char headerData2[] = ":\r\n\r\n";
+
+    ls_xpool_t pool;
+    ls_xpool_init(&pool);
+    HttpRespHeaders h(&pool);
+    h.reset();
+
+    h.parseAdd( headerData, sizeof(headerData)-1, LSI_HEADER_ADD);
+    h.parseAdd( headerData1, sizeof(headerData1)-1, LSI_HEADER_ADD);
+    h.parseAdd( headerData2, sizeof(headerData2)-1, LSI_HEADER_ADD);
+}
+    */
+    
     TEST(respHeaders)
     {
         HttpRespHeaders h;
@@ -612,8 +653,8 @@ SUITE(HttpHeaderTest)
             CHECK(memcmp(pVal, "TTTTTTTTTTTT", valLen) == 0);
 
             //Same name, but since no check,  will be appended directly. But SPDY, will check and parse it.
-            h.parseAdd("MytestHeader: TTTTTTTTTTTT3\r\n",
-                       strlen("MytestHeader: TTTTTTTTTTTT3\r\n"));
+            h.parseAdd("MytestHeader   :    TTTTTTTTTTTT3\r\n",
+                       strlen("MytestHeader   :    TTTTTTTTTTTT3\r\n"));
 
             CHECK(h.getHeadersCount(1) == 10);
             CHECK(h.getHeadersCount(0) == 12);
@@ -622,8 +663,13 @@ SUITE(HttpHeaderTest)
 
             h.addStatusLine(0, SC_404, 1);
 
-            h.parseAdd("MytestHeader: XXX\r\n",
-                       strlen("MytestHeader: XXX\r\n"), LSI_HEADER_MERGE);
+            h.parseAdd("MytestHeader : XXX\r\n",
+                       strlen("MytestHeader : XXX\r\n"), LSI_HEADER_MERGE);
+            
+            h.parseAdd("Content-Encoding   \t  : GZIP\r\n",
+                       strlen("Content-Encoding   \t  : GZIP\r\n"), LSI_HEADER_MERGE);
+            h.parseAdd("Content-Encoding2 : GZIP\r\n",
+                       strlen("Content-Encoding2 : GZIP\r\n"), LSI_HEADER_MERGE);
             h.outputNonSpdyHeaders(&io);
             DisplayBothHeader(io, kk, h.getHeadersCount(0), &h);
             strcpy(sTestHdr,

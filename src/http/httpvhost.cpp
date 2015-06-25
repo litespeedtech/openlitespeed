@@ -1033,6 +1033,8 @@ int HttpVHost::configIndexFile(const XmlNode *pVhConfNode,
     char achURI[] = "/_autoindex/";
     HttpContext *pContext = configContext(achURI , HandlerType::HT_NULL,
                                           "$SERVER_ROOT/share/autoindex/", NULL, 1);
+    if (pContext == NULL)
+        return -1;
     pContext->enableScript(1);
     return 0;
 }

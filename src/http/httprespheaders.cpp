@@ -290,9 +290,12 @@ int HttpRespHeaders::add(const char *pName, int nameLen, const char *pVal,
     HEADERINDEX headerIndex = getRespHeaderIndex(pName);
     if (headerIndex != H_HEADER_END)
     {
-        assert(s_iHeaderLen[headerIndex] == nameLen);
-        assert(strncasecmp(m_sPresetHeaders[headerIndex], pName, nameLen) == 0);
-        return add(headerIndex, pVal, valLen, method);
+        if ( s_iHeaderLen[headerIndex] == nameLen)
+        {
+            //assert(strncasecmp(m_sPresetHeaders[headerIndex], pName, nameLen) == 0);
+            return add(headerIndex, pVal, valLen, method);
+        }
+        headerIndex = H_HEADER_END;
     }
 
     int ret = getHeaderKvOrder(pName, nameLen);
@@ -432,20 +435,25 @@ int HttpRespHeaders::parseAdd(const char *pStr, int len, int method)
         if (pMark != NULL)
         {
             pName = pLineBegin;
+            pVal = pMark + 1;
+            while ( pMark > pLineBegin && isspace( *(pMark - 1)) )
+                --pMark;
             nameLen = pMark - pLineBegin; //Should - 1 to remove the ':' position
-            pVal = pMark + 2;
-            if (*pVal == ' ')
-                ++ pVal;
+            pLineBegin = pLineEnd + 1;
+
+            while ( pVal < pLineEnd && isspace(*(pLineEnd - 1)))
+                --pLineEnd;
+            while ( pVal < pLineEnd && isspace( *pVal ) )
+                ++pVal;
             valLen = pLineEnd - pVal;
-            if (*(pLineEnd - 1) == '\r')
-                -- valLen;
 
             //This way, all the value use APPEND as default
             if (add(pName, nameLen, pVal, valLen, method) == -1)
                 return -1;
         }
-
-        pLineBegin = pLineEnd + 1;
+        else
+            pLineBegin = pLineEnd + 1;
+        
         if (pBEnd <= pLineBegin + 1)
             break;
     }

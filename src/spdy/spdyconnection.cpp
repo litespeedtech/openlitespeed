@@ -67,7 +67,7 @@ SpdyConnection::SpdyConnection()
     , m_iCurDataOutWindow(SPDY_FCW_INIT_SIZE)
     , m_iCurInBytesToUpdate(0)
     , m_iDataInWindow(SPDY_FCW_INIT_SIZE)
-    , m_iStreamInInitWindowSize(5 * 1024 * 1024)
+    , m_iStreamInInitWindowSize(SPDY_FCW_INIT_SIZE)
     , m_iServerMaxStreams(500)
     , m_iStreamOutInitWindowSize(SPDY_FCW_INIT_SIZE)
     , m_iClientMaxStreams(100)
@@ -334,6 +334,9 @@ int SpdyConnection::processSettingFrame(SpdyFrameHeader *pHeader)
     }
     m_iCurrentFrameRemain = 0;
 
+    if (m_iStreamInInitWindowSize == SPDY_FCW_INIT_SIZE )
+        m_iStreamInInitWindowSize = SPDY_FCW_INIT_SIZE * 2;
+    
     sendSettings(m_iServerMaxStreams, m_iStreamInInitWindowSize);
     return 0;
 }

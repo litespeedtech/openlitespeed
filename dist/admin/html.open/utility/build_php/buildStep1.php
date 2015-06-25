@@ -49,4 +49,5 @@ echo $buf;
 ?>
 </table>
 </form>
-<p class="field_note">Note: If you want to use a version not listed here, you can manually update the settings in /usr/local/lsws/admin/html/utility/build_php/buildconf.inc.php.</p>
+<p class="field_note"> * If you want to use a version not listed here, you can manually update the settings in /usr/local/lsws/admin/html/utility/build_php/buildconf.inc.php.</p>
+<p class="field_note"> ** For more information regarding LSPHP, please visit <a href="https://www.litespeedtech.com/support/wiki/doku.php/litespeed_wiki:php" target="_blank">LiteSpeed wiki</a>.</p>

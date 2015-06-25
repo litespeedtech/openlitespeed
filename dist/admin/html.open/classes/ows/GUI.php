@@ -31,7 +31,7 @@ class GUI extends GUIBase
         <li><a href="/config/confMgr.php?m=altop">Listeners</a></li>
       </ul>
     </li>
-    <li><a href="/docs/"  class="mainlevel" target=_new>Help</a></li>
+    <li><a href="/docs/"  class="mainlevel" target="_blank">Help</a></li>
   </ul>';
 
 		$buf = parent::gen_top_menu($dropdown);

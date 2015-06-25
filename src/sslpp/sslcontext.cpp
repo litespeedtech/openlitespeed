@@ -495,13 +495,8 @@ int SSLContext::setCertificateChainFile(const char *pFile)
     unsigned long err;
     int n;
 
-    if ((bio = BIO_new(BIO_s_file_internal())) == NULL)
-        return 0;
-    if (BIO_read_filename(bio, pFile) <= 0)
-    {
-        BIO_free(bio);
-        return 0;
-    }
+    if ((bio = BIO_new_file(pFile, "r")) == NULL)
+        return -1;
     pExtraCerts = m_pCtx->extra_certs;
     if (pExtraCerts != NULL)
     {
@@ -515,7 +510,7 @@ int SSLContext::setCertificateChainFile(const char *pFile)
         {
             X509_free(x509);
             BIO_free(bio);
-            return 0;
+            return -1;
         }
         n++;
     }
@@ -525,7 +520,7 @@ int SSLContext::setCertificateChainFile(const char *pFile)
               && ERR_GET_REASON(err) == PEM_R_NO_START_LINE))
         {
             BIO_free(bio);
-            return 0;
+            return -1;
         }
         while (ERR_get_error() > 0) ;
     }
@@ -590,35 +585,55 @@ int SSLContext::checkPrivateKey()
 
 int SSLContext::setCipherList(const char *pList)
 {
-    if (m_pCtx)
+    if ( !m_pCtx )
+        return false;
+    char cipher[4096];
+
+    if ((strncasecmp(pList, "ALL:", 4) == 0)
+        || (strncasecmp(pList, "SSLv3:", 6) == 0)
+        || (strncasecmp(pList, "TLSv1:", 6) == 0))
     {
-        char cipher[4096];
-
-        if ((strncasecmp(pList, "ALL:", 4) == 0)
-            || (strncasecmp(pList, "SSLv3:", 6) == 0)
-            || (strncasecmp(pList, "TLSv1:", 6) == 0))
-        {
-            //snprintf( cipher, 4095, "RC4:%s", pList );
-            //strcpy( cipher, "ALL:HIGH:!aNULL:!SSLV2:!eNULL" );
+        //snprintf( cipher, 4095, "RC4:%s", pList );
+        //strcpy( cipher, "ALL:HIGH:!aNULL:!SSLV2:!eNULL" );
 #if OPENSSL_VERSION_NUMBER >= 0x10001000L
-            strcpy(cipher, "EECDH+ECDSA+AESGCM EECDH+aRSA+AESGCM EECDH+ECDSA+SHA384 "
-                   "EECDH+ECDSA+SHA256 EECDH+aRSA+SHA384 EECDH+aRSA+SHA256 "
-                   "EECDH+aRSA+RC4 EECDH EDH+aRSA RC4 !aNULL !eNULL !LOW !SSLv2"
-                   "!3DES !MD5 !EXP !PSK !SRP !DSSTLS_ECDHE_RSA_WITH_AES_128_CBC_SHA:"
-                  );
-            //strcpy( cipher, "HIGH:!MD5:!aNULL:!EDH@strength" );
+        strcpy(cipher, "ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES128-GCM-SHA256:"
+                        "ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES256-GCM-SHA384:"
+                        "DHE-RSA-AES128-GCM-SHA256:DHE-DSS-AES128-GCM-SHA256:"
+                        "kEDH+AESGCM:ECDHE-RSA-AES128-SHA256:"
+                        "ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA:"
+                        "ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:"
+                        "ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA:"
+                        "ECDHE-ECDSA-AES256-SHA:DHE-RSA-AES128-SHA256:"
+                        "DHE-RSA-AES128-SHA:DHE-DSS-AES128-SHA256:"
+                        "DHE-RSA-AES256-SHA256:DHE-DSS-AES256-SHA:"
+                        "DHE-RSA-AES256-SHA:AES128-GCM-SHA256:AES256-GCM-SHA384:"
+                        "AES128-SHA256:AES256-SHA256:AES128-SHA:AES256-SHA:AES:"
+                        "CAMELLIA:DES-CBC3-SHA:!aNULL:!eNULL:!EXPORT:!DES:!RC4:"
+                        "!MD5:!PSK:!aECDH:!EDH-DSS-DES-CBC3-SHA:"
+                        "!EDH-RSA-DES-CBC3-SHA:!KRB5-DES-CBC3-SHA"
+        );
 #else
-            strcpy(cipher,
-                   "RC4:HIGH:!aNULL:!MD5:!SSLv2:!eNULL:!EDH:!LOW:!EXPORT56:!EXPORT40");
+        strcpy(cipher,
+                "RC4:HIGH:!aNULL:!MD5:!SSLv2:!eNULL:!EDH:!LOW:!EXPORT56:!EXPORT40");
 #endif
-            //strcpy( cipher, "RC4:-EXP:-SSLv2:-ADH" );
-            pList = cipher;
-        }
-
-        return SSL_CTX_set_cipher_list(m_pCtx, pList);
+        //strcpy( cipher, "RC4:-EXP:-SSLv2:-ADH" );
+        pList = cipher;
     }
     else
-        return 0;
+    {
+        const char * p = strpbrk(pList, ": ");
+        if ( !p || memmem( pList,p - pList, "GCM", 3 ) == NULL 
+                || memmem( pList,p - pList, "SHA384", 6 ) != NULL )
+        {
+            if ( !p )
+                p = ":";
+            snprintf( cipher, 4095, "ECDHE-RSA-AES128-GCM-SHA256%c"
+                      "ECDHE-ECDSA-AES128-GCM-SHA256%c%s", *p, *p, pList);
+            pList = cipher;
+        }
+    }
+
+    return SSL_CTX_set_cipher_list(m_pCtx, pList);
 }
 
 

@@ -534,18 +534,16 @@ class DTblDef
 		$this->_tblDef[$id] = new DTbl($id, 'File Access');
 
 		$parseFormat = "/^[0-7]{3,4}/";
-		$parseHelp1 = '3 digits or more octet number, Default required permission mask is 004 - readable by everyone';
-		$parseHelp2 = '3 digits or more octet number, Default restricted permission mask is 041111 - executable+sticky+directory';
+		$parseHelp = '3 digits or more octet number. Default is 000';
 
 		$attrs = array(
 			new DAttr('followSymbolLink', 'sel', 'Follow Symbolic Link', 'select', false, 0, $this->_options['symbolLink']),
 			new DAttr('checkSymbolLink', 'bool', 'Check Symbolic Link', 'radio', false),
 			new DAttr('forceStrictOwnership', 'bool', 'Force Strict Ownership', 'radio', false),
-			new DAttr('requiredPermissionMask', 'parse', 'Required Permission Mask', 'text', true, $parseFormat, $parseHelp1),
-			new DAttr('restrictedPermissionMask', 'parse', 'Restricted Permission Mask', 'text', true, $parseFormat, $parseHelp2),
-			new DAttr('restrictedScriptPermissionMask', 'parse', 'Script Restricted Permission Mask', 'text', true, $parseFormat, $parseHelp2),
-			new DAttr('restrictedDirPermissionMask', 'parse', 'Script Restricted Directory Permission Mask', 'text', true, $parseFormat, $parseHelp2)
-
+			new DAttr('requiredPermissionMask', 'parse', 'Required Permission Mask', 'text', true, $parseFormat, $parseHelp),
+			new DAttr('restrictedPermissionMask', 'parse', 'Restricted Permission Mask', 'text', true, $parseFormat, $parseHelp),
+			new DAttr('restrictedScriptPermissionMask', 'parse', 'Script Restricted Permission Mask', 'text', true, $parseFormat, $parseHelp),
+			new DAttr('restrictedDirPermissionMask', 'parse', 'Script Restricted Directory Permission Mask', 'text', true, $parseFormat, $parseHelp)
 			);
 
 		$this->_tblDef[$id]->setAttr($attrs, 'sec:file', 'security:fileAccessControl');

@@ -41,7 +41,7 @@
 #define VH_NAME "VH_NAME"
 
 //static const char *MISSING_TAG = "missing <%s>";
-static const char *MISSING_TAG_IN;// = "missing <%s> in <%s>";
+static const char *MISSING_TAG_IN = "missing <%s> in <%s>";
 //static const char *INVAL_TAG = "<%s> is invalid: %s";
 //static const char * INVAL_TAG_IN = "[%s] invalid tag <%s> within <%s>!";
 static const char *INVAL_PATH = "Path for %s is invalid: %s";

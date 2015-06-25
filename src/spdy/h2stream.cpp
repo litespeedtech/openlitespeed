@@ -171,6 +171,8 @@ void H2Stream:: continueWrite()
                getLogId()));
     }
     setFlag(HIO_FLAG_WANT_WRITE, 1);
+    if (next() == NULL)
+        m_pH2Conn->add2PriorityQue(this);
     m_pH2Conn->setPendingWrite();
 
 }

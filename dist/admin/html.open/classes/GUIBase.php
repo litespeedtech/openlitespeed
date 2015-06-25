@@ -74,7 +74,7 @@ class GUIBase
 <!-- END CONTENT -->
 </div>
 <div id="copyright" align="center">Copyright &copy; ' . $year
-	. ' <a href="http://www.litespeedtech.com">LiteSpeed Technologies, Inc.</a> All Rights Reserved.</div>'
+	. ' <a href="https://www.litespeedtech.com">LiteSpeed Technologies, Inc.</a> All Rights Reserved.</div>'
 	. "<!-- $extra -->\n"
 	. '</body></html>';
 

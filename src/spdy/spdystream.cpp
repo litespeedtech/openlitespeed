@@ -145,6 +145,8 @@ void SpdyStream:: continueWrite()
                getLogId()));
     }
     setFlag(HIO_FLAG_WANT_WRITE, 1);
+    if (next() == NULL)
+        m_pSpdyConn->move2ReponQue(this);
     m_pSpdyConn->continueWrite();
 
 }

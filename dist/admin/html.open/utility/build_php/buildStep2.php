@@ -124,7 +124,7 @@
             	echo '<span class="field_error">*' . $check->pass_val['err']['configureParams'] . '</span><br>';
             }
             ?>
-            <textarea name="configureParams" rows="6" cols="60" wrap="soft"><?php echo $options->GetValue('ConfigParam');?></textarea></td>
+            <textarea name="configureParams" rows="12" cols="60" wrap="soft"><?php echo $options->GetValue('ConfigParam');?></textarea></td>
     </tr>
     <tr class="xtbl_value">
             <td class="xtbl_label">Add-on Modules</td>
@@ -137,38 +137,38 @@
     		$buf .= '<input type="checkbox" name="addonSuhosin"';
     		if ($options->GetValue('AddOnSuhosin'))
     			$buf .= $checked;
-    		$buf .= '> <a href="http://suhosin.org">Suhosin</a> (General Hardening) <br>';
+    		$buf .= '> <a href="http://suhosin.org" target="_blank">Suhosin</a> (General Hardening) <br>';
     	}
 
         if ($supported['mailheader']) {
             $buf .= '<input type="checkbox" name="addonMailHeader"';
             if ($options->GetValue('AddOnMailHeader'))
                 $buf .= $checked;
-            $buf .= '> <a href="http://choon.net/php-mail-header.php">PHP Mail Header Patch</a> (Identifies Mail Source) <br>';
+            $buf .= '> <a href="http://choon.net/php-mail-header.php" target="_blank">PHP Mail Header Patch</a> (Identifies Mail Source) <br>';
         }
 
         if ($supported['apc']) {
             $buf .= '<input type="checkbox" name="addonAPC"';
             if ($options->GetValue('AddOnAPC'))
                 $buf .= $checked;
-            $buf .= '> <a href="http://pecl.php.net/package/APC">APC</a> (Opcode Cache) V' . APC_VERSION . '<br>';
+            $buf .= '> <a href="http://pecl.php.net/package/APC" target="_blank">APC</a> (Opcode Cache) V' . APC_VERSION . '<br>';
         }
 
         $buf .= '<input type="checkbox" name="addonXCache"';
         if ($options->GetValue('AddOnXCache'))
             $buf .= $checked;
-        $buf .= '> <a href="http://xcache.lighttpd.net/">XCache</a>  (Opcode Cache) V' . XCACHE_VERSION;
+        $buf .= '> <a href="http://xcache.lighttpd.net/" target="_blank">XCache</a>  (Opcode Cache) V' . XCACHE_VERSION;
 
         $buf .= '<br><input type="checkbox" name="addonMemCache"';
         if ($options->GetValue('AddOnMemCache'))
             $buf .= $checked;
-        $buf .= '> <a href="http://pecl.php.net/package/memcache">memcache</a> (memcached extension) V' . MEMCACHE_VERSION . '<br>';
+        $buf .= '> <a href="http://pecl.php.net/package/memcache" target="_blank">memcache</a> (memcached extension) V' . MEMCACHE_VERSION . '<br>';
 
         if ($supported['opcache']) {
             $buf .= '<input type="checkbox" name="addonOPcache"';
             if ($options->GetValue('AddOnOPcache'))
                 $buf .= $checked;
-            $buf .= '> <a href="http://pecl.php.net/package/ZendOpcache">Zend OPcache</a> (Opcode Cache) V' . OPCACHE_VERSION . '<br>';
+            $buf .= '> <a href="http://pecl.php.net/package/ZendOpcache" target="_blank">Zend OPcache</a> (Opcode Cache) V' . OPCACHE_VERSION . '<br>';
         }
 
     	$buf .= '<p class="field_note">Note: If you want to use a version not listed here, you can manually update the settings in /usr/local/lsws/admin/html/utility/build_php/buildconf.inc.php.</p>';
@@ -179,6 +179,8 @@
     </td>
     </tr>
 </table>
+<p class="field_note"> Note: For more information regarding LSPHP, please visit <a href="https://www.litespeedtech.com/support/wiki/doku.php/litespeed_wiki:php" target="_blank">LiteSpeed wiki</a>.</p>
+<br>
 <center>
 	<input type="submit" name="back" value="Back to Step 1">
 	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
@@ -188,5 +190,3 @@
 </form>
 
 <br><br>
-
-

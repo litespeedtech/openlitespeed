@@ -9,7 +9,7 @@ if ($manual_script == NULL) {// illegal entry
 }
 $binname = 'lsphp-' . $check->pass_val['php_version'];
 
-$notes = '<ul><li>If the build process is successful, the PHP binary will be created under '
+$notes = '<li>If the build process is successful, the PHP binary will be created under '
 	. $_SERVER['LS_SERVER_ROOT'] . '/fcgi-bin/ with name ' . $binname
 	. ', and a symbolic link of lsphp' . $check->pass_val['php_version'][0]
 	. ' will be created or updated to the newly built binary. If '
@@ -17,7 +17,7 @@ $notes = '<ul><li>If the build process is successful, the PHP binary will be cre
 
 if ( $check->pass_val['extentions'] != '') {
 	$notes1 = BuildTool::getExtensionNotes($check->pass_val['extentions']);
-	$notes .= "\n" . $notes1 . '</ul>';
+	$notes .= '<li>' . $notes1 . '</li>';
 }
 
 $echo_cmd = 'echo "For security reason, please log in and manually run the pre-generated script to continue."';
@@ -90,8 +90,9 @@ getUpdate();
 <div><span id="statusgraphzone"><img src='/static/images/working.gif'></span></div>
 
 
-<p> <b>Notes</b>: <?=$notes ?></p>
-
+<p> <b>Notes</b>: <ul><?=$notes ?>
+    <li>For more information regarding LSPHP, please visit <a href="https://www.litespeedtech.com/support/wiki/doku.php/litespeed_wiki:php" target="_blank">LiteSpeed wiki</a>.</li>
+</li></ul></p>
 <p><b>Main Status: </b></p>
 <div style="margin:10px;border:1px solid rgb(134,142,167);outline: 3px solid #eaeaea;width:900px;height:160px;overflow:auto;font-family:Courier, monospace; font-size: 11px; background: #FFFFF7; color: #333333; padding: 5px 10px;">
 <pre id="statuszone"></pre>
