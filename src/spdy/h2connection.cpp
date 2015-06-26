@@ -547,6 +547,12 @@ int H2Connection::processWindowUpdateFrame(H2FrameHeader *pHeader)
             doGoAway(H2_ERROR_FLOW_CONTROL_ERROR);
             return 0;
         }
+        if (D_ENABLED(DL_LESS))
+        {
+            LOG_D((getLogger(),
+                   "[%s] session WINDOW_UPDATE: %d, current window size: %d, new: %d ",
+                   getLogId(), delta, m_iCurDataOutWindow, tmpVal));
+        }
         if (m_iCurDataOutWindow < 0 && tmpVal > 0)
         {
             m_iCurDataOutWindow = tmpVal;
@@ -557,19 +563,13 @@ int H2Connection::processWindowUpdateFrame(H2FrameHeader *pHeader)
     }
     else
     {
-        if (D_ENABLED(DL_LESS))
-        {
-            LOG_D((getLogger(),
-                   "[%s] session WINDOW_UPDATE: %d, window size: %d, streamID: %d ",
-                   getLogId(), delta, m_iCurDataOutWindow, id));
-        }
         H2Stream *pStream = findStream(id);
         if (pStream != NULL)
         {
             int ret = pStream->adjWindowOut(delta);
             if (ret < 0)
                 sendRstFrame(id, H2_ERROR_FLOW_CONTROL_ERROR);
-            else if ( pStream->adjWindowOut(delta) <= delta )
+            else if ( pStream->getWindowOut() <= (int)delta )
                 pStream->continueWrite();
             
         }
@@ -1081,8 +1081,8 @@ int H2Connection::sendDataFrame(uint32_t uiStreamId, int flag,
                                 IOVec *pIov, int total )
 {
     int ret = 0;
-    getBuf()->guarantee(9);
-    appendCtrlFrameHeader(H2_FRAME_DATA, total, flag, uiStreamId);
+    H2FrameHeader header(total, H2_FRAME_DATA, flag, uiStreamId);
+    getBuf()->append((char *)&header, 9);
     if (pIov)
         ret = cacheWritev(*pIov, total);
     if (ret != -1)
@@ -1492,7 +1492,7 @@ int H2Connection::onWriteEx()
 
     DLinkedObj *it = m_priQue.begin();//H2Stream*
     DLinkedObj *itn;
-    for (; it != m_priQue.end();)
+    for (; it != m_priQue.end() && m_iCurDataOutWindow > 0;)
     {
         pH2Stream = (H2Stream *)it;
         itn = it->next();
@@ -1510,7 +1510,7 @@ int H2Connection::onWriteEx()
     if (!isEmpty())
         flush();
     
-    if (wantWrite == 0 && isEmpty())
+    if ((wantWrite == 0 || m_iCurDataOutWindow <= 0) && isEmpty())
         getStream()->suspendWrite();
     return 0;
 }

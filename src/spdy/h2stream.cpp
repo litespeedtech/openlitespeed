@@ -348,6 +348,12 @@ int H2Stream::sendData(IOVec *pIov, int total)
     if (isFlowCtrl())
     {
         m_iWindowOut -= total;
+        if (D_ENABLED(DL_LESS))
+        {
+            LOG_D((getLogger(), "[%s] sent: %lld, current window: %d",
+                getLogId(), (uint64_t)getBytesSent(), m_iWindowOut));
+        }
+        
         if (m_iWindowOut <= 0)
             setFlag(HIO_FLAG_BUFF_FULL, 1);
     }

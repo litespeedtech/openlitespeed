@@ -11,7 +11,7 @@ define ('DEFAULT_INSTALL_DIR', $_SERVER['LS_SERVER_ROOT'].'lsphp'); // actual di
 
 $PHP_VER = array(
         '7'=>
-        array('7.0.0alpha1'),
+        array('7.0.0alpha2'),
         '5'=>
 		 array(
 		 	'5.6.10',
