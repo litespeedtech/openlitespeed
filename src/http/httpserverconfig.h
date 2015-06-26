@@ -181,6 +181,8 @@ public:
     HttpVHost *getGlobalVHost()             {   return m_pGlobalVHost;      }
     
     ReqParserParam& getReqParserParam()     {   return m_ReqParserParam;    }
+    
+    int getSpdyKeepaliveTimeout();
 
 };
 

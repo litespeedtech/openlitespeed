@@ -1009,15 +1009,15 @@ int HttpServerImpl::gracefulShutdown()
     //close keepalive connections
     HttpServerConfig::getInstance().setMaxKeepAliveRequests(0);
     HttpServerConfig::getInstance().setKeepAliveTimeout(0);
-    HttpServerConfig::getInstance().setConnTimeOut(15);
+    //HttpServerConfig::getInstance().setConnTimeOut(15);
     NtwkIOLink::setPrevToken(TIMER_PRECISION - 1);
     NtwkIOLink::setToken(0);
     MultiplexerFactory::getMultiplexer()->timerExecute();  //close keepalive connections
     // change to lower priority
     nice(3);
     //linger for a while
-    return m_dispatcher.linger(HttpServerConfig::getInstance().getConnTimeout()
-                               * 2);
+    return m_dispatcher.linger(
+            HttpServerConfig::getInstance().getRestartTimeout());
 
 }
 

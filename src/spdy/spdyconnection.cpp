@@ -22,8 +22,10 @@
 #include <http/hiohandlerfactory.h>
 #include <http/httplog.h>
 #include <http/httprespheaders.h>
+#include <http/httpserverconfig.h>
 #include <http/httpstatuscode.h>
 #include <util/iovec.h>
+#include <util/datetime.h>
 
 static hash_key_t int_hash(const void *p)
 {
@@ -988,8 +990,12 @@ int SpdyConnection::timerRoutine()
     {
         if (m_tmIdleBegin == 0)
             m_tmIdleBegin = time(NULL);
-        else if (time(NULL) - m_tmIdleBegin > 60)
-            doGoAway(SPDY_GOAWAY_OK);
+        else 
+        {
+            int idle = DateTime::s_curTime - m_tmIdleBegin;
+            if (idle > HttpServerConfig::getInstance().getSpdyKeepaliveTimeout())
+                doGoAway( SPDY_GOAWAY_OK );
+        }
     }
     else
         m_tmIdleBegin = 0;
@@ -1410,13 +1416,13 @@ int SpdyConnection::onWriteEx()
         return 0;
 
 
-    for (int i = 0; i < SPDY_STREAM_PRIORITYS; ++i)
+    for (int i = 0; i < SPDY_STREAM_PRIORITYS && m_iCurDataOutWindow > 0; ++i)
     {
         if (m_dqueStreamRespon[i].empty())
             continue;
         DLinkedObj *it = m_dqueStreamRespon[i].begin();//SpdyStream*
         DLinkedObj *itn;
-        for (; it != m_dqueStreamRespon[i].end();)
+        for (; it != m_dqueStreamRespon[i].end() && m_iCurDataOutWindow > 0;)
         {
             pSpdyStream = (SpdyStream *)it;
             itn = it->next();
@@ -1437,7 +1443,7 @@ int SpdyConnection::onWriteEx()
     if (!isEmpty())
         flush();
     
-    if (wantWrite == 0 && isEmpty())
+    if ((wantWrite == 0 || m_iCurDataOutWindow <= 0) && isEmpty())
         getStream()->suspendWrite();
     return 0;
 }
