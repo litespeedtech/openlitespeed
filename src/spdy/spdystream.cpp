@@ -173,7 +173,7 @@ int SpdyStream::shutdown()
 
     if (D_ENABLED(DL_LESS))
     {
-        LOG_D((getLogger(), "[%s] H2Stream::shutdown()",
+        LOG_D((getLogger(), "[%s] SpdyStream::shutdown()",
                getLogId()));
     }
     m_pSpdyConn->sendFinFrame(m_uiStreamID);
@@ -314,9 +314,8 @@ int SpdyStream::sendData(IOVec *pIov, int total)
     char achHeader[8];
     int ret;
     buildDataFrameHeader(achHeader, total);
-    pIov->push_front(achHeader, 8);
-    ret = m_pSpdyConn->cacheWritev(*pIov);
-    pIov->pop_front(1);
+    m_pSpdyConn->getBuf()->append(achHeader, 8);
+    ret = m_pSpdyConn->cacheWritev(*pIov, total);
     if (D_ENABLED(DL_LESS))
     {
         LOG_D((getLogger(), "[%s] SpdyStream::sendData(), total: %d, ret: %d",

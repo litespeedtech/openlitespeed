@@ -288,6 +288,8 @@ int EventDispatcher::linger(int timeout)
 #ifdef LS_AIO_USE_SIGNAL
         SigEventDispatcher::processSigEvent();
 #endif
+        UserEventNotifier::getInstance().runAllScheduledEvent(NULL, NULL);
+
         if (HttpSignals::gotSigAlarm())
         {
             HttpSignals::resetEvents();

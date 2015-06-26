@@ -129,6 +129,10 @@ public:
     {   return m_iAvailConns < m_iLowWaterMark;        }
 
     void tryAcceptNewConn();
+    
+    int32_t getSslAvailRatio() const
+    {   return m_iAvailSSLConns * 100 / m_iMaxSSLConns;   }
+    
 
     LS_NO_COPY_ASSIGN(ConnLimitCtrl);
 };

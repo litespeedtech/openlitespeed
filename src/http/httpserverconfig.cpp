@@ -17,6 +17,7 @@
 *****************************************************************************/
 #include "httpserverconfig.h"
 
+#include <http/connlimitctrl.h>
 #include <http/denieddir.h>
 #include <http/httpdefs.h>
 #include <http/httplog.h>
@@ -101,6 +102,16 @@ void HttpServerConfig::setMaxDynRespHeaderLen(int len)
 {
     if ((len >= 200) && (len <= MAX_DYN_RESP_HEADER_LEN))
         m_iMaxDynRespHeaderLen = len;
+}
+
+
+int HttpServerConfig::getSpdyKeepaliveTimeout()
+{
+    int timeout = m_iKeepAliveTimeout;
+    timeout *= ConnLimitCtrl::getInstance().getSslAvailRatio() / 10 + 5;
+    if ( timeout > 60 )
+        timeout = 60;
+    return timeout;
 }
 
 

@@ -3610,6 +3610,7 @@ int HttpSession::sendStaticFileEx(SendFileInfo *pData)
     off_t written;
     off_t remain;
     long len;
+    int count = 0;
 
 #if !defined( NO_SENDFILE )
     int fd = pData->getECache()->getfd();
@@ -3662,7 +3663,7 @@ int HttpSession::sendStaticFileEx(SendFileInfo *pData)
             return len;
         else if (len == 0)
             break;
-        else if (len < written)
+        else if (len < written || ++count >= 10)
             return 1;
     }
     return (pData->getRemain() > 0);
