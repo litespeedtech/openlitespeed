@@ -15,12 +15,15 @@
 *    You should have received a copy of the GNU General Public License       *
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
+#include "spdydebug.h"
+
+
+#include <util/autobuf.h>
+
 #include <netinet/in.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
-#include <util/autobuf.h>
-#include "spdydebug.h"
 
 int printheader(unsigned char *buff, int length)
 {
@@ -85,6 +88,7 @@ int printheader(unsigned char *buff, int length)
     return 1;
 }
 
+
 void printbuffstr(char *buff, int length)
 {
     if (length > 999)
@@ -92,6 +96,7 @@ void printbuffstr(char *buff, int length)
 
     ::write(STDOUT_FILENO, buff, length);
 }
+
 
 void printbuff(unsigned char *buff, int length)
 {

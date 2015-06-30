@@ -727,7 +727,7 @@ int HttpSession::processWebSocketUpgrade(const HttpVHost *pVHost)
         m_request.setStatusCode(SC_101);
         logAccess(0);
         L4Handler *pL4Handler = new L4Handler();
-        pL4Handler->assignStream(getStream());
+        pL4Handler->attachStream(getStream());
         pL4Handler->init(m_request, pContext->getWebSockAddr(),
                          getPeerAddrString(), getPeerAddrStrLen());
         LOG_D((getLogger(), "[%s] VH: %s web socket !!!", getLogId(),
@@ -1508,7 +1508,7 @@ void HttpSession::sendHttpError(const char *pAdditional)
         || m_request.getBodyRemain() > 0)
         m_request.keepAlive(false);
     // Let HEAD request follow the errordoc URL, the status code could be changed
-    //if ( sendBody() )
+    //if ( !isNoRespBody() )
     {
         const HttpContext *pContext = m_request.getContext();
         if (!pContext)
@@ -1599,7 +1599,7 @@ int HttpSession::buildErrorResponse(const char *errMsg)
         LOG_ERR(("[%s] invalid HTTP version: %d!", getLogId(), ver));
         ver = HTTP_1_1;
     }
-    if (sendBody())
+    if (!isNoRespBody())
     {
         const char *pHtml = HttpStatusCode::getRealHtml(errCode);
         if (pHtml)
@@ -2630,7 +2630,7 @@ int HttpSession::endResponseInternal(int success)
         LOG_D((getLogger(), "[%s] endResponseInternal()", getLogId()));
     m_iFlag |= HSF_HANDLER_DONE;
 
-    if (sendBody() && m_sessionHooks.isEnabled(LSI_HKPT_RECV_RESP_BODY))
+    if (!isNoRespBody() && m_sessionHooks.isEnabled(LSI_HKPT_RECV_RESP_BODY))
     {
         ret = runFilter(LSI_HKPT_RECV_RESP_BODY, (void *)appendDynBodyTermination,
                         NULL, 0, LSI_CB_FLAG_IN_EOF);
@@ -2691,8 +2691,12 @@ int HttpSession::endResponse(int success)
 
     }
 
+    setState(HSS_WRITING);
     setFlag(HSF_RESP_FLUSHED, 0);
-    ret = flush();
+    if (getStream()->isSpdy())
+        getStream()->continueWrite();
+    else
+        ret = flush();
 
     return ret;
 }
@@ -2773,7 +2777,7 @@ int HttpSession::flush()
         //suspendWrite(); //FIXME: should have this here?!
         return 0;
     }
-    if (!sendBody() && !getFlag(HSF_HANDLER_DONE))
+    if (!!isNoRespBody() && !getFlag(HSF_HANDLER_DONE))
     {
         ret = endResponseInternal(1);
         if (ret)
@@ -2794,7 +2798,7 @@ int HttpSession::flush()
             return 0;
     }
 
-    if (sendBody())
+    if (!isNoRespBody())
     {
         ret = flushBody();
         if (D_ENABLED(DL_LESS))
@@ -2886,7 +2890,8 @@ int HttpSession::sendRespHeaders()
     if (D_ENABLED(DL_LESS))
         LOG_D((getLogger(), "[%s] sendRespHeaders()", getLogId()));
 
-    if (sendBody())
+    int isNoBody = isNoRespBody();
+    if (!isNoBody)
     {
         if (m_sessionHooks.isEnabled(LSI_HKPT_SEND_RESP_BODY))
             m_response.setContentLen(LSI_RESP_BODY_SIZE_UNKNOWN);
@@ -2900,7 +2905,7 @@ int HttpSession::sendRespHeaders()
     if (finalizeHeader(m_request.getVersion(), m_request.getStatusCode()))
         return 1;
 
-    getStream()->sendRespHeaders(&m_response.getRespHeaders());
+    getStream()->sendRespHeaders(&m_response.getRespHeaders(), isNoBody);
     m_iFlag |= HSF_RESP_HEADER_SENT;
     setState(HSS_WRITING);
     return 0;
@@ -2910,7 +2915,7 @@ int HttpSession::setupDynRespBodyBuf()
 {
     if (D_ENABLED(DL_LESS))
         LOG_D((getLogger(), "[%s] setupDynRespBodyBuf()", getLogId()));
-    if (sendBody())
+    if (!isNoRespBody())
     {
         if (setupRespCache() == -1)
             return -1;
@@ -3311,7 +3316,7 @@ int HttpSession::finalizeHeader(int ver, int code)
             return ret;
 
     }
-    if (sendBody())
+    if (!isNoRespBody())
         return contentEncodingFixup();
     return 0;
 }

@@ -33,6 +33,7 @@ public:
     static H2Stream *getH2Stream();
     static void recycle(H2Stream **pStream, int n);
     static int getH2Streams(H2Stream **pStream, int n);
+
 };
 
 #endif // H2STREAMPOOL_H

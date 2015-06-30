@@ -123,12 +123,11 @@ public:
     int del(const char *pName, int nameLen);
     int del(HEADERINDEX headerIndex);
 
-    int  getHeadersCount(int dupLineAsOne)
+    int getUniqueCnt() const    {   return m_iHeaderUniqueCount;    }
+    
+    int  getCount() const
     {
-        if (dupLineAsOne)
-            return m_iHeaderUniqueCount;
-        else
-            return m_iHeaderTotalCount - m_iHeaderRemovedCount;
+        return m_iHeaderTotalCount - m_iHeaderRemovedCount;
     }
 
     int  getTotalCount() const                       {   return m_iHeaderTotalCount;   }

@@ -17,34 +17,30 @@
 *****************************************************************************/
 #ifndef SPDYZLIBFILTER_H
 #define SPDYZLIBFILTER_H
-#include  <netinet/in.h>
-#include  <iostream>
+
 #include <assert.h>
+#include <netinet/in.h>
 #include <stdio.h>
 #include <string.h>
-#include "zlib.h"
 #include <sys/types.h>       /* basic system data types */
-#include "util/autobuf.h"
-#include "util/loopbuf.h"
-#include "spdydebug.h"
+#include <zlib.h>
+
 /**
  * Context for zlib deflating and inflating.
  * Allows to use the same zlib stream on multiple frames. (Needed
  * for inflating multiple compressed headers on a SPDY stream.)
  */
 
+class AutoBuf;
+class LoopBuf;
+
 class SpdyZlibFilter
 {
 
 private:
     z_stream m_stream;
-    short    m_version;
+    short    m_iVersion;
     short    m_isInflator;
-
-private:
-    SpdyZlibFilter(const SpdyZlibFilter &other);
-    SpdyZlibFilter &operator=(const SpdyZlibFilter &other);
-    bool operator==(const SpdyZlibFilter &other) const;
 
 public:
     SpdyZlibFilter();
@@ -52,7 +48,8 @@ public:
     int init(int isInflator, int verSpdy);
     int release();
     int decompress(char *pSource, uint32_t length, AutoBuf &bufInflate);
-    int compress(char *pSource, uint32_t length, LoopBuf *pBuf, int flush);
+    int compress(char *pSource, uint32_t length, LoopBuf *ploopbuf, int flush);
+
 };
 
 #endif // SPDYZLIBFILTER_H

@@ -79,32 +79,23 @@ AC_ARG_ENABLE([adminssl],
               [OPENLSWS_ADMINSSL="$enableval"], [OPENLSWS_ADMINSSL=yes])
 AC_SUBST([OPENLSWS_ADMINSSL])
 
+OPENLSWS_HTTP2="?"
 AC_ARG_ENABLE([spdy],
-              [AC_HELP_STRING([--enable-spdy],
-                              [Enable SPDY and http2 over HTTPS (Spdy and http2 are disabled by default)])],
-               [ AC_DEFINE([LS_ENABLE_SPDY], [1], [Define if need spdy/http2 feature]) 
-                 echo "SPDY/http2 enabled!!!" ], [])
-                 
-AC_ARG_ENABLE([http2],
-              [AC_HELP_STRING([--enable-http2],
-                              [Enable SPDY and http2 over HTTPS (Spdy and http2 are disabled by default)])],
-               [ AC_DEFINE([LS_ENABLE_SPDY], [1], [Define if need spdy/http2 feature]) 
-                 echo "SPDY/http2 enabled!!!" ], [])
+              [AC_HELP_STRING([--enable-spdy=@<:@yes/no@:>@],
+                              [Enable SPDY and http2 over HTTPS @<:@default=yes@:>@])],
+               [OPENLSWS_HTTP2="$enableval"], [])
 
-AC_ARG_ENABLE([debug],
-              [AC_HELP_STRING([--enable-debug],
-                              [Enable debugging symbols (Debug is disabled by default)])],
-              [OPENLSWS_DEBUG="$enableval"
-                if test "$OPENLSWS_DEBUG" = "yes" ; then 
-                    CFLAGS="-g3 -O0"
-                    CXXFLAGS="-g3 -O0"
-                else
-                    CFLAGS="-g -O3"
-                    CXXFLAGS="-g -O3"
-                fi
-                echo "OPENLSWS_DEBUG='$OPENLSWS_DEBUG'"
-                ], [])
-                
+AC_ARG_ENABLE([http2],
+              [AC_HELP_STRING([--enable-http2=@<:@yes/no@:>@],
+                              [Enable SPDY and http2 over HTTPS @<:@default=yes@:>@])],
+               [OPENLSWS_HTTP2="$enableval"], [])
+if test "$OPENLSWS_HTTP2" = "no" ; then 
+    echo "SPDY/http2 disabled!!!"
+else
+    AC_DEFINE([LS_ENABLE_SPDY], [1], [Define if need spdy/http2 feature]) 
+    echo "SPDY/http2 enabled!!!"
+fi
+
 AC_ARG_ENABLE([profiling],
               [AC_HELP_STRING([--enable-profiling],
                               [Enable cpu profiling (profiling is disabled by default)])],

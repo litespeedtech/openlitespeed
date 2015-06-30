@@ -24,16 +24,19 @@ void SpdyStreamPool::recycle(SpdyStream *pStream)
     s_pool.recycle(pStream);
 }
 
+
 SpdyStream *SpdyStreamPool::getSpdyStream()
 {
     SpdyStream *p = s_pool.get();
     return p;
 }
 
+
 void SpdyStreamPool::recycle(SpdyStream **pStream, int n)
 {
     s_pool.recycle((void **)pStream, n);
 }
+
 
 int SpdyStreamPool::getSpdyStreams(SpdyStream **pStream, int n)
 {

@@ -46,3 +46,8 @@ HioHandler::~HioHandler()
 
 }
 
+int HioHandler::h2cUpgrade(HioHandler *pOld)
+{
+    return -1;
+}
+

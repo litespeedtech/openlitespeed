@@ -37,10 +37,10 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <socket/gsockaddr.h>
 #include <sslpp/sslconnection.h>
 #include <sslpp/sslcontext.h>
 #include <sslpp/sslerror.h>
-
 #include <util/accessdef.h>
 #include <util/iovec.h>
 #include "util/ssnprintf.h"
@@ -190,7 +190,7 @@ int NtwkIOLink::setupHandler(HiosProtocol verSpdy)
 
     clearLogId();
     setProtocol(verSpdy);
-    pHandler->assignStream(this);
+    pHandler->attachStream(this);
     pHandler->onInitConnected();
     return 0;
 }
@@ -204,8 +204,8 @@ int NtwkIOLink::switchToHttp2Handler(HioHandler *pSession)
         return -1;
     clearLogId();
     setProtocol(HIOS_PROTO_HTTP2);
-    pHandler->assignStream(this);
-    pHandler->upgradedStream(pSession);
+    pHandler->attachStream(this);
+    pHandler->h2cUpgrade(pSession);
     return 0;
 }
 
@@ -621,9 +621,23 @@ int NtwkIOLink::flush()
     return ret;
 }
 
+
+
+void NtwkIOLink::flushSslWpending()
+{
+    int pending = m_ssl.wpending();
+    if (D_ENABLED(DL_LESS))
+        LOG_D((getLogger(), "[%s] SSL wpending: %d",
+            getLogId(), pending));
+    if (pending > 0)
+        flush();
+}
+
+
 int NtwkIOLink::onWriteSSL(NtwkIOLink *pThis)
 {
     pThis->dumpState("onWriteSSL", "none");
+    pThis->flushSslWpending();
     if (pThis->m_ssl.wantWrite())
     {
         if (!pThis->m_ssl.isConnected() || (pThis->m_ssl.lastRead()))
@@ -961,7 +975,7 @@ int NtwkIOLink::writevEx(LsiSession *pOS, const iovec *vector, int count)
 }
 
 
-int NtwkIOLink::sendRespHeaders(HttpRespHeaders *pHeader)
+int NtwkIOLink::sendRespHeaders(HttpRespHeaders *pHeader, int isNoBody)
 {
     if (pHeader)
     {
@@ -1217,8 +1231,7 @@ int NtwkIOLink::writevExT(LsiSession *pOS, const iovec *vector, int count)
 
 void NtwkIOLink::onTimerSSL_T(NtwkIOLink *pThis)
 {
-    if (pThis->detectClose())
-        return;
+    pThis->flushSslWpending();    
     if (pThis->allowWrite() && (pThis->m_ssl.wantWrite()))
         onWriteSSL_T(pThis);
     if (pThis->allowRead() && (pThis->m_ssl.wantRead()))
@@ -1657,6 +1670,19 @@ const char *NtwkIOLink::buildLogId()
     p += len;
 
     return id.c_str();
+}
+
+int NtwkIOLink::isFromLocalAddr() const
+{
+    char achAddr[128];
+    socklen_t addrlen = 128;
+    if ( getsockname( getfd(), (struct sockaddr *) achAddr, &addrlen ) == -1 )
+    {
+        return 0;
+    }
+    const struct sockaddr * pServer = (struct sockaddr *) achAddr;
+    const struct sockaddr * pClient =  getClientInfo()->getAddr();
+    return ( GSockAddr::compareAddr( pServer, pClient ) == 0 ); 
 }
 
 

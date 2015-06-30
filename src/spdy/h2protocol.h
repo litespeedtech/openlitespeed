@@ -19,6 +19,8 @@
 #define H2PROTOCOL_H
 
 #include <spdy/protocoldef.h>
+
+
 #include <arpa/inet.h>
 #include <string.h>
 #include <sys/types.h>
@@ -50,7 +52,6 @@ enum H2ControlFlags
 {
     H2_CTRL_FLAG_NONE = 0,
     H2_CTRL_FLAG_FIN = 1,
-    H2_CTRL_FLAG_UNIDIRECTIONAL = 2
 };
 
 // Flags on the SETTINGS control frame.

@@ -58,16 +58,19 @@ enum HiosProtocol
 #define HIO_FLAG_BUFF_FULL          (1<<7)
 #define HIO_FLAG_FLOWCTRL           (1<<8)
 
+
+#define HIO_PRIORITY_HIGHEST        (0)
+#define HIO_PRIORITY_LOWEST         (7)
+#define HIO_PRIORITY_HTML           (2)
+#define HIO_PRIORITY_CSS            (HIO_PRIORITY_HTML + 1)
+#define HIO_PRIORITY_JS             (HIO_PRIORITY_CSS + 1)
+#define HIO_PRIORITY_IMAGE          (HIO_PRIORITY_JS + 1)
+#define HIO_PRIORITY_DOWNLOAD       (HIO_PRIORITY_IMAGE + 1)
+#define HIO_PRIORITY_LARGEFILE      (HIO_PRIORITY_LOWEST)
+
 class HioStream : public InputStream, public OutputStream,
     public LogTracker
 {
-    HioHandler   *m_pHandler;
-    off_t               m_lBytesRecv;
-    off_t               m_lBytesSent;
-    char                m_iState;
-    char                m_iProtocol;
-    short               m_iFlag;
-    uint32_t            m_tmLastActive;
 
 public:
     HioStream()
@@ -77,6 +80,7 @@ public:
         , m_iState(HIOS_DISCONNECTED)
         , m_iProtocol(HIOS_PROTO_HTTP)
         , m_iFlag(0)
+        , m_iPriority(0)
         , m_tmLastActive(0)
     {}
     virtual ~HioStream();
@@ -85,7 +89,7 @@ public:
     virtual int readv(struct iovec *vector, size_t count)
     {       return -1;      }
 
-    virtual int sendRespHeaders(HttpRespHeaders *pHeaders) = 0;
+    virtual int sendRespHeaders(HttpRespHeaders *pHeaders, int isNoBody) = 0;
 
     virtual void suspendRead()  = 0;
     virtual void continueRead() = 0;
@@ -93,7 +97,15 @@ public:
     virtual void continueWrite() = 0;
     virtual void switchWriteToRead() = 0;
     virtual void onTimer() = 0;
+    
+    virtual uint16_t getEvents() const = 0;
+    virtual void suspendEventNotify()  {};
+    virtual void resumeEventNotify()   {};
+    //virtual SSLConnection * getSSL() = 0;
+    virtual int isFromLocalAddr() const = 0;
     virtual NtwkIOLink *getNtwkIoLink() = 0;
+
+    virtual void cork(int doCork) {}
 
 
     //virtual uint32_t GetStreamID() = 0;
@@ -103,6 +115,21 @@ public:
         memset(&m_pHandler, 0, (char *)(&m_iFlag + 1) - (char *)&m_pHandler);
         m_tmLastActive = timeStamp;
     }
+    
+    int getPriority() const     {   return m_iPriority;     }
+    void setPriority(int pri)
+    {
+        if (pri > HIO_PRIORITY_LOWEST)
+            pri = HIO_PRIORITY_LOWEST;
+        else if (pri < HIO_PRIORITY_HIGHEST)
+            pri = HIO_PRIORITY_HIGHEST;
+        m_iPriority = pri;
+    }
+    void raisePriority(int by = 1)
+    {   setPriority(m_iPriority - by);  }
+    void lowerPriority(int by = 1)
+    {   setProtocol(m_iPriority + by);  }
+
 
     HioHandler *getHandler() const   {   return m_pHandler;  }
     void setHandler(HioHandler *p) {   m_pHandler = p;     }
@@ -118,6 +145,8 @@ public:
     short isAborted() const     {   return m_iFlag & HIO_FLAG_ABORT;         }
     void  setAbortedFlag()      {   m_iFlag |= HIO_FLAG_ABORT;               }
 
+    int   isClosing() const     {   return m_iState != HIOS_CONNECTED;      }
+    
     void handlerReadyToRelease() {   m_iFlag |= HIO_FLAG_HANDLER_RELEASE;     }
     short canWrite()  const     {   return m_iFlag & HIO_FLAG_BUFF_FULL;     }
 
@@ -126,7 +155,7 @@ public:
 
     int   isSpdy() const        {   return m_iProtocol;      }
 
-    short getState() const          {   return m_iState;     }
+    char  getState() const      {   return m_iState;        }
     void  setState(HioState st)   {   m_iState = st;       }
 
     void  bytesRecv(int n)    {   m_lBytesRecv += n;      }
@@ -134,6 +163,13 @@ public:
 
     off_t getBytesRecv() const  {   return m_lBytesRecv;    }
     off_t getBytesSent() const  {   return m_lBytesSent;    }
+
+     
+    void resetBytesCount()
+    {
+        m_lBytesRecv = 0;
+        m_lBytesSent = 0;
+    }
 
     void setActiveTime(uint32_t lTime)
     {   m_tmLastActive = lTime;              }
@@ -152,6 +188,15 @@ public:
 
 
 private:
+    HioHandler         *m_pHandler;
+    off_t               m_lBytesRecv;
+    off_t               m_lBytesSent;
+    char                m_iState;
+    char                m_iProtocol;
+    short               m_iFlag;
+    int32_t             m_iPriority;
+    uint32_t            m_tmLastActive;
+
     HioStream(const HioStream &other);
     HioStream &operator=(const HioStream &other);
     bool operator==(const HioStream &other) const;
@@ -169,12 +214,30 @@ public:
     virtual ~HioHandler();
 
     HioStream *getStream() const           {   return m_pStream;   }
-    void setStream(HioStream *p)         {   m_pStream = p;      }
-    void assignStream(HioStream *p)
+    //void setStream(HioStream *p)         {   m_pStream = p;      }
+    void attachStream(HioStream *p)
     {
         m_pStream  = p;
         p->setHandler(this);
     }
+
+    HioStream *detachStream()
+    {
+        HioStream *pStream = m_pStream;
+        if (pStream)
+        {
+            m_pStream = NULL;
+            pStream->setHandler(NULL);
+        }
+        return pStream;
+    }
+
+    LOG4CXX_NS::Logger *getLogger() const
+    {   return m_pStream ? m_pStream->getLogger() : NULL;   }
+
+    const char *getLogId()
+    {   return m_pStream ? m_pStream->getLogId() : "DETACHED";     }
+
 
     virtual int onInitConnected() = 0;
     virtual int onReadEx()  = 0;
@@ -185,8 +248,7 @@ public:
     virtual void recycle() = 0;
     
         
-    virtual void init(HiosProtocol ver) {};
-    virtual void upgradedStream(HioHandler *) {};
+    virtual int h2cUpgrade(HioHandler *pOld);
 
 private:
     HioHandler(const HioHandler &other);

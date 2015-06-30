@@ -19,6 +19,8 @@
 #define SPDYSTREAMPOOL_H
 #include <util/objpool.h>
 #include <util/dlinkqueue.h>
+
+
 class SpdyStream;
 typedef ObjPool<SpdyStream>       Pool;
 class SpdyStreamPool : public ObjPool<SpdyStream>
@@ -26,11 +28,13 @@ class SpdyStreamPool : public ObjPool<SpdyStream>
     static Pool s_pool;
     SpdyStreamPool();
     ~SpdyStreamPool();
+
 public:
     static void recycle(SpdyStream *pStream);
     static SpdyStream *getSpdyStream();
     static void recycle(SpdyStream **pStream, int n);
     static int getSpdyStreams(SpdyStream **pStream, int n);
+
 };
 
 #endif // SPDYSTREAMPOOL_H

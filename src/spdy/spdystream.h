@@ -19,7 +19,6 @@
 #define SPDYSTREAM_H
 
 #include <http/hiostream.h>
-
 #include <util/linkedobj.h>
 #include <util/loopbuf.h>
 
@@ -40,11 +39,6 @@ public:
              HioHandler *pHandler);
     int onInitConnected();
 
-    int getPriority() const
-    {
-        return m_iPriority;
-    }
-
     int appendReqData(char *pData, int len, uint8_t Spdy_Flags);
 
     int read(char *buf, int len);
@@ -57,13 +51,12 @@ public:
     int writev(IOVec &vector, int total);
 
     int sendfile(int fdSrc, off_t off, size_t size)
-    {
-        return 0;
-    };
+    {        return 0;    };
+
     void switchWriteToRead() {};
 
     int flush();
-    int sendRespHeaders(HttpRespHeaders *pHeaders);
+    int sendRespHeaders(HttpRespHeaders *pHeaders, int isNoBody);
 
     void suspendRead()
     {   setFlag(HIO_FLAG_WANT_READ, 0);     }
@@ -73,9 +66,14 @@ public:
     void continueRead();
     void continueWrite();
 
+    uint16_t getEvents() const;
+    int isFromLocalAddr() const;
+    virtual NtwkIOLink *getNtwkIoLink();
+
+
     void onTimer();
 
-    virtual NtwkIOLink *getNtwkIoLink();
+    int shutdown();
 
     int close();
 
@@ -106,13 +104,10 @@ public:
 
 
 private:
-    SpdyStream(const SpdyStream &other);
-    SpdyStream &operator=(const SpdyStream &other);
     bool operator==(const SpdyStream &other) const;
 
     void buildDataFrameHeader(char *pHeader, int length);
     int sendData(IOVec *pIov, int total);
-    int sendFin();
 
 
 
@@ -121,11 +116,11 @@ protected:
 
 private:
     uint32_t    m_uiStreamID;
-    int         m_iPriority;
     int32_t     m_iWindowOut;
     int32_t     m_iWindowIn;
     SpdyConnection *m_pSpdyConn;
     LoopBuf     m_bufIn;
+
 };
 
 

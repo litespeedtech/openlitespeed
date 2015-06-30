@@ -16,19 +16,15 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "spdystream.h"
-
 #include "spdyconnection.h"
 
-#include <util/datetime.h>
-#include <http/httplog.h>
 #include <util/ssnprintf.h>
+#include <http/httplog.h>
+#include <util/datetime.h>
 #include <util/iovec.h>
-
-
 
 SpdyStream::SpdyStream()
     : m_uiStreamID(0)
-    , m_iPriority(0)
     , m_pSpdyConn(NULL)
 {
 }
@@ -51,7 +47,7 @@ int SpdyStream::init(uint32_t StreamID,
                      HioHandler *pHandler)
 {
     HioStream::reset(DateTime::s_curTime);
-    pHandler->assignStream(this);
+    pHandler->attachStream(this);
     clearLogId();
 
     setState(HIOS_CONNECTED);
@@ -61,7 +57,7 @@ int SpdyStream::init(uint32_t StreamID,
     m_uiStreamID  = StreamID;
     m_iWindowOut = pSpdyConn->getStreamOutInitWindowSize();
     m_iWindowIn = pSpdyConn->getStreamInInitWindowSize();
-    m_iPriority = Priority;
+    setPriority(Priority);
     m_pSpdyConn = pSpdyConn;
     if (D_ENABLED(DL_LESS))
     {
@@ -70,6 +66,8 @@ int SpdyStream::init(uint32_t StreamID,
     }
     return 0;
 }
+
+
 int SpdyStream::onInitConnected()
 {
     getHandler()->onInitConnected();
@@ -100,6 +98,8 @@ int SpdyStream::appendReqData(char *pData, int len, uint8_t flags)
         getHandler()->onReadEx();
     return len;
 }
+
+
 //***int SpdyStream::read( char * buf, int len )***//
 // return > 0:  number of bytes of that has been read
 // return = 0:  0 byte of data has been read, but there will be more data coming,
@@ -137,6 +137,8 @@ void SpdyStream::continueRead()
     if (m_bufIn.size() > 0)
         getHandler()->onReadEx();
 }
+
+
 void SpdyStream:: continueWrite()
 {
     if (D_ENABLED(DL_LESS))
@@ -146,19 +148,32 @@ void SpdyStream:: continueWrite()
     }
     setFlag(HIO_FLAG_WANT_WRITE, 1);
     if (next() == NULL)
-        m_pSpdyConn->move2ReponQue(this);
+        m_pSpdyConn->add2PriorityQue(this);
     m_pSpdyConn->continueWrite();
-
 }
+
+
 void SpdyStream::onTimer()
 {
     getHandler()->onTimerEx();
 }
 
+
+uint16_t SpdyStream::getEvents() const
+{
+    return m_pSpdyConn->getEvents();
+}
+
+
+int SpdyStream::isFromLocalAddr() const
+{   return m_pSpdyConn->isFromLocalAddr();  }
+
+
 NtwkIOLink *SpdyStream::getNtwkIoLink()
 {   return m_pSpdyConn->getNtwkIoLink();    }
 
-int SpdyStream::sendFin()
+
+int SpdyStream::shutdown()
 {
     if (getState() == HIOS_SHUTDOWN)
         return 0;
@@ -167,13 +182,14 @@ int SpdyStream::sendFin()
 
     if (D_ENABLED(DL_LESS))
     {
-        LOG_D((getLogger(), "[%s] SpdyStream::sendFin()",
+        LOG_D((getLogger(), "[%s] SpdyStream::shutdown()",
                getLogId()));
     }
     m_pSpdyConn->sendFinFrame(m_uiStreamID);
-    m_pSpdyConn->flush();
+    //m_pSpdyConn->flush();
     return 0;
 }
+
 
 int SpdyStream::close()
 {
@@ -181,7 +197,7 @@ int SpdyStream::close()
         return 0;
     if (getHandler() && !isReadyToRelease())
         getHandler()->onCloseEx();
-    sendFin();
+    shutdown();
     setFlag(HIO_FLAG_WANT_WRITE, 1);
     setState(HIOS_DISCONNECTED);
     m_pSpdyConn->continueWrite();
@@ -190,7 +206,7 @@ int SpdyStream::close()
     //    getHandler()->recycle();
     //    setHandler( NULL );
     //}
-    //m_pSpdyConn->recycleStream( m_uiStreamID );
+    m_pSpdyConn->recycleStream(m_uiStreamID);
     return 0;
 }
 
@@ -301,7 +317,6 @@ void SpdyStream::buildDataFrameHeader(char *pHeader, int length)
     *((uint32_t *)pHeader + 1) = htonl(length);
     if (getState() >= HIOS_CLOSING)
         pHeader[4] = 1;
-
 }
 
 int SpdyStream::sendData(IOVec *pIov, int total)
@@ -309,9 +324,8 @@ int SpdyStream::sendData(IOVec *pIov, int total)
     char achHeader[8];
     int ret;
     buildDataFrameHeader(achHeader, total);
-    pIov->push_front(achHeader, 8);
-    ret = m_pSpdyConn->cacheWritev(*pIov);
-    pIov->pop_front(1);
+    m_pSpdyConn->getBuf()->append(achHeader, 8);
+    ret = m_pSpdyConn->cacheWritev(*pIov, total);
     if (D_ENABLED(DL_LESS))
     {
         LOG_D((getLogger(), "[%s] SpdyStream::sendData(), total: %d, ret: %d",
@@ -336,13 +350,25 @@ int SpdyStream::sendData(IOVec *pIov, int total)
 }
 
 
-int SpdyStream::sendRespHeaders(HttpRespHeaders *pHeaders)
+int SpdyStream::sendRespHeaders(HttpRespHeaders *pHeaders, int isNoBody)
 {
     if (getState() == HIOS_DISCONNECTED)
         return -1;
-
-    m_pSpdyConn->move2ReponQue(this);
-    return m_pSpdyConn->sendRespHeaders(pHeaders, m_uiStreamID);
+    if (isNoBody)
+    {
+        if (D_ENABLED(DL_LESS))
+        {
+            LOG_D((getLogger(), "[%s] No response body, set FLAG_FIN.",
+                   getLogId()));
+        }
+        setState(HIOS_SHUTDOWN);
+    }
+    else
+    {
+        if (next() == NULL)
+            m_pSpdyConn->add2PriorityQue(this);
+    }
+    return m_pSpdyConn->sendRespHeaders(pHeaders, m_uiStreamID, isNoBody);
 }
 
 int SpdyStream::adjWindowOut(int32_t n)
@@ -365,7 +391,3 @@ int SpdyStream::adjWindowOut(int32_t n)
     }
     return 0;
 }
-
-
-
-

@@ -16,7 +16,7 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #ifdef RUN_TEST
-
+#include <spdy/spdydebug.h>
 #include <spdy/spdyzlibfilter.h>
 #include "spdy/spdyconnection.h"
 #include "util/autobuf.h"

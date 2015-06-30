@@ -18,6 +18,7 @@
 #ifndef H2STREAM_H
 #define H2STREAM_H
 
+
 #include <http/hiostream.h>
 #include <util/linkedobj.h>
 #include <util/loopbuf.h>
@@ -58,7 +59,7 @@ public:
     void switchWriteToRead() {};
 
     int flush();
-    int sendRespHeaders(HttpRespHeaders *pHeaders);
+    int sendRespHeaders(HttpRespHeaders *pHeaders, int isNoBody);
 
     void suspendRead()
     {   setFlag(HIO_FLAG_WANT_READ, 0);     }
@@ -70,12 +71,14 @@ public:
     void continueWrite();
 
     void onTimer();
-    
+
     int isStuckOnRead()
     {
         return (isWantRead() && DateTime::s_curTime - getActiveTime() >= 5);
     }
 
+    uint16_t getEvents() const;
+    int isFromLocalAddr() const;
     virtual NtwkIOLink *getNtwkIoLink();
 
     int shutdown();
@@ -111,7 +114,7 @@ public:
     uint8_t getReqHeaderEnd() {   return m_reqHeaderEnd;  }
     void    setReqHeaderEnd(uint8_t v)  {   m_reqHeaderEnd = v;  }
 
-    void setContentlen( int32_t len )   {   m_iContentLen = len;    }
+    void setContentlen(int32_t len)   {   m_iContentLen = len;    }
 
 private:
     bool operator==(const H2Stream &other) const;

@@ -254,8 +254,8 @@ public:
     int writeRespBodyDirect(const char *pBuf, int size);
     int writeRespBody(const char *pBuf, int len);
 
-    bool sendBody() const
-    {   return !m_request.noRespBody();  }
+    int isNoRespBody() const
+    {   return m_request.noRespBody();  }
 
 
     int onReadEx();

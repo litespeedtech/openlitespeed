@@ -418,5 +418,22 @@ GSockAddr &GSockAddr::operator=(const in_addr_t addr)
     return *this;
 }
 
-
+int GSockAddr::compareAddr( const struct sockaddr * pAddr1, 
+                            const struct sockaddr * pAddr2 )
+{
+    switch( pAddr1->sa_family )
+    {
+    case AF_INET:
+        return memcmp( &((const struct sockaddr_in *)pAddr1)->sin_addr, 
+                       &((const struct sockaddr_in *)pAddr2)->sin_addr, 
+                       sizeof( in_addr_t ) );
+    case AF_INET6:
+        return memcmp( &((const struct sockaddr_in6 *)pAddr1)->sin6_addr, 
+                       &((const struct sockaddr_in6 *)pAddr2)->sin6_addr, 
+                       sizeof( in6_addr ) );
+    default:
+        return 0;
+    }
+    
+}
 

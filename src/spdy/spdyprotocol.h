@@ -17,10 +17,9 @@
 *****************************************************************************/
 #ifndef SPDYPROTOCOL_H
 #define SPDYPROTOCOL_H
-#include <sys/types.h>
-//#include <algorithm>
-#include <arpa/inet.h>
 #include <spdy/protocoldef.h>
+#include <sys/types.h>
+#include <arpa/inet.h>
 // Types of SPDY frames.
 
 enum SpdyFrameType
@@ -163,7 +162,7 @@ public:
 };
 
 
-const char *getSpdyFrameName(unsigned char bframeType);
+const char *getFrameName(unsigned char bframeType);
 
 class SpdySettingPairs
 {

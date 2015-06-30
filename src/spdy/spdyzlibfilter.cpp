@@ -16,6 +16,10 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "spdyzlibfilter.h"
+#include "spdydebug.h"
+
+#include <util/autobuf.h>
+#include <util/loopbuf.h>
 
 // SPDY 2 dictionary.
 // This is just a hacked dictionary to use for shrinking HTTP-like headers.
@@ -223,11 +227,12 @@ static int  s_dictsLen[] =
 { 0, sizeof(s_spdyV2Dictionary), sizeof(s_spdyV3Dictionary) };
 
 SpdyZlibFilter::SpdyZlibFilter()
-    : m_version(2)
+    : m_iVersion(2)
     , m_isInflator(0)
 {
     memset(&m_stream, 0, sizeof(m_stream));
 }
+
 
 int SpdyZlibFilter::init(int isInflator, int verSpdy)
 {
@@ -235,7 +240,7 @@ int SpdyZlibFilter::init(int isInflator, int verSpdy)
 
     m_isInflator = isInflator;
     assert((uint)verSpdy < sizeof(s_dicts) / sizeof(char *));
-    m_version = verSpdy;
+    m_iVersion = verSpdy;
     if (isInflator)
     {
         if (m_stream.state)
@@ -250,17 +255,19 @@ int SpdyZlibFilter::init(int isInflator, int verSpdy)
         else
             ret = deflateInit(&m_stream, -1);
 
-        ret = deflateSetDictionary(&m_stream, s_dicts[ m_version ],
-                                   s_dictsLen[ m_version ]);
+        ret = deflateSetDictionary(&m_stream, s_dicts[ m_iVersion ],
+                                   s_dictsLen[ m_iVersion ]);
     }
 
     return ret;
 }
 
+
 SpdyZlibFilter::~SpdyZlibFilter()
 {
     release();
 }
+
 
 int SpdyZlibFilter::release()
 {
@@ -292,8 +299,8 @@ int SpdyZlibFilter::decompress(char *pSource, uint32_t length,
 
         case Z_NEED_DICT:
             /* Setting the dictionary for the SPDY zlib compression. */
-            ret = inflateSetDictionary(&m_stream, s_dicts[ m_version ],
-                                       s_dictsLen[ m_version ]);
+            ret = inflateSetDictionary(&m_stream, s_dicts[ m_iVersion ],
+                                       s_dictsLen[ m_iVersion ]);
 
             if (ret != Z_OK)
             {
@@ -327,6 +334,7 @@ int SpdyZlibFilter::decompress(char *pSource, uint32_t length,
     return bufInflate.size();
 }
 
+
 int SpdyZlibFilter::compress(char *pSource, uint32_t length,
                              LoopBuf *ploopbuf, int flush)
 {
@@ -340,7 +348,7 @@ int SpdyZlibFilter::compress(char *pSource, uint32_t length,
     m_stream.next_out = (unsigned char *)ploopbuf->end();
     while (m_stream.avail_in)
     {
-        ret = ::deflate(&m_stream, flush);
+        ret = deflate(&m_stream, flush);
 
         if ((ret == Z_OK) || (ret == Z_STREAM_END))
         {

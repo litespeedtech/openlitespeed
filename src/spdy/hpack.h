@@ -18,6 +18,7 @@
 #ifndef HPACK_H
 #define HPACK_H
 
+
 #include <util/loopbuf.h>
 #include <util/ghash.h>
 #include <util/autobuf.h>
@@ -71,7 +72,7 @@ class DynTblEntry
 {
 public:
     DynTblEntry(char *name, uint32_t name_len, char *val,
-                      uint32_t val_len, uint8_t stxTabId)
+                uint32_t val_len, uint8_t stxTabId)
     {
         reset();
         init(name, name_len, val, val_len, stxTabId);
@@ -129,7 +130,7 @@ public:
     }
     void reset();
 
-    int getDynTabId(char *name, uint16_t name_len, char *value, 
+    int getDynTabId(char *name, uint16_t name_len, char *value,
                     uint16_t value_len, int &val_matched, uint8_t stxTabId);
 
     DynTblEntry *getEntry(uint32_t dynTblId)
@@ -165,8 +166,8 @@ protected:
 
     int dynTblIdToInternalIndex(uint32_t dynTblId)
     {
-        assert(dynTblId >= HPACK_STATIC_TABLE_SIZE + 1 
-            && dynTblId <= HPACK_STATIC_TABLE_SIZE + getEntryCount());
+        assert(dynTblId >= HPACK_STATIC_TABLE_SIZE + 1
+               && dynTblId <= HPACK_STATIC_TABLE_SIZE + getEntryCount());
         return getEntryCount() - (dynTblId - HPACK_STATIC_TABLE_SIZE);
     }
 
@@ -199,11 +200,13 @@ public:
     ~HuffmanCode() {};
 
     static size_t calcHuffmanEncBufSize(const unsigned char *src,
-                                    const unsigned char *src_end);
-    static int huffmanEnc(const unsigned char *src, const unsigned char *src_end,
+                                        const unsigned char *src_end);
+    static int huffmanEnc(const unsigned char *src,
+                          const unsigned char *src_end,
                           unsigned char *dst, int dst_len);
-    static unsigned char *huffmanDec4bits(uint8_t src_4bits, unsigned char *dst,
-                                          HpackHuffDecodeStatus_t &status, 
+    static unsigned char *huffmanDec4bits(uint8_t src_4bits,
+                                          unsigned char *dst,
+                                          HpackHuffDecodeStatus_t &status,
                                           bool lowerCase);
     static int huffmanDec(unsigned char *src, int src_len, unsigned char *dst,
                           int dst_len, bool lowerCase);
@@ -224,22 +227,23 @@ public:
     HpackDynTbl &getRespDynTbl() { return m_respDynTbl;   }
 
     static uint8_t getStxTabId(char *name, uint16_t name_len, char *val,
-                                uint16_t val_len, int &val_matched);
+                               uint16_t val_len, int &val_matched);
 
     unsigned char *encInt(unsigned char *dst, uint32_t value,
-                                 uint32_t prefix_bits);
+                          uint32_t prefix_bits);
     int decInt(unsigned char *&src, const unsigned char *src_end,
-                           uint32_t prefix_bits, uint32_t& value);
+               uint32_t prefix_bits, uint32_t &value);
     int encStr(unsigned char *dst, size_t dst_len,
-                      const unsigned char *str, uint16_t str_len);
+               const unsigned char *str, uint16_t str_len);
     int decStr(unsigned char *dst, size_t dst_len, unsigned char *&src,
-                      const unsigned char *src_end, bool lowerCase);
+               const unsigned char *src_end, bool lowerCase);
 
     //indexedType: 0, Add, 1,: without, 2: never
     unsigned char *encHeader(unsigned char *dst, unsigned char *dstEnd,
                              char *name, uint16_t nameLen, char *value,
                              uint16_t valueLen, int indexedType = 0);
-    int decHeader(unsigned char *&src, unsigned char *srcEnd, AutoBuf &nameValBuf,
+    int decHeader(unsigned char *&src, unsigned char *srcEnd,
+                  AutoBuf &nameValBuf,
                   uint16_t &name_len, uint16_t &val_len);
 
 

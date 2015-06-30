@@ -205,6 +205,7 @@ private:
 
     void updateSSLEvent();
     void checkSSLReadRet(int ret);
+    void flushSslWpending();
 
     int setupHandler(HiosProtocol verSpdy);
     int sslSetupHandler();
@@ -221,7 +222,7 @@ public:
 
     unsigned short getRemotePort() const  {   return m_iRemotePort;       };
 
-    int sendRespHeaders(HttpRespHeaders *pHeaders);
+    int sendRespHeaders(HttpRespHeaders *pHeaders, int isNoBody);
 
     const char *buildLogId();
     LogTracker *getLogTracker()        {   return this;        }
@@ -303,12 +304,15 @@ public:
     void suspendWrite();
     void continueWrite();
     void switchWriteToRead();
+    uint16_t getEvents() const
+    {   return EventReactor::getEvents();  }
 
     void checkThrottle();
     //void setThrottleLimit( int limit )
     //{   m_baseIO.getThrottleCtrl().setLimit( limit );    }
 
     void onTimer();
+    int isFromLocalAddr() const;
 
     //void stopThrottleTimer();
     //void startThrottleTimer();

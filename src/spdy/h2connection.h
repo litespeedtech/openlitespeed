@@ -26,6 +26,8 @@
 #include <util/dlinkqueue.h>
 #include <util/ghash.h>
 
+
+
 #include <sys/time.h>
 #include <limits.h>
 
@@ -37,8 +39,9 @@
 #define H2_CONN_FLAG_CONFIRMED      (1<<4)
 #define H2_CONN_FLAG_FLOW_CTRL      (1<<5)
 #define H2_CONN_HEADERS_START       (1<<6)
+#define H2_CONN_FLAG_WAIT_PROCESS   (1<<7)
 
-#define H2_STREAM_PRIORITYS         (256 + 1)
+#define H2_STREAM_PRIORITYS         (8)
 
 
 class H2Stream;
@@ -67,22 +70,13 @@ public:
     //Following functions are just placeholder
 
     //Placeholder
-    void init(HiosProtocol ver);
+    int init();
     int onInitConnected();
 
     int onTimerEx();
     void add2PriorityQue(H2Stream *pH2Stream);
     int timerRoutine();
 
-    LOG4CXX_NS::Logger *getLogger() const
-    {
-        return getStream()->getLogger();
-    }
-
-    const char *getLogId()
-    {
-        return getStream()->getLogId();
-    }
     void continueWrite()
     {   getStream()->continueWrite();   }
 
@@ -97,8 +91,9 @@ public:
 
     int32_t getPeerMaxFrameSize() const
     {   return m_iPeerMaxFrameSize;         }
-    
-    int sendRespHeaders(HttpRespHeaders *pRespHeaders, uint32_t uiStreamID);
+
+    int sendRespHeaders(HttpRespHeaders *pRespHeaders, uint32_t uiStreamID,
+                        uint8_t flag);
 
     int sendWindowUpdateFrame(uint32_t id, int32_t delta)
     {   return sendFrame4Bytes(H2_FRAME_WINDOW_UPDATE, id, delta);   }
@@ -113,15 +108,26 @@ public:
         return sendFrame0Bytes(H2_FRAME_DATA, H2_FLAG_END_STREAM, uiStreamID);
     }
 
-    int sendDataFrame(uint32_t uiStreamID, int flag, IOVec *pIov, int total );
-    
-    void upgradedStream(HioHandler *pSession);
+    int sendDataFrame(uint32_t uiStreamID, int flag, IOVec *pIov, int total);
+
+    int h2cUpgrade(HioHandler *pSession);
 
     void recycleStream(uint32_t uiStreamID);
 
+    uint16_t getEvents()
+    {   return getStream()->getEvents();    }
+    int isFromLocalAddr() const
+    {   return getStream()->isFromLocalAddr();  }
+
     NtwkIOLink *getNtwkIoLink();
 
-    void setPendingWrite();
+    static HioHandler *get();
+
+    void setPendingWrite()
+    {
+        if (isEmpty() && !getStream()->isWantWrite())
+            getStream()->continueWrite();
+    }
 
 private:
     typedef THash< H2Stream * > StreamMap;
@@ -138,7 +144,8 @@ private:
     int parseHeaders(char *pHeader, int ilength, int &NVPairCnt);
     H2Stream *getNewStream(uint8_t ubH2_Flags);
 
-    int decodeHeaders(unsigned char *src, int length, unsigned char iHeaderFlag);
+    int decodeHeaders(unsigned char *src, int length,
+                      unsigned char iHeaderFlag);
     int processPriorityFrame(H2FrameHeader *pHeader);
     int processSettingFrame(H2FrameHeader *pHeader);
     int processHeadersFrame(H2FrameHeader *pHeader);
@@ -151,12 +158,11 @@ private:
     int processContinuationFrame(H2FrameHeader *pHeader);
 
     int processReqHeader(unsigned char iHeaderFlag);
-    
+
     int sendPingFrame(uint8_t flags, uint8_t *pPayload);
     int sendSettingsFrame();
     int sendGoAwayFrame(H2ErrorCode status);
     int doGoAway(H2ErrorCode status);
-
 
     int appendCtrlFrameHeader(H2FrameType type, uint32_t len,
                               unsigned char flags = 0, uint32_t uiStreamID = 0)
@@ -170,21 +176,25 @@ private:
                          uint32_t uiVal1, uint32_t uiVal2);
     int  sendFrame4Bytes(H2FrameType type, uint32_t uiStreamId,
                          uint32_t uiVal2);
-    int  sendFrame0Bytes(H2FrameType type, uint8_t  flags, uint32_t uiStreamId);
+    int  sendFrame0Bytes(H2FrameType type, uint8_t  flags,
+                         uint32_t uiStreamId);
 
 
     void recycleStream(StreamMap::iterator it);
-    int appendReqHeaders(H2Stream *arg1, char *method = NULL, int methodLen = 0, 
+    int appendReqHeaders(H2Stream *arg1, char *method = NULL,
+                         int methodLen = 0,
                          char *uri = NULL, int uriLen = 0);
-    int decodeData(unsigned char *pSrc, unsigned char *bufEnd, 
+    int decodeData(unsigned char *pSrc, unsigned char *bufEnd,
                    char *method, int *methodLen, char **uri, int *uriLen,
-                   int *contentLen );
+                   int *contentLen);
     void skipRemainData();
     int encodeHeaders(HttpRespHeaders *pRespHeaders, unsigned char *buf,
-                        int maxSize);
+                      int maxSize);
 
     int verifyClientPreface();
     int parseFrame();
+
+
 
 private:
     LoopBuf         m_bufInput;
@@ -196,14 +206,12 @@ private:
     uint32_t        m_tmLastFrameIn;
     struct timeval  m_timevalPing;
 
-    //TODO: use array for m_dqueStreamRespon
-    //DLinkQueue      m_dqueStreamRespon[H2_STREAM_PRIORITYS];
-    DLinkQueue      m_priQue;
-
+    DLinkQueue      m_priQue[H2_STREAM_PRIORITYS];
     StreamMap       m_mapStream;
     short           m_iState;
     short           m_iFlag;
     Priority_st     m_priority;
+    char            m_bVersion;
 
     int32_t         m_iCurDataOutWindow;
     int32_t         m_iCurInBytesToUpdate;

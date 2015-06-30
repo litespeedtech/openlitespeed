@@ -20,7 +20,6 @@
 
 #include <inttypes.h>
 
-
 typedef struct
 {
     char *pName;
@@ -30,7 +29,6 @@ typedef struct
 } NameValuePair;
 
 
-
 static inline uint16_t beReadUint16(const unsigned char *p)
 {
     return ((uint16_t)(*p)) << 8 | *(p + 1);
@@ -38,7 +36,7 @@ static inline uint16_t beReadUint16(const unsigned char *p)
 
 static inline uint32_t beReadUint32(const unsigned char *p)
 {
-    register uint32_t v = *p++;
+    uint32_t v = *p++;
     v = (v << 8) | *p++;
     v = (v << 8) | *p++;
     v = (v << 8) | *p;
@@ -47,14 +45,14 @@ static inline uint32_t beReadUint32(const unsigned char *p)
 
 static inline uint16_t beReadUint16Adv(unsigned char *&p)
 {
-    register uint16_t v = *p++;
+    uint16_t v = *p++;
     v = (v << 8) | *p++;
     return v;
 }
 
 static inline uint32_t beReadUint32Adv(unsigned char *&p)
 {
-    register uint32_t v = *p++;
+    uint32_t v = *p++;
     v = (v << 8) | *p++;
     v = (v << 8) | *p++;
     v = (v << 8) | *p++;
