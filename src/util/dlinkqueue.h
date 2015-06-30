@@ -134,4 +134,45 @@ public:
 
 };
 
+
+template< typename T>
+class TDLinkQueue : public DLinkQueue
+{
+public:
+    TDLinkQueue()   {}
+    ~TDLinkQueue()  {}
+    
+    void release_objects()
+    {
+        T * p;
+        while( (p = pop_front()) != NULL )
+        {
+            delete p;
+        }
+    }
+    
+    void append( T * pReq )
+    {   DLinkQueue::append( pReq );     }
+
+    void push_front( T * pReq )
+    {   DLinkQueue::push_front( pReq ); }
+    
+    void remove( T * pReq )
+    {   DLinkQueue::remove( pReq );     }
+    
+    T * next( const T * pObj )
+    {   return ( T * )pObj->next();       }
+
+    T * pop_front()
+    {   return ( T * )DLinkQueue::pop_front();  }
+
+    T * begin()
+    {   return ( T * )DLinkQueue::begin();      }
+    
+    T * end()
+    {   return ( T * )DLinkQueue::end();    }
+    
+};
+
+
 #endif

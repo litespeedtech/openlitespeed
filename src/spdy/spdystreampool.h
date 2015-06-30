@@ -28,13 +28,13 @@ class SpdyStreamPool : public ObjPool<SpdyStream>
     static Pool s_pool;
     SpdyStreamPool();
     ~SpdyStreamPool();
-    
+
 public:
     static void recycle(SpdyStream *pStream);
     static SpdyStream *getSpdyStream();
     static void recycle(SpdyStream **pStream, int n);
     static int getSpdyStreams(SpdyStream **pStream, int n);
-    
+
     LS_NO_COPY_ASSIGN(SpdyStreamPool);
 };
 

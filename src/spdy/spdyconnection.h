@@ -34,6 +34,7 @@
 
 #define SPDY_CONN_FLAG_GOAWAY           (1<<0)
 #define SPDY_CONN_FLAG_FLOW_CTRL        (1<<1)
+#define SPDY_CONN_FLAG_WAIT_PROCESS     (1<<2)
 
 #define SPDY_STREAM_PRIORITYS          8
 
@@ -44,15 +45,15 @@ class SpdyConnection: public HioHandler, public BufferedOS
 public:
     SpdyConnection();
     virtual ~SpdyConnection();
+
+    static HioHandler *get(HiosProtocol proto);
+
     int onReadEx();
     int onReadEx2();
     int onWriteEx();
 
     int isOutBufFull() const
-    {
-        return ((m_iCurDataOutWindow <= 0)
-                || (getBuf()->size() >= SPDY_MAX_DATAFRAM_SIZE));
-    }
+    {   return ((m_iCurDataOutWindow <= 0) || (getBuf()->size() >= SPDY_MAX_DATAFRAM_SIZE)); }
 
     int flush();
 
@@ -63,11 +64,11 @@ public:
     //Following functions are just placeholder
 
     //Placeholder
-    void init(HiosProtocol ver);
+    int init(HiosProtocol ver);
     int onInitConnected();
 
     int onTimerEx();
-    void move2ReponQue(SpdyStream *pSpdyStream);
+    void add2PriorityQue(SpdyStream *pSpdyStream);
     int timerRoutine();
 
     void continueWrite()
@@ -85,12 +86,12 @@ public:
     int appendPing(uint32_t uiStreamID)
     {   return sendFrame4Bytes(SPDY_FRAME_PING, uiStreamID);  }
 
-    int addBufToGzip(char *hdrBuf, unsigned int &szHdrBuf, int iSpdyVer,
-                     struct iovec *iov, int iov_count, LoopBuf *buf, int &total,
-                     int flushWhenEnd = 0);
-    int addBufToGzip(char *hdrBuf, unsigned int &szHdrBuf, int iSpdyVer,
-                     const char *s, int len, LoopBuf *buf, int &total);
-    int  sendRespHeaders(HttpRespHeaders *pRespHeaders, uint32_t uiStreamID);
+    int addBufToGzip(int iSpdyVer, struct iovec *iov, int iov_count,
+                     LoopBuf *buf, int &total, int flushWhenEnd = 0);
+    int addBufToGzip(int iSpdyVer, const char *s, int len, LoopBuf *buf,
+                     int &total);
+    int  sendRespHeaders(HttpRespHeaders *pRespHeaders, uint32_t uiStreamID,
+                         int isNoBody);
 
     int sendWindowUpdateFrame(uint32_t id, int32_t delta)
     {
@@ -125,6 +126,10 @@ public:
 
     void recycleStream(uint32_t uiStreamID);
     static void replaceZero(char *pValue, int ilength);
+    uint16_t getEvents()
+    {   return getStream()->getEvents();    }
+    int isFromLocalAddr() const
+    {   return getStream()->isFromLocalAddr();  }
 
     NtwkIOLink *getNtwkIoLink();
 
@@ -173,8 +178,7 @@ private:
     void skipRemainData();
     int compressHeaders(HttpRespHeaders *pRespHeaders);
 
-    int deflateToBuffer(char *hdrBuf, unsigned int &szHdrBuf, char *pSource,
-                        uint32_t length, LoopBuf *ploopbuf, int flush);
+    static int getKeepaliveTimeout();
 
 private:
     LoopBuf         m_bufInput;
@@ -189,7 +193,7 @@ private:
     struct timeval  m_timevalPing;
     NameValuePair   m_NameValuePairList[100];
     NameValuePair   m_NameValuePairListReqline[3];
-    DLinkQueue      m_dqueStreamRespon[SPDY_STREAM_PRIORITYS];
+    TDLinkQueue<SpdyStream> m_priQue[SPDY_STREAM_PRIORITYS];
     StreamMap       m_mapStream;
     short           m_state;
     short           m_flag;

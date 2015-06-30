@@ -23,25 +23,21 @@
 #include <spdy/h2connection.h>
 #include <spdy/spdyconnection.h>
 
-HioHandler *HioHandlerFactory::getHioHandler(HiosProtocol ver)
+HioHandler *HioHandlerFactory::getHioHandler(HiosProtocol proto)
 {
     HioHandler *pHioHandler;
-    switch (ver)
+    switch (proto)
     {
     case HIOS_PROTO_HTTP:
         pHioHandler = HttpResourceManager::getInstance().getConnection();
         return pHioHandler;
     case HIOS_PROTO_HTTP2:
-        pHioHandler = (HioHandler *)(new H2Connection());
+        pHioHandler = H2Connection::get();
         break;
     default:
-        pHioHandler = (HioHandler *)(new SpdyConnection());
+        pHioHandler = SpdyConnection::get( proto );
         break;
     }
 
-    if (!pHioHandler)
-        return NULL;
-
-    pHioHandler->init(ver);
     return pHioHandler;
 }

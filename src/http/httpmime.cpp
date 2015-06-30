@@ -170,7 +170,7 @@ void MIMESetting::setHandler(const HttpHandler *pHdlr)
 
 void MIMESetting::inherit(const MIMESetting *pParent, int updateOnly)
 {
-    if (!m_expires.cfgHandler() && (!m_pHandler->getHandlerType()
+    if (!m_expires.cfgHandler() && (!m_pHandler->getType()
                                     || !updateOnly))
         m_pHandler = (HttpHandler *)pParent->getHandler();
     if (!m_expires.cfgCompress())

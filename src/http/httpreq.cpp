@@ -1273,7 +1273,7 @@ int HttpReq::checkSuffixHandler(const char *pURI, int len, int &cacheable)
         if (ret)
             return ret;
     }
-    if (m_pHttpHandler->getHandlerType() == HandlerType::HT_PROXY)
+    if (m_pHttpHandler->getType() == HandlerType::HT_PROXY)
         return -2;
     if (D_ENABLED(DL_LESS))
         LOG_D((getLogger(), "[%s] Cannot found appropriate handler for [%s]",
@@ -1301,7 +1301,7 @@ int HttpReq::processSuffix(const char *pURI, const char *pURIEnd,
             }
         }
     }
-    if (m_pHttpHandler->getHandlerType() == HandlerType::HT_NULL)
+    if (m_pHttpHandler->getType() == HandlerType::HT_NULL)
         return setMimeBySuffix(pSuffix);
     return 0;
 }
@@ -1330,7 +1330,7 @@ int HttpReq::setMimeBySuffix(const char *pSuffix)
                   getLogId(), pSuffix ? pSuffix : ""));
         return SC_403;
     }
-    if (m_pHttpHandler->getHandlerType() != HandlerType::HT_NULL)
+    if (m_pHttpHandler->getType() != HandlerType::HT_NULL)
     {
         if (D_ENABLED(DL_LESS))
             LOG_D((getLogger(), "[%s] Find handler [%s] for [.%s]",
@@ -1469,7 +1469,7 @@ int HttpReq::processContext()
         if (m_pContext->getMatchList())   //regular expression match
             processMatchList(m_pContext, pURI, iURILen);
     }
-    if (m_pHttpHandler->getHandlerType() == HandlerType::HT_PROXY)
+    if (m_pHttpHandler->getType() == HandlerType::HT_PROXY)
         return -2;
     if (m_pContext != pOldCtx)
         m_iContextState &= ~CONTEXT_AUTH_CHECKED;
@@ -1546,7 +1546,7 @@ int HttpReq::processMatchedURI(const char *pURI, int uriLen,
                   getLogId(), m_pContext->getURI()));
         return SC_403; //access denied
     }
-    if (m_pHttpHandler->getHandlerType() >= HandlerType::HT_FASTCGI)
+    if (m_pHttpHandler->getType() >= HandlerType::HT_FASTCGI)
     {
         m_pRealPath = NULL;
         return 0;
@@ -1674,7 +1674,7 @@ int HttpReq::processPath(const char *pURI, int uriLen, char *pBuf,
         if (p != pEnd)
             return checkSuffixHandler(pURI, uriLen, cacheable);
         //NOTE: why need to check this?
-        //if (m_pHttpHandler->getHandlerType() != HandlerType::HT_NULL )
+        //if (m_pHttpHandler->getType() != HandlerType::HT_NULL )
         //    return SC_404;
         int l = pBuf + GLOBAL_BUF_SIZE - p;
         const StringList *pIndexList = m_pContext->getIndexFileList();
@@ -1727,7 +1727,7 @@ int HttpReq::processPath(const char *pURI, int uriLen, char *pBuf,
         if (m_pContext->shouldMatchFiles())
             forcedType = filesMatch(p);
         if ((!forcedType) &&
-            (m_pHttpHandler->getHandlerType() == HandlerType::HT_NULL))
+            (m_pHttpHandler->getType() == HandlerType::HT_NULL))
         {
             //m_pMimeType = NULL;
             ret = processSuffix(pBuf, p, cacheable);

@@ -253,7 +253,7 @@ public:
     const AutoStr2 *getRoot() const {   return &m_sLocation;           }
     void setRoot(const char *pRoot);
 
-    int getHandlerType() const      {   return m_pHandler->getHandlerType();  }
+    int getHandlerType() const      {   return m_pHandler->getType();  }
     void setHandler(const HttpHandler *p)    {   m_pHandler = p;     }
 
     const HttpHandler *getHandler() const      {   return m_pHandler;  }

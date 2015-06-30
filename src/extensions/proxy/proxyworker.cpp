@@ -18,7 +18,9 @@
 #include "proxyworker.h"
 #include "proxyconfig.h"
 #include "proxyconn.h"
+#include <http/handlertype.h>
 ProxyWorker::ProxyWorker(const char *pName)
+    : ExtWorker(HandlerType::HT_PROXY)
 {
     setConfigPointer(new ProxyConfig(pName));
 }

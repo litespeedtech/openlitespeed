@@ -35,8 +35,8 @@ ModuleConfig ModuleManager::g_moduleConfig;
 
 
 LsiModule::LsiModule(lsi_module_t *pModule)
+    : HttpHandler(HandlerType::HT_MODULE)
 {
-    setHandlerType(HandlerType::HT_MODULE);
     m_pModule = pModule;
 }
 

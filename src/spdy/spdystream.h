@@ -35,12 +35,10 @@ public:
     SpdyStream();
     ~SpdyStream();
 
-    int init(uint32_t StreamID, int Priority, SpdyConnection *pSpdyConn,
-             uint8_t Spdy_Flags, HioHandler *pHandler);
+    int init(uint32_t StreamID,
+             int Priority, SpdyConnection *pSpdyConn, uint8_t Spdy_Flags,
+             HioHandler *pHandler);
     int onInitConnected();
-
-    int getPriority() const
-    {        return m_iPriority;    }
 
     int appendReqData(char *pData, int len, uint8_t Spdy_Flags);
 
@@ -59,18 +57,23 @@ public:
     void switchWriteToRead() {};
 
     int flush();
-    int sendRespHeaders(HttpRespHeaders *pHeaders);
+    int sendRespHeaders(HttpRespHeaders *pHeaders, int isNoBody);
 
-    void suspendRead()    {   setFlag(HIO_FLAG_WANT_READ, 0);     }
-    void suspendWrite()   {   setFlag(HIO_FLAG_WANT_WRITE, 0);    }
+    void suspendRead()
+    {   setFlag(HIO_FLAG_WANT_READ, 0);     }
+    void suspendWrite()
+    {   setFlag(HIO_FLAG_WANT_WRITE, 0);    }
 
     void continueRead();
     void continueWrite();
 
+    uint16_t getEvents() const;
+    int isFromLocalAddr() const;
+    virtual NtwkIOLink *getNtwkIoLink();
+
+
     void onTimer();
 
-    virtual NtwkIOLink *getNtwkIoLink();
-    
     int shutdown();
 
     int close();
@@ -95,7 +98,10 @@ public:
     int getDataFrameSize(int wanted);
 
 
-    void appendInputData(char ch)   {       return m_bufIn.append(ch);   }
+    void appendInputData(char ch)
+    {
+        return m_bufIn.append(ch);
+    }
 
 
 private:
@@ -105,12 +111,12 @@ private:
     int sendData(IOVec *pIov, int total);
 
 
+
 protected:
     virtual const char *buildLogId();
 
 private:
     uint32_t    m_uiStreamID;
-    int         m_iPriority;
     int32_t     m_iWindowOut;
     int32_t     m_iWindowIn;
     SpdyConnection *m_pSpdyConn;
@@ -118,6 +124,9 @@ private:
 
     LS_NO_COPY_ASSIGN(SpdyStream);
 };
+
+
+
 
 
 #endif // SPDYSTREAM_H

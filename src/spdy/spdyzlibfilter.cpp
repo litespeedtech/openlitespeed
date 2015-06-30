@@ -223,8 +223,8 @@ static const unsigned char s_spdyV3Dictionary[] =
 };
 
 static const unsigned char *s_dicts[] = { NULL, s_spdyV2Dictionary, s_spdyV3Dictionary };
-static int  s_dictsLen[] = { 0, sizeof(s_spdyV2Dictionary), sizeof(s_spdyV3Dictionary) };
-
+static int  s_dictsLen[] =
+{ 0, sizeof(s_spdyV2Dictionary), sizeof(s_spdyV3Dictionary) };
 
 SpdyZlibFilter::SpdyZlibFilter()
     : m_iVersion(2)
@@ -278,8 +278,8 @@ int SpdyZlibFilter::release()
     return 0;
 }
 
-
-int SpdyZlibFilter::decompress(char *pSource, uint32_t length, AutoBuf &bufInflate)
+int SpdyZlibFilter::decompress(char *pSource, uint32_t length,
+                               AutoBuf &bufInflate)
 {
     int ret;
 
@@ -296,6 +296,7 @@ int SpdyZlibFilter::decompress(char *pSource, uint32_t length, AutoBuf &bufInfla
 
         switch (ret)
         {
+
         case Z_NEED_DICT:
             /* Setting the dictionary for the SPDY zlib compression. */
             ret = inflateSetDictionary(&m_stream, s_dicts[ m_iVersion ],
@@ -347,7 +348,7 @@ int SpdyZlibFilter::compress(char *pSource, uint32_t length,
     m_stream.next_out = (unsigned char *)ploopbuf->end();
     while (m_stream.avail_in)
     {
-        ret = ::deflate(&m_stream, flush);
+        ret = deflate(&m_stream, flush);
 
         if ((ret == Z_OK) || (ret == Z_STREAM_END))
         {

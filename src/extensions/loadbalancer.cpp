@@ -17,15 +17,12 @@
 *****************************************************************************/
 #include "loadbalancer.h"
 #include <extensions/extrequest.h>
-
-LoadBalancer::LoadBalancer()
-    : m_lastWorker(0)
-{
-}
+#include <http/handlertype.h>
 
 
 LoadBalancer::LoadBalancer(const char *pName)
-    : m_lastWorker(0)
+    : ExtWorker(HandlerType::HT_LOADBALANCER)
+    , m_lastWorker(0)
 {
     setConfigPointer(new ExtWorkerConfig(pName));
 }

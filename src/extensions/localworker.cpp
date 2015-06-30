@@ -42,8 +42,9 @@
 #define GRACE_TIMEOUT 20
 #define KILL_TIMEOUT 25
 
-LocalWorker::LocalWorker()
-    : m_fdApp(-1)
+LocalWorker::LocalWorker(int type)
+    : ExtWorker(type)
+    , m_fdApp(-1)
     , m_sigGraceStop(SIGTERM)
     , m_pidList(NULL)
     , m_pidListStop(NULL)

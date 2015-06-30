@@ -231,6 +231,13 @@ int SSLConnection::writev(const struct iovec *vect, int count,
 }
 
 
+int SSLConnection::wpending()
+{
+    BIO * pBIO = SSL_get_wbio( m_ssl );
+    return BIO_wpending(pBIO);
+}
+
+
 int SSLConnection::flush()
 {
     BIO *pBIO = SSL_get_wbio(m_ssl);

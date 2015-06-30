@@ -246,8 +246,6 @@ static ExtWorker *newWorker(int type, const char *pName)
     default:
         return NULL;
     }
-    if (pWorker)
-        pWorker->setHandlerType(type + HandlerType::HT_CGI);
     return pWorker;
 }
 

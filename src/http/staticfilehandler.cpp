@@ -48,8 +48,8 @@
 
 
 RedirectHandler::RedirectHandler()
+    : HttpHandler(HandlerType::HT_REDIRECT)
 {
-    setHandlerType(HandlerType::HT_REDIRECT);
 }
 
 
@@ -64,8 +64,8 @@ const char *RedirectHandler::getName() const
 
 
 StaticFileHandler::StaticFileHandler()
+    : HttpHandler(HandlerType::HT_STATIC)
 {
-    setType(0);
 }
 
 

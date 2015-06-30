@@ -17,7 +17,7 @@
 *****************************************************************************/
 #include "spdyprotocol.h"
 
-static const char *s_sSpdyFrameName[] =
+static const char *s_sFrameName[] =
 {
     "DATA",
     "SYN_STREAM",
@@ -32,11 +32,10 @@ static const char *s_sSpdyFrameName[] =
     "CREDENTIAL"
 };
 
-
-const char *getSpdyFrameName(unsigned char bframeType)
+const char *getFrameName(unsigned char bframeType)
 {
     if (bframeType <= SPDY_FRAME_LAST_CONTROL_TYPE)
-        return s_sSpdyFrameName[bframeType];
+        return s_sFrameName[bframeType];
     return "UNKONWN";
 }
 
