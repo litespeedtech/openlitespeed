@@ -570,7 +570,7 @@ void Awstats::config(HttpVHost *pVHost, int val, char *achBuf,
                 "AWStats CGI-BIN directory");
 
         if (pVHost->getRootContext().determineMime("pl",
-                NULL)->getHandler()->getHandlerType())
+                NULL)->getHandler()->getType())
             handlerType = HandlerType::HT_NULL;
         else
             handlerType = HandlerType::HT_CGI;

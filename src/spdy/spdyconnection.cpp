@@ -79,7 +79,15 @@ SpdyConnection::SpdyConnection()
 }
 
 
-void SpdyConnection::init(HiosProtocol ver)
+HioHandler *SpdyConnection::get(HiosProtocol proto)
+{
+    SpdyConnection *pConn = new SpdyConnection();
+    pConn->init(proto);
+    return pConn;
+}
+
+
+int SpdyConnection::init(HiosProtocol ver)
 {
     if (ver == HIOS_PROTO_SPDY31)
     {
@@ -95,14 +103,15 @@ void SpdyConnection::init(HiosProtocol ver)
     if (ver == HIOS_PROTO_SPDY3)
         m_iStreamOutInitWindowSize = SPDY_FCW_INIT_SIZE;
     else
-        //For SPDY2, there is no flow control, set it to a large value
-        m_iStreamOutInitWindowSize = 1024 * 1024 * 1024;
+        m_iStreamOutInitWindowSize = 1024 * 1024 *
+                                     1024;   //For SPDY2, there is no flow control, set it to a large value
     m_iServerMaxStreams = 500;
     m_iClientMaxStreams = 100;
 
     m_tmIdleBegin = 0;
-    m_iCurrentFrameRemain = -8;
+    m_iCurrentFrameRemain = -SPDY_FRAME_HEADER_SIZE;
     m_pcurrentSpdyHeader = (SpdyFrameHeader *)m_SpdyHeaderMem;
+    return 0;
 }
 
 
@@ -129,6 +138,8 @@ SpdyConnection::~SpdyConnection()
 int SpdyConnection::onReadEx()
 {
     int ret = onReadEx2();
+//    if ((m_flag & SPDY_CONN_FLAG_WAIT_PROCESS) != 0)
+//        onWriteEx();
     if (!isEmpty())
         flush();
     return ret;
@@ -144,6 +155,12 @@ int SpdyConnection::onReadEx2()
             m_bufInput.guarantee(1024);
         avaiLen = m_bufInput.contiguous();
         n = getStream()->read(m_bufInput.end(), avaiLen);
+        //if ( D_ENABLED( DL_LESS ) )
+        //{
+        //    LOG_D(( getLogger(), "[%s] getStream()->read(), availLen = %d, ret = %d",
+        //                    getLogId(), avaiLen, n ));
+        //}
+
         if (n == -1)
         {
             // must start to close connection
@@ -274,7 +291,7 @@ void SpdyConnection::printLogMsg(SpdyFrameHeader *pHeader)
     if (D_ENABLED(DL_LESS))
     {
         LOG_D((getLogger(), "[%s] Received %s, size: %d, D0:%d, D1:%d\n",
-               getLogId(), getSpdyFrameName(pHeader->getType()), pHeader->getLength(),
+               getLogId(), getFrameName(pHeader->getType()), pHeader->getLength(),
                pHeader->getHboData(0),  pHeader->getHboData(1)));
     }
 }
@@ -334,9 +351,9 @@ int SpdyConnection::processSettingFrame(SpdyFrameHeader *pHeader)
     }
     m_iCurrentFrameRemain = 0;
 
-    if (m_iStreamInInitWindowSize == SPDY_FCW_INIT_SIZE )
+    if (m_iStreamInInitWindowSize == SPDY_FCW_INIT_SIZE)
         m_iStreamInInitWindowSize = SPDY_FCW_INIT_SIZE * 2;
-    
+
     sendSettings(m_iServerMaxStreams, m_iStreamInInitWindowSize);
     return 0;
 }
@@ -664,20 +681,26 @@ int SpdyConnection::appendReqHeaders(SpdyStream *pStream, int NVPairCnt)
         pStream->appendInputData(m_NameValuePairListReqline[i].pValue,
                                  m_NameValuePairListReqline[i].ValueLen);
         if (i == 2)
-            pStream->appendInputData("\r\n", 2);
+        {
+            pStream->appendInputData('\r');
+            pStream->appendInputData('\n');
+        }
         else
-            pStream->appendInputData(" ", 1);
+            pStream->appendInputData(' ');
     }
     for (int i = 0; i < NVPairCnt; i++)
     {
         pStream->appendInputData(m_NameValuePairList[i].pName,
                                  m_NameValuePairList[i].nameLen);
-        pStream->appendInputData(": ", 2);
+        pStream->appendInputData(':');
+        pStream->appendInputData(' ');
         pStream->appendInputData(m_NameValuePairList[i].pValue,
                                  m_NameValuePairList[i].ValueLen);
-        pStream->appendInputData("\r\n", 2);
+        pStream->appendInputData('\r');
+        pStream->appendInputData('\n');
     }
-    pStream->appendInputData("\r\n", 2);
+    pStream->appendInputData('\r');
+    pStream->appendInputData('\n');
     return 0;
 
 }
@@ -691,11 +714,15 @@ SpdyStream *SpdyConnection::getNewStream(uint32_t uiStreamID,
         HioHandlerFactory::getHioHandler(HIOS_PROTO_HTTP);
     if (!pSession)
         return NULL;
+
     pStream = new SpdyStream();
+    //pStream = SpdyStreamPool::getSpdyStream();
     m_mapStream.insert((void *)(long)uiStreamID, pStream);
+    if (m_tmIdleBegin)
+        m_tmIdleBegin = 0;
     if (D_ENABLED(DL_MORE))
     {
-        LOG_D((getLogger(), "[%s] getNewStream(), ID: %d, stream map size: %d ",
+        LOG_D((getLogger(), "[%s-%d] getNewStream(), stream map size: %d ",
                getLogId(), uiStreamID, m_mapStream.size()));
     }
     pStream->init(uiStreamID, iPriority, this, ubSpdy_Flags, pSession);
@@ -720,7 +747,7 @@ void SpdyConnection::recycleStream(StreamMap::iterator it)
     SpdyStream *pSpdyStream = it.second();
     m_mapStream.erase(it);
     pSpdyStream->close();
-    m_dqueStreamRespon[pSpdyStream->getPriority()].remove(pSpdyStream);
+    m_priQue[pSpdyStream->getPriority()].remove(pSpdyStream);
     if (pSpdyStream->getHandler())
         pSpdyStream->getHandler()->recycle();
 
@@ -759,7 +786,7 @@ int SpdyConnection::sendFrame8Bytes(SpdyFrameType type, uint32_t uiVal1,
     if (D_ENABLED(DL_MORE))
     {
         LOG_D((getLogger(), "[%s] send %s frame, stream: %d, value: %d"
-               , getLogId(), getSpdyFrameName(type), uiVal1, uiVal2));
+               , getLogId(), getFrameName(type), uiVal1, uiVal2));
     }
     return 0;
 }
@@ -774,7 +801,7 @@ int SpdyConnection::sendFrame4Bytes(SpdyFrameType type, uint32_t uiVal1)
     if (D_ENABLED(DL_MORE))
     {
         LOG_D((getLogger(), "[%s] send %s frame, value: %d"
-               , getLogId(), getSpdyFrameName(type), uiVal1));
+               , getLogId(), getFrameName(type), uiVal1));
     }
     return 0;
 }
@@ -812,10 +839,12 @@ int SpdyConnection::sendSettings(uint32_t uiMaxStreamNum,
                                  uint32_t uiWindowSize)
 {
     static char cMaxStreamNumV2[8] = {      0x00, 0x00, 0x00, 0x01,
-                                            0x04, 0x00, 0x00, 0x00 };
+                                            0x04, 0x00, 0x00, 0x00
+                                     };
     static char cMaxStreamNumV3[8] = {      0x00, 0x00, 0x00, 0x02,
-                                            0x00, 0x00, 0x00, 0x04 };
-    static char cWindowSizeV3[4] =   {      0x00, 0x00, 0x00, 0x07 };
+                                            0x00, 0x00, 0x00, 0x04
+                                     };
+    static char cWindowSizeV3[4] = {        0x00, 0x00, 0x00, 0x07 };
 
     getBuf()->guarantee(28);
     if (m_bVersion == 3)
@@ -989,12 +1018,12 @@ int SpdyConnection::timerRoutine()
     if (m_mapStream.size() == 0)
     {
         if (m_tmIdleBegin == 0)
-            m_tmIdleBegin = time(NULL);
-        else 
+            m_tmIdleBegin = DateTime::s_curTime;
+        else
         {
             int idle = DateTime::s_curTime - m_tmIdleBegin;
             if (idle > HttpServerConfig::getInstance().getSpdyKeepaliveTimeout())
-                doGoAway( SPDY_GOAWAY_OK );
+                doGoAway(SPDY_GOAWAY_OK);
         }
     }
     else
@@ -1005,252 +1034,10 @@ int SpdyConnection::timerRoutine()
 
 void SpdyConnection::logDeflateInflateError(int n, int iDeflate)
 {
-    LOG_INFO((getLogger(), "[%s] Protocol Error, %s Error, Error code = %d, go away!"
-              , getLogId(), (iDeflate == 0 ? "Inflate" : "Deflate"), n));
+    static const char *cErroMsg[2] = { "Inflate Error, Error code =", "Deflate Error, Error code =" };
+    LOG_INFO((getLogger(), "[%s] Protocol Error, %s %d, go away!"
+              , getLogId(), cErroMsg[iDeflate], n));
 }
-
-
-/*
-//#define WRITE_TO_ZLIB_DIRECTLY
-#define SPDY_TMP_HDR_BUFF_SIZE  4096
-int SpdyConnection::deflateToBuffer(char *hdrBuf, unsigned int& szHdrBuf, char* pSource, uint32_t length, LoopBuf* ploopbuf, int flush)
-{
-#ifdef WRITE_TO_ZLIB_DIRECTLY
-    return m_deflator.compress(pSource, length, ploopbuf, flush);
-#else
-
-    //for small pieces of data, collect them and write to zlib later
-    int n = 0;
-
-    if (length > 1024)
-    {
-        if (szHdrBuf > 0)
-        {
-            n += m_deflator.compress(hdrBuf, szHdrBuf, ploopbuf, 0);
-            szHdrBuf = 0;
-        }
-
-        n += m_deflator.compress(pSource, length, ploopbuf, flush);
-        return n;
-    }
-
-    int written = 0;
-    char *pSourceE = pSource + length;
-    while(pSource < pSourceE)
-    {
-        written = (SPDY_TMP_HDR_BUFF_SIZE - szHdrBuf >= pSourceE - pSource) ? (pSourceE - pSource) : (SPDY_TMP_HDR_BUFF_SIZE - szHdrBuf);
-        memcpy(hdrBuf + szHdrBuf, pSource, written);
-        pSource += written;
-        szHdrBuf += written;
-
-        if (szHdrBuf == SPDY_TMP_HDR_BUFF_SIZE)
-        {
-            n += m_deflator.compress(hdrBuf, szHdrBuf, ploopbuf, (pSourceE > pSource) ? 0 : flush);
-            szHdrBuf = 0;
-        }
-    }
-
-    if(szHdrBuf > 0 && flush == Z_SYNC_FLUSH)
-    {
-        n += m_deflator.compress(hdrBuf, szHdrBuf, ploopbuf, flush);
-        szHdrBuf = 0;
-    }
-    return n;
-#endif //WRITE_TO_ZLIB_DIRECTLY
-}
-
-
-//This is only for SPDY case, a NUL will be added between two values
-int SpdyConnection::addBufToGzip(char *hdrBuf, unsigned int& szHdrBuf, int iSpdyVer, struct iovec *iov, int iov_count, LoopBuf *buf, int &total, int flushWhenEnd)
-{
-    if (iov_count <= 0)
-        return 0;
-
-    int i, flush = 0;//Z_SYNC_FLUSH;  //no flush
-    int len = iov[0].iov_len;
-    for (i=1; i<iov_count; ++i)
-        len +=  (1 + iov[i].iov_len);
-
-    uint32_t temp32, width;
-    char* pData = (char*)&temp32;
-    if ( iSpdyVer == 2 )
-    {
-        *((uint16_t*)pData) = htons(( uint16_t )len );
-        width = 2;
-    }
-    else
-    {
-       *((uint32_t*)pData) = htonl(( uint32_t )len );
-        width = 4;
-    }
-
-    int n = deflateToBuffer( hdrBuf, szHdrBuf,  pData, width, buf , flush );
-
-    if( n < 0 )
-    {
-        logDeflateInflateError( n, 1);
-        return LS_FAIL;
-    }
-    total += n;
-
-    for (i= 0; i<iov_count; ++i)
-    {
-        if (i == iov_count -1 && flushWhenEnd)
-            flush = Z_SYNC_FLUSH;
-        else
-            flush =0;
-
-        n = deflateToBuffer( hdrBuf, szHdrBuf, (char *)iov[i].iov_base, iov[i].iov_len, buf , flush );
-
-        if( n < 0 )
-        {
-            logDeflateInflateError( n, 1);
-            return LS_FAIL;
-        }
-        total += n;
-
-        if (i != iov_count -1)
-        {
-            n = deflateToBuffer( hdrBuf, szHdrBuf, (char *)"\0", 1, buf , flush );
-
-            if( n < 0 )
-            {
-                logDeflateInflateError( n, 1);
-                return LS_FAIL;
-            }
-            total += n;
-        }
-    }
-    if ( D_ENABLED( DL_MORE ) )
-        LOG_D(( getLogger(), "[%s] addBufToGzip(), value [%s...], count %d, total len %d", getLogId(), iov[0].iov_base, iov_count, len ));
-
-    return 0;
-}
-
-
-int SpdyConnection::addBufToGzip(char *hdrBuf, unsigned int& szHdrBuf, int iSpdyVer, const char *s, int len, LoopBuf *buf, int &total)
-{
-    struct iovec iov[1];
-    iov[0].iov_base = (void *)s;
-    iov[0].iov_len = len;
-    return addBufToGzip(hdrBuf, szHdrBuf, iSpdyVer, iov, 1, buf, total);
-}
-
-
-int SpdyConnection::sendRespHeaders( HttpRespHeaders *pRespHeaders, uint32_t uiStreamID )
-{
-    //Defalte the data and then add to m_pOutputBuff
-    char hdrBuf[SPDY_TMP_HDR_BUFF_SIZE];
-    unsigned int szHdrBuf = 0;
-
-
-    int n = 0, total = 0;
-    uint32_t temp32;
-    char* pData = (char*)&temp32;
-    //IOVec::iterator it;
-    int headerOffset = getBuf()->size();
-
-    getBuf()->guarantee( 28 );
-    appendCtrlFrameHeader( SPDY_FRAME_SYN_REPLY, 0 );
-    appendNbo4Bytes( getBuf(), uiStreamID );
-
-    total = 4;
-
-    int iheaderCount = pRespHeaders->getHeadersCount(1) + 2;//Add 2, FOR spdy, need to add "version" and "status"
-    if ( m_bVersion == 2 )
-    {
-        *((uint16_t*)pData) = 0;
-        getBuf()->append(pData, 2);
-        total = 6;
-        *((uint16_t*)pData) = htons(( uint16_t )iheaderCount );
-    }
-    else
-        *((uint32_t*)pData) = htonl(( uint32_t )iheaderCount );
-
-    if ( D_ENABLED( DL_MORE ) )
-    {
-        LOG_D(( getLogger(), "[%s] sendRespHeaders(), ID: %d, headerCount: %d"
-                , getLogId(), uiStreamID, iheaderCount ) );
-    }
-
-    n = deflateToBuffer( hdrBuf, szHdrBuf, pData, 8-total, getBuf() ,0 );
-
-    if( n < 0 )
-    {
-        logDeflateInflateError( n, 1);
-        return LS_FAIL;
-    }
-    total += n;
-
-//     it = vector.begin();
-//     for ( ; it != vector.end(); it++ )
-//     {
-//         if( ( it->iov_len == 0)&&(it->iov_base == NULL) )
-//             continue;
-//         n = m_deflator.deflate(( char* )( it->iov_base ),
-//                     it->iov_len, getBuf(),  ( it + 1 == vector.end() )? Z_SYNC_FLUSH : 0);
-//         //assert( n >= 0 );
-//         if( n < 0 )
-//         {
-//             logDeflateInflateError( n, 1);
-//             return LS_FAIL;
-//         }
-//         total += n;
-//     }
-
-#define MAX_LINE_COUNT_OF_MULTILINE_HEADER  10
-    iovec iov[MAX_LINE_COUNT_OF_MULTILINE_HEADER];
-    int count;
-    char *key;
-    int keyLen;
-
-    //Add "version" and "status" here
-    const StatusLineString& statusLine = HttpStatusLine::getStatusLine( pRespHeaders->getHttpVersion(), pRespHeaders->getHttpCode());
-    if (m_bVersion == 2 && addBufToGzip(hdrBuf, szHdrBuf, m_bVersion, "version", 7, getBuf(), total) != 0)
-        return LS_FAIL;
-    else if (addBufToGzip(hdrBuf, szHdrBuf, m_bVersion, ":version", 8, getBuf(), total) != 0)
-        return LS_FAIL;
-
-    if (addBufToGzip(hdrBuf, szHdrBuf, m_bVersion, statusLine.get(), 8, getBuf(), total) != 0)
-        return LS_FAIL;
-    --iheaderCount;
-
-    if (m_bVersion == 2 && addBufToGzip(hdrBuf, szHdrBuf, m_bVersion, "status", 6, getBuf(), total) != 0)
-        return LS_FAIL;
-    else if (addBufToGzip(hdrBuf, szHdrBuf, m_bVersion, ":status", 7, getBuf(), total) != 0)
-        return LS_FAIL;
-
-    if (addBufToGzip(hdrBuf, szHdrBuf, m_bVersion, statusLine.get() + 9, 3, getBuf(), total) != 0)
-        return LS_FAIL;
-    --iheaderCount;
-
-    for (int pos=pRespHeaders->HeaderBeginPos(); pos != pRespHeaders->HeaderEndPos(); pos = pRespHeaders->nextHeaderPos(pos))
-    {
-        count = pRespHeaders->getHeader(pos, &key, &keyLen, iov, MAX_LINE_COUNT_OF_MULTILINE_HEADER);
-
-        if (count >= 1)
-        {
-            --iheaderCount;
-            //to lowercase
-            for (int k=0; k<keyLen; ++k)
-                key[k] |= 0x20;
-            if (addBufToGzip(hdrBuf, szHdrBuf, m_bVersion, key, keyLen, getBuf(), total) != 0)
-                return LS_FAIL;
-
-            int flushWhenEnd = 0;
-            if (iheaderCount == 0)
-                flushWhenEnd = 1;
-
-            if (addBufToGzip(hdrBuf, szHdrBuf, m_bVersion, iov, count, getBuf(), total, flushWhenEnd) != 0)
-                return LS_FAIL;
-        }
-    }
-
-    temp32 = htonl( total );
-    getBuf()->update(( headerOffset + 4 ), (char*)&temp32, 4 );        //Length
-    return total;
-}
-*/
 
 #define SPDY_TMP_HDR_BUFF_SIZE 2048
 #define MAX_LINE_COUNT_OF_MULTILINE_HEADER  100
@@ -1274,7 +1061,7 @@ int SpdyConnection::compressHeaders(HttpRespHeaders *pRespHeaders)
     char *key;
     int keyLen;
     int valLen;
-    count = pRespHeaders->getHeadersCount(1) +
+    count = pRespHeaders->getUniqueCnt() +
             2;//Add 2, FOR spdy, need to add "version" and "status"
     if (m_bVersion == 2)
     {
@@ -1297,8 +1084,8 @@ int SpdyConnection::compressHeaders(HttpRespHeaders *pRespHeaders)
         pCur += sizeof(s_achSpdy3StatusLine) - 1;
     }
     const char *p =
-            HttpStatusCode::getInstance().getCodeString(
-                    pRespHeaders->getHttpCode()) + 1;
+        HttpStatusCode::getInstance().getCodeString(
+            pRespHeaders->getHttpCode()) + 1;
     *pCur++ = *p++;
     *pCur++ = *p++;
     *pCur++ = *p++;
@@ -1319,14 +1106,14 @@ int SpdyConnection::compressHeaders(HttpRespHeaders *pRespHeaders)
             pCur = achHdrBuf;
         }
 
-        char *pKeyEnd = key + keyLen;
-        //to lowercase
         if (m_bVersion == 2)
             pCur = beWriteUint16(pCur, keyLen);
         else
             pCur = beWriteUint32(pCur, keyLen);
+        char *pKeyEnd = key + keyLen;
+        //to lowercase
         while (key < pKeyEnd)
-            *pCur++ = (*key++) | 0x20;
+            *pCur++ = tolower(*key++);
 
         pIov = iov;
         pIovEnd = &iov[count];
@@ -1344,7 +1131,7 @@ int SpdyConnection::compressHeaders(HttpRespHeaders *pRespHeaders)
         {
             if (pIov != iov)
                 *pCur++ = '\0';
-            if ((pIov->iov_len >= 512) || (size_t)(pBufEnd - pCur) < pIov->iov_len)
+            if ((pIov->iov_len >= 512) || pBufEnd - pCur < (int)pIov->iov_len)
             {
                 if (m_deflator.compress(achHdrBuf, pCur - achHdrBuf, getBuf(), 0) == -1)
                     return LS_FAIL;
@@ -1369,7 +1156,7 @@ int SpdyConnection::compressHeaders(HttpRespHeaders *pRespHeaders)
 
 
 int SpdyConnection::sendRespHeaders(HttpRespHeaders *pRespHeaders,
-                                    uint32_t uiStreamID)
+                                    uint32_t uiStreamID, int isNoBody)
 {
     int total;
     uint32_t temp32;
@@ -1377,7 +1164,7 @@ int SpdyConnection::sendRespHeaders(HttpRespHeaders *pRespHeaders,
 
     if (D_ENABLED(DL_MORE))
     {
-        LOG_D((getLogger(), "[%s] sendRespHeaders(), ID: %d"
+        LOG_D((getLogger(), "[%s-%d] sendRespHeaders()"
                , getLogId(), uiStreamID));
     }
 
@@ -1388,14 +1175,20 @@ int SpdyConnection::sendRespHeaders(HttpRespHeaders *pRespHeaders,
 
     total = getBuf()->size() - headerOffset - 8;
     temp32 = htonl(total);
-    getBuf()->update((headerOffset + 4), (char *)&temp32, 4);
+    if (isNoBody)
+        *((char *)&temp32) = 0x01;
+    getBuf()->update((headerOffset + 4), (char *)&temp32, 4);          //Length
     return total;
 }
 
 
-void SpdyConnection::move2ReponQue(SpdyStream *pSpdyStream)
+void SpdyConnection::add2PriorityQue(SpdyStream *pSpdyStream)
 {
-    m_dqueStreamRespon[pSpdyStream->getPriority()].append(pSpdyStream);
+    if (pSpdyStream->next())
+        pSpdyStream->remove();
+    m_priQue[pSpdyStream->getPriority()].append(pSpdyStream);
+    m_flag |= SPDY_CONN_FLAG_WAIT_PROCESS;
+
 }
 
 
@@ -1418,14 +1211,14 @@ int SpdyConnection::onWriteEx()
 
     for (int i = 0; i < SPDY_STREAM_PRIORITYS && m_iCurDataOutWindow > 0; ++i)
     {
-        if (m_dqueStreamRespon[i].empty())
+        if (m_priQue[i].empty())
             continue;
-        DLinkedObj *it = m_dqueStreamRespon[i].begin();//SpdyStream*
-        DLinkedObj *itn;
-        for (; it != m_dqueStreamRespon[i].end() && m_iCurDataOutWindow > 0;)
+        SpdyStream *it = m_priQue[i].begin();//SpdyStream*
+        SpdyStream *itn;
+        for (; it != m_priQue[i].end() && m_iCurDataOutWindow > 0;)
         {
-            pSpdyStream = (SpdyStream *)it;
-            itn = it->next();
+            pSpdyStream = it;
+            itn = (SpdyStream *)it->next();
             if (pSpdyStream->isWantWrite())
             {
                 pSpdyStream->onWrite();
@@ -1442,9 +1235,10 @@ int SpdyConnection::onWriteEx()
 
     if (!isEmpty())
         flush();
-    
+
     if ((wantWrite == 0 || m_iCurDataOutWindow <= 0) && isEmpty())
         getStream()->suspendWrite();
+
     return 0;
 }
 
@@ -1456,7 +1250,7 @@ void SpdyConnection::recycle()
         LOG_D((getLogger(), "[%s] SpdyConnection::recycle()",
                getLogId()));
     }
-    if ( m_mapStream.size() > 0 )
+    if (m_mapStream.size() > 0)
         releaseAllStream();
     detachStream();
     delete this;

@@ -1331,7 +1331,7 @@ int HttpSession::processContextRewrite()
 int HttpSession::processFileMap()
 {
     if (getReq()->getHttpHandler() == NULL ||
-        getReq()->getHttpHandler()->getHandlerType() != HandlerType::HT_MODULE)
+        getReq()->getHttpHandler()->getType() != HandlerType::HT_MODULE)
     {
         int ret = m_request.processContextPath();
         if (D_ENABLED(DL_LESS))
@@ -1415,7 +1415,7 @@ int HttpSession::processAuthorizer()
 int HttpSession::processNewUri()
 {
     if (getReq()->getHttpHandler() != NULL &&
-        getReq()->getHttpHandler()->getHandlerType() == HandlerType::HT_MODULE)
+        getReq()->getHttpHandler()->getType() == HandlerType::HT_MODULE)
         m_processState = HSPS_BEGIN_HANDLER_PROCESS;
     else
         m_processState = HSPS_VHOST_REWRITE;
@@ -1500,12 +1500,12 @@ int HttpSession::handlerProcess(const HttpHandler *pHandler)
     m_processState = HSPS_HANDLER_PROCESSING;
     if (m_pHandler)
         cleanUpHandler();
-    int type = pHandler->getHandlerType();
+    int type = pHandler->getType();
     if ((type >= HandlerType::HT_DYNAMIC) &&
         (type != HandlerType::HT_PROXY))
         if (m_request.checkScriptPermission() == 0)
             return SC_403;
-    if (pHandler->getHandlerType() == HandlerType::HT_SSI)
+    if (pHandler->getType() == HandlerType::HT_SSI)
     {
         const HttpContext *pContext = m_request.getContext();
         if (pContext && !pContext->isIncludesOn())
@@ -1579,7 +1579,7 @@ int HttpSession::assignHandler(const HttpHandler *pHandler)
 {
     ReqHandler *pNewHandler;
     int handlerType;
-    handlerType = pHandler->getHandlerType();
+    handlerType = pHandler->getType();
     pNewHandler = HandlerFactory::getHandler(handlerType);
     if (pNewHandler == NULL)
     {
@@ -1793,7 +1793,7 @@ int HttpSession::buildErrorResponse(const char *errMsg)
         LOG_ERR(("[%s] invalid HTTP version: %d!", getLogId(), ver));
         ver = HTTP_1_1;
     }
-    if (sendBody())
+    if (!isNoRespBody())
     {
         const char *pHtml = HttpStatusCode::getInstance().getRealHtml(errCode);
         if (pHtml)
@@ -2923,7 +2923,7 @@ int HttpSession::endResponseInternal(int success)
             return 1;
     }
 
-    if (sendBody() && m_sessionHooks.isEnabled(LSI_HKPT_RECV_RESP_BODY))
+    if (!isNoRespBody() && m_sessionHooks.isEnabled(LSI_HKPT_RECV_RESP_BODY))
     {
         ret = runFilter(LSI_HKPT_RECV_RESP_BODY,
                         (filter_term_fn)appendDynBodyTermination,
@@ -2986,8 +2986,12 @@ int HttpSession::endResponse(int success)
 
     }
 
+    setState(HSS_WRITING);
     setFlag(HSF_RESP_FLUSHED, 0);
-    ret = flush();
+    if (getStream()->isSpdy())
+        getStream()->continueWrite();
+    else
+        ret = flush();
 
     return ret;
 }
@@ -3079,7 +3083,7 @@ int HttpSession::flush()
         suspendWrite();
         return LS_DONE;
     }
-    if (!sendBody() && !getFlag(HSF_HANDLER_DONE))
+    if (isNoRespBody() && !getFlag(HSF_HANDLER_DONE))
     {
         ret = endResponseInternal(1);
         if (ret)
@@ -3100,7 +3104,7 @@ int HttpSession::flush()
             return LS_DONE;
     }
 
-    if (sendBody())
+    if (!isNoRespBody())
     {
         ret = flushBody();
         if (D_ENABLED(DL_LESS))
@@ -3194,7 +3198,8 @@ int HttpSession::sendRespHeaders()
     if (D_ENABLED(DL_LESS))
         LOG_D((getLogger(), "[%s] sendRespHeaders()", getLogId()));
 
-    if (sendBody())
+    int isNoBody = isNoRespBody();
+    if ( !isNoBody )
     {
         if (m_sessionHooks.isEnabled(LSI_HKPT_SEND_RESP_BODY))
             m_response.setContentLen(LSI_RESP_BODY_SIZE_UNKNOWN);
@@ -3208,7 +3213,7 @@ int HttpSession::sendRespHeaders()
     if (finalizeHeader(m_request.getVersion(), m_request.getStatusCode()))
         return 1;
 
-    getStream()->sendRespHeaders(&m_response.getRespHeaders());
+    getStream()->sendRespHeaders(&m_response.getRespHeaders(), isNoBody);
     m_iFlag |= HSF_RESP_HEADER_SENT;
     setState(HSS_WRITING);
     return 0;
@@ -3219,7 +3224,7 @@ int HttpSession::setupDynRespBodyBuf()
 {
     if (D_ENABLED(DL_LESS))
         LOG_D((getLogger(), "[%s] setupDynRespBodyBuf()", getLogId()));
-    if (sendBody())
+    if (!isNoRespBody())
     {
         if (setupRespCache() == -1)
             return LS_FAIL;
@@ -3761,7 +3766,7 @@ int HttpSession::finalizeHeader(int ver, int code)
             return ret;
 
     }
-    if (sendBody())
+    if (!isNoRespBody())
         return contentEncodingFixup();
     return 0;
 }

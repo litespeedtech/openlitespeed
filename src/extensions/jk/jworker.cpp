@@ -18,8 +18,10 @@
 #include "jworker.h"
 #include "jworkerconfig.h"
 #include "jconn.h"
+#include <http/handlertype.h>
 
 JWorker::JWorker(const char *pName)
+    : ExtWorker(HandlerType::HT_SERVLET)
 {
     setConfigPointer(new JWorkerConfig(pName));
 }

@@ -18,9 +18,11 @@
 #include "lsapiworker.h"
 #include "lsapiconfig.h"
 #include "lsapiconn.h"
+#include <http/handlertype.h>
 
 
 LsapiWorker::LsapiWorker(const char *pName)
+    : LocalWorker(HandlerType::HT_LSAPI)
 {
     setConfigPointer(new LsapiConfig(pName));
 }

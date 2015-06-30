@@ -27,8 +27,6 @@
 #include <sys/types.h>       /* basic system data types */
 #include <zlib.h>
 
-#include <iostream>
-
 /**
  * Context for zlib deflating and inflating.
  * Allows to use the same zlib stream on multiple frames. (Needed
@@ -40,21 +38,19 @@ class LoopBuf;
 
 class SpdyZlibFilter
 {
+
+private:
+    z_stream m_stream;
+    short    m_iVersion;
+    short    m_isInflator;
+
 public:
     SpdyZlibFilter();
     ~SpdyZlibFilter();
     int init(int isInflator, int verSpdy);
     int release();
     int decompress(char *pSource, uint32_t length, AutoBuf &bufInflate);
-    int compress(char *pSource, uint32_t length, LoopBuf *pBuf, int flush);
-
-private:
-    bool operator==(const SpdyZlibFilter &other) const;
-
-private:
-    z_stream m_stream;
-    short    m_iVersion;
-    short    m_isInflator;
+    int compress(char *pSource, uint32_t length, LoopBuf *ploopbuf, int flush);
 
     LS_NO_COPY_ASSIGN(SpdyZlibFilter);
 };

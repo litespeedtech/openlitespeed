@@ -74,7 +74,7 @@ public:
         ST_GOOD
     };
 
-    ExtWorker();
+    explicit ExtWorker(int type);
     virtual ~ExtWorker();
     ConnPool &getConnPool()     {   return m_connPool;  }
 

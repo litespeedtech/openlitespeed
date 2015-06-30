@@ -18,6 +18,7 @@
 #include "fcgiapp.h"
 #include "fcgiappconfig.h"
 #include "fcgiconnection.h"
+#include <http/handlertype.h>
 #include <lsr/ls_time.h>
 
 #include <signal.h>
@@ -27,7 +28,8 @@
 
 
 FcgiApp::FcgiApp(const char *pName)
-    : m_iMaxConns(10)
+    : LocalWorker(HandlerType::HT_FASTCGI)
+    , m_iMaxConns(10)
     , m_iMaxReqs(10)
 {
     setConfigPointer(new FcgiAppConfig(pName));

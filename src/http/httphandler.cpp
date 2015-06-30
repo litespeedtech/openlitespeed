@@ -17,8 +17,8 @@
 *****************************************************************************/
 #include "httphandler.h"
 
-HttpHandler::HttpHandler()
-    : m_iType(0)
+HttpHandler::HttpHandler(int type)
+    : m_iType(type)
 {}
 
 HttpHandler::HttpHandler(const HttpHandler &rhs)

@@ -18,12 +18,12 @@
 #include "h2stream.h"
 
 #include "h2connection.h"
-#include "h2protocol.h"
 
+#include <util/datetime.h>
 #include <http/httplog.h>
 #include <lsr/ls_strtool.h>
-#include <util/datetime.h>
 #include <util/iovec.h>
+#include "lsdef.h"
 
 H2Stream::H2Stream()
     : m_uiStreamID(0)
@@ -57,27 +57,28 @@ int H2Stream::init(uint32_t StreamID, H2Connection *pH2Conn, uint8_t flags,
     clearLogId();
 
     setState(HIOS_CONNECTED);
-    setFlag((flags & (H2_CTRL_FLAG_FIN | H2_CTRL_FLAG_UNIDIRECTIONAL)), 1);
+    setFlag(flags & H2_CTRL_FLAG_FIN, 1);
 
     m_bufIn.clear();
     m_uiStreamID  = StreamID;
     m_iWindowOut = pH2Conn->getStreamOutInitWindowSize();
     m_iWindowIn = pH2Conn->getStreamInInitWindowSize();
 
-//We disable Priority right now.
-//     if (pPriority)
-//     {
-//         //FIXME:need an algrithem to compute the priority
-//         m_iPriority = pPriority->m_weight;
-//     }
-//     else
-//         m_iPriority = 0;
+    int pri = HIO_PRIORITY_HTML;
+    if (pPriority)
+    {
+        if (pPriority->m_weight <= 32)
+            pri = (32 - pPriority->m_weight) >> 2;
+        else
+            pri = (256 - pPriority->m_weight) >> 5;
+    }
+    setPriority(pri);
 
     m_pH2Conn = pH2Conn;
     if (D_ENABLED(DL_LESS))
     {
-        LOG_D((getLogger(), "[%s] H2Stream::init(), id: %d. ",
-               getLogId(), StreamID));
+        LOG_D((getLogger(), "[%s] H2Stream::init(), id: %d, priority: %d. ",
+               getLogId(), StreamID, pri));
     }
     return 0;
 }
@@ -91,7 +92,9 @@ int H2Stream::onInitConnected(bool bUpgraded)
     if (isWantRead())
         getHandler()->onReadEx();
     if (isWantWrite())
-        getHandler()->onWriteEx();
+        if (next() == NULL)
+            m_pH2Conn->add2PriorityQue(this);
+    //getHandler()->onWriteEx();
     return 0;
 }
 
@@ -111,9 +114,9 @@ int H2Stream::appendReqData(char *pData, int len, uint8_t flags)
         m_iWindowIn -= len;
     //Note: H2_CTRL_FLAG_FIN is directly mapped to HIO_FLAG_PEER_SHUTDOWN
     //      H2_CTRL_FLAG_UNIDIRECTIONAL is directly mapped to HIO_FLAG_LOCAL_SHUTDOWN
-    if (flags & (H2_CTRL_FLAG_FIN | H2_CTRL_FLAG_UNIDIRECTIONAL))
+    if (flags & H2_CTRL_FLAG_FIN)
     {
-        setFlag(flags & (H2_CTRL_FLAG_FIN | H2_CTRL_FLAG_UNIDIRECTIONAL), 1);
+        setFlag(H2_CTRL_FLAG_FIN, 1);
         if (m_iContentLen != -1 && m_iContentLen != m_iContentRead)
             return LS_FAIL;
     }
@@ -184,6 +187,16 @@ void H2Stream::onTimer()
 }
 
 
+uint16_t H2Stream::getEvents() const
+{
+    return m_pH2Conn->getEvents();
+}
+
+
+int H2Stream::isFromLocalAddr() const
+{   return m_pH2Conn->isFromLocalAddr();  }
+
+
 NtwkIOLink *H2Stream::getNtwkIoLink()
 {
     return m_pH2Conn->getNtwkIoLink();
@@ -221,7 +234,7 @@ int H2Stream::close()
     //    getHandler()->recycle();
     //    setHandler( NULL );
     //}
-    m_pH2Conn->recycleStream( m_uiStreamID );
+    m_pH2Conn->recycleStream(m_uiStreamID);
     return 0;
 }
 
@@ -229,9 +242,7 @@ int H2Stream::close()
 int H2Stream::flush()
 {
     if (D_ENABLED(DL_LESS))
-    {
         LOG_D((getLogger(), "[%s] H2Stream::flush()", getLogId()));
-    }
     return LS_DONE;
 }
 
@@ -351,9 +362,9 @@ int H2Stream::sendData(IOVec *pIov, int total)
         if (D_ENABLED(DL_LESS))
         {
             LOG_D((getLogger(), "[%s] sent: %lld, current window: %d",
-                getLogId(), (uint64_t)getBytesSent(), m_iWindowOut));
+                   getLogId(), (uint64_t)getBytesSent(), m_iWindowOut));
         }
-        
+
         if (m_iWindowOut <= 0)
             setFlag(HIO_FLAG_BUFF_FULL, 1);
     }
@@ -361,13 +372,27 @@ int H2Stream::sendData(IOVec *pIov, int total)
 }
 
 
-int H2Stream::sendRespHeaders(HttpRespHeaders *pHeaders)
+int H2Stream::sendRespHeaders(HttpRespHeaders *pHeaders, int isNoBody)
 {
+    uint8_t flag = H2_FLAG_END_HEADERS;
     if (getState() == HIOS_DISCONNECTED)
         return LS_FAIL;
-
-    m_pH2Conn->add2PriorityQue(this);
-    return m_pH2Conn->sendRespHeaders(pHeaders, m_uiStreamID);
+    if (isNoBody)
+    {
+        if (D_ENABLED(DL_LESS))
+        {
+            LOG_D((getLogger(), "[%s] No response body, set END_STREAM.",
+                   getLogId()));
+        }
+        flag |= H2_FLAG_END_STREAM;
+        setState(HIOS_SHUTDOWN);
+    }
+    else
+    {
+        if (next() == NULL)
+            m_pH2Conn->add2PriorityQue(this);
+    }
+    return m_pH2Conn->sendRespHeaders(pHeaders, m_uiStreamID, flag);
 }
 
 

@@ -33,7 +33,7 @@ class LocalWorker : public ExtWorker
 
     void        moveToStopList();
 public:
-    LocalWorker();
+    explicit LocalWorker(int type);
 
     ~LocalWorker();
 

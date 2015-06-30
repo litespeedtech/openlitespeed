@@ -552,7 +552,7 @@ static int get_resp_headers_count(lsi_session_t *session)
     if (pSession == NULL)
         return LS_FAIL;
     HttpRespHeaders &respHeaders = pSession->getResp()->getRespHeaders();
-    return respHeaders.getHeadersCount(0);  //For API, retuen the non-spdy case
+    return respHeaders.getCount();  //For API, retuen the non-spdy case
 }
 
 

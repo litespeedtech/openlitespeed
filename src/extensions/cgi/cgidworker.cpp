@@ -46,7 +46,8 @@ int CgidWorker::s_iCgidWorkerPid = -1;
 
 
 CgidWorker::CgidWorker(const char *pName)
-    : m_pid(-1)
+    : ExtWorker(HandlerType::HT_CGI)
+    , m_pid(-1)
     , m_fdCgid(-1)
     , m_lve(1)
 {

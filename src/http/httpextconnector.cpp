@@ -401,7 +401,7 @@ int HttpExtConnector::process(HttpSession *pSession,
     setHttpSession(pSession);
     setAttempts(0);
     m_iRespHeaderSize = 0;
-    if (pHandler->getHandlerType() == HandlerType::HT_LOADBALANCER)
+    if (pHandler->getType() == HandlerType::HT_LOADBALANCER)
     {
         LoadBalancer *pLB = (LoadBalancer *)pHandler;
         setLB(pLB);

@@ -76,6 +76,7 @@ public:
     int accept();
     int connect();
     int read(char *pBuf, int len);
+    int wpending();
     int write(const char *pBuf, int len);
     int writev(const struct iovec *vect, int count, int *finished);
     int flush();

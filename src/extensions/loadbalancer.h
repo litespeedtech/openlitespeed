@@ -34,8 +34,7 @@ protected:
     int workerLoadCompare(ExtWorker *pWorker, ExtWorker *pSelect);
 
 public:
-    LoadBalancer(const char *pName);
-    LoadBalancer();
+    explicit LoadBalancer(const char *pName);
 
     ~LoadBalancer();
     ExtWorker *selectWorker(HttpSession *pSession, ExtRequest *pExtReq);

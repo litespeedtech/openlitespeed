@@ -57,3 +57,10 @@ HioHandler::~HioHandler()
 
 }
 
+
+int HioHandler::h2cUpgrade(HioHandler *pOld)
+{
+    return LS_FAIL;
+}
+
+

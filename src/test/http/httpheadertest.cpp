@@ -501,11 +501,11 @@ TEST (respHeadersCrash)
                   strlen("Thu, 16 May 2013 20:32:23 GMT"));
             h.add(HttpRespHeaders::H_X_POWERED_BY, "PHP/5.3.24", strlen("PHP/5.3.24"));
             h.outputNonSpdyHeaders(&io);
-            DisplayBothHeader(io, kk, h.getHeadersCount(0), &h);
+            DisplayBothHeader(io, kk, h.getCount(), &h);
             strcpy(sTestHdr,
                    "HTTP/1.1 200 OK\r\nserver: My_Server\r\naccept-ranges: bytes\r\ndate: Thu, 16 May 2013 20:32:23 GMT\r\nx-powered-by: PHP/5.3.24\r\nconnection: close\r\n\r\n");
             CheckIoHeader(io, sTestHdr);
-            CHECK(h.getHeadersCount(0) ==
+            CHECK(h.getCount() ==
                   5);   //Will add connection: close automatically
 
             h.reset();
@@ -517,11 +517,11 @@ TEST (respHeadersCrash)
             h.addStatusLine(0, SC_304,
                             1);   //when ver is 0 and keepalive is 1, Will NOT add connection: close automatically
             h.outputNonSpdyHeaders(&io);
-            DisplayBothHeader(io, kk, h.getHeadersCount(0), &h);
+            DisplayBothHeader(io, kk, h.getCount(), &h);
             strcpy(sTestHdr, "HTTP/1.1 304 Not Modified\r\n"
                    "server: My_Server\r\naccept-ranges: bytes\r\ndate: Thu, 16 May 2013 20:32:23 GMT\r\nx-powered-by: PHP/5.3.24\r\n\r\n");
             CheckIoHeader(io, sTestHdr);
-            CHECK(h.getHeadersCount(0) == 4);
+            CHECK(h.getCount() == 4);
 
             h.reset();
             h.add(HttpRespHeaders::H_SERVER,  "My_Server", 9);
@@ -533,28 +533,28 @@ TEST (respHeadersCrash)
             h.add(HttpRespHeaders::H_DATE,  "XXXX", 4, LSI_HEADER_MERGE);
             h.add(HttpRespHeaders::H_X_POWERED_BY, "PHP/5.3.24", strlen("PHP/5.3.24"));
             h.outputNonSpdyHeaders(&io);
-            DisplayBothHeader(io, kk, h.getHeadersCount(0), &h);
+            DisplayBothHeader(io, kk, h.getCount(), &h);
             strcpy(sTestHdr,
                    "HTTP/1.1 200 OK\r\nserver: My_Server\r\naccept-ranges: bytes\r\ndate: Thu, 16 May 2013 20:32:23 GMT,Thu, 16 ,XXXX\r\nx-powered-by: PHP/5.3.24\r\nconnection: close\r\n\r\n");
             CheckIoHeader(io, sTestHdr);
 
             h.add(HttpRespHeaders::H_DATE,  "NEWDATE", 7, LSI_HEADER_ADD);
             h.outputNonSpdyHeaders(&io);
-            DisplayBothHeader(io, kk, h.getHeadersCount(0), &h);
+            DisplayBothHeader(io, kk, h.getCount(), &h);
             strcpy(sTestHdr,
                    "HTTP/1.1 200 OK\r\nserver: My_Server\r\naccept-ranges: bytes\r\ndate: Thu, 16 May 2013 20:32:23 GMT,Thu, 16 ,XXXX\r\nx-powered-by: PHP/5.3.24\r\nconnection: close\r\ndate: NEWDATE\r\n\r\n");
             CheckIoHeader(io, sTestHdr);
 
             h.add(HttpRespHeaders::H_DATE,  "NEWDATE2", 8, LSI_HEADER_ADD);
             h.outputNonSpdyHeaders(&io);
-            DisplayBothHeader(io, kk, h.getHeadersCount(0), &h);
+            DisplayBothHeader(io, kk, h.getCount(), &h);
             strcpy(sTestHdr,
                    "HTTP/1.1 200 OK\r\nserver: My_Server\r\naccept-ranges: bytes\r\ndate: Thu, 16 May 2013 20:32:23 GMT,Thu, 16 ,XXXX\r\nx-powered-by: PHP/5.3.24\r\nconnection: close\r\ndate: NEWDATE\r\ndate: NEWDATE2\r\n\r\n");
             CheckIoHeader(io, sTestHdr);
 
             h.add(HttpRespHeaders::H_DATE,  "NEWDATE3", 8, LSI_HEADER_ADD);
             h.outputNonSpdyHeaders(&io);
-            DisplayBothHeader(io, kk, h.getHeadersCount(0), &h);
+            DisplayBothHeader(io, kk, h.getCount(), &h);
             strcpy(sTestHdr,
                    "HTTP/1.1 200 OK\r\nserver: My_Server\r\naccept-ranges: bytes\r\ndate: Thu, 16 May 2013 20:32:23 GMT,Thu, 16 ,XXXX\r\nx-powered-by: PHP/5.3.24\r\nconnection: close\r\ndate: NEWDATE\r\ndate: NEWDATE2\r\ndate: NEWDATE3\r\n\r\n");
             CheckIoHeader(io, sTestHdr);
@@ -562,8 +562,8 @@ TEST (respHeadersCrash)
 
             h.del(HttpRespHeaders::H_DATE);
             h.outputNonSpdyHeaders(&io);
-            DisplayBothHeader(io, kk, h.getHeadersCount(0), &h);
-            CHECK(h.getHeadersCount(0) == 4);
+            DisplayBothHeader(io, kk, h.getCount(), &h);
+            CHECK(h.getCount() == 4);
             strcpy(sTestHdr,
                    "HTTP/1.1 200 OK\r\nserver: My_Server\r\naccept-ranges: bytes\r\nx-powered-by: PHP/5.3.24\r\nconnection: close\r\n\r\n");
             CheckIoHeader(io, sTestHdr);
@@ -571,16 +571,16 @@ TEST (respHeadersCrash)
 
             h.del("X-Powered-By", strlen("X-Powered-By"));
             h.outputNonSpdyHeaders(&io);
-            DisplayBothHeader(io, kk, h.getHeadersCount(0), &h);
-            CHECK(h.getHeadersCount(0) == 3);
+            DisplayBothHeader(io, kk, h.getCount(), &h);
+            CHECK(h.getCount() == 3);
             strcpy(sTestHdr,
                    "HTTP/1.1 200 OK\r\nserver: My_Server\r\naccept-ranges: bytes\r\nconnection: close\r\n\r\n");
             CheckIoHeader(io, sTestHdr);
 
             h.add(HttpRespHeaders::H_SERVER,  "YY_Server", 9);
             h.outputNonSpdyHeaders(&io);
-            DisplayBothHeader(io, kk, h.getHeadersCount(0), &h);
-            CHECK(h.getHeadersCount(0) == 3);
+            DisplayBothHeader(io, kk, h.getCount(), &h);
+            CHECK(h.getCount() == 3);
             strcpy(sTestHdr,
                    "HTTP/1.1 200 OK\r\nserver: YY_Server\r\naccept-ranges: bytes\r\nconnection: close\r\n\r\n");
             CheckIoHeader(io, sTestHdr);
@@ -588,8 +588,8 @@ TEST (respHeadersCrash)
 
             h.add(HttpRespHeaders::H_SERVER,  "XServer", 7);
             h.outputNonSpdyHeaders(&io);
-            DisplayBothHeader(io, kk, h.getHeadersCount(0), &h);
-            CHECK(h.getHeadersCount(0) == 3);
+            DisplayBothHeader(io, kk, h.getCount(), &h);
+            CHECK(h.getCount() == 3);
             strcpy(sTestHdr,
                    "HTTP/1.1 200 OK\r\nserver: XServer  \r\naccept-ranges: bytes\r\nconnection: close\r\n\r\n");
             CheckIoHeader(io, sTestHdr);
@@ -598,8 +598,8 @@ TEST (respHeadersCrash)
                   strlen("Thu, 16 May 2013 20:32:23 GMT"));
             h.add(HttpRespHeaders::H_X_POWERED_BY, "PHP/9.9.99", strlen("PHP/5.3.24"));
             h.outputNonSpdyHeaders(&io);
-            DisplayBothHeader(io, kk, h.getHeadersCount(0), &h);
-            CHECK(h.getHeadersCount(0) == 5);
+            DisplayBothHeader(io, kk, h.getCount(), &h);
+            CHECK(h.getCount() == 5);
             strcpy(sTestHdr,
                    "HTTP/1.1 200 OK\r\nserver: XServer  \r\naccept-ranges: bytes\r\nconnection: close\r\ndate: Thu, 16 May 2099 20:32:23 GMT\r\nx-powered-by: PHP/9.9.99\r\n\r\n");
             CheckIoHeader(io, sTestHdr);
@@ -609,8 +609,8 @@ TEST (respHeadersCrash)
             h.appendLastVal("; .zip; .rar", strlen("; .zip; .rar"));
             h.appendLastVal("; .exe; .flv", strlen("; .zip; .rar"));
             h.outputNonSpdyHeaders(&io);
-            DisplayBothHeader(io, kk, h.getHeadersCount(0), &h);
-            CHECK(h.getHeadersCount(0) == 6);
+            DisplayBothHeader(io, kk, h.getCount(), &h);
+            CHECK(h.getCount() == 6);
             strcpy(sTestHdr,
                    "HTTP/1.1 200 OK\r\nserver: XServer  \r\naccept-ranges: bytes\r\nconnection: close\r\ndate: Thu, 16 May 2099 20:32:23 GMT\r\nx-powered-by: PHP/9.9.99\r\nallow: *.*; .zip; .rar; .exe; .flv\r\n\r\n");
             CheckIoHeader(io, sTestHdr);
@@ -633,9 +633,9 @@ TEST (respHeadersCrash)
                   strlen("lsws_uid=c; expires=Mon, 13 May 2013 14:10:51 GMT; path=/"),
                   LSI_HEADER_ADD);
             h.outputNonSpdyHeaders(&io);
-            DisplayBothHeader(io, kk, h.getHeadersCount(0), &h);
-            CHECK(h.getHeadersCount(1) == 8);
-            CHECK(h.getHeadersCount(0) == 10);
+            DisplayBothHeader(io, kk, h.getCount(), &h);
+            CHECK(h.getUniqueCnt() == 8);
+            CHECK(h.getCount() == 10);
             strcpy(sTestHdr,
                    "HTTP/1.1 200 OK\r\nserver: XServer  \r\naccept-ranges: bytes\r\nconnection: close\r\ndate: Thu, 16 May 2099 20:32:23 GMT\r\nx-powered-by: PHP/9.9.99\r\nallow: *.*; .zip; .rar; .exe; .flv\r\n");
             strcat(sTestHdr,
@@ -652,8 +652,8 @@ TEST (respHeadersCrash)
             h.parseAdd("MytestHeader: TTTTTTTTTTTT\r\nMyTestHeaderii: IIIIIIIIIIIIIIIIIIIII\r\n",
                        strlen("MytestHeader: TTTTTTTTTTTT\r\nMyTestHeaderii: IIIIIIIIIIIIIIIIIIIII\r\n"));
 
-            CHECK(h.getHeadersCount(1) == 10);
-            CHECK(h.getHeadersCount(0) == 12);
+            CHECK(h.getUniqueCnt() == 10);
+            CHECK(h.getCount() == 12);
             h.getFirstHeader("MytestHeader", strlen("MytestHeader"), &pVal, valLen);
             CHECK(memcmp(pVal, "TTTTTTTTTTTT", valLen) == 0);
 
@@ -661,8 +661,8 @@ TEST (respHeadersCrash)
             h.parseAdd("MytestHeader   :    TTTTTTTTTTTT3\r\n",
                        strlen("MytestHeader   :    TTTTTTTTTTTT3\r\n"));
 
-            CHECK(h.getHeadersCount(1) == 10);
-            CHECK(h.getHeadersCount(0) == 12);
+            CHECK(h.getUniqueCnt() == 10);
+            CHECK(h.getCount() == 12);
             h.getFirstHeader("MytestHeader", strlen("MytestHeader"), &pVal, valLen);
             CHECK(memcmp(pVal, "TTTTTTTTTTTT3", valLen) == 0);
 
@@ -676,7 +676,7 @@ TEST (respHeadersCrash)
             h.parseAdd("Content-Encoding2 : GZIP\r\n",
                        strlen("Content-Encoding2 : GZIP\r\n"), LSI_HEADER_MERGE);
             h.outputNonSpdyHeaders(&io);
-            DisplayBothHeader(io, kk, h.getHeadersCount(0), &h);
+            DisplayBothHeader(io, kk, h.getCount(), &h);
             strcpy(sTestHdr,
                    "HTTP/1.1 404 Not Found\r\nserver: XServer  \r\naccept-ranges: bytes\r\nconnection: close\r\ndate: Thu, 16 May 2099 20:32:23 GMT\r\nx-powered-by: PHP/9.9.99\r\nallow: *.*; .zip; .rar; .exe; .flv\r\n");
             strcat(sTestHdr,
@@ -688,7 +688,7 @@ TEST (respHeadersCrash)
             h.parseAdd("MytestHeader: XXX\r\n",
                        strlen("MytestHeader: XXX\r\n"), LSI_HEADER_MERGE);
             h.outputNonSpdyHeaders(&io);
-            DisplayBothHeader(io, kk, h.getHeadersCount(0), &h);
+            DisplayBothHeader(io, kk, h.getCount(), &h);
             strcpy(sTestHdr,
                    "HTTP/1.1 404 Not Found\r\nserver: XServer  \r\naccept-ranges: bytes\r\nconnection: close\r\ndate: Thu, 16 May 2099 20:32:23 GMT\r\nx-powered-by: PHP/9.9.99\r\nallow: *.*; .zip; .rar; .exe; .flv\r\n");
             strcat(sTestHdr,
@@ -700,7 +700,7 @@ TEST (respHeadersCrash)
             h.parseAdd("MytestHeader: XXX\r\n",
                        strlen("MytestHeader: XXX\r\n"), LSI_HEADER_APPEND);
             h.outputNonSpdyHeaders(&io);
-            DisplayBothHeader(io, kk, h.getHeadersCount(0), &h);
+            DisplayBothHeader(io, kk, h.getCount(), &h);
             strcpy(sTestHdr,
                    "HTTP/1.1 404 Not Found\r\nserver: XServer  \r\naccept-ranges: bytes\r\nconnection: close\r\ndate: Thu, 16 May 2099 20:32:23 GMT\r\nx-powered-by: PHP/9.9.99\r\nallow: *.*; .zip; .rar; .exe; .flv\r\n");
             strcat(sTestHdr,
@@ -718,7 +718,7 @@ TEST (respHeadersCrash)
         h.add(HttpRespHeaders::H_DATE,  "AAAA", 4, LSI_HEADER_MERGE);
         h.add(HttpRespHeaders::H_X_POWERED_BY, "PHP/5.3.24", strlen("PHP/5.3.24"));
         h.outputNonSpdyHeaders(&io);
-        DisplayBothHeader(io, kk, h.getHeadersCount(0), &h);
+        DisplayBothHeader(io, kk, h.getCount(), &h);
         strcpy(sTestHdr,
                "HTTP/1.1 200 OK\r\nserver: My_Server\r\naccept-ranges: bytes\r\ndate: Thu, 16 May 2013 20:32:23 GMT,AAAA\r\nx-powered-by: PHP/5.3.24\r\nconnection: close\r\n\r\n");
         CheckIoHeader(io, sTestHdr);
@@ -726,19 +726,19 @@ TEST (respHeadersCrash)
         strcpy(sTestHdr,
                "HTTP/1.1 200 OK\r\nserver: My_Server\r\naccept-ranges: bytes\r\ndate: Thu, 16 May 2013 20:32:23 GMT,AAAA,AAA\r\nx-powered-by: PHP/5.3.24\r\nconnection: close\r\n\r\n");
         h.outputNonSpdyHeaders(&io);
-        DisplayBothHeader(io, kk, h.getHeadersCount(0), &h);
+        DisplayBothHeader(io, kk, h.getCount(), &h);
         CheckIoHeader(io, sTestHdr);
         h.add(HttpRespHeaders::H_DATE,  "AAA", 3, LSI_HEADER_MERGE);
         strcpy(sTestHdr,
                "HTTP/1.1 200 OK\r\nserver: My_Server\r\naccept-ranges: bytes\r\ndate: Thu, 16 May 2013 20:32:23 GMT,AAAA,AAA\r\nx-powered-by: PHP/5.3.24\r\nconnection: close\r\n\r\n");
         h.outputNonSpdyHeaders(&io);
-        DisplayBothHeader(io, kk, h.getHeadersCount(0), &h);
+        DisplayBothHeader(io, kk, h.getCount(), &h);
         CheckIoHeader(io, sTestHdr);
         h.add(HttpRespHeaders::H_DATE,  "AAA", 3, LSI_HEADER_APPEND);
         strcpy(sTestHdr,
                "HTTP/1.1 200 OK\r\nserver: My_Server\r\naccept-ranges: bytes\r\ndate: Thu, 16 May 2013 20:32:23 GMT,AAAA,AAA,AAA\r\nx-powered-by: PHP/5.3.24\r\nconnection: close\r\n\r\n");
         h.outputNonSpdyHeaders(&io);
-        DisplayBothHeader(io, kk, h.getHeadersCount(0), &h);
+        DisplayBothHeader(io, kk, h.getCount(), &h);
         CheckIoHeader(io, sTestHdr);
 
         ls_xpool_destroy(&pool);
@@ -856,7 +856,7 @@ TEST (respHeadersCrash)
         h.reset();
         //add using array add and check contents
         temp = h.add(headerArray1, 26);
-        CHECK(h.getHeadersCount(0) == 26);
+        CHECK(h.getCount() == 26);
         CHECK(temp == 0);
         for ( i=h.HeaderBeginPos(); i!=h.HeaderEndPos(); i=h.nextHeaderPos(i) )
         {
@@ -871,9 +871,9 @@ TEST (respHeadersCrash)
         {
             temp = h.add((const HttpRespHeaders::HEADERINDEX)(i), s_pHeaders[i+1], strlen(s_pHeaders[i+1]), s_pHeaderVals[i+1], strlen(s_pHeaderVals[i+1]));
             CHECK(temp == 0);
-            temp = h.getHeadersCount(0);
+            temp = h.getCount();
             temp = h.getTotalCount();
-            CHECK(h.getHeadersCount(0) == i+2);//start at 1 and add 1 for connection close
+            CHECK(h.getCount() == i+2);//start at 1 and add 1 for connection close
             CHECK(h.getTotalCount() == i+2);
 
             temp = h.getHeader(s_pHeaders[i+1], strlen(s_pHeaders[i+1]), &pVal, valLen);
@@ -910,10 +910,10 @@ TEST (respHeadersCrash)
 
         h.reset();
         temp = h.add(headerArray1, 26);
-        CHECK(h.getHeadersCount(0) == 26);
+        CHECK(h.getCount() == 26);
         CHECK(temp == 0);
         //check del index
-        int count = h.getHeadersCount(0);;
+        int count = h.getCount();;
         for (i=HttpRespHeaders::H_UNKNOWN; i<HttpRespHeaders::H_HEADER_END;i++)
         {
             temp = h.del((const HttpRespHeaders::HEADERINDEX)(i));
@@ -921,8 +921,8 @@ TEST (respHeadersCrash)
                 CHECK(temp == -1);
             else
                 CHECK(temp == 0);
-            temp = h.getHeadersCount(0);
-            CHECK(h.getHeadersCount(0) == count);//add 1 for connection close
+            temp = h.getCount();
+            CHECK(h.getCount() == count);//add 1 for connection close
             temp = h.getTotalCount();
             //CHECK(h.getTotalCount() == count);//may be removed always returns 26
             count--;
@@ -941,7 +941,7 @@ TEST (respHeadersCrash)
         CHECK(h.getTotalLen() == 57);
         temp = h.getAllHeaders( ios, 30 );
         CHECK(temp == 2);//unknown not removed and close
-        DisplayBothHeader(io, kk, h.getHeadersCount(0), &h);
+        DisplayBothHeader(io, kk, h.getCount(), &h);
         strcpy(sTestHdr, "HTTP/1.1 200 OK\r\nUNKNOWN: xUNKNOWN\r\nConnection: close\r\n\r\n");
         CheckIoHeader(io,sTestHdr);
 
@@ -949,15 +949,15 @@ TEST (respHeadersCrash)
 
         h.reset();
         temp = h.add(headerArray1, 26);
-        count = h.getHeadersCount(0);;
+        count = h.getCount();;
         //check del by name
         for (i=HttpRespHeaders::H_UNKNOWN; i<HttpRespHeaders::H_HEADER_END;i++)
         {
             temp = h.del(s_pHeaders[i+1], strlen(s_pHeaders[i+1]));
             count--;
             CHECK(temp == 0);
-            temp = h.getHeadersCount(0);
-            CHECK(h.getHeadersCount(0) == count);//start at 1 and add 1 for connection close
+            temp = h.getCount();
+            CHECK(h.getCount() == count);//start at 1 and add 1 for connection close
 
             temp = h.getHeader(s_pHeaders[i+1], strlen(s_pHeaders[i+1]), &pVal, valLen);
             CHECK(temp == -1);
@@ -969,14 +969,14 @@ TEST (respHeadersCrash)
         CHECK(h.getTotalLen() == 38);//should be 57 the same as above?
         temp = h.getAllHeaders( ios, 30 );
         CHECK(temp == 1);//unknown was removed and close should be 2?
-        DisplayBothHeader(io, kk, h.getHeadersCount(0), &h);
+        DisplayBothHeader(io, kk, h.getCount(), &h);
         strcpy(sTestHdr, "HTTP/1.1 200 OK\r\nConnection: close\r\n\r\n");
         CheckIoHeader(io,sTestHdr);
 
 
         //check resest and headers built flag
         h.reset();
-        CHECK(h.getHeadersCount(0) == 0);
+        CHECK(h.getCount() == 0);
         CHECK(h.isRespHeadersBuilt() == 0);
 
         //check del unknown
@@ -990,14 +990,14 @@ TEST (respHeadersCrash)
         h.outputNonSpdyHeaders(&io);
 
         CHECK(h.isRespHeadersBuilt() == 1);
-        CHECK(h.getHeadersCount(0) == 4);
+        CHECK(h.getCount() == 4);
         h.del(HttpRespHeaders::H_UNKNOWN);// it is correct behavior not to remove
-        CHECK(h.getHeadersCount(0) == 4);
+        CHECK(h.getCount() == 4);
         h.del(HttpRespHeaders::H_ACCEPT_RANGES);
-        CHECK(h.getHeadersCount(0) == 3);
+        CHECK(h.getCount() == 3);
         h.del("X", strlen("X"));
-        CHECK(h.getHeadersCount(0) == 3);
-        DisplayBothHeader(io, kk, h.getHeadersCount(0), &h);
+        CHECK(h.getCount() == 3);
+        DisplayBothHeader(io, kk, h.getCount(), &h);
         strcpy(sTestHdr, "unknown: My_Server\r\nAccept-Ranges: bytes\r\nDate: Thu, 16 May 2013 20:32:23 GMT\r\nX-Powered-By: PHP/5.3.24\r\n\r\n");
         CheckIoHeader(io,sTestHdr);
 
@@ -1019,7 +1019,7 @@ TEST (respHeadersCrash)
         headerArray[1].val = "val";
         headerArray[1].valLen = 3;
         h.add(headerArray, 2);
-        CHECK(h.getHeadersCount(0) == 2);
+        CHECK(h.getCount() == 2);
         h.getHeader("content-encoding", strlen("content-encoding"), &pVal, valLen);
         CHECK (memcmp(pVal, "Hello", valLen) == 0);
         h.getHeader("Accept-Ranges", strlen("Accept-Ranges"), &pVal, valLen);
@@ -1088,7 +1088,7 @@ TEST (respHeadersCrash)
         CHECK(memcmp((char *)(ios[0].iov_base), "LiteSpeed", 9) == 0);
         temp = ios[0].iov_len;
         CHECK(ios[0].iov_len == 9);
-        DisplayBothHeader(io, kk, h.getHeadersCount(0), &h);
+        DisplayBothHeader(io, kk, h.getCount(), &h);
 
         h.reset();
         h.hideServerSignature(0);
@@ -1100,7 +1100,7 @@ TEST (respHeadersCrash)
         CHECK(memcmp((char *)(ios[0].iov_base), "LiteSpeed", 9) == 0);
         CHECK(ios[0].iov_len == 9);
         h.outputNonSpdyHeaders(&io);
-        DisplayBothHeader(io, kk, h.getHeadersCount(0), &h);
+        DisplayBothHeader(io, kk, h.getCount(), &h);
         strcpy(sTestHdr, "HTTP/1.1 200 OK\r\nServer: LiteSpeed\r\nConnection: close\r\n\r\n");
         CheckIoHeader(io,sTestHdr);
 
@@ -1114,7 +1114,7 @@ TEST (respHeadersCrash)
         CHECK(memcmp((char *)(ios[0].iov_base), "LiteSpeed/1.2.4 Open", 20) == 0);
         CHECK(ios[0].iov_len == 20);
         h.outputNonSpdyHeaders(&io);
-        DisplayBothHeader(io, kk, h.getHeadersCount(0), &h);
+        DisplayBothHeader(io, kk, h.getCount(), &h);
         strcpy(sTestHdr, "HTTP/1.1 200 OK\r\nServer: LiteSpeed/1.2.4 Open\r\nConnection: close\r\n\r\n");
         CheckIoHeader(io,sTestHdr);
 
@@ -1124,7 +1124,7 @@ TEST (respHeadersCrash)
         h.addCommonHeaders();
         h.del(HttpRespHeaders::H_DATE);
         h.outputNonSpdyHeaders(&io);
-        DisplayBothHeader(io, kk, h.getHeadersCount(0), &h);
+        DisplayBothHeader(io, kk, h.getCount(), &h);
         strcpy(sTestHdr, "HTTP/1.1 200 OK\r\nConnection: close\r\n\r\n");
         CheckIoHeader(io,sTestHdr);
 
@@ -1146,15 +1146,15 @@ TEST (respHeadersCrash)
                 temp = h.add((const HttpRespHeaders::HEADERINDEX)(i), s_pHeaders[i+1], strlen(s_pHeaders[i+1]),
                              s_pHeaderVals[i+1], strlen(s_pHeaderVals[i+1]),LSI_HEADER_ADD);
                 CHECK(temp == 0);
-                temp = h.getHeadersCount(0);
+                temp = h.getCount();
                 temp = h.getTotalCount();
-                CHECK(h.getHeadersCount(0) == (i+2)+26*(j));//start at 1 and add 1 for connection close
+                CHECK(h.getCount() == (i+2)+26*(j));//start at 1 and add 1 for connection close
                 CHECK(h.getTotalCount() == (i+2)+26*(j));
             }
         }
 
         temp = h.getTotalCount();
-        temp = h.getHeadersCount(0);
+        temp = h.getCount();
 
 
         //check header content
@@ -1166,7 +1166,7 @@ TEST (respHeadersCrash)
         }
         //check output
         h.outputNonSpdyHeaders(&io);
-        DisplayBothHeader(io, kk, h.getHeadersCount(0), &h);
+        DisplayBothHeader(io, kk, h.getCount(), &h);
 
 
         ph = s_pOutputHdr;

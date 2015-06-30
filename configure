@@ -1458,10 +1458,8 @@ Optional Features:
   --enable-adminssl=[yes/no]
                           Enable HTTPS for admin console (modify adminssl.conf
                           before installation) [default=yes]
-  --enable-spdy           Enable SPDY and http2 over HTTPS (Spdy and http2 are
-                          disabled by default)
-  --enable-http2          Enable SPDY and http2 over HTTPS (Spdy and http2 are
-                          disabled by default)
+  --enable-spdy=[yes/no]  Enable SPDY and http2 over HTTPS [default=yes]
+  --enable-http2=[yes/no] Enable SPDY and http2 over HTTPS [default=yes]
   --enable-redis          Enable redis for cache module (Using redis is
                           disabled by default)
   --enable-debug          Enable debugging symbols (Debug is disabled by
@@ -15667,21 +15665,25 @@ fi
 
 
 
+OPENLSWS_HTTP2="?"
 # Check whether --enable-spdy was given.
 if test "${enable_spdy+set}" = set; then :
-  enableval=$enable_spdy;
-$as_echo "#define LS_ENABLE_SPDY 1" >>confdefs.h
-
-                 echo "SPDY/http2 enabled!!!"
+  enableval=$enable_spdy; OPENLSWS_HTTP2="$enableval"
 fi
 
 
 # Check whether --enable-http2 was given.
 if test "${enable_http2+set}" = set; then :
-  enableval=$enable_http2;
+  enableval=$enable_http2; OPENLSWS_HTTP2="$enableval"
+fi
+
+if test "$OPENLSWS_HTTP2" = "no" ; then
+    echo "SPDY/http2 disabled!!!"
+else
+
 $as_echo "#define LS_ENABLE_SPDY 1" >>confdefs.h
 
-                 echo "SPDY/http2 enabled!!!"
+    echo "SPDY/http2 enabled!!!"
 fi
 
 

@@ -34,8 +34,8 @@
 #include <stdio.h>
 
 SSIEngine::SSIEngine()
+    : HttpHandler(HandlerType::HT_SSI)
 {
-    setHandlerType(HandlerType::HT_SSI);
 }
 
 

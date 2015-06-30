@@ -25,7 +25,6 @@
 
 SpdyStream::SpdyStream()
     : m_uiStreamID(0)
-    , m_iPriority(0)
     , m_pSpdyConn(NULL)
 {
 }
@@ -43,8 +42,9 @@ const char *SpdyStream::buildLogId()
 }
 
 
-int SpdyStream::init(uint32_t StreamID, int Priority, SpdyConnection *pSpdyConn,
-                     uint8_t flags, HioHandler *pHandler)
+int SpdyStream::init(uint32_t StreamID,
+                     int Priority, SpdyConnection *pSpdyConn, uint8_t flags,
+                     HioHandler *pHandler)
 {
     HioStream::reset(DateTime::s_curTime);
     pHandler->attachStream(this);
@@ -57,11 +57,11 @@ int SpdyStream::init(uint32_t StreamID, int Priority, SpdyConnection *pSpdyConn,
     m_uiStreamID  = StreamID;
     m_iWindowOut = pSpdyConn->getStreamOutInitWindowSize();
     m_iWindowIn = pSpdyConn->getStreamInInitWindowSize();
-    m_iPriority = Priority;
+    setPriority(Priority);
     m_pSpdyConn = pSpdyConn;
     if (D_ENABLED(DL_LESS))
     {
-        LOG_D((getLogger(), "[%s] SpdyStream::init(), id: %d.",
+        LOG_D((getLogger(), "[%s] SpdyStream::init(), id: %d. ",
                getLogId(), StreamID));
     }
     return 0;
@@ -148,7 +148,7 @@ void SpdyStream:: continueWrite()
     }
     setFlag(HIO_FLAG_WANT_WRITE, 1);
     if (next() == NULL)
-        m_pSpdyConn->move2ReponQue(this);
+        m_pSpdyConn->add2PriorityQue(this);
     m_pSpdyConn->continueWrite();
 }
 
@@ -158,10 +158,19 @@ void SpdyStream::onTimer()
     getHandler()->onTimerEx();
 }
 
-NtwkIOLink *SpdyStream::getNtwkIoLink()
+
+uint16_t SpdyStream::getEvents() const
 {
-    return m_pSpdyConn->getNtwkIoLink();
+    return m_pSpdyConn->getEvents();
 }
+
+
+int SpdyStream::isFromLocalAddr() const
+{   return m_pSpdyConn->isFromLocalAddr();  }
+
+
+NtwkIOLink *SpdyStream::getNtwkIoLink()
+{   return m_pSpdyConn->getNtwkIoLink();    }
 
 
 int SpdyStream::shutdown()
@@ -177,7 +186,7 @@ int SpdyStream::shutdown()
                getLogId()));
     }
     m_pSpdyConn->sendFinFrame(m_uiStreamID);
-    m_pSpdyConn->flush();
+    //m_pSpdyConn->flush();
     return 0;
 }
 
@@ -197,7 +206,7 @@ int SpdyStream::close()
     //    getHandler()->recycle();
     //    setHandler( NULL );
     //}
-    m_pSpdyConn->recycleStream( m_uiStreamID );
+    m_pSpdyConn->recycleStream(m_uiStreamID);
     return 0;
 }
 
@@ -206,7 +215,8 @@ int SpdyStream::flush()
 {
     if (D_ENABLED(DL_LESS))
     {
-        LOG_D((getLogger(), "[%s] SpdyStream::flush()", getLogId()));
+        LOG_D((getLogger(), "[%s] SpdyStream::flush()",
+               getLogId()));
     }
     return LS_DONE;
 }
@@ -340,13 +350,25 @@ int SpdyStream::sendData(IOVec *pIov, int total)
 }
 
 
-int SpdyStream::sendRespHeaders(HttpRespHeaders *pHeaders)
+int SpdyStream::sendRespHeaders(HttpRespHeaders *pHeaders, int isNoBody)
 {
     if (getState() == HIOS_DISCONNECTED)
         return LS_FAIL;
-
-    m_pSpdyConn->move2ReponQue(this);
-    return m_pSpdyConn->sendRespHeaders(pHeaders, m_uiStreamID);
+    if (isNoBody)
+    {
+        if (D_ENABLED(DL_LESS))
+        {
+            LOG_D((getLogger(), "[%s] No response body, set FLAG_FIN.",
+                   getLogId()));
+        }
+        setState(HIOS_SHUTDOWN);
+    }
+    else
+    {
+        if (next() == NULL)
+            m_pSpdyConn->add2PriorityQue(this);
+    }
+    return m_pSpdyConn->sendRespHeaders(pHeaders, m_uiStreamID, isNoBody);
 }
 
 int SpdyStream::adjWindowOut(int32_t n)
