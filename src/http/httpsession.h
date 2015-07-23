@@ -118,7 +118,7 @@ enum HSPState
 #define HSF_PARSE_REQ_BODY          (1<<18)
 
 
-class HttpSession : public LsiSession, public HioHandler,
+class HttpSession : public LsiSession, public InputStream, public HioHandler,
     public AioEventHandler
 {
     HttpReq               m_request;
