@@ -21,6 +21,9 @@
 #include <log4cxx/fileappender.h>
 #include "patternlayout.h"
 #include "loggingevent.h"
+#include "ilog.h"
+#include "tmplogid.h"
+#include "logsession.h"
 
 #include <stdio.h>
 
@@ -28,12 +31,14 @@ BEGIN_LOG4CXX_NS
 
 static int s_inited = 0;
 ::GFactory *s_pFactory = NULL;
+Logger *Logger::s_pDefault = NULL;
+
 
 Logger::Logger(const char *pName)
     : Duplicable(pName)
     , m_iLevel(Level::DEBUG)
-    , m_pAppender(NULL)
     , m_iAdditive(1)
+    , m_pAppender(NULL)
     , m_pLayout(NULL)
     , m_pParent(NULL)
 {
@@ -57,18 +62,21 @@ void Logger::init()
     }
 }
 
+
 Logger *Logger::getLogger(const char *pName)
 {
     init();
-    if (!*pName)
+    if (!pName || !*pName)
         pName = ROOT_LOGGER_NAME;
     return (Logger *)s_pFactory->getObj(pName, "Logger");
 }
+
 
 Duplicable *Logger::dup(const char *pName)
 {
     return new Logger(pName);
 }
+
 
 static int logSanitorize(char *pBuf, int len)
 {
@@ -76,25 +84,44 @@ static int logSanitorize(char *pBuf, int len)
     while (pBuf < pEnd)
     {
         if (*pBuf < 0x20)
-            *pBuf = '.';
+        {
+            switch (*pBuf)
+            {
+            case '\t':
+            case '\n':
+            case '\r':
+                break;
+            default:
+                *pBuf = '.';
+                break;
+            }
+        }
         ++pBuf;
     }
     return len;
 }
 
 
-void Logger::vlog(int level, const char *format, va_list args,
+void Logger::vlog(int level, const char *pId, const char *format,
+                  va_list args,
                   int no_linefeed)
 {
     char achBuf[8192];
-    int messageLen;
-    messageLen = vsnprintf(achBuf, sizeof(achBuf) - 1,  format, args);
-    if ((size_t)messageLen > sizeof(achBuf) - 1)
+    int messageLen = 0;
+    if (pId != NULL)
+        messageLen = snprintf(achBuf, sizeof(achBuf) - 1, "[%s] ", pId);
+    messageLen += vsnprintf(&achBuf[messageLen],
+                            sizeof(achBuf) - 1 - messageLen,  format, args);
+    if (messageLen > (int)sizeof(achBuf) - 1)
     {
         messageLen = sizeof(achBuf) - 1;
         achBuf[messageLen] = 0;
     }
     messageLen = logSanitorize(achBuf, messageLen);
+
+    if ((level > Level::DEBUG) && (level < Level::TRACE))
+        level = Level::DEBUG;
+
     LoggingEvent event(level, getName(), achBuf, messageLen);
 
     if (no_linefeed)
@@ -106,16 +133,18 @@ void Logger::vlog(int level, const char *format, va_list args,
     {
         if (!event.m_pLayout)
             event.m_pLayout = pLogger->m_pLayout;
-        if (pLogger->m_pAppender && level <= pLogger->getLevel())
+        if (pLogger->m_pAppender && pLogger->isEnabled(level))
         {
-            if (pLogger->m_pAppender->append(&event) == -1)
-                break;
+            //if (pLogger->m_pAppender->append(&event) == -1)
+            //    break;
+            pLogger->m_pAppender->append(&event);
         }
         if (!pLogger->m_pParent || !pLogger->m_iAdditive)
             break;
         pLogger = m_pParent;
     }
 }
+
 
 void Logger::lograw(const char *pBuf, int len)
 {
@@ -124,6 +153,101 @@ void Logger::lograw(const char *pBuf, int len)
             return;
     if (m_pParent && m_iAdditive)
         m_pParent->lograw(pBuf, len);
+}
+
+
+void Logger::s_vlog(int level, LogSession *pLogSession,
+                    const char *format, va_list args, int no_linefeed)
+{
+    log4cxx::Logger *l = NULL;
+    const char *pId = NULL;
+    if (pLogSession != NULL)
+    {
+        l = pLogSession->getLogger();
+        pId = pLogSession->getLogId();
+    }
+
+    if (l == NULL)
+        l = log4cxx::Logger::getDefault();
+
+    l->vlog(level, pId, format, args, no_linefeed);
+}
+
+
+void Logger::s_log(int level, LogSession *pLogSession,
+                   const char *format, ...)
+{
+    log4cxx::Logger *l = NULL;
+    const char *pId = NULL;
+    if (pLogSession != NULL)
+    {
+        l = pLogSession->getLogger();
+        pId = pLogSession->getLogId();
+    }
+
+    if (l == NULL)
+        l = log4cxx::Logger::getDefault();
+
+    va_list  va;
+    va_start(va, format);
+    l->vlog(level, pId, format, va, 0);
+    va_end(va);
+}
+
+
+void Logger::s_log(int level, TmpLogId *pId,
+                   const char *format, ...)
+{
+    log4cxx::Logger *l = log4cxx::Logger::getDefault();
+    va_list  va;
+    va_start(va, format);
+    l->vlog(level, pId ? pId->getLogId() : NULL, format, va, 0);
+    va_end(va);
+
+}
+
+
+void Logger::s_log(int level, log4cxx::Logger *l,
+                   const char *format, ...)
+{
+    if (l == NULL)
+        l = log4cxx::Logger::getDefault();
+    va_list  va;
+    va_start(va, format);
+    l->vlog(level, format, va);
+    va_end(va);
+}
+
+
+void Logger::s_log(int level, log4cxx::ILog *pILog,
+                   const char *format, ...)
+{
+    log4cxx::Logger *l = NULL;
+    const char *pId = NULL;
+    if (pILog != NULL)
+    {
+        l = pILog->getLogger();
+        pId = pILog->getLogId();
+    }
+
+    if (l == NULL)
+        l = log4cxx::Logger::getDefault();
+
+    va_list  va;
+    va_start(va, format);
+    l->vlog(level, pId, format, va, 0);
+    va_end(va);
+
+}
+
+
+void Logger::s_log(int level, const char *format, ...)
+{
+    log4cxx::Logger *l = log4cxx::Logger::getDefault();
+    va_list  va;
+    va_start(va, format);
+    l->vlog(level, format, va);
+    va_end(va);
 }
 
 

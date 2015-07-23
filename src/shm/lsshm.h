@@ -33,10 +33,10 @@
  */
 
 #define SHM_DBG(format, ...) \
-        LOG4CXX_NS::Logger::getRootLogger()->debug(format, ##__VA_ARGS__ )
+    LOG4CXX_NS::Logger::getRootLogger()->debug(format, ##__VA_ARGS__ )
 
 #define SHM_NOTICE(format, ...) \
-        LOG4CXX_NS::Logger::getRootLogger()->notice(format, ##__VA_ARGS__ )
+    LOG4CXX_NS::Logger::getRootLogger()->notice(format, ##__VA_ARGS__ )
 
 
 #ifdef LSSHM_DEBUG_ENABLE
@@ -264,7 +264,7 @@ public:
 
     LsShmOffset_t getMapStatOffset() const
     {
-        return (LsShmOffset_t)(long)&((LsShmMap *)0)->x_stat;
+        return (LsShmOffset_t)(long) & ((LsShmMap *)0)->x_stat;
     }
 
     LsShmOffset_t allocPage(LsShmSize_t pagesize, int &remapped);
@@ -314,29 +314,29 @@ public:
 
     lsi_shmlock_t *allocLock()
     {   return m_locks.allocLock();         }
-    
+
     int freeLock(lsi_shmlock_t *pLock)
     {   return m_locks.freeLock(pLock);     }
-    
+
     lsi_shmlock_t *offset2pLock(LsShmOffset_t offset) const
     {   return m_locks.offset2pLock(offset);    }
-    
+
     LsShmOffset_t pLock2offset(lsi_shmlock_t *pLock)
     {   return m_locks.pLock2offset(pLock);     }
 
-    
+
     ls_attr_inline int lockRemap(lsi_shmlock_t *pLock)
     {
         int ret = lsi_shmlock_lock(pLock);
         chkRemap();
         return ret;
     }
-    
+
     ls_attr_inline LsShmStatus_t chkRemap()
     {
         return (x_pShmMap->x_stat.m_iFileSize == m_iMaxSizeO) ? LSSHM_OK : remap();
     }
-        
+
     LsShmStatus_t remap();
 
     //
@@ -401,7 +401,7 @@ private:
         return (lsi_shmlock_setup(m_pShmLock) || lsi_shmlock_setup(m_pRegLock)) ?
                LSSHM_ERROR : LSSHM_OK;
     }
- 
+
     // only use by physical mapping
     LsShmXSize_t roundToPageSize(LsShmXSize_t size) const
     {
@@ -410,8 +410,8 @@ private:
 
     LsShmSize_t roundUnitSize(LsShmSize_t pagesize) const
     {
-        return ((pagesize + (LSSHM_SHM_UNITSIZE-1))
-               / LSSHM_SHM_UNITSIZE) * LSSHM_SHM_UNITSIZE;
+        return ((pagesize + (LSSHM_SHM_UNITSIZE - 1))
+                / LSSHM_SHM_UNITSIZE) * LSSHM_SHM_UNITSIZE;
     }
 
     void incrCheck(LsShmXSize_t *ptr, LsShmSize_t size)
@@ -419,7 +419,7 @@ private:
         LsShmXSize_t prev = *ptr;
         *ptr += size;
         if (*ptr < prev)    // cnt wrapped
-            *ptr = (LsShmSize_t)-1;
+            *ptr = (LsShmSize_t) - 1;
         return;
     }
 

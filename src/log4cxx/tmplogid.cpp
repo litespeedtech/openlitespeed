@@ -15,44 +15,7 @@
 *    You should have received a copy of the GNU General Public License       *
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
-#ifndef MODULEEVENTNOTIFIER_H
-#define MODULEEVENTNOTIFIER_H
+#include "tmplogid.h"
 
-#include <lsdef.h>
-#include <ls.h>
-#include <edio/eventnotifier.h>
-#include <util/dlinkqueue.h>
-#include <util/tsingleton.h>
-
-class LsiSession;
-class EventObj;
-
-class UserEventNotifier : public EventNotifier,
-                            public TSingleton<UserEventNotifier>
-{
-    friend class TSingleton<UserEventNotifier>;
-
-    DLinkQueue  m_eventObjListWait;
-    DLinkQueue  m_eventObjListDone;
-    int         m_iId;
-
-    UserEventNotifier() { m_iId = 0; }
-public:
-
-    void removeEventObj(EventObj **pEventObj);
-
-    virtual int onNotified(int count);
-
-    EventObj *addEventObj(lsi_session_t *pSession, lsi_module_t *pModule,
-                          int level);
-
-    int isEventObjValid(EventObj *pEventObj);
-
-    int notifyEventObj(EventObj **pEventObj);
-
-
-    LS_NO_COPY_ASSIGN(UserEventNotifier);
-};
-
-
-#endif // MODULEEVENTNOTIFIER_H
+char  TmpLogId::s_aLogId[128] = "config";
+int   TmpLogId::s_iIdLen = 6;

@@ -19,8 +19,8 @@
 
 #include <edio/multiplexer.h>
 #include <edio/multiplexerfactory.h>
-#include <http/httplog.h>
 #include <http/l4handler.h>
+#include <log4cxx/logger.h>
 #include <socket/gsockaddr.h>
 #include <socket/coresocket.h>
 #include <util/loopbuf.h>
@@ -48,8 +48,7 @@ int L4conn::onError()
         if (ret != -1)
             errno = error;
     }
-    if (D_ENABLED(DL_LESS))
-        LOG_D((getLogger(), "[%s] L4conn::onError()", getLogId()));
+    LS_DBG_L(getLogSession(), "L4conn::onError()");
     if (error != 0)
     {
         m_iState = CLOSING;
@@ -63,8 +62,7 @@ int L4conn::onError()
 
 int L4conn::onWrite()
 {
-    if (D_ENABLED(DL_LESS))
-        LOG_D((getLogger(), "[%s] L4conn::onWrite()", getLogId()));
+    LS_DBG_L(getLogSession(), "L4conn::onWrite()");
 
     int ret;
     switch (m_iState)
@@ -113,8 +111,8 @@ int L4conn::onInitConnected()
 //             port = GSockAddr::getPort( (struct sockaddr *)achSockAddr );
 //         }
 
-//         LOG_D(( getLogger(), "[%s] connected to [%s] on local addres [%s:%d]!", getLogId(),
-//                 m_pWorker->getURL(), achAddr, port ));
+//         LS_DBG_L(getLogSession(), "Connected to [%s] on local addres [%s:%d]!",
+//                  m_pWorker->getURL(), achAddr, port);
 //    }
     return 0;
 }
@@ -122,9 +120,7 @@ int L4conn::onInitConnected()
 
 int L4conn::onRead()
 {
-    if (D_ENABLED(DL_LESS))
-        LOG_D((getLogger(), "[%s] L4conn::onRead() state: %d", getLogId(),
-               m_iState));
+    LS_DBG_L(getLogSession(), "L4conn::onRead() state: %d", m_iState);
 
     int ret;
     switch (m_iState)
@@ -153,8 +149,7 @@ int L4conn::close()
     if (m_iState != DISCONNECTED)
     {
         m_iState = DISCONNECTED;
-        if (D_ENABLED(DL_LESS))
-            LOG_D((getLogger(), "[%s] [ExtConn] close()", getLogId()));
+        LS_DBG_L(getLogSession(), "[ExtConn] close()");
         EdStream::close();
         delete m_buf;
     }
@@ -181,8 +176,7 @@ int L4conn::init(const GSockAddr *pGSockAddr)
 {
     int ret = connectEx(pGSockAddr);
 
-    if (D_ENABLED(DL_LESS))
-        LOG_D((getLogger(), "[%s] [L4conn] init ret = [%d]...", getLogId(), ret));
+    LS_DBG_L(getLogSession(), "[L4conn] init ret = [%d]...", ret);
 
     return ret;
 }
@@ -199,9 +193,8 @@ int L4conn::connectEx(const GSockAddr *pGSockAddr)
 
     if (fd != -1)
     {
-        if (D_ENABLED(DL_LESS))
-            LOG_D((getLogger(), "[%s] [L4conn] connecting to [%s]...",
-                   getLogId(), pGSockAddr->toString()));
+        LS_DBG_L(getLogSession(), "[L4conn] connecting to [%s]...",
+                 pGSockAddr->toString());
 
         ::fcntl(fd, F_SETFD, FD_CLOEXEC);
         EdStream::init(fd, pMpl, POLLIN | POLLOUT | POLLHUP | POLLERR);
@@ -226,11 +219,7 @@ int L4conn::doRead()
     if ((space = m_pL4Handler->getBuf()->contiguous()) > 0)
     {
         int n = read(m_pL4Handler->getBuf()->end(), space);
-        if (D_ENABLED(DL_LESS))
-        {
-            LOG_D((getLogger(), "[%s] [L4conn] doRead [%d]...",
-                   getLogId(), n));
-        }
+        LS_DBG_L(getLogSession(), "[L4conn] doRead [%d]...", n);
 
         if (n > 0)
             m_pL4Handler->getBuf()->used(n);
@@ -250,11 +239,7 @@ int L4conn::doRead()
         if (m_pL4Handler->getBuf()->available() <= 0)
         {
             suspendRead();
-            if (D_ENABLED(DL_LESS))
-            {
-                LOG_D((getLogger(), "[%s] [L4conn] suspendRead",
-                       getLogId()));
-            }
+            LS_DBG_L(getLogSession(), "[L4conn] suspendRead");
         }
     }
     return 0;
@@ -269,11 +254,7 @@ int L4conn::doWrite()
     while ((length = getBuf()->blockSize()) > 0)
     {
         int n = write(getBuf()->begin(), length);
-        if (D_ENABLED(DL_LESS))
-        {
-            LOG_D((getLogger(), "[%s] [L4conn] doWrite [%d of %d]...",
-                   getLogId(), n, length));
-        }
+        LS_DBG_L(getLogSession(), "[L4conn] doWrite [%d of %d]...", n, length);
 
         if (n > 0)
             getBuf()->pop_front(n);
@@ -295,12 +276,8 @@ int L4conn::doWrite()
         if (getBuf()->empty())
         {
             suspendWrite();
-            if (D_ENABLED(DL_LESS))
-            {
-                LOG_D((getLogger(),
-                       "[%s] [L4conn] suspendWrite && m_pL4Handler->continueRead",
-                       getLogId()));
-            }
+            LS_DBG_L(getLogSession(),
+                     "[L4conn] suspendWrite && m_pL4Handler->continueRead");
         }
     }
 
@@ -318,3 +295,10 @@ const char *L4conn::getLogId()
 {
     return m_pL4Handler->getLogId();
 }
+
+
+LogSession *L4conn::getLogSession() const
+{
+    return m_pL4Handler->getLogSession();
+}
+

@@ -34,9 +34,9 @@ createFileList()
 {
     FILENAME=$1
     rm -rf $FILENAME
-    find -iname *.c | grep -v UnitTest++ | grep -v build/ | grep -v modules/pagespeed/psol > $FILENAME
-    find -iname *.cpp | grep -v UnitTest++ | grep -v build/ | grep -v modules/pagespeed/psol >> $FILENAME
-    find -iname *.h | grep -v UnitTest++ | grep -v build/ | grep -v modules/pagespeed/psol >> $FILENAME
+    find . -iname "*.c" | grep -v UnitTest++ | grep -v build/ | grep -v modules/pagespeed/psol > $FILENAME
+    find . -iname "*.cpp" | grep -v UnitTest++ | grep -v build/ | grep -v modules/pagespeed/psol >> $FILENAME
+    find . -iname "*.h" | grep -v UnitTest++ | grep -v build/ | grep -v modules/pagespeed/psol >> $FILENAME
 }
 
 
@@ -44,19 +44,18 @@ dealFile()
 {
     local FILENAME=$1
     echo "Dealing with file: $FILENAME"
-    ./astyle  -A1 -s4 -K -w -m0 -p -H -U -k3 -W3 -xj -c -xC75 -n -O -q "$FILENAME"
-    ./astyle  -A1 -s4 -K -w -m0 -p -H -U -k3 -W3 -xj -c -xC75 -n -O -q "$FILENAME"
+    astyle  -A1 -s4 -K -w -m0 -p -H -U -k3 -W3 -xj -c -xC75 -n -O -q "$FILENAME"
+    astyle  -A1 -s4 -K -w -m0 -p -H -U -k3 -W3 -xj -c -xC75 -n -O -q "$FILENAME"
 #    /usr/bin/sed -i -r -e "s/[(][ ]((const[ ])?(unsigned[ ])?(struct[ ])?\w+[ ][*])[ ][)]/(\1)/" -e "s/[(][ ]((const[ ])?(unsigned[ ])?(struct[ ])?\w+[ ][*])[ ][)]/(\1)/"  "$FILENAME"
 #    /usr/bin/sed -i -e "s/( int )/(int)/"  -e "s/( short )/(short)/"  -e "s/( unsigned long )/(unsigned long)/" -e "s/( long )/(long)/"  -e "s/( long long )/(long long)/"   "$FILENAME" 
 #    /usr/bin/sed -i -e "s/( ( /(( /" -e "s/) ) )/) ))/" -e "s/ ) )/ ))/" -e "s/ ) )/ ))/" -e "s/())/() )/" -e "s/return ;/return;/"   "$FILENAME"
 }
 
 if [ "x$1" != "x" ] ; then 
-    PATH=$1
-    if [ -f $PATH ] ; then 
-        dealFile $PATH
+    if [ -f $1 ] ; then 
+        dealFile $1
     else
-        echo "File $PATH does not exist".
+        echo "File $1 does not exist".
         echo
     fi
 else

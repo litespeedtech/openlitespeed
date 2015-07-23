@@ -26,7 +26,8 @@
 class StaticFileCacheData;
 class FileCacheDataEx;
 
-class StaticFileCache : public HttpCache, public TSingleton<StaticFileCache>
+class StaticFileCache : public HttpCache,
+    public TSingleton<StaticFileCache>
 {
     friend class TSingleton<StaticFileCache>;
 

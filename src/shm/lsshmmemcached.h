@@ -205,7 +205,7 @@ public:
     int  doDataUpdate(uint8_t *pBuf);
     int  convertCmd(char *pStr, uint8_t *pBinBuf);
     int  processBinCmd(uint8_t *pBinBuf);
-    
+
     static inline LsMcDataItem *mcIter2data(
         iterator iter, int useCas, uint8_t **pValPtr, int *pValLen)
     {
@@ -218,9 +218,7 @@ public:
             *pValPtr = pItem->x_data->withcas.val;
         }
         else
-        {
             *pValPtr = pItem->x_data->val;
-        }
         return pItem;
     }
 
@@ -244,7 +242,7 @@ public:
     static inline bool isExpired(LsMcDataItem *pItem)
     {
         return ((pItem->x_exptime != 0)
-            && (pItem->x_exptime <= time((time_t *)NULL)));
+                && (pItem->x_exptime <= time((time_t *)NULL)));
     }
 
     void lock()
@@ -265,13 +263,13 @@ private:
     uint64_t getCas()
     {
         return ((m_iHdrOff != 0) ?
-            ++((LsMcHdr *)m_pHash->offset2ptr(m_iHdrOff))->x_data->cas : 0);
+                ++((LsMcHdr *)m_pHash->offset2ptr(m_iHdrOff))->x_data->cas : 0);
     }
 
     uint8_t  getVerbose()
     {
         return ((m_iHdrOff != 0) ?
-            ((LsMcHdr *)m_pHash->offset2ptr(m_iHdrOff))->x_verbose: 0);
+                ((LsMcHdr *)m_pHash->offset2ptr(m_iHdrOff))->x_verbose : 0);
     }
 
     void     setVerbose(uint8_t iLevel)
@@ -302,7 +300,7 @@ private:
     static int   doCmdTouch(LsShmMemCached *pThis,
                             char *pStr, int arg, uint8_t *pConv);
     static int   doCmdStats(LsShmMemCached *pThis,
-                           char *pStr, int arg, uint8_t *pConv);
+                            char *pStr, int arg, uint8_t *pConv);
     static int   doCmdVersion(LsShmMemCached *pThis,
                               char *pStr, int arg, uint8_t *pConv);
     static int   doCmdQuit(LsShmMemCached *pThis,
@@ -322,8 +320,8 @@ private:
     void     doBinVersion(McBinCmdHdr *pHdr);
 
     void     setupBinResHdr(uint8_t cmd,
-                uint8_t extralen, uint16_t keylen, uint32_t totbody,
-                uint16_t status, uint8_t *pBinBuf);
+                            uint8_t extralen, uint16_t keylen, uint32_t totbody,
+                            uint16_t status, uint8_t *pBinBuf);
     void     binOkRespond(McBinCmdHdr *pHdr);
     void     binErrRespond(McBinCmdHdr *pHdr, McBinStat err);
 
@@ -343,8 +341,8 @@ private:
     int   parmAdjLen(int valLen)
     {
         return (m_usecas ?
-            (valLen + sizeof(m_item) + sizeof(m_item.x_data->withcas.cas)) :
-            (valLen + sizeof(m_item)));
+                (valLen + sizeof(m_item) + sizeof(m_item.x_data->withcas.cas)) :
+                (valLen + sizeof(m_item)));
     }
 
     void statSetCmd()

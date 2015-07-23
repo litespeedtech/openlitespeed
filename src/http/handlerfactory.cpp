@@ -20,6 +20,7 @@
 #include <http/handlertype.h>
 #include <http/httpextconnector.h>
 #include <http/staticfilehandler.h>
+#include <log4cxx/logger.h>
 #include <lsiapi/modulehandler.h>
 #include <lsiapi/modulemanager.h>
 #include <main/configctx.h>
@@ -119,8 +120,8 @@ const HttpHandler *HandlerFactory::getHandler(
         (type == HandlerType::HT_JAVAWEBAPP) ||
         (type == HandlerType::HT_RAILS))
     {
-        ConfigCtx::getCurConfigCtx()->logError("Invalid External app type:[%s]" ,
-                                               pType);
+        LS_ERROR(ConfigCtx::getCurConfigCtx(), "Invalid External app type:[%s]" ,
+                 pType);
         return NULL;
     }
 

@@ -457,8 +457,8 @@ static xpool_alink_t *ls_xpool_getsuperblk(ls_xpool_t *pool)
                           1;  /* ptr to real gpool block */
 #ifdef USE_VALGRIND
     VALGRIND_MAKE_MEM_NOACCESS(pNew->data, pBlk->header.size
-                                            - sizeof(ls_pool_blk_t)
-                                            - sizeof(ls_xpool_header_t));
+                               - sizeof(ls_pool_blk_t)
+                               - sizeof(ls_xpool_header_t));
 #endif
     ls_pool_insptr(&pool->psuperblk,
                    pBlk);    /* overwrites size/magic with link */

@@ -18,7 +18,7 @@
 #include <thread/workcrew.h>
 
 #include <edio/eventnotifier.h>
-#include <http/httplog.h>
+#include <log4cxx/logger.h>
 #include <lsr/ls_lfqueue.h>
 
 #ifndef LS_WORKCREW_LF
@@ -28,9 +28,9 @@
 #include <new>
 
 WorkCrew::WorkCrew(EventNotifier *en)
-        : m_pNotifier(en)
-        , m_crew()
-        , m_pProcess(NULL)
+    : m_pNotifier(en)
+    , m_crew()
+    , m_pProcess(NULL)
 {
 #ifdef LS_WORKCREW_LF
     m_pJobQueue = ls_lfqueue_new();
@@ -107,14 +107,14 @@ ls_lfnodei_t *WorkCrew::getJob()
 }
 
 
-int WorkCrew::startJobProcessor(int numWorkers, ls_lfqueue_t *pFinishedQueue,
-                          WorkCrewProcessFn processor)
+int WorkCrew::startJobProcessor(int numWorkers,
+                                ls_lfqueue_t *pFinishedQueue,
+                                WorkCrewProcessFn processor)
 {
     assert(processor && pFinishedQueue);
     m_pProcess = processor;
     m_pFinishedQueue = pFinishedQueue;
-    if (D_ENABLED(DL_MORE))
-        LOG_D(("WorkCrew::startJobProcessor(), Starting Processor."));
+    LS_DBG_H("WorkCrew::startJobProcessor(), Starting Processor.");
 #ifndef LS_WORKCREW_LF
     m_pJobQueue->start();
 #endif
@@ -125,8 +125,7 @@ int WorkCrew::startJobProcessor(int numWorkers, ls_lfqueue_t *pFinishedQueue,
 void WorkCrew::stopProcessing()
 {
     decreaseTo(0);
-    if (D_ENABLED(DL_MORE))
-        LOG_D(("WorkCrew::stopProcessing(), Stopping Processor."));
+    LS_DBG_H("WorkCrew::stopProcessing(), Stopping Processor.");
 #ifndef LS_WORKCREW_LF
     m_pJobQueue->shutdown();
 #endif
@@ -140,17 +139,14 @@ void *WorkCrew::getAndProcessJob()
     ls_lfnodei_t *item = getJob();
     if (!item)
         return NULL;
-    if (D_ENABLED(DL_MORE))
-        LOG_D(("WorkCrew::getAndProcessJob(), Got Job."));
+    LS_DBG_H("WorkCrew::getAndProcessJob(), Got Job.");
     if ((ret = m_pProcess(item)) != NULL)
     {
-        if (D_ENABLED(DL_MORE))
-            LOG_D(("WorkCrew::getAndProcessJob(), Job Failed,"
-                   " returned: %d", ret));
+        LS_DBG_H("WorkCrew::getAndProcessJob(), Job Failed,"
+                 " returned: %d", ret);
         return ret;
     }
-    if (D_ENABLED(DL_MORE))
-        LOG_D(("WorkCrew::getAndProcessJob(), Job Completed."));
+    LS_DBG_H("WorkCrew::getAndProcessJob(), Job Completed.");
     putFinishedItem(item);
     return NULL;
 }
@@ -162,8 +158,7 @@ int WorkCrew::putFinishedItem(ls_lfnodei_t *item)
     ret = ls_lfqueue_put(m_pFinishedQueue, item);
     if (m_pNotifier)
     {
-        if (D_ENABLED(DL_MORE))
-            LOG_D(("WorkCrew::putFinishedItem(), Notifying Notifier."));
+        LS_DBG_H("WorkCrew::putFinishedItem(), Notifying Notifier.");
         m_pNotifier->notify();
     }
     return ret;
@@ -180,8 +175,7 @@ int WorkCrew::resize(int numMembers)
         numMembers = LS_WORKCREW_MAXWORKER;
     if (numMembers == m_crew.getSize())
         return 0;
-    if (D_ENABLED(DL_MORE))
-        LOG_D(("WorkCrew::resize(), Updating Crew Size to %d.", numMembers));
+    LS_DBG_H("WorkCrew::resize(), Updating Crew Size to %d.", numMembers);
     return (numMembers > m_crew.getSize() ? increaseTo(numMembers) :
             decreaseTo(numMembers));
 }

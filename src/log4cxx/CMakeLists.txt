@@ -15,6 +15,8 @@ SET(log4cxx_STAT_SRCS
    appender.cpp
    logger.cpp
    level.cpp
+   logsession.cpp
+   tmplogid.cpp
 )
 
 add_library(log4cxx STATIC ${log4cxx_STAT_SRCS})

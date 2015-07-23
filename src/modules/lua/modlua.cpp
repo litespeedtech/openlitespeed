@@ -126,9 +126,9 @@ int prepLuaFilter(lsi_cb_param_t *rec)
     if (pUser->isFilterActive(LSLUA_HOOK_BODY))
         aEnableHkpt[iEnableCount++] = LSI_HKPT_RECV_RESP_BODY;
 
-    if ( iEnableCount > 0)
+    if (iEnableCount > 0)
         return g_api->set_session_hook_enable_flag(session, &MNAME, 1,
-                                                   aEnableHkpt, iEnableCount );
+                aEnableHkpt, iEnableCount);
     return LSI_HK_RET_OK;
 }
 
@@ -281,5 +281,5 @@ lsi_module_t MNAME = { LSI_MODULE_SIGNATURE,
                        &lslua_mod_config,
                        "v1.0",
                        serverHooks,
-                       {0}
+{0}
                      };

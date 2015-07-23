@@ -65,7 +65,7 @@ static void processTimer()
     gettimeofday(&tv, NULL);
 
     //FIXME: debug code
-    //LOG_D(( "processTimer()" ));
+    //LS_DBG_L( "processTimer()" );
 
     DateTime::s_curTime = tv.tv_sec;
     DateTime::s_curTimeUs = tv.tv_usec;

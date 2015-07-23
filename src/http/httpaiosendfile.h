@@ -30,7 +30,7 @@ public:
     {}
     int processEvent(Aiosfcb *event);
 
-    static void setHttpAioSendFile( HttpAioSendFile *pHasf )
+    static void setHttpAioSendFile(HttpAioSendFile *pHasf)
     {   s_pHttpAioSendFile = pHasf; }
     static HttpAioSendFile *getHttpAioSendFile()
     {   return s_pHttpAioSendFile;  }

@@ -57,7 +57,7 @@ public:
     int  getRestart() const         {   return m_restart;   }
     int  cleanPidList(int ToStopOnly = 0);
 
-    static void setServerInfo( ServerInfo *pServerInfo )
+    static void setServerInfo(ServerInfo *pServerInfo)
     {   s_pServerInfo = pServerInfo;    }
     static ServerInfo *getServerInfo()
     {   return s_pServerInfo;   }

@@ -30,7 +30,7 @@ BEGIN_LOG4CXX_NS
 
 class FileAppender : public Appender
 {
-    ino_t    m_ino;
+    ino_t           m_ino;
     AioOutputStream m_stream;
 
 protected:
@@ -52,7 +52,6 @@ public:
     virtual int getfd() const               {   return m_stream.getfd();        }
     void setAsync()                         {   return m_stream.setAsync();     }
     int flush()                             {   return m_stream.flush();        }
-
 
 
     LS_NO_COPY_ASSIGN(FileAppender);

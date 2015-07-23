@@ -23,6 +23,6 @@ RewriteRuleList::RewriteRuleList()
 
 RewriteRuleList::~RewriteRuleList()
 {
-    releaseObjects();
+    release_objects();
 }
 

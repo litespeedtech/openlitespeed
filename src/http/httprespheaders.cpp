@@ -152,8 +152,9 @@ int HttpRespHeaders::appendHeader(resp_kvpair *pKv, const char *pName,
                                   unsigned int nameLen, const char *pVal,
                                   unsigned int valLen, int method)
 {
-    if ( nameLen + valLen > MAX_RESP_HEADER_LEN
-        || m_buf.size() >= HttpServerConfig::getInstance().getMaxDynRespHeaderLen())
+    if (nameLen + valLen > MAX_RESP_HEADER_LEN
+        || m_buf.size() >=
+        HttpServerConfig::getInstance().getMaxDynRespHeaderLen())
         return LS_FAIL;
 
     if (method == LSI_HEADER_SET)
@@ -303,7 +304,7 @@ int HttpRespHeaders::add(const char *pName, int nameLen, const char *pVal,
     HEADERINDEX headerIndex = getRespHeaderIndex(pName);
     if (headerIndex != H_HEADER_END)
     {
-        if ( s_iHeaderLen[headerIndex] == nameLen)
+        if (s_iHeaderLen[headerIndex] == nameLen)
         {
             //assert(strncasecmp(m_sPresetHeaders[headerIndex], pName, nameLen) == 0);
             return add(headerIndex, pVal, valLen, method);
@@ -456,14 +457,14 @@ int HttpRespHeaders::parseAdd(const char *pStr, int len, int method)
         {
             pName = pLineBegin;
             pVal = pMark + 1;
-            while ( pMark > pLineBegin && isspace( *(pMark - 1)) )
+            while (pMark > pLineBegin && isspace(*(pMark - 1)))
                 --pMark;
             nameLen = pMark - pLineBegin; //Should - 1 to remove the ':' position
             pLineBegin = pLineEnd + 1;
 
-            while ( pVal < pLineEnd && isspace(*(pLineEnd - 1)))
+            while (pVal < pLineEnd && isspace(*(pLineEnd - 1)))
                 --pLineEnd;
-            while ( pVal < pLineEnd && isspace( *pVal ) )
+            while (pVal < pLineEnd && isspace(*pVal))
                 ++pVal;
             valLen = pLineEnd - pVal;
 
@@ -742,17 +743,39 @@ int HttpRespHeaders::appendToIovExclude(IOVec *iovec, const char *pName,
 }
 
 
-int HttpRespHeaders::appendToIov(IOVec *iovec) const
+int HttpRespHeaders::mergeAll()
 {
     int total = 0;
-    if (m_hasHole == 0)
+    resp_kvpair *pKv;
+    AutoBuf tmp(m_buf.size());
+
+    for (int i = 0; (pKv = getKV(i)) != NULL; ++i)
     {
-        if (m_buf.size() > 0)
-            iovec->append(m_buf.begin(), m_buf.size());
-        total = m_buf.size();
+        if (pKv->keyLen > 0)
+        {
+            int len = pKv->keyLen + pKv->valLen + 4;
+            tmp.append(m_buf.begin() + pKv->keyOff, len);
+            int diff = total - pKv->keyOff;
+            pKv->keyOff = total;
+            pKv->valOff += diff;
+            total += len;
+        }
     }
-    else
-        total = appendToIovExclude(iovec, NULL, 0);
+    m_buf.swap(tmp);
+    return total;
+}
+
+
+int HttpRespHeaders::appendToIov(IOVec *iovec)
+{
+    int total = 0;
+
+    if (m_hasHole != 0)
+        mergeAll();
+
+    if (m_buf.size() > 0)
+        iovec->append(m_buf.begin(), m_buf.size());
+    total = m_buf.size();
     return total;
 }
 
@@ -773,8 +796,8 @@ int HttpRespHeaders::outputNonSpdyHeaders(IOVec *iovec)
 
     iovec->clear();
     const StatusLineString &statusLine =
-            HttpStatusLine::getInstance().getStatusLine(m_iHttpVersion,
-                                                        m_iHttpCode);
+        HttpStatusLine::getInstance().getStatusLine(m_iHttpVersion,
+                m_iHttpCode);
     iovec->push_front(statusLine.get(), statusLine.getLen());
     m_iHeadersTotalLen = statusLine.getLen();
     m_iHeadersTotalLen += appendToIov(iovec);

@@ -447,7 +447,8 @@ static int lookup_ssl_cert_serial(X509 *pCert, char *pBuf, int len)
 }
 
 
-static int addEnv(void *pObj, void *pUData, const char *pKey, size_t iKeyLen)
+static int addEnv(void *pObj, void *pUData, const char *pKey,
+                  size_t iKeyLen)
 {
     IEnv *pEnv = (IEnv *)pUData;
     ls_str_pair_t *pPair = (ls_str_pair_t *)pObj;
@@ -530,12 +531,12 @@ int HttpCgiTool::buildCommonEnv(IEnv *pEnv, HttpSession *pSession)
 
     if (pSession->getStream()->isSpdy())
     {
-        const char * pProto = HioStream::getProtocolName( (HiosProtocol)
-                                pSession->getStream()->getProtocol());
-        pEnv->add( "X_SPDY", 6, pProto, strlen(pProto) );
+        const char *pProto = HioStream::getProtocolName((HiosProtocol)
+                             pSession->getStream()->getProtocol());
+        pEnv->add("X_SPDY", 6, pProto, strlen(pProto));
         ++count;
     }
-    
+
     if (pSession->isSSL())
     {
         SSLConnection *pSSL = pSession->getSSL();

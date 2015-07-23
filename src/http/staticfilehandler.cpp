@@ -19,7 +19,6 @@
 
 #include <http/expiresctrl.h>
 #include <http/handlertype.h>
-#include <http/httplog.h>
 #include <http/httpmethod.h>
 #include <http/httpmime.h>
 #include <http/httprange.h>
@@ -31,6 +30,7 @@
 #include <http/moov.h>
 #include <http/sendfileinfo.h>
 #include <http/staticfilecachedata.h>
+#include <log4cxx/logger.h>
 #include <lsr/ls_strtool.h>
 #include <lsr/ls_xpool.h>
 #include <util/datetime.h>
@@ -252,9 +252,8 @@ int buildMoov(HttpSession *pSession)
             return LS_FAIL;
         if (moov_data->is_mem == 1)
         {
-            if (D_ENABLED(DL_LESS))
-                LOG_D((pReq->getLogger(), "[%s] is_mem, buf_size=%u, remaining=%d",
-                       pReq->getLogId(), moov_data->mem.buf_size, moov_data->remaining_bytes));
+            LS_DBG_L(pReq->getLogSession(), "is_mem, buf_size=%u, remaining=%d",
+                     moov_data->mem.buf_size, moov_data->remaining_bytes);
             pSession->appendDynBody((char *)moov_data->mem.buffer,
                                     moov_data->mem.buf_size);
             free(moov_data->mem.buffer);
@@ -263,12 +262,11 @@ int buildMoov(HttpSession *pSession)
         else
         {
             //pSession->flushDynBodyChunk();
-            if (D_ENABLED(DL_LESS))
-                LOG_D((pReq->getLogger(),
-                       "[%s] send from file, start=%u, buf_size=%u, remaining=%d",
-                       pReq->getLogId(), (uint32_t)moov_data->file.start_offset,
-                       moov_data->file.data_size,
-                       moov_data->remaining_bytes));
+            LS_DBG_L(pReq->getLogSession(),
+                     "Send from file, start=%u, buf_size=%u, remaining=%d",
+                     (uint32_t)moov_data->file.start_offset,
+                     moov_data->file.data_size,
+                     moov_data->remaining_bytes);
             pSession->setSendFileBeginEnd(moov_data->file.start_offset,
                                           moov_data->file.start_offset + moov_data->file.data_size);
             return 1;
@@ -300,10 +298,9 @@ int buildMoov(HttpSession *pSession)
     pData->setParam(NULL);
     if (ret == -1)
         return LS_FAIL;
-    if (D_ENABLED(DL_LESS))
-        LOG_D((pReq->getLogger(),
-               "[%s] mdat_start=%u, mdat_size=%u, mdat_64bit=%d\n",
-               pReq->getLogId(), (uint32_t)mdat_start, (uint32_t)mdat_size, mdat_64bit));
+    LS_DBG_L(pReq->getLogSession(),
+             "mdat_start=%u, mdat_size=%u, mdat_64bit=%d",
+             (uint32_t)mdat_start, (uint32_t)mdat_size, mdat_64bit);
     pLen32 = (uint32_t *)(&mdat_header64[8]);
     if (mdat_64bit)
     {
@@ -345,9 +342,9 @@ int processH264Stream(HttpSession *pSession, double start)
             pData->getFileData()->setMiniMoov(mini_moov, mini_moov_size);
         else
         {
-            LOG_NOTICE((pReq->getLogger(),
-                        "[%s] Failed to parse moov header from MP4/H.264 video file [%s].",
-                        pReq->getLogId(), pReq->getRealPath()->c_str()));
+            LS_NOTICE(pReq->getLogSession(),
+                      "Failed to parse moov header from MP4/H.264 video file [%s].",
+                      pReq->getRealPath()->c_str());
             return SC_500;
         }
     }
@@ -366,9 +363,9 @@ int processH264Stream(HttpSession *pSession, double start)
     off_t contentLen = 0;
     if (calcMoovContentLen(pSession, contentLen) == -1)
     {
-        LOG_NOTICE((pReq->getLogger(),
-                    "[%s] Failed to calculate content length for seek request for MP4/H.264 video file [%s].",
-                    pReq->getLogId(), pReq->getRealPath()->c_str()));
+        LS_NOTICE(pReq->getLogSession(),
+                  "Failed to calculate content length for seek request for MP4/H.264 video file [%s].",
+                  pReq->getRealPath()->c_str());
         return SC_500;
     }
     pSession->getResp()->setContentLen(contentLen);
@@ -435,10 +432,10 @@ int StaticFileHandler::process(HttpSession *pSession,
     {
         if (!pReq->getMimeType()->getExpires()->isImage())
         {
-            LOG_INFO((pReq->getLogger(), "[%s] Permission of file [%s] does not "
-                      "meet the requirements of 'Required bits' or "
-                      "'Restricted bits', access denied.",
-                      pReq->getLogId(), pReq->getRealPath()->c_str()));
+            LS_INFO(pReq->getLogSession(), "Permission of file [%s] does not "
+                    "meet the requirements of 'Required bits' or "
+                    "'Restricted bits', access denied.",
+                    pReq->getRealPath()->c_str());
             return SC_403;
         }
     }
@@ -511,13 +508,11 @@ int StaticFileHandler::process(HttpSession *pSession,
 
     //pECache = pData->getECache();
     char compressed = ((pReq->gzipAcceptable() == GZIP_REQUIRED) &&
-              ((pSession->getSessionHooks()->getFlag(LSI_HKPT_RECV_RESP_BODY)
-                    | pSession->getSessionHooks()->getFlag(LSI_HKPT_SEND_RESP_BODY))
-                 & LSI_HOOK_FLAG_DECOMPRESS_REQUIRED) == 0);
+                       ((pSession->getSessionHooks()->getFlag(LSI_HKPT_RECV_RESP_BODY)
+                         | pSession->getSessionHooks()->getFlag(LSI_HKPT_SEND_RESP_BODY))
+                        & LSI_HOOK_FLAG_DECOMPRESS_REQUIRED) == 0);
     ret = pCache->readyCacheData(pECache, compressed);
-    if (D_ENABLED(DL_LESS))
-        LOG_D((pReq->getLogger(), "[%s] readyCacheData() return %d",
-               pReq->getLogId(), ret));
+    LS_DBG_L(pReq->getLogSession(), "readyCacheData() return %d", ret);
     if (!ret)
     {
         if (pReq->isKeepAlive())
@@ -630,6 +625,7 @@ static int buildRangeHeaders(HttpSession *pSession, HttpRange &range)
         buf.parseAdd(sTemp, ret);
 
         bodyLen = end - begin;
+        pResp->setContentLen(bodyLen);
 
         //TODO: simplify logic with sendMultipart()
         pSession->setSendFileBeginEnd(begin, end);
@@ -639,15 +635,15 @@ static int buildRangeHeaders(HttpSession *pSession, HttpRange &range)
     {
         pResp->parseAdd(pData->getHeaderBuf(), pData->getValidateHeaderLen());
         range.beginMultipart();
-        buf.add(HttpRespHeaders::H_CONTENT_RANGE,
+        buf.add(HttpRespHeaders::H_CONTENT_TYPE,
                 "multipart/byteranges; boundary=", 31);
         buf.appendLastVal(range.getBoundary(), strlen(range.getBoundary()));
         bodyLen = range.getMultipartBodyLen(pData->getMimeType()->getMIME());
-        pSession->continueWrite();
+        pResp->setContentLen(bodyLen);
+        pSession->sendRespHeaders();
+        return sendMultipart(pSession, range);
 
     }
-    pResp->setContentLen(bodyLen);
-    pResp->appendContentLenHeader();
     return 0;
 }
 
@@ -657,68 +653,55 @@ static int sendMultipart(HttpSession *pSession, HttpRange &range)
     off_t iRemain;
     int  ret = 0;
     SendFileInfo *pData = pSession->getSendFileInfo();
+    int headerLen;
     while (true)
     {
+        headerLen = range.getPartHeaderLen();
         iRemain = pData->getRemain();
-        if (!iRemain)
+        if (!iRemain && headerLen == 0)
         {
             if (range.more())
             {
                 range.next();
                 range.buildPartHeader(
                     pData->getFileData()->getMimeType()->getMIME()->c_str());
+                headerLen = range.getPartHeaderLen();
             }
-            if (range.more())
-            {
-                off_t begin, end;
-                range.getContentOffset(begin, end);
-                pSession->setSendFileBeginEnd(begin, end);
-                iRemain = pData->getRemain();
-                assert(iRemain > 0);
-            }
-            else
-                pSession->setRespBodyDone();
-
-            /*           else
-                       {
-                           int len = range.getPartHeaderLen();
-                           if ( !len )
-                               return 0;
-                           ret = pSession->writeRespBody( range.getPartHeader(), len );
-                           if ( ret >= len )
-                           {
-                               return 0;
-                           }
-                           else
-                           {
-                               range.partHeaderSent( ret );
-                               return 1;
-                           }
-                       }
-            */
         }
-        int len = range.getPartHeaderLen();
-        if (len)
+        if (headerLen)
         {
-            ret = pSession->writeRespBody(range.getPartHeader(), len);
+            ret = pSession->writeRespBody(range.getPartHeader(), headerLen);
+            LS_DBG_L(pSession->getLogger(), "[%s] send part header %d bytes",
+                     pSession->getLogId(), ret);
+
             if (ret > 0)
             {
                 int r = ret;
                 range.partHeaderSent(ret);
-                if (r < len)
+                if (r < headerLen)
                     return 1;
             }
             else if (ret == -1)
-                return LS_FAIL;
+                return -1;
             else if (!ret)
                 return 1;
         }
-        if (iRemain)
+        if (range.more())
+        {
+            off_t begin, end;
+            range.getContentOffset(begin, end);
+            pSession->setSendFileBeginEnd(begin, end);
+            iRemain = pData->getRemain();
+            assert(iRemain > 0);
             ret = pSession->flush();
+            if (ret)
+                return ret;
+        }
         else
-            return 0;
-        if (ret)
-            return ret;
+        {
+            pSession->endResponse(1);
+            break;
+        }
     }
     return 0;
 
@@ -733,6 +716,10 @@ static int processRange(HttpSession *pSession, HttpReq *pReq,
     ls_xpool_t *pPool = pSession->getReq()->getPool();
     HttpRange *range = new(ls_xpool_alloc(pPool,
                                           sizeof(HttpRange)))HttpRange(pCache->getFileSize());
+
+    LS_DBG_L(pReq->getLogger(), "[%s] Range: %.*s",
+             pReq->getLogId(), pReq->getHeaderLen(HttpHeader::H_RANGE), pRange);
+
     int ret = range->parse(pRange, *pPool);
     if (ret)
     {

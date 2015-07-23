@@ -107,7 +107,7 @@ public:
 
 protected:
     virtual int renameDiskEntry(CacheEntry *pEntry, char *pFrom,
-                                const char *pFromSuffix, const char *pToSuffix, 
+                                const char *pFromSuffix, const char *pToSuffix,
                                 int validate) = 0;
 
 private:

@@ -39,12 +39,12 @@ UserDir::~UserDir()
 {
     if (m_pCacheUser)
     {
-        m_pCacheUser->releaseObjects();
+        m_pCacheUser->release_objects();
         delete m_pCacheUser;
     }
     if (m_pCacheGroup)
     {
-        m_pCacheGroup->releaseObjects();
+        m_pCacheGroup->release_objects();
         delete m_pCacheGroup;
     }
     if (m_pName)

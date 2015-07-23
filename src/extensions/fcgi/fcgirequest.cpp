@@ -150,9 +150,8 @@ int  FcgiRequest::endOfRequest(int endCode, int status)
     assert(pConnector);
     if (endCode)
     {
-        LOG_ERR((pConnector->getLogger(),
-                 "[%s] FcgiRequest::endOfRequest( %d, %d)!\n",
-                 pConnector->getLogId(), endCode, status));
+        LS_ERROR(pConnector, "FcgiRequest::endOfRequest( %d, %d)!",
+                 endCode, status);
         pConnector->endResponse(SC_500, status);
     }
     else
@@ -173,10 +172,7 @@ int FcgiRequest::begin()
 //    int ret = 0;
 //    HttpExtConnector * pConnector = getConnector();
 //    assert( pConnector );
-//    if ( D_ENABLED( DL_MEDIUM ) )
-//        LOG_D(( pConnector->getLogger(),
-//            "[%s] FcgiRequest::onWrite()",
-//            pConnector->getLogId()));
+//    LS_DBG_M(pConnector, "FcgiRequest::onWrite()");
 //    ret = pConnector->extOutputReady( );
 //    return ret;
 //}
@@ -186,9 +182,7 @@ int FcgiRequest::onStdOut()
 {
     HttpExtConnector *pConnector = getConnector();
     assert(pConnector);
-    if (D_ENABLED(DL_MEDIUM))
-        LOG_D((pConnector->getLogger(), "[%s] onStdOut()",
-               pConnector->getLogId()));
+    LS_DBG_M(pConnector, "onStdOut()");
     return pConnector->extInputReady();
 
 }
@@ -198,9 +192,7 @@ int  FcgiRequest::processStdOut(char *pBuf, int size)
 {
     HttpExtConnector *pConnector = getConnector();
     assert(pConnector);
-    if (D_ENABLED(DL_MEDIUM))
-        LOG_D((pConnector->getLogger(), "[%s] process STDOUT %d bytes",
-               pConnector->getLogId(), size));
+    LS_DBG_M(pConnector, "Process STDOUT %d bytes", size);
     return pConnector->processRespData(pBuf, size);
 }
 
@@ -209,9 +201,7 @@ int  FcgiRequest::processStdErr(char *pBuf, int size)
 {
     HttpExtConnector *pConnector = getConnector();
     assert(pConnector);
-    if (D_ENABLED(DL_MEDIUM))
-        LOG_D((pConnector->getLogger(), "[%s] process STDERR %d bytes",
-               pConnector->getLogId(), size));
+    LS_DBG_M(pConnector, "Process STDERR %d bytes", size);
     return pConnector->processErrData(pBuf, size);
 }
 
@@ -341,9 +331,8 @@ int  FcgiRequest::flush()
 
 int FcgiRequest::sendAbortRec()
 {
-    if (D_ENABLED(DL_LESS))
-        LOG_D((getLogger(), "[%s] [FCGI] send abort packet!",
-               getConnector()->getLogId()));
+    LS_DBG_L(getLogger(), "[%s] [FCGI] send abort packet!",
+             getConnector()->getLogId());
     FCGI_Header rec;
     FcgiRecord::setRecordHeader(rec, FCGI_ABORT_REQUEST, m_iId, 0);
     return m_pFcgiConn->sendRecord((const char *)&rec, sizeof(rec));

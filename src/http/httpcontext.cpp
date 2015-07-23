@@ -31,6 +31,7 @@
 #include <http/statusurlmap.h>
 #include <http/urimatch.h>
 #include <http/userdir.h>
+#include <log4cxx/logger.h>
 #include <lsiapi/lsiapihooks.h>
 #include <lsiapi/modulemanager.h>
 #include <lsr/ls_strtool.h>
@@ -388,7 +389,7 @@ int HttpContext::setExtraHeaders(const char *pLogId, const char *pHeaders,
         m_pInternal->m_pExtraHeader = new AutoBuf(512);
         if (!m_pInternal->m_pExtraHeader)
         {
-            LOG_WARN(("[%s] Failed to allocate buffer for extra headers", pLogId));
+            LS_WARN("[%s] Failed to allocate buffer for extra headers", pLogId);
             return LS_FAIL;
         }
     }
@@ -420,7 +421,7 @@ int HttpContext::setExtraHeaders(const char *pLogId, const char *pHeaders,
             {
                 char *p = (char *)pCurEnd;
                 *p = '0';
-                LOG_WARN(("[%s] Invalid Header: %s", pLogId, pLineBegin));
+                LS_WARN("[%s] Invalid Header: %s", pLogId, pLineBegin);
                 *p = '\n';
             }
         }
@@ -774,8 +775,8 @@ int HttpContext::setForceType(char *pValue, const char *pLogId)
             pSetting = HttpMime::getMime()->getMIMESetting(pValue);
         if (!pSetting)
         {
-            LOG_WARN(("[%s] can't set 'Forced Type', undefined MIME Type %s",
-                      pLogId, pValue));
+            LS_WARN("[%s] can't set 'Forced Type', undefined MIME Type %s",
+                    pLogId, pValue);
             return LS_FAIL;
         }
     }
@@ -1023,8 +1024,11 @@ int HttpContext::configErrorPages(const XmlNode *pNode)
             const char *pUrl = pNode->getChildValue("url");
 
             if (setCustomErrUrls(pCode, pUrl) != 0)
-                ConfigCtx::getCurConfigCtx()->logError("failed to set up custom error page %s - %s!",
-                                                       pCode, pUrl);
+            {
+                LS_ERROR(ConfigCtx::getCurConfigCtx(),
+                         "failed to set up custom error page %s - %s!",
+                         pCode, pUrl);
+            }
             else
                 ++add ;
         }
@@ -1048,7 +1052,7 @@ int HttpContext::configRewriteRule(const RewriteMapList *pMapList,
 
     if (pRuleList)
     {
-        RewriteRule::setLogger(NULL, LogIdTracker::getLogId());
+        RewriteRule::setLogger(NULL, TmpLogId::getLogId());
         if (RewriteEngine::parseRules(pRule, pRuleList,
                                       pMapList) == 0)
             setRewriteRules(pRuleList);
@@ -1070,7 +1074,7 @@ int HttpContext::configMime(const XmlNode *pContextNode)
     pValue = pContextNode->getChildValue("forceType");
 
     if (pValue)
-        setForceType((char *) pValue, LogIdTracker::getLogId());
+        setForceType((char *) pValue, TmpLogId::getLogId());
 
     pValue = pContextNode->getChildValue("defaultType");
 
@@ -1107,8 +1111,9 @@ int HttpContext::configExtAuthorizer(const XmlNode *pContextNode)
 
     if (((ExtWorker *) pAuth)->getRole() != EXTAPP_AUTHORIZER)
     {
-        ConfigCtx::getCurConfigCtx()->logError("External Application [%s] is not a Authorizer role.",
-                                               pAuth->getName());
+        LS_ERROR(ConfigCtx::getCurConfigCtx(),
+                 "External Application [%s] is not a Authorizer role.",
+                 pAuth->getName());
         return 1;
     }
 
@@ -1148,7 +1153,7 @@ int HttpContext::config(const RewriteMapList *pMapList,
     pValue = pContextNode->getChildValue("extraHeaders");
 
     if (pValue && (*pValue))
-        setExtraHeaders(LogIdTracker::getLogId(), pValue, (int) strlen(pValue));
+        setExtraHeaders(TmpLogId::getLogId(), pValue, (int) strlen(pValue));
 
     pValue = pContextNode->getChildValue("addDefaultCharset");
 
@@ -1184,8 +1189,10 @@ int HttpContext::config(const RewriteMapList *pMapList,
         if (pValue)
         {
             if (*pValue != '/')
-                ConfigCtx::getCurConfigCtx()->logError("Invalid rewrite base: '%s'",
-                                                       pValue);
+            {
+                LS_ERROR(ConfigCtx::getCurConfigCtx(), "Invalid rewrite base: '%s'",
+                         pValue);
+            }
             else
                 setRewriteBase(pValue);
         }

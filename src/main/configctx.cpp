@@ -22,6 +22,7 @@
 #include <http/httpserverconfig.h>
 #include <http/serverprocessconfig.h>
 #include <log4cxx/level.h>
+#include <log4cxx/logger.h>
 #include <lsr/ls_fileio.h>
 #include <lsr/ls_strtool.h>
 #include <main/mainserverconfig.h>
@@ -72,97 +73,21 @@ long long getLongValue(const char *pValue, int base)
 }
 
 
-void ConfigCtx::vlog(int level, const char *pFmt, va_list args)
-{
-    char achBuf[8192];
-
-    int len = ls_vsnprintf(achBuf, sizeof(achBuf) - 1, pFmt, args);
-    achBuf[len] = 0;
-    HttpLog::log(level, "[%s] %s", m_logIdTracker.getLogId(), achBuf);
-}
-
-
-void ConfigCtx::logError(const char *pFmt, ...)
-{
-    if (HttpLog::isEnabled(NULL, LOG4CXX_NS::Level::ERROR))
-    {
-        va_list ap;
-        va_start(ap, pFmt);
-        vlog(LOG4CXX_NS::Level::ERROR, pFmt, ap);
-        va_end(ap);
-    }
-}
-
-
 void ConfigCtx::logErrorPath(const char *pstr1,  const char *pstr2)
 {
-    if (HttpLog::isEnabled(NULL, LOG4CXX_NS::Level::ERROR))
-        HttpLog::log(LOG4CXX_NS::Level::ERROR, "[%s] Path for %s is invalid: %s",
-                     m_logIdTracker.getLogId(), pstr1, pstr2);
+    LS_ERROR(this, "Path for %s is invalid: %s", pstr1, pstr2);
 }
 
 
 void ConfigCtx::logErrorInvalTag(const char *pstr1,  const char *pstr2)
 {
-    if (HttpLog::isEnabled(NULL, LOG4CXX_NS::Level::ERROR))
-        HttpLog::log(LOG4CXX_NS::Level::ERROR, "[%s] <%s> is invalid: %s",
-                     m_logIdTracker.getLogId(), pstr1, pstr2);
+    LS_ERROR(this, "<%s> is invalid: %s", pstr1, pstr2);
 }
 
 
 void ConfigCtx::logErrorMissingTag(const char *pstr1)
 {
-    if (HttpLog::isEnabled(NULL, LOG4CXX_NS::Level::ERROR))
-        HttpLog::log(LOG4CXX_NS::Level::ERROR, "[%s] missing <%s>",
-                     m_logIdTracker.getLogId(), pstr1);
-}
-
-
-void ConfigCtx::logWarn(const char *pFmt, ...)
-{
-    if (HttpLog::isEnabled(NULL, LOG4CXX_NS::Level::WARN))
-    {
-        va_list ap;
-        va_start(ap, pFmt);
-        vlog(LOG4CXX_NS::Level::WARN, pFmt, ap);
-        va_end(ap);
-    }
-}
-
-
-void ConfigCtx::logNotice(const char *pFmt, ...)
-{
-    if (HttpLog::isEnabled(NULL, LOG4CXX_NS::Level::NOTICE))
-    {
-        va_list ap;
-        va_start(ap, pFmt);
-        vlog(LOG4CXX_NS::Level::NOTICE, pFmt, ap);
-        va_end(ap);
-    }
-}
-
-
-void ConfigCtx::logInfo(const char *pFmt, ...)
-{
-    if (HttpLog::isEnabled(NULL, LOG4CXX_NS::Level::INFO))
-    {
-        va_list ap;
-        va_start(ap, pFmt);
-        vlog(LOG4CXX_NS::Level::INFO, pFmt, ap);
-        va_end(ap);
-    }
-}
-
-
-void ConfigCtx::logDebug(const char *pFmt, ...)
-{
-    if (HttpLog::isEnabled(NULL, LOG4CXX_NS::Level::DEBUG))
-    {
-        va_list ap;
-        va_start(ap, pFmt);
-        vlog(LOG4CXX_NS::Level::DEBUG, pFmt, ap);
-        va_end(ap);
-    }
+    LS_ERROR(this, "missing <%s>", pstr1);
 }
 
 
@@ -171,13 +96,13 @@ const char *ConfigCtx::getTag(const XmlNode *pNode, const char *pName,
 {
     if (pNode == NULL)
     {
-        logError("pNode is NULL while calling getTag( name: %s )" , pName);
+        LS_ERROR(this, "pNode is NULL while calling getTag( name: %s )" , pName);
         return NULL;
     }
 
     const char *pRet = pNode->getChildValue(pName, bKeyName);
     if (!pRet)
-        logError(MISSING_TAG_IN, pName, pNode->getName());
+        LS_ERROR(this, MISSING_TAG_IN, pName, pNode->getName());
 
     return pRet;
 }
@@ -202,7 +127,8 @@ long long ConfigCtx::getLongValue(const XmlNode *pNode, const char *pTag,
         if (((min != LLONG_MIN) && (val < min)) ||
             ((max != LLONG_MAX) && (val > max)))
         {
-            logWarn("invalid value of <%s>:%s, use default=%ld", pTag, pValue, def);
+            LS_WARN(this, "invalid value of <%s>:%s, use default=%ld", pTag, pValue,
+                    def);
             return def;
         }
 
@@ -229,7 +155,7 @@ int ConfigCtx::getRootPath(const char *&pRoot, const char *&pFile)
             }
             else
             {
-                logError("Virtual host root path is not available for %s.", pFile);
+                LS_ERROR(this, "Virtual host root path is not available for %s.", pFile);
                 return LS_FAIL;
             }
         }
@@ -242,7 +168,7 @@ int ConfigCtx::getRootPath(const char *&pRoot, const char *&pFile)
             }
             else
             {
-                logError("Document root path is not available for %s.", pFile);
+                LS_ERROR(this, "Document root path is not available for %s.", pFile);
                 return LS_FAIL;
             }
         }
@@ -372,7 +298,7 @@ int ConfigCtx::getAbsolute(char *res, const char *path, int pathOnly)
 
     if (ret)
     {
-        logError("Failed to tanslate to absolute path with root=%s, "
+        LS_ERROR(this, "Failed to tanslate to absolute path with root=%s, "
                  "path=%s!", pRoot, path);
     }
     else
@@ -380,7 +306,7 @@ int ConfigCtx::getAbsolute(char *res, const char *path, int pathOnly)
         // replace "$VH_NAME" with the real name of the virtual host.
         if (expandVariable(achBuf, res, MAX_PATH_LEN) < 0)
         {
-            logNotice("Path is too long: %s", pPath);
+            LS_NOTICE(this, "Path is too long: %s", pPath);
             return LS_FAIL;
         }
     }
@@ -412,7 +338,7 @@ char *ConfigCtx::getExpandedTag(const XmlNode *pNode,
     if (expandVariable(pVal, pBuf, bufLen) >= 0)
         return pBuf;
 
-    logNotice("String is too long for tag: %s, value: %s, maxlen: %d",
+    LS_NOTICE(this, "String is too long for tag: %s, value: %s, maxlen: %d",
               pName, pVal, bufLen);
     return NULL;
 }
@@ -423,7 +349,7 @@ int ConfigCtx::getValidFile(char *dest, const char *file, const char *desc)
     if ((getAbsoluteFile(dest, file) != 0)
         || access(dest, F_OK) != 0)
     {
-        logError(INVAL_PATH, desc,  dest);
+        LS_ERROR(INVAL_PATH, desc,  dest);
         return LS_FAIL;
     }
 
@@ -435,13 +361,13 @@ int ConfigCtx::getValidPath(char *dest, const char *path, const char *desc)
 {
     if (getAbsolutePath(dest, path) != 0)
     {
-        logError(INVAL_PATH, desc,  path);
+        LS_ERROR(INVAL_PATH, desc,  path);
         return LS_FAIL;
     }
 
     if (access(dest, F_OK) != 0)
     {
-        logError(INACCESSIBLE_PATH, desc,  dest);
+        LS_ERROR(INACCESSIBLE_PATH, desc,  dest);
         return LS_FAIL;
     }
 
@@ -475,13 +401,13 @@ int ConfigCtx::getLogFilePath(char *pBuf, const XmlNode *pNode)
 
     if (getAbsoluteFile(pBuf, pValue) != 0)
     {
-        logError("ath for %s is invalid: %s", "log file",  pValue);
+        LS_ERROR(this, "ath for %s is invalid: %s", "log file",  pValue);
         return 1;
     }
 
     if (GPath::isWritable(pBuf) == false)
     {
-        logError("log file is not writable - %s", pBuf);
+        LS_ERROR(this, "log file is not writable - %s", pBuf);
         return 1;
     }
 
@@ -574,9 +500,11 @@ int ConfigCtx::checkPath(char *pPath, const char *desc, int follow)
     if (ret == -1)
     {
         if (errno == EACCES)
-            logError("Path of %s contains symbolic link or"
+        {
+            LS_ERROR(this, "Path of %s contains symbolic link or"
                      " ownership does not match:%s",
                      desc, pPath);
+        }
         else
             logErrorPath(desc,  pPath);
 
@@ -593,8 +521,7 @@ int ConfigCtx::checkPath(char *pPath, const char *desc, int follow)
     }
 
     if (strcmp(achOld, pPath) != 0)
-        if (D_ENABLED(DL_LESS))
-            logDebug("the real path of %s is %s.", achOld, pPath);
+        LS_DBG_L("the real path of %s is %s.", achOld, pPath);
 
     if (ServerProcessConfig::getInstance().getChroot() != NULL)
         pPath += ServerProcessConfig::getInstance().getChroot()->len();
@@ -610,7 +537,7 @@ int ConfigCtx::checkAccess(char *pReal)
 {
     if (HttpServerConfig::getInstance().getDeniedDir()->isDenied(pReal))
     {
-        logError("Path is in the access denied list:%s", pReal);
+        LS_ERROR(this, "Path is in the access denied list:%s", pReal);
         return LS_FAIL;
     }
 
@@ -701,14 +628,14 @@ XmlNode *ConfigCtx::parseFile(const char *configFilePath,
 
     if (pRoot == NULL)
     {
-        logError("%s", achError);
+        LS_ERROR(this, "%s", achError);
         return NULL;
     }
 
     // basic validation
     if (strcmp(pRoot->getName(), rootTag) != 0)
     {
-        logError("%s: root tag expected: <%s>, real root tag : <%s>!\n",
+        LS_ERROR(this, "%s: root tag expected: <%s>, real root tag : <%s>!\n",
                  configFilePath, rootTag, pRoot->getName());
         delete pRoot;
         return NULL;
@@ -741,13 +668,10 @@ int ConfigCtx::configSecurity(AccessControl *pCtrl, const XmlNode *pNode)
         {
             c = pCtrl->addList(pValue, true);
 
-            if (D_ENABLED(DL_LESS))
-                logDebug("add %d entries into allowed "
-                                            "list.", c);
+            LS_DBG_L(this, "add %d entries into allowed list.", c);
         }
         else
-            logWarn("Access Control: No entries in allowed "
-                                       "list");
+            LS_WARN(this, "Access Control: No entries in allowed list");
 
         pValue = pNode1->getChildValue("deny");
 
@@ -755,16 +679,11 @@ int ConfigCtx::configSecurity(AccessControl *pCtrl, const XmlNode *pNode)
         {
             c = pCtrl->addList(pValue, false);
 
-            if (D_ENABLED(DL_LESS))
-                logDebug("add %d entries into denied list.",
-                                            c);
+            LS_DBG_L(this, "add %d entries into denied list.", c);
         }
     }
     else
-    {
-        if (D_ENABLED(DL_LESS))
-            logDebug("no rule for access control.");
-    }
+        LS_DBG_L(this, "no rule for access control.");
     return 0;
 }
 

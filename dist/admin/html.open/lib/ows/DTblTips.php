@@ -132,7 +132,7 @@ class DTblTips
 		elseif ( $tid == 'L_VHMAP')
 		{
 			$tips[] = 'Select the virtual hosts that you want to map to this listener.';
-			$tips[] = 'Enter all the domains that you want this listener to response. Use comma "," to separate individual domain.';
+			$tips[] = 'Enter all the domains that you want this listener to respond to. Use comma "," to separate individual domain.';
 			$tips[] = 'You can choose only one virtual host to handle all unspecified domains, put "*" in domains.';
 			$tips[] = 'If you have not set up the virtual host you want to map, you can skip this step and come back later';
 		}

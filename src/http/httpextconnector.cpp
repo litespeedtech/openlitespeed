@@ -21,13 +21,13 @@
 #include <http/httpcgitool.h>
 #include <http/httpdefs.h>
 #include <http/httphandler.h>
-#include <http/httplog.h>
 #include <http/httpreq.h>
 #include <http/httpresourcemanager.h>
 #include <http/httpserverconfig.h>
 #include <http/httpsession.h>
 #include <http/httpstatuscode.h>
 #include <http/stderrlogger.h>
+#include <log4cxx/logger.h>
 #include <util/gzipbuf.h>
 #include <util/vmembuf.h>
 
@@ -60,8 +60,7 @@ HttpExtConnector::~HttpExtConnector()
 
 int HttpExtConnector::cleanUp(HttpSession *pSession)
 {
-    if (D_ENABLED(DL_MEDIUM))
-        LOG_D((getLogger(), "[%s] HttpExtConnector::cleanUp() ...", getLogId()));
+    LS_DBG_M(this, "HttpExtConnector::cleanUp() ...");
     //if ( !(getState() & (HEC_ABORT_REQUEST|HEC_ERROR|HEC_COMPLETE)) )
     if (!(getState() & (HEC_COMPLETE)))
     {
@@ -79,8 +78,7 @@ int HttpExtConnector::cleanUp(HttpSession *pSession)
 
 int HttpExtConnector::releaseProcessor()
 {
-    if (D_ENABLED(DL_MEDIUM))
-        LOG_D((getLogger(), "[%s] release ExtProcessor!", getLogId()));
+    LS_DBG_M(this, "Release ExtProcessor!");
     if (m_pProcessor)
     {
         HttpExtProcessor *pProcessor = m_pProcessor;
@@ -136,8 +134,7 @@ int HttpExtConnector::parseHeader(const char *&pBuf, int &len, int proxy)
                 return -2;
         }
     }
-    ret = HttpCgiTool::parseRespHeader(this,
-                                       pWBuf, bufLen, m_iRespState);
+    ret = HttpCgiTool::parseRespHeader(this, pWBuf, bufLen, m_iRespState);
     if (ret > 0)
     {
         m_iRespHeaderSize += ret;
@@ -165,8 +162,8 @@ int HttpExtConnector::parseHeader(const char *&pBuf, int &len, int proxy)
         if (m_iRespHeaderSize >
             HttpServerConfig::getInstance().getMaxDynRespHeaderLen())
         {
-            LOG_WARN((getLogger(), "The size of dynamic response header: %d is"
-                      " over the limit.",  m_iRespHeaderSize));
+            LS_WARN(getLogger(), "The size of dynamic response header: %d is"
+                    " over the limit.",  m_iRespHeaderSize);
             //abortReq(5);
             abortReq();
             errResponse(SC_500, NULL);
@@ -245,9 +242,7 @@ int HttpExtConnector::flushResp()
 
 int HttpExtConnector::processRespBodyData(const char *pBuf, int len)
 {
-    if (D_ENABLED(DL_MEDIUM))
-        LOG_D((getLogger(), "[%s] HttpExtConnector::processRespBodyData()",
-               getLogId()));
+    LS_DBG_M(this, "HttpExtConnector::processRespBodyData()");
     int ret = m_pSession->appendDynBody(pBuf, len);
     if (ret == -1)
         errResponse(SC_500, NULL);
@@ -270,9 +265,7 @@ void HttpExtConnector::abortReq()
 {
     if (!(getState() & HEC_COMPLETE))
     {
-        if (D_ENABLED(DL_MEDIUM))
-            LOG_D((getLogger(),
-                   "[%s] abort request... ", getLogId()));
+        LS_DBG_M(this, "Abort request... ");
         m_iState |= HEC_ABORT_REQUEST;
         if (m_pProcessor)
             m_pProcessor->abort();
@@ -324,7 +317,7 @@ int HttpExtConnector::processErrData(const char *pBuf, int len)
     {
         memmove(pTemp, pBuf, len);
         *(pTemp + len) = 0;
-        LOG_NOTICE((getLogger(), "[%s] [STDERR] %s", getLogId(), pTemp));
+        LS_NOTICE(this, "[STDERR] %s", pTemp);
         free(pTemp);
     }
     return 0;
@@ -334,10 +327,8 @@ int HttpExtConnector::processErrData(const char *pBuf, int len)
 
 int HttpExtConnector::endResponse(int endCode, int protocolStatus)
 {
-    if (D_ENABLED(DL_LESS))
-        LOG_D((getLogger(),
-               "[%s] [EXT] EndResponse( endCode=%d, protocolStatus=%d )",
-               getLogId(), endCode, protocolStatus));
+    LS_DBG_L(this, "[EXT] EndResponse( endCode=%d, protocolStatus=%d )",
+             endCode, protocolStatus);
     int ret = 0;
     if (m_iState & HEC_COMPLETE)
         return 0;
@@ -345,8 +336,7 @@ int HttpExtConnector::endResponse(int endCode, int protocolStatus)
         && !(m_iState & HEC_ABORT_REQUEST))
     {
         m_iRespState |= HttpReq::HEADER_OK;
-        LOG_NOTICE((getLogger(), "[%s] Premature end of response header.",
-                    getLogId()));
+        LS_NOTICE(this, "Premature end of response header.");
         return errResponse(SC_500, NULL);
     }
     m_iState |= HEC_COMPLETE;
@@ -372,10 +362,7 @@ int HttpExtConnector::onWrite(HttpSession *pSession)
 {
     if ((m_iState & (HEC_COMPLETE | HEC_ERROR)) == 0)
     {
-        if (D_ENABLED(DL_MEDIUM))
-            LOG_D((getLogger(),
-                   "[%s] response buffer is empty, "
-                   "suspend HttpSession write!\n", getLogId()));
+        LS_DBG_M(this, "Response buffer is empty, suspend HttpSession write!");
         //m_pHttpSession->resetRespBodyBuf();
         getHttpSession()->suspendWrite();
         m_pProcessor->continueRead();
@@ -383,10 +370,8 @@ int HttpExtConnector::onWrite(HttpSession *pSession)
     }
     else
     {
-        if (D_ENABLED(DL_MEDIUM))
-            LOG_D((getLogger(),
-                   "[%s] ReqBody: %d, RespBody: %d, HEC_COMPLETE!",
-                   getLogId(), m_iReqBodySent, m_pSession->getDynBodySent()));
+        LS_DBG_M(this, "ReqBody: %d, RespBody: %d, HEC_COMPLETE!",
+                 m_iReqBodySent, m_pSession->getDynBodySent());
         return 0;
     }
 }
@@ -407,9 +392,8 @@ int HttpExtConnector::process(HttpSession *pSession,
         setLB(pLB);
         ExtWorker *pWorker = pLB->selectWorker(pSession, this);
         setWorker(pWorker);
-        if (D_ENABLED(DL_LESS))
-            LOG_D((getLogger(), "[%s] Assign new request to ExtProcessor [%s]!",
-                   getLogId(), pWorker ? pWorker->getName() : "unavailable"));
+        LS_DBG_L(this, "Assign new request to ExtProcessor [%s]!",
+                 pWorker ? pWorker->getName() : "unavailable");
     }
     else
     {
@@ -420,16 +404,14 @@ int HttpExtConnector::process(HttpSession *pSession,
 
     if (getWorker() == NULL)
     {
-        LOG_ERR((getLogger(), "[%s] External processor is not available!",
-                 getLogId()));
+        LS_ERROR(this, "External processor is not available!");
         return SC_500; //Fast cgi App Not found
     }
     int ret = m_pWorker->processRequest(this);
     if (ret > 1)
     {
-        if (D_ENABLED(DL_LESS))
-            LOG_D((getLogger(), "[%s] Can't add new request to ExtProcessor [%s]!",
-                   getLogId(), m_pWorker->getName()));
+        LS_DBG_L(this, "Can't add new request to ExtProcessor [%s]!",
+                 m_pWorker->getName());
     }
     else
     {
@@ -446,9 +428,7 @@ int HttpExtConnector::process(HttpSession *pSession,
 
 int  HttpExtConnector::tryRecover()
 {
-    if (D_ENABLED(DL_LESS))
-        LOG_D(("[%s] HttpExtConnector::tryRecover()...",
-               getLogId()));
+    LS_DBG_L(this, "HttpExtConnector::tryRecover()...");
     if (isRecoverable())
     {
         int attempts = incAttempts();
@@ -461,33 +441,26 @@ int  HttpExtConnector::tryRecover()
         resetConnector();
         if (attempts < maxAttempts)
         {
-            if (D_ENABLED(DL_LESS))
-                LOG_D(("[%s] trying to recover from connection problem, attempt: #%d!",
-                       getLogId(), attempts));
+            LS_DBG_L(this, "Trying to recover from connection problem, attempt: #%d!",
+                     attempts);
             if (pLB && (attempts % 3) == 0)
             {
                 ExtWorker *pWorker = pLB->selectWorker(m_pSession, this);
-                if (D_ENABLED(DL_LESS))
+                if (pWorker)
                 {
-                    if (pWorker)
-                    {
-                        LOG_D(("[%s] [LB] retry worker: [%s]",
-                               getLogId(), pWorker->getName()));
-                    }
-                    else
-                        LOG_D(("[%s] [LB] Backup worker is unavailable."));
+                    LS_DBG_L(this, "[LB] retry worker: [%s]",
+                             pWorker->getName());
                 }
+                else
+                    LS_DBG_L(this, "[LB] Backup worker is unavailable.");
                 setWorker(pWorker);
-                if (D_ENABLED(DL_LESS))
-                    LOG_D(("[%s] trying to recover from connection problem, attempt: #%d!",
-                           getLogId(), attempts));
+                LS_DBG_L(this, "Trying to recover from connection problem, attempt: #%d!",
+                         attempts);
             }
             else if (((attempts % 3) >= 2) && !m_pWorker->isReady())
             {
-                if (D_ENABLED(DL_LESS))
-                    LOG_D(("[%s] try to restart external application [%s] at [%s]...",
-                           getLogId(), m_pWorker->getName(),
-                           m_pWorker->getURL()));
+                LS_DBG_L(this, "Try to restart external application [%s] at [%s]...",
+                         m_pWorker->getName(), m_pWorker->getURL());
                 m_pWorker->start();
             }
             if (m_pWorker)
@@ -519,9 +492,7 @@ int HttpExtConnector::sendReqHeader()
 
 int HttpExtConnector::reqHeaderDone()
 {
-    if (D_ENABLED(DL_MEDIUM))
-        LOG_D((getLogger(),
-               "[%s] request header is done\n", getLogId()));
+    LS_DBG_M(this, "Request header is done");
     HttpReq *pReq = getHttpSession()->getReq();
     getProcessor()->beginReqBody();
     getProcessor()->continueRead();
@@ -541,8 +512,7 @@ int HttpExtConnector::reqHeaderDone()
 
 int HttpExtConnector::reqBodyDone()
 {
-    if (D_ENABLED(DL_MEDIUM))
-        LOG_D((getLogger(), "[%s] Request body done!\n", getLogId()));
+    LS_DBG_M(this, "Request body done!");
     //getProcessor()->suspendWrite();
     return getProcessor()->endOfReqBody();
 }
@@ -563,10 +533,9 @@ int HttpExtConnector::sendReqBody()
             pVMemBuf->readUsed(written);
             m_iReqBodySent += written;
         }
-        if (D_ENABLED(DL_MEDIUM))
-            LOG_D((getLogger(),
-                   "[%s] processor sent request body %d bytes, total sent: %lld\n",
-                   getLogId(), written, (long long)m_iReqBodySent));
+        LS_DBG_M(this,
+                 "Processor sent request body %d bytes, total sent: %lld\n",
+                 written, (long long)m_iReqBodySent);
         if ((written != (int)size) || (++count == 2))
         {
             if (written != -1)
@@ -584,10 +553,7 @@ int HttpExtConnector::sendReqBody()
     {
         getProcessor()->suspendWrite();
         getHttpSession()->continueRead();
-        if (D_ENABLED(DL_MEDIUM))
-            LOG_D((getLogger(),
-                   "[%s] all recevied request body sent, suspend write\n",
-                   getLogId()));
+        LS_DBG_M(this, "All received request body sent, suspend write\n");
 
     }
     return 0;
@@ -655,8 +621,7 @@ void HttpExtConnector::extProcessorError(int errCode)
             pName = m_pWorker->getURL();
         else
             pName = "";
-        LOG_ERR((getLogger(), "[%s] [%s]: %s", getLogId(),
-                 pName, strerror(errCode)));
+        LS_ERROR(this, "[%s]: %s", pName, strerror(errCode));
         errResponse(SC_503,
                     "<html><title>Not Avaiable</title>"
                     "<body><h1>Failed to communicate with external application!</h1>"
@@ -686,18 +651,17 @@ LOG4CXX_NS::Logger *HttpExtConnector::getLogger() const
 
 void HttpExtConnector::dump()
 {
-    LOG_INFO((getLogger(), "[%s] HttpExtConnector state: %d, "
-              "request body sent: %d, response body size: %d, response body sent:%d, "
-              "left in buffer: %ld, attempts: %d."
-              , getLogId(), m_iState, m_iReqBodySent,
-              m_pSession->getResp()->getContentLen(), m_pSession->getDynBodySent(),
-              (m_pSession->getRespCache()) ? m_pSession->getRespCache()->writeBufSize() :
-              0, getAttempts()));
+    LS_INFO(this, "HttpExtConnector state: %d, request body sent: %d, "
+            "response body size: %d, response body sent:%d, "
+            "left in buffer: %ld, attempts: %d.",
+            m_iState, m_iReqBodySent, m_pSession->getResp()->getContentLen(),
+            m_pSession->getDynBodySent(),
+            (m_pSession->getRespCache()) ? m_pSession->getRespCache()->writeBufSize() :
+            0, getAttempts());
     if (m_pProcessor)
         m_pProcessor->dump();
     else
-        LOG_INFO((getLogger(), "[%s] External processor is not available.",
-                  getLogId()));
+        LS_INFO(this, "External processor is not available.");
 }
 
 

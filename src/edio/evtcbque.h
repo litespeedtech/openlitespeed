@@ -15,7 +15,34 @@
 *    You should have received a copy of the GNU General Public License       *
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
-#include "logidtracker.h"
+#ifndef CALLBACKQUEUE_H
+#define CALLBACKQUEUE_H
 
-char  LogIdTracker::s_aLogId[128] = "config";
-int   LogIdTracker::s_iIdLen = 6;
+#include <lsr/ls_evtcb.h>
+#include <util/dlinkqueue.h>
+#include <util/tsingleton.h>
+
+struct evtcbnode_s;
+
+class EvtcbQue : public TSingleton<EvtcbQue>
+{
+    friend class TSingleton<EvtcbQue>;
+
+    EvtcbQue();
+    ~EvtcbQue();
+
+    DLinkQueue  m_callbackObjList;
+
+    inline void logState(const char *s, evtcbnode_s *p);
+    void removeObj(evtcbnode_s *pObj);
+    void recycle(evtcbnode_s *pObj);
+
+public:
+    void run(evtcbhead_t *session);
+    evtcbnode_s *schedule(evtcb_pf cb, evtcbhead_t *session,
+                          long lParam, void *pParam);
+    void removeSessionCb(evtcbhead_t *session);
+
+    LS_NO_COPY_ASSIGN(EvtcbQue);
+};
+#endif  //CALLBACKQUEUE_H

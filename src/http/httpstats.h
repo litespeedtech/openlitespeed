@@ -56,7 +56,7 @@ public:
 
     static long getSSLBytesWritten()            {   return s_iSSLBytesWritten;}
     static void setSSLBytesWritten(long val)    {   s_iSSLBytesWritten = val; }
-    static void incSSLBytesWritten(long val = 1){   s_iSSLBytesWritten += val;}
+    static void incSSLBytesWritten(long val = 1) {   s_iSSLBytesWritten += val;}
 
     static int  getIdleConns()                  {   return s_iIdleConns;      }
     static void setIdleConns(int val)           {   s_iIdleConns = val;       }

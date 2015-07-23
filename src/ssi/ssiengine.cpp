@@ -23,10 +23,10 @@
 
 #include <http/handlertype.h>
 #include <http/httpcgitool.h>
-#include <http/httplog.h>
 #include <http/httpsession.h>
 #include <http/httpstatuscode.h>
 #include <http/requestvars.h>
+#include <log4cxx/logger.h>
 #include <lsr/ls_fileio.h>
 #include <util/httputil.h>
 #include <util/ienv.h>
@@ -715,9 +715,8 @@ int SSIEngine::executeComponent(HttpSession *pSession,
     AutoBuf *pBuf;
     int ret;
 
-    if (D_ENABLED(DL_MORE))
-        LOG_D((pSession->getLogger(), "[%s] SSI Process component: %d",
-               pSession->getLogId(), pComponent->getType()));
+    LS_DBG_H(pSession->getLogSession(), "SSI Process component: %d",
+             pComponent->getType());
 
     switch (pComponent->getType())
     {

@@ -18,6 +18,7 @@
 #include <sslpp/sslsession.h>
 
 #include <http/httplog.h>
+#include <log4cxx/logger.h>
 #include <main/configctx.h>
 #include <shm/lsshmhash.h>
 #include <shm/lsshmtypes.h>
@@ -237,11 +238,11 @@ int SSLSession::watchCtx(SSLContext *pSSLContext
     pSSLSession = get(pSSLContext, name, maxentries, timeout);
     if (!pSSLSession)
     {
-        ConfigCtx::getCurConfigCtx()->logNotice(
-            "FAILED TO SETUP EXTERNAL STORAGE SSL CTX %p <%p> ID %s CACHE %d"
-            , pSSLContext, pCtx, name
-            , maxentries
-        );
+        LS_NOTICE(ConfigCtx::getCurConfigCtx(),
+                  "FAILED TO SETUP EXTERNAL STORAGE SSL CTX %p <%p> ID %s CACHE %d"
+                  , pSSLContext, pCtx, name
+                  , maxentries
+                 );
         // NO MEMORY!
         // problem to create new context!
         // pSSLContext->setContextExData(s_idxContext, NULL);
@@ -283,13 +284,14 @@ int SSLSession::watchCtx(SSLContext *pSSLContext
     oldOptions = pSSLContext->setOptions(options);
 
     // Can't call HttpLog - because http is not up yet!
-    ConfigCtx::getCurConfigCtx()->logNotice("SET OPENSSL CTX %p <%p> MAP %s CACHE %d [%d] TIMEOUT %d [%d] Options %X [%X] Mode %X [%X]",
-                                            pSSLContext, pCtx, name
-                                            , maxentries, oldCacheSize
-                                            , timeout, oldTimeout
-                                            , options, oldOptions
-                                            , cachemodes, oldCacheMode
-                                           );
+    LS_NOTICE(ConfigCtx::getCurConfigCtx(),
+              "SET OPENSSL CTX %p <%p> MAP %s CACHE %d [%d] TIMEOUT %d [%d] Options %X [%X] Mode %X [%X]",
+              pSSLContext, pCtx, name
+              , maxentries, oldCacheSize
+              , timeout, oldTimeout
+              , options, oldOptions
+              , cachemodes, oldCacheMode
+             );
 
     //add SHM session cache callbacks
     SSL_CTX_sess_set_new_cb(pCtx, sess_new_cb);

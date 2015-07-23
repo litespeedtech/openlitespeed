@@ -19,9 +19,9 @@
 
 #include <http/handlertype.h>
 #include <http/httphandler.h>
-#include <http/httplog.h>
 #include <http/httpsession.h>
 #include <http/httpstatuscode.h>
+#include <log4cxx/logger.h>
 #include <lsiapi/internal.h>
 #include <lsiapi/modulemanager.h>
 
@@ -45,9 +45,9 @@ static const lsi_handler_t *getHandler(const HttpHandler *pHandler)
 
     if (!pModuleHandler)
     {
-        LOG_ERR(("Internal Server Error, Module %s misses _handler definition,"
+        LS_ERROR("Internal Server Error, Module %s missing _handler definition,"
                  " cannot be used as a handler",
-                 MODULE_NAME(((const LsiModule *)pHandler)->getModule())));
+                 MODULE_NAME(((const LsiModule *)pHandler)->getModule()));
     }
 
     return pModuleHandler;
@@ -65,15 +65,10 @@ int ModuleHandler::cleanUp(HttpSession *pSession)
     if (pModuleHandler->on_clean_up)
     {
         int ret = pModuleHandler->on_clean_up(pSession);
-        if (D_ENABLED(DL_MEDIUM))
-        {
-            pHandler = pSession->getReq()->getHttpHandler();
-            LOG_D((pSession->getLogger(),
-                   "[%s] [%s] _handler->on_clean_up() return %d",
-                   pSession->getLogId(),
-                   MODULE_NAME(((const LsiModule *)pHandler)->getModule()),
-                   ret));
-        }
+        pHandler = pSession->getReq()->getHttpHandler();
+        LS_DBG_M(pSession->getLogSession(),
+                 "[%s] _handler->on_clean_up() return %d",
+                 MODULE_NAME(((const LsiModule *)pHandler)->getModule()), ret);
         return ret;
     }
     return 0;
@@ -88,33 +83,25 @@ int ModuleHandler::onWrite(HttpSession *pSession)
     if (!pModuleHandler)
         return SC_500;
 
+    pHandler = pSession->getReq()->getHttpHandler();
     if (pModuleHandler->on_write_resp)
     {
         int status = pModuleHandler->on_write_resp(pSession);
-        if (D_ENABLED(DL_MEDIUM))
-        {
-            pHandler = pSession->getReq()->getHttpHandler();
-            LOG_D((pSession->getLogger(),
-                   "[%s] [%s] _handler->on_write_resp() return %d",
-                   pSession->getLogId(),
-                   MODULE_NAME(((const LsiModule *)pHandler)->getModule()),
-                   status));
-        }
+        LS_DBG_M(pSession->getLogSession(),
+                 "[%s] _handler->on_write_resp() return %d",
+                 MODULE_NAME(((const LsiModule *)pHandler)->getModule()),
+                 status);
         if (status != LSI_WRITE_RESP_CONTINUE)
             pSession->endResponse(1);
         return (status == LSI_WRITE_RESP_CONTINUE);
     }
     else
     {
-        if (D_ENABLED(DL_MEDIUM))
-        {
-            pHandler = pSession->getReq()->getHttpHandler();
-            LOG_D((pSession->getLogger(),
-                   "[%s] [%s] _handler->on_write_resp() is not available,"
-                   " suspend WRITE event", pSession->getLogId(),
-                   MODULE_NAME(((const LsiModule *)pHandler)->getModule())
-                  ));
-        }
+        LS_DBG_M(pSession->getLogSession(),
+                 "[%s] _handler->on_write_resp() is not available,"
+                 " suspend WRITE event",
+                 MODULE_NAME(((const LsiModule *)pHandler)->getModule())
+                );
         pSession->setFlag(HSF_HANDLER_WRITE_SUSPENDED);
         return LSI_WRITE_RESP_CONTINUE;
     }
@@ -131,12 +118,11 @@ int ModuleHandler::process(HttpSession *pSession,
 
     if (!pModuleHandler->begin_process)
     {
-        LOG_ERR((pSession->getLogger(),
-                 "[%s] Internal Server Error, Module %s missing"
+        LS_ERROR(pSession->getLogSession(),
+                 "Internal Server Error, Module %s missing"
                  " begin_process() callback function, cannot be used"
-                 " as a handler",
-                 pSession->getLogger(), MODULE_NAME(((const LsiModule *)
-                         pHandler)->getModule())));
+                 " as a handler", MODULE_NAME(((const LsiModule *)
+                                               pHandler)->getModule()));
         return SC_500;
     }
 
@@ -146,14 +132,10 @@ int ModuleHandler::process(HttpSession *pSession,
     pSession->setModHandler(pModuleHandler);
 
     int ret = pModuleHandler->begin_process(pSession);
-    if (D_ENABLED(DL_MEDIUM))
-    {
-        LOG_D((pSession->getLogger(),
-               "[%s] [%s] _handler->begin_process() return %d",
-               pSession->getLogId(),
-               MODULE_NAME(((const LsiModule *)pHandler)->getModule()),
-               ret));
-    }
+    LS_DBG_M(pSession->getLogSession(),
+             "[%s] _handler->begin_process() return %d",
+             MODULE_NAME(((const LsiModule *)pHandler)->getModule()),
+             ret);
     if (ret != 0)
     {
         if (ret < 0)
@@ -178,15 +160,11 @@ int ModuleHandler::onRead(HttpSession *pSession)
     if (pModuleHandler->on_read_req_body)
     {
         int ret = pModuleHandler->on_read_req_body(pSession);
-        if (D_ENABLED(DL_MEDIUM))
-        {
-            pHandler = pSession->getReq()->getHttpHandler();
-            LOG_D((pSession->getLogger(),
-                   "[%s] [%s] _handler->on_write_resp() return %d",
-                   pSession->getLogId(),
-                   MODULE_NAME(((const LsiModule *)pHandler)->getModule()),
-                   ret));
-        }
+        pHandler = pSession->getReq()->getHttpHandler();
+        LS_DBG_M(pSession->getLogSession(),
+                 "[%s] _handler->on_write_resp() return %d",
+                 MODULE_NAME(((const LsiModule *)pHandler)->getModule()),
+                 ret);
         return ret;
     }
     else

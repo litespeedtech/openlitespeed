@@ -79,7 +79,7 @@ int LsiBaseFetch::CopyBufferToLs(lsi_session_t *session)
         return 1;
 
     CopyRespBodyToBuf(session, m_buffer.c_str(), m_buffer.size(),
-                               m_bDoneCalled /* send_last_buf */);
+                      m_bDoneCalled /* send_last_buf */);
 
     m_buffer.clear();
 
@@ -112,7 +112,7 @@ int LsiBaseFetch::CollectHeaders(lsi_session_t *session)
         g_api->set_resp_content_length(session, content_length());
 
     return CopyRespHeadersToServer(session, *pagespeed_headers,
-                                           m_preserveCachingHeaders);
+                                   m_preserveCachingHeaders);
 }
 
 void LsiBaseFetch::RequestCollection()
@@ -120,13 +120,12 @@ void LsiBaseFetch::RequestCollection()
     if (m_iPipeFd == -1)
         return ;
 
-    int rc;
     char c = 'A';
-    rc = write(m_iPipeFd, &c, 1);
+    write(m_iPipeFd, &c, 1);
 //     g_api->log(NULL, LSI_LOG_DEBUG,
 //                "[Module:modpagespeed]RequestCollection called, errno %d, "
 //                "pipe_fd_=%d, rc=%d, session=%ld, m_bLastBufSent=%s\n\n",
-//                errno, m_iPipeFd, rc, (long) m_session, 
+//                errno, m_iPipeFd, rc, (long) m_session,
 //                (m_bLastBufSent ? "true" : "false"));
 }
 

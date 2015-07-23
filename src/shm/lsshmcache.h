@@ -84,11 +84,11 @@ public:
                , const char     *cacheName
                , const char     *shmHashName
                , LsShmSize_t     initHashSize = 101
-               , LsShmSize_t     uDataSize = 0
-               , LsShmHash::hash_fn hf = LsShmHash::hashBuf
-               , LsShmHash::val_comp vc = LsShmHash::compBuf
-               , udata_init_fn   udataInitCallback = NULL
-               , udata_remove_fn udataRemoveCallback = NULL
+                       , LsShmSize_t     uDataSize = 0
+                               , LsShmHash::hash_fn hf = LsShmHash::hashBuf
+                                       , LsShmHash::val_comp vc = LsShmHash::compBuf
+                                               , udata_init_fn   udataInitCallback = NULL
+                                                       , udata_remove_fn udataRemoveCallback = NULL
               );
 
     ~LsShmCache()
@@ -140,7 +140,7 @@ public:
         ls_str_set(&parms.key, (char *)pKey, keyLen);
         iterOff = m_pShmHash->findIterator(&parms);
         return (lsShm_hCacheData_t *)((iterOff != 0) ?
-                m_pShmHash->offset2iteratorData(iterOff) : NULL);
+                                      m_pShmHash->offset2iteratorData(iterOff) : NULL);
     }
 
     //

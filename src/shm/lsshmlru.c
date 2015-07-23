@@ -113,7 +113,8 @@ int shmlru_check(shmlru_t *pShmLru)
 }
 
 
-int shmlru_trim(shmlru_t *pShmLru, time_t tmCutoff, int (*func)(iterator iter, void *arg), void *arg)
+int shmlru_trim(shmlru_t *pShmLru, time_t tmCutoff,
+                int (*func)(iterator iter, void *arg), void *arg)
 {
     lsi_shmhash_t *pHash;
     if ((pShmLru == NULL) || ((pHash = pShmLru->phash) == NULL))

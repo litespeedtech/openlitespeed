@@ -25,6 +25,7 @@
 #include <http/httplog.h>
 #include <http/httpvhost.h>
 #include <http/serverprocessconfig.h>
+#include <log4cxx/logger.h>
 #include <lsr/ls_fileio.h>
 #include <main/configctx.h>
 #include <main/mainserverconfig.h>
@@ -123,20 +124,17 @@ void LocalWorker::cleanStopPids()
                 if (delta > KILL_TIMEOUT)
                 {
                     sig = SIGKILL;
-                    LOG_NOTICE(("[%s] Send SIGKILL to process [%d] that won't stop.",
-                                getName(), pid));
+                    LS_NOTICE("[%s] Send SIGKILL to process [%d] that won't stop.",
+                              getName(), pid);
                 }
                 else
                 {
                     sig = m_sigGraceStop;
-                    LOG_NOTICE(("[%s] Send SIGTERM to process [%d].",
-                                getName(), pid));
+                    LS_NOTICE("[%s] Send SIGTERM to process [%d].",
+                              getName(), pid);
                 }
                 if (kill(pid , sig) != -1)
-                {
-                    if (D_ENABLED(DL_LESS))
-                        LOG_D(("[%s] kill pid: %d", getName(), pid));
-                }
+                    LS_DBG_L("[%s] kill pid: %d", getName(), pid);
                 else if (errno == EPERM)
                     PidRegistry::markToStop(pid, KILL_TYPE_TERM);
             }
@@ -153,7 +151,7 @@ void LocalWorker::detectDiedPid()
         pid_t pid = (pid_t)(long)iter->first();
         if ((kill(pid, 0) == -1) && (errno == ESRCH))
         {
-            LOG_INFO(("Process with PID: %d is dead ", pid));
+            LS_INFO("Process with PID: %d is dead ", pid);
             PidList::iterator iterNext = m_pidList->next(iter);
             m_pidList->erase(iter);
             PidRegistry::remove(pid);
@@ -226,14 +224,13 @@ int LocalWorker::stop()
     pid_t pid;
     PidList::iterator iter;
     removeUnixSocket();
-    LOG_NOTICE(("[%s] stop worker processes", getName()));
+    LS_NOTICE("[%s] stop worker processes", getName());
     for (iter = getPidList()->begin(); iter != getPidList()->end();)
     {
         pid = (pid_t)(long)iter->first();
         iter = getPidList()->next(iter);
         killProcess(pid);
-        if (D_ENABLED(DL_LESS))
-            LOG_D(("[%s] kill pid: %d", getName(), pid));
+        LS_DBG_L("[%s] kill pid: %d", getName(), pid);
     }
     moveToStopList();
     setState(ST_NOTSTARTED);
@@ -249,9 +246,8 @@ void LocalWorker::removeUnixSocket()
     if ((m_fdApp >= 0) && (getPidList()->size() > 0) &&
         (addr.family() == PF_UNIX))
     {
-        if (D_ENABLED(DL_LESS))
-            LOG_D(("[%s] remove unix socket: %s", getName(),
-                   addr.getUnix()));
+        LS_DBG_L("[%s] remove unix socket: %s", getName(),
+                 addr.getUnix());
         unlink(addr.getUnix());
         close(m_fdApp);
         m_fdApp = -2;
@@ -273,8 +269,8 @@ int LocalWorker::tryRestart()
 {
     if (DateTime::s_curTime - getLastRestart() > 10)
     {
-        LOG_NOTICE(("[%s] try to fix 503 error by restarting external application",
-                    getName()));
+        LS_NOTICE("[%s] try to fix 503 error by restarting external application",
+                  getName());
         return restart();
     }
     return 0;
@@ -325,7 +321,7 @@ int LocalWorker::getCurInstances() const
 //     if (( uid < HttpGlobals::s_uidMin )||
 //         ( gid < HttpGlobals::s_gidMin ))
 //     {
-//         LOG_INFO(( "[VHost:%s] Fast CGI [%s]: suExec access denied,"
+//         LS_INFO( "[VHost:%s] Fast CGI [%s]: suExec access denied,"
 //                     " UID or GID of VHost document root is smaller "
 //                     "than minimum UID, GID configured. ", pVHost->getName(),
 //                     config.getName() ));
@@ -408,10 +404,10 @@ int LocalWorker::workerExec(LocalWorkerConfig &config, int fd)
             (gid < procConfig.getGidMin()))
         {
             if (D_ENABLED(DL_LESS))
-                LOG_INFO(("[VHost:%s] Fast CGI [%s]: suExec access denied,"
-                          " UID or GID of VHost document root is smaller "
-                          "than minimum UID, GID configured. ", pVHost->getName(),
-                          config.getName()));
+                LS_INFO("[VHost:%s] Fast CGI [%s]: suExec access denied,"
+                        " UID or GID of VHost document root is smaller "
+                        "than minimum UID, GID configured. ", pVHost->getName(),
+                        config.getName());
             return LS_FAIL;
         }
     }
@@ -459,9 +455,9 @@ int LocalWorker::workerExec(LocalWorkerConfig &config, int fd)
     else
         pDir = argv[0];
     SUExec::getSUExec()->prepare(uid, gid, config.getPriority(),
-                                    config.getUmask(),
-                                    pChrootPath, chrootLen,
-                                    pDir, strlen(pDir), config.getRLimits());
+                                 config.getUmask(),
+                                 pChrootPath, chrootLen,
+                                 pDir, strlen(pDir), config.getRLimits());
     int rfd = -1;
     int pid;
     //if ( config.getStartByServer() == 2 )
@@ -497,16 +493,15 @@ int LocalWorker::startWorker()
 //    if (( stat( config.getCommand(), &st ) == -1 )||
 //        ( access(config.getCommand(), X_OK) == -1 ))
 //    {
-//        LOG_ERR(("Start FCGI [%s]: invalid path to executable - %s,"
+//        LS_ERROR("Start FCGI [%s]: invalid path to executable - %s,"
 //                 " not exist or not executable ",
 //                config.getName(),config.getCommand() ));
 //        return LS_FAIL;
 //    }
 //    if ( st.st_mode & S_ISUID )
 //    {
-//        if ( D_ENABLED( DL_LESS ))
-//            LOG_D(( "Fast CGI [%s]: Setuid bit is not allowed : %s\n",
-//                config.getName(), config.getCommand() ));
+//        LS_DBG_L( "Fast CGI [%s]: Setuid bit is not allowed : %s\n",
+//                config.getName(), config.getCommand());
 //        return LS_FAIL;
 //    }
     if (fd < 0)
@@ -541,14 +536,13 @@ int LocalWorker::startWorker()
         pid = workerExec(config, fd);
         if (pid > 0)
         {
-            if (D_ENABLED(DL_LESS))
-                LOG_D(("[%s] add child process pid: %d", getName(), pid));
+            LS_DBG_L("[%s] add child process pid: %d", getName(), pid);
             PidRegistry::add(pid, this, 0);
         }
         else
         {
-            LOG_ERR(("Start FCGI [%s]: failed to start the # %d of %d instances.",
-                     config.getName(), i + 1, instances));
+            LS_ERROR("Start FCGI [%s]: failed to start the # %d of %d instances.",
+                     config.getName(), i + 1, instances);
             break;
         }
     }
@@ -579,8 +573,11 @@ void LocalWorker::configRlimit(RLimits *pRLimits, const XmlNode *pNode)
 
     if ((memSoft & (memSoft < 1024 * 1024)) ||
         (memHard & (memHard < 1024 * 1024)))
-        ConfigCtx::getCurConfigCtx()->logError("Memory limit is too low with %ld/%ld",
-                                               memSoft, memHard);
+    {
+        LS_ERROR(ConfigCtx::getCurConfigCtx(),
+                 "Memory limit is too low with %ld/%ld",
+                 memSoft, memHard);
+    }
     else
         pRLimits->setDataLimit(memSoft, memHard);
 }

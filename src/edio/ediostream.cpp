@@ -18,7 +18,7 @@
 #include "ediostream.h"
 
 #include <edio/multiplexer.h>
-#include <http/httplog.h>
+#include <log4cxx/logger.h>
 #include <util/loopbuf.h>
 
 
@@ -113,8 +113,7 @@ int EdStream::close()
 int EdStream::handleEvents(short event)
 {
     int ret = 0;
-    if (D_ENABLED(DL_LESS))
-        LOG_D(("EdStream::handleEvent(), fd: %d, event: %hd", getfd(), event));
+    LS_DBG_L("EdStream::handleEvent(), fd: %d, event: %hd", getfd(), event);
     if (event & POLLIN)
     {
         ret = onRead();

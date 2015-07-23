@@ -33,7 +33,7 @@ public:
                       int iDestLen);
     static int escapeRFC3986(const char *pSrc, char *pDest, int iDestlen);
     static int escapeRFC3986(const char *pSrc, int iSrcLen, char *pDest,
-                      int iDestLen);
+                             int iDestLen);
     static int escapeQs(const char *pSrc, char *pDest, int iDestLen);
     static int escapeQs(const char *pSrc, int iSrcLen, char *pDest,
                         int iDestLen);

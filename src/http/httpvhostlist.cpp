@@ -28,7 +28,7 @@ class HttpVHostMapImpl: public HashStringMap<HttpVHost *>
     friend class HttpVHostMap;
     ~HttpVHostMapImpl()
     {
-        releaseObjects();
+        release_objects();
     }
 
     void appendTo(VHostList &pList)
@@ -242,9 +242,9 @@ int HttpVHostMap::writeStatusReport(int fd) const
     return m_impl->writeStatusReport(fd);
 }
 
-void HttpVHostMap::releaseObjects()
+void HttpVHostMap::release_objects()
 {
-    m_impl->releaseObjects();
+    m_impl->release_objects();
 }
 
 void VHostList::releaseUnused()

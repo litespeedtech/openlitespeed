@@ -19,10 +19,10 @@
 
 #include <http/httpcontext.h>
 #include <http/httpheader.h>
-#include <http/httplog.h>
 #include <http/httpmime.h>
 #include <http/httpreq.h>
 #include <http/httpstatuscode.h>
+#include <log4cxx/logger.h>
 #include <lsiapi/lsiapi.h>
 #include <lsr/ls_fileio.h>
 #include <lsr/ls_strtool.h>
@@ -95,8 +95,8 @@ static int openFile(const char *pPath, int &fd)
     if (fd == -1)
     {
         int err = errno;
-        LOG_INFO(("Failed to open file [%s], error: %s", pPath,
-                  strerror(err)));
+        LS_INFO("Failed to open file [%s], error: %s", pPath,
+                strerror(err));
         switch (err)
         {
         case EACCES:
@@ -159,8 +159,7 @@ void FileCacheDataEx::release()
     case MMAPED:
         if (m_pCache)
         {
-            if (D_ENABLED(DL_MORE))
-                LOG_D(("[MMAP] Release mapped data at %p", m_pCache));
+            LS_DBG_H("[MMAP] Release mapped data at %p", m_pCache);
             munmap(m_pCache, m_lSize);
             s_iCurTotalMMAPCache -= m_lSize;
         }
@@ -219,8 +218,7 @@ int FileCacheDataEx::readyData(const char *pPath)
         m_pCache = (char *)mmap(0, m_lSize, PROT_READ,
                                 MAP_PRIVATE, m_fd, 0);
         s_iCurTotalMMAPCache += m_lSize;
-        if (D_ENABLED(DL_MORE))
-            LOG_D(("[MMAP] Map %p to file:%s", m_pCache, pPath));
+        LS_DBG_H("[MMAP] Map %p to file:%s", m_pCache, pPath);
         if (m_pCache == MAP_FAILED)
             m_pCache = 0;
         else
@@ -252,8 +250,7 @@ const char *FileCacheDataEx::getCacheData(
     {
         assert(m_fd != -1);
         off_t off = ls_fio_lseek(m_fd, offset, SEEK_SET);
-        /*        if ( D_ENABLED( DL_MORE ))
-                    LOG_D(( "lseek() return %d", (int)off ));*/
+//        LS_DBG_H( "lseek() return %d", (int)off );
         if (off == offset)
             wanted = ls_fio_read(m_fd, pBuf, len);
         else
@@ -496,7 +493,7 @@ static int createLockFile(const char *pReal, char *p)
     int ret = ls_fio_stat(pReal, &st);
     if (ret != -1)    //compression in progress
     {
-        //LOG_INFO((
+        //LS_INFO(
         if (DateTime::s_curTime - st.st_mtime > 60)
             unlink(pReal);
         else
@@ -538,11 +535,8 @@ int StaticFileCacheData::tryCreateGziped()
         //IMPROVE: move this to a standalone process,
         //          fork() is too expensive.
 
-        if (D_ENABLED(DL_MORE))
-        {
-            LOG_D(("To compressed file %s in another process.",
-                   m_real.c_str()));
-        }
+        LS_DBG_H("To compressed file %s in another process.",
+                 m_real.c_str());
         int forkResult;
         forkResult = fork();
         if (forkResult)   //error or parent process
@@ -552,7 +546,7 @@ int StaticFileCacheData::tryCreateGziped()
 
         long ret = compressFile();
         if (ret == -1)
-            LOG_WARN(("Failed to compress file %s!", m_real.c_str()));
+            LS_WARN("Failed to compress file %s!", m_real.c_str());
 
         *p = 'l';
         unlink(m_gzippedPath.buf());

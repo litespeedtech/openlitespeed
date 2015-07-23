@@ -80,20 +80,21 @@ int ContextTree::add(HttpContext *pContext)
 
 
 const HttpContext *ContextTree::bestMatch(const char *pURI,
-                                          size_t iUriLen) const
+        size_t iUriLen) const
 {
     return (HttpContext *)m_pURITree->bestMatch(pURI, iUriLen);
 }
 
 
 const HttpContext *ContextTree::matchLocation(const char *pLoc,
-                                              size_t iLocLen) const
+        size_t iLocLen) const
 {
     return (HttpContext *)m_pLocTree->bestMatch(pLoc, iLocLen);
 }
 
 
-HttpContext *ContextTree::getContext(const char *pURI, size_t iUriLen) const
+HttpContext *ContextTree::getContext(const char *pURI,
+                                     size_t iUriLen) const
 {
     return (HttpContext *)m_pURITree->find(pURI, iUriLen);
 }
@@ -141,9 +142,7 @@ HttpContext *ContextTree::getParentContext(RadixNode *pCurNode)
             && ((pParentContext->getHandler() == NULL)
                 || (pParentContext->getHandlerType()
                     != HandlerType::HT_REDIRECT)))
-        {
             return pParentContext;
-        }
         return getParentContext(pParent);
     }
     return NULL;

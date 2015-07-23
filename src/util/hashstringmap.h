@@ -88,7 +88,7 @@ public:
         return 0;
     }
 
-    void releaseObjects()
+    void release_objects()
     {
         GHash::for_each(begin(), end(), deleteObj);
         GHash::clear();
@@ -113,7 +113,7 @@ public:
                   GHash::value_compare vc = GHash::cmpString)
         : HashStringMap<StrStr * >(initsize, hf, vc)
     {};
-    ~StrStrHashMap() {  releaseObjects();   };
+    ~StrStrHashMap() {  release_objects();   };
     iterator update(const char *pKey, const char *pValue)
     {
         iterator iter = find(pKey);

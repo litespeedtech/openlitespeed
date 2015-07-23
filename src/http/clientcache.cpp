@@ -266,7 +266,7 @@ static int resetQuotas(const void *pKey, void *pData)
             }
         }
         else if (((int)pInfo->getConns() <=
-                  (ClientInfo::getPerClientSoftLimit()>> 1)) &&
+                  (ClientInfo::getPerClientSoftLimit() >> 1)) &&
                  (DateTime::s_curTime - tm < ClientInfo::getOverLimitGracePeriod()))
             pInfo->setOverLimitTime(0);
     }

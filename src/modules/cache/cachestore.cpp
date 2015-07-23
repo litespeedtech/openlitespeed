@@ -31,7 +31,7 @@ CacheStore::CacheStore()
 
 CacheStore::~CacheStore()
 {
-    m_dirtyList.releaseObjects();
+    m_dirtyList.release_objects();
 }
 
 
@@ -120,14 +120,14 @@ void CacheStore::houseKeeping()
         }
         //else if (DateTime_s_curTime - pEntry->getLastAccess() > 300 )
         //{
-        //    LOG_INFO(( "Idle Cache, fd: %d, ref: %d, force release.",
+        //    LS_INFO( "Idle Cache, fd: %d, ref: %d, force release.",
         //                pEntry->getFdStore(), pEntry->getRef() ));
         //    erase( iter );
         //    delete pEntry;
         //}
     }
     for (TPointerList< CacheEntry >::iterator it = m_dirtyList.begin();
-            it != m_dirtyList.end();)
+         it != m_dirtyList.end();)
     {
         if ((*it)->getRef() == 0)
         {
@@ -136,7 +136,7 @@ void CacheStore::houseKeeping()
         }
         //else if (DateTime_s_curTime - (*it)->getLastAccess() > 300 )
         //{
-        //    LOG_INFO(( "Unreleased Cache in dirty list, fd: %d, ref: %d, force release.",
+        //    LS_INFO( "Unreleased Cache in dirty list, fd: %d, ref: %d, force release.",
         //                (*it)->getFdStore(), (*it)->getRef() ));
         //    delete *it;
         //    it = m_dirtyList.erase( it );

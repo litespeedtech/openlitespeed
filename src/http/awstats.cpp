@@ -22,6 +22,7 @@
 #include <http/handlertype.h>
 #include <http/httpmime.h>
 #include <http/serverprocessconfig.h>
+#include <log4cxx/logger.h>
 #include <log4cxx/logrotate.h>
 #include <lsr/ls_fileio.h>
 #include <lsr/ls_strtool.h>
@@ -61,14 +62,14 @@ static int copyFile(const char *pSrc, const char *pDest)
     int fd = open(pSrc, O_RDONLY);
     if (fd == -1)
     {
-        LOG_ERR(("Can not open Awstats model configuration file[%s]: %s",
-                 pSrc, strerror(errno)));
+        LS_ERROR("Can not open Awstats model configuration file[%s]: %s",
+                 pSrc, strerror(errno));
         return LS_FAIL;
     }
     int fdDest = open(pDest, O_RDWR | O_CREAT | O_TRUNC, 0644);
     if (fdDest == -1)
     {
-        LOG_ERR(("Can not create file [%s], %s", pDest, strerror(errno)));
+        LS_ERROR("Can not create file [%s], %s", pDest, strerror(errno));
         close(fd);
         return LS_FAIL;
     }
@@ -80,7 +81,7 @@ static int copyFile(const char *pSrc, const char *pDest)
     {
         if (write(fdDest, achBuf, len) != len)
         {
-            LOG_ERR(("Can not write to file [%s], disk full?", pDest));
+            LS_ERROR("Can not write to file [%s], disk full?", pDest);
             unlink(pDest);
             ret = -1;
             break;
@@ -139,23 +140,23 @@ int renameLogFile(const char *pLogPath, const char *pSrcSuffix,
     ls_snprintf(achDest, sizeof(achDest), "%s%s", pLogPath, pDestSuffix);
     if (ls_fio_stat(achDest, &st) == 0)
     {
-        LOG_ERR(("File already exists: [%s], Awstats updating"
-                 " might be in progress.", achDest));
+        LS_ERROR("File already exists: [%s], Awstats updating"
+                 " might be in progress.", achDest);
         return LS_FAIL;
     }
     ls_snprintf(achSrc, sizeof(achSrc), "%s%s", pLogPath, pSrcSuffix);
     if (ls_fio_stat(achSrc, &st) == -1)
     {
-        LOG_ERR(("Log file does not exist: [%s], cannot update"
-                 " Awstats statistics", achSrc));
+        LS_ERROR("Log file does not exist: [%s], cannot update"
+                 " Awstats statistics", achSrc);
         return LS_FAIL;
     }
     if (st.st_size == 0)
         return LS_FAIL;
     if (rename(achSrc, achDest) == -1)
     {
-        LOG_ERR(("Cannot rename file from [%s] to [%s]: %s",
-                 achSrc, achDest, strerror(errno)));
+        LS_ERROR("Cannot rename file from [%s] to [%s]: %s",
+                 achSrc, achDest, strerror(errno));
         return LS_FAIL;
     }
     return 0;
@@ -238,8 +239,8 @@ int Awstats::createConfigFile(char *pModel, const HttpVHost *pVHost)
     int fd = open(pModel, O_RDONLY);
     if (fd == -1)
     {
-        LOG_ERR(("Can not open Awstats model configuration file[%s]: %s",
-                 pModel, strerror(errno)));
+        LS_ERROR("Can not open Awstats model configuration file[%s]: %s",
+                 pModel, strerror(errno));
         return LS_FAIL;
     }
     int len = strlen(pModel);
@@ -247,8 +248,8 @@ int Awstats::createConfigFile(char *pModel, const HttpVHost *pVHost)
     int fdConf = open(pModel, O_RDWR | O_CREAT | O_TRUNC, 0644);
     if (fdConf == -1)
     {
-        LOG_ERR(("Can not create configuration file [%s], %s", pModel,
-                 strerror(errno)));
+        LS_ERROR("Can not create configuration file [%s], %s", pModel,
+                 strerror(errno));
         close(fd);
         return LS_FAIL;
     }
@@ -320,8 +321,8 @@ int Awstats::prepareAwstatsEnv(const HttpVHost *pVHost)
     {
         if (mkdir(m_sWorkingDir.c_str(), 0755) == -1)
         {
-            LOG_ERR(("Can not create awstats working directory[%s]: %s",
-                     m_sWorkingDir.c_str(), strerror(errno)));
+            LS_ERROR("Can not create awstats working directory[%s]: %s",
+                     m_sWorkingDir.c_str(), strerror(errno));
             return LS_FAIL;
 
         }
@@ -334,8 +335,8 @@ int Awstats::prepareAwstatsEnv(const HttpVHost *pVHost)
         {
             if (mkdir(achBuf, 0755) == -1)
             {
-                LOG_ERR(("Can not create awstats working directory[%s]: %s",
-                         achBuf, strerror(errno)));
+                LS_ERROR("Can not create awstats working directory[%s]: %s",
+                         achBuf, strerror(errno));
                 return LS_FAIL;
             }
         }
@@ -384,7 +385,7 @@ int Awstats::executeUpdate(const char *pName)
         pWorking += ServerProcessConfig::getInstance().getChroot()->len();
     if (chdir(achBuf) == -1)
     {
-        LOG_ERR(("Cannot change to dir [%s]: %s", achBuf, strerror(errno)));
+        LS_ERROR("Cannot change to dir [%s]: %s", achBuf, strerror(errno));
         return LS_FAIL;
     }
     if (m_iMode == AWS_STATIC)
@@ -404,7 +405,7 @@ int Awstats::executeUpdate(const char *pName)
     }
     else
     {
-        LOG_ERR(("Unknown update method %d", m_iMode));
+        LS_ERROR("Unknown update method %d", m_iMode);
         return LS_FAIL;
     }
 
@@ -423,8 +424,8 @@ int Awstats::update(const HttpVHost *pVHost)
     pLogPath = pVHost->getAccessLogPath();
     if (!pLogPath)
     {
-        LOG_ERR(("Virtual host [%s] must use its own access log, "
-                 "in order to use awstats", pVHost->getName()));
+        LS_ERROR("Virtual host [%s] must use its own access log, "
+                 "in order to use awstats", pVHost->getName());
         return LS_FAIL;
     }
 
@@ -449,7 +450,7 @@ int Awstats::update(const HttpVHost *pVHost)
     // fork again
     pid = fork();
     if (pid < 0)
-        LOG_ERR(("fork() failed"));
+        LS_ERROR("fork() failed");
     else if (pid == 0)
     {
         if (procConfig.getChroot() != NULL)
@@ -472,7 +473,7 @@ int Awstats::update(const HttpVHost *pVHost)
         char achBuf[1024];
         ls_snprintf(achBuf, 1024, "%s%s", pLogPath, ".awstats");
         unlink(achBuf);
-        LOG_ERR(("Unable to rename [%s], remove it.", achBuf));
+        LS_ERROR("Unable to rename [%s], remove it.", achBuf);
     }
     exit(0);
 }
@@ -550,8 +551,8 @@ void Awstats::config(HttpVHost *pVHost, int val, char *achBuf,
     if ((!pURI) || (*pURI != '/') || (* (pURI + strlen(pURI) - 1) != '/')
         || (strlen(pURI) > 100))
     {
-        ConfigCtx::getCurConfigCtx()->logWarn("AWStats URI is invalid"
-                                              ", use default [/awstats/].");
+        LS_WARN(ConfigCtx::getCurConfigCtx(), "AWStats URI is invalid"
+                ", use default [/awstats/].");
         iconURI[9] = 0;;
         pURI = iconURI;
     }
@@ -619,8 +620,8 @@ void Awstats::config(HttpVHost *pVHost, int val, char *achBuf,
 
     if (!pValue)
     {
-        ConfigCtx::getCurConfigCtx()->logWarn("SiteDomain configuration is invalid"
-                                              ", use default [%s].",  vhDomain);
+        LS_WARN(ConfigCtx::getCurConfigCtx(), "SiteDomain configuration is invalid"
+                ", use default [%s].",  vhDomain);
         pValue = vhDomain;
     }
     else
@@ -640,8 +641,9 @@ void Awstats::config(HttpVHost *pVHost, int val, char *achBuf,
         {
             ls_snprintf(achBuf, 8192, "127.0.0.1 localhost REGEX[%s]",
                         getSiteDomain());
-            ConfigCtx::getCurConfigCtx()->logWarn("SiteAliases configuration is invalid"
-                                                  ", use default [%s].", achBuf);
+            LS_WARN(ConfigCtx::getCurConfigCtx(),
+                    "SiteAliases configuration is invalid"
+                    ", use default [%s].", achBuf);
             pValue = achBuf;
             needConvert = 0;
         }
@@ -655,8 +657,8 @@ void Awstats::config(HttpVHost *pVHost, int val, char *achBuf,
                 4096, ' ');
         ConfigCtx::getCurConfigCtx()->convertToRegex(&achBuf[4096], achBuf, 4096);
         pValue = achBuf;
-        ConfigCtx::getCurConfigCtx()->logInfo("SiteAliases is set to '%s'",
-                                              achBuf);
+        LS_INFO(ConfigCtx::getCurConfigCtx(), "SiteAliases is set to '%s'",
+                achBuf);
     }
 
     setAliases(pValue);

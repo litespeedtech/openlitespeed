@@ -19,13 +19,14 @@
 #include <edio/multiplexer.h>
 #include <edio/multiplexerfactory.h>
 #include <edio/sigeventdispatcher.h>
+#include <edio/evtcbque.h>
 #include <util/datetime.h>
 #include <http/httpdefs.h>
 #include <http/httplog.h>
 #include <http/httpsignals.h>
 #include <http/ntwkiolink.h>
 #include <http/connlimitctrl.h>
-#include "http/usereventnotifier.h"
+#include <log4cxx/logger.h>
 #include <main/httpserver.h>
 #include <errno.h>
 #include <string.h>
@@ -61,7 +62,7 @@ int EventDispatcher::init(const char *pType)
         {
             MultiplexerFactory::setMultiplexer(pMultiplexer);
             pMultiplexer->setPriHandler(highPriorityTask);
-            //UserEventNotifier::getInstance().initNotifier(pMultiplexer);
+            //CallbackQueue::getInstance().initNotifier(pMultiplexer);
             return 0;
         }
     }
@@ -82,7 +83,7 @@ int EventDispatcher::reinit()
         {
             MultiplexerFactory::setMultiplexer(pMultiplexer);
             pMultiplexer->setPriHandler(highPriorityTask);
-            //UserEventNotifier::getInstance().initNotifier(pMultiplexer);
+            //CallbackQueue::getInstance().initNotifier(pMultiplexer);
             return 0;
         }
     }
@@ -109,7 +110,7 @@ static void processTimer()
     gettimeofday(&tv, NULL);
 
     //TEST: debug code
-    //LOG_D(( "processTimer()" ));
+    //LS_DBG_L( "processTimer()" );
 
     DateTime::s_curTime = tv.tv_sec;
     DateTime::s_curTimeUs = tv.tv_usec;
@@ -163,7 +164,7 @@ int EventDispatcher::run()
         {
             if (!((errno == EINTR )||(errno == EAGAIN)))
             {
-                LOG_ERR(( "Unexpected error inside event loop: %s", strerror( errno ) ));
+                LS_ERROR( "Unexpected error inside event loop: %s", strerror( errno ) ));
                 return 1;
             }
         }
@@ -215,7 +216,7 @@ static inline void processTimerNew()
         }
         MultiplexerFactory::getMultiplexer()->timerExecute();
         ConnLimitCtrl::getInstance().checkWaterMark();
-        //LOG_D(( "processTimer()" ));
+        //LS_DBG_L( "processTimer()" );
     }
 
     ModuleManager::getInstance().OnTimer100msec();
@@ -235,7 +236,7 @@ int EventDispatcher::run()
         {
             if (!((errno == EINTR) || (errno == EAGAIN)))
             {
-                LOG_ERR(("Unexpected error inside event loop: %s", strerror(errno)));
+                LS_ERROR("Unexpected error inside event loop: %s", strerror(errno));
                 return 1;
             }
         }
@@ -243,8 +244,8 @@ int EventDispatcher::run()
 #ifdef LS_AIO_USE_SIGNAL
         SigEventDispatcher::processSigEvent();
 #endif
-        
-        UserEventNotifier::getInstance().runAllScheduledEvent(NULL, NULL);
+
+        EvtcbQue::getInstance().run(NULL);
 
         if ((sigEvent = HttpSignals::gotEvent()))
         {
@@ -272,8 +273,8 @@ int EventDispatcher::linger(int timeout)
     MultiplexerFactory::getMultiplexer()->setPriHandler(NULL);
     startTimer();
     while ((time(NULL) < endTime)
-            && (ConnLimitCtrl::getInstance().getMaxConns()
-                > ConnLimitCtrl::getInstance().availConn()))
+           && (ConnLimitCtrl::getInstance().getMaxConns()
+               > ConnLimitCtrl::getInstance().availConn()))
     {
         ret = MultiplexerFactory::getMultiplexer()->waitAndProcessEvents(
                   MLTPLX_TIMEOUT);
@@ -281,14 +282,14 @@ int EventDispatcher::linger(int timeout)
         {
             if (!((errno == EINTR) || (errno == EAGAIN)))
             {
-                LOG_ERR(("Unexpected error inside event loop: %s", strerror(errno)));
+                LS_ERROR("Unexpected error inside event loop: %s", strerror(errno));
                 return 1;
             }
         }
 #ifdef LS_AIO_USE_SIGNAL
         SigEventDispatcher::processSigEvent();
 #endif
-        UserEventNotifier::getInstance().runAllScheduledEvent(NULL, NULL);
+        EvtcbQue::getInstance().run(NULL);
 
         if (HttpSignals::gotSigAlarm())
         {

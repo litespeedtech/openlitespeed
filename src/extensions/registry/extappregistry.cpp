@@ -20,6 +20,7 @@
 #include <http/handlerfactory.h>
 #include <http/handlertype.h>
 #include <http/serverprocessconfig.h>
+#include <log4cxx/logger.h>
 #include <main/configctx.h>
 #include <socket/gsockaddr.h>
 #include <util/hashstringmap.h>
@@ -63,7 +64,7 @@ public:
 
 void ExtAppMap::removeAll()
 {
-    releaseObjects();
+    release_objects();
 }
 
 
@@ -80,7 +81,7 @@ ExtAppSubRegistry::~ExtAppSubRegistry()
         delete m_pRegistry;
     if (m_pOldWorkers)
         delete m_pOldWorkers;
-    s_toBeStoped.releaseObjects();
+    s_toBeStoped.release_objects();
 }
 
 
@@ -191,8 +192,8 @@ void ExtAppSubRegistry::onTimer()
 
 void ExtAppSubRegistry::clear()
 {
-    m_pRegistry->releaseObjects();
-    m_pOldWorkers->releaseObjects();
+    m_pRegistry->release_objects();
+    m_pOldWorkers->release_objects();
 }
 
 
@@ -388,7 +389,7 @@ ExtWorker *ExtAppRegistry::configExtApp(const XmlNode *pNode,
     if ((iType < HandlerType::HT_FASTCGI) ||
         (iType >= HandlerType::HT_END))
     {
-        currentCtx.logError("unknown external processor <type>: %s", pType);
+        LS_ERROR(&currentCtx, "unknown external processor <type>: %s", pType);
         return NULL;
     }
 
@@ -420,12 +421,12 @@ ExtWorker *ExtAppRegistry::configExtApp(const XmlNode *pNode,
         if (strchr(pUri, ':') == NULL)
             strcat(achAddress, (isHttps ? ":443" : ":80"));
 
-        currentCtx.logDebug("ExtApp Proxy isHttps %d, Uri %s.",  isHttps, pUri);
+        LS_DBG_L(&currentCtx, "ExtApp Proxy isHttps %d, Uri %s.",  isHttps, pUri);
     }
 
     if (addr.set(pUri, NO_ANY))
     {
-        currentCtx.logError("failed to set socket address %s!", pUri);
+        LS_ERROR(&currentCtx, "failed to set socket address %s!", pUri);
         return NULL;
     }
 
@@ -458,8 +459,8 @@ ExtWorker *ExtAppRegistry::configExtApp(const XmlNode *pNode,
 
             if (access(pCmd, X_OK) == -1)
             {
-                currentCtx.logError("invalid path - %s, "
-                                    "it cannot be started by Web server!", buf);
+                LS_ERROR(&currentCtx, "invalid path - %s, "
+                         "it cannot be started by Web server!", buf);
                 return NULL;
             }
 
@@ -476,7 +477,7 @@ ExtWorker *ExtAppRegistry::configExtApp(const XmlNode *pNode,
 
     if (!pWorker)
     {
-        currentCtx.logError("failed to add external processor!");
+        LS_ERROR(&currentCtx, "failed to add external processor!");
         return NULL;
     }
     pConfig = pWorker->getConfigPointer();
@@ -489,7 +490,7 @@ ExtWorker *ExtAppRegistry::configExtApp(const XmlNode *pNode,
 
         if (pWorker->setURL(pUri))
         {
-            currentCtx.logError("failed to set socket address to %s!", pName);
+            LS_ERROR(&currentCtx, "failed to set socket address to %s!", pName);
             return NULL;
         }
     }
@@ -560,7 +561,7 @@ int ExtAppRegistry::configLoadBalacner(const XmlNode *pNode,
 
     if (!pLB)
     {
-        currentCtx.logError("failed to add load balancer!");
+        LS_ERROR(&currentCtx, "failed to add load balancer!");
         return 1;
     }
     else
@@ -585,7 +586,7 @@ int ExtAppRegistry::configLoadBalacner(const XmlNode *pNode,
 
                 if (!pName)
                 {
-                    currentCtx.logError("invalid worker syntax [%s].", pType);
+                    LS_ERROR(&currentCtx, "invalid worker syntax [%s].", pType);
                     continue;
                 }
 
@@ -597,8 +598,9 @@ int ExtAppRegistry::configLoadBalacner(const XmlNode *pNode,
                     (iType == HandlerType::HT_LOGGER) ||
                     (iType < HandlerType::HT_CGI))
                 {
-                    currentCtx.logError("invalid handler type [%s] for load balancer worker.",
-                                        pType);
+                    LS_ERROR(&currentCtx,
+                             "invalid handler type [%s] for load balancer worker.",
+                             pType);
                     continue;
                 }
 
@@ -609,8 +611,8 @@ int ExtAppRegistry::configLoadBalacner(const XmlNode *pNode,
                 {
                     if (pWorker->getConfigPointer()->getVHost() != pVHost)
                     {
-                        currentCtx.logError("Access to handler [%s:%s] is denied!",
-                                            pType, pName);
+                        LS_ERROR(&currentCtx, "Access to handler [%s:%s] is denied!",
+                                 pType, pName);
                         continue;
                     }
                 }

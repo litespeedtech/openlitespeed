@@ -56,7 +56,7 @@ LsShmCache::LsShmCache(
     if ((pPool = pShm->getGlobalPool()) == NULL)
         return;
     if ((m_pShmHash = pPool->getNamedHash(
-        shmHashName, initHashSize, hf, vc, LSSHM_LRU_NONE)) != NULL)
+                          shmHashName, initHashSize, hf, vc, LSSHM_LRU_NONE)) != NULL)
     {
         LsShmReg *pReg;
         if ((pReg = m_pShmHash->findReg(cacheName)) == NULL)
@@ -74,9 +74,7 @@ LsShmCache::LsShmCache(
                     m_status = LSSHM_ERROR;
                 }
                 else
-                {
                     pReg->x_iValue = m_iHdrOffset;
-                }
             }
         }
         if (m_status == LSSHM_NOTREADY)
@@ -272,7 +270,7 @@ lsShm_hCacheData_t *LsShmCache::getObj(const void *pKey, int keyLen,
     LsShmHash::iteroffset iterOff;
     ls_str_pair_t parms;
     if ((iterOff = m_pShmHash->insertIterator(
-        m_pShmHash->setParms(&parms, pKey, keyLen, NULL, valueLen))) == 0)
+                       m_pShmHash->setParms(&parms, pKey, keyLen, NULL, valueLen))) == 0)
         return NULL;
     pObj = (lsShm_hCacheData_t *)m_pShmHash->offset2iteratorData(iterOff);
     ::memset(pObj, 0, valueLen);
@@ -303,8 +301,8 @@ int LsShmCache::isElementExpired(lsShm_hCacheData_t *pObj)
 {
     return (pObj->x_iExpired
             || ((((DateTime::s_curTime - pObj->x_iExpireTime) * 1000)
-                    + ((DateTime::s_curTimeUs / 1000) - pObj->x_iExpireTimeMs)) > 0)
-            );
+                 + ((DateTime::s_curTimeUs / 1000) - pObj->x_iExpireTimeMs)) > 0)
+           );
 }
 
 

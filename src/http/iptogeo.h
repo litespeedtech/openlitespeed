@@ -72,7 +72,7 @@ public:
     int lookUpV6(in6_addr addr, GeoInfo *pInfo);
     int config(const XmlNodeList *pList);
 
-    static void setIpToGeo( IpToGeo *pItg )
+    static void setIpToGeo(IpToGeo *pItg)
     {   s_pIpToGeo = pItg;  }
     static IpToGeo *getIpToGeo()
     {   return s_pIpToGeo;  }

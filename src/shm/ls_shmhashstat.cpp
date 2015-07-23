@@ -44,7 +44,8 @@ void doStatShmHash(LsShmHash *pHash);
 
 void usage()
 {
-    fprintf(stderr, "usage: ls_shmhashstat -f shmfile -t hashtable [ -d dirname ]\n");
+    fprintf(stderr,
+            "usage: ls_shmhashstat -f shmfile -t hashtable [ -d dirname ]\n");
     return;
 }
 
@@ -102,7 +103,7 @@ int main(int ac, char *av[])
 
     snprintf(buf, sizeof(buf), "%s/%s.%s",
              g_pShmDirName, g_pShmName, LSSHM_SYSSHM_FILE_EXT);
-    if (access(buf, R_OK|W_OK) < 0)
+    if (access(buf, R_OK | W_OK) < 0)
     {
         fprintf(stderr, "Unable to access [%s], %s.\n", buf, strerror(errno));
         return 2;
@@ -110,9 +111,9 @@ int main(int ac, char *av[])
     if ((pShm = LsShm::open(g_pShmName, 0, g_pShmDirName)) == NULL)
     {
         fprintf(stderr, "LsShm::open(%s/%s) FAILED!\n",
-          g_pShmDirName, g_pShmName);
+                g_pShmDirName, g_pShmName);
         fprintf(stderr, "%s\nstat=%d, errno=%d.\n",
-          (char *)LsShm::getErrMsg(), LsShm::getErrStat(), LsShm::getErrNo());
+                (char *)LsShm::getErrMsg(), LsShm::getErrStat(), LsShm::getErrNo());
         LsShm::clrErrMsg();
         return 1;
     }
@@ -132,7 +133,8 @@ int main(int ac, char *av[])
         return 4;
     }
     if ((pHash = pGPool->getNamedHash(g_pHashName, 0,
-        (LsShmHash::hash_fn)(long)mode, (LsShmHash::val_comp)(long)mode, lruMode)) == NULL)
+                                      (LsShmHash::hash_fn)(long)mode, (LsShmHash::val_comp)(long)mode,
+                                      lruMode)) == NULL)
     {
         fprintf(stderr, "getNamedHash(%s,lru=%d) FAILED!\n",
                 g_pHashName, lruMode);
@@ -178,9 +180,9 @@ void doStatShmHash(LsShmHash *pHash)
 
     fprintf(stdout, "SHMHASH [%s]\n\
 current total hash memory: %lu\n",
-        pHash->name(),
-        (unsigned long)pStat->m_iHashInUse
-    );
+            pHash->name(),
+            (unsigned long)pStat->m_iHashInUse
+           );
 
     fprintf(stdout, "checking iterators... ");
     fflush(stdout);
@@ -198,26 +200,26 @@ occupied hash indexes:     %u\n\
 longest index linked list: %u\n\
 hash keys duplicated:      %u\n\
 total iterator memory:     %u\n",
-        hStat.num,
-        hStat.numIdx,
-        hStat.numIdxOccupied,
-        hStat.maxLink,
-        hStat.numDup,
-        mystat.totalSize
-    );
+            hStat.num,
+            hStat.numIdx,
+            hStat.numIdxOccupied,
+            hStat.maxLink,
+            hStat.numDup,
+            mystat.totalSize
+           );
 
     if ((pLru = pHash->getLru()) != NULL)
     {
         fprintf(stdout, "LRU\n\
 total elements:            %u\n\
 total elements trimmed:    %u\n",
-            pLru->nvalset,
-            pLru->nvalexp
-        );
+                pLru->nvalset,
+                pLru->nvalexp
+               );
         fprintf(stdout, "LRU linked list... ");
         fflush(stdout);
         fprintf(stdout, "%s\n",
-            (pHash->check() == SHMLRU_CHECKOK) ? "VERIFIED." : "ERRORS!!!");
+                (pHash->check() == SHMLRU_CHECKOK) ? "VERIFIED." : "ERRORS!!!");
     }
     return;
 }

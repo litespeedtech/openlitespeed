@@ -31,7 +31,7 @@ enum
 #include <lsr/ls_types.h>
 #include <util/autobuf.h>
 #include <util/autostr.h>
-#include <util/logtracker.h>
+#include <log4cxx/logsession.h>
 #include <util/objarray.h>
 
 #include <sys/stat.h>
@@ -172,7 +172,7 @@ private:
     struct stat         m_fileStat;
     int                 m_iScriptNameLen;
     short               m_pReqBodyType;
-    LogTracker         *m_pILog;
+    LogSession         *m_pILog;
 
 
 
@@ -266,9 +266,10 @@ public:
     void reset();
     void reset2();
 
-    void setILog(LogTracker *pILog)         {   m_pILog = pILog;            }
+    void setILog(LogSession *pILog)         {   m_pILog = pILog;            }
     LOG4CXX_NS::Logger *getLogger() const   {   return m_pILog->getLogger();}
     const char   *getLogId()                {   return m_pILog->getLogId(); }
+    LogSession *getLogSession() const       {   return m_pILog;             }
 
     void setVHostMap(const VHostMap *pMap)  {   m_pVHostMap = pMap;         }
     const VHostMap *getVHostMap() const     {   return m_pVHostMap;         }
@@ -292,7 +293,7 @@ public:
     {   return ls_str_len(&m_curUrl.key);   }
 
     void setNewHost(const char *pInfo, int len)
-    {   ls_str_xsetstr(&m_newHost, pInfo, len, m_pPool );   }
+    {   ls_str_xsetstr(&m_newHost, pInfo, len, m_pPool);   }
     int getNewHostLen()
     {   return ls_str_len(&m_newHost);  }
     const char *getNewHost()
@@ -522,7 +523,7 @@ public:
 //     {   m_pHTAContext = pCtx;   }
 //     const HttpContext * getHTAContext() const
 //     {   return m_pHTAContext;   }
-    void setContext(const HttpContext *pCtx){   m_pContext = pCtx;          }
+    void setContext(const HttpContext *pCtx) {   m_pContext = pCtx;          }
     const HttpContext *getContext() const   {   return m_pContext;          }
     const HttpContext *getFMContext() const {   return m_pFMContext;        }
 
@@ -587,8 +588,8 @@ public:
         if (m_iRedirects ? ls_str_cstr(&(m_pUrls[0].value))
             : ls_str_cstr(&m_curUrl.value))
             return m_reqURLLen - 1 - (m_iRedirects
-                                        ? ls_str_len(&(m_pUrls[0].value))
-                                        : ls_str_len(&m_curUrl.value));
+                                      ? ls_str_len(&(m_pUrls[0].value))
+                                      : ls_str_len(&m_curUrl.value));
         else
             return m_reqURLLen;
     }

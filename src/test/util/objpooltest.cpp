@@ -36,55 +36,41 @@ void stressTest(ObjPool<ObjPoolTest> &op, int chunk)
 {
     int i;
     ObjPoolTest ***pManyArrays;
-    pManyArrays = (ObjPoolTest ***)ls_palloc(sizeof(ObjPoolTest **) * chunk);
+    pManyArrays = (ObjPoolTest ** *)ls_palloc(sizeof(ObjPoolTest **) * chunk);
     for (i = 0; i < chunk; ++i)
     {
         pManyArrays[i] = (ObjPoolTest **)ls_palloc(sizeof(ObjPoolTest *)
-                                                    * chunk * 10);
+                         * chunk * 10);
         op.get(pManyArrays[i], chunk * 10);
     }
 
-    for (i = 0; i < chunk/2; ++i)
-    {
+    for (i = 0; i < chunk / 2; ++i)
         op.recycle((void **)pManyArrays[i], chunk * 10);
-    }
 
-    for (i = 0; i < chunk/2; ++i)
-    {
+    for (i = 0; i < chunk / 2; ++i)
         op.get(pManyArrays[i], chunk * 10);
-    }
 
-    for (i = 0; i < chunk/2; ++i)
-    {
+    for (i = 0; i < chunk / 2; ++i)
         op.recycle((void **)pManyArrays[i], chunk * 10);
-    }
 
 
     op.shrinkTo(chunk);
 
-    for (i = 0; i < chunk/2; ++i)
-    {
+    for (i = 0; i < chunk / 2; ++i)
         op.get(pManyArrays[i], chunk * 10);
-    }
 
-    for (i = 0; i < chunk/2; ++i)
-    {
+    for (i = 0; i < chunk / 2; ++i)
         op.recycle((void **)pManyArrays[i], chunk * 10);
-    }
 
     op.shrinkTo(chunk);
 
-    for (i = chunk/2; i < chunk; ++i)
-    {
+    for (i = chunk / 2; i < chunk; ++i)
         op.recycle((void **)pManyArrays[i], chunk * 10);
-    }
 
     op.shrinkTo(chunk);
 
     for (i = 0; i < chunk; ++i)
-    {
         ls_pfree(pManyArrays[i]);
-    }
     ls_pfree(pManyArrays);
 }
 

@@ -18,8 +18,8 @@
 #include "l4handler.h"
 
 #include <extensions/l4conn.h>
-#include <http/httplog.h>
 #include <http/httpreq.h>
+#include <log4cxx/logger.h>
 #include <util/loopbuf.h>
 
 L4Handler::L4Handler()
@@ -46,8 +46,7 @@ int L4Handler::onReadEx()
     while ((space = m_pL4conn->getBuf()->contiguous()) > 0)
     {
         int n = getStream()->read(m_pL4conn->getBuf()->end(), space);
-        if (D_ENABLED(DL_LESS))
-            LOG_D((getLogger(), "[%s] L4Handler: read [%d]", getLogId(), n));
+        LS_DBG_L(getLogSession(), "L4Handler: read [%d]", n);
 
         if (n > 0)
             m_pL4conn->getBuf()->used(n);
@@ -69,8 +68,7 @@ int L4Handler::onReadEx()
         if (m_pL4conn->getBuf()->available() <= 0)
         {
             suspendRead();
-            if (D_ENABLED(DL_LESS))
-                LOG_D((getLogger(), "[%s] L4Handler: suspendRead", getLogId()));
+            LS_DBG_L(getLogSession(), "L4Handler: suspendRead");
         }
     }
 
@@ -86,9 +84,7 @@ int L4Handler::onWriteEx()
     while ((length = getBuf()->blockSize()) > 0)
     {
         int n = getStream()->write(getBuf()->begin(), length);
-        if (D_ENABLED(DL_LESS))
-            LOG_D((getLogger(), "[%s] L4Handler: write [%d of %d]", getLogId(), n,
-                   length));
+        LS_DBG_L(getLogSession(), "L4Handler: write [%d of %d]", n, length);
 
         if (n > 0)
             getBuf()->pop_front(n);
@@ -109,11 +105,7 @@ int L4Handler::onWriteEx()
         if (getBuf()->empty())
         {
             suspendWrite();
-            if (D_ENABLED(DL_LESS))
-            {
-                LOG_D((getLogger(), "[%s] [L4conn] m_pL4conn->continueRead",
-                       getLogId()));
-            }
+            LS_DBG_L(getLogSession(), "[L4conn] m_pL4conn->continueRead");
         }
     }
 
@@ -148,12 +140,9 @@ int L4Handler::init(HttpReq &req, const GSockAddr *pGSockAddr,
         pBuff->append("\n\n", 2);
 
     continueRead();
-    if (D_ENABLED(DL_LESS))
-    {
-        LOG_D((getLogger(),
-               "[%s] L4Handler: init web socket, reqheader [%s], len [%d]",
-               getLogId(), req.getOrgReqLine(), req.getHttpHeaderLen()));
-    }
+    LS_DBG_L(getLogSession(),
+             "L4Handler: init web socket, reqheader [%s], len [%d]",
+             req.getOrgReqLine(), req.getHttpHeaderLen());
     return 0;
 }
 

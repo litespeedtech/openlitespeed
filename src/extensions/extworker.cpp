@@ -19,9 +19,9 @@
 #include "extconn.h"
 #include "extrequest.h"
 
-#include <http/httplog.h>
 #include <http/httpstatuscode.h>
 #include <http/httpvhost.h>
+#include <log4cxx/logger.h>
 #include <lsr/ls_strtool.h>
 #include <socket/coresocket.h>
 #include <socket/gsockaddr.h>
@@ -72,8 +72,8 @@ int ExtWorker::start()
     ret = startEx();
     if (ret == -1)
     {
-        LOG_WARN(("[%s] Can not start this external application.",
-                  m_pConfig->getURL()));
+        LS_WARN("[%s] Can not start this external application.",
+                m_pConfig->getURL());
         setState(ST_BAD);
     }
     else
@@ -121,17 +121,15 @@ void ExtWorker::clearCurConnPool()
 
 ExtConn *ExtWorker::getConn()
 {
-//    if ( D_ENABLED( DL_MEDIUM ) )
-//        LOG_D(( "[%s] %d connections in connection pool!",
-//                 m_pConfig->getURL(), getConnPool().getFreeConns() ));
+//    LS_DBG_M( "[%s] %d connections in connection pool!",
+//                m_pConfig->getURL(), getConnPool().getFreeConns());
 
     m_lIdleTime = 0;
     ExtConn *pConn = (ExtConn *) getConnPool().getFreeConn();
     if (pConn)
     {
-        if (D_ENABLED(DL_LESS))
-            LOG_D(("[%s] connection available!",
-                   m_pConfig->getURL()));
+        LS_DBG_L("[%s] connection available!",
+                 m_pConfig->getURL());
     }
     else
     {
@@ -145,9 +143,8 @@ ExtConn *ExtWorker::getConn()
                 pConn = newConn();
                 if (pConn)
                 {
-                    if (D_ENABLED(DL_LESS))
-                        LOG_D(("[%s] create new connection succeed!",
-                               m_pConfig->getURL()));
+                    LS_DBG_L("[%s] create new connection succeed!",
+                             m_pConfig->getURL());
                     getConnPool().regConn(pConn);
                     pConn->setWorker(this);
                 }
@@ -176,16 +173,12 @@ void ExtWorker::recycleConn(ExtConn *pConn)
 
         if (!pReq->isAlive())
         {
-            if (D_ENABLED(DL_LESS))
-                LOG_D((pReq->getLogger(),
-                       "[%s] Client side socket is closed, close connection!",
-                       pReq->getLogId()));
+            LS_DBG_L(pReq, "Client side socket is closed, close connection!");
             continue;
         }
-        if (D_ENABLED(DL_LESS))
-            LOG_D((pReq->getLogger(),
-                   "[%s] assign pending request [%s] to recycled connection!",
-                   m_pConfig->getURL(), pReq->getLogId()));
+        LS_DBG_L(pReq->getLogger(),
+                 "[%s] assign pending request [%s] to recycled connection!",
+                 m_pConfig->getURL(), pReq->getLogId());
         if (pConn->assignReq(pReq) == 0)
             return;
         if (pConn->getReq())
@@ -198,7 +191,7 @@ void ExtWorker::recycleConn(ExtConn *pConn)
 //    //TEST: debug code, should be removed later
 //    if ( getConnPool().inFreeList( pConn ) )
 //    {
-//        LOG_ERR(( "[%s] Double count detected, connection is already in connection pool!",
+//        LS_ERROR( "[%s] Double count detected, connection is already in connection pool!",
 //                m_pConfig->getURL() ));
 //        return;
 //    }
@@ -206,17 +199,15 @@ void ExtWorker::recycleConn(ExtConn *pConn)
 
 
     getConnPool().reuse(pConn);
-    if (D_ENABLED(DL_LESS))
-        LOG_D(("[%s] add recycled connection to connection pool!",
-               m_pConfig->getURL()));
+    LS_DBG_L("[%s] add recycled connection to connection pool!",
+             m_pConfig->getURL());
 }
 
 
 int  ExtWorker::removeReq(ExtRequest *pReq)
 {
-    if (D_ENABLED(DL_LESS))
-        LOG_D(("[%s] Request [%s] is removed from request queue!",
-               m_pConfig->getURL(), pReq->getLogId()));
+    LS_DBG_L("[%s] Request [%s] is removed from request queue!",
+             m_pConfig->getURL(), pReq->getLogId());
     m_reqQueue.remove(pReq);
     return 0;
 }
@@ -240,9 +231,8 @@ int  ExtWorker::processRequest(ExtRequest *pReq, int retry)
         ExtConn *pConn = getConn();
         if (pConn)
         {
-            if (D_ENABLED(DL_LESS))
-                LOG_D(("[%s] request [%s] is assigned with connection!",
-                       m_pConfig->getURL(), pReq->getLogId()));
+            LS_DBG_L("[%s] request [%s] is assigned with connection!",
+                     m_pConfig->getURL(), pReq->getLogId());
             ret = pConn->assignReq(pReq);
             if (ret)
             {
@@ -255,10 +245,9 @@ int  ExtWorker::processRequest(ExtRequest *pReq, int retry)
             return (ret > 0) ? ret : 0;
         }
     }
-    if (D_ENABLED(DL_LESS))
-        LOG_D(("[%s] connection unavailable, add new request [%s] "
-               "to pending queue!",
-               m_pConfig->getURL(), pReq->getLogId()));
+    LS_DBG_L("[%s] connection unavailable, add new request [%s] "
+             "to pending queue!",
+             m_pConfig->getURL(), pReq->getLogId());
     pReq->suspend();
     if (retry)
         m_reqQueue.push_front(pReq);
@@ -276,8 +265,8 @@ int  ExtWorker::processRequest(ExtRequest *pReq, int retry)
 void ExtWorker::failOutstandingReqs()
 {
     //if ( D_ENABLED( DL_LESS ) )
-    LOG_INFO(("[%s] Fail all outstanding requests!",
-              m_pConfig->getURL()));
+    LS_INFO("[%s] Fail all outstanding requests!",
+            m_pConfig->getURL());
     while (!m_reqQueue.empty())
     {
         ExtRequest *pReq = (ExtRequest *)m_reqQueue.pop_front();
@@ -306,10 +295,7 @@ void ExtWorker::processPending()
         ExtRequest *pReq = (ExtRequest *)m_reqQueue.pop_front();
         if (!pReq->isAlive())
         {
-            if (D_ENABLED(DL_LESS))
-                LOG_D((pReq->getLogger(),
-                       "[%s] Client side socket is closed, close connection!",
-                       pReq->getLogId()));
+            LS_DBG_L(pReq, "Client side socket is closed, close connection!");
             continue;
         }
         int ret = pConn->assignReq(pReq);
@@ -340,7 +326,7 @@ int ExtWorker::connectionError(ExtConn *pConn, int errCode)
     if (pReq)
     {
         pConn->removeRequest(pReq);
-//        LOG_INFO(( "[%s] Connection error: %s, req: [%s]",
+//        LS_INFO( "[%s] Connection error: %s, req: [%s]",
 //            m_pConfig->getURL(), strerror( errCode ), pReq->getLogId() ));
     }
     if (pConn->getToStop())
@@ -357,11 +343,10 @@ int ExtWorker::connectionError(ExtConn *pConn, int errCode)
     }
     if (!pConn->getReqProcessed())
     {
-        if (D_ENABLED(DL_LESS))
-            LOG_D(("[%s] No Request has been processed successfully "
-                   "through this connection, the maximum "
-                   "connections allowed will be reduced!",
-                   m_pConfig->getURL()));
+        LS_DBG_L("[%s] No Request has been processed successfully "
+                 "through this connection, the maximum "
+                 "connections allowed will be reduced!",
+                 m_pConfig->getURL());
 
         //m_connPool.decMaxConn();
         //delete pConn;
@@ -382,17 +367,17 @@ int ExtWorker::connectionError(ExtConn *pConn, int errCode)
                 }
                 m_connPool.setMaxConns(0);
                 m_lLastRestart = time(NULL);
-                LOG_INFO(("[%s] Connection refused, restart!",
-                          m_pConfig->getURL()));
+                LS_INFO("[%s] Connection refused, restart!",
+                        m_pConfig->getURL());
                 restart();
             }
             else
             {
                 //m_connPool.adjustMaxConns();
-                LOG_INFO(("[%s] Connection error: %s, adjust "
-                          "maximum connections to %d!",
-                          m_pConfig->getURL(), strerror(errCode),
-                          m_connPool.getMaxConns()));
+                LS_INFO("[%s] Connection error: %s, adjust "
+                        "maximum connections to %d!",
+                        m_pConfig->getURL(), strerror(errCode),
+                        m_connPool.getMaxConns());
                 if (m_connPool.getMaxConns() < (m_pConfig->getMaxConns() + 1) / 2)
                 {
                     int timeout = m_pConfig->getRetryTimeout();
@@ -401,17 +386,17 @@ int ExtWorker::connectionError(ExtConn *pConn, int errCode)
                     if ((m_lLastRestart) &&
                         (time(NULL) - m_lLastRestart < timeout))
                     {
-                        LOG_NOTICE(("[%s] Available connections are dropped below half "
-                                    "of configured value:%d, restart too frequently, wait "
-                                    "till timeout!", m_pConfig->getURL(),
-                                    m_pConfig->getMaxConns()));
+                        LS_NOTICE("[%s] Available connections are dropped below half "
+                                  "of configured value:%d, restart too frequently, wait "
+                                  "till timeout!", m_pConfig->getURL(),
+                                  m_pConfig->getMaxConns());
                     }
                     else
                     {
-                        LOG_NOTICE(("[%s] Available connections are dropped below half "
-                                    "of configured value:%d, start another group of external"
-                                    " application!", m_pConfig->getURL(),
-                                    m_pConfig->getMaxConns()));
+                        LS_NOTICE("[%s] Available connections are dropped below half "
+                                  "of configured value:%d, start another group of external"
+                                  " application!", m_pConfig->getURL(),
+                                  m_pConfig->getMaxConns());
                         m_lLastRestart = time(NULL);
                         restart();
                     }
@@ -425,9 +410,9 @@ int ExtWorker::connectionError(ExtConn *pConn, int errCode)
             //if ( m_iErrors > 10 )
             if (m_pConfig->getRetryTimeout() > 0)
             {
-                LOG_WARN(("[%s] All connections had gone bad, mark it "
-                          "as bad and retry after a while!!!",
-                          m_pConfig->getURL()));
+                LS_WARN("[%s] All connections had gone bad, mark it "
+                        "as bad and retry after a while!!!",
+                        m_pConfig->getURL());
                 stop();
                 m_iState = ST_BAD;
                 m_lErrorTime = time(NULL);
@@ -495,8 +480,8 @@ int ExtWorker::generateRTReport(int fd, const char *pTypeName)
     {
         if (lCurTime - m_lErrorTime > m_pConfig->getRetryTimeout())
         {
-            LOG_INFO(("[%s] Error Timeout, restart and try again!",
-                      m_pConfig->getURL()));
+            LS_INFO("[%s] Error Timeout, restart and try again!",
+                    m_pConfig->getURL());
             m_iState = ST_NOTSTARTED;
             m_iErrors = 0;
             m_lLastRestart = lCurTime;
@@ -508,8 +493,8 @@ int ExtWorker::generateRTReport(int fd, const char *pTypeName)
              (!m_reqQueue.empty()) && (lCurTime - m_lErrorTime > 10))
     {
         m_connPool.setMaxConns(m_connPool.getMaxConns() + 1);
-        LOG_NOTICE(("[%s] Increase effective max connections to %d.",
-                    m_pConfig->getName(), m_connPool.getMaxConns()));
+        LS_NOTICE("[%s] Increase effective max connections to %d.",
+                  m_pConfig->getName(), m_connPool.getMaxConns());
         processPending();
     }
     else if ((!m_reqQueue.empty()) && (m_connPool.getMaxConns() > inUseConn))
@@ -517,7 +502,7 @@ int ExtWorker::generateRTReport(int fd, const char *pTypeName)
     //testing code
 //    if ( m_reqStats.getTotal() > 100 )
 //    {
-//        LOG_NOTICE(( "[%s] Testing Restart.",
+//        LS_NOTICE( "[%s] Testing Restart.",
 //                    m_pConfig->getName() ));
 //        m_reqStats.resetTotal();
 //        m_lLastRestart = time( NULL );
@@ -531,9 +516,8 @@ int ExtWorker::generateRTReport(int fd, const char *pTypeName)
             m_lIdleTime = lCurTime;
         if ((int)(lCurTime - m_lIdleTime) >= m_pConfig->getMaxIdleTime())
         {
-            if (D_ENABLED(DL_LESS))
-                LOG_D(("[%s] Max idle time reached, stop external application. ",
-                       m_pConfig->getURL()));
+            LS_DBG_L("[%s] Max idle time reached, stop external application. ",
+                     m_pConfig->getURL());
             stop();
         }
     }
@@ -543,9 +527,8 @@ int ExtWorker::generateRTReport(int fd, const char *pTypeName)
     //TEST: add idle timeout
 //    if ( stopWhenIdle() && (m_iState == ST_GOOD) && (m_connPool.getTotalConns() == 0) )
 //    {
-//        if ( D_ENABLED( DL_LESS ) )
-//            LOG_D(( "[%s] Stop idle external application. ",
-//                 m_pConfig->getURL() ));
+//        LS_DBG_L( "[%s] Stop idle external application. ",
+//                 m_pConfig->getURL());
 //        stop();
 //    }
     return 0;
@@ -565,9 +548,8 @@ int ExtWorker::startServerSock(ExtWorkerConfig *pConfig, int backlog)
         {
             if (ret == EINTR)
             {
-                if (D_ENABLED(DL_LESS))
-                    LOG_D(("[%s] listen() is interrupted, try again",
-                           pConfig->getURL()));
+                LS_DBG_L("[%s] listen() is interrupted, try again",
+                         pConfig->getURL());
 
                 continue;
             }
@@ -580,8 +562,8 @@ int ExtWorker::startServerSock(ExtWorkerConfig *pConfig, int backlog)
                     if ((retry == 9) &&
                         (addr.family() == PF_UNIX))
                     {
-                        LOG_NOTICE(("Try to clean up unused unix sockets for [%s]",
-                                    pConfig->getURL()));
+                        LS_NOTICE("Try to clean up unused unix sockets for [%s]",
+                                  pConfig->getURL());
                         pConfig->removeUnusedSocket();
                     }
                     else
@@ -589,9 +571,9 @@ int ExtWorker::startServerSock(ExtWorkerConfig *pConfig, int backlog)
                     continue;
                 }
             }
-            LOG_WARN(("Can not listen on address[%s.*]: %s, please clean up manually!",
-                      achBuf,
-                      strerror(ret)));
+            LS_WARN("Can not listen on address[%s.*]: %s, please clean up manually!",
+                    achBuf,
+                    strerror(ret));
             return LS_FAIL;
         }
         fcntl(fd, F_SETFD, FD_CLOEXEC);

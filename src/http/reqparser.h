@@ -94,69 +94,71 @@ public:
     ~ReqParser();
 
     void reset();
-    const char * getErrorStr() const    {   return m_pErrStr;   }
+    const char *getErrorStr() const    {   return m_pErrStr;   }
 
-    int parseInit( HttpReq * pReq, ReqParserParam &param);
-    int parseUpdate( char *buf, size_t size );
+    int parseInit(HttpReq *pReq, ReqParserParam &param);
+    int parseUpdate(char *buf, size_t size);
     int parseDone();
     bool getEnableUploadFile()    {   return m_ReqParserParam.m_iEnableUploadFile; }
     bool isParseDone()  { return m_iParseState == PARSE_DONE; }
-    
+
     //int parseArgs( HttpReq * pReq, int scanPost );
-    const char * getArgStr( int location, int &len );
-    const char * getArgStr( const char * pName, int nameLen, int &len, char* &filePath );
-    
-    const char * getReqHeader( const char * pName, int nameLen, int &len,
-                             HttpReq * pReq );
-    const char * getReqVar( HttpSession* pSession, int varId, int &len,
-                             char * pBegin, int bufLen );
+    const char *getArgStr(int location, int &len);
+    const char *getArgStr(const char *pName, int nameLen, int &len,
+                          char *&filePath);
+
+    const char *getReqHeader(const char *pName, int nameLen, int &len,
+                             HttpReq *pReq);
+    const char *getReqVar(HttpSession *pSession, int varId, int &len,
+                          char *pBegin, int bufLen);
     int getArgCount() const {   return m_args;  }
-    int getArgs( int index, char* &pName, int& nameLen, char* &val, int& valLen, char* &filePath );
+    int getArgs(int index, char *&pName, int &nameLen, char *&val, int &valLen,
+                char *&filePath);
     bool isFile(int index) { return (m_pArgs[index].filePath != NULL);  }
 
-    static const char * getHeaderString( int iIndex );
-                             
- 
+    static const char *getHeaderString(int iIndex);
+
+
     int getCookieCount() const  {   return m_iCookies;  }
 
     static void testQueryString();
     static void testMultipart();
     static void testAll();
 
-    int parseCookies( const char * pCookies, int len );
+    int parseCookies(const char *pCookies, int len);
 
 private:
 
-    int allocArgIndex( int newMax );
-    int allocCookieIndex( int newMax );
-    
+    int allocArgIndex(int newMax);
+    int allocCookieIndex(int newMax);
 
-    int parseArgs( const char * pStr, int len, int resume, int last );
-    void resumeDecode( const char * &pStr, const char * pEnd );
 
-    int parseQueryString( const char * pQS, int len );
-    int parsePostBody( const char * srcBuf, size_t srcSize,
-                       int bodyType, int resume, int last );
+    int parseArgs(const char *pStr, int len, int resume, int last);
+    void resumeDecode(const char *&pStr, const char *pEnd);
+
+    int parseQueryString(const char *pQS, int len);
+    int parsePostBody(const char *srcBuf, size_t srcSize,
+                      int bodyType, int resume, int last);
     //int parsePostBody( HttpReq * pReq );
-    int popProcessedData( char * pBegin, char *pEnd );
-    int checkBoundary( char * &pBegin, char * &pCur );
-    int parseKeyValue( char * &pBegin, char * pLineEnd,
-                       char *&pKey, int &keyLen, char *&pValue, int &valLen );
+    int popProcessedData(char *pBegin, char *pEnd);
+    int checkBoundary(char *&pBegin, char *&pCur);
+    int parseKeyValue(char *&pBegin, char *pLineEnd,
+                      char *&pKey, int &keyLen, char *&pValue, int &valLen);
 
-    int initMutlipart( const char * pContentType, int len );
-    void logParsingError( HttpReq * pReq );
+    int initMutlipart(const char *pContentType, int len);
+    void logParsingError(HttpReq *pReq);
 
-    int normalisePath( int begin, int len );
+    int normalisePath(int begin, int len);
 
-    int appendArg( int beginIndex, int endIndex, int isValue );
-    int appendArgKeyIndex( int begin, int len );
-    int appendArgKey( const char * pStr, int len );
-    int multipartParseHeader( char * pBegin, char *pLineEnd );
-    int parseMutlipart( const char * srcBuf, size_t srcSize, 
-                        int resume, int last);
+    int appendArg(int beginIndex, int endIndex, int isValue);
+    int appendArgKeyIndex(int begin, int len);
+    int appendArgKey(const char *pStr, int len);
+    int multipartParseHeader(char *pBegin, char *pLineEnd);
+    int parseMutlipart(const char *srcBuf, size_t srcSize,
+                       int resume, int last);
 
     int appendBodyBuf(const char *s, size_t len);
-    int appendFileKeyValue(const char *key, size_t keylen, const char *val, 
+    int appendFileKeyValue(const char *key, size_t keylen, const char *val,
                            size_t vallen, bool bFirstPart = false);
     void writeToFile(const char *buf, int len);
 
@@ -183,19 +185,19 @@ private:
     int             m_postBegin;
     int             m_postArgs;
 
-    const char *    m_pErrStr;
+    const char     *m_pErrStr;
 
     int             m_iCookies;
     int             m_iMaxCookies;
-    KeyValuePair *  m_pCookies;
+    KeyValuePair   *m_pCookies;
     HttpReq        *m_pReq;
 
-    /**Comment about the below varibles 
+    /**Comment about the below varibles
      * Such as name="file1", filename="123.jpg"
      * the "file1" is the m_sLastFileKey
      * 123.jpg should be save as "$m_sLastFileKey_Name"'s value
      */
-    AutoStr2        m_sLastFileKey; 
+    AutoStr2        m_sLastFileKey;
     ls_md5_ctx_t    m_md5Ctx;
     int             m_iLastFd;
     int             m_iContentLength;

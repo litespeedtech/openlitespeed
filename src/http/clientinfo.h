@@ -138,22 +138,22 @@ public:
 
     LsiModuleData *getModuleData()      {   return &m_moduleData;   }
 
-    static void setPerClientSoftLimit( int val )
+    static void setPerClientSoftLimit(int val)
     {   s_iSoftLimitPC = val;   }
     static int getPerClientSoftLimit()
     {   return s_iSoftLimitPC;  }
 
-    static void setPerClientHardLimit( int val )
+    static void setPerClientHardLimit(int val)
     {   s_iHardLimitPC = val;   }
     static int getPerClientHardLimit()
     {   return s_iHardLimitPC;  }
 
-    static void setOverLimitGracePeriod( int val )
+    static void setOverLimitGracePeriod(int val)
     {   s_iOverLimitGracePeriod = val;  }
     static int getOverLimitGracePeriod()
     {   return s_iOverLimitGracePeriod; }
 
-    static void setBanPeriod( int val )
+    static void setBanPeriod(int val)
     {   s_iBanPeriod = val;   }
     static int getBanPeriod()
     {   return s_iBanPeriod;  }

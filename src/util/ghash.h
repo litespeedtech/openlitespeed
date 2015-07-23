@@ -202,7 +202,7 @@ public:
         return 0;
     }
 
-    void releaseObjects()
+    void release_objects()
     {
         GHash::for_each(begin(), end(), deleteObj);
         GHash::clear();

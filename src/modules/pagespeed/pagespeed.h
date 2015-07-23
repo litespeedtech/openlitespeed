@@ -15,6 +15,8 @@
 *    You should have received a copy of the GNU General Public License       *
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
+//  Author: dxu@litespeedtech.com (David Shue)
+
 #ifndef LSI_PAGESPEEND_H_
 #define LSI_PAGESPEEND_H_
 
@@ -50,14 +52,14 @@ class InPlaceResourceRecorder;
 // s1: AutoStr, s2: string literal
 // true if they're equal, false otherwise
 #define STR_EQ_LITERAL(s1, s2)          \
-((s1).len() == (sizeof(s2)-1) &&      \
- strncmp((s1).c_str(), (s2), (sizeof(s2)-1)) == 0)
+    ((s1).len() == (sizeof(s2)-1) &&      \
+     strncmp((s1).c_str(), (s2), (sizeof(s2)-1)) == 0)
 
 // s1: AutoStr, s2: string literal
 // true if they're equal ignoring case, false otherwise
 #define STR_CASE_EQ_LITERAL(s1, s2)     \
-((s1).len() == (sizeof(s2)-1) &&      \
- strncasecmp((s1).c_str(), (s2), (sizeof(s2)-1)) == 0)
+    ((s1).len() == (sizeof(s2)-1) &&      \
+     strncasecmp((s1).c_str(), (s2), (sizeof(s2)-1)) == 0)
 
 
 enum PreserveCachingHeaders
@@ -67,18 +69,16 @@ enum PreserveCachingHeaders
     kDontPreserveHeaders,
 };
 
-void CopyRespHeadersFromServer(lsi_session_t *session,
-                                       ResponseHeaders *headers);
+void CopyRespHeadersFromServer(lsi_session_t *session, ResponseHeaders *headers);
 
-void CopyReqHeadersFromServer(lsi_session_t *session,
-                                      RequestHeaders *headers);
+void CopyReqHeadersFromServer(lsi_session_t *session, RequestHeaders *headers);
 
 int CopyRespHeadersToServer(lsi_session_t *session,
-                                    const ResponseHeaders &pagespeed_headers,
-                                    PreserveCachingHeaders preserve_caching_headers);
+                            const ResponseHeaders &pagespeed_headers,
+                            PreserveCachingHeaders preserve_caching_headers);
 
-int CopyRespBodyToBuf(lsi_session_t *session, const char *s,
-                               int len, int done_called);
+int CopyRespBodyToBuf(lsi_session_t *session, const char *s, int len,
+                      int done_called);
 
 StringPiece DetermineHost(lsi_session_t *session);
 

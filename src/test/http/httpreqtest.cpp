@@ -21,19 +21,19 @@
 
 #include <http/httpreq.h>
 #include <http/httpmethod.h>
-#include <util/logtracker.h>
+#include <log4cxx/logsession.h>
 #include <stdio.h>
 #include "test/unittest-cpp/UnitTest++/src/UnitTest++.h"
 
 #include <http/httpstatuscode.h>
 
-class HttpReqTst : public HttpReq, public LogTracker
+class HttpReqTst : public HttpReq, public LogSession
 {
 public:
     HttpReqTst()
         : HttpReq()
     {  }
-    const char *getLogId()     {   return LogTracker::getLogId();  }
+    const char *getLogId()     {   return LogSession::getLogId();  }
     virtual const char *buildLogId() {  return getLogId(); }
 
     int append(const char *pBuf, int size)

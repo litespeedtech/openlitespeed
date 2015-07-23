@@ -136,7 +136,7 @@ KeyData *FileStore::getDataFromStore(const char *pKey, int keyLen)
     while (!feof(m_pFile))
     {
         if ((fgets(pBuf, TEMP_BUF_LEN, m_pFile) == NULL)
-          || (strncmp(pBuf, pKey, keyLen) != 0))
+            || (strncmp(pBuf, pKey, keyLen) != 0))
             continue;
         char ch;
         pPos = pBuf + keyLen;

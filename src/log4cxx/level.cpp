@@ -50,6 +50,7 @@ int Level::toInt(const char *levelName)
     return UNKNOWN;
 }
 
+int Level::s_iDefaultLevel = Level::DEBUG;
 
 END_LOG4CXX_NS
 

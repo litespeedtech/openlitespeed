@@ -140,7 +140,7 @@ static int PsHandlerProcess(lsi_session_t *session)
 
     int len = 1024, flag = 0;
     lsi_shm_off_t offset = g_api->shm_htable_get(pShmHash,
-            (const uint8_t *)URI_PREFIX, sizeof(URI_PREFIX) - 1, &len, &flag);
+                           (const uint8_t *)URI_PREFIX, sizeof(URI_PREFIX) - 1, &len, &flag);
     if (offset == 0)
     {
         g_api->log(NULL, LSI_LOG_ERROR,
@@ -177,14 +177,14 @@ static lsi_serverhook_t serverHooks[] =
 static int _init(lsi_module_t *pModule)
 {
     lsi_shmpool_t *pShmPool = g_api->shm_pool_init("testSharedM", 0);
-    if ( pShmPool == NULL)
+    if (pShmPool == NULL)
     {
         g_api->log(NULL, LSI_LOG_ERROR,
                    "g_api->shm_pool_init return NULL, so quit.\n");
         return LS_FAIL;
     }
     pShmHash = g_api->shm_htable_init(pShmPool, NULL, 0, NULL, NULL);
-    if ( pShmHash == NULL )
+    if (pShmHash == NULL)
     {
         g_api->log(NULL, LSI_LOG_ERROR,
                    "g_api->shm_htable_init return NULL, so quit.\n");
@@ -193,7 +193,7 @@ static int _init(lsi_module_t *pModule)
 
     int len = 1024, flag = LSI_SHM_INIT;
     lsi_shm_off_t offset = g_api->shm_htable_get(pShmHash,
-            (const uint8_t *)URI_PREFIX, sizeof(URI_PREFIX) - 1, &len, &flag);
+                           (const uint8_t *)URI_PREFIX, sizeof(URI_PREFIX) - 1, &len, &flag);
     if (offset == 0)
     {
         g_api->log(NULL, LSI_LOG_ERROR,

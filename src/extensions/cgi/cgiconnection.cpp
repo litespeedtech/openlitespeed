@@ -45,8 +45,7 @@ int CgiConnection::onRead()
 {
     if (!getConnector())
         return LS_FAIL;
-    if (D_ENABLED(DL_MEDIUM))
-        LOG_D((getLogger(), "[%s] CgiConnection::onRead()\n", getLogId()));
+    LS_DBG_M(this, "CgiConnection::onRead()");
     int len = 0;
     int ret = 0;
     do
@@ -54,14 +53,12 @@ int CgiConnection::onRead()
         len = ret = read(HttpResourceManager::getGlobalBuf(), GLOBAL_BUF_SIZE);
         if (ret > 0)
         {
-            if (D_ENABLED(DL_MEDIUM))
-                LOG_D((getLogger(), "[%s] process STDOUT %d bytes",
-                       getLogId(), len));
+            LS_DBG_M(this, "Process STDOUT %d bytes", len);
             //printf( ">>read %d bytes from CGI\n", len );
             //achBuf[ ret ] = 0;
             //printf( "%s", achBuf );
             ret = getConnector()->processRespData(
-                            HttpResourceManager::getGlobalBuf(), len);
+                      HttpResourceManager::getGlobalBuf(), len);
             if (ret == -1)
                 break;
         }
@@ -93,8 +90,7 @@ int CgiConnection::onWrite()
 {
     if (!getConnector())
         return LS_FAIL;
-    if (D_ENABLED(DL_MEDIUM))
-        LOG_D((getLogger(), "[%s] CgiConnection::onWrite()\n", getLogId()));
+    LS_DBG_M(this, "CgiConnection::onWrite()");
     int ret = extOutputReady();
     if (!(getConnector()->getState() & HEC_FWD_REQ_BODY))
         suspendWrite();
@@ -106,8 +102,7 @@ int CgiConnection::onError()
 {
     if (!getConnector())
         return LS_FAIL;
-    if (D_ENABLED(DL_MEDIUM))
-        LOG_D((getLogger(), "[%s] CgiConnection::onError()\n", getLogId()));
+    LS_DBG_M(this, "CgiConnection::onError()");
     //getState() = HEC_COMPLETE;
     getConnector()->endResponse(SC_500, 0);
     return LS_FAIL;

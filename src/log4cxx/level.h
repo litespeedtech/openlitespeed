@@ -26,7 +26,8 @@ BEGIN_LOG4CXX_NS
 
 class Level
 {
-    static const char *s_levelName[];
+    static const char  *s_levelName[];
+    static int          s_iDefaultLevel;
     Level() {};
     ~Level() {};
 public:
@@ -40,6 +41,12 @@ public:
         NOTICE = 5000,
         INFO  = 6000,
         DEBUG = 7000,
+        DBG_LESS = 7020,
+        DBG_LOW  = 7020,
+        DBG_MEDIUM = 7050,
+        DBG_MORE = 7080,
+        DBG_HIGH = 7080,
+        DBG_IODATA = 7090,
         TRACE = 8000,
         NOTSET = 9000,
         UNKNOWN = 10000
@@ -51,6 +58,11 @@ public:
     static int getSysLogInt(int level)
     {   return level / 1000; }
 
+    ls_attr_inline static int isEnabled(int level)
+    {   return level <= s_iDefaultLevel;   }
+
+    static void setDefaultLevel(int level)
+    {   s_iDefaultLevel = level;        }
 
     LS_NO_COPY_ASSIGN(Level);
 };

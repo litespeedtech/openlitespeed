@@ -120,13 +120,13 @@ int DeniedDir::addDir(const char *pDir)
     {
         //if ( *pDir != '/' )
         //{
-        //    LOG_ERR(( "[config] failed to add denied dir, need absolute path - %s!", pDir ));
+        //    LS_ERROR( "[config] failed to add denied dir, need absolute path - %s!", pDir ));
         //    break;
         //}
         int len = strlen(pDir);
         //if ( len >= 256 - 1 )
         //{
-        //    LOG_ERR(( "[config] denied path is too long - %s!", pDir ));
+        //    LS_ERROR( "[config] denied path is too long - %s!", pDir ));
         //    break;
         //}
         char buf[256];
@@ -145,7 +145,7 @@ int DeniedDir::addDir(const char *pDir)
         }
         //if ( ( GPath::clean(buf) != 0 ) ||!GPath::isValid( buf ) )
         //{
-        //    LOG_ERR(( "[config] invalid denied path - %s!", buf ));
+        //    LS_ERROR( "[config] invalid denied path - %s!", buf ));
         //    break;
         //}
         DirItem *pos = find(buf);
@@ -183,7 +183,7 @@ bool DeniedDir::isDenied(iterator iter, const char *pPath)
 
 void DeniedDir::clear()
 {
-    releaseObjects();
+    release_objects();
 }
 
 

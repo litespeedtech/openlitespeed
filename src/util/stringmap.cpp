@@ -31,7 +31,7 @@ struct StringMapSyntaxChecker
         intlookup.insertUpdate("CDE", &checker);
         intlookup.find("ABC");
         intlookup.remove("ABC");
-        intlookup.releaseObjects();
+        intlookup.release_objects();
     }
 
 };

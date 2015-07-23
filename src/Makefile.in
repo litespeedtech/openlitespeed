@@ -109,12 +109,11 @@ am_openlitespeed_OBJECTS = prelinkedmods.$(OBJEXT) httpdtest.$(OBJEXT) \
 	vmembuf.$(OBJEXT) blockbuf.$(OBJEXT) stringlist.$(OBJEXT) \
 	semaphore.$(OBJEXT) refcounter.$(OBJEXT) \
 	gpointerlist.$(OBJEXT) linkedobj.$(OBJEXT) objpool.$(OBJEXT) \
-	gpath.$(OBJEXT) logtracker.$(OBJEXT) poolalloc.$(OBJEXT) \
-	env.$(OBJEXT) xmlnode.$(OBJEXT) iovec.$(OBJEXT) \
-	accesscontrol.$(OBJEXT) signalutil.$(OBJEXT) loopbuf.$(OBJEXT) \
-	stringtool.$(OBJEXT) tsingleton.$(OBJEXT) pcutil.$(OBJEXT) \
-	daemonize.$(OBJEXT) configentry.$(OBJEXT) \
-	logidtracker.$(OBJEXT) datetime.$(OBJEXT) \
+	gpath.$(OBJEXT) poolalloc.$(OBJEXT) env.$(OBJEXT) \
+	xmlnode.$(OBJEXT) iovec.$(OBJEXT) accesscontrol.$(OBJEXT) \
+	signalutil.$(OBJEXT) loopbuf.$(OBJEXT) stringtool.$(OBJEXT) \
+	tsingleton.$(OBJEXT) pcutil.$(OBJEXT) daemonize.$(OBJEXT) \
+	configentry.$(OBJEXT) datetime.$(OBJEXT) \
 	resourcepool.$(OBJEXT) linkedqueue.$(OBJEXT) \
 	httputil.$(OBJEXT) radixtree.$(OBJEXT) profiletime.$(OBJEXT) \
 	partitioninfo.$(OBJEXT) nicdetect.$(OBJEXT) \
@@ -443,7 +442,6 @@ openlitespeed_SOURCES = modules/prelinkedmods.cpp httpdtest.cpp main.cpp \
    util/linkedobj.cpp \
    util/objpool.cpp \
    util/gpath.cpp \
-   util/logtracker.cpp \
    util/poolalloc.cpp \
    util/env.cpp \
    util/xmlnode.cpp \
@@ -456,7 +454,6 @@ openlitespeed_SOURCES = modules/prelinkedmods.cpp httpdtest.cpp main.cpp \
    util/pcutil.cpp \
    util/daemonize.cpp \
    util/configentry.cpp \
-   util/logidtracker.cpp \
    util/datetime.cpp \
    util/resourcepool.cpp \
    util/linkedqueue.cpp \
@@ -657,8 +654,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/linkedobj.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/linkedqueue.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/linkobjpool.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/logidtracker.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/logtracker.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/loopbuf.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ls_aho.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ls_base64.Po@am__quote@
@@ -1660,20 +1655,6 @@ gpath.obj: util/gpath.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o gpath.obj `if test -f 'util/gpath.cpp'; then $(CYGPATH_W) 'util/gpath.cpp'; else $(CYGPATH_W) '$(srcdir)/util/gpath.cpp'; fi`
 
-logtracker.o: util/logtracker.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT logtracker.o -MD -MP -MF $(DEPDIR)/logtracker.Tpo -c -o logtracker.o `test -f 'util/logtracker.cpp' || echo '$(srcdir)/'`util/logtracker.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/logtracker.Tpo $(DEPDIR)/logtracker.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='util/logtracker.cpp' object='logtracker.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o logtracker.o `test -f 'util/logtracker.cpp' || echo '$(srcdir)/'`util/logtracker.cpp
-
-logtracker.obj: util/logtracker.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT logtracker.obj -MD -MP -MF $(DEPDIR)/logtracker.Tpo -c -o logtracker.obj `if test -f 'util/logtracker.cpp'; then $(CYGPATH_W) 'util/logtracker.cpp'; else $(CYGPATH_W) '$(srcdir)/util/logtracker.cpp'; fi`
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/logtracker.Tpo $(DEPDIR)/logtracker.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='util/logtracker.cpp' object='logtracker.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o logtracker.obj `if test -f 'util/logtracker.cpp'; then $(CYGPATH_W) 'util/logtracker.cpp'; else $(CYGPATH_W) '$(srcdir)/util/logtracker.cpp'; fi`
-
 poolalloc.o: util/poolalloc.cpp
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT poolalloc.o -MD -MP -MF $(DEPDIR)/poolalloc.Tpo -c -o poolalloc.o `test -f 'util/poolalloc.cpp' || echo '$(srcdir)/'`util/poolalloc.cpp
 @am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/poolalloc.Tpo $(DEPDIR)/poolalloc.Po
@@ -1841,20 +1822,6 @@ configentry.obj: util/configentry.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='util/configentry.cpp' object='configentry.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o configentry.obj `if test -f 'util/configentry.cpp'; then $(CYGPATH_W) 'util/configentry.cpp'; else $(CYGPATH_W) '$(srcdir)/util/configentry.cpp'; fi`
-
-logidtracker.o: util/logidtracker.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT logidtracker.o -MD -MP -MF $(DEPDIR)/logidtracker.Tpo -c -o logidtracker.o `test -f 'util/logidtracker.cpp' || echo '$(srcdir)/'`util/logidtracker.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/logidtracker.Tpo $(DEPDIR)/logidtracker.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='util/logidtracker.cpp' object='logidtracker.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o logidtracker.o `test -f 'util/logidtracker.cpp' || echo '$(srcdir)/'`util/logidtracker.cpp
-
-logidtracker.obj: util/logidtracker.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT logidtracker.obj -MD -MP -MF $(DEPDIR)/logidtracker.Tpo -c -o logidtracker.obj `if test -f 'util/logidtracker.cpp'; then $(CYGPATH_W) 'util/logidtracker.cpp'; else $(CYGPATH_W) '$(srcdir)/util/logidtracker.cpp'; fi`
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/logidtracker.Tpo $(DEPDIR)/logidtracker.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='util/logidtracker.cpp' object='logidtracker.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o logidtracker.obj `if test -f 'util/logidtracker.cpp'; then $(CYGPATH_W) 'util/logidtracker.cpp'; else $(CYGPATH_W) '$(srcdir)/util/logidtracker.cpp'; fi`
 
 datetime.o: util/datetime.cpp
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT datetime.o -MD -MP -MF $(DEPDIR)/datetime.Tpo -c -o datetime.o `test -f 'util/datetime.cpp' || echo '$(srcdir)/'`util/datetime.cpp

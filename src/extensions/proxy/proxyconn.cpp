@@ -25,11 +25,11 @@
 #include <http/chunkinputstream.h>
 #include <http/httpdefs.h>
 #include <http/httpextconnector.h>
-#include <http/httplog.h>
 #include <http/httpreq.h>
 #include <http/httpresourcemanager.h>
 #include <http/httpsession.h>
 #include <http/httpstatuscode.h>
+#include <log4cxx/logger.h>
 #include <sslpp/sslcontext.h>
 #include <sslpp/sslerror.h>
 
@@ -74,7 +74,7 @@ static SSL *getSslConn()
         s_pProxyCtx = new SSLContext();
         if (s_pProxyCtx)
         {
-            s_pProxyCtx->setRenegProtect(0);            
+            s_pProxyCtx->setRenegProtect(0);
             //s_pProxyCtx->setCipherList();
         }
         else
@@ -126,16 +126,11 @@ int ProxyConn::connectSSL()
         setSSLAgain();
         break;
     case 1:
-        if (D_ENABLED(DL_LESS))
-            LOG_D((getLogger(), "[%s] [SSL] connected!\n", getLogId()));
+        LS_DBG_L(this, "[SSL] connected!");
         break;
     default:
         if (errno == EIO)
-        {
-            if (D_ENABLED(DL_LESS))
-                LOG_D((getLogger(), "[%s] SSL_connect() failed!: %s "
-                       , getLogId(), SSLError().what()));
-        }
+            LS_DBG_L(this, "SSL_connect() failed!: %s ", SSLError().what());
         break;
     }
 
@@ -367,9 +362,7 @@ int ProxyConn::close()
 {
     if (m_iSsl && m_ssl.getSSL())
     {
-        if (D_ENABLED(DL_LESS))
-            LOG_D((getLogger(), "[%s] Shutdown Proxy SSL ...",
-                   getLogId()));
+        LS_DBG_L(this, "Shutdown Proxy SSL ...");
         m_ssl.release();
     }
     return ExtConn::close();
@@ -417,9 +410,7 @@ int ProxyConn::read(char *pBuf , int size)
         ret = m_ssl.read(pBuf, size);
     else
         ret = ExtConn::read(pBuf, size);
-    if (D_ENABLED(DL_LESS))
-        LOG_D((getLogger(), "[%s] read Response %d bytes",
-               getLogId(), ret));
+    LS_DBG_L(this, "Read Response %d bytes", ret);
     if (m_iSsl && (ret < 0))
         errno = ECONNRESET;
     if (ret > 0)
@@ -483,9 +474,7 @@ int ProxyConn::readv(struct iovec *vector, size_t count)
         ret = readvSsl(vector, pEnd);
     else
         ret = ExtConn::readv(vector, pEnd - vector);
-    if (D_ENABLED(DL_LESS))
-        LOG_D((getLogger(), "[%s] read Response %d bytes",
-               getLogId(), ret));
+    LS_DBG_L(this, "Read Response %d bytes", ret);
     if (ret > 0)
     {
 //        int left = ret;
@@ -512,8 +501,7 @@ int ProxyConn::readv(struct iovec *vector, size_t count)
 int ProxyConn::doRead()
 {
     int ret;
-    if (D_ENABLED(DL_LESS))
-        LOG_D((getLogger(), "[%s] ProxyConn::doRead()\n", getLogId()));
+    LS_DBG_L(this, "ProxyConn::doRead()");
     if ((m_iSsl) && (!m_ssl.isConnected()))
     {
         ret = connectSSL();
@@ -563,9 +551,7 @@ int ProxyConn::processResp()
             //memmove( &m_achRespBuf[ m_iRespHeaderRecv ], pBuf, copy );
             m_iRespHeaderRecv += copy;
             m_iRespRecv += len;
-            if (D_ENABLED(DL_LESS))
-                LOG_D((getLogger(), "[%s] read Response %d bytes",
-                       getLogId(), len));
+            LS_DBG_L(this, "Read Response %d bytes", len);
             //debug code
             //::write( 1, pBuf, len );
 
@@ -573,8 +559,7 @@ int ProxyConn::processResp()
             switch (ret)
             {
             case -2:
-                LOG_WARN((getLogger(), "[%s] Invalid Http response header, retry!",
-                          getLogId()));
+                LS_WARN(this, "Invalid Http response header, retry!");
                 //debug code
                 //::write( 1, pBuf, len );
                 errno = ECONNRESET;
@@ -606,9 +591,8 @@ int ProxyConn::processResp()
             }
 
             m_iRespBodySize = pHEC->getHttpSession()->getResp()->getContentLen();
-            if (D_ENABLED(DL_LESS))
-                LOG_D((getLogger(), "[%s] Response body size of proxy reply is %d",
-                       getLogId(), m_iRespBodySize));
+            LS_DBG_L(this, "Response body size of proxy reply is %d",
+                     m_iRespBodySize);
             if (m_iRespBodySize == LSI_RESP_BODY_SIZE_CHUNKED)
                 setupChunkIS();
             else if (!(respState & HEC_RESP_CONT_LEN))
@@ -616,9 +600,7 @@ int ProxyConn::processResp()
 
             m_pBufBegin = pBuf;
             m_pBufEnd = pBuf + len;
-            if (D_ENABLED(DL_MEDIUM))
-                LOG_D((getLogger(), "[%s] process Response body %d bytes",
-                       getLogId(), len));
+            LS_DBG_M(this, "Process Response body %d bytes", len);
             return readRespBody();
         }
     }
@@ -735,17 +717,15 @@ void ProxyConn::setupChunkIS()
 
 int ProxyConn::doError(int err)
 {
-    if (D_ENABLED(DL_LESS))
-        LOG_D((getLogger(), "[%s] ProxyConn::doError()", getLogId()));
+    LS_DBG_L(this, "ProxyConn::doError()");
     if (getConnector())
     {
         int state = getConnector()->getState();
         if (!(state & (HEC_FWD_RESP_BODY | HEC_ABORT_REQUEST
                        | HEC_ERROR | HEC_COMPLETE)))
         {
-            if (D_ENABLED(DL_LESS))
-                LOG_D((getLogger(), "[%s] Proxy Peer closed connection, "
-                       "try another connection!", getLogId()));
+            LS_DBG_L(this, "Proxy Peer closed connection, "
+                     "try another connection!");
             connError(err);
             return 0;
         }
@@ -846,14 +826,14 @@ void ProxyConn::onTimer()
 {
 //    if (!( getEvents() & POLLIN ))
 //    {
-//        LOG_WARN(( getLogger(), "[%s] Oops! POLLIN is turned off for this proxy connection,"
-//                    " turn it on, this should never happen!!!!", getLogId() ));
+//        LS_WARN( this, "Oops! POLLIN is turned off for this proxy connection,"
+//                 " turn it on, this should never happen!!!!");
 //        continueRead();
 //    }
 //    if (( m_iTotalPending > 0 )&& !( getEvents() & POLLOUT ))
 //    {
-//        LOG_WARN(( getLogger(), "[%s] Oops! POLLOUT is turned off while there is pending data,"
-//                    " turn it on, this should never happen!!!!", getLogId() ));
+//        LS_WARN( this, "Oops! POLLOUT is turned off while there is pending data,"
+//                    " turn it on, this should never happen!!!!");
 //        continueWrite();
 //    }
     if (m_lLastRespRecvTime)
@@ -863,14 +843,16 @@ void ProxyConn::onTimer()
         if ((delta > getWorker()->getTimeout()) && (m_iRespBodyRecv))
         {
             if (m_pChunkIS)
-                LOG_INFO((getLogger(), "[%s] Timeout, partial chunk encoded body received,"
-                          " received: %d, chunk len: %d, remain: %d!",
-                          getLogId(), m_iRespBodyRecv, m_pChunkIS->getChunkLen(),
-                          m_pChunkIS->getChunkRemain()));
+            {
+                LS_INFO(this, "Timeout, partial chunk encoded body received,"
+                        " received: %d, chunk len: %d, remain: %d!",
+                        m_iRespBodyRecv, m_pChunkIS->getChunkLen(),
+                        m_pChunkIS->getChunkRemain());
+            }
             else
-                LOG_INFO((getLogger(), "[%s] Timeout, partial response body received,"
-                          " body len: %d, received: %d!",
-                          getLogId(), m_iRespBodySize, m_iRespBodyRecv));
+                LS_INFO(this, "Timeout, partial response body received,"
+                        " body len: %d, received: %d!",
+                        m_iRespBodySize, m_iRespBodyRecv);
             setState(ABORT);
             getConnector()->endResponse(0, 0);;
             return;
@@ -879,13 +861,12 @@ void ProxyConn::onTimer()
         {
             if ((getConnector()))
             {
-                if (D_ENABLED(DL_LESS))
-                    LOG_D((getLogger(), "[%s] Missing trailing CRLF in Chunked Encoding,"
-                           " remain: %d!", getLogId(), m_pChunkIS->getChunkRemain()));
+                LS_DBG_L(this, "Missing trailing CRLF in Chunked Encoding,"
+                         " remain: %d!", m_pChunkIS->getChunkRemain());
 //                const char * p = m_pChunkIS->getLastBytes();
-//                LOG_INFO(( getLogger(),
-//                        "[%s] Last 8 bytes are: %#x %#x %#x %#x %#x %#x %#x %#x",
-//                         getLogId(), p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7] ));
+//                LS_INFO(this,
+//                        "Last 8 bytes are: %#x %#x %#x %#x %#x %#x %#x %#x",
+//                        p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7]);
 //                HttpReq * pReq = getConnector()->getHttpSession()->getReq();
 //                pReq->dumpHeader();
 
@@ -920,20 +901,19 @@ int  ProxyConn::readResp(char *pBuf, int size)
 
 void ProxyConn::dump()
 {
-    LOG_INFO((getLogger(),
-              "[%s] Proxy connection state: %d, watching event: %d, "
-              "Request header:%d, body:%d, sent:%d, "
-              "Response header: %d, total: %d bytes received in %ld seconds,"
-              "Total processing time: %ld.",
-              getLogId(), getState(), getEvents(), m_iReqHeaderSize,
-              m_iReqBodySize, m_iReqTotalSent, m_iRespHeaderRecv, m_iRespRecv,
-              (m_lReqSentTime) ? time(NULL) - m_lReqSentTime : 0,
-              time(NULL) - m_lReqBeginTime));
+    LS_INFO(this,
+            "Proxy connection state: %d, watching event: %d, "
+            "Request header:%d, body:%d, sent:%d, "
+            "Response header: %d, total: %d bytes received in %ld seconds,"
+            "Total processing time: %ld.",
+            getState(), getEvents(), m_iReqHeaderSize,
+            m_iReqBodySize, m_iReqTotalSent, m_iRespHeaderRecv, m_iRespRecv,
+            (m_lReqSentTime) ? time(NULL) - m_lReqSentTime : 0,
+            time(NULL) - m_lReqBeginTime);
 //    if ( m_iRespHeaderRecv > 0 )
 //    {
 //        m_achRespBuf[ m_iRespHeaderRecv ] = 0;
-//        LOG_INFO(( getLogger(), "[%s] Response Header Received: \n%s", getLogId(),
-//            m_achRespBuf ));
+//        LS_INFO(this, "Response Header Received:%s", m_achRespBuf);
 //    }
 }
 

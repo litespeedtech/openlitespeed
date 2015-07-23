@@ -18,6 +18,9 @@
 #include "appendermanager.h"
 #include <log4cxx/appender.h>
 
+#include <limits.h>
+
+
 BEGIN_LOG4CXX_NS
 
 
@@ -32,6 +35,12 @@ AppenderManager::AppenderManager()
 AppenderManager::~AppenderManager()
 {
 }
+
+void AppenderManager::releaseAppenders()
+{
+    m_appenders.release_objects();
+}
+
 
 void AppenderManager::addAppender(Appender *p)
 {
@@ -55,7 +64,7 @@ Appender *AppenderManager::getAppender()
     case AM_TILLFULL:
         if ((m_pCurAppender == NULL) ||
             m_pCurAppender->isFull())
-            return findAppender(m_pCurAppender);
+            return getNextAppender();
         else
             return m_pCurAppender;
         break;
@@ -94,6 +103,8 @@ Appender *AppenderManager::getNextAppender()
         return NULL;
     int n = m_curAppender++;
     int m = -1;
+    int factor = INT_MAX;
+    int f;
     Appender *p = NULL;
     while (n != m_curAppender)
     {
@@ -102,18 +113,32 @@ Appender *AppenderManager::getNextAppender()
         p = m_appenders[n];
         if (!p->isFail())
         {
-            if (!p->isFull())
+            f = p->isFull();
+            if (!f)
             {
                 m_curAppender = n;
                 return p;
             }
-            if (m == -1)
+            if (f < factor)
+            {
+                factor = f;
                 m = n;
-            m = n;
+            }
+            else if (m == -1)
+                m = n;
         }
         ++n;
     }
-    m_curAppender = m;
+    if (m == -1)   //all are bad
+    {
+        if (m_curAppender >= s)
+            m_curAppender = 0;
+        m = m_curAppender;
+        m_appenders[m]->close();
+        m_appenders[m]->open();
+    }
+    else
+        m_curAppender = m;
     return m_appenders[m];
 }
 

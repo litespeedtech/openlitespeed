@@ -194,7 +194,7 @@ public:
         return 0;
     }
 
-    void releaseObjects()
+    void release_objects()
     {
         GMap::for_each(begin(), end(), deleteObj);
         GMap::clear();

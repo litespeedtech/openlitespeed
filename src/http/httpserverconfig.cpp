@@ -109,7 +109,7 @@ int HttpServerConfig::getSpdyKeepaliveTimeout()
 {
     int timeout = m_iKeepAliveTimeout;
     timeout *= ConnLimitCtrl::getInstance().getSslAvailRatio() / 10 + 5;
-    if ( timeout > 60 )
+    if (timeout > 60)
         timeout = 60;
     return timeout;
 }

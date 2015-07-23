@@ -26,13 +26,13 @@
 #include <map>
 namespace std
 {
-    template <>
-    class less< const char * >
-    {
-    public:
-        bool operator()(const char *const &x, const char *const &y) const
-        {   return (strcmp(x, y) < 0); }
-    };
+template <>
+class less< const char * >
+{
+public:
+    bool operator()(const char *const &x, const char *const &y) const
+    {   return (strcmp(x, y) < 0); }
+};
 
 }
 
@@ -78,7 +78,7 @@ public:
         return CONT::erase(pKey);
     }
 
-    void releaseObjects()
+    void release_objects()
     {
         iterator iter;
         for (iter = CONT::begin(); iter != CONT::end();)

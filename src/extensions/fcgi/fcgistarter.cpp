@@ -48,16 +48,15 @@ int FcgiStarter::start(FcgiApp &app)
 //    if (( stat( config.getCommand(), &st ) == -1 )||
 //        ( access(config.getCommand(), X_OK) == -1 ))
 //    {
-//        LOG_ERR(("Start FCGI [%s]: invalid path to executable - %s,"
+//        LS_ERROR("Start FCGI [%s]: invalid path to executable - %s,"
 //                 " not exist or not executable ",
 //                config.getName(),config.getCommand() ));
 //        return LS_FAIL;
 //    }
 //    if ( st.st_mode & S_ISUID )
 //    {
-//        if ( D_ENABLED( DL_LESS ))
-//            LOG_D(( "Fast CGI [%s]: Setuid bit is not allowed : %s\n",
-//                config.getName(), config.getCommand() ));
+//        ( "Fast CGI [%s]: Setuid bit is not allowed : %s\n",
+//                config.getName(), config.getCommand() );
 //        return LS_FAIL;
 //    }
     if (app.getfd() < 0)
@@ -92,13 +91,12 @@ int FcgiStarter::start(FcgiApp &app)
         pid = LocalWorker::workerExec(config, fd);
         if (pid > 0)
         {
-            if (D_ENABLED(DL_LESS))
-                LOG_D(("[%s] add child process pid: %d", app.getName(), pid));
+            LS_DBG_L("[%s] add child process pid: %d", app.getName(), pid);
             PidRegistry::add(pid, &app, 0);
         }
         else
         {
-            LOG_ERR(("Start FCGI [%s]: failed to start the %d of %d instances.",
+            LS_ERROR("Start FCGI [%s]: failed to start the %d of %d instances.",
                      config.getName(), i + 1, instances));
             break;
         }

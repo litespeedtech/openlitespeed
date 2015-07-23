@@ -104,13 +104,13 @@ int CoreSocket::listen(const GSockAddr &server, int backLog, int *fd,
     if (rcvBuf > 4096)
         ::setsockopt(*fd, SOL_SOCKET, SO_RCVBUF, &rcvBuf, sizeof(int));
 
-    if ((( server.family() == AF_INET )||
-         ( server.family() == AF_INET6 )))
+    if (((server.family() == AF_INET) ||
+         (server.family() == AF_INET6)))
     {
         int nodelay = 1;
-        ::setsockopt( *fd, IPPROTO_TCP, TCP_NODELAY, &nodelay, sizeof( int ) );
+        ::setsockopt(*fd, IPPROTO_TCP, TCP_NODELAY, &nodelay, sizeof(int));
     }
-    
+
     ret = ::listen(*fd, backLog);
 
     if (ret == 0)

@@ -63,7 +63,7 @@ PHPConfig::PHPConfig(const PHPConfig &rhs)
 
 PHPConfig::~PHPConfig()
 {
-    m_config.releaseObjects();
+    m_config.release_objects();
 }
 
 

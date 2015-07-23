@@ -30,6 +30,7 @@
 #include <main/configctx.h>
 #include <main/mainserverconfig.h>
 #include <util/xmlnode.h>
+#include <log4cxx/logger.h>
 #include <extensions/localworker.h>
 #include <extensions/registry/extappregistry.h>
 
@@ -97,7 +98,7 @@ int CgidWorker::start(const char *pServerRoot, const char *pChroot,
     fd = ExtWorker::startServerSock(&config, 200);
     if (fd == -1)
     {
-        LOG_ERR(("Cannot create a valid unix domain socket for CGI daemon."));
+        LS_ERROR("Cannot create a valid unix domain socket for CGI daemon.");
         return LS_FAIL;
     }
     m_fdCgid = fd;
@@ -157,13 +158,13 @@ int CgidWorker::spawnCgid(int fd, char *pData, const char *secret)
     }
     else if (pid > 0)
     {
-        LOG_NOTICE(("[PID: %d]: forked cgid: %d", getpid(), pid));
+        LS_NOTICE("[PID: %d]: forked cgid: %d", getpid(), pid);
         m_pid = pid;
         return pid;
     }
     else
     {
-        LOG_ERR(("[PID: %d]: fork error", getpid()));
+        LS_ERROR("[PID: %d]: fork error", getpid());
         return LS_FAIL;
     }
 }
@@ -275,21 +276,22 @@ int CgidWorker::config(const XmlNode *pNode1)
     getConfig().setBuffering(HEC_RESP_NOBUFFER);
     getConfig().setTimeout(HttpServerConfig::getInstance().getConnTimeout());
     procConfig.setUidMin(ConfigCtx::getCurConfigCtx()->getLongValue(pNode1,
-                                "minUID", 10, INT_MAX, 10));
+                         "minUID", 10, INT_MAX, 10));
     procConfig.setGidMin(ConfigCtx::getCurConfigCtx()->getLongValue(pNode1,
-                                "minGID", 5, INT_MAX, 5));
+                         "minGID", 5, INT_MAX, 5));
     uid_t forcedGid = ConfigCtx::getCurConfigCtx()->getLongValue(pNode1,
                       "forceGID", 0, INT_MAX, 0);
 
     if ((forcedGid > 0) && (forcedGid < procConfig.getGidMin()))
-        ConfigCtx::getCurConfigCtx()->logWarn("\"Force GID\" is smaller than \"Minimum GID\", turn it off.");
+        LS_WARN(ConfigCtx::getCurConfigCtx(),
+                "\"Force GID\" is smaller than \"Minimum GID\", turn it off.");
     else
         procConfig.setForceGid(forcedGid);
 
     char achMIME[] = "application/x-httpd-cgi";
     HttpMime::getMime()->addMimeHandler("", achMIME,
-                                           HandlerFactory::getInstance(HandlerType::HT_CGI, NULL), NULL,
-                                           LogIdTracker::getLogId());
+                                        HandlerFactory::getInstance(HandlerType::HT_CGI, NULL), NULL,
+                                        TmpLogId::getLogId());
 
 
 //    char achMIME_SSI[] = "application/x-httpd-shtml";
@@ -297,9 +299,9 @@ int CgidWorker::config(const XmlNode *pNode1)
 //                                            HandlerFactory::getInstance( HandlerType::HT_SSI, NULL ), NULL,  LogIdTracker::getLogId() );
 
     CgidWorker::setCgidWorkerPid(
-            start(MainServerConfig::getInstance().getServerRoot(), psChroot,
-                  procConfig.getUid(), procConfig.getGid(),
-                  procConfig.getPriority()));
+        start(MainServerConfig::getInstance().getServerRoot(), psChroot,
+              procConfig.getUid(), procConfig.getGid(),
+              procConfig.getPriority()));
     return CgidWorker::getCgidWorkerPid();
 }
 

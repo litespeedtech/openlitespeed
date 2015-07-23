@@ -31,7 +31,8 @@
 
 #define BUF_SIZE 4096
 #define MAX_XML_VALUE_LEN (1024 * 1024 - 2)
-const int iXmlNodeRTFlag = RTFLAG_NOCONTEXT | RTFLAG_GLOBALPOOL | RTFLAG_CICMP;
+const int iXmlNodeRTFlag = RTFLAG_NOCONTEXT | RTFLAG_GLOBALPOOL |
+                           RTFLAG_CICMP;
 
 typedef struct xmlouthelper_s
 {
@@ -127,7 +128,7 @@ int XmlNodeImpl::addChild(const char *name, XmlNode *pChild)
 {
     XmlNodeList *pList;
     if ((pList = (XmlNodeList *)m_pNode->find(name, strlen(name),
-                                              iXmlNodeRTFlag)) != NULL)
+                 iXmlNodeRTFlag)) != NULL)
     {
         pList->push_back(pChild);
         return LS_OK;
@@ -216,7 +217,7 @@ const XmlNode *XmlNode::getChild(const char *name, int bOptional) const
     if (m_pImpl->m_pNode->getNumChildren() != 0)
     {
         ptr = (XmlNodeList *)m_pImpl->m_pNode->find(name, strlen(name),
-                                                    iXmlNodeRTFlag);
+                iXmlNodeRTFlag);
         if (ptr != NULL)
             return *(ptr->begin());
     }
@@ -280,8 +281,8 @@ long long XmlNode::getLongValue(const char *pTag,
     if (((min != LLONG_MIN) && (val < min)) ||
         ((max != LLONG_MAX) && (val > max)))
     {
-        //LOG_WARN(( "[%s] invalid value of <%s>:%s, use default=%ld",
-        //        getLogId(), pTag, pValue, def ));
+        //LS_WARN( "[%s] invalid value of <%s>:%s, use default=%ld",
+        //         getLogId(), pTag, pValue, def ));
         return def;
     }
     return val;
@@ -299,7 +300,7 @@ const XmlNodeList *XmlNode::getChildren(const char *name) const
     if (m_pImpl->m_pNode->getNumChildren() == 0)
         return NULL;
     return (XmlNodeList *)m_pImpl->m_pNode->find(name, strlen(name),
-                                                 iXmlNodeRTFlag);
+            iXmlNodeRTFlag);
 }
 
 

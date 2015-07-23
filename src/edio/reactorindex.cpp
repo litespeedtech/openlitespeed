@@ -73,7 +73,7 @@ void ReactorIndex::timerExec()
                 m_pIndexes[i]->onTimer();
             else
             {
-//                LOG_ERR(( "[%d] ReactorIndex[%d]=%p, getfd()=%d, type: %s", getpid(), i, m_pIndexes[i], m_pIndexes[i]->getfd(),
+//                LS_ERROR( "[%d] ReactorIndex[%d]=%p, getfd()=%d, type: %s", getpid(), i, m_pIndexes[i], m_pIndexes[i]->getfd(),
 //                typeid( *m_pIndexes[i] ).name() ));
 
                 m_pIndexes[i] = NULL;

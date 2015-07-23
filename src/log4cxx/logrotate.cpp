@@ -105,7 +105,7 @@ int archiveFile(const char *pFileName, const char *pSuffix,
                 break;
             }
         }
-        l = ls_snprintf(pMoreSuffix, max, ".%d", suffix++);
+        l = ls_snprintf(pMoreSuffix, max, ".%02d", suffix++);
     }
     if (pSuffix && *pSuffix)
     {

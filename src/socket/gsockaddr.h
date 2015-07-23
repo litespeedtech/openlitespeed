@@ -117,8 +117,8 @@ public:
     int getPort() const;
     void setPort(short port);
 
-    static int compareAddr( const struct sockaddr * pAddr1, 
-                            const struct sockaddr * pAddr2 );
+    static int compareAddr(const struct sockaddr *pAddr1,
+                           const struct sockaddr *pAddr2);
 };
 
 #endif

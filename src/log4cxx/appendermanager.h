@@ -52,7 +52,7 @@ public:
     Appender *getAppender();
 
     void setStrategy(int st)      {   m_strategy = st;    }
-
+    void releaseAppenders();
 
 
     LS_NO_COPY_ASSIGN(AppenderManager);

@@ -26,6 +26,7 @@
 #include <http/httpver.h>
 #include <http/httpvhost.h>
 #include <http/iptogeo.h>
+#include <log4cxx/logger.h>
 #include <lsr/ls_strtool.h>
 #include <ssi/ssiruntime.h>
 #include <ssi/ssiscript.h>
@@ -93,7 +94,7 @@ AutoStr2 *SubstItem::setStr(const char *pStr, int len)
 {
     m_value.m_pStr = new AutoStr2(pStr, len);
     if (!m_value.m_pStr)
-        ERR_NO_MEM("new AutoStr2()");
+        LS_ERR_NO_MEM("new AutoStr2()");
 
     return m_value.m_pStr;
 }
@@ -234,7 +235,7 @@ SubstFormat::SubstFormat()
 
 SubstFormat::~SubstFormat()
 {
-    releaseObjects();
+    release_objects();
 }
 
 
@@ -276,7 +277,7 @@ int SubstFormat::parse(const char *pCurLine, const char *pFormatStr,
         pItem = new SubstItem();
         if (!pItem)
         {
-            ERR_NO_MEM("new SubstItem()");
+            LS_ERR_NO_MEM("new SubstItem()");
             return LS_FAIL;
         }
 
@@ -686,7 +687,8 @@ int RequestVars::getReqVar(HttpSession *pSession, int type, char *&pValue,
         i = snprintf(pValue, bufLen, "%d", getpid());
         return i;
     case REF_STATUS_CODE:
-        memmove(pValue, HttpStatusCode::getInstance().getCodeString(pReq->getStatusCode()) + 1,
+        memmove(pValue, HttpStatusCode::getInstance().getCodeString(
+                    pReq->getStatusCode()) + 1,
                 3);
         pValue[3] = 0;
         return 3;
@@ -1184,9 +1186,7 @@ int RequestVars::setEnv(HttpSession *pSession, const char *pName,
         ++pName;
         --nameLen;
         pSession->getReq()->unsetEnv(pName, nameLen);
-        if (D_ENABLED(DL_MEDIUM))
-            LOG_D((pSession->getLogger(),
-                   "[%s] remove ENV: '%s' ", pSession->getLogId(), pName));
+        LS_DBG_M(pSession->getLogSession(), "Remove ENV: '%s' ", pName);
         return 0;
     }
     if (!pValue)
@@ -1196,10 +1196,8 @@ int RequestVars::setEnv(HttpSession *pSession, const char *pName,
     }
     if (strcasecmp(pName, "dontlog") == 0)
     {
-        if (D_ENABLED(DL_MEDIUM))
-            LOG_D((pSession->getLogger(),
-                   "[%s] disable access log for this request.",
-                   pSession->getLogId()));
+        LS_DBG_M(pSession->getLogSession(),
+                 "Disable access log for this request.");
         pSession->setAccessLogOff();
         return 0;
     }
@@ -1207,29 +1205,23 @@ int RequestVars::setEnv(HttpSession *pSession, const char *pName,
     {
         if (strcasecmp(pName, "nokeepalive") == 0)
         {
-            if (D_ENABLED(DL_MEDIUM))
-                LOG_D((pSession->getLogger(),
-                       "[%s] turn off connection keepalive.",
-                       pSession->getLogId()));
+            LS_DBG_M(pSession->getLogSession(),
+                     "Turn off connection keepalive.");
             pSession->getReq()->keepAlive(false);
             return 0;
         }
         //else if ( strcasecmp( pName, "noconntimeout" ) == 0 )
         //{
-        //    if ( D_ENABLED( DL_MEDIUM ) )
-        //        LOG_D(( pSession->getLogger(),
-        //            "[%s] turn off connection timeout.",
-        //            pSession->getLogId() ));
+        //    LS_DBG_M(pSession->getLogSession(),
+        //            "turn off connection timeout.");
         //    pSession->setFlag( HSF_NO_CONN_TIMEOUT );
         //}
         else if (strcasecmp(pName, "no-gzip") == 0)
         {
             if (strncmp(pValue, "0", 1) != 0)
             {
-                if (D_ENABLED(DL_MEDIUM))
-                    LOG_D((pSession->getLogger(),
-                           "[%s] turn off gzip compression for this requst.",
-                           pSession->getLogId()));
+                LS_DBG_M(pSession->getLogSession(),
+                         "Turn off gzip compression for this requst.");
                 pSession->getReq()->andGzip(~GZIP_ENABLED);
             }
             return 0;
@@ -1238,9 +1230,7 @@ int RequestVars::setEnv(HttpSession *pSession, const char *pName,
 
     pSession->addEnv(pName, nameLen, pValue, valLen);
 
-    if (D_ENABLED(DL_MEDIUM))
-        LOG_D((pSession->getLogger(),
-               "[%s] add ENV: '%s:%s' ", pSession->getLogId(), pName, pValue));
+    LS_DBG_M(pSession->getLogSession(), "Add ENV: '%s:%s' ", pName, pValue);
     return 0;
 }
 

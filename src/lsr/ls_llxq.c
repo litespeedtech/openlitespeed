@@ -46,7 +46,7 @@ static inline bool llxq_atom_cmp_and_swap(
     ls_atom_uint_t *pVal, unsigned *pcmp, unsigned swap)
 {
     unsigned prev = (unsigned)
-      ls_atomic_casvint((ls_atom_32_t *)pVal, (int32_t)(*pcmp), (int32_t)swap);
+                    ls_atomic_casvint((ls_atom_32_t *)pVal, (int32_t)(*pcmp), (int32_t)swap);
     if (prev == *pcmp)
         return true;
     *pcmp = prev;
@@ -311,7 +311,7 @@ int ls_llxq_newqueue(ls_llxq_t *pThis, unsigned int size)
     ls_atomic_store(&pinfo->m_iGetIndx, 0);
     pinfo->m_mask = size - 1;
     pprev = ls_atomic_setptr(
-      (void **)indx2pqinfo(pThis, qpindx + 1), (void *)pinfo);
+                (void **)indx2pqinfo(pThis, qpindx + 1), (void *)pinfo);
     if (pprev != NULL)
         ls_pfree((void *)pprev);
     ls_atomic_store(&pThis->m_iQPutIndx, qpindx + 1);

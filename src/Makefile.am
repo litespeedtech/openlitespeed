@@ -33,7 +33,6 @@ openlitespeed_SOURCES = modules/prelinkedmods.cpp httpdtest.cpp main.cpp \
    util/linkedobj.cpp \
    util/objpool.cpp \
    util/gpath.cpp \
-   util/logtracker.cpp \
    util/poolalloc.cpp \
    util/env.cpp \
    util/xmlnode.cpp \
@@ -46,7 +45,6 @@ openlitespeed_SOURCES = modules/prelinkedmods.cpp httpdtest.cpp main.cpp \
    util/pcutil.cpp \
    util/daemonize.cpp \
    util/configentry.cpp \
-   util/logidtracker.cpp \
    util/datetime.cpp \
    util/resourcepool.cpp \
    util/linkedqueue.cpp \

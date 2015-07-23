@@ -17,10 +17,10 @@
 *****************************************************************************/
 #include "h2connection.h"
 #include <http/hiohandlerfactory.h>
-#include <http/httplog.h>
 #include <http/httprespheaders.h>
 #include <http/httpstatuscode.h>
 #include <http/httpserverconfig.h>
+#include <log4cxx/logger.h>
 #include <spdy/h2stream.h>
 #include <spdy/h2streampool.h>
 #include <util/iovec.h>
@@ -145,11 +145,8 @@ int H2Connection::verifyClientPreface()
     m_bufInput.moveTo(sPreface, H2_CLIENT_PREFACE_LEN);
     if (memcmp(sPreface, s_clientPreface, H2_CLIENT_PREFACE_LEN) != 0)
     {
-        if (D_ENABLED(DL_LESS))
-        {
-            LOG_D((getLogger(), "[%s] missing client PREFACE string,"
-                   " got [%.24s], close.", getLogId(), sPreface));
-        }
+        LS_DBG_L(getLogSession(), "Missing client PREFACE string,"
+                 " got [%.24s], close.", sPreface);
         return LS_FAIL;
     }
     m_iFlag |= H2_CONN_FLAG_PREFACE;
@@ -169,24 +166,19 @@ int H2Connection::parseFrame()
             uint32_t id = m_pCurH2Header->getStreamId();
             if (id && (id % 2 == 0))
             {
-                if (D_ENABLED(DL_LESS))
-                    LOG_D((getLogger(), "[%s] invalid frame id %d (type %d)",
-                           getLogId(), id, m_pCurH2Header->getType()));
+                LS_DBG_L(getLogSession(), "Invalid frame id %d (type %d)",
+                         id, m_pCurH2Header->getType());
                 return LS_FAIL;
             }
 
             m_iCurrentFrameRemain = m_pCurH2Header->getLength();
-            if (D_ENABLED(DL_LESS))
-            {
-                LOG_D((getLogger(), "[%s] frame type %d, size: %d", getLogId(),
-                       m_pCurH2Header->getType(), m_iCurrentFrameRemain));
-            }
+            LS_DBG_L(getLogSession(), "Frame type %d, size: %d",
+                     m_pCurH2Header->getType(), m_iCurrentFrameRemain);
             if (m_iCurrentFrameRemain > H2_DEFAULT_DATAFRAME_SIZE)
             {
-                if (D_ENABLED(DL_LESS))
-                    LOG_D((getLogger(), "[%s] Frame size is too large, "
-                           "Max: %d, Current Frame Size: %d.", getLogId(),
-                           H2_DEFAULT_DATAFRAME_SIZE, m_iCurrentFrameRemain));
+                LS_DBG_L(getLogSession(), "Frame size is too large, "
+                         "Max: %d, Current Frame Size: %d.",
+                         H2_DEFAULT_DATAFRAME_SIZE, m_iCurrentFrameRemain);
                 return LS_FAIL;
             }
         }
@@ -194,10 +186,9 @@ int H2Connection::parseFrame()
         {
             if (m_pCurH2Header->getType() != H2_FRAME_SETTINGS)
             {
-                if (D_ENABLED(DL_LESS))
-                    LOG_D((getLogger(), "[%s] expects SETTINGS frame "
-                           "as part of client PREFACE, got frame type %d",
-                           getLogId(), m_pCurH2Header->getType()));
+                LS_DBG_L(getLogSession(), "Expected SETTINGS frame "
+                         "as part of client PREFACE, got frame type %d",
+                         m_pCurH2Header->getType());
                 return LS_FAIL;
             }
         }
@@ -227,11 +218,8 @@ int H2Connection::parseFrame()
 
     if (m_iDataInWindow / 2 < m_iCurInBytesToUpdate)
     {
-        if (D_ENABLED(DL_LESS))
-        {
-            LOG_D((getLogger(), "[%s] send WINDOW_UPDATE, window: %d, consumed: %d.",
-                   getLogId(), m_iDataInWindow, m_iCurInBytesToUpdate));
-        }
+        LS_DBG_L(getLogSession(), "Send WINDOW_UPDATE, window: %d, consumed: %d.",
+                 m_iDataInWindow, m_iCurInBytesToUpdate);
         sendWindowUpdateFrame(0, m_iCurInBytesToUpdate);
         m_iCurInBytesToUpdate = 0;
     }
@@ -249,9 +237,7 @@ int H2Connection::onReadEx2()
             m_bufInput.guarantee(1024);
         avaiLen = m_bufInput.contiguous();
         n = getStream()->read(m_bufInput.end(), avaiLen);
-        if (D_ENABLED(DL_LESS))
-            LOG_D((getLogger(), "[%s] read() return %d",
-                   getLogId(), n));
+        LS_DBG_L(getLogSession(), "Read() returned %d", n);
 
         if (n == -1)
             break;
@@ -332,7 +318,7 @@ int H2Connection::processFrame(H2FrameHeader *pHeader)
 
 void H2Connection::printLogMsg(H2FrameHeader *pHeader)
 {
-    if (D_ENABLED(DL_LESS))
+    if (getLogger()->isEnabled(LOG4CXX_NS::Level::DBG_LESS))
     {
         const char *message = "";
         int messageLen = 0;
@@ -341,11 +327,11 @@ void H2Connection::printLogMsg(H2FrameHeader *pHeader)
             message = (const char *)m_bufInput.begin() + 8;
             messageLen = pHeader->getLength() - 8;
         }
-        LOG_D((getLogger(),
-               "[%s-%d] Received %s, size: %d, flag: 0x%hhx, Message: '%.*s'\n",
-               getLogId(), pHeader->getStreamId(),
-               getH2FrameName(pHeader->getType()), pHeader->getLength(),
-               pHeader->getFlags(), messageLen, message));
+        LS_DBG_L(getLogger(),
+                 "[%s-%d] Received %s, size: %d, flag: 0x%hhx, Message: '%.*s'",
+                 getLogId(), pHeader->getStreamId(),
+                 getH2FrameName(pHeader->getType()), pHeader->getLength(),
+                 pHeader->getFlags(), messageLen, message);
     }
 }
 
@@ -354,12 +340,8 @@ int H2Connection::processPriorityFrame(H2FrameHeader *pHeader)
 {
     if (pHeader->getStreamId() == 0)
     {
-        if (D_ENABLED(DL_LESS))
-            LOG_D((getLogger(),
-                   "[%s] bad PRIORITY frame, stream ID is zero.",
-                   getLogId()));
+        LS_DBG_L(getLogSession(), "Bad PRIORITY frame, stream ID is zero.");
         return LS_FAIL;
-
     }
 
     return 0;
@@ -389,10 +371,8 @@ int H2Connection::processSettingFrame(H2FrameHeader *pHeader)
     uint32_t iEntryID, iEntryValue;
     if (pHeader->getStreamId() != 0)
     {
-        if (D_ENABLED(DL_LESS))
-            LOG_D((getLogger(),
-                   "[%s] bad SETTINGS frame, stream ID must be zero.",
-                   getLogId()));
+        LS_DBG_L(getLogSession(),
+                 "Bad SETTINGS frame, stream ID must be zero.");
         doGoAway(H2_ERROR_PROTOCOL_ERROR);
         return 0;
 
@@ -401,10 +381,8 @@ int H2Connection::processSettingFrame(H2FrameHeader *pHeader)
     int iEntries = m_iCurrentFrameRemain / 6;
     if (m_iCurrentFrameRemain % 6 != 0)
     {
-        if (D_ENABLED(DL_LESS))
-            LOG_D((getLogger(),
-                   "[%s] bad SETTINGS frame, frame size does not match.",
-                   getLogId()));
+        LS_DBG_L(getLogSession(),
+                 "Bad SETTINGS frame, frame size does not match.");
         doGoAway(H2_ERROR_FRAME_SIZE_ERROR);
         return 0;
     }
@@ -413,10 +391,9 @@ int H2Connection::processSettingFrame(H2FrameHeader *pHeader)
     {
         if (iEntries != 0)
         {
-            if (D_ENABLED(DL_LESS))
-                LOG_D((getLogger(),
-                       "[%s] bad SETTINGS frame with ACK flag, has %d entries.",
-                       getLogId(), iEntries));
+            LS_DBG_L(getLogSession(),
+                     "Bad SETTINGS frame with ACK flag, has %d entries.",
+                     iEntries);
             return LS_FAIL;
         }
         if (m_iFlag & H2_CONN_FLAG_SETTING_SENT)
@@ -426,10 +403,8 @@ int H2Connection::processSettingFrame(H2FrameHeader *pHeader)
         }
         else
         {
-            if (D_ENABLED(DL_LESS))
-                LOG_D((getLogger(),
-                       "[%s] received SETTINGS frame with ACK flag before sending our SETTINGS frame.",
-                       getLogId()));
+            LS_DBG_L(getLogSession(), "Received SETTINGS frame with ACK flag "
+                     "before sending our SETTINGS frame.");
             return LS_FAIL;
         }
     }
@@ -441,12 +416,9 @@ int H2Connection::processSettingFrame(H2FrameHeader *pHeader)
         m_bufInput.moveTo((char *)p, 6);
         iEntryID = ((uint16_t)p[0] << 8) | p[1];
         iEntryValue = beReadUint32(&p[2]);
-        if (D_ENABLED(DL_LESS))
-        {
-            LOG_D((getLogger(), "[%s] %s(%d) value: %d", getLogId(),
-                   (iEntryID < 7) ? cpEntryNames[iEntryID] : "INVALID", iEntryID,
-                   iEntryValue));
-        }
+        LS_DBG_L(getLogSession(), "%s(%d) value: %d",
+                 (iEntryID < 7) ? cpEntryNames[iEntryID] : "INVALID", iEntryID,
+                 iEntryValue);
         switch (iEntryID)
         {
         case H2_SETTINGS_HEADER_TABLE_SIZE:
@@ -456,9 +428,8 @@ int H2Connection::processSettingFrame(H2FrameHeader *pHeader)
             if ((iEntryValue < H2_DEFAULT_DATAFRAME_SIZE) ||
                 (iEntryValue > H2_MAX_DATAFRAM_SIZE))
             {
-                if (D_ENABLED(DL_LESS))
-                    LOG_D((getLogger(), "[%s] MAX_FRAME_SIZE value is invalid, %d.",
-                           getLogId(), iEntryValue));
+                LS_DBG_L(getLogSession(), "MAX_FRAME_SIZE value is invalid, %d.",
+                         iEntryValue);
                 return LS_FAIL;
             }
             m_iPeerMaxFrameSize = iEntryValue;
@@ -514,12 +485,7 @@ int H2Connection::processWindowUpdateFrame(H2FrameHeader *pHeader)
     delta &= 0x7FFFFFFFu;
     if (delta == 0)
     {
-        if (D_ENABLED(DL_LESS))
-        {
-            LOG_D((getLogger(),
-                   "[%s] session WINDOW_UPDATE ERROR: %d",
-                   getLogId(), delta));
-        }
+        LS_DBG_L(getLogSession(), "Session WINDOW_UPDATE ERROR: %d", delta);
         if (id)
             sendRstFrame(id, H2_ERROR_PROTOCOL_ERROR);
         else
@@ -535,21 +501,15 @@ int H2Connection::processWindowUpdateFrame(H2FrameHeader *pHeader)
         if (tmpVal > 2147483647)  //2^31 -1
         {
             //sendRstFrame(pHeader->getStreamId(), H2_ERROR_PROTOCOL_ERROR);
-            if (D_ENABLED(DL_LESS))
-            {
-                LOG_D((getLogger(),
-                       "[%s] session WINDOW_UPDATE ERROR: %d, window size: %d, total %d (m_iDataInWindow: %d) ",
-                       getLogId(), delta, m_iCurDataOutWindow, tmpVal, m_iDataInWindow));
-            }
+            LS_DBG_L(getLogSession(),
+                     "Session WINDOW_UPDATE ERROR: %d, window size: %d, total %d (m_iDataInWindow: %d)",
+                     delta, m_iCurDataOutWindow, tmpVal, m_iDataInWindow);
             doGoAway(H2_ERROR_FLOW_CONTROL_ERROR);
             return 0;
         }
-        if (D_ENABLED(DL_LESS))
-        {
-            LOG_D((getLogger(),
-                   "[%s] session WINDOW_UPDATE: %d, current window size: %d, new: %d ",
-                   getLogId(), delta, m_iCurDataOutWindow, tmpVal));
-        }
+        LS_DBG_L(getLogSession(),
+                 "Session WINDOW_UPDATE: %d, current window size: %d, new: %d",
+                 delta, m_iCurDataOutWindow, tmpVal);
         if (m_iCurDataOutWindow <= 0 && tmpVal > 0)
         {
             m_iCurDataOutWindow = tmpVal;
@@ -598,9 +558,8 @@ int H2Connection::processRstFrame(H2FrameHeader *pHeader)
     unsigned char p[4];
     m_bufInput.moveTo((char *)p, 4);
     uint32_t errorCode = beReadUint32(p);
-    LOG_D((getLogger(), "[%s] streamID:%d processRstFrame, error code: %d",
-           getLogId(),
-           streamID, errorCode));
+    LS_DBG_L(getLogSession(), "StreamID:%d processRstFrame, error code: %d",
+             streamID, errorCode);
     pH2Stream->setFlag(HIO_FLAG_PEER_RESET, 1);
     recycleStream(streamID);
     return 0;
@@ -662,12 +621,9 @@ int H2Connection::processDataFrame(H2FrameHeader *pHeader)
 
     if (!pH2Stream->isPeerShutdown())
     {
-        if (D_ENABLED(DL_MORE))
-        {
-            LOG_D((getLogger(),
-                   "[%s] processDataFrame() ID: %d, input window size: %d ",
-                   getLogId(), streamID, pH2Stream->getWindowIn()));
-        }
+        LS_DBG_H(getLogSession(),
+                 "processDataFrame() ID: %d, input window size: %d ",
+                 streamID, pH2Stream->getWindowIn());
 
         if (pH2Stream->getWindowIn() < m_iStreamInInitWindowSize / 2)
         {
@@ -687,13 +643,9 @@ int H2Connection::processContinuationFrame(H2FrameHeader *pHeader)
     if ((id != m_uiLastStreamID)
         || (m_iFlag & H2_CONN_HEADERS_START) == 0)
     {
-        if (D_ENABLED(DL_LESS))
-        {
-            LOG_D((getLogger(),
-                   "[%s] received unexpected CONTINUATION frame, expect id: %d, "
-                   " connection flag: %d",
-                   getLogId(), m_uiLastStreamID, m_iFlag));
-        }
+        LS_DBG_L(getLogSession(),
+                 "Received unexpected CONTINUATION frame, expect id: %d,"
+                 " connection flag: %d",  m_uiLastStreamID, m_iFlag);
         return LS_FAIL;
     }
     if (pHeader->getFlags() & H2_FLAG_END_HEADERS)
@@ -767,11 +719,7 @@ int H2Connection::decodeHeaders(unsigned char *pSrc, int length,
     {
         if (uri)
             free(uri);
-        if (D_ENABLED(DL_LESS))
-        {
-            LOG_D((getLogger(), "[%s] decodeData() failure, return %d",
-                   getLogId(), rc));
-        }
+        LS_DBG_L(getLogSession(), "decodeData() failure, return %d", rc);
         return LS_FAIL;
     }
 
@@ -806,17 +754,16 @@ int H2Connection::processHeadersFrame(H2FrameHeader *pHeader)
 
     if (id == 0)
     {
-        LOG_INFO(("[%s] Protocol error, HEADER frame STREAM ID is 0",
-                  getLogId()));
+        LS_INFO(getLogSession(), "Protocol error, HEADER frame STREAM ID is 0");
         return LS_FAIL;
     }
 
     if (id <= m_uiLastStreamID)
     {
         sendRstFrame(id, H2_ERROR_PROTOCOL_ERROR);
-        LOG_INFO(("[%s] Protocol error, STREAM ID: %d is less the"
-                  " previously received stream ID: %d, go away!",
-                  getLogId(), id, m_uiLastStreamID));
+        LS_INFO(getLogSession(), "Protocol error, STREAM ID: %d is less the"
+                " previously received stream ID: %d, go away!",
+                id, m_uiLastStreamID);
         return LS_FAIL;
     }
     m_uiLastStreamID = id;
@@ -1023,11 +970,8 @@ H2Stream *H2Connection::getNewStream(uint8_t ubH2_Flags)
 
     pStream = new H2Stream();
     m_mapStream.insert((void *)(long)m_uiLastStreamID, pStream);
-    if (D_ENABLED(DL_MORE))
-    {
-        LOG_D((getLogger(), "[%s-%d] getNewStream(), stream map size: %d ",
-               getLogId(), m_uiLastStreamID, m_mapStream.size()));
-    }
+    LS_DBG_H(getLogger(), "[%s-%d] getNewStream(), stream map size: %d",
+             getLogId(), m_uiLastStreamID, m_mapStream.size());
     if (m_tmIdleBegin)
         m_tmIdleBegin = 0;
     pStream->init(m_uiLastStreamID, this, ubH2_Flags, pSession, &m_priority);
@@ -1073,11 +1017,8 @@ void H2Connection::recycleStream(StreamMap::iterator it)
     if (pH2Stream->getHandler())
         pH2Stream->getHandler()->recycle();
 
-    if (D_ENABLED(DL_MORE))
-    {
-        LOG_D((getLogger(), "[%s-%d] recycleStream(), stream map size: %d "
-               , getLogId(), pH2Stream->getStreamID(), m_mapStream.size()));
-    }
+    LS_DBG_H(getLogger(), "[%s-%d] recycleStream(), stream map size: %d ",
+             getLogId(), pH2Stream->getStreamID(), m_mapStream.size());
     //H2StreamPool::recycle( pH2Stream );
     delete pH2Stream;
 }
@@ -1109,11 +1050,8 @@ int H2Connection::sendFrame8Bytes(H2FrameType type, uint32_t uiStreamId,
     appendCtrlFrameHeader(type, 8, 0, uiStreamId);
     appendNbo4Bytes(getBuf(), uiVal1);
     appendNbo4Bytes(getBuf(), uiVal2);
-    if (D_ENABLED(DL_MORE))
-    {
-        LOG_D((getLogger(), "[%s-%d] send %s frame, stream: %d, value: %d"
-               , getLogId(), uiStreamId, getH2FrameName(type), uiVal1, uiVal2));
-    }
+    LS_DBG_H(getLogger(), "[%s-%d] send %s frame, stream: %d, value: %d",
+             getLogId(), uiStreamId, getH2FrameName(type), uiVal1, uiVal2);
     return 0;
 }
 
@@ -1125,11 +1063,8 @@ int H2Connection::sendFrame4Bytes(H2FrameType type, uint32_t uiStreamId,
     appendCtrlFrameHeader(type, 4, 0, uiStreamId);
 
     appendNbo4Bytes(getBuf(), uiVal1);
-    if (D_ENABLED(DL_MORE))
-    {
-        LOG_D((getLogger(), "[%s-%d] send %s frame, value: %d", getLogId(),
-               uiStreamId, getH2FrameName(type), uiVal1));
-    }
+    LS_DBG_H(getLogger(), "[%s-%d] send %s frame, value: %d", getLogId(),
+             uiStreamId, getH2FrameName(type), uiVal1);
     return 0;
 }
 
@@ -1139,11 +1074,8 @@ int H2Connection::sendFrame0Bytes(H2FrameType type, unsigned char flags,
 {
     getBuf()->guarantee(9);
     appendCtrlFrameHeader(type, 0, flags, uiStreamId);
-    if (D_ENABLED(DL_MORE))
-    {
-        LOG_D((getLogger(), "[%s-%d] send %s frame, with Flag: %d"
-               , getLogId(), uiStreamId, getH2FrameName(type), flags));
-    }
+    LS_DBG_H(getLogger(), "[%s-%d] send %s frame, with Flag: %d",
+             getLogId(), uiStreamId, getH2FrameName(type), flags);
     return 0;
 }
 
@@ -1175,13 +1107,9 @@ int H2Connection::sendSettingsFrame()
     getBuf()->guarantee(27);
     appendCtrlFrameHeader(H2_FRAME_SETTINGS, 18);
     getBuf()->append((char *)s_settings, 18);
-    if (D_ENABLED(DL_MORE))
-    {
-        LOG_D((getLogger(),
-               "[%s] send SETTING frame, MAX_CONCURRENT_STREAMS: %d,"
-               "  INITIAL_WINDOW_SIZE: %d"
-               , getLogId(), m_iServerMaxStreams, m_iStreamInInitWindowSize));
-    }
+    LS_DBG_H(getLogSession(), "Send SETTING frame, MAX_CONCURRENT_STREAMS: %d,"
+             " INITIAL_WINDOW_SIZE: %d", m_iServerMaxStreams,
+             m_iStreamInInitWindowSize);
     m_iFlag |= H2_CONN_FLAG_SETTING_SENT;
 
     sendWindowUpdateFrame(0, H2_FCW_INIT_SIZE * 3);
@@ -1198,9 +1126,8 @@ int H2Connection::processPingFrame(H2FrameHeader *pHeader)
     if (pHeader->getStreamId() != 0)
     {
         //doGoAway(H2_ERROR_PROTOCOL_ERROR);
-        if (D_ENABLED(DL_LESS))
-            LOG_D((getLogger(), "[%s] invalid PING frame id %d",
-                   getLogId(), pHeader->getStreamId()));
+        LS_DBG_L(getLogSession(), "Invalid PING frame id %d",
+                 pHeader->getStreamId());
         return LS_FAIL;
     }
 
@@ -1210,9 +1137,7 @@ int H2Connection::processPingFrame(H2FrameHeader *pHeader)
         m_bufInput.moveTo((char *)payload, H2_PING_FRAME_PAYLOAD_SIZE);
         if (pHeader->getFlags() & H2_FLAG_ACK)
         {
-            if (D_ENABLED(DL_LESS))
-                LOG_D((getLogger(), "[%s] unexpected PING frame, %.*s",
-                       getLogId(), 8, payload));
+            LS_DBG_L(getLogSession(), "Unexpected PING frame, %.8s", payload);
             return 0;
         }
         return sendPingFrame(H2_FLAG_ACK, payload);
@@ -1221,11 +1146,8 @@ int H2Connection::processPingFrame(H2FrameHeader *pHeader)
     gettimeofday(&CurTime, NULL);
     msec = (CurTime.tv_sec - m_timevalPing.tv_sec) * 1000;
     msec += (CurTime.tv_usec - m_timevalPing.tv_usec) / 1000;
-    if (D_ENABLED(DL_MORE))
-    {
-        LOG_D((getLogger(), "[%s] Received PING, Round trip "
-               "times=%d milli-seconds", getLogId(), msec));
-    }
+    LS_DBG_H(getLogSession(), "Received PING, Round trip "
+             "times=%d milli-seconds", msec);
     m_timevalPing.tv_sec = 0;
     return 0;
 }
@@ -1254,8 +1176,7 @@ int H2Connection::onCloseEx()
 {
     if (getStream()->isReadyToRelease())
         return 0;
-    if (D_ENABLED(DL_LESS))
-        LOG_D((getLogger(), "[%s] H2Connection::onCloseEx() ", getLogId()));
+    LS_DBG_L(getLogSession(), "H2Connection::onCloseEx()");
 
     getStream()->tobeClosed();
     releaseAllStream();
@@ -1287,9 +1208,8 @@ int H2Connection::processGoAwayFrame(H2FrameHeader *pHeader)
 
 int H2Connection::doGoAway(H2ErrorCode status)
 {
-    if (D_ENABLED(DL_LESS))
-        LOG_D((getLogger(), "[%s] H2Connection::doGoAway(), status = %d ",
-               getLogId(), status));
+    LS_DBG_L(getLogSession(), "H2Connection::doGoAway(), status = %d",
+             status);
     sendGoAwayFrame(status);
     releaseAllStream();
     getStream()->tobeClosed();
@@ -1344,9 +1264,8 @@ int H2Connection::timerRoutine()
             int idle = DateTime::s_curTime - m_tmIdleBegin;
             if (idle > HttpServerConfig::getInstance().getSpdyKeepaliveTimeout())
             {
-                if (D_ENABLED(DL_LESS))
-                    LOG_D((getLogger(), "[%s] Session idle for %d seconds, GOAWAY.",
-                           getLogId(), idle));
+                LS_DBG_L(getLogSession(),
+                         "Session idle for %d seconds, GOAWAY.", idle);
 
                 doGoAway(H2_ERROR_NO_ERROR);
             }
@@ -1358,9 +1277,8 @@ int H2Connection::timerRoutine()
         {
             if (m_timevalPing.tv_sec == 0)
             {
-                if (D_ENABLED(DL_LESS))
-                    LOG_D((getLogger(), "[%s] send PING to check if peer is still alive.",
-                           getLogId()));
+                LS_DBG_L(getLogSession(),
+                         "Send PING to check if peer is still alive.");
                 sendPingFrame(0, (uint8_t *)"RUALIVE?");
                 m_timevalPing.tv_sec = DateTime::s_curTime;
                 m_timevalPing.tv_usec = DateTime::s_curTimeUs;
@@ -1368,9 +1286,7 @@ int H2Connection::timerRoutine()
             }
             else if (DateTime::s_curTime - m_timevalPing.tv_sec > 20)
             {
-                if (D_ENABLED(DL_LESS))
-                    LOG_D((getLogger(), "[%s] PING timeout.",
-                           getLogId()));
+                LS_DBG_L(getLogSession(), "PING timeout.");
                 doGoAway(H2_ERROR_PROTOCOL_ERROR);
             }
         }
@@ -1437,11 +1353,8 @@ int H2Connection::encodeHeaders(HttpRespHeaders *pRespHeaders,
 int H2Connection::sendRespHeaders(HttpRespHeaders *pRespHeaders,
                                   uint32_t uiStreamID, uint8_t flag)
 {
-    if (D_ENABLED(DL_MORE))
-    {
-        LOG_D((getLogger(), "[%s-%d] sendRespHeaders()"
-               , getLogId(), uiStreamID));
-    }
+    LS_DBG_H(getLogger(), "[%s-%d] sendRespHeaders()",
+             getLogId(), uiStreamID);
 
     unsigned char achHdrBuf[H2_TMP_HDR_BUFF_SIZE];
     int rc = encodeHeaders(pRespHeaders, achHdrBuf, H2_TMP_HDR_BUFF_SIZE);
@@ -1459,11 +1372,8 @@ void H2Connection::add2PriorityQue(H2Stream *pH2Stream)
 {
     if (pH2Stream->next())
         pH2Stream->remove();
-    if (D_ENABLED(DL_MORE))
-    {
-        LOG_D((getLogger(), "[%s-%d] add to priority queue: %d",
-               getLogId(), pH2Stream->getStreamID(), pH2Stream->getPriority()));
-    }
+    LS_DBG_H(getLogger(), "[%s-%d] add to priority queue: %d",
+             getLogId(), pH2Stream->getStreamID(), pH2Stream->getPriority());
 
     m_priQue[pH2Stream->getPriority()].append(pH2Stream);
     m_iFlag |= H2_CONN_FLAG_WAIT_PROCESS;
@@ -1478,11 +1388,9 @@ int H2Connection::onWriteEx()
     int wantWrite = 0;
 
 
-    if (D_ENABLED(DL_MORE))
-    {
-        LOG_D((getLogger(), "[%s] onWriteEx() state: %d, output buffer size=%d, Data Out Window: %d",
-               getLogId(), m_iState, getBuf()->size(), m_iCurDataOutWindow));
-    }
+    LS_DBG_H(getLogSession(),
+             "onWriteEx() state: %d, output buffer size = %d, Data Out Window: %d",
+             m_iState, getBuf()->size(), m_iCurDataOutWindow);
     if (getBuf()->size() > 32768)
     {
         flush();
@@ -1494,11 +1402,7 @@ int H2Connection::onWriteEx()
 
     for (int i = 0; i < H2_STREAM_PRIORITYS && m_iCurDataOutWindow > 0; ++i)
     {
-        if (D_ENABLED(DL_MORE))
-        {
-            LOG_D((getLogger(), "[%s] processing priority queue: %d",
-                   getLogId(), i));
-        }
+        LS_DBG_H(getLogSession(), "Processing priority queue: %d", i);
         if (m_priQue[i].empty())
             continue;
         DLinkedObj *it = m_priQue[i].begin();//H2Stream*
@@ -1535,8 +1439,7 @@ int H2Connection::onWriteEx()
 
 void H2Connection::recycle()
 {
-    if (D_ENABLED(DL_MORE))
-        LOG_D((getLogger(), "[%s] H2Connection::recycle()", getLogId()));
+    LS_DBG_H(getLogSession(), "H2Connection::recycle()");
     if (m_mapStream.size() > 0)
         releaseAllStream();
     detachStream();

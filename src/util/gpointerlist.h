@@ -62,9 +62,9 @@ public:
     iterator erase(iterator iter)
     {
         /** Do not use *(-- to avoid trigger compiler bug */
-        --pend; 
-        *iter = *pend; 
-        return iter; 
+        --pend;
+        *iter = *pend;
+        return iter;
     }
 
     int  push_back(void *pPointer)
@@ -78,11 +78,11 @@ public:
     void unsafe_push_back(void **pPointer, int n)
     {   ls_ptrlist_unsafepushbackn(this, pPointer, n);   }
 
-    void *pop_back()        
+    void *pop_back()
     {
         /** Do not use *(-- to avoid trigger compiler bug */
-        --pend; 
-        return *pend; 
+        --pend;
+        return *pend;
     }
     void unsafe_pop_back(void **pPointer, int n)
     {   ls_ptrlist_unsafepopbackn(this, pPointer, n);   }
@@ -142,7 +142,7 @@ public:
     iterator erase(iterator iter)
     {   return (iterator)GPointerList::erase((GPointerList::iterator)iter);    }
 
-    void releaseObjects()
+    void release_objects()
     {
         for (iterator iter = begin(); iter < end(); ++iter)
             if (*iter) delete *iter;
@@ -151,7 +151,7 @@ public:
 
     int copy(const TPointerList &rhs)
     {
-        releaseObjects();
+        release_objects();
         for (const_iterator iter = rhs.begin(); iter < rhs.end(); ++iter)
             push_back(new T(**iter));
         return size();

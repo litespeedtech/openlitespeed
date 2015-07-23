@@ -30,18 +30,18 @@ public:
         m_curCapacity -= pEntry->getEntrySize();
         delete pEntry;
     }
-    
+
     void pushEntry(char *name, uint16_t name_len, char *val, uint16_t val_len,
                    uint32_t nameIndex)
     {
         DynTblEntry *pEntry = new DynTblEntry(name, name_len, val,
-            val_len, nameIndex);
+                                              val_len, nameIndex);
         m_loopbuf.append((char *)(&pEntry), ENTRYPSIZE);
         m_curCapacity += pEntry->getEntrySize();
         ++m_nextFlowId;
         removeOverflowEntries();
     }
-    
+
     void reset()
     {
         int count = getEntryCount();
@@ -54,7 +54,7 @@ public:
         m_nextFlowId = 0;
     }
 
-    int getDynTabId(char *name, uint16_t name_len, char *value, 
+    int getDynTabId(char *name, uint16_t name_len, char *value,
                     uint16_t value_len, int &val_matched, uint8_t stxTabId)
     {
         int id = 0 ;
@@ -63,9 +63,9 @@ public:
         for (int i = 0; i < count; ++i)
         {
             pEntry = getEntryInternal(i);
-            if (value_len == pEntry->getValueLen() 
-                && memcmp(value, pEntry->getValue(), value_len) == 0 
-                && name_len == pEntry->getNameLen() 
+            if (value_len == pEntry->getValueLen()
+                && memcmp(value, pEntry->getValue(), value_len) == 0
+                && name_len == pEntry->getNameLen()
                 && memcmp(name, pEntry->getName(), name_len) == 0)
             {
                 val_matched = 1;
@@ -74,7 +74,7 @@ public:
             }
             else if (stxTabId == 0) //If have stxTabId, so needn't go further
             {
-                if (name_len == pEntry->getNameLen() 
+                if (name_len == pEntry->getNameLen()
                     && memcmp(name, pEntry->getName(), name_len) == 0)
                 {
                     id = i + 1 + HPACK_STATIC_TABLE_SIZE;

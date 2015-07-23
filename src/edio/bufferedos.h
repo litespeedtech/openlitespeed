@@ -55,10 +55,10 @@ public:
             return size;
         }
         else
-            return writeEx( pBuf, size, 0 );
+            return writeEx(pBuf, size, 0);
     }
 
-    int cacheWritev( IOVec &vector, int total );
+    int cacheWritev(IOVec &vector, int total);
 
     int cacheWritev(IOVec &vector)
     {   return writevEx(vector, 0);       }

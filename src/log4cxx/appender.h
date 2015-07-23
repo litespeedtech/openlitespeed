@@ -71,30 +71,30 @@ public:
 
     void setLayout(Layout *layout)
     {   m_pLayout = layout;     }
-    void setAppendMode(int mode)  {   m_iAppend = mode;   }
-    int  getAppendMode() const      {   return m_iAppend;   }
-    void setFlock(int flock)      {   m_iFlock = flock;   }
+    void setAppendMode(int mode)    {   m_iAppend = mode;   }
+    char getAppendMode() const      {   return m_iAppend;   }
+    void setFlock(int flock)        {   m_iFlock = flock;   }
     char getFlock() const           {   return m_iFlock;    }
 
-    virtual int getfd() const          {   return -1;       }
+    virtual int getfd() const       {   return -1;          }
     virtual int open()  = 0;
     virtual int close() = 0;
     virtual int reopenExist() = 0;
     virtual int append(const char *pBuf, int len) = 0 ;
     virtual int append(LoggingEvent *pEvent);
-    virtual int isFull()                {   return 0;               }
-    virtual int isFail()                {   return 0;               }
-    virtual int flush()                 {   return 0;               }
-    void setRollingSize(off_t size)   {   m_iRollingSize = size;  }
-    off_t getRollingSize() const        {   return m_iRollingSize;  }
+    virtual int isFull()            {   return 0;               }
+    virtual int isFail()            {   return 0;               }
+    virtual int flush()             {   return 0;               }
+    void setRollingSize(off_t size) {   m_iRollingSize = size;  }
+    off_t getRollingSize() const    {   return m_iRollingSize;  }
 
-    void setCompress(int compress)    {   m_iCompress = compress; }
-    char getCompress() const            {   return m_iCompress;     }
+    void setCompress(int compress)  {   m_iCompress = compress; }
+    char getCompress() const        {   return m_iCompress;     }
 
-    void setKeepDays(int days)    {   m_iKeepDays = days;     }
+    void setKeepDays(int days)      {   m_iKeepDays = days;     }
     int getKeepDays() const         {   return m_iKeepDays;     }
 
-    virtual void setAsync()             {}
+    virtual void setAsync()         {}
 
 
     LS_NO_COPY_ASSIGN(Appender);

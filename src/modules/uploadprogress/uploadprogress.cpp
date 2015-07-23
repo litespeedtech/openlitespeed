@@ -46,8 +46,9 @@ enum HTTPMETHOD
 
 typedef struct _MyMData
 {
-    char      * pBuffer;
-    char      * pProgressID;  //This need to be malloc when POST, and free in timerCB
+    char       *pBuffer;
+    char
+    *pProgressID;  //This need to be malloc when POST, and free in timerCB
     int         iWholeLength;
     int         iFinishedLength;
 } MyMData;
@@ -91,7 +92,7 @@ static int releaseModuleData(lsi_cb_param_t *rec)
 
 static int setProgress(MyMData *pData)
 {
-    snprintf(pData->pBuffer, MAX_BUF_LENG, "%X:%X", 
+    snprintf(pData->pBuffer, MAX_BUF_LENG, "%X:%X",
              pData->iWholeLength, pData->iFinishedLength);
     return 0;
 }
@@ -99,7 +100,8 @@ static int setProgress(MyMData *pData)
 static const char *getProgressId(lsi_session_t *session, int &idLen)
 {
     const char *pQS = g_api->get_req_query_string(session, &idLen);
-    if (!pQS || strncasecmp(MOD_QS, pQS, MOD_QS_LEN) != 0 || (size_t)idLen <= MOD_QS_LEN)
+    if (!pQS || strncasecmp(MOD_QS, pQS, MOD_QS_LEN) != 0
+        || (size_t)idLen <= MOD_QS_LEN)
         return NULL;
 
     idLen -= MOD_QS_LEN;
@@ -112,7 +114,7 @@ static lsi_hash_key_t hashBuf(const void *__s, int len)
     const uint8_t *p = (const uint8_t *)__s;
     while (--len >= 0)
     {
-        __h = __h * 37 + (const uint8_t )*p;
+        __h = __h * 37 + (const uint8_t) * p;
         ++p;
     }
     return __h;
@@ -126,13 +128,13 @@ static int  compBuf(const void *pVal1, const void *pVal2, int len)
 static int _init(lsi_module_t *module)
 {
     lsi_shmpool_t *pShmPool = g_api->shm_pool_init("moduploadp", 0);
-    if ( pShmPool == NULL)
+    if (pShmPool == NULL)
     {
         g_api->log(NULL, LSI_LOG_ERROR, "shm_pool_init return NULL, quit.\n");
         return LS_FAIL;
     }
     pShmHash = g_api->shm_htable_init(pShmPool, NULL, 0, hashBuf, compBuf);
-    if ( pShmHash == NULL )
+    if (pShmHash == NULL)
     {
         g_api->log(NULL, LSI_LOG_ERROR, "shm_htable_init return NULL, quit.\n");
         return LS_FAIL;
@@ -147,7 +149,8 @@ static int reqBodyRead(lsi_cb_param_t *rec)
 {
     MyMData *myData = (MyMData *)g_api->get_module_data(rec->_session, &MNAME,
                       LSI_MODULE_DATA_HTTP);
-    int len = g_api->stream_read_next(rec, (char *)rec->_param, rec->_param_len);
+    int len = g_api->stream_read_next(rec, (char *)rec->_param,
+                                      rec->_param_len);
     myData->iFinishedLength += len;
     setProgress(myData);
     return len;
@@ -175,7 +178,7 @@ static int checkReqHeader(lsi_cb_param_t *rec)
     char buf[MAX_BUF_LENG], *pBuffer;
     sprintf(buf, "%X:0", contentLength);
     lsi_shm_off_t offset = g_api->shm_htable_add(pShmHash,
-        (const uint8_t *)progressID, idLen, (const uint8_t *)buf, MAX_BUF_LENG);
+                           (const uint8_t *)progressID, idLen, (const uint8_t *)buf, MAX_BUF_LENG);
     pBuffer = (char *)g_api->shm_htable_off2ptr(pShmHash, offset);
     if (!offset || !pBuffer)
     {
@@ -183,7 +186,7 @@ static int checkReqHeader(lsi_cb_param_t *rec)
                    "[%s]checkReqHeader can't add shm entry.\n", ModuleNameStr);
         return 0;
     }
-    
+
     MyMData *myData = (MyMData *) g_api->get_module_data(rec->_session, &MNAME,
                       LSI_MODULE_DATA_HTTP);
     if (!myData)
@@ -192,14 +195,14 @@ static int checkReqHeader(lsi_cb_param_t *rec)
         if (!myData)
         {
             g_api->log(rec->_session, LSI_LOG_ERROR,
-                   "[%s]checkReqHeader out of memory.\n", ModuleNameStr);
+                       "[%s]checkReqHeader out of memory.\n", ModuleNameStr);
             return 0;
         }
         memset(myData, 0, sizeof(MyMData));
     }
 
     myData->pProgressID = strndup(progressID, idLen);
-    myData->iWholeLength = contentLength; 
+    myData->iWholeLength = contentLength;
     myData->iFinishedLength = 0;
     myData->pBuffer = pBuffer;
     g_api->set_module_data(rec->_session, &MNAME, LSI_MODULE_DATA_HTTP,
@@ -220,7 +223,7 @@ static int getState(int iWholeLength, int iFinishedLength)
         return UPLOAD_DONE;
     else if (iFinishedLength == 0)
         return UPLOAD_START;
-    else 
+    else
         return UPLOAD_UPLOADING;
 }
 
@@ -239,15 +242,15 @@ static int begin_process(lsi_session_t *session)
 
     int valLen;
     lsi_shm_off_t offset = g_api->shm_htable_find(pShmHash,
-                                                  (const uint8_t *)progressID, 
-                                                  idLen, &valLen);
-    if (offset == 0 || valLen <= 2 ) //At least 3 bytes
+                           (const uint8_t *)progressID,
+                           idLen, &valLen);
+    if (offset == 0 || valLen <= 2)  //At least 3 bytes
     {
         g_api->log(session, LSI_LOG_ERROR,
                    "[%s]begin_process error, can't find shm entry .\n", ModuleNameStr);
         return 500;
     }
-    
+
     char *p = (char *)g_api->shm_htable_off2ptr(pShmHash, offset);
     int iWholeLength, iFinishedLength;
     sscanf(p, "%X:%X", &iWholeLength, &iFinishedLength);
@@ -263,7 +266,8 @@ static int begin_process(lsi_session_t *session)
     else if (state == UPLOAD_DONE)
         strcpy(buf, "{ \"state\" : \"done\" }\r\n");
     else
-        snprintf(buf, 100, "{ \"state\" : \"uploading\", \"size\" : %d, \"received\" : %d }\r\n",
+        snprintf(buf, 100,
+                 "{ \"state\" : \"uploading\", \"size\" : %d, \"received\" : %d }\r\n",
                  iWholeLength, iFinishedLength);
 
     g_api->append_resp_body(session, buf, strlen(buf));
@@ -285,6 +289,6 @@ static lsi_serverhook_t server_hooks[] =
 
 static lsi_handler_t myhandler = { begin_process, NULL, NULL, NULL };
 lsi_module_t MNAME =
-    { LSI_MODULE_SIGNATURE, _init, &myhandler, NULL, "v1.0", server_hooks, {0} };
+{ LSI_MODULE_SIGNATURE, _init, &myhandler, NULL, "v1.0", server_hooks, {0} };
 
 

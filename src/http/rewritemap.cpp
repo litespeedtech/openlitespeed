@@ -18,7 +18,7 @@
 #include "rewritemap.h"
 #include <util/stringtool.h>
 #include <util/httputil.h>
-#include <http/httplog.h>
+#include <log4cxx/logger.h>
 
 #include <stdlib.h>
 #include <string.h>
@@ -76,7 +76,7 @@ RewriteMap::~RewriteMap()
 {
     if (m_pStore)
         delete m_pStore;
-    releaseObjects();
+    release_objects();
 }
 
 int RewriteMap::parseType_Source(const char *pSource)
@@ -113,11 +113,11 @@ int RewriteMap::parseType_Source(const char *pSource)
 
 int RewriteMap::reloadFromStore()
 {
-    releaseObjects();
+    release_objects();
     if (m_pStore->open())
     {
-        LOG_ERR(("Failed to open rewrite map file: %s",
-                 m_pStore->getDataStoreURI()));
+        LS_ERROR("Failed to open rewrite map file: %s",
+                 m_pStore->getDataStoreURI());
         return LS_FAIL;
     }
     KeyData *pData;
@@ -217,6 +217,6 @@ RewriteMapList::RewriteMapList()
 {}
 
 RewriteMapList::~RewriteMapList()
-{   releaseObjects();  }
+{   release_objects();  }
 
 

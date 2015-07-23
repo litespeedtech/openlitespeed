@@ -71,7 +71,7 @@ static void ls_zpool_manage(void *)
 
 static void *ls_zbufinfo_new()
 {
-    zbufinfo_t *pNew = (zbufinfo_t*)malloc(sizeof(zbufinfo_t));
+    zbufinfo_t *pNew = (zbufinfo_t *)malloc(sizeof(zbufinfo_t));
     if (pNew == NULL)
         return NULL;
     memset(pNew, 0, sizeof(zbufinfo_t));
@@ -136,7 +136,7 @@ static zbufinfo_t *ls_zbufinfo_get(lsi_session_t *session,
 
 static int ls_zmoddata_release(void *data)
 {
-    zmoddata_t *myData = (zmoddata_t*)data;
+    zmoddata_t *myData = (zmoddata_t *)data;
     if (myData)
     {
         if (myData->recv != NULL)
@@ -268,7 +268,8 @@ static int doCompression(lsi_cb_param_t *rec, zbufinfo_t *pBufInfo,
             if (ret != Z_BUF_ERROR)
                 return LSI_HK_RET_ERROR;
         }
-    } while (pBufInfo->zstate != Z_END && pStream->avail_out == 0);
+    }
+    while (pBufInfo->zstate != Z_END && pStream->avail_out == 0);
 
     if (!(ls_loopbuf_empty(pBuf)) || (pBufInfo->zstate != Z_END
                                       && pStream->avail_out == 0))
@@ -286,7 +287,8 @@ static int doCompression(lsi_cb_param_t *rec, zbufinfo_t *pBufInfo,
 }
 
 
-static int compressbuf(lsi_cb_param_t *rec, lsi_module_t *pModule, int isSend)
+static int compressbuf(lsi_cb_param_t *rec, lsi_module_t *pModule,
+                       int isSend)
 {
     const char *pSendingStr, *pCompressStr, *pZipStr, *pModuleStr;
     zbufinfo_t *pBufInfo;
@@ -294,7 +296,7 @@ static int compressbuf(lsi_cb_param_t *rec, lsi_module_t *pModule, int isSend)
     int ret;
     int finish = Z_NO_FLUSH;
     zmoddata_t *myData = (zmoddata_t *)g_api->get_module_data(
-                                rec->_session, pModule, LSI_MODULE_DATA_HTTP);
+                             rec->_session, pModule, LSI_MODULE_DATA_HTTP);
     if (myData == NULL)
         return LSI_HK_RET_ERROR;
     pSendingStr = isSend ? SENDING_STR : RECVING_STR;
@@ -363,7 +365,7 @@ static int clearrecv(lsi_cb_param_t *rec)
 {
     lsi_module_t *pModule = (lsi_module_t *)g_api->get_module(rec);
     zmoddata_t *myData = (zmoddata_t *)g_api->get_module_data(
-                                rec->_session, pModule, LSI_MODULE_DATA_HTTP);
+                             rec->_session, pModule, LSI_MODULE_DATA_HTTP);
     if (myData)
     {
         if (myData->recv != NULL)
@@ -402,8 +404,10 @@ static int init(lsi_module_t *pModule)
 
 static lsi_serverhook_t compresshooks[] =
 {
-    { LSI_HKPT_SEND_RESP_BODY, sendinghook, 3000,
-        LSI_HOOK_FLAG_PROCESS_STATIC | LSI_HOOK_FLAG_TRANSFORM },
+    {
+        LSI_HKPT_SEND_RESP_BODY, sendinghook, 3000,
+        LSI_HOOK_FLAG_PROCESS_STATIC | LSI_HOOK_FLAG_TRANSFORM
+    },
     { LSI_HKPT_RECV_RESP_BODY, recvinghook, 3000, 1 },
     { LSI_HKPT_RCVD_RESP_BODY, clearrecv, 3000, 0 },
     { LSI_HKPT_HTTP_END, cleardata, LSI_HOOK_NORMAL, 0 },
@@ -414,8 +418,10 @@ static lsi_serverhook_t compresshooks[] =
 
 static lsi_serverhook_t decompresshooks[] =
 {
-    { LSI_HKPT_SEND_RESP_BODY, sendinghook, -3000,
-        LSI_HOOK_FLAG_PROCESS_STATIC | LSI_HOOK_FLAG_TRANSFORM },
+    {
+        LSI_HKPT_SEND_RESP_BODY, sendinghook, -3000,
+        LSI_HOOK_FLAG_PROCESS_STATIC | LSI_HOOK_FLAG_TRANSFORM
+    },
     { LSI_HKPT_RECV_RESP_BODY, recvinghook, -3000, 1 },
     { LSI_HKPT_RCVD_RESP_BODY, clearrecv, -3000, 0 },
     { LSI_HKPT_HTTP_END, cleardata, LSI_HOOK_NORMAL, 0 },
@@ -424,9 +430,11 @@ static lsi_serverhook_t decompresshooks[] =
 };
 
 lsi_module_t modcompress = { LSI_MODULE_SIGNATURE, init, NULL, NULL,
-                             MODULE_VERSION, compresshooks, {0} };
+                             MODULE_VERSION, compresshooks, {0}
+                           };
 lsi_module_t moddecompress = { LSI_MODULE_SIGNATURE, init, NULL, NULL,
-                               MODULE_VERSION, decompresshooks, {0} };
+                               MODULE_VERSION, decompresshooks, {0}
+                             };
 
 
 static int enablehook(lsi_session_t *session, lsi_module_t *pModule,
@@ -434,7 +442,7 @@ static int enablehook(lsi_session_t *session, lsi_module_t *pModule,
 {
     int ret, aEnableHkpt[5], iEnableCount = 0;
     zmoddata_t *myData = (zmoddata_t *)g_api->get_module_data(session,
-                                    pModule, LSI_MODULE_DATA_HTTP);
+                         pModule, LSI_MODULE_DATA_HTTP);
     ls_xpool_t *pPool = g_api->get_session_pool(session);
     if (myData == NULL)
     {
@@ -454,17 +462,15 @@ static int enablehook(lsi_session_t *session, lsi_module_t *pModule,
     if (isSend)
     {
         if ((myData->send != NULL)
-          || ((myData->send = ls_zbufinfo_get(session, pModule,
-                                              compresslevel)) != NULL))
-        {
+            || ((myData->send = ls_zbufinfo_get(session, pModule,
+                                                compresslevel)) != NULL))
             aEnableHkpt[iEnableCount++] = LSI_HKPT_SEND_RESP_BODY;
-        }
     }
     else
     {
         if ((myData->recv != NULL)
-          || ((myData->recv = ls_zbufinfo_get(session, pModule,
-                                              compresslevel)) != NULL))
+            || ((myData->recv = ls_zbufinfo_get(session, pModule,
+                                                compresslevel)) != NULL))
         {
             aEnableHkpt[iEnableCount++] = LSI_HKPT_RECV_RESP_BODY;
             aEnableHkpt[iEnableCount++] = LSI_HKPT_RCVD_RESP_BODY;
@@ -474,11 +480,11 @@ static int enablehook(lsi_session_t *session, lsi_module_t *pModule,
     aEnableHkpt[iEnableCount++] = LSI_HKPT_HTTP_END;
     aEnableHkpt[iEnableCount++] = LSI_HKPT_HANDLER_RESTART;
     ret = g_api->set_session_hook_enable_flag(session, pModule, 1, aEnableHkpt,
-                                              iEnableCount );
+            iEnableCount);
     if (ret == LS_OK)
     {
         g_api->set_module_data(session, pModule, LSI_MODULE_DATA_HTTP,
-                                (void *)myData);
+                               (void *)myData);
         return ret;
     }
     if (myData->recv != NULL)
@@ -499,7 +505,8 @@ static int enablehook(lsi_session_t *session, lsi_module_t *pModule,
 }
 
 
-int addModgzipFilter(lsi_session_t *session, int isSend, uint8_t compresslevel)
+int addModgzipFilter(lsi_session_t *session, int isSend,
+                     uint8_t compresslevel)
 {
     if (compresslevel == 0)
         return enablehook(session, &moddecompress, isSend, 0);

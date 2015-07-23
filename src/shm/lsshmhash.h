@@ -110,7 +110,8 @@ typedef struct lsShm_hElem_s
     // real value len
     LsShmSize_t      realValLen() const
     {
-        return (x_iLen - sizeof(struct lsShm_hElem_s) - x_iValOff - sizeof(ls_vardata_t));
+        return (x_iLen - sizeof(struct lsShm_hElem_s) - x_iValOff - sizeof(
+                    ls_vardata_t));
     }
 } LsShmHElem;
 
@@ -197,11 +198,12 @@ public:
 
 public:
     LsShmHash(LsShmPool *pool,
-              const char *name, LsShmSize_t init_size, hash_fn hf, val_comp vc, int lru_mode);
+              const char *name, LsShmSize_t init_size, hash_fn hf, val_comp vc,
+              int lru_mode);
     virtual ~LsShmHash();
 
     int init(size_t init_size);
-    
+
     static LsShmHash *checkHTable(GHash::iterator itor, LsShmPool *pool,
                                   const char *name, LsShmHash::hash_fn hf, LsShmHash::val_comp vc);
 
@@ -235,7 +237,7 @@ public:
     }
 
     LsShmOffset_t getHTableStatOffset() const
-    {   return (LsShmOffset_t)(long)&((LsShmHTable *)(long)m_iOffset)->x_stat; }
+    {   return (LsShmOffset_t)(long) & ((LsShmHTable *)(long)m_iOffset)->x_stat; }
 
     int round4(int x) const
     {   return (x + 0x3) & ~0x3; }
@@ -251,7 +253,7 @@ public:
     void clear();
 
     ls_str_pair_t *setParms(ls_str_pair_t *pParms,
-        const void *pKey, int keyLen, const void *pValue, int valueLen)
+                            const void *pKey, int keyLen, const void *pValue, int valueLen)
     {
         ls_str_set(&pParms->key, (char *)pKey, keyLen);
         ls_str_set(&pParms->value, (char *)pValue, valueLen);
@@ -288,7 +290,7 @@ public:
         iteroffset iterOff;
         ls_str_pair_t parms;
         if ((iterOff = getIterator(
-            setParms(&parms, pKey, keyLen, NULL, *valLen), pFlag)) == 0)
+                           setParms(&parms, pKey, keyLen, NULL, *valLen), pFlag)) == 0)
         {
             *valLen = 0;
             return 0;
@@ -303,9 +305,9 @@ public:
     {
         ls_str_pair_t parms;
         iteroffset iterOff = insertIterator(
-            setParms(&parms, pKey, keyLen, pValue, valueLen));
+                                 setParms(&parms, pKey, keyLen, pValue, valueLen));
         return (iterOff == 0) ?
-            0 : ptr2offset(offset2iteratorData(iterOff));
+               0 : ptr2offset(offset2iteratorData(iterOff));
     }
 
     LsShmOffset_t set(
@@ -313,9 +315,9 @@ public:
     {
         ls_str_pair_t parms;
         iteroffset iterOff = setIterator(
-            setParms(&parms, pKey, keyLen, pValue, valueLen));
+                                 setParms(&parms, pKey, keyLen, pValue, valueLen));
         return (iterOff == 0) ?
-            0 : ptr2offset(offset2iteratorData(iterOff));
+               0 : ptr2offset(offset2iteratorData(iterOff));
     }
 
     LsShmOffset_t update(
@@ -323,9 +325,9 @@ public:
     {
         ls_str_pair_t parms;
         iteroffset iterOff = updateIterator(
-            setParms(&parms, pKey, keyLen, pValue, valueLen));
+                                 setParms(&parms, pKey, keyLen, pValue, valueLen));
         return (iterOff == 0) ?
-            0 : ptr2offset(offset2iteratorData(iterOff));
+               0 : ptr2offset(offset2iteratorData(iterOff));
     }
 
     void eraseIterator(iteroffset iterOff)
@@ -386,60 +388,61 @@ public:
     void setGrowFactor(int f);
 
     bool empty() const
-    {   
-        return getHTable()->x_iSize == 0; 
+    {
+        return getHTable()->x_iSize == 0;
     }
 
-    LsShmSize_t size() const             
-    {   
-        return getHTable()->x_iSize;      
+    LsShmSize_t size() const
+    {
+        return getHTable()->x_iSize;
     }
 
     void incrTableSize()
-    {   
-        ++(getHTable()->x_iSize);      
+    {
+        ++(getHTable()->x_iSize);
     }
 
     void decrTableSize()
-    {   
-        --(getHTable()->x_iSize);      
-    }
-
-    LsShmSize_t capacity() const         
-    {   
-        return getHTable()->x_iCapacity;  
-    }
-
-    LsShmOffset_t lruHdrOff() const 
     {
-        return getHTable()->x_iLruHdr; 
+        --(getHTable()->x_iSize);
+    }
+
+    LsShmSize_t capacity() const
+    {
+        return getHTable()->x_iCapacity;
+    }
+
+    LsShmOffset_t lruHdrOff() const
+    {
+        return getHTable()->x_iLruHdr;
     }
 
     LsShmOffset_t getUserOff() const
-    {   
-        return getHTable()->x_iUserOff; 
+    {
+        return getHTable()->x_iUserOff;
     }
 
     void setUserOff(LsShmOffset_t off)
-    {   
-        getHTable()->x_iUserOff = off; 
+    {
+        getHTable()->x_iUserOff = off;
     }
 
     LsShmSize_t getUserSize() const
-    {   
-        return getHTable()->x_iUserSize; 
+    {
+        return getHTable()->x_iUserSize;
     }
 
     void setUserSize(LsShmSize_t size)
-    {   
-        getHTable()->x_iUserSize = size; 
+    {
+        getHTable()->x_iUserSize = size;
     }
 
     iteroffset begin();
     iteroffset end()                {   return 0;   }
     iteroffset next(iteroffset iterOff);
     int for_each(iteroffset beg, iteroffset end, for_each_fn fun);
-    int for_each2(iteroffset beg, iteroffset end, for_each_fn2 fun, void *pUData);
+    int for_each2(iteroffset beg, iteroffset end, for_each_fn2 fun,
+                  void *pUData);
 
     void destroy();
 
@@ -466,13 +469,15 @@ public:
     LsShmOffset_t getLruTop()
     {
         return ((m_iLruMode != LSSHM_LRU_NONE) ?
-            getLru()->linkFirst : (LsShmOffset_t)-1);
+                getLru()->linkFirst : (LsShmOffset_t) - 1);
     }
 
-    int trim(time_t tmCutoff, int (*func)(iterator iter, void *arg), void *arg);
+    int trim(time_t tmCutoff, int (*func)(iterator iter, void *arg),
+             void *arg);
     int check();
 
-    virtual int setLruData(LsShmOffset_t offVal, const uint8_t *pVal, int valLen)
+    virtual int setLruData(LsShmOffset_t offVal, const uint8_t *pVal,
+                           int valLen)
     {   return LS_FAIL;  }
 
     virtual int getLruData(LsShmOffset_t offVal, LsShmOffset_t *pData, int cnt)
@@ -508,11 +513,14 @@ public:
     int downRef()    { return --m_iRef; }
 
 protected:
-    typedef iteroffset (*hash_find)(LsShmHash *pThis, ls_str_pair_t *pParms);
-    typedef iteroffset (*hash_get)(LsShmHash *pThis, ls_str_pair_t *pParms, int *pFlag);
-    typedef iteroffset (*hash_insert)(LsShmHash *pThis, ls_str_pair_t *pParms, LsShmUpdOpt *pOpt);
-    typedef iteroffset (*hash_set)(LsShmHash *pThis, ls_str_pair_t *pParms);
-    typedef iteroffset (*hash_update)(LsShmHash *pThis, ls_str_pair_t *pParms, LsShmUpdOpt *pOpt);
+    typedef iteroffset(*hash_find)(LsShmHash *pThis, ls_str_pair_t *pParms);
+    typedef iteroffset(*hash_get)(LsShmHash *pThis, ls_str_pair_t *pParms,
+                                  int *pFlag);
+    typedef iteroffset(*hash_insert)(LsShmHash *pThis, ls_str_pair_t *pParms,
+                                     LsShmUpdOpt *pOpt);
+    typedef iteroffset(*hash_set)(LsShmHash *pThis, ls_str_pair_t *pParms);
+    typedef iteroffset(*hash_update)(LsShmHash *pThis, ls_str_pair_t *pParms,
+                                     LsShmUpdOpt *pOpt);
 
     uint32_t getIndex(uint32_t k, uint32_t n)
     {   return k % n ; }
@@ -520,10 +528,10 @@ protected:
     ls_attr_inline LsShmHTable *getHTable() const
     {   return (LsShmHTable *)m_pPool->offset2ptr(m_iOffset);   }
 
-    LsShmSize_t fullFactor() const             
+    LsShmSize_t fullFactor() const
     {   return getHTable()->x_iFullFactor;   }
 
-    LsShmSize_t growFactor() const             
+    LsShmSize_t growFactor() const
     {   return getHTable()->x_iGrowFactor;   }
 
     ls_attr_inline LsShmHIdx *getHIdx() const
@@ -556,16 +564,22 @@ protected:
     iteroffset  insert2(LsShmHKey key, ls_str_pair_t *pParms);
 
     static iteroffset findNum(LsShmHash *pThis, ls_str_pair_t *pParms);
-    static iteroffset getNum(LsShmHash *pThis, ls_str_pair_t *pParms, int *pFlag);
-    static iteroffset insertNum(LsShmHash *pThis, ls_str_pair_t *pParms, LsShmUpdOpt *pOpt);
+    static iteroffset getNum(LsShmHash *pThis, ls_str_pair_t *pParms,
+                             int *pFlag);
+    static iteroffset insertNum(LsShmHash *pThis, ls_str_pair_t *pParms,
+                                LsShmUpdOpt *pOpt);
     static iteroffset setNum(LsShmHash *pThis, ls_str_pair_t *pParms);
-    static iteroffset updateNum(LsShmHash *pThis, ls_str_pair_t *pParms, LsShmUpdOpt *pOpt);
+    static iteroffset updateNum(LsShmHash *pThis, ls_str_pair_t *pParms,
+                                LsShmUpdOpt *pOpt);
 
     static iteroffset findPtr(LsShmHash *pThis, ls_str_pair_t *pParms);
-    static iteroffset getPtr(LsShmHash *pThis, ls_str_pair_t *pParms, int *pFlag);
-    static iteroffset insertPtr(LsShmHash *pThis,ls_str_pair_t *pParms, LsShmUpdOpt *pOpt);
+    static iteroffset getPtr(LsShmHash *pThis, ls_str_pair_t *pParms,
+                             int *pFlag);
+    static iteroffset insertPtr(LsShmHash *pThis, ls_str_pair_t *pParms,
+                                LsShmUpdOpt *pOpt);
     static iteroffset setPtr(LsShmHash *pThis, ls_str_pair_t *pParms);
-    static iteroffset updatePtr(LsShmHash *pThis, ls_str_pair_t *pParms, LsShmUpdOpt *pOpt);
+    static iteroffset updatePtr(LsShmHash *pThis, ls_str_pair_t *pParms,
+                                LsShmUpdOpt *pOpt);
 
     iterator chkMcIter(iteroffset iterOff, LsShmUpdOpt *pOpt);
 
@@ -576,7 +590,8 @@ protected:
     void eraseIteratorHelper(iterator iter);
 
     static inline iteroffset doGet(
-        LsShmHash *pThis, iteroffset iterOff, LsShmHKey key, ls_str_pair_t *pParms, int *pFlag)
+        LsShmHash *pThis, iteroffset iterOff, LsShmHKey key, ls_str_pair_t *pParms,
+        int *pFlag)
     {
         if (iterOff != 0)
         {
@@ -599,14 +614,13 @@ protected:
             // some special lru initialization
             if (pThis->m_iLruMode == LSSHM_LRU_MODE2)
             {
-                shmlru_data_t *pData = (shmlru_data_t *)pThis->offset2iteratorData(iterOff);
+                shmlru_data_t *pData = (shmlru_data_t *)pThis->offset2iteratorData(
+                                           iterOff);
                 pData->maxsize = 0;
                 pData->offiter = iterOff;
             }
             else if (pThis->m_iLruMode == LSSHM_LRU_MODE3)
-            {
                 ((shmlru_val_t *)pThis->offset2iteratorData(iterOff))->offdata = 0;
-            }
             *pFlag = LSSHM_FLAG_CREATED;
         }
         return iterOff;
@@ -669,7 +683,7 @@ protected:
     }
 
     static iteroffset doExpand(LsShmHash *pThis,
-        iteroffset iterOff, LsShmHKey key, ls_str_pair_t *pParms, uint16_t flags);
+                               iteroffset iterOff, LsShmHKey key, ls_str_pair_t *pParms, uint16_t flags);
 
     void setIterData(iterator iter, const void *pValue)
     {
@@ -820,7 +834,7 @@ private:
 
     void releaseHTableShm();
 
-    
+
 #ifdef LSSHM_DEBUG_ENABLE
     // for debug purpose - should debug this later
     friend class debugBase;

@@ -15,52 +15,52 @@
 *    You should have received a copy of the GNU General Public License       *
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
-#ifndef LOGIDTRACKER_H
-#define LOGIDTRACKER_H
+#ifndef LOGSESSION_H
+#define LOGSESSION_H
+
+
 
 #include <lsdef.h>
+#include <log4cxx/nsdefs.h>
 #include <util/autostr.h>
 
-class LogIdTracker
+#define MAX_LOGID_LEN   127
+
+BEGIN_LOG4CXX_NS
+class Logger;
+END_LOG4CXX_NS
+
+class LogSession
 {
-    static char  s_aLogId[128];
-    static int   s_iIdLen;
+    AutoStr2            m_logId;
+    LOG4CXX_NS::Logger *m_pLogger;
 
-    AutoStr m_oldId;
 public:
-    LogIdTracker(const char *pNewId)
-    {
-        m_oldId = getLogId();
-        setLogId(pNewId);
-    }
-    LogIdTracker()
-    {
-        m_oldId = getLogId();
-    }
-    ~LogIdTracker()
-    {
-        setLogId(m_oldId.c_str());
-    }
-    static const char *getLogId()
-    {   return s_aLogId;    }
+    LogSession();
+    ~LogSession();
 
-    static void setLogId(const char *pId)
+    AutoStr2 &getIdBuf()             {   return m_logId;     }
+    //const char * getLogId() const
+    //{
+    //return m_logID.c_str();  }
+    const char *getLogId()
     {
-        strncpy(s_aLogId, pId, sizeof(s_aLogId) - 1);
-        s_aLogId[ sizeof(s_aLogId) - 1 ] = 0;
-        s_iIdLen = strlen(s_aLogId);
+        if (isLogIdBuilt())
+            return m_logId.c_str();
+        return buildLogId();
     }
 
-    static void appendLogId(const char *pId)
-    {
-        strncpy(s_aLogId + s_iIdLen, pId, sizeof(s_aLogId) - 1 - s_iIdLen);
-        s_aLogId[ sizeof(s_aLogId) - 1 ] = 0;
-        s_iIdLen += strlen(s_aLogId + s_iIdLen);
-    }
+    LOG4CXX_NS::Logger *getLogger() const   {   return m_pLogger;   }
+    void setLogger(LOG4CXX_NS::Logger *pLogger)
+    {   m_pLogger = pLogger;    }
+
+    void clearLogId()     {   *m_logId.buf() = 0;      }
+    int  isLogIdBuilt() const       {   return *m_logId.c_str() != '\0';   }
+    virtual const char *buildLogId() = 0;
 
 
-    LS_NO_COPY_ASSIGN(LogIdTracker);
+
+    LS_NO_COPY_ASSIGN(LogSession);
 };
 
-
-#endif // LOGIDTRACKER_H
+#endif

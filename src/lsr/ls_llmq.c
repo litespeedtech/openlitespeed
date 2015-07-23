@@ -36,7 +36,7 @@ static inline bool llmq_atom_cmp_and_swap(
     ls_atom_uint_t *pVal, unsigned *pcmp, unsigned swap)
 {
     unsigned prev = (unsigned)
-      ls_atomic_casvint((ls_atom_32_t *)pVal, (int32_t)(*pcmp), (int32_t)swap);
+                    ls_atomic_casvint((ls_atom_32_t *)pVal, (int32_t)(*pcmp), (int32_t)swap);
     if (prev == *pcmp)
         return true;
     *pcmp = prev;

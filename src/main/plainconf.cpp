@@ -21,10 +21,10 @@
 
 #include "plainconf.h"
 
-#include <http/httplog.h>
 #include <util/gpointerlist.h>
 #include <util/hashstringmap.h>
-#include <util/logtracker.h>
+#include <log4cxx/logger.h>
+#include <log4cxx/logsession.h>
 #include <util/xmlnode.h>
 
 #include <dirent.h>
@@ -355,12 +355,12 @@ plainconfKeywords plainconf::sKeywords[] =
 
     {"umask",          NULL},
     {"blockbadreq",      NULL},  //Add to avoid error notice in errorlog
-    
+
     {"uploadpassbypath",          NULL},
     {"uploadtmpdir",          NULL},
     {"uploadtmpfilepermission",          NULL},
-    
-    
+
+
 };
 
 static HashStringMap<plainconfKeywords *> allKeyword(29, GHash::hfCiString,
@@ -403,9 +403,9 @@ void plainconf::logToMem(char errorLevel, const char *format, ...)
     else
     {
         if (errorLevel == LOG_LEVEL_ERR)
-            LOG_ERR((buf + 1));
+            LS_ERROR(buf + 1);
         else
-            LOG_INFO((buf + 1));
+            LS_INFO(buf + 1);
     }
 }
 
@@ -417,11 +417,11 @@ static int for_each_fn(void *s)
     switch (*p)
     {
     case LOG_LEVEL_ERR:
-        LOG_ERR((p + 1));
+        LS_ERROR(p + 1);
         break;
 
     case LOG_LEVEL_INFO:
-        LOG_INFO((p + 1));
+        LS_INFO(p + 1);
         break;
 
     default:

@@ -22,9 +22,9 @@
 
 #include <http/httpcgitool.h>
 #include <http/httpextconnector.h>
-#include <http/httplog.h>
 #include <http/httpresourcemanager.h>
 #include <http/httpstatuscode.h>
+#include <log4cxx/logger.h>
 #include <util/iovec.h>
 #include <util/stringtool.h>
 
@@ -166,8 +166,7 @@ int FcgiConnection::writeStream(int streamType, int id,
 
 int FcgiConnection::doRead()
 {
-    if (D_ENABLED(DL_LESS))
-        LOG_D((getLogger(), "[%s] FcgiConnection::doRead()", getLogId()));
+    LS_DBG_L(this, "FcgiConnection::doRead()");
     return processFcgiData();
 }
 
@@ -188,8 +187,7 @@ int FcgiConnection::flushOutBuf()
 
 int FcgiConnection::doWrite()
 {
-    if (D_ENABLED(DL_LESS))
-        LOG_D((getLogger(), "[%s] FcgiConnection::doWrite()", getLogId()));
+    LS_DBG_L(this, "FcgiConnection::doWrite()");
     int ret = flushOutBuf();
     if (ret <= 0)
         return ret;
@@ -206,17 +204,15 @@ int FcgiConnection::doWrite()
 
 int FcgiConnection::doError(int err)
 {
-    if (D_ENABLED(DL_LESS))
-        LOG_D((getLogger(), "[%s] FcgiConnection::doError()", getLogId()));
+    LS_DBG_L(this, "FcgiConnection::doError()");
     if (getConnector())
     {
         int state = getConnector()->getState();
         if (!(state & (HEC_FWD_RESP_BODY | HEC_ABORT_REQUEST
                        | HEC_ERROR | HEC_COMPLETE)))
         {
-            if (D_ENABLED(DL_LESS))
-                LOG_D((getLogger(), "[%s] FCGI Peer closed connection, "
-                       "try another connection!", getLogId()));
+            LS_DBG_L(this, "FCGI Peer closed connection, "
+                     "try another connection!");
             connError(err);
             return 0;
         }
@@ -273,14 +269,12 @@ int FcgiConnection::buildFcgiRecHeader(char *pBuf, int size, int &len)
     else
     {
         memmove((char *)&m_recCur + m_recSize, pBuf, len);
-        if (D_ENABLED(DL_MORE))
+        if (getLogger()->isEnabled(LOG4CXX_NS::Level::DBG_HIGH))
         {
             char achBuf[256];
             StringTool::hexEncode(
                 (char *)&m_recCur, sizeof(FCGI_Header), achBuf);
-            LOG_D((getLogger(),
-                   "[%s] FCGI Header: %s",
-                   getLogId(), achBuf));
+            LS_DBG_H(this, "FCGI Header: %s", achBuf);
         }
         if (!FcgiRecord::testRecord(m_recCur))
         {
@@ -351,10 +345,7 @@ int FcgiConnection::processFcgiRecData(char *pBuf, int size, int &end)
 //        }
 //        if ( ret == -1 )
 //        {
-//            if ( D_ENABLED( DL_LESS ) )
-//                LOG_D(( getLogger(),
-//                    "[%s] [FCGI] protocol error",
-//                    getLogId() ));
+//            LS_DBG_L(this, "[FCGI] protocol error");
 //            errno = EPROTO;
 //            m_iState = CLOSING;
 //            return LS_FAIL;
@@ -380,12 +371,7 @@ int FcgiConnection::processFcgiData()
     {
         len = read(HttpResourceManager::getGlobalBuf(),
                    FCGI_INPUT_BUFSIZE);
-        if (D_ENABLED(DL_MORE))
-        {
-            LOG_D((getLogger(),
-                   "[%s] read %d bytes from Fast CGI.",
-                   getLogId(), len));
-        }
+        LS_DBG_H(this, "Read %d bytes from Fast CGI.", len);
         if (!len)
             break;
         if (len == -1)
@@ -436,11 +422,9 @@ int FcgiConnection::processFcgiData()
             left -= used;
             if (ret == -1)
             {
-                if (D_ENABLED(DL_LESS))
-                    LOG_D((getLogger(),
-                           "[%s] [FCGI] protocol error, Record Status=%d, record size=%d"
-                           ", content length=%d",
-                           getLogId(), m_iRecStatus, m_recSize, m_iContentLen));
+                LS_DBG_L(this, "[FCGI] protocol error, Record Status=%d, "
+                         "Record Size=%d, Content Length=%d",
+                         m_iRecStatus, m_recSize, m_iContentLen);
                 errno = EIO;
                 return LS_FAIL;
             }
@@ -536,8 +520,8 @@ int FcgiConnection::processManagementRec(char *pBuf, int size)
             ((FcgiApp *)getWorker())->gotManagementInfo();
             while (used < m_iContentLen)
             {
-                int ret = FcgiNameValuePair::decode(p, size,
-                                                    pName, nameLen, pValue, valLen);
+                int ret = FcgiNameValuePair::decode(p, size, pName, nameLen,
+                                                    pValue, valLen);
                 if (ret != -1)
                 {
                     used += ret;
@@ -620,8 +604,7 @@ int FcgiConnection::readStdOut(int iReqId, char *pBuf, int size)
 
 void FcgiConnection::suspendWrite()
 {
-    if (D_ENABLED(DL_LESS))
-        LOG_D((getLogger(), "[%s] FcgiConnection::suspendWrite()", getLogId()));
+    LS_DBG_L(this, "FcgiConnection::suspendWrite()");
     m_iWantWrite = 0;
     if (m_bufOS.isEmpty())
         EdStream::suspendWrite();
@@ -668,9 +651,7 @@ int  FcgiConnection::sendReqBody(const char *pBuf, int size)
 
 int FcgiConnection::beginReqBody()
 {
-    if (D_ENABLED(DL_MEDIUM))
-        LOG_D((getLogger(), "[%s] FcgiConnection::beginReqBody()",
-               getLogId()));
+    LS_DBG_M(this, "FcgiConnection::beginReqBody()");
     if (!m_iovec.empty())
     {
         pendingEndStream(FCGI_PARAMS);
@@ -683,9 +664,7 @@ int FcgiConnection::beginReqBody()
 
 int FcgiConnection::endOfReqBody()
 {
-    if (D_ENABLED(DL_MEDIUM))
-        LOG_D((getLogger(), "[%s] FcgiConnection::endOfReqBody()",
-               getLogId()));
+    LS_DBG_M(this, "FcgiConnection::endOfReqBody()");
     int ret;
     if (!m_iovec.empty())
     {
@@ -714,9 +693,8 @@ int  FcgiConnection::endOfRequest(int endCode, int status)
         return 0;
     if (endCode)
     {
-        LOG_ERR((getLogger(),
-                 "[%s] FcgiConnection::endOfRequest( %d, %d)!\n",
-                 getLogId(), endCode, status));
+        LS_ERROR(this, "FcgiConnection::endOfRequest( %d, %d)!",
+                 endCode, status);
         pConnector->endResponse(SC_500, status);
     }
     else
@@ -730,9 +708,7 @@ int FcgiConnection::onStdOut()
     HttpExtConnector *pConnector = getConnector();
     if (!pConnector)
         return 0;
-    if (D_ENABLED(DL_MEDIUM))
-        LOG_D((getLogger(), "[%s] onStdOut()",
-               getLogId()));
+    LS_DBG_M(this, "onStdOut()");
     return pConnector->extInputReady();
 
 }
@@ -743,9 +719,7 @@ int  FcgiConnection::processStdOut(char *pBuf, int size)
     HttpExtConnector *pConnector = getConnector();
     if (!pConnector)
         return size;
-    if (D_ENABLED(DL_MEDIUM))
-        LOG_D((getLogger(), "[%s] process STDOUT %d bytes",
-               getLogId(), size));
+    LS_DBG_M(this, "Process STDOUT %d bytes", size);
     return pConnector->processRespData(pBuf, size);
 }
 
@@ -755,9 +729,7 @@ int  FcgiConnection::processStdErr(char *pBuf, int size)
     HttpExtConnector *pConnector = getConnector();
     if (!pConnector)
         return size;
-    if (D_ENABLED(DL_MEDIUM))
-        LOG_D((getLogger(), "[%s] process STDERR %d bytes",
-               getLogId(), size));
+    LS_DBG_M(this, "Process STDERR %d bytes", size);
     return pConnector->processErrData(pBuf, size);
 }
 
@@ -767,9 +739,7 @@ void FcgiConnection::cleanUp()
     //ExtRequest::cleanUp();
     if (!getWorker()->getConfigPointer()->isPersistConn())
     {
-        if (D_ENABLED(DL_MEDIUM))
-            LOG_D((getLogger(), "[%s] Non-Persistent connection, close.",
-                   getLogId()));
+        LS_DBG_M(this, "Non-Persistent connection, close.");
         close();
     }
     setConnector(NULL);
@@ -786,9 +756,7 @@ void FcgiConnection::continueWrite()
 
 void  FcgiConnection::abort()
 {
-    if (D_ENABLED(DL_MEDIUM))
-        LOG_D((getLogger(), "[%s] FcgiConnection::abort()",
-               getLogId()));
+    LS_DBG_M(this, "FcgiConnection::abort()");
     setState(ABORT);
     //sendAbortRec();
 }
@@ -796,9 +764,7 @@ void  FcgiConnection::abort()
 
 int FcgiConnection::begin()
 {
-    if (D_ENABLED(DL_MEDIUM))
-        LOG_D((getLogger(), "[%s] FcgiConnection::beginRequest()",
-               getLogId()));
+    LS_DBG_M(this, "FcgiConnection::beginRequest()");
     FCGI_BeginRequestRecord *pRec
         = (FCGI_BeginRequestRecord *)m_streamHeaders;
     FcgiRecord::setRecordHeader(
@@ -824,9 +790,7 @@ int FcgiConnection::connUnavail()
 
 int FcgiConnection::pendingEndStream(int type)
 {
-    if (D_ENABLED(DL_MEDIUM))
-        LOG_D((getLogger(), "[%s] FcgiConnection::pendingEndStream()",
-               getLogId()));
+    LS_DBG_M(this, "FcgiConnection::pendingEndStream()");
     assert(m_iCurStreamHeader < 64);
     FCGI_Header *pRec = (FCGI_Header *)
                         & (m_streamHeaders[ m_iCurStreamHeader]);
@@ -839,10 +803,8 @@ int FcgiConnection::pendingEndStream(int type)
 
 int FcgiConnection::pendingWrite(const char *pBuf, int size, int type)
 {
-    if (D_ENABLED(DL_MEDIUM))
-        LOG_D((getLogger(), "[%s] FcgiConnection::pendingWrite(),"
-               "m_iCurStreamHeader=%d",
-               getLogId(), m_iCurStreamHeader));
+    LS_DBG_M(this, "FcgiConnection::pendingWrite(), m_iCurStreamHeader=%d",
+             m_iCurStreamHeader);
     int ret = size;
     int packetSize = size;
     if (packetSize > FCGI_MAX_PACKET_SIZE)
@@ -892,9 +854,7 @@ int  FcgiConnection::sendSpecial(const char *pBuf, int size)
 
 int  FcgiConnection::flush()
 {
-    if (D_ENABLED(DL_MEDIUM))
-        LOG_D((getLogger(), "[%s] FcgiConnection::flush()",
-               getLogId()));
+    LS_DBG_M(this, "FcgiConnection::flush()");
     if (!m_iovec.empty())
     {
         int ret = m_bufOS.cacheWritev(m_iovec);
@@ -912,9 +872,7 @@ int  FcgiConnection::flush()
 
 int FcgiConnection::sendAbortRec()
 {
-    if (D_ENABLED(DL_LESS))
-        LOG_D((getLogger(), "[%s] [FCGI] send abort packet!",
-               getLogId()));
+    LS_DBG_L(this, "[FCGI] send abort packet!");
     FCGI_Header rec;
     FcgiRecord::setRecordHeader(rec, FCGI_ABORT_REQUEST, m_iId, 0);
     return sendRecord((const char *)&rec, sizeof(rec));
@@ -929,16 +887,14 @@ int FcgiConnection::readResp(char *pBuf, int size)
 
 void FcgiConnection::dump()
 {
-    LOG_INFO((getLogger(),
-              "[%s] FcgiConnection watching event: %d, wantWrite: %d, "
-              "total Pending: %d, buffered: %d, record status: %d, size:%d, content len: %d, "
-              "request processed: %d, total processing time: %ld, waiting for response for %ld seconds.",
-              getLogId(), getEvents(), m_iWantWrite,
-              m_iTotalPending, m_bufOS.getBuf()->size(),
-              m_iRecStatus, m_recSize, m_iContentLen,
-              getReqProcessed(),
-              time(NULL) - m_lReqBeginTime,
-              (m_lReqSentTime) ? time(NULL) - m_lReqSentTime : 0));
+    LS_INFO(this, "FcgiConnection watching event: %d, wantWrite: %d, "
+            "total Pending: %d, buffered: %d, record status: %d, size:%d, "
+            "content len: %d, request processed: %d, total processing time: "
+            "%ld, waiting for response for %ld seconds.",
+            getEvents(), m_iWantWrite, m_iTotalPending,
+            m_bufOS.getBuf()->size(), m_iRecStatus, m_recSize, m_iContentLen,
+            getReqProcessed(), time(NULL) - m_lReqBeginTime,
+            (m_lReqSentTime) ? time(NULL) - m_lReqSentTime : 0);
 
 }
 

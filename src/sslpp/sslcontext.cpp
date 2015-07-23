@@ -17,6 +17,7 @@
 *****************************************************************************/
 #include "sslcontext.h"
 
+#include <log4cxx/logger.h>
 #include <main/configctx.h>
 #include <sslpp/sslerror.h>
 #include <sslpp/sslocspstapling.h>
@@ -276,10 +277,10 @@ static void SSLConnection_ssl_info_cb(const SSL *pSSL, int where, int ret)
     if ((where & SSL_CB_HANDSHAKE_START) && pConnection->getFlag() == 1)
     {
         close(SSL_get_fd(pSSL));
-        ((SSL*)pSSL)->error_code = 1;
+        ((SSL *)pSSL)->error_code = 1;
         return ;
     }
-    
+
     if ((where & SSL_CB_HANDSHAKE_DONE) != 0)
     {
 #ifdef SSL3_FLAGS_NO_RENEGOTIATE_CIPHERS
@@ -316,9 +317,10 @@ int SSLContext::init(int iMethod)
         // long oldTimeout = setSessionTimeout( 100800 );
         long timeout = 300;
         long oldTimeout = setSessionTimeout(timeout);
-        ConfigCtx::getCurConfigCtx()->logNotice("SET OPENSSL CTX TIMEOUT FROM %d TO %d "
-                                                , oldTimeout
-                                                , timeout);
+        LS_NOTICE(ConfigCtx::getCurConfigCtx(),
+                  "SET OPENSSL CTX TIMEOUT FROM %d TO %d "
+                  , oldTimeout
+                  , timeout);
 
         setSessionCacheSize(1024 * 40);
 
@@ -650,7 +652,7 @@ int SSLContext::checkPrivateKey()
 
 int SSLContext::setCipherList(const char *pList)
 {
-    if ( !m_pCtx )
+    if (!m_pCtx)
         return false;
     char cipher[4096];
 
@@ -662,38 +664,38 @@ int SSLContext::setCipherList(const char *pList)
         //strcpy( cipher, "ALL:HIGH:!aNULL:!SSLV2:!eNULL" );
 #if OPENSSL_VERSION_NUMBER >= 0x10001000L
         strcpy(cipher, "ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES128-GCM-SHA256:"
-                        "ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES256-GCM-SHA384:"
-                        "DHE-RSA-AES128-GCM-SHA256:DHE-DSS-AES128-GCM-SHA256:"
-                        "kEDH+AESGCM:ECDHE-RSA-AES128-SHA256:"
-                        "ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA:"
-                        "ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:"
-                        "ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA:"
-                        "ECDHE-ECDSA-AES256-SHA:DHE-RSA-AES128-SHA256:"
-                        "DHE-RSA-AES128-SHA:DHE-DSS-AES128-SHA256:"
-                        "DHE-RSA-AES256-SHA256:DHE-DSS-AES256-SHA:"
-                        "DHE-RSA-AES256-SHA:AES128-GCM-SHA256:AES256-GCM-SHA384:"
-                        "AES128-SHA256:AES256-SHA256:AES128-SHA:AES256-SHA:AES:"
-                        "CAMELLIA:DES-CBC3-SHA:!aNULL:!eNULL:!EXPORT:!DES:!RC4:"
-                        "!MD5:!PSK:!aECDH:!EDH-DSS-DES-CBC3-SHA:"
-                        "!EDH-RSA-DES-CBC3-SHA:!KRB5-DES-CBC3-SHA"
-        );
+               "ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES256-GCM-SHA384:"
+               "DHE-RSA-AES128-GCM-SHA256:DHE-DSS-AES128-GCM-SHA256:"
+               "kEDH+AESGCM:ECDHE-RSA-AES128-SHA256:"
+               "ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA:"
+               "ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:"
+               "ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA:"
+               "ECDHE-ECDSA-AES256-SHA:DHE-RSA-AES128-SHA256:"
+               "DHE-RSA-AES128-SHA:DHE-DSS-AES128-SHA256:"
+               "DHE-RSA-AES256-SHA256:DHE-DSS-AES256-SHA:"
+               "DHE-RSA-AES256-SHA:AES128-GCM-SHA256:AES256-GCM-SHA384:"
+               "AES128-SHA256:AES256-SHA256:AES128-SHA:AES256-SHA:AES:"
+               "CAMELLIA:DES-CBC3-SHA:!aNULL:!eNULL:!EXPORT:!DES:!RC4:"
+               "!MD5:!PSK:!aECDH:!EDH-DSS-DES-CBC3-SHA:"
+               "!EDH-RSA-DES-CBC3-SHA:!KRB5-DES-CBC3-SHA"
+              );
 #else
         strcpy(cipher,
-                "RC4:HIGH:!aNULL:!MD5:!SSLv2:!eNULL:!EDH:!LOW:!EXPORT56:!EXPORT40");
+               "RC4:HIGH:!aNULL:!MD5:!SSLv2:!eNULL:!EDH:!LOW:!EXPORT56:!EXPORT40");
 #endif
         //strcpy( cipher, "RC4:-EXP:-SSLv2:-ADH" );
         pList = cipher;
     }
     else
     {
-        const char * p = strpbrk(pList, ": ");
-        if ( !p || memmem( pList,p - pList, "GCM", 3 ) == NULL 
-                || memmem( pList,p - pList, "SHA384", 6 ) != NULL )
+        const char *p = strpbrk(pList, ": ");
+        if (!p || memmem(pList, p - pList, "GCM", 3) == NULL
+            || memmem(pList, p - pList, "SHA384", 6) != NULL)
         {
-            if ( !p )
+            if (!p)
                 p = ":";
-            snprintf( cipher, 4095, "ECDHE-RSA-AES128-GCM-SHA256%c"
-                      "ECDHE-ECDSA-AES128-GCM-SHA256%c%s", *p, *p, pList);
+            snprintf(cipher, 4095, "ECDHE-RSA-AES128-GCM-SHA256%c"
+                     "ECDHE-ECDSA-AES128-GCM-SHA256%c%s", *p, *p, pList);
             pList = cipher;
         }
     }
@@ -1025,7 +1027,7 @@ static int SSLConnection_ssl_npn_advertised_cb(SSL *pSSL,
     return SSL_TLSEXT_ERR_OK;
 }
 
-
+#ifdef TLSEXT_TYPE_application_layer_protocol_negotiation
 static int SSLConntext_alpn_select_cb(SSL *pSSL, const unsigned char **out,
                                       unsigned char *outlen, const unsigned char *in,
                                       unsigned int inlen, void *arg)
@@ -1039,7 +1041,7 @@ static int SSLConntext_alpn_select_cb(SSL *pSSL, const unsigned char **out,
         return SSL_TLSEXT_ERR_NOACK;
     return SSL_TLSEXT_ERR_OK;
 }
-
+#endif
 
 int SSLContext::enableSpdy(int level)
 {
@@ -1078,30 +1080,31 @@ SSLContext *SSLContext::setKeyCertCipher(const char *pCertFile,
         const char *pKeyFile, const char *pCAFile, const char *pCAPath,
         const char *pCiphers, int certChain, int cv, int renegProtect)
 {
-    ConfigCtx::getCurConfigCtx()->logDebug("Create SSL context with"
-                                           " Certificate file: %s and Key File: %s.",
-                                           pCertFile, pKeyFile);
+    LS_DBG_L(ConfigCtx::getCurConfigCtx(), "Create SSL context with"
+             " Certificate file: %s and Key File: %s.",
+             pCertFile, pKeyFile);
     setRenegProtect(renegProtect);
     if (!setKeyCertificateFile(pKeyFile,
                                SSLContext::FILETYPE_PEM, pCertFile,
                                SSLContext::FILETYPE_PEM, certChain))
     {
-        ConfigCtx::getCurConfigCtx()->logError("Config SSL Context with"
-                                               " Certificate File: %s"
-                                               " and Key File:%s get SSL error: %s",
-                                               pCertFile, pKeyFile,
-                                               SSLError().what());
+        LS_ERROR(ConfigCtx::getCurConfigCtx(), "Config SSL Context with"
+                 " Certificate File: %s"
+                 " and Key File:%s get SSL error: %s",
+                 pCertFile, pKeyFile,
+                 SSLError().what());
         return NULL;
     }
     else if ((pCAFile || pCAPath) &&
              !setCALocation(pCAFile, pCAPath, cv))
     {
-        ConfigCtx::getCurConfigCtx()->logError("Failed to setup Certificate Authority "
-                                               "Certificate File: '%s', Path: '%s', SSL error: %s",
-                                               pCAFile ? pCAFile : "", pCAPath ? pCAPath : "", SSLError().what());
+        LS_ERROR(ConfigCtx::getCurConfigCtx(),
+                 "Failed to setup Certificate Authority "
+                 "Certificate File: '%s', Path: '%s', SSL error: %s",
+                 pCAFile ? pCAFile : "", pCAPath ? pCAPath : "", SSLError().what());
         return NULL;
     }
-    ConfigCtx::getCurConfigCtx()->logDebug("set ciphers to:%s", pCiphers);
+    LS_DBG_L(ConfigCtx::getCurConfigCtx(), "set ciphers to:%s", pCiphers);
     setCipherList(pCiphers);
     return this;
 }
@@ -1180,8 +1183,9 @@ SSLContext *SSLContext::config(const XmlNode *pNode)
 
     if (pSSL == NULL)
     {
-        ConfigCtx::getCurConfigCtx()->logError("failed to create SSL Context with key: %s, Cert: %s!",
-                                               achKey, achCert);
+        LS_ERROR(ConfigCtx::getCurConfigCtx(),
+                 "failed to create SSL Context with key: %s, Cert: %s!",
+                 achKey, achCert);
         return NULL;
     }
 
@@ -1203,8 +1207,9 @@ SSLContext *SSLContext::config(const XmlNode *pNode)
             if (ConfigCtx::getCurConfigCtx()->getValidFile(achCAPath, pDHParam,
                     "DH Parameter file") != 0)
             {
-                ConfigCtx::getCurConfigCtx()->logWarn("invalid path for DH paramter: %s, ignore and use built-in DH parameter!",
-                                                      pDHParam);
+                LS_WARN(ConfigCtx::getCurConfigCtx(),
+                        "invalid path for DH paramter: %s, ignore and use built-in DH parameter!",
+                        pDHParam);
 
                 pDHParam = NULL;
             }
@@ -1221,8 +1226,9 @@ SSLContext *SSLContext::config(const XmlNode *pNode)
     if (enableSpdy)
     {
         if (-1 == pSSL->enableSpdy(enableSpdy))
-            ConfigCtx::getCurConfigCtx()->logError("SPDY/HTTP2 can't be enabled [try to set to %d].",
-                                                   enableSpdy);
+            LS_ERROR(ConfigCtx::getCurConfigCtx(),
+                     "SPDY/HTTP2 can't be enabled [try to set to %d].",
+                     enableSpdy);
     }
 #else
     //Even if no spdy installed, we still need to parse it
@@ -1230,7 +1236,8 @@ SSLContext *SSLContext::config(const XmlNode *pNode)
     enableSpdy = ConfigCtx::getCurConfigCtx()->getLongValue(pNode,
                  "enableSpdy", 0, 7, 0);
     if (enableSpdy)
-        ConfigCtx::getCurConfigCtx()->logError("SPDY/HTTP2 can't be enabled for not installed.");
+        LS_ERROR(ConfigCtx::getCurConfigCtx(),
+                 "SPDY/HTTP2 can't be enabled for not installed.");
 #endif
 
     if (cv)
@@ -1256,7 +1263,7 @@ SSLContext *SSLContext::config(const XmlNode *pNode)
                 pSSL->setCertificateChainFile(CombineCAfile);
             }
             if (pSSL->configStapling(pNode, pCAFile, achCert) == 0)
-                ConfigCtx::getCurConfigCtx()->logInfo("Enable OCSP Stapling successful!");
+                LS_INFO(ConfigCtx::getCurConfigCtx(), "Enable OCSP Stapling successful!");
         }
     }
     return pSSL;
@@ -1324,13 +1331,13 @@ int  SSLContext::enableShmSessionCache(const char *pName, int maxEntries)
     {
         retCode = SSLSession::watchCtx(this, pName, maxEntries, m_pCtx);
         if (retCode)
-            ConfigCtx::getCurConfigCtx()->logNotice("FAILED TO ENABLE EXTERNAL SHM SSL CACHE");
-
+            LS_NOTICE(ConfigCtx::getCurConfigCtx(),
+                      "FAILED TO ENABLE EXTERNAL SHM SSL CACHE");
         else
-            ConfigCtx::getCurConfigCtx()->logNotice("EXTERNAL SHM SSL CACHE ENABLED");
+            LS_NOTICE(ConfigCtx::getCurConfigCtx(), "EXTERNAL SHM SSL CACHE ENABLED");
     }
     else
-        ConfigCtx::getCurConfigCtx()->logNotice("NO EXTERNAL SHM SSL CACHE");
+        LS_NOTICE(ConfigCtx::getCurConfigCtx(), "NO EXTERNAL SHM SSL CACHE");
 
 #if 0
     //pName can be used to assign different SHM cache storage for different SSL_CTX

@@ -63,14 +63,18 @@ typedef int (*lsi_val_comp)(const void *p1, const void *p2, int len);
  *   LiteSpeed SHM memory container
  */
 lsi_shm_t      *lsi_shm_open(const char *shmname, size_t initialsize);
-int             lsi_shm_close(lsi_shm_t *shmhandle);    /* close connection */
-int             lsi_shm_destroy(lsi_shm_t *shmhandle);  /* remove hash map */
+int             lsi_shm_close(lsi_shm_t
+                              *shmhandle);    /* close connection */
+int             lsi_shm_destroy(lsi_shm_t
+                                *shmhandle);  /* remove hash map */
 
 /*
  *   SHM memory allocator
  */
-lsi_shmpool_t  *lsi_shmpool_open(lsi_shm_t *shmhandle, const char *poolname);
-lsi_shmpool_t  *lsi_shmpool_openbyname(const char *shmname, size_t initialsize);
+lsi_shmpool_t  *lsi_shmpool_open(lsi_shm_t *shmhandle,
+                                 const char *poolname);
+lsi_shmpool_t  *lsi_shmpool_openbyname(const char *shmname,
+                                       size_t initialsize);
 int             lsi_shmpool_close(lsi_shmpool_t *poolhandle);
 int             lsi_shmpool_destroy(lsi_shmpool_t *poolhandle);
 

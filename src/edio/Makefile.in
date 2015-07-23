@@ -111,7 +111,8 @@ am_libedio_a_OBJECTS = reactorindex.$(OBJEXT) fdindex.$(OBJEXT) \
 	lookupfd.$(OBJEXT) devpoller.$(OBJEXT) \
 	aioeventhandler.$(OBJEXT) sigeventdispatcher.$(OBJEXT) \
 	aiooutputstream.$(OBJEXT) aiosendfile.$(OBJEXT) \
-	eventnotifier.$(OBJEXT) eventprocessor.$(OBJEXT)
+	eventnotifier.$(OBJEXT) eventprocessor.$(OBJEXT) \
+	evtcbque.$(OBJEXT)
 libedio_a_OBJECTS = $(am_libedio_a_OBJECTS)
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
@@ -323,7 +324,7 @@ libedio_a_METASOURCES = AUTO
 libedio_a_SOURCES = reactorindex.cpp fdindex.cpp kqueuer.cpp epoll.cpp rtsigio.cpp ediostream.cpp outputbuf.cpp cacheos.cpp \
    inputstream.cpp bufferedos.cpp outputstream.cpp flowcontrol.cpp iochain.cpp multiplexerfactory.cpp eventreactor.cpp poller.cpp \
    multiplexer.cpp pollfdreactor.cpp lookupfd.cpp devpoller.cpp aioeventhandler.cpp sigeventdispatcher.cpp aiooutputstream.cpp \
-   aiosendfile.cpp eventnotifier.cpp eventprocessor.cpp
+   aiosendfile.cpp eventnotifier.cpp eventprocessor.cpp evtcbque.cpp
 
 all: all-am
 
@@ -385,6 +386,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eventnotifier.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eventprocessor.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eventreactor.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/evtcbque.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/fdindex.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/flowcontrol.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/inputstream.Po@am__quote@

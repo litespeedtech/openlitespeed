@@ -22,7 +22,7 @@
 #include <lsiapi/lsiapihooks.h>
 #include <lsiapi/modulemanager.h>
 #include <util/autostr.h>
-#include <util/logtracker.h>
+#include <log4cxx/logsession.h>
 
 #include <sys/types.h>
 
@@ -36,7 +36,7 @@ class SubIpMap;
 class HttpServerImpl;
 
 
-class HttpListener : public EventReactor, public LogTracker
+class HttpListener : public EventReactor, public LogSession
 {
     friend class HttpServerImpl;
     static int32_t      m_iSockSendBufSize;
@@ -65,7 +65,7 @@ class HttpListener : public EventReactor, public LogTracker
 
 
 protected:
-    virtual const char *buildLogId() { return NULL; };
+    virtual const char *buildLogId();
 
 public:
     explicit HttpListener(const char *pName, const char *pAddr);

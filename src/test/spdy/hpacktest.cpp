@@ -38,20 +38,20 @@ void printTable(HpackDynTbl &dynTab)
     {
         int tabId = i + HPACK_STATIC_TABLE_SIZE;
         DynTblEntry *pEntry = (DynTblEntry *)dynTab.getEntry(
-                                        tabId);
+                                  tabId);
 
         printf("[%3d]  (s = %3d) %s: %s\n",
                i, pEntry->getEntrySize(), pEntry->getName(), pEntry->getValue());
     }
-    printf("\tTable size: %lu\n", dynTab.getTotalTableSize());
+    printf("\tTable size: %u\n", dynTab.getTotalTableSize());
 }
 
 TEST(hapck_test_1)
 {
     HpackDynTbl dynTable;
     dynTable.updateMaxCapacity(256);
-    
-    printf( "size of DynTblEntry is %lu\n", sizeof( DynTblEntry ));
+
+    printf("size of DynTblEntry is %u\n", sizeof(DynTblEntry));
 
     addEntry(dynTable, ":authority", "www.example.com", 1);
     printTable(dynTable);
@@ -112,8 +112,9 @@ void testNameValue(const char *name, const char *val, int result,
 {
     int val_match;
     int index = Hpack::getStxTabId((char *)name, (uint16_t)strlen(name) ,
-                                        (char *)val, (uint16_t)strlen(val), val_match);
-    printf("name: %s, val: %s, index = %d match = %d\n", name, val, index, val_match);
+                                   (char *)val, (uint16_t)strlen(val), val_match);
+    printf("name: %s, val: %s, index = %d match = %d\n", name, val, index,
+           val_match);
     CHECK(index == result && val_match == val_match_result);
 }
 
@@ -266,12 +267,13 @@ TEST(hapck_test_RFC_EXample)
 //     char val[1024];
     uint16_t name_len = 1024;
     uint16_t val_len = 1024;
-    while ((rc = hpack.decHeader(pSrc, bufEnd, autoBuf, name_len, val_len)) > 0)
+    while ((rc = hpack.decHeader(pSrc, bufEnd, autoBuf, name_len,
+                                 val_len)) > 0)
     {
         char *name = autoBuf.begin();
         char *val = name + name_len;
-        printf("[%d %d]%s: %s\n", name_len, val_len, 
-               AutoStr2(name,name_len).c_str(),
+        printf("[%d %d]%s: %s\n", name_len, val_len,
+               AutoStr2(name, name_len).c_str(),
                AutoStr2(val, val_len).c_str());
     }
     printTable(hpack.getReqDynTbl());
@@ -281,12 +283,13 @@ TEST(hapck_test_RFC_EXample)
                              "\x82\x86\x84\xbe\x58\x86\xa8\xeb\x10\x64\x9c\xbf";
     pSrc = bufSamp;
     bufEnd =  bufSamp + strlen((const char *)bufSamp);
-    while ((rc = hpack.decHeader(pSrc, bufEnd, autoBuf, name_len, val_len)) > 0)
+    while ((rc = hpack.decHeader(pSrc, bufEnd, autoBuf, name_len,
+                                 val_len)) > 0)
     {
         char *name = autoBuf.begin();
         char *val = name + name_len;
-        printf("[%d %d]%s: %s\n", name_len, val_len, 
-               AutoStr2(name,name_len).c_str(),
+        printf("[%d %d]%s: %s\n", name_len, val_len,
+               AutoStr2(name, name_len).c_str(),
                AutoStr2(val, val_len).c_str());
     }
     printTable(hpack.getReqDynTbl());
@@ -295,12 +298,13 @@ TEST(hapck_test_RFC_EXample)
               "\x82\x87\x85\xbf\x40\x88\x25\xa8\x49\xe9\x5b\xa9\x7d\x7f\x89\x25\xa8\x49\xe9\x5b\xb8\xe8\xb4\xbf";
     pSrc = bufSamp;
     bufEnd =  bufSamp + strlen((const char *)bufSamp);
-    while ((rc = hpack.decHeader(pSrc, bufEnd, autoBuf, name_len, val_len)) > 0)
+    while ((rc = hpack.decHeader(pSrc, bufEnd, autoBuf, name_len,
+                                 val_len)) > 0)
     {
         char *name = autoBuf.begin();
         char *val = name + name_len;
-        printf("[%d %d]%s: %s\n", name_len, val_len, 
-               AutoStr2(name,name_len).c_str(),
+        printf("[%d %d]%s: %s\n", name_len, val_len,
+               AutoStr2(name, name_len).c_str(),
                AutoStr2(val, val_len).c_str());
     }
     printTable(hpack.getReqDynTbl());
@@ -321,15 +325,16 @@ TEST(hapck_self_enc_dec_test)
 //     char val[1024];
     uint16_t name_len = 0;
     uint16_t val_len = 0;
-    
+
     hpack.getRespDynTbl().updateMaxCapacity(256);
     hpack.getReqDynTbl().updateMaxCapacity(256);
 
     unsigned char *pBuf = respBuf;
-    
+
     //Reproduce bug with special charset
-    pBuf = hpack.encHeader(pBuf, respBufEnd, STR_TO_IOVEC_TEST("content-disposition"),
-                           STR_TO_IOVEC_TEST( "inline; filename=\"Ekran Alıntısı.PNG\""));
+    pBuf = hpack.encHeader(pBuf, respBufEnd,
+                           STR_TO_IOVEC_TEST("content-disposition"),
+                           STR_TO_IOVEC_TEST("inline; filename=\"Ekran Alıntısı.PNG\""));
     displayHeader(respBuf, pBuf - respBuf);
     printTable(hpack.getRespDynTbl());
 
@@ -338,17 +343,18 @@ TEST(hapck_self_enc_dec_test)
     ****************************/
     pSrc = respBuf;
     bufEnd =  pBuf;
-    while ((rc = hpack.decHeader(pSrc, bufEnd, autoBuf, name_len, val_len)) > 0)
+    while ((rc = hpack.decHeader(pSrc, bufEnd, autoBuf, name_len,
+                                 val_len)) > 0)
     {
         char *name = autoBuf.begin();
         char *val = name + name_len;
-        printf("[%d %d]%s: %s\n", name_len, val_len, 
-               AutoStr2(name,name_len).c_str(),
+        printf("[%d %d]%s: %s\n", name_len, val_len,
+               AutoStr2(name, name_len).c_str(),
                AutoStr2(val, val_len).c_str());
     }
     printTable(hpack.getReqDynTbl());
 
-    
+
     //1:
     pBuf = respBuf;
     pBuf = hpack.encHeader(pBuf, respBufEnd, STR_TO_IOVEC_TEST(":status"),
@@ -373,12 +379,13 @@ TEST(hapck_self_enc_dec_test)
     ****************************/
     pSrc = respBuf;
     bufEnd =  pBuf;
-    while ((rc = hpack.decHeader(pSrc, bufEnd, autoBuf, name_len, val_len)) > 0)
+    while ((rc = hpack.decHeader(pSrc, bufEnd, autoBuf, name_len,
+                                 val_len)) > 0)
     {
         char *name = autoBuf.begin();
         char *val = name + name_len;
-        printf("[%d %d]%s: %s\n", name_len, val_len, 
-               AutoStr2(name,name_len).c_str(),
+        printf("[%d %d]%s: %s\n", name_len, val_len,
+               AutoStr2(name, name_len).c_str(),
                AutoStr2(val, val_len).c_str());
     }
     printTable(hpack.getReqDynTbl());
@@ -420,12 +427,13 @@ TEST(hapck_self_enc_dec_test)
     ****************************/
     pSrc = respBuf;
     bufEnd =  pBuf;
-    while ((rc = hpack.decHeader(pSrc, bufEnd, autoBuf, name_len, val_len)) > 0)
+    while ((rc = hpack.decHeader(pSrc, bufEnd, autoBuf, name_len,
+                                 val_len)) > 0)
     {
         char *name = autoBuf.begin();
         char *val = name + name_len;
-        printf("[%d %d]%s: %s\n", name_len, val_len, 
-               AutoStr2(name,name_len).c_str(),
+        printf("[%d %d]%s: %s\n", name_len, val_len,
+               AutoStr2(name, name_len).c_str(),
                AutoStr2(val, val_len).c_str());
     }
     printTable(hpack.getReqDynTbl());
@@ -462,12 +470,13 @@ TEST(hapck_self_enc_dec_test)
     ****************************/
     pSrc = respBuf;
     bufEnd =  pBuf;
-    while ((rc = hpack.decHeader(pSrc, bufEnd, autoBuf, name_len, val_len)) > 0)
+    while ((rc = hpack.decHeader(pSrc, bufEnd, autoBuf, name_len,
+                                 val_len)) > 0)
     {
         char *name = autoBuf.begin();
         char *val = name + name_len;
-        printf("[%d %d]%s: %s\n", name_len, val_len, 
-               AutoStr2(name,name_len).c_str(),
+        printf("[%d %d]%s: %s\n", name_len, val_len,
+               AutoStr2(name, name_len).c_str(),
                AutoStr2(val, val_len).c_str());
     }
     printTable(hpack.getReqDynTbl());
@@ -479,76 +488,77 @@ TEST(hapck_self_enc_dec_test)
 
 
 #define LS_STR_TO_IOVEC(a) (a), (sizeof(a) -1)
-static HpackHdrTbl_t g_HpackDynInitTable_t[] = {
-{LS_STR_TO_IOVEC("content-length"),    LS_STR_TO_IOVEC("2145") },
-{LS_STR_TO_IOVEC("etag"),    LS_STR_TO_IOVEC("\"1e0c-54feefd5-7bfd383f\"") },
-{LS_STR_TO_IOVEC("content-length"),    LS_STR_TO_IOVEC("31793") },
-{LS_STR_TO_IOVEC("etag"),    LS_STR_TO_IOVEC("\"3235d-54feefd5-9d7c08af\"") },
-{LS_STR_TO_IOVEC("content-length"),    LS_STR_TO_IOVEC("407") },
-{LS_STR_TO_IOVEC("content-type"),    LS_STR_TO_IOVEC("text/css") },
-{LS_STR_TO_IOVEC("etag"),    LS_STR_TO_IOVEC("\"6bc-54feefd5-a7725cbd\"") },
-{LS_STR_TO_IOVEC("content-length"),    LS_STR_TO_IOVEC("1884") },
-{LS_STR_TO_IOVEC("etag"),    LS_STR_TO_IOVEC("\"1b5a-54feefd5-b6a3dc2a\"") },
-{LS_STR_TO_IOVEC("content-length"),    LS_STR_TO_IOVEC("2308") },
-{LS_STR_TO_IOVEC("etag"),    LS_STR_TO_IOVEC("\"1aee-54feefd5-1d91a5e4\"") },
-{LS_STR_TO_IOVEC("content-length"),    LS_STR_TO_IOVEC("702") },
-{LS_STR_TO_IOVEC("etag"),    LS_STR_TO_IOVEC("\"5f8-54feefd5-197a93f1\"") },
-{LS_STR_TO_IOVEC("content-length"),    LS_STR_TO_IOVEC("556") },
-{LS_STR_TO_IOVEC("etag"),    LS_STR_TO_IOVEC("\"52b-54feefd5-e6075901\"") },
-{LS_STR_TO_IOVEC("content-length"),    LS_STR_TO_IOVEC("6913") },
-{LS_STR_TO_IOVEC("etag"),    LS_STR_TO_IOVEC("\"5767-54feefd5-4a868698\"") },
-{LS_STR_TO_IOVEC("content-length"),    LS_STR_TO_IOVEC("6724") },
-{LS_STR_TO_IOVEC("etag"),    LS_STR_TO_IOVEC("\"64de-54feefd5-fb73534f\"") },
-{LS_STR_TO_IOVEC("content-length"),    LS_STR_TO_IOVEC("2568") },
-{LS_STR_TO_IOVEC("etag"),    LS_STR_TO_IOVEC("\"2530-54feefd5-cccfff57\"") },
-{LS_STR_TO_IOVEC("content-length"),    LS_STR_TO_IOVEC("973") },
-{LS_STR_TO_IOVEC("etag"),    LS_STR_TO_IOVEC("\"b00-54feefd5-e48546d\"") },
-{LS_STR_TO_IOVEC("content-length"),    LS_STR_TO_IOVEC("709") },
-{LS_STR_TO_IOVEC("etag"),    LS_STR_TO_IOVEC("\"6a4-54feefd5-82d8609d\"") },
-{LS_STR_TO_IOVEC("content-length"),    LS_STR_TO_IOVEC("6520") },
-{LS_STR_TO_IOVEC("etag"),    LS_STR_TO_IOVEC("\"5b0d-54feefd5-44735f27\"") },
-{LS_STR_TO_IOVEC("content-length"),    LS_STR_TO_IOVEC("3954") },
-{LS_STR_TO_IOVEC("etag"),    LS_STR_TO_IOVEC("\"22ac-54feefd5-600b05fd\"") },
-{LS_STR_TO_IOVEC("content-length"),    LS_STR_TO_IOVEC("32825") },
-{LS_STR_TO_IOVEC("etag"),    LS_STR_TO_IOVEC("\"16bb3-54feefd5-d669865d\"") },
-{LS_STR_TO_IOVEC("content-length"),    LS_STR_TO_IOVEC("1055") },
-{LS_STR_TO_IOVEC("etag"),    LS_STR_TO_IOVEC("\"a37-54feefd5-59e4760e\"") },
-{LS_STR_TO_IOVEC("date"),    LS_STR_TO_IOVEC("Tue, 10 Mar 2015 19:00:06 GMT") },
-{LS_STR_TO_IOVEC("content-length"),    LS_STR_TO_IOVEC("737") },
-{LS_STR_TO_IOVEC("etag"),    LS_STR_TO_IOVEC("\"63d-54feefd5-c244a03a\"") },
-{LS_STR_TO_IOVEC("expires"),    LS_STR_TO_IOVEC("Tue, 17 Mar 2015 19:00:06 GMT") },
-{LS_STR_TO_IOVEC("content-length"),    LS_STR_TO_IOVEC("3205") },
-{LS_STR_TO_IOVEC("etag"),    LS_STR_TO_IOVEC("\"37cf-54feefd5-10e8e54\"") },
-{LS_STR_TO_IOVEC("content-length"),    LS_STR_TO_IOVEC("6336") },
-{LS_STR_TO_IOVEC("etag"),    LS_STR_TO_IOVEC("\"58d9-54feefd5-f0d60c72\"") },
-{LS_STR_TO_IOVEC("content-length"),    LS_STR_TO_IOVEC("2707") },
-{LS_STR_TO_IOVEC("etag"),    LS_STR_TO_IOVEC("\"285b-54feefd5-2e2834bf\"") },
-{LS_STR_TO_IOVEC("content-length"),    LS_STR_TO_IOVEC("9050") },
-{LS_STR_TO_IOVEC("etag"),    LS_STR_TO_IOVEC("\"87ed-54feefd5-741b49ef\"") },
-{LS_STR_TO_IOVEC("content-length"),    LS_STR_TO_IOVEC("7562") },
-{LS_STR_TO_IOVEC("etag"),    LS_STR_TO_IOVEC("\"795a-54feefd5-9e535995\"") },
-{LS_STR_TO_IOVEC("content-length"),    LS_STR_TO_IOVEC("8780") },
-{LS_STR_TO_IOVEC("etag"),    LS_STR_TO_IOVEC("\"9759-54feefd5-6c09a64d\"") },
-{LS_STR_TO_IOVEC("content-length"),    LS_STR_TO_IOVEC("1842") },
-{LS_STR_TO_IOVEC("etag"),    LS_STR_TO_IOVEC("\"1288-54feefd5-51ae6c5a\"") },
-{LS_STR_TO_IOVEC("content-length"),    LS_STR_TO_IOVEC("9153") },
-{LS_STR_TO_IOVEC("etag"),    LS_STR_TO_IOVEC("\"a2af-54feefd5-83098d2b\"") },
-{LS_STR_TO_IOVEC("content-length"),    LS_STR_TO_IOVEC("437") },
-{LS_STR_TO_IOVEC("etag"),    LS_STR_TO_IOVEC("\"2eb-54feefd5-26eef95\"") },
-{LS_STR_TO_IOVEC("content-length"),    LS_STR_TO_IOVEC("37451") },
-{LS_STR_TO_IOVEC("content-type"),    LS_STR_TO_IOVEC("application/javascript") },
-{LS_STR_TO_IOVEC("etag"),    LS_STR_TO_IOVEC("\"27df1-54feefd5-fe76c415\"") },
-{LS_STR_TO_IOVEC("expires"),    LS_STR_TO_IOVEC("Tue, 17 Mar 2015 19:00:05 GMT") },
-{LS_STR_TO_IOVEC("cache-control"),    LS_STR_TO_IOVEC("public, max-age=604800") },
-{LS_STR_TO_IOVEC("server"),    LS_STR_TO_IOVEC("LiteSpeed") },
-{LS_STR_TO_IOVEC("accept-ranges"),    LS_STR_TO_IOVEC("bytes") },
-{LS_STR_TO_IOVEC("date"),    LS_STR_TO_IOVEC("Tue, 10 Mar 2015 19:00:05 GMT") },
-{LS_STR_TO_IOVEC("vary"),    LS_STR_TO_IOVEC("Accept-Encoding") },
-{LS_STR_TO_IOVEC("content-encoding"),    LS_STR_TO_IOVEC("gzip") },
-{LS_STR_TO_IOVEC("content-length"),    LS_STR_TO_IOVEC("5298") },
-{LS_STR_TO_IOVEC("content-type"),    LS_STR_TO_IOVEC("text/html") },
-{LS_STR_TO_IOVEC("last-modified"),    LS_STR_TO_IOVEC("Tue, 10 Mar 2015 13:21:25 GMT") },
-{LS_STR_TO_IOVEC("etag"),    LS_STR_TO_IOVEC("\"748f-54feefd5-dca65763\"") },
+static HpackHdrTbl_t g_HpackDynInitTable_t[] =
+{
+    {LS_STR_TO_IOVEC("content-length"),    LS_STR_TO_IOVEC("2145") },
+    {LS_STR_TO_IOVEC("etag"),    LS_STR_TO_IOVEC("\"1e0c-54feefd5-7bfd383f\"") },
+    {LS_STR_TO_IOVEC("content-length"),    LS_STR_TO_IOVEC("31793") },
+    {LS_STR_TO_IOVEC("etag"),    LS_STR_TO_IOVEC("\"3235d-54feefd5-9d7c08af\"") },
+    {LS_STR_TO_IOVEC("content-length"),    LS_STR_TO_IOVEC("407") },
+    {LS_STR_TO_IOVEC("content-type"),    LS_STR_TO_IOVEC("text/css") },
+    {LS_STR_TO_IOVEC("etag"),    LS_STR_TO_IOVEC("\"6bc-54feefd5-a7725cbd\"") },
+    {LS_STR_TO_IOVEC("content-length"),    LS_STR_TO_IOVEC("1884") },
+    {LS_STR_TO_IOVEC("etag"),    LS_STR_TO_IOVEC("\"1b5a-54feefd5-b6a3dc2a\"") },
+    {LS_STR_TO_IOVEC("content-length"),    LS_STR_TO_IOVEC("2308") },
+    {LS_STR_TO_IOVEC("etag"),    LS_STR_TO_IOVEC("\"1aee-54feefd5-1d91a5e4\"") },
+    {LS_STR_TO_IOVEC("content-length"),    LS_STR_TO_IOVEC("702") },
+    {LS_STR_TO_IOVEC("etag"),    LS_STR_TO_IOVEC("\"5f8-54feefd5-197a93f1\"") },
+    {LS_STR_TO_IOVEC("content-length"),    LS_STR_TO_IOVEC("556") },
+    {LS_STR_TO_IOVEC("etag"),    LS_STR_TO_IOVEC("\"52b-54feefd5-e6075901\"") },
+    {LS_STR_TO_IOVEC("content-length"),    LS_STR_TO_IOVEC("6913") },
+    {LS_STR_TO_IOVEC("etag"),    LS_STR_TO_IOVEC("\"5767-54feefd5-4a868698\"") },
+    {LS_STR_TO_IOVEC("content-length"),    LS_STR_TO_IOVEC("6724") },
+    {LS_STR_TO_IOVEC("etag"),    LS_STR_TO_IOVEC("\"64de-54feefd5-fb73534f\"") },
+    {LS_STR_TO_IOVEC("content-length"),    LS_STR_TO_IOVEC("2568") },
+    {LS_STR_TO_IOVEC("etag"),    LS_STR_TO_IOVEC("\"2530-54feefd5-cccfff57\"") },
+    {LS_STR_TO_IOVEC("content-length"),    LS_STR_TO_IOVEC("973") },
+    {LS_STR_TO_IOVEC("etag"),    LS_STR_TO_IOVEC("\"b00-54feefd5-e48546d\"") },
+    {LS_STR_TO_IOVEC("content-length"),    LS_STR_TO_IOVEC("709") },
+    {LS_STR_TO_IOVEC("etag"),    LS_STR_TO_IOVEC("\"6a4-54feefd5-82d8609d\"") },
+    {LS_STR_TO_IOVEC("content-length"),    LS_STR_TO_IOVEC("6520") },
+    {LS_STR_TO_IOVEC("etag"),    LS_STR_TO_IOVEC("\"5b0d-54feefd5-44735f27\"") },
+    {LS_STR_TO_IOVEC("content-length"),    LS_STR_TO_IOVEC("3954") },
+    {LS_STR_TO_IOVEC("etag"),    LS_STR_TO_IOVEC("\"22ac-54feefd5-600b05fd\"") },
+    {LS_STR_TO_IOVEC("content-length"),    LS_STR_TO_IOVEC("32825") },
+    {LS_STR_TO_IOVEC("etag"),    LS_STR_TO_IOVEC("\"16bb3-54feefd5-d669865d\"") },
+    {LS_STR_TO_IOVEC("content-length"),    LS_STR_TO_IOVEC("1055") },
+    {LS_STR_TO_IOVEC("etag"),    LS_STR_TO_IOVEC("\"a37-54feefd5-59e4760e\"") },
+    {LS_STR_TO_IOVEC("date"),    LS_STR_TO_IOVEC("Tue, 10 Mar 2015 19:00:06 GMT") },
+    {LS_STR_TO_IOVEC("content-length"),    LS_STR_TO_IOVEC("737") },
+    {LS_STR_TO_IOVEC("etag"),    LS_STR_TO_IOVEC("\"63d-54feefd5-c244a03a\"") },
+    {LS_STR_TO_IOVEC("expires"),    LS_STR_TO_IOVEC("Tue, 17 Mar 2015 19:00:06 GMT") },
+    {LS_STR_TO_IOVEC("content-length"),    LS_STR_TO_IOVEC("3205") },
+    {LS_STR_TO_IOVEC("etag"),    LS_STR_TO_IOVEC("\"37cf-54feefd5-10e8e54\"") },
+    {LS_STR_TO_IOVEC("content-length"),    LS_STR_TO_IOVEC("6336") },
+    {LS_STR_TO_IOVEC("etag"),    LS_STR_TO_IOVEC("\"58d9-54feefd5-f0d60c72\"") },
+    {LS_STR_TO_IOVEC("content-length"),    LS_STR_TO_IOVEC("2707") },
+    {LS_STR_TO_IOVEC("etag"),    LS_STR_TO_IOVEC("\"285b-54feefd5-2e2834bf\"") },
+    {LS_STR_TO_IOVEC("content-length"),    LS_STR_TO_IOVEC("9050") },
+    {LS_STR_TO_IOVEC("etag"),    LS_STR_TO_IOVEC("\"87ed-54feefd5-741b49ef\"") },
+    {LS_STR_TO_IOVEC("content-length"),    LS_STR_TO_IOVEC("7562") },
+    {LS_STR_TO_IOVEC("etag"),    LS_STR_TO_IOVEC("\"795a-54feefd5-9e535995\"") },
+    {LS_STR_TO_IOVEC("content-length"),    LS_STR_TO_IOVEC("8780") },
+    {LS_STR_TO_IOVEC("etag"),    LS_STR_TO_IOVEC("\"9759-54feefd5-6c09a64d\"") },
+    {LS_STR_TO_IOVEC("content-length"),    LS_STR_TO_IOVEC("1842") },
+    {LS_STR_TO_IOVEC("etag"),    LS_STR_TO_IOVEC("\"1288-54feefd5-51ae6c5a\"") },
+    {LS_STR_TO_IOVEC("content-length"),    LS_STR_TO_IOVEC("9153") },
+    {LS_STR_TO_IOVEC("etag"),    LS_STR_TO_IOVEC("\"a2af-54feefd5-83098d2b\"") },
+    {LS_STR_TO_IOVEC("content-length"),    LS_STR_TO_IOVEC("437") },
+    {LS_STR_TO_IOVEC("etag"),    LS_STR_TO_IOVEC("\"2eb-54feefd5-26eef95\"") },
+    {LS_STR_TO_IOVEC("content-length"),    LS_STR_TO_IOVEC("37451") },
+    {LS_STR_TO_IOVEC("content-type"),    LS_STR_TO_IOVEC("application/javascript") },
+    {LS_STR_TO_IOVEC("etag"),    LS_STR_TO_IOVEC("\"27df1-54feefd5-fe76c415\"") },
+    {LS_STR_TO_IOVEC("expires"),    LS_STR_TO_IOVEC("Tue, 17 Mar 2015 19:00:05 GMT") },
+    {LS_STR_TO_IOVEC("cache-control"),    LS_STR_TO_IOVEC("public, max-age=604800") },
+    {LS_STR_TO_IOVEC("server"),    LS_STR_TO_IOVEC("LiteSpeed") },
+    {LS_STR_TO_IOVEC("accept-ranges"),    LS_STR_TO_IOVEC("bytes") },
+    {LS_STR_TO_IOVEC("date"),    LS_STR_TO_IOVEC("Tue, 10 Mar 2015 19:00:05 GMT") },
+    {LS_STR_TO_IOVEC("vary"),    LS_STR_TO_IOVEC("Accept-Encoding") },
+    {LS_STR_TO_IOVEC("content-encoding"),    LS_STR_TO_IOVEC("gzip") },
+    {LS_STR_TO_IOVEC("content-length"),    LS_STR_TO_IOVEC("5298") },
+    {LS_STR_TO_IOVEC("content-type"),    LS_STR_TO_IOVEC("text/html") },
+    {LS_STR_TO_IOVEC("last-modified"),    LS_STR_TO_IOVEC("Tue, 10 Mar 2015 13:21:25 GMT") },
+    {LS_STR_TO_IOVEC("etag"),    LS_STR_TO_IOVEC("\"748f-54feefd5-dca65763\"") },
 };
 
 
@@ -560,70 +570,73 @@ TEST(hapck_self_enc_dec_test_firefox_error)
     Hpack hpack;
     int nCount = sizeof(g_HpackDynInitTable_t) / sizeof(HpackHdrTbl_t);
     int i;
-    for ( i=nCount -1; i>=0; --i )
+    for (i = nCount - 1; i >= 0; --i)
     {
         int val_match;
-        int staticTableIndex = Hpack::getStxTabId((char *)g_HpackDynInitTable_t[i].name, 
-                                                       g_HpackDynInitTable_t[i].name_len,
-                                                       (char *)g_HpackDynInitTable_t[i].val,
-                                                       g_HpackDynInitTable_t[i].val_len,
-                                                       val_match);
-        
+        int staticTableIndex = Hpack::getStxTabId((char *)
+                               g_HpackDynInitTable_t[i].name,
+                               g_HpackDynInitTable_t[i].name_len,
+                               (char *)g_HpackDynInitTable_t[i].val,
+                               g_HpackDynInitTable_t[i].val_len,
+                               val_match);
+
         if (staticTableIndex <= 0)
             printf("Error, not in static table. \n");
-        
-        hpack.getReqDynTbl().pushEntry((char *)g_HpackDynInitTable_t[i].name, 
-                                             g_HpackDynInitTable_t[i].name_len,
-                                             (char *)g_HpackDynInitTable_t[i].val,
-                                             g_HpackDynInitTable_t[i].val_len,
-                                             staticTableIndex);
-        
-        hpack.getRespDynTbl().pushEntry((char *)g_HpackDynInitTable_t[i].name, 
-                                             g_HpackDynInitTable_t[i].name_len,
-                                             (char *)g_HpackDynInitTable_t[i].val,
-                                             g_HpackDynInitTable_t[i].val_len,
-                                             staticTableIndex);
-        
+
+        hpack.getReqDynTbl().pushEntry((char *)g_HpackDynInitTable_t[i].name,
+                                       g_HpackDynInitTable_t[i].name_len,
+                                       (char *)g_HpackDynInitTable_t[i].val,
+                                       g_HpackDynInitTable_t[i].val_len,
+                                       staticTableIndex);
+
+        hpack.getRespDynTbl().pushEntry((char *)g_HpackDynInitTable_t[i].name,
+                                        g_HpackDynInitTable_t[i].name_len,
+                                        (char *)g_HpackDynInitTable_t[i].val,
+                                        g_HpackDynInitTable_t[i].val_len,
+                                        staticTableIndex);
+
     }
     printTable(hpack.getReqDynTbl());
-    
-    
-    char buf[] = "\x88\xF9\x64\x96\xDF\x69\x7E\x94\x0B\xAA\x68\x1D\x8A\x08\x01\x6D"
-                "\x40\xBF\x70\x00\xB8\x07\x54\xC5\xA3\x7F\x62\x92\xFE\x42\x21\xBA"
-                "\xB3\x6D\x4A\x52\xCB\x23\x6B\x0D\xE1\x3E\x17\x05\x2F\xF3\xFF\x04"
-                "\x5F\x87\x35\x23\x98\xAC\x57\x54\xDF\x5C\x83\x69\xD7\x5B\x61\x96"
-                "\xDF\x69\x7E\x94\x08\x14\xD0\x3B\x14\x10\x02\xDA\x81\x7E\xE0\x01"
-                "\x70\x0E\xA9\x8B\x46\xFF\xFF\x01\xFF\x00";
+
+
+    char buf[] =
+        "\x88\xF9\x64\x96\xDF\x69\x7E\x94\x0B\xAA\x68\x1D\x8A\x08\x01\x6D"
+        "\x40\xBF\x70\x00\xB8\x07\x54\xC5\xA3\x7F\x62\x92\xFE\x42\x21\xBA"
+        "\xB3\x6D\x4A\x52\xCB\x23\x6B\x0D\xE1\x3E\x17\x05\x2F\xF3\xFF\x04"
+        "\x5F\x87\x35\x23\x98\xAC\x57\x54\xDF\x5C\x83\x69\xD7\x5B\x61\x96"
+        "\xDF\x69\x7E\x94\x08\x14\xD0\x3B\x14\x10\x02\xDA\x81\x7E\xE0\x01"
+        "\x70\x0E\xA9\x8B\x46\xFF\xFF\x01\xFF\x00";
 
     int rc;
     unsigned char *pSrc = (unsigned char *)buf;
-    unsigned char *bufEnd =  (unsigned char *)buf + 90;
+    unsigned char *bufEnd = (unsigned char *)buf + 90;
 
     AutoBuf autoBuf(2048);
     uint16_t name_len, val_len;
 
     unsigned char *pBuf = respBuf;
     respBufEnd = respBuf + 8192;
-    
+
     while (pSrc < bufEnd)
     {
         rc = hpack.decHeader(pSrc, bufEnd, autoBuf, name_len, val_len);
-        CHECK (rc > 0);
+        CHECK(rc > 0);
 
         char *name = autoBuf.begin();
         char *val = name + name_len;
-        printf("[%d %d]%s: %s\n", name_len, val_len, 
-               AutoStr2(name,name_len).c_str(),
+        printf("[%d %d]%s: %s\n", name_len, val_len,
+               AutoStr2(name, name_len).c_str(),
                AutoStr2(val, val_len).c_str());
-        
-        pBuf = hpack.encHeader(pBuf, respBufEnd, (char *)name, name_len, (char *)val, val_len);
-        
+
+        pBuf = hpack.encHeader(pBuf, respBufEnd, (char *)name, name_len,
+                               (char *)val, val_len);
+
         name_len = 1024;
         val_len = 1024;
     }
-    
+
     displayHeader(respBuf, pBuf - respBuf);
-    CHECK(memcmp(respBuf, buf, 90) ==0);
+    CHECK(memcmp(respBuf, buf, 90) == 0);
 }
 
 
@@ -632,9 +645,9 @@ TEST(hapck_self_enc_dec_test_firefox_error)
 //     unsigned char respBuf[8192] = {0};
 //     unsigned char *respBufEnd = respBuf + 8192;
 //     Hpack hpack;
-//   
-//     
-//     char buf[] = 
+//
+//
+//     char buf[] =
 //     "\x88\x40\x89\xF2\xB5\x67\xF0\x5B\x0B\x22\xD1\xFA\x88\xD7\x8F\x5B"
 //     "\x0D\xAE\xDA\xE2\x6B\x77\xB3\xF3\x2A\x45\x12\x0A\x84\x18\xF5\x40"
 //     "\x17\xDF\x71\xC2\x08\x12\x0C\x12\x38\x30\x3D\x20\x63\x0C\x62\x8D"
@@ -654,31 +667,31 @@ TEST(hapck_self_enc_dec_test_firefox_error)
 //     "\x75\x65\x2C\x9F";
 //     int rc;
 //     unsigned char *pSrc = (unsigned char *)buf;
-//     unsigned char *bufEnd = (unsigned char *)buf + sizeof( buf ) - 1; 
-// 
+//     unsigned char *bufEnd = (unsigned char *)buf + sizeof( buf ) - 1;
+//
 //     AutoBuf autoBuf(2048);
 //     uint16_t name_len, val_len;
-// 
+//
 //     unsigned char *pBuf = respBuf;
 //     respBufEnd = respBuf + 8192;
-//     
+//
 //     while (pSrc < bufEnd)
 //     {
 //         rc = hpack.decHeader(pSrc, bufEnd, autoBuf, name_len, val_len);
 //         CHECK (rc > 0);
-// 
+//
 //         char *name = autoBuf.begin();
 //         char *val = name + name_len;
-//         printf("[%d %d]%s: %s\n", name_len, val_len, 
+//         printf("[%d %d]%s: %s\n", name_len, val_len,
 //                AutoStr2(name,name_len).c_str(),
 //                AutoStr2(val, val_len).c_str());
-//         
+//
 //         pBuf = hpack.encHeader(pBuf, respBufEnd, (char *)name, name_len, (char *)val, val_len);
-//         
+//
 //         name_len = 1024;
 //         val_len = 1024;
 //     }
-//     
+//
 //     displayHeader(respBuf, pBuf - respBuf);
 //     CHECK(memcmp(respBuf, buf, 90) ==0);
 // }
@@ -695,31 +708,31 @@ TEST(getDynTblId_testing)
     for ( i=nCount -1; i>=0; --i )
     {
         int val_match;
-        int staticTableIndex = Hpack::getStxTabId((char *)g_HpackDynInitTable_t[i].name, 
+        int staticTableIndex = Hpack::getStxTabId((char *)g_HpackDynInitTable_t[i].name,
                                                        g_HpackDynInitTable_t[i].name_len,
                                                        (char *)g_HpackDynInitTable_t[i].val,
                                                        g_HpackDynInitTable_t[i].val_len,
                                                        val_match);
-        
+
         if (staticTableIndex <= 0)
             printf("Error, not in static table. \n");
-        
-        dynTbl0.pushEntry((char *)g_HpackDynInitTable_t[i].name, 
+
+        dynTbl0.pushEntry((char *)g_HpackDynInitTable_t[i].name,
                                              g_HpackDynInitTable_t[i].name_len,
                                              (char *)g_HpackDynInitTable_t[i].val,
                                              g_HpackDynInitTable_t[i].val_len,
                                              staticTableIndex);
-        
-        dynTbl1.pushEntry((char *)g_HpackDynInitTable_t[i].name, 
+
+        dynTbl1.pushEntry((char *)g_HpackDynInitTable_t[i].name,
                                              g_HpackDynInitTable_t[i].name_len,
                                              (char *)g_HpackDynInitTable_t[i].val,
                                              g_HpackDynInitTable_t[i].val_len,
                                              staticTableIndex);
     }
-    
+
     printf("\nSpeed test of getDynTblId:");
     printf("\nWith hashTable testing ");
-    
+
     time_t t0 = time(NULL);
     char name[20];
     char val[20];
@@ -734,11 +747,11 @@ TEST(getDynTblId_testing)
             sprintf(val, "TESTVALUE%04d", i);
             dynTbl0.getDynTabId((char *)name, name_len, (char *)val, val_len, val_matched, 0);
             dynTbl0.pushEntry(name, name_len, val, val_len, 0);
-            
+
             sprintf(name, "TESTHEADER%04d", i+1);
             sprintf(val, "TESTVALUE%04d", i+1);
             dynTbl0.getDynTabId(name, name_len, val, val_len, val_matched, 0);
-            
+
             sprintf(name, "TESTHEADER%04d", i+2);
             sprintf(val, "TESTVALUE%04d", i+2);
             dynTbl0.getDynTabId(name, name_len, val, val_len, val_matched, 0);
@@ -748,7 +761,7 @@ TEST(getDynTblId_testing)
     printf("(100 headers)----time: %ds\n", (int)(t1 - t0));
 
     printf("Without hashTable testing (use for loop) ");
-    
+
     t0 = time(NULL);
     for (int k = 0; k < 8000 ; ++k)
     {
@@ -758,11 +771,11 @@ TEST(getDynTblId_testing)
             sprintf(val, "TESTVALUE%04d", i);
             dynTbl1.getDynTabId(name, name_len, val, val_len, val_matched, 0);
             dynTbl1.pushEntry(name, name_len, val, val_len, 0);
-            
+
             sprintf(name, "TESTHEADER%04d", i+1);
             sprintf(val, "TESTVALUE%04d", i+1);
             dynTbl1.getDynTabId(name, name_len, val, val_len, val_matched, 0);
-            
+
             sprintf(name, "TESTHEADER%04d", i+2);
             sprintf(val, "TESTVALUE%04d", i+2);
             dynTbl1.getDynTabId(name, name_len, val, val_len, val_matched, 0);
@@ -770,7 +783,7 @@ TEST(getDynTblId_testing)
     }
     t1 = time(NULL);
     printf("(100 headers)----time: %ds\n", (int)(t1 - t0));
-    
+
     //============================================
     printf("\nWith hashTable testing ");
     t0 = time(NULL);
@@ -782,11 +795,11 @@ TEST(getDynTblId_testing)
             sprintf(val, "TESTVALUE%04d", i);
             dynTbl0.getDynTabId((char *)name, name_len, (char *)val, val_len, val_matched, 0);
             dynTbl0.pushEntry(name, name_len, val, val_len, 0);
-            
+
             sprintf(name, "TESTHEADER%04d", i+1);
             sprintf(val, "TESTVALUE%04d", i+1);
             dynTbl0.getDynTabId(name, name_len, val, val_len, val_matched, 0);
-            
+
             sprintf(name, "TESTHEADER%04d", i+2);
             sprintf(val, "TESTVALUE%04d", i+2);
             dynTbl0.getDynTabId(name, name_len, val, val_len, val_matched, 0);
@@ -796,7 +809,7 @@ TEST(getDynTblId_testing)
     printf("(1000 headers)----time: %ds\n", (int)(t1 - t0));
 
     printf("Without hashTable testing (use for loop) ");
-    
+
     t0 = time(NULL);
     for (int k = 0; k < 4000 ; ++k)
     {
@@ -806,11 +819,11 @@ TEST(getDynTblId_testing)
             sprintf(val, "TESTVALUE%04d", i);
             dynTbl1.getDynTabId(name, name_len, val, val_len, val_matched, 0);
             dynTbl1.pushEntry(name, name_len, val, val_len, 0);
-            
+
             sprintf(name, "TESTHEADER%04d", i+1);
             sprintf(val, "TESTVALUE%04d", i+1);
             dynTbl1.getDynTabId(name, name_len, val, val_len, val_matched, 0);
-            
+
             sprintf(name, "TESTHEADER%04d", i+2);
             sprintf(val, "TESTVALUE%04d", i+2);
             dynTbl1.getDynTabId(name, name_len, val, val_len, val_matched, 0);
@@ -818,14 +831,14 @@ TEST(getDynTblId_testing)
     }
     t1 = time(NULL);
     printf("(1000 headers)----time: %ds\n", (int)(t1 - t0));
-    
-    
-    
-    
+
+
+
+
 
     printf("\nhapck_self_enc_dec_test_firefox_error Done\n");
-    
-    
+
+
 }*/
 
 
@@ -898,55 +911,63 @@ TEST(hapck_getStaticTableId)
 {
     int count = sizeof(g_HpackStaticTableTset) / sizeof(HpackHdrTbl_t);
     CHECK(count == 61);
-    
+
     int val_matched;
     int id;
-    for (int i = 0; i< count; ++i)
+    for (int i = 0; i < count; ++i)
     {
         id = Hpack::getStxTabId((char *)g_HpackStaticTableTset[i].name,
-                                         g_HpackStaticTableTset[i].name_len,
-                                         (char *)g_HpackStaticTableTset[i].val,
-                                         g_HpackStaticTableTset[i].val_len,
-                                         val_matched);
+                                g_HpackStaticTableTset[i].name_len,
+                                (char *)g_HpackStaticTableTset[i].val,
+                                g_HpackStaticTableTset[i].val_len,
+                                val_matched);
         CHECK(id == i + 1);
         if (i >= 1 && i <= 15 && i != 14)
             CHECK(val_matched == 1);
         else
             CHECK(val_matched == 0);
     }
-    
-    id = Hpack::getStxTabId((char *)":method", 7, (char *)"Get", 3, val_matched);
+
+    id = Hpack::getStxTabId((char *)":method", 7, (char *)"Get", 3,
+                            val_matched);
     CHECK(id == 2);
     CHECK(val_matched == 0);
 
-    id = Hpack::getStxTabId((char *)":method", 7, (char *)"GGG", 3, val_matched);
+    id = Hpack::getStxTabId((char *)":method", 7, (char *)"GGG", 3,
+                            val_matched);
     CHECK(id == 2);
     CHECK(val_matched == 0);
-    
-    id = Hpack::getStxTabId((char *)":method", 7, (char *)"gET", 3, val_matched);
+
+    id = Hpack::getStxTabId((char *)":method", 7, (char *)"gET", 3,
+                            val_matched);
     CHECK(id == 2);
     CHECK(val_matched == 0);
-    
-    id = Hpack::getStxTabId((char *)":method", 7, (char *)"GETsss", 6, val_matched);
+
+    id = Hpack::getStxTabId((char *)":method", 7, (char *)"GETsss", 6,
+                            val_matched);
     CHECK(id == 2);
     CHECK(val_matched == 0);
-    
-    id = Hpack::getStxTabId((char *)":method", 7, (char *)"GETsss", 3, val_matched);
+
+    id = Hpack::getStxTabId((char *)":method", 7, (char *)"GETsss", 3,
+                            val_matched);
     CHECK(id == 2);
     CHECK(val_matched == 1);
-    
-    id = Hpack::getStxTabId((char *)":method", 7, (char *)"POST", 4, val_matched);
+
+    id = Hpack::getStxTabId((char *)":method", 7, (char *)"POST", 4,
+                            val_matched);
     CHECK(id == 3);
     CHECK(val_matched == 1);
-    
-    id = Hpack::getStxTabId((char *)":status", 7, (char *)"POST", 4, val_matched);
+
+    id = Hpack::getStxTabId((char *)":status", 7, (char *)"POST", 4,
+                            val_matched);
     CHECK(id == 8);
     CHECK(val_matched == 0);
-    
-    id = Hpack::getStxTabId((char *)":status", 7, (char *)"2000", 4, val_matched);
+
+    id = Hpack::getStxTabId((char *)":status", 7, (char *)"2000", 4,
+                            val_matched);
     CHECK(id == 8);
     CHECK(val_matched == 0);
-    
+
     printf("hapck_getStaticTableId DOne.\n");
 }
 

@@ -45,9 +45,10 @@ static int addoutput(lsi_cb_param_t *rec, const char *level)
     char *pBuf;
     if (rec->_param_len <= 0)
         return g_api->stream_write_next(rec, rec->_param, rec->_param_len);
-    pBuf = ls_xpool_alloc(g_api->get_session_pool(rec->_session), rec->_param_len + strlen(level) + 1);
+    pBuf = ls_xpool_alloc(g_api->get_session_pool(rec->_session),
+                          rec->_param_len + strlen(level) + 1);
     snprintf(pBuf, rec->_param_len + strlen(level) + 1, "%.*s%.*s",
-                rec->_param_len, (const char *)rec->_param, strlen(level) + 1, level);
+             rec->_param_len, (const char *)rec->_param, strlen(level) + 1, level);
     lenNew = rec->_param_len + strlen(level);
     len = g_api->stream_write_next(rec, pBuf, lenNew);
     if (len < lenNew)
@@ -75,10 +76,14 @@ static int beginSession(lsi_cb_param_t *rec)
 static lsi_serverhook_t serverHooks[] =
 {
     {LSI_HKPT_HTTP_BEGIN, beginSession, LSI_HOOK_NORMAL, LSI_HOOK_FLAG_ENABLED},
-    {LSI_HKPT_RECV_RESP_BODY, addrecvresp, LSI_HOOK_NORMAL,
-        LSI_HOOK_FLAG_TRANSFORM},
-    {LSI_HKPT_SEND_RESP_BODY, addsendresp, LSI_HOOK_NORMAL,
-        LSI_HOOK_FLAG_TRANSFORM},
+    {
+        LSI_HKPT_RECV_RESP_BODY, addrecvresp, LSI_HOOK_NORMAL,
+        LSI_HOOK_FLAG_TRANSFORM
+    },
+    {
+        LSI_HKPT_SEND_RESP_BODY, addsendresp, LSI_HOOK_NORMAL,
+        LSI_HOOK_FLAG_TRANSFORM
+    },
     lsi_serverhook_t_END   //Must put this at the end position
 };
 

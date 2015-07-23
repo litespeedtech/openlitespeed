@@ -24,7 +24,7 @@
 struct lsi_session_s;
 class ModIndex;
 class ModuleConfig;
-class LogTracker;
+class LogSession;
 class LsiModule;
 
 typedef struct lsi_module_internal_s
@@ -82,26 +82,24 @@ typedef struct lsi_module_internal_s
 //# error not enough space reserved for internal data in struct lsi_module_t
 //#endif
 
-struct lsi_session_s
-{
-};
 
-typedef struct lsi_session_s lsi_session_t;
-
-class LsiSession : public lsi_session_s
+class LsiSession : public evtcbhead_s
 {
 public:
     LsiSession() {};
     virtual ~LsiSession() {};
     ModuleConfig *getModuleConfig()    { return m_pModuleConfig; };
-    virtual LogTracker *getLogTracker() = 0;
-
-    static int hookResumeCallback(long lParam, LsiSession *pSession) { return 0;};
+    virtual LogSession *getLogSession() = 0;
 
 
 protected:
     ModuleConfig *m_pModuleConfig;
 
+    void setEvtcbHead(evtcbnode_s *pNode)
+    {   evtcbhead_s::evtcb_head = pNode;    }
+
+    evtcbnode_s *getEvtcbHead() const
+    {   return evtcbhead_s::evtcb_head;    }
 
     LS_NO_COPY_ASSIGN(LsiSession);
 };

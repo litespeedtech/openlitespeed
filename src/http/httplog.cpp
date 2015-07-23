@@ -48,8 +48,8 @@ int HttpLog::s_debugLevel = DL_IODATA;
 
 void HttpLog::parse_error(const char *pCurLine, const char *pError)
 {
-    LOG_ERR((s_pCurLogger, "[%s] rewrite: %s while parsing: %s",
-             s_pLogId, pError, pCurLine));
+    LS_ERROR(s_pCurLogger, "[%s] rewrite: %s while parsing: %s",
+             s_pLogId, pError, pCurLine);
 }
 
 
@@ -62,8 +62,8 @@ void HttpLog::setCurLogger(LOG4CXX_NS::Logger *pLogger, const char *pId)
 
 void HttpLog::perror(const char *pStr, const char *pError)
 {
-    LOG_ERR((s_pCurLogger, "[%s] %s: %s.",
-             s_pLogId, (pStr) ? pStr : "", pError));
+    LS_ERROR(s_pCurLogger, "[%s] %s: %s.",
+             s_pLogId, (pStr) ? pStr : "", pError);
 }
 
 
@@ -118,6 +118,12 @@ bool HttpLog::isDebugEnabled(Logger *pLogger, int level)
 void HttpLog::setDebugLevel(int level)
 {
     s_debugLevel = level;
+    if (level > 0)
+    {
+        Level::setDefaultLevel(Level::DEBUG + level * 10);
+        if (logger()->isEnabled(Level::DEBUG))
+            logger()->setLevel(Level::DEBUG + level * 10);
+    }
 }
 
 
@@ -240,18 +246,18 @@ void HttpLog::offsetChroot(const char *pRoot, int len)
 void HttpLog::error_num(int __errnum, const char *__file,
                         unsigned int __line, const char *__function)
 {
-    logger()->error(
-        "errno: (%d)%s in file:%s line:%d function:%s\n",
-        __errnum, strerror(__errnum),
-        __file, __line, __function);
+    LS_ERROR(logger(),
+             "errno: (%d)%s in file:%s line:%d function:%s\n",
+             __errnum, strerror(__errnum),
+             __file, __line, __function);
 }
 
 
 void HttpLog::error_detail(const char *__errstr, const char *__file,
                            unsigned int __line, const char *__function)
 {
-    logger()->error("error:%s in file:%s line:%d function:%s\n",
-                    __errstr, __file, __line, __function);
+    LS_ERROR(logger(), "error:%s in file:%s line:%d function:%s\n",
+             __errstr, __file, __line, __function);
 }
 
 
@@ -428,14 +434,14 @@ void HttpLog::info(Logger *pLogger, const char *fmt, ...)
 
 void HttpLog::errmem(const char *pSource)
 {
-    LOG_ERR(("Out of memory: %s", pSource));
+    LS_ERROR("Out of memory: %s", pSource);
 }
 
 
 void syntax_check()
 {
-    LOG_D(("This is a test, %s %d \n", "string", 23423));
-    LOG_ERR(("This is a test, %s %d \n", "string", 23423));
+    LS_DBG_L("This is a test, %s %d \n", "string", 23423);
+    LS_ERROR("This is a test, %s %d \n", "string", 23423);
     LOG_ERR_CODE(1);
     LOG_DERR("errstr");
 }
@@ -464,6 +470,7 @@ void HttpLog::onTimer()
 
     }
 }
+
 
 
 

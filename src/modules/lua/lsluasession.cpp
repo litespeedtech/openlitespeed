@@ -1935,9 +1935,7 @@ static int  LsLuaSessPrintHelper(lua_State *L, ls_luaprint_t &s,
     if (g_api->is_resp_buffer_available(pSession->getHttpSession()) == 1)
     {
         if (LsLuaPrint(L, &s) == -1)
-        {
             return -1;
-        }
     }
     else
         return pSession->wait4RespBuffer(L);
@@ -2343,7 +2341,7 @@ static int LsLuaSessEscapeUri(lua_State *L)
         return LsLuaApi::userError(L, "escape_uri", "Invalid arg.");
 
     iDestLen = HttpUtil::escapeRFC3986(pSrc, iSrcLen, pDest,
-                                LSLUA_SESS_MAXURILEN);
+                                       LSLUA_SESS_MAXURILEN);
     if (iDestLen <= 0)
         return LsLuaApi::serverError(L, "escape_uri", "Error escaping.");
 

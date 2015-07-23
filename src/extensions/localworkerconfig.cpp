@@ -21,6 +21,7 @@
 
 #include <http/httpserverconfig.h>
 #include <http/serverprocessconfig.h>
+#include <log4cxx/logger.h>
 #include <main/configctx.h>
 #include <util/rlimits.h>
 #include <util/xmlnode.h>
@@ -140,10 +141,11 @@ int LocalWorkerConfig::checkExtAppSelfManagedAndFixEnv()
 
         if ((children > 0) && (children * getInstances() < getMaxConns()))
         {
-            ConfigCtx::getCurConfigCtx()->logWarn("Improper configuration: the value of "
-                                                  "%s should not be less than 'Max "
-                                                  "connections', 'Max connections' is reduced to %d."
-                                                  , instanceEnv[i], children * getInstances());
+            LS_WARN(ConfigCtx::getCurConfigCtx(),
+                    "Improper configuration: the value of "
+                    "%s should not be less than 'Max "
+                    "connections', 'Max connections' is reduced to %d."
+                    , instanceEnv[i], children * getInstances());
             setMaxConns(children * getInstances());
         }
 
@@ -157,7 +159,7 @@ int LocalWorkerConfig::checkExtAppSelfManagedAndFixEnv()
 
 int LocalWorkerConfig::config(const XmlNode *pNode)
 {
-    ServerProcessConfig &procConfig =ServerProcessConfig::getInstance();
+    ServerProcessConfig &procConfig = ServerProcessConfig::getInstance();
     int selfManaged;
     int instances;
     int backlog = ConfigCtx::getCurConfigCtx()->getLongValue(pNode, "backlog",
@@ -209,8 +211,9 @@ int LocalWorkerConfig::config(const XmlNode *pNode)
         HttpServerConfig::getInstance().getMaxFcgiInstances())
     {
         instances = HttpServerConfig::getInstance().getMaxFcgiInstances();
-        ConfigCtx::getCurConfigCtx()->logWarn("<instances> is too large, use default max:%d",
-                                              instances);
+        LS_WARN(ConfigCtx::getCurConfigCtx(),
+                "<instances> is too large, use default max:%d",
+                instances);
     }
     setInstances(instances);
     selfManaged = checkExtAppSelfManagedAndFixEnv();
@@ -218,25 +221,27 @@ int LocalWorkerConfig::config(const XmlNode *pNode)
     if ((instances != 1) &&
         (getMaxConns() > instances))
     {
-        ConfigCtx::getCurConfigCtx()->logNotice("Possible mis-configuration: 'Instances'=%d, "
-                                                "'Max connections'=%d, unless one Fast CGI process is "
-                                                "capable of handling multiple connections, "
-                                                "you should set 'Instances' greater or equal to "
-                                                "'Max connections'.", instances, getMaxConns());
+        LS_NOTICE(ConfigCtx::getCurConfigCtx(),
+                  "Possible mis-configuration: 'Instances'=%d, "
+                  "'Max connections'=%d, unless one Fast CGI process is "
+                  "capable of handling multiple connections, "
+                  "you should set 'Instances' greater or equal to "
+                  "'Max connections'.", instances, getMaxConns());
         setMaxConns(instances);
     }
 
     RLimits *pLimits = getRLimits();
 #if defined(RLIMIT_NPROC)
     int mini_nproc = (3 * getMaxConns() + 50)
-                    * HttpServerConfig::getInstance().getChildren();
+                     * HttpServerConfig::getInstance().getChildren();
     struct rlimit   *pNProc = pLimits->getProcLimit();
 
     if (((pNProc->rlim_cur > 0) && ((int) pNProc->rlim_cur < mini_nproc))
         || ((pNProc->rlim_max > 0) && ((int) pNProc->rlim_max < mini_nproc)))
     {
-        ConfigCtx::getCurConfigCtx()->logNotice("'Process Limit' probably is too low, "
-                                                "adjust the limit to: %d.", mini_nproc);
+        LS_NOTICE(ConfigCtx::getCurConfigCtx(),
+                  "'Process Limit' probably is too low, "
+                  "adjust the limit to: %d.", mini_nproc);
         pLimits->setProcLimit(mini_nproc, mini_nproc);
     }
 
@@ -262,15 +267,15 @@ void LocalWorkerConfig::configExtAppUserGroup(const XmlNode *pNode,
 
         if ((iType != EA_LOGGER)
             && ((pw->pw_uid < ServerProcessConfig::getInstance().getUidMin())
-                || (gid <ServerProcessConfig::getInstance().getGidMin())))
+                || (gid < ServerProcessConfig::getInstance().getGidMin())))
         {
-            ConfigCtx::getCurConfigCtx()->logNotice("ExtApp suExec access denied,"
-                                                    " UID or GID of VHost document root is smaller "
-                                                    "than minimum UID, GID configured. ");
+            LS_NOTICE(ConfigCtx::getCurConfigCtx(), "ExtApp suExec access denied,"
+                      " UID or GID of VHost document root is smaller "
+                      "than minimum UID, GID configured. ");
         }
         else
             setUGid(pw->pw_uid, gid);
     }
-    ConfigCtx::getCurConfigCtx()->logError("Invalid User Name(%s) or Group "
-                                           "Name(%s)!", pUser, pGroup );
+    LS_ERROR(ConfigCtx::getCurConfigCtx(), "Invalid User Name(%s) or Group "
+             "Name(%s)!", pUser, pGroup);
 }

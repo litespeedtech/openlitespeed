@@ -20,6 +20,7 @@
 #include <http/handlerfactory.h>
 #include <http/httphandler.h>
 #include <http/httplog.h>
+#include <log4cxx/logger.h>
 #include <main/configctx.h>
 #include <util/autostr.h>
 #include <util/hashstringmap.h>
@@ -192,7 +193,7 @@ public:
     {}
     MIMESubMap(const MIMESubMap &rhs);
     ~MIMESubMap()
-    {   releaseObjects();  }
+    {   release_objects();  }
 
     MIMESetting *addMIME(char *pMIME);
     const char *setMainType(const char *pType, int len);
@@ -297,7 +298,7 @@ public:
     {}
     MIMEMap(const MIMEMap &rhs);
     ~MIMEMap()
-    {   releaseObjects();  }
+    {   release_objects();  }
     iterator findSubMap(const char *pMIME, char *&p) const;
     MIMESubMap *addSubMap(char *pMIME, int len);
 
@@ -551,7 +552,7 @@ public:
     MIMESuffixMap()
         : HashStringMap<MIMESuffix * >(10)
     {}
-    ~MIMESuffixMap() {   releaseObjects();   }
+    ~MIMESuffixMap() {   release_objects();   }
     MIMESuffixMap(int n) : HashStringMap<MIMESuffix * >(n) {}
     MIMESuffix *addMapping(const char *pSuffix, MIMESetting *pSetting)
     {   return addUpdateMapping(pSuffix, pSetting, 0);    }
@@ -742,13 +743,13 @@ int HttpMime::loadMime(const char *pPropertyPath)
     FILE *fpMime = fopen(pPropertyPath, "r");
     if (fpMime == NULL)
     {
-        LOG_ERR(("[MIME] Cannot load property file: %s", pPropertyPath));
+        LS_ERROR("[MIME] Cannot load property file: %s", pPropertyPath);
         return errno;
     }
 
     char pBuf[TEMP_BUF_LEN];
     int lineNo = 0;
-    m_pSuffixMap->releaseObjects();
+    m_pSuffixMap->release_objects();
 
     while (! feof(fpMime))
     {
@@ -790,7 +791,7 @@ int HttpMime::addUpdateMIME(char *pType, char *pDesc, const char *&reason,
     {
         if (strcmp(pDesc, pSetting->getMIME()->c_str()) != 0)
         {
-//            LOG_WARN(("[MIME] File %s line %d: MIME type with different parameter"
+//            LS_WARN("[MIME] File %s line %d: MIME type with different parameter"
 //                    " is not allowed, current: \"%s\" new: \"%s\", new one is used.",
 //                            pFilePath, lineNo, pSetting->getMIME()->c_str(), pDesc));
             AutoStr2 *pMime = ::getMIME(pDesc);
@@ -860,8 +861,8 @@ int HttpMime::processOneLine(const char *pFilePath, char *pLine,
 
     }
 
-    LOG_ERR(("[MIME] File %s line %d: (%s) - \"%s\"",
-             pFilePath, lineNo, reason, pLine));
+    LS_ERROR("[MIME] File %s line %d: (%s) - \"%s\"",
+             pFilePath, lineNo, reason, pLine);
     return LS_FAIL;
 }
 
@@ -894,8 +895,8 @@ int HttpMime::setCompressibleByType(const char *pValue,
         if (updateMIME(pType, HttpMime::setCompressible,
                        (void *)compressible, pParent) == -1)
         {
-            LOG_NOTICE(("[%s] Can not find compressible MIME type: %s, add it!",
-                        pLogId, pType));
+            LS_NOTICE("[%s] Can not find compressible MIME type: %s, add it!",
+                      pLogId, pType);
             const char *pReason;
             char achTmp[] = "";
             addUpdateMIME(achTmp, pType, pReason, 0);
@@ -930,7 +931,7 @@ int HttpMime::setExpiresByType(const char *pValue, const HttpMime *pParent,
             pExpiresTime = strchr(pType, ' ');
             if (!pExpiresTime)
             {
-                LOG_WARN(("[%s] Invalid Expires setting: %s, ignore!", pLogId, pType));
+                LS_WARN("[%s] Invalid Expires setting: %s, ignore!", pLogId, pType);
                 continue;
             }
         }
@@ -938,9 +939,9 @@ int HttpMime::setExpiresByType(const char *pValue, const HttpMime *pParent,
         if (updateMIME(pType, HttpMime::setExpire,
                        pExpiresTime, pParent) == -1)
         {
-            LOG_WARN(("[%s] Can not find MIME type: %s, "
-                      "ignore Expires setting %s!",
-                      pLogId, pType, pExpiresTime));
+            LS_WARN("[%s] Can not find MIME type: %s, "
+                    "ignore Expires setting %s!",
+                    pLogId, pType, pExpiresTime);
         }
     }
     return 0;
@@ -966,16 +967,16 @@ int HttpMime::addType(const HttpMime *pDefault, const char *pValue,
         pSuffix = strchr(pType, ' ');
         if (!pSuffix)
         {
-            LOG_WARN(("[%s] Incomplete MIME type, missing suffix: %s, ignore!", pLogId,
-                      pType));
+            LS_WARN("[%s] Incomplete MIME type, missing suffix: %s, ignore!", pLogId,
+                    pType);
             return LS_FAIL;
         }
     }
     *pSuffix++ = 0;
     m_pMIMEMap->inherit(pDefault->m_pMIMEMap, 0, pType);
     if (addUpdateMIME(pSuffix, pType, reason, 1))
-        LOG_WARN(("[%s] failed to add mime type: %s %s, reason: %s",
-                  pLogId, pType, pSuffix, reason));
+        LS_WARN("[%s] failed to add mime type: %s %s, reason: %s",
+                pLogId, pType, pSuffix, reason);
 //    }
     return 0;
 }
@@ -1036,8 +1037,8 @@ int HttpMime::addMimeHandler(const char *pSuffix, char *pMime,
     memccpy(achSuffix, pSuffix, 0, 511);
     if (addUpdateMIME(achSuffix, pMime, reason, 1))
     {
-        LOG_WARN(("[%s] failed to add mime type: %s %s, reason: %s",
-                  pLogId, pMime, pSuffix, reason));
+        LS_WARN("[%s] failed to add mime type: %s %s, reason: %s",
+                pLogId, pMime, pSuffix, reason);
         return LS_FAIL;
     }
     updateMIME(pMime, HttpMime::setHandler, (void *)pHdlr, pParent);
@@ -1091,8 +1092,9 @@ int HttpMime::configScriptHandler(const XmlNodeList *pList,
 
         if (currentCtx.expandVariable(handler, achHandler, 256) < 0)
         {
-            currentCtx.logNotice("add String is too long for scripthandler, value: %s",
-                                 handler);
+            LS_NOTICE(&currentCtx,
+                      "add String is too long for scripthandler, value: %s",
+                      handler);
             continue;
         }
 
@@ -1110,8 +1112,9 @@ void HttpMime::addMimeHandler(const HttpHandler *pHdlr, char *pMime,
 {
     if (!pHdlr)
     {
-        ConfigCtx::getCurConfigCtx()->logError("use static file handler for suffix [%s]",
-                                               pSuffix);
+        LS_ERROR(ConfigCtx::getCurConfigCtx(),
+                 "use static file handler for suffix [%s]",
+                 pSuffix);
         pHdlr = HandlerFactory::getInstance(0, NULL);
     }
     HttpMime *pParent = NULL;
@@ -1122,7 +1125,7 @@ void HttpMime::addMimeHandler(const HttpHandler *pHdlr, char *pMime,
         pHttpMime = HttpMime::getMime();
 
     pHttpMime->addMimeHandler(pSuffix, pMime,
-                              pHdlr, pParent, LogIdTracker::getLogId());
+                              pHdlr, pParent, TmpLogId::getLogId());
 }
 
 

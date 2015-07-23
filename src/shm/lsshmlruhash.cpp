@@ -34,7 +34,8 @@ int LsShmHash::entryValMatch(
 }
 
 
-int LsShmHash::trim(time_t tmCutoff, int (*func)(iterator iter, void *arg), void *arg)
+int LsShmHash::trim(time_t tmCutoff, int (*func)(iterator iter, void *arg),
+                    void *arg)
 {
     if (m_iLruMode == LSSHM_LRU_NONE)
         return LS_FAIL;
@@ -114,7 +115,7 @@ int LsShmWLruHash::newDataEntry(
             ls_str_pair_t parms;
             iteroffset iterOff;
             ls_str_set(&parms.key,
-                             (char *)pElem->getKey(), pElem->getKeyLen());
+                       (char *)pElem->getKey(), pElem->getKeyLen());
             ls_str_set(&parms.value, NULL, valLen);
             if ((iterOff = insert2(key, &parms)) == 0)
                 return LS_FAIL;
@@ -184,7 +185,7 @@ int LsShmXLruHash::newDataEntry(
         int remapped;
         LsShmOffset_t offNew;
         if ((offNew = alloc2(
-            (LsShmSize_t)(sizeof(shmlru_data_t) + valLen), remapped)) == 0)
+                          (LsShmSize_t)(sizeof(shmlru_data_t) + valLen), remapped)) == 0)
             return LS_FAIL;
         pData = (shmlru_data_t *)offset2ptr(offNew);
         pData->magic = LSSHM_LRU_MAGIC;

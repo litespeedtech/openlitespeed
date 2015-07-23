@@ -95,7 +95,7 @@ private:
     int m_iFlags;
     int m_iMaxAge;
     int m_iMaxStale;
-    
+
 };
 
 #endif

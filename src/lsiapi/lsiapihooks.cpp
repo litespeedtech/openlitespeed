@@ -17,9 +17,9 @@
 *****************************************************************************/
 #include "lsiapihooks.h"
 
-#include <http/httplog.h>
 #include <lsiapi/internal.h>
-#include <util/logtracker.h>
+#include <log4cxx/logger.h>
+#include <log4cxx/logsession.h>
 
 #include <string.h>
 
@@ -81,10 +81,10 @@ int LsiApiHooks::runForwardCb(lsi_cb_param_t *param)
     int8_t *pEnableArray = hookInfo->enable_array;
     int iCount = (lsiapi_hook_t *)param->_cur_hook - pHooks->begin();
     int iSize = pHooks->size();
-    for ( ; iCount < iSize; ++iCount)
+    for (; iCount < iSize; ++iCount)
     {
         if ((pEnableArray[LSIHOOKS_GETINDEX(iCount)]
-            & (1 << LSIHOOKS_GETOFFSET(iCount))) != 0)
+             & (1 << LSIHOOKS_GETOFFSET(iCount))) != 0)
         {
             param->_cur_hook = (void *)pHooks->get(iCount);
             return (*(((lsiapi_hook_t *)param->_cur_hook)->cb))(param);
@@ -104,10 +104,10 @@ int LsiApiHooks::runBackwardCb(lsi_cb_param_t *param)
     const LsiApiHooks *pHooks = hookInfo->hooks;
     int8_t *pEnableArray = hookInfo->enable_array;
     int iCount = (lsiapi_hook_t *)param->_cur_hook - pHooks->begin();
-    for ( ; iCount >= 0; --iCount)
+    for (; iCount >= 0; --iCount)
     {
         if ((pEnableArray[LSIHOOKS_GETINDEX(iCount)]
-            & (1 << LSIHOOKS_GETOFFSET(iCount))) != 0)
+             & (1 << LSIHOOKS_GETOFFSET(iCount))) != 0)
         {
             param->_cur_hook = (void *)pHooks->get(iCount);
             return (*(((lsiapi_hook_t *)param->_cur_hook)->cb))(param);
@@ -277,10 +277,10 @@ int LsiApiHooks::runCallback(int level, lsi_cb_param_t *param) const
     int iCount = (lsiapi_hook_t *)param->_cur_hook - begin();
     int iSize = size();
 
-    for ( ; iCount < iSize; ++iCount)
+    for (; iCount < iSize; ++iCount)
     {
         if ((pEnableArray[LSIHOOKS_GETINDEX(iCount)]
-            & (1 << LSIHOOKS_GETOFFSET(iCount))) == 0)
+             & (1 << LSIHOOKS_GETOFFSET(iCount))) == 0)
             continue;
 
         hook = get(iCount);
@@ -288,40 +288,23 @@ int LsiApiHooks::runCallback(int level, lsi_cb_param_t *param) const
         rec1 = *param;
         rec1._cur_hook = (void *)hook;
 
-        LogTracker *pTracker = NULL;
-        if (D_ENABLED(DL_MORE))
+        LogSession *pTracker = NULL;
+        if (log4cxx::Level::isEnabled(log4cxx::Level::DBG_MEDIUM))
         {
-            if (param->_session && 
-                (pTracker =((LsiSession *)param->_session)->getLogTracker()) != NULL)
-            {
-                LOG_D((pTracker->getLogger(),
-                       "[%s] [%s] run Hook function for [Module:%s] session=%p",
-                       pTracker->getLogId(), s_pHkptName[ level ],
-                       MODULE_NAME(hook->module), param->_session));
-            }
-            else
-            {
-                LOG_D((NULL,
-                       "[ServerHook: %s] run Hook function for [Module:%s]",
-                       s_pHkptName[ level ], MODULE_NAME(hook->module)));
-            }
+            if (param->_session)
+                pTracker = ((LsiSession *)param->_session)->getLogSession();
+            LS_DBG_M(pTracker, "[%s] run Hook function for [Module:%s] session=%p",
+                     s_pHkptName[ level ],
+                     MODULE_NAME(hook->module), param->_session);
         }
 
         ret = hook->cb(&rec1);
 
-        if (D_ENABLED(DL_MORE))
+        if (log4cxx::Level::isEnabled(log4cxx::Level::DBG_MEDIUM))
         {
-            if (param->_session && pTracker)
-            {
-                LOG_D((pTracker->getLogger(), "[%s] [%s] [Module:%s]  session=%p ret %d",
-                       pTracker->getLogId(), s_pHkptName[ level ],
-                       MODULE_NAME(hook->module), param->_session, ret));
-            }
-            else
-            {
-                LOG_D((NULL, "[ServerHook: %s] [Module:%s] ret %d",
-                       s_pHkptName[ level ], MODULE_NAME(hook->module), ret));
-            }
+            LS_DBG_M(pTracker, "[%s] [Module:%s]  session=%p ret %d",
+                     s_pHkptName[ level ],
+                     MODULE_NAME(hook->module), param->_session, ret);
         }
         if ((ret == LSI_HK_RET_SUSPEND)
             || ((ret != 0) && !(m_iFlag & LSI_HOOK_FLAG_NO_INTERRUPT)))
@@ -335,9 +318,10 @@ int LsiApiHooks::runCallback(int level, lsi_cb_param_t *param) const
 }
 
 
-int LsiApiHooks::runCallback(int level, int8_t *pEnableArray, LsiSession *session,
-                    void *param1, int paramLen1, int *flag_out, int flag_in,
-                    lsi_module_t *pModule) const
+int LsiApiHooks::runCallback(int level, int8_t *pEnableArray,
+                             LsiSession *session,
+                             void *param1, int paramLen1, int *flag_out, int flag_in,
+                             lsi_module_t *pModule) const
 {
     lsiapi_hook_t *pHook = NULL;
 

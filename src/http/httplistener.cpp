@@ -21,12 +21,12 @@
 #include <http/clientcache.h>
 #include <http/clientinfo.h>
 #include <http/connlimitctrl.h>
-#include <http/httplog.h>
 #include <http/httpresourcemanager.h>
 #include <http/httpvhost.h>
 #include <http/ntwkiolink.h>
 #include <http/smartsettings.h>
 #include <http/vhostmap.h>
+#include <log4cxx/logger.h>
 #include <socket/coresocket.h>
 #include <socket/gsockaddr.h>
 #include <util/accessdef.h>
@@ -100,6 +100,20 @@ void HttpListener::endConfig()
 }
 
 
+const char *HttpListener::buildLogId()
+{
+    AutoStr2 &id = getIdBuf();
+    const AutoStr2 *pAddrStr;
+    if (m_pMapVHost == NULL)
+        return NULL;
+    pAddrStr = m_pMapVHost->getAddrStr();
+    if (pAddrStr == NULL || pAddrStr->len() == 0)
+        return NULL;
+    id = *pAddrStr;
+    return id.c_str();
+}
+
+
 const char *HttpListener::getAddrStr() const
 {
     return m_pMapVHost->getAddrStr()->c_str();
@@ -124,7 +138,7 @@ int HttpListener::assign(int fd, struct sockaddr *pAddr)
         snprintf(achAddr, 128, "[::]:%hu", (short)addr.getPort());
     else
         addr.toString(achAddr, 128);
-    LOG_NOTICE(("Recovering server socket: [%s]", achAddr));
+    LS_NOTICE("Recovering server socket: [%s]", achAddr);
     m_pMapVHost->setAddrStr(achAddr);
     if ((addr.family() == AF_INET6)
         && (IN6_IS_ADDR_UNSPECIFIED(&addr.getV6()->sin6_addr)))
@@ -140,8 +154,7 @@ int HttpListener::start()
     if (addr.set(getAddrStr(), 0))
         return errno;
     int fd;
-    int ret = CoreSocket::listen(addr,
-                                 SmartSettings::getSockBacklog(), &fd,
+    int ret = CoreSocket::listen(addr, SmartSettings::getSockBacklog(), &fd,
                                  m_iSockSendBufSize, m_iSockRecvBufSize);
     if (ret != 0)
         return ret;
@@ -174,8 +187,8 @@ int HttpListener::setSockAttr(int fd, GSockAddr &addr)
     if (setsockopt(fd, SOL_SOCKET, SO_ACCEPTFILTER, &arg, sizeof(arg)) < 0)
     {
         if (errno != ENOENT)
-            LOG_NOTICE(("Failed to set accept-filter 'httpready': %s",
-                        strerror(errno)));
+            LS_NOTICE("Failed to set accept-filter 'httpready': %s",
+                      strerror(errno));
     }
 #endif
 
@@ -210,7 +223,7 @@ int HttpListener::stop()
 {
     if (getfd() != -1)
     {
-        LOG_INFO(("Stop listener %s.", getAddrStr()));
+        LS_INFO("Stop listener %s.", getAddrStr());
         MultiplexerFactory::getMultiplexer()->remove(this);
         close(getfd());
         setfd(-1);
@@ -262,7 +275,7 @@ int HttpListener::handleEvents(short event)
         static int isUseAccept4 = 1;
         if (isUseAccept4)
         {
-            pCur->fd = accept4(getfd(), (struct sockaddr *)(pCur->achPeerAddr), 
+            pCur->fd = accept4(getfd(), (struct sockaddr *)(pCur->achPeerAddr),
                                &len, SOCK_NONBLOCK | SOCK_CLOEXEC);
             if (pCur->fd == -1 && errno == ENOSYS)
             {
@@ -286,9 +299,9 @@ int HttpListener::handleEvents(short event)
             if ((errno != EAGAIN) && (errno != ECONNABORTED)
                 && (errno != EINTR))
             {
-                LOG_ERR((getLogger(),
-                         "HttpListener::acceptConnection(): [%s] can't accept:%s!",
-                         getAddrStr(), strerror(errno)));
+                LS_ERROR(this,
+                         "HttpListener::acceptConnection(): Accept failed:%s!",
+                         strerror(errno));
             }
             break;
         }
@@ -322,32 +335,18 @@ int HttpListener::handleEvents(short event)
     {
         if (limitType == 1)
         {
-            if (D_ENABLED(DL_MORE))
-            {
-                LOG_D((getLogger(),
-                       "[%s] max connections reached, suspend accepting!",
-                       getAddrStr()));
-            }
+            LS_DBG_H(this, "Max connections reached, suspend accepting!");
 
             ctrl.suspendAll();
         }
         else
         {
-            if (D_ENABLED(DL_MORE))
-            {
-                LOG_D((getLogger(),
-                       "[%s] max SSL connections reached, suspend accepting!",
-                       getAddrStr()));
-            }
+            LS_DBG_M(this, "Max SSL connections reached, suspend accepting!");
 
             ctrl.suspendSSL();
         }
     }
-    if (D_ENABLED(DL_MORE))
-    {
-        LOG_D((getLogger(),
-               "[%s] %d connections accepted!", getAddrStr(), iCount));
-    }
+    LS_DBG_H(this, "%d connections accepted!", iCount);
     return 0;
 }
 
@@ -365,9 +364,8 @@ int HttpListener::checkAccess(struct conn_data *pData)
     ClientInfo *pInfo = ClientCache::getClientCache()->getClientInfo(pPeer);
     pData->pInfo = pInfo;
 
-    if (D_ENABLED(DL_MORE))
-        LOG_D(("[%s] New connection from %s:%d.", getAddrStr(),
-               pInfo->getAddrString(), ntohs(((struct sockaddr_in *)pPeer)->sin_port)));
+    LS_DBG_H(this, "New connection from %s:%d.", pInfo->getAddrString(),
+             ntohs(((struct sockaddr_in *)pPeer)->sin_port));
 
     return pInfo->checkAccess();
 }
@@ -397,8 +395,8 @@ int HttpListener::batchAddConn(struct conn_data *pBegin,
     pCur = pBegin;
     if (ret <= 0)
     {
-        ERR_NO_MEM("HttpSessionPool::getConnections()");
-        LOG_ERR(("need %d connections, allocated %d connections!", n, ret));
+        LS_ERR_NO_MEM("HttpSessionPool::getConnections()");
+        LS_ERROR("Need %d connections, allocated %d connections!", n, ret);
         while (pCur < pEnd)
         {
             if (pCur->fd != -1)
@@ -413,7 +411,7 @@ int HttpListener::batchAddConn(struct conn_data *pBegin,
     NtwkIOLink **pConnEnd = &pConns[ret];
     NtwkIOLink **pConnCur = pConns;
     VHostMap *pMap;
-    int flag = MultiplexerFactory::getMultiplexer()->getFLTag();
+    //int flag = MultiplexerFactory::getMultiplexer()->getFLTag();
     while (pCur < pEnd)
     {
         int fd = pCur->fd;
@@ -451,7 +449,7 @@ int HttpListener::batchAddConn(struct conn_data *pBegin,
     }
     if (pConnCur < pConnEnd)
         HttpResourceManager::getInstance().recycle(pConnCur,
-                                                   pConnEnd - pConnCur);
+                pConnEnd - pConnCur);
 
     return 0;
 }
@@ -484,7 +482,7 @@ int HttpListener::addConnection(struct conn_data *pCur, int *iCount)
     NtwkIOLink *pConn = HttpResourceManager::getInstance().getNtwkIOLink();
     if (!pConn)
     {
-        ERR_NO_MEM("HttpSessionPool::getConnection()");
+        LS_ERR_NO_MEM("HttpSessionPool::getConnection()");
         close(fd);
         --(*iCount);
         return LS_FAIL;

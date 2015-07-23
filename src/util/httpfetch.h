@@ -100,8 +100,8 @@ public:
     int process();
     int cancel();
     int getStatusCode() const               {   return m_iStatusCode;    }
-    const char *getRespContentType() const {   return m_pRespContentType;  }
-    VMemBuf *getResult() const             {   return m_pBuf;          }
+    const char *getRespContentType() const  {   return m_pRespContentType;  }
+    VMemBuf *getResult() const              {   return m_pBuf;          }
     void releaseResult();
     void reset();
     void setProxyServerAddr(const char *pAddr);
@@ -111,8 +111,9 @@ public:
     void closeConnection();
     void setTimeout(int timeoutSec)         {   m_iTimeoutSec = timeoutSec; }
     int getTimeout()                        {   return m_iTimeoutSec;   }
-    void writeLog(const char *s)            {   m_pLogger->info("HttpFetch[%d]: %s", getLoggerId(), s); }
-    void enableDebug(int d)               {   m_iEnableDebug = d;     }
+    void writeLog(const char *s)
+    {   LS_INFO(m_pLogger, "HttpFetch[%d]: %s", getLoggerId(), s);    }
+    void enableDebug(int d)                 {   m_iEnableDebug = d;     }
 
 
 

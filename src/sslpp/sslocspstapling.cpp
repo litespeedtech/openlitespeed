@@ -552,8 +552,9 @@ int SslOcspStapling::config(const XmlNode *pNode, SSL_CTX *pSSL,
 
     if (init(pSSL) == -1)
     {
-        ConfigCtx::getCurConfigCtx()->logError("OCSP Stapling can't be enabled [%s].",
-                                               getStaplingErrMsg());
+        LS_ERROR(ConfigCtx::getCurConfigCtx(),
+                 "OCSP Stapling can't be enabled [%s].",
+                 getStaplingErrMsg());
         return LS_FAIL;
     }
 

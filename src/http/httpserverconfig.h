@@ -179,9 +179,9 @@ public:
 
     void setGlobalVHost(HttpVHost *pVal)    {   m_pGlobalVHost = pVal;      }
     HttpVHost *getGlobalVHost()             {   return m_pGlobalVHost;      }
-    
-    ReqParserParam& getReqParserParam()     {   return m_ReqParserParam;    }
-    
+
+    ReqParserParam &getReqParserParam()     {   return m_ReqParserParam;    }
+
     int getSpdyKeepaliveTimeout();
 
 };

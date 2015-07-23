@@ -70,7 +70,8 @@ lsi_shmpool_t *lsi_shmpool_open(lsi_shm_t *shmhandle, const char *poolname)
 }
 
 
-lsi_shmpool_t *lsi_shmpool_openbyname(const char *shmname, size_t initialsize)
+lsi_shmpool_t *lsi_shmpool_openbyname(const char *shmname,
+                                      size_t initialsize)
 {
     LsShm *pshm;
     if ((pshm = LsShm::open(shmname, (LsShmXSize_t)initialsize)) == NULL)
@@ -158,7 +159,7 @@ lsi_shmhash_t *lsi_shmhash_open(lsi_shmpool_t *poolhandle,
 {
     check_defaults(&initialsize, &hf, &vc);
     return ((LsShmPool *)poolhandle)->getNamedHash(
-        hash_table_name, (LsShmSize_t)initialsize, hf, vc, LSSHM_LRU_NONE);
+               hash_table_name, (LsShmSize_t)initialsize, hf, vc, LSSHM_LRU_NONE);
 }
 
 
@@ -175,7 +176,7 @@ lsi_shmhash_t *lsi_shmlruhash_open(lsi_shmpool_t *poolhandle,
     case LSSHM_LRU_MODE2:
     case LSSHM_LRU_MODE3:
         return ((LsShmPool *)poolhandle)->getNamedHash(
-            hash_table_name, (LsShmSize_t)initialsize, hf, vc, mode);
+                   hash_table_name, (LsShmSize_t)initialsize, hf, vc, mode);
     default:
         return NULL;
     }
