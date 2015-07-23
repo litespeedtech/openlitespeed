@@ -373,7 +373,7 @@ void HttpSession::setupChunkIS()
     assert(m_pChunkIS == NULL);
     {
         m_pChunkIS = HttpGlobals::getResManager()->getChunkInputStream();
-        m_pChunkIS->setStream(getStream());
+        m_pChunkIS->setStream(this);
         m_pChunkIS->open();
     }
 }
