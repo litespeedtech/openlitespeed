@@ -35,9 +35,9 @@ TEST(ls_ShmBaseLru_test)
     char lockfilename[255];
     LsShm *pShm;
     snprintf(shmfilename, sizeof(shmfilename), "%s/%s.shm",
-      g_pShmDirName, g_pShmName);
+             g_pShmDirName, g_pShmName);
     snprintf(lockfilename, sizeof(lockfilename), "%s/%s.lock",
-      g_pShmDirName, g_pShmName);
+             g_pShmDirName, g_pShmName);
     unlink(shmfilename);
     unlink(lockfilename);
 
@@ -51,7 +51,7 @@ TEST(ls_ShmBaseLru_test)
     if (pShm == NULL)
     {
         printf("Msg: [%s], stat=%d, errno=%d.\n",
-            LsShm::getErrMsg(), LsShm::getErrStat(), LsShm::getErrNo());
+               LsShm::getErrMsg(), LsShm::getErrStat(), LsShm::getErrNo());
         LsShm::clrErrMsg();
         return;
     }
@@ -94,7 +94,8 @@ static void doit(LsShm *pShm)
     if (pGPool == NULL)
         return;
     CHECK((pHash = pGPool->getNamedHash(
-      g_pHashName, 0, LsShmHash::hashXXH32, LsShmHash::compBuf, LSSHM_LRU_MODE1)) != NULL);
+                       g_pHashName, 0, LsShmHash::hashXXH32, LsShmHash::compBuf,
+                       LSSHM_LRU_MODE1)) != NULL);
     if (pHash == NULL)
         return;
     ls_str_set(&parms.key, (char *)key0, sizeof(key0) - 1);
@@ -120,7 +121,7 @@ static void doit(LsShm *pShm)
     ls_str_set(&parms.value, (char *)valX, 5);
     CHECK(pHash->setIterator(&parms) == iterOff1);  // should use same memory
     CHECK(iter->getValLen() == 5);
-    
+
     ls_str_set(&parms.key, (char *)keyX, sizeof(keyX) - 1);
     flags = LSSHM_FLAG_NONE;
     CHECK((iterOffX = pHash->getIterator(&parms, &flags)) != 0);
@@ -141,7 +142,7 @@ static void doit(LsShm *pShm)
         pTop = pHash->offset2iterator(offTop);
         time_t tmval = pTop->getLruLasttime();
         fprintf(stdout, "[%.*s] %s",
-               pTop->getKeyLen(), pTop->getKey(), ctime(&tmval));
+                pTop->getKeyLen(), pTop->getKey(), ctime(&tmval));
         num = pHash->size();
         CHECK((cnt = pHash->trim(tmval, trimfunc, (void *)pHash)) < num);
         num -= cnt;
@@ -165,8 +166,8 @@ static void doit(LsShm *pShm)
         if ((off = pHash->insert(keyBuf, 9, valBuf, 9)) == 0)
         {
             printf("Insert [%.*s] failed: [%s], stat=%d, errno=%d.\n",
-                9, keyBuf,
-                LsShm::getErrMsg(), LsShm::getErrStat(), LsShm::getErrNo());
+                   9, keyBuf,
+                   LsShm::getErrMsg(), LsShm::getErrStat(), LsShm::getErrNo());
             LsShm::clrErrMsg();
             break;
         }

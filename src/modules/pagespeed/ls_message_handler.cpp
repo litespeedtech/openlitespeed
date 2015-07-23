@@ -79,19 +79,20 @@ void LsiMessageHandler::MessageVImpl(MessageType type, const char *msg,
 {
     lsi_log_level logLevel = GetLsiLogLevel(type);
     GoogleString formatted_message = Format(msg, args);
-    g_api->log(NULL, logLevel, "[%s %s] %s\n", ModuleName, 
+    g_api->log(NULL, logLevel, "[%s %s] %s\n", ModuleName,
                kModPagespeedVersion, formatted_message.c_str());
 
     // Prepare a log message for the SharedCircularBuffer only.
     AddMessageToBuffer(type, formatted_message);
 }
 
-void LsiMessageHandler::FileMessageVImpl(MessageType type, const char *file,
+void LsiMessageHandler::FileMessageVImpl(MessageType type,
+        const char *file,
         int line, const char *msg, va_list args)
 {
     lsi_log_level logLevel = GetLsiLogLevel(type);
     GoogleString formatted_message = Format(msg, args);
-    g_api->log(NULL, logLevel, "[%s %s] %s:%d:%s", ModuleName, 
+    g_api->log(NULL, logLevel, "[%s %s] %s:%d:%s", ModuleName,
                kModPagespeedVersion, file, line, formatted_message.c_str());
 }
 

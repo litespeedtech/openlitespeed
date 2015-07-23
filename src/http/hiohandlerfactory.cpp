@@ -35,7 +35,7 @@ HioHandler *HioHandlerFactory::getHioHandler(HiosProtocol proto)
         pHioHandler = H2Connection::get();
         break;
     default:
-        pHioHandler = SpdyConnection::get( proto );
+        pHioHandler = SpdyConnection::get(proto);
         break;
     }
 

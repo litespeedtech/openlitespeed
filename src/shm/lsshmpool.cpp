@@ -134,8 +134,8 @@ LsShmPool::LsShmPool(LsShm *shm, const char *name, LsShmPool *gpool)
         if ((m_status = checkStaticData(name)) != LSSHM_OK)
         {
             LsShm::setErrMsg(LSSHM_BADVERSION,
-                "Invalid SHM Pool [%s], magic=%08X(%08X), MapFile [%s].",
-                name, getPool()->x_iMagic, LSSHM_POOL_MAGIC, shm->fileName());
+                             "Invalid SHM Pool [%s], magic=%08X(%08X), MapFile [%s].",
+                             name, getPool()->x_iMagic, LSSHM_POOL_MAGIC, shm->fileName());
         }
     }
     else
@@ -155,7 +155,7 @@ LsShmPool::LsShmPool(LsShm *shm, const char *name, LsShmPool *gpool)
         {
 #ifdef DEBUG_RUN
             SHM_NOTICE("LsShmPool::LsShmPool insert %s <%p>",
-                            m_pPoolName, &m_objBase);
+                       m_pPoolName, &m_objBase);
 #endif
             m_pShm->getObjBase().insert(m_pPoolName, this);
         }
@@ -171,7 +171,7 @@ LsShmPool::~LsShmPool()
     {
 #ifdef DEBUG_RUN
         SHM_NOTICE("LsShmPool::~LsShmPool remove %s <%p>",
-                        m_pPoolName, &m_objBase);
+                   m_pPoolName, &m_objBase);
 #endif
         m_pShm->getObjBase().remove(m_pPoolName);
         ::free(m_pPoolName);
@@ -181,7 +181,7 @@ LsShmPool::~LsShmPool()
 
 
 LsShmHash *LsShmPool::getNamedHash(const char *name,
-                          LsShmSize_t init_size, hash_fn hf, val_comp vc, int lru_mode)
+                                   LsShmSize_t init_size, hash_fn hf, val_comp vc, int lru_mode)
 {
     LsShmHash *pObj;
     GHash::iterator itor;
@@ -191,12 +191,12 @@ LsShmHash *LsShmPool::getNamedHash(const char *name,
 
 #ifdef DEBUG_RUN
     SHM_NOTICE("LsShmPool::getNamedHash find %s <%p>",
-                    name, &getObjBase());
+               name, &getObjBase());
 #endif
     itor = getObjBase().find(name);
     if ((itor != NULL)
         && ((pObj = LsShmHash::checkHTable(itor, this, name, hf,
-                                vc)) != (LsShmHash *)-1))
+                                           vc)) != (LsShmHash *) - 1))
         return pObj;
 
     if (lru_mode == LSSHM_LRU_MODE2)
@@ -207,7 +207,7 @@ LsShmHash *LsShmPool::getNamedHash(const char *name,
         pObj = new LsShmHash(this, name, init_size, hf, vc, lru_mode);
     if (pObj != NULL)
     {
-        if (pObj->init( init_size) == LS_OK)
+        if (pObj->init(init_size) == LS_OK)
             return pObj;
         delete pObj;
     }
@@ -356,7 +356,7 @@ void LsShmPool::addFreeList(LsShmPoolMap *pSrcMap)
             pFreeList->x_iPrev = last;
         }
         LsShmSize_t cnt = pSrcMap->x_stat.m_iFlReleased
-            - pSrcMap->x_stat.m_iFlAllocated;
+                          - pSrcMap->x_stat.m_iFlAllocated;
         getDataMap()->x_iFreeList = listOffset;
         incrCheck(&getDataMap()->x_stat.m_iFlReleased, cnt);
         getDataMap()->x_stat.m_iFlCnt += pSrcMap->x_stat.m_iFlCnt;
@@ -407,7 +407,7 @@ void LsShmPool::addFreeBucket(LsShmPoolMap *pSrcMap)
             *pDst = bcktOffset;
             *pSrc = 0;
             LsShmSize_t cnt = pSrcMap->x_stat.m_bckt[num].m_iBkReleased
-                - pSrcMap->x_stat.m_bckt[num].m_iBkAllocated;
+                              - pSrcMap->x_stat.m_bckt[num].m_iBkAllocated;
             incrCheck(&pSrcMap->x_stat.m_bckt[num].m_iBkAllocated, cnt);
             incrCheck(&getDataMap()->x_stat.m_bckt[num].m_iBkReleased, cnt);
         }
@@ -541,9 +541,7 @@ LsShmOffset_t LsShmPool::allocFromDataBucket(LsShmSize_t size)
         *pBucket = *np;
     }
     else if ((offset = fillDataBucket(bucketNum, size)) == 0)
-    {
         return 0;
-    }
     incrCheck(&getDataMap()->x_stat.m_bckt[bucketNum].m_iBkAllocated, 1);
     return offset;
 }
@@ -587,7 +585,8 @@ LsShmOffset_t LsShmPool::allocFromGlobalBucket(
 // @brief freeBucket[bucketNum] will be set to the new allocated pool.
 // @brief return the offset of the newly allocated memory.
 //
-LsShmOffset_t LsShmPool::fillDataBucket(LsShmSize_t bucketNum, LsShmSize_t size)
+LsShmOffset_t LsShmPool::fillDataBucket(LsShmSize_t bucketNum,
+                                        LsShmSize_t size)
 {
     LsShmSize_t num;
     // allocated according to data size
@@ -637,7 +636,8 @@ LsShmOffset_t LsShmPool::fillDataBucket(LsShmSize_t bucketNum, LsShmSize_t size)
 // @brief could cause remap.
 // @brief always check return num and offset.
 //
-LsShmOffset_t LsShmPool::allocFromDataChunk(LsShmSize_t size, LsShmSize_t &num)
+LsShmOffset_t LsShmPool::allocFromDataChunk(LsShmSize_t size,
+        LsShmSize_t &num)
 {
     LsShmOffset_t offset;
     LsShmSize_t numAvail;
@@ -688,7 +688,7 @@ LsShmOffset_t LsShmPool::allocFromDataChunk(LsShmSize_t size, LsShmSize_t &num)
     if (remapped != 0)
         pDataMap = getDataMap();
     pDataMap->x_stat.m_iFreeChunk += needed;
-    
+
     if (releaseOffset != 0)
     {
         // merging leftover and newly allocated memory
@@ -709,7 +709,8 @@ LsShmOffset_t LsShmPool::allocFromDataChunk(LsShmSize_t size, LsShmSize_t &num)
 }
 
 
-void LsShmPool::mvDataFreeListToBucket(LsShmFreeList *pFree, LsShmOffset_t offset)
+void LsShmPool::mvDataFreeListToBucket(LsShmFreeList *pFree,
+                                       LsShmOffset_t offset)
 {
     rmFromDataFreeList(pFree);
     if (pFree->x_iSize > 0)

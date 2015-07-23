@@ -34,7 +34,7 @@
 #include <sys/syscall.h>
 
 
-static inline int do_wait(void * volatile *ptr, struct timespec *timeout)
+static inline int do_wait(void *volatile *ptr, struct timespec *timeout)
 {
     int ret = 0;
     if (syscall(SYS_futex, (int *)ptr, FUTEX_WAIT, 0, timeout, NULL, 0) < 0)
@@ -50,11 +50,11 @@ static inline int do_wait(void * volatile *ptr, struct timespec *timeout)
 }
 
 
-static inline void do_wake(void * volatile *ptr)
+static inline void do_wake(void *volatile *ptr)
 {
     int retry = 3;
     while ((syscall(SYS_futex, (int *)ptr, FUTEX_WAKE, 1, NULL, NULL, 0) < 1)
-          && (--retry > 0))
+           && (--retry > 0))
         ;
     return;
 }
@@ -189,7 +189,7 @@ ls_lfnodei_t *ls_lfqueue_get(ls_lfqueue_t *pThis)
             if ((prev.m_ptr == tail.m_ptr) && (prev.m_seq == tail.m_seq))
             {
                 ls_lfnodei_t *prevhead = (ls_lfnodei_t *)ls_atomic_casvptr(
-                  (volatile void **)&pThis->phead, pnode, (void *)&pThis->tail.m_ptr);
+                                             (volatile void **)&pThis->phead, pnode, (void *)&pThis->tail.m_ptr);
 
                 if (prevhead == pnode)
                     return pnode;
@@ -208,7 +208,8 @@ ls_lfnodei_t *ls_lfqueue_get(ls_lfqueue_t *pThis)
 
 
 #if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
-ls_lfnodei_t *ls_lfqueue_timedget(ls_lfqueue_t *pThis, struct timespec *timeout)
+ls_lfnodei_t *ls_lfqueue_timedget(ls_lfqueue_t *pThis,
+                                  struct timespec *timeout)
 {
     ls_lfnodei_t *data;
     while ((data = ls_lfqueue_get(pThis)) == NULL)

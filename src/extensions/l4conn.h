@@ -26,6 +26,7 @@
 
 class GSockAddr;
 class L4Handler;
+class LogSession;
 class LoopBuf;
 BEGIN_LOG4CXX_NS
 class Logger;
@@ -71,6 +72,7 @@ private:
 
     LOG4CXX_NS::Logger *getLogger() const;
     const char *getLogId();
+    LogSession *getLogSession() const;
 
     LS_NO_COPY_ASSIGN(L4conn);
 };

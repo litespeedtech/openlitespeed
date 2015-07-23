@@ -82,20 +82,20 @@ void parse(ContextTree *pTree, char **aUris, int loops, int iTarget)
     ProfileTime timer("Benching!", loops, PROFILE_NANO);
     for (i = 0; i < loops; ++i)
     {
-            pContext = pTree->getContext(aUris[iTarget],
-                                         strlen(aUris[iTarget]));
-            pContext->changeUidOnly();
+        pContext = pTree->getContext(aUris[iTarget],
+                                     strlen(aUris[iTarget]));
+        pContext->changeUidOnly();
 
-            pContext = pTree->matchLocation(pContext->getLocation(),
-                                            pContext->getLocationLen());
-            pContext->changeUidOnly();
+        pContext = pTree->matchLocation(pContext->getLocation(),
+                                        pContext->getLocationLen());
+        pContext->changeUidOnly();
 
-            pContext = pTree->bestMatch(aUris[iTarget], strlen(aUris[iTarget]));
-            pContext->changeUidOnly();
+        pContext = pTree->bestMatch(aUris[iTarget], strlen(aUris[iTarget]));
+        pContext->changeUidOnly();
 
-            pContext = pTree->matchLocation(pContext->getLocation(),
-                                            pContext->getLocationLen());
-            pContext->changeUidOnly();
+        pContext = pTree->matchLocation(pContext->getLocation(),
+                                        pContext->getLocationLen());
+        pContext->changeUidOnly();
     }
 }
 

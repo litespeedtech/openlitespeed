@@ -30,7 +30,7 @@ static int is_bad_file(const char *path)
     FILE *fp = fopen(path, "rb");
     if (!fp)
         return -1;
-    
+
     /**
      * In this example, we check if this file contains a string "_BAD_FILE_"
      * if yes, treat it as a bad file
@@ -38,7 +38,7 @@ static int is_bad_file(const char *path)
     int ret = 0;
     char buf[8192];
     int len;
-    while(len = fread(buf, 1, 8191, fp), len > 0)
+    while (len = fread(buf, 1, 8191, fp), len > 0)
     {
         buf[len] = 0x00;
         if (strstr(buf, "_BAD_FILE_"))
@@ -59,12 +59,12 @@ int check_req_uploaded_file(lsi_cb_param_t *param)
     int nameLen, valLen;
     int i;
     int count = g_api->get_req_body_part_count(param->_session);
-    for (i=0; i<count; ++i)
+    for (i = 0; i < count; ++i)
     {
         if (g_api->is_req_body_part_file(param->_session, i))
         {
-            g_api->get_req_body_part(param->_session, i, &name, &nameLen, 
-                &val, &valLen, &path);
+            g_api->get_req_body_part(param->_session, i, &name, &nameLen,
+                                     &val, &valLen, &path);
 
             if (is_bad_file(path))
                 return LSI_HK_RET_ERROR;

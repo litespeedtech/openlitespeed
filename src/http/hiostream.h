@@ -22,7 +22,7 @@
 #include <sys/types.h>
 #include <edio/inputstream.h>
 #include <edio/outputstream.h>
-#include <util/logtracker.h>
+#include <log4cxx/logsession.h>
 #include <lsdef.h>
 
 class IOVec;
@@ -76,7 +76,7 @@ enum HiosProtocol
 
 
 class HioStream : public InputStream, public OutputStream,
-    public LogTracker
+    public LogSession
 {
 
 public:
@@ -187,7 +187,7 @@ public:
 
     int   isClosing() const     {   return m_iState != HIOS_CONNECTED;      }
 
-    void handlerReadyToRelease(){   m_iFlag |= HIO_FLAG_HANDLER_RELEASE;    }
+    void handlerReadyToRelease() {   m_iFlag |= HIO_FLAG_HANDLER_RELEASE;    }
     short canWrite()  const     {   return m_iFlag & HIO_FLAG_BUFF_FULL;    }
 
     char  getProtocol() const   {   return m_iProtocol;     }
@@ -288,6 +288,9 @@ public:
 
     const char *getLogId()
     {   return m_pStream ? m_pStream->getLogId() : "DETACHED";     }
+
+    LogSession *getLogSession() const
+    {   return m_pStream;   }
 
 
     virtual int onInitConnected() = 0;

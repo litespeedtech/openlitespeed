@@ -71,7 +71,7 @@ RealmMap::RealmMap(int initSize)
 
 RealmMap::~RealmMap()
 {
-    releaseObjects();
+    release_objects();
 }
 
 
@@ -115,7 +115,7 @@ UserDir *HttpVHost::getFileUserDir(
         pDir = (PlainFileUserDir *)getRealm(pName);
         if (pDir)
         {
-            LOG_ERR(("[%s] Realm %s exists.", m_sName.c_str(), pName));
+            LS_ERROR("[%s] Realm %s exists.", m_sName.c_str(), pName);
             return NULL;
         }
     }
@@ -412,8 +412,8 @@ void HttpVHost::onTimer()
         {
             if (m_pAccessLog->reopenExist() == -1)
             {
-                LOG_ERR(("[%s] Failed to open access log file %s.",
-                         m_sName.c_str(), m_pAccessLog->getLogPath()));
+                LS_ERROR("[%s] Failed to open access log file %s.",
+                         m_sName.c_str(), m_pAccessLog->getLogPath());
             }
             m_pAccessLog->flush();
         }
@@ -470,7 +470,7 @@ void HttpVHost::addRewriteMap(const char *pName, const char *pLocation)
     {
         delete pMap;
         if (ret == 2)
-            LOG_ERR(("unknown or unsupported rewrite map type!"));
+            LS_ERROR("unknown or unsupported rewrite map type!");
         if (ret == -1)
             ERR_NO_MEM("parseType_Source()");
         return;
@@ -516,24 +516,24 @@ void HttpVHost::updateUGid(const char *pLogId, const char *pPath)
     int ret = ls_fio_stat(achBuf, &st);
     if (ret)
     {
-        LOG_ERR(("[%s] stat() failed on %s!",
-                 pLogId, achBuf));
+        LS_ERROR("[%s] stat() failed on %s!",
+                 pLogId, achBuf);
     }
     else
     {
         if (st.st_uid < procConfig.getUidMin())
         {
-            LOG_WARN(("[%s] Uid of %s is smaller than minimum requirement"
-                      " %d, use server uid!",
-                      pLogId, achBuf, procConfig.getUidMin()));
+            LS_WARN("[%s] Uid of %s is smaller than minimum requirement"
+                    " %d, use server uid!",
+                    pLogId, achBuf, procConfig.getUidMin());
             st.st_uid = procConfig.getUid();
         }
         if (st.st_gid < procConfig.getGidMin())
         {
             st.st_gid = procConfig.getGid();
-            LOG_WARN(("[%s] Gid of %s is smaller than minimum requirement"
-                      " %d, use server gid!",
-                      pLogId, achBuf, procConfig.getGidMin()));
+            LS_WARN("[%s] Gid of %s is smaller than minimum requirement"
+                    " %d, use server gid!",
+                    pLogId, achBuf, procConfig.getGidMin());
         }
         setUid(st.st_uid);
         setGid(st.st_gid);
@@ -549,8 +549,8 @@ HttpContext *HttpVHost::setContext(HttpContext *pContext,
 
     if (!pHdlr)
     {
-        LOG_ERR(("[%s] Can not find handler with type: %d, name: %s.",
-                 LogIdTracker::getLogId(), type, (pHandler) ? pHandler : ""));
+        LS_ERROR("[%s] Can not find handler with type: %d, name: %s.",
+                 TmpLogId::getLogId(), type, (pHandler) ? pHandler : "");
     }
     else if (type > HandlerType::HT_CGI)
         pHdlr = isHandlerAllowed(pHdlr, type, pHandler);
@@ -594,7 +594,8 @@ HttpContext *HttpVHost::addContext(const char *pUri, int type,
 }
 
 
-const HttpContext *HttpVHost::matchLocation(const char *pURI, size_t iUriLen,
+const HttpContext *HttpVHost::matchLocation(const char *pURI,
+        size_t iUriLen,
         int regex) const
 {
     const HttpContext *pContext;
@@ -647,8 +648,8 @@ HTAuth *HttpVHost::configAuthRealm(HttpContext *pContext,
 
         if (!pUserDB)
         {
-            ConfigCtx::getCurConfigCtx()->logWarn("<realm> %s is not configured,"
-                                                  " deny access to this context", pRealmName);
+            LS_WARN(ConfigCtx::getCurConfigCtx(), "<realm> %s is not configured,"
+                    " deny access to this context", pRealmName);
         }
         else
         {
@@ -731,8 +732,8 @@ int HttpVHost::configBasics(const XmlNode *pVhConfNode, int iChrootLen)
     ConfigCtx::getCurConfigCtx()->clearDocRoot();
     if (setDocRoot(pPath) != 0)
     {
-        ConfigCtx::getCurConfigCtx()->logError("failed to set document root - %s!",
-                                               pPath);
+        LS_ERROR(ConfigCtx::getCurConfigCtx(), "failed to set document root - %s!",
+                 pPath);
         return LS_FAIL;
     }
     ConfigCtx::getCurConfigCtx()->setDocRoot(pPath);
@@ -823,7 +824,8 @@ int HttpVHost::configHotlinkCtrl(const XmlNode *pNode)
 
     if (!pCtrl)
     {
-        ConfigCtx::getCurConfigCtx()->logError("out of memory while creating HotlinkCtrl Object!");
+        LS_ERROR(ConfigCtx::getCurConfigCtx(),
+                 "out of memory while creating HotlinkCtrl Object!");
         return LS_FAIL;
     }
     if (pCtrl->config(pNode) == -1)
@@ -892,8 +894,8 @@ int HttpVHost::configRealm(const XmlNode *pRealmNode)
 
     if (p2 == NULL)
     {
-        ConfigCtx::getCurConfigCtx()->logError("missing <%s> in <%s>", "userDB",
-                                               "realm");
+        LS_ERROR(ConfigCtx::getCurConfigCtx(), "missing <%s> in <%s>", "userDB",
+                 "realm");
         return LS_FAIL;
     }
 
@@ -931,7 +933,8 @@ int HttpVHost::configRealm(const XmlNode *pRealmNode)
 
     if (!pUserDir)
     {
-        ConfigCtx::getCurConfigCtx()->logError("Failed to create authentication DB.");
+        LS_ERROR(ConfigCtx::getCurConfigCtx(),
+                 "Failed to create authentication DB.");
         return LS_FAIL;
     }
 
@@ -1007,7 +1010,7 @@ int HttpVHost::configRewrite(const XmlNode *pNode)
 
     configRewriteMap(pNode);
 
-    RewriteRule::setLogger(NULL, LogIdTracker::getLogId());
+    RewriteRule::setLogger(NULL, TmpLogId::getLogId());
     char *pRules = (char *) pNode->getChildValue("rules");
     if (pRules)
         getRootContext().configRewriteRule(getRewriteMaps(), pRules);
@@ -1064,7 +1067,8 @@ int HttpVHost::configIndexFile(const XmlNode *pVhConfNode,
     if (pUSTag)
         if (*pUSTag != '/')
         {
-            ConfigCtx::getCurConfigCtx()->logError("Invalid AutoIndexURI, must be started with a '/'");
+            LS_ERROR(ConfigCtx::getCurConfigCtx(),
+                     "Invalid AutoIndexURI, must be started with a '/'");
             pUSTag = NULL;
         }
     setAutoIndexURI((pUSTag) ? pUSTag : strIndexURI);
@@ -1186,21 +1190,21 @@ HttpContext *HttpVHost::configContext(const char *pUri, int type,
 
                 if (access(achRealPath, F_OK) != 0)
                 {
-                    ConfigCtx::getCurConfigCtx()->logError("path is not accessible: %s",
-                                                           achRealPath);
+                    LS_ERROR(ConfigCtx::getCurConfigCtx(), "path is not accessible: %s",
+                             achRealPath);
                     return NULL;
                 }
 
                 if (PathLen > 512)
                 {
-                    ConfigCtx::getCurConfigCtx()->logError("path is too long: %s",
-                                                           achRealPath);
+                    LS_ERROR(ConfigCtx::getCurConfigCtx(), "path is too long: %s",
+                             achRealPath);
                     return NULL;
                 }
 
                 pLocation = achRealPath;
                 pProcChroot = ServerProcessConfig::getInstance().getChroot();
-                if ( pProcChroot != NULL)
+                if (pProcChroot != NULL)
                     pLocation += pProcChroot->len();
 
                 if (allowBrowse)
@@ -1254,8 +1258,9 @@ int HttpVHost::configAwstats(const char *vhDomain, int vhAliasesLen,
 
     if (!getAccessLog())
     {
-        currentCtx.logError("Virtual host does not have its own access log file, "
-                            "AWStats integration is disabled.");
+        LS_ERROR(&currentCtx,
+                 "Virtual host does not have its own access log file, "
+                 "AWStats integration is disabled.");
         return LS_FAIL;
     }
 
@@ -1263,8 +1268,8 @@ int HttpVHost::configAwstats(const char *vhDomain, int vhAliasesLen,
             "$SERVER_ROOT/add-ons/awstats/",
             "AWStats installation") == -1)
     {
-        currentCtx.logError("Cannot find AWStats installation at [%s],"
-                            " AWStats add-on is disabled!");
+        LS_ERROR(&currentCtx, "Cannot find AWStats installation at [%s],"
+                 " AWStats add-on is disabled!");
         return LS_FAIL;
     }
 
@@ -1272,8 +1277,8 @@ int HttpVHost::configAwstats(const char *vhDomain, int vhAliasesLen,
             "$SERVER_ROOT/add-ons/awstats/wwwroot/icon/",
             "AWStats icon directory") == -1)
     {
-        currentCtx.logError("Cannot find AWStats icon directory at [%s],"
-                            " AWStats add-on is disabled!");
+        LS_ERROR(&currentCtx, "Cannot find AWStats icon directory at [%s],"
+                 " AWStats add-on is disabled!");
         return LS_FAIL;
     }
 
@@ -1286,8 +1291,9 @@ int HttpVHost::configAwstats(const char *vhDomain, int vhAliasesLen,
         || (ConfigCtx::getCurConfigCtx()->getAbsolutePath(achBuf, pValue) == -1) ||
         (ConfigCtx::getCurConfigCtx()->checkAccess(achBuf) == -1))
     {
-        currentCtx.logError("AWStats working directory: %s does not exist or access denied, "
-                            "please fix it, AWStats integration is disabled.", achBuf);
+        LS_ERROR(&currentCtx,
+                 "AWStats working directory: %s does not exist or access denied, "
+                 "please fix it, AWStats integration is disabled.", achBuf);
         return LS_FAIL;
     }
 
@@ -1295,10 +1301,11 @@ int HttpVHost::configAwstats(const char *vhDomain, int vhAliasesLen,
         (strncmp(&achBuf[iChrootLen], getVhRoot()->c_str(),
                  getVhRoot()->len())))
     {
-        currentCtx.logError("AWStats working directory: %s is not inside virtual host root: "
-                            "%s%s, AWStats integration is disabled.", achBuf,
-                            ((iChrootLen == 0) ? ("") : (pProcChroot->c_str())),
-                            getVhRoot()->c_str());
+        LS_ERROR(&currentCtx,
+                 "AWStats working directory: %s is not inside virtual host root: "
+                 "%s%s, AWStats integration is disabled.", achBuf,
+                 ((iChrootLen == 0) ? ("") : (pProcChroot->c_str())),
+                 getVhRoot()->c_str());
         return LS_FAIL;
     }
 
@@ -1326,7 +1333,7 @@ HttpContext *HttpVHost::addRailsContext(const char *pURI,
 
     if (uriLen > MAX_URI_LEN - 100)
     {
-        ConfigCtx::getCurConfigCtx()->logError("context URI is too long!");
+        LS_ERROR(ConfigCtx::getCurConfigCtx(), "context URI is too long!");
         return NULL;
     }
 
@@ -1373,7 +1380,8 @@ HttpContext *HttpVHost::configRailsContext(const char *contextUri,
 
     if (ret == -1)
     {
-        ConfigCtx::getCurConfigCtx()->logError("path to Rails application is invalid!");
+        LS_ERROR(ConfigCtx::getCurConfigCtx(),
+                 "path to Rails application is invalid!");
         return NULL;
     }
 
@@ -1428,7 +1436,7 @@ HttpContext *HttpVHost::importWebApp(const char *contextUri,
 
     if (ret == -1)
     {
-        ConfigCtx::getCurConfigCtx()->logError("path to Web-App is invalid!");
+        LS_ERROR(ConfigCtx::getCurConfigCtx(), "path to Web-App is invalid!");
         return NULL;
     }
 
@@ -1436,7 +1444,7 @@ HttpContext *HttpVHost::importWebApp(const char *contextUri,
 
     if (pathLen > MAX_PATH_LEN - 20)
     {
-        ConfigCtx::getCurConfigCtx()->logError("path to Web-App is too long!");
+        LS_ERROR(ConfigCtx::getCurConfigCtx(), "path to Web-App is too long!");
         return NULL;
     }
 
@@ -1470,7 +1478,7 @@ HttpContext *HttpVHost::importWebApp(const char *contextUri,
 
     if (uriLen > MAX_URI_LEN - 100)
     {
-        ConfigCtx::getCurConfigCtx()->logError("context URI is too long!");
+        LS_ERROR(ConfigCtx::getCurConfigCtx(), "context URI is too long!");
         return NULL;
     }
 
@@ -1479,8 +1487,9 @@ HttpContext *HttpVHost::importWebApp(const char *contextUri,
 
     if (!pRoot)
     {
-        ConfigCtx::getCurConfigCtx()->logError("invalid Web-App configuration file: %s."
-                                               , achFileName);
+        LS_ERROR(ConfigCtx::getCurConfigCtx(),
+                 "invalid Web-App configuration file: %s."
+                 , achFileName);
         return NULL;
     }
 
@@ -1546,8 +1555,9 @@ void HttpVHost::configServletMapping(XmlNode *pRoot, char *pachURI,
 
                 if (!pInnerContext)
                 {
-                    ConfigCtx::getCurConfigCtx()->logError("Failed to import servlet mapping for %s",
-                                                           pMappingNode->getChildValue("url-pattern"));
+                    LS_ERROR(ConfigCtx::getCurConfigCtx(),
+                             "Failed to import servlet mapping for %s",
+                             pMappingNode->getChildValue("url-pattern"));
                 }
             }
         }
@@ -1574,8 +1584,9 @@ static int getRedirectCode(const XmlNode *pContextNode, int &code,
 
             if (code == -1)
             {
-                ConfigCtx::getCurConfigCtx()->logWarn("Invalid status code %d, use default: 302!",
-                                                      orgCode);
+                LS_WARN(ConfigCtx::getCurConfigCtx(),
+                        "Invalid status code %d, use default: 302!",
+                        orgCode);
                 code = SC_302;
             }
         }
@@ -1585,7 +1596,8 @@ static int getRedirectCode(const XmlNode *pContextNode, int &code,
     {
         if ((pLocation == NULL) || (*pLocation == 0))
         {
-            ConfigCtx::getCurConfigCtx()->logError("Destination URI must be specified!");
+            LS_ERROR(ConfigCtx::getCurConfigCtx(),
+                     "Destination URI must be specified!");
             return LS_FAIL;
         }
     }
@@ -1633,8 +1645,9 @@ int HttpVHost::configContext(const XmlNode *pContextNode)
         if (ConfigCtx::getCurConfigCtx()->expandVariable(pHandler, achHandler,
                 256) < 0)
         {
-            currentCtx.logNotice("add String is too long for scripthandler, value: %s",
-                                 pHandler);
+            LS_NOTICE(&currentCtx,
+                      "add String is too long for scripthandler, value: %s",
+                      pHandler);
             return LS_FAIL;
         }
 
@@ -1648,8 +1661,9 @@ int HttpVHost::configContext(const XmlNode *pContextNode)
 
     if ((*pUri != '/') && (!match))
     {
-        currentCtx.logError("URI must start with '/' or 'exp:', invalid URI - %s",
-                            pUri);
+        LS_ERROR(&currentCtx,
+                 "URI must start with '/' or 'exp:', invalid URI - %s",
+                 pUri);
         return LS_FAIL;
     }
 
@@ -1791,8 +1805,8 @@ void HttpVHost::checkAndAddNewUriFormModuleList(const XmlNodeList
                     pContext = addContext(pValue, HandlerType::HT_NULL, achRealPath, NULL, 1);
                     if (pContext == NULL)
                     {
-                        LOG_ERR(("[%s] checkAndAddNewUriFormModuleList try to add the context [%s] failed.",
-                                 LogIdTracker::getLogId(), pValue));
+                        LS_ERROR("[%s] checkAndAddNewUriFormModuleList try to add the context [%s] failed.",
+                                 TmpLogId::getLogId(), pValue);
                         break;
                     }
                 }
@@ -2092,7 +2106,7 @@ int HttpVHost::config(const XmlNode *pVhConfNode)
     if (configBasics(pVhConfNode, iChrootlen) != 0)
         return 1;
 
-    updateUGid(LogIdTracker::getLogId(), getDocRoot()->c_str());
+    updateUGid(TmpLogId::getLogId(), getDocRoot()->c_str());
 
     const XmlNode *p0;
     HttpContext *pRootContext = &getRootContext();
@@ -2137,7 +2151,7 @@ int HttpVHost::config(const XmlNode *pVhConfNode)
         {
             pRootContext->initMIME();
             pRootContext->getMIME()->setExpiresByType(pValue,
-                    HttpMime::getMime(), LogIdTracker::getLogId());
+                    HttpMime::getMime(), TmpLogId::getLogId());
         }
     }
 
@@ -2236,10 +2250,10 @@ const HttpHandler *HttpVHost::isHandlerAllowed(const HttpHandler *pHdlr,
     {
         if (this != pVHost1)
         {
-            LOG_ERR(("[%s] Access to handler [%s:%s] from [%s] is denied!",
-                     LogIdTracker::getLogId(),
+            LS_ERROR("[%s] Access to handler [%s:%s] from [%s] is denied!",
+                     TmpLogId::getLogId(),
                      HandlerType::getHandlerTypeString(type),
-                     pHandler, getName()));
+                     pHandler, getName());
             return  NULL;
         }
     }
@@ -2272,8 +2286,9 @@ void HttpVHost::configVHChrootMode(const XmlNode *pNode)
                 strncmp(p1, getVhRoot()->c_str(),
                         getVhRoot()->len()) != 0)
             {
-                ConfigCtx::getCurConfigCtx()->logError("Chroot path % must be inside virtual host root %s",
-                                                       p1, getVhRoot()->c_str());
+                LS_ERROR(ConfigCtx::getCurConfigCtx(),
+                         "Chroot path % must be inside virtual host root %s",
+                         p1, getVhRoot()->c_str());
                 val = 0;
             }
 
@@ -2297,8 +2312,9 @@ HttpVHost *HttpVHost::configVHost(const XmlNode *pNode, const char *pName,
     {
         if (strcmp(pName, DEFAULT_ADMIN_SERVER_NAME) == 0)
         {
-            ConfigCtx::getCurConfigCtx()->logError("invalid <name>, %s is used for the "
-                                                   "administration server, ignore!",  pName);
+            LS_ERROR(ConfigCtx::getCurConfigCtx(),
+                     "invalid <name>, %s is used for the "
+                     "administration server, ignore!",  pName);
             break;
         }
 
@@ -2350,35 +2366,39 @@ HttpVHost *HttpVHost::configVHost(const XmlNode *pNode, const char *pName,
         pVHnew->getThrottleLimits()->config(pNode,
                                             ThrottleControl::getDefault(), &currentCtx);
 
-        pVHnew->m_ReqParserParam.m_iEnableUploadFile = ConfigCtx::getCurConfigCtx()->getLongValue(pConfigNode,
-                             "uploadpassbypath", 0, 1,
-                             HttpServerConfig::getInstance().getReqParserParam().m_iEnableUploadFile);
+        pVHnew->m_ReqParserParam.m_iEnableUploadFile =
+            ConfigCtx::getCurConfigCtx()->getLongValue(pConfigNode,
+                    "uploadpassbypath", 0, 1,
+                    HttpServerConfig::getInstance().getReqParserParam().m_iEnableUploadFile);
 
-        pVHnew->m_ReqParserParam.m_iFileMod = ConfigCtx::getCurConfigCtx()->getLongValue(pConfigNode,
-                             "uploadtmpfilepermission", 0000, 0777,
-                             HttpServerConfig::getInstance().getReqParserParam().m_iFileMod,
-                             8);
+        pVHnew->m_ReqParserParam.m_iFileMod =
+            ConfigCtx::getCurConfigCtx()->getLongValue(pConfigNode,
+                    "uploadtmpfilepermission", 0000, 0777,
+                    HttpServerConfig::getInstance().getReqParserParam().m_iFileMod,
+                    8);
 
-        
+
         const char *pParam = pConfigNode->getChildValue("uploadtmpdir");
         char sLocation[MAX_PATH_LEN] = {0};
-        if (!pParam || 
-            ConfigCtx::getCurConfigCtx()->expandVariable(pParam, sLocation, MAX_PATH_LEN, 1) < 0)
+        if (!pParam ||
+            ConfigCtx::getCurConfigCtx()->expandVariable(pParam, sLocation,
+                    MAX_PATH_LEN, 1) < 0)
             pVHnew->m_ReqParserParam.m_sUploadFilePathTemplate.setStr(
-                             HttpServerConfig::getInstance().getReqParserParam().m_sUploadFilePathTemplate.c_str());
+                HttpServerConfig::getInstance().getReqParserParam().m_sUploadFilePathTemplate.c_str());
         else
             pVHnew->m_ReqParserParam.m_sUploadFilePathTemplate.setStr(sLocation);
 
         if (pVHnew->config(pConfigNode) == 0)
         {
             HttpServer::getInstance().checkSuspendedVHostList(pVHnew);
-            
+
             /**
              * Just call below after the docRoot is parsed.
              * If not exist, create it.
              */
             struct stat stBuf;
-            const char *path = pVHnew->m_ReqParserParam.m_sUploadFilePathTemplate.c_str();
+            const char *path =
+                pVHnew->m_ReqParserParam.m_sUploadFilePathTemplate.c_str();
             if (stat(path, &stBuf) == -1)
             {
                 mkdir(path, 02770);
@@ -2394,7 +2414,7 @@ HttpVHost *HttpVHost::configVHost(const XmlNode *pNode, const char *pName,
         }
 
         delete pVHnew;
-        currentCtx.logError("configuration failed!");
+        LS_ERROR(&currentCtx, "configuration failed!");
 
         break;
     }
@@ -2440,8 +2460,10 @@ HttpVHost *HttpVHost::configVHost(XmlNode *pNode)
                 pVhConfNode = plainconf::parseFile(achVhConf, "virtualHostConfig");
 
                 if (pVhConfNode == NULL)
-                    ConfigCtx::getCurConfigCtx()->logError("cannot load configure file - %s !",
-                                                           achVhConf);
+                {
+                    LS_ERROR(ConfigCtx::getCurConfigCtx(), "cannot load configure file - %s !",
+                             achVhConf);
+                }
                 else
                     gotConfigFile = true;
             }
@@ -2484,8 +2506,9 @@ int HttpVHost::checkDeniedSubDirs(const char *pUri, const char *pLocation)
 
         if (n == MAX_URI_LEN)
         {
-            ConfigCtx::getCurConfigCtx()->logError("URI is too long when add denied dir %s for context %s",
-                                                   pDenied, pUri);
+            LS_ERROR(ConfigCtx::getCurConfigCtx(),
+                     "URI is too long when add denied dir %s for context %s",
+                     pDenied, pUri);
             return LS_FAIL;
         }
 
@@ -2495,8 +2518,9 @@ int HttpVHost::checkDeniedSubDirs(const char *pUri, const char *pLocation)
         if (!addContext(achNewURI, HandlerType::HT_NULL, pDenied,
                         NULL, false))
         {
-            ConfigCtx::getCurConfigCtx()->logError("Failed to block denied dir %s for context %s",
-                                                   pDenied, pUri);
+            LS_ERROR(ConfigCtx::getCurConfigCtx(),
+                     "Failed to block denied dir %s for context %s",
+                     pDenied, pUri);
             return LS_FAIL;
         }
 
@@ -2517,14 +2541,14 @@ void HttpVHost::enableAioLogging()
     if (m_iAioAccessLog == 1)
     {
         getAccessLog()->getAppender()->setAsync();
-        LOG_D(("[VHost:%s] Enable AIO for Access Logging!",
-               getName()));
+        LS_DBG_L("[VHost:%s] Enable AIO for Access Logging!",
+                 getName());
     }
     if (m_iAioErrorLog == 1)
     {
         getLogger()->getAppender()->setAsync();
-        LOG_D(("[VHost:%s] Enable AIO for Error Logging!",
-               getName()));
+        LS_DBG_L("[VHost:%s] Enable AIO for Error Logging!",
+                 getName());
     }
 }
 

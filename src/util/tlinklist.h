@@ -74,7 +74,7 @@ public:
         p = p->removeNext();
         return p;
     }
-    void releaseObjects()
+    void release_objects()
     {
         LinkedObj *pDel;
         while ((pDel = m_first.removeNext()) != NULL)

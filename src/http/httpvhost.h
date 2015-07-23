@@ -422,7 +422,7 @@ public:
     LsiModuleData *getModuleData()      {   return &m_moduleData;   }
 
     ReqParserParam &getReqParserParam() {   return  m_ReqParserParam;   }
-    
+
     void enableAioLogging();
 };
 

@@ -25,7 +25,6 @@
 #include <http/httpresp.h>
 #include <http/ntwkiolink.h>
 #include <http/sendfileinfo.h>
-#include <http/usereventnotifier.h>
 #include <lsiapi/internal.h>
 #include <lsiapi/lsimoduledata.h>
 
@@ -161,7 +160,6 @@ class HttpSession : public LsiSession, public HioHandler,
     Aiosfcb              *m_pAiosfcb;
 
     uint32_t              m_sn;
-    EventObj             *m_pEventObjHead;
     ReqParser            *m_pReqParser;
 
     HttpSession(const HttpSession &rhs);
@@ -180,26 +178,19 @@ class HttpSession : public LsiSession, public HioHandler,
     static int readReqBodyTermination(LsiSession *pSession, char *pBuf,
                                       int size);
 
-    static int stx_nextRequest(long l, void *p)
+    static int stx_nextRequest(lsi_session_t *p, long , void *)
     {
         HttpSession *pSession = (HttpSession *)p;
         pSession->nextRequest();
         return 0;
     }
-    
+
 public:
-    
+
     uint32_t getSn()    { return m_sn;}
-    void setEventObjHead(EventObj *v) 
-    {
-        assert(v->m_pParam == this);
-        m_pEventObjHead = v;
-    }
-    
-    EventObj *getEventObjHead() { return m_pEventObjHead; }
-    
-    void runAllEventNotifier();
-    
+
+    void runAllCallbacks();
+
     void closeConnection();
     void recycle();
 
@@ -218,7 +209,7 @@ public:
 
     ReqParser  *getReqParser()  {   return m_pReqParser;    }
 
-    static int hookResumeCallback(long lParam, LsiSession *pSession);
+    static int hookResumeCallback(lsi_session_t *session, long lParam, void *);
 
 
 private:
@@ -286,7 +277,7 @@ private:
     int processAuthorizer();
     int processFileMap();
     int processNewUri();
-    
+
     int setupReqParser();
 
 
@@ -443,7 +434,7 @@ public:
     void resetResp()
     {   getResp()->reset(); }
 
-    LogTracker *getLogTracker()    {   return getStream();     }
+    LogSession *getLogSession()    {   return getStream();     }
 
     SendFileInfo *getSendFileInfo() {   return &m_sendFileInfo;   }
 

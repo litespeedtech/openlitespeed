@@ -501,9 +501,7 @@ static int ls_map_insertnode(ls_map_t *pThis, ls_map_iter node)
 
     node->color = RED;
     if (ls_map_insert_into_tree(pThis->root, node, pThis->vc_fn) != LS_OK)
-    {
         return LS_FAIL;
-    }
 
     ls_map_fix_tree(pThis, node);
     pThis->root->color = BLACK;

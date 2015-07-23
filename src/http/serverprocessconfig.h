@@ -43,28 +43,28 @@ public:
 
     ~ServerProcessConfig();
 
-    void setUid( uid_t uid )                {   m_uid = uid;                }
+    void setUid(uid_t uid)                {   m_uid = uid;                }
     uid_t getUid() const                    {   return m_uid;               }
 
-    void setGid( gid_t gid )                {   m_gid = gid;                }
+    void setGid(gid_t gid)                {   m_gid = gid;                }
     gid_t getGid() const                    {   return m_gid;               }
 
-    void setUidMin( uid_t uid )             {   m_uidMin = uid;             }
+    void setUidMin(uid_t uid)             {   m_uidMin = uid;             }
     uid_t getUidMin() const                 {   return m_uidMin;            }
 
-    void setGidMin( gid_t gid )             {   m_gidMin = gid;             }
+    void setGidMin(gid_t gid)             {   m_gidMin = gid;             }
     gid_t getGidMin() const                 {   return m_gidMin;            }
 
-    void setForceGid( uid_t forceGid )      {   m_forceGid = forceGid;      }
+    void setForceGid(uid_t forceGid)      {   m_forceGid = forceGid;      }
     uid_t getForceGid() const               {   return m_forceGid;          }
 
-    void setPriority( int iPriority )       {   m_iPriority = iPriority;    }
+    void setPriority(int iPriority)       {   m_iPriority = iPriority;    }
     int getPriority() const                 {   return m_iPriority;         }
 
-    void setUMask( int iUMask )             {   m_iUMask = iUMask;          }
+    void setUMask(int iUMask)             {   m_iUMask = iUMask;          }
     int getUMask() const                    {   return m_iUMask;            }
 
-    void setChroot( AutoStr2 *pChroot )     {   m_pChroot = pChroot;        }
+    void setChroot(AutoStr2 *pChroot)     {   m_pChroot = pChroot;        }
     AutoStr2 *getChroot() const             {   return m_pChroot;           }
 };
 

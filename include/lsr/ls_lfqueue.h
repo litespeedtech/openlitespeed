@@ -207,7 +207,8 @@ ls_lfnodei_t *ls_lfqueue_get(ls_lfqueue_t *pThis);
  * @return a pointer to the object on success,
  *  else NULL on error including timeout.
  */
-ls_lfnodei_t *ls_lfqueue_timedget(ls_lfqueue_t *pThis, struct timespec *timeout);
+ls_lfnodei_t *ls_lfqueue_timedget(ls_lfqueue_t *pThis,
+                                  struct timespec *timeout);
 
 /**
  * @ls_lfqueue_empty

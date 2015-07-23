@@ -78,7 +78,7 @@ int main(int ac, char *av[])
     }
 
     if ((pHash = pGPool->getNamedHash(g_pHashName, 0,
-      LsShmHash::hashXXH32, LsShmHash::compBuf, LSSHM_LRU_MODE1)) == NULL)
+                                      LsShmHash::hashXXH32, LsShmHash::compBuf, LSSHM_LRU_MODE1)) == NULL)
     {
         fprintf(stderr, "getNamedHash failed!\n");
         return 3;
@@ -90,11 +90,11 @@ int main(int ac, char *av[])
         int ret;
         char *p;
         if ((p = strchr(cmdbuf, '\n')) != NULL)
-            *p = '\0';
+            * p = '\0';
         if (memcmp(cmdbuf, "bin", 3) == 0)
         {
             if ((pMC->convertCmd(&cmdbuf[3], (uint8_t *)&binbuf.binhdr) < 0)
-              || (pMC->processBinCmd((uint8_t *)&binbuf.binhdr) < 0))
+                || (pMC->processBinCmd((uint8_t *)&binbuf.binhdr) < 0))
                 fprintf(stdout, "FAILED!\n");
         }
         else if ((ret = pMC->processCmd(cmdbuf)) < 0)
@@ -104,7 +104,7 @@ int main(int ac, char *av[])
             if (fgets(databuf, sizeof(databuf), stdin) == NULL)
                 break;
             if ((p = strchr(databuf, '\n')) != NULL)
-                *p = '\0';
+                * p = '\0';
             fprintf(stdout, "data:[%s]\n", databuf);
             if (pMC->doDataUpdate((uint8_t *)databuf) < 0)
                 fprintf(stdout, "FAILED!\n");

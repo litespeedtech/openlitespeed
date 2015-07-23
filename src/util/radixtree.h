@@ -114,7 +114,7 @@ public:
 
     // NOTICE: iFlags should be an |= of any flags needed, listed above.
     RadixNode *insert(ls_xpool_t *pool, const char *pLabel, size_t iLabelLen,
-                    void *pObj, int iFlags = 0, int iMode = RTMODE_CONTIGUOUS);
+                      void *pObj, int iFlags = 0, int iMode = RTMODE_CONTIGUOUS);
     void *erase(const char *pLabel, size_t iLabelLen, int iFlags = 0);
     void *update(const char *pLabel, size_t iLabelLen, void *pObj,
                  int iFlags = 0);
@@ -195,9 +195,9 @@ class RadixTree
 public:
 
     RadixTree(int iMode = RTMODE_CONTIGUOUS)
-      : m_iMode(iMode)
-      , m_iFlags(0)
-      , m_pRoot(NULL)
+        : m_iMode(iMode)
+        , m_iFlags(0)
+        , m_pRoot(NULL)
     {   ls_xpool_init(&m_pool);             }
 
     ~RadixTree()

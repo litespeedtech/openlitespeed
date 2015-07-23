@@ -20,10 +20,10 @@
 // #include "spdystreampool.h"
 
 #include <http/hiohandlerfactory.h>
-#include <http/httplog.h>
 #include <http/httprespheaders.h>
 #include <http/httpserverconfig.h>
 #include <http/httpstatuscode.h>
+#include <log4cxx/logger.h>
 #include <util/iovec.h>
 #include <util/datetime.h>
 
@@ -155,11 +155,8 @@ int SpdyConnection::onReadEx2()
             m_bufInput.guarantee(1024);
         avaiLen = m_bufInput.contiguous();
         n = getStream()->read(m_bufInput.end(), avaiLen);
-        //if ( D_ENABLED( DL_LESS ) )
-        //{
-        //    LOG_D(( getLogger(), "[%s] getStream()->read(), availLen = %d, ret = %d",
-        //                    getLogId(), avaiLen, n ));
-        //}
+//         LS_DBG_L(getLogSession(),
+//                  "getStream()->read(), availLen = %d, ret = %d", avaiLen, n);
 
         if (n == -1)
         {
@@ -180,12 +177,9 @@ int SpdyConnection::onReadEx2()
                     break;
                 m_bufInput.moveTo((char *)m_pcurrentSpdyHeader, SPDY_FRAME_HEADER_SIZE);
                 m_iCurrentFrameRemain = m_pcurrentSpdyHeader->getLength();
-                if (D_ENABLED(DL_LESS))
-                {
-                    if (!m_pcurrentSpdyHeader->isControlFrame())
-                        LOG_D((getLogger(), "[%s] DATA frame, size: %d", getLogId(),
-                               m_iCurrentFrameRemain));
-                }
+                if (!m_pcurrentSpdyHeader->isControlFrame())
+                    LS_DBG_L(getLogSession(), "DATA frame, size: %d",
+                             m_iCurrentFrameRemain);
             }
             if (m_pcurrentSpdyHeader->isControlFrame())
             {
@@ -212,11 +206,8 @@ int SpdyConnection::onReadEx2()
         if (isFlowCtrl() &&
             (m_iDataInWindow / 2 < m_iCurInBytesToUpdate))
         {
-            if (D_ENABLED(DL_LESS))
-            {
-                LOG_D((getLogger(), "[%s] bytes received for WINDOW_UPDATE: %d",
-                       getLogId(), m_iDataInWindow));
-            }
+            LS_DBG_L(getLogSession(), "Bytes received for WINDOW_UPDATE: %d",
+                     m_iDataInWindow);
             sendWindowUpdateFrame(0, m_iCurInBytesToUpdate);
             m_iCurInBytesToUpdate = 0;
         }
@@ -237,9 +228,9 @@ int SpdyConnection::processControlFrame(SpdyFrameHeader *pHeader)
     if (m_bVersion != pHeader->getVersion())
     {
         //Spdy version does not match,
-        LOG_INFO(("[%s] Protocol error, session is SPDY%d, frame "
-                  "header version is SPDY%d, go away!",
-                  getLogId(), m_bVersion, pHeader->getVersion()));
+        LS_INFO(getLogSession(), "Protocol error, session is SPDY%d, frame "
+                "header version is SPDY%d, go away!",
+                m_bVersion, pHeader->getVersion());
         return LS_FAIL;
     }
 
@@ -277,8 +268,9 @@ int SpdyConnection::processControlFrame(SpdyFrameHeader *pHeader)
     case SPDY_FRAME_CREDENTIAL:
         break;
     default:
-        LOG_INFO(("[%s] SPDY%d protocol error, unknown frame type: %d, go away!",
-                  getLogId(), m_bVersion, pHeader->getVersion()));
+        LS_INFO(getLogSession(),
+                "SPDY%d protocol error, unknown frame type: %d, go away!",
+                m_bVersion, pHeader->getVersion());
         //break protocol, bad client
         return LS_FAIL;
     }
@@ -288,12 +280,9 @@ int SpdyConnection::processControlFrame(SpdyFrameHeader *pHeader)
 
 void SpdyConnection::printLogMsg(SpdyFrameHeader *pHeader)
 {
-    if (D_ENABLED(DL_LESS))
-    {
-        LOG_D((getLogger(), "[%s] Received %s, size: %d, D0:%d, D1:%d\n",
-               getLogId(), getFrameName(pHeader->getType()), pHeader->getLength(),
-               pHeader->getHboData(0),  pHeader->getHboData(1)));
-    }
+    LS_DBG_L(getLogSession(), "Received %s, size: %d, D0:%d, D1:%d",
+             getFrameName(pHeader->getType()), pHeader->getLength(),
+             pHeader->getHboData(0),  pHeader->getHboData(1));
 }
 
 
@@ -317,9 +306,8 @@ int SpdyConnection::processSettingFrame(SpdyFrameHeader *pHeader)
     int iEntries = pHeader->getHboData(0);
     if (m_iCurrentFrameRemain != 8 * iEntries)
     {
-        LOG_INFO((getLogger(),
-                  "[%s] bad SETTING frame, frame size does not match, ignore.",
-                  getLogId()));
+        LS_INFO(getLogSession(),
+                "Bad SETTING frame, frame size does not match, ignore.");
         return 0;
     }
 
@@ -331,12 +319,9 @@ int SpdyConnection::processSettingFrame(SpdyFrameHeader *pHeader)
         ucEntryFlags = settingPairs.getFlags();
         iEntryID = settingPairs.getID();
         iEntryValue = settingPairs.getValue();
-        if (D_ENABLED(DL_LESS))
-        {
-            LOG_D((getLogger(), "[%s] %s(%d) value: %d, Flags=%d", getLogId(),
-                   (iEntryID < 8) ? cpEntryNames[iEntryID] : "INVALID", iEntryID, iEntryValue,
-                   ucEntryFlags));
-        }
+        LS_DBG_L(getLogSession(), "%s(%d) value: %d, Flags=%d",
+                 (iEntryID < 8) ? cpEntryNames[iEntryID] : "INVALID",
+                 iEntryID, iEntryValue, ucEntryFlags);
         switch (iEntryID)
         {
         case SPDY_SETTINGS_INITIAL_WINDOW_SIZE:
@@ -366,12 +351,26 @@ int SpdyConnection::processWindowUpdateFrame(SpdyFrameHeader *pHeader)
     StreamMap::iterator it;
     if ((id == 0) && (isFlowCtrl()))
     {
-        m_iCurDataOutWindow += delta;
-        if (D_ENABLED(DL_LESS))
+        uint32_t tmpVal = m_iCurDataOutWindow + delta;
+        if (tmpVal > 2147483647)  //2^31 -1
         {
-            LOG_D((getLogger(), "[%s] session WINDOW_UPDATE: %d, window size: %d ",
-                   getLogId(), delta, m_iCurDataOutWindow));
+            //sendRstFrame(pHeader->getStreamId(), H2_ERROR_PROTOCOL_ERROR);
+            LS_DBG_L(getLogSession(),
+                     "Session WINDOW_UPDATE ERROR: %d, window size: %d, total %d (m_iDataInWindow: %d)",
+                     delta, m_iCurDataOutWindow, tmpVal, m_iDataInWindow);
+            doGoAway(SPDY_GOAWAY_FLOW_CONTROL_ERROR);
+            return 0;
         }
+        LS_DBG_L(getLogSession(),
+                 "Session WINDOW_UPDATE: %d, current window size: %d, new: %d",
+                 delta, m_iCurDataOutWindow, tmpVal);
+        if (m_iCurDataOutWindow <= 0 && tmpVal > 0)
+        {
+            m_iCurDataOutWindow = tmpVal;
+            onWriteEx();
+        }
+        else
+            m_iCurDataOutWindow = tmpVal;
         return 0;
     }
     it = m_mapStream.find((void *)(long)id);
@@ -445,12 +444,9 @@ int SpdyConnection::processDataFrame(SpdyFrameHeader *pHeader)
 
     if (isSpdy3() && !pSpdyStream->isPeerShutdown())
     {
-        if (D_ENABLED(DL_MORE))
-        {
-            LOG_D((getLogger(),
-                   "[%s] processDataFrame() ID: %d, input window size: %d ",
-                   getLogId(), streamID, pSpdyStream->getWindowIn()));
-        }
+        LS_DBG_H(getLogSession(),
+                 "ProcessDataFrame() ID: %d, input window size: %d",
+                 streamID, pSpdyStream->getWindowIn());
 
         if (pSpdyStream->getWindowIn() < m_iStreamInInitWindowSize / 2)
         {
@@ -476,10 +472,10 @@ int SpdyConnection::processSynStreamFrame(SpdyFrameHeader *pHeader)
     if (id <= m_uiLastStreamID)
     {
         sendRstFrame(id, SPDY_RST_STREAM_PROTOCOL_ERROR);
-        LOG_INFO(("[%s] Protocol error, SYN_STREAM ID: %d is less the"
-                  " previously received stream ID: %d, cannot keep"
-                  " decompression state in sync, go away!",
-                  getLogId(), id, m_uiLastStreamID));
+        LS_INFO(getLogSession(), "Protocol error, SYN_STREAM ID: %d is less"
+                " than the previously received stream ID: %d,"
+                " cannot keep decompression state in sync, go away!",
+                id, m_uiLastStreamID);
 
         return LS_FAIL;
     }
@@ -720,11 +716,8 @@ SpdyStream *SpdyConnection::getNewStream(uint32_t uiStreamID,
     m_mapStream.insert((void *)(long)uiStreamID, pStream);
     if (m_tmIdleBegin)
         m_tmIdleBegin = 0;
-    if (D_ENABLED(DL_MORE))
-    {
-        LOG_D((getLogger(), "[%s-%d] getNewStream(), stream map size: %d ",
-               getLogId(), uiStreamID, m_mapStream.size()));
-    }
+    LS_DBG_H(getLogger(), "[%s-%d] getNewStream(), stream map size: %d",
+             getLogId(), uiStreamID, m_mapStream.size());
     pStream->init(uiStreamID, iPriority, this, ubSpdy_Flags, pSession);
     pStream->setProtocol(getStream()->getProtocol());
     if (m_bVersion == 3)
@@ -751,11 +744,8 @@ void SpdyConnection::recycleStream(StreamMap::iterator it)
     if (pSpdyStream->getHandler())
         pSpdyStream->getHandler()->recycle();
 
-    if (D_ENABLED(DL_MORE))
-    {
-        LOG_D((getLogger(), "[%s] recycleStream(), ID: %d, stream map size: %d "
-               , getLogId(), pSpdyStream->getStreamID(), m_mapStream.size()));
-    }
+    LS_DBG_H(getLogSession(), "recycleStream(), ID: %d, stream map size: %d",
+             pSpdyStream->getStreamID(), m_mapStream.size());
     //SpdyStreamPool::recycle( pSpdyStream );
     delete pSpdyStream;
 }
@@ -783,11 +773,8 @@ int SpdyConnection::sendFrame8Bytes(SpdyFrameType type, uint32_t uiVal1,
     appendNbo4Bytes(getBuf(), uiVal1);
     appendNbo4Bytes(getBuf(), uiVal2);
     flush();
-    if (D_ENABLED(DL_MORE))
-    {
-        LOG_D((getLogger(), "[%s] send %s frame, stream: %d, value: %d"
-               , getLogId(), getFrameName(type), uiVal1, uiVal2));
-    }
+    LS_DBG_H(getLogSession(), "Send %s frame, stream: %d, value: %d",
+             getFrameName(type), uiVal1, uiVal2);
     return 0;
 }
 
@@ -798,11 +785,8 @@ int SpdyConnection::sendFrame4Bytes(SpdyFrameType type, uint32_t uiVal1)
     appendCtrlFrameHeader(type, 4);
     appendNbo4Bytes(getBuf(), uiVal1);
     flush();
-    if (D_ENABLED(DL_MORE))
-    {
-        LOG_D((getLogger(), "[%s] send %s frame, value: %d"
-               , getLogId(), getFrameName(type), uiVal1));
-    }
+    LS_DBG_H(getLogSession(), "Send %s frame, value: %d",
+             getFrameName(type), uiVal1);
     return 0;
 }
 
@@ -854,25 +838,18 @@ int SpdyConnection::sendSettings(uint32_t uiMaxStreamNum,
         appendNbo4Bytes(getBuf(), uiMaxStreamNum);
         append4Bytes(getBuf(), cWindowSizeV3);
         appendNbo4Bytes(getBuf(), uiWindowSize);
-        if (D_ENABLED(DL_MORE))
-        {
-            LOG_D((getLogger(),
-                   "[%s] send SETTING frame, MAX_CONCURRENT_STREAMS: %d,"
-                   "  INITIAL_WINDOW_SIZE: %d"
-                   , getLogId(), uiMaxStreamNum, uiWindowSize));
-        }
+        LS_DBG_H(getLogSession(),
+                 "Send SETTING frame, MAX_CONCURRENT_STREAMS: %d,"
+                 "  INITIAL_WINDOW_SIZE: %d", uiMaxStreamNum, uiWindowSize);
     }
     else
     {
         appendCtrlFrameHeader(SPDY_FRAME_SETTINGS, 12);
         getBuf()->append(cMaxStreamNumV2, 8);
         appendNbo4Bytes(getBuf(), uiMaxStreamNum);
-        if (D_ENABLED(DL_MORE))
-        {
-            LOG_D((getLogger(),
-                   "[%s] send SETTING frame, MAX_CONCURRENT_STREAMS: %d,"
-                   , getLogId(), uiMaxStreamNum));
-        }
+        LS_DBG_H(getLogSession(),
+                 "Send SETTING frame, MAX_CONCURRENT_STREAMS: %d",
+                 uiMaxStreamNum);
     }
     if (isFlowCtrl())
     {
@@ -901,11 +878,8 @@ int SpdyConnection::processPingFrame(SpdyFrameHeader *pHeader)
     gettimeofday(&CurTime, NULL);
     msec = (CurTime.tv_sec - m_timevalPing.tv_sec) * 1000;
     msec += (CurTime.tv_usec - m_timevalPing.tv_usec) / 1000;
-    if (D_ENABLED(DL_MORE))
-    {
-        LOG_D((getLogger(), "[%s] Received PING, ID=%d, Round trip "
-               "times=%d milli-seconds", getLogId(), m_uiLastPingID, msec));
-    }
+    LS_DBG_H(getLogSession(), "Received PING, ID=%d, Round trip "
+             "times=%d milli-seconds", m_uiLastPingID, msec);
     return 0;
 }
 
@@ -939,8 +913,7 @@ int SpdyConnection::onCloseEx()
 {
     if (getStream()->isReadyToRelease())
         return 0;
-    if (D_ENABLED(DL_LESS))
-        LOG_D((getLogger(), "[%s] SpdyConnection::onCloseEx() ", getLogId()));
+    LS_DBG_L(getLogSession(), "SpdyConnection::onCloseEx()");
     getStream()->tobeClosed();
     releaseAllStream();
     return 0;
@@ -969,9 +942,8 @@ int SpdyConnection::processGoAwayFrame(SpdyFrameHeader *pHeader)
 
 int SpdyConnection::doGoAway(SpdyGoAwayStatus status)
 {
-    if (D_ENABLED(DL_LESS))
-        LOG_D((getLogger(), "[%s] SpdyConnection::doGoAway(), status = %d ",
-               getLogId(), status));
+    LS_DBG_L(getLogSession(), "SpdyConnection::doGoAway(), status = %d",
+             status);
     sendGoAwayFrame(status);
     releaseAllStream();
     getStream()->tobeClosed();
@@ -1035,8 +1007,8 @@ int SpdyConnection::timerRoutine()
 void SpdyConnection::logDeflateInflateError(int n, int iDeflate)
 {
     static const char *cErroMsg[2] = { "Inflate Error, Error code =", "Deflate Error, Error code =" };
-    LOG_INFO((getLogger(), "[%s] Protocol Error, %s %d, go away!"
-              , getLogId(), cErroMsg[iDeflate], n));
+    LS_INFO(getLogSession(), "Protocol Error, %s %d, go away!",
+            cErroMsg[iDeflate], n);
 }
 
 #define SPDY_TMP_HDR_BUFF_SIZE 2048
@@ -1162,11 +1134,7 @@ int SpdyConnection::sendRespHeaders(HttpRespHeaders *pRespHeaders,
     uint32_t temp32;
     int headerOffset = getBuf()->size();
 
-    if (D_ENABLED(DL_MORE))
-    {
-        LOG_D((getLogger(), "[%s-%d] sendRespHeaders()"
-               , getLogId(), uiStreamID));
-    }
+    LS_DBG_H(getLogger(), "[%s-%d] sendRespHeaders()", getLogId(), uiStreamID);
 
     getBuf()->guarantee(28);
     appendCtrlFrameHeader(SPDY_FRAME_SYN_REPLY, 0);
@@ -1189,6 +1157,8 @@ void SpdyConnection::add2PriorityQue(SpdyStream *pSpdyStream)
     m_priQue[pSpdyStream->getPriority()].append(pSpdyStream);
     m_flag |= SPDY_CONN_FLAG_WAIT_PROCESS;
 
+    if (m_iCurDataOutWindow > 0 && !getStream()->isWantWrite())
+        getStream()->continueWrite();
 }
 
 
@@ -1197,11 +1167,8 @@ int SpdyConnection::onWriteEx()
     SpdyStream *pSpdyStream = NULL;
     int wantWrite = 0;
 
-    if (D_ENABLED(DL_MORE))
-    {
-        LOG_D((getLogger(), "[%s] onWriteEx() state: %d, output buffer size=%d\n ",
-               getLogId(), m_state, getBuf()->size()));
-    }
+    LS_DBG_H(getLogSession(), "onWriteEx() state: %d, output buffer size=%d",
+             m_state, getBuf()->size());
     flush();
     if (!isEmpty())
         return 0;
@@ -1245,11 +1212,7 @@ int SpdyConnection::onWriteEx()
 
 void SpdyConnection::recycle()
 {
-    if (D_ENABLED(DL_MORE))
-    {
-        LOG_D((getLogger(), "[%s] SpdyConnection::recycle()",
-               getLogId()));
-    }
+    LS_DBG_H(getLogSession(), "SpdyConnection::recycle()");
     if (m_mapStream.size() > 0)
         releaseAllStream();
     detachStream();

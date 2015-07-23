@@ -119,7 +119,7 @@ class Expression : public LinkedObj, public TLinkList<ExprToken>
 
 public:
     Expression() {}
-    ~Expression() { releaseObjects();  }
+    ~Expression() { release_objects();  }
     int parse(const char *pBegin, const char *pEnd);
 };
 
@@ -199,7 +199,7 @@ public:
         , m_pParentComp(pComp)
     {}
 
-    ~SSIBlock() {   releaseObjects();  }
+    ~SSIBlock() {   release_objects();  }
 
     SSIBlock      *getParentBlock() const   {   return m_pParentBlock;  }
     SSI_If        *getParentComp() const    {   return m_pParentComp;   }

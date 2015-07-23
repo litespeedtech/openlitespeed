@@ -143,9 +143,9 @@ int SSLConnection::write(const char *pBuf, int len)
     m_iWant = 0;
     if (len <= 0)
         return 0;
-    
+
     int writeLen, ret = 0;
-    do 
+    do
     {
         writeLen = (len > MAX_SSL_WRITE_SIZE ? MAX_SSL_WRITE_SIZE : len);
         int rc = SSL_write(m_ssl, pBuf, writeLen);
@@ -165,8 +165,9 @@ int SSLConnection::write(const char *pBuf, int len)
             else
                 return ret; //Do not change the state since not finished
         }
-    } while (len > 0);
-    
+    }
+    while (len > 0);
+
     m_iWant &= ~LAST_WRITE;
     return ret;
 }
@@ -233,7 +234,7 @@ int SSLConnection::writev(const struct iovec *vect, int count,
 
 int SSLConnection::wpending()
 {
-    BIO * pBIO = SSL_get_wbio( m_ssl );
+    BIO *pBIO = SSL_get_wbio(m_ssl);
     return BIO_wpending(pBIO);
 }
 
@@ -251,13 +252,13 @@ int SSLConnection::flush()
     //1 means BIO_flush succeed.
     switch (ret)
     {
-        case 1:
-            return LS_DONE;
-        case 0:
-            return LS_AGAIN;
-        case -1:
-        default:
-            return LS_FAIL;
+    case 1:
+        return LS_DONE;
+    case 0:
+        return LS_AGAIN;
+    case -1:
+    default:
+        return LS_FAIL;
     }
 }
 

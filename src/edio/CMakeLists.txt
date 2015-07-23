@@ -34,6 +34,7 @@ SET(edio_STAT_SRCS
    aiosendfile.cpp
    eventnotifier.cpp
    eventprocessor.cpp
+   evtcbque.cpp
 )
 
 add_library(edio STATIC ${edio_STAT_SRCS})

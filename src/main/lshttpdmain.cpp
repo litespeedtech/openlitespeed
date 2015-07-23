@@ -101,15 +101,14 @@ LshttpdMain::~LshttpdMain()
 
 int LshttpdMain::forkTooFreq()
 {
-    LOG_WARN(("[AutoRestarter] forking too frequently, suspend for a while!"));
+    LS_WARN("[AutoRestarter] forking too frequently, suspend for a while!");
     return 0;
 }
 
 
 int LshttpdMain::preFork()
 {
-    if (D_ENABLED(DL_LESS))
-        LOG_D(("[AutoRestarter] prepare to fork new child process to handle request!"));
+    LS_DBG_L("[AutoRestarter] prepare to fork new child process to handle request!");
 
     if (GlobalServerSessionHooks->isEnabled(LSI_HKPT_MAIN_PREFORK))
         GlobalServerSessionHooks->runCallbackNoParam(LSI_HKPT_MAIN_PREFORK, NULL);
@@ -125,16 +124,16 @@ int LshttpdMain::forkError(int err)
 
 int LshttpdMain::postFork(pid_t pid)
 {
-    LOG_NOTICE(("[AutoRestarter] new child process with pid=%d is forked!",
-                pid));
+    LS_NOTICE("[AutoRestarter] new child process with pid=%d is forked!",
+              pid);
     return 0;
 }
 
 
 int LshttpdMain::childExit(pid_t ch_pid, int stat)
 {
-    LOG_NOTICE(("[AutoRestarter] child process with pid=%d exited with status=%d!",
-                ch_pid, stat));
+    LS_NOTICE("[AutoRestarter] child process with pid=%d exited with status=%d!",
+              ch_pid, stat);
     if (stat != 100)
         return 0;
     return 0;
@@ -148,8 +147,8 @@ int LshttpdMain::childSignaled(pid_t pid, int signal, int coredump)
         "no core file is created",
         "a core file is created"
     };
-    LOG_NOTICE(("[AutoRestarter] child process with pid=%d received signal=%d, %s!",
-                (int)pid, signal, pCoreFile[ coredump != 0 ]));
+    LS_NOTICE("[AutoRestarter] child process with pid=%d received signal=%d, %s!",
+              (int)pid, signal, pCoreFile[ coredump != 0 ]);
     //cleanUp();
 
     //We are in middle of graceful shutdown, do not restart another copy
@@ -185,7 +184,7 @@ int LshttpdMain::SendCrashNotification(pid_t pid, int signal, int coredump,
         return 0;
     memset(&s_uname, 0, sizeof(s_uname));
     if (uname(&s_uname) == -1)
-        LOG_WARN(("uname() failed!"));
+        LS_WARN("uname() failed!");
     ls_snprintf(achSubject, sizeof(achSubject) - 1,
                 "Web server %s on %s is automatically restarted",
                 MainServerConfigObj.getServerName(), s_uname.nodename);
@@ -252,14 +251,14 @@ void LshttpdMain::onGuardTimer()
 //#if !defined( RUN_TEST )
     if (m_pidFile.testAndRelockPidFile(PID_FILE, m_pid))
     {
-        LOG_NOTICE(("Failed to lock PID file, restart server gracefully ..."));
+        LS_NOTICE("Failed to lock PID file, restart server gracefully ...");
         gracefulRestart();
         return;
     }
 //#endif
     CgidWorker::checkRestartCgid(MainServerConfigObj.getServerRoot(),
-            MainServerConfigObj.getChroot(),
-            ServerProcessConfig::getInstance().getPriority());
+                                 MainServerConfigObj.getChroot(),
+                                 ServerProcessConfig::getInstance().getPriority());
     HttpLog::onTimer();
     m_pServer->onVHostTimer();
     s_count = (s_count + 1) % 5;
@@ -279,14 +278,14 @@ int LshttpdMain::processAdminCmd(char *pCmd, char *pEnd, int &apply)
         pCmd += 7;
         if (strncasecmp(pCmd, "config", 6) == 0)
         {
-            LOG_NOTICE(("Reload configuration request from admin interface!"));
+            LS_NOTICE("Reload configuration request from admin interface!");
             reconfig();
         }
         /* COMMENT: Not support reconfigVHost NOW.
         else if ( strncasecmp( pCmd, "vhost:", 6 ) == 0 )
         {
             pCmd += 6;
-            LOG_NOTICE(( "Reload configuration for virtual host %s!", pCmd ));
+            LS_NOTICE( "Reload configuration for virtual host %s!", pCmd ));
             if ( m_pBuilder->loadConfigFile( NULL ) == 0 )
                 m_pServer->reconfigVHost( pCmd, m_pBuilder->getRoot() );
                 //m_pBuilder->reconfigVHost( pCmd );
@@ -300,9 +299,9 @@ int LshttpdMain::processAdminCmd(char *pCmd, char *pEnd, int &apply)
         {
             pCmd += 6;
             if (!m_pServer->enableVHost(pCmd, 1))
-                LOG_NOTICE(("Virtual host %s is enabled!", pCmd));
+                LS_NOTICE("Virtual host %s is enabled!", pCmd);
             else
-                LOG_ERR(("Virtual host %s can not be enabled, reload first!", pCmd));
+                LS_ERROR("Virtual host %s can not be enabled, reload first!", pCmd);
         }
     }
     else if (strncasecmp(pCmd, "disable:", 8) == 0)
@@ -313,19 +312,19 @@ int LshttpdMain::processAdminCmd(char *pCmd, char *pEnd, int &apply)
         {
             pCmd += 6;
             if (!m_pServer->enableVHost(pCmd, 0))
-                LOG_NOTICE(("Virtual host %s is disabled!", pCmd));
+                LS_NOTICE("Virtual host %s is disabled!", pCmd);
             else
-                LOG_ERR(("Virtual host %s can not be disabled, reload first!", pCmd));
+                LS_ERROR("Virtual host %s can not be disabled, reload first!", pCmd);
         }
     }
     else if (strncasecmp(pCmd, "restart", 7) == 0)
     {
-        LOG_NOTICE(("Server restart request from admin interface!"));
+        LS_NOTICE("Server restart request from admin interface!");
         gracefulRestart();
     }
     else if (strncasecmp(pCmd, "toggledbg", 7) == 0)
     {
-        LOG_NOTICE(("Toggle debug logging request from admin interface!"));
+        LS_NOTICE("Toggle debug logging request from admin interface!");
         broadcastSig(SIGUSR2, 0);
         HttpLog::toggleDebugLog();
         apply = 0;
@@ -385,7 +384,7 @@ int LshttpdMain::startAdminSocket()
         return LS_FAIL;
     ::fcntl(m_fdAdmin, F_SETFD, FD_CLOEXEC);
     HttpServerConfig::getInstance().setAdminSock(strdup(achBuf));
-    LOG_NOTICE(("[ADMIN] server socket: %s", achBuf));
+    LS_NOTICE("[ADMIN] server socket: %s", achBuf);
     return 0;
 }
 
@@ -438,8 +437,8 @@ int LshttpdMain::processAdminSockConn(int fd)
 
     if ((len == -1) || (pEnd == p))
     {
-        LOG_ERR(("[ADMIN] failed to read command, command buf len=%d",
-                 (int)(p - achBuf)));
+        LS_ERROR("[ADMIN] failed to read command, command buf len=%d",
+                 (int)(p - achBuf));
         return LS_FAIL;
     }
     char *pEndAuth = strchr(achBuf, '\n');
@@ -461,8 +460,8 @@ int LshttpdMain::processAdminBuffer(char *p, char *pEnd)
         return LS_FAIL;
     if (strncasecmp(pEnd - 14, "end of actions", 14) != 0)
     {
-        LOG_ERR(("[ADMIN] failed to read command, command buf len=%d",
-                 (int)(pEnd - p)));
+        LS_ERROR("[ADMIN] failed to read command, command buf len=%d",
+                 (int)(pEnd - p));
         return LS_FAIL;
     }
     pEnd -= 14;
@@ -644,12 +643,12 @@ int LshttpdMain::reconfig()
         m_pBuilder->releaseConfigXmlTree();
     if (ret != 0)
     {
-        LOG_WARN(("Reconfiguration failed, server is restored to "
-                  "the state before reconfiguration as much as possible, "
-                  "if any problem, please restart server!"));
+        LS_WARN("Reconfiguration failed, server is restored to "
+                "the state before reconfiguration as much as possible, "
+                "if any problem, please restart server!");
     }
     else
-        LOG_NOTICE(("Reconfiguration succeed! "));
+        LS_NOTICE("Reconfiguration succeed! ");
     m_pServer->generateStatusReport();
     return 0;
 }
@@ -737,10 +736,10 @@ static void enableCoreDump()
 {
     struct  rlimit rl;
     if (getrlimit(RLIMIT_CORE, &rl) == -1)
-        LOG_WARN(("getrlimit( RLIMIT_CORE, ...) failed!"));
+        LS_WARN("getrlimit( RLIMIT_CORE, ...) failed!");
     else
     {
-        //LOG_D(( "rl.rlim_cur=%d, rl.rlim_max=%d", rl.rlim_cur, rl.rlim_max ));
+        //LS_DBG_L( "rl.rlim_cur=%d, rl.rlim_max=%d", rl.rlim_cur, rl.rlim_max );
         if ((getuid() == 0) && (rl.rlim_max < 10240000))
             rl.rlim_max = 10240000;
         rl.rlim_cur = rl.rlim_max;
@@ -787,7 +786,7 @@ int LshttpdMain::init(int argc, char *argv[])
         parseOpt(argc, argv);
     if (getServerRoot(argc, argv) != 0)
     {
-        //LOG_ERR(("Failed to determine the root directory of server!" ));
+        //LS_ERROR("Failed to determine the root directory of server!" ));
         fprintf(stderr,
                 "Can't determine the Home of LiteSpeed Web Server, exit!\n");
         return 1;
@@ -810,26 +809,26 @@ int LshttpdMain::init(int argc, char *argv[])
     if (procConfig.getUid() <= 10 || procConfig.getGid() < 10)
     {
         MainServerConfig  &MainServerConfigObj =  MainServerConfig::getInstance();
-        LOG_ERR(("It is not allowed to run LiteSpeed web server on behalf of a "
+        LS_ERROR("It is not allowed to run LiteSpeed web server on behalf of a "
                  "privileged user/group, user id must not be "
                  "less than 50 and group id must not be less than 10."
                  "UID of user '%s' is %d, GID of group '%s' is %d. "
                  "Please fix above problem first!",
                  MainServerConfigObj.getUser(), procConfig.getUid(),
-                 MainServerConfigObj.getGroup(), procConfig.getGid()));
+                 MainServerConfigObj.getGroup(), procConfig.getGid());
         return 1;
     }
     changeOwner();
 
     plainconf::flushErrorLog();
-    LOG_NOTICE(("Loading %s ...", HttpServerVersion::getVersion()));
-    LOG_NOTICE(("Using [%s]", SSLeay_version(SSLEAY_VERSION)));
+    LS_NOTICE("Loading %s ...", HttpServerVersion::getVersion());
+    LS_NOTICE("Using [%s]", SSLeay_version(SSLEAY_VERSION));
 
     if (!m_noDaemon)
     {
         if (Daemonize::daemonize(1, 1))
             return 3;
-        LOG_D(("Daemonized!"));
+        LS_DBG_L("Daemonized!");
 #ifndef RUN_TEST
         Daemonize::close();
 #endif
@@ -849,7 +848,7 @@ int LshttpdMain::init(int argc, char *argv[])
     ret = config();
     if (ret)
     {
-        LOG_ERR(("Fatal error in configuration, exit!"));
+        LS_ERROR("Fatal error in configuration, exit!");
         fprintf(stderr, "[ERROR] Fatal error in configuration, shutdown!\n");
         return ret;
     }
@@ -1125,8 +1124,8 @@ int LshttpdMain::cleanUp(int pid, char *pBB)
 {
     if (pBB)
     {
-        LOG_NOTICE(("[AutoRestarter] cleanup children processes and "
-                    "unix sockets belong to process %d !", pid));
+        LS_NOTICE("[AutoRestarter] cleanup children processes and "
+                  "unix sockets belong to process %d !", pid);
         ((ServerInfo *)pBB)->cleanUp();
     }
     return 0;
@@ -1143,8 +1142,8 @@ int LshttpdMain::checkRestartReq()
     {
         if (((ServerInfo *)pProc->m_pBlackBoard)->getRestart())
         {
-            LOG_NOTICE(("Child Process:%d request a graceful server restart ...",
-                        pProc->m_pid));
+            LS_NOTICE("Child Process:%d request a graceful server restart ...",
+                      pProc->m_pid);
             const char *pAdminEmails = MainServerConfigObj.getAdminEmails();
             if ((pAdminEmails) && (*pAdminEmails))
             {
@@ -1152,7 +1151,7 @@ int LshttpdMain::checkRestartReq()
                 static struct utsname      s_uname;
                 memset(&s_uname, 0, sizeof(s_uname));
                 if (uname(&s_uname) == -1)
-                    LOG_WARN(("uname() failed!"));
+                    LS_WARN("uname() failed!");
                 ls_snprintf(achSubject, sizeof(achSubject) - 1,
                             "LiteSpeed Web server %s on %s restarts "
                             "automatically to fix 503 Errors",
@@ -1262,16 +1261,14 @@ void LshttpdMain::stopAllChildren()
 
 void LshttpdMain::applyChanges()
 {
-    if (D_ENABLED(DL_LESS))
-        LOG_D(("Applying new configuration. "));
+    LS_DBG_L("Applying new configuration. ");
     broadcastSig(SIGTERM, 1);
 }
 
 
 void LshttpdMain::gracefulRestart()
 {
-    if (D_ENABLED(DL_LESS))
-        LOG_D(("Graceful Restart... "));
+    LS_DBG_L("Graceful Restart... ");
     close(m_fdAdmin);
     broadcastSig(SIGTERM, 1);
     s_iRunning = 0;
@@ -1289,11 +1286,11 @@ void LshttpdMain::gracefulRestart()
         chdir(achCmd);
         achCmd[len - 10] = '/';
         if (execl(achCmd, "litespeed", NULL))
-            LOG_ERR(("Failed to start new instance of LiteSpeed Web server!"));
+            LS_ERROR("Failed to start new instance of LiteSpeed Web server!");
         exit(0);
     }
     if (pid == -1)
-        LOG_ERR(("Failed to restart the server!"));
+        LS_ERROR("Failed to restart the server!");
 }
 
 
@@ -1387,7 +1384,7 @@ int LshttpdMain::guardCrash()
     if (GlobalServerSessionHooks->isEnabled(LSI_HKPT_MAIN_ATEXIT))
         GlobalServerSessionHooks->runCallbackNoParam(LSI_HKPT_MAIN_ATEXIT, NULL);
 
-    HttpLog::notice("[PID:%d] Server Stopped!\n", getpid());
+    LS_NOTICE("[PID:%d] Server Stopped!\n", getpid());
     exit(ret);
 }
 
@@ -1398,17 +1395,17 @@ void LshttpdMain::processSignal()
         onGuardTimer();
     if (HttpSignals::gotSigStop())
     {
-        LOG_NOTICE(("SIGTERM received, stop server..."));
+        LS_NOTICE("SIGTERM received, stop server...");
         s_iRunning = -1;
     }
     if (HttpSignals::gotSigUsr1() || HttpSignals::gotSigHup())
     {
-        LOG_NOTICE(("Server Restart Request via Signal..."));
+        LS_NOTICE("Server Restart Request via Signal...");
         gracefulRestart();
     }
 //     if ( HttpSignals::gotSigHup() )
 //     {
-//         LOG_NOTICE(( "SIGHUP received, Reloading configuration file..."));
+//         LS_NOTICE( "SIGHUP received, Reloading configuration file..."));
 //         if ( reconfig() == -1)
 //         {
 //             s_iRunning = 0;
@@ -1457,9 +1454,9 @@ void LshttpdMain::setAffinity( pid_t pid, int cpuId )
     CPU_ZERO(&mask);
     CPU_SET((cpuId - 1)% numCPU, &mask);
     if (SET_AFFINITY(pid, sizeof(cpu_set_t), &mask) < 0)
-        LOG_ERR(( "[main] setAffinity error, pid %d cpuId %d [numCPU=%d]", pid, cpuId, numCPU ));
+        LS_ERROR( "[main] setAffinity error, pid %d cpuId %d [numCPU=%d]", pid, cpuId, numCPU ));
     else
-        LOG_D(( "[main] setAffinity, pid %d cpuId %d [numCPU=%d]", pid, cpuId, numCPU ));
+        LS_DBG_L( "[main] setAffinity, pid %d cpuId %d [numCPU=%d]", pid, cpuId, numCPU );
 #endif
 }
 */

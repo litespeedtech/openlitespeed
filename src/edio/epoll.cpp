@@ -107,7 +107,7 @@ int epoll::reinit()
 /*
 void dump_type_info( EventReactor * pHandler, const char * pMsg )
 {
-    LOG_INFO(( "[%d] %s EventReactor: %p, fd: %d, type: %s", getpid(), pMsg, pHandler, pHandler->getfd(),
+    LS_INFO( "[%d] %s EventReactor: %p, fd: %d, type: %s", getpid(), pMsg, pHandler, pHandler->getfd(),
                 typeid( *pHandler ).name() ));
 }
 */
@@ -238,13 +238,13 @@ int epoll::waitAndProcessEvents(int iTimeoutMilliSec)
                         epevt.data.fd = fd;
                         epevt.events = 0;
                         (syscall(__NR_epoll_ctl, m_epfd, EPOLL_CTL_DEL, fd, &epevt));
-                        //LOG_WARN(( "[%d] Remove looping fd: %d, event: %d\n", getpid(), fd, p->events ));
+                        //LS_WARN( "[%d] Remove looping fd: %d, event: %d\n", getpid(), fd, p->events ));
                         ++s_problems;
                     }
                 }
                 else if (s_loop_count >= 20)
                 {
-                    //LOG_WARN(( "Looping fd: %d, event: %d\n", fd, p->events ));
+                    //LS_WARN( "Looping fd: %d, event: %d\n", fd, p->events ));
                     assert(p->events);
                     problem_detected = 0;
                 }

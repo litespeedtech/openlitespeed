@@ -55,8 +55,7 @@ int BufferedOS::writeEx(const char *pBuf, int size, int avoidCache)
         ret = m_pOS->write(pBuf, size);
         if ((ret < size) && (ret >= avoidCache))
             ret = m_buf.cache(pBuf, size, ret);
-//        if ( D_ENABLED( DL_MORE ) )
-//            LOG_D(( "bufferedOS::write() return %d, %d bytes in cache\n", ret, m_buf.size() ));
+//        LS_DBG_H( "bufferedOS::write() return %d, %d bytes in cache\n", ret, m_buf.size());
         return ret;
     }
     else
@@ -68,15 +67,15 @@ int BufferedOS::writeEx(const char *pBuf, int size, int avoidCache)
 }
 
 
-int BufferedOS::cacheWritev( IOVec &vector, int total )
-{   
+int BufferedOS::cacheWritev(IOVec &vector, int total)
+{
     if (m_buf.size() + total < 40960)
     {
-        m_buf.cache( vector.get(), vector.len(), 0);
+        m_buf.cache(vector.get(), vector.len(), 0);
         return total;
     }
     else
-        return writevEx( vector, 0 );       
+        return writevEx(vector, 0);
 }
 
 
@@ -113,8 +112,7 @@ int BufferedOS::writevEx(IOVec &vec, int avoidCache)
         ret = m_pOS->writev(vec.get(), vec.len());
     if (ret >= avoidCache)
         ret = m_buf.cache(vec.get(), vec.len(), ret);
-    //if ( D_ENABLED( DL_MORE ) )
-    //    LOG_D(( "bufferedOS::writev() return %d, %d bytes in cache\n", ret, m_buf.size() ));
+    //LS_DBG_H( "bufferedOS::writev() return %d, %d bytes in cache\n", ret, m_buf.size());
     return ret;
 }
 
@@ -134,9 +132,8 @@ int BufferedOS::flush()
                 m_buf.clear();
             else
                 m_buf.pop_front(ret);
-//            if ( D_ENABLED( DL_MORE ) )
-//                LOG_D(( "bufferedOS::flush() writen %d, %d bytes in cache\n",
-//                        ret, m_buf.size() ));
+//          LS_DBG_H( "bufferedOS::flush() writen %d, %d bytes in cache\n",
+//                      ret, m_buf.size());
             ret = m_buf.size();
         }
     }

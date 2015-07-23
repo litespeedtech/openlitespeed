@@ -24,11 +24,11 @@
 #include <http/connlimitctrl.h>
 #include <http/hiohandlerfactory.h>
 #include <http/httpaiosendfile.h>
-#include <http/httplog.h>
 #include <http/httpresourcemanager.h>
 #include <http/httprespheaders.h>
 #include <http/httplistener.h>
 #include <http/httpstats.h>
+#include <log4cxx/logger.h>
 #include <lsiapi/lsiapi.h>
 #include <lsr/ls_strtool.h>
 #include <socket/gsockaddr.h>
@@ -195,7 +195,8 @@ int NtwkIOLink::writev_internal(const struct iovec *vector, int len,
     param._flag_in = flush_flag;
     ret = LsiApiHooks::runForwardCb(&param);
     m_hasBufferedData = flag_out;
-    LOG_D(("[NtwkIOLink::writev] ret %d hasData %d", ret, m_hasBufferedData));
+    LS_DBG_L(this, "[NtwkIOLink::writev] ret %d hasData %d",
+             ret, m_hasBufferedData);
     return ret;
 }
 
@@ -222,7 +223,7 @@ int NtwkIOLink::read(char *pBuf, int size)
     param._param_len = size;
     param._flag_out = NULL;
     ret = LsiApiHooks::runBackwardCb(&param);
-    LOG_D(("[NtwkIOLink::read] read  %d", ret));
+    LS_DBG_L(this, "[NtwkIOLink::read] read %d bytes.", ret);
     return ret;
 }
 
@@ -327,7 +328,7 @@ int NtwkIOLink::setLink(HttpListener *pListener,  int fd,
         }
         else
         {
-            LOG_ERR((getLogger(), "newSSL() Failed!", getLogId()));
+            LS_ERROR(this, "newSSL() Failed!");
             return LS_FAIL;
         }
     }
@@ -338,9 +339,7 @@ int NtwkIOLink::setLink(HttpListener *pListener,  int fd,
 
     }
     pInfo->incConn();
-    if (D_ENABLED(DL_LESS))
-        LOG_D((getLogger(), "[%s] concurrent conn: %d",
-               getLogId(), pInfo->getConns()));
+    LS_DBG_L(this, "concurrent conn: %d", pInfo->getConns());
     return 0;
 }
 
@@ -368,9 +367,7 @@ void NtwkIOLink::tryRead()
 int NtwkIOLink::handleEvents(short evt)
 {
     int event = evt;
-    if (D_ENABLED(DL_MEDIUM))
-        LOG_D((getLogger(), "[%s] NtwkIOLink::handleEvents() events=%d!",
-               getLogId(), event));
+    LS_DBG_M(this, "NtwkIOLink::handleEvents() events=%d!", event);
     if (getState() == HIOS_SHUTDOWN)
     {
         if (event & (POLLHUP | POLLERR))
@@ -414,8 +411,7 @@ int NtwkIOLink::close()
 
 void NtwkIOLink::suspendRead()
 {
-    if (D_ENABLED(DL_LESS))
-        LOG_D((getLogger(), "[%s] NtwkIOLink::suspendRead()...", getLogId()));
+    LS_DBG_L(this, "NtwkIOLink::suspendRead()...");
     if (!((isSSL()) && (m_ssl.wantRead())))
         MultiplexerFactory::getMultiplexer()->suspendRead(this);
 }
@@ -423,13 +419,11 @@ void NtwkIOLink::suspendRead()
 
 void NtwkIOLink::continueRead()
 {
-    if (D_ENABLED(DL_LESS))
-        LOG_D((getLogger(), "[%s] NtwkIOLink::continueRead()...", getLogId()));
+    LS_DBG_L(this, "NtwkIOLink::continueRead()...");
     setFlag(HIO_FLAG_WANT_READ, 1);
     if ((allowRead()))
     {
-        if (D_ENABLED(DL_LESS))
-            LOG_D((getLogger(), "[%s] read resumed!", getLogId()));
+        LS_DBG_L(this, "Read resumed!");
         MultiplexerFactory::getMultiplexer()->continueRead(this);
     }
 }
@@ -437,29 +431,25 @@ void NtwkIOLink::continueRead()
 
 void NtwkIOLink::suspendWrite()
 {
-    if (D_ENABLED(DL_LESS))
-        LOG_D((getLogger(), "[%s] NtwkIOLink::suspendWrite()...", getLogId()));
+    LS_DBG_L(this, "NtwkIOLink::suspendWrite()...");
     setFlag(HIO_FLAG_WANT_WRITE, 0);
     if (!((isSSL()) && (m_ssl.wantWrite())) && m_hasBufferedData == 0)
     {
         MultiplexerFactory::getMultiplexer()->suspendWrite(this);
-        if (D_ENABLED(DL_LESS))
-            LOG_D((getLogger(), "[%s] write suspended", getLogId()));
+        LS_DBG_L(this, "Write suspended");
     }
 }
 
 
 void NtwkIOLink::continueWrite()
 {
-    if (D_ENABLED(DL_LESS))
-        LOG_D((getLogger(), "[%s] NtwkIOLink::continueWrite()...", getLogId()));
+    LS_DBG_L(this, "NtwkIOLink::continueWrite()...");
     //if( getFlag( HIO_FLAG_WANT_WRITE ) )
     //    return;
     setFlag(HIO_FLAG_WANT_WRITE, 1);
     if (allowWrite())
     {
-        if (D_ENABLED(DL_LESS))
-            LOG_D((getLogger(), "[%s] write resumed!", getLogId()));
+        LS_DBG_L(this, "Write resumed!");
         /*        short revents = getRevents();
                 if ( revents & POLLOUT )
                     handleEvents( revents );
@@ -513,9 +503,9 @@ void NtwkIOLink::checkSSLReadRet(int ret)
             MultiplexerFactory::getMultiplexer()->continueWrite(this);
         }
     }
-    else 
+    else
         tobeClosed();
-    
+
 }
 
 
@@ -578,9 +568,7 @@ int NtwkIOLink::writevExSSL(LsiSession *pOS, const iovec *vector,
             ++i;
         written = pThis->getSSL()->write(pBuf, bufSize);
 
-        if (D_ENABLED(DL_LESS))
-            LOG_D((pThis->getLogger(), "[%s] SSL write() return %d!",
-                   pThis->getLogId(), written));
+        LS_DBG_L(pThis, "SSL write() return %d!", written);
 
         if (written > 0)
         {
@@ -603,9 +591,7 @@ int NtwkIOLink::writevExSSL(LsiSession *pOS, const iovec *vector,
         }
         else if (pThis->getState() != HIOS_SHUTDOWN)
         {
-            if (D_ENABLED(DL_LESS))
-                LOG_D((pThis->getLogger(), "[%s] SSL_write() failed: %s "
-                       , pThis->getLogId(), SSLError().what()));
+            LS_DBG_L(pThis, "SSL_write() failed: %s", SSLError().what());
 
             pThis->setState(HIOS_CLOSING);
             return LS_FAIL;
@@ -644,17 +630,14 @@ void NtwkIOLink::setSSLAgain()
 int NtwkIOLink::flush()
 {
     int ret;
-    if (D_ENABLED(DL_LESS))
-        LOG_D((getLogger(), "[%s] NtwkIOLink::flush...", getLogId()));
+    LS_DBG_L(this, "NtwkIOLink::flush...");
 
 //     int nodelay = 1;
 //     ::setsockopt( getfd(), IPPROTO_TCP, TCP_NODELAY, &nodelay, sizeof( int ) );
 
     if (m_hasBufferedData || (m_iHeaderToSend > 0))
     {
-        if (D_ENABLED(DL_LESS))
-            LOG_D((getLogger(), "[%s] NtwkIOLink::flush buffered data ...",
-                   getLogId()));
+        LS_DBG_L(this, "NtwkIOLink::flush buffered data ...");
         ret = writev_internal(m_iov.get(), m_iov.len(), LSI_CB_FLAG_IN_FLUSH);
         if (m_iHeaderToSend > 0)
         {
@@ -706,9 +689,7 @@ int NtwkIOLink::flush()
 void NtwkIOLink::flushSslWpending()
 {
     int pending = m_ssl.wpending();
-    if (D_ENABLED(DL_LESS))
-        LOG_D((getLogger(), "[%s] SSL wpending: %d",
-            getLogId(), pending));
+    LS_DBG_L(this, "SSL wpending: %d", pending);
     if (pending > 0)
         flush();
 }
@@ -749,9 +730,7 @@ int NtwkIOLink::onReadSSL(NtwkIOLink *pThis)
 
 int NtwkIOLink::shutdownSsl()
 {
-    if (D_ENABLED(DL_LESS))
-        LOG_D((getLogger(), "[%s] Shutting down SSL ...",
-            getLogId()));
+    LS_DBG_L(this, "Shutting down SSL ...");
     m_ssl.shutdown(0);
     m_ssl.release();
     ConnLimitCtrl::getInstance().decSSLConn();
@@ -762,9 +741,7 @@ int NtwkIOLink::shutdownSsl()
 int NtwkIOLink::closeSSL(NtwkIOLink *pThis)
 {
     if (pThis->m_ssl.getSSL())
-    {
         pThis->shutdownSsl();
-    }
     return close_(pThis);
 }
 
@@ -781,12 +758,8 @@ int NtwkIOLink::shutdown()
     setState(HIOS_SHUTDOWN);
 
     if (m_ssl.getSSL())
-    {
         shutdownSsl();
-    }
-    if (D_ENABLED(DL_LESS))
-        LOG_D((getLogger(), "[%s] Shutting down out-bound socket ...",
-               getLogId()));
+    LS_DBG_L(this, "Shutting down out-bound socket ...");
 
     ::shutdown(getfd(), SHUT_WR);
     return 0;
@@ -809,12 +782,9 @@ int NtwkIOLink::close_(NtwkIOLink *pThis)
             ConnLimitCtrl::getInstance().decConn();
             pThis->m_pClientInfo->decConn();
             pThis->m_iPeerShutdown |= IO_COUNTED;
-            if (D_ENABLED(DL_LESS))
-                LOG_D((pThis->getLogger(),
-                       "[%s] Available Connections: %d, concurrent conn: %d",
-                       pThis->getLogId(),
-                       ConnLimitCtrl::getInstance().availConn(),
-                       pThis->m_pClientInfo->getConns()));
+            LS_DBG_L(pThis, "Available Connections: %d, concurrent conn: %d.",
+                     ConnLimitCtrl::getInstance().availConn(),
+                     pThis->m_pClientInfo->getConns());
         }
     }
 //    pThis->closeSocket();
@@ -829,8 +799,7 @@ void NtwkIOLink::closeSocket()
 
     ConnLimitCtrl &ctrl = ConnLimitCtrl::getInstance();
 
-    if (D_ENABLED(DL_LESS))
-        LOG_D((getLogger(), "[%s] Close socket ...", getLogId()));
+    LS_DBG_L(this, "Close socket ...");
 
     if (m_sessionHooks.isEnabled(LSI_HKPT_L4_ENDSESSION))
         m_sessionHooks.runCallbackNoParam(LSI_HKPT_L4_ENDSESSION, this);
@@ -846,10 +815,8 @@ void NtwkIOLink::closeSocket()
     {
         ctrl.decConn();
         m_pClientInfo->decConn();
-        if (D_ENABLED(DL_LESS))
-            LOG_D((getLogger(),
-                   "[%s] Available Connections: %d, concurrent conn: %d",
-                   getLogId(), ctrl.availConn(), m_pClientInfo->getConns()));
+        LS_DBG_L(this, "Available Connections: %d, concurrent conn: %d",
+                 ctrl.availConn(), m_pClientInfo->getConns());
     }
 
 
@@ -865,8 +832,7 @@ void NtwkIOLink::closeSocket()
         setHandler(NULL);
     }
     //recycle itself.
-    if (D_ENABLED(DL_LESS))
-        LOG_D((getLogger(), "[%s] Recycle NtwkIoLink", getLogId()));
+    LS_DBG_L(this, "Recycle NtwkIoLink");
     HttpResourceManager::getInstance().recycle(this);
 }
 
@@ -910,22 +876,18 @@ void NtwkIOLink::onTimer()
         }
 
         if (m_ssl.getSSL() && m_ssl.getStatus() == SSLConnection::ACCEPTING
-            && DateTime::s_curTime - getActiveTime() >= 10 )
+            && DateTime::s_curTime - getActiveTime() >= 10)
         {
-            if ( D_ENABLED( DL_LESS ))
-                LOG_D((getLogger(), "[%s] SSL handshake timed out, close SSL.",
-                       getLogId() ));
+            LS_DBG_L(this, "SSL handshake timed out, close SSL.");
             closeSSL(this);
         }
-        
+
         if (detectClose())
             return;
         (*m_pFpList->m_onTimer_fp)(this);
-        if ( getState() == HIOS_CLOSING )
-        {
+        if (getState() == HIOS_CLOSING)
             onPeerClose();
-        }
-        
+
     }
 }
 
@@ -957,9 +919,7 @@ int NtwkIOLink::checkReadRet(int ret, int size)
     {
         if (getState() != HIOS_SHUTDOWN)
         {
-            if (D_ENABLED(DL_LESS))
-                LOG_D((getLogger(), "[%s] End of stream detected, CLOSING!",
-                       getLogId()));
+            LS_DBG_L(this, "End of stream detected, CLOSING!");
             //have the connection closed quickly
             setFlag(HIO_FLAG_PEER_SHUTDOWN, 1);
             setState(HIOS_CLOSING);
@@ -974,22 +934,17 @@ int NtwkIOLink::checkReadRet(int ret, int size)
             //incase client shutdown the writting side after sending the request
             // and waiting for the response, we can't close the connection before
             // we finish write the response back.
-            if (D_ENABLED(DL_LESS))
-                LOG_D((getLogger(), "[%s] read error: %s\n",
-                       getLogId(), strerror(errno)));
+            LS_DBG_L(this, "Read error: %s", strerror(errno));
         case EAGAIN:
         case EINTR:
             ret = 0;
             break;
         default:
             tobeClosed();
-            if (D_ENABLED(DL_LESS))
-                LOG_D((getLogger(), "[%s] read error: %s\n",
-                       getLogId(), strerror(errno)));
+            LS_DBG_L(this, "Read error: %s", strerror(errno));
         }
     }
-    if (D_ENABLED(DL_LESS))
-        LOG_D((getLogger(), "[%s] Read from client: %d\n", getLogId(), ret));
+    LS_DBG_L(this, "Read from client: %d", ret);
     return ret;
 
 }
@@ -1082,9 +1037,7 @@ int NtwkIOLink::addAioSFJob(Aiosfcb *cb)
     if (ret)
     {
         cb->setFlag(AIOSFCB_FLAG_TRYAGAIN);
-        if (D_ENABLED(DL_LESS))
-            LOG_D((getLogger(), "[%s] Add Job Failed, Try Again Flag Set.",
-                   getLogId()));
+        LS_DBG_L(this, "Add Job Failed, Try Again Flag Set.");
     }
     else
         cb->clearFlag(AIOSFCB_FLAG_TRYAGAIN);
@@ -1105,9 +1058,8 @@ int NtwkIOLink::aiosendfile(Aiosfcb *cb)
 
     if (m_aioSFQ.size() == 1)
         addAioSFJob(cb);
-    else if (D_ENABLED(DL_MEDIUM))
-        LOG_D((getLogger(), "[%s] ntwkiolink busy with another session\n",
-               getLogId()));
+    else
+        LS_DBG_M(this, "Ntwkiolink busy with another session");
     return 1;
 }
 
@@ -1184,9 +1136,7 @@ int NtwkIOLink::checkWriteRet(int len)
         {
         case EINTR:
         case EAGAIN:
-            if (D_ENABLED(DL_LESS))
-                LOG_D((getLogger(), "[%s] [write] errstr=%s!\n", getLogId(),
-                       strerror(errno)));
+            LS_DBG_L(this, "write error: %s", strerror(errno));
             len = 0;
             break;
         default:
@@ -1198,13 +1148,10 @@ int NtwkIOLink::checkWriteRet(int len)
                     setFlag(HIO_FLAG_ABORT, 1);
                 }
             }
-            if (D_ENABLED(DL_LESS))
-                LOG_D((getLogger(), "[%s] write error: %s\n",
-                       getLogId(), strerror(errno)));
+            LS_DBG_L(this, "write error: %s!", strerror(errno));
         }
     }
-    if (D_ENABLED(DL_LESS))
-        LOG_D((getLogger(),  "[%s] Written to client: %d\n", getLogId(), len));
+    LS_DBG_L(this, "Written to client: %d", len);
     return len;
 }
 
@@ -1213,8 +1160,7 @@ int NtwkIOLink::detectClose()
 {
     if (getState() == HIOS_SHUTDOWN)
     {
-        if (D_ENABLED(DL_MEDIUM))
-            LOG_D((getLogger(), "[%s] Shutdown time out!", getLogId()));
+        LS_DBG_M(this, "Shutdown time out!");
         closeSocket();
     }
     else if (getState() == HIOS_CONNECTED)
@@ -1224,8 +1170,7 @@ int NtwkIOLink::detectClose()
             ((DateTime::s_curTime - getActiveTime() > 10) &&
              (::recv(getfd(), &ch, 1, MSG_PEEK) == 0)))
         {
-            if (D_ENABLED(DL_LESS))
-                LOG_D((getLogger(), "[%s] peer connection close detected!\n", getLogId()));
+            LS_DBG_L(this, "Peer close connection detected!");
             //have the connection closed faster
             onPeerClose();
             return 1;
@@ -1240,11 +1185,10 @@ int NtwkIOLink::detectCloseNow()
     char ch;
     if (::recv(getfd(), &ch, 1, MSG_PEEK) == 0)
     {
-        if (D_ENABLED(DL_LESS))
-            LOG_D((getLogger(), "[%s] peer connection close detected!\n", getLogId()));
+        LS_DBG_L(this, "Peer close connection detected!");
         //have the connection closed faster
         setFlag(HIO_FLAG_PEER_SHUTDOWN, 1);
-        close();
+        onPeerClose();
         return 1;
     }
     return 0;
@@ -1273,30 +1217,25 @@ int NtwkIOLink::onWriteT(NtwkIOLink *pThis)
 
 void NtwkIOLink::dumpState(const char *pFuncName, const char *action)
 {
-    if (D_ENABLED(DL_MORE))
-        LOG_D((getLogger(),  "[%s] %s(), %s, wantRead: %d, wantWrite: %d,"
-               " allowWrite: %d, allowRead: %d,"
-               " m_ssl.wantRead: %d, m_ssl.wantWrite: %d, "
-               " m_ssl.lastRead: %d, m_ssl.lastWrite: %d",
-               getLogId(),  pFuncName, action, isWantRead(), isWantWrite(),
-               allowWrite(), allowRead(),
-               m_ssl.wantRead(), m_ssl.wantWrite(),
-               m_ssl.lastRead(), m_ssl.lastWrite()
-              ));
+    LS_DBG_H(this,  "%s(), %s, wantRead: %d, wantWrite: %d, allowWrite: %d,"
+             " allowRead: %d, m_ssl.wantRead: %d, m_ssl.wantWrite: %d,"
+             " m_ssl.lastRead: %d, m_ssl.lastWrite: %d",
+             pFuncName, action, isWantRead(), isWantWrite(),
+             allowWrite(), allowRead(),
+             m_ssl.wantRead(), m_ssl.wantWrite(),
+             m_ssl.lastRead(), m_ssl.lastWrite()
+            );
 
 }
 
 
 void NtwkIOLink::onTimer_T(NtwkIOLink *pThis)
 {
-//    if ( D_ENABLED( DL_MORE ))
-//        LOG_D(( pThis->getLogger(),  "[%s] conn token:%d, global Token: %d\n",
-//                    pThis->getLogId(), pThis->m_tmToken, HttpGlobals::s_tmToken ));
-//        if ( D_ENABLED( DL_MORE ))
-//            LOG_D(( pThis->getLogger(),  "[%s] output avail:%d. state: %d \n",
-//                    pThis->getLogId(),
-//                    pThis->getClientInfo()->getThrottleCtrl().getOSQuota(),
-//                    pThis->getState() ));
+//     LS_DBG_H(pThis, "conn token:%d, global Token: %d\n",
+//              pThis->m_tmToken, HttpGlobals::s_tmToken);
+//     LS_DBG_H(pThis, "output avail:%d. state: %d \n",
+//              pThis->getClientInfo()->getThrottleCtrl().getOSQuota(),
+//              pThis->getState());
 
     if (pThis->hasBufferedData() && pThis->allowWrite())
         pThis->flush();
@@ -1369,9 +1308,7 @@ int NtwkIOLink::writevExT(LsiSession *pOS, const iovec *vector, int count)
     for (int i = 0; i < count; ++i)
         total += vector[i].iov_len;
 
-//    if ( D_ENABLED( DL_LESS ))
-//        LOG_D(( pThis->getLogger(),  "[%s] Quota:%d, to write: %d\n",
-//                    pThis->getLogId(), Quota, total ));
+//    LS_DBG_L( pThis, "Quota:%d, to write: %d\n", Quota, total);
     if ((unsigned int)total > (unsigned int)Quota + (Quota >> 3))
     {
         IOVec iov;
@@ -1419,7 +1356,7 @@ int NtwkIOLink::writevExT(LsiSession *pOS, const iovec *vector, int count)
 
 void NtwkIOLink::onTimerSSL_T(NtwkIOLink *pThis)
 {
-    pThis->flushSslWpending();    
+    pThis->flushSslWpending();
     if (pThis->allowWrite() && (pThis->m_ssl.wantWrite()))
         onWriteSSL_T(pThis);
     if (pThis->allowRead() && (pThis->m_ssl.wantRead()))
@@ -1588,10 +1525,9 @@ void NtwkIOLink::handle_acceptSSL_EIO_Err()
     }
     else
     {
-        if (D_ENABLED(DL_LESS))
-            LOG_D((getLogger(),
-                   "[%s] SSL_accept() failed!: %s, get_url_from_reqheader return %d.",
-                   getLogId(), SSLError().what(), rc_parse));
+        LS_DBG_L(this,
+                 "SSL_accept() failed!: %s, get_url_from_reqheader return %d.",
+                 SSLError().what(), rc_parse);
         ::write(getfd(), s_errUseSSL, sizeof(s_errUseSSL) - 1);
     }
 }
@@ -1602,16 +1538,15 @@ int NtwkIOLink::acceptSSL()
     int ret = m_ssl.accept();
     if (ret == 1)
     {
-        if (D_ENABLED(DL_LESS))
-            LOG_D((getLogger(), "[%s] [SSL] accepted!\n", getLogId()));
+        LS_DBG_L(this, "[SSL] accepted!");
         if ((ClientInfo::getPerClientHardLimit() < 1000)
             && (m_pClientInfo->getAccess() != AC_TRUST)
             && (m_pClientInfo->incSslNewConn() >
                 (ClientInfo::getPerClientHardLimit() << 1)))
         {
-            LOG_WARN((getLogger(), "[%s] [SSL] too many new SSL connections: %d, "
-                      "possible SSL negociation based attack, block!", getLogId(),
-                      m_pClientInfo->getSslNewConn()));
+            LS_WARN(this, "[SSL] Too many new SSL connections: %d, "
+                    "possible SSL negociation based attack, block!",
+                    m_pClientInfo->getSslNewConn());
             m_pClientInfo->setOverLimitTime(DateTime::s_curTime);
             m_pClientInfo->setAccess(AC_BLOCK);
         }
@@ -1629,15 +1564,13 @@ int NtwkIOLink::sslSetupHandler()
     unsigned int spdyVer = m_ssl.getSpdyVersion();
     if (spdyVer >= HIOS_PROTO_MAX)
     {
-        LOG_ERR((getLogger(), "[%s] bad SPDY version: %d, use HTTP", getLogId(),
-                 spdyVer));
+        LS_ERROR(this, "Bad SPDY version: %d, will use HTTP", spdyVer);
         spdyVer = HIOS_PROTO_HTTP;
     }
     else
     {
-        if (D_ENABLED(DL_LESS))
-            LOG_D((getLogger(), "[%s] Next Protocol Negociation result: %s\n",
-                   getLogId(), getProtocolName((HiosProtocol)spdyVer)));
+        LS_DBG_L(this, "Next Protocol Negotiation result: %s",
+                 getProtocolName((HiosProtocol)spdyVer));
     }
     return setupHandler((HiosProtocol)spdyVer);
 }
@@ -1645,8 +1578,7 @@ int NtwkIOLink::sslSetupHandler()
 
 int NtwkIOLink::SSLAgain()
 {
-    if (D_ENABLED(DL_LESS))
-        LOG_D((getLogger(), "[%s] [SSL] SSLAgain()!\n", getLogId()));
+    LS_DBG_L(this, "[SSL] SSLAgain()!");
     int ret = 0;
     switch (m_ssl.getStatus())
     {
@@ -1776,9 +1708,8 @@ int NtwkIOLink::writevExSSL_T(LsiSession *pOS, const iovec *vector,
         else
             ++vect;
         int written = pThis->getSSL()->write(pBuf, bufSize);
-        if (D_ENABLED(DL_MORE))
-            LOG_D(("[%s] to write %d bytes, written %d bytes",
-                   pThis->getLogId(), bufSize, written));
+        LS_DBG_H(pThis, "Need to write %d bytes, wrote %d bytes.",
+                 bufSize, written);
         if (written > 0)
         {
             pThis->bytesSent(written);
@@ -1800,9 +1731,8 @@ int NtwkIOLink::writevExSSL_T(LsiSession *pOS, const iovec *vector,
         }
         else if (pThis->getState() != HIOS_SHUTDOWN)
         {
-            if (D_ENABLED(DL_MORE))
-                LOG_D(("[%s] SSL error: %s, mark connection to be closed",
-                       pThis->getLogId(), SSLError().what()));
+            LS_DBG_H(pThis, "SSL error: %s, mark connection to be closed.",
+                     SSLError().what());
             pThis->setState(HIOS_CLOSING);
             return LS_FAIL;
         }
@@ -1826,9 +1756,7 @@ void NtwkIOLink::suspendEventNotify()
 {
     if (!MultiplexerFactory::s_iMultiplexerType)
     {
-        if (D_ENABLED(DL_LESS))
-            LOG_D((getLogger(), "[%s] remove fd:%d from multiplexer!\n", getLogId(),
-                   getfd()));
+        LS_DBG_L(this, "Remove fd %d from multiplexer!", getfd());
         MultiplexerFactory::getMultiplexer()->remove(this);
     }
 }
@@ -1838,9 +1766,7 @@ void NtwkIOLink::resumeEventNotify()
 {
     if (!MultiplexerFactory::s_iMultiplexerType)
     {
-        if (D_ENABLED(DL_LESS))
-            LOG_D((getLogger(), "[%s] add fd:%d back to multiplexer!\n", getLogId(),
-                   getfd()));
+        LS_DBG_L(this, "Add fd %d back to multiplexer!", getfd());
         MultiplexerFactory::getMultiplexer()->add(this, POLLHUP | POLLERR);
     }
 }
@@ -1877,12 +1803,10 @@ int NtwkIOLink::isFromLocalAddr() const
 {
     char achAddr[128];
     socklen_t addrlen = 128;
-    if ( getsockname( getfd(), (struct sockaddr *) achAddr, &addrlen ) == -1 )
-    {
+    if (getsockname(getfd(), (struct sockaddr *) achAddr, &addrlen) == -1)
         return 0;
-    }
-    const struct sockaddr * pServer = (struct sockaddr *) achAddr;
-    const struct sockaddr * pClient =  getClientInfo()->getAddr();
-    return ( GSockAddr::compareAddr( pServer, pClient ) == 0 ); 
+    const struct sockaddr *pServer = (struct sockaddr *) achAddr;
+    const struct sockaddr *pClient =  getClientInfo()->getAddr();
+    return (GSockAddr::compareAddr(pServer, pClient) == 0);
 }
 

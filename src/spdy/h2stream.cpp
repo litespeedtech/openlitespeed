@@ -20,7 +20,7 @@
 #include "h2connection.h"
 
 #include <util/datetime.h>
-#include <http/httplog.h>
+#include <log4cxx/logger.h>
 #include <lsr/ls_strtool.h>
 #include <util/iovec.h>
 #include "lsdef.h"
@@ -75,11 +75,7 @@ int H2Stream::init(uint32_t StreamID, H2Connection *pH2Conn, uint8_t flags,
     setPriority(pri);
 
     m_pH2Conn = pH2Conn;
-    if (D_ENABLED(DL_LESS))
-    {
-        LOG_D((getLogger(), "[%s] H2Stream::init(), id: %d, priority: %d. ",
-               getLogId(), StreamID, pri));
-    }
+    LS_DBG_L(this, "H2Stream::init(), id: %d, priority: %d.", StreamID, pri);
     return 0;
 }
 
@@ -155,11 +151,7 @@ int H2Stream::read(char *buf, int len)
 
 void H2Stream::continueRead()
 {
-    if (D_ENABLED(DL_LESS))
-    {
-        LOG_D((getLogger(), "[%s] H2Stream::continueRead()",
-               getLogId()));
-    }
+    LS_DBG_L(this, "H2Stream::continueRead()");
     setFlag(HIO_FLAG_WANT_READ, 1);
     if (m_bufIn.size() > 0)
         getHandler()->onReadEx();
@@ -168,11 +160,8 @@ void H2Stream::continueRead()
 
 void H2Stream:: continueWrite()
 {
-    if (D_ENABLED(DL_LESS))
-    {
-        LOG_D((getLogger(), "[%s] H2Stream::continueWrite()",
-               getLogId()));
-    }
+    LS_DBG_L(this, "H2Stream::continueWrite()",
+             getLogId());
     setFlag(HIO_FLAG_WANT_WRITE, 1);
     if (next() == NULL)
         m_pH2Conn->add2PriorityQue(this);
@@ -210,11 +199,7 @@ int H2Stream::shutdown()
 
     setState(HIOS_SHUTDOWN);
 
-    if (D_ENABLED(DL_LESS))
-    {
-        LOG_D((getLogger(), "[%s] H2Stream::shutdown()",
-               getLogId()));
-    }
+    LS_DBG_L(this, "H2Stream::shutdown()");
     m_pH2Conn->sendFinFrame(m_uiStreamID);
     return 0;
 }
@@ -241,8 +226,7 @@ int H2Stream::close()
 
 int H2Stream::flush()
 {
-    if (D_ENABLED(DL_LESS))
-        LOG_D((getLogger(), "[%s] H2Stream::flush()", getLogId()));
+    LS_DBG_L(this, "H2Stream::flush()");
     return LS_DONE;
 }
 
@@ -320,11 +304,7 @@ int H2Stream::write(const char *buf, int len)
 
 int H2Stream::onWrite()
 {
-    if (D_ENABLED(DL_LESS))
-    {
-        LOG_D((getLogger(), "[%s] H2Stream::onWrite()",
-               getLogId()));
-    }
+    LS_DBG_L(this, "H2Stream::onWrite()");
     if (m_pH2Conn->isOutBufFull())
         return 0;
     if (m_iWindowOut <= 0)
@@ -343,11 +323,7 @@ int H2Stream::sendData(IOVec *pIov, int total)
 {
     int ret;
     ret = m_pH2Conn->sendDataFrame(m_uiStreamID, 0, pIov, total);
-    if (D_ENABLED(DL_LESS))
-    {
-        LOG_D((getLogger(), "[%s] H2Stream::sendData(), total: %d, ret: %d",
-               getLogId(), total, ret));
-    }
+    LS_DBG_L(this, "H2Stream::sendData(), total: %d, ret: %d", total, ret);
     if (ret == -1)
     {
         setFlag(HIO_FLAG_ABORT, 1);
@@ -359,11 +335,8 @@ int H2Stream::sendData(IOVec *pIov, int total)
     if (isFlowCtrl())
     {
         m_iWindowOut -= total;
-        if (D_ENABLED(DL_LESS))
-        {
-            LOG_D((getLogger(), "[%s] sent: %lld, current window: %d",
-                   getLogId(), (uint64_t)getBytesSent(), m_iWindowOut));
-        }
+        LS_DBG_L(this, "Sent: %lld, current window: %d.",
+                 (uint64_t)getBytesSent(), m_iWindowOut);
 
         if (m_iWindowOut <= 0)
             setFlag(HIO_FLAG_BUFF_FULL, 1);
@@ -379,11 +352,7 @@ int H2Stream::sendRespHeaders(HttpRespHeaders *pHeaders, int isNoBody)
         return LS_FAIL;
     if (isNoBody)
     {
-        if (D_ENABLED(DL_LESS))
-        {
-            LOG_D((getLogger(), "[%s] No response body, set END_STREAM.",
-                   getLogId()));
-        }
+        LS_DBG_L(this, "No response body, set END_STREAM.");
         flag |= H2_FLAG_END_STREAM;
         setState(HIOS_SHUTDOWN);
     }
@@ -401,11 +370,8 @@ int H2Stream::adjWindowOut(int32_t n)
     if (isFlowCtrl())
     {
         m_iWindowOut += n;
-        if (D_ENABLED(DL_LESS))
-        {
-            LOG_D((getLogger(), "[%s] stream WINDOW_UPDATE: %d, window size: %d ",
-                   getLogId(), n, m_iWindowOut));
-        }
+        LS_DBG_L(this, "Stream WINDOW_UPDATE: %d, window size: %d.",
+                 n, m_iWindowOut);
         if (m_iWindowOut < 0)
         {
             //window overflow

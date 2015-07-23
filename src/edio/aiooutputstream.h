@@ -69,7 +69,7 @@ public:
         setcb(fildes, buf, nbytes, offset, pHandler);
         return aio_write(&m_aiocb);
     }
-LS_NO_COPY_ASSIGN(AioReq);
+    LS_NO_COPY_ASSIGN(AioReq);
 };
 
 class AioOutputStream : public AioEventHandler, private AioReq

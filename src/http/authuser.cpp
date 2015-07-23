@@ -46,7 +46,7 @@ int AuthUser::setGroups(const char *pGroups, const char *pEnd)
     else
     {
         if (m_pGroups)
-            m_pGroups->releaseObjects();
+            m_pGroups->release_objects();
         else
         {
             m_pGroups = new StringList();

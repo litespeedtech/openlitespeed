@@ -64,7 +64,7 @@ public:
 
     void setSSL(SSL *ssl);
     SSL *getSSL() const    {   return m_ssl;   }
-    
+
     int getFlag()   { return m_iFlag;  }
     void setFlag(int v) { m_iFlag = v; }
 
@@ -109,7 +109,7 @@ public:
     static const unsigned char *getSessionId(SSL_SESSION *s);
     static int getCipherBits(const SSL_CIPHER *pCipher, int *algkeysize);
     static int isClientVerifyOptional(int i);
-    
+
     LS_NO_COPY_ASSIGN(SSLConnection);
 };
 

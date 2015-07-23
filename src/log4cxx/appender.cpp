@@ -19,7 +19,6 @@
 #include <log4cxx/layout.h>
 #include <log4cxx/loggingevent.h>
 
-#include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <string.h>

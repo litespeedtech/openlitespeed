@@ -26,7 +26,7 @@ bool LsiCachingHeaders::Lookup(const StringPiece &key,
 {
     iovec iov[MAX_SAME_HEADER_NUM];
     int n = g_api->get_resp_header(m_session, -1, key.as_string().c_str(),
-                                   key.as_string().size(), iov, 
+                                   key.as_string().size(), iov,
                                    MAX_SAME_HEADER_NUM);
 
     if (n == 0)   // No header found with this name.

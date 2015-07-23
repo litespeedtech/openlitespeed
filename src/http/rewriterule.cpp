@@ -20,6 +20,7 @@
 #include <http/httplog.h>
 #include <http/httpstatuscode.h>
 #include <http/rewritemap.h>
+#include <log4cxx/logger.h>
 #include <util/stringtool.h>
 
 #include <assert.h>
@@ -32,7 +33,7 @@ static const char *s_pLogId            = NULL;
 static LOG4CXX_NS::Logger   *s_pLogger  = NULL;
 // static void parse_error( const char * pError )
 // {
-//     LOG_ERR(( s_pLogger, "[%s] rewrite: %s while parsing: %s",
+//     LS_ERROR( s_pLogger, "[%s] rewrite: %s while parsing: %s",
 //                     s_pLogId, pError, s_pCurLine ));
 // }
 
@@ -46,8 +47,8 @@ void RewriteRule::setLogger(LOG4CXX_NS::Logger *pLogger, const char *pId)
 
 void RewriteRule::error(const char *pError)
 {
-    LOG_ERR((s_pLogger, "[%s] rewrite: %s.",
-             s_pLogId, pError));
+    LS_ERROR(s_pLogger, "[%s] rewrite: %s.",
+             s_pLogId, pError);
 }
 
 
@@ -91,7 +92,7 @@ RewriteSubstFormat::RewriteSubstFormat()
 
 RewriteSubstFormat::~RewriteSubstFormat()
 {
-    releaseObjects();
+    release_objects();
 }
 
 
@@ -583,8 +584,8 @@ RewriteRule::RewriteRule(const RewriteRule &rhs)
 
 RewriteRule::~RewriteRule()
 {
-    m_conds.releaseObjects();
-    m_env.releaseObjects();
+    m_conds.release_objects();
+    m_env.release_objects();
 }
 
 

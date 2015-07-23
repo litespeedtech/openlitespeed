@@ -36,7 +36,7 @@ void doStatShmPool(LsShmPool *pPool);
 
 
 LsShmSize_t blks2kbytes(LsShmSize_t blks)
-{   return blks*LSSHM_SHM_UNITSIZE/1024;  }
+{   return blks * LSSHM_SHM_UNITSIZE / 1024;  }
 
 
 void usage()
@@ -85,7 +85,7 @@ int main(int ac, char *av[])
 
     snprintf(buf, sizeof(buf), "%s/%s.%s",
              g_pShmDirName, g_pShmName, LSSHM_SYSSHM_FILE_EXT);
-    if (access(buf, R_OK|W_OK) < 0)
+    if (access(buf, R_OK | W_OK) < 0)
     {
         fprintf(stderr, "Unable to access [%s], %s.\n", buf, strerror(errno));
         return 2;
@@ -93,9 +93,9 @@ int main(int ac, char *av[])
     if ((pShm = LsShm::open(g_pShmName, 0, g_pShmDirName)) == NULL)
     {
         fprintf(stderr, "LsShm::open(%s/%s) FAILED!\n",
-          g_pShmDirName, g_pShmName);
+                g_pShmDirName, g_pShmName);
         fprintf(stderr, "%s\nstat=%d, errno=%d.\n",
-          (char *)LsShm::getErrMsg(), LsShm::getErrStat(), LsShm::getErrNo());
+                (char *)LsShm::getErrMsg(), LsShm::getErrStat(), LsShm::getErrNo());
         LsShm::clrErrMsg();
         return 1;
     }
@@ -125,14 +125,14 @@ available before expanding: %lu\n\
 total allocated:            %lu\n\
 total released:             %lu\n\
 freelist elements (count):  %lu\n",
-        pShm->name(),
-        (unsigned long)(pStat->m_iFileSize / 1024),
-        (unsigned long)(pStat->m_iUsedSize / 1024),
-        (unsigned long)((pStat->m_iFileSize - pStat->m_iUsedSize) / 1024),
-        (unsigned long)blks2kbytes(pStat->m_iAllocated),
-        (unsigned long)blks2kbytes(pStat->m_iReleased),
-        (unsigned long)pStat->m_iFreeListCnt
-    );
+            pShm->name(),
+            (unsigned long)(pStat->m_iFileSize / 1024),
+            (unsigned long)(pStat->m_iUsedSize / 1024),
+            (unsigned long)((pStat->m_iFileSize - pStat->m_iUsedSize) / 1024),
+            (unsigned long)blks2kbytes(pStat->m_iAllocated),
+            (unsigned long)blks2kbytes(pStat->m_iReleased),
+            (unsigned long)pStat->m_iFreeListCnt
+           );
     return;
 }
 
@@ -149,28 +149,28 @@ allocated from freelist (bytes): %lu\n\
 released to freelist (bytes):    %lu\n\
 freelist elements (count):       %lu\n\
 buckets (<256):  allocated         released             free(count)\n",
-        (unsigned long)pStat->m_iShmAllocated,
-        (unsigned long)pStat->m_iShmReleased,
-        (unsigned long)pStat->m_iFlAllocated,
-        (unsigned long)pStat->m_iFlReleased,
-        (unsigned long)pStat->m_iFlCnt
-    );
+            (unsigned long)pStat->m_iShmAllocated,
+            (unsigned long)pStat->m_iShmReleased,
+            (unsigned long)pStat->m_iFlAllocated,
+            (unsigned long)pStat->m_iFlReleased,
+            (unsigned long)pStat->m_iFlCnt
+           );
     LsShmSize_t poolFree = pStat->m_iFlReleased - pStat->m_iFlAllocated
-        + pStat->m_iFreeChunk;
+                           + pStat->m_iFreeChunk;
     LsShmSize_t bcktsz = 0;
     struct LsShmPoolMapStat::bcktstat *p = &pStat->m_bckt[0];
     int i;
     for (i = 0; i < LSSHM_POOL_NUMBUCKET;
-        ++i, ++p, bcktsz += LSSHM_POOL_BCKTINCR)
+         ++i, ++p, bcktsz += LSSHM_POOL_BCKTINCR)
     {
         int num;
         if ((p->m_iBkAllocated == 0) && (p->m_iBkReleased == 0))
             continue;
         fprintf(stdout, "%5d %20lu %16lu",
-                         (unsigned int)bcktsz,
-                         (unsigned long)p->m_iBkAllocated,
-                         (unsigned long)p->m_iBkReleased
-        );
+                (unsigned int)bcktsz,
+                (unsigned long)p->m_iBkAllocated,
+                (unsigned long)p->m_iBkReleased
+               );
         if ((num = (p->m_iBkReleased - p->m_iBkAllocated)) > 0)
         {
             fprintf(stdout, " %16u\n", num);
@@ -183,10 +183,10 @@ buckets (<256):  allocated         released             free(count)\n",
 current direct shm pool used (kbytes): %lu\n\
 current total pool used (bytes): %lu\n\
 current total pool free (bytes): %lu\n",
-        (unsigned long)(pStat->m_iShmAllocated - pStat->m_iShmReleased),
-        (unsigned long)pStat->m_iPoolInUse,
-        (unsigned long)poolFree
-    );
+            (unsigned long)(pStat->m_iShmAllocated - pStat->m_iShmReleased),
+            (unsigned long)pStat->m_iPoolInUse,
+            (unsigned long)poolFree
+           );
     return;
 }
 

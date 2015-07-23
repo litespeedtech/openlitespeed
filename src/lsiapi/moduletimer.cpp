@@ -92,7 +92,7 @@ int ModTimerList::addTimer(unsigned int msTimeout, int repeat,
     pTimer->m_key.usec = DateTime::s_curTimeUs + 1000 * (msTimeout % 1000);
     pTimer->m_timerCb = timerCb;
     pTimer->m_pTimerCbParam = timerCbParam;
-    if ( repeat )
+    if (repeat)
         pTimer->m_repeat = msTimeout;
     else
         pTimer->m_repeat = 0;
@@ -139,11 +139,9 @@ int ModTimerList::checkExpired()
     {
         pTimer = (ModTimer *)iter->getValue();
         if ((pTimer->m_key.sec > DateTime::s_curTime)
-          || ((pTimer->m_key.sec == DateTime::s_curTime)
-             && (pTimer->m_key.usec > DateTime::s_curTimeUs)))
-        {
+            || ((pTimer->m_key.sec == DateTime::s_curTime)
+                && (pTimer->m_key.usec > DateTime::s_curTimeUs)))
             return count;
-        }
         if (pTimer->m_repeat)
         {
             if (m_timerMap.detachNode(iter) != pTimer)
@@ -151,7 +149,7 @@ int ModTimerList::checkExpired()
             pTimer->m_timerCb(pTimer->m_pTimerCbParam);
             pTimer->m_key.sec = DateTime::s_curTime + pTimer->m_repeat / 1000;
             pTimer->m_key.usec = DateTime::s_curTimeUs + 1000
-                                    * (pTimer->m_repeat % 1000);
+                                 * (pTimer->m_repeat % 1000);
             if (m_timerMap.attachNode(&pTimer->m_key, pTimer) != LS_OK)
                 return LS_FAIL;
         }

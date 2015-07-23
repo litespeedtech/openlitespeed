@@ -86,7 +86,6 @@ SET(http_STAT_SRCS
    httpaiosendfile.cpp
    serverprocessconfig.cpp
    httpstats.cpp
-   usereventnotifier.cpp
    reqparser.cpp
 )
 

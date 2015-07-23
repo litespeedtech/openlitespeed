@@ -114,7 +114,7 @@ public:
         : IP6Hash(initSize, IP6Acc::hf, IP6Acc::cmp)
     {}
 
-    ~IP6AccessControl() { releaseObjects();  };
+    ~IP6AccessControl() { release_objects();  };
 
     int addUpdate(const in6_addr &ip, long allow);
 
@@ -127,7 +127,7 @@ public:
             IP6Hash::erase(iter);
         }
     }
-    void clear()    {   releaseObjects(); IP6Hash::clear();  }
+    void clear()    {   release_objects(); IP6Hash::clear();  }
     size_t size() const {   return IP6Hash::size();   }
 
 

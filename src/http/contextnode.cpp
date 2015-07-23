@@ -41,7 +41,7 @@ ContextNode::~ContextNode()
         delete m_pContext;
     if (m_pLabel)
         Pool::deallocate2(m_pLabel);
-    releaseObjects();
+    release_objects();
 }
 
 void ContextNode::setLabel(const char *l)

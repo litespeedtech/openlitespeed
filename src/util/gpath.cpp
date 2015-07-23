@@ -81,7 +81,7 @@ public:
     }
 
     void clear()
-    {   releaseObjects();  }
+    {   release_objects();  }
 
 
     LS_NO_COPY_ASSIGN(ReadLinkCache);

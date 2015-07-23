@@ -46,7 +46,7 @@ public:
     const char *getSubjectName();
     const char *getIssuer();
     static int PEMWriteCert(X509 *pCert, char *pBuf, int len);
-    
+
     LS_NO_COPY_ASSIGN(SSLCert);
 };
 

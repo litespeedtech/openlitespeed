@@ -19,8 +19,8 @@
 
 ConnPool::~ConnPool()
 {
-    m_connList.releaseObjects();
-    m_badList.releaseObjects();
+    m_connList.release_objects();
+    m_badList.release_objects();
 }
 
 int ConnPool::setMaxConns(int max)

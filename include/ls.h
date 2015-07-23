@@ -19,6 +19,7 @@
 #define LS_MODULE_H
 
 #include <lsr/ls_types.h>
+#include <lsr/ls_evtcb.h>
 
 #include <stdio.h>
 #include <sys/stat.h>
@@ -1168,10 +1169,11 @@ typedef struct lsi_gdata_cont_s lsi_gdata_container_t;
 typedef struct lsi_shm_htable_s lsi_shm_htable_t;
 typedef struct ls_shmpool_s  lsi_shmpool_t;
 typedef struct ls_shmhash_s  lsi_shmhash_t;
-typedef struct lsi_session_s  lsi_session_t;
+typedef struct evtcbhead_s  lsi_session_t;
 typedef struct lsi_serverhook_s lsi_serverhook_t;
 typedef struct lsi_handler_s  lsi_handler_t;
 typedef struct lsi_config_s lsi_config_t;
+
 typedef uint32_t lsi_shm_off_t;
 typedef uint32_t lsi_hash_key_t;
 
@@ -1229,12 +1231,8 @@ typedef int (*lsi_hash_value_comp_pf)(const void *pVal1, const void *pVal2,
                                       int len);
 
 
-/**
- * @typedef lsi_event_callback_pf
- * @brief The event notifier callback function will be called when event is triggered.
- * @since 1.0
- */
-typedef int (* lsi_event_callback_pf)(const long lParam, void *pParam);
+
+
 
 /**************************************************************************************************
  *                                       API Structures
@@ -1434,8 +1432,8 @@ struct lsi_serverhook_s
 
 
 #define LSI_MODULE_RESERVED_SIZE    ((3 * sizeof(void *)) \
-                                  + ((LSI_HKPT_TOTAL_COUNT + 1) * sizeof(int32_t)) \
-                                  + (LSI_MODULE_DATA_COUNT * sizeof(int16_t)))
+                                     + ((LSI_HKPT_TOTAL_COUNT + 1) * sizeof(int32_t)) \
+                                     + (LSI_MODULE_DATA_COUNT * sizeof(int16_t)))
 
 
 
@@ -2003,11 +2001,13 @@ struct lsi_api_s
     int (*remove_timer)(int time_id);
 
 
-    void *(*create_event)(lsi_event_callback_pf cb, long lParam, void *pParam);
-    void *(*create_session_resume_event)(lsi_session_t *session, lsi_module_t *pModule);
-    
-    int (*notify_event)(void *event_notifier_pointer);
-    void (*remove_event)(void *event_notifier_pointer);
+    /***
+     * Reurn 0 if error, otherwise return non-zero
+     */
+    long (*create_event)(evtcb_pf cb, lsi_session_t *pSession,
+                         long lParam, void *pParam);
+    long (*create_session_resume_event)(lsi_session_t *session,
+                                        lsi_module_t *pModule);
 
 
     /**
@@ -2245,9 +2245,9 @@ struct lsi_api_s
      * @return
      */
     int (*set_req_wait_full_body)(lsi_session_t *pSession);
-    
-    
-    
+
+
+
     int (*set_parse_req_body)(lsi_session_t *pSession);
 
     /**
@@ -2272,18 +2272,19 @@ struct lsi_api_s
      * return 0 for no body
      *    1 for one part
      *    else for multipart
-     * 
+     *
      */
     int (*get_req_body_part_count)(lsi_session_t *session);
-    
-    int (*get_req_body_part)(lsi_session_t *session, int index, char **name, int* nameLen, char **val, int* valLen, char** filePath);
-    
+
+    int (*get_req_body_part)(lsi_session_t *session, int index, char **name,
+                             int *nameLen, char **val, int *valLen, char **filePath);
+
     int (*is_req_body_part_file)(lsi_session_t *session, int index);
-    
-                              
-    
-    
-    
+
+
+
+
+
     /**
      * @brief set_status_code is used to set the response status code of an HTTP session.
      * It can be used in hook point and handler processing functions,

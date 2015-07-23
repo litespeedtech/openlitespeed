@@ -16,7 +16,8 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "serverinfo.h"
-#include <http/httplog.h>
+
+#include <log4cxx/logger.h>
 
 #include <lsr/ls_time.h>
 #include <lsr/ls_fileio.h>
@@ -139,8 +140,7 @@ int ServerInfo::cleanPidList(int toStopOnly)
     {
         kill(*p1, SIGTERM);
         kill(*p1, SIGUSR1);
-        if (D_ENABLED(DL_LESS))
-            LOG_D(("[AutoRestater] Clean up child process with pid: %d", *p1));
+        LS_DBG_L("[AutoRestater] Clean up child process with pid: %d", *p1);
     }
     ls_sleep(100);
     p1 = pids;

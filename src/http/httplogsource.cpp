@@ -20,6 +20,7 @@
 #include <http/httplog.h>
 #include <http/stderrlogger.h>
 #include <log4cxx/appender.h>
+#include <log4cxx/logger.h>
 //#include <log4cxx/appendermanager.h>
 //#include <log4cxx/level.h>
 #include <main/configctx.h>
@@ -68,7 +69,7 @@ int HttpLogSource::initAccessLog(const XmlNode *pRoot,
         {
             if (initAccessLog(pNode1, &rollingSize) != 0)
             {
-                currentCtx.logError("failed to set up access log!");
+                LS_ERROR(&currentCtx, "failed to set up access log!");
                 return LS_FAIL;
             }
         }
@@ -87,7 +88,7 @@ int HttpLogSource::initAccessLog(const XmlNode *pRoot,
 
             if (GPath::isWritable(buf) == false)
             {
-                currentCtx.logError("log file is not writable - %s", buf);
+                LS_ERROR(&currentCtx, "log file is not writable - %s", buf);
                 return LS_FAIL;
             }
 
@@ -137,8 +138,9 @@ int HttpLogSource::initAccessLog(const XmlNode *pNode,
 
         if (pFmt)
             if (pLog->setCustomLog(pFmt) == -1)
-                ConfigCtx::getCurConfigCtx()->logError("failed to setup custom log format [%s]",
-                                                       pFmt);
+                LS_ERROR(ConfigCtx::getCurConfigCtx(),
+                         "failed to setup custom log format [%s]",
+                         pFmt);
 
         pValue = pNode->getChildValue("logReferer");
 
@@ -256,7 +258,7 @@ int HttpLogSource::initErrorLog(const XmlNode *pRoot,
         {
             if (initErrorLog2(pNode1, setDebugLevel) != 0)
             {
-                currentCtx.logError("failed to set up error log!");
+                LS_ERROR(&currentCtx, "failed to set up error log!");
                 return LS_FAIL;
             }
         }

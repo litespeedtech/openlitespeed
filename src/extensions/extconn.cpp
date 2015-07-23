@@ -21,8 +21,8 @@
 
 #include <edio/multiplexer.h>
 #include <edio/multiplexerfactory.h>
-#include <http/httplog.h>
 #include <http/httpstatuscode.h>
+#include <log4cxx/logger.h>
 #include <socket/coresocket.h>
 #include <socket/gsockaddr.h>
 #include <util/datetime.h>
@@ -77,8 +77,8 @@ int ExtConn::assignReq(ExtRequest *pReq)
     assert(!m_iInProcess);
 //    if ( m_iInProcess )
 //    {
-//        LOG_WARN(( "[%s] [ExtConn] connection is still in middle of a request, close before "
-//                   "assign a new request" ));
+//        LS_WARN(this, "[ExtConn] connection is still in middle of a request,"
+//                " close before assign a new request");
 //        close();
 //    }
     m_iCPState = 0;
@@ -108,8 +108,7 @@ int ExtConn::assignReq(ExtRequest *pReq)
 
 int ExtConn::close()
 {
-    if (D_ENABLED(DL_LESS))
-        LOG_D((getLogger(), "[%s] [ExtConn] close()", getLogId()));
+    LS_DBG_L(this, "[ExtConn] close()");
     EdStream::close();
     m_iState = DISCONNECTED;
     m_iInProcess = 0;
@@ -119,8 +118,7 @@ int ExtConn::close()
 
 int ExtConn::reconnect()
 {
-    if (D_ENABLED(DL_LESS))
-        LOG_D((getLogger(), "[%s] [ExtConn] reconnect()", getLogId()));
+    LS_DBG_L(this, "[ExtConn] reconnect()");
     if (m_iState != DISCONNECTED)
         close();
     if (m_pWorker)
@@ -151,9 +149,7 @@ int ExtConn::connectEx(Multiplexer *pMplx)
                                   &fd, 1);
     if (fd != -1)
     {
-        if (D_ENABLED(DL_LESS))
-            LOG_D((getLogger(), "[%s] [ExtConn] connecting to [%s]...",
-                   getLogId(), m_pWorker->getURL()));
+        LS_DBG_L(this, "[ExtConn] connecting to [%s]...", m_pWorker->getURL());
         m_tmLastAccess = DateTime::s_curTime;
         ::fcntl(fd, F_SETFD, FD_CLOEXEC);
         init(fd, pMplx);
@@ -181,7 +177,7 @@ int ExtConn::onInitConnected()
         return LS_FAIL;
     }
     m_iState = PROCESSING;
-    if (D_ENABLED(DL_LESS))
+    if (getLogger()->isEnabled(LOG4CXX_NS::Level::DBG_LESS))
     {
         char        achSockAddr[128];
         char        achAddr[128]    = "";
@@ -194,9 +190,8 @@ int ExtConn::onInitConnected()
             port = GSockAddr::getPort((struct sockaddr *)achSockAddr);
         }
 
-        LOG_D((getLogger(), "[%s] connected to [%s] on local addres [%s:%d]!",
-               getLogId(),
-               m_pWorker->getURL(), achAddr, port));
+        LS_DBG_L(this, "Connected to [%s] on local address [%s:%d]!",
+                 m_pWorker->getURL(), achAddr, port);
     }
     return 0;
 }
@@ -204,8 +199,7 @@ int ExtConn::onInitConnected()
 
 int ExtConn::onRead()
 {
-    if (D_ENABLED(DL_LESS))
-        LOG_D((getLogger(), "[%s] ExtConn::onRead()", getLogId()));
+    LS_DBG_L(this, "ExtConn::onRead()");
     m_tmLastAccess = DateTime::s_curTime;
     int ret;
     switch (m_iState)
@@ -232,9 +226,7 @@ int ExtConn::onRead()
 
 int ExtConn::onWrite()
 {
-    if (D_ENABLED(DL_LESS))
-        LOG_D((getLogger(), "[%s] ExtConn::onWrite()",
-               getLogId()));
+    LS_DBG_L(this, "ExtConn::onWrite()");
     m_tmLastAccess = DateTime::s_curTime;
     int ret;
     switch (m_iState)
@@ -269,8 +261,7 @@ int ExtConn::onError()
         if (ret != -1)
             errno = error;
     }
-    if (D_ENABLED(DL_LESS))
-        LOG_D((getLogger(), "[%s] ExtConn::onError()", getLogId()));
+    LS_DBG_L(this, "ExtConn::onError()");
     if (error != 0)
     {
         m_iState = CLOSING;
@@ -294,8 +285,7 @@ void ExtConn::onSecTimer()
     {
         if (secs >= 2)
         {
-            LOG_NOTICE((getLogger(), "[%s] ExtConn timed out while connecting.",
-                        getLogId()));
+            LS_NOTICE(this, "ExtConn timed out while connecting.");
             connError(ETIMEDOUT);
         }
     }
@@ -308,25 +298,21 @@ void ExtConn::onSecTimer()
         {
             if (secs >= m_pWorker->getTimeout())
             {
-                LOG_NOTICE((getLogger(), "[%s] ExtConn timed out while processing.",
-                            getLogId()));
+                LS_NOTICE(this, "ExtConn timed out while processing.");
                 connError(ETIMEDOUT);
             }
             else if ((secs == 10) && (getReq()->isRecoverable()))
             {
-                /*                if ( D_ENABLED( DL_LESS ) )
-                                    LOG_D(( getLogger(), "[%s] No response in 10 seconds, possible dead lock, "
-                                            "try starting a new instance.", getLogId() ));
-                                m_pWorker->addNewProcess(); */
+//                 LS_DBG_L(this, "No response in 10 seconds, possible dead "
+//                          "lock, try starting a new instance.");
+                m_pWorker->addNewProcess();
             }
         }
     }
     else if ((m_iState == PROCESSING)
              && (secs > m_pWorker->getConfigPointer()->getKeepAliveTimeout()))
     {
-        if (D_ENABLED(DL_LESS))
-            LOG_D((getLogger(), "[%s] Idle connection timed out, close!",
-                   getLogId()));
+        LS_DBG_L(this, "Idle connection timed out, close!");
         close();
     }
 
@@ -335,11 +321,10 @@ void ExtConn::onSecTimer()
 
 int ExtConn::connError(int errCode)
 {
-    if (D_ENABLED(DL_LESS))
-        LOG_D((getLogger(),
-               "[%s] connection to [%s] on request #%d, comfirmed %d, error: %s!",
-               getLogId(), m_pWorker->getURL(), m_iReqProcessed, (int)m_iCPState,
-               strerror(errCode)));
+    LS_DBG_L(this,
+             "Connection to [%s] on request #%d, confirmed %d, error: %s!",
+             m_pWorker->getURL(), m_iReqProcessed, (int)m_iCPState,
+             strerror(errCode));
     if (errCode == EINTR)
         return 0;
     close();
@@ -388,24 +373,21 @@ int ExtConn::onEventDone()
 #ifndef _NDEBUG
 void ExtConn::continueRead()
 {
-    if (D_ENABLED(DL_LESS))
-        LOG_D((getLogger(), "[%s] ExtConn::continueRead()", getLogId()));
+    LS_DBG_L(this, "ExtConn::continueRead()");
     EdStream::continueRead();
 }
 
 
 void ExtConn::suspendRead()
 {
-    if (D_ENABLED(DL_LESS))
-        LOG_D((getLogger(), "[%s] ExtConn::suspendRead()", getLogId()));
+    LS_DBG_L(this, "ExtConn::suspendRead()");
     EdStream::suspendRead();
 }
 
 
 void ExtConn::continueWrite()
 {
-    if (D_ENABLED(DL_LESS))
-        LOG_D((getLogger(), "[%s] ExtConn::continueWrite()", getLogId()));
+    LS_DBG_L(this, "ExtConn::continueWrite()");
     /*    if ( getRevents() & POLLOUT )
         {
             onWrite();
@@ -417,8 +399,7 @@ void ExtConn::continueWrite()
 
 void ExtConn::suspendWrite()
 {
-    if (D_ENABLED(DL_LESS))
-        LOG_D((getLogger(), "[%s] ExtConn::suspendWrite()", getLogId()));
+    LS_DBG_L(this, "ExtConn::suspendWrite()");
     EdStream::suspendWrite();
 }
 #endif

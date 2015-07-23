@@ -107,16 +107,15 @@ static void addrlookup_callback(struct dns_ctx *ctx, struct dns_rr_ptr *rr,
                 achBuf[--n] = 0;
             }
 
-            LOG_D(("DNS reverse lookup: [%s]: %s",
-                   pInfo->getAddrString(), p));
+            LS_DBG_L("DNS reverse lookup: [%s]: %s",
+                     pInfo->getAddrString(), p);
         }
         free(rr);
     }
     else
     {
-        if (D_ENABLED(DL_MORE))
-            LOG_D(("Failed to lookup [%s]: %s\n", pInfo->getAddrString(),
-                   dns_strerror(dns_status(ctx))));
+        LS_DBG_H("Failed to lookup [%s]: %s\n", pInfo->getAddrString(),
+                 dns_strerror(dns_status(ctx)));
         pInfo->setHostName(NULL);
     }
 }
@@ -235,7 +234,7 @@ int Adns::init()
     int ret = ares_init_options(&s_channel, &opt, mask);
     if (ret != ARES_SUCCESS)
     {
-        LOG_ERR(("ares_init: %s\n", ares_strerror(ret)));
+        LS_ERROR("ares_init: %s\n", ares_strerror(ret)));
         return LS_FAIL;
     }
     return 0;
@@ -269,8 +268,8 @@ static void addrlookup_callback(void *arg, int status,
         break;
     case ARES_ENOMEM:
     case ARES_EDESTRUCTION:
-        LOG_NOTICE(("ADNS: while resolving %s: %s\n", pInfo->getAddrString(),
-                    ares_strerror(status)));
+        LS_NOTICE("ADNS: while resolving %s: %s\n", pInfo->getAddrString(),
+                  ares_strerror(status)));
         break;
     }
 }

@@ -27,10 +27,10 @@
 #include <http/httpcgitool.h>
 #include <http/httpdefs.h>
 #include <http/httpextconnector.h>
-#include <http/httplog.h>
 #include <http/httpreq.h>
 #include <http/httpsession.h>
 #include <http/httpstatuscode.h>
+#include <log4cxx/logger.h>
 #include <util/datetime.h>
 
 #include <fcntl.h>
@@ -90,7 +90,7 @@ int LsapiConn::connect(Multiplexer *pMplx)
     errno = ECONNRESET;
     if (socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == -1)
     {
-        LOG_ERR(("[LsapiConn::connect()] socketpair() failed!"));
+        LS_ERROR("[LsapiConn::connect()] socketpair() failed!");
         return LS_FAIL;
     }
     fcntl(fds[0], F_SETFD, FD_CLOEXEC);
@@ -108,8 +108,7 @@ int LsapiConn::connect(Multiplexer *pMplx)
     }
     else
     {
-        if (D_ENABLED(DL_LESS))
-            LOG_D(("[%s] add child process pid: %d", pWorker->getName(), m_pid));
+        LS_DBG_L("[%s] add child process pid: %d", pWorker->getName(), m_pid);
         PidRegistry::add(m_pid, pWorker, 0);
     }
 
@@ -171,10 +170,8 @@ int LsapiConn::sendReqHeader()
                                &m_iTotalPending);
     if (ret)
     {
-        LOG_INFO((getLogger(),
-                  "[%s] Failed to build LSAPI request header, "
-                  "can't forward request to external LSAPI application ",
-                  getLogId()));
+        LS_INFO(this, "Failed to build LSAPI request header, "
+                "can't forward request to external LSAPI application.");
 //        ((HttpExtConnector *)pReq)->setProcessor( NULL );
 //        setConnector( NULL );
         return LS_FAIL;
@@ -228,9 +225,7 @@ void LsapiConn::abort()
 
 int LsapiConn::sendAbortReq()
 {
-    if (D_ENABLED(DL_LESS))
-        LOG_D((getLogger(), "[%s] [LSAPI] send abort packet!",
-               getLogId()));
+    LS_DBG_L(this, "[LSAPI] send abort packet!");
     lsapi_packet_header rec;
     LsapiReq::buildPacketHeader(&rec, LSAPI_ABORT_REQUEST,
                                 LSAPI_PACKET_HEADER_LEN);
@@ -313,8 +308,7 @@ int  LsapiConn::flush()
 
 int LsapiConn::doRead()
 {
-    if (D_ENABLED(DL_LESS))
-        LOG_D((getLogger(), "[%s] LsapiConn::doRead()\n", getLogId()));
+    LS_DBG_L(this, "LsapiConn::doRead()");
     int ret;
     ret = processResp();
 //    if ( m_respState )
@@ -380,14 +374,13 @@ int LsapiConn::processPacketHeader(char *pBuf, int len)
                         LSAPI_PACKET_HEADER_LEN;
         if (m_iPacketLeft < 0)
         {
-            LOG_WARN(("[%s] LSAPI Packet header is invalid!",
-                      getLogId()));
+            LS_WARN(this, "LSAPI Packet header is invalid!");
             errno = EIO;
             return LS_FAIL;
         }
 //         if ( m_iPacketLeft > LSAPI_MAX_HEADER_LEN )
 //         {
-//             LOG_WARN(( "[%s] LSAPI Packet is too large: %d",
+//             LS_WARN( "[%s] LSAPI Packet is too large: %d",
 //                     getLogId(), m_iPacketLeft ));
 //          errno = EIO;
 //             return LS_FAIL;
@@ -403,8 +396,8 @@ int LsapiConn::processPacketHeader(char *pBuf, int len)
         case LSAPI_RESP_HEADER:
             if (m_respState == LSAPI_CONN_READ_RESP_BODY)
             {
-                LOG_WARN(("[%s] Invalid LSAPI Response Header Packet following STREAM packet",
-                          getLogId()));
+                LS_WARN(this, "Invalid LSAPI Response Header Packet following "
+                        "STREAM packet");
                 errno = EIO;
                 return LS_FAIL;
             }
@@ -520,9 +513,7 @@ int LsapiConn::processRespBuffed()
                     return ret;
                 break;
             case LSAPI_RESP_STREAM:
-                if (D_ENABLED(DL_MEDIUM))
-                    LOG_D((getLogger(), "[%s] process response stream %d bytes",
-                           getLogId(), len));
+                LS_DBG_M(this, "Process response stream %d bytes", len);
                 ret = pHEC->processRespData(m_pRespHeaderProcess, len);
                 if (respState & 0xff)
                     m_respState = LSAPI_CONN_READ_RESP_BODY;
@@ -531,16 +522,13 @@ int LsapiConn::processRespBuffed()
                 m_pRespHeaderProcess += len;
                 break;
             case LSAPI_STDERR_STREAM:
-                if (D_ENABLED(DL_MEDIUM))
-                    LOG_D((getLogger(), "[%s] process STDERR stream %d bytes",
-                           getLogId(), len));
+                LS_DBG_M(this, "Process STDERR stream %d bytes", len);
                 ret = pHEC->processErrData(m_pRespHeaderProcess, len);
                 m_pRespHeaderProcess += len;
                 break;
             default:
-                LOG_NOTICE((getLogger(),
-                            "[%s] Unknown Packet Type %c, LSAPI protcol is broken.",
-                            getLogId(), m_respHeader.m_type));
+                LS_NOTICE(this, "Unknown Packet Type %c, LSAPI protocol is "
+                          "broken.", m_respHeader.m_type);
                 errno = EIO;
                 return LS_FAIL;
             }
@@ -564,9 +552,7 @@ int LsapiConn::processResp()
             ret = read(((char *)&m_respHeader) + sizeof(m_respHeader) -
                        m_iPacketHeaderLeft,
                        m_iPacketHeaderLeft);
-            if (D_ENABLED(DL_MEDIUM))
-                LOG_D((getLogger(), "[%s] process packet header %d bytes",
-                       getLogId(), ret));
+            LS_DBG_M(this, "Process packet header %d bytes", ret);
             if (ret > 0)
             {
                 m_iPacketHeaderLeft -= ret;
@@ -577,16 +563,16 @@ int LsapiConn::processResp()
                     if (m_iPacketLeft < 0)
                     {
                         const char *p = (const char *)&m_respHeader;
-                        LOG_WARN(("[%s] LSAPI Packet header is invalid,"
-                                  "('%c','%c','%c','%c','%c','%c','%c','%c')",
-                                  getLogId(), *p, *(p + 1), *(p + 2), *(p + 3),
-                                  *(p + 4), *(p + 5), *(p + 6), *(p + 7)));
+                        LS_WARN("[%s] LSAPI Packet header is invalid,"
+                                "('%c','%c','%c','%c','%c','%c','%c','%c')",
+                                getLogId(), *p, *(p + 1), *(p + 2), *(p + 3),
+                                *(p + 4), *(p + 5), *(p + 6), *(p + 7));
                         break;
 
                     }
 //                     if ( m_iPacketLeft > LSAPI_MAX_HEADER_LEN )
 //                     {
-//                         LOG_WARN(( "[%s] LSAPI Packet is too large: %d",
+//                         LS_WARN( "[%s] LSAPI Packet is too large: %d",
 //                                 getLogId(), m_iPacketLeft ));
 //                      break;
 //                     }
@@ -645,9 +631,8 @@ int LsapiConn::processResp()
                 break;
             default:
                 //error: protocol error
-                LOG_NOTICE((getLogger(),
-                            "[%s] Unknown Packet Type %c, LSAPI protcol is broken.",
-                            getLogId(), m_respHeader.m_type));
+                LS_NOTICE(this, "Unknown Packet Type %c, LSAPI protocol is "
+                          "broken.", m_respHeader.m_type);
                 errno = EIO;
                 return LS_FAIL;
             }
@@ -751,9 +736,7 @@ int LsapiConn::processRespHeader()
         while (m_iPacketLeft > 0)
         {
             len = ExtConn::read(m_pRespHeader, m_pRespHeaderBufEnd - m_pRespHeader);
-            if (D_ENABLED(DL_MEDIUM))
-                LOG_D((getLogger(), "[%s] process response header %d bytes",
-                       getLogId(), len));
+            LS_DBG_M(this, "Process response header %d bytes", len);
             if (len > 0)
             {
                 m_iPacketLeft -= len;
@@ -761,8 +744,7 @@ int LsapiConn::processRespHeader()
                 switch (ret)
                 {
                 case -2:
-                    LOG_WARN((getLogger(), "[%s] Invalid Http response header, retry!",
-                              getLogId()));
+                    LS_WARN(this, "Invalid Http response header, retry!");
                     //debug code
                     //::write( 1, pBuf, len );
                     errno = ECONNRESET;
@@ -829,10 +811,8 @@ int LsapiConn::readRespBody()
         if (ret > 0)
         {
             int len, packetLen;
-            if (D_ENABLED(DL_MEDIUM))
-                LOG_D((getLogger(),
-                       "[%s] process response stream %d bytes, packet left: %d",
-                       getLogId(), ret, m_iPacketLeft));
+            LS_DBG_M(this, "Process response stream %d bytes, packet left: %d",
+                     ret, m_iPacketLeft);
             if (ret >= m_iPacketLeft)
             {
                 packetLen       = m_iPacketLeft;
@@ -858,10 +838,10 @@ int LsapiConn::readRespBody()
                 m_iPacketHeaderLeft = LSAPI_PACKET_HEADER_LEN;
                 if (ret > packetLen)
                 {
-                    if (D_ENABLED(DL_MEDIUM))
-                        LOG_D((getLogger(), "[%s] process packet header %d bytes",
-                               getLogId(), ret - packetLen));
-                    int len1 = processPacketHeader(pBuf + packetLen, ret - packetLen);
+                    LS_DBG_M(this, "Process packet header %d bytes",
+                             ret - packetLen);
+                    int len1 = processPacketHeader(pBuf + packetLen,
+                                                   ret - packetLen);
                     if (len1 <= 0)
                         return len1;
                     if ((m_respHeader.m_type != LSAPI_RESP_STREAM) ||
@@ -906,9 +886,8 @@ int LsapiConn::readStderrStream()
         if (ret > 0)
         {
             int len, packetLen;
-            if (D_ENABLED(DL_MEDIUM))
-                LOG_D((getLogger(), "[%s] process STDERR stream %d bytes, packet left: %d",
-                       getLogId(), ret, m_iPacketLeft));
+            LS_DBG_M(this, "Process STDERR stream %d bytes, packet left: %d",
+                     ret, m_iPacketLeft);
             if (ret >= m_iPacketLeft)
             {
                 packetLen       = m_iPacketLeft;
@@ -932,7 +911,7 @@ int LsapiConn::readStderrStream()
             {
                 char ch = pBuf[packetLen];
                 pBuf[ packetLen ] = 0;
-                LOG_NOTICE((getLogger(), "[%s] [LSAPI:STDERR]: %s", getLogId(), pBuf));
+                LS_NOTICE(this, "[LSAPI:STDERR]: %s", pBuf);
                 pBuf[ packetLen ] = ch;
             }
 
@@ -941,9 +920,8 @@ int LsapiConn::readStderrStream()
                 m_iPacketHeaderLeft = LSAPI_PACKET_HEADER_LEN;
                 if (ret > packetLen)
                 {
-                    if (D_ENABLED(DL_MEDIUM))
-                        LOG_D((getLogger(), "[%s] process packet header %d bytes",
-                               getLogId(), ret - packetLen));
+                    LS_DBG_M(this, "Process packet header %d bytes",
+                             ret - packetLen);
                     len = processPacketHeader(pBuf + packetLen, ret - packetLen);
                     if (len <= 0)
                         return len;
@@ -964,17 +942,15 @@ int LsapiConn::readStderrStream()
 
 int LsapiConn::doError(int err)
 {
-    if (D_ENABLED(DL_LESS))
-        LOG_D((getLogger(), "[%s] LsapiConn::doError()", getLogId()));
+    LS_DBG_L(this, "LsapiConn::doError()");
     if (getConnector())
     {
         int state = getConnector()->getState();
         if (!(state & (HEC_FWD_RESP_BODY | HEC_ABORT_REQUEST
                        | HEC_ERROR | HEC_COMPLETE)))
         {
-            if (D_ENABLED(DL_LESS))
-                LOG_D((getLogger(), "[%s] Lsapi Peer closed connection, "
-                       "try another connection!", getLogId()));
+            LS_DBG_L(this, "Lsapi Peer closed connection, "
+                     "try another connection!");
             connError(err);
             return 0;
         }
@@ -1035,9 +1011,8 @@ void LsapiConn::onTimer()
     if (m_respState && !getCPState()
         && (DateTime::s_curTime - m_lReqSentTime >= 3))
     {
-        LOG_NOTICE((getLogger(),
-                    "[%s] No request delivery notification has been received from LSAPI application, possible dead lock.",
-                    getLogId()));
+        LS_NOTICE(this, "No request delivery notification has been received "
+                  "from LSAPI application, possible dead lock.");
         if (((LsapiWorker *)getWorker())->getConfig().getSelfManaged())
             getWorker()->addNewProcess();
         else
@@ -1051,14 +1026,14 @@ void LsapiConn::onTimer()
             if (( delta > getWorker()->getTimeout() )&&( m_iRespBodyRecv ))
             {
                 if ( m_pChunkIS )
-                    LOG_INFO(( getLogger(), "[%s] Timeout, partial chunk encoded body received,"
+                    LS_INFO(this, "Timeout, partial chunk encoded body received,"
                         " received: %d, chunk len: %d, remain: %d!",
-                        getLogId(), m_iRespBodyRecv, m_pChunkIS->getChunkLen(),
-                        m_pChunkIS->getChunkRemain() ));
+                        m_iRespBodyRecv, m_pChunkIS->getChunkLen(),
+                        m_pChunkIS->getChunkRemain());
                 else
-                    LOG_INFO((getLogger(), "[%s] Timeout, partial response body received,"
+                    LS_INFO(this, "Timeout, partial response body received,"
                         " body len: %d, received: %d!",
-                        getLogId(), m_iRespBodySize, m_iRespBodyRecv ));
+                        m_iRespBodySize, m_iRespBodyRecv);
                 setState( CLOSING );
                 if ( getConnector() )
                     getConnector()->endResponse( 0, 0 );
@@ -1068,8 +1043,7 @@ void LsapiConn::onTimer()
             {
                 if ((!m_pChunkIS->getChunkLen())&&( getConnector() ))
                 {
-                    LOG_INFO(( getLogger(), "[%s] Missing trailing CRLF in Chunked Encoding!",
-                                getLogId() ));
+                    LS_INFO(this, "Missing trailing CRLF in Chunked Encoding!");
                     setState( CLOSING );
                     getConnector()->endResponse( 0, 0 );
                     return;
@@ -1101,12 +1075,12 @@ int  LsapiConn::readResp(char *pBuf, int size)
 
 void LsapiConn::dump()
 {
-    /*    LOG_INFO(( getLogger(), "[%s] Lsapi connection state: %d, watching event: %d, "
+    /*    LS_INFO(this, "Lsapi connection state: %d, watching event: %d, "
                     "Request header:%d, body:%d, sent:%d, "
                     "Response header: %d, total: %d bytes received in %ld seconds,"
                     "Total processing time: %ld.",
-                    getLogId(), getState(), getEvents(), m_iReqHeaderSize,
-                    m_iReqBodySize, m_iReqTotalSent, m_iRespHeaderRecv, m_iRespRecv,
+                    getState(), getEvents(), m_iReqHeaderSize, m_iReqBodySize,
+                    m_iReqTotalSent, m_iRespHeaderRecv, m_iRespRecv,
                     (m_lReqSentTime)?time(NULL) - m_lReqSentTime : 0,
                     time(NULL) - m_lReqBeginTime ));*/
 }

@@ -52,13 +52,13 @@ LsMcCmdFunc LsShmMemCached::s_LsMcCmdFuncs[] =
     { "gat",        MC_BINCMD_GET,          doCmdGat },
     { "get",        MC_BINCMD_GET,          doCmdGet },
     { "bget",       MC_BINCMD_GET,          doCmdGet },
-    { "gets",       MC_BINCMD_GET|LSMC_WITHCAS,         doCmdGet },
+    { "gets",       MC_BINCMD_GET | LSMC_WITHCAS,         doCmdGet },
     { "add",        MC_BINCMD_ADD,          doCmdUpdate },
     { "set",        MC_BINCMD_SET,          doCmdUpdate },
     { "replace",    MC_BINCMD_REPLACE,      doCmdUpdate },
     { "append",     MC_BINCMD_APPEND,       doCmdUpdate },
     { "prepend",    MC_BINCMD_PREPEND,      doCmdUpdate },
-    { "cas",        MC_BINCMD_REPLACE|LSMC_WITHCAS,     doCmdUpdate },
+    { "cas",        MC_BINCMD_REPLACE | LSMC_WITHCAS,     doCmdUpdate },
     { "incr",       MC_BINCMD_INCREMENT,    doCmdArithmetic },
     { "decr",       MC_BINCMD_DECREMENT,    doCmdArithmetic },
     { "delete",     MC_BINCMD_DELETE,       doCmdDelete },
@@ -73,14 +73,16 @@ LsMcCmdFunc LsShmMemCached::s_LsMcCmdFuncs[] =
 
 const char badCmdLineFmt[] = "CLIENT_ERROR bad command line format";
 
-static int asc2bincmd(int arg, char *pkey, int keylen, char *pval, int vallen,
-    uint32_t flags, uint32_t exptime, uint64_t cas, bool quiet, uint8_t *pout);
+static int asc2bincmd(int arg, char *pkey, int keylen, char *pval,
+                      int vallen,
+                      uint32_t flags, uint32_t exptime, uint64_t cas, bool quiet, uint8_t *pout);
 
 const char tokNoreply[] = "noreply";
 
 static inline bool chkNoreply(char *tokPtr, int tokLen)
 {
-    return ((tokLen == sizeof(tokNoreply)-1) && (strcmp(tokPtr, tokNoreply) == 0));
+    return ((tokLen == sizeof(tokNoreply) - 1)
+            && (strcmp(tokPtr, tokNoreply) == 0));
 }
 
 
@@ -188,7 +190,8 @@ int LsShmMemCached::processCmd(char *pStr)
 LsMcCmdFunc *LsShmMemCached::getCmdFunction(char *pCmd)
 {
     LsMcCmdFunc *p = &s_LsMcCmdFuncs[0];
-    while (p < &s_LsMcCmdFuncs[sizeof(s_LsMcCmdFuncs)/sizeof(s_LsMcCmdFuncs[0])])
+    while (p < &s_LsMcCmdFuncs[sizeof(s_LsMcCmdFuncs) / sizeof(
+                                   s_LsMcCmdFuncs[0])])
     {
         if (strcmp(pCmd, p->cmd) == 0)
             return p;
@@ -250,10 +253,8 @@ void LsShmMemCached::dataItemUpdate(uint8_t *pBuf)
     else
     {
         if ((m_item.x_exptime != 0)
-          && (m_item.x_exptime <= LSMC_MAXDELTATIME))
-        {
+            && (m_item.x_exptime <= LSMC_MAXDELTATIME))
             m_item.x_exptime += iter->getLruLasttime();
-        }
         ::memcpy((void *)pItem, (void *)&m_item, sizeof(m_item));
     }
     if (m_usecas)
@@ -291,9 +292,9 @@ int LsShmMemCached::doCmdGat(LsShmMemCached *pThis,
     if (pConv != NULL)
     {
         return asc2bincmd(MC_BINCMD_GAT,
-            pThis->m_parms.key.pstr, pThis->m_parms.key.length,
-            NULL, 0, (uint32_t)0, (uint32_t)exptime,
-            (uint64_t)0, pThis->m_noreply, pConv);
+                          pThis->m_parms.key.pstr, pThis->m_parms.key.length,
+                          NULL, 0, (uint32_t)0, (uint32_t)exptime,
+                          (uint64_t)0, pThis->m_noreply, pConv);
     }
     return pThis->notImplemented(pThis, NULL, 0, NULL);
 }
@@ -317,9 +318,9 @@ int LsShmMemCached::doCmdGet(LsShmMemCached *pThis,
         if (pConv != NULL)
         {
             return asc2bincmd(MC_BINCMD_GETK,
-                pThis->m_parms.key.pstr, pThis->m_parms.key.length,
-                NULL, 0, (uint32_t)0, (uint32_t)0,
-                (uint64_t)0, pThis->m_noreply, pConv);
+                              pThis->m_parms.key.pstr, pThis->m_parms.key.length,
+                              NULL, 0, (uint32_t)0, (uint32_t)0,
+                              (uint64_t)0, pThis->m_noreply, pConv);
         }
 
         pThis->lock();
@@ -336,22 +337,22 @@ int LsShmMemCached::doCmdGet(LsShmMemCached *pThis,
             {
                 pThis->statGetHit();
                 pThis->sendResult("VALUE %.*s %d %d %llu\r\n%.*s\r\n",
-                  iter->getKeyLen(), iter->getKey(),
-                  pItem->x_flags,
-                  valLen,
-                  (pThis->m_usecas ? pItem->x_data->withcas.cas : (uint64_t)0),
-                  valLen, valPtr
-                );
+                                  iter->getKeyLen(), iter->getKey(),
+                                  pItem->x_flags,
+                                  valLen,
+                                  (pThis->m_usecas ? pItem->x_data->withcas.cas : (uint64_t)0),
+                                  valLen, valPtr
+                                 );
             }
             else
             {
                 pThis->statGetHit();
                 pThis->sendResult("VALUE %.*s %d %d\r\n%.*s\r\n",
-                  iter->getKeyLen(), iter->getKey(),
-                  pItem->x_flags,
-                  valLen,
-                  valLen, valPtr
-                );
+                                  iter->getKeyLen(), iter->getKey(),
+                                  pItem->x_flags,
+                                  valLen,
+                                  valLen, valPtr
+                                 );
             }
         }
         else
@@ -387,7 +388,7 @@ int LsShmMemCached::doCmdUpdate(LsShmMemCached *pThis,
         || (!pThis->myStrtoul(pFlags, &flags))
         || (!pThis->myStrtoul(pExptime, &exptime))
         || (!pThis->myStrtol(pLength, &length))
-    )
+       )
     {
         pThis->respond(badCmdLineFmt);
         return -1;
@@ -403,9 +404,8 @@ int LsShmMemCached::doCmdUpdate(LsShmMemCached *pThis,
             updOpt.m_iFlags |= LSMC_WITHCAS;
     }
     else
-    {
-        pThis->m_parms.value.length = pThis->parmAdjLen(pThis->m_parms.value.length);
-    }
+        pThis->m_parms.value.length = pThis->parmAdjLen(
+                                          pThis->m_parms.value.length);
     if (arg & LSMC_WITHCAS)
     {
         pStr = pThis->advToken(pStr, &pCas, &tokLen);
@@ -417,9 +417,7 @@ int LsShmMemCached::doCmdUpdate(LsShmMemCached *pThis,
         updOpt.m_cas = (uint64_t)cas;
     }
     else
-    {
         updOpt.m_cas = 0;
-    }
     pStr = pThis->advToken(pStr, &tokPtr, &tokLen);     // optional noreply
     pThis->m_noreply = chkNoreply(tokPtr, tokLen);
     if (pThis->m_noreply)
@@ -428,55 +426,55 @@ int LsShmMemCached::doCmdUpdate(LsShmMemCached *pThis,
     if (pConv != NULL)
     {
         return asc2bincmd(arg,
-            pThis->m_parms.key.pstr, pThis->m_parms.key.length,
-            tokPtr, tokLen, (uint32_t)flags, (uint32_t)exptime,
-            (uint64_t)updOpt.m_cas, pThis->m_noreply, pConv);
+                          pThis->m_parms.key.pstr, pThis->m_parms.key.length,
+                          tokPtr, tokLen, (uint32_t)flags, (uint32_t)exptime,
+                          (uint64_t)updOpt.m_cas, pThis->m_noreply, pConv);
     }
 
     pThis->lock();
     pThis->statSetCmd();
     switch (arg)
     {
-        case MC_BINCMD_ADD:
-            pThis->m_iterOff = pThis->m_pHash->insertIterator(&pThis->m_parms,
-                                                              &updOpt);
-            pThis->m_retcode = UPDRET_DONE;
-            break;
-        case MC_BINCMD_SET:
-            pThis->m_iterOff = pThis->m_pHash->setIterator(&pThis->m_parms);
-            pThis->m_retcode = UPDRET_DONE;
-            break;
-        case MC_BINCMD_REPLACE:
-            pThis->m_iterOff = pThis->m_pHash->updateIterator(&pThis->m_parms,
-                                                              &updOpt);
-            pThis->m_retcode = UPDRET_DONE;
-            break;
-        case MC_BINCMD_APPEND:
-            pThis->m_iterOff = pThis->m_pHash->updateIterator(&pThis->m_parms,
-                                                              &updOpt);
-            pThis->m_retcode = UPDRET_APPEND;
-            break;
-        case MC_BINCMD_PREPEND:
-            pThis->m_iterOff = pThis->m_pHash->updateIterator(&pThis->m_parms,
-                                                              &updOpt);
-            pThis->m_retcode = UPDRET_PREPEND;
-            break;
-        case MC_BINCMD_REPLACE|LSMC_WITHCAS:
-            pThis->m_iterOff = pThis->m_pHash->updateIterator(&pThis->m_parms,
-                                                              &updOpt);
-            pThis->m_retcode = updOpt.m_iRetcode;
-            if (pThis->m_retcode == UPDRET_NOTFOUND)
-                pThis->statCasMiss();
-            else if (pThis->m_retcode == UPDRET_CASFAIL)
-                pThis->statCasBad();
-            else
-                pThis->statCasHit();
+    case MC_BINCMD_ADD:
+        pThis->m_iterOff = pThis->m_pHash->insertIterator(&pThis->m_parms,
+                           &updOpt);
+        pThis->m_retcode = UPDRET_DONE;
+        break;
+    case MC_BINCMD_SET:
+        pThis->m_iterOff = pThis->m_pHash->setIterator(&pThis->m_parms);
+        pThis->m_retcode = UPDRET_DONE;
+        break;
+    case MC_BINCMD_REPLACE:
+        pThis->m_iterOff = pThis->m_pHash->updateIterator(&pThis->m_parms,
+                           &updOpt);
+        pThis->m_retcode = UPDRET_DONE;
+        break;
+    case MC_BINCMD_APPEND:
+        pThis->m_iterOff = pThis->m_pHash->updateIterator(&pThis->m_parms,
+                           &updOpt);
+        pThis->m_retcode = UPDRET_APPEND;
+        break;
+    case MC_BINCMD_PREPEND:
+        pThis->m_iterOff = pThis->m_pHash->updateIterator(&pThis->m_parms,
+                           &updOpt);
+        pThis->m_retcode = UPDRET_PREPEND;
+        break;
+    case MC_BINCMD_REPLACE|LSMC_WITHCAS:
+        pThis->m_iterOff = pThis->m_pHash->updateIterator(&pThis->m_parms,
+                           &updOpt);
+        pThis->m_retcode = updOpt.m_iRetcode;
+        if (pThis->m_retcode == UPDRET_NOTFOUND)
+            pThis->statCasMiss();
+        else if (pThis->m_retcode == UPDRET_CASFAIL)
+            pThis->statCasBad();
+        else
+            pThis->statCasHit();
 
-            break;
-        default:
-            pThis->unlock();
-            pThis->respond("SERVER_ERROR unhandled type");
-            return -1;
+        break;
+    default:
+        pThis->unlock();
+        pThis->respond("SERVER_ERROR unhandled type");
+        return -1;
     }
     // unlock after data is updated
     pThis->m_needed = length;
@@ -494,7 +492,7 @@ int LsShmMemCached::doCmdArithmetic(LsShmMemCached *pThis,
     char *pDelta;
     unsigned long long delta;
     LsShmUpdOpt updOpt;
-    char numBuf[ULL_MAXLEN+1];
+    char numBuf[ULL_MAXLEN + 1];
     pStr = pThis->advToken(pStr, &pThis->m_parms.key.pstr,
                            &pThis->m_parms.key.length);
     pStr = pThis->advToken(pStr, &pDelta, &tokLen);
@@ -525,14 +523,14 @@ int LsShmMemCached::doCmdArithmetic(LsShmMemCached *pThis,
         uint32_t initval = 1000;    // testing
         uint32_t exptime = 0;       // testing
         return asc2bincmd(arg,
-            pThis->m_parms.key.pstr, pThis->m_parms.key.length,
-            NULL, 0, (uint32_t)initval, (uint32_t)exptime,
-            (uint64_t)delta, pThis->m_noreply, pConv);
+                          pThis->m_parms.key.pstr, pThis->m_parms.key.length,
+                          NULL, 0, (uint32_t)initval, (uint32_t)exptime,
+                          (uint64_t)delta, pThis->m_noreply, pConv);
     }
 
     pThis->lock();
     if ((pThis->m_iterOff =
-        pThis->m_pHash->updateIterator(&pThis->m_parms, &updOpt)) != 0)
+             pThis->m_pHash->updateIterator(&pThis->m_parms, &updOpt)) != 0)
     {
         if (arg == MC_BINCMD_INCREMENT)
             pThis->statIncrHit();
@@ -556,7 +554,7 @@ int LsShmMemCached::doCmdArithmetic(LsShmMemCached *pThis,
         pThis->unlock();
         if (updOpt.m_iRetcode == UPDRET_NONNUMERIC)
             pThis->respond(
-              "CLIENT_ERROR cannot increment or decrement non-numeric value");
+                "CLIENT_ERROR cannot increment or decrement non-numeric value");
         else
             pThis->respond("SERVER_ERROR unable to update");
     }
@@ -590,16 +588,16 @@ int LsShmMemCached::doCmdDelete(LsShmMemCached *pThis,
     if (pConv != NULL)
     {
         return asc2bincmd(arg,
-            pThis->m_parms.key.pstr, pThis->m_parms.key.length,
-            NULL, 0, (uint32_t)0, (uint32_t)0,
-            (uint64_t)0, pThis->m_noreply, pConv);
+                          pThis->m_parms.key.pstr, pThis->m_parms.key.length,
+                          NULL, 0, (uint32_t)0, (uint32_t)0,
+                          (uint64_t)0, pThis->m_noreply, pConv);
     }
 
     pThis->lock();
     if ((iterOff = pThis->m_pHash->findIterator(&pThis->m_parms)) != 0)
     {
         expired = pThis->isExpired(
-            (LsMcDataItem *)pThis->m_pHash->offset2iteratorData(iterOff));
+                      (LsMcDataItem *)pThis->m_pHash->offset2iteratorData(iterOff));
         pThis->m_pHash->eraseIterator(iterOff);
     }
     if ((iterOff != 0) && !expired)
@@ -609,7 +607,7 @@ int LsShmMemCached::doCmdDelete(LsShmMemCached *pThis,
         pThis->respond("DELETED");
     }
     else
-    { 
+    {
         pThis->statDeleteMiss();
         pThis->unlock();
         pThis->respond("NOT_FOUND");
@@ -646,9 +644,9 @@ int LsShmMemCached::doCmdTouch(LsShmMemCached *pThis,
     if (pConv != NULL)
     {
         return asc2bincmd(arg,
-            pThis->m_parms.key.pstr, pThis->m_parms.key.length,
-            NULL, 0, (uint32_t)0, (uint32_t)exptime,
-            (uint64_t)0, pThis->m_noreply, pConv);
+                          pThis->m_parms.key.pstr, pThis->m_parms.key.length,
+                          NULL, 0, (uint32_t)0, (uint32_t)exptime,
+                          (uint64_t)0, pThis->m_noreply, pConv);
     }
 
     pThis->lock();
@@ -674,14 +672,14 @@ int LsShmMemCached::doCmdTouch(LsShmMemCached *pThis,
 
 
 int LsShmMemCached::doCmdStats(LsShmMemCached *pThis,
-                                 char *pStr, int arg, uint8_t *pConv)
+                               char *pStr, int arg, uint8_t *pConv)
 {
     if (pConv != NULL)
     {
         return asc2bincmd(arg,
-            NULL, 0,
-            NULL, 0, (uint32_t)0, (uint32_t)0,
-            (uint64_t)0, pThis->m_noreply, pConv);
+                          NULL, 0,
+                          NULL, 0, (uint32_t)0, (uint32_t)0,
+                          (uint64_t)0, pThis->m_noreply, pConv);
     }
     if (pThis->m_iHdrOff == 0)
         return -1;
@@ -735,9 +733,9 @@ int LsShmMemCached::doCmdVersion(LsShmMemCached *pThis,
     if (pConv != NULL)
     {
         return asc2bincmd(arg,
-            NULL, 0,
-            NULL, 0, (uint32_t)0, (uint32_t)0,
-            (uint64_t)0, pThis->m_noreply, pConv);
+                          NULL, 0,
+                          NULL, 0, (uint32_t)0, (uint32_t)0,
+                          (uint64_t)0, pThis->m_noreply, pConv);
     }
     pThis->respond("VERSION " VERSION);
     return 0;
@@ -750,9 +748,9 @@ int LsShmMemCached::doCmdQuit(LsShmMemCached *pThis,
     if (pConv != NULL)
     {
         return asc2bincmd(arg,
-            NULL, 0,
-            NULL, 0, (uint32_t)0, (uint32_t)0,
-            (uint64_t)0, pThis->m_noreply, pConv);
+                          NULL, 0,
+                          NULL, 0, (uint32_t)0, (uint32_t)0,
+                          (uint64_t)0, pThis->m_noreply, pConv);
     }
     pThis->respond("bye!");
     return 0;
@@ -783,9 +781,9 @@ int LsShmMemCached::doCmdVerbosity(LsShmMemCached *pThis,
     if (pConv != NULL)
     {
         return asc2bincmd(arg,
-            NULL, 0,
-            NULL, 0, (uint32_t)verbose, (uint32_t)0,
-            (uint64_t)0, pThis->m_noreply, pConv);
+                          NULL, 0,
+                          NULL, 0, (uint32_t)verbose, (uint32_t)0,
+                          (uint64_t)0, pThis->m_noreply, pConv);
     }
 
     pThis->setVerbose((uint8_t)verbose);
@@ -825,79 +823,79 @@ int LsShmMemCached::processBinCmd(uint8_t *pBinBuf)
 
     switch (pHdr->opcode)
     {
-        case MC_BINCMD_TOUCH:
-        case MC_BINCMD_GAT:
-        case MC_BINCMD_GATK:
-            doTouch = true;
-            // no break
-        case MC_BINCMD_GET:
-        case MC_BINCMD_GETK:
-            doBinGet(pHdr, doTouch);
-            break;
-        case MC_BINCMD_SET:
-            lock();
-            statSetCmd();
-            m_iterOff = m_pHash->setIterator(&m_parms);
-            doBinDataUpdate(pVal, pHdr);
-            break;
-        case MC_BINCMD_ADD:
-            lock();
-            statSetCmd();
-            m_iterOff = m_pHash->insertIterator(&m_parms, &updOpt);
-            doBinDataUpdate(pVal, pHdr);
-            break;
-        case MC_BINCMD_REPLACE:
-            lock();
-            statSetCmd();
-            m_iterOff = m_pHash->updateIterator(&m_parms, &updOpt);
-            if (pHdr->cas != 0)
-            {
-                m_retcode = updOpt.m_iRetcode;
-                if (m_retcode == UPDRET_NOTFOUND)
-                    statCasMiss();
-                else if (m_retcode == UPDRET_CASFAIL)
-                    statCasBad();
-                else
-                    statCasHit();
-            }
-            doBinDataUpdate(pVal, pHdr);
-            break;
-        case MC_BINCMD_DELETE:
-            doBinDelete(pHdr);
-            break;
-        case MC_BINCMD_INCREMENT:
-        case MC_BINCMD_DECREMENT:
-            doBinArithmetic(pHdr, &updOpt);
-            break;
-        case MC_BINCMD_APPEND:
-        case MC_BINCMD_PREPEND:
-            lock();
-            statSetCmd();
-            m_iterOff = m_pHash->updateIterator(&m_parms, &updOpt);
-            // memcached compatibility
-            m_retcode = ((updOpt.m_iRetcode == UPDRET_NOTFOUND) ?
-                UPDRET_DONE: updOpt.m_iRetcode);
-            doBinDataUpdate(pVal, pHdr);
-            break;
-        case MC_BINCMD_VERBOSITY:
+    case MC_BINCMD_TOUCH:
+    case MC_BINCMD_GAT:
+    case MC_BINCMD_GATK:
+        doTouch = true;
+    // no break
+    case MC_BINCMD_GET:
+    case MC_BINCMD_GETK:
+        doBinGet(pHdr, doTouch);
+        break;
+    case MC_BINCMD_SET:
+        lock();
+        statSetCmd();
+        m_iterOff = m_pHash->setIterator(&m_parms);
+        doBinDataUpdate(pVal, pHdr);
+        break;
+    case MC_BINCMD_ADD:
+        lock();
+        statSetCmd();
+        m_iterOff = m_pHash->insertIterator(&m_parms, &updOpt);
+        doBinDataUpdate(pVal, pHdr);
+        break;
+    case MC_BINCMD_REPLACE:
+        lock();
+        statSetCmd();
+        m_iterOff = m_pHash->updateIterator(&m_parms, &updOpt);
+        if (pHdr->cas != 0)
+        {
+            m_retcode = updOpt.m_iRetcode;
+            if (m_retcode == UPDRET_NOTFOUND)
+                statCasMiss();
+            else if (m_retcode == UPDRET_CASFAIL)
+                statCasBad();
+            else
+                statCasHit();
+        }
+        doBinDataUpdate(pVal, pHdr);
+        break;
+    case MC_BINCMD_DELETE:
+        doBinDelete(pHdr);
+        break;
+    case MC_BINCMD_INCREMENT:
+    case MC_BINCMD_DECREMENT:
+        doBinArithmetic(pHdr, &updOpt);
+        break;
+    case MC_BINCMD_APPEND:
+    case MC_BINCMD_PREPEND:
+        lock();
+        statSetCmd();
+        m_iterOff = m_pHash->updateIterator(&m_parms, &updOpt);
+        // memcached compatibility
+        m_retcode = ((updOpt.m_iRetcode == UPDRET_NOTFOUND) ?
+                     UPDRET_DONE : updOpt.m_iRetcode);
+        doBinDataUpdate(pVal, pHdr);
+        break;
+    case MC_BINCMD_VERBOSITY:
         {
             McBinReqExtra *pReqX = (McBinReqExtra *)(pHdr + 1);
             setVerbose((uint8_t)ntohl(pReqX->verbosity.level));
         }
-            binOkRespond(pHdr);
-            break;
-        case MC_BINCMD_VERSION:
-            doBinVersion(pHdr);
-            break;
-        case MC_BINCMD_QUIT:
-            respond("bye!");
-            break;
-        case MC_BINCMD_FLUSH:
-        case MC_BINCMD_NOOP:
-        case MC_BINCMD_STAT:
-        default:
-            notImplemented(this, NULL, 0, NULL);
-            break;
+        binOkRespond(pHdr);
+        break;
+    case MC_BINCMD_VERSION:
+        doBinVersion(pHdr);
+        break;
+    case MC_BINCMD_QUIT:
+        respond("bye!");
+        break;
+    case MC_BINCMD_FLUSH:
+    case MC_BINCMD_NOOP:
+    case MC_BINCMD_STAT:
+    default:
+        notImplemented(this, NULL, 0, NULL);
+        break;
     }
 
     return 0;
@@ -909,51 +907,51 @@ uint8_t LsShmMemCached::setupNoreplyCmd(uint8_t cmd)
     m_noreply = true;
     switch (cmd)
     {
-        case MC_BINCMD_SETQ:
-            cmd = MC_BINCMD_SET;
-            break;
-        case MC_BINCMD_ADDQ:
-            cmd = MC_BINCMD_ADD;
-            break;
-        case MC_BINCMD_REPLACEQ:
-            cmd = MC_BINCMD_REPLACE;
-            break;
-        case MC_BINCMD_DELETEQ:
-            cmd = MC_BINCMD_DELETE;
-            break;
-        case MC_BINCMD_INCREMENTQ:
-            cmd = MC_BINCMD_INCREMENT;
-            break;
-        case MC_BINCMD_DECREMENTQ:
-            cmd = MC_BINCMD_DECREMENT;
-            break;
-        case MC_BINCMD_QUITQ:
-            cmd = MC_BINCMD_QUIT;
-            break;
-        case MC_BINCMD_FLUSHQ:
-            cmd = MC_BINCMD_FLUSH;
-            break;
-        case MC_BINCMD_APPENDQ:
-            cmd = MC_BINCMD_APPEND;
-            break;
-        case MC_BINCMD_PREPENDQ:
-            cmd = MC_BINCMD_PREPEND;
-            break;
-        case MC_BINCMD_GETQ:
-            cmd = MC_BINCMD_GET;
-            break;
-        case MC_BINCMD_GETKQ:
-            cmd = MC_BINCMD_GETK;
-            break;
-        case MC_BINCMD_GATQ:
-            cmd = MC_BINCMD_GAT;
-            break;
-        case MC_BINCMD_GATKQ:
-            cmd = MC_BINCMD_GATK;
-            break;
-        default:
-            m_noreply = false;
-            break;
+    case MC_BINCMD_SETQ:
+        cmd = MC_BINCMD_SET;
+        break;
+    case MC_BINCMD_ADDQ:
+        cmd = MC_BINCMD_ADD;
+        break;
+    case MC_BINCMD_REPLACEQ:
+        cmd = MC_BINCMD_REPLACE;
+        break;
+    case MC_BINCMD_DELETEQ:
+        cmd = MC_BINCMD_DELETE;
+        break;
+    case MC_BINCMD_INCREMENTQ:
+        cmd = MC_BINCMD_INCREMENT;
+        break;
+    case MC_BINCMD_DECREMENTQ:
+        cmd = MC_BINCMD_DECREMENT;
+        break;
+    case MC_BINCMD_QUITQ:
+        cmd = MC_BINCMD_QUIT;
+        break;
+    case MC_BINCMD_FLUSHQ:
+        cmd = MC_BINCMD_FLUSH;
+        break;
+    case MC_BINCMD_APPENDQ:
+        cmd = MC_BINCMD_APPEND;
+        break;
+    case MC_BINCMD_PREPENDQ:
+        cmd = MC_BINCMD_PREPEND;
+        break;
+    case MC_BINCMD_GETQ:
+        cmd = MC_BINCMD_GET;
+        break;
+    case MC_BINCMD_GETKQ:
+        cmd = MC_BINCMD_GETK;
+        break;
+    case MC_BINCMD_GATQ:
+        cmd = MC_BINCMD_GAT;
+        break;
+    case MC_BINCMD_GATKQ:
+        cmd = MC_BINCMD_GATK;
+        break;
+    default:
+        m_noreply = false;
+        break;
     }
     return cmd;
 }
@@ -983,63 +981,63 @@ uint8_t *LsShmMemCached::setupBinCmd(McBinCmdHdr *pHdr, LsShmUpdOpt *pOpt)
 
         switch (pHdr->opcode)
         {
-            case MC_BINCMD_REPLACE:
-                pOpt->m_iFlags = pHdr->opcode;
-                pOpt->m_cas = pHdr->cas;
-                // no break
-            case MC_BINCMD_ADD:
-            case MC_BINCMD_SET:
-                if (pHdr->extralen != sizeof(pReqX->value))
-                    return NULL;
-                m_item.x_flags = (uint32_t)ntohl(pReqX->value.flags);
-                m_item.x_exptime = (time_t)ntohl(pReqX->value.exptime);
-                m_parms.value.length = parmAdjLen(m_parms.value.length);
-                break;
+        case MC_BINCMD_REPLACE:
+            pOpt->m_iFlags = pHdr->opcode;
+            pOpt->m_cas = pHdr->cas;
+        // no break
+        case MC_BINCMD_ADD:
+        case MC_BINCMD_SET:
+            if (pHdr->extralen != sizeof(pReqX->value))
+                return NULL;
+            m_item.x_flags = (uint32_t)ntohl(pReqX->value.flags);
+            m_item.x_exptime = (time_t)ntohl(pReqX->value.exptime);
+            m_parms.value.length = parmAdjLen(m_parms.value.length);
+            break;
 
-            case MC_BINCMD_TOUCH:
-            case MC_BINCMD_GAT:
-            case MC_BINCMD_GATK:
-                if (pHdr->extralen != sizeof(pReqX->touch))
-                    return NULL;
-                m_item.x_exptime = (time_t)ntohl(pReqX->touch.exptime);
-                break;
+        case MC_BINCMD_TOUCH:
+        case MC_BINCMD_GAT:
+        case MC_BINCMD_GATK:
+            if (pHdr->extralen != sizeof(pReqX->touch))
+                return NULL;
+            m_item.x_exptime = (time_t)ntohl(pReqX->touch.exptime);
+            break;
 
-            case MC_BINCMD_INCREMENT:
-            case MC_BINCMD_DECREMENT:
-                if (pHdr->extralen != sizeof(pReqX->incrdecr))
-                    return NULL;
-                m_parms.value.length = parmAdjLen(0);
-                pOpt->m_iFlags = pHdr->opcode;
-                if (m_usecas)
-                    pOpt->m_iFlags |= LSMC_WITHCAS;
-                pOpt->m_value = (uint64_t)ntohll(pReqX->incrdecr.delta);
-                pOpt->m_cas = pHdr->cas;
-                pOpt->m_pRet = (void *)&m_item;
-                break;
+        case MC_BINCMD_INCREMENT:
+        case MC_BINCMD_DECREMENT:
+            if (pHdr->extralen != sizeof(pReqX->incrdecr))
+                return NULL;
+            m_parms.value.length = parmAdjLen(0);
+            pOpt->m_iFlags = pHdr->opcode;
+            if (m_usecas)
+                pOpt->m_iFlags |= LSMC_WITHCAS;
+            pOpt->m_value = (uint64_t)ntohll(pReqX->incrdecr.delta);
+            pOpt->m_cas = pHdr->cas;
+            pOpt->m_pRet = (void *)&m_item;
+            break;
 
-            case MC_BINCMD_APPEND:
-                pOpt->m_iFlags = MC_BINCMD_APPEND;
-                if (m_usecas)
-                    pOpt->m_iFlags |= LSMC_WITHCAS;
-                pOpt->m_cas = pHdr->cas;
-                pOpt->m_iRetcode = UPDRET_APPEND;
-                break;
+        case MC_BINCMD_APPEND:
+            pOpt->m_iFlags = MC_BINCMD_APPEND;
+            if (m_usecas)
+                pOpt->m_iFlags |= LSMC_WITHCAS;
+            pOpt->m_cas = pHdr->cas;
+            pOpt->m_iRetcode = UPDRET_APPEND;
+            break;
 
-            case MC_BINCMD_PREPEND:
-                pOpt->m_iFlags = MC_BINCMD_PREPEND;
-                if (m_usecas)
-                    pOpt->m_iFlags |= LSMC_WITHCAS;
-                pOpt->m_cas = pHdr->cas;
-                pOpt->m_iRetcode = UPDRET_PREPEND;
-                break;
+        case MC_BINCMD_PREPEND:
+            pOpt->m_iFlags = MC_BINCMD_PREPEND;
+            if (m_usecas)
+                pOpt->m_iFlags |= LSMC_WITHCAS;
+            pOpt->m_cas = pHdr->cas;
+            pOpt->m_iRetcode = UPDRET_PREPEND;
+            break;
 
-            case MC_BINCMD_VERBOSITY:
-                if (pHdr->extralen != sizeof(pReqX->verbosity))
-                    return NULL;
-                break;
+        case MC_BINCMD_VERBOSITY:
+            if (pHdr->extralen != sizeof(pReqX->verbosity))
+                return NULL;
+            break;
 
-            default:
-                break;
+        default:
+            break;
         }
         pBody += keyLen;
     }
@@ -1049,10 +1047,10 @@ uint8_t *LsShmMemCached::setupBinCmd(McBinCmdHdr *pHdr, LsShmUpdOpt *pOpt)
 
 void LsShmMemCached::doBinGet(McBinCmdHdr *pHdr, bool doTouch)
 {
-    uint8_t resBuf[sizeof(McBinCmdHdr)+sizeof(McBinResExtra)];
+    uint8_t resBuf[sizeof(McBinCmdHdr) + sizeof(McBinResExtra)];
     int keyLen = ((pHdr->opcode == MC_BINCMD_GATK)
-        || (pHdr->opcode == MC_BINCMD_GETK)) ?
-        m_parms.key.length : 0;
+                  || (pHdr->opcode == MC_BINCMD_GETK)) ?
+                 m_parms.key.length : 0;
     lock();
     if ((m_iterOff = m_pHash->findIterator(&m_parms)) != 0)
     {
@@ -1086,8 +1084,8 @@ void LsShmMemCached::doBinGet(McBinCmdHdr *pHdr, bool doTouch)
             if (pHdr->opcode == MC_BINCMD_TOUCH)
                 valLen = 0;     // return only flags
             setupBinResHdr(pHdr->opcode,
-                (uint8_t)extra, (uint16_t)keyLen, (uint32_t)extra + keyLen + valLen,
-                MC_BINSTAT_SUCCESS, resBuf);
+                           (uint8_t)extra, (uint16_t)keyLen, (uint32_t)extra + keyLen + valLen,
+                           MC_BINSTAT_SUCCESS, resBuf);
             binRespond(resBuf, sizeof(McBinCmdHdr) + extra);
             if (keyLen != 0)
                 binRespond((uint8_t *)m_parms.key.pstr, m_parms.key.length);
@@ -1106,15 +1104,13 @@ void LsShmMemCached::doBinGet(McBinCmdHdr *pHdr, bool doTouch)
     {
         m_noreply = false;
         setupBinResHdr(pHdr->opcode,
-            0, (uint16_t)keyLen, (uint32_t)keyLen,
-            MC_BINSTAT_KEYENOENT, resBuf);
+                       0, (uint16_t)keyLen, (uint32_t)keyLen,
+                       MC_BINSTAT_KEYENOENT, resBuf);
         binRespond(resBuf, sizeof(McBinCmdHdr));
         binRespond((uint8_t *)m_parms.key.pstr, m_parms.key.length);
     }
     else
-    {
         binErrRespond(pHdr, MC_BINSTAT_KEYENOENT);
-    }
     return;
 }
 
@@ -1187,8 +1183,8 @@ void LsShmMemCached::doBinDelete(McBinCmdHdr *pHdr)
 
 void LsShmMemCached::doBinArithmetic(McBinCmdHdr *pHdr, LsShmUpdOpt *pOpt)
 {
-    char numBuf[ULL_MAXLEN+1];
-    uint8_t resBuf[sizeof(McBinCmdHdr)+sizeof(McBinResExtra)];
+    char numBuf[ULL_MAXLEN + 1];
+    uint8_t resBuf[sizeof(McBinCmdHdr) + sizeof(McBinResExtra)];
 
     // return value in `extra' field
     int extra = sizeof(((McBinResExtra *)0)->incrdecr.newval);
@@ -1205,8 +1201,8 @@ void LsShmMemCached::doBinArithmetic(McBinCmdHdr *pHdr, LsShmUpdOpt *pOpt)
         m_retcode = UPDRET_NONE;
         doBinDataUpdate((uint8_t *)numBuf, pHdr);
         setupBinResHdr(pHdr->opcode,
-            (uint8_t)0, (uint16_t)0, (uint32_t)extra,
-            MC_BINSTAT_SUCCESS, resBuf);
+                       (uint8_t)0, (uint16_t)0, (uint32_t)extra,
+                       MC_BINSTAT_SUCCESS, resBuf);
         pResX->incrdecr.newval = (uint64_t)htonll(strtoull(numBuf, NULL, 10));
         binRespond(resBuf, sizeof(McBinCmdHdr) + extra);
     }
@@ -1227,15 +1223,15 @@ void LsShmMemCached::doBinArithmetic(McBinCmdHdr *pHdr, LsShmUpdOpt *pOpt)
             m_item.x_flags = 0;
             m_item.x_exptime = (time_t)ntohl(pReqX->incrdecr.exptime);
             m_parms.value.length = parmAdjLen(
-                snprintf(numBuf, sizeof(numBuf), "%llu",
-                  (unsigned long long)ntohll(pReqX->incrdecr.initval)));
+                                       snprintf(numBuf, sizeof(numBuf), "%llu",
+                                                (unsigned long long)ntohll(pReqX->incrdecr.initval)));
             if ((m_iterOff = m_pHash->insertIterator(&m_parms)) != 0)
             {
                 m_retcode = UPDRET_NONE;
                 doBinDataUpdate((uint8_t *)numBuf, pHdr);
                 setupBinResHdr(pHdr->opcode,
-                    (uint8_t)0, (uint16_t)0, (uint32_t)extra,
-                    MC_BINSTAT_SUCCESS, resBuf);
+                               (uint8_t)0, (uint16_t)0, (uint32_t)extra,
+                               MC_BINSTAT_SUCCESS, resBuf);
                 pResX->incrdecr.newval = pReqX->incrdecr.initval;
                 binRespond(resBuf, sizeof(McBinCmdHdr) + extra);
             }
@@ -1267,15 +1263,15 @@ void LsShmMemCached::doBinVersion(McBinCmdHdr *pHdr)
     uint8_t resBuf[sizeof(McBinCmdHdr)];
     int len = strlen(VERSION);
     setupBinResHdr(pHdr->opcode,
-        (uint8_t)0, (uint16_t)0, (uint32_t)len, MC_BINSTAT_SUCCESS, resBuf);
+                   (uint8_t)0, (uint16_t)0, (uint32_t)len, MC_BINSTAT_SUCCESS, resBuf);
     binRespond(resBuf, sizeof(McBinCmdHdr));
     binRespond((uint8_t *)VERSION, len);
 }
 
 
 void LsShmMemCached::setupBinResHdr(uint8_t cmd,
-    uint8_t extralen, uint16_t keylen, uint32_t totbody,
-    uint16_t status, uint8_t *pBinBuf)
+                                    uint8_t extralen, uint16_t keylen, uint32_t totbody,
+                                    uint16_t status, uint8_t *pBinBuf)
 {
     if (m_noreply)
         return;
@@ -1358,9 +1354,7 @@ void LsShmMemCached::binErrRespond(McBinCmdHdr *pHdr, McBinStat err)
     }
 
     if (getVerbose() > 1)
-    {
         fprintf(stderr, ">%d Writing an error: %s\n", 0, text);
-    }
 
     int len = strlen(text);
     m_iterOff = 0;
@@ -1377,7 +1371,7 @@ char *LsShmMemCached::advToken(char *pStr, char **pTokPtr, int *pTokLen)
 {
     char c;
     while (*pStr ==  ' ')
-       ++pStr;
+        ++pStr;
     *pTokPtr = pStr;
     while (((c = *pStr) != ' ') && (c != '\0'))
         ++pStr;
@@ -1393,7 +1387,8 @@ bool LsShmMemCached::myStrtol(const char *pStr, long *pVal)
     char *endptr;
     errno = 0;
     long val = strtol(pStr, &endptr, 10);
-    if ((errno == ERANGE) || (endptr == pStr) || (*endptr && !isspace(*endptr)))
+    if ((errno == ERANGE) || (endptr == pStr) || (*endptr
+            && !isspace(*endptr)))
         return false;
     *pVal = val;
     return true;
@@ -1405,7 +1400,8 @@ bool LsShmMemCached::myStrtoul(const char *pStr, unsigned long *pVal)
     char *endptr;
     errno = 0;
     unsigned long val = strtoul(pStr, &endptr, 10);
-    if ((errno == ERANGE) || (endptr == pStr) || (*endptr && !isspace(*endptr)))
+    if ((errno == ERANGE) || (endptr == pStr) || (*endptr
+            && !isspace(*endptr)))
         return false;
     *pVal = val;
     return true;
@@ -1417,7 +1413,8 @@ bool LsShmMemCached::myStrtoll(const char *pStr, long long *pVal)
     char *endptr;
     errno = 0;
     long long val = strtoll(pStr, &endptr, 10);
-    if ((errno == ERANGE) || (endptr == pStr) || (*endptr && !isspace(*endptr)))
+    if ((errno == ERANGE) || (endptr == pStr) || (*endptr
+            && !isspace(*endptr)))
         return false;
     *pVal = val;
     return true;
@@ -1429,7 +1426,8 @@ bool LsShmMemCached::myStrtoull(const char *pStr, unsigned long long *pVal)
     char *endptr;
     errno = 0;
     unsigned long long val = strtoull(pStr, &endptr, 10);
-    if ((errno == ERANGE) || (endptr == pStr) || (*endptr && !isspace(*endptr)))
+    if ((errno == ERANGE) || (endptr == pStr) || (*endptr
+            && !isspace(*endptr)))
         return false;
     *pVal = val;
     return true;
@@ -1459,8 +1457,9 @@ int LsShmMemCached::convertCmd(char *pStr, uint8_t *pBinBuf)
 }
 
 
-static int asc2bincmd(int arg, char *pkey, int keylen, char *pval, int vallen,
-    uint32_t flags, uint32_t exptime, uint64_t cas, bool quiet, uint8_t *pout)
+static int asc2bincmd(int arg, char *pkey, int keylen, char *pval,
+                      int vallen,
+                      uint32_t flags, uint32_t exptime, uint64_t cas, bool quiet, uint8_t *pout)
 {
     McBinCmdHdr *pHdr = (McBinCmdHdr *)pout;
     char *pbody = (char *)(pHdr + 1);
@@ -1473,78 +1472,78 @@ static int asc2bincmd(int arg, char *pkey, int keylen, char *pval, int vallen,
     pHdr->cas = cas;
 
     pReqX = (McBinReqExtra *)pbody;
-    switch(arg)
+    switch (arg)
     {
-        case MC_BINCMD_ADD:
-            pHdr->opcode = (quiet ? MC_BINCMD_ADDQ : MC_BINCMD_ADD);
-            pReqX->value.flags = htonl(flags);
-            pReqX->value.exptime = htonl(exptime);
-            pHdr->extralen = sizeof(pReqX->value);
-            break;
-        case MC_BINCMD_SET:
-            pHdr->opcode = (quiet ? MC_BINCMD_SETQ : MC_BINCMD_SET);
-            pReqX->value.flags = htonl(flags);
-            pReqX->value.exptime = htonl(exptime);
-            pHdr->extralen = sizeof(pReqX->value);
-            break;
-        case MC_BINCMD_REPLACE:
-        case MC_BINCMD_REPLACE|LSMC_WITHCAS:
-            pHdr->opcode = (quiet ? MC_BINCMD_REPLACEQ : MC_BINCMD_REPLACE);
-            pReqX->value.flags = htonl(flags);
-            pReqX->value.exptime = htonl(exptime);
-            pHdr->extralen = sizeof(pReqX->value);
-            break;
-        case MC_BINCMD_DELETE:
-            pHdr->opcode = (quiet ? MC_BINCMD_DELETEQ : MC_BINCMD_DELETE);
-            pHdr->extralen = 0;
-            break;
-        case MC_BINCMD_INCREMENT:   // definitely a hack,
-        case MC_BINCMD_DECREMENT:   // but this is a temporary test function
-            if (arg == MC_BINCMD_INCREMENT)
-                pHdr->opcode =
-                    (quiet ? MC_BINCMD_INCREMENTQ : MC_BINCMD_INCREMENT);
-            else /* if (arg == MC_BINCMD_DECREMENT) */
-                pHdr->opcode =
-                    (quiet ? MC_BINCMD_DECREMENTQ : MC_BINCMD_DECREMENT);
-            pHdr->cas = 0;      // cannot set this from ascii mode
-            pReqX->incrdecr.delta = htonll(cas);
-            pReqX->incrdecr.initval = (uint64_t)flags;
-            pReqX->incrdecr.initval = htonll(pReqX->incrdecr.initval);
-            pReqX->incrdecr.exptime = htonl(exptime);
-            pHdr->extralen = sizeof(pReqX->incrdecr);
-            break;
-        case MC_BINCMD_APPEND:
-            pHdr->opcode = (quiet ? MC_BINCMD_APPENDQ : MC_BINCMD_APPEND);
-            pHdr->extralen = 0;
-            break;
-        case MC_BINCMD_PREPEND:
-            pHdr->opcode = (quiet ? MC_BINCMD_PREPENDQ : MC_BINCMD_PREPEND);
-            pHdr->extralen = 0;
-            break;
-        case MC_BINCMD_VERBOSITY:
-            pHdr->opcode = MC_BINCMD_VERBOSITY;
-            pReqX->verbosity.level = htonl(flags);
-            pHdr->extralen = sizeof(pReqX->verbosity);
-            break;
-        case MC_BINCMD_GAT:
-            pHdr->opcode = (quiet ? MC_BINCMD_GATQ : MC_BINCMD_GAT);
-            pReqX->touch.exptime = htonl(exptime);
-            pHdr->extralen = sizeof(pReqX->touch);
-            break;
-        case MC_BINCMD_GATK:
-            pHdr->opcode = (quiet ? MC_BINCMD_GATKQ : MC_BINCMD_GATK);
-            pReqX->touch.exptime = htonl(exptime);
-            pHdr->extralen = sizeof(pReqX->touch);
-            break;
-        case MC_BINCMD_TOUCH:
-            pHdr->opcode = MC_BINCMD_TOUCH;
-            pReqX->touch.exptime = htonl(exptime);
-            pHdr->extralen = sizeof(pReqX->touch);
-            break;
-        default:
-            pHdr->opcode = arg;
-            pHdr->extralen = 0;
-            break;
+    case MC_BINCMD_ADD:
+        pHdr->opcode = (quiet ? MC_BINCMD_ADDQ : MC_BINCMD_ADD);
+        pReqX->value.flags = htonl(flags);
+        pReqX->value.exptime = htonl(exptime);
+        pHdr->extralen = sizeof(pReqX->value);
+        break;
+    case MC_BINCMD_SET:
+        pHdr->opcode = (quiet ? MC_BINCMD_SETQ : MC_BINCMD_SET);
+        pReqX->value.flags = htonl(flags);
+        pReqX->value.exptime = htonl(exptime);
+        pHdr->extralen = sizeof(pReqX->value);
+        break;
+    case MC_BINCMD_REPLACE:
+    case MC_BINCMD_REPLACE|LSMC_WITHCAS:
+        pHdr->opcode = (quiet ? MC_BINCMD_REPLACEQ : MC_BINCMD_REPLACE);
+        pReqX->value.flags = htonl(flags);
+        pReqX->value.exptime = htonl(exptime);
+        pHdr->extralen = sizeof(pReqX->value);
+        break;
+    case MC_BINCMD_DELETE:
+        pHdr->opcode = (quiet ? MC_BINCMD_DELETEQ : MC_BINCMD_DELETE);
+        pHdr->extralen = 0;
+        break;
+    case MC_BINCMD_INCREMENT:   // definitely a hack,
+    case MC_BINCMD_DECREMENT:   // but this is a temporary test function
+        if (arg == MC_BINCMD_INCREMENT)
+            pHdr->opcode =
+                (quiet ? MC_BINCMD_INCREMENTQ : MC_BINCMD_INCREMENT);
+        else /* if (arg == MC_BINCMD_DECREMENT) */
+            pHdr->opcode =
+                (quiet ? MC_BINCMD_DECREMENTQ : MC_BINCMD_DECREMENT);
+        pHdr->cas = 0;      // cannot set this from ascii mode
+        pReqX->incrdecr.delta = htonll(cas);
+        pReqX->incrdecr.initval = (uint64_t)flags;
+        pReqX->incrdecr.initval = htonll(pReqX->incrdecr.initval);
+        pReqX->incrdecr.exptime = htonl(exptime);
+        pHdr->extralen = sizeof(pReqX->incrdecr);
+        break;
+    case MC_BINCMD_APPEND:
+        pHdr->opcode = (quiet ? MC_BINCMD_APPENDQ : MC_BINCMD_APPEND);
+        pHdr->extralen = 0;
+        break;
+    case MC_BINCMD_PREPEND:
+        pHdr->opcode = (quiet ? MC_BINCMD_PREPENDQ : MC_BINCMD_PREPEND);
+        pHdr->extralen = 0;
+        break;
+    case MC_BINCMD_VERBOSITY:
+        pHdr->opcode = MC_BINCMD_VERBOSITY;
+        pReqX->verbosity.level = htonl(flags);
+        pHdr->extralen = sizeof(pReqX->verbosity);
+        break;
+    case MC_BINCMD_GAT:
+        pHdr->opcode = (quiet ? MC_BINCMD_GATQ : MC_BINCMD_GAT);
+        pReqX->touch.exptime = htonl(exptime);
+        pHdr->extralen = sizeof(pReqX->touch);
+        break;
+    case MC_BINCMD_GATK:
+        pHdr->opcode = (quiet ? MC_BINCMD_GATKQ : MC_BINCMD_GATK);
+        pReqX->touch.exptime = htonl(exptime);
+        pHdr->extralen = sizeof(pReqX->touch);
+        break;
+    case MC_BINCMD_TOUCH:
+        pHdr->opcode = MC_BINCMD_TOUCH;
+        pReqX->touch.exptime = htonl(exptime);
+        pHdr->extralen = sizeof(pReqX->touch);
+        break;
+    default:
+        pHdr->opcode = arg;
+        pHdr->extralen = 0;
+        break;
     }
     pbody += pHdr->extralen;
     ::memcpy(pbody, pkey, keylen);

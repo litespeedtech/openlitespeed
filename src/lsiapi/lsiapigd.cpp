@@ -287,9 +287,9 @@ LSIAPI void *get_gdata(lsi_gdata_cont_t *containerInfo, const char *key,
 
         gdata_key_t key_st = {(char *)key, key_len};
         buildFileDataLocation(file_path, LSI_MAX_FILE_PATH_LEN, key_st, "i",
-                                containerInfo->type);
+                              containerInfo->type);
         if (recover_file_gdata(containerInfo, key, key_len, file_path, iter,
-                                release_cb, deserialize_cb) != 0)
+                               release_cb, deserialize_cb) != 0)
         {
             unlink(file_path);
             return NULL;
@@ -324,7 +324,7 @@ LSIAPI void *get_gdata(lsi_gdata_cont_t *containerInfo, const char *key,
     }
 
     buildFileDataLocation(file_path, LSI_MAX_FILE_PATH_LEN, pItem->key, "i",
-                        containerInfo->type);
+                          containerInfo->type);
 
     if (renew_TTL)
     {

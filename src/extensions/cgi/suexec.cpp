@@ -23,8 +23,8 @@
 #include "cgidworker.h"
 #include "cgidconfig.h"
 
-#include <http/httplog.h>
 #include <http/serverprocessconfig.h>
+#include <log4cxx/logger.h>
 #include <lsr/ls_fileio.h>
 #include <socket/coresocket.h>
 #include <util/pcutil.h>
@@ -153,9 +153,9 @@ int SUExec::spawnChild(const char *pAppCmd, int fdIn, int fdOut,
     {
         if (chdir(pDir))
         {
-            LOG_ERR(("chdir(\"%s\") failed with errno=%d, "
+            LS_ERROR("chdir(\"%s\") failed with errno=%d, "
                      "when try to start Fast CGI application: %s!",
-                     pDir, errno, pAppCmd));
+                     pDir, errno, pAppCmd);
             exit(-1);
         }
         *(argv[0] - 1) = '/';
@@ -173,9 +173,9 @@ int SUExec::spawnChild(const char *pAppCmd, int fdIn, int fdOut,
     setpriority(PRIO_PROCESS, 0, priority);
     PCUtil::setCpuAffinityAll();
     execve(pDir, &argv[0], env);
-    LOG_ERR(("execve() failed with errno=%d, "
+    LS_ERROR("execve() failed with errno=%d, "
              "when try to start Fast CGI application: %s!",
-             errno, pAppCmd));
+             errno, pAppCmd);
     exit(-1);
     return 0;
 }
@@ -197,23 +197,23 @@ int SUExec::checkLScgid(const char *path)
     struct stat st;
     if ((ls_fio_stat(path, &st) == -1) || !(st.st_mode & S_IXOTH))
     {
-        LOG_ERR(("[%s] is not a valid executable."
-                 , path));
+        LS_ERROR("[%s] is not a valid executable."
+                 , path);
         return LS_FAIL;
     }
     if (st.st_uid)
     {
-        LOG_ERR(("[%s] is not owned by root user.", path));
+        LS_ERROR("[%s] is not owned by root user.", path);
         return LS_FAIL;
     }
     if (!(st.st_mode & S_ISUID))
     {
-        LOG_ERR(("[%s] setuid bit is off.", path));
+        LS_ERROR("[%s] setuid bit is off.", path);
         return LS_FAIL;
     }
     if (st.st_mode & (S_IWOTH | S_IWGRP))
     {
-        LOG_ERR(("[%s] is writeable by group or other.", path));
+        LS_ERROR("[%s] is writeable by group or other.", path);
         return LS_FAIL;
     }
     return 0;
@@ -264,7 +264,7 @@ int SUExec::suEXEC(const char *pServerRoot, int *pfd, int listenFd,
     int fds[2];
     if (socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == -1)
     {
-        LOG_ERR(("[suEXEC] socketpair() failed!"));
+        LS_ERROR("[suEXEC] socketpair() failed!");
         return LS_FAIL;
     }
     snprintf(&achExec[len], 2048 - len, " -n %d", fds[1]);
@@ -273,11 +273,11 @@ int SUExec::suEXEC(const char *pServerRoot, int *pfd, int listenFd,
     int fdsData[2];
     if (socketpair(AF_UNIX, SOCK_STREAM, 0, fdsData) == -1)
     {
-        LOG_ERR(("[suEXEC] socketpair() failed!"));
+        LS_ERROR("[suEXEC] socketpair() failed!");
         return LS_FAIL;
     }
     len = snprintf(sockAddr, 250, "uds:/%s",
-            CgidWorker::getCgidWorker()->getConfig().getServerAddrUnixSock());
+                   CgidWorker::getCgidWorker()->getConfig().getServerAddrUnixSock());
     write(fdsData[0], sockAddr, len + 1);
     close(fdsData[0]);
 
@@ -297,8 +297,8 @@ int SUExec::suEXEC(const char *pServerRoot, int *pfd, int listenFd,
         len = write(fds[0], m_req.get(), size);
         if (len != size)
         {
-            LOG_ERR(("[suEXEC] Failed to write %d bytes to lscgid, written: %d",
-                     size, len));
+            LS_ERROR("[suEXEC] Failed to write %d bytes to lscgid, written: %d",
+                     size, len);
         }
     }
     if (pfd)
@@ -421,9 +421,7 @@ int SUExec::cgidSuEXEC(const char *pServerRoot, int *pfd, int listenFd,
 #ifdef _HAS_LVE_
     if ((CgidWorker::getCgidWorker()->getLVE())
         && (m_req.getCgidReq()->m_uid))
-    {
         sLVE[11] = CgidWorker::getCgidWorker()->getLVE() + '0';
-    }
 #endif
 
     int fdReq = -1;
@@ -442,8 +440,8 @@ int SUExec::cgidSuEXEC(const char *pServerRoot, int *pfd, int listenFd,
         int len = write(fdReq, m_req.get(), size);
         if (len != size)
         {
-            LOG_ERR(("[suEXEC] Failed to write %d bytes to lscgid, written: %d",
-                     size, len));
+            LS_ERROR("[suEXEC] Failed to write %d bytes to lscgid, written: %d",
+                     size, len);
         }
         send_fd(fdReq, listenFd);
         pid = 0;

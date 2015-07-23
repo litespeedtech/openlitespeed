@@ -303,7 +303,7 @@ public:
     }
     void clear()
     {
-        releaseObjects();
+        release_objects();
         TPointerList<header>::clear();
     }
 };

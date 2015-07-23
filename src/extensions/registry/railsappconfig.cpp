@@ -19,6 +19,7 @@
 #include "extappregistry.h"
 
 #include <http/serverprocessconfig.h>
+#include <log4cxx/logger.h>
 #include <main/configctx.h>
 #include <main/mainserverconfig.h>
 #include <util/xmlnode.h>
@@ -54,7 +55,8 @@ LocalWorker *RailsAppConfig::newRailsApp(HttpVHost *pvhost,
 
     if (pathLen > MAX_PATH_LEN - 20)
     {
-        ConfigCtx::getCurConfigCtx()->logError("path to Rack application is too long!");
+        LS_ERROR(ConfigCtx::getCurConfigCtx(),
+                 "path to Rack application is too long!");
         return NULL;
     }
 
@@ -66,7 +68,8 @@ LocalWorker *RailsAppConfig::newRailsApp(HttpVHost *pvhost,
     }
     if (!pRailsRunner)
     {
-        ConfigCtx::getCurConfigCtx()->logError("'Ruby path' is not set properly, Rack context is disabled!");
+        LS_ERROR(ConfigCtx::getCurConfigCtx(),
+                 "'Ruby path' is not set properly, Rack context is disabled!");
         return NULL;
     }
 
@@ -155,8 +158,8 @@ int RailsAppConfig::configRailsRunner(char *pRunnerCmd, int cmdLen,
 
     if ((pRubyBin) && (access(pRubyBin, X_OK) != 0))
     {
-        ConfigCtx::getCurConfigCtx()->logError("Ruby path is not vaild: %s",
-                                               pRubyBin);
+        LS_ERROR(ConfigCtx::getCurConfigCtx(), "Ruby path is not vaild: %s",
+                 pRubyBin);
         pRubyBin = NULL;
     }
 
@@ -174,7 +177,8 @@ int RailsAppConfig::configRailsRunner(char *pRunnerCmd, int cmdLen,
 
     if (!pRubyBin)
     {
-        ConfigCtx::getCurConfigCtx()->logNotice("Cannot find ruby interpreter, Rails easy configuration is turned off");
+        LS_NOTICE(ConfigCtx::getCurConfigCtx(),
+                  "Cannot find ruby interpreter, Rails easy configuration is turned off");
         return LS_FAIL;
     }
 
@@ -198,7 +202,7 @@ int RailsAppConfig::loadRailsDefault(const XmlNode *pNode)
     s_pRailsDefault->setRetryTimeout(0);
     s_pRailsDefault->setBuffering(0);
     s_pRailsDefault->setPriority(
-            ServerProcessConfig::getInstance().getPriority() + 1);
+        ServerProcessConfig::getInstance().getPriority() + 1);
     s_pRailsDefault->setBackLog(10);
     s_pRailsDefault->setMaxIdleTime(300);
     s_pRailsDefault->setRLimits(ExtAppRegistry::getRLimits());
@@ -211,9 +215,9 @@ int RailsAppConfig::loadRailsDefault(const XmlNode *pNode)
             0, 1, 0) == 1)
     {
         setRailsAppLimit(ConfigCtx::getCurConfigCtx()->getLongValue(
-                                 pNode, "railsAppLimit", 0, 20, 1));
+                             pNode, "railsAppLimit", 0, 20, 1));
         setRubyProcLimit(ConfigCtx::getCurConfigCtx()->getLongValue(
-                                 pNode, "rubyProcLimit", 0, 100, 10));
+                             pNode, "rubyProcLimit", 0, 100, 10));
     }
     else
         setRailsAppLimit(-1);

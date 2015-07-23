@@ -87,9 +87,9 @@ static int begin_process(lsi_session_t *session)
         if (strncmp(outBuf, pVals[i], strlen(pVals[i])) != 0)
         {
             g_api->log(session, LSI_LOG_INFO,
-                "Not a match.  Key: %.*s, Orig Val: %.*s, Current Val: %.*s\n",
-                strlen(pKeys[i]), pKeys[i], strlen(pVals[i]), pVals[i],
-                iOut, outBuf);
+                       "Not a match.  Key: %.*s, Orig Val: %.*s, Current Val: %.*s\n",
+                       strlen(pKeys[i]), pKeys[i], strlen(pVals[i]), pVals[i],
+                       iOut, outBuf);
         }
     }
 
@@ -135,6 +135,7 @@ static lsi_serverhook_t serverHooks[] =
 
 static lsi_handler_t myhandler = { begin_process, NULL, NULL, NULL };
 lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, _init, &myhandler, NULL, "v1.0",
-                       serverHooks };
+                       serverHooks
+                     };
 
 

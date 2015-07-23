@@ -15,52 +15,15 @@
 *    You should have received a copy of the GNU General Public License       *
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
-#ifndef LOGTRACKER_H
-#define LOGTRACKER_H
-
-
-
-#include <lsdef.h>
-#include <log4cxx/nsdefs.h>
-#include <util/autostr.h>
-
-#define MAX_LOGID_LEN   127
-
-BEGIN_LOG4CXX_NS
-class Logger;
-END_LOG4CXX_NS
-
-class LogTracker
+#include <log4cxx/logsession.h>
+#include <stddef.h>
+LogSession::LogSession()
+    : m_pLogger(NULL)
 {
-    AutoStr2            m_logId;
-    LOG4CXX_NS::Logger *m_pLogger;
+    m_logId.prealloc(MAX_LOGID_LEN + 1);
+    *(m_logId.buf() + MAX_LOGID_LEN) = 0;
+    *m_logId.buf() = 0;
+}
+LogSession::~LogSession()
+{}
 
-public:
-    LogTracker();
-    ~LogTracker();
-
-    AutoStr2 &getIdBuf()             {   return m_logId;     }
-    //const char * getLogId() const
-    //{
-    //return m_logID.c_str();  }
-    const char *getLogId()
-    {
-        if (isLogIdBuilt())
-            return m_logId.c_str();
-        return buildLogId();
-    }
-
-    LOG4CXX_NS::Logger *getLogger() const   {   return m_pLogger;   }
-    void setLogger(LOG4CXX_NS::Logger *pLogger)
-    {   m_pLogger = pLogger;    }
-
-    void clearLogId()     {   *m_logId.buf() = 0;      }
-    int  isLogIdBuilt() const       {   return *m_logId.c_str() != '\0';   }
-    virtual const char *buildLogId() = 0;
-
-
-
-    LS_NO_COPY_ASSIGN(LogTracker);
-};
-
-#endif

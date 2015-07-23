@@ -33,7 +33,7 @@ StringList::StringList(const StringList &rhs)
 
 StringList::~StringList()
 {
-    releaseObjects();
+    release_objects();
 }
 
 const AutoStr2 *StringList::add(const char *pStr, int len)
@@ -79,7 +79,7 @@ int StringList::split(const char *pBegin, const char *pEnd,
 
 void StringList::clear()
 {
-    releaseObjects();
+    release_objects();
 }
 
 const AutoStr2 *StringList::find(const char *pString) const

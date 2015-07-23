@@ -161,12 +161,12 @@ void ls_atomic_pidspin_init();
 #include <errno.h>
 #include <machine/atomic.h>
 #include <sys/umtx.h>
-ls_inline int ls_futex_wake(int *futex) 
+ls_inline int ls_futex_wake(int *futex)
 {
     return _umtx_op(futex, UMTX_OP_WAKE, 1, 0, 0);
 }
 
-ls_inline int ls_futex_wait(int *futex, int val, struct timespec *timeout) 
+ls_inline int ls_futex_wait(int *futex, int val, struct timespec *timeout)
 {
     int err = _umtx_op(futex, UMTX_OP_WAIT_UINT, val, 0, (void *)timeout);
     return err;
@@ -177,13 +177,13 @@ ls_inline int ls_futex_wait(int *futex, int val, struct timespec *timeout)
 
 #if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
 
-ls_inline int ls_futex_wake(int *futex) 
+ls_inline int ls_futex_wake(int *futex)
 {
     return syscall(SYS_futex, futex, FUTEX_WAKE, 1, NULL, NULL, 0);
 }
 
 
-ls_inline int ls_futex_wait(int *futex, int val, struct timespec *timeout) 
+ls_inline int ls_futex_wait(int *futex, int val, struct timespec *timeout)
 {
     return syscall(SYS_futex, futex, FUTEX_WAIT, val, timeout, NULL, 0);
 }
@@ -230,10 +230,11 @@ ls_inline int ls_futex_lock(ls_mutex_t *p)
         {
             if ((val == LS_FUTEX_LOCKED2)
                 || (ls_atomic_casvint(p, LS_FUTEX_LOCKED1, LS_FUTEX_LOCKED2)
-                != LS_LOCK_AVAIL))
+                    != LS_LOCK_AVAIL))
                 ls_futex_wait(p, LS_FUTEX_LOCKED2, NULL); /* blocking */
-        } while ((val = ls_atomic_casvint(p, LS_LOCK_AVAIL, LS_FUTEX_LOCKED2))
-            != LS_LOCK_AVAIL);
+        }
+        while ((val = ls_atomic_casvint(p, LS_LOCK_AVAIL, LS_FUTEX_LOCKED2))
+               != LS_LOCK_AVAIL);
     }
     return 0;
 }
@@ -269,11 +270,12 @@ ls_inline int ls_futex_safe_lock(ls_mutex_t *p)
             && ls_atomic_casint(p, lockpid, ls_spin_pid | LS_FUTEX_HAS_WAITER))
             return -(lockpid & LS_FUTEX_PID_MASK);
         if ((lockpid & LS_FUTEX_HAS_WAITER)
-            || ls_atomic_casint(p, lockpid, lockpid | LS_FUTEX_HAS_WAITER ) != 0)
+            || ls_atomic_casint(p, lockpid, lockpid | LS_FUTEX_HAS_WAITER) != 0)
             ls_futex_wait(p, lockpid | LS_FUTEX_HAS_WAITER, &x_time);
-    } while ((lockpid = ls_atomic_casvint(p, LS_LOCK_AVAIL, 
-                ls_spin_pid | LS_FUTEX_HAS_WAITER)) != LS_LOCK_AVAIL );
-        
+    }
+    while ((lockpid = ls_atomic_casvint(p, LS_LOCK_AVAIL,
+                                        ls_spin_pid | LS_FUTEX_HAS_WAITER)) != LS_LOCK_AVAIL);
+
     return 0;
 }
 
@@ -295,9 +297,9 @@ ls_inline int ls_futex_safe_unlock(ls_mutex_t *p)
     assert((old & LS_FUTEX_PID_MASK) == ls_spin_pid);
     if ((old & LS_FUTEX_HAS_WAITER) == 0)
         return 0;
-    
+
     //return syscall(SYS_futex, p, FUTEX_WAKE, 1, NULL, NULL, 0);
-    return ls_futex_wake( p );
+    return ls_futex_wake(p);
 }
 
 /**
@@ -333,7 +335,7 @@ ls_inline int ls_futex_unlock(ls_mutex_t *p)
 
     assert(*lp != 0);
     return (ls_atomic_setint(p, LS_LOCK_AVAIL) == LS_FUTEX_LOCKED2) ?
-        ls_futex_wake(p) : 0;
+           ls_futex_wake(p) : 0;
 }
 
 /**
@@ -410,14 +412,12 @@ ls_inline int ls_atomic_spin_pidlock(ls_atom_spinlock_t *p)
         else if (--cnt == 0)
         {
             if ((kill(waitpid, 0) < 0) && (errno == ESRCH)
-              && ls_atomic_casint(p, waitpid, ls_spin_pid))
+                && ls_atomic_casint(p, waitpid, ls_spin_pid))
                 return -waitpid;
             cnt = MAX_SPINCNT_CHECK;
         }
         else
-        {
             cpu_relax();
-        }
     }
 }
 
@@ -483,7 +483,7 @@ ls_inline int ls_atomic_spin_unlock(ls_atom_spinlock_t *p)
  */
 ls_inline int ls_atomic_spin_pidunlock(ls_atom_spinlock_t *p)
 {
-    assert( *p == ls_spin_pid);
+    assert(*p == ls_spin_pid);
     ls_atomic_clrint(p);
     return 0;
 }

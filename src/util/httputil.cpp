@@ -129,7 +129,7 @@ int HttpUtil::escapeRFC3986(const char *pSrc, char *pDest, int iDestlen)
 
 
 int HttpUtil::escapeRFC3986(const char *pSrc, int iSrcLen, char *pDest,
-                     int iDestLen)
+                            int iDestLen)
 {
     char ch;
     char *p = pDest;

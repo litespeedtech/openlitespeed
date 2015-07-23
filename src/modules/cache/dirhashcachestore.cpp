@@ -40,7 +40,7 @@ DirHashCacheStore::DirHashCacheStore()
 
 DirHashCacheStore::~DirHashCacheStore()
 {
-    releaseObjects();
+    release_objects();
 }
 
 
@@ -166,7 +166,7 @@ CacheEntry *DirHashCacheStore::getCacheEntry(CacheHash &hash,
             pEntry->setFdStore(fd);
             pEntry->setFilePath(achBuf);
         }
-        //LOG_INFO(( "getCacheEntry(), open fd: %d, entry: %p", fd, pEntry ));
+        //LS_INFO( "getCacheEntry(), open fd: %d, entry: %p", fd, pEntry ));
     }
     if (!pEntry)
     {
@@ -310,7 +310,7 @@ CacheEntry *DirHashCacheStore::createCacheEntry(const CacheHash &hash,
         return NULL;
     }
     ::fcntl(fd, F_SETFD, FD_CLOEXEC);
-    //LOG_INFO(( "createCacheEntry(), open fd: %d", fd ));
+    //LS_INFO( "createCacheEntry(), open fd: %d", fd ));
 
     CacheEntry *pEntry = new DirHashCacheEntry();
     pEntry->setFdStore(fd);

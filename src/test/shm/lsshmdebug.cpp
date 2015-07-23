@@ -420,7 +420,8 @@ void debugBase::dumpBuf(const char *tag, const char *buf, int size)
 
 void debugBase::dumpIterKey(LsShmHash::iterator iter)
 {
-    fprintf(fp(), "KEY[%s]", decode((char *)iter->getKey(), iter->getKeyLen()));
+    fprintf(fp(), "KEY[%s]", decode((char *)iter->getKey(),
+                                    iter->getKeyLen()));
 }
 
 void debugBase::dumpIterValue(LsShmHash::iterator iter)

@@ -123,7 +123,7 @@ public:
     int del(HEADERINDEX headerIndex);
 
     int getUniqueCnt() const    {   return m_iHeaderUniqueCount;    }
-    
+
     int  getCount() const
     {
         return m_aKVPairs.getSize() - m_iHeaderRemovedCount;
@@ -160,7 +160,7 @@ public:
     int outputNonSpdyHeaders(IOVec *iovec);
     int isRespHeadersBuilt()    {   return m_iHeaderBuilt;  }
     int getTotalLen()       { return m_iHeadersTotalLen; }
-    int appendToIov(IOVec *iovec) const;
+    int appendToIov(IOVec *iovec);
     int appendToIovExclude(IOVec *iovec, const char *pName, int nameLen) const;
 
     static HEADERINDEX getRespHeaderIndex(const char *pHeader);
@@ -234,6 +234,7 @@ private:
     int             getHeaderKvOrder(const char *pName, unsigned int nameLen);
     void            verifyHeaderLength(HEADERINDEX headerIndex,
                                        const char *pName, unsigned int nameLen);
+    int             mergeAll();
 
     HttpRespHeaders(const HttpRespHeaders &other);
     void operator=(const HttpRespHeaders &rhs);

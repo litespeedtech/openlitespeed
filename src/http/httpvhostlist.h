@@ -55,7 +55,7 @@ public:
     void offsetChroot(const char *pChroot, int len);
     int  writeStatusReport(int fd) const;
     int  writeRTReport(int fd) const;
-    void releaseObjects();
+    void release_objects();
     static void incRef(HttpVHost *pHost);
     static void decRef(HttpVHost *pHost);
     static const char *getName(HttpVHost *pHost);

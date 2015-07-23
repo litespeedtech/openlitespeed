@@ -18,7 +18,7 @@
 #include "spdystream.h"
 #include "spdyconnection.h"
 
-#include <http/httplog.h>
+#include <log4cxx/logger.h>
 #include <lsr/ls_strtool.h>
 #include <util/datetime.h>
 #include <util/iovec.h>
@@ -59,11 +59,7 @@ int SpdyStream::init(uint32_t StreamID,
     m_iWindowIn = pSpdyConn->getStreamInInitWindowSize();
     setPriority(Priority);
     m_pSpdyConn = pSpdyConn;
-    if (D_ENABLED(DL_LESS))
-    {
-        LOG_D((getLogger(), "[%s] SpdyStream::init(), id: %d. ",
-               getLogId(), StreamID));
-    }
+    LS_DBG_L(this, "SpdyStream::init(), id: %d. ", StreamID);
     return 0;
 }
 
@@ -128,11 +124,7 @@ int SpdyStream::read(char *buf, int len)
 
 void SpdyStream::continueRead()
 {
-    if (D_ENABLED(DL_LESS))
-    {
-        LOG_D((getLogger(), "[%s] SpdyStream::continueRead()",
-               getLogId()));
-    }
+    LS_DBG_L(this, "SpdyStream::continueRead()");
     setFlag(HIO_FLAG_WANT_READ, 1);
     if (m_bufIn.size() > 0)
         getHandler()->onReadEx();
@@ -141,11 +133,7 @@ void SpdyStream::continueRead()
 
 void SpdyStream:: continueWrite()
 {
-    if (D_ENABLED(DL_LESS))
-    {
-        LOG_D((getLogger(), "[%s] SpdyStream::continueWrite()",
-               getLogId()));
-    }
+    LS_DBG_L(this, "SpdyStream::continueWrite()");
     setFlag(HIO_FLAG_WANT_WRITE, 1);
     if (next() == NULL)
         m_pSpdyConn->add2PriorityQue(this);
@@ -180,11 +168,7 @@ int SpdyStream::shutdown()
 
     setState(HIOS_SHUTDOWN);
 
-    if (D_ENABLED(DL_LESS))
-    {
-        LOG_D((getLogger(), "[%s] SpdyStream::shutdown()",
-               getLogId()));
-    }
+    LS_DBG_L(this, "SpdyStream::shutdown()");
     m_pSpdyConn->sendFinFrame(m_uiStreamID);
     //m_pSpdyConn->flush();
     return 0;
@@ -213,11 +197,7 @@ int SpdyStream::close()
 
 int SpdyStream::flush()
 {
-    if (D_ENABLED(DL_LESS))
-    {
-        LOG_D((getLogger(), "[%s] SpdyStream::flush()",
-               getLogId()));
-    }
+    LS_DBG_L(this, "SpdyStream::flush()");
     return LS_DONE;
 }
 
@@ -293,11 +273,7 @@ int SpdyStream::write(const char *buf, int len)
 
 int SpdyStream::onWrite()
 {
-    if (D_ENABLED(DL_LESS))
-    {
-        LOG_D((getLogger(), "[%s] SpdyStream::onWrite()",
-               getLogId()));
-    }
+    LS_DBG_L(this, "SpdyStream::onWrite()");
     if (m_pSpdyConn->isOutBufFull())
         return 0;
     if (m_iWindowOut <= 0)
@@ -326,11 +302,7 @@ int SpdyStream::sendData(IOVec *pIov, int total)
     buildDataFrameHeader(achHeader, total);
     m_pSpdyConn->getBuf()->append(achHeader, 8);
     ret = m_pSpdyConn->cacheWritev(*pIov, total);
-    if (D_ENABLED(DL_LESS))
-    {
-        LOG_D((getLogger(), "[%s] SpdyStream::sendData(), total: %d, ret: %d",
-               getLogId(), total, ret));
-    }
+    LS_DBG_L(this, "SpdyStream::sendData(), total: %d, ret: %d", total, ret);
     if (ret == -1)
     {
         setFlag(HIO_FLAG_ABORT, 1);
@@ -356,11 +328,7 @@ int SpdyStream::sendRespHeaders(HttpRespHeaders *pHeaders, int isNoBody)
         return LS_FAIL;
     if (isNoBody)
     {
-        if (D_ENABLED(DL_LESS))
-        {
-            LOG_D((getLogger(), "[%s] No response body, set FLAG_FIN.",
-                   getLogId()));
-        }
+        LS_DBG_L(this, "No response body, set FLAG_FIN.");
         setState(HIOS_SHUTDOWN);
     }
     else
@@ -376,11 +344,8 @@ int SpdyStream::adjWindowOut(int32_t n)
     if (isFlowCtrl())
     {
         m_iWindowOut += n;
-        if (D_ENABLED(DL_LESS))
-        {
-            LOG_D((getLogger(), "[%s] stream WINDOW_UPDATE: %d, window size: %d ",
-                   getLogId(), n, m_iWindowOut));
-        }
+        LS_DBG_L(this, "Stream WINDOW_UPDATE: %d, window size: %d ",
+                 n, m_iWindowOut);
         if (m_iWindowOut < 0)
         {
             //window overflow

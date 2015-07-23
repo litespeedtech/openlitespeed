@@ -26,7 +26,7 @@
 
 #include <sslpp/sslconnection.h>
 #include <util/dlinkqueue.h>
-#include <util/logtracker.h>
+#include <log4cxx/logsession.h>
 #include <util/iovec.h>
 
 #include <sys/types.h>
@@ -223,13 +223,15 @@ public:
 
     static void setPrevToken(int val)
     {
-        s_iPrevTmToken = val;     }
+        s_iPrevTmToken = val;
+    }
     static int getPrevToken()
     {   return s_iPrevTmToken;    }
 
     static void setToken(int val)
     {
-        s_iTmToken = val;         }
+        s_iTmToken = val;
+    }
     static int getToken()
     {   return s_iTmToken;        }
 
@@ -244,7 +246,7 @@ public:
     int sendRespHeaders(HttpRespHeaders *pHeaders, int isNoBody);
 
     const char *buildLogId();
-    LogTracker *getLogTracker()        {   return this;        }
+    LogSession *getLogSession()        {   return this;        }
 
     class fp_list      *getFnList() { return m_pFpList; }
 
@@ -299,7 +301,7 @@ public:
 
     SSLConnection *getSSL()     {   return &m_ssl;  }
     bool isSSL() const          {   return m_ssl.getSSL() != NULL;  }
-    
+
     int shutdownSsl();
 
     int SSLAgain();

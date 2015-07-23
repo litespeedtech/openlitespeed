@@ -165,7 +165,7 @@ class RealTimeStats
         $vhosts = array() ;
         $m = array() ;
         $found = preg_match_all("/REQ_RATE \[(.+)\]: REQ_PROCESSING: ([0-9]+), REQ_PER_SEC: ([0-9\.]+), TOT_REQS: ([0-9]+)/i", $this->_rawdata, $m) ;
-        //$found = preg_match_all("/REQ_RATE \[(.+)\]: REQ_PROCESSING: ([0-9]+), REQ_PER_SEC: ([0-9]+\.[0-9]), TOT_REQS: ([0-9]+), CACHE_HITS_PER_SEC: ([0-9]+\.[0-9]), TOTAL_CACHE_HITS: ([0-9]+)/i", $this->_rawdata, $m);
+        //$found = preg_match_all("/REQ_RATE \[(.+)\]: REQ_PROCESSING: ([0-9]+), REQ_PER_SEC: ([0-9\.]+), TOT_REQS: ([0-9]+), CACHE_HITS_PER_SEC: ([0-9\.]+), TOTAL_CACHE_HITS: ([0-9]+)/i", $this->_rawdata, $m);
 
         for ( $f = 0 ; $f < $found ; $f ++ ) {
             $vhname = trim($m[1][$f]) ;
@@ -185,7 +185,7 @@ class RealTimeStats
 
         //reset
         $m = array() ;
-        $found = preg_match_all("/EXTAPP \[(.+)\] \[(.+)\] \[(.+)\]: CMAXCONN: ([0-9]+), EMAXCONN: ([0-9]+), POOL_SIZE: ([0-9]+), INUSE_CONN: ([0-9]+), IDLE_CONN: ([0-9]+), WAITQUE_DEPTH: ([0-9]+), REQ_PER_SEC: ([0-9]+\.[0-9]), TOT_REQS: ([0-9]+)/i", $this->_rawdata, $m) ;
+        $found = preg_match_all("/EXTAPP \[(.+)\] \[(.+)\] \[(.+)\]: CMAXCONN: ([0-9]+), EMAXCONN: ([0-9]+), POOL_SIZE: ([0-9]+), INUSE_CONN: ([0-9]+), IDLE_CONN: ([0-9]+), WAITQUE_DEPTH: ([0-9]+), REQ_PER_SEC: ([0-9\.]+), TOT_REQS: ([0-9]+)/i", $this->_rawdata, $m) ;
 
         for ( $f = 0 ; $f < $found ; $f ++ ) {
             $vhname = trim($m[2][$f]) ;
@@ -211,7 +211,7 @@ class RealTimeStats
             $vhosts[$vhname][self::FLD_VH_EAP_INUSE] += (int) $m[7][$f] ;
             $vhosts[$vhname][self::FLD_VH_EAP_IDLE] += (int) $m[8][$f] ;
             $vhosts[$vhname][self::FLD_VH_EAP_WAITQUE] += (int) $m[9][$f] ;
-            $vhosts[$vhname][self::FLD_VH_EAP_REQ_PER_SEC] += (int) $m[10][$f] ;
+            $vhosts[$vhname][self::FLD_VH_EAP_REQ_PER_SEC] += doubleval($m[10][$f]) ;
         }
 
         $this->_vhosts = $vhosts ;
@@ -228,7 +228,7 @@ class RealTimeStats
         $vhosts = array() ;
         $m = array() ;
         $found = preg_match_all("/REQ_RATE \[(.+)\]: REQ_PROCESSING: ([0-9]+), REQ_PER_SEC: ([0-9\.]+), TOT_REQS: ([0-9]+)/i", $this->_rawdata, $m) ;
-        //$found = preg_match_all("/REQ_RATE \[(.+)\]: REQ_PROCESSING: ([0-9]+), REQ_PER_SEC: ([0-9]+\.[0-9]), TOT_REQS: ([0-9]+), CACHE_HITS_PER_SEC: ([0-9]+\.[0-9]), TOTAL_CACHE_HITS: ([0-9]+)/i", $this->_rawdata, $m);
+        //$found = preg_match_all("/REQ_RATE \[(.+)\]: REQ_PROCESSING: ([0-9]+), REQ_PER_SEC: ([0-9\.]+), TOT_REQS: ([0-9]+), CACHE_HITS_PER_SEC: ([0-9\.]+), TOTAL_CACHE_HITS: ([0-9]+)/i", $this->_rawdata, $m);
 
         for ( $f = 0 ; $f < $found ; $f ++ ) {
             $vhname = trim($m[1][$f]) ;
@@ -248,7 +248,7 @@ class RealTimeStats
 
         //reset
         $m = array() ;
-        $found = preg_match_all("/EXTAPP \[(.+)\] \[(.+)\] \[(.+)\]: CMAXCONN: ([0-9]+), EMAXCONN: ([0-9]+), POOL_SIZE: ([0-9]+), INUSE_CONN: ([0-9]+), IDLE_CONN: ([0-9]+), WAITQUE_DEPTH: ([0-9]+), REQ_PER_SEC: ([0-9]+\.[0-9]), TOT_REQS: ([0-9]+)/i", $this->_rawdata, $m) ;
+        $found = preg_match_all("/EXTAPP \[(.+)\] \[(.+)\] \[(.+)\]: CMAXCONN: ([0-9]+), EMAXCONN: ([0-9]+), POOL_SIZE: ([0-9]+), INUSE_CONN: ([0-9]+), IDLE_CONN: ([0-9]+), WAITQUE_DEPTH: ([0-9]+), REQ_PER_SEC: ([0-9\.]+), TOT_REQS: ([0-9]+)/i", $this->_rawdata, $m) ;
 
         for ( $f = 0 ; $f < $found ; $f ++ ) {
             $vhname = trim($m[2][$f]) ;
@@ -279,13 +279,13 @@ class RealTimeStats
             $ea[self::FLD_EA_INUSE_CONN] += (int) $m[7][$f] ;
             $ea[self::FLD_EA_IDLE_CONN] += (int) $m[8][$f] ;
             $ea[self::FLD_EA_WAITQUE_DEPTH] += (int) $m[9][$f] ;
-            $ea[self::FLD_EA_REQ_PER_SEC] += (int) $m[10][$f] ;
-            $ea[self::FLD_EA_TOT_REQS] += (int) $m[11][$f] ;
+            $ea[self::FLD_EA_REQ_PER_SEC] += doubleval($m[10][$f]) ;
+            $ea[self::FLD_EA_TOT_REQS] += doubleval($m[11][$f]) ;
 
             $vhosts[$vhname][self::FLD_VH_EAP_INUSE] += (int) $m[7][$f] ;
             $vhosts[$vhname][self::FLD_VH_EAP_IDLE] += (int) $m[8][$f] ;
             $vhosts[$vhname][self::FLD_VH_EAP_WAITQUE] += (int) $m[9][$f] ;
-            $vhosts[$vhname][self::FLD_VH_EAP_REQ_PER_SEC] += (int) $m[10][$f] ;
+            $vhosts[$vhname][self::FLD_VH_EAP_REQ_PER_SEC] += doubleval($m[10][$f]) ;
         }
 
 

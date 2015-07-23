@@ -18,8 +18,8 @@
 #include "ssiscript.h"
 #include "ssiconfig.h"
 
-#include <http/httplog.h>
 #include <http/requestvars.h>
+#include <log4cxx/logger.h>
 #include <lsr/ls_fileio.h>
 #include <util/gpointerlist.h>
 #include <util/pcregex.h>
@@ -857,8 +857,8 @@ int SSIScript::parse(SSITagConfig *pConfig, const char *pScriptPath)
     }
     else
     {
-        LOG_ERR(("[%s] Failed to open SSI script: %s",
-                 pScriptPath, strerror(errno)));
+        LS_ERROR("[%s] Failed to open SSI script: %s",
+                 pScriptPath, strerror(errno));
     }
     return LS_FAIL;
 

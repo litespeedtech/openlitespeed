@@ -23,10 +23,10 @@
 
 #include <http/httpcgitool.h>
 #include <http/httpextconnector.h>
-#include <http/httplog.h>
 #include <http/httpresourcemanager.h>
 #include <http/httpsession.h>
 #include <http/serverprocessconfig.h>
+#include <log4cxx/logger.h>
 
 #include <sys/socket.h>
 #include <openssl/md5.h>
@@ -58,8 +58,7 @@ int CgidConn::doRead()
 {
     if (!getConnector())
         return LS_FAIL;
-    if (D_ENABLED(DL_MEDIUM))
-        LOG_D((getLogger(), "[%s] CgidConn::onRead()\n", getLogId()));
+    LS_DBG_M(this, "CgidConn::onRead()");
     int len = 0;
     int ret = 0;
     do
@@ -67,14 +66,12 @@ int CgidConn::doRead()
         len = ret = read(HttpResourceManager::getGlobalBuf(), GLOBAL_BUF_SIZE);
         if (ret > 0)
         {
-            if (D_ENABLED(DL_MEDIUM))
-                LOG_D((getLogger(), "[%s] process STDOUT %d bytes",
-                       getLogId(), len));
+            LS_DBG_M(this, "Process STDOUT %d bytes", len);
             //printf( ">>read %d bytes from CGI\n", len );
             //achBuf[ ret ] = 0;
             //printf( "%s", achBuf );
             ret = getConnector()->processRespData(
-                            HttpResourceManager::getGlobalBuf(), len);
+                      HttpResourceManager::getGlobalBuf(), len);
             if (ret == -1)
                 break;
         }
@@ -109,8 +106,7 @@ int CgidConn::doWrite()
 {
     if (!getConnector())
         return LS_FAIL;
-    if (D_ENABLED(DL_MEDIUM))
-        LOG_D((getLogger(), "[%s] CgidConn::onWrite()\n", getLogId()));
+    LS_DBG_M(this, "CgidConn::onWrite()");
     int ret = getConnector()->extOutputReady();
     if (!(getConnector()->getState() & HEC_FWD_REQ_BODY))
     {
@@ -130,8 +126,7 @@ int CgidConn::doError(int error)
 {
     if (!getConnector())
         return LS_FAIL;
-    if (D_ENABLED(DL_MEDIUM))
-        LOG_D((getLogger(), "[%s] CgidConn::onError()\n", getLogId()));
+    LS_DBG_M(this, "CgidConn::onError()");
     //getState() = HEC_COMPLETE;
     getConnector()->endResponse(0, 0);
     return LS_FAIL;
@@ -242,11 +237,8 @@ int CgidConn::addRequest(ExtRequest *pReq)
         ret = buildReqHeader();
     if (ret)
     {
-//        if ( D_ENABLED( DL_LESS ) )
-//            LOG_D(( getLogger(),
-//                "[%s] Request header can't fit into 8K buffer, "
-//                "can't forward request to servlet engine",
-//                getLogId() ));
+//        LS_DBG_L(this, "Request header can't fit into 8K buffer, "
+//                 "can't forward request to servlet engine");
         ((HttpExtConnector *)pReq)->setProcessor(NULL);
         setConnector(NULL);
     }
@@ -269,16 +261,10 @@ int CgidConn::buildSSIExecHeader()
     ret = pReq->getUGidChroot(&uid, &gid, &psChroot);
     if (ret)
         return ret;
-//    if ( D_ENABLED( DL_LESS ) )
-//        LOG_D(( getLogger(),
-//            "[%s] UID: %d, GID: %d",
-//            getLogId(), pHeader->m_uid, pHeader->m_gid ));
+//    LS_DBG_L(this, "UID: %d, GID: %d", pHeader->m_uid, pHeader->m_gid);
     if (psChroot)
     {
-//        if ( D_ENABLED( DL_LESS ) )
-//            LOG_D(( getLogger(),
-//                "[%s] chroot: %s, real path: %s",
-//                getLogId(), pChroot->c_str(), pReal ));
+//        LS_DBG_L(this, "chroot: %s, real path: %s", pChroot->c_str(), pReal);
         pChroot = psChroot->c_str();
         ret = psChroot->len();
     }
@@ -339,16 +325,10 @@ int CgidConn::buildReqHeader()
     ret = pReq->getUGidChroot(&uid, &gid, &psChroot);
     if (ret)
         return ret;
-//    if ( D_ENABLED( DL_LESS ) )
-//        LOG_D(( getLogger(),
-//            "[%s] UID: %d, GID: %d",
-//            getLogId(), pHeader->m_uid, pHeader->m_gid ));
+//    LS_DBG_L(this, "UID: %d, GID: %d", pHeader->m_uid, pHeader->m_gid);
     if (psChroot)
     {
-//        if ( D_ENABLED( DL_LESS ) )
-//            LOG_D(( getLogger(),
-//                "[%s] chroot: %s, real path: %s",
-//                getLogId(), pChroot->c_str(), pReal ));
+//        LS_DBG_L(this, "chroot: %s, real path: %s", pChroot->c_str(), pReal);
         pChroot = psChroot->c_str();
         ret = psChroot->len();
     }

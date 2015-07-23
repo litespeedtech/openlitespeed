@@ -17,6 +17,7 @@
 *****************************************************************************/
 
 #include <edio/multiplexerfactory.h>
+#include <edio/evtcbque.h>
 #include <http/accesslog.h>
 #include <http/handlertype.h>
 #include <http/httplog.h>
@@ -27,7 +28,6 @@
 #include <http/httpvhost.h>
 #include <http/requestvars.h>
 #include <http/staticfilecachedata.h>
-#include <http/usereventnotifier.h>
 #include <http/reqparser.h>
 #include <log4cxx/logger.h>
 #include <lsiapi/envmanager.h>
@@ -86,17 +86,16 @@ int add_global_hook(int index, const lsi_module_t *pModule,
     if (priority[index] < LSI_MAX_HOOK_PRIORITY
         && priority[index] > -1 * LSI_MAX_HOOK_PRIORITY)
         order = priority[index];
-    if (D_ENABLED(DL_MORE))
-        LOG_D(("[Module: %s] add_global_hook, index %d [%s], priority %hd, flag %hd",
-               MODULE_NAME(pModule), index, LsiApiHooks::s_pHkptName[index], order,
-               flag));
+    LS_DBG_H("[Module: %s] add_global_hook, index %d [%s], priority %hd, flag %hd",
+             MODULE_NAME(pModule), index, LsiApiHooks::s_pHkptName[index], order,
+             flag);
     return pHooks->add(pModule, cb, order, flag);
 }
 
 
 static int set_session_hook_enable_flag(lsi_session_t *session,
-                                    const lsi_module_t *pModule, int enable,
-                                    int *index, int iNumIndices)
+                                        const lsi_module_t *pModule, int enable,
+                                        int *index, int iNumIndices)
 {
     int i, ret = LS_OK;
     int aL4Indices[LSI_HKPT_L4_COUNT], iL4Count = 0;
@@ -135,45 +134,30 @@ static int set_session_hook_enable_flag(lsi_session_t *session,
     }
     if (iL4Count > 0)
         ret = ((NtwkIOLink *)pSession)->getSessionHooks()->setEnable(
-                                pModule, enable, aL4Indices, iL4Count);
+                  pModule, enable, aL4Indices, iL4Count);
 
     if (ret == LS_OK && iHttpCount > 0)
         ret = ((HttpSession *)pSession)->getSessionHooks()->setEnable(
-                                pModule, enable, aHttpIndices, iHttpCount);
+                  pModule, enable, aHttpIndices, iHttpCount);
 
-    if (D_ENABLED(DL_MORE))
-        LOG_D(("[Module: %s] set_session_hook_enable_flag, enable %hd, "
-               "num indices %d, return %d", MODULE_NAME(pModule), enable,
-               iNumIndices, ret));
+    LS_DBG_H("[Module: %s] set_session_hook_enable_flag, enable %hd, "
+             "num indices %d, return %d", MODULE_NAME(pModule), enable,
+             iNumIndices, ret);
     return ret;
 }
 
 
 static  void log(lsi_session_t *session, int level, const char *fmt, ...)
 {
-    //For DEBUG level, may prevent to write to error log
-    if (! D_ENABLED(DL_MORE) && level == LSI_LOG_DEBUG)
-        return;
-
-    char achFmt[4096];
-    HttpSession *pSess = (HttpSession *)((LsiSession *)session);
-    LOG4CXX_NS::Logger *pLogger = NULL;
-    if (pSess)
+    if (log4cxx::Level::isEnabled(level))
     {
-        pLogger = pSess->getLogger();
-        if (pSess->getLogId())
-        {
-            int n = snprintf(achFmt, sizeof(achFmt) - 2, "[%s] %s", pSess->getLogId(),
-                             fmt);
-            if ((size_t)n > sizeof(achFmt) - 2)
-                achFmt[sizeof(achFmt) - 2 ] = 0;
-            fmt = achFmt;
-        }
+        HttpSession *pSess = (HttpSession *)((LsiSession *)session);
+        LogSession *pLogSess = pSess ? pSess->getLogSession() : NULL;
+        va_list ap;
+        va_start(ap, fmt);
+        LOG4CXX_NS::Logger::s_vlog(level, pLogSess, fmt, ap, 1);
+        va_end(ap);
     }
-    va_list ap;
-    va_start(ap, fmt);
-    HttpLog::vlog(pLogger, level, fmt, ap, 1);
-    va_end(ap);
 
 }
 
@@ -181,22 +165,28 @@ static  void log(lsi_session_t *session, int level, const char *fmt, ...)
 static  void vlog(lsi_session_t *session, int level, const char *fmt,
                   va_list vararg, int no_linefeed)
 {
-    char achFmt[4096];
-    HttpSession *pSess = (HttpSession *)((LsiSession *)session);
-    LOG4CXX_NS::Logger *pLogger = NULL;
-    if (pSess)
+    if (log4cxx::Level::isEnabled(level))
     {
-        pLogger = pSess->getLogger();
-        if (pSess->getLogId())
-        {
-            int n = snprintf(achFmt, sizeof(achFmt) - 2, "[%s] %s", pSess->getLogId(),
-                             fmt);
-            if ((size_t)n > sizeof(achFmt) - 2)
-                achFmt[sizeof(achFmt) - 2 ] = 0;
-            fmt = achFmt;
-        }
+        HttpSession *pSess = (HttpSession *)((LsiSession *)session);
+        LogSession *pLogSess = pSess ? pSess->getLogSession() : NULL;
+        LOG4CXX_NS::Logger::s_vlog(level, pLogSess, fmt, vararg, no_linefeed);
     }
-    HttpLog::vlog(pLogger, level, fmt, vararg, no_linefeed);
+//     char achFmt[4096];
+//     HttpSession *pSess = (HttpSession *)((LsiSession *)session);
+//     LOG4CXX_NS::Logger *pLogger = NULL;
+//     if (pSess)
+//     {
+//         pLogger = pSess->getLogger();
+//         if (pSess->getLogId())
+//         {
+//             int n = snprintf(achFmt, sizeof(achFmt) - 2, "[%s] %s", pSess->getLogId(),
+//                              fmt);
+//             if ((size_t)n > sizeof(achFmt) - 2)
+//                 achFmt[sizeof(achFmt) - 2 ] = 0;
+//             fmt = achFmt;
+//         }
+//     }
+//     HttpLog::vlog(pLogger, level, fmt, vararg, no_linefeed);
 
 }
 
@@ -240,11 +230,12 @@ static int init_module_data(lsi_module_t *pModule,
 }
 
 
-static LsiModuleData *get_module_data_by_type(void *obj, int type)
+static LsiModuleData *get_module_data_by_type(lsi_session_t *session_,
+        int type)
 {
     NtwkIOLink *pNtwkLink;
     HttpSession *pSession;
-    LsiSession *session = (LsiSession *)obj;
+    LsiSession *session = (LsiSession *)session_;
     switch (type)
     {
     case LSI_MODULE_DATA_HTTP:
@@ -798,7 +789,7 @@ static int lsi_set_timer(unsigned int timeout_ms, int repeat,
                          lsi_timer_callback_pf timer_cb, void *timer_cb_param)
 {
     int id = ModTimerList::getInstance().addTimer(timeout_ms, repeat, timer_cb,
-                                                  timer_cb_param);
+             timer_cb_param);
     return id;
 }
 
@@ -809,33 +800,20 @@ static int lsi_remove_timer(int timer_id)
 }
 
 
-static void *create_event(lsi_event_callback_pf cb, long lParam, void *pParam)
+static long create_event(evtcb_pf cb,
+                         lsi_session_t *session, long lParam, void *pParam)
 {
-    return (void *)UserEventNotifier::getInstance().createEventObj(cb,
-                                                                   lParam,
-                                                                   pParam);
+    return (long)EvtcbQue::getInstance().schedule(cb, session,
+            lParam, pParam);
 }
 
-static void *create_session_resume_event(lsi_session_t *session, lsi_module_t *pModule)
+static long create_session_resume_event(lsi_session_t *session,
+                                        lsi_module_t *pModule)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
-    lsi_event_callback_pf cb = (lsi_event_callback_pf)(&HttpSession::hookResumeCallback);
-    return create_event(cb, pSession->getSn(), (LsiSession *)session);
+    evtcb_pf cb = (evtcb_pf)(&HttpSession::hookResumeCallback);
+    return create_event(cb, session, pSession->getSn(), NULL);
 }
-
-static void remove_event(void *event_obj_pointer)
-{
-    UserEventNotifier::getInstance().removeEventObj((EventObj *)
-             event_obj_pointer);
-}
-
-
-static int notify_event(void *event_obj_pointer)
-{
-    return UserEventNotifier::getInstance().notifyEventObj((
-                EventObj *)event_obj_pointer);
-}
-
 
 static const char *get_req_header(lsi_session_t *session, const char *key,
                                   int keyLen, int *valLen)
@@ -1163,10 +1141,12 @@ static int get_req_body_part_count(lsi_session_t *session)
         return pSession->getReqParser()->getArgCount();
 }
 
-static int get_req_body_part(lsi_session_t *session, int index, char **name, int* nameLen, char **val, int* valLen, char** filePath)
+static int get_req_body_part(lsi_session_t *session, int index,
+                             char **name, int *nameLen, char **val, int *valLen, char **filePath)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
-    return pSession->getReqParser()->getArgs(index, *name, *nameLen, *val, *valLen, *filePath);
+    return pSession->getReqParser()->getArgs(index, *name, *nameLen, *val,
+            *valLen, *filePath);
 }
 
 static int is_req_body_part_file(lsi_session_t *session, int index)
@@ -1963,8 +1943,6 @@ void lsiapi_init_server_api()
 
     pApi->create_event = create_event;
     pApi->create_session_resume_event = create_session_resume_event;
-    pApi->remove_event = remove_event;
-    pApi->notify_event = notify_event;
 
     pApi->get_req_raw_headers_length = get_req_raw_headers_length;
     pApi->get_req_raw_headers = get_req_raw_headers;

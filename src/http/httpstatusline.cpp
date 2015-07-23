@@ -35,7 +35,8 @@ StatusLineString::StatusLineString(int version, int code)
         m_iLineLen = verLen + codeLen ;
         m_pLine = s_pEnd;
         memcpy(s_pEnd, HttpVer::getVersionString(version), verLen);
-        memcpy(s_pEnd + verLen, HttpStatusCode::getInstance().getCodeString(code), codeLen);
+        memcpy(s_pEnd + verLen, HttpStatusCode::getInstance().getCodeString(code),
+               codeLen);
         s_pEnd += m_iLineLen;
     }
     else
@@ -49,11 +50,11 @@ StatusLineString::StatusLineString(int version, int code)
 HttpStatusLine::HttpStatusLine()
 {
     int code, version = HTTP_1_1;
-    for(code = 0; code < SC_END; ++code)
+    for (code = 0; code < SC_END; ++code)
         m_aCache[version][code] = new StatusLineString(version, code);
 
     version = HTTP_1_0;
-    for(code = 0; code < SC_END; ++code)
+    for (code = 0; code < SC_END; ++code)
         m_aCache[version][code] = new StatusLineString(version, code);
 }
 
@@ -61,11 +62,11 @@ HttpStatusLine::HttpStatusLine()
 HttpStatusLine::~HttpStatusLine()
 {
     int code, version = HTTP_1_1;
-    for(code = 0; code < SC_END; ++code)
+    for (code = 0; code < SC_END; ++code)
         delete m_aCache[version][code];
 
     version = HTTP_1_0;
-    for(code = 0; code < SC_END; ++code)
+    for (code = 0; code < SC_END; ++code)
         delete m_aCache[version][code];
 }
 

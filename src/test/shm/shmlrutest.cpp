@@ -52,13 +52,13 @@ TEST(ls_ShmLruTest_test)
     unlink(lockfilename);
 
     CHECK((ret = shmlru_init(mylru[0].base, shmname, 0,
-                      mylru[0].name, 0, LsShmHash::hashXXH32, LsShmHash::compBuf,
-                      mylru[0].mode)) == 0);
+                             mylru[0].name, 0, LsShmHash::hashXXH32, LsShmHash::compBuf,
+                             mylru[0].mode)) == 0);
     if (ret != 0)
         return;
     CHECK((ret = shmlru_init(mylru[1].base, shmname, 0,
-                      mylru[1].name, 0, LsShmHash::hashXXH32, LsShmHash::compBuf,
-                      mylru[1].mode)) == 0);
+                             mylru[1].name, 0, LsShmHash::hashXXH32, LsShmHash::compBuf,
+                             mylru[1].mode)) == 0);
     if (ret != 0)
         return;
 
@@ -129,7 +129,8 @@ static void doit(struct mylru *pLru)
         CHECK(pData->count == SHMLRU_MINSAVECNT - 1);
         CHECK(pData->size == sizeof(val2) - 1);
         CHECK(memcmp(pData->data, val2, pData->size) == 0);
-        if (pLru->mode == LSSHM_LRU_MODE2)    /* allocs larger data, then releases old */
+        if (pLru->mode ==
+            LSSHM_LRU_MODE2)    /* allocs larger data, then releases old */
             CHECK(retsave != retbuf[0]);
         else
         {

@@ -84,7 +84,7 @@ void VMemBuf::releaseBlocks()
     {
         s_iCurAnonMapBlocks -= m_iCurTotalSize / s_iBlockSize;
         if (m_iNoRecycle)
-            m_bufList.releaseObjects();
+            m_bufList.release_objects();
         else
         {
             s_pAnonPool->push_back(m_bufList);
@@ -92,7 +92,7 @@ void VMemBuf::releaseBlocks()
         }
     }
     else
-        m_bufList.releaseObjects();
+        m_bufList.release_objects();
     memset(&m_iCurWBlkPos, 0,
            (char *)(&m_pCurRPos + 1) - (char *)&m_iCurWBlkPos);
     m_iCurTotalSize = 0;
@@ -663,8 +663,8 @@ char *VMemBuf::getWriteBuffer(size_t &size)
 size_t VMemBuf::getCurROffset() const
 {
     return (m_pCurRBlock)
-            ? (m_curRBlkPos - ((*m_pCurRBlock)->getBufEnd() - m_pCurRPos))
-            : 0;
+           ? (m_curRBlkPos - ((*m_pCurRBlock)->getBufEnd() - m_pCurRPos))
+           : 0;
 }
 
 

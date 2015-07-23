@@ -147,7 +147,8 @@ bool LsiRewriteDriverFactory::InitLsiUrlAsyncFetchers()
 LsServerContext *LsiRewriteDriverFactory::MakeLsiServerContext(
     StringPiece hostname, int port)
 {
-    LsServerContext *server_context = new LsServerContext(this, hostname, port);
+    LsServerContext *server_context = new LsServerContext(this, hostname,
+            port);
     uninitialized_server_contexts_.insert(server_context);
     return server_context;
 }

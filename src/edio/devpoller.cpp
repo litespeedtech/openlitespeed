@@ -107,17 +107,17 @@ int DevPoller::waitAndProcessEvents(int iTimeoutMilliSec)
         for (; pBegin < pEnd; ++pBegin)
         {
             int fd = pBegin->fd;
-            //LOG_D(( "DevPoller: fd: %d, revents: %hd", fd, pBegin->revents ));
+            //LS_DBG_L( "DevPoller: fd: %d, revents: %hd", fd, pBegin->revents );
             if (fd > m_reactorIndex.getCapacity())
             {
-                //LOG_D(( "DevPoller: overflow, remove fd: %d", fd ));
+                //LS_DBG_L( "DevPoller: overflow, remove fd: %d", fd );
                 appendChange(fd, POLLREMOVE);
             }
             else
             {
                 EventReactor *pReactor = m_reactorIndex.get(fd);
                 //if ( !pReactor )
-                //    LOG_D(( "DevPoller: pReactor is NULL, remove fd: %d", fd ));
+                //    LS_DBG_L( "DevPoller: pReactor is NULL, remove fd: %d", fd );
                 if ((pReactor) && (pBegin->fd == pReactor->getfd()))
                 {
                     pReactor->setRevent(pBegin->revents);
@@ -125,7 +125,7 @@ int DevPoller::waitAndProcessEvents(int iTimeoutMilliSec)
                 }
                 else
                 {
-                    //LOG_D(( "DevPoller: does not match, remove fd: %d", fd ));
+                    //LS_DBG_L( "DevPoller: does not match, remove fd: %d", fd );
                     appendChange(fd, POLLREMOVE);
                 }
             }

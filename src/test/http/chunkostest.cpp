@@ -66,36 +66,36 @@ class ThrottledOS : public OutputStream
     int             m_count;
 public:
     ThrottledOS()
-        : m_count( 0 )
-        {}
-    int write( const char * pBuf, int size )
+        : m_count(0)
+    {}
+    int write(const char *pBuf, int size)
     {
-        if ( size > m_count)
+        if (size > m_count)
             size = m_count;
-        if ( size > 0 )
+        if (size > 0)
         {
-            m_buf.append( pBuf, size );
+            m_buf.append(pBuf, size);
             m_count -= size;
             return size;
         }
         else
             return 0;
     }
-    int writev( const struct iovec * iov, int count )
+    int writev(const struct iovec *iov, int count)
     {
-        return OutputStream::writevToWrite( iov, count );        
+        return OutputStream::writevToWrite(iov, count);
     }
-   
+
     void clearCache()
     {   m_buf.clear();  }
     int flush()
     {   return 0;}
     int close()
     {   clearCache(); return 0;  }
-    const AutoBuf& getBuf() const { return m_buf; }
-    void allowBytes( int n )
+    const AutoBuf &getBuf() const { return m_buf; }
+    void allowBytes(int n)
     {   m_count = n;    }
-    
+
 };
 
 
@@ -251,39 +251,39 @@ void testChunkBuffer()
 
 void testCrash()
 {
-    
+
     ThrottledOS       testOS;
     ChunkOutputStream chunkOS;
     IOVec iov;
-    chunkOS.setStream( &testOS );
+    chunkOS.setStream(&testOS);
     chunkOS.open();
-    chunkOS.setBuffering( 1 );
+    chunkOS.setBuffering(1);
 
     int ret;
-    char *pBuf = (char *)malloc( 16384 );
-    memset( pBuf, 'a', 8192 );
-    memset( pBuf + 8192, 'b', 8192 );
-    ret = chunkOS.write( pBuf, 8192 );
+    char *pBuf = (char *)malloc(16384);
+    memset(pBuf, 'a', 8192);
+    memset(pBuf + 8192, 'b', 8192);
+    ret = chunkOS.write(pBuf, 8192);
     CHECK(ret == 0);
     testOS.allowBytes(40960);
-    ret = chunkOS.write( pBuf, 8192 );
+    ret = chunkOS.write(pBuf, 8192);
     CHECK(ret == 8192);
-    
-    char * p = pBuf + 8192;
+
+    char *p = pBuf + 8192;
     int bytes = 327;
-    ret = chunkOS.write( p, bytes);
+    ret = chunkOS.write(p, bytes);
     CHECK(ret == 327);
     p += ret;
     bytes = 8192 - 327;
-    
+
     testOS.allowBytes(100);
     ret = chunkOS.flush();
     CHECK(ret == 1);
-    
+
     testOS.allowBytes(40960);
     ret = chunkOS.write(p, bytes);
     CHECK(ret == bytes);
-    
+
     free(pBuf);
 }
 

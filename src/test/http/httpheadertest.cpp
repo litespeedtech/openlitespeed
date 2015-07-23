@@ -426,7 +426,7 @@ SUITE(HttpHeaderTest)
         for (it = io.begin(); it != io.end(); ++it)
         {
             p = (unsigned char *)it->iov_base;
-            printf( "Check: %.*s, %.*s\n", it->iov_len, p, it->iov_len, ph );
+            printf("Check: %.*s, %.*s\n", it->iov_len, p, it->iov_len, ph);
             CHECK(strncasecmp((const char *)p, ph, it->iov_len) == 0);
             if (strncasecmp((const char *)p, ph, it->iov_len) != 0)
                 printf("p:\n%.*s\nph:\n%.*s\n", it->iov_len, p, it->iov_len, ph);
@@ -436,47 +436,47 @@ SUITE(HttpHeaderTest)
 //printf("<-&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&\n");
     }
 
-    
-TEST (respHeadersCrash)
-{
-    char headerData[] = 
-"X-Powered-By: PHP/5.3.29\r\n"
-"Set-Cookie: PHPSESSID=us6sr4noanp02s0its2dgv35m1; path=/\r\n"
-"Expires: Thu, 19 Nov 1981 08:52:00 GMT\r\n"
-"X-Pingback: http://www.theeverafterbridal.com/xmlrpc.php\r\n"
-"Content-Type: text/html; charset=UTF-8\r\n"
-"Set-Cookie: wordpress_fa5eb9fde7bf3f7f3fd8640562242bba=+; expires=Fri, 06-Jun-2014 04:43:43 GMT; path=/wp-admin\r\n"
-"Set-Cookie: wordpress_sec_fa5eb9fde7bf3f7f3fd8640562242bba=+; expires=Fri, 06-Jun-2014 04:43:43 GMT; path=/wp-admin\r\n"
-"Set-Cookie: wordpress_fa5eb9fde7bf3f7f3fd8640562242bba=+; expires=Fri, 06-Jun-2014 04:43:43 GMT; path=/wp-content/plugins\r\n"
-"Set-Cookie: wordpress_sec_fa5eb9fde7bf3f7f3fd8640562242bba=+; expires=Fri, 06-Jun-2014 04:43:43 GMT; path=/wp-content/plugins\r\n"
-"Set-Cookie: wordpress_logged_in_fa5eb9fde7bf3f7f3fd8640562242bba=+; expires=Fri, 06-Jun-2014 04:43:43 GMT; path=/\r\n"
-"Set-Cookie: wordpress_logged_in_fa5eb9fde7bf3f7f3fd8640562242bba=+; expires=Fri, 06-Jun-2014 04:43:43 GMT; path=/\r\n"
-"Set-Cookie: wordpress_fa5eb9fde7bf3f7f3fd8640562242bba=+; expires=Fri, 06-Jun-2014 04:43:43 GMT; path=/\r\n"
-"Set-Cookie: wordpress_fa5eb9fde7bf3f7f3fd8640562242bba=+; expires=Fri, 06-Jun-2014 04:43:43 GMT; path=/\r\n"
-"Set-Cookie: wordpress_sec_fa5eb9fde7bf3f7f3fd8640562242bba=+; expires=Fri, 06-Jun-2014 04:43:43 GMT; path=/\r\n"
-"Set-Cookie: wordpress_sec_fa5eb9fde7bf3f7f3fd8640562242bba=+; expires=Fri, 06-Jun-2014 04:43:43 GMT; path=/\r\n"
-"Set-Cookie: wordpressuser_fa5eb9fde7bf3f7f3fd8640562242bba=+; expires=Fri, 06-Jun-2014 04:43:43 GMT; path=/\r\n"
-"Set-Cookie: wordpresspass_fa5eb9fde7bf3f7f3fd8640562242bba=+; expires=Fri, 06-Jun-2014 04:43:43 GMT; path=/\r\n"
-"Set-Cookie: wordpressuser_fa5eb9fde7bf3f7f3fd8640562242bba=+; expires=Fri, 06-Jun-2014 04:43:43 GMT; path=/\r\n"
-"Set-Cookie: wordpresspass_fa5eb9fde7bf3f7f3fd8640562242bba=+; expires=Fri, 06-Jun-2014 04:43:43 GMT; path=/\r\n"
-"Cache-Control: no-store, no-cache, must-revalidate, max-age=0\r\n";
 
-    char headerData1[] = 
-"Cache-Control: post-check=0, pre-check=0\r\n";
+    TEST(respHeadersCrash)
+    {
+        char headerData[] =
+            "X-Powered-By: PHP/5.3.29\r\n"
+            "Set-Cookie: PHPSESSID=us6sr4noanp02s0its2dgv35m1; path=/\r\n"
+            "Expires: Thu, 19 Nov 1981 08:52:00 GMT\r\n"
+            "X-Pingback: http://www.theeverafterbridal.com/xmlrpc.php\r\n"
+            "Content-Type: text/html; charset=UTF-8\r\n"
+            "Set-Cookie: wordpress_fa5eb9fde7bf3f7f3fd8640562242bba=+; expires=Fri, 06-Jun-2014 04:43:43 GMT; path=/wp-admin\r\n"
+            "Set-Cookie: wordpress_sec_fa5eb9fde7bf3f7f3fd8640562242bba=+; expires=Fri, 06-Jun-2014 04:43:43 GMT; path=/wp-admin\r\n"
+            "Set-Cookie: wordpress_fa5eb9fde7bf3f7f3fd8640562242bba=+; expires=Fri, 06-Jun-2014 04:43:43 GMT; path=/wp-content/plugins\r\n"
+            "Set-Cookie: wordpress_sec_fa5eb9fde7bf3f7f3fd8640562242bba=+; expires=Fri, 06-Jun-2014 04:43:43 GMT; path=/wp-content/plugins\r\n"
+            "Set-Cookie: wordpress_logged_in_fa5eb9fde7bf3f7f3fd8640562242bba=+; expires=Fri, 06-Jun-2014 04:43:43 GMT; path=/\r\n"
+            "Set-Cookie: wordpress_logged_in_fa5eb9fde7bf3f7f3fd8640562242bba=+; expires=Fri, 06-Jun-2014 04:43:43 GMT; path=/\r\n"
+            "Set-Cookie: wordpress_fa5eb9fde7bf3f7f3fd8640562242bba=+; expires=Fri, 06-Jun-2014 04:43:43 GMT; path=/\r\n"
+            "Set-Cookie: wordpress_fa5eb9fde7bf3f7f3fd8640562242bba=+; expires=Fri, 06-Jun-2014 04:43:43 GMT; path=/\r\n"
+            "Set-Cookie: wordpress_sec_fa5eb9fde7bf3f7f3fd8640562242bba=+; expires=Fri, 06-Jun-2014 04:43:43 GMT; path=/\r\n"
+            "Set-Cookie: wordpress_sec_fa5eb9fde7bf3f7f3fd8640562242bba=+; expires=Fri, 06-Jun-2014 04:43:43 GMT; path=/\r\n"
+            "Set-Cookie: wordpressuser_fa5eb9fde7bf3f7f3fd8640562242bba=+; expires=Fri, 06-Jun-2014 04:43:43 GMT; path=/\r\n"
+            "Set-Cookie: wordpresspass_fa5eb9fde7bf3f7f3fd8640562242bba=+; expires=Fri, 06-Jun-2014 04:43:43 GMT; path=/\r\n"
+            "Set-Cookie: wordpressuser_fa5eb9fde7bf3f7f3fd8640562242bba=+; expires=Fri, 06-Jun-2014 04:43:43 GMT; path=/\r\n"
+            "Set-Cookie: wordpresspass_fa5eb9fde7bf3f7f3fd8640562242bba=+; expires=Fri, 06-Jun-2014 04:43:43 GMT; path=/\r\n"
+            "Cache-Control: no-store, no-cache, must-revalidate, max-age=0\r\n";
 
-    char headerData2[] = ":\r\n\r\n";
+        char headerData1[] =
+            "Cache-Control: post-check=0, pre-check=0\r\n";
 
-    ls_xpool_t pool;
-    ls_xpool_init(&pool);
-    HttpRespHeaders h(&pool);
-    h.reset();
+        char headerData2[] = ":\r\n\r\n";
 
-    h.parseAdd( headerData, sizeof(headerData)-1, LSI_HEADER_ADD);
-    h.parseAdd( headerData1, sizeof(headerData1)-1, LSI_HEADER_ADD);
-    h.parseAdd( headerData2, sizeof(headerData2)-1, LSI_HEADER_ADD);
-}
-    
-    
+        ls_xpool_t pool;
+        ls_xpool_init(&pool);
+        HttpRespHeaders h(&pool);
+        h.reset();
+
+        h.parseAdd(headerData, sizeof(headerData) - 1, LSI_HEADER_ADD);
+        h.parseAdd(headerData1, sizeof(headerData1) - 1, LSI_HEADER_ADD);
+        h.parseAdd(headerData2, sizeof(headerData2) - 1, LSI_HEADER_ADD);
+    }
+
+
     TEST(respHeaders)
     {
         ls_xpool_t pool;
@@ -670,7 +670,7 @@ TEST (respHeadersCrash)
 
             h.parseAdd("MytestHeader : XXX\r\n",
                        strlen("MytestHeader : XXX\r\n"), LSI_HEADER_MERGE);
-            
+
             h.parseAdd("Content-Encoding   \t  : GZIP\r\n",
                        strlen("Content-Encoding   \t  : GZIP\r\n"), LSI_HEADER_MERGE);
             h.parseAdd("Content-Encoding2 : GZIP\r\n",

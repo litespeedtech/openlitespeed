@@ -19,7 +19,7 @@
 #define CONFIGCTX_H
 
 #include <lsdef.h>
-#include <util/logidtracker.h>
+#include <log4cxx/tmplogid.h>
 
 #include <stdarg.h>
 
@@ -30,7 +30,7 @@ class HttpHandler;
 class AccessControl;
 #define MAX_PATH_LEN                4096
 long long getLongValue(const char *pValue, int base = 10);
-class ConfigCtx
+class ConfigCtx : public TmpLogId
 {
 public:
 
@@ -41,13 +41,13 @@ public:
         s_pCurConfigCtx = this;
         if (pAppendId1)
         {
-            m_logIdTracker.appendLogId(":");
-            m_logIdTracker.appendLogId(pAppendId1);
+            appendLogId(":");
+            appendLogId(pAppendId1);
         }
         if (pAppendId2)
         {
-            m_logIdTracker.appendLogId(":");
-            m_logIdTracker.appendLogId(pAppendId2);
+            appendLogId(":");
+            appendLogId(pAppendId2);
         }
     }
     ~ConfigCtx()
@@ -55,12 +55,6 @@ public:
         s_pCurConfigCtx = m_pParent;
     }
 
-    void vlog(int level, const char *pFmt, va_list args);
-    void logError(const char *pFmt, ...);
-    void logWarn(const char *pFmt, ...);
-    void logNotice(const char *pFmt, ...);
-    void logInfo(const char *pFmt, ...);
-    void logDebug(const char *pFmt, ...);
     void logErrorPath(const char *pstr1,  const char *pstr2);
     void logErrorInvalTag(const char *pstr1,  const char *pstr2);
     void logErrorMissingTag(const char *pstr1);
@@ -102,7 +96,6 @@ public:
     { memcpy(s_aDocRoot, pDocRoot, strlen(pDocRoot) + 1); }
     static const char *getDocRoot()         {   return s_aDocRoot;    }
 private:
-    LogIdTracker    m_logIdTracker;
     ConfigCtx      *m_pParent;
     static AutoStr2        s_vhName;
     static AutoStr2        s_vhDomain;

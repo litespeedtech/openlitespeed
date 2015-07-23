@@ -19,6 +19,7 @@
 
 #include <http/handlertype.h>
 #include <http/httplog.h>
+#include <log4cxx/logger.h>
 #include <lsiapi/internal.h>
 #include <lsiapi/lsiapi.h>
 #include <lsiapi/lsiapihooks.h>
@@ -122,12 +123,11 @@ ModuleManager::iterator ModuleManager::addModule(const char *name,
     storeModulePointer(MODULE_ID(pModule), pModule);
 
     iter = insert((char *) MODULE_NAME(pModule), pLmHttpHandler);
-    if (D_ENABLED(DL_MORE))
-        LOG_D(("%s module [%s] built with API v%hd.%hd has been"
-               " registered successfully.",
-               pType, MODULE_NAME(pModule),
-               (int16_t)(pModule->_signature >> 16),
-               (int16_t)pModule->_signature));
+    LS_DBG_H("%s module [%s] built with API v%hd.%hd has been"
+             " registered successfully.",
+             pType, MODULE_NAME(pModule),
+             (int16_t)(pModule->_signature >> 16),
+             (int16_t)pModule->_signature);
     return iter;
 }
 
@@ -196,7 +196,7 @@ lsi_module_t *ModuleManager::loadModule(const char *name)
     if (dlLib)
         dlclose(dlLib);
 
-    LOG_ERR(("Failed to load module [%s], error: %s", name, error));
+    LS_ERROR("Failed to load module [%s], error: %s", name, error);
     return NULL;
 }
 
@@ -293,9 +293,11 @@ static void checkModuleDef(lsi_module_t *pModule)
                 {
                     int index = pModule->_serverhook[count].index;
                     if (index < 0 || index >= LSI_HKPT_TOTAL_COUNT)
-                        LOG_ERR(("[%s] create def file failure,"
+                    {
+                        LS_ERROR("[%s] create def file failure,"
                                  " wrong index(%d).\n",
-                                 MODULE_NAME(pModule), index));
+                                 MODULE_NAME(pModule), index);
+                    }
                     else
                         fprintf(fp, "priority.%s:%d\n",
                                 LsiApiHooks::s_pHkptName[index],
@@ -322,8 +324,8 @@ int ModuleManager::runModuleInit()
             if (ret != 0)
             {
                 disableModule(pModule);
-                LOG_ERR(("[%s] initialization failure, disabled",
-                         MODULE_NAME(pModule)));
+                LS_ERROR("[%s] initialization failure, disabled",
+                         MODULE_NAME(pModule));
             }
             else
             {
@@ -342,9 +344,9 @@ int ModuleManager::runModuleInit()
                     }
                 }
 
-                LOG_INFO(("[Module: %s %s] has been initialized successfully",
-                          MODULE_NAME(pModule),
-                          ((pModule->_info) ? pModule->_info : "")));
+                LS_INFO("[Module: %s %s] has been initialized successfully",
+                        MODULE_NAME(pModule),
+                        ((pModule->_info) ? pModule->_info : ""));
             }
         }
     }
@@ -650,7 +652,7 @@ int ModuleConfig::parseConfig(const XmlNode *pNode, lsi_module_t *pModule,
 //             const char *p;
 //             while (p = *pModule->_config_parser->_config_keys)
 //             {
-//                 LOG_INFO(( "%s", p));
+//                 LS_INFO( "%s", p));
 //                 ++pModule->_config_parser->_config_keys;
 //             }
 
@@ -685,8 +687,7 @@ int ModuleConfig::parseConfigList(const XmlNodeList *moduleConfigNodeList,
         if (!pValue)
         {
             ret = -1;
-            if (D_ENABLED(DL_MORE))
-                LOG_D(("[LSIAPI] parseConfigList error, no module name"));
+            LS_DBG_H("[LSIAPI] parseConfigList error, no module name");
             break;
         }
 

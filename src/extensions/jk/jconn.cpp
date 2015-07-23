@@ -20,10 +20,10 @@
 #include <extensions/extworker.h>
 
 #include <http/httpextconnector.h>
-#include <http/httplog.h>
 #include <http/httpmime.h>
 #include <http/httpstatuscode.h>
 #include <http/httpsession.h>
+#include <log4cxx/logger.h>
 
 JConn::JConn()
     : m_pReqHeaderEnd(NULL)
@@ -89,17 +89,15 @@ int JConn::processPacketHeader(unsigned char *&p)
     if ((*p != AJP_RESP_PREFIX_B1) ||
         (*(p + 1) != AJP_RESP_PREFIX_B2))
     {
-        LOG_ERR((getLogger(), "[%s] Invalid AJP response signature %x%x",
-                 getLogId(), (int) *p,
-                 (int) * (p + 1)));
+        LS_ERROR(this, "Invalid AJP response signature %x%x", (int) *p,
+                 (int) * (p + 1));
         return LS_FAIL;
     }
     p += 2;
     m_curPacketSize = getInt(p);
     if (m_curPacketSize > AJP_MAX_PKT_BODY_SIZE)
     {
-        LOG_ERR((getLogger(), "[%s] packet size is too large - %d",
-                 getLogId(), m_curPacketSize));
+        LS_ERROR(this, "Packet size is too large - %d", m_curPacketSize);
         return LS_FAIL;
     }
     m_packetType = *p++;
@@ -115,10 +113,8 @@ int JConn::processPacketHeader(unsigned char *&p)
     case AJP13_END_RESP:
         if (*p != 1)
         {
-            if (D_ENABLED(DL_LESS))
-                LOG_D((getLogger(),
-                       "[%s] close connection required by servlet engine %s ",
-                       getLogId(), getWorker()->getURL()));
+            LS_DBG_L(this, "Close connection required by servlet engine %s ",
+                     getWorker()->getURL());
 
             setState(CLOSING);
         }
@@ -361,9 +357,7 @@ int JConn::doRead()
         len = read((char *)m_pCurPos, toRead);
         if (len > 0)
         {
-            if (D_ENABLED(DL_MEDIUM))
-                LOG_D((getLogger(), "[%s] process STDOUT %d bytes",
-                       getLogId(), len));
+            LS_DBG_M(this, "Process STDOUT %d bytes", len);
             //printf( ">>read %d bytes from CGI\n", len );
             //::write( 1, m_pCurPos, len );
             m_pCurPos += len;
@@ -411,11 +405,8 @@ int JConn::addRequest(ExtRequest *pReq)
     int ret = buildReqHeader();
     if (ret)
     {
-        if (D_ENABLED(DL_LESS))
-            LOG_D((getLogger(),
-                   "[%s] Request header can't fit into 8K buffer, "
-                   "can't forward request to servlet engine",
-                   getLogId()));
+        LS_DBG_L(this, "Request header can't fit into 8K buffer, "
+                 "can't forward request to servlet engine");
         ((HttpExtConnector *)pReq)->setProcessor(NULL);
         setConnector(NULL);
         ret = SC_500;

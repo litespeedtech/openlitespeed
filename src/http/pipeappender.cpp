@@ -19,7 +19,7 @@
 
 #include <edio/multiplexer.h>
 #include <edio/multiplexerfactory.h>
-#include <http/httplog.h>
+#include <log4cxx/logger.h>
 #include <lsr/ls_fileio.h>
 #include <util/iovec.h>
 
@@ -84,7 +84,7 @@ int PipeAppender::open()
     if (socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == -1)
     {
         m_error = errno;
-        LOG_ERR(("[PipeAppender] socketpair() failed!"));
+        LS_ERROR("[PipeAppender] socketpair() failed!");
         return LS_FAIL;
     }
     fcntl(fds[0], F_SETFD, FD_CLOEXEC);
@@ -139,8 +139,8 @@ int PipeAppender::append(const char *pBuf, int len)
     {
         if ((ret > -1) || (errno == EAGAIN))
         {
-            LOG_NOTICE(("[PipeAppender:%d] cache output: %d", Appender::getfd(),
-                        len - ret));
+            LS_NOTICE("[PipeAppender:%d] cache output: %d", Appender::getfd(),
+                      len - ret);
             MultiplexerFactory::getMultiplexer()->continueWrite(this);
             return m_buf.cache(pBuf, len, (ret == -1) ? 0 : ret);
         }
@@ -152,14 +152,14 @@ int PipeAppender::append(const char *pBuf, int len)
 
 int PipeAppender::flush()
 {
-    LOG_NOTICE(("[PipeAppender:%d] flush() cache size: %d", Appender::getfd(),
-                m_buf.size()));
+    LS_NOTICE("[PipeAppender:%d] flush() cache size: %d", Appender::getfd(),
+              m_buf.size());
     if (!m_buf.empty())
     {
         IOVec iov;
         m_buf.getIOvec(iov);
         int ret = ::writev(Appender::getfd(), iov.get(), iov.len());
-        LOG_NOTICE(("[PipeAppender] flush() writev() return %d", ret));
+        LS_NOTICE("[PipeAppender] flush() writev() return %d", ret);
         if (ret > 0)
         {
             if (m_buf.size() <= ret)

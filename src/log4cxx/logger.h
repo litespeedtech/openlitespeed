@@ -29,7 +29,6 @@
 
 #define ROOT_LOGGER_NAME "__root"
 
-BEGIN_LOG4CXX_NS
 
 #define __logger_log( level, format ) \
     do { \
@@ -40,15 +39,100 @@ BEGIN_LOG4CXX_NS
         } \
     }while(0)
 
+/*
+#define ___log( level, ... ) \
+{ \
+    log4cxx::Logger *l = log4cxx::Logger::getDefault(); \
+    if (l->isEnabled( level )) \
+        l->log2( level, __VA_ARGS__ ); \
+}
+
+#define LS_NOTICE2( ... ) \
+       ___log( log4cxx::Level::NOTICE, __VA_ARGS__)
+*/
+
+#define LS_DBG_IO( ... ) \
+    do { \
+        if ( log4cxx::Level::isEnabled( log4cxx::Level::DBG_IODATA ) ) \
+            log4cxx::Logger::s_log( log4cxx::Level::DBG_IODATA, __VA_ARGS__); \
+    }while(0)
+
+#define LS_DBG_H( ... ) \
+    do { \
+        if ( log4cxx::Level::isEnabled( log4cxx::Level::DBG_HIGH ) ) \
+            log4cxx::Logger::s_log( log4cxx::Level::DBG_HIGH, __VA_ARGS__); \
+    }while(0)
+
+#define LS_DBG_M( ... ) \
+    do { \
+        if ( log4cxx::Level::isEnabled( log4cxx::Level::DBG_MEDIUM ) ) \
+            log4cxx::Logger::s_log(  log4cxx::Level::DBG_MEDIUM, __VA_ARGS__); \
+    }while(0)
+
+#define LS_DBG_L( ... ) \
+    do { \
+        if ( log4cxx::Level::isEnabled( log4cxx::Level::DBG_LESS ) ) \
+            log4cxx::Logger::s_log( log4cxx::Level::DBG_LESS, __VA_ARGS__); \
+    }while(0)
+
+
+#define LS_INFO( ... ) \
+    do { \
+        if ( log4cxx::Level::isEnabled( log4cxx::Level::INFO ) ) \
+            log4cxx::Logger::s_log( log4cxx::Level::INFO, __VA_ARGS__); \
+    }while(0)
+
+#define LS_NOTICE( ... ) \
+    do { \
+        if ( log4cxx::Level::isEnabled( log4cxx::Level::NOTICE ) ) \
+            log4cxx::Logger::s_log( log4cxx::Level::NOTICE, __VA_ARGS__); \
+    }while(0)
+
+#define LS_WARN( ... ) \
+    do { \
+        if ( log4cxx::Level::isEnabled( log4cxx::Level::WARN ) ) \
+            log4cxx::Logger::s_log( log4cxx::Level::WARN, __VA_ARGS__); \
+    }while(0)
+
+#define LS_ERROR( ... ) \
+    do { \
+        if ( log4cxx::Level::isEnabled( log4cxx::Level::ERROR ) ) \
+            log4cxx::Logger::s_log( log4cxx::Level::ERROR, __VA_ARGS__); \
+    }while(0)
+
+#define LS_CRIT( ... ) \
+    do { \
+        if ( log4cxx::Level::isEnabled( log4cxx::Level::CRIT ) ) \
+            log4cxx::Logger::s_log( log4cxx::Level::CRIT, __VA_ARGS__); \
+    }while(0)
+
+#define LS_FATAL( ... ) \
+    do { \
+        if ( log4cxx::Level::isEnabled( log4cxx::Level::FATAL ) ) \
+            log4cxx::Logger::s_log( log4cxx::Level::FATAL, __VA_ARGS__); \
+    }while(0)
+
+#define LS_ERR_NO_MEM( msg ) \
+    ( LOG4CXX_NS::Logger::errmem( msg ) )
+
+class TmpLogId;
+class LogSession;
+
+BEGIN_LOG4CXX_NS
+
 class Appender;
 class Layout;
+class ILog;
+
 class Logger : public Duplicable
 {
     int         m_iLevel;
-    Appender   *m_pAppender;
     int         m_iAdditive;
+    Appender   *m_pAppender;
     Layout     *m_pLayout;
     Logger     *m_pParent;
+
+    static Logger *s_pDefault;
 
 protected:
     explicit Logger(const char *pName);
@@ -61,17 +145,48 @@ public:
     static Logger *getRootLogger()
     {   return getLogger(ROOT_LOGGER_NAME); }
 
+    ls_attr_inline static Logger *getDefault()
+    {
+        if (!s_pDefault)
+            s_pDefault = getLogger(NULL);
+        return s_pDefault;
+    }
+
+    static void setDefault(Logger *pDefault)
+    {   s_pDefault = pDefault;      }
+
     static Logger *getLogger(const char *pName);
 
     void vlog(int level, const char *format, va_list args,
-              int no_linefeed = 0);
+              int no_linefeed = 0)
+    {
+        vlog(level, NULL, format, args, no_linefeed);
+    }
+
+    void vlog(int level, const char *pId, const char *format, va_list args,
+              int no_linefeed);
+
+    void log2(int level, const char *format, ...)
+    {
+        va_list  va;
+        va_start(va, format);
+        vlog(level, format, va);
+        va_end(va);
+    }
+
 
     void log(int level, const char *format, ...)
     {
-        __logger_log(level, format);
+        if (isEnabled(level))
+        {
+            va_list  va;
+            va_start(va, format);
+            vlog(level, format, va);
+            va_end(va);
+        }
     }
 
-    void vdebug(const char *format, va_list args)
+    ls_attr_inline void vdebug(const char *format, va_list args)
     {
         vlog(Level::DEBUG, format, args);
     }
@@ -81,7 +196,7 @@ public:
         __logger_log(Level::DEBUG, format);
     }
 
-    void vtrace(const char *format, va_list args)
+    ls_attr_inline void vtrace(const char *format, va_list args)
     {
         vlog(Level::TRACE, format, args);
     }
@@ -91,7 +206,7 @@ public:
         __logger_log(Level::TRACE, format);
     }
 
-    void vinfo(const char *format, va_list args)
+    ls_attr_inline void vinfo(const char *format, va_list args)
     {
         vlog(Level::INFO, format, args);
     }
@@ -101,7 +216,7 @@ public:
         __logger_log(Level::INFO, format);
     }
 
-    void vnotice(const char *format, va_list args)
+    ls_attr_inline void vnotice(const char *format, va_list args)
     {
         vlog(Level::NOTICE, format, args);
     }
@@ -111,7 +226,7 @@ public:
         __logger_log(Level::NOTICE, format);
     }
 
-    void vwarn(const char *format, va_list args)
+    ls_attr_inline void vwarn(const char *format, va_list args)
     {
         vlog(Level::WARN, format, args);
     }
@@ -121,25 +236,27 @@ public:
         __logger_log(Level::WARN, format);
     }
 
-    void verror(const char *format, va_list args)
+    ls_attr_inline void verror(const char *format, va_list args)
     {
         vlog(Level::ERROR, format, args);
     }
+
     void error(const char *format, ...)
     {
         __logger_log(Level::ERROR, format);
     }
 
-    void vfatal(const char *format, va_list args)
+    ls_attr_inline void vfatal(const char *format, va_list args)
     {
         vlog(Level::FATAL, format, args);
     }
+
     void fatal(const char *format, ...)
     {
         __logger_log(Level::FATAL, format);
     }
 
-    void valert(const char *format, va_list args)
+    ls_attr_inline void valert(const char *format, va_list args)
     {
         vlog(Level::ALERT, format, args);
     }
@@ -149,7 +266,7 @@ public:
         __logger_log(Level::ALERT, format);
     }
 
-    void vcrit(const char *format, va_list args)
+    ls_attr_inline void vcrit(const char *format, va_list args)
     {
         vlog(Level::CRIT, format, args);
     }
@@ -161,11 +278,10 @@ public:
 
     void lograw(const char *pBuf, int len);
 
-    bool isEnabled(int level) const
+    ls_attr_inline int isEnabled(int level) const
     {   return level <= m_iLevel; }
 
-
-    int getLevel() const
+    ls_attr_inline int getLevel() const
     {   return m_iLevel;  }
 
     void setLevel(int level)
@@ -174,25 +290,43 @@ public:
     void setLevel(const char *pLevel)
     {   setLevel(Level::toInt(pLevel)); }
 
-    int getAdditivity() const
+    ls_attr_inline int getAdditivity() const
     {   return m_iAdditive;  }
 
     void setAdditivity(int additive)
     {   m_iAdditive = additive;   }
 
-    Appender *getAppender()
+    ls_attr_inline Appender *getAppender()
     {   return m_pAppender;  }
     void setAppender(Appender *pAppender)
     {   m_pAppender = pAppender;    }
 
-    const Layout *getLaout() const
+    ls_attr_inline const Layout *getLaout() const
     {   return m_pLayout;  }
     void setLayout(Layout *pLayout)
     {   m_pLayout = pLayout;    }
 
     void setParent(Logger *pParent)    {   m_pParent = pParent;    }
 
+    static void errmem(const char *pSource)
+    {   LS_ERROR("Out of memory: %s", pSource); }
 
+    static void s_log(int level, log4cxx::Logger *logger,
+                      const char *format, ...);
+
+    static void s_log(int level, log4cxx::ILog *pILog,
+                      const char *format, ...);
+
+    static void s_log(int level, LogSession *pLogSession,
+                      const char *format, ...);
+
+    static void s_log(int level, TmpLogId *pId,
+                      const char *format, ...);
+
+    static void s_log(int level, const char *format, ...);
+
+    static void s_vlog(int level, LogSession *pLogSession,
+                       const char *format, va_list args, int no_linefeed);
 
     LS_NO_COPY_ASSIGN(Logger);
 };

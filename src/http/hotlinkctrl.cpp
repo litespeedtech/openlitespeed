@@ -18,6 +18,7 @@
 #include "hotlinkctrl.h"
 
 #include <main/configctx.h>
+#include <log4cxx/logger.h>
 #include <util/pcregex.h>
 #include <util/xmlnode.h>
 #include <pcreposix.h>
@@ -97,7 +98,8 @@ int HotlinkCtrl::config(const XmlNode *pNode)
 {
     if (setSuffixes(pNode->getChildValue("suffixes")) <= 0)
     {
-        ConfigCtx::getCurConfigCtx()->logError("no suffix is configured, disable hotlink protection.");
+        LS_ERROR(ConfigCtx::getCurConfigCtx(),
+                 "no suffix is configured, disable hotlink protection.");
         return LS_FAIL;
     }
 
@@ -128,8 +130,9 @@ int HotlinkCtrl::config(const XmlNode *pNode)
         if ((ret <= 0) &&
             (ret2 < 0))
         {
-            ConfigCtx::getCurConfigCtx()->logWarn("no valid host is configured, only self"
-                                                  " reference is allowed.");
+            LS_WARN(ConfigCtx::getCurConfigCtx(),
+                    "no valid host is configured, only self"
+                    " reference is allowed.");
             self = 1;
         }
     }

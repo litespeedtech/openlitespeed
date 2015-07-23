@@ -118,12 +118,12 @@ private:
     // Add an option to lsi_properties_
     template<class OptionClass>
     static void AddLsiOption(typename OptionClass::ValueType default_value,
-                               OptionClass LsiRewriteOptions::*offset,
-                               const char *id,
-                               StringPiece option_name,
-                               OptionScope scope,
-                               const char *help,
-                               bool safe_to_print)
+                             OptionClass LsiRewriteOptions::*offset,
+                             const char *id,
+                             StringPiece option_name,
+                             OptionScope scope,
+                             const char *help,
+                             bool safe_to_print)
     {
         AddProperty(default_value, offset, id, option_name, scope, help,
                     safe_to_print, m_pProperties);

@@ -22,8 +22,8 @@ GFactory::GFactory()
 {}
 GFactory::~GFactory()
 {
-    m_typeRegistry.releaseObjects();
-    m_objRegistry.releaseObjects();
+    m_typeRegistry.release_objects();
+    m_objRegistry.release_objects();
 }
 
 Duplicable *GFactory::getObj(const char *pName, const char *pType)

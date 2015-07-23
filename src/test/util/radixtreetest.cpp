@@ -178,7 +178,7 @@ void doTest(RadixTree *pTree, char **pDynamicInputs, int count)
 
     const char *pBegin = pDynamicInputs[26];
     const char *pNext = (const char *)memchr(pBegin + 1, '/',
-                                             strlen(pBegin) - 1);
+                        strlen(pBegin) - 1);
     void *pOut, *data = pTree->bestMatch(pDynamicInputs[4],
                                          strlen(pDynamicInputs[4]));
     CHECK((pOut = pTree->bestMatch(pBegin, pNext - pBegin)) == NULL);

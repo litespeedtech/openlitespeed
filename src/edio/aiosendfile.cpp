@@ -16,15 +16,9 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include <edio/aiosendfile.h>
-#include <http/httplog.h>
+#include <log4cxx/logger.h>
 #include <lsr/ls_lfqueue.h>
 #include <util/gsendfile.h>
-
-static void debugLog(const char *pFunctionName, const char *pMsg)
-{
-    if (D_ENABLED(DL_MORE))
-        LOG_D(("AioSendFile::%s(), %s"));
-}
 
 
 Aiosfcb *Aiosfcb::getCbPtr(ls_lfnodei_t *pNode)
@@ -38,7 +32,7 @@ void *AioSendFile::aioSendFile(ls_lfnodei_t *item)
     Aiosfcb *cb = Aiosfcb::getCbPtr(item);
     if (cb->getFlag(AIOSFCB_FLAG_CANCEL))
     {
-        debugLog("aioSendFile", "Job Cancelled!");
+        LS_DBG_H("AioSendFile::aioSendFile(), Job Cancelled!");
         cb->setRet(0);
     }
     else
@@ -48,7 +42,7 @@ void *AioSendFile::aioSendFile(ls_lfnodei_t *item)
         cb->setRet(gsendfile(cb->getSendFd(), cb->getReadFd(),
                              &iOff, cb->getSize()));
 #else
-        debugLog("aioSendFile", "No SendFile! Automatically fail.");
+        LS_DBG_H("AioSendFile::aioSendFile(), No SendFile!");
         cb->setRet(-1);
 #endif
         cb->setOffset(iOff);
@@ -80,7 +74,7 @@ int AioSendFile::onNotified(int count)
         event = Aiosfcb::getCbPtr(ls_lfqueue_get(m_pFinishedQueue));
         if (!event)
         {
-            debugLog("onNotified", "Bad Event Object Returned!");
+            LS_DBG_H("AioSendFile::onNotified(), Bad Event Object Returned!");
             return LS_FAIL;
         }
         processEvent(event);

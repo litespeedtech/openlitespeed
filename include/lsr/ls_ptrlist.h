@@ -282,9 +282,9 @@ ls_inline ls_ptrlist_iter ls_ptrlist_erase(
     ls_ptrlist_t *pThis, ls_ptrlist_iter iter)
 {
     /** Do not use *(-- to avoid trigger compiler bug */
-    --pThis->pend; 
-    *iter = *(pThis->pend);  
-    return iter;   
+    --pThis->pend;
+    *iter = *(pThis->pend);
+    return iter;
 }
 
 /**

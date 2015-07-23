@@ -211,7 +211,7 @@ private:
         {
             level = B + i;
             iLevelSize = getLevelSize(
-                                LsiApiHooks::getGlobalApiHooks(level)->size());
+                             LsiApiHooks::getGlobalApiHooks(level)->size());
             memcpy(m_pEnableArray[i],
                    parentSessionHooks->getEnableArray(level),
                    iLevelSize * sizeof(int8_t));
@@ -233,9 +233,7 @@ private:
         {
             if (pEnableArray[LSIHOOKS_GETINDEX(i)]
                 & (1 << LSIHOOKS_GETOFFSET(i)))
-            {
                 m_iFlag[index] |= pLevel->get(i)->flag | LSI_HOOK_FLAG_ENABLED;
-            }
         }
     }
 
@@ -266,7 +264,7 @@ private:
                 if (pHook->flag & LSI_HOOK_FLAG_ENABLED)
                 {
                     pEnableArray[LSIHOOKS_GETINDEX(j)]
-                            |= 1 << LSIHOOKS_GETOFFSET(j);
+                    |= 1 << LSIHOOKS_GETOFFSET(j);
                 }
                 ++pHook;
             }
@@ -285,7 +283,7 @@ private:
         for (int i = 0; i < S; ++i)
         {
             iSize = getLevelSize(
-                            LsiApiHooks::getGlobalApiHooks(B + i)->size());
+                        LsiApiHooks::getGlobalApiHooks(B + i)->size());
             m_pEnableArray[i] = new int8_t[iSize]();
         }
         m_iStatus = INITED;
@@ -318,7 +316,7 @@ public:
             for (int i = 0; i < S; ++i)
             {
                 iLevelSize = getLevelSize(
-                                LsiApiHooks::getGlobalApiHooks(B + i)->size());
+                                 LsiApiHooks::getGlobalApiHooks(B + i)->size());
                 memset(m_pEnableArray[i], 0, iLevelSize * sizeof(int8_t));
                 m_iFlag[i] = 0;
             }
@@ -375,14 +373,14 @@ public:
             if (enable)
             {
                 m_pEnableArray[aEnableHkpts[i] - B][LSIHOOKS_GETINDEX(iModIdx)]
-                    |= (1 << LSIHOOKS_GETOFFSET(iModIdx));
+                |= (1 << LSIHOOKS_GETOFFSET(iModIdx));
                 m_iFlag[aEnableHkpts[i] - B] |= (pHook->flag
-                                                | LSI_HOOK_FLAG_ENABLED);
+                                                 | LSI_HOOK_FLAG_ENABLED);
             }
             else
             {
                 m_pEnableArray[aEnableHkpts[i] - B][LSIHOOKS_GETINDEX(iModIdx)]
-                    &= ~(1 << LSIHOOKS_GETOFFSET(iModIdx));
+                &= ~(1 << LSIHOOKS_GETOFFSET(iModIdx));
                 updateFlag(aEnableHkpts[i]);
             }
         }
@@ -469,7 +467,7 @@ class HttpSessionHooks
 {
     HttpSessionHooks(const HttpSessionHooks &rhs);
     HttpSessionHooks(const SessionHooks<LSI_HKPT_HTTP_BEGIN,
-                                        LSI_HKPT_HTTP_COUNT> &rhs);
+                     LSI_HKPT_HTTP_COUNT> &rhs);
     void operator=(const HttpSessionHooks &rhs);
 public:
     HttpSessionHooks()
@@ -483,7 +481,7 @@ class ServerSessionHooks
 {
     ServerSessionHooks(const ServerSessionHooks &rhs);
     ServerSessionHooks(const SessionHooks<LSI_HKPT_MAIN_INITED,
-                                          LSI_HKPT_SERVER_COUNT> &rhs);
+                       LSI_HKPT_SERVER_COUNT> &rhs);
     void operator=(const ServerSessionHooks &rhs);
 public:
     ServerSessionHooks()

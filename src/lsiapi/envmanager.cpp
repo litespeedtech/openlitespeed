@@ -29,8 +29,8 @@ EnvManager::EnvManager()
 
 EnvManager::~EnvManager()
 {
-    m_envHashT.releaseObjects();
-    m_envList.releaseObjects();
+    m_envHashT.release_objects();
+    m_envList.release_objects();
 }
 
 

@@ -18,9 +18,9 @@
 #include "vhostmap.h"
 
 #include <lsdef.h>
-#include <http/httplog.h>
 #include <http/httpvhost.h>
 #include <http/httpvhostlist.h>
+#include <log4cxx/logger.h>
 #include <lsr/ls_strtool.h>
 #include <socket/gsockaddr.h>
 #include <sslpp/sslcontext.h>
@@ -309,7 +309,7 @@ void VHostMap::clear()
         WildMatchList::iterator iter;
         for (iter = m_pWildMatches->begin(); iter != m_pWildMatches->end(); ++iter)
             HttpVHostMap::decRef((*iter)->getVHost());
-        m_pWildMatches->releaseObjects();
+        m_pWildMatches->release_objects();
         delete m_pWildMatches;
         m_pWildMatches = NULL;
     }
@@ -465,9 +465,9 @@ int VHostMap::addMaping(HttpVHost *pVHost,
         {
             if (!optional)
             {
-                LOG_ERR(("Hostname [%s] on listener [%s] is mapped to virtual host [%s], "
+                LS_ERROR("Hostname [%s] on listener [%s] is mapped to virtual host [%s], "
                          "can't map to virtual host [%s]!",
-                         pDomain, m_sAddr.c_str(), pOld->getName(), pVHost->getName()));
+                         pDomain, m_sAddr.c_str(), pOld->getName(), pVHost->getName());
                 return LS_FAIL;
             }
             return 0;
@@ -477,15 +477,14 @@ int VHostMap::addMaping(HttpVHost *pVHost,
     if ((!psDomain) ||
         (addMap(psDomain->c_str(), pVHost)))
     {
-        LOG_ERR(("Associates [%s] with [%s] on hostname/IP [%s] %s!",
-                 pVHost->getName(), m_sAddr.c_str(), pDomain, "failed"));
+        LS_ERROR("Associates [%s] with [%s] on hostname/IP [%s] %s!",
+                 pVHost->getName(), m_sAddr.c_str(), pDomain, "failed");
         return LS_FAIL;
     }
     else
     {
-        if (D_ENABLED(DL_LESS))
-            LOG_D(("Associates [%s] with [%s] on hostname/IP [%s] %s!",
-                   pVHost->getName(), m_sAddr.c_str(), pDomain, "succeed"));
+        LS_DBG_L("Associates [%s] with [%s] on hostname/IP [%s] %s!",
+                 pVHost->getName(), m_sAddr.c_str(), pDomain, "succeed");
         return 0;
     }
 }
@@ -528,7 +527,7 @@ int VHostMap::mapDomainList(HttpVHost    *pVHost,
                         *(p + 1) = 0;
                     else
                     {
-                        LOG_ERR(("Missing ']' for literal IPv6 address: %s", temp));
+                        LS_ERROR("Missing ']' for literal IPv6 address: %s", temp);
                         len = 0;
                     }
                 }
@@ -571,7 +570,7 @@ SubIpMap::SubIpMap()
 
 SubIpMap::~SubIpMap()
 {
-    m_map.releaseObjects();
+    m_map.release_objects();
 }
 
 

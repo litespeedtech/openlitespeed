@@ -18,7 +18,7 @@
 #include "httplistenerlist.h"
 #include <http/httplistener.h>
 #include <http/vhostmap.h>
-#include <http/httplog.h>
+#include <log4cxx/logger.h>
 
 #include <assert.h>
 #include <stdio.h>
@@ -72,7 +72,7 @@ HttpListenerList::HttpListenerList()
 
 HttpListenerList::~HttpListenerList()
 {
-    releaseObjects();
+    release_objects();
 }
 
 static int s_compare(const void *p1, const void *p2)
@@ -194,7 +194,7 @@ void HttpListenerList::endConfig()
 
 void HttpListenerList::clear()
 {
-    releaseObjects();
+    release_objects();
 }
 
 static int compare_fd(const void *p1, const void *p2)
@@ -223,8 +223,8 @@ void HttpListenerList::passListeners()
         if ((*iter)->getfd() != -1)
         {
             --count;
-            LOG_INFO(("Pass listener %s, copy fd %d to %d.", (*iter)->getAddrStr(),
-                      (*iter)->getfd(), startfd + count));
+            LS_INFO("Pass listener %s, copy fd %d to %d.", (*iter)->getAddrStr(),
+                    (*iter)->getfd(), startfd + count);
             dup2((*iter)->getfd(), startfd + count);
         }
     }

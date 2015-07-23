@@ -30,6 +30,6 @@ struct HashStringMapSyntaxChecker
         intlookup.update("CDE", &checker);
         intlookup.find("ABC");
         intlookup.remove("ABC");
-        intlookup.releaseObjects();
+        intlookup.release_objects();
     }
 };

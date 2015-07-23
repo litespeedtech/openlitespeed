@@ -55,8 +55,8 @@ bool LogMessageHandler(int severity, const char *file, int line,
 
     if (severity == logging::LOG_FATAL)
         severity = logging::LOG_ERROR;
-    
-    
+
+
     if (severity == logging::LOG_FATAL)
     {
         if (base::debug::BeingDebugged())

@@ -58,11 +58,11 @@ int StdErrLogger::handleEvents(short event)
         //m_pAppender->flush();
     }
     else if (event & POLLHUP)
-        LOG_ERR(("POLLHUP"));
+        LS_ERROR("POLLHUP");
     if ((ret != -1) && (event & POLLOUT))
-        LOG_ERR(("POLLOUT"));
+        LS_ERROR("POLLOUT");
     if ((ret != -1) && (event & POLLERR))
-        LOG_ERR(("POLLERR"));
+        LS_ERROR("POLLERR");
     return 0;
 
 }
@@ -97,7 +97,7 @@ int StdErrLogger::initLogger(Multiplexer *pMultiplexer)
     int fds[2];
     if (socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == -1)
     {
-        LOG_ERR(("Failed to setup StdErrLogger!"));
+        LS_ERROR("Failed to setup StdErrLogger!");
         return LS_FAIL;
     }
     ::fcntl(fds[0], F_SETFD, FD_CLOEXEC);

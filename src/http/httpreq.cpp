@@ -24,7 +24,6 @@
 #include <http/htauth.h>
 #include <http/httpcontext.h>
 #include <http/httpdefs.h>
-#include <http/httplog.h>
 #include <http/httpmethod.h>
 #include <http/httpmime.h>
 #include <http/httpresourcemanager.h>
@@ -35,6 +34,7 @@
 #include <http/serverprocessconfig.h>
 #include <http/vhostmap.h>
 #include <http/reqparser.h>
+#include <log4cxx/logger.h>
 #include <lsr/ls_fileio.h>
 #include <lsr/ls_hash.h>
 #include <lsr/ls_strtool.h>
@@ -138,7 +138,8 @@ HttpReq::HttpReq()
     ls_str_set(&m_location, NULL, 0);
     ls_str_set(&m_pathInfo, NULL, 0);
     ls_str_set(&m_newHost, NULL, 0);
-    m_pUrls = (ls_str_pair_t *)malloc(sizeof(ls_str_pair_t) * (MAX_REDIRECTS + 1));
+    m_pUrls = (ls_str_pair_t *)malloc(sizeof(ls_str_pair_t) *
+                                      (MAX_REDIRECTS + 1));
     memset(m_pUrls, 0, sizeof(ls_str_pair_t) * (MAX_REDIRECTS + 1));
     m_pEnv = NULL;
     m_pAuthUser = NULL;
@@ -539,7 +540,7 @@ void HttpReq::setScriptNameLen(int n)
 {
     m_iScriptNameLen = n;
     ls_str_set(&m_pathInfo, (char *)getURI() + m_iScriptNameLen,
-                     getURILen() - n);
+               getURILen() - n);
 }
 
 
@@ -585,8 +586,8 @@ int HttpReq::processHeaderLines()
             skipSpaceBothSide(pTemp, pTemp1);
             if (strncmp(pTemp, "() {", 4) == 0)
             {
-                LOG_INFO(("[%s] Status 400: CVE-2014-6271, CVE-2014-7169 signature detected in request header!",
-                          getLogId()));
+                LS_INFO(getLogSession(), "Status 400: CVE-2014-6271, "
+                        "CVE-2014-7169 signature detected in request header!");
                 return SC_400;
             }
             index = HttpHeader::getIndex(pLineBegin);
@@ -810,9 +811,8 @@ int HttpReq::processNewReqData(const struct sockaddr *pAddr)
 {
     if (!m_pVHost->isEnabled())
     {
-        LOG_INFO((getLogger(),
-                  "[%s] VHost disabled [%s], access denied.",
-                  getLogId(), getVHost()->getName()));
+        LS_INFO(getLogSession(), "VHost disabled [%s], access denied.",
+                getVHost()->getName());
         return SC_403;
     }
     if (!m_pVHost->enableGzip())
@@ -823,32 +823,22 @@ int HttpReq::processNewReqData(const struct sockaddr *pAddr)
         if (//!m_accessGranted &&
             !pAccessCache->isAllowed(pAddr))
         {
-            LOG_INFO((getLogger(),
-                      "[%s] [ACL] Access to virtual host [%s] is denied",
-                      getLogId(), getVHost()->getName()));
+            LS_INFO(getLogSession(),
+                    "[ACL] Access to virtual host [%s] is denied.",
+                    getVHost()->getName());
             return SC_403;
         }
     }
 
     m_iScriptNameLen = getURILen();
-    if (D_ENABLED(DL_LESS))
+    if (getLogger() && getLogger()->isEnabled(LOG4CXX_NS::Level::DBG_LESS))
     {
         const char *pQS = getQueryString();
-        char *pQSEnd = (char *)pQS + getQueryStringLen();
-        char ch = 0;
-        if (pQS)
-        {
-            ch = *pQSEnd;
-            *pQSEnd = 0;
-        }
-        LOG_D((getLogger(),
-               "[%s] New request: \n\tMethod=[%s], URI=[%s],\n"
-               "\tQueryString=[%s]\n\tContent Length=%d\n",
-               getLogId(), HttpMethod::get(getMethod()), getURI(),
-               pQS, getContentLength()));
-        if (pQS)
-            *pQSEnd = ch;
-
+        int len = getQueryStringLen();
+        LS_DBG_L(getLogSession(), "New request: \n\tMethod=[%s], URI=[%s],\n"
+                 "\tQueryString=[.*%s]\n\tContent Length=%d\n",
+                 HttpMethod::get(getMethod()), getURI(), len, pQS,
+                 getContentLength());
     }
     //access control of virtual host
     return 0;
@@ -963,9 +953,7 @@ int HttpReq::setCurrentURL(const char *pURL, int len, int alloc)
     assert(pURL);
     if (*pURL != '/')
     {
-        if (D_ENABLED(DL_LESS))
-            LOG_D((getLogger(), "[%s] URL is invalid - not start with '/'.",
-                   getLogId()));
+        LS_DBG_L(getLogSession(), "URL is invalid - does not start with '/'.");
         return SC_400;
     }
     char *pURI;
@@ -983,9 +971,8 @@ int HttpReq::setCurrentURL(const char *pURL, int len, int alloc)
     int n = HttpUtil::unescapeInPlace(pURI, iURILen, pArgs);
     if (n == -1)
     {
-        if (D_ENABLED(DL_LESS))
-            LOG_D((getLogger(), "[%s] Unable to decode request URI: %s.",
-                   getLogId(), pURI));
+        LS_DBG_L(getLogSession(), "Unable to decode request URI: %s.",
+                 pURI);
         return SC_400;    //invalid url format
     }
     uSetURI(pURI, iURILen);
@@ -1073,8 +1060,7 @@ int HttpReq::saveCurURL()
 {
     if (m_iRedirects >= MAX_REDIRECTS)
     {
-        LOG_ERR((getLogger(), "[%s] Maximum number of redirect reached.",
-                 getLogId()));
+        LS_ERROR(getLogSession(), "Maximum number of redirect reached.");
         return SC_500;
     }
     m_pUrls[m_iRedirects].key = m_curUrl.key;
@@ -1135,15 +1121,13 @@ int HttpReq::detectLoopRedirect()
     {
         m_curUrl.key = m_pUrls[--m_iRedirects].key;
         m_curUrl.value = m_pUrls[m_iRedirects].value;
-        LOG_ERR((getLogger(), "[%s] detect loop redirection.", getLogId()));
+        LS_ERROR(getLogSession(), "Detected loop redirection.");
         //TODO:
         // print the redirect url stack.
         return SC_500;
     }
-    if (D_ENABLED(DL_LESS))
-        LOG_D((getLogger(), "[%s] redirect to: \n\tURI=[%s],\n"
-               "\tQueryString=[%s]", getLogId(), getURI(),
-               getQueryString()));
+    LS_DBG_L(getLogSession(), "Redirect to: \n\tURI=[%s],\n"
+             "\tQueryString=[%s]", getURI(), getQueryString());
     if (m_pReqBodyBuf)
         m_pReqBodyBuf->rewindReadBuf();
 
@@ -1275,9 +1259,8 @@ int HttpReq::checkSuffixHandler(const char *pURI, int len, int &cacheable)
     }
     if (m_pHttpHandler->getType() == HandlerType::HT_PROXY)
         return -2;
-    if (D_ENABLED(DL_LESS))
-        LOG_D((getLogger(), "[%s] Cannot found appropriate handler for [%s]",
-               getLogId(), pURI));
+    LS_DBG_L(getLogSession(), "Cannot find appropriate handler for [%s].",
+             pURI);
     return SC_404;
 }
 
@@ -1325,21 +1308,20 @@ int HttpReq::setMimeBySuffix(const char *pSuffix)
     m_pHttpHandler = m_pMimeType->getHandler();
     if (!m_pHttpHandler)
     {
-        LOG_INFO((getLogger(),
-                  "[%s] Missing handler for suffix [.%s], access denied.",
-                  getLogId(), pSuffix ? pSuffix : ""));
+        LS_INFO(getLogSession(),
+                "Missing handler for suffix [.%s], access denied.",
+                pSuffix ? pSuffix : "");
         return SC_403;
     }
     if (m_pHttpHandler->getType() != HandlerType::HT_NULL)
     {
-        if (D_ENABLED(DL_LESS))
-            LOG_D((getLogger(), "[%s] Find handler [%s] for [.%s]",
-                   getLogId(), m_pHttpHandler->getName(), pSuffix ? pSuffix : ""));
+        LS_DBG_L(getLogSession(), "Find handler [%s] for [.%s].",
+                 m_pHttpHandler->getName(), pSuffix ? pSuffix : "");
         if (!m_pContext->isScriptEnabled())
         {
-            LOG_INFO((getLogger(), "[%s] Scripting is disabled for "
-                      "VHost [%s], context [%s] access denied.", getLogId(),
-                      m_pVHost->getName(), m_pContext->getURI()));
+            LS_INFO(getLogSession(), "Scripting is disabled for "
+                    "VHost [%s], context [%s] access denied.",
+                    m_pVHost->getName(), m_pContext->getURI());
             return SC_403;
         }
     }
@@ -1347,17 +1329,17 @@ int HttpReq::setMimeBySuffix(const char *pSuffix)
     {
         if (getPathInfoLen() > 0)   //Path info is not allowed for static file
         {
-            LOG_INFO((getLogger(),
-                      "[%s] URI '%s' refers to a static file with PATH_INFO [%s].",
-                      getLogId(), getURI(), getPathInfo()));
+            LS_INFO(getLogSession(),
+                    "URI '%s' refers to a static file with PATH_INFO [%s].",
+                    getURI(), getPathInfo());
             return SC_404;
         }
         if ((m_pMimeType->getMIME()->len() > 20) &&
             (strncmp("x-httpd-", m_pMimeType->getMIME()->c_str() + 12, 8) == 0))
         {
-            LOG_ERR((getLogger(), "[%s] MIME type [%s] for suffix '.%s' does not "
+            LS_ERROR(getLogSession(), "MIME type [%s] for suffix '.%s' does not "
                      "allow serving as static file, access denied!",
-                     getLogId(), m_pMimeType->getMIME(), pSuffix ? pSuffix : ""));
+                     m_pMimeType->getMIME(), pSuffix ? pSuffix : "");
             dumpHeader();
             return SC_403;
         }
@@ -1377,10 +1359,8 @@ int HttpReq::locationToUrl(const char *pLocation, int len)
                          pLocation + pNewCtx->getLocationLen());
         pLocation = achURI;
         len = n;
-        if (D_ENABLED(DL_MORE))
-            LOG_D((getLogger(), "[%s] File [%s] has been mapped to URI: [%s] , "
-                   " via context: [%s]", getLogId(), pLocation,
-                   achURI, pNewCtx->getURI()));
+        LS_DBG_H(getLogSession(), "File [%s] has been mapped to URI: [%s],"
+                 " via context: [%s]", pLocation, achURI, pNewCtx->getURI());
     }
     setLocation(pLocation, len);
     return 0;
@@ -1450,16 +1430,12 @@ int HttpReq::processContext()
         m_pContext = m_pVHost->bestMatch(pURI, iURILen);
         if (!m_pContext)
         {
-            if (D_ENABLED(DL_LESS))
-                LOG_D((getLogger(), "[%s] No context found for URI: [%s]",
-                       getLogId(), pURI));
+            LS_DBG_L(getLogSession(), "No context found for URI: [%s].", pURI);
             return SC_404;
         }
-        if (D_ENABLED(DL_MORE))
-            LOG_D((getLogger(), "[%s] Find context with URI: [%s], "
-                   "location: [%s]", getLogId(),
-                   m_pContext->getURI(),
-                   m_pContext->getLocation() ? m_pContext->getLocation() : ""));
+        LS_DBG_H(getLogSession(), "Find context with URI: [%s], "
+                 "location: [%s].", m_pContext->getURI(),
+                 m_pContext->getLocation() ? m_pContext->getLocation() : "");
 
         if ((*(m_pContext->getURI() + m_pContext->getURILen() - 1) == '/') &&
             (*(pURI + m_pContext->getURILen() - 1) != '/'))
@@ -1541,9 +1517,8 @@ int HttpReq::processMatchedURI(const char *pURI, int uriLen,
 {
     if (!m_pContext->allowBrowse())
     {
-        LOG_INFO((getLogger(),
-                  "[%s] Context [%s] is not accessible: access denied.",
-                  getLogId(), m_pContext->getURI()));
+        LS_INFO(getLogSession(), "Context [%s] is not accessible: access denied.",
+                m_pContext->getURI());
         return SC_403; //access denied
     }
     if (m_pHttpHandler->getType() >= HandlerType::HT_FASTCGI)
@@ -1565,9 +1540,8 @@ int HttpReq::processURIEx(const char *pURI, int uriLen, int &cacheable)
     {
         if (!m_pContext->allowBrowse())
         {
-            LOG_INFO((getLogger(), "[%s] Context [%s] is not accessible: "
-                      "access denied.",
-                      getLogId(), m_pContext->getURI()));
+            LS_INFO(getLogSession(), "Context [%s] is not accessible: "
+                    "access denied.", m_pContext->getURI());
             return SC_403; //access denied
         }
         if (m_pContext->getHandlerType() >= HandlerType::HT_FASTCGI)
@@ -1590,8 +1564,8 @@ int HttpReq::processURIEx(const char *pURI, int uriLen, int &cacheable)
                             pBuf, GLOBAL_BUF_SIZE - 1);
     if (pathLen == -1)
     {
-        LOG_ERR((getLogger(), "[%s] translate() failed,"
-                 " translation buffer is too small.", getLogId()));
+        LS_ERROR(getLogSession(),
+                 "translate() failed, translation buffer is too small.");
         return SC_500;
     }
     char *pEnd = pBuf + pathLen;
@@ -1633,9 +1607,7 @@ int HttpReq::processPath(const char *pURI, int uriLen, char *pBuf,
                 {
                     if (++p != pEnd)
                     {
-                        if (D_ENABLED(DL_LESS))
-                            LOG_D((getLogger(), "[%s] File not found [%s] ",
-                                   getLogId(), pBuf));
+                        LS_DBG_L(getLogSession(), "File not found [%s].", pBuf);
                         return SC_404;
                     }
                 }
@@ -1649,9 +1621,7 @@ int HttpReq::processPath(const char *pURI, int uriLen, char *pBuf,
     if (ret == -1)
     {
         //if ( strcmp( p, "/favicon.ico" ) != 0 )
-        if (D_ENABLED(DL_LESS))
-            LOG_D((getLogger(), "[%s] File not found [%s]",
-                   getLogId(), pBuf));
+        LS_DBG_L(getLogSession(), "(stat)File not found [%s].", pBuf);
         return checkSuffixHandler(pURI, uriLen, cacheable);
     }
     if (p != pEnd)
@@ -1711,9 +1681,8 @@ int HttpReq::processPath(const char *pURI, int uriLen, char *pBuf,
                     return ret;
                 return LS_FAIL;  //internal redirect
             }
-            if (D_ENABLED(DL_LESS))
-                LOG_D((getLogger(), "[%s] Index file is not available in [%s]",
-                       getLogId(), pBuf));
+            LS_DBG_L(getLogSession(), "Index file is not available in [%s].",
+                     pBuf);
             return SC_404; //can't find a index file
         }
     }
@@ -1796,13 +1765,12 @@ int HttpReq::checkSymLink(const char *pPath, int pathLen,
         {
             if (httpServConf.getDeniedDir()->isDenied(achTmp))
             {
-                LOG_INFO((getLogger(),
-                          "[%s] checkSymLinks() pBuf:%p, pBegin: %p, target: %s, return: %d, hasLink: %d, errno: %d",
-                          getLogId(), pPath, pBegin, achTmp, rpathLen, hasLink, errno
-                         ));
-                LOG_INFO((getLogger(),
-                          "[%s] Path [%s] is in access denied list, access denied",
-                          getLogId(), achTmp));
+                LS_INFO(getLogSession(), "checkSymLinks() pBuf:%p, pBegin: %p, "
+                        "target: %s, return: %d, hasLink: %d, errno: %d",
+                        pPath, pBegin, achTmp, rpathLen, hasLink, errno);
+                LS_INFO(getLogSession(),
+                        "Path [%s] is in access denied list, access denied.",
+                        achTmp);
                 return SC_403;
             }
         }
@@ -1810,10 +1778,10 @@ int HttpReq::checkSymLink(const char *pPath, int pathLen,
     }
     else
     {
-        LOG_INFO((getLogger(),
-                  "[%s] Found symbolic link, or owner of symbolic link and link "
-                  "target does not match for path [%s], access denied. ret=%d, errno=%d",
-                  getLogId(), pPath, rpathLen, errno));
+        LS_INFO(getLogSession(),
+                "Found symbolic link, or owner of symbolic link and link "
+                "target does not match for path [%s], access denied. ret=%d, errno=%d",
+                pPath, rpathLen, errno);
         return SC_403;
     }
     if (hasLink && restrained)
@@ -1824,18 +1792,17 @@ int HttpReq::checkSymLink(const char *pPath, int pathLen,
             if (strncmp(achTmp, m_pContext->getLocation(),
                         m_pContext->getLocationLen()) != 0)
             {
-                LOG_INFO((getLogger(),
-                          "[%s] Path [%s] is beyond restrained VHOST root [%s]",
-                          getLogId(), achTmp, m_pVHost->getVhRoot()->c_str()));
+                LS_INFO(getLogSession(),
+                        "Path [%s] is beyond restrained VHOST root [%s]",
+                        achTmp, m_pVHost->getVhRoot()->c_str());
 
                 return SC_403;
             }
         }
     }
-    if (D_ENABLED(DL_MORE))
-        LOG_D((getLogger(),
-               "[%s] Check Symbolic link for [%s] is successful, access to target [%s] is granted"
-               , getLogId(), pPath, achTmp));
+    LS_DBG_H(getLogSession(),
+             "Check Symbolic link for [%s] is successful, access to target "
+             "[%s] is granted", pPath, achTmp);
     return 0;
 }
 
@@ -1937,15 +1904,11 @@ int HttpReq::setLocation(const char *pLoc, int len)
 
 void HttpReq::updateContentType(char *pHeader)
 {
-    if ( strncasecmp( pHeader,
-         "application/x-www-form-urlencoded", 33 ) == 0 )
-    {
+    if (strncasecmp(pHeader,
+                    "application/x-www-form-urlencoded", 33) == 0)
         m_pReqBodyType = REQ_BODY_FORM;
-    }
-    else if ( strncasecmp( pHeader, "multipart/form-data", 19 ) == 0 )
-    {
+    else if (strncasecmp(pHeader, "multipart/form-data", 19) == 0)
         m_pReqBodyType = REQ_BODY_MULTIPART;
-    }
 }
 
 
@@ -1969,8 +1932,8 @@ int HttpReq::prepareReqBodyBuf()
         m_pReqBodyBuf = HttpResourceManager::getInstance().getVMemBuf();
         if (!m_pReqBodyBuf || m_pReqBodyBuf->reinit(m_lEntityLength))
         {
-            LOG_ERR((getLogger(), "[%s] Failed to obtain or reinitialize VMemBuf.",
-                     getLogId()));
+            LS_ERROR(getLogSession(),
+                     "Failed to obtain or reinitialize VMemBuf.");
             return SC_500;
         }
     }
@@ -2108,8 +2071,8 @@ int HttpReq::checkHotlink(const HotlinkCtrl *pHLC, const char *pSuffix)
     {
         if (!pHLC->allowDirectAccess())
         {
-            LOG_INFO(("[%s] [HOTLINK] Direct access detected, access denied.",
-                      getLogId()));
+            LS_INFO(getLogSession(),
+                    "[HOTLINK] Direct access detected, access denied.");
             ret = SC_403;
         }
     }
@@ -2123,8 +2086,8 @@ int HttpReq::checkHotlink(const HotlinkCtrl *pHLC, const char *pSuffix)
             const char *pHost = getHeader(HttpHeader::H_HOST);
             if (memcmp(pHost, pRef, getHeaderLen(HttpHeader::H_HOST)) != 0)
             {
-                LOG_INFO(("[%s] [HOTLINK] Reference from other web site,"
-                          " access denied, referrer: [%s]", getLogId(), pRef));
+                LS_INFO(getLogSession(), "[HOTLINK] Reference from other "
+                        "website, access denied, referrer: [%s]", pRef);
                 ret = SC_403;
             }
         }
@@ -2132,8 +2095,8 @@ int HttpReq::checkHotlink(const HotlinkCtrl *pHLC, const char *pSuffix)
         {
             if (!pHLC->allowed(pRef, len))
             {
-                LOG_INFO(("[%s] [HOTLINK] Disallowed referrer,"
-                          " access denied, referrer: [%s]", getLogId(), pRef));
+                LS_INFO(getLogSession(), "[HOTLINK] Disallowed referrer,"
+                        " access denied, referrer: [%s]", pRef);
                 ret = SC_403;
             }
         }
@@ -2169,13 +2132,12 @@ void HttpReq::dumpHeader()
     if (pEnd < pBegin)
         pEnd = (char *)pBegin;
     *pEnd = 0;
-    LOG_INFO((getLogger(), "[%s] Content len: %d, Request line: \n%s",
-              getLogId(),
-              m_lEntityLength, pBegin));
+    LS_INFO(getLogSession(), "Content len: %d, Request line: \n%s",
+            m_lEntityLength, pBegin);
     if (m_iRedirects > 0)
     {
-        LOG_INFO((getLogger(), "[%s] Redirect: #%d, URL: %s", getLogId(),
-                  m_iRedirects, getURI()));
+        LS_INFO(getLogSession(), "Redirect: #%d, URL: %s",
+                m_iRedirects, getURI());
     }
 }
 
@@ -2188,9 +2150,8 @@ int HttpReq::getUGidChroot(uid_t *pUid, gid_t *pGid,
     {
         if (!m_pContext || !m_pContext->allowSetUID())
         {
-            LOG_INFO((getLogger(), "[%s] Context [%s] set UID/GID mode is "
-                      "not allowed, access denied.", getLogId(),
-                      m_pContext->getURI()));
+            LS_INFO(getLogSession(), "Context [%s] set UID/GID mode is "
+                    "not allowed, access denied.", m_pContext->getURI());
             return SC_403;
         }
     }
@@ -2220,9 +2181,8 @@ int HttpReq::getUGidChroot(uid_t *pUid, gid_t *pGid,
     if ((*pUid < procConfig.getUidMin()) ||
         (*pGid < procConfig.getGidMin()))
     {
-        LOG_INFO((getLogger(), "[%s] CGI's UID or GID is smaller "
-                  "than the minimum UID, GID configured, access denied.",
-                  getLogId()));
+        LS_INFO(getLogSession(), "CGI's UID or GID is smaller "
+                "than the minimum UID, GID configured, access denied.");
         return SC_403;
     }
     *pChroot = NULL;
@@ -2562,7 +2522,7 @@ int HttpReq::getETagFlags() const
     else
     {
         etag = HttpServerConfig::getInstance()
-                        .getGlobalVHost()->getRootContext().getFileEtag();
+               .getGlobalVHost()->getRootContext().getFileEtag();
     }
     if (tagMod)
     {
@@ -2580,9 +2540,9 @@ int HttpReq::checkScriptPermission()
     if (m_fileStat.st_mode &
         HttpServerConfig::getInstance().getScriptForbiddenBits())
     {
-        LOG_INFO((getLogger(),
-                  "[%s] [%s] file permission is restricted for script.",
-                  getLogId(), getVHost()->getName(), m_pRealPath->c_str()));
+        LS_INFO(getLogSession(),
+                "[%s] file permission is restricted for script %s.",
+                getVHost()->getName(), m_pRealPath->c_str());
         return 0;
     }
     return 1;

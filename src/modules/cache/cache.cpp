@@ -54,7 +54,8 @@
 extern lsi_module_t MNAME;
 
 static const char s_x_cached[] = "X-LiteSpeed-Cache: hit\r\n";
-static const char s_x_cached_private[] = "X-LiteSpeed-Cache: hit,private\r\n";
+static const char s_x_cached_private[] =
+    "X-LiteSpeed-Cache: hit,private\r\n";
 
 enum
 {
@@ -373,11 +374,11 @@ static int initGData()
 
     DirHashCacheStore *pDirHashCacheStore = (DirHashCacheStore *)
                                             g_api->get_gdata(pCont,
-                                                             CACHEMODULEKEY,
-                                                             CACHEMODULEKEYLEN,
-                                                             releaseCb,
-                                                             0,
-                                                             NULL);
+                                                    CACHEMODULEKEY,
+                                                    CACHEMODULEKEYLEN,
+                                                    releaseCb,
+                                                    0,
+                                                    NULL);
     if (pDirHashCacheStore)
     {
         g_api->log(NULL, LSI_LOG_ERROR, "[%s]GDItem init error.\n",
@@ -394,7 +395,8 @@ static int initGData()
 }
 
 
-void calcCacheHash(const char *pUri, int iUriLen, const char *pQS, int iQSLen,
+void calcCacheHash(const char *pUri, int iUriLen, const char *pQS,
+                   int iQSLen,
                    const char *pIp, int iIpLen, const char *pCookie,
                    int iCookieLen, CacheHash *pCeHash, CacheHash *pPrvCeHash)
 {
@@ -488,7 +490,7 @@ int checkBypassHeader(const char *header, int len)
     for (int i = 0; i < count ; ++i)
     {
         if (len == headersBypassLen[i]
-                && strncasecmp(headersBypass[i], header, headersBypassLen[i]) == 0)
+            && strncasecmp(headersBypass[i], header, headersBypassLen[i]) == 0)
             return 1;
     }
 
@@ -520,7 +522,8 @@ void getRespHeader(lsi_session_t *session, int header_index, char **buf,
                    int *length)
 {
     struct iovec iov[1] = {{NULL, 0}};
-    int iovCount = g_api->get_resp_header(session, header_index, NULL, 0, iov, 1);
+    int iovCount = g_api->get_resp_header(session, header_index, NULL, 0, iov,
+                                          1);
     if (iovCount == 1)
     {
         *buf = (char *)iov[0].iov_base;
@@ -952,8 +955,8 @@ static int checkAssignHandler(lsi_cb_param_t *rec)
     if (method == HTTP_GET || method == HTTP_HEAD)
     {
         if (rec->_param == NULL && cacheEnvLen == 0 &&
-                (pConfig->isPublicPrivateEnabled() == 0 ||
-                 (!pConfig->isSet(CACHE_QS_CACHE) && pQS && iQSLen > 0)))
+            (pConfig->isPublicPrivateEnabled() == 0 ||
+             (!pConfig->isSet(CACHE_QS_CACHE) && pQS && iQSLen > 0)))
         {
             g_api->log(rec->_session, LSI_LOG_DEBUG,
                        "[%s]checkAssignHandler returned, for cache disabled or has QS but qscache disabled.\n",
@@ -1065,10 +1068,10 @@ static int checkAssignHandler(lsi_cb_param_t *rec)
     myData->cacheCtrl = cacheCtrl;
 
     if (myData->iCacheState == CE_STATE_HAS_RIVATECACHE ||
-            (myData->iCacheState == CE_STATE_HAS_PUBLIC_CACHE
-             && cacheCtrl.isPublicCacheable()) ||
-            myData->iMethod == HTTP_PURGE ||
-            myData->iMethod == HTTP_REFRESH)
+        (myData->iCacheState == CE_STATE_HAS_PUBLIC_CACHE
+         && cacheCtrl.isPublicCacheable()) ||
+        myData->iMethod == HTTP_PURGE ||
+        myData->iMethod == HTTP_REFRESH)
     {
         g_api->register_req_handler(rec->_session, &MNAME, 0);
         g_api->log(rec->_session, LSI_LOG_DEBUG,
@@ -1079,7 +1082,8 @@ static int checkAssignHandler(lsi_cb_param_t *rec)
     {
         //only GET need to store, HEAD won't
         int aEnableHkpt[] = {LSI_HKPT_RCVD_RESP_HEADER,
-                             LSI_HKPT_HANDLER_RESTART};
+                             LSI_HKPT_HANDLER_RESTART
+                            };
         g_api->set_session_hook_enable_flag(rec->_session, &MNAME, 1,
                                             aEnableHkpt, 2);
         myData->iHaveAddedHook = 1;
@@ -1148,7 +1152,7 @@ int isModified(lsi_session_t *session, CeHeader &CeHeader, char *etag,
 
     buf = g_api->get_req_header(session, "If-Modified-Since", 17, &len);
     if (buf && len >= RFC_1123_TIME_LEN &&
-            CeHeader.m_tmLastMod <= DateTime::parseHttpTime(buf))
+        CeHeader.m_tmLastMod <= DateTime::parseHttpTime(buf))
         return 0;
 
     return 1;
@@ -1222,7 +1226,8 @@ static int handlerProcess(lsi_session_t *session)
 
     char *buff = NULL;
     char *pBuffOrg = NULL;
-    if (myData->pEntry->getPart2Offset() - myData->pEntry->getPart1Offset() > 0)
+    if (myData->pEntry->getPart2Offset() - myData->pEntry->getPart1Offset() >
+        0)
     {
 #ifdef CACHE_RESP_HEADER
         if (myData->m_pEntry->m_sRespHeader.len() > 0) //has it
@@ -1235,7 +1240,7 @@ static int handlerProcess(lsi_session_t *session)
             if (buff == (char *)(-1))
             {
                 g_api->free_module_data(session, &MNAME, LSI_MODULE_DATA_HTTP,
-                                httpRelease);
+                                        httpRelease);
                 return 500;
             }
             pBuffOrg = buff;
@@ -1331,12 +1336,14 @@ static int handlerProcess(lsi_session_t *session)
     if (pBuffOrg)
         munmap((caddr_t)pBuffOrg, myData->pEntry->getPart2Offset());
 
-    g_api->free_module_data(session, &MNAME, LSI_MODULE_DATA_HTTP, httpRelease);
+    g_api->free_module_data(session, &MNAME, LSI_MODULE_DATA_HTTP,
+                            httpRelease);
     return ret;
 }
 
 lsi_handler_t cache_handler = { handlerProcess, NULL, NULL, NULL };
 lsi_config_t cacheDealConfig = { ParseConfig, FreeConfig, paramArray };
 lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, init, &cache_handler,
-    &cacheDealConfig, "cache v1.3", serverHooks, {0} };
+                       &cacheDealConfig, "cache v1.3", serverHooks, {0}
+                     };
 

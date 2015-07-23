@@ -34,13 +34,15 @@ HttpStatusCode::HttpStatusCode()
     int code = 0;
     m_aSC[code++] = new StatusCode(0, " 200 OK\r\n", NULL);
     m_aSC[code++] = new StatusCode(SC_100, " 100 Continue\r\n", NULL);
-    m_aSC[code++] = new StatusCode(SC_101, " 101 Switching Protocols\r\n", NULL);
+    m_aSC[code++] = new StatusCode(SC_101, " 101 Switching Protocols\r\n",
+                                   NULL);
     m_aSC[code++] = new StatusCode(SC_102, " 102 Processing\r\n", NULL);
 
     m_aSC[code++] = new StatusCode(SC_200, " 200 OK\r\n", NULL);
     m_aSC[code++] = new StatusCode(SC_201, " 201 Created\r\n", NULL);
     m_aSC[code++] = new StatusCode(SC_202, " 202 Accepted\r\n", NULL);
-    m_aSC[code++] = new StatusCode(SC_203, " 203 Non-Authoritative Information\r\n", NULL);
+    m_aSC[code++] = new StatusCode(SC_203,
+                                   " 203 Non-Authoritative Information\r\n", NULL);
     m_aSC[code++] = new StatusCode(SC_204, " 204 No Content\r\n", NULL);
     m_aSC[code++] = new StatusCode(SC_205, " 205 Reset Content\r\n", NULL);
     m_aSC[code++] = new StatusCode(SC_206, " 206 Partial Content\r\n", NULL);
@@ -49,54 +51,83 @@ HttpStatusCode::HttpStatusCode()
 
     m_aSC[code++] = new StatusCode(SC_300, " 300 Multiple Choices\r\n", NULL);
     m_aSC[code++] = new StatusCode(SC_301, " 301 Moved Permanently\r\n",
-    "The document has been permanently moved to <A HREF=\"%s\">here</A>.");
-    m_aSC[code++] = new StatusCode(SC_302, " 302 Found\r\n", "The document has been temporarily moved to <A HREF=\"%s\">here</A>.");
-    m_aSC[code++] = new StatusCode(SC_303, " 303 See Other\r\n", "The answer to your request is located <A HREF=\"%s\">here</A>.");
+                                   "The document has been permanently moved to <A HREF=\"%s\">here</A>.");
+    m_aSC[code++] = new StatusCode(SC_302, " 302 Found\r\n",
+                                   "The document has been temporarily moved to <A HREF=\"%s\">here</A>.");
+    m_aSC[code++] = new StatusCode(SC_303, " 303 See Other\r\n",
+                                   "The answer to your request is located <A HREF=\"%s\">here</A>.");
     m_aSC[code++] = new StatusCode(SC_304, " 304 Not Modified\r\n", NULL);
-    m_aSC[code++] = new StatusCode(SC_305, " 305 Use Proxy\r\n", "The resource is only accessible through the proxy!");
+    m_aSC[code++] = new StatusCode(SC_305, " 305 Use Proxy\r\n",
+                                   "The resource is only accessible through the proxy!");
     m_aSC[code++] = new StatusCode(SC_306, "", NULL);
     m_aSC[code++] = new StatusCode(SC_307, " 307 Temporary Redirect\r\n",
-    "The document has been temporarily moved to <A HREF=\"%s\">here</A>.");
+                                   "The document has been temporarily moved to <A HREF=\"%s\">here</A>.");
 
-    m_aSC[code++] = new StatusCode(SC_400, " 400 Bad Request\r\n", "It is not a valid request!");
-    m_aSC[code++] = new StatusCode(SC_401, " 401 Unauthorized\r\n", "Proper authorization is required to access this resource!");
+    m_aSC[code++] = new StatusCode(SC_400, " 400 Bad Request\r\n",
+                                   "It is not a valid request!");
+    m_aSC[code++] = new StatusCode(SC_401, " 401 Unauthorized\r\n",
+                                   "Proper authorization is required to access this resource!");
     m_aSC[code++] = new StatusCode(SC_402, " 402 Payment Required\r\n", NULL);
-    m_aSC[code++] = new StatusCode(SC_403, " 403 Forbidden\r\n", "Access to this resource on the server is denied!");
-    m_aSC[code++] = new StatusCode(SC_404, " 404 Not Found\r\n", "The resource requested could not be found on this server!");
-    m_aSC[code++] = new StatusCode(SC_405, " 405 Method Not Allowed\r\n", "This type request is not allowed!");
+    m_aSC[code++] = new StatusCode(SC_403, " 403 Forbidden\r\n",
+                                   "Access to this resource on the server is denied!");
+    m_aSC[code++] = new StatusCode(SC_404, " 404 Not Found\r\n",
+                                   "The resource requested could not be found on this server!");
+    m_aSC[code++] = new StatusCode(SC_405, " 405 Method Not Allowed\r\n",
+                                   "This type request is not allowed!");
     m_aSC[code++] = new StatusCode(SC_406, " 406 Not Acceptable\r\n", NULL);
-    m_aSC[code++] = new StatusCode(SC_407, " 407 Proxy Authentication Required\r\n", NULL);
+    m_aSC[code++] = new StatusCode(SC_407,
+                                   " 407 Proxy Authentication Required\r\n", NULL);
     m_aSC[code++] = new StatusCode(SC_408, " 408 Request Time-out\r\n", NULL);
-    m_aSC[code++] = new StatusCode(SC_409, " 409 Conflict\r\n", "The request could not be completed due to a conflict "
-    "with the current state of the resource.");
-    m_aSC[code++] = new StatusCode(SC_410, " 410 Gone\r\n", "The requested resource is no longer available at the server "
-    "and no forwarding address is known.");
-    m_aSC[code++] = new StatusCode(SC_411, " 411 Length Required\r\n", "Lenth of body must be present in the request header!");
-    m_aSC[code++] = new StatusCode(SC_412, " 412 Precondition Failed\r\n", NULL);
-    m_aSC[code++] = new StatusCode(SC_413, " 413 Request Entity Too Large\r\n", "The request body is over the maximum size allowed!");
-    m_aSC[code++] = new StatusCode(SC_414, " 414 Request-URI Too Large\r\n", "The request URL is over the maximum size allowed!");
-    m_aSC[code++] = new StatusCode(SC_415, " 415 Unsupported Media Type\r\n", "The media type is not supported by the server!");
-    m_aSC[code++] = new StatusCode(SC_416, " 416 Requested range not satisfiable\r\n",
-    "None of the range specified overlap the current extent of the selected resource.\n");
-    m_aSC[code++] = new StatusCode(SC_417, " 417 Expectation Failed\r\n", NULL);
-    m_aSC[code++] = new StatusCode(SC_418, " 418 reauthentication required\r\n", NULL);
-    m_aSC[code++] = new StatusCode(SC_419, " 419 proxy reauthentication required\r\n", NULL);
-    m_aSC[code++] = new StatusCode(SC_420, " 420 Policy Not Fulfilled\r\n", NULL);
+    m_aSC[code++] = new StatusCode(SC_409, " 409 Conflict\r\n",
+                                   "The request could not be completed due to a conflict "
+                                   "with the current state of the resource.");
+    m_aSC[code++] = new StatusCode(SC_410, " 410 Gone\r\n",
+                                   "The requested resource is no longer available at the server "
+                                   "and no forwarding address is known.");
+    m_aSC[code++] = new StatusCode(SC_411, " 411 Length Required\r\n",
+                                   "Lenth of body must be present in the request header!");
+    m_aSC[code++] = new StatusCode(SC_412, " 412 Precondition Failed\r\n",
+                                   NULL);
+    m_aSC[code++] = new StatusCode(SC_413, " 413 Request Entity Too Large\r\n",
+                                   "The request body is over the maximum size allowed!");
+    m_aSC[code++] = new StatusCode(SC_414, " 414 Request-URI Too Large\r\n",
+                                   "The request URL is over the maximum size allowed!");
+    m_aSC[code++] = new StatusCode(SC_415, " 415 Unsupported Media Type\r\n",
+                                   "The media type is not supported by the server!");
+    m_aSC[code++] = new StatusCode(SC_416,
+                                   " 416 Requested range not satisfiable\r\n",
+                                   "None of the range specified overlap the current extent of the selected resource.\n");
+    m_aSC[code++] = new StatusCode(SC_417, " 417 Expectation Failed\r\n",
+                                   NULL);
+    m_aSC[code++] = new StatusCode(SC_418,
+                                   " 418 reauthentication required\r\n", NULL);
+    m_aSC[code++] = new StatusCode(SC_419,
+                                   " 419 proxy reauthentication required\r\n", NULL);
+    m_aSC[code++] = new StatusCode(SC_420, " 420 Policy Not Fulfilled\r\n",
+                                   NULL);
     m_aSC[code++] = new StatusCode(SC_421, " 421 Bad Mapping\r\n", NULL);
-    m_aSC[code++] = new StatusCode(SC_422, " 422 Unprocessable Entity\r\n", NULL);
+    m_aSC[code++] = new StatusCode(SC_422, " 422 Unprocessable Entity\r\n",
+                                   NULL);
     m_aSC[code++] = new StatusCode(SC_423, " 423 Locked\r\n", NULL);
     m_aSC[code++] = new StatusCode(SC_424, " 424 Failed Dependency\r\n", NULL);
 
-    m_aSC[code++] = new StatusCode(SC_500, " 500 Internal Server Error\r\n", "An internal server error has occured.");
-    m_aSC[code++] = new StatusCode(SC_501, " 501 Not Implemented\r\n", "The requested method is not implemented by the server.");
+    m_aSC[code++] = new StatusCode(SC_500, " 500 Internal Server Error\r\n",
+                                   "An internal server error has occured.");
+    m_aSC[code++] = new StatusCode(SC_501, " 501 Not Implemented\r\n",
+                                   "The requested method is not implemented by the server.");
     m_aSC[code++] = new StatusCode(SC_502, " 502 Bad Gateway\r\n", NULL);
-    m_aSC[code++] = new StatusCode(SC_503, " 503 Service Unavailable\r\n", "The server is temporarily busy, try again later!");
+    m_aSC[code++] = new StatusCode(SC_503, " 503 Service Unavailable\r\n",
+                                   "The server is temporarily busy, try again later!");
     m_aSC[code++] = new StatusCode(SC_504, " 504 Gateway Time-out\r\n", NULL);
-    m_aSC[code++] = new StatusCode(SC_505, " 505 HTTP Version not supported\r\n", "Only HTTP/1.0, HTTP/1.1 is supported.");
+    m_aSC[code++] = new StatusCode(SC_505,
+                                   " 505 HTTP Version not supported\r\n",
+                                   "Only HTTP/1.0, HTTP/1.1 is supported.");
     m_aSC[code++] = new StatusCode(SC_506, " 506 Loop Detected\r\n", NULL);
-    m_aSC[code++] = new StatusCode(SC_507, " 507 Insufficient Storage\r\n", NULL);
+    m_aSC[code++] = new StatusCode(SC_507, " 507 Insufficient Storage\r\n",
+                                   NULL);
     m_aSC[code++] = new StatusCode(SC_508, " ", NULL);
-    m_aSC[code++] = new StatusCode(SC_509, " 509 Bandwidth Limit Exceeded", NULL);
+    m_aSC[code++] = new StatusCode(SC_509, " 509 Bandwidth Limit Exceeded",
+                                   NULL);
     m_aSC[code++] = new StatusCode(SC_510, " 510 Not Extended", NULL);
 };
 

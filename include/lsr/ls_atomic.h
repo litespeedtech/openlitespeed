@@ -31,7 +31,7 @@ typedef volatile int32_t  ls_atom_32_t;
 typedef volatile int64_t  ls_atom_64_t;
 typedef volatile int      ls_atom_int_t;
 typedef volatile long     ls_atom_long_t;
-typedef volatile void *   ls_atom_ptr_t;
+typedef volatile void    *ls_atom_ptr_t;
 
 typedef volatile uint32_t ls_atom_u32_t;
 typedef volatile uint64_t ls_atom_u64_t;
@@ -84,21 +84,21 @@ typedef union
 #define ls_barrier                  __sync_synchronize
 #define ls_atomic_add               __sync_add_and_fetch
 #define ls_atomic_sub               __sync_sub_and_fetch
-                 
+
 #if defined( __i386__ )
- 
+
 ls_atomic_inline char ls_atomic_dcas(ls_atom_xptr_t *ptr,
-  ls_atom_xptr_t *cmpptr, ls_atom_xptr_t *newptr)
+                                     ls_atom_xptr_t *cmpptr, ls_atom_xptr_t *newptr)
 {
     return __sync_bool_compare_and_swap(
-      &ptr->m_whole, cmpptr->m_whole, newptr->m_whole);
+               &ptr->m_whole, cmpptr->m_whole, newptr->m_whole);
 }
-                 
+
 ls_atomic_inline void ls_atomic_dcasv(ls_atom_xptr_t *ptr,
-  ls_atom_xptr_t *cmpptr, ls_atom_xptr_t *newptr, ls_atom_xptr_t *oldptr)
+                                      ls_atom_xptr_t *cmpptr, ls_atom_xptr_t *newptr, ls_atom_xptr_t *oldptr)
 {
     oldptr->m_whole = __sync_val_compare_and_swap(
-      &ptr->m_whole, cmpptr->m_whole, newptr->m_whole);
+                          &ptr->m_whole, cmpptr->m_whole, newptr->m_whole);
     return;
 }
 
@@ -108,56 +108,56 @@ ls_atomic_inline void ls_atomic_dcasv(ls_atom_xptr_t *ptr,
 #if defined( __i386__ )
 
 #define ls_atomic_setint(ptr, val) \
-          (int)ls_atomic_set32((uint32_t *)ptr, (uint32_t)val)
+    (int)ls_atomic_set32((uint32_t *)ptr, (uint32_t)val)
 #define ls_atomic_setlong(ptr, val) \
-          (long)ls_atomic_set32((uint32_t *)ptr, (uint32_t)val)
+    (long)ls_atomic_set32((uint32_t *)ptr, (uint32_t)val)
 #define ls_atomic_setptr(ptr, val) \
-          (void *)ls_atomic_set32((uint32_t *)ptr, (uint32_t)val)
+    (void *)ls_atomic_set32((uint32_t *)ptr, (uint32_t)val)
 
 #define ls_atomic_clrint(ptr)       ls_atomic_clr32((uint32_t *)ptr)
 #define ls_atomic_clrlong(ptr)      ls_atomic_clr32((uint32_t *)ptr)
 #define ls_atomic_clrptr(ptr)       ls_atomic_clr32((uint32_t *)ptr)
 
 #define ls_atomic_casint(ptr, cmpval, newval) \
-          ls_atomic_cas32((uint32_t *)ptr, (uint32_t)cmpval, (uint32_t)newval)
+    ls_atomic_cas32((uint32_t *)ptr, (uint32_t)cmpval, (uint32_t)newval)
 #define ls_atomic_caslong(ptr, cmpval, newval) \
-          ls_atomic_cas32((uint32_t *)ptr, (uint32_t)cmpval, (uint32_t)newval)
+    ls_atomic_cas32((uint32_t *)ptr, (uint32_t)cmpval, (uint32_t)newval)
 #define ls_atomic_casptr(ptr, cmpval, newval) \
-          ls_atomic_cas32((uint32_t *)ptr, (uint32_t)cmpval, (uint32_t)newval)
+    ls_atomic_cas32((uint32_t *)ptr, (uint32_t)cmpval, (uint32_t)newval)
 
 #define ls_atomic_casvint(ptr, cmpval, newval) \
-          (int)ls_atomic_casv32((uint32_t *)ptr, (uint32_t)cmpval, (uint32_t)newval)
+    (int)ls_atomic_casv32((uint32_t *)ptr, (uint32_t)cmpval, (uint32_t)newval)
 #define ls_atomic_casvlong(ptr, cmpval, newval) \
-          (long)ls_atomic_casv32((uint32_t *)ptr, (uint32_t)cmpval, (uint32_t)newval)
+    (long)ls_atomic_casv32((uint32_t *)ptr, (uint32_t)cmpval, (uint32_t)newval)
 #define ls_atomic_casvptr(ptr, cmpval, newval) \
-          (void *)ls_atomic_casv32((uint32_t *)ptr, (uint32_t)cmpval, (uint32_t)newval)
+    (void *)ls_atomic_casv32((uint32_t *)ptr, (uint32_t)cmpval, (uint32_t)newval)
 
 #elif defined( __x86_64 )||defined( __x86_64__ )
 
 #define ls_atomic_setint(ptr, val) \
-           (int)ls_atomic_set32((uint32_t *)ptr, (uint32_t)val)
+    (int)ls_atomic_set32((uint32_t *)ptr, (uint32_t)val)
 #define ls_atomic_setlong(ptr, val) \
-          (long)ls_atomic_set64((uint64_t *)ptr, (uint64_t)val)
+    (long)ls_atomic_set64((uint64_t *)ptr, (uint64_t)val)
 #define ls_atomic_setptr(ptr, val) \
-          (void *)ls_atomic_set64((uint64_t *)ptr, (uint64_t)val)
+    (void *)ls_atomic_set64((uint64_t *)ptr, (uint64_t)val)
 
 #define ls_atomic_clrint(ptr)       ls_atomic_clr32((uint32_t *)ptr)
 #define ls_atomic_clrlong(ptr)      ls_atomic_clr64((uint64_t *)ptr)
 #define ls_atomic_clrptr(ptr)       ls_atomic_clr64((uint64_t *)ptr)
 
 #define ls_atomic_casint(ptr, cmpval, newval) \
-          ls_atomic_cas32((uint32_t *)ptr, (uint32_t)cmpval, (uint32_t)newval)
+    ls_atomic_cas32((uint32_t *)ptr, (uint32_t)cmpval, (uint32_t)newval)
 #define ls_atomic_caslong(ptr, cmpval, newval) \
-          ls_atomic_cas64((uint64_t *)ptr, (uint64_t)cmpval, (uint64_t)newval)
+    ls_atomic_cas64((uint64_t *)ptr, (uint64_t)cmpval, (uint64_t)newval)
 #define ls_atomic_casptr(ptr, cmpval, newval) \
-          ls_atomic_cas64((uint64_t *)ptr, (uint64_t)cmpval, (uint64_t)newval)
+    ls_atomic_cas64((uint64_t *)ptr, (uint64_t)cmpval, (uint64_t)newval)
 
 #define ls_atomic_casvint(ptr, cmpval, newval) \
-          (int)ls_atomic_casv32((uint32_t *)ptr, (uint32_t)cmpval, (uint32_t)newval)
+    (int)ls_atomic_casv32((uint32_t *)ptr, (uint32_t)cmpval, (uint32_t)newval)
 #define ls_atomic_casvlong(ptr, cmpval, newval) \
-          (long)ls_atomic_casv64((uint64_t *)ptr, (uint64_t)cmpval, (uint64_t)newval)
+    (long)ls_atomic_casv64((uint64_t *)ptr, (uint64_t)cmpval, (uint64_t)newval)
 #define ls_atomic_casvptr(ptr, cmpval, newval) \
-          (void *)ls_atomic_casv64((uint64_t *)ptr, (uint64_t)cmpval, (uint64_t)newval)
+    (void *)ls_atomic_casv64((uint64_t *)ptr, (uint64_t)cmpval, (uint64_t)newval)
 
 #endif
 
@@ -209,7 +209,7 @@ ls_atomic_inline void ls_atomic_clr32(uint32_t *ptr)
 }
 
 ls_atomic_inline unsigned char ls_atomic_cas32(
-  uint32_t *ptr, uint32_t cmpval, uint32_t newval)
+    uint32_t *ptr, uint32_t cmpval, uint32_t newval)
 {
     unsigned char result;
     __asm__ __volatile__(
@@ -225,7 +225,7 @@ ls_atomic_inline unsigned char ls_atomic_cas32(
 }
 
 ls_atomic_inline uint32_t ls_atomic_casv32(
-  uint32_t *ptr, uint32_t cmpval, uint32_t newval)
+    uint32_t *ptr, uint32_t cmpval, uint32_t newval)
 {
     uint32_t result;
     __asm__ __volatile__(
@@ -243,7 +243,7 @@ ls_atomic_inline uint32_t ls_atomic_casv32(
 #define ls_barrier()   __asm__ __volatile__("lock orl $0x0,(%esp)\n");
 
 ls_atomic_inline unsigned char ls_atomic_dcas(volatile ls_atom_xptr_t *ptr,
-  ls_atom_xptr_t *cmpptr, ls_atom_xptr_t *newptr)
+        ls_atom_xptr_t *cmpptr, ls_atom_xptr_t *newptr)
 {
     unsigned char result;
     __asm__ __volatile__(
@@ -260,7 +260,7 @@ ls_atomic_inline unsigned char ls_atomic_dcas(volatile ls_atom_xptr_t *ptr,
 }
 
 ls_atomic_inline void ls_atomic_dcasv(volatile ls_atom_xptr_t *ptr,
-  ls_atom_xptr_t *cmpptr, ls_atom_xptr_t *newptr, ls_atom_xptr_t *oldptr)
+                                      ls_atom_xptr_t *cmpptr, ls_atom_xptr_t *newptr, ls_atom_xptr_t *oldptr)
 {
     __asm__ __volatile__(
         "lock cmpxchg8b %0\n\t"
@@ -275,11 +275,11 @@ ls_atomic_inline void ls_atomic_dcasv(volatile ls_atom_xptr_t *ptr,
 }
 
 ls_atomic_inline uint64_t ls_atomic_casv64(
-  uint64_t *ptr, uint64_t cmpval, uint64_t newval)
+    uint64_t *ptr, uint64_t cmpval, uint64_t newval)
 {
     ls_atom_xptr_t result;
     ls_atomic_dcasv((ls_atom_xptr_t *)ptr,
-      (ls_atom_xptr_t *)&cmpval, (ls_atom_xptr_t *)&newval, &result);
+                    (ls_atom_xptr_t *)&cmpval, (ls_atom_xptr_t *)&newval, &result);
     return result.m_whole;
 }
 
@@ -308,7 +308,7 @@ ls_atomic_inline void ls_atomic_clr64(uint64_t *ptr)
 }
 
 ls_atomic_inline unsigned char ls_atomic_cas64(
-  uint64_t *ptr, uint64_t cmpval, uint64_t newval)
+    uint64_t *ptr, uint64_t cmpval, uint64_t newval)
 {
     unsigned char result;
     __asm__ __volatile__(
@@ -324,7 +324,7 @@ ls_atomic_inline unsigned char ls_atomic_cas64(
 }
 
 ls_atomic_inline uint64_t ls_atomic_casv64(
-  uint64_t *ptr, uint64_t cmpval, uint64_t newval)
+    uint64_t *ptr, uint64_t cmpval, uint64_t newval)
 {
     uint64_t result;
     __asm__ __volatile__(
@@ -344,7 +344,7 @@ ls_atomic_inline uint64_t ls_atomic_casv64(
 #if defined( __x86_64 )||defined( __x86_64__ )
 
 ls_atomic_inline char ls_atomic_dcas(volatile ls_atom_xptr_t *ptr,
-                                  ls_atom_xptr_t *cmpptr, ls_atom_xptr_t *newptr)
+                                     ls_atom_xptr_t *cmpptr, ls_atom_xptr_t *newptr)
 {
     char result;
     __asm__ __volatile__(
@@ -361,7 +361,7 @@ ls_atomic_inline char ls_atomic_dcas(volatile ls_atom_xptr_t *ptr,
 }
 
 ls_atomic_inline void ls_atomic_dcasv(volatile ls_atom_xptr_t *ptr,
-                                   ls_atom_xptr_t *cmpptr, ls_atom_xptr_t *newptr, ls_atom_xptr_t *oldptr)
+                                      ls_atom_xptr_t *cmpptr, ls_atom_xptr_t *newptr, ls_atom_xptr_t *oldptr)
 {
     __asm__ __volatile__(
         "lock cmpxchg16b %0\n\t"

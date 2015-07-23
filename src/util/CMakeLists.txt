@@ -38,7 +38,6 @@ SET(util_STAT_SRCS
    linkedobj.cpp
    objpool.cpp
    gpath.cpp
-   logtracker.cpp
    poolalloc.cpp
    env.cpp
    xmlnode.cpp
@@ -51,7 +50,6 @@ SET(util_STAT_SRCS
    pcutil.cpp
    daemonize.cpp
    configentry.cpp
-   logidtracker.cpp
    datetime.cpp
    resourcepool.cpp
    linkedqueue.cpp

@@ -47,7 +47,7 @@ class CustomFormat : public TPointerList<LogFormatItem>
 {
 public:
     CustomFormat()  {}
-    ~CustomFormat() {   releaseObjects();    }
+    ~CustomFormat() {   release_objects();    }
 
     int parseFormat(const char *psFormat);
 };
@@ -432,7 +432,7 @@ int AccessLog::setCustomLog(const char *pFmt)
             return LS_FAIL;
     }
     else
-        m_pCustomFormat->releaseObjects();
+        m_pCustomFormat->release_objects();
     return m_pCustomFormat->parseFormat(pFmt);
 }
 

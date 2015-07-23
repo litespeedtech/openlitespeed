@@ -120,7 +120,8 @@ static void *rnDoAlloc(int iFlags, ls_xpool_t *pool, int iSize)
 }
 
 
-static void *rnDoRealloc(int iFlags, ls_xpool_t *pool, void *pOld, int iSize)
+static void *rnDoRealloc(int iFlags, ls_xpool_t *pool, void *pOld,
+                         int iSize)
 {
     if ((iFlags & RTFLAG_GLOBALPOOL) == 0)
         return ls_xpool_realloc(pool, pOld, iSize);
@@ -152,7 +153,10 @@ static int rnCheckWC(const char *pLabel, size_t iLabelLen)
     {
         switch (pLabel[i])
         {
-        case '?': case '*': case '[': case '{':
+        case '?':
+        case '*':
+        case '[':
+        case '{':
             return 1;
         default:
             break;
@@ -206,7 +210,8 @@ int RadixTree::checkPrefix(const char *pLabel, size_t iLabelLen) const
 }
 
 
-RadixNode *RadixTree::insert(const char *pLabel, size_t iLabelLen, void *pObj)
+RadixNode *RadixTree::insert(const char *pLabel, size_t iLabelLen,
+                             void *pObj)
 {
     ls_xpool_t *pool = NULL;
     RadixNode *pDest = NULL;
@@ -248,7 +253,7 @@ RadixNode *RadixTree::insert(const char *pLabel, size_t iLabelLen, void *pObj)
 void *RadixTree::erase(const char *pLabel, size_t iLabelLen) const
 {
     if ((((m_iFlags & RTFLAG_NOCONTEXT) == 0)
-            && (checkPrefix(pLabel, iLabelLen) != 0))
+         && (checkPrefix(pLabel, iLabelLen) != 0))
         || (m_pRoot->body == NULL))
         return NULL;
     return m_pRoot->body->erase(pLabel + m_pRoot->len,
@@ -256,10 +261,11 @@ void *RadixTree::erase(const char *pLabel, size_t iLabelLen) const
 }
 
 
-void *RadixTree::update(const char *pLabel, size_t iLabelLen, void *pObj) const
+void *RadixTree::update(const char *pLabel, size_t iLabelLen,
+                        void *pObj) const
 {
     if ((((m_iFlags & RTFLAG_NOCONTEXT) == 0)
-            && (checkPrefix(pLabel, iLabelLen) != 0))
+         && (checkPrefix(pLabel, iLabelLen) != 0))
         || (m_pRoot->body == NULL))
         return NULL;
     return m_pRoot->body->update(pLabel + m_pRoot->len,
@@ -270,7 +276,7 @@ void *RadixTree::update(const char *pLabel, size_t iLabelLen, void *pObj) const
 void *RadixTree::find(const char *pLabel, size_t iLabelLen) const
 {
     if ((((m_iFlags & RTFLAG_NOCONTEXT) == 0)
-            && (checkPrefix(pLabel, iLabelLen) != 0))
+         && (checkPrefix(pLabel, iLabelLen) != 0))
         || (m_pRoot->body == NULL))
         return NULL;
     return m_pRoot->body->find(pLabel + m_pRoot->len, iLabelLen - m_pRoot->len,
@@ -281,7 +287,7 @@ void *RadixTree::find(const char *pLabel, size_t iLabelLen) const
 void *RadixTree::bestMatch(const char *pLabel, size_t iLabelLen) const
 {
     if ((((m_iFlags & RTFLAG_NOCONTEXT) == 0)
-            && (checkPrefix(pLabel, iLabelLen) != 0))
+         && (checkPrefix(pLabel, iLabelLen) != 0))
         || (m_pRoot->body == NULL))
         return NULL;
     return m_pRoot->body->find(pLabel + m_pRoot->len, iLabelLen - m_pRoot->len,
@@ -331,7 +337,7 @@ void *RadixNode::getParentObj()
 
 
 RadixNode *RadixNode::insert(ls_xpool_t *pool, const char *pLabel,
-                        size_t iLabelLen, void *pObj, int iFlags, int iMode)
+                             size_t iLabelLen, void *pObj, int iFlags, int iMode)
 {
     const char *pGC;
     size_t iChildLen, iGCLen;
@@ -488,7 +494,8 @@ void *RadixNode::find(const char *pLabel, size_t iLabelLen, int iFlags)
 }
 
 
-void *RadixNode::bestMatch(const char *pLabel, size_t iLabelLen, int iFlags)
+void *RadixNode::bestMatch(const char *pLabel, size_t iLabelLen,
+                           int iFlags)
 {
     return find(pLabel, iLabelLen, iFlags | RTFLAG_BESTMATCH);
 }
@@ -518,7 +525,7 @@ int RadixNode::for_each_child(rn_foreach fun)
     case RNSTATE_CNODE:
     case RNSTATE_PNODE:
         return count + m_pCHeaders->body->for_each(fun, m_pCHeaders->label,
-                                                   m_pCHeaders->len);
+                m_pCHeaders->len);
     case RNSTATE_CARRAY:
         pHeader = m_pCHeaders;
         for (i = 0; i < iNum; ++i)
@@ -526,7 +533,7 @@ int RadixNode::for_each_child(rn_foreach fun)
             count += pHeader->body->for_each(fun, pHeader->label,
                                              pHeader->len);
             pHeader = (rnheader_t *)(&pHeader->label[0]
-                                    + rnh_roundup(pHeader->len));
+                                     + rnh_roundup(pHeader->len));
         }
         break;
     case RNSTATE_PARRAY:
@@ -558,7 +565,7 @@ int RadixNode::for_each_child(rn_foreach fun)
     case RNSTATE_CNODE:
     case RNSTATE_PNODE:
         return count + m_pWC->m_pC->body->for_each(fun, m_pWC->m_pC->label,
-                                                   m_pWC->m_pC->len);
+                m_pWC->m_pC->len);
     case RNSTATE_CARRAY:
         pHeader = m_pWC->m_pC;
         for (i = 0; i < iNum; ++i)
@@ -566,7 +573,7 @@ int RadixNode::for_each_child(rn_foreach fun)
             count += pHeader->body->for_each(fun, pHeader->label,
                                              pHeader->len);
             pHeader = (rnheader_t *)(&pHeader->label[0]
-                                    + rnh_roundup(pHeader->len));
+                                     + rnh_roundup(pHeader->len));
         }
         break;
     case RNSTATE_PARRAY:
@@ -608,8 +615,8 @@ int RadixNode::for_each_child2(rn_foreach2 fun, void *pUData)
     case RNSTATE_CNODE:
     case RNSTATE_PNODE:
         return count + m_pCHeaders->body->for_each2(fun, pUData,
-                                                    m_pCHeaders->label,
-                                                    m_pCHeaders->len);
+                m_pCHeaders->label,
+                m_pCHeaders->len);
     case RNSTATE_CARRAY:
         pHeader = m_pCHeaders;
         for (i = 0; i < iNum; ++i)
@@ -617,7 +624,7 @@ int RadixNode::for_each_child2(rn_foreach2 fun, void *pUData)
             count += pHeader->body->for_each2(fun, pUData, pHeader->label,
                                               pHeader->len);
             pHeader = (rnheader_t *)(&pHeader->label[0]
-                                    + rnh_roundup(pHeader->len));
+                                     + rnh_roundup(pHeader->len));
         }
         break;
     case RNSTATE_PARRAY:
@@ -649,8 +656,8 @@ int RadixNode::for_each_child2(rn_foreach2 fun, void *pUData)
     case RNSTATE_CNODE:
     case RNSTATE_PNODE:
         return count + m_pWC->m_pC->body->for_each2(fun, pUData,
-                                                    m_pWC->m_pC->label,
-                                                    m_pWC->m_pC->len);
+                m_pWC->m_pC->label,
+                m_pWC->m_pC->len);
     case RNSTATE_CARRAY:
         pHeader = m_pWC->m_pC;
         for (i = 0; i < iNum; ++i)
@@ -658,7 +665,7 @@ int RadixNode::for_each_child2(rn_foreach2 fun, void *pUData)
             count += pHeader->body->for_each2(fun, pUData, pHeader->label,
                                               pHeader->len);
             pHeader = (rnheader_t *)(&pHeader->label[0]
-                                    + rnh_roundup(pHeader->len));
+                                     + rnh_roundup(pHeader->len));
         }
         break;
     case RNSTATE_PARRAY:
@@ -675,12 +682,13 @@ int RadixNode::for_each_child2(rn_foreach2 fun, void *pUData)
 }
 
 
-RadixNode *RadixNode::newNode(ls_xpool_t *pool, RadixNode *pParent, void *pObj)
+RadixNode *RadixNode::newNode(ls_xpool_t *pool, RadixNode *pParent,
+                              void *pObj)
 {
     void *ptr = rnDoAlloc(0, pool, sizeof(RadixNode));
     if (ptr == NULL)
         return NULL;
-    return new (ptr) RadixNode(pParent, pObj);
+    return new(ptr) RadixNode(pParent, pObj);
 }
 
 
@@ -706,7 +714,7 @@ RadixNode *RadixNode::newBranch(ls_xpool_t *pool, const char *pLabel,
                        iGCLen);
 
     pMyChildHeader = (rnheader_t *)rnDoAlloc(iFlags, pool,
-                                             rnh_size(iChildLen + 1));
+                     rnh_size(iChildLen + 1));
     if (pMyChildHeader == NULL)
     {
         rnDoFree(iFlags, pool, pMyNode);
@@ -774,7 +782,7 @@ int RadixNode::getHeader(int iFlags, ls_xpool_t *pool, const char *pLabel,
     ls_str_t hashMatch;
     size_t iOffset;
     int i, iExact = getNumExact();
-    switch(getState())
+    switch (getState())
     {
     case RNSTATE_NOCHILD:
         break;
@@ -788,7 +796,7 @@ int RadixNode::getHeader(int iFlags, ls_xpool_t *pool, const char *pLabel,
         }
         iOffset = rnh_roundedsize(m_pCHeaders->len);
         pTmp = (rnheader_t *)rnDoRealloc(iFlags, pool, m_pCHeaders,
-                                    iOffset + rnh_roundedsize(iLabelLen));
+                                         iOffset + rnh_roundedsize(iLabelLen));
         if (pTmp == NULL)
             return -1;
         m_pCHeaders = pTmp;
@@ -819,7 +827,7 @@ int RadixNode::getHeader(int iFlags, ls_xpool_t *pool, const char *pLabel,
         if (iExact < RN_USEHASHCNT)
         {
             pTmp = (rnheader_t *)rnDoRealloc(iFlags, pool, m_pCHeaders,
-                                    iOffset + rnh_roundedsize(iLabelLen));
+                                             iOffset + rnh_roundedsize(iLabelLen));
             if (pTmp == NULL)
             {
                 pHeader = NULL;
@@ -883,7 +891,7 @@ int RadixNode::setHeader(int iFlags, int iMode, ls_xpool_t *pool,
         break;
     case RNSTATE_PNODE:
         pArray = (rnheader_t **)rnDoAlloc(iFlags, pool,
-                                sizeof(rnheader_t *) * (RN_USEHASHCNT >> 1));
+                                          sizeof(rnheader_t *) * (RN_USEHASHCNT >> 1));
         if (pArray == NULL)
         {
             rnDoFree(iFlags, pool, pHeader);
@@ -899,10 +907,10 @@ int RadixNode::setHeader(int iFlags, int iMode, ls_xpool_t *pool,
             break;
         ptr = rnDoAlloc(iFlags, pool, sizeof(GHash));
         if ((iFlags & RTFLAG_CICMP) != 0)
-            pHash = new (ptr) GHash(RN_HASHSZ, ls_str_hfci, ls_str_cmpci,
-                                    pool);
+            pHash = new(ptr) GHash(RN_HASHSZ, ls_str_hfci, ls_str_cmpci,
+                                   pool);
         else
-            pHash = new (ptr) GHash(RN_HASHSZ, ls_str_hfxx, ls_str_cmp, pool);
+            pHash = new(ptr) GHash(RN_HASHSZ, ls_str_hfxx, ls_str_cmp, pool);
         pTmp = (rnheader_t *)m_pCHeaders;
         for (i = 0; i < iExact; ++i)
         {
@@ -933,7 +941,7 @@ int RadixNode::setHeader(int iFlags, int iMode, ls_xpool_t *pool,
             if (iExact == RN_USEHASHCNT >> 1)
             {
                 pArray = (rnheader_t **)rnDoRealloc(iFlags, pool, m_pPHeaders,
-                                        sizeof(rnheader_t *) * RN_USEHASHCNT);
+                                                    sizeof(rnheader_t *) * RN_USEHASHCNT);
                 if (pArray == NULL)
                 {
                     rnDoFree(iFlags, pool, pHeader);
@@ -947,10 +955,10 @@ int RadixNode::setHeader(int iFlags, int iMode, ls_xpool_t *pool,
 
         ptr = rnDoAlloc(iFlags, pool, sizeof(GHash));
         if ((iFlags & RTFLAG_CICMP) != 0)
-            pHash = new (ptr) GHash(RN_HASHSZ, ls_str_hfci, ls_str_cmpci,
-                                    pool);
+            pHash = new(ptr) GHash(RN_HASHSZ, ls_str_hfci, ls_str_cmpci,
+                                   pool);
         else
-            pHash = new (ptr) GHash(RN_HASHSZ, ls_str_hfxx, ls_str_cmp, pool);
+            pHash = new(ptr) GHash(RN_HASHSZ, ls_str_hfxx, ls_str_cmp, pool);
 
         for (i = 0; i < iExact; ++i)
         {
@@ -993,13 +1001,14 @@ int RadixNode::setHeader(int iFlags, int iMode, ls_xpool_t *pool,
 
 
 //returns 1 if new, 0 if child matched, -1 if alloc failed.
-int RadixNode::getWCHeader(int iFlags, ls_xpool_t *pool, const char *pLabel,
-                    size_t iLabelLen, rnheader_t *&pHeader, rnwchelp_t *pHelp)
+int RadixNode::getWCHeader(int iFlags, ls_xpool_t *pool,
+                           const char *pLabel,
+                           size_t iLabelLen, rnheader_t *&pHeader, rnwchelp_t *pHelp)
 {
     rnheader_t *pTmp;
     size_t iOffsetSet = 0;
     int i, iCount = getNumWild();
-    switch(getWCState())
+    switch (getWCState())
     {
     case RNSTATE_NOCHILD:
         break;
@@ -1041,7 +1050,7 @@ int RadixNode::getWCHeader(int iFlags, ls_xpool_t *pool, const char *pLabel,
             if (iLabelLen > pTmp->len)
                 break;
             else if ((iLabelLen == pTmp->len)
-                && (fnmatch(pTmp->label, pLabel, FNM_LEADING_DIR) == 0))
+                     && (fnmatch(pTmp->label, pLabel, FNM_LEADING_DIR) == 0))
             {
                 pHeader = pTmp;
                 return 0;
@@ -1108,7 +1117,7 @@ int RadixNode::setWCHeader(int iFlags, int iMode, ls_xpool_t *pool,
     case RNSTATE_PNODE:
         pTmp = m_pWC->m_pC;
         pArray = (rnheader_t **)rnDoAlloc(iFlags, pool,
-                            sizeof(rnheader_t *) * RNWC_ARRAYSTARTSZ);
+                                          sizeof(rnheader_t *) * RNWC_ARRAYSTARTSZ);
         if (pArray == NULL)
         {
             rnDoFree(iFlags, pool, pHeader);
@@ -1149,7 +1158,7 @@ int RadixNode::setWCHeader(int iFlags, int iMode, ls_xpool_t *pool,
         if ((iCount & (iCount - 1)) == 0)
         {
             pArray = (rnheader_t **)rnDoRealloc(iFlags, pool, m_pWC->m_pP,
-                                        sizeof(rnheader_t *) * (iCount << 1));
+                                                sizeof(rnheader_t *) * (iCount << 1));
             if (pArray == NULL)
                 return LS_FAIL;
             m_pWC->m_pP = pArray;
@@ -1177,8 +1186,9 @@ void RadixNode::mergeSelf(void **pOrig)
 }
 
 
-int RadixNode::merge(ls_xpool_t *pool, const char *pMatch, size_t iMatchLen,
-                int iFlags, int iMode, void **pOrig, rnheader_t *pHeaderAdded)
+int RadixNode::merge(ls_xpool_t *pool, const char *pMatch,
+                     size_t iMatchLen,
+                     int iFlags, int iMode, void **pOrig, rnheader_t *pHeaderAdded)
 {
     int i, iCount = getNumWild();
     rnheader_t *pHeader;
@@ -1376,9 +1386,7 @@ RadixNode *RadixNode::searchWild(const char *pLabel, size_t iLabelLen,
             if ((iLabelLen != m_pWC->m_pC->len)
                 || (rnDoCmp(iFlags, m_pWC->m_pC->label, pLabel,
                             m_pWC->m_pC->len) != 0))
-            {
                 return NULL;
-            }
         }
         return m_pWC->m_pC->body;
     case RNSTATE_CARRAY:
@@ -1469,7 +1477,7 @@ RadixNode *RadixNode::findChild(const char *pLabel, size_t iLabelLen,
  * the object.
  */
 RadixNode *RadixNode::findChildData(const char *pLabel, size_t iLabelLen,
-                                RadixNode *pNode, int iHasChildren, int iFlags)
+                                    RadixNode *pNode, int iHasChildren, int iFlags)
 {
     RadixNode *pOut;
     if (iHasChildren == 0)
@@ -1547,52 +1555,52 @@ void RadixNode::printChildren(rnprint_t *pHelper)
         return;
     switch (getState())
     {
-        case RNSTATE_CNODE:
-        case RNSTATE_PNODE:
+    case RNSTATE_CNODE:
+    case RNSTATE_PNODE:
+        for (i = 0; i < pHelper->offset; ++i)
+            printf("|");
+        printf("%.*s  ->", m_pCHeaders->len, m_pCHeaders->label);
+        printf("(%d)%p\n", m_pCHeaders->body->m_iOrig,
+               m_pCHeaders->body->getObj());
+        if (m_pCHeaders->body->hasChildren())
+            m_pCHeaders->body->printChildren(&myHelper);
+        break;
+    case RNSTATE_CARRAY:
+        pHeader = m_pCHeaders;
+        for (j = 0; j < m_iNumExact; ++j)
+        {
             for (i = 0; i < pHelper->offset; ++i)
                 printf("|");
-            printf("%.*s  ->", m_pCHeaders->len, m_pCHeaders->label);
-            printf("(%d)%p\n", m_pCHeaders->body->m_iOrig,
-                   m_pCHeaders->body->getObj());
-            if (m_pCHeaders->body->hasChildren())
-                m_pCHeaders->body->printChildren(&myHelper);
-            break;
-        case RNSTATE_CARRAY:
-            pHeader = m_pCHeaders;
-            for (j = 0; j < m_iNumExact; ++j)
-            {
-                for (i = 0; i < pHelper->offset; ++i)
-                    printf("|");
-                printf("%.*s  ->", pHeader->len, pHeader->label);
-                printf("(%d)%p\n", pHeader->body->m_iOrig,
-                       pHeader->body->getObj());
-                if (pHeader->body->hasChildren())
-                    pHeader->body->printChildren(&myHelper);
+            printf("%.*s  ->", pHeader->len, pHeader->label);
+            printf("(%d)%p\n", pHeader->body->m_iOrig,
+                   pHeader->body->getObj());
+            if (pHeader->body->hasChildren())
+                pHeader->body->printChildren(&myHelper);
 
-                pHeader = (rnheader_t *)(&pHeader->label[0]
-                                         + rnh_roundup(pHeader->len));
-            }
-            break;
-        case RNSTATE_PARRAY:
-            for (j = 0; j < m_iNumExact; ++j)
-            {
-                pHeader = m_pPHeaders[j];
-                for (i = 0; i < pHelper->offset; ++i)
-                    printf("|");
-                printf("%.*s  ->", pHeader->len, pHeader->label);
-                printf("(%d)%p\n", pHeader->body->m_iOrig,
-                       pHeader->body->getObj());
-                if (pHeader->body->hasChildren())
-                    pHeader->body->printChildren(&myHelper);
-            }
-            break;
-        case RNSTATE_HASH:
-            myHelper.offset -= 2;
-            m_pHash->for_each2(m_pHash->begin(), m_pHash->end(), printHash,
-                               (void *)&myHelper);
-            break;
-        default:
-            break;
+            pHeader = (rnheader_t *)(&pHeader->label[0]
+                                     + rnh_roundup(pHeader->len));
+        }
+        break;
+    case RNSTATE_PARRAY:
+        for (j = 0; j < m_iNumExact; ++j)
+        {
+            pHeader = m_pPHeaders[j];
+            for (i = 0; i < pHelper->offset; ++i)
+                printf("|");
+            printf("%.*s  ->", pHeader->len, pHeader->label);
+            printf("(%d)%p\n", pHeader->body->m_iOrig,
+                   pHeader->body->getObj());
+            if (pHeader->body->hasChildren())
+                pHeader->body->printChildren(&myHelper);
+        }
+        break;
+    case RNSTATE_HASH:
+        myHelper.offset -= 2;
+        m_pHash->for_each2(m_pHash->begin(), m_pHash->end(), printHash,
+                           (void *)&myHelper);
+        break;
+    default:
+        break;
     }
     if ((m_pWC == NULL) || (iCount == 0))
         return;

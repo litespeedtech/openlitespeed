@@ -17,8 +17,8 @@
 *****************************************************************************/
 #include "clientinfo.h"
 
-#include <http/httplog.h>
 #include <http/iptogeo.h>
+#include <log4cxx/logger.h>
 #include <util/accessdef.h>
 #include <util/datetime.h>
 
@@ -165,8 +165,7 @@ int ClientInfo::checkAccess()
     {
     case AC_BLOCK:
     case AC_DENY:
-        if (D_ENABLED(DL_LESS))
-            LOG_D(("[%s] Access is denied!", getAddrString()));
+        LS_DBG_L("[%s] Access is denied!", getAddrString());
         return 1;
     case AC_ALLOW:
         if (getOverLimitTime())
@@ -174,27 +173,26 @@ int ClientInfo::checkAccess()
             if (DateTime::s_curTime - getOverLimitTime()
                 >= ClientInfo::getOverLimitGracePeriod())
             {
-                LOG_NOTICE(("[%s] is over per client soft connection limit: %d for %d seconds,"
-                            " close connection!",
-                            getAddrString(), iSoftLimit,
-                            DateTime::s_curTime - getOverLimitTime()));
+                LS_NOTICE("[%s] is over per client soft connection limit: %d for %d seconds,"
+                          " close connection!",
+                          getAddrString(), iSoftLimit,
+                          DateTime::s_curTime - getOverLimitTime());
                 setOverLimitTime(DateTime::s_curTime);
                 setAccess(AC_BLOCK);
                 return 1;
             }
             else
             {
-                if (D_ENABLED(DL_LESS))
-                    LOG_D(("[%s] %d connections established, limit: %d.",
-                           getAddrString(), getConns(), iSoftLimit));
+                LS_DBG_L("[%s] %d connections established, limit: %d.",
+                         getAddrString(), getConns(), iSoftLimit);
             }
         }
         else if ((int)getConns() >= iSoftLimit)
             setOverLimitTime(DateTime::s_curTime);
         if ((int)getConns() >= ClientInfo::getPerClientHardLimit())
         {
-            LOG_NOTICE(("[%s] Reached per client connection hard limit: %d, close connection!",
-                        getAddrString(), ClientInfo::getPerClientHardLimit()));
+            LS_NOTICE("[%s] Reached per client connection hard limit: %d, close connection!",
+                      getAddrString(), ClientInfo::getPerClientHardLimit());
             setOverLimitTime(DateTime::s_curTime);
             setAccess(AC_BLOCK);
             return 1;

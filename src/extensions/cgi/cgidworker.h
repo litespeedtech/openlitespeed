@@ -58,11 +58,11 @@ public:
     static int getCgidPid();
     int config(const XmlNode *pNode1);
 
-    static void setCgidWorker( CgidWorker *pWorker )
+    static void setCgidWorker(CgidWorker *pWorker)
     {   s_pCgid = pWorker;  }
     static CgidWorker *getCgidWorker()
     {   return s_pCgid;     }
-    static void setCgidWorkerPid( int pid )
+    static void setCgidWorkerPid(int pid)
     {   s_iCgidWorkerPid = pid;  }
     static int getCgidWorkerPid()
     {   return s_iCgidWorkerPid;     }

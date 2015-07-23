@@ -85,8 +85,8 @@ static inline LsShmHash *LsLuaShmOpen(const char *name)
     pName = new AutoStr2(name);
     pName->append("hash", 4);
     pRet =  pPool->getNamedHash(pName->c_str(), LSSHM_HASHINITSIZE,
-                            LsShmHash::hashString, LsShmHash::compString,
-                            LSSHM_LRU_NONE);
+                                LsShmHash::hashString, LsShmHash::compString,
+                                LSSHM_LRU_NONE);
     delete pName;
     return pRet;
 }
@@ -728,9 +728,7 @@ int LsLuaShmFlushExpCb(LsShmHash::iteroffset iterOff, void *pUData)
         ++pScanner->numchecked;
         if ((pScanner->maxcheck)
             && (pScanner->numchecked >= pScanner->maxcheck))
-        {
             return 1;
-        }
     }
     return 0;
 }

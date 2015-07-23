@@ -121,8 +121,8 @@ int HttpFetch::allocateBuf(const char *pSaveFile)
     {
         ret = m_pBuf->set(pSaveFile, 8192);
         if (ret == 0 && m_iEnableDebug)
-            m_pLogger->debug("HttpFetch[%d]::allocateBuf File %s created.",
-                             getLoggerId(), pSaveFile);
+            LS_DBG_M(m_pLogger, "HttpFetch[%d]::allocateBuf File %s created.",
+                     getLoggerId(), pSaveFile);
     }
     else
         ret = m_pBuf->set(VMBUF_ANON_MAP, 8192);
@@ -158,7 +158,7 @@ int HttpFetch::intiReq(const char *pURL, const char *pBody, int bodyLen,
         return LS_FAIL;
 
     if (m_iEnableDebug)
-        m_pLogger->debug("HttpFetch[%d]::intiReq url=%s", getLoggerId(), pURL);
+        LS_DBG_M(m_pLogger, "HttpFetch[%d]::intiReq url=%s", getLoggerId(), pURL);
     return 0;
 }
 
@@ -250,8 +250,8 @@ int HttpFetch::buildReq(const char *pMethod, const char *pURL,
     m_iReqHeaderLen += 2;
     m_iReqSent = 0;
     if (m_iEnableDebug)
-        m_pLogger->debug("HttpFetch[%d]::buildReq Host=%s [0]", getLoggerId(),
-                         m_aHost);
+        LS_DBG_M(m_pLogger, "HttpFetch[%d]::buildReq Host=%s [0]", getLoggerId(),
+                 m_aHost);
     return 0;
 
 }
@@ -261,8 +261,8 @@ int HttpFetch::startProcessReq(int nonblock, const GSockAddr &sockAddr)
     m_iReqState = 0;
 
     if (m_iEnableDebug)
-        m_pLogger->debug("HttpFetch[%d]::startProcessReq sockAddr=%s",
-                         getLoggerId(), sockAddr.toString());
+        LS_DBG_M(m_pLogger, "HttpFetch[%d]::startProcessReq sockAddr=%s",
+                 getLoggerId(), sockAddr.toString());
     int ret = CoreSocket::connect(sockAddr, O_NONBLOCK, &m_iFdHttp);
     if (m_iFdHttp == -1)
         return LS_FAIL;
@@ -307,8 +307,8 @@ int HttpFetch::startProcessReq(int nonblock, const GSockAddr &sockAddr)
         m_iReqState = 1; //connecting
 
     if (m_iEnableDebug)
-        m_pLogger->debug("HttpFetch[%d]::startProcessReq ret=%d state=%d",
-                         getLoggerId(), ret, m_iReqState);
+        LS_DBG_M(m_pLogger, "HttpFetch[%d]::startProcessReq ret=%d state=%d",
+                 getLoggerId(), ret, m_iReqState);
     return 0;
 }
 
@@ -345,9 +345,10 @@ int HttpFetch::sendReq()
                              m_iReqHeaderLen - m_iReqSent);
         //write( 1, m_pReqBuf + m_reqSent, m_reqHeaderLen - m_reqSent );
         if (m_iEnableDebug)
-            m_pLogger->debug("HttpFetch[%d]::sendReq::nio_write fd=%d len=%d [%d - %d] ret=%d",
-                             getLoggerId(), m_iFdHttp,
-                             m_iReqHeaderLen - m_iReqSent, m_iReqHeaderLen, m_iReqSent, ret);
+            LS_DBG_M(m_pLogger,
+                     "HttpFetch[%d]::sendReq::nio_write fd=%d len=%d [%d - %d] ret=%d",
+                     getLoggerId(), m_iFdHttp,
+                     m_iReqHeaderLen - m_iReqSent, m_iReqHeaderLen, m_iReqSent, ret);
         if (ret > 0)
             m_iReqSent += ret;
         else if (ret == -1)
@@ -459,8 +460,8 @@ int HttpFetch::recvResp()
     {
         ret = ::ls_fio_read(m_iFdHttp, achBuf, 8192);
         if (m_iEnableDebug)
-            m_pLogger->debug("HttpFetch[%d]::recvResp fd=%d ret=%d", getLoggerId(),
-                             m_iFdHttp, ret);
+            LS_DBG_M(m_pLogger, "HttpFetch[%d]::recvResp fd=%d ret=%d", getLoggerId(),
+                     m_iFdHttp, ret);
         if (ret == 0)
         {
             if (m_iRespBodyLen == -1)
@@ -602,8 +603,8 @@ void HttpFetch::setProxyServerAddr(const char *pAddr)
         m_pProxyAddr = new GSockAddr();
         m_pProxyAddr->set(pAddr, NO_ANY | DO_NSLOOKUP);
         if (m_iEnableDebug)
-            m_pLogger->debug("HttpFetch[%d]::setProxyServerAddr %s", getLoggerId(),
-                             pAddr);
+            LS_DBG_M(m_pLogger, "HttpFetch[%d]::setProxyServerAddr %s", getLoggerId(),
+                     pAddr);
         if (m_pProxyAddrStr)
             free(m_pProxyAddrStr);
         m_pProxyAddrStr = strdup(pAddr);
@@ -615,8 +616,8 @@ void HttpFetch::closeConnection()
     if (m_iFdHttp != -1)
     {
         if (m_iEnableDebug)
-            m_pLogger->debug("HttpFetch[%d]::closeConnection fd=%d ", getLoggerId(),
-                             m_iFdHttp);
+            LS_DBG_M(m_pLogger, "HttpFetch[%d]::closeConnection fd=%d ", getLoggerId(),
+                     m_iFdHttp);
         close(m_iFdHttp);
         m_iFdHttp = -1;
         stopDriver();

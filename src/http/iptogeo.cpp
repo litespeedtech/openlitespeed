@@ -18,6 +18,7 @@
 #include "iptogeo.h"
 
 #include <http/httplog.h>
+#include <log4cxx/logger.h>
 #include <main/configctx.h>
 #include <util/ienv.h>
 #include <util/xmlnode.h>
@@ -435,7 +436,7 @@ int IpToGeo::setGeoIpDbFile(const char *pFile, const char *cacheMode)
     pGip = GeoIP_open(pFile, flag);
     if (!pGip)
     {
-        LOG_ERR(("Failed to open GeoIP DB file: %s", pFile));
+        LS_ERROR("Failed to open GeoIP DB file: %s", pFile);
         return LS_FAIL;
     }
     int fd = fileno(pGip->GeoIPDatabase);
@@ -569,7 +570,8 @@ int IpToGeo::config(const XmlNodeList *pList)
         IpToGeo::setIpToGeo(this);
     else
     {
-        ConfigCtx::getCurConfigCtx()->logWarn("Failed to setup a valid GeoIP DB file, Geolocation is disable!");
+        LS_WARN(ConfigCtx::getCurConfigCtx(),
+                "Failed to setup a valid GeoIP DB file, Geolocation is disable!");
         return LS_FAIL;
     }
     return 0;

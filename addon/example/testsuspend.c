@@ -35,30 +35,9 @@
 #define     MNAME       testsuspend
 extern lsi_module_t MNAME;
 
-typedef struct _MyMData
-{
-    void *notifier_pointer;
-} MyMData;
-
-int httpRelease(void *data)
-{
-    MyMData *myData = (MyMData *)data;
-    if (myData)
-    {
-        //g_api->remove_event(&myData->notifier_pointer);
-        free(myData);
-    }
-
-
-    return 0;
-}
 
 void timer_callback(void *session)
 {
-    MyMData *myData = (MyMData *) g_api->get_module_data((
-                          lsi_session_t *)session, &MNAME, LSI_MODULE_DATA_HTTP);
-    if (myData == NULL)
-        return;
 
     int len;
     const char *qs = g_api->get_req_query_string((lsi_session_t *)session,
@@ -66,7 +45,7 @@ void timer_callback(void *session)
     if (len > 1 && strstr(qs, "11"))
         g_api->register_req_handler((lsi_session_t *)session, &MNAME, 12);
 
-    g_api->notify_event(myData->notifier_pointer);
+    g_api->create_session_resume_event((lsi_session_t *)session, &MNAME);
 }
 
 void *thread_callback(void *session)
@@ -83,16 +62,6 @@ int suspendFunc(lsi_cb_param_t *rec)
     uri = g_api->get_req_uri(rec->_session, &len);
     if (len >= 12 && strcasestr(uri, "/testsuspend"))
     {
-        MyMData *myData = (MyMData *) g_api->get_module_data(rec->_session, &MNAME,
-                          LSI_MODULE_DATA_HTTP);
-        if (!myData)
-        {
-            myData = (MyMData *)malloc(sizeof(MyMData));
-            g_api->set_module_data(rec->_session, &MNAME, LSI_MODULE_DATA_HTTP,
-                                   (void *)myData);
-        }
-        myData->notifier_pointer = 0;
-
 
 // //#define USE_TIMER_HERE
 // #ifdef  USE_TIMER_HERE
@@ -108,39 +77,26 @@ int suspendFunc(lsi_cb_param_t *rec)
 // #endif
 
         pthread_t mythread;
-        myData->notifier_pointer = g_api->create_session_resume_event(rec->_session, &MNAME);
-        if (myData->notifier_pointer)
+        int rc = pthread_create(&mythread, NULL, thread_callback,
+                                (void *)rec->_session);
+        if (rc == 0)
         {
-            int rc = pthread_create(&mythread, NULL, thread_callback,
-                                    (void *)rec->_session);
-            if (rc == 0)
-            {
-                return LSI_HK_RET_SUSPEND; //If ret LSI_HK_RET_SUSPEND, should set a timer or a thread to call hookResumeCallback()
-            }
+            return LSI_HK_RET_SUSPEND; //If ret LSI_HK_RET_SUSPEND, should set a timer or a thread to call hookResumeCallback()
         }
     }
 
     return LSI_HK_RET_OK;
 }
 
-static int clearData(lsi_cb_param_t *rec)
-{
-    g_api->free_module_data(rec->_session, &MNAME, LSI_MODULE_DATA_HTTP,
-                            httpRelease);
-    return 0;
-}
-
 
 static lsi_serverhook_t serverHooks[] =
 {
     {LSI_HKPT_RECV_REQ_HEADER, suspendFunc, LSI_HOOK_NORMAL, LSI_HOOK_FLAG_ENABLED},
-    {LSI_HKPT_HTTP_END, clearData, LSI_HOOK_LAST, LSI_HOOK_FLAG_ENABLED},
     lsi_serverhook_t_END   //Must put this at the end position
 };
 
 static int _init(lsi_module_t *pModule)
 {
-    g_api->init_module_data(pModule, httpRelease, LSI_MODULE_DATA_HTTP);
     return 0;
 }
 

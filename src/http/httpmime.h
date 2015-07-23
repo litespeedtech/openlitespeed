@@ -118,7 +118,7 @@ public:
                                HttpMime *pHttpMime,
                                const char *pSuffix);
 
-    static void setMime( HttpMime *pMime )
+    static void setMime(HttpMime *pMime)
     {   s_pMime = pMime;    }
     static HttpMime *getMime()
     {   return s_pMime;     }
