@@ -156,14 +156,14 @@ class STATS {
 			$temp->inuse_conn += (int) $result[7][$f];
 			$temp->idle_conn += (int) $result[8][$f];
 			$temp->waitqueue_depth += (int) $result[9][$f];
-			$temp->req_per_sec += (int) $result[10][$f];
-			$temp->req_total += (int) $result[11][$f];
+			$temp->req_per_sec += doubleval($result[10][$f]);
+			$temp->req_total += doubleval($result[11][$f]);
 
 			$this->vhosts[$vhost]->eap_inuse += (int) $result[7][$f];
 			$this->vhosts[$vhost]->eap_idle += (int) $result[8][$f];
 			$this->vhosts[$vhost]->eap_waitQ += (int) $result[9][$f];
-			$this->vhosts[$vhost]->eap_req_per_sec += (int) $result[10][$f];
-			$this->vhosts[$vhost]->eap_req_total += (int) $result[11][$f];
+			$this->vhosts[$vhost]->eap_req_per_sec += doubleval($result[10][$f]);
+			$this->vhosts[$vhost]->eap_req_total += doubleval($result[11][$f]);
 
 		}
 
@@ -263,14 +263,14 @@ class STATS_VHOST {
 
 	var $vhost = null;
 	var $req_processing = 0;
-	var $req_per_sec = 0;
+	var $req_per_sec = 0.0;
 	var $req_total = 0;
 	var $eap_count = 0;
 	var $eap_process = 0;
 	var $eap_inuse = 0;
 	var $eap_idle = 0;
 	var $eap_waitQ = 0;
-	var $eap_req_per_sec = 0;
+	var $eap_req_per_sec = 0.0;
 	var $eap_req_total = 0;
 	var $extapps = array();
 
@@ -296,7 +296,7 @@ class STATS_VHOST_EXTAPP {
 	var $inuse_conn = 0;
 	var $idle_conn = 0;
 	var $waitqueue_depth = 0;
-	var $req_per_sec = 0;
+	var $req_per_sec = 0.0;
 	var $req_total = 0;
 
 }

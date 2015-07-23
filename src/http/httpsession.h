@@ -173,7 +173,6 @@ private:
     int processWebSocketUpgrade(const HttpVHost *pVHost);
     int processHttp2Upgrade(const HttpVHost *pVHost);
 
-    int sendRespHeaders();
     int resumeHandlerProcess();
     int flushBody();
     int endResponseInternal(int success);
@@ -382,6 +381,7 @@ public:
     {   return m_sessionHooks.getCopy(index); }
     void setSendFileBeginEnd(off_t start, off_t end);
     void prepareHeaders();
+    int sendRespHeaders();
     void addLocationHeader();
 
     void setAccessLogOff()      {   m_iFlag |= HSF_ACCESS_LOG_OFF;  }

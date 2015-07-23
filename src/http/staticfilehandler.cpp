@@ -618,6 +618,7 @@ static int buildRangeHeaders(HttpSession *pSession, HttpRange &range)
         buf.parseAdd(sTemp, ret);
 
         bodyLen = end - begin;
+        pResp->setContentLen(bodyLen);
 
         //TODO: simplify logic with sendMultipart()
         pSession->setSendFileBeginEnd(begin, end);
@@ -627,18 +628,17 @@ static int buildRangeHeaders(HttpSession *pSession, HttpRange &range)
     {
         pResp->parseAdd(pData->getHeaderBuf(), pData->getValidateHeaderLen());
         range.beginMultipart();
-        buf.add(HttpRespHeaders::H_CONTENT_RANGE,
+        buf.add(HttpRespHeaders::H_CONTENT_TYPE,
                 "multipart/byteranges; boundary=", 31);
         buf.appendLastVal(range.getBoundary(), strlen(range.getBoundary()));
         bodyLen = range.getMultipartBodyLen(pData->getMimeType()->getMIME());
-        pSession->continueWrite();
+        pResp->setContentLen(bodyLen);
+        pSession->sendRespHeaders();
+        return sendMultipart(pSession, range);
 
     }
-    pResp->setContentLen(bodyLen);
-    pResp->appendContentLenHeader();
     return 0;
 }
-
 
 
 static int sendMultipart(HttpSession *pSession, HttpRange &range)
@@ -646,55 +646,33 @@ static int sendMultipart(HttpSession *pSession, HttpRange &range)
     off_t iRemain;
     int  ret = 0;
     SendFileInfo *pData = pSession->getSendFileInfo();
+    int headerLen;
     while (true)
     {
+        headerLen = range.getPartHeaderLen();
         iRemain = pData->getRemain();
-        if (!iRemain)
+        if (!iRemain && headerLen == 0)
         {
             if (range.more())
             {
                 range.next();
                 range.buildPartHeader(
                     pData->getFileData()->getMimeType()->getMIME()->c_str());
+                headerLen = range.getPartHeaderLen();
             }
-            if (range.more())
-            {
-                off_t begin, end;
-                range.getContentOffset(begin, end);
-                pSession->setSendFileBeginEnd(begin, end);
-                iRemain = pData->getRemain();
-                assert(iRemain > 0);
-            }
-            else
-                pSession->setRespBodyDone();
-
-            /*           else
-                       {
-                           int len = range.getPartHeaderLen();
-                           if ( !len )
-                               return 0;
-                           ret = pSession->writeRespBody( range.getPartHeader(), len );
-                           if ( ret >= len )
-                           {
-                               return 0;
-                           }
-                           else
-                           {
-                               range.partHeaderSent( ret );
-                               return 1;
-                           }
-                       }
-            */
         }
-        int len = range.getPartHeaderLen();
-        if (len)
+        if (headerLen)
         {
-            ret = pSession->writeRespBody(range.getPartHeader(), len);
+            ret = pSession->writeRespBody(range.getPartHeader(), headerLen);
+            if (D_ENABLED(DL_LESS))
+                LOG_D((pSession->getLogger(), "[%s] send part header %d bytes",
+                     pSession->getLogId(), ret));
+            
             if (ret > 0)
             {
                 int r = ret;
                 range.partHeaderSent(ret);
-                if (r < len)
+                if (r < headerLen)
                     return 1;
             }
             else if (ret == -1)
@@ -702,16 +680,27 @@ static int sendMultipart(HttpSession *pSession, HttpRange &range)
             else if (!ret)
                 return 1;
         }
-        if (iRemain)
+        if (range.more())
+        {
+            off_t begin, end;
+            range.getContentOffset(begin, end);
+            pSession->setSendFileBeginEnd(begin, end);
+            iRemain = pData->getRemain();
+            assert(iRemain > 0);
             ret = pSession->flush();
+            if (ret)
+                return ret;
+        }
         else
-            return 0;
-        if (ret)
-            return ret;
+        {
+            pSession->endResponse(1);
+            break;
+        }
     }
     return 0;
 
 }
+
 
 static int processRange(HttpSession *pSession, HttpReq *pReq,
                         const char *pRange)
@@ -719,6 +708,11 @@ static int processRange(HttpSession *pSession, HttpReq *pReq,
     SendFileInfo *pData = pSession->getSendFileInfo();
     StaticFileCacheData *pCache = pData->getFileData();
     HttpRange *range = new HttpRange(pCache->getFileSize());
+    
+    if (D_ENABLED(DL_LESS))
+        LOG_D((pReq->getLogger(), "[%s] Range: %.*s",
+             pReq->getLogId(), pReq->getHeaderLen(HttpHeader::H_RANGE), pRange));
+
     int ret = range->parse(pRange);
     if (ret)
     {

@@ -251,7 +251,7 @@ if($refresh >= 2) {
 			$buf .= '<td  align="center">'.number_format($vh->eap_inuse).'</td>';
 			$buf .= '<td  align="center">'.number_format($vh->eap_idle).'</td>';
 			$buf .= '<td  align="center">'.number_format($vh->eap_waitQ).'</td>';
-			$buf .= '<td  align="center">'.number_format($vh->eap_req_per_sec).'</td>';
+			$buf .= '<td  align="center">'.number_format($vh->eap_req_per_sec,1).'</td>';
 			$buf .= '</tr>'."\n";
 
 		}
@@ -308,7 +308,7 @@ if($refresh >= 2) {
 					$buf .= '<td  align="center">'.number_format($eap->inuse_conn).'</td>';
 					$buf .= '<td  align="center">'.number_format($eap->idle_conn).'</td>';
 					$buf .= '<td  align="center">'.number_format($eap->waitqueue_depth).'</td>';
-					$buf .= '<td  align="center">'.number_format($eap->req_per_sec).'</td>';
+					$buf .= '<td  align="center">'.number_format($eap->req_per_sec,1).'</td>';
 					$buf .= '</tr>'."\n";
 			}
 		}
