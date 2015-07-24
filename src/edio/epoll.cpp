@@ -19,7 +19,7 @@
 
 #include "epoll.h"
 
-// #include <http/httplog.h>
+// #include <log4cxx/logger.h>
 
 #include <assert.h>
 #include <fcntl.h>
@@ -128,7 +128,7 @@ int epoll::add(EventReactor *pHandler, short mask)
     epevt.data.u64 = 0;
     epevt.data.fd = fd;
     epevt.events = mask;
-    //if ( D_ENABLED( DL_LESS ) || s_problems )
+//     if ( LS_LOG_ENABLED( LOG4CXX_NS::Level::DBG_LESS ) || s_problems )
     //    dump_type_info( pHandler, "added" );
     //return (syscall(__NR_epoll_ctl, m_epfd, EPOLL_CTL_ADD, fd, &epevt));
     return epoll_ctl(m_epfd, EPOLL_CTL_ADD, fd, &epevt);

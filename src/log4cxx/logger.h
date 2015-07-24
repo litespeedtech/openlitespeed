@@ -51,6 +51,10 @@
        ___log( log4cxx::Level::NOTICE, __VA_ARGS__)
 */
 
+#define LS_LOG_ENABLED(level) log4cxx::Level::isEnabled( level )
+#define LS_LOG(level, ...) log4cxx::Logger::s_log( level, __VA_ARGS__);
+
+
 #define LS_DBG_IO( ... ) \
     do { \
         if ( log4cxx::Level::isEnabled( log4cxx::Level::DBG_IODATA ) ) \
@@ -73,6 +77,13 @@
     do { \
         if ( log4cxx::Level::isEnabled( log4cxx::Level::DBG_LESS ) ) \
             log4cxx::Logger::s_log( log4cxx::Level::DBG_LESS, __VA_ARGS__); \
+    }while(0)
+
+
+#define LS_DBG( ... ) \
+    do { \
+        if ( log4cxx::Level::isEnabled( log4cxx::Level::DEBUG ) ) \
+            log4cxx::Logger::s_log( log4cxx::Level::DEBUG, __VA_ARGS__); \
     }while(0)
 
 

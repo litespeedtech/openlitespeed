@@ -22,7 +22,6 @@
 #include "cgi/suexec.h"
 #include "registry/extappregistry.h"
 
-#include <http/httplog.h>
 #include <http/httpvhost.h>
 #include <http/serverprocessconfig.h>
 #include <log4cxx/logger.h>
@@ -403,7 +402,7 @@ int LocalWorker::workerExec(LocalWorkerConfig &config, int fd)
         if ((uid < procConfig.getUidMin()) ||
             (gid < procConfig.getGidMin()))
         {
-            if (D_ENABLED(DL_LESS))
+            if (LS_LOG_ENABLED( LOG4CXX_NS::Level::DBG_LESS ))
                 LS_INFO("[VHost:%s] Fast CGI [%s]: suExec access denied,"
                         " UID or GID of VHost document root is smaller "
                         "than minimum UID, GID configured. ", pVHost->getName(),

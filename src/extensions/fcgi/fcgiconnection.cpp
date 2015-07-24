@@ -269,7 +269,7 @@ int FcgiConnection::buildFcgiRecHeader(char *pBuf, int size, int &len)
     else
     {
         memmove((char *)&m_recCur + m_recSize, pBuf, len);
-        if (getLogger()->isEnabled(LOG4CXX_NS::Level::DBG_HIGH))
+        if (LS_LOG_ENABLED(LOG4CXX_NS::Level::DBG_HIGH))
         {
             char achBuf[256];
             StringTool::hexEncode(

@@ -264,9 +264,7 @@ int  ExtWorker::processRequest(ExtRequest *pReq, int retry)
 
 void ExtWorker::failOutstandingReqs()
 {
-    //if ( D_ENABLED( DL_LESS ) )
-    LS_INFO("[%s] Fail all outstanding requests!",
-            m_pConfig->getURL());
+    LS_INFO("[%s] Fail all outstanding requests!", m_pConfig->getURL());
     while (!m_reqQueue.empty())
     {
         ExtRequest *pReq = (ExtRequest *)m_reqQueue.pop_front();

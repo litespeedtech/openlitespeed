@@ -363,7 +363,11 @@ public:
     const   char *getContentType() const
     {   return getHeader(HttpHeader::H_CONTENT_TYPE);     }
 
-    void setContentLength(off_t len)        {   m_lEntityLength = len;      }
+    void setContentLength(off_t len)
+    {
+        m_lEntityLength = len;
+
+    }
     off_t getContentLength() const          {   return m_lEntityLength;     }
     int  getHostStrLen()                    {   return m_iHostLen;          }
     int  getScriptNameLen() const           {   return m_iScriptNameLen;    }
