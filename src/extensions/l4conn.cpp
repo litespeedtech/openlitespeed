@@ -98,7 +98,7 @@ int L4conn::onInitConnected()
         return LS_FAIL;
     }
     m_iState = PROCESSING;
-//     if ( D_ENABLED( DL_LESS ) )
+//     if ( LS_LOG_ENABLED( LOG4CXX_NS::Level::DBG_LESS ))
 //     {
 //         char        achSockAddr[128];
 //         char        achAddr[128]    = "";

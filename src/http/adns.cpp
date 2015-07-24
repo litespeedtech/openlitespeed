@@ -19,7 +19,7 @@
 #ifdef  USE_UDNS
 
 #include <http/clientinfo.h>
-#include <http/httplog.h>
+#include <log4cxx/logger.h>
 
 #include <udns.h>
 
@@ -90,7 +90,7 @@ static void addrlookup_callback(struct dns_ctx *ctx, struct dns_rr_ptr *rr,
     {
         //Just use the first result for now
         pInfo->setHostName(rr->dnsptr_ptr[0]);
-        if (D_ENABLED(DL_MORE))
+        if (LS_LOG_ENABLED( LOG4CXX_NS::Level::DBG_MORE))
         {
             char achBuf[4096];
             int n = 0;
@@ -107,7 +107,7 @@ static void addrlookup_callback(struct dns_ctx *ctx, struct dns_rr_ptr *rr,
                 achBuf[--n] = 0;
             }
 
-            LS_DBG_L("DNS reverse lookup: [%s]: %s",
+            LS_DBG_H("DNS reverse lookup: [%s]: %s",
                      pInfo->getAddrString(), p);
         }
         free(rr);

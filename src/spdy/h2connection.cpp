@@ -318,7 +318,7 @@ int H2Connection::processFrame(H2FrameHeader *pHeader)
 
 void H2Connection::printLogMsg(H2FrameHeader *pHeader)
 {
-    if (getLogger()->isEnabled(LOG4CXX_NS::Level::DBG_LESS))
+    if (LS_LOG_ENABLED(LOG4CXX_NS::Level::DBG_LESS))
     {
         const char *message = "";
         int messageLen = 0;

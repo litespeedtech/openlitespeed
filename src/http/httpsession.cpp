@@ -911,7 +911,7 @@ int HttpSession::processNewReqInit()
     const HttpVHost *pVHost = m_request.matchVHost();
     if (!pVHost)
     {
-        if (getLogger()->isEnabled(LOG4CXX_NS::Level::DBG_LESS))
+        if (LS_LOG_ENABLED(LOG4CXX_NS::Level::DBG_LESS))
         {
             char *pHostEnd = (char *)m_request.getHostStr() +
                              m_request.getHostStrLen();
@@ -1482,7 +1482,7 @@ int HttpSession::handlerProcess(const HttpHandler *pHandler)
     }
     else
     {
-        if (getLogger()->isEnabled(LOG4CXX_NS::Level::DBG_LESS))
+        if (LS_LOG_ENABLED(LOG4CXX_NS::Level::DBG_LESS))
         {
             const ThrottleUnit * pTU = pTC->getThrottleUnit( dyn );
             LS_DBG_L(getLogSession(), "%s throttling %d/%d",
@@ -2247,7 +2247,7 @@ int HttpSession::detectConnectionTimeout(int delta)
             LS_ERROR(getLogSession(),
                      "BUG: fd %d does not match fd %d in pollfd!",
                      m_pNtwkIOLink->getfd(), m_pNtwkIOLink->getPollfd()->fd);
-//            if ( D_ENABLED( DL_MEDIUM ))
+//            if ( LS_LOG_ENABLED( LOG4CXX_NS::Level::DBG_MEDIUM ))
         if ((m_response.getBodySent() == 0) || !m_pNtwkIOLink->getEvents())
         {
             LS_INFO(getLogSession(), "Connection idle time too long: %ld while"

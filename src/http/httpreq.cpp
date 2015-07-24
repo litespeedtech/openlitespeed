@@ -831,12 +831,12 @@ int HttpReq::processNewReqData(const struct sockaddr *pAddr)
     }
 
     m_iScriptNameLen = getURILen();
-    if (getLogger() && getLogger()->isEnabled(LOG4CXX_NS::Level::DBG_LESS))
+    if (getLogger() && LS_LOG_ENABLED(LOG4CXX_NS::Level::DBG_LESS))
     {
         const char *pQS = getQueryString();
         int len = getQueryStringLen();
         LS_DBG_L(getLogSession(), "New request: \n\tMethod=[%s], URI=[%s],\n"
-                 "\tQueryString=[.*%s]\n\tContent Length=%d\n",
+                 "\tQueryString=[%.*s]\n\tContent Length=%d\n",
                  HttpMethod::get(getMethod()), getURI(), len, pQS,
                  getContentLength());
     }
