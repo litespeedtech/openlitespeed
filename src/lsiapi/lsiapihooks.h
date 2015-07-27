@@ -280,6 +280,9 @@ public:
     void restartSessionHooks(int *levels, int nLevels,
                              const SessionHooks<base, size> *parent)
     {
+        if (!parent)
+            return ;
+
         for (int i = 0; i < nLevels; ++i)
         {
             int l = levels[i] - base;
