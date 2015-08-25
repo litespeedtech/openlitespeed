@@ -57,7 +57,8 @@ public:
         DAV_SEARCH,
         HTTP_PURGE,
         HTTP_REFRESH,
-        HTTP_METHOD_END
+        HTTP_METHOD_END,
+        HTTP_PATCH
     };
 
     static http_method_t parse2(const char *pMethod);

@@ -101,6 +101,7 @@ enum HTTP_METHOD
     HTTP_PURGE,
     HTTP_REFRESH,
     HTTP_METHOD_END,
+    HTTP_PATCH
 };
 
 typedef struct _MyMData
