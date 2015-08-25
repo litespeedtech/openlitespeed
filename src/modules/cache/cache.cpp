@@ -75,6 +75,7 @@ enum HTTP_METHOD
     HTTP_HEAD,
     HTTP_POST,
     HTTP_PUT ,
+    HTTP_PATCH,
     HTTP_DELETE,
     HTTP_TRACE,
     HTTP_CONNECT,
@@ -100,8 +101,7 @@ enum HTTP_METHOD
     DAV_SEARCH,
     HTTP_PURGE,
     HTTP_REFRESH,
-    HTTP_METHOD_END,
-    HTTP_PATCH
+    HTTP_METHOD_END
 };
 
 typedef struct _MyMData
