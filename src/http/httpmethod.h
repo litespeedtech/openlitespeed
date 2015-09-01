@@ -32,6 +32,7 @@ public:
         HTTP_HEAD,
         HTTP_POST,
         HTTP_PUT ,
+        HTTP_PATCH,
         HTTP_DELETE,
         HTTP_TRACE,
         HTTP_CONNECT,

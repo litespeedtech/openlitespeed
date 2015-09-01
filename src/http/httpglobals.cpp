@@ -128,6 +128,7 @@ const char *HttpMethod::s_psMethod[HttpMethod::HTTP_METHOD_END] =
     "HEAD",
     "POST",
     "PUT",
+    "PATCH",
     "DELETE",
     "TRACE",
     "CONNECT",
@@ -157,7 +158,7 @@ const char *HttpMethod::s_psMethod[HttpMethod::HTTP_METHOD_END] =
 };
 int HttpMethod::s_iMethodLen[HttpMethod::HTTP_METHOD_END] =
 {
-    7, 7, 3, 4, 4, 3, 6, 5, 7, 4,
+    7, 7, 3, 4, 4, 3, 5, 6, 5, 7, 4,
     8, 9, 5, 4, 4, 6, 15, 6, 7, 8, 10, 7, 11, 5, 5, 16, 10, 4, 6, 5, 7
 };
 

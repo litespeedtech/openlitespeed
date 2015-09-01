@@ -39,7 +39,10 @@ http_method_t HttpMethod::parse2(const char *pMethod)
         switch (*(pMethod + 2) & ~0x20)
         {
         case 'T':
-            method = HTTP_PUT;
+            if ('A' == (*(pMethod + 1) & ~0x20))
+                method = HTTP_PATCH;
+            else
+                method = HTTP_PUT;
             break;
         case 'R':
             method = HTTP_PURGE;
