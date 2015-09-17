@@ -683,12 +683,13 @@ int HttpSession::updateClientInfoFromProxyHeader(const char *pProxyHeader)
     char *p = (char *)memchr(pProxyHeader, ',', len);
     if (p)
         len = p - pProxyHeader;
-    if ((len <= 0) || (len > 16))
+    if ((len <= 0) || (len > 40))
     {
-        //error, not a valid IPv4 address
+        //error, not a valid IPv4 or IPv6 address
         return 0;
     }
 
+    ClientInfo *pInfo;
     memmove(achIP, pProxyHeader, len);
     achIP[len] = 0;
     struct sockaddr_in addr;
@@ -698,10 +699,24 @@ int HttpSession::updateClientInfoFromProxyHeader(const char *pProxyHeader)
     if (addr.sin_addr.s_addr == INADDR_BROADCAST)
     {
         //Failed to parse the address string to IPv4 address
-        return 0;
+        //Try to parse address as IPv6
+        struct sockaddr_in6 addr6;
+        memset(&addr6, 0, sizeof(sockaddr_in6));
+        if (inet_pton(AF_INET6, achIP, &(addr6.sin6_addr.s6_addr)) <= 0)
+        {
+            //not a valid IPv6
+            return 0;
+        }
+        addr6.sin6_family = AF_INET6;
+        pInfo = HttpGlobals::getClientCache()
+                ->getClientInfo((struct sockaddr *)&addr6);
     }
-    ClientInfo *pInfo = HttpGlobals::getClientCache()
-                        ->getClientInfo((struct sockaddr *)&addr);
+    else
+    {
+        pInfo = HttpGlobals::getClientCache()
+                ->getClientInfo((struct sockaddr *)&addr);
+    }
+
     if (pInfo)
     {
         if (pInfo->checkAccess())
