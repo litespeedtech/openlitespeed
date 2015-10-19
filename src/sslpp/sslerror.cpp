@@ -23,9 +23,24 @@
 
 SSLError::SSLError() throw()
 {
-    m_achMsg[MSG_MAX_LEN] = 0;
-    m_iError = ERR_peek_error();
-    ERR_error_string_n(m_iError, m_achMsg, MSG_MAX_LEN);
+    char *p = m_achMsg;
+    char *pEnd = &m_achMsg[MSG_MAX_LEN] - 1;
+    const char *data;
+    int flag;
+    int iError;
+    while ((iError = ERR_peek_error_line_data(NULL, NULL, &data, &flag)) != 0)
+    {
+
+        ERR_error_string_n(iError, p, pEnd - p);
+        p += strlen(p);
+        if (*data && (flag & ERR_TXT_STRING))
+        {
+            *p++ = ':';
+            strncpy(p, data, pEnd - p);
+        }
+        p += strlen(p);
+        ERR_get_error();
+    }
 }
 
 

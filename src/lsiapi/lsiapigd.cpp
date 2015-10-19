@@ -27,6 +27,42 @@
 #include <sys/mman.h>
 #include <unistd.h>
 
+
+/**
+ * @def LSI_MAX_FILE_PATH_LEN
+ * @brief The max file path length.
+ * @since 1.0
+ */
+#define LSI_MAX_FILE_PATH_LEN        4096
+
+
+
+
+/**
+ * @enum lsi_container_type
+ * @brief Data container types.
+ * @details Used in the API type parameter.
+ * Determines whether the data is contained in memory or in a file.
+ * @since 1.0
+ */
+enum lsi_container_type
+{
+    /**
+     * Memory container type for user global data.
+     */
+    LSI_CONTAINER_MEMORY = 0,
+    
+    /**
+     * File container type for user global data.
+     */
+    LSI_CONTAINER_FILE,
+
+    /**
+     * Placeholder.
+     */
+    LSI_CONTAINER_COUNT,
+};
+
 static hash_key_t  lsi_global_data_hash_fn(const void *val)
 {
     const gdata_key_t *key = (const gdata_key_t *)val;
@@ -37,58 +73,58 @@ static hash_key_t  lsi_global_data_hash_fn(const void *val)
 }
 
 
-static int  lsi_global_data_cmp(const void *pVal1, const void *pVal2)
-{
-    const gdata_key_t *pKey1 = (const gdata_key_t *)pVal1;
-    const gdata_key_t *pKey2 = (const gdata_key_t *)pVal2;
-    if (!pKey1 || !pKey2 || pKey1->key_str_len != pKey2->key_str_len)
-        return LS_FAIL;
-
-    return memcmp(pKey1->key_str, pKey2->key_str, pKey1->key_str_len);
-}
-
-
-void init_gdata_hashes()
-{
-    for (int i = 0; i < LSI_CONTAINER_COUNT; ++i)
-        LsiapiBridge::g_aGDataContainer[i] = new GDataContainer(30,
-                lsi_global_data_hash_fn, lsi_global_data_cmp);
-}
+// static int  lsi_global_data_cmp(const void *pVal1, const void *pVal2)
+// {
+//     const gdata_key_t *pKey1 = (const gdata_key_t *)pVal1;
+//     const gdata_key_t *pKey2 = (const gdata_key_t *)pVal2;
+//     if (!pKey1 || !pKey2 || pKey1->key_str_len != pKey2->key_str_len)
+//         return LS_FAIL;
+// 
+//     return memcmp(pKey1->key_str, pKey2->key_str, pKey1->key_str_len);
+// }
 
 
-void release_gdata_container(GDataHash *containerInfo)
-{
-    GDataHash::iterator iter;
-    for (iter = containerInfo->begin(); iter != containerInfo->end();
-         iter = containerInfo->next(iter))
-    {
-        iter.second()->release_cb(iter.second()->value);
-        free(iter.second()->key.key_str);
-    }
-}
+// void init_gdata_hashes()
+// {
+//     for (int i = 0; i < LSI_CONTAINER_COUNT; ++i)
+//         LsiapiBridge::g_aGDataContainer[i] = new GDataContainer(30,
+//                 lsi_global_data_hash_fn, lsi_global_data_cmp);
+// }
 
 
-void uninit_gdata_hashes()
-{
-    GDataContainer *pLsiGDataContHashT = NULL;
-    lsi_gdata_cont_t *containerInfo = NULL;
-    GDataContainer::iterator iter;
-    int i;
-    for (i = 0; i < LSI_CONTAINER_COUNT; ++i)
-    {
-        pLsiGDataContHashT = LsiapiBridge::g_aGDataContainer[i];
-        for (iter = pLsiGDataContHashT->begin(); iter != pLsiGDataContHashT->end();
-             iter = pLsiGDataContHashT->next(iter))
-        {
-            containerInfo = iter.second();
-            release_gdata_container(containerInfo->container);
-            free(containerInfo->key.key_str);
-            delete containerInfo->container;
-            free(containerInfo);
-        }
-        delete LsiapiBridge::g_aGDataContainer[i];
-    }
-}
+// void release_gdata_container(GDataHash *containerInfo)
+// {
+//     GDataHash::iterator iter;
+//     for (iter = containerInfo->begin(); iter != containerInfo->end();
+//          iter = containerInfo->next(iter))
+//     {
+//         iter.second()->release_cb(iter.second()->value);
+//         free(iter.second()->key.key_str);
+//     }
+// }
+
+
+// void uninit_gdata_hashes()
+// {
+//     GDataContainer *pLsiGDataContHashT = NULL;
+//     lsi_gdata_cont_t *containerInfo = NULL;
+//     GDataContainer::iterator iter;
+//     int i;
+//     for (i = 0; i < LSI_CONTAINER_COUNT; ++i)
+//     {
+//         pLsiGDataContHashT = LsiapiBridge::g_aGDataContainer[i];
+//         for (iter = pLsiGDataContHashT->begin(); iter != pLsiGDataContHashT->end();
+//              iter = pLsiGDataContHashT->next(iter))
+//         {
+//             containerInfo = iter.second();
+//             release_gdata_container(containerInfo->container);
+//             free(containerInfo->key.key_str);
+//             delete containerInfo->container;
+//             free(containerInfo);
+//         }
+//         delete LsiapiBridge::g_aGDataContainer[i];
+//     }
+// }
 
 
 /***
@@ -180,7 +216,7 @@ static FILE *open_file_to_write_n_check_dir(const char *file_path)
 
 static int recover_file_gdata(lsi_gdata_cont_t *containerInfo,
                               const char *key, int key_len, const char *file_path,
-                              GDataHash::iterator &iter, lsi_release_callback_pf release_cb,
+                              GDataHash::iterator &iter, lsi_datarelease_pf release_cb,
                               lsi_deserialize_pf deserialize_cb)
 {
     //If no deserialize presented, can not recover!
@@ -270,7 +306,7 @@ static int recover_file_gdata(lsi_gdata_cont_t *containerInfo,
 //Should use gdata_container_val_st instead of GDataHash
 //cahe FILE mtim should always be NEWer or the same (>=) than cache buffer
 LSIAPI void *get_gdata(lsi_gdata_cont_t *containerInfo, const char *key,
-                       int key_len, lsi_release_callback_pf release_cb,
+                       int key_len, lsi_datarelease_pf release_cb,
                        int renew_TTL, lsi_deserialize_pf deserialize_cb)
 {
     GDataHash *pCont = containerInfo->container;
@@ -372,7 +408,7 @@ LSIAPI int delete_gdata(lsi_gdata_cont_t *containerInfo, const char *key,
 
 
 LSIAPI int set_gdata(lsi_gdata_cont_t *containerInfo, const char *key,
-                     int key_len, void *val, int TTL, lsi_release_callback_pf release_cb,
+                     int key_len, void *val, int TTL, lsi_datarelease_pf release_cb,
                      int force_update, lsi_serialize_pf serialize_cb)
 {
     gdata_item_t *data = NULL;
@@ -444,60 +480,61 @@ LSIAPI int set_gdata(lsi_gdata_cont_t *containerInfo, const char *key,
 LSIAPI lsi_gdata_cont_t *get_gdata_container(int type, const char *key,
         int key_len)
 {
-    if ((type != LSI_CONTAINER_MEMORY  && type != LSI_CONTAINER_FILE)
-        || key_len <= 0 || key == NULL)
-        return NULL;
-
-    GDataContainer *pLsiGDataContHashT = LsiapiBridge::g_aGDataContainer[type];
-    lsi_gdata_cont_t *containerInfo = NULL;
-    char file_path[LSI_MAX_FILE_PATH_LEN] = {0};
-
-    //find if exist, otherwise create it
-    gdata_key_t key_st = {(char *)key, key_len};
-    GDataContainer::iterator iter = pLsiGDataContHashT->find(&key_st);
-    if (iter != pLsiGDataContHashT->end())
-        containerInfo = iter.second();
-    else
-    {
-        char *p = (char *)malloc(key_len);
-        if (!p)
-            return NULL;
-
-        GDataHash *pContainer = new GDataHash(30, lsi_global_data_hash_fn,
-                                              lsi_global_data_cmp);
-        memcpy(p, key, key_len);
-
-        time_t tm = DateTime::s_curTime;
-        containerInfo = (lsi_gdata_cont_t *)malloc(sizeof(lsi_gdata_cont_t));
-        containerInfo->key.key_str = p;
-        containerInfo->key.key_str_len = key_len;
-        containerInfo->container = pContainer;
-        containerInfo->tmcreate = tm;
-        containerInfo->type = type;
-        pLsiGDataContHashT->insert(&containerInfo->key, containerInfo);
-
-        //If cache file exist, use the ceate time recorded
-        buildFileDataLocation(file_path, LSI_MAX_FILE_PATH_LEN, containerInfo->key,
-                              "c", type);
-
-        FILE *fp = fopen(file_path, "rb");
-        if (fp)
-        {
-            fread((char *)&tm, 1, 4, fp);
-            fclose(fp);
-            containerInfo->tmcreate = tm;
-        }
-        else
-        {
-            fp = open_file_to_write_n_check_dir(file_path);
-            if (fp)
-            {
-                fwrite((char *)&tm, 1, 4, fp);
-                fclose(fp);
-            }
-        }
-    }
-    return containerInfo;
+    return NULL; //Not in use any more
+//     if ((type != LSI_CONTAINER_MEMORY  && type != LSI_CONTAINER_FILE)
+//         || key_len <= 0 || key == NULL)
+//         return NULL;
+// 
+//     GDataContainer *pLsiGDataContHashT = LsiapiBridge::g_aGDataContainer[type];
+//     lsi_gdata_cont_t *containerInfo = NULL;
+//     char file_path[LSI_MAX_FILE_PATH_LEN] = {0};
+// 
+//     //find if exist, otherwise create it
+//     gdata_key_t key_st = {(char *)key, key_len};
+//     GDataContainer::iterator iter = pLsiGDataContHashT->find(&key_st);
+//     if (iter != pLsiGDataContHashT->end())
+//         containerInfo = iter.second();
+//     else
+//     {
+//         char *p = (char *)malloc(key_len);
+//         if (!p)
+//             return NULL;
+// 
+//         GDataHash *pContainer = new GDataHash(30, lsi_global_data_hash_fn,
+//                                               lsi_global_data_cmp);
+//         memcpy(p, key, key_len);
+// 
+//         time_t tm = DateTime::s_curTime;
+//         containerInfo = (lsi_gdata_cont_t *)malloc(sizeof(lsi_gdata_cont_t));
+//         containerInfo->key.key_str = p;
+//         containerInfo->key.key_str_len = key_len;
+//         containerInfo->container = pContainer;
+//         containerInfo->tmcreate = tm;
+//         containerInfo->type = type;
+//         pLsiGDataContHashT->insert(&containerInfo->key, containerInfo);
+// 
+//         //If cache file exist, use the ceate time recorded
+//         buildFileDataLocation(file_path, LSI_MAX_FILE_PATH_LEN, containerInfo->key,
+//                               "c", type);
+// 
+//         FILE *fp = fopen(file_path, "rb");
+//         if (fp)
+//         {
+//             fread((char *)&tm, 1, 4, fp);
+//             fclose(fp);
+//             containerInfo->tmcreate = tm;
+//         }
+//         else
+//         {
+//             fp = open_file_to_write_n_check_dir(file_path);
+//             if (fp)
+//             {
+//                 fwrite((char *)&tm, 1, 4, fp);
+//                 fclose(fp);
+//             }
+//         }
+//     }
+//     return containerInfo;
 }
 
 

@@ -191,7 +191,7 @@ int CgidWorker::checkRestartCgid(const char *pServerRoot,
 int CgidWorker::watchDog(const char *pServerRoot, const char *pChroot,
                          int priority, int switchToLscgid)
 {
-    if ((switchToLscgid == 1) & (m_pid != -1))
+    if ((switchToLscgid == 1) && (m_pid != -1))
     {
         kill(m_pid, SIGTERM);
         m_pid = -1;
@@ -200,15 +200,6 @@ int CgidWorker::watchDog(const char *pServerRoot, const char *pChroot,
         if (kill(m_pid, 0) == 0)
             return 0;
     char achData[256];
-    char achExec[2048];
-    if (switchToLscgid)
-    {
-        snprintf(achExec, 2048, "%s%sbin/lscgid", (pChroot) ? pChroot : "",
-                 pServerRoot);
-    }
-    else
-        snprintf(achExec, 2048, "%s%sbin/httpd", (pChroot) ? pChroot : "",
-                 pServerRoot);
 
     int ret = spawnCgid(m_fdCgid, achData, getConfig().getSecret());
     if (ret != -1)

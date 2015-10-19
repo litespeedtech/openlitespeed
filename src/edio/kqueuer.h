@@ -73,6 +73,9 @@ public:
     virtual int waitAndProcessEvents(int iTimeoutMilliSec);
     virtual void timerExecute();
     virtual void setPriHandler(EventReactor::pri_handler handler);
+    virtual void wantRead(EventReactor *pHandler, int want);
+    virtual void wantWrite(EventReactor *pHandler, int want);
+    virtual void modEvent(EventReactor *pHandler, short mask, int add_remove);
 
     virtual void continueRead(EventReactor *pHandler);
     virtual void suspendRead(EventReactor *pHandler);

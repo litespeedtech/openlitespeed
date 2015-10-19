@@ -270,7 +270,7 @@ StaticFileCacheData::StaticFileCacheData()
 
 StaticFileCacheData::~StaticFileCacheData()
 {
-    LsiapiBridge::releaseModuleData(LSI_MODULE_DATA_FILE, getModuleData());
+    LsiapiBridge::releaseModuleData(LSI_DATA_FILE, getModuleData());
     if (m_pGziped)
         delete m_pGziped;
     if (m_pSSIScript)
@@ -636,7 +636,7 @@ int StaticFileCacheData::compressFile()
     }
     if (0 == gzBuf.endStream())
     {
-        long size;
+        off_t size;
         if (gzFile.exactSize(&size) == 0)
         {
             gzFile.close();

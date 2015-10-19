@@ -43,25 +43,25 @@
 struct rnheader_s
 {
     RadixNode  *body;
-    size_t      len;
+    int         len;
     char        label[0];
 };
 
 
 struct rnwchelp_s
 {
-    size_t off;
-    size_t total;
+    int off;
+    int total;
 };
 
 
 struct rnprint_s
 {
-    unsigned long offset;
+    int offset;
     int mode;
 };
 
-#define rnh_size(iLen) (sizeof(void *) + sizeof(size_t) + iLen)
+#define rnh_size(iLen) (sizeof(void *) + sizeof(int) + iLen)
 
 // NOTICE: size should be size + 1 to account for '\0', but
 // the first part also had a -1, so I just canceled it out. (size + 1 + 4 - 1)
@@ -78,8 +78,8 @@ struct rnprint_s
  * Length of the current label is stored in iChildLen.
  * Return value is if there are any children left.
  */
-static int rnNextOffset(const char *pLabel, size_t iLabelLen,
-                        size_t &iChildLen)
+static int rnNextOffset(const char *pLabel, int iLabelLen,
+                        int &iChildLen)
 {
     const char *ptr = (const char *)memchr(pLabel, '/', iLabelLen);
     if (ptr == NULL)
@@ -91,8 +91,8 @@ static int rnNextOffset(const char *pLabel, size_t iLabelLen,
 
 
 static const char *rnGetLengths(int iFlags, const char *pLabel,
-                                size_t iLabelLen, int &iHasChildren,
-                                size_t &iChildLen, size_t &iGCLen)
+                                int iLabelLen, int &iHasChildren,
+                                int &iChildLen, int &iGCLen)
 {
     if ((iFlags & RTFLAG_NOCONTEXT) != 0)
     {
@@ -138,7 +138,7 @@ static void rnDoFree(int iFlags, ls_xpool_t *pool, void *ptr)
 }
 
 
-static int rnDoCmp(int iFlags, const char *p1, const char *p2, size_t len)
+static int rnDoCmp(int iFlags, const char *p1, const char *p2, int len)
 {
     if ((iFlags & RTFLAG_CICMP) != 0)
         return strncasecmp(p1, p2, len);
@@ -146,9 +146,9 @@ static int rnDoCmp(int iFlags, const char *p1, const char *p2, size_t len)
 }
 
 
-static int rnCheckWC(const char *pLabel, size_t iLabelLen)
+static int rnCheckWC(const char *pLabel, int iLabelLen)
 {
-    size_t i;
+    int i;
     for (i = 0; i < iLabelLen; ++i)
     {
         switch (pLabel[i])
@@ -166,7 +166,7 @@ static int rnCheckWC(const char *pLabel, size_t iLabelLen)
 }
 
 
-int RadixTree::setRootLabel(const char *pLabel, size_t iLabelLen)
+int RadixTree::setRootLabel(const char *pLabel, int iLabelLen)
 {
     if (pLabel == NULL || iLabelLen == 0)
         return LS_FAIL;
@@ -200,7 +200,7 @@ void RadixTree::setNoContext()
 }
 
 
-int RadixTree::checkPrefix(const char *pLabel, size_t iLabelLen) const
+int RadixTree::checkPrefix(const char *pLabel, int iLabelLen) const
 {
     if (m_pRoot == NULL)
         return LS_FAIL;
@@ -210,13 +210,13 @@ int RadixTree::checkPrefix(const char *pLabel, size_t iLabelLen) const
 }
 
 
-RadixNode *RadixTree::insert(const char *pLabel, size_t iLabelLen,
+RadixNode *RadixTree::insert(const char *pLabel, int iLabelLen,
                              void *pObj)
 {
     ls_xpool_t *pool = NULL;
     RadixNode *pDest = NULL;
     const char *pChild = pLabel;
-    size_t iChildLen = iLabelLen;
+    int iChildLen = iLabelLen;
     if (m_pRoot == NULL)
         return NULL;
     if ((m_iFlags & RTFLAG_NOCONTEXT) == 0)
@@ -250,7 +250,7 @@ RadixNode *RadixTree::insert(const char *pLabel, size_t iLabelLen,
 }
 
 
-void *RadixTree::erase(const char *pLabel, size_t iLabelLen) const
+void *RadixTree::erase(const char *pLabel, int iLabelLen) const
 {
     if ((((m_iFlags & RTFLAG_NOCONTEXT) == 0)
          && (checkPrefix(pLabel, iLabelLen) != 0))
@@ -261,7 +261,7 @@ void *RadixTree::erase(const char *pLabel, size_t iLabelLen) const
 }
 
 
-void *RadixTree::update(const char *pLabel, size_t iLabelLen,
+void *RadixTree::update(const char *pLabel, int iLabelLen,
                         void *pObj) const
 {
     if ((((m_iFlags & RTFLAG_NOCONTEXT) == 0)
@@ -273,7 +273,7 @@ void *RadixTree::update(const char *pLabel, size_t iLabelLen,
 }
 
 
-void *RadixTree::find(const char *pLabel, size_t iLabelLen) const
+void *RadixTree::find(const char *pLabel, int iLabelLen) const
 {
     if ((((m_iFlags & RTFLAG_NOCONTEXT) == 0)
          && (checkPrefix(pLabel, iLabelLen) != 0))
@@ -284,7 +284,7 @@ void *RadixTree::find(const char *pLabel, size_t iLabelLen) const
 }
 
 
-void *RadixTree::bestMatch(const char *pLabel, size_t iLabelLen) const
+void *RadixTree::bestMatch(const char *pLabel, int iLabelLen) const
 {
     if ((((m_iFlags & RTFLAG_NOCONTEXT) == 0)
          && (checkPrefix(pLabel, iLabelLen) != 0))
@@ -337,10 +337,10 @@ void *RadixNode::getParentObj()
 
 
 RadixNode *RadixNode::insert(ls_xpool_t *pool, const char *pLabel,
-                             size_t iLabelLen, void *pObj, int iFlags, int iMode)
+                             int iLabelLen, void *pObj, int iFlags, int iMode)
 {
     const char *pGC;
-    size_t iChildLen, iGCLen;
+    int iChildLen, iGCLen;
     rnwchelp_t wcHelp;
     rnheader_t *pHeader = NULL;
     RadixNode *pDest = NULL;
@@ -442,7 +442,7 @@ RadixNode *RadixNode::insert(ls_xpool_t *pool, const char *pLabel,
 }
 
 
-void *RadixNode::erase(const char *pLabel, size_t iLabelLen, int iFlags)
+void *RadixNode::erase(const char *pLabel, int iLabelLen, int iFlags)
 {
     void *pObj;
     RadixNode *pNode;
@@ -460,7 +460,7 @@ void *RadixNode::erase(const char *pLabel, size_t iLabelLen, int iFlags)
 }
 
 
-void *RadixNode::update(const char *pLabel, size_t iLabelLen, void *pObj,
+void *RadixNode::update(const char *pLabel, int iLabelLen, void *pObj,
                         int iFlags)
 {
     void *pTmp;
@@ -479,7 +479,7 @@ void *RadixNode::update(const char *pLabel, size_t iLabelLen, void *pObj,
 }
 
 
-void *RadixNode::find(const char *pLabel, size_t iLabelLen, int iFlags)
+void *RadixNode::find(const char *pLabel, int iLabelLen, int iFlags)
 {
     RadixNode *pNode;
     if (iLabelLen == 0)
@@ -494,14 +494,14 @@ void *RadixNode::find(const char *pLabel, size_t iLabelLen, int iFlags)
 }
 
 
-void *RadixNode::bestMatch(const char *pLabel, size_t iLabelLen,
+void *RadixNode::bestMatch(const char *pLabel, int iLabelLen,
                            int iFlags)
 {
     return find(pLabel, iLabelLen, iFlags | RTFLAG_BESTMATCH);
 }
 
 
-int RadixNode::for_each(rn_foreach fun, const char *pKey, size_t iKeyLen)
+int RadixNode::for_each(rn_foreach fun, const char *pKey, int iKeyLen)
 {
     int incr = 0;
     void *pObj;
@@ -591,7 +591,7 @@ int RadixNode::for_each_child(rn_foreach fun)
 
 
 int RadixNode::for_each2(rn_foreach2 fun, void *pUData, const char *pKey,
-                         size_t iKeyLen)
+                         int iKeyLen)
 {
     int incr = 0;
     void *pObj;
@@ -699,14 +699,14 @@ RadixNode *RadixNode::newNode(ls_xpool_t *pool, RadixNode *pParent,
 * Return value is new child.
 */
 RadixNode *RadixNode::newBranch(ls_xpool_t *pool, const char *pLabel,
-                                size_t iLabelLen, void *pObj,
+                                int iLabelLen, void *pObj,
                                 RadixNode *pParent, RadixNode *&pDest,
                                 int iFlags, int iMode)
 {
     RadixNode *pMyNode;
     rnheader_t *pMyChildHeader;
     const char *pGC;
-    size_t iChildLen, iGCLen;
+    int iChildLen, iGCLen;
     int *pModeToSet, iHasChildren = 0;
     pMyNode = newNode(pool, pParent, NULL);
 
@@ -775,12 +775,12 @@ RadixNode *RadixNode::newBranch(ls_xpool_t *pool, const char *pLabel,
 
 //returns 1 if new, 0 if child matched, -1 if alloc failed.
 int RadixNode::getHeader(int iFlags, ls_xpool_t *pool, const char *pLabel,
-                         size_t iLabelLen, rnheader_t *&pHeader)
+                         int iLabelLen, rnheader_t *&pHeader)
 {
     rnheader_t *pTmp;
     GHash::iterator pHashNode;
     ls_str_t hashMatch;
-    size_t iOffset;
+    int iOffset;
     int i, iExact = getNumExact();
     switch (getState())
     {
@@ -1003,10 +1003,10 @@ int RadixNode::setHeader(int iFlags, int iMode, ls_xpool_t *pool,
 //returns 1 if new, 0 if child matched, -1 if alloc failed.
 int RadixNode::getWCHeader(int iFlags, ls_xpool_t *pool,
                            const char *pLabel,
-                           size_t iLabelLen, rnheader_t *&pHeader, rnwchelp_t *pHelp)
+                           int iLabelLen, rnheader_t *&pHeader, rnwchelp_t *pHelp)
 {
     rnheader_t *pTmp;
-    size_t iOffsetSet = 0;
+    int iOffsetSet = 0;
     int i, iCount = getNumWild();
     switch (getWCState())
     {
@@ -1187,7 +1187,7 @@ void RadixNode::mergeSelf(void **pOrig)
 
 
 int RadixNode::merge(ls_xpool_t *pool, const char *pMatch,
-                     size_t iMatchLen,
+                     int iMatchLen,
                      int iFlags, int iMode, void **pOrig, rnheader_t *pHeaderAdded)
 {
     int i, iCount = getNumWild();
@@ -1310,7 +1310,7 @@ int RadixNode::merge(ls_xpool_t *pool, const char *pMatch,
 }
 
 
-RadixNode *RadixNode::searchExact(const char *pLabel, size_t iLabelLen,
+RadixNode *RadixNode::searchExact(const char *pLabel, int iLabelLen,
                                   int iFlags)
 {
     int i;
@@ -1363,7 +1363,7 @@ RadixNode *RadixNode::searchExact(const char *pLabel, size_t iLabelLen,
 }
 
 
-RadixNode *RadixNode::searchWild(const char *pLabel, size_t iLabelLen,
+RadixNode *RadixNode::searchWild(const char *pLabel, int iLabelLen,
                                  int iFlags)
 {
     rnheader_t *pHeader;
@@ -1447,12 +1447,12 @@ RadixNode *RadixNode::searchWild(const char *pLabel, size_t iLabelLen,
  * This function compares labels of the search target and current children.
  * If found, it will call findChildData, which may recurse back to findChild.
  */
-RadixNode *RadixNode::findChild(const char *pLabel, size_t iLabelLen,
+RadixNode *RadixNode::findChild(const char *pLabel, int iLabelLen,
                                 int iFlags)
 {
     RadixNode *pExactOut, *pWildOut;
     const char *pGC;
-    size_t iChildLen, iGCLen;
+    int iChildLen, iGCLen;
     int iHasChildren = 0;
 
     pGC = rnGetLengths(iFlags, pLabel, iLabelLen, iHasChildren, iChildLen,
@@ -1476,7 +1476,7 @@ RadixNode *RadixNode::findChild(const char *pLabel, size_t iLabelLen,
  * it needs to recurse deeper, and if it doesn't, returns the pointer to
  * the object.
  */
-RadixNode *RadixNode::findChildData(const char *pLabel, size_t iLabelLen,
+RadixNode *RadixNode::findChildData(const char *pLabel, int iLabelLen,
                                     RadixNode *pNode, int iHasChildren, int iFlags)
 {
     RadixNode *pOut;
@@ -1527,7 +1527,7 @@ int RadixNode::printHash(const void *key, void *data, void *extra)
     rnprint_t myHelper;
     myHelper.mode = pHelper->mode;
     myHelper.offset = pHelper->offset + 2;
-    unsigned int i;
+    int i;
     for (i = 0; i < pHelper->offset; ++i)
         printf("|");
     printf("%.*s  ->", pHeader->len, pHeader->label);
@@ -1545,7 +1545,7 @@ int RadixNode::printHash(const void *key, void *data, void *extra)
  */
 void RadixNode::printChildren(rnprint_t *pHelper)
 {
-    unsigned int i;
+    int i;
     int j, iCount = getNumWild();
     rnheader_t *pHeader;
     rnprint_t myHelper;

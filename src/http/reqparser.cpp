@@ -40,8 +40,8 @@ ReqParser::ReqParser()
     , m_multipartBuf(8192)
     , m_ignore_part(1)
     , m_multipartState(0)
-    , m_iCachedEof(0)
     , m_resume(0)
+    , m_md5CachedNum(0)
     , m_iCurOff(0)
     , m_state_kv(0)
     , m_last_char(0)
@@ -50,22 +50,18 @@ ReqParser::ReqParser()
     , m_args(0)
     , m_maxArgs(0)
     , m_pArgs(NULL)
-    , m_iCookies(-1)
-    , m_iMaxCookies(0)
-    , m_pCookies(NULL)
     , m_pReq(NULL)
     , m_sLastFileKey("")
-    , m_iLastFd(-1)
+    , m_pLastFileBuf(NULL)
     , m_iContentLength(0)
 {
     allocArgIndex(8);
-    allocCookieIndex(8);
 }
 
 ReqParser::~ReqParser()
 {
-    if (m_iLastFd != -1)
-        close(m_iLastFd);
+    if (m_pLastFileBuf)
+        closeLastMFile();
     m_sLastFileKey.setLen(0);
 
     if (m_pArgs)
@@ -80,11 +76,6 @@ ReqParser::~ReqParser()
         }
         free(m_pArgs);
         m_pArgs = NULL;
-    }
-    if (m_pCookies)
-    {
-        free(m_pCookies);
-        m_pCookies = NULL;
     }
 }
 
@@ -107,10 +98,9 @@ void ReqParser::reset()
     m_qsArgs    = 0;
     m_postBegin = 0;
     m_postArgs  = 0;
-    m_iCookies = -1;
-    m_iLastFd = -1;
-    m_iCachedEof = 0;
+    m_pLastFileBuf = NULL;
     m_resume = 0;
+    m_md5CachedNum = 0;
     m_pReq = NULL;
     m_sLastFileKey.setLen(0);
     m_iContentLength = 0;
@@ -134,21 +124,6 @@ int ReqParser::allocArgIndex(int newMax)
     return 0;
 }
 
-int ReqParser::allocCookieIndex(int newMax)
-{
-    if (newMax <= m_iMaxCookies)
-        return 0;
-    KeyValuePair *pNewBuf = (KeyValuePair *)realloc(m_pCookies,
-                            sizeof(KeyValuePair) * newMax);
-    if (pNewBuf)
-    {
-        m_pCookies = pNewBuf;
-        m_iMaxCookies = newMax;
-    }
-    else
-        return -1;
-    return 0;
-}
 
 int ReqParser::appendArgKeyIndex(int begin, int len)
 {
@@ -164,12 +139,8 @@ int ReqParser::appendArgKeyIndex(int begin, int len)
     m_pArgs[m_args - 1].valueOffset   = begin + len + 1;
     m_pArgs[m_args - 1].valueLen      = 0;
     m_pArgs[m_args - 1].filePath = NULL;
-    if (m_iLastFd != -1)
-    {
-        close(m_iLastFd);
-        m_iLastFd = -1;
-        m_iCachedEof = 0;
-    }
+    if (m_pLastFileBuf)
+        closeLastMFile();
     m_sLastFileKey.setLen(0);
     return 0;
 }
@@ -460,15 +431,24 @@ int ReqParser::multipartParseHeader(char *pBegin, char *pLineEnd)
                             memcpy(p, m_ReqParserParam.m_sUploadFilePathTemplate.c_str(), templateLen);
                             memcpy(p + templateLen, "/XXXXXX", 7);
                             *(p + templateLen + 7) = 0x00;
-                            m_iLastFd = mkstemp(p);
-                            if (m_iLastFd == -1)
+                            int fd = mkstemp(p);
+                            if (fd == -1)
                             {
                                 m_multipartState = MPS_ERROR;
                                 free(p);
                                 return -1;
                             }
+
+                            m_pLastFileBuf = new VMemBuf;
+                            if (!m_pLastFileBuf)
+                            {
+                                free(p);
+                                close(fd);
+                                return -1;
+                            }
+                            m_pLastFileBuf->setFd(p, fd);
                             m_pArgs[m_args - 1].filePath = p;
-                            fchmod(m_iLastFd, m_ReqParserParam.m_iFileMod);
+                            fchmod(fd, m_ReqParserParam.m_iFileMod);
 
                             //m_iFormState = PARSE_FORM_NAME;
                             //Need to append to bodyBuf path, name, content_type
@@ -576,24 +556,33 @@ int ReqParser::checkBoundary(char *&pBegin, char *&pCur)
                 m_pArgs[m_args - 1].valueLen = len;
             }
         }
-        else if (m_iLastFd != -1)
+        else if (m_pLastFileBuf)
         {
-            assert(m_iCachedEof == 2 || m_iCachedEof == 1);
-            struct stat stbuf;
-            if (fstat(m_iLastFd, &stbuf) == 0)
+            off_t size = m_pLastFileBuf->getCurWOffset();
+            char *p = m_pLastFileBuf->getCurWPos();
+            int additionalBytes =  0;
+            if (size >= 2)
             {
-                off_t fileSzie = stbuf.st_size;
-                char s[30] = {0};
-                int l = ls_snprintf(s, 30, "%ld", fileSzie);
-                appendFileKeyValue("_size", 5, s, l);
+                if (*(p - 2) == '\r')
+                    additionalBytes=  2;
+                else
+                    additionalBytes = 1;
             }
-            close(m_iLastFd);
-            m_iLastFd = -1 ;
-            m_iCachedEof = 0;
+            //m_pLastFileBuf->rewindWOff(additionalBytes);
+            m_pLastFileBuf->shrinkBuf(size - additionalBytes);
+            closeLastMFile();
+
+            char s[30] = {0};
+            int l = ls_snprintf(s, 30, "%lld", size - additionalBytes);
+            appendFileKeyValue("_size", 5, s, l);
 
             //Now calc file size and MD5 and append to bodyBuf
             char sMd5[16], sMd5Hex[32];
+            if (m_md5CachedNum - additionalBytes > 0)
+                ls_md5_update(&m_md5Ctx, m_md5CachedBytes,
+                              m_md5CachedNum - additionalBytes);
             ls_md5_final((unsigned char *)sMd5, &m_md5Ctx);
+            m_md5CachedNum = 0;
             StringTool::hexEncode(sMd5, 16, sMd5Hex);
             appendFileKeyValue("_md5", 4, sMd5Hex, 32);
         }
@@ -639,14 +628,14 @@ int ReqParser::checkBoundary(char *&pBegin, char *&pCur)
 }
 
 
-int ReqParser::parseMutlipart(const char *pBuf, size_t size,
+int ReqParser::parseMultipart(const char *pBuf, size_t size,
                               int resume, int last)
 {
     //TODO:  if m_multipartBuf is empty and do not copy,
     //use pBuf directly, if have left part, then write to it for next time using
     int    ret;
     int count = 0;
-    char *pLineEnd, *p;
+    char *pLineEnd = NULL, *p;
     char *pBegin, *pEnd, *pCur;
     char *pOldCur = NULL;
 
@@ -772,23 +761,9 @@ int ReqParser::parseMutlipart(const char *pBuf, size_t size,
 
             if (!m_ignore_part)
                 m_decodeBuf.append(pBegin, pCur - pBegin);
-            else if (m_iLastFd != -1)//If it is a file, save to file
-            {
-                if (m_iCachedEof) // 1 or 2
-                    writeToFile("\r\n" + 2 - m_iCachedEof, m_iCachedEof);
+            else if (m_pLastFileBuf)
+                writeToFile(pBegin, pCur - pBegin);
 
-                if (*(pCur - 1) == '\n')
-                {
-                    if (*(pCur - 2) == '\r')
-                        m_iCachedEof = 2;
-                    else
-                        m_iCachedEof = 1;
-                }
-                else
-                    m_iCachedEof = 0;
-
-                writeToFile(pBegin, pCur - pBegin - m_iCachedEof);
-            }
 
             if (pLineEnd)
                 m_multipartState = MPS_PART_DATA_BOUNDARY;
@@ -819,7 +794,7 @@ int ReqParser::parsePostBody(const char *srcBuf, size_t srcSize,
         ret = appendBodyBuf(srcBuf, srcSize);
     }
     else
-        ret = parseMutlipart(srcBuf, srcSize, resume, last);
+        ret = parseMultipart(srcBuf, srcSize, resume, last);
     return ret;
 }
 
@@ -916,9 +891,50 @@ int ReqParser::appendFileKeyValue(const char *key, size_t keylen,
 
 void ReqParser::writeToFile(const char *buf, int len)
 {
-    write(m_iLastFd, buf, len);
-    ls_md5_update(&m_md5Ctx, buf, len);
+    if (len <= 0)
+        return;
+
+    m_pLastFileBuf->write(buf, len);
+
+    int iUseCache, iUseBuf;
+    if (len ==1)
+    {
+        iUseBuf = 0;
+        if (m_md5CachedNum == 0)
+            iUseCache = 0;
+        else
+            iUseCache = 1;
+    }
+    else
+    {
+        iUseBuf = len - 2;
+        iUseCache = m_md5CachedNum;
+    }
+
+    if (iUseCache)
+    {
+        ls_md5_update(&m_md5Ctx, m_md5CachedBytes, iUseCache);
+        m_md5CachedNum -= iUseCache;
+        if (m_md5CachedNum == 1)
+            m_md5CachedBytes[0] = m_md5CachedBytes[1];
+    }
+
+    memcpy(m_md5CachedBytes + m_md5CachedNum, buf + iUseBuf, len - iUseBuf);
+    m_md5CachedNum += (len - iUseBuf);
+    if (iUseBuf)
+        ls_md5_update(&m_md5Ctx, buf, iUseBuf);
 }
+
+void ReqParser::closeLastMFile()
+{
+    if(m_pLastFileBuf)
+    {
+        m_pLastFileBuf->close();
+        delete m_pLastFileBuf;
+        m_pLastFileBuf = NULL;
+    }
+}
+
 
 int ReqParser::parseInit(HttpReq *pReq, ReqParserParam &param)
 {
@@ -981,203 +997,27 @@ int ReqParser::parseDone()
         fwrite(m_decodeBuf.begin(), m_decodeBuf.size(), 1, f);
         fclose(f);
     }
+
+
+    f = fopen("/tmp/reqbodybuf", "wb");
+    if (f)
+    {
+        VMemBuf *pVMBuf = m_pReq->getBodyBuf();
+        pVMBuf->rewindReadBuf();
+        char *pBuf;
+        size_t size;
+        while (((pBuf = pVMBuf->getReadBuffer(size)) != NULL)
+           && (size > 0))
+        {
+            fwrite(pBuf, size, 1, f);
+            pVMBuf->readUsed(size);
+        }
+        fclose(f);
+    }
+
 #endif
     m_iParseState = PARSE_DONE;
     return ret;
-}
-
-/*
-//When all are ready, call below to parse once to have it done
-int ReqParser::parseArgs( HttpReq * pReq, int scanPost )
-{
-    if ((scanPost != 2 )&&!( m_partParsed & SEC_LOC_ARGS_GET ))
-    {
-        m_partParsed |= SEC_LOC_ARGS_GET;
-        if (( pReq->getQueryStringLen() > 0 )&&
-            ( parseQueryString( pReq->getQueryString(),
-                                pReq->getQueryStringLen() ) == -1 ))
-        {
-            logParsingError(  pReq );
-            return -1;
-        }
-    }
-    if ( scanPost && !(m_partParsed & SEC_LOC_ARGS_POST ) )
-    {
-        m_postBegin = m_args;
-        m_partParsed |= SEC_LOC_ARGS_POST;
-        if ( pReq->getContentLength() > 0 )
-        {
-            VMemBuf * pBodyBuf = pReq->getBodyBuf();
-            size_t offset = pBodyBuf->getCurROffset();
-            int ret = parsePostBody( pReq );
-            if ( offset != pBodyBuf->getCurROffset() )
-            {
-                pBodyBuf->setROffset( offset );
-            }
-            if ( ret == -1)
-            {
-                logParsingError( pReq );
-                return -1;
-            }
-        }
-    }
-    return 0;
-}*/
-
-
-int ReqParser::parseCookies(const char *pCookies, int len)
-{
-    if (m_iCookies != -1)
-        return 0;
-    m_iCookies = 0;
-    if (!pCookies || !*pCookies || len == 0)
-        return 0;
-    const char *pEnd = pCookies + len ;
-    const char *p, *pVal, *pNameEnd, *pValEnd;
-    int nameOff, valOff;
-    for (; pCookies < pEnd; pCookies = p + 1)
-    {
-        p = (const char *)memchr(pCookies, ';', pEnd - pCookies);
-        if (!p)
-            p = pEnd;
-        pValEnd = p;
-        while (isspace(*pCookies))
-            ++pCookies;
-        if (p == pCookies)
-            continue;
-        pVal = (const char *)memchr(pCookies, '=', p - pCookies);
-        if (!pVal)
-            continue;
-        pNameEnd = pVal++;
-        while (isspace(*pVal))
-            ++pVal;
-        nameOff = m_decodeBuf.size();
-        m_decodeBuf.append(pCookies, pNameEnd - pCookies);
-        m_decodeBuf.appendUnsafe('\0');
-        valOff = m_decodeBuf.size();
-        while (isspace(pValEnd[-1]))
-            --pValEnd;
-        if (pValEnd > pVal)
-            m_decodeBuf.append(pVal, pValEnd - pVal);
-        else
-            pValEnd = pVal;
-        m_decodeBuf.appendUnsafe('\0');
-
-        if (m_iCookies >= m_iMaxCookies)
-        {
-            int newMax = m_iMaxCookies << 1;
-            if (allocCookieIndex(newMax))
-                return -1;
-        }
-        m_pCookies[m_iCookies].keyOffset = nameOff;
-        m_pCookies[m_iCookies].keyLen    = pNameEnd - pCookies;
-        m_pCookies[m_iCookies].valueOffset   = valOff;
-        m_pCookies[m_iCookies].valueLen      = pValEnd - pVal;
-        ++m_iCookies;
-
-    }
-    return 0;
-}
-
-// int ReqParser::testCookies( HttpSession* pSession, SecRule * pRule, AutoBuf * pMatched, int countOnly )
-// {
-//     int i;
-//     const char * p;
-//     int len;
-//     int ret, ret1;
-//     int offset;
-//     int total = 0;
-//     for( i = 0; i < m_iCookies; ++i )
-//     {
-//         offset = m_pCookies[i].keyOffset;
-//         len = m_pCookies[i].keyLen;
-//         p = m_decodeBuf.begin() + offset;
-//         ret = pRule->getLocation()->shouldTest( p, len, SEC_LOC_COOKIES );
-//         if (( ret & 4 )||(ret & countOnly) ) //count_only
-//         {
-//             ++total;
-//         }
-//         if ( ret & 2 ) //value
-//         {
-//             offset = m_pCookies[i].valueOffset;
-//             len = m_pCookies[i].valueLen;
-//             p = m_decodeBuf.begin() + offset;
-//             //LS_DBG_L( "[SECURITY] Cookie value len: %d ", len );
-//
-//             ret1 = pRule->matchString( pSession, p, len, pMatched );
-//             if ( ret1 )
-//                 return 1;
-//
-//         }
-//         if ( ret & 1 ) //name
-//         {
-//             offset = m_pCookies[i].keyOffset;
-//             len = m_pCookies[i].keyLen;
-//             p = m_decodeBuf.begin() + offset;
-//             ret1 = pRule->matchString( pSession, p, len, pMatched );
-//             if ( ret1 )
-//                 return 1;
-//         }
-//     }
-//     if (( total )&&( !countOnly ))
-//     {
-//         return pRule->matchCount( total, pSession, pMatched );
-//     }
-//     return total;
-// }
-
-
-const char *ReqParser::getArgStr(int location, int &len)
-{
-    switch (location)
-    {
-    case SEC_LOC_ARGS_ALL:
-        if (m_args == 0)
-            break;
-        else
-            len = m_pArgs[m_args - 1].valueOffset +
-                  m_pArgs[m_args - 1].valueLen -
-                  m_pArgs[0].keyOffset;
-        return m_decodeBuf.begin() + m_pArgs[0].keyOffset;
-    case SEC_LOC_ARGS_GET:
-        if (m_qsArgs == 0)
-            break;
-        else
-            len = m_pArgs[m_qsBegin + m_qsArgs - 1].valueOffset +
-                  m_pArgs[m_qsBegin + m_qsArgs - 1].valueLen -
-                  m_pArgs[m_qsBegin].keyOffset;
-        return m_decodeBuf.begin() + m_pArgs[m_qsBegin].keyOffset;
-    case SEC_LOC_ARGS_POST:
-        if (m_postArgs == 0)
-            break;
-        else
-            len = m_pArgs[m_postBegin + m_postArgs - 1].valueOffset +
-                  m_pArgs[m_postBegin + m_postArgs - 1].valueLen -
-                  m_pArgs[m_postBegin].keyOffset;
-        return m_decodeBuf.begin() + m_pArgs[m_postBegin].keyOffset;
-    }
-    len = 0;
-    return "";
-
-}
-
-const char *ReqParser::getArgStr(const char *pName, int nameLen, int &len,
-                                 char *&filePath)
-{
-    int i;
-    for (i = 0; i < m_args; ++i)
-    {
-        const char *p = m_decodeBuf.begin() + m_pArgs[i].keyOffset;
-        if ((m_pArgs[i].keyLen == nameLen) &&
-            (strncasecmp(pName, p, nameLen) == 0))
-        {
-            len = m_pArgs[i].valueLen;
-            filePath = m_pArgs[i].filePath;
-            return m_decodeBuf.begin() + m_pArgs[i].valueOffset;
-        }
-    }
-    len = 0;
-    return NULL;
 }
 
 int ReqParser::getArgs(int index, char *&pName, int &nameLen, char *&val,
@@ -1195,17 +1035,6 @@ int ReqParser::getArgs(int index, char *&pName, int &nameLen, char *&val,
     }
     else
         return -1;
-}
-
-const char *ReqParser::getReqHeader(const char *pName, int nameLen,
-                                    int &len,
-                                    HttpReq *pReq)
-{
-    const char *pHeader = RequestVars::getUnknownHeader(
-                              pReq, pName, nameLen, len);
-
-    return pHeader;
-
 }
 
 const char *ReqParser::getReqVar(HttpSession *pSession, int varId,
@@ -1403,7 +1232,7 @@ void ReqParser::testMultipart()
     parser.reset();
     parser.initMutlipart(pContentType, 86);
 
-    parser.parseMutlipart(achBufTest, sizeof(achBufTest) - 1, 0, 1);
+    parser.parseMultipart(achBufTest, sizeof(achBufTest) - 1, 0, 1);
     res = memcmp(parser.m_decodeBuf.begin(), achDecoded,
                  sizeof(achDecoded) - 1);
     assert(res == 0);
@@ -1442,7 +1271,7 @@ void ReqParser::testMultipart()
     parser.reset();
     parser.initMutlipart(pContentType, 86);
 
-    parser.parseMutlipart("", 0, 0, 0);
+    parser.parseMultipart("", 0, 0, 0);
     char *p = achBufTest;
     char *pEnd = &achBufTest[0] + sizeof(achBufTest) - 1;
     while (*p)
@@ -1450,10 +1279,10 @@ void ReqParser::testMultipart()
         res = pEnd - p;
         if (res > 4)
             res = 4;
-        parser.parseMutlipart(p, res, 1, 0);
+        parser.parseMultipart(p, res, 1, 0);
         p += res;
     }
-    parser.parseMutlipart("", 0, 1, 1);
+    parser.parseMultipart("", 0, 1, 1);
     res = memcmp(parser.m_decodeBuf.begin(), achDecoded,
                  sizeof(achDecoded) - 1);
     assert(res == 0);

@@ -275,7 +275,7 @@ HttpVHost::~HttpVHost()
         delete m_pSSLCtx;
 
 
-    LsiapiBridge::releaseModuleData(LSI_MODULE_DATA_VHOST, &m_moduleData);
+    LsiapiBridge::releaseModuleData(LSI_DATA_VHOST, &m_moduleData);
 
 }
 
@@ -1902,9 +1902,9 @@ lsi_module_config_t *parseModuleConfigParam(lsi_module_t *pModule,
     if (config->data_flag == LSI_CONFDATA_OWN)
     {
         assert(config->sparam != NULL);
-        config->config = pModule->_config_parser->_parse_config(
+        config->config = pModule->config_parser->parse_config(
                              config->sparam->c_str(), config->sparam->len(), init_config,
-                             LSI_CONTEXT_LEVEL, pContext->getURI());
+                             LSI_CFG_CONTEXT, pContext->getURI());
         delete config->sparam;
         config->sparam = NULL;
         config->data_flag = LSI_CONFDATA_PARSED;
@@ -1924,8 +1924,8 @@ lsi_module_config_t *parseModuleConfigParam(lsi_module_t *pModule,
 int HttpVHost::configVHModuleUrlFilter2(lsi_module_t *pModule,
                                         const XmlNodeList *pfilterList)
 {
-    if (!pModule || !pModule->_config_parser
-        || !pModule->_config_parser->_parse_config)
+    if (!pModule || !pModule->config_parser
+        || !pModule->config_parser->parse_config)
         return 0;
 
     int ret = 0;
@@ -1994,7 +1994,7 @@ int HttpVHost::configModuleConfigInContext(const XmlNode *pContextNode,
     lsi_module_config_t *config = pContext->getModuleConfig()->get(MODULE_ID(
                                       pModule));
 
-    if (!pModule->_config_parser || !pModule->_config_parser->_parse_config)
+    if (!pModule->config_parser || !pModule->config_parser->parse_config)
         return LS_FAIL;
 
 
@@ -2181,7 +2181,7 @@ int HttpVHost::config(const XmlNode *pVhConfNode)
         ModuleConfig *pConfig = new ModuleConfig;
         pConfig->init(ModuleManager::getInstance().getModuleCount());
         pConfig->inherit(ModuleManager::getGlobalModuleConfig());
-        ModuleConfig::parseConfigList(pModuleList, pConfig, LSI_VHOST_LEVEL,
+        ModuleConfig::parseConfigList(pModuleList, pConfig, LSI_CFG_VHOST,
                                       this->getName());
         pRootContext->setModuleConfig(pConfig, 1);
     }
@@ -2449,6 +2449,8 @@ HttpVHost *HttpVHost::configVHost(XmlNode *pNode)
         if (ConfigCtx::getCurConfigCtx()->getValidChrootPath(pVhRoot,
                 "vhost root") != 0)
             break;
+
+        ConfigCtx::getCurConfigCtx()->setDocRoot(ConfigCtx::getCurConfigCtx()->getVhRoot());
 
         const char *pConfFile = pNode->getChildValue("configFile");
 

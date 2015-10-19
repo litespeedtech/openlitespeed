@@ -457,6 +457,7 @@ int FcgiConnection::processFcgiData()
 int FcgiConnection::queryAppAttr()
 {
     char achBuf[256];
+    FCGI_Header *pHeader = (FCGI_Header *)achBuf;
     char *p = achBuf + sizeof(FCGI_Header);
     int size = sizeof(achBuf) - sizeof(FCGI_Header);
     int len = 0;
@@ -470,8 +471,7 @@ int FcgiConnection::queryAppAttr()
     len += (ret = FcgiNameValuePair::append(p, size, FCGI_MPXS_CONNS, ""));
     p += ret;
     size -= ret;
-    FcgiRecord::setRecordHeader(*((FCGI_Header *)achBuf), FCGI_GET_VALUES,
-                                0, len);
+    FcgiRecord::setRecordHeader(*pHeader, FCGI_GET_VALUES, 0, len);
     return sendRecord(achBuf, sizeof(FCGI_Header) + len);
 }
 

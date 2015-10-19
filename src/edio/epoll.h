@@ -33,25 +33,16 @@ class epoll : public Multiplexer
     int                  m_epfd;
     struct epoll_event *m_pResults;
     ReactorIndex         m_reactorIndex;
-    int updateEvents(EventReactor *pHandler, short mask);
 
     void addEvent(EventReactor *pHandler, short mask)
     {
-        pHandler->orMask2(mask);
-        updateEvents(pHandler, pHandler->getEvents());
+        mask |= pHandler->getEvents();
+        setEventMask(pHandler, mask);
     }
     void removeEvent(EventReactor *pHandler, short mask)
     {
-        pHandler->andMask2(~mask);
-        updateEvents(pHandler, pHandler->getEvents());
-    }
-    void setEvents(EventReactor *pHandler, short mask)
-    {
-        if (pHandler->getEvents() != mask)
-        {
-            pHandler->setMask2(mask);
-            updateEvents(pHandler, mask);
-        }
+        mask = pHandler->getEvents() & ~mask;
+        setEventMask(pHandler, mask);
     }
     int reinit();
 
@@ -65,6 +56,8 @@ public:
     virtual int waitAndProcessEvents(int iTimeoutMilliSec);
     virtual void timerExecute();
     virtual void setPriHandler(EventReactor::pri_handler handler) {};
+    virtual void modEvent(EventReactor *pHandler, short mask, int add_remove);
+    virtual void setEventMask(EventReactor *pHandler, short mask);
 
     virtual void continueRead(EventReactor *pHandler);
     virtual void suspendRead(EventReactor *pHandler);

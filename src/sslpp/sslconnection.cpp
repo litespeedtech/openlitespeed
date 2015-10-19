@@ -32,6 +32,7 @@
 #include <unistd.h>
 
 
+int32_t SSLConnection::s_iConnIdx = -1;
 
 //static const char * s_pErrInvldSSL = "Invalid Parameter, SSL* ssl is null\n";
 
@@ -40,6 +41,8 @@ SSLConnection::SSLConnection()
     , m_iStatus(DISCONNECTED)
     , m_iWant(0)
     , m_iFlag(0)
+    , m_iFreeCtx(0)
+    , m_iFreeSess(0)
 {
 }
 
@@ -49,8 +52,10 @@ SSLConnection::SSLConnection(SSL *ssl)
     , m_iStatus(DISCONNECTED)
     , m_iWant(0)
     , m_iFlag(0)
+    , m_iFreeCtx(0)
+    , m_iFreeSess(0)
 {
-    SSL_set_ex_data(ssl, 0, (void *)this);
+    SSL_set_ex_data(ssl, s_iConnIdx, (void *)this);
 }
 
 
@@ -59,9 +64,11 @@ SSLConnection::SSLConnection(SSL *ssl, int fd)
     , m_iStatus(DISCONNECTED)
     , m_iWant(0)
     , m_iFlag(0)
+    , m_iFreeCtx(0)
+    , m_iFreeSess(0)
 {
     SSL_set_fd(m_ssl, fd);
-    SSL_set_ex_data(ssl, 0, (void *)this);
+    SSL_set_ex_data(ssl, s_iConnIdx, (void *)this);
 }
 
 
@@ -69,9 +76,13 @@ SSLConnection::SSLConnection(SSL *ssl, int rfd, int wfd)
     : m_ssl(ssl)
     , m_iStatus(DISCONNECTED)
     , m_iWant(0)
+    , m_iFlag(0)
+    , m_iFreeCtx(0)
+    , m_iFreeSess(0)
 {
     SSL_set_rfd(m_ssl, rfd);
     SSL_set_wfd(m_ssl, wfd);
+    SSL_set_ex_data(ssl, s_iConnIdx, (void *)this);
 }
 
 
@@ -88,13 +99,18 @@ void SSLConnection::setSSL(SSL *ssl)
     //m_iWant = 0;
     m_ssl = ssl;
     m_iFlag = 0;
-    SSL_set_ex_data(m_ssl, 0, (void *)this);
+    SSL_set_ex_data(ssl, s_iConnIdx, (void *)this);
 }
+
 void SSLConnection::release()
 {
     assert(m_ssl);
     if (m_iStatus != DISCONNECTED)
         shutdown(0);
+    if (m_iFreeSess != 0)
+        SSL_SESSION_free(SSL_get_session(m_ssl));
+    if (m_iFreeCtx != 0)
+        SSL_CTX_free(SSL_get_SSL_CTX(m_ssl));
     SSL_free(m_ssl);
     m_ssl = NULL;
 }
@@ -329,6 +345,15 @@ int SSLConnection::checkError(int ret)
             m_iWant |= WRITE;
         ERR_clear_error();
         return 0;
+    case SSL_ERROR_SYSCALL:
+        {
+            int ret = ERR_get_error();
+            if (ret == 0)
+            {
+                errno = ECONNRESET;
+                break;
+            }
+        }
     default:
         errno = EIO;
         //printf( "SSLError:%s\n", SSLError(err).what() );
@@ -429,6 +454,13 @@ int SSLConnection::getSpdyVersion()
         return 4;
 #endif
     return v;
+}
+
+
+void SSLConnection::initConnIdx()
+{
+    if ( s_iConnIdx < 0 )
+        s_iConnIdx = SSL_get_ex_new_index(0, NULL, NULL, NULL, NULL);
 }
 
 

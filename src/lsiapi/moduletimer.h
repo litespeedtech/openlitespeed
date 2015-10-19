@@ -46,7 +46,7 @@ class ModTimerList : public TSingleton<ModTimerList>
 public:
 
     int addTimer(unsigned int timeout_ms, int repeat,
-                 lsi_timer_callback_pf timer_cb, void *timer_cb_param);
+                 lsi_timercb_pf timer_cb, void *timer_cb_param);
     int removeTimer(int iId);
 
     int checkExpired();

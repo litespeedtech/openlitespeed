@@ -48,7 +48,7 @@ typedef struct lsi_module_internal_s
      * it will be set to the user data id.
      * @since 1.0
      */
-    int16_t                      data_id[LSI_MODULE_DATA_COUNT];
+    int16_t                      data_id[LSI_DATA_COUNT];
 
     /**
      * @brief Initially set to 0.  After a module is loaded,
@@ -70,12 +70,12 @@ typedef struct lsi_module_internal_s
     LsiModule                   *mod_handler;
 } lsi_module_internal_t;
 
-#define MODULE_NAME(x)      (((lsi_module_internal_t *)x->_reserved)->name )
-#define MODULE_ID(x)        (((lsi_module_internal_t *)x->_reserved)->id )
-#define MODULE_DATA_ID(x)   ((lsi_module_internal_t *)x->_reserved)->data_id
-#define MODULE_PRIORITY(x)  ((lsi_module_internal_t *)x->_reserved)->priority
-#define MODULE_HOOKINDEX(x) ((lsi_module_internal_t *)x->_reserved)->hook_index
-#define MODULE_HANDLER(x)   ((lsi_module_internal_t *)x->_reserved)->mod_handler
+#define MODULE_NAME(x)      (((lsi_module_internal_t *)x->reserved)->name )
+#define MODULE_ID(x)        (((lsi_module_internal_t *)x->reserved)->id )
+#define MODULE_DATA_ID(x)   ((lsi_module_internal_t *)x->reserved)->data_id
+#define MODULE_PRIORITY(x)  ((lsi_module_internal_t *)x->reserved)->priority
+#define MODULE_HOOKINDEX(x) ((lsi_module_internal_t *)x->reserved)->hook_index
+#define MODULE_HANDLER(x)   ((lsi_module_internal_t *)x->reserved)->mod_handler
 
 
 //#if sizeof( struct lsi_module_internal_t ) > LSI_MODULE_RESERVED_SIZE

@@ -593,7 +593,7 @@ int ProxyConn::processResp()
             m_iRespBodySize = pHEC->getHttpSession()->getResp()->getContentLen();
             LS_DBG_L(this, "Response body size of proxy reply is %d",
                      m_iRespBodySize);
-            if (m_iRespBodySize == LSI_RESP_BODY_SIZE_CHUNKED)
+            if (m_iRespBodySize == LSI_RSP_BODY_SIZE_CHUNKED)
                 setupChunkIS();
             else if (!(respState & HEC_RESP_CONT_LEN))
                 m_iRespBodySize = INT_MAX;
@@ -619,7 +619,7 @@ int ProxyConn::readRespBody()
         return LS_FAIL;
     if (m_pChunkIS)
     {
-        while (getState() != ABORT)
+        while (getState() != ABORT && !m_pChunkIS->eos())
         {
             char *pBuf = pHEC->getRespBuf(bufLen);
             if (!pBuf)
@@ -632,22 +632,18 @@ int ProxyConn::readRespBody()
                     m_lLastRespRecvTime = time(NULL);
                     m_iRespBodyRecv += ret;
                     int ret1 = pHEC->processRespBodyData(pBuf, ret);
-                    if (ret1)
-                        return ret1;
-                    if (ret > 1024)
+                    if (ret1 == -1)
+                        ret = LS_FAIL;
+                    if (ret > 1024 || (ret < (int)bufLen))
                         pHEC->flushResp();
-
                 }
                 if (m_pChunkIS->eos())
                 {
                     ret = 0;
                     break;
                 }
-                if (ret < (int)bufLen)
-                {
-                    pHEC->flushResp();
-                    return 0;
-                }
+                pHEC->flushResp();
+                return ret;
             }
             else
             {

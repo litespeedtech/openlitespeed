@@ -52,7 +52,7 @@ public:
     int writev(const struct iovec *vec, int count);
     int writev(IOVec &vector, int total);
 
-    int sendfile(int fdSrc, off_t off, size_t size)
+    int sendfile(int fdSrc, off_t off, off_t size)
     {
         return 0;
     };
@@ -114,12 +114,11 @@ public:
     uint8_t getReqHeaderEnd() {   return m_reqHeaderEnd;  }
     void    setReqHeaderEnd(uint8_t v)  {   m_reqHeaderEnd = v;  }
 
-    void setContentlen(int32_t len)   {   m_iContentLen = len;    }
-
 private:
     bool operator==(const H2Stream &other) const;
 
     int sendData(IOVec *pIov, int total);
+    int dataSent(int ret);
 
 protected:
     virtual const char *buildLogId();
@@ -130,8 +129,6 @@ private:
     int32_t     m_iWindowIn;
     H2Connection *m_pH2Conn;
     LoopBuf     m_bufIn;
-    int32_t     m_iContentLen;
-    int32_t     m_iContentRead;
 
     uint8_t     m_reqHeaderEnd;
 

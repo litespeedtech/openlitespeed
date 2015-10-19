@@ -24,6 +24,8 @@
 
 #ifdef __linux
 #include <sched.h>
+#define _GNC_SOURCE
+#include <pthread.h>
 #endif
 
 #ifdef __FreeBSD__
@@ -109,7 +111,8 @@ int PCUtil::setCpuAffinity(cpu_set_t *mask)
     return cpuset_setaffinity(CPU_LEVEL_WHICH, CPU_WHICH_PID, -1,
                               sizeof(cpu_set_t), mask);
 #elif defined(linux) || defined(__linux) || defined(__linux__)
-    return sched_setaffinity(0, sizeof(cpu_set_t), mask);
+    return pthread_setaffinity_np( pthread_self(), sizeof(cpu_set_t), mask);
+    //return sched_setaffinity(0, sizeof(cpu_set_t), mask);
 #endif
     return 0;
 }

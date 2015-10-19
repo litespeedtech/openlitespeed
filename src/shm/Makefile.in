@@ -101,10 +101,9 @@ am__v_AR_0 = @echo "  AR      " $@;
 am__v_AR_1 = 
 liblsshm_a_AR = $(AR) $(ARFLAGS)
 liblsshm_a_LIBADD =
-am_liblsshm_a_OBJECTS = lsshmcache.$(OBJEXT) lsshmlock.$(OBJEXT) \
-	lsshmlru.$(OBJEXT) lsshmhash.$(OBJEXT) lsshmlruhash.$(OBJEXT) \
-	lsshmmemcached.$(OBJEXT) lsshmpool.$(OBJEXT) lsshm.$(OBJEXT) \
-	lsi_shm.$(OBJEXT) ls_fallocate.$(OBJEXT)
+am_liblsshm_a_OBJECTS = lsshmlock.$(OBJEXT) lsshmhash.$(OBJEXT) \
+	lsshmlruhash.$(OBJEXT) lsshmpool.$(OBJEXT) lsshm.$(OBJEXT) \
+	ls_fallocate.$(OBJEXT)
 liblsshm_a_OBJECTS = $(am_liblsshm_a_OBJECTS)
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
@@ -334,15 +333,11 @@ noinst_LIBRARIES = liblsshm.a
 INCLUDES = -I$(top_srcdir)/include -I$(top_srcdir)/src
 liblsshm_a_METASOURCES = AUTO
 liblsshm_a_SOURCES = \
-    lsshmcache.cpp \
     lsshmlock.cpp \
-    lsshmlru.c \
     lsshmhash.cpp \
     lsshmlruhash.cpp \
-    lsshmmemcached.cpp \
     lsshmpool.cpp \
     lsshm.cpp \
-    lsi_shm.cpp \
     ls_fallocate.c
 
 all: all-am
@@ -395,14 +390,10 @@ distclean-compile:
 	-rm -f *.tab.c
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ls_fallocate.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lsi_shm.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lsshm.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lsshmcache.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lsshmhash.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lsshmlock.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lsshmlru.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lsshmlruhash.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lsshmmemcached.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lsshmpool.Po@am__quote@
 
 .c.o:

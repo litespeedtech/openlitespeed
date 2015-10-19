@@ -326,7 +326,7 @@ static void *llmq_get(ls_llmq_t *pThis, int *pWaitVal)
 
 void *ls_llmq_timedget(ls_llmq_t *pThis, struct timespec *timeout)
 {
-    int waitval;
+    int waitval = 0;
     void *data;
     while ((data = llmq_get(pThis, &waitval)) == NULL)
     {

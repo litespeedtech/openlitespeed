@@ -78,7 +78,7 @@ int ServerInfo::cleanUnixSocketList()
 {
     DLinkedObj *pNext = m_unixSocketList.next();
     char achBuf[2048];
-    int chrootLen;
+    int chrootLen = 0;
     char *pSock;
     struct stat st;
     if (m_pChroot)

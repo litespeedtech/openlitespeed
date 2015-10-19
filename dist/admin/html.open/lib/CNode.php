@@ -432,7 +432,8 @@ class CNode
 		$ref = $curref;
 		$child = $this->GetChildNode($location, $ref);
 		if ($child == NULL) {
-			$child = $this->AllocateLayerNode($location);
+            // need original loc
+			$child = $this->AllocateLayerNode($loc);
 		}
 		elseif (!is_a($child, 'CNode')) {
 			die("child is not cnode \n");

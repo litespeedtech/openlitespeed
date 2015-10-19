@@ -22,8 +22,8 @@
 #include <http/httprespheaders.h>
 
 #define RANGE_HEADER_LEN    22
-#define LSI_RESP_BODY_SIZE_CHUNKED (-1)
-#define LSI_RESP_BODY_SIZE_UNKNOWN (-2)
+#define LSI_RSP_BODY_SIZE_CHUNKED (-1)
+#define LSI_RSP_BODY_SIZE_UNKNOWN (-2)
 
 class HttpReq;
 typedef struct ls_xpool_s ls_xpool_t;
@@ -78,7 +78,7 @@ public:
 
     //IOVec& getIov()    {   return m_respHeaders.getIOVec();  }
     int parseAdd(const char *pBuf, int len)
-    {   return m_respHeaders.parseAdd(pBuf, len, LSI_HEADER_ADD);    }
+    {   return m_respHeaders.parseAdd(pBuf, len, LSI_HEADEROP_ADD);    }
 
     void addGzipEncodingHeader()
     {

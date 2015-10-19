@@ -125,8 +125,8 @@ public:
 
     int32_t getMaxURLLen() const            {   return m_iMaxURLLen;        }
     int32_t getMaxHeaderBufLen() const      {   return m_iMaxHeaderBufLen;  }
-    int32_t getMaxReqBodyLen() const        {   return m_iMaxReqBodyLen;    }
-    int32_t getMaxDynRespLen() const        {   return m_iMaxDynRespLen;    }
+    int64_t getMaxReqBodyLen() const        {   return m_iMaxReqBodyLen;    }
+    int64_t getMaxDynRespLen() const        {   return m_iMaxDynRespLen;    }
     int32_t getMaxDynRespHeaderLen() const
     {   return m_iMaxDynRespHeaderLen;  }
 

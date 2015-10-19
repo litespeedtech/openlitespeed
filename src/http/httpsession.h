@@ -125,7 +125,7 @@ class HttpSession : public LsiSession, public InputStream, public HioHandler,
     HttpResp              m_response;
 
     LsiModuleData         m_moduleData; //lsiapi user data of http level
-    const lsi_handler_t  *m_pModHandler;
+    const lsi_reqhdlr_t  *m_pModHandler;
 
     HttpSessionHooks      m_sessionHooks;
     HSPState              m_processState;
@@ -136,8 +136,8 @@ class HttpSession : public LsiSession, public InputStream, public HioHandler,
     ChunkOutputStream    *m_pChunkOS;
     ReqHandler           *m_pHandler;
 
-    lsiapi_hookinfo_t     m_curHookInfo;
-    lsi_cb_param_t        m_curHkptParam;
+    lsi_hookinfo_t     m_curHookInfo;
+    lsi_param_t        m_curHkptParam;
     int                   m_curHookRet;
 
     off_t                 m_lDynBodySent;
@@ -249,13 +249,13 @@ private:
     int writeRespBodyBlockInternal(SendFileInfo *pData, const char *pBuf,
                                    int written);
     int writeRespBodyBlockFilterInternal(SendFileInfo *pData, const char *pBuf,
-                                         int written, lsi_cb_param_t *param = NULL);
+                                         int written, lsi_param_t *param = NULL);
     void releaseSendFileInfo();
-    int chunkSendfile(int fdSrc, off_t off, size_t size);
+    int chunkSendfile(int fdSrc, off_t off, off_t size);
     int processWebSocketUpgrade(const HttpVHost *pVHost);
     int processHttp2Upgrade(const HttpVHost *pVHost);
 
-    int resumeHandlerProcess();
+    //int resumeHandlerProcess();
     int flushBody();
     int endResponseInternal(int success);
 
@@ -387,7 +387,7 @@ public:
 
     void addEnv(const char *pKey, int keyLen, const char *pValue, long valLen);
 
-    int writeRespBodySendFile(int fdFile, off_t offset, size_t size);
+    off_t writeRespBodySendFile(int fdFile, off_t offset, off_t size);
     int setupRespCache();
     void releaseRespCache();
     int sendDynBody();
@@ -440,7 +440,7 @@ public:
 
     int openStaticFile(const char *pPath, int pathLen, int *status);
 
-
+    int detectContentLenMismatch(int buffered);
 
     /**
      * @brief initSendFileInfo() should be called before start sending a static file
@@ -483,10 +483,10 @@ public:
     virtual int onAioEvent();
     int handleAioSFEvent(Aiosfcb *event);
 
-    void setModHandler(const lsi_handler_t *pHandler)
+    void setModHandler(const lsi_reqhdlr_t *pHandler)
     {   m_pModHandler = pHandler;   }
 
-    const lsi_handler_t *getModHandler()
+    const lsi_reqhdlr_t *getModHandler()
     {   return m_pModHandler;}
 };
 

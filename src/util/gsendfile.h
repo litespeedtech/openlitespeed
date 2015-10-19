@@ -26,7 +26,7 @@ extern "C" {
 #include <sys/types.h>
 #include <sys/socket.h>
 static inline ssize_t gsendfile(int fdOut, int fdIn, off_t *off,
-                                size_t size)
+                                off_t size)
 {
     ssize_t ret;
     off_t written;
@@ -44,7 +44,7 @@ static inline ssize_t gsendfile(int fdOut, int fdIn, off_t *off,
 #include <sys/types.h>
 #include <sys/socket.h>
 static inline ssize_t gsendfile(int fdOut, int fdIn, off_t *off,
-                                size_t size)
+                                off_t size)
 {
     ssize_t ret;
     off_t len = size;
@@ -61,7 +61,7 @@ static inline ssize_t gsendfile(int fdOut, int fdIn, off_t *off,
 #if defined(sun) || defined(__sun)
 #include <sys/sendfile.h>
 static inline ssize_t gsendfile(int fdOut, int fdIn, off_t *off,
-                                size_t size)
+                                off_t size)
 {
     int n = 0;
     sendfilevec_t vec[1];
@@ -72,7 +72,7 @@ static inline ssize_t gsendfile(int fdOut, int fdIn, off_t *off,
     vec[n].sfv_len  = size;
     ++n;
 
-    size_t written;
+    off_t written;
     ssize_t ret = ::sendfilev(fdOut, vec, n, &written);
     if ((!ret) || (errno == EAGAIN))
         ret = written;
@@ -89,7 +89,7 @@ static inline ssize_t gsendfile(int fdOut, int fdIn, off_t *off,
 #endif
 #if defined(HPUX)
 static inline ssize_t gsendfile(int fdOut, int fdIn, off_t *off,
-                                size_t size)
+                                off_t size)
 {
     return ::sendfile(fdOut, fdIn, off, size, NULL, 0);
 }

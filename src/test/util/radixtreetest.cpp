@@ -106,7 +106,7 @@ const char *pWCFind[] =
 };
 const int iWCFindLen = 7;
 
-static int test_for_each(void *pObj, const char *pKey, size_t iKeyLen)
+static int test_for_each(void *pObj, const char *pKey, int iKeyLen)
 {
 #ifdef RADIXTREE_DEBUG
     printf("%.*s, %p\n", iKeyLen, pKey, pObj);
@@ -116,7 +116,7 @@ static int test_for_each(void *pObj, const char *pKey, size_t iKeyLen)
 
 
 static int test_for_each2(void *pObj, void *pUData, const char *pKey,
-                          size_t iKeyLen)
+                          int iKeyLen)
 {
 #ifdef RADIXTREE_DEBUG
     int *p = (int *)pUData;

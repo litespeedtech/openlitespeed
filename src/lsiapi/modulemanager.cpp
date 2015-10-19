@@ -47,7 +47,7 @@ int ModuleManager::initModule()
     if (LsiapiBridge::initLsiapi() != 0)
         return LS_FAIL;
 
-    memset(m_aModuleDataCount, 0, sizeof(short) * LSI_MODULE_DATA_COUNT);
+    memset(m_aModuleDataCount, 0, sizeof(short) * LSI_DATA_COUNT);
     clear();
     return 0;
 }
@@ -116,7 +116,7 @@ ModuleManager::iterator ModuleManager::addModule(const char *name,
     MODULE_NAME(pModule) = strdup(name);
     MODULE_ID(pModule) = getModuleCount();
     memset(MODULE_DATA_ID(pModule), 0xFF,
-           sizeof(short) * LSI_MODULE_DATA_COUNT); //value is -1 now.
+           sizeof(short) * LSI_DATA_COUNT); //value is -1 now.
     MODULE_HOOKINDEX(pModule) = new ModIndex();
     MODULE_HANDLER(pModule) = pLmHttpHandler;
     //m_gModuleArray[pModule->_id] = pModule;
@@ -126,8 +126,8 @@ ModuleManager::iterator ModuleManager::addModule(const char *name,
     LS_DBG_H("%s module [%s] built with API v%hd.%hd has been"
              " registered successfully.",
              pType, MODULE_NAME(pModule),
-             (int16_t)(pModule->_signature >> 16),
-             (int16_t)pModule->_signature);
+             (int16_t)(pModule->signature >> 16),
+             (int16_t)pModule->signature);
     return iter;
 }
 
@@ -182,7 +182,7 @@ lsi_module_t *ModuleManager::loadModule(const char *name)
 
     if (pModule)
     {
-        if ((pModule->_signature >> 32) != 0x4C53494D)
+        if ((pModule->signature >> 32) != 0x4C53494D)
             error = "Module signature does not match";
         else
         {
@@ -204,7 +204,7 @@ lsi_module_t *ModuleManager::loadModule(const char *name)
 void ModuleManager::disableModule(lsi_module_t *pModule)
 {
     int i;
-    pModule->_handler = NULL;
+    pModule->reqhandler = NULL;
 
     for (i = 0; i < LSI_HKPT_TOTAL_COUNT; ++i)
         ((LsiApiHooks *)(LsiApiHooks::getGlobalApiHooks(i)))->remove(pModule);
@@ -222,7 +222,7 @@ static void checkModuleDef(lsi_module_t *pModule)
     snprintf(defPath, 512, "%s/modules/%s.def",
              MainServerConfig::getInstance().getServerRoot(),
              MODULE_NAME(pModule));
-    const char *info = pModule->_info;
+    const char *info = pModule->about;
     int match = 0;
     size_t infoLen = 0;
     if (info)
@@ -276,22 +276,22 @@ static void checkModuleDef(lsi_module_t *pModule)
 
             fprintf(fp, "%s\n\n", sInfo.c_str());
 
-            if (pModule->_config_parser)
+            if (pModule->config_parser)
             {
                 const char *p;
-                while ((p = *pModule->_config_parser->_config_keys) != NULL)
+                while ((p = *pModule->config_parser->config_keys) != NULL)
                 {
                     fprintf(fp, "param.%s\n", p);
-                    ++pModule->_config_parser->_config_keys;
+                    ++pModule->config_parser->config_keys;
                 }
             }
 
-            if (pModule->_serverhook)
+            if (pModule->serverhook)
             {
                 int count = 0;
-                while (pModule->_serverhook[count].cb)
+                while (pModule->serverhook[count].cb)
                 {
-                    int index = pModule->_serverhook[count].index;
+                    int index = pModule->serverhook[count].index;
                     if (index < 0 || index >= LSI_HKPT_TOTAL_COUNT)
                     {
                         LS_ERROR("[%s] create def file failure,"
@@ -301,7 +301,7 @@ static void checkModuleDef(lsi_module_t *pModule)
                     else
                         fprintf(fp, "priority.%s:%d\n",
                                 LsiApiHooks::s_pHkptName[index],
-                                pModule->_serverhook[count].priority);
+                                pModule->serverhook[count].priority);
                     ++count;
                 }
             }
@@ -317,10 +317,10 @@ int ModuleManager::runModuleInit()
     for (int i = 0; i < getModuleCount(); ++i)
     {
         pModule = m_pModuleArray[i];
-        if (pModule->_init)
+        if (pModule->init_pf)
         {
             checkModuleDef(pModule);
-            int ret = pModule->_init(pModule);
+            int ret = pModule->init_pf(pModule);
             if (ret != 0)
             {
                 disableModule(pModule);
@@ -330,23 +330,23 @@ int ModuleManager::runModuleInit()
             else
             {
                 //add global level hooks here
-                if (pModule->_serverhook)
+                if (pModule->serverhook)
                 {
                     int count = 0;
-                    while (pModule->_serverhook[count].cb)
+                    while (pModule->serverhook[count].cb)
                     {
-                        add_global_hook(pModule->_serverhook[count].index,
+                        add_global_hook(pModule->serverhook[count].index,
                                         pModule,
-                                        pModule->_serverhook[count].cb,
-                                        pModule->_serverhook[count].priority,
-                                        pModule->_serverhook[count].flag);
+                                        pModule->serverhook[count].cb,
+                                        pModule->serverhook[count].priority,
+                                        pModule->serverhook[count].flag);
                         ++count;
                     }
                 }
 
                 LS_INFO("[Module: %s %s] has been initialized successfully",
                         MODULE_NAME(pModule),
-                        ((pModule->_info) ? pModule->_info : ""));
+                        ((pModule->about) ? pModule->about : ""));
             }
         }
     }
@@ -401,7 +401,7 @@ int ModuleManager::unloadModules()
 
 short ModuleManager::getModuleDataCount(unsigned int level)
 {
-    if (level < LSI_MODULE_DATA_COUNT)
+    if (level < LSI_DATA_COUNT)
         return m_aModuleDataCount[level];
     else
         return LS_FAIL;//Error, should not access this value
@@ -410,7 +410,7 @@ short ModuleManager::getModuleDataCount(unsigned int level)
 
 void ModuleManager::incModuleDataCount(unsigned int level)
 {
-    if (level < LSI_MODULE_DATA_COUNT)
+    if (level < LSI_DATA_COUNT)
         ++ m_aModuleDataCount[level];
 }
 
@@ -423,7 +423,7 @@ void ModuleManager::updateDebugLevel()
 
 void ModuleManager::OnTimer10sec()
 {
-    LsiapiBridge::checkExpiredGData();
+    //LsiapiBridge::checkExpiredGData();
 }
 
 
@@ -497,8 +497,8 @@ ModuleConfig::~ModuleConfig()
         config = get(i);
         if ((config->data_flag == LSI_CONFDATA_PARSED)
             && (config->config != NULL)
-            && (config->module->_config_parser->_free_config))
-            config->module->_config_parser->_free_config(config->config);
+            && (config->module->config_parser->free_config))
+            config->module->config_parser->free_config(config->config);
         delete config;
     }
 }
@@ -562,7 +562,7 @@ int ModuleConfig::parsePriority(const XmlNode *pModuleNode, int *priority)
             && (pValue = pModuleNode->getChildValue(pHkptName)))
             priority[i] = atoi(pValue);
         else
-            priority[i] = LSI_MAX_HOOK_PRIORITY + 1;
+            priority[i] = LSI_HOOK_PRIORITY_MAX + 1;
     }
     return 0;
 }
@@ -580,7 +580,7 @@ int ModuleConfig::saveConfig(const XmlNode *pNode, lsi_module_t *pModule,
     else
         module_config->filters_enable = -1;
 
-    if (pModule->_config_parser && pModule->_config_parser->_parse_config)
+    if (pModule->config_parser && pModule->config_parser->parse_config)
     {
         if ((pValue = pNode->getChildValue("param")) != NULL)
         {
@@ -614,7 +614,7 @@ int ModuleConfig::saveConfig(const XmlNode *pNode, lsi_module_t *pModule,
 //
 //     for( iter = pUnknList->begin(); iter != pUnknList->end(); ++iter )
 //     {
-//         config->config = pModule->_config_parser->_parse_config((*iter)->getValue(), config->config);
+//         config->config = pModule->config_parser->parse_config((*iter)->getValue(), config->config);
 //
 //
 //     ModuleConfig *pConfig = new ModuleConfig;
@@ -643,21 +643,21 @@ int ModuleConfig::parseConfig(const XmlNode *pNode, lsi_module_t *pModule,
 
     pValue = pNode->getChildValue("param");
     iValueLen = pNode->getChildValueLen("param");
-    if (pModule->_config_parser && pModule->_config_parser->_parse_config)
+    if (pModule->config_parser && pModule->config_parser->parse_config)
     {
-        if (pModule->_config_parser->_config_keys)
+        if (pModule->config_parser->config_keys)
         {
             ;
             //TODO: check the param one by one if it is in array
 //             const char *p;
-//             while (p = *pModule->_config_parser->_config_keys)
+//             while (p = *pModule->config_parser->config_keys)
 //             {
 //                 LS_INFO( "%s", p));
-//                 ++pModule->_config_parser->_config_keys;
+//                 ++pModule->config_parser->config_keys;
 //             }
 
         }
-        config->config = pModule->_config_parser->_parse_config(pValue,
+        config->config = pModule->config_parser->parse_config(pValue,
                          iValueLen, config->config, level, name);
         config->data_flag = LSI_CONFDATA_PARSED;
     }

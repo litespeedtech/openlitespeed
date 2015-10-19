@@ -176,7 +176,10 @@ int LsapiReq::buildReq(HttpSession *pSession, int *totalLen)
     m_bufReq.resize(sizeof(lsapi_req_header));
 
     pHeader->m_httpHeaderLen    = pReq->getHttpHeaderEnd();
-    pHeader->m_reqBodyLen       = pReq->getContentLength();
+    if (pReq->getContentLength() >= 2 * 1024 * 1024 * 1024LL)
+        pHeader->m_reqBodyLen = -2;
+    else
+        pHeader->m_reqBodyLen       = pReq->getContentLength();
     pHeader->m_cntUnknownHeaders = pReq->getUnknownHeaderCount();
 
     ret = appendSpecialEnv(&env, pSession, pHeader);

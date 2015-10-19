@@ -28,7 +28,7 @@
 
 lsi_api_t LsiapiBridge::g_lsiapiFunctions;
 const lsi_api_t *g_api = &LsiapiBridge::g_lsiapiFunctions;
-GDataContainer *LsiapiBridge::g_aGDataContainer[LSI_CONTAINER_COUNT] = {0};
+//GDataContainer *LsiapiBridge::g_aGDataContainer[LSI_CONTAINER_COUNT] = {0};
 
 
 void  LsiapiBridge::releaseModuleData(int level, LsiModuleData *pData)
@@ -42,7 +42,7 @@ void  LsiapiBridge::releaseModuleData(int level, LsiModuleData *pData)
         data = pData->get(MODULE_DATA_ID(hook->module)[level]);
         if (data)
         {
-            lsi_release_callback_pf cb = (lsi_release_callback_pf)hook->cb;
+            lsi_datarelease_pf cb = (lsi_datarelease_pf)hook->cb;
             cb(data);
             pData->set(MODULE_DATA_ID(hook->module)[level], NULL);
         }
@@ -50,56 +50,56 @@ void  LsiapiBridge::releaseModuleData(int level, LsiModuleData *pData)
 }
 
 
-void LsiapiBridge::checkExpiredGData()
-{
-    time_t tm = DateTime::s_curTime;
-
-    GDataContainer *pLsiGDataContHashT = NULL;
-    lsi_gdata_cont_t *containerInfo = NULL;
-    GDataContainer::iterator iter;
-    GDataHash::iterator iter2;
-
-    for (int i = 0; i < LSI_CONTAINER_COUNT; ++i)
-    {
-        pLsiGDataContHashT = g_aGDataContainer[i];
-        if (!pLsiGDataContHashT)
-            continue;
-        for (iter = pLsiGDataContHashT->begin(); iter != pLsiGDataContHashT->end();
-             iter = pLsiGDataContHashT->next(iter))
-        {
-            containerInfo = iter.second();
-            GDataHash *pCont = containerInfo->container;
-            for (iter2 = pCont->begin(); iter2 != pCont->end();
-                 iter2 = pCont->next(iter2))
-            {
-                if (iter.second() && iter2.second()->tmexpire < tm)
-                    erase_gdata_elem(containerInfo, iter2);
-            }
-        }
-    }
-}
+// void LsiapiBridge::checkExpiredGData()
+// {
+//     time_t tm = DateTime::s_curTime;
+// 
+//     GDataContainer *pLsiGDataContHashT = NULL;
+//     lsi_gdata_cont_t *containerInfo = NULL;
+//     GDataContainer::iterator iter;
+//     GDataHash::iterator iter2;
+// 
+//     for (int i = 0; i < LSI_CONTAINER_COUNT; ++i)
+//     {
+//         pLsiGDataContHashT = g_aGDataContainer[i];
+//         if (!pLsiGDataContHashT)
+//             continue;
+//         for (iter = pLsiGDataContHashT->begin(); iter != pLsiGDataContHashT->end();
+//              iter = pLsiGDataContHashT->next(iter))
+//         {
+//             containerInfo = iter.second();
+//             GDataHash *pCont = containerInfo->container;
+//             for (iter2 = pCont->begin(); iter2 != pCont->end();
+//                  iter2 = pCont->next(iter2))
+//             {
+//                 if (iter.second() && iter2.second()->tmexpire < tm)
+//                     erase_gdata_elem(containerInfo, iter2);
+//             }
+//         }
+//     }
+// }
 
 
 int LsiapiBridge::initLsiapi()
 {
-    g_lsiapiFunctions.get_gdata_container = get_gdata_container;
-    g_lsiapiFunctions.empty_gdata_container = empty_gdata_container;
-    g_lsiapiFunctions.purge_gdata_container = purge_gdata_container;
-
-    g_lsiapiFunctions.get_gdata = get_gdata;
-    g_lsiapiFunctions.delete_gdata = delete_gdata;
-    g_lsiapiFunctions.set_gdata = set_gdata;
+//     g_lsiapiFunctions.get_gdata_container = get_gdata_container;
+//     g_lsiapiFunctions.empty_gdata_container = empty_gdata_container;
+//     g_lsiapiFunctions.purge_gdata_container = purge_gdata_container;
+// 
+//     g_lsiapiFunctions.get_gdata = get_gdata;
+//     g_lsiapiFunctions.delete_gdata = delete_gdata;
+//     g_lsiapiFunctions.set_gdata = set_gdata;
 
     lsiapi_init_server_api();
 
-    init_gdata_hashes();
+    //init_gdata_hashes();
     return 0;
 }
 
 
 void LsiapiBridge::uninitLsiapi()
 {
-    uninit_gdata_hashes();
+    //uninit_gdata_hashes();
 }
 
 

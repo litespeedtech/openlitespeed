@@ -55,7 +55,7 @@ static jsModuleData_t *allocateJsData(lsi_session_t *session,
 static void *getLsJsSession_from_moduleData(lsi_session_t *pSess)
 {
     jsModuleData_t *pData = (jsModuleData_t *) g_api->get_module_data(pSess,
-                            &MNAME, LSI_MODULE_DATA_HTTP);
+                            &MNAME, LSI_DATA_HTTP);
     if (pData)
         return pData->pSession;
     else
@@ -63,82 +63,82 @@ static void *getLsJsSession_from_moduleData(lsi_session_t *pSess)
 }
 
 #if 0
-static int http_end(lsi_cb_param_t *rec)
+static int http_end(lsi_param_t *rec)
 {
     extern void http_end_callback(void *);
 
     g_api->log(NULL, LSI_LOG_DEBUG,  "HTTP_END [%s]\n",
                g_api->get_req_uri(rec->_session, NULL));
     // http_end_callback(rec->_session);
-    return LSI_HK_RET_OK;
+    return LSI_OK;
 }
 
-static int http_begin(lsi_cb_param_t *rec)
+static int http_begin(lsi_param_t *rec)
 {
     //const char *uri;
     //uri = g_api->get_req_uri(rec->_session, NULL );
     // g_api->log( NULL, LSI_LOG_DEBUG,  "HTTP_BEGIN [%s]\n", uri);
-    return LSI_HK_RET_OK;
+    return LSI_OK;
 }
 
-static int recv_resp_header(struct lsi_cb_param_t *rec)
+static int recv_resp_header(struct lsi_param_t *rec)
 {
     const char *uri;
     uri = g_api->get_req_uri(rec->_session);
     g_api->log(NULL, LSI_LOG_DEBUG,  "RECV_RESP_HEADER [%s]\n", uri);
-    return LSI_HK_RET_OK;
+    return LSI_OK;
 }
 
-static int recv_resp_body(struct lsi_cb_param_t *rec)
+static int recv_resp_body(struct lsi_param_t *rec)
 {
     const char *uri;
     uri = g_api->get_req_uri(rec->_session);
     g_api->log(NULL, LSI_LOG_DEBUG,  "RECV_RESP_BODY [%s]\n", uri);
-    return LSI_HK_RET_OK;
+    return LSI_OK;
 }
 
-static int recvd_resp_body(struct lsi_cb_param_t *rec)
+static int recvd_resp_body(struct lsi_param_t *rec)
 {
     const char *uri;
     uri = g_api->get_req_uri(rec->_session);
     g_api->log(NULL, LSI_LOG_DEBUG,  "RECVD_RESP_BODY [%s]\n", uri);
-    return LSI_HK_RET_OK;
+    return LSI_OK;
 }
 
-static int send_resp_header(struct lsi_cb_param_t *rec)
+static int send_resp_header(struct lsi_param_t *rec)
 {
     const char *uri;
     uri = g_api->get_req_uri(rec->_session);
     g_api->log(NULL, LSI_LOG_DEBUG,  "SEND_RESP_HEADER [%s]\n", uri);
-    return LSI_HK_RET_OK;
+    return LSI_OK;
 }
 
-static int send_resp_body(struct lsi_cb_param_t *rec)
+static int send_resp_body(struct lsi_param_t *rec)
 {
     const char *uri;
     uri = g_api->get_req_uri(rec->_session);
     g_api->log(NULL, LSI_LOG_DEBUG,  "SEND_RESP_BODY [%s]\n", uri);
-    return LSI_HK_RET_OK;
+    return LSI_OK;
 }
 
-static int recved_req_handler(struct lsi_cb_param_t *rec)
+static int recved_req_handler(struct lsi_param_t *rec)
 {
     const char *uri;
     uri = g_api->get_req_uri(rec->_session);
     g_api->log(NULL, LSI_LOG_DEBUG,  "dummy_handler [%s]\n", uri);
-    return LSI_HK_RET_OK;
+    return LSI_OK;
 }
 
 //
 //  LSI_HKPT_RECV_REQ_BODY
 //
-int recv_req_body(struct lsi_cb_param_t *rec)
+int recv_req_body(struct lsi_param_t *rec)
 {
     const char *uri;
     uri = g_api->get_req_uri(rec->_session);
     g_api->log(NULL, LSI_LOG_DEBUG,  "RECV_REQ_BODY JS exec_handler [%s]\n",
                uri);
-    return LSI_HK_RET_OK;
+    return LSI_OK;
 }
 
 //
@@ -146,7 +146,7 @@ int recv_req_body(struct lsi_cb_param_t *rec)
 //      If we choose to use HOOK POINT for handler selection,
 //          this is the HOOK POINT...
 //
-int recv_req_header(struct lsi_cb_param_t *rec)
+int recv_req_header(struct lsi_param_t *rec)
 {
     const char *uri;
     uri = g_api->get_req_uri(rec->_session);
@@ -161,7 +161,7 @@ int recv_req_header(struct lsi_cb_param_t *rec)
             // g_api->set_wait_full_req_body( rec->_session );
         }
     }
-    return LSI_HK_RET_OK;
+    return LSI_OK;
 }
 #endif
 
@@ -175,7 +175,7 @@ static int _init(lsi_module_t *pModule)
         g_api->log(NULL, LSI_LOG_ERROR,  "FAILED TO SETUP Node.js interface\n");
         return -1;
     }
-    pModule->_info = "Node.js Interface";  //set version string
+    pModule->about = "Node.js Interface";  //set version string
 
     //
     // enable call back here ... if any
@@ -184,7 +184,7 @@ static int _init(lsi_module_t *pModule)
     //
     //  module data for LsJsSession look up
     //
-    g_api->init_module_data(pModule, releaseJsData, LSI_MODULE_DATA_HTTP);
+    g_api->init_module_data(pModule, releaseJsData, LSI_DATA_HTTP);
     return 0;
 }
 
@@ -193,10 +193,10 @@ static int jsHandler(lsi_session_t *session)
     jsModuleData_t *pData;
 
     pData = (jsModuleData_t *) g_api->get_module_data(session, &MNAME,
-            LSI_MODULE_DATA_HTTP);
+            LSI_DATA_HTTP);
     if (!pData)
     {
-        pData = allocateJsData(session, &MNAME, LSI_MODULE_DATA_HTTP);
+        pData = allocateJsData(session, &MNAME, LSI_DATA_HTTP);
         if (!pData)
         {
             g_api->log(NULL, LSI_LOG_ERROR,  "FAILED TO ALLOCATE MODULE DATA\n");
@@ -231,7 +231,7 @@ static int jsHandler(lsi_session_t *session)
     // So I just set this off...
     g_api->set_handler_write_state(session, 0);
 
-    LsJsUserParam *pUser = (LsJsUserParam *) g_api->get_module_param(session,
+    LsJsUserParam *pUser = (LsJsUserParam *) g_api->get_config(session,
                            &MNAME);
     if (LsJsEngine::runScript(session, pUser, jsfile))
         return 500;
@@ -300,11 +300,11 @@ static int onWriteEvent(lsi_session_t *session)
     {
 #if 0
         if (pSession->onWrite(session) == 1)
-            return LSI_WRITE_RESP_CONTINUE;
+            return LSI_RSP_MORE;
 #endif
         ;
     }
-    return LSI_WRITE_RESP_FINISHED;
+    return LSI_RSP_DONE;
 }
 
 //
@@ -321,9 +321,9 @@ const char *myParam[] =
  * Define a handler, need to provide a struct _handler_functions_st object, in which
  * the first function pointer should not be NULL
  */
-static lsi_handler_t lsjs_mod_handler = { jsHandler, onReadEvent, onWriteEvent , onCleanupEvent};
+static lsi_reqhdlr_t lsjs_mod_handler = { jsHandler, onReadEvent, onWriteEvent , onCleanupEvent};
 
-static lsi_config_t lsjs_mod_config = { LsJsEngine::parseParam, LsJsEngine::removeParam , myParam };
+static lsi_confparser_t lsjs_mod_config = { LsJsEngine::parseParam, LsJsEngine::removeParam , myParam };
 
 lsi_module_t MNAME = { LSI_MODULE_SIGNATURE,
                        _init,

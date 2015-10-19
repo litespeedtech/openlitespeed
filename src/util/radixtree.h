@@ -40,9 +40,9 @@ class GHash;
 
 //NOTICE: Should this pass in the key as well?
 // Should return 0 for success.
-typedef int (*rn_foreach)(void *pObj, const char *pKey, size_t iKeyLen);
+typedef int (*rn_foreach)(void *pObj, const char *pKey, int iKeyLen);
 typedef int (*rn_foreach2)(void *pObj, void *pUData, const char *pKey,
-                           size_t iKeyLen);
+                           int iKeyLen);
 
 typedef struct rnwc_s
 {
@@ -113,23 +113,23 @@ public:
 
 
     // NOTICE: iFlags should be an |= of any flags needed, listed above.
-    RadixNode *insert(ls_xpool_t *pool, const char *pLabel, size_t iLabelLen,
+    RadixNode *insert(ls_xpool_t *pool, const char *pLabel, int iLabelLen,
                       void *pObj, int iFlags = 0, int iMode = RTMODE_CONTIGUOUS);
-    void *erase(const char *pLabel, size_t iLabelLen, int iFlags = 0);
-    void *update(const char *pLabel, size_t iLabelLen, void *pObj,
+    void *erase(const char *pLabel, int iLabelLen, int iFlags = 0);
+    void *update(const char *pLabel, int iLabelLen, void *pObj,
                  int iFlags = 0);
-    void *find(const char *pLabel, size_t iLabelLen, int iFlags = 0);
-    void *bestMatch(const char *pLabel, size_t iLabelLen, int iFlags = 0);
-    RadixNode *findChild(const char *pLabel, size_t iLabelLen, int iFlags = 0);
-    int for_each(rn_foreach fun, const char *pKey = NULL, size_t iKeyLen = 0);
+    void *find(const char *pLabel, int iLabelLen, int iFlags = 0);
+    void *bestMatch(const char *pLabel, int iLabelLen, int iFlags = 0);
+    RadixNode *findChild(const char *pLabel, int iLabelLen, int iFlags = 0);
+    int for_each(rn_foreach fun, const char *pKey = NULL, int iKeyLen = 0);
     int for_each2(rn_foreach2 fun, void *pUData, const char *pKey = NULL,
-                  size_t iKeyLen = 0);
+                  int iKeyLen = 0);
     int for_each_child(rn_foreach fun);
     int for_each_child2(rn_foreach2 fun, void *pUData);
 
 
     static RadixNode *newBranch(ls_xpool_t *pool, const char *pLabel,
-                                size_t iLabelLen, void *pObj,
+                                int iLabelLen, void *pObj,
                                 RadixNode *pParent, RadixNode *&pDest,
                                 int iFlags = 0, int iMode = RTMODE_CONTIGUOUS);
     static RadixNode *newNode(ls_xpool_t *pool, RadixNode *pParent,
@@ -151,22 +151,22 @@ private:
     void **getObjPtr()              {   return &m_pObj;                     }
 
     int getHeader(int iFlags, ls_xpool_t *pool, const char *pLabel,
-                  size_t iLabelLen, rnheader_t *&pHeader);
+                  int iLabelLen, rnheader_t *&pHeader);
     int setHeader(int iFlags, int iMode, ls_xpool_t *pool,
                   rnheader_t *pHeader);
     int getWCHeader(int iFlags, ls_xpool_t *pool, const char *pLabel,
-                    size_t iLabelLen, rnheader_t *&pHeader, rnwchelp_t *pHelp);
+                    int iLabelLen, rnheader_t *&pHeader, rnwchelp_t *pHelp);
 
     int setWCHeader(int iFlags, int iMode, ls_xpool_t *pool,
                     rnheader_t *pHeader, rnwchelp_t *pHelp);
     void mergeSelf(void **pOrig);
-    int merge(ls_xpool_t *pool, const char *pMatch, size_t iMatchLen,
+    int merge(ls_xpool_t *pool, const char *pMatch, int iMatchLen,
               int iFlags, int iMode, void **pOrig, rnheader_t *pHeaderAdded);
 
-    RadixNode *searchExact(const char *pLabel, size_t iLabelLen, int iFlags);
+    RadixNode *searchExact(const char *pLabel, int iLabelLen, int iFlags);
 
-    RadixNode *searchWild(const char *pLabel, size_t iLabelLen, int iFlags);
-    RadixNode *findChildData(const char *pLabel, size_t iLabelLen,
+    RadixNode *searchWild(const char *pLabel, int iLabelLen, int iFlags);
+    RadixNode *findChildData(const char *pLabel, int iLabelLen,
                              RadixNode *pNode, int iHasChildren, int iFlags);
 
     static int printHash(const void *key, void *data, void *extra);
@@ -204,7 +204,7 @@ public:
     {   ls_xpool_destroy(&m_pool);          }
 
     // NOTICE: If any of these are to be used, they should be set immediately.
-    int setRootLabel(const char *pLabel, size_t iLabelLen);
+    int setRootLabel(const char *pLabel, int iLabelLen);
     int getNoContext()              {   return m_iFlags & RTFLAG_NOCONTEXT; }
     void setNoContext();
     int getUseGlobalPool()          {   return m_iFlags & RTFLAG_GLOBALPOOL;}
@@ -216,11 +216,11 @@ public:
     int getUseMerge()               {   return m_iFlags & RTFLAG_MERGE;     }
     void setUseMerge()              {   m_iFlags |= RTFLAG_MERGE;           }
 
-    RadixNode *insert(const char *pLabel, size_t iLabelLen, void *pObj);
-    void *erase(const char *pLabel, size_t iLabelLen) const;
-    void *update(const char *pLabel, size_t iLabelLen, void *pObj) const;
-    void *find(const char *pLabel, size_t iLabelLen) const;
-    void *bestMatch(const char *pLabel, size_t iLabelLen) const;
+    RadixNode *insert(const char *pLabel, int iLabelLen, void *pObj);
+    void *erase(const char *pLabel, int iLabelLen) const;
+    void *update(const char *pLabel, int iLabelLen, void *pObj) const;
+    void *find(const char *pLabel, int iLabelLen) const;
+    void *bestMatch(const char *pLabel, int iLabelLen) const;
 
     int for_each(rn_foreach fun);
     int for_each2(rn_foreach2 fun, void *pUData);
@@ -230,7 +230,7 @@ public:
 private:
     RadixTree(const RadixTree &rhs);
     void *operator=(const RadixTree &rhs);
-    int checkPrefix(const char *pLabel, size_t iLabelLen) const;
+    int checkPrefix(const char *pLabel, int iLabelLen) const;
 
 
     ls_xpool_t  m_pool;

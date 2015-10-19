@@ -53,55 +53,55 @@ const int numheaders = sizeof(headers) / sizeof(headers[0]);
 
 
 //test changing resp header
-static int mycb(lsi_cb_param_t *rec)
+static int mycb(lsi_param_t *rec)
 {
-    g_api->set_resp_header(rec->_session, LSI_RESP_HEADER_SERVER, NULL, 0,
-                           "/testServer 1.0", sizeof("/testServer 1.0") - 1, LSI_HEADER_SET);
-    g_api->set_resp_header(rec->_session, LSI_RESP_HEADER_SET_COOKIE, NULL, 0,
-                           "An Example Cookie", sizeof("An Example Cookie") - 1, LSI_HEADER_ADD);
-    g_api->set_resp_header(rec->_session, LSI_RESP_HEADER_SET_COOKIE, NULL, 0,
-                           "1 bit set!", sizeof("1 bit set!") - 1, LSI_HEADER_ADD);
+    g_api->set_resp_header(rec->session, LSI_RSPHDR_SERVER, NULL, 0,
+                           "/testServer 1.0", sizeof("/testServer 1.0") - 1, LSI_HEADEROP_SET);
+    g_api->set_resp_header(rec->session, LSI_RSPHDR_SET_COOKIE, NULL, 0,
+                           "An Example Cookie", sizeof("An Example Cookie") - 1, LSI_HEADEROP_ADD);
+    g_api->set_resp_header(rec->session, LSI_RSPHDR_SET_COOKIE, NULL, 0,
+                           "1 bit set!", sizeof("1 bit set!") - 1, LSI_HEADEROP_ADD);
     g_api->log(NULL, LSI_LOG_DEBUG, "#### mymodule1 test %s\n", "myCb");
     return 0;
 }
 
 
 //test changing resp header
-static int mycb2(lsi_cb_param_t *rec)
+static int mycb2(lsi_param_t *rec)
 {
-    g_api->set_resp_header2(rec->_session, "Addheader: 2 bit set!\r\n",
-                            sizeof("Addheader: 2 bit set!\r\n") - 1, LSI_HEADER_SET);
+    g_api->set_resp_header2(rec->session, "Addheader: 2 bit set!\r\n",
+                            sizeof("Addheader: 2 bit set!\r\n") - 1, LSI_HEADEROP_SET);
     return 0;
 }
 
 
-static int mycb3(lsi_cb_param_t *rec)
+static int mycb3(lsi_param_t *rec)
 {
 
-    g_api->set_resp_header2(rec->_session,
+    g_api->set_resp_header2(rec->session,
                             "Destructheader: 4 bit set! Removing other headers...\r\n",
                             sizeof("Destructheader: 4 bit set! Removing other headers...\r\n") - 1,
-                            LSI_HEADER_ADD);
-    g_api->remove_resp_header(rec->_session, LSI_RESP_HEADER_SET_COOKIE, NULL,
+                            LSI_HEADEROP_ADD);
+    g_api->remove_resp_header(rec->session, LSI_RSPHDR_SET_COOKIE, NULL,
                               0);
-    g_api->remove_resp_header(rec->_session, -1, "Addheader",
+    g_api->remove_resp_header(rec->session, -1, "Addheader",
                               sizeof("Addheader") - 1);
     return 0;
 }
 
 
-static int mycb4(lsi_cb_param_t *rec)
+static int mycb4(lsi_param_t *rec)
 {
-    int i, j, iov_count = g_api->get_resp_headers_count(rec->_session);
+    int i, j, iov_count = g_api->get_resp_headers_count(rec->session);
     struct iovec iov_key[iov_count], iov_val[iov_count];
     memset(iov_key, 0, sizeof(struct iovec) * iov_count);
     memset(iov_val, 0, sizeof(struct iovec) * iov_count);
 
-    g_api->set_resp_header2(rec->_session,
+    g_api->set_resp_header2(rec->session,
                             "ProtectorHeader: 8 bit set! Duplicating headers for potential removal!\r\n",
                             sizeof("ProtectorHeader: 8 bit set! Duplicating headers for potential removal!\r\n")
-                            - 1, LSI_HEADER_ADD);
-    iov_count = g_api->get_resp_headers(rec->_session, iov_key, iov_val,
+                            - 1, LSI_HEADEROP_ADD);
+    iov_count = g_api->get_resp_headers(rec->session, iov_key, iov_val,
                                         iov_count);
     for (i = iov_count - 1; i >= 0; --i)
     {
@@ -114,7 +114,7 @@ static int mycb4(lsi_cb_param_t *rec)
                 sprintf(save, "SavedHeader: %.*s\r\n",
                         iov_val[i].iov_len, (char *)iov_val[i].iov_base
                        );
-                g_api->set_resp_header2(rec->_session, save, strlen(save), LSI_HEADER_ADD);
+                g_api->set_resp_header2(rec->session, save, strlen(save), LSI_HEADEROP_ADD);
             }
         }
     }
@@ -122,11 +122,11 @@ static int mycb4(lsi_cb_param_t *rec)
 }
 
 
-int check_type(lsi_cb_param_t *rec)
+int check_type(lsi_param_t *rec)
 {
     const char *qs;
     int sessionHookType = 0;
-    qs = g_api->get_req_query_string(rec->_session, NULL);
+    qs = g_api->get_req_query_string(rec->session, NULL);
     sessionHookType = strtol(qs + sizeof(testurl) - 1, NULL, 10);
     if (sessionHookType & 0x01)
         mycb(rec);
@@ -136,24 +136,24 @@ int check_type(lsi_cb_param_t *rec)
         mycb4(rec);
     if (sessionHookType & 0x04)
         mycb3(rec);
-    return LSI_HK_RET_OK;
+    return LSI_OK;
 }
 
 
-int check_if_remove_session_hook(lsi_cb_param_t *rec)
+int check_if_remove_session_hook(lsi_param_t *rec)
 {
     const char *qs;
     int sessionHookType = 0;
     int iEnableHkpt = LSI_HKPT_SEND_RESP_HEADER;
-    qs = g_api->get_req_query_string(rec->_session, NULL);
+    qs = g_api->get_req_query_string(rec->session, NULL);
     if (qs && strncasecmp(qs, testurl, sizeof(testurl) - 1) == 0)
     {
         sessionHookType = strtol(qs + sizeof(testurl) - 1, NULL, 10);
         if (sessionHookType & 0x0f)
-            g_api->set_session_hook_enable_flag(rec->_session, &MNAME, 1,
+            g_api->enable_hook(rec->session, &MNAME, 1,
                                                 &iEnableHkpt, 1);
     }
-    return LSI_HK_RET_OK;
+    return LSI_OK;
 }
 
 
@@ -165,9 +165,9 @@ static int _init(lsi_module_t *module)
 
 static lsi_serverhook_t server_hooks[] =
 {
-    { LSI_HKPT_RECV_REQ_HEADER, check_if_remove_session_hook, LSI_HOOK_NORMAL, LSI_HOOK_FLAG_ENABLED },
+    { LSI_HKPT_RECV_REQ_HEADER, check_if_remove_session_hook, LSI_HOOK_NORMAL, LSI_FLAG_ENABLED },
     { LSI_HKPT_SEND_RESP_HEADER, check_type, LSI_HOOK_NORMAL, 0 },
-    lsi_serverhook_t_END   //Must put this at the end position
+    LSI_HOOK_END   //Must put this at the end position
 };
 
 lsi_module_t MNAME =

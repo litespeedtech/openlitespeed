@@ -1033,6 +1033,9 @@ int SpdyConnection::compressHeaders(HttpRespHeaders *pRespHeaders)
     char *key;
     int keyLen;
     int valLen;
+    
+    pRespHeaders->dropConnectionHeaders();
+    
     count = pRespHeaders->getUniqueCnt() +
             2;//Add 2, FOR spdy, need to add "version" and "status"
     if (m_bVersion == 2)

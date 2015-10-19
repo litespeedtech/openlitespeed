@@ -55,7 +55,7 @@ typedef struct
 
 typedef union
 {
-    lsi_shmlock_t       x_lock;
+    ls_shmlock_t        x_lock;
     LsShmOffset_t       x_iNext;
 } LsShmLockElem;
 
@@ -67,16 +67,13 @@ public:
     LsShmLock();
     ~LsShmLock();
 
-    static const char *getDefaultShmDir();
-
-
     LsShmLockMap *getShmLockMap() const
     {   return m_pShmLockMap; }
 
-    lsi_shmlock_t *offset2pLock(LsShmOffset_t offset) const
+    ls_shmlock_t *offset2pLock(LsShmOffset_t offset) const
     {
         assert(offset < getShmLockMap()->x_iMaxSize);
-        return (lsi_shmlock_t *)(((uint8_t *)getShmLockMap()) + offset);
+        return (ls_shmlock_t *)(((uint8_t *)getShmLockMap()) + offset);
     }
 
     void *offset2ptr(LsShmOffset_t offset) const
@@ -92,7 +89,7 @@ public:
         return (LsShmOffset_t)((uint8_t *)ptr - (uint8_t *)getShmLockMap());
     }
 
-    LsShmOffset_t pLock2offset(lsi_shmlock_t *pLock)
+    LsShmOffset_t pLock2offset(ls_shmlock_t *pLock)
     {
         assert((uint8_t *)pLock <
                ((uint8_t *)getShmLockMap()) + getShmLockMap()->x_iMaxSize);
@@ -102,7 +99,7 @@ public:
     LsShmStatus_t status() const
     {   return m_status; }
 
-    int pLock2LockNum(lsi_shmlock_t *pLock) const
+    int pLock2LockNum(ls_shmlock_t *pLock) const
     {   return ((LsShmLockElem *)pLock - m_pShmLockElem); }
 
     LsShmLockElem *lockNum2pElem(const int num) const
@@ -110,15 +107,15 @@ public:
         return ((num < 0) || (num >= (int)getShmLockMap()->x_iMaxElem)) ?
                NULL : (m_pShmLockElem + num);
     }
-    lsi_shmlock_t *lockNum2pLock(const int num) const
+    ls_shmlock_t *lockNum2pLock(const int num) const
     {
-        return (lsi_shmlock_t *)
+        return (ls_shmlock_t *)
                (((num < 0) || (num >= (int)getShmLockMap()->x_iMaxElem)) ?
                 NULL : (m_pShmLockElem + num));
     }
 
-    lsi_shmlock_t *allocLock();
-    int freeLock(lsi_shmlock_t *pLock);
+    ls_shmlock_t *allocLock();
+    int freeLock(ls_shmlock_t *pLock);
 
 private:
     LsShmLock(const LsShmLock &other);

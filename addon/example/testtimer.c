@@ -40,23 +40,23 @@
 lsi_module_t MNAME;
 static int onReadEvent(lsi_session_t *session);
 
-int reg_handler(lsi_cb_param_t *rec)
+int reg_handler(lsi_param_t *rec)
 {
     const char *uri;
     int len;
-    uri = g_api->get_req_uri(rec->_session, &len);
+    uri = g_api->get_req_uri(rec->session, &len);
     if (len >= 11 && strncasecmp(uri, "/testtimer/", 11) == 0)
     {
-        g_api->register_req_handler(rec->_session, &MNAME, 10);
-        g_api->set_req_env(rec->_session, "cache-control", 13, "max-age 20", 10);
+        g_api->register_req_handler(rec->session, &MNAME, 10);
+        g_api->set_req_env(rec->session, "cache-control", 13, "max-age 20", 10);
     }
-    return LSI_HK_RET_OK;
+    return LSI_OK;
 }
 
 static lsi_serverhook_t serverHooks[] =
 {
-    {LSI_HKPT_RECV_REQ_HEADER, reg_handler, LSI_HOOK_NORMAL, LSI_HOOK_FLAG_ENABLED},
-    lsi_serverhook_t_END   //Must put this at the end position
+    {LSI_HKPT_RECV_REQ_HEADER, reg_handler, LSI_HOOK_NORMAL, LSI_FLAG_ENABLED},
+    LSI_HOOK_END   //Must put this at the end position
 };
 
 int nullRelease(void *p)
@@ -66,7 +66,7 @@ int nullRelease(void *p)
 
 static int init(lsi_module_t *pModule)
 {
-    g_api->init_module_data(pModule, nullRelease, LSI_MODULE_DATA_HTTP);
+    g_api->init_module_data(pModule, nullRelease, LSI_DATA_HTTP);
     return 0;
 }
 
@@ -91,7 +91,7 @@ void finish_cb(void *session)
     int id;
     char buf[1024];
     lsi_session_t *pSession = (lsi_session_t *)session;
-    id = (int)g_api->get_module_data(session, &MNAME, LSI_MODULE_DATA_HTTP);
+    id = (int)g_api->get_module_data(session, &MNAME, LSI_DATA_HTTP);
     g_api->remove_timer(id);
     sprintf(buf, "Finishing timer(5 seconds)!, time: %ld<br>\n",
             (long)(time(NULL)));
@@ -109,10 +109,10 @@ static int PsHandlerProcess(lsi_session_t *session)
     t = time(NULL);
     tmp = gmtime(&t);
     strftime(tmBuf, 30, "%a, %d %b %Y %H:%M:%S GMT", tmp);
-    g_api->set_resp_header(session, LSI_RESP_HEADER_CONTENT_TYPE, NULL, 0,
-                           "text/html", sizeof("text/html") - 1, LSI_HEADER_SET);
-    g_api->set_resp_header(session, LSI_RESP_HEADER_LAST_MODIFIED, NULL, 0,
-                           tmBuf, 29, LSI_HEADER_SET);
+    g_api->set_resp_header(session, LSI_RSPHDR_CONTENT_TYPE, NULL, 0,
+                           "text/html", sizeof("text/html") - 1, LSI_HEADEROP_SET);
+    g_api->set_resp_header(session, LSI_RSPHDR_LAST_MODIFIED, NULL, 0,
+                           tmBuf, 29, LSI_HEADEROP_SET);
 
     char buf[1024];
     sprintf(buf, "This test will take 5 seconds, now time is %ld\n<p>",
@@ -126,7 +126,7 @@ static int PsHandlerProcess(lsi_session_t *session)
     g_api->set_timer(3000, 0, timer_cb, session);
     g_api->set_timer(4000, 0, timer_cb, session);
     g_api->set_timer(5000, 0, finish_cb, session);
-    g_api->set_module_data(session, &MNAME, LSI_MODULE_DATA_HTTP,
+    g_api->set_module_data(session, &MNAME, LSI_DATA_HTTP,
                            (void *)(long)id);
     return 0;
 }
@@ -146,17 +146,17 @@ static int onWriteEvent(lsi_session_t *session)
 {
     g_api->append_resp_body(session, "<br>Writing finished, bye.\n<p>",
                             sizeof("<br>Writing finished, bye.\n<p>") - 1);
-    return LSI_WRITE_RESP_FINISHED;
+    return LSI_RSP_DONE;
 }
 
 static int onCleanUp(lsi_session_t *session)
 {
     int id = (int)(long)g_api->get_module_data(session, &MNAME,
-             LSI_MODULE_DATA_HTTP);
+             LSI_DATA_HTTP);
     g_api->remove_timer(id);
-    g_api->set_module_data(session, &MNAME, LSI_MODULE_DATA_HTTP, NULL);
+    g_api->set_module_data(session, &MNAME, LSI_DATA_HTTP, NULL);
     return 0;
 }
 
-lsi_handler_t myhandler = { PsHandlerProcess, onReadEvent, onWriteEvent, onCleanUp };
+lsi_reqhdlr_t myhandler = { PsHandlerProcess, onReadEvent, onWriteEvent, onCleanUp };
 lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, init, &myhandler, NULL, "", serverHooks};

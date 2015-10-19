@@ -157,7 +157,7 @@ int HttpRespHeaders::appendHeader(resp_kvpair *pKv, const char *pName,
         HttpServerConfig::getInstance().getMaxDynRespHeaderLen())
         return LS_FAIL;
 
-    if (method == LSI_HEADER_SET)
+    if (method == LSI_HEADEROP_SET)
         memset(pKv, 0, sizeof(resp_kvpair));
 
     if (m_buf.available() < (int)(pKv->valLen + nameLen * 2 + valLen + 9))
@@ -168,7 +168,7 @@ int HttpRespHeaders::appendHeader(resp_kvpair *pKv, const char *pName,
 
     //Be careful of the two Kv pointer
     resp_kvpair *pUpdKv = pKv;
-    if (pKv->valLen > 0 && method == LSI_HEADER_ADD)
+    if (pKv->valLen > 0 && method == LSI_HEADEROP_ADD)
     {
         int new_id = getTotalCount();
         if (getFreeSpaceCount() <= 0)
@@ -258,14 +258,14 @@ int HttpRespHeaders::_add(int kvOrderNum, const char *pName, int nameLen,
         pKv = getKV(kvOrderNum);
 
     //enough space for replace, use the same keyoff, and update valoff, add padding, make it is the same length as before
-    if (method == LSI_HEADER_SET && pKv->keyLen == (int)nameLen
+    if (method == LSI_HEADEROP_SET && pKv->keyLen == (int)nameLen
         && pKv->valLen >= (int)valLen)
     {
         replaceHeader(pKv, pVal, valLen);
         return 0;
     }
 
-    if ((method == LSI_HEADER_MERGE) && (pKv->valLen > 0))
+    if ((method == LSI_HEADEROP_MERGE) && (pKv->valLen > 0))
     {
         if (hasValue(getVal(pKv), pKv->valLen, pVal, valLen))
             return 0;//if exist when merge, ignor, otherwise same as append
@@ -274,7 +274,7 @@ int HttpRespHeaders::_add(int kvOrderNum, const char *pName, int nameLen,
     m_hLastHeaderKVPairIndex = kvOrderNum;
 
     //Under append situation, if has existing key and valLen > 0, then makes a hole
-    if (pKv->valLen > 0 && method != LSI_HEADER_ADD)
+    if (pKv->valLen > 0 && method != LSI_HEADEROP_ADD)
     {
         assert(pKv->keyLen > 0);
         m_hasHole = 1;
@@ -877,4 +877,16 @@ void HttpRespHeaders::hideServerSignature(int hide)
     }
 
 }
+
+
+void HttpRespHeaders::dropConnectionHeaders()
+{
+    del(H_CONNECTION);
+    del(H_KEEP_ALIVE);
+    del(H_PROXY_CONNECTION);
+    del(H_TRANSFER_ENCODING);
+    //del(H_UPGRADE);
+}
+
+
 

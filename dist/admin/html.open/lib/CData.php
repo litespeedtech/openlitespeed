@@ -50,7 +50,7 @@ class CData
 		if ($SERVER_ROOT == '' || trim($SERVER_ROOT) == '')
 			die("Require SERVER_ROOT as input param!");
 
-		echo "Migrate plain conf to xml from $SERVER_ROOT\n";
+		error_log("Migrate plain conf to xml from $SERVER_ROOT\n");
 
 		if ( $SERVER_ROOT{-1} != '/' )
 			$SERVER_ROOT .= '/';
@@ -67,7 +67,7 @@ class CData
 		$filemap = DPageDef::GetInstance()->GetFileMap(DInfo::CT_ADMIN);
 		$admindata->save_xml_file($admindata->_root, $filemap, $admindata->_xmlpath);
 		$admindata->copy_permission($admindata->_path, $admindata->_xmlpath);
-		echo "Migration done.\n";
+		error_log("Migration done.\n");
 	}
 
 	public static function Util_Migrate_AllXml2Conf($SERVER_ROOT, $recover_script, $removexml)
@@ -82,7 +82,7 @@ class CData
 		if ($removexml != 1 && $removexml != 0)
 			die("Require removexml as input param with value 1 or 0.");
 
-		echo "Migrate xml to plain conf from $SERVER_ROOT\n";
+		error_log("Migrate xml to plain conf under server root $SERVER_ROOT\n");
 		if ( $SERVER_ROOT{-1} != '/' )
 			$SERVER_ROOT .= '/';
 
@@ -119,10 +119,10 @@ class CData
 
 		if (defined('RECOVER_SCRIPT')) {
 			chmod(RECOVER_SCRIPT, 0700);
-			echo "You can recover the migrated xml configuration files from this script " . RECOVER_SCRIPT . "\n";
+			error_log("You can recover the migrated xml configuration files from this script " . RECOVER_SCRIPT . "\n");
 		}
 
-		echo "Migration done.\n";
+		error_log("Migration done.\n");
 	}
 
 	public function GetRootNode()
@@ -898,7 +898,7 @@ class CData
 				$vhdata = new CData(DInfo::CT_VH, $conffile);
 				$this->save_xml_file($vhdata->_root, $filemap, $vhdata->_xmlpath);
 				$this->copy_permission($vhdata->_path, $vhdata->_xmlpath);
-				echo "  converted $vhdata->_path to $vhdata->_xmlpath\n";
+				error_log("  converted $vhdata->_path to $vhdata->_xmlpath\n");
 			}
 		}
 
@@ -912,14 +912,14 @@ class CData
 				$tpdata = new CData(DInfo::CT_TP, $conffile);
 				$this->save_xml_file($tpdata->_root, $filemap, $tpdata->_xmlpath);
 				$this->copy_permission($tpdata->_path, $tpdata->_xmlpath);
-				echo "  converted $tpdata->_path to $tpdata->_xmlpath\n";
+				error_log("  converted $tpdata->_path to $tpdata->_xmlpath\n");
 			}
 		}
 
 		$filemap = DPageDef::GetInstance()->GetFileMap(DInfo::CT_SERV);
 		$this->save_xml_file($this->_root, $filemap, $this->_xmlpath);
 		$this->copy_permission($this->_path, $this->_xmlpath);
-		echo "  converted $this->_path to $this->_xmlpath\n";
+		error_log("  converted $this->_path to $this->_xmlpath\n");
 	}
 
 

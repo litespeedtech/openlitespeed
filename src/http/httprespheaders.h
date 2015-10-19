@@ -105,13 +105,13 @@ public:
     void reset();
 
     int add(HEADERINDEX headerIndex, const char *pVal, unsigned int valLen,
-            int method = LSI_HEADER_SET);
+            int method = LSI_HEADEROP_SET);
     int add(const char *pName, int nameLen, const char *pVal,
-            unsigned int valLen, int method = LSI_HEADER_SET);
+            unsigned int valLen, int method = LSI_HEADEROP_SET);
 
     int appendLastVal(const char *pVal, int valLen);
-    int add(http_header_t *headerArray, int size, int method = LSI_HEADER_SET);
-    int parseAdd(const char *pStr, int len, int method = LSI_HEADER_SET);
+    int add(http_header_t *headerArray, int size, int method = LSI_HEADEROP_SET);
+    int parseAdd(const char *pStr, int len, int method = LSI_HEADEROP_SET);
 
 
     //Special case
@@ -187,6 +187,9 @@ public:
 
     void addCommonHeaders()
     {   add(s_commonHeaders, s_commonHeadersCount);     }
+    
+    void dropConnectionHeaders();
+    
 
 public:
     static const char *m_sPresetHeaders[H_HEADER_END];

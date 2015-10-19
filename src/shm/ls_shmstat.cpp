@@ -23,16 +23,18 @@
 #include <unistd.h>
 
 
-static const char *g_pShmDirName = LsShm::getDefaultShmDir();
+static const char *g_pShmDirName = "/dev/shm/ols";
 static const char *g_pShmName = NULL;
 
 
 char *argv0 = NULL;
 
+#include <util/pool.h>
+Pool g_pool;
+
 
 void doStatShm(LsShm *pShm);
 void doStatShmPool(LsShmPool *pPool);
-
 
 
 LsShmSize_t blks2kbytes(LsShmSize_t blks)
@@ -119,19 +121,13 @@ void doStatShm(LsShm *pShm)
         (LsShmMapStat *)pShm->offset2ptr(pShm->getMapStatOffset());
 
     fprintf(stdout, "SHM [%s] (in kbytes unless otherwise specified)\n\
-shm filesize:               %lu\n\
-currently used:             %lu\n\
-available before expanding: %lu\n\
-total allocated:            %lu\n\
-total released:             %lu\n\
-freelist elements (count):  %lu\n",
-            pShm->name(),
-            (unsigned long)(pStat->m_iFileSize / 1024),
-            (unsigned long)(pStat->m_iUsedSize / 1024),
-            (unsigned long)((pStat->m_iFileSize - pStat->m_iUsedSize) / 1024),
-            (unsigned long)blks2kbytes(pStat->m_iAllocated),
-            (unsigned long)blks2kbytes(pStat->m_iReleased),
-            (unsigned long)pStat->m_iFreeListCnt
+shm filesize:               %u\n\
+currently used:             %u\n\
+available before expanding: %u\n",
+            pShm->mapName(),
+            pStat->m_iFileSize / 1024,
+            pStat->m_iUsedSize / 1024,
+            (pStat->m_iFileSize - pStat->m_iUsedSize) / 1024
            );
     return;
 }
@@ -143,17 +139,23 @@ void doStatShmPool(LsShmPool *pPool)
         (LsShmPoolMapStat *)pPool->offset2ptr(pPool->getPoolMapStatOffset());
 
     fprintf(stdout, "GLOBAL POOL (in kbytes unless otherwise specified)\n\
-direct shm allocated (>1K):      %lu\n\
-direct shm released  (>1K):      %lu\n\
-allocated from freelist (bytes): %lu\n\
-released to freelist (bytes):    %lu\n\
-freelist elements (count):       %lu\n\
+global allocated pages:          %u\n\
+global released pages:           %u\n\
+global freelist (count):         %u\n\
+allocated pages (>1K):           %u\n\
+released pages  (>1K):           %u\n\
+allocated from freelist (bytes): %u\n\
+released to freelist (bytes):    %u\n\
+freelist elements (count):       %u\n\
 buckets (<256):  allocated         released             free(count)\n",
-            (unsigned long)pStat->m_iShmAllocated,
-            (unsigned long)pStat->m_iShmReleased,
-            (unsigned long)pStat->m_iFlAllocated,
-            (unsigned long)pStat->m_iFlReleased,
-            (unsigned long)pStat->m_iFlCnt
+            pStat->m_iGpAllocated,
+            pStat->m_iGpReleased,
+            pStat->m_iGpFreeListCnt,
+            pStat->m_iPgAllocated,
+            pStat->m_iPgReleased,
+            pStat->m_iFlAllocated,
+            pStat->m_iFlReleased,
+            pStat->m_iFlCnt
            );
     LsShmSize_t poolFree = pStat->m_iFlReleased - pStat->m_iFlAllocated
                            + pStat->m_iFreeChunk;
@@ -166,11 +168,8 @@ buckets (<256):  allocated         released             free(count)\n",
         int num;
         if ((p->m_iBkAllocated == 0) && (p->m_iBkReleased == 0))
             continue;
-        fprintf(stdout, "%5d %20lu %16lu",
-                (unsigned int)bcktsz,
-                (unsigned long)p->m_iBkAllocated,
-                (unsigned long)p->m_iBkReleased
-               );
+        fprintf(stdout, "%5d %20u %16u",
+                bcktsz, p->m_iBkAllocated, p->m_iBkReleased);
         if ((num = (p->m_iBkReleased - p->m_iBkAllocated)) > 0)
         {
             fprintf(stdout, " %16u\n", num);
@@ -180,12 +179,12 @@ buckets (<256):  allocated         released             free(count)\n",
             fputc('\n', stdout);
     }
     fprintf(stdout, "\
-current direct shm pool used (kbytes): %lu\n\
-current total pool used (bytes): %lu\n\
-current total pool free (bytes): %lu\n",
-            (unsigned long)(pStat->m_iShmAllocated - pStat->m_iShmReleased),
-            (unsigned long)pStat->m_iPoolInUse,
-            (unsigned long)poolFree
+current allocated pages used (kbytes): %u\n\
+current total pool used (bytes): %u\n\
+current total pool free (bytes): %u\n",
+            pStat->m_iPgAllocated - pStat->m_iPgReleased,
+            pStat->m_iPoolInUse,
+            poolFree
            );
     return;
 }

@@ -52,7 +52,7 @@ int HttpCgiTool::processHeaderLine(HttpExtConnector *pExtConn,
 {
     HttpRespHeaders::HEADERINDEX index;
     int tmpIndex;
-    const char *pKeyEnd;
+    const char *pKeyEnd = NULL;
     const char *pValue = pLineBegin;
     char *p;
     HttpResp *pResp = pExtConn->getHttpSession()->getResp();
@@ -129,7 +129,7 @@ int HttpCgiTool::processHeaderLine(HttpExtConnector *pExtConn,
             str.append(pLineBegin, pLineEnd - pLineBegin);
             str.append(pCharset->c_str(), pCharset->len());
             str.append("\r\n", 2);
-            buf.parseAdd(str.c_str(), str.len(), LSI_HEADER_ADD);
+            buf.parseAdd(str.c_str(), str.len(), LSI_HEADEROP_ADD);
         }
         return 0;
     case HttpRespHeaders::H_CONTENT_ENCODING:
@@ -194,7 +194,7 @@ int HttpCgiTool::processHeaderLine(HttpExtConnector *pExtConn,
         }
         return 0;
     case HttpRespHeaders::H_TRANSFER_ENCODING:
-        pResp->setContentLen(LSI_RESP_BODY_SIZE_CHUNKED);
+        pResp->setContentLen(LSI_RSP_BODY_SIZE_CHUNKED);
         return 0;
     case HttpRespHeaders::H_PROXY_CONNECTION:
     case HttpRespHeaders::H_CONNECTION:
@@ -202,7 +202,7 @@ int HttpCgiTool::processHeaderLine(HttpExtConnector *pExtConn,
             status |= HEC_RESP_CONN_CLOSE;
         return 0;
     case HttpRespHeaders::H_CONTENT_LENGTH:
-        if (pResp->getContentLen() == LSI_RESP_BODY_SIZE_UNKNOWN)
+        if (pResp->getContentLen() == LSI_RSP_BODY_SIZE_UNKNOWN)
         {
             off_t lContentLen = strtoll(pValue, NULL, 10);
             if ((lContentLen >= 0) && (lContentLen != LLONG_MAX))
@@ -447,11 +447,10 @@ static int lookup_ssl_cert_serial(X509 *pCert, char *pBuf, int len)
 }
 
 
-static int addEnv(void *pObj, void *pUData, const char *pKey,
-                  size_t iKeyLen)
+static int addEnv(void *pObj, void *pUData, const char *pKey, int iKeyLen)
 {
     IEnv *pEnv = (IEnv *)pUData;
-    ls_str_pair_t *pPair = (ls_str_pair_t *)pObj;
+    ls_strpair_t *pPair = (ls_strpair_t *)pObj;
     pEnv->add(ls_str_cstr(&pPair->key), ls_str_len(&pPair->key),
               ls_str_cstr(&pPair->value), ls_str_len(&pPair->value));
     return 0;

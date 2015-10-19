@@ -81,40 +81,40 @@ int test_range(int action)
     return LS_FAIL;
 }
 
-int check_if_redirect(lsi_cb_param_t *rec)
+int check_if_redirect(lsi_param_t *rec)
 {
     const char *uri;
     const char *qs;
-    int action = LSI_URI_REWRITE;
+    int action = LSI_URL_REWRITE;
     int useHandler = 0;
     int len;
-    uri = g_api->get_req_uri(rec->_session, &len);
+    uri = g_api->get_req_uri(rec->session, &len);
     if (len >= strlen(TEST_URL)
         && strncasecmp(uri, TEST_URL, strlen(TEST_URL)) == 0)
     {
-        qs = g_api->get_req_query_string(rec->_session, NULL);
+        qs = g_api->get_req_query_string(rec->session, NULL);
         if (parse_qs(qs, &action, &useHandler) < 0)
         {
-            report_error(rec->_session, qs);
-            return LSI_HK_RET_OK;
+            report_error(rec->session, qs);
+            return LSI_OK;
         }
         if (test_range(action) < 0)
-            report_error(rec->_session, qs);
+            report_error(rec->session, qs);
         else if (!useHandler)
-            g_api->set_uri_qs(rec->_session, action, DEST_URL, sizeof(DEST_URL) - 1,
+            g_api->set_uri_qs(rec->session, action, DEST_URL, sizeof(DEST_URL) - 1,
                               "", 0);
         else if (action > 1)
-            g_api->register_req_handler(rec->_session, &MNAME, TEST_URL_LEN);
+            g_api->register_req_handler(rec->session, &MNAME, TEST_URL_LEN);
         else
-            report_error(rec->_session, qs);
+            report_error(rec->session, qs);
     }
-    return LSI_HK_RET_OK;
+    return LSI_OK;
 }
 
 static lsi_serverhook_t serverHooks[] =
 {
-    {LSI_HKPT_RECV_REQ_HEADER, check_if_redirect, LSI_HOOK_NORMAL, LSI_HOOK_FLAG_ENABLED},
-    lsi_serverhook_t_END   //Must put this at the end position
+    {LSI_HKPT_RECV_REQ_HEADER, check_if_redirect, LSI_HOOK_NORMAL, LSI_FLAG_ENABLED},
+    LSI_HOOK_END   //Must put this at the end position
 };
 
 static int _init(lsi_module_t *pModule)
@@ -125,12 +125,12 @@ static int _init(lsi_module_t *pModule)
 static int handlerBeginProcess(lsi_session_t *session)
 {
     const char *qs;
-    int action = LSI_URI_REWRITE;
+    int action = LSI_URL_REWRITE;
     qs = g_api->get_req_query_string(session, NULL);
     if (parse_qs(qs, &action, NULL) < 0)
     {
         report_error(session, qs);
-        return LSI_HK_RET_OK;
+        return LSI_OK;
     }
     if (action == 17 || action == 33 || action == 49)
         report_error(session, qs);
@@ -139,5 +139,5 @@ static int handlerBeginProcess(lsi_session_t *session)
     return 0;
 }
 
-lsi_handler_t myhandler = { handlerBeginProcess, NULL, NULL, NULL };
+lsi_reqhdlr_t myhandler = { handlerBeginProcess, NULL, NULL, NULL };
 lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, _init, &myhandler, NULL, "test  redirect v1.0", serverHooks };

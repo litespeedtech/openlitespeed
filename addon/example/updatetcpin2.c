@@ -55,10 +55,10 @@ static int l4release2(void *data)
 }
 
 
-static int l4init2(lsi_cb_param_t *rec)
+static int l4init2(lsi_param_t *rec)
 {
-    MyData2 *myData = (MyData2 *)g_api->get_module_data(rec->_session, &MNAME,
-                      LSI_MODULE_DATA_L4);
+    MyData2 *myData = (MyData2 *)g_api->get_module_data(rec->session, &MNAME,
+                      LSI_DATA_L4);
     if (!myData)
     {
         myData = (MyData2 *) malloc(sizeof(MyData2));
@@ -66,7 +66,7 @@ static int l4init2(lsi_cb_param_t *rec)
         ls_loopbuf(&myData->outBuf, MAX_BLOCK_BUFSIZE);
 
         g_api->log(NULL, LSI_LOG_DEBUG, "#### updatetcpin2 test %s\n", "l4init");
-        g_api->set_module_data(rec->_session, &MNAME, LSI_MODULE_DATA_L4,
+        g_api->set_module_data(rec->session, &MNAME, LSI_DATA_L4,
                                (void *)myData);
     }
     else
@@ -79,7 +79,7 @@ static int l4init2(lsi_cb_param_t *rec)
 }
 
 //expand the recieved data to base64 encode
-static int l4recv2(lsi_cb_param_t *rec)
+static int l4recv2(lsi_param_t *rec)
 {
 #define ENCODE_BLOCK_SIZE 800
 #define DECODE_BLOCK_SIZE (ENCODE_BLOCK_SIZE * 3 / 4 + 4)
@@ -89,8 +89,8 @@ static int l4recv2(lsi_cb_param_t *rec)
     char tmpBuf[ENCODE_BLOCK_SIZE];
     int len, sz;
 
-    myData = (MyData2 *)g_api->get_module_data(rec->_session, &MNAME,
-             LSI_MODULE_DATA_L4);
+    myData = (MyData2 *)g_api->get_module_data(rec->session, &MNAME,
+             LSI_DATA_L4);
     if (!myData)
         return LS_FAIL;
 
@@ -120,25 +120,25 @@ static int l4recv2(lsi_cb_param_t *rec)
     }
 
     ////////////////////////////////////////////////////////////////////////////////
-    if (ls_loopbuf_size(&myData->outBuf) < rec->_param_len)
-        rec->_param_len = ls_loopbuf_size(&myData->outBuf);
+    if (ls_loopbuf_size(&myData->outBuf) < rec->len1)
+        rec->len1 = ls_loopbuf_size(&myData->outBuf);
 
-    if (rec->_param_len > 0)
-        ls_loopbuf_moveto(&myData->outBuf, (char *)rec->_param, rec->_param_len);
+    if (rec->len1 > 0)
+        ls_loopbuf_moveto(&myData->outBuf, (char *)rec->ptr1, rec->len1);
 
-    return rec->_param_len;
+    return rec->len1;
 }
 
 static lsi_serverhook_t serverHooks[] =
 {
-    {LSI_HKPT_L4_BEGINSESSION, l4init2, LSI_HOOK_NORMAL, LSI_HOOK_FLAG_ENABLED},
-    {LSI_HKPT_L4_RECVING, l4recv2, LSI_HOOK_EARLY + 1, LSI_HOOK_FLAG_TRANSFORM | LSI_HOOK_FLAG_ENABLED},
-    lsi_serverhook_t_END   //Must put this at the end position
+    {LSI_HKPT_L4_BEGINSESSION, l4init2, LSI_HOOK_NORMAL, LSI_FLAG_ENABLED},
+    {LSI_HKPT_L4_RECVING, l4recv2, LSI_HOOK_EARLY + 1, LSI_FLAG_TRANSFORM | LSI_FLAG_ENABLED},
+    LSI_HOOK_END   //Must put this at the end position
 };
 
 static int init(lsi_module_t *pModule)
 {
-    g_api->init_module_data(pModule, l4release2, LSI_MODULE_DATA_L4);
+    g_api->init_module_data(pModule, l4release2, LSI_DATA_L4);
     return 0;
 }
 

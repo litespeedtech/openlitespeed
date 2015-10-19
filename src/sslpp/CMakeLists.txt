@@ -3,13 +3,15 @@ cmake_minimum_required(VERSION 2.8)
 
 ########### next target ###############
 
-SET(sslpp_STAT_SRCS sslsession.cpp
+SET(sslpp_STAT_SRCS
    sslengine.cpp
    sslcert.cpp
    sslerror.cpp
    sslconnection.cpp
    sslcontext.cpp
    sslocspstapling.cpp
+   sslsesscache.cpp
+   sslticket.cpp
    ../http/requestvars.cpp
 )
 
@@ -32,9 +34,9 @@ find_library( lsshm liblsshm.a )
 #
 #libsslpp_a_METASOURCES = AUTO
 #
-#libsslpp_a_SOURCES = sslengine.cpp sslcert.cpp sslerror.cpp sslconnection.cpp sslcontext.cpp 
+#libsslpp_a_SOURCES = sslengine.cpp sslcert.cpp sslerror.cpp sslconnection.cpp sslcontext.cpp
 #
 #
-#EXTRA_DIST = sslcontext.cpp sslcontext.h sslconnection.cpp sslconnection.h sslerror.cpp sslerror.h sslcert.cpp sslcert.h sslengine.cpp sslengine.h 
+#EXTRA_DIST = sslcontext.cpp sslcontext.h sslconnection.cpp sslconnection.h sslerror.cpp sslerror.h sslcert.cpp sslcert.h sslengine.cpp sslengine.h
 #
 ######## kdevelop will overwrite this part!!! (end)############

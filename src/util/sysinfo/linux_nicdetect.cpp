@@ -101,7 +101,7 @@ NICDetect::get_ifi_info(int family, int doaliases)
     char                *buf, lastname[IFNAMSIZ], *cptr;
     struct ifconf       ifc;
     struct ifreq        *ifr, ifrcopy;
-    struct sockaddr_in  *sinptr;
+    struct sockaddr_in  *sinptr = NULL;
     if (family == AF_INET6)
         return parse_proc_net();
     sockfd = ::socket(AF_INET, SOCK_DGRAM, 0);
@@ -211,6 +211,7 @@ NICDetect::get_ifi_info(int family, int doaliases)
             }
             break;
         case AF_INET6:
+            sinptr = (struct sockaddr_in *) &ifr->ifr_addr;
             if (ifi->ifi_addr == NULL)
             {
                 ifi->ifi_addr = (sockaddr *)calloc(1, sizeof(struct sockaddr_in6));

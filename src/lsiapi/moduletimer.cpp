@@ -33,7 +33,7 @@ class ModTimer
 {
 public:
     timerkey_t              m_key;
-    lsi_timer_callback_pf   m_timerCb;
+    lsi_timercb_pf   m_timerCb;
     void                   *m_pTimerCbParam;
     unsigned int            m_repeat;
 };
@@ -83,7 +83,7 @@ ModTimerList::~ModTimerList()
 
 
 int ModTimerList::addTimer(unsigned int msTimeout, int repeat,
-                           lsi_timer_callback_pf timerCb,
+                           lsi_timercb_pf timerCb,
                            void *timerCbParam)
 {
     ModTimer *pTimer = m_timerPool.get();

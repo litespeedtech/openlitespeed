@@ -173,10 +173,10 @@ static void testparam_freeConfig(void *_config)
 
 static int testparam_handlerBeginProcess(lsi_session_t *session)
 {
-    g_api->set_resp_header(session, LSI_RESP_HEADER_CONTENT_TYPE, NULL, 0,
-                           "text/plain", sizeof("text/plain") - 1, LSI_HEADER_SET);
+    g_api->set_resp_header(session, LSI_RSPHDR_CONTENT_TYPE, NULL, 0,
+                           "text/plain", sizeof("text/plain") - 1, LSI_HEADEROP_SET);
 
-    param_st *pparam_st = (param_st *) g_api->get_module_param(session,
+    param_st *pparam_st = (param_st *) g_api->get_config(session,
                           &MNAME);
     char buf[1024];
     int len;
@@ -202,25 +202,25 @@ static int testparam_handlerBeginProcess(lsi_session_t *session)
     return 0;
 }
 
-static int reg_handler(lsi_cb_param_t *rec)
+static int reg_handler(lsi_param_t *rec)
 {
     const char *uri;
     int len;
-    uri = g_api->get_req_uri(rec->_session, &len);
+    uri = g_api->get_req_uri(rec->session, &len);
     if (len >= 10 && strcasestr(uri, "/testparam"))
-        g_api->register_req_handler(rec->_session, &MNAME, 10);
-    return LSI_HK_RET_OK;
+        g_api->register_req_handler(rec->session, &MNAME, 10);
+    return LSI_OK;
 }
 
 static lsi_serverhook_t serverHooks[] =
 {
-    {LSI_HKPT_URI_MAP, reg_handler, LSI_HOOK_EARLY, LSI_HOOK_FLAG_ENABLED},
-    lsi_serverhook_t_END   //Must put this at the end position
+    {LSI_HKPT_URI_MAP, reg_handler, LSI_HOOK_EARLY, LSI_FLAG_ENABLED},
+    LSI_HOOK_END   //Must put this at the end position
 };
 
 static int testparam_init(lsi_module_t *pModule)
 {
-    param_st *pparam_st = (param_st *) g_api->get_module_param(NULL, pModule);
+    param_st *pparam_st = (param_st *) g_api->get_config(NULL, pModule);
     if (pparam_st)
     {
         g_api->log(NULL,  LSI_LOG_INFO,
@@ -239,6 +239,6 @@ static int testparam_init(lsi_module_t *pModule)
     return 0;
 }
 
-lsi_handler_t testparam_myhandler = { testparam_handlerBeginProcess, NULL, NULL, NULL };
-lsi_config_t testparam_dealConfig = { testparam_parseConfig, testparam_freeConfig, myParam };
+lsi_reqhdlr_t testparam_myhandler = { testparam_handlerBeginProcess, NULL, NULL, NULL };
+lsi_confparser_t testparam_dealConfig = { testparam_parseConfig, testparam_freeConfig, myParam };
 lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, testparam_init, &testparam_myhandler, &testparam_dealConfig, "Version 1.1", serverHooks };

@@ -41,7 +41,7 @@ HttpResp::~HttpResp()
 void HttpResp::reset()
 {
     m_respHeaders.reset();
-    m_lEntityLength = LSI_RESP_BODY_SIZE_UNKNOWN;
+    m_lEntityLength = LSI_RSP_BODY_SIZE_UNKNOWN;
     m_lEntityFinished = 0;
 }
 
@@ -66,7 +66,7 @@ void HttpResp::appendContentLenHeader()
 int HttpResp::appendHeader(const char *pName, int nameLen,
                            const char *pValue, int valLen)
 {
-    m_respHeaders.add(pName, nameLen, pValue, valLen, LSI_HEADER_ADD);
+    m_respHeaders.add(pName, nameLen, pValue, valLen, LSI_HEADEROP_ADD);
     return 0;
 }
 
@@ -121,7 +121,7 @@ int HttpResp::addCookie(const char *pName, const char *pVal,
         p += 10;
     }
     m_respHeaders.add(HttpRespHeaders::H_SET_COOKIE, achBuf, p - achBuf,
-                      LSI_HEADER_ADD);
+                      LSI_HEADEROP_ADD);
     return 0;
 }
 

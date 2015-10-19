@@ -87,6 +87,9 @@ public:
     virtual int waitAndProcessEvents(int iTimeoutMilliSec);
     virtual void timerExecute();
     virtual void setPriHandler(EventReactor::pri_handler handler);
+    virtual void modEvent(EventReactor *pHandler, short mask, int add_remove);
+    virtual void setEventMask(EventReactor *pHandler, short mask)
+    {   setEvent(pHandler, mask);       }
 
     virtual void continueRead(EventReactor *pHandler);
     virtual void suspendRead(EventReactor *pHandler);

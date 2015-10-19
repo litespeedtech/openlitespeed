@@ -131,7 +131,7 @@ NtwkIOLink::NtwkIOLink()
 
 NtwkIOLink::~NtwkIOLink()
 {
-    LsiapiBridge::releaseModuleData(LSI_MODULE_DATA_L4, getModuleData());
+    LsiapiBridge::releaseModuleData(LSI_DATA_L4, getModuleData());
 }
 
 
@@ -178,21 +178,21 @@ int NtwkIOLink::writev_internal(const struct iovec *vector, int len,
                                          (struct iovec *)vector, len);
 
     int ret;
-    lsi_cb_param_t param;
-    lsiapi_hookinfo_t hookInfo;
-    param._session = (LsiSession *)this;
+    lsi_param_t param;
+    lsi_hookinfo_t hookInfo;
+    param.session = (LsiSession *)this;
     int    flag_out = 0;
 
     hookInfo.hooks = pWritevHooks;
     hookInfo.enable_array = m_sessionHooks.getEnableArray(
                                 LSI_HKPT_L4_SENDING);
     hookInfo.term_fn = (filter_term_fn)m_pFpList->m_writev_fp;
-    param._cur_hook = (void *)pWritevHooks->begin();
-    param._hook_info = &hookInfo;
-    param._param = vector;
-    param._param_len = len;
-    param._flag_out = &flag_out;
-    param._flag_in = flush_flag;
+    param.cur_hook = (void *)pWritevHooks->begin();
+    param.hook_chain = &hookInfo;
+    param.ptr1 = vector;
+    param.len1 = len;
+    param.flag_out = &flag_out;
+    param.flag_in = flush_flag;
     ret = LsiApiHooks::runForwardCb(&param);
     m_hasBufferedData = flag_out;
     LS_DBG_L(this, "[NtwkIOLink::writev] ret %d hasData %d",
@@ -209,19 +209,19 @@ int NtwkIOLink::read(char *pBuf, int size)
         return (*m_pFpList->m_read_fp)(this, pBuf, size);
 
     int ret;
-    lsi_cb_param_t param;
-    lsiapi_hookinfo_t hookInfo;
-    param._session = (LsiSession *)this;
+    lsi_param_t param;
+    lsi_hookinfo_t hookInfo;
+    param.session = (LsiSession *)this;
 
     hookInfo.hooks = pReadHooks;
     hookInfo.enable_array = m_sessionHooks.getEnableArray(
                                 LSI_HKPT_L4_RECVING);
     hookInfo.term_fn = (filter_term_fn)m_pFpList->m_read_fp;
-    param._cur_hook = (void *)((lsiapi_hook_t *)pReadHooks->end() - 1);
-    param._hook_info = &hookInfo;
-    param._param = pBuf;
-    param._param_len = size;
-    param._flag_out = NULL;
+    param.cur_hook = (void *)((lsiapi_hook_t *)pReadHooks->end() - 1);
+    param.hook_chain = &hookInfo;
+    param.ptr1 = pBuf;
+    param.len1 = size;
+    param.flag_out = NULL;
     ret = LsiApiHooks::runBackwardCb(&param);
     LS_DBG_L(this, "[NtwkIOLink::read] read %d bytes.", ret);
     return ret;
@@ -638,7 +638,7 @@ int NtwkIOLink::flush()
     if (m_hasBufferedData || (m_iHeaderToSend > 0))
     {
         LS_DBG_L(this, "NtwkIOLink::flush buffered data ...");
-        ret = writev_internal(m_iov.get(), m_iov.len(), LSI_CB_FLAG_IN_FLUSH);
+        ret = writev_internal(m_iov.get(), m_iov.len(), LSI_CBFI_FLUSH);
         if (m_iHeaderToSend > 0)
         {
             if (ret >= m_iHeaderToSend)
@@ -965,7 +965,7 @@ int NtwkIOLink::readEx(LsiSession *pIS, char *pBuf, int size)
 
 #if !defined( NO_SENDFILE )
 
-size_t NtwkIOLink::sendfileSetUp(size_t size)
+off_t NtwkIOLink::sendfileSetUp(off_t size)
 {
     if (m_iHeaderToSend > 0)
     {
@@ -985,6 +985,8 @@ size_t NtwkIOLink::sendfileSetUp(size_t size)
         size = size & ((1 << 30) - 1);
     if (size <= 0)
         return 0;
+    if (size > INT_MAX )
+        size = INT_MAX;
 
     return size;
 }
@@ -1019,7 +1021,7 @@ int NtwkIOLink::sendfileFinish(int written)
 }
 
 
-int NtwkIOLink::sendfile(int fdSrc, off_t off, size_t size)
+int NtwkIOLink::sendfile(int fdSrc, off_t off, off_t size)
 {
     int written;
 

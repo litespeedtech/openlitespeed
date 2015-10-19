@@ -54,17 +54,17 @@ int l4release(void *data)
 }
 
 
-int l4init(lsi_cb_param_t *rec)
+int l4init(lsi_param_t *rec)
 {
 
-    MyData *myData = (MyData *)g_api->get_module_data(rec->_session, &MNAME,
-                     LSI_MODULE_DATA_L4);
+    MyData *myData = (MyData *)g_api->get_module_data(rec->session, &MNAME,
+                     LSI_DATA_L4);
     if (!myData)
     {
         myData = (MyData *) malloc(sizeof(MyData));
         ls_loopbuf(&myData->writeBuf, MAX_BLOCK_BUFSIZE);
         g_api->log(NULL, LSI_LOG_DEBUG, "#### updatetcpout2 test %s\n", "l4init");
-        g_api->set_module_data(rec->_session, &MNAME, LSI_MODULE_DATA_L4,
+        g_api->set_module_data(rec->session, &MNAME, LSI_DATA_L4,
                                (void *)myData);
     }
     else
@@ -72,14 +72,14 @@ int l4init(lsi_cb_param_t *rec)
     return 0;
 }
 
-int l4send(lsi_cb_param_t *rec)
+int l4send(lsi_param_t *rec)
 {
     int total = 0;
 
     MyData *myData = NULL;
     char *pBegin;
-    struct iovec *iov = (struct iovec *)rec->_param;
-    int count = rec->_param_len;
+    struct iovec *iov = (struct iovec *)rec->ptr1;
+    int count = rec->len1;
     char s[4] = {0};
     int written = 0;
     int i, j;
@@ -87,8 +87,8 @@ int l4send(lsi_cb_param_t *rec)
     struct iovec iovOut;
 
     g_api->log(NULL, LSI_LOG_DEBUG, "#### updatetcpout2 test %s\n", "l4send");
-    myData = (MyData *)g_api->get_module_data(rec->_session, &MNAME,
-             LSI_MODULE_DATA_L4);
+    myData = (MyData *)g_api->get_module_data(rec->session, &MNAME,
+             LSI_DATA_L4);
 
     if (MAX_BLOCK_BUFSIZE > ls_loopbuf_size(&myData->writeBuf))
     {
@@ -127,20 +127,20 @@ int l4send(lsi_cb_param_t *rec)
 
     int hasData = 1;
     if (ls_loopbuf_size(&myData->writeBuf))
-        rec->_flag_out = (void *)&hasData;
+        rec->flag_out = (void *)&hasData;
     return total;
 }
 
 static lsi_serverhook_t serverHooks[] =
 {
-    {LSI_HKPT_L4_BEGINSESSION, l4init, LSI_HOOK_NORMAL, LSI_HOOK_FLAG_ENABLED},
-    {LSI_HKPT_L4_SENDING, l4send, LSI_HOOK_EARLY + 1, LSI_HOOK_FLAG_TRANSFORM | LSI_HOOK_FLAG_ENABLED},
-    lsi_serverhook_t_END   //Must put this at the end position
+    {LSI_HKPT_L4_BEGINSESSION, l4init, LSI_HOOK_NORMAL, LSI_FLAG_ENABLED},
+    {LSI_HKPT_L4_SENDING, l4send, LSI_HOOK_EARLY + 1, LSI_FLAG_TRANSFORM | LSI_FLAG_ENABLED},
+    LSI_HOOK_END   //Must put this at the end position
 };
 
 static int init(lsi_module_t *pModule)
 {
-    g_api->init_module_data(pModule, l4release, LSI_MODULE_DATA_L4);
+    g_api->init_module_data(pModule, l4release, LSI_DATA_L4);
     return 0;
 }
 

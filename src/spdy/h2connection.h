@@ -109,6 +109,7 @@ public:
     }
 
     int sendDataFrame(uint32_t uiStreamID, int flag, IOVec *pIov, int total);
+    int sendDataFrame(uint32_t uiStreamId, int flag, const char * pBuf, int len);
 
     int h2cUpgrade(HioHandler *pSession);
 
@@ -164,6 +165,8 @@ private:
     int sendGoAwayFrame(H2ErrorCode status);
     int doGoAway(H2ErrorCode status);
 
+    int resetStream( uint32_t id, H2Stream *pStream, H2ErrorCode code);
+    
     int appendCtrlFrameHeader(H2FrameType type, uint32_t len,
                               unsigned char flags = 0, uint32_t uiStreamID = 0)
     {
@@ -185,8 +188,7 @@ private:
                          int methodLen = 0,
                          char *uri = NULL, int uriLen = 0);
     int decodeData(unsigned char *pSrc, unsigned char *bufEnd,
-                   char *method, int *methodLen, char **uri, int *uriLen,
-                   int *contentLen);
+                   char *method, int *methodLen, char **uri, int *uriLen);
     void skipRemainData();
     int encodeHeaders(HttpRespHeaders *pRespHeaders, unsigned char *buf,
                       int maxSize);

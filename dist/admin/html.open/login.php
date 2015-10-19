@@ -78,7 +78,7 @@ if ($msg != '') {
 <?php
 
 
-if ($_SERVER['HTTP_REFERER'] == '') {
+if (empty($_SERVER['HTTP_REFERER'])) {
 	include("view/inc/scripts.php");
 }
 else {

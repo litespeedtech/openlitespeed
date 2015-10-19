@@ -233,7 +233,7 @@ void *LsJsEngine::parseParam(const char *param
                , "JS Param name %s level %d %s parent %d param %s %d\n"
                , name
                , level
-               , (level == LSI_MODULE_DATA_HTTP) ? "HTTP" : ""
+               , (level == LSI_DATA_HTTP) ? "HTTP" : ""
                , pParent ? pParent->level() : -1
                , param ? param : ""
                , pParent ? pParent->isReady() : -1

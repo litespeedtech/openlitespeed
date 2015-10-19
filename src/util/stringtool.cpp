@@ -85,7 +85,7 @@ void *StringTool::memmem(const char *haystack, size_t haystacklen,
 
     while (haystack < p
            && ((haystack = (const char *)memchr(haystack, *needle,
-                           haystacklen)) != NULL))
+                           p - haystack)) != NULL))
     {
         if (memcmp(haystack, needle, needleLength) == 0)
             return (void *)haystack;

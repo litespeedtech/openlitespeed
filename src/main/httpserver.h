@@ -55,7 +55,6 @@ class HttpServer : public TSingleton<HttpServer>, public HttpLogSource
     friend class TSingleton<HttpServer>;
 
     HttpServerImpl     *m_impl;
-    int                 m_serverMode;
 
     HttpServer(const HttpServer &rhs);
     void operator=(const HttpServer &rhs);
@@ -63,10 +62,6 @@ class HttpServer : public TSingleton<HttpServer>, public HttpLogSource
 public:
 
     ~HttpServer();
-
-    void setServerMode(int serverMode) { m_serverMode = serverMode; };
-    int getServerMode() {   return m_serverMode;    }
-
 
     int start();
     int shutdown();

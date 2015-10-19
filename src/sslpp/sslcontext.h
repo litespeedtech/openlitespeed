@@ -20,7 +20,6 @@
 
 #include <lsdef.h>
 
-#include <stdio.h>
 #include <sys/stat.h>
 
 
@@ -38,11 +37,13 @@ private:
     short       m_iMethod;
     char        m_iRenegProtect;
     char        m_iEnableSpdy;
+    int         m_iKeyLen;
     struct stat m_stKey;
     struct stat m_stCert;
 
     SslOcspStapling *m_pStapling;
 
+    static int     s_iEnableMultiCerts;
 
     void release();
     int init(int method = SSL_ALL);
@@ -73,21 +74,17 @@ public:
     int setKeyCertificateFile(const char *pKeyFile, int iKeyType,
                               const char *pCertFile, int iCertType,
                               int chained);
+    int  setMultiKeyCertFile(const char *pKeyFile, int iKeyType,
+                             const char *pCertFile, int iCertType, int chained);
     int setCertificateFile(const char *pFile, int type, int chained);
     int setCertificateChainFile(const char *pFile);
     int setPrivateKeyFile(const char *pFile, int type);
     int checkPrivateKey();
-    int  setSessionIdContext(unsigned char *sid, unsigned int len);
-    void flushSessionCache(long tm);
-    int  setContextExData(int idx, void *arg);
-    void *getContextExData(int idx);
     long setOptions(long options);
     long getOptions();
-    long setSessionCacheMode(long mode);
-    long setSessionCacheSize(long size);
-    long setSessionTimeout(long timeout);
     void setProtocol(int method);
     void setRenegProtect(int p)   {   m_iRenegProtect = p;    }
+    static void setUseStrongDH(int use);
     int  setCipherList(const char *pList);
     int  setCALocation(const char *pCAFile, const char *pCAPath, int cv);
 
@@ -104,22 +101,29 @@ public:
     static int  publickey_decrypt(const unsigned char *pPubKey, int keylen,
                                   const char *encrypted,
                                   int len, char *decrypted, int bufLen);
+
+    static void enableMultiCerts()     {   s_iEnableMultiCerts = 1;         }
+    static int  multiCertsEnabled()    {   return s_iEnableMultiCerts;      }
     void setClientVerify(int mode, int depth);
     int addCRL(const char *pCRLFile, const char *pCRLPath);
     int enableSpdy(int level);
     int getEnableSpdy() const   {   return m_iEnableSpdy;   }
     SslOcspStapling *getpStapling() {  return m_pStapling; }
     void setpStapling(SslOcspStapling *pSslOcspStapling) {  m_pStapling = pSslOcspStapling;}
-    SSLContext *setKeyCertCipher(const char *pCertFile,
-                                 const char *pKeyFile, const char *pCAFile, const char *pCAPath,
-                                 const char *pCiphers, int certChain, int cv, int renegProtect);
+    SSLContext *setKeyCertCipher(const char *pCertFile, const char *pKeyFile,
+                const char *pCAFile, const char *pCAPath, const char *pCiphers,
+                int certChain, int cv, int renegProtect);
     SSLContext *config(const XmlNode *pNode);
     int configStapling(const XmlNode *pNode,
                        const char *pCAFile, char *pachCert);
     void configCRL(const XmlNode *pNode, SSLContext *pSSL);
     int  initECDH();
     int  initDH(const char *pFile);
-    int  enableShmSessionCache(const char *pName, int maxEntries);
+    static int setupIdContext(SSL_CTX *pCtx, const void *pDigest,
+                              size_t iDigestLen);
+    int  enableShmSessionCache();
+    int  enableSessionTickets();
+    void disableSessionTickets();
 
     LS_NO_COPY_ASSIGN(SSLContext);
 };

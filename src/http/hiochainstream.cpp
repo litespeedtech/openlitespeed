@@ -148,7 +148,7 @@ int HioChainStream::write(const char *pBuf, int size)
 
 }
 
-int HioChainStream::sendfile(int fdSrc, off_t off, size_t size)
+int HioChainStream::sendfile(int fdSrc, off_t off, off_t size)
 {
     //if (getState()!=HIOS_CONNECTED)
     //    return -1;

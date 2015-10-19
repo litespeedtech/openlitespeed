@@ -46,7 +46,7 @@ class LogFilter
 	function __construct($filename, $type=self::LOGTYPE_ERRLOG)
 	{
 		$this->_logfile = $filename;
-		$this->_logtype = type;
+		$this->_logtype = $type;
 	}
 
 	function Get($field)

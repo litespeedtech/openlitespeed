@@ -534,8 +534,8 @@ static void *llxq_get(ls_llxq_t *pThis, llxqinfo_t **pPInfo, int *pWaitVal)
 
 void *ls_llxq_timedget(ls_llxq_t *pThis, struct timespec *timeout)
 {
-    int waitval;
-    llxqinfo_t *pinfo;
+    int waitval = 0;
+    llxqinfo_t *pinfo = NULL;
     void *data;
     while ((data = llxq_get(pThis, &pinfo, &waitval)) == NULL)
     {

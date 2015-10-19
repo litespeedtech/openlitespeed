@@ -24,7 +24,7 @@
 #include <unistd.h>
 
 
-static const char *g_pShmDirName = LsShm::getDefaultShmDir();
+static const char *g_pShmDirName = "/dev/shm/ols";
 static const char *g_pShmName = NULL;
 static const char *g_pHashName = NULL;
 
@@ -36,6 +36,9 @@ typedef struct
 
 
 char *argv0 = NULL;
+
+#include <util/pool.h>
+Pool g_pool;
 
 
 int chkHashTable(LsShm *pShm, LsShmReg *pReg, int *pMode, int *pLruMode);
@@ -133,7 +136,8 @@ int main(int ac, char *av[])
         return 4;
     }
     if ((pHash = pGPool->getNamedHash(g_pHashName, 0,
-                                      (LsShmHash::hash_fn)(long)mode, (LsShmHash::val_comp)(long)mode,
+                                      (LsShmHasher_fn)(long)mode, 
+                                      (LsShmValComp_fn)(long)mode,
                                       lruMode)) == NULL)
     {
         fprintf(stderr, "getNamedHash(%s,lru=%d) FAILED!\n",
@@ -179,9 +183,9 @@ void doStatShmHash(LsShmHash *pHash)
         (LsShmHTableStat *)pHash->offset2ptr(pHash->getHTableStatOffset());
 
     fprintf(stdout, "SHMHASH [%s]\n\
-current total hash memory: %lu\n",
+current total hash memory: %u\n",
             pHash->name(),
-            (unsigned long)pStat->m_iHashInUse
+            pStat->m_iHashInUse
            );
 
     fprintf(stdout, "checking iterators... ");
@@ -218,8 +222,20 @@ total elements trimmed:    %u\n",
                );
         fprintf(stdout, "LRU linked list... ");
         fflush(stdout);
-        fprintf(stdout, "%s\n",
-                (pHash->check() == SHMLRU_CHECKOK) ? "VERIFIED." : "ERRORS!!!");
+        const char *str;
+        switch (pHash->check())
+        {
+            case SHMLRU_BADINIT:
+                str = "Not an LRU Hash.";
+                break;
+            case SHMLRU_CHECKOK:
+                str = "VERIFIED.";
+                break;
+            default:
+                str = "ERRORS!!!";
+                break;
+        }
+        fprintf(stdout, "%s\n", str);
     }
     return;
 }

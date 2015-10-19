@@ -128,7 +128,7 @@ class DPageDef
 														new DTblMap(array('*map', '*map$name'), 'VT_REWRITE_MAP'),
 										'VT_REWRITE_RULE')),
 										new DTblMap('vhssl',
-												array('LVT_SSL_CERT', 'LVT_SSL', 'VT_SSL_FEATURE', 'LVT_SSL_OCSP', 'LVT_SSL_CLVERIFY')),
+                                                array('LVT_SSL_CERT', 'LVT_SSL', 'VT_SSL_FEATURE', 'LVT_SSL_OCSP', 'LVT_SSL_CLVERIFY')),
 										new DTblMap(array('websocketList:*websocket', '*websocket$uri'), 'VT_WBSOCK'),
 										new DTblMap(array('moduleList:*module','*module$name'),
 												array('VT_MOD',

@@ -25,7 +25,7 @@
 #include <http/reqhandler.h>
 #include <util/autobuf.h>
 #include <log4cxx/ilog.h>
-
+#include <sys/types.h>
 
 class HttpSession;
 class HttpExtProcessor;

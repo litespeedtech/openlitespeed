@@ -149,13 +149,13 @@ public:
     inline LsLuaUserParam *getUserParam()
     {   return m_pUserParam;    }
 
-    inline lsi_cb_param_t *getModParam()
+    inline lsi_param_t *getModParam()
     {   return m_pModParam;    }
 
     inline void setUserParam(LsLuaUserParam *pParam)
     {   m_pUserParam = pParam;  }
 
-    inline void setModParam(lsi_cb_param_t *pParam)
+    inline void setModParam(lsi_param_t *pParam)
     {   m_pModParam = pParam;  }
 
     void releaseTimer();
@@ -192,7 +192,7 @@ private:
     LsLuaTimerData   *m_pMaxTimer;      // track the maxTimer
     LsLuaStreamData *m_pStream;         // my stream pool
     LsLuaUserParam   *m_pUserParam;
-    lsi_cb_param_t   *m_pModParam;
+    lsi_param_t   *m_pModParam;
 
     // Need to track all LUA installed timer
     LsLuaTimerData   *m_pTimerList;

@@ -22,14 +22,14 @@
 lsi_module_t MNAME;
 
 
-static int reg_handler(lsi_cb_param_t *param)
+static int reg_handler(lsi_param_t *param)
 {
     const char *uri;
     int len;
-    uri = g_api->get_req_uri(param->_session, &len);
+    uri = g_api->get_req_uri(param->session, &len);
     if ((len >= 7) && (strncasecmp(uri, "/mytest", 7) == 0))
-        g_api->register_req_handler(param->_session, &MNAME, 7);
-    return LSI_HK_RET_OK;
+        g_api->register_req_handler(param->session, &MNAME, 7);
+    return LSI_OK;
 }
 
 
@@ -49,11 +49,11 @@ static int begin_process(lsi_session_t *session)
 
 static lsi_serverhook_t server_hooks[] =
 {
-    {LSI_HKPT_RECV_REQ_HEADER, reg_handler, LSI_HOOK_FIRST, LSI_HOOK_FLAG_ENABLED},
-    lsi_serverhook_t_END   //Must put this at the end position
+    {LSI_HKPT_RECV_REQ_HEADER, reg_handler, LSI_HOOK_FIRST, LSI_FLAG_ENABLED},
+    LSI_HOOK_END   //Must put this at the end position
 };
 
-static lsi_handler_t myhandler = { begin_process, NULL, NULL, NULL };
+static lsi_reqhdlr_t myhandler = { begin_process, NULL, NULL, NULL };
 lsi_module_t MNAME =
 {
     LSI_MODULE_SIGNATURE, _init, &myhandler, NULL, "", server_hooks

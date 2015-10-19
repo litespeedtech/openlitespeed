@@ -36,12 +36,19 @@ typedef ls_ptrlist_t           ls_strlist_t;
  * @{
  */
 typedef struct ls_str_s        ls_str_t;
-typedef struct ls_str_pair_s   ls_str_pair_t;
+typedef struct ls_strpair_s   ls_strpair_t;
 /**
  * @}
  */
 typedef struct ls_xpool_s      ls_xpool_t;
 
+typedef uint32_t (*h32_fn)(const void *pVal);
+typedef uint64_t (*h64_fn)(const void *pVal);
+typedef int (*v_comp)(const void *pVal1, const void *pVal2);
+
+typedef uint32_t (*h2_32_fn)(const void *pVal, size_t len);
+typedef uint64_t (*h2_64_fn)(const void *pVal, size_t len);
+typedef int (*v2_comp)(const void *pVal1, const void *pVal2, size_t len);
 
 #ifdef __cplusplus
 }

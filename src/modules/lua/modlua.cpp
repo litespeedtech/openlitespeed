@@ -61,39 +61,39 @@ static luaData_t *allocateLuaData(lsi_session_t *session,
 static LsLuaSession *getLuaSess(lsi_session_t *session)
 {
     luaData_t *pData = (luaData_t *)g_api->get_module_data(session, &MNAME,
-                       LSI_MODULE_DATA_HTTP);
+                       LSI_DATA_HTTP);
     if (pData == NULL)
         return NULL;
     return pData->m_pSession;
 }
 
 
-static int runLuaFilter(lsi_cb_param_t *rec, int index)
+static int runLuaFilter(lsi_param_t *rec, int index)
 {
     LsLuaUserParam *pUser;
     const char *pFile;
-    int iFileLen;
-    lsi_session_t *session = rec->_session;
+    int iFileLen = 0;
+    lsi_session_t *session = rec->session;
     luaData_t *pData = (luaData_t *)g_api->get_module_data(session, &MNAME,
-                       LSI_MODULE_DATA_HTTP);
+                       LSI_DATA_HTTP);
     if (pData == NULL)
     {
-        pData = allocateLuaData(session, &MNAME, LSI_MODULE_DATA_HTTP);
+        pData = allocateLuaData(session, &MNAME, LSI_DATA_HTTP);
         if (pData == NULL)
         {
             g_api->log(NULL, LSI_LOG_ERROR,
                        "FAILED TO ALLOCATE MODULE DATA\n");
-            return LSI_HK_RET_ERROR;
+            return LSI_ERROR;
         }
     }
     pData->m_pSession = NULL;
 
-    pUser = (LsLuaUserParam *)g_api->get_module_param(session, &MNAME);
+    pUser = (LsLuaUserParam *)g_api->get_config(session, &MNAME);
     pFile = pUser->getFilterPath(index, iFileLen);
     if (iFileLen <= 0)
     {
         g_api->log(NULL, LSI_LOG_ERROR, "Invalid Lua Filter file.");
-        return LSI_HK_RET_ERROR;
+        return LSI_ERROR;
     }
     if (index == LSLUA_HOOK_BODY)
     {
@@ -105,11 +105,11 @@ static int runLuaFilter(lsi_cb_param_t *rec, int index)
 }
 
 
-int prepLuaFilter(lsi_cb_param_t *rec)
+int prepLuaFilter(lsi_param_t *rec)
 {
     int aEnableHkpt[4], iEnableCount = 0;
-    lsi_session_t *session = rec->_session;
-    LsLuaUserParam *pUser = (LsLuaUserParam *)g_api->get_module_param(session,
+    lsi_session_t *session = rec->session;
+    LsLuaUserParam *pUser = (LsLuaUserParam *)g_api->get_config(session,
                             &MNAME);
     g_api->set_req_wait_full_body(session);
     //TODO: set resp wait full body?
@@ -127,25 +127,25 @@ int prepLuaFilter(lsi_cb_param_t *rec)
         aEnableHkpt[iEnableCount++] = LSI_HKPT_RECV_RESP_BODY;
 
     if (iEnableCount > 0)
-        return g_api->set_session_hook_enable_flag(session, &MNAME, 1,
+        return g_api->enable_hook(session, &MNAME, 1,
                 aEnableHkpt, iEnableCount);
-    return LSI_HK_RET_OK;
+    return LSI_OK;
 }
 
 
-int luaRewrite(lsi_cb_param_t *rec)
+int luaRewrite(lsi_param_t *rec)
 {   return runLuaFilter(rec, LSLUA_HOOK_REWRITE);   }
 
 
-int luaAuthFilter(lsi_cb_param_t *rec)
+int luaAuthFilter(lsi_param_t *rec)
 {   return runLuaFilter(rec, LSLUA_HOOK_AUTH);  }
 
 
-int luaHeaderFilter(lsi_cb_param_t *rec)
+int luaHeaderFilter(lsi_param_t *rec)
 {   return runLuaFilter(rec, LSLUA_HOOK_HEADER);   }
 
 
-int luaBodyFilter(lsi_cb_param_t *rec)
+int luaBodyFilter(lsi_param_t *rec)
 {   return runLuaFilter(rec, LSLUA_HOOK_BODY);  }
 
 
@@ -158,10 +158,10 @@ static int luaHandler(lsi_session_t *session)
     luaData_t *pData;
 
     pData = (luaData_t *)g_api->get_module_data(session, &MNAME,
-            LSI_MODULE_DATA_HTTP);
+            LSI_DATA_HTTP);
     if (pData == NULL)
     {
-        pData = allocateLuaData(session, &MNAME, LSI_MODULE_DATA_HTTP);
+        pData = allocateLuaData(session, &MNAME, LSI_DATA_HTTP);
         if (pData == NULL)
         {
             g_api->log(NULL, LSI_LOG_ERROR,
@@ -170,10 +170,10 @@ static int luaHandler(lsi_session_t *session)
         }
     }
     pData->m_pSession = NULL;
-    pUser = (LsLuaUserParam *)g_api->get_module_param(session, &MNAME);
+    pUser = (LsLuaUserParam *)g_api->get_config(session, &MNAME);
     uri = (char *)g_api->get_req_uri(session, NULL);
 
-    n = g_api->get_req_var_by_id(session, LSI_REQ_VAR_DOC_ROOT, luafile,
+    n = g_api->get_req_var_by_id(session, LSI_VAR_DOC_ROOT, luafile,
                                  MAXFILENAMELEN);
     memmove(luafile + n, uri, strlen(uri));
     n += strlen(uri);
@@ -228,8 +228,8 @@ static int onWriteEvent(lsi_session_t *session)
 
     if ((pSession != NULL)
         && (pSession->onWrite(session) == 1))
-        return LSI_WRITE_RESP_CONTINUE;
-    return LSI_WRITE_RESP_FINISHED;
+        return LSI_RSP_MORE;
+    return LSI_RSP_DONE;
 }
 
 
@@ -237,13 +237,13 @@ static lsi_serverhook_t serverHooks[] =
 {
     {
         LSI_HKPT_HTTP_BEGIN, prepLuaFilter, LSI_HOOK_EARLY,
-        LSI_HOOK_FLAG_ENABLED
+        LSI_FLAG_ENABLED
     },
     { LSI_HKPT_URI_MAP, luaRewrite, LSI_HOOK_EARLY, 0 },
     { LSI_HKPT_HTTP_AUTH, luaAuthFilter, LSI_HOOK_EARLY, 0 },
     { LSI_HKPT_RCVD_RESP_HEADER, luaHeaderFilter, LSI_HOOK_EARLY, 0 },
     { LSI_HKPT_RECV_RESP_BODY, luaBodyFilter, LSI_HOOK_EARLY, 0 },
-    lsi_serverhook_t_END
+    LSI_HOOK_END
 };
 
 
@@ -251,10 +251,10 @@ static int _init(lsi_module_t *pModule)
 {
     if (LsLuaEngine::init() != 0)
         return LS_FAIL;
-    pModule->_info = LsLuaEngine::version();
+    pModule->about = LsLuaEngine::version();
     g_api->log(NULL, LSI_LOG_NOTICE, "LUA: %s ENGINE READY\n",
                LsLuaEngine::getLuaName());
-    g_api->init_module_data(pModule, releaseLuaData, LSI_MODULE_DATA_HTTP);
+    g_api->init_module_data(pModule, releaseLuaData, LSI_DATA_HTTP);
     return 0;
 }
 
@@ -266,11 +266,11 @@ const char *myParam[] =
     NULL
 };
 
-static lsi_handler_t lslua_mod_handler = { luaHandler, onReadEvent,
+static lsi_reqhdlr_t lslua_mod_handler = { luaHandler, onReadEvent,
                                            onWriteEvent, onCleanupEvent
                                          };
 
-static lsi_config_t lslua_mod_config = { LsLuaEngine::parseParam,
+static lsi_confparser_t lslua_mod_config = { LsLuaEngine::parseParam,
                                          LsLuaEngine::removeParam,
                                          myParam
                                        };

@@ -404,6 +404,9 @@ int SslOcspStapling::certVerify(OCSP_RESPONSE *pResponse,
                 m_RespTime = st.st_mtime;
         }
     }
+    else
+        Logger::getRootLogger()->error("OCSP_basic_verify() failed: %s\n",
+                                       SSLError().what());
     if (iResult)
     {
         setLastErrMsg("%s", SSLError().what());
@@ -513,25 +516,21 @@ int SslOcspStapling::getCertId(X509 *pCert)
 
 void SslOcspStapling::setCertFile(const char *Certfile)
 {
-    char RespFile[4096];
+    char RespFile[4096], *pExt;
     unsigned char md5[16];
-    char *p;
+    char md5Str[35] = {0};
+    int iLen;
     m_sCertfile.setStr(Certfile);
-    //strcat(RespFile, HttpGlobals::s_pServerRoot);
-    //strcat(RespFile, "/tmp/ocspcache/R");
-    strcpy(RespFile, s_pRespTempPath);
-    p = &RespFile[s_iRespTempPathLen];
-    *p++ = 'R';
     StringTool::getMd5(Certfile, strlen(Certfile), md5);
-    StringTool::hexEncode((const char *)md5, 16, p);
-    p += 32;
-
-    strcpy(p , ".rsp");
-    p += 4;
-    m_sRespfile.setStr(RespFile, p - RespFile);
-    strcpy(p, ".tmp");
-    p += 3;
-    m_sRespfileTmp.setStr(RespFile, p - RespFile);
+    StringTool::hexEncode((const char *)md5, 16, md5Str);
+    md5Str[32] = 0;
+    iLen = snprintf(RespFile, 4095, "%.*sR%s", s_iRespTempPathLen,
+                    s_pRespTempPath, md5Str);
+    pExt = RespFile + iLen;
+    snprintf(pExt, 5, ".rsp");
+    m_sRespfile.setStr(RespFile);
+    snprintf(pExt, 5, ".tmp");
+    m_sRespfileTmp.setStr(RespFile);
 }
 
 

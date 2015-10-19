@@ -25,26 +25,26 @@
 #define     MNAME       testhttpauth
 lsi_module_t MNAME;
 
-int httpAuth(lsi_cb_param_t *rec)
+int httpAuth(lsi_param_t *rec)
 {
     //test if the IP is 127.0.0.1 pass through, otherwise, reply 403
     char ip[16] = {0};
-    g_api->get_req_var_by_id(rec->_session, LSI_REQ_GEOIP_ADDR, ip, 16);
+    g_api->get_req_var_by_id(rec->session, LSI_VAR_GEOIP_ADDR, ip, 16);
     if (strcmp(ip, "127.0.0.1") == 0)
-        return LSI_HK_RET_OK;
+        return LSI_OK;
     else
     {
-        g_api->set_status_code(rec->_session, 403);
-        g_api->log(rec->_session, LSI_LOG_INFO, "Access denied since ip = %s.\n",
+        g_api->set_status_code(rec->session, 403);
+        g_api->log(rec->session, LSI_LOG_INFO, "Access denied since ip = %s.\n",
                    ip);
-        return LSI_HK_RET_ERROR;
+        return LSI_ERROR;
     }
 }
 
 static lsi_serverhook_t serverHooks[] =
 {
-    {LSI_HKPT_HTTP_AUTH, httpAuth, LSI_HOOK_NORMAL, LSI_HOOK_FLAG_ENABLED},
-    lsi_serverhook_t_END   //Must put this at the end position
+    {LSI_HKPT_HTTP_AUTH, httpAuth, LSI_HOOK_NORMAL, LSI_FLAG_ENABLED},
+    LSI_HOOK_END   //Must put this at the end position
 };
 
 static int _init(lsi_module_t *pModule)

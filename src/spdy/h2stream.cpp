@@ -30,8 +30,6 @@ H2Stream::H2Stream()
     , m_iWindowOut(H2_FCW_INIT_SIZE)
     , m_iWindowIn(H2_FCW_INIT_SIZE)
     , m_pH2Conn(NULL)
-    , m_iContentLen(-1)
-    , m_iContentRead(0)
     , m_reqHeaderEnd(0)
 {
 }
@@ -75,7 +73,8 @@ int H2Stream::init(uint32_t StreamID, H2Connection *pH2Conn, uint8_t flags,
     setPriority(pri);
 
     m_pH2Conn = pH2Conn;
-    LS_DBG_L(this, "H2Stream::init(), id: %d, priority: %d.", StreamID, pri);
+    LS_DBG_L(this, "H2Stream::init(), id: %d, priority: %d, flag: %d. ",
+             StreamID, pri, (int)getFlag());
     return 0;
 }
 
@@ -105,7 +104,6 @@ int H2Stream::appendReqData(char *pData, int len, uint8_t flags)
 {
     if (m_bufIn.append(pData, len) == -1)
         return LS_FAIL;
-    m_iContentRead += len;
     if (isFlowCtrl())
         m_iWindowIn -= len;
     //Note: H2_CTRL_FLAG_FIN is directly mapped to HIO_FLAG_PEER_SHUTDOWN
@@ -113,7 +111,7 @@ int H2Stream::appendReqData(char *pData, int len, uint8_t flags)
     if (flags & H2_CTRL_FLAG_FIN)
     {
         setFlag(H2_CTRL_FLAG_FIN, 1);
-        if (m_iContentLen != -1 && m_iContentLen != m_iContentRead)
+        if (getHandler()->detectContentLenMismatch(m_bufIn.size()))
             return LS_FAIL;
     }
     if (isWantRead())
@@ -194,7 +192,7 @@ NtwkIOLink *H2Stream::getNtwkIoLink()
 
 int H2Stream::shutdown()
 {
-    if (getState() == HIOS_SHUTDOWN)
+    if (getState() >= HIOS_SHUTDOWN)
         return 0;
 
     setState(HIOS_SHUTDOWN);
@@ -287,7 +285,6 @@ int H2Stream::writev(const struct iovec *vec, int count)
 
 int H2Stream::write(const char *buf, int len)
 {
-    IOVec iov;
     int allowed;
     if (getState() == HIOS_DISCONNECTED)
         return LS_FAIL;
@@ -295,10 +292,8 @@ int H2Stream::write(const char *buf, int len)
     if (allowed <= 0)
         return 0;
 
-    iov.append(buf, allowed);
-    if (sendData(&iov, allowed) == -1)
-        return LS_FAIL;
-    return allowed;
+    int ret = m_pH2Conn->sendDataFrame(m_uiStreamID, 0, buf, allowed);
+    return dataSent(ret);
 }
 
 
@@ -324,6 +319,12 @@ int H2Stream::sendData(IOVec *pIov, int total)
     int ret;
     ret = m_pH2Conn->sendDataFrame(m_uiStreamID, 0, pIov, total);
     LS_DBG_L(this, "H2Stream::sendData(), total: %d, ret: %d", total, ret);
+    return dataSent(ret);
+}
+
+
+int H2Stream::dataSent(int ret)
+{
     if (ret == -1)
     {
         setFlag(HIO_FLAG_ABORT, 1);
@@ -331,17 +332,17 @@ int H2Stream::sendData(IOVec *pIov, int total)
     }
 
     setActiveTime(DateTime::s_curTime);
-    bytesSent(total);
+    bytesSent(ret);
     if (isFlowCtrl())
     {
-        m_iWindowOut -= total;
-        LS_DBG_L(this, "Sent: %lld, current window: %d.",
+        m_iWindowOut -= ret;
+        LS_DBG_L(this, "sent: %lld, current window: %d",
                  (uint64_t)getBytesSent(), m_iWindowOut);
 
         if (m_iWindowOut <= 0)
             setFlag(HIO_FLAG_BUFF_FULL, 1);
     }
-    return total;
+    return ret;
 }
 
 

@@ -62,9 +62,9 @@ typedef struct _MyData
 } MyData;
 
 /*Function Declarations*/
-static int setWaitFull(lsi_cb_param_t *rec);
-static int scanForImage(lsi_cb_param_t *rec);
-static int parseParameters(lsi_cb_param_t *rec, MyData *myData);
+static int setWaitFull(lsi_param_t *rec);
+static int scanForImage(lsi_param_t *rec);
+static int parseParameters(lsi_param_t *rec, MyData *myData);
 static int getReqDimensions(const char *buf, int iLen, int *width,
                             int *height);
 static void *resizeImage(const char *buf, int bufLen, int width,
@@ -77,35 +77,35 @@ int httpRelease(void *data)
     return 0;
 }
 
-int httpinit(lsi_cb_param_t *rec)
+int httpinit(lsi_param_t *rec)
 {
     MyData *myData;
-    ls_xpool_t *pool = g_api->get_session_pool(rec->_session);
+    ls_xpool_t *pool = g_api->get_session_pool(rec->session);
     myData = ls_xpool_alloc(pool, sizeof(MyData));
     ls_loopbuf_x(&myData->inWBuf, MAX_BLOCK_BUFSIZE, pool);
     ls_loopbuf_x(&myData->outWBuf, MAX_BLOCK_BUFSIZE, pool);
 
     g_api->log(NULL, LSI_LOG_DEBUG, "#### mymoduleresize init\n");
-    g_api->set_module_data(rec->_session, &MNAME, LSI_MODULE_DATA_HTTP,
+    g_api->set_module_data(rec->session, &MNAME, LSI_DATA_HTTP,
                            (void *)myData);
     return 0;
 }
 
-static int setWaitFull(lsi_cb_param_t *rec)
+static int setWaitFull(lsi_param_t *rec)
 {
-    g_api->set_resp_wait_full_body(rec->_session);
-    return LSI_HK_RET_OK;
+    g_api->set_resp_wait_full_body(rec->session);
+    return LSI_OK;
 }
 
 /* Returns 0 for image, 1 for wrong input */
-static int parseParameters(lsi_cb_param_t *rec, MyData *myData)
+static int parseParameters(lsi_param_t *rec, MyData *myData)
 {
     int iLen;
     const char *ptr;
     struct iovec iov;
 
-    if ((iLen = g_api->get_resp_header(rec->_session,
-                                       LSI_RESP_HEADER_CONTENT_TYPE, NULL, 0, &iov, 1)) < 1
+    if ((iLen = g_api->get_resp_header(rec->session,
+                                       LSI_RSPHDR_CONTENT_TYPE, NULL, 0, &iov, 1)) < 1
         || iov.iov_len < 9
        )
         return 1;
@@ -195,27 +195,27 @@ static void *resizeImage(const char *buf, int bufLen, int width,
     return ptr;
 }
 
-static int scanForImage(lsi_cb_param_t *rec)
+static int scanForImage(lsi_param_t *rec)
 {
     off_t offset = 0;
     int iSrcSize, iDestSize, iWidth = 0, iHeight = 0, iLen = 0;
     void *pRespBodyBuf, *pSrcBuf, *pDestBuf;
     const char *ptr, *pDimensions;
-    MyData *myData = (MyData *)g_api->get_module_data(rec->_session, &MNAME,
-                     LSI_MODULE_DATA_HTTP);
-    ls_xpool_t *pPool = g_api->get_session_pool(rec->_session);
+    MyData *myData = (MyData *)g_api->get_module_data(rec->session, &MNAME,
+                     LSI_DATA_HTTP);
+    ls_xpool_t *pPool = g_api->get_session_pool(rec->session);
 
     if (parseParameters(rec, myData) == 0)
     {
 
-        pDimensions = g_api->get_req_query_string(rec->_session, &iLen);
+        pDimensions = g_api->get_req_query_string(rec->session, &iLen);
         if ((iLen == 0)
             || (getReqDimensions(pDimensions, iLen, &iWidth, &iHeight) != 0)
            )
-            return LSI_HK_RET_OK;
-        pRespBodyBuf = g_api->get_resp_body_buf(rec->_session);
+            return LSI_OK;
+        pRespBodyBuf = g_api->get_resp_body_buf(rec->session);
         if (!pRespBodyBuf)
-            return LSI_HK_RET_OK;
+            return LSI_OK;
         iSrcSize = g_api->get_body_buf_size(pRespBodyBuf);
         pSrcBuf = ls_xpool_alloc(pPool, iSrcSize);
         while (!g_api->is_body_buf_eof(pRespBodyBuf, offset))
@@ -229,40 +229,40 @@ static int scanForImage(lsi_cb_param_t *rec)
         }
     }
     else
-        return LSI_HK_RET_OK;
+        return LSI_OK;
     g_api->reset_body_buf(pRespBodyBuf, 1);
     if (g_api->append_body_buf(pRespBodyBuf, pSrcBuf, iSrcSize) != iSrcSize)
-        return LSI_HK_RET_ERROR;
+        return LSI_ERROR;
     iSrcSize = g_api->get_body_buf_size(pRespBodyBuf);
 
     pDestBuf = resizeImage(pSrcBuf, iSrcSize, iWidth, iHeight, myData,
                            &iDestSize);
     if (!pDestBuf)
-        return LSI_HK_RET_ERROR;
+        return LSI_ERROR;
 
-    while (g_api->is_resp_buffer_available(rec->_session) <= 0);
+    while (g_api->is_resp_buffer_available(rec->session) <= 0);
 
 
     g_api->reset_body_buf(pRespBodyBuf, 1);
     if (g_api->append_body_buf(pRespBodyBuf, pDestBuf, iDestSize) != iDestSize)
-        return LSI_HK_RET_ERROR;
-    g_api->set_resp_content_length(rec->_session, iDestSize);
+        return LSI_ERROR;
+    g_api->set_resp_content_length(rec->session, iDestSize);
 
     gdFree(pDestBuf);
-    return LSI_HK_RET_OK;
+    return LSI_OK;
 }
 
 static lsi_serverhook_t serverHooks[] =
 {
-    {LSI_HKPT_HTTP_BEGIN, httpinit, LSI_HOOK_NORMAL, LSI_HOOK_FLAG_ENABLED},
-    {LSI_HKPT_RECV_REQ_HEADER, setWaitFull, LSI_HOOK_NORMAL, LSI_HOOK_FLAG_ENABLED},
-    {LSI_HKPT_SEND_RESP_HEADER, scanForImage, LSI_HOOK_NORMAL, LSI_HOOK_FLAG_ENABLED},
-    lsi_serverhook_t_END   //Must put this at the end position
+    {LSI_HKPT_HTTP_BEGIN, httpinit, LSI_HOOK_NORMAL, LSI_FLAG_ENABLED},
+    {LSI_HKPT_RECV_REQ_HEADER, setWaitFull, LSI_HOOK_NORMAL, LSI_FLAG_ENABLED},
+    {LSI_HKPT_SEND_RESP_HEADER, scanForImage, LSI_HOOK_NORMAL, LSI_FLAG_ENABLED},
+    LSI_HOOK_END   //Must put this at the end position
 };
 
 static int _init(lsi_module_t *pModule)
 {
-    g_api->init_module_data(pModule, httpRelease, LSI_MODULE_DATA_HTTP);
+    g_api->init_module_data(pModule, httpRelease, LSI_DATA_HTTP);
     return 0;
 }
 

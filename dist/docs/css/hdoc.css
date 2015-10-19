@@ -20,6 +20,7 @@ ol li, ul li {	margin: 7px 0;}
 
 .sidetree ul { list-style-type: none; padding:5px; margin:0; }
 .sidetree ul .level2 { list-style-type: square; padding: 0 0 0 25px; margin:0;  }
+.sidetree ul .level3 { list-style-type: circle; padding: 0 0 0 25px; margin:0;  }
 .sidetree .current a, .sidetree .current a:visited {color:#db8406;font-weight:bold;}
 
 a, a:visited {text-decoration: none; color: #3f81c3; }

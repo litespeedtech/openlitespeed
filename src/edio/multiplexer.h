@@ -47,6 +47,8 @@ public:
     virtual void suspendWrite(EventReactor *pHandler);
     virtual void switchWriteToRead(EventReactor *pHandler);
     virtual void switchReadToWrite(EventReactor *pHandler);
+    virtual void modEvent(EventReactor *pHandler, short mask, int add_remove);
+    virtual void setEventMask(EventReactor *pHandler, short mask);
 
     virtual void resetRevents(EventReactor *pHandler, short event)
     {   pHandler->resetRevent(event); }

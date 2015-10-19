@@ -32,23 +32,23 @@ int write_log(const char *sHookName)
     return 0;
 }
 
-int writeALog1(lsi_cb_param_t *rec) {   return write_log("LSI_HKPT_MAIN_INITED"); }
-int writeALog2(lsi_cb_param_t *rec) {   return write_log("LSI_HKPT_MAIN_PREFORK"); }
-int writeALog3(lsi_cb_param_t *rec) {   return write_log("LSI_HKPT_MAIN_POSTFORK"); }
-int writeALog4(lsi_cb_param_t *rec) {   return write_log("LSI_HKPT_WORKER_POSTFORK"); }
-int writeALog5(lsi_cb_param_t *rec) {   return write_log("LSI_HKPT_WORKER_ATEXIT"); }
-int writeALog6(lsi_cb_param_t *rec) {   return write_log("LSI_HKPT_MAIN_ATEXIT"); }
+int writeALog1(lsi_param_t *rec) {   return write_log("LSI_HKPT_MAIN_INITED"); }
+int writeALog2(lsi_param_t *rec) {   return write_log("LSI_HKPT_MAIN_PREFORK"); }
+int writeALog3(lsi_param_t *rec) {   return write_log("LSI_HKPT_MAIN_POSTFORK"); }
+int writeALog4(lsi_param_t *rec) {   return write_log("LSI_HKPT_WORKER_INIT"); }
+int writeALog5(lsi_param_t *rec) {   return write_log("LSI_HKPT_WORKER_ATEXIT"); }
+int writeALog6(lsi_param_t *rec) {   return write_log("LSI_HKPT_MAIN_ATEXIT"); }
 
 
 static lsi_serverhook_t serverHooks[] =
 {
-    { LSI_HKPT_MAIN_INITED,    writeALog1, LSI_HOOK_NORMAL, LSI_HOOK_FLAG_ENABLED},
-    { LSI_HKPT_MAIN_PREFORK,      writeALog2, LSI_HOOK_NORMAL, LSI_HOOK_FLAG_ENABLED},
-    { LSI_HKPT_MAIN_POSTFORK,     writeALog3, LSI_HOOK_NORMAL, LSI_HOOK_FLAG_ENABLED},
-    { LSI_HKPT_WORKER_POSTFORK,         writeALog4, LSI_HOOK_NORMAL, LSI_HOOK_FLAG_ENABLED},
-    { LSI_HKPT_WORKER_ATEXIT,         writeALog5, LSI_HOOK_NORMAL, LSI_HOOK_FLAG_ENABLED},
-    { LSI_HKPT_MAIN_ATEXIT,         writeALog6, LSI_HOOK_NORMAL, LSI_HOOK_FLAG_ENABLED},
-    lsi_serverhook_t_END   //Must put this at the end position
+    { LSI_HKPT_MAIN_INITED,    writeALog1, LSI_HOOK_NORMAL, LSI_FLAG_ENABLED},
+    { LSI_HKPT_MAIN_PREFORK,   writeALog2, LSI_HOOK_NORMAL, LSI_FLAG_ENABLED},
+    { LSI_HKPT_MAIN_POSTFORK,  writeALog3, LSI_HOOK_NORMAL, LSI_FLAG_ENABLED},
+    { LSI_HKPT_WORKER_INIT,    writeALog4, LSI_HOOK_NORMAL, LSI_FLAG_ENABLED},
+    { LSI_HKPT_WORKER_ATEXIT,  writeALog5, LSI_HOOK_NORMAL, LSI_FLAG_ENABLED},
+    { LSI_HKPT_MAIN_ATEXIT,    writeALog6, LSI_HOOK_NORMAL, LSI_FLAG_ENABLED},
+    LSI_HOOK_END   //Must put this at the end position
 };
 
 static int _init(lsi_module_t *pModule)

@@ -51,7 +51,7 @@ public:
     int writev(const struct iovec *vec, int count);
     int writev(IOVec &vector, int total);
 
-    int sendfile(int fdSrc, off_t off, size_t size)
+    int sendfile(int fdSrc, off_t off, off_t size)
     {        return 0;    };
 
     void switchWriteToRead() {};

@@ -98,7 +98,7 @@ class DTblDef extends DTblDefBase
             DTblDefBase::NewParseTextAttr('uploadTmpFilePermission', DMsg::ALbl('l_uploadtmpfilepermission'), $this->_options['parseFormat']['filePermission3'], DMsg::ALbl('parse_uploadtmpfilepermission')),
             DTblDefBase::NewBoolAttr('uploadPassByPath', DMsg::ALbl('l_uploadpassbypath'))
 		);
-		$this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_uploadfile'), $attrs, 'TABLEfileUpload');
+		$this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_uploadfile'), $attrs, 'fileUpload');
     }
 
     protected function add_VT_FILEUPLOAD($id)
@@ -108,7 +108,7 @@ class DTblDef extends DTblDefBase
             DTblDefBase::NewParseTextAttr('uploadTmpFilePermission', DMsg::ALbl('l_uploadtmpfilepermission'), $this->_options['parseFormat']['filePermission3'], DMsg::ALbl('parse_uploadtmpfilepermission')),
             DTblDefBase::NewBoolAttr('uploadPassByPath', DMsg::ALbl('l_uploadpassbypath'))
 		);
-		$this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_uploadfile'), $attrs, 'TABLEfileUpload');
+		$this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_uploadfile'), $attrs, 'fileUpload');
     }
 
 	protected function add_S_TUNING_OS($id) //keep
@@ -187,7 +187,7 @@ class DTblDef extends DTblDefBase
 		foreach($tags as $tag) {
 			$attrs[] = DTblDefBase::NewIntAttr($tag, "$hook $tag $priority", true, -6000, 6000);
 		}
-		$this->_tblDef[$id] = DTbl::NewIndexed($id, DMsg::ALbl('l_servermoduledef'), $attrs, 'name', 'TABLEservModules');
+		$this->_tblDef[$id] = DTbl::NewIndexed($id, DMsg::ALbl('l_servermoduledef'), $attrs, 'name', 'servModules');
 	}
 
 	protected function add_VT_MOD_TOP($id)
@@ -199,7 +199,7 @@ class DTblDef extends DTblDefBase
 					$this->_attrs['mod_enabled']->dup(NULL, NULL, 'moduleEnabled_vh'),
 					DTblDefBase::NewActionAttr('VT_MOD', 'vEd')
 		);
-		$this->_tblDef[$id] = DTbl::NewTop($id, DMsg::ALbl('l_moduleconf'), $attrs, 'name', 'VT_MOD', $align, 'TABLEvhModules', 'module', TRUE);
+		$this->_tblDef[$id] = DTbl::NewTop($id, DMsg::ALbl('l_moduleconf'), $attrs, 'name', 'VT_MOD', $align, 'vhModules', 'module', TRUE);
 	}
 
 	protected function add_VT_MOD($id)
@@ -210,7 +210,7 @@ class DTblDef extends DTblDefBase
 						$this->_attrs['mod_enabled']->dup(NULL, NULL, 'moduleEnabled_vh')
 		);
 
-		$this->_tblDef[$id] = DTbl::NewIndexed($id, DMsg::ALbl('l_moduleconf'), $attrs, 'name', 'TABLEvhModules');
+		$this->_tblDef[$id] = DTbl::NewIndexed($id, DMsg::ALbl('l_moduleconf'), $attrs, 'name', 'vhModules');
 		$this->_tblDef[$id]->Set(DTbl::FLD_LINKEDTBL, array('VT_MOD_FILTERTOP'));
 	}
 
@@ -224,7 +224,7 @@ class DTblDef extends DTblDefBase
 				DTblDefBase::NewActionAttr('VT_MOD_FILTER', 'vEd')
 		);
 
-		$this->_tblDef[$id] = DTbl::NewTop($id, DMsg::ALbl('l_urlfilter'), $attrs, 'uri', 'VT_MOD_FILTER', $align, 'TABLEvhModuleUrlFilters', 'filter', FALSE);
+		$this->_tblDef[$id] = DTbl::NewTop($id, DMsg::ALbl('l_urlfilter'), $attrs, 'uri', 'VT_MOD_FILTER', $align, 'vhModuleUrlFilters', 'filter', FALSE);
 		$this->_tblDef[$id]->Set(Dtbl::FLD_SHOWPARENTREF, true);
 	}
 
@@ -235,7 +235,7 @@ class DTblDef extends DTblDefBase
 					$this->_attrs['mod_enabled']->dup(NULL, NULL, 'moduleEnabled_vh')
 		);
 
-		$this->_tblDef[$id] = DTbl::NewIndexed($id, DMsg::ALbl('l_urlfilter'), $attrs, 'uri', 'TABLEvhModuleUrlFilters');
+		$this->_tblDef[$id] = DTbl::NewIndexed($id, DMsg::ALbl('l_urlfilter'), $attrs, 'uri', 'vhModuleUrlFilters');
 		$this->_tblDef[$id]->Set(Dtbl::FLD_SHOWPARENTREF, true);
 	}
 
@@ -248,7 +248,7 @@ class DTblDef extends DTblDefBase
 						$this->_attrs['mod_enabled']->dup(NULL, NULL, 'moduleEnabled_lst'),
 						DTblDefBase::NewActionAttr('L_MOD', 'vEd')
 		);
-		$this->_tblDef[$id] = DTbl::NewTop($id, DMsg::ALbl('l_moduleconf'), $attrs, 'name', 'L_MOD', $align, 'TABLElistenerModules', 'module', TRUE);
+		$this->_tblDef[$id] = DTbl::NewTop($id, DMsg::ALbl('l_moduleconf'), $attrs, 'name', 'L_MOD', $align, 'listenerModules', 'module', TRUE);
 	}
 
 	protected function add_L_MOD($id)
@@ -258,7 +258,7 @@ class DTblDef extends DTblDefBase
 						$this->_attrs['mod_params'],
 						$this->_attrs['mod_enabled']->dup(NULL, NULL, 'moduleEnabled_lst')
 		);
-		$this->_tblDef[$id] = DTbl::NewIndexed($id, DMsg::ALbl('l_moduleconf'), $attrs, 'name', 'TABLElistenerModules');
+		$this->_tblDef[$id] = DTbl::NewIndexed($id, DMsg::ALbl('l_moduleconf'), $attrs, 'name', 'listenerModules');
 	}
 
 	protected function add_V_TOPD($id)
@@ -303,7 +303,7 @@ class DTblDef extends DTblDefBase
 			DTblDefBase::NewViewAttr('userDB:location', DMsg::ALbl('l_userdblocation'), 'userDBLocation'),
 			DTblDefBase::NewActionAttr('V_REALM_FILE', 'vEd')
 		);
-		$this->_tblDef[$id] = DTbl::NewTop($id, DMsg::ALbl('l_realmlist'), $attrs, 'name', 'V_REALM_FILE', $align, 'TABLErealms', 'shield', TRUE);
+		$this->_tblDef[$id] = DTbl::NewTop($id, DMsg::ALbl('l_realmlist'), $attrs, 'name', 'V_REALM_FILE', $align, 'realms', 'shield', TRUE);
 	}
 
 	protected function add_T_REALM_TOP($id)
@@ -316,7 +316,7 @@ class DTblDef extends DTblDefBase
 				DTblDefBase::NewViewAttr('userDB:location', DMsg::ALbl('l_userdblocation'), 'userDBLocation'),
 				DTblDefBase::NewActionAttr('T_REALM_FILE', 'vEd')
 		);
-		$this->_tblDef[$id] = DTbl::NewTop($id, DMsg::ALbl('l_realmlist'), $attrs, 'name', 'T_REALM_FILE', $align, 'TABLErealms', 'shield', TRUE);
+		$this->_tblDef[$id] = DTbl::NewTop($id, DMsg::ALbl('l_realmlist'), $attrs, 'name', 'T_REALM_FILE', $align, 'realms', 'shield', TRUE);
 	}
 
 	protected function add_VT_CTX_TOP($id)
@@ -358,7 +358,7 @@ class DTblDef extends DTblDefBase
 				$this->get_ctx_attrs('charset')
 		);
 		$defaultExtract = array('type'=>'NULL');
-		$this->_tblDef[$id] = DTbl::NewIndexed($id, DMsg::ALbl('l_ctxg'), $attrs, 'uri', 'TABLEgeneralContext', $defaultExtract);
+		$this->_tblDef[$id] = DTbl::NewIndexed($id, DMsg::ALbl('l_ctxg'), $attrs, 'uri', 'generalContext', $defaultExtract);
 	}
 
 	protected function add_VT_CTXJ($id)
@@ -379,7 +379,7 @@ class DTblDef extends DTblDefBase
 				$this->get_ctx_attrs('charset')
 		);
 		$defaultExtract = array('type'=>'webapp');
-		$this->_tblDef[$id] = DTbl::NewIndexed($id, DMsg::ALbl('l_ctxj'), $attrs, 'uri', 'TABLEjavaWebAppContext', $defaultExtract);
+		$this->_tblDef[$id] = DTbl::NewIndexed($id, DMsg::ALbl('l_ctxj'), $attrs, 'uri', 'javaWebAppContext', $defaultExtract);
 	}
 
 	protected function add_VT_CTXRL($id)
@@ -387,7 +387,7 @@ class DTblDef extends DTblDefBase
 		$attrs = array_merge(
 				$this->get_ctx_attrs('uri'),
 				array(
-						$this->_attrs['ctx_location'],
+                        DTblDefBase::NewTextAttr('location', DMsg::ALbl('l_location'), 'cust', false, 'rails_location'),
 						$this->_attrs['note'],
 						$this->_attrs['railsEnv'],
 						DTblDefBase::NewIntAttr('maxConns', DMsg::ALbl('l_maxconns'), true, 1, 2000),
@@ -402,7 +402,7 @@ class DTblDef extends DTblDefBase
 				$this->get_ctx_attrs('charset')
 		);
 		$defaultExtract = array('type'=>'rails');
-		$this->_tblDef[$id] = DTbl::NewIndexed($id, DMsg::ALbl('l_ctxrl'), $attrs, 'uri', 'TABLErailsContext', $defaultExtract);
+		$this->_tblDef[$id] = DTbl::NewIndexed($id, DMsg::ALbl('l_ctxrl'), $attrs, 'uri', 'railsContext', $defaultExtract);
 	}
 
 	protected function add_VT_CTXS($id)
@@ -417,7 +417,7 @@ class DTblDef extends DTblDefBase
 				$this->get_ctx_attrs('charset')
 		);
 		$defaultExtract = array('type'=>'servlet');
-		$this->_tblDef[$id] = DTbl::NewIndexed($id, DMsg::ALbl('l_ctxs'), $attrs, 'uri', 'TABLEservletContext', $defaultExtract);
+		$this->_tblDef[$id] = DTbl::NewIndexed($id, DMsg::ALbl('l_ctxs'), $attrs, 'uri', 'servletContext', $defaultExtract);
 	}
 
 	protected function add_VT_CTXF($id)
@@ -432,7 +432,7 @@ class DTblDef extends DTblDefBase
 						$this->get_ctx_attrs('charset')
 				);
 		$defaultExtract = array('type'=>'fcgi');
-		$this->_tblDef[$id] = DTbl::NewIndexed($id, DMsg::ALbl('l_ctxf'), $attrs, 'uri', 'TABLEfcgiContext', $defaultExtract);
+		$this->_tblDef[$id] = DTbl::NewIndexed($id, DMsg::ALbl('l_ctxf'), $attrs, 'uri', 'fcgiContext', $defaultExtract);
 	}
 
 
@@ -448,7 +448,7 @@ class DTblDef extends DTblDefBase
 				$this->get_ctx_attrs('charset')
 		);
 		$defaultExtract = array('type'=>'lsapi');
-		$this->_tblDef[$id] = DTbl::NewIndexed($id, DMsg::ALbl('l_ctxl'), $attrs, 'uri', 'TABLElsapiContext', $defaultExtract);
+		$this->_tblDef[$id] = DTbl::NewIndexed($id, DMsg::ALbl('l_ctxl'), $attrs, 'uri', 'lsapiContext', $defaultExtract);
 	}
 
 	protected function add_VT_CTXMD($id)
@@ -464,7 +464,7 @@ class DTblDef extends DTblDefBase
 				$this->get_ctx_attrs('charset')
 		);
 		$defaultExtract = array('type'=>'module');
-		$this->_tblDef[$id] = DTbl::NewIndexed($id, DMsg::ALbl('l_ctxmd'), $attrs, 'uri', 'TABLElmodContext', $defaultExtract);
+		$this->_tblDef[$id] = DTbl::NewIndexed($id, DMsg::ALbl('l_ctxmd'), $attrs, 'uri', 'lmodContext', $defaultExtract);
 	}
 
 	protected function add_VT_CTXB($id)
@@ -478,7 +478,7 @@ class DTblDef extends DTblDefBase
 				$this->get_ctx_attrs('charset')
 		);
 		$defaultExtract = array('type'=>'loadbalancer');
-		$this->_tblDef[$id] = DTbl::NewIndexed($id, DMsg::ALbl('l_ctxb'), $attrs, 'uri', 'TABLElbContext', $defaultExtract);
+		$this->_tblDef[$id] = DTbl::NewIndexed($id, DMsg::ALbl('l_ctxb'), $attrs, 'uri', 'lbContext', $defaultExtract);
 	}
 
 	protected function add_VT_CTXP($id)
@@ -493,7 +493,7 @@ class DTblDef extends DTblDefBase
 				$this->get_ctx_attrs('charset')
 		);
 		$defaultExtract = array('type'=>'proxy');
-		$this->_tblDef[$id] = DTbl::NewIndexed($id, DMsg::ALbl('l_ctxp'), $attrs, 'uri', 'TABLEproxyContext', $defaultExtract);
+		$this->_tblDef[$id] = DTbl::NewIndexed($id, DMsg::ALbl('l_ctxp'), $attrs, 'uri', 'proxyContext', $defaultExtract);
 	}
 
 	protected function add_VT_CTXC($id)
@@ -510,7 +510,7 @@ class DTblDef extends DTblDefBase
 				$this->get_ctx_attrs('charset')
 		);
 		$defaultExtract = array('type'=>'cgi');
-		$this->_tblDef[$id] = DTbl::NewIndexed($id, DMsg::ALbl('l_ctxc'), $attrs, 'uri', 'TABLEcgiContext', $defaultExtract);
+		$this->_tblDef[$id] = DTbl::NewIndexed($id, DMsg::ALbl('l_ctxc'), $attrs, 'uri', 'cgiContext', $defaultExtract);
 	}
 
 	protected function add_VT_CTXR($id)
@@ -527,7 +527,7 @@ class DTblDef extends DTblDefBase
 				$this->get_ctx_attrs('auth')
 		);
 		$defaultExtract = array('type'=>'redirect');
-		$this->_tblDef[$id] = DTbl::NewIndexed($id, DMsg::ALbl('l_ctxr'), $attrs, 'uri', 'TABLEredirectContext', $defaultExtract);
+		$this->_tblDef[$id] = DTbl::NewIndexed($id, DMsg::ALbl('l_ctxr'), $attrs, 'uri', 'redirectContext', $defaultExtract);
 	}
 
 	protected function add_T_SEC_CGI($id)

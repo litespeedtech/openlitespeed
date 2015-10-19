@@ -47,12 +47,12 @@ typedef struct lsiapi_hook_s
 } lsiapi_hook_t;
 
 
-typedef struct lsiapi_hookinfo_s
+typedef struct lsi_hookinfo_s
 {
     const LsiApiHooks  *hooks;
     int8_t             *enable_array;
     filter_term_fn      term_fn;
-} lsiapi_hookinfo_t;
+} lsi_hookinfo_t;
 
 
 class LsiApiHooks
@@ -101,7 +101,7 @@ public:
     int copy(const LsiApiHooks &other);
 
 
-    int runCallback(int level, lsi_cb_param_t *param) const;
+    int runCallback(int level, lsi_param_t *param) const;
     int runCallback(int level, int8_t *pEnableArray, LsiSession *session,
                     void *param1, int paramLen1, int *flag_out, int flag_in,
                     lsi_module_t *pModule = NULL) const;
@@ -115,8 +115,8 @@ public:
     }
 
 
-    static int runForwardCb(lsi_cb_param_t *param);
-    static int runBackwardCb(lsi_cb_param_t *param);
+    static int runForwardCb(lsi_param_t *param);
+    static int runBackwardCb(lsi_param_t *param);
 
 
 
@@ -233,7 +233,7 @@ private:
         {
             if (pEnableArray[LSIHOOKS_GETINDEX(i)]
                 & (1 << LSIHOOKS_GETOFFSET(i)))
-                m_iFlag[index] |= pLevel->get(i)->flag | LSI_HOOK_FLAG_ENABLED;
+                m_iFlag[index] |= pLevel->get(i)->flag | LSI_FLAG_ENABLED;
         }
     }
 
@@ -261,7 +261,7 @@ private:
             pEnableArray = m_pEnableArray[i];
             for (j = 0; j < iLevelSize; ++j)
             {
-                if (pHook->flag & LSI_HOOK_FLAG_ENABLED)
+                if (pHook->flag & LSI_FLAG_ENABLED)
                 {
                     pEnableArray[LSIHOOKS_GETINDEX(j)]
                     |= 1 << LSIHOOKS_GETOFFSET(j);
@@ -375,7 +375,7 @@ public:
                 m_pEnableArray[aEnableHkpts[i] - B][LSIHOOKS_GETINDEX(iModIdx)]
                 |= (1 << LSIHOOKS_GETOFFSET(iModIdx));
                 m_iFlag[aEnableHkpts[i] - B] |= (pHook->flag
-                                                 | LSI_HOOK_FLAG_ENABLED);
+                                                 | LSI_FLAG_ENABLED);
             }
             else
             {
@@ -427,7 +427,7 @@ public:
     {
         if (isAllDisabled())
             return 1;
-        return ((m_iFlag[hookLevel - B] & LSI_HOOK_FLAG_ENABLED) == 0);
+        return ((m_iFlag[hookLevel - B] & LSI_FLAG_ENABLED) == 0);
     }
 
     int isEnabled(int hookLevel) const  {  return !isDisabled(hookLevel);   }

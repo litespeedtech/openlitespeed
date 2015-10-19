@@ -167,7 +167,7 @@ static int initstream(z_stream *pStream, uint8_t compresslevel)
 }
 
 
-int flushloopbuf(lsi_cb_param_t *rec, int iState, ls_loopbuf_t *pBuf)
+int flushloopbuf(lsi_param_t *rec, int iState, ls_loopbuf_t *pBuf)
 {
     int written = 0;
     int sz = 0;
@@ -188,7 +188,7 @@ int flushloopbuf(lsi_cb_param_t *rec, int iState, ls_loopbuf_t *pBuf)
 
     if (ls_loopbuf_empty(pBuf) && iState == Z_END)
     {
-        rec->_flag_in |= LSI_CB_FLAG_IN_EOF;
+        rec->flag_in |= LSI_CBFI_EOF;
         g_api->stream_write_next(rec, NULL, 0);
     }
 
@@ -196,7 +196,7 @@ int flushloopbuf(lsi_cb_param_t *rec, int iState, ls_loopbuf_t *pBuf)
 }
 
 
-static int doCompression(lsi_cb_param_t *rec, zbufinfo_t *pBufInfo,
+static int doCompression(lsi_param_t *rec, zbufinfo_t *pBufInfo,
                          int iDoFlush, const char *pModuleStr,
                          const char *pSendingStr, const char *pCompressStr)
 {
@@ -211,19 +211,19 @@ static int doCompression(lsi_cb_param_t *rec, zbufinfo_t *pBufInfo,
             return LS_FAIL;
         if (!ls_loopbuf_empty(pBuf))
         {
-            if (rec->_flag_out != NULL)
-                *rec->_flag_out |= LSI_CB_FLAG_OUT_BUFFERED_DATA;
+            if (rec->flag_out != NULL)
+                *rec->flag_out |= LSI_CBFO_BUFFERED;
             return 0;
         }
     }
 
     if (pBufInfo->zstate == Z_END)
-        return rec->_param_len;
+        return rec->len1;
 
     do
     {
         ls_loopbuf_xguarantee(pBuf, 1024,
-                              g_api->get_session_pool(rec->_session));
+                              g_api->get_session_pool(rec->session));
         len = ls_loopbuf_contiguous(pBuf);
         pStream->avail_out = len;
         pStream->next_out = (unsigned char *)ls_loopbuf_end(pBuf);
@@ -235,13 +235,13 @@ static int doCompression(lsi_cb_param_t *rec, zbufinfo_t *pBufInfo,
 
         if (ret >= Z_OK)
         {
-            consumed = rec->_param_len - pStream->avail_in;
+            consumed = rec->len1 - pStream->avail_in;
             ls_loopbuf_used(pBuf, len - pStream->avail_out);
 
             if (pBufInfo->zstate == Z_EOF && ret == Z_STREAM_END)
             {
                 pBufInfo->zstate = Z_END;
-                g_api->log(rec->_session, LSI_LOG_DEBUG,
+                g_api->log(rec->session, LSI_LOG_DEBUG,
                            "[%s%s] compressbuf end of stream set.\n",
                            pModuleStr, pCompressStr);
             }
@@ -251,22 +251,22 @@ static int doCompression(lsi_cb_param_t *rec, zbufinfo_t *pBufInfo,
                 written += sz;
             else if (sz < 0)
             {
-                g_api->log(rec->_session, LSI_LOG_ERROR,
+                g_api->log(rec->session, LSI_LOG_ERROR,
                            "[%s%s] compressbuf in %d, return %d (written %d, "
                            "flag in %d)\n", pModuleStr, pCompressStr,
-                           rec->_param_len, sz, written, rec->_flag_in);
-                return LSI_HK_RET_ERROR;
+                           rec->len1, sz, written, rec->flag_in);
+                return LSI_ERROR;
             }
             if (!ls_loopbuf_empty(pBuf))
                 break;
         }
         else
         {
-            g_api->log(rec->_session, LSI_LOG_ERROR,
+            g_api->log(rec->session, LSI_LOG_ERROR,
                        "[%s%s] compressbuf in %d, inflate/deflate return %d\n",
-                       pModuleStr, pCompressStr, rec->_param_len, ret);
+                       pModuleStr, pCompressStr, rec->len1, ret);
             if (ret != Z_BUF_ERROR)
-                return LSI_HK_RET_ERROR;
+                return LSI_ERROR;
         }
     }
     while (pBufInfo->zstate != Z_END && pStream->avail_out == 0);
@@ -274,20 +274,20 @@ static int doCompression(lsi_cb_param_t *rec, zbufinfo_t *pBufInfo,
     if (!(ls_loopbuf_empty(pBuf)) || (pBufInfo->zstate != Z_END
                                       && pStream->avail_out == 0))
     {
-        if (rec->_flag_out != NULL)
-            *rec->_flag_out |= LSI_CB_FLAG_OUT_BUFFERED_DATA;
+        if (rec->flag_out != NULL)
+            *rec->flag_out |= LSI_CBFO_BUFFERED;
     }
 
-    g_api->log(rec->_session, LSI_LOG_DEBUG,
+    g_api->log(rec->session, LSI_LOG_DEBUG,
                "[%s%s] compressbuf [%s] in %d, consumed: %d, written %d, "
                "flag in %d, buffer has %d.\n", pModuleStr, pCompressStr,
-               pSendingStr, rec->_param_len, consumed,
-               written, rec->_flag_in, ls_loopbuf_size(pBuf));
+               pSendingStr, rec->len1, consumed,
+               written, rec->flag_in, ls_loopbuf_size(pBuf));
     return consumed;
 }
 
 
-static int compressbuf(lsi_cb_param_t *rec, lsi_module_t *pModule,
+static int compressbuf(lsi_param_t *rec, lsi_module_t *pModule,
                        int isSend)
 {
     const char *pSendingStr, *pCompressStr, *pZipStr, *pModuleStr;
@@ -296,14 +296,14 @@ static int compressbuf(lsi_cb_param_t *rec, lsi_module_t *pModule,
     int ret;
     int finish = Z_NO_FLUSH;
     zmoddata_t *myData = (zmoddata_t *)g_api->get_module_data(
-                             rec->_session, pModule, LSI_MODULE_DATA_HTTP);
+                             rec->session, pModule, LSI_DATA_HTTP);
     if (myData == NULL)
-        return LSI_HK_RET_ERROR;
+        return LSI_ERROR;
     pSendingStr = isSend ? SENDING_STR : RECVING_STR;
     pBufInfo = isSend ? myData->send : myData->recv;
 
     if (pBufInfo == NULL)
-        return LSI_HK_RET_ERROR;
+        return LSI_ERROR;
 
     pStream = &pBufInfo->zstream;
     pCompressStr = pBufInfo->compresslevel ? COMPRESS_STR : DECOMPRESS_STR;
@@ -314,16 +314,16 @@ static int compressbuf(lsi_cb_param_t *rec, lsi_module_t *pModule,
     {
         if (initstream(pStream, pBufInfo->compresslevel) == LS_FAIL)
         {
-            g_api->log(rec->_session, LSI_LOG_ERROR,
+            g_api->log(rec->session, LSI_LOG_ERROR,
                        "[%s%s] initZstream init method [%s], failed.\n",
                        pModuleStr, pCompressStr, pZipStr);
             ret = LSI_HKPT_RECV_RESP_BODY;
-            g_api->set_session_hook_enable_flag(rec->_session, pModule, 0,
+            g_api->enable_hook(rec->session, pModule, 0,
                                                 &ret, 1); // Disable
-            return g_api->stream_write_next(rec, (const char *)rec->_param,
-                                            rec->_param_len);
+            return g_api->stream_write_next(rec, (const char *)rec->ptr1,
+                                            rec->len1);
         }
-        g_api->log(rec->_session, LSI_LOG_DEBUG,
+        g_api->log(rec->session, LSI_LOG_DEBUG,
                    "[%s%s] initZstream init method [%s], succeeded.\n",
                    pModuleStr, pCompressStr, pZipStr);
         pBufInfo->zstate = Z_INITED;
@@ -331,17 +331,17 @@ static int compressbuf(lsi_cb_param_t *rec, lsi_module_t *pModule,
 
     if (pBufInfo->zstate < Z_EOF)
     {
-        pStream->avail_in = rec->_param_len;
-        pStream->next_in = (Byte *)rec->_param;
-        if (rec->_flag_in & LSI_CB_FLAG_IN_EOF)
+        pStream->avail_in = rec->len1;
+        pStream->next_in = (Byte *)rec->ptr1;
+        if (rec->flag_in & LSI_CBFI_EOF)
         {
             pBufInfo->zstate = Z_EOF;
-            rec->_flag_in |= LSI_CB_FLAG_IN_FLUSH;
+            rec->flag_in |= LSI_CBFI_FLUSH;
         }
-        else if (rec->_flag_in & LSI_CB_FLAG_IN_FLUSH)
+        else if (rec->flag_in & LSI_CBFI_FLUSH)
             finish = Z_PARTIAL_FLUSH;
     }
-    rec->_flag_in &= ~LSI_CB_FLAG_IN_EOF;
+    rec->flag_in &= ~LSI_CBFI_EOF;
     if (pBufInfo->zstate == Z_EOF)
         finish = Z_FINISH;
     return doCompression(rec, pBufInfo, finish, pModuleStr, pSendingStr,
@@ -349,23 +349,23 @@ static int compressbuf(lsi_cb_param_t *rec, lsi_module_t *pModule,
 }
 
 
-static int sendinghook(lsi_cb_param_t *rec)
+static int sendinghook(lsi_param_t *rec)
 {
     return compressbuf(rec, (lsi_module_t *)g_api->get_module(rec), 1);
 }
 
 
-static int recvinghook(lsi_cb_param_t *rec)
+static int recvinghook(lsi_param_t *rec)
 {
     return compressbuf(rec, (lsi_module_t *)g_api->get_module(rec), 0);
 }
 
 
-static int clearrecv(lsi_cb_param_t *rec)
+static int clearrecv(lsi_param_t *rec)
 {
     lsi_module_t *pModule = (lsi_module_t *)g_api->get_module(rec);
     zmoddata_t *myData = (zmoddata_t *)g_api->get_module_data(
-                             rec->_session, pModule, LSI_MODULE_DATA_HTTP);
+                             rec->session, pModule, LSI_DATA_HTTP);
     if (myData)
     {
         if (myData->recv != NULL)
@@ -374,18 +374,18 @@ static int clearrecv(lsi_cb_param_t *rec)
             myData->recv = NULL;
         }
         if (myData->send == NULL)
-            g_api->set_module_data(rec->_session, pModule,
-                                   LSI_MODULE_DATA_HTTP, NULL);
+            g_api->set_module_data(rec->session, pModule,
+                                   LSI_DATA_HTTP, NULL);
     }
-    return LSI_HK_RET_OK;
+    return LSI_OK;
 }
 
 
-static int cleardata(lsi_cb_param_t *rec)
+static int cleardata(lsi_param_t *rec)
 {
-    g_api->free_module_data(rec->_session, g_api->get_module(rec),
-                            LSI_MODULE_DATA_HTTP, ls_zmoddata_release);
-    return LSI_HK_RET_OK;
+    g_api->free_module_data(rec->session, g_api->get_module(rec),
+                            LSI_DATA_HTTP, ls_zmoddata_release);
+    return LSI_OK;
 }
 
 
@@ -396,9 +396,9 @@ static int init(lsi_module_t *pModule)
     if (zpooltimerid == 0)
         zpooltimerid = g_api->set_timer(10000, 1, ls_zpool_manage, NULL);
     if (zpooltimerid == LS_FAIL)
-        return LSI_HK_RET_ERROR;
+        return LSI_ERROR;
     return g_api->init_module_data(pModule, ls_zmoddata_release,
-                                   LSI_MODULE_DATA_HTTP);
+                                   LSI_DATA_HTTP);
 }
 
 
@@ -406,13 +406,13 @@ static lsi_serverhook_t compresshooks[] =
 {
     {
         LSI_HKPT_SEND_RESP_BODY, sendinghook, 3000,
-        LSI_HOOK_FLAG_PROCESS_STATIC | LSI_HOOK_FLAG_TRANSFORM
+        LSI_FLAG_PROCESS_STATIC | LSI_FLAG_TRANSFORM
     },
     { LSI_HKPT_RECV_RESP_BODY, recvinghook, 3000, 1 },
     { LSI_HKPT_RCVD_RESP_BODY, clearrecv, 3000, 0 },
     { LSI_HKPT_HTTP_END, cleardata, LSI_HOOK_NORMAL, 0 },
     { LSI_HKPT_HANDLER_RESTART, cleardata, LSI_HOOK_NORMAL, 0 },
-    lsi_serverhook_t_END  //Must put this at the end position
+    LSI_HOOK_END  //Must put this at the end position
 };
 
 
@@ -420,13 +420,13 @@ static lsi_serverhook_t decompresshooks[] =
 {
     {
         LSI_HKPT_SEND_RESP_BODY, sendinghook, -3000,
-        LSI_HOOK_FLAG_PROCESS_STATIC | LSI_HOOK_FLAG_TRANSFORM
+        LSI_FLAG_PROCESS_STATIC | LSI_FLAG_TRANSFORM
     },
     { LSI_HKPT_RECV_RESP_BODY, recvinghook, -3000, 1 },
     { LSI_HKPT_RCVD_RESP_BODY, clearrecv, -3000, 0 },
     { LSI_HKPT_HTTP_END, cleardata, LSI_HOOK_NORMAL, 0 },
     { LSI_HKPT_HANDLER_RESTART, cleardata, LSI_HOOK_NORMAL, 0 },
-    lsi_serverhook_t_END  //Must put this at the end position
+    LSI_HOOK_END  //Must put this at the end position
 };
 
 lsi_module_t modcompress = { LSI_MODULE_SIGNATURE, init, NULL, NULL,
@@ -442,7 +442,7 @@ static int enablehook(lsi_session_t *session, lsi_module_t *pModule,
 {
     int ret, aEnableHkpt[5], iEnableCount = 0;
     zmoddata_t *myData = (zmoddata_t *)g_api->get_module_data(session,
-                         pModule, LSI_MODULE_DATA_HTTP);
+                         pModule, LSI_DATA_HTTP);
     ls_xpool_t *pPool = g_api->get_session_pool(session);
     if (myData == NULL)
     {
@@ -479,11 +479,11 @@ static int enablehook(lsi_session_t *session, lsi_module_t *pModule,
 
     aEnableHkpt[iEnableCount++] = LSI_HKPT_HTTP_END;
     aEnableHkpt[iEnableCount++] = LSI_HKPT_HANDLER_RESTART;
-    ret = g_api->set_session_hook_enable_flag(session, pModule, 1, aEnableHkpt,
+    ret = g_api->enable_hook(session, pModule, 1, aEnableHkpt,
             iEnableCount);
     if (ret == LS_OK)
     {
-        g_api->set_module_data(session, pModule, LSI_MODULE_DATA_HTTP,
+        g_api->set_module_data(session, pModule, LSI_DATA_HTTP,
                                (void *)myData);
         return ret;
     }

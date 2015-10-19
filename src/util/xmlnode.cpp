@@ -214,6 +214,8 @@ int XmlNode::setValue(const char *value, int len)
 const XmlNode *XmlNode::getChild(const char *name, int bOptional) const
 {
     XmlNodeList *ptr;
+    if (m_pImpl->m_pNode == NULL)
+        return NULL;
     if (m_pImpl->m_pNode->getNumChildren() != 0)
     {
         ptr = (XmlNodeList *)m_pImpl->m_pNode->find(name, strlen(name),
@@ -319,7 +321,7 @@ int XmlNode::getAllChildren(XmlNodeList &list)
 
 
 static int addListToList(void *pObj, void *pUData, const char *pKey,
-                         size_t iKeyLen)
+                         int iKeyLen)
 {
     XmlNodeList *pChild = (XmlNodeList *)pObj;
     XmlNodeList *pList = (XmlNodeList *)pUData;
@@ -354,7 +356,7 @@ const char *XmlNode::getAttr(const char *name) const
 
 
 static int printAttrChild(void *pObj, void *pUData, const char *pKey,
-                          size_t iKeyLen)
+                          int iKeyLen)
 {
     Attr *ptr = (Attr *)pObj;
     FILE *fd = (FILE *)pUData;
@@ -364,7 +366,7 @@ static int printAttrChild(void *pObj, void *pUData, const char *pKey,
 
 
 static int printChild(void *pObj, void *pUData, const char *pKey,
-                      size_t iKeyLen)
+                      int iKeyLen)
 {
     XmlNodeList::const_iterator iter;
     XmlNodeList *pList = (XmlNodeList *)pObj;

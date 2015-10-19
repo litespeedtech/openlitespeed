@@ -173,7 +173,7 @@ int HttpSession::attachSubSession(HttpSession *pSubSess)
 {
     HioChainStream *pStream = (HioChainStream *)pSubSess->getStream();
     pStream->setParentSession(this);
-    pSubSess->getResp()->setContentLen(LSI_RESP_BODY_SIZE_UNKNOWN);
+    pSubSess->getResp()->setContentLen(LSI_RSP_BODY_SIZE_UNKNOWN);
     pStream->setFlag(HIO_FLAG_PASS_THROUGH, 1);
     m_pCurSubSession = pSubSess;
     if (pStream->isWantWrite())
@@ -408,7 +408,7 @@ void HttpSession::mergeRespHeaders(HttpRespHeaders::INDEX headerIndex,
         m_response.getRespHeaders().add(
             headerIndex, pName, nameLen,
             (const char *)pIov->iov_base, pIov->iov_len,
-            LSI_HEADER_OP_APPEND);
+            LSI_HEADEROP_OP_APPEND);
         ++pIov;
     }
 }

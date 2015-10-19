@@ -168,20 +168,20 @@ SUITE(VMemBufTest)
         CHECK(pVmemBuf->getCurFileSize() == pVmemBuf->getMinMmapSize());
         CHECK(pVmemBuf->getCurWBlkPos() == pVmemBuf->getBlockSize());
         CHECK(pBuf != NULL);
-        CHECK(size == pVmemBuf->getBlockSize());
+        CHECK(size == (size_t)pVmemBuf->getBlockSize());
         pVmemBuf->writeUsed(size);
         CHECK(false == pVmemBuf->empty());
         pBuf1 = pVmemBuf->getWriteBuffer(size);
         CHECK(pBuf1 != NULL);
         CHECK(pBuf1 != pBuf);
-        CHECK(size == pVmemBuf->getBlockSize());
+        CHECK(size == (size_t)pVmemBuf->getBlockSize());
         CHECK(pVmemBuf->getCurWBlkPos() == pVmemBuf->getBlockSize() * 2);
         pVmemBuf->writeUsed(size);
         CHECK(false == pVmemBuf->empty());
         pBuf = pVmemBuf->getWriteBuffer(size);
         CHECK(pVmemBuf->getCurWBlkPos() == pVmemBuf->getBlockSize() * 3);
         CHECK(pBuf != NULL);
-        CHECK(size == pVmemBuf->getBlockSize());
+        CHECK(size == (size_t)pVmemBuf->getBlockSize());
         CHECK(pVmemBuf->getCurFileSize() >= pVmemBuf->getBlockSize() * 3);
         pVmemBuf->writeUsed(1024);
         CHECK(false == pVmemBuf->empty());
@@ -190,14 +190,14 @@ SUITE(VMemBufTest)
         pBuf = pVmemBuf->getReadBuffer(size);
         CHECK(pVmemBuf->getCurRBlkPos() == pVmemBuf->getBlockSize());
         CHECK(pBuf != NULL);
-        CHECK(size == pVmemBuf->getBlockSize());
+        CHECK(size == (size_t)pVmemBuf->getBlockSize());
         pVmemBuf->readUsed(size);
         CHECK(false == pVmemBuf->empty());
 
         pBuf1 = pVmemBuf->getReadBuffer(size);
         CHECK(pBuf1 != NULL);
         CHECK(pBuf1 != pBuf);
-        CHECK(size == pVmemBuf->getBlockSize());
+        CHECK(size == (size_t)pVmemBuf->getBlockSize());
         CHECK(pVmemBuf->getCurRBlkPos() == pVmemBuf->getBlockSize() * 2);
         pVmemBuf->readUsed(size);
         CHECK(false == pVmemBuf->empty());
@@ -217,14 +217,14 @@ SUITE(VMemBufTest)
         pBuf = pVmemBuf->getWriteBuffer(size);
         CHECK(pVmemBuf->getCurWBlkPos() == pVmemBuf->getBlockSize() * 3);
         CHECK(pBuf != NULL);
-        CHECK(size == pVmemBuf->getBlockSize() - 1024);
+        CHECK(size == (size_t)pVmemBuf->getBlockSize() - 1024);
         pVmemBuf->writeUsed(size);
         CHECK(false == pVmemBuf->empty());
 
         pBuf = pVmemBuf->getReadBuffer(size);
         CHECK(pVmemBuf->getCurRBlkPos() == pVmemBuf->getBlockSize() * 3);
         CHECK(pBuf != NULL);
-        CHECK(size == pVmemBuf->getBlockSize() - 1024);
+        CHECK(size == (size_t)pVmemBuf->getBlockSize() - 1024);
         pVmemBuf->readUsed(size);
 
         CHECK(true == pVmemBuf->empty());
@@ -235,7 +235,7 @@ SUITE(VMemBufTest)
         pBuf = pVmemBuf->getWriteBuffer(size);
         CHECK(pVmemBuf->getCurWBlkPos() == pVmemBuf->getBlockSize() * 4);
         CHECK(pBuf != NULL);
-        CHECK(size == pVmemBuf->getBlockSize());
+        CHECK(size == (size_t)pVmemBuf->getBlockSize());
         CHECK(pVmemBuf->getCurFileSize() >= pVmemBuf->getBlockSize() * 4);
         pVmemBuf->writeUsed(size);
         CHECK(false == pVmemBuf->empty());
@@ -243,7 +243,7 @@ SUITE(VMemBufTest)
         pBuf = pVmemBuf->getReadBuffer(size);
         CHECK(pVmemBuf->getCurRBlkPos() == pVmemBuf->getBlockSize() * 4);
         CHECK(pBuf != NULL);
-        CHECK(size == pVmemBuf->getBlockSize());
+        CHECK(size == (size_t)pVmemBuf->getBlockSize());
         pVmemBuf->readUsed(size);
         CHECK(true == pVmemBuf->empty());
 

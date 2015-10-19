@@ -55,44 +55,44 @@ void *thread_callback(void *session)
     pthread_exit(NULL);
 }
 
-int suspendFunc(lsi_cb_param_t *rec)
+int suspendFunc(lsi_param_t *rec)
 {
     const char *uri;
     int len;
-    uri = g_api->get_req_uri(rec->_session, &len);
+    uri = g_api->get_req_uri(rec->session, &len);
     if (len >= 12 && strcasestr(uri, "/testsuspend"))
     {
 
 // //#define USE_TIMER_HERE
 // #ifdef  USE_TIMER_HERE
 //         g_api->set_timer(5000, timer_callback, (void *)rec->_session);
-//         return LSI_HK_RET_SUSPEND;
+//         return LSI_SUSPEND;
 // #else
 //         pthread_t mythread;
 //         int rc = pthread_create(&mythread, NULL, thread_callback,  (void *)rec->_session);
 //         if (rc == 0)
 //         {
-//             return LSI_HK_RET_SUSPEND; //If ret LSI_HK_RET_SUSPEND, should set a timer or a thread to call hookResumeCallback()
+//             return LSI_SUSPEND; //If ret LSI_SUSPEND, should set a timer or a thread to call hookResumeCallback()
 //         }
 // #endif
 
         pthread_t mythread;
         int rc = pthread_create(&mythread, NULL, thread_callback,
-                                (void *)rec->_session);
+                                (void *)rec->session);
         if (rc == 0)
         {
-            return LSI_HK_RET_SUSPEND; //If ret LSI_HK_RET_SUSPEND, should set a timer or a thread to call hookResumeCallback()
+            return LSI_SUSPEND; //If ret LSI_SUSPEND, should set a timer or a thread to call hookResumeCallback()
         }
     }
 
-    return LSI_HK_RET_OK;
+    return LSI_OK;
 }
 
 
 static lsi_serverhook_t serverHooks[] =
 {
-    {LSI_HKPT_RECV_REQ_HEADER, suspendFunc, LSI_HOOK_NORMAL, LSI_HOOK_FLAG_ENABLED},
-    lsi_serverhook_t_END   //Must put this at the end position
+    {LSI_HKPT_RECV_REQ_HEADER, suspendFunc, LSI_HOOK_NORMAL, LSI_FLAG_ENABLED},
+    LSI_HOOK_END   //Must put this at the end position
 };
 
 static int _init(lsi_module_t *pModule)
@@ -110,10 +110,10 @@ static int PsHandlerProcess(lsi_session_t *session)
     t = time(NULL);
     tmp = gmtime(&t);
     strftime(tmBuf, 30, "%a, %d %b %Y %H:%M:%S GMT", tmp);
-    g_api->set_resp_header(session, LSI_RESP_HEADER_CONTENT_TYPE, NULL, 0,
-                           "text/html", sizeof("text/html") - 1, LSI_HEADER_SET);
-    g_api->set_resp_header(session, LSI_RESP_HEADER_LAST_MODIFIED, NULL, 0,
-                           tmBuf, 29, LSI_HEADER_SET);
+    g_api->set_resp_header(session, LSI_RSPHDR_CONTENT_TYPE, NULL, 0,
+                           "text/html", sizeof("text/html") - 1, LSI_HEADEROP_SET);
+    g_api->set_resp_header(session, LSI_RSPHDR_LAST_MODIFIED, NULL, 0,
+                           tmBuf, 29, LSI_HEADEROP_SET);
 
     char buf[1024];
     sprintf(buf,
@@ -124,5 +124,5 @@ static int PsHandlerProcess(lsi_session_t *session)
     return 0;
 }
 
-lsi_handler_t myhandler = { PsHandlerProcess, NULL, NULL, NULL };
+lsi_reqhdlr_t myhandler = { PsHandlerProcess, NULL, NULL, NULL };
 lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, _init, &myhandler, NULL, "", serverHooks};

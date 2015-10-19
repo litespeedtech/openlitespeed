@@ -216,7 +216,7 @@ private:
 
     void dumpState(const char *pFuncName, const char *action);
 
-    size_t sendfileSetUp(size_t size);
+    off_t sendfileSetUp(off_t size);
     int sendfileFinish(int written);
 
 public:
@@ -276,7 +276,7 @@ public:
     int writev_internal(const struct iovec *vector, int len, int flush_flag);
     int writev(const struct iovec *vector, int len);
 
-    int sendfile(int fdSrc, off_t off, size_t size);
+    int sendfile(int fdSrc, off_t off, off_t size);
 
     int addAioSFJob(Aiosfcb *cb);
     int aiosendfiledone(Aiosfcb *cb);

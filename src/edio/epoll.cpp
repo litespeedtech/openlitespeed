@@ -135,13 +135,15 @@ int epoll::add(EventReactor *pHandler, short mask)
 }
 
 
-int epoll::updateEvents(EventReactor *pHandler, short mask)
+void epoll::setEventMask(EventReactor *pHandler, short mask)
 {
     struct epoll_event epevt;
     int fd = pHandler->getfd();
     if (fd == -1)
-        return 0;
+        return;
     assert(pHandler == m_reactorIndex.get(fd));
+    if (pHandler->getEvents() == mask )
+        return;
     pHandler->setMask2(mask);
     //assert( fd > 1 );
     memset(&epevt, 0, sizeof(struct epoll_event));
@@ -149,7 +151,7 @@ int epoll::updateEvents(EventReactor *pHandler, short mask)
     epevt.data.fd = fd;
     epevt.events = mask;
     //return (syscall(__NR_epoll_ctl, m_epfd, EPOLL_CTL_MOD, fd, &epevt));
-    return epoll_ctl(m_epfd, EPOLL_CTL_MOD, fd, &epevt);
+    epoll_ctl(m_epfd, EPOLL_CTL_MOD, fd, &epevt);
 }
 
 
@@ -286,6 +288,28 @@ void epoll::timerExecute()
 }
 
 
+void epoll::modEvent(EventReactor *pHandler, short maskIn, int add_remove)
+{
+    short mask;
+    
+    mask = pHandler->getEvents() & maskIn;
+    if (add_remove == 0)
+    {
+        if (mask == 0)
+            return;
+        mask = pHandler->getEvents() & ~mask;
+    }
+    else 
+    {
+        mask = mask ^ maskIn;
+        if (mask == 0)
+            return;
+        mask = pHandler->getEvents() | mask;
+    }
+    setEventMask(pHandler, mask);
+}
+
+
 void epoll::continueRead(EventReactor *pHandler)
 {
     if (!(pHandler->getEvents() & POLLIN))
@@ -316,13 +340,13 @@ void epoll::suspendWrite(EventReactor *pHandler)
 
 void epoll::switchWriteToRead(EventReactor *pHandler)
 {
-    setEvents(pHandler, POLLIN | POLLHUP | POLLERR);
+    setEventMask(pHandler, POLLIN | POLLHUP | POLLERR);
 }
 
 
 void epoll::switchReadToWrite(EventReactor *pHandler)
 {
-    setEvents(pHandler, POLLOUT | POLLHUP | POLLERR);
+    setEventMask(pHandler, POLLOUT | POLLHUP | POLLERR);
 }
 
 

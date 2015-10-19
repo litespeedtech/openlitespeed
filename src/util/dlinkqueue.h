@@ -90,7 +90,7 @@ public:
         ++m_iTotal;
     }
 
-    void append(DLinkedObj *pReq, DLinkedObj *pReqToAppend)
+    void insert_after(DLinkedObj *pReq, DLinkedObj *pReqToAppend)
     {
         pReq->addNext(pReqToAppend);
         ++m_iTotal;

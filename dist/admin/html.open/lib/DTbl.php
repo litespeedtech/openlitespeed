@@ -385,7 +385,11 @@ class DTbl
 			$dlayer = $dlayer[$ref];
 		}
 
-		if (($tips = DTblTips::getTips($this->_id)) != NULL) {
+        $labels = array($this->_helpKey);
+        foreach ($this->_dattrs as $attr) {
+            $labels[] = $attr->_helpKey;
+        }
+		if (($tips = DMsg::GetEditTips($labels)) != NULL) {
 			$buf .= UI::GetTblTips($tips);
 		}
 

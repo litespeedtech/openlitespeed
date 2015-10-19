@@ -94,18 +94,18 @@ static int begin_process(lsi_session_t *session)
     }
 
     g_api->set_status_code(session, 200);
-    g_api->set_resp_header(session, LSI_RESP_HEADER_CONTENT_TYPE, NULL, 0,
-                           "text/html", 9, LSI_HEADER_SET);
+    g_api->set_resp_header(session, LSI_RSPHDR_CONTENT_TYPE, NULL, 0,
+                           "text/html", 9, LSI_HEADEROP_SET);
     g_api->append_resp_body(session, resp_buf, sizeof(resp_buf) - 1);
     g_api->end_resp(session);
     return 0;
 }
 
 
-static int beginSession(lsi_cb_param_t *rec)
+static int beginSession(lsi_param_t *rec)
 {
     int i;
-    lsi_session_t *pSession = rec->_session;
+    lsi_session_t *pSession = rec->session;
 
     for (i = 0; i < iSize; ++i)
     {
@@ -129,11 +129,11 @@ static int _init()
 
 static lsi_serverhook_t serverHooks[] =
 {
-    {LSI_HKPT_HTTP_BEGIN, beginSession, LSI_HOOK_NORMAL, LSI_HOOK_FLAG_ENABLED},
-    lsi_serverhook_t_END   //Must put this at the end position
+    {LSI_HKPT_HTTP_BEGIN, beginSession, LSI_HOOK_NORMAL, LSI_FLAG_ENABLED},
+    LSI_HOOK_END   //Must put this at the end position
 };
 
-static lsi_handler_t myhandler = { begin_process, NULL, NULL, NULL };
+static lsi_reqhdlr_t myhandler = { begin_process, NULL, NULL, NULL };
 lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, _init, &myhandler, NULL, "v1.0",
                        serverHooks
                      };

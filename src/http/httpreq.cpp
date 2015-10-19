@@ -138,9 +138,9 @@ HttpReq::HttpReq()
     ls_str_set(&m_location, NULL, 0);
     ls_str_set(&m_pathInfo, NULL, 0);
     ls_str_set(&m_newHost, NULL, 0);
-    m_pUrls = (ls_str_pair_t *)malloc(sizeof(ls_str_pair_t) *
+    m_pUrls = (ls_strpair_t *)malloc(sizeof(ls_strpair_t) *
                                       (MAX_REDIRECTS + 1));
-    memset(m_pUrls, 0, sizeof(ls_str_pair_t) * (MAX_REDIRECTS + 1));
+    memset(m_pUrls, 0, sizeof(ls_strpair_t) * (MAX_REDIRECTS + 1));
     m_pEnv = NULL;
     m_pAuthUser = NULL;
     m_pRange = NULL;
@@ -194,7 +194,7 @@ void HttpReq::reset()
     ls_str_set(&m_location, NULL, 0);
     ls_str_set(&m_pathInfo, NULL, 0);
     ls_str_set(&m_newHost, NULL, 0);
-    memset(m_pUrls, 0, sizeof(ls_str_pair_t) * (MAX_REDIRECTS + 1));
+    memset(m_pUrls, 0, sizeof(ls_strpair_t) * (MAX_REDIRECTS + 1));
     m_pEnv = NULL;
     m_pAuthUser = NULL;
     m_pRange = NULL;
@@ -649,7 +649,7 @@ int HttpReq::processHeader(int index)
         postProcessHost(pCur, pBEnd);
         break;
     case HttpHeader::H_CONTENT_LENGTH:
-        m_lEntityLength = strtol(pCur, NULL, 0);
+        m_lEntityLength = strtoll(pCur, NULL, 0);
         break;
     case HttpHeader::H_TRANSFER_ENCODING:
         if (strncasecmp(pCur, "chunked", 7) == 0)
@@ -1106,7 +1106,7 @@ int HttpReq::detectLoopRedirect()
     int i;
     for (i = 0; i < m_iRedirects; ++i)
     {
-        ls_str_pair_t tmp = m_pUrls[i];
+        ls_strpair_t tmp = m_pUrls[i];
         if
         (
             (ls_str_len(&tmp.key) == getURILen())
@@ -1915,19 +1915,19 @@ void HttpReq::updateContentType(char *pHeader)
 #define HTTP_PAGE_SIZE 4096
 int HttpReq::prepareReqBodyBuf()
 {
-    if ((m_lEntityLength != CHUNKED) &&
-        (m_lEntityLength <= m_headerBuf.capacity() - m_iReqHeaderBufFinished))
-    {
-        m_pReqBodyBuf = new VMemBuf();
-        if (!m_pReqBodyBuf)
-            return SC_500;
-        BlockBuf *pBlock = new BlockBuf(m_headerBuf.begin() +
-                                        m_iReqHeaderBufFinished, m_lEntityLength);
-        if (!pBlock)
-            return SC_500;
-        m_pReqBodyBuf->set(pBlock);
-    }
-    else
+//     if ((m_lEntityLength != CHUNKED) &&
+//         (m_lEntityLength <= m_headerBuf.capacity() - m_iReqHeaderBufFinished))
+//     {
+//         m_pReqBodyBuf = new VMemBuf();
+//         if (!m_pReqBodyBuf)
+//             return SC_500;
+//         BlockBuf *pBlock = new BlockBuf(m_headerBuf.begin() +
+//                                         m_iReqHeaderBufFinished, m_lEntityLength);
+//         if (!pBlock)
+//             return SC_500;
+//         m_pReqBodyBuf->set(pBlock);
+//     }
+//     else
     {
         m_pReqBodyBuf = HttpResourceManager::getInstance().getVMemBuf();
         if (!m_pReqBodyBuf || m_pReqBodyBuf->reinit(m_lEntityLength))
@@ -2243,19 +2243,19 @@ const char *HttpReq::findEnvAlias(const char *pKey, int keyLen,
 }
 
 
-ls_str_pair_t *HttpReq::addEnv(const char *pOrgKey, int orgKeyLen,
+ls_strpair_t *HttpReq::addEnv(const char *pOrgKey, int orgKeyLen,
                                const char *pValue, int valLen)
 {
     int keyLen = 0;
     const char *pKey = findEnvAlias(pOrgKey, orgKeyLen, keyLen);
-    ls_str_pair_t *sp;
+    ls_strpair_t *sp;
 
     if (m_pEnv == NULL)
         m_pEnv = RadixNode::newNode(m_pPool, NULL, NULL);
 
-    if ((sp = (ls_str_pair_t *)m_pEnv->find(pKey, keyLen)) == NULL)
+    if ((sp = (ls_strpair_t *)m_pEnv->find(pKey, keyLen)) == NULL)
     {
-        sp = (ls_str_pair_t *)ls_xpool_alloc(m_pPool, sizeof(ls_str_pair_t));
+        sp = (ls_strpair_t *)ls_xpool_alloc(m_pPool, sizeof(ls_strpair_t));
         ls_str_x(&sp->key, pKey, keyLen, m_pPool);
         ls_str_x(&sp->value, pValue, valLen, m_pPool);
         if (m_pEnv->insert(m_pPool, ls_str_cstr(&sp->key),
@@ -2274,10 +2274,10 @@ const char *HttpReq::getEnv(const char *pOrgKey, int orgKeyLen,
 {
     int keyLen = 0;
     const char *pKey = findEnvAlias(pOrgKey, orgKeyLen, keyLen);
-    ls_str_pair_t *sp;
+    ls_strpair_t *sp;
 
     if ((m_pEnv != NULL)
-        && ((sp = (ls_str_pair_t *)m_pEnv->find(pKey, keyLen)) != NULL))
+        && ((sp = (ls_strpair_t *)m_pEnv->find(pKey, keyLen)) != NULL))
     {
         valLen = ls_str_len(&sp->value);
         return ls_str_cstr(&sp->value);
@@ -2300,11 +2300,11 @@ int HttpReq::getEnvCount()
 
 void HttpReq::unsetEnv(const char *pKey, int keyLen)
 {
-    ls_str_pair_t *sp;
+    ls_strpair_t *sp;
 
     if (m_pEnv != NULL)
     {
-        sp = (ls_str_pair_t *)m_pEnv->erase(pKey, keyLen);
+        sp = (ls_strpair_t *)m_pEnv->erase(pKey, keyLen);
         if (sp == NULL)
             return;
         ls_str_xd(&sp->key, m_pPool);
@@ -2492,7 +2492,7 @@ int HttpReq::detectLoopRedirect(const char *pURI, int uriLen,
         return 1;
     for (i = 0; i < m_iRedirects; ++i)
     {
-        ls_str_pair_t tmp = m_pUrls[i];
+        ls_strpair_t tmp = m_pUrls[i];
         if ((((ls_str_len(&tmp.key) == uriLen)
               && (strncmp(ls_str_cstr(&tmp.key), pURI,
                           ls_str_len(&tmp.key)) == 0))

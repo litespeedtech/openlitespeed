@@ -33,9 +33,9 @@ class ContextTree
     const HttpContext  *m_pRootContext;
 
     static int updateChildren(void *pObj, void *pUData, const char *pKey,
-                              size_t iKeyLen);
+                              int iKeyLen);
     static int inherit(void *pObj, void *pUData, const char *pKey,
-                       size_t iKeyLen);
+                       int iKeyLen);
 
     HttpContext *getParentContext(RadixNode *pCurNode);
     void updateTreeAfterAdd(RadixNode *pRadixNode, HttpContext *pContext);
@@ -48,12 +48,12 @@ public:
 
     const HttpContext *getRootContext() const  {   return m_pRootContext;  }
     void setRootContext(const HttpContext *pContext);
-    void setRootLocation(const char *pLocation, size_t iLocLen);
+    void setRootLocation(const char *pLocation, int iLocLen);
 
     int add(HttpContext *pContext);
-    const HttpContext *bestMatch(const char *pURI, size_t iUriLen) const;
-    const HttpContext *matchLocation(const char *pLoc, size_t iLocLen) const;
-    HttpContext *getContext(const char *pURI, size_t iUriLen) const;
+    const HttpContext *bestMatch(const char *pURI, int iUriLen) const;
+    const HttpContext *matchLocation(const char *pLoc, int iLocLen) const;
+    HttpContext *getContext(const char *pURI, int iUriLen) const;
     void contextInherit();
 };
 

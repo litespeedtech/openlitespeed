@@ -116,7 +116,7 @@ evtcbnode_s *EvtcbQue::schedule(evtcb_pf cb,
             }
             else
             {
-                m_callbackObjList.append(session->evtcb_head, pObj);
+                m_callbackObjList.insert_after(session->evtcb_head, pObj);
                 logState("schedule()][Header EXIST", pObj);
             }
         }
@@ -151,6 +151,12 @@ void EvtcbQue::recycle(evtcbnode_s *pObj)
 
 void EvtcbQue::removeSessionCb(evtcbhead_t *session)
 {
+    if (m_callbackObjList.size() == 0)
+    {
+        session->evtcb_head = NULL;
+        return ;
+    }
+
     evtcbnode_s *pObj = session->evtcb_head;
     evtcbnode_s *pObjNext;
 

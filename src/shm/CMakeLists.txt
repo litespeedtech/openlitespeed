@@ -8,15 +8,11 @@ cmake_policy(SET CMP0002 OLD)
 ########### next target ###############
 
 SET(shm_STAT_SRCS 
-    lsshmcache.cpp 
-    lsshmlock.cpp 
-    lsshmlru.c 
-    lsshmhash.cpp 
-    lsshmlruhash.cpp 
-    lsshmpool.cpp 
+    lsshmlock.cpp
+    lsshmhash.cpp
+    lsshmlruhash.cpp
+    lsshmpool.cpp
     lsshm.cpp
-    lsshmmemcached.cpp
-    lsi_shm.cpp
     ls_fallocate.c
 )
 
