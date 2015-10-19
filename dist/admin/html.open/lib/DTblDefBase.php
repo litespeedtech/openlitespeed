@@ -213,7 +213,7 @@ class DTblDefBase
 
 			'scriptHandler' => DTblDefBase::NewSelAttr('handler', DMsg::ALbl('l_handlername'), 'extprocessor:$$type', false, 'shHandlerName'),
 
-			'ext_type' => DTblDefBase::NewSelAttr('type', DMsg::ALbl('l_type'), $this->_options['extType'], false),
+			'ext_type' => DTblDefBase::NewSelAttr('type', DMsg::ALbl('l_type'), $this->_options['extType'], false, 'extAppType'),
 			'name'=> DTblDefBase::NewTextAttr('name', DMsg::ALbl('l_name'), 'name', false),
 			'ext_name'=> DTblDefBase::NewTextAttr('name', DMsg::ALbl('l_name'), 'name', false, 'extAppName'),
 			'ext_address' => DTblDefBase::NewTextAttr('address', DMsg::ALbl('l_address'), 'addr', false, 'extAppAddress'),
@@ -272,7 +272,7 @@ class DTblDefBase
 			'inBandwidth' => DTblDefBase::NewIntAttr('inBandwidth', DMsg::ALbl('l_inbandwidth'), true, 0),
 
 			'ctx_order' => $ctxOrder,
-			'ctx_type' => DTblDefBase::NewSelAttr('type', DMsg::ALbl('l_type'), $this->_options['ctxType'], false),
+			'ctx_type' => DTblDefBase::NewSelAttr('type', DMsg::ALbl('l_type'), $this->_options['ctxType'], false, 'ctxType'),
 			'ctx_uri' => DTblDefBase::NewTextAttr('uri', DMsg::ALbl('l_uri'), 'expuri', false, 'expuri'),
 			'ctx_location' => DTblDefBase::NewTextAttr('location', DMsg::ALbl('l_location'), 'cust', false),
 			'ctx_shandler' => DTblDefBase::NewSelAttr('handler', DMsg::ALbl('l_servletengine'), 'extprocessor:servlet', false, 'servletEngine'),
@@ -360,7 +360,7 @@ class DTblDefBase
 				$this->_attrs['geoipDBCache'],
 				DTblDefBase::NewActionAttr('S_GEOIP', 'Ed')
 		);
-		$this->_tblDef[$id] = DTbl::NewTop($id, DMsg::ALbl('l_geoipdb'), $attrs, 'geoipDBFile', 'S_GEOIP', $align, 'TABLEgeolocationDB', 'database', TRUE);
+		$this->_tblDef[$id] = DTbl::NewTop($id, DMsg::ALbl('l_geoipdb'), $attrs, 'geoipDBFile', 'S_GEOIP', $align, 'geolocationDB', 'database', TRUE);
 	}
 
 	protected function add_S_GEOIP($id)
@@ -370,7 +370,7 @@ class DTblDefBase
 				$this->_attrs['geoipDBCache'],
 				$this->_attrs['note'],
 		);
-		$this->_tblDef[$id] = DTbl::NewIndexed($id, DMsg::ALbl('l_geoipdb'), $attrs, 'geoipDBFile', 'TABLEgeolocationDB');
+		$this->_tblDef[$id] = DTbl::NewIndexed($id, DMsg::ALbl('l_geoipdb'), $attrs, 'geoipDBFile', 'geolocationDB');
 	}
 
 	protected function add_S_TUNING_CONN($id)
@@ -396,7 +396,7 @@ class DTblDefBase
 				DTblDefBase::NewIntAttr('maxReqHeaderSize', DMsg::ALbl('l_maxreqheadersize'), false, 1024, 16380),
 				DTblDefBase::NewIntAttr('maxReqBodySize', DMsg::ALbl('l_maxreqbodysize'), false, '1M', NULL ),
 				DTblDefBase::NewIntAttr('maxDynRespHeaderSize', DMsg::ALbl('l_maxdynrespheadersize'), false, 200, 8192),
-				DTblDefBase::NewIntAttr('maxDynRespSize', DMsg::ALbl('l_maxdynrespsize'), false, '1M', '2047M')
+				DTblDefBase::NewIntAttr('maxDynRespSize', DMsg::ALbl('l_maxdynrespsize'), false, '1M', NULL)
 		);
 		$this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_reqresp'), $attrs);
 	}
@@ -454,7 +454,7 @@ class DTblDefBase
 				DTblDefBase::NewIntAttr('banPeriod', DMsg::ALbl('l_banperiod'), true, 0)
 		);
 
-		$this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_perclientthrottle'), $attrs, 'TABLEperClientConnLimit');
+		$this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_perclientthrottle'), $attrs, 'perClientConnLimit');
 	}
 
 	protected function add_S_SEC_CGI($id)
@@ -475,13 +475,13 @@ class DTblDefBase
 				$this->_attrs['procHardLimit']
 		);
 
-		$this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_cgisettings'), $attrs, 'TABLEcgiResource');
+		$this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_cgisettings'), $attrs, 'cgiResource');
 	}
 
 	protected function add_S_SEC_DENY($id)
 	{
 		$attrs = array(
-				new DAttr('dir', 'dir', NULL, 'textarea', true, 2, ',', 'rows="15" cols="78" wrap=off', 2, 'accessDenyDir')
+            DTblDefBase::NewTextAreaAttr('dir', NULL, 'dir', true, 15, NULL, 0, 1, 2)
 		);
 		$this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_accessdenydir'), $attrs, 'accessDenyDir', 1);
 	}
@@ -493,7 +493,7 @@ class DTblDefBase
 				DTblDefBase::NewTextAreaAttr('deny', DMsg::ALbl('l_accessdeny'), 'subnet', true, 5, 'accessControl_deny', 0, 0, 1)
 		);
 
-		$this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_accesscontrol'), $attrs, 'TABLEaccessControl', 1);
+		$this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_accesscontrol'), $attrs, 'accessControl', 1);
 	}
 
 	protected function add_A_EXT_SEL($id)
@@ -571,7 +571,7 @@ class DTblDefBase
 		$parseHelp = 'ExtAppType::ExtAppName, allowed types are fcgi, fcgiauth, lsapi, servlet and proxy. e.g. fcgi::myphp, servlet::tomcat';
 
 		$attrs = array( $this->_attrs['ext_name'],
-				DTblDefBase::NewParseTextAreaAttr('workers', DMsg::ALbl('l_workers'), $parseFormat, $parseHelp, true, 3, NULL, 0, 0, 1),
+				DTblDefBase::NewParseTextAreaAttr('workers', DMsg::ALbl('l_workers'), $parseFormat, $parseHelp, true, 3, 'extWorkers', 0, 0, 1),
 				$this->_attrs['note'],
 		);
 		$defaultExtract = array('type'=>'loadbalancer');
@@ -727,7 +727,7 @@ class DTblDefBase
 				$this->_attrs['procSoftLimit'],
 				$this->_attrs['procHardLimit']
 		);
-		$this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_railssettings'), $attrs, 'TABLErailsDefault');
+		$this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_railssettings'), $attrs, 'railsDefault');
 	}
 
 	protected function add_V_TOP($id)
@@ -826,7 +826,7 @@ class DTblDefBase
 				$this->_attrs['l_vhost'],
 				$this->_attrs['l_domain']
 		);
-		$this->_tblDef[$id] = DTbl::NewIndexed($id, DMsg::ALbl('l_vhmappings'), $attrs, 'vhost', 'TABLEvirtualHostMapping');
+		$this->_tblDef[$id] = DTbl::NewIndexed($id, DMsg::ALbl('l_vhmappings'), $attrs, 'vhost', 'virtualHostMapping');
 	}
 
 	protected function add_L_VHMAP_TOP($id)
@@ -838,7 +838,7 @@ class DTblDefBase
 				$this->_attrs['l_domain'],
 				DTblDefBase::NewActionAttr('L_VHMAP', 'Ed')
 		);
-		$this->_tblDef[$id] = DTbl::NewTop($id, DMsg::ALbl('l_vhmappings'), $attrs, 'vhost', 'L_VHMAP', $align, 'TABLEvirtualHostMapping', 'web_link', FALSE);
+		$this->_tblDef[$id] = DTbl::NewTop($id, DMsg::ALbl('l_vhmappings'), $attrs, 'vhost', 'L_VHMAP', $align, 'virtualHostMapping', 'web_link', FALSE);
 	}
 
 	protected function add_LVT_SSL_CERT($id)
@@ -850,7 +850,7 @@ class DTblDefBase
 				DTblDefBase::NewTextAttr('CACertPath', DMsg::ALbl('l_cacertpath'), 'cust'),
 				DTblDefBase::NewTextAttr('CACertFile', DMsg::ALbl('l_cacertfile'), 'cust'),
 		);
-		$this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_ssl'), $attrs, 'TABLEsslCert');
+		$this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_ssl'), $attrs, 'sslCert');
 	}
 
 	protected function add_LVT_SSL($id)
@@ -947,7 +947,7 @@ class DTblDefBase
 	{
 		$attrs = array(
 				DTblDefBase::NewTextAttr('docRoot', DMsg::ALbl('l_docroot'), 'cust', false),//no validation, maybe suexec owner
-				$this->_attrs['adminEmails'],
+				$this->_attrs['adminEmails']->dup(NULL, NULL, 'vhadminEmails'),
 				$this->_attrs['vh_enableGzip'],
 				$this->_attrs['enableIpGeo'],
 				$this->_attrs['vh_spdyAdHeader']
@@ -959,7 +959,7 @@ class DTblDefBase
 	{
 		$attrs = array(
 				DTblDefBase::NewBoolAttr('useServer', DMsg::ALbl('l_useServer'), false, 'logUseServer'),
-				$this->_attrs['fileName3']->dup(NULL, NULL, 'log_fileName'),
+				$this->_attrs['fileName3']->dup(NULL, NULL, 'vhlog_fileName'),
 				DTblDefBase::NewSelAttr('logLevel', DMsg::ALbl('l_loglevel'), $this->_options['logLevel'], true, 'vhlog_logLevel'),
 				$this->_attrs['rollingSize']
 		);
@@ -971,7 +971,7 @@ class DTblDefBase
 		$attrs = array(
 				DTblDefBase::NewSelAttr('useServer', DMsg::ALbl('l_logcontrol'),
 						array(0=>DMsg::ALbl('o_ownlogfile'), 1=>DMsg::ALbl('o_serverslogfile'), 2=>DMsg::ALbl('o_disabled')), false, 'aclogUseServer'),
-				$this->_attrs['fileName3']->dup(NULL, NULL, 'accessLog_fileName'),
+				$this->_attrs['fileName3']->dup(NULL, NULL, 'vhaccessLog_fileName'),
 				DTblDefBase::NewSelAttr('pipedLogger', DMsg::ALbl('l_pipedlogger'),	'extprocessor:logger', true, 'accessLog_pipedLogger'),
 				$this->_attrs['logFormat'],
 				$this->_attrs['logHeaders'],
@@ -1046,7 +1046,7 @@ class DTblDefBase
 				DTblDefBase::NewViewAttr('url', DMsg::ALbl('l_url')),
 				DTblDefBase::NewActionAttr('VT_ERRPG', 'Ed')
 		);
-		$this->_tblDef[$id] = DTbl::NewTop($id, DMsg::ALbl('l_custerrpages'), $attrs, 'errCode', 'VT_ERRPG', $align, 'TABLEerrPage', 'file', TRUE);
+		$this->_tblDef[$id] = DTbl::NewTop($id, DMsg::ALbl('l_custerrpages'), $attrs, 'errCode', 'VT_ERRPG', $align, 'errPage', 'file', TRUE);
 	}
 
 	protected function add_VT_ERRPG($id)
@@ -1056,7 +1056,7 @@ class DTblDefBase
 				DTblDefBase::NewTextAttr('url', DMsg::ALbl('l_url'), 'cust', false, 'errURL'),
 				$this->_attrs['note'],
 		);
-		$this->_tblDef[$id] = DTbl::NewIndexed($id, DMsg::ALbl('l_custerrpages'), $attrs, 'errCode', 'TABLEerrPage');
+		$this->_tblDef[$id] = DTbl::NewIndexed($id, DMsg::ALbl('l_custerrpages'), $attrs, 'errCode', 'errPage');
 	}
 
 	protected function get_realm_attrs()
@@ -1126,7 +1126,7 @@ class DTblDefBase
 	{
 		$attrs = array(
 				DTblDefBase::NewTextAttr('name', DMsg::ALbl('l_username'), 'name', false),
-				DTblDefBase::NewTextAttr('group', DMsg::ALbl('l_groups'), 'name', true, NULL, 1),
+				DTblDefBase::NewTextAttr('group', DMsg::ALbl('l_groups'), 'name', true, 'UDBgroup', 1),
 				DTblDefBase::NewPassAttr('pass', DMsg::ALbl('l_newpass')),
 				DTblDefBase::NewPassAttr('pass1', DMsg::ALbl('l_retypepass'))
 		);
@@ -1283,7 +1283,7 @@ class DTblDefBase
 	{
 		$attrs = array(
 				$this->_attrs['tp_vrFile']->dup('docRoot', DMsg::ALbl('l_docroot'), 'templateVHDocRoot'),
-				$this->_attrs['adminEmails'],
+				$this->_attrs['adminEmails']->dup(NULL, NULL, 'vhadminEmails'),
 				$this->_attrs['vh_enableGzip'],
 				$this->_attrs['enableIpGeo'],
 				$this->_attrs['vh_spdyAdHeader']
@@ -1348,7 +1348,7 @@ class DTblDefBase
 	{
 		$attrs = array(
 				DTblDefBase::NewTextAttr('name', DMsg::ALbl('l_username'), 'name', false),
-				DTblDefBase::NewPassAttr('oldpass', DMsg::ALbl('l_oldpass'), false),
+				DTblDefBase::NewPassAttr('oldpass', DMsg::ALbl('l_oldpass'), false, 'adminOldPass'),
 				DTblDefBase::NewPassAttr('pass', DMsg::ALbl('l_newpass'), false),
 				DTblDefBase::NewPassAttr('pass1', DMsg::ALbl('l_retypepass'), false)
 		);

@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+  <title>Open LiteSpeed Web Server Users' Manual - Fast CGI Context</title>
+  <meta name="description" content="Open LiteSpeed Web Server Users' Manual - Fast CGI Context." />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="shortcut icon" href="img/favicon.ico" />
+  <link rel="stylesheet" type="text/css" href="css/hdoc.css">
+</head>
+<body>
+<div class="pagewrapper"><div class="sidetree">
+<h3>OpenLiteSpeed Web Server <a href="index.html"> Users' Manual</a></h3>
+<h5>Version 1.4 Rev. 1 </h5>
+<hr/>
+<div>
+<ul class="toctop">
+<li><a href="license.html">License</a></li>
+<li><a href="intro.html">Introduction</a></li>
+<li><a href="install.html">Installation</a></li>
+<li><a href="admin.html">Administration</a>
+	<ul class="level2"><li><a href="ServerStat_Help.html">Service Manager</a></li></ul></li>
+<li><a href="security.html">Security</a></li>
+<li><a href="config.html">Configuration</a>
+	<ul class="level2">
+	<li><a href="ServGeneral_Help.html">Server General</a></li>
+	<li><a href="ServTuning_Help.html">Server Tuning</a></li>
+	<li><a href="ServSecurity_Help.html">Server Security</a></li>
+	<li><a href="ExtApp_Help.html">External Apps</a></li>
+                <ul class="level3">
+                <li><a href="External_FCGI.html">Fast CGI App</a></li>
+                <li><a href="External_FCGI_Auth.html">Fast CGI Authorizer</a></li>
+                <li><a href="External_LSAPI.html">LSAPI App</a></li>
+                <li><a href="External_Servlet.html">Servlet Engine</a></li>
+                <li><a href="External_WS.html">Web Server</a></li>
+                <li><a href="External_PL.html">Pipped logger</a></li>
+                <li><a href="External_LB.html">Load Balancer</a></li>
+                </ul>
+	<li><a href="ScriptHandler_Help.html">Script Handler</a></li>
+	<li><a href="Rails_Help.html">Rack/Rails Settings</a></li>
+	<li><a href="Module_Help.html">Module Configuration</a></li>
+	<li><a href="Listeners_Help.html">Listeners</a></li>
+	<li><a href="Templates_Help.html">Templates</a></li>
+	<li><a href="VirtualHosts_Help.html">Virtual Host Base</a></li>
+	<li><a href="VHGeneral_Help.html">Virtual Host General</a></li>
+	<li><a href="VHSecurity_Help.html">Virtual Host Security</a></li>
+	<li><a href="Rewrite_Help.html">Rewrite</a></li>
+	<li><a href="Context_Help.html">Context</a></li>
+               <ul class="level3">
+                <li><a href="Static_Context.html">Static Context</a></li>
+                <li><a href="Java_Web_App_Context.html">Java Web App Context</a></li>
+                <li><a href="Servlet_Context.html">Servlet Context</a></li>
+                <li><span class="current"><a href="FCGI_Context.html">Fast CGI Context</a></span></li>
+                <li><a href="LSAPI_Context.html">LSAPI Context</a></li>
+                <li><a href="Proxy_Context.html">Proxy Context</a></li>
+                <li><a href="CGI_Context.html">CGI Context</a></li>
+                <li><a href="LB_Context.html">Load Balancer Context</a></li>
+                <li><a href="Redirect_Context.html">Redirect Context</a></li>
+                <li><a href="Rails_Context.html">Rack/Rails Context</a></li>
+                <li><a href="Module_Context.html">Module Handler Context</a></li>
+                </ul>
+	<li><a href="VHWebSocket_Help.html">Web Socket Proxy</a></li>
+	<li><a href="AdminGeneral_Help.html">Admin Server</a></li>
+	<li><a href="AdminListener_Help.html">Admin Listeners</a></li>	
+	</ul>
+</li>
+</ul>
+</div></div>
+<div class="contentwrapper"><div class="nav-bar"><div class="prev">&#171 <a href="Servlet_Context.html">Servlet Context</a></div><div class="center"><a href="Context_Help.html">Context</a></div><div class="next"><a href="LSAPI_Context.html">LiteSpeed SAPI Context</a> &#187;</div></div>
+<h1>Fast CGI Context</h1><h4>Table of Contents</h4><section class="toc"><section class="toc-row"><header><a href="#fcgiContext">FastCGI Context</a></header><p>
+<a href="#expuri">URI</a>&nbsp;|&nbsp;<a href="#fcgiapp">FastCGI App</a>&nbsp;|&nbsp;<a href="#extraHeaders">Extra Headers</a>&nbsp;|&nbsp;<a href="#realm">Realm</a>&nbsp;|&nbsp;<a href="#authName">Authentication Name</a>&nbsp;|&nbsp;<a href="#required">Require (Authorized Users/Groups)</a>&nbsp;|&nbsp;<a href="#accessAllowed">Access Allowed</a>&nbsp;|&nbsp;<a href="#accessDenied">Access Denied</a>&nbsp;|&nbsp;<a href="#extAuthorizer">Authorizer</a>&nbsp;|&nbsp;<a href="#addDefaultCharset">Add Default Charset</a>&nbsp;|&nbsp;<a href="#defaultCharsetCustomized">Customized Default Charset</a>&nbsp;|&nbsp;<a href="#enableIpGeo">Enable IP Geolocation</a>&nbsp;|&nbsp;</p></section>
+</section>
+<section><div class="helpitem"><a name="fcgiContext"></a><table width="100%" class="ht" border="0" cellpadding="5" cellspacing="0"> <tr class="ht-title"><td><div>FastCGI Context<span class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="img/top.gif"></a></span></div></td></tr> <tr><td><span class="ht-label">Description: </span>FastCGI applications cannot be used directly. A FastCGI application must be either configured as  a script handler or mapped to a URL through FastCGI context. A FastCGI context will  associate a URI with a FastCGI application.</td></tr> </table> </div>
+<div class="helpitem"><a name="expuri"></a><table width="100%" class="ht" border="0" cellpadding="5" cellspacing="0"> <tr class="ht-title"><td><div>URI<span class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="img/top.gif"></a></span></div></td></tr> <tr><td><span class="ht-label">Description: </span>Specifies the URI for this context.</td></tr> <tr><td><span class="ht-label">Syntax: </span>The URI can be a plain URI (starting with "/") or  a Perl compatible regular expression URI (starting with "exp:"). If a plain URI ends  with a "/", then this context will include all sub-URIs under this URI. If the context maps to a directory on the file system, a trailing "/" must be added.</td></tr> <tr><td><span class="ht-label">See Also: </span><span class="tagl"><a href="#location">Location</a></span></td></tr> </table> </div>
+<div class="helpitem"><a name="fcgiapp"></a><table width="100%" class="ht" border="0" cellpadding="5" cellspacing="0"> <tr class="ht-title"><td><div>FastCGI App<span class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="img/top.gif"></a></span></div></td></tr> <tr><td><span class="ht-label">Description: </span>Specifies the name of the FastCGI application.  This application must be defined in the <span class="tagP"><a href="#ExtApp_Help">External Application</a></span> section at the server or virtual host level.</td></tr> <tr><td><span class="ht-label">Syntax: </span>Select from drop down list</td></tr> </table> </div>
+<div class="helpitem"><a name="extraHeaders"></a><table width="100%" class="ht" border="0" cellpadding="5" cellspacing="0"> <tr class="ht-title"><td><div>Extra Headers<span class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="img/top.gif"></a></span></div></td></tr> <tr><td><span class="ht-label">Description: </span>Specifies extra response headers to be added. Multiple headers can be added, one header per line. Put "NONE" to disable headers inherited from parent content.</td></tr> <tr><td><span class="ht-label">Syntax: </span>"[HeaderName]: [HeaderValue]" in each line.</td></tr> <tr><td><span class="ht-label">Example: </span>Cache-control: no-cache, no-store <br/> My-header: Custom header value</td></tr> </table> </div>
+<div class="helpitem"><a name="realm"></a><table width="100%" class="ht" border="0" cellpadding="5" cellspacing="0"> <tr class="ht-title"><td><div>Realm<span class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="img/top.gif"></a></span></div></td></tr> <tr><td><span class="ht-label">Description: </span>Specifies the authorization realm for this context. When specified,  a valid username and password must be provided in order to access this context.  <span class="tagl"><a href="VHSecurity_Help.html#realms">Authorization Realms</a></span> are set up in the <span class="tagP"><a href="#VHSecurity_Help">Virtual Host Security</a></span> section.  This setting uses each realm's <span class="tagl"><a href="VHSecurity_Help.html#realmName">Realm Name</a></span>.</td></tr> <tr><td><span class="ht-label">Syntax: </span>Select from drop down list</td></tr> </table> </div>
+<div class="helpitem"><a name="authName"></a><table width="100%" class="ht" border="0" cellpadding="5" cellspacing="0"> <tr class="ht-title"><td><div>Authentication Name<span class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="img/top.gif"></a></span></div></td></tr> <tr><td><span class="ht-label">Description: </span>Specifies an alternative name for the authorization realm for current context.  If it is not specified, the original realm name will be used. The authentication name is  displayed on the browser's login pop-up.</td></tr> </table> </div>
+<div class="helpitem"><a name="required"></a><table width="100%" class="ht" border="0" cellpadding="5" cellspacing="0"> <tr class="ht-title"><td><div>Require (Authorized Users/Groups)<span class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="img/top.gif"></a></span></div></td></tr> <tr><td><span class="ht-label">Description: </span>Specifies which user/group can access this context. This allows you to use  one user/group database (specified in <span class="tagl"><a href="#realm">Realm</a></span>) across a number of contexts, but  only allow certain users/groups from that database to access this context.</td></tr> <tr><td><span class="ht-label">Syntax: </span>Syntax is compatible with Apache's Require directive. For example:  <ul> <li><span class="val">user username [username ...]</span> <br/> Only listed users can access this context;</li> <li> <span class="val">group groupid [groupid ...]</span><br/> Only users belonging to the listed groups can access this context.</li> </ul> If this setting is not specified, all valid users will be able to access this resource.</td></tr> </table> </div>
+<div class="helpitem"><a name="accessAllowed"></a><table width="100%" class="ht" border="0" cellpadding="5" cellspacing="0"> <tr class="ht-title"><td><div>Access Allowed<span class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="img/top.gif"></a></span></div></td></tr> <tr><td><span class="ht-label">Description: </span>Specifies which IPs or sub-networks are allowed to access resources under this context. Together with  <span class="tagl"><a href="#accessDenied">Access Denied</a></span> and server/virtual host-level access control, accessibility is determined by  the smallest scope that a client's IP address falls into.</td></tr> <tr><td><span class="ht-label">Syntax: </span>Comma-delimited list of IPs/sub-networks.</td></tr> <tr><td><span class="ht-label">Example: </span>Sub-networks can be written as <span class="val">192.168.1.0/255.255.255.0</span>, <span class="val">192.168.1</span> or <span class="val">192.168.1.*</span>.</td></tr> </table> </div>
+<div class="helpitem"><a name="accessDenied"></a><table width="100%" class="ht" border="0" cellpadding="5" cellspacing="0"> <tr class="ht-title"><td><div>Access Denied<span class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="img/top.gif"></a></span></div></td></tr> <tr><td><span class="ht-label">Description: </span>Specifies which IPs or sub-networks are NOT allowed to access resources under this context.  Together with <span class="tagl"><a href="#accessAllowed">Access Allowed</a></span> and server/virtual host-level access control, accessibility is  determined by the smallest scope that a client's IP address falls into.</td></tr> <tr><td><span class="ht-label">Syntax: </span>Comma-delimited list of IPs/sub-networks.</td></tr> <tr><td><span class="ht-label">Example: </span>Sub-networks can be written as <span class="val">192.168.1.0/255.255.255.0</span>, <span class="val">192.168.1</span> or <span class="val">192.168.1.*</span>.</td></tr> </table> </div>
+<div class="helpitem"><a name="extAuthorizer"></a><table width="100%" class="ht" border="0" cellpadding="5" cellspacing="0"> <tr class="ht-title"><td><div>Authorizer<span class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="img/top.gif"></a></span></div></td></tr> <tr><td><span class="ht-label">Description: </span>Specifies an external application that can be used to generate authorized/unauthorized decisions. Currently, only the FastCGI Authorizer is available. For more details about the FastCGI Authorizer role,  please visit <a href="http://www.fastcgi.com" target="_blank">http://www.fastcgi.com</a>.</td></tr> <tr><td><span class="ht-label">Syntax: </span>Select from drop down list</td></tr> </table> </div>
+<div class="helpitem"><a name="addDefaultCharset"></a><table width="100%" class="ht" border="0" cellpadding="5" cellspacing="0"> <tr class="ht-title"><td><div>Add Default Charset<span class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="img/top.gif"></a></span></div></td></tr> <tr><td><span class="ht-label">Description: </span>Specifies whether to add a character set tag to the 	   "Content-Type" response header, when content type is either 	   "text/html" or "text/plain" without any parameters. 	   When set to <span class="val">Off</span>,  this function is disabled. When set to 	   <span class="val">On</span>, either the character set specified by 	   <span class="tagl"><a href="#defaultCharsetCustomized">Customized Default Charset</a></span> or the default "iso-8859-1" will be added.</td></tr> <tr><td><span class="ht-label">Syntax: </span>Select from radio box</td></tr> </table> </div>
+<div class="helpitem"><a name="defaultCharsetCustomized"></a><table width="100%" class="ht" border="0" cellpadding="5" cellspacing="0"> <tr class="ht-title"><td><div>Customized Default Charset<span class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="img/top.gif"></a></span></div></td></tr> <tr><td><span class="ht-label">Description: </span>Specifies a character set to be used when <span class="tagl"><a href="#addDefaultCharset">Add Default Charset</a></span> 	   is <span class="val">On</span>. This is optional. The default value is <span class="val">iso-8859-1</span>. 	   This entry has no effect when <span class="tagl"><a href="#addDefaultCharset">Add Default Charset</a></span> is 	   <span class="val">Off</span>.</td></tr> <tr><td><span class="ht-label">Syntax: </span>Name of a character set, like <span class="val">utf-8</span></td></tr> <tr><td><span class="ht-label">Example: </span>utf-8</td></tr> </table> </div>
+<div class="helpitem"><a name="enableIpGeo"></a><table width="100%" class="ht" border="0" cellpadding="5" cellspacing="0"> <tr class="ht-title"><td><div>Enable IP Geolocation<span class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="img/top.gif"></a></span></div></td></tr> <tr><td><span class="ht-label">Description: </span> Specifies whether to enable/disable IP Geolocation lookup.  It can be set at server-, virtual host-, or context-level. IP Geolocation is disabled by default when using value "Not Set".</td></tr> <tr><td><span class="ht-label">Syntax: </span>Select from radio box</td></tr> <tr><td><span class="ht-label">See Also: </span><span class="tagl"><a href="ServGeneral_Help.html#useIpInProxyHeader">Use Client IP in Header</a></span>, <span class="tagl"><a href="ServGeneral_Help.html#geoipDBFile">DB File Path</a></span>, <span class="tagl"><a href="ServGeneral_Help.html#geoipDBCache">DB Cache Type</a></span></td></tr> </table> </div>
+</section>
+</div><footer class="copyright">Copyright &copy; 2013-2015. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> All rights reserved.</footer>
+</div>
+</body>
+</html>

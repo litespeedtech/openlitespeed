@@ -102,8 +102,8 @@ class SInfo
 	{
 		clearstatcache();
 		$mt = filemtime(SInfo::FSTATUS);
-		if ( $this->serverLastModTime != $mt )	{
-			$this->serverLastModTime = $mt;
+		if ( $this->_serverLastModTime != $mt )	{
+			$this->_serverLastModTime = $mt;
 			return true;
 		}
 		return false;
@@ -158,8 +158,10 @@ class SInfo
 					$tpname = $tp->Get(CNode::FLD_VAL);
 					$initval = array('templ' => $tpname, 'running' => -1);
 					if (is_array($member)) { // cannot use array_merge, will empty the number only keys
-						foreach($member as $m)
+                        $tvhnames = array_keys($member);
+						foreach($tvhnames as $m) {
 							$vhosts[$m] = $initval;
+                        }
 					}
 					else {
 						$vhosts[$member->Get(CNode::FLD_VAL)] = $initval;

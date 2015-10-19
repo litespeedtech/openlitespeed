@@ -358,6 +358,46 @@ int KQueuer::getFdKQ()
 {   return s_fdKQ; }
 
 
+void KQueuer::modEvent(EventReactor *pHandler, short maskIn, int add_remove)
+{
+    int mod;
+    short mask;
+    
+    mask = pHandler->getEvents() & maskIn;
+    if (add_remove == 0)
+    {
+        if (mask == 0)
+            return;
+        pHandler->andMask2(~mask);
+        mod = EV_DELETE;
+    }
+    else 
+    {
+        mask = mask ^ maskIn;
+        if (mask == 0)
+            return;
+        pHandler->orMask2(mask);
+        mod = (EV_ADD | EV_ENABLE);
+    }
+    if (mask & POLLIN)
+        appendEvent(pHandler, EVFILT_READ, mod);
+    if (mask & POLLOUT)
+        appendEvent(pHandler, EVFILT_WRITE, mod);
+}
+
+
+
+void KQueuer::wantRead(EventReactor *pHandler, int want)
+{
+    modEvent(pHandler, POLLIN, want);
+}
+
+
+void KQueuer::wantWrite(EventReactor *pHandler, int want)
+{
+    modEvent(pHandler, POLLOUT, want);
+}
+
 
 #endif //defined(__FreeBSD__ ) || defined(__NetBSD__) || defined(__OpenBSD__) 
 //|| defined(macintosh) || defined(__APPLE__) || defined(__APPLE_CC__)

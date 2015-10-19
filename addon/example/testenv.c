@@ -33,12 +33,12 @@ lsi_module_t MNAME;
  * //testenv?modcompress:S1P-3000R1P-3000&moddecompress:S1P3000R1P3000
  */
 
-int assignHandler(lsi_cb_param_t *rec)
+int assignHandler(lsi_param_t *rec)
 {
     int len;
     const char *p;
     const char *pEnd;
-    const char *uri = g_api->get_req_uri(rec->_session, &len);
+    const char *uri = g_api->get_req_uri(rec->session, &len);
     const char *nameStart;
     char name[128];
     int nameLen;
@@ -49,8 +49,8 @@ int assignHandler(lsi_cb_param_t *rec)
         strncasecmp(uri, URI_PREFIX, strlen(URI_PREFIX)) != 0)
         return 0;
 
-    g_api->register_req_handler(rec->_session, &MNAME, 0);
-    p = g_api->get_req_query_string(rec->_session, &len);
+    g_api->register_req_handler(rec->session, &MNAME, 0);
+    p = g_api->get_req_query_string(rec->session, &len);
     pEnd = p + len;
     while (p && p < pEnd)
     {
@@ -79,8 +79,8 @@ int assignHandler(lsi_cb_param_t *rec)
             strncpy(val, valStart, valLen);
             val[valLen] = 0x00;
 
-            g_api->set_req_env(rec->_session, name, nameLen, val, valLen);
-            g_api->log(rec->_session, LSI_LOG_INFO,
+            g_api->set_req_env(rec->session, name, nameLen, val, valLen);
+            g_api->log(rec->session, LSI_LOG_INFO,
                        "[Module:testEnv] setEnv name[%s] val[%s]\n", name, val);
 
         }
@@ -109,8 +109,8 @@ static int PsHandlerProcess(lsi_session_t *session)
 
 static lsi_serverhook_t serverHooks[] =
 {
-    {LSI_HKPT_RECV_REQ_HEADER, assignHandler, LSI_HOOK_NORMAL, LSI_HOOK_FLAG_ENABLED},
-    lsi_serverhook_t_END   //Must put this at the end position
+    {LSI_HKPT_RECV_REQ_HEADER, assignHandler, LSI_HOOK_NORMAL, LSI_FLAG_ENABLED},
+    LSI_HOOK_END   //Must put this at the end position
 };
 
 static int _init(lsi_module_t *pModule)
@@ -118,5 +118,5 @@ static int _init(lsi_module_t *pModule)
     return 0;
 }
 
-lsi_handler_t myhandler = { PsHandlerProcess, NULL, NULL, NULL };
+lsi_reqhdlr_t myhandler = { PsHandlerProcess, NULL, NULL, NULL };
 lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, _init, &myhandler, NULL, "", serverHooks };

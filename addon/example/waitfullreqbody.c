@@ -59,14 +59,14 @@ static int httprelease(void *data)
 }
 
 
-static int httpinit(lsi_cb_param_t *param)
+static int httpinit(lsi_param_t *param)
 {
     mydata_t *mydata;
-    ls_xpool_t *pool = g_api->get_session_pool(param->_session);
+    ls_xpool_t *pool = g_api->get_session_pool(param->session);
     mydata = ls_xpool_alloc(pool, sizeof(mydata_t));
     ls_loopbuf_x(&mydata->inbuf, MAX_BLOCK_BUFSIZE, pool);
     g_api->log(NULL, LSI_LOG_DEBUG, "#### waitfullreqbody init\n");
-    g_api->set_module_data(param->_session, &MNAME, LSI_MODULE_DATA_HTTP,
+    g_api->set_module_data(param->session, &MNAME, LSI_DATA_HTTP,
                            (void *)mydata);
     return 0;
 }
@@ -79,17 +79,17 @@ static int httpinit(lsi_cb_param_t *param)
  * DO NOT SET TO 0, because the other module may already set to 1 when pass in this function.
  *
  */
-static int httpreqread(lsi_cb_param_t *param)
+static int httpreqread(lsi_param_t *param)
 {
     mydata_t *mydata = NULL;
-    ls_xpool_t *pool = g_api->get_session_pool(param->_session);
+    ls_xpool_t *pool = g_api->get_session_pool(param->session);
     char *pbegin;
     char tmpBuf[MAX_BLOCK_BUFSIZE];
     int len, sz, i;
-    char *p = (char *)param->_param;
+    char *p = (char *)param->ptr1;
 
-    mydata = (mydata_t *)g_api->get_module_data(param->_session, &MNAME,
-             LSI_MODULE_DATA_HTTP);
+    mydata = (mydata_t *)g_api->get_module_data(param->session, &MNAME,
+             LSI_DATA_HTTP);
     if (mydata == NULL)
         return LS_FAIL;
 
@@ -102,7 +102,7 @@ static int httpreqread(lsi_cb_param_t *param)
     }
 
     while (!ls_loopbuf_empty(&mydata->inbuf)
-           && (p - (char *)param->_param < param->_param_len))
+           && (p - (char *)param->ptr1 < param->len1))
     {
         ls_loopbuf_xstraight(&mydata->inbuf, pool);
         pbegin = ls_loopbuf_begin(&mydata->inbuf);
@@ -111,8 +111,8 @@ static int httpreqread(lsi_cb_param_t *param)
 //#define TESTCASE_2
 #ifndef TESTCASE_2
         //test case 1: double each cahr
-        if (sz > param->_param_len / 2)
-            sz = param->_param_len / 2;
+        if (sz > param->len1 / 2)
+            sz = param->len1 / 2;
         for (i = 0; i < sz; ++i)
         {
             *p++ = *pbegin;
@@ -133,33 +133,33 @@ static int httpreqread(lsi_cb_param_t *param)
         ls_loopbuf_popfront(&mydata->inbuf, sz);
     }
 
-    param->_param_len = p - (char *)param->_param;
+    param->len1 = p - (char *)param->ptr1;
     if (!ls_loopbuf_empty(&mydata->inbuf))
-        *((int *)param->_flag_out) = 1;
+        *((int *)param->flag_out) = 1;
 
-    return param->_param_len;
+    return param->len1;
 }
 
 
-static int reg_handler(lsi_cb_param_t *param)
+static int reg_handler(lsi_param_t *param)
 {
     const char *uri;
     int len;
-    uri = g_api->get_req_uri(param->_session, &len);
+    uri = g_api->get_req_uri(param->session, &len);
     if ((len >= sizeof(testuri) - 1)
         && (strncasecmp(uri, testuri, sizeof(testuri) - 1) == 0))
     {
-        g_api->register_req_handler(param->_session, &MNAME, sizeof(testuri) - 1);
+        g_api->register_req_handler(param->session, &MNAME, sizeof(testuri) - 1);
         //g_api->set_req_wait_full_body(param->_session);
     }
-    return LSI_HK_RET_OK;
+    return LSI_OK;
 }
 
 
 static int _init(lsi_module_t *module)
 {
-    module->_info = VERSION;  //set version string
-    g_api->init_module_data(module, httprelease, LSI_MODULE_DATA_HTTP);
+    module->about = VERSION;  //set version string
+    g_api->init_module_data(module, httprelease, LSI_DATA_HTTP);
 
     return 0;
 }
@@ -222,7 +222,7 @@ static int begin_process(lsi_session_t *session)
 
 static int clean_up(lsi_session_t *session)
 {
-    g_api->free_module_data(session, &MNAME, LSI_MODULE_DATA_HTTP,
+    g_api->free_module_data(session, &MNAME, LSI_DATA_HTTP,
                             httprelease);
     return 0;
 }
@@ -230,14 +230,14 @@ static int clean_up(lsi_session_t *session)
 
 static lsi_serverhook_t server_hooks[] =
 {
-    { LSI_HKPT_RECV_REQ_HEADER, reg_handler, LSI_HOOK_NORMAL, LSI_HOOK_FLAG_ENABLED },
-    { LSI_HKPT_HTTP_BEGIN, httpinit, LSI_HOOK_NORMAL, LSI_HOOK_FLAG_ENABLED },
-    { LSI_HKPT_RECV_REQ_BODY, httpreqread, LSI_HOOK_EARLY, LSI_HOOK_FLAG_TRANSFORM | LSI_HOOK_FLAG_ENABLED },
+    { LSI_HKPT_RECV_REQ_HEADER, reg_handler, LSI_HOOK_NORMAL, LSI_FLAG_ENABLED },
+    { LSI_HKPT_HTTP_BEGIN, httpinit, LSI_HOOK_NORMAL, LSI_FLAG_ENABLED },
+    { LSI_HKPT_RECV_REQ_BODY, httpreqread, LSI_HOOK_EARLY, LSI_FLAG_TRANSFORM | LSI_FLAG_ENABLED },
 
-    lsi_serverhook_t_END   //Must put this at the end position
+    LSI_HOOK_END   //Must put this at the end position
 };
 
-static lsi_handler_t myhandler = { begin_process, on_read, NULL, clean_up };
+static lsi_reqhdlr_t myhandler = { begin_process, on_read, NULL, clean_up };
 
 lsi_module_t MNAME =
 {

@@ -358,8 +358,8 @@ int HttpListener::checkAccess(struct conn_data *pData)
         (IN6_IS_ADDR_V4MAPPED(&((struct sockaddr_in6 *)pPeer)->sin6_addr)))
     {
         pPeer->sa_family = AF_INET;
-        ((struct sockaddr_in *)pPeer)->sin_addr.s_addr = *((in_addr_t *)
-                &pData->achPeerAddr[20]);
+        memmove(&((struct sockaddr_in *)pPeer)->sin_addr.s_addr,
+                &pData->achPeerAddr[20], 4);
     }
     ClientInfo *pInfo = ClientCache::getClientCache()->getClientInfo(pPeer);
     pData->pInfo = pInfo;
@@ -411,6 +411,7 @@ int HttpListener::batchAddConn(struct conn_data *pBegin,
     NtwkIOLink **pConnEnd = &pConns[ret];
     NtwkIOLink **pConnCur = pConns;
     VHostMap *pMap;
+    sockaddr_in *pAddrIn;
     //int flag = MultiplexerFactory::getMultiplexer()->getFLTag();
     while (pCur < pEnd)
     {
@@ -424,11 +425,10 @@ int HttpListener::batchAddConn(struct conn_data *pBegin,
                 pMap = getSubMap(fd);
             else
                 pMap = getVHostMap();
-
+            pAddrIn = (sockaddr_in *)pCur->achPeerAddr;
             pConn->setVHostMap(pMap);
             pConn->setLogger(getLogger());
-            pConn->setRemotePort(ntohs(((sockaddr_in *)(
-                                            pCur->achPeerAddr))->sin_port));
+            pConn->setRemotePort(ntohs(pAddrIn->sin_port));
 
             //    if ( getDedicated() )
             //    {
@@ -472,6 +472,7 @@ VHostMap *HttpListener::getSubMap(int fd)
 int HttpListener::addConnection(struct conn_data *pCur, int *iCount)
 {
     int fd = pCur->fd;
+    sockaddr_in *pAddrIn = (sockaddr_in *)pCur->achPeerAddr;
     if (checkAccess(pCur))
     {
         no_timewait(fd);
@@ -494,8 +495,7 @@ int HttpListener::addConnection(struct conn_data *pCur, int *iCount)
         pMap = getVHostMap();
     pConn->setVHostMap(pMap);
     pConn->setLogger(getLogger());
-    pConn->setRemotePort(ntohs(((sockaddr_in *)(
-                                    pCur->achPeerAddr))->sin_port));
+    pConn->setRemotePort(ntohs(pAddrIn->sin_port));
     if (pConn->setLink(this, pCur->fd, pCur->pInfo, pMap->getSSLContext()))
     {
         HttpResourceManager::getInstance().recycle(pConn);

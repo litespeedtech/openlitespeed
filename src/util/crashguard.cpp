@@ -57,8 +57,8 @@ int CrashGuard::guardCrash()
 {
     long lLastForkTime  = 0;
     int  iForkCount     = 0;
-    int  rpid   = 0;
-    int  ret;
+    int  rpid           = 0;
+    int  ret            = 0;
     int  stat;
     assert(m_pGuardedApp);
     init();

@@ -39,57 +39,57 @@ lsi_module_t MNAME;
 /////////////////////////////////////////////////////////////////////////////
 #define     VERSION         "V1.0"
 
-static int addoutput(lsi_cb_param_t *rec, const char *level)
+static int addoutput(lsi_param_t *rec, const char *level)
 {
     int len = 0, lenNew;
     char *pBuf;
-    if (rec->_param_len <= 0)
-        return g_api->stream_write_next(rec, rec->_param, rec->_param_len);
-    pBuf = ls_xpool_alloc(g_api->get_session_pool(rec->_session),
-                          rec->_param_len + strlen(level) + 1);
-    snprintf(pBuf, rec->_param_len + strlen(level) + 1, "%.*s%.*s",
-             rec->_param_len, (const char *)rec->_param, strlen(level) + 1, level);
-    lenNew = rec->_param_len + strlen(level);
+    if (rec->len1 <= 0)
+        return g_api->stream_write_next(rec, rec->ptr1, rec->len1);
+    pBuf = ls_xpool_alloc(g_api->get_session_pool(rec->session),
+                          rec->len1 + strlen(level) + 1);
+    snprintf(pBuf, rec->len1 + strlen(level) + 1, "%.*s%.*s",
+             rec->len1, (const char *)rec->ptr1, strlen(level) + 1, level);
+    lenNew = rec->len1 + strlen(level);
     len = g_api->stream_write_next(rec, pBuf, lenNew);
     if (len < lenNew)
-        *rec->_flag_out = LSI_CB_FLAG_OUT_BUFFERED_DATA;
-    if (len < rec->_param_len)
+        *rec->flag_out = LSI_CBFO_BUFFERED;
+    if (len < rec->len1)
         return len;
-    return rec->_param_len;
+    return rec->len1;
 }
 
-static int addrecvresp(lsi_cb_param_t *rec)
+static int addrecvresp(lsi_param_t *rec)
 {   return addoutput(rec, "RECV3: If this appears, good.\n");  }
 
 
-static int addsendresp(lsi_cb_param_t *rec)
+static int addsendresp(lsi_param_t *rec)
 {   return addoutput(rec, "SEND3: If this appears, good.\n");  }
 
-static int beginSession(lsi_cb_param_t *rec)
+static int beginSession(lsi_param_t *rec)
 {
     int aEnableHkpts[] = {LSI_HKPT_RECV_RESP_BODY, LSI_HKPT_SEND_RESP_BODY};
-    g_api->set_session_hook_enable_flag(rec->_session, &MNAME, 1,
+    g_api->enable_hook(rec->session, &MNAME, 1,
                                         aEnableHkpts, 2);
     return 0;
 }
 
 static lsi_serverhook_t serverHooks[] =
 {
-    {LSI_HKPT_HTTP_BEGIN, beginSession, LSI_HOOK_NORMAL, LSI_HOOK_FLAG_ENABLED},
+    {LSI_HKPT_HTTP_BEGIN, beginSession, LSI_HOOK_NORMAL, LSI_FLAG_ENABLED},
     {
         LSI_HKPT_RECV_RESP_BODY, addrecvresp, LSI_HOOK_NORMAL,
-        LSI_HOOK_FLAG_ENABLED | LSI_HOOK_FLAG_TRANSFORM
+        LSI_FLAG_ENABLED | LSI_FLAG_TRANSFORM
     },
     {
         LSI_HKPT_SEND_RESP_BODY, addsendresp, LSI_HOOK_NORMAL,
-        LSI_HOOK_FLAG_ENABLED | LSI_HOOK_FLAG_TRANSFORM
+        LSI_FLAG_ENABLED | LSI_FLAG_TRANSFORM
     },
-    lsi_serverhook_t_END   //Must put this at the end position
+    LSI_HOOK_END   //Must put this at the end position
 };
 
 static int _init()
 {
-    MNAME._info = VERSION;  //set version string
+    MNAME.about = VERSION;  //set version string
     return 0;
 }
 

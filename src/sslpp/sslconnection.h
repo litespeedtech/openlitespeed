@@ -33,6 +33,9 @@ class SSLConnection
     int     m_iStatus;
     int     m_iWant;
     int     m_iFlag;
+    char    m_iFreeCtx;
+    char    m_iFreeSess;
+    static int32_t s_iConnIdx;
 
 public:
     enum
@@ -56,6 +59,15 @@ public:
     int lastRead() const    {   return m_iWant & LAST_READ; }
     int lastWrite() const   {   return m_iWant & LAST_WRITE; }
 
+    char getFlag() const    {   return m_iFlag;     }
+    void setFlag(int flag) {   m_iFlag = flag;     }
+
+    char getFreeCtx() const {   return m_iFreeCtx;      }
+    void setFreeCtx()       {   m_iFreeCtx = 1;         }
+
+    char getFreeSess() const    {   return m_iFreeSess;     }
+    void setFreeSess()          {   m_iFreeSess = 1;        }
+
     SSLConnection();
     explicit SSLConnection(SSL *ssl);
     SSLConnection(SSL *ssl, int fd);
@@ -64,9 +76,6 @@ public:
 
     void setSSL(SSL *ssl);
     SSL *getSSL() const    {   return m_ssl;   }
-
-    int getFlag()   { return m_iFlag;  }
-    void setFlag(int v) { m_iFlag = v; }
 
     void release();
     int setfd(int fd);
@@ -105,6 +114,8 @@ public:
 
     int getSpdyVersion();
 
+    static void initConnIdx();
+    static int getConnIdx()         {   return s_iConnIdx;   }
     static int getSessionIdLen(SSL_SESSION *s);
     static const unsigned char *getSessionId(SSL_SESSION *s);
     static int getCipherBits(const SSL_CIPHER *pCipher, int *algkeysize);

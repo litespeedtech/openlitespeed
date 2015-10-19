@@ -136,15 +136,17 @@ PHP_INSTALLED=n
 INSTALL_TYPE="reinstall"
 if [ -f "$LSWS_HOME/conf/httpd_config.xml" ] ; then
 
-    printf '\033[31;42m\e[5mWarning:\e[25m\033[0m\033[31m This is a beta version. We recommend that you back up your current installation before trying \n\tthis version. Are you sure you want to overwrite your current version [Yes/No]?\033[0m '  
+    printf '\033[31;42m\e[5mWarning:\e[25m\033[0m\033[31m This version uses a plain text configuration file which can also be modified by hand.\n\033[0m '
+    printf '\033[31m \tThe XML configuration file for your current version (1.3.x or below) will be converted\n\tby the installation program to this format and a copy will be made of your current XML\n\033[0m '
+    printf '\033[31m \tfile named <filename>.xml.bak. If you have any installed modules, they will need to be\n\trecompiled to comply with the upgraded API.\n\tAre you sure you want to upgrade to this version? [Yes/No]\033[0m '
     read Overwrite_Old
-    echo 
+    echo
 
     if [ "x$Overwrite_Old" = "x" ]; then
         Overwrite_Old=No
     fi
 
-    if [ "x$Overwrite_Old" != "xYes" ]; then
+    if [ "x$Overwrite_Old" != "xYes" ] && [ "x$Overwrite_Old" != "xY" ] ; then
         echo "Abort installation!" 
         exit 0
     fi
@@ -154,13 +156,22 @@ if [ -f "$LSWS_HOME/conf/httpd_config.xml" ] ; then
     inst_admin_php
     PHP_INSTALLED=y
     
-    rm "$LSWS_HOME/conf/httpd_config.conf"
-    rm "$LSWS_HOME/DEFAULT/conf/vhconf.conf"
+    if [ -e "$LSWS_HOME/conf/httpd_config.conf" ] ; then
+        mv "$LSWS_HOME/conf/httpd_config.conf" "$LSWS_HOME/conf/httpd_config.conf.old"
+    fi
+    
+    if [ -e "$LSWS_HOME/DEFAULT/conf/vhconf.conf" ] ; then
+        mv "$LSWS_HOME/DEFAULT/conf/vhconf.conf" "$LSWS_HOME/DEFAULT/conf/vhconf.conf.old"
+    fi
+
     if [ ! -d "$LSWS_HOME/backup" ] ; then
         mkdir "$LSWS_HOME/backup"
     fi
+
     $LSINSTALL_DIR/admin/misc/convertxml.sh $LSWS_HOME
-    rm "$LSWS_HOME/conf/httpd_config.xml"
+    if [ -e "$LSWS_HOME/conf/httpd_config.xml" ] ; then
+        rm "$LSWS_HOME/conf/httpd_config.xml"
+    fi
 fi
 
 if [ -f "$LSWS_HOME/conf/httpd_config.conf" ] ; then

@@ -19,6 +19,7 @@
 #ifndef REQPARSER_H
 #define REQPARSER_H
 
+#include <sys/types.h>
 #include <util/autobuf.h>
 #include <util/autostr.h>
 #include <lsr/ls_md5.h>
@@ -26,32 +27,10 @@
 
 #define MAX_BOUNDARY_LEN  1024
 
-#define SEC_LOC_ARGS            (1<<0)
-#define SEC_LOC_ARGS_NAMES      (1<<1)
-#define SEC_LOC_HEADERS         (1<<2)
-#define SEC_LOC_COOKIES         (1<<3)
-#define SEC_LOC_ENVS            (1<<4)
-#define SEC_LOC_XML             (1<<5)
-
-#define SEC_LOC_ARGS_GET        (1<<6)
-#define SEC_LOC_ARGS_POST       (1<<7)
-#define SEC_LOC_ARGS_ALL        (SEC_LOC_ARGS_GET|SEC_LOC_ARGS_POST)
-#define SEC_LOC_ARGS_GET_NAMES  (1<<8)
-#define SEC_LOC_ARGS_POST_NAMES (1<<9)
-#define SEC_LOC_COOKIES_NAMES   (1<<10)
-
 
 class HttpSession;
 class HttpReq;
 class VMemBuf;
-
-struct KeyValuePair
-{
-    int keyOffset;
-    int keyLen;
-    int valueOffset;
-    int valueLen;
-};
 
 struct KeyValuePairFile
 {
@@ -102,13 +81,6 @@ public:
     bool getEnableUploadFile()    {   return m_ReqParserParam.m_iEnableUploadFile; }
     bool isParseDone()  { return m_iParseState == PARSE_DONE; }
 
-    //int parseArgs( HttpReq * pReq, int scanPost );
-    const char *getArgStr(int location, int &len);
-    const char *getArgStr(const char *pName, int nameLen, int &len,
-                          char *&filePath);
-
-    const char *getReqHeader(const char *pName, int nameLen, int &len,
-                             HttpReq *pReq);
     const char *getReqVar(HttpSession *pSession, int varId, int &len,
                           char *pBegin, int bufLen);
     int getArgCount() const {   return m_args;  }
@@ -116,21 +88,14 @@ public:
                 char *&filePath);
     bool isFile(int index) { return (m_pArgs[index].filePath != NULL);  }
 
-    static const char *getHeaderString(int iIndex);
-
-
-    int getCookieCount() const  {   return m_iCookies;  }
 
     static void testQueryString();
     static void testMultipart();
     static void testAll();
 
-    int parseCookies(const char *pCookies, int len);
-
 private:
 
     int allocArgIndex(int newMax);
-    int allocCookieIndex(int newMax);
 
 
     int parseArgs(const char *pStr, int len, int resume, int last);
@@ -154,12 +119,13 @@ private:
     int appendArgKeyIndex(int begin, int len);
     int appendArgKey(const char *pStr, int len);
     int multipartParseHeader(char *pBegin, char *pLineEnd);
-    int parseMutlipart(const char *srcBuf, size_t srcSize,
+    int parseMultipart(const char *srcBuf, size_t srcSize,
                        int resume, int last);
 
     int appendBodyBuf(const char *s, size_t len);
     int appendFileKeyValue(const char *key, size_t keylen, const char *val,
                            size_t vallen, bool bFirstPart = false);
+    void closeLastMFile();
     void writeToFile(const char *buf, int len);
 
 private:
@@ -168,8 +134,8 @@ private:
     AutoStr2        m_part_boundary;
     int8_t          m_ignore_part;
     int8_t          m_multipartState;
-    uint8_t         m_iCachedEof;
     uint8_t         m_resume;
+    int8_t          m_md5CachedNum;
     int             m_iCurOff;
 
     char            m_state_kv;
@@ -186,10 +152,6 @@ private:
     int             m_postArgs;
 
     const char     *m_pErrStr;
-
-    int             m_iCookies;
-    int             m_iMaxCookies;
-    KeyValuePair   *m_pCookies;
     HttpReq        *m_pReq;
 
     /**Comment about the below varibles
@@ -199,8 +161,9 @@ private:
      */
     AutoStr2        m_sLastFileKey;
     ls_md5_ctx_t    m_md5Ctx;
-    int             m_iLastFd;
-    int             m_iContentLength;
+    char            m_md5CachedBytes[2];
+    VMemBuf        *m_pLastFileBuf;
+    off_t           m_iContentLength;
     ReqParserParam  m_ReqParserParam;
 };
 

@@ -60,10 +60,10 @@ struct ls_str_s
 };
 
 /**
- * @typedef ls_str_pair_t
+ * @typedef ls_strpair_t
  * @brief A str pair structure that can be used for key/value pairs.
  */
-struct ls_str_pair_s
+struct ls_strpair_s
 {
     ls_str_t key;
     ls_str_t value;

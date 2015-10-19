@@ -23,7 +23,6 @@ class debugBase;
 #endif
 
 #include <shm/lsshmhash.h>
-#include <shm/lsshmlru.h>
 
 /**
  * @file
@@ -32,12 +31,15 @@ class debugBase;
 
 class LsShmPool;
 
+#define SHMLRU_MINSAVECNT   5           /* minimum count to save history */
+
+
 class LsShmWLruHash : public LsShmHash
 {
 public:
-    LsShmWLruHash(LsShmPool *pool, const char *name, LsShmSize_t init_size,
-                  hash_fn hf, val_comp vc)
-        : LsShmHash(pool, name, init_size, hf, vc, LSSHM_LRU_MODE2)
+    LsShmWLruHash(LsShmPool *pool, const char *name,
+                  LsShmHasher_fn hf, LsShmValComp_fn vc)
+        : LsShmHash(pool, name, hf, vc, LSSHM_LRU_MODE2)
     {   return;  }
     virtual ~LsShmWLruHash() {}
 
@@ -82,9 +84,9 @@ private:
 class LsShmXLruHash : public LsShmHash
 {
 public:
-    LsShmXLruHash(LsShmPool *pool, const char *name, LsShmSize_t init_size,
-                  hash_fn hf, val_comp vc)
-        : LsShmHash(pool, name, init_size, hf, vc, LSSHM_LRU_MODE3)
+    LsShmXLruHash(LsShmPool *pool, const char *name,
+                  LsShmHasher_fn hf, LsShmValComp_fn vc)
+        : LsShmHash(pool, name, hf, vc, LSSHM_LRU_MODE3)
     {   return;  }
     virtual ~LsShmXLruHash() {}
 

@@ -23,33 +23,33 @@
 #include "test/unittest-cpp/UnitTest++/src/UnitTest++.h"
 #include <unistd.h>
 
-int cb1(lsi_cb_param_t *param)
+int cb1(lsi_param_t *param)
 {
-    printf("test cb1, %s %d\n", (char *)param->_param, param->_param_len);
+    printf("test cb1, %s %d\n", (char *)param->ptr1, param->len1);
     return 0;
 }
 
-int cb2(lsi_cb_param_t *param)
+int cb2(lsi_param_t *param)
 {
-    printf("test cb2, %s %d\n", (char *)param->_param, param->_param_len);
+    printf("test cb2, %s %d\n", (char *)param->ptr1, param->len1);
     return 0;
 }
 
-int cb3(lsi_cb_param_t *param)
+int cb3(lsi_param_t *param)
 {
-    printf("test cb3, %s %d\n", (char *)param->_param, param->_param_len);
+    printf("test cb3, %s %d\n", (char *)param->ptr1, param->len1);
     return 0;
 }
 
-int cb4(lsi_cb_param_t *param)
+int cb4(lsi_param_t *param)
 {
-    printf("test cb4, %s %d\n", (char *)param->_param, param->_param_len);
+    printf("test cb4, %s %d\n", (char *)param->ptr1, param->len1);
     return 0;
 }
 
-int cb5(lsi_cb_param_t *param)
+int cb5(lsi_param_t *param)
 {
-    printf("test cb5, %s %d\n", (char *)param->_param, param->_param_len);
+    printf("test cb5, %s %d\n", (char *)param->ptr1, param->len1);
     return 0;
 }
 

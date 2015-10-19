@@ -40,7 +40,7 @@ typedef struct gdata_item_s
     time_t tmcreate;
     time_t tmexpire;        //Create time + TTL = expird time
     time_t tmaccess;        //For not checking file too often
-    lsi_release_callback_pf release_cb;
+    lsi_datarelease_pf release_cb;
 } gdata_item_t;
 
 typedef  THash<gdata_item_t *> GDataHash;
@@ -64,12 +64,12 @@ public:
     ~LsiapiBridge() {};
 
     static lsi_api_t  g_lsiapiFunctions;
-    static GDataContainer *g_aGDataContainer[LSI_CONTAINER_COUNT];
+    //static GDataContainer *g_aGDataContainer[LSI_CONTAINER_COUNT];
 
 
     static int initLsiapi();
     static void uninitLsiapi();
-    static void checkExpiredGData();
+    //static void checkExpiredGData();
     static void releaseModuleData(int level, LsiModuleData *pData);
     static lsi_api_t *getLsiapiFunctions()
     { return &LsiapiBridge::g_lsiapiFunctions; };

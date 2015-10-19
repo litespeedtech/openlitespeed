@@ -118,7 +118,7 @@ SUITE(HttpHeaderTest)
         const char *p;
         //int l;
 
-        for (int i = 0; i < LSI_RESP_HEADER_END; ++i)
+        for (int i = 0; i < LSI_RSPHDR_END; ++i)
         {
             p = HttpRespHeaders::m_sPresetHeaders[i];
             //l = HttpRespHeaders::m_iPresetHeaderLen[i];
@@ -426,10 +426,12 @@ SUITE(HttpHeaderTest)
         for (it = io.begin(); it != io.end(); ++it)
         {
             p = (unsigned char *)it->iov_base;
-            printf("Check: %.*s, %.*s\n", it->iov_len, p, it->iov_len, ph);
+            printf("Check: %.*s, %.*s\n", (int)it->iov_len, p,
+                   (int)it->iov_len, ph);
             CHECK(strncasecmp((const char *)p, ph, it->iov_len) == 0);
             if (strncasecmp((const char *)p, ph, it->iov_len) != 0)
-                printf("p:\n%.*s\nph:\n%.*s\n", it->iov_len, p, it->iov_len, ph);
+                printf("p:\n%.*s\nph:\n%.*s\n", (int)it->iov_len, p, 
+                       (int)it->iov_len, ph);
             ph += it->iov_len;
         }
 
@@ -471,9 +473,9 @@ SUITE(HttpHeaderTest)
         HttpRespHeaders h(&pool);
         h.reset();
 
-        h.parseAdd(headerData, sizeof(headerData) - 1, LSI_HEADER_ADD);
-        h.parseAdd(headerData1, sizeof(headerData1) - 1, LSI_HEADER_ADD);
-        h.parseAdd(headerData2, sizeof(headerData2) - 1, LSI_HEADER_ADD);
+        h.parseAdd(headerData, sizeof(headerData) - 1, LSI_HEADEROP_ADD);
+        h.parseAdd(headerData1, sizeof(headerData1) - 1, LSI_HEADEROP_ADD);
+        h.parseAdd(headerData2, sizeof(headerData2) - 1, LSI_HEADEROP_ADD);
     }
 
 
@@ -529,8 +531,8 @@ SUITE(HttpHeaderTest)
             h.add(HttpRespHeaders::H_DATE, "Thu, 16 May 2013 20:32:23 GMT",
                   strlen("Thu, 16 May 2013 20:32:23 GMT"));
             h.add(HttpRespHeaders::H_DATE,  "Thu, 16 ", strlen("Thu, 16 "),
-                  LSI_HEADER_MERGE);
-            h.add(HttpRespHeaders::H_DATE,  "XXXX", 4, LSI_HEADER_MERGE);
+                  LSI_HEADEROP_MERGE);
+            h.add(HttpRespHeaders::H_DATE,  "XXXX", 4, LSI_HEADEROP_MERGE);
             h.add(HttpRespHeaders::H_X_POWERED_BY, "PHP/5.3.24", strlen("PHP/5.3.24"));
             h.outputNonSpdyHeaders(&io);
             DisplayBothHeader(io, kk, h.getCount(), &h);
@@ -538,21 +540,21 @@ SUITE(HttpHeaderTest)
                    "HTTP/1.1 200 OK\r\nserver: My_Server\r\naccept-ranges: bytes\r\ndate: Thu, 16 May 2013 20:32:23 GMT,Thu, 16 ,XXXX\r\nx-powered-by: PHP/5.3.24\r\nconnection: close\r\n\r\n");
             CheckIoHeader(io, sTestHdr);
 
-            h.add(HttpRespHeaders::H_DATE,  "NEWDATE", 7, LSI_HEADER_ADD);
+            h.add(HttpRespHeaders::H_DATE,  "NEWDATE", 7, LSI_HEADEROP_ADD);
             h.outputNonSpdyHeaders(&io);
             DisplayBothHeader(io, kk, h.getCount(), &h);
             strcpy(sTestHdr,
                    "HTTP/1.1 200 OK\r\nserver: My_Server\r\naccept-ranges: bytes\r\ndate: Thu, 16 May 2013 20:32:23 GMT,Thu, 16 ,XXXX\r\nx-powered-by: PHP/5.3.24\r\nconnection: close\r\ndate: NEWDATE\r\n\r\n");
             CheckIoHeader(io, sTestHdr);
 
-            h.add(HttpRespHeaders::H_DATE,  "NEWDATE2", 8, LSI_HEADER_ADD);
+            h.add(HttpRespHeaders::H_DATE,  "NEWDATE2", 8, LSI_HEADEROP_ADD);
             h.outputNonSpdyHeaders(&io);
             DisplayBothHeader(io, kk, h.getCount(), &h);
             strcpy(sTestHdr,
                    "HTTP/1.1 200 OK\r\nserver: My_Server\r\naccept-ranges: bytes\r\ndate: Thu, 16 May 2013 20:32:23 GMT,Thu, 16 ,XXXX\r\nx-powered-by: PHP/5.3.24\r\nconnection: close\r\ndate: NEWDATE\r\ndate: NEWDATE2\r\n\r\n");
             CheckIoHeader(io, sTestHdr);
 
-            h.add(HttpRespHeaders::H_DATE,  "NEWDATE3", 8, LSI_HEADER_ADD);
+            h.add(HttpRespHeaders::H_DATE,  "NEWDATE3", 8, LSI_HEADEROP_ADD);
             h.outputNonSpdyHeaders(&io);
             DisplayBothHeader(io, kk, h.getCount(), &h);
             strcpy(sTestHdr,
@@ -619,19 +621,19 @@ SUITE(HttpHeaderTest)
             h.add(HttpRespHeaders::H_SET_COOKIE,
                   "lsws_uid=a; expires=Mon, 13 May 2013 14:10:51 GMT; path=/",
                   strlen("lsws_uid=a; expires=Mon, 13 May 2013 14:10:51 GMT; path=/"),
-                  LSI_HEADER_ADD);
+                  LSI_HEADEROP_ADD);
 
             h.add(HttpRespHeaders::H_SET_COOKIE,
                   "lsws_pass=b; expires=Mon, 13 May 2013 14:10:51 GMT; path=/",
                   strlen("lsws_pass=b; expires=Mon, 13 May 2013 14:10:51 GMT; path=/"),
-                  LSI_HEADER_ADD);
+                  LSI_HEADEROP_ADD);
 
             h.add("testBreak", 9, "----", 4);
 
             h.add(HttpRespHeaders::H_SET_COOKIE,
                   "lsws_uid=c; expires=Mon, 13 May 2013 14:10:51 GMT; path=/",
                   strlen("lsws_uid=c; expires=Mon, 13 May 2013 14:10:51 GMT; path=/"),
-                  LSI_HEADER_ADD);
+                  LSI_HEADEROP_ADD);
             h.outputNonSpdyHeaders(&io);
             DisplayBothHeader(io, kk, h.getCount(), &h);
             CHECK(h.getUniqueCnt() == 8);
@@ -669,24 +671,24 @@ SUITE(HttpHeaderTest)
             h.addStatusLine(0, SC_404, 1);
 
             h.parseAdd("MytestHeader : XXX\r\n",
-                       strlen("MytestHeader : XXX\r\n"), LSI_HEADER_MERGE);
+                       strlen("MytestHeader : XXX\r\n"), LSI_HEADEROP_MERGE);
 
             h.parseAdd("Content-Encoding   \t  : GZIP\r\n",
-                       strlen("Content-Encoding   \t  : GZIP\r\n"), LSI_HEADER_MERGE);
+                       strlen("Content-Encoding   \t  : GZIP\r\n"), LSI_HEADEROP_MERGE);
             h.parseAdd("Content-Encoding2 : GZIP\r\n",
-                       strlen("Content-Encoding2 : GZIP\r\n"), LSI_HEADER_MERGE);
+                       strlen("Content-Encoding2 : GZIP\r\n"), LSI_HEADEROP_MERGE);
             h.outputNonSpdyHeaders(&io);
             DisplayBothHeader(io, kk, h.getCount(), &h);
             strcpy(sTestHdr,
-                   "HTTP/1.1 404 Not Found\r\nserver: XServer  \r\naccept-ranges: bytes\r\nconnection: close\r\ndate: Thu, 16 May 2099 20:32:23 GMT\r\nx-powered-by: PHP/9.9.99\r\nallow: *.*; .zip; .rar; .exe; .flv\r\n");
+                   "HTTP/1.1 404 Not Found\r\nServer: XServer  \r\nAccept-Ranges: bytes\r\nConnection: close\r\nDate: Thu, 16 May 2099 20:32:23 GMT\r\nX-Powered-By: PHP/9.9.99\r\nAllow: *.*; .zip; .rar; .exe; .flv\r\n");
             strcat(sTestHdr,
-                   "set-cookie: lsws_uid=a; expires=Mon, 13 May 2013 14:10:51 GMT; path=/\r\nset-cookie: lsws_pass=b; expires=Mon, 13 May 2013 14:10:51 GMT; path=/\r\ntestbreak: ----\r\nset-cookie: lsws_uid=c; expires=Mon, 13 May 2013 14:10:51 GMT; path=/\r\n");
+                   "Set-Cookie: lsws_uid=a; expires=Mon, 13 May 2013 14:10:51 GMT; path=/\r\nSet-Cookie: lsws_pass=b; expires=Mon, 13 May 2013 14:10:51 GMT; path=/\r\ntestBreak: ----\r\nSet-Cookie: lsws_uid=c; expires=Mon, 13 May 2013 14:10:51 GMT; path=/\r\n");
             strcat(sTestHdr,
-                   "mytestheader: TTTTTTTTTTTT3,XXX\r\nmytestheaderii: IIIIIIIIIIIIIIIIIIIII\r\n\r\n");
+                   "MytestHeader: TTTTTTTTTTTT3,XXX\r\nMyTestHeaderii: IIIIIIIIIIIIIIIIIIIII\r\nContent-Encoding: GZIP\r\nContent-Encoding2: GZIP\r\n\r\n");
             CheckIoHeader(io, sTestHdr);
 
             h.parseAdd("MytestHeader: XXX\r\n",
-                       strlen("MytestHeader: XXX\r\n"), LSI_HEADER_MERGE);
+                       strlen("MytestHeader: XXX\r\n"), LSI_HEADEROP_MERGE);
             h.outputNonSpdyHeaders(&io);
             DisplayBothHeader(io, kk, h.getCount(), &h);
             strcpy(sTestHdr,
@@ -694,19 +696,19 @@ SUITE(HttpHeaderTest)
             strcat(sTestHdr,
                    "set-cookie: lsws_uid=a; expires=Mon, 13 May 2013 14:10:51 GMT; path=/\r\nset-cookie: lsws_pass=b; expires=Mon, 13 May 2013 14:10:51 GMT; path=/\r\ntestbreak: ----\r\nset-cookie: lsws_uid=c; expires=Mon, 13 May 2013 14:10:51 GMT; path=/\r\n");
             strcat(sTestHdr,
-                   "mytestheader: TTTTTTTTTTTT3,XXX\r\nmytestheaderii: IIIIIIIIIIIIIIIIIIIII\r\n\r\n");
+                   "mytestheader: TTTTTTTTTTTT3,XXX\r\nmytestheaderii: IIIIIIIIIIIIIIIIIIIII\r\nContent-Encoding: GZIP\r\nContent-Encoding2: GZIP\r\n\r\n");
             CheckIoHeader(io, sTestHdr);
 
             h.parseAdd("MytestHeader: XXX\r\n",
-                       strlen("MytestHeader: XXX\r\n"), LSI_HEADER_APPEND);
+                       strlen("MytestHeader: XXX\r\n"), LSI_HEADEROP_APPEND);
             h.outputNonSpdyHeaders(&io);
             DisplayBothHeader(io, kk, h.getCount(), &h);
             strcpy(sTestHdr,
-                   "HTTP/1.1 404 Not Found\r\nserver: XServer  \r\naccept-ranges: bytes\r\nconnection: close\r\ndate: Thu, 16 May 2099 20:32:23 GMT\r\nx-powered-by: PHP/9.9.99\r\nallow: *.*; .zip; .rar; .exe; .flv\r\n");
+                   "HTTP/1.1 404 Not Found\r\nServer: XServer  \r\nAccept-Ranges: bytes\r\nConnection: close\r\nDate: Thu, 16 May 2099 20:32:23 GMT\r\nX-Powered-By: PHP/9.9.99\r\nAllow: *.*; .zip; .rar; .exe; .flv\r\n");
             strcat(sTestHdr,
-                   "set-cookie: lsws_uid=a; expires=Mon, 13 May 2013 14:10:51 GMT; path=/\r\nset-cookie: lsws_pass=b; expires=Mon, 13 May 2013 14:10:51 GMT; path=/\r\ntestbreak: ----\r\nset-cookie: lsws_uid=c; expires=Mon, 13 May 2013 14:10:51 GMT; path=/\r\n");
+                   "Set-Cookie: lsws_uid=a; expires=Mon, 13 May 2013 14:10:51 GMT; path=/\r\nSet-Cookie: lsws_pass=b; expires=Mon, 13 May 2013 14:10:51 GMT; path=/\r\ntestBreak: ----\r\nSet-Cookie: lsws_uid=c; expires=Mon, 13 May 2013 14:10:51 GMT; path=/\r\n");
             strcat(sTestHdr,
-                   "mytestheader: TTTTTTTTTTTT3,XXX,XXX\r\nmytestheaderii: IIIIIIIIIIIIIIIIIIIII\r\n\r\n");
+                   "MytestHeader: TTTTTTTTTTTT3,XXX,XXX\r\nMyTestHeaderii: IIIIIIIIIIIIIIIIIIIII\r\nContent-Encoding: GZIP\r\nContent-Encoding2: GZIP\r\n\r\n");
             CheckIoHeader(io, sTestHdr);
         }
 
@@ -715,26 +717,26 @@ SUITE(HttpHeaderTest)
         h.add(HttpRespHeaders::H_ACCEPT_RANGES,  "bytes", 5);
         h.add(HttpRespHeaders::H_DATE,  "Thu, 16 May 2013 20:32:23 GMT",
               strlen("Thu, 16 May 2013 20:32:23 GMT"));
-        h.add(HttpRespHeaders::H_DATE,  "AAAA", 4, LSI_HEADER_MERGE);
+        h.add(HttpRespHeaders::H_DATE,  "AAAA", 4, LSI_HEADEROP_MERGE);
         h.add(HttpRespHeaders::H_X_POWERED_BY, "PHP/5.3.24", strlen("PHP/5.3.24"));
         h.outputNonSpdyHeaders(&io);
         DisplayBothHeader(io, kk, h.getCount(), &h);
         strcpy(sTestHdr,
                "HTTP/1.1 200 OK\r\nserver: My_Server\r\naccept-ranges: bytes\r\ndate: Thu, 16 May 2013 20:32:23 GMT,AAAA\r\nx-powered-by: PHP/5.3.24\r\nconnection: close\r\n\r\n");
         CheckIoHeader(io, sTestHdr);
-        h.add(HttpRespHeaders::H_DATE,  "AAA", 3, LSI_HEADER_MERGE);
+        h.add(HttpRespHeaders::H_DATE,  "AAA", 3, LSI_HEADEROP_MERGE);
         strcpy(sTestHdr,
                "HTTP/1.1 200 OK\r\nserver: My_Server\r\naccept-ranges: bytes\r\ndate: Thu, 16 May 2013 20:32:23 GMT,AAAA,AAA\r\nx-powered-by: PHP/5.3.24\r\nconnection: close\r\n\r\n");
         h.outputNonSpdyHeaders(&io);
         DisplayBothHeader(io, kk, h.getCount(), &h);
         CheckIoHeader(io, sTestHdr);
-        h.add(HttpRespHeaders::H_DATE,  "AAA", 3, LSI_HEADER_MERGE);
+        h.add(HttpRespHeaders::H_DATE,  "AAA", 3, LSI_HEADEROP_MERGE);
         strcpy(sTestHdr,
                "HTTP/1.1 200 OK\r\nserver: My_Server\r\naccept-ranges: bytes\r\ndate: Thu, 16 May 2013 20:32:23 GMT,AAAA,AAA\r\nx-powered-by: PHP/5.3.24\r\nconnection: close\r\n\r\n");
         h.outputNonSpdyHeaders(&io);
         DisplayBothHeader(io, kk, h.getCount(), &h);
         CheckIoHeader(io, sTestHdr);
-        h.add(HttpRespHeaders::H_DATE,  "AAA", 3, LSI_HEADER_APPEND);
+        h.add(HttpRespHeaders::H_DATE,  "AAA", 3, LSI_HEADEROP_APPEND);
         strcpy(sTestHdr,
                "HTTP/1.1 200 OK\r\nserver: My_Server\r\naccept-ranges: bytes\r\ndate: Thu, 16 May 2013 20:32:23 GMT,AAAA,AAA,AAA\r\nx-powered-by: PHP/5.3.24\r\nconnection: close\r\n\r\n");
         h.outputNonSpdyHeaders(&io);
@@ -1144,7 +1146,7 @@ SUITE(HttpHeaderTest)
             {
                 //printf("i = %d j = %d \n",i,j);
                 temp = h.add((const HttpRespHeaders::HEADERINDEX)(i), s_pHeaders[i+1], strlen(s_pHeaders[i+1]),
-                             s_pHeaderVals[i+1], strlen(s_pHeaderVals[i+1]),LSI_HEADER_ADD);
+                             s_pHeaderVals[i+1], strlen(s_pHeaderVals[i+1]),LSI_HEADEROP_ADD);
                 CHECK(temp == 0);
                 temp = h.getCount();
                 temp = h.getTotalCount();

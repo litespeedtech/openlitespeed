@@ -77,9 +77,12 @@
 #include <main/plainconf.h>
 #include <main/serverinfo.h>
 
+#include <shm/lsshm.h>
 #include <sslpp/sslcontext.h>
 #include <sslpp/sslengine.h>
 #include <sslpp/sslocspstapling.h>
+#include <sslpp/sslsesscache.h>
+#include <sslpp/sslticket.h>
 
 #include <util/accesscontrol.h>
 #include <util/autostr.h>
@@ -336,6 +339,7 @@ private:
                                    const char *pURI, char *pchPHPBin);
     const char *configAdminPhpUri(const XmlNode *pNode);
     int configAdminConsole(const XmlNode *pNode);
+    int configSysShmDirs( char *pConfDir );
     int configTuning(const XmlNode *pRoot);
     void setMaxConns(int32_t conns);
     void setMaxSSLConns(int32_t conns);
@@ -876,6 +880,7 @@ void HttpServerImpl::onTimer30Secs()
 
     }
     HttpStats::set503Errors(0);
+    SslTicket::getInstance().onTimer();
 }
 
 
@@ -1291,7 +1296,7 @@ HttpListener *HttpServerImpl::configListener(const XmlNode *pNode,
             const XmlNodeList *pModuleList = p0->getChildren("module");
             if (pModuleList)
                 ModuleConfig::parseConfigList(pModuleList, &pListener->m_moduleConfig,
-                                              LSI_LISTENER_LEVEL, pName);
+                                              LSI_CFG_LISTENER, pName);
 
             pListener->getSessionHooks()->inherit(NULL, 1);
             ModuleManager::getInstance().applyConfigToIolinkRt(
@@ -1741,6 +1746,44 @@ void HttpServerImpl::setMaxSSLConns(int32_t conns)
 }
 
 
+int HttpServerImpl::configSysShmDirs(char *pConfDir)
+{
+    const char *pAppSuffix = "ols";
+    const char *pRamdisk, *pBackup2 = "$SERVER_ROOT/admin/tmp";
+    char achDir[MAX_PATH_LEN];
+
+
+    if ((pConfDir != NULL)
+        && ((LsShm::checkDirSpace(pConfDir) != LSSHM_OK)
+            || (LsShm::addBaseDir(pConfDir) != LSSHM_OK)))
+    {
+        LS_ERROR("Add configured default directory failed! '%s'", pConfDir);
+    }
+    pRamdisk = LsShm::detectDefaultRamdisk();
+    if (pRamdisk != NULL)
+    {
+        snprintf(achDir, MAX_PATH_LEN, "%s/%s/", pRamdisk, pAppSuffix);
+        if (GPath::createMissingPath(achDir, 0750) != 0)
+            LS_ERROR("Create default directory failed! '%s'", achDir);
+        else if ((LsShm::checkDirSpace(achDir) != LSSHM_OK)
+            || (LsShm::addBaseDir(achDir) != LSSHM_OK))
+            LS_ERROR("Add default directory failed!  '%s'", achDir);
+    }
+
+    snprintf(achDir, MAX_PATH_LEN, "/tmp/%s/shm/", pAppSuffix);
+    if (LsShm::addBaseDir(achDir) != LSSHM_OK)
+        LS_ERROR("Add backup directory 1 failed! '%s'", achDir);
+
+    if (ConfigCtx::getCurConfigCtx()->getAbsolutePath(achDir, pBackup2) != 0)
+        LS_DBG_L("Load backup dir failed");
+
+    if (LsShm::addBaseDir(achDir) != LSSHM_OK)
+        LS_DBG_L("Add backup directory 2 failed! '%s'", achDir);
+
+    return LsShm::getBaseDirCount() != 0;
+}
+
+
 int HttpServerImpl::configTuning(const XmlNode *pRoot)
 {
     ConfigCtx currentCtx("server", "tuning");
@@ -1817,6 +1860,8 @@ int HttpServerImpl::configTuning(const XmlNode *pRoot)
         LS_WARN(&currentCtx, "Failed to initialize SSL Accelerator Device: %s,"
                 " SSL hardware acceleration is disabled!", pValue);
     }
+    SSLContext::setUseStrongDH(currentCtx.getLongValue(pNode, "SSLStrongDhKey",
+                                                       0, 1, 1));
 
     // GZIP compression
     config.setGzipCompress(currentCtx.getLongValue(pNode, "enableGzipCompress",
@@ -1869,6 +1914,59 @@ int HttpServerImpl::configTuning(const XmlNode *pRoot)
     }
 
     StaticFileCacheData::setGzipCachePath(pValue);
+
+
+    // shm
+    const char *pShmDir = pNode->getChildValue( "shmDefaultDir" );
+    char achShmDefDir[MAX_PATH_LEN];
+    char *pConfDir = NULL;
+    if ( pShmDir != NULL )
+    {
+        if (currentCtx.getValidFile(achShmDefDir, pShmDir, "Shm Default Dir") == 0)
+            pConfDir = achShmDefDir;
+    }
+
+    if ( configSysShmDirs(pConfDir) == 0 )
+    {
+        LS_ERROR("Failed to init any system shm directories.");
+        return -1;
+    }
+
+    if ( currentCtx.getLongValue(pNode, "sslEnableMultiCerts", 0, 1, 0) == 1 )
+        SSLContext::enableMultiCerts();
+
+    int iSslCacheSize;
+    int32_t iSslCacheTimeout;
+    if (currentCtx.getLongValue(pNode, "sslSessionCache", 0, 1, 0) != 0)
+    {
+        iSslCacheSize = currentCtx.getLongValue(pNode, "sslSessionCacheSize",
+                                                0, INT_MAX, 1000000);
+
+        iSslCacheTimeout = currentCtx.getLongValue(pNode,
+                                                   "sslSessionCacheTimeout",
+                                                   0, INT_MAX, 216000);
+        if (SslSessCache::getInstance().init(iSslCacheTimeout,
+                                             iSslCacheSize) != LS_OK)
+        {
+            LS_WARN("[%s] Failed to init SSL Session Id Cache");
+            return -1;
+        }
+    }
+
+    const char *pTKFile;
+    char achTKFile[MAX_PATH_LEN];
+    if (currentCtx.getLongValue(pNode, "sslSessionTickets", 0, 1, 0) == 1)
+    {
+        if ((pTKFile = pNode->getChildValue("sslSessionTicketKeyFile")) != NULL)
+        {
+            if (currentCtx.getValidFile(achTKFile, pTKFile,
+                                        "Ticket Key File") == 0)
+                pTKFile = achTKFile;
+        }
+        long iTicketLifetime = currentCtx.getLongValue(pNode,
+                        "sslSessionTicketLifetime", 216000, INT_MAX, 216000);
+        SslTicket::getInstance().init(pTKFile, iTicketLifetime);
+    }
 
     return 0;
 }
@@ -2169,7 +2267,8 @@ void HttpServerImpl::configVHTemplateToListenerMap(
 
     for (iter = pList->begin(); iter != pList->end(); ++iter)
     {
-        const char *pName = (*iter)->getChildValue("vhName");
+        const char *pName = ConfigCtx::getCurConfigCtx()->getTag((*iter),
+                                                                 "name", 1);
         const char *pDomain = (*iter)->getChildValue("vhDomain");
         const char *pAliases = (*iter)->getChildValue("vhAliases");
         const char *pVhRoot = (*iter)->getChildValue("vhRoot");
@@ -2499,7 +2598,7 @@ int HttpServerImpl::configModules(const XmlNode *pRoot)
     for (int i = 0; i < moduleCount; ++i)
         ModuleManager::getGlobalModuleConfig()->get(i)->filters_enable = 1;
     ModuleConfig::parseConfigList(pList,
-                                  ModuleManager::getGlobalModuleConfig(), LSI_SERVER_LEVEL,
+                                  ModuleManager::getGlobalModuleConfig(), LSI_CFG_SERVER,
                                   pRoot->getName());
     ModuleManager::getInstance().runModuleInit();
 
@@ -2686,8 +2785,6 @@ int HttpServerImpl::configServer(int reconfig, XmlNode *pRoot)
                 pri, new_pri);
     }
 
-    //Must load modules before parse and set scriptHandlers
-    configModules(pRoot);
 
     ret = configServerBasic2(pRoot, pRoot->getChildValue("swappingDir"));
 
@@ -2701,6 +2798,8 @@ int HttpServerImpl::configServer(int reconfig, XmlNode *pRoot)
 
     configTuning(pRoot);
 
+    //Must load modules before parse and set scriptHandlers
+    configModules(pRoot);
 
     if (startListeners(pRoot, ADMIN_CONFIG_NODE))
         return LS_FAIL;
@@ -3025,9 +3124,9 @@ int HttpServerImpl::initSampleServer()
     {
     }
     SSLContext *pNewContext = new SSLContext(SSLContext::SSL_ALL);
-    SSLContext *pSSL = pNewContext->setKeyCertCipher(
-                           achBuf1, achBuf, NULL, NULL,
-                           "ALL:!ADH:!EXPORT56:RC4+RSA:+HIGH:+MEDIUM:+SSLv2:+EXP" , 0, 0, 0);
+    SSLContext *pSSL = pNewContext->setKeyCertCipher(achBuf1, achBuf, NULL,
+                NULL, "ALL:!ADH:!EXPORT56:RC4+RSA:+HIGH:+MEDIUM:+SSLv2:+EXP",
+                0, 0, 0);
     if (pSSL == NULL)
         delete pNewContext;
 

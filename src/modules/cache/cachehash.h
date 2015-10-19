@@ -49,19 +49,19 @@ public:
 
     void saveHash(XXH64_state_t *pState)
     {
-        *((uint64_t *)m_key) = XXH64_digest(pState);
+        m_key = XXH64_digest(pState);
     }
 
     const char *getKey() const
     {
-        return m_key;
+        return (const char *)&m_key;
     }
 
     static hash_key_t to_ghash_key(const void *__s);
     static int  compare(const void *pVal1, const void *pVal2);
 
 private:
-    char  m_key[HASH_KEY_LEN];
+    uint64_t m_key;
 
 };
 

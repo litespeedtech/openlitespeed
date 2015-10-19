@@ -331,9 +331,7 @@ ls_inline int ls_futex_trylock(ls_mutex_t *p)
  */
 ls_inline int ls_futex_unlock(ls_mutex_t *p)
 {
-    int *lp = p;
-
-    assert(*lp != 0);
+    assert(*p != 0);
     return (ls_atomic_setint(p, LS_LOCK_AVAIL) == LS_FUTEX_LOCKED2) ?
            ls_futex_wake(p) : 0;
 }
@@ -417,7 +415,9 @@ ls_inline int ls_atomic_spin_pidlock(ls_atom_spinlock_t *p)
             cnt = MAX_SPINCNT_CHECK;
         }
         else
+        {
             cpu_relax();
+        }
     }
 }
 

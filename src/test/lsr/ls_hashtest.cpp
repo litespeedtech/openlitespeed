@@ -215,7 +215,7 @@ TEST(ls_hashtest_test)
 
     // check interface to xxhash
     ls_hash_t xxhash;
-    ls_hash_iter xxiter;
+    ls_hash_iter xxiter = NULL;
     const char *pKey = "hello world";
     ls_hash(&xxhash, 10, ls_hash_hfstring, ls_hash_cmpstring, NULL);
     CHECK((xxiter = ls_hash_find(&xxhash, pKey)) == NULL);

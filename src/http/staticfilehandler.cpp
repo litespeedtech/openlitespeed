@@ -510,7 +510,7 @@ int StaticFileHandler::process(HttpSession *pSession,
     char compressed = ((pReq->gzipAcceptable() == GZIP_REQUIRED) &&
                        ((pSession->getSessionHooks()->getFlag(LSI_HKPT_RECV_RESP_BODY)
                          | pSession->getSessionHooks()->getFlag(LSI_HKPT_SEND_RESP_BODY))
-                        & LSI_HOOK_FLAG_DECOMPRESS_REQUIRED) == 0);
+                        & LSI_FLAG_DECOMPRESS_REQUIRED) == 0);
     ret = pCache->readyCacheData(pECache, compressed);
     LS_DBG_L(pReq->getLogSession(), "readyCacheData() return %d", ret);
     if (!ret)

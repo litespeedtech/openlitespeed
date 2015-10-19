@@ -55,8 +55,8 @@ static int begin_process(lsi_session_t *session)
     char out[maxOutLen];
     int iUriLen, iOutLen;
     g_api->set_status_code(session, 200);
-    g_api->set_resp_header(session, LSI_RESP_HEADER_CONTENT_TYPE, NULL, 0,
-                           "text/html", 9, LSI_HEADER_SET);
+    g_api->set_resp_header(session, LSI_RSPHDR_CONTENT_TYPE, NULL, 0,
+                           "text/html", 9, LSI_HEADEROP_SET);
     uri = g_api->get_req_uri(session, &iUriLen);
     if (memcmp(uri, pPrefix, strlen(pPrefix)) != 0)
         return LS_FAIL;
@@ -68,7 +68,7 @@ static int begin_process(lsi_session_t *session)
     return 0;
 }
 
-static lsi_handler_t myhandler = { begin_process, NULL, NULL, NULL };
+static lsi_reqhdlr_t myhandler = { begin_process, NULL, NULL, NULL };
 lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, NULL, &myhandler, NULL };
 
 

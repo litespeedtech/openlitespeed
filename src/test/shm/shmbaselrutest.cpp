@@ -23,7 +23,7 @@
 #include <string.h>
 #include "test/unittest-cpp/UnitTest++/src/UnitTest++.h"
 
-static const char *g_pShmDirName = LsShm::getDefaultShmDir();
+static const char *g_pShmDirName = "/dev/shm/ols";
 static const char *g_pShmName = "SHMLRUTEST";
 static const char *g_pHashName = "SHMLRUHASH";
 
@@ -60,7 +60,7 @@ TEST(ls_ShmBaseLru_test)
 }
 
 
-static int trimfunc(iterator iter, void *arg)
+static int trimfunc(LsShmHash::iterator iter, void *arg)
 {
     LsShmHash *pHash = (LsShmHash *)arg;
     fprintf(stdout, "trim: [%.*s][%.*s] size=%d\n",
@@ -84,17 +84,17 @@ static void doit(LsShm *pShm)
     LsShmHash::iteroffset iterOff0 = 0;
     LsShmHash::iteroffset iterOff1 = 0;
     LsShmHash::iteroffset iterOffX = 0;
-    LsShmOffset_t offTop;
-    ls_str_pair_t parms;
+    LsShmOffset_t offTop = 0;
+    ls_strpair_t parms;
     int flags;
-    int cnt;
+    int cnt = 0;
     int num;
 
     CHECK((pGPool = pShm->getGlobalPool()) != NULL);
     if (pGPool == NULL)
         return;
     CHECK((pHash = pGPool->getNamedHash(
-                       g_pHashName, 0, LsShmHash::hashXXH32, LsShmHash::compBuf,
+                       g_pHashName, 0, LsShmHash::hashXXH32, memcmp,
                        LSSHM_LRU_MODE1)) != NULL);
     if (pHash == NULL)
         return;

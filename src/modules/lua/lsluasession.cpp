@@ -1140,7 +1140,7 @@ static int LsLuaReqHttpVersion(lua_State *L)
     char aTmpBuf[TMPBUFSIZE];
     LsLuaSession *pSession = LsLuaGetSession(L);
     iBufSize = g_api->get_req_var_by_id(pSession->getHttpSession(),
-                                        LSI_REQ_VAR_SERVER_PROTO,
+                                        LSI_VAR_SERVER_PROTO,
                                         aTmpBuf, iBufSize);
     if (iBufSize != 0)
         LsLuaApi::pushlstring(L, aTmpBuf, iBufSize);
@@ -1278,7 +1278,7 @@ static int LsLuaReqGetMethod(lua_State *L)
     char aTmpBuf[TMPBUFSIZE];
     LsLuaSession *pSession = LsLuaGetSession(L);
     iBufSize = g_api->get_req_var_by_id(pSession->getHttpSession(),
-                                        LSI_REQ_VAR_REQ_METHOD,
+                                        LSI_VAR_REQ_METHOD,
                                         aTmpBuf, iBufSize);
     if (iBufSize != 0)
         LsLuaApi::pushlstring(L, aTmpBuf, iBufSize);
@@ -1320,7 +1320,7 @@ static int LsLuaReqSetUri(lua_State *L)
         pSession->setFlag(LLF_URLREDIRECTED);
         return LsLuaApi::yield(L, 0);
     }
-    if (g_api->set_uri_qs(session, LSI_URI_REWRITE, pUri, iUriLen, NULL, 0))
+    if (g_api->set_uri_qs(session, LSI_URL_REWRITE, pUri, iUriLen, NULL, 0))
         return LsLuaApi::serverError(L, "req_set_uri", "Setting uri failed");
 
     return 0;
@@ -1337,7 +1337,7 @@ static int LsLuaReqSetUriArgs(lua_State *L)
 
     LsLuaGetQs(L, 1, pQs, iQsLen);
     if (g_api->set_uri_qs(pSession->getHttpSession()
-                          , LSI_URI_NOCHANGE | LSI_URL_QS_SET
+                          , LSI_URL_NOCHANGE | LSI_URL_QS_SET
                           , NULL, 0
                           , pQs, iQsLen
                          ) < 0
@@ -1860,8 +1860,8 @@ static int  LsLuaSessRedirect(lua_State *L)
 
     switch (status)
     {
-    case LSI_URI_NOCHANGE:          // 0
-    case LSI_URI_REWRITE:           // 1
+    case LSI_URL_NOCHANGE:          // 0
+    case LSI_URL_REWRITE:           // 1
     case LSI_URL_REDIRECT_INTERNAL: // 2
     case LSI_URL_REDIRECT_301:
     case LSI_URL_REDIRECT_302:
@@ -1878,7 +1878,7 @@ static int  LsLuaSessRedirect(lua_State *L)
         status = LSI_URL_REDIRECT_307;
         break;
     default:
-        status = LSI_URI_REWRITE;
+        status = LSI_URL_REWRITE;
         break;
     }
     if (g_api->set_uri_qs(pSession->getHttpSession(), status, cp, len, "", 0))
@@ -3020,7 +3020,7 @@ void LsLuaCreateUD(lua_State *L)
 static int LsLuaGetArg(lua_State *L)
 {
     int idx;
-    lsi_cb_param_t *rec;
+    lsi_param_t *rec;
     luaL_Buffer buf;
     LsLuaSession *pSession = LsLuaGetSession(L);
     int iRet;
@@ -3038,8 +3038,8 @@ static int LsLuaGetArg(lua_State *L)
         rec = pSession->getModParam();
         LsLuaApi::buffinit(L, &buf);
         LsLuaApi::addlstring(&buf,
-                             (const char *)rec->_param,
-                             rec->_param_len);
+                             (const char *)rec->ptr1,
+                             rec->len1);
         LsLuaApi::pushresult(&buf);
     }
     else if (idx == 2)

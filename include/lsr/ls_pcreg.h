@@ -496,7 +496,7 @@ int ls_pcre_getnamedsubcnt(ls_pcre_t *pThis);
  * @return Number of named patterns if successful, else -1.
  */
 int ls_pcre_getnamedsubs(const ls_pcre_t *pThis, const ls_pcreres_t *pRes,
-                         ls_str_pair_t *pSubPats, int iCount);
+                         ls_strpair_t *pSubPats, int iCount);
 
 /** @ls_pcresub_release
  * @brief Releases anything that was initialized by the pcre sub compile/exec calls.

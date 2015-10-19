@@ -20,7 +20,6 @@
 #include <shm/lsshm.h>
 #include <util/gpath.h>
 
-#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -45,7 +44,6 @@ LsShmLock::LsShmLock()
     , m_pShmLockElem(NULL)
     , m_iMaxSizeO(0)
 {
-
 }
 
 
@@ -55,19 +53,19 @@ LsShmLock::~LsShmLock()
 }
 
 
-lsi_shmlock_t *LsShmLock::allocLock()
+ls_shmlock_t *LsShmLock::allocLock()
 {
     LsShmLockElem *pElem;
     LsShmOffset_t offset;
-    lsi_shmlock_lock(&m_pShmLockElem->x_lock);
+    ls_shmlock_lock(&m_pShmLockElem->x_lock);
     if ((offset = getShmLockMap()->x_iFreeOffset) == 0)
     {
-        lsi_shmlock_unlock(&m_pShmLockElem->x_lock);
+        ls_shmlock_unlock(&m_pShmLockElem->x_lock);
         return NULL;
     }
     pElem = m_pShmLockElem + offset;
     m_pShmLockMap->x_iFreeOffset = pElem->x_iNext;
-    lsi_shmlock_unlock(&m_pShmLockElem->x_lock);
+    ls_shmlock_unlock(&m_pShmLockElem->x_lock);
     if (sizeof(pElem->x_lock) == sizeof(int))   // optimized out by compiler
         *(int *)&pElem->x_lock = 0;
     else
@@ -76,14 +74,14 @@ lsi_shmlock_t *LsShmLock::allocLock()
 }
 
 
-int LsShmLock::freeLock(lsi_shmlock_t *pLock)
+int LsShmLock::freeLock(ls_shmlock_t *pLock)
 {
     int num = pLock2LockNum(pLock);
     LsShmLockElem *pElem = m_pShmLockElem + num;
-    lsi_shmlock_lock(&m_pShmLockElem->x_lock);
+    ls_shmlock_lock(&m_pShmLockElem->x_lock);
     pElem->x_iNext = getShmLockMap()->x_iFreeOffset;
     getShmLockMap()->x_iFreeOffset = num;
-    lsi_shmlock_unlock(&m_pShmLockElem->x_lock);
+    ls_shmlock_unlock(&m_pShmLockElem->x_lock);
     return 0;
 }
 
@@ -101,8 +99,7 @@ void LsShmLock::cleanup()
 
 LsShmStatus_t LsShmLock::checkMagic(LsShmLockMap *mp) const
 {
-    return (mp->x_iMagic != m_iMagic) ?
-           LSSHM_BADVERSION : LSSHM_OK;
+    return (mp->x_iMagic != m_iMagic) ? LSSHM_BADVERSION : LSSHM_OK;
 }
 
 
@@ -115,11 +112,10 @@ LsShmStatus_t LsShmLock::init(const char *pFileName, int fd,
     m_iFd = fd;
     size = ((size + s_iPageSize - 1) / s_iPageSize) * s_iPageSize;
 
-
     if (fstat(m_iFd, &mystat) < 0)
     {
-        LsShm::setErrMsg(LSSHM_SYSERROR, "Unable to stat [%s], %s.",
-                         pFileName, strerror(errno));
+        LsShm::setErrMsg(LSSHM_SYSERROR, "Unable to stat lock file, %s.",
+                         strerror(errno));
         return LSSHM_BADMAPFILE;
     }
 
@@ -147,9 +143,8 @@ LsShmStatus_t LsShmLock::init(const char *pFileName, int fd,
     {
         if (mystat.st_size < s_iHdrSize)
         {
-            LsShm::setErrMsg(LSSHM_BADMAPFILE,
-                             "Bad LockFile format [%s], size=%lld.",
-                             pFileName, (uint64_t)mystat.st_size);
+            LsShm::setErrMsg(LSSHM_BADMAPFILE, "Bad LockFile, size=%lld.",
+                             (uint64_t)mystat.st_size);
             return LSSHM_BADMAPFILE;
         }
 
@@ -160,8 +155,8 @@ LsShmStatus_t LsShmLock::init(const char *pFileName, int fd,
         if (checkMagic(getShmLockMap()) != LSSHM_OK)
         {
             LsShm::setErrMsg(LSSHM_BADVERSION,
-                             "Bad LockFile format [%s], size=%lld, magic=%08X(%08X).",
-                             pFileName, (uint64_t)mystat.st_size,
+                             "Bad LockFile format, size=%lld, magic=%08X(%08X).",
+                             (uint64_t)mystat.st_size,
                              getShmLockMap()->x_iMagic, m_iMagic);
             return LSSHM_BADVERSION;
         }
@@ -222,9 +217,8 @@ uint64_t  LsShmLock::getId() const
 
 LsShmStatus_t LsShmLock::map(LsShmXSize_t size)
 {
-    uint8_t *p =
-        (uint8_t *)mmap(0, (size_t)size, PROT_READ | PROT_WRITE, MAP_SHARED, m_iFd,
-                        0);
+    uint8_t *p = (uint8_t *)
+        mmap(0, (size_t)size, PROT_READ | PROT_WRITE, MAP_SHARED, m_iFd, 0);
     if (p == MAP_FAILED)
     {
         LsShm::setErrMsg(LSSHM_SYSERROR, "Unable to mmap, size=%lu, %s.",
@@ -275,7 +269,7 @@ void LsShmLock::setupFreeList(LsShmOffset_t to)
 
     if (lastNum == 0)
     {
-        lsi_shmlock_setup(&m_pShmLockElem->x_lock); // lock for lockfile
+        ls_shmlock_setup(&m_pShmLockElem->x_lock); // lock for lockfile
         ++lastNum;      // keep this for myself
     }
     getShmLockMap()->x_iFreeOffset = lastNum;

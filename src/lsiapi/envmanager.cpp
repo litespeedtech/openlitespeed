@@ -79,11 +79,11 @@ lsi_callback_pf EnvManager::findHandler(const char *name)
 int EnvManager::execEnvHandler(LsiSession *session, lsi_callback_pf cb,
                                void *val, long valLen)
 {
-    lsi_cb_param_t param;
-    memset(&param, 0, sizeof(lsi_cb_param_t));
-    param._session = session;
-    param._param = val;
-    param._param_len = valLen;
+    lsi_param_t param;
+    memset(&param, 0, sizeof(lsi_param_t));
+    param.session = session;
+    param.ptr1 = val;
+    param.len1 = valLen;
     return cb(&param);
 }
 

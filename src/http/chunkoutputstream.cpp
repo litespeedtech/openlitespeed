@@ -111,6 +111,7 @@ int ChunkOutputStream::chunkedWrite(const char *pBuf, int size)
 int ChunkOutputStream::write(const char *pBuf, int size)
 {
     //printf( "****ChunkOutputStream::write()\n" );
+    int chunkSize;
     int ret, left = size;
     if ((pBuf == NULL) || (size <= 0))
         return 0;
@@ -126,12 +127,6 @@ int ChunkOutputStream::write(const char *pBuf, int size)
         switch (ret)
         {
         case 0:
-            left -= m_iLastBufLen;
-            pBuf += m_iLastBufLen;
-            m_pLastBufBegin = NULL;
-            m_iLastBufLen = 0;
-            if (!left)
-                return size;
             break;
         case 1:
             return 0;
@@ -139,7 +134,17 @@ int ChunkOutputStream::write(const char *pBuf, int size)
             return ret;
         }
     }
-    int chunkSize;
+    
+    if (m_pLastBufBegin != NULL)
+    {
+        left -= m_iLastBufLen;
+        pBuf += m_iLastBufLen;
+        m_pLastBufBegin = NULL;
+        m_iLastBufLen = 0;
+        if (!left)
+            return size;
+    }
+    
     do
     {
         if (left + m_iCurSize > MAX_CHUNK_SIZE)
@@ -174,7 +179,7 @@ int ChunkOutputStream::write(const char *pBuf, int size)
 
 void ChunkOutputStream::reset()
 {
-    memset(&m_iCurSize, 0, (char *)&m_iLastBufLen - (char *)&m_iCurSize);
+    memset(&m_iCurSize, 0, (char *)m_headerBuf - (char *)&m_iCurSize);
     m_iov.clear();
 }
 

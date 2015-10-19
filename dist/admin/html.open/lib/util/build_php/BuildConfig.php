@@ -22,10 +22,10 @@ class BuildConfig
         switch ( $field ) {
 
             case self::PHP_VERSION: return
-                        array( '7.0.0beta1',
-                            '5.6.11',
-                            '5.5.27',
-                            '5.4.43',
+                        array( '7.0.0RC5',
+                            '5.6.14',
+                            '5.5.30',
+                            '5.4.45',
                             '5.3.29',
                             '5.2.17',
                             '4.4.9' ) ;

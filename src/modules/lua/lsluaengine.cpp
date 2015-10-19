@@ -178,7 +178,7 @@ int LsLuaEngine::checkResume(LsLuaSession *pSession, int iRet)
         break;
     default:
         pErrType = "ERROR";
-        iRet = LSI_HK_RET_DENY;
+        iRet = LSI_DENY;
     }
     if (iRet)
     {
@@ -356,7 +356,7 @@ int LsLuaEngine::runState(lsi_session_t *session, LsLuaSession *pSandbox,
 }
 
 
-int LsLuaEngine::filterOut(lsi_cb_param_t *rec, const char *pBuf, int iLen)
+int LsLuaEngine::filterOut(lsi_param_t *rec, const char *pBuf, int iLen)
 {
     int iWritten, iOffset = 0;
     while ((iOffset < iLen)
@@ -367,12 +367,12 @@ int LsLuaEngine::filterOut(lsi_cb_param_t *rec, const char *pBuf, int iLen)
 }
 
 
-int LsLuaEngine::writeToNextFilter(lsi_cb_param_t *rec,
+int LsLuaEngine::writeToNextFilter(lsi_param_t *rec,
                                    LsLuaUserParam *pUser,
                                    const char *pOut, int iOutLen)
 {
     int ret, len;
-    lsi_session_t *session = rec->_session;
+    lsi_session_t *session = rec->session;
     ls_xloopbuf_t *pBuf = pUser->getPendingBuf();
     if (pBuf && ((len = ls_xloopbuf_size(pBuf)) > 0))
     {
@@ -387,11 +387,11 @@ int LsLuaEngine::writeToNextFilter(lsi_cb_param_t *rec,
                 ls_xloopbuf_append(pBuf, pOut, iOutLen);
             if (ls_xloopbuf_getnumseg(pBuf) > 1)
                 ls_xloopbuf_straight(pBuf);
-            *rec->_flag_out = LSI_CB_FLAG_OUT_BUFFERED_DATA;
+            *rec->flag_out = LSI_CBFO_BUFFERED;
             return 0;
         }
         assert(ls_xloopbuf_empty(pBuf));
-        *rec->_flag_out = 0;
+        *rec->flag_out = 0;
     }
     if (pOut == NULL)
         return 1;
@@ -403,7 +403,7 @@ int LsLuaEngine::writeToNextFilter(lsi_cb_param_t *rec,
                                    g_api->get_session_pool(session));
         ls_xloopbuf_append(pBuf, pOut + ret, iOutLen - ret);
         pUser->setPendingBuf(pBuf);
-        *rec->_flag_out = LSI_CB_FLAG_OUT_BUFFERED_DATA;
+        *rec->flag_out = LSI_CBFO_BUFFERED;
     }
     return 1;
 }
@@ -462,7 +462,7 @@ int LsLuaEngine::runScript(lsi_session_t *session, const char *scriptpath,
 }
 
 
-int LsLuaEngine::runFilterScript(lsi_cb_param_t *rec,
+int LsLuaEngine::runFilterScript(lsi_param_t *rec,
                                  const char *scriptpath,
                                  LsLuaUserParam *pUser,
                                  LsLuaSession **ppSession,
@@ -470,11 +470,11 @@ int LsLuaEngine::runFilterScript(lsi_cb_param_t *rec,
 {
     int ret, len;
     LsLuaSession *pSandbox;
-    lsi_session_t *session = rec->_session;
+    lsi_session_t *session = rec->session;
 
     if ((ret = LsLuaEngine::writeToNextFilter(rec, pUser, NULL, 0)) != 1)
         return ret;
-    if (rec->_param == NULL)
+    if (rec->ptr1 == NULL)
         return 0;
     pSandbox = LsLuaEngine::prepState(session, scriptpath, pUser, iCurHook);
     if (pSandbox == NULL)
@@ -483,7 +483,7 @@ int LsLuaEngine::runFilterScript(lsi_cb_param_t *rec,
         *ppSession = pSandbox;
 
     pSandbox->setModParam(rec);
-    len = rec->_param_len;
+    len = rec->len1;
 
     if ((ret = LsLuaEngine::runState(session, pSandbox, iCurHook)) != 0)
         return LsLuaEngine::checkResume(pSandbox, ret);
@@ -491,7 +491,7 @@ int LsLuaEngine::runFilterScript(lsi_cb_param_t *rec,
     if (pSandbox->isFlagSet(LLF_TRYSENDRESP))
         pSandbox->clearFlag(LLF_TRYSENDRESP);
     else
-        LsLuaEngine::writeToNextFilter(rec, pUser, (const char *)rec->_param,
+        LsLuaEngine::writeToNextFilter(rec, pUser, (const char *)rec->ptr1,
                                        len);
     if (pSandbox->isFlagSet(LLF_LUADONE))
         return LS_FAIL; // Truncate the response.
@@ -559,7 +559,7 @@ void *LsLuaEngine::parseParam(const char *param, int param_len,
     g_api->log(NULL, LSI_LOG_DEBUG,
                "%s: LUA PARSEPARAM %d %s Parent %2d [%.20s] %d\n",
                name, level,
-               (level == LSI_MODULE_DATA_HTTP) ? "HTTP" : "",
+               (level == LSI_DATA_HTTP) ? "HTTP" : "",
                pParent ? pParent->getLevel() : -1,
                param,
                pParent ? pParent->getMaxRunTime() : -1);

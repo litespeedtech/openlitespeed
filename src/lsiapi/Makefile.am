@@ -5,6 +5,6 @@ INCLUDES = -I$(top_srcdir)/include -I$(top_srcdir)/src
 
 liblsiapi_a_METASOURCES = AUTO
 
-liblsiapi_a_SOURCES = lsiapi.cpp lsimoduledata.cpp lsiapihooks.cpp modulehandler.cpp modulemanager.cpp lsiapilib.cpp lsiapigd.cpp envmanager.cpp \
+liblsiapi_a_SOURCES = ediohandler.cpp lsiapi.cpp lsimoduledata.cpp lsiapihooks.cpp modulehandler.cpp modulemanager.cpp lsiapilib.cpp lsiapigd.cpp envmanager.cpp \
 moduletimer.cpp
 

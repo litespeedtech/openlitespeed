@@ -129,7 +129,7 @@ ClientInfo *ClientCache::del(const struct sockaddr *pAddr)
 
 void ClientCache::recycle(ClientInfo *pInfo)
 {
-    LsiapiBridge::releaseModuleData(LSI_MODULE_DATA_IP,
+    LsiapiBridge::releaseModuleData(LSI_DATA_IP,
                                     pInfo->getModuleData());
     s_pool()->recycle(pInfo);
 

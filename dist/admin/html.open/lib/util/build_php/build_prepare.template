@@ -47,7 +47,7 @@ if [ -e "${PHP_SRC}" ] ; then
 	fi
 fi
 
-if [ "${PHP_SRC_READY}" = "N" ] && [ `expr ${PHP_VERSION} : ".*alpha\|.*beta"` -gt 0 ] ; then
+if [ "${PHP_SRC_READY}" = "N" ] && [ `expr ${PHP_VERSION} : ".*alpha\|.*beta\|.*RC"` -gt 0 ] ; then
 	DOWNLOAD_URL="https://downloads.php.net/~ab/${PHP_SRC}"
 	main_msg "Retrieving PHP source archive from ${DOWNLOAD_URL}" 
 	${DL_METHOD} ${PHP_SRC} ${DOWNLOAD_URL}
@@ -100,14 +100,14 @@ echo ""
 
 if [ "${ENABLE_MAILHEADER}" -eq 1 ] ; then
 
-	MAILHEADER_VER=`expr '${PHP_VERSION}' : "\(.\..\)"`
-	if [ $MAILHEADER_VER = "5.2" ] ; then
+	MAILHEADER_VER=`expr ${PHP_VERSION} : "\(.\..\)"`
+	if [ "${MAILHEADER_VER}" = "5.2" ] ; then
 		MAILHEADER_VER=5.2.x
-	elif [ $MAILHEADER_VER = "5.3" ] ; then 
+	elif [ "${MAILHEADER_VER}" = "5.3" ] ; then 
 		MAILHEADER_VER=5.3.x
-	elif [ $MAILHEADER_VER = "5.4" ] ; then 
+	elif [ "${MAILHEADER_VER}" = "5.4" ] ; then 
 		MAILHEADER_VER=5.4.x
-	elif [ $MAILHEADER_VER = "5.5" ] ; then 
+	elif [ "${MAILHEADER_VER}" = "5.5" ] ; then 
 		MAILHEADER_VER=5.5.x
 	else
 		MAILHEADER_VER=${PHP_VERSION}

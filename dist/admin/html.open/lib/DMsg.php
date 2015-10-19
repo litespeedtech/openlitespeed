@@ -37,11 +37,15 @@ class DMsg
 		$filecode = self::$_supported[$lang][1];
 		self::$_curlang = $lang;
 
-		include SERVER_ROOT . self::LANG_DIR . 'en-US_msg.php';
+        $msgfile = SERVER_ROOT . self::LANG_DIR . 'en-US_msg.php';
+        if (file_exists($msgfile)) {
+            // maybe called from command line for converter tool
+            include $msgfile;
 
-		if ($lang != DMsg::DEFAULT_LANG) {
-			include SERVER_ROOT . self::LANG_DIR . $filecode . '_msg.php';
-		}
+            if ($lang != DMsg::DEFAULT_LANG) {
+                include SERVER_ROOT . self::LANG_DIR . $filecode . '_msg.php';
+            }
+        }
 	}
 
 	private static function init_tips()
@@ -96,6 +100,26 @@ class DMsg
 		}
 	}
 
+    public static function GetEditTips($labels)
+    {
+		global $_tipsdb;
+
+		if (self::$_curtips == '') {
+			self::init_tips();
+		}
+
+        $tips = array();
+        foreach ($labels as $label) {
+            $label = 'EDTP:' . $label;
+            if (isset($_tipsdb[$label]))
+                $tips = array_merge($tips, $_tipsdb[$label]);
+        }
+        if (empty($tips))
+            return NULL;
+        else
+            return $tips;
+    }
+
 	public static function UIStr($tag, $repl='')
 	{
 		if ($tag == '')
@@ -114,7 +138,7 @@ class DMsg
 				return str_replace($search, $replace, $_gmsg[$tag]);
 			}
 		else {
-			error_log("DMsg:undefined UIStr tag $tag");
+			//error_log("DMsg:undefined UIStr tag $tag");
 			return 'Unknown';
 		}
 	}
@@ -136,8 +160,7 @@ class DMsg
 		if (isset($_gmsg[$tag]))
 			return $_gmsg[$tag];
 		else {
-			error_log("DMsg:undefined ALbl tag $tag");
-			debug_print_backtrace();
+			//error_log("DMsg:undefined ALbl tag $tag");
 			return 'Unknown';
 		}
 	}
@@ -154,7 +177,7 @@ class DMsg
 		if (isset($_gmsg[$tag]))
 			return $_gmsg[$tag] . ' '; // add extra space
 		else {
-			error_log("DMsg:undefined Err tag $tag");
+			//error_log("DMsg:undefined Err tag $tag");
 			return 'Unknown';
 		}
 	}

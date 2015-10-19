@@ -78,7 +78,7 @@ int main(int ac, char *av[])
     }
 
     if ((pHash = pGPool->getNamedHash(g_pHashName, 0,
-                                      LsShmHash::hashXXH32, LsShmHash::compBuf, LSSHM_LRU_MODE1)) == NULL)
+                                      LsShmHash::hashXXH32, memcmp, LSSHM_LRU_MODE1)) == NULL)
     {
         fprintf(stderr, "getNamedHash failed!\n");
         return 3;

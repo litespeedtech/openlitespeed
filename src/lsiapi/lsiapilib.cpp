@@ -18,6 +18,7 @@
 
 #include <edio/multiplexerfactory.h>
 #include <edio/evtcbque.h>
+#include <edio/multiplexer.h>
 #include <http/accesslog.h>
 #include <http/handlertype.h>
 #include <http/httplog.h>
@@ -36,14 +37,15 @@
 #include <lsiapi/modulehandler.h>
 #include <lsiapi/modulemanager.h>
 #include <lsiapi/moduletimer.h>
+#include "ediohandler.h"
 #include <main/configctx.h>
 #include <main/httpserver.h>
 #include <main/mainserverconfig.h>
-#include <shm/lsi_shm.h>
 #include <util/datetime.h>
 #include <util/httputil.h>
 #include <util/vmembuf.h>
 
+#include <unistd.h>
 
 
 static int is_release_cb_added(const lsi_module_t *pModule, int level)
@@ -66,10 +68,10 @@ static int lsiapi_add_release_data_hook(int index,
                                         const lsi_module_t *pModule, lsi_callback_pf cb)
 {
     LsiApiHooks *pHooks;
-    if ((index < 0) || (index >= LSI_MODULE_DATA_COUNT))
+    if ((index < 0) || (index >= LSI_DATA_COUNT))
         return LS_FAIL;
     pHooks = LsiApiHooks::getReleaseDataHooks(index);
-    if (pHooks->add(pModule, cb, 0, LSI_HOOK_FLAG_ENABLED) >= 0)
+    if (pHooks->add(pModule, cb, 0, LSI_FLAG_ENABLED) >= 0)
         return 0;
     return LS_FAIL;
 }
@@ -83,8 +85,8 @@ int add_global_hook(int index, const lsi_module_t *pModule,
     if ((index < 0) || (index >= LSI_HKPT_TOTAL_COUNT))
         return LS_FAIL;
     pHooks = (LsiApiHooks *) LsiApiHooks::getGlobalApiHooks(index);
-    if (priority[index] < LSI_MAX_HOOK_PRIORITY
-        && priority[index] > -1 * LSI_MAX_HOOK_PRIORITY)
+    if (priority[index] < LSI_HOOK_PRIORITY_MAX
+        && priority[index] > -1 * LSI_HOOK_PRIORITY_MAX)
         order = priority[index];
     LS_DBG_H("[Module: %s] add_global_hook, index %d [%s], priority %hd, flag %hd",
              MODULE_NAME(pModule), index, LsiApiHooks::s_pHkptName[index], order,
@@ -93,7 +95,7 @@ int add_global_hook(int index, const lsi_module_t *pModule,
 }
 
 
-static int set_session_hook_enable_flag(lsi_session_t *session,
+static int enable_hook(lsi_session_t *session,
                                         const lsi_module_t *pModule, int enable,
                                         int *index, int iNumIndices)
 {
@@ -140,7 +142,7 @@ static int set_session_hook_enable_flag(lsi_session_t *session,
         ret = ((HttpSession *)pSession)->getSessionHooks()->setEnable(
                   pModule, enable, aHttpIndices, iHttpCount);
 
-    LS_DBG_H("[Module: %s] set_session_hook_enable_flag, enable %hd, "
+    LS_DBG_H("[Module: %s] enable_hook, enable %hd, "
              "num indices %d, return %d", MODULE_NAME(pModule), enable,
              iNumIndices, ret);
     return ret;
@@ -197,6 +199,8 @@ static  void lograw(lsi_session_t *session, const char *buf, int len)
     LOG4CXX_NS::Logger *pLogger = NULL;
     if (pSess)
         pLogger = pSess->getLogger();
+    if (!pLogger)
+        pLogger = LOG4CXX_NS::Logger::getLogger(NULL);
     pLogger->lograw(buf, len);
 }
 
@@ -213,9 +217,9 @@ static int lsiapi_register_env_handler(const char *env_name,
 //Return -1 wrong level number
 //Return -2, already inited
 static int init_module_data(lsi_module_t *pModule,
-                            lsi_release_callback_pf cb, int level)
+                            lsi_datarelease_pf cb, int level)
 {
-    if (level < LSI_MODULE_DATA_HTTP || level > LSI_MODULE_DATA_L4)
+    if (level < LSI_DATA_HTTP || level > LSI_DATA_L4)
         return LS_FAIL;
 
     if (MODULE_DATA_ID(pModule)[level] == -1)
@@ -234,13 +238,13 @@ static LsiModuleData *get_module_data_by_type(lsi_session_t *session_,
         int type)
 {
     NtwkIOLink *pNtwkLink;
-    HttpSession *pSession;
+    HttpSession *pSession = NULL;
     LsiSession *session = (LsiSession *)session_;
     switch (type)
     {
-    case LSI_MODULE_DATA_HTTP:
-    case LSI_MODULE_DATA_FILE:
-    case LSI_MODULE_DATA_VHOST:
+    case LSI_DATA_HTTP:
+    case LSI_DATA_FILE:
+    case LSI_DATA_VHOST:
         pSession = dynamic_cast< HttpSession *>(session);
         if (!pSession)
             return NULL;
@@ -249,18 +253,18 @@ static LsiModuleData *get_module_data_by_type(lsi_session_t *session_,
 
     switch (type)
     {
-    case LSI_MODULE_DATA_L4:
+    case LSI_DATA_L4:
         pNtwkLink = dynamic_cast< NtwkIOLink *>(session);
         if (!pNtwkLink)  //Comment: make sure dealloc hookfunction is set.
             break;
         return pNtwkLink->getModuleData();
-    case LSI_MODULE_DATA_HTTP:
+    case LSI_DATA_HTTP:
         return pSession->getModuleData();
-    case LSI_MODULE_DATA_FILE:
+    case LSI_DATA_FILE:
         if (!pSession->getSendFileInfo()->getFileData())
             break;
         return pSession->getSendFileInfo()->getFileData()->getModuleData();
-    case LSI_MODULE_DATA_IP:
+    case LSI_DATA_IP:
         pSession = dynamic_cast< HttpSession *>(session);
         if (pSession)
             return pSession->getClientInfo()->getModuleData();
@@ -271,7 +275,7 @@ static LsiModuleData *get_module_data_by_type(lsi_session_t *session_,
                 return pNtwkLink->getClientInfo()->getModuleData();
         }
         break;
-    case LSI_MODULE_DATA_VHOST:
+    case LSI_DATA_VHOST:
         if (!pSession->getReq()->getVHost())
             break;
         return pSession->getReq()->getVHost()->getModuleData();
@@ -284,7 +288,7 @@ static LsiModuleData *get_module_data_by_type(lsi_session_t *session_,
 static int set_module_data(lsi_session_t *session,
                            const lsi_module_t *pModule, int level, void *data)
 {
-    if (level < LSI_MODULE_DATA_HTTP || level > LSI_MODULE_DATA_L4)
+    if (level < LSI_DATA_HTTP || level > LSI_DATA_L4)
         return LS_FAIL;
 
     if (!is_release_cb_added(pModule, level))
@@ -320,19 +324,19 @@ static void *get_module_data(lsi_session_t *session,
 }
 
 
-static void *get_cb_module_data(const lsi_cb_param_t *param, int level)
+static void *get_cb_module_data(const lsi_param_t *param, int level)
 {
-    LsiModuleData *pData = get_module_data_by_type(param->_session, level);
+    LsiModuleData *pData = get_module_data_by_type(param->session, level);
     if (!pData)
         return NULL;
 
     return pData->get(MODULE_DATA_ID(((lsiapi_hook_t *)
-                                      param->_cur_hook)->module)[level]);
+                                      param->cur_hook)->module)[level]);
 }
 
 
 static void free_module_data(lsi_session_t *session,
-                             const lsi_module_t *pModule, int level, lsi_release_callback_pf cb)
+                             const lsi_module_t *pModule, int level, lsi_datarelease_pf cb)
 {
     LsiModuleData *pData = get_module_data_by_type(session, level);
     if (!pData)
@@ -347,48 +351,48 @@ static void free_module_data(lsi_session_t *session,
 
 
 /////////////////////////////////////////////////////////////////////////////
-static int stream_write_next(lsi_cb_param_t *pParam, const char *buf,
+static int stream_write_next(lsi_param_t *pParam, const char *buf,
                              int len)
 {
-    lsi_cb_param_t param;
-    param._session = pParam->_session;
-    param._cur_hook = (void *)(((lsiapi_hook_t *)pParam->_cur_hook) + 1);
-    param._hook_info = pParam->_hook_info;
-    param._param = buf;
-    param._param_len = len;
-    param._flag_out = pParam->_flag_out;
-    param._flag_in = pParam->_flag_in;
+    lsi_param_t param;
+    param.session = pParam->session;
+    param.cur_hook = (void *)(((lsiapi_hook_t *)pParam->cur_hook) + 1);
+    param.hook_chain = pParam->hook_chain;
+    param.ptr1 = buf;
+    param.len1 = len;
+    param.flag_out = pParam->flag_out;
+    param.flag_in = pParam->flag_in;
     return LsiApiHooks::runForwardCb(&param);
 }
 
 
 /////////////////////////////////////////////////////////////////////////////
-static int lsiapi_stream_read_next(lsi_cb_param_t *pParam, char *pBuf,
+static int lsiapi_stream_read_next(lsi_param_t *pParam, char *pBuf,
                                    int size)
 {
-    lsi_cb_param_t param;
-    param._session = pParam->_session;
-    param._cur_hook = (void *)(((lsiapi_hook_t *)pParam->_cur_hook) - 1);
-    param._hook_info = pParam->_hook_info;
-    param._param = pBuf;
-    param._param_len = size;
-    param._flag_out = pParam->_flag_out;
-    param._flag_in = pParam->_flag_in;
+    lsi_param_t param;
+    param.session = pParam->session;
+    param.cur_hook = (void *)(((lsiapi_hook_t *)pParam->cur_hook) - 1);
+    param.hook_chain = pParam->hook_chain;
+    param.ptr1 = pBuf;
+    param.len1 = size;
+    param.flag_out = pParam->flag_out;
+    param.flag_in = pParam->flag_in;
     return LsiApiHooks::runBackwardCb(&param);
 }
 
 
-static int lsiapi_stream_writev_next(lsi_cb_param_t *pParam,
+static int lsiapi_stream_writev_next(lsi_param_t *pParam,
                                      struct iovec *iov, int count)
 {
-    lsi_cb_param_t param;
-    param._session = pParam->_session;
-    param._cur_hook = (void *)(((lsiapi_hook_t *)pParam->_cur_hook) + 1);
-    param._hook_info = pParam->_hook_info;
-    param._param = iov;
-    param._param_len = count;
-    param._flag_out = pParam->_flag_out;
-    param._flag_in = pParam->_flag_in;
+    lsi_param_t param;
+    param.session = pParam->session;
+    param.cur_hook = (void *)(((lsiapi_hook_t *)pParam->cur_hook) + 1);
+    param.hook_chain = pParam->hook_chain;
+    param.ptr1 = iov;
+    param.len1 = count;
+    param.flag_out = pParam->flag_out;
+    param.flag_in = pParam->flag_in;
     return LsiApiHooks::runForwardCb(&param);
 }
 
@@ -464,7 +468,7 @@ static int set_resp_header(lsi_session_t *session,
     if (pSession == NULL)
         return LS_FAIL;
     HttpRespHeaders &respHeaders = pSession->getResp()->getRespHeaders();
-    if (header_index < LSI_RESP_HEADER_END)
+    if (header_index < LSI_RSPHDR_END)
     {
         respHeaders.add((HttpRespHeaders::HEADERINDEX)header_index, val, valLen,
                         add_method);
@@ -527,7 +531,7 @@ static int get_resp_header(lsi_session_t *session,
     if (pSession == NULL)
         return LS_FAIL;
     HttpRespHeaders &respHeaders = pSession->getResp()->getRespHeaders();
-    if (header_index < LSI_RESP_HEADER_END)
+    if (header_index < LSI_RSPHDR_END)
         return respHeaders.getHeader((HttpRespHeaders::HEADERINDEX)header_index,
                                      iov, maxIovCount);
     else
@@ -577,7 +581,7 @@ static int remove_resp_header(lsi_session_t *session,
     if (pSession == NULL)
         return LS_FAIL;
     HttpRespHeaders &respHeaders = pSession->getResp()->getRespHeaders();
-    if (header_index < LSI_RESP_HEADER_END)
+    if (header_index < LSI_RSPHDR_END)
         respHeaders.del((HttpRespHeaders::HEADERINDEX)header_index);
     else
         respHeaders.del(name, nameLen);
@@ -751,7 +755,7 @@ static int register_req_handler(lsi_session_t *session,
     HttpReq *pReq = pSession->getReq();
     LsiModule *pHandler = MODULE_HANDLER(pModule);
     if ((pHandler != NULL)
-        && (pModule->_handler != NULL))
+        && (pModule->reqhandler != NULL))
     {
         pReq->setHandler(pHandler);
         pReq->setScriptNameLen(scriptLen);
@@ -786,7 +790,7 @@ static int set_handler_write_state(lsi_session_t *session, int state)
 
 //return time_id, if error return -1
 static int lsi_set_timer(unsigned int timeout_ms, int repeat,
-                         lsi_timer_callback_pf timer_cb, void *timer_cb_param)
+                         lsi_timercb_pf timer_cb, void *timer_cb_param)
 {
     int id = ModTimerList::getInstance().addTimer(timeout_ms, repeat, timer_cb,
              timer_cb_param);
@@ -936,7 +940,7 @@ static const char *get_cookie_value(lsi_session_t *session,
 // }
 
 
-static const char *lsi_req_env[LSI_REQ_COUNT] =
+static const char *lsi_req_env[LSI_VAR_COUNT] =
 {
     "REMOTE_ADDR",
     "REMOTE_PORT",
@@ -995,7 +999,7 @@ static const char *lsi_req_env[LSI_REQ_COUNT] =
 int getVarNameStr(const char *name, unsigned int len)
 {
     int ret = -1;
-    for (int i = 0; i < LSI_REQ_COUNT; ++i)
+    for (int i = 0; i < LSI_VAR_COUNT; ++i)
     {
         if (strlen(lsi_req_env[i]) == len
             && strncasecmp(name, lsi_req_env[i], len) == 0)
@@ -1018,11 +1022,11 @@ static int get_req_var_by_id(lsi_session_t *session, int type, char *val,
     char *p = val;
     memset(val, 0, maxValLen);
 
-    if (type <= LSI_REQ_VAR_HTTPS)
+    if (type <= LSI_VAR_HTTPS)
         ret = RequestVars::getReqVar(pSession,
-                                     type - LSI_REQ_VAR_REMOTE_ADDR + REF_REMOTE_ADDR,
+                                     type - LSI_VAR_REMOTE_ADDR + REF_REMOTE_ADDR,
                                      p, maxValLen);
-    else if (type < LSI_REQ_COUNT)
+    else if (type < LSI_VAR_COUNT)
         ret = RequestVars::getReqVar2(pSession, type, p, maxValLen);
     else
         return LS_FAIL;
@@ -1081,7 +1085,7 @@ static void set_req_env(lsi_session_t *session, const char *name,
 }
 
 
-static int get_req_content_length(lsi_session_t *session)
+static int64_t get_req_content_length(lsi_session_t *session)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
     if (pSession == NULL)
@@ -1342,7 +1346,7 @@ static int set_uri_qs(lsi_session_t *session, int action, const char *uri,
 #define MAX_URI_QS_LEN 8192
     char tmpBuf[MAX_URI_QS_LEN];
     char *pStart = tmpBuf;
-    char *pQs;
+    char *pQs = NULL;
     int final_qs_len = 0;
     int len = 0;
     int urlLen;
@@ -1359,8 +1363,8 @@ static int set_uri_qs(lsi_session_t *session, int action, const char *uri,
     uri_act = action & URI_OP_MASK;
     if ((uri_act == LSI_URL_REDIRECT_INTERNAL) &&
         (pSession->getState() <= HSS_READING_BODY))
-        uri_act = LSI_URI_REWRITE;
-    if ((uri_act == LSI_URI_NOCHANGE) || (!uri) || (uri_len == 0))
+        uri_act = LSI_URL_REWRITE;
+    if ((uri_act == LSI_URL_NOCHANGE) || (!uri) || (uri_len == 0))
     {
         uri = pSession->getReq()->getURI();
         uri_len = pSession->getReq()->getURILen();
@@ -1446,9 +1450,9 @@ static int set_uri_qs(lsi_session_t *session, int action, const char *uri,
 
     switch (uri_act)
     {
-    case LSI_URI_NOCHANGE:
-    case LSI_URI_REWRITE:
-        if (uri_act != LSI_URI_NOCHANGE)
+    case LSI_URL_NOCHANGE:
+    case LSI_URL_REWRITE:
+        if (uri_act != LSI_URL_NOCHANGE)
             pSession->getReq()->setRewriteURI(tmpBuf, urlLen, 1);
         if (qs_act & URL_QS_OP_MASK)
             pSession->getReq()->setRewriteQueryString(pQs, final_qs_len);
@@ -1487,7 +1491,7 @@ static const char   *get_server_root()
 }
 
 
-static void *get_module_param(lsi_session_t *session,
+static void *get_config(lsi_session_t *session,
                               const lsi_module_t *pModule)
 {
     ModuleConfig *pConfig = NULL;
@@ -1506,6 +1510,38 @@ static void *get_module_param(lsi_session_t *session,
 
 static void *lsiapi_get_multiplexer()
 {   return MultiplexerFactory::getMultiplexer();   }
+
+
+static ls_edio_t *edio_reg(int fd, edio_evt_cb evt_cb,
+                edio_timer_cb timer_cb, short events, void * pParam )
+{
+    EdioHandler *pHandler = new EdioHandler(fd, pParam, evt_cb, timer_cb );
+    if (!pHandler)
+        return NULL;
+    MultiplexerFactory::getMultiplexer()->add(pHandler, events);
+    return pHandler;
+}
+
+
+static void edio_remove(ls_edio_t *pHandle)
+{
+    if (!pHandle)
+        return;
+    EdioHandler *pHandler = (EdioHandler *)pHandle;
+    MultiplexerFactory::getMultiplexer()->remove(pHandler);
+    delete pHandler;
+}
+
+
+static void edio_modify(ls_edio_t *pHandle, short events, int add_remove)
+{
+    if (!pHandle)
+        return;
+    EdioHandler *pHandler = (EdioHandler *)pHandle;
+    events &= (POLLIN|POLLOUT);
+    if (events != 0)
+        MultiplexerFactory::getMultiplexer()->modEvent(pHandler, events, add_remove);
+}
 
 
 static int lsiapi_is_suspended(lsi_session_t *session)
@@ -1777,9 +1813,9 @@ static int set_req_body_buf(lsi_session_t *session, void *pBuf)
 }
 
 
-static const lsi_module_t *get_module(lsi_cb_param_t *param)
+static const lsi_module_t *get_module(lsi_param_t *param)
 {
-    return ((lsiapi_hook_t *)param->_cur_hook)->module;
+    return ((lsiapi_hook_t *)param->cur_hook)->module;
 }
 
 
@@ -1817,13 +1853,13 @@ static int set_vhost_module_data(const void *vhost,
             if (data)
             {
                 iCount = ModuleManager::getInstance().getModuleDataCount(
-                             LSI_MODULE_DATA_VHOST);
+                             LSI_DATA_VHOST);
                 pData->initData(iCount);
             }
             else
                 return 0;
         }
-        pData->set(MODULE_DATA_ID(pModule)[LSI_MODULE_DATA_VHOST], data);
+        pData->set(MODULE_DATA_ID(pModule)[LSI_DATA_VHOST], data);
         ret = 0;
     }
 
@@ -1837,7 +1873,7 @@ static void *get_vhost_module_data(const void *vhost,
     LsiModuleData *pData = ((HttpVHost *)vhost)->getModuleData();
     if (!pData)
         return NULL;
-    return pData->get(MODULE_DATA_ID(pModule)[LSI_MODULE_DATA_VHOST]);
+    return pData->get(MODULE_DATA_ID(pModule)[LSI_DATA_VHOST]);
 }
 
 
@@ -1874,12 +1910,6 @@ int get_local_sockaddr(lsi_session_t *session, char *pIp, int maxLen)
 }
 
 
-int get_server_mode()
-{
-    return HttpServer::getInstance().getServerMode();
-}
-
-
 ls_xpool_t *get_session_pool(lsi_session_t *session)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
@@ -1893,14 +1923,14 @@ int expand_current_server_varible(int level, const char *pVarible,
     int ret = -1;
     switch (level)
     {
-    case LSI_SERVER_LEVEL:
-    case LSI_LISTENER_LEVEL:
-    case LSI_VHOST_LEVEL:
+    case LSI_CFG_SERVER:
+    case LSI_CFG_LISTENER:
+    case LSI_CFG_VHOST:
         ret = ConfigCtx::getCurConfigCtx()->expandVariable(pVarible, buf,
                 maxLen, 1);
         break;
 
-    case LSI_CONTEXT_LEVEL:
+    case LSI_CFG_CONTEXT:
     default:
         break;
     }
@@ -1912,14 +1942,14 @@ int expand_current_server_varible(int level, const char *pVarible,
 void lsiapi_init_server_api()
 {
     lsi_api_t *pApi = LsiapiBridge::getLsiapiFunctions();
-    pApi->set_session_hook_enable_flag = set_session_hook_enable_flag;
+    pApi->enable_hook = enable_hook;
 
     pApi->register_env_handler = lsiapi_register_env_handler;
     pApi->get_module = get_module;
 
 
     pApi->get_server_root = get_server_root;
-    pApi->get_module_param = get_module_param;
+    pApi->get_config = get_config;
     pApi->init_module_data = init_module_data;
 
     pApi->get_module_data = get_module_data;
@@ -2005,7 +2035,12 @@ void lsiapi_init_server_api()
     pApi->remove_resp_header = remove_resp_header;
     pApi->end_resp_headers = end_resp_headers;
     pApi->is_resp_headers_sent = is_resp_headers_sent;
+
     pApi->get_multiplexer = lsiapi_get_multiplexer;
+    pApi->edio_reg = edio_reg;
+    pApi->edio_remove = edio_remove;
+    pApi->edio_modify = edio_modify;
+
     pApi->is_suspended = lsiapi_is_suspended;
     pApi->resume = lsiapi_resume;
 
@@ -2038,21 +2073,6 @@ void lsiapi_init_server_api()
     pApi->set_req_body_buf = set_req_body_buf;
     pApi->get_cur_time = get_cur_time;
 
-    // shared memory
-    pApi->shm_pool_init = lsi_shmpool_openbyname;
-    pApi->shm_pool_alloc = lsi_shmpool_alloc2;
-    pApi->shm_pool_free = lsi_shmpool_release2;
-    pApi->shm_pool_off2ptr = lsi_shmpool_key2ptr;
-    pApi->shm_htable_init = lsi_shmhash_open;
-    pApi->shm_htable_set = lsi_shmhash_set;
-    pApi->shm_htable_add = lsi_shmhash_insert;
-    pApi->shm_htable_update = lsi_shmhash_update;
-    pApi->shm_htable_find = lsi_shmhash_find;
-    pApi->shm_htable_get = lsi_shmhash_get;
-    pApi->shm_htable_delete = lsi_shmhash_remove;
-    pApi->shm_htable_clear = lsi_shmhash_clear;
-    pApi->shm_htable_off2ptr = lsi_shmhash_datakey2ptr;
-
     pApi->get_vhost_count = get_vhost_count;
     pApi->get_vhost = get_vhost;
     pApi->set_vhost_module_data = set_vhost_module_data;
@@ -2062,7 +2082,6 @@ void lsiapi_init_server_api()
 
     pApi->handoff_fd = handoff_fd;
     pApi->get_local_sockaddr = get_local_sockaddr;
-    pApi->get_server_mode = get_server_mode;
     pApi->expand_current_server_varible = expand_current_server_varible;
 
     pApi->_debugLevel = HttpLog::getDebugLevel();

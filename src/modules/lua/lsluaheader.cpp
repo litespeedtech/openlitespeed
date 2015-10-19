@@ -103,7 +103,7 @@ int LsLuaHeaderGet(lua_State *L)
 
     pKey = LsLuaHeaderTransformKey(session, pInput, len);
 
-    iHeaderCount = g_api->get_resp_header(session, LSI_RESP_HEADER_UNKNOWN,
+    iHeaderCount = g_api->get_resp_header(session, LSI_RSPHDR_UNKNOWN,
                                           pKey, len, iov, iMaxHeaders);
     if (iHeaderCount <= 0)
         LsLuaApi::pushnil(L);
@@ -148,12 +148,12 @@ int LsLuaHeaderSet(lua_State *L)
     iHeaderId = g_api->get_resp_header_id(session, pKey);
     switch (iHeaderId)
     {
-    case LSI_RESP_HEADER_SET_COOKIE:
-    case LSI_RESP_HEADER_UNKNOWN:
-        iAddOp = LSI_HEADER_APPEND;
+    case LSI_RSPHDR_SET_COOKIE:
+    case LSI_RSPHDR_UNKNOWN:
+        iAddOp = LSI_HEADEROP_APPEND;
         break;
     default:
-        iAddOp = LSI_HEADER_SET;
+        iAddOp = LSI_HEADEROP_SET;
         break;
     }
     switch (LsLuaApi::type(L, 3))
@@ -163,7 +163,7 @@ int LsLuaHeaderSet(lua_State *L)
             break;
     //fall through
     case LUA_TNIL:
-        g_api->remove_resp_header(session, LSI_RESP_HEADER_UNKNOWN,
+        g_api->remove_resp_header(session, LSI_RSPHDR_UNKNOWN,
                                   pKey, iKeyLen);
         return 0;
     case LUA_TSTRING:

@@ -20,6 +20,7 @@
 
 #include <lsr/ls_types.h>
 #include <lsr/ls_evtcb.h>
+#include <lsr/ls_edio.h>
 
 #include <stdio.h>
 #include <sys/stat.h>
@@ -47,41 +48,6 @@
 #define LSIAPI_VERSION_STRING   "1.1"
 
 /**
- * @def LSI_MAX_HOOK_PRIORITY
- * @brief The max priority level allowed.
- * @since 1.0
- */
-#define LSI_MAX_HOOK_PRIORITY     6000
-
-/**
- * @def LSI_MAX_RESP_BUFFER_SIZE
- * @brief The max buffer size for is_resp_buffer_available.
- * @since 1.0
- */
-#define LSI_MAX_RESP_BUFFER_SIZE     (1024*1024)
-
-/**
- * @def LSI_MAX_FILE_PATH_LEN
- * @brief The max file path length.
- * @since 1.0
- */
-#define LSI_MAX_FILE_PATH_LEN        4096
-
-/**
- * @def LSI_MODULE_CONTAINER_KEY
- * @brief The container key string of all modules' global data.
- * @since 1.0
- */
-#define LSI_MODULE_CONTAINER_KEY     "_lsi_modules_container__"
-
-/**
- * @def LSI_MODULE_CONTAINER_KEYLEN
- * @brief The length of the key for the global data container of all modules.
- * @since 1.0
- */
-#define LSI_MODULE_CONTAINER_KEYLEN   (sizeof(LSI_MODULE_CONTAINER_KEY) - 1)
-
-/**
  * @def LSI_MODULE_SIGNATURE
  * @brief Identifies the module as a LSIAPI module and the version of LSIAPI that the module was compiled with.
  * @details The signature tells the server core first that it is actually a LSIAPI module,
@@ -95,6 +61,15 @@
     (int64_t)(LSIAPI_VERSION_MINOR)
 
 
+
+/**
+ * @def LSI_MAX_RESP_BUFFER_SIZE
+ * @brief The max buffer size for is_resp_buffer_available.
+ * @since 1.0
+ */
+#define LSI_MAX_RESP_BUFFER_SIZE     (1024*1024)
+
+    
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -105,46 +80,29 @@ extern "C" {
  **************************************************************************************************/
 
 /**
- * @enum lsi_config_level
- * @brief The parameter level specified in the callback routine, lsi_config_t::_parse_config,
+ * @enum lsi_cfg_level
+ * @brief The parameter level specified in the callback routine, lsi_confparser_t::parse_config,
  * in user configuration parameter parsing.
  * @since 1.0
  */
-enum lsi_config_level
+enum lsi_cfg_level
 {
     /**
-     * Server level.
+     * Server level configuration.
      */
-    LSI_SERVER_LEVEL = 0,
+    LSI_CFG_SERVER = 0,
     /**
-     * Listener level.
+     * Listener level configuration.
      */
-    LSI_LISTENER_LEVEL,
+    LSI_CFG_LISTENER,
     /**
-     * Virtual Host level.
+     * Virtual Host level configuration.
      */
-    LSI_VHOST_LEVEL,
+    LSI_CFG_VHOST,
     /**
-     * Context level.
+     * Context level configuration.
      */
-    LSI_CONTEXT_LEVEL,
-};
-
-/**
- * @enum lsi_server_mode
- * @brief The web server running mode is defined by how to start the web server.
- * @since 1.0
- */
-enum lsi_server_mode
-{
-    /**
-     * Normal server running mode
-     */
-    LSI_SERVER_MODE_DAEMON = 0,
-    /**
-     * Server running mode with "-d"
-     */
-    LSI_SERVER_MODE_FORGROUND,
+    LSI_CFG_CONTEXT,
 };
 
 
@@ -152,7 +110,7 @@ enum lsi_server_mode
  * @enum lsi_hook_priority
  * @brief The default running priorities for hook filter functions.
  * @details Used when there are more than one filter at the same hook point.
- * Any number from -1 * LSI_MAX_HOOK_PRIORITY to LSI_MAX_HOOK_PRIORITY can also be used.
+ * Any number from -1 * LSI_HOOK_PRIORITY_MAX to LSI_HOOK_PRIORITY_MAX can also be used.
  * The lower values will have higher priority, so they will run first.
  * Hook functions with the same order value will be called based on the order in which they appear
  * in the configuration list.
@@ -180,6 +138,13 @@ enum lsi_hook_priority
      * Hook priority last predefined value.
      */
     LSI_HOOK_LAST   =  30,
+
+    
+    /**
+    * The max priority level allowed.
+    */
+    LSI_HOOK_PRIORITY_MAX = 6000
+    
 };
 
 
@@ -187,7 +152,7 @@ enum lsi_hook_priority
  * @enum lsi_hook_flag
  * @brief Flags applying to hook functions.
  * @details A filter has two modes, TRANSFORMER and OBSERVER.  Flag if it is a transformer.
- * @details LSI_HOOK_FLAG_TRANSFORM is a flag for filter hook points, indicating
+ * @details LSI_FLAG_TRANSFORM is a flag for filter hook points, indicating
  *  that the filter may change the content of the input data.
  *  If a filter does not change the input data, in OBSERVER mode, do not
  *  set this flag.
@@ -205,7 +170,7 @@ enum lsi_hook_flag
      * This is for filter type hook points. If no filters are Transformer filters,
      * optimization could be applied by the server core when processing the data.
      */
-    LSI_HOOK_FLAG_TRANSFORM  = 1,
+    LSI_FLAG_TRANSFORM  = 1,
 
     /**
       * The hook function requires decompressed data.
@@ -213,87 +178,62 @@ enum lsi_hook_flag
       * If any filter requires decompression, the server core will add the decompression filter at the
       * beginning of the filter chain for compressed data.
       */
-    LSI_HOOK_FLAG_DECOMPRESS_REQUIRED = 2,
+    LSI_FLAG_DECOMPRESS_REQUIRED = 2,
 
     /**
      * This flag is for LSI_HKPT_SEND_RESP_BODY only,
      * and should be added only if a filter needs to process a static file.
      * If no filter is needed to process a static file, sendfile() API will be used.
      */
-    LSI_HOOK_FLAG_PROCESS_STATIC = 4,
+    LSI_FLAG_PROCESS_STATIC = 4,
 
 
     /**
      * This flag enables the hook function.
      * It may be set statically on the global level,
-     * or a call to set_session_hook_enable_flag may be used.
+     * or a call to enable_hook may be used.
      */
-    LSI_HOOK_FLAG_ENABLED = 8,
+    LSI_FLAG_ENABLED = 8,
 
 
 };
 
 
 /**
- * @enum lsi_module_data_level
+ * @enum lsi_data_level
  * @brief Determines the scope of the module's user defined data.
  * @details Used by the level API parameter of various functions.
  * Determines what other functions are allowed to access the data and for how long
  * it will be available.
  * @since 1.0
  */
-enum lsi_module_data_level
+enum lsi_data_level
 {
     /**
      * User data type for an HTTP session.
      */
-    LSI_MODULE_DATA_HTTP = 0,
+    LSI_DATA_HTTP = 0,
     /**
      * User data for cached file type.
      */
-    LSI_MODULE_DATA_FILE,
+    LSI_DATA_FILE,
     /**
      * User data type for TCP/IP data.
      */
-    LSI_MODULE_DATA_IP,
+    LSI_DATA_IP,
     /**
      * User data type for Virtual Hosts.
      */
-    LSI_MODULE_DATA_VHOST,
+    LSI_DATA_VHOST,
     /**
      * Module data type for a TCP layer 4 session.
      */
-    LSI_MODULE_DATA_L4,
+    LSI_DATA_L4,
 
     /**
      * Placeholder.
      */
-    LSI_MODULE_DATA_COUNT, /** This is NOT an index */
-};
-
-
-/**
- * @enum lsi_container_type
- * @brief Data container types.
- * @details Used in the API type parameter.
- * Determines whether the data is contained in memory or in a file.
- * @since 1.0
- */
-enum lsi_container_type
-{
-    /**
-     * Memory container type for user global data.
-     */
-    LSI_CONTAINER_MEMORY = 0,
-    /**
-     * File container type for user global data.
-     */
-    LSI_CONTAINER_FILE,
-
-    /**
-     * Placeholder.
-     */
-    LSI_CONTAINER_COUNT,
+    LSI_DATA_COUNT, /** This is NOT an index */
 };
 
 
@@ -430,12 +370,15 @@ enum lsi_hkpt_level
     LSI_HKPT_MAIN_POSTFORK,
 
     /**
-     * LSI_HKPT_WORKER_POSTFORK is the point in a worker process
-     * after it has been created by the main (controller) process.
-     * Note that a corresponding MAIN_POSTFORK hook may
-     * occur in the main process either before *or* after this hook.
+     * LSI_HKPT_WORKER_INIT is the point at the beginning of a worker process 
+     * starts, before going into its event loop to start serve requests. 
+     * It is invoked when a worker process forked from main (controller) process, 
+     * or server started without the main (controller) process (debugging mode). 
+     * Note that when forked from the main process, a corresponding 
+     * MAIN_POSTFORK hook will be triggered in the main process, it may
+     * occur either before *or* after this hook.
      */
-    LSI_HKPT_WORKER_POSTFORK,
+    LSI_HKPT_WORKER_INIT,
 
     /**
      * LSI_HKPT_WORKER_ATEXIT is the point in a worker process
@@ -493,66 +436,66 @@ enum lsi_log_level
 
 
 /**
- * @enum lsi_hk_result_code
+ * @enum lsi_retcode
  * @brief LSIAPI return value definition.
  * @details Used in the return value of API functions and callback functions unless otherwise stipulated.
  * If a function returns an int type value, it should always
- * return LSI_HK_RET_OK for no errors and LSI_HK_RET_ERROR for other cases.
+ * return LSI_OK for no errors and LSI_ERROR for other cases.
  * For such functions that return a bool type (true / false), 1 means true and 0 means false.
  * @since 1.0
  */
-enum lsi_hk_result_code
+enum lsi_retcode
 {
     /**
      * Return code for suspend current hookpoint
      */
-    LSI_HK_RET_SUSPEND = -3,
+    LSI_SUSPEND = -3,
     /**
      * Return code to deny access.
      */
-    LSI_HK_RET_DENY = -2,
+    LSI_DENY = -2,
     /**
      * Return code error.
      */
-    LSI_HK_RET_ERROR = -1,
+    LSI_ERROR = -1,
     /**
      * Return code success.
      */
-    LSI_HK_RET_OK = 0,
+    LSI_OK = 0,
 
 };
 
 
 /**
- * @enum lsi_onwrite_result_code
+ * @enum lsi_onwrite_retcode
  * @brief Write response return values.
  * @details Used as on_write_resp return value.
  * Continue should be used until the response sending is completed.
  * Finished will end the process of the server requesting further data.
  * @since 1.0
  */
-enum lsi_onwrite_result_code
+enum lsi_onwrite_retcode
 {
     /**
      * Error in the response processing.
      */
-    LSI_WRITE_RESP_ERROR = -1,
+    LSI_RSP_ERROR = -1,
     /**
      * No further response data to write.
      */
-    LSI_WRITE_RESP_FINISHED = 0,
+    LSI_RSP_DONE = 0,
     /**
      * More response body data to write.
      */
-    LSI_WRITE_RESP_CONTINUE,
+    LSI_RSP_MORE,
 };
 
 
 /**
  * @enum lsi_cb_flag
  * @brief definition of flags used in hook function input and ouput parameters
- * @details It defines flags for _flag_in and _flag_out of lsi_cb_param_t.
- * LSI_CB_FLAG_IN_XXXX is for _flag_in, LSI_CB_FLAG_OUT_BUFFERED_DATA is for
+ * @details It defines flags for _flag_in and _flag_out of lsi_param_t.
+ * LSI_CB_FLAG_IN_XXXX is for _flag_in, LSI_CBFO_BUFFERED is for
  * _flag_out; the flags should be set or removed through a bitwise operator.
  *
  * @since 1.0
@@ -562,28 +505,28 @@ enum lsi_cb_flags
     /**
      * Indicates that a filter buffered data in its own buffer.
      */
-    LSI_CB_FLAG_OUT_BUFFERED_DATA = 1,
+    LSI_CBFO_BUFFERED = 1,
 
     /**
      * This flag requires the filter to flush its internal buffer to the next filter, then
      * pass this flag to the next filter.
      */
-    LSI_CB_FLAG_IN_FLUSH = 1,
+    LSI_CBFI_FLUSH = 1,
 
     /**
      * This flag tells the filter it is the end of stream; there should be no more data
      * feeding into this filter.  The filter should ignore any input data after this flag is
-     * set.  This flag implies LSI_CB_FLAG_IN_FLUSH.  A filter should only set this flag after
+     * set.  This flag implies LSI_CBFI_FLUSH.  A filter should only set this flag after
      * all buffered data has been sent to the next filter.
      */
-    LSI_CB_FLAG_IN_EOF = 2,
+    LSI_CBFI_EOF = 2,
 
     /**
      * This flag is set for LSI_HKPT_SEND_RESP_BODY only if the input data is from
      * a static file; if a filter does not need to check a static file, it can skip processing
      * data if this flag is set.
      */
-    LSI_CB_FLAG_IN_STATIC_FILE = 4,
+    LSI_CBFI_STATIC = 4,
 
     /**
      * This flag is set for LSI_HKPT_RCVD_RESP_BODY only if the request handler does not abort
@@ -591,7 +534,7 @@ enum lsi_cb_flags
      * connection to backend has been reset.  If a hook function only needs to process
      * a successful response, it should check for this flag.
      */
-    LSI_CB_FLAG_IN_RESP_SUCCEED = 8,
+    LSI_CBFI_RESPSUCC = 8,
 
 };
 
@@ -608,207 +551,207 @@ enum lsi_req_variable
     /**
      * Remote addr environment variable
      */
-    LSI_REQ_VAR_REMOTE_ADDR = 0,
+    LSI_VAR_REMOTE_ADDR = 0,
     /**
      * Remote port environment variable
      */
-    LSI_REQ_VAR_REMOTE_PORT,
+    LSI_VAR_REMOTE_PORT,
     /**
      * Remote host environment variable
      */
-    LSI_REQ_VAR_REMOTE_HOST,
+    LSI_VAR_REMOTE_HOST,
     /**
      * Remote user environment variable
      */
-    LSI_REQ_VAR_REMOTE_USER,
+    LSI_VAR_REMOTE_USER,
     /**
      * Remote identifier environment variable
      */
-    LSI_REQ_VAR_REMOTE_IDENT,
+    LSI_VAR_REMOTE_IDENT,
     /**
      * Remote method environment variable
      */
-    LSI_REQ_VAR_REQ_METHOD,
+    LSI_VAR_REQ_METHOD,
     /**
      * Query string environment variable
      */
-    LSI_REQ_VAR_QUERY_STRING,
+    LSI_VAR_QUERY_STRING,
     /**
      * Authentication type environment variable
      */
-    LSI_REQ_VAR_AUTH_TYPE,
+    LSI_VAR_AUTH_TYPE,
     /**
      * URI path environment variable
      */
-    LSI_REQ_VAR_PATH_INFO,
+    LSI_VAR_PATH_INFO,
     /**
      * Script filename environment variable
      */
-    LSI_REQ_VAR_SCRIPTFILENAME,
+    LSI_VAR_SCRIPTFILENAME,
     /**
      * Filename port environment variable
      */
-    LSI_REQ_VAR_REQUST_FN,
+    LSI_VAR_REQUST_FN,
     /**
      * URI environment variable
      */
-    LSI_REQ_VAR_REQ_URI,
+    LSI_VAR_REQ_URI,
     /**
      * Document root directory environment variable
      */
-    LSI_REQ_VAR_DOC_ROOT,
+    LSI_VAR_DOC_ROOT,
     /**
      * Port environment variable
      */
-    LSI_REQ_VAR_SERVER_ADMIN,
+    LSI_VAR_SERVER_ADMIN,
     /**
      * Server name environment variable
      */
-    LSI_REQ_VAR_SERVER_NAME,
+    LSI_VAR_SERVER_NAME,
     /**
      * Server address environment variable
      */
-    LSI_REQ_VAR_SERVER_ADDR,
+    LSI_VAR_SERVER_ADDR,
     /**
      * Server port environment variable
      */
-    LSI_REQ_VAR_SERVER_PORT,
+    LSI_VAR_SERVER_PORT,
     /**
      * Server prototype environment variable
      */
-    LSI_REQ_VAR_SERVER_PROTO,
+    LSI_VAR_SERVER_PROTO,
     /**
      * Server software version environment variable
      */
-    LSI_REQ_VAR_SERVER_SOFT,
+    LSI_VAR_SERVER_SOFT,
     /**
      * API version environment variable
      */
-    LSI_REQ_VAR_API_VERSION,
+    LSI_VAR_API_VERSION,
     /**
      * Request line environment variable
      */
-    LSI_REQ_VAR_REQ_LINE,
+    LSI_VAR_REQ_LINE,
     /**
      * Subrequest environment variable
      */
-    LSI_REQ_VAR_IS_SUBREQ,
+    LSI_VAR_IS_SUBREQ,
     /**
      * Time environment variable
      */
-    LSI_REQ_VAR_TIME,
+    LSI_VAR_TIME,
     /**
      * Year environment variable
      */
-    LSI_REQ_VAR_TIME_YEAR,
+    LSI_VAR_TIME_YEAR,
     /**
      * Month environment variable
      */
-    LSI_REQ_VAR_TIME_MON,
+    LSI_VAR_TIME_MON,
     /**
      * Day environment variable
      */
-    LSI_REQ_VAR_TIME_DAY,
+    LSI_VAR_TIME_DAY,
     /**
      * Hour environment variable
      */
-    LSI_REQ_VAR_TIME_HOUR,
+    LSI_VAR_TIME_HOUR,
     /**
      * Minute environment variable
      */
-    LSI_REQ_VAR_TIME_MIN,
+    LSI_VAR_TIME_MIN,
     /**
      * Seconds environment variable
      */
-    LSI_REQ_VAR_TIME_SEC,
+    LSI_VAR_TIME_SEC,
     /**
      * Weekday environment variable
      */
-    LSI_REQ_VAR_TIME_WDAY,
+    LSI_VAR_TIME_WDAY,
     /**
      * Script file name environment variable
      */
-    LSI_REQ_VAR_SCRIPT_NAME,
+    LSI_VAR_SCRIPT_NAME,
     /**
      * Current URI environment variable
      */
-    LSI_REQ_VAR_CUR_URI,
+    LSI_VAR_CUR_URI,
     /**
      * URI base name environment variable
      */
-    LSI_REQ_VAR_REQ_BASENAME,
+    LSI_VAR_REQ_BASENAME,
     /**
      * Script user id environment variable
      */
-    LSI_REQ_VAR_SCRIPT_UID,
+    LSI_VAR_SCRIPT_UID,
     /**
      * Script global id environment variable
      */
-    LSI_REQ_VAR_SCRIPT_GID,
+    LSI_VAR_SCRIPT_GID,
     /**
      * Script user name environment variable
      */
-    LSI_REQ_VAR_SCRIPT_USERNAME,
+    LSI_VAR_SCRIPT_USERNAME,
     /**
      * Script group name environment variable
      */
-    LSI_REQ_VAR_SCRIPT_GRPNAME,
+    LSI_VAR_SCRIPT_GRPNAME,
     /**
      * Script mode environment variable
      */
-    LSI_REQ_VAR_SCRIPT_MODE,
+    LSI_VAR_SCRIPT_MODE,
     /**
      * Script base name environment variable
      */
-    LSI_REQ_VAR_SCRIPT_BASENAME,
+    LSI_VAR_SCRIPT_BASENAME,
     /**
      * Script URI environment variable
      */
-    LSI_REQ_VAR_SCRIPT_URI,
+    LSI_VAR_SCRIPT_URI,
     /**
      * Original URI environment variable
      */
-    LSI_REQ_VAR_ORG_REQ_URI,
+    LSI_VAR_ORG_REQ_URI,
     /**
      * HTTPS environment variable
      */
-    LSI_REQ_VAR_HTTPS,
+    LSI_VAR_HTTPS,
     /**
      * SSL version environment variable
      */
-    LSI_REQ_SSL_VERSION,
+    LSI_VAR_SSL_VERSION,
     /**
      * SSL session ID environment variable
      */
-    LSI_REQ_SSL_SESSION_ID,
+    LSI_VAR_SSL_SESSION_ID,
     /**
      * SSL cipher environment variable
      */
-    LSI_REQ_SSL_CIPHER,
+    LSI_VAR_SSL_CIPHER,
     /**
      * SSL cipher use key size environment variable
      */
-    LSI_REQ_SSL_CIPHER_USEKEYSIZE,
+    LSI_VAR_SSL_CIPHER_USEKEYSIZE,
     /**
      * SSL cipher ALG key size environment variable
      */
-    LSI_REQ_SSL_CIPHER_ALGKEYSIZE,
+    LSI_VAR_SSL_CIPHER_ALGKEYSIZE,
     /**
      * SSL client certification environment variable
      */
-    LSI_REQ_SSL_CLIENT_CERT,
+    LSI_VAR_SSL_CLIENT_CERT,
     /**
      * Geographical IP address environment variable
      */
-    LSI_REQ_GEOIP_ADDR,
+    LSI_VAR_GEOIP_ADDR,
     /**
      * Translated path environment variable
      */
-    LSI_REQ_PATH_TRANSLATED,
+    LSI_VAR_PATH_TRANSLATED,
     /**
      * Placeholder.
      */
-    LSI_REQ_COUNT,    /** This is NOT an index */
+    LSI_VAR_COUNT,    /** This is NOT an index */
 };
 
 
@@ -818,14 +761,14 @@ enum lsi_req_variable
  * @details Used in API parameter add_method in response header access functions.
  * If there are no existing headers, any method that is called
  * will have the effect of adding a new header.
- * If there is an existing header, LSI_HEADER_SET will
+ * If there is an existing header, LSI_HEADEROP_SET will
  * add a header and will replace the existing one.
- * LSI_HEADER_APPEND will append a comma and the header
+ * LSI_HEADEROP_APPEND will append a comma and the header
  * value to the end of the existing value list.
- * LSI_HEADER_MERGE is just like LSI_HEADER_APPEND unless
+ * LSI_HEADEROP_MERGE is just like LSI_HEADEROP_APPEND unless
  * the same value exists in the existing header.
  * In this case, it will do nothing.
- * LSI_HEADER_ADD will add a new line to the header,
+ * LSI_HEADEROP_ADD will add a new line to the header,
  * whether or not it already exists.
  * @since 1.0
  */
@@ -834,26 +777,26 @@ enum lsi_header_op
     /**
      * Set the header.
      */
-    LSI_HEADER_SET = 0,
+    LSI_HEADEROP_SET = 0,
     /**
      * Add with a comma to seperate
      */
-    LSI_HEADER_APPEND,
+    LSI_HEADEROP_APPEND,
     /**
      * Append unless it exists
      */
-    LSI_HEADER_MERGE,
+    LSI_HEADEROP_MERGE,
     /**
      * Add a new line
      */
-    LSI_HEADER_ADD
+    LSI_HEADEROP_ADD
 };
 
 
 /**
  * @enum lsi_url_op
  * @brief The methods used to redirect a request to a new URL.
- * @details LSI_URI_NOCHANGE, LSI_URI_REWRITE and LSI_URL_REDIRECT_* can be combined with
+ * @details LSI_URL_NOCHANGE, LSI_URL_REWRITE and LSI_URL_REDIRECT_* can be combined with
  * LSI_URL_QS_*
  * @since 1.0
  * @see lsi_api_s::set_uri_qs
@@ -863,12 +806,12 @@ enum lsi_url_op
     /**
      * Do not change URI, intended for modifying Query String only.
      */
-    LSI_URI_NOCHANGE = 0,
+    LSI_URL_NOCHANGE = 0,
 
     /**
      * Rewrite to the new URI and use the URI for subsequent processing stages.
      */
-    LSI_URI_REWRITE,
+    LSI_URL_REWRITE,
 
     /**
      * Internal redirect; the redirect is performed internally,
@@ -897,22 +840,22 @@ enum lsi_url_op
     LSI_URL_REDIRECT_307,
 
     /**
-     * Do not change Query String. Only valid with LSI_URI_REWRITE.
+     * Do not change Query String. Only valid with LSI_URL_REWRITE.
      */
     LSI_URL_QS_NOCHANGE = 0 << 4,
 
     /**
-     * Append Query String. Can be combined with LSI_URI_REWRITE and LSI_URL_REDIRECT_*.
+     * Append Query String. Can be combined with LSI_URL_REWRITE and LSI_URL_REDIRECT_*.
      */
     LSI_URL_QS_APPEND = 1 << 4,
 
     /**
-     * Set Query String. Can be combined with LSI_URI_REWRITE and LSI_URL_REDIRECT_*.
+     * Set Query String. Can be combined with LSI_URL_REWRITE and LSI_URL_REDIRECT_*.
      */
     LSI_URL_QS_SET = 2 << 4,
 
     /**
-     * Delete Query String. Can be combined with LSI_URI_REWRITE and LSI_URL_REDIRECT_*.
+     * Delete Query String. Can be combined with LSI_URL_REWRITE and LSI_URL_REDIRECT_*.
      */
     LSI_URL_QS_DELETE = 3 << 4,
 
@@ -935,103 +878,103 @@ enum lsi_req_header_id
     /**
      * "Accept" request header.
      */
-    LSI_REQ_HEADER_ACCEPT = 0,
+    LSI_HDR_ACCEPT = 0,
     /**
      * "Accept-Charset" request header.
      */
-    LSI_REQ_HEADER_ACC_CHARSET,
+    LSI_HDR_ACC_CHARSET,
     /**
      * "Accept-Encoding" request header.
      */
-    LSI_REQ_HEADER_ACC_ENCODING,
+    LSI_HDR_ACC_ENCODING,
     /**
      * "Accept-Language" request header.
      */
-    LSI_REQ_HEADER_ACC_LANG,
+    LSI_HDR_ACC_LANG,
     /**
      * "Authorization" request header.
      */
-    LSI_REQ_HEADER_AUTHORIZATION,
+    LSI_HDR_AUTHORIZATION,
     /**
      * "Connection" request header.
      */
-    LSI_REQ_HEADER_CONNECTION,
+    LSI_HDR_CONNECTION,
     /**
      * "Content-Type" request header.
      */
-    LSI_REQ_HEADER_CONTENT_TYPE,
+    LSI_HDR_CONTENT_TYPE,
     /**
      * "Content-Length" request header.
      */
-    LSI_REQ_HEADER_CONTENT_LENGTH,
+    LSI_HDR_CONTENT_LENGTH,
     /**
      * "Cookie" request header.
      */
-    LSI_REQ_HEADER_COOKIE,
+    LSI_HDR_COOKIE,
     /**
      * "Cookie2" request header.
      */
-    LSI_REQ_HEADER_COOKIE2,
+    LSI_HDR_COOKIE2,
     /**
      * "Host" request header.
      */
-    LSI_REQ_HEADER_HOST,
+    LSI_HDR_HOST,
     /**
      * "Pragma" request header.
      */
-    LSI_REQ_HEADER_PRAGMA,
+    LSI_HDR_PRAGMA,
     /**
      * "Referer" request header.
      */
-    LSI_REQ_HEADER_REFERER,
+    LSI_HDR_REFERER,
     /**
      * "User-Agent" request header.
      */
-    LSI_REQ_HEADER_USERAGENT,
+    LSI_HDR_USERAGENT,
     /**
      * "Cache-Control" request header.
      */
-    LSI_REQ_HEADER_CACHE_CTRL,
+    LSI_HDR_CACHE_CTRL,
     /**
      * "If-Modified-Since" request header.
      */
-    LSI_REQ_HEADER_IF_MODIFIED_SINCE,
+    LSI_HDR_IF_MODIFIED_SINCE,
     /**
      * "If-Match" request header.
      */
-    LSI_REQ_HEADER_IF_MATCH,
+    LSI_HDR_IF_MATCH,
     /**
      * "If-No-Match" request header.
      */
-    LSI_REQ_HEADER_IF_NO_MATCH,
+    LSI_HDR_IF_NO_MATCH,
     /**
      * "If-Range" request header.
      */
-    LSI_REQ_HEADER_IF_RANGE,
+    LSI_HDR_IF_RANGE,
     /**
      * "If-Unmodified-Since" request header.
      */
-    LSI_REQ_HEADER_IF_UNMOD_SINCE,
+    LSI_HDR_IF_UNMOD_SINCE,
     /**
      * "Keep-Alive" request header.
      */
-    LSI_REQ_HEADER_KEEP_ALIVE,
+    LSI_HDR_KEEP_ALIVE,
     /**
      * "Range" request header.
      */
-    LSI_REQ_HEADER_RANGE,
+    LSI_HDR_RANGE,
     /**
      * "X-Forwarded-For" request header.
      */
-    LSI_REQ_HEADER_X_FORWARDED_FOR,
+    LSI_HDR_X_FORWARDED_FOR,
     /**
      * "Via" request header.
      */
-    LSI_REQ_HEADER_VIA,
+    LSI_HDR_VIA,
     /**
      * "Transfer-Encoding" request header.
      */
-    LSI_REQ_HEADER_TRANSFER_ENCODING
+    LSI_HDR_TRANSFER_ENCODING
 
 };
 
@@ -1048,111 +991,111 @@ enum lsi_resp_header_id
     /**
      * Accept ranges id
      */
-    LSI_RESP_HEADER_ACCEPT_RANGES = 0,
+    LSI_RSPHDR_ACCEPT_RANGES = 0,
     /**
      * Connection id
      */
-    LSI_RESP_HEADER_CONNECTION,
+    LSI_RSPHDR_CONNECTION,
     /**
      * Content type id.
      */
-    LSI_RESP_HEADER_CONTENT_TYPE,
+    LSI_RSPHDR_CONTENT_TYPE,
     /**
      * Content length id.
      */
-    LSI_RESP_HEADER_CONTENT_LENGTH,
+    LSI_RSPHDR_CONTENT_LENGTH,
     /**
      * Content encoding id.
      */
-    LSI_RESP_HEADER_CONTENT_ENCODING,
+    LSI_RSPHDR_CONTENT_ENCODING,
     /**
      * Content range id.
      */
-    LSI_RESP_HEADER_CONTENT_RANGE,
+    LSI_RSPHDR_CONTENT_RANGE,
     /**
      * Contnet disposition id.
      */
-    LSI_RESP_HEADER_CONTENT_DISPOSITION,
+    LSI_RSPHDR_CONTENT_DISPOSITION,
     /**
      * Cache control id.
      */
-    LSI_RESP_HEADER_CACHE_CTRL,
+    LSI_RSPHDR_CACHE_CTRL,
     /**
      * Date id.
      */
-    LSI_RESP_HEADER_DATE,
+    LSI_RSPHDR_DATE,
     /**
      * E-tag id.
      */
-    LSI_RESP_HEADER_ETAG,
+    LSI_RSPHDR_ETAG,
     /**
      * Expires id.
      */
-    LSI_RESP_HEADER_EXPIRES,
+    LSI_RSPHDR_EXPIRES,
     /**
      * Keep alive message id.
      */
-    LSI_RESP_HEADER_KEEP_ALIVE,
+    LSI_RSPHDR_KEEP_ALIVE,
     /**
      * Lasst modified date id.
      */
-    LSI_RESP_HEADER_LAST_MODIFIED,
+    LSI_RSPHDR_LAST_MODIFIED,
     /**
      * Location id.
      */
-    LSI_RESP_HEADER_LOCATION,
+    LSI_RSPHDR_LOCATION,
     /**
      * Litespeed location id.
      */
-    LSI_RESP_HEADER_LITESPEED_LOCATION,
+    LSI_RSPHDR_LITESPEED_LOCATION,
     /**
      * Cashe control id.
      */
-    LSI_RESP_HEADER_LITESPEED_CACHE_CONTROL,
+    LSI_RSPHDR_LITESPEED_CACHE_CONTROL,
     /**
      * Pragma id.
      */
-    LSI_RESP_HEADER_PRAGMA,
+    LSI_RSPHDR_PRAGMA,
     /**
      * Proxy connection id.
      */
-    LSI_RESP_HEADER_PROXY_CONNECTION,
+    LSI_RSPHDR_PROXY_CONNECTION,
     /**
      * Server id.
      */
-    LSI_RESP_HEADER_SERVER,
+    LSI_RSPHDR_SERVER,
     /**
      * Set cookie id.
      */
-    LSI_RESP_HEADER_SET_COOKIE,
+    LSI_RSPHDR_SET_COOKIE,
     /**
      * CGI status id.
      */
-    LSI_RESP_HEADER_CGI_STATUS,
+    LSI_RSPHDR_CGI_STATUS,
     /**
      * Transfer encoding id.
      */
-    LSI_RESP_HEADER_TRANSFER_ENCODING,
+    LSI_RSPHDR_TRANSFER_ENCODING,
     /**
      * Vary id.
      */
-    LSI_RESP_HEADER_VARY,
+    LSI_RSPHDR_VARY,
     /**
      * Authentication id.
      */
-    LSI_RESP_HEADER_WWW_AUTHENTICATE,
+    LSI_RSPHDR_WWW_AUTHENTICATE,
     /**
      * Powered by id.
      */
-    LSI_RESP_HEADER_X_POWERED_BY,
+    LSI_RSPHDR_X_POWERED_BY,
     /**
      * Header end id.
      */
-    LSI_RESP_HEADER_END,
+    LSI_RSPHDR_END,
     /**
      * Header unknown id.
      */
-    LSI_RESP_HEADER_UNKNOWN = LSI_RESP_HEADER_END
+    LSI_RSPHDR_UNKNOWN = LSI_RSPHDR_END
 
 };
 
@@ -1161,21 +1104,15 @@ enum lsi_resp_header_id
  * Forward Declarations
  */
 
-typedef struct lsi_module_s lsi_module_t;
-typedef struct lsi_api_s lsi_api_t;
-typedef struct lsi_cb_param_s lsi_cb_param_t;
-typedef struct lsiapi_hookinfo_s  lsi_hook_t;
-typedef struct lsi_gdata_cont_s lsi_gdata_container_t;
-typedef struct lsi_shm_htable_s lsi_shm_htable_t;
-typedef struct ls_shmpool_s  lsi_shmpool_t;
-typedef struct ls_shmhash_s  lsi_shmhash_t;
-typedef struct evtcbhead_s  lsi_session_t;
+typedef struct lsi_module_s     lsi_module_t;
+typedef struct lsi_api_s        lsi_api_t;
+typedef struct lsi_param_s      lsi_param_t;
+typedef struct lsi_hookinfo_s   lsi_hookchain_t;
+typedef struct evtcbhead_s      lsi_session_t;
 typedef struct lsi_serverhook_s lsi_serverhook_t;
-typedef struct lsi_handler_s  lsi_handler_t;
-typedef struct lsi_config_s lsi_config_t;
+typedef struct lsi_reqhdlr_s    lsi_reqhdlr_t;
+typedef struct lsi_confparser_s lsi_confparser_t;
 
-typedef uint32_t lsi_shm_off_t;
-typedef uint32_t lsi_hash_key_t;
 
 
 /**
@@ -1183,54 +1120,21 @@ typedef uint32_t lsi_hash_key_t;
  * @brief The callback function and its parameters.
  * @since 1.0
  */
-typedef int (*lsi_callback_pf)(lsi_cb_param_t *);
+typedef int (*lsi_callback_pf)(lsi_param_t *);
 
 /**
- * @typedef lsi_release_callback_pf
+ * @typedef lsi_datarelease_pf
  * @brief The memory release callback function for the user module data.
  * @since 1.0
  */
-typedef int (*lsi_release_callback_pf)(void *);
+typedef int (*lsi_datarelease_pf)(void *);
 
 /**
- * @typedef lsi_serialize_pf
- * @brief The serializer callback function for the user global file data.
- * Must use malloc to get the buffer and return the buffer.
- * @since 1.0
- */
-typedef char   *(*lsi_serialize_pf)(void *pObject, int *out_length);
-
-/**
- * @typedef lsi_deserialize_pf
- * @brief The deserializer callback function for the user global file data.
- * Must use malloc to get the buffer and return the buffer.
- * @since 1.0
- */
-typedef void   *(*lsi_deserialize_pf)(char *, int length);
-
-/**
- * @typedef lsi_timer_callback_pf
+ * @typedef lsi_timercb_pf
  * @brief The timer callback function for the set timer feature.
  * @since 1.0
  */
-typedef void (*lsi_timer_callback_pf)(void *);
-
-/**
- * @typedef lsi_hash_pf
- * @brief The hash callback function generates and returns a hash key.
- * @since 1.0
- */
-typedef lsi_hash_key_t (*lsi_hash_pf)(const void *, int len);
-
-/**
- * @typedef lsi_hash_value_comp_pf
- * @brief The hash compare callback function compares two hash keys.
- * @since 1.0
- */
-typedef int (*lsi_hash_value_comp_pf)(const void *pVal1, const void *pVal2,
-                                      int len);
-
-
+typedef void (*lsi_timercb_pf)(void *);
 
 
 
@@ -1240,29 +1144,29 @@ typedef int (*lsi_hash_value_comp_pf)(const void *pVal1, const void *pVal2,
 
 
 /**
- * @typedef lsi_cb_param_t
+ * @typedef lsi_param_t
  * @brief Callback parameters passed to the callback functions.
  * @since 1.0
  **/
-struct lsi_cb_param_s
+struct lsi_param_s
 {
     /**
-     * @brief _session is a pointer to the session.
+     * @brief session is a pointer to the session.
      * @since 1.0
      */
-    lsi_session_t      *_session;
+    lsi_session_t      *session;
 
     /**
-     * @brief _hook_info is a pointer to the struct lsiapi_hookinfo_t.
+     * @brief hook_chain is a pointer to the struct lsi_hookinfo_t.
      * @since 1.0
      */
-    lsi_hook_t         *_hook_info;
+    lsi_hookchain_t    *hook_chain;
 
     /**
-     * @brief _cur_hook is a pointer to the current hook.
+     * @brief cur_hook is a pointer to the current hook.
      * @since 1.0
      */
-    void               *_cur_hook;
+    void               *cur_hook;
 
     /**
      * @brief _param is a pointer to the first parameter.
@@ -1271,34 +1175,34 @@ struct lsi_cb_param_s
      * of expected values for each _param based on use.
      * @since 1.0
      */
-    const void         *_param;
+    const void         *ptr1;
 
     /**
      * @brief _param_len is the length of the first parameter.
      * @since 1.0
      */
-    int                 _param_len;
+    int                 len1;
 
     /**
      * @brief _flag_out is a pointer to the second parameter.
      * @since 1.0
      */
-    int                *_flag_out;
+    int                *flag_out;
 
     /**
      * @brief _flag_in is the length of the second parameter.
      * @since 1.0
      */
-    int                 _flag_in;
+    int                 flag_in;
 };
 
 
 /**
- * @typedef lsi_handler_t
+ * @typedef lsi_reqhdlr_t
  * @brief Pre-defined handler functions.
  * @since 1.0
  */
-struct lsi_handler_s
+struct lsi_reqhdlr_s
 {
     /**
      * @brief begin_process is called when the server starts to process a request.
@@ -1322,7 +1226,7 @@ struct lsi_handler_s
      * @details on_write_resp is called when the server gets a large response body
      * where the response did not write completely.
      * If not provided, set it to NULL.
-     * The default function will execute and return LSI_WRITE_RESP_FINISHED.
+     * The default function will execute and return LSI_RSP_DONE.
      * @since 1.0
      */
     int (*on_write_resp)(lsi_session_t *pSession);
@@ -1340,7 +1244,7 @@ struct lsi_handler_s
 
 
 /**
- * @typedef lsi_config_s
+ * @typedef lsi_confparser_s
  * @brief Contains functions which are used to define parse and release functions for the
  * user defined configuration parameters.
  * @details
@@ -1349,10 +1253,10 @@ struct lsi_handler_s
  * allocated memory using the session_end filter hooks.
  * @since 1.0
  */
-struct lsi_config_s
+struct lsi_confparser_s
 {
     /**
-     * @brief _parse_config is a callback function for the server to call to parse the user defined
+     * @brief parse_config is a callback function for the server to call to parse the user defined
      * parameters and return a pointer to the user defined configuration data structure.
      * @details
      *
@@ -1360,36 +1264,36 @@ struct lsi_config_s
      * @param[in] param - the \\0 terminated buffer holding configuration parameters.
      * @param[in] param_len - the total length of the configuration parameters.
      * @param[in] initial_config - a pointer to the default configuration inherited from the parent level.
-     * @param[in] level - applicable level from enum #lsi_config_level.
+     * @param[in] level - applicable level from enum #lsi_confparser_level.
      * @param[in] name - name of the Server/Listener/VHost or URI of the Context.
      * @return a pointer to a the user-defined configuration data, which combines initial_config with
      *         settings in param; if both param and initial_config are NULL, a hard-coded default
      *         configuration value should be returned.
      */
-    void  *(*_parse_config)(const char *param, int param_len,
+    void  *(*parse_config)(const char *param, int param_len,
                             void *initial_config, int level, const char *name);
 
     /**
-     * @brief _free_config is a callback function for the server to call to release a pointer to
+     * @brief free_config is a callback function for the server to call to release a pointer to
      * the user defined data.
      * @since 1.0
      * @param[in] config - a pointer to configuration data structure to be released.
      */
-    void (*_free_config)(void *config);
+    void (*free_config)(void *config);
 
     /**
-     * @brief _config_keys is a NULL terminated array of const char *.
+     * @brief config_keys is a NULL terminated array of const char *.
      * It is used to filter the module user parameters by the server while parsing the configuration.
      * @since 1.0
      */
-    const char **_config_keys;
+    const char **config_keys;
 };
 
 
 /**
  * @typedef lsi_serverhook_s
  * @brief Global hook point specification.
- * @details An array of these entries, terminated by the lsi_serverhook_t_END entry,
+ * @details An array of these entries, terminated by the LSI_HOOK_END entry,
  * at lsi_module_t::_serverhook defines the global hook points of a module.
  * @since 1.0
  */
@@ -1423,17 +1327,17 @@ struct lsi_serverhook_s
 
 
 /**
- * @def lsi_serverhook_t_END
+ * @def LSI_HOOK_END
  * @brief Termination entry for the array of lsi_serverhook_t entries
  * at lsi_module_t::_serverhook.
  * @since 1.0
  */
-#define lsi_serverhook_t_END    {0, NULL, 0, 0}
+#define LSI_HOOK_END    {0, NULL, 0, 0}
 
 
 #define LSI_MODULE_RESERVED_SIZE    ((3 * sizeof(void *)) \
                                      + ((LSI_HKPT_TOTAL_COUNT + 1) * sizeof(int32_t)) \
-                                     + (LSI_MODULE_DATA_COUNT * sizeof(int16_t)))
+                                     + (LSI_DATA_COUNT * sizeof(int16_t)))
 
 
 
@@ -1448,21 +1352,21 @@ struct lsi_module_s
      * @brief identifies an LSIAPI module. It should be set to LSI_MODULE_SIGNATURE.
      * @since 1.0
      */
-    int64_t                  _signature;
+    int64_t                  signature;
 
     /**
      * @brief a function pointer that will be called after the module is loaded.
      * Used to initialize module data.
      * @since 1.0
      */
-    int (*_init)(lsi_module_t *pModule);
+    int (*init_pf)(lsi_module_t *module);
 
     /**
      * @brief _handler needs to be provided if this module is a request handler.
      * If not present, set to NULL.
      * @since 1.0
      */
-    lsi_handler_t           *_handler;
+    lsi_reqhdlr_t           *reqhandler;
 
     /**
      * @brief contains functions which are used to parse user defined
@@ -1470,7 +1374,7 @@ struct lsi_module_s
      * If not present, set to NULL.
      * @since 1.0
      */
-    lsi_config_t            *_config_parser;
+    lsi_confparser_t        *config_parser;
 
     /**
      * @brief information about this module set by the developer;
@@ -1478,16 +1382,16 @@ struct lsi_module_s
      * If not present, set to NULL.
      * @since 1.0
      */
-    const char              *_info;
+    const char              *about;
 
     /**
      * @brief information for global server level hook functions.
      * If not present, set to NULL.
      * @since 1.0
      */
-    lsi_serverhook_t        *_serverhook;
+    lsi_serverhook_t        *serverhook;
 
-    char                     _reserved[ LSI_MODULE_RESERVED_SIZE ];
+    char                     reserved[ LSI_MODULE_RESERVED_SIZE ];
 
 };
 
@@ -1559,8 +1463,8 @@ struct lsi_api_s
     void (*lograw)(lsi_session_t *pSession, const char *buf, int len);
 
     /**
-     * @brief get_module_param is used to get the user defined module parameters which are parsed by
-     * the callback _parse_config and pointed to in the struct lsi_config_t.
+     * @brief get_config is used to get the user defined module parameters which are parsed by
+     * the callback parse_config and pointed to in the struct lsi_confparser_t.
      *
      * @since 1.0
      *
@@ -1568,12 +1472,12 @@ struct lsi_api_s
      * @param[in] pModule - a pointer to an lsi_module_t struct.
      * @return a pointer to the user-defined configuration data.
      */
-    void *(* get_module_param)(lsi_session_t *pSession,
-                               const lsi_module_t *pModule);
+    void *(*get_config)(lsi_session_t *pSession,
+                        const lsi_module_t *pModule);
 
 
     /**
-     * @brief set_session_hook_enable_flag is used to set the flag of a hook function in a certain level to enable or disable the function.
+     * @brief enable_hook is used to set the flag of a hook function in a certain level to enable or disable the function.
      * This should only be used after a session is already created
      * and applies only to this session.
      * There are L4 level and HTTP level session hooks.
@@ -1590,10 +1494,8 @@ struct lsi_api_s
      * @param[in] iNumIndices - The number of indices to set in index.
      * @return -1 on failure.
      */
-    int (*set_session_hook_enable_flag)(lsi_session_t *session,
-                                        const lsi_module_t *pModule,
-                                        int enable, int *index,
-                                        int iNumIndices);
+    int (*enable_hook)(lsi_session_t *session, const lsi_module_t *pModule,
+                       int enable, int *index, int iNumIndices);
 
     /**
      * @brief get_module is used to retrieve module information associated with a hook point based on callback parameters.
@@ -1603,7 +1505,7 @@ struct lsi_api_s
      * @param[in] pParam - a pointer to callback parameters.
      * @return NULL on failure, a pointer to the lsi_module_t data structure on success.
      */
-    const lsi_module_t *(*get_module)(lsi_cb_param_t *pParam);
+    const lsi_module_t *(*get_module)(lsi_param_t *pParam);
 
     /**
      * @brief init_module_data is used to initialize module data of a certain level(scope).
@@ -1616,7 +1518,7 @@ struct lsi_api_s
      * @param[in] level - as defined in the module data level enum #lsi_module_data_level.
      * @return -1 for wrong level, -2 for already initialized, 0 for success.
      */
-    int (*init_module_data)(lsi_module_t *pModule, lsi_release_callback_pf cb,
+    int (*init_module_data)(lsi_module_t *pModule, lsi_datarelease_pf cb,
                             int level);
 
     /**
@@ -1673,7 +1575,7 @@ struct lsi_api_s
     * @param[in] level - as defined in the module data level enum #lsi_module_data_level.
     * @return NULL on failure, a pointer to the user defined data on success.
     */
-    void *(*get_cb_module_data)(const lsi_cb_param_t *pParam, int level);
+    void *(*get_cb_module_data)(const lsi_param_t *pParam, int level);
 
     /**
      * @brief free_module_data is to be called when the user needs to free the module data immediately.
@@ -1687,7 +1589,7 @@ struct lsi_api_s
      * @param[in] cb - a pointer to the user-defined callback function that releases the user data.
      */
     void (*free_module_data)(lsi_session_t *pSession,
-                             const lsi_module_t *pModule, int level, lsi_release_callback_pf cb);
+                             const lsi_module_t *pModule, int level, lsi_datarelease_pf cb);
 
     /**
      * @brief stream_writev_next needs to be called in the LSI_HKPT_L4_SENDING hook point level just
@@ -1700,7 +1602,7 @@ struct lsi_api_s
      * @param[in] count - the size of the IO vector.
      * @return the return value from the hook filter callback function.
      */
-    int (*stream_writev_next)(lsi_cb_param_t *pParam, struct iovec *iov,
+    int (*stream_writev_next)(lsi_param_t *pParam, struct iovec *iov,
                               int count);
 
     /**
@@ -1715,7 +1617,7 @@ struct lsi_api_s
      * @param[in] size - the buffer size.
      * @return the return value from the hook filter callback function.
      */
-    int (*stream_read_next)(lsi_cb_param_t *pParam, char *pBuf, int size);
+    int (*stream_read_next)(lsi_param_t *pParam, char *pBuf, int size);
 
     /**
      * @brief stream_write_next is used to write the response body to the next function
@@ -1730,106 +1632,8 @@ struct lsi_api_s
      * @param[in] buflen - the size of the buffer.
      * @return -1 on failure, return value of the hook filter callback function.
      */
-    int (*stream_write_next)(lsi_cb_param_t *pParam, const char *buf, int len);
+    int (*stream_write_next)(lsi_param_t *pParam, const char *buf, int len);
 
-    /**
-     * @brief get_gdata_container is used to get the global data container which is determined by the given key.
-     * It will retrieve it if it exists, otherwise it will create a new one.
-     * There are two types of containers: memory type and file type.
-     * Memory type containers will be lost when the web server is restarted.
-     * The file type container will be retained after restart.
-     *
-     * @since 1.0
-     *
-     * @param[in] type - enum of Data container types.
-     * @param[in] key - a pointer to a container ID string.
-     * @param[in] key_len - the string length.
-     * @return NULL on failure, a pointer to the data container on success.
-     */
-    lsi_gdata_container_t *(*get_gdata_container)(int type, const char *key,
-            int key_len);
-
-    /**
-     * @brief empty_gdata_container is used to delete all the data indices in the global data container.
-     * It won't delete the physical files in the directory of the container.
-     *
-     * @since 1.0
-     *
-     * @param[in] pContainer - the global data container.
-     * @return -1 on failure, 0 on success.
-     */
-    int (*empty_gdata_container)(lsi_gdata_container_t *pContainer);
-
-    /**
-     * @brief purge_gdata_container is used to delete the physical files of the empty container.
-     *
-     * @since 1.0
-     *
-     * @param[in] pContainer - the global data container.
-     * @return -1 on failure, 0 on success.
-     */
-    int (*purge_gdata_container)(lsi_gdata_container_t *pContainer);
-
-    /**
-     * @brief get_gdata is used to get the global data which was already set to the container.
-     * deserialize_cb needs to be provided in case the data index does not exist but the file
-     * is cached.  In this case, the data can be deserialized from the file.
-     * It will be released with the release_cb callback when the data is deleted.
-     *
-     * @since 1.0
-     *
-     * @param[in] pContainer - the global data container.
-     * @param[in] key - a pointer to a container ID string.
-     * @param[in] key_len - the string length.
-     * @param[in] cb - a pointer to the user-defined callback function that releases the global data.
-     * @param[in] renew_TTL - time to live.
-     * @param[in] deserialize_cb - a pointer to the user-defined deserializer callback function used for file read.
-     * @return a pointer to the user-defined global data on success,
-     * NULL on failure.
-     */
-    void *(*get_gdata)(lsi_gdata_container_t *pContainer, const char *key,
-                       int key_len,
-                       lsi_release_callback_pf release_cb, int renew_TTL,
-                       lsi_deserialize_pf deserialize_cb);
-
-    /**
-     * @brief delete_gdata is used to delete the global data which was already set to the container.
-     *
-     * @since 1.0
-     *
-     * @param[in] pContainer - the global data container.
-     * @param[in] key - a pointer to a container ID string.
-     * @param[in] key_len - the string length.
-     * @return 0.
-     */
-    int (*delete_gdata)(lsi_gdata_container_t *pContainer, const char *key,
-                        int key_len);
-
-    /**
-     * @brief set_gdata is used to set the global data (void *val) with a given key.
-     * A TTL(time to live) needs to be set.
-     * lsi_release_callback_pf needs to be provided for use when the data is to be deleted.
-     * If the container is a FILE type, a lsi_serialize_pf will be called to get the buffer
-     * which will be written to file.
-     * If the data exists and force_update is 0, this function will not update the data.
-     *
-     * @since 1.0
-     *
-     * @param[in] pContainer - the global data container.
-     * @param[in] key - a pointer to a container ID string.
-     * @param[in] key_len - the string length.
-     * @param[in] val - a pointer to the user-defined data.
-     * @param[in] TTL - time to live.
-     * @param[in] cb - a pointer to the user-defined callback function that releases the global data.
-     * @param[in] force_update - the flag to force existing data to be overwritten.  0 to not force
-     * an update, any number not equal to 0 to force update.
-     * @param[in] serialize_cb - a pointer to the user-defined serializer callback function used for file write.
-     * @return -1 on failure, 1 on not forced, 0 on success.
-     */
-    int (*set_gdata)(lsi_gdata_container_t *pContainer, const char *key,
-                     int key_len, void *val, int TTL,
-                     lsi_release_callback_pf release_cb, int force_update,
-                     lsi_serialize_pf serialize_cb);
 
     /**
      * @brief get_req_raw_headers_length can be used to get the length of the total request headers.
@@ -1947,7 +1751,7 @@ struct lsi_api_s
     /**
      * @brief register_req_handler can be used to dynamically register a handler.
      * The scriptLen is the length of the script.  To call this function,
-     * the module needs to provide the lsi_handler_t (not set to NULL).
+     * the module needs to provide the lsi_reqhdlr_t (not set to NULL).
      *
      * @since 1.0
      *
@@ -1987,7 +1791,7 @@ struct lsi_api_s
      *
      */
     int (*set_timer)(unsigned int timeout_ms, int repeat,
-                     lsi_timer_callback_pf timer_cb, void *timer_cb_param);
+                     lsi_timercb_pf timer_cb, void *timer_cb_param);
 
     /**
      * @brief remove_timer removes a timer.
@@ -2150,13 +1954,13 @@ struct lsi_api_s
      *
      * @param[in] pSession - a pointer to the HttpSession.
      * @param[in] action - action to be taken to URI and Query String, defined by #lsi_url_op:
-     * - LSI_URI_NOCHANGE - do not change the URI.
-     * - LSI_URI_REWRITE - rewrite a new URI and use for processing.
+     * - LSI_URL_NOCHANGE - do not change the URI.
+     * - LSI_URL_REWRITE - rewrite a new URI and use for processing.
      * - LSI_URL_REDIRECT_INTERNAL - internal redirect, as if the server received a new request.
      * - LSI_URL_REDIRECT_{301,302,303,307} - external redirect.
      * .
      * combined with one of the Query String qualifiers:
-     * - LSI_URL_QS_NOCHANGE - do not change the Query String (LSI_URI_REWRITE only).
+     * - LSI_URL_QS_NOCHANGE - do not change the Query String (LSI_URL_REWRITE only).
      * - LSI_URL_QS_APPEND - append to the Query String.
      * - LSI_URL_QS_SET - set the Query String.
      * - LSI_URL_QS_DELETE - delete the Query String.
@@ -2167,7 +1971,7 @@ struct lsi_api_s
      * @param[in] qs -  a pointer to the Query String.
      * @param[in] qs_len - the length of the Query String.
      * @return -1 on failure, 0 on success.
-     * @note LSI_URL_QS_NOCHANGE is only valid with LSI_URI_REWRITE, in which case qs and qs_len MUST be NULL.
+     * @note LSI_URL_QS_NOCHANGE is only valid with LSI_URL_REWRITE, in which case qs and qs_len MUST be NULL.
      * In all other cases, a NULL specified Query String has the effect of deleting the resultant Query String completely.
      * In all cases of redirection, if the Query String is part of the target URL, qs and qs_len must be specified,
      * since the original Query String is NOT carried over.
@@ -2205,7 +2009,7 @@ struct lsi_api_s
      * @param[in] pSession - a pointer to the HttpSession.
      * @return content length.
      */
-    int (*get_req_content_length)(lsi_session_t *pSession);
+    int64_t (*get_req_content_length)(lsi_session_t *pSession);
 
     /**
      * @brief read_req_body is used to get the request body to a given buffer.
@@ -2477,9 +2281,9 @@ struct lsi_api_s
     /**
      * @brief get_resp_header is used to get a response header's value in an iovec array.
      * It will try to use header_id to search the header first.
-     * If header_id is not LSI_RESP_HEADER_UNKNOWN, the name and nameLen will NOT be checked,
+     * If header_id is not LSI_RSPHDR_UNKNOWN, the name and nameLen will NOT be checked,
      * and they can be set to NULL and 0.
-     * Otherwise, if header_id is LSI_RESP_HEADER_UNKNOWN, then it will search through name and nameLen.
+     * Otherwise, if header_id is LSI_RSPHDR_UNKNOWN, then it will search through name and nameLen.
      *
      * @since 1.0
      *
@@ -2825,6 +2629,15 @@ struct lsi_api_s
      * @return a pointer to the multiplexer used by the main event loop.
      */
     void *(*get_multiplexer)();
+    
+    ls_edio_t *(*edio_reg)(int fd, edio_evt_cb evt_cb,  
+                edio_timer_cb timer_cb, short events, void * pParam );
+    
+    void (*edio_remove)(ls_edio_t *pHandle);
+    
+    void (*edio_modify)(ls_edio_t *pHandle, short events, int add_remove);
+
+    
 
     /**
      * @brief is_suspended returns if a session is in suspended mode.
@@ -2846,360 +2659,6 @@ struct lsi_api_s
      */
     int (*resume)(lsi_session_t *pSession, int retcode);
 
-    /**
-     * @def LSI_SHM_MAX_NAME_LEN
-     * @brief Shared Memory maximum characters in name of Shared Memory Pool or Hash Table
-     * (shm_pool_init and shm_htable_init).
-     * @since 1.0
-     */
-#define LSI_SHM_MAX_NAME_LEN    (11)
-
-    /**
-     * @def LSI_SHM_MAX_ALLOC_SIZE
-     * @brief Shared Memory maximum total memory allocatable (~2GB)
-     * @since 1.0
-     */
-#define LSI_SHM_MAX_ALLOC_SIZE  (2000000000)
-
-    /**
-     * @def LSI_SHM_INIT
-     * @brief Shared Memory flag bit requesting initialization.
-     * @since 1.0
-     */
-#define LSI_SHM_INIT    (0x0001)
-
-    /**
-     * @def LSI_SHM_SETTOP
-     * @brief Shared Memory flag bit requesting setting top of linked list.
-     * @since 1.0
-     */
-#define LSI_SHM_SETTOP  (0x0002)
-
-    /**
-     * @def LSI_SHM_CREATED
-     * @brief Shared Memory flag bit indicating newly created.
-     * @since 1.0
-     */
-#define LSI_SHM_CREATED (0x0001)
-
-    /**
-     * @brief shm_pool_init initializes a shared memory pool.
-     * @details If the pool does not exist, a new one is created.
-     *
-     * @since 1.0
-     *
-     * @param[in] pName - the name of the shared memory pool.
-     * This name should not exceed #LSI_SHM_MAX_NAME_LEN characters in length.
-     * If NULL, the system default name and size are used.
-     * @param[in] initSize - the initial size in bytes of the shared memory pool.
-     * If 0, the system default size is used.  The shared memory size grows as needed.
-     * The maximum total allocatable shared memory is defined by #LSI_SHM_MAX_ALLOC_SIZE.
-     * @return a pointer to the Shared Memory Pool object, to be used with subsequent shm_pool_* functions.
-     * @note shm_pool_init is generally the first routine called to access the shared memory pool system.
-     *   The handle returned is used in all related routines to access and modify shared memory.
-     *   The user should always maintain data in terms of shared memory offsets,
-     *   and convert to pointers only when accessing or modifying the data, since offsets
-     *   to the data remain constant but pointers may change at any time if shared memory is remapped.
-     * @code
-     *
-       lsi_shmpool_t *pShmpool;
-       lsi_shm_off_t dataOffset;
-
-       {
-           char *ptr;
-
-           ...
-
-           pShmpool = g_api->shm_pool_init( "SHMPool", 0 );
-           if ( pShmpool == NULL )
-               error;
-
-           ...
-
-           dataOffset = g_api->shm_pool_alloc( pShmpool, 16 );
-           if ( dataOffset == 0 )
-               error;
-           ptr = (char *)g_api->shm_pool_off2ptr( pShmpool, dataOffset );
-           if ( ptr == NULL )
-               error;
-           strcpy( ptr, "Hello World" );
-
-           ...
-       }
-
-       {
-           ...
-
-           printf( "%s\n", (char *)g_api->shm_pool_off2ptr( pShmpool, dataOffset ) );
-           g_api->shm_pool_free( pShmpool, dataOffset, 16 );
-
-           ...
-       }
-     * @endcode
-     * @see shm_pool_alloc, shm_pool_free, shm_pool_off2ptr
-     */
-    lsi_shmpool_t *(*shm_pool_init)(const char *pName, const size_t initSize);
-
-    /**
-     * @brief shm_pool_alloc allocates a shared memory block from the shared memory pool.
-     *
-     * @since 1.0
-     *
-     * @param[in] pShmpool - a pointer to the Shared Memory Pool object (from shm_pool_init).
-     * @param[in] size - the size in bytes of the memory block to allocate.
-     * @return the offset of the allocated memory in the pool, else 0 on error.
-     * @note the allocated memory is uninitialized,
-     * even if returned offsets are the same as in previous allocations.
-     * @see shm_pool_init, shm_pool_free, shm_pool_off2ptr
-     */
-    lsi_shm_off_t (*shm_pool_alloc)(lsi_shmpool_t *pShmpool, size_t size);
-
-    /**
-     * @brief shm_pool_free frees a shared memory block back to the shared memory pool.
-     *
-     * @since 1.0
-     *
-     * @param[in] pShmpool - a pointer to the Shared Memory Pool object (from shm_pool_init).
-     * @param[in] offset - the offset of the memory block to free, returned from a previous call to shm_pool_alloc.
-     * @param[in] size - the size of this memory block which MUST be the same as was allocated for this offset.
-     * @return void.
-     * @warning it is the responsibility of the user to ensure that offset and size are valid,
-     *   that offset was returned from a previous call to shm_pool_alloc,
-     *   and that size is the same block size used in the allocation.
-     *   Bad things will happen with invalid parameters, which also includes calling shm_pool_free for an already freed block.
-     * @see shm_pool_init, shm_pool_alloc
-     */
-    void (*shm_pool_free)(lsi_shmpool_t *pShmpool, lsi_shm_off_t offset,
-                          size_t size);
-
-    /**
-     * @brief shm_pool_off2ptr converts a shared memory pool offset to a user space pointer.
-     *
-     * @since 1.0
-     *
-     * @param[in] pShmpool - a pointer to the Shared Memory Pool object (from shm_pool_init).
-     * @param[in] offset - an offset in the shared memory pool.
-     * @return a pointer in the user's space for the shared memory offset, else NULL on error.
-     * @note the user should always maintain data in terms of shared memory offsets,
-     *   and convert to pointers only when accessing or modifying the data, since offsets
-     *   to the data remain constant but pointers may change at any time if shared memory is remapped.
-     * @warning it is the responsibility of the user to ensure that offset is valid.
-     * @see shm_pool_init, shm_htable_off2ptr
-     */
-    uint8_t *(*shm_pool_off2ptr)(lsi_shmpool_t *pShmpool,
-                                 lsi_shm_off_t offset);
-
-#ifdef notdef
-    //helper functions for atomic operations on SHM data
-    void (*shm_atom_incr_int8)(lsi_shm_off_t offset, int8_t  inc_by);
-    void (*shm_atom_incr_int16)(lsi_shm_off_t offset, int16_t inc_by);
-    void (*shm_atom_incr_int32)(lsi_shm_off_t offset, int32_t inc_by);
-    void (*shm_atom_incr_int64)(lsi_shm_off_t offset, int64_t inc_by);
-#endif
-
-    /**
-     * @brief shm_htable_init initializes a shared memory hash table.
-     * @details If the hash table does not exist, a new one is created.
-     *
-     * @since 1.0
-     *
-     * @param[in] pShmpool - a pointer to a Shared Memory Pool object (from shm_pool_init).
-     * If NULL, a Shared Memory Pool object with the name specified by pName is used.
-     * @param[in] pName - the name of the hash table.
-     * This name should not exceed #LSI_SHM_MAX_NAME_LEN characters in length.
-     * If NULL, the system default name is used.
-     * @param[in] initSize - the initial size (in entries/buckets) of the hash table index.
-     * If 0, the system default number is used.
-     * @param[in] hash_pf - a function to be used for hash key generation (optional).
-     * If NULL, a default hash function is used.
-     * @param[in] comp_pf - a function to be used for key comparison (optional).
-     * If NULL, the default compare function is used (strcmp(3)).
-     * @return a pointer to the Shared Memory Hash Table object, to be used with subsequent shm_htable_* functions.
-     * @note shm_hash_init initializes the hash table system after a shared memory pool has been initialized.
-     *   The handle returned is used in all related routines to access and modify shared memory.
-     *   The user should always maintain data in terms of shared memory offsets,
-     *   and convert to pointers only when accessing or modifying the data, since offsets
-     *   to the data remain constant but pointers may change at any time if shared memory is remapped.
-     * @code
-     *
-       lsi_shmpool_t *pShmpool;
-       lsi_shmhash_t *pShmhash;
-       char myKey[] = "myKey";
-       lsi_shm_off_t valOffset;
-
-       {
-           int valLen;
-           char *valPtr;
-
-           ...
-
-           pShmpool = g_api->shm_pool_init( "SHMPool", 0 );
-           if ( pShmpool == NULL )
-               error;
-           pShmhash = g_api->shm_htable_init( pShmpool, "SHMHash", 0, NULL, NULL );
-           if ( pShmhash == NULL )
-               error;
-
-           ...
-
-           valOffset = g_api->shm_htable_find(
-             pShmhash, (const uint8_t *)myKey, sizeof(myKey) - 1, &valLen );
-           if ( valOffset == 0 )
-               error;
-           valPtr = (char *)g_api->shm_htable_off2ptr( pShmhash, valOffset );
-           if ( valPtr == NULL )
-               error;
-           printf( "[%.*s]\n", valLen, valPtr );    // if values are printable characters
-
-           ...
-       }
-     * @endcode
-     * @see shm_pool_init, shm_htable_add, shm_htable_find, shm_htable_get, shm_htable_set, shm_htable_update, shm_htable_clear
-     */
-    lsi_shmhash_t *(*shm_htable_init)(lsi_shmpool_t *pShmpool,
-                                      const char *pName, size_t initSize, lsi_hash_pf hash_pf,
-                                      lsi_hash_value_comp_pf comp_pf);
-
-    // set to new value regardless whether key is in table or not.
-    /**
-     * @brief shm_htable_set sets a value in the hash table.
-     * @details The new value is set whether or not the key currently exists in the table;
-     *   i.e., either add a new entry or update an existing one.
-     *
-     * @since 1.0
-     *
-     * @param[in] pShmhash - a pointer to the Shared Memory Hash Table object (from shm_htable_init).
-     * @param[in] pKey - the hash table entry key.
-     * @param[in] keyLen - the length of the key at pKey.
-     * @param[in] pValue - the new value to set in the hash table entry.
-     * @param[in] valLen - the length of the value at pValue.
-     * @return the offset to the entry value in the hash table, else 0 on error.
-     * @see shm_htable_init, shm_htable_add, shm_htable_find, shm_htable_get, shm_htable_update, shm_htable_off2ptr
-     */
-    lsi_shm_off_t (*shm_htable_set)(lsi_shmhash_t *pShmhash,
-                                    const uint8_t *pKey, int keyLen, const uint8_t *pValue, int valLen);
-
-    // key must NOT be in table already
-    /**
-     * @brief shm_htable_add adds a new entry to the hash table.
-     * @details The key must NOT currently exist in the table.
-     *
-     * @since 1.0
-     *
-     * @param[in] pShmhash - a pointer to the Shared Memory Hash Table object (from shm_htable_init).
-     * @param[in] pKey - the hash table entry key.
-     * @param[in] keyLen - the length of the key at pKey.
-     * @param[in] pValue - the new value to set in the hash table entry.
-     * @param[in] valLen - the length of the value at pValue.
-     * @return the offset to the entry value in the hash table, else 0 on error.
-     * @see shm_htable_init, shm_htable_find, shm_htable_get, shm_htable_set, shm_htable_update, shm_htable_off2ptr
-     */
-    lsi_shm_off_t (*shm_htable_add)(lsi_shmhash_t *pShmhash,
-                                    const uint8_t *pKey, int keyLen, const uint8_t *pValue, int valLen);
-
-    // key must be in table already
-    /**
-     * @brief shm_htable_update updates a value in the hash table.
-     * @details The key MUST currently exist in the table.
-     *
-     * @since 1.0
-     *
-     * @param[in] pShmhash - a pointer to the Shared Memory Hash Table object (from shm_htable_init).
-     * @param[in] pKey - the hash table entry key.
-     * @param[in] keyLen - the length of the key at pKey.
-     * @param[in] pValue - the new value to set in the hash table entry.
-     * @param[in] valLen - the length of the value at pValue.
-     * @return the offset to the entry value in the hash table, else 0 on error.
-     * @see shm_htable_init, shm_htable_add, shm_htable_find, shm_htable_get, shm_htable_set, shm_htable_off2ptr
-     */
-    lsi_shm_off_t (*shm_htable_update)(lsi_shmhash_t *pShmhash,
-                                       const uint8_t *pKey, int keyLen, const uint8_t *pValue, int valLen);
-
-    /**
-     * @brief shm_htable_find finds a value in the hash table.
-     * @details The key MUST currently exist in the table.
-     *
-     * @since 1.0
-     *
-     * @param[in] pShmhash - a pointer to the Shared Memory Hash Table object (from shm_htable_init).
-     * @param[in] pKey - the hash table entry key.
-     * @param[in] keyLen - the length of the key at pKey.
-     * @param[out] pvalLen - the length of the value for this entry.
-     * @return the offset to the entry value in the hash table, else 0 on error.
-     * @see shm_htable_init, shm_htable_add, shm_htable_get, shm_htable_set, shm_htable_update, shm_htable_off2ptr
-     */
-    lsi_shm_off_t (*shm_htable_find)(lsi_shmhash_t *pShmhash,
-                                     const uint8_t *pKey, int keyLen, int *pvalLen);
-
-    /**
-     * @brief shm_htable_get gets an entry from the hash table.
-     * @details An entry is returned whether or not the key currently exists in the table;
-     *   i.e., if the key exists, it is returned (find), else a new one is created (add).
-     *
-     * @since 1.0
-     *
-     * @param[in] pShmhash - a pointer to the Shared Memory Hash Table object (from shm_htable_init).
-     * @param[in] pKey - the hash table entry key.
-     * @param[in] keyLen - the length of the key at pKey.
-     * @param[in,out] pvalLen - the length of the value for this entry.
-     * @param[in,out] pFlags - various flags (parameters and returns).
-     * - #LSI_SHM_INIT (in) - initialize (clear) entry IF and only if newly created.
-     * - #LSI_SHM_SETTOP (in) - set entry to the top of the linked list.
-     * - #LSI_SHM_CREATED (out) - a new entry was created.
-     * @return the offset to the entry value in the hash table, else 0 on error.
-     * @note the parameter specified by the user at pvalLen is used only if a new entry is created (#LSI_SHM_CREATED is set);
-     *   else, the length of the existing entry value is returned through this pointer.
-     *   This parameter cannot change the size of an existing entry.
-     * @see shm_htable_init, shm_htable_add, shm_htable_find, shm_htable_set, shm_htable_update, shm_htable_off2ptr
-     */
-    lsi_shm_off_t (*shm_htable_get)(lsi_shmhash_t *pShmhash,
-                                    const uint8_t *pKey, int keyLen, int *pvalLen, int *pFlags);
-
-    /**
-     * @brief shm_htable_delete deletes/removes a hash table entry.
-     *
-     * @since 1.0
-     *
-     * @param[in] pShmhash - a pointer to the Shared Memory Hash Table object (from shm_htable_init).
-     * @param[in] pKey - the hash table entry key.
-     * @param[in] keyLen - the length of the key at pKey.
-     * @return void.
-     * @see shm_htable_init, shm_htable_clear
-     */
-    void (*shm_htable_delete)(lsi_shmhash_t *pShmhash, const uint8_t *pKey,
-                              int keyLen);
-
-    /**
-     * @brief shm_htable_clear deletes all hash table entries for the given hash table.
-     *
-     * @since 1.0
-     *
-     * @param[in] pShmhash - a pointer to the Shared Memory Hash Table object (from shm_htable_init).
-     * @return void.
-     * @see shm_htable_init, shm_htable_delete
-     */
-    void (*shm_htable_clear)(lsi_shmhash_t *pShmhash);
-
-#ifdef notdef
-    int (*shm_htable_destroy)(lsi_shmhash_t *pShmhash);
-#endif
-
-    /**
-     * @brief shm_htable_off2ptr converts a hash table offset to a user space pointer.
-     *
-     * @since 1.0
-     *
-     * @param[in] pShmhash - a pointer to the Shared Memory Hash Table object (from shm_htable_init).
-     * @param[in] offset - an offset in the shared memory hash table.
-     * @return a pointer in the user's space for the shared memory offset, else NULL on error.
-     * @note the user should always maintain data in terms of shared memory offsets,
-     *   and convert to pointers only when accessing or modifying the data, since offsets
-     *   to the data remain constant but pointers may change at any time if shared memory is remapped.
-     * @warning it is the responsibility of the user to ensure that offset is valid.
-     * @see shm_htable_init, shm_pool_off2ptr
-     */
-    uint8_t *(*shm_htable_off2ptr)(lsi_shmhash_t *pShmhash,
-                                   lsi_shm_off_t offset);
 
 #ifdef notdef
     int (*is_subrequest)(lsi_session_t *pSession);
@@ -3275,7 +2734,7 @@ struct lsi_api_s
     /**
      * @brief get_vhost_module_param
      *  gets the user defined module parameters which are parsed by
-     *  the callback _parse_config and pointed to in the struct lsi_config_t.
+     *  the callback parse_config and pointed to in the struct lsi_confparser_t.
      *
      * @since 1.0
      *
@@ -3284,7 +2743,7 @@ struct lsi_api_s
      * @return NULL on failure,
      *  a pointer to the user-defined configuration data on success.
      *
-     * @see get_module_param
+     * @see get_config
      */
     void       *(* get_vhost_module_param)(const void *vhost,
                                            const lsi_module_t *pModule);
@@ -3313,15 +2772,6 @@ struct lsi_api_s
      */
     int (* get_local_sockaddr)(lsi_session_t *pSession, char *pIp, int maxLen);
 
-    /**
-     * @brief get_server_mode
-     *  gets the mode of the server defined by enum #lsi_server_mode.
-     *
-     * @since 1.0
-     *
-     * @return the mode of the server.
-     */
-    int (* get_server_mode)();
 
     /**
      * @brief handoff_fd return a duplicated file descriptor associated with current session and
@@ -3343,7 +2793,7 @@ struct lsi_api_s
     int (*handoff_fd)(lsi_session_t *pSession, char **pData, int *pDataLen);
 
     /** @since 1.0
-     * @param[in] level - lsi_config_level
+     * @param[in] level - lsi_confparser_level
      * @param[in] pVarible - varible of the Server/Listener/VHost or URI of the Context
      * @param[in] buf - a buffer to store the result
      * @param[in] max_len - length of the buf

@@ -178,7 +178,7 @@ int HTAuth::digestAuth(HttpSession *pSession, const char *pAuthorization,
                        const AuthRequired *pRequired) const
 {
     const char     *username = NULL;
-    int             username_len;
+    int             username_len = 0;
     const char     *realm = NULL;
     const char     *nonce = NULL;
     const char     *requri = NULL;

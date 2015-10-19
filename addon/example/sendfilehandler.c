@@ -33,24 +33,24 @@ lsi_module_t MNAME;
 static char testuri[] = "/sendfile";
 
 
-static int dummycall(lsi_cb_param_t *param)
+static int dummycall(lsi_param_t *param)
 {
-    const char *in = (const char *)param->_param;
-    int len = param->_param_len;
+    const char *in = (const char *)param->ptr1;
+    int len = param->len1;
     int sent = g_api->stream_write_next(param,  in, len);
     return sent;
 }
 
 
-static int reg_handler(lsi_cb_param_t *param)
+static int reg_handler(lsi_param_t *param)
 {
     const char *uri;
     int len;
-    uri = g_api->get_req_uri(param->_session, &len);
+    uri = g_api->get_req_uri(param->session, &len);
     if ((len >= sizeof(testuri) - 1)
         && (strncasecmp(uri, testuri, sizeof(testuri) - 1) == 0))
-        g_api->register_req_handler(param->_session, &MNAME, sizeof(testuri) - 1);
-    return LSI_HK_RET_OK;
+        g_api->register_req_handler(param->session, &MNAME, sizeof(testuri) - 1);
+    return LSI_OK;
 }
 
 
@@ -91,12 +91,12 @@ static int begin_process(lsi_session_t *session)
 
 static lsi_serverhook_t server_hooks[] =
 {
-    { LSI_HKPT_RECV_REQ_HEADER, reg_handler, LSI_HOOK_NORMAL, LSI_HOOK_FLAG_ENABLED },
+    { LSI_HKPT_RECV_REQ_HEADER, reg_handler, LSI_HOOK_NORMAL, LSI_FLAG_ENABLED },
     //{ LSI_HKPT_SEND_RESP_BODY, dummycall, LSI_HOOK_NORMAL, 0 },
-    lsi_serverhook_t_END   //Must put this at the end position
+    LSI_HOOK_END   //Must put this at the end position
 };
 
-static lsi_handler_t myhandler = { begin_process, NULL, NULL, NULL };
+static lsi_reqhdlr_t myhandler = { begin_process, NULL, NULL, NULL };
 
 lsi_module_t MNAME =
 {

@@ -15,10 +15,28 @@
 *    You should have received a copy of the GNU General Public License       *
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
-#ifndef LSLOCK_H
-#define LSLOCK_H
 
-#include <lsr/ls_lock.h>
+#ifndef EDIOHANDLER_H
+#define EDIOHANDLER_H
 
-#endif
+#include <lsdef.h>
+#include <lsr/ls_edio.h>
+#include <edio/eventreactor.h>
 
+
+class EdioHandler : public ls_edio_s, public EventReactor
+{
+public:
+    EdioHandler(int fd, void * pParam, edio_evt_cb evt_cb,  
+                edio_timer_cb timer_cb );
+    virtual ~EdioHandler();
+    
+    virtual int handleEvents(short event);
+    virtual void onTimer();
+
+private:
+    
+    LS_NO_COPY_ASSIGN(EdioHandler);
+};
+
+#endif // EDIOHANDLER_H

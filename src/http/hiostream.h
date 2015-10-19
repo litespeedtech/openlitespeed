@@ -39,6 +39,7 @@ enum HioState
     HIOS_CONNECTED,
     HIOS_CLOSING,
     HIOS_SHUTDOWN,
+    HIOS_RESET
 };
 
 enum HiosProtocol
@@ -92,7 +93,7 @@ public:
     {}
     virtual ~HioStream();
 
-    virtual int sendfile(int fdSrc, off_t off, size_t size) = 0;
+    virtual int sendfile(int fdSrc, off_t off, off_t size) = 0;
     virtual int aiosendfile(Aiosfcb *cb)
     {   return 0;   }
     virtual int aiosendfiledone(Aiosfcb *cb)
@@ -180,7 +181,8 @@ public:
 
     void setFlag(int flagbit, int val)
     {   m_iFlag = (val) ? (m_iFlag | flagbit) : (m_iFlag & ~flagbit);       }
-    short getFlag(int flagbit) const   {    return flagbit & m_iFlag;       }
+    short getFlag(int flagbit) const    {   return flagbit & m_iFlag;       }
+    short getFlag() const               {   return m_iFlag;                 }
 
     short isAborted() const     {   return m_iFlag & HIO_FLAG_ABORT;        }
     void  setAbortedFlag()      {   m_iFlag |= HIO_FLAG_ABORT;              }
@@ -225,7 +227,7 @@ public:
 
     void tobeClosed()
     {
-        if (m_iState != HIOS_SHUTDOWN)
+        if (m_iState < HIOS_SHUTDOWN)
             m_iState = HIOS_CLOSING;
     }
 
@@ -302,6 +304,7 @@ public:
     virtual void recycle() = 0;
 
     virtual int h2cUpgrade(HioHandler *pOld);
+    virtual int detectContentLenMismatch(int buffered)  {   return 0;  }
 
 private:
     HioHandler(const HioHandler &other);

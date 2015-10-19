@@ -399,11 +399,11 @@ static int ls_pcre_map_name(unsigned char *pEntry, char **pName)
 
 
 int ls_pcre_getnamedsubs(const ls_pcre_t *pThis, const ls_pcreres_t *pRes,
-                         ls_str_pair_t *pSubPats, int iCount)
+                         ls_strpair_t *pSubPats, int iCount)
 {
     int i, iEntryLen, iSubLen;
     unsigned char *pNames;
-    char *pName, *pSubStr;
+    char *pName, *pSubStr = NULL;
 
     if (pcre_fullinfo(
             pThis->regex, NULL, PCRE_INFO_NAMEENTRYSIZE, &iEntryLen) != 0)

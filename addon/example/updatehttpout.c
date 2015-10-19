@@ -49,32 +49,32 @@ int httpRelease(void *data)
     return 0;
 }
 
-int httpinit(lsi_cb_param_t *rec)
+int httpinit(lsi_param_t *rec)
 {
-    MyData *myData = (MyData *)g_api->get_module_data(rec->_session, &MNAME,
-                     LSI_MODULE_DATA_HTTP);
-    ls_xpool_t *pool = g_api->get_session_pool(rec->_session);
+    MyData *myData = (MyData *)g_api->get_module_data(rec->session, &MNAME,
+                     LSI_DATA_HTTP);
+    ls_xpool_t *pool = g_api->get_session_pool(rec->session);
     myData = (MyData *)ls_xpool_alloc(pool, sizeof(MyData));
     ls_loopbuf_x(&myData->inWBuf, MAX_BLOCK_BUFSIZE, pool);
     ls_loopbuf_x(&myData->outWBuf, MAX_BLOCK_BUFSIZE, pool);
 
     g_api->log(NULL, LSI_LOG_DEBUG, "#### mymodulehttp init\n");
-    g_api->set_module_data(rec->_session, &MNAME, LSI_MODULE_DATA_HTTP,
+    g_api->set_module_data(rec->session, &MNAME, LSI_DATA_HTTP,
                            (void *)myData);
     return 0;
 }
 
-int httprespwrite(lsi_cb_param_t *rec)
+int httprespwrite(lsi_param_t *rec)
 {
     MyData *myData = NULL;
-    ls_xpool_t *pool = g_api->get_session_pool(rec->_session);
-    const char *in = rec->_param;
-    int inLen = rec->_param_len;
+    ls_xpool_t *pool = g_api->get_session_pool(rec->session);
+    const char *in = rec->ptr1;
+    int inLen = rec->len1;
     int written, total = 0;
 //    int j;
 //    char s[4] = {0};
-    myData = (MyData *)g_api->get_module_data(rec->_session, &MNAME,
-             LSI_MODULE_DATA_HTTP);
+    myData = (MyData *)g_api->get_module_data(rec->session, &MNAME,
+             LSI_DATA_HTTP);
 
 //     for ( j=0; j<inLen; ++j )
 //     {
@@ -106,7 +106,7 @@ int httprespwrite(lsi_cb_param_t *rec)
     if (!ls_loopbuf_empty(&myData->outWBuf))
     {
         int hasData = 1;
-        rec->_flag_out = &hasData;
+        rec->flag_out = &hasData;
     }
     return inLen; //Because all data used, ruturn thr orignal length
 }
@@ -122,27 +122,27 @@ static char *getNullEndString(const char *s, int len, char *str,
 }
 
 
-int httpreqHeaderRecved(lsi_cb_param_t *rec)
+int httpreqHeaderRecved(lsi_param_t *rec)
 {
     const char *host, *ua, *uri, *accept;
     char *headerBuf;
     int hostLen, uaLen, acceptLen, headerLen;
     char uaBuf[1024], hostBuf[128], acceptBuf[512];
-    ls_xpool_t *pPool = g_api->get_session_pool(rec->_session);
+    ls_xpool_t *pPool = g_api->get_session_pool(rec->session);
 
-    uri = g_api->get_req_uri(rec->_session, NULL);
-    host = g_api->get_req_header(rec->_session, "Host", 4, &hostLen);
-    ua = g_api->get_req_header(rec->_session, "User-Agent", 10, &uaLen);
-    accept = g_api->get_req_header(rec->_session, "Accept", 6, &acceptLen);
+    uri = g_api->get_req_uri(rec->session, NULL);
+    host = g_api->get_req_header(rec->session, "Host", 4, &hostLen);
+    ua = g_api->get_req_header(rec->session, "User-Agent", 10, &uaLen);
+    accept = g_api->get_req_header(rec->session, "Accept", 6, &acceptLen);
     g_api->log(NULL, LSI_LOG_DEBUG,
                "#### mymodulehttp test, httpreqHeaderRecved URI:%s host:%s, ua:%s accept:%s\n",
                uri, getNullEndString(host, hostLen, hostBuf, 128), getNullEndString(ua,
                        uaLen, uaBuf, 1024), getNullEndString(accept, acceptLen, acceptBuf, 512));
 
-    headerLen = g_api->get_req_raw_headers_length(rec->_session);
+    headerLen = g_api->get_req_raw_headers_length(rec->session);
     headerBuf = (char *)ls_xpool_alloc(pPool, headerLen + 1);
     memset(headerBuf, 0, headerLen + 1);
-    g_api->get_req_raw_headers(rec->_session, headerBuf, headerLen);
+    g_api->get_req_raw_headers(rec->session, headerBuf, headerLen);
     g_api->log(NULL, LSI_LOG_DEBUG,
                "#### mymodulehttp test, httpreqHeaderRecved whole header: %s, length: %d\n",
                headerBuf, headerLen);
@@ -154,15 +154,15 @@ int httpreqHeaderRecved(lsi_cb_param_t *rec)
 
 static lsi_serverhook_t serverHooks[] =
 {
-    {LSI_HKPT_HTTP_BEGIN, httpinit, LSI_HOOK_NORMAL, LSI_HOOK_FLAG_ENABLED},
-    {LSI_HKPT_RECV_RESP_BODY, httprespwrite, LSI_HOOK_NORMAL, LSI_HOOK_FLAG_TRANSFORM | LSI_HOOK_FLAG_DECOMPRESS_REQUIRED | LSI_HOOK_FLAG_ENABLED},
-    {LSI_HKPT_RECV_REQ_HEADER, httpreqHeaderRecved, LSI_HOOK_NORMAL, LSI_HOOK_FLAG_ENABLED},
-    lsi_serverhook_t_END   //Must put this at the end position
+    {LSI_HKPT_HTTP_BEGIN, httpinit, LSI_HOOK_NORMAL, LSI_FLAG_ENABLED},
+    {LSI_HKPT_RECV_RESP_BODY, httprespwrite, LSI_HOOK_NORMAL, LSI_FLAG_TRANSFORM | LSI_FLAG_DECOMPRESS_REQUIRED | LSI_FLAG_ENABLED},
+    {LSI_HKPT_RECV_REQ_HEADER, httpreqHeaderRecved, LSI_HOOK_NORMAL, LSI_FLAG_ENABLED},
+    LSI_HOOK_END   //Must put this at the end position
 };
 
 static int _init(lsi_module_t *pModule)
 {
-    g_api->init_module_data(pModule, httpRelease, LSI_MODULE_DATA_HTTP);
+    g_api->init_module_data(pModule, httpRelease, LSI_DATA_HTTP);
     return 0;
 }
 

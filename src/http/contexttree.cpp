@@ -51,7 +51,7 @@ void ContextTree::setRootContext(const HttpContext *pContext)
 }
 
 
-void ContextTree::setRootLocation(const char *pLocation, size_t iLocLen)
+void ContextTree::setRootLocation(const char *pLocation, int iLocLen)
 {
     m_pLocTree->setRootLabel(pLocation, iLocLen);
 }
@@ -61,7 +61,7 @@ int ContextTree::add(HttpContext *pContext)
 {
     RadixNode *pRadixNode;
     const char *pURI = pContext->getURI();
-    size_t iUriLen = pContext->getURILen();
+    int iUriLen = pContext->getURILen();
 
     pRadixNode = m_pURITree->insert(pURI, iUriLen, pContext);
     if (pRadixNode == NULL)
@@ -80,21 +80,21 @@ int ContextTree::add(HttpContext *pContext)
 
 
 const HttpContext *ContextTree::bestMatch(const char *pURI,
-        size_t iUriLen) const
+        int iUriLen) const
 {
     return (HttpContext *)m_pURITree->bestMatch(pURI, iUriLen);
 }
 
 
 const HttpContext *ContextTree::matchLocation(const char *pLoc,
-        size_t iLocLen) const
+        int iLocLen) const
 {
     return (HttpContext *)m_pLocTree->bestMatch(pLoc, iLocLen);
 }
 
 
 HttpContext *ContextTree::getContext(const char *pURI,
-                                     size_t iUriLen) const
+                                     int iUriLen) const
 {
     return (HttpContext *)m_pURITree->find(pURI, iUriLen);
 }
@@ -107,7 +107,7 @@ void ContextTree::contextInherit()
 
 
 int ContextTree::inherit(void *pObj, void *pUData, const char *pKey,
-                         size_t iKeyLen)
+                         int iKeyLen)
 {
     HttpContext *pContext = (HttpContext *)pObj;
     const HttpContext *pRootContext = (const HttpContext *)pUData;
@@ -117,7 +117,7 @@ int ContextTree::inherit(void *pObj, void *pUData, const char *pKey,
 
 
 int ContextTree::updateChildren(void *pObj, void *pUData, const char *pKey,
-                                size_t iKeyLen)
+                                int iKeyLen)
 {
     HttpContext *pNewParent = (HttpContext *)pUData;
     HttpContext *pContext = (HttpContext *)pObj;

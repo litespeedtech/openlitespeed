@@ -813,26 +813,26 @@ int RequestVars::getReqVar(HttpSession *pSession, int type, char *&pValue,
 }
 
 
-//Only for types from LSI_REQ_SSL_VERSION to LSI_REQ_PATH_TRANSLATED which are defined in ls.h
+//Only for types from LSI_VAR_SSL_VERSION to LSI_VAR_PATH_TRANSLATED which are defined in ls.h
 int RequestVars::getReqVar2(HttpSession *pSession, int type, char *&pValue,
                             int bufLen)
 {
     HttpReq *pReq = pSession->getReq();
     int ret = 0;
 
-    if (type >= LSI_REQ_SSL_VERSION && type <= LSI_REQ_SSL_CLIENT_CERT)
+    if (type >= LSI_VAR_SSL_VERSION && type <= LSI_VAR_SSL_CLIENT_CERT)
     {
         if (!pSession->isSSL())
             return 0;
 
         SSLConnection *pSSL = pSession->getSSL();
-        if (type == LSI_REQ_SSL_VERSION)
+        if (type == LSI_VAR_SSL_VERSION)
         {
             pValue = (char *)pSSL->getVersion();
             ret = strlen(pValue);
             return ret;
         }
-        else if (type == LSI_REQ_SSL_SESSION_ID)
+        else if (type == LSI_VAR_SSL_SESSION_ID)
         {
             SSL_SESSION *pSession = pSSL->getSession();
             if (pSession)
@@ -846,7 +846,7 @@ int RequestVars::getReqVar2(HttpSession *pSession, int type, char *&pValue,
             }
             return ret;
         }
-        else if (type == LSI_REQ_SSL_CLIENT_CERT)
+        else if (type == LSI_VAR_SSL_CLIENT_CERT)
         {
             X509 *pClientCert = pSSL->getPeerCertificate();
             if (pClientCert)
@@ -859,7 +859,7 @@ int RequestVars::getReqVar2(HttpSession *pSession, int type, char *&pValue,
             const SSL_CIPHER *pCipher = pSSL->getCurrentCipher();
             if (pCipher)
             {
-                if (type == LSI_REQ_SSL_CIPHER)
+                if (type == LSI_VAR_SSL_CIPHER)
                 {
                     pValue = (char *)pSSL->getCipherName();
                     ret = strlen(pValue);
@@ -868,22 +868,22 @@ int RequestVars::getReqVar2(HttpSession *pSession, int type, char *&pValue,
                 {
                     int algkeysize;
                     int keysize = SSLConnection::getCipherBits(pCipher, &algkeysize);
-                    if (type == LSI_REQ_SSL_CIPHER_USEKEYSIZE)
+                    if (type == LSI_VAR_SSL_CIPHER_USEKEYSIZE)
                         ret = ls_snprintf(pValue, 20, "%d", keysize);
-                    else //LSI_REQ_SSL_CIPHER_ALGKEYSIZE
+                    else //LSI_VAR_SSL_CIPHER_ALGKEYSIZE
                         ret = ls_snprintf(pValue, 20, "%d", algkeysize);
                 }
             }
             return ret;
         }
     }
-    else if (type == LSI_REQ_GEOIP_ADDR)
+    else if (type == LSI_VAR_GEOIP_ADDR)
     {
         ret = pSession->getPeerAddrStrLen();
         pValue = (char *)pSession->getPeerAddrString();
         return ret;
     }
-    else if (type == LSI_REQ_PATH_TRANSLATED)
+    else if (type == LSI_VAR_PATH_TRANSLATED)
     {
         int n = pReq->getPathInfoLen();
         if (n > 0)

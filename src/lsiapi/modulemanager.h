@@ -105,7 +105,7 @@ public:
 
 private:
     ModulePointer *m_pModuleArray;
-    short  m_aModuleDataCount[LSI_MODULE_DATA_COUNT];
+    short  m_aModuleDataCount[LSI_DATA_COUNT];
     static ModuleConfig g_moduleConfig;
 
 };

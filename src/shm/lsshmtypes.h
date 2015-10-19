@@ -18,7 +18,7 @@
 #ifndef LSSHMTYPES_H
 #define LSSHMTYPES_H
 
-#include <shm/lslock.h>
+#include <lsr/ls_lock.h>
 
 #include <stdint.h>
 #include <sys/types.h>
@@ -46,30 +46,30 @@ struct ls_shm_s {};
 struct ls_shmpool_s {};
 struct ls_shmhash_s {};
 struct ls_shmobject_s {};
-typedef struct ls_shm_s        lsi_shm_t;
-typedef struct ls_shmpool_s    lsi_shmpool_t;
-typedef struct ls_shmhash_s    lsi_shmhash_t;
-typedef struct ls_shmobject_s  lsi_shmobject_t;
+typedef struct ls_shm_s         ls_shm_t;
+typedef struct ls_shmpool_s     ls_shmpool_t;
+typedef struct ls_shmhash_s     ls_shmhash_t;
+typedef struct ls_shmobject_s   ls_shmobject_t;
 
 #ifdef LSSHM_USE_SPINLOCK
-typedef ls_spinlock_t          lsi_shmlock_t;
+typedef ls_spinlock_t           ls_shmlock_t;
 #ifdef USE_PIDSPINLOCK
-#define lsi_shmlock_setup       ls_atomic_spin_setup
-#define lsi_shmlock_lock        ls_atomic_spin_pidlock
-#define lsi_shmlock_trylock     ls_atomic_pidspin_trylock
-#define lsi_shmlock_unlock      ls_atomic_spin_unlock
+#define ls_shmlock_setup        ls_atomic_spin_setup
+#define ls_shmlock_lock         ls_atomic_spin_pidlock
+#define ls_shmlock_trylock      ls_atomic_pidspin_trylock
+#define ls_shmlock_unlock       ls_atomic_spin_unlock
 #else
-#define lsi_shmlock_setup       ls_spinlock_setup
-#define lsi_shmlock_lock        ls_spinlock_lock
-#define lsi_shmlock_trylock     ls_spinlock_trylock
-#define lsi_shmlock_unlock      ls_spinlock_unlock
+#define ls_shmlock_setup        ls_spinlock_setup
+#define ls_shmlock_lock         ls_spinlock_lock
+#define ls_shmlock_trylock      ls_spinlock_trylock
+#define ls_shmlock_unlock       ls_spinlock_unlock
 #endif
 #else
-typedef ls_mutex_t             lsi_shmlock_t;
-#define lsi_shmlock_setup       ls_mutex_setup
-#define lsi_shmlock_lock        ls_mutex_lock
-#define lsi_shmlock_trylock     ls_mutex_trylock
-#define lsi_shmlock_unlock      ls_mutex_unlock
+typedef ls_mutex_t              ls_shmlock_t;
+#define ls_shmlock_setup        ls_mutex_setup
+#define ls_shmlock_lock         ls_mutex_lock
+#define ls_shmlock_trylock      ls_mutex_trylock
+#define ls_shmlock_unlock       ls_mutex_unlock
 #endif
 
 
@@ -79,10 +79,14 @@ typedef LsShmOffset_t           LsShmXSize_t;
 typedef uint32_t                LsShmSize_t;
 typedef uint32_t                LsShmCnt_t;
 
-#define LSSHM_MAGIC             0x20150503   // 32 bits
-#define LSSHM_LOCK_MAGIC        0x20150504   // 32 bits
-#define LSSHM_HASH_MAGIC        0x20150430   // 32 bits
-#define LSSHM_POOL_MAGIC        0x20150409   // 32 bits
+typedef h2_32_fn                LsShmHasher_fn;
+typedef v2_comp                 LsShmValComp_fn;
+
+
+#define LSSHM_MAGIC             0x20151012   // 32 bits
+#define LSSHM_LOCK_MAGIC        0x20150505   // 32 bits
+#define LSSHM_HASH_MAGIC        0x20150915   // 32 bits
+#define LSSHM_POOL_MAGIC        0x20150930   // 32 bits
 
 #define LSSHM_VER_MAJOR         0x0     // 8 bits
 #define LSSHM_VER_MINOR         0x0     // 8 bits
@@ -98,13 +102,12 @@ typedef uint32_t                LsShmCnt_t;
 #define LSSHM_SYSPOOL           "LsPool"    // default SHM POOL name
 #define LSSHM_SYSHASH           "LsHash"    // default SHM HASH name
 
-#define LSSHM_SYSSHM_DIR1        "/dev/shm/LiteSpeed"
-#define LSSHM_SYSSHM_DIR2        "/tmp/LiteSpeed_shm"
 #define LSSHM_SYSSHM_FILENAME   LSSHM_SYSSHM
 #define LSSHM_SYSSHM_FILE_EXT   "shm"
 #define LSSHM_SYSLOCK_FILE_EXT  "lock"
 
-#define LSSHM_INITSIZE          LSSHM_PAGESIZE   // default SHM SIZE
+#define LSSHM_MINDIRSPACE       0xA00000        // 10M minimum directory space
+#define LSSHM_INITSIZE          LSSHM_PAGESIZE  // default SHM SIZE
 
 #define LSSHM_SHM_UNITSIZE      0x400           // 1K byte increments
 #define LSSHM_POOL_UNITSIZE     8               //  8 byte increments

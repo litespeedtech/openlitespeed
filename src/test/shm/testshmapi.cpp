@@ -37,7 +37,7 @@
 //
 static int    testLuaShmApi()
 {
-    lsi_shmhash_t *pHash = ls_luashm_open("abc");
+    ls_shmhash_t *pHash = ls_luashm_open("abc");
     assert(pHash);
 
     ls_luashm_t *pVal;

@@ -42,6 +42,7 @@ LsShmStatus_t LsShmPool::createStaticData(const char *name)
     pDataMap->x_chunk.x_iStart = 0;
     pDataMap->x_chunk.x_iEnd = 0;
     pDataMap->x_iFreeList = 0;
+    pDataMap->x_iFreePageList = 0;
     for (i = 0; i < LSSHM_POOL_NUMBUCKET; ++i)
         pDataMap->x_aFreeBucket[i] = 0;
     ::memset(&pDataMap->x_stat, 0, sizeof(LsShmPoolMapStat));
@@ -64,6 +65,7 @@ LsShmStatus_t LsShmPool::checkStaticData(const char *name)
 LsShmPool::LsShmPool(LsShm *shm, const char *name, LsShmPool *gpool)
     : m_iMagic(LSSHM_POOL_MAGIC)
     , m_pPoolName(NULL)
+    , m_iOffset(0)
     , m_iShmOwner(0)
     , m_iRegNum(0)
     , m_pParent(gpool)
@@ -74,7 +76,7 @@ LsShmPool::LsShmPool(LsShm *shm, const char *name, LsShmPool *gpool)
 
     m_status = LSSHM_NOTREADY; // no good
 
-    if ((name == NULL) || (strlen(name) >= LSSHM_MAXNAMELEN))
+    if ((name == NULL) || (*name == '\0'))
     {
         m_status = LSSHM_BADPARAM;
         return;
@@ -114,18 +116,19 @@ LsShmPool::LsShmPool(LsShm *shm, const char *name, LsShmPool *gpool)
             // allocate header from SYS POOL
             LsShmOffset_t offset;
             int remapped;
-            offset = shm->allocPage(LSSHM_SHM_UNITSIZE, remapped);
+            int rndPoolMemSz = roundDataSize(sizeof(LsShmPoolMem));
+            offset = allocPage(LSSHM_SHM_UNITSIZE, remapped);
             if (offset == 0)
             {
                 m_status = LSSHM_BADMAPFILE;
                 return;
             }
-            ::memset(offset2ptr(offset), 0, sizeof(LsShmPoolMem));
+            ::memset(offset2ptr(offset), 0, rndPoolMemSz);
             m_iOffset = offset;
             p_reg->x_iValue = m_iOffset;
 
-            extraOffset = offset + sizeof(LsShmPoolMem);
-            extraSize = LSSHM_SHM_UNITSIZE - sizeof(LsShmPoolMem);
+            extraOffset = offset + rndPoolMemSz;
+            extraSize = LSSHM_SHM_UNITSIZE - rndPoolMemSz;
         }
     }
 
@@ -166,7 +169,7 @@ LsShmPool::LsShmPool(LsShm *shm, const char *name, LsShmPool *gpool)
 LsShmPool::~LsShmPool()
 {
     if (m_pParent != NULL)
-        destroyShm();
+        destroy();
     if (m_pPoolName != NULL)
     {
 #ifdef DEBUG_RUN
@@ -180,8 +183,27 @@ LsShmPool::~LsShmPool()
 }
 
 
+LsShmOffset_t LsShmPool::getReg(const char *name)
+{
+    if (name == NULL)
+        return 0;
+
+    LsShmOffset_t offReg = m_pShm->findRegOff(name);
+    if (offReg == 0)
+    {
+        if ((offReg = m_pShm->addRegOff(name)) == 0)
+        {
+            m_status = LSSHM_BADMAPFILE;
+            return 0;
+        }
+    }
+    return offReg;
+}
+
+
 LsShmHash *LsShmPool::getNamedHash(const char *name,
-                                   LsShmSize_t init_size, hash_fn hf, val_comp vc, int lru_mode)
+                                   LsShmSize_t init_size, LsShmHasher_fn hf,
+                                   LsShmValComp_fn vc, int lru_mode)
 {
     LsShmHash *pObj;
     GHash::iterator itor;
@@ -196,22 +218,108 @@ LsShmHash *LsShmPool::getNamedHash(const char *name,
     itor = getObjBase().find(name);
     if ((itor != NULL)
         && ((pObj = LsShmHash::checkHTable(itor, this, name, hf,
-                                           vc)) != (LsShmHash *) - 1))
+                                           vc)) != (LsShmHash *)-1))
         return pObj;
 
-    if (lru_mode == LSSHM_LRU_MODE2)
-        pObj = new LsShmWLruHash(this, name, init_size, hf, vc);
-    else if (lru_mode == LSSHM_LRU_MODE3)
-        pObj = new LsShmXLruHash(this, name, init_size, hf, vc);
-    else
-        pObj = new LsShmHash(this, name, init_size, hf, vc, lru_mode);
-    if (pObj != NULL)
+    LsShmOffset_t offReg = getReg(name);
+    if (offReg == 0)
+        return NULL;
+    LsShmReg * pReg = (LsShmReg *)offset2ptr(offReg);
+    if (!pReg)
+        return NULL;
+
+    if (pReg->x_iValue == 0)
     {
-        if (pObj->init(init_size) == LS_OK)
-            return pObj;
-        delete pObj;
+        LsShmOffset_t offset = allocateNewHash( init_size, hf != NULL, lru_mode);
+        if (offset != 0)
+        {
+            pReg = (LsShmReg *)offset2ptr(offReg);
+            pReg->x_iValue = offset;
+        }
     }
-    return NULL;
+    if (!pReg->x_iValue)
+        return NULL;
+
+    return newHashByOffset(pReg->x_iValue, name, hf, vc, lru_mode);
+}
+
+
+LsShmHash * LsShmPool::newHashByOffset(LsShmOffset_t offset,
+                  const char *name, LsShmHasher_fn hf, 
+                  LsShmValComp_fn vc, int lru_mode)
+{
+    LsShmHash *pObj;
+    if (lru_mode == LSSHM_LRU_MODE2)
+        pObj = new LsShmWLruHash(this, name, hf, vc);
+    else if (lru_mode == LSSHM_LRU_MODE3)
+        pObj = new LsShmXLruHash(this, name, hf, vc);
+    else
+        pObj = new LsShmHash(this, name, hf, vc, lru_mode);
+    if ( pObj->init(offset) == LS_FAIL)
+    {
+        delete pObj;
+        pObj = NULL;
+    }
+    else
+        getObjBase().insert(pObj->name(), pObj);
+
+    return pObj;
+}
+
+
+LsShmOffset_t LsShmPool::allocateNewHash(int init_size, int iMode, int iLruMode)
+{
+    // Create new HASH Table
+    int remapped;
+
+    ls_shmlock_t *pShmLock = lockPool()->allocLock();
+    if ((pShmLock == NULL) || (ls_shmlock_setup(pShmLock) != 0))
+    {
+        return 0;
+    }
+ 
+    // NOTE: system is not up yet... ignore remap here
+    LsShmOffset_t offset = alloc2(sizeof(LsShmHTable), remapped);
+    if (offset == 0)
+    {
+        lockPool()->freeLock(pShmLock);
+        return 0;
+    }
+    
+    init_size = LsShmHash::roundUp(init_size);
+    int szTable = LsShmHash::sz2TableSz(init_size);
+    int szBitMap = LsShmHash::sz2BitMapSz(init_size);
+    LsShmOffset_t iBase = alloc2(szTable + szBitMap, remapped);
+
+    if (iBase == 0)
+    {
+        lockPool()->freeLock(pShmLock);
+        release2(offset, sizeof(LsShmHTable));
+        return 0;
+    }
+    LsShmHTable *pTable = (LsShmHTable *)offset2ptr(offset);
+
+    ::memset(pTable, 0, sizeof(*pTable));
+    ::memset(offset2ptr(iBase), 0, szTable + szBitMap);
+
+    pTable->x_iMagic = LSSHM_HASH_MAGIC;
+    pTable->x_iCapacity = init_size;
+    pTable->x_iFullFactor = 2;
+    pTable->x_iGrowFactor = 2;
+    pTable->x_iBitMap = iBase;
+    pTable->x_iHIdx = iBase + szBitMap;
+    pTable->x_iHIdxNew = pTable->x_iHIdx;
+
+    pTable->x_iBitMapSz = szBitMap;
+    pTable->x_stat.m_iHashInUse = size2roundSize(sizeof(LsShmHTable))
+                                  + size2roundSize(szTable + szBitMap);
+
+    pTable->x_iLockOffset = lockPool()->pLock2offset(pShmLock);
+
+    pTable->x_iMode = iMode;
+    pTable->x_iLruMode = iLruMode;
+    
+    return offset;
 }
 
 
@@ -230,8 +338,11 @@ void LsShmPool::close()
 }
 
 
-void LsShmPool::destroyShm()
+void LsShmPool::destroy()
 {
+    if (m_iOffset == 0)
+        return;
+
     int8_t owner;
     if (m_pParent != NULL)
         owner = 0;
@@ -247,9 +358,10 @@ void LsShmPool::destroyShm()
         release2(pDataMap->x_chunk.x_iStart, left);
     mvFreeBucket();
     mvFreeList();
-    m_pShm->clrReg(m_iRegNum);
+    if (m_pPoolName != NULL)
+        m_pShm->delReg(m_pPoolName);
     m_pShm->freeLock(m_pShmLock);
-    m_pParent->release2(m_iOffset, sizeof(LsShmPoolMem));
+    m_pParent->release2(m_iOffset, roundDataSize(sizeof(LsShmPoolMem)));
     m_iOffset = m_pParent->m_iOffset;   // let parent/global take over
     m_pShmLock = m_pShm->offset2pLock(getPool()->x_iLockOffset);
     m_iLockEnable = m_pParent->m_iLockEnable;
@@ -270,18 +382,16 @@ LsShmOffset_t LsShmPool::alloc2(LsShmSize_t size, int &remapped)
 
     remapped = 0;
     size = roundDataSize(size);
+    lock();
     if (size >= LSSHM_SHM_UNITSIZE)
     {
-        if ((offset = m_pShm->allocPage(size, remapped)) != 0)
+        if ((offset = allocPage(size, remapped)) != 0)
         {
-            lock();
-            incrCheck(&getDataMap()->x_stat.m_iShmAllocated, roundSize2pages(size));
-            unlock();
+            incrCheck(&getDataMap()->x_stat.m_iPgAllocated, roundSize2pages(size));
         }
     }
     else
     {
-        lock();
         if (size >= LSSHM_POOL_MAXBCKTSIZE)
             // allocate from FreeList
             offset = allocFromDataFreeList(size);
@@ -290,8 +400,8 @@ LsShmOffset_t LsShmPool::alloc2(LsShmSize_t size, int &remapped)
             offset = allocFromDataBucket(size);
         if (offset != 0)
             getDataMap()->x_stat.m_iPoolInUse += size;
-        unlock();
     }
+    unlock();
     if (map_o != m_pShm->getShmMap())
         remapped = 1;
 
@@ -304,9 +414,9 @@ void LsShmPool::release2(LsShmOffset_t offset, LsShmSize_t size)
     size = roundDataSize(size);
     if (size >= LSSHM_SHM_UNITSIZE)
     {
-        m_pShm->releasePage(offset, size);
+        releasePage(offset, size);
         lock();
-        incrCheck(&getDataMap()->x_stat.m_iShmReleased, roundSize2pages(size));
+        incrCheck(&getDataMap()->x_stat.m_iPgReleased, roundSize2pages(size));
         unlock();
     }
     else
@@ -533,16 +643,16 @@ LsShmOffset_t LsShmPool::allocFromDataBucket(LsShmSize_t size)
     LsShmOffset_t offset;
     LsShmOffset_t *np, *pBucket;
 
-    LsShmSize_t bucketNum = dataSize2Bucket(size);
-    pBucket = &getDataMap()->x_aFreeBucket[bucketNum];
+    LsShmSize_t num = dataSize2Bucket(size);
+    pBucket = &getDataMap()->x_aFreeBucket[num];
     if ((offset = *pBucket) != 0)
     {
         np = (LsShmOffset_t *)offset2ptr(offset);
         *pBucket = *np;
     }
-    else if ((offset = fillDataBucket(bucketNum, size)) == 0)
+    else if ((offset = fillDataBucket(num, size)) == 0)
         return 0;
-    incrCheck(&getDataMap()->x_stat.m_bckt[bucketNum].m_iBkAllocated, 1);
+    incrCheck(&getDataMap()->x_stat.m_bckt[num].m_iBkAllocated, 1);
     return offset;
 }
 
@@ -585,8 +695,7 @@ LsShmOffset_t LsShmPool::allocFromGlobalBucket(
 // @brief freeBucket[bucketNum] will be set to the new allocated pool.
 // @brief return the offset of the newly allocated memory.
 //
-LsShmOffset_t LsShmPool::fillDataBucket(LsShmSize_t bucketNum,
-                                        LsShmSize_t size)
+LsShmOffset_t LsShmPool::fillDataBucket(LsShmSize_t bucketNum, LsShmSize_t size)
 {
     LsShmSize_t num;
     // allocated according to data size
@@ -680,7 +789,7 @@ LsShmOffset_t LsShmPool::allocFromDataChunk(LsShmSize_t size,
         needed = LSSHM_SHM_UNITSIZE;
 
     int remapped = 0;
-    if ((offset = m_pShm->allocPage(needed, remapped)) == 0)
+    if ((offset = allocPage(needed, remapped)) == 0)
     {
         num = 0;
         return 0;
@@ -742,5 +851,262 @@ void LsShmPool::rmFromDataFreeList(LsShmFreeList *pFree)
         xp->x_iPrev = pFree->x_iPrev;
     }
     --getDataMap()->x_stat.m_iFlCnt;
+}
+
+
+LsShmOffset_t LsShmPool::getFromFreeList(LsShmSize_t size)
+{
+    LsShmOffset_t offset;
+    LShmFreeTop *ap;
+
+    offset = getDataMap()->x_iFreePageList;
+    while (offset != 0)
+    {
+        ap = (LShmFreeTop *)offset2ptr(offset);
+        if (ap->x_iFreeSize >= size)
+        {
+            LsShmSize_t left = ap->x_iFreeSize - size;
+            reduceFreeFromBot(ap, offset, left);
+            return offset + left;
+        }
+        offset = ap->x_iFreeNext;
+    }
+    return 0; // no match
+}
+
+
+//
+//  reduceFreeFromBot - reduce to size or unlink myself from FreeList
+//
+void LsShmPool::reduceFreeFromBot(
+    LShmFreeTop *ap, LsShmOffset_t offset, LsShmSize_t newsize)
+{
+    if (newsize == 0)
+    {
+        // remove myself from freelist
+        markTopUsed(ap);
+        disconnectFromFree(ap,
+            (LShmFreeBot *)offset2ptr(ap->x_iFreeSize - sizeof(LShmFreeBot)));
+        return;
+    }
+
+    //
+    // NOTE: reduce size from bottom
+    //
+    LShmFreeBot *bp =
+        (LShmFreeBot *)offset2ptr(offset + newsize - sizeof(LShmFreeBot));
+
+    bp->x_iFreeOffset = offset;
+    bp->x_iBMarker = LSSHM_FREE_BMARKER;
+    ap->x_iFreeSize = newsize;
+}
+
+
+void LsShmPool::disconnectFromFree(LShmFreeTop *ap, LShmFreeBot *bp)
+{
+    LsShmOffset_t myNext, myPrev;
+    myNext = ap->x_iFreeNext;
+    myPrev = ap->x_iFreePrev;
+    LShmFreeTop *xp;
+
+    LsShmPoolMap *pDataMap = getDataMap();
+    if (myPrev != 0)
+    {
+        xp = (LShmFreeTop *)offset2ptr(myPrev);
+        xp->x_iFreeNext = myNext;
+    }
+    else
+        pDataMap->x_iFreePageList = myNext;
+    if (myNext != 0)
+    {
+        xp = (LShmFreeTop *)offset2ptr(myNext);
+        xp->x_iFreePrev = myPrev;
+    }
+    --pDataMap->x_stat.m_iGpFreeListCnt;
+}
+
+
+//
+//  @brief isFreeBlockAbove - is the space above this block "freespace".
+//  @return true if the block above is free otherwise false
+//
+bool LsShmPool::isFreeBlockAbove(
+    LsShmOffset_t offset, LsShmSize_t size, int joinFlag)
+{
+    LsShmSize_t aboveOffset = offset - sizeof(LShmFreeBot);
+    if (aboveOffset < LSSHM_SHM_UNITSIZE)
+        return false;
+
+    LShmFreeBot *bp = (LShmFreeBot *)offset2ptr(aboveOffset);
+    if ((bp->x_iBMarker == LSSHM_FREE_BMARKER)
+        && (bp->x_iFreeOffset >= LSSHM_SHM_UNITSIZE)
+        && (bp->x_iFreeOffset < aboveOffset))
+    {
+        LShmFreeTop *ap = (LShmFreeTop *)offset2ptr(bp->x_iFreeOffset);
+        if ((ap->x_iAMarker == LSSHM_FREE_AMARKER)
+            && ((ap->x_iFreeSize + bp->x_iFreeOffset) == offset))
+        {
+            if (joinFlag != 0)
+            {
+                // join above block
+                ap->x_iFreeSize += size;
+
+                LShmFreeBot *xp =
+                    (LShmFreeBot *)offset2ptr(offset + size - sizeof(LShmFreeBot));
+                xp->x_iBMarker = LSSHM_FREE_BMARKER;
+                xp->x_iFreeOffset = bp->x_iFreeOffset;
+
+                markTopUsed((LShmFreeTop *)offset2ptr(offset));
+            }
+            return true;
+        }
+    }
+    return false;
+}
+
+
+//
+// Check if this is a good free block
+//
+bool LsShmPool::isFreeBlockBelow(
+    LsShmOffset_t offset, LsShmSize_t size, int joinFlag)
+{
+    LsShmOffset_t belowOffset = offset + size;
+
+    LShmFreeTop *ap = (LShmFreeTop *)offset2ptr(belowOffset);
+    if (ap->x_iAMarker == LSSHM_FREE_AMARKER)
+    {
+        // the bottom free offset
+        LsShmOffset_t e_offset = belowOffset + ap->x_iFreeSize;
+        if ((e_offset < LSSHM_SHM_UNITSIZE) || (e_offset > getShmMapMaxSize()))
+            return false;
+
+        e_offset -= sizeof(LShmFreeBot);
+        LShmFreeBot *bp = (LShmFreeBot *)offset2ptr(e_offset);
+        if ((bp->x_iBMarker == LSSHM_FREE_BMARKER)
+            && (bp->x_iFreeOffset == belowOffset))
+        {
+            if (joinFlag != 0)
+            {
+                markTopUsed(ap);
+                if (joinFlag == 2)
+                {
+                    disconnectFromFree(ap, bp);
+                    // merge to top
+                    LShmFreeTop *xp = (LShmFreeTop *)offset2ptr(offset);
+                    xp->x_iFreeSize += ap->x_iFreeSize;
+                    bp->x_iFreeOffset = offset;
+                    return true;
+                }
+
+                // setup myself as free block
+                LShmFreeTop *np = (LShmFreeTop *)offset2ptr(offset);
+                np->x_iAMarker = LSSHM_FREE_AMARKER;
+                np->x_iFreeSize = size + ap->x_iFreeSize;
+                np->x_iFreeNext = ap->x_iFreeNext;
+                np->x_iFreePrev = ap->x_iFreePrev;
+
+                bp->x_iFreeOffset = offset;
+
+                LShmFreeTop *xp;
+                if (np->x_iFreeNext != 0)
+                {
+                    xp = (LShmFreeTop *)offset2ptr(np->x_iFreeNext);
+                    xp->x_iFreePrev = offset;
+                }
+                if (np->x_iFreePrev != 0)
+                {
+                    xp = (LShmFreeTop *)offset2ptr(np->x_iFreePrev);
+                    xp->x_iFreeNext = offset;
+                }
+                else
+                    getDataMap()->x_iFreePageList = offset;
+            }
+            return true;
+        }
+    }
+    return false;
+}
+
+
+LsShmOffset_t LsShmPool::allocPage(LsShmSize_t pagesize, int &remap)
+{
+    LsShmOffset_t offset;
+
+    LSSHM_CHECKSIZE(pagesize);
+    pagesize = roundPageSize(pagesize);
+    remap = 0;
+
+    LsShmPool *pPagePool = ((m_pParent != NULL) ? m_pParent : this);
+    if (m_pParent != NULL)
+        pPagePool->lock();
+    if ((offset = pPagePool->getFromFreeList(pagesize)) == 0)
+    {
+        if ((offset = m_pShm->allocPage(pagesize, remap)) == 0)
+        {
+            goto out;
+        }
+        markTopUsed((LShmFreeTop *)offset2ptr(offset));
+    }
+    incrCheck(&pPagePool->getDataMap()->x_stat.m_iGpAllocated,
+        (pagesize / LSSHM_SHM_UNITSIZE));
+out:
+    if (m_pParent != NULL)
+        pPagePool->unlock();
+
+    return offset;
+}
+
+
+void LsShmPool::releasePage(LsShmOffset_t offset, LsShmSize_t pagesize)
+{
+    pagesize = roundPageSize(pagesize);
+
+    LsShmPool *pPagePool = ((m_pParent != NULL) ? m_pParent : this);
+    pPagePool->lock();
+    incrCheck(&pPagePool->getDataMap()->x_stat.m_iGpReleased,
+        (pagesize / LSSHM_SHM_UNITSIZE));
+    if (pPagePool->isFreeBlockAbove(offset, pagesize, 1))
+    {
+        LShmFreeTop *ap;
+        offset = ((LShmFreeBot *)offset2ptr(
+                      offset + pagesize - sizeof(LShmFreeBot)))->x_iFreeOffset;
+        ap = (LShmFreeTop *)offset2ptr(offset);
+        pPagePool->isFreeBlockBelow(offset, ap->x_iFreeSize, 2);
+        goto out;
+    }
+    if (pPagePool->isFreeBlockBelow(offset, pagesize, 1))
+        goto out;
+    pPagePool->joinFreeList(offset, pagesize);
+out:
+    pPagePool->unlock();
+    return;
+}
+
+
+void LsShmPool::joinFreeList(LsShmOffset_t offset, LsShmSize_t size)
+{
+    LsShmPoolMap *pDataMap = getDataMap();
+    // setup myself as free block
+    LShmFreeTop *np = (LShmFreeTop *)offset2ptr(offset);
+    np->x_iAMarker = LSSHM_FREE_AMARKER;
+    np->x_iFreeSize = size;
+    np->x_iFreeNext = pDataMap->x_iFreePageList;
+    np->x_iFreePrev = 0;
+
+    // join myself to freeList
+    pDataMap->x_iFreePageList = offset;
+
+    if (np->x_iFreeNext != 0)
+    {
+        LShmFreeTop *xp = (LShmFreeTop *)offset2ptr(np->x_iFreeNext);
+        xp->x_iFreePrev = offset;
+    }
+
+    LShmFreeBot *bp =
+        (LShmFreeBot *)offset2ptr(offset + size - sizeof(LShmFreeBot));
+    bp->x_iFreeOffset = offset;
+    bp->x_iBMarker = LSSHM_FREE_BMARKER;
+    ++pDataMap->x_stat.m_iGpFreeListCnt;
 }
 

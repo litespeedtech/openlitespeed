@@ -29,8 +29,8 @@
 
 #define _RELEASE_MMAP
 
-size_t VMemBuf::s_iBlockSize = 8192;
-size_t VMemBuf::s_iMinMmapSize = 8192;
+size_t  VMemBuf::s_iBlockSize = 8192;
+size_t  VMemBuf::s_iMinMmapSize = 8192;
 
 int  VMemBuf::s_iMaxAnonMapBlocks = 1024 * 1024 * 10 / 8192;
 int  VMemBuf::s_iCurAnonMapBlocks = 0;
@@ -133,7 +133,7 @@ void VMemBuf::recycle(BlockBuf *pBuf)
 }
 
 
-int VMemBuf::shrinkBuf(long size)
+int VMemBuf::shrinkBuf(off_t size)
 {
     /*
         if ( m_type == VMBUF_FILE_MAP )
@@ -152,11 +152,11 @@ int VMemBuf::shrinkBuf(long size)
         size = 0;
     if ((m_iType == VMBUF_FILE_MAP) && (m_iFd != -1))
     {
-        if (m_iCurTotalSize > (unsigned long) size)
+        if (m_iCurTotalSize > size)
             ftruncate(m_iFd, size);
     }
     BlockBuf *pBuf;
-    while (m_iCurTotalSize > (size_t)size)
+    while (m_iCurTotalSize > size)
     {
         pBuf = m_bufList.pop_back();
         m_iCurTotalSize -= pBuf->getBlockSize();
@@ -179,11 +179,11 @@ void VMemBuf::releaseBlock(BlockBuf *pBlock)
 }
 
 
-int VMemBuf::remapBlock(BlockBuf *pBlock, int pos)
+int VMemBuf::remapBlock(BlockBuf *pBlock, off_t pos)
 {
     char *pBuf = (char *) mmap(NULL, s_iBlockSize, PROT_READ | PROT_WRITE,
                                MAP_SHARED | MAP_FILE, m_iFd, pos);
-    if (!pBuf)
+    if (pBuf == MAP_FAILED)
     {
         perror("mmap() failed in remapBlock");
         return LS_FAIL;
@@ -193,12 +193,12 @@ int VMemBuf::remapBlock(BlockBuf *pBlock, int pos)
 }
 
 
-int VMemBuf::reinit(int TargetSize)
+int VMemBuf::reinit(off_t TargetSize)
 {
     if (m_iType == VMBUF_ANON_MAP)
     {
         if ((TargetSize >=
-             (long)((s_iMaxAnonMapBlocks - s_iCurAnonMapBlocks) * s_iBlockSize)) ||
+             (off_t)((s_iMaxAnonMapBlocks - s_iCurAnonMapBlocks) * s_iBlockSize)) ||
             (TargetSize > 1024 * 1024))
         {
             releaseBlocks();
@@ -210,8 +210,8 @@ int VMemBuf::reinit(int TargetSize)
     {
         if ((TargetSize < 1024 * 1024) &&
             (s_iMaxAnonMapBlocks - s_iCurAnonMapBlocks > s_iMaxAnonMapBlocks / 5) &&
-            ((unsigned int) TargetSize < (s_iMaxAnonMapBlocks - s_iCurAnonMapBlocks) *
-             s_iBlockSize))
+            ( TargetSize < (off_t)((s_iMaxAnonMapBlocks - s_iCurAnonMapBlocks) *
+             s_iBlockSize)))
         {
             deallocate();
             if (set(VMBUF_ANON_MAP , getBlockSize()) == -1)
@@ -269,10 +269,10 @@ void VMemBuf::reset()
 }
 
 
-BlockBuf *VMemBuf::getAnonMapBlock(int size)
+BlockBuf *VMemBuf::getAnonMapBlock(size_t size)
 {
     BlockBuf *pBlock;
-    if ((unsigned int)size == s_iBlockSize)
+    if (size == s_iBlockSize)
     {
         if (!s_pAnonPool->empty())
         {
@@ -520,12 +520,12 @@ void VMemBuf::rewindReadBuf()
 }
 
 
-int VMemBuf::setROffset(size_t offset)
+int VMemBuf::setROffset(off_t offset)
 {
     if (offset > m_iCurTotalSize)
         return LS_FAIL;
     rewindReadBuf();
-    while (offset >= (*m_pCurRBlock)->getBlockSize())
+    while (offset >= (off_t)(*m_pCurRBlock)->getBlockSize())
     {
         offset -= (*m_pCurRBlock)->getBlockSize();
         mapNextRBlock();
@@ -583,7 +583,7 @@ int VMemBuf::grow()
 {
     char *pBuf;
     BlockBuf *pBlock;
-    size_t oldPos = m_iCurTotalSize;
+    off_t oldPos = m_iCurTotalSize;
     switch (m_iType)
     {
     case VMBUF_MALLOC:
@@ -660,7 +660,7 @@ char *VMemBuf::getWriteBuffer(size_t &size)
 }
 
 
-size_t VMemBuf::getCurROffset() const
+off_t VMemBuf::getCurROffset() const
 {
     return (m_pCurRBlock)
            ? (m_curRBlkPos - ((*m_pCurRBlock)->getBufEnd() - m_pCurRPos))
@@ -668,7 +668,7 @@ size_t VMemBuf::getCurROffset() const
 }
 
 
-size_t VMemBuf::getCurWOffset() const
+off_t VMemBuf::getCurWOffset() const
 {
     return m_pCurWBlock
            ? (m_iCurWBlkPos - ((*m_pCurWBlock)->getBufEnd() - m_pCurWPos))
@@ -705,11 +705,11 @@ int VMemBuf::mapNextRBlock()
 }
 
 
-long VMemBuf::writeBufSize() const
+off_t  VMemBuf::writeBufSize() const
 {
     if (m_pCurWBlock == m_pCurRBlock)
         return m_pCurWPos - m_pCurRPos;
-    int diff = m_iCurWBlkPos - m_curRBlkPos;
+    off_t  diff = m_iCurWBlkPos - m_curRBlkPos;
     if (m_pCurWBlock)
         diff += m_pCurWPos - (*m_pCurWBlock)->getBuf();
     if (m_pCurRBlock)
@@ -759,9 +759,9 @@ int VMemBuf::write(const char *pBuf, int size)
 }
 
 
-int VMemBuf::exactSize(long *pSize)
+int VMemBuf::exactSize(off_t  *pSize)
 {
-    long size = m_iCurTotalSize;
+    off_t  size = m_iCurTotalSize;
     if (m_pCurWBlock)
         size -= (*m_pCurWBlock)->getBufEnd() - m_pCurWPos;
     if (pSize)
@@ -808,9 +808,9 @@ MMapVMemBuf::MMapVMemBuf(int TargetSize)
 // }
 
 
-char *VMemBuf::mapTmpBlock(int fd, BlockBuf &buf, size_t offset, int write)
+char *VMemBuf::mapTmpBlock(int fd, BlockBuf &buf, off_t offset, int write)
 {
-    size_t blkBegin = offset - offset % s_iBlockSize;
+    off_t blkBegin = offset - offset % s_iBlockSize;
     char *pBuf = (char *) mmap(NULL, s_iBlockSize, PROT_READ | write,
                                MAP_SHARED | MAP_FILE, fd, blkBegin);
     if (pBuf == MAP_FAILED)
@@ -878,8 +878,8 @@ void VMemBuf::releaseBlockBuf(off_t offset)
 }
 
 
-int VMemBuf::copyToFile(size_t startOff, size_t len,
-                        int fd, size_t destStartOff)
+int VMemBuf::copyToFile(off_t  startOff, off_t  len,
+                        int fd, off_t  destStartOff)
 {
     BlockBuf *pSrcBlock = NULL;
     char *pSrcPos;

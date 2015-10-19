@@ -36,12 +36,12 @@ ModuleHandler::~ModuleHandler()
 }
 
 
-static const lsi_handler_t *getHandler(const HttpHandler *pHandler)
+static const lsi_reqhdlr_t *getHandler(const HttpHandler *pHandler)
 {
 
-    const lsi_handler_t *pModuleHandler = NULL;
+    const lsi_reqhdlr_t *pModuleHandler = NULL;
     if (pHandler)
-        pModuleHandler = ((const LsiModule *)pHandler)->getModule()->_handler;
+        pModuleHandler = ((const LsiModule *)pHandler)->getModule()->reqhandler;
 
     if (!pModuleHandler)
     {
@@ -57,7 +57,7 @@ static const lsi_handler_t *getHandler(const HttpHandler *pHandler)
 int ModuleHandler::cleanUp(HttpSession *pSession)
 {
     const HttpHandler *pHandler;
-    const lsi_handler_t *pModuleHandler = pSession->getModHandler();
+    const lsi_reqhdlr_t *pModuleHandler = pSession->getModHandler();
 
     if (!pModuleHandler)
         return SC_500;
@@ -78,7 +78,7 @@ int ModuleHandler::cleanUp(HttpSession *pSession)
 int ModuleHandler::onWrite(HttpSession *pSession)
 {
     const HttpHandler *pHandler;
-    const lsi_handler_t *pModuleHandler = pSession->getModHandler();
+    const lsi_reqhdlr_t *pModuleHandler = pSession->getModHandler();
 
     if (!pModuleHandler)
         return SC_500;
@@ -91,9 +91,9 @@ int ModuleHandler::onWrite(HttpSession *pSession)
                  "[%s] _handler->on_write_resp() return %d",
                  MODULE_NAME(((const LsiModule *)pHandler)->getModule()),
                  status);
-        if (status != LSI_WRITE_RESP_CONTINUE)
+        if (status != LSI_RSP_MORE)
             pSession->endResponse(1);
-        return (status == LSI_WRITE_RESP_CONTINUE);
+        return (status == LSI_RSP_MORE);
     }
     else
     {
@@ -103,7 +103,7 @@ int ModuleHandler::onWrite(HttpSession *pSession)
                  MODULE_NAME(((const LsiModule *)pHandler)->getModule())
                 );
         pSession->setFlag(HSF_HANDLER_WRITE_SUSPENDED);
-        return LSI_WRITE_RESP_CONTINUE;
+        return LSI_RSP_MORE;
     }
 }
 
@@ -111,7 +111,7 @@ int ModuleHandler::onWrite(HttpSession *pSession)
 int ModuleHandler::process(HttpSession *pSession,
                            const HttpHandler *pHandler)
 {
-    const lsi_handler_t *pModuleHandler = getHandler(pHandler);
+    const lsi_reqhdlr_t *pModuleHandler = getHandler(pHandler);
 
     if (!pModuleHandler)
         return SC_500;
@@ -152,7 +152,7 @@ int ModuleHandler::process(HttpSession *pSession,
 int ModuleHandler::onRead(HttpSession *pSession)
 {
     const HttpHandler *pHandler;
-    const lsi_handler_t *pModuleHandler = pSession->getModHandler();
+    const lsi_reqhdlr_t *pModuleHandler = pSession->getModHandler();
 
     if (!pModuleHandler)
         return SC_500;

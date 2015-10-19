@@ -21,22 +21,44 @@
 <li><a href="admin.html">Administration</a>
 	<ul class="level2"><li><a href="ServerStat_Help.html">Service Manager</a></li></ul></li>
 <li><a href="security.html">Security</a></li>
-<li><a href="config.html">Configurations</a>
+<li><a href="config.html">Configuration</a>
 	<ul class="level2">
 	<li><a href="ServGeneral_Help.html">Server General</a></li>
 	<li><a href="ServTuning_Help.html">Server Tuning</a></li>
 	<li><a href="ServSecurity_Help.html">Server Security</a></li>
 	<li><a href="ExtApp_Help.html">External Apps</a></li>
+                <ul class="level3">
+                <li><a href="External_FCGI.html">Fast CGI App</a></li>
+                <li><a href="External_FCGI_Auth.html">Fast CGI Authorizer</a></li>
+                <li><a href="External_LSAPI.html">LSAPI App</a></li>
+                <li><a href="External_Servlet.html">Servlet Engine</a></li>
+                <li><a href="External_WS.html">Web Server</a></li>
+                <li><a href="External_PL.html">Pipped logger</a></li>
+                <li><a href="External_LB.html">Load Balancer</a></li>
+                </ul>
 	<li><a href="ScriptHandler_Help.html">Script Handler</a></li>
 	<li><a href="Rails_Help.html">Rack/Rails Settings</a></li>
 	<li><a href="Module_Help.html">Module Configuration</a></li>
 	<li><a href="Listeners_Help.html">Listeners</a></li>
 	<li><a href="Templates_Help.html">Templates</a></li>
-	<li><a href="VirtualHosts_Help.html">Virtual Host List</a></li>
+	<li><a href="VirtualHosts_Help.html">Virtual Host Base</a></li>
 	<li><a href="VHGeneral_Help.html">Virtual Host General</a></li>
 	<li><a href="VHSecurity_Help.html">Virtual Host Security</a></li>
 	<li><a href="Rewrite_Help.html">Rewrite</a></li>
 	<li><a href="Context_Help.html">Context</a></li>
+               <ul class="level3">
+                <li><a href="Static_Context.html">Static Context</a></li>
+                <li><a href="Java_Web_App_Context.html">Java Web App Context</a></li>
+                <li><a href="Servlet_Context.html">Servlet Context</a></li>
+                <li><a href="FCGI_Context.html">Fast CGI Context</a></li>
+                <li><a href="LSAPI_Context.html">LSAPI Context</a></li>
+                <li><a href="Proxy_Context.html">Proxy Context</a></li>
+                <li><a href="CGI_Context.html">CGI Context</a></li>
+                <li><a href="LB_Context.html">Load Balancer Context</a></li>
+                <li><a href="Redirect_Context.html">Redirect Context</a></li>
+                <li><a href="Rails_Context.html">Rack/Rails Context</a></li>
+                <li><a href="Module_Context.html">Module Handler Context</a></li>
+                </ul>
 	<li><a href="VHWebSocket_Help.html">Web Socket Proxy</a></li>
 	<li><a href="AdminGeneral_Help.html">Admin Server</a></li>
 	<li><a href="AdminListener_Help.html">Admin Listeners</a></li>	
@@ -121,7 +143,7 @@ rpm -Uvh epel-release-5-4.noarch.rpm  (CentOS 5.* only) </p>
 	<li><p>The default port for the WebAdmin console is 7080.</p>
 	<p>Plug http://[address]:7080/, into your browser to go to the WebAdmin interface. (If you changed the port for WebAdmin during installation, use that port instead.)</p>
 	<p>Remember that for [address] you can use &quot;localhost&quot; if you're currently using the machine the server is on.</p>
-	<p>The WebAdmin welcome page should load. Click the &quot;Log on&quot; link and use the administrator's user name and password specified during installation to log on.</p>
+	<p>The WebAdmin welcome page should load. Click the &quot;Log on&quot; link and use the administrator's username and password specified during installation to log on.</p>
 	<p>For detailed information regarding configuration, please refer to our Configuration Guide, or click the &quot;Help&quot; link at the top of each page.</p>
 	</li>
 	<li><p>If your server uses firewall, please make sure that localhost is trusted.</p>
@@ -150,6 +172,6 @@ XXXX is a port number. If the port is available, the command will produce no out
 	<li>Remove the install directory: rm -rf [your_install_dir]
 </ol>
 </div><footer class="copyright">Copyright &copy; 2013-2015. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> All rights reserved.</footer>
-				</div>
-				</body>
-				</html>
+</div>
+</body>
+</html>

@@ -60,10 +60,10 @@ public:
     static int runScript(lsi_session_t *session, const char *scriptpath,
                          LsLuaUserParam *pUser, LsLuaSession **ppSession,
                          int iCurHook);
-    static int runFilterScript(lsi_cb_param_t *rec, const char *scriptpath,
+    static int runFilterScript(lsi_param_t *rec, const char *scriptpath,
                                LsLuaUserParam *pUser, LsLuaSession **ppSession,
                                int iCurHook);
-    static int writeToNextFilter(lsi_cb_param_t *rec, LsLuaUserParam *pUser,
+    static int writeToNextFilter(lsi_param_t *rec, LsLuaUserParam *pUser,
                                  const char *pOut, int iOutLen);
     static void ref(LsLuaSession *pSession);
     static void unref(LsLuaSession *pSession);
@@ -120,8 +120,8 @@ private:
                                    int iCurHook);
     static int runState(lsi_session_t *session, LsLuaSession *pSandbox,
                         int iCurHook);
-    static int respFilterSetup(lsi_cb_param_t *rec, lua_State *L);
-    static int filterOut(lsi_cb_param_t *rec, const char *pBuf, int iLen);
+    static int respFilterSetup(lsi_param_t *rec, lua_State *L);
+    static int filterOut(lsi_param_t *rec, const char *pBuf, int iLen);
 
 private:
     LsLuaEngine(const LsLuaEngine &other);

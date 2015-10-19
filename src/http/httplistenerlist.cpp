@@ -236,28 +236,29 @@ void HttpListenerList::recvListeners()
     int         startfd = 1000;
     char        achSockAddr[128];
     socklen_t   len;
+    struct sockaddr *pAddr = (struct sockaddr *)achSockAddr;
     len = 128;
-    if (getpeername(startfd, (struct sockaddr *)achSockAddr, &len) != -1)
+    if (getpeername(startfd, pAddr, &len) != -1)
         startfd = 300;      // Must not be connected
     else
     {
         len = 128;
-        if (getsockname(startfd, (struct sockaddr *)achSockAddr, &len) == -1)
+        if (getsockname(startfd, pAddr, &len) == -1)
             startfd = 300;  // Must be a server socket
     }
     while (1)
     {
         len = 128;
-        if (getpeername(startfd, (struct sockaddr *)achSockAddr, &len) != -1)
+        if (getpeername(startfd, pAddr, &len) != -1)
             break;      // Must not be connected
         len = 128;
-        if (getsockname(startfd, (struct sockaddr *)achSockAddr, &len) == -1)
+        if (getsockname(startfd, pAddr, &len) == -1)
             break;      // Must be a server socket
-        if (((struct sockaddr *)achSockAddr)->sa_family != PF_UNIX)
+        if (pAddr->sa_family != PF_UNIX)
         {
             int fd = dup(startfd);
             HttpListener *pListener = new HttpListener();
-            pListener->assign(fd, (struct sockaddr *)achSockAddr);
+            pListener->assign(fd, pAddr);
             push_back(pListener);
             sort(s_compare);
         }

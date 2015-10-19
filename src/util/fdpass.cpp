@@ -122,6 +122,7 @@ char                control[ sizeof(struct cmsghdr) + sizeof(int) + 8];
 } control_un;
 struct cmsghdr    *cmptr;
 
+memset(&msg, 0, sizeof(msg));
 msg.msg_control = control_un.control;
 msg.msg_controllen = control_space;
 
@@ -131,6 +132,7 @@ cmptr->cmsg_level = SOL_SOCKET;
 cmptr->cmsg_type = SCM_RIGHTS;
 memmove(CMSG_DATA(cmptr), &sendfd, sizeof(int));
 #else
+memset(&msg, 0, sizeof(msg));
 msg.msg_accrights = (caddr_t) &sendfd;
 msg.msg_accrightslen = sizeof(int);
 #endif

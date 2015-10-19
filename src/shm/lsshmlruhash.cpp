@@ -20,6 +20,8 @@
 
 #include <unistd.h>
 
+#define LSSHM_LRU_MAGIC     0x20141201
+
 
 int LsShmHash::entryValMatch(
     const uint8_t *pVal, int valLen, shmlru_data_t *pData)
@@ -64,6 +66,46 @@ int LsShmHash::trim(time_t tmCutoff, int (*func)(iterator iter, void *arg),
     pLru->nvalexp += del;
     autoUnlock();
     return del;
+}
+
+
+LsShmHash::iteroffset LsShmHash::nextTmLruIterOff(time_t tmCutoff)
+{
+    if (m_iLruMode == LSSHM_LRU_NONE)
+        return 0;
+    iterator iter;
+    iteroffset iterOff = getLru()->linkLast;
+    if (tmCutoff > 0)
+    {
+        while (iterOff != 0)
+        {
+            iter = offset2iterator(iterOff);
+            if (iter->getLruLasttime() > tmCutoff)
+                break;
+            iterOff = iter->getLruLinkNext();
+        }
+    }
+    return iterOff;
+}
+
+
+LsShmHash::iteroffset LsShmHash::prevTmLruIterOff(time_t tmCutoff)
+{
+    if (m_iLruMode == LSSHM_LRU_NONE)
+        return 0;
+    iterator iter;
+    iteroffset iterOff = getLru()->linkFirst;
+    if (tmCutoff > 0)
+    {
+        while (iterOff != 0)
+        {
+            iter = offset2iterator(iterOff);
+            if (iter->getLruLasttime() < tmCutoff)
+                break;
+            iterOff = iter->getLruLinkPrev();
+        }
+    }
+    return iterOff;
 }
 
 
@@ -112,7 +154,7 @@ int LsShmWLruHash::newDataEntry(
         {
             LsShmHElem *pElem = (LsShmHElem *)offset2ptr(pData->offiter);
             LsShmHKey key = pElem->x_hkey;
-            ls_str_pair_t parms;
+            ls_strpair_t parms;
             iteroffset iterOff;
             ls_str_set(&parms.key,
                        (char *)pElem->getKey(), pElem->getKeyLen());
@@ -185,7 +227,7 @@ int LsShmXLruHash::newDataEntry(
         int remapped;
         LsShmOffset_t offNew;
         if ((offNew = alloc2(
-                          (LsShmSize_t)(sizeof(shmlru_data_t) + valLen), remapped)) == 0)
+            (LsShmSize_t)(sizeof(shmlru_data_t) + valLen), remapped)) == 0)
             return LS_FAIL;
         pData = (shmlru_data_t *)offset2ptr(offNew);
         pData->magic = LSSHM_LRU_MAGIC;

@@ -106,7 +106,8 @@ public:
     int sendFinFrame(uint32_t uiStreamID)
     {
         char achHeader[8];
-        *(uint32_t *)achHeader = htonl(uiStreamID);
+        uint32_t *pHeader = (uint32_t *)achHeader;
+        *pHeader = htonl(uiStreamID);
         achHeader[4] = 1;
         achHeader[5] = 0;
         achHeader[6] = 0;

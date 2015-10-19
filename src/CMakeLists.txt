@@ -128,7 +128,6 @@ SET(unittest_STAT_SRCS
    test/thread/threadtest.cpp
    test/thread/workcrewtest.cpp
    test/shm/shmbaselrutest.cpp
-   test/shm/shmlrutest.cpp
    test/shm/shmxtest.cpp
 )
 
@@ -146,9 +145,6 @@ add_executable(ls_shmhashstat
     shm/ls_shmhashstat.cpp
 )
 
-add_executable(shmmemcachedtest
-    test/shm/shmmemcachedtest.cpp
-)
 
 # add_executable(ctbench
 #     modules/prelinkedmods.cpp
@@ -241,11 +237,9 @@ SET( litespeedlib
 
 target_link_libraries(openlitespeed ${litespeedlib} )
 
-target_link_libraries(ls_shmstat lsshm util lsr pthread )
+target_link_libraries(ls_shmstat lsshm log4cxx edio util lsr pthread rt )
 
-target_link_libraries(ls_shmhashstat lsshm util lsr pthread )
-
-target_link_libraries(shmmemcachedtest lsshm util lsr pthread )
+target_link_libraries(ls_shmhashstat lsshm log4cxx edio util lsr pthread rt )
 
 # target_link_libraries(ctbench ${litespeedlib} )
 

@@ -23,19 +23,19 @@
 lsi_module_t MNAME;
 
 
-static int reg_handler(lsi_cb_param_t *param)
+static int reg_handler(lsi_param_t *param)
 {
     const char *uri;
     int len;
-    uri = g_api->get_req_uri(param->_session, &len);
+    uri = g_api->get_req_uri(param->session, &len);
     if (memmem((const void *)uri, len, (const void *)".345", 4) != NULL)
     {
-        g_api->register_req_handler(param->_session, &MNAME, 0);
-        g_api->log(param->_session, LSI_LOG_DEBUG,
+        g_api->register_req_handler(param->session, &MNAME, 0);
+        g_api->log(param->session, LSI_LOG_DEBUG,
                    "[hellohandler2:%s] register_req_handler for URI: %s\n",
-                   MNAME._info, uri);
+                   MNAME.about, uri);
     }
-    return LSI_HK_RET_OK;
+    return LSI_OK;
 }
 
 
@@ -43,7 +43,7 @@ static int _init(lsi_module_t *module)
 {
     g_api->log(NULL, LSI_LOG_DEBUG,
                "[hellohandler2:%s] _init [log in module code]\n",
-               MNAME._info);
+               MNAME.about);
     return 0;
 }
 
@@ -56,22 +56,22 @@ static int begin_process(lsi_session_t *session)
     g_api->end_resp(session);
     g_api->log(session, LSI_LOG_DEBUG,
                "[hellohandler2:%s] begin_process for URI: %s\n",
-               MNAME._info, g_api->get_req_uri(session, NULL));
+               MNAME.about, g_api->get_req_uri(session, NULL));
     return 0;
 }
 
 
 static lsi_serverhook_t server_hooks[] =
 {
-    { LSI_HKPT_RECV_REQ_HEADER, reg_handler, LSI_HOOK_NORMAL, LSI_HOOK_FLAG_ENABLED },
-    lsi_serverhook_t_END   //Must put this at the end position
+    { LSI_HKPT_RECV_REQ_HEADER, reg_handler, LSI_HOOK_NORMAL, LSI_FLAG_ENABLED },
+    LSI_HOOK_END   //Must put this at the end position
 };
 
 /**
- * Define a handler, need to provide a struct lsi_handler_t object, in which
+ * Define a handler, need to provide a struct lsi_reqhdlr_t object, in which
  * the first function pointer should not be NULL
  */
-static lsi_handler_t myhandler = { begin_process, NULL, NULL, NULL };
+static lsi_reqhdlr_t myhandler = { begin_process, NULL, NULL, NULL };
 lsi_module_t MNAME =
 {
     LSI_MODULE_SIGNATURE, _init, &myhandler, NULL, "v1.0", server_hooks

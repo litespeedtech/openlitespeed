@@ -361,8 +361,7 @@ class DInfo
 
 		if (($pos = strrpos($this->_ref, '`')) !== FALSE)
 			$this->_ref = substr($this->_ref, 0, $pos);
-		elseif ($this->_view == 'sl' || $this->_view == 'sl_'
-				|| $this->_view == 'al' || $this->_view == 'al_'
+		elseif ($this->_view == 'sl_' || $this->_view == 'al_'
 				|| $this->_pid == 'base' || $this->_pid == 'mbr')
 			$this->_ref = $this->_viewName; // still in serv conf
 		else

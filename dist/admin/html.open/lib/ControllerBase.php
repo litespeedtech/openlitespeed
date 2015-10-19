@@ -468,7 +468,7 @@ class ControllerBase
 
 			case SInfo::DATA_DASH_LOG:
 			case SInfo::DATA_VIEW_LOG:
-				return $this->_service->LoadLog($fields);
+				return $this->_service->LoadLog($type);
 
 			case SInfo::DATA_Status_LV:
 				$this->_service->LoadStatus();

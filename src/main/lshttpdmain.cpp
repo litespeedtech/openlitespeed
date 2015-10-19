@@ -700,7 +700,6 @@ void LshttpdMain::parseOpt(int argc, char *argv[])
     char achCwd[512];
     getServerRootFromExecutablePath(argv[0], achCwd, 512);
     opterr = 0;
-    int serverMode = LSI_SERVER_MODE_DAEMON;
     while ((c = getopt(argc, argv, opts)) != EOF)
     {
         switch (c)
@@ -711,7 +710,6 @@ void LshttpdMain::parseOpt(int argc, char *argv[])
         case 'd':
             m_noDaemon = 1;
             m_noCrashGuard = 1;
-            serverMode = LSI_SERVER_MODE_FORGROUND;
             break;
         case 'n':
             m_noDaemon = 1;
@@ -727,8 +725,6 @@ void LshttpdMain::parseOpt(int argc, char *argv[])
             printf("?? getopt returned character code -%o ??\n", c);
         }
     }
-
-    m_pServer->setServerMode(serverMode);
 }
 
 
@@ -906,6 +902,11 @@ int LshttpdMain::init(int argc, char *argv[])
     if (1 == HttpServerConfig::getInstance().getProcNo())
         ExtAppRegistry::runOnStartUp();
 
+    if (GlobalServerSessionHooks->isEnabled(LSI_HKPT_WORKER_INIT))
+        GlobalServerSessionHooks->runCallbackNoParam(LSI_HKPT_WORKER_INIT,
+                NULL);
+
+
     return 0;
 }
 
@@ -1056,10 +1057,6 @@ int LshttpdMain::startChild(ChildProc *pProc)
     {
         //child process
         cpu_set_t       cpu_affinity;
-
-        if (GlobalServerSessionHooks->isEnabled(LSI_HKPT_WORKER_POSTFORK))
-            GlobalServerSessionHooks->runCallbackNoParam(LSI_HKPT_WORKER_POSTFORK,
-                    NULL);
 
         PCUtil::getAffinityMask(s_iCpuCount, pProc->m_iProcNo - 1, 1,
                                 &cpu_affinity);
@@ -1310,7 +1307,7 @@ int LshttpdMain::guardCrash()
 {
     long lLastForkTime  = DateTime::s_curTime = time(NULL);
     int  iForkCount     = 0;
-    int  ret;
+    int  ret            = 0;
     int  iNumChildren = HttpServerConfig::getInstance().getChildren();
     struct pollfd   pfds[2];
     HttpSignals::init(sigchild);

@@ -112,8 +112,8 @@ private:
     const MIMESetting  *m_pMimeType;
 
     ls_xpool_t         *m_pPool;
-    ls_str_pair_t       m_curUrl;
-    ls_str_pair_t      *m_pUrls;
+    ls_strpair_t       m_curUrl;
+    ls_strpair_t      *m_pUrls;
     ls_str_t            m_location;
     char               *m_pAuthUser;
     ls_str_t            m_pathInfo;
@@ -506,7 +506,7 @@ public:
     int checkSymLink(const char *pPath, int pathLen, const char *pBegin);
 
     const char *findEnvAlias(const char *pKey, int keyLen, int &aliasKeyLen);
-    ls_str_pair_t *addEnv(const char *pKey, int keyLen, const char *pValue,
+    ls_strpair_t *addEnv(const char *pKey, int keyLen, const char *pValue,
                           int valLen);
     const char *getEnv(const char *pKey, int keyLen, int &valLen);
     const RadixNode *getEnvNode() const;

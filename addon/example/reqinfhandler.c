@@ -215,15 +215,15 @@ static int free_mydata(void *data)
 }
 
 
-static int initdata(lsi_cb_param_t *param)
+static int initdata(lsi_param_t *param)
 {
-    mydata_t *mydata = (mydata_t *)g_api->get_module_data(param->_session,
-                       &MNAME, LSI_MODULE_DATA_HTTP);
-    ls_xpool_t *pPool = g_api->get_session_pool(param->_session);
+    mydata_t *mydata = (mydata_t *)g_api->get_module_data(param->session,
+                       &MNAME, LSI_DATA_HTTP);
+    ls_xpool_t *pPool = g_api->get_session_pool(param->session);
     mydata = (mydata_t *)ls_xpool_alloc(pPool, sizeof(mydata_t));
     memset(mydata, 0, sizeof(mydata_t));
     g_api->log(NULL, LSI_LOG_DEBUG, "#### reqinfomodule initdata\n");
-    g_api->set_module_data(param->_session, &MNAME, LSI_MODULE_DATA_HTTP,
+    g_api->set_module_data(param->session, &MNAME, LSI_DATA_HTTP,
                            (void *)mydata);
     return 0;
 }
@@ -236,7 +236,7 @@ static int get_reqbody_dealertype(lsi_session_t *session)
     int n;
     if (g_api->get_req_content_length(session) > 0)
     {
-        n = g_api->get_req_var_by_id(session, LSI_REQ_VAR_PATH_INFO, path, 512);
+        n = g_api->get_req_var_by_id(session, LSI_VAR_PATH_INFO, path, 512);
         if (n >= 5 && strncasecmp(path, "/echo", 5) == 0)
             return 1;
         else if (n >= 4 && strncasecmp(path, "/md5", 4) == 0)
@@ -265,7 +265,7 @@ static int on_read(lsi_session_t *session)
     int ret, i;
     int readbytes = 0, written = 0;
     mydata_t *mydata = (mydata_t *)g_api->get_module_data(session, &MNAME,
-                       LSI_MODULE_DATA_HTTP);
+                       LSI_DATA_HTTP);
     if (mydata == NULL || mydata->type == 0)
     {
         g_api->end_resp(session);
@@ -338,7 +338,7 @@ static int begin_process(lsi_session_t *session)
     const char *p;
     char *buf;
     mydata_t *mydata = (mydata_t *)g_api->get_module_data(session, &MNAME,
-                       LSI_MODULE_DATA_HTTP);
+                       LSI_DATA_HTTP);
     ls_xpool_t *pPool = g_api->get_session_pool(session);
 
     //Create response body
@@ -374,7 +374,7 @@ static int begin_process(lsi_session_t *session)
     append(session,
            "\r\n</table><br>Server req env<br><table border=1>\r\n", 0);
     //Server req env
-    for (i = LSI_REQ_VAR_REMOTE_ADDR; i < LSI_REQ_COUNT; ++i)
+    for (i = LSI_VAR_REMOTE_ADDR; i < LSI_VAR_COUNT; ++i)
     {
         n = g_api->get_req_var_by_id(session, i, val, VALMAXSIZE);
         if (n > 0)
@@ -463,34 +463,34 @@ static int begin_process(lsi_session_t *session)
 static int on_write(lsi_session_t *session)
 {
     mydata_t *mydata = (mydata_t *)g_api->get_module_data(session, &MNAME,
-                       LSI_MODULE_DATA_HTTP);
+                       LSI_DATA_HTTP);
     return (mydata == NULL || mydata->type == 0 || mydata->resp_done == 1) ?
-           LSI_WRITE_RESP_FINISHED : LSI_WRITE_RESP_CONTINUE;
+           LSI_RSP_DONE : LSI_RSP_MORE;
 }
 
 
-static int reg_handler(lsi_cb_param_t *param)
+static int reg_handler(lsi_param_t *param)
 {
     const char *uri;
     int len;
-    uri = g_api->get_req_uri(param->_session, &len);
+    uri = g_api->get_req_uri(param->session, &len);
     if ((uri != NULL) && (len >= sizeof(testuri) - 1)
         && (strncasecmp(uri, testuri, sizeof(testuri) - 1) == 0))
-        g_api->register_req_handler(param->_session, &MNAME, sizeof(testuri) - 1);
-    return LSI_HK_RET_OK;
+        g_api->register_req_handler(param->session, &MNAME, sizeof(testuri) - 1);
+    return LSI_OK;
 }
 
 
 static int _init(lsi_module_t *module)
 {
-    g_api->init_module_data(module, free_mydata, LSI_MODULE_DATA_HTTP);
+    g_api->init_module_data(module, free_mydata, LSI_DATA_HTTP);
     return 0;
 }
 
 
 static int clean_up(lsi_session_t *session)
 {
-    g_api->free_module_data(session, &MNAME, LSI_MODULE_DATA_HTTP,
+    g_api->free_module_data(session, &MNAME, LSI_DATA_HTTP,
                             free_mydata);
     return 0;
 }
@@ -498,13 +498,13 @@ static int clean_up(lsi_session_t *session)
 
 static lsi_serverhook_t server_hooks[] =
 {
-    { LSI_HKPT_HTTP_BEGIN, initdata, LSI_HOOK_NORMAL, LSI_HOOK_FLAG_ENABLED },
-    //{ LSI_HKPT_HTTP_END, resetdata, LSI_HOOK_NORMAL, LSI_HOOK_FLAG_ENABLED },
-    { LSI_HKPT_RECV_REQ_HEADER, reg_handler, LSI_HOOK_NORMAL, LSI_HOOK_FLAG_ENABLED },
-    lsi_serverhook_t_END   //Must put this at the end position
+    { LSI_HKPT_HTTP_BEGIN, initdata, LSI_HOOK_NORMAL, LSI_FLAG_ENABLED },
+    //{ LSI_HKPT_HTTP_END, resetdata, LSI_HOOK_NORMAL, LSI_FLAG_ENABLED },
+    { LSI_HKPT_RECV_REQ_HEADER, reg_handler, LSI_HOOK_NORMAL, LSI_FLAG_ENABLED },
+    LSI_HOOK_END   //Must put this at the end position
 };
 
-static lsi_handler_t myhandler = { begin_process, on_read, on_write, clean_up };
+static lsi_reqhdlr_t myhandler = { begin_process, on_read, on_write, clean_up };
 
 lsi_module_t MNAME =
 {

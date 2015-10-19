@@ -20,6 +20,22 @@
 #include <lsiapi/lsiapi.h>
 #include <util/ghash.h>
 
+/**
+ * @typedef lsi_serialize_pf
+ * @brief The serializer callback function for the user global file data.
+ * Must use malloc to get the buffer and return the buffer.
+ * @since 1.0
+ */
+typedef char   *(*lsi_serialize_pf)(void *pObject, int *out_length);
+
+/**
+ * @typedef lsi_deserialize_pf
+ * @brief The deserializer callback function for the user global file data.
+ * Must use malloc to get the buffer and return the buffer.
+ * @since 1.0
+ */
+typedef void   *(*lsi_deserialize_pf)(char *, int length);
+
 void init_gdata_hashes();
 void release_gdata_container(GDataHash *containerInfo);
 void uninit_gdata_hashes();
@@ -27,13 +43,13 @@ void uninit_gdata_hashes();
 void erase_gdata_elem(lsi_gdata_cont_t *containerInfo,
                       GDataHash::iterator iter);
 LSIAPI void *get_gdata(lsi_gdata_cont_t *containerInfo, const char *key,
-                       int key_len, lsi_release_callback_pf release_cb,
+                       int key_len, lsi_datarelease_pf release_cb,
                        int renew_TTL, lsi_deserialize_pf deserialize_cb);
 LSIAPI int delete_gdata(lsi_gdata_cont_t *containerInfo, const char *key,
                         int key_len);
 LSIAPI int set_gdata(lsi_gdata_cont_t *containerInfo, const char *key,
                      int key_len, void *val, int TTL,
-                     lsi_release_callback_pf release_cb, int force_update,
+                     lsi_datarelease_pf release_cb, int force_update,
                      lsi_serialize_pf serialize_cb);
 LSIAPI lsi_gdata_cont_t *get_gdata_container(int type, const char *key,
         int key_len);

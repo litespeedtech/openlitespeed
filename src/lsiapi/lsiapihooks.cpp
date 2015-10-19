@@ -54,69 +54,69 @@ LsiApiHooks LsiApiHooks::s_hooks[LSI_HKPT_TOTAL_COUNT];
 ServerSessionHooks *LsiApiHooks::s_pServerSessionHooks = NULL;
 static LsiApiHooks *s_releaseDataHooks = NULL;
 
-#define LSI_HOOK_FLAG_NO_INTERRUPT  1
+#define LSI_FLAG_NO_INTERRUPT  1
 
 
 void LsiApiHooks::initGlobalHooks()
 {
     s_pServerSessionHooks = new ServerSessionHooks();
-    s_releaseDataHooks = new LsiApiHooks[LSI_MODULE_DATA_COUNT];
+    s_releaseDataHooks = new LsiApiHooks[LSI_DATA_COUNT];
 
     s_hooks[ LSI_HKPT_L4_BEGINSESSION ].setGlobalFlag(
-        LSI_HOOK_FLAG_NO_INTERRUPT);
+        LSI_FLAG_NO_INTERRUPT);
     s_hooks[ LSI_HKPT_L4_ENDSESSION ].setGlobalFlag(
-        LSI_HOOK_FLAG_NO_INTERRUPT);
+        LSI_FLAG_NO_INTERRUPT);
 
-    s_hooks[ LSI_HKPT_HTTP_BEGIN ].setGlobalFlag(LSI_HOOK_FLAG_NO_INTERRUPT);
-    s_hooks[ LSI_HKPT_HTTP_END ].setGlobalFlag(LSI_HOOK_FLAG_NO_INTERRUPT);
+    s_hooks[ LSI_HKPT_HTTP_BEGIN ].setGlobalFlag(LSI_FLAG_NO_INTERRUPT);
+    s_hooks[ LSI_HKPT_HTTP_END ].setGlobalFlag(LSI_FLAG_NO_INTERRUPT);
     s_hooks[ LSI_HKPT_HANDLER_RESTART ].setGlobalFlag(
-        LSI_HOOK_FLAG_NO_INTERRUPT);
+        LSI_FLAG_NO_INTERRUPT);
 }
 
 
-int LsiApiHooks::runForwardCb(lsi_cb_param_t *param)
+int LsiApiHooks::runForwardCb(lsi_param_t *param)
 {
-    lsiapi_hookinfo_t *hookInfo = param->_hook_info;
+    lsi_hookinfo_t *hookInfo = param->hook_chain;
     const LsiApiHooks *pHooks = hookInfo->hooks;
     int8_t *pEnableArray = hookInfo->enable_array;
-    int iCount = (lsiapi_hook_t *)param->_cur_hook - pHooks->begin();
+    int iCount = (lsiapi_hook_t *)param->cur_hook - pHooks->begin();
     int iSize = pHooks->size();
     for (; iCount < iSize; ++iCount)
     {
         if ((pEnableArray[LSIHOOKS_GETINDEX(iCount)]
              & (1 << LSIHOOKS_GETOFFSET(iCount))) != 0)
         {
-            param->_cur_hook = (void *)pHooks->get(iCount);
-            return (*(((lsiapi_hook_t *)param->_cur_hook)->cb))(param);
+            param->cur_hook = (void *)pHooks->get(iCount);
+            return (*(((lsiapi_hook_t *)param->cur_hook)->cb))(param);
 
         }
     }
 
-    return hookInfo->term_fn((LsiSession *)param->_session,
-                             (void *)param->_param,
-                             param->_param_len);
+    return hookInfo->term_fn((LsiSession *)param->session,
+                             (void *)param->ptr1,
+                             param->len1);
 }
 
 
-int LsiApiHooks::runBackwardCb(lsi_cb_param_t *param)
+int LsiApiHooks::runBackwardCb(lsi_param_t *param)
 {
-    lsiapi_hookinfo_t *hookInfo = param->_hook_info;
+    lsi_hookinfo_t *hookInfo = param->hook_chain;
     const LsiApiHooks *pHooks = hookInfo->hooks;
     int8_t *pEnableArray = hookInfo->enable_array;
-    int iCount = (lsiapi_hook_t *)param->_cur_hook - pHooks->begin();
+    int iCount = (lsiapi_hook_t *)param->cur_hook - pHooks->begin();
     for (; iCount >= 0; --iCount)
     {
         if ((pEnableArray[LSIHOOKS_GETINDEX(iCount)]
              & (1 << LSIHOOKS_GETOFFSET(iCount))) != 0)
         {
-            param->_cur_hook = (void *)pHooks->get(iCount);
-            return (*(((lsiapi_hook_t *)param->_cur_hook)->cb))(param);
+            param->cur_hook = (void *)pHooks->get(iCount);
+            return (*(((lsiapi_hook_t *)param->cur_hook)->cb))(param);
         }
     }
 
-    return hookInfo->term_fn((LsiSession *)param->_session,
-                             (void *)param->_param,
-                             param->_param_len);
+    return hookInfo->term_fn((LsiSession *)param->session,
+                             (void *)param->ptr1,
+                             param->len1);
 }
 
 
@@ -268,13 +268,13 @@ int LsiApiHooks::remove(const lsi_module_t *pModule)
 
 
 //need to check Hook count before call this function
-int LsiApiHooks::runCallback(int level, lsi_cb_param_t *param) const
+int LsiApiHooks::runCallback(int level, lsi_param_t *param) const
 {
     int ret = 0;
-    lsi_cb_param_t rec1;
+    lsi_param_t rec1;
     lsiapi_hook_t *hook;
-    int8_t *pEnableArray = param->_hook_info->enable_array;
-    int iCount = (lsiapi_hook_t *)param->_cur_hook - begin();
+    int8_t *pEnableArray = param->hook_chain->enable_array;
+    int iCount = (lsiapi_hook_t *)param->cur_hook - begin();
     int iSize = size();
 
     for (; iCount < iSize; ++iCount)
@@ -286,16 +286,16 @@ int LsiApiHooks::runCallback(int level, lsi_cb_param_t *param) const
         hook = get(iCount);
 
         rec1 = *param;
-        rec1._cur_hook = (void *)hook;
+        rec1.cur_hook = (void *)hook;
 
         LogSession *pTracker = NULL;
         if (log4cxx::Level::isEnabled(log4cxx::Level::DBG_MEDIUM))
         {
-            if (param->_session)
-                pTracker = ((LsiSession *)param->_session)->getLogSession();
+            if (param->session)
+                pTracker = ((LsiSession *)param->session)->getLogSession();
             LS_DBG_M(pTracker, "[%s] run Hook function for [Module:%s] session=%p",
                      s_pHkptName[ level ],
-                     MODULE_NAME(hook->module), param->_session);
+                     MODULE_NAME(hook->module), param->session);
         }
 
         ret = hook->cb(&rec1);
@@ -304,16 +304,16 @@ int LsiApiHooks::runCallback(int level, lsi_cb_param_t *param) const
         {
             LS_DBG_M(pTracker, "[%s] [Module:%s]  session=%p ret %d",
                      s_pHkptName[ level ],
-                     MODULE_NAME(hook->module), param->_session, ret);
+                     MODULE_NAME(hook->module), param->session, ret);
         }
-        if ((ret == LSI_HK_RET_SUSPEND)
-            || ((ret != 0) && !(m_iFlag & LSI_HOOK_FLAG_NO_INTERRUPT)))
+        if ((ret == LSI_SUSPEND)
+            || ((ret != 0) && !(m_iFlag & LSI_FLAG_NO_INTERRUPT)))
         {
-            param->_cur_hook = hook;
+            param->cur_hook = hook;
             return ret;
         }
     }
-    param->_cur_hook = end();
+    param->cur_hook = end();
     return ret;
 }
 
@@ -332,8 +332,8 @@ int LsiApiHooks::runCallback(int level, int8_t *pEnableArray,
 //         pHook = find(pModule);
     }
 
-    lsiapi_hookinfo_t info = { this, pEnableArray, NULL };
-    lsi_cb_param_t param =
+    lsi_hookinfo_t info = { this, pEnableArray, NULL };
+    lsi_param_t param =
     {
         session,
         &info,

@@ -85,7 +85,7 @@ ClientInfo::ClientInfo()
                                     , 101
                                     , sizeof(TShmClient)
                                     , LsShmHash::hashBuf
-                                    , LsShmHash::compBuf
+                                    , memcmp
                                     , shmData_init
                                     , shmData_remove
                                    );

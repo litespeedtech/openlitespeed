@@ -89,7 +89,7 @@ const HttpHandler *HandlerFactory::getInstance(int type, const char *pName)
     case HandlerType::HT_MODULE:
         iter = ModuleManager::getInstance().find(pName);
         if (iter != ModuleManager::getInstance().end() &&
-            ((LsiModule *)iter.second())->getModule()->_handler)
+            ((LsiModule *)iter.second())->getModule()->reqhandler)
             return iter.second();
         else
             return NULL;

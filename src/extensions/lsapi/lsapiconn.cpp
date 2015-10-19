@@ -597,7 +597,7 @@ int LsapiConn::processResp()
                     }
                 }
             }
-            else
+            if (m_iPacketHeaderLeft > 0)
             {
                 if ((m_respState == LSAPI_CONN_READ_RESP_BODY) &&
                     (getConnector()))

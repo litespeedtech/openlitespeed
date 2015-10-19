@@ -124,12 +124,12 @@ am_openlitespeed_OBJECTS = prelinkedmods.$(OBJEXT) httpdtest.$(OBJEXT) \
 	ls_lock.$(OBJEXT) ls_loopbuf.$(OBJEXT) ls_map.$(OBJEXT) \
 	ls_md5.$(OBJEXT) ls_mpscq.$(OBJEXT) ls_objarray.$(OBJEXT) \
 	ls_objpool.$(OBJEXT) ls_pcreg.$(OBJEXT) ls_pool.$(OBJEXT) \
-	ls_ptrlist.$(OBJEXT) ls_sha1.$(OBJEXT) ls_stack.$(OBJEXT) \
-	ls_str.$(OBJEXT) ls_strlist.$(OBJEXT) ls_strtool.$(OBJEXT) \
-	ls_time.$(OBJEXT) ls_tsstack.$(OBJEXT) ls_xpool.$(OBJEXT) \
-	xxhash.$(OBJEXT) pthreadcond.$(OBJEXT) pthreadmutex.$(OBJEXT) \
-	pthreadworkqueue.$(OBJEXT) thread.$(OBJEXT) workcrew.$(OBJEXT) \
-	worker.$(OBJEXT)
+	ls_ptrlist.$(OBJEXT) ls_sha1.$(OBJEXT) ls_shm.$(OBJEXT) \
+	ls_stack.$(OBJEXT) ls_str.$(OBJEXT) ls_strlist.$(OBJEXT) \
+	ls_strtool.$(OBJEXT) ls_time.$(OBJEXT) ls_tsstack.$(OBJEXT) \
+	ls_xpool.$(OBJEXT) xxhash.$(OBJEXT) pthreadcond.$(OBJEXT) \
+	pthreadmutex.$(OBJEXT) pthreadworkqueue.$(OBJEXT) \
+	thread.$(OBJEXT) workcrew.$(OBJEXT) worker.$(OBJEXT)
 openlitespeed_OBJECTS = $(am_openlitespeed_OBJECTS)
 am__DEPENDENCIES_1 =
 openlitespeed_DEPENDENCIES = ./main/libmain.a ./http/libhttp.a \
@@ -485,6 +485,7 @@ openlitespeed_SOURCES = modules/prelinkedmods.cpp httpdtest.cpp main.cpp \
    lsr/ls_pool.c \
    lsr/ls_ptrlist.c \
    lsr/ls_sha1.c \
+   lsr/ls_shm.cpp \
    lsr/ls_stack.c \
    lsr/ls_str.c \
    lsr/ls_strlist.c \
@@ -677,6 +678,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ls_pool.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ls_ptrlist.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ls_sha1.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ls_shm.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ls_stack.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ls_str.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ls_strlist.Po@am__quote@
@@ -1948,6 +1950,20 @@ systeminfo.obj: util/sysinfo/systeminfo.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='util/sysinfo/systeminfo.cpp' object='systeminfo.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o systeminfo.obj `if test -f 'util/sysinfo/systeminfo.cpp'; then $(CYGPATH_W) 'util/sysinfo/systeminfo.cpp'; else $(CYGPATH_W) '$(srcdir)/util/sysinfo/systeminfo.cpp'; fi`
+
+ls_shm.o: lsr/ls_shm.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT ls_shm.o -MD -MP -MF $(DEPDIR)/ls_shm.Tpo -c -o ls_shm.o `test -f 'lsr/ls_shm.cpp' || echo '$(srcdir)/'`lsr/ls_shm.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/ls_shm.Tpo $(DEPDIR)/ls_shm.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='lsr/ls_shm.cpp' object='ls_shm.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o ls_shm.o `test -f 'lsr/ls_shm.cpp' || echo '$(srcdir)/'`lsr/ls_shm.cpp
+
+ls_shm.obj: lsr/ls_shm.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT ls_shm.obj -MD -MP -MF $(DEPDIR)/ls_shm.Tpo -c -o ls_shm.obj `if test -f 'lsr/ls_shm.cpp'; then $(CYGPATH_W) 'lsr/ls_shm.cpp'; else $(CYGPATH_W) '$(srcdir)/lsr/ls_shm.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/ls_shm.Tpo $(DEPDIR)/ls_shm.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='lsr/ls_shm.cpp' object='ls_shm.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o ls_shm.obj `if test -f 'lsr/ls_shm.cpp'; then $(CYGPATH_W) 'lsr/ls_shm.cpp'; else $(CYGPATH_W) '$(srcdir)/lsr/ls_shm.cpp'; fi`
 
 pthreadcond.o: thread/pthreadcond.cpp
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT pthreadcond.o -MD -MP -MF $(DEPDIR)/pthreadcond.Tpo -c -o pthreadcond.o `test -f 'thread/pthreadcond.cpp' || echo '$(srcdir)/'`thread/pthreadcond.cpp

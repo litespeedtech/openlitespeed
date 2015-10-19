@@ -206,7 +206,7 @@ int GzipBuf::processFile(int type, const char *pFileName,
             if (!ret)
             {
                 ret = endStream();
-                long size;
+                off_t size;
                 if (!ret)
                     ret = gzFile.exactSize(&size);
             }

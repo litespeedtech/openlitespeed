@@ -18,7 +18,7 @@
 /*
  *   LiteSpeed SHM interface
  */
-#include <shm/lsi_shm.h>
+#include <lsr/ls_shm.h>
 
 #include <shm/lsshmlruhash.h>
 #include <shm/lsshmpool.h>
@@ -38,20 +38,20 @@ extern "C" {
  */
 
 
-lsi_shm_t *lsi_shm_open(const char *shmname, size_t initialsize)
+ls_shm_t *ls_shm_open(const char *shmname, size_t initialsize)
 {
     return LsShm::open(shmname, (LsShmXSize_t)initialsize);
 }
 
 
-int lsi_shm_close(lsi_shm_t *shmhandle)
+int ls_shm_close(ls_shm_t *shmhandle)
 {
     ((LsShm *)shmhandle)->close();
     return 0;
 }
 
 
-int lsi_shm_destroy(lsi_shm_t *shmhandle)
+int ls_shm_destroy(ls_shm_t *shmhandle)
 {
     ::unlink(((LsShm *)shmhandle)->fileName());
     ((LsShm *)shmhandle)->close();
@@ -64,14 +64,13 @@ int lsi_shm_destroy(lsi_shm_t *shmhandle)
  */
 
 
-lsi_shmpool_t *lsi_shmpool_open(lsi_shm_t *shmhandle, const char *poolname)
+ls_shmpool_t *ls_shm_getpool(ls_shm_t *shmhandle, const char *poolname)
 {
     return ((LsShm *)shmhandle)->getNamedPool(poolname);
 }
 
 
-lsi_shmpool_t *lsi_shmpool_openbyname(const char *shmname,
-                                      size_t initialsize)
+ls_shmpool_t *ls_shm_opengpool(const char *shmname, size_t initialsize)
 {
     LsShm *pshm;
     if ((pshm = LsShm::open(shmname, (LsShmXSize_t)initialsize)) == NULL)
@@ -80,41 +79,41 @@ lsi_shmpool_t *lsi_shmpool_openbyname(const char *shmname,
 }
 
 
-int lsi_shmpool_close(lsi_shmpool_t *poolhandle)
+int ls_shmpool_close(ls_shmpool_t *poolhandle)
 {
     ((LsShmPool *)poolhandle)->close();
     return 0;
 }
 
 
-int lsi_shmpool_destroy(lsi_shmpool_t *poolhandle)
+int ls_shmpool_destroy(ls_shmpool_t *poolhandle)
 {
     delete poolhandle;
     return 0;
 }
 
 
-lsi_shm_off_t lsi_shmpool_alloc2(lsi_shmpool_t *poolhandle, size_t size)
+ls_shmoff_t ls_shmpool_alloc(ls_shmpool_t *poolhandle, size_t size)
 {
     int remap = 0;
     return ((LsShmPool *)poolhandle)->alloc2((LsShmSize_t)size, remap);
 }
 
 
-void lsi_shmpool_release2(
-    lsi_shmpool_t *poolhandle, lsi_shm_off_t key, size_t size)
+void ls_shmpool_free(
+    ls_shmpool_t *poolhandle, ls_shmoff_t key, size_t size)
 {
     ((LsShmPool *)poolhandle)->release2(key, (LsShmSize_t)size);
 }
 
 
-uint8_t *lsi_shmpool_key2ptr(lsi_shmpool_t *poolhandle, lsi_shm_off_t key)
+uint8_t *ls_shmpool_off2ptr(ls_shmpool_t *poolhandle, ls_shmoff_t key)
 {
     return (uint8_t *)((LsShmPool *)poolhandle)->offset2ptr(key);
 }
 
 
-lsi_shm_off_t lsi_shmpool_getreg(lsi_shmpool_t *poolhandle,
+ls_shmoff_t ls_shmpool_getreg(ls_shmpool_t *poolhandle,
                                  const char *name)
 {
     LsShmReg *p_reg;
@@ -123,8 +122,8 @@ lsi_shm_off_t lsi_shmpool_getreg(lsi_shmpool_t *poolhandle,
 }
 
 
-int lsi_shmpool_setreg(
-    lsi_shmpool_t *poolhandle, const char *name, lsi_shm_off_t off)
+int ls_shmpool_setreg(
+    ls_shmpool_t *poolhandle, const char *name, ls_shmoff_t off)
 {
     LsShmReg *p_reg = ((LsShmPool *)poolhandle)->addReg(name);
     if ((p_reg == NULL) || (off <= 0))
@@ -140,22 +139,22 @@ int lsi_shmpool_setreg(
 
 
 static void check_defaults(
-    size_t *pinitialsize, lsi_hash_fn *phf, lsi_val_comp *pvc)
+    size_t *pinitialsize, ls_shmhash_pf *phf, ls_shmhash_vc_pf *pvc)
 {
     if (*pinitialsize == 0)
         *pinitialsize = LSSHM_HASHINITSIZE;
     if (*phf == NULL)
-        *phf = (lsi_hash_fn)LsShmHash::hashString;
+        *phf = (ls_shmhash_pf)LsShmHash::hashString;
     if (*pvc == NULL)
-        *pvc = (lsi_val_comp)LsShmHash::compString;
+        *pvc = (ls_shmhash_vc_pf)LsShmHash::compString;
 }
 
 
-lsi_shmhash_t *lsi_shmhash_open(lsi_shmpool_t *poolhandle,
+ls_shmhash_t *ls_shmhash_open(ls_shmpool_t *poolhandle,
                                 const char *hash_table_name,
                                 size_t initialsize,
-                                lsi_hash_fn hf,
-                                lsi_val_comp vc)
+                                ls_shmhash_pf hf,
+                                ls_shmhash_vc_pf vc)
 {
     check_defaults(&initialsize, &hf, &vc);
     return ((LsShmPool *)poolhandle)->getNamedHash(
@@ -163,11 +162,11 @@ lsi_shmhash_t *lsi_shmhash_open(lsi_shmpool_t *poolhandle,
 }
 
 
-lsi_shmhash_t *lsi_shmlruhash_open(lsi_shmpool_t *poolhandle,
+ls_shmhash_t *lsi_shmlruhash_open(ls_shmpool_t *poolhandle,
                                    const char *hash_table_name,
                                    size_t initialsize,
-                                   lsi_hash_fn hf,
-                                   lsi_val_comp vc,
+                                   ls_shmhash_pf hf,
+                                   ls_shmhash_vc_pf vc,
                                    int mode)
 {
     check_defaults(&initialsize, &hf, &vc);
@@ -183,63 +182,59 @@ lsi_shmhash_t *lsi_shmlruhash_open(lsi_shmpool_t *poolhandle,
 }
 
 
-int lsi_shmhash_close(lsi_shmhash_t *hashhandle)
+int ls_shmhash_close(ls_shmhash_t *hashhandle)
 {
     ((LsShmHash *)hashhandle)->close();
     return 0;
 }
 
 
-int lsi_shmhash_destroy(lsi_shmhash_t *hashhandle)
+int ls_shmhash_destroy(ls_shmhash_t *hashhandle)
 {
     delete hashhandle;
     return 0;
 }
 
 
-lsi_shm_off_t lsi_shmhash_hdroff(lsi_shmhash_t *hashhandle)
+#ifdef notdef
+ls_shmoff_t ls_shmhash_hdroff(ls_shmhash_t *hashhandle)
 {
     return ((LsShmHash *)hashhandle)->lruHdrOff();
 }
+#endif
 
 
-lsi_shm_off_t lsi_shmhash_alloc2(lsi_shmhash_t *hashhandle, size_t size)
+ls_shmoff_t ls_shmhash_alloc2(ls_shmhash_t *hashhandle, size_t size)
 {
     int remap = 0;
     return ((LsShmHash *)hashhandle)->alloc2((LsShmSize_t)size, remap);
 }
 
 
-void lsi_shmhash_release2(lsi_shmhash_t *hashhandle,
-                          lsi_shm_off_t key,
+void ls_shmhash_release2(ls_shmhash_t *hashhandle,
+                          ls_shmoff_t key,
                           size_t size)
 {
     ((LsShmHash *)hashhandle)->release2(key, (LsShmSize_t)size);
 }
 
 
-uint8_t *lsi_shmhash_key2ptr(lsi_shmhash_t *hashhandle, lsi_shm_off_t key)
-{
-    return (uint8_t *)((LsShmHash *)hashhandle)->offset2ptr(key);
-}
-
-
-uint8_t *lsi_shmhash_datakey2ptr(lsi_shmhash_t *hashhandle,
-                                 lsi_shm_off_t key)
+uint8_t *ls_shmhash_off2ptr(ls_shmhash_t *hashhandle,
+                                 ls_shmoff_t key)
 {
     return (uint8_t *)
-           ((LsShmHash *)hashhandle)->offset2ptr((lsi_shm_off_t)key);
+           ((LsShmHash *)hashhandle)->offset2ptr((ls_shmoff_t)key);
 }
 
 
-lsi_shm_off_t lsi_shmhash_find(lsi_shmhash_t *hashhandle,
+ls_shmoff_t ls_shmhash_find(ls_shmhash_t *hashhandle,
                                const uint8_t *key, int keylen, int *retsize)
 {
     return ((LsShmHash *)hashhandle)->find((const void *)key, keylen, retsize);
 }
 
 
-lsi_shm_off_t lsi_shmhash_get(lsi_shmhash_t *hashhandle,
+ls_shmoff_t ls_shmhash_get(ls_shmhash_t *hashhandle,
                               const uint8_t *key, int keylen, int *retsize, int *pFlag)
 {
     return ((LsShmHash *)hashhandle)->get(
@@ -247,7 +242,7 @@ lsi_shm_off_t lsi_shmhash_get(lsi_shmhash_t *hashhandle,
 }
 
 
-lsi_shm_off_t lsi_shmhash_set(lsi_shmhash_t *hashhandle,
+ls_shmoff_t ls_shmhash_set(ls_shmhash_t *hashhandle,
                               const uint8_t *key, int keylen,
                               const uint8_t *value, int valuelen)
 {
@@ -256,7 +251,7 @@ lsi_shm_off_t lsi_shmhash_set(lsi_shmhash_t *hashhandle,
 }
 
 
-lsi_shm_off_t lsi_shmhash_insert(lsi_shmhash_t *hashhandle,
+ls_shmoff_t ls_shmhash_insert(ls_shmhash_t *hashhandle,
                                  const uint8_t *key, int keylen,
                                  const uint8_t *value, int valuelen)
 {
@@ -265,7 +260,7 @@ lsi_shm_off_t lsi_shmhash_insert(lsi_shmhash_t *hashhandle,
 }
 
 
-lsi_shm_off_t lsi_shmhash_update(lsi_shmhash_t *hashhandle,
+ls_shmoff_t ls_shmhash_update(ls_shmhash_t *hashhandle,
                                  const uint8_t *key, int keylen,
                                  const uint8_t *value, int valuelen)
 {
@@ -274,67 +269,67 @@ lsi_shm_off_t lsi_shmhash_update(lsi_shmhash_t *hashhandle,
 }
 
 
-void lsi_shmhash_remove(lsi_shmhash_t *hashhandle,
+void ls_shmhash_delete(ls_shmhash_t *hashhandle,
                         const uint8_t *key, int keylen)
 {
     ((LsShmHash *)hashhandle)->remove((const void *)key, keylen);
 }
 
 
-void lsi_shmhash_clear(lsi_shmhash_t *hashhandle)
+void ls_shmhash_clear(ls_shmhash_t *hashhandle)
 {
     ((LsShmHash *)hashhandle)->clear();
 }
 
 
-int lsi_shmhash_setdata(lsi_shmhash_t *hashhandle,
-                        lsi_shm_off_t offVal, const uint8_t *value, int valuelen)
+int ls_shmhash_setdata(ls_shmhash_t *hashhandle,
+                        ls_shmoff_t offVal, const uint8_t *value, int valuelen)
 {
     return ((LsShmHash *)hashhandle)->setLruData(offVal, value, valuelen);
 }
 
 
-int lsi_shmhash_getdata(lsi_shmhash_t *hashhandle,
-                        lsi_shm_off_t offVal, lsi_shm_off_t *pvalue, int cnt)
+int ls_shmhash_getdata(ls_shmhash_t *hashhandle,
+                        ls_shmoff_t offVal, ls_shmoff_t *pvalue, int cnt)
 {
     return ((LsShmHash *)hashhandle)->getLruData(offVal, pvalue, cnt);
 }
 
 
-int lsi_shmhash_getdataptrs(lsi_shmhash_t *hashhandle,
-                            lsi_shm_off_t offVal, int (*func)(void *pData))
+int ls_shmhash_getdataptrs(ls_shmhash_t *hashhandle,
+                            ls_shmoff_t offVal, int (*func)(void *pData))
 {
     return ((LsShmHash *)hashhandle)->getLruDataPtrs(offVal, func);
 }
 
 
-int lsi_shmhash_trim(lsi_shmhash_t *hashhandle,
-                     time_t tmcutoff, int (*func)(iterator iter, void *arg), void *arg)
+int ls_shmhash_trim(ls_shmhash_t *hashhandle,
+                     time_t tmcutoff, int (*func)(LsShmHash::iterator iter, void *arg), void *arg)
 {
     return ((LsShmHash *)hashhandle)->trim(tmcutoff, func, arg);
 }
 
 
-int lsi_shmhash_check(lsi_shmhash_t *hashhandle)
+int ls_shmhash_check(ls_shmhash_t *hashhandle)
 {
     return ((LsShmHash *)hashhandle)->check();
 }
 
 
-int lsi_shmhash_lock(lsi_shmhash_t *hashhandle)
+int ls_shmhash_lock(ls_shmhash_t *hashhandle)
 {
     return ((LsShmHash *)hashhandle)->lock();
 }
 
 
-int lsi_shmhash_unlock(lsi_shmhash_t *hashhandle)
+int ls_shmhash_unlock(ls_shmhash_t *hashhandle)
 {
     return ((LsShmHash *)hashhandle)->unlock();
 }
 
 
 /* Hash table statistic */
-int lsi_shmhash_stat(lsi_shmhash_t *hashhandle, LsHashStat *phashstat)
+int ls_shmhash_stat(ls_shmhash_t *hashhandle, LsHashStat *phashstat)
 {
     LsShmHash *pLsShmHash = (LsShmHash *)hashhandle;
     return pLsShmHash->stat(phashstat, NULL, 0);
@@ -344,15 +339,15 @@ int lsi_shmhash_stat(lsi_shmhash_t *hashhandle, LsHashStat *phashstat)
 /*
  *  LiteSpeed SHM Lock
  */
-lsi_shmlock_t *lsi_shmlock_get(lsi_shm_t *shmhandle)
+ls_shmlock_t *ls_shmlock_get(ls_shm_t *shmhandle)
 {
     return ((LsShm *)shmhandle)->allocLock();
 }
 
 
-int lsi_shmlock_remove(lsi_shm_t *shmhandle, lsi_shmlock_t *lock)
+int ls_shmlock_remove(ls_shm_t *shmhandle, ls_shmlock_t *lock)
 {
-    return ((LsShm *)shmhandle)->freeLock((lsi_shmlock_t *)lock);
+    return ((LsShm *)shmhandle)->freeLock((ls_shmlock_t *)lock);
 }
 
 

@@ -31,7 +31,7 @@ typedef struct ls_luaregex_s
 {
     const char         *input;
     const char         *pattern;
-    ls_str_pair_t      *namedpats;    // Named patterns
+    ls_strpair_t      *namedpats;    // Named patterns
     ls_pcre_t          *pcre;
     ls_pcreres_t        res;
     unsigned long       flags;
@@ -251,9 +251,9 @@ static int LsLuaRegexDoPcre(lua_State *L, LsLuaSession *pSession,
 
     if (!r->findmode && r->namedpatscount)
     {
-        r->namedpats = (ls_str_pair_t *)ls_xpool_alloc(pool,
+        r->namedpats = (ls_strpair_t *)ls_xpool_alloc(pool,
                        r->namedpatscount
-                       * sizeof(ls_str_pair_t));
+                       * sizeof(ls_strpair_t));
         r->namedpatscount = ls_pcre_getnamedsubs(r->pcre, &r->res,
                             r->namedpats, r->namedpatscount);
         if (r->namedpatscount < 0)

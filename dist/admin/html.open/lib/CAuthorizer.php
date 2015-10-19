@@ -38,7 +38,7 @@ class CAuthorizer
 
             if ( array_key_exists('lastaccess', $_SESSION) ) {
 
-                if ( $_SESSION['timeout'] > 0 && time() - $_SESSION['lastaccess'] > $_SESSION['timeout'] ) {
+                if ( isset($_SESSION['timeout']) && $_SESSION['timeout'] > 0 && time() - $_SESSION['lastaccess'] > $_SESSION['timeout'] ) {
                     $this->clear() ;
                     if ( strpos($_SERVER['SCRIPT_NAME'], '/view/') !== FALSE ) {
                         echo json_encode(array( 'login_timeout' => 1 )) ;

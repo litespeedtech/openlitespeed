@@ -64,13 +64,13 @@ static int has_bad_word(const char *s, size_t len)
 }
 
 
-int check_req_whole_body(lsi_cb_param_t *param)
+int check_req_whole_body(lsi_param_t *param)
 {
     off_t offset = 0;
     const char *pbuf;
     int len = 0;
     int ret ;
-    void *preqbodybuf = g_api->get_req_body_buf(param->_session);
+    void *preqbodybuf = g_api->get_req_body_buf(param->session);
     while (!g_api->is_body_buf_eof(preqbodybuf, offset))
     {
         pbuf = g_api->acquire_body_buf_block(preqbodybuf, offset, &len);
@@ -82,10 +82,10 @@ int check_req_whole_body(lsi_cb_param_t *param)
         ret = has_bad_word(pbuf, len);
         g_api->release_body_buf_block(preqbodybuf, offset);
         if (ret != 0)
-            return LSI_HK_RET_ERROR;
+            return LSI_ERROR;
         offset += len;
     }
-    return LSI_HK_RET_OK;
+    return LSI_OK;
 }
 
 
@@ -97,8 +97,8 @@ static int _init(lsi_module_t *pModule)
 
 static lsi_serverhook_t server_hooks[] =
 {
-    { LSI_HKPT_RCVD_REQ_BODY, check_req_whole_body, LSI_HOOK_EARLY, LSI_HOOK_FLAG_ENABLED },
-    lsi_serverhook_t_END   //Must put this at the end position
+    { LSI_HKPT_RCVD_REQ_BODY, check_req_whole_body, LSI_HOOK_EARLY, LSI_FLAG_ENABLED },
+    LSI_HOOK_END   //Must put this at the end position
 };
 
 lsi_module_t MNAME =

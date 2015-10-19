@@ -367,6 +367,7 @@ int send_fd(int fd, int sendfd)
         char                control[sizeof(struct cmsghdr) + sizeof(int) + 8];
     } control_un;
     struct cmsghdr    *cmptr;
+    int *pSendFd;
 
     msg.msg_control = control_un.control;
     msg.msg_controllen = control_space;
@@ -375,7 +376,8 @@ int send_fd(int fd, int sendfd)
     cmptr->cmsg_len = CMSG_LEN(sizeof(int));
     cmptr->cmsg_level = SOL_SOCKET;
     cmptr->cmsg_type = SCM_RIGHTS;
-    *((int *) CMSG_DATA(cmptr)) = sendfd;
+    pSendFd = (int *)CMSG_DATA(cmptr);
+    *pSendFd = sendfd;
 #else
     msg.msg_accrights = (caddr_t) &sendfd;
     msg.msg_accrightslen = sizeof(int);

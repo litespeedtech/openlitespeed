@@ -25,7 +25,7 @@
 class SSLError : public std::exception
 {
     int  m_iError;
-    char m_achMsg[256];
+    char m_achMsg[4096];
 public:
     SSLError() throw();
     SSLError(int err) throw();
@@ -33,7 +33,7 @@ public:
     ~SSLError() throw();
     const char *what() const throw()
     {   return m_achMsg;  }
-    int get() const     {   return m_iError;    }
+//     int get() const     {   return m_iError;    }
 
     LS_NO_COPY_ASSIGN(SSLError);
 };

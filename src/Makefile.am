@@ -76,6 +76,7 @@ openlitespeed_SOURCES = modules/prelinkedmods.cpp httpdtest.cpp main.cpp \
    lsr/ls_pool.c \
    lsr/ls_ptrlist.c \
    lsr/ls_sha1.c \
+   lsr/ls_shm.cpp \
    lsr/ls_stack.c \
    lsr/ls_str.c \
    lsr/ls_strlist.c \
