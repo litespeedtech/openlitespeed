@@ -10,7 +10,7 @@ cmake_policy(SET CMP0002 OLD)
 SET(shm_STAT_SRCS 
     lsshmlock.cpp
     lsshmhash.cpp
-    lsshmlruhash.cpp
+    #lsshmlruhash.cpp
     lsshmpool.cpp
     lsshm.cpp
     ls_fallocate.c

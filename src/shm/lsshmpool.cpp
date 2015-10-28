@@ -18,11 +18,88 @@
 #include <shm/lsshmpool.h>
 
 #include <shm/lsshmhash.h>
-#include <shm/lsshmlruhash.h>
 
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+
+//
+// Internal for free link
+//
+#define LSSHM_FREE_AMARKER 0x0123fedc
+#define LSSHM_FREE_BMARKER 0xba984567
+//
+//  Two block to indicate a free block
+//
+struct ls_shmfreetop_s
+{
+    LsShmSize_t      x_iAMarker;
+    LsShmSize_t      x_iFreeSize;           // size of the freeblock
+    LsShmOffset_t    x_iFreeNext;
+    LsShmOffset_t    x_iFreePrev;
+};
+
+
+struct ls_shmfreebot_s
+{
+    LsShmOffset_t    x_iFreeOffset;         // back to the begin
+    LsShmSize_t      x_iBMarker;
+};
+
+
+// runtime free memory for the pool
+struct ls_shmmapchunk_s
+{
+    LsShmOffset_t  x_iStart;
+    LsShmOffset_t  x_iEnd;
+};
+
+
+struct ls_shmfreelist_s
+{
+    LsShmOffset_t  x_iNext;
+    LsShmOffset_t  x_iPrev;
+    LsShmSize_t    x_iSize;
+};
+
+
+struct ls_shmpoolmap_s
+{
+    ShmMapChunk     x_chunk;            // unused after alloc2
+    LsShmOffset_t   x_iFreeList;        // the big free list
+    LsShmOffset_t   x_iFreePageList;
+    LsShmOffset_t   x_aFreeBucket[LSSHM_POOL_NUMBUCKET];
+    LsShmPoolMapStat    x_stat;         // map statistics
+};
+
+
+struct ls_shmpoolmem_s
+{
+    uint32_t        x_iMagic;
+    uint8_t         x_aName[LSSHM_MAXNAMELEN];
+    LsShmSize_t     x_iSize;
+    LsShmPoolMap    x_data;
+    LsShmOffset_t   x_iLockOffset;
+    pid_t           x_pid;
+};
+
+
+inline LsShmPoolMap *LsShmPool::getDataMap() const
+{   return (LsShmPoolMap *)&(getPool()->x_data);    }
+
+
+LsShmOffset_t LsShmPool::getPoolMapStatOffset() const
+{ return (LsShmOffset_t)(long) & ((LsShmPoolMem *)(long)m_iOffset)->x_data.x_stat; }
+
+
+inline  void LsShmPool::incrCheck(LsShmXSize_t *ptr, LsShmSize_t size)
+{
+    LsShmSize_t prev = *ptr;
+    *ptr += size;
+    if (*ptr < prev)    // cnt wrapped
+        *ptr = (LsShmSize_t) - 1;
+    return;
+}
 
 
 LsShmStatus_t LsShmPool::createStaticData(const char *name)
@@ -64,7 +141,6 @@ LsShmStatus_t LsShmPool::checkStaticData(const char *name)
 
 LsShmPool::LsShmPool(LsShm *shm, const char *name, LsShmPool *gpool)
     : m_iMagic(LSSHM_POOL_MAGIC)
-    , m_pPoolName(NULL)
     , m_iOffset(0)
     , m_iShmOwner(0)
     , m_iRegNum(0)
@@ -74,6 +150,7 @@ LsShmPool::LsShmPool(LsShm *shm, const char *name, LsShmPool *gpool)
     LsShmOffset_t extraOffset = 0;
     LsShmSize_t extraSize = 0;
 
+    obj.m_pName = NULL;
     m_status = LSSHM_NOTREADY; // no good
 
     if ((name == NULL) || (*name == '\0'))
@@ -91,7 +168,7 @@ LsShmPool::LsShmPool(LsShm *shm, const char *name, LsShmPool *gpool)
     }
     else
     {
-        if ((m_pPoolName = strdup(name)) == NULL)
+        if ((obj.m_pName = strdup(name)) == NULL)
         {
             m_status = LSSHM_ERROR;
             return;
@@ -154,13 +231,13 @@ LsShmPool::LsShmPool(LsShm *shm, const char *name, LsShmPool *gpool)
     {
         m_status = LSSHM_READY;
         m_iRef = 1;
-        if (m_pPoolName != NULL)
+        if (obj.m_pName != NULL)
         {
 #ifdef DEBUG_RUN
             SHM_NOTICE("LsShmPool::LsShmPool insert %s <%p>",
-                       m_pPoolName, &m_objBase);
+                       obj.m_pName, &m_objBase);
 #endif
-            m_pShm->getObjBase().insert(m_pPoolName, this);
+            m_pShm->getObjBase().insert(obj.m_pName, &this->obj);
         }
     }
 }
@@ -170,15 +247,15 @@ LsShmPool::~LsShmPool()
 {
     if (m_pParent != NULL)
         destroy();
-    if (m_pPoolName != NULL)
+    if (obj.m_pName != NULL)
     {
 #ifdef DEBUG_RUN
         SHM_NOTICE("LsShmPool::~LsShmPool remove %s <%p>",
-                   m_pPoolName, &m_objBase);
+                   obj.m_pName, &m_objBase);
 #endif
-        m_pShm->getObjBase().remove(m_pPoolName);
-        ::free(m_pPoolName);
-        m_pPoolName = NULL;
+        m_pShm->getObjBase().remove(obj.m_pName);
+        ::free(obj.m_pName);
+        obj.m_pName = NULL;
     }
 }
 
@@ -249,19 +326,19 @@ LsShmHash * LsShmPool::newHashByOffset(LsShmOffset_t offset,
                   LsShmValComp_fn vc, int lru_mode)
 {
     LsShmHash *pObj;
-    if (lru_mode == LSSHM_LRU_MODE2)
-        pObj = new LsShmWLruHash(this, name, hf, vc);
-    else if (lru_mode == LSSHM_LRU_MODE3)
-        pObj = new LsShmXLruHash(this, name, hf, vc);
-    else
-        pObj = new LsShmHash(this, name, hf, vc, lru_mode);
+//     if (lru_mode == LSSHM_LRU_MODE2)
+//         pObj = new LsShmWLruHash(this, name, hf, vc);
+//     else if (lru_mode == LSSHM_LRU_MODE3)
+//         pObj = new LsShmXLruHash(this, name, hf, vc);
+//     else
+    pObj = new LsShmHash(this, name, hf, vc, lru_mode);
     if ( pObj->init(offset) == LS_FAIL)
     {
         delete pObj;
         pObj = NULL;
     }
     else
-        getObjBase().insert(pObj->name(), pObj);
+        getObjBase().insert(pObj->name(), &pObj->obj);
 
     return pObj;
 }
@@ -270,7 +347,6 @@ LsShmHash * LsShmPool::newHashByOffset(LsShmOffset_t offset,
 LsShmOffset_t LsShmPool::allocateNewHash(int init_size, int iMode, int iLruMode)
 {
     // Create new HASH Table
-    int remapped;
 
     ls_shmlock_t *pShmLock = lockPool()->allocLock();
     if ((pShmLock == NULL) || (ls_shmlock_setup(pShmLock) != 0))
@@ -279,46 +355,13 @@ LsShmOffset_t LsShmPool::allocateNewHash(int init_size, int iMode, int iLruMode)
     }
  
     // NOTE: system is not up yet... ignore remap here
-    LsShmOffset_t offset = alloc2(sizeof(LsShmHTable), remapped);
+    LsShmOffset_t offset = 
+            LsShmHash::allocHTable(this, init_size, iMode, iLruMode, 
+                                   lockPool()->pLock2offset(pShmLock));
     if (offset == 0)
     {
         lockPool()->freeLock(pShmLock);
-        return 0;
-    }
-    
-    init_size = LsShmHash::roundUp(init_size);
-    int szTable = LsShmHash::sz2TableSz(init_size);
-    int szBitMap = LsShmHash::sz2BitMapSz(init_size);
-    LsShmOffset_t iBase = alloc2(szTable + szBitMap, remapped);
-
-    if (iBase == 0)
-    {
-        lockPool()->freeLock(pShmLock);
-        release2(offset, sizeof(LsShmHTable));
-        return 0;
-    }
-    LsShmHTable *pTable = (LsShmHTable *)offset2ptr(offset);
-
-    ::memset(pTable, 0, sizeof(*pTable));
-    ::memset(offset2ptr(iBase), 0, szTable + szBitMap);
-
-    pTable->x_iMagic = LSSHM_HASH_MAGIC;
-    pTable->x_iCapacity = init_size;
-    pTable->x_iFullFactor = 2;
-    pTable->x_iGrowFactor = 2;
-    pTable->x_iBitMap = iBase;
-    pTable->x_iHIdx = iBase + szBitMap;
-    pTable->x_iHIdxNew = pTable->x_iHIdx;
-
-    pTable->x_iBitMapSz = szBitMap;
-    pTable->x_stat.m_iHashInUse = size2roundSize(sizeof(LsShmHTable))
-                                  + size2roundSize(szTable + szBitMap);
-
-    pTable->x_iLockOffset = lockPool()->pLock2offset(pShmLock);
-
-    pTable->x_iMode = iMode;
-    pTable->x_iLruMode = iLruMode;
-    
+    }    
     return offset;
 }
 
@@ -331,7 +374,7 @@ void LsShmPool::close()
         m_iShmOwner = 0;
         p = m_pShm; // delayed remove
     }
-    if ((m_pPoolName != NULL) && (downRef() == 0))
+    if ((obj.m_pName != NULL) && (downRef() == 0))
         delete this;
     if (p != NULL)
         p->close();
@@ -358,8 +401,8 @@ void LsShmPool::destroy()
         release2(pDataMap->x_chunk.x_iStart, left);
     mvFreeBucket();
     mvFreeList();
-    if (m_pPoolName != NULL)
-        m_pShm->delReg(m_pPoolName);
+    if (obj.m_pName != NULL)
+        m_pShm->delReg(obj.m_pName);
     m_pShm->freeLock(m_pShmLock);
     m_pParent->release2(m_iOffset, roundDataSize(sizeof(LsShmPoolMem)));
     m_iOffset = m_pParent->m_iOffset;   // let parent/global take over
@@ -874,6 +917,11 @@ LsShmOffset_t LsShmPool::getFromFreeList(LsShmSize_t size)
     return 0; // no match
 }
 
+static void markTopUsed(LShmFreeTop *ap)
+{
+    ap->x_iAMarker = 0;
+}
+
 
 //
 //  reduceFreeFromBot - reduce to size or unlink myself from FreeList
@@ -1108,5 +1156,18 @@ void LsShmPool::joinFreeList(LsShmOffset_t offset, LsShmSize_t size)
     bp->x_iFreeOffset = offset;
     bp->x_iBMarker = LSSHM_FREE_BMARKER;
     ++pDataMap->x_stat.m_iGpFreeListCnt;
+}
+
+
+int LsShmPool::mergeDeadPool(LsShmPoolMem* pPool)
+{
+    if ((kill(pPool->x_pid, 0) < 0) && (errno == ESRCH))
+    {
+        addFreeBucket(&pPool->x_data);
+        addFreeList(&pPool->x_data);
+        release2( ptr2offset(pPool), roundDataSize(sizeof(LsShmPoolMem)));
+        return 1;
+    }
+    return 0;
 }
 

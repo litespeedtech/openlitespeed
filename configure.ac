@@ -6,7 +6,7 @@ m4_include(ax_check_liblua.m4)
 
 dnl Process this file with autoconf to produce a configure script.
 AC_PREREQ([2.69])
-AC_INIT([openlitespeed],[1.4.12],[info@litespeedtech.com],[openlitespeed],[http://www.litespeedtech.com/])
+AC_INIT([openlitespeed],[1.4.13],[info@litespeedtech.com],[openlitespeed],[http://www.litespeedtech.com/])
 AM_INIT_AUTOMAKE([1.0 foreign no-define ])
 
 AM_CONFIG_HEADER(src/config.h:src/config.h.in)
@@ -178,15 +178,23 @@ AC_ARG_WITH([libdir],
             [OPENLSWS_LIBDIR="$withval"], [
                 OSTYPE=`uname -m`
                 OSNAME=`uname -s`
-                if test "$OSNAME" != Linux ; then
-                    OPENLSWS_LIBDIR=lib
-                else
-                    if test "$OSTYPE" != x86_64 ; then
+                OPENLSWS_LIBDIR=lib
+                if test "$OSNAME" = Linux ; then
+                    if test "$OSTYPE" = x86_64 ; then
+                        OPENLSWS_LIBDIR=lib64
+                    elif test "$OSTYPE" = i686 ; then
+               
                         CFLAGS="$CFLAGS -march=i686"
                         CXXFLAGS="$CXXFLAGS -march=i686"
-                        OPENLSWS_LIBDIR=lib
-                    else
-                        OPENLSWS_LIBDIR=lib64
+                        elif test "$OSTYPE" = armv7l ; then
+                       # Raspberry Pi 2, Scaleway C1, Parallella
+                        CFLAGS="$CFLAGS -march=armv7"
+                        CXXFLAGS="$CXXFLAGS -march=armv7"
+                    elif test "$OSTYPE" = armv6l ; then
+                       # Raspberry Pi (not Pi 2)
+                        CFLAGS="$CFLAGS -march=armv6 -mfloat-abi=hard -mfpu=vfp"
+                        CXXFLAGS="$CXXFLAGS -march=armv6 -mfloat-abi=hard -mfpu=vfp"
+                        
                     fi
                 fi
              ])

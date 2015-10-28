@@ -51,7 +51,7 @@ class DPageDef
                         'S_FILEUPLOAD',
 						new DTblMap(array('ipToGeo:geoipDB','*geoipdb$geoipDBFile'), 'S_GEOIP'),
 						new DTblMap('tuning',
-								array('S_TUNING_OS', 'S_TUNING_CONN', 'S_TUNING_REQ', 'S_TUNING_STATIC', 'S_TUNING_GZIP')),
+								array('S_TUNING_OS', 'S_TUNING_CONN', 'S_TUNING_REQ', 'S_TUNING_STATIC', 'S_TUNING_GZIP', 'S_TUNING_SSLSESSION')),
 						new DTblMap(array('security:fileAccessControl','fileAccessControl'), 'S_SEC_FILE'),
 						new DTblMap(array('security:perClientConnLimit','perClientConnLimit'), 'S_SEC_CONN'),
 						new DTblMap(array('security:CGIRLimit','CGIRLimit'), 'S_SEC_CGI'),
@@ -183,7 +183,7 @@ class DPageDef
 
 		$id = 'tuning';
 		$page = new DPage($id, DMsg::UIStr('tab_tuning'), new DTblMap('tuning',
-				array('S_TUNING_OS', 'S_TUNING_CONN', 'S_TUNING_REQ', 'S_TUNING_STATIC', 'S_TUNING_GZIP')));
+				array('S_TUNING_OS', 'S_TUNING_CONN', 'S_TUNING_REQ', 'S_TUNING_STATIC', 'S_TUNING_GZIP', 'S_TUNING_SSLSESSION')));
 		$this->_pageDef['serv'][$id] = $page;
 
 		$id = 'sec';

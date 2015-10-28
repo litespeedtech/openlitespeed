@@ -134,7 +134,8 @@ private:
     unsigned char       m_iHS3;
     unsigned char       m_iLeadingWWW;
     int                 m_iHS2;
-    int                 m_method;
+    short               m_iCfIpHeader;
+    short               m_method;
     unsigned int        m_ver;
     int                 m_iEnvCount;
     short               m_iKeepAlive;
@@ -519,6 +520,9 @@ public:
     }
     const char *getUnknownHeaderByIndex(int idx, int &keyLen,
                                         const char *&pValue, int &valLen);
+    char isCfIpSet() const                      {   return m_iCfIpHeader;   }
+    const char* getCfIpHeader(int &len);
+
     char getRewriteLogLevel() const;
     void setHandler(const HttpHandler *pHandler)
     {   m_pHttpHandler = pHandler;      }

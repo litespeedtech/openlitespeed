@@ -806,15 +806,23 @@ int SSLContext::setCipherList(const char *pList)
     }
     else
     {
-        const char *p = strpbrk(pList, ": ");
+        const char *pBegin = pList;
+        const char *p;
+        while((p = strpbrk(pBegin, ": ")) != NULL
+              && ((memmem(pBegin, p - pBegin, "CHACHA", 6) != NULL)
+               || (memmem(pBegin, p - pBegin, "chacha", 6) != NULL)))
+        {
+            pBegin = p + 1;
+        }
         if (!p || strncasecmp(pList, "ECDHE", 5) != 0
             || memmem(pList, p - pList, "GCM", 3) == NULL
             || memmem(pList, p - pList, "SHA384", 6) != NULL)
         {
             if (!p)
                 p = ":";
-            snprintf(cipher, 4095, "ECDHE-RSA-AES128-GCM-SHA256%c"
-                     "ECDHE-ECDSA-AES128-GCM-SHA256%c%s", *p, *p, pList);
+            snprintf(cipher, 4095, "%.*sECDHE-ECDSA-AES128-GCM-SHA256%c"
+                     "ECDHE-RSA-AES128-GCM-SHA256%c%s",
+                     pBegin - pList, pList, *p, *p, pBegin);
             pList = cipher;
         }
     }
@@ -1282,17 +1290,26 @@ SSLContext *SSLContext::config(const XmlNode *pNode)
     if (!pKeyFile)
         return NULL;
 
-    if (ConfigCtx::getCurConfigCtx()->getValidFile(achCert, pCertFile,
-            "certificate file") != 0)
-        return NULL;
+    if (s_iEnableMultiCerts != 0)
+    {
+        if (ConfigCtx::getCurConfigCtx()->getAbsoluteFile(achCert,
+                pCertFile) != 0)
+            return NULL;
+        else if (ConfigCtx::getCurConfigCtx()->getAbsoluteFile(achKey,
+                pKeyFile) != 0)
+            return NULL;
+    }
     else
-        pCertFile = achCert;
-
-    if (ConfigCtx::getCurConfigCtx()->getValidFile(achKey, pKeyFile,
-            "key file") != 0)
-        return NULL;
-    else
-        pKeyFile = achKey;
+    {
+        if (ConfigCtx::getCurConfigCtx()->getValidFile(achCert, pCertFile,
+                "certificate file") != 0)
+            return NULL;
+        if (ConfigCtx::getCurConfigCtx()->getValidFile(achKey, pKeyFile,
+                "key file") != 0)
+            return NULL;
+    }
+    pCertFile = achCert;
+    pKeyFile = achKey;
 
     pCiphers = pNode->getChildValue("ciphers");
 

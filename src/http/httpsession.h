@@ -136,14 +136,16 @@ class HttpSession : public LsiSession, public InputStream, public HioHandler,
     ChunkOutputStream    *m_pChunkOS;
     ReqHandler           *m_pHandler;
 
-    lsi_hookinfo_t     m_curHookInfo;
-    lsi_param_t        m_curHkptParam;
+    lsi_hookinfo_t        m_curHookInfo;
+    lsi_param_t           m_curHkptParam;
     int                   m_curHookRet;
 
     off_t                 m_lDynBodySent;
 
     VMemBuf              *m_pRespBodyBuf;
     GzipBuf              *m_pGzipBuf;
+    ClientInfo           *m_pClientInfo;
+
     NtwkIOLink           *m_pNtwkIOLink;
 
     SendFileInfo          m_sendFileInfo;
@@ -173,7 +175,9 @@ class HttpSession : public LsiSession, public InputStream, public HioHandler,
 
     void cleanUpHandler();
     void nextRequest();
-    int  updateClientInfoFromProxyHeader(const char *pProxyHeader);
+    int  updateClientInfoFromProxyHeader(const char *pHeaderName, 
+                                         const char *pProxyHeader, 
+                                         int headerLen);
 
     static int readReqBodyTermination(LsiSession *pSession, char *pBuf,
                                       int size);
@@ -289,11 +293,12 @@ public:
     NtwkIOLink *getNtwkIOLink() const      {   return m_pNtwkIOLink;   }
     //void setNtwkIOLink( NtwkIOLink * p )    {   m_pNtwkIOLink = p;      }
     //below are wrapper functions
-    SSLConnection *getSSL()     {   return m_pNtwkIOLink->getSSL();  }
-    bool isSSL() const          {   return m_pNtwkIOLink->isSSL();  }
-    const char *getPeerAddrString() const {    return m_pNtwkIOLink->getPeerAddrString();  }
-    int getPeerAddrStrLen() const   {   return m_pNtwkIOLink->getPeerAddrStrLen();   }
-    const struct sockaddr *getPeerAddr() const {   return m_pNtwkIOLink->getPeerAddr(); }
+    SSLConnection *getSSL()     {   return m_pNtwkIOLink->getSSL();     }
+    bool isSSL() const          {   return m_pNtwkIOLink->isSSL();      }
+    
+    const char *getPeerAddrString() const;
+    int getPeerAddrStrLen() const;
+    const struct sockaddr *getPeerAddr() const;
 
     void suspendRead()          {    getStream()->suspendRead();        };
     void continueRead()         {    getStream()->continueRead();       };
@@ -306,7 +311,9 @@ public:
     void tryRead()              {    m_pNtwkIOLink->tryRead();          };
     off_t getBytesRecv() const  {   return getStream()->getBytesRecv();    }
     off_t getBytesSent() const  {   return getStream()->getBytesSent();    }
-    ClientInfo *getClientInfo() const {    return m_pNtwkIOLink->getClientInfo();  }
+
+    void setClientInfo(ClientInfo *p)   {   m_pClientInfo = p;      }
+    ClientInfo *getClientInfo() const   {   return m_pClientInfo;  }
 
     HttpSessionState getState() const       {   return (HttpSessionState)m_iState;    }
     void setState(HttpSessionState state) {   m_iState = (short)state;   }

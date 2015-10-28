@@ -130,7 +130,7 @@ int main(int ac, char *av[])
         fprintf(stderr, "Unable to find [%s] in registry!\n", g_pHashName);
         return 3;
     }
-    if (chkHashTable(pShm, pReg, &mode, &lruMode) < 0)
+    if (LsShmHash::chkHashTable(pShm, pReg, &mode, &lruMode) < 0)
     {
         fprintf(stderr, "Not a Hash Table [%s]!\n", g_pHashName);
         return 4;
@@ -151,25 +151,12 @@ int main(int ac, char *av[])
 }
 
 
-int chkHashTable(LsShm *pShm, LsShmReg *pReg, int *pMode, int *pLruMode)
-{
-    if (pReg->x_iValue == 0)
-        return -1;
-    LsShmHTable *pTable = (LsShmHTable *)pShm->offset2ptr(pReg->x_iValue);
-    if (pTable->x_iMagic != LSSHM_HASH_MAGIC)
-        return -1;
-    *pMode = pTable->x_iMode;
-    *pLruMode = pTable->x_iLruMode;
-    return 0;
-}
-
-
 int iterFunc(LsShmHash::iteroffset iterOff, void *pData)
 {
     MyStat *pMyStat = (MyStat *)((LsHashStat *)pData)->userData;
     LsShmHash *pHash = pMyStat->pHash;
     LsShmHash::iterator iter = pHash->offset2iterator(iterOff);
-    pMyStat->totalSize += pHash->getPool()->size2roundSize(iter->x_iLen);
+    pMyStat->totalSize += LsShmPool::size2roundSize(iter->x_iLen);
     return 0;
 }
 
@@ -182,8 +169,7 @@ void doStatShmHash(LsShmHash *pHash)
     LsShmHTableStat *pStat =
         (LsShmHTableStat *)pHash->offset2ptr(pHash->getHTableStatOffset());
 
-    fprintf(stdout, "SHMHASH [%s]\n\
-current total hash memory: %u\n",
+    fprintf(stdout, "SHMHASH [%s]\ncurrent total hash memory: %u\n",
             pHash->name(),
             pStat->m_iHashInUse
            );
@@ -197,13 +183,13 @@ current total hash memory: %u\n",
         fprintf(stdout, "ERRORS!!!\n");
         return;
     }
-    fprintf(stdout, "DONE.\n\
-total elements:            %u\n\
-total hash indexes:        %u\n\
-occupied hash indexes:     %u\n\
-longest index linked list: %u\n\
-hash keys duplicated:      %u\n\
-total iterator memory:     %u\n",
+    fprintf(stdout, "DONE.\n"
+                    "total elements:            %u\n"
+                    "total hash indexes:        %u\n"
+                    "occupied hash indexes:     %u\n"
+                    "longest index linked list: %u\n"
+                    "hash keys duplicated:      %u\n"
+                    "total iterator memory:     %u\n",
             hStat.num,
             hStat.numIdx,
             hStat.numIdxOccupied,
@@ -214,9 +200,9 @@ total iterator memory:     %u\n",
 
     if ((pLru = pHash->getLru()) != NULL)
     {
-        fprintf(stdout, "LRU\n\
-total elements:            %u\n\
-total elements trimmed:    %u\n",
+        fprintf(stdout, "LRU\n"
+                        "total elements:            %u\n"
+                        "total elements trimmed:    %u\n",
                 pLru->nvalset,
                 pLru->nvalexp
                );

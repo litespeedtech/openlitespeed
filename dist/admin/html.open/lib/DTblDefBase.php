@@ -243,6 +243,9 @@ class DTblDefBase
 			'procHardLimit' => DTblDefBase::NewIntAttr('procHardLimit', DMsg::ALbl('l_prochardlimit'), true, 0),
 
 		    'ssl_renegProtection' => DTblDefBase::NewBoolAttr('renegProtection', DMsg::ALbl('l_renegprotection')),
+            'sslSessionCache' => DTblDefBase::NewBoolAttr('sslSessionCache', DMsg::ALbl('l_sslSessionCache')),
+            'sslSessionTickets' => DTblDefBase::NewBoolAttr('sslSessionTickets', DMsg::ALbl('l_sslSessionTickets')),
+
 			'l_vhost' => DTblDefBase::NewSelAttr('vhost', DMsg::ALbl('l_vhost'), 'virtualhost', false, 'virtualHostName'),
 			'l_domain' => DTblDefBase::NewTextAttr('domain', DMsg::ALbl('l_domains'), 'domain', false, 'domainName', 1),
 			'tp_templateFile' => DTblDefBase::NewPathAttr('templateFile', DMsg::ALbl('l_templatefile'), 'filetp', 2, 'rwc', false),
@@ -438,6 +441,20 @@ class DTblDefBase
 		);
 
 		$this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_fileaccess'), $attrs);
+	}
+
+	protected function add_S_TUNING_SSLSESSION($id)
+	{
+		$attrs = array(
+            $this->_attrs['sslSessionCache'],
+            DTblDefBase::NewIntAttr('sslSessionCacheSize', DMsg::ALbl('l_sslSessionCacheSize'), true, 512),
+            DTblDefBase::NewIntAttr('sslSessionCacheTimeout', DMsg::ALbl('l_sslSessionCacheTimeout'), true, 10, 1000000),
+            $this->_attrs['sslSessionTickets'],
+            DTblDefBase::NewTextAttr('shmDefaultDir', DMsg::ALbl('l_shmDefaultDir'), 'cust'),
+            DTblDefBase::NewIntAttr('sslSessionTicketLifetime', DMsg::ALbl('l_sslSessionTicketLifetime'), true, 10, 1000000),
+            DTblDefBase::NewTextAttr('sslSessionTicketKeyFile', DMsg::ALbl('l_sslSessionTicketKeyFile'), 'cust')
+			);
+        $this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_tuningsslsession'), $attrs, 'sslSessionTBL');
 	}
 
 	protected function add_S_SEC_CONN($id)
@@ -870,18 +887,24 @@ class DTblDefBase
 	{
 		$attrs = array(
 			$this->_attrs['ssl_renegProtection'],
+            $this->_attrs['sslSessionCache'],
+            $this->_attrs['sslSessionTickets'],
 			DTblDefBase::NewCheckBoxAttr('enableSpdy', DMsg::ALbl('l_enablespdy'), array('1'=>'SPDY/2', '2'=>'SPDY/3', '4'=>'HTTP/2', '0'=>DMsg::ALbl('o_none')))
 		    );
 		$this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_securityandfeatures'), $attrs);
 	}
 
-	protected function add_VT_SSL_FEATURE($id)
-	{
-		$attrs = array($this->_attrs['ssl_renegProtection']);
-		$this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::UIStr('tab_sec'), $attrs);
-	}
+	protected function add_VT_SSL_FEATURE( $id )
+    {
+        $attrs = array(
+            $this->_attrs['ssl_renegProtection'],
+            $this->_attrs['sslSessionCache'],
+            $this->_attrs['sslSessionTickets'],
+        ) ;
+        $this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::UIStr('tab_sec'), $attrs) ;
+    }
 
-	protected function add_LVT_SSL_OCSP($id)
+    protected function add_LVT_SSL_OCSP($id)
 	{
 		$attrs = array(
 				DTblDefBase::NewBoolAttr('enableStapling', DMsg::ALbl('l_enablestapling')),

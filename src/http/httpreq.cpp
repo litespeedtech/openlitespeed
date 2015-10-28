@@ -618,6 +618,12 @@ int HttpReq::processHeaderLines()
                         memset((char *)(pLineBegin - 2), 0x20, 7 + pCurHeader->valLen + 4);//
                     }
                 }
+                else if (pCurHeader->keyLen == 16 
+                        && (strncasecmp(pLineBegin, "CF-Connecting-IP", 16) == 0))
+                {
+                    m_iCfIpHeader = m_unknHeaders.getSize();
+                }
+                
             }
         }
         pLineBegin = pLineEnd + 1;
@@ -2325,6 +2331,18 @@ const char *HttpReq::getUnknownHeaderByIndex(int idx, int &keyLen,
         valLen = pIdx->valLen;
         keyLen = pIdx->keyLen;
         return m_headerBuf.getp(pIdx->keyOff);
+    }
+    return NULL;
+}
+
+
+const char* HttpReq::getCfIpHeader(int &len)
+{
+    key_value_pair *pIdx = getUnknHeaderPair(m_iCfIpHeader - 1);
+    if (pIdx)
+    {
+        len = pIdx->valLen;
+        return m_headerBuf.getp(pIdx->valOff);
     }
     return NULL;
 }

@@ -23,7 +23,7 @@
 #define LSSHM_LRU_MAGIC     0x20141201
 
 
-int LsShmHash::entryValMatch(
+static int entryValMatch(
     const uint8_t *pVal, int valLen, shmlru_data_t *pData)
 {
     if (((int)pData->size != valLen)
@@ -35,111 +35,25 @@ int LsShmHash::entryValMatch(
     return 1;
 }
 
-
-int LsShmHash::trim(time_t tmCutoff, int (*func)(iterator iter, void *arg),
-                    void *arg)
+int LsShmWLruHash::setLruData(LsShmOffset_t offVal, const uint8_t *pVal, int valLen)
 {
-    if (m_iLruMode == LSSHM_LRU_NONE)
-        return LS_FAIL;
-    int del = 0;
-    LsShmHElem *pElem;
-    LsShmOffset_t next;
-    autoLockChkRehash();
-    LsHashLruInfo *pLru = getLru();
-    LsShmOffset_t offElem = pLru->linkLast;
-    while (offElem != 0)
-    {
-        pElem = (LsShmHElem *)offset2ptr(offElem);
-        if (pElem->getLruLasttime() >= tmCutoff)
-            break;
-
-        if (func != NULL)
-            (*func)(pElem, arg);
-        int ret = clrdata(pElem->getVal());
-        next = pElem->getLruLinkNext();
-        eraseIteratorHelper(pElem);
-        ++del;
-        pLru->ndataexp += ret;
-        pLru->ndataset -= ret;
-        offElem = next;
-    }
-    pLru->nvalexp += del;
-    autoUnlock();
-    return del;
+    int ret = 0;
+    shmlru_data_t *pData = (shmlru_data_t *)offset2ptr(offVal);
+    if ((pData->maxsize == 0)
+        || (entryValMatch((const uint8_t *)pVal, valLen, pData) == 0))
+        ret = newDataEntry((const uint8_t *)pVal, valLen, pData);
+    return ret;
 }
 
 
-LsShmHash::iteroffset LsShmHash::nextTmLruIterOff(time_t tmCutoff)
+int LsShmXLruHash::setLruData(LsShmOffset_t offVal, const uint8_t *pVal, int valLen)
 {
-    if (m_iLruMode == LSSHM_LRU_NONE)
-        return 0;
-    iterator iter;
-    iteroffset iterOff = getLru()->linkLast;
-    if (tmCutoff > 0)
-    {
-        while (iterOff != 0)
-        {
-            iter = offset2iterator(iterOff);
-            if (iter->getLruLasttime() > tmCutoff)
-                break;
-            iterOff = iter->getLruLinkNext();
-        }
-    }
-    return iterOff;
-}
-
-
-LsShmHash::iteroffset LsShmHash::prevTmLruIterOff(time_t tmCutoff)
-{
-    if (m_iLruMode == LSSHM_LRU_NONE)
-        return 0;
-    iterator iter;
-    iteroffset iterOff = getLru()->linkFirst;
-    if (tmCutoff > 0)
-    {
-        while (iterOff != 0)
-        {
-            iter = offset2iterator(iterOff);
-            if (iter->getLruLasttime() < tmCutoff)
-                break;
-            iterOff = iter->getLruLinkPrev();
-        }
-    }
-    return iterOff;
-}
-
-
-int LsShmHash::check()
-{
-    if (m_iLruMode == LSSHM_LRU_NONE)
-        return SHMLRU_BADINIT;
-
-    int valcnt = 0;
-    int datacnt = 0;
-    int ret;
-    LsShmHElem *pElem;
-    autoLockChkRehash();
-    LsHashLruInfo *pLru = getLru();
-    LsShmOffset_t offElem = pLru->linkLast;
-    while (offElem != 0)
-    {
-        pElem = (LsShmHElem *)offset2ptr(offElem);
-        if ((ret = chkdata(pElem->getVal())) < 0)
-        {
-            autoUnlock();
-            return ret;
-        }
-        ++valcnt;
-        datacnt += ret;
-        offElem = pElem->getLruLinkNext();
-    }
-    if (valcnt != pLru->nvalset)
-        ret = SHMLRU_BADVALCNT;
-    else if (datacnt != pLru->ndataset)
-        ret = SHMLRU_BADDATACNT;
-    else
-        ret = SHMLRU_CHECKOK;
-    autoUnlock();
+    int ret = 0;
+    shmlru_val_t *pShmval = (shmlru_val_t *)offset2ptr(offVal);
+    if ((pShmval->offdata == 0)
+        || (entryValMatch((const uint8_t *)pVal, valLen,
+                            (shmlru_data_t *)offset2ptr(pShmval->offdata)) == 0))
+        ret = newDataEntry((const uint8_t *)pVal, valLen, pShmval);
     return ret;
 }
 

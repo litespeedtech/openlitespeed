@@ -40,7 +40,32 @@ extern "C" {
 };
 
 
-LsShmVersion LsShm::s_version =
+typedef union
+{
+    struct
+    {
+        uint8_t     m_iMajor;
+        uint8_t     m_iMinor;
+        uint8_t     m_iRel;
+        uint8_t     m_iType;
+    } x;
+    uint32_t    m_iVer;
+} LsShmVersion;
+
+
+struct ls_shmmap_s
+{
+    uint32_t          x_iMagic;
+    LsShmVersion      x_version;
+    uint64_t          x_id;
+    LsShmOffset_t     x_iLockOffset;
+    LsShmOffset_t     x_globalHashOff;
+    LsShmMapStat      x_stat;               // map statistics
+};
+
+
+
+LsShmVersion s_version =
 {
     { LSSHM_VER_MAJOR, LSSHM_VER_MINOR, LSSHM_VER_REL, LSSHM_VER_TYPE }
 };
@@ -112,17 +137,7 @@ LsShm::LsShm(const char *pMapName)
     , m_pGHash(NULL)
     , m_iRef(0)
 {
-    m_pMapName = strdup(pMapName);
-#ifdef DELAY_UNMAP
-    m_uCur = m_uArray;
-    m_uEnd = m_uCur;
-#endif
-
-#if 0
-// destructor will clean this up
-    else
-        cleanup();
-#endif
+    obj.m_pName = strdup(pMapName);
 }
 
 
@@ -159,6 +174,12 @@ void LsShm::tryRecoverBadOffset(LsShmOffset_t offset)
         (*s_fatalErrorCb)();
     LsShmSize_t curMaxSize = x_pShmMap->x_stat.m_iFileSize; 
     assert(offset < curMaxSize);
+}
+
+
+LsShmOffset_t LsShm::getMapStatOffset() const
+{
+    return (LsShmOffset_t)(long) & ((LsShmMap *)0)->x_stat;
 }
 
 
@@ -221,7 +242,7 @@ LsShm *LsShm::getExisting(const char *dirName)
     if (itor == NULL)
         return NULL;
     pObj = (LsShm *)itor->second();
-    pObj->upRef();
+    ++pObj->m_iRef;
     return pObj;
 }
 
@@ -294,7 +315,7 @@ void LsShm::deleteFile()
 
 void LsShm::close()
 {
-    if (downRef() == 0)
+    if (--m_iRef == 0)
     {
         if (m_pGHash)
             delete m_pGHash;
@@ -316,10 +337,10 @@ void LsShm::cleanup()
         free(m_pFileName);
         m_pFileName = NULL;
     }
-    if (m_pMapName != NULL)
+    if (obj.m_pName != NULL)
     {
-        free(m_pMapName);
-        m_pMapName = NULL;
+        free(obj.m_pName);
+        obj.m_pName = NULL;
     }
 }
 
@@ -398,7 +419,7 @@ LsShmStatus_t LsShm::newShmMap(LsShmSize_t size, uint64_t id)
 LsShmStatus_t LsShm::initShm(const char *mapName, LsShmXSize_t size,
                              const char *pBaseDir, int mode)
 {
-    int i;
+    int i = 0;
     struct stat     mystat;
     char            buf[0x1000];
     struct timeval  tv;
@@ -490,7 +511,7 @@ LsShmStatus_t LsShm::initShm(const char *mapName, LsShmXSize_t size,
         if (map((LsShmXSize_t)s_iShmHdrSize) != LSSHM_OK)
             return LSSHM_ERROR;
 
-        if (checkMagic(x_pShmMap, m_pMapName) != LSSHM_OK)
+        if (checkMagic(x_pShmMap, obj.m_pName) != LSSHM_OK)
         {
             setErrMsg(LSSHM_BADVERSION,
                       "Bad SHM file format [%s], size=%lld, magic=%08X(%08X).",
@@ -542,11 +563,7 @@ LsShmStatus_t LsShm::expand(LsShmXSize_t incrSize)
     if (expandFile((LsShmOffset_t)xsize, incrSize) != LSSHM_OK)
         return LSSHM_ERROR;
 
-#ifdef DELAY_UNMAP
-    unmapLater();
-#else
     unmap();
-#endif
     xsize += incrSize;
     if (map(xsize) != LSSHM_OK)
     {
@@ -573,6 +590,7 @@ LsShmStatus_t LsShm::map(LsShmXSize_t size)
     }
 
     x_pShmMap = (LsShmMap *)p;
+    x_pStats = &x_pShmMap->x_stat;
     m_iMaxSizeO = size;
     return LSSHM_OK;
 }
@@ -586,11 +604,7 @@ LsShmStatus_t LsShm::remap()
 #endif
 
     LsShmXSize_t size = x_pShmMap->x_stat.m_iFileSize;
-#ifdef DELAY_UNMAP
-    unmapLater();
-#else
     unmap();
-#endif
     return map(size);
 }
 
@@ -602,6 +616,7 @@ void LsShm::unmap()
         m_pShmMapO = x_pShmMap;
         munmap(x_pShmMap, m_iMaxSizeO);
         x_pShmMap = NULL;
+        x_pStats = 0;
         m_iMaxSizeO = 0;
     }
 }
@@ -650,6 +665,38 @@ out:
 }
 
 
+int LsShm::recoverOrphanShm()
+{
+    if ((getGlobalPool() == NULL) || (m_pGHash == NULL))
+        return 0;
+
+    m_pGHash->disableLock();
+    m_pGHash->lockChkRehash();
+    LsShmSize_t size = m_pGHash->size();
+    m_pGHash->for_each2(m_pGHash->begin(), m_pGHash->end(), chkReg, this);
+    size -= m_pGHash->size();
+    m_pGHash->unlock();
+    m_pGHash->enableLock();
+    return (int)size;
+}
+
+
+int LsShm::chkReg(LsShmOffset_t iterOff, void *pUData)
+{
+    LsShmReg *pReg =
+        (LsShmReg *)((LsShm *)pUData)->m_pGHash->offset2iteratorData(iterOff);
+    if (pReg->x_iFlag & LSSHM_REGFLAG_PID)
+    {
+        LsShmPoolMem *pPool =
+            (LsShmPoolMem *)((LsShm *)pUData)->offset2ptr(pReg->x_iValue);
+        LsShmPool *pGPool = ((LsShm *)pUData)->m_pGPool;
+        if (pGPool->mergeDeadPool(pPool))
+            ((LsShm *)pUData)->m_pGHash->eraseIterator(iterOff);
+    }
+    return 0;
+}
+
+
 LsShmPool *LsShm::getGlobalPool()
 {
     if ((m_pGPool != NULL) && (m_pGPool->getMagic() == LSSHM_POOL_MAGIC))
@@ -693,7 +740,7 @@ LsShmPool *LsShm::getNamedPool(const char *name)
         SHM_NOTICE("LsShm::getNamedPool %s <%p> return %p ",
                    name, &getObjBase(), iter);
 #endif
-        pObj = (LsShmPool *)iter->second();
+        pObj = (LsShmPool *)(ls_shmpool_t *)iter->second();
         if (pObj->getMagic() != LSSHM_POOL_MAGIC)
             return NULL;
         pObj->upRef();
