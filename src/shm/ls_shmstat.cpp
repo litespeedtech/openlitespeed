@@ -117,8 +117,7 @@ int main(int ac, char *av[])
 
 void doStatShm(LsShm *pShm)
 {
-    LsShmMapStat *pStat =
-        (LsShmMapStat *)pShm->offset2ptr(pShm->getMapStatOffset());
+    LsShmMapStat *pStat = (LsShmMapStat *)pShm->getMapStat();
 
     fprintf(stdout, "SHM [%s] (in kbytes unless otherwise specified)\n\
 shm filesize:               %u\n\

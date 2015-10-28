@@ -140,7 +140,7 @@ class DTblDef extends DTblDefBase
 		$this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_tuningos'), $attrs);
 	}
 
-	protected function add_S_TUNING_STATIC($id)  // keep
+	protected function add_S_TUNING_STATIC($id)
 	{
 		$attrs = array(
 				DTblDefBase::NewIntAttr('maxCachedFileSize', DMsg::ALbl('l_maxcachedfilesize'), false, 0, 1048576),

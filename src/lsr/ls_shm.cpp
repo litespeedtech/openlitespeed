@@ -20,7 +20,7 @@
  */
 #include <lsr/ls_shm.h>
 
-#include <shm/lsshmlruhash.h>
+#include <shm/lsshmhash.h>
 #include <shm/lsshmpool.h>
 
 #include <assert.h>
@@ -117,7 +117,7 @@ ls_shmoff_t ls_shmpool_getreg(ls_shmpool_t *poolhandle,
                                  const char *name)
 {
     LsShmReg *p_reg;
-    return ((p_reg = ((LsShmPool *)poolhandle)->findReg(name)) == NULL) ?
+    return ((p_reg = ((LsShmPool *)poolhandle)->getShm()->findReg(name)) == NULL) ?
            0 : p_reg->x_iValue;
 }
 
@@ -125,7 +125,7 @@ ls_shmoff_t ls_shmpool_getreg(ls_shmpool_t *poolhandle,
 int ls_shmpool_setreg(
     ls_shmpool_t *poolhandle, const char *name, ls_shmoff_t off)
 {
-    LsShmReg *p_reg = ((LsShmPool *)poolhandle)->addReg(name);
+    LsShmReg *p_reg = ((LsShmPool *)poolhandle)->getShm()->addReg(name);
     if ((p_reg == NULL) || (off <= 0))
         return LS_FAIL;
     p_reg->x_iValue = off;
@@ -170,15 +170,17 @@ ls_shmhash_t *lsi_shmlruhash_open(ls_shmpool_t *poolhandle,
                                    int mode)
 {
     check_defaults(&initialsize, &hf, &vc);
-    switch (mode)
-    {
-    case LSSHM_LRU_MODE2:
-    case LSSHM_LRU_MODE3:
-        return ((LsShmPool *)poolhandle)->getNamedHash(
-                   hash_table_name, (LsShmSize_t)initialsize, hf, vc, mode);
-    default:
-        return NULL;
-    }
+    return ((LsShmPool *)poolhandle)->getNamedHash(
+                hash_table_name, (LsShmSize_t)initialsize, hf, vc, mode);
+//     switch (mode)
+//     {
+//     case LSSHM_LRU_MODE2:
+//     case LSSHM_LRU_MODE3:
+//         return ((LsShmPool *)poolhandle)->getNamedHash(
+//                    hash_table_name, (LsShmSize_t)initialsize, hf, vc, mode);
+//     default:
+//         return NULL;
+//     }
 }
 
 
@@ -282,25 +284,25 @@ void ls_shmhash_clear(ls_shmhash_t *hashhandle)
 }
 
 
-int ls_shmhash_setdata(ls_shmhash_t *hashhandle,
-                        ls_shmoff_t offVal, const uint8_t *value, int valuelen)
-{
-    return ((LsShmHash *)hashhandle)->setLruData(offVal, value, valuelen);
-}
-
-
-int ls_shmhash_getdata(ls_shmhash_t *hashhandle,
-                        ls_shmoff_t offVal, ls_shmoff_t *pvalue, int cnt)
-{
-    return ((LsShmHash *)hashhandle)->getLruData(offVal, pvalue, cnt);
-}
-
-
-int ls_shmhash_getdataptrs(ls_shmhash_t *hashhandle,
-                            ls_shmoff_t offVal, int (*func)(void *pData))
-{
-    return ((LsShmHash *)hashhandle)->getLruDataPtrs(offVal, func);
-}
+// int ls_shmhash_setdata(ls_shmhash_t *hashhandle,
+//                         ls_shmoff_t offVal, const uint8_t *value, int valuelen)
+// {
+//     return ((LsShmHash *)hashhandle)->setLruData(offVal, value, valuelen);
+// }
+// 
+// 
+// int ls_shmhash_getdata(ls_shmhash_t *hashhandle,
+//                         ls_shmoff_t offVal, ls_shmoff_t *pvalue, int cnt)
+// {
+//     return ((LsShmHash *)hashhandle)->getLruData(offVal, pvalue, cnt);
+// }
+// 
+// 
+// int ls_shmhash_getdataptrs(ls_shmhash_t *hashhandle,
+//                             ls_shmoff_t offVal, int (*func)(void *pData))
+// {
+//     return ((LsShmHash *)hashhandle)->getLruDataPtrs(offVal, func);
+// }
 
 
 int ls_shmhash_trim(ls_shmhash_t *hashhandle,

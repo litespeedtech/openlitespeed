@@ -38,27 +38,17 @@ class debugBase;
 
 
 // runtime free memory for the pool
-typedef struct
-{
-    LsShmOffset_t  x_iStart;
-    LsShmOffset_t  x_iEnd;
-} ShmMapChunk;
+typedef struct ls_shmmapchunk_s ShmMapChunk;
+typedef struct ls_shmfreelist_s LsShmFreeList;
+typedef struct ls_shmpoolmap_s LsShmPoolMap;
+typedef struct ls_shmpoolmem_s LsShmPoolMem;
+typedef struct ls_shmfreetop_s LShmFreeTop;
+typedef struct ls_shmfreebot_s LShmFreeBot;
 
-typedef struct
-{
-    LsShmOffset_t  x_iNext;
-    LsShmOffset_t  x_iPrev;
-    LsShmSize_t    x_iSize;
-} LsShmFreeList;
 
 #define LSSHM_POOL_NUMBUCKET    0x20
 #define LSSHM_MAX_BUCKET_SLOT   0x8 // max bucket slot allocation
 
-#if 0
-// useful for test purpose
-#define LSSHM_POOL_NUMBUCKET    0x4
-#define LSSHM_MAX_BUCKET_SLOT   0x4 // max bucket slot allocation
-#endif
 
 #define LSSHM_POOL_MAXBCKTSIZE  (LSSHM_POOL_NUMBUCKET * LSSHM_POOL_BCKTINCR)
 
@@ -81,49 +71,8 @@ typedef struct
     } m_bckt[LSSHM_POOL_NUMBUCKET];
 } LsShmPoolMapStat;
 
-typedef struct
-{
-    ShmMapChunk     x_chunk;            // unused after alloc2
-    LsShmOffset_t   x_iFreeList;        // the big free list
-    LsShmOffset_t   x_iFreePageList;
-    LsShmOffset_t   x_aFreeBucket[LSSHM_POOL_NUMBUCKET];
-    LsShmPoolMapStat    x_stat;         // map statistics
-} LsShmPoolMap;
 
-typedef struct
-{
-    uint32_t        x_iMagic;
-    uint8_t         x_aName[LSSHM_MAXNAMELEN];
-    LsShmSize_t     x_iSize;
-    LsShmPoolMap    x_data;
-    LsShmOffset_t   x_iLockOffset;
-    pid_t           x_pid;
-} LsShmPoolMem;
-
-//
-// Internal for free link
-//
-#define LSSHM_FREE_AMARKER 0x0123fedc
-#define LSSHM_FREE_BMARKER 0xba984567
-//
-//  Two block to indicate a free block
-//
-typedef struct
-{
-    LsShmSize_t      x_iAMarker;
-    LsShmSize_t      x_iFreeSize;           // size of the freeblock
-    LsShmOffset_t    x_iFreeNext;
-    LsShmOffset_t    x_iFreePrev;
-} LShmFreeTop;
-
-typedef struct
-{
-    LsShmOffset_t    x_iFreeOffset;         // back to the begin
-    LsShmSize_t      x_iBMarker;
-} LShmFreeBot;
-
-
-class LsShmPool : public ls_shmpool_s, ls_shmobject_s
+class LsShmPool : public ls_shmpool_s
 {
 public:
     explicit LsShmPool(LsShm *shm, const char *name, LsShmPool *gpool);
@@ -153,25 +102,25 @@ public:
     ls_attr_inline LsShmStatus_t chkRemap()
     {   return m_pShm->chkRemap(); }
 
-    ls_attr_inline LsShmSize_t roundDataSize(LsShmSize_t size) const
+    static inline LsShmSize_t roundDataSize(LsShmSize_t size)
     {
         return ((size + (LSSHM_POOL_UNITSIZE - 1))
                 / LSSHM_POOL_UNITSIZE) * LSSHM_POOL_UNITSIZE;
     };
 
-    ls_attr_inline LsShmSize_t roundPageSize(LsShmSize_t size) const
+    static inline  LsShmSize_t roundPageSize(LsShmSize_t size)
     {
         return ((size + (LSSHM_SHM_UNITSIZE - 1))
                 / LSSHM_SHM_UNITSIZE) * LSSHM_SHM_UNITSIZE;
     };
 
-    ls_attr_inline LsShmSize_t size2roundSize(LsShmSize_t size) const
+    static inline  LsShmSize_t size2roundSize(LsShmSize_t size)
     {
         return ((size >= LSSHM_SHM_UNITSIZE) ?
                 roundPageSize(size) : roundDataSize(size));
     }
 
-    ls_attr_inline LsShmSize_t roundSize2pages(LsShmSize_t size) const
+    static inline  LsShmSize_t roundSize2pages(LsShmSize_t size)
     {
         return ((size + (LSSHM_SHM_UNITSIZE - 1)) / LSSHM_SHM_UNITSIZE);
     };
@@ -179,25 +128,14 @@ public:
     LsShmOffset_t  alloc2(LsShmSize_t size, int &remapped);
     void  release2(LsShmOffset_t offset, LsShmSize_t size);
     void  mvFreeList();
-    void  addFreeList(LsShmPoolMap *pSrcMap);
     void  mvFreeBucket();
-    void  addFreeBucket(LsShmPoolMap *pSrcMap);
 
-    LsShmOffset_t allocPage(LsShmSize_t pagesize, int &remapped);
-    void releasePage(LsShmOffset_t offset, LsShmSize_t pagesize);
 
     void enableLock()
     {   m_iLockEnable = 1; }
 
     void disableLock()
     {   m_iLockEnable = 0; }
-
-    LsShmOffset_t getReg(const char *name);
-
-    LsShmReg *findReg(const char *name)
-    {   return m_pShm->findReg(name); }
-    LsShmReg *addReg(const char *name)
-    {   return m_pShm->addReg(name); }
 
     ls_attr_inline LsShmMap *getShmMap() const
     {   return m_pShm->getShmMap(); }
@@ -208,11 +146,10 @@ public:
     ls_attr_inline LsShmSize_t getShmMapOldMaxSize() const
     {   return m_pShm->oldMaxSize(); }
 
-    LsShmOffset_t getPoolMapStatOffset() const
-    { return (LsShmOffset_t)(long) & ((LsShmPoolMem *)(long)m_iOffset)->x_data.x_stat; }
+    LsShmOffset_t getPoolMapStatOffset() const;
 
     LsShmLock *lockPool()
-    {   return m_pShm->lockPool(); }
+    {   return m_pShm->getLocks(); }
 
 #ifdef notdef
     void setMapOwner(int o)
@@ -240,19 +177,24 @@ public:
                   const char *name, LsShmHasher_fn hf, 
                   LsShmValComp_fn vc, int lru_mode);
     LsShmOffset_t allocateNewHash(int initSize, int iMode, int iLruMode);
+    int mergeDeadPool(LsShmPoolMem* pPool);
 
 private:
     ls_attr_inline LsShmPoolMem *getPool() const
     {   return (LsShmPoolMem *)offset2ptr(m_iOffset);   }
 
-    ls_attr_inline LsShmPoolMap *getDataMap() const
-    {   return (LsShmPoolMap *)&(getPool()->x_data);    }
+    LsShmPoolMap *getDataMap() const;
 
     int setupLock()
     {   return m_iLockEnable && ls_shmlock_setup(m_pShmLock); }
 
     void mapLock();
 
+    LsShmOffset_t getReg(const char *name);
+
+    LsShmOffset_t allocPage(LsShmSize_t pagesize, int &remapped);
+    void releasePage(LsShmOffset_t offset, LsShmSize_t pagesize);
+    
     // for internal purpose
     void  releaseData(LsShmOffset_t offset, LsShmSize_t size);
 
@@ -271,6 +213,9 @@ private:
     void mvDataFreeListToBucket(LsShmFreeList *pFree, LsShmOffset_t offset);
     void rmFromDataFreeList(LsShmFreeList *pFree);
 
+    void  addFreeList(LsShmPoolMap *pSrcMap);
+    void  addFreeBucket(LsShmPoolMap *pSrcMap);
+
     LsShmSize_t dataSize2Bucket(LsShmSize_t size) const
     {   return (size / LSSHM_POOL_BCKTINCR); }
 
@@ -282,19 +227,8 @@ private:
     void reduceFreeFromBot(LShmFreeTop *ap,
                            LsShmOffset_t offset, LsShmSize_t newsize);
     void disconnectFromFree(LShmFreeTop *ap, LShmFreeBot *bp);
-    void markTopUsed(LShmFreeTop *ap)
-    {
-        ap->x_iAMarker = 0;
-    }
 
-    void incrCheck(LsShmXSize_t *ptr, LsShmSize_t size)
-    {
-        LsShmSize_t prev = *ptr;
-        *ptr += size;
-        if (*ptr < prev)    // cnt wrapped
-            *ptr = (LsShmSize_t) - 1;
-        return;
-    }
+    void incrCheck(LsShmXSize_t *ptr, LsShmSize_t size);
 
 private:
     LsShmPool(const LsShmPool &other);
@@ -302,7 +236,6 @@ private:
     bool operator==(const LsShmPool &other);
 
     uint32_t            m_iMagic;
-    char               *m_pPoolName;    // Name
     LsShm              *m_pShm;         // SHM handle
     LsShmStatus_t       m_status;       // Ready ...
     LsShmOffset_t       m_iOffset;      // find from SHM registry

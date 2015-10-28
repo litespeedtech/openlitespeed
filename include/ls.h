@@ -1391,7 +1391,7 @@ struct lsi_module_s
      */
     lsi_serverhook_t        *serverhook;
 
-    char                     reserved[ LSI_MODULE_RESERVED_SIZE ];
+    int32_t                  reserved[ (LSI_MODULE_RESERVED_SIZE + 3) / 4 ];
 
 };
 

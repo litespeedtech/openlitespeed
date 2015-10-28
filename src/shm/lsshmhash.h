@@ -27,6 +27,8 @@ class debugBase;
 #include <shm/lsshm.h>
 #include <shm/lsshmpool.h>
 
+#define LSSHM_LRU_NONE      0
+#define LSSHM_LRU           1
 
 /**
  * @file
@@ -53,29 +55,6 @@ class debugBase;
 typedef uint32_t     LsShmHKey;
 typedef int32_t      LsShmHElemLen_t;
 typedef uint32_t     LsShmHElemOffs_t;
-typedef struct shmlru_data_s shmlru_data_t;
-
-typedef struct shmlru_data_s
-{
-    uint32_t          magic;
-    time_t            strttime;
-    time_t            lasttime;
-    int32_t           count;
-    uint16_t          size;
-    uint16_t          maxsize;
-    union
-    {
-        LsShmOffset_t    offprev;       /* history */
-        LsShmOffset_t    offiter;       /* or if no history, my iterator */
-    };
-    uint8_t           data[0];
-} shmlru_data_t;
-
-
-typedef struct shmlru_val_s
-{
-    LsShmOffset_t    offdata;
-} shmlru_val_t;
 
 
 typedef struct
@@ -104,16 +83,16 @@ typedef struct lsShm_hElem_s
     int32_t          getKeyLen() const
     { return ((ls_vardata_t *)x_aData)->x_size; }
     uint8_t         *getVal() const
-    { return ((ls_vardata_t *)((uint8_t *)x_aData + x_iValOff))->x_data; }
+    { return ((ls_vardata_t *)((uint8_t*)x_aData + x_iValOff))->x_data; }
     int32_t          getValLen() const
-    { return ((ls_vardata_t *)((uint8_t *)x_aData + x_iValOff))->x_size; }
+    { return ((ls_vardata_t *)((uint8_t*)x_aData + x_iValOff))->x_size; }
     void             setKeyLen(int32_t len)
     { ((ls_vardata_t *)x_aData)->x_size = len; }
     void             setValLen(int32_t len)
-    { ((ls_vardata_t *)((uint8_t *)x_aData + x_iValOff))->x_size = len; }
+    { ((ls_vardata_t *)((uint8_t*)x_aData + x_iValOff))->x_size = len; }
 
     LsShmHElemLink  *getLruLinkPtr() const
-    { return ((LsShmHElemLink *)((uint8_t *)x_aData + x_iValOff) - 1); }
+    { return ((LsShmHElemLink *)((uint8_t*)x_aData + x_iValOff) - 1); }
     LsShmOffset_t    getLruLinkNext() const
     { return getLruLinkPtr()->x_iLinkNext; }
     LsShmOffset_t    getLruLinkPrev() const
@@ -146,55 +125,30 @@ typedef struct
     LsShmXSize_t    m_iHashInUse;   // shm allocated to hash (bytes)
 } LsShmHTableStat;
 
-typedef struct
+typedef struct ls_shmhtable_s LsShmHTable;
+
+
+class LsShmHashLruAddon
 {
-    uint32_t        x_iMagic;
-    LsShmSize_t     x_iCapacity;
-    LsShmSize_t     x_iSize;
-    LsShmSize_t     x_iFullFactor;
-    LsShmSize_t     x_iGrowFactor;
-    LsShmOffset_t   x_iHIdx;
-    LsShmOffset_t   x_iBitMap;
-    LsShmOffset_t   x_iHIdxNew; // in rehash()
-    LsShmSize_t     x_iCapacityNew;
-    LsShmOffset_t   x_iWorkIterOff;
-    LsShmOffset_t   x_iBitMapSz;
-    LsShmOffset_t   x_iLockOffset;
-    uint8_t         x_iMode;
-    uint8_t         x_iLruMode; // lru=1, wlru=2, xlru=3
-    uint8_t         x_unused[2];
-    LsShmHTableStat x_stat;         // hash statistics
-    uint8_t         x_reserved[256];
-} LsShmHTable;
 
-// minimum element count for bloom bitmap (approx 1Mb table size)
-#define MINSZ_FOR_BITMAP    (1024*1024/sizeof(LsShmHIdx))
+public:
+    LsShmHashLruAddon() {}
+    virtual ~LsShmHashLruAddon() {}
 
-#define x_lruInfo   x_reserved[sizeof(((LsShmHTable *)0)->x_reserved) \
-                        - sizeof(LsHashLruInfo)]
+    virtual int setLruData(LsShmOffset_t offVal, const uint8_t *pVal, int valLen);
 
-typedef struct
-{
-    uint16_t    m_iFlags;
-    uint8_t     m_iRetcode;
-    uint8_t     m_notused;
-    void       *m_pRet;     // returned stuff
-    void       *m_pMisc;    // miscellaneous stuff
-    uint64_t    m_value;
-    uint64_t    m_cas;
-} LsShmUpdOpt;
+    virtual int getLruData(LsShmOffset_t offVal, LsShmOffset_t *pData, int cnt);
 
-#define UPDRET_DONE         0
-#define UPDRET_NOTFOUND     1
-#define UPDRET_NONNUMERIC   2
-#define UPDRET_CASFAIL      3
-#define UPDRET_APPEND       10
-#define UPDRET_PREPEND      11
-#define UPDRET_NONE         20
+    virtual int getLruDataPtrs(LsShmOffset_t offVal, int (*func)(void *pData));
+
+    virtual int clrdata(uint8_t *pValue);
+    virtual int chkdata(uint8_t *pValue);
+    
+};
 
 
 class AutoBuf;
-class LsShmHash : public ls_shmhash_s, public ls_shmobject_s
+class LsShmHash : public ls_shmhash_s
 {
 public:
     typedef LsShmHElem *iterator;
@@ -228,6 +182,10 @@ public:
     static LsShmHash *open(
         const char *pShmName, const char *pHashName, int init_size, int lruMode);
 
+    static LsShmOffset_t allocHTable(LsShmPool * pPool, int init_size, 
+                                     int iMode, int iLruMode, 
+                                     LsShmOffset_t lockOffset);
+
     //int init(size_t init_size);
     int init(LsShmOffset_t offset);
 
@@ -236,15 +194,12 @@ public:
     static int sz2TableSz(LsShmSize_t sz)
     {   return (sz * sizeof(LsShmHIdx)); }
 
-    static int sz2BitMapSz(LsShmSize_t sz)
-    {
-        return ((sz < MINSZ_FOR_BITMAP) ? 0 :
-            (((sz + s_bitsPerLsShmHIdx - 1) / s_bitsPerLsShmHIdx)
-            * sizeof(LsShmHIdx)));
-    }
 
     static LsShmHash *checkHTable(GHash::iterator itor, LsShmPool *pool,
                                   const char *name, LsShmHasher_fn hf, LsShmValComp_fn vc);
+    
+    static int chkHashTable(LsShm *pShm, LsShmReg *pReg, int *pMode, int *pLruMode);
+
 
     ls_attr_inline LsShmPool *getPool() const
     {   return m_pPool;     }
@@ -261,25 +216,13 @@ public:
     ls_attr_inline void *offset2iteratorData(iteroffset offset) const
     {   return ((iterator)m_pPool->offset2ptr(offset))->getVal(); }
 
-    LsShmOffset_t alloc2(LsShmSize_t size, int &remapped)
-    {
-        LsShmOffset_t ret = m_pPool->alloc2(size, remapped);
-        if (ret != 0)
-            getHTable()->x_stat.m_iHashInUse += m_pPool->size2roundSize(size);
-        return ret;
-    }
+    LsShmOffset_t alloc2(LsShmSize_t size, int &remapped);
 
-    void release2(LsShmOffset_t offset, LsShmSize_t size)
-    {
-        m_pPool->release2(offset, size);
-        getHTable()->x_stat.m_iHashInUse -= m_pPool->size2roundSize(size);
-    }
+    void release2(LsShmOffset_t offset, LsShmSize_t size);
 
-    LsShmOffset_t getHTableStatOffset() const
-    {   return (LsShmOffset_t)(long) & ((LsShmHTable *)(long)m_iOffset)->x_stat; }
+    LsShmOffset_t getHTableStatOffset() const;
 
-    LsShmOffset_t getHTableReservedOffset() const
-    {   return (LsShmOffset_t)(long) & ((LsShmHTable *)(long)m_iOffset)->x_reserved; }
+    LsShmOffset_t getHTableReservedOffset() const;
 
     int round4(int x) const
     {   return (x + 0x3) & ~0x3; }
@@ -288,7 +231,7 @@ public:
     {   return iter->getVal(); }
 
     const char *name() const
-    {   return m_pName; }
+    {   return obj.m_pName; }
 
     void close();
 
@@ -372,41 +315,11 @@ public:
                0 : ptr2offset(offset2iteratorData(iterOff));
     }
 
-    int touchLru(iteroffset iterOff)
-    {
-        if (m_iLruMode == LSSHM_LRU_NONE)
-            return 0;
-        
-        autoLockChkRehash();
-        linkSetTop(offset2iterator(iterOff));
-        autoUnlock();
-
-        return 0;
-    }
+    int touchLru(iteroffset iterOff);
     
-    int linkSetTopTime(LsShmOffset_t offset, time_t lasttime)
-    {
-        if (m_iLruMode != LSSHM_LRU_NONE)
-        {
-            autoLockChkRehash();
-            LsShmHElemLink *pLink = offset2iterator(offset)->getLruLinkPtr();
-            if ((pLink->x_iLinkNext != 0) || (lasttime > time((time_t *)NULL)))
-            {
-                autoUnlock();
-                return LS_FAIL;
-            }
-            LsShmOffset_t prev = pLink->x_iLinkPrev;
-            if (prev != 0)
-            {
-                LsShmHElemLink *pPrev = offset2iterator(prev)->getLruLinkPtr();
-                if (lasttime < pPrev->x_lasttime)
-                    lasttime = pPrev->x_lasttime;
-            }
-            pLink->x_lasttime = lasttime;
-            autoUnlock();
-        }
-        return LS_OK;
-    }
+    int linkSetTopTime(LsShmOffset_t offset, time_t lasttime);
+    
+    int linkMvTopTime(LsShmOffset_t offset, time_t lasttime);
 
     void eraseIterator(iteroffset iterOff)
     {
@@ -435,10 +348,10 @@ public:
         return iterOff;
     }
 
-    iteroffset insertIterator(ls_strpair_t *pParms, LsShmUpdOpt *pOpt = NULL)
+    iteroffset insertIterator(ls_strpair_t *pParms)
     {
         autoLockChkRehash();
-        iteroffset iterOff = (*m_insert)(this, pParms, pOpt);
+        iteroffset iterOff = (*m_insert)(this, pParms);
         autoUnlock();
         return iterOff;
     }
@@ -451,10 +364,10 @@ public:
         return iterOff;
     }
 
-    iteroffset updateIterator(ls_strpair_t *pParms, LsShmUpdOpt *pOpt = NULL)
+    iteroffset updateIterator(ls_strpair_t *pParms)
     {
         autoLockChkRehash();
-        iteroffset iterOff = (*m_update)(this, pParms, pOpt);
+        iteroffset iterOff = (*m_update)(this, pParms);
         autoUnlock();
         return iterOff;
     }
@@ -500,30 +413,13 @@ public:
     void setFullFactor(int f);
     void setGrowFactor(int f);
 
-    bool empty() const
-    {
-        return getHTable()->x_iSize == 0;
-    }
+    bool empty() const;
+    LsShmSize_t size() const;
+    LsShmSize_t capacity() const;
 
-    LsShmSize_t size() const
-    {
-        return getHTable()->x_iSize;
-    }
+    void incrTableSize();
+    void decrTableSize();
 
-    void incrTableSize()
-    {
-        ++(getHTable()->x_iSize);
-    }
-
-    void decrTableSize()
-    {
-        --(getHTable()->x_iSize);
-    }
-
-    LsShmSize_t capacity() const
-    {
-        return getHTable()->x_iCapacity;
-    }
 
     iteroffset begin();
     iteroffset end()                {   return 0;   }
@@ -539,8 +435,7 @@ public:
     int stat(LsHashStat *pHashStat, for_each_fn2 fun, void *pData);
 
     // LRU stuff
-    ls_attr_inline LsHashLruInfo *getLru() const
-    {   return (LsHashLruInfo *)&(getHTable()->x_lruInfo);  }
+    LsHashLruInfo *getLru() const;
 
     LsShmOffset_t getLruTop()
     {
@@ -551,16 +446,6 @@ public:
     int trim(time_t tmCutoff, int (*func)(iterator iter, void *arg),
              void *arg);
     int check();
-
-    virtual int setLruData(LsShmOffset_t offVal, const uint8_t *pVal,
-                           int valLen)
-    {   return LS_FAIL;  }
-
-    virtual int getLruData(LsShmOffset_t offVal, LsShmOffset_t *pData, int cnt)
-    {   return LS_FAIL;  }
-
-    virtual int getLruDataPtrs(LsShmOffset_t offVal, int (*func)(void *pData))
-    {   return LS_FAIL;  }
 
     void enableLock()
     {   m_iLockEnable = 1; };
@@ -578,13 +463,7 @@ public:
     int unlock()
     {   return m_iLockEnable ? 0 : ls_shmlock_unlock(m_pShmLock); }
 
-#ifdef notdef
-    void lockChkRehash()
-    {
-        if ((lock() < 0) && (getHTable()->x_iHIdx != getHTable()->x_iHIdxNew))
-            rehash();
-    }
-#endif
+    void lockChkRehash();
 
     int getRef()     { return m_iRef; }
     int upRef()      { return ++m_iRef; }
@@ -594,11 +473,9 @@ protected:
     typedef iteroffset(*hash_find)(LsShmHash *pThis, ls_strpair_t *pParms);
     typedef iteroffset(*hash_get)(LsShmHash *pThis, ls_strpair_t *pParms,
                                   int *pFlag);
-    typedef iteroffset(*hash_insert)(LsShmHash *pThis, ls_strpair_t *pParms,
-                                     LsShmUpdOpt *pOpt);
+    typedef iteroffset(*hash_insert)(LsShmHash *pThis, ls_strpair_t *pParms);
     typedef iteroffset(*hash_set)(LsShmHash *pThis, ls_strpair_t *pParms);
-    typedef iteroffset(*hash_update)(LsShmHash *pThis, ls_strpair_t *pParms,
-                                     LsShmUpdOpt *pOpt);
+    typedef iteroffset(*hash_update)(LsShmHash *pThis, ls_strpair_t *pParms);
 
     uint32_t getIndex(uint32_t k, uint32_t n)
     {   return k % n ; }
@@ -606,41 +483,15 @@ protected:
     ls_attr_inline LsShmHTable *getHTable() const
     {   return (LsShmHTable *)m_pPool->offset2ptr(m_iOffset);   }
 
-    LsShmSize_t fullFactor() const
-    {   return getHTable()->x_iFullFactor;   }
+    LsShmSize_t fullFactor() const;
+    LsShmSize_t growFactor() const;
 
-    LsShmSize_t growFactor() const
-    {   return getHTable()->x_iGrowFactor;   }
+    ls_attr_inline LsShmHIdx *getHIdx() const;
 
-    ls_attr_inline LsShmHIdx *getHIdx() const
-    {   return (LsShmHIdx *)m_pPool->offset2ptr(getHTable()->x_iHIdx);   }
-
-    ls_attr_inline uint8_t *getBitMap() const
-    {
-        LsShmHTable *pTable = getHTable();
-        if (pTable->x_iBitMapSz == 0)
-            return NULL;
-        return (uint8_t *)m_pPool->offset2ptr(pTable->x_iBitMap);
-    }
-
-    int getBitMapEnt(uint32_t indx)
-    {
-        uint8_t *pBitMap = getBitMap();
-        return ((pBitMap == NULL) ? 1 :
-            pBitMap[indx / s_bitsPerChar] & s_bitMask[indx % s_bitsPerChar]);
-    }
-    void setBitMapEnt(uint32_t indx)
-    {
-        uint8_t *pBitMap;
-        if ((pBitMap = getBitMap()) != NULL)
-            pBitMap[indx / s_bitsPerChar] |= s_bitMask[indx % s_bitsPerChar];
-    }
-    void clrBitMapEnt(uint32_t indx)
-    {
-        uint8_t *pBitMap;
-        if ((pBitMap = getBitMap()) != NULL)
-            pBitMap[indx / s_bitsPerChar] &= ~(s_bitMask[indx % s_bitsPerChar]);
-    }
+    ls_attr_inline uint8_t *getBitMap() const;
+    int getBitMapEnt(uint32_t indx);
+    void setBitMapEnt(uint32_t indx);
+    void clrBitMapEnt(uint32_t indx);
 
     int         rehash();
     iteroffset  find2(LsShmHKey key, ls_strpair_t *pParms);
@@ -649,20 +500,16 @@ protected:
     static iteroffset findNum(LsShmHash *pThis, ls_strpair_t *pParms);
     static iteroffset getNum(LsShmHash *pThis, ls_strpair_t *pParms,
                              int *pFlag);
-    static iteroffset insertNum(LsShmHash *pThis, ls_strpair_t *pParms,
-                                LsShmUpdOpt *pOpt);
+    static iteroffset insertNum(LsShmHash *pThis, ls_strpair_t *pParms);
     static iteroffset setNum(LsShmHash *pThis, ls_strpair_t *pParms);
-    static iteroffset updateNum(LsShmHash *pThis, ls_strpair_t *pParms,
-                                LsShmUpdOpt *pOpt);
+    static iteroffset updateNum(LsShmHash *pThis, ls_strpair_t *pParms);
 
     static iteroffset findPtr(LsShmHash *pThis, ls_strpair_t *pParms);
     static iteroffset getPtr(LsShmHash *pThis, ls_strpair_t *pParms,
                              int *pFlag);
-    static iteroffset insertPtr(LsShmHash *pThis, ls_strpair_t *pParms,
-                                LsShmUpdOpt *pOpt);
+    static iteroffset insertPtr(LsShmHash *pThis, ls_strpair_t *pParms);
     static iteroffset setPtr(LsShmHash *pThis, ls_strpair_t *pParms);
-    static iteroffset updatePtr(LsShmHash *pThis, ls_strpair_t *pParms,
-                                LsShmUpdOpt *pOpt);
+    static iteroffset updatePtr(LsShmHash *pThis, ls_strpair_t *pParms);
 
     //
     //  @brief eraseIterator_helper
@@ -670,98 +517,12 @@ protected:
     //
     void eraseIteratorHelper(iterator iter);
 
-    static inline iteroffset doGet(
-        LsShmHash *pThis, iteroffset iterOff, LsShmHKey key, ls_strpair_t *pParms,
-        int *pFlag)
-    {
-        if (iterOff != 0)
-        {
-            iterator iter = pThis->offset2iterator(iterOff);
-            if (pThis->m_iLruMode != LSSHM_LRU_NONE)
-                pThis->linkSetTop(iter);
-            *pFlag = LSSHM_FLAG_NONE;
-            return iterOff;
-        }
-        LSSHM_CHECKSIZE(ls_str_len(&pParms->value));
-        iterOff = pThis->insert2(key, pParms);
-        if (iterOff != 0)
-        {
-            if (*pFlag & LSSHM_FLAG_INIT)
-            {
-                // initialize the memory
-                ::memset(pThis->offset2iteratorData(iterOff),
-                         0, ls_str_len(&pParms->value));
-            }
-            // some special lru initialization
-            if (pThis->m_iLruMode == LSSHM_LRU_MODE2)
-            {
-                shmlru_data_t *pData = (shmlru_data_t *)pThis->offset2iteratorData(
-                                           iterOff);
-                pData->maxsize = 0;
-                pData->offiter = iterOff;
-            }
-            else if (pThis->m_iLruMode == LSSHM_LRU_MODE3)
-                ((shmlru_val_t *)pThis->offset2iteratorData(iterOff))->offdata = 0;
-            *pFlag = LSSHM_FLAG_CREATED;
-        }
-        return iterOff;
-    }
+    iteroffset doGet(iteroffset iterOff, LsShmHKey key, ls_strpair_t *pParms,
+                     int *pFlag);
+    iteroffset doInsert(iteroffset iterOff, LsShmHKey key, ls_strpair_t *pParms);
+    iteroffset doSet(iteroffset iterOff, LsShmHKey key, ls_strpair_t *pParms);
 
-    static inline iteroffset doInsert(
-        LsShmHash *pThis, iteroffset iterOff, LsShmHKey key, ls_strpair_t *pParms)
-    {
-        if (iterOff != 0)
-            return 0;
-        LSSHM_CHECKSIZE(ls_str_len(&pParms->value));
-        return pThis->insert2(key, pParms);
-    }
-
-    static inline iteroffset doSet(
-        LsShmHash *pThis, iteroffset iterOff, LsShmHKey key, ls_strpair_t *pParms)
-    {
-        LSSHM_CHECKSIZE(ls_str_len(&pParms->value));
-        if (iterOff != 0)
-        {
-            iterator iter = pThis->offset2iterator(iterOff);
-            if (iter->realValLen() >= (LsShmSize_t)ls_str_len(&pParms->value))
-            {
-                iter->setValLen(ls_str_len(&pParms->value));
-                pThis->setIterData(iter, ls_str_buf(&pParms->value));
-                if (pThis->m_iLruMode != LSSHM_LRU_NONE)
-                    pThis->linkSetTop(iter);
-                return iterOff;
-            }
-            else
-            {
-                // remove the iter and install new one
-                pThis->eraseIteratorHelper(iter);
-            }
-        }
-        return pThis->insert2(key, pParms);
-    }
-
-    static inline iteroffset doUpdate(
-        LsShmHash *pThis, iteroffset iterOff, LsShmHKey key, ls_strpair_t *pParms)
-    {
-        if (iterOff == 0)
-            return 0;
-        LSSHM_CHECKSIZE(ls_str_len(&pParms->value));
-        iterator iter = pThis->offset2iterator(iterOff);
-        if (iter->realValLen() >= (LsShmSize_t)ls_str_len(&pParms->value))
-        {
-            iter->setValLen(ls_str_len(&pParms->value));
-            pThis->setIterData(iter, ls_str_buf(&pParms->value));
-            if (pThis->m_iLruMode != LSSHM_LRU_NONE)
-                pThis->linkSetTop(iter);
-        }
-        else
-        {
-            // remove the iter and install new one
-            pThis->eraseIteratorHelper(iter);
-            iterOff = pThis->insert2(key, pParms);
-        }
-        return iterOff;
-    }
+    iteroffset doUpdate(iteroffset iterOff, LsShmHKey key, ls_strpair_t *pParms);
 
 #ifdef notdef
     static iteroffset doExpand(LsShmHash *pThis,
@@ -789,22 +550,13 @@ protected:
     int autoUnlock()
     {   return m_iLockEnable && ls_shmlock_unlock(m_pShmLock); }
 
-    void autoLockChkRehash()
-    {
-        if ((autoLock() < 0) && (getHTable()->x_iHIdx != getHTable()->x_iHIdxNew))
-            rehash();
-    }
+    void autoLockChkRehash();
 
     // stat helper
     int statIdx(iteroffset iterOff, for_each_fn2 fun, void *pUData);
 
     int setupLock()
     {   return m_iLockEnable && ls_shmlock_setup(m_pShmLock); }
-
-    virtual int clrdata(uint8_t *pValue)
-    {   return 0;  }        // no data entries; only iterator value
-    virtual int chkdata(uint8_t *pValue)
-    {   return 0;  }        // no data entries; only iterator value
 
     // auxiliary double linked list of hash elements
     void set_linkNext(LsShmOffset_t offThis, LsShmOffset_t offNext)
@@ -817,76 +569,24 @@ protected:
         ((LsShmHElem *)offset2ptr(offThis))->setLruLinkPrev(offPrev);
     }
 
-    void linkHElem(LsShmHElem *pElem, LsShmOffset_t offElem)
-    {
-        LsHashLruInfo *pLru = getLru();
-        LsShmHElemLink *pLink = pElem->getLruLinkPtr();
-        if (pLru->linkFirst)
-        {
-            set_linkNext(pLru->linkFirst, offElem);
-            pLink->x_iLinkPrev = pLru->linkFirst;
-        }
-        else
-        {
-            pLink->x_iLinkPrev = 0;
-            pLru->linkLast = offElem;
-        }
-        pLink->x_iLinkNext = 0;
-        pLink->x_lasttime = time((time_t *)NULL);
-        pLru->linkFirst = offElem;
-        ++pLru->nvalset;
-    }
+    void linkHElem(LsShmHElem *pElem, LsShmOffset_t offElem);
 
-    void unlinkHElem(LsShmHElem *pElem)
-    {
-        LsHashLruInfo *pLru = getLru();
-        LsShmHElemLink *pLink = pElem->getLruLinkPtr();
-        if (pLink->x_iLinkNext)
-            set_linkPrev(pLink->x_iLinkNext, pLink->x_iLinkPrev);
-        else
-            pLru->linkFirst = pLink->x_iLinkPrev;
-        if (pLink->x_iLinkPrev)
-            set_linkNext(pLink->x_iLinkPrev, pLink->x_iLinkNext);
-        else
-            pLru->linkLast = pLink->x_iLinkNext;
-        --pLru->nvalset;
-    }
+    void unlinkHElem(LsShmHElem *pElem);
 
-    void linkSetTop(LsShmHElem *pElem)
+    void linkSetTop(LsShmHElem *pElem);
+    
+    int8_t addExtraSpace(uint8_t iterExtra, uint8_t dataExtra)
     {
-        LsShmHElemLink *pLink = pElem->getLruLinkPtr();
-        LsShmOffset_t next = pLink->x_iLinkNext;
-        if (next != 0)      // not top of list already
-        {
-            LsHashLruInfo *pLru = getLru();
-            LsShmOffset_t offElem = ptr2offset(pElem);
-            LsShmOffset_t prev = pLink->x_iLinkPrev;
-            if (prev == 0)  // last one
-                pLru->linkLast = next;
-            else
-                set_linkNext(prev, next);
-            set_linkPrev(next, prev);
-            pLink->x_iLinkNext = 0;
-            pLink->x_iLinkPrev = pLru->linkFirst;
-            set_linkNext(pLru->linkFirst, offElem);
-            pLru->linkFirst = offElem;
-        }
-        pLink->x_lasttime = time((time_t *)NULL);
+        m_dataExtraSpace += dataExtra;
+        dataExtra = m_iterExtraSpace;
+        m_iterExtraSpace += iterExtra;
+        return dataExtra;
     }
-
-    virtual void valueSetup(LsShmHElemOffs_t *pValOff, int *pValLen)
-    {
-        *pValOff += sizeof(LsShmHElemLink);
-        return;
-    }
-
-    int entryValMatch(const uint8_t *pVal, int valLen, shmlru_data_t *pData);
 
 protected:
     uint32_t            m_iMagic;
     LsShmPool          *m_pPool;
     LsShmOffset_t       m_iOffset;
-    char               *m_pName;
 
     LsShmHasher_fn      m_hf;
     LsShmValComp_fn     m_vc;
@@ -896,18 +596,17 @@ protected:
     hash_find           m_find;
     hash_get            m_get;
 
+    uint8_t             m_iterExtraSpace;
+    uint8_t             m_dataExtraSpace;
     int8_t              m_iLockEnable;
     int8_t              m_iMode;        // mode 0=Num, 1=Ptr
     uint8_t             m_iLruMode;     // lru=1, wlru=2, xlru=3
     ls_shmlock_t       *m_pShmLock;     // local lock for Hash
     LsShmStatus_t       m_status;
-
+    LsShmHashLruAddon  *m_pLruAddon;
     // house keeping
     int m_iRef;
 
-    static const uint8_t s_bitMask[];
-    static const size_t s_bitsPerChar;
-    static const size_t s_bitsPerLsShmHIdx;
 
 private:
     // disable the bad boys!
@@ -915,7 +614,6 @@ private:
     LsShmHash &operator=(const LsShmHash &other);
 
     void releaseHTableShm();
-    void appendKeyVal(uint32_t uKeyLen, uint32_t uValLen, const char* pKey, const char* pVal, AutoBuf *pAutoBuf);
 
 #ifdef LSSHM_DEBUG_ENABLE
     // for debug purpose - should debug this later

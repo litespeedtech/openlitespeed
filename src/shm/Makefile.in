@@ -102,8 +102,7 @@ am__v_AR_1 =
 liblsshm_a_AR = $(AR) $(ARFLAGS)
 liblsshm_a_LIBADD =
 am_liblsshm_a_OBJECTS = lsshmlock.$(OBJEXT) lsshmhash.$(OBJEXT) \
-	lsshmlruhash.$(OBJEXT) lsshmpool.$(OBJEXT) lsshm.$(OBJEXT) \
-	ls_fallocate.$(OBJEXT)
+	lsshmpool.$(OBJEXT) lsshm.$(OBJEXT) ls_fallocate.$(OBJEXT)
 liblsshm_a_OBJECTS = $(am_liblsshm_a_OBJECTS)
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
@@ -335,7 +334,6 @@ liblsshm_a_METASOURCES = AUTO
 liblsshm_a_SOURCES = \
     lsshmlock.cpp \
     lsshmhash.cpp \
-    lsshmlruhash.cpp \
     lsshmpool.cpp \
     lsshm.cpp \
     ls_fallocate.c
@@ -393,7 +391,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lsshm.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lsshmhash.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lsshmlock.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lsshmlruhash.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lsshmpool.Po@am__quote@
 
 .c.o:
@@ -648,6 +645,7 @@ uninstall-am:
 	tags tags-am uninstall uninstall-am
 
 
+#    lsshmlruhash.cpp \
 ####### kdevelop will overwrite this part!!! (end)############
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.

@@ -42,10 +42,22 @@ extern "C"
 // #define USE_PIDSPINLOCK         // enable for pid based spinlock
 
 // C to C++ wrapper
-struct ls_shm_s {};
-struct ls_shmpool_s {};
-struct ls_shmhash_s {};
-struct ls_shmobject_s {};
+struct ls_shmobject_s 
+{
+    char * m_pName;
+};
+struct ls_shm_s 
+{
+    struct ls_shmobject_s obj;
+};
+struct ls_shmpool_s 
+{
+    struct ls_shmobject_s obj;
+};
+struct ls_shmhash_s 
+{
+    struct ls_shmobject_s obj;
+} ;
 typedef struct ls_shm_s         ls_shm_t;
 typedef struct ls_shmpool_s     ls_shmpool_t;
 typedef struct ls_shmhash_s     ls_shmhash_t;

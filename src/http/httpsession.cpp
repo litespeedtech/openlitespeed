@@ -107,6 +107,16 @@ HttpSession::~HttpSession()
 #endif
 }
 
+const char *HttpSession::getPeerAddrString() const
+{    return m_pClientInfo->getAddrString();  }
+
+int HttpSession::getPeerAddrStrLen() const
+{   return m_pClientInfo->getAddrStrLen();   }
+
+const struct sockaddr *HttpSession::getPeerAddr() const
+{   return m_pClientInfo->getAddr(); }
+
+
 
 int HttpSession::onInitConnected()
 {
@@ -114,7 +124,10 @@ int HttpSession::onInitConnected()
     m_lReqTime = DateTime::s_curTime;
     m_iReqTimeUs = DateTime::s_curTimeUs;
     if (m_pNtwkIOLink)
+    {
         setVHostMap(m_pNtwkIOLink->getVHostMap());
+        setClientInfo(m_pNtwkIOLink->getClientInfo());
+    }
 
     m_iFlag = 0;
 
@@ -384,6 +397,8 @@ void HttpSession::nextRequest()
             ls_snprintf(getStream()->getIdBuf().buf() +
                         getStream()->getIdBuf().len(), 10, "-%hu", m_iReqServed);
         }
+        setClientInfo(m_pNtwkIOLink->getClientInfo());
+        
         m_processState = HSPS_READ_REQ_HEADER;
         if (m_request.pendingHeaderDataLen())
         {
@@ -833,14 +848,16 @@ void HttpSession::processPending(int ret)
 }
 
 
-int HttpSession::updateClientInfoFromProxyHeader(const char *pProxyHeader)
+int HttpSession::updateClientInfoFromProxyHeader(const char *pHeaderName, 
+                                                 const char *pProxyHeader, 
+                                                 int headerLen)
 {
     char achIP[256];
     char achAddr[128];
     struct sockaddr *pAddr;
     void *pIP;
-    int len = m_request.getHeaderLen(HttpHeader::H_X_FORWARDED_FOR);
-    char *p = (char *)memchr(pProxyHeader, ',', len);
+    int len = headerLen;
+    char *p = (char *)memchr(pProxyHeader, ',', headerLen);
     if (p)
         len = p - pProxyHeader;
     if ((len <= 0) || (len > 255))
@@ -868,6 +885,9 @@ int HttpSession::updateClientInfoFromProxyHeader(const char *pProxyHeader)
         return 0;
 
     ClientInfo *pInfo = ClientCache::getClientCache()->getClientInfo(pAddr);
+    LS_DBG_L(getLogSession(),
+             "update REMOTE_ADDR based on %s header to %s",
+             pHeaderName, achIP);
     if (pInfo)
     {
         if (pInfo->checkAccess())
@@ -879,7 +899,15 @@ int HttpSession::updateClientInfoFromProxyHeader(const char *pProxyHeader)
     addEnv("PROXY_REMOTE_ADDR", 17,
            getPeerAddrString(), getPeerAddrStrLen());
 
-    m_pNtwkIOLink->changeClientInfo(pInfo);
+    if (pInfo == m_pClientInfo)
+        return 0;
+    //NOTE: turn of connection account for now, it does not work well for
+    //  changing client info based on x-forwarded-for header
+    //  causes double dec at ntwkiolink level, no dec at session level
+    //m_pClientInfo->decConn();
+    //pInfo->incConn();
+
+    m_pClientInfo = pInfo;
     return 0;
 }
 
@@ -973,11 +1001,24 @@ int HttpSession::processNewReqInit()
         || ((httpServConf.getUseProxyHeader() == 2)
             && (getClientInfo()->getAccess() == AC_TRUST)))
     {
-        const char *pProxyHeader = m_request.getHeader(
-                                       HttpHeader::H_X_FORWARDED_FOR);
+        const char *pName;
+        const char *pProxyHeader;
+        int len;
+        if ((httpServConf.getUseProxyHeader() == 2) && m_request.isCfIpSet())
+        {
+            pName = "CF-Connecting-IP";
+            pProxyHeader = m_request.getCfIpHeader( len );
+        }
+        else
+        {
+            pName = "X-Forwarded-For";
+            pProxyHeader = m_request.getHeader(
+                                        HttpHeader::H_X_FORWARDED_FOR);
+            len = m_request.getHeaderLen(HttpHeader::H_X_FORWARDED_FOR);
+        }
         if (*pProxyHeader)
         {
-            ret = updateClientInfoFromProxyHeader(pProxyHeader);
+            ret = updateClientInfoFromProxyHeader(pName, pProxyHeader, len);
             if (ret)
                 return ret;
         }
@@ -1019,7 +1060,7 @@ int HttpSession::processNewReqInit()
     }
 
     if ((m_pNtwkIOLink->isThrottle())
-        && (m_pNtwkIOLink->getClientInfo()->getAccess() != AC_TRUST))
+        && (getClientInfo()->getAccess() != AC_TRUST))
         m_pNtwkIOLink->getThrottleCtrl()->adjustLimits(
             pVHost->getThrottleLimits());
 
@@ -1039,7 +1080,7 @@ int HttpSession::processNewReqInit()
             LS_DBG_L(getLogSession(), "Nearing connection count soft limit,"
                      " turn keep-alive off.");
         }
-        else if (m_pNtwkIOLink->getClientInfo()->getOverLimitTime())
+        else if (getClientInfo()->getOverLimitTime())
         {
             m_request.keepAlive(false);
             LS_DBG_L(getLogSession(),
@@ -1922,11 +1963,11 @@ int HttpSession::onWriteEx()
     switch (getState())
     {
     case HSS_THROTTLING:
-        if (m_pNtwkIOLink->getClientInfo()->getThrottleCtrl().allowProcess(
+        if (getClientInfo()->getThrottleCtrl().allowProcess(
                 m_pHandler->getType()))
         {
             setState(HSS_PROCESSING);
-            m_pNtwkIOLink->getClientInfo()->getThrottleCtrl().incReqProcessed(
+            getClientInfo()->getThrottleCtrl().incReqProcessed(
                 m_pHandler->getType());
             ret = m_pHandler->process(this, m_request.getHttpHandler());
             if ((ret) && (getStream()->getState() < HIOS_SHUTDOWN))
@@ -2258,7 +2299,7 @@ int HttpSession::detectKeepAliveTimeout(int delta)
             c = 1;
 
         }
-        else if ((int)m_pNtwkIOLink->getClientInfo()->getConns() >
+        else if ((int)getClientInfo()->getConns() >
                  (ClientInfo::getPerClientSoftLimit() >> 1))
         {
             LS_DBG_M(getLogSession(), "Number of connections is over the soft "

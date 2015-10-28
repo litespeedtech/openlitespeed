@@ -17,7 +17,7 @@
 *****************************************************************************/
 #ifdef RUN_TEST
 
-#include <shm/lsshmlruhash.h>
+#include <shm/lsshmhash.h>
 
 #include <stdio.h>
 #include <string.h>
@@ -95,7 +95,7 @@ static void doit(LsShm *pShm)
         return;
     CHECK((pHash = pGPool->getNamedHash(
                        g_pHashName, 0, LsShmHash::hashXXH32, memcmp,
-                       LSSHM_LRU_MODE1)) != NULL);
+                       LSSHM_LRU)) != NULL);
     if (pHash == NULL)
         return;
     ls_str_set(&parms.key, (char *)key0, sizeof(key0) - 1);

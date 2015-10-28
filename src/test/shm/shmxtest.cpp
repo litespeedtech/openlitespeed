@@ -82,9 +82,7 @@ TEST(shmPerProcess_test)
         perror(achLockFileName);
     if (pShm == NULL)
         return;
-#ifdef notdef
     CHECK(pShm->recoverOrphanShm() == 0);
-#endif
 
     CHECK((pGPool = pShm->getGlobalPool()) != NULL);
     if (pGPool == NULL)
@@ -190,9 +188,7 @@ TEST(shmPerProcess_test)
 
     CHECK(pShm->findReg(g_pPool1Name) != NULL);
     CHECK((off1 = pPool1->alloc2(SZ_TESTBCKT, remap)) != 0);
-#ifdef notdef
     CHECK(pShm->recoverOrphanShm() == 0);
-#endif
     pPool1->destroy();
     CHECK(pShm->findReg(g_pPool1Name) == NULL);
     pPool1->release2(off1, SZ_TESTBCKT);
@@ -200,9 +196,7 @@ TEST(shmPerProcess_test)
     pPool2->close();
     CHECK(pShm->findReg(g_pPool2Name) == NULL);
     CHECK(pGPool->alloc2(SZ_TESTBCKT, remap) == off1);
-#ifdef notdef
     CHECK(pShm->recoverOrphanShm() == 0);
-#endif
 
     // shm statistics
     int cnt;
