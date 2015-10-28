@@ -118,6 +118,8 @@ class LogFilter
 
 	function SetRange($from, $size)
 	{
+        if ($from < 0)
+            $from = 0;
 		$this->_frominput = $from;
 		$this->_blksize = $size;
 		$this->_output = '';
