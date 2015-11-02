@@ -118,8 +118,10 @@ bool HttpLog::isDebugEnabled(Logger *pLogger, int level)
 void HttpLog::setDebugLevel(int level)
 {
     s_debugLevel = level;
-    if (level > 0)
+    if (level >= 0)
     {
+        if (level == 0)//If 0, need to update to below DEBUG
+            level = -1;
         Level::setDefaultLevel(Level::DEBUG + level * 10);
         if (logger()->isEnabled(Level::DEBUG))
             logger()->setLevel(Level::DEBUG + level * 10);
