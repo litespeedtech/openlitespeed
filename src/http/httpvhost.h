@@ -77,7 +77,7 @@ class ModUserdir;
 class RewriteMapList;
 class RLimits;
 class SSITagConfig;
-class SSLContext;
+class SslContext;
 class UserDir;
 class XmlNodeList;
 
@@ -133,7 +133,7 @@ private:
     AutoStr2            m_sChroot;
     RewriteRuleList     m_rewriteRules;
     RewriteMapList     *m_pRewriteMaps;
-    SSLContext         *m_pSSLCtx;
+    SslContext         *m_pSSLCtx;
     SSITagConfig       *m_pSSITagConfig;
     AutoStr2            m_sSpdyAdHeader;
     ReqParserParam      m_ReqParserParam;
@@ -343,9 +343,9 @@ public:
 
     SSITagConfig *getSSITagConfig() const
     {   return m_pSSITagConfig;     }
-    void setSSLContext(SSLContext *pCtx);
+    void setSslContext(SslContext *pCtx);
 
-    SSLContext *getSSLContext() const
+    SslContext *getSslContext() const
     {   return m_pSSLCtx;           }
 
     HTAuth *configAuthRealm(HttpContext *pContext,

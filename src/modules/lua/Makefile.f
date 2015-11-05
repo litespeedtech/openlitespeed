@@ -1,6 +1,7 @@
 CC=g++
 LFSFLAGS= $(shell getconf LFS_CFLAGS)
-CFLAGS= -fPIC -g  -Wall -c -D_REENTRANT  -I../../../include/ -I./ -I../ -I../../  $(LFSFLAGS)
+CFLAGS= -fPIC -g  -Wall -c -D_REENTRANT  -I../../../include/ -I./ -I../ -I../../  -I/usr/local/include/luajit-2.0/  $(LFSFLAGS)
+
 
 OS := $(shell uname)
 ifeq ($(OS), Darwin)
@@ -9,8 +10,8 @@ else
         LDFLAGS= -fPIC -g -Wall $(LFSFLAGS) -shared
 endif
 
-SOURCES =lsluascript.cpp lsluaengine.cpp edluastream.cpp lsluaapi.cpp ls_lua_util.c \
-    lsluasession.cpp lsluaheader.cpp lsluashared.cpp modlua.cpp
+SOURCES =lsluaengine.cpp edluastream.cpp lsluaapi.cpp \
+    lsluasession.cpp lsluaheader.cpp lsluashared.cpp lsluaregex.cpp modlua.cpp
 
 $(shell rm *.o)
 

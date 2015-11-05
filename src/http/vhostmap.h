@@ -29,7 +29,7 @@
 class HttpVHost;
 class HttpVHostMap;
 class WildMatch;
-class SSLContext;
+class SslContext;
 
 class VHostMap : private HashStringMap< HttpVHost * >, public RefCounter
 {
@@ -37,7 +37,7 @@ class VHostMap : private HashStringMap< HttpVHost * >, public RefCounter
     HttpVHost        *m_pCatchAll;
     HttpVHost        *m_pDedicated;
     WildMatchList    *m_pWildMatches;
-    SSLContext       *m_pSSLContext;
+    SslContext       *m_pSslContext;
     AutoStr2          m_sAddr;
     int               m_port;
     AutoStr2          m_sPort;
@@ -95,8 +95,8 @@ public:
     void updateMapping(HttpVHostMap &vhosts);
     int writeStatusReport(int fd);
 
-    SSLContext *getSSLContext() const      {   return m_pSSLContext;   }
-    void setSSLContext(SSLContext *p);
+    SslContext *getSslContext() const      {   return m_pSslContext;   }
+    void setSslContext(SslContext *p);
 
     int  isNamedVH() const              {   return m_iNamedVH;    }
     void setNamedVH(int admin)        {   m_iNamedVH = admin;   }
@@ -128,6 +128,6 @@ public:
     int hasSSL();
 
 };
-extern SSLContext *VHostMapFindSSLContext(void *arg, const char *pName);
+extern SslContext *VHostMapFindSslContext(void *arg, const char *pName);
 
 #endif

@@ -17,8 +17,8 @@
 *****************************************************************************/
 #include <log4cxx/fileappender.h>
 #include <util/gfactory.h>
-#include <lsr/ls_fileio.h>
 
+#include <errno.h>
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <time.h>
@@ -53,7 +53,7 @@ int FileAppender::reopenExist()
 {
     const char *pName = getName();
     struct stat st;
-    if (ls_fio_stat(pName, &st) == -1)
+    if (stat(pName, &st) == -1)
         return 0;
     if (m_ino != st.st_ino)
     {

@@ -70,7 +70,7 @@ VHostMap::VHostMap()
     : m_pCatchAll(NULL)
     , m_pDedicated(NULL)
     , m_pWildMatches(NULL)
-    , m_pSSLContext(NULL)
+    , m_pSslContext(NULL)
     , m_iNamedVH(0)
     , m_iStripWWW(1)
 {}
@@ -79,8 +79,8 @@ VHostMap::VHostMap()
 VHostMap::~VHostMap()
 {
 
-    if (m_pSSLContext)
-        delete m_pSSLContext;
+    if (m_pSslContext)
+        delete m_pSslContext;
     clear();
 
 }
@@ -441,13 +441,13 @@ HttpVHost *VHostMap::exactMatchVHost(const char *pHost) const
 }
 
 
-void VHostMap::setSSLContext(SSLContext *pContext)
+void VHostMap::setSslContext(SslContext *pContext)
 {
-    if (pContext == m_pSSLContext)
+    if (pContext == m_pSslContext)
         return;
-    if (m_pSSLContext)
-        delete m_pSSLContext;
-    m_pSSLContext = pContext;
+    if (m_pSslContext)
+        delete m_pSslContext;
+    m_pSslContext = pContext;
 }
 
 
@@ -674,14 +674,14 @@ int SubIpMap::hasSSL()
     IpMap::iterator iter = m_map.begin();
     for (; iter != m_map.end(); iter = m_map.next(iter))
     {
-        if (iter.second()->getSSLContext())
+        if (iter.second()->getSslContext())
             return 1;
     }
     return 0;
 }
 
 
-SSLContext *VHostMapFindSSLContext(void *arg, const char *pName)
+SslContext *VHostMapFindSslContext(void *arg, const char *pName)
 {
     VHostMap *pMap = (VHostMap *)arg;
     HttpVHost *pVHost = pMap->getDedicated();
@@ -701,8 +701,8 @@ SSLContext *VHostMapFindSSLContext(void *arg, const char *pName)
         }
     }
     if (pVHost)
-        return pVHost->getSSLContext();
-    return pMap->getSSLContext();
+        return pVHost->getSslContext();
+    return pMap->getSslContext();
 
 }
 

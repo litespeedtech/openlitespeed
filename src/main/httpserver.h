@@ -44,7 +44,7 @@ class FcgiApp;
 class ExtWorker;
 class StringList;
 class ScriptHandlerMap;
-class SSLContext;
+class SslContext;
 class HttpConfigLoader;
 class VHostMap;
 class XmlNode;

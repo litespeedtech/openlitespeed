@@ -30,7 +30,7 @@ class SslOcspStapling;
 class XmlNode;
 class ConfigCtx;
 
-class SSLContext
+class SslContext
 {
 private:
     SSL_CTX    *m_pCtx;
@@ -65,8 +65,8 @@ public:
         FILETYPE_ASN1
     };
 
-    explicit SSLContext(int method = SSL_ALL);
-    ~SSLContext();
+    explicit SslContext(int method = SSL_ALL);
+    ~SslContext();
     SSL_CTX *get() const    {   return m_pCtx;  }
     SSL *newSSL();
     int setKeyCertificateFile(const char *pKeyCertFile, int iType,
@@ -110,13 +110,13 @@ public:
     int getEnableSpdy() const   {   return m_iEnableSpdy;   }
     SslOcspStapling *getpStapling() {  return m_pStapling; }
     void setpStapling(SslOcspStapling *pSslOcspStapling) {  m_pStapling = pSslOcspStapling;}
-    SSLContext *setKeyCertCipher(const char *pCertFile, const char *pKeyFile,
+    SslContext *setKeyCertCipher(const char *pCertFile, const char *pKeyFile,
                 const char *pCAFile, const char *pCAPath, const char *pCiphers,
                 int certChain, int cv, int renegProtect);
-    SSLContext *config(const XmlNode *pNode);
+    SslContext *config(const XmlNode *pNode);
     int configStapling(const XmlNode *pNode,
                        const char *pCAFile, char *pachCert);
-    void configCRL(const XmlNode *pNode, SSLContext *pSSL);
+    void configCRL(const XmlNode *pNode, SslContext *pSSL);
     int  initECDH();
     int  initDH(const char *pFile);
     static int setupIdContext(SSL_CTX *pCtx, const void *pDigest,
@@ -125,6 +125,6 @@ public:
     int  enableSessionTickets();
     void disableSessionTickets();
 
-    LS_NO_COPY_ASSIGN(SSLContext);
+    LS_NO_COPY_ASSIGN(SslContext);
 };
 #endif

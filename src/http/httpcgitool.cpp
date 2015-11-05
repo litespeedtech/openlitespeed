@@ -538,7 +538,7 @@ int HttpCgiTool::buildCommonEnv(IEnv *pEnv, HttpSession *pSession)
 
     if (pSession->isSSL())
     {
-        SSLConnection *pSSL = pSession->getSSL();
+        SslConnection *pSSL = pSession->getSSL();
         pEnv->add("HTTPS", 5, "on",  2);
         const char *pVersion = pSSL->getVersion();
         n = strlen(pVersion);
@@ -547,11 +547,11 @@ int HttpCgiTool::buildCommonEnv(IEnv *pEnv, HttpSession *pSession)
         SSL_SESSION *pSession = pSSL->getSession();
         if (pSession)
         {
-            int idLen = SSLConnection::getSessionIdLen(pSession);
+            int idLen = SslConnection::getSessionIdLen(pSession);
             n = idLen * 2;
             assert(n < (int)sizeof(buf));
             StringTool::hexEncode(
-                (char *)SSLConnection::getSessionId(pSession),
+                (char *)SslConnection::getSessionId(pSession),
                 idLen, buf);
             pEnv->add("SSL_SESSION_ID", 14, buf, n);
             ++count;
@@ -564,7 +564,7 @@ int HttpCgiTool::buildCommonEnv(IEnv *pEnv, HttpSession *pSession)
             n = strlen(pName);
             pEnv->add("SSL_CIPHER", 10, pName, n);
             int algkeysize;
-            int keysize = SSLConnection::getCipherBits(pCipher, &algkeysize);
+            int keysize = SslConnection::getCipherBits(pCipher, &algkeysize);
             n = ls_snprintf(buf, 20, "%d", keysize);
             pEnv->add("SSL_CIPHER_USEKEYSIZE", 21, buf, n);
             n = ls_snprintf(buf, 20, "%d", algkeysize);
@@ -582,7 +582,7 @@ int HttpCgiTool::buildCommonEnv(IEnv *pEnv, HttpSession *pSession)
                 if (pClientCert)
                 {
                     //IMPROVE: too many deep copy here.
-                    //n = SSLCert::PEMWriteCert( pClientCert, achBuf, 4096 );
+                    //n = SslCert::PEMWriteCert( pClientCert, achBuf, 4096 );
                     //if ((n>0)&&( n <= 4096 ))
                     //{
                     //    pEnv->add( "SSL_CLIENT_CERT", 15, achBuf, n );
@@ -604,7 +604,7 @@ int HttpCgiTool::buildCommonEnv(IEnv *pEnv, HttpSession *pSession)
                     X509_NAME_oneline(X509_get_issuer_name(pClientCert), achBuf, 4096);
                     pEnv->add("SSL_CLIENT_I_DN", 15, achBuf, strlen(achBuf));
                     ++count;
-                    if (SSLConnection::isClientVerifyOptional(i))
+                    if (SslConnection::isClientVerifyOptional(i))
                     {
                         strcpy(achBuf, "GENEROUS");
                         n = 8;

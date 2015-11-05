@@ -19,7 +19,7 @@
 
 #include <openssl/ssl.h>
 
-SSLCert::SSLCert()
+SslCert::SslCert()
     : m_cert(NULL)
     , m_pSubjectName(NULL)
     , m_pIssuer(NULL)
@@ -27,20 +27,20 @@ SSLCert::SSLCert()
 }
 
 
-SSLCert::SSLCert(X509 *pCert)
+SslCert::SslCert(X509 *pCert)
     : m_cert(pCert)
     , m_pSubjectName(NULL)
     , m_pIssuer(NULL)
 {}
 
 
-SSLCert::~SSLCert()
+SslCert::~SslCert()
 {
     release();
 }
 
 
-void SSLCert::release()
+void SslCert::release()
 {
     if (m_cert)
     {
@@ -63,14 +63,14 @@ void SSLCert::release()
 }
 
 
-void SSLCert::operator=(X509 *pCert)
+void SslCert::operator=(X509 *pCert)
 {
     release();
     m_cert = pCert;
 }
 
 
-const char *SSLCert::getSubjectName()
+const char *SslCert::getSubjectName()
 {
     if (!m_pSubjectName)
     {
@@ -82,7 +82,7 @@ const char *SSLCert::getSubjectName()
 }
 
 
-const char *SSLCert::getIssuer()
+const char *SslCert::getIssuer()
 {
     if (!m_pIssuer)
     {
@@ -94,7 +94,7 @@ const char *SSLCert::getIssuer()
 }
 
 
-int SSLCert::PEMWriteCert(X509 *pCert, char *pBuf, int len)
+int SslCert::PEMWriteCert(X509 *pCert, char *pBuf, int len)
 {
     int n;
     BIO *bio;

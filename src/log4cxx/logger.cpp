@@ -159,38 +159,25 @@ void Logger::lograw(const char *pBuf, int len)
 void Logger::s_vlog(int level, LogSession *pLogSession,
                     const char *format, va_list args, int no_linefeed)
 {
-    log4cxx::Logger *l = NULL;
-    const char *pId = NULL;
-    if (pLogSession != NULL)
-    {
-        l = pLogSession->getLogger();
-        pId = pLogSession->getLogId();
-    }
-
-    if (l == NULL)
-        l = log4cxx::Logger::getDefault();
-
-    l->vlog(level, pId, format, args, no_linefeed);
+    log4cxx::Logger *l = (pLogSession && pLogSession->getLogger())
+                         ? pLogSession->getLogger()
+                         : log4cxx::Logger::getDefault();
+    l->vlog(level, pLogSession ? pLogSession->getLogId() : NULL,
+            format, args, no_linefeed);
 }
 
 
 void Logger::s_log(int level, LogSession *pLogSession,
                    const char *format, ...)
 {
-    log4cxx::Logger *l = NULL;
-    const char *pId = NULL;
-    if (pLogSession != NULL)
-    {
-        l = pLogSession->getLogger();
-        pId = pLogSession->getLogId();
-    }
-
-    if (l == NULL)
-        l = log4cxx::Logger::getDefault();
+    log4cxx::Logger *l = (pLogSession && pLogSession->getLogger())
+                         ? pLogSession->getLogger()
+                         : log4cxx::Logger::getDefault();
 
     va_list  va;
     va_start(va, format);
-    l->vlog(level, pId, format, va, 0);
+    l->vlog(level, pLogSession ? pLogSession->getLogId() : NULL, format, va,
+            0);
     va_end(va);
 }
 
@@ -222,20 +209,12 @@ void Logger::s_log(int level, log4cxx::Logger *l,
 void Logger::s_log(int level, log4cxx::ILog *pILog,
                    const char *format, ...)
 {
-    log4cxx::Logger *l = NULL;
-    const char *pId = NULL;
-    if (pILog != NULL)
-    {
-        l = pILog->getLogger();
-        pId = pILog->getLogId();
-    }
-
-    if (l == NULL)
-        l = log4cxx::Logger::getDefault();
-
+    log4cxx::Logger *l = (pILog && pILog->getLogger())
+                         ? pILog->getLogger()
+                         : log4cxx::Logger::getDefault();
     va_list  va;
     va_start(va, format);
-    l->vlog(level, pId, format, va, 0);
+    l->vlog(level, pILog ? pILog->getLogId() : NULL, format, va, 0);
     va_end(va);
 
 }

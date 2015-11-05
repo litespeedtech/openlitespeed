@@ -32,11 +32,11 @@
 #include <unistd.h>
 
 
-int32_t SSLConnection::s_iConnIdx = -1;
+int32_t SslConnection::s_iConnIdx = -1;
 
 //static const char * s_pErrInvldSSL = "Invalid Parameter, SSL* ssl is null\n";
 
-SSLConnection::SSLConnection()
+SslConnection::SslConnection()
     : m_ssl(NULL)
     , m_iStatus(DISCONNECTED)
     , m_iWant(0)
@@ -47,7 +47,7 @@ SSLConnection::SSLConnection()
 }
 
 
-SSLConnection::SSLConnection(SSL *ssl)
+SslConnection::SslConnection(SSL *ssl)
     : m_ssl(ssl)
     , m_iStatus(DISCONNECTED)
     , m_iWant(0)
@@ -59,7 +59,7 @@ SSLConnection::SSLConnection(SSL *ssl)
 }
 
 
-SSLConnection::SSLConnection(SSL *ssl, int fd)
+SslConnection::SslConnection(SSL *ssl, int fd)
     : m_ssl(ssl)
     , m_iStatus(DISCONNECTED)
     , m_iWant(0)
@@ -72,7 +72,7 @@ SSLConnection::SSLConnection(SSL *ssl, int fd)
 }
 
 
-SSLConnection::SSLConnection(SSL *ssl, int rfd, int wfd)
+SslConnection::SslConnection(SSL *ssl, int rfd, int wfd)
     : m_ssl(ssl)
     , m_iStatus(DISCONNECTED)
     , m_iWant(0)
@@ -86,14 +86,14 @@ SSLConnection::SSLConnection(SSL *ssl, int rfd, int wfd)
 }
 
 
-SSLConnection::~SSLConnection()
+SslConnection::~SslConnection()
 {
     if (m_ssl)
         release();
 }
 
 
-void SSLConnection::setSSL(SSL *ssl)
+void SslConnection::setSSL(SSL *ssl)
 {
     assert(!m_ssl);
     //m_iWant = 0;
@@ -102,7 +102,7 @@ void SSLConnection::setSSL(SSL *ssl)
     SSL_set_ex_data(ssl, s_iConnIdx, (void *)this);
 }
 
-void SSLConnection::release()
+void SslConnection::release()
 {
     assert(m_ssl);
     if (m_iStatus != DISCONNECTED)
@@ -116,7 +116,7 @@ void SSLConnection::release()
 }
 
 
-int SSLConnection::setfd(int fd)
+int SslConnection::setfd(int fd)
 {
     m_iWant = 0;
     int ret = SSL_set_fd(m_ssl, fd);
@@ -126,7 +126,7 @@ int SSLConnection::setfd(int fd)
 }
 
 
-int SSLConnection::setfd(int rfd, int wfd)
+int SslConnection::setfd(int rfd, int wfd)
 {
     m_iWant = 0;
     int ret = SSL_set_rfd(m_ssl, rfd);
@@ -138,7 +138,7 @@ int SSLConnection::setfd(int rfd, int wfd)
 }
 
 
-int SSLConnection::read(char *pBuf, int len)
+int SslConnection::read(char *pBuf, int len)
 {
     assert(m_ssl);
     m_iWant = 0;
@@ -153,7 +153,7 @@ int SSLConnection::read(char *pBuf, int len)
 }
 
 #define MAX_SSL_WRITE_SIZE 8192
-int SSLConnection::write(const char *pBuf, int len)
+int SslConnection::write(const char *pBuf, int len)
 {
     assert(m_ssl);
     m_iWant = 0;
@@ -189,7 +189,7 @@ int SSLConnection::write(const char *pBuf, int len)
 }
 
 
-int SSLConnection::writev(const struct iovec *vect, int count,
+int SslConnection::writev(const struct iovec *vect, int count,
                           int *finished)
 {
     int ret = 0;
@@ -248,14 +248,14 @@ int SSLConnection::writev(const struct iovec *vect, int count,
 }
 
 
-int SSLConnection::wpending()
+int SslConnection::wpending()
 {
     BIO *pBIO = SSL_get_wbio(m_ssl);
     return BIO_wpending(pBIO);
 }
 
 
-int SSLConnection::flush()
+int SslConnection::flush()
 {
     BIO *pBIO = SSL_get_wbio(m_ssl);
     if (!pBIO)
@@ -279,7 +279,7 @@ int SSLConnection::flush()
 }
 
 
-int SSLConnection::shutdown(int bidirectional)
+int SslConnection::shutdown(int bidirectional)
 {
     assert(m_ssl);
     m_iFlag = 0;
@@ -309,14 +309,14 @@ int SSLConnection::shutdown(int bidirectional)
 }
 
 
-void SSLConnection::toAccept()
+void SslConnection::toAccept()
 {
     m_iStatus = ACCEPTING;
     m_iWant = READ;
 }
 
 
-int SSLConnection::accept()
+int SslConnection::accept()
 {
     assert(m_ssl);
     m_iWant = 0;
@@ -332,7 +332,7 @@ int SSLConnection::accept()
 }
 
 
-int SSLConnection::checkError(int ret)
+int SslConnection::checkError(int ret)
 {
     int err = SSL_get_error(m_ssl, ret);
     switch (err)
@@ -356,13 +356,13 @@ int SSLConnection::checkError(int ret)
         }
     default:
         errno = EIO;
-        //printf( "SSLError:%s\n", SSLError(err).what() );
+        //printf( "SslError:%s\n", SslError(err).what() );
     }
     return LS_FAIL;
 }
 
 
-int SSLConnection::connect()
+int SslConnection::connect()
 {
     assert(m_ssl);
     m_iStatus = CONNECTING;
@@ -378,7 +378,7 @@ int SSLConnection::connect()
 }
 
 
-int SSLConnection::tryagain()
+int SslConnection::tryagain()
 {
     assert(m_ssl);
     switch (m_iStatus)
@@ -394,36 +394,36 @@ int SSLConnection::tryagain()
 }
 
 
-X509 *SSLConnection::getPeerCertificate() const
+X509 *SslConnection::getPeerCertificate() const
 {   return SSL_get_peer_certificate(m_ssl);   }
 
 
-long SSLConnection::getVerifyResult() const
+long SslConnection::getVerifyResult() const
 {   return SSL_get_verify_result(m_ssl);      }
 
 
-int SSLConnection::getVerifyMode() const
+int SslConnection::getVerifyMode() const
 {   return SSL_get_verify_mode(m_ssl);        }
 
 
-const char *SSLConnection::getCipherName() const
+const char *SslConnection::getCipherName() const
 {   return SSL_get_cipher_name(m_ssl);    }
 
 
-const SSL_CIPHER *SSLConnection::getCurrentCipher() const
+const SSL_CIPHER *SslConnection::getCurrentCipher() const
 {   return SSL_get_current_cipher(m_ssl); }
 
 
-SSL_SESSION *SSLConnection::getSession() const
+SSL_SESSION *SslConnection::getSession() const
 {   return SSL_get_session(m_ssl);        }
 
 
-const char *SSLConnection::getVersion() const
+const char *SslConnection::getVersion() const
 {   return SSL_get_version(m_ssl);        }
 
 
 static const char NPN_SPDY_PREFIX[] = { 's', 'p', 'd', 'y', '/' };
-int SSLConnection::getSpdyVersion()
+int SslConnection::getSpdyVersion()
 {
     int v = 0;
 
@@ -457,44 +457,44 @@ int SSLConnection::getSpdyVersion()
 }
 
 
-void SSLConnection::initConnIdx()
+void SslConnection::initConnIdx()
 {
     if ( s_iConnIdx < 0 )
         s_iConnIdx = SSL_get_ex_new_index(0, NULL, NULL, NULL, NULL);
 }
 
 
-int SSLConnection::getSessionIdLen(SSL_SESSION *s)
+int SslConnection::getSessionIdLen(SSL_SESSION *s)
 {   return s->session_id_length;     }
 
 
-const unsigned char *SSLConnection::getSessionId(SSL_SESSION *s)
+const unsigned char *SslConnection::getSessionId(SSL_SESSION *s)
 {   return s->session_id;           }
 
 
-int SSLConnection::getCipherBits(const SSL_CIPHER *pCipher,
+int SslConnection::getCipherBits(const SSL_CIPHER *pCipher,
                                  int *algkeysize)
 {
     return SSL_CIPHER_get_bits((SSL_CIPHER *)pCipher, algkeysize);
 }
 
 
-int SSLConnection::isClientVerifyOptional(int i)
+int SslConnection::isClientVerifyOptional(int i)
 {   return i == SSL_VERIFY_PEER;    }
 
 
-int SSLConnection::isVerifyOk() const
+int SslConnection::isVerifyOk() const
 {   return SSL_get_verify_result(m_ssl) == X509_V_OK;     }
 
 
-int SSLConnection::buildVerifyErrorString(char *pBuf, int len) const
+int SslConnection::buildVerifyErrorString(char *pBuf, int len) const
 {
     return snprintf(pBuf, len, "FAILED: %s", X509_verify_cert_error_string(
                         SSL_get_verify_result(m_ssl)));
 }
 
 
-int SSLConnection::setTlsExtHostName(const char *pName)
+int SslConnection::setTlsExtHostName(const char *pName)
 {
     if (pName)
         return SSL_set_tlsext_host_name(m_ssl, pName);

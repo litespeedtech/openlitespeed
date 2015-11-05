@@ -825,7 +825,7 @@ int RequestVars::getReqVar2(HttpSession *pSession, int type, char *&pValue,
         if (!pSession->isSSL())
             return 0;
 
-        SSLConnection *pSSL = pSession->getSSL();
+        SslConnection *pSSL = pSession->getSSL();
         if (type == LSI_VAR_SSL_VERSION)
         {
             pValue = (char *)pSSL->getVersion();
@@ -837,11 +837,11 @@ int RequestVars::getReqVar2(HttpSession *pSession, int type, char *&pValue,
             SSL_SESSION *pSession = pSSL->getSession();
             if (pSession)
             {
-                int idLen = SSLConnection::getSessionIdLen(pSession);
+                int idLen = SslConnection::getSessionIdLen(pSession);
                 ret = idLen * 2;
                 if (ret > bufLen)
                     ret = bufLen;
-                StringTool::hexEncode((char *)SSLConnection::getSessionId(pSession),
+                StringTool::hexEncode((char *)SslConnection::getSessionId(pSession),
                                       ret / 2, pValue);
             }
             return ret;
@@ -850,7 +850,7 @@ int RequestVars::getReqVar2(HttpSession *pSession, int type, char *&pValue,
         {
             X509 *pClientCert = pSSL->getPeerCertificate();
             if (pClientCert)
-                ret = SSLCert::PEMWriteCert(pClientCert, pValue, bufLen);
+                ret = SslCert::PEMWriteCert(pClientCert, pValue, bufLen);
 
             return ret;
         }
@@ -867,7 +867,7 @@ int RequestVars::getReqVar2(HttpSession *pSession, int type, char *&pValue,
                 else
                 {
                     int algkeysize;
-                    int keysize = SSLConnection::getCipherBits(pCipher, &algkeysize);
+                    int keysize = SslConnection::getCipherBits(pCipher, &algkeysize);
                     if (type == LSI_VAR_SSL_CIPHER_USEKEYSIZE)
                         ret = ls_snprintf(pValue, 20, "%d", keysize);
                     else //LSI_VAR_SSL_CIPHER_ALGKEYSIZE

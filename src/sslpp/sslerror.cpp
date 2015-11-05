@@ -21,7 +21,7 @@
 
 #define MSG_MAX_LEN sizeof( m_achMsg ) - 1
 
-SSLError::SSLError() throw()
+SslError::SslError() throw()
 {
     char *p = m_achMsg;
     char *pEnd = &m_achMsg[MSG_MAX_LEN] - 1;
@@ -44,7 +44,7 @@ SSLError::SSLError() throw()
 }
 
 
-SSLError::SSLError(int err) throw()
+SslError::SslError(int err) throw()
 {
     m_achMsg[MSG_MAX_LEN] = 0;
     m_iError = err;
@@ -52,7 +52,7 @@ SSLError::SSLError(int err) throw()
 }
 
 
-SSLError::SSLError(const char *pErr) throw()
+SslError::SslError(const char *pErr) throw()
 {
     if (pErr)
     {
@@ -65,6 +65,6 @@ SSLError::SSLError(const char *pErr) throw()
 }
 
 
-SSLError::~SSLError() throw()
+SslError::~SslError() throw()
 {
 }

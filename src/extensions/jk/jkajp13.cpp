@@ -266,17 +266,17 @@ int JkAjp13::buildReq(HttpSession *pSession, char *&p, char *pEnd)
     }
     if (pSession->isSSL())
     {
-        SSLConnection *pSSL = pSession->getSSL();
+        SslConnection *pSSL = pSession->getSSL();
         SSL_SESSION *pSession = pSSL->getSession();
         if (pSession)
         {
-            int idLen = SSLConnection::getSessionIdLen(pSession);
+            int idLen = SslConnection::getSessionIdLen(pSession);
             n = idLen * 2;
             if (pEnd2 - p < n)
                 return LS_FAIL;
             *p++ = AJP_A_SSL_SESSION;
             appendInt(p, n);
-            ls_hexencode((char *)SSLConnection::getSessionId(pSession),
+            ls_hexencode((char *)SslConnection::getSessionId(pSession),
                          idLen, p);
             p += n;
             *p++ = 0;
@@ -292,7 +292,7 @@ int JkAjp13::buildReq(HttpSession *pSession, char *&p, char *pEnd)
             *p++ = AJP_A_SSL_CIPHER;
             appendString(p, pName, n);
             int algkeysize;
-            int keysize = SSLConnection::getCipherBits(pCipher, &algkeysize);
+            int keysize = SslConnection::getCipherBits(pCipher, &algkeysize);
             if (pEnd2 - p < 20)
                 return LS_FAIL;
             *p++ = AJP_A_SSL_KEY_SIZE;
@@ -304,7 +304,7 @@ int JkAjp13::buildReq(HttpSession *pSession, char *&p, char *pEnd)
         X509 *pClientCert = pSSL->getPeerCertificate();
         if (pClientCert)
         {
-            n = SSLCert::PEMWriteCert(pClientCert, p + 3, pEnd - p);
+            n = SslCert::PEMWriteCert(pClientCert, p + 3, pEnd - p);
             if ((n > 0) && (n < pEnd2 - p))
             {
                 *p++ = AJP_A_SSL_CERT;

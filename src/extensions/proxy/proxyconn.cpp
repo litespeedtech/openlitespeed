@@ -68,10 +68,10 @@ void ProxyConn::init(int fd, Multiplexer *pMplx)
 
 static SSL *getSslConn()
 {
-    static SSLContext *s_pProxyCtx = NULL;
+    static SslContext *s_pProxyCtx = NULL;
     if (!s_pProxyCtx)
     {
-        s_pProxyCtx = new SSLContext();
+        s_pProxyCtx = new SslContext();
         if (s_pProxyCtx)
         {
             s_pProxyCtx->setRenegProtect(0);
@@ -130,7 +130,7 @@ int ProxyConn::connectSSL()
         break;
     default:
         if (errno == EIO)
-            LS_DBG_L(this, "SSL_connect() failed!: %s ", SSLError().what());
+            LS_DBG_L(this, "SSL_connect() failed!: %s ", SslError().what());
         break;
     }
 

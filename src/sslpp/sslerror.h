@@ -22,20 +22,20 @@
 
 #include <exception>
 
-class SSLError : public std::exception
+class SslError : public std::exception
 {
     int  m_iError;
     char m_achMsg[4096];
 public:
-    SSLError() throw();
-    SSLError(int err) throw();
-    SSLError(const char *pErr) throw();
-    ~SSLError() throw();
+    SslError() throw();
+    SslError(int err) throw();
+    SslError(const char *pErr) throw();
+    ~SslError() throw();
     const char *what() const throw()
     {   return m_achMsg;  }
 //     int get() const     {   return m_iError;    }
 
-    LS_NO_COPY_ASSIGN(SSLError);
+    LS_NO_COPY_ASSIGN(SslError);
 };
 
 #endif

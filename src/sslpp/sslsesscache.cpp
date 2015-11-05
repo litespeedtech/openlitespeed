@@ -148,7 +148,7 @@ static SSL_SESSION *getSessionCb(SSL *pSSL, unsigned char *id, int len, int *ref
         if (pSess)
         {
             printId("Create Session from cache succeed", id, len);
-            SSLConnection *pConn = (SSLConnection *)SSL_get_ex_data(pSSL, SSLConnection::getConnIdx());
+            SslConnection *pConn = (SslConnection *)SSL_get_ex_data(pSSL, SslConnection::getConnIdx());
             pConn->setFreeSess();
         }
         else

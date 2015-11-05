@@ -1258,7 +1258,7 @@ HttpListener *HttpServerImpl::configListener(const XmlNode *pNode,
         ConfigCtx currentCtx(pName);
         const char *pAddr = ConfigCtx::getCurConfigCtx()->getTag(pNode,
                             "address");
-        SSLContext *pSSLCtx = NULL;
+        SslContext *pSSLCtx = NULL;
         if (pAddr == NULL)
             break;
 
@@ -1267,7 +1267,7 @@ HttpListener *HttpServerImpl::configListener(const XmlNode *pNode,
         if (secure)
         {
             ConfigCtx currentCtx("ssl");
-            pSSLCtx = new SSLContext(SSLContext::SSL_ALL);
+            pSSLCtx = new SslContext(SslContext::SSL_ALL);
             if (!pSSLCtx->config(pNode))
             {
                 delete pSSLCtx;
@@ -1308,7 +1308,7 @@ HttpListener *HttpServerImpl::configListener(const XmlNode *pNode,
 
         if (pSSLCtx)
         {
-            pListener->getVHostMap()->setSSLContext(pSSLCtx);
+            pListener->getVHostMap()->setSslContext(pSSLCtx);
             if (pSSLCtx->initSNI(pListener->getVHostMap()) == -1)
             {
                 LS_WARN(&currentCtx,
@@ -1798,7 +1798,7 @@ int HttpServerImpl::configTuning(const XmlNode *pRoot)
     //connections
     setMaxConns(currentCtx.getLongValue(pNode, "maxConnections", 1, 1000000,
                                         2000));
-    setMaxSSLConns(currentCtx.getLongValue(pNode, "maxSSLConnections", 0,
+    setMaxSSLConns(currentCtx.getLongValue(pNode, "maxSslConnections", 0,
                                            1000000, 1000));
     HttpListener::setSockSendBufSize(
         currentCtx.getLongValue(pNode, "sndBufSize", 0, 256 * 1024, 0));
@@ -1855,12 +1855,12 @@ int HttpServerImpl::configTuning(const XmlNode *pRoot)
 
     const char *pValue = pNode->getChildValue("SSLCryptoDevice");
 
-    if (SSLEngine::init(pValue) == -1)
+    if (SslEngine::init(pValue) == -1)
     {
         LS_WARN(&currentCtx, "Failed to initialize SSL Accelerator Device: %s,"
                 " SSL hardware acceleration is disabled!", pValue);
     }
-    SSLContext::setUseStrongDH(currentCtx.getLongValue(pNode, "SSLStrongDhKey",
+    SslContext::setUseStrongDH(currentCtx.getLongValue(pNode, "SSLStrongDhKey",
                                                        0, 1, 1));
 
     // GZIP compression
@@ -1933,7 +1933,7 @@ int HttpServerImpl::configTuning(const XmlNode *pRoot)
     }
 
     if ( currentCtx.getLongValue(pNode, "sslEnableMultiCerts", 0, 1, 0) == 1 )
-        SSLContext::enableMultiCerts();
+        SslContext::enableMultiCerts();
 
     int iSslCacheSize;
     int32_t iSslCacheTimeout;
@@ -3123,8 +3123,8 @@ int HttpServerImpl::initSampleServer()
     if (addListener("*:3080") == 0)
     {
     }
-    SSLContext *pNewContext = new SSLContext(SSLContext::SSL_ALL);
-    SSLContext *pSSL = pNewContext->setKeyCertCipher(achBuf1, achBuf, NULL,
+    SslContext *pNewContext = new SslContext(SslContext::SSL_ALL);
+    SslContext *pSSL = pNewContext->setKeyCertCipher(achBuf1, achBuf, NULL,
                 NULL, "ALL:!ADH:!EXPORT56:RC4+RSA:+HIGH:+MEDIUM:+SSLv2:+EXP",
                 0, 0, 0);
     if (pSSL == NULL)

@@ -49,7 +49,7 @@ class ProxyConn : public ExtConn
     ChunkInputStream *m_pChunkIS;
 
     int         m_iSsl;
-    SSLConnection  m_ssl;
+    SslConnection  m_ssl;
 
     char        m_extraHeader[256];  //X-Forwarded-For
 

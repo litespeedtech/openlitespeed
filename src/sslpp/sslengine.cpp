@@ -21,17 +21,17 @@
 
 #include <string.h>
 
-SSLEngine::SSLEngine()
+SslEngine::SslEngine()
 {
 }
 
 
-SSLEngine::~SSLEngine()
+SslEngine::~SslEngine()
 {
 }
 
 
-int SSLEngine::init(const char *pID)
+int SslEngine::init(const char *pID)
 {
     /* Load all bundled ENGINEs into memory and make them visible */
     if (!pID)
@@ -61,7 +61,7 @@ int SSLEngine::init(const char *pID)
 }
 
 
-void SSLEngine::shutdown()
+void SslEngine::shutdown()
 {
     ENGINE_cleanup();
 }

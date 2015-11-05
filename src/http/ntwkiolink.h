@@ -37,7 +37,7 @@
 class Aiosfcb;
 class HttpListener;
 class VHostMap;
-class SSLContext;
+class SslContext;
 struct sockaddr;
 
 typedef int (*writev_fp)(LsiSession *pThis, const struct iovec *vector,
@@ -110,7 +110,7 @@ private:
     int                 m_tmToken;
     int                 m_iSslLastWrite;
     int                 m_iHeaderToSend;
-    SSLConnection       m_ssl;
+    SslConnection       m_ssl;
 
     class fp_list      *m_pFpList;
     IolinkSessionHooks  m_sessionHooks;
@@ -299,7 +299,7 @@ public:
         m_ssl.setfd(getfd());
     }
 
-    SSLConnection *getSSL()     {   return &m_ssl;  }
+    SslConnection *getSSL()     {   return &m_ssl;  }
     bool isSSL() const          {   return m_ssl.getSSL() != NULL;  }
 
     int shutdownSsl();
@@ -314,7 +314,7 @@ public:
     int switchToHttp2Handler(HioHandler *pSession);
 
     int setLink(HttpListener *pListener, int fd, ClientInfo *pInfo,
-                SSLContext  *pSSLContext);
+                SslContext  *pSslContext);
 
     const char *getPeerAddrString() const
     {   return m_pClientInfo->getAddrString();   }

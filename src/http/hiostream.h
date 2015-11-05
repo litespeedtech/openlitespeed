@@ -113,7 +113,7 @@ public:
     virtual uint16_t getEvents() const = 0;
     virtual void suspendEventNotify()  {};
     virtual void resumeEventNotify()   {};
-    //virtual SSLConnection * getSSL() = 0;
+    //virtual SslConnection * getSSL() = 0;
     virtual int isFromLocalAddr() const = 0;
     virtual NtwkIOLink *getNtwkIoLink() = 0;
 
