@@ -27,7 +27,7 @@
 #include <sys/types.h>
 
 class HttpVHost;
-class SSLContext;
+class SslContext;
 class VHostMap;
 class ClientInfo;
 class GSockAddr;

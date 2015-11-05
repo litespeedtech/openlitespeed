@@ -40,9 +40,9 @@
 #include <config.h>
 #include <limits.h>
 
-int     SSLContext::s_iEnableMultiCerts = 0;
+int     SslContext::s_iEnableMultiCerts = 0;
 static char         s_iUseStrongDH = 0;
-void SSLContext::setUseStrongDH(int use)
+void SslContext::setUseStrongDH(int use)
 {
     s_iUseStrongDH = use;
 }
@@ -204,19 +204,19 @@ static DH *getTmpDhParam(int size)
 }
 
 
-long SSLContext::getOptions()
+long SslContext::getOptions()
 {
     return SSL_CTX_get_options(m_pCtx);
 }
 
 
-long SSLContext::setOptions(long options)
+long SslContext::setOptions(long options)
 {
     return SSL_CTX_set_options(m_pCtx, options);
 }
 
 
-int SSLContext::seedRand(int len)
+int SslContext::seedRand(int len)
 {
     static int fd = open("/dev/urandom", O_RDONLY | O_NONBLOCK);
     char achBuf[2048];
@@ -272,7 +272,7 @@ int SSLContext::seedRand(int len)
 }
 
 
-void SSLContext::setProtocol(int method)
+void SslContext::setProtocol(int method)
 {
     if (method == m_iMethod)
         return;
@@ -283,7 +283,7 @@ void SSLContext::setProtocol(int method)
 }
 
 
-void SSLContext::updateProtocol(int method)
+void SslContext::updateProtocol(int method)
 {
     setOptions(SSL_OP_NO_SSLv2);
     if (!(method & SSL_v3))
@@ -301,7 +301,7 @@ void SSLContext::updateProtocol(int method)
 }
 
 
-int SSLContext::initDH(const char *pFile)
+int SslContext::initDH(const char *pFile)
 {
     DH *pDH = NULL;
     if (pFile)
@@ -329,7 +329,7 @@ int SSLContext::initDH(const char *pFile)
 }
 
 
-int SSLContext::initECDH()
+int SslContext::initECDH()
 {
 #if OPENSSL_VERSION_NUMBER >= 0x10001000L
 #ifndef OPENSSL_NO_ECDH
@@ -347,10 +347,10 @@ int SSLContext::initECDH()
     return 0;
 }
 
-static void SSLConnection_ssl_info_cb(const SSL *pSSL, int where, int ret)
+static void SslConnection_ssl_info_cb(const SSL *pSSL, int where, int ret)
 {
-    SSLConnection *pConnection = (SSLConnection *)SSL_get_ex_data(pSSL,
-                                                SSLConnection::getConnIdx());
+    SslConnection *pConnection = (SslConnection *)SSL_get_ex_data(pSSL,
+                                                SslConnection::getConnIdx());
     if ((where & SSL_CB_HANDSHAKE_START) && pConnection->getFlag() == 1)
     {
         close(SSL_get_fd(pSSL));
@@ -367,7 +367,7 @@ static void SSLConnection_ssl_info_cb(const SSL *pSSL, int where, int ret)
     }
 }
 
-int SSLContext::init(int iMethod)
+int SslContext::init(int iMethod)
 {
     if (m_pCtx != NULL)
         return 0;
@@ -398,7 +398,7 @@ int SSLContext::init(int iMethod)
         if (m_iRenegProtect)
         {
             setOptions(SSL_OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION);
-            SSL_CTX_set_info_callback(m_pCtx, SSLConnection_ssl_info_cb);
+            SSL_CTX_set_info_callback(m_pCtx, SslConnection_ssl_info_cb);
         }
 
         //initECDH();
@@ -412,7 +412,7 @@ int SSLContext::init(int iMethod)
 }
 
 
-SSLContext::SSLContext(int iMethod)
+SslContext::SslContext(int iMethod)
     : m_pCtx(NULL)
     , m_iMethod(iMethod)
     , m_iRenegProtect(1)
@@ -423,13 +423,13 @@ SSLContext::SSLContext(int iMethod)
 }
 
 
-SSLContext::~SSLContext()
+SslContext::~SslContext()
 {
     release();
 }
 
 
-void SSLContext::release()
+void SslContext::release()
 {
     if (m_pCtx != NULL)
     {
@@ -442,7 +442,7 @@ void SSLContext::release()
 }
 
 
-SSL *SSLContext::newSSL()
+SSL *SslContext::newSSL()
 {
     init(m_iMethod);
     seedRand(128);
@@ -454,9 +454,9 @@ static int translateType(int type)
 {
     switch (type)
     {
-    case SSLContext::FILETYPE_PEM:
+    case SslContext::FILETYPE_PEM:
         return SSL_FILETYPE_PEM;
-    case SSLContext::FILETYPE_ASN1:
+    case SslContext::FILETYPE_ASN1:
         return SSL_FILETYPE_ASN1;
     default:
         return -1;
@@ -475,26 +475,26 @@ static int isFileChanged(const char *pFile, const struct stat &stOld)
 }
 
 
-int SSLContext::isKeyFileChanged(const char *pKeyFile) const
+int SslContext::isKeyFileChanged(const char *pKeyFile) const
 {
     return isFileChanged(pKeyFile, m_stKey);
 }
 
 
-int SSLContext::isCertFileChanged(const char *pCertFile) const
+int SslContext::isCertFileChanged(const char *pCertFile) const
 {
     return isFileChanged(pCertFile, m_stCert);
 }
 
 
-int SSLContext::setKeyCertificateFile(const char *pFile, int iType,
+int SslContext::setKeyCertificateFile(const char *pFile, int iType,
                                       int chained)
 {
     return setKeyCertificateFile(pFile, iType, pFile, iType, chained);
 }
 
 
-int SSLContext::setKeyCertificateFile(const char *pKeyFile, int iKeyType,
+int SslContext::setKeyCertificateFile(const char *pKeyFile, int iKeyType,
                                       const char *pCertFile, int iCertType,
                                       int chained)
 {
@@ -508,7 +508,7 @@ int SSLContext::setKeyCertificateFile(const char *pKeyFile, int iKeyType,
 
 static const int max_certs = 4;
 static const int max_path_len = 512;
-int SSLContext::setMultiKeyCertFile(const char *pKeyFile, int iKeyType,
+int SslContext::setMultiKeyCertFile(const char *pKeyFile, int iKeyType,
                                     const char *pCertFile, int iCertType,
                                     int chained)
 {
@@ -623,7 +623,7 @@ static int loadCertFile(SSL_CTX *pCtx, const char *pFile, int type)
     {
         if ( X509_digest(cert, EVP_sha1(), digest, &digestlen) == 0)
             LS_DBG_L("Creating cert digest failed");
-        else if (SSLContext::setupIdContext(pCtx, digest, digestlen) != LS_OK)
+        else if (SslContext::setupIdContext(pCtx, digest, digestlen) != LS_OK)
             LS_DBG_L("Digest id context failed");
     }
     X509_free(cert);
@@ -631,7 +631,7 @@ static int loadCertFile(SSL_CTX *pCtx, const char *pFile, int type)
 }
 
 
-int SSLContext::setCertificateFile(const char *pFile, int type,
+int SslContext::setCertificateFile(const char *pFile, int type,
                                    int chained)
 {
     int ret;
@@ -653,7 +653,7 @@ int SSLContext::setCertificateFile(const char *pFile, int type,
 }
 
 
-int SSLContext::setCertificateChainFile(const char *pFile)
+int SslContext::setCertificateChainFile(const char *pFile)
 {
     BIO *bio;
     X509 *x509;
@@ -696,7 +696,7 @@ int SSLContext::setCertificateChainFile(const char *pFile)
 }
 
 
-int SSLContext::setCALocation(const char *pCAFile, const char *pCAPath,
+int SslContext::setCALocation(const char *pCAFile, const char *pCAPath,
                               int cv)
 {
     int ret;
@@ -730,7 +730,7 @@ int SSLContext::setCALocation(const char *pCAFile, const char *pCAPath,
 }
 
 
-int SSLContext::setPrivateKeyFile(const char *pFile, int type)
+int SslContext::setPrivateKeyFile(const char *pFile, int type)
 {
     char *pBegin,  buf[MAX_CERT_LENGTH];
     BIO *in;
@@ -759,7 +759,7 @@ int SSLContext::setPrivateKeyFile(const char *pFile, int type)
 }
 
 
-int SSLContext::checkPrivateKey()
+int SslContext::checkPrivateKey()
 {
     if (m_pCtx)
         return SSL_CTX_check_private_key(m_pCtx);
@@ -768,7 +768,7 @@ int SSLContext::checkPrivateKey()
 }
 
 
-int SSLContext::setCipherList(const char *pList)
+int SslContext::setCipherList(const char *pList)
 {
     if (!m_pCtx)
         return false;
@@ -843,7 +843,7 @@ SL_CTX_set_verify(ctx, nVerify,  ssl_callback_SSLVerify);
 */
 
 
-int SSLContext::initSSL()
+int SslContext::initSSL()
 {
     SSL_load_error_strings();
     SSL_library_init();
@@ -852,7 +852,7 @@ int SSLContext::initSSL()
     sk_SSL_COMP_zero(SSL_COMP_get_compression_methods());
 #endif
 
-    SSLConnection::initConnIdx();
+    SslConnection::initConnIdx();
 
     return seedRand(512);
 }
@@ -928,7 +928,7 @@ static RSA *load_key(const unsigned char *key, int keyLen, char *pass,
 }
 
 
-int  SSLContext::publickey_encrypt(const unsigned char *pPubKey,
+int  SslContext::publickey_encrypt(const unsigned char *pPubKey,
                                    int keylen,
                                    const char *content, int len, char *encrypted, int bufLen)
 {
@@ -950,7 +950,7 @@ int  SSLContext::publickey_encrypt(const unsigned char *pPubKey,
 }
 
 
-int  SSLContext::publickey_decrypt(const unsigned char *pPubKey,
+int  SslContext::publickey_decrypt(const unsigned char *pPubKey,
                                    int keylen,
                                    const char *encrypted, int len, char *decrypted, int bufLen)
 {
@@ -972,7 +972,7 @@ int  SSLContext::publickey_decrypt(const unsigned char *pPubKey,
 
 
 /*
-int  SSLContext::privatekey_encrypt( const char * pPrivateKeyFile, const char * content,
+int  SslContext::privatekey_encrypt( const char * pPrivateKeyFile, const char * content,
                     int len, char * encrypted, int bufLen )
 {
     int ret;
@@ -990,7 +990,7 @@ int  SSLContext::privatekey_encrypt( const char * pPrivateKeyFile, const char * 
     else
         return LS_FAIL;
 }
-int  SSLContext::privatekey_decrypt( const char * pPrivateKeyFile, const char * encrypted,
+int  SslContext::privatekey_decrypt( const char * pPrivateKeyFile, const char * encrypted,
                     int len, char * decrypted, int bufLen )
 {
     int ret;
@@ -1040,15 +1040,15 @@ int  SSLContext::privatekey_decrypt( const char * pPrivateKeyFile, const char * 
 */
 
 
-extern SSLContext *VHostMapFindSSLContext(void *arg, const char *pName);
-static int SSLConnection_ssl_servername_cb(SSL *pSSL, int *ad, void *arg)
+extern SslContext *VHostMapFindSslContext(void *arg, const char *pName);
+static int SslConnection_ssl_servername_cb(SSL *pSSL, int *ad, void *arg)
 {
     SSL_CTX *pOldCtx, *pNewCtx;
     const char *servername = SSL_get_servername(pSSL,
                              TLSEXT_NAMETYPE_host_name);
     if (!servername || !*servername)
         return SSL_TLSEXT_ERR_NOACK;
-    SSLContext *pCtx = VHostMapFindSSLContext(arg, servername);
+    SslContext *pCtx = VHostMapFindSslContext(arg, servername);
     if (!pCtx)
         return SSL_TLSEXT_ERR_NOACK;
     pOldCtx = SSL_get_SSL_CTX(pSSL);
@@ -1069,11 +1069,11 @@ static int SSLConnection_ssl_servername_cb(SSL *pSSL, int *ad, void *arg)
 }
 
 
-int SSLContext::initSNI(void *param)
+int SslContext::initSNI(void *param)
 {
 #ifdef SSL_TLSEXT_ERR_OK
     SSL_CTX_set_tlsext_servername_callback(m_pCtx,
-                                           SSLConnection_ssl_servername_cb);
+                                           SslConnection_ssl_servername_cb);
     SSL_CTX_set_tlsext_servername_arg(m_pCtx, param);
 
     return 0;
@@ -1084,9 +1084,9 @@ int SSLContext::initSNI(void *param)
 
 
 /*!
-    \fn SSLContext::setClientVerify( int mode, int depth)
+    \fn SslContext::setClientVerify( int mode, int depth)
  */
-void SSLContext::setClientVerify(int mode, int depth)
+void SslContext::setClientVerify(int mode, int depth)
 {
     int req;
     switch (mode)
@@ -1109,9 +1109,9 @@ void SSLContext::setClientVerify(int mode, int depth)
 
 
 /*!
-    \fn SSLContext::addCRL( const char * pCRLFile, const char * pCRLPath)
+    \fn SslContext::addCRL( const char * pCRLFile, const char * pCRLPath)
  */
-int SSLContext::addCRL(const char *pCRLFile, const char *pCRLPath)
+int SslContext::addCRL(const char *pCRLFile, const char *pCRLPath)
 {
     X509_STORE *store = SSL_CTX_get_cert_store(m_pCtx);
     X509_LOOKUP *lookup = X509_STORE_add_lookup(store, X509_LOOKUP_hash_dir());
@@ -1155,11 +1155,11 @@ static unsigned int NEXT_PROTO_STRING_LEN[8] =
 //static const char NEXT_PROTO_STRING[] = "\x06spdy/2\x08http/1.1\x08http/1.0";
 
 
-static int SSLConnection_ssl_npn_advertised_cb(SSL *pSSL,
+static int SslConnection_ssl_npn_advertised_cb(SSL *pSSL,
         const unsigned char **out,
         unsigned int *outlen, void *arg)
 {
-    SSLContext *pCtx = (SSLContext *)arg;
+    SslContext *pCtx = (SslContext *)arg;
     *out = (const unsigned char *)NEXT_PROTO_STRING[ pCtx->getEnableSpdy()];
     *outlen = NEXT_PROTO_STRING_LEN[ pCtx->getEnableSpdy() ];
     return SSL_TLSEXT_ERR_OK;
@@ -1170,7 +1170,7 @@ static int SSLConntext_alpn_select_cb(SSL *pSSL, const unsigned char **out,
                                       unsigned char *outlen, const unsigned char *in,
                                       unsigned int inlen, void *arg)
 {
-    SSLContext *pCtx = (SSLContext *)arg;
+    SslContext *pCtx = (SslContext *)arg;
     if (SSL_select_next_proto((unsigned char **) out, outlen,
                               (const unsigned char *)NEXT_PROTO_STRING[ pCtx->getEnableSpdy() ],
                               NEXT_PROTO_STRING_LEN[ pCtx->getEnableSpdy() ],
@@ -1181,7 +1181,7 @@ static int SSLConntext_alpn_select_cb(SSL *pSSL, const unsigned char **out,
 }
 #endif
 
-int SSLContext::enableSpdy(int level)
+int SslContext::enableSpdy(int level)
 {
     m_iEnableSpdy = (level & 7);
     if (m_iEnableSpdy == 0)
@@ -1191,7 +1191,7 @@ int SSLContext::enableSpdy(int level)
 #endif
 #ifdef TLSEXT_TYPE_next_proto_neg
     SSL_CTX_set_next_protos_advertised_cb(m_pCtx,
-                                          SSLConnection_ssl_npn_advertised_cb, this);
+                                          SslConnection_ssl_npn_advertised_cb, this);
 #else
 #error "Openssl version is too low (openssl 1.0.1 or higher is required)!!!"
 #endif
@@ -1199,7 +1199,7 @@ int SSLContext::enableSpdy(int level)
 }
 
 #else
-int SSLContext::enableSpdy(int level)
+int SslContext::enableSpdy(int level)
 {
     return LS_FAIL;
 }
@@ -1214,7 +1214,7 @@ static int sslCertificateStatus_cb(SSL *ssl, void *data)
 }
 
 
-SSLContext *SSLContext::setKeyCertCipher(const char *pCertFile,
+SslContext *SslContext::setKeyCertCipher(const char *pCertFile,
         const char *pKeyFile, const char *pCAFile, const char *pCAPath,
         const char *pCiphers, int certChain, int cv, int renegProtect)
 {
@@ -1225,19 +1225,19 @@ SSLContext *SSLContext::setKeyCertCipher(const char *pCertFile,
     setRenegProtect(renegProtect);
     if ( multiCertsEnabled())
     {
-        ret = setMultiKeyCertFile(pKeyFile, SSLContext::FILETYPE_PEM,
-                            pCertFile, SSLContext::FILETYPE_PEM, certChain);
+        ret = setMultiKeyCertFile(pKeyFile, SslContext::FILETYPE_PEM,
+                            pCertFile, SslContext::FILETYPE_PEM, certChain);
     }
     else
     {
-        ret = setKeyCertificateFile(pKeyFile, SSLContext::FILETYPE_PEM,
-                            pCertFile, SSLContext::FILETYPE_PEM, certChain);
+        ret = setKeyCertificateFile(pKeyFile, SslContext::FILETYPE_PEM,
+                            pCertFile, SslContext::FILETYPE_PEM, certChain);
     }
     if ( !ret )
     {
         LS_ERROR( "[SSL] Config SSL Context with Certificate File: %s"
                 " and Key File:%s get SSL error: %s",
-                pCertFile, pKeyFile, SSLError().what());
+                pCertFile, pKeyFile, SslError().what());
         return NULL;
     }
 
@@ -1247,7 +1247,7 @@ SSLContext *SSLContext::setKeyCertCipher(const char *pCertFile,
         LS_ERROR(ConfigCtx::getCurConfigCtx(),
                  "Failed to setup Certificate Authority "
                  "Certificate File: '%s', Path: '%s', SSL error: %s",
-                 pCAFile ? pCAFile : "", pCAPath ? pCAPath : "", SSLError().what());
+                 pCAFile ? pCAFile : "", pCAPath ? pCAPath : "", SslError().what());
         return NULL;
     }
     LS_DBG_L(ConfigCtx::getCurConfigCtx(), "set ciphers to:%s", pCiphers);
@@ -1256,7 +1256,7 @@ SSLContext *SSLContext::setKeyCertCipher(const char *pCertFile,
 }
 
 
-SSLContext *SSLContext::config(const XmlNode *pNode)
+SslContext *SslContext::config(const XmlNode *pNode)
 {
     char achCert[MAX_PATH_LEN];
     char achKey [MAX_PATH_LEN];
@@ -1270,7 +1270,7 @@ SSLContext *SSLContext::config(const XmlNode *pNode)
     const char *pCAFile;
 //    const char *pAddr;
 
-    SSLContext *pSSL;
+    SslContext *pSSL;
     int protocol;
     int certChain;
     int renegProt;
@@ -1453,7 +1453,7 @@ SSLContext *SSLContext::config(const XmlNode *pNode)
 }
 
 
-int SSLContext::configStapling(const XmlNode *pNode,
+int SslContext::configStapling(const XmlNode *pNode,
                                const char *pCAFile, char *pachCert)
 {
     SslOcspStapling *pSslOcspStapling = new SslOcspStapling;
@@ -1472,7 +1472,7 @@ int SSLContext::configStapling(const XmlNode *pNode,
 }
 
 
-void SSLContext::configCRL(const XmlNode *pNode, SSLContext *pSSL)
+void SslContext::configCRL(const XmlNode *pNode, SslContext *pSSL)
 {
     char achCrlFile[MAX_PATH_LEN];
     char achCrlPath[MAX_PATH_LEN];
@@ -1503,7 +1503,7 @@ void SSLContext::configCRL(const XmlNode *pNode, SSLContext *pSSL)
 }
 
 
-int SSLContext::setupIdContext(SSL_CTX *pCtx, const void *pDigest,
+int SslContext::setupIdContext(SSL_CTX *pCtx, const void *pDigest,
                                size_t iDigestLen)
 {
     EVP_MD_CTX md;
@@ -1541,7 +1541,7 @@ int SSLContext::setupIdContext(SSL_CTX *pCtx, const void *pDigest,
 }
 
 
-int  SSLContext::enableShmSessionCache()
+int  SslContext::enableShmSessionCache()
 {
     if (!SslSessCache::getInstance().isReady())
     {
@@ -1558,13 +1558,13 @@ int  SSLContext::enableShmSessionCache()
 }
 
 
-int SSLContext::enableSessionTickets()
+int SslContext::enableSessionTickets()
 {
     return SslTicket::getInstance().enableCtx(m_pCtx);
 }
 
 
-void SSLContext::disableSessionTickets()
+void SslContext::disableSessionTickets()
 {
     SslTicket::getInstance().disableCtx(m_pCtx);
 }

@@ -21,15 +21,15 @@
 #include <lsdef.h>
 
 
-class SSLEngine
+class SslEngine
 {
 public:
-    SSLEngine();
-    ~SSLEngine();
+    SslEngine();
+    ~SslEngine();
     static int init(const char *pID);
     static void shutdown();
 
-    LS_NO_COPY_ASSIGN(SSLEngine);
+    LS_NO_COPY_ASSIGN(SslEngine);
 };
 
 #endif

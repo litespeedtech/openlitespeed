@@ -22,6 +22,7 @@
 
 #include <stddef.h>
 #include <inttypes.h>
+#include <string.h>
 
 
 #define LS_OK       0
@@ -37,6 +38,8 @@
     private: \
     T(const T&);               \
     void operator=(const T&);
+
+#define LS_ZERO_FILL(x, y)     memset(&x, 0, (char *)(&y+1) - (char *)&x)  
 
 #define ls_inline           static inline
 #define ls_always_inline    static inline __attribute__((always_inline))

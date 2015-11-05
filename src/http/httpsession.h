@@ -293,7 +293,7 @@ public:
     NtwkIOLink *getNtwkIOLink() const      {   return m_pNtwkIOLink;   }
     //void setNtwkIOLink( NtwkIOLink * p )    {   m_pNtwkIOLink = p;      }
     //below are wrapper functions
-    SSLConnection *getSSL()     {   return m_pNtwkIOLink->getSSL();     }
+    SslConnection *getSSL()     {   return m_pNtwkIOLink->getSSL();     }
     bool isSSL() const          {   return m_pNtwkIOLink->isSSL();      }
     
     const char *getPeerAddrString() const;

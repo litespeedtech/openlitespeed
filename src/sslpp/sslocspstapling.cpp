@@ -406,10 +406,10 @@ int SslOcspStapling::certVerify(OCSP_RESPONSE *pResponse,
     }
     else
         Logger::getRootLogger()->error("OCSP_basic_verify() failed: %s\n",
-                                       SSLError().what());
+                                       SslError().what());
     if (iResult)
     {
-        setLastErrMsg("%s", SSLError().what());
+        setLastErrMsg("%s", SslError().what());
         ERR_clear_error();
         if (m_pHttpFetch)
             m_pHttpFetch->writeLog(s_ErrMsg.c_str());

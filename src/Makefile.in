@@ -117,19 +117,20 @@ am_openlitespeed_OBJECTS = prelinkedmods.$(OBJEXT) httpdtest.$(OBJEXT) \
 	resourcepool.$(OBJEXT) linkedqueue.$(OBJEXT) \
 	httputil.$(OBJEXT) radixtree.$(OBJEXT) profiletime.$(OBJEXT) \
 	partitioninfo.$(OBJEXT) nicdetect.$(OBJEXT) \
-	systeminfo.$(OBJEXT) ls_aho.$(OBJEXT) ls_base64.$(OBJEXT) \
-	ls_buf.$(OBJEXT) ls_confparser.$(OBJEXT) ls_crc64.$(OBJEXT) \
-	ls_dlinkq.$(OBJEXT) ls_fileio.$(OBJEXT) ls_hash.$(OBJEXT) \
-	ls_lfqueue.$(OBJEXT) ls_lfstack.$(OBJEXT) ls_link.$(OBJEXT) \
-	ls_lock.$(OBJEXT) ls_loopbuf.$(OBJEXT) ls_map.$(OBJEXT) \
-	ls_md5.$(OBJEXT) ls_mpscq.$(OBJEXT) ls_objarray.$(OBJEXT) \
-	ls_objpool.$(OBJEXT) ls_pcreg.$(OBJEXT) ls_pool.$(OBJEXT) \
-	ls_ptrlist.$(OBJEXT) ls_sha1.$(OBJEXT) ls_shm.$(OBJEXT) \
-	ls_stack.$(OBJEXT) ls_str.$(OBJEXT) ls_strlist.$(OBJEXT) \
-	ls_strtool.$(OBJEXT) ls_time.$(OBJEXT) ls_tsstack.$(OBJEXT) \
-	ls_xpool.$(OBJEXT) xxhash.$(OBJEXT) pthreadcond.$(OBJEXT) \
-	pthreadmutex.$(OBJEXT) pthreadworkqueue.$(OBJEXT) \
-	thread.$(OBJEXT) workcrew.$(OBJEXT) worker.$(OBJEXT)
+	systeminfo.$(OBJEXT) ni_fio.$(OBJEXT) ls_aho.$(OBJEXT) \
+	ls_base64.$(OBJEXT) ls_buf.$(OBJEXT) ls_confparser.$(OBJEXT) \
+	ls_crc64.$(OBJEXT) ls_dlinkq.$(OBJEXT) ls_fileio.$(OBJEXT) \
+	ls_hash.$(OBJEXT) ls_lfqueue.$(OBJEXT) ls_lfstack.$(OBJEXT) \
+	ls_link.$(OBJEXT) ls_lock.$(OBJEXT) ls_loopbuf.$(OBJEXT) \
+	ls_map.$(OBJEXT) ls_md5.$(OBJEXT) ls_mpscq.$(OBJEXT) \
+	ls_objarray.$(OBJEXT) ls_objpool.$(OBJEXT) ls_pcreg.$(OBJEXT) \
+	ls_pool.$(OBJEXT) ls_ptrlist.$(OBJEXT) ls_sha1.$(OBJEXT) \
+	ls_shm.$(OBJEXT) ls_stack.$(OBJEXT) ls_str.$(OBJEXT) \
+	ls_strlist.$(OBJEXT) ls_strtool.$(OBJEXT) ls_time.$(OBJEXT) \
+	ls_tsstack.$(OBJEXT) ls_xpool.$(OBJEXT) xxhash.$(OBJEXT) \
+	pthreadcond.$(OBJEXT) pthreadmutex.$(OBJEXT) \
+	pthreadworkqueue.$(OBJEXT) thread.$(OBJEXT) workcrew.$(OBJEXT) \
+	worker.$(OBJEXT)
 openlitespeed_OBJECTS = $(am_openlitespeed_OBJECTS)
 am__DEPENDENCIES_1 =
 openlitespeed_DEPENDENCIES = ./main/libmain.a ./http/libhttp.a \
@@ -463,6 +464,7 @@ openlitespeed_SOURCES = modules/prelinkedmods.cpp httpdtest.cpp main.cpp \
    util/sysinfo/partitioninfo.cpp \
    util/sysinfo/nicdetect.cpp \
    util/sysinfo/systeminfo.cpp \
+   util/ni_fio.c \
    lsr/ls_aho.c \
    lsr/ls_base64.c \
    lsr/ls_buf.c \
@@ -687,6 +689,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ls_tsstack.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ls_xpool.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/main.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ni_fio.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/nicdetect.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/objpool.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/partitioninfo.Po@am__quote@
@@ -739,6 +742,20 @@ distclean-compile:
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$<' object='$@' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LTCOMPILE) -c -o $@ $<
+
+ni_fio.o: util/ni_fio.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ni_fio.o -MD -MP -MF $(DEPDIR)/ni_fio.Tpo -c -o ni_fio.o `test -f 'util/ni_fio.c' || echo '$(srcdir)/'`util/ni_fio.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/ni_fio.Tpo $(DEPDIR)/ni_fio.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='util/ni_fio.c' object='ni_fio.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ni_fio.o `test -f 'util/ni_fio.c' || echo '$(srcdir)/'`util/ni_fio.c
+
+ni_fio.obj: util/ni_fio.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ni_fio.obj -MD -MP -MF $(DEPDIR)/ni_fio.Tpo -c -o ni_fio.obj `if test -f 'util/ni_fio.c'; then $(CYGPATH_W) 'util/ni_fio.c'; else $(CYGPATH_W) '$(srcdir)/util/ni_fio.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/ni_fio.Tpo $(DEPDIR)/ni_fio.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='util/ni_fio.c' object='ni_fio.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ni_fio.obj `if test -f 'util/ni_fio.c'; then $(CYGPATH_W) 'util/ni_fio.c'; else $(CYGPATH_W) '$(srcdir)/util/ni_fio.c'; fi`
 
 ls_aho.o: lsr/ls_aho.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ls_aho.o -MD -MP -MF $(DEPDIR)/ls_aho.Tpo -c -o ls_aho.o `test -f 'lsr/ls_aho.c' || echo '$(srcdir)/'`lsr/ls_aho.c

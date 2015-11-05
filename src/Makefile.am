@@ -54,6 +54,7 @@ openlitespeed_SOURCES = modules/prelinkedmods.cpp httpdtest.cpp main.cpp \
    util/sysinfo/partitioninfo.cpp \
    util/sysinfo/nicdetect.cpp \
    util/sysinfo/systeminfo.cpp \
+   util/ni_fio.c \
    lsr/ls_aho.c \
    lsr/ls_base64.c \
    lsr/ls_buf.c \

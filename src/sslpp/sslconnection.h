@@ -27,7 +27,7 @@ typedef struct ssl_st SSL;
 typedef struct ssl_ctx_st SSL_CTX;
 typedef struct ssl_session_st SSL_SESSION;
 
-class SSLConnection
+class SslConnection
 {
     SSL    *m_ssl;
     int     m_iStatus;
@@ -68,11 +68,11 @@ public:
     char getFreeSess() const    {   return m_iFreeSess;     }
     void setFreeSess()          {   m_iFreeSess = 1;        }
 
-    SSLConnection();
-    explicit SSLConnection(SSL *ssl);
-    SSLConnection(SSL *ssl, int fd);
-    SSLConnection(SSL *ssl, int rfd, int wfd);
-    ~SSLConnection();
+    SslConnection();
+    explicit SslConnection(SSL *ssl);
+    SslConnection(SSL *ssl, int fd);
+    SslConnection(SSL *ssl, int rfd, int wfd);
+    ~SslConnection();
 
     void setSSL(SSL *ssl);
     SSL *getSSL() const    {   return m_ssl;   }
@@ -121,7 +121,7 @@ public:
     static int getCipherBits(const SSL_CIPHER *pCipher, int *algkeysize);
     static int isClientVerifyOptional(int i);
 
-    LS_NO_COPY_ASSIGN(SSLConnection);
+    LS_NO_COPY_ASSIGN(SslConnection);
 };
 
 #endif

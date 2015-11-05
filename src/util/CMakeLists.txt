@@ -59,6 +59,7 @@ SET(util_STAT_SRCS
    sysinfo/partitioninfo.cpp
    sysinfo/nicdetect.cpp
    sysinfo/systeminfo.cpp
+   ni_fio.c
 )
 
 add_library(util STATIC ${util_STAT_SRCS} )

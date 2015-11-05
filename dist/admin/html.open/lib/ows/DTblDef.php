@@ -113,19 +113,6 @@ class DTblDef extends DTblDefBase
 
 	protected function add_S_TUNING_OS($id) //keep
 	{
-		$ssloptions = array( 'null' => DMsg::ALbl('l_ssloptnull'),
-				     'auto' => DMsg::ALbl('l_ssloptauto'),
-				     'aesni' => DMsg::ALbl('l_ssloptaesni'),
-				     'dynamic'=> DMsg::ALbl('l_ssloptdynamic'),
-				     'cswift' => DMsg::ALbl('l_ssloptcswift'),
-				     'chil' => DMsg::ALbl('l_ssloptchil'),
-				     'atalla' => DMsg::ALbl('l_ssloptatalla'),
-				     'nuron' => DMsg::ALbl('l_ssloptnuron'),
-				     'ubsec' => DMsg::ALbl('l_ssloptubsec'),
-				     'aep' => DMsg::ALbl('l_ssloptaep'),
-				     'sureware' => DMsg::ALbl('l_ssloptsureware'),
-				     '4758cca' => DMsg::ALbl('l_sslopt4758cca') );
-
 		$edoptions = array( 'best'    => 'best (All platforms)',
 				    'poll'    => 'poll (All platforms)',
 				    'epoll'   => 'epoll (Linux 2.6 kernel)',
@@ -134,7 +121,7 @@ class DTblDef extends DTblDefBase
 
 		$attrs = array(
 			DTblDefBase::NewSelAttr('eventDispatcher', DMsg::ALbl('l_ioeventdispatcher'), $edoptions),
-			DTblDefBase::NewSelAttr('SSLCryptoDevice', DMsg::ALbl('l_sslcryptodevice'), $ssloptions),
+            DTblDefBase::NewTextAttr('shmDefaultDir', DMsg::ALbl('l_shmDefaultDir'), 'cust'),
 			);
 
 		$this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_tuningos'), $attrs);
@@ -153,6 +140,36 @@ class DTblDef extends DTblDefBase
 			);
 
 		$this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_tuningstatic'), $attrs);
+	}
+
+	protected function add_S_TUNING_SSL($id)
+	{
+		$ssloptions = array( 'null' => DMsg::ALbl('l_ssloptnull'),
+			 'auto' => DMsg::ALbl('l_ssloptauto'),
+			 'aesni' => DMsg::ALbl('l_ssloptaesni'),
+			 'dynamic'=> DMsg::ALbl('l_ssloptdynamic'),
+			 'cswift' => DMsg::ALbl('l_ssloptcswift'),
+			 'chil' => DMsg::ALbl('l_ssloptchil'),
+			 'atalla' => DMsg::ALbl('l_ssloptatalla'),
+			 'nuron' => DMsg::ALbl('l_ssloptnuron'),
+			 'ubsec' => DMsg::ALbl('l_ssloptubsec'),
+			 'aep' => DMsg::ALbl('l_ssloptaep'),
+			 'sureware' => DMsg::ALbl('l_ssloptsureware'),
+			 '4758cca' => DMsg::ALbl('l_sslopt4758cca') );
+
+
+		$attrs = array(
+			DTblDefBase::NewBoolAttr('SSLStrongDhKey', DMsg::ALbl('l_SSLStrongDhKey')),
+			DTblDefBase::NewBoolAttr('sslEnableMultiCerts', DMsg::ALbl('l_sslEnableMultiCerts')),
+			DTblDefBase::NewSelAttr('SSLCryptoDevice', DMsg::ALbl('l_sslcryptodevice'), $ssloptions),
+            $this->_attrs['sslSessionCache'],
+            DTblDefBase::NewIntAttr('sslSessionCacheSize', DMsg::ALbl('l_sslSessionCacheSize'), true, 512),
+            DTblDefBase::NewIntAttr('sslSessionCacheTimeout', DMsg::ALbl('l_sslSessionCacheTimeout'), true, 10, 1000000),
+            $this->_attrs['sslSessionTickets'],
+            DTblDefBase::NewIntAttr('sslSessionTicketLifetime', DMsg::ALbl('l_sslSessionTicketLifetime'), true, 10, 1000000),
+            DTblDefBase::NewTextAttr('sslSessionTicketKeyFile', DMsg::ALbl('l_sslSessionTicketKeyFile'), 'cust')
+			);
+        $this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_tuningsslsettings'), $attrs, 'sslGlobal');
 	}
 
 	protected function add_S_MOD_TOP($id)

@@ -443,20 +443,6 @@ class DTblDefBase
 		$this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_fileaccess'), $attrs);
 	}
 
-	protected function add_S_TUNING_SSLSESSION($id)
-	{
-		$attrs = array(
-            $this->_attrs['sslSessionCache'],
-            DTblDefBase::NewIntAttr('sslSessionCacheSize', DMsg::ALbl('l_sslSessionCacheSize'), true, 512),
-            DTblDefBase::NewIntAttr('sslSessionCacheTimeout', DMsg::ALbl('l_sslSessionCacheTimeout'), true, 10, 1000000),
-            $this->_attrs['sslSessionTickets'],
-            DTblDefBase::NewTextAttr('shmDefaultDir', DMsg::ALbl('l_shmDefaultDir'), 'cust'),
-            DTblDefBase::NewIntAttr('sslSessionTicketLifetime', DMsg::ALbl('l_sslSessionTicketLifetime'), true, 10, 1000000),
-            DTblDefBase::NewTextAttr('sslSessionTicketKeyFile', DMsg::ALbl('l_sslSessionTicketKeyFile'), 'cust')
-			);
-        $this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_tuningsslsession'), $attrs, 'sslSessionTBL');
-	}
-
 	protected function add_S_SEC_CONN($id)
 	{
 		$attrs = array(

@@ -94,7 +94,7 @@ void HttpListener::endConfig()
         m_pSubIpMap->endConfig();
     if (m_pMapVHost->getDedicated())
         setLogger(m_pMapVHost->getDedicated()->getLogger());
-    if (m_pMapVHost->getSSLContext()
+    if (m_pMapVHost->getSslContext()
         || (m_pSubIpMap && m_pSubIpMap->hasSSL()))
         m_isSSL = 1;
 }
@@ -434,7 +434,7 @@ int HttpListener::batchAddConn(struct conn_data *pBegin,
             //    {
             //        //pConn->accessGranted();
             //    }
-            if (!pConn->setLink(this, fd, pCur->pInfo, pMap->getSSLContext()))
+            if (!pConn->setLink(this, fd, pCur->pInfo, pMap->getSslContext()))
             {
                 ++pConnCur;
                 //pConn->tryRead();
@@ -496,7 +496,7 @@ int HttpListener::addConnection(struct conn_data *pCur, int *iCount)
     pConn->setVHostMap(pMap);
     pConn->setLogger(getLogger());
     pConn->setRemotePort(ntohs(pAddrIn->sin_port));
-    if (pConn->setLink(this, pCur->fd, pCur->pInfo, pMap->getSSLContext()))
+    if (pConn->setLink(this, pCur->fd, pCur->pInfo, pMap->getSslContext()))
     {
         HttpResourceManager::getInstance().recycle(pConn);
         close(fd);

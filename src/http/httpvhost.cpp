@@ -627,7 +627,7 @@ HttpContext *HttpVHost::getContext(const char *pURI, size_t iUriLen,
 }
 
 
-void HttpVHost::setSSLContext(SSLContext *pCtx)
+void HttpVHost::setSslContext(SslContext *pCtx)
 {
     if (pCtx == m_pSSLCtx)
         return;
@@ -2129,9 +2129,9 @@ int HttpVHost::config(const XmlNode *pVhConfNode)
     if (p0)
     {
         ConfigCtx currentCtx("ssl");
-        SSLContext *pSSLCtx = new SSLContext(SSLContext::SSL_ALL);
+        SslContext *pSSLCtx = new SslContext(SslContext::SSL_ALL);
         if (pSSLCtx->config(p0))
-            setSSLContext(pSSLCtx);
+            setSslContext(pSSLCtx);
         else
             delete pSSLCtx;
     }

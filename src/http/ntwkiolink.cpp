@@ -286,7 +286,7 @@ int NtwkIOLink::switchToHttp2Handler(HioHandler *pSession)
 
 
 int NtwkIOLink::setLink(HttpListener *pListener,  int fd,
-                        ClientInfo *pInfo, SSLContext *pSSLContext)
+                        ClientInfo *pInfo, SslContext *pSslContext)
 {
     HioStream::reset(DateTime::s_curTime);
     setfd(fd);
@@ -316,9 +316,9 @@ int NtwkIOLink::setLink(HttpListener *pListener,  int fd,
             POLLIN | POLLHUP | POLLERR) == -1)
         return LS_FAIL;
     //set ssl context
-    if (pSSLContext)
+    if (pSslContext)
     {
-        SSL *p = pSSLContext->newSSL();
+        SSL *p = pSslContext->newSSL();
         if (p)
         {
             ConnLimitCtrl::getInstance().incSSLConn();
@@ -591,7 +591,7 @@ int NtwkIOLink::writevExSSL(LsiSession *pOS, const iovec *vector,
         }
         else if (pThis->getState() != HIOS_SHUTDOWN)
         {
-            LS_DBG_L(pThis, "SSL_write() failed: %s", SSLError().what());
+            LS_DBG_L(pThis, "SSL_write() failed: %s", SslError().what());
 
             pThis->setState(HIOS_CLOSING);
             return LS_FAIL;
@@ -875,7 +875,7 @@ void NtwkIOLink::onTimer()
                 addAioSFJob(cb);
         }
 
-        if (m_ssl.getSSL() && m_ssl.getStatus() == SSLConnection::ACCEPTING
+        if (m_ssl.getSSL() && m_ssl.getStatus() == SslConnection::ACCEPTING
             && DateTime::s_curTime - getActiveTime() >= 10)
         {
             LS_DBG_L(this, "SSL handshake timed out, close SSL.");
@@ -1529,7 +1529,7 @@ void NtwkIOLink::handle_acceptSSL_EIO_Err()
     {
         LS_DBG_L(this,
                  "SSL_accept() failed!: %s, get_url_from_reqheader return %d.",
-                 SSLError().what(), rc_parse);
+                 SslError().what(), rc_parse);
         ::write(getfd(), s_errUseSSL, sizeof(s_errUseSSL) - 1);
     }
 }
@@ -1584,18 +1584,18 @@ int NtwkIOLink::SSLAgain()
     int ret = 0;
     switch (m_ssl.getStatus())
     {
-    case SSLConnection::CONNECTING:
+    case SslConnection::CONNECTING:
         ret = m_ssl.connect();
         break;
-    case SSLConnection::ACCEPTING:
+    case SslConnection::ACCEPTING:
         ret = acceptSSL();
         if (ret == 1)
             sslSetupHandler();
         break;
-    case SSLConnection::SHUTDOWN:
+    case SslConnection::SHUTDOWN:
         ret = m_ssl.shutdown(1);
         break;
-    case SSLConnection::CONNECTED:
+    case SslConnection::CONNECTED:
         if (m_ssl.lastRead())
         {
             if (getHandler())
@@ -1734,7 +1734,7 @@ int NtwkIOLink::writevExSSL_T(LsiSession *pOS, const iovec *vector,
         else if (pThis->getState() != HIOS_SHUTDOWN)
         {
             LS_DBG_H(pThis, "SSL error: %s, mark connection to be closed.",
-                     SSLError().what());
+                     SslError().what());
             pThis->setState(HIOS_CLOSING);
             return LS_FAIL;
         }
