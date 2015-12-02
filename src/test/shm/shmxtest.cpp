@@ -95,7 +95,7 @@ TEST(shmPerProcess_test)
         return;
 
     CHECK((pHash1 = pPool1->getNamedHash(g_pHashName, 0, NULL, NULL,
-                                         LSSHM_LRU_NONE)) != NULL);
+                                         LSSHM_FLAG_NONE)) != NULL);
     if (pHash1 == NULL)
         return;
     const void *pKey = (const void *)0x11223344;
@@ -104,7 +104,7 @@ TEST(shmPerProcess_test)
     CHECK(pHash1->insert(pKey, 0, (const void *)&val,
                          sizeof(val)) == 0); // dup
     CHECK((pHash2 = pPool2->getNamedHash(g_pHashName, 0, NULL, NULL,
-                                         LSSHM_LRU_NONE)) != NULL);
+                                         LSSHM_FLAG_NONE)) != NULL);
     if (pHash2 == NULL)
         return;
 
@@ -114,35 +114,35 @@ TEST(shmPerProcess_test)
     xxx_t xxx;
     TShmHash<xxx_t> *pTHash;
     ls_strpair_t parms;
-    LsShmOffset_t off;
+    LsShmHash::iteroffset off;
     int iValLen;
     int ret;
 
     pTHash = (TShmHash <xxx_t> *)pGPool->getNamedHash(
-        "tmplHash", 0, LsShmHash::hashXXH32, memcmp, LSSHM_LRU_NONE);
+        "tmplHash", 0, LsShmHash::hashXXH32, memcmp, LSSHM_FLAG_NONE);
     xxx.x[0] = 0x1234;
     CHECK(pTHash->update(aKey, iKeyLen, &xxx) == 0);
-    CHECK((off = pTHash->get(aKey, iKeyLen, &iValLen, &ret)) != 0);
+    CHECK((off.m_iOffset = pTHash->get(aKey, iKeyLen, &iValLen, &ret)) != 0);
     CHECK(iValLen == sizeof(xxx));
-    CHECK(ret == LSSHM_FLAG_CREATED);
-    CHECK(pTHash->update(aKey, iKeyLen, &xxx) == off);
+    CHECK(ret == LSSHM_VAL_CREATED);
+    CHECK(pTHash->update(aKey, iKeyLen, &xxx) == off.m_iOffset);
     CHECK(pTHash->insert(aKey, iKeyLen, &xxx) == 0);
-    CHECK(pTHash->find(aKey, iKeyLen, &ret) == off);
+    CHECK(pTHash->find(aKey, iKeyLen, &ret) == off.m_iOffset);
     CHECK(ret == sizeof(xxx));
 
     xxx.x[0] = 0x5678;
     ls_str_set(&parms.key, (char *)aKey, iKeyLen);
     ls_str_set(&parms.value, (char *)&xxx, sizeof(xxx));
-    CHECK(pTHash->insertIterator(&parms) == 0);
-    CHECK((off = pTHash->getIterator(&parms, &ret)) != 0);
-    CHECK(ret == LSSHM_FLAG_NONE);
-    if (off != 0)
+    CHECK(pTHash->insertIterator(&parms).m_iOffset == 0);
+    CHECK((off = pTHash->getIterator(&parms, &ret)).m_iOffset != 0);
+    CHECK(ret == LSSHM_VAL_NONE);
+    if (off.m_iOffset != 0)
     {
         TShmHash<xxx_t>::iterator it(pTHash->offset2iterator(off));
         CHECK(memcmp(it.first(), aKey, iKeyLen) == 0);
         CHECK(((xxx_t *)it.second())->x[0] == 0x1234);
-        CHECK(pTHash->setIterator(&parms) == off);
-        CHECK(pTHash->findIterator(&parms) == off);
+        CHECK(pTHash->setIterator(&parms).m_iOffset == off.m_iOffset);
+        CHECK(pTHash->findIterator(&parms).m_iOffset == off.m_iOffset);
         CHECK(((xxx_t *)it.second())->x[0] == 0x5678);
     }
 

@@ -34,7 +34,7 @@ class ContextList;
 class HTAuth;
 //class HTACache;
 class HttpMime;
-class MIMESetting;
+class MimeSetting;
 class PHPConfig;
 class ReqHandler;
 class RewriteRuleList;
@@ -116,13 +116,14 @@ class HttpSessionHooks;
 #define ETAG_MOD_SIZE       128
 #define ETAG_MOD_ALL        (ETAG_MOD_INODE|ETAG_MOD_MTIME|ETAG_MOD_SIZE)
 #define ETAG_MASK           (ETAG_ALL|ETAG_MOD_ALL)
-#define BIT_FILES_ETAG          (1<<12)
 
 #define BIT_ALLOW_BROWSE        (1<<0)
 #define BIT_INCLUDES            (1<<4)
 #define BIT_INCLUDES_NOEXEC     (1<<5)
 #define BIT_XBIT_HACK_FULL      (1<<7)
 #define BIT_URI_CACHEABLE       (1<<8)
+#define BIT2_IS_FILESMATCH_CTX  (1<<11)
+#define BIT_FILES_ETAG          (1<<12)
 
 #define BIT_RAILS_CONTEXT       (1<<6)
 
@@ -165,7 +166,7 @@ typedef struct _CTX_INT
     const HttpHandler    *m_pAuthorizer;
     StringList           *m_pIndexList;
     AutoStr2             *m_pDefaultCharset;
-    const MIMESetting    *m_pForceType;
+    const MimeSetting    *m_pForceType;
     HttpMime             *m_pMIME;
     PHPConfig            *m_pPHPConfig;
     StatusUrlMap         *m_pCustomErrUrls;
@@ -218,6 +219,9 @@ class HttpContext
     HttpContext(const HttpContext &rhs);
     void operator=(const HttpContext &rhs) {}
 
+    const MimeSetting *lookupMimeBySuffix(const char *achSuffix) const;
+
+    const MimeSetting *getMimeBySuffix(const char *pSuffix, int forceAddMime);
 
 
 public:
@@ -305,15 +309,17 @@ public:
     void clearConfigBit()           {   m_iConfigBits = 0;      }
 
     void inherit(const HttpContext *pRootContext);
+    void matchListInherit(const HttpContext *pRootContext) const;
 
     HttpMime *getMIME()            {   return m_pInternal->m_pMIME;}
     const HttpMime *getMIME() const {   return m_pInternal->m_pMIME;}
     int initMIME();
-    int addMIME(const char *pValue);
+    const MimeSetting * addMIME(const char *pMime,
+                                const char *pSuffix);
     int setExpiresByType(const char *pValue);
     int setCompressByType(const char *pValue);
 
-    const MIMESetting *getForceType() const
+    const MimeSetting *getForceType() const
     {   return m_pInternal->m_pForceType;    }
     int setForceType(char *pValue, const char *pLogId);
 
@@ -359,8 +365,12 @@ public:
     }
     int  isScriptEnabled() const    {   return m_iSetUidMode & ENABLE_SCRIPT;   }
 
-    const MIMESetting *determineMime(const char *pSuffix,
+    const MimeSetting *determineMime(const char *pSuffix,
                                      char *pMimeType) const;
+   const MimeSetting *checkFMMime(const char *pSuffix,
+                                   char *pForcedType) const;
+    const MimeSetting *lookupMimeSetting(char *pValue) const;
+    const MimeSetting *lookupMimeSetting(char *pValue, int forceAddMIME);
 
     void setRailsContext()          {   setConfigBit2(BIT_RAILS_CONTEXT, 1);   }
     char isRailsContext() const     {   return m_iConfigBits2 & BIT_RAILS_CONTEXT;   }
@@ -497,6 +507,8 @@ public:
 
     int  isModuleConfigOwn() const   {   return m_iConfigBits & BIT_MODULECONFIG; }
     int  isSessionHookOwn() const   {   return m_iConfigBits & BIT_SESSIONHOOKS; }
+
+    int forceAddMime(char *pBegin);
 
 };
 

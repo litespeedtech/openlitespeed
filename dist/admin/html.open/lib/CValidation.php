@@ -113,9 +113,7 @@ class CValidation
 			$this->chkPostTbl_L_GENERAL($extracted);
 		}
 		elseif ($view == 'sl' || $view == 'al' ) { // will ignore vhlevel
-			if ($tid == 'LVT_SSL')
-				$isValid = $this->chkPostTbl_L_SSL($extracted);
-			elseif ($tid == 'LVT_SSL_CERT')
+			if ($tid == 'LVT_SSL_CERT')
 				$isValid = $this->chkPostTbl_L_SSL_CERT($extracted);
 		}
 		elseif ($view == 'admin') {
@@ -229,24 +227,6 @@ class CValidation
 		$listener = $confdata->GetChildNodeById('listener', $this->_disp->Get(DInfo::FLD_ViewName));
 		$secure = $listener->GetChildVal('secure');
 		return ($secure == 1);
-	}
-
-	protected function chkPostTbl_L_SSL($d)
-	{
-		$isValid = 1;
-		if ($this->isCurrentListenerSecure()) {
-			$err = 'Value must be set for secured listener. ';
-			if ($d->GetChildVal('sslProtocol') == NULL) {
-				$d->SetChildErr('sslProtocol', $err);
-				$isValid = -1;
-			}
-			if ($d->GetChildVal('ciphers') == NULL) {
-				$d->SetChildErr('ciphers', $err);
-				$isValid = -1;
-			}
-		}
-
-		return $isValid;
 	}
 
 	protected function chkPostTbl_L_SSL_CERT($d)

@@ -103,6 +103,8 @@ HttpContext *ContextTree::getContext(const char *pURI,
 void ContextTree::contextInherit()
 {
     m_pURITree->for_each2(inherit, (void *)m_pRootContext);
+    ((HttpContext *)m_pRootContext)->matchListInherit(m_pRootContext);
+    
 }
 
 

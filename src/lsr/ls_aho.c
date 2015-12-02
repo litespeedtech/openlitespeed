@@ -299,7 +299,9 @@ unsigned int ls_aho_search(ls_aho_t *pThis,
             for (pInputPtr = string + iStringIter; pInputPtr < string + size;
                  ++pInputPtr)
             {
-                if ((start_state = aAccept[(int) * pInputPtr]) != 0)
+                if (*pInputPtr < 0) // Out of range
+                    continue;
+                if ((start_state = aAccept[(int)*pInputPtr]) != 0)
                     break;
             }
             if (pInputPtr >= string + size)

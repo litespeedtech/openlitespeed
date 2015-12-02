@@ -33,32 +33,32 @@ class StringList;
 class MIMEMap;
 class MIMESuffix;
 class MIMESuffixMap;
-class MIMESettingList;
+class MimeSettingList;
 class XmlNodeList;
 class HttpVHost;
 class ConfigCtx;
 
-class MIMESetting
+class MimeSetting
 {
     AutoStr2           *m_psMIME;
     ExpiresCtrl         m_expires;
     const HttpHandler *m_pHandler;
 
-    void operator=(const MIMESetting &rhs);
+    void operator=(const MimeSetting &rhs);
 public:
-    MIMESetting();
-    MIMESetting(const MIMESetting &rhs);
-    ~MIMESetting();
+    MimeSetting();
+    MimeSetting(const MimeSetting &rhs);
+    ~MimeSetting();
     const AutoStr2     *getMIME() const     {   return m_psMIME;    }
     ExpiresCtrl        *getExpires()        {   return &m_expires;  }
     const ExpiresCtrl *getExpires() const  {   return &m_expires;  }
     void  setMIME(AutoStr2 *pMIME)       {   m_psMIME = pMIME;   }
     void  setHandler(const HttpHandler *pHdlr);
     const HttpHandler *getHandler() const  {   return m_pHandler;  }
-    void  inherit(const MIMESetting *pParent, int updateOnly);
+    void  inherit(const MimeSetting *pParent, int updateOnly);
 };
 
-typedef void (*FnUpdate)(MIMESetting *pSetting, void *pValue);
+typedef void (*FnUpdate)(MimeSetting *pSetting, void *pValue);
 
 class HttpMime
 {
@@ -69,29 +69,30 @@ public:
 private:
     MIMEMap          *m_pMIMEMap;
     MIMESuffixMap    *m_pSuffixMap;
-    MIMESetting      *m_pDefault;
+    MimeSetting      *m_pDefault;
     static HttpMime  *s_pMime;
 
     void operator=(const HttpMime &rhs) {}
 
     int processOneLine(const char *pFilePath, char *pLine, int lineNo);
-    int inheritSuffix(const HttpMime *pParent);
 
 
 public:
-    MIMESetting *initDefault(char *pMIME = NULL);
+    MimeSetting *initDefault(char *pMIME = NULL);
     int loadMime(const char *pPropertyPath);
-    int addUpdateMIME(char *pType, char *pDesc, const char *&reason,
+    MimeSetting *addUpdateMIME(char *pType, char *pDesc, const char *&reason,
                       int update = 1);
 
-    const MIMESetting *getFileMime(const char *pPath) const;
-    const MIMESetting *getFileMime(const char *pPath, int len) const;
-    const MIMESetting *getFileMimeByType(const char *pType) const;
-    const MIMESetting *getDefault() const {   return m_pDefault;  }
-    const MIMESetting *getMIMESetting(char *pMime) const;
+    const MimeSetting *getFileMime(const char *pPath) const;
+    const MimeSetting *getFileMime(const char *pPath, int len) const;
+    const MimeSetting *getFileMimeBySuffix(const char *pType) const;
+    const MimeSetting *getDefault() const {   return m_pDefault;  }
+    const MimeSetting *getMimeSetting(char *pMime) const;
+    const MimeSetting *getMIMESettingLowerCase(char *pMime) const;
     int inherit(HttpMime *pParent, int handlerOnly = 1);
+    int inheritSuffix(const HttpMime *pParent, int force);
 
-    MIMESetting *getDefault() {   return m_pDefault;  }
+    MimeSetting *getDefault() {   return m_pDefault;  }
     int updateMIME(char *pMIME, FnUpdate fn, void *pValue,
                    const HttpMime *pParent);
     int setCompressibleByType(const char *pValue, const HttpMime *pParent,
@@ -100,15 +101,19 @@ public:
                          const char *pLogId);
     int addType(const HttpMime *pParent, const char *pValue,
                 const char *pLogId);
+    int addUpdateSuffixMimeMap(MimeSetting *pSetting, char *pSuffixes,
+                               int update);
     int addMimeHandler(const char *suffix, char *pMime,
                        const HttpHandler *pHandler,
                        const HttpMime *pParent, const char *pLogId);
 
+    void updateSuffixMimeHandler();
+
     static void releaseMIMEList();
     char compressible(const char *pMIME) const;
-    static void setCompressible(MIMESetting *pSetting, void *pValue);
-    static void setExpire(MIMESetting *pSetting, void *pValue);
-    static void setHandler(MIMESetting *pSetting, void *pValue);
+    static void setCompressible(MimeSetting *pSetting, void *pValue);
+    static void setExpire(MimeSetting *pSetting, void *pValue);
+    static void setHandler(MimeSetting *pSetting, void *pValue);
     static int  needCharset(const char *pMIME);
     static int  isValidMimeType(const char *pDescr);
     static int  shouldKeepAlive(const char *pMIME);

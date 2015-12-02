@@ -144,7 +144,7 @@ $_tipsdb['chrootMode'] = new DAttrHelp("外部应用程序Chroot模式", '指定
 
 $_tipsdb['chrootPath'] = new DAttrHelp("外部应用程序Chroot路径", '当&quot;外部应用程序Chroot模式&quot;被设置为Customized Chroot Path时，用来为当前虚拟主机外部应用程序脚本指定新的根目录。', '', '路径1', '');
 
-$_tipsdb['ciphers'] = new DAttrHelp("Ciphers", 'Specifies the cipher suite to be used to negotiate the SSL handshake. LSWS supports cipher suites implemented in SSL v3.0, TLS v1.0, and TLS v1.2.', '[Security] We recommend ECDHE-RSA-AES128-SHA256:RC4:HIGH:!MD5:!aNULL:!EDH', 'Colon-separated string of cipher specifications. LSWS supports all cipher suites implemented in SSL v3.0, TLS v1.0, and TLS v1.2.', 'ECDHE-RSA-AES128-SHA256:RC4:HIGH:!MD5:!aNULL:!EDH');
+$_tipsdb['ciphers'] = new DAttrHelp("Ciphers", 'Specifies the cipher suite to be used to negotiate the SSL handshake. LSWS supports cipher suites implemented in SSL v3.0, TLS v1.0, and TLS v1.2.', '[Security] We recommend leaving this field blank to use our default cipher which follows SSL cipher best practices.', 'Colon-separated string of cipher specifications. LSWS supports all cipher suites implemented in SSL v3.0, TLS v1.0, and TLS v1.2.', 'ECDHE-RSA-AES128-SHA256:RC4:HIGH:!MD5:!aNULL:!EDH');
 
 $_tipsdb['clientVerify'] = new DAttrHelp("Client Verification", ' Specifies the type of client certifcate authentication. Available types are: <ul> <li>None: No client certificate is required.</li> <li>Optional: Client certificate is optional.</li> <li>Require: The client must has valid certificate.</li> <li>Optional_no_ca: Same as optional.</li> </ul> The default is &quot;None&quot;.', '&quot;None&quot; or &quot;Require&quot; are recommended.', 'Select from drop down list', '');
 
@@ -544,7 +544,7 @@ $_tipsdb['sslEnableMultiCerts'] = new DAttrHelp("Enable Multiple SSL Certificate
 
 $_tipsdb['sslOCSP'] = new DAttrHelp("OCSP Stapling", 'Online Certificate Status Protocol (OCSP) is a more efficient method  of checking whether a digital certificate is valid. It works by communicating  with another server — the OCSP responder — to get verification that the certificate  is valid instead of checking through certificate revocation lists (CRL).<br/><br/>OCSP stapling is a further improvement on this protocol, allowing the server to  check with the OCSP responder at regular intervals instead of every time a certificate  is requested. See the <a href=&quot;http://en.wikipedia.org/wiki/OCSP_Stapling&quot;>OCSP Wikipedia page</a> for more details.', '', '', '');
 
-$_tipsdb['sslProtocol'] = new DAttrHelp("Protocol Version", 'Specifies which version of SSL protocol will be used. You can choose from  SSL v3.0 and TLS v1.0. Since OpenSSL 1.0.1, TLS v1.1 and TLS v1.2 are also supported.', '', '', '');
+$_tipsdb['sslProtocol'] = new DAttrHelp("Protocol Version", 'Specifies which version of SSL protocol will be used. You can choose from  SSL v3.0 and TLS v1.0. Since OpenSSL 1.0.1, TLS v1.1 and TLS v1.2 are also supported.', 'Leaving this field blank will enable TLS v1.0, TLS v1.1, and TLS v1.2 by default.', '', '');
 
 $_tipsdb['sslProtocolSetting'] = new DAttrHelp("SSL Protocol", 'Customizes SSL protocols accepted by the listener.', '', '', '');
 

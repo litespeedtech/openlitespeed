@@ -81,10 +81,10 @@ static void doit(LsShm *pShm)
     LsShmHash *pHash;
     LsShmHElem *pTop;
     LsShmHash::iterator iter = NULL;
-    LsShmHash::iteroffset iterOff0 = 0;
-    LsShmHash::iteroffset iterOff1 = 0;
-    LsShmHash::iteroffset iterOffX = 0;
-    LsShmOffset_t offTop = 0;
+    LsShmHash::iteroffset iterOff0 = {0};
+    LsShmHash::iteroffset iterOff1 = {0};
+    LsShmHash::iteroffset iterOffX = {0};
+    LsShmHash::iteroffset offTop = {0};
     ls_strpair_t parms;
     int flags;
     int cnt = 0;
@@ -95,49 +95,50 @@ static void doit(LsShm *pShm)
         return;
     CHECK((pHash = pGPool->getNamedHash(
                        g_pHashName, 0, LsShmHash::hashXXH32, memcmp,
-                       LSSHM_LRU)) != NULL);
+                       LSSHM_FLAG_LRU)) != NULL);
     if (pHash == NULL)
         return;
     ls_str_set(&parms.key, (char *)key0, sizeof(key0) - 1);
     ls_str_set(&parms.value, NULL, 0);
     flags = LSSHM_FLAG_NONE;
-    CHECK((iterOff0 = pHash->getIterator(&parms, &flags)) != 0);
-    CHECK(flags == LSSHM_FLAG_CREATED);
+    CHECK((iterOff0 = pHash->getIterator(&parms, &flags)).m_iOffset != 0);
+    CHECK(flags == LSSHM_VAL_CREATED);
 
     ls_str_set(&parms.key, (char *)key1, sizeof(key1) - 1);
-    CHECK((iterOff1 = pHash->findIterator(&parms)) == 0);
-    CHECK((iterOff1 = pHash->updateIterator(&parms)) == 0);
+    CHECK((iterOff1 = pHash->findIterator(&parms)).m_iOffset == 0);
+    CHECK((iterOff1 = pHash->updateIterator(&parms)).m_iOffset == 0);
 
-    CHECK((iterOff1 = pHash->insertIterator(&parms)) != 0);
-    CHECK(pHash->findIterator(&parms) == iterOff1);
+    CHECK((iterOff1 = pHash->insertIterator(&parms)).m_iOffset != 0);
+    CHECK(pHash->findIterator(&parms).m_iOffset == iterOff1.m_iOffset);
     ls_str_set(&parms.value, (char *)valX, sizeof(valX) - 1);
-    CHECK((iterOff1 = pHash->updateIterator(&parms)) != 0);  // may change
-    if (iterOff1 != 0)
+    CHECK((iterOff1 = pHash->updateIterator(&parms)).m_iOffset != 0);  // may change
+    if (iterOff1.m_iOffset != 0)
     {
         iter = pHash->offset2iterator(iterOff1);
         CHECK(iter->getValLen() == sizeof(valX) - 1);
         CHECK(memcmp(iter->getVal(), valX, iter->getValLen()) == 0);
     }
     ls_str_set(&parms.value, (char *)valX, 5);
-    CHECK(pHash->setIterator(&parms) == iterOff1);  // should use same memory
+    CHECK(pHash->setIterator(&parms).m_iOffset == iterOff1.m_iOffset);  // should use same memory
     CHECK(iter->getValLen() == 5);
 
     ls_str_set(&parms.key, (char *)keyX, sizeof(keyX) - 1);
-    flags = LSSHM_FLAG_NONE;
-    CHECK((iterOffX = pHash->getIterator(&parms, &flags)) != 0);
-    CHECK(flags == LSSHM_FLAG_CREATED);
+    flags = LSSHM_VAL_NONE;
+    CHECK((iterOffX = pHash->getIterator(&parms, &flags)).m_iOffset != 0);
+    CHECK(flags == LSSHM_VAL_CREATED);
 
     CHECK(pHash->check() == SHMLRU_CHECKOK);
     CHECK(pHash->size() == 3);
-    CHECK(pHash->getLruTop() == iterOffX);
+    CHECK(pHash->getLruTop().m_iOffset == iterOffX.m_iOffset);
 
     ls_str_set(&parms.key, (char *)key0, sizeof(key0) - 1);
-    flags = LSSHM_FLAG_NONE;
-    CHECK(pHash->getIterator(&parms, &flags) == iterOff0);
-    CHECK(flags == LSSHM_FLAG_NONE);
+    flags = LSSHM_VAL_NONE;
+    CHECK(pHash->getIterator(&parms, &flags).m_iOffset == iterOff0.m_iOffset);
+    CHECK(flags == LSSHM_VAL_NONE);
 
-    CHECK((offTop = pHash->getLruTop()) == iterOff0);
-    if ((int)offTop > 0)
+    offTop = pHash->getLruTop();
+    CHECK(offTop.m_iOffset == iterOff0.m_iOffset);
+    if ((int)offTop.m_iOffset > 0)
     {
         pTop = pHash->offset2iterator(offTop);
         time_t tmval = pTop->getLruLasttime();
@@ -149,7 +150,7 @@ static void doit(LsShm *pShm)
         CHECK(pHash->size() == (size_t)num);
         CHECK(pHash->trim(tmval + 1, trimfunc, (void *)pHash) == num);
         CHECK(pHash->size() == (size_t)0);
-        CHECK(pHash->getLruTop() == 0);
+        CHECK(pHash->getLruTop().m_iOffset == 0);
     }
 
     // large hash test

@@ -1298,7 +1298,7 @@ int HttpReq::processSuffix(const char *pURI, const char *pURIEnd,
 
 const char *HttpReq::getMimeBySuffix(const char *pSuffix)
 {
-    const MIMESetting *pMime = m_pContext->determineMime(pSuffix,
+    const MimeSetting *pMime = m_pContext->determineMime(pSuffix,
                                (char *)m_pForcedType);
     if (pMime)
         return pMime->getMIME()->c_str();

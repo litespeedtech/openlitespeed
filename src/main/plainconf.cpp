@@ -26,6 +26,7 @@
 #include <log4cxx/logger.h>
 #include <log4cxx/logsession.h>
 #include <util/xmlnode.h>
+#include <libgen.h>
 
 #include <dirent.h>
 #include <errno.h>
@@ -37,7 +38,8 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-
+//#define TEST_OUTPUT_PLAIN_CONF
+ 
 //Special case
 //:: means module and module name
 
@@ -961,9 +963,7 @@ bool plainconf::isInclude(const char *sLine, AutoStr2 &path)
     return false;
 }
 
-
-//return 0: not exist, 1: file, 2: directory, 3: directory with wildchar
-int plainconf::checkFiletype(const char *path)
+ConfFileType plainconf::checkFiletype(const char *path)
 {
     struct stat sb;
 
@@ -971,16 +971,16 @@ int plainconf::checkFiletype(const char *path)
     if (strchr(path, '*') ||
         strchr(path, '?') ||
         (strchr(path, '[') && strchr(path, ']')))
-        return 3;
+        return eConfWildcard;
 
     if (stat(path, &sb) == -1)
-        return 0;
+        return eConfUnknown;
 
     if ((sb.st_mode & S_IFMT) == S_IFDIR)
-        return 2;
+        return eConfDir;
 
     else
-        return 1;
+        return eConfFile;
 }
 
 
@@ -996,6 +996,10 @@ void plainconf::loadDirectory(const char *pPath, const char *pPattern)
 
     struct dirent *dir_ent;
 
+    char str[4096] = {0};
+    strcpy(str, pPath);
+    strcatchr(str, '/', 4096);
+    int offset = strlen(str);
     StringList AllEntries;
 
     while ((dir_ent = readdir(pDir)))
@@ -1009,33 +1013,36 @@ void plainconf::loadDirectory(const char *pPath, const char *pPattern)
 
         if (pPattern)
         {
-            if (fnmatch(pPattern, pName, FNM_PATHNAME))
+            //Beside the unmatch, also must exclude *,v which was created by rcs
+            if(fnmatch(pPattern, pName, FNM_PATHNAME) != 0
+                || fnmatch("*,v", pName, FNM_PATHNAME) == 0)
                 continue;
         }
 
-        char str[4096] = {0};
-        strcpy(str, pPath);
-        strcatchr(str, '/', 4096);
-        strcat(str, pName);
-        AllEntries.add(str);
+        strcpy(str + offset, pName);
+        struct stat st;
+        if (stat(str, &st) == 0)
+        {
+            if (S_ISDIR(st.st_mode)
+                || pPattern
+                || fnmatch("*.conf", pName, FNM_PATHNAME) == 0)
+                AllEntries.add(str);
+        }
     }
-
     closedir(pDir);
-
-    //Sort the filename order
     AllEntries.sort();
-    StringList::iterator iter;
 
+    StringList::iterator iter;
     for (iter = AllEntries.begin(); iter != AllEntries.end(); ++iter)
     {
-        const char *p = (*iter)->c_str();
-        logToMem(LOG_LEVEL_INFO, "Processing config file: %s", p);
-        loadConfFile(p);
+        const char *pName = (*iter)->c_str();
+        logToMem(LOG_LEVEL_INFO, "Processing config file: %s", pName);
+        loadConfFile(pName);
     }
 }
 
 
-void plainconf::getIncludeFile(const char *orgFile, char *targetFile)
+void plainconf::getIncludeFile(const char *curDir, const char *orgFile, char *targetFile)
 {
     int len = strlen(orgFile);
 
@@ -1062,7 +1069,8 @@ void plainconf::getIncludeFile(const char *orgFile, char *targetFile)
 
     else
     {
-        strcpy(targetFile, rootPath.c_str());
+        strcpy(targetFile, curDir);
+        strcat(targetFile, "/");
         strcat(targetFile, orgFile);
     }
 }
@@ -1119,15 +1127,15 @@ void plainconf::loadConfFile(const char *path)
 {
     logToMem(LOG_LEVEL_INFO, "start parsing file %s", path);
 
-    int type = checkFiletype(path);
+    ConfFileType type = checkFiletype(path);
 
-    if (type == 0)
+    if (type == eConfUnknown)
         return;
 
-    else if (type == 2)
+    else if (type == eConfDir)
         loadDirectory(path, NULL);
 
-    else if (type == 3)
+    else if (type == eConfWildcard)
     {
         AutoStr2 prefixPath = path;
         const char *p = strrchr(path, '/');
@@ -1177,8 +1185,10 @@ void plainconf::loadConfFile(const char *path)
         char sMultiLineModeSign[MAX_MULLINE_SIGN_LENGTH] = {0};
         size_t  nMultiLineModeSignLen = 0;  //>0 is mulline mode
 
-        while (fgets(sLine, MAX_LINE_LENGTH, fp), !feof(fp))
+        while (!feof(fp))
         {
+            sLine[0] = 0x00;
+            fgets(sLine, MAX_LINE_LENGTH, fp);
             ++lineNumber;
             p = sLine;
 
@@ -1214,7 +1224,10 @@ void plainconf::loadConfFile(const char *path)
             if (isInclude(p, pathInclude))
             {
                 char achBuf[512] = {0};
-                getIncludeFile(pathInclude.c_str(), achBuf);
+                char *pathc = strdup(path);
+                const char *curDir = dirname(pathc);
+                getIncludeFile(curDir, pathInclude.c_str(), achBuf);
+                free(pathc);
                 loadConfFile(achBuf);
             }
             else

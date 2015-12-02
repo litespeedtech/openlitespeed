@@ -250,6 +250,16 @@ class CNode
 		}
 	}
 
+	public function AddIncludeChildren($incroot)
+	{
+		if (is_array($incroot->_els)) {
+			foreach ($incroot->_els as $elm) {
+				$elm->AddFlag(self::BM_INC);
+				$this->AddChild($elm);
+			}
+		}
+	}
+
 	public function RemoveChild($key) // todo: key contains :
 	{
 		$key = strtolower($key);
@@ -527,6 +537,9 @@ class CNode
 		if ($this->_type & self::BM_IDX)
 			return; // do not print index node
 
+		if (($this->_type != self::T_INC) && ($this->_type & self::BM_INC))
+			return; // do not print including nodes
+
 		$indent = str_pad('', $level * 2);
 		$val = $this->_v;
 		if ($val != '' && strpos($val,"\n"))
@@ -560,6 +573,7 @@ class CNode
 				$buf1 .= "\n##__INC__\n";
 				$end = "\n##__ENDINC__\n";
 			}
+
 			foreach ($this->_els as $el) {
 				if (is_array($el)) {
 					foreach ($el as $child)

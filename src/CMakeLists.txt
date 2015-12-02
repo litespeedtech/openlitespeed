@@ -182,44 +182,12 @@ add_executable(ls_shmhashstat
 # ${util_SRCS}
 # )
 
-# add_executable(ls_lfqueuetest
-# test/lsr/ls_lfqueuetest.c
-# ${lsr_SRCS}
-# )
 
-# add_executable(ls_lfstacktest
-# test/lsr/ls_lfstacktest.cpp
-# util/misc/profiletime.cpp
-# ${lsr_SRCS}
-# ${test_SRCS}
-# )
 
-# add_executable(ls_llmqtest
-# test/lsr/ls_llmqtest.c
-# ${lsr_SRCS}
-# )
 
-# add_executable(ls_locktest
-# test/lsr/ls_locktest.cpp
-# ${lsr_SRCS}
-# )
 
-# add_executable(ls_stacktest
-# test/lsr/ls_stacktest.cpp
-# util/misc/profiletime.cpp
-# ${lsr_SRCS}
-# ${test_SRCS}
-# )
 
-# add_executable(ls_thrsafetest
-# test/lsr/ls_thrsafetest.cpp
-# ${lsr_SRCS}
-# )
 
-# add_executable(ls_valgrindtest
-# test/lsr/ls_valgrindtest.c
-# ${lsr_SRCS}
-# )
 
 
 # NOTE: When creating a new directory, the order it is placed in this list
@@ -247,19 +215,51 @@ target_link_libraries(ls_shmhashstat lsshm log4cxx edio util lsr pthread rt )
 
 # target_link_libraries(shmlru_test ${litespeedlib} )
 
-# target_link_libraries(ls_lfqueuetest pthread ssl crypto pcre )
+add_executable(ls_lfqueuetest
+test/lsr/ls_lfqueuetest.c
+${lsr_SRCS}
+)
+target_link_libraries(ls_lfqueuetest lsr pthread ssl crypto pcre )
 
-# target_link_libraries(ls_lfstacktest pthread ssl crypto pcre )
+add_executable(ls_lfstacktest
+test/lsr/ls_lfstacktest.cpp
+util/misc/profiletime.cpp
+${lsr_SRCS}
+${test_SRCS}
+)
+target_link_libraries(ls_lfstacktest lsr pthread ssl crypto pcre )
 
-# target_link_libraries(ls_llmqtest pthread ssl crypto pcre )
+add_executable(ls_llmqtest
+test/lsr/ls_llmqtest.c
+${lsr_SRCS}
+)
+target_link_libraries(ls_llmqtest lsr pthread ssl crypto pcre )
 
-# target_link_libraries(ls_locktest pthread ssl crypto pcre )
+add_executable(ls_locktest
+test/lsr/ls_locktest.cpp
+${lsr_SRCS}
+)
+target_link_libraries(ls_locktest lsr pthread ssl crypto pcre )
 
-# target_link_libraries(ls_stacktest pthread ssl crypto pcre )
+add_executable(ls_stacktest
+test/lsr/ls_stacktest.cpp
+util/misc/profiletime.cpp
+${lsr_SRCS}
+${test_SRCS}
+)
+target_link_libraries(ls_stacktest lsr pthread ssl crypto pcre )
 
-# target_link_libraries(ls_thrsafetest pthread ssl crypto pcre )
+add_executable(ls_thrsafetest
+test/lsr/ls_thrsafetest.cpp
+${lsr_SRCS}
+)
+target_link_libraries(ls_thrsafetest lsr pthread ssl crypto pcre )
 
-# target_link_libraries(ls_valgrindtest pthread ssl crypto pcre )
+add_executable(ls_valgrindtest
+test/lsr/ls_valgrindtest.c
+${lsr_SRCS}
+)
+target_link_libraries(ls_valgrindtest lsr pthread ssl crypto pcre )
 
 install(TARGETS openlitespeed DESTINATION bin)
 

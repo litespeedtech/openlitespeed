@@ -77,7 +77,14 @@ class DMsg
 			$_SESSION['DMsg::_COOKIE_LANG_'] = $lang;
 			self::$_curlang = '';
 			self::$_curtips = '';
-			setcookie(DMsg::_COOKIE_LANG_, $lang, strtotime('+30 days'), "/");
+			$domain = $_SERVER['HTTP_HOST'];
+			if ($pos = strpos($domain, ':')) {
+				$domain = substr($domain, 0, $pos);
+			}
+			$secure = !empty($_SERVER['HTTPS']);
+			$httponly = true;
+
+			setcookie(DMsg::_COOKIE_LANG_, $lang, strtotime('+10 days'), '/', $domain, $secure, $httponly);
 		}
 	}
 

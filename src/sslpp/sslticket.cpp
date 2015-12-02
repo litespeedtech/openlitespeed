@@ -176,7 +176,7 @@ int SslTicket::initShm()
     }
     if ((m_pKeyStore = pShmPool->getNamedHash(s_pSTShmHashName, 4,
                                         LsShmHash::hashXXH32, memcmp,
-                                        LSSHM_LRU_NONE )) == NULL)
+                                        LSSHM_FLAG_NONE )) == NULL)
     {
         LOGDBG("Get Hash Failed.");
         return LS_FAIL;

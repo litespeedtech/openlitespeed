@@ -24,7 +24,7 @@
 #include <unistd.h>
 
 
-static const char *g_pShmDirName = "/dev/shm/ols";
+static const char *g_pShmDirName = "/dev/shm/lslb";
 static const char *g_pShmName = NULL;
 static const char *g_pHashName = NULL;
 
@@ -41,7 +41,7 @@ char *argv0 = NULL;
 Pool g_pool;
 
 
-int chkHashTable(LsShm *pShm, LsShmReg *pReg, int *pMode, int *pLruMode);
+int chkHashTable(LsShm *pShm, LsShmReg *pReg, int *pMode, int *pFlags);
 void doStatShmHash(LsShmHash *pHash);
 
 
@@ -98,7 +98,7 @@ int main(int ac, char *av[])
     LsShmHash *pHash;
     LsShmReg *pReg;
     int mode;
-    int lruMode;
+    int flags;
     char buf[2048];
 
     if (getOptions(ac, av) < 0)
@@ -130,18 +130,18 @@ int main(int ac, char *av[])
         fprintf(stderr, "Unable to find [%s] in registry!\n", g_pHashName);
         return 3;
     }
-    if (LsShmHash::chkHashTable(pShm, pReg, &mode, &lruMode) < 0)
+    if (LsShmHash::chkHashTable(pShm, pReg, &mode, &flags) < 0)
     {
         fprintf(stderr, "Not a Hash Table [%s]!\n", g_pHashName);
         return 4;
     }
     if ((pHash = pGPool->getNamedHash(g_pHashName, 0,
-                                      (LsShmHasher_fn)(long)mode, 
+                                      (LsShmHasher_fn)(long)mode,
                                       (LsShmValComp_fn)(long)mode,
-                                      lruMode)) == NULL)
+                                      flags)) == NULL)
     {
         fprintf(stderr, "getNamedHash(%s,lru=%d) FAILED!\n",
-                g_pHashName, lruMode);
+                g_pHashName, flags);
         return 5;
     }
 
@@ -203,8 +203,8 @@ void doStatShmHash(LsShmHash *pHash)
         fprintf(stdout, "LRU\n"
                         "total elements:            %u\n"
                         "total elements trimmed:    %u\n",
-                pLru->nvalset,
-                pLru->nvalexp
+                pHash->getLruTotal(), //pLru->nvalset,
+                pHash->getLruTrimmed() //pLru->nvalexp
                );
         fprintf(stdout, "LRU linked list... ");
         fflush(stdout);

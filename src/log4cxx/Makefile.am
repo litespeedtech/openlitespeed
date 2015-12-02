@@ -1,7 +1,7 @@
 ####### kdevelop will overwrite this part!!! (begin)##########
 noinst_LIBRARIES = liblog4cxx.a
 
-INCLUDES = $(all_includes) -I$(top_srcdir)/include -I$(top_srcdir)/src
+INCLUDES = -I$(top_srcdir)/include -I$(top_srcdir)/src
 
 liblog4cxx_a_METASOURCES = AUTO
 

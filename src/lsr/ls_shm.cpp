@@ -158,7 +158,7 @@ ls_shmhash_t *ls_shmhash_open(ls_shmpool_t *poolhandle,
 {
     check_defaults(&initialsize, &hf, &vc);
     return ((LsShmPool *)poolhandle)->getNamedHash(
-               hash_table_name, (LsShmSize_t)initialsize, hf, vc, LSSHM_LRU_NONE);
+               hash_table_name, (LsShmSize_t)initialsize, hf, vc, 0);
 }
 
 

@@ -34,7 +34,7 @@
 
 class HttpReq;
 class StaticFileCacheData;
-class MIMESetting;
+class MimeSetting;
 class SSIScript;
 
 class FileCacheDataEx : public RefCounter
@@ -117,7 +117,7 @@ class StaticFileCacheData : public CacheElement
     AutoStr2        m_gzippedPath;
     AutoStr2        m_sHeaders;
 
-    const MIMESetting *m_pMimeType;
+    const MimeSetting *m_pMimeType;
     const AutoStr2     *m_pCharset;
 
     char           *m_pETag;
@@ -150,8 +150,8 @@ public:
 
     off_t getFileSize() const   {   return m_fileData.getFileSize();    }
 
-    void setMimeType(const MIMESetting *pType) {   m_pMimeType = pType;  }
-    const MIMESetting *getMimeType() const    {   return m_pMimeType;   }
+    void setMimeType(const MimeSetting *pType) {   m_pMimeType = pType;  }
+    const MimeSetting *getMimeType() const    {   return m_pMimeType;   }
 
     void setCharset(const AutoStr2 *p)     {   m_pCharset = p;       }
 
@@ -187,7 +187,7 @@ public:
     time_t getLastMod() const       {   return m_fileData.getLastMod();   }
     bool isDirty(const struct stat &fileStat) const
     {   return m_fileData.isDirty(fileStat);      }
-    int needUpdateHeaders(const MIMESetting *pMIME,
+    int needUpdateHeaders(const MimeSetting *pMIME,
                           const AutoStr2 *pCharset, short etag) const
     {
         return (pMIME != m_pMimeType) || (pCharset != m_pCharset)
@@ -195,7 +195,7 @@ public:
     }
     int compressFile();
 
-    int buildHeaders(const MIMESetting *pMIME,
+    int buildHeaders(const MimeSetting *pMIME,
                      const AutoStr2 *pCharset, short etag);
     int isSamePath(const char *arg1, int arg2)
     {  return strcmp(m_real.c_str(), arg1) == 0;   }

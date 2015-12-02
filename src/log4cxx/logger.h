@@ -52,7 +52,7 @@
 */
 
 #define LS_LOG_ENABLED(level) log4cxx::Level::isEnabled( level )
-#define LS_LOG(level, ...) log4cxx::Logger::s_log( level, __VA_ARGS__); \
+#define LS_LOG(level, ...) log4cxx::Logger::s_log( level, __VA_ARGS__);
 
 
 #define LS_DBG_IO( ... ) \
@@ -125,223 +125,223 @@
 #define LS_ERR_NO_MEM( msg ) \
     ( LOG4CXX_NS::Logger::errmem( msg ) )
 
-    class TmpLogId;
-    class LogSession;
+class TmpLogId;
+class LogSession;
 
-    BEGIN_LOG4CXX_NS
+BEGIN_LOG4CXX_NS
 
-    class Appender;
-    class Layout;
-    class ILog;
+class Appender;
+class Layout;
+class ILog;
 
-    class Logger : public Duplicable
+class Logger : public Duplicable
+{
+    int         m_iLevel;
+    int         m_iAdditive;
+    Appender   *m_pAppender;
+    Layout     *m_pLayout;
+    Logger     *m_pParent;
+
+    static Logger *s_pDefault;
+
+protected:
+    explicit Logger(const char *pName);
+    Duplicable *dup(const char *pName);
+
+public:
+    ~Logger() {};
+    static void init();
+
+    static Logger *getRootLogger()
+    {   return getLogger(ROOT_LOGGER_NAME); }
+
+    ls_attr_inline static Logger *getDefault()
     {
-        int         m_iLevel;
-        int         m_iAdditive;
-        Appender   *m_pAppender;
-        Layout     *m_pLayout;
-        Logger     *m_pParent;
+        if (!s_pDefault)
+            s_pDefault = getLogger(NULL);
+        return s_pDefault;
+    }
 
-        static Logger *s_pDefault;
+    static void setDefault(Logger *pDefault)
+    {   s_pDefault = pDefault;      }
 
-    protected:
-        explicit Logger(const char *pName);
-        Duplicable *dup(const char *pName);
+    static Logger *getLogger(const char *pName);
 
-    public:
-        ~Logger() {};
-        static void init();
+    void vlog(int level, const char *format, va_list args,
+              int no_linefeed = 0)
+    {
+        vlog(level, NULL, format, args, no_linefeed);
+    }
 
-        static Logger *getRootLogger()
-        {   return getLogger(ROOT_LOGGER_NAME); }
+    void vlog(int level, const char *pId, const char *format, va_list args,
+              int no_linefeed);
 
-        ls_attr_inline static Logger *getDefault()
-        {
-            if (!s_pDefault)
-                s_pDefault = getLogger(NULL);
-            return s_pDefault;
-        }
+    void log2(int level, const char *format, ...)
+    {
+        va_list  va;
+        va_start(va, format);
+        vlog(level, format, va);
+        va_end(va);
+    }
 
-        static void setDefault(Logger *pDefault)
-        {   s_pDefault = pDefault;      }
 
-        static Logger *getLogger(const char *pName);
-
-        void vlog(int level, const char *format, va_list args,
-                  int no_linefeed = 0)
-        {
-            vlog(level, NULL, format, args, no_linefeed);
-        }
-
-        void vlog(int level, const char *pId, const char *format, va_list args,
-                  int no_linefeed);
-
-        void log2(int level, const char *format, ...)
+    void log(int level, const char *format, ...)
+    {
+        if (isEnabled(level))
         {
             va_list  va;
             va_start(va, format);
             vlog(level, format, va);
             va_end(va);
         }
+    }
+
+    ls_attr_inline void vdebug(const char *format, va_list args)
+    {
+        vlog(Level::DEBUG, format, args);
+    }
+
+    void debug(const char *format, ...)
+    {
+        __logger_log(Level::DEBUG, format);
+    }
+
+    ls_attr_inline void vtrace(const char *format, va_list args)
+    {
+        vlog(Level::TRACE, format, args);
+    }
+
+    void trace(const char *format, ...)
+    {
+        __logger_log(Level::TRACE, format);
+    }
+
+    ls_attr_inline void vinfo(const char *format, va_list args)
+    {
+        vlog(Level::INFO, format, args);
+    }
+
+    void info(const char *format, ...)
+    {
+        __logger_log(Level::INFO, format);
+    }
+
+    ls_attr_inline void vnotice(const char *format, va_list args)
+    {
+        vlog(Level::NOTICE, format, args);
+    }
+
+    void notice(const char *format, ...)
+    {
+        __logger_log(Level::NOTICE, format);
+    }
+
+    ls_attr_inline void vwarn(const char *format, va_list args)
+    {
+        vlog(Level::WARN, format, args);
+    }
+
+    void warn(const char *format, ...)
+    {
+        __logger_log(Level::WARN, format);
+    }
+
+    ls_attr_inline void verror(const char *format, va_list args)
+    {
+        vlog(Level::ERROR, format, args);
+    }
+
+    void error(const char *format, ...)
+    {
+        __logger_log(Level::ERROR, format);
+    }
+
+    ls_attr_inline void vfatal(const char *format, va_list args)
+    {
+        vlog(Level::FATAL, format, args);
+    }
+
+    void fatal(const char *format, ...)
+    {
+        __logger_log(Level::FATAL, format);
+    }
+
+    ls_attr_inline void valert(const char *format, va_list args)
+    {
+        vlog(Level::ALERT, format, args);
+    }
+
+    void alert(const char *format, ...)
+    {
+        __logger_log(Level::ALERT, format);
+    }
+
+    ls_attr_inline void vcrit(const char *format, va_list args)
+    {
+        vlog(Level::CRIT, format, args);
+    }
+
+    void crit(const char *format, ...)
+    {
+        __logger_log(Level::CRIT, format);
+    }
+
+    void lograw(const char *pBuf, int len);
+
+    ls_attr_inline int isEnabled(int level) const
+    {   return level <= m_iLevel; }
+
+    ls_attr_inline int getLevel() const
+    {   return m_iLevel;  }
+
+    void setLevel(int level)
+    {   m_iLevel = level;  }
+
+    void setLevel(const char *pLevel)
+    {   setLevel(Level::toInt(pLevel)); }
+
+    ls_attr_inline int getAdditivity() const
+    {   return m_iAdditive;  }
+
+    void setAdditivity(int additive)
+    {   m_iAdditive = additive;   }
+
+    ls_attr_inline Appender *getAppender()
+    {   return m_pAppender;  }
+    void setAppender(Appender *pAppender)
+    {   m_pAppender = pAppender;    }
+
+    ls_attr_inline const Layout *getLaout() const
+    {   return m_pLayout;  }
+    void setLayout(Layout *pLayout)
+    {   m_pLayout = pLayout;    }
+
+    void setParent(Logger *pParent)    {   m_pParent = pParent;    }
+
+    static void errmem(const char *pSource)
+    {   LS_ERROR("Out of memory: %s", pSource); }
+
+    static void s_log(int level, log4cxx::Logger *logger,
+                      const char *format, ...);
+
+    static void s_log(int level, log4cxx::ILog *pILog,
+                      const char *format, ...);
+
+    static void s_log(int level, LogSession *pLogSession,
+                      const char *format, ...);
+
+    static void s_log(int level, TmpLogId *pId,
+                      const char *format, ...);
+
+    static void s_log(int level, const char *format, ...);
+
+    static void s_vlog(int level, LogSession *pLogSession,
+                       const char *format, va_list args, int no_linefeed);
+
+    LS_NO_COPY_ASSIGN(Logger);
+};
 
 
-        void log(int level, const char *format, ...)
-        {
-            if (isEnabled(level))
-            {
-                va_list  va;
-                va_start(va, format);
-                vlog(level, format, va);
-                va_end(va);
-            }
-        }
-
-        ls_attr_inline void vdebug(const char *format, va_list args)
-        {
-            vlog(Level::DEBUG, format, args);
-        }
-
-        void debug(const char *format, ...)
-        {
-            __logger_log(Level::DEBUG, format);
-        }
-
-        ls_attr_inline void vtrace(const char *format, va_list args)
-        {
-            vlog(Level::TRACE, format, args);
-        }
-
-        void trace(const char *format, ...)
-        {
-            __logger_log(Level::TRACE, format);
-        }
-
-        ls_attr_inline void vinfo(const char *format, va_list args)
-        {
-            vlog(Level::INFO, format, args);
-        }
-
-        void info(const char *format, ...)
-        {
-            __logger_log(Level::INFO, format);
-        }
-
-        ls_attr_inline void vnotice(const char *format, va_list args)
-        {
-            vlog(Level::NOTICE, format, args);
-        }
-
-        void notice(const char *format, ...)
-        {
-            __logger_log(Level::NOTICE, format);
-        }
-
-        ls_attr_inline void vwarn(const char *format, va_list args)
-        {
-            vlog(Level::WARN, format, args);
-        }
-
-        void warn(const char *format, ...)
-        {
-            __logger_log(Level::WARN, format);
-        }
-
-        ls_attr_inline void verror(const char *format, va_list args)
-        {
-            vlog(Level::ERROR, format, args);
-        }
-
-        void error(const char *format, ...)
-        {
-            __logger_log(Level::ERROR, format);
-        }
-
-        ls_attr_inline void vfatal(const char *format, va_list args)
-        {
-            vlog(Level::FATAL, format, args);
-        }
-
-        void fatal(const char *format, ...)
-        {
-            __logger_log(Level::FATAL, format);
-        }
-
-        ls_attr_inline void valert(const char *format, va_list args)
-        {
-            vlog(Level::ALERT, format, args);
-        }
-
-        void alert(const char *format, ...)
-        {
-            __logger_log(Level::ALERT, format);
-        }
-
-        ls_attr_inline void vcrit(const char *format, va_list args)
-        {
-            vlog(Level::CRIT, format, args);
-        }
-
-        void crit(const char *format, ...)
-        {
-            __logger_log(Level::CRIT, format);
-        }
-
-        void lograw(const char *pBuf, int len);
-
-        ls_attr_inline int isEnabled(int level) const
-        {   return level <= m_iLevel; }
-
-        ls_attr_inline int getLevel() const
-        {   return m_iLevel;  }
-
-        void setLevel(int level)
-        {   m_iLevel = level;  }
-
-        void setLevel(const char *pLevel)
-        {   setLevel(Level::toInt(pLevel)); }
-
-        ls_attr_inline int getAdditivity() const
-        {   return m_iAdditive;  }
-
-        void setAdditivity(int additive)
-        {   m_iAdditive = additive;   }
-
-        ls_attr_inline Appender *getAppender()
-        {   return m_pAppender;  }
-        void setAppender(Appender *pAppender)
-        {   m_pAppender = pAppender;    }
-
-        ls_attr_inline const Layout *getLaout() const
-        {   return m_pLayout;  }
-        void setLayout(Layout *pLayout)
-        {   m_pLayout = pLayout;    }
-
-        void setParent(Logger *pParent)    {   m_pParent = pParent;    }
-
-        static void errmem(const char *pSource)
-        {   LS_ERROR("Out of memory: %s", pSource); }
-
-        static void s_log(int level, log4cxx::Logger *logger,
-                          const char *format, ...);
-
-        static void s_log(int level, log4cxx::ILog *pILog,
-                          const char *format, ...);
-
-        static void s_log(int level, LogSession *pLogSession,
-                          const char *format, ...);
-
-        static void s_log(int level, TmpLogId *pId,
-                          const char *format, ...);
-
-        static void s_log(int level, const char *format, ...);
-
-        static void s_vlog(int level, LogSession *pLogSession,
-                           const char *format, va_list args, int no_linefeed);
-
-        LS_NO_COPY_ASSIGN(Logger);
-    };
-
-
-    END_LOG4CXX_NS
+END_LOG4CXX_NS
 
 #endif

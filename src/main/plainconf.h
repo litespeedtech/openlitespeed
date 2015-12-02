@@ -41,6 +41,14 @@ enum
     LOG_LEVEL_INFO = 'I',
 };
 
+enum ConfFileType {
+    eConfUnknown = 0,
+    eConfFile,
+    eConfDir,
+    eConfWildcard,  //directory with wildchar
+};
+
+
 struct plainconfKeywords
 {
     const char *name;
@@ -91,8 +99,8 @@ public:
     static void parseLine(const char *fileName, int lineNumber,
                           const char *sLine);
 
-    static int checkFiletype(const char *path);
-    static void getIncludeFile(const char *orgFile, char *targetFile);
+    static ConfFileType checkFiletype(const char *path);
+    static void getIncludeFile(const char *curDir, const char *orgFile, char *targetFile);
 
     static const char *getConfDeepValue(const XmlNode *pNode,
                                         const char *name);

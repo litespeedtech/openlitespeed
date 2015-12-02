@@ -80,7 +80,7 @@ public:
 
 public:
     LsShmHash *getNamedHash(const char *name, LsShmSize_t init_size,
-                            LsShmHasher_fn hf, LsShmValComp_fn vc, int lru_mode);
+                            LsShmHasher_fn hf, LsShmValComp_fn vc, int flags);
     void close();
     void destroy();
 
@@ -174,9 +174,9 @@ public:
     int downRef() { return --m_iRef; }
 
     LsShmHash * newHashByOffset(LsShmOffset_t x_globalHashOff,
-                  const char *name, LsShmHasher_fn hf, 
-                  LsShmValComp_fn vc, int lru_mode);
-    LsShmOffset_t allocateNewHash(int initSize, int iMode, int iLruMode);
+                  const char *name, LsShmHasher_fn hf,
+                  LsShmValComp_fn vc, int flags);
+    LsShmOffset_t allocateNewHash(int initSize, int iMode, int iFlags);
     int mergeDeadPool(LsShmPoolMem* pPool);
 
 private:
@@ -194,7 +194,7 @@ private:
 
     LsShmOffset_t allocPage(LsShmSize_t pagesize, int &remapped);
     void releasePage(LsShmOffset_t offset, LsShmSize_t pagesize);
-    
+
     // for internal purpose
     void  releaseData(LsShmOffset_t offset, LsShmSize_t size);
 

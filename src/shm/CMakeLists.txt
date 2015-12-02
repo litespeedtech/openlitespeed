@@ -1,19 +1,17 @@
 
 cmake_minimum_required(VERSION 2.8)
-INCLUDE( ${PROJECT_SOURCE_DIR}/CMakeModules/common.cmake)
-
 cmake_policy(SET CMP0002 OLD)
 
 
 ########### next target ###############
 
-SET(shm_STAT_SRCS 
-    lsshmlock.cpp
-    lsshmhash.cpp
-    #lsshmlruhash.cpp
-    lsshmpool.cpp
+SET(shm_STAT_SRCS
     lsshm.cpp
-    ls_fallocate.c
+    lsshmhash.cpp
+    lsshmlock.cpp
+    lsshmpool.cpp
+    lsshmtidmgr.cpp
+    lsshmhashobserver.cpp
 )
 
 add_library(lsshm STATIC ${shm_STAT_SRCS} )
