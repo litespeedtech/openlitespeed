@@ -31,35 +31,10 @@
 
 class debugBase;
 
-//
-// LiteSpeed Shared Memory Lock Map
-//
-//  +------------------------------------------------
-//  | HEADER
-//  |    --> maxSize      --------------------------+
-//  |    --> offset free  ----------------+         |
-//  |                                     |         |
-//  |----------------------------         |         |
-//  |    --> Mutex                        |         |
-//  |                        <------------+         |
-//  |------------------------<----------------------+
-//
-typedef struct
-{
-    uint32_t            x_iMagic;
-    LsShmCnt_t          x_iMaxElem;
-    uint64_t            x_id;
-    LsShmXSize_t        x_iMaxSize;      // the file size
-    LsShmOffset_t       x_iFreeOffset;   // first free lock
-} LsShmLockMap;
+typedef struct ls_shmlock_map_s LsShmLockMap;
+typedef union ls_shmlock_elem_s LsShmLockElem;
 
-typedef union
-{
-    ls_shmlock_t        x_lock;
-    LsShmOffset_t       x_iNext;
-} LsShmLockElem;
-
-class LsShmLock : public ls_shmobject_s
+class LsShmLock
 {
     friend class LsShm;
 
@@ -67,52 +42,11 @@ public:
     LsShmLock();
     ~LsShmLock();
 
-    LsShmLockMap *getShmLockMap() const
-    {   return m_pShmLockMap; }
+    ls_shmlock_t *offset2pLock(LsShmOffset_t offset) const;
+    void *offset2ptr(LsShmOffset_t offset) const;
 
-    ls_shmlock_t *offset2pLock(LsShmOffset_t offset) const
-    {
-        assert(offset < getShmLockMap()->x_iMaxSize);
-        return (ls_shmlock_t *)(((uint8_t *)getShmLockMap()) + offset);
-    }
-
-    void *offset2ptr(LsShmOffset_t offset) const
-    {
-        assert(offset < getShmLockMap()->x_iMaxSize);
-        return (void *)(((uint8_t *)getShmLockMap()) + offset);
-    }
-
-    LsShmOffset_t ptr2offset(const void *ptr) const
-    {
-        assert(ptr <
-               ((uint8_t *)getShmLockMap()) + getShmLockMap()->x_iMaxSize);
-        return (LsShmOffset_t)((uint8_t *)ptr - (uint8_t *)getShmLockMap());
-    }
-
-    LsShmOffset_t pLock2offset(ls_shmlock_t *pLock)
-    {
-        assert((uint8_t *)pLock <
-               ((uint8_t *)getShmLockMap()) + getShmLockMap()->x_iMaxSize);
-        return (LsShmOffset_t)((uint8_t *)pLock - (uint8_t *)getShmLockMap());
-    }
-
-    LsShmStatus_t status() const
-    {   return m_status; }
-
-    int pLock2LockNum(ls_shmlock_t *pLock) const
-    {   return ((LsShmLockElem *)pLock - m_pShmLockElem); }
-
-    LsShmLockElem *lockNum2pElem(const int num) const
-    {
-        return ((num < 0) || (num >= (int)getShmLockMap()->x_iMaxElem)) ?
-               NULL : (m_pShmLockElem + num);
-    }
-    ls_shmlock_t *lockNum2pLock(const int num) const
-    {
-        return (ls_shmlock_t *)
-               (((num < 0) || (num >= (int)getShmLockMap()->x_iMaxElem)) ?
-                NULL : (m_pShmLockElem + num));
-    }
+    LsShmOffset_t ptr2offset(const void *ptr) const;
+    LsShmOffset_t pLock2offset(ls_shmlock_t *pLock);
 
     ls_shmlock_t *allocLock();
     int freeLock(ls_shmlock_t *pLock);
@@ -124,8 +58,6 @@ private:
 
 private:
     // only use by physical mapping
-    LsShmXSize_t  roundToPageSize(LsShmXSize_t size) const
-    {   return ((size + s_iPageSize - 1) / s_iPageSize) * s_iPageSize; }
 
     LsShmStatus_t       expand(LsShmXSize_t size);
     LsShmStatus_t       expandFile(LsShmOffset_t from, LsShmXSize_t incrSize);
@@ -140,8 +72,6 @@ private:
     void                setupFreeList(LsShmOffset_t to);
 
     uint32_t            m_iMagic;
-    static LsShmSize_t  s_iPageSize;
-    static LsShmSize_t  s_iHdrSize;
     LsShmStatus_t       m_status;
     int                 m_iFd;
     LsShmLockMap       *m_pShmLockMap;

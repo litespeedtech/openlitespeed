@@ -257,6 +257,7 @@ void LocalWorkerConfig::configExtAppUserGroup(const XmlNode *pNode,
 
     const char *pUser = pNode->getChildValue("extUser");
     const char *pGroup = pNode->getChildValue("extGroup");
+    uid_t uid = ServerProcessConfig::getInstance().getUid();
     gid_t gid = -1;
     struct passwd *pw = Daemonize::configUserGroup(pUser, pGroup, gid);
 
@@ -274,8 +275,9 @@ void LocalWorkerConfig::configExtAppUserGroup(const XmlNode *pNode,
                       "than minimum UID, GID configured. ");
         }
         else
-            setUGid(pw->pw_uid, gid);
+            uid = pw->pw_uid;
     }
-    LS_ERROR(ConfigCtx::getCurConfigCtx(), "Invalid User Name(%s) or Group "
-             "Name(%s)!", pUser, pGroup);
+    else
+        gid = ServerProcessConfig::getInstance().getGid();
+    setUGid(uid, gid);
 }

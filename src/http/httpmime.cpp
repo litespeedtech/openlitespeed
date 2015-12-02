@@ -40,7 +40,7 @@ static StringList *s_pMIMEList = NULL;
 
 HttpMime *HttpMime::s_pMime = NULL;
 
-//class MIMESettingList : public TPointerList<MIMESetting>{};
+//class MimeSettingList : public TPointerList<MimeSetting>{};
 
 
 static StringList *getMIMEList()
@@ -75,12 +75,12 @@ static AutoStr2 *getMIME(const char *pMIME)
 }
 
 
-//static MIMESettingList * s_pOldSettings = NULL;
-//static MIMESettingList* getOldSettings()
+//static MimeSettingList * s_pOldSettings = NULL;
+//static MimeSettingList* getOldSettings()
 //{
 //    if ( !s_pOldSettings )
 //    {
-//        s_pOldSettings = new MIMESettingList();
+//        s_pOldSettings = new MimeSettingList();
 //    }
 //    return s_pOldSettings;
 //}
@@ -144,13 +144,13 @@ int HttpMime::isValidMimeType(const char *pDescr)
 }
 
 
-MIMESetting::MIMESetting()
+MimeSetting::MimeSetting()
     : m_psMIME(NULL)
     , m_pHandler(HandlerFactory::getInstance(0, NULL))
 {}
 
 
-MIMESetting::MIMESetting(const MIMESetting &rhs)
+MimeSetting::MimeSetting(const MimeSetting &rhs)
     : m_psMIME(rhs.m_psMIME)
     , m_expires(rhs.m_expires)
     , m_pHandler(rhs.m_pHandler)
@@ -158,18 +158,18 @@ MIMESetting::MIMESetting(const MIMESetting &rhs)
 }
 
 
-MIMESetting::~MIMESetting()
+MimeSetting::~MimeSetting()
 {
 }
 
 
-void MIMESetting::setHandler(const HttpHandler *pHdlr)
+void MimeSetting::setHandler(const HttpHandler *pHdlr)
 {
     m_pHandler = pHdlr;
 }
 
 
-void MIMESetting::inherit(const MIMESetting *pParent, int updateOnly)
+void MimeSetting::inherit(const MimeSetting *pParent, int updateOnly)
 {
     if (!m_expires.cfgHandler() && (!m_pHandler->getType()
                                     || !updateOnly))
@@ -181,7 +181,7 @@ void MIMESetting::inherit(const MIMESetting *pParent, int updateOnly)
 }
 
 
-class MIMESubMap : public HashStringMap<MIMESetting *>
+class MIMESubMap : public HashStringMap<MimeSetting *>
 {
     AutoStr2        m_sMainType;
 
@@ -189,29 +189,30 @@ class MIMESubMap : public HashStringMap<MIMESetting *>
     void operator=(const MIMESubMap &rhs);
 public:
     MIMESubMap()
-        : HashStringMap<MIMESetting * >(10)
+        : HashStringMap<MimeSetting * >(10)
     {}
     MIMESubMap(const MIMESubMap &rhs);
     ~MIMESubMap()
     {   release_objects();  }
 
-    MIMESetting *addMIME(char *pMIME);
+    MimeSetting *addMIME(char *pMIME);
     const char *setMainType(const char *pType, int len);
     const char *getMainType() const    {   return m_sMainType.c_str(); }
     void updateMIME(FnUpdate fpUpdate, void *pValue);
     int inherit(const MIMESubMap *pParent, int existedOnly);
     int inherit(iterator iter, int existedOnly);
+    MIMESubMap::iterator findMimeIgnoreCharset(char *pMIME);
 
 };
 
 
 MIMESubMap::MIMESubMap(const MIMESubMap &rhs)
-    : HashStringMap<MIMESetting * >(10), m_sMainType(rhs.m_sMainType)
+    : HashStringMap<MimeSetting * >(10), m_sMainType(rhs.m_sMainType)
 {
     iterator iter;
     for (iter = rhs.begin(); iter != rhs.end(); iter = rhs.next(iter))
     {
-        MIMESetting *pSetting = new MIMESetting(*iter.second());
+        MimeSetting *pSetting = new MimeSetting(*iter.second());
         if (pSetting)
             insert(iter.first(), pSetting);
     }
@@ -226,7 +227,7 @@ int MIMESubMap::inherit(iterator iter, int existedOnly)
     {
         if (!existedOnly)
         {
-            MIMESetting *pSetting = new MIMESetting(*iter.second());
+            MimeSetting *pSetting = new MimeSetting(*iter.second());
             if (pSetting)
                 insert(iter.first(), pSetting);
             else
@@ -265,7 +266,7 @@ void MIMESubMap::updateMIME(FnUpdate fpUpdate, void *pValue)
 }
 
 
-MIMESetting *MIMESubMap::addMIME(char *pMIME)
+MimeSetting *MIMESubMap::addMIME(char *pMIME)
 {
     const char *p = strchr(pMIME, '/');
     if (!p)
@@ -277,7 +278,7 @@ MIMESetting *MIMESubMap::addMIME(char *pMIME)
     if (!pStr)
         return NULL;
     p = pStr->c_str() + (p - pMIME);
-    MIMESetting *pSetting = new MIMESetting();
+    MimeSetting *pSetting = new MimeSetting();
     if (!pSetting)
         return NULL;
     pSetting->setMIME(pStr);
@@ -285,6 +286,24 @@ MIMESetting *MIMESubMap::addMIME(char *pMIME)
         pSetting->getExpires()->setBit(CONFIG_IMAGE);
     insert(p, pSetting);
     return pSetting;
+}
+
+
+MIMESubMap::iterator MIMESubMap::findMimeIgnoreCharset(char *pMIME)
+{
+    char *p1 = strchr(pMIME, ';');
+    char ch;
+    if (p1)
+    {
+        while (isspace(*(p1 - 1)))
+            --p1;
+        ch = *p1;
+        *p1 = '\0';
+    }
+    MIMESubMap::iterator iterSub = find(pMIME);
+    if (p1)
+        *p1 = ch;
+    return iterSub;
 }
 
 
@@ -302,9 +321,9 @@ public:
     iterator findSubMap(const char *pMIME, char *&p) const;
     MIMESubMap *addSubMap(char *pMIME, int len);
 
-    MIMESetting *addMIME(char *pMIME);
-    MIMESetting *findMIME(char *pMIME) const;
-    void removeMIME(MIMESetting *pMIME);
+    MimeSetting *addMIME(char *pMIME);
+    MimeSetting *findMimeIgnoreCharset(char *pMIME) const;
+    void removeMIME(MimeSetting *pMIME);
     int updateMIME(char *pMIME, FnUpdate fpUpdate, void *pValue);
     int inherit(const MIMEMap *pParent, int existedOnly, char *pFilter);
     int inherit(iterator iter, int existedOnly);
@@ -417,7 +436,7 @@ MIMESubMap *MIMEMap::addSubMap(char *pMIME, int len)
 }
 
 
-MIMESetting *MIMEMap::addMIME(char *pMIME)
+MimeSetting *MIMEMap::addMIME(char *pMIME)
 {
     char *p;
     iterator iter = findSubMap(pMIME, p);
@@ -442,7 +461,7 @@ MIMESetting *MIMEMap::addMIME(char *pMIME)
 }
 
 
-MIMESetting *MIMEMap::findMIME(char *pMIME) const
+MimeSetting *MIMEMap::findMimeIgnoreCharset(char *pMIME) const
 {
     char *p;
     iterator iter = findSubMap(pMIME, p);
@@ -451,19 +470,8 @@ MIMESetting *MIMEMap::findMIME(char *pMIME) const
         return NULL;
     pMap = iter.second();
     ++p;
-    char *p1 = strchr(p, ';');
-    char ch;
-    if (p1)
-    {
-        while (isspace(*(p1 - 1)))
-            --p1;
-        ch = *p1;
-        *p1 = '\0';
-    }
-    MIMESubMap::iterator iterSub = pMap->find(p);
-    if (p1)
-        *p1 = ch;
-    if (iterSub == pMap->end())
+    MIMESubMap::iterator iterSub = pMap->findMimeIgnoreCharset(p);
+    if (iterSub == end())
         return NULL;
     else
         return iterSub.second();
@@ -471,7 +479,7 @@ MIMESetting *MIMEMap::findMIME(char *pMIME) const
 }
 
 
-void MIMEMap::removeMIME(MIMESetting *pMIME)
+void MIMEMap::removeMIME(MimeSetting *pMIME)
 {
     char *p;
     iterator iter = findSubMap((char *)pMIME->getMIME()->c_str(), p);
@@ -493,24 +501,34 @@ int MIMEMap::updateMIME(char *pMIME, FnUpdate fnUpdate, void *pValue)
     {
         char *p;
         iterator iter = findSubMap(pMIME, p);
+        MIMESubMap *pMap = NULL;
 
-        if (iter != end())
+        if (iter == end())
         {
-            MIMESubMap *pMap = iter.second();
-            ++p;
-            if (*p == '*')
-                pMap->updateMIME(fnUpdate, pValue);
-            else
-            {
-                MIMESubMap::iterator iterSub = pMap->find(p);
-                if (iterSub == pMap->end())
-                    return LS_FAIL;
-                else
-                    (*fnUpdate)(iterSub.second(), pValue);
-            }
+            if (!p)
+                return -1;
+            pMap = addSubMap(pMIME, p - pMIME);
+            if (!pMap)
+                return -1;
         }
         else
-            return LS_FAIL;
+            pMap = iter.second();
+        ++p;
+        if (*p == '*')
+            pMap->updateMIME(fnUpdate, pValue);
+        else
+        {
+            MIMESubMap::iterator iterSub = pMap->find(p);
+            if (iterSub == pMap->end())
+            {
+                MimeSetting *pM = pMap->addMIME(pMIME);
+                if (!pM)
+                    return -1;
+                (*fnUpdate)(pM, pValue);
+            }
+            else
+                (*fnUpdate)(iterSub.second(), pValue);
+        }
 
     }
     return 0;
@@ -522,23 +540,23 @@ class MIMESuffix
     MIMESuffix(const MIMESuffix &rhs);
     void operator=(const MIMESuffix &rhs);
 public:
-    MIMESuffix(const char *pSuffix, MIMESetting *pSetting);
+    MIMESuffix(const char *pSuffix, MimeSetting *pSetting);
     ~MIMESuffix() {}
 
     const char     *getSuffix() const   {   return m_sSuffix.c_str();   }
-    MIMESetting    *getSetting() const  {   return m_pSetting;  }
+    MimeSetting    *getSetting() const  {   return m_pSetting;  }
 
-    void            setSetting(MIMESetting *pSetting)
+    void            setSetting(MimeSetting *pSetting)
     {   m_pSetting = pSetting;  }
 
 private:
     AutoStr       m_sSuffix;
-    MIMESetting *m_pSetting;
+    MimeSetting *m_pSetting;
 
 };
 
 
-MIMESuffix::MIMESuffix(const char *pSuffix, MIMESetting *pSetting)
+MIMESuffix::MIMESuffix(const char *pSuffix, MimeSetting *pSetting)
     : m_sSuffix(pSuffix)
     , m_pSetting(pSetting)
 {}
@@ -554,16 +572,16 @@ public:
     {}
     ~MIMESuffixMap() {   release_objects();   }
     MIMESuffixMap(int n) : HashStringMap<MIMESuffix * >(n) {}
-    MIMESuffix *addMapping(const char *pSuffix, MIMESetting *pSetting)
+    MIMESuffix *addMapping(const char *pSuffix, MimeSetting *pSetting)
     {   return addUpdateMapping(pSuffix, pSetting, 0);    }
-    MIMESuffix *addUpdateMapping(const char *pSuffix, MIMESetting *pSetting,
+    MIMESuffix *addUpdateMapping(const char *pSuffix, MimeSetting *pSetting,
                                  int update = 1);
 
 };
 
 
 MIMESuffix *MIMESuffixMap::addUpdateMapping(
-    const char *pSuffix, MIMESetting *pSetting, int update)
+    const char *pSuffix, MimeSetting *pSetting, int update)
 {
     iterator iter = find(pSuffix);
     if (iter != end())
@@ -571,9 +589,9 @@ MIMESuffix *MIMESuffixMap::addUpdateMapping(
         if (update)
         {
             MIMESuffix *pOld = iter.second();
-            GHash::erase(iter);
-            if (pOld)
-                delete pOld;
+            pOld->setSetting(pSetting);
+            //pSetting->addSuffix(pSuffix);
+            return pOld;
         }
         else
             return NULL;
@@ -597,27 +615,60 @@ HttpMime::HttpMime(const HttpMime &rhs)
 {
     m_pMIMEMap = new MIMEMap(*rhs.m_pMIMEMap);
     if (rhs.m_pDefault)
-        m_pDefault = m_pMIMEMap->findMIME((char *)
+        m_pDefault = m_pMIMEMap->findMimeIgnoreCharset((char *)
                                           rhs.m_pDefault->getMIME()->c_str());
     else
         m_pDefault = NULL;
     m_pSuffixMap = new MIMESuffixMap();
-    inheritSuffix(&rhs);
+    inheritSuffix(&rhs, 1);
 }
 
 
-int HttpMime::inheritSuffix(const HttpMime *pParent)
+int HttpMime::inheritSuffix(const HttpMime *pParent, int force)
 {
+//*
     MIMESuffixMap::iterator iter;
     for (iter = pParent->m_pSuffixMap->begin();
          iter != pParent->m_pSuffixMap->end();
          iter = pParent->m_pSuffixMap->next(iter))
     {
-        MIMESetting *pSetting = m_pMIMEMap->findMIME((char *)
+        MIMESuffixMap::iterator iterSelf = m_pSuffixMap->
+                                           find(iter.first());
+        if (iterSelf != m_pSuffixMap->end())
+            continue;
+        MimeSetting *pSetting = m_pMIMEMap->findMimeIgnoreCharset((char *)
                                 iter.second()->getSetting()->getMIME()->c_str());
+        if (!pSetting && force)
+            pSetting = iter.second()->getSetting();
         if (pSetting)
-            m_pSuffixMap->addUpdateMapping(iter.first(), pSetting, 0);
+            m_pSuffixMap->addUpdateMapping(iter.first(), pSetting, force);
     }
+// */
+    /*
+        MIMEMap::iterator iter;
+        for( iter = m_pMIMEMap->begin();
+             iter != m_pMIMEMap->end();
+             iter = m_pMIMEMap->next( iter ) )
+        {
+            MIMESubMap::iterator iterSub;
+            for( iterSub = iter.second()->begin();
+                 iterSub != iter.second()->end();
+                 iterSub = iter.second()->next( iterSub ) )
+            {
+                MimeSetting * pSetting = pParent->m_pMIMEMap->findMimeIgnoreCharset( (char *)
+                    iterSub.second()->getMIME()->c_str() );
+                if ( pSetting && pSetting->getSuffixes() )
+                {
+                    StringList * pSuffixes = pSetting->getSuffixes();
+                    StringList::iterator suffixIter;
+                    for( suffixIter = pSuffixes->begin();
+                        suffixIter != pSuffixes->end();
+                        ++suffixIter )
+                        m_pSuffixMap->addUpdateMapping( (*suffixIter)->c_str(), iterSub.second(), 0 );
+                }
+            }
+        }
+    // */
     return 0;
 }
 
@@ -631,7 +682,7 @@ int HttpMime::updateMIME(char *pMIME, FnUpdate fn, void *pValue,
 }
 
 
-MIMESetting *HttpMime::initDefault(char *pMIME)
+MimeSetting *HttpMime::initDefault(char *pMIME)
 {
     if (!pMIME)
         pMIME = DEFAULT_MIME_TYPE;
@@ -647,9 +698,14 @@ MIMESetting *HttpMime::initDefault(char *pMIME)
 }
 
 
-const MIMESetting *HttpMime::getMIMESetting(char *pMime) const
+const MimeSetting *HttpMime::getMimeSetting(char *pMime) const
 {
-    return m_pMIMEMap->findMIME(pMime);
+    return m_pMIMEMap->findMimeIgnoreCharset(pMime);
+}
+
+const MimeSetting *HttpMime::getMIMESettingLowerCase(char *pMime) const
+{
+    return m_pMIMEMap->findMimeIgnoreCharset(pMime);
 }
 
 
@@ -668,7 +724,7 @@ HttpMime::~HttpMime()
 }
 
 
-const MIMESetting *HttpMime::getFileMime(const char *pPath, int len) const
+const MimeSetting *HttpMime::getFileMime(const char *pPath, int len) const
 {
     const char *p = pPath + len;
     while (p > pPath)
@@ -679,23 +735,23 @@ const MIMESetting *HttpMime::getFileMime(const char *pPath, int len) const
             return NULL;
         --p;
     }
-    return getFileMimeByType(p);
+    return getFileMimeBySuffix(p);
 }
 
 
-const MIMESetting *HttpMime::getFileMime(const char *pPath) const
+const MimeSetting *HttpMime::getFileMime(const char *pPath) const
 {
     const char *pSuffix = strrchr(pPath, '.');
     if (pSuffix)
     {
         ++pSuffix;
-        return getFileMimeByType(pSuffix);
+        return getFileMimeBySuffix(pSuffix);
     }
     return NULL;
 }
 
 
-const MIMESetting *HttpMime::getFileMimeByType(const char *pType) const
+const MimeSetting *HttpMime::getFileMimeBySuffix(const char *pType) const
 {
     if (pType)
     {
@@ -709,7 +765,7 @@ const MIMESetting *HttpMime::getFileMimeByType(const char *pType) const
 
 char HttpMime::compressible(const char *pMIME) const
 {
-    const MIMESetting *pSetting = m_pMIMEMap->findMIME((char *)pMIME);
+    const MimeSetting *pSetting = m_pMIMEMap->findMimeIgnoreCharset((char *)pMIME);
     if (!pSetting)
         if (m_pDefault)
             return m_pDefault->getExpires()->compressible();
@@ -726,13 +782,28 @@ int HttpMime::inherit(HttpMime *pParent, int existedOnly)
         return 0;
     if (m_pMIMEMap->inherit(pParent->m_pMIMEMap, existedOnly, NULL))
         return LS_FAIL;
-    inheritSuffix(pParent);
+    //inheritSuffix(pParent);
     if (!existedOnly)
     {
         if (pParent->m_pDefault)
             initDefault((char *)pParent->getDefault()->getMIME()->c_str());
     }
     return 0;
+}
+
+
+void HttpMime::updateSuffixMimeHandler()
+{
+    MIMESuffixMap::iterator iter;
+    for (iter = m_pSuffixMap->begin();
+         iter != m_pSuffixMap->end();
+         iter = m_pSuffixMap->next(iter))
+    {
+        MimeSetting *pSetting = m_pMIMEMap->findMimeIgnoreCharset(
+                                    (char *)iter.second()->getSetting()->getMIME()->c_str());
+        if (pSetting && pSetting != iter.second()->getSetting())
+            iter.second()->setSetting(pSetting);
+    }
 }
 
 
@@ -768,25 +839,25 @@ int HttpMime::loadMime(const char *pPropertyPath)
 }
 
 
-int HttpMime::addUpdateMIME(char *pType, char *pDesc, const char *&reason,
+MimeSetting * HttpMime::addUpdateMIME(char *pSuffixes, char *pDesc, const char *&reason,
                             int update)
 {
-    pType = StringTool::strTrim(pType);
+    pSuffixes = StringTool::strTrim(pSuffixes);
     pDesc = StringTool::strTrim(pDesc);
     if (!isValidMimeType(pDesc))
     {
         reason = "invalid MIME description";
-        return LS_FAIL;
+        return NULL;
     }
     if (strlen(pDesc) > MAX_MIME_LEN)
     {
         reason = "MIME description is too long";
-        return LS_FAIL;
+        return NULL;
     }
 
-    pType = StringTool::strLower(pType, pType);
+    pSuffixes = StringTool::strLower(pSuffixes, pSuffixes);
     pDesc = StringTool::strLower(pDesc, pDesc);
-    MIMESetting *pSetting = m_pMIMEMap->findMIME(pDesc);
+    MimeSetting *pSetting = m_pMIMEMap->findMimeIgnoreCharset(pDesc);
     if (pSetting)
     {
         if (strcmp(pDesc, pSetting->getMIME()->c_str()) != 0)
@@ -804,31 +875,11 @@ int HttpMime::addUpdateMIME(char *pType, char *pDesc, const char *&reason,
         if (!pSetting)
         {
             reason = "invalid MIME type";
-            return LS_FAIL;
+            return NULL;
         }
     }
-    char *p = pType;
-    while (1)
-    {
-        p = strtok(pType, ", ");
-        if (!p)
-            return 0;
-        pType = NULL;
-        p = StringTool::strTrim(p);
-        while (*p == '.')
-            ++p;
-        if (*p == 0)
-            continue;
-        if (!isValidType(p))
-            continue;
-        if (strcmp(p, "default") == 0)
-        {
-            m_pDefault = pSetting;
-            continue;
-        }
-        if (!m_pSuffixMap->addUpdateMapping(p, pSetting, update))
-            continue;
-    }
+    addUpdateSuffixMimeMap(pSetting, pSuffixes, update);
+    return pSetting;
 }
 
 
@@ -854,7 +905,7 @@ int HttpMime::processOneLine(const char *pFilePath, char *pLine,
         ++ pDesc;
 
 
-        if (addUpdateMIME(pType, pDesc, reason, 0))
+        if (!addUpdateMIME(pType, pDesc, reason, 0))
             break;
         else
             return 0;
@@ -867,7 +918,7 @@ int HttpMime::processOneLine(const char *pFilePath, char *pLine,
 }
 
 
-void HttpMime::setCompressible(MIMESetting *pSetting, void *pValue)
+void HttpMime::setCompressible(MimeSetting *pSetting, void *pValue)
 {
     pSetting->getExpires()->setCompressible((long)pValue);
     pSetting->getExpires()->setBit(CONFIG_COMPRESS);
@@ -908,7 +959,7 @@ int HttpMime::setCompressibleByType(const char *pValue,
 }
 
 
-void HttpMime::setExpire(MIMESetting *pSetting, void *pValue)
+void HttpMime::setExpire(MimeSetting *pSetting, void *pValue)
 {
     pSetting->getExpires()->parse((const char *)pValue);
 }
@@ -948,6 +999,38 @@ int HttpMime::setExpiresByType(const char *pValue, const HttpMime *pParent,
 }
 
 
+int HttpMime::addUpdateSuffixMimeMap(MimeSetting *pSetting,
+                                     char *pSuffixes, int update)
+{
+    pSuffixes = StringTool::strTrim(pSuffixes);
+    pSuffixes = StringTool::strLower(pSuffixes, pSuffixes);
+    char *p = pSuffixes;
+    while (1)
+    {
+        p = strtok(pSuffixes, ", \t");
+        if (!p)
+            return 0;
+        pSuffixes = NULL;
+        p = StringTool::strTrim(p);
+        while (*p == '.')
+            ++p;
+        if (*p == 0)
+            continue;
+        if (!isValidType(p))
+            continue;
+        if (strcmp(p, "default") == 0)
+        {
+            m_pDefault = pSetting;
+            continue;
+        }
+        if (!m_pSuffixMap->addUpdateMapping(p, pSetting, update))
+            continue;
+    }
+
+}
+
+
+
 int HttpMime::addType(const HttpMime *pDefault, const char *pValue,
                       const char *pLogId)
 {
@@ -982,9 +1065,10 @@ int HttpMime::addType(const HttpMime *pDefault, const char *pValue,
 }
 
 
-void HttpMime::setHandler(MIMESetting *pSetting, void *pValue)
+void HttpMime::setHandler(MimeSetting *pSetting, void *pValue)
 {
     pSetting->setHandler((HttpHandler *)pValue);
+    pSetting->getExpires()->setBit(CONFIG_HANDLER);
 }
 
 
@@ -1035,7 +1119,7 @@ int HttpMime::addMimeHandler(const char *pSuffix, char *pMime,
         pMime = achBuf;
     }
     memccpy(achSuffix, pSuffix, 0, 511);
-    if (addUpdateMIME(achSuffix, pMime, reason, 1))
+    if (!addUpdateMIME(achSuffix, pMime, reason, 1))
     {
         LS_WARN("[%s] failed to add mime type: %s %s, reason: %s",
                 pLogId, pMime, pSuffix, reason);

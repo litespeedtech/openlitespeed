@@ -460,7 +460,7 @@ int  FileCacheDataEx::buildCLHeader(bool gziped)
 }
 
 
-int StaticFileCacheData::buildHeaders(const MIMESetting *pMIME,
+int StaticFileCacheData::buildHeaders(const MimeSetting *pMIME,
                                       const AutoStr2 *pCharset, short etag)
 {
     int ret;

@@ -372,28 +372,15 @@ int LocalWorker::workerExec(LocalWorkerConfig &config, int fd)
     uid_t uid;
     gid_t gid;
     const HttpVHost *pVHost = config.getVHost();
-    if (!pVHost)
+    uid = config.getUid();
+    gid = config.getGid();
+    if ((int)uid == -1)
+        uid = procConfig.getUid();
+    if ((int)gid == -1)
+        gid = procConfig.getGid();
+
+    if (pVHost && pVHost->getRootContext().getSetUidMode() == UID_DOCROOT)
     {
-//        if ( config.getRunOnStartUp() == 2 )
-//        {
-//            uid = 0;
-//            gid = 0;
-//        }
-//        else
-        {
-            uid = config.getUid();
-            gid = config.getGid();
-            if ((int)uid == -1)
-                uid = procConfig.getUid();
-            if ((int)gid == -1)
-                gid = procConfig.getGid();
-        }
-    }
-    else
-    {
-        int mode = pVHost->getRootContext().getSetUidMode();
-        if (mode != UID_DOCROOT)
-            return LS_FAIL;
         uid = pVHost->getUid();
         gid = pVHost->getGid();
         if (procConfig.getForceGid() != 0)
@@ -540,7 +527,7 @@ int LocalWorker::startWorker()
         }
         else
         {
-            LS_ERROR("Start FCGI [%s]: failed to start the # %d of %d instances.",
+            LS_ERROR("Start [%s]: failed to start the # %d of %d instances.",
                      config.getName(), i + 1, instances);
             break;
         }

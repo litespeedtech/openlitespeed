@@ -109,6 +109,7 @@ int SslOcspStapling::callback(SSL *ssl)
     int     iResult;
     unsigned char *pbuff;
     iResult = SSL_TLSEXT_ERR_NOACK;
+    update();
     if (m_iDataLen > 0)
     {
         /*OpenSSL will free pbuff by itself */
@@ -119,7 +120,6 @@ int SslOcspStapling::callback(SSL *ssl)
         SSL_set_tlsext_status_ocsp_resp(ssl, pbuff, m_iDataLen);
         iResult = SSL_TLSEXT_ERR_OK;
     }
-    update();
     return iResult;
 }
 

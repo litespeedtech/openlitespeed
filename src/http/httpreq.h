@@ -79,7 +79,7 @@ class HttpRespHeaders;
 class HttpSession;
 class HttpVHost;
 class IOVec;
-class MIMESetting;
+class MimeSetting;
 class RadixNode;
 class SSIConfig;
 class SSIRuntime;
@@ -109,7 +109,7 @@ private:
 
     key_value_pair      m_curURL;
 
-    const MIMESetting  *m_pMimeType;
+    const MimeSetting  *m_pMimeType;
 
     ls_xpool_t         *m_pPool;
     ls_strpair_t       m_curUrl;
@@ -494,7 +494,7 @@ public:
     int  getUGidChroot(uid_t *pUid, gid_t *pGid,
                        const AutoStr2 **pChroot);
     const AutoStr2 *getDefaultCharset() const;
-    const MIMESetting *getMimeType() const  {   return m_pMimeType;         }
+    const MimeSetting *getMimeType() const  {   return m_pMimeType;         }
     void  smartKeepAlive(const char *pValue);
     //int setRewriteURI( const char * pURL, int len );
     int setRewriteURI(const char *pURL, int len, int no_escape = 1);

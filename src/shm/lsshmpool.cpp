@@ -280,7 +280,7 @@ LsShmOffset_t LsShmPool::getReg(const char *name)
 
 LsShmHash *LsShmPool::getNamedHash(const char *name,
                                    LsShmSize_t init_size, LsShmHasher_fn hf,
-                                   LsShmValComp_fn vc, int lru_mode)
+                                   LsShmValComp_fn vc, int iFlags)
 {
     LsShmHash *pObj;
     GHash::iterator itor;
@@ -307,7 +307,7 @@ LsShmHash *LsShmPool::getNamedHash(const char *name,
 
     if (pReg->x_iValue == 0)
     {
-        LsShmOffset_t offset = allocateNewHash( init_size, hf != NULL, lru_mode);
+        LsShmOffset_t offset = allocateNewHash( init_size, hf != NULL, iFlags);
         if (offset != 0)
         {
             pReg = (LsShmReg *)offset2ptr(offReg);
@@ -317,21 +317,21 @@ LsShmHash *LsShmPool::getNamedHash(const char *name,
     if (!pReg->x_iValue)
         return NULL;
 
-    return newHashByOffset(pReg->x_iValue, name, hf, vc, lru_mode);
+    return newHashByOffset(pReg->x_iValue, name, hf, vc, iFlags);
 }
 
 
 LsShmHash * LsShmPool::newHashByOffset(LsShmOffset_t offset,
-                  const char *name, LsShmHasher_fn hf, 
-                  LsShmValComp_fn vc, int lru_mode)
+                  const char *name, LsShmHasher_fn hf,
+                  LsShmValComp_fn vc, int iFlags)
 {
     LsShmHash *pObj;
-//     if (lru_mode == LSSHM_LRU_MODE2)
+//     if (iFlags & LSSHM_FLAG_LRU_MODE2)
 //         pObj = new LsShmWLruHash(this, name, hf, vc);
-//     else if (lru_mode == LSSHM_LRU_MODE3)
+//     else if (iFlags & LSSHM_FLAG_LRU_MODE3)
 //         pObj = new LsShmXLruHash(this, name, hf, vc);
 //     else
-    pObj = new LsShmHash(this, name, hf, vc, lru_mode);
+    pObj = new LsShmHash(this, name, hf, vc, iFlags);
     if ( pObj->init(offset) == LS_FAIL)
     {
         delete pObj;
@@ -344,7 +344,7 @@ LsShmHash * LsShmPool::newHashByOffset(LsShmOffset_t offset,
 }
 
 
-LsShmOffset_t LsShmPool::allocateNewHash(int init_size, int iMode, int iLruMode)
+LsShmOffset_t LsShmPool::allocateNewHash(int init_size, int iMode, int iFlags)
 {
     // Create new HASH Table
 
@@ -353,15 +353,15 @@ LsShmOffset_t LsShmPool::allocateNewHash(int init_size, int iMode, int iLruMode)
     {
         return 0;
     }
- 
+
     // NOTE: system is not up yet... ignore remap here
-    LsShmOffset_t offset = 
-            LsShmHash::allocHTable(this, init_size, iMode, iLruMode, 
+    LsShmOffset_t offset =
+            LsShmHash::allocHTable(this, init_size, iMode, iFlags,
                                    lockPool()->pLock2offset(pShmLock));
     if (offset == 0)
     {
         lockPool()->freeLock(pShmLock);
-    }    
+    }
     return offset;
 }
 
@@ -419,9 +419,8 @@ LsShmOffset_t LsShmPool::alloc2(LsShmSize_t size, int &remapped)
     LsShmMap *map_o = m_pShm->getShmMap();
     LsShmOffset_t offset;
 
-    if (size == 0)
+    if ((size == 0) || (size&0x80000000) || (size>LSSHM_MAXSIZE)) 
         return 0;
-    LSSHM_CHECKSIZE(size);
 
     remapped = 0;
     size = roundDataSize(size);
@@ -1081,7 +1080,8 @@ LsShmOffset_t LsShmPool::allocPage(LsShmSize_t pagesize, int &remap)
 {
     LsShmOffset_t offset;
 
-    LSSHM_CHECKSIZE(pagesize);
+    if ((pagesize&0x80000000) || (pagesize>LSSHM_MAXSIZE))
+        return 0;;
     pagesize = roundPageSize(pagesize);
     remap = 0;
 

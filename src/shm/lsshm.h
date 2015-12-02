@@ -45,7 +45,6 @@ class debugBase;// These two should be the same size...
 class LsShmPool;
 class LsShmHash;
 
-
 #define LSSHM_OPEN_STD      0x00
 #define LSSHM_OPEN_NEW      0x01
 
@@ -127,7 +126,7 @@ public:
     {
         m_iMaxShmSize = size > LSSHM_MINSPACE ? size : LSSHM_MINSPACE;
     }
-    
+
     LsShmXSize_t shmMaxSize() const {   return m_iMaxShmSize;   }
     LsShmXSize_t maxSize() const    {   return x_pStats->m_iFileSize;   }
     LsShmXSize_t oldMaxSize() const {   return m_iMaxSizeO;     }
@@ -140,7 +139,7 @@ public:
     }
 
     LsShmMapStat *getMapStat() const    {   return x_pStats;    }
-    
+
     LsShmOffset_t getMapStatOffset() const;
 
     LsShmOffset_t allocPage(LsShmSize_t pagesize, int &remapped);
@@ -246,7 +245,7 @@ private:
     }
 
     void tryRecoverBadOffset(LsShmOffset_t offset);
-    
+
     // only use by physical mapping
     LsShmXSize_t roundToPageSize(LsShmXSize_t size) const
     {
@@ -277,7 +276,7 @@ private:
 
     LsShmStatus_t newShmMap(LsShmSize_t size, uint64_t id);
 
-    static int chkReg(LsShmOffset_t iterOff, void *pUData);
+    static int chkReg(LsShmHIterOff iterOff, void *pUData);
 
     // various objects within the SHM
     HashStringMap < ls_shmobject_t *> m_objBase;

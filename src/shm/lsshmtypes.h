@@ -135,11 +135,11 @@ typedef v2_comp                 LsShmValComp_fn;
 #define LSSHM_MAXERRMSG         4096            // max error message len
 
 // bit mask from ls.h
-#define LSSHM_FLAG_NONE         0x0000          // no flag values
-#define LSSHM_FLAG_INIT         0x0001          // used to indicate for memset
-#define LSSHM_FLAG_CREATED      0x0001          // return flag if SHM created
+#define LSSHM_VAL_NONE          0x0000          // no flag values
+#define LSSHM_VAL_INIT          0x0001          // used to indicate for memset
+#define LSSHM_VAL_CREATED       0x0001          // return flag if SHM created
 
-#define LSSHM_CHECKSIZE(x) { if ((x&0x80000000) || (x>LSSHM_MAXSIZE)) return 0;}
+#define LSSHM_CHECKSIZE(x) { if ((x&0x80000000) || (x>LSSHM_MAXSIZE)) return end();}
 
 enum LsShmStatus_t
 {
@@ -173,18 +173,12 @@ struct LsHashStat_s
 };
 typedef struct LsHashStat_s LsHashStat;
 
-// LruHash info
-struct LsHashLruInfo_s
-{
-    LsShmOffset_t    linkFirst;
-    LsShmOffset_t    linkLast;
-    int              nvalset;    // number of keys currently set
-    int              nvalexp;    // number of keys expired
-    int              ndataset;   // number of value datas currently set
-    int              ndatadel;   // number of datas deleted by mincnt
-    int              ndataexp;   // number of datas expired
-};
 typedef struct LsHashLruInfo_s LsHashLruInfo;
+typedef struct ls_shmhiteroff_s
+{
+    LsShmOffset_t   m_iOffset;   // offset location of hash element
+} LsShmHIterOff;
+
 
 /* status for shmlru_check */
 #define SHMLRU_CHECKOK      (0)

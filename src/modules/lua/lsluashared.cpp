@@ -86,7 +86,7 @@ static inline LsShmHash *LsLuaShmOpen(const char *name)
     pName->append("hash", 4);
     pRet =  pPool->getNamedHash(pName->c_str(), LSSHM_HASHINITSIZE,
                                 LsShmHash::hashString, LsShmHash::compString,
-                                LSSHM_LRU_NONE);
+                                LSSHM_FLAG_NONE);
     delete pName;
     return pRet;
 }

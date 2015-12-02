@@ -2,8 +2,8 @@
 <head>
   <meta charset="utf-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
-  <title>Open LiteSpeed Web Server Users' Manual - Listeners SSL</title>
-  <meta name="description" content="Open LiteSpeed Web Server Users' Manual - Listeners SSL." />
+  <title>Open LiteSpeed Web Server Users' Manual - Virtual Host SSL</title>
+  <meta name="description" content="Open LiteSpeed Web Server Users' Manual - Virtual Host SSL." />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="shortcut icon" href="img/favicon.ico" />
   <link rel="stylesheet" type="text/css" href="css/hdoc.css">
@@ -41,12 +41,12 @@
 	<li><a href="Rails_Help.html">Rack/Rails Settings</a></li>
 	<li><a href="Module_Help.html">Module Configuration</a></li>
 	<li><a href="Listeners_General_Help.html">Listener General</a></li>
-        <li><span class="current"><a href="Listeners_SSL_Help.html">Listener SSL</a></span></li>
+        <li><a href="Listeners_SSL_Help.html">Listener SSL</a></li>
 	<li><a href="Templates_Help.html">Templates</a></li>
 	<li><a href="VirtualHosts_Help.html">Virtual Host Basic</a></li>
 	<li><a href="VHGeneral_Help.html">Virtual Host General</a></li>
 	<li><a href="VHSecurity_Help.html">Virtual Host Security</a></li>
-        <li><a href="VHSSL_Help.html">Virtual Host SSL</a></li>
+        <li><span class="current"><a href="VHSSL_Help.html">Virtual Host SSL</a></span></li>
 	<li><a href="Rewrite_Help.html">Rewrite</a></li>
 	<li><a href="Context_Help.html">Context</a></li>
                <ul class="level3">
@@ -75,13 +75,13 @@
 </li>
 </ul>
 </div></div>
-<div class="contentwrapper"><div class="nav-bar"><div class="prev">&#171 <a href="Listeners_General_Help.html">Listeners General</a></div><div class="center"><a href="config.html">Configuration</a></div><div class="next"><a href="Templates_Help.html">Virtual Host Templates</a> &#187;</div></div>
-<h1>Listeners SSL</h1><h4>Table of Contents</h4><section class="toc"><section class="toc-row"><header><a href="#sslCert">SSL Private Key & Certificate</a></header><p>
+<div class="contentwrapper"><div class="nav-bar"><div class="prev">&#171 <a href="VHSecurity_Help.html">Virtual Host Security</a></div><div class="center"><a href="config.html">Configuration</a></div><div class="next"><a href="Rewrite_Help.html">Rewrite</a> &#187;</div></div>
+<h1>Virtual Host SSL</h1><h4>Table of Contents</h4><section class="toc"><section class="toc-row"><header><a href="#sslCert">SSL Private Key & Certificate</a></header><p>
 <a href="#keyFile">Private Key File</a>&nbsp;|&nbsp;<a href="#certFile">Certificate File</a>&nbsp;|&nbsp;<a href="#certChain">Chained Certificate</a>&nbsp;|&nbsp;<a href="#CACertPath">CA Certificate Path</a>&nbsp;|&nbsp;<a href="#CACertFile">CA Certificate File</a>&nbsp;|&nbsp;</p></section>
 <section class="toc-row"><header><a href="#sslProtocolSetting">SSL Protocol</a></header><p>
 <a href="#sslProtocol">Protocol Version</a>&nbsp;|&nbsp;<a href="#ciphers">Ciphers</a>&nbsp;|&nbsp;<a href="#enableECDHE">Enable ECDH Key Exchange</a>&nbsp;|&nbsp;<a href="#enableDHE">Enable DH Key Exchange</a>&nbsp;|&nbsp;<a href="#DHParam">DH Parameter</a>&nbsp;|&nbsp;</p></section>
-<section class="toc-row"><header>Security & Features</header><p>
-<a href="#renegProtection">SSL Renegotiation Protection</a>&nbsp;|&nbsp;<a href="#sslSessionCache">Enable Session Cache</a>&nbsp;|&nbsp;<a href="#sslSessionTickets">Enable Session Tickets</a>&nbsp;|&nbsp;<a href="#enableSpdy">Enable SPDY/HTTP2</a>&nbsp;|&nbsp;</p></section>
+<section class="toc-row"><header>Security</header><p>
+<a href="#renegProtection">SSL Renegotiation Protection</a>&nbsp;|&nbsp;<a href="#sslSessionCache">Enable Session Cache</a>&nbsp;|&nbsp;<a href="#sslSessionTickets">Enable Session Tickets</a>&nbsp;|&nbsp;</p></section>
 <section class="toc-row"><header><a href="#sslOCSP">OCSP Stapling</a></header><p>
 <a href="#enableStapling">Enable OCSP Stapling</a>&nbsp;|&nbsp;<a href="#ocspRespMaxAge">OCSP Response Max Age (secs)</a>&nbsp;|&nbsp;<a href="#ocspResponder">OCSP Responder</a>&nbsp;|&nbsp;<a href="#ocspCACerts">OCSP CA Certificates</a>&nbsp;|&nbsp;</p></section>
 <section class="toc-row"><header>Client Verification</header><p>
@@ -102,7 +102,6 @@
 <div class="helpitem"><a name="renegProtection"></a><table width="100%" class="ht" border="0" cellpadding="5" cellspacing="0"> <tr class="ht-title"><td><div>SSL Renegotiation Protection<span class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="img/top.gif"></a></span></div></td></tr> <tr><td><span class="ht-label">Description: </span>Specifies whether to enable SSL Renegotiation Protection to  defend against SSL handshake-based attacks. The default value is "Yes".</td></tr> <tr><td><span class="ht-label">Syntax: </span>Select from radio box</td></tr> </table> </div>
 <div class="helpitem"><a name="sslSessionCache"></a><table width="100%" class="ht" border="0" cellpadding="5" cellspacing="0"> <tr class="ht-title"><td><div>Enable Session Cache<span class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="img/top.gif"></a></span></div></td></tr> <tr><td><span class="ht-label">Description: </span>Enables session id caching. If "Not Set", defaults to  "No". (Openssl Default)</td></tr> <tr><td><span class="ht-label">Syntax: </span>Select from radio box</td></tr> </table> </div>
 <div class="helpitem"><a name="sslSessionTickets"></a><table width="100%" class="ht" border="0" cellpadding="5" cellspacing="0"> <tr class="ht-title"><td><div>Enable Session Tickets<span class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="img/top.gif"></a></span></div></td></tr> <tr><td><span class="ht-label">Description: </span>Enables session tickets. If "Not Set", the server will use openSSL's default ticket.</td></tr> <tr><td><span class="ht-label">Syntax: </span>Select from radio box</td></tr> </table> </div>
-<div class="helpitem"><a name="enableSpdy"></a><table width="100%" class="ht" border="0" cellpadding="5" cellspacing="0"> <tr class="ht-title"><td><div>Enable SPDY/HTTP2<span class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="img/top.gif"></a></span></div></td></tr> <tr><td><span class="ht-label">Description: </span>HTTP/2 and SPDY are new versions of the HTTP network protocol with the goal of reducing page load times.  More information can be found at: http://en.wikipedia.org/wiki/HTTP/2</td></tr> <tr><td><span class="ht-label">Syntax: </span>Check the protocol(s) you wish to enable. Leaving all boxes unchecked will enable SPDY and HTTP/2 support (the default).  If you wish to disable SPDY and HTTP/2, check "None" only and leave all other boxes unchecked.</td></tr> </table> </div>
 <div class="helpitem"><a name="sslOCSP"></a><table width="100%" class="ht" border="0" cellpadding="5" cellspacing="0"> <tr class="ht-title"><td><div>OCSP Stapling<span class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="img/top.gif"></a></span></div></td></tr> <tr><td><span class="ht-label">Description: </span>Online Certificate Status Protocol (OCSP) is a more efficient method  of checking whether a digital certificate is valid. It works by communicating  with another server — the OCSP responder — to get verification that the certificate  is valid instead of checking through certificate revocation lists (CRL).<br/><br/> OCSP stapling is a further improvement on this protocol, allowing the server to  check with the OCSP responder at regular intervals instead of every time a certificate  is requested. See the <a href="http://en.wikipedia.org/wiki/OCSP_Stapling">OCSP Wikipedia page</a> for more details.</td></tr> </table> </div>
 <div class="helpitem"><a name="enableStapling"></a><table width="100%" class="ht" border="0" cellpadding="5" cellspacing="0"> <tr class="ht-title"><td><div>Enable OCSP Stapling<span class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="img/top.gif"></a></span></div></td></tr> <tr><td><span class="ht-label">Description: </span>Determines whether to enable OCSP stapling, a more efficient way of verifying public key certificates.</td></tr> <tr><td><span class="ht-label">Syntax: </span>Select from radio box</td></tr> </table> </div>
 <div class="helpitem"><a name="ocspRespMaxAge"></a><table width="100%" class="ht" border="0" cellpadding="5" cellspacing="0"> <tr class="ht-title"><td><div>OCSP Response Max Age (secs)<span class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="img/top.gif"></a></span></div></td></tr> <tr><td><span class="ht-label">Description: </span>This option sets the maximum allowable age for an OCSP response. If an OCSP response is older than this maximum age, the server will contact the OCSP responder for a new response. The default value is <span class="val">86400</span>. Maximum age can be turned off by setting this value to <span class="val">-1</span>.</td></tr> <tr><td><span class="ht-label">Syntax: </span>Integer of seconds</td></tr> </table> </div>

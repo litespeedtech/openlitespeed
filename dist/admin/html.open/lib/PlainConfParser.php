@@ -3,23 +3,34 @@
 class RawFiles
 {
 	private $_list = array();
-	// list of obj (name, level, parrent)
+	// list of obj (name, level, fid, dir, fullpath)
 
 	private $_errs = array();
 	private $_fatal = 0;
 
-	public function GetFileName($fid)
+	public function GetFullFileName($fid)
 	{
-		return $this->_list[$fid][0];
+		return $this->_list[$fid][4];
 	}
 
 	public function AddRawFile($node)
 	{
 		$filename = $node->Get(CNode::FLD_VAL);
 		$index = count($this->_list);
-		$level = ($index > 0) ? $this->_list[$parent][1] + 1 : 0;
+		$parentid = $index - 1;
+		$level = ($index > 0) ? $this->_list[$parentid][1] + 1 : 0;
+		$fullpath = $filename;
+		if ($filename{0} != '/') {
+			if ($parentid) {
+				$fullpath = $this->_list[$parentid][3] . '/' . $filename;
+			}
+			else {
+				$fullpath = SERVER_ROOT . '/conf/' . $fullpath;
+			}
+		}
+		$dir = dirname($fullpath);
 
-		$this->_list[$index] = array($filename, $level, $index);
+		$this->_list[$index] = array($filename, $level, $index, $dir, $fullpath); // list of obj (name, level, fid, dir, fullpath)
 
 		return $index;
 	}
@@ -68,11 +79,10 @@ class PlainConfParser
 
 	public function Parse($filename)
 	{
-		$parser = new PlainConfParser();
 		$root = new CNode(CNode::K_ROOT, $filename, CNode::T_ROOT);
 		$rawfiles = new RawFiles();
 
-		$parser->parse_raw($rawfiles, $root);
+		$this->parse_raw($rawfiles, $root);
 
 		return $root;
 	}
@@ -82,11 +92,12 @@ class PlainConfParser
 		$fid = $rawfiles->AddRawFile($root);
 
 		$filename = $root->Get(CNode::FLD_VAL);
-		$rawlines = file($filename);
+		$fullpath = $rawfiles->GetFullFileName($fid);
+		$rawlines = file($fullpath);
 
 		if ($rawlines == NULL) {
 			$errlevel = ($root->Get(CNode::FLD_KEY) == CNode::K_ROOT) ? CNode::E_FATAL : CNode::E_WARN;
-			$errmsg = "Failed to read file $filename";
+			$errmsg = "Failed to read file $filename, abspath = $fullpath";
 			$rawfiles->MarkError($root, $errlevel, $errmsg);
 			return;
 		}
@@ -108,24 +119,23 @@ class PlainConfParser
 
 			$line_num ++;
 
-			if ($sticky || ($multiline_tag != ''))
+			if ($sticky || ($multiline_tag != '')) {
 				$d = rtrim($data, "\r\n");
-			else
+			}
+			else {
 				$d = trim($data);
+				if ($d == '') {
+					$cur_comment .= "\n";
+					continue; 	// ignore empty lines
+				}
 
-			if ($d == '') {
-				$cur_comment .= "\n";
-				continue; 	// ignore empty lines
-			}
-
-			if ($d[0] == '#') {
-				$cur_comment .= $d . "\n";
-				continue;	// comments
-			}
-
-			if (!$sticky && $multiline_tag == '') {
+				if ($d[0] == '#') {
+					$cur_comment .= $d . "\n";
+					continue;	// comments
+				}
 				$from_line = $line_num;
 			}
+
 
 			$end_char = $d[strlen($d) - 1];
 
@@ -199,11 +209,12 @@ class PlainConfParser
 				}
 
 				$type = CNode::T_KV;
-				if ($is_block)
+				if ($is_block) {
 					$type = ($val == NULL) ? CNode::T_KB : CNode::T_KVB;
-				elseif (strcasecmp($key, 'include') == 0)
+				}
+				elseif (strcasecmp($key, 'include') == 0) {
 					$type = CNode::T_INC;
-
+				}
 
 				$newnode = new CNode($key, $val, $type);
 				$newnode->SetRawMap($fid, $from_line, $to_line, $cur_comment);
@@ -220,6 +231,7 @@ class PlainConfParser
 				}
 				elseif ($newnode->HasFlag(CNode::BM_INC)) {
 					$this->parse_raw($rawfiles, $newnode);
+					$cur_node->AddIncludeChildren($newnode);
 				}
 			}
 

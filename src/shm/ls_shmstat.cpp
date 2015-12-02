@@ -23,7 +23,7 @@
 #include <unistd.h>
 
 
-static const char *g_pShmDirName = "/dev/shm/ols";
+static const char *g_pShmDirName = "/dev/shm/lslb";
 static const char *g_pShmName = NULL;
 
 

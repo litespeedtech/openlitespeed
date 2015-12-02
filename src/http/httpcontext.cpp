@@ -186,6 +186,7 @@ int HttpContext::setFilesMatch(const char *pURI, int regex)
 {
     if (!pURI)
         return LS_FAIL;
+    setConfigBit2(BIT2_IS_FILESMATCH_CTX, 1);
     if (regex)
     {
         //m_iFilesMatchCtx = 1;
@@ -542,17 +543,37 @@ void HttpContext::inherit(const HttpContext *pRootContext)
         if (!(m_iConfigBits & BIT_DEF_CHARSET))
             m_pInternal->m_pDefaultCharset = m_pParent->m_pInternal->m_pDefaultCharset;
         if (!(m_iConfigBits & BIT_MIME))
-            m_pInternal->m_pMIME = m_pParent->m_pInternal->m_pMIME;
+        {
+            if (!(m_iConfigBits2 & BIT2_IS_FILESMATCH_CTX))
+                m_pInternal->m_pMIME = m_pParent->m_pInternal->m_pMIME;
+        }
         else
         {
             if (m_pInternal->m_pMIME)
             {
+                //DumpSuffixMimeAssoc( this, "Before inheit Glboal", m_pInternal->m_pMIME, "php" );
                 m_pInternal->m_pMIME->inherit(HttpMime::getMime(), 1);
-                m_pInternal->m_pMIME->inherit(m_pParent->m_pInternal->m_pMIME, 0);
+                //DumpSuffixMimeAssoc( this, "After inheit Glboal", m_pInternal->m_pMIME, "php" );
+                if (!(m_iConfigBits2 & BIT2_IS_FILESMATCH_CTX)
+                    && m_pParent->m_pInternal->m_pMIME)
+                {
+                    m_pInternal->m_pMIME->inherit(m_pParent->m_pInternal->m_pMIME, 0);
+                    m_pInternal->m_pMIME->inheritSuffix(m_pParent->m_pInternal->m_pMIME, 1);
+                }
+                //DumpSuffixMimeAssoc( pParent, pParent->getURI(), pParent->m_pInternal->m_pMIME, "php" );
+                //DumpSuffixMimeAssoc( pParent, pParent->getURI(), pParent->m_pInternal->m_pMIME, "php5" );
+                //DumpSuffixMimeAssoc( this, "After inheit parent", m_pInternal->m_pMIME, "php" );
+                m_pInternal->m_pMIME->inheritSuffix(HttpMime::getMime(), 0);
+                //DumpSuffixMimeAssoc( this, "After inheitSuffix Global", m_pInternal->m_pMIME, "php" );
+                m_pInternal->m_pMIME->updateSuffixMimeHandler();
+                //DumpSuffixMimeAssoc( this, "After updateSuffixMimeHandler", m_pInternal->m_pMIME, "php" );
             }
         }
         if (!(m_iConfigBits & BIT_FORCE_TYPE))
-            m_pInternal->m_pForceType = m_pParent->m_pInternal->m_pForceType;
+        {
+            if (!(m_iConfigBits2 & BIT2_IS_FILESMATCH_CTX))
+                m_pInternal->m_pForceType = m_pParent->m_pInternal->m_pForceType;
+        }
         if (!(m_iConfigBits & BIT_AUTHORIZER))
             m_pInternal->m_pAuthorizer = m_pParent->m_pInternal->m_pAuthorizer;
         if (!(m_iConfigBits & BIT_DIRINDEX))
@@ -678,6 +699,17 @@ void HttpContext::inherit(const HttpContext *pRootContext)
 }
 
 
+void HttpContext::matchListInherit(const HttpContext *pRootContext) const 
+{
+    if (m_pMatchList)
+    {
+        ContextList::iterator iter;
+        for (iter = m_pMatchList->begin(); iter != m_pMatchList->end(); ++iter)
+            (*iter)->inherit(pRootContext);
+    }
+}
+
+
 int HttpContext::addMatchContext(HttpContext *pContext)
 {
     //assert( !m_iFilesMatchCtx );
@@ -732,12 +764,19 @@ const HttpContext *HttpContext::findMatchContext(const char *pURI,
 }
 
 
-int HttpContext::addMIME(const char *pValue)
+const MimeSetting * HttpContext::addMIME(const char *pMime,
+                                         const char *pSuffix)
 {
     if (initMIME())
-        return LS_FAIL;
-    return m_pInternal->m_pMIME->addType(HttpMime::getMime(), pValue,
-                                         m_sLocation.c_str());
+        return NULL;
+    char achBuf[1024];
+    snprintf(achBuf, 1024, "%s", pMime);
+
+    MimeSetting *pSetting = (MimeSetting *)lookupMimeSetting(achBuf, 1);
+    snprintf(achBuf, 1024, "%s", pSuffix);
+    if (pSetting)
+        m_pInternal->m_pMIME->addUpdateSuffixMimeMap(pSetting, achBuf, 1);
+    return pSetting;
 
 }
 
@@ -762,17 +801,101 @@ int HttpContext::setCompressByType(const char *pValue)
 }
 
 
+const MimeSetting *HttpContext::lookupMimeBySuffix(const char *pSuffix)
+const
+{
+    const MimeSetting *pSetting = NULL;
+    HttpMime *pMIME = m_pInternal->m_pMIME;
+    const HttpContext *pCtx = this;
+    while (pCtx && !pSetting)
+    {
+        pMIME = pCtx->m_pInternal->m_pMIME;
+        if (pMIME && (pCtx->m_iConfigBits & BIT_MIME))
+        {
+            pSetting = pMIME->getFileMimeBySuffix(pSuffix);
+            if (pSetting)
+                break;
+        }
+        pCtx = pCtx->m_pParent;
+    }
+    if (!pSetting)
+        pSetting = HttpMime::getMime()->getFileMimeBySuffix(pSuffix);
+    return pSetting;
+}
+
+
+const MimeSetting *HttpContext::lookupMimeSetting(char *pValue) const
+{
+    const MimeSetting *pSetting = NULL;
+    HttpMime *pMIME = m_pInternal->m_pMIME;
+    const HttpContext *pCtx = this;
+    StringTool::strLower(pValue, pValue);
+    while (pCtx && !pSetting)
+    {
+        pMIME = pCtx->m_pInternal->m_pMIME;
+        if (pMIME)
+        {
+            pSetting = pMIME->getMIMESettingLowerCase(pValue);
+            if (pSetting)
+                break;
+        }
+        pCtx = pCtx->m_pParent;
+    }
+    if (!pSetting)
+        pSetting = HttpMime::getMime()->getMIMESettingLowerCase(pValue);
+    return pSetting;
+}
+
+
+const MimeSetting *HttpContext::lookupMimeSetting(char *pValue,
+        int forceAddMIME)
+{
+    const MimeSetting *pSetting = lookupMimeSetting(pValue);
+    if (!pSetting && forceAddMIME)
+    {
+        char achTmp[] = "";
+        const char *pReason;
+//             HttpMime::getMime()->addUpdateMIME( achTmp, pValue, pReason, 1 );
+//             pSetting = HttpMime::getMime()->getMIMESettingLowerCase( pValue );
+        if (!m_pInternal->m_pMIME)
+            initMIME();
+        pSetting = m_pInternal->m_pMIME->addUpdateMIME(achTmp, pValue, pReason, 1);
+    }
+    return pSetting;
+}
+
+
+int HttpContext::forceAddMime(char *pMime)
+{
+    if (initMIME())
+        return -1;
+    const MimeSetting *pSetting = m_pInternal->m_pMIME
+                                  ->getMIMESettingLowerCase(pMime);
+    if (!pSetting)
+    {
+        const MimeSetting *pProto = lookupMimeSetting(pMime, 1);
+        char achTmp[] = "";
+        const char *pReason;
+        pSetting = m_pInternal->m_pMIME->addUpdateMIME(achTmp, pMime, pReason, 1);
+        if (pSetting && pProto)
+            ((MimeSetting *)pSetting)->inherit(pProto, 0);
+    }
+    return 0;
+}
+
+
+
 int HttpContext::setForceType(char *pValue, const char *pLogId)
 {
-    const MIMESetting *pSetting = NULL;
+    const MimeSetting *pSetting = NULL;
     if (allocateInternal())
         return LS_FAIL;
     if (strcasecmp(pValue, "none") != 0)
     {
         if (m_pInternal->m_pMIME)
-            pSetting = m_pInternal->m_pMIME->getMIMESetting(pValue);
+            pSetting = m_pInternal->m_pMIME->getMimeSetting(pValue);
         if (!pSetting)
-            pSetting = HttpMime::getMime()->getMIMESetting(pValue);
+            pSetting = HttpMime::getMime()->getMimeSetting(pValue);
         if (!pSetting)
         {
             LS_WARN("[%s] can't set 'Forced Type', undefined MIME Type %s",
@@ -786,16 +909,16 @@ int HttpContext::setForceType(char *pValue, const char *pLogId)
 }
 
 
-const MIMESetting *HttpContext::determineMime(const char *pSuffix,
+const MimeSetting *HttpContext::determineMime(const char *pSuffix,
         char *pForcedType) const
 {
-    const MIMESetting *pMimeType = NULL;
+    const MimeSetting *pMimeType = NULL;
     if (pForcedType)
     {
         if (m_pInternal->m_pMIME)
-            pMimeType = m_pInternal->m_pMIME->getMIMESetting(pForcedType);
+            pMimeType = m_pInternal->m_pMIME->getMimeSetting(pForcedType);
         if (!pMimeType)
-            pMimeType = HttpMime::getMime()->getMIMESetting(pForcedType);
+            pMimeType = HttpMime::getMime()->getMimeSetting(pForcedType);
         if (pMimeType)
             return pMimeType;
     }
@@ -808,11 +931,11 @@ const MIMESetting *HttpContext::determineMime(const char *pSuffix,
         StringTool::strLower(pSuffix, achSuffix, len);
         if (m_pInternal->m_pMIME)
         {
-            pMimeType = m_pInternal->m_pMIME->getFileMimeByType(achSuffix);
+            pMimeType = m_pInternal->m_pMIME->getFileMimeBySuffix(achSuffix);
             if (pMimeType)
                 return pMimeType;
         }
-        pMimeType = HttpMime::getMime()->getFileMimeByType(achSuffix);
+        pMimeType = HttpMime::getMime()->getFileMimeBySuffix(achSuffix);
         if (pMimeType)
             return pMimeType;
     }
@@ -1069,7 +1192,19 @@ int HttpContext::configMime(const XmlNode *pContextNode)
     const char *pValue = pContextNode->getChildValue("addMIMEType");
 
     if (pValue)
-        addMIME(pValue);
+    {
+        StringList list;
+        list.split(pValue, strlen(pValue) + pValue, ",");
+        StringList::iterator iter;
+        for (iter = list.begin(); iter != list.end(); ++iter)
+        {
+            char *pSuffixes = (char *)
+                              strpbrk((*iter)->c_str(), " \t");
+            if (pSuffixes)
+                *pSuffixes++ = 0;
+            addMIME((*iter)->c_str(), pSuffixes);
+        }
+    }
 
     pValue = pContextNode->getChildValue("forceType");
 

@@ -36,7 +36,40 @@
 
 
 extern "C" {
-    int ls_expandfile(int fd, LsShmOffset_t fromsize, LsShmXSize_t incrsize);
+
+/*
+ *   ls_expandfile - expanding current file
+ *   return 0 if file expanded
+ *   otherwise return -1
+ *
+ *   if incrsize < 0 the file will be reduced.
+ */
+int ls_expandfile(int fd, LsShmOffset_t fromsize, LsShmXSize_t incrsize)
+{
+    LsShmOffset_t fromloc;
+    int pagesize = getpagesize();
+    LsShmOffset_t newsize = fromsize + incrsize;
+
+    if (ftruncate(fd, (off_t)newsize) < 0)
+        return LS_FAIL;
+
+    if (newsize <= fromsize)
+        return 0;
+
+    fromloc = fromsize++;
+    do
+    {
+        if (pwrite(fd, "", 1, fromsize) != 1)
+        {
+            ftruncate(fd, (off_t)fromloc);
+            return LS_FAIL;
+        }
+        fromsize += pagesize;
+    }
+    while (fromsize < newsize);
+    return 0;
+}
+
 };
 
 
@@ -627,10 +660,6 @@ LsShmOffset_t LsShm::allocPage(LsShmSize_t pagesize, int &remap)
     LsShmOffset_t offset;
     LsShmSize_t availSize;
 
-#ifdef notdef       // guaranteed by caller
-    LSSHM_CHECKSIZE(pagesize);
-    pagesize = roundUnitSize(pagesize);
-#endif
     remap = 0;
 
     //
@@ -681,7 +710,7 @@ int LsShm::recoverOrphanShm()
 }
 
 
-int LsShm::chkReg(LsShmOffset_t iterOff, void *pUData)
+int LsShm::chkReg(LsShmHIterOff iterOff, void *pUData)
 {
     LsShmReg *pReg =
         (LsShmReg *)((LsShm *)pUData)->m_pGHash->offset2iteratorData(iterOff);
@@ -773,12 +802,12 @@ LsShmHash *LsShm::getGlobalHash(int initSize)
     if (!x_pShmMap->x_globalHashOff)
     {
         x_pShmMap->x_globalHashOff = gpool->allocateNewHash(initSize, 1,
-                                                            LSSHM_LRU_NONE);
+                                                            LSSHM_FLAG_NONE);
         if (!x_pShmMap->x_globalHashOff)
             return NULL;
     }
     m_pGHash = gpool->newHashByOffset(x_pShmMap->x_globalHashOff, "_G",
-            LsShmHash::hashXXH32, memcmp, LSSHM_LRU_NONE);
+            LsShmHash::hashXXH32, memcmp, LSSHM_FLAG_NONE);
     return m_pGHash;
 
 }
@@ -824,7 +853,7 @@ LsShmOffset_t LsShm::addRegOff(const char *name)
     if (!pGlobal)
         return 0;
     int valLen = sizeof(LsShmReg);
-    int flag = LSSHM_FLAG_INIT;
+    int flag = LSSHM_VAL_INIT;
     return pGlobal->get(name, strlen(name), &valLen, &flag);
 }
 

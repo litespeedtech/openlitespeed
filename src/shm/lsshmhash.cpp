@@ -19,6 +19,7 @@
 
 #include <lsr/xxhash.h>
 #include <shm/lsshmpool.h>
+#include <shm/lsshmtidmgr.h>
 
 #include <assert.h>
 #include <errno.h>
@@ -42,11 +43,31 @@ typedef struct ls_shmhtable_s
     LsShmOffset_t   x_iBitMapSz;
     LsShmOffset_t   x_iLockOffset;
     uint8_t         x_iMode;
-    uint8_t         x_iLruMode; // lru=1, wlru=2, xlru=3
+    uint8_t         x_iFlags;
     uint8_t         x_unused[2];
     LsShmHTableStat x_stat;         // hash statistics
     uint8_t         x_reserved[256];
 } LsShmHTable;
+
+
+struct lsshmobsiter_s
+{
+    LsShmObserver  *observer;
+    LsShmOffset_t   tableOff;
+    LsShmOffset_t   iterOff;
+};
+
+// LruHash info
+struct LsHashLruInfo_s
+{
+    LsShmHIterOff    linkFirst;
+    LsShmHIterOff    linkLast;
+    int              nvalset;    // number of keys currently set
+    int              nvalexp;    // number of keys expired
+    int              ndataset;   // number of value datas currently set
+    int              ndatadel;   // number of datas deleted by mincnt
+    int              ndataexp;   // number of datas expired
+};
 
 
 #define x_lruInfo   x_reserved[sizeof(((LsShmHTable *)0)->x_reserved) \
@@ -62,10 +83,10 @@ const size_t s_bitsPerChar =
     sizeof(s_bitMask) / sizeof(s_bitMask[0]);
 
 // minimum element count for bloom bitmap (approx 1Mb table size)
-#define MINSZ_FOR_BITMAP    (1024*1024/sizeof(LsShmHIdx))
+#define MINSZ_FOR_BITMAP    (1024*1024/sizeof(LsShmHIterOff))
 
 const size_t s_bitsPerLsShmHIdx =
-    s_bitsPerChar * sizeof(LsShmHIdx);
+    s_bitsPerChar * sizeof(LsShmHIterOff);
 
 
 enum { prime_count = 31    };
@@ -96,7 +117,7 @@ static int findRange(LsShmSize_t sz)
     {
         return ((sz < MINSZ_FOR_BITMAP) ? 0 :
             (((sz + s_bitsPerLsShmHIdx - 1) / s_bitsPerLsShmHIdx)
-            * sizeof(LsShmHIdx)));
+            * sizeof(LsShmHIterOff)));
     }
 
 
@@ -224,8 +245,8 @@ inline LsShmSize_t LsShmHash::growFactor() const
 {   return getHTable()->x_iGrowFactor;   }
 
 
-inline LsShmHIdx *LsShmHash::getHIdx() const
-{   return (LsShmHIdx *)m_pPool->offset2ptr(getHTable()->x_iHIdx);   }
+inline LsShmHIterOff *LsShmHash::getHIdx() const
+{   return (LsShmHIterOff *)m_pPool->offset2ptr(getHTable()->x_iHIdx);   }
 
 
 inline uint8_t *LsShmHash::getBitMap() const
@@ -253,6 +274,35 @@ void LsShmHash::autoLockChkRehash()
 
 LsHashLruInfo *LsShmHash::getLru() const
 {   return (LsHashLruInfo *)&(getHTable()->x_lruInfo);  }
+
+
+LsShmHash::iteroffset LsShmHash::getLruTop()
+{
+    return getLru()->linkFirst;
+}
+
+LsShmHash::iteroffset LsShmHash::getLruBottom()
+{
+    return getLru()->linkLast;
+}
+
+int32_t LsShmHash::getLruTotal()
+{   
+    return getLru()->nvalset;       
+}
+
+int32_t LsShmHash::getLruTrimmed()
+{
+    return getLru()->nvalexp;
+}
+
+
+// For now assume only one observer.
+// void *LsShmHash::getObsData(LsShmHElem *pElem, LsShmObserver *pObserver) const
+void *LsShmHash::getObsData(LsShmHElem *pElem) const
+{
+    return pElem->x_aData + pElem->x_iValOff - m_pObservers->iterOff;
+}
 
 
 LsShmOffset_t LsShmHash::alloc2(LsShmSize_t size, int &remapped)
@@ -328,11 +378,23 @@ inline void LsShmHash::clrBitMapEnt(uint32_t indx)
 LsShmOffset_t LsShmHash::getHTableStatOffset() const
 {   return (LsShmOffset_t)(long) & ((LsShmHTable *)(long)m_iOffset)->x_stat; }
 
+
 LsShmOffset_t LsShmHash::getHTableReservedOffset() const
 {   return (LsShmOffset_t)(long) & ((LsShmHTable *)(long)m_iOffset)->x_reserved; }
 
 
-int LsShmHash::chkHashTable(LsShm *pShm, LsShmReg *pReg, int *pMode, int *pLruMode)
+LsShmXSize_t LsShmHash::getHashDataSize() const
+{
+    return ((LsShmHTableStat *)offset2ptr(
+            getHTableStatOffset()))->m_iHashInUse
+            - LsShmPool::size2roundSize(sizeof(LsShmHTable))
+            - LsShmPool::size2roundSize(sz2TableSz(capacity()))
+            - LsShmPool::size2roundSize(sz2BitMapSz(capacity()))
+            - LsShmPool::size2roundSize(sizeof(LsHashLruInfo));
+}
+
+
+int LsShmHash::chkHashTable(LsShm *pShm, LsShmReg *pReg, int *pMode, int *pFlags)
 {
     if (pReg->x_iValue == 0)
         return -1;
@@ -340,13 +402,13 @@ int LsShmHash::chkHashTable(LsShm *pShm, LsShmReg *pReg, int *pMode, int *pLruMo
     if (pTable->x_iMagic != LSSHM_HASH_MAGIC)
         return -1;
     *pMode = pTable->x_iMode;
-    *pLruMode = pTable->x_iLruMode;
+    *pFlags = pTable->x_iFlags;
     return 0;
 }
 
 
 LsShmHash::LsShmHash(LsShmPool *pool, const char *name,
-                     LsShmHasher_fn hf, LsShmValComp_fn vc, int lru_mode)
+                     LsShmHasher_fn hf, LsShmValComp_fn vc, int flags)
     : m_iMagic(LSSHM_HASH_MAGIC)
     , m_pPool(pool)
     , m_iOffset(0)
@@ -354,8 +416,9 @@ LsShmHash::LsShmHash(LsShmPool *pool, const char *name,
     , m_vc(vc)
     , m_iterExtraSpace(0)
     , m_dataExtraSpace(0)
-    , m_iLruMode(lru_mode)
+    , m_iFlags(flags)
     , m_pLruAddon(NULL)
+    , m_pTidMgr(NULL)
 {
     obj.m_pName = strdup(name);
     m_iRef = 0;
@@ -385,8 +448,8 @@ LsShmHash::LsShmHash(LsShmPool *pool, const char *name,
 }
 
 
-LsShmOffset_t LsShmHash::allocHTable(LsShmPool * pPool, int init_size, 
-                                     int iMode, int iLruMode, 
+LsShmOffset_t LsShmHash::allocHTable(LsShmPool * pPool, int init_size,
+                                     int iMode, int iFlags,
                                      LsShmOffset_t lockOffset)
 {
     int remapped;
@@ -396,7 +459,7 @@ LsShmOffset_t LsShmHash::allocHTable(LsShmPool * pPool, int init_size,
     {
         return 0;
     }
-    
+
     init_size = roundUp(init_size);
     int szTable = sz2TableSz(init_size);
     int szBitMap = sz2BitMapSz(init_size);
@@ -427,10 +490,10 @@ LsShmOffset_t LsShmHash::allocHTable(LsShmPool * pPool, int init_size,
     pTable->x_iLockOffset = lockOffset;
 
     pTable->x_iMode = iMode;
-    pTable->x_iLruMode = iLruMode;
-    
+    pTable->x_iFlags = iFlags;
+
     return offset;
-    
+
 }
 
 
@@ -442,14 +505,20 @@ int LsShmHash::init(LsShmOffset_t offset)
     // check the magic and mode
     if ((m_iMagic != pTable->x_iMagic)
         || (m_iMode != pTable->x_iMode)
-        || (m_iLruMode != pTable->x_iLruMode))
+        || (m_iFlags != pTable->x_iFlags))
         return LS_FAIL;
     m_pShmLock = m_pPool->lockPool()->offset2pLock(pTable->x_iLockOffset);
 
-    if (m_iLruMode & LSSHM_LRU)
+    if (m_iFlags & LSSHM_FLAG_LRU)
         m_iterExtraSpace = sizeof(LsShmHElemLink);
-    //if ((m_iLruMode == LSSHM_LRU_MODE2) || (m_iLruMode == LSSHM_LRU_MODE3))
+    //if ((m_iFlags & LSSHM_FLAG_LRU_MODE2) || (m_iFlags & LSSHM_FLAG_LRU_MODE3))
     //    m_iLockEnable = 0;  // shmlru routines lock manually on higher level
+    if (m_iFlags & LSSHM_FLAG_TID)
+    {
+        LsShmOffset_t iTidIterOff = addExtraSpace(sizeof(uint64_t), 0);
+        if ((m_pTidMgr = new LsShmTidMgr(iTidIterOff)) == NULL)
+            return LS_FAIL;
+    }
     m_iRef = 1;
     m_status = LSSHM_READY;
     return LS_OK;
@@ -471,11 +540,13 @@ LsShmHash::~LsShmHash()
         free(obj.m_pName);
         obj.m_pName = NULL;
     }
+    if (m_pTidMgr != NULL)
+        delete m_pTidMgr;
 }
 
 
 LsShmHash *LsShmHash::open(
-    const char *pShmName, const char *pHashName, int init_size, int lruMode)
+    const char *pShmName, const char *pHashName, int init_size, int flags)
 {
     LsShm *pShm;
     LsShmPool *pPool = NULL;
@@ -497,7 +568,7 @@ LsShmHash *LsShmHash::open(
         }
 
         if ((pHash = pPool->getNamedHash(pHashName, init_size,
-            LsShmHash::hashXXH32, memcmp, lruMode)) == NULL)
+            LsShmHash::hashXXH32, memcmp, flags)) == NULL)
         {
             pPool->close();
             pShm->deleteFile();
@@ -601,10 +672,10 @@ int LsShmHash::rehash()
     LsShmSize_t newSize;;
     LsShmOffset_t newIdxOff;
     LsShmOffset_t newBitOff;
-    LsShmHIdx *pIdxOld;
-    LsShmHIdx *pIdxNew;
-    LsShmHIdx *opIdx;
-    LsShmHIdx *npIdx;
+    LsShmHIterOff *pIdxOld;
+    LsShmHIterOff *pIdxNew;
+    LsShmHIterOff *opIdx;
+    LsShmHIterOff *npIdx;
     iterator iter;
     iteroffset iterOff;
     iteroffset iterNextOff;
@@ -619,23 +690,23 @@ int LsShmHash::rehash()
               );
 #endif
     LsShmHTable *pTable = getHTable();
-    pIdxOld = (LsShmHIdx *)m_pPool->offset2ptr(pTable->x_iHIdx);
+    pIdxOld = (LsShmHIterOff *)m_pPool->offset2ptr(pTable->x_iHIdx);
     if (pTable->x_iHIdx != pTable->x_iHIdxNew)          // rehash in progress
     {
         newSize = pTable->x_iCapacityNew;
         newIdxOff = pTable->x_iHIdxNew;
-        pIdxNew = (LsShmHIdx *)m_pPool->offset2ptr(newIdxOff);
-        if ((iterOff = pTable->x_iWorkIterOff) != 0)    // iter in progress
+        pIdxNew = (LsShmHIterOff *)m_pPool->offset2ptr(newIdxOff);
+        if ((iterOff.m_iOffset = pTable->x_iWorkIterOff) != 0)    // iter in progress
         {
             iter = offset2iterator(iterOff);
             npIdx = pIdxNew + getIndex(iter->x_hkey, newSize);
-            if (npIdx->x_iOffset != iterOff)            // not there yet
+            if (npIdx->m_iOffset != iterOff.m_iOffset)            // not there yet
             {
                 opIdx = pIdxOld + getIndex(iter->x_hkey, oldSize);
-                if (opIdx->x_iOffset == iterOff)
-                    opIdx->x_iOffset = iter->x_iNext;   // remove from old
-                iter->x_iNext = npIdx->x_iOffset;
-                npIdx->x_iOffset = iterOff;
+                if (opIdx->m_iOffset == iterOff.m_iOffset)
+                    opIdx->m_iOffset = iter->x_iNext.m_iOffset;   // remove from old
+                iter->x_iNext.m_iOffset = npIdx->m_iOffset;
+                npIdx->m_iOffset = iterOff.m_iOffset;
             }
 
         }
@@ -651,7 +722,7 @@ int LsShmHash::rehash()
         uint8_t *ptr = (uint8_t *)offset2ptr(newBitOff);
         ::memset(ptr, 0, szTable + szBitMap);
         newIdxOff = newBitOff + szBitMap;
-        pIdxNew = (LsShmHIdx *)(ptr + szBitMap);
+        pIdxNew = (LsShmHIterOff *)(ptr + szBitMap);
         pTable = getHTable();
         pTable->x_iBitMap = newBitOff;
         pTable->x_iBitMapSz = szBitMap;
@@ -659,8 +730,8 @@ int LsShmHash::rehash()
         pTable->x_iHIdxNew = newIdxOff;
     }
 
-    pIdxOld = (LsShmHIdx *)m_pPool->offset2ptr(pTable->x_iHIdx);
-    for (iterOff = begin(); iterOff != end();)
+    pIdxOld = (LsShmHIterOff *)m_pPool->offset2ptr(pTable->x_iHIdx);
+    for (iterOff = begin(); iterOff.m_iOffset != 0;)
     {
         uint32_t hashIndx;
         iter = offset2iterator(iterOff);
@@ -668,10 +739,10 @@ int LsShmHash::rehash()
         hashIndx = getIndex(iter->x_hkey, newSize);
         npIdx = pIdxNew + hashIndx;
         setBitMapEnt(hashIndx);
-        pTable->x_iWorkIterOff = iterOff;
-        (pIdxOld + getIndex(iter->x_hkey, oldSize))->x_iOffset = iter->x_iNext;
-        iter->x_iNext = npIdx->x_iOffset;
-        npIdx->x_iOffset = iterOff;
+        pTable->x_iWorkIterOff = iterOff.m_iOffset;
+        (pIdxOld + getIndex(iter->x_hkey, oldSize))->m_iOffset = iter->x_iNext.m_iOffset;
+        iter->x_iNext.m_iOffset = npIdx->m_iOffset;
+        npIdx->m_iOffset = iterOff.m_iOffset;
         iterOff = iterNextOff;
     }
     pTable->x_iWorkIterOff = 0;
@@ -690,7 +761,7 @@ int LsShmHash::release_hash_elem(LsShmHash::iteroffset iterOff,
 {
     LsShmHash *pThis = (LsShmHash *)pUData;
     LsShmHash::iterator iter = pThis->offset2iterator(iterOff);
-    pThis->release2(iterOff, (LsShmSize_t)iter->x_iLen);
+    pThis->release2(iterOff.m_iOffset, (LsShmSize_t)iter->x_iLen);
     return 0;
 }
 
@@ -704,14 +775,16 @@ void LsShmHash::clear()
     ::memset(offset2ptr(pTable->x_iBitMap), 0,
         pTable->x_iBitMapSz + sz2TableSz(pTable->x_iCapacity));
     pTable->x_iSize = 0;
-    if (m_iLruMode != LSSHM_LRU_NONE)
+    if (m_iFlags & LSSHM_FLAG_LRU)
     {
         LsHashLruInfo *pLru = getLru();
-        pLru->linkFirst = 0;
-        pLru->linkLast = 0;
+        pLru->linkFirst.m_iOffset = 0;
+        pLru->linkLast.m_iOffset = 0;
         pLru->nvalset = 0;
         pLru->ndataset = 0;
     }
+    if (m_pTidMgr != NULL)
+        m_pTidMgr->clearCb();
 }
 
 
@@ -719,35 +792,35 @@ LsShmHash::iteroffset LsShmHash::doGet(
     iteroffset iterOff, LsShmHKey key, ls_strpair_t *pParms,
     int *pFlag)
 {
-    if (iterOff != 0)
+    if (iterOff.m_iOffset != 0)
     {
         iterator iter = offset2iterator(iterOff);
-        if (m_iLruMode != LSSHM_LRU_NONE)
-            linkSetTop(iter);
-        *pFlag = LSSHM_FLAG_NONE;
+        if (m_iFlags & LSSHM_FLAG_LRU)
+            linkSetTop(iter, iterOff);
+        *pFlag = LSSHM_VAL_NONE;
         return iterOff;
     }
     LSSHM_CHECKSIZE(ls_str_len(&pParms->value));
     iterOff = insert2(key, pParms);
-    if (iterOff != 0)
+    if (iterOff.m_iOffset != 0)
     {
-        if (*pFlag & LSSHM_FLAG_INIT)
+        if (*pFlag & LSSHM_VAL_INIT)
         {
             // initialize the memory
             ::memset(offset2iteratorData(iterOff),
                         0, ls_str_len(&pParms->value));
         }
         // some special lru initialization
-//         if (m_iLruMode == LSSHM_LRU_MODE2)
+//         if (m_iFlags & LSSHM_FLAG_LRU_MODE2)
 //         {
 //             shmlru_data_t *pData = (shmlru_data_t *)offset2iteratorData(
 //                                         iterOff);
 //             pData->maxsize = 0;
 //             pData->offiter = iterOff;
 //         }
-//         else if (m_iLruMode == LSSHM_LRU_MODE3)
+//         else if (m_iFlags & LSSHM_FLAG_LRU_MODE3)
 //             ((shmlru_val_t *)offset2iteratorData(iterOff))->offdata = 0;
-        *pFlag = LSSHM_FLAG_CREATED;
+        *pFlag = LSSHM_VAL_CREATED;
     }
     return iterOff;
 }
@@ -756,8 +829,8 @@ LsShmHash::iteroffset LsShmHash::doGet(
 LsShmHash::iteroffset LsShmHash::doInsert(
             iteroffset iterOff, LsShmHKey key, ls_strpair_t *pParms)
 {
-    if (iterOff != 0)
-        return 0;
+    if (iterOff.m_iOffset != 0)
+        return end();
     LSSHM_CHECKSIZE(ls_str_len(&pParms->value));
     return insert2(key, pParms);
 }
@@ -766,15 +839,17 @@ LsShmHash::iteroffset LsShmHash::doSet(
             iteroffset iterOff, LsShmHKey key, ls_strpair_t *pParms)
 {
     LSSHM_CHECKSIZE(ls_str_len(&pParms->value));
-    if (iterOff != 0)
+    if (iterOff.m_iOffset != 0)
     {
         iterator iter = offset2iterator(iterOff);
         if (iter->realValLen() >= (LsShmSize_t)ls_str_len(&pParms->value))
         {
             iter->setValLen(ls_str_len(&pParms->value));
             setIterData(iter, ls_str_buf(&pParms->value));
-            if (m_iLruMode != LSSHM_LRU_NONE)
-                linkSetTop(iter);
+            if (m_iFlags & LSSHM_FLAG_LRU)
+                linkSetTop(iter, iterOff);
+            if (m_pTidMgr != NULL)
+                m_pTidMgr->updateIterCb(iter, iterOff);
             return iterOff;
         }
         else
@@ -788,24 +863,9 @@ LsShmHash::iteroffset LsShmHash::doSet(
 
 LsShmHash::iteroffset LsShmHash::doUpdate(iteroffset iterOff, LsShmHKey key, ls_strpair_t *pParms)
 {
-    if (iterOff == 0)
-        return 0;
-    LSSHM_CHECKSIZE(ls_str_len(&pParms->value));
-    iterator iter = offset2iterator(iterOff);
-    if (iter->realValLen() >= (LsShmSize_t)ls_str_len(&pParms->value))
-    {
-        iter->setValLen(ls_str_len(&pParms->value));
-        setIterData(iter, ls_str_buf(&pParms->value));
-        if (m_iLruMode != LSSHM_LRU_NONE)
-            linkSetTop(iter);
-    }
-    else
-    {
-        // remove the iter and install new one
-        eraseIteratorHelper(iter);
-        iterOff = insert2(key, pParms);
-    }
-    return iterOff;
+    if (iterOff.m_iOffset == 0)
+        return end();
+    return doSet(iterOff, key, pParms);
 }
 
 
@@ -818,11 +878,14 @@ void LsShmHash::eraseIteratorHelper(iterator iter)
     if (iter == NULL)
         return;
 
-    iteroffset iterOff = m_pPool->ptr2offset(iter);
+    iteroffset iterOff; 
+    iterOff.m_iOffset = m_pPool->ptr2offset(iter);
     uint32_t hashIndx = getIndex(iter->x_hkey, capacity());
-    LsShmHIdx *pIdx = getHIdx() + hashIndx;
-    LsShmOffset_t offset = pIdx->x_iOffset;
+    LsShmHIterOff *pIdx = getHIdx() + hashIndx;
+    LsShmOffset_t offset = pIdx->m_iOffset;
     LsShmHElem *pElem;
+    LsShmOffset_t next = iter->x_iNext.m_iOffset;     // in case of remap in tid list
+    LsShmSize_t size = iter->x_iLen;
 
 #ifdef DEBUG_RUN
     if (offset == 0)
@@ -837,11 +900,13 @@ void LsShmHash::eraseIteratorHelper(iterator iter)
     }
 #endif
 
-    if (m_iLruMode != LSSHM_LRU_NONE)
+    if (m_iFlags & LSSHM_FLAG_LRU)
         unlinkHElem(iter);
-    if (offset == iterOff)
+    if (m_pTidMgr != NULL)
+        m_pTidMgr->eraseIterCb(iter);
+    if (offset == iterOff.m_iOffset)
     {
-        if ((pIdx->x_iOffset = iter->x_iNext) == 0) // last one
+        if ((pIdx->m_iOffset = next) == 0) // last one
             clrBitMapEnt(hashIndx);
     }
     else
@@ -849,18 +914,18 @@ void LsShmHash::eraseIteratorHelper(iterator iter)
         do
         {
             pElem = (LsShmHElem *)m_pPool->offset2ptr(offset);
-            if (pElem->x_iNext == iterOff)
+            if (pElem->x_iNext.m_iOffset == iterOff.m_iOffset)
             {
-                pElem->x_iNext = iter->x_iNext;
+                pElem->x_iNext.m_iOffset = next;
                 break;
             }
             // next offset...
-            offset = pElem->x_iNext;
+            offset = pElem->x_iNext.m_iOffset;
         }
         while (offset != 0);
     }
 
-    release2(iterOff, (LsShmSize_t)iter->x_iLen);
+    release2(iterOff.m_iOffset, size);
     decrTableSize();
 }
 
@@ -870,8 +935,8 @@ LsShmHash::iteroffset LsShmHash::find2(LsShmHKey key,
 {
     uint32_t hashIndx = getIndex(key, capacity());
     if (getBitMapEnt(hashIndx) == 0)     // quick check
-        return 0;
-    LsShmHIdx *pIdx = getHIdx() + hashIndx;
+        return end();
+    LsShmHIterOff *pIdx = getHIdx() + hashIndx;
 
 #ifdef DEBUG_RUN
     SHM_NOTICE("LsShmHash::find %6d %X size %d cap %d <%p> %d",
@@ -882,62 +947,88 @@ LsShmHash::iteroffset LsShmHash::find2(LsShmHKey key,
                hashIndx
               );
 #endif
-    LsShmOffset_t offset = pIdx->x_iOffset;
+    LsShmHIterOff offset = *pIdx;
     LsShmHElem *pElem;
 
-    while (offset != 0)
+    while (offset.m_iOffset != 0)
     {
-        pElem = (LsShmHElem *)m_pPool->offset2ptr(offset);
+        pElem = (LsShmHElem *)m_pPool->offset2ptr(offset.m_iOffset);
         if ((pElem->x_hkey == key)
             && (pElem->getKeyLen() == ls_str_len(&pParms->key))
             && ((*m_vc)(ls_str_buf(&pParms->key), pElem->getKey(),
                         ls_str_len(&pParms->key)) == 0))
-            return offset;
-        offset = pElem->x_iNext;
+            break;
+        offset.m_iOffset = pElem->x_iNext.m_iOffset;
     }
-    return 0;
+    return offset;
 }
 
 
-LsShmHash::iteroffset LsShmHash::insert2(LsShmHKey key,
-        ls_strpair_t *pParms)
+LsShmHash::iteroffset LsShmHash::allocIter(int keyLen, int realValLen)
 {
-    LsShmHElemOffs_t valueOff = sizeof(ls_vardata_t) + round4(ls_str_len(
-                                    &pParms->key)) + m_iterExtraSpace;
-    int valLen = ls_str_len(&pParms->value) + m_dataExtraSpace;
+    LsShmHElemOffs_t valueOff = sizeof(ls_vardata_t) + round4(keyLen)
+                                + m_iterExtraSpace;
+    int valLen = realValLen + m_dataExtraSpace;
     LsShmHElemLen_t elementSize = sizeof(LsShmHElem) + valueOff
                       + sizeof(ls_vardata_t) + round4(valLen);
     int remapped;
-    LsShmOffset_t offset = alloc2(elementSize, remapped);
-    if (offset == 0)
-        return 0;
+    iteroffset offset;
+    offset.m_iOffset = alloc2(elementSize, remapped);
+    if (offset.m_iOffset == 0)
+        return offset;
+    LsShmHElem *pNew = (LsShmHElem *)m_pPool->offset2ptr(offset.m_iOffset);
+
+    pNew->x_iLen = elementSize;
+    pNew->x_iValOff = valueOff;
+    // pNew->x_iNext.m_iOffset = 0;
+    pNew->setKeyLen(keyLen);
+    pNew->setValLen(valLen);
+    return offset;
+}
+
+
+LsShmHash::iteroffset LsShmHash::insert2(
+    LsShmHKey key, ls_strpair_t *pParms)
+{
+    LsShmHash::iteroffset offset = insertCopy2(key, pParms);
+    if (m_pTidMgr != NULL)
+        m_pTidMgr->insertIterCb(offset);
+    return offset;
+}
+
+
+LsShmHash::iteroffset LsShmHash::insertCopy2(LsShmHKey key,
+        ls_strpair_t *pParms)
+{
+    LsShmHash::iteroffset offset;
 
     if (size() * fullFactor() > capacity())
     {
         if (rehash() < 0)
         {
             if (size() == capacity())
-                return 0;
+                return end();
         }
     }
-    LsShmHElem *pNew = (LsShmHElem *)m_pPool->offset2ptr(offset);
 
-    pNew->x_iLen = elementSize;
-    pNew->x_iValOff = valueOff;
-    // pNew->x_iNext = 0;
+    offset = allocIter(ls_str_len(&pParms->key),
+                                     ls_str_len(&pParms->value));
+    if (offset.m_iOffset == 0)
+        return offset;
+    LsShmHElem *pNew = (LsShmHElem *)m_pPool->offset2ptr(offset.m_iOffset);
+
+    // pNew->x_iNext.m_iOffset = 0;
     pNew->x_hkey = key;
-    pNew->setKeyLen(ls_str_len(&pParms->key));
-    pNew->setValLen(valLen);
 
     setIterKey(pNew, ls_str_buf(&pParms->key));
     setIterData(pNew, ls_str_buf(&pParms->value));
-    if (m_iLruMode != LSSHM_LRU_NONE)
+    if (m_iFlags & LSSHM_FLAG_LRU)
         linkHElem(pNew, offset);
 
     uint32_t hashIndx = getIndex(key, capacity());
-    LsShmHIdx *pIdx = getHIdx() + hashIndx;
-    pNew->x_iNext = pIdx->x_iOffset;
-    pIdx->x_iOffset = offset;
+    LsShmHIterOff *pIdx = getHIdx() + hashIndx;
+    pNew->x_iNext.m_iOffset = pIdx->m_iOffset;
+    pIdx->m_iOffset = offset.m_iOffset;
     setBitMapEnt(hashIndx);
 
 #ifdef DEBUG_RUN
@@ -955,25 +1046,76 @@ LsShmHash::iteroffset LsShmHash::insert2(LsShmHKey key,
 }
 
 
+LsShmHash::iteroffset LsShmHash::iterGrowValue(iteroffset iterOff,
+                                               int size_to_grow, int front)
+{
+    LsShmHElem *pOld = (LsShmHElem *)m_pPool->offset2ptr(iterOff.m_iOffset);
+    int keyLen = pOld->getKeyLen();
+    int valLen = pOld->getValLen();
+    int valOff = pOld->x_iValOff;
+    int newTotalSize = pOld->x_iLen + round4(size_to_grow);
+    int remapped;
+    iteroffset offset;
+    offset.m_iOffset = alloc2(newTotalSize, remapped);
+    if (offset.m_iOffset == 0)
+        return offset;
+    LsShmHElem *pNew = offset2iterator(offset);
+
+    pNew->x_iLen = newTotalSize;
+    pNew->x_iValOff = valOff;
+    // pNew->x_iNext.m_iOffset = 0;
+    pNew->setKeyLen(keyLen);
+    pNew->setValLen(valLen + size_to_grow);
+
+    pOld = (LsShmHElem *)m_pPool->offset2ptr(iterOff.m_iOffset);
+        // pNew->x_iNext.m_iOffset = 0;
+    pNew->x_hkey = pOld->x_hkey;
+
+    setIterKey(pNew, pOld->getKey());
+    if (front)
+        front = size_to_grow;
+    ::memcpy(pNew->getVal() + front, pOld->getVal(), pOld->getValLen());
+
+    eraseIteratorHelper(pOld);
+    if (m_iFlags & LSSHM_FLAG_LRU)
+        linkHElem(pNew, offset);
+    if (m_pTidMgr != NULL)
+        m_pTidMgr->insertIterCb(offset);
+
+    uint32_t hashIndx = getIndex(pNew->x_hkey, capacity());
+    LsShmHIterOff *pIdx = getHIdx() + hashIndx;
+    pNew->x_iNext.m_iOffset = pIdx->m_iOffset;
+    pIdx->m_iOffset = offset.m_iOffset;
+    setBitMapEnt(hashIndx);
+
+    incrTableSize();
+    return offset;
+}
+
+
+
+
+
 LsShmHash::iteroffset LsShmHash::findNum(LsShmHash *pThis, ls_strpair_t *pParms)
 {
+    LsShmHash::iteroffset offset = {0};
     LsShmHKey key = (LsShmHKey)(long)ls_str_buf(&pParms->key);
     uint32_t hashIndx = pThis->getIndex(key, pThis->capacity());
     if (pThis->getBitMapEnt(hashIndx) == 0)     // quick check
-        return 0;
-    LsShmHIdx *pIdx = pThis->getHIdx() + hashIndx;
-    LsShmOffset_t offset = pIdx->x_iOffset;
+        return offset;
+    LsShmHIterOff *pIdx = pThis->getHIdx() + hashIndx;
+    offset = *pIdx;
     LsShmHElem *pElem;
 
-    while (offset != 0)
+    while (offset.m_iOffset != 0)
     {
-        pElem = (LsShmHElem *)pThis->m_pPool->offset2ptr(offset);
+        pElem = pThis->offset2iterator(offset);
         // check to see if the key is the same
         if ((pElem->x_hkey == key) && ((*(LsShmHKey *)pElem->getKey()) == key))
-            return offset;
-        offset = pElem->x_iNext;
+            break;
+        offset.m_iOffset = pElem->x_iNext.m_iOffset;
     }
-    return 0;
+    return offset;
 }
 
 
@@ -1084,14 +1226,14 @@ LsShmHash::iteroffset LsShmHash::updatePtr(LsShmHash *pThis,
 LsShmHash::iteroffset LsShmHash::doExpand(LsShmHash *pThis,
         iteroffset iterOff, LsShmHKey key, ls_strpair_t *pParms, uint16_t flags)
 {
-    iterator iter = pThis->offset2iterator(iterOff);
+    iterator iter = pThis->offset2iterator(iterOff.m_iOffset);
     int32_t lenExp = ls_str_len(&pParms->value);
     int32_t lenNew = iter->getValLen() + lenExp;
     LSSHM_CHECKSIZE(lenNew);
     if (iter->realValLen() >= (LsShmSize_t)lenNew)
     {
         iter->setValLen(lenNew);
-        if (pThis->m_iLruMode != LSSHM_LRU_NONE)
+        if (pThis->m_iFlags & LSSHM_FLAG_LRU)
             pThis->linkSetTop(iter);
     }
     else
@@ -1104,7 +1246,7 @@ LsShmHash::iteroffset LsShmHash::doExpand(LsShmHash *pThis,
                                     pThis->setParms(&parmsNew,
                                             ls_str_buf(&pParms->key), ls_str_len(&pParms->key),
                                             NULL, lenNew));
-        iter = pThis->offset2iterator(iterOff);     // in case of insert remap
+        iter = pThis->offset2iterator(iterOff.m_iOffset);     // in case of insert remap
         iterNew = pThis->offset2iterator(iterOffNew);
         ::memcpy(iterNew->getVal(), iter->getVal(), iter->getValLen());
         pThis->eraseIteratorHelper(iter);
@@ -1121,12 +1263,12 @@ LsShmHash::iteroffset LsShmHash::begin()
     if (size() == 0)
         return end();
 
-    LsShmHIdx *p = getHIdx();
-    LsShmHIdx *pIdxEnd = p + capacity();
+    LsShmHIterOff *p = getHIdx();
+    LsShmHIterOff *pIdxEnd = p + capacity();
     while (p < pIdxEnd)
     {
-        if (p->x_iOffset != 0)
-            return (iteroffset)p->x_iOffset;
+        if (p->m_iOffset != 0)
+            return *p;
         ++p;
     }
     return end();
@@ -1135,21 +1277,21 @@ LsShmHash::iteroffset LsShmHash::begin()
 
 LsShmHash::iteroffset LsShmHash::next(iteroffset iterOff)
 {
-    if (iterOff == end())
-        return end();
+    if (iterOff.m_iOffset == 0)
+        return iterOff;
     iterator iter = offset2iterator(iterOff);
-    if (iter->x_iNext != 0)
-        return (iteroffset)iter->x_iNext;
+    if (iter->x_iNext.m_iOffset != 0)
+        return iter->x_iNext;
 
-    LsShmHIdx *p = getHIdx();
-    LsShmHIdx *pIdxEnd = p + capacity();
+    LsShmHIterOff *p = getHIdx();
+    LsShmHIterOff *pIdxEnd = p + capacity();
     p += (getIndex(iter->x_hkey, capacity()) + 1);
     while (p < pIdxEnd)
     {
-        if (p->x_iOffset != 0)
+        if (p->m_iOffset != 0)
         {
 #ifdef DEBUG_RUN
-            iterator xiter = (iterator)m_pPool->offset2ptr(p->x_iOffset);
+            iterator xiter = (iterator)m_pPool->offset2ptr(p->m_iOffset);
             if (xiter != NULL)
             {
                 if ((xiter->getKeyLen() == 0)
@@ -1163,7 +1305,7 @@ LsShmHash::iteroffset LsShmHash::next(iteroffset iterOff)
                 }
             }
 #endif
-            return (iteroffset)p->x_iOffset;
+            return *p;
         }
         ++p;
     }
@@ -1181,7 +1323,7 @@ int LsShmHash::for_each(iteroffset beg, iteroffset end, for_each_fn fun)
     int n = 0;
     iteroffset iterNext = beg;
     iteroffset iterOff;
-    while ((iterNext != 0) && (iterNext != end))
+    while (iterNext.m_iOffset != 0)
     {
         iterOff = iterNext;
         iterNext = next(iterNext);      // get next before fun
@@ -1204,7 +1346,7 @@ int LsShmHash::for_each2(
     int n = 0;
     iteroffset iterNext = beg;
     iteroffset iterOff;
-    while ((iterNext != 0) && (iterNext != end))
+    while (iterNext.m_iOffset != 0)
     {
         iterOff = iterNext;
         iterNext = next(iterNext);      // get next before fun
@@ -1219,18 +1361,18 @@ int LsShmHash::for_each2(
 int LsShmHash::trim(time_t tmCutoff, int (*func)(iterator iter, void *arg),
                     void *arg)
 {
-    if (m_iLruMode == LSSHM_LRU_NONE)
+    if ((m_iFlags & LSSHM_FLAG_LRU) == 0)
         return LS_FAIL;
     int del = 0;
     LsShmHElem *pElem;
-    LsShmOffset_t next;
+    iteroffset next;
     autoLockChkRehash();
     LsHashLruInfo *pLru = getLru();
-    LsShmOffset_t offElem = pLru->linkLast;
-    while (offElem != 0)
+    iteroffset offElem = pLru->linkLast;
+    while (offElem.m_iOffset != 0)
     {
         int ret = 1;
-        pElem = (LsShmHElem *)offset2ptr(offElem);
+        pElem = offset2iterator(offElem);
         if (pElem->getLruLasttime() >= tmCutoff)
             break;
 
@@ -1249,35 +1391,66 @@ int LsShmHash::trim(time_t tmCutoff, int (*func)(iterator iter, void *arg),
     return del;
 }
 
+int LsShmHash::trimsize(int need, int (*func)(iterator iter, void *arg),
+                        void *arg)
+{
+    if ((m_iFlags & LSSHM_FLAG_LRU) == 0)
+        return LS_FAIL;
+    int del = 0;
+    LsShmHElem *pElem;
+    iteroffset next;
+    autoLockChkRehash();
+    LsHashLruInfo *pLru = getLru();
+    iteroffset offElem = pLru->linkLast;
+    while ((offElem.m_iOffset != 0) && (need > 0))
+    {
+        int ret = 1;
+        pElem = offset2iterator(offElem);
+        need -= pElem->x_iLen;
+        if (func != NULL)
+            ret = (*func)(pElem, arg);
+//         int ret = clrdata(pElem->getVal());
+        next = pElem->getLruLinkNext();
+        eraseIteratorHelper(pElem);
+        ++del;
+        pLru->ndataexp += ret;
+        pLru->ndataset -= ret;
+        offElem = next;
+    }
+    pLru->nvalexp += del;
+    autoUnlock();
+    return del;
+}
+
 
 int LsShmHash::touchLru(iteroffset iterOff)
 {
-    if (m_iLruMode == LSSHM_LRU_NONE)
+    if ((m_iFlags & LSSHM_FLAG_LRU) == 0)
         return 0;
-    
+
     autoLockChkRehash();
-    linkSetTop(offset2iterator(iterOff));
+    linkSetTop(offset2iterator(iterOff), iterOff);
     autoUnlock();
 
     return 0;
 }
 
 
-void LsShmHash::linkHElem(LsShmHElem *pElem, LsShmOffset_t offElem)
+void LsShmHash::linkHElem(LsShmHElem *pElem, iteroffset offElem)
 {
     LsHashLruInfo *pLru = getLru();
     LsShmHElemLink *pLink = pElem->getLruLinkPtr();
-    if (pLru->linkFirst)
+    if (pLru->linkFirst.m_iOffset)
     {
         set_linkNext(pLru->linkFirst, offElem);
         pLink->x_iLinkPrev = pLru->linkFirst;
     }
     else
     {
-        pLink->x_iLinkPrev = 0;
+        pLink->x_iLinkPrev.m_iOffset = 0;
         pLru->linkLast = offElem;
     }
-    pLink->x_iLinkNext = 0;
+    pLink->x_iLinkNext.m_iOffset = 0;
     pLink->x_lasttime = time((time_t *)NULL);
     pLru->linkFirst = offElem;
     ++pLru->nvalset;
@@ -1288,32 +1461,31 @@ void LsShmHash::unlinkHElem(LsShmHElem *pElem)
 {
     LsHashLruInfo *pLru = getLru();
     LsShmHElemLink *pLink = pElem->getLruLinkPtr();
-    if (pLink->x_iLinkNext)
+    if (pLink->x_iLinkNext.m_iOffset)
         set_linkPrev(pLink->x_iLinkNext, pLink->x_iLinkPrev);
     else
         pLru->linkFirst = pLink->x_iLinkPrev;
-    if (pLink->x_iLinkPrev)
+    if (pLink->x_iLinkPrev.m_iOffset)
         set_linkNext(pLink->x_iLinkPrev, pLink->x_iLinkNext);
     else
         pLru->linkLast = pLink->x_iLinkNext;
     --pLru->nvalset;
 }
 
-void LsShmHash::linkSetTop(LsShmHElem *pElem)
+void LsShmHash::linkSetTop(LsShmHElem *pElem, iteroffset offElem)
 {
     LsShmHElemLink *pLink = pElem->getLruLinkPtr();
-    LsShmOffset_t next = pLink->x_iLinkNext;
-    if (next != 0)      // not top of list already
+    iteroffset next = pLink->x_iLinkNext;
+    if (next.m_iOffset != 0)      // not top of list already
     {
         LsHashLruInfo *pLru = getLru();
-        LsShmOffset_t offElem = ptr2offset(pElem);
-        LsShmOffset_t prev = pLink->x_iLinkPrev;
-        if (prev == 0)  // last one
+        iteroffset prev = pLink->x_iLinkPrev;
+        if (prev.m_iOffset == 0)  // last one
             pLru->linkLast = next;
         else
             set_linkNext(prev, next);
         set_linkPrev(next, prev);
-        pLink->x_iLinkNext = 0;
+        pLink->x_iLinkNext.m_iOffset = 0;
         pLink->x_iLinkPrev = pLru->linkFirst;
         set_linkNext(pLru->linkFirst, offElem);
         pLru->linkFirst = offElem;
@@ -1323,19 +1495,19 @@ void LsShmHash::linkSetTop(LsShmHElem *pElem)
 
 
 
-int LsShmHash::linkSetTopTime(LsShmOffset_t offset, time_t lasttime)
+int LsShmHash::linkSetTopTime(iteroffset offset, time_t lasttime)
 {
-    if (m_iLruMode != LSSHM_LRU_NONE)
+    if (m_iFlags & LSSHM_FLAG_LRU)
     {
         autoLockChkRehash();
         LsShmHElemLink *pLink = offset2iterator(offset)->getLruLinkPtr();
-        if ((pLink->x_iLinkNext != 0) || (lasttime > time((time_t *)NULL)))
+        if ((pLink->x_iLinkNext.m_iOffset != 0) || (lasttime > time((time_t *)NULL)))
         {
             autoUnlock();
             return LS_FAIL;
         }
-        LsShmOffset_t prev = pLink->x_iLinkPrev;
-        if (prev != 0)
+        iteroffset prev = pLink->x_iLinkPrev;
+        if (prev.m_iOffset != 0)
         {
             LsShmHElemLink *pPrev = offset2iterator(prev)->getLruLinkPtr();
             if (lasttime < pPrev->x_lasttime)
@@ -1347,17 +1519,17 @@ int LsShmHash::linkSetTopTime(LsShmOffset_t offset, time_t lasttime)
     return LS_OK;
 }
 
-int LsShmHash::linkMvTopTime(LsShmOffset_t offset, time_t lasttime)
+int LsShmHash::linkMvTopTime(iteroffset offset, time_t lasttime)
 {
-    if (m_iLruMode != LSSHM_LRU_NONE)
+    if (m_iFlags & LSSHM_FLAG_LRU)
     {
         autoLockChkRehash();
         LsShmHElemLink *pLink = offset2iterator(offset)->getLruLinkPtr();
-        if ((pLink->x_iLinkNext != 0) || (lasttime <= 0))
+        if ((pLink->x_iLinkNext.m_iOffset != 0) || (lasttime <= 0))
             return LS_FAIL;
         pLink->x_lasttime = lasttime;
-        LsShmOffset_t prev = pLink->x_iLinkPrev;
-        if (prev == 0)  // only one
+        iteroffset prev = pLink->x_iLinkPrev;
+        if (prev.m_iOffset == 0)  // only one
         {
             autoUnlock();
             return LS_OK;
@@ -1369,15 +1541,15 @@ int LsShmHash::linkMvTopTime(LsShmOffset_t offset, time_t lasttime)
             return LS_OK;
         }
         LsHashLruInfo *pLru = getLru();
-        pPrev->x_iLinkNext = 0;
+        pPrev->x_iLinkNext.m_iOffset = 0;
         pLru->linkFirst = prev;     // prev is now top
         while (1)
         {
-            if (pPrev->x_iLinkPrev == 0)
+            if (pPrev->x_iLinkPrev.m_iOffset == 0)
             {
                 pPrev->x_iLinkPrev = offset;
                 pLink->x_iLinkNext = prev;
-                pLink->x_iLinkPrev = 0;
+                pLink->x_iLinkPrev.m_iOffset = 0;
                 pLru->linkLast = offset;
                 break;
             }
@@ -1400,13 +1572,13 @@ int LsShmHash::linkMvTopTime(LsShmOffset_t offset, time_t lasttime)
 
 LsShmHash::iteroffset LsShmHash::nextTmLruIterOff(time_t tmCutoff)
 {
-    if (m_iLruMode == LSSHM_LRU_NONE)
-        return 0;
+    if ((m_iFlags & LSSHM_FLAG_LRU) == 0)
+        return end();
     iterator iter;
     iteroffset iterOff = getLru()->linkLast;
     if (tmCutoff > 0)
     {
-        while (iterOff != 0)
+        while (iterOff.m_iOffset != 0)
         {
             iter = offset2iterator(iterOff);
             if (iter->getLruLasttime() > tmCutoff)
@@ -1420,13 +1592,13 @@ LsShmHash::iteroffset LsShmHash::nextTmLruIterOff(time_t tmCutoff)
 
 LsShmHash::iteroffset LsShmHash::prevTmLruIterOff(time_t tmCutoff)
 {
-    if (m_iLruMode == LSSHM_LRU_NONE)
-        return 0;
+    if ((m_iFlags & LSSHM_FLAG_LRU) == 0)
+        return end();
     iterator iter;
     iteroffset iterOff = getLru()->linkFirst;
     if (tmCutoff > 0)
     {
-        while (iterOff != 0)
+        while (iterOff.m_iOffset != 0)
         {
             iter = offset2iterator(iterOff);
             if (iter->getLruLasttime() < tmCutoff)
@@ -1440,7 +1612,7 @@ LsShmHash::iteroffset LsShmHash::prevTmLruIterOff(time_t tmCutoff)
 
 int LsShmHash::check()
 {
-    if (m_iLruMode == LSSHM_LRU_NONE)
+    if ((m_iFlags & LSSHM_FLAG_LRU) == 0)
         return SHMLRU_BADINIT;
 
     int valcnt = 0;
@@ -1449,18 +1621,19 @@ int LsShmHash::check()
     LsShmHElem *pElem;
     autoLockChkRehash();
     LsHashLruInfo *pLru = getLru();
-    LsShmOffset_t offElem = pLru->linkLast;
-    while (offElem != 0)
+    iteroffset offElem = pLru->linkLast;
+    while (offElem.m_iOffset != 0)
     {
         ret = 1;
-        pElem = (LsShmHElem *)offset2ptr(offElem);
+        pElem = offset2iterator(offElem);
         if (m_pLruAddon && (ret = m_pLruAddon->chkdata(pElem->getVal())) < 0)
         {
             autoUnlock();
             return ret;
         }
         ++valcnt;
-        datacnt += ret;
+        if (m_pLruAddon)
+            datacnt += ret;
         offElem = pElem->getLruLinkNext();
     }
     if (valcnt != pLru->nvalset)
@@ -1493,7 +1666,7 @@ int LsShmHash::statIdx(iteroffset iterOff, for_each_fn2 fun, void *pUdata)
     int curDup = 0; // keep track the number of dup!
 
     int numInIdx = 0;
-    while (iterOff != 0)
+    while (iterOff.m_iOffset != 0)
     {
         iterator iter = offset2iterator(iterOff);
         int i;
@@ -1542,17 +1715,16 @@ int LsShmHash::stat(LsHashStat *pHashStat, for_each_fn2 fun, void *pData)
 
     autoLockChkRehash();
     // search each idx
-    LsShmHIdx *p = getHIdx();
-    LsShmHIdx *pIdxEnd = p + capacity();
+    LsShmHIterOff *p = getHIdx();
+    LsShmHIterOff *pIdxEnd = p + capacity();
     while (p < pIdxEnd)
     {
         ++pHashStat->numIdx;
-        if (p->x_iOffset != 0)
+        if (p->m_iOffset != 0)
         {
             ++pHashStat->numIdxOccupied;
             int num;
-            if ((num = statIdx((iteroffset)p->x_iOffset,
-                               fun, (void *)pHashStat)) != 0)
+            if ((num = statIdx(*p, fun, (void *)pHashStat)) != 0)
             {
                 pHashStat->num += num;
                 if (num > pHashStat->maxLink)

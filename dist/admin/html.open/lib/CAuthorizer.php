@@ -242,8 +242,15 @@ class CAuthorizer
             $secretKey0 = mt_rand() . $start . mt_rand() ;
             $secretKey1 = mt_rand() . mt_rand() . $start ;
 
-            setcookie($this->_id_field, PMA_blowfish_encrypt($authUser, $secretKey0), 0, "/") ;
-            setcookie($this->_pass_field, PMA_blowfish_encrypt($authPass, $secretKey1), 0, "/") ;
+			$domain = $_SERVER['HTTP_HOST'];
+			if ($pos = strpos($domain, ':')) {
+				$domain = substr($domain, 0, $pos);
+			}
+			$secure = !empty($_SERVER['HTTPS']);
+			$httponly = true;
+
+            setcookie($this->_id_field, PMA_blowfish_encrypt($authUser, $secretKey0), 0, "/", $domain, $secure, $httponly) ;
+            setcookie($this->_pass_field, PMA_blowfish_encrypt($authPass, $secretKey1), 0, "/", $domain, $secure, $httponly) ;
 
             $this->updateAccessTime(array( $secretKey0, $secretKey1 )) ;
         }

@@ -2479,6 +2479,6 @@ static int Init(lsi_module_t *pModule)
 lsi_confparser_t dealConfig = { ParseConfig, FreeConfig, paramArray };
 lsi_reqhdlr_t _handler = { PsHandlerProcess, NULL, NULL, NULL };
 lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, Init, &_handler, &dealConfig,
-                       "v1.6-1.9.32.6", serverHooks, {0}
+                       "v1.4.13-1.9.32.6", serverHooks, {0}
                      };
 
