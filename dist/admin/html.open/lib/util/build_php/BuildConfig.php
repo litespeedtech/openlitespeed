@@ -22,15 +22,15 @@ class BuildConfig
         switch ( $field ) {
 
             case self::PHP_VERSION: return
-                        array( '7.0.0RC7',
-                            '5.6.15',
+                        array( '7.0.0',
+                            '5.6.16',
                             '5.5.30',
                             '5.4.45',
                             '5.3.29',
                             '5.2.17',
                             '4.4.9' ) ;
 
-            case self::LSAPI_VERSION: return '6.8' ;
+            case self::LSAPI_VERSION: return '6.9' ;
 
             case self::SUHOSIN_VERSION: return '0.9.38' ;
 
