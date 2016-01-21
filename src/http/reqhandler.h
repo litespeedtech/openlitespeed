@@ -29,7 +29,7 @@ class ReqHandler
     ReqHandler(const ReqHandler &rhs);
     void operator=(const ReqHandler &rhs);
 public:
-    ReqHandler(): m_iType(1)  {};
+    ReqHandler(): m_iType(0)  {};
     virtual ~ReqHandler()       {};
     virtual int process(HttpSession *pSession,
                         const HttpHandler *pHandler) = 0;

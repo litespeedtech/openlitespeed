@@ -118,7 +118,8 @@ static char *escape_uri(char *p, char *pEnd, const char *pURI, int uriLen)
 
 
 HttpReq::HttpReq()
-    : m_headerBuf(HEADER_BUF_INIT_SIZE)
+    : m_pSslConn(NULL)
+    , m_headerBuf(HEADER_BUF_INIT_SIZE)
     , m_fdReqFile(-1)
 {
     m_headerBuf.resize(HEADER_BUF_PAD);
@@ -134,7 +135,7 @@ HttpReq::HttpReq()
     m_pPool = ls_xpool_new();
     ls_xpool_skipfree(m_pPool);
     uSetURI(NULL, 0);
-    ls_str_set(&m_curUrl.value, NULL, 0);
+    ls_str_set(&m_curUrl.val, NULL, 0);
     ls_str_set(&m_location, NULL, 0);
     ls_str_set(&m_pathInfo, NULL, 0);
     ls_str_set(&m_newHost, NULL, 0);
@@ -145,6 +146,7 @@ HttpReq::HttpReq()
     m_pAuthUser = NULL;
     m_pRange = NULL;
     m_pReqBodyType = REQ_BODY_UNKNOWN;
+    m_cookies.init();
 }
 
 
@@ -156,7 +158,7 @@ HttpReq::~HttpReq()
     ls_xpool_delete(m_pPool);
     m_pPool = NULL;
     uSetURI(NULL, 0);
-    ls_str_set(&m_curUrl.value, NULL, 0);
+    ls_str_set(&m_curUrl.val, NULL, 0);
     ls_str_set(&m_location, NULL, 0);
     ls_str_set(&m_pathInfo, NULL, 0);
     ls_str_set(&m_newHost, NULL, 0);
@@ -166,6 +168,7 @@ HttpReq::~HttpReq()
     m_pEnv = NULL;
     m_pAuthUser = NULL;
     m_pRange = NULL;
+    m_cookies.clear();
 }
 
 
@@ -186,11 +189,12 @@ void HttpReq::reset()
     ::memset(m_commonHeaderOffset, 0,
              (char *)(&m_code + 1) - (char *)m_commonHeaderOffset);
     m_pRealPath = NULL;
+    m_cookies.clear();
     ls_xpool_reset(m_pPool);
     ls_xpool_skipfree(m_pPool);
     m_unknHeaders.init();
     uSetURI(NULL, 0);
-    ls_str_set(&m_curUrl.value, NULL, 0);
+    ls_str_set(&m_curUrl.val, NULL, 0);
     ls_str_set(&m_location, NULL, 0);
     ls_str_set(&m_pathInfo, NULL, 0);
     ls_str_set(&m_newHost, NULL, 0);
@@ -198,6 +202,7 @@ void HttpReq::reset()
     m_pEnv = NULL;
     m_pAuthUser = NULL;
     m_pRange = NULL;
+    m_cookies.init();
 }
 
 
@@ -230,7 +235,7 @@ void HttpReq::reset2()
 
 int HttpReq::setQS(const char *qs, int qsLen)
 {
-    return ls_str_xsetstr(&m_curUrl.value, qs, qsLen, m_pPool);
+    return ls_str_xsetstr(&m_curUrl.val, qs, qsLen, m_pPool);
 }
 
 
@@ -286,6 +291,28 @@ int HttpReq::processHeader()
 
 #define MAX_HEADER_TAG_LEN  20
 
+const HttpVHost *HttpReq::matchVHost(const VHostMap *pVHostMap)
+{
+    const HttpVHost *pVHost = NULL;
+    register char *pHost = m_headerBuf.begin() + m_iHostOff;
+    register char *pHostEnd = pHost + m_iHostLen;
+    register char ch = *pHostEnd;
+    register int  www = 4;
+    if (m_iLeadingWWW && pVHostMap->isStripWWW())
+    {
+        pHost += www;
+        www = 0;
+    }
+    *pHostEnd = 0;
+    pVHost = pVHostMap->matchVHost(pHost, pHostEnd);
+    if (www && !pVHost && m_iLeadingWWW)
+    {
+        pHost += 4;
+        pVHost = pVHostMap->matchVHost(pHost, pHostEnd);
+    }
+    *pHostEnd = ch;
+    return pVHost;
+}
 
 const HttpVHost *HttpReq::matchVHost()
 {
@@ -450,7 +477,7 @@ int HttpReq::parseURL(const char *pCur, const char *pBEnd)
     }
     else
     {
-        ls_str_set(&m_curUrl.value, NULL, 0);
+        ls_str_set(&m_curUrl.val, NULL, 0);
         pMark = pBEnd;
     }
     result = parseURI(pFound, pMark);
@@ -526,8 +553,8 @@ int HttpReq::parseMethod(const char *pCur, const char *pBEnd)
         (m_method >= HttpMethod::HTTP_METHOD_END))
         return SC_505;
 
-    if (m_method == HttpMethod::HTTP_OPTIONS)
-        return SC_405;
+//     if (m_method == HttpMethod::HTTP_OPTIONS)
+//         return SC_405;
 
     pCur += HttpMethod::getLen(m_method);
     if ((*pCur != ' ') && (*pCur != '\t'))
@@ -618,12 +645,17 @@ int HttpReq::processHeaderLines()
                         memset((char *)(pLineBegin - 2), 0x20, 7 + pCurHeader->valLen + 4);//
                     }
                 }
-                else if (pCurHeader->keyLen == 16 
+                else if (pCurHeader->keyLen == 16
                         && (strncasecmp(pLineBegin, "CF-Connecting-IP", 16) == 0))
                 {
                     m_iCfIpHeader = m_unknHeaders.getSize();
                 }
-                
+                else if (pCurHeader->keyLen == 17
+                        && strncasecmp(pLineBegin, "X-Forwarded-Proto", 17) == 0)
+                {
+                    if (pCurHeader->valLen == 5 && strncasecmp(pTemp, "https", 5) == 0)
+                        m_iContextState |= X_FORWARD_HTTPS;
+                }
             }
         }
         pLineBegin = pLineEnd + 1;
@@ -986,7 +1018,7 @@ int HttpReq::setCurrentURL(const char *pURL, int len, int alloc)
         setQS(getURI() + (pArgs - pURI), n - 1 - (pArgs - pURI));
 
     else
-        m_curUrl.value = m_pUrls[m_iRedirects - 1].value;
+        m_curUrl.val = m_pUrls[m_iRedirects - 1].val;
     m_iScriptNameLen = getURILen();
     ls_str_setlen(&m_pathInfo, 0);
     return 0;
@@ -1070,7 +1102,7 @@ int HttpReq::saveCurURL()
         return SC_500;
     }
     m_pUrls[m_iRedirects].key = m_curUrl.key;
-    m_pUrls[m_iRedirects++].value = m_curUrl.value;
+    m_pUrls[m_iRedirects++].val = m_curUrl.val;
 
     return 0;
 }
@@ -1117,8 +1149,8 @@ int HttpReq::detectLoopRedirect()
         (
             (ls_str_len(&tmp.key) == getURILen())
             && (strncmp(ls_str_cstr(&tmp.key), pURI, ls_str_len(&tmp.key)) == 0)
-            && (ls_str_len(&tmp.value) == getQueryStringLen())
-            && (strncmp(ls_str_cstr(&tmp.value), pArg, ls_str_len(&tmp.value)) == 0)
+            && (ls_str_len(&tmp.val) == getQueryStringLen())
+            && (strncmp(ls_str_cstr(&tmp.val), pArg, ls_str_len(&tmp.val)) == 0)
         )
             break;
 
@@ -1126,7 +1158,7 @@ int HttpReq::detectLoopRedirect()
     if (i < m_iRedirects)   //loop detected
     {
         m_curUrl.key = m_pUrls[--m_iRedirects].key;
-        m_curUrl.value = m_pUrls[m_iRedirects].value;
+        m_curUrl.val = m_pUrls[m_iRedirects].val;
         LS_ERROR(getLogSession(), "Detected loop redirection.");
         //TODO:
         // print the redirect url stack.
@@ -2263,13 +2295,13 @@ ls_strpair_t *HttpReq::addEnv(const char *pOrgKey, int orgKeyLen,
     {
         sp = (ls_strpair_t *)ls_xpool_alloc(m_pPool, sizeof(ls_strpair_t));
         ls_str_x(&sp->key, pKey, keyLen, m_pPool);
-        ls_str_x(&sp->value, pValue, valLen, m_pPool);
+        ls_str_x(&sp->val, pValue, valLen, m_pPool);
         if (m_pEnv->insert(m_pPool, ls_str_cstr(&sp->key),
                            ls_str_len(&sp->key), sp) == NULL)
             return NULL;
     }
-    else if (strncasecmp(ls_str_cstr(&sp->value), pValue, valLen) != 0)
-        ls_str_xsetstr(&sp->value, pValue, valLen, m_pPool);
+    else if (strncasecmp(ls_str_cstr(&sp->val), pValue, valLen) != 0)
+        ls_str_xsetstr(&sp->val, pValue, valLen, m_pPool);
     ++m_iEnvCount;
     return sp;
 }
@@ -2285,8 +2317,8 @@ const char *HttpReq::getEnv(const char *pOrgKey, int orgKeyLen,
     if ((m_pEnv != NULL)
         && ((sp = (ls_strpair_t *)m_pEnv->find(pKey, keyLen)) != NULL))
     {
-        valLen = ls_str_len(&sp->value);
-        return ls_str_cstr(&sp->value);
+        valLen = ls_str_len(&sp->val);
+        return ls_str_cstr(&sp->val);
     }
     return NULL;
 }
@@ -2314,7 +2346,7 @@ void HttpReq::unsetEnv(const char *pKey, int keyLen)
         if (sp == NULL)
             return;
         ls_str_xd(&sp->key, m_pPool);
-        ls_str_xd(&sp->value, m_pPool);
+        ls_str_xd(&sp->val, m_pPool);
         ls_xpool_free(m_pPool, sp);
         --m_iEnvCount;
     }
@@ -2452,7 +2484,7 @@ void HttpReq::restorePathInfo()
     if (m_iRedirects < oldRedirects)
     {
         m_curUrl.key = m_pUrls[m_iRedirects].key;
-        m_curUrl.value = m_pUrls[m_iRedirects].value;
+        m_curUrl.val = m_pUrls[m_iRedirects].val;
     }
 }
 
@@ -2517,9 +2549,9 @@ int HttpReq::detectLoopRedirect(const char *pURI, int uriLen,
              || ((ls_str_len(&tmp.key) == relativeLen)
                  && (strncmp(ls_str_cstr(&tmp.key), p,
                              ls_str_len(&tmp.key)) == 0)))
-            && (ls_str_len(&tmp.value) == qsLen)
-            && (strncmp(ls_str_cstr(&tmp.value), pArg,
-                        ls_str_len(&tmp.value)) == 0))
+            && (ls_str_len(&tmp.val) == qsLen)
+            && (strncmp(ls_str_cstr(&tmp.val), pArg,
+                        ls_str_len(&tmp.val)) == 0))
             break;
     }
     if (i < m_iRedirects)   //loop detected
@@ -2566,5 +2598,347 @@ int HttpReq::checkScriptPermission()
     return 1;
 }
 
+int HttpReq::removeCookie(const char *pName, int nameLen)
+{
+    cookieval_t *pEntry = getCookie(pName, nameLen);
+    if (pEntry)
+    {
+        if (m_cookies.getSize() == 1)
+        {
+            m_commonHeaderOffset[ HttpHeader::H_COOKIE ] = 0;
+        }
+        else
+        {
+            const char *p = m_headerBuf.getp(pEntry->keyOff);
+            memset((char *)p, ' ', m_headerBuf.getp(pEntry->valOff)
+                   + pEntry->valLen - p);
+            pEntry->keyLen = pEntry->keyOff = 0;
+        }
+        return 1;
+    }
+    return 0;
+}
+
+
+cookieval_t *HttpReq::setCookie(const char *pName, int nameLen, const char *pValue,
+                       int valLen)
+{
+    char *p;
+    cookieval_t *pIdx = NULL;
+    int keyOff, valOff;
+    if (m_commonHeaderLen[ HttpHeader::H_COOKIE ] >= 16384 ||
+        (int)m_commonHeaderLen[ HttpHeader::H_COOKIE ] + valLen + nameLen + 1 >
+        32768)
+    {
+        LS_DBG_L(getLogSession(),
+                 "Cookie size [%s] is too large, stop updating cookie from Set-Cookie.",
+                 m_commonHeaderLen[ HttpHeader::H_COOKIE ]);
+        return NULL;
+    }
+    pIdx = getCookie(pName, nameLen);
+    if (pIdx)
+    {
+        if (valLen <= pIdx->valLen)
+        {
+            p = (char *)m_headerBuf.getp(pIdx->valOff);
+            if ((valLen == pIdx->valLen) &&
+                (memcmp(pValue, p, valLen) == 0))
+            {
+                LS_DBG_L(getLogSession(), "same value [%.*s=%.*s].",
+                         nameLen, pName, valLen, pValue);
+                return NULL;
+            }
+            clearContextState(CACHE_PRIVATE_KEY | CACHE_KEY);
+
+            memmove(p, pValue, valLen);
+            LS_DBG_L(getLogSession(), "replace cookie [%.*s] with new value [%.*s].",
+                     nameLen, pName, valLen, pValue);
+            pIdx->flag |= COOKIE_FLAG_RESP_UPDATE;
+            int diff = pIdx->valLen - valLen;
+            if (diff > 0)
+            {
+                if (pIdx->valLen + pIdx->valOff ==
+                    m_commonHeaderOffset[ HttpHeader::H_COOKIE ] +
+                    m_commonHeaderLen[ HttpHeader::H_COOKIE ])
+                    m_commonHeaderLen[ HttpHeader::H_COOKIE ] -= diff;
+                memset(p + valLen, ' ', diff);
+                pIdx->valLen = valLen;
+            }
+            return pIdx;
+        }
+        p = m_headerBuf.getp(pIdx->keyOff);
+        memset((char *)p, ' ', m_headerBuf.getp(pIdx->valOff) + pIdx->valLen
+               - p);
+    }
+    if (m_cookies.getSize() == 0)
+    {
+        //create cookie: header
+        m_headerBuf.append("Cookie: ", 8);
+        m_commonHeaderOffset[ HttpHeader::H_COOKIE ] = m_headerBuf.size();
+        m_commonHeaderLen[ HttpHeader::H_COOKIE ] = 0;
+    }
+    else if (m_headerBuf.size() > m_commonHeaderOffset[ HttpHeader::H_COOKIE ]
+             + m_commonHeaderLen[ HttpHeader::H_COOKIE ] + 4)
+    {
+        copyCookieHeaderToBufEnd(m_commonHeaderOffset[ HttpHeader::H_COOKIE ],
+                                 NULL, m_commonHeaderLen[ HttpHeader::H_COOKIE ]);
+    }
+    else
+        m_headerBuf.resize(m_commonHeaderOffset[ HttpHeader::H_COOKIE ]
+                           + m_commonHeaderLen[ HttpHeader::H_COOKIE ]);
+
+    if (!pIdx)
+    {
+        pIdx = m_cookies.insertCookieIndex(m_pPool, &m_headerBuf, pName, nameLen);
+        pIdx->flag = 0;
+        m_cookies.cookieClassify(pIdx, pName, nameLen, pValue, valLen);
+        LS_DBG_L(getLogSession(), "insert new cookie[%.*s].",
+                 nameLen, pName);
+    }
+
+    if (m_commonHeaderLen[ HttpHeader::H_COOKIE ] > 0)
+    {
+        if (*(m_headerBuf.end() - 1) != ';')
+        {
+            m_headerBuf.append(";", 1);
+            ++m_commonHeaderLen[ HttpHeader::H_COOKIE ];
+        }
+    }
+
+    keyOff = m_headerBuf.size();
+    valOff = keyOff + nameLen + 1;
+    if (pValue == pName + nameLen + 1)
+    {
+        m_headerBuf.append(pName, nameLen + valLen + 1);
+        *m_headerBuf.getp(valOff - 1) = '=';
+    }
+    else
+    {
+        m_headerBuf.append(pName, nameLen);
+        m_headerBuf.append("=", 1);
+        m_headerBuf.append(pValue, valLen);
+    }
+    LS_DBG_L(getLogSession(), "append cookie [%.*s] with new value [%.*s].",
+             nameLen, pName, valLen, pValue);
+
+    pIdx->keyOff = keyOff;
+    pIdx->flag |= COOKIE_FLAG_RESP_UPDATE;
+    pIdx->keyLen = nameLen;
+    pIdx->valOff = valOff;
+    pIdx->valLen = valLen;
+    m_commonHeaderLen[ HttpHeader::H_COOKIE ] += nameLen + valLen + 1;
+
+    m_headerBuf.append("\r\n", 2);
+
+    clearContextState(CACHE_PRIVATE_KEY | CACHE_KEY);
+
+    return pIdx;
+
+}
+
+
+int HttpReq::processSetCookieHeader(const char *pValue, int valLen)
+{
+    const char *pEnd = pValue + valLen;
+    const char *pCookieName, *pCookieValue;
+    int cookieNameLen, cookieValueLen;
+    if (getContextState(DUM_BENCHMARK_TOOL))
+        return 0;
+    while ((pValue < pEnd) && isspace(*pValue))
+        ++pValue;
+    pCookieName = pValue;
+    pValue = pCookieValue = (const char *)memchr(pValue, '=', pEnd - pValue);
+    if (!pCookieValue)
+        return -1;
+    while (isspace(pValue[-1]))
+        --pValue;
+    cookieNameLen = pValue - pCookieName;
+    if (cookieNameLen <= 0)
+        return -1;
+
+    ++pCookieValue;
+    pValue = (const char *)memchr(pCookieValue, ';', pEnd - pCookieValue);
+    if (!pValue)
+        pValue = pEnd;
+    while (pValue > pCookieValue && isspace(pValue[-1]))
+        --pValue;
+    while (pValue > pCookieValue && isspace(*pCookieValue))
+        ++pCookieValue;
+    cookieValueLen = pValue - pCookieValue;
+    return (setCookie(pCookieName, cookieNameLen, pCookieValue,
+                      cookieValueLen) != NULL);
+}
+
+
+cookieval_t *HttpReq::getCookie(const char *pName, int nameLen)
+{
+    int i;
+    parseCookies();
+
+    for (i = 0; i < m_cookies.getSize(); ++i)
+    {
+        cookieval_t *pEntry = m_cookies.getObj(i);
+        if (pEntry->keyLen == nameLen)
+        {
+            char *p = (char *)m_headerBuf.getp(pEntry->keyOff);
+            if (strncasecmp(pName, p, nameLen) == 0)
+                return pEntry;
+        }
+    }
+    return NULL;
+}
+
+
+int HttpReq::parseCookies()
+{
+    const char *pCookies;
+    const char *pEnd;
+    const char *p, *pVal, *pNameEnd, *pValEnd;
+    int nameOff, valOff, len;
+
+    if (m_iContextState & COOKIE_PARSED)
+        return 0;
+    m_iContextState |= COOKIE_PARSED;
+
+    pCookies = getHeader(HttpHeader::H_COOKIE);
+    len = getHeaderLen(HttpHeader::H_COOKIE);
+    if (!pCookies || !*pCookies || len == 0)
+        return 0;
+    pEnd = pCookies + len ;
+    for (; pCookies < pEnd; pCookies = p + 1)
+    {
+        p = (const char *)memchr(pCookies, ';', pEnd - pCookies);
+        if (!p)
+            p = pEnd;
+        pValEnd = p;
+        while (isspace(*pCookies))
+            ++pCookies;
+        if (p == pCookies)
+            continue;
+        pVal = (const char *)memchr(pCookies, '=', p - pCookies);
+        if (!pVal)
+            continue;
+        pNameEnd = pVal++;
+        while (isspace(*pVal))
+            ++pVal;
+        nameOff = pCookies - m_headerBuf.begin();
+        valOff = pVal - m_headerBuf.begin();
+        while (isspace(pValEnd[-1]))
+            --pValEnd;
+
+        cookieval_t *pCookieEntry = m_cookies.insertCookieIndex(m_pPool,
+                                        &m_headerBuf, pCookies, pNameEnd - pCookies);
+        if (!pCookieEntry)
+            return -1;
+
+        pCookieEntry->keyOff    = nameOff;
+        pCookieEntry->flag      = 0;
+        pCookieEntry->keyLen    = pNameEnd - pCookies;
+        pCookieEntry->valOff    = valOff;
+        pCookieEntry->valLen    = pValEnd - pVal;
+        m_cookies.cookieClassify(pCookieEntry, pCookies, pCookieEntry->keyLen,
+                                 pVal, pCookieEntry->valLen);
+    }
+    return 0;
+}
+
+cookieval_t *CookieList::insertCookieIndex(ls_xpool_t *pool, AutoBuf *pData,
+        const char *pName, int nameLen)
+{
+    if (getCapacity() == 0)
+        guarantee(pool, 10);
+    else if(getCapacity() <= getSize() + 1)
+        guarantee(pool, getCapacity() * 2);
+
+    cookieval_t *pCookieEntry = getNew();
+    if (!pCookieEntry)
+        return NULL;
+
+    while (pCookieEntry > begin())
+    {
+        cookieval_t *pCmp = pCookieEntry - 1;
+        const char *pCmpName = pData->getp(pCmp->keyOff);
+        int len = pCmp->keyLen;
+        if (len > nameLen)
+            len = nameLen;
+        int res = strncasecmp(pCmpName, pName, len);
+        if (res > 0 || (res == 0 && pCmp->keyLen > nameLen))
+            --pCookieEntry;
+        else
+            break;
+    }
+    if (pCookieEntry != end() - 1)
+    {
+        memmove(pCookieEntry + 1, pCookieEntry,
+                (char *)(end() - 1) - (char *)pCookieEntry);
+        if (m_iSessIdx && m_iSessIdx - 1 >= pCookieEntry - begin())
+            ++m_iSessIdx;
+    }
+    return pCookieEntry;
+}
+
+void CookieList::cookieClassify(cookieval_t *pCookieEntry,
+                                const char *pCookies, int nameLen,
+                                const char *pVal, int valLen)
+{
+    if (valLen >= 32)
+    {
+        if (nameLen == 8 && strncasecmp(pCookies, "frontend", 8) == 0)
+        {
+            pCookieEntry->flag |= COOKIE_FLAG_FRONTEND;
+            if (!isSessIdxSet() ||
+                ((begin() + getSessIdx())->flag & COOKIE_FLAG_PHPSESSID))
+                setSessIdx(pCookieEntry - begin());
+        }
+        else if (nameLen == 9 && strncasecmp(pCookies, "PHPSESSID", 9) == 0)
+        {
+            pCookieEntry->flag |= COOKIE_FLAG_PHPSESSID;
+            if (!isSessIdxSet())
+                setSessIdx(pCookieEntry - begin());
+        }
+        else if (nameLen == 10 && strncasecmp(pCookies, "xf_session", 10) == 0)
+        {
+            pCookieEntry->flag |= COOKIE_FLAG_XF_SESSID;
+            if (!isSessIdxSet() ||
+                ((begin() + getSessIdx())->flag & COOKIE_FLAG_PHPSESSID))
+                setSessIdx(pCookieEntry - begin());
+        }
+    }
+}
+
+int HttpReq::copyCookieHeaderToBufEnd(int oldOff, const char *pCookie,
+                                      int cookieLen)
+{
+    int offset, diff;
+    char *pBuf;
+    m_headerBuf.append("Cookie: ", 8);
+    offset = m_headerBuf.size();
+    m_headerBuf.appendAllocOnly(cookieLen + 2);
+
+    if (!pCookie)
+        pCookie = m_headerBuf.getp(
+                      m_commonHeaderOffset[ HttpHeader::H_COOKIE ]);
+
+    m_commonHeaderOffset[ HttpHeader::H_COOKIE ] = offset;
+
+    pBuf = m_headerBuf.getp(offset);
+    memmove(pBuf, pCookie, cookieLen);
+    pBuf += cookieLen;
+    *pBuf++ = '\r';
+    *pBuf++ = '\n';
+
+    diff = offset - oldOff;
+    if (diff == 0)
+        return 0;
+
+    cookieval_t *p = m_cookies.begin();
+    while (p < m_cookies.end())
+    {
+        p->keyOff += diff;
+        p->valOff += diff;
+        ++p;
+    }
+    return 0;
+}
 
 

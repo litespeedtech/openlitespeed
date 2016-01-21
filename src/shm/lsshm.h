@@ -164,7 +164,7 @@ public:
     {
         if (ptr == NULL)
             return 0;
-        assert((ptr < (((uint8_t *)x_pShmMap) + x_pStats->m_iFileSize))
+        assert((ptr <= (((uint8_t *)x_pShmMap) + x_pStats->m_iFileSize))
                && (ptr > (const void *)x_pShmMap));
         return (LsShmOffset_t)((uint8_t *)ptr - (uint8_t *)x_pShmMap);
     }

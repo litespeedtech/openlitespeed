@@ -122,4 +122,145 @@ TEST(ls_XPoolTest_test)
     CHECK(ls_xpool_isempty(&pool) == 1);
 }
 
+
+// TEST(ls_XPoolTest_test2)
+// {
+//     ls_xpool_t pool;
+//     ls_xpool_init(&pool);
+//     char *ptr = (char *)ls_xpool_alloc(&pool, 320);
+//     ls_xpool_free(&pool, (void *)ptr);
+//     ptr = (char *)ls_xpool_alloc(&pool, 321);
+//     ls_xpool_free(&pool, (void *)ptr);
+//     ptr = (char *)ls_xpool_alloc(&pool, 322);
+//     ls_xpool_free(&pool, (void *)ptr);
+//     ptr = (char *)ls_xpool_alloc(&pool, 323);
+//     ls_xpool_free(&pool, (void *)ptr);
+//     ptr = (char *)ls_xpool_alloc(&pool, 324);
+//     ls_xpool_free(&pool, (void *)ptr);
+//     ptr = (char *)ls_xpool_alloc(&pool, 325);
+//     ls_xpool_free(&pool, (void *)ptr);
+//     ptr = (char *)ls_xpool_alloc(&pool, 326);
+//     ls_xpool_free(&pool, (void *)ptr);
+//     ptr = (char *)ls_xpool_alloc(&pool, 329);
+//     ls_xpool_free(&pool, (void *)ptr);
+//     ptr = (char *)ls_xpool_alloc(&pool, 330);
+//     ls_xpool_free(&pool, (void *)ptr);
+//     ptr = (char *)ls_xpool_alloc(&pool, 340);
+//     ls_xpool_free(&pool, (void *)ptr);
+//     ptr = (char *)ls_xpool_alloc(&pool, 350);
+//     ls_xpool_free(&pool, (void *)ptr);
+//     ptr = (char *)ls_xpool_alloc(&pool, 360);
+//     ls_xpool_free(&pool, (void *)ptr);
+//     ptr = (char *)ls_xpool_alloc(&pool, 370);
+//     ls_xpool_free(&pool, (void *)ptr);
+//     ptr = (char *)ls_xpool_alloc(&pool, 380);
+//     ls_xpool_free(&pool, (void *)ptr);
+//     ptr = (char *)ls_xpool_alloc(&pool, 390);
+//     ls_xpool_free(&pool, (void *)ptr);
+//     ptr = (char *)ls_xpool_alloc(&pool, 400);
+//     ls_xpool_free(&pool, (void *)ptr);
+//     ptr = (char *)ls_xpool_alloc(&pool, 320);
+//     ls_xpool_free(&pool, (void *)ptr);
+//     ptr = (char *)ls_xpool_alloc(&pool, 320);
+//     ls_xpool_free(&pool, (void *)ptr);
+//     ptr = (char *)ls_xpool_alloc(&pool, 320);
+//     ls_xpool_free(&pool, (void *)ptr);
+//     ptr = (char *)ls_xpool_alloc(&pool, 320);
+//     ls_xpool_free(&pool, (void *)ptr);
+//     ptr = (char *)ls_xpool_alloc(&pool, 320);
+//     ls_xpool_free(&pool, (void *)ptr);
+//     ptr = (char *)ls_xpool_alloc(&pool, 320);
+//     ls_xpool_free(&pool, (void *)ptr);
+//     ptr = (char *)ls_xpool_alloc(&pool, 320);
+//     ls_xpool_free(&pool, (void *)ptr);
+//     ptr = (char *)ls_xpool_alloc(&pool, 320);
+//     ls_xpool_free(&pool, (void *)ptr);
+//     ptr = (char *)ls_xpool_alloc(&pool, 320);
+//     ls_xpool_free(&pool, (void *)ptr);
+//     ptr = (char *)ls_xpool_alloc(&pool, 320);
+//     ls_xpool_free(&pool, (void *)ptr);
+//     ptr = (char *)ls_xpool_alloc(&pool, 320);
+//     ls_xpool_free(&pool, (void *)ptr);
+//     ptr = (char *)ls_xpool_alloc(&pool, 320);
+//     ls_xpool_free(&pool, (void *)ptr);
+//     ptr = (char *)ls_xpool_alloc(&pool, 320);
+//     ls_xpool_free(&pool, (void *)ptr);
+//     ptr = (char *)ls_xpool_alloc(&pool, 320);
+//     ls_xpool_free(&pool, (void *)ptr);
+//     ptr = (char *)ls_xpool_alloc(&pool, 320);
+//
+//
+//     char *ptr1 = (char *)ls_xpool_alloc(&pool, 320);
+//     memset(ptr1, 255, 160);
+//     ls_xpool_free(&pool, (void *)ptr);
+//
+//
+//     char *ptr2 = (char *)ls_xpool_realloc(&pool, ptr1, 640);
+//     CHECK(ptr2 > ptr1 || (long)ptr2 + 160 <= (long)ptr1);
+//
+//
+//     char *ptr3 = (char *)ls_xpool_realloc(&pool, ptr2, 648);
+//     CHECK(ptr3 > ptr2 || (long)ptr3 + 320 <= (long)ptr2);
+//
+//
+//     char *ptr4 = (char *)ls_xpool_realloc(&pool, ptr3, 1280);
+//     CHECK(ptr4 > ptr3 || ptr4 + 640 <= ptr3);
+//
+//     ls_xpool_free(&pool, (void *)ptr4);
+// }
+
+
+
+TEST(ls_XPoolTest_testData)
+{
+    ls_xpool_t pool;
+    ls_xpool_init(&pool);
+
+    int sz = 1024 - 8 - 1; //to make a exact same size as the superbuf
+    char *ptr = (char *)ls_xpool_alloc(&pool, sz);
+    strcpy(ptr, "\x77\x77\x77\x77\x77\x77\x77\x77\x77");
+    char *ptr1 = (char *)ls_xpool_alloc(&pool, sz);
+    strcpy(ptr1, "\x77\x77\x77\x77\x77\x77\x77\x77\x77");
+    char *ptr2 = (char *)ls_xpool_alloc(&pool, sz);
+    strcpy(ptr2, "\x77\x77\x77\x77\x77\x77\x77\x77\x77");
+
+    sz -= 256;  //even -256, still will alloc 1024, because when the last remain < 262
+                //the blk will be removed and the remain will be append to the last alloc buffer
+    char *ptr3 = (char *)ls_xpool_alloc(&pool, sz);
+    strcpy(ptr3, "\x77\x77\x77\x77\x77\x77\x77\x77\x77");
+
+
+    //try to test the last buffer of the
+    char *ptr4 = (char *)ls_xpool_alloc(&pool, 0);
+
+
+
+    ls_xpool_free(&pool, (void *)ptr);
+    ls_xpool_free(&pool, (void *)ptr1);
+    ls_xpool_free(&pool, (void *)ptr2);
+    ls_xpool_free(&pool, (void *)ptr3);
+    ls_xpool_free(&pool, (void *)ptr4);
+
+    sz = 4 * 1024 - 8 ; //to make a exact same size as the superbuf
+    ptr = (char *)ls_xpool_alloc(&pool, sz);
+    strcpy(ptr, "\x77\x77\x77\x77\x77\x77\x77\x77\x77");
+    ls_xpool_free(&pool, (void *)ptr);
+
+    sz = 4 * 1024 - 8 + 1; //to make a exact same size as the superbuf
+    ptr = (char *)ls_xpool_alloc(&pool, sz);
+    strcpy(ptr, "\x77\x77\x77\x77\x77\x77\x77\x77\x77");
+    ls_xpool_free(&pool, (void *)ptr);
+
+
+    sz = 4 * 1024 - 8 - 1; //to make a exact same size as the superbuf
+    ptr = (char *)ls_xpool_alloc(&pool, sz);
+    strcpy(ptr, "\x77\x77\x77\x77\x77\x77\x77\x77\x77");
+    ls_xpool_free(&pool, (void *)ptr);
+
+
+}
+
+
+
+
 #endif

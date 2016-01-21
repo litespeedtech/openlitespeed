@@ -197,7 +197,7 @@ int GzipBuf::processFile(int type, const char *pFileName,
                 len = ls_fio_read(fd, achBuf, sizeof(achBuf));
                 if (len <= 0)
                     break;
-                if (this->write(achBuf, len))
+                if (this->write(achBuf, len) != len)
                 {
                     ret = -1;
                     break;

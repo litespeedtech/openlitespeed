@@ -20,11 +20,18 @@
 #include "cacheentry.h"
 #include <util/datetime.h>
 
+#include "internalcachemanager.h"
+#include "shmcachemanager.h"
+
+
 CacheStore::CacheStore()
     : HashStringMap<CacheEntry * >(29,
                                    CacheHash::to_ghash_key,
                                    CacheHash::compare)
-
+    , m_iTotalEntries(0)
+    , m_iTotalHit(0)
+    , m_iTotalMiss(0)
+    , m_pManager(NULL)
 {
 }
 
@@ -32,7 +39,42 @@ CacheStore::CacheStore()
 CacheStore::~CacheStore()
 {
     m_dirtyList.release_objects();
+    if (m_pManager)
+        delete m_pManager;
 }
+
+
+void CacheStore::setStorageRoot(const char *pRoot)
+{
+    if ((m_sRoot.c_str() != NULL)
+        && (strcmp(pRoot, m_sRoot.c_str()) == 0))
+        return;
+    m_sRoot.setStr(pRoot);
+
+}
+
+
+int CacheStore::initManager()
+{
+    if (!m_sRoot.c_str())
+        return LS_FAIL;
+    if (m_pManager)
+        return LS_OK;
+#if 0
+    m_pManager = new InternalCacheManager();
+#else
+    m_pManager = new ShmCacheManager();
+#endif
+    if (m_pManager->init(m_sRoot.c_str()) == -1)
+    {
+        delete m_pManager;
+        m_pManager = NULL;
+        return LS_FAIL;
+    }
+    return LS_OK;
+}
+
+
 
 
 int CacheStore::stale(CacheEntry *pEntry)
@@ -61,7 +103,6 @@ int CacheStore::dispose(CacheStore::iterator iter, int isRemovePermEntry)
     return 0;
 }
 
-
 int CacheStore::purge(CacheEntry  *pEntry)
 {
     iterator iter = find(pEntry->getHashKey().getKey());
@@ -72,7 +113,6 @@ int CacheStore::purge(CacheEntry  *pEntry)
     }
     return 0;
 }
-
 
 int CacheStore::refresh(CacheEntry  *pEntry)
 {
@@ -100,14 +140,14 @@ void CacheStore::houseKeeping()
         iterNext = GHash::next(iter);
         if (pEntry->getRef() == 0)
         {
-            if (DateTime_s_curTime > pEntry->getExpireTime() + pEntry->getMaxStale())
+            if (DateTime::s_curTime > pEntry->getExpireTime() + pEntry->getMaxStale())
             {
                 dispose(iter, 1);
                 continue;
             }
             else
             {
-                int idle = DateTime_s_curTime - pEntry->getLastAccess();
+                int idle = DateTime::s_curTime - pEntry->getLastAccess();
                 if (idle > 120)
                 {
                     erase(iter);
@@ -118,7 +158,7 @@ void CacheStore::houseKeeping()
                     pEntry->releaseTmpResource();
             }
         }
-        //else if (DateTime_s_curTime - pEntry->getLastAccess() > 300 )
+        //else if (DateTime::s_curTime - pEntry->getLastAccess() > 300 )
         //{
         //    LS_INFO( "Idle Cache, fd: %d, ref: %d, force release.",
         //                pEntry->getFdStore(), pEntry->getRef() ));
@@ -134,7 +174,7 @@ void CacheStore::houseKeeping()
             delete *it;
             it = m_dirtyList.erase(it);
         }
-        //else if (DateTime_s_curTime - (*it)->getLastAccess() > 300 )
+        //else if (DateTime::s_curTime - (*it)->getLastAccess() > 300 )
         //{
         //    LS_INFO( "Unreleased Cache in dirty list, fd: %d, ref: %d, force release.",
         //                (*it)->getFdStore(), (*it)->getRef() ));
@@ -145,4 +185,5 @@ void CacheStore::houseKeeping()
             ++it;
     }
 }
+
 

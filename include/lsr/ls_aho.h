@@ -196,6 +196,8 @@ unsigned int ls_aho_search(ls_aho_t *pThis,
                            size_t startpos,
                            size_t *out_start, size_t *out_end, ls_aho_state_t **out_last_state);
 
+ls_aho_t *ls_aho_copy(ls_aho_t *pThis);
+
 #ifdef __cplusplus
 }
 #endif

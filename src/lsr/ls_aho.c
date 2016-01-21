@@ -50,6 +50,8 @@ static ls_aho_state_t *ls_aho_getgoto(
 static int ls_aho_optimize(ls_aho_state_t *state, int case_sensitive);
 static void ls_aho_freegoto(ls_aho_gotonode_t *node);
 static void ls_aho_freenodes(ls_aho_state_t *state, int case_sensitive);
+static void ls_aho_copy_helper(ls_aho_state_t *pState, char *pBuf, int iCurLen,
+                               int inc, ls_aho_t *pThis);
 
 
 ls_aho_t *ls_aho_new(int case_sensitive)
@@ -268,6 +270,21 @@ int ls_aho_maketree(ls_aho_t *pThis)
 int ls_aho_optimizetree(ls_aho_t *pThis)
 {
     return ls_aho_optimize(pThis->zero_state, pThis->case_sensitive);
+}
+
+
+ls_aho_t *ls_aho_copy(ls_aho_t *pThis)
+{
+    char buf[4096];
+    unsigned int inc = 1;
+    ls_aho_state_t *pZero = pThis->zero_state;
+    ls_aho_t *pNew = ls_aho_new(pThis->case_sensitive);
+    if ((pZero == NULL) || (pZero->goto_size == 0))
+        return pNew;
+    if (pThis->case_sensitive)
+        ++inc;
+    ls_aho_copy_helper(pZero, buf, 0, inc, pNew);
+    return pNew;
 }
 
 
@@ -523,4 +540,24 @@ static void ls_aho_freenodes(ls_aho_state_t *state, int case_sensitive)
     }
     ls_pfree(state);
 }
+
+#define LS_AHO_SEPARATOR 244
+
+static void ls_aho_copy_helper(ls_aho_state_t *pState, char *pBuf, int iCurLen,
+                               int inc, ls_aho_t *pThis)
+{
+    unsigned int i;
+    if (pState->goto_size == 0)
+    {
+        // pattern is finished
+        ls_aho_addpattern(pThis, pBuf, iCurLen);
+        return;
+    }
+    for (i = 0; i < pState->goto_size; i += inc)
+    {
+        pBuf[iCurLen]= pState->children_labels[i];
+        ls_aho_copy_helper(pState->children_states[i], pBuf, iCurLen + 1, inc, pThis);
+    }
+}
+
 

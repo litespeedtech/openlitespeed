@@ -6,7 +6,7 @@ m4_include(ax_check_liblua.m4)
 
 dnl Process this file with autoconf to produce a configure script.
 AC_PREREQ([2.69])
-AC_INIT([openlitespeed],[1.4.14],[info@litespeedtech.com],[openlitespeed],[http://www.litespeedtech.com/])
+AC_INIT([openlitespeed],[1.4.15],[info@litespeedtech.com],[openlitespeed],[http://www.litespeedtech.com/])
 AM_INIT_AUTOMAKE([1.0 foreign no-define ])
 
 AM_CONFIG_HEADER(src/config.h:src/config.h.in)
@@ -161,8 +161,8 @@ fi
 AM_CONDITIONAL([HAVE_LIBLUA], [test x$need_lua = xyes])
 echo "Lua inlcude = $LUA_INCLUDES, need_lua = $need_lua"    
                 
-CFLAGS="$CFLAGS -fstack-protector $(getconf LFS_CFLAGS)"
-CXXFLAGS="$CXXFLAGS -fstack-protector $(getconf LFS_CFLAGS)"
+CFLAGS="$CFLAGS -fstack-protector $(getconf LFS_CFLAGS) "
+CXXFLAGS="$CXXFLAGS -fstack-protector $(getconf LFS_CFLAGS) "
 
 
 
@@ -254,7 +254,7 @@ fi
 #For Mac OS, add special falgs for LuaJit
 if test `uname -s` = "Darwin"
 then
-    LDFLAGS="$LDFLAGS -pagezero_size 10000 -image_base 100000000"
+    LDFLAGS="$LDFLAGS -Wl,-export_dynamic -pagezero_size 10000 -image_base 100000000"
     RT_LIB_OPTION=
 fi
 

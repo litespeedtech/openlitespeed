@@ -2848,10 +2848,8 @@ int HttpServerImpl::configServer(int reconfig, XmlNode *pRoot)
             HttpMime::configScriptHandler(pList, NULL);
     }
 
-    p0 = pRoot->getChild("ipToGeo");
-
-    if (p0)
-        configIpToGeo(p0);
+    if (m_serverContext.isGeoIpOn())
+        configIpToGeo(pRoot);
 
 
     const char *pVal = pRoot->getChildValue("suspendedVhosts");

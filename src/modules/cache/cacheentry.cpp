@@ -20,103 +20,156 @@
 #include <string.h>
 #include <unistd.h>
 
+#include <util/dlinkqueue.h>
+
+
 CacheEntry::CacheEntry()
-    : m_iLastAccess(0)
-    , m_iHits(0)
+    : m_lastAccess(0)
+//     , m_iHits(0)
+//     , m_iTestHits(0)
     , m_iMaxStale(0)
     , m_startOffset(0)
-    , m_iFdStore(-1)
+    , m_fdStore(-1)
+    , m_pWaitQue(NULL)
 {
 }
 
 
 CacheEntry::~CacheEntry()
 {
-    if (m_iFdStore != -1)
-        close(m_iFdStore);
+    if (m_fdStore != -1)
+        close(m_fdStore);
+    if (m_pWaitQue)
+        delete m_pWaitQue;
 }
 
 
-int CacheEntry::setKey(const CacheHash &hash,
-                       const char *pURI, int iURILen,
-                       const char *pQS, int iQSLen,
-                       const char *pIP, int ipLen,
-                       const char *pCookie, int cookieLen)
+void CacheEntry::appendToWaitQ(DLinkedObj *pObj)
 {
-    m_hashKey.init(hash);
-    int len = iURILen + ((iQSLen > 0) ? iQSLen + 1 : 0);
-    int l;
-    if (ipLen > 0)
+    if (!m_pWaitQue)
+        m_pWaitQue = new DLinkQueue();
+    m_pWaitQue->append(pObj);
+}
+
+
+int CacheKey::getPrivateId(char *pBuf, char *pBufEnd)
+{
+    char *p = pBuf;
+    if (m_ipLen <= 0)
+        return -1;
+    if (m_iCookiePrivate > 0)
     {
-        len += ipLen + 1;
-        if (cookieLen > 0)
-            len += cookieLen + 1;
+        if (p + m_iCookiePrivate + 1 > pBufEnd)
+            return -1;
+        *p++ = '~';
+        memmove(p , m_sCookie.c_str() + m_iCookieVary, m_iCookiePrivate);
+        p += m_iCookiePrivate;
     }
+    if (p + m_ipLen + 1 > pBufEnd)
+        return -1;
+    *p++ = '@';
+    memmove(p, m_pIP, m_ipLen);
+    p += m_ipLen;
+    *p = 0;
+    return p - pBuf;
+}
+
+
+int CacheEntry::setKey(const CacheHash &hash, CacheKey *pKey)
+{
+    m_hashKey.copy(hash);
+    int len = pKey->m_iUriLen + ((pKey->m_iQsLen > 0) ? pKey->m_iQsLen + 1 :
+                                 0);
+    int l;
+    if (pKey->m_ipLen > 0)
+    {
+        len += pKey->m_ipLen + 1;
+        if (pKey->m_iCookiePrivate > 0)
+            len += pKey->m_iCookiePrivate + 1;
+    }
+    if (pKey->m_iCookieVary > 0)
+        len += pKey->m_iCookieVary + 1;
 
     char *pBuf = m_sKey.prealloc(len + 1);
     if (!pBuf)
-        return LS_FAIL;
-    memmove(pBuf, pURI, iURILen + 1);
-    l = iURILen;
-    if (iQSLen > 0)
+        return -1;
+    memmove(pBuf, pKey->m_pUri, pKey->m_iUriLen + 1);
+    l = pKey->m_iUriLen;
+    if (pKey->m_iQsLen > 0)
     {
         pBuf[ l++ ] = '?';
-        memmove(pBuf + l , pQS, iQSLen + 1);
-        l += iQSLen;
+        memmove(pBuf + l , pKey->m_pQs, pKey->m_iQsLen + 1);
+        l += pKey->m_iQsLen;
     }
-    if (ipLen > 0)
+    if (pKey->m_iCookieVary > 0)
     {
-        pBuf[l++] = '@';
-        memmove(pBuf + l, pIP, ipLen);
-        l += ipLen;
-        if (cookieLen > 0)
+        pBuf[l++] = '#';
+        memmove(pBuf + l , pKey->m_sCookie.c_str(), pKey->m_iCookieVary);
+        l += pKey->m_iCookieVary;
+    }
+    if (pKey->m_ipLen > 0)
+    {
+        if (pKey->m_iCookiePrivate > 0)
         {
             pBuf[l++] = '~';
-            memmove(pBuf + l , pCookie, cookieLen);
-            l += cookieLen;
+            memmove(pBuf + l , pKey->m_sCookie.c_str() + pKey->m_iCookieVary,
+                    pKey->m_iCookiePrivate);
+            l += pKey->m_iCookiePrivate;
         }
+        pBuf[l++] = '@';
+        memmove(pBuf + l, pKey->m_pIP, pKey->m_ipLen);
+        l += pKey->m_ipLen;
     }
-    m_header.m_iKeyLen = len;
+    m_header.m_keyLen = len;
     return 0;
 }
 
-
-int CacheEntry::verifyKey(
-    const char *pURI, int iURILen,
-    const char *pQS, int iQSLen,
-    const char *pIP, int ipLen,
-    const char *pCookie, int cookieLen) const
+int CacheEntry::verifyKey(CacheKey *pKey) const
 {
     const char *p = m_sKey.c_str();
-    if (strncmp(pURI, p, iURILen) != 0)
-        return LS_FAIL;
-    p += iURILen;
-    if (iQSLen > 0)
+    if (!p || strncmp(pKey->m_pUri, p, pKey->m_iUriLen) != 0)
+        return -1;
+    p += pKey->m_iUriLen;
+    if (pKey->m_iQsLen > 0)
     {
         if ((*p  != '?') ||
-            (memcmp(p + 1, pQS, iQSLen) != 0))
-            return LS_FAIL;
-        p += iQSLen + 1;
+            (memcmp(p + 1, pKey->m_pQs, pKey->m_iQsLen) != 0))
+            return -1;
+        p += pKey->m_iQsLen + 1;
     }
 
-    if (ipLen > 0)
+    if (pKey->m_iCookieVary > 0)
     {
-        if ((*p  != '@') ||
-            (memcmp(p + 1, pIP, ipLen) != 0))
-            return LS_FAIL;
-        p += ipLen + 1;
-        if (cookieLen > 0)
+        if ((*p  != '#') ||
+            (memcmp(p + 1, pKey->m_sCookie.c_str(), pKey->m_iCookieVary) != 0))
+            return -1;
+        p += pKey->m_iCookieVary + 1;
+
+    }
+    if (pKey->m_ipLen > 0)
+    {
+        if (pKey->m_iCookiePrivate > 0)
         {
             if ((*p  != '~') ||
-                (memcmp(p + 1, pCookie, cookieLen) != 0))
-                return LS_FAIL;
-            p += cookieLen + 1;
+                (memcmp(p + 1, pKey->m_sCookie.c_str() + pKey->m_iCookieVary,
+                        pKey->m_iCookiePrivate) != 0))
+                return -1;
+            p += pKey->m_iCookiePrivate + 1;
         }
+        if ((*p  != '@') ||
+            (memcmp(p + 1, pKey->m_pIP, pKey->m_ipLen) != 0))
+            return -1;
+        p += pKey->m_ipLen + 1;
     }
-    if (m_header.m_iKeyLen > p - m_sKey.c_str())
-        return LS_FAIL;
+    if (m_header.m_keyLen > p - m_sKey.c_str())
+        return -1;
     return 0;
 }
 
 
+void CacheEntry::setTag(const char *pTag, int len)
+{
+    m_sTag.setStr(pTag, len);
+    m_header.m_tagLen = len;
+}
 

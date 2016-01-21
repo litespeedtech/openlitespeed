@@ -49,6 +49,7 @@ enum
     SC_305 ,
     SC_306 ,
     SC_307 ,
+    SC_308 ,
 
     SC_400 ,
     SC_401 ,
@@ -139,6 +140,7 @@ public:
         _304_Not_Modified = 304,
         _305_Use_Proxy = 305,
         _307_Temporary_Redirect = 307,
+        _308_Permanent_Redirect = 308,
         _400_Bad_Request = 400,
         _401_Unauthorized = 401,
         _402_Payment_Required = 402,

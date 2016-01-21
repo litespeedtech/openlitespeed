@@ -55,8 +55,8 @@ extern "C" {
  */
 struct ls_str_s
 {
-    char *pstr;
-    int   length;
+    char *ptr;
+    int   len;
 };
 
 /**
@@ -66,7 +66,7 @@ struct ls_str_s
 struct ls_strpair_s
 {
     ls_str_t key;
-    ls_str_t value;
+    ls_str_t val;
 };
 
 /**
@@ -140,7 +140,7 @@ void       ls_str_delete(ls_str_t *pThis);
  * @return Void.
  */
 ls_inline void ls_str_blank(ls_str_t *pThis)
-{   pThis->pstr = NULL; pThis->length = 0;       }
+{   pThis->ptr = NULL; pThis->len = 0;       }
 
 /** @ls_str_len
  * @brief Gets the length of the lsr str object.
@@ -149,7 +149,7 @@ ls_inline void ls_str_blank(ls_str_t *pThis)
  * @return The length.
  */
 ls_inline int           ls_str_len(const ls_str_t *pThis)
-{   return pThis->length;    }
+{   return pThis->len;    }
 
 /** @ls_str_setlen
  * @brief Sets the length of the string.
@@ -159,7 +159,7 @@ ls_inline int           ls_str_len(const ls_str_t *pThis)
  * @return Void.
  */
 ls_inline void          ls_str_setlen(ls_str_t *pThis, int len)
-{   pThis->length = len;    }
+{   pThis->len = len;    }
 
 /** @ls_str_buf
  * @brief Gets a char * of the string.
@@ -168,7 +168,7 @@ ls_inline void          ls_str_setlen(ls_str_t *pThis, int len)
  * @return A char * of the string.
  */
 ls_inline char         *ls_str_buf(const ls_str_t *pThis)
-{   return pThis->pstr;   }
+{   return pThis->ptr;   }
 
 /** @ls_str_cstr
  * @brief Gets a \e const char * of the string.
@@ -177,7 +177,7 @@ ls_inline char         *ls_str_buf(const ls_str_t *pThis)
  * @return A \e const char * of the string.
  */
 ls_inline const char   *ls_str_cstr(const ls_str_t *pThis)
-{   return pThis->pstr;   }
+{   return pThis->ptr;   }
 
 /** @ls_str_prealloc
  * @brief Preallocates space in the lsr str object.
@@ -270,8 +270,8 @@ ls_hash_key_t  ls_str_hfci(const void *pKey);
  */
 ls_inline void ls_str_set(ls_str_t *pThis, char *pStr, int len)
 {
-    pThis->pstr = pStr;
-    pThis->length = len;
+    pThis->ptr = pStr;
+    pThis->len = len;
 }
 
 /** @ls_str_xnew

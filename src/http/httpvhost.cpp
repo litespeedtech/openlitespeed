@@ -746,6 +746,10 @@ int HttpVHost::configBasics(const XmlNode *pVhConfNode, int iChrootLen)
     enableGzip((HttpServerConfig::getInstance().getGzipCompress()) ?
                ConfigCtx::getCurConfigCtx()->getLongValue(pVhConfNode, "enableGzip", 0, 1,
                        1) : 0);
+    m_rootContext.setGeoIP((HttpServer::getInstance().getServerContext().isGeoIpOn()) ?
+               ConfigCtx::getCurConfigCtx()->getLongValue(pVhConfNode, "enableIpGeo", 0, 1,
+                       0) : 0);
+
 
     const char *pAdminEmails = pVhConfNode->getChildValue("adminEmails");
     if (!pAdminEmails)
@@ -981,8 +985,11 @@ void HttpVHost::configRewriteMap(const XmlNode *pNode)
         for (iter = pList->begin(); iter != pList->end(); ++iter)
         {
             XmlNode *pN1 = *iter;
-            const char *pName = pN1->getChildValue("name");
+            const char *pName = pN1->getChildValue("name", 1);
             const char *pLocation = pN1->getChildValue("location");
+            if (!pName || !pLocation)
+                continue;
+
             char achBuf[1024];
             const char *p = strchr(pLocation, '$');
 
@@ -1695,6 +1702,9 @@ int HttpVHost::configContext(const XmlNode *pContextNode)
     {
         if (configContextAuth(pContext, pContextNode) == -1)
             return LS_FAIL;
+        pContext->setGeoIP((m_rootContext.isGeoIpOn()) ?
+                       ConfigCtx::getCurConfigCtx()->getLongValue(pContextNode,
+                       "enableIpGeo", 0, 1, 0) : 0);
         return pContext->config(getRewriteMaps(), pContextNode, type);
     }
 

@@ -5364,7 +5364,7 @@ hash_key_t HpackDynTbl::hfNameVal(const void *__s)
 {
     hash_key_t __h = HpackDynTbl::hfName(__s);
     DynTblEntry *pEntry = (DynTblEntry *)__s;
-    return XXH((const char *)pEntry->getName(), pEntry->getNameLen(), __h);
+    return XXH((const char *)pEntry->getValue(), pEntry->getValueLen(), __h);
 }
 
 int HpackDynTbl::cmpName(const void *pVal1, const void *pVal2)

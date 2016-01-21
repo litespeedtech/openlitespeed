@@ -30,7 +30,7 @@ TEST(StatusUrlMapTest_test)
     int i;
     for (i = SC_300; i < SC_END; ++i)
         CHECK(map1.getUrl(i) == NULL);
-    for (i = 300; i < 308; ++i)
+    for (i = 300; i < 309; ++i)
         CHECK(map1.setStatusUrlMap(i, "/url3xx") == 0);
     for (i = 400; i < 425; ++i)
         CHECK(map1.setStatusUrlMap(i, "/url4xx") == 0);
@@ -45,7 +45,7 @@ TEST(StatusUrlMapTest_test)
         CHECK(strcmp(map1.getUrl(i)->c_str(), "/url5xx") == 0);
     CHECK(map1.setStatusUrlMap(100, "/url100") == 0);
     CHECK(map1.setStatusUrlMap(299, "/url299") == -1);
-    CHECK(map1.setStatusUrlMap(308, "/url308") == -1);
+    CHECK(map1.setStatusUrlMap(309, "/url309") == -1);
     CHECK(map1.setStatusUrlMap(399, "/url308") == -1);
     CHECK(map1.setStatusUrlMap(425, "/url418") == -1);
     CHECK(map1.setStatusUrlMap(499, "/url499") == -1);

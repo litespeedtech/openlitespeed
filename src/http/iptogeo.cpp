@@ -554,7 +554,7 @@ int IpToGeo::config(const XmlNodeList *pList)
     for (iter = pList->begin(); iter != pList->end(); ++iter)
     {
         XmlNode *p = *iter;
-        const char *pFile = p->getChildValue("geoipDBFile");
+        const char *pFile = p->getValue();
         char achBufFile[MAX_PATH_LEN];
 
         if ((!pFile) ||

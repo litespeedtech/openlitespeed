@@ -19,7 +19,7 @@
 #define DIRHASHCACHESTORE_H
 
 #include <lsdef.h>
-#include <cachestore.h>
+#include "cachestore.h"
 
 
 class CacheHash;
@@ -28,17 +28,16 @@ class DirHashCacheEntry;
 class DirHashCacheStore : public CacheStore
 {
 
-    int buildCacheLocation(char *pBuf, int len, const CacheHash &hash);
+    int buildCacheLocation(char *pBuf, int len, const CacheHash &hash,
+                           int isPrivate);
     int updateEntryState(DirHashCacheEntry *pEntry);
     int isChanged(CacheEntry *pEntry, const char *pPath, int len);
     int isEntryExists(CacheHash &hash, const char *pSuffix,
                       struct stat *pStat);
-
-    int isEntryStale(CacheHash &hash);
+    int isEntryUpdating(CacheHash &hash, int isPrivate);
+    int isEntryStale(CacheHash &hash, int isPrivate);
     int isEntryExist(CacheHash &hash, const char *pSuffix,
-                     struct stat *pStat);
-
-    int isEntryUpdating(CacheHash &hash);
+                     struct stat *pStat, int isPrivate);
 
 protected:
     int renameDiskEntry(CacheEntry *pEntry, char *pFrom,
@@ -52,19 +51,11 @@ public:
     virtual int clearStrage();
 
 
-    virtual CacheEntry *getCacheEntry(CacheHash &hash,
-                                      const char *pURI, int pURILen,
-                                      const char *pQS, int pQSLen,
-                                      const char *pIP, int ipLen,
-                                      const char *pCookie, int cookieLen,
+    virtual CacheEntry *getCacheEntry(CacheHash &hash, CacheKey *pKey,
                                       int32_t lastCacheFlush, int maxStale);
 
-    virtual CacheEntry *createCacheEntry(const CacheHash &hash,
-                                         const char *pURI, int pURILen,
-                                         const char *pQS, int pQSLen,
-                                         const char *pIP, int ipLen,
-                                         const char *pCookie, int cookieLen,
-                                         int force, int *errorcode);
+    virtual CacheEntry *createCacheEntry(const CacheHash &hash, CacheKey *pKey,
+                                         int force);
 
     virtual void cancelEntry(CacheEntry *pEntry, int remove);
 
@@ -78,7 +69,9 @@ public:
     virtual int publish(CacheEntry *pEntry);
 
     virtual void removePermEntry(CacheEntry *pEntry);
-    int &ls_fio_stat(char achBuf[4096], struct stat *st);
+
+
+//    int &ls_fio_stat(char achBuf[4096], struct stat *st);
 
 
 

@@ -11,6 +11,7 @@ set(libUnitTest  libUnitTest++.a)
 ##########################################################################################
 
 add_definitions(-DTEST_OUTPUT_PLAIN_CONF)
+add_definitions(-DLS_VG_DEBUG)
 
 execute_process( COMMAND getconf LFS_CFLAGS
             OUTPUT_VARIABLE  LFS_CFLAGS )

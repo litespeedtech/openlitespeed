@@ -32,37 +32,20 @@ public:
 
     ~CacheHash();
 
-    void init(const CacheHash &rhs)
-    {
-        *this = rhs;
-    }
+    void copy(const CacheHash &rhs)
+    {   *this = rhs;       }
+    static void update(XXH64_state_t *pState, const char *pBuf, int len);
 
-    void initHash(XXH64_state_t *pState)
-    {
-        XXH64_reset(pState, 0);
-    }
-
-    void updHash(XXH64_state_t *pState, const char *pBuf, int len)
-    {
-        XXH64_update(pState, pBuf, len);
-    }
-
-    void saveHash(XXH64_state_t *pState)
-    {
-        m_key = XXH64_digest(pState);
-    }
-
-    const char *getKey() const
-    {
-        return (const char *)&m_key;
-    }
+    const unsigned char *getKey() const   
+    {   return (unsigned char *)&m_key;     }
+    void setKey(uint64_t digest)
+    {    m_key = digest;     }
 
     static hash_key_t to_ghash_key(const void *__s);
     static int  compare(const void *pVal1, const void *pVal2);
 
 private:
-    uint64_t m_key;
-
+    uint64_t  m_key;
 };
 
 #endif

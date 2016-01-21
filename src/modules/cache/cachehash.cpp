@@ -17,7 +17,6 @@
 *****************************************************************************/
 #include "cachehash.h"
 #include <zlib.h>
-#include <lsr/ls_crc64.h>
 #include <string.h>
 
 CacheHash::CacheHash()
@@ -29,30 +28,17 @@ CacheHash::~CacheHash()
 {
 }
 
-
-#ifdef notdef
-void CacheHash::init()
+void CacheHash::update(XXH64_state_t *pState, const char *pBuf, int len)
 {
-    memset(m_key, 0, 8);
+    XXH64_update(pState, pBuf, len);
 }
-
-
-void CacheHash::hash(const char *pBuf, int len)
-{
-    //*((uint64_t *)m_key) = ls_crc64( *((uint64_t *)m_key), (const unsigned char *)pBuf, len );
-    uint64_t *pKey = (uint64_t *)m_key;
-    *pKey = ls_crc64(*pKey, (const unsigned char *)pBuf, len);
-}
-#endif
-
 
 hash_key_t CacheHash::to_ghash_key(const void *__s)
 {
-    hash_key_t __h = *((uint64_t *)__s);
+    register hash_key_t __h = *((uint64_t *)__s);
 
     return __h;
 }
-
 
 int CacheHash::compare(const void *pVal1, const void *pVal2)
 {   return  *((uint64_t *)pVal1) - *((uint64_t *)pVal2);    }

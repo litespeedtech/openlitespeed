@@ -11,8 +11,10 @@ else
         LDFLAGS= -fPIC -pg -O2  -g -Wall $(LFSFLAGS) -shared
 endif
 
-SOURCES =cache.cpp cacheentry.cpp cachehash.cpp cachestore.cpp ceheader.cpp dirhashcacheentry.cpp dirhashcachestore.cpp \
-        cacheconfig.cpp cachectrl.cpp
+SOURCES =cache.cpp cacheentry.cpp cachehash.cpp cachestore.cpp \
+        ceheader.cpp dirhashcacheentry.cpp dirhashcachestore.cpp \
+        cacheconfig.cpp cachectrl.cpp internalcachemanager.cpp \
+        cachemanager.cpp shmcachemanager.cpp
 
 $(shell rm *.o )
 

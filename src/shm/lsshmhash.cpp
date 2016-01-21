@@ -418,6 +418,7 @@ LsShmHash::LsShmHash(LsShmPool *pool, const char *name,
     , m_dataExtraSpace(0)
     , m_iFlags(flags)
     , m_pLruAddon(NULL)
+    , m_pObservers(NULL)
     , m_pTidMgr(NULL)
 {
     obj.m_pName = strdup(name);
@@ -800,7 +801,7 @@ LsShmHash::iteroffset LsShmHash::doGet(
         *pFlag = LSSHM_VAL_NONE;
         return iterOff;
     }
-    LSSHM_CHECKSIZE(ls_str_len(&pParms->value));
+    LSSHM_CHECKSIZE(ls_str_len(&pParms->val));
     iterOff = insert2(key, pParms);
     if (iterOff.m_iOffset != 0)
     {
@@ -808,7 +809,7 @@ LsShmHash::iteroffset LsShmHash::doGet(
         {
             // initialize the memory
             ::memset(offset2iteratorData(iterOff),
-                        0, ls_str_len(&pParms->value));
+                        0, ls_str_len(&pParms->val));
         }
         // some special lru initialization
 //         if (m_iFlags & LSSHM_FLAG_LRU_MODE2)
@@ -831,21 +832,21 @@ LsShmHash::iteroffset LsShmHash::doInsert(
 {
     if (iterOff.m_iOffset != 0)
         return end();
-    LSSHM_CHECKSIZE(ls_str_len(&pParms->value));
+    LSSHM_CHECKSIZE(ls_str_len(&pParms->val));
     return insert2(key, pParms);
 }
 
 LsShmHash::iteroffset LsShmHash::doSet(
             iteroffset iterOff, LsShmHKey key, ls_strpair_t *pParms)
 {
-    LSSHM_CHECKSIZE(ls_str_len(&pParms->value));
+    LSSHM_CHECKSIZE(ls_str_len(&pParms->val));
     if (iterOff.m_iOffset != 0)
     {
         iterator iter = offset2iterator(iterOff);
-        if (iter->realValLen() >= (LsShmSize_t)ls_str_len(&pParms->value))
+        if (iter->realValLen() >= (LsShmSize_t)ls_str_len(&pParms->val))
         {
-            iter->setValLen(ls_str_len(&pParms->value));
-            setIterData(iter, ls_str_buf(&pParms->value));
+            iter->setValLen(ls_str_len(&pParms->val));
+            setIterData(iter, ls_str_buf(&pParms->val));
             if (m_iFlags & LSSHM_FLAG_LRU)
                 linkSetTop(iter, iterOff);
             if (m_pTidMgr != NULL)
@@ -1012,7 +1013,7 @@ LsShmHash::iteroffset LsShmHash::insertCopy2(LsShmHKey key,
     }
 
     offset = allocIter(ls_str_len(&pParms->key),
-                                     ls_str_len(&pParms->value));
+                                     ls_str_len(&pParms->val));
     if (offset.m_iOffset == 0)
         return offset;
     LsShmHElem *pNew = (LsShmHElem *)m_pPool->offset2ptr(offset.m_iOffset);
@@ -1021,7 +1022,7 @@ LsShmHash::iteroffset LsShmHash::insertCopy2(LsShmHKey key,
     pNew->x_hkey = key;
 
     setIterKey(pNew, ls_str_buf(&pParms->key));
-    setIterData(pNew, ls_str_buf(&pParms->value));
+    setIterData(pNew, ls_str_buf(&pParms->val));
     if (m_iFlags & LSSHM_FLAG_LRU)
         linkHElem(pNew, offset);
 
@@ -1126,7 +1127,7 @@ LsShmHash::iteroffset LsShmHash::getNum(LsShmHash *pThis,
     char *keyptr = ls_str_buf(&pParms->key);
     ls_strpair_t nparms;
     ls_str_set(&nparms.key, (char *)&keyptr, sizeof(LsShmHKey));
-    nparms.value = pParms->value;
+    nparms.val = pParms->val;
 
     return pThis->doGet(iterOff, (LsShmHKey)(long)keyptr, &nparms, pFlag);
 }
@@ -1139,7 +1140,7 @@ LsShmHash::iteroffset LsShmHash::insertNum(LsShmHash *pThis,
     char *keyptr = ls_str_buf(&pParms->key);
     ls_strpair_t nparms;
     ls_str_set(&nparms.key, (char *)&keyptr, sizeof(LsShmHKey));
-    nparms.value = pParms->value;
+    nparms.val = pParms->val;
 
     return pThis->doInsert(iterOff, (LsShmHKey)(long)keyptr, &nparms);
 }
@@ -1151,7 +1152,7 @@ LsShmHash::iteroffset LsShmHash::setNum(LsShmHash *pThis, ls_strpair_t *pParms)
     char *keyptr = ls_str_buf(&pParms->key);
     ls_strpair_t nparms;
     ls_str_set(&nparms.key, (char *)&keyptr, sizeof(LsShmHKey));
-    nparms.value = pParms->value;
+    nparms.val = pParms->val;
 
     return pThis->doSet(iterOff, (LsShmHKey)(long)keyptr, &nparms);
 }
@@ -1164,7 +1165,7 @@ LsShmHash::iteroffset LsShmHash::updateNum(LsShmHash *pThis,
     char *keyptr = ls_str_buf(&pParms->key);
     ls_strpair_t nparms;
     ls_str_set(&nparms.key, (char *)&keyptr, sizeof(LsShmHKey));
-    nparms.value = pParms->value;
+    nparms.val = pParms->val;
 
     return pThis->doUpdate(iterOff, (LsShmHKey)(long)keyptr, &nparms);
 }

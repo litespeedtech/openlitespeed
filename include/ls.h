@@ -69,7 +69,7 @@
  */
 #define LSI_MAX_RESP_BUFFER_SIZE     (1024*1024)
 
-    
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -139,12 +139,12 @@ enum lsi_hook_priority
      */
     LSI_HOOK_LAST   =  30,
 
-    
+
     /**
     * The max priority level allowed.
     */
     LSI_HOOK_PRIORITY_MAX = 6000
-    
+
 };
 
 
@@ -370,11 +370,11 @@ enum lsi_hkpt_level
     LSI_HKPT_MAIN_POSTFORK,
 
     /**
-     * LSI_HKPT_WORKER_INIT is the point at the beginning of a worker process 
-     * starts, before going into its event loop to start serve requests. 
-     * It is invoked when a worker process forked from main (controller) process, 
-     * or server started without the main (controller) process (debugging mode). 
-     * Note that when forked from the main process, a corresponding 
+     * LSI_HKPT_WORKER_INIT is the point at the beginning of a worker process
+     * starts, before going into its event loop to start serve requests.
+     * It is invoked when a worker process forked from main (controller) process,
+     * or server started without the main (controller) process (debugging mode).
+     * Note that when forked from the main process, a corresponding
      * MAIN_POSTFORK hook will be triggered in the main process, it may
      * occur either before *or* after this hook.
      */
@@ -1085,6 +1085,22 @@ enum lsi_resp_header_id
      */
     LSI_RSPHDR_WWW_AUTHENTICATE,
     /**
+     * LiteSpeed Cache id.
+     */
+    LSI_RSPHDR_LITESPEED_CACHE,
+    /**
+     * LiteSpeed Purge id.
+     */
+    LSI_RSPHDR_LITESPEED_PURGE,
+    /**
+     * LiteSpeed Tag id.
+     */
+    LSI_RSPHDR_LITESPEED_TAG,
+    /**
+     * LiteSpeed Vary id.
+     */
+    LSI_RSPHDR_LITESPEED_VARY,
+    /**
      * Powered by id.
      */
     LSI_RSPHDR_X_POWERED_BY,
@@ -1497,6 +1513,21 @@ struct lsi_api_s
     int (*enable_hook)(lsi_session_t *session, const lsi_module_t *pModule,
                        int enable, int *index, int iNumIndices);
 
+
+
+    /**
+     * @brief get_hook_flag is used to get the flag of the hook functions in a
+     * certain level.
+     *
+     * @since 1.0
+     *
+     * @param[in] pSession - a pointer to the HttpSession, obtained from
+     *   callback parameters.
+     * @param[in] index - A list of indices to set, as defined in the enum of
+     *   Hook Point level definitions #lsi_hkpt_level.
+     */
+    int (*get_hook_flag)(lsi_session_t *session, int index);
+
     /**
      * @brief get_module is used to retrieve module information associated with a hook point based on callback parameters.
      *
@@ -1747,6 +1778,17 @@ struct lsi_api_s
      */
     const char *(*get_mapped_context_uri)(lsi_session_t *pSession,
                                           int *length);
+
+    /**
+     * @brief is_req_handler_registered can be used to test if a request handler
+     * of a session was already registered or not.
+     *
+     * @since 1.0
+     *
+     * @param[in] pSession - a pointer to the HttpSession.
+     * @return 1 on true, and 0 on false.
+     */
+    int (*is_req_handler_registered)(lsi_session_t *pSession);
 
     /**
      * @brief register_req_handler can be used to dynamically register a handler.
@@ -2629,15 +2671,17 @@ struct lsi_api_s
      * @return a pointer to the multiplexer used by the main event loop.
      */
     void *(*get_multiplexer)();
-    
-    ls_edio_t *(*edio_reg)(int fd, edio_evt_cb evt_cb,  
+
+    ls_edio_t *(*edio_reg)(int fd, edio_evt_cb evt_cb,
                 edio_timer_cb timer_cb, short events, void * pParam );
-    
+
     void (*edio_remove)(ls_edio_t *pHandle);
-    
+
     void (*edio_modify)(ls_edio_t *pHandle, short events, int add_remove);
 
-    
+
+    //return 0 is YES, and 1 is deny
+    int (*get_client_access) (lsi_session_t *session);
 
     /**
      * @brief is_suspended returns if a session is in suspended mode.
@@ -2646,7 +2690,7 @@ struct lsi_api_s
      * @param[in] pSession - a pointer to the HttpSession.
      * @return 0 false, -1 invalid pSession, none-zero true.
      */
-    int (*is_suspended)(lsi_session_t *pSession);
+    int (*is_suspended)(lsi_session_t *session);
 
     /**
      * @brief resume continues processing of the suspended session.
@@ -2657,11 +2701,11 @@ struct lsi_api_s
      * @param[in] retcode - the result that a hook function returns as if there is no suspend/resume happened.
      * @return -1 failed to resume, 0 successful.
      */
-    int (*resume)(lsi_session_t *pSession, int retcode);
+    int (*resume)(lsi_session_t *session, int retcode);
 
 
 #ifdef notdef
-    int (*is_subrequest)(lsi_session_t *pSession);
+    int (*is_subrequest)(lsi_session_t *session);
 #endif
 
     /**

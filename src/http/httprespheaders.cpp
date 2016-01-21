@@ -79,6 +79,10 @@ const char *HttpRespHeaders::m_sPresetHeaders[H_HEADER_END] =
     "Transfer-Encoding",
     "Vary",
     "Www-Authenticate",
+    "X-Litespeed-Cache",
+    "X-Litespeed-Purge",
+    "X-Litespeed-Tag",
+    "X-Litespeed-Vary",
     "X-Powered-By"
 };
 
@@ -87,7 +91,8 @@ int HttpRespHeaders::s_iHeaderLen[H_HEADER_END + 1] =
 {
     13, 10, 12, 14, 16, 13, 19, 13, //cache-control
     4, 4, 7, 10, 13, 8, 20, 25, //x-litespeed-cache-control
-    6, 16, 6, 10, 6, 17, 4, 16, 12, //x-powered-by
+    6, 16, 6, 10, 6, 17, 4, 16, //www-authenticate
+    17, 17, 15, 16, 12, //x-powered-by
     0
 };
 
@@ -115,6 +120,7 @@ void HttpRespHeaders::reset()
     m_hLastHeaderKVPairIndex = -1;
     m_aKVPairs.init();
     m_aKVPairs.setSize(0);
+    m_aKVPairs.clear();
 }
 
 
@@ -656,10 +662,22 @@ HttpRespHeaders::HEADERINDEX HttpRespHeaders::getRespHeaderIndex(
     case 'x':
         if (strncasecmp(pHeader, "-powered-by", 11) == 0)
             idx = H_X_POWERED_BY;
-        else if (strncasecmp(pHeader, "-litespeed-location", 19) == 0)
-            idx = H_LITESPEED_LOCATION;
-        else if (strncasecmp(pHeader, "-litespeed-cache-control", 24) == 0)
-            idx = H_LITESPEED_CACHE_CONTROL;
+        if (strncasecmp(pHeader, "-litespeed-", 11) == 0)
+        {
+            pHeader += 11;
+            if (strncasecmp(pHeader, "location", 8) == 0)
+                idx = H_LITESPEED_LOCATION;
+            else if (strncasecmp(pHeader, "cache-control", 13) == 0)
+                idx = H_LITESPEED_CACHE_CONTROL;
+            else if (strncasecmp(pHeader, "cache", 5) == 0)
+                idx = H_X_LITESPEED_CACHE;
+            else if (strncasecmp(pHeader, "tag", 3) == 0)
+                idx = H_X_LITESPEED_TAG;
+            else if (strncasecmp(pHeader, "purge", 5) == 0)
+                idx = H_X_LITESPEED_PURGE;
+            else if (strncasecmp(pHeader, "vary", 4) == 0)
+                idx = H_X_LITESPEED_VARY;
+        }
         break;
     default:
         break;

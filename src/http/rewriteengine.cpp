@@ -750,6 +750,7 @@ int RewriteEngine::setCookie(char *pBuf, int len, HttpSession *pSession)
         httponly = ((*p == '1') || (strncasecmp("true", p, 4) == 0)
                     || (strncasecmp("HttpOnly", p, 8) == 0));
     }
+    pSession->getReq()->setCookie(pName, strlen(pName), pVal, strlen(pVal));
     return pSession->getResp()->addCookie(pName, pVal, pPath, pDomain, age,
                                           secure, httponly);
 

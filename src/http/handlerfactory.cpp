@@ -47,6 +47,7 @@ static ExtConnectorPool             s_extConnectorPool(0, 10);
 
 ReqHandler *HandlerFactory::getHandler(int type)
 {
+    ReqHandler *pReqHandler;
     switch (type)
     {
     case HandlerType::HT_STATIC:
@@ -61,7 +62,10 @@ ReqHandler *HandlerFactory::getHandler(int type)
     case HandlerType::HT_PROXY:
     case HandlerType::HT_LSAPI:
     case HandlerType::HT_LOADBALANCER:
-        return s_extConnectorPool.get();
+        //Here are the only cases not set the type.
+        pReqHandler = s_extConnectorPool.get();
+        pReqHandler->setType(type);
+        return pReqHandler;
     default:
         return NULL;
     }

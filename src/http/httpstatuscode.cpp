@@ -62,6 +62,8 @@ HttpStatusCode::HttpStatusCode()
     m_aSC[code++] = new StatusCode(SC_306, "", NULL);
     m_aSC[code++] = new StatusCode(SC_307, " 307 Temporary Redirect\r\n",
                                    "The document has been temporarily moved to <A HREF=\"%s\">here</A>.");
+    m_aSC[code++] = new StatusCode(SC_308, " 308 Permanent Redirect\r\n",
+                                   "The document has been permanently redirected.");
 
     m_aSC[code++] = new StatusCode(SC_400, " 400 Bad Request\r\n",
                                    "It is not a valid request!");
