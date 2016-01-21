@@ -963,7 +963,7 @@ int H2Connection::decodeData(unsigned char *pSrc, unsigned char *bufEnd,
             free(*uri);
             *uri = NULL;
         }
-        return -1;
+        return LS_FAIL;
     }
 
     /*TODO: we suppose cookies are in one frame, if in another frame, it will

@@ -41,18 +41,27 @@ public:
         must_revalidate = (1 << 9),
         proxy_revalidate = (1 << 10),
         s_maxage = (1 << 11),
-        has_cookie = (1 << 12)
+        esi_config = (1 << 12),
+        no_vary = (1 << 13),
+        set_blank = (1 << 14),
+        shared = (1 << 15),
+        esi_on = (1 << 16),
+        has_cookie = (1 << 17)
     };
 
     int isCacheOff() const
     {
-        return (m_iFlags & (no_cache | no_store)) || (m_iMaxAge == 0);
+        return m_iFlags & (no_cache | no_store);
     }
-    int isPublicCacheable() const
+    int isCacheOn() const   
+    {
+        return m_iFlags & (cache_private | cache_public);   
+    }
+    int isPublicCacheable() const 
     {
         return !(m_iFlags & (no_cache | no_store | cache_private | has_cookie));
     }
-    int isPrivateCacheable() const
+    int isPrivateCacheable() const  
     {
         return m_iFlags & cache_private;
     }
@@ -68,6 +77,22 @@ public:
     {
         return m_iMaxAge;
     }
+    void setPrivateToPublic()
+    {
+        m_iFlags = (m_iFlags & ~cache_private) | cache_public;
+    }
+    void setEsiOff()
+    {
+        m_iFlags &= ~esi_on;
+    }
+
+    void reset()
+    {
+        m_iFlags = 0;
+        m_iMaxAge = 0;
+        m_iMaxStale = 0;
+    }
+
     void init(int flags, int iMaxAge, int iMaxStale);
     int parse(const char *pHeader, int len);
     int isMaxAgeSet() const

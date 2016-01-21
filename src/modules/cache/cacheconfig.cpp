@@ -16,6 +16,10 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "cacheconfig.h"
+#include "ls.h"
+
+#include "dirhashcachestore.h"
+#include <http/httpvhost.h>
 
 CacheConfig::CacheConfig()
     : m_iCacheConfigBits(0)
@@ -23,13 +27,32 @@ CacheConfig::CacheConfig()
     , m_defaultAge(86400)
     , m_privateAge(60)
     , m_iMaxStale(0)
-    , m_sStoragePath("")
+    , m_lMaxObjSize(1024 * 1024)
+    //, m_iBypassPercentage(5)
+    , m_iLevele(0)
+    , m_iOnlyUseOwnUrlExclude(0)
+    , m_iOwnStore(0)
+    , m_pUrlExclude(NULL)
+    , m_pParentUrlExclude(NULL)
+    , m_pVHostMapExclude(NULL)
+    , m_pStore(NULL)
 {
 }
 
 
 CacheConfig::~CacheConfig()
 {
+    if (m_pUrlExclude)
+        delete m_pUrlExclude;
+    if (m_iLevele == LSI_CFG_SERVER &&m_pVHostMapExclude)
+        delete m_pVHostMapExclude;
+    if (m_iOwnStore && m_pStore)
+        delete m_pStore;
+
+    m_pUrlExclude = NULL;
+    m_pParentUrlExclude = NULL;
+    m_pVHostMapExclude = NULL;
+    m_pStore = NULL;
 }
 
 
@@ -43,11 +66,17 @@ void CacheConfig::inherit(const CacheConfig *pParent)
             m_privateAge = pParent->m_privateAge;
         if (!(m_iCacheConfigBits & CACHE_STALE_AGE_SET))
             m_iMaxStale = pParent->m_iMaxStale;
+        if (!(m_iCacheConfigBits & CACHE_MAX_OBJ_SIZE))
+            m_lMaxObjSize = pParent->m_lMaxObjSize;
         m_iCacheFlag = (m_iCacheFlag & m_iCacheConfigBits) |
                        (pParent->m_iCacheFlag & ~m_iCacheConfigBits);
-        m_sStoragePath.setStr(pParent->getStoragePath());
+        m_pParentUrlExclude = pParent->m_pUrlExclude;
+        m_pUrlExclude = NULL;
+        m_pVHostMapExclude = pParent->m_pVHostMapExclude;
+        m_iOnlyUseOwnUrlExclude = 0;
+        m_pStore = pParent->getStore();
+        m_iOwnStore = 0;
     }
-
 }
 
 
@@ -61,11 +90,38 @@ void CacheConfig::apply(const CacheConfig *pParent)
             m_privateAge = pParent->m_privateAge;
         if (pParent->m_iCacheConfigBits & CACHE_STALE_AGE_SET)
             m_iMaxStale = pParent->m_iMaxStale;
+        if (pParent->m_iCacheConfigBits & CACHE_MAX_OBJ_SIZE)
+            m_lMaxObjSize = pParent->m_lMaxObjSize;
 
         m_iCacheFlag = (pParent->m_iCacheFlag & pParent->m_iCacheConfigBits) |
                        (m_iCacheFlag & ~pParent->m_iCacheConfigBits);
     }
 
+}
+
+#define CACHE_LITEMAGE_BITS (CACHE_QS_CACHE | CACHE_REQ_COOKIE_CACHE \
+                             | CACHE_IGNORE_REQ_CACHE_CTRL_HEADER \
+                             | CACHE_IGNORE_RESP_CACHE_CTRL_HEADER \
+                             | CACHE_RESP_COOKIE_CACHE \
+                             | CACHE_CHECK_PUBLIC  )
+
+int CacheConfig::isLitemagReady()
+{
+    if ((m_iCacheFlag & (CACHE_LITEMAGE_BITS | CACHE_ENABLED
+                         | CACHE_PRIVATE_ENABLED)) ==  CACHE_LITEMAGE_BITS)
+    {
+        if (m_lMaxObjSize >= 500 * 1024)
+            return 1;
+    }
+    return 0;
+}
+
+
+void CacheConfig::setLitemageDefault()
+{
+    setConfigBit(CACHE_LITEMAGE_BITS, 1);
+    setConfigBit(CACHE_ENABLED | CACHE_PRIVATE_ENABLED, 0);
+    setMaxObjSize(1024 * 1024);
 }
 
 

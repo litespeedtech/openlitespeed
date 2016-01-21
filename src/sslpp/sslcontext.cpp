@@ -1141,15 +1141,15 @@ static const char *NEXT_PROTO_STRING[8] =
     "\x06spdy/2\x08http/1.1",
     "\x08spdy/3.1\x06spdy/3\x08http/1.1",
     "\x08spdy/3.1\x06spdy/3\x06spdy/2\x08http/1.1",
-    "\x02h2\x03h2c\x05h2-17\x05h2-14\x08http/1.1",
-    "\x02h2\x03h2c\x05h2-17\x05h2-14\x06spdy/2\x08http/1.1",
-    "\x02h2\x03h2c\x05h2-17\x05h2-14\x08spdy/3.1\x06spdy/3\x08http/1.1",
-    "\x02h2\x03h2c\x05h2-17\x05h2-14\x08spdy/3.1\x06spdy/3\x06spdy/2\x08http/1.1",
+    "\x02h2\x08http/1.1",
+    "\x02h2\x06spdy/2\x08http/1.1",
+    "\x02h2\x08spdy/3.1\x06spdy/3\x08http/1.1",
+    "\x02h2\x08spdy/3.1\x06spdy/3\x06spdy/2\x08http/1.1",
 };
 
 static unsigned int NEXT_PROTO_STRING_LEN[8] =
 {
-    9, 16, 25, 32, 28, 35, 44, 51,
+    9, 16, 25, 32, 12, 19, 28, 35,
 };
 
 //static const char NEXT_PROTO_STRING[] = "\x06spdy/2\x08http/1.1\x08http/1.0";
@@ -1546,7 +1546,7 @@ int  SslContext::enableShmSessionCache()
     if (!SslSessCache::getInstance().isReady())
     {
         LS_WARN("FAILED TO ENABLE SHM SSL CACHE. SERVER DID NOT INITIALIZE");
-        return LS_OK;
+        return LS_FAIL;
     }
 
     SSL_CTX_set_session_cache_mode(m_pCtx, SSL_SESS_CACHE_SERVER

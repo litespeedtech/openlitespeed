@@ -37,7 +37,7 @@ class TestOS : public OutputStream
 public:
     int write(const char *pBuf, int size)
     {
-        if (m_buf.size() < 8208)
+        if (m_buf.size() < 16400)
         {
             m_buf.append(pBuf, size);
             return size;
@@ -146,7 +146,7 @@ static void testBasic()
     chunkOS.close();
     len = testOS.getBuf().size();
     CHECK(21 == len);
-    CHECK(strcmp(pResult , testOS.getBuf().begin()) == 0);
+    CHECK(strncmp(pResult , testOS.getBuf().begin(), len) == 0);
     testOS.clearCache();
     CHECK(0 == testOS.getBuf().size());
     chunkOS.open();
@@ -161,7 +161,7 @@ static void testBasic()
     chunkOS.close();
     len = testOS.getBuf().size();
     CHECK(21 == len);
-    CHECK(strcmp(pResult , testOS.getBuf().begin()) == 0);
+    CHECK(strncmp(pResult , testOS.getBuf().begin(), len) == 0);
 }
 
 static int chunkLen(int num)

@@ -147,9 +147,9 @@ static int LsLuaRegexFillTable(lua_State *L, ls_luaregex_t *r,
     for (i = 0; i < r->namedpatscount; ++i)
     {
         pName = ls_str_buf(&r->namedpats[i].key);
-        pVal = ls_str_buf(&r->namedpats[i].value);
+        pVal = ls_str_buf(&r->namedpats[i].val);
         iNameLen = ls_str_len(&r->namedpats[i].key);
-        iValLen = ls_str_len(&r->namedpats[i].value);
+        iValLen = ls_str_len(&r->namedpats[i].val);
         LsLuaApi::pushlstring(L, pName, iNameLen);
         if (iDup)
         {

@@ -24,6 +24,9 @@
 #include <stddef.h>
 #include <time.h>
 #include <limits.h>
+
+#define THROTTLE_MAX (INT_MAX/2)
+
 class XmlNode;
 class ConfigCtx;
 class ThrottleUnit
@@ -32,20 +35,21 @@ class ThrottleUnit
     int     m_iAvailable;
 public:
     ThrottleUnit()
-        : m_iLimit(INT_MAX)
-        , m_iAvailable(INT_MAX)
+        : m_iLimit(THROTTLE_MAX)
+        , m_iAvailable(THROTTLE_MAX)
     {}
     ~ThrottleUnit()          {}
 
     int     getAvail() const    {   return m_iAvailable;        }
+    int     getLimit() const    {   return m_iLimit;            }
     void    reset()             {   m_iAvailable = m_iLimit;    }
     void    setLimit(int n)   {   m_iLimit = n;               }
     void    used(int n)       {   m_iAvailable -= n;          }
     void    adjustLimit(int n)
-    {   m_iAvailable += (n - m_iLimit);   m_iLimit = (n > 0) ? n : INT_MAX;       }
+    {   m_iAvailable += (n - m_iLimit);   m_iLimit = (n > 0) ? n : THROTTLE_MAX;       }
 
-    LS_NO_COPY_ASSIGN(ThrottleUnit);
 };
+
 
 class ThrottleLimits
 {
@@ -87,33 +91,44 @@ private:
 
     ThrottleUnit    m_input;
     ThrottleUnit    m_output;
-    ThrottleUnit    m_req[2];
+    ThrottleUnit    m_req[3]; //0 is static, 2 is the processors in use, 1 is the requests processed
 
 public:
     ThrottleControl()       {}
     ~ThrottleControl()      {}
     int getISQuota() const          {   return m_input.getAvail();      }
     int getOSQuota() const          {   return m_output.getAvail();     }
-    void setISLimit(int limit)    {   m_input.setLimit(limit);      }
-    void setOSLimit(int limit)    {   m_output.setLimit(limit);     }
+    void setISLimit(int limit)      {   m_input.setLimit(limit);        }
+    void setOSLimit(int limit)      {   m_output.setLimit(limit);       }
 
-    void useISQuota(int used)     {   m_input.used(used);           }
-    void useOSQuota(int used)     {   m_output.used(used);          }
+    void useISQuota(int used)       {   m_input.used(used);             }
+    void useOSQuota(int used)       {   m_output.used(used);            }
     bool allowRead() const          {   return (m_input.getAvail() > 0);  }
     bool allowWrite() const         {   return (m_output.getAvail() > 0); }
     bool allowProcess(int dyn) const
-    {   return (m_req[dyn].getAvail() > 0);    }
+    {   return (m_req[dyn].getAvail() > 0) && (!dyn || (m_req[2].getAvail() > 0));    }
+
+    ThrottleUnit *getThrottleUnit(int dyn)
+    {   return &m_req[dyn];   }
+
     void incReqProcessed(int dyn)
-    {   m_req[dyn].used(1);                   }
+    {
+        m_req[dyn].used(1);
+        if (dyn)
+            m_req[2].used(1);
+    }
+
+    void decDynReqProcessing()      {   m_req[2].used(-1);              }
 
     void resetQuotas();
 
     void setUnlimited()
     {
-        m_input.setLimit(INT_MAX);
-        m_output.setLimit(INT_MAX);
-        m_req[0].setLimit(INT_MAX);
-        m_req[1].setLimit(INT_MAX);
+        m_input.setLimit(THROTTLE_MAX);
+        m_output.setLimit(THROTTLE_MAX);
+        m_req[0].setLimit(THROTTLE_MAX);
+        m_req[1].setLimit(THROTTLE_MAX);
+        m_req[2].setLimit(THROTTLE_MAX);
     }
     void adjustLimits(const ThrottleLimits *pLimits)
     {
@@ -121,12 +136,12 @@ public:
         m_output.adjustLimit(pLimits->getOutputLimit());
         m_req[0].adjustLimit(pLimits->getStaticReqLimit());
         m_req[1].adjustLimit(pLimits->getDynReqLimit());
+        m_req[2].adjustLimit(pLimits->getDynReqLimit());
     }
 
     static ThrottleLimits *getDefault()    {   return &s_default;      }
 
 
-    LS_NO_COPY_ASSIGN(ThrottleControl);
 };
 
 

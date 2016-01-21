@@ -80,10 +80,10 @@ public:
         return *this;
     }
 
-    char       *buf()                                   {   return pstr;  }
-    const char *c_str() const                           {   return pstr;  }
-    int         len() const                             {   return length;   }
-    void        setLen(int len)                       {   length = len;    }
+    char       *buf()                                {   return ptr;  }
+    const char *c_str() const                        {   return ptr;  }
+    int         len() const                          {   return ls_str_s::len;   }
+    void        setLen(int len)                      {   ls_str_s::len = len;    }
 
     char   *prealloc(int size)                       {   return ls_str_prealloc(this, size);    }
     void    append(const char *pStr, const int len)  {   ls_str_append(this, pStr, len);  }

@@ -172,7 +172,7 @@ void ls_objarray_setcapacity(ls_objarray_t *pThis, ls_xpool_t *pool,
  */
 ls_inline void ls_objarray_guarantee(ls_objarray_t *pThis,
                                      ls_xpool_t *pool, int numObj)
-{   ls_objarray_setcapacity(pThis, pool, numObj);    }
+{   ls_objarray_setcapacity(pThis, pool, numObj /*+ pThis->sizenow*/);    }
 
 /** @ls_objarray_getobj
  * @brief Gets the object at a given index in the array.  The index must be

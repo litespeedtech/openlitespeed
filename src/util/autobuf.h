@@ -86,6 +86,19 @@ public:
         return size;
     }
 
+    int appendAllocOnly(int size)
+    {
+        if (size == 0)
+            return 0;
+        if (size > available())
+        {
+            if (grow(size - available()) == -1)
+                return -1;
+        }
+        used(size);
+        return size;
+    }
+    
     int xAppend(const char *pBuf, int size, ls_xpool_t *pool)
     {   return ls_buf_xappend2(this, pBuf, size, pool);  }
 

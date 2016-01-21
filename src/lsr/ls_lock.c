@@ -26,8 +26,7 @@
  *   futex
  */
 
-#if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
-
+#ifdef USE_F_MUTEX
 int ls_futex_setup(ls_mutex_t *p)
 {
 #if 0

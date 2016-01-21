@@ -120,13 +120,19 @@ const struct sockaddr *HttpSession::getPeerAddr() const
 
 int HttpSession::onInitConnected()
 {
-    m_pNtwkIOLink = getStream()->getNtwkIoLink();
+    NtwkIOLink *pNtwkIOLink = m_pNtwkIOLink = getStream()->getNtwkIoLink();
+
     m_lReqTime = DateTime::s_curTime;
     m_iReqTimeUs = DateTime::s_curTimeUs;
-    if (m_pNtwkIOLink)
+    if (pNtwkIOLink)
     {
-        setVHostMap(m_pNtwkIOLink->getVHostMap());
-        setClientInfo(m_pNtwkIOLink->getClientInfo());
+        if (pNtwkIOLink->isSSL())
+            m_request.setSsl(pNtwkIOLink->getSSL());
+        else
+            m_request.setSsl(NULL);
+        setVHostMap(pNtwkIOLink->getVHostMap());
+        m_iRemotePort = pNtwkIOLink->getRemotePort();
+        setClientInfo(pNtwkIOLink->getClientInfo());
     }
 
     m_iFlag = 0;
@@ -1551,9 +1557,7 @@ int HttpSession::handlerProcess(const HttpHandler *pHandler)
         }
         return startServerParsed();
     }
-    //PORT_FIXME: turn off for now
-    /*
-    int dyn = ( pHandler->getHandlerType() >= HandlerType::HT_DYNAMIC );
+    int dyn = ( pHandler->getType() >= HandlerType::HT_DYNAMIC );
     ThrottleControl * pTC = &getClientInfo()->getThrottleCtrl();
     if (( getClientInfo()->getAccess() == AC_TRUST)||
         ( pTC->allowProcess( dyn )))
@@ -1573,10 +1577,9 @@ int HttpSession::handlerProcess(const HttpHandler *pHandler)
                          pTU->getAvail(), pTU->getLimit());
             }
         }
-        setState( HC_THROTTLING );
+        setState( HSS_THROTTLING );
         return 0;
     }
-    */
     if (m_request.getContext() && m_request.getContext()->isRailsContext())
         setFlag(HSF_REQ_WAIT_FULL_BODY);
     if (getFlag(HSF_REQ_WAIT_FULL_BODY | HSF_REQ_BODY_DONE) ==
@@ -2506,6 +2509,9 @@ extern int addModgzipFilter(lsi_session_t *session, int isSend,
                             uint8_t compressLevel);
 int HttpSession::setupGzipFilter()
 {
+    if ( m_iFlag & HSF_RESP_HEADER_SENT)
+        return 0;
+    
     char gz = m_request.gzipAcceptable();
     int recvhkptNogzip = m_sessionHooks.getFlag(LSI_HKPT_RECV_RESP_BODY) &
                          LSI_FLAG_DECOMPRESS_REQUIRED;
@@ -3004,8 +3010,6 @@ int HttpSession::flushBody()
     {
 //            if ( !m_request.getSSIRuntime() )
         {
-            if (m_pChunkOS->flush() != 0)
-                return LS_AGAIN;
             if ((m_iFlag & (HSF_HANDLER_DONE | HSF_RECV_RESP_BUFFERED
                             | HSF_SEND_RESP_BUFFERED | HSF_CHUNK_CLOSED))
                 == HSF_HANDLER_DONE)
@@ -3014,6 +3018,8 @@ int HttpSession::flushBody()
                 LS_DBG_L(getLogSession(), "Chunk closed!");
                 m_iFlag |= HSF_CHUNK_CLOSED;
             }
+            if (m_pChunkOS->flush() != 0)
+                return LS_AGAIN;
         }
     }
     return LS_DONE;
@@ -3779,7 +3785,7 @@ int HttpSession::handoff(char **pData, int *pDataLen)
         return LS_FAIL;
     if (m_iReqServed != 0)
         return LS_FAIL;
-    int fd = dup(m_pNtwkIOLink->getfd());
+    int fd = dup(getStream()->getNtwkIoLink()->getfd());
     if (fd != -1)
     {
         AutoBuf &headerBuf = m_request.getHeaderBuf();

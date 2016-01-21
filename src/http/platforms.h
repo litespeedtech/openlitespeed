@@ -15,9 +15,41 @@
 *    You should have received a copy of the GNU General Public License       *
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
+
 #ifndef _HTTP_PLATFORM_
 #define _HTTP_PLATFORM_
 
+#define BE_MK_DWORD( p ) ( (((((int32_t)*(p)<<8)|*(p+1))<<8)|*(p+2))<<8|*(p+3) )
+#define BE_MK_WORD( p ) ( ((int16_t)*(p)<<8)|*(p+1) )
+
+#define BE_MK_DWORD4(a, b, c, d) ( (((((int32_t)a<<8)|b)<<8)|c)<<8|d )
+#define BE_MK_WORD2( a, b ) ( ((int16_t)a<<8)| b )
+
+#define LE_MK_DWORD( p ) ( (((((int32_t)*(p+3)<<8)|*(p+2))<<8)|*(p+1))<<8|*(p) )
+#define LE_MK_WORD( p ) ( ((int16_t)*(p+1)<<8)|*(p) )
+
+#define LE_MK_DWORD4( a, b, c, d ) ( (((((int32_t)d<<8)|c)<<8)|b)<<8|a )
+#define LE_MK_WORD2( a, b ) ( ((int16_t)b<<8)|a )
+
+#if defined(sparc) ||defined(__sparc) || defined(__sparc__) || \
+    defined(__powerpc__) || defined(__ppc__) || \
+    defined(__hppa) || defined(_MIPSEB) || defined(_POWER)
+#define MK_DWORD(p) BE_MK_DWORD(p)
+#define MK_WORD(p)  BE_MK_WORD(p)
+#define MK_DWORD4(a,b,c,d) BE_MK_DWORD4(a,b,c,d)
+#define MK_WORD2(a,b)      BE_MK_WORD2(a,b)
+#else
+#define MK_DWORD( p ) (*(const int32_t *)(p))
+#define MK_WORD( p ) (*(const int16_t *)(p))
+
+#define MK_DWORD4(a,b,c,d) LE_MK_DWORD4(a,b,c,d)
+#define MK_WORD2(a,b)      LE_MK_WORD2(a,b)
+#endif
+
+#define MASK0 MK_DWORD4( 0, 0xff, 0xff, 0xff )
+#define MASK1 MK_DWORD4( 0xff, 0, 0xff, 0xff )
+#define MASK2 MK_DWORD4( 0xff, 0xff, 0, 0xff )
+#define MASK3 MK_DWORD4( 0xff, 0xff, 0xff, 0 )
 
 #if defined(__i386__)
 #if defined(linux) || defined(__linux) || defined(__linux__)

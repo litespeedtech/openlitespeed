@@ -18,6 +18,8 @@
 #ifndef OBJPOOL_H
 #define OBJPOOL_H
 
+//#define DISABLE_OBJ_POOL
+
 
 #include <util/gpointerlist.h>
 
@@ -42,6 +44,7 @@ public:
 
     void *get()
     {
+#ifndef DISABLE_OBJ_POOL
         if (m_freeList.empty())
         {
             if (allocate(m_iChunkSize))
@@ -50,29 +53,51 @@ public:
         void *pObj = m_freeList.back();
         m_freeList.pop_back();
         return pObj;
+#else
+        return newObj();
+#endif
     }
 
     void recycle(void *pObj)
     {
+#ifndef DISABLE_OBJ_POOL
         if (pObj)
             m_freeList.unsafe_push_back(pObj);
+#else
+        releaseObj(pObj);
+#endif
     }
 
     int get(void **pObj, int n)
     {
+#ifndef DISABLE_OBJ_POOL
         if ((int)m_freeList.size() < n)
         {
             if (allocate((n < m_iChunkSize) ? m_iChunkSize : n))
                 return 0;
         }
         m_freeList.unsafe_pop_back(pObj, n);
+#else
+        for (int i=0; i<n; ++i)
+        {
+            pObj[i] = newObj();
+        }
+
+#endif
         return n;
     }
 
     void recycle(void **pObj, int n)
     {
+#ifndef DISABLE_OBJ_POOL
         if (pObj)
             m_freeList.unsafe_push_back(pObj, n);
+#else
+        for (int i=0; i<n; ++i)
+        {
+            releaseObj(pObj[i]);
+        }
+#endif
     }
 
     int size() const                {   return m_freeList.size();   }

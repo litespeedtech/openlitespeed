@@ -25,8 +25,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define directivesCount 12
-
 CacheCtrl::CacheCtrl()
     : m_iFlags(0)
     , m_iMaxAge(INT_MAX)
@@ -38,9 +36,8 @@ CacheCtrl::CacheCtrl()
 CacheCtrl::~CacheCtrl()
 {
 }
-
-
-static const char *s_directives[directivesCount] =
+#define CACHE_DIRECTIVES 16
+static const char *s_directives[CACHE_DIRECTIVES] =
 {
     "no-cache",
     "no-store",
@@ -53,12 +50,15 @@ static const char *s_directives[directivesCount] =
     "private",
     "must-revalidate",
     "proxy-revalidate",
-    "s-maxage"
+    "s-maxage",
+    "esi",
+    "no-vary",
+    "set-blank",
+    "shared"
 };
 
-
-static const int s_dirLen[directivesCount] =
-{   8, 8, 7, 9, 9, 12, 14, 6, 7, 15, 16, 8    };
+static const int s_dirLen[CACHE_DIRECTIVES] =
+{   8, 8, 7, 9, 9, 12, 14, 6, 7, 15, 16, 8, 3, 7, 9, 6    };
 
 
 void CacheCtrl::init(int flags, int iMaxAge, int iMaxStale)
@@ -67,7 +67,6 @@ void CacheCtrl::init(int flags, int iMaxAge, int iMaxStale)
     m_iMaxAge = iMaxAge;
     m_iMaxStale = iMaxStale;
 }
-
 
 int CacheCtrl::parse(const char *pHeader, int len)
 {
@@ -78,46 +77,53 @@ int CacheCtrl::parse(const char *pHeader, int len)
         p = parser.trim_parse();
         if (!p)
             break;
-        if (p == parser.getStrEnd())
-            continue;
-        AutoStr2 s(p, parser.getStrEnd() - p);
-        int i;
-        for (i = 0; i < 12; ++i)
+        if (p != parser.getStrEnd())
         {
-            if (strncasecmp(s.c_str(), s_directives[i], s_dirLen[i]) == 0)
-                break;
-        }
-        if (i >= 12)
-            continue;
-
-        m_iFlags |= (1 << i);
-        if (((i == 2) && !(m_iFlags & (i << 11))) ||
-            (i == 11) || (i == 3))
-        {
-            p += s_dirLen[i];
-            while ((*p == ' ') || (*p == '=') || (*p == '"'))
-                ++p;
-            if (!isdigit(*p))
-                continue;
-            if (i == 3)
+            AutoStr2 s(p, parser.getStrEnd() - p);
+            int i;
+            for (i = 0; i < CACHE_DIRECTIVES; ++i)
             {
-                m_iMaxStale = atoi(p);
-                continue;
+                if (strncasecmp(s.c_str(), s_directives[i], s_dirLen[i]) == 0)
+                    break;
             }
-            m_iMaxAge = atoi(p);
-            if (m_iMaxAge > 0)
-                m_iFlags |= cache_public;
-            else
+            if (i < CACHE_DIRECTIVES)
             {
-                m_iFlags &= ~cache_public;
-                m_iFlags &= ~cache_private;
+                m_iFlags |= (1 << i);
+                if (((i == 2) && !(m_iFlags & (i << 11))) ||
+                    (i == 11) || (i == 3))
+                {
+                    p += s_dirLen[i];
+                    while ((*p == ' ') || (*p == '=') || (*p == '"'))
+                        ++p;
+                    if (isdigit(*p))
+                    {
+                        if (i == 3)
+                            m_iMaxStale = atoi(p);
+                        else
+                        {
+                            //If "max-age" set, enable public cache
+                            m_iMaxAge = atoi(p);
+                            m_iFlags |= cache_public;
+                            m_iFlags &= (~no_cache & ~no_store);
+                        }
+                    }
+                }
+                else if (i == 12)
+                {
+                    p += s_dirLen[i];
+                    while ((*p == ' ') || (*p == '=') || (*p == '"'))
+                        ++p;
+                    if (strncasecmp(p, "on", 2) == 0)
+                        m_iFlags |= esi_on;
+                    else if (strncasecmp(p, "off", 3) == 0)
+                        m_iFlags &= ~esi_on;
+                }
             }
-
-
         }
     }
     return 0;
 
 }
+
 
 

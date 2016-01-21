@@ -18,6 +18,7 @@
 #ifndef HTTPREQ_H
 #define HTTPREQ_H
 
+class SslConnection;
 enum
 {
     REQ_BODY_UNKNOWN,
@@ -44,20 +45,30 @@ enum
 #define PROCESS_CONTEXT         (1<<0)
 #define CONTEXT_AUTH_CHECKED    (1<<1)
 #define REDIR_CONTEXT           (1<<2)
-#define IN_SENDFILE             (1<<3)
 #define KEEP_AUTH_INFO          (1<<5)
+#define REWRITE_REDIR           (1<<6)
+#define SKIP_REWRITE            (1<<7)
+#define REWRITE_PERDIR          (1<<8)
+#define REWRITE_QSD             (1<<9)
+#define REWRITE_CACHE_CONF      (1<<10)
+#define CACHE_DECOMPRESS        (1<<11)
+#define NO_RESP_BODY            (1<<12)
+#define IS_ERROR_PAGE           (1<<13)
+#define STAGE_V1                (1<<14)
+#define AUTH_DIGEST_STALE       (1<<15)
+#define VERIFY_SIG              (1<<16)
+#define CACHE_KEY               (1<<17)
+#define CACHE_PRIVATE_KEY       (1<<18)
+#define AP_USER_DIR             (1<<19)
+#define X_FORWARD_HTTPS         (1<<20)
+#define LOG_ACCESS_404          (1<<21)
+#define RESP_CONT_LEN_SET       (1<<22)
 
-#define REWRITE_QSD             (1<<6)
-#define REWRITE_REDIR           (1<<7)
-#define SKIP_REWRITE            (1<<8)
-
-#define MP4_SEEK                (1<<9)
-#define IS_ERROR_PAGE           (1<<10)
-
-#define EXEC_EXT_CMD            (1<<12)
-#define RESP_CONT_LEN_SET       (1<<13)
-
-
+#define COOKIE_PARSED           (1<<24)
+#define LITEMAGE_CROWLER        (1<<25)
+#define DUM_BENCHMARK_TOOL      (1<<26)
+#define EXEC_EXT_CMD            (1<<27)
+#define MP4_SEEK                (1<<28)
 
 #define GZIP_ENABLED            1
 #define REQ_GZIP_ACCEPT         2
@@ -97,12 +108,63 @@ typedef struct
     int valLen;
 } key_value_pair;
 
+
+typedef struct
+{
+    int keyOff;
+    int flag: 8;
+    int keyLen: 24;
+    int valOff;
+    int valLen;
+} cookieval_t;
+
+#define COOKIE_FLAG_PHPSESSID       1
+#define COOKIE_FLAG_FRONTEND        2
+#define COOKIE_FLAG_XF_SESSID       4
+#define COOKIE_FLAG_RESP_UPDATE     8
+
+
+class CookieList : public TObjArray< cookieval_t >
+{
+public:
+    CookieList()
+        : m_iSessIdx(0)
+    {}
+    ~CookieList()
+    {}
+    void setSessIdx(int idx)
+    {   m_iSessIdx = idx + 1;   }
+    int getSessIdx() const
+    {   return m_iSessIdx - 1;  }
+    int isSessIdxSet() const
+    {   return m_iSessIdx != 0; }
+    void reset()
+    {   clear(); m_iSessIdx = 0;    }
+
+    void cookieClassify(cookieval_t *pCookieEntry,
+                        const char *pCookies, int nameLen,
+                        const char *pVal, int valLen);
+
+    cookieval_t *insertCookieIndex(ls_xpool_t *pool, AutoBuf *pData,
+                                   const char *pName, int nameLen);
+    void copy(CookieList &rhs, ls_xpool_t *pool)
+    {
+        m_iSessIdx = rhs.m_iSessIdx;
+        TObjArray<cookieval_t>::copy(rhs, pool);
+    }
+
+
+private:
+    int  m_iSessIdx;
+};
+
 typedef TObjArray< key_value_pair > KVPairArray;
 
 class HttpReq
 {
 private:
     const VHostMap     *m_pVHostMap;
+    SslConnection      *m_pSslConn;
     AutoBuf             m_headerBuf;
 
     int                 m_iReqHeaderBufFinished;
@@ -144,7 +206,7 @@ private:
     off_t               m_lEntityLength;
     off_t               m_lEntityFinished;
     short               m_iRedirects;
-    short               m_iContextState;
+    int                 m_iContextState;
     const HttpHandler  *m_pHttpHandler;
 
     int                 m_iHttpHeaderEnd;
@@ -174,6 +236,7 @@ private:
     int                 m_iScriptNameLen;
     short               m_pReqBodyType;
     LogSession         *m_pILog;
+    CookieList          m_cookies;
 
 
 
@@ -274,6 +337,7 @@ public:
 
     void setVHostMap(const VHostMap *pMap)  {   m_pVHostMap = pMap;         }
     const VHostMap *getVHostMap() const     {   return m_pVHostMap;         }
+    const HttpVHost *matchVHost(const VHostMap *pVHostMap);
     const HttpVHost *matchVHost();
 
     char getStatus() const                  {   return m_iHeaderStatus;     }
@@ -306,9 +370,9 @@ public:
     {   return ls_str_len(&m_pathInfo); }
 
     const char *getQueryString()
-    {   return ls_str_cstr(&m_curUrl.value);    }
+    {   return ls_str_cstr(&m_curUrl.val);    }
     int   getQueryStringLen()
-    {   return ls_str_len(&m_curUrl.value); }
+    {   return ls_str_len(&m_curUrl.val); }
 
     int   isWebsocket() const
     {   return ((UPD_PROTO_WEBSOCKET == m_upgradeProto) ? 1 : 0);   }
@@ -523,6 +587,11 @@ public:
     char isCfIpSet() const                      {   return m_iCfIpHeader;   }
     const char* getCfIpHeader(int &len);
 
+    void setSsl(SslConnection *p)   {    m_pSslConn = p;        }
+    SslConnection * getSsl() const  {   return m_pSslConn;      }
+    int isHttps() const     
+    {   return m_pSslConn || (m_iContextState & X_FORWARD_HTTPS);    }
+    
     char getRewriteLogLevel() const;
     void setHandler(const HttpHandler *pHandler)
     {   m_pHttpHandler = pHandler;      }
@@ -538,9 +607,9 @@ public:
     void incRedirects()                     {   ++m_iRedirects;             }
     short getRedirects() const              {   return m_iRedirects;        }
 
-    void orContextState(short s)            {   m_iContextState |= s;       }
-    void clearContextState(short s)         {   m_iContextState &= ~s;      }
-    short getContextState(short s) const    {   return m_iContextState & s; }
+    void orContextState(int s)            {   m_iContextState |= s;       }
+    void clearContextState(int s)         {   m_iContextState &= ~s;      }
+    short getContextState(int s) const    {   return m_iContextState & s; }
     int detectLoopRedirect(const char *pURI, int uriLen,
                            const char *pArg, int qsLen, int isSSL);
     int detectLoopRedirect();
@@ -593,11 +662,11 @@ public:
     }
     int   getOrgReqURILen()
     {
-        if (m_iRedirects ? ls_str_cstr(&(m_pUrls[0].value))
-            : ls_str_cstr(&m_curUrl.value))
+        if (m_iRedirects ? ls_str_cstr(&(m_pUrls[0].val))
+            : ls_str_cstr(&m_curUrl.val))
             return m_reqURLLen - 1 - (m_iRedirects
-                                      ? ls_str_len(&(m_pUrls[0].value))
-                                      : ls_str_len(&m_curUrl.value));
+                                      ? ls_str_len(&(m_pUrls[0].val))
+                                      : ls_str_len(&m_curUrl.val));
         else
             return m_reqURLLen;
     }
@@ -626,6 +695,17 @@ public:
 
     ls_xpool_t *getPool()
     {   return m_pPool; }
+    
+    int removeCookie(const char *pName, int nameLen);
+    cookieval_t *setCookie(const char *pName, int nameLen, const char *pValue,
+                           int valLen);
+    int processSetCookieHeader(const char *pValue, int valLen);
+    cookieval_t *getCookie(const char *pName, int nameLen);
+    cookieval_t *insertCookieIndex(const char *pName, int nameLen);
+    int parseCookies();
+    int copyCookieHeaderToBufEnd(int oldOff, const char *pCookie,
+                                      int cookieLen);
+    CookieList  &getCookieList() { return   m_cookies; }
 };
 
 

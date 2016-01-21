@@ -324,11 +324,15 @@ int net_instaweb::CopyRespHeadersToServer(
         // To prevent the gzip module from clearing weak etags, we output them
         // using a different name here. The etag header filter module runs behind
         // the gzip compressors header filter, and will rename it to 'ETag'
-        if (StringCaseEqual(name_gs, "etag")
-            && StringCaseStartsWith(value_gs, "W/"))
+        if (StringCaseEqual(name_gs, "etag") && StringCaseStartsWith(value_gs, "W/"))
             name.setStr(kInternalEtagName, strlen(kInternalEtagName));
         else
+        {
             name.setStr(name_gs.data(), name_gs.length());
+            //Disable cache module if etag not changed
+            if (StringCaseEqual(name_gs, "etag"))
+                g_api->set_req_env(session, "cache-control", 13, "no-cache", 8);
+        }
 
         value.setStr(value_gs.data(), value_gs.length());
 
@@ -1724,8 +1728,7 @@ bool SendToPagespeed(PsMData *pMyData, lsi_param_t *rec,
 
 void StripHtmlHeaders(lsi_session_t *session)
 {
-    g_api->remove_resp_header(session, LSI_RSPHDR_CONTENT_LENGTH, NULL,
-                              0);
+    g_api->remove_resp_header(session, LSI_RSPHDR_CONTENT_LENGTH, NULL, 0);
     g_api->remove_resp_header(session, LSI_RSPHDR_ACCEPT_RANGES, NULL, 0);
 }
 
@@ -1764,7 +1767,9 @@ int HtmlRewriteFixHeadersFilter(PsMData *pMyData,
 int InPlaceCheckHeaderFilter(PsMData *pMyData, lsi_session_t *session,
                              ps_request_ctx_t *ctx)
 {
-
+    
+    
+ 
     if (ctx->recorder != NULL)
     {
         g_api->log(session, LSI_LOG_DEBUG,
@@ -2185,6 +2190,18 @@ static int UriMapFilter(lsi_param_t *rec)
 
 static int RecvReqHeaderCheck(lsi_param_t *rec)
 {
+    if (g_api->is_req_handler_registered(rec->session))
+        return LSI_OK;
+    else
+    {
+         int aEnableHkpt[] = {LSI_HKPT_HANDLER_RESTART,
+                             LSI_HKPT_HTTP_END,
+                             LSI_HKPT_RCVD_RESP_HEADER,
+                             LSI_HKPT_SEND_RESP_BODY
+                            };
+        g_api->enable_hook(rec->session, &MNAME, 1, aEnableHkpt, 4);
+    }
+
     //init the VHost data
     ps_vh_conf_t *cfg_s = (ps_vh_conf_t *) g_api->get_module_data(
                               rec->session, &MNAME, LSI_DATA_VHOST);
@@ -2298,7 +2315,7 @@ static int RecvReqHeaderCheck(lsi_param_t *rec)
     g_api->set_req_wait_full_body(rec->session);
 
     //Disable cache module
-    g_api->set_req_env(rec->session, "cache-control", 13, "no-cache", 8);
+    //g_api->set_req_env(rec->session, "cache-control", 13, "no-cache", 8);
 
     int iEnableHkpt;
     switch (response_category)
@@ -2393,9 +2410,13 @@ void EventCb(void *session_)
     if (status_ok)
     {
         pMyData->statusCode = status_code;
-        g_api->register_req_handler(session, &MNAME, 0);
-        g_api->log(session, LSI_LOG_DEBUG,
+        
+        //Add below code to avoid register_req_handler when it is only filters.
+        if (!pMyData->ctx->htmlRewrite) {
+            g_api->register_req_handler(session, &MNAME, 0);
+            g_api->log(session, LSI_LOG_DEBUG,
                    "[%s]ps_event_cb register_req_handler OK.\n", ModuleName);
+        }
     }
 
     g_api->set_handler_write_state(session, 1);
@@ -2458,13 +2479,11 @@ static lsi_serverhook_t serverHooks[] =
     { LSI_HKPT_MAIN_ATEXIT,         TerminateMainConf,  LSI_HOOK_NORMAL,    LSI_FLAG_ENABLED },
     { LSI_HKPT_RECV_REQ_HEADER,     RecvReqHeaderCheck, LSI_HOOK_NORMAL,    LSI_FLAG_ENABLED },
     { LSI_HKPT_URI_MAP,             UriMapFilter,       LSI_HOOK_LAST,      0 },
-    { LSI_HKPT_HANDLER_RESTART,     EndSession,         LSI_HOOK_LAST,      LSI_FLAG_ENABLED },
-    { LSI_HKPT_HTTP_END,            EndSession,         LSI_HOOK_LAST,      LSI_FLAG_ENABLED },
-    { LSI_HKPT_RCVD_RESP_HEADER,    HeaderFilter,       LSI_HOOK_LAST,      LSI_FLAG_ENABLED },
-    {
-        LSI_HKPT_SEND_RESP_BODY,      BodyFilter,         LSI_HOOK_NORMAL,
-        LSI_FLAG_ENABLED | LSI_FLAG_TRANSFORM 
-        | LSI_FLAG_PROCESS_STATIC | LSI_FLAG_DECOMPRESS_REQUIRED
+    { LSI_HKPT_HANDLER_RESTART,     EndSession,         LSI_HOOK_LAST,      0 },
+    { LSI_HKPT_HTTP_END,            EndSession,         LSI_HOOK_LAST,      0 },
+    { LSI_HKPT_RCVD_RESP_HEADER,    HeaderFilter,       LSI_HOOK_LAST,      0 },
+    { LSI_HKPT_SEND_RESP_BODY,      BodyFilter,         LSI_HOOK_NORMAL,
+        LSI_FLAG_TRANSFORM | LSI_FLAG_PROCESS_STATIC | LSI_FLAG_DECOMPRESS_REQUIRED
     },
     LSI_HOOK_END   //Must put this at the end position
 };
@@ -2479,6 +2498,6 @@ static int Init(lsi_module_t *pModule)
 lsi_confparser_t dealConfig = { ParseConfig, FreeConfig, paramArray };
 lsi_reqhdlr_t _handler = { PsHandlerProcess, NULL, NULL, NULL };
 lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, Init, &_handler, &dealConfig,
-                       "v1.4.13-1.9.32.6", serverHooks, {0}
+                       "v1.4.15-1.9.32.6", serverHooks, {0}
                      };
 

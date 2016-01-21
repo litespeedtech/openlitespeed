@@ -19,13 +19,16 @@
 #include "dirhashcacheentry.h"
 #include <lsr/ls_fileio.h>
 
+#include <http/httpresp.h>
+#include <util/ni_fio.h>
 #include <errno.h>
 #include <string.h>
 #include <unistd.h>
+#include <util/datetime.h>
 
 DirHashCacheEntry::DirHashCacheEntry()
     : CacheEntry()
-    , m_iLastCheck(-1)
+    , m_lastCheck(-1)
 {
 }
 
@@ -36,8 +39,6 @@ DirHashCacheEntry::~DirHashCacheEntry()
         close(getFdStore());
 
 }
-
-
 //<"LSCH"><CeHeader><CacheKey><ResponseHeader><ResponseBody>
 int DirHashCacheEntry::loadCeHeader()
 {
@@ -47,53 +48,39 @@ int DirHashCacheEntry::loadCeHeader()
         errno = EBADF;
         return LS_FAIL;
     }
-    if (ls_fio_lseek(fd, getStartOffset(), SEEK_SET) == -1)
+    if (nio_lseek(fd, getStartOffset(), SEEK_SET) == -1)
         return LS_FAIL;
-    char achBuf[4 + sizeof(CeHeader) ];
-    if ((size_t)ls_fio_read(fd, achBuf, 4 + sizeof(CeHeader))
-        < 4 + sizeof(CeHeader))
+    char achBuf[CACHE_ENTRY_MAGIC_LEN + sizeof(CeHeader) ];
+    int  *pId = (int *)achBuf;
+    if (nio_read(fd, achBuf, CACHE_ENTRY_MAGIC_LEN + sizeof(CeHeader))
+        < CACHE_ENTRY_MAGIC_LEN + (int)sizeof(CeHeader))
         return LS_FAIL;
-//  if ( *( uint32_t *)achBuf != CE_ID )
-//     return LS_FAIL;
-    if (memcmp(achBuf, CE_ID, 4) != 0)
+    if (*pId != CE_ID)
         return LS_FAIL;
-
-    memmove(&getHeader(), &achBuf[4], sizeof(CeHeader));
-    int len = getHeader().m_iKeyLen;
+    memmove(&getHeader(), &achBuf[CACHE_ENTRY_MAGIC_LEN], sizeof(CeHeader));
+    int len = getHeader().m_keyLen;
     if (len > 0)
     {
         char *p = getKey().prealloc(len + 1);
         if (!p)
             return LS_FAIL;
-        if (ls_fio_read(fd, p, len) < len)
+        if (nio_read(fd, p, len) < len)
             return LS_FAIL;
         *(p + len) = 0;
     }
-
-    char tmpBUf[4096];
-#ifdef CACHE_RESP_HEADER
-    if (getHeader().m_valPart1Len < 4096)  //< 4K
+    len = getHeader().m_tagLen;
+    if (len > 0)
     {
-        if (ls_fio_read(fd, tmpBUf,
-                        getHeader().m_valPart1Len) < getHeader().m_valPart1Len)
-            return LS_FAIL;
-
-        m_sRespHeader.append(tmpBUf, getHeader().m_valPart1Len);
+        char *p = getTag().prealloc(len + 1);
+        if (!p)
+            return -1;
+        if (nio_read(fd, p, len) < len)
+            return -1;
+        *(p + len) = 0;
     }
-#endif
-
-    //load part3 to buffer
-    int part3offset = getHeaderSize() + getContentTotalLen();
-    if (ls_fio_lseek(fd, part3offset, SEEK_SET) != -1)
-    {
-        while ((len = ls_fio_read(fd, tmpBUf, 4096)) > 0)
-            m_sPart3Buf.append(tmpBUf, len);
-    }
-
     return 0;
 
 }
-
 
 int DirHashCacheEntry::saveCeHeader()
 {
@@ -103,24 +90,30 @@ int DirHashCacheEntry::saveCeHeader()
         errno = EBADF;
         return LS_FAIL;
     }
-    if (ls_fio_lseek(fd, getStartOffset(), SEEK_SET) == -1)
+    if (nio_lseek(fd, getStartOffset(), SEEK_SET) == -1)
         return LS_FAIL;
-    char achBuf[4 + sizeof(CeHeader) ];
-    //*( int *)achBuf = CE_ID;
-    memcpy(achBuf, CE_ID, 4);
-    memmove(&achBuf[4], &getHeader(), sizeof(CeHeader));
-    if ((size_t)ls_fio_write(fd, achBuf, 4 + sizeof(CeHeader)) <
-        4 + sizeof(CeHeader))
+    char achBuf[CACHE_ENTRY_MAGIC_LEN + sizeof(CeHeader) ];
+    int *pId = (int *)achBuf;
+    *pId = CE_ID;
+    memmove(&achBuf[CACHE_ENTRY_MAGIC_LEN], &getHeader(), sizeof(CeHeader));
+    if (nio_write(fd, achBuf, CACHE_ENTRY_MAGIC_LEN + sizeof(CeHeader)) <
+        CACHE_ENTRY_MAGIC_LEN + (int)sizeof(CeHeader))
         return LS_FAIL;
-    if (getHeader().m_iKeyLen > 0)
+    if (getHeader().m_keyLen > 0)
     {
-        if (ls_fio_write(fd, getKey().c_str(), getHeader().m_iKeyLen) <
-            getHeader().m_iKeyLen)
+        if (nio_write(fd, getKey().c_str(), getHeader().m_keyLen) <
+            getHeader().m_keyLen)
             return LS_FAIL;
     }
+    //Tag is not available yet
+//     if ( getHeader().m_tagLen > 0 )
+//     {
+//         if ( nio_write( fd, getTag().c_str(), getHeader().m_tagLen ) <
+//                 getHeader().m_tagLen )
+//             return -1;
+//     }
     return 0;
 }
-
 
 int DirHashCacheEntry::allocate(int size)
 {
@@ -141,7 +134,6 @@ int DirHashCacheEntry::allocate(int size)
     return 0;
 }
 
-
 int DirHashCacheEntry::releaseTmpResource()
 {
     int fd = getFdStore();
@@ -151,6 +143,45 @@ int DirHashCacheEntry::releaseTmpResource()
         setFdStore(-1);
     }
     return 0;
+}
+
+int DirHashCacheEntry::saveRespHeaders(HttpRespHeaders *pHeader)
+{
+    int total = 0;
+    IOVec iov;
+    const char *pKey;
+    int keyLen;
+
+    pKey = pHeader->getHeader(HttpRespHeaders::H_X_LITESPEED_TAG, &keyLen);
+    if (pKey && keyLen > 0)
+    {
+        setTag(pKey, keyLen);
+        //getHeader().m_tagLen = keyLen;
+        if (ls_fio_write(getFdStore(), pKey, keyLen) <
+            keyLen)
+            return -1;
+        pHeader->del(HttpRespHeaders::H_X_LITESPEED_TAG);
+    }
+
+    total = pHeader->appendToIov(&iov);
+    iov.append("\r\n", 2);
+    total += 2;
+    if (nio_writev(getFdStore(), iov.get(), iov.len()) < total)
+        return LS_FAIL;
+    pKey = pHeader->getHeader(HttpRespHeaders::H_LAST_MODIFIED, &keyLen);
+    if (pKey)
+        getHeader().m_tmLastMod = DateTime::parseHttpTime(pKey);
+    /*
+     * FIXME: need to locate etag header location
+        pHeader->getHeader( HttpRespHeaders::H_ETAG, &pKey, &keyLen);
+        if ( pKey )
+        {
+            getHeader().m_offETag = m_iEtagStarts;
+            getHeader().m_lenETag = m_iEtagLen;
+        }
+    */
+    return total;
+
 }
 
 

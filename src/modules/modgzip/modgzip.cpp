@@ -380,6 +380,12 @@ static int clearrecv(lsi_param_t *rec)
     return LSI_OK;
 }
 
+static int rmcontentlength(lsi_session_t *session)
+{
+    g_api->remove_resp_header(session, LSI_RSPHDR_CONTENT_LENGTH, NULL, 0);
+    g_api->set_resp_content_length(session, -1);
+    return LSI_OK;
+}
 
 static int cleardata(lsi_param_t *rec)
 {
@@ -483,6 +489,7 @@ static int enablehook(lsi_session_t *session, lsi_module_t *pModule,
             iEnableCount);
     if (ret == LS_OK)
     {
+        rmcontentlength(session);
         g_api->set_module_data(session, pModule, LSI_DATA_HTTP,
                                (void *)myData);
         return ret;

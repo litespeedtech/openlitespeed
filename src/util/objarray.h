@@ -67,6 +67,16 @@ public:
     T      *getArray()                  {   return (T *)ObjArray::getArray(); }
     T      *getObj(int index) const   {   return (T *)ObjArray::getObj(index);  }
     T      *getNew()                    {   return (T *)ObjArray::getNew(); }
+
+    T *begin()      {   return  getArray();    }
+    T *end()        {   return (T *)getArray() + getSize();   }
+
+    void copy(TObjArray &other, ls_xpool_t *pool)
+    {
+        setCapacity(pool, other.getCapacity());
+        setSize(other.getSize());
+        memmove(getArray(), other.getArray(), getSize() * sizeof (T));
+    }
 };
 
 

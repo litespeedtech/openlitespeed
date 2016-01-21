@@ -88,7 +88,7 @@ HttpSession *HttpSession::newSubSession(SubSessInfo_t *pSubSessInfo)
     pSession->setStream(pStream);
     pSession->getReq()->setILog(pStream);
     pSession->m_pClientInfo = m_pClientInfo;
-    pSession->m_pSslConn = m_pSslConn;
+    pSession->getReq()->setSsl(getSSL()); 
 
     pStream->setDepth(depth);
 
@@ -396,15 +396,14 @@ void HttpSession::mergeRespHeaders(HttpRespHeaders::INDEX headerIndex,
     struct iovec *pEnd = pIov + count;
     while (pIov < pEnd)
     {
-//         if ( headerIndex == HttpRespHeaders::H_SET_COOKIE )
-//         {
-//             if ( m_request.processSetCookieHeader( ( const char * )pIov->iov_base, pIov->iov_len ) == 0 )
-//             {
-//                 ++pIov;
-//                 continue;
-//             }
-//
-//         }
+        if ( headerIndex == HttpRespHeaders::H_SET_COOKIE )
+        {
+            if ( m_request.processSetCookieHeader( ( const char * )pIov->iov_base, pIov->iov_len ) == 0 )
+            {
+                ++pIov;
+                continue;
+            }
+        }
         m_response.getRespHeaders().add(
             headerIndex, pName, nameLen,
             (const char *)pIov->iov_base, pIov->iov_len,

@@ -35,6 +35,28 @@
 #define CE_UPDATING     (1<<0)
 #define CE_STALE        (1<<1)
 
+class DLinkedObj;
+class DLinkQueue;
+class HttpRespHeaders;
+
+struct CacheKey
+{
+    const char     *m_pUri;
+    int             m_iUriLen;
+    const char     *m_pQs;
+    int             m_iQsLen;
+    const char     *m_pIP;
+    int             m_ipLen;
+    AutoStr2        m_sCookie;
+    int             m_iCookieVary;
+    int             m_iCookiePrivate;
+
+    int getPrivateId(char *pBuf, char *pBufEnd);
+    int isPrivate() const
+    {   return m_pIP != NULL;   }
+};
+
+
 class CacheEntry : public RefCounter
 {
 public:
@@ -42,152 +64,109 @@ public:
 
     virtual ~CacheEntry();
 
-    void setLastAccess(long tm)
-    {
-        m_iLastAccess = tm;
-    }
-    long getLastAccess() const
-    {
-        return m_iLastAccess;
-    }
+    void setLastAccess(long tm)   {   m_lastAccess = tm;  }
+    long getLastAccess() const      {   return m_lastAccess;    }
 
-    void incHits()
-    {
-        ++m_iHits;
-    }
-    long getHits() const
-    {
-        return m_iHits;
-    }
+//     void incHits()                  {   ++m_iHits;          }
+//     long getHits() const            {   return m_iHits;     }
+// 
+//     void incTestHits()              {   ++m_iTestHits;    }
+//     long getTestHits() const        {   return m_iTestHits;    }
+    
+    void setFdStore(int fd)         {   m_fdStore = fd;  }
+    int getFdStore() const          {   return m_fdStore; }
 
-    void setFdStore(int fd)
-    {
-        m_iFdStore = fd;
-    }
-    int getFdStore() const
-    {
-        return m_iFdStore;
-    }
+    void setStartOffset(off_t off) {   m_startOffset = off;    }
+    off_t getStartOffset() const    {   return m_startOffset;   }
 
-    void setStartOffset(off_t off)
-    {
-        m_startOffset = off;
-    }
-    off_t getStartOffset() const
-    {
-        return m_startOffset;
-    }
-
-    void setMaxStale(int age)
-    {
-        m_iMaxStale = age;
-    }
-    int  getMaxStale() const
-    {
-        return m_iMaxStale;
-    }
+    void setMaxStale(int age)     {   m_iMaxStale = age;      }
+    int  getMaxStale() const        {   return m_iMaxStale;     }
 
     off_t getHeaderSize() const
     {
-        return 4 + sizeof(CeHeader) + m_header.m_iKeyLen;
+        return CACHE_ENTRY_MAGIC_LEN + sizeof(CeHeader)
+               + m_header.m_keyLen + m_header.m_tagLen;
     }
 
-
-    void setContentLen(int part1, int part2)
-    {
-        m_header.m_iValPart1Len = part1;
-        m_header.m_iValPart2Len = part2;
-    }
+    void setPart1Len(int len)
+    {   m_header.m_valPart1Len = len;   }
+    void setPart2Len(int len)
+    {   m_header.m_valPart2Len = len;   }
 
     int getContentTotalLen() const
-    {
-        return m_header.m_iValPart1Len + m_header.m_iValPart2Len;
-    }
+    {   return m_header.m_valPart1Len + m_header.m_valPart2Len; }
+
+    int getPart1Len() const
+    {   return m_header.m_valPart1Len;      }
+    int32_t getPart2Len() const
+    {   return m_header.m_valPart2Len;      }
 
     virtual int loadCeHeader() = 0 ;
     virtual int saveCeHeader() = 0 ;
     virtual int allocate(int size) = 0;
     virtual int releaseTmpResource() = 0;
-
-    int setKey(const CacheHash &hash,
-               const char *pUri, int iUriLen,
-               const char *pQs, int iQsLen,
-               const char *pIp, int iIpLen,
-               const char *pCookie, int iCookieLen);
-
-    int verifyKey(
-        const char *pUri, int iUriLen,
-        const char *pQs, int iQsLen,
-        const char *pIp, int iIpLen,
-        const char *pCookie, int iCookieLen) const;
+    virtual int saveRespHeaders(HttpRespHeaders *pHeader) = 0;
 
 
+    int setKey(const CacheHash &hash, CacheKey *pKey);
+
+    int verifyKey(CacheKey *pKey) const;
+
+    int isUnderConstruct() const
+    {   return m_header.m_flag & CeHeader::CEH_IN_CONSTRUCT;    }
+
+    void appendToWaitQ(DLinkedObj *pObj);
+    DLinkQueue *getWaitQ() const    {   return m_pWaitQue;      }
 
     void markReady(int compressed)
     {
-        m_header.m_iFlag = (m_header.m_iFlag & ~CeHeader::CEH_IN_CONSTRUCT)
-                           | (compressed ? CeHeader::CEH_COMPRESSED : 0) ;
+        m_header.m_flag = (m_header.m_flag & ~CeHeader::CEH_IN_CONSTRUCT)
+                          | (compressed ? CeHeader::CEH_COMPRESSED : 0) ;
     }
 
     int isGzipped() const
-    {
-        return m_header.m_iFlag & CeHeader::CEH_COMPRESSED;
-    }
+    {   return m_header.m_flag & CeHeader::CEH_COMPRESSED;  }
+
 
     int isUpdating() const
-    {
-        return m_header.m_iFlag & CeHeader::CEH_UPDATING;
-    }
+    {   return m_header.m_flag & CeHeader::CEH_UPDATING;    }
     void setUpdating(int i)
-    {
-        m_header.m_iFlag = ((m_header.m_iFlag & ~CeHeader::CEH_UPDATING) |
-                            (i ? CeHeader::CEH_UPDATING : 0));
-    }
+    {   setFlag(CeHeader::CEH_UPDATING, i);  }
 
     int isStale() const
-    {
-        return m_header.m_iFlag & CeHeader::CEH_STALE;
-    }
-
+    {   return m_header.m_flag & CeHeader::CEH_STALE;       }
     void setStale(int i)
-    {
-        m_header.m_iFlag = ((m_header.m_iFlag & ~CeHeader::CEH_STALE) |
-                            (i ? CeHeader::CEH_STALE : 0));
-    }
+    {   setFlag(CeHeader::CEH_STALE, i);  }
 
-    CeHeader &getHeader()
-    {
-        return m_header;
-    }
-    AutoStr   &getKey()
-    {
-        return m_sKey;
-    }
-    const CacheHash &getHashKey() const
-    {
-        return m_hashKey;
-    }
+    int isPrivate() const
+    {   return m_header.m_flag & CeHeader::CEH_PRIVATE;     }
 
-    void setHashKey(const CacheHash &hash)
-    {
-        m_hashKey.init(hash);
-    }
+    CeHeader &getHeader()               {   return m_header;            }
+    AutoStr  &getKey()                  {   return m_sKey;              }
+    int       getKeyLen()               {   return m_header.m_keyLen;   }
+    const CacheHash &getHashKey() const {   return m_hashKey;           }
 
-    int getPart1Offset() const
-    {
-        return m_startOffset + getHeaderSize();
-    }
+    void setHashKey(const CacheHash &hash)  {   m_hashKey.copy(hash);     }
+
+    int getPart1Offset() const          {   return m_startOffset + getHeaderSize();   }
 
     int getPart2Offset() const
-    {
-        return m_startOffset + getHeaderSize() + m_header.m_iValPart1Len;
-    }
+    {   return m_startOffset + getHeaderSize() + m_header.m_valPart1Len;   }
 
-    time_t getExpireTime() const
-    {
-        return m_header.m_tmExpire;
-    }
+    time_t getExpireTime() const        {   return m_header.m_tmExpire; }
 
+    void setFlag(int flag, int val)
+    {   m_header.m_flag = ((m_header.m_flag & ~flag) | ((val) ? flag : 0));  }
+
+    AutoStr &getTag()                   {   return m_sTag;      }
+    void setTag(const char *pTag, int len);
+    int  isOlderThan(int32_t tmLast, int32_t iMsecLast)
+    {
+        return ((m_header.m_tmCreated < tmLast)
+                || ((m_header.m_tmCreated == tmLast)
+                    && (m_header.m_msCreated < iMsecLast)));
+    }
+    
     void setFilePath(const char *path)
     {
         m_sFile.setStr(path);
@@ -202,26 +181,20 @@ public:
 
 
 private:
-    long        m_iLastAccess;
-    int         m_iHits;
+    long        m_lastAccess;
+//     int         m_iHits;
+//     int         m_iTestHits;
     int         m_iMaxStale;
     CacheHash   m_hashKey;
 
     off_t       m_startOffset;
     CeHeader    m_header;
-    int         m_iFdStore;
+    int         m_fdStore;
     AutoStr     m_sKey;
 
+    AutoStr     m_sTag;
+    DLinkQueue *m_pWaitQue;
     AutoStr     m_sFile;
-
-#ifdef CACHE_RESP_HEADER
-public:
-    //For fast the parsing speed, cache the header to buffer whose size less than 4KB
-    AutoStr2    m_sRespHeader;
-#endif
-public:
-    AutoStr2    m_sPart3Buf;
-
 
     LS_NO_COPY_ASSIGN(CacheEntry);
 };

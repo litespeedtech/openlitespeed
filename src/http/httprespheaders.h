@@ -20,6 +20,7 @@
 
 #include <util/autobuf.h>
 #include <util/objarray.h>
+#include <util/iovec.h>
 #include <ls.h>
 
 // namespace RespHeader {
@@ -75,9 +76,15 @@ public:
         H_TRANSFER_ENCODING,
         H_VARY,
         H_WWW_AUTHENTICATE,
+        H_X_LITESPEED_CACHE,
+        H_X_LITESPEED_PURGE,
+        H_X_LITESPEED_TAG,
+        H_X_LITESPEED_VARY,
         H_X_POWERED_BY,
 
-        H_HEADER_END
+//        H_HTTP_VERSION,
+        H_HEADER_END,
+        H_UNKNOWN = H_HEADER_END,
 
         //not commonly used headers.
 //         H_AGE,

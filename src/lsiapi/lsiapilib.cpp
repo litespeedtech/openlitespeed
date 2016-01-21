@@ -34,6 +34,7 @@
 #include <lsiapi/envmanager.h>
 #include <lsiapi/internal.h>
 #include <lsiapi/lsiapi.h>
+#include <lsiapi/lsiapihooks.h>
 #include <lsiapi/modulehandler.h>
 #include <lsiapi/modulemanager.h>
 #include <lsiapi/moduletimer.h>
@@ -44,9 +45,8 @@
 #include <util/datetime.h>
 #include <util/httputil.h>
 #include <util/vmembuf.h>
-
+#include <util/accessdef.h>
 #include <unistd.h>
-
 
 static int is_release_cb_added(const lsi_module_t *pModule, int level)
 {
@@ -148,6 +148,12 @@ static int enable_hook(lsi_session_t *session,
     return ret;
 }
 
+
+static int get_hook_flag(lsi_session_t *session, int index)
+{
+    HttpSession *pSession = (HttpSession *)((LsiSession *)session);
+    return pSession->getSessionHooks()->getFlag(index);
+}
 
 static  void log(lsi_session_t *session, int level, const char *fmt, ...)
 {
@@ -745,6 +751,19 @@ static const char *get_mapped_context_uri(lsi_session_t *session,
     return pReq->getContext()->getURI();
 }
 
+static int is_req_handler_registered(lsi_session_t *session)
+{
+    HttpSession *pSession = (HttpSession *)((LsiSession *)session);
+    if (pSession)
+    {
+        HttpReq *pReq = pSession->getReq();
+        if ( pReq && pReq->getHttpHandler()
+            && pReq->getHttpHandler()->getType() == HandlerType::HT_MODULE)
+            return 1;
+    }
+    
+    return 0;
+}
 
 static int register_req_handler(lsi_session_t *session,
                                 lsi_module_t *pModule, int scriptLen)
@@ -753,13 +772,17 @@ static int register_req_handler(lsi_session_t *session,
     if (pSession == NULL)
         return LS_FAIL;
     HttpReq *pReq = pSession->getReq();
+    if ( pReq && pReq->getHttpHandler()
+        && pReq->getHttpHandler()->getType() == HandlerType::HT_MODULE)
+        return LS_FAIL; //already registered by a module
+
     LsiModule *pHandler = MODULE_HANDLER(pModule);
     if ((pHandler != NULL)
         && (pModule->reqhandler != NULL))
     {
         pReq->setHandler(pHandler);
         pReq->setScriptNameLen(scriptLen);
-        return 0;
+        return LS_OK;
     }
 
     return LS_FAIL;
@@ -1563,6 +1586,17 @@ static int lsiapi_resume(lsi_session_t *session, int retcode)
 }
 
 
+static int get_client_access(lsi_session_t *session)
+{
+    HttpSession *pSession = (HttpSession *)((LsiSession *)session);
+    if (pSession == NULL)
+        return LS_FAIL;
+    if (pSession->getClientInfo()->getAccess() == AC_TRUST)
+        return 0;
+    else
+        return 1;
+}
+
 static int get_file_path_by_uri(lsi_session_t *session, const char *uri,
                                 int uri_len, char *path, int max_len)
 {
@@ -1943,6 +1977,7 @@ void lsiapi_init_server_api()
 {
     lsi_api_t *pApi = LsiapiBridge::getLsiapiFunctions();
     pApi->enable_hook = enable_hook;
+    pApi->get_hook_flag = get_hook_flag;
 
     pApi->register_env_handler = lsiapi_register_env_handler;
     pApi->get_module = get_module;
@@ -1966,6 +2001,7 @@ void lsiapi_init_server_api()
     pApi->set_status_code = set_status_code;
     pApi->get_status_code = get_status_code;
 
+    pApi->is_req_handler_registered = is_req_handler_registered;
     pApi->register_req_handler = register_req_handler;
     pApi->set_handler_write_state = set_handler_write_state;
     pApi->set_timer = lsi_set_timer;
@@ -2043,6 +2079,7 @@ void lsiapi_init_server_api()
 
     pApi->is_suspended = lsiapi_is_suspended;
     pApi->resume = lsiapi_resume;
+    pApi->get_client_access = get_client_access;
 
     pApi->get_file_path_by_uri = get_file_path_by_uri;
     //pApi->get_static_file_stat = get_static_file_stat;

@@ -837,7 +837,7 @@ int AccessControl::isAvailable(const XmlNode *pNode)
     {
         const char *pAllow = pNode1->getChildValue("allow");
 
-        if (((pAllow) && strchr(pAllow, 'T'))
+        if (((pAllow) && strcasestr(pAllow, "T"))
             || (pNode1->getChildValue("deny")))
             return 1;
     }

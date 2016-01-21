@@ -147,6 +147,7 @@ class HttpSession : public LsiSession, public InputStream, public HioHandler,
     ClientInfo           *m_pClientInfo;
 
     NtwkIOLink           *m_pNtwkIOLink;
+    uint16_t              m_iRemotePort;
 
     SendFileInfo          m_sendFileInfo;
 
@@ -293,8 +294,8 @@ public:
     NtwkIOLink *getNtwkIOLink() const      {   return m_pNtwkIOLink;   }
     //void setNtwkIOLink( NtwkIOLink * p )    {   m_pNtwkIOLink = p;      }
     //below are wrapper functions
-    SslConnection *getSSL()     {   return m_pNtwkIOLink->getSSL();     }
-    bool isSSL() const          {   return m_pNtwkIOLink->isSSL();      }
+    SslConnection *getSSL() const   {   return m_request.getSsl();          }
+    int16_t isSSL() const           {   return m_request.isHttps(); }
     
     const char *getPeerAddrString() const;
     int getPeerAddrStrLen() const;
@@ -306,9 +307,9 @@ public:
     void continueWrite()        {    getStream()->continueWrite();      };
     void switchWriteToRead()    {    getStream()->switchWriteToRead();  };
 
-    void suspendEventNotify()   {    m_pNtwkIOLink->suspendEventNotify(); };
-    void resumeEventNotify()    {    m_pNtwkIOLink->resumeEventNotify(); };
-    void tryRead()              {    m_pNtwkIOLink->tryRead();          };
+    void suspendEventNotify()   {    getStream()->suspendEventNotify(); };
+    void resumeEventNotify()    {    getStream()->resumeEventNotify();  };
+
     off_t getBytesRecv() const  {   return getStream()->getBytesRecv();    }
     off_t getBytesSent() const  {   return getStream()->getBytesSent();    }
 
@@ -339,7 +340,7 @@ public:
 
 
     unsigned short getRemotePort() const
-    {   return m_pNtwkIOLink->getRemotePort();   };
+    {   return m_iRemotePort;   };
 
     void setVHostMap(const VHostMap *pMap)
     {

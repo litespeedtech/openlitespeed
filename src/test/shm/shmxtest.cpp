@@ -132,7 +132,7 @@ TEST(shmPerProcess_test)
 
     xxx.x[0] = 0x5678;
     ls_str_set(&parms.key, (char *)aKey, iKeyLen);
-    ls_str_set(&parms.value, (char *)&xxx, sizeof(xxx));
+    ls_str_set(&parms.val, (char *)&xxx, sizeof(xxx));
     CHECK(pTHash->insertIterator(&parms).m_iOffset == 0);
     CHECK((off = pTHash->getIterator(&parms, &ret)).m_iOffset != 0);
     CHECK(ret == LSSHM_VAL_NONE);

@@ -196,6 +196,12 @@ int HttpCgiTool::processHeaderLine(HttpExtConnector *pExtConn,
     case HttpRespHeaders::H_TRANSFER_ENCODING:
         pResp->setContentLen(LSI_RSP_BODY_SIZE_CHUNKED);
         return 0;
+        
+    case HttpRespHeaders::H_SET_COOKIE:
+        //pReq->getRespCacheCtrl().setHasCookie();
+        pReq->processSetCookieHeader(pValue, pLineEnd - pValue);
+        break;
+
     case HttpRespHeaders::H_PROXY_CONNECTION:
     case HttpRespHeaders::H_CONNECTION:
         if (strncasecmp(pValue, "close", 5) == 0)
@@ -452,7 +458,7 @@ static int addEnv(void *pObj, void *pUData, const char *pKey, int iKeyLen)
     IEnv *pEnv = (IEnv *)pUData;
     ls_strpair_t *pPair = (ls_strpair_t *)pObj;
     pEnv->add(ls_str_cstr(&pPair->key), ls_str_len(&pPair->key),
-              ls_str_cstr(&pPair->value), ls_str_len(&pPair->value));
+              ls_str_cstr(&pPair->val), ls_str_len(&pPair->val));
     return 0;
 }
 

@@ -20,14 +20,16 @@
 CeHeader::CeHeader()
     : m_tmCreated(0)
     , m_tmExpire(0)
-    , m_iFlag(CEH_IN_CONSTRUCT)
-    , m_iKeyLen(0)
-    , m_iStatusCode(0)
-    , m_iValPart1Len(0)
-    , m_iValPart2Len(0)
+    , m_flag(CEH_IN_CONSTRUCT)
+    , m_msCreated(0)
+    , m_tagLen(0)
+    , m_keyLen(0)
+    , m_statusCode(0)
+    , m_valPart1Len(0)
+    , m_valPart2Len(0)
     , m_tmLastMod(0)
-    , m_iOffETag(0)
-    , m_iLenETag(0)
+    , m_offETag(0)
+    , m_lenETag(0)
 {
 }
 
@@ -35,5 +37,6 @@ CeHeader::CeHeader()
 CeHeader::~CeHeader()
 {
 }
+
 
 

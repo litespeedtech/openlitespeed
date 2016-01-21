@@ -52,22 +52,17 @@
 extern "C" {
 #endif
 
-#if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
-#define USE_F_MUTEX
-#else
-#undef USE_F_MUTEX
-#endif
-
-#if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
-#define USE_ATOMIC_SPIN
-#else
-#define USE_MUTEX_LOCK
-#endif
-
 #if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__) \
     || defined(__FreeBSD__ ) || defined(__NetBSD__) || defined(__OpenBSD__)
+#define USE_F_MUTEX
+#define USE_ATOMIC_SPIN
 #define USE_MUTEX_ADAPTIVE
-#endif /* defined(linux) || defined(__FreeBSD__ ) */
+
+#else
+#undef USE_F_MUTEX
+#define USE_MUTEX_LOCK
+
+#endif
 
 
 #define MAX_FUTEX_SPINCNT      10
@@ -104,6 +99,9 @@ typedef int32_t             ls_atom_spinlock_t;
 
 #ifdef USE_ATOMIC_SPIN
 typedef ls_atom_spinlock_t   ls_spinlock_t;
+
+extern int ls_spin_pid;    /* process id used with ls_atomic_pidspin */
+void ls_atomic_pidspin_init();
 #else
 typedef ls_pspinlock_t  ls_spinlock_t;
 #endif
@@ -113,9 +111,6 @@ typedef ls_mutex_t         ls_lock_t;
 #else
 typedef ls_spinlock_t      ls_lock_t;
 #endif
-
-extern int ls_spin_pid;    /* process id used with ls_atomic_pidspin */
-void ls_atomic_pidspin_init();
 
 
 #ifdef USE_F_MUTEX
@@ -191,7 +186,6 @@ ls_inline int ls_futex_wait(int *futex, int val, struct timespec *timeout)
 #endif
 
 
-#if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
 #ifdef USE_F_MUTEX
 
 #define LS_FUTEX_LOCKED1    (1)
@@ -349,9 +343,9 @@ ls_inline int ls_futex_unlock(ls_mutex_t *p)
 int ls_futex_setup(ls_mutex_t *p);
 
 #endif //USE_F_MUTEX
-#endif
 
-//#ifdef USE_ATOMIC_SPIN
+
+#ifdef USE_ATOMIC_SPIN
 
 
 /**
@@ -501,7 +495,7 @@ ls_inline int ls_atomic_spin_pidunlock(ls_atom_spinlock_t *p)
  */
 int ls_atomic_spin_setup(ls_atom_spinlock_t *p);
 
-//#endif
+#endif
 
 int ls_pthread_mutex_setup(pthread_mutex_t *);
 

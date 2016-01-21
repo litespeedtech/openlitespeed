@@ -23,13 +23,15 @@
 #include <util/hashstringmap.h>
 #include <util/gpointerlist.h>
 #include <util/autostr.h>
-
 #include <inttypes.h>
+#include "cachemanager.h"
 
 #define MAX_STALE_AGE 600
 
 class CacheEntry;
 class CacheHash;
+struct CacheKey;
+class CacheManager;
 
 class CacheStore : public HashStringMap<CacheEntry *>
 {
@@ -40,26 +42,22 @@ public:
 
     int reset();
 
+    int initManager();
+    
     virtual int clearStrage() = 0;
 
     virtual CacheEntry *getCacheEntry(CacheHash &hash,
-                                      const char *pURI, int pURILen,
-                                      const char *pQS, int pQSLen,
-                                      const char *pIP, int ipLen,
-                                      const char *pCookie, int cookieLen,
+                                      CacheKey *pKey,
                                       int32_t lastCacheFlush, int maxStale) = 0;
 
     virtual CacheEntry *createCacheEntry(const CacheHash &hash,
-                                         const char *pURI, int pURILen,
-                                         const char *pQS, int pQSLen,
-                                         const char *pIP, int ipLen,
-                                         const char *pCookie, int cookieLen,
-                                         int force, int *errorcode) = 0;
+                                         CacheKey *pKey,
+                                         int force) = 0;
 
-    virtual CacheEntry *getCacheEntry(const char *pKey, int keyLen) = 0;
+//    virtual CacheEntry * getCacheEntry( const char * pKey, int keyLen ) = 0;
 
-    virtual CacheEntry *getWriteEntry(const char *pKey, int keyLen,
-                                      const char *pHash) = 0;
+//    virtual CacheEntry * getWriteEntry( const char * pKey, int keyLen,
+//                        const char * pHash ) = 0;
 
     virtual int saveEntry(CacheEntry *pEntry) = 0;
 
@@ -82,46 +80,43 @@ public:
 
     void houseKeeping();
 
-    void setStorageRoot(const char *pRoot)
-    {
-        m_sRoot.setStr(pRoot);
-    }
-
+    void setStorageRoot(const char *pRoot);
     const AutoStr2 &getRoot() const
     {
         return m_sRoot;
     }
 
-    void setMaxObjSize(long objSize)
-    {
-        m_iMaxObjSize = objSize;
-    }
-    long getMaxObjSize()
-    {
-        return m_iMaxObjSize;
-    }
+    
     void addToDirtyList(CacheEntry *pEntry)
-    {
-        m_dirtyList.push_back(pEntry);
-    }
+    {   m_dirtyList.push_back(pEntry);        }
+
+    CacheManager *getManager()   {   return m_pManager;    }
+
+    
+    
+//     void setMaxObjSize(long objSize)
+//     {
+//         m_iMaxObjSize = objSize;
+//     }
+//     long getMaxObjSize()
+//     {
+//         return m_iMaxObjSize;
+//     }
 
 protected:
     virtual int renameDiskEntry(CacheEntry *pEntry, char *pFrom,
-                                const char *pFromSuffix, const char *pToSuffix,
-                                int validate) = 0;
+                                const char *pFromSuffix, const char *pToSuffix, int validate) = 0;
 
 private:
     int m_iTotalEntries;
     int m_iTotalHit;
     int m_iTotalMiss;
 
-    TPointerList< CacheEntry > m_dirtyList;
+    TPointerList< CacheEntry >       m_dirtyList;
+    CacheManager                    *m_pManager;
 
-    long      m_iMaxObjSize;
+
     AutoStr2  m_sRoot;
-
-
-    LS_NO_COPY_ASSIGN(CacheStore);
 };
 
 #endif

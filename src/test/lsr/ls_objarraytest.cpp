@@ -133,4 +133,53 @@ TEST(ls_ObjArrayTest_test)
 
 }
 
+
+TEST(ls_ObjArrayTest_test2)
+{
+    int i;
+    ls_objarray_t array;
+    ls_xpool_t pool;
+    ls_objarray_init(&array, sizeof(testpair_t));
+    ls_xpool_init(&pool);
+
+
+    
+    CHECK(ls_objarray_getcapacity(&array) == 0);
+    CHECK(ls_objarray_getsize(&array) == 0);
+    CHECK(ls_objarray_getarray(&array) == NULL);
+    ls_objarray_guarantee(&array, &pool, 20);
+    
+    
+    for (i = 0; i < 20; ++i)
+    {
+        testpair_t *buf = (testpair_t *)ls_objarray_getnew(&array);
+        buf->key = buf->val = i + 1;
+    }
+    for (i = 0; i < 20; ++i)
+    {
+        testpair_t *buf = (testpair_t *)ls_objarray_getobj(&array, i);
+        CHECK(buf->key == i + 1 && buf->val == i + 1);
+    }
+    ls_objarray_guarantee(&array, &pool, 20);
+    ls_objarray_guarantee(&array, &pool, 40);
+    ls_objarray_guarantee(&array, &pool, 50);
+    ls_objarray_guarantee(&array, &pool, 80);
+    ls_objarray_guarantee(&array, &pool, 60);
+    ls_objarray_guarantee(&array, &pool, 40);
+    ls_objarray_guarantee(&array, &pool, 20);
+    ls_objarray_guarantee(&array, &pool, 24);
+    
+    for (i = 0; i < 20; ++i)
+    {
+        testpair_t *buf = (testpair_t *)ls_objarray_getobj(&array, i);
+        CHECK(buf->key == i + 1 && buf->val == i + 1);
+    }
+    
+    
+    ls_objarray_release(&array, &pool);
+    CHECK(1);
+}
+
+
+
 #endif

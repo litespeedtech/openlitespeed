@@ -267,7 +267,7 @@ public:
                             const void *pKey, int keyLen, const void *pValue, int valueLen)
     {
         ls_str_set(&pParms->key, (char *)pKey, keyLen);
-        ls_str_set(&pParms->value, (char *)pValue, valueLen);
+        ls_str_set(&pParms->val, (char *)pValue, valueLen);
         return pParms;
     }
 

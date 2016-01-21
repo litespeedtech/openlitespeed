@@ -83,9 +83,9 @@ void ls_str_delete(ls_str_t *pThis)
 
 char *ls_str_prealloc(ls_str_t *pThis, int size)
 {
-    char *p = (char *)ls_prealloc(pThis->pstr, size);
+    char *p = (char *)ls_prealloc(pThis->ptr, size);
     if (p != NULL)
-        pThis->pstr = p;
+        pThis->ptr = p;
     return p;
 }
 
@@ -105,9 +105,9 @@ void ls_str_append(ls_str_t *pThis, const char *pStr, const int len)
 int ls_str_cmp(const void *pVal1, const void *pVal2)
 {
     return strncmp(
-               ((ls_str_t *)pVal1)->pstr,
-               ((ls_str_t *)pVal2)->pstr,
-               ((ls_str_t *)pVal1)->length
+               ((ls_str_t *)pVal1)->ptr,
+               ((ls_str_t *)pVal2)->ptr,
+               ((ls_str_t *)pVal1)->len
            );
 }
 
@@ -115,9 +115,9 @@ int ls_str_cmp(const void *pVal1, const void *pVal2)
 ls_hash_key_t ls_str_hf(const void *pKey)
 {
     ls_hash_key_t __h = 0;
-    const char *p = ((ls_str_t *)pKey)->pstr;
+    const char *p = ((ls_str_t *)pKey)->ptr;
     char ch = *(const char *)p;
-    int i = ((ls_str_t *)pKey)->length;
+    int i = ((ls_str_t *)pKey)->len;
     for (; i > 0 ; --i)
     {
         ch = *((const char *)p++);
@@ -129,16 +129,16 @@ ls_hash_key_t ls_str_hf(const void *pKey)
 
 ls_hash_key_t ls_str_hfxx(const void *pKey)
 {
-    return XXH32(((ls_str_t *)pKey)->pstr, ((ls_str_t *)pKey)->length, 0);
+    return XXH32(((ls_str_t *)pKey)->ptr, ((ls_str_t *)pKey)->len, 0);
 }
 
 
 int ls_str_cmpci(const void *pVal1, const void *pVal2)
 {
     return strncasecmp(
-               ((ls_str_t *)pVal1)->pstr,
-               ((ls_str_t *)pVal2)->pstr,
-               ((ls_str_t *)pVal1)->length
+               ((ls_str_t *)pVal1)->ptr,
+               ((ls_str_t *)pVal2)->ptr,
+               ((ls_str_t *)pVal1)->len
            );
 }
 
@@ -146,9 +146,9 @@ int ls_str_cmpci(const void *pVal1, const void *pVal2)
 ls_hash_key_t ls_str_hfci(const void *pKey)
 {
     ls_hash_key_t __h = 0;
-    const char *p = ((ls_str_t *)pKey)->pstr;
+    const char *p = ((ls_str_t *)pKey)->ptr;
     char ch = *(const char *)p;
-    int i = ((ls_str_t *)pKey)->length;
+    int i = ((ls_str_t *)pKey)->len;
     for (; i > 0 ; --i)
     {
         ch = *((const char *)p++);
@@ -195,9 +195,9 @@ void ls_str_xdelete(ls_str_t *pThis, ls_xpool_t *pool)
 
 char *ls_str_xprealloc(ls_str_t *pThis, int size, ls_xpool_t *pool)
 {
-    char *p = (char *)ls_xpool_realloc(pool, pThis->pstr, size);
+    char *p = (char *)ls_xpool_realloc(pool, pThis->ptr, size);
     if (p != NULL)
-        pThis->pstr = p;
+        pThis->ptr = p;
     return p;
 }
 
@@ -235,8 +235,8 @@ void ls_iStr_d(ls_str_t *pThis, ls_xpool_t *pool)
 {
     if (pThis != NULL)
     {
-        if (pThis->pstr != NULL)
-            ls_str_do_free(pool, pThis->pstr);
+        if (pThis->ptr != NULL)
+            ls_str_do_free(pool, pThis->ptr);
         ls_str_blank(pThis);
     }
 }
@@ -263,10 +263,10 @@ ls_str_t *ls_iStr(ls_str_t *pThis, const char *pStr, int len,
 {
     if (pStr == NULL)
         ls_str_blank(pThis);
-    else if ((pThis->pstr = ls_str_do_dupstr(pStr, len, pool)) == NULL)
+    else if ((pThis->ptr = ls_str_do_dupstr(pStr, len, pool)) == NULL)
         pThis = NULL;
     else
-        pThis->length = len;
+        pThis->len = len;
     return pThis;
 }
 
@@ -275,8 +275,8 @@ int ls_str_iSetStr(ls_str_t *pThis, const char *pStr, int len,
                    ls_xpool_t *pool)
 {
     assert(pThis);
-    ls_str_do_free(pool, pThis->pstr);
-    return ((ls_iStr(pThis, pStr, len, pool) == NULL) ? 0 : pThis->length);
+    ls_str_do_free(pool, pThis->ptr);
+    return ((ls_iStr(pThis, pStr, len, pool) == NULL) ? 0 : pThis->len);
 }
 
 
@@ -286,15 +286,15 @@ void ls_str_iAppend(ls_str_t *pThis, const char *pStr, const int len,
     assert(pThis && pStr);
     char *p;
     if (pool != NULL)
-        p = (char *)ls_xpool_realloc(pool, pThis->pstr, pThis->length + len + 1);
+        p = (char *)ls_xpool_realloc(pool, pThis->ptr, pThis->len + len + 1);
     else
-        p = (char *)ls_prealloc(pThis->pstr, pThis->length + len + 1);
+        p = (char *)ls_prealloc(pThis->ptr, pThis->len + len + 1);
     if (p != NULL)
     {
-        memmove(p + pThis->length, pStr, len);
-        pThis->length += len;
-        *(p + pThis->length) = 0;
-        pThis->pstr = p;
+        memmove(p + pThis->len, pStr, len);
+        pThis->len += len;
+        *(p + pThis->len) = 0;
+        pThis->ptr = p;
     }
 }
 

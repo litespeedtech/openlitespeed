@@ -19,7 +19,7 @@
 #define DIRHASHCACHEENTRY_H
 
 #include <lsdef.h>
-#include <cacheentry.h>
+#include "cacheentry.h"
 
 
 class DirHashCacheStore;
@@ -39,13 +39,13 @@ public:
 
     int releaseTmpResource();
 
+    int saveRespHeaders(HttpRespHeaders *pHeader);
+
 private:
-    int32_t         m_iLastCheck;
-    int32_t         m_iLastMod;
-    off_t           m_iSize;
+    int32_t         m_lastCheck;
+    int32_t         m_lastMod;
+    off_t           m_lSize;
     ino_t           m_inode;
-
-
 
     LS_NO_COPY_ASSIGN(DirHashCacheEntry);
 };

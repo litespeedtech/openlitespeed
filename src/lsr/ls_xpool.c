@@ -65,8 +65,7 @@ ls_inline void vg_xpool_alloc(
 static xpool_alink_t *ls_xpool_getsuperblk(ls_xpool_t *pool);
 
 /* Get a big allocation for any requests for allocations bigger than the superblock */
-static void *ls_xpool_bblkalloc(ls_xpool_t *pool, uint32_t size,
-                                uint32_t nsize);
+static void *ls_xpool_bblkalloc(ls_xpool_t *pool, uint32_t nsize);
 
 /* Get a block */
 static xpool_alink_t *xpool_blkget(ls_xpool_t *pool, uint32_t size);
@@ -261,7 +260,7 @@ void *ls_xpool_alloc(ls_xpool_t *pool, uint32_t size)
     if (nsize > LS_XPOOL_MAXLGBLK_SIZE)
 #endif
     {
-        return ls_xpool_bblkalloc(pool, size, nsize);
+        return ls_xpool_bblkalloc(pool, nsize);
     }
 
     if (nsize <= LS_XPOOL_FLMAXBYTES && (pool->pfreelists != NULL))
@@ -468,10 +467,11 @@ static xpool_alink_t *ls_xpool_getsuperblk(ls_xpool_t *pool)
 }
 
 
-void *ls_xpool_bblkalloc(ls_xpool_t *pool, uint32_t size, uint32_t nsize)
+void *ls_xpool_bblkalloc(ls_xpool_t *pool, uint32_t nsize)
 {
     ls_xpool_bblk_t *pNew;
-    pNew = (ls_xpool_bblk_t *)ls_palloc(size + sizeof(ls_xpool_bblk_t));
+    pNew = (ls_xpool_bblk_t *)ls_palloc(nsize + sizeof(ls_xpool_bblk_t) 
+                                        - sizeof(ls_xpool_header_t));
     pNew->header.size = nsize;
     pNew->header.magic = LS_XPOOL_MAGIC;
     pNew->prev = NULL;

@@ -99,7 +99,7 @@ static void doit(LsShm *pShm)
     if (pHash == NULL)
         return;
     ls_str_set(&parms.key, (char *)key0, sizeof(key0) - 1);
-    ls_str_set(&parms.value, NULL, 0);
+    ls_str_set(&parms.val, NULL, 0);
     flags = LSSHM_FLAG_NONE;
     CHECK((iterOff0 = pHash->getIterator(&parms, &flags)).m_iOffset != 0);
     CHECK(flags == LSSHM_VAL_CREATED);
@@ -110,7 +110,7 @@ static void doit(LsShm *pShm)
 
     CHECK((iterOff1 = pHash->insertIterator(&parms)).m_iOffset != 0);
     CHECK(pHash->findIterator(&parms).m_iOffset == iterOff1.m_iOffset);
-    ls_str_set(&parms.value, (char *)valX, sizeof(valX) - 1);
+    ls_str_set(&parms.val, (char *)valX, sizeof(valX) - 1);
     CHECK((iterOff1 = pHash->updateIterator(&parms)).m_iOffset != 0);  // may change
     if (iterOff1.m_iOffset != 0)
     {
@@ -118,7 +118,7 @@ static void doit(LsShm *pShm)
         CHECK(iter->getValLen() == sizeof(valX) - 1);
         CHECK(memcmp(iter->getVal(), valX, iter->getValLen()) == 0);
     }
-    ls_str_set(&parms.value, (char *)valX, 5);
+    ls_str_set(&parms.val, (char *)valX, 5);
     CHECK(pHash->setIterator(&parms).m_iOffset == iterOff1.m_iOffset);  // should use same memory
     CHECK(iter->getValLen() == 5);
 
