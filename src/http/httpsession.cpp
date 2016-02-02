@@ -404,7 +404,7 @@ void HttpSession::nextRequest()
                         getStream()->getIdBuf().len(), 10, "-%hu", m_iReqServed);
         }
         setClientInfo(m_pNtwkIOLink->getClientInfo());
-        
+
         m_processState = HSPS_READ_REQ_HEADER;
         if (m_request.pendingHeaderDataLen())
         {
@@ -854,8 +854,8 @@ void HttpSession::processPending(int ret)
 }
 
 
-int HttpSession::updateClientInfoFromProxyHeader(const char *pHeaderName, 
-                                                 const char *pProxyHeader, 
+int HttpSession::updateClientInfoFromProxyHeader(const char *pHeaderName,
+                                                 const char *pProxyHeader,
                                                  int headerLen)
 {
     char achIP[256];
@@ -1302,9 +1302,11 @@ int HttpSession::processVHostRewrite()
 
 int HttpSession::processContextMap()
 {
+    const HttpContext *pOldCtx;
+    HttpContext *pCtx;
     int ret;
     m_iFlag |= HSF_URI_PROCESSED;
-    ret = m_request.processContext();
+    ret = m_request.processContext(pOldCtx);
     if (ret)
     {
         LS_DBG_L(getLogSession(), "processContext() returned %d.", ret);
@@ -1315,7 +1317,14 @@ int HttpSession::processContextMap()
         }
     }
     else
+    {
         m_processState = HSPS_CONTEXT_REWRITE;
+        if (((pCtx = (HttpContext *)m_request.getContext()) != pOldCtx)
+            && pCtx->getModuleConfig() != NULL)
+        {
+            m_pModuleConfig = pCtx->getModuleConfig();
+        }
+    }
     return ret;
 }
 
@@ -2511,7 +2520,7 @@ int HttpSession::setupGzipFilter()
 {
     if ( m_iFlag & HSF_RESP_HEADER_SENT)
         return 0;
-    
+
     char gz = m_request.gzipAcceptable();
     int recvhkptNogzip = m_sessionHooks.getFlag(LSI_HKPT_RECV_RESP_BODY) &
                          LSI_FLAG_DECOMPRESS_REQUIRED;

@@ -168,8 +168,7 @@ private:
     AutoBuf             m_headerBuf;
 
     int                 m_iReqHeaderBufFinished;
-
-    key_value_pair      m_curURL;
+    int                 m_iReqHeaderBufRead;
 
     const MimeSetting  *m_pMimeType;
 
@@ -447,7 +446,7 @@ public:
     int  redirect(const char *pURL, int len, int alloc = 0);
     int  postRewriteProcess(const char *pURI, int len);
     int  processContextPath();
-    int  processContext();
+    int  processContext(const HttpContext *&pOldCtx);
     int  checkPathInfo(const char *pURI, int iURILen, int &pathLen,
                        short &scriptLen, short &pathInfoLen,
                        const HttpContext *pContext);
@@ -530,7 +529,7 @@ public:
     void processReqBodyInReqHeaderBuf();
     void resetHeaderBuf();
     int  pendingHeaderDataLen() const
-    {   return m_headerBuf.size() - m_iReqHeaderBufFinished;  }
+    {   return m_iReqHeaderBufRead - m_iReqHeaderBufFinished;  }
 
     void rewindPendingHeaderData(int len)
     {   m_iReqHeaderBufFinished -= len; }
@@ -538,7 +537,7 @@ public:
     void compactHeaderBuf()
     {
         m_headerBuf.resize(m_iHttpHeaderEnd);
-        m_iReqHeaderBufFinished = m_iHttpHeaderEnd;
+        m_iReqHeaderBufRead = m_iReqHeaderBufFinished = m_iHttpHeaderEnd;
     }
 
     int getCurPos() const
@@ -589,9 +588,9 @@ public:
 
     void setSsl(SslConnection *p)   {    m_pSslConn = p;        }
     SslConnection * getSsl() const  {   return m_pSslConn;      }
-    int isHttps() const     
+    int isHttps() const
     {   return m_pSslConn || (m_iContextState & X_FORWARD_HTTPS);    }
-    
+
     char getRewriteLogLevel() const;
     void setHandler(const HttpHandler *pHandler)
     {   m_pHttpHandler = pHandler;      }
@@ -695,7 +694,7 @@ public:
 
     ls_xpool_t *getPool()
     {   return m_pPool; }
-    
+
     int removeCookie(const char *pName, int nameLen);
     cookieval_t *setCookie(const char *pName, int nameLen, const char *pValue,
                            int valLen);
