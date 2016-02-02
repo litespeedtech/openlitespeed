@@ -124,7 +124,7 @@ HttpReq::HttpReq()
 {
     m_headerBuf.resize(HEADER_BUF_PAD);
     *((int *)m_headerBuf.begin()) = 0;
-    m_iReqHeaderBufFinished = HEADER_BUF_PAD;
+    m_iReqHeaderBufRead = m_iReqHeaderBufFinished = HEADER_BUF_PAD;
     //m_pHTAContext = NULL;
     m_pContext = NULL;
     m_pSSIRuntime = NULL;
@@ -208,7 +208,7 @@ void HttpReq::reset()
 
 void HttpReq::resetHeaderBuf()
 {
-    m_iReqHeaderBufFinished = HEADER_BUF_PAD;
+    m_iReqHeaderBufRead = m_iReqHeaderBufFinished = HEADER_BUF_PAD;
     m_headerBuf.resize(HEADER_BUF_PAD);
 }
 
@@ -219,13 +219,14 @@ void HttpReq::reset2()
         return;
 
     reset();
-    if (m_headerBuf.size() - m_iReqHeaderBufFinished > 0)
+    if (m_iReqHeaderBufRead - m_iReqHeaderBufFinished > 0)
     {
         memmove(m_headerBuf.begin() + HEADER_BUF_PAD,
                 m_headerBuf.begin() + m_iReqHeaderBufFinished,
-                m_headerBuf.size() - m_iReqHeaderBufFinished);
-        m_headerBuf.resize(HEADER_BUF_PAD + m_headerBuf.size() -
+                m_iReqHeaderBufRead - m_iReqHeaderBufFinished);
+        m_headerBuf.resize(HEADER_BUF_PAD + m_iReqHeaderBufRead -
                            m_iReqHeaderBufFinished);
+        m_iReqHeaderBufRead = m_headerBuf.size();
         m_iReqHeaderBufFinished = HEADER_BUF_PAD;
     }
     else
@@ -593,7 +594,10 @@ int HttpReq::processHeaderLines()
             while (1)
             {
                 if (pLineEnd + 1 >= pBEnd)
+                {
+                    m_iReqHeaderBufFinished = pLineBegin - m_headerBuf.begin();
                     return 1;
+                }
                 if ((*(pLineEnd + 1) == ' ') || (*(pLineEnd + 1) == '\t'))
                 {
                     *((char *)pLineEnd) = ' ';
@@ -669,6 +673,7 @@ int HttpReq::processHeaderLines()
     if (headerfinished)
     {
         m_iHttpHeaderEnd = m_iReqHeaderBufFinished;
+        m_iReqHeaderBufRead = m_headerBuf.size();
         m_iHeaderStatus = HEADER_OK;
         return 0;
     }
@@ -1450,11 +1455,11 @@ int HttpReq::postRewriteProcess(const char *pURI, int len)
 }
 
 
-int HttpReq::processContext()
+int HttpReq::processContext(const HttpContext *&pOldCtx)
 {
     const char *pURI;
     int   iURILen;
-    const HttpContext *pOldCtx = m_pContext;
+    pOldCtx = m_pContext;
     pURI = getURI();
     iURILen = getURILen();
     m_pMimeType = NULL;
@@ -2013,14 +2018,14 @@ void HttpReq::updateNoRespBodyByStatus(int code)
 
 void HttpReq::processReqBodyInReqHeaderBuf()
 {
-    int already = m_headerBuf.size() - m_iReqHeaderBufFinished;
+    int already = m_iReqHeaderBufRead - m_iReqHeaderBufFinished;
     if (!already)
         return;
     if (already > m_lEntityLength)
         already = m_lEntityLength;
+    size_t size;
     if (m_lEntityLength > m_headerBuf.capacity() - m_iReqHeaderBufFinished)
     {
-        size_t size;
         char *pBuf = getBodyBuf()->getWriteBuffer(size);
         assert(pBuf);
         assert((int)size >= already);
