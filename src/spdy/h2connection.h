@@ -57,10 +57,20 @@ public:
 
     int isOutBufFull() const
     {
-        return ((m_iCurDataOutWindow <= 0)
-                || (getBuf()->size() >= H2_MAX_DATAFRAM_SIZE));
+        return ((m_iCurDataOutWindow <= 0) || (getBuf()->size() >= 65535));
     }
 
+    int getAllowedDataSize(int wanted) const
+    {
+        if (wanted > m_iCurDataOutWindow)
+            wanted = m_iCurDataOutWindow;
+        if (wanted > m_iPeerMaxFrameSize)
+            wanted = m_iPeerMaxFrameSize;
+        if (m_buf.size() > 8192 && wanted > 2048)
+            wanted = 2048;
+        return wanted;
+    }
+    
     int flush();
 
     int onCloseEx();
@@ -208,7 +218,7 @@ private:
     uint32_t        m_tmLastFrameIn;
     struct timeval  m_timevalPing;
 
-    DLinkQueue      m_priQue[H2_STREAM_PRIORITYS];
+    TDLinkQueue<H2Stream>  m_priQue[H2_STREAM_PRIORITYS];
     StreamMap       m_mapStream;
     short           m_iState;
     short           m_iFlag;

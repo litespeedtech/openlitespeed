@@ -28,7 +28,7 @@ class debugBase;
  * replicated the gpool idea.
  *  lsShmPool
  *  (0) Page memory is handled by LsShm.
- *  (1) Maintain fixed size bucket for fast allocation (4-256, 8 byte interval).
+ *  (1) Maintain fixed size bucket for fast allocation (4-1024, 16 byte interval).
  *  (2) Anything bigger than max bucket will get from the freelist allocation.
  *
  *  LsShmPoolMem -> the physical map structure
@@ -46,7 +46,7 @@ typedef struct ls_shmfreetop_s LShmFreeTop;
 typedef struct ls_shmfreebot_s LShmFreeBot;
 
 
-#define LSSHM_POOL_NUMBUCKET    0x20
+#define LSSHM_POOL_NUMBUCKET    0x40
 #define LSSHM_MAX_BUCKET_SLOT   0x8 // max bucket slot allocation
 
 

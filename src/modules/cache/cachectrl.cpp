@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2015  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2016  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -61,13 +61,6 @@ static const int s_dirLen[CACHE_DIRECTIVES] =
 {   8, 8, 7, 9, 9, 12, 14, 6, 7, 15, 16, 8, 3, 7, 9, 6    };
 
 
-void CacheCtrl::init(int flags, int iMaxAge, int iMaxStale)
-{
-    m_iFlags = flags;
-    m_iMaxAge = iMaxAge;
-    m_iMaxStale = iMaxStale;
-}
-
 int CacheCtrl::parse(const char *pHeader, int len)
 {
     StrParse parser(pHeader, pHeader + len, ",");
@@ -89,7 +82,7 @@ int CacheCtrl::parse(const char *pHeader, int len)
             if (i < CACHE_DIRECTIVES)
             {
                 m_iFlags |= (1 << i);
-                if (((i == 2) && !(m_iFlags & (i << 11))) ||
+                if (((i == 2) && !(m_iFlags & s_maxage)) ||
                     (i == 11) || (i == 3))
                 {
                     p += s_dirLen[i];
@@ -122,8 +115,5 @@ int CacheCtrl::parse(const char *pHeader, int len)
         }
     }
     return 0;
-
 }
-
-
 

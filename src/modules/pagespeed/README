@@ -4,11 +4,9 @@ This module is not built automatically during OpenLiteSpeed installation. Please
 
 Note: PSOL and OpenLiteSpeed's PageSpeed Module is only available for Linux.
 
-1. Run ./dlpsol.sh to get the Page Speed Optimization Libraries (PSOL). Please use the version of PSOL included in the dlpsol.sh file. This version is the latest version we support.
+1. Run "make" command to make modpagespeed.so, if compiling does not work, try "gmake" instead of "make".
 
-2. Run "make" command to make modpagespeed.so, if compiling does not work, try "gmake" instead of "make".
-
-3. Copy the file to the modules directory in your OpenLiteSpeed installation. (Normally, it should be $LSWS_ROOT/modules/.)
+2. Copy the file to the modules directory in your OpenLiteSpeed installation. (Normally, it should be $LSWS_ROOT/modules/.)
 
 For configuration, please refer to https://developers.google.com/speed/pagespeed/module/config_filters
 

@@ -40,7 +40,10 @@
 #define VH_ROOT     "VH_ROOT"
 #define DOC_ROOT    "DOC_ROOT"
 #define SERVER_ROOT "SERVER_ROOT"
-#define VH_NAME "VH_NAME"
+#define VH_NAME     "VH_NAME"
+#define VH_DOMAIN   "VH_DOMAIN"
+//VH_USER
+
 
 //static const char *MISSING_TAG = "missing <%s>";
 static const char *MISSING_TAG_IN = "missing <%s> in <%s>";
@@ -217,38 +220,35 @@ int ConfigCtx::expandVariable(const char *pValue, char *pBuf,
 
         if (*pBegin == '$')
         {
+            const char *pName = NULL;
+            int nameLen = -1;
+            
             if (strncasecmp(pBegin + 1, VH_NAME, 7) == 0)
             {
                 pBegin += 8;
-                int nameLen = s_vhName.len();
-
-                if (nameLen > 0)
-                {
-                    if (nameLen > pBufEnd - pCur)
-                        return LS_FAIL;
-
-                    memmove(pCur, s_vhName.c_str(), nameLen);
-                    pCur += nameLen;
-                }
+                pName = s_vhName.c_str();
+                nameLen = s_vhName.len();
             }
-            else if ((allVariable)
-                     && ((strncasecmp(pBegin + 1, VH_ROOT, 7) == 0)
-                         || (strncasecmp(pBegin + 1, DOC_ROOT, 8) == 0)
-                         || (strncasecmp(pBegin + 1, SERVER_ROOT, 11) == 0)))
+            else if (strncasecmp(pBegin + 1, VH_DOMAIN, 9) == 0)
             {
-                const char *pRoot = "";
-                getRootPath(pRoot, pBegin);
-
-                if (*pRoot)
-                {
-                    int len = strlen(pRoot);
-
-                    if (len > pBufEnd - pCur)
-                        return LS_FAIL;
-
-                    memmove(pCur, pRoot, len);
-                    pCur += len;
-                }
+                pBegin += 10;
+                pName = s_vhDomain.c_str();
+                nameLen = s_vhDomain.len();
+            }
+            else if (allVariable && strncasecmp(pBegin + 1, VH_ROOT, 7) == 0)
+            {
+                pBegin += 8;
+                pName = s_aVhRoot;
+            }
+            else if (allVariable && strncasecmp(pBegin + 1, DOC_ROOT, 8) == 0)
+            {
+                pBegin += 9;
+                pName = s_aDocRoot;
+            }
+            else if (allVariable && strncasecmp(pBegin + 1, SERVER_ROOT, 11) == 0)
+            {
+                pBegin += 12;
+                pName = MainServerConfig::getInstance().getServerRoot();
             }
             else
             {
@@ -257,6 +257,19 @@ int ConfigCtx::expandVariable(const char *pValue, char *pBuf,
 
                 *pCur++ = '$';
                 ++pBegin;
+                continue;
+            }
+            
+            if (pName && nameLen == -1)
+                nameLen = strlen(pName);
+            
+            if (nameLen > 0)
+            {
+                if (nameLen > pBufEnd - pCur)
+                    return LS_FAIL;
+
+                memmove(pCur, pName, nameLen);
+                pCur += nameLen;
             }
         }
     }
@@ -304,7 +317,7 @@ int ConfigCtx::getAbsolute(char *res, const char *path, int pathOnly)
     else
     {
         // replace "$VH_NAME" with the real name of the virtual host.
-        if (expandVariable(achBuf, res, MAX_PATH_LEN) < 0)
+        if (expandVariable(achBuf, res, MAX_PATH_LEN, 1) < 0)
         {
             LS_NOTICE(this, "Path is too long: %s", pPath);
             return LS_FAIL;

@@ -54,10 +54,10 @@ protected:
     AutoBuf               m_respHeaderBuf;
     int                   m_iState;
     int                   m_iRespState;
-    int                   m_iReqBodySent;
+    int64_t               m_iReqBodySent;
     int                   m_iRespHeaderSize;
-    int                   m_iRespBodyLen;
-    int                   m_iRespBodySent;
+    int64_t               m_iRespBodyLen;
+    int64_t               m_iRespBodySent;
 
 
     int sendReqBody();

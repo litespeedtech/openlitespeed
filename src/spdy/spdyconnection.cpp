@@ -1178,26 +1178,30 @@ int SpdyConnection::onWriteEx()
     if (getStream()->canWrite() & HIO_FLAG_BUFF_FULL)
         return 0;
 
+    TDLinkQueue<SpdyStream> *pQue = &m_priQue[0];
+    TDLinkQueue<SpdyStream> *pEnd = &m_priQue[SPDY_STREAM_PRIORITYS];
+    
 
-    for (int i = 0; i < SPDY_STREAM_PRIORITYS && m_iCurDataOutWindow > 0; ++i)
+    for( ; pQue < pEnd && m_iCurDataOutWindow > 0; ++pQue)
     {
-        if (m_priQue[i].empty())
+        if (pQue->empty())
             continue;
-        SpdyStream *it = m_priQue[i].begin();//SpdyStream*
-        SpdyStream *itn;
-        for (; it != m_priQue[i].end() && m_iCurDataOutWindow > 0;)
+        int count = pQue->size(); 
+        while(count-- > 0 && m_iCurDataOutWindow > 0 
+              && (pSpdyStream = pQue->pop_front()) != NULL)
         {
-            pSpdyStream = it;
-            itn = (SpdyStream *)it->next();
             if (pSpdyStream->isWantWrite())
             {
                 pSpdyStream->onWrite();
                 if (pSpdyStream->isWantWrite() && (pSpdyStream->getWindowOut() > 0))
+                {
                     ++wantWrite;
+                    if (!pSpdyStream->next())
+                        m_priQue[pSpdyStream->getPriority()].append(pSpdyStream);
+                }
             }
             if (pSpdyStream->getState() != HIOS_CONNECTED)
                 recycleStream(pSpdyStream->getStreamID());
-            it = itn;
         }
         if (getStream()->canWrite() & HIO_FLAG_BUFF_FULL)
             return 0;

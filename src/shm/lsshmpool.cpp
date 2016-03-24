@@ -1019,6 +1019,8 @@ bool LsShmPool::isFreeBlockBelow(
     LsShmOffset_t offset, LsShmSize_t size, int joinFlag)
 {
     LsShmOffset_t belowOffset = offset + size;
+    if (belowOffset >= m_pShm->maxSize())
+        return false;
 
     LShmFreeTop *ap = (LShmFreeTop *)offset2ptr(belowOffset);
     if (ap->x_iAMarker == LSSHM_FREE_AMARKER)

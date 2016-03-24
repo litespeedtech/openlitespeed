@@ -49,10 +49,9 @@ enum HTTPMETHOD
 typedef struct _MyMData
 {
     char       *pBuffer;
-    char
-    *pProgressID;  //This need to be malloc when POST, and free in timerCB
-    int         iWholeLength;
-    int         iFinishedLength;
+    char       *pProgressID;  //be malloc when POST, and free in timerCB
+    int64_t     iWholeLength;
+    int64_t     iFinishedLength;
 } MyMData;
 
 
@@ -94,7 +93,7 @@ static int releaseModuleData(lsi_param_t *rec)
 
 static int setProgress(MyMData *pData)
 {
-    snprintf(pData->pBuffer, MAX_BUF_LENG, "%X:%X",
+    snprintf(pData->pBuffer, MAX_BUF_LENG, "%llX:%llX",
              pData->iWholeLength, pData->iFinishedLength);
     return 0;
 }
@@ -156,7 +155,7 @@ static int checkReqHeader(lsi_param_t *rec)
 {
     int idLen;
     const char *progressID = getProgressId(rec->session, idLen);
-    int contentLength = g_api->get_req_content_length(rec->session);
+    int64_t contentLength = g_api->get_req_content_length(rec->session);
     if (progressID && contentLength <= 0)
     {
         //GET, must disable cache module
@@ -167,7 +166,7 @@ static int checkReqHeader(lsi_param_t *rec)
         return 0;
 
     char buf[MAX_BUF_LENG], *pBuffer;
-    sprintf(buf, "%X:0", contentLength);
+    sprintf(buf, "%llX:0", contentLength);
     ls_shmoff_t offset = ls_shmhash_insert(pShmHash,
                            (const uint8_t *)progressID, idLen, (const uint8_t *)buf, MAX_BUF_LENG);
     pBuffer = (char *)ls_shmhash_off2ptr(pShmHash, offset);
@@ -206,7 +205,7 @@ static int checkReqHeader(lsi_param_t *rec)
 }
 
 
-static int getState(int iWholeLength, int iFinishedLength)
+static int getState(int64_t iWholeLength, int64_t iFinishedLength)
 {
     if (iWholeLength <= 0)
         return UPLOAD_ERROR;
@@ -243,8 +242,8 @@ static int begin_process(lsi_session_t *session)
     }
 
     char *p = (char *)ls_shmhash_off2ptr(pShmHash, offset);
-    int iWholeLength, iFinishedLength;
-    sscanf(p, "%X:%X", &iWholeLength, &iFinishedLength);
+    int64_t iWholeLength, iFinishedLength;
+    sscanf(p, "%llX:%llX", &iWholeLength, &iFinishedLength);
     int state = getState(iWholeLength, iFinishedLength);
 
     char buf[100] = {0}; //enough
@@ -258,7 +257,7 @@ static int begin_process(lsi_session_t *session)
         strcpy(buf, "{ \"state\" : \"done\" }\r\n");
     else
         snprintf(buf, 100,
-                 "{ \"state\" : \"uploading\", \"size\" : %d, \"received\" : %d }\r\n",
+                 "{ \"state\" : \"uploading\", \"size\" : %lld, \"received\" : %lld }\r\n",
                  iWholeLength, iFinishedLength);
 
     g_api->append_resp_body(session, buf, strlen(buf));

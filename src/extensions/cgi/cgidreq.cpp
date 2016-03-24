@@ -26,7 +26,7 @@
 CgidReq::CgidReq()
     : m_buf(2048)
 {
-    m_buf.resize(sizeof(lscgid_req));
+    clear();
 }
 
 

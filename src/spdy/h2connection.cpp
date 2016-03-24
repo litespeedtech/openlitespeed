@@ -1387,6 +1387,8 @@ int H2Connection::encodeHeaders(HttpRespHeaders *pRespHeaders,
          pos != pRespHeaders->HeaderEndPos();
          pos = pRespHeaders->nextHeaderPos(pos))
     {
+        key = NULL;
+        keyLen = 0;
         count = pRespHeaders->getHeader(pos, &key, &keyLen, iov,
                                         MAX_LINE_COUNT_OF_MULTILINE_HEADER);
 
@@ -1457,7 +1459,7 @@ int H2Connection::onWriteEx()
     LS_DBG_H(getLogSession(),
              "onWriteEx() state: %d, output buffer size = %d, Data Out Window: %d",
              m_iState, getBuf()->size(), m_iCurDataOutWindow);
-    if (getBuf()->size() > 32768)
+    if (getBuf()->size() > 4096)
     {
         flush();
         if (!isEmpty())
@@ -1466,27 +1468,30 @@ int H2Connection::onWriteEx()
     if (getStream()->canWrite() & HIO_FLAG_BUFF_FULL)
         return 0;
 
-    for (int i = 0; i < H2_STREAM_PRIORITYS && m_iCurDataOutWindow > 0; ++i)
-    {
-        LS_DBG_H(getLogSession(), "Processing priority queue: %d", i);
-        if (m_priQue[i].empty())
-            continue;
-        DLinkedObj *it = m_priQue[i].begin();//H2Stream*
-        DLinkedObj *itn;
+    TDLinkQueue<H2Stream> *pQue = &m_priQue[0];
+    TDLinkQueue<H2Stream> *pEnd = &m_priQue[H2_STREAM_PRIORITYS];
+    
 
-        for (; it != m_priQue[i].end() && m_iCurDataOutWindow > 0;)
+    for( ; pQue < pEnd && m_iCurDataOutWindow > 0; ++pQue)
+    {
+        if (pQue->empty())
+            continue;
+        int count = pQue->size(); 
+        while(count-- > 0 && m_iCurDataOutWindow > 0 
+              && (pH2Stream = pQue->pop_front()) != NULL)
         {
-            pH2Stream = (H2Stream *)it;
-            itn = it->next();
             if (pH2Stream->isWantWrite())
             {
                 pH2Stream->onWrite();
                 if (pH2Stream->isWantWrite() && (pH2Stream->getWindowOut() > 0))
+                {
                     ++wantWrite;
+                    if (!pH2Stream->next())
+                        m_priQue[pH2Stream->getPriority()].append(pH2Stream);
+                }
             }
             if (pH2Stream->getState() != HIOS_CONNECTED)
                 recycleStream(pH2Stream->getStreamID());
-            it = itn;
         }
         if (getStream()->canWrite() & HIO_FLAG_BUFF_FULL)
             return 0;

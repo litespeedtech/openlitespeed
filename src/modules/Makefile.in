@@ -357,8 +357,8 @@ noinst_LIBRARIES = libmodules.a
 INCLUDES = -I$(top_srcdir)/include -I$(top_srcdir)/src
 libmodules_a_METASOURCES = AUTO
 libmodules_a_SOURCES = modgzip/modgzip.cpp
-@HAVE_LIBLUA_FALSE@SUBDIRS = cache uploadprogress
-@HAVE_LIBLUA_TRUE@SUBDIRS = cache uploadprogress lua
+@HAVE_LIBLUA_FALSE@SUBDIRS = cache uploadprogress 
+@HAVE_LIBLUA_TRUE@SUBDIRS = cache uploadprogress lua 
 all: all-recursive
 
 .SUFFIXES:

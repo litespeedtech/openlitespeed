@@ -30,6 +30,10 @@ CeHeader::CeHeader()
     , m_tmLastMod(0)
     , m_offETag(0)
     , m_lenETag(0)
+    , m_lenStxFilePath(0)
+    , m_lSize(0)
+    , m_inode(0)
+    , m_lastMod(0)
 {
 }
 

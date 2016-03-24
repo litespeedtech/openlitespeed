@@ -241,10 +241,7 @@ int H2Stream::getDataFrameSize(int wanted)
 
     if (wanted > m_iWindowOut)
         wanted = m_iWindowOut;
-    if (wanted > m_pH2Conn->getCurDataOutWindow())
-        wanted = m_pH2Conn->getCurDataOutWindow();
-    if (wanted > m_pH2Conn->getPeerMaxFrameSize())
-        wanted = m_pH2Conn->getPeerMaxFrameSize();
+    wanted = m_pH2Conn->getAllowedDataSize(wanted);
     return wanted;
 }
 

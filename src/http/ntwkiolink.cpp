@@ -187,6 +187,7 @@ int NtwkIOLink::writev_internal(const struct iovec *vector, int len,
     hookInfo.enable_array = m_sessionHooks.getEnableArray(
                                 LSI_HKPT_L4_SENDING);
     hookInfo.term_fn = (filter_term_fn)m_pFpList->m_writev_fp;
+    hookInfo.hook_level = LSI_HKPT_L4_SENDING;
     param.cur_hook = (void *)pWritevHooks->begin();
     param.hook_chain = &hookInfo;
     param.ptr1 = vector;
@@ -217,6 +218,7 @@ int NtwkIOLink::read(char *pBuf, int size)
     hookInfo.enable_array = m_sessionHooks.getEnableArray(
                                 LSI_HKPT_L4_RECVING);
     hookInfo.term_fn = (filter_term_fn)m_pFpList->m_read_fp;
+    hookInfo.hook_level = LSI_HKPT_L4_RECVING;
     param.cur_hook = (void *)((lsiapi_hook_t *)pReadHooks->end() - 1);
     param.hook_chain = &hookInfo;
     param.ptr1 = pBuf;

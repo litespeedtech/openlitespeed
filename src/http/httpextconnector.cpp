@@ -535,7 +535,7 @@ int HttpExtConnector::sendReqBody()
         }
         LS_DBG_M(this,
                  "Processor sent request body %d bytes, total sent: %lld\n",
-                 written, (long long)m_iReqBodySent);
+                 written, m_iReqBodySent);
         if ((written != (int)size) || (++count == 2))
         {
             if (written != -1)
@@ -651,9 +651,9 @@ LOG4CXX_NS::Logger *HttpExtConnector::getLogger() const
 
 void HttpExtConnector::dump()
 {
-    LS_INFO(this, "HttpExtConnector state: %d, request body sent: %d, "
-            "response body size: %d, response body sent:%d, "
-            "left in buffer: %ld, attempts: %d.",
+    LS_INFO(this, "HttpExtConnector state: %d, request body sent: %lld, "
+            "response body size: %lld, response body sent:%lld, "
+            "left in buffer: %lld, attempts: %d.",
             m_iState, m_iReqBodySent, m_pSession->getResp()->getContentLen(),
             m_pSession->getDynBodySent(),
             (m_pSession->getRespCache()) ? m_pSession->getRespCache()->writeBufSize() :

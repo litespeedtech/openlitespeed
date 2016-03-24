@@ -58,8 +58,9 @@ if [ "${PHP_SRC_READY}" = "N" ] && [ `expr ${PHP_VERSION} : ".*alpha\|.*beta\|.*
 	fi
 fi
 
+
 if [ "${PHP_SRC_READY}" = "N" ] ; then
-	DOWNLOAD_URL="http://us1.php.net/get/${PHP_SRC}/from/us1.php.net/mirror"
+	DOWNLOAD_URL="http://php.net/distributions/${PHP_SRC}"
 	main_msg "Retrieving PHP source archive from ${DOWNLOAD_URL}" 
 	${DL_METHOD} ${PHP_SRC} ${DOWNLOAD_URL}
 
@@ -70,8 +71,8 @@ if [ "${PHP_SRC_READY}" = "N" ] ; then
 fi
 
 if [ "${PHP_SRC_READY}" = "N" ] ; then
-	DOWNLOAD_URL="http://us2.php.net/get/$PHP_SRC/from/us2.php.net/mirror"
-	main_msg "Try again, retrieving PHP source archive from ${DOWNLOAD_URL}" 
+	DOWNLOAD_URL="http://us1.php.net/distributions/${PHP_SRC}"
+	main_msg "Retrieving PHP source archive from ${DOWNLOAD_URL}" 
 	${DL_METHOD} ${PHP_SRC} ${DOWNLOAD_URL}
 
 	test_phpsrc_ok ${PHP_SRC}
@@ -79,6 +80,29 @@ if [ "${PHP_SRC_READY}" = "N" ] ; then
 		PHP_SRC_READY=Y
 	fi
 fi
+
+if [ "${PHP_SRC_READY}" = "N" ] ; then
+	DOWNLOAD_URL="http://us2.php.net/distributions/${PHP_SRC}"
+	main_msg "Retrieving PHP source archive from ${DOWNLOAD_URL}" 
+	${DL_METHOD} ${PHP_SRC} ${DOWNLOAD_URL}
+
+	test_phpsrc_ok ${PHP_SRC}
+	if [ "$?" -eq "0" ] ; then
+		PHP_SRC_READY=Y
+	fi
+fi
+
+if [ "${PHP_SRC_READY}" = "N" ] ; then
+	DOWNLOAD_URL="http://us3.php.net/distributions/${PHP_SRC}"
+	main_msg "Retrieving PHP source archive from ${DOWNLOAD_URL}" 
+	${DL_METHOD} ${PHP_SRC} ${DOWNLOAD_URL}
+
+	test_phpsrc_ok ${PHP_SRC}
+	if [ "$?" -eq "0" ] ; then
+		PHP_SRC_READY=Y
+	fi
+fi
+
 if [ "${PHP_SRC_READY}" = "N" ] ; then
 	MAIN_VER=`expr '${PHP_VERSION}' : "\(.\)"`
 	DOWNLOAD_URL="http://museum.php.net/php${MAIN_VER}/${PHP_SRC}"

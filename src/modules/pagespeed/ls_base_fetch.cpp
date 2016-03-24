@@ -44,6 +44,7 @@ LsiBaseFetch::LsiBaseFetch(lsi_session_t *session, int pipe_fd,
 {
     if (pthread_mutex_init(&m_mutex, NULL))
         CHECK(0);
+    m_buffer.clear();
 }
 
 LsiBaseFetch::~LsiBaseFetch()
@@ -160,7 +161,8 @@ void LsiBaseFetch::Release()
 
 void LsiBaseFetch::DecrefAndDeleteIfUnreferenced()
 {
-    if (ls_atomic_add(&m_iReferences, -1) == 0)
+    ls_atomic_add(&m_iReferences, -1);
+    if (m_iReferences== 0)
         delete this;
 }
 

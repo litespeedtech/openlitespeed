@@ -806,8 +806,7 @@ int HttpRespHeaders::outputNonSpdyHeaders(IOVec *iovec)
 {
     if (m_iKeepAlive)
     {
-        if (m_iHttpVersion != HTTP_1_1)
-            add(&HttpRespHeaders::s_keepaliveHeader, 1);
+        add(&HttpRespHeaders::s_keepaliveHeader, 1);
     }
     else
         add(&HttpRespHeaders::s_concloseHeader, 1);

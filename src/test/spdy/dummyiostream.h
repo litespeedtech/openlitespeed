@@ -21,6 +21,7 @@
 #include <http/hiostream.h>
 #include <util/loopbuf.h>
 
+class HttpRespHeaders;
 class DummySpdyConnStream: public HioStream
 {
     int             m_running;
@@ -37,10 +38,10 @@ public:
 
     ////////////////////////////
     int writev(IOVec &vector, int total) {return 0;};
-    int sendfile(IOVec &vector, int &total, int fdSrc, off_t off,
-                 size_t size) {return 0;};
+    virtual int sendfile(int fdSrc, off_t off, off_t size) 
+    {   return 0;   }
     int close()  { return -1;};
-    int sendRespHeaders();
+    int sendRespHeaders(HttpRespHeaders *pHeaders, int isNoBody);
 
 
     void suspendRead()      { setFlag(HIO_FLAG_WANT_READ, 0);     }

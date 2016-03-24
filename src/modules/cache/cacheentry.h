@@ -24,7 +24,7 @@
 #include <util/autostr.h>
 #include <util/refcounter.h>
 
-#include <sys/types.h>
+
 
 
 #define DateTime_s_curTime  ( DateTime::s_curTime )
@@ -69,10 +69,10 @@ public:
 
 //     void incHits()                  {   ++m_iHits;          }
 //     long getHits() const            {   return m_iHits;     }
-// 
+//
 //     void incTestHits()              {   ++m_iTestHits;    }
 //     long getTestHits() const        {   return m_iTestHits;    }
-    
+
     void setFdStore(int fd)         {   m_fdStore = fd;  }
     int getFdStore() const          {   return m_fdStore; }
 
@@ -166,7 +166,7 @@ public:
                 || ((m_header.m_tmCreated == tmLast)
                     && (m_header.m_msCreated < iMsecLast)));
     }
-    
+
     void setFilePath(const char *path)
     {
         m_sFile.setStr(path);
@@ -182,8 +182,6 @@ public:
 
 private:
     long        m_lastAccess;
-//     int         m_iHits;
-//     int         m_iTestHits;
     int         m_iMaxStale;
     CacheHash   m_hashKey;
 

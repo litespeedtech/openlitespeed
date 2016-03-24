@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2015  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2016  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -82,23 +82,23 @@ public:
     long getMaxObjSize() const      {   return m_lMaxObjSize;   }
     int  isLitemagReady();
     void setLitemageDefault();
-    
+
 //     void setStoragePath(const char *s, int len)
 //     {
 //         m_sStoragePath.setStr(s, len);
 //     }
-// 
+//
 //     const char *getStoragePath() const
 //     {
 //         return m_sStoragePath.c_str();
 //     }
 
-   // int getBypassPercentage() {   return m_iBypassPercentage; }
-    
+    // int getBypassPercentage() {   return m_iBypassPercentage; }
+
     void setLevel(int v)    { m_iLevele = v; }
     void setOnlyUseOwnUrlExclude(int v)    { m_iOnlyUseOwnUrlExclude = v; }
     int isOnlyUseOwnUrlExclude()    { return m_iOnlyUseOwnUrlExclude; }
-    
+
     void setOwnStore(int v)    { m_iOwnStore = v; }
     //int getOwnStore()    { return m_iOwnStore; }
 
@@ -112,8 +112,8 @@ public:
 
     DirHashCacheStore *getStore() const { return m_pStore; }
     void setStore(DirHashCacheStore *pStore) { m_pStore = pStore; }
-    
-    
+
+
 
 private:
     short   m_iCacheConfigBits;

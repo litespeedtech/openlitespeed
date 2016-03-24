@@ -45,6 +45,7 @@ void timer_callback(void *session)
     if (len > 1 && strstr(qs, "11"))
         g_api->register_req_handler((lsi_session_t *)session, &MNAME, 12);
 
+
     g_api->create_session_resume_event((lsi_session_t *)session, &MNAME);
 }
 

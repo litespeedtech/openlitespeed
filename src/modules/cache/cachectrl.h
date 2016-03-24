@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2015  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2016  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -53,15 +53,15 @@ public:
     {
         return m_iFlags & (no_cache | no_store);
     }
-    int isCacheOn() const   
+    int isCacheOn() const
     {
-        return m_iFlags & (cache_private | cache_public);   
+        return m_iFlags & (cache_private | cache_public);
     }
-    int isPublicCacheable() const 
+    int isPublicCacheable() const
     {
         return !(m_iFlags & (no_cache | no_store | cache_private | has_cookie));
     }
-    int isPrivateCacheable() const  
+    int isPrivateCacheable() const
     {
         return m_iFlags & cache_private;
     }
@@ -93,7 +93,20 @@ public:
         m_iMaxStale = 0;
     }
 
-    void init(int flags, int iMaxAge, int iMaxStale);
+    void init(int flags, int iMaxAge, int iMaxStale)
+    {
+        m_iFlags |= flags;
+        m_iMaxAge = iMaxAge;
+        m_iMaxStale = iMaxStale;
+    }
+
+    void update(int flags, int iMaxAge, int iMaxStale)
+    {
+        flags &= ~(max_age | max_stale | s_maxage | esi_config);
+        m_iFlags &= (max_age | max_stale | s_maxage | esi_config);
+        init(flags, iMaxAge, iMaxStale);
+    }
+
     int parse(const char *pHeader, int len);
     int isMaxAgeSet() const
     {

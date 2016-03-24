@@ -43,7 +43,7 @@ public:
     int reset();
 
     int initManager();
-    
+
     virtual int clearStrage() = 0;
 
     virtual CacheEntry *getCacheEntry(CacheHash &hash,
@@ -86,14 +86,14 @@ public:
         return m_sRoot;
     }
 
-    
+
     void addToDirtyList(CacheEntry *pEntry)
     {   m_dirtyList.push_back(pEntry);        }
 
     CacheManager *getManager()   {   return m_pManager;    }
 
-    
-    
+
+
 //     void setMaxObjSize(long objSize)
 //     {
 //         m_iMaxObjSize = objSize;

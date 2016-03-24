@@ -188,11 +188,14 @@ void HttpReq::reset()
     }
     ::memset(m_commonHeaderOffset, 0,
              (char *)(&m_code + 1) - (char *)m_commonHeaderOffset);
+    m_pHttpHandler = NULL;
+    m_pSslConn = NULL;
+    resetHeaderBuf();
     m_pRealPath = NULL;
-    m_cookies.clear();
     ls_xpool_reset(m_pPool);
     ls_xpool_skipfree(m_pPool);
     m_unknHeaders.init();
+    m_cookies.init();
     uSetURI(NULL, 0);
     ls_str_set(&m_curUrl.val, NULL, 0);
     ls_str_set(&m_location, NULL, 0);
@@ -202,7 +205,6 @@ void HttpReq::reset()
     m_pEnv = NULL;
     m_pAuthUser = NULL;
     m_pRange = NULL;
-    m_cookies.init();
 }
 
 
@@ -516,9 +518,7 @@ int HttpReq::parseHost(const char *pCur, const char *pBEnd)
         pHost = (const char *)memchr(pCur, ':', pBEnd - pCur);
         if ((pHost) && (pHost + 2 < pBEnd))
         {
-            if ((*(pHost + 1) == '/') && (*(pHost + 2) == '/'))
-                pCur = pHost + 2;
-            else
+            if ((*(pHost + 1) != '/') || (*(pHost + 2) != '/'))
                 return SC_400;
         }
         else
@@ -526,8 +526,14 @@ int HttpReq::parseHost(const char *pCur, const char *pBEnd)
             m_iReqHeaderBufFinished = pCur - m_headerBuf.begin();
             return 1;
         }
-        if (memchr(pCur + 1, '/', (pBEnd - pCur - 1)) != NULL)
-            postProcessHost(pCur + 1, pBEnd);
+        
+        pHost += 3;
+        const char *pHostEnd = (const char *)memchr(pHost, '/', (pBEnd - pHost));
+        if (pHostEnd != NULL)
+        {
+            m_iHostLen = pHost - pCur;
+            postProcessHost(pHost , pHostEnd);
+        }
         else
         {
             pCur = pBEnd;
@@ -749,7 +755,7 @@ int HttpReq::postProcessHost(const char *pCur, const char *pBEnd)
     if (pstrfound)
         m_iHostLen = pstrfound - pCur;
     else
-        m_iHostLen = pBEnd - pCur;
+        m_iHostLen += pBEnd - pCur;
     if (!m_iHostLen)
         m_iHostOff = 0;
 
@@ -2198,6 +2204,8 @@ int HttpReq::getUGidChroot(uid_t *pUid, gid_t *pGid,
             return SC_403;
         }
     }
+    if (m_pVHost && !m_pContext)
+        m_pContext = &m_pVHost->getRootContext();
     char chMode = UID_FILE;
     if (m_pContext)
         chMode = m_pContext->getSetUidMode();

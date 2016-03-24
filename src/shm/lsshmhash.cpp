@@ -888,6 +888,9 @@ void LsShmHash::eraseIteratorHelper(iterator iter)
     LsShmOffset_t next = iter->x_iNext.m_iOffset;     // in case of remap in tid list
     LsShmSize_t size = iter->x_iLen;
 
+    //NOTE:race condition, two process release the object at the same time. 
+    //     ShmHash was not properly locked. 
+    assert(offset != 0);
 #ifdef DEBUG_RUN
     if (offset == 0)
     {
@@ -904,7 +907,10 @@ void LsShmHash::eraseIteratorHelper(iterator iter)
     if (m_iFlags & LSSHM_FLAG_LRU)
         unlinkHElem(iter);
     if (m_pTidMgr != NULL)
+    {
         m_pTidMgr->eraseIterCb(iter);
+        pIdx = getHIdx() + hashIndx;
+    }
     if (offset == iterOff.m_iOffset)
     {
         if ((pIdx->m_iOffset = next) == 0) // last one
@@ -912,7 +918,7 @@ void LsShmHash::eraseIteratorHelper(iterator iter)
     }
     else
     {
-        do
+        while (offset != 0)
         {
             pElem = (LsShmHElem *)m_pPool->offset2ptr(offset);
             if (pElem->x_iNext.m_iOffset == iterOff.m_iOffset)
@@ -923,7 +929,6 @@ void LsShmHash::eraseIteratorHelper(iterator iter)
             // next offset...
             offset = pElem->x_iNext.m_iOffset;
         }
-        while (offset != 0);
     }
 
     release2(iterOff.m_iOffset, size);
@@ -1081,7 +1086,10 @@ LsShmHash::iteroffset LsShmHash::iterGrowValue(iteroffset iterOff,
     if (m_iFlags & LSSHM_FLAG_LRU)
         linkHElem(pNew, offset);
     if (m_pTidMgr != NULL)
+    {
         m_pTidMgr->insertIterCb(offset);
+        pNew = offset2iterator(offset);
+    }
 
     uint32_t hashIndx = getIndex(pNew->x_hkey, capacity());
     LsShmHIterOff *pIdx = getHIdx() + hashIndx;
@@ -1373,6 +1381,8 @@ int LsShmHash::trim(time_t tmCutoff, int (*func)(iterator iter, void *arg),
     while (offElem.m_iOffset != 0)
     {
         int ret = 1;
+        if ((m_pTidMgr != NULL) && (m_pTidMgr->checkTidTbl() != 0))
+            pLru = getLru();
         pElem = offset2iterator(offElem);
         if (pElem->getLruLasttime() >= tmCutoff)
             break;
@@ -1406,6 +1416,8 @@ int LsShmHash::trimsize(int need, int (*func)(iterator iter, void *arg),
     while ((offElem.m_iOffset != 0) && (need > 0))
     {
         int ret = 1;
+        if ((m_pTidMgr != NULL) && (m_pTidMgr->checkTidTbl() != 0))
+            pLru = getLru();
         pElem = offset2iterator(offElem);
         need -= pElem->x_iLen;
         if (func != NULL)

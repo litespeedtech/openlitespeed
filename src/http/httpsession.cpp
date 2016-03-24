@@ -105,6 +105,7 @@ HttpSession::~HttpSession()
         HttpResourceManager::getInstance().recycle(m_pAiosfcb);
     m_pAiosfcb = NULL;
 #endif
+    m_sExtCmdResBuf.clear();
 }
 
 const char *HttpSession::getPeerAddrString() const
@@ -159,6 +160,10 @@ int HttpSession::onInitConnected()
         delete m_pReqParser;
         m_pReqParser = NULL;
     }
+    m_sExtCmdResBuf.clear();
+    m_cbExtCmd = NULL;
+    m_lExtCmdParam = 0;
+    m_pExtCmdParam = NULL;
     return 0;
 }
 
@@ -214,6 +219,7 @@ int HttpSession::runEventHkpt(int hookLevel, HSPState nextState)
         m_curHookInfo.hooks = pHooks;
         m_curHookInfo.term_fn = NULL;
         m_curHookInfo.enable_array = m_sessionHooks.getEnableArray(hookLevel);
+        m_curHookInfo.hook_level = hookLevel;
         m_curHkptParam.cur_hook = ((lsiapi_hook_t *)pHooks->begin());
         m_curHkptParam.hook_chain = &m_curHookInfo;
         m_curHkptParam.ptr1 = NULL ;
@@ -339,7 +345,6 @@ void HttpSession::nextRequest()
     if (getEvtcbHead())
         EvtcbQue::getInstance().removeSessionCb(this);
 
-
     LS_DBG_L(getLogSession(), "HttpSession::nextRequest()!");
     getStream()->flush();
     setState(HSS_WAITING);
@@ -429,6 +434,12 @@ void HttpSession::httpError(int code, const char *pAdditional)
         code = SC_500;
     m_request.setStatusCode(code);
     sendHttpError(pAdditional);
+    if (m_pReqParser)
+    {
+        delete m_pReqParser;
+        m_pReqParser = NULL;
+    }
+    m_sExtCmdResBuf.clear();
     ++m_sn;
 }
 
@@ -620,6 +631,7 @@ int HttpSession::readReqBody()
             param.session = (LsiSession *)this;
 
             hookInfo.hooks = pReadHooks;
+            hookInfo.hook_level = LSI_HKPT_RECV_REQ_BODY;
             hookInfo.term_fn = (filter_term_fn)readReqBodyTermination;
             hookInfo.enable_array = m_sessionHooks.getEnableArray(
                                         LSI_HKPT_RECV_REQ_BODY);
@@ -958,6 +970,13 @@ int HttpSession::processHttp2Upgrade(const HttpVHost *pVHost)
     return 0;
 }
 
+void HttpSession::extCmdDone()
+{
+    EvtcbQue::getInstance().schedule(m_cbExtCmd,
+                                     this,
+                                     m_lExtCmdParam,
+                                     m_pExtCmdParam);
+}
 
 int HttpSession::hookResumeCallback(lsi_session_t *session, long lParam,
                                     void *)
@@ -1262,6 +1281,7 @@ int HttpSession::redirect(const char *pNewURL, int len, int alloc)
         cleanUpHandler();
     m_request.setHandler(NULL);
     m_request.setContext(NULL);
+    m_response.reset();
     m_processState = HSPS_PROCESS_NEW_URI;
     return smProcessReq();
 }
@@ -1322,6 +1342,7 @@ int HttpSession::processContextMap()
         if (((pCtx = (HttpContext *)m_request.getContext()) != pOldCtx)
             && pCtx->getModuleConfig() != NULL)
         {
+            m_sessionHooks.inherit(pCtx->getSessionHooks(), 0);
             m_pModuleConfig = pCtx->getModuleConfig();
         }
     }
@@ -2094,7 +2115,7 @@ void HttpSession::closeConnection()
     logAccess(getStream()->getFlag(HIO_FLAG_PEER_SHUTDOWN));
 
     m_lReqTime = DateTime::s_curTime;
-//     m_response.reset();
+    m_response.reset();
     m_request.reset();
     m_request.resetHeaderBuf();
     releaseSendFileInfo();
@@ -2119,6 +2140,7 @@ void HttpSession::closeConnection()
 
     //For reuse condition, need to reset the sessionhooks
     m_sessionHooks.reset();
+
     if (getEvtcbHead())
         EvtcbQue::getInstance().removeSessionCb(this);
 
@@ -2132,11 +2154,13 @@ void HttpSession::recycle()
 {
     if (getEvtcbHead())
         EvtcbQue::getInstance().removeSessionCb(this);
+
     if (m_pReqParser)
     {
         delete m_pReqParser;
         m_pReqParser = NULL;
     }
+    m_sExtCmdResBuf.clear();
 
     ++m_sn;
     if (getFlag(HSF_AIO_READING))
@@ -2550,8 +2574,7 @@ int HttpSession::setupGzipFilter()
         {
             if (!m_pRespBodyBuf->empty())
                 m_pRespBodyBuf->rewindWriteBuf();
-            if ((!m_request.getContextState(RESP_CONT_LEN_SET)
-                 || m_response.getContentLen() > 200))
+            if (m_response.getContentLen() > 200)
                 if (setupGzipBuf() == -1)
                     return LS_FAIL;
         }
@@ -2675,6 +2698,7 @@ int HttpSession::runFilter(int hookLevel,
     hookInfo.hooks = pHooks;
     hookInfo.enable_array = m_sessionHooks.getEnableArray(hookLevel);
     hookInfo.term_fn = pfTermination;
+    hookInfo.hook_level = hookLevel;
     param.cur_hook = (void *)pHooks->begin();
     param.hook_chain = &hookInfo;
     param.ptr1 = pBuf;
@@ -3225,17 +3249,17 @@ int HttpSession::flushDynBodyChunk()
 }
 
 
-int HttpSession::execExtCmd(const char *pCmd, int len)
+int HttpSession::execExtCmd(const char *pCmd, int len, int mode)
 {
-
     ReqHandler *pNewHandler;
     ExtWorker *pWorker = ExtAppRegistry::getApp(
                              EA_CGID, LSCGID_NAME);
+    m_sExtCmdResBuf.clear();
     if (m_pHandler)
         cleanUpHandler();
     pNewHandler = HandlerFactory::getHandler(HandlerType::HT_CGI);
     m_request.setRealPath(pCmd, len);
-    m_request.orContextState(EXEC_EXT_CMD);
+    m_request.orContextState(mode);
     m_pHandler = pNewHandler;
     return m_pHandler->process(this, pWorker);
 
@@ -3659,6 +3683,7 @@ int HttpSession::sendStaticFile(SendFileInfo *pData)
     hookInfo.hooks = LsiApiHooks::getGlobalApiHooks(LSI_HKPT_SEND_RESP_BODY);
     hookInfo.enable_array = m_sessionHooks.getEnableArray(
                                 LSI_HKPT_SEND_RESP_BODY);
+    hookInfo.hook_level = LSI_HKPT_SEND_RESP_BODY;
     param.hook_chain = &hookInfo;
 
     param.flag_in  = 0;
@@ -3764,8 +3789,7 @@ int HttpSession::contentEncodingFixup()
     }
     else if (!pContentEncoding && updateContentCompressible())
     {
-        if ((!m_request.getContextState(RESP_CONT_LEN_SET)
-             || m_response.getContentLen() > 200))
+        if (m_response.getContentLen() > 200)
         {
             if (addModgzipFilter((LsiSession *)this, 1,
                                  HttpServerConfig::getInstance().getCompressLevel()) == -1)
@@ -3832,7 +3856,7 @@ int HttpSession::onAioEvent()
         lsi_param_t param;
         lsi_hookinfo_t hookInfo;
         param.session = (LsiSession *)this;
-
+        hookInfo.hook_level = LSI_HKPT_SEND_RESP_BODY;
         hookInfo.term_fn = (filter_term_fn)
                            writeRespBodyTermination;
         hookInfo.hooks = LsiApiHooks::getGlobalApiHooks(LSI_HKPT_SEND_RESP_BODY);
@@ -4098,6 +4122,7 @@ int HttpSession::resumeProcess(int passCode, int retcode)
     {
     case HSPS_HKPT_HTTP_BEGIN:
     case HSPS_HKPT_RECV_REQ_HEADER:
+    case HSPS_HKPT_RCVD_REQ_BODY:
     case HSPS_HKPT_URI_MAP:
     case HSPS_HKPT_HTTP_AUTH:
     case HSPS_HKPT_RCVD_RESP_HEADER:
@@ -4164,6 +4189,7 @@ void HttpSession::runAllCallbacks()
 {
     if (!getEvtcbHead())
         return ;
+
 
     EvtcbQue::getInstance().run(this);
 }

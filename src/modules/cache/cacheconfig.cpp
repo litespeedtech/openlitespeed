@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2015  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2016  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -28,7 +28,7 @@ CacheConfig::CacheConfig()
     , m_privateAge(60)
     , m_iMaxStale(0)
     , m_lMaxObjSize(1024 * 1024)
-    //, m_iBypassPercentage(5)
+      //, m_iBypassPercentage(5)
     , m_iLevele(0)
     , m_iOnlyUseOwnUrlExclude(0)
     , m_iOwnStore(0)
@@ -44,7 +44,7 @@ CacheConfig::~CacheConfig()
 {
     if (m_pUrlExclude)
         delete m_pUrlExclude;
-    if (m_iLevele == LSI_CFG_SERVER &&m_pVHostMapExclude)
+    if (m_iLevele == LSI_CFG_SERVER && m_pVHostMapExclude)
         delete m_pVHostMapExclude;
     if (m_iOwnStore && m_pStore)
         delete m_pStore;
