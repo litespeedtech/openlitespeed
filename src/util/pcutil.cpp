@@ -66,6 +66,10 @@ cpu_set_t    PCUtil::s_maskAll;
 
 int PCUtil::getNumProcessors()
 {
+#ifdef LSWS_NO_SET_AFFINITY
+    return 2;
+#else
+    
     if (s_nCpu > 0)
         return s_nCpu;
 #if defined(linux) || defined(__linux) || defined(__linux__)
@@ -86,6 +90,8 @@ int PCUtil::getNumProcessors()
         s_nCpu = 1;
     getAffinityMask(s_nCpu, s_nCpu, s_nCpu, &s_maskAll);
     return s_nCpu;
+    
+#endif
 }
 
 void PCUtil::getAffinityMask(int iCpuCount, int iProcessNum,

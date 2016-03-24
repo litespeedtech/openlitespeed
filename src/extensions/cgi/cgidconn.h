@@ -33,7 +33,7 @@ class CgidConn  : public ExtConn
     CgidReq         m_req;
 
     int buildReqHeader();
-    int buildSSIExecHeader();
+    int buildSSIExecHeader(int checkContext);
 
 protected:
     virtual int doRead();
@@ -61,6 +61,7 @@ public:
     virtual int  endOfReqBody();
     virtual int  sendReqBody(const char *pBuf, int size);
     virtual int  readResp(char *pBuf, int size);
+    virtual int  endResp();
     virtual int  flush();
     virtual void cleanUp();
     virtual void dump();

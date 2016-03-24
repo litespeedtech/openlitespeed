@@ -58,35 +58,45 @@ int CgidConn::doRead()
 {
     if (!getConnector())
         return LS_FAIL;
+
     LS_DBG_M(this, "CgidConn::onRead()");
+    int resultNeedParseMode =
+        getConnector()->getHttpSession()->getReq()->getContextState(
+            EXEC_CMD_PARSE_RES);
     int len = 0;
     int ret = 0;
+
     do
     {
         len = ret = read(HttpResourceManager::getGlobalBuf(), GLOBAL_BUF_SIZE);
         if (ret > 0)
         {
             LS_DBG_M(this, "Process STDOUT %d bytes", len);
-            //printf( ">>read %d bytes from CGI\n", len );
-            //achBuf[ ret ] = 0;
-            //printf( "%s", achBuf );
-            ret = getConnector()->processRespData(
-                      HttpResourceManager::getGlobalBuf(), len);
-            if (ret == -1)
-                break;
+//            printf( ">>read %d bytes from CGI\n", len );
+//            printf( "%.*s", len, HttpResourceManager::getGlobalBuf() );
+            if (resultNeedParseMode)
+                getConnector()->getHttpSession()->getExtCmdBuf().append(
+                    HttpResourceManager::getGlobalBuf(), len);
+            else
+            {
+                ret = getConnector()->processRespData(
+                          HttpResourceManager::getGlobalBuf(), len);
+                if (ret == -1)
+                    break;
+            }
         }
         else
         {
             if (ret)
             {
-                getConnector()->endResponse(0, 0);
+                endResp();
                 return 0;
             }
             break;
         }
     }
     while (len == GLOBAL_BUF_SIZE);
-    if ((ret != -1) && (getConnector()))
+    if ((ret != -1) && (getConnector()) && !resultNeedParseMode)
         getConnector()->flushResp();
     return ret;
 }
@@ -96,11 +106,20 @@ int CgidConn::readResp(char *pBuf, int size)
 {
     int len = read(pBuf, size);
     if (len == -1)
-        getConnector()->endResponse(0, 0);
+        endResp();
     return len;
 
 }
 
+int CgidConn::endResp()
+{
+    if (getConnector()->getHttpSession()->getReq()->getContextState(
+            EXEC_CMD_PARSE_RES))
+        getConnector()->getHttpSession()->extCmdDone();
+    else
+        getConnector()->endResponse(0, 0);
+    return 0;
+}
 
 int CgidConn::doWrite()
 {
@@ -128,7 +147,7 @@ int CgidConn::doError(int error)
         return LS_FAIL;
     LS_DBG_M(this, "CgidConn::onError()");
     //getState() = HEC_COMPLETE;
-    getConnector()->endResponse(0, 0);
+    endResp();
     return LS_FAIL;
 }
 
@@ -199,14 +218,25 @@ int  CgidConn::sendReqHeader()
 
 int CgidConn::sendReqBody(const char *pBuf, int size)
 {
-    int ret;
+    int ret = 0;
+    /**
+     * If it is running a ext cmd by a module, should be SUSPENDED now,
+     * but we still need to send out the pending data.
+     */
+    if (getConnector()->getHttpSession()->getFlag(HSF_SUSPENDED))
+        size = 0;
+
     if (m_iTotalPending == 0)
-        ret = write(pBuf, size);
+    {
+        if (size > 0)
+            ret = write(pBuf, size);
+    }
     else
     {
         IOVec iov;
         iov.append(m_pPendingBuf, m_iTotalPending);
-        iov.append(pBuf, size);
+        if (size > 0)
+            iov.append(pBuf, size);
         ret = writev(iov);
         if (ret >= m_iTotalPending)
         {
@@ -232,7 +262,10 @@ int CgidConn::addRequest(ExtRequest *pReq)
     int ret;
     if (getConnector()->getHttpSession()->getReq()->getContextState(
             EXEC_EXT_CMD))
-        ret = buildSSIExecHeader();
+        ret = buildSSIExecHeader(1);
+    else if (getConnector()->getHttpSession()->getReq()->getContextState(
+                 EXEC_CMD_PARSE_RES))
+        ret = buildSSIExecHeader(0);
     else
         ret = buildReqHeader();
     if (ret)
@@ -246,32 +279,36 @@ int CgidConn::addRequest(ExtRequest *pReq)
 }
 
 
-int CgidConn::buildSSIExecHeader()
+int CgidConn::buildSSIExecHeader(int checkContext)
 {
     static unsigned int s_id = 0;
     HttpSession *pSession = getConnector()->getHttpSession();
     HttpReq *pReq = pSession->getReq();
     const char *pReal;
-    const AutoStr2 *psChroot;
-    const char *pChroot;
-    int ret;
-    uid_t uid;
-    gid_t gid;
+    const AutoStr2 *psChroot = NULL;
+    const char *pChroot = NULL;
+    int ret = 0;
+    uid_t uid = 0;
+    gid_t gid = 0;
     pReal = pReq->getRealPath()->c_str();
-    ret = pReq->getUGidChroot(&uid, &gid, &psChroot);
-    if (ret)
-        return ret;
+
+    if (checkContext)
+    {
+        ret = pReq->getUGidChroot(&uid, &gid, &psChroot);//FIXME:
+        if (ret)
+            return ret;
 //    LS_DBG_L(this, "UID: %d, GID: %d", pHeader->m_uid, pHeader->m_gid);
-    if (psChroot)
-    {
+        if (psChroot)
+        {
 //        LS_DBG_L(this, "chroot: %s, real path: %s", pChroot->c_str(), pReal);
-        pChroot = psChroot->c_str();
-        ret = psChroot->len();
-    }
-    else
-    {
-        pChroot = NULL;
-        ret = 0;
+            pChroot = psChroot->c_str();
+            ret = psChroot->len();
+        }
+        else
+        {
+            pChroot = NULL;
+            ret = 0;
+        }
     }
     char achBuf[4096];
     memccpy(achBuf, pReal, 0, 4096);

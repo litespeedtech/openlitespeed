@@ -662,24 +662,24 @@ int ShmCacheManager::shouldPurge(
     int valLen;
     LsShmOffset_t offVal;
     int ret = 0;
-    const char * p = pKey;
-    const char * pEnd = pKey + keyLen;
-    while(p < pEnd)
+    const char *p = pKey;
+    const char *pEnd = pKey + keyLen;
+    while (p < pEnd)
     {
-       const char * pTagEnd = (const char *)memchr(p, ',', pEnd - p);
-       if (pTagEnd == NULL)
-           pTagEnd = pEnd;
-    
-    //     LOG4CXX_NS::Logger::getRootLogger()->debug(
-    //         "Lookup tag: '%.*s', create timestamp: %d.%d",
-    //          keyLen, pKey, sec, (int)msec );
+        const char *pTagEnd = (const char *)memchr(p, ',', pEnd - p);
+        if (pTagEnd == NULL)
+            pTagEnd = pEnd;
+
+        //     LOG4CXX_NS::Logger::getRootLogger()->debug(
+        //         "Lookup tag: '%.*s', create timestamp: %d.%d",
+        //          keyLen, pKey, sec, (int)msec );
 
         if ((offVal = m_pPublicPurge->find(p, pTagEnd - p, &valLen)) != 0)
         {
             purgeinfo_t *pData = (purgeinfo_t *)m_pPublicPurge->offset2ptr(offVal);
-    //         LOG4CXX_NS::Logger::getRootLogger()->debug(
-    //             "Found tag: '%.*s', purge timestamp: %d.%d, flag: %d",
-    //             keyLen, pKey, pData->tmSecs, (int)pData->tmMsec, pData->flags);
+            //         LOG4CXX_NS::Logger::getRootLogger()->debug(
+            //             "Found tag: '%.*s', purge timestamp: %d.%d, flag: %d",
+            //             keyLen, pKey, pData->tmSecs, (int)pData->tmMsec, pData->flags);
             if (shouldExpireData(pData, sec, msec))
             {
                 ret = pData->flags;
@@ -741,7 +741,7 @@ int ShmCacheManager::isPurged(CacheEntry *pEntry, CacheKey *pKey)
                 ret = 1;
         if (!ret)
         {
-            if (shouldPurge(pEntry->getKey().c_str(), pEntry->getKeyLen(), 
+            if (shouldPurge(pEntry->getKey().c_str(), pEntry->getKeyLen(),
                             pEntry->getHeader().m_tmCreated,
                             pEntry->getHeader().m_msCreated))
                 ret = 1;
@@ -805,7 +805,7 @@ int ShmCacheManager::initTables(LsShmPool *pPool)
     if (!m_pSessions)
         return -1;
 
-    m_pStr2IdHash = pPool->getNamedHash("tags", 20,LsShmHash::hashXXH32,
+    m_pStr2IdHash = pPool->getNamedHash("tags", 20, LsShmHash::hashXXH32,
                                         memcmp,  0);
     if (!m_pStr2IdHash)
         return -1;
@@ -1008,10 +1008,10 @@ int ShmCacheManager::shouldCleanDiskCache()
         return 0;
     ++m_attempts;
     double loads[3];
-    if ( getloadavg(loads, 3) == -1)
+    if (getloadavg(loads, 3) == -1)
         return 0;
-    if (loads[1] < (double)PCUtil::getNumProcessors() / 6 
-                   * (1 + (double)m_attempts / 60))
+    if (loads[1] < (double)PCUtil::getNumProcessors() / 6
+        * (1 + (double)m_attempts / 60))
     {
         getCacheInfo()->setLastCleanDiskCache(last, DateTime::s_curTime);
         m_attempts = 0;

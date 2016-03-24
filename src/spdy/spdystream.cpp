@@ -213,11 +213,9 @@ int SpdyStream::getDataFrameSize(int wanted)
 
     if (wanted > m_iWindowOut)
         wanted = m_iWindowOut;
-    if (m_pSpdyConn->isFlowCtrl()
-        && (wanted > m_pSpdyConn->getCurDataOutWindow()))
-        wanted = m_pSpdyConn->getCurDataOutWindow();
     if (wanted > SPDY_MAX_DATAFRAM_SIZE)
         wanted = SPDY_MAX_DATAFRAM_SIZE;
+    wanted = m_pSpdyConn->getAllowedDataSize(wanted);
     return wanted;
 }
 

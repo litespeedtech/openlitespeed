@@ -11,11 +11,29 @@ BASE_DIR=`dirname $LSINSTALL_DIR`
 LSWS_HOME=`dirname $BASE_DIR`
 
 PATH=$PATH
-PHP_VERSION=5.3.29
+PHP_VERSION=5.6.18
 PHP_BUILD_DIR=$LSWS_HOME/phpbuild
 mkdir ${PHP_BUILD_DIR}
 LOG_FILE=${PHP_BUILD_DIR}/adminphp.log
-DL_METHOD="curl -L -o"
+
+# detect download method
+OS=`uname -s`
+DL_METHOD="wget -nv -O"
+if [ "x$OS" = "xFreeBSD" ] ; then
+    DL=`which fetch`
+    DL_METHOD="$DL -o"
+else
+    # test wget exist or not
+    DL=`which wget`
+    if [ "$?" -ne "0" ] ; then
+        DL=`which curl`
+        DL_METHOD="$DL -L -o"
+        if [ "$?" -ne "0" ] ; then
+            echo "Error: Cannot find proper download method curl/wget."
+        fi
+    fi
+fi
+
 LSAPI_VERSION=6.6
 PHP_CONF_OPTIONS="--prefix=/tmp --disable-all --with-litespeed --enable-session --enable-posix --enable-xml --with-libexpat-dir=/usr --with-zlib --enable-sockets --enable-bcmath --enable-json"
 
@@ -85,7 +103,7 @@ if [ -e "${PHP_SRC}" ] ; then
 fi
 
 if [ ${PHP_SRC_READY} = "N" ] ; then
-	DOWNLOAD_URL="http://us1.php.net/get/${PHP_SRC}/from/us1.php.net/mirror"
+	DOWNLOAD_URL="http://us1.php.net/distributions/${PHP_SRC}"
 	main_msg "Retrieving PHP source archive from ${DOWNLOAD_URL}" 
 	${DL_METHOD} ${PHP_SRC} ${DOWNLOAD_URL}
 
@@ -96,7 +114,7 @@ if [ ${PHP_SRC_READY} = "N" ] ; then
 fi
 
 if [ ${PHP_SRC_READY} = "N" ] ; then
-    DOWNLOAD_URL="http://us2.php.net/get/${PHP_SRC}/from/us2.php.net/mirror"
+    DOWNLOAD_URL="http://us2.php.net/distributions/${PHP_SRC}"
     main_msg "Try again, retrieving PHP source archive from ${DOWNLOAD_URL}" 
     ${DL_METHOD} ${PHP_SRC} ${DOWNLOAD_URL}
 

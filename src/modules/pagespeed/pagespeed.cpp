@@ -89,6 +89,7 @@
 // Needed for SystemRewriteDriverFactory to use shared memory.
 #define PAGESPEED_SUPPORT_POSIX_SHARED_MEM
 
+#define PAGESPEED_RESP_HEADER "X-LS-Pagespeed"
 
 enum HTTP_METHOD
 {
@@ -238,14 +239,12 @@ static int GetHttpVersion(lsi_session_t *session)
 {
     int major = 0, minor = 0;
     char val[10] = {0};
-    int n = g_api->get_req_var_by_id(session, LSI_VAR_SERVER_PROTO, val,
-                                     10);
-
+    int n = g_api->get_req_var_by_id(session, LSI_VAR_SERVER_PROTO, val, 10);
     if (n >= 8)   //should be http/
     {
         char *p = strchr(val, '/');
         if (p)
-            sscanf(p, "%d.%d", &major, &minor);
+            sscanf(p + 1, "%d.%d", &major, &minor);
     }
 
     return major * 1000 + minor;
@@ -302,6 +301,11 @@ int net_instaweb::CopyRespHeadersToServer(
         const GoogleString &name_gs = pagespeed_headers.Name(i);
         const GoogleString &value_gs = pagespeed_headers.Value(i);
 
+        //If etag not PAGESPEED style, meas not optimized, so not cahce it
+        if (StringCaseEqual(name_gs, "etag") && !StringCaseStartsWith(value_gs, "W/"))
+            g_api->set_req_env(session, "cache-control", 13, "no-cache", 8);
+
+        
         if (preserve_caching_headers == kPreserveAllCachingHeaders)
         {
             if (StringCaseEqual(name_gs, "ETag") ||
@@ -327,12 +331,7 @@ int net_instaweb::CopyRespHeadersToServer(
         if (StringCaseEqual(name_gs, "etag") && StringCaseStartsWith(value_gs, "W/"))
             name.setStr(kInternalEtagName, strlen(kInternalEtagName));
         else
-        {
             name.setStr(name_gs.data(), name_gs.length());
-            //Disable cache module if etag not changed
-            if (StringCaseEqual(name_gs, "etag"))
-                g_api->set_req_env(session, "cache-control", 13, "no-cache", 8);
-        }
 
         value.setStr(value_gs.data(), value_gs.length());
 
@@ -395,6 +394,7 @@ int net_instaweb::CopyRespBodyToBuf(lsi_session_t *session,
     PsMData *pMyData = (PsMData *) g_api->get_module_data(session, &MNAME,
                        LSI_DATA_HTTP);
     //pMyData->status_code = 200;
+    ls_loopbuf_d(&pMyData->buff);
     ls_loopbuf_append(&pMyData->buff, s, len);
     pMyData->doneCalled = done_called;
     return 0;
@@ -459,6 +459,9 @@ void ReleaseBaseFetch(PsMData *pData)
         delete pData->pNotifier;
         pData->pNotifier = NULL;
     }
+    
+    ls_loopbuf_d(&pData->buff);
+    pData->doneCalled = false;
 }
 
 static int ReleaseRequestContext(PsMData *pData)
@@ -905,7 +908,8 @@ static int ChildInit(lsi_param_t *rec)
 
 void EventCb(void *session);
 int CreateBaseFetch(PsMData *pMyData, lsi_session_t *session,
-                    RequestContextPtr request_context)
+                    RequestContextPtr request_context,
+                    RequestHeaders* request_headers)
 {
     CHECK(pMyData->pNotifier == NULL);
     pMyData->pNotifier = new PipeNotifier();
@@ -923,6 +927,7 @@ int CreateBaseFetch(PsMData *pMyData, lsi_session_t *session,
     //When the base_fetch is good then set the callback, otherwise, may cause crash.
     if (pMyData->ctx->baseFetch)
     {
+        pMyData->ctx->baseFetch->SetRequestHeadersTakingOwnership(request_headers);
         pMyData->pNotifier->setCb(EventCb);
         return 0;
     }
@@ -1128,7 +1133,7 @@ bool DetermineOptions(lsi_session_t *session,
                                           response_headers, request_context,
                                           cfg_s, url, pagespeed_query_params,
                                           pagespeed_option_cookies);
-    bool have_request_options = request_options != NULL;
+    bool have_request_options = (request_options != NULL);
 
     // Modify our options in response to request options if specified.
     if (have_request_options)
@@ -1249,8 +1254,7 @@ void BeaconHandlerHelper(PsMData *pMyData, lsi_session_t *session,
 
 // Parses out query params from the request.
 //isPost: 1, use post bosy, 0, use query param
-void QueryParamsHandler(lsi_session_t *session, StringPiece *data,
-                        int isPost)
+void QueryParamsHandler(lsi_session_t *session, StringPiece *data, int isPost)
 {
     if (!isPost)
     {
@@ -1409,6 +1413,7 @@ int SimpleHandler(PsMData *pMyData, lsi_session_t *session,
         response_headers.Add(HttpAttributes::kEtag, "W/\"0\"");
 
     //g_api->append_body_buf(session, output.c_str(), output.size());
+    ls_loopbuf_d(&pMyData->buff);
     ls_loopbuf_append(&pMyData->buff, output.c_str(), output.size());
 
     return 0;
@@ -1434,7 +1439,11 @@ int ResourceHandler(PsMData *pMyData,
 
     GoogleString url_string = DetermineUrl(session);;
     GoogleUrl url(url_string);
-    CHECK(url.IsWebValid());
+    if (!url.IsWebValid())
+    {
+        g_api->log(session, LSI_LOG_DEBUG, "invalid url");
+        return LS_FAIL;
+    }
 
 
     scoped_ptr<RequestHeaders> request_headers(new RequestHeaders);
@@ -1514,7 +1523,11 @@ int ResourceHandler(PsMData *pMyData,
         ctx->session = session;
         ctx->htmlRewrite = false;
         ctx->inPlace = false;
-        //ctx->pagespeed_connection = NULL;
+        ctx->proxyFetch = NULL;
+        ctx->baseFetch = NULL;
+        ctx->fetchDone = false;
+        ctx->driver = NULL;
+        ctx->recorder = NULL;
         ctx->preserveCachingHeaders = kDontPreserveHeaders;
 
         if (!options->modify_caching_headers())
@@ -1543,26 +1556,9 @@ int ResourceHandler(PsMData *pMyData,
         pMyData->ctx = ctx;
     }
 
-    if (CreateBaseFetch(pMyData, session, request_context) != 0)
-        return LS_FAIL;
-    ctx->baseFetch->SetRequestHeadersTakingOwnership(
-        request_headers.release());
-
-
-    bool page_callback_added = false;
-    scoped_ptr<ProxyFetchPropertyCallbackCollector>
-    property_callback(
-        ProxyFetchFactory::InitiatePropertyCacheLookup(
-            !html_rewrite /* is_resource_fetch */,
-            url,
-            cfg_s->serverContext,
-            options,
-            ctx->baseFetch,
-            false /* requires_blink_cohort (no longer unused) */,
-            &page_callback_added));
-
     if (pagespeed_resource)
     {
+        CreateBaseFetch(pMyData, session, request_context, request_headers.release());
         ResourceFetch::Start(
             url,
             NULL,
@@ -1572,6 +1568,7 @@ int ResourceHandler(PsMData *pMyData,
     }
     else if (is_an_admin_handler)
     {
+        CreateBaseFetch(pMyData, session, request_context, request_headers.release());
         QueryParams query_params;
         query_params.ParseFromUrl(url);
 
@@ -1622,6 +1619,7 @@ int ResourceHandler(PsMData *pMyData,
 
     if (html_rewrite)
     {
+        CreateBaseFetch(pMyData, session, request_context, request_headers.release());
         // Do not store driver in request_context, it's not safe.
         RewriteDriver *driver;
 
@@ -1642,9 +1640,24 @@ int ResourceHandler(PsMData *pMyData,
         driver->set_pagespeed_query_params(pagespeed_query_params);
         driver->set_pagespeed_option_cookies(pagespeed_option_cookies);
 
+        bool page_callback_added = false;
+        scoped_ptr<ProxyFetchPropertyCallbackCollector>
+        property_callback(
+            ProxyFetchFactory::InitiatePropertyCacheLookup(
+                !html_rewrite /* is_resource_fetch */,
+                url,
+                cfg_s->serverContext,
+                options,
+                ctx->baseFetch,
+                false /* requires_blink_cohort (no longer unused) */,
+                &page_callback_added));
+        
+        
+        
+        
         ctx->proxyFetch = cfg_s->proxyFetchFactory->CreateNewProxyFetch(
                               url_string, ctx->baseFetch, driver,
-                              property_callback.release(),
+                              property_callback.release(),  
                               NULL /* original_content_fetch */);
 
         g_api->log(NULL, LSI_LOG_DEBUG, "Create ProxyFetch %s.\n",
@@ -1656,6 +1669,7 @@ int ResourceHandler(PsMData *pMyData,
         options->enabled() &&
         options->IsAllowed(url.Spec()))
     {
+        CreateBaseFetch(pMyData, session, request_context, request_headers.release());
         // Do not store driver in request_context, it's not safe.
         RewriteDriver *driver;
 
@@ -1693,8 +1707,9 @@ int ResourceHandler(PsMData *pMyData,
                "Passing on content handling for non-pagespeed resource '%s'\n",
                url_string.c_str());
 
-    ctx->baseFetch->Done(false);
-    ReleaseBaseFetch(pMyData);
+    CHECK(ctx->baseFetch == NULL);
+//     ctx->baseFetch->Done(false);
+//     ReleaseBaseFetch(pMyData);
     // set html_rewrite flag.
     ctx->htmlRewrite = true;
     return LS_FAIL;
@@ -1712,10 +1727,12 @@ bool SendToPagespeed(PsMData *pMyData, lsi_param_t *rec,
         return false;
 
     CHECK(ctx->proxyFetch != NULL);
-    ctx->proxyFetch->Write(
-        StringPiece((const char *) rec->ptr1, rec->len1),
-        pMyData->cfg_s->handler);
-
+    if (rec->len1 > 0) {
+        ctx->proxyFetch->Write(
+            StringPiece((const char *) rec->ptr1, rec->len1),
+            pMyData->cfg_s->handler);
+    }
+    
     if (rec->flag_in & LSI_CBFI_EOF)
     {
         ctx->proxyFetch->Done(true /* success */);
@@ -1755,6 +1772,11 @@ int HtmlRewriteFixHeadersFilter(PsMData *pMyData,
     // resources instead of using the last modified header.
     g_api->remove_resp_header(session, LSI_RSPHDR_LAST_MODIFIED, NULL, 0);
 
+    g_api->set_resp_header(session, -1, PAGESPEED_RESP_HEADER, 
+                           sizeof(PAGESPEED_RESP_HEADER) - 1,
+                           MNAME.about, strlen(MNAME.about),
+                           LSI_HEADEROP_SET);
+    
 //   // Clear expires
 //   if (r->headers_out.expires) {
 //     r->headers_out.expires->hash = 0;
@@ -1896,19 +1918,15 @@ int InPlaceCheckHeaderFilter(PsMData *pMyData, lsi_session_t *session,
 }
 
 int InPlaceBodyFilter(PsMData *pMyData, lsi_param_t *rec,
-                      ps_request_ctx_t *ctx, ps_vh_conf_t *cfg_s, int writtenLength)
+                      ps_request_ctx_t *ctx, StringPiece &contents, int length)
 {
-    if (ctx == NULL || ctx->recorder == NULL)
-        return 1;
-
     g_api->log(rec->session, LSI_LOG_DEBUG,
                "[Module:ModPagespeed]ps in place body filter: %s, bufLen=%d\n",
-               pMyData->urlString.c_str(), writtenLength);
+               pMyData->urlString.c_str(), rec->len1);
 
     InPlaceResourceRecorder *recorder = ctx->recorder;
-    if (writtenLength > 0)
+    if (length > 0)
     {
-        StringPiece contents((char *) rec->ptr1, writtenLength);
         recorder->Write(contents, recorder->handler());
     }
 
@@ -1917,6 +1935,7 @@ int InPlaceBodyFilter(PsMData *pMyData, lsi_param_t *rec,
 
     if (rec->flag_in & LSI_CBFI_EOF || recorder->failed())
     {
+        recorder->Flush(recorder->handler());
         ResponseHeaders response_headers;
         CopyRespHeadersFromServer(rec->session, &response_headers);
         ctx->recorder->DoneAndSetHeaders(&response_headers, true);
@@ -1926,29 +1945,31 @@ int InPlaceBodyFilter(PsMData *pMyData, lsi_param_t *rec,
     return 0;
 }
 
-int BodyFilter(lsi_param_t *rec)
+int sendRespBody(lsi_param_t *rec)
 {
     ps_vh_conf_t *cfg_s;
     ps_request_ctx_t *ctx;
     PsMData *pMyData = (PsMData *) g_api->get_module_data(rec->session,
                        &MNAME, LSI_DATA_HTTP);
-    /**
-     * Wrong case, will not deal with it
-     */
+
     if (pMyData == NULL || (cfg_s = pMyData->cfg_s) == NULL
         || (ctx = pMyData->ctx) == NULL)
         return g_api->stream_write_next(rec, (const char *) rec->ptr1,
                                         rec->len1);
 
+    int ret = rec->len1;
+    StringPiece contents;
+    if (ctx->recorder)
+    {
+        contents = StringPiece((char *) rec->ptr1, rec->len1);
+    }
 
-    int ret = 0;
     int writtenTotal = 0;
-    if (ctx->htmlRewrite)
+    if (ctx->htmlRewrite && !pMyData->doneCalled)
     {
         if (rec->len1 > 0 ||  rec->flag_in)
         {
             SendToPagespeed(pMyData, rec, ctx);
-            ret = rec->len1;
         }
     }
 
@@ -1956,15 +1977,16 @@ int BodyFilter(lsi_param_t *rec)
     {
         ret = g_api->stream_write_next(rec, (const char *) rec->ptr1,
                                                 rec->len1);
-        InPlaceBodyFilter(pMyData, rec, ctx, cfg_s, ret);
+        if (ret >= 0 && ctx->recorder)
+        {
+            InPlaceBodyFilter(pMyData, rec, ctx, contents, ret);
+        }
         return ret;
     }
 
-
     int len;
-    while ((len = ls_loopbuf_size(&pMyData->buff)) > 0)
+    while ((len = ls_loopbuf_blksize(&pMyData->buff)) > 0)
     {
-        ls_loopbuf_straight(&pMyData->buff);
         char *buf = ls_loopbuf_begin(&pMyData->buff);
 
         if (pMyData->doneCalled)
@@ -1973,6 +1995,13 @@ int BodyFilter(lsi_param_t *rec)
             rec->flag_in = LSI_CBFI_FLUSH;
 
         int written = g_api->stream_write_next(rec, buf, len);
+        if (written >= 0 && ctx->recorder)
+        {
+            contents = StringPiece(buf, written);
+            InPlaceBodyFilter(pMyData, rec, ctx, contents, written);
+        }
+
+        
         if (written < 0)
             return LS_FAIL;
         else if (written == 0)
@@ -2006,8 +2035,8 @@ int BodyFilter(lsi_param_t *rec)
                "[%s]ps_body_filter flag_in %d, flag out %d, done_called %d, Accumulated %d, write to next %d, buffer data written %d.\n",
                ModuleName, rec->flag_in, *rec->flag_out, pMyData->doneCalled,
                rec->len1, ret, writtenTotal);
-    //InPlaceBodyFilter(pMyData, rec, ctx, cfg_s, writtenTotal);
-    return ret;//rec->_param_len;
+    
+    return ret;
 
 }
 
@@ -2025,6 +2054,10 @@ void UpdateEtag(lsi_param_t *rec)
         g_api->set_resp_header(rec->session, LSI_RSPHDR_ETAG, NULL, 0,
                                (const char *) iov[0].iov_base,
                                iov[0].iov_len, LSI_HEADEROP_SET);
+        
+        //If etag not PAGESPEED style, meas not optimized, so not cahce it
+        if (strncasecmp((const char *) iov[0].iov_base, "W/", 2) == 0)
+            g_api->set_req_env(rec->session, "cache-control", 13, "no-cache", 8);
     }
 }
 
@@ -2078,7 +2111,7 @@ int HtmlRewriteHeaderFilter(PsMData *pMyData, lsi_session_t *session,
     return 0;
 }
 
-int HeaderFilter(lsi_param_t *rec)
+int revdRespHeader(lsi_param_t *rec)
 {
     UpdateEtag(rec);
 
@@ -2095,9 +2128,9 @@ int HeaderFilter(lsi_param_t *rec)
                               pMyData->uaLen))
         return 0;
 
+    InPlaceCheckHeaderFilter(pMyData, rec->session, ctx);
     HtmlRewriteHeaderFilter(pMyData, rec->session, ctx, cfg_s);
     HtmlRewriteFixHeadersFilter(pMyData, rec->session, ctx);
-    InPlaceCheckHeaderFilter(pMyData, rec->session, ctx);
 
     return 0;
 }
@@ -2171,37 +2204,9 @@ RequestRouting::Response RouteRequest(PsMData *pMyData,
     return RequestRouting::kResource;
 }
 
-//Now only when BEACON this hook will be enabled, so that do not check
-static int UriMapFilter(lsi_param_t *rec)
-{
-    PsMData *pMyData = (PsMData *) g_api->get_module_data(rec->session,
-                       &MNAME, LSI_DATA_HTTP);
-    int ret = BeaconHandler(pMyData, rec->session);
-    if (ret == 0)
-    {
-        //statuc_code already set.
-        g_api->register_req_handler(rec->session, &MNAME, 0);
-        g_api->log(rec->session, LSI_LOG_DEBUG,
-                   "[%s]ps_uri_map_filter register_req_handler OK.\n",
-                   ModuleName);
-    }
-    return 0;
-}
 
 static int RecvReqHeaderCheck(lsi_param_t *rec)
 {
-    if (g_api->is_req_handler_registered(rec->session))
-        return LSI_OK;
-    else
-    {
-         int aEnableHkpt[] = {LSI_HKPT_HANDLER_RESTART,
-                             LSI_HKPT_HTTP_END,
-                             LSI_HKPT_RCVD_RESP_HEADER,
-                             LSI_HKPT_SEND_RESP_BODY
-                            };
-        g_api->enable_hook(rec->session, &MNAME, 1, aEnableHkpt, 4);
-    }
-
     //init the VHost data
     ps_vh_conf_t *cfg_s = (ps_vh_conf_t *) g_api->get_module_data(
                               rec->session, &MNAME, LSI_DATA_VHOST);
@@ -2231,6 +2236,19 @@ static int RecvReqHeaderCheck(lsi_param_t *rec)
                    ModuleName);
         return LSI_OK;
     }
+    
+    if (g_api->is_req_handler_registered(rec->session))
+        return LSI_OK;
+    else
+    {
+         int aEnableHkpt[] = {LSI_HKPT_HANDLER_RESTART,
+                             LSI_HKPT_HTTP_END,
+                             LSI_HKPT_RCVD_RESP_HEADER,
+                             LSI_HKPT_SEND_RESP_BODY
+                            };
+        g_api->enable_hook(rec->session, &MNAME, 1, aEnableHkpt, 4);
+    }
+
 
     char httpMethod[10] = {0};
     int methodLen = g_api->get_req_var_by_id(rec->session,
@@ -2292,8 +2310,6 @@ static int RecvReqHeaderCheck(lsi_param_t *rec)
     }
 
     pMyData->ctx = NULL;
-    pMyData->cfg_s = NULL;
-    pMyData->userAgent = NULL;
     pMyData->uaLen = 0;
     pMyData->statusCode = 0;
     pMyData->respHeaders = NULL;
@@ -2306,8 +2322,7 @@ static int RecvReqHeaderCheck(lsi_param_t *rec)
     pMyData->cfg_s = cfg_s;
     pMyData->userAgent = g_api->get_req_header_by_id(rec->session,
                          LSI_HDR_USERAGENT, &pMyData->uaLen);
-    g_api->set_module_data(rec->session, &MNAME, LSI_DATA_HTTP,
-                           pMyData);
+    g_api->set_module_data(rec->session, &MNAME, LSI_DATA_HTTP, pMyData);
     RequestRouting::Response response_category =
         RouteRequest(pMyData, rec->session, true);
 
@@ -2317,16 +2332,18 @@ static int RecvReqHeaderCheck(lsi_param_t *rec)
     //Disable cache module
     //g_api->set_req_env(rec->session, "cache-control", 13, "no-cache", 8);
 
-    int iEnableHkpt;
     switch (response_category)
     {
     case RequestRouting::kBeacon:
-        iEnableHkpt = LSI_HKPT_URI_MAP;
-        g_api->enable_hook(rec->session, &MNAME, 1,
-                                            &iEnableHkpt, 1);
-        //Go to URI_MAP and next step and this is the reason of
-        //why URI_MAP does not check the response_category, if
-        //in the future we need to do more thing in URI_MAP, check.
+        ret = BeaconHandler(pMyData, rec->session);
+        if (ret == 0)
+        {
+            //statuc_code already set.
+            g_api->register_req_handler(rec->session, &MNAME, 0);
+            g_api->log(rec->session, LSI_LOG_DEBUG,
+                       "[%s]ps_uri_map_filter register_req_handler OK.\n",
+                       ModuleName);
+        }
         break;
 
     case RequestRouting::kStaticContent:
@@ -2404,6 +2421,7 @@ void EventCb(void *session_)
                "[%s]ps_event_cb triggered, session=%p\n",
                ModuleName, session_);
 
+    //For suspended case, use the following to resume
     int status_code =
         pMyData->ctx->baseFetch->response_headers()->status_code();
     bool status_ok = (status_code != 0) && (status_code < 400);
@@ -2419,8 +2437,9 @@ void EventCb(void *session_)
         }
     }
 
-    g_api->set_handler_write_state(session, 1);
+
     g_api->create_session_resume_event(session, &MNAME);
+    g_api->set_handler_write_state(session, 1);
     g_api->log(session, LSI_LOG_DEBUG,
                "[%s]EventCb called, pData=%p.\n", ModuleName, pMyData);
 }
@@ -2440,19 +2459,29 @@ static int PsHandlerProcess(lsi_session_t *session)
     g_api->set_status_code(session, pMyData->statusCode);
 
     if (pMyData->respHeaders)
+    {
         CopyRespHeadersToServer(session, *pMyData->respHeaders,
                                 kDontPreserveHeaders);
+    }
     else
     {
         if (pMyData->ctx && pMyData->ctx->baseFetch)
             pMyData->ctx->baseFetch->CollectHeaders(session);
     }
+    g_api->remove_resp_header(session, LSI_RSPHDR_CONTENT_LENGTH, NULL, 0);
+    
+    
+    AutoStr2 str(MNAME.about);
+    str.append("-0", 2); //For handler, make a little difference
+    g_api->set_resp_header(session, -1, PAGESPEED_RESP_HEADER, 
+                           sizeof(PAGESPEED_RESP_HEADER) - 1,
+                           str.c_str(), str.len(),
+                           LSI_HEADEROP_SET);
 
-    while (ls_loopbuf_size(&pMyData->buff))
+    int len;
+    while ((len = ls_loopbuf_blksize(&pMyData->buff)) > 0)
     {
-        ls_loopbuf_straight(&pMyData->buff);
         const char *pBuf = ls_loopbuf_begin(&pMyData->buff);
-        int len = ls_loopbuf_size(&pMyData->buff);
         int written = g_api->append_resp_body(session,  pBuf, len);
 
         if (written > 0)
@@ -2465,9 +2494,9 @@ static int PsHandlerProcess(lsi_session_t *session)
         }
     }
 
+    ls_loopbuf_d(&pMyData->buff);
     g_api->end_resp(session);
-    g_api->free_module_data(session, &MNAME, LSI_DATA_HTTP,
-                            ReleaseMydata);
+    g_api->free_module_data(session, &MNAME, LSI_DATA_HTTP, ReleaseMydata);
     return 0;
 }
 
@@ -2477,12 +2506,11 @@ static lsi_serverhook_t serverHooks[] =
     { LSI_HKPT_MAIN_INITED,         PostConfig,         LSI_HOOK_NORMAL,    LSI_FLAG_ENABLED },
     { LSI_HKPT_WORKER_INIT,         ChildInit,          LSI_HOOK_NORMAL,    LSI_FLAG_ENABLED },
     { LSI_HKPT_MAIN_ATEXIT,         TerminateMainConf,  LSI_HOOK_NORMAL,    LSI_FLAG_ENABLED },
-    { LSI_HKPT_RECV_REQ_HEADER,     RecvReqHeaderCheck, LSI_HOOK_NORMAL,    LSI_FLAG_ENABLED },
-    { LSI_HKPT_URI_MAP,             UriMapFilter,       LSI_HOOK_LAST,      0 },
-    { LSI_HKPT_HANDLER_RESTART,     EndSession,         LSI_HOOK_LAST,      0 },
-    { LSI_HKPT_HTTP_END,            EndSession,         LSI_HOOK_LAST,      0 },
-    { LSI_HKPT_RCVD_RESP_HEADER,    HeaderFilter,       LSI_HOOK_LAST,      0 },
-    { LSI_HKPT_SEND_RESP_BODY,      BodyFilter,         LSI_HOOK_NORMAL,
+    { LSI_HKPT_URI_MAP,             RecvReqHeaderCheck, LSI_HOOK_NORMAL,    LSI_FLAG_ENABLED },
+    { LSI_HKPT_HANDLER_RESTART,     EndSession,         LSI_HOOK_NORMAL,    0 },
+    { LSI_HKPT_HTTP_END,            EndSession,         LSI_HOOK_NORMAL,    0 },
+    { LSI_HKPT_RCVD_RESP_HEADER,    revdRespHeader,     LSI_HOOK_NORMAL,    0 },
+    { LSI_HKPT_SEND_RESP_BODY,      sendRespBody,       LSI_HOOK_NORMAL,
         LSI_FLAG_TRANSFORM | LSI_FLAG_PROCESS_STATIC | LSI_FLAG_DECOMPRESS_REQUIRED
     },
     LSI_HOOK_END   //Must put this at the end position
@@ -2498,6 +2526,6 @@ static int Init(lsi_module_t *pModule)
 lsi_confparser_t dealConfig = { ParseConfig, FreeConfig, paramArray };
 lsi_reqhdlr_t _handler = { PsHandlerProcess, NULL, NULL, NULL };
 lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, Init, &_handler, &dealConfig,
-                       "v1.4.15-1.9.32.6", serverHooks, {0}
+                       "1.5.0-1.9.32.10", serverHooks, {0}
                      };
 

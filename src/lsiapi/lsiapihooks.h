@@ -51,6 +51,7 @@ typedef struct lsi_hookinfo_s
 {
     const LsiApiHooks  *hooks;
     int8_t             *enable_array;
+    int8_t              hook_level;
     filter_term_fn      term_fn;
 } lsi_hookinfo_t;
 
@@ -284,7 +285,7 @@ private:
         {
             iSize = getLevelSize(
                         LsiApiHooks::getGlobalApiHooks(B + i)->size());
-            m_pEnableArray[i] = new int8_t[iSize]();
+            m_pEnableArray[i] = new int8_t[iSize];
         }
         m_iStatus = INITED;
 

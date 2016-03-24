@@ -45,6 +45,7 @@
 #include <util/stringlist.h>
 #include <util/signalutil.h>
 #include <util/vmembuf.h>
+#include <sys/sysctl.h>
 
 #include <extensions/cgi/cgidworker.h>
 #include <extensions/registry/extappregistry.h>
@@ -60,7 +61,6 @@
 #include <sys/mman.h>
 #include <sys/resource.h>
 #include <sys/stat.h>
-#include <sys/sysctl.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/utsname.h>
@@ -1418,6 +1418,9 @@ void LshttpdMain::processSignal()
 
 int LshttpdMain::getNumCores()
 {
+#ifdef LSWS_NO_SET_AFFINITY
+    return 2;
+#else
 #if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
     return sysconf(_SC_NPROCESSORS_ONLN);
 #else
@@ -1438,6 +1441,7 @@ int LshttpdMain::getNumCores()
         if (count < 1)  count = 1;
     }
     return count;
+#endif
 #endif
 }
 /*

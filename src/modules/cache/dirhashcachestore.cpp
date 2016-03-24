@@ -128,7 +128,7 @@ CacheEntry *DirHashCacheStore::getCacheEntry(CacheHash &hash,
             if (isChanged((DirHashCacheEntry *)pEntry, achBuf, pathLen))
             {
                 g_api->log(NULL, LSI_LOG_DEBUG, "[CACHE] [%p] path [%s] has been modified "
-                         "on disk, mark dirty", pEntry, achBuf);
+                           "on disk, mark dirty", pEntry, achBuf);
 
                 //updated by another process, do not remove current object on disk
                 erase(iter);
@@ -194,7 +194,7 @@ CacheEntry *DirHashCacheStore::getCacheEntry(CacheHash &hash,
         if (DateTime::s_curTime - pEntry->getExpireTime() > pEntry->getMaxStale())
         {
             g_api->log(NULL, LSI_LOG_DEBUG, "[CACHE] [%p] has expired, dispose"
-                     , pEntry);
+                       , pEntry);
 
             getManager()->incStats(pEntry->isPrivate(), offsetof(cachestats_t,
                                    expired));
@@ -213,7 +213,7 @@ CacheEntry *DirHashCacheStore::getCacheEntry(CacheHash &hash,
                                     DHCS_SOURCE_MATCH | DHCS_DEST_CHECK) != 0)
                 {
                     g_api->log(NULL, LSI_LOG_DEBUG, "[CACHE] [%p] is stale, [%s] mark stale"
-                             , pEntry, achBuf);
+                               , pEntry, achBuf);
                     dispose = 1;
                 }
 
@@ -231,12 +231,14 @@ CacheEntry *DirHashCacheStore::getCacheEntry(CacheHash &hash,
 //                         , pEntry);
 //         dispose = 1;
 //     }
-    g_api->log(NULL, LSI_LOG_DEBUG, "[CACHE] check [%p] against cache manager, tag: '%s' "
-             , pEntry, pEntry->getTag().c_str());
+    g_api->log(NULL, LSI_LOG_DEBUG,
+               "[CACHE] check [%p] against cache manager, tag: '%s' "
+               , pEntry, pEntry->getTag().c_str());
     if (getManager()->isPurged(pEntry, pKey))
     {
-        g_api->log(NULL, LSI_LOG_DEBUG, "[CACHE] [%p] has been purged by cache manager, dispose"
-                 , pEntry);
+        g_api->log(NULL, LSI_LOG_DEBUG,
+                   "[CACHE] [%p] has been purged by cache manager, dispose"
+                   , pEntry);
 
         dispose = 1;
     }
@@ -256,8 +258,9 @@ CacheEntry *DirHashCacheStore::getCacheEntry(CacheHash &hash,
 
     if (pEntry->verifyKey(pKey) != 0)
     {
-        g_api->log(NULL, LSI_LOG_DEBUG, "[CACHE] [%p] does not match cache key, key confliction detect, do not use."
-                 , pEntry);
+        g_api->log(NULL, LSI_LOG_DEBUG,
+                   "[CACHE] [%p] does not match cache key, key confliction detect, do not use."
+                   , pEntry);
 
         getManager()->incStats(pEntry->isPrivate(), offsetof(cachestats_t,
                                collisions));
@@ -580,7 +583,7 @@ int DirHashCacheStore::publish(CacheEntry *pEntry)
     insert((char *)pEntry->getHashKey().getKey(), pEntry);
     getManager()->incStats(pEntry->isPrivate(), offsetof(cachestats_t,
                            created));
-    
+
     //Rename the record in pEntry
     achTmp[len - 4] = 0;
     pEntry->setFilePath(achTmp);

@@ -1528,6 +1528,9 @@ struct lsi_api_s
      */
     int (*get_hook_flag)(lsi_session_t *session, int index);
 
+    
+    int (*get_hook_level)(lsi_param_t *pParam);
+    
     /**
      * @brief get_module is used to retrieve module information associated with a hook point based on callback parameters.
      *
@@ -2702,6 +2705,12 @@ struct lsi_api_s
      * @return -1 failed to resume, 0 successful.
      */
     int (*resume)(lsi_session_t *session, int retcode);
+
+    int (* exec_ext_cmd)(lsi_session_t *pSession, const char *cmd, int len,
+                         evtcb_pf cb, const long lParam, void *pParam);
+
+    char *(* get_ext_cmd_res_buf)(lsi_session_t *pSession, int *length);
+
 
 
 #ifdef notdef

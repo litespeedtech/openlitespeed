@@ -822,7 +822,7 @@ int SslContext::setCipherList(const char *pList)
                 p = ":";
             snprintf(cipher, 4095, "%.*sECDHE-ECDSA-AES128-GCM-SHA256%c"
                      "ECDHE-RSA-AES128-GCM-SHA256%c%s",
-                     pBegin - pList, pList, *p, *p, pBegin);
+                     (int)(pBegin - pList), pList, *p, *p, pBegin);
             pList = cipher;
         }
     }

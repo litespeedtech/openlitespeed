@@ -63,7 +63,7 @@ int HttpCgiTool::processHeaderLine(HttpExtConnector *pExtConn,
     {
         pValue += HttpRespHeaders::getHeaderStringLen(index);
 
-        while (isspace(*pValue))
+        while ((pValue < pLineEnd) && isspace(*pValue))
             ++pValue;
         pKeyEnd = pValue;
         if (*pValue != ':')
@@ -71,7 +71,7 @@ int HttpCgiTool::processHeaderLine(HttpExtConnector *pExtConn,
         else
         {
             do { ++pValue; }
-            while (isspace(*pValue));
+            while ((pValue < pLineEnd) && isspace(*pValue));
         }
     }
     if (index == HttpRespHeaders::H_HEADER_END)
@@ -80,8 +80,15 @@ int HttpCgiTool::processHeaderLine(HttpExtConnector *pExtConn,
         if (pKeyEnd != NULL)
         {
             pValue = pKeyEnd + 1;
-            while (isspace(*pValue))
+            while ((pValue < pLineEnd) && isspace(*pValue))
                 ++pValue;
+            while (isspace(pKeyEnd[-1]))
+                --pKeyEnd;
+            //ignore empty response header
+            //if ( pValue == pLineEnd )
+            //    return 0;
+            if (pKeyEnd - pLineBegin <= 0)
+                return 0;
         }
         else
         {

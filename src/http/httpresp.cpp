@@ -48,9 +48,12 @@ void HttpResp::reset()
 
 void HttpResp::appendContentLenHeader()
 {
-    static char sLength[44] = {0};
-    int n = StringTool::offsetToStr(sLength, 43, m_lEntityLength);
-    m_respHeaders.add(HttpRespHeaders::H_CONTENT_LENGTH, sLength, n);
+    if (m_lEntityLength >= 0)
+    {
+        static char sLength[44] = {0};
+        int n = StringTool::offsetToStr(sLength, 43, m_lEntityLength);
+        m_respHeaders.add(HttpRespHeaders::H_CONTENT_LENGTH, sLength, n);
+    }
 }
 
 

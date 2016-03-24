@@ -332,7 +332,7 @@ int LsiApiHooks::runCallback(int level, int8_t *pEnableArray,
 //         pHook = find(pModule);
     }
 
-    lsi_hookinfo_t info = { this, pEnableArray, NULL };
+    lsi_hookinfo_t info = { this, pEnableArray, level, NULL };
     lsi_param_t param =
     {
         session,

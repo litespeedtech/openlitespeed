@@ -69,6 +69,7 @@ enum
 #define DUM_BENCHMARK_TOOL      (1<<26)
 #define EXEC_EXT_CMD            (1<<27)
 #define MP4_SEEK                (1<<28)
+#define EXEC_CMD_PARSE_RES      (1<<29)
 
 #define GZIP_ENABLED            1
 #define REQ_GZIP_ACCEPT         2

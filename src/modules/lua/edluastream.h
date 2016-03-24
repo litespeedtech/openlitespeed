@@ -50,7 +50,7 @@ public:
     int connectTo(lua_State *L, const char *pAddr, uint16_t port);
     int send(lua_State *L, const char *pBuf, int32_t iLen);
     int recv(lua_State *L, int32_t len);
-    int close(lua_State *L);
+    int closeSock(lua_State *L);
     int setTimout(int32_t timeout)
     {
         m_iTimeoutMs = timeout;

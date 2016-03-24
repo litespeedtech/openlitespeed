@@ -474,6 +474,9 @@ void ModuleManager::updateHttpApiHook(HttpSessionHooks *pRtHooks,
 {
     if (!moduleConfig->getFilterEnable(module_id))
         pRtHooks->setModuleEnable(m_pModuleArray[module_id], 0);
+    //FIXME: shoudl th ebelow code be called?
+    //else
+      //  pRtHooks->setModuleEnable(m_pModuleArray[module_id], 1);
 }
 
 

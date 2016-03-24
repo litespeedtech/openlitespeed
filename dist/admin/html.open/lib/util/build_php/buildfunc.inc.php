@@ -220,11 +220,15 @@ class BuildCheck
 
         $modules['suhosin'] = in_array($v, array('5.4.','5.5.','5.6.'));
 
-        $modules['apc'] = in_array($v, array('4.4.', '5.1.', '5.2.', '5.3.', '5.4.')); // apc is supported up to 5.4.
+        $modules['apc'] = in_array($v, array('4.4.', '5.2.', '5.3.', '5.4.')); // apc is supported up to 5.4.
 
         $modules['opcache'] = in_array($v, array('5.2.', '5.3.', '5.4.'));   // opcache is built-in since 5.5
 
-        $modules['mailheader'] = in_array($v, array('4.4.', '5.1.', '5.2.', '5.3.', '5.4.', '5.5'));
+        $modules['mailheader'] = in_array($v, array('4.4.', '5.2.', '5.3.', '5.4.', '5.5'));
+
+		$modules['xcache'] = in_array($v, array('4.4.', '5.2.', '5.3.', '5.4.', '5.5', '5.6')); // php7 not supported
+
+		$modules['memcache'] = in_array($v, array('4.4.', '5.2.', '5.3.', '5.4.', '5.5', '5.6')); // php7 not supported
 
         return $modules;
 	}

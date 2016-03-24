@@ -494,7 +494,7 @@ int EdLuaStream::forceClose(lua_State *L)
 }
 
 
-int EdLuaStream::close(lua_State *L)
+int EdLuaStream::closeSock(lua_State *L)
 {
     int ret;
     LsLuaLog(L, LSI_LOG_DEBUG, 0, "close %d", EdLuaStream::getfd());
@@ -622,7 +622,7 @@ static int LsLuaSockClose(lua_State *L)
         p_sock = *p;
     if (p_sock == NULL)
         return LsLuaApi::userError(L, "sock_close", "Bad Socket");
-    return p_sock->close(L);
+    return p_sock->closeSock(L);
 }
 
 

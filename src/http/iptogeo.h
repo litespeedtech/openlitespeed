@@ -78,6 +78,8 @@ public:
     {   return s_pIpToGeo;  }
 
 private:
+    int loadGeoIpDbFile(const char *pFile, int flag);
+    int testGeoIpDbFile(const char *pFile, int flag);
 
     int     m_locDbType;
     int     m_useProxyHeaders;

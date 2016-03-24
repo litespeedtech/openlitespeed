@@ -53,7 +53,7 @@ public:
     int onWriteEx();
 
     int isOutBufFull() const
-    {   return ((m_iCurDataOutWindow <= 0) || (getBuf()->size() >= SPDY_MAX_DATAFRAM_SIZE)); }
+    {   return ((m_iCurDataOutWindow <= 0) || (getBuf()->size() >= 65535)); }
 
     int flush();
 
@@ -125,6 +125,15 @@ public:
     void enableSessionFlowCtrl()    {   m_flag |= SPDY_CONN_FLAG_FLOW_CTRL;  }
     short isFlowCtrl() const    {   return m_flag & SPDY_CONN_FLAG_FLOW_CTRL;  }
 
+    int getAllowedDataSize(int wanted) const
+    {
+        if (wanted > m_iCurDataOutWindow)
+            wanted = m_iCurDataOutWindow;
+        if (m_buf.size() > 8192 && wanted > 2048)
+            wanted = 2048;
+        return wanted;
+    }
+    
     void recycleStream(uint32_t uiStreamID);
     static void replaceZero(char *pValue, int ilength);
     uint16_t getEvents()

@@ -39,6 +39,7 @@ class SSIScript;
 class LsiApiHooks;
 class Aiosfcb;
 class ReqParser;
+class CallbackLinkedObj;
 
 enum  HttpSessionState
 {
@@ -165,6 +166,12 @@ class HttpSession : public LsiSession, public InputStream, public HioHandler,
     uint32_t              m_sn;
     ReqParser            *m_pReqParser;
 
+    AutoBuf               m_sExtCmdResBuf;
+    evtcb_pf              m_cbExtCmd;
+    long                  m_lExtCmdParam;
+    void                 *m_pExtCmdParam;
+
+
     HttpSession(const HttpSession &rhs);
     void operator=(const HttpSession &rhs);
 
@@ -213,6 +220,19 @@ public:
     int32_t getFlag(int mask)    {   return m_iFlag & mask;      }
 
     ReqParser  *getReqParser()  {   return m_pReqParser;    }
+
+
+    AutoBuf &getExtCmdBuf()   { return m_sExtCmdResBuf;    }
+
+    void setExtCmdNotifier(evtcb_pf cb, const long lParam,
+                           void *pParam)
+    {
+        m_cbExtCmd = cb;
+        m_lExtCmdParam = lParam;
+        m_pExtCmdParam = pParam;
+    }
+
+    void extCmdDone();
 
     static int hookResumeCallback(lsi_session_t *session, long lParam, void *);
 
@@ -430,7 +450,7 @@ public:
     VMemBuf *getRespCache() const  {   return m_pRespBodyBuf; }
     off_t getDynBodySent() const    {   return m_lDynBodySent; }
     //int flushDynBody( int nobuff );
-    int execExtCmd(const char *pCmd, int len);
+    int execExtCmd(const char *pCmd, int len, int mode = EXEC_EXT_CMD);
     int handlerProcess(const HttpHandler *pHandler);
     int getParsedScript(SSIScript *&pScript);
     int startServerParsed();

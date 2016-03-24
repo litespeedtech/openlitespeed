@@ -100,18 +100,16 @@ public:
 
     int32_t getLastCleanDiskCache() const   {   return m_tmLastCleanDiskCache;  }
     int32_t getLastCleanSessPurge() const   {   return m_iLastCleanSessPurge;   }
-    
+
     char setLastCleanDiskCache(int32_t tmOld, int32_t tmNow)
-    {   
-        char succ = ls_atomic_cas32(&m_tmLastCleanDiskCache, tmOld, tmNow);       
+    {
+        char succ = ls_atomic_cas32(&m_tmLastCleanDiskCache, tmOld, tmNow);
         if (succ)
-        {
             m_iLastCleanSessPurge = m_iSessionPurged;
-        }
         return succ;
     }
-    
-    int32_t getNewPurgeCount() const    
+
+    int32_t getNewPurgeCount() const
     {   return m_iSessionPurged - m_iLastCleanSessPurge;    }
 
 private:

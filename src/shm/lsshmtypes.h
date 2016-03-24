@@ -122,8 +122,8 @@ typedef v2_comp                 LsShmValComp_fn;
 #define LSSHM_INITSIZE          LSSHM_PAGESIZE  // default SHM SIZE
 
 #define LSSHM_SHM_UNITSIZE      0x400           // 1K byte increments
-#define LSSHM_POOL_UNITSIZE     8               //  8 byte increments
-#define LSSHM_POOL_BCKTINCR     8               // byte increment for buckets
+#define LSSHM_POOL_UNITSIZE     16              //  8 byte increments
+#define LSSHM_POOL_BCKTINCR     16              // byte increment for buckets
 #define LSSHM_MINHASH           0x400
 #define LSSHM_MINLOCK           0x400
 #define LSSHM_HASHINITSIZE      97

@@ -323,7 +323,7 @@ public:
         return (iterOff.m_iOffset == 0) ?
                0 : ptr2offset(offset2iteratorData(iterOff));
     }
-
+    
     LsShmOffset_t set(
         const void *pKey, int keyLen, const void *pValue, int valueLen)
     {
@@ -409,6 +409,59 @@ public:
         autoUnlock();
         return iterOff;
     }
+
+    iteroffset findIteratorWithKey(LsShmHKey key, ls_strpair_t *pParms)
+    {
+        autoLockChkRehash();
+        iteroffset iterOff = find2(key, pParms);
+        autoUnlock();
+        return iterOff;
+    }
+
+    iteroffset getIteratorWithKey(LsShmHKey key, ls_strpair_t *pParms,
+                                  int *pFlag)
+    {
+        autoLockChkRehash();
+        iteroffset iterOff = find2(key, pParms);
+        iterOff = doGet(iterOff, key, pParms, pFlag);
+        autoUnlock();
+        return iterOff;
+    }
+
+    iteroffset insertIteratorWithKey(LsShmHKey key, ls_strpair_t *pParms)
+    {
+        autoLockChkRehash();
+        iteroffset iterOff = find2(key, pParms);
+        iterOff = doInsert(iterOff, key, pParms);
+        autoUnlock();
+        return iterOff;
+    }
+
+    iteroffset setIteratorWithKey(LsShmHKey key, ls_strpair_t *pParms)
+    {
+        autoLockChkRehash();
+        iteroffset iterOff = find2(key, pParms);
+        iterOff = doSet(iterOff, key, pParms);
+        autoUnlock();
+        return iterOff;
+    }
+
+    iteroffset updateIteratorWithKey(LsShmHKey key, ls_strpair_t *pParms)
+    {
+        autoLockChkRehash();
+        iteroffset iterOff = find2(key, pParms);
+        iterOff = doUpdate(iterOff, key, pParms);
+        autoUnlock();
+        return iterOff;
+    }
+
+    // NOTICE: the following do* methods assume that the lock is locked.
+    iteroffset doGet(iteroffset iterOff, LsShmHKey key, ls_strpair_t *pParms,
+                     int *pFlag);
+    iteroffset doInsert(iteroffset iterOff, LsShmHKey key, ls_strpair_t *pParms);
+    iteroffset doSet(iteroffset iterOff, LsShmHKey key, ls_strpair_t *pParms);
+
+    iteroffset doUpdate(iteroffset iterOff, LsShmHKey key, ls_strpair_t *pParms);
 
     iteroffset nextLruIterOff(iteroffset iterOff)
     {
@@ -569,13 +622,6 @@ protected:
     //  @brief  should only be called after SHM-HASH-LOCK has been acquired.
     //
     void eraseIteratorHelper(iterator iter);
-
-    iteroffset doGet(iteroffset iterOff, LsShmHKey key, ls_strpair_t *pParms,
-                     int *pFlag);
-    iteroffset doInsert(iteroffset iterOff, LsShmHKey key, ls_strpair_t *pParms);
-    iteroffset doSet(iteroffset iterOff, LsShmHKey key, ls_strpair_t *pParms);
-
-    iteroffset doUpdate(iteroffset iterOff, LsShmHKey key, ls_strpair_t *pParms);
 
 #ifdef notdef
     static iteroffset doExpand(LsShmHash *pThis,

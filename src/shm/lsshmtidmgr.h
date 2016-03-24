@@ -36,10 +36,13 @@
 typedef struct
 {
     uint64_t        x_tid;
+    uint64_t        x_lastTidPreClear;
     LsShmOffset_t   x_iTidTblStrtOff;
     LsShmOffset_t   x_iTidTblCurOff;
     uint64_t        x_tidLastNoti;
     LsShmOffset_t   x_iBlkLastNoti;
+    LsShmOffset_t   x_iBlkIdxOff;
+    uint64_t        x_iBlkCnt;
     LsShmOffset_t   x_iLockOff;
 } LsShmTidInfo;
 
@@ -65,14 +68,12 @@ public:
     ~LsShmTidMgr() {}
     int  init(LsShmHash *pHash, LsShmOffset_t off, bool blkinit);
     void clrTidTbl();
+    LsShmOffset_t growTidTbl(uint64_t base, int &remapped);
+    int checkTidTbl();
 
     void linkTid(LsShmHIterOff offElem, uint64_t *pTid);
-    void unlinkTid(LsShmHElem *pElem);
-    void tidReplaceTid(LsShmHElem *pElem, LsShmHIterOff offElem, uint64_t *pTid)
-    {
-        unlinkTid(pElem);
-        linkTid(offElem, pTid);
-    }
+    void unlinkTid(uint64_t tid);
+    void tidReplaceTid(LsShmHElem *pElem, LsShmHIterOff offElem, uint64_t *pTid);
 
     LsShmHIterOff doSet(const void *pKey, int iKeyLen, const void *pVal,
                         int iValLen);
@@ -103,7 +104,7 @@ public:
     {
         LsShmHIterOff off = {0};
         LsShmTidTblBlk *pBlk;
-        if ((pBlk = tid2tblBlk(tid, *ppBlk)) == NULL)
+        if ((pBlk = tid2tblBlk(tid)) == NULL)
             return off;
         *ppBlk = pBlk;
         uint64_t tidVal = pBlk->x_iTidVals[tid % TIDTBLBLK_MAXSZ];
@@ -127,19 +128,11 @@ private:
     int  setTidTblIter(LsShmHIterOff iterOff, uint64_t *pTid)
     {   return setTidTblEnt(iterOff2tidVal(iterOff), pTid);  }
 
-    LsShmTidTblBlk  *tid2tblBlk(uint64_t tid, LsShmTidTblBlk *pBlk);
-
-    LsShmTidTblBlk  *nxtTblBlkStrt(LsShmTidTblBlk *pBlk)
-    {
-        LsShmOffset_t off;
-        if (pBlk != NULL)
-            return pBlk;
-        if ((off = getTidInfo()->x_iTidTblStrtOff) == 0)
-            return NULL;
-        return (LsShmTidTblBlk *)m_pHash->offset2ptr(off);
-    }
+    LsShmTidTblBlk  *tid2tblBlk(uint64_t tid);
 
     uint64_t        *nxtValInBlk(LsShmTidTblBlk *pBlk, int *pIndx);
+    
+    LsShmOffset_t    allocBlkIdx(LsShmOffset_t oldIdx, LsShmSize_t curSize, int &remapped);
 
     int  setupLock()
     {   return ls_shmlock_setup(m_pShmLock);  }

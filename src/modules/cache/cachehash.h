@@ -36,7 +36,7 @@ public:
     {   *this = rhs;       }
     static void update(XXH64_state_t *pState, const char *pBuf, int len);
 
-    const unsigned char *getKey() const   
+    const unsigned char *getKey() const
     {   return (unsigned char *)&m_key;     }
     void setKey(uint64_t digest)
     {    m_key = digest;     }

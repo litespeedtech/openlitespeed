@@ -20,6 +20,7 @@
 
 #include <inttypes.h>
 #include <http/platforms.h>
+#include <sys/types.h>
 
 #define CE_ID MK_DWORD4( 'L', 'S', 'C', 'H' )
 #define CACHE_ENTRY_MAGIC_LEN        4
@@ -54,7 +55,10 @@ public:
     int32_t m_tmLastMod;        //Last Modified time parsed from response header if set
     int16_t m_offETag;          //ETag header value location
     int16_t m_lenETag;          //ETag Header size
-
+    int16_t m_lenStxFilePath;   //For a static file caching, we store the orginal file path
+    off_t   m_lSize;
+    ino_t   m_inode;
+    time_t  m_lastMod;
 };
 
 #endif

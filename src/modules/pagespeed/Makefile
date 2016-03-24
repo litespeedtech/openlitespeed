@@ -45,7 +45,7 @@ SOURCES =pagespeed.cpp log_message_handler.cpp ls_message_handler.cpp \
         ls_rewrite_options.cpp  \
         ls_base_fetch.cpp
         
-
+DLPSOL:= $(shell ./dlpsol.sh )
 $(shell rm *.o ../../util/*.o)
 
 OBJECTS=$(SOURCES:.cpp=.o)

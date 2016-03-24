@@ -95,6 +95,12 @@ int add_global_hook(int index, const lsi_module_t *pModule,
 }
 
 
+static int get_hook_level(lsi_param_t *pParam)
+{
+    return pParam->hook_chain->hook_level;
+}
+
+
 static int enable_hook(lsi_session_t *session,
                                         const lsi_module_t *pModule, int enable,
                                         int *index, int iNumIndices)
@@ -761,7 +767,7 @@ static int is_req_handler_registered(lsi_session_t *session)
             && pReq->getHttpHandler()->getType() == HandlerType::HT_MODULE)
             return 1;
     }
-    
+
     return 0;
 }
 
@@ -1586,6 +1592,29 @@ static int lsiapi_resume(lsi_session_t *session, int retcode)
 }
 
 
+
+static int exec_ext_cmd(lsi_session_t *session, const char *cmd, int len,
+                        evtcb_pf cb, const long lParam, void *pParam)
+{
+    HttpSession *pSession = (HttpSession *)((LsiSession *)session);
+    if (pSession == NULL)
+        return LS_FAIL;
+
+    pSession->setExtCmdNotifier(cb, lParam, pParam);
+    pSession->execExtCmd(cmd, len, EXEC_CMD_PARSE_RES);
+    return 0;
+}
+
+static char *get_ext_cmd_res_buf(lsi_session_t *session, int *length)
+{
+    HttpSession *pSession = (HttpSession *)((LsiSession *)session);
+    if (pSession == NULL)
+        return NULL;
+
+    *length = pSession->getExtCmdBuf().size();
+    return pSession->getExtCmdBuf().begin();
+}
+
 static int get_client_access(lsi_session_t *session)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
@@ -1596,6 +1625,7 @@ static int get_client_access(lsi_session_t *session)
     else
         return 1;
 }
+
 
 static int get_file_path_by_uri(lsi_session_t *session, const char *uri,
                                 int uri_len, char *path, int max_len)
@@ -1977,6 +2007,7 @@ void lsiapi_init_server_api()
 {
     lsi_api_t *pApi = LsiapiBridge::getLsiapiFunctions();
     pApi->enable_hook = enable_hook;
+    pApi->get_hook_level = get_hook_level;
     pApi->get_hook_flag = get_hook_flag;
 
     pApi->register_env_handler = lsiapi_register_env_handler;
@@ -2079,7 +2110,11 @@ void lsiapi_init_server_api()
 
     pApi->is_suspended = lsiapi_is_suspended;
     pApi->resume = lsiapi_resume;
+
+    pApi->exec_ext_cmd = exec_ext_cmd;
+    pApi->get_ext_cmd_res_buf = get_ext_cmd_res_buf;
     pApi->get_client_access = get_client_access;
+
 
     pApi->get_file_path_by_uri = get_file_path_by_uri;
     //pApi->get_static_file_stat = get_static_file_stat;

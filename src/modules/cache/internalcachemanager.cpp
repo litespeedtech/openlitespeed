@@ -249,7 +249,7 @@ void *InternalCacheManager::getPrivateCacheInfo(const char *pPrivateId,
 
 
 int InternalCacheManager::setPrivateTagFlag(void *pPrivatePurgeData,
-        int tagId, uint8_t flag)
+        purgeinfo_t *pPurginfo)
 {
     return LS_FAIL;
 }

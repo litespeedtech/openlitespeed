@@ -24,6 +24,5 @@ listener adminListener{
   secure                1
   keyFile               $SERVER_ROOT/admin/conf/%SSL_HOSTNAME%.key
   certFile              $SERVER_ROOT/admin/conf/%SSL_HOSTNAME%.crt
-  ciphers               SSLv3:TLSv1:HIGH:MEDIUM:!aNULL:!MD5:!SSLv2:!eNULL:!EDH
   clientVerify          0
 }
