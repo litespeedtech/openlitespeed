@@ -40,7 +40,7 @@ int EdStream::regist(Multiplexer *pMultiplexer, int events)
 {
     if (pMultiplexer)
         return pMultiplexer->add(this, events);
-    return 0;
+    return LS_OK;
 }
 
 
@@ -91,7 +91,7 @@ int EdStream::close()
         ::close(getfd());
         setfd(-1);
     }
-    return 0;
+    return LS_OK;
 }
 
 
@@ -134,7 +134,7 @@ int EdStream::handleEvents(short event)
     {
         ret = onHangup();
         if (!getAssignedRevent())
-            return 0;
+            return LS_OK;
     }
     if ((ret != -1) && (event & POLLOUT))
     {
@@ -146,11 +146,11 @@ int EdStream::handleEvents(short event)
     {
         ret = onError();
         if (!getAssignedRevent())
-            return 0;
+            return LS_OK;
     }
     if (ret != -1)
         onEventDone();
-    return 0;
+    return LS_OK;
 }
 
 
@@ -165,7 +165,7 @@ int EdStream::read(char *pBuf, int size)
         return LS_FAIL;
     }
     if ((ret == -1) && ((errno == EAGAIN) || (errno == EINTR)))
-        return 0;
+        return LS_OK;
     return ret;
 }
 
@@ -182,7 +182,7 @@ int EdStream::readv(struct iovec *vector, size_t count)
     {
         resetRevent(POLLIN);
         if ((errno == EAGAIN) || (errno == EINTR))
-            return 0;
+            return LS_OK;
     }
     return ret;
 
@@ -192,7 +192,7 @@ int EdStream::readv(struct iovec *vector, size_t count)
 int EdStream::onHangup()
 {
     //::shutdown( getfd(), SHUT_RD );
-    return 0;
+    return LS_OK;
 }
 
 

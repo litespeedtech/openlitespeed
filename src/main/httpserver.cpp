@@ -106,6 +106,7 @@
 #include <unistd.h>
 
 #include <new>
+#include <util/httpfetch.h>
 
 #ifdef RUN_TEST
 #include <httpdtest.h>
@@ -116,7 +117,6 @@
 #include <http/htauth.h>
 #include <http/httpresp.h>
 #include <http/httpsession.h>
-#include <util/httpfetch.h>
 #endif
 
 #if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
@@ -201,7 +201,7 @@ private:
     long                m_lStartTime;
     pid_t               m_pid;
     gid_t               m_pri_gid;
-
+    HttpFetch *         m_pAutoUpdFetch;
 
     HttpServerImpl(const HttpServerImpl &rhs);
     void operator=(const HttpServerImpl &rhs);
@@ -211,6 +211,7 @@ private:
         : m_sSwapDirectory(DEFAULT_SWAP_DIR)
         , m_sRTReportFile(DEFAULT_TMP_DIR "/.rtreport")
         , m_pri_gid(0)
+        , m_pAutoUpdFetch(NULL)
     {
         ClientCache::initObjPool();
         ExtAppRegistry::init();
@@ -224,7 +225,10 @@ private:
     }
 
     ~HttpServerImpl()
-    {}
+    {
+        if (m_pAutoUpdFetch)
+            delete m_pAutoUpdFetch;
+    }
 
     int initAdns()
     {
@@ -300,6 +304,8 @@ private:
                            HttpVHost    *pVHost,
                            const char *pDomains);
 
+    
+    void checkOLSUpdate();
     void onTimer();
     void onTimer60Secs();
     void onTimer30Secs();
@@ -369,8 +375,12 @@ private:
     void setServerRoot(const char *pRoot);
     int initServer(XmlNode *pRoot, int reconfig);
     int initServer(XmlNode *pRoot, int &iReleaseXmlTree, int reconfig);
+    int readVersion(const char *path);
+    
 public:
     void hideServerSignature(int sv);
+    int processAutoUpdResp(HttpFetch *pHttpFetch);
+    
 };
 
 #include <http/userdir.h>
@@ -884,14 +894,112 @@ void HttpServerImpl::onTimer30Secs()
 }
 
 
+static int autoUpdCheckCb(void *pArg, HttpFetch *pHttpFetch)
+{
+    HttpServerImpl *pServerImpl = (HttpServerImpl *)pArg;
+    pServerImpl->processAutoUpdResp(pHttpFetch);
+    return 0;
+}
+
+int HttpServerImpl::readVersion(const char *path)
+{
+    //If a.b.c will return ((a * 100) + b) * 100) + c
+    char s[20] = {0};
+    int ver = 0;
+    FILE *fp = fopen(path, "r");
+    if (fp)
+    {
+        fread(s, 1, 20, fp);
+        fclose(fp);
+
+        int a = 0, b = 0, c = 0;
+        sscanf(s, "%d.%d.%d", &a, &b, &c);
+        ver = a * 10000 + b * 100 + c;
+    }
+    return ver;
+}
+
+int HttpServerImpl::processAutoUpdResp(HttpFetch *pHttpFetch)
+{
+    assert( pHttpFetch == m_pAutoUpdFetch );
+    int istatusCode = m_pAutoUpdFetch->getStatusCode() ;
+    const char *path = pHttpFetch->getResult()->getTempFileName();
+    if (istatusCode != 200)
+        unlink(path);
+    else
+    {
+        chmod(path, 0744);
+        int newVer = readVersion(path);
+        if (newVer > 10000)
+        {
+            AutoStr2 sCurVer;
+            sCurVer.setStr(MainServerConfig::getInstance().getServerRoot());
+            sCurVer.append("/VERSION", 8);
+            int curVer = readVersion(sCurVer.c_str());
+            if (newVer > curVer)
+                LS_NOTICE("[!!!UPDATE!!!] new version %d.%d.%d is available.\n",
+                          newVer/10000, (newVer/100) % 100, newVer % 100);
+        }
+    }
+    return 0;
+}
+
+
+//autoupdate checking, this only do once per day, won't use much resource
+void HttpServerImpl::checkOLSUpdate()
+{
+    struct stat sb;
+    AutoStr2 sAutoUpdFile;
+    sAutoUpdFile.setStr(MainServerConfig::getInstance().getServerRoot());
+    sAutoUpdFile.append("/autoupdate/", 12);
+    if (stat(sAutoUpdFile.c_str(), &sb) == -1) 
+        mkdir(sAutoUpdFile.c_str(), 0755);
+    sAutoUpdFile.append("release", 7);
+
+    time_t t = time(NULL);
+
+    if (stat(sAutoUpdFile.c_str(), &sb) != -1)
+    {
+        if (t - sb.st_mtime < 86400) //Less than 1 day
+            return ;
+        else
+            unlink(sAutoUpdFile.c_str());
+    }
+
+    struct tm * tl = localtime(&t);
+    if (tl->tm_hour != 2)  //Only check it between 2:00AM - 3:00AM
+        return ;
+
+    if (m_pAutoUpdFetch)
+    {
+        delete m_pAutoUpdFetch;
+        m_pAutoUpdFetch = NULL;
+    }
+    m_pAutoUpdFetch = new HttpFetch();
+    m_pAutoUpdFetch->setTimeout(15);  //Set Req timeout as 30 seconds
+    m_pAutoUpdFetch->setResProcessor(autoUpdCheckCb, this);
+    GSockAddr m_addrResponder;
+    m_addrResponder.setHttpUrl("http://open.litespeedtech.com/", 30);
+    m_pAutoUpdFetch->startReq("http://open.litespeedtech.com/packages/release",
+                               1, 1, NULL, 0, 
+                               sAutoUpdFile.c_str(),
+                               NULL, m_addrResponder);
+
+    return ;
+}
+
+
+
 void HttpServerImpl::onTimer60Secs()
 {
-
     m_toBeReleasedListeners.releaseUnused();
     m_toBeReleasedVHosts.releaseUnused();
     m_toBeReleasedContext.releaseUnused(DateTime::s_curTime,
                                         HttpServerConfig::getInstance().getConnTimeout());
 
+    int autoUpdate = 1; //Need to read from config?
+    if (autoUpdate)
+        checkOLSUpdate();
 }
 
 

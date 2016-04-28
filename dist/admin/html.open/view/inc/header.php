@@ -59,17 +59,25 @@
 			</div>
 
 			<!-- projects dropdown -->
-			<div class="project-context hidden-xs">
+			<div class="project-context hidden-xs"><span class="label">
 
 			<?php
-			$prod = PRODUCT::GetInstance();
-			$product = ucwords(strtolower($prod->product));
-			$edition = ucwords(strtolower($prod->edition));
-			$version = $prod->version;
-			echo '<span class="label">' . DMsg::UIStr('note_curver') . ':</span><span>'
-				. $product . ' ' . $edition . ' ' . $version . '</span>';
+			$prod = Product::GetInstance();
+			$product = ucwords(strtolower(Product::PROD_NAME));
+			$edition = ucwords(strtolower($prod->getEdition()));
+			$version = $prod->getVersion();
+			$new_version = $prod->getNewVersion();
+
+			$ver_notice = DMsg::UIStr('note_curver') . ':</span><span>'
+				. $product . ' ' . $edition . ' ' . $version; // .  . '</span>';
+			if ($new_version) {
+				$ver_notice .= ' &nbsp;&nbsp;<a href="http://open.litespeedtech.com/releaselog" target="_blank"><i>'
+						. DMsg::UIStr('note_newver') . ' ' . $new_version . '</i></a>';
+			}
+			echo $ver_notice;
+
 			?>
-			</div>
+			</span></div>
 			<!-- end projects dropdown -->
 
 			<!-- pulled right: nav area -->

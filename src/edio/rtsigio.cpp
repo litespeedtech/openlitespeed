@@ -66,7 +66,7 @@ int RTsigio::enableSigio()
         (!sigaddset(&m_sigset, SIGIO)) &&
         (!sigaddset(&m_sigset, RTSIGNUM)) &&
         (!sigprocmask(SIG_BLOCK, &m_sigset, NULL)))
-        return 0;
+        return LS_OK;
     return LS_FAIL;
 }
 
@@ -101,7 +101,7 @@ int RTsigio::add(EventReactor *pHandler, short mask)
 //
 //    }
 
-    return 0;
+    return LS_OK;
 }
 
 
@@ -114,13 +114,13 @@ int RTsigio::remove(EventReactor *pHandler)
     }
     int fd = pHandler->getfd();
     if (fd >= m_fdindex.getCapacity())
-        return 0;
+        return LS_OK;
     if (getPfdReactor().remove(pHandler))
         return LS_FAIL;
     //remove O_ASYNC flag, stop generate signal
     //::fcntl( fd, F_SETFL, O_NONBLOCK );
     m_fdindex.set(fd, 65535);
-    return 0;
+    return LS_OK;
 
 }
 

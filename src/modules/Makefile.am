@@ -10,9 +10,9 @@ libmodules_a_METASOURCES = AUTO
 libmodules_a_SOURCES = modgzip/modgzip.cpp
 
 if HAVE_LIBLUA
-SUBDIRS = cache uploadprogress lua 
+SUBDIRS = cache uploadprogress lua modinspector
 else
-SUBDIRS = cache uploadprogress 
+SUBDIRS = cache uploadprogress modinspector
 endif
 
 #noinst_HEADERS = 

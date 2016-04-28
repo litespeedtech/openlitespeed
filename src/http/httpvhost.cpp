@@ -34,6 +34,7 @@
 #include <http/rewritemap.h>
 #include <http/serverprocessconfig.h>
 #include <http/userdir.h>
+#include <http/staticfilecachedata.h>
 #include <log4cxx/appender.h>
 #include <log4cxx/layout.h>
 #include <log4cxx/logger.h>
@@ -251,6 +252,7 @@ HttpVHost::HttpVHost(const char *pHostName)
                       HandlerFactory::getInstance(0, NULL), 1);
     m_rootContext.allocateInternal();
     m_contexts.setRootContext(&m_rootContext);
+    m_pUrlStxFileHash = new UrlStxFileHash(30, GHash::hfString, GHash::cmpString);
 }
 
 
@@ -273,7 +275,8 @@ HttpVHost::~HttpVHost()
         delete m_pAwstats;
     if (m_pSSLCtx)
         delete m_pSSLCtx;
-
+    m_pUrlStxFileHash->release_objects();
+    delete m_pUrlStxFileHash;
 
     LsiapiBridge::releaseModuleData(LSI_DATA_VHOST, &m_moduleData);
 
@@ -399,6 +402,7 @@ void HttpVHost::setAdminEmails(const char *pEmails)
 
 void HttpVHost::onTimer30Secs()
 {
+    urlStaticFileHashCleanTimer();
 }
 
 
@@ -2411,8 +2415,8 @@ HttpVHost *HttpVHost::configVHost(const XmlNode *pNode, const char *pName,
                 pVHnew->m_ReqParserParam.m_sUploadFilePathTemplate.c_str();
             if (stat(path, &stBuf) == -1)
             {
-                mkdir(path, 02770);
-                chmod(path, 02770);
+                mkdir(path, 02771);
+                chmod(path, 02771);
                 if (pVHnew->m_rootContext.getSetUidMode() == 2)
                 {
                     struct stat st;
@@ -2564,4 +2568,48 @@ void HttpVHost::enableAioLogging()
     }
 }
 
+void HttpVHost::addUrlStaticFileMatch(const char *url, StaticFileCacheData *pData)
+{
+    static_file_data_t *data = new static_file_data_t;
+    data->pData = pData;
+    data->tmaccess = DateTime::s_curTime;
+    data->url.setStr(url);
+    m_pUrlStxFileHash->update(data->url.c_str(), data);
+}
+
+StaticFileCacheData *HttpVHost::getUrlStaticFileData(const char *url)
+{
+    UrlStxFileHash::iterator it = m_pUrlStxFileHash->find(url);
+    if (it == m_pUrlStxFileHash->end())
+        return NULL;
+    else
+    {
+        if (it.second()->tmaccess != DateTime::s_curTime)
+        {
+            StaticFileCacheData *pData = it.second()->pData;
+            if (pData)
+                pData->getFileData()->decRef();
+            it.second()->pData = NULL;
+        }
+        return it.second()->pData;
+    }
+}
+
+void HttpVHost::urlStaticFileHashCleanTimer()
+{
+    UrlStxFileHash::iterator it;
+    for( it = m_pUrlStxFileHash->begin(); it != m_pUrlStxFileHash->end(); )
+    {
+        static_file_data_t *data = (static_file_data_t *)it.second();
+        if (data->tmaccess != DateTime::s_curTime)
+        {
+            StaticFileCacheData *pData = it.second()->pData;
+            if (pData)
+                pData->getFileData()->decRef();
+            delete it.second();
+            m_pUrlStxFileHash->erase(it);
+        }
+        it = m_pUrlStxFileHash->next(it);
+    }
+}
 

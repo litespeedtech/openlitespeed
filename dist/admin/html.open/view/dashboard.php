@@ -50,7 +50,7 @@ $servstatplot = array(
                 <div class="widget-toolbar" role="menu">
                     <span class="onoffswitch-title"><?php DMsg::EchoUIStr('service_realtime') ?></span>
                     <span class="onoffswitch">
-                        <input type="checkbox" name="live_feed" class="onoffswitch-checkbox" checked="checked" id="live_feed">
+                        <input type="checkbox" name="live_feed" class="onoffswitch-checkbox" id="live_feed">
                         <label class="onoffswitch-label" for="live_feed"> <span class="onoffswitch-inner" data-swchon-text="YES" data-swchoff-text="NO"></span> <span class="onoffswitch-switch"></span> </label> </span>
                 </div>
             </header>
@@ -245,7 +245,9 @@ $servstatplot = array(
 
         // setup control widget
         var updateInterval = 15000;
-        $.intervalArr.push(setInterval(update, updateInterval));
+		if ($("#live_feed").is(':checked')) {
+	        $.intervalArr.push(setInterval(update, updateInterval));
+        }
         var timezoneoffset = (new Date()).getTimezoneOffset() * 60000;
 
         // setup plot

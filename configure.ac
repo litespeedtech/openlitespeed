@@ -6,7 +6,7 @@ m4_include(ax_check_liblua.m4)
 
 dnl Process this file with autoconf to produce a configure script.
 AC_PREREQ([2.69])
-AC_INIT([openlitespeed],[1.4.16],[info@litespeedtech.com],[openlitespeed],[http://www.litespeedtech.com/])
+AC_INIT([openlitespeed],[1.4.17],[info@litespeedtech.com],[openlitespeed],[http://www.litespeedtech.com/])
 AM_INIT_AUTOMAKE([1.0 foreign no-define ])
 
 AM_CONFIG_HEADER(src/config.h:src/config.h.in)
@@ -278,6 +278,7 @@ AC_CONFIG_FILES(Makefile
                 src/modules/Makefile
                 src/shm/Makefile
                 src/modules/cache/Makefile
+                src/modules/modinspector/Makefile
                 src/modules/uploadprogress/Makefile)
                 
 if test x$need_lua = xyes ; then

@@ -43,14 +43,14 @@ int FdIndex::allocate(int capacity)
                sizeof(short) * (capacity - m_capacity));
     m_pIndexes = pIndexes;
     m_capacity = capacity;
-    return 0;
+    return LS_OK;
 }
 
 int FdIndex::deallocate()
 {
     if (m_pIndexes)
         free(m_pIndexes);
-    return 0;
+    return LS_OK;
 }
 
 

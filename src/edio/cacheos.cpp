@@ -29,9 +29,8 @@ int CacheOS::cacheWritev(IOVec &vec, int total, int *pRet)
     int ret = 0;
     int bufSize;
     int written = 0;
-    int count = vec.len();
-    const struct iovec *vector = vec.get();
-    for (; count > 0; --count, ++vector)
+    const struct iovec *vector = vec.begin();
+    for (; vector < vec.end(); ++vector)
     {
         const char *pBuf = (const char *) vector->iov_base;
         bufSize = vector->iov_len;

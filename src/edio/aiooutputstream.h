@@ -40,30 +40,31 @@ private:
 public:
     AioReq();
 
-    inline void *getBuf()
+    void *getBuf()
     {
         void *p = (void *)m_aiocb.aio_buf;
         m_aiocb.aio_buf = NULL;
         return p;
     }
 
-    inline off_t getOffset()
+    off_t getOffset()
     {   return m_aiocb.aio_offset;  }
 
-    inline int getError()
+    int getError()
     {   return aio_error(&m_aiocb);   }
 
     //NOTICE: If the error is EINPROGRESS, the result of this is undefined.
-    inline int getReturn()
+    int getReturn()
     {   return aio_return(&m_aiocb);  }
 
-    inline int read(int fildes, void *buf, int nbytes, int offset,
+    int read(int fildes, void *buf, int nbytes, int offset,
                     AioEventHandler *pHandler)
     {
         setcb(fildes, buf, nbytes, offset, pHandler);
         return aio_read(&m_aiocb);
     }
-    inline int write(int fildes, void *buf, int nbytes, int offset,
+    
+    int write(int fildes, void *buf, int nbytes, int offset,
                      AioEventHandler *pHandler)
     {
         setcb(fildes, buf, nbytes, offset, pHandler);
@@ -108,7 +109,7 @@ public:
 
     void setFlock(int l)           {   m_iFlock = l;           }
 
-    inline void setAsync()
+    void setAsync()
     {
 #ifdef LS_AIO_USE_AIO
         m_async = 1;

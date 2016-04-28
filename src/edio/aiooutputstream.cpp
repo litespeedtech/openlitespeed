@@ -80,7 +80,7 @@ int AioOutputStream::open(const char *pathname, int flags, mode_t mode)
 int AioOutputStream::close()
 {
     if (getfd() == -1)
-        return 0;
+        return LS_OK;
     if (m_pRecv)
         flush();
     if (m_pSend)
@@ -92,7 +92,7 @@ int AioOutputStream::close()
         m_closeRequested = 0;
         m_flushRequested = 0;
     }
-    return 0;
+    return LS_OK;
 }
 
 
@@ -149,7 +149,7 @@ int AioOutputStream::onAioEvent()
         return flush();
     if (m_closeRequested)
         return close();
-    return 0;
+    return LS_OK;
 }
 
 

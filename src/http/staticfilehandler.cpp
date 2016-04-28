@@ -30,6 +30,7 @@
 #include <http/moov.h>
 #include <http/sendfileinfo.h>
 #include <http/staticfilecachedata.h>
+#include "httpvhost.h"
 #include <log4cxx/logger.h>
 #include <lsr/ls_strtool.h>
 #include <lsr/ls_xpool.h>
@@ -413,11 +414,17 @@ int StaticFileHandler::process(HttpSession *pSession,
 
     const AutoStr2 *pPath = pReq->getRealPath();
 
-    ret = pSession->setUpdateStaticFileCache(pCache, pECache, pPath->c_str(),
+    if (pPath)
+    {
+        ret = pSession->setUpdateStaticFileCache(pCache, pECache, pPath->c_str(),
             pPath->len(),
             pReq->transferReqFileFd(), pReq->getFileStat());
-    if (ret)
-        return ret;
+        if (ret)
+            return ret;
+    }
+
+    if (pSession->getFlag(HSF_STX_FILE_CACHE_READY))
+        pReq->setMimeType(pCache->getMimeType());
 
     if (pCache->needUpdateHeaders(pReq->getMimeType(),
                                   pReq->getDefaultCharset(), pReq->getETagFlags()))
@@ -565,6 +572,12 @@ int StaticFileHandler::process(HttpSession *pSession,
         }
         //ret = pSession->flush();
         ret = pSession->endResponse(1);
+    }
+    if (ret == 0 && !pSession->getFlag(HSF_STX_FILE_CACHE_READY))
+    {
+        HttpVHost *host = (HttpVHost *)pSession->getReq()->getVHost();
+        host->addUrlStaticFileMatch(pReq->getURI(), pData->getFileData());
+        pData->getFileData()->incRef();
     }
     return ret;
 

@@ -1348,6 +1348,23 @@ static int send_file(lsi_session_t *session, const char *path,
 }
 
 
+static int send_file2(lsi_session_t *session, int fd,
+                     int64_t start, int64_t size)
+{
+    HttpSession *pSession = (HttpSession *)((LsiSession *)session);
+    if (pSession == NULL)
+        return LS_FAIL;
+
+    if (pSession->isEndResponse())
+        return LS_FAIL;
+
+    
+    pSession->setSendFileOffsetSize(fd, start, size);
+    pSession->flush();
+    return 0;
+}
+
+
 static void lsi_flush(lsi_session_t *session)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
@@ -2081,6 +2098,7 @@ void lsiapi_init_server_api()
     pApi->append_resp_body = append_resp_body;
     pApi->append_resp_bodyv = append_resp_bodyv;
     pApi->send_file = send_file;
+    pApi->send_file2 = send_file2;
     pApi->init_file_type_mdata = init_file_type_mdata;
     pApi->flush = lsi_flush;
     pApi->end_resp = lsi_end_resp;

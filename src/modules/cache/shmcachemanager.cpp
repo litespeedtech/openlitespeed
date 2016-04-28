@@ -656,8 +656,8 @@ int ShmCacheManager::processPurgeCmdEx(
 
 /*
  */
-int ShmCacheManager::shouldPurge(
-    const char *pKey, int keyLen, int32_t sec, int16_t msec)
+int ShmCacheManager::shouldPurge(const char *pKey, int keyLen, 
+                                 int32_t sec, int16_t msec)
 {
     int valLen;
     LsShmOffset_t offVal;
@@ -674,7 +674,15 @@ int ShmCacheManager::shouldPurge(
         //         "Lookup tag: '%.*s', create timestamp: %d.%d",
         //          keyLen, pKey, sec, (int)msec );
 
-        if ((offVal = m_pPublicPurge->find(p, pTagEnd - p, &valLen)) != 0)
+        while(isblank(*p))
+            ++p;
+
+        const char *pTagEndBak = pTagEnd;
+        while (isblank(*(pTagEndBak - 1)))
+            --pTagEndBak;
+
+        if (pTagEndBak > p && 
+            (offVal = m_pPublicPurge->find(p, pTagEndBak - p, &valLen)) != 0)
         {
             purgeinfo_t *pData = (purgeinfo_t *)m_pPublicPurge->offset2ptr(offVal);
             //         LOG4CXX_NS::Logger::getRootLogger()->debug(
@@ -693,9 +701,9 @@ int ShmCacheManager::shouldPurge(
 
 
 int ShmCacheManager::isPurgedByTag(
-    const char *pTag, CacheEntry *pEntry, CacheKey *pKey)
+    const char *pTag, CacheEntry *pEntry, CacheKey *pKey, bool isCheckPrivate)
 {
-    if (pKey->m_pIP)
+    if (isCheckPrivate)
     {
         //assert( "NO_PRIVATE_PURGE_YET" == NULL );
         ShmPrivatePurgeData privatePurge;
@@ -725,7 +733,7 @@ int ShmCacheManager::isPurgedByTag(
 }
 
 
-int ShmCacheManager::isPurged(CacheEntry *pEntry, CacheKey *pKey)
+int ShmCacheManager::isPurged(CacheEntry *pEntry, CacheKey *pKey, bool isCheckPrivate)
 {
     int ret = 0;
     CacheInfo *pInfo = (CacheInfo *)m_pPublicPurge->
@@ -737,7 +745,7 @@ int ShmCacheManager::isPurged(CacheEntry *pEntry, CacheKey *pKey)
     {
         const char *pTag = pEntry->getTag().c_str();
         if (pTag)
-            if (isPurgedByTag(pTag, pEntry, pKey))
+            if (isPurgedByTag(pTag, pEntry, pKey, isCheckPrivate))
                 ret = 1;
         if (!ret)
         {
@@ -1004,8 +1012,8 @@ int ShmCacheManager::shouldCleanDiskCache()
     int last = getCacheInfo()->getLastCleanDiskCache();
     if (DateTime::s_curTime - last < 86400)
         return 0;
-    if (getCacheInfo()->getNewPurgeCount() < 500)
-        return 0;
+//    if (getCacheInfo()->getNewPurgeCount() < 500)
+//        return 0;
     ++m_attempts;
     double loads[3];
     if (getloadavg(loads, 3) == -1)

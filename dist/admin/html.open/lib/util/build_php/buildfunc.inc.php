@@ -5,7 +5,7 @@ class BuildOptions
 	private $base_ver;
 	private $type; //NONE, DEFAULT, IMPORT, INPUT, BUILD
 	private $batch_id;
-	private $validated = FALSE;
+	private $validated = false;
 
 
 	private $vals = array(
@@ -15,20 +15,20 @@ class BuildOptions
 			'InstallPath' => '',
 			'CompilerFlags' => '',
 			'ConfigParam' => '',
-			'AddOnSuhosin' => FALSE,
-			'AddOnMailHeader' => FALSE,
-			'AddOnAPC' => FALSE,
-			'AddOnXCache' => FALSE,
-			'AddOnMemCache' => FALSE,
-			'AddOnMemCached' => FALSE,
-			'AddonOPcache' => FALSE
+			'AddOnSuhosin' => false,
+			'AddOnMailHeader' => false,
+			'AddOnAPC' => false,
+			'AddOnXCache' => false,
+			'AddOnMemCache' => false,
+			'AddOnMemCachd' => false,
+			'AddonOPcache' => false
 	);
 
 
 	function __construct($version="")
 	{
 		if ( $version != "" && !$this->setVersion($version)) {
-			return NULL;
+			return null;
 		}
 		$this->type = 'NONE';
 		$this->batch_id = ''. time() . '.' . rand(1,9);
@@ -73,11 +73,11 @@ class BuildOptions
 	{
 		$base = substr($version, 0, strpos($version, '.'));
 		if(!in_array($version, BuildConfig::GetVersion(BuildConfig::PHP_VERSION))) {
-			return FALSE;
+			return false;
 		}
 		$this->base_ver = $base;
 		$this->vals['PHPVersion'] = $version;
-		return TRUE;
+		return true;
 	}
 
 	function setDefaultOptions()
@@ -88,16 +88,16 @@ class BuildOptions
 		$this->vals['InstallPath'] = BuildConfig::Get(BuildConfig::DEFAULT_INSTALL_DIR) . $this->base_ver;
 		$this->vals['CompilerFlags'] = '';
 		$this->vals['ConfigParam'] = $params[$this->base_ver];
-		$this->vals['AddOnSuhosin'] = FALSE;
-		$this->vals['AddOnMailHeader'] = FALSE;
-		$this->vals['AddOnAPC'] = FALSE;
-		$this->vals['AddOnXCache'] = FALSE;
-		$this->vals['AddOnMemCache'] = FALSE;
-		$this->vals['AddOnMemCached'] = FALSE;
-		$this->vals['AddOnOPcache'] = FALSE;
+		$this->vals['AddOnSuhosin'] = false;
+		$this->vals['AddOnMailHeader'] = false;
+		$this->vals['AddOnAPC'] = false;
+		$this->vals['AddOnXCache'] = false;
+		$this->vals['AddOnMemCache'] = false;
+		$this->vals['AddOnMemCachd'] = false;
+		$this->vals['AddOnOPcache'] = false;
 
 		$this->type = 'DEFAULT';
-		$this->validated = TRUE;
+		$this->validated = true;
 	}
 
 	function getSavedOptions()
@@ -113,7 +113,7 @@ class BuildOptions
 				return $saved_options;
 			}
 		}
-		return NULL;
+		return null;
 
 
 	}
@@ -121,7 +121,7 @@ class BuildOptions
 	public function SaveOptions()
 	{
 		if (!$this->validated) {
-			return FALSE;
+			return false;
 		}
 
 		$saved_val = $this->vals;
@@ -149,6 +149,7 @@ class BuildOptions
 		$addon_apc = $this->vals['AddOnAPC'] ? 'true':'false';
 		$addon_xcache = $this->vals['AddOnXCache'] ? 'true':'false';
 		$addon_memcache = $this->vals['AddOnMemCache'] ? 'true':'false';
+		$addon_memcachd = $this->vals['AddOnMemCachd'] ? 'true':'false';
 		$addon_opcache = $this->vals['AddOnOPcache'] ? 'true':'false';
 
 		$loc = 'document.buildform';
@@ -160,8 +161,12 @@ class BuildOptions
                     $loc.addonMailHeader.checked = $addon_mailHeader;
                 if ($loc.addonAPC != null)
                     $loc.addonAPC.checked = $addon_apc;
-		$loc.addonXCache.checked = $addon_xcache;
-		$loc.addonMemCache.checked = $addon_memcache;
+		if ($loc.addonXCache != null)
+			$loc.addonXCache.checked = $addon_xcache;
+		if ($loc.addonMemCache != null)
+			$loc.addonMemCache.checked = $addon_memcache;
+		if ($loc.addonMemCachd != null)
+			$loc.addonMemCachd.checked = $addon_memcachd;
                 if ($loc.addonOPcache != null)
                     $loc.addonOPcache.checked = $addon_opcache;
 		if ($loc.addonSuhosin != null)
@@ -224,11 +229,13 @@ class BuildCheck
 
         $modules['opcache'] = in_array($v, array('5.2.', '5.3.', '5.4.'));   // opcache is built-in since 5.5
 
-        $modules['mailheader'] = in_array($v, array('4.4.', '5.2.', '5.3.', '5.4.', '5.5'));
+        $modules['mailheader'] = in_array($v, array('4.4.', '5.2.', '5.3.', '5.4.', '5.5.'));
 
-		$modules['xcache'] = in_array($v, array('4.4.', '5.2.', '5.3.', '5.4.', '5.5', '5.6')); // php7 not supported
+		$modules['xcache'] = in_array($v, array('4.4.', '5.2.', '5.3.', '5.4.', '5.5.', '5.6.')); // php7 not supported
 
-		$modules['memcache'] = in_array($v, array('4.4.', '5.2.', '5.3.', '5.4.', '5.5', '5.6')); // php7 not supported
+		$modules['memcache'] = in_array($v, array('4.4.', '5.2.', '5.3.', '5.4.', '5.5.', '5.6.')); // php7 not supported
+
+		$modules['memcachd'] = in_array($v, array('4.4.', '5.2.', '5.3.', '5.4.', '5.5.', '5.6.')); // php7 not supported
 
         return $modules;
 	}
@@ -241,7 +248,7 @@ class BuildCheck
 
 		//bash mesg
 		$OS=`uname`;
-		if ( strpos($OS,'FreeBSD') !== FALSE )	{
+		if ( strpos($OS,'FreeBSD') !== false )	{
 			if (!file_exists('/bin/bash') && !file_exists('/usr/bin/bash') && !file_exists('/usr/local/bin/bash')) {
 				$this->pass_val['err'] = DMsg::Err('buildphp_errnobash');
 			}
@@ -263,14 +270,14 @@ class BuildCheck
 		$next = UIBase::GrabInput('ANY','next');
 		if ($next == 0) {
 			$this->next_step = 1;
-			return TRUE;
+			return true;
 		}
 		$php_version = UIBase::GrabGoodInput('ANY','buildver');
 
 		// only if illegal action, will have err
 		if ( !$this->validate_php_version($php_version) ) {
 			$this->next_step = 0;
-			return FALSE;
+			return false;
 		}
 		$this->pass_val['php_version'] = $php_version;
 
@@ -284,13 +291,13 @@ class BuildCheck
 		$options->SetValue('ConfigParam', $configParams);
 		$options->SetValue('CompilerFlags', $compilerFlags);
 
-		$options->SetValue('AddOnSuhosin', (NULL != UIBase::GrabGoodInput('ANY','addonSuhosin')));
-		$options->SetValue('AddOnMailHeader',  (NULL != UIBase::GrabGoodInput('ANY','addonMailHeader')));
-		$options->SetValue('AddOnAPC', (NULL != UIBase::GrabGoodInput('ANY','addonAPC')));
-		$options->SetValue('AddOnXCache', (NULL != UIBase::GrabGoodInput('ANY','addonXCache')));
-		$options->SetValue('AddOnMemCache', (NULL != UIBase::GrabGoodInput('ANY','addonMemCache')));
-		$options->SetValue('AddOnMemCached', (NULL != UIBase::GrabGoodInput('ANY','addonMemCached')));
-		$options->SetValue('AddOnOPcache', (NULL != UIBase::GrabGoodInput('ANY','addonOPcache')));
+		$options->SetValue('AddOnSuhosin', (null != UIBase::GrabGoodInput('ANY','addonSuhosin')));
+		$options->SetValue('AddOnMailHeader',  (null != UIBase::GrabGoodInput('ANY','addonMailHeader')));
+		$options->SetValue('AddOnAPC', (null != UIBase::GrabGoodInput('ANY','addonAPC')));
+		$options->SetValue('AddOnXCache', (null != UIBase::GrabGoodInput('ANY','addonXCache')));
+		$options->SetValue('AddOnMemCache', (null != UIBase::GrabGoodInput('ANY','addonMemCache')));
+		$options->SetValue('AddOnMemCachd', (null != UIBase::GrabGoodInput('ANY','addonMemCachd')));
+		$options->SetValue('AddOnOPcache', (null != UIBase::GrabGoodInput('ANY','addonOPcache')));
 
 		// can be real input err
 		$v1 = $this->validate_extra_path_env($options->GetValue('ExtraPathEnv'));
@@ -301,13 +308,13 @@ class BuildCheck
 		if (!$v1 || !$v2 || !$v3 || !$v4) {
 			$options->SetType('INPUT');
 
-			$options->SetValidated(FALSE);
+			$options->SetValidated(false);
 			$this->pass_val['input_options'] = $options;
 			$this->next_step = 2;
-			return FALSE;
+			return false;
 		}
 
-		if (strpos($configParams, '--with-litespeed') === FALSE) {
+		if (strpos($configParams, '--with-litespeed') === false) {
 			$configParams .= " '--with-litespeed'";
 		}
 
@@ -317,10 +324,10 @@ class BuildCheck
 
 
 		$options->SetType('BUILD');
-		$options->SetValidated(TRUE);
+		$options->SetValidated(true);
 		$this->pass_val['build_options'] = $options;
 		$this->next_step = 3;
-		return TRUE;
+		return true;
 	}
 
 	private function validate_step3()
@@ -328,7 +335,7 @@ class BuildCheck
 		$php_version = UIBase::GrabGoodInput('ANY', 'buildver');
 		if ($php_version == '') {
 			echo "missing php_version";
-			return FALSE;
+			return false;
 		}
 
 		$this->pass_val['php_version'] = $php_version;
@@ -336,29 +343,29 @@ class BuildCheck
 		$next = UIBase::GrabInput('ANY','next');
 		if ($next == 0) {
 			$this->next_step = 2;
-			return TRUE;
+			return true;
 		}
 
 		if (!isset($_SESSION['progress_file'])) {
 			echo "missing progress file";
-			return FALSE;
+			return false;
 		}
 		$progress_file = $_SESSION['progress_file'];
 
 		if (!isset($_SESSION['log_file'])) {
 			echo "missing log file";
-			return FALSE;
+			return false;
 		}
 		$log_file = $_SESSION['log_file'];
 		if (!file_exists($log_file)) {
 			echo "logfile does not exist";
-			return FALSE;
+			return false;
 		}
 
 		$manual_script = UIBase::GrabGoodInput('ANY','manual_script');
 		if ($manual_script == '' || !file_exists($manual_script)) {
 			echo "missing manual script";
-			return FALSE;
+			return false;
 		}
 
 		$this->pass_val['progress_file'] = $progress_file;
@@ -367,7 +374,7 @@ class BuildCheck
 		$this->pass_val['extentions'] = UIBase::GrabGoodInput('ANY', 'extentions');
 
 		$this->next_step = 4;
-		return TRUE;
+		return true;
 	}
 
 
@@ -386,17 +393,17 @@ class BuildCheck
 	private function validate_extra_path_env($extra_path_env)
 	{
 		if ($extra_path_env === '') {
-			return TRUE;
+			return true;
 		}
 		$envp = preg_split("/:/", $extra_path_env);
 		foreach ($envp as $p) {
 			if (!is_dir($p)) {
 				$this->pass_val['err']['path_env'] = DMsg::Err('err_invalidpath') . $p;
-				return FALSE;
+				return false;
 			}
 		}
 		$extra_path_env .= ':';
-		return TRUE;
+		return true;
 	}
 
 	private function validate_install_path($path)
@@ -404,28 +411,28 @@ class BuildCheck
 		$path = PathTool::clean($path);
 		if ($path == '') {
 			$this->pass_val['err']['installPath'] = DMsg::Err('err_valcannotempty');
-			return FALSE;
+			return false;
 		}
 		if ($path[0] != '/') {
 			$this->pass_val['err']['installPath'] = DMsg::Err('err_requireabspath');
-			return FALSE;
+			return false;
 		}
 
 		if (preg_match('/([;&"|#$?`])/', $path)) {
 			$this->pass_val['err']['installPath'] = DMsg::Err('err_illegalcharfound');
-			return FALSE;
+			return false;
 		}
 
 		//parent exists.
 		if (!is_dir($path)) {
 			if (is_file($path)) {
 				$this->pass_val['err']['installPath'] = DMsg::Err('err_invalidpath');
-				return FALSE;
+				return false;
 			}
 			$testpath = dirname($path);
 			if (!is_dir($testpath)) {
 				$this->pass_val['err']['installPath'] = DMsg::Err('err_parentdirnotexist');
-				return FALSE;
+				return false;
 			}
 		}
 		else {
@@ -435,23 +442,23 @@ class BuildCheck
 		if ($testpath == '.' || $testpath == '/'
 		|| PathTool::isDenied($testpath)) {
 			$this->pass_val['err']['installPath'] = 'Illegal location';
-			return FALSE;
+			return false;
 		}
 
-		return TRUE;
+		return true;
 	}
 
 	private function validate_complier_flags(&$cflags)
 	{
 		if ($cflags === '')
-			return TRUE;
+			return true;
 
 		if (preg_match('/([;&"|#$?`])/', $cflags)) {
-			if (strpos($cflags, '"') !== FALSE)
+			if (strpos($cflags, '"') !== false)
 				$this->pass_val['err']['compilerFlags'] = DMsg::Err('buildphp_errquotes');
 			else
 				$this->pass_val['err']['compilerFlags'] = DMsg::Err('err_illegalcharfound');
-			return FALSE;
+			return false;
 		}
 
 		// split array
@@ -461,25 +468,25 @@ class BuildCheck
 		$FLAGS = 'CFLAGS|CPPFLAGS|CXXFLAGS|LDFLAGS';
 		while (strlen($a) > 0)
 		{
-		    $m = NULL;
+		    $m = null;
 		    if (preg_match("/^($FLAGS)=[^'^\"^ ]+\s+/", $a, $matches)) {
 				$m = $matches[0];
 		    }
 		    elseif (preg_match("/^($FLAGS)='[^'^\"]+'\s+/", $a, $matches)) {
 				$m = $matches[0];
 		    }
-		    if ($m != NULL) {
+		    if ($m != null) {
 				$a = substr($a, strlen($m));
 				$flag[] = rtrim($m);
 		    }
 		    else {
 		    	$pe = $a;
 		    	$ipos = strpos($pe, ' ');
-		    	if ( $ipos !== FALSE) {
+		    	if ( $ipos !== false) {
 		    		$pe = substr($a, 0, $ipos);
 		    	}
 				$this->pass_val['err']['compilerFlags'] = DMsg::Err('err_invalidvalat') . $pe;
-				return FALSE;
+				return false;
 		    }
 		}
 		if (!empty($flag)) {
@@ -487,18 +494,18 @@ class BuildCheck
 		}
 		else
 			$cflags = '';
-		return TRUE;
+		return true;
 
 	}
 
 	private function validate_config_params(&$config_params)
 	{
 		if (preg_match('/([;&"|#$?`])/', $config_params)) {
-			if (strpos($config_params, '"') !== FALSE)
+			if (strpos($config_params, '"') !== false)
 				$this->pass_val['err']['configureParams'] = DMsg::Err('buildphp_errquotes');
 			else
 				$this->pass_val['err']['configureParams'] = DMsg::Err('err_illegalcharfound');
-			return FALSE;
+			return false;
 		}
 
 		// split array
@@ -507,7 +514,7 @@ class BuildCheck
 		$a = trim($a) . ' ';
 		while (strlen($a) > 0)
 		{
-		    $m = NULL;
+		    $m = null;
 		    if (preg_match("/^'--[a-zA-Z_\-0-9]+=[^=^'^;]+'\s+/", $a, $matches)) {
 				$m = $matches[0];
 		    }
@@ -520,7 +527,7 @@ class BuildCheck
 		    elseif (preg_match("/^--[a-zA-Z_\-0-9]+\s+/", $a, $matches)) {
 				$m = $matches[0];
 		    }
-		    if ($m != NULL) {
+		    if ($m != null) {
 				$a = substr($a, strlen($m));
 				// ignore unused options
 				// '--prefix=/usr/local'
@@ -534,23 +541,23 @@ class BuildCheck
 		    else {
 		    	$pe = $a;
 		    	$ipos = strpos($pe, ' ');
-		    	if ( $ipos !== FALSE) {
+		    	if ( $ipos !== false) {
 		    		$pe = substr($a, 0, $ipos);
 		    	}
 				$this->pass_val['err']['configureParams'] = DMsg::Err('err_invalidvalat') . $pe;
-				return FALSE;
+				return false;
 		    }
 		}
 
 		if (empty($params)) {
 			$this->pass_val['err']['configureParams'] = DMsg::Err('err_valcannotempty');
-			return FALSE;
+			return false;
 		}
 
 		$options = implode(' ', $params);
 
 		$config_params = $options;
-		return TRUE;
+		return true;
 	}
 
 
@@ -558,21 +565,21 @@ class BuildCheck
 
 class BuildTool
 {
-	var $options = NULL;
+	var $options = null;
 	var $ext_options = array();
 	var $dlmethod;
 	var $progress_file;
 	var $log_file;
 	var $extension_used;
 
-	var $build_prepare_script = NULL;
-	var $build_install_script = NULL;
-	var $build_manual_run_script = NULL;
+	var $build_prepare_script = null;
+	var $build_install_script = null;
+	var $build_manual_run_script = null;
 
 	function __construct($input_options)
 	{
-		if ($input_options == NULL || !$input_options->IsValidated()) {
-			return NULL;
+		if ($input_options == null || !$input_options->IsValidated()) {
+			return null;
 		}
 		$this->options = $input_options;
 	}
@@ -590,29 +597,29 @@ class BuildTool
 
 		if (file_exists($this->progress_file)) {
 			$error = DMsg::Err('buildphp_errinprogress');
-			return FALSE;
+			return false;
 		}
 
 		if (!$this->detectDownloadMethod()) {
 			$error = DMsg::Err('err_faildetectdlmethod');
-			return FALSE;
+			return false;
 		}
 
 		$this->initDownloadUrl();
-		return TRUE;
+		return true;
 	}
 
 	function detectDownloadMethod()
 	{
 		$OS=`uname`;
 		$dlmethod = ''; // dlmethod $output $url
-		if ( strpos($OS,'FreeBSD') !== FALSE )
+		if ( strpos($OS,'FreeBSD') !== false )
 		{
 			if ((exec('PATH=$path_env:/bin:/usr/bin:/usr/local/bin fetch', $o,$status)||1) && $status <= 1) {
 				$dlmethod = "fetch -o"; // status is 127 if not found
 			}
 		}
-		if ( strpos($OS,'SunOS') !== FALSE ) // for SunOS, status is 1, so use return string
+		if ( strpos($OS,'SunOS') !== false ) // for SunOS, status is 1, so use return string
 		{
 			if ( exec('PATH=$path_env:/bin:/usr/bin:/usr/local/bin curl', $o, $status) != '') {
 				$dlmethod = "curl -L -o";
@@ -631,11 +638,11 @@ class BuildTool
 				$dlmethod = "wget -nv -O";
 			}
 			else {
-				return FALSE;
+				return false;
 			}
 		}
 		$this->dlmethod = $dlmethod;
-		return TRUE;
+		return true;
 	}
 
 	function initDownloadUrl()
@@ -683,15 +690,15 @@ class BuildTool
 
 		$this->ext_options['MemCache'] = $ext;
 
-//		$ext = array('__extension_name__' => 'MemCached');
-//		$ver = 'memcached-' . MEMCACHED_VERSION;
-//		$ext['__extension_dir__'] = $ver;
-//		$ext['__extension_src__'] = $ver . '.tgz';
-//		$ext['__extension_download_url__'] = 'http://pecl.php.net/get/'. $ver . '.tgz';
-//		$ext['__extract_method__'] = 'tar -zxf';
-//		$ext['__extension_extra_config__'] = '--enable-memcached';
-//
-//		$this->ext_options['MemCached'] = $ext;
+		$ext = array('__extension_name__' => 'MemCached');
+		$ver = 'memcached-' . BuildConfig::GetVersion(BuildConfig::MEMCACHED_VERSION);
+		$ext['__extension_dir__'] = $ver;
+		$ext['__extension_src__'] = $ver . '.tgz';
+		$ext['__extension_download_url__'] = 'http://pecl.php.net/get/'. $ver . '.tgz';
+		$ext['__extract_method__'] = 'tar -zxf';
+		$ext['__extension_extra_config__'] = '--enable-memcached';
+
+		$this->ext_options['MemCachd'] = $ext;
 
 		$ext = array('__extension_name__' => 'OPcache');
 		$ver = 'zendopcache-' . BuildConfig::GetVersion(BuildConfig::OPCACHE_VERSION);
@@ -706,59 +713,27 @@ class BuildTool
 
 	public static function getExtensionNotes($extensions)
 	{
-		$ocname = array();
-		if (strpos($extensions, 'APC') !== FALSE) {
-			$ocname[] = 'APC';
-		}
-		if (strpos($extensions, 'XCache') !== FALSE) {
-			$ocname[] = 'XCache';
-		}
-		if (strpos($extensions, 'OPcache') !== FALSE) {
-			$ocname[] = 'OPcache';
-		}
-		if (strpos($extensions, 'Suhosin') !== FALSE) {
-			$ocname[] = 'Suhosin';
-		}
-
-		if (count($ocname) == 0) {
-			return '';
-		}
-		$notes = '<li>' . DMsg::UIStr('buildphp_enableextnote') . '<br />';
-		$notes1 = '';
-		foreach($ocname as $ocn) {
-
-			if ($ocn == 'Suhosin') {
-				$notes1 .= '
-;				=================
-;				Suhosin
-;				=================
-extension=suhosin.so
-
-';
-			}
-
-			if ($ocn == 'APC') {
-				$notes1 .= '
+		$notes = array();
+		if (strpos($extensions, 'APC') !== false) {
+			$notes[] = '
 ;				=================
 ;				APC
 ;				=================
 				extension=apc.so
 
-				';
-			}
-
-			if ($ocn == 'XCache') {
-				$notes1 .= '
+';
+		}
+		if (strpos($extensions, 'XCache') !== false) {
+			$notes[] = '
 ;				=================
 ;				XCache
 ;				=================
 				extension=xcache.so
 
-				';
-			}
-
-			if ($ocn == 'OPcache') {
-				$notes1 .= '
+';
+		}
+		if (strpos($extensions, 'OPcache') !== false) {
+			$notes[] = '
 ;				=================
 ;				Zend OPcache
 ;				=================
@@ -771,21 +746,52 @@ opcache.revalidate_freq=60
 opcache.fast_shutdown=1
 opcache.enable_cli=1
 
-				';
-			}
+';
 		}
-		$notes .= nl2br($notes1);
-		$notes .= '</li>';
+		if (strpos($extensions, 'Suhosin') !== false) {
+			$notes[] = '
+;				=================
+;				Suhosin
+;				=================
+				extension=suhosin.so
 
-		return $notes;
+';
+		}
+		if (strpos($extensions, 'MemCache') !== false) {
+			$notes[] = '
+;				=================
+;				MemCache
+;				=================
+				extension=memcache.so
+
+';
+		}
+		if (strpos($extensions, 'MemCachd') !== false) {
+			$notes[] = '
+;				=================
+;				MemCached
+;				=================
+				extension=memcached.so
+
+';
+		}
+
+		if (count($notes) == 0) {
+			return '';
+		}
+		$note = '<li>' . DMsg::UIStr('buildphp_enableextnote') . '<br />';
+		$note .= nl2br(implode("\n", $notes));
+		$note .= '</li>';
+
+		return $note;
 	}
 
 
 	public function GenerateScript(&$error, &$optionsaved)
 	{
-		if ($this->progress_file == NULL) {
+		if ($this->progress_file == null) {
 			if (!$this->init($error, $optionsaved)) {
-				return FALSE;
+				return false;
 			}
 		}
 		$params = array();
@@ -871,9 +877,9 @@ opcache.enable_cli=1
 		if ($this->options->GetValue('AddOnMemCache')) {
 			$extList[] = 'MemCache';
 		}
-//		if ($this->options->GetValue('AddOnMemCached')) {
-//			$extList[] = 'MemCached';
-//		}
+		if ($this->options->GetValue('AddOnMemCachd')) {
+			$extList[] = 'MemCachd';
+		}
 		if ($this->options->GetValue('AddOnOPcache')) {
 			$extList[] = 'OPcache';
 		}
@@ -891,24 +897,24 @@ opcache.enable_cli=1
 		$prepare_script .= 'main_msg "**DONE**"' . "\n";
 		$install_script .= 'main_msg "**DONE**"' . "\n";
 
-		if ( file_put_contents($this->build_prepare_script, $prepare_script) === FALSE) {
+		if ( file_put_contents($this->build_prepare_script, $prepare_script) === false) {
 
 			$error = DMsg::Err('buildphp_errcreatescript') . $this->build_prepare_script;
 			return false;
 		}
 
-		if ( chmod($this->build_prepare_script, 0700) == FALSE) {
+		if ( chmod($this->build_prepare_script, 0700) == false) {
 			$error = DMsg::Err('buildphp_errchmod') . $this->build_prepare_script;
 			return false;
 		}
 
-		if ( file_put_contents($this->build_install_script, $install_script) === FALSE) {
+		if ( file_put_contents($this->build_install_script, $install_script) === false) {
 
 			$error = DMsg::Err('buildphp_errcreatescript') . $this->build_install_script;
 			return false;
 		}
 
-		if ( chmod($this->build_install_script, 0700) == FALSE) {
+		if ( chmod($this->build_install_script, 0700) == false) {
 			$error = DMsg::Err('buildphp_errchmod') . $this->build_install_script;
 			return false;
 		}
@@ -921,13 +927,13 @@ opcache.enable_cli=1
 			return false;
 		}
 		$template_script = str_replace($search, $replace, $template);
-		if ( file_put_contents($this->build_manual_run_script, $template_script) === FALSE) {
+		if ( file_put_contents($this->build_manual_run_script, $template_script) === false) {
 
 			$error = DMsg::Err('buildphp_errcreatescript') . $this->build_manual_run_script;
 			return false;
 		}
 
-		if ( chmod($this->build_manual_run_script, 0700) == FALSE) {
+		if ( chmod($this->build_manual_run_script, 0700) == false) {
 			$error = DMsg::Err('buildphp_errchmod') . $this->build_manual_run_script;
 			return false;
 		}

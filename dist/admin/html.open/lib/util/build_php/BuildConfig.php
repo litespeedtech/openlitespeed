@@ -15,6 +15,7 @@ class BuildConfig
     const XCACHE_VERSION = 14 ;
     const MEMCACHE_VERSION = 15 ;
     const OPCACHE_VERSION = 16 ;
+	const MEMCACHED_VERSION = 17;
 
     public static function GetVersion( $field )
     {
@@ -22,9 +23,9 @@ class BuildConfig
         switch ( $field ) {
 
             case self::PHP_VERSION: return
-                        array( '7.0.4',
-                            '5.6.19',
-                            '5.5.33',
+                        array( '7.0.5',
+                            '5.6.20',
+                            '5.5.34',
                             '5.4.45',
                             '5.3.29',
                             '5.2.17',
@@ -40,7 +41,7 @@ class BuildConfig
 
             case self::MEMCACHE_VERSION: return '2.2.7' ;
 
-            //('MEMCACHED_VERSION', '1.0.2');
+			case self::MEMCACHED_VERSION: return '2.2.0';
 
             case self::OPCACHE_VERSION: return '7.0.5' ;
             default: die("illegal field") ;

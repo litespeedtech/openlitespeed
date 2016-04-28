@@ -52,7 +52,7 @@ public:
 
 
     virtual CacheEntry *getCacheEntry(CacheHash &hash, CacheKey *pKey,
-                                      int32_t lastCacheFlush, int maxStale);
+                                      int maxStale, int32_t lastCacheFlush);
 
     virtual CacheEntry *createCacheEntry(const CacheHash &hash, CacheKey *pKey,
                                          int force);

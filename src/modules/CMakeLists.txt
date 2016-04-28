@@ -4,5 +4,6 @@ add_subdirectory(cache)
 add_subdirectory(pagespeed)
 add_subdirectory(lua)
 add_subdirectory(js)
+add_subdirectory(modinspector)
 add_subdirectory(uploadprogress)
 

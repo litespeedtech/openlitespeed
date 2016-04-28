@@ -49,6 +49,7 @@ LsiBaseFetch::LsiBaseFetch(lsi_session_t *session, int pipe_fd,
 
 LsiBaseFetch::~LsiBaseFetch()
 {
+    m_buffer.clear();
     pthread_mutex_destroy(&m_mutex);
 }
 

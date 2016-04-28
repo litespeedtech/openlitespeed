@@ -25,7 +25,7 @@
 
 CacheEntry::CacheEntry()
     : m_lastAccess(0)
-//     , m_iHits(0)
+     , m_iHits(0)
 //     , m_iTestHits(0)
     , m_iMaxStale(0)
     , m_startOffset(0)

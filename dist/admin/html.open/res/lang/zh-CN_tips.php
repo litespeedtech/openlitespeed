@@ -152,7 +152,7 @@ $_tipsdb['compilerflags'] = new DAttrHelp("Compiler Flags", 'Add additional comp
 
 $_tipsdb['compressibleTypes'] = new DAttrHelp("压缩类型", '指定允许哪些MIME类型进行压缩。', '[性能建议] 只允许特定类型进行GZIP压缩。 二进制文件如gif/png/jpeg图片文件及flash文件无法从压缩中获益。', '以逗号分隔的MIME类型列表。通配符“*”和 否定符号“！”是允许的，如text/*, !text/js。', 'If you want to compress text/* but not text/css, you can have a rule like  text/*, !text/css. &quot;!&quot; will exclude that MIME type.');
 
-$_tipsdb['configFile'] = new DAttrHelp("配置文件", '指定虚拟主机的配置文件名称。 配置文件必须位于$SERVER_ROOT/conf/vhosts/目录下。 推荐使用$SERVER_ROOT/conf/vhosts/$VH_NAME/vhconf.conf。', '', '文件3', '');
+$_tipsdb['configFile'] = new DAttrHelp("配置文件", '指定虚拟主机的配置文件名称。 配置文件必须位于$SERVER_ROOT/conf/vhosts/目录下。 推荐使用$SERVER_ROOT/conf/vhosts/$VH_NAME/vhconf.conf。', '$VH_NAME.conf is recommended for easy management.', '文件3', '');
 
 $_tipsdb['configureparams'] = new DAttrHelp("Configure Parameters", 'Configure parameters for PHP build. Apache-specific parameters and &quot;--prefix&quot; value will be automatically  removed and &quot;--with-litespeed&quot; will be automatically appended when you click Next Step.  (Prefix can be set in the field above.) This way you can simply copy and paste the configure  parameters from the phpinfo() output of an existing working PHP build.', '', 'Space-delimited series of options (with or without double quotes)', '');
 
@@ -576,9 +576,9 @@ $_tipsdb['templateName'] = new DAttrHelp("Template Name", 'A unique name for the
 
 $_tipsdb['templateVHAliases'] = new DAttrHelp("Aliases", 'Specifies alternate names for the virtual host. All possible hostnames and IP addresses should be added to this list. The wildcard characters * and ? are allowed in the name. Append :<port> for web sites not on port 80. <br/><br/>Aliases will be used in the following situations: <ol>   <li>To match the hostname in the Host header when processing a   request.</li>   <li>To populate domain name/alias configurations for add-ons    like FrontPage or AWstats.</li>   <li>To configure listener-to-virtual host mappings based on the virtual host template.</li> </ol>', '', 'Comma-separated list of domain names.', '');
 
-$_tipsdb['templateVHConfigFile'] = new DAttrHelp("Instantiated VHost Config File", 'Specifies the location of the config file generated when you instantiate a member virtual host.  Variable $VH_NAME must appear in the path so each virtual host will have its own file. Suggested location is $SERVER_ROOT/conf/vhosts/$VH_NAME/vhconf.conf. This config file will  be created only after you move a member vhost out of the template through instantiation.', '', 'String with $VH_NAME variable and .conf suffix', '');
+$_tipsdb['templateVHConfigFile'] = new DAttrHelp("Instantiated VHost Config File", 'Specifies the location of the config file generated when you instantiate a member virtual host.  Variable $VH_NAME must appear in the path so each virtual host will have its own file. Must be located under $SERVER_ROOT/conf/vhosts/. This config file will  be created only after you move a member vhost out of the template through instantiation.', '$VH_NAME.conf is recommended for easy management.', 'String with $VH_NAME variable and .conf suffix', '');
 
-$_tipsdb['templateVHDocRoot'] = new DAttrHelp("Document Root", 'Specifies the unique path for each member virtual host&#039;s document root.   Variable $VH_NAME or $VH_ROOT must appear in the path so  each member virtual host will have its own document root.', '', 'string with $VH_NAME or $VH_ROOT variable', '$VH_ROOT/public_html/ or $SERVER_ROOT/$VH_NAME/public_html.');
+$_tipsdb['templateVHDocRoot'] = new DAttrHelp("Document Root", 'Specifies the unique path for each member virtual host&#039;s document root.   Variable $VH_NAME or $VH_ROOT must appear in the path so  each member virtual host will have its own document root.', '', 'path with $VH_NAME or $VH_ROOT variable', '$VH_ROOT/public_html/ or $SERVER_ROOT/$VH_NAME/public_html.');
 
 $_tipsdb['templateVHDomain'] = new DAttrHelp("Domain", 'Specifies the main domain name for this member virtual host.  If left blank, the virtual host name will be used. This should be a fully qualified domain name, but you can use an IP address as well.  It is recommended to append :<port> for web sites not on port 80.  For configurations containing domain names, this domain can be referenced  with variable $VH_DOMAIN. <br/><br/>This domain name will be used in the following situations: <ol>   <li>To match the hostname in the Host header when processing a   request.</li>   <li>To populate the domain name configurations for add-ons    like FrontPage or AWstats.</li>  <li>To configure listener-to-virtual host mappings based on the virtual host template.</li> </ol>', '', 'domain name', '');
 
@@ -632,11 +632,11 @@ $_tipsdb['vhRoot'] = new DAttrHelp("虚拟主机根", '指定虚拟主机的根�
 
 $_tipsdb['vhSmartKeepAlive'] = new DAttrHelp("智能Keep-Alive", '指定是否为虚拟主机启用智能Keep-Alive。这个选项仅在当&quot;智能持续连接&quot;启用并且&quot;最大Keep-Alive请求数&quot;大于1的时候生效。', '[性能建议] 为访问繁忙的网站启用此项。', '布尔值', '');
 
-$_tipsdb['vhaccessLog_fileName'] = new DAttrHelp("File Name", 'Specifies the file name of the access log file.', '[Performance] Put access log file on a separate disk.', 'File name which can be absolute, or relative to $SERVER_ROOT, or relative to $VH_ROOT.', '');
+$_tipsdb['vhaccessLog_fileName'] = new DAttrHelp("File Name", 'Specifies the file name of the access log file.', '[Performance] Put access log file on a separate disk.', 'File name which can be absolute, relative to $SERVER_ROOT, or relative to $VH_ROOT.', '');
 
 $_tipsdb['vhadminEmails'] = new DAttrHelp("管理员邮箱", '指定这个虚拟主机管理员的电子邮箱地址。', '', 'Comma separated list of email addresses', '');
 
-$_tipsdb['vhlog_fileName'] = new DAttrHelp("File Name", 'Specifies the path for the log file.', '[Performance] Place the log file on a separate disk.', 'File name which can be absolute, or relative to $SERVER_ROOT, or relative to $VH_ROOT.', '');
+$_tipsdb['vhlog_fileName'] = new DAttrHelp("File Name", 'Specifies the path for the log file.', '[Performance] Place the log file on a separate disk.', 'File name which can be absolute, relative to $SERVER_ROOT, or relative to $VH_ROOT.', '');
 
 $_tipsdb['vhlog_logLevel'] = new DAttrHelp("日志级别", '指定日志记录级别。可用级别（从高到低）为ERROR,  WARNING, NOTICE, INFO, 和 DEBUG。 只有当消息等级高于或与当前设置相同时才被记录。 如果您希望将此设置为DEBUG，您也需要设置服务器日志级别为DEBUG。 调试的级别只能在服务器级别通过&quot;调试级别&quot;控制。', '[性能建议] 除非&quot;调试级别&quot;设置为NONE以外的日志级别, 否则DEBUG级别不会对性能产生任何影响，推荐采用。', '选项', '');
 
@@ -785,7 +785,7 @@ $_tipsdb['EDTP:swappingDir'] = array('Swapping directory is recommended to be pl
 
 $_tipsdb['EDTP:users'] = array('Group DB will be checked only if the user in the user DB does not contain group information..','Use comma to separate multiple users.'); 
 
-$_tipsdb['EDTP:vhRoot'] = array('All directories must pre-exist. This web interface will not create directory for you. If you are creating a new virtual host, you  can create an empty root directory and set it up from the beginning; or you can copy the DEFAULT virtual root that shipped with the package to this virtual  host root and modify it.','Virtual host root ($VH_ROOT) can be absolute path or relative to $SERVER_ROOT. Config File can be relative to $VH_ROOT.'); 
+$_tipsdb['EDTP:vhRoot'] = array('All directories must pre-exist. This web interface will not create the directory for you. If you are creating a new virtual host, you  can create an empty root directory and set it up from the beginning; or you can copy the &quot;Example&quot; virtual root that shipped with the package to this virtual  host root and modify it.','Virtual host root ($VH_ROOT) can be absolute path or relative to $SERVER_ROOT.'); 
 
 $_tipsdb['EDTP:vhaccessLog_fileName'] = array('Log file path can be either an absolute path or a relative path to $SERVER_ROOT, $VH_ROOT.'); 
 

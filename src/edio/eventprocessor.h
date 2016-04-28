@@ -69,7 +69,7 @@ public:
         EventData *pData = new EventData(type, pParam, cb);
         AutoLock lock(&m_mutex);
         m_data.push_back(pData);
-        return 0;
+        return LS_OK;
     }
     int get(EventData **pEvents, int len)
     {

@@ -360,9 +360,7 @@ void NtwkIOLink::drainReadBuf()
 
 void NtwkIOLink::tryRead()
 {
-    char ch;
-    if (::recv(getfd(), &ch, 1, MSG_PEEK) == 1)
-        handleEvents(POLLIN);
+    handleEvents(POLLIN);
 }
 
 
@@ -399,8 +397,16 @@ int NtwkIOLink::handleEvents(short evt)
     if (event & POLLOUT)
         (*m_pFpList->m_onWrite_fp)(this);
     m_iInProcess = 0;
-    if (getState() == HIOS_CLOSING)
+
+    switch(getState())
+    {
+    case HIOS_CLOSING:
         onPeerClose();
+        break;
+    case HIOS_SHUTDOWN:
+        closeSocket();
+        break;
+    }
     return 0;
 }
 

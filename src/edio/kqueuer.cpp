@@ -61,14 +61,14 @@ int KQueuer::allocateChangeBuf(int capacity)
                sizeof(struct kevent) * (capacity - m_changeCapacity));
     m_pChanges = pEvents;
     m_changeCapacity = capacity;
-    return 0;
+    return LS_OK;
 }
 
 int KQueuer::deallocateChangeBuf()
 {
     if (m_pChanges)
         free(m_pChanges);
-    return 0;
+    return LS_OK;
 }
 
 
@@ -84,7 +84,7 @@ int KQueuer::init(int capacity)
     if (m_fdKQ == -1)
         return LS_FAIL;
     ::fcntl(m_fdKQ, F_SETFD, FD_CLOEXEC);
-    return 0;
+    return LS_OK;
 }
 
 
@@ -103,7 +103,7 @@ int KQueuer::addEvent(EventReactor *pHandler, short mask)
     if (mask & POLLOUT)
         appendEvent(pHandler, EVFILT_WRITE, EV_ADD | EV_ENABLE);
     pHandler->setMask2(mask);
-    return 0;
+    return LS_OK;
 }
 
 int KQueuer::add(EventReactor *pHandler, short mask)
@@ -128,7 +128,7 @@ int KQueuer::remove(EventReactor *pHandler)
     }
     pHandler->setMask2(0);
     m_reactorIndex.set(pHandler->getfd(), NULL);
-    return 0;
+    return LS_OK;
 }
 
 void KQueuer::processAioEvent(struct kevent *pEvent)

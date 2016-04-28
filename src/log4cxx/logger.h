@@ -26,6 +26,7 @@
 #include <log4cxx/nsdefs.h>
 #include <log4cxx/level.h>
 #include <util/duplicable.h>
+#include <sys/uio.h>
 
 #define ROOT_LOGGER_NAME "__root"
 
@@ -287,6 +288,8 @@ public:
     }
 
     void lograw(const char *pBuf, int len);
+    
+    void lograw(const struct iovec *pIov, int size);
 
     ls_attr_inline int isEnabled(int level) const
     {   return level <= m_iLevel; }

@@ -80,6 +80,7 @@ $_gmsg['note_confirm_delete'] = '你确定要删除这个条目吗？这将从�
 $_gmsg['note_confirm_instantiate'] = '你确定你想要实例化这个虚拟主机吗？这将为该虚拟主机创建一个独立的配置文件。';
 $_gmsg['note_copyrightreserved'] = '保留所有权利。';
 $_gmsg['note_curver'] = '当前版本';
+$_gmsg['note_newver'] = '新版本';
 $_gmsg['note_dataretrievedat'] = '数据接收于';
 $_gmsg['note_fullscreen'] = '全屏模式';
 $_gmsg['note_inputerr'] = '检查到输入错误，请改正后继续。';

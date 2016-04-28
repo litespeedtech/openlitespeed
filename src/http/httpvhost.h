@@ -81,6 +81,10 @@ class SslContext;
 class UserDir;
 class XmlNodeList;
 
+template< class T >
+class THash;
+class StaticFileCacheData;
+
 class RealmMap : public HashStringMap< UserDir * >
 {
     typedef HashStringMap< UserDir * > _shmap;
@@ -93,6 +97,14 @@ public:
     void operator=(const RealmMap &rhs);
 };
 
+typedef struct _static_file_data
+{
+    AutoStr2 url;
+    time_t tmaccess;
+    StaticFileCacheData *pData;
+} static_file_data_t;
+
+typedef  THash<static_file_data_t *> UrlStxFileHash;
 
 class HttpVHost : public RefCounter, public HttpLogSource
 {
@@ -138,6 +150,8 @@ private:
     AutoStr2            m_sSpdyAdHeader;
     ReqParserParam      m_ReqParserParam;
     LsiModuleData       m_moduleData;
+    
+    UrlStxFileHash     *m_pUrlStxFileHash;
 
     HttpVHost(const HttpVHost &rhs);
     void operator=(const HttpVHost &rhs);
@@ -424,6 +438,11 @@ public:
     ReqParserParam &getReqParserParam() {   return  m_ReqParserParam;   }
 
     void enableAioLogging();
+
+    void addUrlStaticFileMatch(const char *url, StaticFileCacheData *pData);
+    StaticFileCacheData *getUrlStaticFileData(const char *url);
+    void urlStaticFileHashCleanTimer();
+    
 };
 
 

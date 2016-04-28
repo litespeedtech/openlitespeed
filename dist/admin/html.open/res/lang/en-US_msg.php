@@ -80,6 +80,7 @@ $_gmsg['note_confirm_delete'] = 'Are you sure you want to delete this entry? Thi
 $_gmsg['note_confirm_instantiate'] = 'Are you sure you want to instantiate this virtual host? This will create a dedicated configuration file for this virtual host.';
 $_gmsg['note_copyrightreserved'] = 'All Rights Reserved.';
 $_gmsg['note_curver'] = 'Current Version';
+$_gmsg['note_newver'] = 'New Release';
 $_gmsg['note_dataretrievedat'] = 'Data retrieved at';
 $_gmsg['note_fullscreen'] = 'Full Screen';
 $_gmsg['note_inputerr'] = 'Input error detected. Please resolve the error(s).';

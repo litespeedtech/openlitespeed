@@ -75,6 +75,8 @@ public:
     off_t getCurEnd() const      {   return m_lCurEnd;   }
     off_t getRemain() const  {   return m_lCurEnd - m_lCurPos;   }
 
+    int getfd();
+
     void *getAioBuf()           {   return m_pAioBuf;   }
     void setAioBuf(void *p)   {   m_pAioBuf = p;      }
     off_t getAioLen()            {   return m_lAioLen;   }

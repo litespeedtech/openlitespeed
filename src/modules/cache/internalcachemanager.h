@@ -28,7 +28,7 @@ public:
 
     void *getPrivateCacheInfo(const char *pPrivateId, int len, int force);
 
-    int setPrivateTagFlag(void *pPrivatePurgeData, purgeinfo_t *pPurginfo);
+    int setPrivateTagFlag(void *pPrivatePurgeData, int tagId, uint8_t flag);
     purgeinfo_t *getPrivateTagInfo(void *pPrivatePurgeData, int tagId);
 
     int setVerifyKey(void *pPrivatePurgeData, const char *pVerifyKey, int len);

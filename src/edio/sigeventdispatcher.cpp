@@ -67,7 +67,7 @@ int SigEventDispatcher::processSigEvent()
         ((AioEventHandler *)si.si_value.sival_ptr)->onAioEvent();
     }
 #endif
-    return 0;
+    return LS_OK;
 }
 
 int SigEventDispatcher::init()
@@ -86,7 +86,7 @@ int SigEventDispatcher::init()
     }
     MultiplexerFactory::getMultiplexer()->add(pReactor, POLLIN);
 #endif // defined(LS_AIO_USE_SIGFD)
-    return 0;
+    return LS_OK;
 }
 
 
@@ -109,7 +109,7 @@ int SigEventDispatcher::handleEvents(short event)
     int i, readCount = 0;
     signalfd_siginfo si[5];
     if (!(event & POLLIN))
-        return 0;
+        return LS_OK;
     do
     {
         if ((readCount = read(getfd(), &si, sizeof(signalfd_siginfo) * 5)) < 0)
@@ -119,14 +119,14 @@ int SigEventDispatcher::handleEvents(short event)
             return LS_FAIL;
         }
         else if (readCount == 0)
-            return 0;
+            return LS_OK;
         readCount /= sizeof(signalfd_siginfo);
         for (i = 0; i < readCount; ++i)
             ((AioEventHandler *)si[i].ssi_ptr)->onAioEvent();
     }
     while (readCount == 5);
 #endif // defined(LS_AIO_USE_SIGFD)
-    return 0;
+    return LS_OK;
 }
 
 #endif // defined(LS_AIO_USE_KQ)

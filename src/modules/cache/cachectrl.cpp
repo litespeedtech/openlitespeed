@@ -26,7 +26,7 @@
 #include <string.h>
 
 CacheCtrl::CacheCtrl()
-    : m_iFlags(0)
+    : m_flags(0)
     , m_iMaxAge(INT_MAX)
     , m_iMaxStale(0)
 {
@@ -81,8 +81,8 @@ int CacheCtrl::parse(const char *pHeader, int len)
             }
             if (i < CACHE_DIRECTIVES)
             {
-                m_iFlags |= (1 << i);
-                if (((i == 2) && !(m_iFlags & s_maxage)) ||
+                m_flags |= (1 << i);
+                if (((i == 2) && !(m_flags & (s_maxage))) ||
                     (i == 11) || (i == 3))
                 {
                     p += s_dirLen[i];
@@ -96,8 +96,8 @@ int CacheCtrl::parse(const char *pHeader, int len)
                         {
                             //If "max-age" set, enable public cache
                             m_iMaxAge = atoi(p);
-                            m_iFlags |= cache_public;
-                            m_iFlags &= (~no_cache & ~no_store);
+                            m_flags |= cache_public;
+                            m_flags &= (~no_cache & ~no_store);
                         }
                     }
                 }
@@ -107,9 +107,9 @@ int CacheCtrl::parse(const char *pHeader, int len)
                     while ((*p == ' ') || (*p == '=') || (*p == '"'))
                         ++p;
                     if (strncasecmp(p, "on", 2) == 0)
-                        m_iFlags |= esi_on;
+                        m_flags |= esi_on;
                     else if (strncasecmp(p, "off", 3) == 0)
-                        m_iFlags &= ~esi_on;
+                        m_flags &= ~esi_on;
                 }
             }
         }

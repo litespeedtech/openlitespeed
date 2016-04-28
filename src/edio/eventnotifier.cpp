@@ -57,7 +57,7 @@ int EventNotifier::handleEvents(short int event)
         onNotified(count);
     }
 
-    return 0;
+    return LS_OK;
 }
 
 
@@ -83,7 +83,7 @@ int EventNotifier::initNotifier(Multiplexer *pMultiplexer)
         return LS_FAIL;
     pMultiplexer->add(this, POLLIN | POLLHUP | POLLERR);
 
-    return 0;
+    return LS_OK;
 }
 
 

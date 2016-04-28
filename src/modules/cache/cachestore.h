@@ -47,8 +47,8 @@ public:
     virtual int clearStrage() = 0;
 
     virtual CacheEntry *getCacheEntry(CacheHash &hash,
-                                      CacheKey *pKey,
-                                      int32_t lastCacheFlush, int maxStale) = 0;
+                                      CacheKey *pKey, int maxStale,
+                                      int32_t lastCacheFlush) = 0;
 
     virtual CacheEntry *createCacheEntry(const CacheHash &hash,
                                          CacheKey *pKey,
@@ -93,6 +93,7 @@ public:
     CacheManager *getManager()   {   return m_pManager;    }
 
 
+	const AutoStr2 *getName() const {   return &m_sName;     }
 
 //     void setMaxObjSize(long objSize)
 //     {
@@ -117,6 +118,7 @@ private:
 
 
     AutoStr2  m_sRoot;
+	AutoStr2  m_sName;
 };
 
 #endif

@@ -139,6 +139,9 @@ public:
         if (isEmpty() && !getStream()->isWantWrite())
             getStream()->continueWrite();
     }
+    
+    void incShutdownStream()    {   ++m_uiShutdownStreams;  }
+    void decShutdownStream()    {   --m_uiShutdownStreams;  }
 
 private:
     typedef THash< H2Stream * > StreamMap;
@@ -213,6 +216,7 @@ private:
     AutoBuf         m_bufInflate;
     uint32_t        m_uiServerStreamID;
     uint32_t        m_uiLastStreamID;
+    uint32_t        m_uiShutdownStreams;
     uint32_t        m_uiGoAwayId;
     int32_t         m_iCurrentFrameRemain;
     uint32_t        m_tmLastFrameIn;

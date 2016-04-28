@@ -45,7 +45,7 @@ public:
                 return LS_FAIL;
         }
         m_pIndexes[fd] = index;
-        return 0;
+        return LS_OK;
     }
 
     LS_NO_COPY_ASSIGN(FdIndex);

@@ -30,6 +30,6 @@ EventProcessor::~EventProcessor()
 
 int EventProcessor::onNotified(int count)
 {
-    return 0;
+    return LS_OK;
 }
 

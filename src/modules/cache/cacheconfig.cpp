@@ -107,8 +107,8 @@ void CacheConfig::apply(const CacheConfig *pParent)
 
 int CacheConfig::isLitemagReady()
 {
-    if ((m_iCacheFlag & (CACHE_LITEMAGE_BITS | CACHE_ENABLED
-                         | CACHE_PRIVATE_ENABLED)) ==  CACHE_LITEMAGE_BITS)
+    if ((m_iCacheFlag & (CACHE_LITEMAGE_BITS | CACHE_ENABLE_PUBLIC
+                         | CACHE_ENABLE_PRIVATE)) ==  CACHE_LITEMAGE_BITS)
     {
         if (m_lMaxObjSize >= 500 * 1024)
             return 1;
@@ -120,7 +120,7 @@ int CacheConfig::isLitemagReady()
 void CacheConfig::setLitemageDefault()
 {
     setConfigBit(CACHE_LITEMAGE_BITS, 1);
-    setConfigBit(CACHE_ENABLED | CACHE_PRIVATE_ENABLED, 0);
+    setConfigBit(CACHE_ENABLE_PUBLIC | CACHE_ENABLE_PRIVATE, 0);
     setMaxObjSize(1024 * 1024);
 }
 

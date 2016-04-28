@@ -48,7 +48,7 @@ class KQueuer : public Multiplexer
                     unsigned short flags)
     {
         if (fd == -1)
-            return 0;
+            return LS_OK;
         if (m_curChange == m_changeCapacity)
         {
             if (allocateChangeBuf(m_changeCapacity + 64) == -1)
@@ -59,7 +59,7 @@ class KQueuer : public Multiplexer
         pEvent->filter = filter;
         pEvent->flags  = flags;
         pEvent->udata  = pHandler;
-        return 0;
+        return LS_OK;
     }
     void processAioEvent(struct kevent *pEvent);
     void processSocketEvent(struct kevent *pEvent);

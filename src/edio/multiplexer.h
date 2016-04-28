@@ -34,7 +34,7 @@ public:
         DEFAULT_CAPACITY = 16
     };
     virtual int getHandle() const          {    return -1;  }
-    virtual int init(int capacity = DEFAULT_CAPACITY) { return 0; };
+    virtual int init(int capacity = DEFAULT_CAPACITY) { return LS_OK; };
     virtual int add(EventReactor *pHandler, short mask) = 0;
     virtual int remove(EventReactor *pHandler) = 0;
     virtual int waitAndProcessEvents(int iTimeoutMilliSec) = 0;
@@ -48,11 +48,7 @@ public:
     virtual void switchWriteToRead(EventReactor *pHandler);
     virtual void switchReadToWrite(EventReactor *pHandler);
     virtual void modEvent(EventReactor *pHandler, short mask, int add_remove);
-    virtual void setEventMask(EventReactor *pHandler, short mask);
 
-    virtual void resetRevents(EventReactor *pHandler, short event)
-    {   pHandler->resetRevent(event); }
-    virtual void testEvents(EventReactor *pHandler) {}
     int  getFLTag() const   {   return m_iFLTag;        }
     void setFLTag(int tag)  {   m_iFLTag = tag;         }
 
