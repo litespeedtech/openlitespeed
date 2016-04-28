@@ -24,10 +24,19 @@
 
 #define MAX_FDINDEX 100000
 class EventReactor;
+
+typedef struct ReactorHolder
+{
+    EventReactor   *m_pReactor;
+    unsigned short  m_eventSet;
+    unsigned short  m_flags;
+    
+}ReactorHolder;
+
 class ReactorIndex
 {
 public:
-    EventReactor **m_pIndexes;
+    ReactorHolder  *m_pIndexes;
     unsigned int    m_capacity;
     unsigned int    m_iUsed;
 
@@ -43,7 +52,7 @@ public:
     int allocate(int capacity);
 
     EventReactor *get(int fd) const
-    {   return ((unsigned)fd <= m_iUsed) ? m_pIndexes[fd] : NULL;  }
+    {   return ((unsigned)fd <= m_iUsed) ? m_pIndexes[fd].m_pReactor : NULL;  }
 
     int set(int fd, EventReactor *pReactor)
     {
@@ -59,14 +68,21 @@ public:
         }
         if ((unsigned)fd > m_iUsed)
             m_iUsed = fd;
-        m_pIndexes[fd] = pReactor;
-        return 0;
+        m_pIndexes[fd].m_pReactor = pReactor;
+        return LS_OK;
     }
+    
+    void setUpdateFlags(int fd, int val)
+    {   m_pIndexes[fd].m_flags = val;   }
+    
+    unsigned short getUpdateFlags(int fd) const
+    {   return m_pIndexes[fd].m_flags;  }
+    
     void timerExec();
     int verify(int fd, EventReactor *pReactor)
     {
-        if (((unsigned)fd <= m_iUsed) && (m_pIndexes[fd] == pReactor))
-            return 0;
+        if (((unsigned)fd <= m_iUsed) && (m_pIndexes[fd].m_pReactor == pReactor))
+            return LS_OK;
         return LS_FAIL;
     }
     LS_NO_COPY_ASSIGN(ReactorIndex);

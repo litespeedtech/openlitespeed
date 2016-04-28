@@ -81,7 +81,7 @@ static char *escape_uri(char *p, char *pEnd, const char *pURI, int uriLen)
 {
     const char *pURIEnd = pURI + uriLen;
     char ch;
-    while ((pURI < pURIEnd) && (p < pEnd - 3))
+    while ((pURI < pURIEnd) && (p < pEnd))
     {
         ch = *pURI++;
         if (isalnum(ch))
@@ -106,6 +106,8 @@ static char *escape_uri(char *p, char *pEnd, const char *pURI, int uriLen)
                 *p++ = ch;
                 break;
             default:
+                if (p >= pEnd - 3)
+                    break;
                 *p++ = '%';
                 *p++ = s_hex[((unsigned char)ch) >> 4 ];
                 *p++ = s_hex[ ch & 0xf ];
@@ -147,6 +149,7 @@ HttpReq::HttpReq()
     m_pRange = NULL;
     m_pReqBodyType = REQ_BODY_UNKNOWN;
     m_cookies.init();
+    m_pUrlStaticFileData = NULL;
 }
 
 
@@ -169,6 +172,7 @@ HttpReq::~HttpReq()
     m_pAuthUser = NULL;
     m_pRange = NULL;
     m_cookies.clear();
+    m_pUrlStaticFileData = NULL;
 }
 
 
@@ -1625,7 +1629,10 @@ int HttpReq::processURIEx(const char *pURI, int uriLen, int &cacheable)
         if (*(pBegin - 1) == '/')
             --pBegin;
     }
-    return processPath(pURI, uriLen, pBuf, pBegin, pEnd, cacheable);
+    if (m_pUrlStaticFileData)
+        return 0;
+    else
+        return processPath(pURI, uriLen, pBuf, pBegin, pEnd, cacheable);
 }
 
 
@@ -2954,4 +2961,9 @@ int HttpReq::copyCookieHeaderToBufEnd(int oldOff, const char *pCookie,
     return 0;
 }
 
-
+int HttpReq::checkUrlStaicFileCache()
+{
+    HttpVHost *host = (HttpVHost *)getVHost();
+    m_pUrlStaticFileData = host->getUrlStaticFileData(getURI());
+    return 0;
+}

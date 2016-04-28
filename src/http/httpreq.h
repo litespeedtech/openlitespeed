@@ -238,6 +238,8 @@ private:
     LogSession         *m_pILog;
     CookieList          m_cookies;
 
+    StaticFileCacheData *m_pUrlStaticFileData;
+    
 
 
     HttpReq(const HttpReq &rhs) ;
@@ -259,6 +261,7 @@ private:
 
     int checkSuffixHandler(const char *pURI, int len, int &cacheable);
 
+    
 
     //parse headers
     int processRequestLine();
@@ -559,6 +562,8 @@ public:
                        const AutoStr2 **pChroot);
     const AutoStr2 *getDefaultCharset() const;
     const MimeSetting *getMimeType() const  {   return m_pMimeType;         }
+    void  setMimeType(const MimeSetting *mime) {   m_pMimeType = mime;         }
+    
     void  smartKeepAlive(const char *pValue);
     //int setRewriteURI( const char * pURL, int len );
     int setRewriteURI(const char *pURL, int len, int no_escape = 1);
@@ -609,7 +614,7 @@ public:
 
     void orContextState(int s)            {   m_iContextState |= s;       }
     void clearContextState(int s)         {   m_iContextState &= ~s;      }
-    short getContextState(int s) const    {   return m_iContextState & s; }
+    int getContextState(int s) const    {   return m_iContextState & s; }
     int detectLoopRedirect(const char *pURI, int uriLen,
                            const char *pArg, int qsLen, int isSSL);
     int detectLoopRedirect();
@@ -706,6 +711,10 @@ public:
     int copyCookieHeaderToBufEnd(int oldOff, const char *pCookie,
                                       int cookieLen);
     CookieList  &getCookieList() { return   m_cookies; }
+    
+    
+    int checkUrlStaicFileCache();
+    StaticFileCacheData *getUrlStaticFileData() { return m_pUrlStaticFileData;}
 };
 
 

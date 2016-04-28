@@ -2235,6 +2235,21 @@ struct lsi_api_s
     int (*send_file)(lsi_session_t *pSession, const char *path, int64_t start,
                      int64_t size);
 
+        /**
+     * @brief send_file is used to send a file as the response body.
+     * It can be used in handler processing functions.
+     *
+     * @since 1.0
+     *
+     * @param[in] pSession - a pointer to the HttpSession.
+     * @param[in] fd - file descriptor of the file to send.
+     * @param[in] start - file start offset.
+     * @param[in] size - remaining size.
+     * @return -1 or error codes from various layers of calls on failure, 0 on success.
+     */
+    int (*send_file2)(lsi_session_t *pSession, int fd, int64_t start,
+                     int64_t size);
+    
     /**
      * @brief flush flushes the connection and sends the data.
      *

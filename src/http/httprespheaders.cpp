@@ -784,16 +784,28 @@ int HttpRespHeaders::mergeAll()
 }
 
 
-int HttpRespHeaders::appendToIov(IOVec *iovec)
+int HttpRespHeaders::appendToIov(IOVec *iovec, int &addCrlf)
 {
-    int total = 0;
+    int total;
 
     if (m_hasHole != 0)
         mergeAll();
-
-    if (m_buf.size() > 0)
-        iovec->append(m_buf.begin(), m_buf.size());
     total = m_buf.size();
+    if (addCrlf)
+    {
+        if (m_buf.available() >= 2)
+        {
+            char *p = m_buf.end();
+            *p++ = '\r';
+            *p++ = '\n';
+            total += 2;
+        }
+        else
+            addCrlf = 0;
+    }
+    if (total > 0)
+        iovec->append(m_buf.begin(), total);
+    
     return total;
 }
 
@@ -817,10 +829,13 @@ int HttpRespHeaders::outputNonSpdyHeaders(IOVec *iovec)
                 m_iHttpCode);
     iovec->push_front(statusLine.get(), statusLine.getLen());
     m_iHeadersTotalLen = statusLine.getLen();
-    m_iHeadersTotalLen += appendToIov(iovec);
-
-    iovec->append("\r\n", 2);
-    m_iHeadersTotalLen += 2;
+    int addCrlf = 1;
+    m_iHeadersTotalLen += appendToIov(iovec, addCrlf);
+    if (!addCrlf)
+    {   
+        iovec->append("\r\n", 2);
+        m_iHeadersTotalLen += 2;
+    }
     m_iHeaderBuilt = 1;
     return 0;
 }

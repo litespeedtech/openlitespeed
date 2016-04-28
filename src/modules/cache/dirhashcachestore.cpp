@@ -99,8 +99,7 @@ int DirHashCacheStore::isEntryStale(CacheHash &hash, int isPrivate)
 }
 
 CacheEntry *DirHashCacheStore::getCacheEntry(CacheHash &hash,
-        CacheKey *pKey,
-        int32_t lastCacheFlush, int maxStale)
+        CacheKey *pKey, int maxStale, int32_t lastCacheFlush)
 {
     char achBuf[4096] = "";
     int fd;
@@ -169,17 +168,13 @@ CacheEntry *DirHashCacheStore::getCacheEntry(CacheHash &hash,
         }
         ::fcntl(fd, F_SETFD, FD_CLOEXEC);
         if (pEntry)
-        {
             pEntry->setFdStore(fd);
-            pEntry->setFilePath(achBuf);
-        }
         //LS_INFO( "getCacheEntry(), open fd: %d, entry: %p", fd, pEntry ));
     }
     if (!pEntry)
     {
         pEntry = new DirHashCacheEntry();
         pEntry->setFdStore(fd);
-        pEntry->setFilePath(achBuf);
         pEntry->setHashKey(hash);
         //pEntry->setKey( hash, pURI, iURILen, pQS, iQSLen, pIP, ipLen, pCookie, cookieLen );
         pEntry->loadCeHeader();
@@ -225,23 +220,26 @@ CacheEntry *DirHashCacheStore::getCacheEntry(CacheHash &hash,
             }
         }
     }
-//     if ( pEntry->getHeader().m_tmCreated <= lastCacheFlush )
-//     {
-//         LS_DBG_L( "[CACHE] [%p] has been flushed, dispose"
-//                         , pEntry);
-//         dispose = 1;
-//     }
+
     g_api->log(NULL, LSI_LOG_DEBUG,
-               "[CACHE] check [%p] against cache manager, tag: '%s' "
-               , pEntry, pEntry->getTag().c_str());
-    if (getManager()->isPurged(pEntry, pKey))
+               "[CACHE] check [%p] against cache manager, tag: '%s' \n",
+               pEntry, pEntry->getTag().c_str());
+
+    if ( pEntry->getHeader().m_tmCreated <= lastCacheFlush )
     {
         g_api->log(NULL, LSI_LOG_DEBUG,
-                   "[CACHE] [%p] has been purged by cache manager, dispose"
+                   "[CACHE] [%p] has been flushed, dispose.\n", pEntry);
+        dispose = 1;
+    }
+    else if (getManager()->isPurged(pEntry, pKey, (lastCacheFlush >= 0)))
+    {
+        g_api->log(NULL, LSI_LOG_DEBUG,
+                   "[CACHE] [%p] has been purged by cache manager, dispose.\n"
                    , pEntry);
 
         dispose = 1;
     }
+
     if (dispose)
     {
         if (iter != end())
@@ -384,11 +382,11 @@ CacheEntry *DirHashCacheStore::createCacheEntry(
 
     CacheEntry *pEntry = new DirHashCacheEntry();
     pEntry->setFdStore(fd);
-    pEntry->setFilePath(achBuf);
     pEntry->setKey(hash, pKey);
     if (pKey->m_pIP)
         pEntry->getHeader().m_flag |= CeHeader::CEH_PRIVATE;
-    pEntry->saveCeHeader();
+    //Do not save now since tag is not ready, will call it later
+    //pEntry->saveCeHeader();
 
     //update current entry
     CacheStore::iterator iter = find(hash.getKey());
@@ -584,9 +582,6 @@ int DirHashCacheStore::publish(CacheEntry *pEntry)
     getManager()->incStats(pEntry->isPrivate(), offsetof(cachestats_t,
                            created));
 
-    //Rename the record in pEntry
-    achTmp[len - 4] = 0;
-    pEntry->setFilePath(achTmp);
     return 0;
 }
 

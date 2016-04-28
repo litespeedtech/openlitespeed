@@ -798,7 +798,7 @@ int RewriteEngine::expandEnv(const RewriteRule *pRule,
                 if (m_logLevel > 4)
                     LS_INFO(pSession->getLogSession(),
                             "[REWRITE] Set Proxy Host header to: '%s' ",
-                            pKey, pValue);
+                            pValue);
             }
             else
             {

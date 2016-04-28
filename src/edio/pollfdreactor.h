@@ -116,7 +116,7 @@ public:
 //        if ( revents )
         m_pReactors[index]->assignRevent(revents);
         m_pReactors[index]->handleEvents(revents);
-        return 0;
+        return LS_OK;
     }
 
     int processEvent(int index, short revents)
@@ -129,7 +129,7 @@ public:
 //        if ( revents )
         m_pReactors[index]->assignRevent(revents);
         m_pReactors[index]->handleEvents(revents);
-        return 0;
+        return LS_OK;
     }
 
 
@@ -157,7 +157,7 @@ public:
             }
             ++m_pCur;
         }
-        return 0;
+        return LS_OK;
     }
 
     void timerExecute()

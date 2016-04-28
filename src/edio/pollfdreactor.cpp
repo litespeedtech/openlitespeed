@@ -66,7 +66,7 @@ int PollfdReactor::allocate(int capacity)
     pfds = m_pEnd;
     while (pfds < m_pStoreEnd)
         (pfds++)->fd = -1;
-    return 0;
+    return LS_OK;
 }
 
 
@@ -85,7 +85,7 @@ int PollfdReactor::deallocate()
         free(m_pfds);
         m_pfds = NULL;
     }
-    return 0;
+    return LS_OK;
 }
 
 
@@ -125,7 +125,7 @@ int PollfdReactor::remove(EventReactor *pHandler)
             pRm->events = m_iFirstRecycled;
             m_iFirstRecycled = pRm - m_pfds;
         }
-        return 0;
+        return LS_OK;
     }
     return LS_FAIL;
 }

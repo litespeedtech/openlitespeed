@@ -1019,9 +1019,15 @@ GoogleString DetermineUrl(lsi_session_t *session)
 
     StringPiece host = DetermineHost(session);
 
+    int iQSLen;
+    const char *pQS = g_api->get_req_query_string(session, &iQSLen);
     int uriLen = g_api->get_req_org_uri(session, NULL, 0);
-    char *uri = new char[uriLen + 1];
+    char *uri = new char[uriLen + 1 + iQSLen + 1];
     g_api->get_req_org_uri(session, uri, uriLen + 1);
+    if (iQSLen > 0) {
+        strcat(uri, "?");
+        strncat(uri, pQS, iQSLen);
+    }
 
     GoogleString rc = StrCat(IsHttps(session) ? "https://" : "http://",
                              host, port_string, uri);
@@ -1721,16 +1727,15 @@ int ResourceHandler(PsMData *pMyData,
 // Eventually it will make it's way, optimized, to base_fetch.
 //return 0 for error, 1 for 
 bool SendToPagespeed(PsMData *pMyData, lsi_param_t *rec,
+                     StringPiece &str, int len,
                      ps_request_ctx_t *ctx)
 {
     if (ctx->proxyFetch == NULL)
         return false;
 
     CHECK(ctx->proxyFetch != NULL);
-    if (rec->len1 > 0) {
-        ctx->proxyFetch->Write(
-            StringPiece((const char *) rec->ptr1, rec->len1),
-            pMyData->cfg_s->handler);
+    if (len > 0) {
+        ctx->proxyFetch->Write(str, pMyData->cfg_s->handler);
     }
     
     if (rec->flag_in & LSI_CBFI_EOF)
@@ -1959,17 +1964,13 @@ int sendRespBody(lsi_param_t *rec)
 
     int ret = rec->len1;
     StringPiece contents;
-    if (ctx->recorder)
-    {
-        contents = StringPiece((char *) rec->ptr1, rec->len1);
-    }
-
     int writtenTotal = 0;
     if (ctx->htmlRewrite && !pMyData->doneCalled)
     {
         if (rec->len1 > 0 ||  rec->flag_in)
         {
-            SendToPagespeed(pMyData, rec, ctx);
+            contents = StringPiece((char *) rec->ptr1, rec->len1);
+            SendToPagespeed(pMyData, rec, contents, rec->len1, ctx);
         }
     }
 
@@ -1977,9 +1978,14 @@ int sendRespBody(lsi_param_t *rec)
     {
         ret = g_api->stream_write_next(rec, (const char *) rec->ptr1,
                                                 rec->len1);
-        if (ret >= 0 && ctx->recorder)
+        if (ret >= 0)
         {
-            InPlaceBodyFilter(pMyData, rec, ctx, contents, ret);
+            if(ctx->recorder)
+            {
+                contents = StringPiece((char *) rec->ptr1, ret);
+                InPlaceBodyFilter(pMyData, rec, ctx, contents, ret);
+            }
+
         }
         return ret;
     }
@@ -1995,22 +2001,20 @@ int sendRespBody(lsi_param_t *rec)
             rec->flag_in = LSI_CBFI_FLUSH;
 
         int written = g_api->stream_write_next(rec, buf, len);
-        if (written >= 0 && ctx->recorder)
+        if (written > 0)
         {
-            contents = StringPiece(buf, written);
-            InPlaceBodyFilter(pMyData, rec, ctx, contents, written);
-        }
-
-        
-        if (written < 0)
-            return LS_FAIL;
-        else if (written == 0)
-            break;
-        else
-        {
+            if(ctx->recorder)
+            {
+                contents = StringPiece(buf, written);
+                InPlaceBodyFilter(pMyData, rec, ctx, contents, written);
+            }
             ls_loopbuf_popfront(&pMyData->buff, written);
             writtenTotal += written;
         }
+        else if (written < 0)
+            return LS_FAIL;
+        else
+            break;
     }
 
     if (!pMyData->doneCalled)
@@ -2317,6 +2321,7 @@ static int RecvReqHeaderCheck(lsi_param_t *rec)
     pMyData->endRespCalled = 0;
     pMyData->doneCalled = 0;
     ls_loopbuf(&pMyData->buff, 4096);
+    ls_loopbuf_d(&pMyData->buff);
     pMyData->urlString = DetermineUrl(rec->session);
     pMyData->method = (HTTP_METHOD) method;
     pMyData->cfg_s = cfg_s;
@@ -2526,6 +2531,6 @@ static int Init(lsi_module_t *pModule)
 lsi_confparser_t dealConfig = { ParseConfig, FreeConfig, paramArray };
 lsi_reqhdlr_t _handler = { PsHandlerProcess, NULL, NULL, NULL };
 lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, Init, &_handler, &dealConfig,
-                       "1.5.0-1.9.32.10", serverHooks, {0}
+                       "1.4.17-1.9.32.10", serverHooks, {0}
                      };
 

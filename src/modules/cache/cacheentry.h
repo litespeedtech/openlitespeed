@@ -67,8 +67,8 @@ public:
     void setLastAccess(long tm)   {   m_lastAccess = tm;  }
     long getLastAccess() const      {   return m_lastAccess;    }
 
-//     void incHits()                  {   ++m_iHits;          }
-//     long getHits() const            {   return m_iHits;     }
+     void incHits()                  {   ++m_iHits;          }
+     long getHits() const            {   return m_iHits;     }
 //
 //     void incTestHits()              {   ++m_iTestHits;    }
 //     long getTestHits() const        {   return m_iTestHits;    }
@@ -167,21 +167,11 @@ public:
                     && (m_header.m_msCreated < iMsecLast)));
     }
 
-    void setFilePath(const char *path)
-    {
-        m_sFile.setStr(path);
-    }
-    const char *getFilePath(char *buf, int maxBufLen)
-    {
-        strcpy(buf, m_sFile.c_str());
-        if (isStale())
-            strcat(buf, ".S");
-        return buf;
-    }
 
 
 private:
     long        m_lastAccess;
+    int         m_iHits;
     int         m_iMaxStale;
     CacheHash   m_hashKey;
 
@@ -192,7 +182,6 @@ private:
 
     AutoStr     m_sTag;
     DLinkQueue *m_pWaitQue;
-    AutoStr     m_sFile;
 
     LS_NO_COPY_ASSIGN(CacheEntry);
 };

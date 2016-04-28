@@ -156,6 +156,16 @@ void Logger::lograw(const char *pBuf, int len)
 }
 
 
+void Logger::lograw(const struct iovec *pIov, int len)
+{
+    const struct iovec *end = pIov + len;
+    for (; pIov < end; ++pIov)
+    {
+        lograw((const char *) pIov->iov_base, pIov->iov_len);
+    }
+    
+}
+
 void Logger::s_vlog(int level, LogSession *pLogSession,
                     const char *format, va_list args, int no_linefeed)
 {

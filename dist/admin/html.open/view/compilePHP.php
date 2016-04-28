@@ -281,11 +281,14 @@ class CompilePHPUI
 		if ($supported['xcache']) {
 			$input .= $this->input_checkbox('addonXCache', $options->GetValue('AddOnXCache'), '<a href="http://xcache.lighttpd.net/" target="_blank">XCache</a> (' . $label_opcode .') V' . BuildConfig::GetVersion(BuildConfig::XCACHE_VERSION));
 		}
+		if ($supported['opcache']) {
+            $input .= $this->input_checkbox('addonOPcache', $options->GetValue('AddOnOPcache'), '<a href="http://pecl.php.net/package/ZendOpcache" target="_blank">Zend OPcache</a> (' . $label_opcode .') V' . BuildConfig::GetVersion(BuildConfig::OPCACHE_VERSION));
+		}
 		if ($supported['memcache']) {
 			$input .= $this->input_checkbox('addonMemCache', $options->GetValue('AddOnMemCache'), '<a href="http://pecl.php.net/package/memcache" target="_blank">memcache</a> (memcached extension) V' . BuildConfig::GetVersion(BuildConfig::MEMCACHE_VERSION));
 		}
-		if ($supported['opcache']) {
-            $input .= $this->input_checkbox('addonOPcache', $options->GetValue('AddOnOPcache'), '<a href="http://pecl.php.net/package/ZendOpcache" target="_blank">Zend OPcache</a> (' . $label_opcode .') V' . BuildConfig::GetVersion(BuildConfig::OPCACHE_VERSION));
+		if ($supported['memcachd']) {
+			$input .= $this->input_checkbox('addonMemCachd', $options->GetValue('AddOnMemCachd'), '<a href="http://pecl.php.net/package/memcached" target="_blank">memcached</a> (PHP extension for interfacing with memcached via libmemcached library) V' . BuildConfig::GetVersion(BuildConfig::MEMCACHED_VERSION));
 		}
 		$note = DMsg::ALbl('buildphp_updatever') . ' /usr/local/lsws/admin/html/lib/util/build_php/BuildConfig.php';
 		$buf .= $this->form_group(DMsg::ALbl('buildphp_addonmodules'), false, $input, '', $note);

@@ -170,6 +170,7 @@ int HttpListener::setSockAttr(int fd, GSockAddr &addr)
     int nodelay = 1;
     //::setsockopt( fd, IPPROTO_TCP, TCP_NODELAY, &nodelay, sizeof( int ) );
 #ifdef TCP_DEFER_ACCEPT
+    nodelay = 30;
     ::setsockopt(fd, IPPROTO_TCP, TCP_DEFER_ACCEPT, &nodelay, sizeof(int));
 #endif
 
@@ -335,15 +336,19 @@ int HttpListener::handleEvents(short event)
     {
         if (limitType == 1)
         {
-            LS_DBG_H(this, "Max connections reached, suspend accepting!");
-
-            ctrl.suspendAll();
+            if (ctrl.availConn() <= 0)
+            {
+                LS_DBG_H(this, "Max connections reached, suspend accepting!");
+                ctrl.suspendAll();
+            }
         }
         else
         {
-            LS_DBG_M(this, "Max SSL connections reached, suspend accepting!");
-
-            ctrl.suspendSSL();
+            if (ctrl.availSSLConn() <= 0)
+            {
+                LS_DBG_M(this, "Max SSL connections reached, suspend accepting!");
+                ctrl.suspendSSL();
+            }
         }
     }
     LS_DBG_H(this, "%d connections accepted!", iCount);
@@ -437,7 +442,7 @@ int HttpListener::batchAddConn(struct conn_data *pBegin,
             if (!pConn->setLink(this, fd, pCur->pInfo, pMap->getSslContext()))
             {
                 ++pConnCur;
-                //pConn->tryRead();
+                pConn->tryRead();
             }
             else
             {
@@ -503,7 +508,7 @@ int HttpListener::addConnection(struct conn_data *pCur, int *iCount)
         --(*iCount);
         return LS_FAIL;
     }
-    //pConn->tryRead();
+    pConn->tryRead();
     return 0;
 }
 

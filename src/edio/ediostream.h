@@ -146,7 +146,7 @@ public:
 //    virtual bool wantWrite() = 0;
 //    void updateEvents();
     int close();
-    int flush()    {   return 0;    }
+    int flush()    {   return LS_OK;    }
     int getSockError(int32_t *error);
 };
 

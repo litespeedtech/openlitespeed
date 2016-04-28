@@ -54,7 +54,7 @@ int Poller::add(EventReactor *pHandler, short mask)
 {
     assert(pHandler);
     m_pfdReactors.add(pHandler, mask);
-    return 0;
+    return LS_OK;
 }
 
 
@@ -62,7 +62,7 @@ int Poller::remove(EventReactor *pHandler)
 {
     assert(pHandler);
     m_pfdReactors.remove(pHandler);
-    return 0;
+    return LS_OK;
 }
 
 
@@ -75,7 +75,7 @@ int Poller::waitAndProcessEvents(int iTimeoutMilliSec)
     {
         m_pfdReactors.setEvents(events);
         m_pfdReactors.processAllEvents();
-        return 0;
+        return LS_OK;
     }
     return events;
 }

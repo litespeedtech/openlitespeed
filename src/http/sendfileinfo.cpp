@@ -16,6 +16,7 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "sendfileinfo.h"
+#include <http/staticfilecachedata.h>
 
 #include <assert.h>
 
@@ -33,4 +34,10 @@ SendFileInfo::SendFileInfo()
 SendFileInfo::~SendFileInfo()
 {}
 
-
+int SendFileInfo::getfd()
+{
+    if (!m_pECache)
+        return (long)m_pParam;
+    else
+        return m_pECache->getfd();
+}

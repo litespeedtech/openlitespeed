@@ -44,7 +44,7 @@
 #include <http/httpsession.h>
 #include <http/httpvhost.h>
 #include <util/autostr.h>
-
+#include <sys/uio.h>
 
 
 #define MAX_CACHE_CONTROL_LENGTH    128
@@ -139,23 +139,27 @@ const int paramArrayCount = 17;
 const char *paramArray[paramArrayCount + 1] =
 {
     "enableCache",   //0
+    "enablePrivateCache",
+    "checkPublicCache",
+    "checkPrivateCache", //3
     "qsCache",
     "reqCookieCache",
-    "respCookieCache",
+    
     "ignoreReqCacheCtrl",
-    "ignoreRespCacheCtrl", //5
+    "ignoreRespCacheCtrl", //7
+    
+    "respCookieCache",
+    
     "expireInSeconds",
+    "privateExpireInSeconds",//10
     "maxStaleAge",
-    "enablePrivateCache",
-    "privateExpireInSeconds",
-    "storagepath", //10 "cacheStorePath"
+    "maxCacheObjSize",
+    
+    "storagepath", //13 "cacheStorePath"
 
     //Below 5 are newly added
-    "checkPrivateCache", //11
-    "checkPublicCache",
-    "maxCacheObjSize",
-    "noCacheDomain",
-    "noCacheUrl",
+    "noCacheDomain",//14
+    "noCacheUrl",//15
 
     "no-vary", //16
     NULL //Must have NULL in the last item
@@ -323,60 +327,61 @@ static int parseLine(CacheConfig *pConfig, const char *key, int keyLen,
     {
         //compatible with lslb
         if (strncasecmp(key, "cacheStorePath", keyLen) == 0)
-            i = 10;
+            i = 13;
     }
 
     switch (i)
     {
     case 0:
-        bit = CACHE_ENABLED;
+        bit = CACHE_ENABLE_PUBLIC;
         break;
     case 1:
-        bit = CACHE_QS_CACHE;
+        bit = CACHE_ENABLE_PRIVATE;
         break;
     case 2:
-        bit = CACHE_REQ_COOKIE_CACHE;
+        bit = CACHE_CHECK_PUBLIC;
         break;
     case 3:
-        bit = CACHE_RESP_COOKIE_CACHE;
+        bit = CACHE_CHECK_PRIVATE;
         break;
     case 4:
-        bit = CACHE_IGNORE_REQ_CACHE_CTRL_HEADER;
+        bit = CACHE_QS_CACHE;
         break;
     case 5:
-        bit = CACHE_IGNORE_RESP_CACHE_CTRL_HEADER;
+        bit = CACHE_REQ_COOKIE_CACHE;
         break;
     case 6:
+        bit = CACHE_IGNORE_REQ_CACHE_CTRL_HEADER;
+        break;
+    case 7:
+        bit = CACHE_IGNORE_RESP_CACHE_CTRL_HEADER;
+        break;
+    case 8:
+        bit = CACHE_RESP_COOKIE_CACHE;
+        break;
+    case 9:
         bit = CACHE_MAX_AGE_SET;
         maxValue = INT_MAX;
         break;
-    case 7:
-        bit = CACHE_STALE_AGE_SET;
-        maxValue = INT_MAX;
-        break;
-    case 8:
-        bit = CACHE_PRIVATE_ENABLED;
-        break;
-    case 9:
+    case 10:
         bit = CACHE_PRIVATE_AGE_SET;
         maxValue = INT_MAX;
         break;
-    case 10:
-    case 14:
-    case 15:
-        return i; //return the index for next step parsing
-
     case 11:
-        bit = CACHE_CHECK_PRIVATE;
+        bit = CACHE_STALE_AGE_SET;
+        maxValue = INT_MAX;
         break;
     case 12:
-        bit = CACHE_CHECK_PUBLIC;
-        break;
-    case 13:
         bit = CACHE_MAX_OBJ_SIZE;
         maxValue = INT_MAX;
         defValue = 1024 * 1024;
         break;
+        
+    case 13: //storagepath
+    case 14:
+    case 15:
+        return i; //return the index for next step parsing
+
     case 16:
         bit = CACHE_NO_VARY;
         break;
@@ -430,11 +435,11 @@ static void matchSettings(const char *param, int param_len,
     //need to tune the setting of enbleCache and CheckPublic
     if (!strcasestr(param, "checkPublicCache"))
         pConfig->setConfigBit(CACHE_CHECK_PUBLIC,
-                              pConfig->isSet(CACHE_ENABLED));
+                              pConfig->isSet(CACHE_ENABLE_PUBLIC));
 
     if (!strcasestr(param, "checkPrivateCache"))
         pConfig->setConfigBit(CACHE_CHECK_PRIVATE,
-                              pConfig->isSet(CACHE_PRIVATE_ENABLED));
+                              pConfig->isSet(CACHE_ENABLE_PRIVATE));
 }
 
 
@@ -481,7 +486,7 @@ static void *ParseConfig(const char *param, int param_len,
         int ret = parseLine(pConfig, ls_str_cstr(pKey), ls_str_len(pKey), pValStr,
                             valLen);
 
-        if (ret == 10)
+        if (ret == 13)
             parseStoragePath(pConfig, pValStr, valLen, level, name);
         else if (ret == 15)
             parseNoCacheUrl(pConfig, pValStr, valLen, level, name);
@@ -792,6 +797,15 @@ void buildCacheKey(lsi_param_t *rec, const char *uri, int uriLen,
         pKey->m_iCookieVary = getCacheVaryCookie(rec->session, pReq, pCookieBuf,
                               pCookieBufEnd);
 
+//     bool m_iRewriteCacheVaryValOff = 0;
+//     if (m_iRewriteCacheVaryValOff)
+//     {
+//         char *p = (char *)memccpy(&pCookieBuf[pKey->m_iCookieVary],
+//                           m_reqBuf.getPointer(m_iRewriteCacheVaryValOff), 0,
+//                           pCookieBufEnd - &pCookieBuf[pKey->m_iCookieVary] );
+//         if (p != NULL)
+//             pKey->m_iCookieVary = p - pCookieBuf;
+//     }
     if (pIp)
         pKey->m_iCookiePrivate = getPrivateCacheCookie(pReq,
                                  &pCookieBuf[pKey->m_iCookieVary],
@@ -806,25 +820,19 @@ void buildCacheKey(lsi_param_t *rec, const char *uri, int uriLen,
 }
 
 
-short hasCache(lsi_param_t *rec, MyMData *myData,
-               int no_vary,
-               const char *uri, int uriLen,
-               DirHashCacheStore *pDirHashCacheStore,
+short hasCache(lsi_param_t *rec, MyMData *myData, int no_vary, const char *uri,
+               int uriLen, DirHashCacheStore *pDirHashCacheStore,
                CacheHash *cePublicHash, CacheHash *cePrivateHash,
                CacheConfig *pConfig, CacheEntry **pEntry, bool doPublic)
 {
-    buildCacheKey(rec, uri, uriLen, no_vary,
-                  &myData->cacheKey);
-    calcCacheHash(rec->session, &myData->cacheKey, cePublicHash,
-                  cePrivateHash);
+    buildCacheKey(rec, uri, uriLen, no_vary, &myData->cacheKey);
+    calcCacheHash(rec->session, &myData->cacheKey, cePublicHash, cePrivateHash);
 
-    //Try private one first
     long lastCacheFlush = (long)g_api->get_module_data(rec->session, &MNAME,
                           LSI_DATA_IP);
+    
     *pEntry = pDirHashCacheStore->getCacheEntry(*cePrivateHash,
-              &myData->cacheKey,
-              lastCacheFlush,
-              pConfig->getMaxStale());
+              &myData->cacheKey, pConfig->getMaxStale(), lastCacheFlush);
     if (*pEntry && (!(*pEntry)->isStale() || (*pEntry)->isUpdating()))
         return CE_STATE_HAS_PRIVATE_CACHE;
 
@@ -832,8 +840,7 @@ short hasCache(lsi_param_t *rec, MyMData *myData,
     {
         //Second, check if can use public one
         *pEntry = pDirHashCacheStore->getCacheEntry(*cePublicHash,
-                  &myData->cacheKey,
-                  0, pConfig->getMaxStale());
+                  &myData->cacheKey, pConfig->getMaxStale(), -1);
         if (*pEntry && (!(*pEntry)->isStale() || (*pEntry)->isUpdating()))
             return CE_STATE_HAS_PUBLIC_CACHE;
     }
@@ -868,8 +875,9 @@ int checkBypassHeader(const char *header, int len)
         "content-length",
         "transfer-encoding",
         "content-encoding",
+        "set-cookie",
     };
-    int8_t headersBypassLen[] = {  13, 4, 4, 14, 17, 16, };
+    int8_t headersBypassLen[] = {  13, 4, 4, 14, 17, 16, 10, };
 
     int count = sizeof(headersBypass) / sizeof(const char *);
     for (int i = 0; i < count ; ++i)
@@ -888,7 +896,8 @@ int writeHttpHeader(int fd, AutoStr2 *str, const char *key, int key_len,
 {
     write(fd, key, key_len);
     write(fd, ": ", 2);
-    write(fd, val, val_len);
+    if (val_len > 0)
+        write(fd, val, val_len);
     write(fd, "\r\n", 2);
 
 #ifdef CACHE_RESP_HEADER
@@ -920,8 +929,7 @@ void getRespHeader(lsi_session_t *session, int header_index, char **buf,
                    int *length)
 {
     struct iovec iov[1] = {{NULL, 0}};
-    int iovCount = g_api->get_resp_header(session, header_index, NULL, 0, iov,
-                                          1);
+    int iovCount = g_api->get_resp_header(session, header_index, NULL, 0, iov, 1);
     if (iovCount == 1)
     {
         *buf = (char *)iov[0].iov_base;
@@ -938,16 +946,22 @@ static int bypassUrimapHook(lsi_param_t *rec)
 {
     if (g_api->get_hook_level(rec) == LSI_HKPT_RECV_REQ_HEADER)
     {
-        int enableHkpt = LSI_HKPT_URI_MAP;
-        g_api->enable_hook(rec->session, &MNAME, 0, &enableHkpt, 1);
+        int disableHkpt = LSI_HKPT_URI_MAP;
+        g_api->enable_hook(rec->session, &MNAME, 0, &disableHkpt, 1);
     }
     return 0;
+}
+
+static void disableRcvdRespHeaderFilter(lsi_param_t *rec)
+{
+    int disableHkpt = LSI_HKPT_RCVD_RESP_HEADER;
+    g_api->enable_hook(rec->session, &MNAME, 0, &disableHkpt, 1);
 }
 
 
 void clearHooksOnly(lsi_session_t *session)
 {
-    int aEnableHkpts[4], iEnableCount = 0;
+    int aHkpts[4], iHkptCount = 0;
     MyMData *myData = (MyMData *) g_api->get_module_data(session, &MNAME,
                       LSI_DATA_HTTP);
     if (myData)
@@ -955,9 +969,9 @@ void clearHooksOnly(lsi_session_t *session)
         if (myData->iHaveAddedHook == 1 || myData->iHaveAddedHook == 2)
         {
             if (myData->iHaveAddedHook == 2)
-                aEnableHkpts[iEnableCount++] = myData->hkptIndex;
-            aEnableHkpts[iEnableCount++] = LSI_HKPT_RCVD_RESP_HEADER;
-            g_api->enable_hook(session, &MNAME, 0, aEnableHkpts, iEnableCount);
+                aHkpts[iHkptCount++] = myData->hkptIndex;
+            aHkpts[iHkptCount++] = LSI_HKPT_RCVD_RESP_HEADER;
+            g_api->enable_hook(session, &MNAME, 0, aHkpts, iHkptCount);
             myData->iHaveAddedHook = 0;
         }
     }
@@ -1017,9 +1031,9 @@ static int endCache(lsi_param_t *rec)
 static int getControlFlag(CacheConfig *pConfig)
 {
     int flag = CacheCtrl::max_age | CacheCtrl::max_stale | CacheCtrl::s_maxage;
-    if (pConfig->isSet(CACHE_ENABLED))
+    if (pConfig->isSet(CACHE_ENABLE_PUBLIC))
         flag |= CacheCtrl::cache_public;
-    if (pConfig->isSet(CACHE_PRIVATE_ENABLED))
+    if (pConfig->isSet(CACHE_ENABLE_PRIVATE))
         flag |= CacheCtrl::cache_private;
     if (pConfig->isSet(CACHE_NO_VARY))
         flag |= CacheCtrl::no_vary;
@@ -1032,18 +1046,49 @@ static int getControlFlag(CacheConfig *pConfig)
 }
 
 
+static void processPurge(lsi_session_t *session, 
+                         const char *pValue, int valLen);
 static int createEntry(lsi_param_t *rec)
 {
+    //If have special cache headers, handle them here
+    struct iovec iov[5];
+    int count = g_api->get_resp_header(rec->session,
+                                       LSI_RSPHDR_LITESPEED_PURGE,
+                                       NULL, 0, iov, 5);
+    for (int i=0; i<count; ++i)
+    {
+        int valLen = iov[i].iov_len;
+        const char *pVal = (const char *)iov[i].iov_base;
+        if (pVal && valLen > 0)
+            processPurge(rec->session, pVal, valLen);
+    }
+    if (count > 0)
+        g_api->remove_resp_header(rec->session, LSI_RSPHDR_LITESPEED_PURGE, NULL, 0);
+
+
     MyMData *myData = (MyMData *)g_api->get_module_data(rec->session, &MNAME,
                       LSI_DATA_HTTP);
-    if (myData == NULL)
+    if (myData == NULL || myData->iHaveAddedHook == 0)
     {
         clearHooks(rec->session);
-        g_api->log(rec->session, LSI_LOG_ERROR,
-                   "[%s]internal error during createEntry.\n", ModuleNameStr);
+        g_api->log(rec->session, LSI_LOG_DEBUG,
+                   "[%s]createEntry quit, code 1.\n", ModuleNameStr);
         return 0;
     }
 
+
+//     count = g_api->get_resp_header(rec->session,
+//                                        LSI_RSPHDR_LITESPEED_TAG,
+//                                        NULL, 0, iov, 5);
+//     for (int i=0; i<count; ++i)
+//     {
+//         int valLen = iov[i].iov_len;
+//         const char *pVal = (const char *)iov[i].iov_base;
+//         if (pVal && valLen > 0)
+//             ;//processPurge(myData, rec->session, pVal, valLen);
+//     }
+    
+    
     CacheConfig *pContextConfig = (CacheConfig *)g_api->get_config(
                                       rec->session, &MNAME);
     if ((pContextConfig != NULL) && pContextConfig != myData->pConfig)
@@ -1165,6 +1210,14 @@ int cacheHeader(lsi_param_t *rec, MyMData *myData)
     }
     else
         CeHeader.m_lenETag = 0;
+
+    char *pKey = NULL;
+    int keyLen;
+    getRespHeader(rec->session, LSI_RSPHDR_LITESPEED_TAG, &pKey, &keyLen);
+    if (pKey && keyLen > 0)
+        myData->pEntry->setTag(pKey, keyLen);
+    else
+        CeHeader.m_tagLen = 0;
     
     //Check if it is a static file caching
     char path[4096];
@@ -1187,8 +1240,7 @@ int cacheHeader(lsi_param_t *rec, MyMData *myData)
     myData->pEntry->setPart1Len(0); //->setContentLen(0, 0);
     myData->pEntry->setPart2Len(0);
 
-    if (g_api->is_resp_buffer_gzippped(rec->session))
-        myData->pEntry->markReady(1);
+    myData->pEntry->markReady(g_api->is_resp_buffer_gzippped(rec->session));
 
     myData->pEntry->saveCeHeader();
 
@@ -1224,15 +1276,23 @@ int cacheHeader(lsi_param_t *rec, MyMData *myData)
         //check if need to bypass
         if (!checkBypassHeader((const char *)iov_key[i].iov_base,
                                iov_key[i].iov_len))
+        {
+            //if it is lsc-cookie, then change to Set-Cookie
+            const char *pKey = (const char *)iov_key[i].iov_base;
+            if (iov_key[i].iov_len == 10 &&
+                strncasecmp(pKey, "lsc-cookie", 10) == 0)
+                pKey = "Set-Cookie";
+
 #ifdef CACHE_RESP_HEADER
             headersBufSize += writeHttpHeader(fd, &(myData->m_pEntry->m_sRespHeader),
-                                              iov_key[i].iov_base, iov_key[i].iov_len,
+                                              pKey, iov_key[i].iov_len,
                                               iov_val[i].iov_base, iov_val[i].iov_len);
 #else
             headersBufSize += writeHttpHeader(fd, NULL,
-                                              (char *)iov_key[i].iov_base, iov_key[i].iov_len,
+                                              pKey, iov_key[i].iov_len,
                                               (char *)iov_val[i].iov_base, iov_val[i].iov_len);
 #endif
+        }
     }
 
 #ifdef CACHE_RESP_HEADER
@@ -1607,6 +1667,7 @@ static int checkAssignHandler(lsi_param_t *rec)
         myData->pOrgUri = uri;
         myData->iMethod = method;
         myData->hkptIndex = 0;
+        myData->iHaveAddedHook = 0;
 
         //Set to true but not the below just for not to re-check cache state or
         //re-store it
@@ -1636,8 +1697,10 @@ static int checkAssignHandler(lsi_param_t *rec)
             g_api->free_module_data(rec->session, &MNAME, LSI_DATA_HTTP,
                                     httpRelease);
         }
+        disableRcvdRespHeaderFilter(rec);
         return bypassUrimapHook(rec);
     }
+
 
     //need to  re-set the cacheCtrl and pConfig since it may be updated in diff level
     myData->cacheCtrl = cacheCtrl;
@@ -1672,6 +1735,7 @@ static int checkAssignHandler(lsi_param_t *rec)
                            "[%s]checkAssignHandler register_req_handler OK.\n",
                            ModuleNameStr);
             }
+            disableRcvdRespHeaderFilter(rec);
             bypassUrimapHook(rec);
         }
         else
@@ -1686,9 +1750,6 @@ static int checkAssignHandler(lsi_param_t *rec)
     {
         if (!myData->cacheCtrl.isCacheOff())
         {
-            //only 'GET' need to store, 'HEAD' won't
-            int enableHkpt = LSI_HKPT_RCVD_RESP_HEADER;
-            g_api->enable_hook(rec->session, &MNAME, 1, &enableHkpt, 1);
             myData->iHaveAddedHook = 1;
 
             //g_api->set_session_hook_flag( rec->_session, LSI_HKPT_RCVD_RESP_BODY, &MNAME, 1 );
@@ -1721,7 +1782,7 @@ static int checkEnv(lsi_param_t *rec)
     if (cacheCtrl.isCacheOff() && myData->iHaveAddedHook == 1)
     {
         clearHooksOnly(rec->session);
-        //myData->iHaveAddedHook = 0;
+        myData->iHaveAddedHook = 0;
     }
     else if (!cacheCtrl.isCacheOff() && myData->iHaveAddedHook == 0)
     {
@@ -1748,8 +1809,9 @@ static lsi_serverhook_t serverHooks[] =
     {LSI_HKPT_URI_MAP,          checkAssignHandler, LSI_HOOK_EARLY,     LSI_FLAG_ENABLED},
     {LSI_HKPT_HTTP_END,         endCache,           LSI_HOOK_LAST + 1,  LSI_FLAG_ENABLED},
     {LSI_HKPT_HANDLER_RESTART,  cancelCache,        LSI_HOOK_LAST + 1,  LSI_FLAG_ENABLED},
-
-    {LSI_HKPT_RCVD_RESP_HEADER, createEntry,        LSI_HOOK_LAST + 1,  0},
+    {LSI_HKPT_RCVD_RESP_HEADER, createEntry,        LSI_HOOK_LAST + 1,  LSI_FLAG_ENABLED},
+    
+    
     {LSI_HKPT_RCVD_RESP_BODY,   cacheTofile,        LSI_HOOK_LAST + 1,  0},
     {LSI_HKPT_SEND_RESP_BODY,   cacheTofileFilter,  LSI_HOOK_LAST + 1,  0},
     LSI_HOOK_END   //Must put this at the end position
@@ -1788,6 +1850,121 @@ int isModified(lsi_session_t *session, CeHeader &CeHeader, char *etag,
 
     return 1;
 }
+
+
+// static void processCacheVary(lsi_session_t *session, 
+//                              const char *pValue, int valLen)
+// {
+//     CacheStore *pStore = NULL;
+//     MyMData *myData = (MyMData *)g_api->get_module_data(session, &MNAME,
+//                       LSI_DATA_HTTP);
+//     if (myData)
+//         pStore = myData->pConfig->getStore();
+//     else
+//     {
+//         CacheConfig *pContextConfig = (CacheConfig *)g_api->get_config(
+//                                       session, &MNAME);
+//         pStore = pContextConfig->getStore();
+//     }
+//     if (!pStore)
+//         return ;
+//     HttpSession *pSession = (HttpSession *)session;
+//     HttpReq *pReq = pSession->getReq();
+//     const AutoStr2 *pCurVary = pReq->getCacheVary();
+//     if (pCurVary)
+//     {
+//         if ((pCurVary->len() == valLen)
+//             && (strncasecmp(pCurVary->c_str(), pValue, valLen) == 0))
+//             return;
+//         else
+//         {
+//             LS_NOTICE(getLogSession(), "CacheVary changed for URL [%.*s], "
+//                       "from [%s] to [%.*s], it should not happen.",
+//                       m_request.getOrgReqURLLen(),  m_request.getOrgReqURL(),
+//                       pCurVary->c_str(), valLen, pValue);
+//         }
+//     }
+// 
+//     int id = pStore->getManager()->getVaryId(pValue, valLen);
+//     if (id != -1)
+//     {
+//         pStore->getManager()->addUrlVary(m_request.getOrgReqURL(),
+//                                          m_request.getOrgReqURLLen(), id);
+//         const AutoStr2 *pVary = pStore->getManager()->getVaryStrById(id);
+//         if (pVary)
+//             m_request.setCacheVary(pVary);
+//         LS_DBG_M(getLogSession(), "set CacheVary [%.*s], id [%d] for URL "
+//                  "[%.*s], result: %p->%s", valLen, pValue, id,
+//                  m_request.getOrgReqURLLen(),  m_request.getOrgReqURL(),
+//                  pVary, pVary ? pVary->c_str() : "");
+//         m_request.clearContextState(CACHE_PRIVATE_KEY | CACHE_KEY);
+// 
+//     }
+//     else
+//     {
+//         LS_DBG_M(getLogSession(), "failed to get ID for CacheVary [%.*s]",
+//                  valLen, pValue);
+//     }
+// }
+// 
+
+
+static void processPurge(lsi_session_t *session, 
+                         const char *pValue, int valLen)
+{
+    CacheStore *pStore = NULL;
+    MyMData *myData = (MyMData *)g_api->get_module_data(session, &MNAME,
+                      LSI_DATA_HTTP);
+    if (myData)
+        pStore = myData->pConfig->getStore();
+    else
+    {
+        CacheConfig *pContextConfig = (CacheConfig *)g_api->get_config(
+                                      session, &MNAME);
+        pStore = pContextConfig->getStore();
+    }
+    if (!pStore)
+        return ;
+    
+    if (strncmp(pValue, "private,", 8) == 0)
+    {
+        CacheKey key;
+        int ipLen;
+        char pCookieBuf[MAX_HEADER_LEN] = {0};
+        char *pCookieBufEnd = pCookieBuf + MAX_HEADER_LEN;
+        key.m_pIP = g_api->get_client_ip(session, &ipLen);
+        key.m_ipLen = ipLen;
+        key.m_iCookieVary = 0;
+        
+        HttpSession *pSession = (HttpSession *)session;
+        HttpReq *pReq = pSession->getReq();
+        key.m_iCookiePrivate = getPrivateCacheCookie(pReq,
+                                 &pCookieBuf[key.m_iCookieVary],
+                                 pCookieBufEnd);
+        key.m_sCookie.setStr(pCookieBuf);
+        
+        pValue += 8;
+        valLen -= 8;
+        while (isspace(*pValue))
+        {
+            ++pValue;
+            --valLen;
+        }
+        pStore->getManager()->processPrivatePurgeCmd(&key,
+                pValue, valLen, DateTime::s_curTime, DateTime::s_curTimeUs / 1000);
+        g_api->log(session, LSI_LOG_DEBUG, 
+                   "PURGE private cache for [%s]: %.*s\n",
+                   key.m_pIP, valLen, pValue);
+    }
+    else
+    {
+        pStore->getManager()->processPurgeCmd(
+            pValue, valLen, DateTime::s_curTime, DateTime::s_curTimeUs / 1000);
+        g_api->log(session, LSI_LOG_DEBUG,  "PURGE public cache: %.*s",
+                   valLen, pValue);
+    }
+}
+
 
 
 static int handlerProcess(lsi_session_t *session)
@@ -1910,9 +2087,6 @@ static int handlerProcess(lsi_session_t *session)
     int ret  = 0;
     if (myData->iMethod == HTTP_GET)
     {
-        char filePath[max_file_len] = {0};
-        myData->pEntry->getFilePath(filePath, max_file_len);
-
 //        g_api->remove_resp_header(session, LSI_RSPHDR_TRANSFER_ENCODING, NULL, 0);
         off_t length = myData->pEntry->getContentTotalLen() -
                        (myData->pEntry->getPart2Offset() - myData->pEntry->getPart1Offset());
@@ -1931,7 +2105,8 @@ static int handlerProcess(lsi_session_t *session)
             g_api->set_resp_buffer_gzip_flag(session, 0);
 
         g_api->set_resp_content_length(session, length);
-        if (g_api->send_file(session, filePath, startPos, length) == 0)
+        int fd = myData->pEntry->getFdStore();
+        if (g_api->send_file2(session, fd, startPos, length) == 0)
             g_api->end_resp(session);
         else
             ret = 500;
@@ -1942,14 +2117,13 @@ static int handlerProcess(lsi_session_t *session)
     if (pBuffOrg)
         munmap((caddr_t)pBuffOrg, myData->pEntry->getPart2Offset());
 
-    g_api->free_module_data(session, &MNAME, LSI_DATA_HTTP,
-                            httpRelease);
+    g_api->free_module_data(session, &MNAME, LSI_DATA_HTTP, httpRelease);
     return ret;
 }
 
 lsi_reqhdlr_t cache_handler = { handlerProcess, NULL, NULL, NULL };
 lsi_confparser_t cacheDealConfig = { ParseConfig, FreeConfig, paramArray };
 lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, init, &cache_handler,
-                       &cacheDealConfig, "cache v1.5", serverHooks, {0}
+                       &cacheDealConfig, "cache v1.51", serverHooks, {0}
                      };
 

@@ -196,6 +196,7 @@ int H2Stream::shutdown()
         return 0;
 
     setState(HIOS_SHUTDOWN);
+    m_pH2Conn->incShutdownStream();
 
     LS_DBG_L(this, "H2Stream::shutdown()");
     m_pH2Conn->sendFinFrame(m_uiStreamID);
@@ -209,9 +210,12 @@ int H2Stream::close()
         return 0;
     if (getHandler() && !isReadyToRelease())
         getHandler()->onCloseEx();
-    shutdown();
-    setFlag(HIO_FLAG_WANT_WRITE, 0);
+    if (getState() < HIOS_SHUTDOWN)
+        shutdown();
+    if (getState() == HIOS_SHUTDOWN)
+        m_pH2Conn->decShutdownStream();
     setState(HIOS_DISCONNECTED);
+    setFlag(HIO_FLAG_WANT_WRITE, 0);
     //if (getHandler())
     //{
     //    getHandler()->recycle();
@@ -352,7 +356,11 @@ int H2Stream::sendRespHeaders(HttpRespHeaders *pHeaders, int isNoBody)
     {
         LS_DBG_L(this, "No response body, set END_STREAM.");
         flag |= H2_FLAG_END_STREAM;
-        setState(HIOS_SHUTDOWN);
+        if (getState() != HIOS_SHUTDOWN)
+        {
+            setState(HIOS_SHUTDOWN);
+            m_pH2Conn->incShutdownStream();
+        }
     }
     else
     {

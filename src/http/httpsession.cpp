@@ -61,6 +61,7 @@
 #include <util/datetime.h>
 #include <util/gzipbuf.h>
 #include <util/vmembuf.h>
+#include <util/blockbuf.h>
 
 #include <extensions/extworker.h>
 #include <extensions/cgi/lscgiddef.h>
@@ -349,6 +350,7 @@ void HttpSession::nextRequest()
     getStream()->flush();
     setState(HSS_WAITING);
 
+    m_sendFileInfo.reset();
     if (m_pReqParser)
     {
         delete m_pReqParser;
@@ -427,13 +429,27 @@ void HttpSession::nextRequest()
     }
 }
 
+int HttpSession::sendDefaultErrorPage(const char * pAdditional)
+{
+    setState(HSS_WRITING);
+    buildErrorResponse(pAdditional);
+    endResponse(1);
+    return 0;
+}
 
 void HttpSession::httpError(int code, const char *pAdditional)
 {
-    if (code < 0)
-        code = SC_500;
-    m_request.setStatusCode(code);
-    sendHttpError(pAdditional);
+    if (m_request.isErrorPage() && code == SC_404)
+    {
+        sendDefaultErrorPage(pAdditional);
+    }
+    else
+    {
+        if (code < 0)
+            code = SC_500;
+        m_request.setStatusCode(code);
+        sendHttpError(pAdditional);
+    }
     if (m_pReqParser)
     {
         delete m_pReqParser;
@@ -1313,6 +1329,10 @@ int HttpSession::processVHostRewrite()
             m_sessionHooks.reset();
             m_sessionHooks.inherit(((HttpContext *)pContext)->getSessionHooks(), 0);
             m_pModuleConfig = ((HttpContext *)pContext)->getModuleConfig();
+            if (ret == -2) {
+                m_processState = HSPS_BEGIN_HANDLER_PROCESS;
+                return 0;
+            }
         }
     }
     m_processState = HSPS_CONTEXT_MAP;
@@ -1405,6 +1425,8 @@ int HttpSession::processContextRewrite()
 
 int HttpSession::processFileMap()
 {
+    m_request.checkUrlStaicFileCache();
+
     if (getReq()->getHttpHandler() == NULL ||
         getReq()->getHttpHandler()->getType() != HandlerType::HT_MODULE)
     {
@@ -1620,6 +1642,7 @@ int HttpSession::handlerProcess(const HttpHandler *pHandler)
     if (ret)
         return ret;
 
+
     setState(HSS_PROCESSING);
     //PORT_FIXME: turn off for now
     //pTC->incReqProcessed( m_pHandler->getType() == HandlerType::HT_DYNAMIC );
@@ -1669,6 +1692,18 @@ int HttpSession::assignHandler(const HttpHandler *pHandler)
     m_pHandler = pNewHandler;
     switch (handlerType)
     {
+    case HandlerType::HT_STATIC:
+        //So, if serve with static file, try use cache first
+        if (m_request.getUrlStaticFileData())
+        {
+            m_sendFileInfo.setFileData(m_request.getUrlStaticFileData());
+            m_sendFileInfo.setECache(m_request.getUrlStaticFileData()->getFileData());
+            m_sendFileInfo.setCurPos(0);
+            m_sendFileInfo.setCurEnd(m_request.getUrlStaticFileData()->getFileSize());
+            m_sendFileInfo.setParam(NULL);
+            setFlag(HSF_STX_FILE_CACHE_READY);
+        }
+        break;
     case HandlerType::HT_FASTCGI:
     case HandlerType::HT_CGI:
     case HandlerType::HT_SERVLET:
@@ -1788,7 +1823,7 @@ void HttpSession::sendHttpError(const char *pAdditional)
 
                     assert(pErrDoc->len() < 2048);
                     int ret = redirect(pErrDoc->c_str(), pErrDoc->len(), 1);
-                    if (ret == 0)
+                    if (ret == 0 || statusCode == ret)
                         return;
                     if ((ret != m_request.getStatusCode())
                         && (m_request.getStatusCode() == SC_404)
@@ -1815,9 +1850,7 @@ void HttpSession::sendHttpError(const char *pAdditional)
                 }
                 */
     }
-    setState(HSS_WRITING);
-    buildErrorResponse(pAdditional);
-    endResponse(1);
+    sendDefaultErrorPage(pAdditional);
     HttpStats::getReqStats()->incReqProcessed();
 }
 
@@ -2144,7 +2177,9 @@ void HttpSession::closeConnection()
     if (getEvtcbHead())
         EvtcbQue::getInstance().removeSessionCb(this);
 
-    getStream()->wantWrite(0);
+
+    //if (!(m_iFlag & HSF_SUB_SESSION))
+    //    getStream()->wantWrite(0);
     getStream()->handlerReadyToRelease();
     getStream()->shutdown();
 }
@@ -3417,6 +3452,14 @@ int HttpSession::openStaticFile(const char *pPath, int pathLen,
     return fd;
 }
 
+void HttpSession::setSendFileOffsetSize(int fd, off_t start, off_t size)
+{
+    m_sendFileInfo.setParam((void *)(long)fd);
+    setSendFileBeginEnd(start,
+                        size >= 0 ? (start + size) 
+                                  : m_sendFileInfo.getECache()->getFileSize());
+}
+
 
 int HttpSession::initSendFileInfo(const char *pPath, int pathLen)
 {
@@ -3599,7 +3642,7 @@ int HttpSession::sendStaticFileEx(SendFileInfo *pData)
     int count = 0;
 
 #if !defined( NO_SENDFILE )
-    int fd = pData->getECache()->getfd();
+    int fd = pData->getfd();
     int iModeSF = HttpServerConfig::getInstance().getUseSendfile();
     if (iModeSF && fd != -1 && !isSSL() && !getStream()->isSpdy()
         && (!getGzipBuf() ||
@@ -3630,14 +3673,30 @@ int HttpSession::sendStaticFileEx(SendFileInfo *pData)
             return len;
     }
 #endif
+
+    BlockBuf tmpBlock;
     while ((remain = pData->getRemain()) > 0)
     {
         len = (remain < STATIC_FILE_BLOCK_SIZE) ? remain : STATIC_FILE_BLOCK_SIZE ;
         written = remain;
-        pBuf = pData->getECache()->getCacheData(
-                   pData->getCurPos(), written, HttpResourceManager::getGlobalBuf(), len);
-        if (written <= 0)
-            return LS_FAIL;
+        if (pData->getECache())
+        {
+            pBuf = pData->getECache()->getCacheData(
+                       pData->getCurPos(), written, HttpResourceManager::getGlobalBuf(), len);
+            if (written <= 0)
+                return LS_FAIL;
+        }
+        else
+        {
+            pBuf = VMemBuf::mapTmpBlock(pData->getfd(), tmpBlock, pData->getCurPos());
+            if (!pBuf)
+                return -1;
+            written = tmpBlock.getBufEnd() - pBuf;
+            if (written > remain)
+                written = remain;
+            if (written <= 0)
+                return -1;
+        }
 
         len = writeRespBodyBlockInternal(pData, pBuf, written);
         if (len < 0)
@@ -3690,15 +3749,29 @@ int HttpSession::sendStaticFile(SendFileInfo *pData)
     param.flag_out = &buffered;
 
 
+    BlockBuf tmpBlock;
     while ((remain = pData->getRemain()) > 0)
     {
         len = (remain < STATIC_FILE_BLOCK_SIZE) ? remain : STATIC_FILE_BLOCK_SIZE ;
         written = remain;
-        pBuf = pData->getECache()->getCacheData(
-                   pData->getCurPos(), written, HttpResourceManager::getGlobalBuf(), len);
-        if (written <= 0)
-            return LS_FAIL;
-
+        if (pData->getECache())
+        {
+            pBuf = pData->getECache()->getCacheData(
+                       pData->getCurPos(), written, HttpResourceManager::getGlobalBuf(), len);
+            if (written <= 0)
+                return LS_FAIL;
+        }
+        else
+        {
+            pBuf = VMemBuf::mapTmpBlock(pData->getfd(), tmpBlock, pData->getCurPos());
+            if (!pBuf)
+                return -1;
+            written = tmpBlock.getBufEnd() - pBuf;
+            if (written > remain)
+                written = remain;
+            if (written <= 0)
+                return -1;
+        }
         len = writeRespBodyBlockFilterInternal(pData, pBuf, written, &param);
         if (len < 0)
             return len;

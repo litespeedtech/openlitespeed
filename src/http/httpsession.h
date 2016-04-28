@@ -118,6 +118,8 @@ enum HSPState
 #define HSF_AIO_READING             (1<<17)
 #define HSF_PARSE_REQ_BODY          (1<<18)
 
+#define HSF_STX_FILE_CACHE_READY    (1<<19)
+
 
 class HttpSession : public LsiSession, public InputStream, public HioHandler,
     public AioEventHandler
@@ -245,6 +247,7 @@ private:
     int processURI(const char *pURI);
     int readToHeaderBuf();
     void sendHttpError(const char *pAdditional);
+    int sendDefaultErrorPage(const char * pAdditional);
     int detectTimeout();
 
     //int cacheWrite( const char * pBuf, int size );
@@ -490,6 +493,9 @@ public:
 
     void setSendFileOffsetSize(off_t start, off_t size);
 
+    void setSendFileOffsetSize(int fd, off_t start, off_t size);
+    
+    
     int finalizeHeader(int ver, int code);
     LsiModuleData *getModuleData()      {   return &m_moduleData;   }
 

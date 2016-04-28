@@ -260,11 +260,10 @@ int CgidConn::addRequest(ExtRequest *pReq)
     assert(pReq);
     setConnector((HttpExtConnector *)pReq);
     int ret;
-    if (getConnector()->getHttpSession()->getReq()->getContextState(
-            EXEC_EXT_CMD))
+    HttpReq *req = getConnector()->getHttpSession()->getReq();
+    if (req->getContextState(EXEC_EXT_CMD))
         ret = buildSSIExecHeader(1);
-    else if (getConnector()->getHttpSession()->getReq()->getContextState(
-                 EXEC_CMD_PARSE_RES))
+    else if (req->getContextState(EXEC_CMD_PARSE_RES))
         ret = buildSSIExecHeader(0);
     else
         ret = buildReqHeader();

@@ -23,21 +23,21 @@
 #include <util/aho.h>
 #include <http/vhostmap.h>
 
-#define CACHE_ENABLED                       (1<<0)
-#define CACHE_CHECK_PUBLIC                  (1<<1)
-#define CACHE_QS_CACHE                      (1<<2)
-#define CACHE_REQ_COOKIE_CACHE              (1<<3)
-#define CACHE_IGNORE_REQ_CACHE_CTRL_HEADER  (1<<4)
-#define CACHE_IGNORE_RESP_CACHE_CTRL_HEADER (1<<5)
-#define CACHE_IGNORE_SURROGATE_HEADER       (1<<6)
-#define CACHE_RESP_COOKIE_CACHE             (1<<7)
+#define CACHE_ENABLE_PUBLIC                 (1<<0)
+#define CACHE_ENABLE_PRIVATE                (1<<1)
+#define CACHE_CHECK_PUBLIC                  (1<<2)
+#define CACHE_CHECK_PRIVATE                 (1<<3)
+#define CACHE_QS_CACHE                      (1<<4)
+#define CACHE_REQ_COOKIE_CACHE              (1<<5)
+#define CACHE_IGNORE_REQ_CACHE_CTRL_HEADER  (1<<6)
+#define CACHE_IGNORE_RESP_CACHE_CTRL_HEADER (1<<7)
+#define CACHE_IGNORE_SURROGATE_HEADER       (1<<8)
+#define CACHE_RESP_COOKIE_CACHE             (1<<9)
 
-#define CACHE_MAX_AGE_SET                   (1<<8)
-#define CACHE_PRIVATE_ENABLED               (1<<9)
-#define CACHE_PRIVATE_AGE_SET               (1<<10)
-#define CACHE_STALE_AGE_SET                 (1<<11)
-#define CACHE_MAX_OBJ_SIZE                  (1<<12)
-#define CACHE_CHECK_PRIVATE                 (1<<13)
+#define CACHE_MAX_AGE_SET                   (1<<10)
+#define CACHE_PRIVATE_AGE_SET               (1<<11)
+#define CACHE_STALE_AGE_SET                 (1<<12)
+#define CACHE_MAX_OBJ_SIZE                  (1<<13)
 #define CACHE_NO_VARY                       (1<<14)
 
 class DirHashCacheStore;
@@ -66,14 +66,10 @@ public:
     void setMaxStale(int age)         {   m_iMaxStale = age;       }
     int  getMaxStale() const            {   return m_iMaxStale;      }
 
-    int  isPrivateEnabled() const   {   return m_iCacheFlag & CACHE_PRIVATE_ENABLED;    }
+    int  isPrivateEnabled() const   {   return m_iCacheFlag & CACHE_ENABLE_PRIVATE;    }
     int  isPrivateCheck() const   {   return m_iCacheFlag & CACHE_CHECK_PRIVATE;   }
 
-    int  isPublicPrivateEnabled() const
-    {
-        return m_iCacheFlag & (CACHE_PRIVATE_ENABLED | CACHE_ENABLED);
-    }
-    int  isEnabled() const          {   return m_iCacheFlag & CACHE_ENABLED; }
+    int  isEnabled() const          {   return m_iCacheFlag & CACHE_ENABLE_PUBLIC; }
     int  isCheckPublic() const      {   return m_iCacheFlag & CACHE_CHECK_PUBLIC;       }
     int  isSet(int bit) const     {   return m_iCacheFlag & bit;     }
     int  getConfigBits(int bit) const  {   return m_iCacheConfigBits & bit; }

@@ -167,7 +167,7 @@ public:
     int outputNonSpdyHeaders(IOVec *iovec);
     int isRespHeadersBuilt()    {   return m_iHeaderBuilt;  }
     int getTotalLen()       { return m_iHeadersTotalLen; }
-    int appendToIov(IOVec *iovec);
+    int appendToIov(IOVec *iovec, int &addCrlf);
     int appendToIovExclude(IOVec *iovec, const char *pName, int nameLen) const;
 
     static HEADERINDEX getRespHeaderIndex(const char *pHeader);

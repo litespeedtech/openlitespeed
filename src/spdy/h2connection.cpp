@@ -69,6 +69,7 @@ H2Connection::H2Connection()
     : m_bufInput(4096)
     , m_uiServerStreamID(2)
     , m_uiLastStreamID(0)
+    , m_uiShutdownStreams(0)
     , m_uiGoAwayId(0)
     , m_iCurrentFrameRemain(-H2_FRAME_HEADER_SIZE)
     , m_tmLastFrameIn(0)
@@ -106,6 +107,7 @@ int H2Connection::init()
     m_iServerMaxStreams = 100;
     m_iClientMaxStreams = 100;
     m_tmIdleBegin = 0;
+    m_uiShutdownStreams = 0;
     m_iCurrentFrameRemain = -H2_FRAME_HEADER_SIZE;
     m_pCurH2Header = (H2FrameHeader *)m_iaH2HeaderMem;
     return 0;
@@ -1006,13 +1008,15 @@ H2Stream *H2Connection::getNewStream(uint8_t ubH2_Flags)
     if (!pSession)
         return NULL;
 
-    if (m_mapStream.size() >= (uint)m_iServerMaxStreams)
+    LS_DBG_H(getLogger(), "[%s-%d] getNewStream(), stream map size: %d, shutdown streams: %d, flag: %d ",
+             getLogId(), m_uiLastStreamID, m_mapStream.size(), 
+             m_uiShutdownStreams, (int)ubH2_Flags);
+
+    if (m_mapStream.size() - m_uiShutdownStreams >= (uint)m_iServerMaxStreams)
         return NULL;
 
     pStream = new H2Stream();
     m_mapStream.insert((void *)(long)m_uiLastStreamID, pStream);
-    LS_DBG_H(getLogger(), "[%s-%d] getNewStream(), stream map size: %d, flag: %d ",
-             getLogId(), m_uiLastStreamID, m_mapStream.size(), (int)ubH2_Flags);
     if (m_tmIdleBegin)
         m_tmIdleBegin = 0;
     pStream->init(m_uiLastStreamID, this, ubH2_Flags, pSession, &m_priority);

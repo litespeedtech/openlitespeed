@@ -49,6 +49,4 @@ void Multiplexer::modEvent(EventReactor *pHandler, short mask, int add_remove)
         pHandler->andMask2(~mask);
 }
 
-void Multiplexer::setEventMask(EventReactor *pHandler, short mask)
-{   pHandler->setMask2(mask);   }
 

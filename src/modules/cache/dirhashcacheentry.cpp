@@ -105,13 +105,12 @@ int DirHashCacheEntry::saveCeHeader()
             getHeader().m_keyLen)
             return LS_FAIL;
     }
-    //Tag is not available yet
-//     if ( getHeader().m_tagLen > 0 )
-//     {
-//         if ( nio_write( fd, getTag().c_str(), getHeader().m_tagLen ) <
-//                 getHeader().m_tagLen )
-//             return -1;
-//     }
+    if ( getHeader().m_tagLen > 0 )
+    {
+        if ( nio_write( fd, getTag().c_str(), getHeader().m_tagLen ) <
+                getHeader().m_tagLen )
+            return LS_FAIL;
+    }
     return 0;
 }
 
@@ -162,10 +161,13 @@ int DirHashCacheEntry::saveRespHeaders(HttpRespHeaders *pHeader)
             return -1;
         pHeader->del(HttpRespHeaders::H_X_LITESPEED_TAG);
     }
-
-    total = pHeader->appendToIov(&iov);
-    iov.append("\r\n", 2);
-    total += 2;
+    int addCrlf = 1;
+    total = pHeader->appendToIov(&iov, addCrlf);
+    if (!addCrlf)
+    {
+        iov.append("\r\n", 2);
+        total += 2;
+    }
     if (nio_writev(getFdStore(), iov.get(), iov.len()) < total)
         return LS_FAIL;
     pKey = pHeader->getHeader(HttpRespHeaders::H_LAST_MODIFIED, &keyLen);

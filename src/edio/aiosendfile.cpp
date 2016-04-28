@@ -79,6 +79,6 @@ int AioSendFile::onNotified(int count)
         }
         processEvent(event);
     }
-    return 0;
+    return LS_OK;
 }
 

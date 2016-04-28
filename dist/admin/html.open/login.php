@@ -72,7 +72,7 @@ if ($msg != '') {
 </div>
 <div class="row" style="margin:40px"></div>
 <div class="footer">
-        <p class="text-center">Copyright &copy; 2014-2015 <a href="http://www.litespeedtech.com">LiteSpeed Technologies, Inc.</a> </p>
+        <p class="text-center">Copyright &copy; 2014-2016 <a href="http://www.litespeedtech.com">LiteSpeed Technologies, Inc.</a> </p>
 </div>
 
 <?php

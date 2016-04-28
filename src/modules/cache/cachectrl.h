@@ -49,53 +49,26 @@ public:
         has_cookie = (1 << 17)
     };
 
-    int isCacheOff() const
-    {
-        return m_iFlags & (no_cache | no_store);
-    }
-    int isCacheOn() const
-    {
-        return m_iFlags & (cache_private | cache_public);
-    }
-    int isPublicCacheable() const
-    {
-        return !(m_iFlags & (no_cache | no_store | cache_private | has_cookie));
-    }
-    int isPrivateCacheable() const
-    {
-        return m_iFlags & cache_private;
-    }
-    void setHasCookie()
-    {
-        m_iFlags |= has_cookie;
-    }
-    int getFlags() const
-    {
-        return m_iFlags;
-    }
-    int getMaxAge() const
-    {
-        return m_iMaxAge;
-    }
-    void setPrivateToPublic()
-    {
-        m_iFlags = (m_iFlags & ~cache_private) | cache_public;
-    }
-    void setEsiOff()
-    {
-        m_iFlags &= ~esi_on;
-    }
+    int isCacheOff() const  {   return m_flags & (no_cache | no_store);    }
+    int isCacheOn() const   {   return m_flags & (cache_private | cache_public);   }
+    int isPublicCacheable() const {   return !(m_flags & (no_cache | no_store | cache_private | has_cookie));   }
+    int isPrivateCacheable() const  {   return m_flags & cache_private;   }
+    void setHasCookie()     {   m_flags |= has_cookie;  }
+    int getFlags() const    {   return m_flags;     }
+    int getMaxAge() const   {   return m_iMaxAge;   }
+    void setPrivateToPublic()   {   m_flags = (m_flags & ~cache_private) | cache_public;  }
+    void setEsiOff()        {   m_flags &= ~esi_on;  }
 
     void reset()
     {
-        m_iFlags = 0;
+        m_flags = 0;
         m_iMaxAge = 0;
         m_iMaxStale = 0;
     }
 
     void init(int flags, int iMaxAge, int iMaxStale)
     {
-        m_iFlags |= flags;
+        m_flags |= flags;
         m_iMaxAge = iMaxAge;
         m_iMaxStale = iMaxStale;
     }
@@ -103,34 +76,23 @@ public:
     void update(int flags, int iMaxAge, int iMaxStale)
     {
         flags &= ~(max_age | max_stale | s_maxage | esi_config);
-        m_iFlags &= (max_age | max_stale | s_maxage | esi_config);
+        m_flags &= (max_age | max_stale | s_maxage | esi_config);
         init(flags, iMaxAge, iMaxStale);
     }
 
     int parse(const char *pHeader, int len);
-    int isMaxAgeSet() const
+    int isMaxAgeSet() const {   return m_flags & (max_age | s_maxage);  }
+    void setMaxAge(int age)     {   m_iMaxAge = age;        }
+    int isMaxStaleSet() const   {   return m_flags & max_stale;     }
+    int getMaxStale() const     {   return m_iMaxStale;     }
+    void setMaxStale(int age)   {   m_iMaxStale = age;      }
+    void copy(CacheCtrl &rhs)
     {
-        return m_iFlags & (max_age | s_maxage);
-    }
-    void setMaxAge(int age)
-    {
-        m_iMaxAge = age;
-    }
-    int isMaxStaleSet() const
-    {
-        return m_iFlags & max_stale;
-    }
-    int getMaxStale() const
-    {
-        return m_iMaxStale;
-    }
-    void setMaxStale(int age)
-    {
-        m_iMaxStale = age;
+        memcpy(this, &rhs, sizeof(CacheCtrl));
     }
 
 private:
-    int m_iFlags;
+    int m_flags;
     int m_iMaxAge;
     int m_iMaxStale;
 
