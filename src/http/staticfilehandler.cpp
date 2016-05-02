@@ -81,13 +81,32 @@ StaticFileHandler::~StaticFileHandler()
 
 
 inline int buildStaticFileHeaders(HttpResp *pResp, HttpReq *pReq,
-                                  SendFileInfo *pData)
+                                  SendFileInfo *pSendfileInfo)
 {
-    pResp->setContentLen(pData->getECache()->getFileSize());
-    pResp->parseAdd(pData->getFileData()->getHeaderBuf(),
-                    pData->getFileData()->getHeaderLen());
-    pResp->parseAdd(pData->getECache()->getCLHeader().c_str(),
-                    pData->getECache()->getCLHeader().len());
+    pResp->setContentLen(pSendfileInfo->getECache()->getFileSize());
+
+    StaticFileCacheData *pData = pSendfileInfo->getFileData();
+    const char *p = pData->getHeaderBuf();
+    int iETagLen = pData->getETagHeaderLen() - 8;
+    if (iETagLen > 0)
+    {
+        pResp->getRespHeaders().add(HttpRespHeaders::H_ETAG, p + 6, iETagLen);
+        p += 6 + iETagLen + 2; //include "\r\n"
+    }
+
+    //last modify
+    pResp->getRespHeaders().add(HttpRespHeaders::H_LAST_MODIFIED,
+                                p + 15, RFC_1123_TIME_LEN);
+    p += 15 + RFC_1123_TIME_LEN + 2;
+
+    pResp->getRespHeaders().add(HttpRespHeaders::H_CONTENT_TYPE,
+                                p + 14, pData->getHeaderLen() -
+                                (p - pData->getHeaderBuf()) - 14 - 2);
+
+    p = pSendfileInfo->getECache()->getCLHeader().c_str();
+    pResp->getRespHeaders().add(HttpRespHeaders::H_CONTENT_LENGTH, p + 16,
+                                pSendfileInfo->getECache()->getCLHeader().len() - 18);
+    
     pResp->getRespHeaders().appendAcceptRange();
 
     return 0;
@@ -625,7 +644,25 @@ static int buildRangeHeaders(HttpSession *pSession, HttpRange &range)
 
     if (range.count() == 1)
     {
-        pResp->parseAdd(pData->getHeaderBuf(), pData->getHeaderLen());
+        const char *p = pData->getHeaderBuf();
+        //pResp->parseAdd(pData->getHeaderBuf(), pData->getHeaderLen());
+        int iETagLen = pData->getETagHeaderLen() - 8;
+        if (iETagLen > 0)
+        {
+            pResp->getRespHeaders().add(HttpRespHeaders::H_ETAG,
+                                        p + 6, iETagLen);
+            p += 6 + iETagLen + 2; //include "\r\n"
+        }
+
+        //last modify
+        pResp->getRespHeaders().add(HttpRespHeaders::H_LAST_MODIFIED,
+                                    p + 15, RFC_1123_TIME_LEN);
+        p += 15 + RFC_1123_TIME_LEN + 2;
+        
+        pResp->getRespHeaders().add(HttpRespHeaders::H_CONTENT_TYPE,
+                                    p + 14, pData->getHeaderLen() - 
+                                    (p - pData->getHeaderBuf()) - 14 - 2);
+
         off_t begin, end;
         int ret = range.getContentOffset(0, begin, end);
         if (ret)
