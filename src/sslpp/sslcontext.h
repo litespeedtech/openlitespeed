@@ -111,8 +111,8 @@ public:
     SslOcspStapling *getpStapling() {  return m_pStapling; }
     void setpStapling(SslOcspStapling *pSslOcspStapling) {  m_pStapling = pSslOcspStapling;}
     SslContext *setKeyCertCipher(const char *pCertFile, const char *pKeyFile,
-                const char *pCAFile, const char *pCAPath, const char *pCiphers,
-                int certChain, int cv, int renegProtect);
+                                 const char *pCAFile, const char *pCAPath, const char *pCiphers,
+                                 int certChain, int cv, int renegProtect);
     SslContext *config(const XmlNode *pNode);
     int configStapling(const XmlNode *pNode,
                        const char *pCAFile, char *pachCert);

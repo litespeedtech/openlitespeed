@@ -133,7 +133,7 @@ public:
             wanted = 2048;
         return wanted;
     }
-    
+
     void recycleStream(uint32_t uiStreamID);
     static void replaceZero(char *pValue, int ilength);
     uint16_t getEvents()

@@ -389,7 +389,7 @@ int LocalWorker::workerExec(LocalWorkerConfig &config, int fd)
         if ((uid < procConfig.getUidMin()) ||
             (gid < procConfig.getGidMin()))
         {
-            if (LS_LOG_ENABLED( LOG4CXX_NS::Level::DBG_LESS ))
+            if (LS_LOG_ENABLED(LOG4CXX_NS::Level::DBG_LESS))
                 LS_INFO("[VHost:%s] Fast CGI [%s]: suExec access denied,"
                         " UID or GID of VHost document root is smaller "
                         "than minimum UID, GID configured. ", pVHost->getName(),

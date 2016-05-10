@@ -114,10 +114,11 @@ uint8_t *ls_shmpool_off2ptr(ls_shmpool_t *poolhandle, ls_shmoff_t key)
 
 
 ls_shmoff_t ls_shmpool_getreg(ls_shmpool_t *poolhandle,
-                                 const char *name)
+                              const char *name)
 {
     LsShmReg *p_reg;
-    return ((p_reg = ((LsShmPool *)poolhandle)->getShm()->findReg(name)) == NULL) ?
+    return ((p_reg = ((LsShmPool *)poolhandle)->getShm()->findReg(
+                         name)) == NULL) ?
            0 : p_reg->x_iValue;
 }
 
@@ -151,10 +152,10 @@ static void check_defaults(
 
 
 ls_shmhash_t *ls_shmhash_open(ls_shmpool_t *poolhandle,
-                                const char *hash_table_name,
-                                size_t initialsize,
-                                ls_shmhash_pf hf,
-                                ls_shmhash_vc_pf vc)
+                              const char *hash_table_name,
+                              size_t initialsize,
+                              ls_shmhash_pf hf,
+                              ls_shmhash_vc_pf vc)
 {
     check_defaults(&initialsize, &hf, &vc);
     return ((LsShmPool *)poolhandle)->getNamedHash(
@@ -163,15 +164,15 @@ ls_shmhash_t *ls_shmhash_open(ls_shmpool_t *poolhandle,
 
 
 ls_shmhash_t *lsi_shmlruhash_open(ls_shmpool_t *poolhandle,
-                                   const char *hash_table_name,
-                                   size_t initialsize,
-                                   ls_shmhash_pf hf,
-                                   ls_shmhash_vc_pf vc,
-                                   int mode)
+                                  const char *hash_table_name,
+                                  size_t initialsize,
+                                  ls_shmhash_pf hf,
+                                  ls_shmhash_vc_pf vc,
+                                  int mode)
 {
     check_defaults(&initialsize, &hf, &vc);
     return ((LsShmPool *)poolhandle)->getNamedHash(
-                hash_table_name, (LsShmSize_t)initialsize, hf, vc, mode);
+               hash_table_name, (LsShmSize_t)initialsize, hf, vc, mode);
 //     switch (mode)
 //     {
 //     case LSSHM_LRU_MODE2:
@@ -214,15 +215,15 @@ ls_shmoff_t ls_shmhash_alloc2(ls_shmhash_t *hashhandle, size_t size)
 
 
 void ls_shmhash_release2(ls_shmhash_t *hashhandle,
-                          ls_shmoff_t key,
-                          size_t size)
+                         ls_shmoff_t key,
+                         size_t size)
 {
     ((LsShmHash *)hashhandle)->release2(key, (LsShmSize_t)size);
 }
 
 
 uint8_t *ls_shmhash_off2ptr(ls_shmhash_t *hashhandle,
-                                 ls_shmoff_t key)
+                            ls_shmoff_t key)
 {
     return (uint8_t *)
            ((LsShmHash *)hashhandle)->offset2ptr((ls_shmoff_t)key);
@@ -230,14 +231,14 @@ uint8_t *ls_shmhash_off2ptr(ls_shmhash_t *hashhandle,
 
 
 ls_shmoff_t ls_shmhash_find(ls_shmhash_t *hashhandle,
-                               const uint8_t *key, int keylen, int *retsize)
+                            const uint8_t *key, int keylen, int *retsize)
 {
     return ((LsShmHash *)hashhandle)->find((const void *)key, keylen, retsize);
 }
 
 
 ls_shmoff_t ls_shmhash_get(ls_shmhash_t *hashhandle,
-                              const uint8_t *key, int keylen, int *retsize, int *pFlag)
+                           const uint8_t *key, int keylen, int *retsize, int *pFlag)
 {
     return ((LsShmHash *)hashhandle)->get(
                (const void *)key, keylen, retsize, pFlag);
@@ -245,8 +246,8 @@ ls_shmoff_t ls_shmhash_get(ls_shmhash_t *hashhandle,
 
 
 ls_shmoff_t ls_shmhash_set(ls_shmhash_t *hashhandle,
-                              const uint8_t *key, int keylen,
-                              const uint8_t *value, int valuelen)
+                           const uint8_t *key, int keylen,
+                           const uint8_t *value, int valuelen)
 {
     return ((LsShmHash *)hashhandle)->set(
                (const void *)key, keylen, (const void *)value, valuelen);
@@ -254,8 +255,8 @@ ls_shmoff_t ls_shmhash_set(ls_shmhash_t *hashhandle,
 
 
 ls_shmoff_t ls_shmhash_insert(ls_shmhash_t *hashhandle,
-                                 const uint8_t *key, int keylen,
-                                 const uint8_t *value, int valuelen)
+                              const uint8_t *key, int keylen,
+                              const uint8_t *value, int valuelen)
 {
     return ((LsShmHash *)hashhandle)->insert(
                (const void *)key, keylen, (const void *)value, valuelen);
@@ -263,8 +264,8 @@ ls_shmoff_t ls_shmhash_insert(ls_shmhash_t *hashhandle,
 
 
 ls_shmoff_t ls_shmhash_update(ls_shmhash_t *hashhandle,
-                                 const uint8_t *key, int keylen,
-                                 const uint8_t *value, int valuelen)
+                              const uint8_t *key, int keylen,
+                              const uint8_t *value, int valuelen)
 {
     return ((LsShmHash *)hashhandle)->update(
                (const void *)key, keylen, (const void *)value, valuelen);
@@ -272,7 +273,7 @@ ls_shmoff_t ls_shmhash_update(ls_shmhash_t *hashhandle,
 
 
 void ls_shmhash_delete(ls_shmhash_t *hashhandle,
-                        const uint8_t *key, int keylen)
+                       const uint8_t *key, int keylen)
 {
     ((LsShmHash *)hashhandle)->remove((const void *)key, keylen);
 }
@@ -289,15 +290,15 @@ void ls_shmhash_clear(ls_shmhash_t *hashhandle)
 // {
 //     return ((LsShmHash *)hashhandle)->setLruData(offVal, value, valuelen);
 // }
-// 
-// 
+//
+//
 // int ls_shmhash_getdata(ls_shmhash_t *hashhandle,
 //                         ls_shmoff_t offVal, ls_shmoff_t *pvalue, int cnt)
 // {
 //     return ((LsShmHash *)hashhandle)->getLruData(offVal, pvalue, cnt);
 // }
-// 
-// 
+//
+//
 // int ls_shmhash_getdataptrs(ls_shmhash_t *hashhandle,
 //                             ls_shmoff_t offVal, int (*func)(void *pData))
 // {
@@ -306,7 +307,8 @@ void ls_shmhash_clear(ls_shmhash_t *hashhandle)
 
 
 int ls_shmhash_trim(ls_shmhash_t *hashhandle,
-                     time_t tmcutoff, int (*func)(LsShmHash::iterator iter, void *arg), void *arg)
+                    time_t tmcutoff, int (*func)(LsShmHash::iterator iter, void *arg),
+                    void *arg)
 {
     return ((LsShmHash *)hashhandle)->trim(tmcutoff, func, arg);
 }

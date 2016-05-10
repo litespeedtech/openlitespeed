@@ -51,7 +51,7 @@ enum lsi_container_type
      * Memory container type for user global data.
      */
     LSI_CONTAINER_MEMORY = 0,
-    
+
     /**
      * File container type for user global data.
      */
@@ -79,7 +79,7 @@ static hash_key_t  lsi_global_data_hash_fn(const void *val)
 //     const gdata_key_t *pKey2 = (const gdata_key_t *)pVal2;
 //     if (!pKey1 || !pKey2 || pKey1->key_str_len != pKey2->key_str_len)
 //         return LS_FAIL;
-// 
+//
 //     return memcmp(pKey1->key_str, pKey2->key_str, pKey1->key_str_len);
 // }
 
@@ -484,11 +484,11 @@ LSIAPI lsi_gdata_cont_t *get_gdata_container(int type, const char *key,
 //     if ((type != LSI_CONTAINER_MEMORY  && type != LSI_CONTAINER_FILE)
 //         || key_len <= 0 || key == NULL)
 //         return NULL;
-// 
+//
 //     GDataContainer *pLsiGDataContHashT = LsiapiBridge::g_aGDataContainer[type];
 //     lsi_gdata_cont_t *containerInfo = NULL;
 //     char file_path[LSI_MAX_FILE_PATH_LEN] = {0};
-// 
+//
 //     //find if exist, otherwise create it
 //     gdata_key_t key_st = {(char *)key, key_len};
 //     GDataContainer::iterator iter = pLsiGDataContHashT->find(&key_st);
@@ -499,11 +499,11 @@ LSIAPI lsi_gdata_cont_t *get_gdata_container(int type, const char *key,
 //         char *p = (char *)malloc(key_len);
 //         if (!p)
 //             return NULL;
-// 
+//
 //         GDataHash *pContainer = new GDataHash(30, lsi_global_data_hash_fn,
 //                                               lsi_global_data_cmp);
 //         memcpy(p, key, key_len);
-// 
+//
 //         time_t tm = DateTime::s_curTime;
 //         containerInfo = (lsi_gdata_cont_t *)malloc(sizeof(lsi_gdata_cont_t));
 //         containerInfo->key.key_str = p;
@@ -512,11 +512,11 @@ LSIAPI lsi_gdata_cont_t *get_gdata_container(int type, const char *key,
 //         containerInfo->tmcreate = tm;
 //         containerInfo->type = type;
 //         pLsiGDataContHashT->insert(&containerInfo->key, containerInfo);
-// 
+//
 //         //If cache file exist, use the ceate time recorded
 //         buildFileDataLocation(file_path, LSI_MAX_FILE_PATH_LEN, containerInfo->key,
 //                               "c", type);
-// 
+//
 //         FILE *fp = fopen(file_path, "rb");
 //         if (fp)
 //         {

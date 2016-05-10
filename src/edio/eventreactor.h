@@ -26,7 +26,7 @@ public:
     typedef int (*pri_handler)();
     typedef void (*command_fn)(EventReactor *pThis);
 
-    EventReactor() 
+    EventReactor()
         : m_pfd(NULL)
         , m_cntHup(0)
         , m_eventSet(0)
@@ -44,9 +44,13 @@ public:
     virtual void onTimer()  {}
 
     int getfd() const                   {   return m_pollfd.fd;     }
-    void setfd(int fd)                  
-    {   m_pollfd.fd = fd;   m_pollfd.revents = 0; m_cntHup = 0;
-        m_eventSet = 0;     m_flags = 0;
+    void setfd(int fd)
+    {
+        m_pollfd.fd = fd;
+        m_pollfd.revents = 0;
+        m_cntHup = 0;
+        m_eventSet = 0;
+        m_flags = 0;
     }
 
     int getHupCounter() const           {   return m_cntHup;        }
@@ -66,12 +70,12 @@ public:
     void clearRevent()                  {   m_pollfd.revents = 0;    }
     void assignRevent(short event)      {   m_pollfd.revents = event;}
     short getAssignedRevent()           {   return m_pollfd.revents; }
-    
+
     void updateEventSet()               {   m_eventSet = m_pfd->events;     }
     int  isApplyEvents() const          {   return m_eventSet != m_pfd->events;  }
-    
+
     void addFlag(unsigned short flag)   {   m_flags |= flag;        }
-    void removeFlag(unsigned short flag){   m_flags &= ~flag;       }
+    void removeFlag(unsigned short flag) {   m_flags &= ~flag;       }
     unsigned short getEvtFlag() const   {   return m_flags;         }
 
     LS_NO_COPY_ASSIGN(EventReactor);

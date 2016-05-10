@@ -459,7 +459,7 @@ int SslConnection::getSpdyVersion()
 
 void SslConnection::initConnIdx()
 {
-    if ( s_iConnIdx < 0 )
+    if (s_iConnIdx < 0)
         s_iConnIdx = SSL_get_ex_new_index(0, NULL, NULL, NULL, NULL);
 }
 

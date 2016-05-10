@@ -41,7 +41,8 @@ void Multiplexer::switchWriteToRead(EventReactor *pHandler)
 void Multiplexer::switchReadToWrite(EventReactor *pHandler)
 {   pHandler->setMask2(POLLOUT | POLLHUP | POLLERR);   }
 
-void Multiplexer::modEvent(EventReactor *pHandler, short mask, int add_remove)
+void Multiplexer::modEvent(EventReactor *pHandler, short mask,
+                           int add_remove)
 {
     if (add_remove)
         pHandler->orMask2(mask);

@@ -27,15 +27,15 @@
 class EdioHandler : public ls_edio_s, public EventReactor
 {
 public:
-    EdioHandler(int fd, void * pParam, edio_evt_cb evt_cb,  
-                edio_timer_cb timer_cb );
+    EdioHandler(int fd, void *pParam, edio_evt_cb evt_cb,
+                edio_timer_cb timer_cb);
     virtual ~EdioHandler();
-    
+
     virtual int handleEvents(short event);
     virtual void onTimer();
 
 private:
-    
+
     LS_NO_COPY_ASSIGN(EdioHandler);
 };
 

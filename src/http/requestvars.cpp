@@ -980,9 +980,9 @@ const char *RequestVars::getCookieValue(HttpReq *pReq,
     cookieval_t *cookie = pReq->getCookie(pCookieName, nameLen);
     int cookieLen = cookie->valLen;
     char *pcookieval = pReq->getHeaderBuf().getp(cookie->valOff);
-    
+
 #endif
-    
+
     const char *pCookie = pReq->getHeader(HttpHeader::H_COOKIE);
     if (!*pCookie)
         return NULL;
@@ -1010,7 +1010,7 @@ const char *RequestVars::getCookieValue(HttpReq *pReq,
                 while ((pIdEnd > p1) && isspace(*(pIdEnd - 1)))
                     --pIdEnd;
                 idLen = pIdEnd - p1;
-                
+
 #ifdef TEST_NEW_FUN
                 assert(cookieLen == idLen);
                 assert(memcmp(pcookieval, p1, idLen) == 0);

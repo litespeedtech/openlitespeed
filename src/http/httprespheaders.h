@@ -117,7 +117,8 @@ public:
             unsigned int valLen, int method = LSI_HEADEROP_SET);
 
     int appendLastVal(const char *pVal, int valLen);
-    int add(http_header_t *headerArray, int size, int method = LSI_HEADEROP_SET);
+    int add(http_header_t *headerArray, int size,
+            int method = LSI_HEADEROP_SET);
     int parseAdd(const char *pStr, int len, int method = LSI_HEADEROP_SET);
 
 
@@ -194,9 +195,9 @@ public:
 
     void addCommonHeaders()
     {   add(s_commonHeaders, s_commonHeadersCount);     }
-    
+
     void dropConnectionHeaders();
-    
+
 
 public:
     static const char *m_sPresetHeaders[H_HEADER_END];

@@ -429,7 +429,7 @@ void HttpSession::nextRequest()
     }
 }
 
-int HttpSession::sendDefaultErrorPage(const char * pAdditional)
+int HttpSession::sendDefaultErrorPage(const char *pAdditional)
 {
     setState(HSS_WRITING);
     buildErrorResponse(pAdditional);
@@ -440,9 +440,7 @@ int HttpSession::sendDefaultErrorPage(const char * pAdditional)
 void HttpSession::httpError(int code, const char *pAdditional)
 {
     if (m_request.isErrorPage() && code == SC_404)
-    {
         sendDefaultErrorPage(pAdditional);
-    }
     else
     {
         if (code < 0)
@@ -520,13 +518,13 @@ int HttpSession::detectContentLenMismatch(int buffered)
     if (m_request.getContentLength() >= 0)
     {
         if (buffered + m_request.getContentFinished()
-                != m_request.getContentLength())
+            != m_request.getContentLength())
         {
             LS_DBG_L(getLogSession(), "Protocol Error: Content-Length: %"
                      PRId64 " != Finished: %" PRId64 " + Buffered: %d!",
                      m_request.getContentLength(),
                      m_request.getContentFinished(),
-                     buffered );
+                     buffered);
             return LS_FAIL;
         }
     }
@@ -883,8 +881,8 @@ void HttpSession::processPending(int ret)
 
 
 int HttpSession::updateClientInfoFromProxyHeader(const char *pHeaderName,
-                                                 const char *pProxyHeader,
-                                                 int headerLen)
+        const char *pProxyHeader,
+        int headerLen)
 {
     char achIP[256];
     char achAddr[128];
@@ -1048,13 +1046,13 @@ int HttpSession::processNewReqInit()
         if ((httpServConf.getUseProxyHeader() == 2) && m_request.isCfIpSet())
         {
             pName = "CF-Connecting-IP";
-            pProxyHeader = m_request.getCfIpHeader( len );
+            pProxyHeader = m_request.getCfIpHeader(len);
         }
         else
         {
             pName = "X-Forwarded-For";
             pProxyHeader = m_request.getHeader(
-                                        HttpHeader::H_X_FORWARDED_FOR);
+                               HttpHeader::H_X_FORWARDED_FOR);
             len = m_request.getHeaderLen(HttpHeader::H_X_FORWARDED_FOR);
         }
         if (*pProxyHeader)
@@ -1329,7 +1327,8 @@ int HttpSession::processVHostRewrite()
             m_sessionHooks.reset();
             m_sessionHooks.inherit(((HttpContext *)pContext)->getSessionHooks(), 0);
             m_pModuleConfig = ((HttpContext *)pContext)->getModuleConfig();
-            if (ret == -2) {
+            if (ret == -2)
+            {
                 m_processState = HSPS_BEGIN_HANDLER_PROCESS;
                 return 0;
             }
@@ -1609,27 +1608,27 @@ int HttpSession::handlerProcess(const HttpHandler *pHandler)
         }
         return startServerParsed();
     }
-    int dyn = ( pHandler->getType() >= HandlerType::HT_DYNAMIC );
-    ThrottleControl * pTC = &getClientInfo()->getThrottleCtrl();
-    if (( getClientInfo()->getAccess() == AC_TRUST)||
-        ( pTC->allowProcess( dyn )))
+    int dyn = (pHandler->getType() >= HandlerType::HT_DYNAMIC);
+    ThrottleControl *pTC = &getClientInfo()->getThrottleCtrl();
+    if ((getClientInfo()->getAccess() == AC_TRUST) ||
+        (pTC->allowProcess(dyn)))
     {
     }
     else
     {
         if (LS_LOG_ENABLED(LOG4CXX_NS::Level::DBG_LESS))
         {
-            const ThrottleUnit * pTU = pTC->getThrottleUnit( dyn );
+            const ThrottleUnit *pTU = pTC->getThrottleUnit(dyn);
             LS_DBG_L(getLogSession(), "%s throttling %d/%d",
-                     (dyn)?"Dyn":"Static", pTU->getAvail(), pTU->getLimit());
-            if ( dyn )
+                     (dyn) ? "Dyn" : "Static", pTU->getAvail(), pTU->getLimit());
+            if (dyn)
             {
-                pTU = pTC->getThrottleUnit( 2 );
+                pTU = pTC->getThrottleUnit(2);
                 LS_DBG_L(getLogSession(), "dyn processor in use %d/%d",
                          pTU->getAvail(), pTU->getLimit());
             }
         }
-        setState( HSS_THROTTLING );
+        setState(HSS_THROTTLING);
         return 0;
     }
     if (m_request.getContext() && m_request.getContext()->isRailsContext())
@@ -2286,7 +2285,7 @@ int HttpSession::chunkSendfile(int fdSrc, off_t off, off_t size)
 
 
 off_t HttpSession::writeRespBodySendFile(int fdFile, off_t offset,
-                                       off_t size)
+        off_t size)
 {
     off_t written;
     if (m_pChunkOS)
@@ -2522,7 +2521,7 @@ int HttpSession::sendDynBody()
                  len, ret);
         if (ret > 0)
         {
-            assert( ret <= len );
+            assert(ret <= len);
             m_lDynBodySent += ret;
             m_pRespBodyBuf->readUsed(ret);
             if (ret < len)
@@ -2577,7 +2576,7 @@ extern int addModgzipFilter(lsi_session_t *session, int isSend,
                             uint8_t compressLevel);
 int HttpSession::setupGzipFilter()
 {
-    if ( m_iFlag & HSF_RESP_HEADER_SENT)
+    if (m_iFlag & HSF_RESP_HEADER_SENT)
         return 0;
 
     char gz = m_request.gzipAcceptable();
@@ -3456,8 +3455,8 @@ void HttpSession::setSendFileOffsetSize(int fd, off_t start, off_t size)
 {
     m_sendFileInfo.setParam((void *)(long)fd);
     setSendFileBeginEnd(start,
-                        size >= 0 ? (start + size) 
-                                  : m_sendFileInfo.getECache()->getFileSize());
+                        size >= 0 ? (start + size)
+                        : m_sendFileInfo.getECache()->getFileSize());
 }
 
 
@@ -4028,7 +4027,7 @@ int HttpSession::smProcessReq()
                     break;
                 return 0;
             }
-            //fall through
+        //fall through
         case HSPS_NEW_REQ:
             ret = processNewReqInit();
             if (m_processState != HSPS_HKPT_HTTP_BEGIN)

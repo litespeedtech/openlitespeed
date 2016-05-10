@@ -222,7 +222,7 @@ int ConfigCtx::expandVariable(const char *pValue, char *pBuf,
         {
             const char *pName = NULL;
             int nameLen = -1;
-            
+
             if (strncasecmp(pBegin + 1, VH_NAME, 7) == 0)
             {
                 pBegin += 8;
@@ -259,10 +259,10 @@ int ConfigCtx::expandVariable(const char *pValue, char *pBuf,
                 ++pBegin;
                 continue;
             }
-            
+
             if (pName && nameLen == -1)
                 nameLen = strlen(pName);
-            
+
             if (nameLen > 0)
             {
                 if (nameLen > pBufEnd - pCur)

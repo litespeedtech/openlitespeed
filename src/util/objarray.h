@@ -75,7 +75,7 @@ public:
     {
         setCapacity(pool, other.getCapacity());
         setSize(other.getSize());
-        memmove(getArray(), other.getArray(), getSize() * sizeof (T));
+        memmove(getArray(), other.getArray(), getSize() * sizeof(T));
     }
 };
 

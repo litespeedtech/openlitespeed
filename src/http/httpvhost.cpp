@@ -252,7 +252,8 @@ HttpVHost::HttpVHost(const char *pHostName)
                       HandlerFactory::getInstance(0, NULL), 1);
     m_rootContext.allocateInternal();
     m_contexts.setRootContext(&m_rootContext);
-    m_pUrlStxFileHash = new UrlStxFileHash(30, GHash::hfString, GHash::cmpString);
+    m_pUrlStxFileHash = new UrlStxFileHash(30, GHash::hfString,
+                                           GHash::cmpString);
 }
 
 
@@ -750,9 +751,11 @@ int HttpVHost::configBasics(const XmlNode *pVhConfNode, int iChrootLen)
     enableGzip((HttpServerConfig::getInstance().getGzipCompress()) ?
                ConfigCtx::getCurConfigCtx()->getLongValue(pVhConfNode, "enableGzip", 0, 1,
                        1) : 0);
-    m_rootContext.setGeoIP((HttpServer::getInstance().getServerContext().isGeoIpOn()) ?
-               ConfigCtx::getCurConfigCtx()->getLongValue(pVhConfNode, "enableIpGeo", 0, 1,
-                       0) : 0);
+    m_rootContext.setGeoIP((
+                               HttpServer::getInstance().getServerContext().isGeoIpOn()) ?
+                           ConfigCtx::getCurConfigCtx()->getLongValue(pVhConfNode, "enableIpGeo", 0,
+                                   1,
+                                   0) : 0);
 
 
     const char *pAdminEmails = pVhConfNode->getChildValue("adminEmails");
@@ -1707,8 +1710,8 @@ int HttpVHost::configContext(const XmlNode *pContextNode)
         if (configContextAuth(pContext, pContextNode) == -1)
             return LS_FAIL;
         pContext->setGeoIP((m_rootContext.isGeoIpOn()) ?
-                       ConfigCtx::getCurConfigCtx()->getLongValue(pContextNode,
-                       "enableIpGeo", 0, 1, 0) : 0);
+                           ConfigCtx::getCurConfigCtx()->getLongValue(pContextNode,
+                                   "enableIpGeo", 0, 1, 0) : 0);
         return pContext->config(getRewriteMaps(), pContextNode, type);
     }
 
@@ -2464,7 +2467,8 @@ HttpVHost *HttpVHost::configVHost(XmlNode *pNode)
                 "vhost root") != 0)
             break;
 
-        ConfigCtx::getCurConfigCtx()->setDocRoot(ConfigCtx::getCurConfigCtx()->getVhRoot());
+        ConfigCtx::getCurConfigCtx()->setDocRoot(
+            ConfigCtx::getCurConfigCtx()->getVhRoot());
 
         const char *pConfFile = pNode->getChildValue("configFile");
 
@@ -2568,7 +2572,8 @@ void HttpVHost::enableAioLogging()
     }
 }
 
-void HttpVHost::addUrlStaticFileMatch(const char *url, StaticFileCacheData *pData)
+void HttpVHost::addUrlStaticFileMatch(const char *url,
+                                      StaticFileCacheData *pData)
 {
     static_file_data_t *data = new static_file_data_t;
     data->pData = pData;
@@ -2598,7 +2603,7 @@ StaticFileCacheData *HttpVHost::getUrlStaticFileData(const char *url)
 void HttpVHost::urlStaticFileHashCleanTimer()
 {
     UrlStxFileHash::iterator it;
-    for( it = m_pUrlStxFileHash->begin(); it != m_pUrlStxFileHash->end(); )
+    for (it = m_pUrlStxFileHash->begin(); it != m_pUrlStxFileHash->end();)
     {
         static_file_data_t *data = (static_file_data_t *)it.second();
         if (data->tmaccess != DateTime::s_curTime)

@@ -319,7 +319,7 @@ static int compressbuf(lsi_param_t *rec, lsi_module_t *pModule,
                        pModuleStr, pCompressStr, pZipStr);
             ret = LSI_HKPT_RECV_RESP_BODY;
             g_api->enable_hook(rec->session, pModule, 0,
-                                                &ret, 1); // Disable
+                               &ret, 1); // Disable
             return g_api->stream_write_next(rec, (const char *)rec->ptr1,
                                             rec->len1);
         }
@@ -486,7 +486,7 @@ static int enablehook(lsi_session_t *session, lsi_module_t *pModule,
     aEnableHkpt[iEnableCount++] = LSI_HKPT_HTTP_END;
     aEnableHkpt[iEnableCount++] = LSI_HKPT_HANDLER_RESTART;
     ret = g_api->enable_hook(session, pModule, 1, aEnableHkpt,
-            iEnableCount);
+                             iEnableCount);
     if (ret == LS_OK)
     {
         rmcontentlength(session);

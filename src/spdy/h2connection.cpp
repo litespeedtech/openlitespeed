@@ -259,7 +259,7 @@ int H2Connection::onReadEx2()
         if ((ret = parseFrame()) != LS_OK)
         {
             H2ErrorCode err;
-            if ((ret < 0)||(ret >= H2_ERROR_CODE_COUNT))
+            if ((ret < 0) || (ret >= H2_ERROR_CODE_COUNT))
                 err = H2_ERROR_PROTOCOL_ERROR;
             else
                 err = (H2ErrorCode)ret;
@@ -288,9 +288,7 @@ int H2Connection::processFrame(H2FrameHeader *pHeader)
     {
         if ((requiredLength[type] != 0)
             && (requiredLength[type] != pHeader->getLength()))
-        {
             return H2_ERROR_FRAME_SIZE_ERROR;
-        }
     }
     memset((char *)pHeader + H2_FRAME_HEADER_SIZE, 0, 10);
     printLogMsg(pHeader);
@@ -483,12 +481,11 @@ int H2Connection::processSettingFrame(H2FrameHeader *pHeader)
 }
 
 
-int H2Connection::resetStream( uint32_t id, H2Stream *pStream, H2ErrorCode code)
+int H2Connection::resetStream(uint32_t id, H2Stream *pStream,
+                              H2ErrorCode code)
 {
     if (pStream)
-    {
         id = pStream->getStreamID();
-    }
     else
         pStream = findStream(id);
     if (id > 0)
@@ -609,7 +606,7 @@ void H2Connection::skipRemainData()
 int H2Connection::processDataFrame(H2FrameHeader *pHeader)
 {
     uint32_t streamID = pHeader->getStreamId();
-    
+
     printLogMsg(pHeader);
     if (streamID == 0 || streamID > m_uiLastStreamID)
         return LS_FAIL;
@@ -618,7 +615,7 @@ int H2Connection::processDataFrame(H2FrameHeader *pHeader)
     if (pH2Stream == NULL || pH2Stream->isPeerShutdown())
     {
         LS_DBG_L(getLogSession(), "stream: %p, isPeerShutdown: %d ",
-                 pH2Stream, pH2Stream?pH2Stream->isPeerShutdown():0);
+                 pH2Stream, pH2Stream ? pH2Stream->isPeerShutdown() : 0);
         skipRemainData();
         resetStream(streamID, pH2Stream, H2_ERROR_STREAM_CLOSED);
         return 0;
@@ -798,7 +795,7 @@ int H2Connection::processHeadersFrame(H2FrameHeader *pHeader)
     if (id <= m_uiLastStreamID)
     {
         H2Stream *pStream = findStream(id);
-        if (pStream )
+        if (pStream)
         {
             H2ErrorCode ret = H2_ERROR_PROTOCOL_ERROR;
             if (pStream->isPeerShutdown())
@@ -819,9 +816,7 @@ int H2Connection::processHeadersFrame(H2FrameHeader *pHeader)
     {
         uint8_t padLen = *pSrc;
         if (m_iCurrentFrameRemain <= 1 + padLen)
-        {
-             return H2_ERROR_PROTOCOL_ERROR;
-        }
+            return H2_ERROR_PROTOCOL_ERROR;
         m_bufInput.pop_front(1);
         m_bufInput.pop_back(padLen);
         m_iCurrentFrameRemain -= padLen + 1;
@@ -835,7 +830,7 @@ int H2Connection::processHeadersFrame(H2FrameHeader *pHeader)
                                       0x7FFFFFFFu;
         if (m_priority.m_dependStreamId == id)
             return H2_ERROR_PROTOCOL_ERROR;
-        
+
         //Add one to the value to obtain a weight between 1 and 256.
         m_priority.m_weight = *(pSrc + 4) + 1;
         m_bufInput.pop_front(5);
@@ -1008,8 +1003,9 @@ H2Stream *H2Connection::getNewStream(uint8_t ubH2_Flags)
     if (!pSession)
         return NULL;
 
-    LS_DBG_H(getLogger(), "[%s-%d] getNewStream(), stream map size: %d, shutdown streams: %d, flag: %d ",
-             getLogId(), m_uiLastStreamID, m_mapStream.size(), 
+    LS_DBG_H(getLogger(),
+             "[%s-%d] getNewStream(), stream map size: %d, shutdown streams: %d, flag: %d ",
+             getLogId(), m_uiLastStreamID, m_mapStream.size(),
              m_uiShutdownStreams, (int)ubH2_Flags);
 
     if (m_mapStream.size() - m_uiShutdownStreams >= (uint)m_iServerMaxStreams)
@@ -1089,7 +1085,7 @@ int H2Connection::sendDataFrame(uint32_t uiStreamId, int flag,
 
 
 int H2Connection::sendDataFrame(uint32_t uiStreamId, int flag,
-                                const char * pBuf, int len)
+                                const char *pBuf, int len)
 {
     int ret = 0;
     H2FrameHeader header(len, H2_FRAME_DATA, flag, uiStreamId);
@@ -1263,8 +1259,8 @@ int H2Connection::processGoAwayFrame(H2FrameHeader *pHeader)
 {
     if (!(m_iFlag & H2_CONN_FLAG_GOAWAY))
     {
-        doGoAway((pHeader->getStreamId() != 0)?
-                 H2_ERROR_PROTOCOL_ERROR:
+        doGoAway((pHeader->getStreamId() != 0) ?
+                 H2_ERROR_PROTOCOL_ERROR :
                  H2_ERROR_NO_ERROR);
     }
     m_iFlag |= (short)H2_CONN_FLAG_GOAWAY;
@@ -1386,7 +1382,7 @@ int H2Connection::encodeHeaders(HttpRespHeaders *pRespHeaders,
     pCur = m_hpack.encHeader(pCur, pBufEnd, (char *)":status", 7, p, 3, 0);
 
     pRespHeaders->dropConnectionHeaders();
-    
+
     for (int pos = pRespHeaders->HeaderBeginPos();
          pos != pRespHeaders->HeaderEndPos();
          pos = pRespHeaders->nextHeaderPos(pos))
@@ -1474,15 +1470,15 @@ int H2Connection::onWriteEx()
 
     TDLinkQueue<H2Stream> *pQue = &m_priQue[0];
     TDLinkQueue<H2Stream> *pEnd = &m_priQue[H2_STREAM_PRIORITYS];
-    
 
-    for( ; pQue < pEnd && m_iCurDataOutWindow > 0; ++pQue)
+
+    for (; pQue < pEnd && m_iCurDataOutWindow > 0; ++pQue)
     {
         if (pQue->empty())
             continue;
-        int count = pQue->size(); 
-        while(count-- > 0 && m_iCurDataOutWindow > 0 
-              && (pH2Stream = pQue->pop_front()) != NULL)
+        int count = pQue->size();
+        while (count-- > 0 && m_iCurDataOutWindow > 0
+               && (pH2Stream = pQue->pop_front()) != NULL)
         {
             if (pH2Stream->isWantWrite())
             {

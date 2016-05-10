@@ -58,14 +58,14 @@ public:
     {   return aio_return(&m_aiocb);  }
 
     int read(int fildes, void *buf, int nbytes, int offset,
-                    AioEventHandler *pHandler)
+             AioEventHandler *pHandler)
     {
         setcb(fildes, buf, nbytes, offset, pHandler);
         return aio_read(&m_aiocb);
     }
-    
+
     int write(int fildes, void *buf, int nbytes, int offset,
-                     AioEventHandler *pHandler)
+              AioEventHandler *pHandler)
     {
         setcb(fildes, buf, nbytes, offset, pHandler);
         return aio_write(&m_aiocb);

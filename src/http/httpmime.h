@@ -81,7 +81,7 @@ public:
     MimeSetting *initDefault(char *pMIME = NULL);
     int loadMime(const char *pPropertyPath);
     MimeSetting *addUpdateMIME(char *pType, char *pDesc, const char *&reason,
-                      int update = 1);
+                               int update = 1);
 
     const MimeSetting *getFileMime(const char *pPath) const;
     const MimeSetting *getFileMime(const char *pPath, int len) const;

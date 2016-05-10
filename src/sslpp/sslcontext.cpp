@@ -350,7 +350,7 @@ int SslContext::initECDH()
 static void SslConnection_ssl_info_cb(const SSL *pSSL, int where, int ret)
 {
     SslConnection *pConnection = (SslConnection *)SSL_get_ex_data(pSSL,
-                                                SslConnection::getConnIdx());
+                                 SslConnection::getConnIdx());
     if ((where & SSL_CB_HANDSHAKE_START) && pConnection->getFlag() == 1)
     {
         close(SSL_get_fd(pSSL));
@@ -619,9 +619,9 @@ static int loadCertFile(SSL_CTX *pCtx, const char *pFile, int type)
     BIO_free(in);
     if (!cert)
         return LS_FAIL;
-    if (( ret = SSL_CTX_use_certificate(pCtx, cert)) == 1 )
+    if ((ret = SSL_CTX_use_certificate(pCtx, cert)) == 1)
     {
-        if ( X509_digest(cert, EVP_sha1(), digest, &digestlen) == 0)
+        if (X509_digest(cert, EVP_sha1(), digest, &digestlen) == 0)
             LS_DBG_L("Creating cert digest failed");
         else if (SslContext::setupIdContext(pCtx, digest, digestlen) != LS_OK)
             LS_DBG_L("Digest id context failed");
@@ -808,12 +808,10 @@ int SslContext::setCipherList(const char *pList)
     {
         const char *pBegin = pList;
         const char *p;
-        while((p = strpbrk(pBegin, ": ")) != NULL
-              && ((memmem(pBegin, p - pBegin, "CHACHA", 6) != NULL)
-               || (memmem(pBegin, p - pBegin, "chacha", 6) != NULL)))
-        {
+        while ((p = strpbrk(pBegin, ": ")) != NULL
+               && ((memmem(pBegin, p - pBegin, "CHACHA", 6) != NULL)
+                   || (memmem(pBegin, p - pBegin, "chacha", 6) != NULL)))
             pBegin = p + 1;
-        }
         if (!p || strncasecmp(pList, "ECDHE", 5) != 0
             || memmem(pList, p - pList, "GCM", 3) == NULL
             || memmem(pList, p - pList, "SHA384", 6) != NULL)
@@ -1053,7 +1051,7 @@ static int SslConnection_ssl_servername_cb(SSL *pSSL, int *ad, void *arg)
         return SSL_TLSEXT_ERR_NOACK;
     pOldCtx = SSL_get_SSL_CTX(pSSL);
     pNewCtx = pCtx->get();
-    if ( pOldCtx == pNewCtx )
+    if (pOldCtx == pNewCtx)
         return SSL_TLSEXT_ERR_OK;
     SSL_set_SSL_CTX(pSSL, pNewCtx);
     SSL_set_verify(pSSL, SSL_CTX_get_verify_mode(pNewCtx), NULL);
@@ -1223,26 +1221,26 @@ SslContext *SslContext::setKeyCertCipher(const char *pCertFile,
              " Certificate file: %s and Key File: %s.",
              pCertFile, pKeyFile);
     setRenegProtect(renegProtect);
-    if ( multiCertsEnabled())
+    if (multiCertsEnabled())
     {
         ret = setMultiKeyCertFile(pKeyFile, SslContext::FILETYPE_PEM,
-                            pCertFile, SslContext::FILETYPE_PEM, certChain);
+                                  pCertFile, SslContext::FILETYPE_PEM, certChain);
     }
     else
     {
         ret = setKeyCertificateFile(pKeyFile, SslContext::FILETYPE_PEM,
-                            pCertFile, SslContext::FILETYPE_PEM, certChain);
+                                    pCertFile, SslContext::FILETYPE_PEM, certChain);
     }
-    if ( !ret )
+    if (!ret)
     {
-        LS_ERROR( "[SSL] Config SSL Context with Certificate File: %s"
-                " and Key File:%s get SSL error: %s",
-                pCertFile, pKeyFile, SslError().what());
+        LS_ERROR("[SSL] Config SSL Context with Certificate File: %s"
+                 " and Key File:%s get SSL error: %s",
+                 pCertFile, pKeyFile, SslError().what());
         return NULL;
     }
 
     if ((pCAFile || pCAPath) &&
-             !setCALocation(pCAFile, pCAPath, cv))
+        !setCALocation(pCAFile, pCAPath, cv))
     {
         LS_ERROR(ConfigCtx::getCurConfigCtx(),
                  "Failed to setup Certificate Authority "
@@ -1296,7 +1294,7 @@ SslContext *SslContext::config(const XmlNode *pNode)
                 pCertFile) != 0)
             return NULL;
         else if (ConfigCtx::getCurConfigCtx()->getAbsoluteFile(achKey,
-                pKeyFile) != 0)
+                 pKeyFile) != 0)
             return NULL;
     }
     else
@@ -1338,11 +1336,11 @@ SslContext *SslContext::config(const XmlNode *pNode)
     }
 
     cv = ConfigCtx::getCurConfigCtx()->getLongValue(pNode, "clientVerify",
-                                                    0, 3, 0);
+            0, 3, 0);
     certChain = ConfigCtx::getCurConfigCtx()->getLongValue(pNode, "certChain",
-                                                           0, 1, 0);
+                0, 1, 0);
     renegProt = ConfigCtx::getCurConfigCtx()->getLongValue(pNode,
-                                                   "renegprotection", 0, 1, 1);
+                "renegprotection", 0, 1, 1);
     pSSL = setKeyCertCipher(pCertFile, pKeyFile, pCAFile, pCAPath, pCiphers,
                             certChain, (cv != 0), renegProt);
     if (pSSL == NULL)
@@ -1400,16 +1398,14 @@ SslContext *SslContext::config(const XmlNode *pNode)
 #endif
 
     sessionCache = ConfigCtx::getCurConfigCtx()->getLongValue(pNode,
-                                "sslSessionCache", 0, 1, 0);
+                   "sslSessionCache", 0, 1, 0);
     sessionTicket = ConfigCtx::getCurConfigCtx()->getLongValue(pNode,
-                                "sslSessionTickets", 0, 1, -1);
+                    "sslSessionTickets", 0, 1, -1);
 
     if (sessionCache != 0)
     {
-        if (enableShmSessionCache() == LS_FAIL )
-        {
+        if (enableShmSessionCache() == LS_FAIL)
             LS_ERROR("Enable session cache failed.");
-        }
     }
 
     if (sessionTicket == 1)
@@ -1420,7 +1416,7 @@ SslContext *SslContext::config(const XmlNode *pNode)
             return NULL;
         }
     }
-    else if (sessionTicket == 0 )
+    else if (sessionTicket == 0)
         disableSessionTickets();
 
     if (cv)
@@ -1512,29 +1508,29 @@ int SslContext::setupIdContext(SSL_CTX *pCtx, const void *pDigest,
 
     EVP_MD_CTX_init(&md);
 
-    if ( EVP_DigestInit_ex(&md, EVP_sha1(), NULL) != 1 )
+    if (EVP_DigestInit_ex(&md, EVP_sha1(), NULL) != 1)
     {
-        LS_DBG_L( "Init EVP Digest failed.");
+        LS_DBG_L("Init EVP Digest failed.");
         return LS_FAIL;
     }
-    else if ( EVP_DigestUpdate(&md, pDigest, iDigestLen) != 1 )
+    else if (EVP_DigestUpdate(&md, pDigest, iDigestLen) != 1)
     {
-        LS_DBG_L( "Update EVP Digest failed");
+        LS_DBG_L("Update EVP Digest failed");
         return LS_FAIL;
     }
-    else if ( EVP_DigestFinal_ex(&md, buf, &len ) != 1 )
+    else if (EVP_DigestFinal_ex(&md, buf, &len) != 1)
     {
-        LS_DBG_L( "EVP Digest Final failed.");
+        LS_DBG_L("EVP Digest Final failed.");
         return LS_FAIL;
     }
-    else if ( EVP_MD_CTX_cleanup(&md) != 1 )
+    else if (EVP_MD_CTX_cleanup(&md) != 1)
     {
-        LS_DBG_L( "EVP Digest Cleanup failed.");
+        LS_DBG_L("EVP Digest Cleanup failed.");
         return LS_FAIL;
     }
-    else if ( SSL_CTX_set_session_id_context(pCtx, buf, len) != 1 )
+    else if (SSL_CTX_set_session_id_context(pCtx, buf, len) != 1)
     {
-        LS_DBG_L( "Set Session Id Context failed.");
+        LS_DBG_L("Set Session Id Context failed.");
         return LS_FAIL;
     }
     return LS_OK;
@@ -1550,7 +1546,7 @@ int  SslContext::enableShmSessionCache()
     }
 
     SSL_CTX_set_session_cache_mode(m_pCtx, SSL_SESS_CACHE_SERVER
-                                            | SSL_SESS_CACHE_NO_INTERNAL);
+                                   | SSL_SESS_CACHE_NO_INTERNAL);
     /* enable external cache configuration check */
     SslSessCache::watchCtx(m_pCtx);
     LS_DBG_L("EXTERNAL SHM SSL CACHE ENABLED");

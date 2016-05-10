@@ -1033,9 +1033,9 @@ int SpdyConnection::compressHeaders(HttpRespHeaders *pRespHeaders)
     char *key;
     int keyLen;
     int valLen;
-    
+
     pRespHeaders->dropConnectionHeaders();
-    
+
     count = pRespHeaders->getUniqueCnt() +
             2;//Add 2, FOR spdy, need to add "version" and "status"
     if (m_bVersion == 2)
@@ -1180,15 +1180,15 @@ int SpdyConnection::onWriteEx()
 
     TDLinkQueue<SpdyStream> *pQue = &m_priQue[0];
     TDLinkQueue<SpdyStream> *pEnd = &m_priQue[SPDY_STREAM_PRIORITYS];
-    
 
-    for( ; pQue < pEnd && m_iCurDataOutWindow > 0; ++pQue)
+
+    for (; pQue < pEnd && m_iCurDataOutWindow > 0; ++pQue)
     {
         if (pQue->empty())
             continue;
-        int count = pQue->size(); 
-        while(count-- > 0 && m_iCurDataOutWindow > 0 
-              && (pSpdyStream = pQue->pop_front()) != NULL)
+        int count = pQue->size();
+        while (count-- > 0 && m_iCurDataOutWindow > 0
+               && (pSpdyStream = pQue->pop_front()) != NULL)
         {
             if (pSpdyStream->isWantWrite())
             {

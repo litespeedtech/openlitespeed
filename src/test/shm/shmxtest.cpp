@@ -119,7 +119,7 @@ TEST(shmPerProcess_test)
     int ret;
 
     pTHash = (TShmHash <xxx_t> *)pGPool->getNamedHash(
-        "tmplHash", 0, LsShmHash::hashXXH32, memcmp, LSSHM_FLAG_NONE);
+                 "tmplHash", 0, LsShmHash::hashXXH32, memcmp, LSSHM_FLAG_NONE);
     xxx.x[0] = 0x1234;
     CHECK(pTHash->update(aKey, iKeyLen, &xxx) == 0);
     CHECK((off.m_iOffset = pTHash->get(aKey, iKeyLen, &iValLen, &ret)) != 0);

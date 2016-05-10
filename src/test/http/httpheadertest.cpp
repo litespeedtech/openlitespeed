@@ -430,7 +430,7 @@ SUITE(HttpHeaderTest)
                    (int)it->iov_len, ph);
             CHECK(strncasecmp((const char *)p, ph, it->iov_len) == 0);
             if (strncasecmp((const char *)p, ph, it->iov_len) != 0)
-                printf("p:\n%.*s\nph:\n%.*s\n", (int)it->iov_len, p, 
+                printf("p:\n%.*s\nph:\n%.*s\n", (int)it->iov_len, p,
                        (int)it->iov_len, ph);
             ph += it->iov_len;
         }

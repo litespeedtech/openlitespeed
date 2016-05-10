@@ -225,7 +225,7 @@ CacheEntry *DirHashCacheStore::getCacheEntry(CacheHash &hash,
                "[CACHE] check [%p] against cache manager, tag: '%s' \n",
                pEntry, pEntry->getTag().c_str());
 
-    if ( pEntry->getHeader().m_tmCreated <= lastCacheFlush )
+    if (pEntry->getHeader().m_tmCreated <= lastCacheFlush)
     {
         g_api->log(NULL, LSI_LOG_DEBUG,
                    "[CACHE] [%p] has been flushed, dispose.\n", pEntry);

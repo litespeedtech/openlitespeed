@@ -314,8 +314,8 @@ public:
     HttpMime *getMIME()            {   return m_pInternal->m_pMIME;}
     const HttpMime *getMIME() const {   return m_pInternal->m_pMIME;}
     int initMIME();
-    const MimeSetting * addMIME(const char *pMime,
-                                const char *pSuffix);
+    const MimeSetting *addMIME(const char *pMime,
+                               const char *pSuffix);
     int setExpiresByType(const char *pValue);
     int setCompressByType(const char *pValue);
 
@@ -367,7 +367,7 @@ public:
 
     const MimeSetting *determineMime(const char *pSuffix,
                                      char *pMimeType) const;
-   const MimeSetting *checkFMMime(const char *pSuffix,
+    const MimeSetting *checkFMMime(const char *pSuffix,
                                    char *pForcedType) const;
     const MimeSetting *lookupMimeSetting(char *pValue) const;
     const MimeSetting *lookupMimeSetting(char *pValue, int forceAddMIME);

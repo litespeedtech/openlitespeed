@@ -165,7 +165,8 @@ static int checkFiles(lsi_param_t *param, const char *cmd, int len,
     g_api->log(param->session, LSI_LOG_DEBUG,
                "[modinspector]checkFiles: %.*s\n",
                len, cmd);
-    return g_api->exec_ext_cmd(param->session, cmd, len, my_cb, (long)prefix, NULL);
+    return g_api->exec_ext_cmd(param->session, cmd, len, my_cb, (long)prefix,
+                               NULL);
 }
 
 
@@ -196,7 +197,8 @@ static int check_req_uploaded_file(lsi_param_t *param)
 
     if (file_count > 0)
     {
-        int ret = checkFiles(param, ls_str_cstr(str), ls_str_len(str), scanner_st->prefix);
+        int ret = checkFiles(param, ls_str_cstr(str), ls_str_len(str),
+                             scanner_st->prefix);
         ls_str_delete(str);
         if (ret == 0)
             return LSI_SUSPEND;
@@ -225,7 +227,7 @@ static int set_session(lsi_param_t *param)
         int aEnableHkpts[1];
         aEnableHkpts[0] = LSI_HKPT_RCVD_REQ_BODY;
         g_api->enable_hook(param->session, &MNAME, 1,
-                                            aEnableHkpts, 1);
+                           aEnableHkpts, 1);
     }
     return LSI_OK;
 }

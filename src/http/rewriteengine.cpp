@@ -41,8 +41,8 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
-
-
+#include <sys/mman.h>
+#include <fcntl.h>
 
 RewriteEngine::RewriteEngine()
 {
@@ -51,6 +51,29 @@ RewriteEngine::RewriteEngine()
 
 RewriteEngine::~RewriteEngine()
 {
+}
+
+int RewriteEngine::loadRewriteFile(char *path, RewriteRuleList *pRuleList,
+                                   const RewriteMapList *pMaps)
+{
+    int fd = open(path, O_RDONLY);
+    if (fd == -1 )
+    {
+        LS_ERROR("Rewrite file [%s] can not open.", path);
+        return LS_FAIL;
+    }
+
+    char *pOrg  = (char *)mmap((caddr_t)0, 0, PROT_READ, MAP_SHARED, fd, 0);
+    if (pOrg == (char *)(-1))
+    {
+        LS_ERROR("Rewrite file [%s] can not be mapped.", path);
+        return LS_FAIL;
+    }
+
+    char *p = pOrg;
+    int ret = parseRules(p, pRuleList, pMaps);
+    munmap((caddr_t)pOrg, 0);
+    return ret;
 }
 
 
@@ -91,12 +114,29 @@ int RewriteEngine::parseRules(char *&pRules, RewriteRuleList *pRuleList,
             char *pLineEnd = strchr(pRules, '\n');
             if (pLineEnd)
                 *pLineEnd = 0;
-            if (*pRules != '#')
+
+            if ((strncasecmp(pRules, "RewriteFile", 11) == 0) &&
+                (isspace(*(pRules + 11))))
+            {
+                pRules += 12;
+                while (isspace(*pRules))
+                    ++pRules;
+
+                loadRewriteFile(pRules, pRuleList, pMapList);
+                LS_INFO("RewriteFile [%s] parsed.", pRules);
+            }
+            else if (strncasecmp(pRules, "<IfModule", 9) == 0 ||
+                     strncasecmp(pRules, "</IfModule>", 11) == 0 ||
+                     strncasecmp(pRules, "RewriteEngine", 13) == 0)
+                LS_INFO("Rewrite directive: %s bypassed.", pRules);
+            else if (*pRules != '#')
                 LS_ERROR("Invalid rewrite directive: %s", pRules);
+
             if (pLineEnd)
                 *pLineEnd = '\n';
             else
                 break;
+
             pRules = pLineEnd + 1;
         }
     }

@@ -46,7 +46,7 @@ typedef struct STShmData_s
 } STShmData_t;
 
 
-static void LOGDBG(const char* format, ...)
+static void LOGDBG(const char *format, ...)
 {
     char achNewFmt[1024];
     va_list arglist;
@@ -58,7 +58,7 @@ static void LOGDBG(const char* format, ...)
 }
 
 
-static void LOGERR(const char* format, ...)
+static void LOGERR(const char *format, ...)
 {
     char achNewFmt[1024];
     va_list arglist;
@@ -175,8 +175,8 @@ int SslTicket::initShm()
         return LS_FAIL;
     }
     if ((m_pKeyStore = pShmPool->getNamedHash(s_pSTShmHashName, 4,
-                                        LsShmHash::hashXXH32, memcmp,
-                                        LSSHM_FLAG_NONE )) == NULL)
+                       LsShmHash::hashXXH32, memcmp,
+                       LSSHM_FLAG_NONE)) == NULL)
     {
         LOGDBG("Get Hash Failed.");
         return LS_FAIL;
@@ -186,7 +186,7 @@ int SslTicket::initShm()
 }
 
 
-int SslTicket::init(const char* pFileName, long int timeout)
+int SslTicket::init(const char *pFileName, long int timeout)
 {
     STShmData_t *pShmData;
     int iValLen;
@@ -287,7 +287,7 @@ int SslTicket::init(const char* pFileName, long int timeout)
     }
     m_aKeys[m_idxCur].expireSec = DateTime::s_curTime + timeout;
     pShmData->m_aKeys[pShmData->m_idxCur].expireSec
-                                    = m_aKeys[m_idxCur].expireSec;
+        = m_aKeys[m_idxCur].expireSec;
     pShmData->m_tmLastAccess = DateTime::s_curTime;
     m_pKeyStore->unlock();
     return LS_OK;
@@ -354,7 +354,8 @@ int SslTicket::onTimer()
         RAND_bytes((unsigned char *)pPrev, SSLTICKET_KEYSIZE);
         pPrev->expireSec = pCur->expireSec + m_iLifetime;
     }
-    rotateIndices(pShmData->m_idxPrev, pShmData->m_idxCur, pShmData->m_idxNext);
+    rotateIndices(pShmData->m_idxPrev, pShmData->m_idxCur,
+                  pShmData->m_idxNext);
     m_pKeyStore->unlock();
     return LS_OK;
 }
@@ -415,7 +416,8 @@ int SslTicket::checkShmExpire(STShmData_t *pShmData)
 
     RAND_bytes((unsigned char *)pPrev, SSLTICKET_KEYSIZE);
     pPrev->expireSec = pNext->expireSec + (m_iLifetime >> 1);
-    rotateIndices(pShmData->m_idxPrev, pShmData->m_idxCur, pShmData->m_idxNext);
+    rotateIndices(pShmData->m_idxPrev, pShmData->m_idxCur,
+                  pShmData->m_idxNext);
     return LS_OK;
 }
 

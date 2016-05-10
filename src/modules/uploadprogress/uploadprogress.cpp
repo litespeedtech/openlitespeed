@@ -67,7 +67,7 @@ static int releaseMData(void *data)
 static void removeShmEntry(void *progressID)
 {
     ls_shmhash_delete(pShmHash, (const uint8_t *)progressID,
-                             strlen((char *)progressID));
+                      strlen((char *)progressID));
     free((char *)progressID);
 }
 
@@ -168,7 +168,7 @@ static int checkReqHeader(lsi_param_t *rec)
     char buf[MAX_BUF_LENG], *pBuffer;
     sprintf(buf, "%llX:0", contentLength);
     ls_shmoff_t offset = ls_shmhash_insert(pShmHash,
-                           (const uint8_t *)progressID, idLen, (const uint8_t *)buf, MAX_BUF_LENG);
+                                           (const uint8_t *)progressID, idLen, (const uint8_t *)buf, MAX_BUF_LENG);
     pBuffer = (char *)ls_shmhash_off2ptr(pShmHash, offset);
     if (!offset || !pBuffer)
     {
@@ -200,7 +200,7 @@ static int checkReqHeader(lsi_param_t *rec)
 
     int aEnableHkpt[] = {LSI_HKPT_RECV_REQ_BODY, LSI_HKPT_HTTP_END };
     g_api->enable_hook(rec->session, &MNAME, 1, aEnableHkpt,
-                                        sizeof(aEnableHkpt) / sizeof(int));
+                       sizeof(aEnableHkpt) / sizeof(int));
     return LSI_OK;
 }
 
@@ -232,8 +232,8 @@ static int begin_process(lsi_session_t *session)
 
     int valLen;
     ls_shmoff_t offset = ls_shmhash_find(pShmHash,
-                           (const uint8_t *)progressID,
-                           idLen, &valLen);
+                                         (const uint8_t *)progressID,
+                                         idLen, &valLen);
     if (offset == 0 || valLen <= 2)  //At least 3 bytes
     {
         g_api->log(session, LSI_LOG_ERROR,

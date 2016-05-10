@@ -99,6 +99,9 @@ class RewriteEngine : public TSingleton<RewriteEngine>
                                    const HttpContext *&pContext, const HttpContext *&pRootContext);
 public:
     ~RewriteEngine();
+
+    static int loadRewriteFile(char *path, RewriteRuleList *pRuleList,
+                               const RewriteMapList *pMaps);
     static int parseRules(char *&pRules, RewriteRuleList *pRuleList,
                           const RewriteMapList *pMapList);
     int processRuleSet(const RewriteRuleList *pRuleList, HttpSession *pSession,

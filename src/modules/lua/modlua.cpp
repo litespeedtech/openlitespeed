@@ -128,7 +128,7 @@ int prepLuaFilter(lsi_param_t *rec)
 
     if (iEnableCount > 0)
         return g_api->enable_hook(session, &MNAME, 1,
-                aEnableHkpt, iEnableCount);
+                                  aEnableHkpt, iEnableCount);
     return LSI_OK;
 }
 
@@ -271,9 +271,9 @@ static lsi_reqhdlr_t lslua_mod_handler = { luaHandler, onReadEvent,
                                          };
 
 static lsi_confparser_t lslua_mod_config = { LsLuaEngine::parseParam,
-                                         LsLuaEngine::removeParam,
-                                         myParam
-                                       };
+                                             LsLuaEngine::removeParam,
+                                             myParam
+                                           };
 
 lsi_module_t MNAME = { LSI_MODULE_SIGNATURE,
                        _init,

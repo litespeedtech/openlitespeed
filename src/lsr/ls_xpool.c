@@ -470,7 +470,7 @@ static xpool_alink_t *ls_xpool_getsuperblk(ls_xpool_t *pool)
 void *ls_xpool_bblkalloc(ls_xpool_t *pool, uint32_t nsize)
 {
     ls_xpool_bblk_t *pNew;
-    pNew = (ls_xpool_bblk_t *)ls_palloc(nsize + sizeof(ls_xpool_bblk_t) 
+    pNew = (ls_xpool_bblk_t *)ls_palloc(nsize + sizeof(ls_xpool_bblk_t)
                                         - sizeof(ls_xpool_header_t));
     pNew->header.size = nsize;
     pNew->header.magic = LS_XPOOL_MAGIC;

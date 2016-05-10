@@ -114,7 +114,8 @@ static int mycb4(lsi_param_t *rec)
                 sprintf(save, "SavedHeader: %.*s\r\n",
                         iov_val[i].iov_len, (char *)iov_val[i].iov_base
                        );
-                g_api->set_resp_header2(rec->session, save, strlen(save), LSI_HEADEROP_ADD);
+                g_api->set_resp_header2(rec->session, save, strlen(save),
+                                        LSI_HEADEROP_ADD);
             }
         }
     }
@@ -151,7 +152,7 @@ int check_if_remove_session_hook(lsi_param_t *rec)
         sessionHookType = strtol(qs + sizeof(testurl) - 1, NULL, 10);
         if (sessionHookType & 0x0f)
             g_api->enable_hook(rec->session, &MNAME, 1,
-                                                &iEnableHkpt, 1);
+                               &iEnableHkpt, 1);
     }
     return LSI_OK;
 }

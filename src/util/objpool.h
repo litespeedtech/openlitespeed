@@ -78,10 +78,8 @@ public:
         }
         m_freeList.unsafe_pop_back(pObj, n);
 #else
-        for (int i=0; i<n; ++i)
-        {
+        for (int i = 0; i < n; ++i)
             pObj[i] = newObj();
-        }
 
 #endif
         return n;
@@ -93,10 +91,8 @@ public:
         if (pObj)
             m_freeList.unsafe_push_back(pObj, n);
 #else
-        for (int i=0; i<n; ++i)
-        {
+        for (int i = 0; i < n; ++i)
             releaseObj(pObj[i]);
-        }
 #endif
     }
 

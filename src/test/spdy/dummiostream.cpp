@@ -56,7 +56,8 @@ int DummySpdyConnStream::onInitConnected()
     return 0;
 }
 
-int DummySpdyConnStream::sendRespHeaders(HttpRespHeaders *pHeaders, int isNoBody)
+int DummySpdyConnStream::sendRespHeaders(HttpRespHeaders *pHeaders,
+        int isNoBody)
 {
     //TODO:
     return -1;

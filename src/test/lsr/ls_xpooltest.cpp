@@ -225,7 +225,7 @@ TEST(ls_XPoolTest_testData)
     strcpy(ptr2, "\x77\x77\x77\x77\x77\x77\x77\x77\x77");
 
     sz -= 256;  //even -256, still will alloc 1024, because when the last remain < 262
-                //the blk will be removed and the remain will be append to the last alloc buffer
+    //the blk will be removed and the remain will be append to the last alloc buffer
     char *ptr3 = (char *)ls_xpool_alloc(&pool, sz);
     strcpy(ptr3, "\x77\x77\x77\x77\x77\x77\x77\x77\x77");
 

@@ -398,7 +398,7 @@ int NtwkIOLink::handleEvents(short evt)
         (*m_pFpList->m_onWrite_fp)(this);
     m_iInProcess = 0;
 
-    switch(getState())
+    switch (getState())
     {
     case HIOS_CLOSING:
         onPeerClose();
@@ -993,7 +993,7 @@ off_t NtwkIOLink::sendfileSetUp(off_t size)
         size = size & ((1 << 30) - 1);
     if (size <= 0)
         return 0;
-    if (size > INT_MAX )
+    if (size > INT_MAX)
         size = INT_MAX;
 
     return size;

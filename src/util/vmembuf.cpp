@@ -210,8 +210,8 @@ int VMemBuf::reinit(off_t TargetSize)
     {
         if ((TargetSize < 1024 * 1024) &&
             (s_iMaxAnonMapBlocks - s_iCurAnonMapBlocks > s_iMaxAnonMapBlocks / 5) &&
-            ( TargetSize < (off_t)((s_iMaxAnonMapBlocks - s_iCurAnonMapBlocks) *
-             s_iBlockSize)))
+            (TargetSize < (off_t)((s_iMaxAnonMapBlocks - s_iCurAnonMapBlocks) *
+                                  s_iBlockSize)))
         {
             deallocate();
             if (set(VMBUF_ANON_MAP , getBlockSize()) == -1)
