@@ -163,7 +163,7 @@ void LsiBaseFetch::Release()
 void LsiBaseFetch::DecrefAndDeleteIfUnreferenced()
 {
     ls_atomic_add(&m_iReferences, -1);
-    if (m_iReferences== 0)
+    if (m_iReferences == 0)
         delete this;
 }
 

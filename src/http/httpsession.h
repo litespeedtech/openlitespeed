@@ -121,7 +121,8 @@ enum HSPState
 #define HSF_STX_FILE_CACHE_READY    (1<<19)
 
 
-class HttpSession : public LsiSession, public InputStream, public HioHandler,
+class HttpSession : public LsiSession, public InputStream,
+    public HioHandler,
     public AioEventHandler
 {
     HttpReq               m_request;
@@ -185,8 +186,8 @@ class HttpSession : public LsiSession, public InputStream, public HioHandler,
 
     void cleanUpHandler();
     void nextRequest();
-    int  updateClientInfoFromProxyHeader(const char *pHeaderName, 
-                                         const char *pProxyHeader, 
+    int  updateClientInfoFromProxyHeader(const char *pHeaderName,
+                                         const char *pProxyHeader,
                                          int headerLen);
 
     static int readReqBodyTermination(LsiSession *pSession, char *pBuf,
@@ -247,7 +248,7 @@ private:
     int processURI(const char *pURI);
     int readToHeaderBuf();
     void sendHttpError(const char *pAdditional);
-    int sendDefaultErrorPage(const char * pAdditional);
+    int sendDefaultErrorPage(const char *pAdditional);
     int detectTimeout();
 
     //int cacheWrite( const char * pBuf, int size );
@@ -319,7 +320,7 @@ public:
     //below are wrapper functions
     SslConnection *getSSL() const   {   return m_request.getSsl();          }
     int16_t isSSL() const           {   return m_request.isHttps(); }
-    
+
     const char *getPeerAddrString() const;
     int getPeerAddrStrLen() const;
     const struct sockaddr *getPeerAddr() const;
@@ -494,8 +495,8 @@ public:
     void setSendFileOffsetSize(off_t start, off_t size);
 
     void setSendFileOffsetSize(int fd, off_t start, off_t size);
-    
-    
+
+
     int finalizeHeader(int ver, int code);
     LsiModuleData *getModuleData()      {   return &m_moduleData;   }
 

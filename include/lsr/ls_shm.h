@@ -37,7 +37,7 @@ typedef lsi_hash_key_t (*ls_shmhash_pf)(const void *, size_t len);
  * @since 1.0
  */
 typedef int (*ls_shmhash_vc_pf)(const void *pVal1, const void *pVal2,
-                                      size_t len);
+                                size_t len);
 
 /**
  * @def LSI_SHM_MAX_NAME_LEN
@@ -399,13 +399,15 @@ uint8_t *ls_shmhash_off2ptr(ls_shmhash_t *pShmhash,
  *   LiteSpeed SHM memory container
  */
 ls_shm_t       *ls_shm_open(const char *shmname, size_t initialsize);
-int             ls_shm_close(ls_shm_t *shmhandle);    /* close connection */
+int             ls_shm_close(ls_shm_t
+                             *shmhandle);    /* close connection */
 int             ls_shm_destroy(ls_shm_t *shmhandle);  /* remove hash map */
 ls_shmpool_t   *ls_shm_getpool(ls_shm_t *shmhandle, const char *poolname);
 
-ls_shmoff_t     ls_shmpool_getreg(ls_shmpool_t *poolhandle, const char *name);
+ls_shmoff_t     ls_shmpool_getreg(ls_shmpool_t *poolhandle,
+                                  const char *name);
 int             ls_shmpool_setreg(ls_shmpool_t *poolhandle,
-                                   const char *name, ls_shmoff_t off);
+                                  const char *name, ls_shmoff_t off);
 
 int             ls_shmhash_close(ls_shmhash_t *hashhandle);
 int             ls_shmhash_destroy(ls_shmhash_t *hashhandle);
@@ -421,17 +423,17 @@ ls_shmhash_t   *lsi_shmlruhash_open(ls_shmpool_t *poolhandle,
 /* Hash Shared memory access */
 ls_shmoff_t     ls_shmhash_hdroff(ls_shmhash_t *hashhandle);
 ls_shmoff_t     ls_shmhash_alloc2(ls_shmhash_t *hashhandle,
-                                   size_t size);
+                                  size_t size);
 void            ls_shmhash_release2(ls_shmhash_t *hashhandle,
-                                     ls_shmoff_t key,
-                                     size_t size);
+                                    ls_shmoff_t key,
+                                    size_t size);
 /* Hash Element memory access */
 int             ls_shmhash_setdata(ls_shmhash_t *hashhandle,
-                                    ls_shmoff_t offVal, const uint8_t *value, int valuelen);
+                                   ls_shmoff_t offVal, const uint8_t *value, int valuelen);
 int             ls_shmhash_getdata(ls_shmhash_t *hashhandle,
-                                    ls_shmoff_t offVal, ls_shmoff_t *pvalue, int cnt);
+                                   ls_shmoff_t offVal, ls_shmoff_t *pvalue, int cnt);
 int             ls_shmhash_getdataptrs(ls_shmhash_t *hashhandle,
-                                        ls_shmoff_t offVal, int (*func)(void *pData));
+                                       ls_shmoff_t offVal, int (*func)(void *pData));
 //int             ls_shmhash_trim(ls_shmhash_t *hashhandle,
 //                                 time_t tmcutoff, int (*func)(LsShmHash::iterator iter, void *arg), void *arg);
 int             ls_shmhash_check(ls_shmhash_t *hashhandle);

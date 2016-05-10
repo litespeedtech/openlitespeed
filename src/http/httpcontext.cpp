@@ -699,7 +699,7 @@ void HttpContext::inherit(const HttpContext *pRootContext)
 }
 
 
-void HttpContext::matchListInherit(const HttpContext *pRootContext) const 
+void HttpContext::matchListInherit(const HttpContext *pRootContext) const
 {
     if (m_pMatchList)
     {
@@ -764,8 +764,8 @@ const HttpContext *HttpContext::findMatchContext(const char *pURI,
 }
 
 
-const MimeSetting * HttpContext::addMIME(const char *pMime,
-                                         const char *pSuffix)
+const MimeSetting *HttpContext::addMIME(const char *pMime,
+                                        const char *pSuffix)
 {
     if (initMIME())
         return NULL;

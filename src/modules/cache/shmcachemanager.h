@@ -101,7 +101,8 @@ private:
     int shouldPurge(const char *pKey, int keyLen, int32_t sec, int16_t msec);
 
     int findSession(CacheKey *pKey, ShmPrivatePurgeData *pData);
-    int isPurgedByTag(const char *pTag, CacheEntry *pEntry, CacheKey *pKey, bool isCheckPrivate);
+    int isPurgedByTag(const char *pTag, CacheEntry *pEntry, CacheKey *pKey,
+                      bool isCheckPrivate);
     int processPurgeCmdEx(ShmPrivatePurgeData *pPrivate, const char *pValue,
                           int iValLen, time_t curTime, int curTimeMS);
 

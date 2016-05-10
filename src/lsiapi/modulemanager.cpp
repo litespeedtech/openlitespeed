@@ -476,7 +476,7 @@ void ModuleManager::updateHttpApiHook(HttpSessionHooks *pRtHooks,
         pRtHooks->setModuleEnable(m_pModuleArray[module_id], 0);
     //FIXME: shoudl th ebelow code be called?
     //else
-      //  pRtHooks->setModuleEnable(m_pModuleArray[module_id], 1);
+    //  pRtHooks->setModuleEnable(m_pModuleArray[module_id], 1);
 }
 
 

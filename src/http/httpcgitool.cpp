@@ -45,6 +45,7 @@
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <config.h>
 
 int HttpCgiTool::processHeaderLine(HttpExtConnector *pExtConn,
                                    const char  *pLineBegin,
@@ -203,7 +204,7 @@ int HttpCgiTool::processHeaderLine(HttpExtConnector *pExtConn,
     case HttpRespHeaders::H_TRANSFER_ENCODING:
         pResp->setContentLen(LSI_RSP_BODY_SIZE_CHUNKED);
         return 0;
-        
+
     case HttpRespHeaders::H_SET_COOKIE:
         //pReq->getRespCacheCtrl().setHasCookie();
         pReq->processSetCookieHeader(pValue, pLineEnd - pValue);
@@ -641,6 +642,13 @@ int HttpCgiTool::buildCommonEnv(IEnv *pEnv, HttpSession *pSession)
         }
 
     }
+
+    char sVer[40];
+    n = snprintf(sVer, 40, "Openlitespeed %s", PACKAGE_VERSION);
+    pEnv->add("LSWS_EDITION", 12, sVer, n);
+    pEnv->add("X-LSCACHE", 9, "1", 1);
+    count += 2;
+
     return count;
 }
 

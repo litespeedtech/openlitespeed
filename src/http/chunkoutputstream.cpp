@@ -134,7 +134,7 @@ int ChunkOutputStream::write(const char *pBuf, int size)
             return ret;
         }
     }
-    
+
     if (m_pLastBufBegin != NULL)
     {
         left -= m_iLastBufLen;
@@ -144,7 +144,7 @@ int ChunkOutputStream::write(const char *pBuf, int size)
         if (!left)
             return size;
     }
-    
+
     do
     {
         if (left + m_iCurSize > MAX_CHUNK_SIZE)

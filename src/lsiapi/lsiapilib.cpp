@@ -102,8 +102,8 @@ static int get_hook_level(lsi_param_t *pParam)
 
 
 static int enable_hook(lsi_session_t *session,
-                                        const lsi_module_t *pModule, int enable,
-                                        int *index, int iNumIndices)
+                       const lsi_module_t *pModule, int enable,
+                       int *index, int iNumIndices)
 {
     int i, ret = LS_OK;
     int aL4Indices[LSI_HKPT_L4_COUNT], iL4Count = 0;
@@ -763,7 +763,7 @@ static int is_req_handler_registered(lsi_session_t *session)
     if (pSession)
     {
         HttpReq *pReq = pSession->getReq();
-        if ( pReq && pReq->getHttpHandler()
+        if (pReq && pReq->getHttpHandler()
             && pReq->getHttpHandler()->getType() == HandlerType::HT_MODULE)
             return 1;
     }
@@ -778,7 +778,7 @@ static int register_req_handler(lsi_session_t *session,
     if (pSession == NULL)
         return LS_FAIL;
     HttpReq *pReq = pSession->getReq();
-    if ( pReq && pReq->getHttpHandler()
+    if (pReq && pReq->getHttpHandler()
         && pReq->getHttpHandler()->getType() == HandlerType::HT_MODULE)
         return LS_FAIL; //already registered by a module
 
@@ -1349,7 +1349,7 @@ static int send_file(lsi_session_t *session, const char *path,
 
 
 static int send_file2(lsi_session_t *session, int fd,
-                     int64_t start, int64_t size)
+                      int64_t start, int64_t size)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
     if (pSession == NULL)
@@ -1358,7 +1358,7 @@ static int send_file2(lsi_session_t *session, int fd,
     if (pSession->isEndResponse())
         return LS_FAIL;
 
-    
+
     pSession->setSendFileOffsetSize(fd, start, size);
     pSession->flush();
     return 0;
@@ -1538,7 +1538,7 @@ static const char   *get_server_root()
 
 
 static void *get_config(lsi_session_t *session,
-                              const lsi_module_t *pModule)
+                        const lsi_module_t *pModule)
 {
     ModuleConfig *pConfig = NULL;
     if (session)
@@ -1559,9 +1559,9 @@ static void *lsiapi_get_multiplexer()
 
 
 static ls_edio_t *edio_reg(int fd, edio_evt_cb evt_cb,
-                edio_timer_cb timer_cb, short events, void * pParam )
+                           edio_timer_cb timer_cb, short events, void *pParam)
 {
-    EdioHandler *pHandler = new EdioHandler(fd, pParam, evt_cb, timer_cb );
+    EdioHandler *pHandler = new EdioHandler(fd, pParam, evt_cb, timer_cb);
     if (!pHandler)
         return NULL;
     MultiplexerFactory::getMultiplexer()->add(pHandler, events);
@@ -1584,9 +1584,10 @@ static void edio_modify(ls_edio_t *pHandle, short events, int add_remove)
     if (!pHandle)
         return;
     EdioHandler *pHandler = (EdioHandler *)pHandle;
-    events &= (POLLIN|POLLOUT);
+    events &= (POLLIN | POLLOUT);
     if (events != 0)
-        MultiplexerFactory::getMultiplexer()->modEvent(pHandler, events, add_remove);
+        MultiplexerFactory::getMultiplexer()->modEvent(pHandler, events,
+                add_remove);
 }
 
 

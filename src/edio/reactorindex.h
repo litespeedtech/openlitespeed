@@ -30,8 +30,8 @@ typedef struct ReactorHolder
     EventReactor   *m_pReactor;
     unsigned short  m_eventSet;
     unsigned short  m_flags;
-    
-}ReactorHolder;
+
+} ReactorHolder;
 
 class ReactorIndex
 {
@@ -71,13 +71,13 @@ public:
         m_pIndexes[fd].m_pReactor = pReactor;
         return LS_OK;
     }
-    
+
     void setUpdateFlags(int fd, int val)
     {   m_pIndexes[fd].m_flags = val;   }
-    
+
     unsigned short getUpdateFlags(int fd) const
     {   return m_pIndexes[fd].m_flags;  }
-    
+
     void timerExec();
     int verify(int fd, EventReactor *pReactor)
     {

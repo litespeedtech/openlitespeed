@@ -50,7 +50,8 @@ static ls_aho_state_t *ls_aho_getgoto(
 static int ls_aho_optimize(ls_aho_state_t *state, int case_sensitive);
 static void ls_aho_freegoto(ls_aho_gotonode_t *node);
 static void ls_aho_freenodes(ls_aho_state_t *state, int case_sensitive);
-static void ls_aho_copy_helper(ls_aho_state_t *pState, char *pBuf, int iCurLen,
+static void ls_aho_copy_helper(ls_aho_state_t *pState, char *pBuf,
+                               int iCurLen,
                                int inc, ls_aho_t *pThis);
 
 
@@ -318,7 +319,7 @@ unsigned int ls_aho_search(ls_aho_t *pThis,
             {
                 if (*pInputPtr < 0) // Out of range
                     continue;
-                if ((start_state = aAccept[(int)*pInputPtr]) != 0)
+                if ((start_state = aAccept[(int) * pInputPtr]) != 0)
                     break;
             }
             if (pInputPtr >= string + size)
@@ -543,7 +544,8 @@ static void ls_aho_freenodes(ls_aho_state_t *state, int case_sensitive)
 
 #define LS_AHO_SEPARATOR 244
 
-static void ls_aho_copy_helper(ls_aho_state_t *pState, char *pBuf, int iCurLen,
+static void ls_aho_copy_helper(ls_aho_state_t *pState, char *pBuf,
+                               int iCurLen,
                                int inc, ls_aho_t *pThis)
 {
     unsigned int i;
@@ -555,8 +557,9 @@ static void ls_aho_copy_helper(ls_aho_state_t *pState, char *pBuf, int iCurLen,
     }
     for (i = 0; i < pState->goto_size; i += inc)
     {
-        pBuf[iCurLen]= pState->children_labels[i];
-        ls_aho_copy_helper(pState->children_states[i], pBuf, iCurLen + 1, inc, pThis);
+        pBuf[iCurLen] = pState->children_labels[i];
+        ls_aho_copy_helper(pState->children_states[i], pBuf, iCurLen + 1, inc,
+                           pThis);
     }
 }
 

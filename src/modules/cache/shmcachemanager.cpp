@@ -656,7 +656,7 @@ int ShmCacheManager::processPurgeCmdEx(
 
 /*
  */
-int ShmCacheManager::shouldPurge(const char *pKey, int keyLen, 
+int ShmCacheManager::shouldPurge(const char *pKey, int keyLen,
                                  int32_t sec, int16_t msec)
 {
     int valLen;
@@ -674,14 +674,14 @@ int ShmCacheManager::shouldPurge(const char *pKey, int keyLen,
         //         "Lookup tag: '%.*s', create timestamp: %d.%d",
         //          keyLen, pKey, sec, (int)msec );
 
-        while(isblank(*p))
+        while (isblank(*p))
             ++p;
 
         const char *pTagEndBak = pTagEnd;
         while (isblank(*(pTagEndBak - 1)))
             --pTagEndBak;
 
-        if (pTagEndBak > p && 
+        if (pTagEndBak > p &&
             (offVal = m_pPublicPurge->find(p, pTagEndBak - p, &valLen)) != 0)
         {
             purgeinfo_t *pData = (purgeinfo_t *)m_pPublicPurge->offset2ptr(offVal);
@@ -733,7 +733,8 @@ int ShmCacheManager::isPurgedByTag(
 }
 
 
-int ShmCacheManager::isPurged(CacheEntry *pEntry, CacheKey *pKey, bool isCheckPrivate)
+int ShmCacheManager::isPurged(CacheEntry *pEntry, CacheKey *pKey,
+                              bool isCheckPrivate)
 {
     int ret = 0;
     CacheInfo *pInfo = (CacheInfo *)m_pPublicPurge->

@@ -18,8 +18,8 @@
 
 #include "ediohandler.h"
 
-EdioHandler::EdioHandler(int fd, void * pParam, edio_evt_cb evt_cb,  
-            edio_timer_cb timer_cb )
+EdioHandler::EdioHandler(int fd, void *pParam, edio_evt_cb evt_cb,
+                         edio_timer_cb timer_cb)
 {
     ls_edio_s::pParam = pParam;
     ls_edio_s::evtCb = evt_cb;

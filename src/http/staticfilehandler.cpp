@@ -106,7 +106,7 @@ inline int buildStaticFileHeaders(HttpResp *pResp, HttpReq *pReq,
     p = pSendfileInfo->getECache()->getCLHeader().c_str();
     pResp->getRespHeaders().add(HttpRespHeaders::H_CONTENT_LENGTH, p + 16,
                                 pSendfileInfo->getECache()->getCLHeader().len() - 18);
-    
+
     pResp->getRespHeaders().appendAcceptRange();
 
     return 0;
@@ -436,8 +436,8 @@ int StaticFileHandler::process(HttpSession *pSession,
     if (pPath)
     {
         ret = pSession->setUpdateStaticFileCache(pCache, pECache, pPath->c_str(),
-            pPath->len(),
-            pReq->transferReqFileFd(), pReq->getFileStat());
+                pPath->len(),
+                pReq->transferReqFileFd(), pReq->getFileStat());
         if (ret)
             return ret;
     }
@@ -658,9 +658,9 @@ static int buildRangeHeaders(HttpSession *pSession, HttpRange &range)
         pResp->getRespHeaders().add(HttpRespHeaders::H_LAST_MODIFIED,
                                     p + 15, RFC_1123_TIME_LEN);
         p += 15 + RFC_1123_TIME_LEN + 2;
-        
+
         pResp->getRespHeaders().add(HttpRespHeaders::H_CONTENT_TYPE,
-                                    p + 14, pData->getHeaderLen() - 
+                                    p + 14, pData->getHeaderLen() -
                                     (p - pData->getHeaderBuf()) - 14 - 2);
 
         off_t begin, end;

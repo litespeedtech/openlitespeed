@@ -69,7 +69,7 @@ int PCUtil::getNumProcessors()
 #ifdef LSWS_NO_SET_AFFINITY
     return 2;
 #else
-    
+
     if (s_nCpu > 0)
         return s_nCpu;
 #if defined(linux) || defined(__linux) || defined(__linux__)
@@ -90,7 +90,7 @@ int PCUtil::getNumProcessors()
         s_nCpu = 1;
     getAffinityMask(s_nCpu, s_nCpu, s_nCpu, &s_maskAll);
     return s_nCpu;
-    
+
 #endif
 }
 
@@ -117,7 +117,7 @@ int PCUtil::setCpuAffinity(cpu_set_t *mask)
     return cpuset_setaffinity(CPU_LEVEL_WHICH, CPU_WHICH_PID, -1,
                               sizeof(cpu_set_t), mask);
 #elif defined(linux) || defined(__linux) || defined(__linux__)
-    return pthread_setaffinity_np( pthread_self(), sizeof(cpu_set_t), mask);
+    return pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), mask);
     //return sched_setaffinity(0, sizeof(cpu_set_t), mask);
 #endif
     return 0;

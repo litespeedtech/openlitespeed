@@ -409,9 +409,7 @@ ls_inline int ls_atomic_spin_pidlock(ls_atom_spinlock_t *p)
             cnt = MAX_SPINCNT_CHECK;
         }
         else
-        {
             cpu_relax();
-        }
     }
 }
 

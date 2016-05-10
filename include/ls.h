@@ -1287,7 +1287,7 @@ struct lsi_confparser_s
      *         configuration value should be returned.
      */
     void  *(*parse_config)(const char *param, int param_len,
-                            void *initial_config, int level, const char *name);
+                           void *initial_config, int level, const char *name);
 
     /**
      * @brief free_config is a callback function for the server to call to release a pointer to
@@ -1407,7 +1407,7 @@ struct lsi_module_s
      */
     lsi_serverhook_t        *serverhook;
 
-    int32_t                  reserved[ (LSI_MODULE_RESERVED_SIZE + 3) / 4 ];
+    int32_t                  reserved[(LSI_MODULE_RESERVED_SIZE + 3) / 4 ];
 
 };
 
@@ -1528,9 +1528,9 @@ struct lsi_api_s
      */
     int (*get_hook_flag)(lsi_session_t *session, int index);
 
-    
+
     int (*get_hook_level)(lsi_param_t *pParam);
-    
+
     /**
      * @brief get_module is used to retrieve module information associated with a hook point based on callback parameters.
      *
@@ -2235,21 +2235,21 @@ struct lsi_api_s
     int (*send_file)(lsi_session_t *pSession, const char *path, int64_t start,
                      int64_t size);
 
-        /**
-     * @brief send_file is used to send a file as the response body.
-     * It can be used in handler processing functions.
-     *
-     * @since 1.0
-     *
-     * @param[in] pSession - a pointer to the HttpSession.
-     * @param[in] fd - file descriptor of the file to send.
-     * @param[in] start - file start offset.
-     * @param[in] size - remaining size.
-     * @return -1 or error codes from various layers of calls on failure, 0 on success.
-     */
+    /**
+    * @brief send_file is used to send a file as the response body.
+    * It can be used in handler processing functions.
+    *
+    * @since 1.0
+    *
+    * @param[in] pSession - a pointer to the HttpSession.
+    * @param[in] fd - file descriptor of the file to send.
+    * @param[in] start - file start offset.
+    * @param[in] size - remaining size.
+    * @return -1 or error codes from various layers of calls on failure, 0 on success.
+    */
     int (*send_file2)(lsi_session_t *pSession, int fd, int64_t start,
-                     int64_t size);
-    
+                      int64_t size);
+
     /**
      * @brief flush flushes the connection and sends the data.
      *
@@ -2691,7 +2691,7 @@ struct lsi_api_s
     void *(*get_multiplexer)();
 
     ls_edio_t *(*edio_reg)(int fd, edio_evt_cb evt_cb,
-                edio_timer_cb timer_cb, short events, void * pParam );
+                           edio_timer_cb timer_cb, short events, void *pParam);
 
     void (*edio_remove)(ls_edio_t *pHandle);
 
@@ -2699,7 +2699,7 @@ struct lsi_api_s
 
 
     //return 0 is YES, and 1 is deny
-    int (*get_client_access) (lsi_session_t *session);
+    int (*get_client_access)(lsi_session_t *session);
 
     /**
      * @brief is_suspended returns if a session is in suspended mode.

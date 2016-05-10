@@ -239,7 +239,7 @@ private:
     CookieList          m_cookies;
 
     StaticFileCacheData *m_pUrlStaticFileData;
-    
+
 
 
     HttpReq(const HttpReq &rhs) ;
@@ -261,7 +261,7 @@ private:
 
     int checkSuffixHandler(const char *pURI, int len, int &cacheable);
 
-    
+
 
     //parse headers
     int processRequestLine();
@@ -563,7 +563,7 @@ public:
     const AutoStr2 *getDefaultCharset() const;
     const MimeSetting *getMimeType() const  {   return m_pMimeType;         }
     void  setMimeType(const MimeSetting *mime) {   m_pMimeType = mime;         }
-    
+
     void  smartKeepAlive(const char *pValue);
     //int setRewriteURI( const char * pURL, int len );
     int setRewriteURI(const char *pURL, int len, int no_escape = 1);
@@ -577,7 +577,7 @@ public:
 
     const char *findEnvAlias(const char *pKey, int keyLen, int &aliasKeyLen);
     ls_strpair_t *addEnv(const char *pKey, int keyLen, const char *pValue,
-                          int valLen);
+                         int valLen);
     const char *getEnv(const char *pKey, int keyLen, int &valLen);
     const RadixNode *getEnvNode() const;
     int  getEnvCount();
@@ -590,10 +590,10 @@ public:
     const char *getUnknownHeaderByIndex(int idx, int &keyLen,
                                         const char *&pValue, int &valLen);
     char isCfIpSet() const                      {   return m_iCfIpHeader;   }
-    const char* getCfIpHeader(int &len);
+    const char *getCfIpHeader(int &len);
 
     void setSsl(SslConnection *p)   {    m_pSslConn = p;        }
-    SslConnection * getSsl() const  {   return m_pSslConn;      }
+    SslConnection *getSsl() const  {   return m_pSslConn;      }
     int isHttps() const
     {   return m_pSslConn || (m_iContextState & X_FORWARD_HTTPS);    }
 
@@ -709,10 +709,10 @@ public:
     cookieval_t *insertCookieIndex(const char *pName, int nameLen);
     int parseCookies();
     int copyCookieHeaderToBufEnd(int oldOff, const char *pCookie,
-                                      int cookieLen);
+                                 int cookieLen);
     CookieList  &getCookieList() { return   m_cookies; }
-    
-    
+
+
     int checkUrlStaicFileCache();
     StaticFileCacheData *getUrlStaticFileData() { return m_pUrlStaticFileData;}
 };

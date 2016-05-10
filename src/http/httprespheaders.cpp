@@ -805,7 +805,7 @@ int HttpRespHeaders::appendToIov(IOVec *iovec, int &addCrlf)
     }
     if (total > 0)
         iovec->append(m_buf.begin(), total);
-    
+
     return total;
 }
 
@@ -817,9 +817,7 @@ int HttpRespHeaders::appendToIov(IOVec *iovec, int &addCrlf)
 int HttpRespHeaders::outputNonSpdyHeaders(IOVec *iovec)
 {
     if (m_iKeepAlive)
-    {
         add(&HttpRespHeaders::s_keepaliveHeader, 1);
-    }
     else
         add(&HttpRespHeaders::s_concloseHeader, 1);
 
@@ -832,7 +830,7 @@ int HttpRespHeaders::outputNonSpdyHeaders(IOVec *iovec)
     int addCrlf = 1;
     m_iHeadersTotalLen += appendToIov(iovec, addCrlf);
     if (!addCrlf)
-    {   
+    {
         iovec->append("\r\n", 2);
         m_iHeadersTotalLen += 2;
     }

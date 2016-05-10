@@ -53,12 +53,12 @@ void  LsiapiBridge::releaseModuleData(int level, LsiModuleData *pData)
 // void LsiapiBridge::checkExpiredGData()
 // {
 //     time_t tm = DateTime::s_curTime;
-// 
+//
 //     GDataContainer *pLsiGDataContHashT = NULL;
 //     lsi_gdata_cont_t *containerInfo = NULL;
 //     GDataContainer::iterator iter;
 //     GDataHash::iterator iter2;
-// 
+//
 //     for (int i = 0; i < LSI_CONTAINER_COUNT; ++i)
 //     {
 //         pLsiGDataContHashT = g_aGDataContainer[i];
@@ -85,7 +85,7 @@ int LsiapiBridge::initLsiapi()
 //     g_lsiapiFunctions.get_gdata_container = get_gdata_container;
 //     g_lsiapiFunctions.empty_gdata_container = empty_gdata_container;
 //     g_lsiapiFunctions.purge_gdata_container = purge_gdata_container;
-// 
+//
 //     g_lsiapiFunctions.get_gdata = get_gdata;
 //     g_lsiapiFunctions.delete_gdata = delete_gdata;
 //     g_lsiapiFunctions.set_gdata = set_gdata;

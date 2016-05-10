@@ -358,11 +358,12 @@ int KQueuer::getFdKQ()
 {   return s_fdKQ; }
 
 
-void KQueuer::modEvent(EventReactor *pHandler, short maskIn, int add_remove)
+void KQueuer::modEvent(EventReactor *pHandler, short maskIn,
+                       int add_remove)
 {
     int mod;
     short mask;
-    
+
     mask = pHandler->getEvents() & maskIn;
     if (add_remove == 0)
     {
@@ -371,7 +372,7 @@ void KQueuer::modEvent(EventReactor *pHandler, short maskIn, int add_remove)
         pHandler->andMask2(~mask);
         mod = EV_DELETE;
     }
-    else 
+    else
     {
         mask = mask ^ maskIn;
         if (mask == 0)

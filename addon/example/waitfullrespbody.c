@@ -85,7 +85,7 @@ static int get_testtype(lsi_param_t *param)
     if (type <= 8)
     {
         g_api->enable_hook(param->session, &MNAME, 1,
-                                            &type2hook[type - 1], 1);
+                           &type2hook[type - 1], 1);
     }
 
     return 0;

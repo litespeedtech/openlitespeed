@@ -93,7 +93,7 @@ public:
     CacheManager *getManager()   {   return m_pManager;    }
 
 
-	const AutoStr2 *getName() const {   return &m_sName;     }
+    const AutoStr2 *getName() const {   return &m_sName;     }
 
 //     void setMaxObjSize(long objSize)
 //     {
@@ -118,7 +118,7 @@ private:
 
 
     AutoStr2  m_sRoot;
-	AutoStr2  m_sName;
+    AutoStr2  m_sName;
 };
 
 #endif

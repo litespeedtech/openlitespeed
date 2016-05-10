@@ -179,8 +179,8 @@ int epoll::remove(EventReactor *pHandler)
         m_reactorIndex.set(fd, NULL);
     }
     return removeEx(fd);
-}    
-    
+}
+
 
 int epoll::removeEx(int fd)
 {
@@ -366,7 +366,7 @@ void epoll::applyEvents()
 
     int *p = m_pUpdates->begin();
     int *pEnd = m_pUpdates->end();
-    while(p < pEnd)
+    while (p < pEnd)
     {
         epevt.data.fd = *p++;
         EventReactor *pReactor = m_reactorIndex.get(epevt.data.fd);
@@ -376,10 +376,8 @@ void epoll::applyEvents()
             if (pReactor->isApplyEvents())
             {
                 epevt.events = pReactor->getEvents();
-                if ( epoll_ctl(m_epfd, EPOLL_CTL_MOD, epevt.data.fd, &epevt) == 0)
-                {
+                if (epoll_ctl(m_epfd, EPOLL_CTL_MOD, epevt.data.fd, &epevt) == 0)
                     pReactor->updateEventSet();
-                }
             }
         }
     }
@@ -390,9 +388,7 @@ void epoll::applyEvents()
 void epoll::appendEvent(int fd)
 {
     if (m_pUpdates->getSize() >= m_pUpdates->getCapacity())
-    {
         m_pUpdates->guarantee(NULL, m_pUpdates->getCapacity() << 1);
-    }
     int *p = m_pUpdates->getNew();
     *p = fd;
 }

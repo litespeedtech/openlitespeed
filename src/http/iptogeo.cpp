@@ -76,7 +76,7 @@ const char *GeoInfo::getGeoEnv(const char *pEnvName)
         pEnvName += 6;
     else if (strncasecmp(pEnvName, "GEO:", 4) == 0)
         pEnvName += 4;
-    else 
+    else
         return NULL;
 
     if (strncasecmp(pEnvName, "COUNTRY_", 8) == 0)
@@ -84,7 +84,7 @@ const char *GeoInfo::getGeoEnv(const char *pEnvName)
         pEnvName += 8;
         if (strncasecmp(pEnvName, "CODE", 4) == 0)
         {
-                
+
             if ((m_countryId > 0)
                 && (m_countryId < (int)(sizeof(GeoIP_country_name) / sizeof(
                                             const char *))))
@@ -498,7 +498,7 @@ int IpToGeo::testGeoIpDbFile(const char *pFile, int flag)
             GeoInfo info;
             lookUp(*((int *)&addr), &info);
         }
-        exit( ret != 0);
+        exit(ret != 0);
     }
     else
     {

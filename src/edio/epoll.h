@@ -27,7 +27,7 @@ class epoll : public Multiplexer
     struct epoll_event *m_pResCur;
     ReactorIndex        m_reactorIndex;
     TObjArray<int>     *m_pUpdates;
-    
+
     int updateEvents(EventReactor *pHandler, short mask);
 
     void addEvent(EventReactor *pHandler, short mask)
@@ -48,17 +48,17 @@ class epoll : public Multiplexer
             updateEvents(pHandler, mask);
         }
     }
-    
+
     int addEx(int fd, short mask);
     int removeEx(int fd);
     int updateEventsEx(int fd, short mask);
-    
+
     int reinit();
 
     void applyEvents();
     void appendEvent(int fd);
     int  processEvents();
-    
+
 public:
     epoll();
     ~epoll();

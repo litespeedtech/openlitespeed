@@ -105,9 +105,7 @@ public:
     {
         char succ = ls_atomic_cas32(&m_tmLastCleanDiskCache, tmOld, tmNow);
         if (succ)
-        {
             m_iLastCleanSessPurge = m_iSessionPurged;
-        }
         return succ;
     }
 
@@ -154,7 +152,8 @@ public:
                              int len) = 0;
     virtual const char *getVerifyKey(void *pPrivatePurgeData, int *len) = 0;
 
-    virtual int isPurged(CacheEntry *pEntry, CacheKey *pKey, bool isCheckPrivate) = 0;
+    virtual int isPurged(CacheEntry *pEntry, CacheKey *pKey,
+                         bool isCheckPrivate) = 0;
     virtual int processPurgeCmd(const char *pValue, int iValLen,
                                 time_t curTime, int curTimeMS) = 0;
     virtual int processPrivatePurgeCmd(

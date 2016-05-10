@@ -616,7 +616,7 @@ HttpMime::HttpMime(const HttpMime &rhs)
     m_pMIMEMap = new MIMEMap(*rhs.m_pMIMEMap);
     if (rhs.m_pDefault)
         m_pDefault = m_pMIMEMap->findMimeIgnoreCharset((char *)
-                                          rhs.m_pDefault->getMIME()->c_str());
+                     rhs.m_pDefault->getMIME()->c_str());
     else
         m_pDefault = NULL;
     m_pSuffixMap = new MIMESuffixMap();
@@ -765,7 +765,8 @@ const MimeSetting *HttpMime::getFileMimeBySuffix(const char *pType) const
 
 char HttpMime::compressible(const char *pMIME) const
 {
-    const MimeSetting *pSetting = m_pMIMEMap->findMimeIgnoreCharset((char *)pMIME);
+    const MimeSetting *pSetting = m_pMIMEMap->findMimeIgnoreCharset((
+                                      char *)pMIME);
     if (!pSetting)
         if (m_pDefault)
             return m_pDefault->getExpires()->compressible();
@@ -839,8 +840,9 @@ int HttpMime::loadMime(const char *pPropertyPath)
 }
 
 
-MimeSetting * HttpMime::addUpdateMIME(char *pSuffixes, char *pDesc, const char *&reason,
-                            int update)
+MimeSetting *HttpMime::addUpdateMIME(char *pSuffixes, char *pDesc,
+                                     const char *&reason,
+                                     int update)
 {
     pSuffixes = StringTool::strTrim(pSuffixes);
     pDesc = StringTool::strTrim(pDesc);

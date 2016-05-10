@@ -150,7 +150,7 @@ private:
     AutoStr2            m_sSpdyAdHeader;
     ReqParserParam      m_ReqParserParam;
     LsiModuleData       m_moduleData;
-    
+
     UrlStxFileHash     *m_pUrlStxFileHash;
 
     HttpVHost(const HttpVHost &rhs);
@@ -442,7 +442,7 @@ public:
     void addUrlStaticFileMatch(const char *url, StaticFileCacheData *pData);
     StaticFileCacheData *getUrlStaticFileData(const char *url);
     void urlStaticFileHashCleanTimer();
-    
+
 };
 
 

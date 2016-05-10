@@ -45,7 +45,7 @@ public:
     int     init(int32_t iTimeout, int iMaxEntries);
     int     isReady() const              {   return m_pSessStore != NULL;   }
     int32_t getExpireSec() const         {   return m_expireSec;            }
-    void    setExpireSec(int32_t iExpire){   m_expireSec = iExpire;         }
+    void    setExpireSec(int32_t iExpire) {   m_expireSec = iExpire;         }
 
     int     sessionFlush();
     int     stat();

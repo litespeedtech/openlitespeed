@@ -91,7 +91,8 @@ private:
 
     ThrottleUnit    m_input;
     ThrottleUnit    m_output;
-    ThrottleUnit    m_req[3]; //0 is static, 2 is the processors in use, 1 is the requests processed
+    ThrottleUnit
+    m_req[3]; //0 is static, 2 is the processors in use, 1 is the requests processed
 
 public:
     ThrottleControl()       {}

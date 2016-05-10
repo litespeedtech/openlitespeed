@@ -145,11 +145,12 @@ void DevPoller::setPriHandler(EventReactor::pri_handler handler)
 }
 
 
-void DevPoller::modEvent(EventReactor *pHandler, short maskIn, int add_remove)
+void DevPoller::modEvent(EventReactor *pHandler, short maskIn,
+                         int add_remove)
 {
     int mod;
     short mask;
-    
+
     mask = pHandler->getEvents() & maskIn;
     if (add_remove == 0)
     {
@@ -158,7 +159,7 @@ void DevPoller::modEvent(EventReactor *pHandler, short maskIn, int add_remove)
         pHandler->andMask2(~mask);
         appendChange(pHandler->getfd(), POLLREMOVE);
     }
-    else 
+    else
     {
         mask = mask ^ maskIn;
         if (mask == 0)

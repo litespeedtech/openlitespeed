@@ -95,7 +95,7 @@ int assignHandler(lsi_param_t *rec)
     if (len >= URI_PREFIX_LEN &&
         strncasecmp(uri, URI_PREFIX, URI_PREFIX_LEN) == 0)
     {
-        if ( len == URI_PREFIX_LEN)
+        if (len == URI_PREFIX_LEN)
             p = "/";
         else
             p = uri + URI_PREFIX_LEN;
@@ -147,7 +147,7 @@ static int PsHandlerProcess(lsi_session_t *session)
 
     int len = 1024, flag = 0;
     ls_shmoff_t offset = ls_shmhash_get(pShmHash,
-                           (const uint8_t *)URI_PREFIX, sizeof(URI_PREFIX) - 1, &len, &flag);
+                                        (const uint8_t *)URI_PREFIX, sizeof(URI_PREFIX) - 1, &len, &flag);
     if (offset == 0)
     {
         g_api->log(NULL, LSI_LOG_ERROR,
@@ -200,7 +200,7 @@ static int _init(lsi_module_t *pModule)
 
     int len = 1024, flag = LSI_SHM_INIT;
     ls_shmoff_t offset = ls_shmhash_get(pShmHash,
-                           (const uint8_t *)URI_PREFIX, sizeof(URI_PREFIX) - 1, &len, &flag);
+                                        (const uint8_t *)URI_PREFIX, sizeof(URI_PREFIX) - 1, &len, &flag);
     if (offset == 0)
     {
         g_api->log(NULL, LSI_LOG_ERROR,

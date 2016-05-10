@@ -67,8 +67,8 @@ public:
     void setLastAccess(long tm)   {   m_lastAccess = tm;  }
     long getLastAccess() const      {   return m_lastAccess;    }
 
-     void incHits()                  {   ++m_iHits;          }
-     long getHits() const            {   return m_iHits;     }
+    void incHits()                  {   ++m_iHits;          }
+    long getHits() const            {   return m_iHits;     }
 //
 //     void incTestHits()              {   ++m_iTestHits;    }
 //     long getTestHits() const        {   return m_iTestHits;    }

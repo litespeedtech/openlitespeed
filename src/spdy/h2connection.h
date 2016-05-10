@@ -70,7 +70,7 @@ public:
             wanted = 2048;
         return wanted;
     }
-    
+
     int flush();
 
     int onCloseEx();
@@ -119,7 +119,8 @@ public:
     }
 
     int sendDataFrame(uint32_t uiStreamID, int flag, IOVec *pIov, int total);
-    int sendDataFrame(uint32_t uiStreamId, int flag, const char * pBuf, int len);
+    int sendDataFrame(uint32_t uiStreamId, int flag, const char *pBuf,
+                      int len);
 
     int h2cUpgrade(HioHandler *pSession);
 
@@ -139,7 +140,7 @@ public:
         if (isEmpty() && !getStream()->isWantWrite())
             getStream()->continueWrite();
     }
-    
+
     void incShutdownStream()    {   ++m_uiShutdownStreams;  }
     void decShutdownStream()    {   --m_uiShutdownStreams;  }
 
@@ -178,8 +179,8 @@ private:
     int sendGoAwayFrame(H2ErrorCode status);
     int doGoAway(H2ErrorCode status);
 
-    int resetStream( uint32_t id, H2Stream *pStream, H2ErrorCode code);
-    
+    int resetStream(uint32_t id, H2Stream *pStream, H2ErrorCode code);
+
     int appendCtrlFrameHeader(H2FrameType type, uint32_t len,
                               unsigned char flags = 0, uint32_t uiStreamID = 0)
     {

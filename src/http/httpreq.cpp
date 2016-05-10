@@ -142,7 +142,7 @@ HttpReq::HttpReq()
     ls_str_set(&m_pathInfo, NULL, 0);
     ls_str_set(&m_newHost, NULL, 0);
     m_pUrls = (ls_strpair_t *)malloc(sizeof(ls_strpair_t) *
-                                      (MAX_REDIRECTS + 1));
+                                     (MAX_REDIRECTS + 1));
     memset(m_pUrls, 0, sizeof(ls_strpair_t) * (MAX_REDIRECTS + 1));
     m_pEnv = NULL;
     m_pAuthUser = NULL;
@@ -530,7 +530,7 @@ int HttpReq::parseHost(const char *pCur, const char *pBEnd)
             m_iReqHeaderBufFinished = pCur - m_headerBuf.begin();
             return 1;
         }
-        
+
         pHost += 3;
         const char *pHostEnd = (const char *)memchr(pHost, '/', (pBEnd - pHost));
         if (pHostEnd != NULL)
@@ -660,12 +660,10 @@ int HttpReq::processHeaderLines()
                     }
                 }
                 else if (pCurHeader->keyLen == 16
-                        && (strncasecmp(pLineBegin, "CF-Connecting-IP", 16) == 0))
-                {
+                         && (strncasecmp(pLineBegin, "CF-Connecting-IP", 16) == 0))
                     m_iCfIpHeader = m_unknHeaders.getSize();
-                }
                 else if (pCurHeader->keyLen == 17
-                        && strncasecmp(pLineBegin, "X-Forwarded-Proto", 17) == 0)
+                         && strncasecmp(pLineBegin, "X-Forwarded-Proto", 17) == 0)
                 {
                     if (pCurHeader->valLen == 5 && strncasecmp(pTemp, "https", 5) == 0)
                         m_iContextState |= X_FORWARD_HTTPS;
@@ -2302,7 +2300,7 @@ const char *HttpReq::findEnvAlias(const char *pKey, int keyLen,
 
 
 ls_strpair_t *HttpReq::addEnv(const char *pOrgKey, int orgKeyLen,
-                               const char *pValue, int valLen)
+                              const char *pValue, int valLen)
 {
     int keyLen = 0;
     const char *pKey = findEnvAlias(pOrgKey, orgKeyLen, keyLen);
@@ -2388,7 +2386,7 @@ const char *HttpReq::getUnknownHeaderByIndex(int idx, int &keyLen,
 }
 
 
-const char* HttpReq::getCfIpHeader(int &len)
+const char *HttpReq::getCfIpHeader(int &len)
 {
     key_value_pair *pIdx = getUnknHeaderPair(m_iCfIpHeader - 1);
     if (pIdx)
@@ -2624,9 +2622,7 @@ int HttpReq::removeCookie(const char *pName, int nameLen)
     if (pEntry)
     {
         if (m_cookies.getSize() == 1)
-        {
             m_commonHeaderOffset[ HttpHeader::H_COOKIE ] = 0;
-        }
         else
         {
             const char *p = m_headerBuf.getp(pEntry->keyOff);
@@ -2640,8 +2636,9 @@ int HttpReq::removeCookie(const char *pName, int nameLen)
 }
 
 
-cookieval_t *HttpReq::setCookie(const char *pName, int nameLen, const char *pValue,
-                       int valLen)
+cookieval_t *HttpReq::setCookie(const char *pName, int nameLen,
+                                const char *pValue,
+                                int valLen)
 {
     char *p;
     cookieval_t *pIdx = NULL;
@@ -2847,7 +2844,7 @@ int HttpReq::parseCookies()
             --pValEnd;
 
         cookieval_t *pCookieEntry = m_cookies.insertCookieIndex(m_pPool,
-                                        &m_headerBuf, pCookies, pNameEnd - pCookies);
+                                    &m_headerBuf, pCookies, pNameEnd - pCookies);
         if (!pCookieEntry)
             return -1;
 
@@ -2862,12 +2859,13 @@ int HttpReq::parseCookies()
     return 0;
 }
 
-cookieval_t *CookieList::insertCookieIndex(ls_xpool_t *pool, AutoBuf *pData,
+cookieval_t *CookieList::insertCookieIndex(ls_xpool_t *pool,
+        AutoBuf *pData,
         const char *pName, int nameLen)
 {
     if (getCapacity() == 0)
         guarantee(pool, 10);
-    else if(getCapacity() <= getSize() + 1)
+    else if (getCapacity() <= getSize() + 1)
         guarantee(pool, getCapacity() * 2);
 
     cookieval_t *pCookieEntry = getNew();

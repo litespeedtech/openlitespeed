@@ -105,10 +105,10 @@ int DirHashCacheEntry::saveCeHeader()
             getHeader().m_keyLen)
             return LS_FAIL;
     }
-    if ( getHeader().m_tagLen > 0 )
+    if (getHeader().m_tagLen > 0)
     {
-        if ( nio_write( fd, getTag().c_str(), getHeader().m_tagLen ) <
-                getHeader().m_tagLen )
+        if (nio_write(fd, getTag().c_str(), getHeader().m_tagLen) <
+            getHeader().m_tagLen)
             return LS_FAIL;
     }
     return 0;

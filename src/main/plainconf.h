@@ -41,7 +41,8 @@ enum
     LOG_LEVEL_INFO = 'I',
 };
 
-enum ConfFileType {
+enum ConfFileType
+{
     eConfUnknown = 0,
     eConfFile,
     eConfDir,
@@ -100,7 +101,8 @@ public:
                           const char *sLine);
 
     static ConfFileType checkFiletype(const char *path);
-    static void getIncludeFile(const char *curDir, const char *orgFile, char *targetFile);
+    static void getIncludeFile(const char *curDir, const char *orgFile,
+                               char *targetFile);
 
     static const char *getConfDeepValue(const XmlNode *pNode,
                                         const char *name);

@@ -90,7 +90,7 @@ static void addrlookup_callback(struct dns_ctx *ctx, struct dns_rr_ptr *rr,
     {
         //Just use the first result for now
         pInfo->setHostName(rr->dnsptr_ptr[0]);
-        if (LS_LOG_ENABLED( LOG4CXX_NS::Level::DBG_MORE))
+        if (LS_LOG_ENABLED(LOG4CXX_NS::Level::DBG_MORE))
         {
             char achBuf[4096];
             int n = 0;

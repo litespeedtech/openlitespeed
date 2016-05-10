@@ -70,9 +70,11 @@ enum PreserveCachingHeaders
     kDontPreserveHeaders,
 };
 
-void CopyRespHeadersFromServer(lsi_session_t *session, ResponseHeaders *headers);
+void CopyRespHeadersFromServer(lsi_session_t *session,
+                               ResponseHeaders *headers);
 
-void CopyReqHeadersFromServer(lsi_session_t *session, RequestHeaders *headers);
+void CopyReqHeadersFromServer(lsi_session_t *session,
+                              RequestHeaders *headers);
 
 int CopyRespHeadersToServer(lsi_session_t *session,
                             const ResponseHeaders &pagespeed_headers,

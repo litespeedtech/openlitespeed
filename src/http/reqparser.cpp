@@ -564,7 +564,7 @@ int ReqParser::checkBoundary(char *&pBegin, char *&pCur)
             if (size >= 2)
             {
                 if (*(p - 2) == '\r')
-                    additionalBytes=  2;
+                    additionalBytes =  2;
                 else
                     additionalBytes = 1;
             }
@@ -897,7 +897,7 @@ void ReqParser::writeToFile(const char *buf, int len)
     m_pLastFileBuf->write(buf, len);
 
     int iUseCache, iUseBuf;
-    if (len ==1)
+    if (len == 1)
     {
         iUseBuf = 0;
         if (m_md5CachedNum == 0)
@@ -927,7 +927,7 @@ void ReqParser::writeToFile(const char *buf, int len)
 
 void ReqParser::closeLastMFile()
 {
-    if(m_pLastFileBuf)
+    if (m_pLastFileBuf)
     {
         m_pLastFileBuf->close();
         delete m_pLastFileBuf;
@@ -1007,7 +1007,7 @@ int ReqParser::parseDone()
         char *pBuf;
         size_t size;
         while (((pBuf = pVMBuf->getReadBuffer(size)) != NULL)
-           && (size > 0))
+               && (size > 0))
         {
             fwrite(pBuf, size, 1, f);
             pVMBuf->readUsed(size);

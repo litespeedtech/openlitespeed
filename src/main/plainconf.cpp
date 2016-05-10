@@ -39,7 +39,7 @@
 #include <unistd.h>
 
 //#define TEST_OUTPUT_PLAIN_CONF
- 
+
 //Special case
 //:: means module and module name
 
@@ -248,6 +248,7 @@ plainconfKeywords plainconf::sKeywords[] =
     {"rewritecond",                              NULL},
     {"rewriteengine",                            NULL},
     {"rewriterule",                              NULL},
+    {"rewritefile",                              NULL},
     {"rollingsize",                              NULL},
     {"rubybin",                                  NULL},
     {"rules",                                    NULL},
@@ -952,15 +953,15 @@ int plainconf::checkMultiLineMode(const char *sLine,
 //if true return true, and also set the path
 bool plainconf::isInclude(const char *sLine, AutoStr2 &path)
 {
+    char *p = NULL;
     if (strncasecmp(sLine, "include", 7) == 0)
-    {
-        char *p = (char *)sLine + 7;
-        removeSpace(p, 0);
-        path = p;
-        return true;
-    }
+        p = (char *)sLine + 7;
+    else
+        return false;
 
-    return false;
+    removeSpace(p, 0);
+    path = p;
+    return true;
 }
 
 ConfFileType plainconf::checkFiletype(const char *path)
@@ -1014,7 +1015,7 @@ void plainconf::loadDirectory(const char *pPath, const char *pPattern)
         if (pPattern)
         {
             //Beside the unmatch, also must exclude *,v which was created by rcs
-            if(fnmatch(pPattern, pName, FNM_PATHNAME) != 0
+            if (fnmatch(pPattern, pName, FNM_PATHNAME) != 0
                 || fnmatch("*,v", pName, FNM_PATHNAME) == 0)
                 continue;
         }
@@ -1042,7 +1043,8 @@ void plainconf::loadDirectory(const char *pPath, const char *pPattern)
 }
 
 
-void plainconf::getIncludeFile(const char *curDir, const char *orgFile, char *targetFile)
+void plainconf::getIncludeFile(const char *curDir, const char *orgFile,
+                               char *targetFile)
 {
     int len = strlen(orgFile);
 

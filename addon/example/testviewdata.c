@@ -50,7 +50,7 @@ static int beginSession(lsi_param_t *rec)
 {
     int aEnableHkpts[] = {LSI_HKPT_RECV_RESP_BODY, LSI_HKPT_SEND_RESP_BODY};
     g_api->enable_hook(rec->session, &MNAME, 1,
-                                        aEnableHkpts, 2);
+                       aEnableHkpts, 2);
     return 0;
 }
 

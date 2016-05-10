@@ -98,7 +98,7 @@ public:
         used(size);
         return size;
     }
-    
+
     int xAppend(const char *pBuf, int size, ls_xpool_t *pool)
     {   return ls_buf_xappend2(this, pBuf, size, pool);  }
 

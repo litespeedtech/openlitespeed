@@ -201,7 +201,7 @@ private:
     long                m_lStartTime;
     pid_t               m_pid;
     gid_t               m_pri_gid;
-    HttpFetch *         m_pAutoUpdFetch;
+    HttpFetch          *m_pAutoUpdFetch;
 
     HttpServerImpl(const HttpServerImpl &rhs);
     void operator=(const HttpServerImpl &rhs);
@@ -304,7 +304,7 @@ private:
                            HttpVHost    *pVHost,
                            const char *pDomains);
 
-    
+
     void checkOLSUpdate();
     void onTimer();
     void onTimer60Secs();
@@ -345,7 +345,7 @@ private:
                                    const char *pURI, char *pchPHPBin);
     const char *configAdminPhpUri(const XmlNode *pNode);
     int configAdminConsole(const XmlNode *pNode);
-    int configSysShmDirs( char *pConfDir );
+    int configSysShmDirs(char *pConfDir);
     int configTuning(const XmlNode *pRoot);
     void setMaxConns(int32_t conns);
     void setMaxSSLConns(int32_t conns);
@@ -376,11 +376,11 @@ private:
     int initServer(XmlNode *pRoot, int reconfig);
     int initServer(XmlNode *pRoot, int &iReleaseXmlTree, int reconfig);
     int readVersion(const char *path);
-    
+
 public:
     void hideServerSignature(int sv);
     int processAutoUpdResp(HttpFetch *pHttpFetch);
-    
+
 };
 
 #include <http/userdir.h>
@@ -502,7 +502,7 @@ int HttpServerImpl::generateStatusReport()
         LS_ERROR("Failed to generate the status report!");
     char achBuf1[1024];
     ret = snprintf(achBuf1, 1024, "DEBUG_LOG: %d, VERSION: %s-%s\n",
-                   (LS_LOG_ENABLED( LOG4CXX_NS::Level::DBG_LESS )) ? 1 : 0,
+                   (LS_LOG_ENABLED(LOG4CXX_NS::Level::DBG_LESS)) ? 1 : 0,
                    PACKAGE_VERSION, LS_PLATFORM);
     pAppender->append(achBuf1, ret);
 
@@ -903,7 +903,8 @@ static int autoUpdCheckCb(void *pArg, HttpFetch *pHttpFetch)
 
 int HttpServerImpl::readVersion(const char *path)
 {
-    //If a.b.c will return ((a * 100) + b) * 100) + c
+    //a.b.c(.d) will return (((a * 100 + b) * 100) + c) * 100 + d
+    //a, b, c and d will take up to 2 digits
     char s[20] = {0};
     int ver = 0;
     FILE *fp = fopen(path, "r");
@@ -912,16 +913,17 @@ int HttpServerImpl::readVersion(const char *path)
         fread(s, 1, 20, fp);
         fclose(fp);
 
-        int a = 0, b = 0, c = 0;
-        sscanf(s, "%d.%d.%d", &a, &b, &c);
-        ver = a * 10000 + b * 100 + c;
+        int a = 0, b = 0, c = 0, d = 0;
+        //The .d may not exist
+        if (sscanf(s, "%d.%d.%d.%d", &a, &b, &c, &d) >= 3)
+            ver = (((a * 100 + b % 100) * 100) + c % 100) * 100 + d % 100;
     }
     return ver;
 }
 
 int HttpServerImpl::processAutoUpdResp(HttpFetch *pHttpFetch)
 {
-    assert( pHttpFetch == m_pAutoUpdFetch );
+    assert(pHttpFetch == m_pAutoUpdFetch);
     int istatusCode = m_pAutoUpdFetch->getStatusCode() ;
     const char *path = pHttpFetch->getResult()->getTempFileName();
     if (istatusCode != 200)
@@ -930,15 +932,16 @@ int HttpServerImpl::processAutoUpdResp(HttpFetch *pHttpFetch)
     {
         chmod(path, 0744);
         int newVer = readVersion(path);
-        if (newVer > 10000)
+        if (newVer > 1000000)
         {
             AutoStr2 sCurVer;
             sCurVer.setStr(MainServerConfig::getInstance().getServerRoot());
             sCurVer.append("/VERSION", 8);
             int curVer = readVersion(sCurVer.c_str());
             if (newVer > curVer)
-                LS_NOTICE("[!!!UPDATE!!!] new version %d.%d.%d is available.\n",
-                          newVer/10000, (newVer/100) % 100, newVer % 100);
+                LS_NOTICE("[!!!UPDATE!!!] new version %d.%d.%d.%d is available.\n",
+                          newVer / 1000000, (newVer / 10000) % 100, 
+                          (newVer / 100) % 100, newVer % 100);
         }
     }
     return 0;
@@ -952,7 +955,7 @@ void HttpServerImpl::checkOLSUpdate()
     AutoStr2 sAutoUpdFile;
     sAutoUpdFile.setStr(MainServerConfig::getInstance().getServerRoot());
     sAutoUpdFile.append("/autoupdate/", 12);
-    if (stat(sAutoUpdFile.c_str(), &sb) == -1) 
+    if (stat(sAutoUpdFile.c_str(), &sb) == -1)
         mkdir(sAutoUpdFile.c_str(), 0755);
     sAutoUpdFile.append("release", 7);
 
@@ -966,7 +969,7 @@ void HttpServerImpl::checkOLSUpdate()
             unlink(sAutoUpdFile.c_str());
     }
 
-    struct tm * tl = localtime(&t);
+    struct tm *tl = localtime(&t);
     if (tl->tm_hour != 2)  //Only check it between 2:00AM - 3:00AM
         return ;
 
@@ -981,9 +984,9 @@ void HttpServerImpl::checkOLSUpdate()
     GSockAddr m_addrResponder;
     m_addrResponder.setHttpUrl("http://open.litespeedtech.com/", 30);
     m_pAutoUpdFetch->startReq("http://open.litespeedtech.com/packages/release",
-                               1, 1, NULL, 0, 
-                               sAutoUpdFile.c_str(),
-                               NULL, m_addrResponder);
+                              1, 1, NULL, 0,
+                              sAutoUpdFile.c_str(),
+                              NULL, m_addrResponder);
 
     return ;
 }
@@ -1864,9 +1867,7 @@ int HttpServerImpl::configSysShmDirs(char *pConfDir)
     if ((pConfDir != NULL)
         && ((LsShm::checkDirSpace(pConfDir) != LSSHM_OK)
             || (LsShm::addBaseDir(pConfDir) != LSSHM_OK)))
-    {
         LS_ERROR("Add configured default directory failed! '%s'", pConfDir);
-    }
     pRamdisk = LsShm::detectDefaultRamdisk();
     if (pRamdisk != NULL)
     {
@@ -1874,7 +1875,7 @@ int HttpServerImpl::configSysShmDirs(char *pConfDir)
         if (GPath::createMissingPath(achDir, 0750) != 0)
             LS_ERROR("Create default directory failed! '%s'", achDir);
         else if ((LsShm::checkDirSpace(achDir) != LSSHM_OK)
-            || (LsShm::addBaseDir(achDir) != LSSHM_OK))
+                 || (LsShm::addBaseDir(achDir) != LSSHM_OK))
             LS_ERROR("Add default directory failed!  '%s'", achDir);
     }
 
@@ -1969,7 +1970,7 @@ int HttpServerImpl::configTuning(const XmlNode *pRoot)
                 " SSL hardware acceleration is disabled!", pValue);
     }
     SslContext::setUseStrongDH(currentCtx.getLongValue(pNode, "SSLStrongDhKey",
-                                                       0, 1, 1));
+                               0, 1, 1));
 
     // GZIP compression
     config.setGzipCompress(currentCtx.getLongValue(pNode, "enableGzipCompress",
@@ -2025,22 +2026,22 @@ int HttpServerImpl::configTuning(const XmlNode *pRoot)
 
 
     // shm
-    const char *pShmDir = pNode->getChildValue( "shmDefaultDir" );
+    const char *pShmDir = pNode->getChildValue("shmDefaultDir");
     char achShmDefDir[MAX_PATH_LEN];
     char *pConfDir = NULL;
-    if ( pShmDir != NULL )
+    if (pShmDir != NULL)
     {
         if (currentCtx.getValidFile(achShmDefDir, pShmDir, "Shm Default Dir") == 0)
             pConfDir = achShmDefDir;
     }
 
-    if ( configSysShmDirs(pConfDir) == 0 )
+    if (configSysShmDirs(pConfDir) == 0)
     {
         LS_ERROR("Failed to init any system shm directories.");
         return -1;
     }
 
-    if ( currentCtx.getLongValue(pNode, "sslEnableMultiCerts", 0, 1, 0) == 1 )
+    if (currentCtx.getLongValue(pNode, "sslEnableMultiCerts", 0, 1, 0) == 1)
         SslContext::enableMultiCerts();
 
     int iSslCacheSize;
@@ -2051,8 +2052,8 @@ int HttpServerImpl::configTuning(const XmlNode *pRoot)
                                                 0, INT_MAX, 1000000);
 
         iSslCacheTimeout = currentCtx.getLongValue(pNode,
-                                                   "sslSessionCacheTimeout",
-                                                   0, INT_MAX, 216000);
+                           "sslSessionCacheTimeout",
+                           0, INT_MAX, 216000);
         if (SslSessCache::getInstance().init(iSslCacheTimeout,
                                              iSslCacheSize) != LS_OK)
         {
@@ -2072,7 +2073,7 @@ int HttpServerImpl::configTuning(const XmlNode *pRoot)
                 pTKFile = achTKFile;
         }
         long iTicketLifetime = currentCtx.getLongValue(pNode,
-                        "sslSessionTicketLifetime", 216000, INT_MAX, 216000);
+                               "sslSessionTicketLifetime", 216000, INT_MAX, 216000);
         SslTicket::getInstance().init(pTKFile, iTicketLifetime);
     }
 
@@ -2376,7 +2377,7 @@ void HttpServerImpl::configVHTemplateToListenerMap(
     for (iter = pList->begin(); iter != pList->end(); ++iter)
     {
         const char *pName = ConfigCtx::getCurConfigCtx()->getTag((*iter),
-                                                                 "name", 1);
+                            "name", 1);
         const char *pDomain = (*iter)->getChildValue("vhDomain");
         const char *pAliases = (*iter)->getChildValue("vhAliases");
         const char *pVhRoot = (*iter)->getChildValue("vhRoot");
@@ -3231,8 +3232,8 @@ int HttpServerImpl::initSampleServer()
     }
     SslContext *pNewContext = new SslContext(SslContext::SSL_ALL);
     SslContext *pSSL = pNewContext->setKeyCertCipher(achBuf1, achBuf, NULL,
-                NULL, "ALL:!ADH:!EXPORT56:RC4+RSA:+HIGH:+MEDIUM:+SSLv2:+EXP",
-                0, 0, 0);
+                       NULL, "ALL:!ADH:!EXPORT56:RC4+RSA:+HIGH:+MEDIUM:+SSLv2:+EXP",
+                       0, 0, 0);
     if (pSSL == NULL)
         delete pNewContext;
 

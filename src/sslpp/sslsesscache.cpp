@@ -73,7 +73,7 @@ int SslSessCache::initShm()
     if ((pPool = pShm->getGlobalPool()) == NULL)
         return LS_FAIL;
     if ((m_pSessStore = pPool->getNamedHash(shmSslCache, 10000,
-                        LsShmHash::hash32id, memcmp, LSSHM_FLAG_LRU)) != NULL)
+                                            LsShmHash::hash32id, memcmp, LSSHM_FLAG_LRU)) != NULL)
     {
         m_pSessStore->disableLock(); // we will be responsible for the lock
         s_numNew = 0;
@@ -129,7 +129,8 @@ static int newSessionCb(SSL *pSSL, SSL_SESSION *pSess)
  * This function will go into shm to look for the ID and if found,
  * will convert it to, and return as a SSL_SESSION object.
  */
-static SSL_SESSION *getSessionCb(SSL *pSSL, unsigned char *id, int len, int *ref)
+static SSL_SESSION *getSessionCb(SSL *pSSL, unsigned char *id, int len,
+                                 int *ref)
 {
     SslSessCache &cache = SslSessCache::getInstance();
 
@@ -139,7 +140,7 @@ static SSL_SESSION *getSessionCb(SSL *pSSL, unsigned char *id, int len, int *ref
     //*ref = 0;
     const unsigned char *cp;
     SSL_SESSION *pSess = NULL;
-    SslSessData_t * pObj = cache.getLockedSessionData(id, len);
+    SslSessData_t *pObj = cache.getLockedSessionData(id, len);
     if (pObj)
     {
         cp = (const unsigned char *) pObj->x_sessionData;
@@ -148,7 +149,8 @@ static SSL_SESSION *getSessionCb(SSL *pSSL, unsigned char *id, int len, int *ref
         if (pSess)
         {
             printId("Create Session from cache succeed", id, len);
-            SslConnection *pConn = (SslConnection *)SSL_get_ex_data(pSSL, SslConnection::getConnIdx());
+            SslConnection *pConn = (SslConnection *)SSL_get_ex_data(pSSL,
+                                   SslConnection::getConnIdx());
             pConn->setFreeSess();
         }
         else
@@ -183,7 +185,7 @@ static void removeCb(SSL_CTX *pCtx, SSL_SESSION *pSess)
 #ifdef DEBUG_SHOW_MORE
     printId("Remove Session", pSess->session_id, pSess->session_id_length);
 #endif
-    LsShmHash * pStore = cache.getSessStore();
+    LsShmHash *pStore = cache.getSessStore();
 
     pStore->lock();
     pStore->remove(pSess->session_id, pSess->session_id_length);
@@ -224,9 +226,7 @@ int SslSessCache::addSession(unsigned char *pId, int idLen,
 #endif
     }
     else
-    {
         printId("Failed to add to SHM hashtable", pId, idLen);
-    }
     m_pSessStore->unlock();
 
     return (iObjOff != 0); //session will be cached
@@ -246,7 +246,8 @@ void SslSessCache::unlock()
  * NOTICE: if this function succeeds, the hash table \b must be unlocked
  * afterwards.
  */
-SslSessData_t *SslSessCache::getLockedSessionData(unsigned char *id, int len)
+SslSessData_t *SslSessCache::getLockedSessionData(unsigned char *id,
+        int len)
 {
     int valLen;
     LsShmOffset_t iObjOff;
@@ -314,7 +315,8 @@ int checkStatElem(LsShmHash::iteroffset iIterOff, void *pData)
 {
     LsHashStat *pHashStat = (LsHashStat *)pData;
     LsShmHash *pHash = (LsShmHash *)pHashStat->userData;
-    SslSessData_t *pObj = (SslSessData_t *)pHash->offset2iteratorData(iIterOff);
+    SslSessData_t *pObj = (SslSessData_t *)pHash->offset2iteratorData(
+                              iIterOff);
     if (isExpired(pObj))
         pHashStat->numExpired++;
     return 0;
