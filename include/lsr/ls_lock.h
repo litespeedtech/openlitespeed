@@ -55,7 +55,6 @@ extern "C" {
 #if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__) \
     || defined(__FreeBSD__ ) || defined(__NetBSD__) || defined(__OpenBSD__)
 #define USE_F_MUTEX
-#define USE_ATOMIC_SPIN
 #define USE_MUTEX_ADAPTIVE
 
 #else
@@ -63,7 +62,7 @@ extern "C" {
 #define USE_MUTEX_LOCK
 
 #endif
-
+#define USE_ATOMIC_SPIN
 
 #define MAX_FUTEX_SPINCNT      10
 #define MAX_FUTEX_PIDCHECK     10
@@ -360,7 +359,7 @@ int ls_futex_setup(ls_mutex_t *p);
  * @see ls_atomic_spin_setup, ls_atomic_spin_trylock, ls_atomic_spin_unlock,
  *   ls_atomic_spin_pidlock
  */
-ls_inline int ls_atomic_spin_lock(ls_atom_spinlock_t *p)
+ls_inline int ls_atomic_spin_lock(volatile ls_atom_spinlock_t *p)
 {
     while (1)
     {
@@ -457,7 +456,7 @@ ls_inline int ls_atomic_pidspin_trylock(ls_atom_spinlock_t *p)
  *
  * @see ls_atomic_spin_setup, ls_atomic_spin_lock, ls_atomic_spin_trylock
  */
-ls_inline int ls_atomic_spin_unlock(ls_atom_spinlock_t *p)
+ls_inline int ls_atomic_spin_unlock(volatile ls_atom_spinlock_t *p)
 {
     ls_atomic_clrint(p);
     return 0;

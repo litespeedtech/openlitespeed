@@ -21,8 +21,14 @@
 #include "pagespeed.h"
 #include <lsdef.h>
 
+#include <vector>
+
+
 #include "net/instaweb/rewriter/public/rewrite_options.h"
-#include "net/instaweb/system/public/system_rewrite_options.h"
+#include "pagespeed/kernel/base/message_handler.h"
+#include "pagespeed/kernel/base/ref_counted_ptr.h"
+#include "pagespeed/kernel/base/stl_util.h"          // for STLDeleteElements
+#include "pagespeed/system/system_rewrite_options.h"
 
 namespace net_instaweb
 {
@@ -31,7 +37,6 @@ class LsiRewriteDriverFactory;
 class LsiRewriteOptions : public SystemRewriteOptions
 {
 public:
-    // See rewrite_options::Initialize and ::Terminate
     static void Initialize();
     static void Terminate();
 
@@ -40,26 +45,12 @@ public:
     explicit LsiRewriteOptions(ThreadSystem *thread_system);
     virtual ~LsiRewriteOptions() { }
 
-    // args is an array of n_args StringPieces together representing a directive.
-    // For example:
-    //   ["RewriteLevel", "PassThrough"]
-    // or
-    //   ["EnableFilters", "combine_css,extend_cache,rewrite_images"]
-    // or
-    //   ["ShardDomain", "example.com", "s1.example.com,s2.example.com"]
-    // Apply the directive, returning LSI_CONF_OK on success or an error message
-    // on failure.
-    //
-    // pool is a memory pool for allocating error strings.
     const char *ParseAndSetOptions(
         StringPiece *args, int n_args, MessageHandler *handler,
         LsiRewriteDriverFactory *driver_factory, OptionScope scope);
 
-    // Make an identical copy of these options and return it.
     virtual LsiRewriteOptions *Clone() const;
 
-    // Returns a suitably down cast version of 'instance' if it is an instance
-    // of this class, NULL if not.
     static const LsiRewriteOptions *DynamicCast(const RewriteOptions
             *instance);
     static LsiRewriteOptions *DynamicCast(RewriteOptions *instance);
@@ -90,20 +81,6 @@ public:
     }
 
 private:
-    // Helper methods for ParseAndSetOptions().  Each can:
-    //  - return kOptionNameUnknown and not set msg:
-    //    - directive not handled; continue on with other possible
-    //      interpretations.
-    //  - return kOptionOk and not set msg:
-    //    - directive handled, all's well.
-    //  - return kOptionValueInvalid and set msg:
-    //    - directive handled with an error; return the error to the user.
-    //
-    // msg will be shown to the user on kOptionValueInvalid.  While it would be
-    // nice to always use msg and never use the MessageHandler, some option
-    // parsing code in RewriteOptions expects to write to a MessageHandler.  If
-    // that happens we put a summary on msg so the user sees something, and the
-    // detailed message goes to their log via handler.
     OptionSettingResult ParseAndSetOptions0(
         StringPiece directive, GoogleString *msg, MessageHandler *handler);
 

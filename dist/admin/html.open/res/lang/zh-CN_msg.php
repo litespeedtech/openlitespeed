@@ -446,7 +446,6 @@ $_gmsg['l_ssl'] = 'SSL私钥和证书';
 $_gmsg['l_sslcryptodevice'] = 'SSL硬件加速器';
 $_gmsg['l_sslopt4758cca'] = '(4758cca) IBM 4758 CCA硬件引擎支持';
 $_gmsg['l_ssloptaep'] = '(aep) Aep 硬件引擎支持';
-$_gmsg['l_ssloptaesni'] = '(aesni) Intel AES-NI引擎';
 $_gmsg['l_ssloptatalla'] = '(atalla) Atalla硬件引擎支持';
 $_gmsg['l_ssloptauto'] = '(auto) 自动使用可用设备';
 $_gmsg['l_ssloptchil'] = '(chil) nCipher硬件引擎支持';

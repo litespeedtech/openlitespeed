@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2015  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2016  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -19,18 +19,11 @@
 #define LSI_REWRITE_DRIVER_FACTORY_H_
 
 #include <lsdef.h>
-
 #include <set>
 
-#include "net/instaweb/system/public/system_rewrite_driver_factory.h"
-#include "net/instaweb/util/public/md5_hasher.h"
-#include "net/instaweb/util/public/scoped_ptr.h"
-#include "net/instaweb/system/public/serf_url_async_fetcher.h"
-
-
-// TODO(oschaaf): We should reparent ApacheRewriteDriverFactory and
-// LsiRewriteDriverFactory to a new class OriginRewriteDriverFactory and factor
-// out as much as possible.
+#include "pagespeed/kernel/base/md5_hasher.h"
+#include "pagespeed/kernel/base/scoped_ptr.h"
+#include "pagespeed/system/system_rewrite_driver_factory.h"
 
 namespace net_instaweb
 {
@@ -65,6 +58,7 @@ public:
     static void InitStats(Statistics *statistics);
     LsServerContext *MakeLsiServerContext(StringPiece hostname, int port);
     virtual ServerContext *NewServerContext();
+    virtual void ShutDown();
 
     void StartThreads();
 
@@ -107,6 +101,7 @@ private:
 
     GoogleString m_sHostname;
     int m_iPort;
+    bool m_bShutDown;
 
     LS_NO_COPY_ASSIGN(LsiRewriteDriverFactory);
 };

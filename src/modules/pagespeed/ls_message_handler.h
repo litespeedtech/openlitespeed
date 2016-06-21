@@ -22,11 +22,11 @@
 
 #include <cstdarg>
 
-#include "net/instaweb/system/public/system_message_handler.h"
-#include "net/instaweb/util/public/basictypes.h"
-#include "net/instaweb/util/public/message_handler.h"
-#include "net/instaweb/util/public/string.h"
-#include "net/instaweb/util/public/string_util.h"
+#include "pagespeed/kernel/base/basictypes.h"
+#include "pagespeed/kernel/base/message_handler.h"
+#include "pagespeed/kernel/base/string.h"
+#include "pagespeed/kernel/base/string_util.h"
+#include "pagespeed/system/system_message_handler.h"
 
 namespace net_instaweb
 {
@@ -47,10 +47,10 @@ public:
 
 
 protected:
-    virtual void MessageVImpl(MessageType type, const char *msg, va_list args);
+    virtual void MessageSImpl(MessageType type, const GoogleString& message);
 
-    virtual void FileMessageVImpl(MessageType type, const char *filename,
-                                  int line, const char *msg, va_list args);
+    virtual void FileMessageSImpl(MessageType type, const char* file, 
+                                  int line, const GoogleString& message);
 
 private:
     lsi_log_level GetLsiLogLevel(MessageType type);

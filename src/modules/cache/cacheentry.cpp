@@ -146,19 +146,35 @@ int CacheEntry::verifyKey(CacheKey *pKey) const
         p += pKey->m_iCookieVary + 1;
 
     }
+
+    //pKey->m_ipLen < 0 is for the public cache key
+    bool isPublic = false;
+    if (pKey->m_ipLen < 0)
+    {
+        pKey->m_ipLen = 0 - pKey->m_ipLen;
+        isPublic = true;
+    }
+    
     if (pKey->m_ipLen > 0)
     {
         if (pKey->m_iCookiePrivate > 0)
         {
-            if ((*p  != '~') ||
-                (memcmp(p + 1, pKey->m_sCookie.c_str() + pKey->m_iCookieVary,
-                        pKey->m_iCookiePrivate) != 0))
-                return -1;
+            if (!isPublic)
+            {
+                if ((*p  != '~') ||
+                    (memcmp(p + 1, pKey->m_sCookie.c_str() + pKey->m_iCookieVary,
+                            pKey->m_iCookiePrivate) != 0))
+                    return -1;
+            }
             p += pKey->m_iCookiePrivate + 1;
         }
-        if ((*p  != '@') ||
-            (memcmp(p + 1, pKey->m_pIP, pKey->m_ipLen) != 0))
-            return -1;
+        
+        if (!isPublic)
+        {
+            if ((*p  != '@') ||
+                (memcmp(p + 1, pKey->m_pIP, pKey->m_ipLen) != 0))
+                return -1;
+        }
         p += pKey->m_ipLen + 1;
     }
     if (m_header.m_keyLen > p - m_sKey.c_str())

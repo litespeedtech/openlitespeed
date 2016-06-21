@@ -21,8 +21,17 @@
 #include <lsr/ls_evtcb.h>
 #include <util/dlinkqueue.h>
 #include <util/tsingleton.h>
+#include <edio/eventnotifier.h>
+
 
 struct evtcbnode_s;
+
+class EmptyEventNotifier : public EventNotifier
+{
+public:
+    virtual int handleEvents(short int event) {return 0;}
+    virtual int onNotified(int count){return 0;};
+};
 
 class EvtcbQue : public TSingleton<EvtcbQue>
 {
@@ -34,15 +43,27 @@ class EvtcbQue : public TSingleton<EvtcbQue>
     DLinkQueue  m_callbackObjList;
 
     inline void logState(const char *s, evtcbnode_s *p);
-    void removeObj(evtcbnode_s *pObj);
-    void recycle(evtcbnode_s *pObj);
+    void runOne(evtcbnode_s *pObj);
 
 public:
     void run(evtcbhead_t *session);
+    void run();
+    void recycle(evtcbnode_s *pObj);
+
+    evtcbnode_s * getNodeObj(evtcb_pf cb, evtcbhead_t *session,
+                             long lParam, void *pParam);
+    
+    evtcbhead_t **get_session_ref_ptr(evtcbnode_s *);
+    
+    void schedule(evtcbnode_s *pObj, bool nowait = false);
     evtcbnode_s *schedule(evtcb_pf cb, evtcbhead_t *session,
                           long lParam, void *pParam);
     void removeSessionCb(evtcbhead_t *session);
 
     LS_NO_COPY_ASSIGN(EvtcbQue);
+    
+private:
+    int lock_add;
+    EmptyEventNotifier *m_pEmptyEventNotifier;
 };
 #endif  //CALLBACKQUEUE_H

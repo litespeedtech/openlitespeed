@@ -848,6 +848,42 @@ static long create_session_resume_event(lsi_session_t *session,
     return create_event(cb, session, pSession->getSn(), NULL);
 }
 
+static long get_event_obj(evtcb_pf cb, lsi_session_t *pSession,
+                         long lParam, void *pParam)
+{
+    return (long)EvtcbQue::getInstance().getNodeObj(cb, pSession, lParam, pParam);
+}
+
+
+static void schedule_event(long event_obj, int nowait)
+{
+    EvtcbQue::getInstance().schedule((evtcbnode_s *)event_obj, nowait);
+}
+
+static void remove_event_obj(long event_obj)
+{
+    EvtcbQue::getInstance().recycle((evtcbnode_s *)event_obj);
+}
+
+static lsi_session_t **get_session_ref_ptr(long event_obj)
+{
+    return EvtcbQue::getInstance().get_session_ref_ptr((evtcbnode_s *)event_obj);
+}
+
+void set_session_back_ref_ptr(lsi_session_t *pSession_, lsi_session_t **session)
+{
+    HttpSession *pSession = (HttpSession *)((LsiSession *)pSession_);
+    pSession->setBackRefPtr(session);
+}
+
+
+void reset_session_back_ref_ptr(lsi_session_t *pSession_)
+{
+    HttpSession *pSession = (HttpSession *)((LsiSession *)pSession_);
+    pSession->resetBackRefPtr();
+}
+
+
 static const char *get_req_header(lsi_session_t *session, const char *key,
                                   int keyLen, int *valLen)
 {
@@ -2058,6 +2094,13 @@ void lsiapi_init_server_api()
 
     pApi->create_event = create_event;
     pApi->create_session_resume_event = create_session_resume_event;
+    
+    pApi->get_event_obj = get_event_obj;
+    pApi->schedule_event = schedule_event;
+    pApi->remove_event_obj = remove_event_obj;
+    pApi->set_session_back_ref_ptr = set_session_back_ref_ptr;
+    pApi->reset_session_back_ref_ptr = reset_session_back_ref_ptr;
+    pApi->get_session_ref_ptr = get_session_ref_ptr;
 
     pApi->get_req_raw_headers_length = get_req_raw_headers_length;
     pApi->get_req_raw_headers = get_req_raw_headers;

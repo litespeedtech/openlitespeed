@@ -63,13 +63,11 @@
 
 			<?php
 			$prod = Product::GetInstance();
-			$product = ucwords(strtolower(Product::PROD_NAME));
-			$edition = ucwords(strtolower($prod->getEdition()));
 			$version = $prod->getVersion();
 			$new_version = $prod->getNewVersion();
 
 			$ver_notice = DMsg::UIStr('note_curver') . ':</span><span>'
-				. $product . ' ' . $edition . ' ' . $version; // .  . '</span>';
+				. Product::PROD_NAME . ' ' . $version; 
 			if ($new_version) {
 				$ver_notice .= ' &nbsp;&nbsp;<a href="http://open.litespeedtech.com/releaselog" target="_blank"><i>'
 						. DMsg::UIStr('note_newver') . ' ' . $new_version . '</i></a>';

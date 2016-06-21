@@ -104,7 +104,7 @@ if [ "${PHP_SRC_READY}" = "N" ] ; then
 fi
 
 if [ "${PHP_SRC_READY}" = "N" ] ; then
-	MAIN_VER=`expr '${PHP_VERSION}' : "\(.\)"`
+	MAIN_VER=`expr "${PHP_VERSION}" : "\(.\)"`
 	DOWNLOAD_URL="http://museum.php.net/php${MAIN_VER}/${PHP_SRC}"
 	main_msg "Try again, retrieving PHP source archive from ${DOWNLOAD_URL}" 
 	${DL_METHOD} ${PHP_SRC} ${DOWNLOAD_URL}

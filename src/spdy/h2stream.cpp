@@ -239,6 +239,8 @@ int H2Stream::getDataFrameSize(int wanted)
         (0 >= m_iWindowOut))
     {
         setFlag(HIO_FLAG_BUFF_FULL | HIO_FLAG_WANT_WRITE, 1);
+        if (next() == NULL)
+            m_pH2Conn->add2PriorityQue(this);
         m_pH2Conn->setPendingWrite();
         return 0;
     }

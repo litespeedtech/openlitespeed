@@ -724,9 +724,13 @@ void calcCacheHash2(lsi_session_t *session, CacheKey *pKey,
     XXH64_reset(&state, 0);
     XXH64_update(&state, host, len);
 
-    len = g_api->get_req_var_by_id(session, LSI_VAR_SSL_VERSION, env, 12);
-    if (len > 3)  //SSL
-        XXH64_update(&state, "!", 1);
+    char port[12] = ":";
+    g_api->get_req_var_by_id(session, LSI_VAR_SERVER_PORT, port + 1, 10);
+    XXH64_update(&state, port, strlen(port));
+    
+//     len = g_api->get_req_var_by_id(session, LSI_VAR_SSL_VERSION, env, 12);
+//     if (len > 3)  //SSL
+//         XXH64_update(&state, "!", 1);
 
     XXH64_update(&state, pKey->m_pUri, pKey->m_iUriLen);
 
@@ -841,8 +845,12 @@ short hasCache(lsi_param_t *rec, MyMData *myData, int no_vary,
     if (doPublic)
     {
         //Second, check if can use public one
+        //Attemp to set the ipLen to negative number for checking public cache
+        int savedIpLen = myData->cacheKey.m_ipLen;
+        myData->cacheKey.m_ipLen = 0 - savedIpLen;
         *pEntry = pDirHashCacheStore->getCacheEntry(*cePublicHash,
                   &myData->cacheKey, pConfig->getMaxStale(), -1);
+        myData->cacheKey.m_ipLen = savedIpLen;
         if (*pEntry && (!(*pEntry)->isStale() || (*pEntry)->isUpdating()))
             return CE_STATE_HAS_PUBLIC_CACHE;
     }
@@ -1090,6 +1098,18 @@ static int createEntry(lsi_param_t *rec)
                    "[%s]createEntry quit, code 2.\n", ModuleNameStr);
         return 0;
     }
+    
+    //Error page won't be stored to cache
+    int code = g_api->get_status_code(rec->session);
+    if (code != 200)
+    {
+        clearHooks(rec->session);
+        g_api->log(rec->session, LSI_LOG_DEBUG,
+                   "[%s]cacheTofile to be cancelled for error page, code=%d.\n",
+                   ModuleNameStr, code);
+        return 0;
+    }
+
 
 //     count = g_api->get_resp_header(rec->session,
 //                                        LSI_RSPHDR_LITESPEED_TAG,
@@ -1115,20 +1135,17 @@ static int createEntry(lsi_param_t *rec)
 
     if (!myData->pConfig->isSet(CACHE_IGNORE_RESP_CACHE_CTRL_HEADER))
     {
-        iovec iov[3];
-        int count = g_api->get_resp_header(rec->session,
+        count = g_api->get_resp_header(rec->session,
                                            LSI_RSPHDR_CACHE_CTRL, NULL, 0, iov, 3);
         for (int i = 0; i < count; ++i)
             myData->cacheCtrl.parse((char *)iov[i].iov_base, iov[i].iov_len);
     }
 
-    if (!myData->pConfig->isSet(CACHE_RESP_COOKIE_CACHE))
+    count = g_api->get_resp_header(rec->session, LSI_RSPHDR_SET_COOKIE, NULL,
+                                   0, iov, 1);
+    if (iov[0].iov_len > 0 && count == 1)
     {
-        struct iovec iov[1] = {{NULL, 0}};
-        int iovCount = g_api->get_resp_header(rec->session,
-                                              LSI_RSPHDR_SET_COOKIE, NULL,
-                                              0, iov, 1);
-        if (iov[0].iov_len > 0 && iovCount == 1)
+        if (!myData->pConfig->isSet(CACHE_RESP_COOKIE_CACHE))
         {
             clearHooks(rec->session);
             g_api->log(rec->session, LSI_LOG_DEBUG,
@@ -1136,17 +1153,16 @@ static int createEntry(lsi_param_t *rec)
                        ModuleNameStr);
             return 0;
         }
-    }
-
-    //Error page won't be stored to cache
-    int code = g_api->get_status_code(rec->session);
-    if (code != 200)
-    {
-        clearHooks(rec->session);
-        g_api->log(rec->session, LSI_LOG_DEBUG,
-                   "[%s]cacheTofile to be cancelled for error page, code=%d.\n",
-                   ModuleNameStr, code);
-        return 0;
+        else
+        {
+            //since have set-cookie header, re-calculate the hash keys
+            buildCacheKey(rec, myData->cacheKey.m_pUri, 
+                          myData->cacheKey.m_iUriLen, 
+                          myData->cacheCtrl.getFlags() & CacheCtrl::no_vary,
+                          &myData->cacheKey);
+            calcCacheHash(rec->session, &myData->cacheKey,
+                          &myData->cePublicHash, &myData->cePrivateHash);
+        }
     }
 
     myData->hkptIndex = LSI_HKPT_RCVD_RESP_BODY;
@@ -2138,6 +2154,6 @@ static int handlerProcess(lsi_session_t *session)
 lsi_reqhdlr_t cache_handler = { handlerProcess, NULL, NULL, NULL };
 lsi_confparser_t cacheDealConfig = { ParseConfig, FreeConfig, paramArray };
 lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, init, &cache_handler,
-                       &cacheDealConfig, "cache v1.51", serverHooks, {0}
+                       &cacheDealConfig, "cache v1.52", serverHooks, {0}
                      };
 

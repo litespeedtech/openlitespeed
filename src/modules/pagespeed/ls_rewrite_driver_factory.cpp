@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2015  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2016  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -24,30 +24,30 @@
 #include "ls_rewrite_options.h"
 #include "ls_server_context.h"
 
-#include "net/instaweb/http/public/content_type.h"
 #include "net/instaweb/http/public/rate_controller.h"
 #include "net/instaweb/http/public/rate_controlling_url_async_fetcher.h"
 #include "net/instaweb/http/public/wget_url_fetcher.h"
 #include "net/instaweb/rewriter/public/rewrite_driver.h"
 #include "net/instaweb/rewriter/public/rewrite_driver_factory.h"
 #include "net/instaweb/rewriter/public/server_context.h"
-#include "net/instaweb/system/public/in_place_resource_recorder.h"
-#include "net/instaweb/system/public/serf_url_async_fetcher.h"
-#include "net/instaweb/system/public/system_caches.h"
-#include "net/instaweb/system/public/system_rewrite_options.h"
-#include "net/instaweb/util/public/google_message_handler.h"
-#include "net/instaweb/util/public/null_shared_mem.h"
-#include "net/instaweb/util/public/posix_timer.h"
 #include "net/instaweb/util/public/property_cache.h"
-#include "net/instaweb/util/public/scheduler_thread.h"
-#include "net/instaweb/util/public/shared_circular_buffer.h"
-#include "net/instaweb/util/public/shared_mem_statistics.h"
-#include "net/instaweb/util/public/slow_worker.h"
-#include "net/instaweb/util/public/stdio_file_system.h"
-#include "net/instaweb/util/public/string.h"
-#include "net/instaweb/util/public/string_util.h"
-#include "net/instaweb/util/public/thread_system.h"
+#include "pagespeed/kernel/base/google_message_handler.h"
+#include "pagespeed/kernel/base/null_shared_mem.h"
+#include "pagespeed/kernel/base/posix_timer.h"
+#include "pagespeed/kernel/base/stdio_file_system.h"
+#include "pagespeed/kernel/base/string.h"
+#include "pagespeed/kernel/base/string_util.h"
+#include "pagespeed/kernel/base/thread_system.h"
+#include "pagespeed/kernel/http/content_type.h"
+#include "pagespeed/kernel/sharedmem/shared_circular_buffer.h"
+#include "pagespeed/kernel/sharedmem/shared_mem_statistics.h"
 #include "pagespeed/kernel/thread/pthread_shared_mem.h"
+#include "pagespeed/kernel/thread/scheduler_thread.h"
+#include "pagespeed/kernel/thread/slow_worker.h"
+#include "pagespeed/system/in_place_resource_recorder.h"
+#include "pagespeed/system/serf_url_async_fetcher.h"
+#include "pagespeed/system/system_caches.h"
+#include "pagespeed/system/system_rewrite_options.h"
 
 namespace net_instaweb
 {
@@ -66,7 +66,7 @@ LsiRewriteDriverFactory::LsiRewriteDriverFactory(
     const ProcessContext &process_context,
     SystemThreadSystem *system_thread_system, StringPiece hostname, int port)
     : SystemRewriteDriverFactory(process_context, system_thread_system,
-                                 NULL /* default shared memory runtime */, hostname, port),
+                                 NULL, hostname, port),
       m_mainConf(NULL),
       m_bThreadsStarted(false),
       m_pLsiMessageHandler(new LsiMessageHandler(timer(),
@@ -75,7 +75,8 @@ LsiRewriteDriverFactory::LsiRewriteDriverFactory(
           new LsiMessageHandler(timer(), thread_system()->NewMutex())),
       m_pSharedCircularBuffer(NULL),
       m_sHostname(hostname.as_string()),
-      m_iPort(port)
+      m_iPort(port),
+      m_bShutDown(false)
 {
     InitializeDefaultOptions();
     default_options()->set_beacon_url("/ls_pagespeed_beacon");
@@ -147,8 +148,7 @@ bool LsiRewriteDriverFactory::InitLsiUrlAsyncFetchers()
 LsServerContext *LsiRewriteDriverFactory::MakeLsiServerContext(
     StringPiece hostname, int port)
 {
-    LsServerContext *server_context = new LsServerContext(this, hostname,
-            port);
+    LsServerContext *server_context = new LsServerContext(this, hostname, port);
     uninitialized_server_contexts_.insert(server_context);
     return server_context;
 }
@@ -164,6 +164,15 @@ ServerContext *LsiRewriteDriverFactory::NewServerContext()
 {
     LOG(DFATAL) << "MakeLsiServerContext should be used instead";
     return NULL;
+}
+
+void LsiRewriteDriverFactory::ShutDown()
+{
+    if (!m_bShutDown)
+    {
+        m_bShutDown = true;
+        SystemRewriteDriverFactory::ShutDown();
+    }
 }
 
 void LsiRewriteDriverFactory::ShutDownMessageHandlers()

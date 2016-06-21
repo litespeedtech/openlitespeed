@@ -2,19 +2,17 @@
 
 class Product
 {
-	const PROD_NAME = 'LITESPEED WEB SERVER';
+	const PROD_NAME = 'OpenLiteSpeed';
 
 	private $version;
-	private $edition;
 	private $new_version;
 
 	private function __construct()
 	{
 		$matches = array();
 		$str = $_SERVER['LSWS_EDITION'];
-		if ( preg_match('/^(.*)\/(.*)\/(.*)$/i', $str, $matches ) ) {
-			$this->edition = strtoupper(trim($matches[2]));
-			$this->version = trim($matches[3]);
+		if ( preg_match('/ (\d.*)$/i', $str, $matches ) ) {
+			$this->version = trim($matches[1]);
 		}
 		$releasefile = SERVER_ROOT . 'autoupdate/release' ;
 		if ( file_exists($releasefile) ) {
@@ -29,11 +27,6 @@ class Product
         if ( !isset($GLOBALS['_PRODUCT_']) )
 			$GLOBALS['_PRODUCT_'] = new Product();
 		return $GLOBALS['_PRODUCT_'];
-	}
-
-	public function getEdition()
-	{
-		return $this->edition;
 	}
 
 	public function getVersion()

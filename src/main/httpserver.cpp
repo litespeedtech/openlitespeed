@@ -1649,10 +1649,13 @@ LocalWorker *HttpServerImpl::createAdminPhpApp(const char *pChroot,
     pFcgiApp->getConfig().setInstances(4);
     pFcgiApp->getConfig().clearEnv();
     pFcgiApp->getConfig().addEnv("PHP_FCGI_MAX_REQUESTS=1000");
-    snprintf(pchPHPBin, MAX_PATH_LEN,
-             "LSWS_EDITION=LiteSpeed Web Server/%s/%s",
-             "Open", PACKAGE_VERSION);
-    pFcgiApp->getConfig().addEnv(pchPHPBin);
+    /**
+     * Disable the below code for this env will be added later
+     */
+//     snprintf(pchPHPBin, MAX_PATH_LEN,
+//              "LSWS_EDITION=LiteSpeed Web Server/%s/%s",
+//              "Open", PACKAGE_VERSION);
+//     pFcgiApp->getConfig().addEnv(pchPHPBin);
     RLimits limits;
     limits.setDataLimit(500 * 1024 * 1024, 500 * 1024 * 1024);
     limits.setProcLimit(1000, 1000);

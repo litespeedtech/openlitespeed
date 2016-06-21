@@ -245,7 +245,7 @@ int EventDispatcher::run()
         SigEventDispatcher::processSigEvent();
 #endif
 
-        EvtcbQue::getInstance().run(NULL);
+        EvtcbQue::getInstance().run();
 
         if ((sigEvent = HttpSignals::gotEvent()))
         {
@@ -289,7 +289,7 @@ int EventDispatcher::linger(int timeout)
 #ifdef LS_AIO_USE_SIGNAL
         SigEventDispatcher::processSigEvent();
 #endif
-        EvtcbQue::getInstance().run(NULL);
+        EvtcbQue::getInstance().run();
 
         if (HttpSignals::gotSigAlarm())
         {

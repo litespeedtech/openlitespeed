@@ -22,11 +22,11 @@
 #define LSI_PAGESPEEND_H_
 
 #include "../include/ls.h"
-#include "ls_rewrite_driver_factory.h"
+//#include "ls_rewrite_driver_factory.h"
 #include "psol/include/out/Release/obj/gen/net/instaweb/public/version.h"
 #include "base/logging.h"
-#include "net/instaweb/http/public/response_headers.h"
-#include "net/instaweb/util/public/string_util.h"
+#include "pagespeed/kernel/base/string_util.h"
+#include "pagespeed/kernel/http/response_headers.h"
 
 #define STRINGIFY0(x) #x
 #define STRINGIFY(x) STRINGIFY0(x)
@@ -80,10 +80,9 @@ int CopyRespHeadersToServer(lsi_session_t *session,
                             const ResponseHeaders &pagespeed_headers,
                             PreserveCachingHeaders preserve_caching_headers);
 
-int CopyRespBodyToBuf(lsi_session_t *session, const char *s, int len,
-                      int done_called);
+int CopyRespBodyToBuf(lsi_session_t *session, GoogleString &str, int done_called);
 
-StringPiece DetermineHost(lsi_session_t *session);
+char *DetermineHost(lsi_session_t *session, char *str, int maxLen);
 
 int DeterminePort(lsi_session_t *session);
 

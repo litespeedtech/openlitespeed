@@ -20,30 +20,40 @@
 
 #include <lsr/ls_atomic.h>
 
-#include "net/instaweb/http/public/response_headers.h"
 #include "net/instaweb/rewriter/public/rewrite_stats.h"
-#include "net/instaweb/util/public/google_message_handler.h"
-#include "net/instaweb/util/public/message_handler.h"
+#include "pagespeed/kernel/base/google_message_handler.h"
+#include "pagespeed/kernel/base/message_handler.h"
+#include "pagespeed/kernel/base/posix_timer.h"
+#include "pagespeed/kernel/http/response_headers.h"
 #include <unistd.h>
 #include <errno.h>
 
-LsiBaseFetch::LsiBaseFetch(lsi_session_t *session, int pipe_fd,
+const char kHeadersComplete = 'H';
+const char kFlush = 'F';
+const char kDone = 'D';
+
+//LsiBaseFetch* LsiBaseFetch::event_connection = NULL;
+int LsiBaseFetch::active_base_fetches = 0;
+
+LsiBaseFetch::LsiBaseFetch(lsi_session_t *session,
                            LsServerContext *server_context,
                            const RequestContextPtr &request_ctx,
-                           PreserveCachingHeaders preserve_caching_headers)
+                           PreserveCachingHeaders preserve_caching_headers,
+                           BaseFetchType type)
     : AsyncFetch(request_ctx),
-      m_session(session),
       m_pServerContext(server_context),
       m_bDoneCalled(false),
       m_bLastBufSent(false),
-      m_iPipeFd(pipe_fd),
+      m_lEventObj(0),
       m_iReferences(2),
+      m_iType(type),
       m_bIproLookup(false),
       m_bSuccess(false),
       m_preserveCachingHeaders(preserve_caching_headers)
 {
     if (pthread_mutex_init(&m_mutex, NULL))
         CHECK(0);
+    __sync_add_and_fetch(&LsiBaseFetch::active_base_fetches, 1);
     m_buffer.clear();
 }
 
@@ -51,6 +61,24 @@ LsiBaseFetch::~LsiBaseFetch()
 {
     m_buffer.clear();
     pthread_mutex_destroy(&m_mutex);
+    __sync_add_and_fetch(&LsiBaseFetch::active_base_fetches, -1);
+}
+
+const char* BaseFetchTypeToCStr(BaseFetchType type) {
+  switch(type) {
+    case kPageSpeedResource:
+      return "ps resource";
+    case kHtmlTransform:
+      return "html transform";
+    case kAdminPage:
+      return "admin page";
+    case kIproLookup:
+      return "ipro lookup";
+    case kPageSpeedProxy:
+      return "pagespeed proxy";
+  }
+  CHECK(false);
+  return "can't get here";
 }
 
 void LsiBaseFetch::Lock()
@@ -80,8 +108,7 @@ int LsiBaseFetch::CopyBufferToLs(lsi_session_t *session)
     if (!m_bDoneCalled && m_buffer.empty())
         return 1;
 
-    CopyRespBodyToBuf(session, m_buffer.c_str(), m_buffer.size(),
-                      m_bDoneCalled /* send_last_buf */);
+    CopyRespBodyToBuf(session, m_buffer, m_bDoneCalled /* send_last_buf */);
 
     m_buffer.clear();
 
@@ -119,16 +146,14 @@ int LsiBaseFetch::CollectHeaders(lsi_session_t *session)
 
 void LsiBaseFetch::RequestCollection()
 {
-    if (m_iPipeFd == -1)
+    if (m_lEventObj == 0)
         return ;
 
-    char c = 'A';
-    write(m_iPipeFd, &c, 1);
-//     g_api->log(NULL, LSI_LOG_DEBUG,
-//                "[Module:modpagespeed]RequestCollection called, errno %d, "
-//                "pipe_fd_=%d, rc=%d, session=%ld, m_bLastBufSent=%s\n\n",
-//                errno, m_iPipeFd, rc, (long) m_session,
-//                (m_bLastBufSent ? "true" : "false"));
+    IncrementRefCount();
+    long tmp = m_lEventObj;
+    m_lEventObj = 0;
+    g_api->schedule_event(tmp, 1);
+
 }
 
 void LsiBaseFetch::HandleHeadersComplete()
@@ -136,7 +161,7 @@ void LsiBaseFetch::HandleHeadersComplete()
     int statusCode = response_headers()->status_code();
     bool statusOk = (statusCode != 0 && statusCode < 400);
 
-    if (!m_bIproLookup || statusOk)
+    if ((m_iType != kIproLookup) || statusOk)
     {
         // If this is a 404 response we need to count it in the stats.
         if (response_headers()->status_code() == HttpStatus::kNotFound)
@@ -155,16 +180,22 @@ bool LsiBaseFetch::HandleFlush(MessageHandler *handler)
     return true;
 }
 
-void LsiBaseFetch::Release()
-{
-    DecrefAndDeleteIfUnreferenced();
+
+int LsiBaseFetch::DecrementRefCount() {
+  return DecrefAndDeleteIfUnreferenced();
 }
 
-void LsiBaseFetch::DecrefAndDeleteIfUnreferenced()
+int LsiBaseFetch::IncrementRefCount() {
+  return __sync_add_and_fetch(&m_iReferences, 1);
+}
+
+int LsiBaseFetch::DecrefAndDeleteIfUnreferenced()
 {
-    ls_atomic_add(&m_iReferences, -1);
-    if (m_iReferences == 0)
+    // Creates a full memory barrier.
+    int r = __sync_add_and_fetch(&m_iReferences, -1);
+    if (r == 0)
         delete this;
+    return r;
 }
 
 void LsiBaseFetch::HandleDone(bool success)
@@ -178,9 +209,5 @@ void LsiBaseFetch::HandleDone(bool success)
     m_bDoneCalled = true;
     Unlock();
     RequestCollection();
-
-    //Just set to -1, but not to close it because it does not belong to this class
-    m_iPipeFd = -1;
-
     DecrefAndDeleteIfUnreferenced();
 }

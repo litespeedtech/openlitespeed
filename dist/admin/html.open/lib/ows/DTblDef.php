@@ -146,7 +146,6 @@ class DTblDef extends DTblDefBase
 	{
 		$ssloptions = array( 'null' => DMsg::ALbl('l_ssloptnull'),
 			 'auto' => DMsg::ALbl('l_ssloptauto'),
-			 'aesni' => DMsg::ALbl('l_ssloptaesni'),
 			 'dynamic'=> DMsg::ALbl('l_ssloptdynamic'),
 			 'cswift' => DMsg::ALbl('l_ssloptcswift'),
 			 'chil' => DMsg::ALbl('l_ssloptchil'),
