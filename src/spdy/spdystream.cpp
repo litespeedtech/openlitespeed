@@ -207,6 +207,8 @@ int SpdyStream::getDataFrameSize(int wanted)
         (0 >= m_iWindowOut))
     {
         setFlag(HIO_FLAG_BUFF_FULL | HIO_FLAG_WANT_WRITE, 1);
+        if (next() == NULL)
+            m_pSpdyConn->add2PriorityQue(this);
         m_pSpdyConn->continueWrite();
         return 0;
     }

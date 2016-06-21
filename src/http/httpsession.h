@@ -155,6 +155,8 @@ class HttpSession : public LsiSession, public InputStream,
 
     SendFileInfo          m_sendFileInfo;
 
+    HttpSession **        m_pBackRefPtr;
+
     long                  m_lReqTime;
     int32_t               m_iReqTimeUs;
 
@@ -196,7 +198,8 @@ class HttpSession : public LsiSession, public InputStream,
     static int stx_nextRequest(lsi_session_t *p, long , void *)
     {
         HttpSession *pSession = (HttpSession *)p;
-        pSession->nextRequest();
+        if (pSession)
+            pSession->nextRequest();
         return 0;
     }
 
@@ -523,6 +526,9 @@ public:
 
     const lsi_reqhdlr_t *getModHandler()
     {   return m_pModHandler;}
+    
+    void setBackRefPtr(lsi_session_t ** v);
+    void resetBackRefPtr();
 };
 
 #endif

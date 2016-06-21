@@ -20,6 +20,7 @@
 #include <ls.h>
 
 void lsiapi_init_server_api();
+void set_session_back_ref_ptr(lsi_session_t *pSession_, lsi_session_t **session);
 int add_global_hook(int index, const lsi_module_t *pModule,
                     lsi_callback_pf cb, short order, short flag);
 

@@ -20,10 +20,10 @@
 
 #include <signal.h>
 
-#include "net/instaweb/util/public/abstract_mutex.h"
-#include "net/instaweb/util/public/debug.h"
-#include "net/instaweb/util/public/shared_circular_buffer.h"
-#include "net/instaweb/util/public/string_util.h"
+#include "pagespeed/kernel/base/abstract_mutex.h"
+#include "pagespeed/kernel/base/debug.h"
+#include "pagespeed/kernel/sharedmem/shared_circular_buffer.h"
+#include "pagespeed/kernel/base/string_util.h"
 #include "pagespeed/kernel/base/posix_timer.h"
 #include "pagespeed/kernel/base/time_util.h"
 
@@ -74,26 +74,23 @@ lsi_log_level LsiMessageHandler::GetLsiLogLevel(MessageType type)
     }
 }
 
-void LsiMessageHandler::MessageVImpl(MessageType type, const char *msg,
-                                     va_list args)
+void LsiMessageHandler::MessageSImpl(MessageType type,
+                                     const GoogleString& message)
 {
     lsi_log_level logLevel = GetLsiLogLevel(type);
-    GoogleString formatted_message = Format(msg, args);
     g_api->log(NULL, logLevel, "[%s %s] %s\n", ModuleName,
-               kModPagespeedVersion, formatted_message.c_str());
+               kModPagespeedVersion, message.c_str());
 
     // Prepare a log message for the SharedCircularBuffer only.
-    AddMessageToBuffer(type, formatted_message);
+    AddMessageToBuffer(type, message);
 }
 
-void LsiMessageHandler::FileMessageVImpl(MessageType type,
-        const char *file,
-        int line, const char *msg, va_list args)
+void LsiMessageHandler::FileMessageSImpl(MessageType type, const char *file,
+                                         int line, const GoogleString& message)
 {
     lsi_log_level logLevel = GetLsiLogLevel(type);
-    GoogleString formatted_message = Format(msg, args);
     g_api->log(NULL, logLevel, "[%s %s] %s:%d:%s", ModuleName,
-               kModPagespeedVersion, file, line, formatted_message.c_str());
+               kModPagespeedVersion, file, line, message.c_str());
 }
 
 }  // namespace net_instaweb

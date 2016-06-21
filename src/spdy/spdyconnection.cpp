@@ -1000,6 +1000,11 @@ int SpdyConnection::timerRoutine()
     }
     else
         m_tmIdleBegin = 0;
+    if (!isEmpty() && DateTime::s_curTime - getStream()->getActiveTime() > 20)
+    {
+        LS_DBG_L(getLogSession(), "write() timeout.");
+        doGoAway(SPDY_GOAWAY_PROTOCOL_ERROR);
+    }
     return 0;
 }
 

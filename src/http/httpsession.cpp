@@ -426,6 +426,7 @@ void HttpSession::nextRequest()
             setState(HSS_WAITING);
             HttpStats::incIdleConns();
         }
+        resetBackRefPtr();
     }
 }
 
@@ -996,6 +997,9 @@ int HttpSession::hookResumeCallback(lsi_session_t *session, long lParam,
                                     void *)
 {
     HttpSession *pSession = (HttpSession *)(LsiSession *)session;
+    if (!pSession)
+        return -1;
+
     if ((uint32_t)lParam != pSession->getSn())
     {
         LS_DBG_L(pSession->getLogSession(),
@@ -2181,6 +2185,7 @@ void HttpSession::closeConnection()
     //    getStream()->wantWrite(0);
     getStream()->handlerReadyToRelease();
     getStream()->shutdown();
+    resetBackRefPtr();
 }
 
 
@@ -2195,6 +2200,8 @@ void HttpSession::recycle()
         m_pReqParser = NULL;
     }
     m_sExtCmdResBuf.clear();
+
+    resetBackRefPtr();
 
     ++m_sn;
     if (getFlag(HSF_AIO_READING))
@@ -4011,6 +4018,24 @@ int HttpSession::handleAioSFEvent(Aiosfcb *event)
     return onWriteEx();
 }
 
+void HttpSession::setBackRefPtr(lsi_session_t ** v)
+{
+    LS_DBG_M(getLogSession(),
+                 "setBackRefPtr() called, set to %p.", *v);
+    m_pBackRefPtr = (HttpSession **)v;
+}
+
+void HttpSession::resetBackRefPtr()
+{
+    if (m_pBackRefPtr)
+    {
+        LS_DBG_M(getLogSession(),
+                 "resetBackRefPtr() called. previous value is %p:%p.",
+                 m_pBackRefPtr, *m_pBackRefPtr);
+         *m_pBackRefPtr = NULL;
+         m_pBackRefPtr = NULL;
+    }
+}
 
 int HttpSession::smProcessReq()
 {

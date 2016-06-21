@@ -17,12 +17,14 @@ endif()
 include_directories(./;../;../../;../../util/;
                 ./psol/include/;
                 ./psol/include/third_party/apr/src/include/;
+                ./psol/include/third_party/aprutil/src/include/;
                 ./psol/include/third_party/chromium/src/;
                 ./psol/include/third_party/protobuf/src/;
                 ./psol/include/third_party/google-sparsehash/src/;
                 ./psol/include/third_party/re2/src/;
                 ./psol/include/out/Debug/obj/gen/protoc_out/instaweb/;
                 ./psol/include/third_party/apr/gen/arch/linux/${OSVERSION}/include/;
+                ./psol/include/third_party/aprutil/gen/arch/linux/${OSVERSION}/include/;
                 ./psol/include/third_party/css_parser/src;
                 ./psol/include/third_party/google-sparsehash/gen/arch/linux/${OSVERSION}/include/)
 
@@ -31,8 +33,8 @@ execute_process( COMMAND getconf LFS_CFLAGS
 
 add_definitions( ${LFS_CFLAGS} )
 
-add_library(modpagespeed SHARED  pagespeed.cpp  log_message_handler.cpp ls_message_handler.cpp
-            pipenotifier.cpp
+add_library(modpagespeed SHARED  pagespeed.cpp  log_message_handler.cpp
+            ls_message_handler.cpp
             ls_server_context.cpp
             ls_rewrite_driver_factory.cpp
             ls_caching_headers.cpp

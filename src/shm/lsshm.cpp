@@ -210,6 +210,12 @@ void LsShm::tryRecoverBadOffset(LsShmOffset_t offset)
 }
 
 
+int LsShm::isOffsetValid(LsShmOffset_t offset)
+{
+    return (offset <= x_pShmMap->x_stat.m_iFileSize);
+}
+
+
 LsShmOffset_t LsShm::getMapStatOffset() const
 {
     return (LsShmOffset_t)(long) & ((LsShmMap *)0)->x_stat;

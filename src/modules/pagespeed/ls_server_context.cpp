@@ -22,9 +22,9 @@
 #include "ls_rewrite_driver_factory.h"
 #include "ls_rewrite_options.h"
 #include "net/instaweb/rewriter/public/rewrite_driver.h"
-#include "net/instaweb/system/public/add_headers_fetcher.h"
-#include "net/instaweb/system/public/loopback_route_fetcher.h"
-#include "net/instaweb/system/public/system_request_context.h"
+#include "pagespeed/system/add_headers_fetcher.h"
+#include "pagespeed/system/loopback_route_fetcher.h"
+#include "pagespeed/system/system_request_context.h"
 
 namespace net_instaweb
 {
@@ -47,12 +47,15 @@ SystemRequestContext *LsServerContext::NewRequestContext(
     int local_port = DeterminePort(session);
     char ip[60] = {0};
     g_api->get_local_sockaddr(session, ip, 60);
+    char hostC[512] = {0};
+    StringPiece host = DetermineHost(session, hostC, 512);
     StringPiece local_ip = ip;
-    g_api->log(NULL, LSI_LOG_DEBUG, "NewRequestContext port %d and ip %s\n",
-               local_port, ip);
+    g_api->log(NULL, LSI_LOG_DEBUG,
+               "NewRequestContext: host %s port %d ip %s\n",
+               hostC, local_port, ip);
     return new SystemRequestContext(thread_system()->NewMutex(),
                                     timer(),
-                                    DetermineHost(session),    //  hostname,
+                                    host,    //  hostname,
                                     local_port,
                                     local_ip);
 }

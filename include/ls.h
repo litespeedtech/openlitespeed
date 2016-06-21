@@ -1858,6 +1858,20 @@ struct lsi_api_s
     long (*create_session_resume_event)(lsi_session_t *session,
                                         lsi_module_t *pModule);
 
+    
+    
+    long (*get_event_obj)(evtcb_pf cb, lsi_session_t *pSession,
+                         long lParam, void *pParam);
+    
+    void (*remove_event_obj)(long event_obj);
+    void (*schedule_event)(long event_obj, int nowait);
+
+    lsi_session_t **(*get_session_ref_ptr)(long event_obj);
+    /**
+     * Need to understand the usage of this API!!!
+     */
+    void (*set_session_back_ref_ptr)(lsi_session_t *pSession, lsi_session_t **session);
+    void (*reset_session_back_ref_ptr)(lsi_session_t *pSession_);
 
     /**
      * get_req_cookies is used to get all the request cookies.

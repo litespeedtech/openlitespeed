@@ -34,11 +34,12 @@ INCLUDEFILES =-I. -I../.. -I.. -I../../util -I../../../include \
 	      -I./psol/include/third_party/apr/src/include/ \
 	      -I./psol/include/third_party/google-sparsehash/gen/$(INCLUDE_ARCH)/include/ \
 	      -I./psol/include/third_party/apr/gen/$(INCLUDE_ARCH)/include/ \
-	      -I./psol/include/third_party/css_parser/src/ 
+	      -I./psol/include/third_party/css_parser/src/ \
+	      -I./psol/include/third_party/aprutil/src/include/ \
+	      -I./psol/include/third_party/aprutil/gen/$(INCLUDE_ARCH)/include/
 
 	      
 SOURCES =pagespeed.cpp log_message_handler.cpp ls_message_handler.cpp \
-        pipenotifier.cpp \
         ls_server_context.cpp \
         ls_rewrite_driver_factory.cpp \
         ls_caching_headers.cpp \

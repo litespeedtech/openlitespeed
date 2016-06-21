@@ -17,10 +17,13 @@
 *****************************************************************************/
 #include "ls_rewrite_options.h"
 #include "ls_rewrite_driver_factory.h"
+
+#include "psol/include/out/Release/obj/gen/net/instaweb/public/version.h"
 #include "net/instaweb/rewriter/public/file_load_policy.h"
 #include "net/instaweb/rewriter/public/rewrite_options.h"
-#include "net/instaweb/system/public/system_caches.h"
-#include "net/instaweb/util/public/timer.h"
+#include "pagespeed/kernel/base/message_handler.h"
+#include "pagespeed/kernel/base/timer.h"
+#include "pagespeed/system/system_caches.h"
 
 namespace net_instaweb
 {
@@ -31,7 +34,7 @@ const char kMessagesPath[] = "MessagesPath";
 const char kAdminPath[] = "AdminPath";
 const char kGlobalAdminPath[] = "GlobalAdminPath";
 
-const char *const server_only_options[] =
+const char *const server_options[] =
 {
     "FetcherTimeoutMs",
     "FetchProxy",
@@ -53,12 +56,6 @@ const char *const server_only_options[] =
     "LoadFromFileRule",
     "LoadFromFileRuleMatch"
 };
-
-// Options that can only be used in the main (http) option scope.
-const char *const main_only_options[] =
-{
-};
-
 
 
 RewriteOptions::Properties *LsiRewriteOptions::m_pProperties = NULL;
@@ -145,19 +142,10 @@ RewriteOptions::OptionScope LsiRewriteOptions::GetOptionScope(
     StringPiece option_name)
 {
     unsigned int i;
-    unsigned int size = sizeof(main_only_options) / sizeof(char *);
-
+    unsigned int size = sizeof(server_options) / sizeof(char *);
     for (i = 0; i < size; i++)
     {
-        if (StringCaseEqual(main_only_options[i], option_name))
-            return kProcessScopeStrict;
-    }
-
-    size = sizeof(server_only_options) / sizeof(char *);
-
-    for (i = 0; i < size; i++)
-    {
-        if (StringCaseEqual(server_only_options[i], option_name))
+        if (StringCaseEqual(server_options[i], option_name))
             return kServerScope;
     }
 

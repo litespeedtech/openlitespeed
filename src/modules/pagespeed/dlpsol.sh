@@ -10,7 +10,7 @@ if [ ! -f psol/include/out/Release/obj/gen/net/instaweb/public/version.h ] ; the
 
     DL=`which curl`
     DLCMD="$DL -O -k "
-    TARGET=1.9.32.10.tar.gz
+    TARGET=1.11.33.2.tar.gz
     $DLCMD https://dl.google.com/dl/page-speed/psol/$TARGET  
     tar -xzvf $TARGET # expands to psol/
     rm $TARGET
@@ -24,6 +24,27 @@ if [ ! -f psol/include/out/Release/obj/gen/net/instaweb/public/version.h ] ; the
     ln -sf psol/include/third_party/chromium/src/build/ build
     ln -sf psol/include/third_party/css_parser/src/strings strings
 
+    #fix a file which stop the compiling of pagespeed module
+    
+    cat << EOF > psol/include/pagespeed/kernel/base/scoped_ptr.h
+/**
+* Due the compiling issue, this file was updated from the original file.
+*/
+#ifndef PAGESPEED_KERNEL_BASE_SCOPED_PTR_H_
+#define PAGESPEED_KERNEL_BASE_SCOPED_PTR_H_
+#include "base/memory/scoped_ptr.h"
+
+namespace net_instaweb {
+template<typename T> class scoped_array : public scoped_ptr<T[]> {
+public:
+    scoped_array() : scoped_ptr<T[]>() {}
+    explicit scoped_array(T* t) : scoped_ptr<T[]>(t) {}
+};
+}
+#endif
+
+EOF
+    
 fi
 cd -
 

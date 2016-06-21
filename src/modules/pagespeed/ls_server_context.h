@@ -22,9 +22,7 @@
 #include <lsdef.h>
 
 #include "ls_message_handler.h"
-#include "net/instaweb/automatic/public/proxy_fetch.h"
-#include "net/instaweb/system/public/system_server_context.h"
-
+#include "pagespeed/system/system_server_context.h"
 
 namespace net_instaweb
 {
@@ -39,11 +37,9 @@ public:
         LsiRewriteDriverFactory *factory, StringPiece hostname, int port);
     virtual ~LsServerContext();
 
-    // We expect to use ProxyFetch with HTML.
-    virtual bool ProxiesHtml() const
-    {
-        return true;
-    }
+    // We don't allow ProxyFetch to fetch HTML via MapProxyDomain. We will call
+    // set_trusted_input() on any ProxyFetches we use to transform internal HTML.
+    virtual bool ProxiesHtml() const { return false; }
 
     LsiRewriteOptions *Config();
     LsiRewriteDriverFactory *GetRewriteDriverFactory()

@@ -447,7 +447,6 @@ $_gmsg['l_sslcryptodevice'] = 'SSL Hardware Accelerator';
 $_gmsg['l_sslEnableMultiCerts'] = 'Enable Multiple SSL Certificates';
 $_gmsg['l_sslopt4758cca'] = '(4758cca) IBM 4758 CCA hardware engine support';
 $_gmsg['l_ssloptaep'] = '(aep) Aep hardware engine support';
-$_gmsg['l_ssloptaesni'] = '(aesni) Intel AES-NI engine';
 $_gmsg['l_ssloptatalla'] = '(atalla) Atalla hardware engine support';
 $_gmsg['l_ssloptauto'] = '(auto) Automatically use available devices';
 $_gmsg['l_ssloptchil'] = '(chil) nCipher hardware engine support';

@@ -160,6 +160,8 @@ public:
         return (void *)(((uint8_t *)x_pShmMap) + offset);
     }  // map size
 
+    int isOffsetValid(LsShmOffset_t offset);
+
     LsShmOffset_t ptr2offset(const void *ptr) const
     {
         if (ptr == NULL)

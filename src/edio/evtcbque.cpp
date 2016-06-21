@@ -18,6 +18,11 @@
 #include "evtcbque.h"
 #include <log4cxx/logger.h>
 #include <util/objpool.h>
+#include <lsr/ls_lock.h>
+#include <edio/multiplexer.h>
+#include <edio/multiplexerfactory.h>
+
+
 
 struct evtcbnode_s : public DLinkedObj
 {
@@ -27,6 +32,7 @@ struct evtcbnode_s : public DLinkedObj
     void           *m_pParam;
 };
 
+
 typedef ObjPool<evtcbnode_s> CallbackObjPool;
 static CallbackObjPool *s_pCbnodePool;
 
@@ -34,12 +40,17 @@ static CallbackObjPool *s_pCbnodePool;
 EvtcbQue::EvtcbQue()
 {
     s_pCbnodePool = new CallbackObjPool;
+    m_pEmptyEventNotifier = new EmptyEventNotifier;
+    m_pEmptyEventNotifier->initNotifier(MultiplexerFactory::getMultiplexer());
+    lock_add = 0;
 }
+
 
 EvtcbQue::~EvtcbQue()
 {
     s_pCbnodePool->shrinkTo(0);
     delete s_pCbnodePool;
+    delete m_pEmptyEventNotifier;
     m_callbackObjList.pop_all();
 }
 
@@ -53,6 +64,7 @@ void EvtcbQue::logState(const char *s, evtcbnode_s *p)
         LS_ERROR("[EvtcbQue:%s] Obj=NULL\n", s);
 }
 
+
 /**
  * session is a filter. If NULL, run all in queue
  */
@@ -60,90 +72,152 @@ void EvtcbQue::run(evtcbhead_t *session)
 {
     evtcbnode_s *pObj;
     evtcbnode_s *pObjNext;
+    evtcbnode_s *pLast;
+    
 
-    if (session == NULL)
-        pObj = (evtcbnode_s *)m_callbackObjList.begin();
-    else
-        pObj = session->evtcb_head;
+    assert(session != NULL);
+    assert(m_callbackObjList.size() > 0);
+    assert(session->evtcb_head);
 
-    assert(m_callbackObjList.size() > 0
-           || (m_callbackObjList.begin() ==
-               m_callbackObjList.end())); //WRONG state!!!
+    LS_DBG_M("[EvtcbQue:run(%p)]\n", session);
 
+    ls_atomic_spin_lock(&lock_add);
+    pObj = session->evtcb_head;
+    session->evtcb_head = NULL;
+    pLast = (evtcbnode_s *)(m_callbackObjList.end()->prev());
+    ls_atomic_spin_unlock(&lock_add);
 
-    while (m_callbackObjList.size() > 0
-           && pObj && pObj != (evtcbnode_s *)m_callbackObjList.end()
-           && (!session || pObj->m_pSession == session))
+    while(pObj && pObj->m_pSession == session)
     {
+        ls_atomic_spin_lock(&lock_add);
         pObjNext = (evtcbnode_s *)pObj->next();
-        logState("run()", pObj);
-
-        m_callbackObjList.remove(pObj);
-
-        if (pObj->m_pSession)
-            pObj->m_pSession->evtcb_head = NULL;
-
-
-        assert(pObj->m_callback);
-        if (pObj->m_callback)
-            pObj->m_callback(pObj->m_pSession, pObj->m_lParam,
-                             pObj->m_pParam);
-        else
-            logState("run()][Error: NULL calback", pObj);
-
-        recycle(pObj);
+        ls_atomic_spin_unlock(&lock_add);
+        runOne(pObj);
+        if (pObj == pLast)
+            break;
         pObj = pObjNext;
     }
 }
 
 
-evtcbnode_s *EvtcbQue::schedule(evtcb_pf cb,
-                                evtcbhead_t *session, long lParam, void *pParam)
+/**
+ * session is a filter. If NULL, run all in queue
+ */
+void EvtcbQue::run()
 {
+    evtcbnode_s *pObj;
+    evtcbnode_s *pObjNext;
+    evtcbnode_s *pLast;
+    int empty;
+    
+    ls_atomic_spin_lock(&lock_add);
+    empty = m_callbackObjList.empty();
+    if (!empty)
+    {
+        pObj = (evtcbnode_s *)m_callbackObjList.begin();
+        pLast = (evtcbnode_s *)(m_callbackObjList.end()->prev());
+    }
+    ls_atomic_spin_unlock(&lock_add);
+    
+    if (empty)
+    {
+        //LS_DBG_M("run() queue is empty");
+         return;
+    }
+    logState("run() starts", pObj);
+    
+    while (1)
+    {
+        ls_atomic_spin_lock(&lock_add);
+        pObjNext = (evtcbnode_s *)pObj->next();
+        if (pObj->m_pSession && pObj->m_pSession->evtcb_head == pObj)
+            pObj->m_pSession->evtcb_head = NULL;
+        ls_atomic_spin_unlock(&lock_add);
+        runOne(pObj);
+        if (pObj == pLast)
+            break;
+        pObj = pObjNext;
+    }
+}
+
+
+void EvtcbQue::runOne(evtcbnode_s *pObj)
+{
+    logState("run()", pObj);
+
+    ls_atomic_spin_lock(&lock_add);
+    m_callbackObjList.remove(pObj);
+    ls_atomic_spin_unlock(&lock_add);
+
+    if (pObj->m_callback)
+        pObj->m_callback(pObj->m_pSession, pObj->m_lParam, pObj->m_pParam);
+
+    recycle(pObj);
+}
+
+
+evtcbnode_s * EvtcbQue::getNodeObj(evtcb_pf cb, evtcbhead_t *session,
+                                   long lParam, void *pParam)
+{
+    ls_atomic_spin_lock(&lock_add);
     evtcbnode_s *pObj = s_pCbnodePool->get();
+    ls_atomic_spin_unlock(&lock_add);
+    logState("getNodeObj", pObj);
+
     if (pObj)
     {
         pObj->m_callback = cb;
         pObj->m_pSession = session;
         pObj->m_lParam = lParam;
         pObj->m_pParam = pParam;
-        if (session)
-        {
-            if (session->evtcb_head == NULL)
-            {
-                session->evtcb_head = pObj;
-                m_callbackObjList.append(pObj);
-            }
-            else
-            {
-                m_callbackObjList.insert_after(session->evtcb_head, pObj);
-                logState("schedule()][Header EXIST", pObj);
-            }
-        }
-        else
-            m_callbackObjList.append(pObj);
     }
-
-    logState("schedule()", pObj);
     return pObj;
 }
 
 
-void EvtcbQue::removeObj(evtcbnode_s *pObj)
+void EvtcbQue::schedule(evtcbnode_s *pObj, bool nowait)
 {
-    if (!pObj)
-        return;
-
-    logState("removeObj()", pObj);
-    if (pObj->next())
+    evtcbhead_t *session = pObj->m_pSession;
+    logState(nowait?"schedule() nowait" : "schedule()", pObj);
+    ls_atomic_spin_lock(&lock_add);
+    if (session)
     {
-        m_callbackObjList.remove(pObj);
-        recycle(pObj);
+        //set_session_back_ref_ptr(session, &pObj->m_pSession);
+        if (session->evtcb_head == NULL)
+        {
+            session->evtcb_head = pObj;
+        }
+        else
+        {
+            m_callbackObjList.insert_after(session->evtcb_head, pObj);
+            ls_atomic_spin_unlock(&lock_add);
+
+            logState("schedule()][Header EXIST", pObj);
+            return;
+        }
     }
+    m_callbackObjList.append(pObj);
+    ls_atomic_spin_unlock(&lock_add);
+    
+    if (nowait)
+        m_pEmptyEventNotifier->notify();
 }
+
+
+evtcbnode_s *EvtcbQue::schedule(evtcb_pf cb, evtcbhead_t *session,
+                          long lParam, void *pParam)
+{
+    evtcbnode_s *pObj = getNodeObj(cb, session, lParam, pParam);
+    if (pObj)
+        schedule(pObj);
+    
+    return pObj;
+}
+
 
 void EvtcbQue::recycle(evtcbnode_s *pObj)
 {
+    logState("recycle()", pObj);
     memset(pObj, 0, sizeof(evtcbnode_s));
     s_pCbnodePool->recycle(pObj);
 }
@@ -151,25 +225,40 @@ void EvtcbQue::recycle(evtcbnode_s *pObj)
 
 void EvtcbQue::removeSessionCb(evtcbhead_t *session)
 {
-    if (m_callbackObjList.size() == 0)
-    {
-        session->evtcb_head = NULL;
+    if (!session->evtcb_head)
         return ;
-    }
+    
 
-    evtcbnode_s *pObj = session->evtcb_head;
+    evtcbnode_s *pObj;
     evtcbnode_s *pObjNext;
 
-    logState("removeSessionCb()][header state", pObj);
-    while (pObj && pObj != (evtcbnode_s *)m_callbackObjList.end())
+    ls_atomic_spin_lock(&lock_add);
+    if (m_callbackObjList.size() != 0)
     {
-        pObjNext = (evtcbnode_s *)pObj->next();
-        if (pObj->m_pSession == session)
-            removeObj(pObj);
-        else
-            break;
-        pObj = pObjNext;
+        pObj = session->evtcb_head;
+        while (pObj && pObj != (evtcbnode_s *)m_callbackObjList.end())
+        {
+            logState("removeSessionCb()][header state", pObj);
+            pObjNext = (evtcbnode_s *)pObj->next();
+            if (pObj->m_pSession == session)
+            {
+                pObj->m_pSession = NULL;
+                pObj->m_callback = NULL;
+            }
+            else
+                break;
+            pObj = pObjNext;
+        }
     }
     session->evtcb_head = NULL;
+    ls_atomic_spin_unlock(&lock_add);
+}
+
+evtcbhead_t **EvtcbQue::get_session_ref_ptr(evtcbnode_s *nodeObj)
+{
+    if (!nodeObj)
+        return NULL;
+    logState("get_session_ref_ptr()", nodeObj);
+    return &nodeObj->m_pSession;
 }
 

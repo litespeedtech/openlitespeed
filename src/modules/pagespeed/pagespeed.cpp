@@ -23,30 +23,28 @@
 #include <lsr/ls_loopbuf.h>
 #include <lsr/ls_xpool.h>
 
+
+//#include <net/base/iovec.h>
+//#include <apr_poll.h>
+#include "autostr.h"
+#include "stringtool.h"
+#include <fcntl.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include "log_message_handler.h"
+#include "../../src/http/serverprocessconfig.h"
+#include <signal.h>
+
+#include "ls_base_fetch.h"
 #include "ls_caching_headers.h"
 #include "ls_message_handler.h"
 #include "ls_rewrite_driver_factory.h"
 #include "ls_rewrite_options.h"
 #include "ls_server_context.h"
 
-#include <net/base/iovec.h>
-#include <apr_poll.h>
-#include "autostr.h"
-#include "stringtool.h"
-#include "ls_base_fetch.h"
-#include <fcntl.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include "pipenotifier.h"
-#include "log_message_handler.h"
-#include "../../src/http/serverprocessconfig.h"
-#include <signal.h>
-
-#include "net/instaweb/automatic/public/proxy_fetch.h"
 #include "net/instaweb/http/public/async_fetch.h"
 #include "net/instaweb/http/public/cache_url_async_fetcher.h"
-#include "net/instaweb/http/public/content_type.h"
 #include "net/instaweb/http/public/request_context.h"
 #include "net/instaweb/public/global_constants.h"
 #include "net/instaweb/rewriter/public/experiment_matcher.h"
@@ -58,28 +56,29 @@
 #include "net/instaweb/rewriter/public/rewrite_query.h"
 #include "net/instaweb/rewriter/public/rewrite_stats.h"
 #include "net/instaweb/rewriter/public/static_asset_manager.h"
-#include "net/instaweb/system/public/in_place_resource_recorder.h"
-#include "net/instaweb/system/public/system_caches.h"
-#include "net/instaweb/system/public/system_request_context.h"
-#include "net/instaweb/system/public/system_rewrite_options.h"
-#include "net/instaweb/system/public/system_server_context.h"
-#include "net/instaweb/system/public/system_thread_system.h"
 #include "net/instaweb/util/public/fallback_property_page.h"
-#include "net/instaweb/util/public/google_message_handler.h"
-#include "net/instaweb/util/public/google_url.h"
-#include "net/instaweb/util/public/gzip_inflater.h"
-#include "net/instaweb/util/public/null_message_handler.h"
-#include "net/instaweb/util/public/query_params.h"
-#include "net/instaweb/util/public/statistics_logger.h"
-#include "net/instaweb/util/public/stdio_file_system.h"
-#include "net/instaweb/util/public/string.h"
-#include "net/instaweb/util/public/string_writer.h"
-#include "net/instaweb/util/public/time_util.h"
-#include "net/instaweb/util/stack_buffer.h"
+#include "pagespeed/automatic/proxy_fetch.h"
+#include "pagespeed/kernel/base/google_message_handler.h"
+#include "pagespeed/kernel/base/null_message_handler.h"
 #include "pagespeed/kernel/base/posix_timer.h"
+#include "pagespeed/kernel/base/stack_buffer.h"
+#include "pagespeed/kernel/base/stdio_file_system.h"
+#include "pagespeed/kernel/base/string.h"
+#include "pagespeed/kernel/base/string_writer.h"
+#include "pagespeed/kernel/base/time_util.h"
+#include "pagespeed/kernel/http/content_type.h"
+#include "pagespeed/kernel/http/google_url.h"
 #include "pagespeed/kernel/http/query_params.h"
 #include "pagespeed/kernel/html/html_keywords.h"
 #include "pagespeed/kernel/thread/pthread_shared_mem.h"
+#include "pagespeed/kernel/util/gzip_inflater.h"
+#include "pagespeed/kernel/util/statistics_logger.h"
+#include "pagespeed/system/in_place_resource_recorder.h"
+#include "pagespeed/system/system_caches.h"
+#include "pagespeed/system/system_request_context.h"
+#include "pagespeed/system/system_rewrite_options.h"
+#include "pagespeed/system/system_server_context.h"
+#include "pagespeed/system/system_thread_system.h"
 
 #define DBG(session, args...)                                       \
     g_api->log(session, LSI_LOG_DEBUG, args)
@@ -88,6 +87,8 @@
 
 // Needed for SystemRewriteDriverFactory to use shared memory.
 #define PAGESPEED_SUPPORT_POSIX_SHARED_MEM
+LsiRewriteDriverFactory* active_driver_factory = NULL;
+bool factory_deleted = false;
 
 #define PAGESPEED_RESP_HEADER "X-LS-Pagespeed"
 
@@ -112,7 +113,7 @@ enum HTTP_METHOD
 };
 
 
-using namespace net_instaweb;
+
 
 /**************************************************************************************************
  *
@@ -145,7 +146,6 @@ struct ps_vh_conf_t
 typedef struct
 {
     LsiBaseFetch *baseFetch;
-    lsi_session_t *session;
 
     // for html rewrite
     ProxyFetch *proxyFetch;
@@ -164,7 +164,7 @@ struct PsMData
 {
     ps_request_ctx_t    *ctx;
     ps_vh_conf_t        *cfg_s;
-    PipeNotifier        *pNotifier;
+    
     const char          *userAgent;
     int                  uaLen;
     GoogleString         urlString;
@@ -174,7 +174,8 @@ struct PsMData
     int16_t              statusCode;
     ResponseHeaders     *respHeaders;
 
-    ls_loopbuf_t         buff;
+    GoogleString         sBuff;
+    size_t               nBuffOffset;
     int8_t               endRespCalled;
     int8_t               doneCalled;
 };
@@ -211,8 +212,7 @@ int SetCacheControl(lsi_session_t *session, char *cache_control)
     return 0;
 }
 
-//If copy_request is 0, then copy response headers
-//Othercopy request headers.
+//If copy_request is 0, then copy response headers, Other copy request headers.
 template<class Headers>
 void CopyHeaders(lsi_session_t *session, int is_from_request, Headers *to)
 {
@@ -379,6 +379,17 @@ int net_instaweb::CopyRespHeadersToServer(
             g_api->set_resp_content_length(session, (int64_t) atol(value.c_str()));
         }
 
+        else if (STR_EQ_LITERAL(name, "Content-Encoding"))
+            need_set = true;
+        else if (STR_EQ_LITERAL(name, "Refresh"))
+            need_set = true;
+        else if (STR_EQ_LITERAL(name, "Content-Range"))
+            need_set = true;
+        else if (STR_EQ_LITERAL(name, "Accept-Ranges"))
+            need_set = true;
+        else if (STR_EQ_LITERAL(name, "WWW-Authenticate"))
+            need_set = true;
+        
         if (need_set)
         {
             g_api->set_resp_header(session, -1, name.c_str(), name.len(),
@@ -389,21 +400,29 @@ int net_instaweb::CopyRespHeadersToServer(
     return 0;
 }
 
-
-int net_instaweb::CopyRespBodyToBuf(lsi_session_t *session,
-                                    const char *s, int len, int done_called)
+int net_instaweb::CopyRespBodyToBuf(lsi_session_t *session, GoogleString &str,
+                                    int done_called)
 {
     PsMData *pMyData = (PsMData *) g_api->get_module_data(session, &MNAME,
                        LSI_DATA_HTTP);
     //pMyData->status_code = 200;
-    ls_loopbuf_d(&pMyData->buff);
-    ls_loopbuf_append(&pMyData->buff, s, len);
+    if (pMyData->sBuff.size() > 0)
+        pMyData->sBuff.append(str);
+    else
+        pMyData->sBuff.swap(str);
+    
+    pMyData->nBuffOffset = 0;
     pMyData->doneCalled = done_called;
     return 0;
 }
 
 int TerminateMainConf(lsi_param_t *rec)
 {
+    if (active_driver_factory != NULL) {
+        delete active_driver_factory;
+        active_driver_factory = NULL;
+    }
+
     delete g_pProcessContext;
     g_pProcessContext = NULL;
 
@@ -417,7 +436,7 @@ int TerminateMainConf(lsi_param_t *rec)
         delete g_pMainConf;
         g_pMainConf = NULL;
     }
-
+    factory_deleted = false;
     return 0;
 }
 
@@ -427,8 +446,14 @@ static int ReleaseVhConf(void *p)
     {
         ps_vh_conf_t *cfg_s = (ps_vh_conf_t *) p;
 
-        if (cfg_s->proxyFetchFactory)
-            delete cfg_s->proxyFetchFactory;
+        if (!factory_deleted && cfg_s->serverContext != NULL) {
+            if (active_driver_factory == cfg_s->serverContext->factory()) {
+                active_driver_factory = NULL;
+            }
+            delete cfg_s->serverContext->factory();
+            factory_deleted = true;
+        }
+
 
         if (cfg_s->serverContext)
             delete cfg_s->serverContext;
@@ -451,18 +476,12 @@ void ReleaseBaseFetch(PsMData *pData)
 
     if (pData->ctx->baseFetch != NULL)
     {
-        pData->ctx->baseFetch->Release();
+        pData->ctx->baseFetch->DecrementRefCount();
         pData->ctx->baseFetch = NULL;
     }
 
-    if (pData->pNotifier != NULL)
-    {
-        pData->pNotifier->uninitNotifier((Multiplexer *) g_api->get_multiplexer());
-        delete pData->pNotifier;
-        pData->pNotifier = NULL;
-    }
-
-    ls_loopbuf_d(&pData->buff);
+    pData->sBuff.clear();
+    pData->nBuffOffset = 0;
     pData->doneCalled = false;
 }
 
@@ -511,8 +530,9 @@ static int ReleaseMydata(void *data)
     if (pData->respHeaders)
         delete pData->respHeaders;
 
-    ls_loopbuf_d(&pData->buff);
-
+    pData->urlString.clear();
+    pData->sBuff.clear();
+    pData->nBuffOffset = 0;
     delete pData;
     return 0;
 }
@@ -522,7 +542,7 @@ int EndSession(lsi_param_t *rec)
     PsMData *pData = (PsMData *) g_api->get_module_data(rec->session, &MNAME,
                      LSI_DATA_HTTP);
 
-    if (pData != NULL)
+    if (pData)
     {
         g_api->log(rec->session, LSI_LOG_DEBUG,
                    "[%s]ps_end_session, session=%p pData=%p.\n",
@@ -530,7 +550,6 @@ int EndSession(lsi_param_t *rec)
 
         g_api->free_module_data(rec->session, &MNAME, LSI_DATA_HTTP,
                                 ReleaseMydata);
-        g_api->set_module_data(rec->session, &MNAME, LSI_DATA_HTTP, NULL);
     }
 
 
@@ -650,6 +669,8 @@ static int CreateMainConf()
         return LS_FAIL;
     }
 
+    active_driver_factory = g_pMainConf->driverFactory;
+    active_driver_factory->LoggingInit();
     g_pMainConf->driverFactory->Init();
     g_bMainConfInited = 1;
     return 0;
@@ -665,31 +686,41 @@ inline void TrimLeadingSpace(const char **p)
 static void ParseOption(LsiRewriteOptions *pOption, const char *sLine,
                         int len, int level, const char *name)
 {
+    /***
+     * The parameters can have "ModPagespeed" or "pagespeed" at the beginning.
+     * Just for compatible with pagespeed module of Apache and Nginx configures.
+     */
     const char *pEnd = sLine + len;
     TrimLeadingSpace(&sLine);
+    
+    while (isspace(*(pEnd - 1)))
+        -- pEnd;
+    if (*(pEnd - 1) == ';')
+        -- pEnd;
 
-    if (pEnd - sLine <= 10 || strncasecmp(sLine, "pagespeed", 9) != 0
-        || (sLine[9] != ' ' && sLine[9] != '\t'))
+    if (pEnd - sLine >= 12 && strncasecmp(sLine, "pagespeed", 9) == 0)
     {
-        if (pEnd - sLine > 0)
-        {
-            g_api->log(NULL, LSI_LOG_DEBUG,
-                       "[%s]parseOption do not parse %s in level %s\n",
-                       ModuleName, AutoStr2(sLine, (int)(pEnd - sLine)).c_str(), name);
-        }
-
-        return ;
+        //assert(isblank(sLine[9]);
+        sLine += 10;
     }
+    else if (pEnd - sLine >= 14 && strncasecmp(sLine, "ModPagespeed", 12) == 0)
+    {
+        sLine += 12;
+    }
+    skip_leading_space(&sLine);
+    
+    if (pEnd - sLine < 2)
+        return ;
 
-    //move to the next arg position
-    sLine += 10;
+    g_api->log(NULL, LSI_LOG_DEBUG,
+                   "modpagespeed ParseOption parssing '%.*s' on level %d [%s]\n",
+                   pEnd - sLine, sLine, level, name);
 
 #define MAX_ARG_NUM 5
     StringPiece args[MAX_ARG_NUM];
     int narg = 0;
     const char *argBegin, *argEnd, *pError;
 
-    skip_leading_space(&sLine);
 
     while (narg < MAX_ARG_NUM && sLine < pEnd &&
            StringTool::parseNextArg(sLine, pEnd, argBegin, argEnd, pError) == 0)
@@ -728,11 +759,11 @@ static void ParseOption(LsiRewriteOptions *pOption, const char *sLine,
     // The directory has been prepared, but we haven't actually parsed the
     // directive yet.  That happens below in ParseAndSetOptions().
     pOption->ParseAndSetOptions(args, narg, handler,
-                                g_pMainConf->driverFactory,
-                                scope);
+                                g_pMainConf->driverFactory, scope);
+
 }
 
-
+#define DEFAULT_SERVER_CONFIG  "pagespeed FileCachePath /tmp/lshttpd/pagespeed/"
 static void *ParseConfig(const char *param, int paramLen,
                          void *_initial_config, int level, const char *name)
 {
@@ -751,8 +782,19 @@ static void *ParseConfig(const char *param, int paramLen,
     if (!pOption)
         return NULL;
 
+    //For server level config, must at least set the "FileCachePath", otherwise 
+    //will cause FileCachePath not set and init failed.
+    
     if (!param)
-        return (void *) pOption;
+    {
+        if (level != LSI_CFG_SERVER)
+            return (void *) pOption;
+        else
+        {
+            param = DEFAULT_SERVER_CONFIG;
+            paramLen = sizeof(DEFAULT_SERVER_CONFIG) -1;
+        }
+    }
 
     const char *pEnd = param + paramLen;
     const char *pStart = param;
@@ -873,6 +915,7 @@ static int PostConfig(lsi_param_t *rec)
     {
         delete g_pMainConf->driverFactory;
         g_pMainConf->driverFactory = NULL;
+        active_driver_factory = NULL;
     }
 
 
@@ -909,39 +952,39 @@ static int ChildInit(lsi_param_t *rec)
     return 0;
 }
 
-void EventCb(void *session);
+int EventCb(evtcbhead_s *session, long, void *);
 int CreateBaseFetch(PsMData *pMyData, lsi_session_t *session,
                     RequestContextPtr request_context,
-                    RequestHeaders *request_headers)
+                    RequestHeaders *request_headers,
+                    BaseFetchType type)
 {
-    CHECK(pMyData->pNotifier == NULL);
-    pMyData->pNotifier = new PipeNotifier();
-    pMyData->pNotifier->initNotifier((Multiplexer *) g_api->get_multiplexer(),
-                                     session);
-    g_api->log(session, LSI_LOG_DEBUG,
-               "[Module:ModPagespeed]ps_create_base_fetch created event notifier, session=%p\n",
-               session);
-
-    pMyData->ctx->baseFetch = new LsiBaseFetch(
-        session, pMyData->pNotifier->getFdIn(), pMyData->cfg_s->serverContext,
-        request_context,
-        pMyData->ctx->preserveCachingHeaders);
+    if (pMyData->ctx->baseFetch)
+    {
+        long evtObj = pMyData->ctx->baseFetch->GetEventObj();
+        if (evtObj != 0)
+            g_api->remove_event_obj(evtObj);
+    }
+    pMyData->ctx->baseFetch = new LsiBaseFetch(session,
+                                               pMyData->cfg_s->serverContext,
+                                               request_context,
+                                               pMyData->ctx->preserveCachingHeaders,
+                                               type);
 
     //When the base_fetch is good then set the callback, otherwise, may cause crash.
     if (pMyData->ctx->baseFetch)
     {
         pMyData->ctx->baseFetch->SetRequestHeadersTakingOwnership(request_headers);
-        pMyData->pNotifier->setCb(EventCb);
+        long event_obj = g_api->get_event_obj(EventCb, session, 0, 0);
+        g_api->log(session, LSI_LOG_DEBUG,
+               "[Module:ModPagespeed]ps_create_base_fetch get event obj %p, session=%p\n",
+               (void *)event_obj, session);
+        pMyData->ctx->baseFetch->SetEventObj(event_obj);
+        g_api->set_session_back_ref_ptr(session, 
+                                        g_api->get_session_ref_ptr(event_obj));
         return 0;
     }
     else
-    {
-        pMyData->pNotifier->uninitNotifier((Multiplexer *)
-                                           g_api->get_multiplexer());
-        delete pMyData->pNotifier;
-        pMyData->pNotifier = NULL;
         return LS_FAIL;
-    }
 }
 
 bool CheckPagespeedApplicable(PsMData *pMyData, lsi_session_t *session)
@@ -978,13 +1021,11 @@ bool CheckPagespeedApplicable(PsMData *pMyData, lsi_session_t *session)
     return true;
 }
 
-StringPiece net_instaweb::DetermineHost(lsi_session_t *session)
+char *net_instaweb::DetermineHost(lsi_session_t *session,
+                                  char *hostC, int maxLen)
 {
-    const int maxLen = 512;
-    char hostC[maxLen];
     g_api->get_req_var_by_id(session, LSI_VAR_SERVER_NAME, hostC, maxLen);
-    StringPiece host = hostC;
-    return host;
+    return hostC;
 }
 
 int net_instaweb::DeterminePort(lsi_session_t *session)
@@ -1006,7 +1047,7 @@ int net_instaweb::DeterminePort(lsi_session_t *session)
 }
 
 
-GoogleString DetermineUrl(lsi_session_t *session)
+void DetermineUrl(lsi_session_t *session, GoogleString &str)
 {
     int port = DeterminePort(session);
     GoogleString port_string;
@@ -1020,7 +1061,8 @@ GoogleString DetermineUrl(lsi_session_t *session)
     else
         port_string = StrCat(":", IntegerToString(port));
 
-    StringPiece host = DetermineHost(session);
+    char hostC[512] = {0};
+    StringPiece host = DetermineHost(session, hostC, 512);
 
     int iQSLen;
     const char *pQS = g_api->get_req_query_string(session, &iQSLen);
@@ -1033,10 +1075,9 @@ GoogleString DetermineUrl(lsi_session_t *session)
         strncat(uri, pQS, iQSLen);
     }
 
-    GoogleString rc = StrCat(IsHttps(session) ? "https://" : "http://",
+    str = StrCat(IsHttps(session) ? "https://" : "http://",
                              host, port_string, uri);
     delete []uri;
-    return rc;
 }
 
 
@@ -1090,7 +1131,9 @@ bool SetExperimentStateAndCookie(lsi_session_t *session,
 {
     CHECK(options->running_experiment());
     bool need_cookie = cfg_s->serverContext->experiment_matcher()->
-                       ClassifyIntoExperiment(*request_headers, options);
+                       ClassifyIntoExperiment(*request_headers, 
+                                              *cfg_s->serverContext->user_agent_matcher(),
+                                              options);
 
     if (need_cookie && host.length() > 0)
     {
@@ -1104,11 +1147,12 @@ bool SetExperimentStateAndCookie(lsi_session_t *session,
         int state = options->experiment_id();
         GoogleString expires;
         ConvertTimeToString(expiration_time_ms, &expires);
-        GoogleString value = StringPrintf(
-                                 "%s=%s; Expires=%s; Domain=.%s; Path=/",
-                                 experiment::kExperimentCookie,
-                                 experiment::ExperimentStateToCookieString(state).c_str(),
-                                 expires.c_str(), host.as_string().c_str());
+        GoogleString value;
+        SStringPrintf(&value,
+                      "%s=%s; Expires=%s; Domain=.%s; Path=/",
+                      experiment::kExperimentCookie,
+                      experiment::ExperimentStateToCookieString(state).c_str(),
+                      expires.c_str(), host.as_string().c_str());
 
         g_api->set_resp_header(session, LSI_RSPHDR_SET_COOKIE, NULL, 0,
                                value.c_str(), value.size(), LSI_HEADEROP_MERGE);
@@ -1424,8 +1468,9 @@ int SimpleHandler(PsMData *pMyData, lsi_session_t *session,
         response_headers.Add(HttpAttributes::kEtag, "W/\"0\"");
 
     //g_api->append_body_buf(session, output.c_str(), output.size());
-    ls_loopbuf_d(&pMyData->buff);
-    ls_loopbuf_append(&pMyData->buff, output.c_str(), output.size());
+    pMyData->sBuff.clear();
+    pMyData->nBuffOffset = 0;
+    pMyData->sBuff.append(output);
 
     return 0;
 }
@@ -1448,7 +1493,8 @@ int ResourceHandler(PsMData *pMyData,
         response_category != RequestRouting::kCachePurge)
         return LS_FAIL;
 
-    GoogleString url_string = DetermineUrl(session);;
+    GoogleString url_string;
+    DetermineUrl(session, url_string);
     GoogleUrl url(url_string);
     if (!url.IsWebValid())
     {
@@ -1531,7 +1577,6 @@ int ResourceHandler(PsMData *pMyData,
         CHECK(ctx == NULL);
         ctx = new ps_request_ctx_t();
 
-        ctx->session = session;
         ctx->htmlRewrite = false;
         ctx->inPlace = false;
         ctx->proxyFetch = NULL;
@@ -1563,6 +1608,8 @@ int ResourceHandler(PsMData *pMyData,
         }
 
         ctx->recorder = NULL;
+        //ctx->location_field_set = false;
+        //ctx->psol_vary_accept_only = false;
         pMyData->urlString = url_string;
         pMyData->ctx = ctx;
     }
@@ -1570,7 +1617,7 @@ int ResourceHandler(PsMData *pMyData,
     if (pagespeed_resource)
     {
         CreateBaseFetch(pMyData, session, request_context,
-                        request_headers.release());
+                        request_headers.release(), kPageSpeedResource);
         ResourceFetch::Start(
             url,
             NULL,
@@ -1581,7 +1628,7 @@ int ResourceHandler(PsMData *pMyData,
     else if (is_an_admin_handler)
     {
         CreateBaseFetch(pMyData, session, request_context,
-                        request_headers.release());
+                        request_headers.release(), kAdminPage);
         QueryParams query_params;
         query_params.ParseFromUrl(url);
 
@@ -1628,12 +1675,36 @@ int ResourceHandler(PsMData *pMyData,
             CHECK(false);
 
         return 1;
+    } else if (!html_rewrite && response_category == RequestRouting::kResource) {
+        bool is_proxy = false;
+        GoogleString mapped_url;
+        GoogleString host_header;
+
+        if (options->domain_lawyer()->MapOriginUrl(
+                url, &mapped_url, &host_header, &is_proxy) && is_proxy) {
+            CreateBaseFetch(pMyData, session, request_context,
+                            request_headers.release(), kPageSpeedProxy);
+            
+            RewriteDriver* driver;
+            driver = cfg_s->serverContext->NewRewriteDriver(
+                         ctx->baseFetch->request_context());
+        
+            driver->SetRequestHeaders(*ctx->baseFetch->request_headers());
+            driver->set_pagespeed_query_params(pagespeed_query_params);
+            driver->set_pagespeed_option_cookies(pagespeed_option_cookies);
+    
+            cfg_s->proxyFetchFactory->StartNewProxyFetch(mapped_url,
+                                                         ctx->baseFetch, driver,
+                                                         NULL /*property_callback*/,
+                                                         NULL /*original_content_fetch*/);
+            return 1;
+        }
     }
 
     if (html_rewrite)
     {
         CreateBaseFetch(pMyData, session, request_context,
-                        request_headers.release());
+                        request_headers.release(), kHtmlTransform);
         // Do not store driver in request_context, it's not safe.
         RewriteDriver *driver;
 
@@ -1644,36 +1715,25 @@ int ResourceHandler(PsMData *pMyData,
         driver = cfg_s->serverContext->NewRewriteDriver(
                      ctx->baseFetch->request_context());
 
-        StringPiece user_agent = ctx->baseFetch->request_headers()->Lookup1(
-                                     HttpAttributes::kUserAgent);
-
-        if (!user_agent.empty())
-            driver->SetUserAgent(user_agent);
-
         driver->SetRequestHeaders(*ctx->baseFetch->request_headers());
         driver->set_pagespeed_query_params(pagespeed_query_params);
         driver->set_pagespeed_option_cookies(pagespeed_option_cookies);
 
-        bool page_callback_added = false;
-        scoped_ptr<ProxyFetchPropertyCallbackCollector>
-        property_callback(
+        ProxyFetchPropertyCallbackCollector *property_callback =
             ProxyFetchFactory::InitiatePropertyCacheLookup(
                 !html_rewrite /* is_resource_fetch */,
                 url,
                 cfg_s->serverContext,
                 options,
                 ctx->baseFetch,
-                false /* requires_blink_cohort (no longer unused) */,
-                &page_callback_added));
-
-
-
+                false);
 
         ctx->proxyFetch = cfg_s->proxyFetchFactory->CreateNewProxyFetch(
                               url_string, ctx->baseFetch, driver,
-                              property_callback.release(),
+                              property_callback,
                               NULL /* original_content_fetch */);
 
+        ctx->proxyFetch->set_trusted_input(true);
         g_api->log(NULL, LSI_LOG_DEBUG, "Create ProxyFetch %s.\n",
                    url_string.c_str());
         return 0;
@@ -1684,19 +1744,13 @@ int ResourceHandler(PsMData *pMyData,
         options->IsAllowed(url.Spec()))
     {
         CreateBaseFetch(pMyData, session, request_context,
-                        request_headers.release());
+                        request_headers.release(), kIproLookup);
         // Do not store driver in request_context, it's not safe.
         RewriteDriver *driver;
 
         driver = cfg_s->serverContext->NewRewriteDriver(
                      ctx->baseFetch->request_context());
 
-
-        StringPiece user_agent = ctx->baseFetch->request_headers()->Lookup1(
-                                     HttpAttributes::kUserAgent);
-
-        if (!user_agent.empty())
-            driver->SetUserAgent(user_agent);
 
         driver->SetRequestHeaders(*ctx->baseFetch->request_headers());
 
@@ -1836,7 +1890,8 @@ int InPlaceCheckHeaderFilter(PsMData *pMyData, lsi_session_t *session,
     ps_vh_conf_t *cfg_s = pMyData->cfg_s;
     LsServerContext *server_context = cfg_s->serverContext;
     MessageHandler *message_handler = cfg_s->handler;
-    GoogleString url = DetermineUrl(session);
+    GoogleString url;
+    DetermineUrl(session, url);
     // The URL we use for cache key is a bit different since it may
     // have PageSpeed query params removed.
     GoogleString cache_url = pMyData->urlString;
@@ -1968,10 +2023,11 @@ int sendRespBody(lsi_param_t *rec)
         return g_api->stream_write_next(rec, (const char *) rec->ptr1,
                                         rec->len1);
 
+    int doneCalled = pMyData->doneCalled;
     int ret = rec->len1;
     StringPiece contents;
     int writtenTotal = 0;
-    if (ctx->htmlRewrite && !pMyData->doneCalled)
+    if (ctx->htmlRewrite && !doneCalled)
     {
         if (rec->len1 > 0 ||  rec->flag_in)
         {
@@ -1980,10 +2036,10 @@ int sendRespBody(lsi_param_t *rec)
         }
     }
 
-    if (!ctx->htmlRewrite || ctx->baseFetch == NULL)
+    if (pMyData->sBuff.size() - pMyData->nBuffOffset == 0 &&
+        (!ctx->htmlRewrite || ctx->baseFetch == NULL))
     {
-        ret = g_api->stream_write_next(rec, (const char *) rec->ptr1,
-                                       rec->len1);
+        ret = g_api->stream_write_next(rec, (const char *) rec->ptr1, rec->len1);
         if (ret >= 0)
         {
             if (ctx->recorder)
@@ -1997,15 +2053,14 @@ int sendRespBody(lsi_param_t *rec)
     }
 
     int len;
-    while ((len = ls_loopbuf_blksize(&pMyData->buff)) > 0)
+    while ((len = pMyData->sBuff.size() - pMyData->nBuffOffset) > 0)
     {
-        char *buf = ls_loopbuf_begin(&pMyData->buff);
-
+        const char *buf = pMyData->sBuff.c_str() + pMyData->nBuffOffset;
         if (pMyData->doneCalled)
             rec->flag_in = LSI_CBFI_EOF;
         else
             rec->flag_in = LSI_CBFI_FLUSH;
-
+        
         int written = g_api->stream_write_next(rec, buf, len);
         if (written > 0)
         {
@@ -2014,7 +2069,7 @@ int sendRespBody(lsi_param_t *rec)
                 contents = StringPiece(buf, written);
                 InPlaceBodyFilter(pMyData, rec, ctx, contents, written);
             }
-            ls_loopbuf_popfront(&pMyData->buff, written);
+            pMyData->nBuffOffset += written;
             writtenTotal += written;
         }
         else if (written < 0)
@@ -2023,18 +2078,22 @@ int sendRespBody(lsi_param_t *rec)
             break;
     }
 
-    if (!pMyData->doneCalled)
+    if (pMyData->sBuff.size() - pMyData->nBuffOffset <= 0)
     {
-        if (rec->flag_out)
+        pMyData->sBuff.clear();
+        pMyData->nBuffOffset = 0;
+    }
+    
+    if (rec->flag_out)
+    {
+        if (!doneCalled || pMyData->sBuff.size() - pMyData->nBuffOffset > 0)
             *rec->flag_out |= LSI_CBFO_BUFFERED;
     }
-    else
+
+    if (doneCalled && !pMyData->endRespCalled)
     {
-        if (!pMyData->endRespCalled)
-        {
-            pMyData->endRespCalled = true;
-            g_api->end_resp(rec->session);
-        }
+        pMyData->endRespCalled = true;
+        g_api->end_resp(rec->session);
     }
 
     if (*rec->flag_out && rec->flag_in == LSI_CBFI_EOF)
@@ -2043,7 +2102,7 @@ int sendRespBody(lsi_param_t *rec)
 
     g_api->log(rec->session, LSI_LOG_DEBUG,
                "[%s]ps_body_filter flag_in %d, flag out %d, done_called %d, Accumulated %d, write to next %d, buffer data written %d.\n",
-               ModuleName, rec->flag_in, *rec->flag_out, pMyData->doneCalled,
+               ModuleName, rec->flag_in, *rec->flag_out, doneCalled,
                rec->len1, ret, writtenTotal);
 
     return ret;
@@ -2159,7 +2218,8 @@ RequestRouting::Response RouteRequest(PsMData *pMyData,
         return RequestRouting::kPagespeedDisabled;
     }
 
-    GoogleString url_string = DetermineUrl(session);
+    GoogleString url_string;
+    DetermineUrl(session, url_string);
     GoogleUrl url(url_string);
 
     if (!url.IsWebValid())
@@ -2194,9 +2254,10 @@ RequestRouting::Response RouteRequest(PsMData *pMyData,
         StringCaseStartsWith(path, global_options->GetAdminPath()))
         return RequestRouting::kAdmin;
     else if (!global_options->GetGlobalAdminPath().empty() &&
-             StringCaseStartsWith(path, global_options->GetGlobalAdminPath()))
+             StringCaseStartsWith(path, global_options->GetGlobalAdminPath()) &&
+             global_options->GlobalAdminAccessAllowed(url)) {
         return RequestRouting::kGlobalAdmin;
-    else if (global_options->enable_cache_purge() &&
+    } else if (global_options->enable_cache_purge() &&
              !global_options->purge_method().empty() &&
              pMyData->method == HTTP_PURGE)
         return RequestRouting::kCachePurge;
@@ -2323,12 +2384,11 @@ static int RecvReqHeaderCheck(lsi_param_t *rec)
     pMyData->uaLen = 0;
     pMyData->statusCode = 0;
     pMyData->respHeaders = NULL;
-    pMyData->pNotifier = NULL;
     pMyData->endRespCalled = 0;
     pMyData->doneCalled = 0;
-    ls_loopbuf(&pMyData->buff, 4096);
-    ls_loopbuf_d(&pMyData->buff);
-    pMyData->urlString = DetermineUrl(rec->session);
+    pMyData->sBuff = "";
+    pMyData->nBuffOffset = 0;
+    DetermineUrl(rec->session, pMyData->urlString);
     pMyData->method = (HTTP_METHOD) method;
     pMyData->cfg_s = cfg_s;
     pMyData->userAgent = g_api->get_req_header_by_id(rec->session,
@@ -2411,12 +2471,22 @@ int BaseFetchHandler(PsMData *pMyData, lsi_session_t *session)
 }
 
 //This event shoule occur only once!
-void EventCb(void *session_)
+int EventCb(evtcbhead_s *session_, long, void *)
 {
+    if (session_ == NULL)
+    {
+        //session has been closed. PsMData has been released.
+        //cleanup pagespeed resouces.
+        return -1;
+    }
     lsi_session_t *session = (lsi_session_t *) session_;
+    g_api->reset_session_back_ref_ptr(session);
+    
     PsMData *pMyData = (PsMData *) g_api->get_module_data(session, &MNAME,
                        LSI_DATA_HTTP);
-
+    if (!pMyData)
+        return 0;
+    
     if (pMyData->ctx->baseFetch)
     {
         if (!pMyData->ctx->fetchDone)
@@ -2429,7 +2499,7 @@ void EventCb(void *session_)
     }
 
     g_api->log(session, LSI_LOG_DEBUG,
-               "[%s]ps_event_cb triggered, session=%p\n",
+               "[%s]EventCb triggered, session=%p\n",
                ModuleName, session_);
 
     //For suspended case, use the following to resume
@@ -2454,6 +2524,7 @@ void EventCb(void *session_)
     g_api->set_handler_write_state(session, 1);
     g_api->log(session, LSI_LOG_DEBUG,
                "[%s]EventCb called, pData=%p.\n", ModuleName, pMyData);
+    return 0;
 }
 
 static int PsHandlerProcess(lsi_session_t *session)
@@ -2491,13 +2562,13 @@ static int PsHandlerProcess(lsi_session_t *session)
                            LSI_HEADEROP_SET);
 
     int len;
-    while ((len = ls_loopbuf_blksize(&pMyData->buff)) > 0)
+    while ((len = pMyData->sBuff.size() - pMyData->nBuffOffset) > 0)
     {
-        const char *pBuf = ls_loopbuf_begin(&pMyData->buff);
-        int written = g_api->append_resp_body(session,  pBuf, len);
+        const char *pBuf = pMyData->sBuff.c_str() + pMyData->nBuffOffset;
+        int written = g_api->append_resp_body(session, pBuf, len);
 
         if (written > 0)
-            ls_loopbuf_popfront(&pMyData->buff, written);
+            pMyData->nBuffOffset += written;
         else
         {
             g_api->log(session, LSI_LOG_DEBUG,
@@ -2506,7 +2577,8 @@ static int PsHandlerProcess(lsi_session_t *session)
         }
     }
 
-    ls_loopbuf_d(&pMyData->buff);
+    pMyData->sBuff.clear();
+    pMyData->nBuffOffset = 0;
     g_api->end_resp(session);
     g_api->free_module_data(session, &MNAME, LSI_DATA_HTTP, ReleaseMydata);
     return 0;
@@ -2539,6 +2611,6 @@ static int Init(lsi_module_t *pModule)
 lsi_confparser_t dealConfig = { ParseConfig, FreeConfig, paramArray };
 lsi_reqhdlr_t _handler = { PsHandlerProcess, NULL, NULL, NULL };
 lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, Init, &_handler, &dealConfig,
-                       "1.4.17-1.9.32.10", serverHooks, {0}
+                       "1.4.18-1.11.33.2", serverHooks, {0}
                      };
 
