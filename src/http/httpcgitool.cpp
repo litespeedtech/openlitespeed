@@ -552,95 +552,97 @@ int HttpCgiTool::buildCommonEnv(IEnv *pEnv, HttpSession *pSession)
 
     if (pSession->isSSL())
     {
+        //pEnv->add("HTTPS", 5, "on",  2);
         SslConnection *pSSL = pSession->getSSL();
-        pEnv->add("HTTPS", 5, "on",  2);
-        const char *pVersion = pSSL->getVersion();
-        n = strlen(pVersion);
-        pEnv->add("SSL_VERSION", 11, pVersion, n);
-        count += 2;
-        SSL_SESSION *pSession = pSSL->getSession();
-        if (pSession)
+        if (pSSL)
         {
-            int idLen = SslConnection::getSessionIdLen(pSession);
-            n = idLen * 2;
-            assert(n < (int)sizeof(buf));
-            StringTool::hexEncode(
-                (char *)SslConnection::getSessionId(pSession),
-                idLen, buf);
-            pEnv->add("SSL_SESSION_ID", 14, buf, n);
+            const char *pVersion = pSSL->getVersion();
+            n = strlen(pVersion);
+            pEnv->add("SSL_VERSION", 11, pVersion, n);
             ++count;
-        }
-
-        const SSL_CIPHER *pCipher = pSSL->getCurrentCipher();
-        if (pCipher)
-        {
-            const char *pName = pSSL->getCipherName();
-            n = strlen(pName);
-            pEnv->add("SSL_CIPHER", 10, pName, n);
-            int algkeysize;
-            int keysize = SslConnection::getCipherBits(pCipher, &algkeysize);
-            n = ls_snprintf(buf, 20, "%d", keysize);
-            pEnv->add("SSL_CIPHER_USEKEYSIZE", 21, buf, n);
-            n = ls_snprintf(buf, 20, "%d", algkeysize);
-            pEnv->add("SSL_CIPHER_ALGKEYSIZE", 21, buf, n);
-            count += 3;
-        }
-
-        int i = pSSL->getVerifyMode();
-        if (i != 0)
-        {
-            char achBuf[4096];
-            X509 *pClientCert = pSSL->getPeerCertificate();
-            if (pSSL->isVerifyOk())
+            SSL_SESSION *pSession = pSSL->getSession();
+            if (pSession)
             {
-                if (pClientCert)
+                int idLen = SslConnection::getSessionIdLen(pSession);
+                n = idLen * 2;
+                assert(n < (int)sizeof(buf));
+                StringTool::hexEncode(
+                    (char *)SslConnection::getSessionId(pSession),
+                    idLen, buf);
+                pEnv->add("SSL_SESSION_ID", 14, buf, n);
+                ++count;
+            }
+
+            const SSL_CIPHER *pCipher = pSSL->getCurrentCipher();
+            if (pCipher)
+            {
+                const char *pName = pSSL->getCipherName();
+                n = strlen(pName);
+                pEnv->add("SSL_CIPHER", 10, pName, n);
+                int algkeysize;
+                int keysize = SslConnection::getCipherBits(pCipher, &algkeysize);
+                n = ls_snprintf(buf, 20, "%d", keysize);
+                pEnv->add("SSL_CIPHER_USEKEYSIZE", 21, buf, n);
+                n = ls_snprintf(buf, 20, "%d", algkeysize);
+                pEnv->add("SSL_CIPHER_ALGKEYSIZE", 21, buf, n);
+                count += 3;
+            }
+
+            int i = pSSL->getVerifyMode();
+            if (i != 0)
+            {
+                char achBuf[4096];
+                X509 *pClientCert = pSSL->getPeerCertificate();
+                if (pSSL->isVerifyOk())
                 {
-                    //IMPROVE: too many deep copy here.
-                    //n = SslCert::PEMWriteCert( pClientCert, achBuf, 4096 );
-                    //if ((n>0)&&( n <= 4096 ))
-                    //{
-                    //    pEnv->add( "SSL_CLIENT_CERT", 15, achBuf, n );
-                    //    ++count;
-                    //}
-                    n = snprintf(achBuf, sizeof(achBuf), "%lu",
-                                 X509_get_version(pClientCert) + 1);
-                    pEnv->add("SSL_CLIENT_M_VERSION", 20, achBuf, n);
-                    ++count;
-                    n = lookup_ssl_cert_serial(pClientCert, achBuf, 4096);
-                    if (n != -1)
+                    if (pClientCert)
                     {
-                        pEnv->add("SSL_CLIENT_M_SERIAL", 19, achBuf, n);
+                        //IMPROVE: too many deep copy here.
+                        //n = SslCert::PEMWriteCert( pClientCert, achBuf, 4096 );
+                        //if ((n>0)&&( n <= 4096 ))
+                        //{
+                        //    pEnv->add( "SSL_CLIENT_CERT", 15, achBuf, n );
+                        //    ++count;
+                        //}
+                        n = snprintf(achBuf, sizeof(achBuf), "%lu",
+                                     X509_get_version(pClientCert) + 1);
+                        pEnv->add("SSL_CLIENT_M_VERSION", 20, achBuf, n);
                         ++count;
-                    }
-                    X509_NAME_oneline(X509_get_subject_name(pClientCert), achBuf, 4096);
-                    pEnv->add("SSL_CLIENT_S_DN", 15, achBuf, strlen(achBuf));
-                    ++count;
-                    X509_NAME_oneline(X509_get_issuer_name(pClientCert), achBuf, 4096);
-                    pEnv->add("SSL_CLIENT_I_DN", 15, achBuf, strlen(achBuf));
-                    ++count;
-                    if (SslConnection::isClientVerifyOptional(i))
-                    {
-                        strcpy(achBuf, "GENEROUS");
-                        n = 8;
+                        n = lookup_ssl_cert_serial(pClientCert, achBuf, 4096);
+                        if (n != -1)
+                        {
+                            pEnv->add("SSL_CLIENT_M_SERIAL", 19, achBuf, n);
+                            ++count;
+                        }
+                        X509_NAME_oneline(X509_get_subject_name(pClientCert), achBuf, 4096);
+                        pEnv->add("SSL_CLIENT_S_DN", 15, achBuf, strlen(achBuf));
+                        ++count;
+                        X509_NAME_oneline(X509_get_issuer_name(pClientCert), achBuf, 4096);
+                        pEnv->add("SSL_CLIENT_I_DN", 15, achBuf, strlen(achBuf));
+                        ++count;
+                        if (SslConnection::isClientVerifyOptional(i))
+                        {
+                            strcpy(achBuf, "GENEROUS");
+                            n = 8;
+                        }
+                        else
+                        {
+                            strcpy(achBuf, "SUCCESS");
+                            n = 7;
+                        }
                     }
                     else
                     {
-                        strcpy(achBuf, "SUCCESS");
-                        n = 7;
+                        strcpy(achBuf, "NONE");
+                        n = 4;
                     }
                 }
                 else
-                {
-                    strcpy(achBuf, "NONE");
-                    n = 4;
-                }
+                    n = pSSL->buildVerifyErrorString(achBuf, sizeof(achBuf));
+                pEnv->add("SSL_CLIENT_VERIFY", 17, achBuf, n);
+                ++count;
             }
-            else
-                n = pSSL->buildVerifyErrorString(achBuf, sizeof(achBuf));
-            pEnv->add("SSL_CLIENT_VERIFY", 17, achBuf, n);
-            ++count;
         }
-
     }
 
     char sVer[40];

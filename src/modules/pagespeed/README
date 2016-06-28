@@ -10,6 +10,6 @@ Note: PSOL and OpenLiteSpeed's PageSpeed Module is only available for Linux.
 
 For configuration, please refer to https://developers.google.com/speed/pagespeed/module/config_filters
 
-OpenLiteSpeed's PageSpeed Module configuration follows the NGINX PageSpeed configuration syntax (in the link above), but without the ";" at the end of each line.
+OpenLiteSpeed's PageSpeed Module configuration follows the NGINX PageSpeed configuration syntax (in the link above).
 
 Thanks and enjoy.

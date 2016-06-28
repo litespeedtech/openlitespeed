@@ -713,6 +713,10 @@ enum lsi_req_variable
      */
     LSI_VAR_ORG_REQ_URI,
     /**
+     * Original QS environment variable
+     */
+    LSI_VAR_ORG_QS,
+    /**
      * HTTPS environment variable
      */
     LSI_VAR_HTTPS,
@@ -1866,12 +1870,6 @@ struct lsi_api_s
     void (*remove_event_obj)(long event_obj);
     void (*schedule_event)(long event_obj, int nowait);
 
-    lsi_session_t **(*get_session_ref_ptr)(long event_obj);
-    /**
-     * Need to understand the usage of this API!!!
-     */
-    void (*set_session_back_ref_ptr)(lsi_session_t *pSession, lsi_session_t **session);
-    void (*reset_session_back_ref_ptr)(lsi_session_t *pSession_);
 
     /**
      * get_req_cookies is used to get all the request cookies.

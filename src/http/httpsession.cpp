@@ -90,11 +90,11 @@ HttpSession::HttpSession()
     , m_sn(1)
     , m_pReqParser(NULL)
 {
-    memset(&m_pChunkIS, 0, (char *)(&m_iReqServed + 1) -
-           (char *)&m_pChunkIS);
+    memset(&m_pChunkIS, 0, (char *)(&m_iReqServed + 1) - (char *)&m_pChunkIS);
     m_pModuleConfig = NULL;
     m_response.reset();
     m_request.reset();
+    resetEvtcb();
 }
 
 
@@ -155,7 +155,7 @@ int HttpSession::onInitConnected()
 //     m_response.reset();
 //     m_request.reset();
     ++m_sn;
-    setEvtcbHead(NULL);
+    resetEvtcb();
     if (m_pReqParser)
     {
         delete m_pReqParser;
@@ -1066,6 +1066,10 @@ int HttpSession::processNewReqInit()
                 return ret;
         }
     }
+
+    if (m_request.isHttps())
+        m_request.addEnv("HTTPS", 5, "on", 2);
+    
     m_lReqTime = DateTime::s_curTime;
     m_iReqTimeUs = DateTime::s_curTimeUs;
 
@@ -4018,22 +4022,30 @@ int HttpSession::handleAioSFEvent(Aiosfcb *event)
     return onWriteEx();
 }
 
-void HttpSession::setBackRefPtr(lsi_session_t ** v)
+void HttpSession::setBackRefPtr(evtcbhead_t ** v)
 {
     LS_DBG_M(getLogSession(),
                  "setBackRefPtr() called, set to %p.", *v);
-    m_pBackRefPtr = (HttpSession **)v;
+    evtcbhead_t::back_ref_ptr = v; 
 }
+
+
+void HttpSession::resetEvtcb()
+{
+    evtcb_head = NULL;
+    back_ref_ptr = NULL;
+}
+
 
 void HttpSession::resetBackRefPtr()
 {
-    if (m_pBackRefPtr)
+    if (evtcbhead_t::back_ref_ptr)
     {
         LS_DBG_M(getLogSession(),
                  "resetBackRefPtr() called. previous value is %p:%p.",
-                 m_pBackRefPtr, *m_pBackRefPtr);
-         *m_pBackRefPtr = NULL;
-         m_pBackRefPtr = NULL;
+                 evtcbhead_t::back_ref_ptr, *evtcbhead_t::back_ref_ptr);
+        *evtcbhead_t::back_ref_ptr = NULL;
+        evtcbhead_t::back_ref_ptr = NULL;
     }
 }
 

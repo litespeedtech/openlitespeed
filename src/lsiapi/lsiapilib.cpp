@@ -848,10 +848,15 @@ static long create_session_resume_event(lsi_session_t *session,
     return create_event(cb, session, pSession->getSn(), NULL);
 }
 
-static long get_event_obj(evtcb_pf cb, lsi_session_t *pSession,
+static long get_event_obj(evtcb_pf cb, lsi_session_t *session,
                          long lParam, void *pParam)
 {
-    return (long)EvtcbQue::getInstance().getNodeObj(cb, pSession, lParam, pParam);
+   // return (long)EvtcbQue::getInstance().getNodeObj(cb, pSession, lParam, pParam);
+    evtcbnode_s *pEvtObj = EvtcbQue::getInstance().getNodeObj(cb, session, lParam, pParam);
+    HttpSession *pSession = (HttpSession *)((LsiSession *)session);
+    if (pSession)
+        pSession->setBackRefPtr(EvtcbQue::getSessionRefPtr(pEvtObj));
+    return (long)pEvtObj;
 }
 
 
@@ -864,25 +869,6 @@ static void remove_event_obj(long event_obj)
 {
     EvtcbQue::getInstance().recycle((evtcbnode_s *)event_obj);
 }
-
-static lsi_session_t **get_session_ref_ptr(long event_obj)
-{
-    return EvtcbQue::getInstance().get_session_ref_ptr((evtcbnode_s *)event_obj);
-}
-
-void set_session_back_ref_ptr(lsi_session_t *pSession_, lsi_session_t **session)
-{
-    HttpSession *pSession = (HttpSession *)((LsiSession *)pSession_);
-    pSession->setBackRefPtr(session);
-}
-
-
-void reset_session_back_ref_ptr(lsi_session_t *pSession_)
-{
-    HttpSession *pSession = (HttpSession *)((LsiSession *)pSession_);
-    pSession->resetBackRefPtr();
-}
-
 
 static const char *get_req_header(lsi_session_t *session, const char *key,
                                   int keyLen, int *valLen)
@@ -1048,6 +1034,7 @@ static const char *lsi_req_env[LSI_VAR_COUNT] =
     "SCRIPT_BASENAME",
     "SCRIPT_URI",
     "ORG_REQ_URI",
+    "ORG_QS",
     "HTTPS",
     "SSL_VERSION",
     "SSL_SESSION_ID",
@@ -2098,9 +2085,6 @@ void lsiapi_init_server_api()
     pApi->get_event_obj = get_event_obj;
     pApi->schedule_event = schedule_event;
     pApi->remove_event_obj = remove_event_obj;
-    pApi->set_session_back_ref_ptr = set_session_back_ref_ptr;
-    pApi->reset_session_back_ref_ptr = reset_session_back_ref_ptr;
-    pApi->get_session_ref_ptr = get_session_ref_ptr;
 
     pApi->get_req_raw_headers_length = get_req_raw_headers_length;
     pApi->get_req_raw_headers = get_req_raw_headers;

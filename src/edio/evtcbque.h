@@ -42,7 +42,7 @@ class EvtcbQue : public TSingleton<EvtcbQue>
 
     DLinkQueue  m_callbackObjList;
 
-    inline void logState(const char *s, evtcbnode_s *p);
+    static void logState(const char *s, evtcbnode_s *p);
     void runOne(evtcbnode_s *pObj);
 
 public:
@@ -53,12 +53,12 @@ public:
     evtcbnode_s * getNodeObj(evtcb_pf cb, evtcbhead_t *session,
                              long lParam, void *pParam);
     
-    evtcbhead_t **get_session_ref_ptr(evtcbnode_s *);
-    
     void schedule(evtcbnode_s *pObj, bool nowait = false);
     evtcbnode_s *schedule(evtcb_pf cb, evtcbhead_t *session,
                           long lParam, void *pParam);
     void removeSessionCb(evtcbhead_t *session);
+
+    static evtcbhead_t **getSessionRefPtr(evtcbnode_s *nodeObj);
 
     LS_NO_COPY_ASSIGN(EvtcbQue);
     

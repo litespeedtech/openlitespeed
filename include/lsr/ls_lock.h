@@ -324,7 +324,7 @@ ls_inline int ls_futex_trylock(ls_mutex_t *p)
  */
 ls_inline int ls_futex_unlock(ls_mutex_t *p)
 {
-    assert(*p != 0);
+    assert(*(int *)p != 0);
     return (ls_atomic_setint(p, LS_LOCK_AVAIL) == LS_FUTEX_LOCKED2) ?
            ls_futex_wake(p) : 0;
 }
@@ -343,8 +343,7 @@ int ls_futex_setup(ls_mutex_t *p);
 
 #endif //USE_F_MUTEX
 
-
-#ifdef USE_ATOMIC_SPIN
+//#ifdef USE_ATOMIC_SPIN
 
 
 /**
@@ -359,15 +358,13 @@ int ls_futex_setup(ls_mutex_t *p);
  * @see ls_atomic_spin_setup, ls_atomic_spin_trylock, ls_atomic_spin_unlock,
  *   ls_atomic_spin_pidlock
  */
-ls_inline int ls_atomic_spin_lock(volatile ls_atom_spinlock_t *p)
+ls_inline int ls_atomic_spin_lock(ls_atom_spinlock_t *p)
 {
-    while (1)
+    while (!ls_atomic_casint(p, LS_LOCK_AVAIL, LS_LOCK_INUSE))
     {
-        if ((*p == LS_LOCK_AVAIL)
-            && ls_atomic_casint(p, LS_LOCK_AVAIL, LS_LOCK_INUSE))
-            return 0;
         cpu_relax();
     }
+    return 0;
 }
 
 /**
@@ -386,19 +383,28 @@ ls_inline int ls_atomic_spin_lock(volatile ls_atom_spinlock_t *p)
  *
  * @see ls_atomic_spin_lock
  */
+
+#define LS_SPIN_MIN_PID 10
+
 ls_inline int ls_atomic_spin_pidlock(ls_atom_spinlock_t *p)
 {
     int waitpid;
     if (ls_spin_pid == 0)
         ls_atomic_pidspin_init();
+    assert(*p != ls_spin_pid);
     int cnt = MAX_SPINCNT_CHECK;
     while (1)
     {
-        if ((waitpid = *p) == LS_LOCK_AVAIL)
+        waitpid = ls_atomic_casvint(p, LS_LOCK_AVAIL, ls_spin_pid);
+        if (waitpid == LS_LOCK_AVAIL)
         {
-            if (ls_atomic_casint(p, LS_LOCK_AVAIL, ls_spin_pid))
-                return 0;
-            cnt = MAX_SPINCNT_CHECK;
+            return 0;
+        }
+        else if (waitpid < LS_SPIN_MIN_PID)
+        {
+            //something is wrong with waitpid, mark it as available, otherise
+            // it will spin forever as those PIDs are taken by system processes
+            *p = LS_LOCK_AVAIL;
         }
         else if (--cnt == 0)
         {
@@ -408,7 +414,10 @@ ls_inline int ls_atomic_spin_pidlock(ls_atom_spinlock_t *p)
             cnt = MAX_SPINCNT_CHECK;
         }
         else
-            cpu_relax();
+        {
+            usleep(200);
+            //cpu_relax();
+        }
     }
 }
 
@@ -456,7 +465,7 @@ ls_inline int ls_atomic_pidspin_trylock(ls_atom_spinlock_t *p)
  *
  * @see ls_atomic_spin_setup, ls_atomic_spin_lock, ls_atomic_spin_trylock
  */
-ls_inline int ls_atomic_spin_unlock(volatile ls_atom_spinlock_t *p)
+ls_inline int ls_atomic_spin_unlock(ls_atom_spinlock_t *p)
 {
     ls_atomic_clrint(p);
     return 0;
@@ -492,7 +501,7 @@ ls_inline int ls_atomic_spin_pidunlock(ls_atom_spinlock_t *p)
  */
 int ls_atomic_spin_setup(ls_atom_spinlock_t *p);
 
-#endif
+//#endif
 
 int ls_pthread_mutex_setup(pthread_mutex_t *);
 
