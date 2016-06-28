@@ -506,8 +506,7 @@ static int ReleaseRequestContext(PsMData *pData)
     if (pData->ctx->recorder != NULL)
     {
         pData->ctx->recorder->Fail();
-        pData->ctx->recorder->DoneAndSetHeaders(NULL,
-                                                false);    // Deletes recorder.
+        pData->ctx->recorder->DoneAndSetHeaders(NULL, false);
         pData->ctx->recorder = NULL;
     }
 
@@ -561,8 +560,8 @@ bool IsHttps(lsi_session_t *session)
 //COmment: the below code to check if it is HTTPS but we should not check HTTPS
 //    because it may cause other issue, so just always return false;
     char s[12] = {0};
-    int len = g_api->get_req_var_by_id(session, LSI_VAR_SSL_VERSION, s, 12);
-    if (len > 3)
+    int len = g_api->get_req_var_by_id(session, LSI_VAR_HTTPS, s, 12);
+    if (len == 2 && strncasecmp(s, "on", 2) == 0)
         return true;
     return false;
 }
@@ -979,8 +978,8 @@ int CreateBaseFetch(PsMData *pMyData, lsi_session_t *session,
                "[Module:ModPagespeed]ps_create_base_fetch get event obj %p, session=%p\n",
                (void *)event_obj, session);
         pMyData->ctx->baseFetch->SetEventObj(event_obj);
-        g_api->set_session_back_ref_ptr(session, 
-                                        g_api->get_session_ref_ptr(event_obj));
+//         g_api->set_session_back_ref_ptr(session, 
+//                                         g_api->get_session_ref_ptr(event_obj));
         return 0;
     }
     else
@@ -2480,7 +2479,7 @@ int EventCb(evtcbhead_s *session_, long, void *)
         return -1;
     }
     lsi_session_t *session = (lsi_session_t *) session_;
-    g_api->reset_session_back_ref_ptr(session);
+    //g_api->reset_session_back_ref_ptr(session);
     
     PsMData *pMyData = (PsMData *) g_api->get_module_data(session, &MNAME,
                        LSI_DATA_HTTP);
@@ -2611,6 +2610,6 @@ static int Init(lsi_module_t *pModule)
 lsi_confparser_t dealConfig = { ParseConfig, FreeConfig, paramArray };
 lsi_reqhdlr_t _handler = { PsHandlerProcess, NULL, NULL, NULL };
 lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, Init, &_handler, &dealConfig,
-                       "1.4.18-1.11.33.2", serverHooks, {0}
+                       "1.4.18.1-1.11.33.2", serverHooks, {0}
                      };
 

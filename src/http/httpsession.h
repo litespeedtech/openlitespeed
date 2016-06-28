@@ -155,8 +155,6 @@ class HttpSession : public LsiSession, public InputStream,
 
     SendFileInfo          m_sendFileInfo;
 
-    HttpSession **        m_pBackRefPtr;
-
     long                  m_lReqTime;
     int32_t               m_iReqTimeUs;
 
@@ -311,6 +309,8 @@ private:
     int processNewUri();
 
     int setupReqParser();
+    void resetEvtcb();
+ 
 
 
 public:
@@ -527,7 +527,7 @@ public:
     const lsi_reqhdlr_t *getModHandler()
     {   return m_pModHandler;}
     
-    void setBackRefPtr(lsi_session_t ** v);
+    void setBackRefPtr(evtcbhead_t ** v);
     void resetBackRefPtr();
 };
 

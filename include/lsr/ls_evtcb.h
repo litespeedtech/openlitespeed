@@ -13,6 +13,7 @@ struct evtcbnode_s;
 typedef struct evtcbhead_s
 {
     struct evtcbnode_s *evtcb_head;
+    struct evtcbhead_s **back_ref_ptr;
 }
 evtcbhead_t;
 
