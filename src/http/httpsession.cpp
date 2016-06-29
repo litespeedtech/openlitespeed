@@ -398,6 +398,8 @@ void HttpSession::nextRequest()
         m_iReqTimeUs = DateTime::s_curTimeUs;
         m_response.reset();
         m_request.reset2();
+        if (m_pNtwkIOLink && m_pNtwkIOLink->isSSL())
+            m_request.setSsl(m_pNtwkIOLink->getSSL());
         releaseSendFileInfo();
         if (m_pRespBodyBuf)
             releaseRespCache();
