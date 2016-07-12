@@ -56,6 +56,7 @@ public:
     int16_t m_offETag;          //ETag header value location
     int16_t m_lenETag;          //ETag Header size
     int16_t m_lenStxFilePath;   //For a static file caching, we store the orginal file path
+    int16_t m_iPrivLen;         //ip and private cookie length, save it for compare cacheHeader need to exclude it
     off_t   m_lSize;
     ino_t   m_inode;
     time_t  m_lastMod;

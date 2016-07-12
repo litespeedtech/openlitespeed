@@ -1402,7 +1402,7 @@ HttpListener *HttpServerImpl::configListener(const XmlNode *pNode,
 
             pListener->m_moduleConfig.init(
                 ModuleManager::getInstance().getModuleCount());
-            pListener->m_moduleConfig.inherit(ModuleManager::getGlobalModuleConfig());
+            pListener->m_moduleConfig.inherit(ModuleManager::getInstance().getGlobalModuleConfig());
 
             const XmlNodeList *pModuleList = p0->getChildren("module");
             if (pModuleList)
@@ -2333,7 +2333,7 @@ int HttpServerImpl::configServerBasic2(const XmlNode *pRoot,
 
         configSecurity(pRoot);
 
-        m_serverContext.setModuleConfig(ModuleManager::getGlobalModuleConfig(), 0);
+        m_serverContext.setModuleConfig(ModuleManager::getInstance().getGlobalModuleConfig(), 0);
         m_serverContext.initExternalSessionHooks();
         return 0;
     }
@@ -2705,12 +2705,12 @@ int HttpServerImpl::configModules(const XmlNode *pRoot)
 
     const XmlNodeList *pList = pNode->getChildren("module");
     int moduleCount = ModuleManager::getInstance().loadModules(pList);
-    ModuleManager::getGlobalModuleConfig()->init(moduleCount);
+    ModuleManager::getInstance().getGlobalModuleConfig()->init(moduleCount);
     //If global level is "not set", by default is enable, so set to 1 here, other level won't do that
     for (int i = 0; i < moduleCount; ++i)
-        ModuleManager::getGlobalModuleConfig()->get(i)->filters_enable = 1;
+        ModuleManager::getInstance().getGlobalModuleConfig()->get(i)->filters_enable = 1;
     ModuleConfig::parseConfigList(pList,
-                                  ModuleManager::getGlobalModuleConfig(), LSI_CFG_SERVER,
+                                  ModuleManager::getInstance().getGlobalModuleConfig(), LSI_CFG_SERVER,
                                   pRoot->getName());
     ModuleManager::getInstance().runModuleInit();
 
@@ -2718,7 +2718,7 @@ int HttpServerImpl::configModules(const XmlNode *pRoot)
     LsiApiHooks::s_pServerSessionHooks->inherit(NULL, 1);
     ModuleManager::getInstance().applyConfigToServerRt(
         LsiApiHooks::s_pServerSessionHooks,
-        ModuleManager::getGlobalModuleConfig());
+        ModuleManager::getInstance().getGlobalModuleConfig());
 
     LsiApiHooks::initModuleEnableHooks();
     return 0;

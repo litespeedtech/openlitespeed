@@ -1567,7 +1567,7 @@ static void *get_config(lsi_session_t *session,
     if (session)
         pConfig = ((LsiSession *)session)->getModuleConfig();
     else
-        pConfig = ModuleManager::getGlobalModuleConfig();
+        pConfig = ModuleManager::getInstance().getGlobalModuleConfig();
 
     if (!pConfig)
         return NULL;

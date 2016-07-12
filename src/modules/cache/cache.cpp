@@ -718,7 +718,6 @@ void calcCacheHash2(lsi_session_t *session, CacheKey *pKey,
 //    CACHE_PRIVATE_KEY;
     XXH64_state_t state;
     int len;
-    char env[512];
     const char *host = g_api->get_req_header_by_id(session, LSI_HDR_HOST,
                        &len);
     XXH64_reset(&state, 0);
@@ -727,7 +726,7 @@ void calcCacheHash2(lsi_session_t *session, CacheKey *pKey,
     char port[12] = ":";
     g_api->get_req_var_by_id(session, LSI_VAR_SERVER_PORT, port + 1, 10);
     XXH64_update(&state, port, strlen(port));
-    
+
 //     len = g_api->get_req_var_by_id(session, LSI_VAR_SSL_VERSION, env, 12);
 //     if (len > 3)  //SSL
 //         XXH64_update(&state, "!", 1);
@@ -1030,6 +1029,8 @@ static int endCache(lsi_param_t *rec)
             {
                 myData->pConfig->getStore()->publish(myData->pEntry);
                 myData->iCacheState = CE_STATE_CACHED;  //Succeed
+                g_api->log(NULL, LSI_LOG_DEBUG,
+                           "[%s]published %s.\n", ModuleNameStr, myData->pOrgUri);
             }
         }
         return cancelCache(rec);
@@ -1041,7 +1042,7 @@ static int endCache(lsi_param_t *rec)
 
 static int getControlFlag(CacheConfig *pConfig)
 {
-    int flag = CacheCtrl::max_age | CacheCtrl::max_stale | CacheCtrl::s_maxage;
+    int flag = CacheCtrl::max_age | CacheCtrl::max_stale;
     if (pConfig->isSet(CACHE_ENABLE_PUBLIC))
         flag |= CacheCtrl::cache_public;
     if (pConfig->isSet(CACHE_ENABLE_PRIVATE))
@@ -1061,7 +1062,7 @@ static void processPurge(lsi_session_t *session,
                          const char *pValue, int valLen);
 static int createEntry(lsi_param_t *rec)
 {
-    //If have special cache headers, handle them here
+    //If have special cache headers, handle them here even if myData is NULL.
     struct iovec iov[5];
     int count = g_api->get_resp_header(rec->session,
                                        LSI_RSPHDR_LITESPEED_PURGE,
@@ -1077,28 +1078,6 @@ static int createEntry(lsi_param_t *rec)
         g_api->remove_resp_header(rec->session, LSI_RSPHDR_LITESPEED_PURGE, NULL,
                                   0);
 
-    //deal with X-Litespeed-Cache-Control
-    count = g_api->get_resp_header(rec->session, LSI_RSPHDR_UNKNOWN, 
-                                   "X-Litespeed-Cache-Control", 25, iov, 1);
-    if (count > 0 && iov[0].iov_len == 8 &&
-         strncasecmp((const char *)iov[0].iov_base, "no-cache", 8) ==  0)
-    {
-        clearHooks(rec->session);
-        g_api->log(rec->session, LSI_LOG_DEBUG,
-                   "[%s]createEntry abort, code 1.\n", ModuleNameStr);
-        return 0;
-    }
-
-    MyMData *myData = (MyMData *)g_api->get_module_data(rec->session, &MNAME,
-                      LSI_DATA_HTTP);
-    if (myData == NULL || myData->iHaveAddedHook == 0)
-    {
-        clearHooks(rec->session);
-        g_api->log(rec->session, LSI_LOG_DEBUG,
-                   "[%s]createEntry quit, code 2.\n", ModuleNameStr);
-        return 0;
-    }
-    
     //Error page won't be stored to cache
     int code = g_api->get_status_code(rec->session);
     if (code != 200)
@@ -1110,17 +1089,15 @@ static int createEntry(lsi_param_t *rec)
         return 0;
     }
 
-
-//     count = g_api->get_resp_header(rec->session,
-//                                        LSI_RSPHDR_LITESPEED_TAG,
-//                                        NULL, 0, iov, 5);
-//     for (int i=0; i<count; ++i)
-//     {
-//         int valLen = iov[i].iov_len;
-//         const char *pVal = (const char *)iov[i].iov_base;
-//         if (pVal && valLen > 0)
-//             ;//processPurge(myData, rec->session, pVal, valLen);
-//     }
+    MyMData *myData = (MyMData *)g_api->get_module_data(rec->session, &MNAME,
+                                                        LSI_DATA_HTTP);
+    if (myData == NULL || myData->iHaveAddedHook == 0)
+    {
+        clearHooks(rec->session);
+        g_api->log(rec->session, LSI_LOG_DEBUG,
+                   "[%s]createEntry quit, code 2.\n", ModuleNameStr);
+        return 0;
+    }
 
 
     CacheConfig *pContextConfig = (CacheConfig *)g_api->get_config(
@@ -1133,12 +1110,18 @@ static int createEntry(lsi_param_t *rec)
         myData->pConfig = pContextConfig;
     }
 
-    if (!myData->pConfig->isSet(CACHE_IGNORE_RESP_CACHE_CTRL_HEADER))
+
+    count = g_api->get_resp_header(rec->session,
+                    LSI_RSPHDR_LITESPEED_CACHE_CONTROL, NULL, 0, iov, 3);
+    for (int i = 0; i < count; ++i)
+        myData->cacheCtrl.parse((char *)iov[i].iov_base, iov[i].iov_len);
+
+    if (myData->cacheCtrl.isCacheOff())
     {
-        count = g_api->get_resp_header(rec->session,
-                                           LSI_RSPHDR_CACHE_CTRL, NULL, 0, iov, 3);
-        for (int i = 0; i < count; ++i)
-            myData->cacheCtrl.parse((char *)iov[i].iov_base, iov[i].iov_len);
+        clearHooks(rec->session);
+        g_api->log(rec->session, LSI_LOG_DEBUG,
+                   "[%s]createEntry abort, code 1.\n", ModuleNameStr);
+        return 0;
     }
 
     count = g_api->get_resp_header(rec->session, LSI_RSPHDR_SET_COOKIE, NULL,
@@ -1156,8 +1139,8 @@ static int createEntry(lsi_param_t *rec)
         else
         {
             //since have set-cookie header, re-calculate the hash keys
-            buildCacheKey(rec, myData->cacheKey.m_pUri, 
-                          myData->cacheKey.m_iUriLen, 
+            buildCacheKey(rec, myData->cacheKey.m_pUri,
+                          myData->cacheKey.m_iUriLen,
                           myData->cacheCtrl.getFlags() & CacheCtrl::no_vary,
                           &myData->cacheKey);
             calcCacheHash(rec->session, &myData->cacheKey,
@@ -1778,7 +1761,8 @@ static int checkAssignHandler(lsi_param_t *rec)
     }
     else if (myData->iMethod == HTTP_GET && isReqCacheable(rec, pConfig))
     {
-        if (!myData->cacheCtrl.isCacheOff())
+        if (!myData->cacheCtrl.isCacheOff()
+            || (myData->pConfig->isCheckPublic() || myData->pConfig->isPrivateCheck()))
         {
             myData->iHaveAddedHook = 1;
 
@@ -2026,6 +2010,8 @@ static int handlerProcess(lsi_session_t *session)
             {
                 myData->pConfig->getStore()->purge(myData->pEntry);
                 g_api->append_resp_body(session, "Purged.", 7);
+                g_api->log(NULL, LSI_LOG_DEBUG,
+                           "[%s]Purged %s.\n", ModuleNameStr, myData->pOrgUri);
             }
             else
             {
@@ -2154,6 +2140,6 @@ static int handlerProcess(lsi_session_t *session)
 lsi_reqhdlr_t cache_handler = { handlerProcess, NULL, NULL, NULL };
 lsi_confparser_t cacheDealConfig = { ParseConfig, FreeConfig, paramArray };
 lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, init, &cache_handler,
-                       &cacheDealConfig, "cache v1.52", serverHooks, {0}
+                       &cacheDealConfig, "cache v1.53", serverHooks, {0}
                      };
 

@@ -32,6 +32,8 @@
 #define STRINGIFY(x) STRINGIFY0(x)
 #define MNAME      modpagespeed
 #define ModuleName STRINGIFY(MNAME)
+#define CACHE_MAX_AGE   30
+#define CACHE_MAX_AGE_STR STRINGIFY(CACHE_MAX_AGE)
 
 #define PAGESPEED_MODULEKEY     ModuleName
 #define PAGESPEED_MODULEKEYLEN  (sizeof(ModuleName) -1)

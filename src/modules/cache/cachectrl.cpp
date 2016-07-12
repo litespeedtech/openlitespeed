@@ -82,9 +82,14 @@ int CacheCtrl::parse(const char *pHeader, int len)
             if (i < CACHE_DIRECTIVES)
             {
                 m_flags |= (1 << i);
-                if (((i == 2) && !(m_flags & (s_maxage))) ||
-                    (i == 11) || (i == 3))
+                switch (i)
                 {
+                case 2:
+                    if (m_flags & (s_maxage))
+                        break;
+                    //fall through
+                case 3:
+                case 11:
                     p += s_dirLen[i];
                     while ((*p == ' ') || (*p == '=') || (*p == '"'))
                         ++p;
@@ -100,9 +105,8 @@ int CacheCtrl::parse(const char *pHeader, int len)
                             m_flags &= (~no_cache & ~no_store);
                         }
                     }
-                }
-                else if (i == 12)
-                {
+                    break;
+                case 12:
                     p += s_dirLen[i];
                     while ((*p == ' ') || (*p == '=') || (*p == '"'))
                         ++p;
@@ -110,6 +114,13 @@ int CacheCtrl::parse(const char *pHeader, int len)
                         m_flags |= esi_on;
                     else if (strncasecmp(p, "off", 3) == 0)
                         m_flags &= ~esi_on;
+                    break;
+                case 7:
+                    // If php says public, cache publicly.
+                    m_flags &= ~cache_private;
+                    break;
+                default:
+                    break;
                 }
             }
         }

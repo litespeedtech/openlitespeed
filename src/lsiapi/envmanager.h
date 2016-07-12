@@ -59,7 +59,7 @@ public:
                        long valLen);
 
 private:
-    HashStringMap<EnvHandler *> m_envHashT;
+    HashStringMap<EnvHandler *> *m_pEnvHashT;
     TLinkList<EnvHandler>  m_envList;
 
 

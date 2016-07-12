@@ -205,12 +205,43 @@ const char *paramArray[] =
     NULL //Must have NULL in the last item
 };
 
+
 int SetCacheControl(lsi_session_t *session, char *cache_control)
 {
     g_api->set_resp_header(session, LSI_RSPHDR_CACHE_CTRL, NULL, 0,
                            cache_control, strlen(cache_control), LSI_HEADEROP_SET);
     return 0;
 }
+
+
+int SetLimitCacheControl(lsi_session_t *session, char *buffer, int len)
+{
+    GoogleString str;
+    str.append(buffer, len);
+    char *p = (char *)strcasestr(str.c_str(), "max-age");
+    if (p)
+    {
+        p = strchr(p + 7, '=');
+        if (p)
+        {
+            int age = atoi(p + 1);
+            if (age > CACHE_MAX_AGE)
+            {
+                int width = strlen(CACHE_MAX_AGE_STR);
+                strncpy((char *)p + 1, CACHE_MAX_AGE_STR, width);
+                p += 1 + width;
+                while(isdigit(*p))
+                {
+                    *p = ' ';
+                    ++p;
+                }
+            }
+        }
+    }
+    SetCacheControl(session, (char *)str.c_str());
+    return 0;
+}
+
 
 //If copy_request is 0, then copy response headers, Other copy request headers.
 template<class Headers>
@@ -309,6 +340,9 @@ int net_instaweb::CopyRespHeadersToServer(
 
         if (preserve_caching_headers == kPreserveAllCachingHeaders)
         {
+            /***
+             * In this case, to keep cache-control header for ls cache
+             */
             if (StringCaseEqual(name_gs, "ETag") ||
                 StringCaseEqual(name_gs, "Expires") ||
                 StringCaseEqual(name_gs, "Date") ||
@@ -340,7 +374,8 @@ int net_instaweb::CopyRespHeadersToServer(
 
         if (STR_EQ_LITERAL(name, "Cache-Control"))
         {
-            SetCacheControl(session, const_cast<char *>(value_gs.c_str()));
+            SetLimitCacheControl(session, (char *)value_gs.c_str(),
+                                 value_gs.length());
             continue;
         }
         else if (STR_EQ_LITERAL(name, "Content-Type"))
@@ -376,7 +411,7 @@ int net_instaweb::CopyRespHeadersToServer(
         else if (STR_EQ_LITERAL(name, "Content-Length"))
         {
             need_set = false;
-            g_api->set_resp_content_length(session, (int64_t) atol(value.c_str()));
+            //g_api->set_resp_content_length(session, (int64_t) atol(value.c_str()));
         }
 
         else if (STR_EQ_LITERAL(name, "Content-Encoding"))
@@ -455,8 +490,11 @@ static int ReleaseVhConf(void *p)
         }
 
 
-        if (cfg_s->serverContext)
-            delete cfg_s->serverContext;
+        if (cfg_s->proxyFetchFactory)
+        {
+            delete cfg_s->proxyFetchFactory;
+            cfg_s->proxyFetchFactory = NULL;
+        }
 
         delete cfg_s;
     }
@@ -557,13 +595,12 @@ int EndSession(lsi_param_t *rec)
 
 bool IsHttps(lsi_session_t *session)
 {
-//COmment: the below code to check if it is HTTPS but we should not check HTTPS
-//    because it may cause other issue, so just always return false;
     char s[12] = {0};
     int len = g_api->get_req_var_by_id(session, LSI_VAR_HTTPS, s, 12);
-    if (len == 2 && strncasecmp(s, "on", 2) == 0)
+    if (len == 2)
         return true;
-    return false;
+    else
+        return false;
 }
 
 void IgnoreSigpipe()
@@ -1595,7 +1632,7 @@ int ResourceHandler(PsMData *pMyData,
         }
         else if (!pagespeed_resource && !is_an_admin_handler)
         {
-            ctx->preserveCachingHeaders = kPreserveOnlyCacheControl;
+            ctx->preserveCachingHeaders = kDontPreserveHeaders;//kPreserveOnlyCacheControl;
             // Downstream cache integration is enabled. If a rebeaconing key has been
             // configured and there is a ShouldBeacon header with the correct key,
             // disable original Cache-Control headers so that the instrumented page is
@@ -1824,10 +1861,17 @@ int HtmlRewriteFixHeadersFilter(PsMData *pMyData,
 
     if (ctx->preserveCachingHeaders == kDontPreserveHeaders)
     {
+        struct iovec iov[1] = {{NULL, 0}};
+        int iovCount = g_api->get_resp_header(session, LSI_RSPHDR_CACHE_CTRL,
+                                              NULL, 0, iov, 1);
+        if (iovCount)
+            SetLimitCacheControl(session, (char *) iov[0].iov_base,
+                                 iov[0].iov_len);
+
         // Don't cache html.  See mod_instaweb:instaweb_fix_headers_filter.
-        LsiCachingHeaders caching_headers(session);
-        SetCacheControl(session,
-                        (char *) caching_headers.GenerateDisabledCacheControl().c_str());
+//         LsiCachingHeaders caching_headers(session);
+//         SetCacheControl(session,
+//                         (char *) caching_headers.GenerateDisabledCacheControl().c_str());
     }
 
     // Pagespeed html doesn't need etags: it should never be cached.

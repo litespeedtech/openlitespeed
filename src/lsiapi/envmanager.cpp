@@ -23,13 +23,16 @@
 
 EnvManager::EnvManager()
 {
-
+    m_pEnvHashT = new HashStringMap<EnvHandler *>(29, 
+                                                  GHash::hfCiString,
+                                                  GHash::cmpCiString);
 }
 
 
 EnvManager::~EnvManager()
 {
-    m_envHashT.release_objects();
+    m_pEnvHashT->release_objects();
+    delete m_pEnvHashT;
     m_envList.release_objects();
 }
 
@@ -42,7 +45,7 @@ int EnvManager::regEnvHandler(const char *name, unsigned int len,
     pEnvHandler->m_iLen = len;
     pEnvHandler->m_cb = cb;
     if (strpbrk(pEnvHandler->m_pName, "*?") == NULL)
-        m_envHashT.insert(pEnvHandler->m_pName, pEnvHandler);
+        m_pEnvHashT->insert(pEnvHandler->m_pName, pEnvHandler);
     else
         m_envList.append(pEnvHandler);
     return 0;
@@ -57,8 +60,8 @@ int EnvManager::delEnvHandler(const char *name, unsigned int len)
 
 lsi_callback_pf EnvManager::findHandler(const char *name)
 {
-    HashStringMap<EnvHandler *>::iterator iter = m_envHashT.find(name);
-    if (iter != m_envHashT.end())
+    HashStringMap<EnvHandler *>::iterator iter = m_pEnvHashT->find(name);
+    if (iter != m_pEnvHashT->end())
         return iter.second()->m_cb;
     else
     {
