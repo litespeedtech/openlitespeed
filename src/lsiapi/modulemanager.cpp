@@ -32,13 +32,18 @@
 
 #define INITIAL_MODULE_COUNT   10
 
-ModuleConfig ModuleManager::g_moduleConfig;
-
 
 LsiModule::LsiModule(lsi_module_t *pModule)
     : HttpHandler(HandlerType::HT_MODULE)
 {
     m_pModule = pModule;
+}
+
+
+ModuleManager::ModuleManager()
+{
+    m_pModuleArray = NULL;
+    m_pGlobalModuleConfig = new ModuleConfig();
 }
 
 

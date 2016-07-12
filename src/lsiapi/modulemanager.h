@@ -59,7 +59,7 @@ class ModuleManager : public HashStringMap<LsiModule *>,
 {
     friend class TSingleton<ModuleManager>;
 private:
-    ModuleManager() { m_pModuleArray = NULL;    };
+    ModuleManager();
 
     iterator addModule(const char *name, const char *pType,
                        lsi_module_t *pModule);
@@ -99,14 +99,14 @@ public:
     lsi_module_t *GetModulePointer(int module_id)
     {   return m_pModuleArray[module_id];  }
 
-    static ModuleConfig *getGlobalModuleConfig()
-    {   return &g_moduleConfig;    }
+    ModuleConfig *getGlobalModuleConfig()
+    {   return m_pGlobalModuleConfig;    }
     static void updateDebugLevel();
 
 private:
     ModulePointer *m_pModuleArray;
     short  m_aModuleDataCount[LSI_DATA_COUNT];
-    static ModuleConfig g_moduleConfig;
+    ModuleConfig    *m_pGlobalModuleConfig;
 
 };
 

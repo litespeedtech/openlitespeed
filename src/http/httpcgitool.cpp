@@ -141,7 +141,8 @@ int HttpCgiTool::processHeaderLine(HttpExtConnector *pExtConn,
         }
         return 0;
     case HttpRespHeaders::H_CONTENT_ENCODING:
-        if (pReq->getStatusCode() == SC_304)
+        if (pReq->getStatusCode() == SC_304
+            || strncasecmp(pValue, "none", 4) == 0)
             return 0;
         if (strncasecmp(pValue, "gzip", 4) == 0)
             pReq->orGzip(UPSTREAM_GZIP);

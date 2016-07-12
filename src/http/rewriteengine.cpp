@@ -57,22 +57,27 @@ int RewriteEngine::loadRewriteFile(char *path, RewriteRuleList *pRuleList,
                                    const RewriteMapList *pMaps)
 {
     int fd = open(path, O_RDONLY);
-    if (fd == -1 )
+    if (fd == -1)
     {
         LS_ERROR("Rewrite file [%s] can not open.", path);
         return LS_FAIL;
     }
 
-    char *pOrg  = (char *)mmap((caddr_t)0, 0, PROT_READ, MAP_SHARED, fd, 0);
-    if (pOrg == (char *)(-1))
-    {
-        LS_ERROR("Rewrite file [%s] can not be mapped.", path);
+    struct stat sb;
+    if (fstat(fd, &sb) == -1) {
+        LS_ERROR("Rewrite file [%s] cannot be open.", path);
         return LS_FAIL;
     }
 
-    char *p = pOrg;
+    off_t len = sb.st_size;
+    char *buf = new char[len + 1];
+    char *p = buf;
+    len = read(fd, buf, len);
+    close(fd);
+    buf[len] = 0;
     int ret = parseRules(p, pRuleList, pMaps);
-    munmap((caddr_t)pOrg, 0);
+    delete []buf;
+
     return ret;
 }
 
@@ -847,6 +852,31 @@ int RewriteEngine::expandEnv(const RewriteRule *pRule,
                 if (m_logLevel > 4)
                     LS_INFO(pSession->getLogSession(),
                             "[REWRITE] add ENV: '%s:%s' ", pKey, pValue);
+                if (strncasecmp(pKey, "cache-", 6) == 0)
+                {
+                    if ((strcasecmp(pKey + 6, "control") == 0) ||
+                        (strcasecmp(pKey + 6, "ctrl") == 0))
+                    {
+                        if (strncasecmp(pValue, "vary=", 5) == 0)
+                        {
+                            pValue += 5;
+                            if (m_logLevel > 4)
+                                LS_INFO(pSession->getLogSession(),
+                                        "[REWRITE] set cache vary value: '%s'",
+                                        pValue);
+                            RequestVars::setEnv(pSession, "LSCACHE_VARY_VALUE", 
+                                                18, pValue, pValEnd - pValue);
+                        }
+                    }
+                    else if (strcasecmp(pKey + 6, "Vary") == 0) 
+                    {
+                        if (m_logLevel > 4)
+                            LS_INFO(pSession->getLogSession(),
+                                    "[REWRITE] set cache vary on: '%s'", pValue);
+                        RequestVars::setEnv(pSession, "LSCACHE_VARY_COOKIE", 19,
+                                            pValue, pValEnd - pValue);
+                    }
+                }
             }
         }
         pEnv = (RewriteSubstFormat *)pEnv->next();

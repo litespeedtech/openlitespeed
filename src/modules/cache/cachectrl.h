@@ -51,7 +51,7 @@ public:
 
     int isCacheOff() const  {   return m_flags & (no_cache | no_store);    }
     int isCacheOn() const   {   return m_flags & (cache_private | cache_public);   }
-    int isPublicCacheable() const {   return !(m_flags & (no_cache | no_store | cache_private | has_cookie));   }
+    int isPublicCacheable() const {   return (m_flags & cache_public);   }
     int isPrivateCacheable() const  {   return m_flags & cache_private;   }
     void setHasCookie()     {   m_flags |= has_cookie;  }
     int getFlags() const    {   return m_flags;     }

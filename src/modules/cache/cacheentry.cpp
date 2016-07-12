@@ -81,11 +81,16 @@ int CacheEntry::setKey(const CacheHash &hash, CacheKey *pKey)
     int len = pKey->m_iUriLen + ((pKey->m_iQsLen > 0) ? pKey->m_iQsLen + 1 :
                                  0);
     int l;
+    m_header.m_iPrivLen = 0;
     if (pKey->m_ipLen > 0)
     {
         len += pKey->m_ipLen + 1;
+        m_header.m_iPrivLen = pKey->m_ipLen + 1;
         if (pKey->m_iCookiePrivate > 0)
+        {
             len += pKey->m_iCookiePrivate + 1;
+            m_header.m_iPrivLen += pKey->m_iCookiePrivate + 1;
+        }
     }
     if (pKey->m_iCookieVary > 0)
         len += pKey->m_iCookieVary + 1;
@@ -174,10 +179,11 @@ int CacheEntry::verifyKey(CacheKey *pKey) const
             if ((*p  != '@') ||
                 (memcmp(p + 1, pKey->m_pIP, pKey->m_ipLen) != 0))
                 return -1;
+            p += pKey->m_ipLen + 1;
         }
-        p += pKey->m_ipLen + 1;
     }
-    if (m_header.m_keyLen > p - m_sKey.c_str())
+    if (m_header.m_keyLen - (isPublic ? m_header.m_iPrivLen : 0)
+        > p - m_sKey.c_str())
         return -1;
     return 0;
 }

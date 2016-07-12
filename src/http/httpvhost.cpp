@@ -2197,7 +2197,7 @@ int HttpVHost::config(const XmlNode *pVhConfNode)
     {
         ModuleConfig *pConfig = new ModuleConfig;
         pConfig->init(ModuleManager::getInstance().getModuleCount());
-        pConfig->inherit(ModuleManager::getGlobalModuleConfig());
+        pConfig->inherit(ModuleManager::getInstance().getGlobalModuleConfig());
         ModuleConfig::parseConfigList(pModuleList, pConfig, LSI_CFG_VHOST,
                                       this->getName());
         pRootContext->setModuleConfig(pConfig, 1);
