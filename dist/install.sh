@@ -22,55 +22,45 @@ inst_admin_php()
 
     echo "DLCMD is $DLCMD"
     echo
-    
+
     HASADMINPHP=n
-
     if [ -f "$LSWS_HOME/admin/fcgi-bin/admin_php" ] ; then
-    #    echo -e "\033[38;5;148mphp already exists, needn't to re-build\033[39m"
-        "$LSWS_HOME/admin/fcgi-bin/admin_php" -i | grep json 2>&1 1>/dev/null
-        if [ $? = 0 ]; then
-            HASADMINPHP=y
-            echo "admin_php found."
-        else
-            mv "$LSWS_HOME/admin/fcgi-bin/admin_php" "$LSWS_HOME/admin/fcgi-bin/admin_php.bak"
-        fi
+        mv "$LSWS_HOME/admin/fcgi-bin/admin_php" "$LSWS_HOME/admin/fcgi-bin/admin_php.bak"
+        echo "admin_php found and mv to admin_php.bak"
     fi
-    if [ "x$HASADMINPHP" = "xn" ] ; then
-    
-        if [ ! -d "$LSWS_HOME/admin/fcgi-bin/" ] ; then
-            mkdir -p "$LSWS_HOME/admin/fcgi-bin/"
-            echo "Mkdir $LSWS_HOME/admin/fcgi-bin/ for installing admni_php"
-        fi
-        
-        if [ "x$OS" = "xLinux" ] && [ "x$DLCMD" != "x" ]  ; then
-            if [ "x$OSTYPE" != "xx86_64" ] ; then
-                $DLCMD $LSWS_HOME/admin/fcgi-bin/admin_php http://www.litespeedtech.com/packages/lsphp5_bin/i386/lsphp5
-            else
-                $DLCMD $LSWS_HOME/admin/fcgi-bin/admin_php http://www.litespeedtech.com/packages/lsphp5_bin/x86_64/lsphp5
-            fi
-            
-            if [ $? = 0 ] ; then 
-                HASADMINPHP=y
-                echo "admin_php downloaded."
-            fi
-            
-    #        if [ -f  "$LSWS_HOME/admin/fcgi-bin/admin_php" ] ; then
-    #            HASADMINPHP=y
-    #        fi
 
-    #    elif [ "x$OS" = "xFreeBSD" ] && [ "x$DLCMD" != "x" ]  ; then
-    #        if [ "x$OSTYPE" != "xamd64" ] ; then
-    #            $DLCMD $LSWS_HOME/admin/fcgi-bin/admin_php http://www.litespeedtech.com/packages/lsphp5_bin/i386-freebsd/lsphp5
-    #        else
-    #            $DLCMD $LSWS_HOME/admin/fcgi-bin/admin_php http://www.litespeedtech.com/packages/lsphp5_bin/x86_64-freebsd/lsphp5
-    #        fi
-    #        
-    #        if [ $? = 0 ] ; then 
-    #            HASADMINPHP=y
-    #            echo "admin_php downloaded."
-    #        fi
+    if [ ! -d "$LSWS_HOME/admin/fcgi-bin/" ] ; then
+        mkdir -p "$LSWS_HOME/admin/fcgi-bin/"
+        echo "Mkdir $LSWS_HOME/admin/fcgi-bin/ for installing admni_php"
+    fi
+        
+    if [ "x$OS" = "xLinux" ] ; then
+        if [ "x$OSTYPE" != "xx86_64" ] ; then
+            $DLCMD $LSWS_HOME/admin/fcgi-bin/admin_php http://www.litespeedtech.com/packages/lsphp5_bin/i386/lsphp5
+        else
+            $DLCMD $LSWS_HOME/admin/fcgi-bin/admin_php http://www.litespeedtech.com/packages/lsphp5_bin/x86_64/lsphp5
         fi
         
+        if [ $? = 0 ] ; then 
+            HASADMINPHP=y
+            echo "admin_php downloaded."
+        fi
+        
+#        if [ -f  "$LSWS_HOME/admin/fcgi-bin/admin_php" ] ; then
+#            HASADMINPHP=y
+#        fi
+
+    elif [ "x$OS" = "xFreeBSD" ] ; then
+        if [ "x$OSTYPE" != "xamd64" ] ; then
+           $DLCMD $LSWS_HOME/admin/fcgi-bin/admin_php http://www.litespeedtech.com/packages/lsphp5_bin/i386-freebsd/lsphp5
+        else
+           $DLCMD $LSWS_HOME/admin/fcgi-bin/admin_php http://www.litespeedtech.com/packages/lsphp5_bin/x86_64-freebsd/lsphp5
+        fi
+       
+        if [ $? = 0 ] ; then 
+           HASADMINPHP=y
+           echo "admin_php downloaded."
+        fi
     fi
 
     if [ "x$HASADMINPHP" = "xn" ] ; then
