@@ -668,6 +668,12 @@ int HttpReq::processHeaderLines()
                     if (pCurHeader->valLen == 5 && strncasecmp(pTemp, "https", 5) == 0)
                         m_iContextState |= X_FORWARD_HTTPS;
                 }
+                else if (pCurHeader->keyLen == 5
+                         && (strncasecmp(pLineBegin, "proxy", 5) == 0))
+                {
+                    LS_INFO(getLogSession(), "Status 400: HTTPOXY attack detected!");
+                    return SC_400;
+                }
             }
         }
         pLineBegin = pLineEnd + 1;

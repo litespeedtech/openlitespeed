@@ -6,7 +6,7 @@ m4_include(ax_check_liblua.m4)
 
 dnl Process this file with autoconf to produce a configure script.
 AC_PREREQ([2.69])
-AC_INIT([openlitespeed],[1.4.19],[info@litespeedtech.com],[openlitespeed],[http://www.litespeedtech.com/])
+AC_INIT([openlitespeed],[1.4.20],[info@litespeedtech.com],[openlitespeed],[http://www.litespeedtech.com/])
 AM_INIT_AUTOMAKE([1.0 foreign no-define ])
 
 AM_CONFIG_HEADER(src/config.h:src/config.h.in)
@@ -30,6 +30,9 @@ AC_PROG_LN_S
 AC_PROG_MAKE_SET
 AC_PROG_RANLIB
 LT_INIT
+
+OSTYPE=`uname -m`
+OSNAME=`uname -s`
 
 # Checks for header files.
 AC_CHECK_HEADER([pthread.h],
@@ -98,12 +101,12 @@ else
 fi
 
 
-AC_ARG_ENABLE([cacheredis],
-              [AC_HELP_STRING([--enable-redis],
-                              [Enable redis for cache module (Using redis is disabled by default)])],
-               [ AC_DEFINE([LS_ENABLE_REDIS], [1], [Define if cache module needs redis feature]) 
-                 echo "Cache redis enabled!!!" ], [])
-                 
+#AC_ARG_ENABLE([cacheredis],
+#              [AC_HELP_STRING([--enable-redis],
+#                              [Enable redis for cache module (Using redis is disabled by default)])],
+#               [ AC_DEFINE([LS_ENABLE_REDIS], [1], [Define if cache module needs redis feature]) 
+#                 echo "Cache redis enabled!!!" ], [])
+
 AC_ARG_ENABLE([debug],
               [AC_HELP_STRING([--enable-debug],
                               [Enable debugging symbols (Debug is disabled by default)])],
@@ -164,7 +167,18 @@ echo "Lua inlcude = $LUA_INCLUDES, need_lua = $need_lua"
 CFLAGS="$CFLAGS -fstack-protector $(getconf LFS_CFLAGS) "
 CXXFLAGS="$CXXFLAGS -fstack-protector $(getconf LFS_CFLAGS) "
 
-
+if test "$OSNAME" = Darwin ; then
+    usedynossl=yes
+    CPPFLAGS="$CPPFLAGS -I../../src -I../../include -I/usr/local/include -I/usr/local -I/usr -I/usr/pkg "
+else
+    usedynossl=no
+    CPPFLAGS="$CPPFLAGS -I../../openssl/include -I../../src -I../../include -I/usr/local/include -I/usr/local -I/usr -I/usr/pkg "
+    echo "Will build latest stable openssl libraries for you, this may take several minutes ..."
+    OSSL=`. $srcdir/dlossl.sh`
+    echo "Finsihed building openssl."
+fi
+AM_CONDITIONAL([USE_DYN_OSSL], [test x$usedynossl = xyes])
+echo "Openssl: use_dyn_ossl = $usedynossl"
 
 AC_ARG_ENABLE([rpath],
               [AC_HELP_STRING([--disable-rpath], 
@@ -176,8 +190,7 @@ AC_SUBST([OPENLSWS_DISABLE_RPATH])
 AC_ARG_WITH([libdir],
             AS_HELP_STRING([--with-libdir],[Set system lib directory. It is lib or lib64 and will be automatically checked by default]),
             [OPENLSWS_LIBDIR="$withval"], [
-                OSTYPE=`uname -m`
-                OSNAME=`uname -s`
+
                 OPENLSWS_LIBDIR=lib
                 if test "$OSNAME" = Linux ; then
                     if test "$OSTYPE" = x86_64 ; then
@@ -198,14 +211,19 @@ AC_ARG_WITH([libdir],
                     fi
                 fi
              ])
-echo "Final CFLAGS='$CFLAGS' CXXFLAGS='$CXXFLAGS'"
+echo "Final CFLAGS='$CFLAGS' CXXFLAGS='$CXXFLAGS' CPPFLAGS='$CPPFLAGS'"
              
 echo "Default system lib directory = $OPENLSWS_LIBDIR"
 AC_SUBST([OPENLSWS_LIBDIR])
 
 
 AX_CHECK_ZLIB(, AC_MSG_ERROR(Can not find zlib. You must install it before continuing.))
-AX_CHECK_OPENSSL(, AC_MSG_ERROR(Can not find openssl. You must install it before continuing.))
+
+
+if test "$OSNAME" = Darwin ; then
+    AX_CHECK_OPENSSL(, AC_MSG_ERROR(Can not find openssl. You must install it before continuing.))
+fi
+
 AX_PATH_LIB_PCRE(, AC_MSG_ERROR(Can not find pcre. You must install it before continuing.))
 AX_LIB_EXPAT(0.5)
 AC_CHECK_LIB([GeoIP], [GeoIP_id_by_addr])
@@ -241,19 +259,17 @@ AC_CHECK_FUNCS(malloc bzero dup2 ftruncate getcwd gethostbyaddr gethostbyname ge
 
 RT_LIB_OPTION=" -lrt" 
 DL_LIB_OPTION=" -ldl"
-if test `uname -s` = "Linux"
-then
+if test "$OSNAME" = Linux ; then
     LDFLAGS="$LDFLAGS -Wl,--export-dynamic"
 fi
-if test `uname -s` = "FreeBSD"
-then
+
+if test "$OSNAME" = FreeBSD ; then
     LDFLAGS="$LDFLAGS -Wl,--export-dynamic"
     DL_LIB_OPTION=
 fi
 
 #For Mac OS, add special falgs for LuaJit
-if test `uname -s` = "Darwin"
-then
+if test "$OSNAME" = Darwin ; then
     LDFLAGS="$LDFLAGS -Wl,-export_dynamic -pagezero_size 10000 -image_base 100000000"
     RT_LIB_OPTION=
 fi

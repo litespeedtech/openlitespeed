@@ -1,7 +1,7 @@
 ####### kdevelop will overwrite this part!!! (begin)##########
 noinst_LIBRARIES = libproxy.a
 
-INCLUDES = -I$(top_srcdir)/include -I$(top_srcdir)/src -I$(all_includes)
+AM_CPPFLAGS = -I$(top_srcdir)/include -I$(top_srcdir)/src -I$(all_includes)
 
 libproxy_a_METASOURCES = AUTO
 

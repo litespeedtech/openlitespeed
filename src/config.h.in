@@ -209,9 +209,6 @@
    slash. */
 #undef LSTAT_FOLLOWS_SLASHED_SYMLINK
 
-/* Define if cache module needs redis feature */
-#undef LS_ENABLE_REDIS
-
 /* Define if need spdy/http2 feature */
 #undef LS_ENABLE_SPDY
 

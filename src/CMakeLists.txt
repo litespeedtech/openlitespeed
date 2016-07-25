@@ -132,7 +132,7 @@ SET(unittest_STAT_SRCS
    test/shm/shmxtest.cpp
 )
 
-link_directories(/usr/local/lib ${PROJECT_SOURCE_DIR}/src/test/unittest-cpp/UnitTest++)
+link_directories(${PROJECT_SOURCE_DIR}/openssl/ /usr/local/lib ${PROJECT_SOURCE_DIR}/src/test/unittest-cpp/UnitTest++)
 
 add_executable(openlitespeed ${openlitespeed_SRCS}
     ${unittest_STAT_SRCS}
@@ -198,11 +198,11 @@ add_executable(ls_shmhashstat
 # So for example, if edio depends on your new directory, your directory
 # should be listed AFTER edio.  PLEASE TRY TO KEEP THIS NEAT!
 SET( litespeedlib
-    modgzip lsiapi main http lsiapi spdy ssi
+    modgzip lsiapi main http lsiapi spdy ssi 
     registry cgi fcgi jk extensions lsapi proxy
     edio socket sslpp lsshm thread log4cxx GeoIP
     -Wl,--whole-archive util lsr -Wl,--no-whole-archive
-    pthread rt ${CMAKE_DL_LIBS} ${libUnitTest} )
+    pthread rt ${CMAKE_DL_LIBS} ${libUnitTest} libssl.a libcrypto.a)
 
 target_link_libraries(openlitespeed ${litespeedlib} )
 
@@ -220,7 +220,7 @@ add_executable(ls_lfqueuetest
 test/lsr/ls_lfqueuetest.c
 ${lsr_SRCS}
 )
-target_link_libraries(ls_lfqueuetest lsr pthread ssl crypto pcre )
+target_link_libraries(ls_lfqueuetest lsr pthread pcre )
 
 add_executable(ls_lfstacktest
 test/lsr/ls_lfstacktest.cpp
@@ -228,19 +228,19 @@ util/misc/profiletime.cpp
 ${lsr_SRCS}
 ${test_SRCS}
 )
-target_link_libraries(ls_lfstacktest lsr pthread ssl crypto pcre )
+target_link_libraries(ls_lfstacktest lsr pthread pcre )
 
 add_executable(ls_llmqtest
 test/lsr/ls_llmqtest.c
 ${lsr_SRCS}
 )
-target_link_libraries(ls_llmqtest lsr pthread ssl crypto pcre )
+target_link_libraries(ls_llmqtest lsr pthread pcre )
 
 add_executable(ls_locktest
 test/lsr/ls_locktest.cpp
 ${lsr_SRCS}
 )
-target_link_libraries(ls_locktest lsr pthread ssl crypto pcre )
+target_link_libraries(ls_locktest lsr pthread pcre )
 
 add_executable(ls_stacktest
 test/lsr/ls_stacktest.cpp
@@ -248,19 +248,19 @@ util/misc/profiletime.cpp
 ${lsr_SRCS}
 ${test_SRCS}
 )
-target_link_libraries(ls_stacktest lsr pthread ssl crypto pcre )
+target_link_libraries(ls_stacktest lsr pthread pcre )
 
 add_executable(ls_thrsafetest
 test/lsr/ls_thrsafetest.cpp
 ${lsr_SRCS}
 )
-target_link_libraries(ls_thrsafetest lsr pthread ssl crypto pcre )
+target_link_libraries(ls_thrsafetest lsr pthread pcre )
 
 add_executable(ls_valgrindtest
 test/lsr/ls_valgrindtest.c
 ${lsr_SRCS}
 )
-target_link_libraries(ls_valgrindtest lsr pthread ssl crypto pcre )
+target_link_libraries(ls_valgrindtest lsr pthread pcre )
 
 install(TARGETS openlitespeed DESTINATION bin)
 

@@ -1,6 +1,6 @@
 noinst_LIBRARIES = libcgi.a
 
-INCLUDES = -I$(top_srcdir)/include -I$(top_srcdir)/src
+AM_CPPFLAGS = -I$(top_srcdir)/include -I$(top_srcdir)/src
 
 libcgi_a_METASOURCES = AUTO
 
