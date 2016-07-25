@@ -3172,6 +3172,10 @@ int HttpSession::flush()
             if (getState() != HSS_COMPLETE)
             {
                 setState(HSS_COMPLETE);
+                if (getStream()->isSpdy())
+                {
+                    getStream()->shutdown();
+                }
                 EvtcbQue::getInstance().schedule(stx_nextRequest,
                                                  (lsi_session_t *)this,
                                                  getSn(),
@@ -3620,7 +3624,7 @@ int HttpSession::sendStaticFileAio(SendFileInfo *pData)
                                              written);
             if (len < 0)
                 return LS_FAIL;
-            else if (len < written)
+            else if (!getStream()->isSpdy() && len < written)
             {
                 LS_DBG_M(getLogSession(),
                          "Socket still busy, %d bytes to write",
@@ -3717,7 +3721,7 @@ int HttpSession::sendStaticFileEx(SendFileInfo *pData)
             return len;
         else if (len == 0)
             break;
-        else if (len < written || ++count >= 10)
+        else if ((!getStream()->isSpdy() && len < written) || ++count >= 10)
             return 1;
     }
     return (pData->getRemain() > 0);

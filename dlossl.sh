@@ -14,6 +14,7 @@ fixbug()
 
 
 cd `dirname "$0"`
+echo "Checking openssl ..."
 
 if [ ! -f openssl/libcrypto.a ] ; then
     echo -e "\033[38;5;148mDownload openssl $VERSION and building, it will take several minutes ...\033[39m"
@@ -42,5 +43,5 @@ else
     exit 0
 fi
 
-echo -e "\033[38;5;148mOK, openssl libraries exists.\033[39m"
+echo "OK, openssl libraries exists."
 exit 0

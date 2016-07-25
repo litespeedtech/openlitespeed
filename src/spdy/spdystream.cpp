@@ -170,7 +170,7 @@ int SpdyStream::shutdown()
 
     LS_DBG_L(this, "SpdyStream::shutdown()");
     m_pSpdyConn->sendFinFrame(m_uiStreamID);
-    //m_pSpdyConn->flush();
+    m_pSpdyConn->flush();
     return 0;
 }
 
@@ -257,17 +257,24 @@ int SpdyStream::writev(const struct iovec *vec, int count)
 int SpdyStream::write(const char *buf, int len)
 {
     IOVec iov;
+    const char *p = buf;
+    const char *pEnd = buf + len;
     int allowed;
     if (getState() == HIOS_DISCONNECTED)
         return LS_FAIL;
-    allowed = getDataFrameSize(len);
-    if (allowed <= 0)
-        return 0;
+    while(pEnd - p > 0)
+    {
+        allowed = getDataFrameSize(pEnd - p);
+        if (allowed <= 0)
+            break;
 
-    iov.append(buf, allowed);
-    if (sendData(&iov, allowed) == -1)
-        return LS_FAIL;
-    return allowed;
+        iov.append(p, allowed);
+        if (sendData(&iov, allowed) == -1)
+            return LS_FAIL;
+        p += allowed;
+        iov.clear();
+    }
+    return p - buf;
 }
 
 

@@ -72,7 +72,7 @@ static inline ssize_t gsendfile(int fdOut, int fdIn, off_t *off,
     vec[n].sfv_len  = size;
     ++n;
 
-    off_t written;
+    size_t written;
     ssize_t ret = ::sendfilev(fdOut, vec, n, &written);
     if ((!ret) || (errno == EAGAIN))
         ret = written;
