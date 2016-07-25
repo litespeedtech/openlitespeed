@@ -1,7 +1,7 @@
 ####### kdevelop will overwrite this part!!! (begin)##########
 noinst_LIBRARIES = libmain.a
 
-INCLUDES = -I$(top_srcdir)/include -I$(top_srcdir)/src
+AM_CPPFLAGS =  -I$(top_srcdir)/openssl/include/ -I$(top_srcdir)/include -I$(top_srcdir)/src
 
 libmain_a_METASOURCES = AUTO
 

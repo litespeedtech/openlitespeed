@@ -1,4 +1,12 @@
 bin_PROGRAMS = openlitespeed
+
+if USE_DYN_OSSL
+AM_OPENSSL_LIBS=$(OPENSSL_LIBS)
+else
+AM_OPENSSL_LIBS= ../openssl/libssl.a ../openssl/libcrypto.a 
+endif
+
+
 openlitespeed_SOURCES = modules/prelinkedmods.cpp httpdtest.cpp main.cpp \
    util/httpfetchdriver.cpp \
    util/httpfetch.cpp \
@@ -98,12 +106,11 @@ openlitespeed_LDADD =  ./main/libmain.a ./http/libhttp.a ./spdy/libspdy.a \
         ./extensions/libextensions.a ./log4cxx/liblog4cxx.a ./socket/libsocket.a \
         ./sslpp/libsslpp.a  ./ssi/libssi.a ./edio/libedio.a ./lsiapi/liblsiapi.a \
         ./modules/libmodules.a ./shm/liblsshm.a  \
-        $(EXPAT_LIBS) $(OPENSSL_LIBS) $(PCRE_LIBS) -lGeoIP -lz -lexpat -lpthread $(DL_LIB_OPTION) $(RT_LIB_OPTION)
+        $(AM_OPENSSL_LIBS) $(EXPAT_LIBS)  $(PCRE_LIBS) -lGeoIP -lz -lexpat -lpthread $(DL_LIB_OPTION) $(RT_LIB_OPTION)
 
-
-AM_CPPFLAGS = $(PCRE_CFLAGS) $(OPENSSL_INCLUDES) $(EXPAT_CFLAGS)
 AM_LDFLAGS = -L/usr/lib $(OPENSSL_LDFLAGS)
-INCLUDES = -I$(top_srcdir)/include -I$(top_srcdir)/src
+AM_CPPFLAGS = -I$(top_srcdir)/openssl/include/ -I$(top_srcdir)/include -I$(top_srcdir)/src  -I$(top_srcdir) $(PCRE_CFLAGS) $(EXPAT_CFLAGS)
+
 SUBDIRS =  socket http spdy sslpp ssi extensions log4cxx main edio lsiapi  modules shm
 
 

@@ -17,7 +17,7 @@ mime                             $SERVER_ROOT/conf/mime.properties
 showVersionNumber                0 
 adminEmails                      %ADMIN_EMAIL%
 adminRoot                        $SERVER_ROOT/admin/ 
-indexFiles                       index.html
+indexFiles                       index.html, index.php
 
 errorlog $SERVER_ROOT/logs/error.log {
         logLevel             DEBUG

@@ -1130,9 +1130,6 @@ int SslContext::addCRL(const char *pCRLFile, const char *pCRLPath)
 
 
 #ifdef LS_ENABLE_SPDY
-/**
- * We support h2-17, but if set to this value, firefox will not choose h2-17, so we have to use h2-14.
- */
 static const char *NEXT_PROTO_STRING[8] =
 {
     "\x08http/1.1",
@@ -1149,9 +1146,6 @@ static unsigned int NEXT_PROTO_STRING_LEN[8] =
 {
     9, 16, 25, 32, 12, 19, 28, 35,
 };
-
-//static const char NEXT_PROTO_STRING[] = "\x06spdy/2\x08http/1.1\x08http/1.0";
-
 
 static int SslConnection_ssl_npn_advertised_cb(SSL *pSSL,
         const unsigned char **out,
