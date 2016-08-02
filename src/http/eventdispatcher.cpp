@@ -193,7 +193,7 @@ int EventDispatcher::run()
 }
 */
 
-
+static int s_ppid = 1;
 static inline void processTimerNew()
 {
     struct timeval tv;
@@ -210,7 +210,7 @@ static inline void processTimerNew()
     {
         if (NtwkIOLink::getToken() < NtwkIOLink::getPrevToken())
         {
-            if (getppid() == 1)
+            if (getppid() != s_ppid)
                 HttpSignals::setSigStop();
             HttpServer::getInstance().onTimer();
         }
@@ -228,6 +228,7 @@ int EventDispatcher::run()
 {
     int ret;
     int sigEvent;
+    s_ppid = getppid();
     while (true)
     {
         ret = MultiplexerFactory::getMultiplexer()->waitAndProcessEvents(
