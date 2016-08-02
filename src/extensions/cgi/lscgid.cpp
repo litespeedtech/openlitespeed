@@ -683,7 +683,7 @@ static int run(int fdServerSock)
         }
         else
         {
-            if (getppid() == 1)
+            if (getppid() != s_parent)
                 return 1;
         }
     }
