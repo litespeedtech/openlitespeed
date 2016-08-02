@@ -278,9 +278,8 @@ HttpVHost::~HttpVHost()
         delete m_pSSLCtx;
     m_pUrlStxFileHash->release_objects();
     delete m_pUrlStxFileHash;
-
+    urlStaticFileHashClean();
     LsiapiBridge::releaseModuleData(LSI_DATA_VHOST, &m_moduleData);
-
 }
 
 
@@ -403,7 +402,7 @@ void HttpVHost::setAdminEmails(const char *pEmails)
 
 void HttpVHost::onTimer30Secs()
 {
-    urlStaticFileHashCleanTimer();
+    urlStaticFileHashClean();
 }
 
 
@@ -2582,39 +2581,53 @@ void HttpVHost::addUrlStaticFileMatch(const char *url,
     m_pUrlStxFileHash->update(data->url.c_str(), data);
 }
 
-StaticFileCacheData *HttpVHost::getUrlStaticFileData(const char *url)
+
+int HttpVHost::checkFileChanged(static_file_data_t *data, struct stat &sb)
+{
+    if (sb.st_size == data->pData->getFileSize() &&
+        sb.st_mtime == data->pData->getLastMod() &&
+        sb.st_ino == data->pData->getINode())
+        return 0;
+   else
+   {
+        UrlStxFileHash::iterator it = m_pUrlStxFileHash->find(data->url.c_str());
+        if (it != m_pUrlStxFileHash->end())
+        {
+            if (data->pData->decRef() > 0)
+            {
+                m_UrlStxFileDirtyList.push_back(data);
+            }
+            else
+                delete data;
+            m_pUrlStxFileHash->erase(it);
+        }
+        return -1;
+   }
+}
+
+
+static_file_data_t *HttpVHost::getUrlStaticFileData(const char *url)
 {
     UrlStxFileHash::iterator it = m_pUrlStxFileHash->find(url);
     if (it == m_pUrlStxFileHash->end())
         return NULL;
     else
-    {
-        if (it.second()->tmaccess != DateTime::s_curTime)
-        {
-            StaticFileCacheData *pData = it.second()->pData;
-            if (pData)
-                pData->getFileData()->decRef();
-            it.second()->pData = NULL;
-        }
-        return it.second()->pData;
-    }
+        return it.second();
 }
 
-void HttpVHost::urlStaticFileHashCleanTimer()
+
+void HttpVHost::urlStaticFileHashClean()
 {
-    UrlStxFileHash::iterator it;
-    for (it = m_pUrlStxFileHash->begin(); it != m_pUrlStxFileHash->end();)
+    TPointerList<static_file_data_t>::iterator it;
+    for (it = m_UrlStxFileDirtyList.begin(); it != m_UrlStxFileDirtyList.end();)
     {
-        static_file_data_t *data = (static_file_data_t *)it.second();
-        if (data->tmaccess != DateTime::s_curTime)
+        if ((*it)->pData->getRef() <= 0)
         {
-            StaticFileCacheData *pData = it.second()->pData;
-            if (pData)
-                pData->getFileData()->decRef();
-            delete it.second();
-            m_pUrlStxFileHash->erase(it);
+            delete *it;
+            m_UrlStxFileDirtyList.erase(it);
         }
-        it = m_pUrlStxFileHash->next(it);
+        else
+            ++it;
     }
 }
 

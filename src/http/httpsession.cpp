@@ -320,7 +320,7 @@ inline void HttpSession::releaseStaticFileCacheData(StaticFileCacheData
 
 inline void HttpSession::releaseFileCacheDataEx(FileCacheDataEx *&pECache)
 {
-    if (pECache && pECache->decRef() == 0)
+    if (pECache && pECache->decRef() <= 0)
     {
         if (pECache->getfd() != -1)
             pECache->closefd();
@@ -350,7 +350,7 @@ void HttpSession::nextRequest()
     getStream()->flush();
     setState(HSS_WAITING);
 
-    m_sendFileInfo.reset();
+    //m_sendFileInfo.reset();
     if (m_pReqParser)
     {
         delete m_pReqParser;
@@ -1707,10 +1707,10 @@ int HttpSession::assignHandler(const HttpHandler *pHandler)
         //So, if serve with static file, try use cache first
         if (m_request.getUrlStaticFileData())
         {
-            m_sendFileInfo.setFileData(m_request.getUrlStaticFileData());
-            m_sendFileInfo.setECache(m_request.getUrlStaticFileData()->getFileData());
+            m_sendFileInfo.setFileData(m_request.getUrlStaticFileData()->pData);
+            m_sendFileInfo.setECache(m_request.getUrlStaticFileData()->pData->getFileData());
             m_sendFileInfo.setCurPos(0);
-            m_sendFileInfo.setCurEnd(m_request.getUrlStaticFileData()->getFileSize());
+            m_sendFileInfo.setCurEnd(m_request.getUrlStaticFileData()->pData->getFileSize());
             m_sendFileInfo.setParam(NULL);
             setFlag(HSF_STX_FILE_CACHE_READY);
         }
@@ -3510,8 +3510,6 @@ int HttpSession::initSendFileInfo(const char *pPath, int pathLen)
     if (pData->getFileData() == pECache)
         return 0;
 
-    releaseFileCacheDataEx(pECache);
-    pECache = NULL;
     return m_sendFileInfo.getFileData()->readyCacheData(pECache, 0);
 }
 

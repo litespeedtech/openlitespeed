@@ -163,6 +163,8 @@ public:
     typedef int (*for_each_fn)(iteroffset iterOff);
     typedef int (*for_each_fn2)(iteroffset iterOff, void *pUData);
 
+    typedef int (*TrimCb)(iterator iter, void *arg);
+    
     static LsShmHKey hashString(const void *__s, size_t len);
     static int compString(const void *pVal1, const void *pVal2, size_t len);
 
@@ -236,7 +238,11 @@ public:
 
     LsShmOffset_t getHTableReservedOffset() const;
 
-    LsShmXSize_t getHashDataSize() const;
+    LsShmXSize_t getHashDataSize() const
+    {
+        return ((LsShmHTableStat *)offset2ptr(
+                getHTableStatOffset()))->m_iHashInUse;
+    }
 
     void *getIterDataPtr(iterator iter) const
     {   return iter->getVal(); }
@@ -271,14 +277,20 @@ public:
         return pParms;
     }
 
-    void remove(const void *pKey, int keyLen)
+    int remove(const void *pKey, int keyLen)
     {
         iteroffset iterOff;
         ls_strpair_t parms;
         ls_str_set(&parms.key, (char *)pKey, keyLen);
-        iterOff = findIterator(&parms);
+        
+        autoLockChkRehash();
+        iterOff = (*m_find)(this, &parms);
         if (iterOff.m_iOffset != 0)
-            eraseIterator(iterOff);
+        {
+            eraseIteratorHelper(iterOff);
+        }
+        autoUnlock();
+        return iterOff.m_iOffset != 0;
     }
 
     LsShmOffset_t find(const void *pKey, int keyLen, int *valLen)
@@ -353,7 +365,7 @@ public:
     void eraseIterator(iteroffset iterOff)
     {
         autoLockChkRehash();
-        eraseIteratorHelper(offset2iterator(iterOff));
+        eraseIteratorHelper(iterOff);
         autoUnlock();
     }
 
@@ -540,9 +552,9 @@ public:
     int32_t getLruTotal();
     int32_t getLruTrimmed(); 
 
-    int trim(time_t tmCutoff, int (*func)(iterator iter, void *arg),
-             void *arg);
-    int trimsize(int need, int (*func)(iterator iter, void *arg), void *arg);
+    int trim(time_t tmCutoff, LsShmHash::TrimCb cb, void *arg);
+    int trimsize(int need, LsShmHash::TrimCb cb, void *arg);
+    
     int check();
 
     void enableLock()
@@ -621,7 +633,7 @@ protected:
     //  @brief eraseIterator_helper
     //  @brief  should only be called after SHM-HASH-LOCK has been acquired.
     //
-    void eraseIteratorHelper(iterator iter);
+    void eraseIteratorHelper(iteroffset iterOff);
 
 #ifdef notdef
     static iteroffset doExpand(LsShmHash *pThis,

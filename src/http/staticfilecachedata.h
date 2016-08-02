@@ -185,6 +185,8 @@ public:
     int readyCacheData(FileCacheDataEx *&pECache,
                        char compress);
     time_t getLastMod() const       {   return m_fileData.getLastMod();   }
+    ino_t getINode() const          {   return m_fileData.getINode();     }
+    
     bool isDirty(const struct stat &fileStat) const
     {   return m_fileData.isDirty(fileStat);      }
     int needUpdateHeaders(const MimeSetting *pMIME,

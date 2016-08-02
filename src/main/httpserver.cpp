@@ -134,6 +134,9 @@
 static int s_achPid[256];
 static int s_curPid = 0;
 
+#define RTREPORT_FILE_TMP  DEFAULT_TMP_DIR "/.rtreport"
+const char *sRtReportPath = "/dev/shm/.rtreport";
+
 static void sigchild(int sig)
 {
     int status, pid;
@@ -177,6 +180,18 @@ void HttpServer::cleanPid()
 
 }
 
+static void verifyRtReportPath()
+{
+    DIR *dir = opendir("/dev/shm");
+    if (dir)
+    {
+        closedir(dir);
+        symlink(sRtReportPath, RTREPORT_FILE_TMP);
+    }
+    else
+        sRtReportPath = RTREPORT_FILE_TMP;
+}
+
 
 class HttpServerImpl
 {
@@ -209,7 +224,6 @@ private:
     // interface functions
     HttpServerImpl(HttpServer *pServer)
         : m_sSwapDirectory(DEFAULT_SWAP_DIR)
-        , m_sRTReportFile(DEFAULT_TMP_DIR "/.rtreport")
         , m_pri_gid(0)
         , m_pAutoUpdFetch(NULL)
     {
@@ -218,6 +232,9 @@ private:
         HttpMime::setMime(&m_httpMime);
         m_serverContext.allocateInternal();
         HttpRespHeaders::buildCommonHeaders();
+
+        verifyRtReportPath();
+        m_sRTReportFile = sRtReportPath;
 
 #ifdef  USE_CARES
         Adns::init();
@@ -583,9 +600,11 @@ void HttpServerImpl::setRTReportName(int proc)
 {
     if (proc != 1)
     {
-        char achBuf[256];
-        ls_snprintf(achBuf, 256, "%s.%d", DEFAULT_TMP_DIR "/.rtreport", proc);
+        char achBuf[256], achBuf1[256];
+        ls_snprintf(achBuf, 256, "%s.%d", sRtReportPath, proc);
+        ls_snprintf(achBuf1, 256, "%s.%d", RTREPORT_FILE_TMP, proc);
         m_sRTReportFile.setStr(achBuf);
+        symlink(achBuf, achBuf1);
     }
 }
 
@@ -982,11 +1001,13 @@ void HttpServerImpl::checkOLSUpdate()
     m_pAutoUpdFetch->setTimeout(15);  //Set Req timeout as 30 seconds
     m_pAutoUpdFetch->setResProcessor(autoUpdCheckCb, this);
     GSockAddr m_addrResponder;
-    m_addrResponder.setHttpUrl("http://open.litespeedtech.com/", 30);
-    m_pAutoUpdFetch->startReq("http://open.litespeedtech.com/packages/release",
-                              1, 1, NULL, 0,
-                              sAutoUpdFile.c_str(),
-                              NULL, m_addrResponder);
+    char sUrl[128];
+    strcpy(sUrl, "http://open.litespeedtech.com/");
+    m_addrResponder.setHttpUrl(sUrl, strlen(sUrl));
+    strcat(sUrl, "packages/release?ver=");
+    strcat(sUrl, PACKAGE_VERSION);
+    m_pAutoUpdFetch->startReq(sUrl, 1, 1, NULL, 0, sAutoUpdFile.c_str(), NULL,
+                              m_addrResponder);
 
     return ;
 }

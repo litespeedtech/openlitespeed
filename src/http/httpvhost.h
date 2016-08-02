@@ -33,6 +33,7 @@
 #include <util/stringlist.h>
 
 #include <sys/types.h>
+#include <sys/stat.h>
 
 BEGIN_LOG4CXX_NS
 class Logger;
@@ -152,6 +153,7 @@ private:
     LsiModuleData       m_moduleData;
 
     UrlStxFileHash     *m_pUrlStxFileHash;
+    TPointerList<static_file_data_t>   m_UrlStxFileDirtyList;
 
     HttpVHost(const HttpVHost &rhs);
     void operator=(const HttpVHost &rhs);
@@ -440,8 +442,9 @@ public:
     void enableAioLogging();
 
     void addUrlStaticFileMatch(const char *url, StaticFileCacheData *pData);
-    StaticFileCacheData *getUrlStaticFileData(const char *url);
-    void urlStaticFileHashCleanTimer();
+    int checkFileChanged(static_file_data_t *data, struct stat &sb);
+    static_file_data_t *getUrlStaticFileData(const char *url);
+    void urlStaticFileHashClean();
 
 };
 

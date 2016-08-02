@@ -34,6 +34,7 @@
 #include <http/serverprocessconfig.h>
 #include <http/vhostmap.h>
 #include <http/reqparser.h>
+#include "staticfilecachedata.h"
 #include <log4cxx/logger.h>
 #include <lsr/ls_fileio.h>
 #include <lsr/ls_hash.h>
@@ -46,6 +47,7 @@
 #include <util/iovec.h>
 #include <util/radixtree.h>
 #include <util/vmembuf.h>
+#include <util/datetime.h>
 
 #include <ctype.h>
 #include <errno.h>
@@ -1633,7 +1635,8 @@ int HttpReq::processURIEx(const char *pURI, int uriLen, int &cacheable)
         if (*(pBegin - 1) == '/')
             --pBegin;
     }
-    if (m_pUrlStaticFileData)
+    if (m_pUrlStaticFileData
+        && m_pUrlStaticFileData->tmaccess == DateTime::s_curTime)
         return 0;
     else
         return processPath(pURI, uriLen, pBuf, pBegin, pEnd, cacheable);
@@ -1766,6 +1769,18 @@ int HttpReq::processPath(const char *pURI, int uriLen, char *pBuf,
 
     }
     m_sRealPathStore.setStr(pBuf, p - pBuf);
+
+    if (m_pUrlStaticFileData)
+    {
+        if (m_pVHost->checkFileChanged(m_pUrlStaticFileData, m_fileStat) == 0)
+        {
+            m_pUrlStaticFileData->tmaccess = DateTime::s_curTime;
+            return 0;
+        }
+        else
+            m_pUrlStaticFileData = NULL;
+    }
+
     m_pRealPath = &m_sRealPathStore;
     return ret;
 }
@@ -1781,6 +1796,7 @@ int HttpReq::filesMatch(const char *pEnd)
     len = pEnd - p;
     if (len)
     {
+        assert(!m_pFMContext);
         m_pFMContext = m_pContext->matchFilesContext(p, len);
         if ((m_pFMContext) && (m_pFMContext->getConfigBits()& BIT_FORCE_TYPE))
         {

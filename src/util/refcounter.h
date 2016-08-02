@@ -33,7 +33,7 @@ public:
     int incRef(int n)     {   return m_iRef += n; }
     int decRef(int n)     {   return m_iRef -= n; }
     int getRef() const      {   return m_iRef;      }
-
+    void reset()    { m_iRef = 0; }
 
     LS_NO_COPY_ASSIGN(RefCounter);
 };

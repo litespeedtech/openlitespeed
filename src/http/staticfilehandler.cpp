@@ -441,6 +441,11 @@ int StaticFileHandler::process(HttpSession *pSession,
         if (ret)
             return ret;
     }
+    else  //when using a cache, should incRef od the pCache, otherwise,
+          //when release will cause ref counter error
+    {
+        pCache->incRef();
+    }
 
     if (pSession->getFlag(HSF_STX_FILE_CACHE_READY))
         pReq->setMimeType(pCache->getMimeType());
@@ -597,6 +602,7 @@ int StaticFileHandler::process(HttpSession *pSession,
         HttpVHost *host = (HttpVHost *)pSession->getReq()->getVHost();
         host->addUrlStaticFileMatch(pReq->getURI(), pData->getFileData());
         pData->getFileData()->incRef();
+        pData->getFileData()->getFileData()->incRef();
     }
     return ret;
 
