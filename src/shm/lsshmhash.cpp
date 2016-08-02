@@ -383,15 +383,6 @@ LsShmOffset_t LsShmHash::getHTableReservedOffset() const
 {   return (LsShmOffset_t)(long) & ((LsShmHTable *)(long)m_iOffset)->x_reserved; }
 
 
-LsShmXSize_t LsShmHash::getHashDataSize() const
-{
-    return ((LsShmHTableStat *)offset2ptr(
-            getHTableStatOffset()))->m_iHashInUse
-            - LsShmPool::size2roundSize(sizeof(LsShmHTable))
-            - LsShmPool::size2roundSize(sz2TableSz(capacity()))
-            - LsShmPool::size2roundSize(sz2BitMapSz(capacity()))
-            - LsShmPool::size2roundSize(sizeof(LsHashLruInfo));
-}
 
 
 int LsShmHash::chkHashTable(LsShm *pShm, LsShmReg *pReg, int *pMode, int *pFlags)
@@ -856,7 +847,7 @@ LsShmHash::iteroffset LsShmHash::doSet(
         else
         {
             // remove the iter and install new one
-            eraseIteratorHelper(iter);
+            eraseIteratorHelper(iterOff);
         }
     }
     return insert2(key, pParms);
@@ -874,13 +865,12 @@ LsShmHash::iteroffset LsShmHash::doUpdate(iteroffset iterOff, LsShmHKey key, ls_
 // @brief erase - remove iter from the SHM pool.
 // @brief will destroy the link to itself if any!
 //
-void LsShmHash::eraseIteratorHelper(iterator iter)
+void LsShmHash::eraseIteratorHelper(iteroffset iterOff)
 {
-    if (iter == NULL)
+    if (iterOff.m_iOffset == 0)
         return;
 
-    iteroffset iterOff; 
-    iterOff.m_iOffset = m_pPool->ptr2offset(iter);
+    iterator iter = offset2iterator(iterOff);
     uint32_t hashIndx = getIndex(iter->x_hkey, capacity());
     LsShmHIterOff *pIdx = getHIdx() + hashIndx;
     LsShmOffset_t offset = pIdx->m_iOffset;
@@ -1082,7 +1072,7 @@ LsShmHash::iteroffset LsShmHash::iterGrowValue(iteroffset iterOff,
         front = size_to_grow;
     ::memcpy(pNew->getVal() + front, pOld->getVal(), pOld->getValLen());
 
-    eraseIteratorHelper(pOld);
+    eraseIteratorHelper(iterOff);
     if (m_iFlags & LSSHM_FLAG_LRU)
         linkHElem(pNew, offset);
     if (m_pTidMgr != NULL)
@@ -1258,7 +1248,7 @@ LsShmHash::iteroffset LsShmHash::doExpand(LsShmHash *pThis,
         iter = pThis->offset2iterator(iterOff.m_iOffset);     // in case of insert remap
         iterNew = pThis->offset2iterator(iterOffNew);
         ::memcpy(iterNew->getVal(), iter->getVal(), iter->getValLen());
-        pThis->eraseIteratorHelper(iter);
+        pThis->eraseIteratorHelper(iterOff);
         iterOff = iterOffNew;
         iter = iterNew;
     }
@@ -1367,8 +1357,7 @@ int LsShmHash::for_each2(
 }
 
 
-int LsShmHash::trim(time_t tmCutoff, int (*func)(iterator iter, void *arg),
-                    void *arg)
+int LsShmHash::trim(time_t tmCutoff, LsShmHash::TrimCb func, void *arg)
 {
     if ((m_iFlags & LSSHM_FLAG_LRU) == 0)
         return LS_FAIL;
@@ -1386,12 +1375,12 @@ int LsShmHash::trim(time_t tmCutoff, int (*func)(iterator iter, void *arg),
         pElem = offset2iterator(offElem);
         if (pElem->getLruLasttime() >= tmCutoff)
             break;
+        next = pElem->getLruLinkNext();
 
         if (func != NULL)
             ret = (*func)(pElem, arg);
         //int ret = clrdata(pElem->getVal());
-        next = pElem->getLruLinkNext();
-        eraseIteratorHelper(pElem);
+        eraseIteratorHelper(offElem);
         ++del;
         pLru->ndataexp += ret;
         pLru->ndataset -= ret;
@@ -1402,8 +1391,7 @@ int LsShmHash::trim(time_t tmCutoff, int (*func)(iterator iter, void *arg),
     return del;
 }
 
-int LsShmHash::trimsize(int need, int (*func)(iterator iter, void *arg),
-                        void *arg)
+int LsShmHash::trimsize(int need, LsShmHash::TrimCb func, void *arg)
 {
     if ((m_iFlags & LSSHM_FLAG_LRU) == 0)
         return LS_FAIL;
@@ -1420,11 +1408,12 @@ int LsShmHash::trimsize(int need, int (*func)(iterator iter, void *arg),
             pLru = getLru();
         pElem = offset2iterator(offElem);
         need -= pElem->x_iLen;
+        next = pElem->getLruLinkNext();
+
         if (func != NULL)
             ret = (*func)(pElem, arg);
 //         int ret = clrdata(pElem->getVal());
-        next = pElem->getLruLinkNext();
-        eraseIteratorHelper(pElem);
+        eraseIteratorHelper(offElem);
         ++del;
         pLru->ndataexp += ret;
         pLru->ndataset -= ret;

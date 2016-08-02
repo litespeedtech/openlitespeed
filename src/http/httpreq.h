@@ -28,6 +28,7 @@ enum
 
 
 #include <http/httpheader.h>
+#include "httpvhost.h"
 #include <lsr/ls_str.h>
 #include <lsr/ls_types.h>
 #include <util/autobuf.h>
@@ -238,7 +239,7 @@ private:
     LogSession         *m_pILog;
     CookieList          m_cookies;
 
-    StaticFileCacheData *m_pUrlStaticFileData;
+    static_file_data_t *m_pUrlStaticFileData;
 
 
 
@@ -714,7 +715,7 @@ public:
 
 
     int checkUrlStaicFileCache();
-    StaticFileCacheData *getUrlStaticFileData() { return m_pUrlStaticFileData;}
+    static_file_data_t *getUrlStaticFileData() { return m_pUrlStaticFileData;}
 };
 
 

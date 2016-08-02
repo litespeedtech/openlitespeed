@@ -37,9 +37,9 @@ extern "C"
 // #define DEBUG_RUN               // dump a lot of msg and sleep
 // #define DEBUG_TEST_SYS          // to exercise the system
 // #define DEBUG_SHOW_MORE
-#define LSSHM_DEBUG_ENABLE
-// #define LSSHM_USE_SPINLOCK      // enable for spinlock otherwise mutex
-// #define USE_PIDSPINLOCK         // enable for pid based spinlock
+// #define LSSHM_DEBUG_ENABLE
+#define LSSHM_USE_SPINLOCK      // enable for spinlock otherwise mutex
+#define USE_PIDSPINLOCK         // enable for pid based spinlock
 
 // C to C++ wrapper
 struct ls_shmobject_s 

@@ -27,9 +27,11 @@
 
 #define DEFAULT_TMP_DIR     "/tmp/lshttpd"
 #define DEFAULT_SWAP_DIR    DEFAULT_TMP_DIR "/swap/"
-#define RTREPORT_FILE       DEFAULT_TMP_DIR "/.rtreport"
 
 #define ADMIN_USERDB                "_AdminUserDB"
+
+extern const char *sRtReportPath;
+
 
 class HttpVHost;
 class HttpServerImpl;
