@@ -134,8 +134,9 @@
 static int s_achPid[256];
 static int s_curPid = 0;
 
+#define OLS_SHM_DIR  "/dev/shm/ols"
 #define RTREPORT_FILE_TMP  DEFAULT_TMP_DIR "/.rtreport"
-const char *sRtReportPath = "/dev/shm/.rtreport";
+const char *sRtReportPath = OLS_SHM_DIR "/.rtreport";
 
 static void sigchild(int sig)
 {
@@ -182,13 +183,33 @@ void HttpServer::cleanPid()
 
 static void verifyRtReportPath()
 {
+    int error = 1;
     DIR *dir = opendir("/dev/shm");
     if (dir)
     {
         closedir(dir);
-        symlink(sRtReportPath, RTREPORT_FILE_TMP);
+        if (!opendir(OLS_SHM_DIR))
+        {
+            ::system("mkdir -p " OLS_SHM_DIR );
+            if (getuid() == 0)
+            {
+                char sCmd[128];
+                snprintf(sCmd, 128, "chown %s:%s %s",
+                         MainServerConfig::getInstance().getUser(),
+                         MainServerConfig::getInstance().getGroup(),
+                         OLS_SHM_DIR);
+                ::system(sCmd);
+            }
+        }
+        if (opendir(OLS_SHM_DIR))
+        {
+            unlink(RTREPORT_FILE_TMP);
+            symlink(sRtReportPath, RTREPORT_FILE_TMP);
+            error =0;
+        }
     }
-    else
+
+    if (error)
         sRtReportPath = RTREPORT_FILE_TMP;
 }
 
@@ -232,9 +253,7 @@ private:
         HttpMime::setMime(&m_httpMime);
         m_serverContext.allocateInternal();
         HttpRespHeaders::buildCommonHeaders();
-
-        verifyRtReportPath();
-        m_sRTReportFile = sRtReportPath;
+        m_sRTReportFile = RTREPORT_FILE_TMP;
 
 #ifdef  USE_CARES
         Adns::init();
@@ -602,9 +621,14 @@ void HttpServerImpl::setRTReportName(int proc)
     {
         char achBuf[256], achBuf1[256];
         ls_snprintf(achBuf, 256, "%s.%d", sRtReportPath, proc);
-        ls_snprintf(achBuf1, 256, "%s.%d", RTREPORT_FILE_TMP, proc);
         m_sRTReportFile.setStr(achBuf);
-        symlink(achBuf, achBuf1);
+
+        if (strncasecmp(sRtReportPath, DEFAULT_TMP_DIR, 
+            sizeof(DEFAULT_TMP_DIR) - 1) != 0)
+        {
+            ls_snprintf(achBuf1, 256, "%s.%d", RTREPORT_FILE_TMP, proc);
+            symlink(achBuf, achBuf1);
+        }
     }
 }
 
@@ -2706,6 +2730,10 @@ int HttpServerImpl::configServerBasics(int reconfig, const XmlNode *pRoot)
         //this value can only be set once when server start.
         if (MainServerConfigObj.getCrashGuard() == 2)
             MainServerConfigObj.setCrashGuard(1);
+
+
+        verifyRtReportPath();
+        m_sRTReportFile = sRtReportPath;
 
         return 0;
     }
