@@ -184,25 +184,38 @@ void HttpServer::cleanPid()
 static void verifyRtReportPath()
 {
     int error = 1;
-    DIR *dir = opendir("/dev/shm");
-    if (dir)
+    struct stat sb;
+    if (stat("/dev/shm", &sb) != -1)
     {
-        closedir(dir);
-        if (!opendir(OLS_SHM_DIR))
+        if (!(sb.st_mode & S_IROTH) || !(sb.st_mode & S_IXOTH))
         {
-            ::system("mkdir -p " OLS_SHM_DIR );
-            if (getuid() == 0)
+            sb.st_mode |= (S_IROTH | S_IXOTH);
+            if (chmod ("/dev/shm", sb.st_mode))
             {
-                char sCmd[128];
-                snprintf(sCmd, 128, "chown %s:%s %s",
-                         MainServerConfig::getInstance().getUser(),
-                         MainServerConfig::getInstance().getGroup(),
-                         OLS_SHM_DIR);
-                ::system(sCmd);
+                /**
+                 * Unusual, this eror should never happen, just print to screen.
+                 */
+                printf("Failed to chmod /dev/shm to S_IROTH | S_IXOTH.\n");
             }
         }
-        if (opendir(OLS_SHM_DIR))
+
+        DIR *dir = opendir(OLS_SHM_DIR);
+        if (!dir)
         {
+            if (mkdir(OLS_SHM_DIR, 0755) != -1)
+            {
+                if (getuid() == 0)
+                {
+                    struct passwd *pw = getpwnam(MainServerConfig::getInstance().getUser());
+                    chown(OLS_SHM_DIR, pw->pw_uid, pw->pw_gid);
+                }
+                dir = opendir(OLS_SHM_DIR);
+            }
+        }
+
+        if (dir)
+        {
+            closedir(dir);
             unlink(RTREPORT_FILE_TMP);
             symlink(sRtReportPath, RTREPORT_FILE_TMP);
             error =0;
