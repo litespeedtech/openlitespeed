@@ -351,8 +351,7 @@ int ExtAppRegistry::generateRTReport(int fd)
 }
 
 
-ExtWorker *ExtAppRegistry::configExtApp(const XmlNode *pNode,
-                                        int configUserGroup)
+ExtWorker *ExtAppRegistry::configExtApp(const XmlNode *pNode)
 {
     int iType;
     int role;
@@ -514,11 +513,7 @@ ExtWorker *ExtAppRegistry::configExtApp(const XmlNode *pNode,
         config.setStartByServer(iAutoStart);
 
         config.config(pNode);
-
-
-        if (configUserGroup)
-            config.configExtAppUserGroup(pNode, iType);
-
+        config.configExtAppUserGroup(pNode, iType);
     }
 
     return pWorker;
@@ -641,7 +636,7 @@ int ExtAppRegistry::configExtApps(const XmlNode *pRoot,
     for (int i = 0 ; i < c ; ++ i)
     {
         pExtAppNode = list[i];
-        ExtWorker *pWorker = configExtApp(pExtAppNode, pVHost != NULL);
+        ExtWorker *pWorker = configExtApp(pExtAppNode);
         if (pWorker != NULL)
         {
             if (pVHost)

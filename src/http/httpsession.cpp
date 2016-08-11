@@ -302,7 +302,7 @@ void HttpSession::logAccess(int cancelled)
 void HttpSession::resumeSSI()
 {
     m_request.restorePathInfo();
-    releaseSendFileInfo();
+    releaseSendFileInfo(); //Must called before VHost released!!!
     if ((m_pGzipBuf) && (!m_pGzipBuf->isStreamStarted()))
         m_pGzipBuf->reinit();
     SSIEngine::resumeExecute(this);
@@ -313,7 +313,7 @@ void HttpSession::resumeSSI()
 inline void HttpSession::releaseStaticFileCacheData(StaticFileCacheData
         * &pCache)
 {
-    if (pCache && pCache->decRef() == 0)
+    if (pCache && pCache->decRef() <= 0)
         pCache->setLastAccess(DateTime::s_curTime);
 }
 
@@ -321,10 +321,7 @@ inline void HttpSession::releaseStaticFileCacheData(StaticFileCacheData
 inline void HttpSession::releaseFileCacheDataEx(FileCacheDataEx *&pECache)
 {
     if (pECache && pECache->decRef() <= 0)
-    {
-        if (pECache->getfd() != -1)
-            pECache->closefd();
-    }
+        pECache->release();
 }
 
 
@@ -396,13 +393,13 @@ void HttpSession::nextRequest()
         ++m_iReqServed;
         m_lReqTime = DateTime::s_curTime;
         m_iReqTimeUs = DateTime::s_curTimeUs;
+        releaseSendFileInfo();
         m_response.reset();
         m_request.reset2();
 
         if (m_pNtwkIOLink && m_pNtwkIOLink->isSSL())
             m_request.setSsl(m_pNtwkIOLink->getSSL());
 
-        releaseSendFileInfo();
         if (m_pRespBodyBuf)
             releaseRespCache();
         if (m_pGzipBuf)
@@ -1302,7 +1299,7 @@ int HttpSession::redirect(const char *pNewURL, int len, int alloc)
     int ret = m_request.redirect(pNewURL, len, alloc);
     if (ret)
         return ret;
-    m_sendFileInfo.reset();
+    releaseSendFileInfo();
     if (m_pHandler)
         cleanUpHandler();
     m_request.setHandler(NULL);
@@ -1713,6 +1710,8 @@ int HttpSession::assignHandler(const HttpHandler *pHandler)
             m_sendFileInfo.setCurEnd(m_request.getUrlStaticFileData()->pData->getFileSize());
             m_sendFileInfo.setParam(NULL);
             setFlag(HSF_STX_FILE_CACHE_READY);
+            LS_DBG_L( getLogSession(), "[static file cache] handling static file [ref=%d].",
+                m_request.getUrlStaticFileData()->pData->getFileData()->getRef());
         }
         break;
     case HandlerType::HT_FASTCGI:
@@ -2159,10 +2158,11 @@ void HttpSession::closeConnection()
     logAccess(getStream()->getFlag(HIO_FLAG_PEER_SHUTDOWN));
 
     m_lReqTime = DateTime::s_curTime;
+    releaseSendFileInfo();
     m_response.reset();
     m_request.reset();
     m_request.resetHeaderBuf();
-    releaseSendFileInfo();
+
     m_pModHandler = NULL;
 
     if (m_pChunkOS)

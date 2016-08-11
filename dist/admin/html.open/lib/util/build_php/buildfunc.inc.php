@@ -671,10 +671,11 @@ class BuildTool
 		$this->ext_options['APC'] = $ext;
 
 		$ext = array('__extension_name__' => 'XCache');
-		$ver = 'xcache-' . BuildConfig::GetVersion(BuildConfig::XCACHE_VERSION);
+		$ver0 = BuildConfig::GetVersion(BuildConfig::XCACHE_VERSION);
+		$ver = 'xcache-' . $ver0;
 		$ext['__extension_dir__'] = $ver;
 		$ext['__extension_src__'] = $ver . '.tar.gz';
-		$ext['__extension_download_url__'] = 'http://xcache.lighttpd.net/pub/Releases/' . XCACHE_VERSION . '/' . $ver . '.tar.gz';
+		$ext['__extension_download_url__'] = 'http://xcache.lighttpd.net/pub/Releases/' . $ver0 . '/' . $ver . '.tar.gz';
 		$ext['__extract_method__'] = 'tar -zxf';
 		$ext['__extension_extra_config__'] = '--enable-xcache';
 

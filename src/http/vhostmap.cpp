@@ -694,7 +694,7 @@ SslContext *VHostMapFindSslContext(void *arg, const char *pName)
         pHost = StringTool::strLower(pName, achBuf, len);
         pHostEnd = pHost + len;
         pVHost = pMap->matchVHost(pHost, pHostEnd);
-        if ((!pVHost) && (memcmp(pHost, "www.", 4) == 0))
+        if ((!pVHost || pVHost == pMap->getCatchAll()) && (memcmp(pHost, "www.", 4) == 0))
         {
             pHost += 4;
             pVHost = pMap->matchVHost(pHost, pHostEnd);

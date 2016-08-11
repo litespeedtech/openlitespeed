@@ -603,6 +603,9 @@ int StaticFileHandler::process(HttpSession *pSession,
         host->addUrlStaticFileMatch(pReq->getURI(), pData->getFileData());
         pData->getFileData()->incRef();
         pData->getFileData()->getFileData()->incRef();
+        //assert(pData->getFileData()->getRef() == 2);
+        //assert(pData->getFileData()->getFileData()->getRef() == 2);
+        LS_DBG_L( pSession->getLogSession(), "[static file cache] create cache." );
     }
     return ret;
 
