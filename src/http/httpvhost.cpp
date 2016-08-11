@@ -2623,11 +2623,39 @@ void HttpVHost::urlStaticFileHashClean()
     {
         if ((*it)->pData->getRef() <= 0)
         {
+            LS_DBG_L("[VHost:%s][static file cache] Clean list.", getName());
             delete *it;
             m_UrlStxFileDirtyList.erase(it);
         }
         else
             ++it;
     }
+
+    UrlStxFileHash::iterator itt;
+    for (itt = m_pUrlStxFileHash->begin(); itt != m_pUrlStxFileHash->end();)
+    {
+        static_file_data_t *data = (static_file_data_t *)itt.second();
+        if (data->pData->getRef() <= 1)
+        {
+            LS_DBG_L("[VHost:%s][static file cache] Clean HashT.", getName());
+            data->pData->reset();
+            data->pData->getFileData()->reset();
+            delete data;
+            m_pUrlStxFileHash->erase(itt);
+        }
+        itt = m_pUrlStxFileHash->next(itt);
+    }
 }
+
+
+void HttpVHost::removeurlStaticFile(static_file_data_t *data)
+{
+    UrlStxFileHash::iterator it = m_pUrlStxFileHash->find(data->url.c_str());
+    if (it != m_pUrlStxFileHash->end())
+    {
+        delete data;
+        m_pUrlStxFileHash->erase(it);
+    }
+}
+
 

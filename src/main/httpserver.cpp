@@ -181,50 +181,6 @@ void HttpServer::cleanPid()
 
 }
 
-static void verifyRtReportPath()
-{
-    int error = 1;
-    struct stat sb;
-    if (stat("/dev/shm", &sb) != -1)
-    {
-        if (!(sb.st_mode & S_IROTH) || !(sb.st_mode & S_IXOTH))
-        {
-            sb.st_mode |= (S_IROTH | S_IXOTH);
-            if (chmod ("/dev/shm", sb.st_mode))
-            {
-                /**
-                 * Unusual, this eror should never happen, just print to screen.
-                 */
-                printf("Failed to chmod /dev/shm to S_IROTH | S_IXOTH.\n");
-            }
-        }
-
-        DIR *dir = opendir(OLS_SHM_DIR);
-        if (!dir)
-        {
-            if (mkdir(OLS_SHM_DIR, 0755) != -1)
-            {
-                if (getuid() == 0)
-                {
-                    struct passwd *pw = getpwnam(MainServerConfig::getInstance().getUser());
-                    chown(OLS_SHM_DIR, pw->pw_uid, pw->pw_gid);
-                }
-                dir = opendir(OLS_SHM_DIR);
-            }
-        }
-
-        if (dir)
-        {
-            closedir(dir);
-            unlink(RTREPORT_FILE_TMP);
-            symlink(sRtReportPath, RTREPORT_FILE_TMP);
-            error =0;
-        }
-    }
-
-    if (error)
-        sRtReportPath = RTREPORT_FILE_TMP;
-}
 
 
 class HttpServerImpl
@@ -426,6 +382,9 @@ private:
     int initServer(XmlNode *pRoot, int &iReleaseXmlTree, int reconfig);
     int readVersion(const char *path);
 
+    void chmodDirToAll(const char *path, struct stat &sb);
+    void verifyRtReportPath();
+    
 public:
     void hideServerSignature(int sv);
     int processAutoUpdResp(HttpFetch *pHttpFetch);
@@ -2613,6 +2572,58 @@ int HttpServerImpl::configVHosts(const XmlNode *pRoot)
     return 0;
 }
 
+
+void HttpServerImpl::chmodDirToAll(const char *path, struct stat &sb)
+{
+    if (!(sb.st_mode & S_IROTH) || !(sb.st_mode & S_IXOTH))
+    {
+        sb.st_mode |= (S_IROTH | S_IXOTH);
+        if (chmod (path, sb.st_mode))
+        {
+            /**
+             * Unusual, this eror should never happen, just print to screen.
+             */
+            printf("Failed to chmod %s to S_IROTH | S_IXOTH.\n", path);
+        }
+    }
+}
+
+void HttpServerImpl::verifyRtReportPath()
+{
+    int error = 1;
+    struct stat sb;
+    if (stat("/dev/shm", &sb) != -1)
+    {
+        chmodDirToAll("/dev/shm", sb);
+
+        if (stat(OLS_SHM_DIR, &sb) == -1)
+        {
+            if (mkdir(OLS_SHM_DIR, 0755) != -1)
+            {
+                if (getuid() == 0)
+                {
+                    struct passwd *pw = getpwnam(MainServerConfig::getInstance().getUser());
+                    chown(OLS_SHM_DIR, pw->pw_uid, pw->pw_gid);
+                }
+                error =0;
+            }
+        }
+        else
+        {
+            chmodDirToAll(OLS_SHM_DIR, sb);
+            error =0;
+        }
+
+        if (!error)
+        {
+            unlink(RTREPORT_FILE_TMP);
+            symlink(sRtReportPath, RTREPORT_FILE_TMP);
+        }
+    }
+
+    if (error)
+        sRtReportPath = RTREPORT_FILE_TMP;
+}
 
 int HttpServerImpl::configServerBasics(int reconfig, const XmlNode *pRoot)
 {

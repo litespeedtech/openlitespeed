@@ -79,7 +79,7 @@ public:
     static void init();
     static void shutdown();
     static int generateRTReport(int fd);
-    static ExtWorker *configExtApp(const XmlNode *pNode, int configUserGroup);
+    static ExtWorker *configExtApp(const XmlNode *pNode);
     static int configLoadBalacner(const XmlNode *pNode,
                                   const HttpVHost *pVHost);
     static int configExtApps(const XmlNode *pRoot, const HttpVHost *pVHost);

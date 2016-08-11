@@ -2987,3 +2987,11 @@ int HttpReq::checkUrlStaicFileCache()
     m_pUrlStaticFileData = host->getUrlStaticFileData(getURI());
     return 0;
 }
+
+
+void HttpReq::removeUrlStaicFileCache(static_file_data_t *pData)
+{
+    HttpVHost *host = (HttpVHost *)getVHost();
+    host->removeurlStaticFile(pData);
+}
+

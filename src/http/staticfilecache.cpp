@@ -89,7 +89,7 @@ int StaticFileCache::newCache(const char *pPath, int pathLen,
         {
             delete pData;
             pData = NULL;
-        };
+        }
     }
     return ret;
 }
