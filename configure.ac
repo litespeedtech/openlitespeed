@@ -64,6 +64,13 @@ AC_ARG_WITH([admin],
             [OPENLSWS_ADMIN="$withval"], [OPENLSWS_ADMIN=admin])
 AC_SUBST([OPENLSWS_ADMIN])
 
+## ##Set option --with-adminport
+AC_ARG_WITH([adminport],
+            AS_HELP_STRING([--with-adminport],[Set administrator listener port [default: 7080]]),
+            [OPENLSWS_ADMINPORT="$withval"], [OPENLSWS_ADMINPORT=7080])
+AC_SUBST([OPENLSWS_ADMINPORT])
+
+
 ## ##Set option --with-password
 AC_ARG_WITH([password],
             AS_HELP_STRING([--with-password],[Set password of administrator [default: 123456]]),
