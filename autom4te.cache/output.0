@@ -658,6 +658,7 @@ LUA_INCLUDES
 OPENLSWS_ADMINSSL
 OPENLSWS_EMAIL
 OPENLSWS_PASSWORD
+OPENLSWS_ADMINPORT
 OPENLSWS_ADMIN
 OPENLSWS_GROUP
 OPENLSWS_USER
@@ -796,6 +797,7 @@ enable_assert
 with_user
 with_group
 with_admin
+with_adminport
 with_password
 with_email
 enable_adminssl
@@ -1478,6 +1480,7 @@ Optional Packages:
   --with-user             Set user name to run openlitespeed @<:@default: nobody@:>@
   --with-group            Set group of the user @<:@default: nobody@:>@
   --with-admin            Set administrator user name @<:@default: admin@:>@
+  --with-adminport        Set administrator listener port @<:@default: 7080@:>@
   --with-password         Set password of administrator @<:@default: 123456@:>@
   --with-email            Set email of administrator @<:@default: root@localhost@:>@
   --with-lua[=DIR]       use liblua (located in directory DIR, if supplied) for compiling mod_lua module.  [default=no]
@@ -15636,6 +15639,18 @@ if test "${with_admin+set}" = set; then :
 else
   OPENLSWS_ADMIN=admin
 fi
+
+
+
+## ##Set option --with-adminport
+
+@%:@ Check whether --with-adminport was given.
+if test "${with_adminport+set}" = set; then :
+  withval=$with_adminport; OPENLSWS_ADMINPORT="$withval"
+else
+  OPENLSWS_ADMINPORT=7080
+fi
+
 
 
 

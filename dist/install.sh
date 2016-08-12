@@ -97,15 +97,41 @@ LSINSTALL_DIR=`dirname "$0"`
 
 init
 LSWS_HOME=$1
+
 WS_USER=$2
+if [ "x$WS_USER" = "xyes" ] ; then 
+    WS_USER=nobody
+fi
+
 WS_GROUP=$3
+if [ "x$WS_GROUP" = "xyes" ] ; then 
+    WS_GROUP=nobody
+fi
+
 ADMIN_USER=$4
+if [ "x$ADMIN_USER" = "xyes" ] ; then 
+    ADMIN_USER=admin
+fi
+
 PASS_ONE=$5
+if [ "x$PASS_ONE" = "xyes" ] ; then 
+    PASS_ONE=123456
+fi
+
 ADMIN_EMAIL=$6
+if [ "x$ADMIN_EMAIL" = "xyes" ] ; then 
+    ADMIN_EMAIL=root@localhost
+fi
+
+ADMIN_SSL=$7
+ADMIN_PORT=$8
+if [ "x$ADMIN_PORT" = "xyes" ] ; then 
+    ADMIN_PORT=7080
+fi
+
 
 VERSION=open
 HTTP_PORT=8088
-ADMIN_PORT=7080
 SETUP_PHP=1
 PHP_SUFFIX="php"
 SSL_HOSTNAME=""
@@ -192,7 +218,7 @@ configRuby
 
 
 #Comment out the below two lines
-echo "Target_Dir:$LSWS_HOME User:$WS_USER Group:$WS_GROUP Admin:$ADMIN_USER Password:$PASS_ONE LSINSTALL_DIR:$LSINSTALL_DIR AdminSSL:$7 END"
+echo "Target_Dir:$LSWS_HOME User:$WS_USER Group:$WS_GROUP Admin:$ADMIN_USER Password:$PASS_ONE LSINSTALL_DIR:$LSINSTALL_DIR AdminSSL:$ADMIN_SSL ADMIN_PORT:$ADMIN_PORT END"
 
 echo
 echo -e "\033[38;5;148mInstalling, please wait...\033[39m"
@@ -200,7 +226,7 @@ echo
 
 
 
-if [ "x$7" = "xyes" ] ; then
+if [ "x$ADMIN_SSL" = "xyes" ] ; then
     echo "Admin SSL enabled!"
     gen_selfsigned_cert ../adminssl.conf
     cp $LSINSTALL_DIR/${SSL_HOSTNAME}.crt $LSINSTALL_DIR/admin/conf/${SSL_HOSTNAME}.crt
