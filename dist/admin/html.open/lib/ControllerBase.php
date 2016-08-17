@@ -325,9 +325,23 @@ class ControllerBase
 			return false;
 		}
 
+		$domains = $s_vhnode->GetChildVal('vhDomain');
+		if ($domains == NULL) {
+			$domains = $vhname; // default
+		}
+		$domain = $domains;
+		$alias = '';
+		if ( ($domainalias = $s_vhnode->GetChildVal('vhAliases')) != NULL ) {
+			$domains .= ", $domainalias";
+			$alias = $domainalias;
+		}
+		
 		$vhroot = $tproot->GetChildren('virtualHostConfig');
 		if ($vhroot == false)
 			return false;
+		$vhroot->AddChild(new CNode('vhDomain', $domain));
+		$vhroot->AddChild(new CNode('vhAliases', $alias));
+		
 		$vh->SetRootNode($vhroot);
 		$vh->SaveFile();
 
@@ -337,12 +351,6 @@ class ControllerBase
 		$tproot->AddChild(new CNode('note', "Instantiated from template $tpname"));
 		$basemap->Convert(0, $tproot, 1, $this->_serv->GetRootNode());
 		$s_vhnode->RemoveFromParent();
-
-		$domains = $s_vhnode->GetChildVal('vhDomain');
-		if ($domains == NULL)
-			$domains = $vhname; // default
-		if ( ($domainalias = $s_vhnode->GetChildVal('vhAliases')) != NULL )
-			$domains .= ", $domainalias";
 
 		$listeners = $s_tpnode->GetChildVal('listeners');
 		$lns = preg_split("/, /", $listeners, -1, PREG_SPLIT_NO_EMPTY);

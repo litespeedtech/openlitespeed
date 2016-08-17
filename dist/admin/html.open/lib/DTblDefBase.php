@@ -252,6 +252,8 @@ class DTblDefBase
 			'tp_listeners' => DTblDefBase::NewSelAttr('listeners', DMsg::ALbl('l_mappedlisteners'), 'listener', false, 'mappedListeners', NULL, 1),
 			'tp_vhName' => DTblDefBase::NewTextAttr('vhName', DMsg::ALbl('l_vhname'), 'vhname', false, 'templateVHName'),
 			'tp_vhDomain' => DTblDefBase::NewTextAttr('vhDomain', DMsg::ALbl('l_domain'), 'domain', true, 'templateVHDomain'),
+			'tp_vhAliases' => DTblDefBase::NewTextAttr('vhAliases', DMsg::ALbl('l_vhaliases'), 'domain', true, 'templateVHAliases', 1),
+
 			'tp_vhRoot' => DTblDefBase::NewParseTextAttr('vhRoot', DMsg::ALbl('l_defaultvhroot'),
 									 $this->_options['tp_vname'][0], $this->_options['tp_vname'][1],
 									 false, 'templateVHRoot'),
@@ -945,7 +947,7 @@ class DTblDefBase
 		$attrs = array(
 				$this->_attrs['tp_vhName'],
 				$this->_attrs['tp_vhDomain'],
-				DTblDefBase::NewTextAttr('vhAliases', DMsg::ALbl('l_vhaliases'), 'domain', true, 'templateVHAliases', 1),
+				$this->_attrs['tp_vhAliases'],
 				$vhroot
 		);
 		$this->_tblDef[$id] = DTbl::NewIndexed($id, DMsg::ALbl('l_membervhosts'), $attrs, 'vhName');
@@ -956,6 +958,8 @@ class DTblDefBase
 	{
 		$attrs = array(
 				DTblDefBase::NewTextAttr('docRoot', DMsg::ALbl('l_docroot'), 'cust', false),//no validation, maybe suexec owner
+				$this->_attrs['tp_vhDomain'], // this setting is a new way, will merge with listener map settings for backward compatible
+				$this->_attrs['tp_vhAliases'], 
 				$this->_attrs['adminEmails']->dup(NULL, NULL, 'vhadminEmails'),
 				$this->_attrs['vh_enableGzip'],
 				$this->_attrs['enableIpGeo'],

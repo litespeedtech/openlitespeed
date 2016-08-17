@@ -86,7 +86,7 @@ public:
     static const AutoStr2 *getVhAliases()            {   return &s_vhAliases;        }
     static void setVhName(const char *pVhName)             { s_vhName.setStr(pVhName);  }
     static void setVhDomain(const char *pvhDomain)         { s_vhDomain.setStr(pvhDomain);  }
-    static void setVhAliases(const char *pvhAliases)       { s_vhDomain.setStr(pvhAliases);  }
+    static void setVhAliases(const char *pvhAliases)       { s_vhAliases.setStr(pvhAliases);  }
     static const char *getVhRoot()         {   return s_aVhRoot;     }
     static void clearVhRoot()               {   s_aVhRoot[0] = 0;     }
     static ConfigCtx   *getCurConfigCtx()   {   return s_pCurConfigCtx; }
