@@ -142,7 +142,7 @@ $_tipsdb['chrootMode'] = new DAttrHelp("外部应用程序Chroot模式", '指定
 
 $_tipsdb['chrootPath'] = new DAttrHelp("外部应用程序Chroot路径", '当&quot;外部应用程序Chroot模式&quot;被设置为Customized Chroot Path时，用来为当前虚拟主机外部应用程序脚本指定新的根目录。', '', '路径1', '');
 
-$_tipsdb['ciphers'] = new DAttrHelp("Ciphers", 'Specifies the cipher suite to be used when negotiating the SSL handshake.  LSWS supports cipher suites implemented in SSL v3.0, TLS v1.0, and TLS v1.2.', '[Security] We recommend leaving this field blank to use our default cipher which follows SSL cipher best practices.', 'Colon-separated string of cipher specifications. LSWS supports all cipher suites implemented in SSL v3.0, TLS v1.0, and TLS v1.2.', 'ECDHE-RSA-AES128-SHA256:RC4:HIGH:!MD5:!aNULL:!EDH');
+$_tipsdb['ciphers'] = new DAttrHelp("Ciphers", 'Specifies the cipher suite to be used when negotiating the SSL handshake.  LSWS supports cipher suites implemented in SSL v3.0, TLS v1.0, and TLS v1.2.', '[Security] We recommend leaving this field blank to use our default cipher which follows SSL cipher best practices.', 'Colon-separated string of cipher specifications.', 'ECDHE-RSA-AES128-SHA256:RC4:HIGH:!MD5:!aNULL:!EDH');
 
 $_tipsdb['clientVerify'] = new DAttrHelp("Client Verification", ' Specifies the type of client certifcate authentication. Available types are: <ul> <li><b>None:</b> No client certificate is required.</li> <li><b>Optional:</b> Client certificate is optional.</li> <li><b>Require:</b> The client must has valid certificate.</li> <li><b>Optional_no_ca:</b> Same as optional.</li> </ul> The default is &quot;None&quot;.', '&quot;None&quot; or &quot;Require&quot; are recommended.', 'Select from drop down list', '');
 
@@ -150,7 +150,7 @@ $_tipsdb['compilerflags'] = new DAttrHelp("Compiler Flags", 'Add additional comp
 
 $_tipsdb['compressibleTypes'] = new DAttrHelp("压缩类型", '指定允许哪些MIME类型进行压缩。', '[性能建议] 只允许特定类型进行GZIP压缩。 二进制文件如gif/png/jpeg图片文件及flash文件无法从压缩中获益。', '以逗号分隔的MIME类型列表。通配符“*”和 否定符号“！”是允许的，如text/*, !text/js。', 'If you want to compress text/* but not text/css, you can have a rule like  text/*, !text/css. &quot;!&quot; will exclude that MIME type.');
 
-$_tipsdb['configFile'] = new DAttrHelp("配置文件", '指定虚拟主机的配置文件名称。 配置文件必须位于$SERVER_ROOT/conf/vhosts/目录下。 推荐使用$SERVER_ROOT/conf/vhosts/$VH_NAME/vhconf.conf。', '$VH_NAME.conf is recommended for easy management.', '文件3', '');
+$_tipsdb['configFile'] = new DAttrHelp("配置文件", '指定虚拟主机的配置文件名称。 配置文件必须位于$SERVER_ROOT/conf/vhosts/目录下。 推荐使用$SERVER_ROOT/conf/vhosts/$VH_NAME/vhconf.conf。', '$SERVER_ROOT/conf/vhosts/$VH_NAME/vhconf.conf is recommended', '文件3', '');
 
 $_tipsdb['configureparams'] = new DAttrHelp("Configure Parameters", 'Configure parameters for PHP build. Apache-specific parameters and &quot;--prefix&quot; value will be automatically  removed and &quot;--with-litespeed&quot; will be automatically appended when you click Next Step.  (Prefix can be set in the field above.) This way you can simply copy and paste the configure  parameters from the phpinfo() output of an existing working PHP build.', '', 'Space-delimited series of options (with or without double quotes)', '');
 
@@ -574,7 +574,7 @@ $_tipsdb['templateName'] = new DAttrHelp("Template Name", 'A unique name for the
 
 $_tipsdb['templateVHAliases'] = new DAttrHelp("Aliases", 'Specifies alternate names for the virtual host. All possible hostnames and IP addresses should be added to this list. The wildcard characters * and ? are allowed in the name. Append :<port> for web sites not on port 80. <br/><br/>Aliases will be used in the following situations: <ol>   <li>To match the hostname in the Host header when processing a   request.</li>   <li>To populate domain name/alias configurations for add-ons    like FrontPage or AWstats.</li>   <li>To configure listener-to-virtual host mappings based on the virtual host template.</li> </ol>', '', 'Comma-separated list of domain names.', '');
 
-$_tipsdb['templateVHConfigFile'] = new DAttrHelp("Instantiated VHost Config File", 'Specifies the location of the config file generated when you instantiate a member virtual host.  Variable $VH_NAME must appear in the path so each virtual host will have its own file. Must be located under $SERVER_ROOT/conf/vhosts/. This config file will  be created only after you move a member vhost out of the template through instantiation.', '$VH_NAME.conf is recommended for easy management.', 'String with $VH_NAME variable and .conf suffix', '');
+$_tipsdb['templateVHConfigFile'] = new DAttrHelp("Instantiated VHost Config File", 'Specifies the location of the config file generated when you instantiate a member virtual host.  Variable $VH_NAME must appear in the path so each virtual host will have its own file. Must be located under  $SERVER_ROOT/conf/vhosts/. This config file will be created only after you move a member vhost out of the template  through instantiation.', '$VH_NAME/vhconf.conf is recommended for easy management.', 'String with $VH_NAME variable and .conf suffix', '');
 
 $_tipsdb['templateVHDocRoot'] = new DAttrHelp("Document Root", 'Specifies the unique path for each member virtual host&#039;s document root.   Variable $VH_NAME or $VH_ROOT must appear in the path so  each member virtual host will have its own document root.', '', 'path with $VH_NAME or $VH_ROOT variable', '$VH_ROOT/public_html/ or $SERVER_ROOT/$VH_NAME/public_html.');
 

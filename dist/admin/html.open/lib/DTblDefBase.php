@@ -1285,7 +1285,7 @@ class DTblDefBase
 				$this->_attrs['tp_vhRoot'],
 				DTblDefBase::NewParseTextAttr('configFile', DMsg::ALbl('l_configfile'),
 						'/\$VH_NAME.+\.conf$/', DMsg::ALbl('parse_tpvhconffile'),
-						false, 'templateFileRef'),
+						false, 'templateVHConfigFile'),
 				$this->_attrs['vh_maxKeepAliveReq'],
 				$this->_attrs['vh_smartKeepAlive']
 		);
