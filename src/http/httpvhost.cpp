@@ -1400,7 +1400,7 @@ HttpContext *HttpVHost::configRailsContext(const char *contextUri,
 
 
     LocalWorker *pWorker = RailsAppConfig::newRailsApp(this, contextUri,
-                           achFileName, getName(), maxConns, pRailsEnv,
+                           getName(), achFileName, maxConns, pRailsEnv,
                            maxIdle, pEnv, RailsAppConfig::getpRailsDefault()->getRunOnStartUp(),
                            pRubyPath) ;
 
