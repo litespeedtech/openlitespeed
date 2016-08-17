@@ -786,7 +786,11 @@ int StaticFileCacheData::readyCacheData(
     if ((m_fileData.isCached() ||
          (m_fileData.getfd() != -1)))
         return 0;
-    return m_fileData.readyData(pFileName);
+
+    ret = m_fileData.readyData(pFileName);
+    if (ret)
+        pECache->decRef();
+    return ret;
 }
 
 

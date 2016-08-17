@@ -2492,8 +2492,8 @@ HttpVHost *HttpVHost::configVHost(XmlNode *pNode)
             pVhConfNode = pNode;
 
 
-        const char *pDomain  = pVhConfNode->getChildValue("domainName");
-        const char *pAliases = pVhConfNode->getChildValue("hostAliases");
+        const char *pDomain  = pVhConfNode->getChildValue("vhDomain");
+        const char *pAliases = pVhConfNode->getChildValue("vhAliases");
         pVHost = HttpVHost::configVHost(pNode, pName, pDomain, pAliases, pVhRoot,
                                         pVhConfNode);
         break;
@@ -2588,8 +2588,8 @@ int HttpVHost::checkFileChanged(static_file_data_t *data, struct stat &sb)
         sb.st_mtime == data->pData->getLastMod() &&
         sb.st_ino == data->pData->getINode())
         return 0;
-   else
-   {
+    else
+    {
         UrlStxFileHash::iterator it = m_pUrlStxFileHash->find(data->url.c_str());
         if (it != m_pUrlStxFileHash->end())
         {
@@ -2602,7 +2602,7 @@ int HttpVHost::checkFileChanged(static_file_data_t *data, struct stat &sb)
             m_pUrlStxFileHash->erase(it);
         }
         return -1;
-   }
+    }
 }
 
 
@@ -2621,7 +2621,7 @@ void HttpVHost::urlStaticFileHashClean()
     TPointerList<static_file_data_t>::iterator it;
     for (it = m_UrlStxFileDirtyList.begin(); it != m_UrlStxFileDirtyList.end();)
     {
-        if ((*it)->pData->getRef() <= 0)
+        if ((*it)->pData->getFileData()->getRef() <= 0)
         {
             LS_DBG_L("[VHost:%s][static file cache] Clean list.", getName());
             delete *it;
@@ -2635,11 +2635,11 @@ void HttpVHost::urlStaticFileHashClean()
     for (itt = m_pUrlStxFileHash->begin(); itt != m_pUrlStxFileHash->end();)
     {
         static_file_data_t *data = (static_file_data_t *)itt.second();
-        if (data->pData->getRef() <= 1)
+        if (data->pData->getFileData()->getRef() <= 1)
         {
             LS_DBG_L("[VHost:%s][static file cache] Clean HashT.", getName());
-            data->pData->reset();
-            data->pData->getFileData()->reset();
+            data->pData->decRef();
+            data->pData->getFileData()->decRef();
             delete data;
             m_pUrlStxFileHash->erase(itt);
         }

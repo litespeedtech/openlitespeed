@@ -2594,24 +2594,40 @@ void HttpServerImpl::verifyRtReportPath()
     struct stat sb;
     if (stat("/dev/shm", &sb) != -1)
     {
-        chmodDirToAll("/dev/shm", sb);
+        struct passwd *pw = getpwnam(MainServerConfig::getInstance().getUser());
+        bool rootuser = (getuid() == 0);
 
+        chmodDirToAll("/dev/shm", sb);
         if (stat(OLS_SHM_DIR, &sb) == -1)
         {
-            if (mkdir(OLS_SHM_DIR, 0755) != -1)
+            int mod = (rootuser ? 0755 : 0777);
+            if (mkdir(OLS_SHM_DIR, mod) != -1)
             {
-                if (getuid() == 0)
-                {
-                    struct passwd *pw = getpwnam(MainServerConfig::getInstance().getUser());
+                if (rootuser)
                     chown(OLS_SHM_DIR, pw->pw_uid, pw->pw_gid);
-                }
                 error =0;
             }
         }
         else
         {
             chmodDirToAll(OLS_SHM_DIR, sb);
-            error =0;
+            if (sb.st_uid != pw->pw_uid)
+            {
+                if (rootuser)
+                {
+                    chown(OLS_SHM_DIR, pw->pw_uid, pw->pw_gid);
+                    error = 0;
+                }
+                else
+                {
+                    printf("ERROR: %s own by user/group other than '%s:%s'.\n",
+                           OLS_SHM_DIR, 
+                           MainServerConfig::getInstance().getUser(),
+                           MainServerConfig::getInstance().getGroup());
+                }
+            }
+            else
+                error =0;
         }
 
         if (!error)
