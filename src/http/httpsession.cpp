@@ -321,7 +321,7 @@ inline void HttpSession::releaseStaticFileCacheData(StaticFileCacheData
 inline void HttpSession::releaseFileCacheDataEx(FileCacheDataEx *&pECache)
 {
     if (pECache && pECache->decRef() <= 0)
-        pECache->release();
+        pECache->closefd();
 }
 
 
