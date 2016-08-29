@@ -2,8 +2,6 @@
 
 class RealTimeStats
 {
-
-    const RPT_PATH = '/tmp/lshttpd/' ;
     const FLD_BPS_IN = 0 ;
     const FLD_BPS_OUT = 1 ;
     const FLD_SSL_BPS_IN = 2 ;
@@ -51,8 +49,9 @@ class RealTimeStats
     {
         $this->_rawdata = '' ;
         $processes = $_SERVER['LSWS_CHILDREN'] ;
+		$statsDir = isset($_SERVER['LSWS_STATDIR']) ? $_SERVER['LSWS_STATDIR'] : '/tmp/lshttpd';
 
-        $rtrpt = self::RPT_PATH . '.rtreport' ;
+        $rtrpt = rtrim($statsDir, '/') . '/.rtreport' ;
         for ( $i = 1 ; $i <= $processes ; $i ++ ) {
             if ( $i > 1 )
                 $this->_rawdata .= "\n" . file_get_contents("{$rtrpt}.{$i}") ;

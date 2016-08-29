@@ -133,6 +133,8 @@ if [ "${ENABLE_MAILHEADER}" -eq 1 ] ; then
 		MAILHEADER_VER=5.4.x
 	elif [ "${MAILHEADER_VER}" = "5.5" ] ; then 
 		MAILHEADER_VER=5.5.x
+	elif [ "${MAILHEADER_VER}" = "5.6" ] ; then 
+		MAILHEADER_VER=5.6.x
 	else
 		MAILHEADER_VER=${PHP_VERSION}
 	fi

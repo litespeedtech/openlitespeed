@@ -1084,6 +1084,18 @@ int HttpReq::setRewriteQueryString(const char *pQS, int len)
 }
 
 
+static void sanitizeHeaderValue(char *pHeaderVal, int len)
+{
+    char *pHeaderEnd = pHeaderVal + len;
+    while(pHeaderVal < pHeaderEnd)
+    {
+        if (*pHeaderVal == '\r' || *pHeaderVal == '\n')
+            *pHeaderVal = ' ';
+        ++pHeaderVal;
+    }
+}    
+
+
 int HttpReq::setRewriteLocation(char *pURI, int uriLen,
                                 const char *pQS, int qsLen, int escape)
 {
@@ -1099,6 +1111,7 @@ int HttpReq::setRewriteLocation(char *pURI, int uriLen,
     else
     {
         memcpy(p, pURI, uriLen);
+        sanitizeHeaderValue(p, uriLen);
         p += uriLen;
     }
     if (qsLen != 0)
@@ -1107,6 +1120,7 @@ int HttpReq::setRewriteLocation(char *pURI, int uriLen,
         if (qsLen > pEnd - p)
             qsLen = pEnd - p;
         memmove(p, pQS, qsLen);
+        sanitizeHeaderValue(p, qsLen);
         p += qsLen;
     }
     *p = 0;
@@ -1974,7 +1988,10 @@ int HttpReq::addWWWAuthHeader(HttpRespHeaders &buf) const
 int HttpReq::setLocation(const char *pLoc, int len)
 {
     assert(pLoc);
-    return ls_str_xsetstr(&m_location, pLoc, len, m_pPool);
+    int ret = ls_str_xsetstr(&m_location, pLoc, len, m_pPool);
+    if (m_location.ptr != NULL)
+        sanitizeHeaderValue(m_location.ptr, m_location.len);
+    return ret;
 }
 
 

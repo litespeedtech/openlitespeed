@@ -760,7 +760,7 @@ void LshttpdMain::removeOldRtreport()
     char achBuf[8192];
     int i = 1;
     int ret, len;
-    ConfigCtx::getCurConfigCtx()->getAbsolute(achBuf, sRtReportPath, 0);
+    ConfigCtx::getCurConfigCtx()->getAbsolute(achBuf, sStatDir, 0);
     len = strlen(achBuf);
     while (1)
     {

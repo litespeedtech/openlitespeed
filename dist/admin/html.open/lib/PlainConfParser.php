@@ -136,8 +136,12 @@ class PlainConfParser
 				$from_line = $line_num;
 			}
 
-
-			$end_char = $d[strlen($d) - 1];
+			if (strlen($d) > 0) {
+				$end_char = $d[strlen($d) - 1];
+			}
+			else {
+				$end_char = '';
+			}
 
 			$cur_val .= $d;
 

@@ -92,6 +92,9 @@ class LsShm : public ls_shm_s
 public:
     static LsShm *open(const char *mapName, LsShmXSize_t initSize,
                        const char *pBaseDir = NULL, int mode = LSSHM_OPEN_STD);
+    
+    int chperm(int uid, int gid, int mask);
+    
     void close();
 
     void deleteFile();

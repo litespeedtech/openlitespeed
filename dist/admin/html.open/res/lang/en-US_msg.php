@@ -24,7 +24,7 @@ $_gmsg['menu_rtstats'] = 'Real-Time Stats';
 $_gmsg['menu_serv'] = 'Server Configuration';
 $_gmsg['menu_sl'] = 'Listeners';
 $_gmsg['menu_sl_'] = 'Listener';
-$_gmsg['menu_toggledebug'] = 'Toggle Debug Logging';
+$_gmsg['menu_toggledebug'] = 'Toggle Debug';
 $_gmsg['menu_tools'] = 'Tools';
 $_gmsg['menu_tp'] = 'VHost Templates';
 $_gmsg['menu_tp_'] = 'VHost Template';
@@ -465,6 +465,7 @@ $_gmsg['l_sslSessionTicketLifetime'] = 'SSL Session Ticket Lifetime (secs)';
 $_gmsg['l_sslSessionTicketKeyFile'] = 'SSL Session Ticket Key File';
 $_gmsg['l_sslSessionTickets'] = 'Enable Session Tickets';
 $_gmsg['l_shmDefaultDir'] = 'Default SHM Directory';
+$_gmsg['l_statDir'] = 'Statistics Output Directory';
 $_gmsg['l_staticreqpersec'] = 'Static Requests/second';
 $_gmsg['l_statuscode'] = 'Status Code';
 $_gmsg['l_storagepath'] = 'Storage Path';
@@ -688,7 +689,7 @@ $_gmsg['buildphp_mainstatus'] = 'Main Status';
 $_gmsg['buildphp_manualrunnotice'] = '<p>For security reasons, please log in to your server and run the pre-generated script from shell.
 	You can monitor the progress from this screen.</p>
 	<p>If build successfully, please update php.ini accordingly if needed. To apply changes, please do a graceful restart.</p>
-	<p>If it stops due to errors, it may caused by missing packages, after you install it, rerun the same command and this page will show the updated log. For more information regarding LSPHP, please visit <a href="https://www.litespeedtech.com/support/wiki/doku.php/litespeed_wiki:php" target="_blank">LiteSpeed wiki</a>.</p>
+	<p>If it stops due to errors, it may caused by missing packages, after you install it, rerun the same command and this page will show the updated log. For more information regarding LSPHP, please visit <a href="https://www.litespeedtech.com/support/wiki/doku.php/litespeed_wiki:php" rel="noopener noreferrer" target="_blank">LiteSpeed wiki</a>.</p>
 	<p>If you log in as root, you can directly run the command: <br><code>%%manual_script%%</code></p>
 	<p>If you log in as a user who has sudo permission, you can run the command with sudo and input root password after prompt.
 	<code>sudo %%manual_script%%</code></p>';

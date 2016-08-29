@@ -128,15 +128,12 @@
 #include <sys/sysctl.h>
 #endif
 
-#define STATUS_FILE         DEFAULT_TMP_DIR "/.status"
 #define FILEMODE            0644
 
 static int s_achPid[256];
 static int s_curPid = 0;
 
-#define OLS_SHM_DIR  "/dev/shm/ols"
-#define RTREPORT_FILE_TMP  DEFAULT_TMP_DIR "/.rtreport"
-const char *sRtReportPath = OLS_SHM_DIR "/.rtreport";
+const char *sStatDir = DEFAULT_TMP_DIR;
 
 static void sigchild(int sig)
 {
@@ -201,7 +198,7 @@ private:
     HttpContext         m_serverContext;
     AccessControl       m_accessCtrl;
     AutoStr             m_sSwapDirectory;
-    AutoStr             m_sRTReportFile;
+    AutoStr2            m_sRTReportFile;
     HttpMime            m_httpMime;
     long                m_lStartTime;
     pid_t               m_pid;
@@ -222,7 +219,7 @@ private:
         HttpMime::setMime(&m_httpMime);
         m_serverContext.allocateInternal();
         HttpRespHeaders::buildCommonHeaders();
-        m_sRTReportFile = RTREPORT_FILE_TMP;
+        m_sRTReportFile = DEFAULT_TMP_DIR "/.rtreport";
 
 #ifdef  USE_CARES
         Adns::init();
@@ -383,7 +380,7 @@ private:
     int readVersion(const char *path);
 
     void chmodDirToAll(const char *path, struct stat &sb);
-    void verifyRtReportPath();
+    void verifyStatDir(const char *path);
     
 public:
     void hideServerSignature(int sv);
@@ -494,9 +491,9 @@ int HttpServerImpl::generateStatusReport()
         strcpy(achBuf,
                ServerProcessConfig::getInstance().getChroot()->c_str());
     }
-    strcat(achBuf, STATUS_FILE);
-    LOG4CXX_NS::Appender *pAppender = LOG4CXX_NS::Appender::getAppender(
-                                          achBuf);
+    strcat(achBuf, sStatDir);
+    strcat(achBuf, "/.status");
+    LOG4CXX_NS::Appender *pAppender = LOG4CXX_NS::Appender::getAppender(achBuf);
     pAppender->setAppendMode(0);
     if (pAppender->open())
     {
@@ -591,16 +588,9 @@ void HttpServerImpl::setRTReportName(int proc)
 {
     if (proc != 1)
     {
-        char achBuf[256], achBuf1[256];
-        ls_snprintf(achBuf, 256, "%s.%d", sRtReportPath, proc);
+        char achBuf[256];
+        ls_snprintf(achBuf, 256, "%s/.rtreport.%d", sStatDir, proc);
         m_sRTReportFile.setStr(achBuf);
-
-        if (strncasecmp(sRtReportPath, DEFAULT_TMP_DIR, 
-            sizeof(DEFAULT_TMP_DIR) - 1) != 0)
-        {
-            ls_snprintf(achBuf1, 256, "%s.%d", RTREPORT_FILE_TMP, proc);
-            symlink(achBuf, achBuf1);
-        }
     }
 }
 
@@ -1673,6 +1663,10 @@ LocalWorker *HttpServerImpl::createAdminPhpApp(const char *pChroot,
 //              "LSWS_EDITION=LiteSpeed Web Server/%s/%s",
 //              "Open", PACKAGE_VERSION);
 //     pFcgiApp->getConfig().addEnv(pchPHPBin);
+
+    snprintf(pchPHPBin, MAX_PATH_LEN, "LSWS_STATDIR=%s", sStatDir);
+    pFcgiApp->getConfig().addEnv(pchPHPBin);
+
     RLimits limits;
     limits.setDataLimit(500 * 1024 * 1024, 500 * 1024 * 1024);
     limits.setProcLimit(1000, 1000);
@@ -2588,40 +2582,43 @@ void HttpServerImpl::chmodDirToAll(const char *path, struct stat &sb)
     }
 }
 
-void HttpServerImpl::verifyRtReportPath()
+void HttpServerImpl::verifyStatDir(const char *path)
 {
-    int error = 1;
-    struct stat sb;
-    if (stat("/dev/shm", &sb) != -1)
+    int l;
+    if (path && (l = strlen(path)) > 0)
     {
-        struct passwd *pw = getpwnam(MainServerConfig::getInstance().getUser());
+        int error = 1;
         bool rootuser = (getuid() == 0);
-
-        chmodDirToAll("/dev/shm", sb);
-        if (stat(OLS_SHM_DIR, &sb) == -1)
+        struct passwd *pw = getpwnam(MainServerConfig::getInstance().getUser());
+        struct stat sb;
+        if (stat(path, &sb) == -1)
         {
+            AutoStr2 str = path;
+            if (path[l -1 ] != '/')
+                str.append("/", 1);
+
             int mod = (rootuser ? 0755 : 0777);
-            if (mkdir(OLS_SHM_DIR, mod) != -1)
+            if (GPath::createMissingPath((char *)str.c_str(), mod) == 0)
             {
                 if (rootuser)
-                    chown(OLS_SHM_DIR, pw->pw_uid, pw->pw_gid);
+                    chown(str.c_str(), pw->pw_uid, pw->pw_gid);
                 error =0;
             }
         }
         else
         {
-            chmodDirToAll(OLS_SHM_DIR, sb);
+            chmodDirToAll(path, sb);
             if (sb.st_uid != pw->pw_uid)
             {
                 if (rootuser)
                 {
-                    chown(OLS_SHM_DIR, pw->pw_uid, pw->pw_gid);
+                    chown(path, pw->pw_uid, pw->pw_gid);
                     error = 0;
                 }
                 else
                 {
                     printf("ERROR: %s own by user/group other than '%s:%s'.\n",
-                           OLS_SHM_DIR, 
+                           path,
                            MainServerConfig::getInstance().getUser(),
                            MainServerConfig::getInstance().getGroup());
                 }
@@ -2631,14 +2628,8 @@ void HttpServerImpl::verifyRtReportPath()
         }
 
         if (!error)
-        {
-            unlink(RTREPORT_FILE_TMP);
-            symlink(sRtReportPath, RTREPORT_FILE_TMP);
-        }
+            sStatDir = path;
     }
-
-    if (error)
-        sRtReportPath = RTREPORT_FILE_TMP;
 }
 
 int HttpServerImpl::configServerBasics(int reconfig, const XmlNode *pRoot)
@@ -2771,9 +2762,10 @@ int HttpServerImpl::configServerBasics(int reconfig, const XmlNode *pRoot)
         if (MainServerConfigObj.getCrashGuard() == 2)
             MainServerConfigObj.setCrashGuard(1);
 
-
-        verifyRtReportPath();
-        m_sRTReportFile = sRtReportPath;
+        pValue = pRoot->getChildValue("statDir");
+        verifyStatDir(pValue);
+        m_sRTReportFile = sStatDir;
+        m_sRTReportFile.append("/.rtreport", 10);
 
         return 0;
     }
