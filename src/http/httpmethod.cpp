@@ -32,6 +32,7 @@ const char *HttpMethod::s_psMethod[HttpMethod::HTTP_METHOD_END] =
     "TRACE",
     "CONNECT",
     "MOVE",
+    "PATCH",
     "PROPFIND",
     "PROPPATCH",
     "MKCOL",
@@ -57,7 +58,7 @@ const char *HttpMethod::s_psMethod[HttpMethod::HTTP_METHOD_END] =
 };
 int HttpMethod::s_iMethodLen[HttpMethod::HTTP_METHOD_END] =
 {
-    7, 7, 3, 4, 4, 3, 6, 5, 7, 4,
+    7, 7, 3, 4, 4, 3, 6, 5, 7, 4, 5,
     8, 9, 5, 4, 4, 6, 15, 6, 7, 8, 10, 7, 11, 5, 5, 16, 10, 4, 6, 5, 7
 };
 
@@ -81,7 +82,15 @@ http_method_t HttpMethod::parse2(const char *pMethod)
         switch (*(pMethod + 2) & ~0x20)
         {
         case 'T':
-            method = HTTP_PUT;
+            switch (*(pMethod + 1) & ~0x20)
+            {
+                case 'A':
+                    method = HTTP_PATCH;
+                    break;
+                default:
+                    method = HTTP_PUT;
+                    break;
+            }
             break;
         case 'R':
             method = HTTP_PURGE;

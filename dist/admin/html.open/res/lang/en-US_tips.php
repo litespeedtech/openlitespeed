@@ -558,6 +558,8 @@ $_tipsdb['sslSessionTicketLifetime'] = new DAttrHelp("SSL Session Ticket Lifetim
 
 $_tipsdb['sslSessionTickets'] = new DAttrHelp("Enable Session Tickets", 'Enables session tickets. If &quot;Not Set&quot;, the server will use openSSL&#039;s default ticket.', '', 'Select from radio box', '');
 
+$_tipsdb['statDir'] = new DAttrHelp("Statistics Output Directory", 'The directory where the Real-Time Stats report file will be written. The default directory is <b>/tmp/lshttpd/</b> .', 'During server operation, the .rtreport file will be written to every second.  To avoid unnecessary disk writes, set this to a RAM Disk.<br/>The .rtreport file can be used with 3rd party monitoring software to track server health.', 'Absolute path.', '');
+
 $_tipsdb['staticReqPerSec'] = new DAttrHelp("Static Requests/Second", 'Specifies the maximum number of requests to static content coming from a single IP address that can be processed in a single second regardless of the number of connections established. <br/><br/>When this limit is reached, all future requests are tar-pitted until the next second.  Request limits for dynamically generated content are independent of this limit. Per-client request limits can be set at server- or virtual host-level.  Virtual host-level settings override server-level settings.', '[Security] Trusted IPs or sub-networks are not affected.', 'Integer number', '');
 
 $_tipsdb['statuscode'] = new DAttrHelp("Status Code", 'Specifies the response status code of the external redirection.  If the status code is between 300 and 399, &quot;Destination URI&quot; can be specified.', '', 'Select from drop down list', '');

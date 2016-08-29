@@ -558,6 +558,8 @@ $_tipsdb['sslSessionTicketLifetime'] = new DAttrHelp("SSL Session Ticket Lifetim
 
 $_tipsdb['sslSessionTickets'] = new DAttrHelp("Enable Session Tickets", 'Enables session tickets. If &quot;Not Set&quot;, the server will use openSSL&#039;s default ticket.', '', 'Select from radio box', '');
 
+$_tipsdb['statDir'] = new DAttrHelp("Statistics Output Directory", 'The directory where the Real-Time Stats report file will be written. The default directory is <b>/tmp/lshttpd/</b> .', 'During server operation, the .rtreport file will be written to every second.  To avoid unnecessary disk writes, set this to a RAM Disk.<br/>The .rtreport file can be used with 3rd party monitoring software to track server health.', 'Absolute path.', '');
+
 $_tipsdb['staticReqPerSec'] = new DAttrHelp("静态请求/秒", '指定每秒可处理的来自单个IP的静态内容请求数量（无论与该IP之间建立了多少个连接）。<br/><br/>当达到此限制时，所有后来的请求将被延滞到下一秒。 对于动态内容请求的限制与本限制无关。 每个客户端的请求限制可以在服务器或虚拟主机级别设置。 虚拟主机级别的设置将覆盖服务器级别的设置。', '[安全] 受信任的IP或子网不受影响。', '无符号整数', '');
 
 $_tipsdb['statuscode'] = new DAttrHelp("状态码", '指定外部重定向响应状态码。 如果状态码在300和399之间，可以指定&quot;目标URI&quot;。', '', '选择', '');

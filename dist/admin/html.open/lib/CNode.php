@@ -62,10 +62,10 @@ class CNode
 	private $_k;
 	private $_raw_k;
 	private $_print_k;
-	private $_v = NULL; //value
-	private $_e = NULL; //err
+	private $_v = null; //value
+	private $_e = null; //err
 	private $_errlevel = 0; //  1-Warning, 2-fatal
-	private $_parent = NULL;
+	private $_parent = null;
 
 	private $_fileline;
 	private $_changed;
@@ -76,13 +76,13 @@ class CNode
 		$this->_raw_k = $key;
 		$this->_k = DKeywordAlias::NormalizedKey($key);
 		$this->_print_k = $key;
-		$this->_changed = TRUE;
+		$this->_changed = true;
 		$this->_type = $type;
 
 		if ($this->_type != CNode::T_KV)
 			$this->_els = array();
 		$this->_v = $val;
-		if ($val != NULL && ($this->_type & self::BM_VAL == 0))
+		if ($val != null && ($this->_type & self::BM_VAL == 0))
 			$this->_type |= self::BM_VAL;
 	}
 
@@ -94,9 +94,9 @@ class CNode
 			case self::FLD_VAL: return $this->_v;
 			case self::FLD_ERR: return $this->_e;
 			case self::FLD_PARENT: return $this->_parent;
-			case self::FLD_FID: return ($this->_fileline == NULL) ? '' : $this->_fileline->_fid;
-			case self::FLD_FLFROM: return ($this->_fileline == NULL) ? '' : $this->_fileline->_fline0;
-			case self::FLD_FLTO: return ($this->_fileline == NULL) ? '' : $this->_fileline->_fline1;
+			case self::FLD_FID: return ($this->_fileline == null) ? '' : $this->_fileline->_fid;
+			case self::FLD_FLFROM: return ($this->_fileline == null) ? '' : $this->_fileline->_fline0;
+			case self::FLD_FLTO: return ($this->_fileline == null) ? '' : $this->_fileline->_fline1;
 		}
 		die("field $field not supported");
 	}
@@ -125,7 +125,7 @@ class CNode
 	public function SetVal($v)
 	{
 		$this->_v = $v;
-		if ($v != NULL && ($this->_type & self::BM_VAL == 0))
+		if ($v != null && ($this->_type & self::BM_VAL == 0))
 			$this->_type |= self::BM_VAL;
 	}
 
@@ -142,7 +142,7 @@ class CNode
 	public function HasVal()
 	{
 		// 0 is valid
-		return ($this->_v !== NULL && $this->_v !== '');
+		return ($this->_v !== null && $this->_v !== '');
 	}
 
 	public function SetErr($errmsg, $level=1)
@@ -156,7 +156,7 @@ class CNode
 
 	public function HasErr()
 	{
-		return $this->_e != NULL;
+		return $this->_e != null;
 	}
 
 	public function HasFatalErr()
@@ -216,7 +216,7 @@ class CNode
 	public function SetRawMap($file_id, $from_line, $to_line, $comment)
 	{
 		$this->_fileline = new FileLine($file_id, $from_line, $to_line, $comment);
-		$this->_changed = FALSE;
+		$this->_changed = false;
 	}
 
 	public function AddEndComment($endcomment)
@@ -235,12 +235,12 @@ class CNode
 			if (!is_array($this->_els[$k])) {
 				$first_node = $this->_els[$k];
 				$this->_els[$k] = array();
-				if ($first_node->_v == NULL)
+				if ($first_node->_v == null)
 					$this->_els[$k][] = $first_node;
 				else
 					$this->_els[$k][$first_node->_v] = $first_node;
 			}
-			if ($child->_v == NULL)
+			if ($child->_v == null)
 				$this->_els[$k][] = $child;
 			else
 				$this->_els[$k][$child->_v] = $child;
@@ -254,8 +254,16 @@ class CNode
 	{
 		if (is_array($incroot->_els)) {
 			foreach ($incroot->_els as $elm) {
-				$elm->AddFlag(self::BM_INC);
-				$this->AddChild($elm);
+				if (is_array($elm)) {
+					foreach($elm as $elSingle) {
+						$elSingle->AddFlag(self::BM_INC);
+						$this->AddChild($elSingle);
+					}
+				}
+				else {
+					$elm->AddFlag(self::BM_INC);
+					$this->AddChild($elm);
+				}
 			}
 		}
 	}
@@ -268,7 +276,7 @@ class CNode
 
 	public function RemoveFromParent()
 	{
-		if ($this->_parent != NULL) {
+		if ($this->_parent != null) {
 			if (is_array($this->_parent->_els[$this->_k]) ) {
 				foreach ($this->_parent->_els[$this->_k] as $key => $el) {
 					if ($el == $this) {
@@ -279,16 +287,16 @@ class CNode
 			}
 			else
 				unset($this->_parent->_els[$this->_k]);
-			$this->_parent = NULL;
+			$this->_parent = null;
 		}
 	}
 
 	public function HasDirectChildren($key='')
 	{
 		if ($key == '')
-			return ($this->_els != NULL && count($this->_els) > 0);
+			return ($this->_els != null && count($this->_els) > 0);
 		else
-			return ($this->_els != NULL && isset($this->_els[strtolower($key)]));
+			return ($this->_els != null && isset($this->_els[strtolower($key)]));
 	}
 
 	public function GetChildren($key)
@@ -301,61 +309,61 @@ class CNode
 				if (isset($node->_els[$k]))
 					$node = $node->_els[$k];
 				else
-					return NULL;
+					return null;
 			}
 			return $node;
 		}
 		elseif (isset($this->_els[$key]))
 			return $this->_els[$key];// can be array
 		else
-			return NULL;
+			return null;
 	}
 
 	public function GetChildVal($key)
 	{
 		$child = $this->GetChildren($key);
-		return ($child == NULL || !is_a($child, 'CNode')) ? NULL : $child->_v;
+		return ($child == null || !is_a($child, 'CNode')) ? null : $child->_v;
 	}
 
 	public function SetChildVal($key, $val)
 	{
 		$child = $this->GetChildren($key);
-		if ($child == NULL && !is_a($child, 'CNode'))
-			return FALSE;
+		if ($child == null && !is_a($child, 'CNode'))
+			return false;
 		$child->SetVal($val);
-		return TRUE;
+		return true;
 	}
 
 	public function SetChildErr($key, $err)
 	{
 		$child = $this->GetChildren($key);
-		if ($child == NULL && !is_a($child, 'CNode'))
-			return FALSE;
-		if ($err == NULL) // clear err
-			$child->SetErr(NULL, 0);
+		if ($child == null && !is_a($child, 'CNode'))
+			return false;
+		if ($err == null) // clear err
+			$child->SetErr(null, 0);
 		else
 			$child->SetErr($err);
-		return TRUE;
+		return true;
 	}
 
 	public function GetChildNodeById($key, $id)
 	{
 		$layer = $this->GetChildren($key);
-		if ($layer != NULL) {
+		if ($layer != null) {
 			if (is_array($layer)) {
-				return isset($layer[$id]) ? $layer[$id] : NULL;
+				return isset($layer[$id]) ? $layer[$id] : null;
 			}
 			elseif ($layer->_v == $id)
 				return $layer;
 		}
-		return NULL;
+		return null;
 	}
 
 	private function get_last_layer($location)
 	{
 		$layers = explode(':', $location);
 		$lastlayer = array_pop($layers);
-		if ($lastlayer != NULL) {
+		if ($lastlayer != null) {
 			$lastlayer = ltrim($lastlayer, '*');
 			if (($varpos = strpos($lastlayer, '$')) > 0) {
 				$lastlayer = substr($lastlayer, 0, $varpos);
@@ -372,10 +380,10 @@ class CNode
 
 		$layers = explode(':', $location);
 		foreach ( $layers as $layer ) {
-			$ismulti = FALSE;
+			$ismulti = false;
 			if ($layer[0] == '*') {
 				$layer = ltrim($layer, '*');
-				$ismulti = TRUE;
+				$ismulti = true;
 			}
 			if (($varpos = strpos($layer, '$')) > 0) {
 				$layer = substr($layer, 0, $varpos);
@@ -387,7 +395,7 @@ class CNode
 					return $node;
 				}
 				else {
-					return NULL;
+					return null;
 				}
 			}
 
@@ -411,14 +419,14 @@ class CNode
 
 				if (is_array($nodelist)) {
 					if (!isset($nodelist[$curref])) {
-						return NULL;
+						return null;
 					}
 					$node = $nodelist[$curref];
 				}
 				else {
 					$node = $nodelist;
 					if ($node->_v != $curref) {
-						return NULL;
+						return null;
 					}
 				}
 			}
@@ -433,7 +441,7 @@ class CNode
 	public function GetChildNode(&$location, &$ref)
 	{
 		$node = $this->GetChildrenByLoc($location, $ref);
-		return is_a($node, 'CNode') ? $node : NULL;
+		return is_a($node, 'CNode') ? $node : null;
 	}
 
 	public function UpdateChildren($loc, $curref, $extractData)
@@ -441,7 +449,7 @@ class CNode
 		$location = $loc;
 		$ref = $curref;
 		$child = $this->GetChildNode($location, $ref);
-		if ($child == NULL) {
+		if ($child == null) {
             // need original loc
 			$child = $this->AllocateLayerNode($loc);
 		}
@@ -466,11 +474,16 @@ class CNode
 						$nd->SetVal($exchild->_v);
 					}
 				}
+				else if (is_array($exchild)) {
+					foreach($exchild as $exchildSingle) {
+						$child->AddChild($exchildSingle);
+					}
+				}
 				else {
 					$child->AddChild($exchild);
 				}
 			}
-			if ($extractData->_v != NULL && $extractData->_v !== $child->_v) {
+			if ($extractData->_v != null && $extractData->_v !== $child->_v) {
 				$child->update_holder_val($extractData->_v);
 			}
 		}
@@ -478,7 +491,7 @@ class CNode
 
 	private function update_holder_val($val)
 	{
-		if ($this->_parent != NULL) {
+		if ($this->_parent != null) {
 			$oldval = $this->_v;
 			$this->_v = $val;
 			if (is_array($this->_parent->_els[$this->_k])) {
@@ -492,7 +505,7 @@ class CNode
 	{
 		$indent = str_pad('', $level * 2);
 		$buf .= "key={$this->_k} val= {$this->_v} type={$this->_type}";
-		if ($this->_els != NULL) {
+		if ($this->_els != null) {
 			$buf .= " {\n";
 			$level ++;
 			foreach ($this->_els as $k => $el) {
@@ -517,11 +530,11 @@ class CNode
 
 	public function PrintBuf(&$buf, $level=0)
 	{
-		$note0 = ($this->_fileline == NULL) ? '' : $this->_fileline->_note0;
-		$note1 = ($this->_fileline == NULL) ? '' : $this->_fileline->_note1;
+		$note0 = ($this->_fileline == null) ? '' : $this->_fileline->_note0;
+		$note1 = ($this->_fileline == null) ? '' : $this->_fileline->_note1;
 		$key = $this->_print_k;
 		$alias_note = '';
-		if (($key1 = DKeywordAlias::GetShortPrintKey($this->_k)) != NULL) {
+		if (($key1 = DKeywordAlias::GetShortPrintKey($this->_k)) != null) {
 			$key = $key1;
 			if ($note0 == '' && $key != $this->_raw_k) {
 				$alias_note = "# $key is shortened alias of $this->_print_k \n";
@@ -655,8 +668,8 @@ class CNode
 					$layer = substr($layer, 0, $varpos);
 				}
 				$children = $node->GetChildren($layer);
-				if ($children == NULL)
-					return NULL;
+				if ($children == null)
+					return null;
 
 				$node = $children;
 
@@ -686,8 +699,8 @@ class CNode
 					$type = CNode::T_KB;
 				}
 				$children = $node->GetChildren($key);
-				if ($children == NULL) {
-					$children = new CNode($key, NULL, $type);
+				if ($children == null) {
+					$children = new CNode($key, null, $type);
 					$node->AddChild($children);
 				}
 				$node = $children;

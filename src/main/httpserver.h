@@ -30,7 +30,7 @@
 
 #define ADMIN_USERDB                "_AdminUserDB"
 
-extern const char *sRtReportPath;
+extern const char *sStatDir;
 
 
 class HttpVHost;

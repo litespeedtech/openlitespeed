@@ -266,29 +266,29 @@ class CompilePHPUI
         $input = '';
         if ($supported['mailheader']) {
             $input = $this->input_checkbox('addonMailHeader', $options->GetValue('AddOnMailHeader'),
-                    '<a href="http://choon.net/php-mail-header.php" target="_blank">' . DMsg::ALbl('buildphp_mailheader1')
+                    '<a href="http://choon.net/php-mail-header.php" target="_blank" rel="noopener noreferrer">' . DMsg::ALbl('buildphp_mailheader1')
                     . '</a> (' . DMsg::ALbl('buildphp_mailheader2') .')');
         }
 		if ($supported['suhosin']) {
-			$input .= $this->input_checkbox('addonSuhosin', $options->GetValue('AddOnSuhosin'), '<a href="http://suhosin.org" target="_blank">Suhosin</a> ' . DMsg::ALbl('buildphp_suhosin'));
+			$input .= $this->input_checkbox('addonSuhosin', $options->GetValue('AddOnSuhosin'), '<a href="http://suhosin.org" target="_blank" rel="noopener noreferrer">Suhosin</a> ' . DMsg::ALbl('buildphp_suhosin'));
 		}
 
 		$label_opcode = DMsg::ALbl('buildphp_opcodecache');
         if ($supported['apc']) {
-    		$input .= $this->input_checkbox('addonAPC', $options->GetValue('AddOnAPC'), '<a href="http://pecl.php.net/package/APC" target="_blank">APC</a> (' . $label_opcode .') V' . BuildConfig::GetVersion(BuildConfig::APC_VERSION));
+    		$input .= $this->input_checkbox('addonAPC', $options->GetValue('AddOnAPC'), '<a href="http://pecl.php.net/package/APC" target="_blank" rel="noopener noreferrer">APC</a> (' . $label_opcode .') V' . BuildConfig::GetVersion(BuildConfig::APC_VERSION));
 		}
 
 		if ($supported['xcache']) {
-			$input .= $this->input_checkbox('addonXCache', $options->GetValue('AddOnXCache'), '<a href="http://xcache.lighttpd.net/" target="_blank">XCache</a> (' . $label_opcode .') V' . BuildConfig::GetVersion(BuildConfig::XCACHE_VERSION));
+			$input .= $this->input_checkbox('addonXCache', $options->GetValue('AddOnXCache'), '<a href="http://xcache.lighttpd.net/" target="_blank" rel="noopener noreferrer">XCache</a> (' . $label_opcode .') V' . BuildConfig::GetVersion(BuildConfig::XCACHE_VERSION));
 		}
 		if ($supported['opcache']) {
-            $input .= $this->input_checkbox('addonOPcache', $options->GetValue('AddOnOPcache'), '<a href="http://pecl.php.net/package/ZendOpcache" target="_blank">Zend OPcache</a> (' . $label_opcode .') V' . BuildConfig::GetVersion(BuildConfig::OPCACHE_VERSION));
+            $input .= $this->input_checkbox('addonOPcache', $options->GetValue('AddOnOPcache'), '<a href="http://pecl.php.net/package/ZendOpcache" target="_blank" rel="noopener noreferrer">Zend OPcache</a> (' . $label_opcode .') V' . BuildConfig::GetVersion(BuildConfig::OPCACHE_VERSION));
 		}
 		if ($supported['memcache']) {
-			$input .= $this->input_checkbox('addonMemCache', $options->GetValue('AddOnMemCache'), '<a href="http://pecl.php.net/package/memcache" target="_blank">memcache</a> (memcached extension) V' . BuildConfig::GetVersion(BuildConfig::MEMCACHE_VERSION));
+			$input .= $this->input_checkbox('addonMemCache', $options->GetValue('AddOnMemCache'), '<a href="http://pecl.php.net/package/memcache" target="_blank" rel="noopener noreferrer">memcache</a> (memcached extension) V' . BuildConfig::GetVersion(BuildConfig::MEMCACHE_VERSION));
 		}
 		if ($supported['memcachd']) {
-			$input .= $this->input_checkbox('addonMemCachd', $options->GetValue('AddOnMemCachd'), '<a href="http://pecl.php.net/package/memcached" target="_blank">memcached</a> (PHP extension for interfacing with memcached via libmemcached library) V' . BuildConfig::GetVersion(BuildConfig::MEMCACHED_VERSION));
+			$input .= $this->input_checkbox('addonMemCachd', $options->GetValue('AddOnMemCachd'), '<a href="http://pecl.php.net/package/memcached" target="_blank" rel="noopener noreferrer">memcached</a> (PHP extension for interfacing with memcached via libmemcached library) V' . BuildConfig::GetVersion(BuildConfig::MEMCACHED_VERSION));
 		}
 		$note = DMsg::ALbl('buildphp_updatever') . ' /usr/local/lsws/admin/html/lib/util/build_php/BuildConfig.php';
 		$buf .= $this->form_group(DMsg::ALbl('buildphp_addonmodules'), false, $input, '', $note);

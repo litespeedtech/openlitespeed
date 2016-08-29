@@ -24,7 +24,6 @@ class SInfo
 	private $_serverLastModTime = 100;
 
 	const FNAME = '/tmp/lshttpd/.admin';
-	const FSTATUS = '/tmp/lshttpd/.status';
 	const FPID = '/tmp/lshttpd/lshttpd.pid';
 
 	const DATA_Status_LV = 1;
@@ -37,12 +36,19 @@ class SInfo
 	function __construct()
 	{
 		clearstatcache();
-		$this->_serverLastModTime = filemtime(SInfo::FSTATUS);
+		$this->_serverLastModTime = filemtime(self::GetStatusFile());
 	}
 
+	public static function GetStatusFile()
+	{
+		$statsDir = isset($_SERVER['LSWS_STATDIR']) ? $_SERVER['LSWS_STATDIR'] : '/tmp/lshttpd';
+        $status = rtrim($statsDir, '/') . '/.status' ;	
+		return $status;
+	}
+	
 	public static function GetLicenseInfo()
 	{
-		if (($lines = file_get_contents(SInfo::FSTATUS)) == false)
+		if (($lines = file_get_contents(self::GetStatusFile())) == false)
 			return false;
 
 		// LICENSE_EXPIRES: 0, UPDATE_EXPIRES: 1597636800, SERIAL: , TYPE: 2-CPU
@@ -59,7 +65,7 @@ class SInfo
 	public static function GetDebugLogState()
 	{
 		$state = -1; // -1: error, 0: off, 1: on
-		if ($lines = file_get_contents(SInfo::FSTATUS)) {
+		if ($lines = file_get_contents(self::GetStatusFile())) {
 			if ( preg_match( "/DEBUG_LOG: ([01]), VERSION: (.+)$/m", $lines, $m)) {
 				$state = $m[1];
 			}
@@ -101,7 +107,7 @@ class SInfo
 	private function checkLastMod()
 	{
 		clearstatcache();
-		$mt = filemtime(SInfo::FSTATUS);
+		$mt = filemtime(self::GetStatusFile());
 		if ( $this->_serverLastModTime != $mt )	{
 			$this->_serverLastModTime = $mt;
 			return true;
@@ -171,7 +177,7 @@ class SInfo
 		}
 		$this->_vhosts = $vhosts;
 
-		if (($lines = file_get_contents(SInfo::FSTATUS)) == false)
+		if (($lines = file_get_contents(self::GetStatusFile())) == false)
 			return false;
 
 		$pos = strpos($lines, "VHOST");

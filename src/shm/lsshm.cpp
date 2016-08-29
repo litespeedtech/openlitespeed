@@ -352,6 +352,24 @@ void LsShm::deleteFile()
 }
 
 
+int LsShm::chperm(int uid, int gid, int mask)
+{
+    int ret;
+    if (mask > 0)
+    {
+        ret = fchmod(m_iFd, mask);
+        fchmod( m_locks.getfd(), mask);
+    }
+    if (ret != -1 && uid > 0)
+    {
+        ret = fchown(m_iFd, uid, gid);
+        fchown( m_locks.getfd(), uid, gid);
+    }
+    return ret;
+}
+
+
+
 void LsShm::close()
 {
     if (--m_iRef == 0)
@@ -414,10 +432,10 @@ LsShmStatus_t LsShm::openLockShmFile(int mode)
 {
     if (mode & LSSHM_OPEN_NEW)
         unlink(m_pFileName);
-    if ((m_iFd = ::open(m_pFileName, O_RDWR | O_CREAT, 0750)) < 0)
+    if ((m_iFd = ::open(m_pFileName, O_RDWR | O_CREAT, 0640)) < 0)
     {
-        if ((GPath::createMissingPath(m_pFileName, 0750) < 0)
-            || ((m_iFd = ::open(m_pFileName, O_RDWR | O_CREAT, 0750)) < 0))
+        if ((GPath::createMissingPath(m_pFileName, 0755) < 0)
+            || ((m_iFd = ::open(m_pFileName, O_RDWR | O_CREAT, 0640)) < 0))
         {
             setErrMsg(LSSHM_SYSERROR, "Unable to open/create [%s], %s.",
                       m_pFileName, strerror(errno));
@@ -520,7 +538,7 @@ LsShmStatus_t LsShm::initShm(const char *mapName, LsShmXSize_t size,
         unlink(buf);
     }
 
-    int fdLock = ::open(buf, O_RDWR | O_CREAT, 0750);
+    int fdLock = ::open(buf, O_RDWR | O_CREAT, 0640);
     if (fdLock == -1
         || (m_status = m_locks.init(buf, fdLock, LSSHM_MINLOCK, id)) != LSSHM_OK)
     {

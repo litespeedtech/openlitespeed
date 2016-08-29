@@ -36,6 +36,7 @@ public:
         HTTP_TRACE,
         HTTP_CONNECT,
         HTTP_MOVE,
+        HTTP_PATCH,
         DAV_PROPFIND,
         DAV_PROPPATCH,
         DAV_MKCOL,

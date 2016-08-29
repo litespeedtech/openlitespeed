@@ -229,7 +229,7 @@ class BuildCheck
 
         $modules['opcache'] = in_array($v, array('5.2.', '5.3.', '5.4.'));   // opcache is built-in since 5.5
 
-        $modules['mailheader'] = in_array($v, array('4.4.', '5.2.', '5.3.', '5.4.', '5.5.'));
+		$modules['mailheader'] = in_array($v, array('4.4.', '5.2.', '5.3.', '5.4.', '5.5.', '5.6.')); // php7 is listed on their site, but compile failed
 
 		$modules['xcache'] = in_array($v, array('4.4.', '5.2.', '5.3.', '5.4.', '5.5.', '5.6.')); // php7 not supported
 

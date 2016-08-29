@@ -76,7 +76,7 @@ class DAttrBase
 	public function dup($key, $label, $helpkey)
 	{
 		$cname = get_class($this);
-		$d = new $cname($this->_key, $this->_type, $this->_label, $this->_inputType, TRUE,
+		$d = new $cname($this->_key, $this->_type, $this->_label, $this->_inputType, true,
 			$this->_minVal, $this->_maxVal, $this->_inputAttr, $this->_multiInd, $this->_helpKey);
 
 		$d->_glue = $this->_glue;
@@ -287,7 +287,7 @@ class DAttrBase
 			}
 			$node->AddChild(new CNode($key, $value));
 		}
-		return TRUE;
+		return true;
 	}
 
 	public function toHtml($pnode, $refUrl=NULL)

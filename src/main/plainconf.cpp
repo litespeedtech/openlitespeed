@@ -278,6 +278,7 @@ plainconfKeywords plainconf::sKeywords[] =
     {"spdyadheader",                             NULL},
     {"sslcryptodevice",                          NULL},
     {"sslprotocol",                              NULL},
+    {"statdir",                                  NULL},
     {"staticreqpersec",                          NULL},
     {"statuscode",                               NULL},
     {"suffix",                                   NULL},
