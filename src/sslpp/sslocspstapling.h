@@ -15,6 +15,10 @@
 *    You should have received a copy of the GNU General Public License       *
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
+#include <config.h>
+
+#ifndef USE_BORINGSSL
+
 #ifndef SSLOCSPSTAPLING_H
 #define SSLOCSPSTAPLING_H
 
@@ -94,3 +98,5 @@ private:
 };
 const char *getStaplingErrMsg();
 #endif // SSLOCSPSTAPLING_H
+
+#endif // USE_BORINGSSL

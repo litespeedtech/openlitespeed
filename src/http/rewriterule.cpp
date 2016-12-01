@@ -729,8 +729,22 @@ int RewriteRule::parseOneFlag(const char *&pRuleStr, const char *pEnd)
             ++pRuleStr;
         if (*pRuleStr == '=')
         {
+            int n = -1;
+            int isQuoted = 0;
             ++pRuleStr;
-            size_t n = strcspn(pRuleStr, ",] \t\r\n");
+            if (*pRuleStr == '"' || *pRuleStr == '\'')
+            {
+                const char *p = strchr(pRuleStr+1, *pRuleStr);
+                if (p)
+                    n = p - pRuleStr - 1;
+                if (n >= 0)
+                {
+                    ++pRuleStr;
+                    isQuoted = 1;
+                }
+            }
+            if (n == -1)
+                n = strcspn(pRuleStr, ",] \t\r\n");
             if (n > 0)
             {
                 const char *pEnv = pRuleStr;
@@ -748,12 +762,14 @@ int RewriteRule::parseOneFlag(const char *&pRuleStr, const char *pEnd)
                 }
                 if (pFormat->parse(pEnv, pRuleStr, NULL))
                 {
+                    pRuleStr += isQuoted;
                     HttpLog::parse_error(s_pCurLine,  "failed to parse env string");
                     delete pFormat;
                     return LS_FAIL;
                 }
                 pFormat->setType(RewriteSubstFormat::ENV);
                 m_env.append(pFormat);
+                pRuleStr += isQuoted;
             }
             else
             {

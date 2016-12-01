@@ -716,7 +716,7 @@ SpdyStream *SpdyConnection::getNewStream(uint32_t uiStreamID,
     m_mapStream.insert((void *)(long)uiStreamID, pStream);
     if (m_tmIdleBegin)
         m_tmIdleBegin = 0;
-    LS_DBG_H(getLogger(), "[%s-%d] getNewStream(), stream map size: %d",
+    LS_DBG_H(getLogger(), "[%s-%d] getNewStream(), stream map size: %zd",
              getLogId(), uiStreamID, m_mapStream.size());
     pStream->init(uiStreamID, iPriority, this, ubSpdy_Flags, pSession);
     pStream->setProtocol(getStream()->getProtocol());
@@ -744,7 +744,7 @@ void SpdyConnection::recycleStream(StreamMap::iterator it)
     if (pSpdyStream->getHandler())
         pSpdyStream->getHandler()->recycle();
 
-    LS_DBG_H(getLogSession(), "recycleStream(), ID: %d, stream map size: %d",
+    LS_DBG_H(getLogSession(), "recycleStream(), ID: %d, stream map size: %zd",
              pSpdyStream->getStreamID(), m_mapStream.size());
     //SpdyStreamPool::recycle( pSpdyStream );
     delete pSpdyStream;
@@ -878,8 +878,8 @@ int SpdyConnection::processPingFrame(SpdyFrameHeader *pHeader)
     gettimeofday(&CurTime, NULL);
     msec = (CurTime.tv_sec - m_timevalPing.tv_sec) * 1000;
     msec += (CurTime.tv_usec - m_timevalPing.tv_usec) / 1000;
-    LS_DBG_H(getLogSession(), "Received PING, ID=%d, Round trip "
-             "times=%d milli-seconds", m_uiLastPingID, msec);
+    LS_DBG_H(getLogSession(), "Received PING, ID=%ud, Round trip "
+             "times=%ld milli-seconds", m_uiLastPingID, msec);
     return 0;
 }
 

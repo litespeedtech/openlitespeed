@@ -212,6 +212,9 @@
 /* Define if need spdy/http2 feature */
 #undef LS_ENABLE_SPDY
 
+/* The pre-defined modules version info */
+#undef LS_MODULE_VERSION_INFO
+
 /* Define to the sub-directory in which libtool stores uninstalled libraries.
    */
 #undef LT_OBJDIR
@@ -239,6 +242,9 @@
 
 /* Define to 1 if you have the ANSI C header files. */
 #undef STDC_HEADERS
+
+/* Defined to use BoringSSL instead of OpenSSL */
+#undef USE_BORINGSSL
 
 /* Define to 1 to make fseeko visible on some hosts (e.g. glibc 2.2). */
 #undef _LARGEFILE_SOURCE

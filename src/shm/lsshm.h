@@ -110,7 +110,8 @@ public:
     static LsShmStatus_t checkDirSpace(const char *dirName);
     static LsShmStatus_t addBaseDir(const char *dirName);
     static int getBaseDirCount()        {   return s_iNumBaseDir;   }
-
+    static int deleteFile(const char *pName, const char *pBaseDir);
+    
     static LsShmStatus_t setErrMsg(LsShmStatus_t stat, const char *fmt, ...);
     static LsShmStatus_t getErrStat()   {   return s_errStat;   }
     static int getErrNo()               {   return s_iErrNo;    }
@@ -141,6 +142,8 @@ public:
         return x_pShmMap;
     }
 
+    int getfd() const   {   return m_iFd;   }
+    
     LsShmMapStat *getMapStat() const    {   return x_pStats;    }
 
     LsShmOffset_t getMapStatOffset() const;
@@ -199,6 +202,11 @@ public:
         return ret;
     }
 
+    ls_attr_inline int isLocked(ls_shmlock_t *pLock)
+    {
+        return ls_shmlock_locked(pLock);
+    }
+    
     ls_attr_inline LsShmStatus_t chkRemap()
     {
         return (x_pStats->m_iFileSize == m_iMaxSizeO) ? LSSHM_OK : remap();

@@ -30,7 +30,6 @@ H2Stream::H2Stream()
     , m_iWindowOut(H2_FCW_INIT_SIZE)
     , m_iWindowIn(H2_FCW_INIT_SIZE)
     , m_pH2Conn(NULL)
-    , m_reqHeaderEnd(0)
 {
 }
 
@@ -158,8 +157,7 @@ void H2Stream::continueRead()
 
 void H2Stream:: continueWrite()
 {
-    LS_DBG_L(this, "H2Stream::continueWrite()",
-             getLogId());
+    LS_DBG_L(this, "H2Stream::continueWrite()");
     setFlag(HIO_FLAG_WANT_WRITE, 1);
     if (next() == NULL)
         m_pH2Conn->add2PriorityQue(this);
@@ -283,7 +281,7 @@ int H2Stream::writev(IOVec &vector, int total)
 int H2Stream::writev(const struct iovec *vec, int count)
 {
     IOVec iov(vec, count);
-    return writev(iov.get(), iov.bytes());
+    return writev(iov, iov.bytes());
 }
 
 

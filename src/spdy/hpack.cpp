@@ -5397,7 +5397,7 @@ int HpackDynTbl::cmpNameVal(const void *pVal1, const void *pVal2)
 HpackDynTbl::HpackDynTbl()
 {
     m_curCapacity = 0;
-    m_maxCapacity = INITIAL_DYNAMIC_TABLE_SIZE;
+    m_maxCapacity = m_curMaxCapacity = INITIAL_DYNAMIC_TABLE_SIZE;
     m_nextFlowId = 0;
     m_pNameHashT = new GHash(15, HpackDynTbl::hfName, HpackDynTbl::cmpName);
     m_pNameValueHashT = new GHash(15, HpackDynTbl::hfNameVal,
@@ -5435,7 +5435,7 @@ void HpackDynTbl::reset()
     m_pNameValueHashT->clear();
     m_loopbuf.clear();
     m_curCapacity = 0;
-    m_maxCapacity = INITIAL_DYNAMIC_TABLE_SIZE;
+    m_maxCapacity = m_curMaxCapacity = INITIAL_DYNAMIC_TABLE_SIZE;
     m_nextFlowId = 0;
 }
 
@@ -5524,7 +5524,7 @@ void HpackDynTbl::pushEntry(char *name, uint16_t name_len, char *val,
 
 void HpackDynTbl::removeOverflowEntries()
 {
-    while (m_maxCapacity < m_curCapacity)
+    while (m_curMaxCapacity < m_curCapacity)
         popEntry();
 }
 
@@ -6062,8 +6062,12 @@ int Hpack::decHeader(unsigned char *&src, unsigned char *srcEnd,
         if (0 != decInt(src, srcEnd, 5, newCapcity))
             return -1;
 
-        getReqDynTbl().updateMaxCapacity(newCapcity);
-        return 1;
+        if (newCapcity <= getReqDynTbl().getMaxCapacity())
+            getReqDynTbl().updateCurMaxCapacity(newCapcity);
+        else 
+            return -1;
+        if (src == srcEnd)
+            return 0;
     }
 
     uint32_t index = 0;

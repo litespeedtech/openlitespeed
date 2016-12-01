@@ -76,6 +76,7 @@ void CacheConfig::inherit(const CacheConfig *pParent)
         m_iOnlyUseOwnUrlExclude = 0;
         m_pStore = pParent->getStore();
         m_iOwnStore = 0;
+        m_iAddEtag = pParent->getAddEtagType();
     }
 }
 

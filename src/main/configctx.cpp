@@ -130,8 +130,8 @@ long long ConfigCtx::getLongValue(const XmlNode *pNode, const char *pTag,
         if (((min != LLONG_MIN) && (val < min)) ||
             ((max != LLONG_MAX) && (val > max)))
         {
-            LS_WARN(this, "invalid value of <%s>:%s, use default=%ld", pTag, pValue,
-                    def);
+            LS_WARN(this, "invalid value of <%s>:%s, use default=%lld",
+                    pTag, pValue, def);
             return def;
         }
 

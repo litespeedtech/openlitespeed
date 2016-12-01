@@ -148,7 +148,7 @@ static int enable_hook(lsi_session_t *session,
         ret = ((HttpSession *)pSession)->getSessionHooks()->setEnable(
                   pModule, enable, aHttpIndices, iHttpCount);
 
-    LS_DBG_H("[Module: %s] enable_hook, enable %hd, "
+    LS_DBG_H("[Module: %s] enable_hook, enable %d, "
              "num indices %d, return %d", MODULE_NAME(pModule), enable,
              iNumIndices, ret);
     return ret;

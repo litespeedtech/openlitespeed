@@ -11,7 +11,6 @@ execute_process( COMMAND getconf LFS_CFLAGS
 add_definitions( ${LFS_CFLAGS} )
 
 add_library(cache SHARED
-    internalcachemanager.cpp
     cachemanager.cpp
     shmcachemanager.cpp
     cacheentry.cpp

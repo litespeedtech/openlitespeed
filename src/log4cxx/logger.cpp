@@ -78,7 +78,7 @@ Duplicable *Logger::dup(const char *pName)
 }
 
 
-static int logSanitorize(char *pBuf, int len)
+static int logSanitize(char *pBuf, int len)
 {
     char *pEnd = pBuf + len - 2;
     while (pBuf < pEnd)
@@ -117,7 +117,7 @@ void Logger::vlog(int level, const char *pId, const char *format,
         messageLen = sizeof(achBuf) - 1;
         achBuf[messageLen] = 0;
     }
-    messageLen = logSanitorize(achBuf, messageLen);
+    messageLen = logSanitize(achBuf, messageLen);
 
     if ((level > Level::DEBUG) && (level < Level::TRACE))
         level = Level::DEBUG;
@@ -149,8 +149,11 @@ void Logger::vlog(int level, const char *pId, const char *format,
 void Logger::lograw(const char *pBuf, int len)
 {
     if (m_pAppender)
+    {
         if (m_pAppender->append(pBuf, len) == -1)
             return;
+        m_pAppender->flush();
+    }
     if (m_pParent && m_iAdditive)
         m_pParent->lograw(pBuf, len);
 }
@@ -239,6 +242,25 @@ void Logger::s_log(int level, const char *format, ...)
     va_end(va);
 }
 
+
+void Logger::s_lograw(const char *format, ...)
+{
+    log4cxx::Logger *l = log4cxx::Logger::getDefault();
+    va_list  va;
+    va_start(va, format);
+    char achBuf[8192];
+    int messageLen ;
+    messageLen = vsnprintf(achBuf,
+                            sizeof(achBuf) - 1,  format, va);
+    if (messageLen > (int)sizeof(achBuf) - 1)
+    {
+        messageLen = sizeof(achBuf) - 1;
+        achBuf[messageLen] = 0;
+    }
+    messageLen = logSanitize(achBuf, messageLen);
+    l->lograw(achBuf, messageLen);
+    va_end(va);
+}
 
 END_LOG4CXX_NS
 

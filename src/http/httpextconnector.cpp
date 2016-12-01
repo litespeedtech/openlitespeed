@@ -370,8 +370,9 @@ int HttpExtConnector::onWrite(HttpSession *pSession)
     }
     else
     {
-        LS_DBG_M(this, "ReqBody: %d, RespBody: %d, HEC_COMPLETE!",
-                 m_iReqBodySent, m_pSession->getDynBodySent());
+        LS_DBG_M(this, "ReqBody: %lld, RespBody: %lld, HEC_COMPLETE!",
+                 (long long)m_iReqBodySent,
+                 (long long)m_pSession->getDynBodySent());
         return 0;
     }
 }
@@ -535,7 +536,7 @@ int HttpExtConnector::sendReqBody()
         }
         LS_DBG_M(this,
                  "Processor sent request body %d bytes, total sent: %lld\n",
-                 written, m_iReqBodySent);
+                 written, (long long)m_iReqBodySent);
         if ((written != (int)size) || (++count == 2))
         {
             if (written != -1)
@@ -654,10 +655,13 @@ void HttpExtConnector::dump()
     LS_INFO(this, "HttpExtConnector state: %d, request body sent: %lld, "
             "response body size: %lld, response body sent:%lld, "
             "left in buffer: %lld, attempts: %d.",
-            m_iState, m_iReqBodySent, m_pSession->getResp()->getContentLen(),
-            m_pSession->getDynBodySent(),
-            (m_pSession->getRespCache()) ? m_pSession->getRespCache()->writeBufSize() :
-            0, getAttempts());
+            m_iState, (long long)m_iReqBodySent, 
+            (long long)m_pSession->getResp()->getContentLen(),
+            (long long)m_pSession->getDynBodySent(),
+            (long long)((m_pSession->getRespCache()) 
+                         ? m_pSession->getRespCache()->writeBufSize() 
+                         : 0), 
+            getAttempts());
     if (m_pProcessor)
         m_pProcessor->dump();
     else

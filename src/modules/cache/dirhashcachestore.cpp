@@ -66,7 +66,7 @@ int DirHashCacheStore::updateEntryState(DirHashCacheEntry *pEntry)
     return 0;
 }
 
-int DirHashCacheStore::isEntryExist(CacheHash &hash, const char *pSuffix,
+int DirHashCacheStore::isEntryExist(const CacheHash &hash, const char *pSuffix,
                                     struct stat *pStat, int isPrivate)
 {
     char achBuf[4096];
@@ -81,7 +81,7 @@ int DirHashCacheStore::isEntryExist(CacheHash &hash, const char *pSuffix,
     return 0;
 }
 
-int DirHashCacheStore::isEntryUpdating(CacheHash &hash, int isPrivate)
+int DirHashCacheStore::isEntryUpdating(const CacheHash &hash, int isPrivate)
 {
     struct stat st;
     if ((isEntryExist(hash, ".tmp", &st, isPrivate) == 1) &&
@@ -90,13 +90,53 @@ int DirHashCacheStore::isEntryUpdating(CacheHash &hash, int isPrivate)
     return 0;
 }
 
-int DirHashCacheStore::isEntryStale(CacheHash &hash, int isPrivate)
+int DirHashCacheStore::isEntryStale(const CacheHash &hash, int isPrivate)
 {
     struct stat st;
     if (isEntryExist(hash, ".S", &st, isPrivate) == 1)
         return 1;
     return 0;
 }
+
+int DirHashCacheStore::processStale(CacheEntry *pEntry, char *pBuf, int pathLen)
+{
+    int dispose = 0;
+    if (DateTime::s_curTime - pEntry->getExpireTime() > pEntry->getMaxStale())
+        {
+        g_api->log(NULL, LSI_LOG_DEBUG, "[CACHE] [%p] has expired, dispose"
+                   , pEntry);
+
+        getManager()->incStats(pEntry->isPrivate(), offsetof(cachestats_t,
+                               expired));
+
+        dispose = 1;
+    }
+    else
+    {
+        if (!pEntry->isStale())
+        {
+            pEntry->setStale(1);
+            if (!pathLen)
+                pathLen = buildCacheLocation(pBuf, 4096, pEntry->getHashKey(),
+                                             pEntry->isPrivate());
+            if (renameDiskEntry(pEntry, pBuf, NULL, ".S",
+                                DHCS_SOURCE_MATCH | DHCS_DEST_CHECK) != 0)
+            {
+                g_api->log(NULL, LSI_LOG_DEBUG, "[CACHE] [%p] is stale, [%s] mark stale"
+                           , pEntry, pBuf);
+                dispose = 1;
+            }
+
+        }
+        if (!pEntry->isUpdating())
+        {
+            if (isEntryUpdating(pEntry->getHashKey(), pEntry->isPrivate()))
+                pEntry->setUpdating(1);
+        }
+    }
+    return dispose;
+}
+
 
 CacheEntry *DirHashCacheStore::getCacheEntry(CacheHash &hash,
         CacheKey *pKey, int maxStale, int32_t lastCacheFlush)
@@ -184,43 +224,11 @@ CacheEntry *DirHashCacheStore::getCacheEntry(CacheHash &hash,
             pEntry->setStale(1);
         pEntry->setMaxStale(maxStale);
     }
+
     if (pEntry->isStale() || DateTime::s_curTime > pEntry->getExpireTime())
     {
-        if (DateTime::s_curTime - pEntry->getExpireTime() > pEntry->getMaxStale())
-        {
-            g_api->log(NULL, LSI_LOG_DEBUG, "[CACHE] [%p] has expired, dispose"
-                       , pEntry);
-
-            getManager()->incStats(pEntry->isPrivate(), offsetof(cachestats_t,
-                                   expired));
-
-            dispose = 1;
-        }
-        else
-        {
-            if (!pEntry->isStale())
-            {
-                pEntry->setStale(1);
-                if (!pathLen)
-                    pathLen = buildCacheLocation(achBuf, 4096, hash,
-                                                 pEntry->isPrivate());
-                if (renameDiskEntry(pEntry, achBuf, NULL, ".S",
-                                    DHCS_SOURCE_MATCH | DHCS_DEST_CHECK) != 0)
-                {
-                    g_api->log(NULL, LSI_LOG_DEBUG, "[CACHE] [%p] is stale, [%s] mark stale"
-                               , pEntry, achBuf);
-                    dispose = 1;
-                }
-
-            }
-            if (!pEntry->isUpdating())
-            {
-                if (isEntryUpdating(hash, pEntry->isPrivate()))
-                    pEntry->setUpdating(1);
-            }
-        }
+        dispose = processStale(pEntry, achBuf, pathLen);
     }
-
     g_api->log(NULL, LSI_LOG_DEBUG,
                "[CACHE] check [%p] against cache manager, tag: '%s' \n",
                pEntry, pEntry->getTag().c_str());
@@ -231,13 +239,20 @@ CacheEntry *DirHashCacheStore::getCacheEntry(CacheHash &hash,
                    "[CACHE] [%p] has been flushed, dispose.\n", pEntry);
         dispose = 1;
     }
-    else if (getManager()->isPurged(pEntry, pKey, (lastCacheFlush >= 0)))
+    
+    if (!dispose )
     {
-        g_api->log(NULL, LSI_LOG_DEBUG,
-                   "[CACHE] [%p] has been purged by cache manager, dispose.\n"
-                   , pEntry);
-
-        dispose = 1;
+        int flag = getManager()->isPurged(pEntry, pKey, (lastCacheFlush >= 0));
+        if (flag)
+        {
+            g_api->log(NULL, LSI_LOG_DEBUG,
+                       "[CACHE] [%p] has been purged by cache manager, %s",
+                       pEntry, (flag & PDF_STALE) ? "stale" : "dispose");
+            if (flag &PDF_STALE)
+                dispose = processStale(pEntry, achBuf, pathLen);
+            else
+                dispose = 1;
+        }
     }
 
     if (dispose)
@@ -383,7 +398,7 @@ CacheEntry *DirHashCacheStore::createCacheEntry(
     CacheEntry *pEntry = new DirHashCacheEntry();
     pEntry->setFdStore(fd);
     pEntry->setKey(hash, pKey);
-    if (pKey->m_pIP)
+    if (pKey->m_pIP && pKey->m_ipLen > 0)
         pEntry->getHeader().m_flag |= CeHeader::CEH_PRIVATE;
     //Do not save now since tag is not ready, will call it later
     //pEntry->saveCeHeader();

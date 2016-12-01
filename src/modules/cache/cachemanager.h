@@ -21,7 +21,7 @@ class UrlVary;
 #define PDF_PREFIX  1
 #define PDF_POSTFIX 2
 #define PDF_REGEX   3
-#define PDF_REFRESH 4
+#define PDF_STALE   4
 #define PDF_PURGE   8
 #define PDF_SHARED  16
 #define PDF_TAG     32

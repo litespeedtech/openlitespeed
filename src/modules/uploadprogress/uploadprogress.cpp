@@ -27,6 +27,8 @@
 #define MOD_QS_LEN          (sizeof(MOD_QS) -1)
 #define MAX_BUF_LENG        20
 #define EXPIRE_TIME         (30 * 1000)
+#define MODULE_VERSION_INFO  "1.1"
+
 
 ls_shmhash_t *pShmHash = NULL;
 extern lsi_module_t MNAME;
@@ -94,7 +96,7 @@ static int releaseModuleData(lsi_param_t *rec)
 static int setProgress(MyMData *pData)
 {
     snprintf(pData->pBuffer, MAX_BUF_LENG, "%llX:%llX",
-             pData->iWholeLength, pData->iFinishedLength);
+             (long long)pData->iWholeLength, (long long)pData->iFinishedLength);
     return 0;
 }
 
@@ -155,7 +157,7 @@ static int checkReqHeader(lsi_param_t *rec)
 {
     int idLen;
     const char *progressID = getProgressId(rec->session, idLen);
-    int64_t contentLength = g_api->get_req_content_length(rec->session);
+    long long contentLength = g_api->get_req_content_length(rec->session);
     if (progressID && contentLength <= 0)
     {
         //GET, must disable cache module
@@ -242,7 +244,7 @@ static int begin_process(lsi_session_t *session)
     }
 
     char *p = (char *)ls_shmhash_off2ptr(pShmHash, offset);
-    int64_t iWholeLength, iFinishedLength;
+    long long iWholeLength, iFinishedLength;
     sscanf(p, "%llX:%llX", &iWholeLength, &iFinishedLength);
     int state = getState(iWholeLength, iFinishedLength);
 
@@ -279,6 +281,6 @@ static lsi_serverhook_t server_hooks[] =
 
 static lsi_reqhdlr_t myhandler = { begin_process, NULL, NULL, NULL };
 lsi_module_t MNAME =
-{ LSI_MODULE_SIGNATURE, _init, &myhandler, NULL, "v1.0", server_hooks, {0} };
+{ LSI_MODULE_SIGNATURE, _init, &myhandler, NULL, MODULE_VERSION_INFO, server_hooks, {0} };
 
 

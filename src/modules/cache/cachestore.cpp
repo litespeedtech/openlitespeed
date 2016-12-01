@@ -20,7 +20,6 @@
 #include "cacheentry.h"
 #include <util/datetime.h>
 
-#include "internalcachemanager.h"
 #include "shmcachemanager.h"
 
 
@@ -60,11 +59,7 @@ int CacheStore::initManager()
         return LS_FAIL;
     if (m_pManager)
         return LS_OK;
-#if 0
-    m_pManager = new InternalCacheManager();
-#else
     m_pManager = new ShmCacheManager();
-#endif
     if (m_pManager->init(m_sRoot.c_str()) == -1)
     {
         delete m_pManager;

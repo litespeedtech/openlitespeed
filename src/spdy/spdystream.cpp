@@ -250,7 +250,7 @@ int SpdyStream::writev(IOVec &vector, int total)
 int SpdyStream::writev(const struct iovec *vec, int count)
 {
     IOVec iov(vec, count);
-    return writev(iov.get(), iov.bytes());
+    return writev(iov, iov.bytes());
 }
 
 

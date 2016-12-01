@@ -111,9 +111,6 @@ public:
         return m_bufIn.append(ch);
     }
 
-    uint8_t getReqHeaderEnd() {   return m_reqHeaderEnd;  }
-    void    setReqHeaderEnd(uint8_t v)  {   m_reqHeaderEnd = v;  }
-
 private:
     bool operator==(const H2Stream &other) const;
 
@@ -129,8 +126,6 @@ private:
     int32_t     m_iWindowIn;
     H2Connection *m_pH2Conn;
     LoopBuf     m_bufIn;
-
-    uint8_t     m_reqHeaderEnd;
 
     LS_NO_COPY_ASSIGN(H2Stream);
 };

@@ -70,11 +70,13 @@ typedef ls_spinlock_t           ls_shmlock_t;
 #define ls_shmlock_lock         ls_atomic_spin_pidlock
 #define ls_shmlock_trylock      ls_atomic_pidspin_trylock
 #define ls_shmlock_unlock       ls_atomic_spin_unlock
+#define ls_shmlock_locked       ls_atomic_pidlocked
 #else
 #define ls_shmlock_setup        ls_spinlock_setup
 #define ls_shmlock_lock         ls_spinlock_lock
 #define ls_shmlock_trylock      ls_spinlock_trylock
 #define ls_shmlock_unlock       ls_spinlock_unlock
+#define ls_shmlock_locked       ls_spinlock_locked
 #endif
 #else
 typedef ls_mutex_t              ls_shmlock_t;
@@ -82,6 +84,7 @@ typedef ls_mutex_t              ls_shmlock_t;
 #define ls_shmlock_lock         ls_mutex_lock
 #define ls_shmlock_trylock      ls_mutex_trylock
 #define ls_shmlock_unlock       ls_mutex_unlock
+#define ls_shmlock_locked       ls_mutex_locked
 #endif
 
 

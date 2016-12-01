@@ -19,7 +19,7 @@
 #include <lsdef.h>
 #include <lsr/ls_ptrlist.h>
 #include <lsr/ls_pool.h>
-#include <util/swap.h>
+#include <lsr/ls_swap.h>
 
 #include <errno.h>
 #include <string.h>

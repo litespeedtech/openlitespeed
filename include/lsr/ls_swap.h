@@ -15,61 +15,11 @@
 *    You should have received a copy of the GNU General Public License       *
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
-#include "sslengine.h"
-#include <config.h>
-#include <openssl/engine.h>
-#include <openssl/crypto.h>
+#ifndef LS_SWAP_H_
+#define LS_SWAP_H_
 
-#include <string.h>
-
-SslEngine::SslEngine()
-{
-}
+#define GSWAP( a, b, t ) do{ t=a; a=b; b=t; } while(0)
 
 
-SslEngine::~SslEngine()
-{
-}
-
-
-int SslEngine::init(const char *pID)
-{
-#ifndef USE_BORINGSSL
-    /* Load all bundled ENGINEs into memory and make them visible */
-    if (!pID)
-        return 0;
-    if ((strcasecmp(pID, "null") == 0) ||
-        (strcasecmp(pID, "builtin") == 0))
-        return 0;
-    ENGINE_load_builtin_engines();
-    if ((strcasecmp(pID, "auto") == 0) ||
-        (strcasecmp(pID, "all") == 0))
-    {
-        ENGINE_register_all_complete();
-        return 0;
-    }
-    ENGINE *e;
-    int ret = 0;
-    e = ENGINE_by_id(pID);
-    if (!e)
-        return LS_FAIL;
-    if (strcmp(pID, "chil") == 0)
-        ENGINE_ctrl_cmd_string(e, "FORK_CHECK", "1", 0);
-    if (!ENGINE_set_default(e, ENGINE_METHOD_ALL))
-        ret = -1;
-    /* Release the structural reference from ENGINE_by_id() */
-    ENGINE_free(e);
-    return ret;
-#else
-    return 0;
 #endif
-}
-
-
-void SslEngine::shutdown()
-{
-#ifndef USE_BORINGSSL
-    ENGINE_cleanup();
-#endif
-}
 

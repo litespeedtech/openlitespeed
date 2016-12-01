@@ -38,6 +38,9 @@
 #define PAGESPEED_MODULEKEY     ModuleName
 #define PAGESPEED_MODULEKEYLEN  (sizeof(ModuleName) -1)
 
+#define MODULE_VERSION_INFO     "1.4.24-1.11.33.3"
+
+
 extern lsi_module_t MNAME;
 
 using namespace net_instaweb;

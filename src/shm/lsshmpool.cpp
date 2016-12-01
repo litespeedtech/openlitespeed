@@ -19,15 +19,20 @@
 
 #include <shm/lsshmhash.h>
 
+#include <log4cxx/logger.h>
+
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+
+static int s_pid = -1;
 
 //
 // Internal for free link
 //
 #define LSSHM_FREE_AMARKER 0x0123fedc
 #define LSSHM_FREE_BMARKER 0xba984567
+
 //
 //  Two block to indicate a free block
 //
@@ -104,7 +109,6 @@ inline  void LsShmPool::incrCheck(LsShmXSize_t *ptr, LsShmSize_t size)
 
 LsShmStatus_t LsShmPool::createStaticData(const char *name)
 {
-    LsShmCnt_t i;
     LsShmPoolMem *pPool = getPool();
 
     pPool->x_iMagic = LSSHM_POOL_MAGIC;
@@ -120,8 +124,7 @@ LsShmStatus_t LsShmPool::createStaticData(const char *name)
     pDataMap->x_chunk.x_iEnd = 0;
     pDataMap->x_iFreeList = 0;
     pDataMap->x_iFreePageList = 0;
-    for (i = 0; i < LSSHM_POOL_NUMBUCKET; ++i)
-        pDataMap->x_aFreeBucket[i] = 0;
+    ::memset(pDataMap->x_aFreeBucket, 0, sizeof(pDataMap->x_aFreeBucket));
     ::memset(&pDataMap->x_stat, 0, sizeof(LsShmPoolMapStat));
 
     return LSSHM_OK;
@@ -571,6 +574,8 @@ void LsShmPool::addFreeBucket(LsShmPoolMap *pSrcMap)
     return;
 }
 
+static unsigned int s_debug_free_bucket = 0;
+
 
 //
 // Internal release2
@@ -614,7 +619,20 @@ void LsShmPool::releaseData(LsShmOffset_t offset, LsShmSize_t size)
 
         pData = (LsShmOffset_t *)offset2ptr(offset);
         pBucket = &pDataMap->x_aFreeBucket[bucketNum];
-        *pData = *pBucket;
+        assert(m_pShm->isOffsetValid(offset));
+        if (s_debug_free_bucket == bucketNum)
+            LS_LOGRAW("[DEBUG] [SHM] [%d-%d:%p] release to freebucket, "
+                      "offset: %d, size: %d, next: %d\n",
+                      s_pid, m_pShm->getfd(), this, offset, size, *pBucket);
+        if (!m_pShm->isOffsetValid(*pBucket))
+        {    
+            LS_ERROR("[SHM] [%d-%d:%p] freebucket corruption, "
+                     "offset: %d, bucket: %d\n", s_pid, m_pShm->getfd(), 
+                     this, *pBucket, bucketNum);
+            *pData = 0;
+        }
+        else
+            *pData = *pBucket;
         *pBucket = offset;
         incrCheck(&pDataMap->x_stat.m_bckt[bucketNum].m_iBkReleased, 1);
     }
@@ -690,11 +708,31 @@ LsShmOffset_t LsShmPool::allocFromDataBucket(LsShmSize_t size)
     if ((offset = *pBucket) != 0)
     {
         np = (LsShmOffset_t *)offset2ptr(offset);
-        *pBucket = *np;
+        if (!m_pShm->isOffsetValid(*np))
+        {
+            LS_ERROR("[SHM] [%d-%d:%p] pool free bucket [%d] corruption, at "
+                     "offset: %d, invalid value: %d, usage: alloc %d, free %d\n",
+                     s_pid, m_pShm->getfd(), this, num, offset, *np, 
+                     getDataMap()->x_stat.m_bckt[num].m_iBkAllocated,
+                     getDataMap()->x_stat.m_bckt[num].m_iBkReleased );
+            *pBucket = (LsShmOffset_t)0;
+        }
+        else
+            *pBucket = *np;
     }
-    else if ((offset = fillDataBucket(num, size)) == 0)
-        return 0;
+    else 
+    {
+        if (s_debug_free_bucket == num)
+            LS_LOGRAW("[DEBUG] [SHM] [%d-%d:%p] freebucket %d is empty for size: %d\n", 
+                    s_pid, m_pShm->getfd(), this, num, size);
+        if ((offset = fillDataBucket(num, size)) == 0)
+            return 0;
+        }
     incrCheck(&getDataMap()->x_stat.m_bckt[num].m_iBkAllocated, 1);
+    if (s_debug_free_bucket == num)
+        LS_LOGRAW("[DEBUG] [SHM] [%d-%d:%p] allocate from freebucket, "
+                  "offset: %d, size: %d, next: %d\n", 
+                  s_pid, m_pShm->getfd(), this, offset, size, getDataMap()->x_aFreeBucket[num]);
     return offset;
 }
 
@@ -715,6 +753,7 @@ LsShmOffset_t LsShmPool::allocFromGlobalBucket(
     next = first = *np;
     while (next != 0)
     {
+        assert(m_pShm->isOffsetValid(next));
         np = (LsShmOffset_t *)offset2ptr(next);
         next = *np;
         if (++cnt >= num)
@@ -750,7 +789,16 @@ LsShmOffset_t LsShmPool::fillDataBucket(LsShmSize_t bucketNum, LsShmSize_t size)
         && ((offset = m_pParent->allocFromGlobalBucket(bucketNum, num)) != 0))
     {
         if (num > 1)
-            getDataMap()->x_aFreeBucket[bucketNum] = offset + size;
+        {
+            xoffset = *((LsShmOffset_t *)m_pShm->offset2ptr(offset));
+            assert(m_pShm->isOffsetValid(xoffset));
+            getDataMap()->x_aFreeBucket[bucketNum] = xoffset;
+            if (s_debug_free_bucket == bucketNum)
+                LS_LOGRAW("[DEBUG] [SHM] [%d-%d:%p] allocFromGlobalBucket(), %d objects, "
+                          "first offset: %d, second offset: %d\n", s_pid,
+                          m_pShm->getfd(), this, num, offset, xoffset);
+
+        }
         incrCheck(&getDataMap()->x_stat.m_bckt[bucketNum].m_iBkReleased, num);
         return offset;
     }
@@ -761,17 +809,27 @@ LsShmOffset_t LsShmPool::fillDataBucket(LsShmSize_t bucketNum, LsShmSize_t size)
 
     // take the first one - save the rest
     xoffset += size;
+    if (s_debug_free_bucket == bucketNum)
+        LS_LOGRAW("[DEBUG] [SHM] [%d-%d:%p] allocFromDataChunk(), %d objects, "
+                  "first offset: %d, push offset: %d\n", s_pid, m_pShm->getfd(),
+                  this, num, offset, xoffset);
     if (--num != 0)
+    {
+        assert(m_pShm->isOffsetValid(xoffset));
         getDataMap()->x_aFreeBucket[bucketNum] = xoffset;
-
+    }
     uint8_t *xp;
     xp = (uint8_t *)offset2ptr(offset);
     while (num-- != 0)
     {
         xp += size;
         xoffset += size;
+        assert(m_pShm->isOffsetValid(xoffset));
         *((LsShmOffset_t *)xp) = num ? xoffset : 0;
-    }
+        if (s_debug_free_bucket == bucketNum)
+            LS_LOGRAW("[DEBUG] [SHM] [%d-%d:%p] allocFromDataChunk(), append #%d offset: %d, \n",
+                      s_pid, m_pShm->getfd(), this, num , *((LsShmOffset_t *)xp));
+        }
     return offset;
 }
 
@@ -871,6 +929,8 @@ void LsShmPool::mvDataFreeListToBucket(LsShmFreeList *pFree,
         LsShmOffset_t *np;
         np = (LsShmOffset_t *)pFree; // cast to offset
         *np = getDataMap()->x_aFreeBucket[bucketNum];
+        
+        assert(m_pShm->isOffsetValid(offset));
         getDataMap()->x_aFreeBucket[bucketNum] = offset;
         incrCheck(&getDataMap()->x_stat.m_bckt[bucketNum].m_iBkReleased, 1);
     }
@@ -1173,3 +1233,8 @@ int LsShmPool::mergeDeadPool(LsShmPoolMem* pPool)
     return 0;
 }
 
+
+void LsShmPool::setPid(int pid)
+{
+    s_pid = pid;
+}

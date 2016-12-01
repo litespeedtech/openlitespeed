@@ -28,6 +28,26 @@
 #include <string.h>
 #include <unistd.h>
 
+
+// LruHash info
+struct LsHashLruInfo_s
+{
+    LsShmHIterOff    linkFirst;
+    LsShmHIterOff    linkLast;
+    int              nvalset;    // number of keys currently set
+    int              nvalexp;    // number of keys expired
+    int              ndataset;   // number of value datas currently set
+    int              ndatadel;   // number of datas deleted by mincnt
+    int              ndataexp;   // number of datas expired
+};
+
+
+static int s_tidOffset[2] = { 
+    sizeof(LsShmTidInfo), 
+    sizeof(LsShmTidInfo) + sizeof(LsHashLruInfo_s)   
+};
+
+
 typedef struct ls_shmhtable_s
 {
     uint32_t        x_iMagic;
@@ -47,6 +67,14 @@ typedef struct ls_shmhtable_s
     uint8_t         x_unused[2];
     LsShmHTableStat x_stat;         // hash statistics
     uint8_t         x_reserved[256];
+    
+    LsHashLruInfo_s *getLruInfo()
+    {   return (LsHashLruInfo_s *)&x_reserved[sizeof(x_reserved) 
+                                             - sizeof(LsHashLruInfo_s)];    }
+    
+    LsShmTidInfo    *getTidInfo()
+    {   return (LsShmTidInfo *)&x_reserved[sizeof(x_reserved) 
+                          - s_tidOffset[x_iMode & LSSHM_FLAG_LRU]]; }
 } LsShmHTable;
 
 
@@ -56,23 +84,6 @@ struct lsshmobsiter_s
     LsShmOffset_t   tableOff;
     LsShmOffset_t   iterOff;
 };
-
-// LruHash info
-struct LsHashLruInfo_s
-{
-    LsShmHIterOff    linkFirst;
-    LsShmHIterOff    linkLast;
-    int              nvalset;    // number of keys currently set
-    int              nvalexp;    // number of keys expired
-    int              ndataset;   // number of value datas currently set
-    int              ndatadel;   // number of datas deleted by mincnt
-    int              ndataexp;   // number of datas expired
-};
-
-
-#define x_lruInfo   x_reserved[sizeof(((LsShmHTable *)0)->x_reserved) \
-                        - sizeof(LsHashLruInfo)]
-
 
 
 const uint8_t s_bitMask[] =
@@ -272,8 +283,8 @@ void LsShmHash::autoLockChkRehash()
 }
 
 
-LsHashLruInfo *LsShmHash::getLru() const
-{   return (LsHashLruInfo *)&(getHTable()->x_lruInfo);  }
+LsHashLruInfo *LsShmHash::getLru()
+{   return getHTable()->getLruInfo();  }
 
 
 LsShmHash::iteroffset LsShmHash::getLruTop()
@@ -510,6 +521,9 @@ int LsShmHash::init(LsShmOffset_t offset)
         LsShmOffset_t iTidIterOff = addExtraSpace(sizeof(uint64_t), 0);
         if ((m_pTidMgr = new LsShmTidMgr(iTidIterOff)) == NULL)
             return LS_FAIL;
+        LsShmOffset_t tidMgrOff = offset 
+                + ((char *)pTable->getTidInfo() - (char *)pTable);
+        m_pTidMgr->init(this, tidMgrOff, 0);
     }
     m_iRef = 1;
     m_status = LSSHM_READY;
@@ -1425,6 +1439,47 @@ int LsShmHash::trimsize(int need, LsShmHash::TrimCb func, void *arg)
 }
 
 
+int LsShmHash::trimByCb(int maxCnt, LsShmHash::TrimCb func, void *arg)
+{
+    if ((m_iFlags & LSSHM_FLAG_LRU) == 0)
+        return LS_FAIL;
+    int del = 0;
+    LsShmHElem *pElem;
+    iteroffset next;
+    autoLockChkRehash();
+    LsHashLruInfo *pLru = getLru();
+    iteroffset offElem = pLru->linkLast;
+    while ((offElem.m_iOffset != 0) && (maxCnt > 0))
+    {
+        int ret = 1;
+        if ((m_pTidMgr != NULL) && (m_pTidMgr->checkTidTbl() != 0))
+            pLru = getLru();
+        pElem = offset2iterator(offElem);
+        maxCnt--;
+        next = pElem->getLruLinkNext();
+        if (func != NULL)
+        {
+            ret = (*func)(pElem, arg);
+            if (ret < 0)
+                break;
+            if (ret == 0)
+            {
+                offElem = next;
+                continue;
+            }
+        }
+        eraseIteratorHelper(offElem);
+        ++del;
+        pLru->ndataexp += ret;
+        pLru->ndataset -= ret;
+        offElem = next;
+    }
+    pLru->nvalexp += del;
+    autoUnlock();
+    return del;
+}
+
+
 int LsShmHash::touchLru(iteroffset iterOff)
 {
     if ((m_iFlags & LSSHM_FLAG_LRU) == 0)
@@ -1440,6 +1495,7 @@ int LsShmHash::touchLru(iteroffset iterOff)
 
 void LsShmHash::linkHElem(LsShmHElem *pElem, iteroffset offElem)
 {
+    assert(m_pPool->getShm()->isLocked(m_pShmLock));
     LsHashLruInfo *pLru = getLru();
     LsShmHElemLink *pLink = pElem->getLruLinkPtr();
     if (pLru->linkFirst.m_iOffset)
@@ -1461,6 +1517,7 @@ void LsShmHash::linkHElem(LsShmHElem *pElem, iteroffset offElem)
 
 void LsShmHash::unlinkHElem(LsShmHElem *pElem)
 {
+    assert(m_pPool->getShm()->isLocked(m_pShmLock));
     LsHashLruInfo *pLru = getLru();
     LsShmHElemLink *pLink = pElem->getLruLinkPtr();
     if (pLink->x_iLinkNext.m_iOffset)
@@ -1476,6 +1533,7 @@ void LsShmHash::unlinkHElem(LsShmHElem *pElem)
 
 void LsShmHash::linkSetTop(LsShmHElem *pElem, iteroffset offElem)
 {
+    assert(m_pPool->getShm()->isLocked(m_pShmLock));
     LsShmHElemLink *pLink = pElem->getLruLinkPtr();
     iteroffset next = pLink->x_iLinkNext;
     if (next.m_iOffset != 0)      // not top of list already

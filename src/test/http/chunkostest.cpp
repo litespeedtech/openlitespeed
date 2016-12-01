@@ -33,7 +33,6 @@
 class TestOS : public OutputStream
 {
     AutoBuf         m_buf;
-    int             m_count;
 public:
     int write(const char *pBuf, int size)
     {

@@ -381,7 +381,7 @@ private:
 
     void chmodDirToAll(const char *path, struct stat &sb);
     void verifyStatDir(const char *path);
-    
+
 public:
     void hideServerSignature(int sv);
     int processAutoUpdResp(HttpFetch *pHttpFetch);
@@ -655,7 +655,10 @@ HttpListener *HttpServerImpl::addListener(const char *pName,
         return NULL;
     pListener = m_listeners.get(pName, pAddr);
     if (pListener)
+    {
+        LS_DBG_L("Reuse existing Listener [%s] [%s].", pName, pAddr);
         return pListener;
+    }
     pListener = m_oldListeners.get(pName, pAddr);
     if (!pListener)
     {
@@ -787,16 +790,8 @@ int HttpServerImpl::removeVHostFromListener(const char *pListenerName,
     if ((pListener == NULL) || (pVHost == NULL))
         return EINVAL;
     int ret = pListener->getVHostMap()->removeVHost(pVHost);
-    if (ret)
-    {
-        LS_ERROR("Deassociates [%s] with [%s] on hostname/IP [%s] %s!",
-                 pVHostName, pListenerName, "failed");
-    }
-    else
-    {
-        LS_DBG_L("Deassociates [%s] with [%s] on hostname/IP [%s] %s!",
-                 pVHostName, pListenerName, "succeed");
-    }
+    LS_ERROR("Deassociates [%s] with [%s] on %s!",
+             pVHostName, pListenerName, (ret ? "failed" : "succeed"));
     return ret;
 }
 
@@ -945,7 +940,7 @@ int HttpServerImpl::processAutoUpdResp(HttpFetch *pHttpFetch)
             int curVer = readVersion(sCurVer.c_str());
             if (newVer > curVer)
                 LS_NOTICE("[!!!UPDATE!!!] new version %d.%d.%d.%d is available.\n",
-                          newVer / 1000000, (newVer / 10000) % 100, 
+                          newVer / 1000000, (newVer / 10000) % 100,
                           (newVer / 100) % 100, newVer % 100);
         }
     }
@@ -1255,7 +1250,7 @@ int HttpServerImpl::addVirtualHostMapping(HttpListener *pListener,
     {
         LS_ERROR(ConfigCtx::getCurConfigCtx(),
                  "missing <domain> in <vhostMap> - vhost = %s listener = %s",
-                 pVHost, pListener);
+                 pVHost, pListener->getAddrStr());
         return LS_FAIL;
     }
 
@@ -1290,7 +1285,7 @@ int HttpServerImpl::addVirtualHostMapping(HttpListener *pListener,
     {
         LS_ERROR(ConfigCtx::getCurConfigCtx(),
                  "missing <domain> in <vhostMap> - vhost = %s listener = %s",
-                 pVHost, pListener);
+                 pVHost, pListener->getAddrStr());
         return LS_FAIL;
     }
 
@@ -1393,6 +1388,8 @@ HttpListener *HttpServerImpl::configListener(const XmlNode *pNode,
                 break;
             }
         }
+
+        LS_DBG_L("Config listener [%s] [%s]", pName, pAddr);
 
         HttpListener *pListener = NULL;
         pListener = addListener(pName, pAddr);
@@ -1924,9 +1921,9 @@ int HttpServerImpl::configTuning(const XmlNode *pRoot)
     setMaxSSLConns(currentCtx.getLongValue(pNode, "maxSslConnections", 0,
                                            1000000, 1000));
     HttpListener::setSockSendBufSize(
-        currentCtx.getLongValue(pNode, "sndBufSize", 0, 256 * 1024, 0));
+        currentCtx.getLongValue(pNode, "sndBufSize", 0, 512 * 1024, 0));
     HttpListener::setSockRecvBufSize(
-        currentCtx.getLongValue(pNode, "rcvBufSize", 0, 256 * 1024, 0));
+        currentCtx.getLongValue(pNode, "rcvBufSize", 0, 512 * 1024, 0));
     HttpServerConfig &config = HttpServerConfig::getInstance();
     config.setKeepAliveTimeout(
         currentCtx.getLongValue(pNode, "keepAliveTimeout", 1, 10000, 15));
@@ -2071,7 +2068,7 @@ int HttpServerImpl::configTuning(const XmlNode *pRoot)
         if (SslSessCache::getInstance().init(iSslCacheTimeout,
                                              iSslCacheSize) != LS_OK)
         {
-            LS_WARN("[%s] Failed to init SSL Session Id Cache");
+            LS_WARN("Failed to init SSL Session Id Cache");
             return -1;
         }
     }
@@ -2281,7 +2278,6 @@ int HttpServerImpl::configServerBasic2(const XmlNode *pRoot,
     while (1)
     {
         const XmlNode *pNode;
-        char  achBuf[4096];
 
         ConfigCtx currentCtx("server", "basics2");
 
@@ -2293,10 +2289,13 @@ int HttpServerImpl::configServerBasic2(const XmlNode *pRoot,
 
         if (pSwapDir)
             setSwapDir(pSwapDir);
+
+#ifndef USE_BORINGSSL
+        char  achBuf[4096];
         ls_snprintf(achBuf, 4096, "%s/tmp/ocspcache/",
                     MainServerConfig::getInstance().getServerRoot());
         SslOcspStapling::setRespTempPath(achBuf);
-
+#endif
         m_serverContext.configAutoIndex(pRoot);
         m_serverContext.configDirIndex(pRoot);
         const char *pURI = getAutoIndexURI(pRoot);

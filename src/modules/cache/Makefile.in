@@ -126,7 +126,7 @@ cache_la_LIBADD =
 am_cache_la_OBJECTS = cache.lo cacheentry.lo cachehash.lo \
 	cachestore.lo ceheader.lo dirhashcacheentry.lo \
 	dirhashcachestore.lo cacheconfig.lo cachectrl.lo \
-	internalcachemanager.lo cachemanager.lo shmcachemanager.lo
+	cachemanager.lo shmcachemanager.lo
 cache_la_OBJECTS = $(am_cache_la_OBJECTS)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
@@ -254,6 +254,7 @@ OBJEXT = @OBJEXT@
 OPENLSWS_ADMIN = @OPENLSWS_ADMIN@
 OPENLSWS_ADMINPORT = @OPENLSWS_ADMINPORT@
 OPENLSWS_ADMINSSL = @OPENLSWS_ADMINSSL@
+OPENLSWS_BSSL = @OPENLSWS_BSSL@
 OPENLSWS_DISABLE_RPATH = @OPENLSWS_DISABLE_RPATH@
 OPENLSWS_EMAIL = @OPENLSWS_EMAIL@
 OPENLSWS_GROUP = @OPENLSWS_GROUP@
@@ -343,7 +344,7 @@ AM_CPPFLAGS = -I$(top_srcdir)/openssl/include/ -I$(top_srcdir)/include -I$(top_s
 cache_la_METASOURCES = AUTO
 cache_la_SOURCES = cache.cpp cacheentry.cpp cachehash.cpp cachestore.cpp \
 	ceheader.cpp dirhashcacheentry.cpp dirhashcachestore.cpp \
-        cacheconfig.cpp cachectrl.cpp internalcachemanager.cpp \
+        cacheconfig.cpp cachectrl.cpp \
         cachemanager.cpp shmcachemanager.cpp
 
 all: all-am
@@ -435,7 +436,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ceheader.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dirhashcacheentry.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dirhashcachestore.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/internalcachemanager.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/shmcachemanager.Plo@am__quote@
 
 .cpp.o:

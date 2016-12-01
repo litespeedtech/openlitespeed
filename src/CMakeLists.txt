@@ -9,6 +9,13 @@ add_custom_target(Name ALL COMMAND make WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/
 set_directory_properties(PROPERTIES  ADDITIONAL_MAKE_CLEAN_FILES "${PROJECT_SOURCE_DIR}/src/test/unittest-cpp/UnitTest++/libUnitTest++.a")
 set(libUnitTest  libUnitTest++.a)
 ##########################################################################################
+#If you want to use BoringSSL, just un-comment out the following commands
+#AND YOU NEED TO HAVE THE files ready in openlitespeed/ssl
+#You can run the dlbssl.sh to make them ready
+#add_definitions(-DUSE_BORINGSSL)
+#set(BSSL_ADD_LIB  libdecrepit.a)
+##########################################################################################
+
 
 add_definitions(-DTEST_OUTPUT_PLAIN_CONF)
 add_definitions(-DLS_VG_DEBUG)
@@ -132,7 +139,7 @@ SET(unittest_STAT_SRCS
    test/shm/shmxtest.cpp
 )
 
-link_directories(${PROJECT_SOURCE_DIR}/openssl/ /usr/local/lib ${PROJECT_SOURCE_DIR}/src/test/unittest-cpp/UnitTest++)
+link_directories(${PROJECT_SOURCE_DIR}/ssl/ /usr/local/lib ${PROJECT_SOURCE_DIR}/src/test/unittest-cpp/UnitTest++)
 
 add_executable(openlitespeed ${openlitespeed_SRCS}
     ${unittest_STAT_SRCS}
@@ -202,7 +209,7 @@ SET( litespeedlib
     registry cgi fcgi jk extensions lsapi proxy
     edio socket sslpp lsshm thread log4cxx GeoIP
     -Wl,--whole-archive util lsr -Wl,--no-whole-archive
-    pthread rt ${CMAKE_DL_LIBS} ${libUnitTest} libssl.a libcrypto.a)
+    pthread rt ${CMAKE_DL_LIBS} ${libUnitTest} libssl.a libcrypto.a ${BSSL_ADD_LIB})
 
 target_link_libraries(openlitespeed ${litespeedlib} )
 

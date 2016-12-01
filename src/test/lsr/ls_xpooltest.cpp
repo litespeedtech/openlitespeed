@@ -115,9 +115,9 @@ TEST(ls_XPoolTest_test)
     ls_xpool_free(&pool, (void *)ptr2);
 
     CHECK(ls_xpool_isempty(&pool) == 0);
-    (char *)ls_xpool_alloc(&pool, 8 * 1024);
-    (char *)ls_xpool_alloc(&pool, 64 * 1024 + 1);
-    (char *)ls_xpool_alloc(&pool, 8 * 1024);
+    (void)ls_xpool_alloc(&pool, 8 * 1024);
+    (void)ls_xpool_alloc(&pool, 64 * 1024 + 1);
+    (void)ls_xpool_alloc(&pool, 8 * 1024);
     ls_xpool_destroy(&pool);
     CHECK(ls_xpool_isempty(&pool) == 1);
 }

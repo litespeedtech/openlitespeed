@@ -127,8 +127,19 @@ public:
     void updateMaxCapacity(size_t maxCapacity)
     {
         m_maxCapacity = maxCapacity;
+        updateCurMaxCapacity(maxCapacity);
+    }
+
+    void updateCurMaxCapacity(size_t maxCapacity)
+    {
+        m_curMaxCapacity = maxCapacity;
         removeOverflowEntries();
     }
+    
+    size_t getMaxCapacity() const   
+    {   return m_maxCapacity;   }
+
+    
     void reset();
 
     int getDynTabId(char *name, uint16_t name_len, char *value,
@@ -174,6 +185,7 @@ protected:
 
 protected:
     size_t      m_maxCapacity;  //set by SETTINGS_HEADER_TABLE_SIZE
+    size_t      m_curMaxCapacity;
     size_t      m_curCapacity;
     uint32_t    m_nextFlowId;
 

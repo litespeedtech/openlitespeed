@@ -29,6 +29,7 @@ void ThrottleControl::resetQuotas()
     m_output.reset();
     m_req[0].reset();
     m_req[1].reset();
+    m_req[2].reset();
 }
 
 

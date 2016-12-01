@@ -43,7 +43,7 @@ void printTable(HpackDynTbl &dynTab)
         printf("[%3d]  (s = %3d) %s: %s\n",
                i, pEntry->getEntrySize(), pEntry->getName(), pEntry->getValue());
     }
-    printf("\tTable size: %u\n", dynTab.getTotalTableSize());
+    printf("\tTable size: %lu\n", dynTab.getTotalTableSize());
 }
 
 TEST(hapck_test_1)
@@ -51,7 +51,7 @@ TEST(hapck_test_1)
     HpackDynTbl dynTable;
     dynTable.updateMaxCapacity(256);
 
-    printf("size of DynTblEntry is %u\n", sizeof(DynTblEntry));
+    printf("size of DynTblEntry is %lu\n", sizeof(DynTblEntry));
 
     addEntry(dynTable, ":authority", "www.example.com", 1);
     printTable(dynTable);

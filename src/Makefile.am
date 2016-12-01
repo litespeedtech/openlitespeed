@@ -3,7 +3,11 @@ bin_PROGRAMS = openlitespeed
 if USE_DYN_OSSL
 AM_OPENSSL_LIBS=$(OPENSSL_LIBS)
 else
-AM_OPENSSL_LIBS= ../openssl/libssl.a ../openssl/libcrypto.a 
+if USE_BSSL
+AM_OPENSSL_LIBS= ../ssl/libssl.a ../ssl/libcrypto.a ../ssl/libdecrepit.a
+else
+AM_OPENSSL_LIBS= ../ssl/libssl.a ../ssl/libcrypto.a 
+endif
 endif
 
 
@@ -109,7 +113,7 @@ openlitespeed_LDADD =  ./main/libmain.a ./http/libhttp.a ./spdy/libspdy.a \
         $(AM_OPENSSL_LIBS) $(EXPAT_LIBS)  $(PCRE_LIBS) -lGeoIP -lz -lexpat -lpthread $(DL_LIB_OPTION) $(RT_LIB_OPTION)
 
 AM_LDFLAGS = -L/usr/lib $(OPENSSL_LDFLAGS)
-AM_CPPFLAGS = -I$(top_srcdir)/openssl/include/ -I$(top_srcdir)/include -I$(top_srcdir)/src  -I$(top_srcdir) $(PCRE_CFLAGS) $(EXPAT_CFLAGS)
+AM_CPPFLAGS = -I$(top_srcdir)/ssl/include/ -I$(top_srcdir)/include -I$(top_srcdir)/src  -I$(top_srcdir) $(PCRE_CFLAGS) $(EXPAT_CFLAGS)
 
 SUBDIRS =  socket http spdy sslpp ssi extensions log4cxx main edio lsiapi  modules shm
 

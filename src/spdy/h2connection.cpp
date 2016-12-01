@@ -768,7 +768,6 @@ int H2Connection::decodeHeaders(unsigned char *pSrc, int length,
     }
 
     appendReqHeaders(pStream, method, methodLen, uri, uriLen);
-    pStream->setReqHeaderEnd(1);
     pStream->appendInputData("\r\n", 2);
     free(uri);
 
@@ -1031,7 +1030,6 @@ int H2Connection::h2cUpgrade(HioHandler *pSession)
     pStream->init(uiStreamID, this, 0, pSession);
     pStream->setProtocol(HIOS_PROTO_HTTP2);
     pStream->setFlag(HIO_FLAG_FLOWCTRL, 1);
-    pStream->setReqHeaderEnd(1);
     onInitConnected();
     setPendingWrite();
     getBuf()->append(s_h2sUpgradeResponse, sizeof(s_h2sUpgradeResponse) - 1);
@@ -1207,7 +1205,7 @@ int H2Connection::processPingFrame(H2FrameHeader *pHeader)
     msec = (CurTime.tv_sec - m_timevalPing.tv_sec) * 1000;
     msec += (CurTime.tv_usec - m_timevalPing.tv_usec) / 1000;
     LS_DBG_H(getLogSession(), "Received PING, Round trip "
-             "times=%d milli-seconds", msec);
+             "times=%ld milli-seconds", msec);
     m_timevalPing.tv_sec = 0;
     return 0;
 }
