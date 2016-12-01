@@ -420,9 +420,9 @@ void plainconf::logToMem(char errorLevel, const char *format, ...)
     else
     {
         if (errorLevel == LOG_LEVEL_ERR)
-            LS_ERROR(buf + 1);
+            LS_ERROR("%s", buf + 1);
         else
-            LS_INFO(buf + 1);
+            LS_INFO("%s", buf + 1);
     }
 }
 
@@ -434,11 +434,11 @@ static int for_each_fn(void *s)
     switch (*p)
     {
     case LOG_LEVEL_ERR:
-        LS_ERROR(p + 1);
+        LS_ERROR("%s", p + 1);
         break;
 
     case LOG_LEVEL_INFO:
-        LS_INFO(p + 1);
+        LS_INFO("%s", p + 1);
         break;
 
     default:

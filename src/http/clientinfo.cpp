@@ -176,14 +176,14 @@ int ClientInfo::checkAccess()
                 LS_NOTICE("[%s] is over per client soft connection limit: %d for %d seconds,"
                           " close connection!",
                           getAddrString(), iSoftLimit,
-                          DateTime::s_curTime - getOverLimitTime());
+                          (int)(DateTime::s_curTime - getOverLimitTime()));
                 setOverLimitTime(DateTime::s_curTime);
                 setAccess(AC_BLOCK);
                 return 1;
             }
             else
             {
-                LS_DBG_L("[%s] %d connections established, limit: %d.",
+                LS_DBG_L("[%s] %zd connections established, limit: %d.",
                          getAddrString(), getConns(), iSoftLimit);
             }
         }

@@ -167,12 +167,15 @@ public:
                     && (m_header.m_msCreated < iMsecLast)));
     }
 
+    void setNeedDelay(int v) {   m_needDelay = v;    }
+    int  getNeedDelay() {   return m_needDelay;    }
 
 
 private:
     long        m_lastAccess;
     int         m_iHits;
     int         m_iMaxStale;
+    int         m_needDelay; //delay serving if have cache, in URI_MAP instead of recv req header */
     CacheHash   m_hashKey;
 
     off_t       m_startOffset;
@@ -182,7 +185,6 @@ private:
 
     AutoStr     m_sTag;
     DLinkQueue *m_pWaitQue;
-
     LS_NO_COPY_ASSIGN(CacheEntry);
 };
 

@@ -143,7 +143,7 @@ void *WorkCrew::getAndProcessJob()
     if ((ret = m_pProcess(item)) != NULL)
     {
         LS_DBG_H("WorkCrew::getAndProcessJob(), Job Failed,"
-                 " returned: %d", ret);
+                 " returned: %ld", (long)ret);
         return ret;
     }
     LS_DBG_H("WorkCrew::getAndProcessJob(), Job Completed.");

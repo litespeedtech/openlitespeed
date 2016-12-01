@@ -1282,7 +1282,8 @@ int HttpVHost::configAwstats(const char *vhDomain, int vhAliasesLen,
             "AWStats installation") == -1)
     {
         LS_ERROR(&currentCtx, "Cannot find AWStats installation at [%s],"
-                 " AWStats add-on is disabled!");
+                 " AWStats add-on is disabled!",
+                 "$SERVER_ROOT/add-ons/awstats/");
         return LS_FAIL;
     }
 
@@ -1291,7 +1292,8 @@ int HttpVHost::configAwstats(const char *vhDomain, int vhAliasesLen,
             "AWStats icon directory") == -1)
     {
         LS_ERROR(&currentCtx, "Cannot find AWStats icon directory at [%s],"
-                 " AWStats add-on is disabled!");
+                 " AWStats add-on is disabled!",
+                 "$SERVER_ROOT/add-ons/awstats/wwwroot/icon/");
         return LS_FAIL;
     }
 
@@ -2303,7 +2305,7 @@ void HttpVHost::configVHChrootMode(const XmlNode *pNode)
                         getVhRoot()->len()) != 0)
             {
                 LS_ERROR(ConfigCtx::getCurConfigCtx(),
-                         "Chroot path % must be inside virtual host root %s",
+                         "Chroot path %s must be inside virtual host root %s",
                          p1, getVhRoot()->c_str());
                 val = 0;
             }

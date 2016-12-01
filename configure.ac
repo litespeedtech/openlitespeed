@@ -6,7 +6,7 @@ m4_include(ax_check_liblua.m4)
 
 dnl Process this file with autoconf to produce a configure script.
 AC_PREREQ([2.69])
-AC_INIT([openlitespeed],[1.4.23],[info@litespeedtech.com],[openlitespeed],[http://www.litespeedtech.com/])
+AC_INIT([openlitespeed],[1.4.24],[info@litespeedtech.com],[openlitespeed],[http://www.litespeedtech.com/])
 AM_INIT_AUTOMAKE([1.0 foreign no-define ])
 
 AM_CONFIG_HEADER(src/config.h:src/config.h.in)
@@ -142,8 +142,9 @@ AC_ARG_ENABLE([profiling],
 dnl liblua check
 AC_MSG_CHECKING(whether to compile mod_lua module)
 
+
 AC_ARG_WITH(lua,
-[  --with-lua[[=DIR]]       use liblua (located in directory DIR, if supplied) for compiling mod_lua module.  [[default=no]]],
+[  --with-lua[[=DIR]]        use liblua (located in directory DIR, if supplied) for compiling mod_lua module.  [[default=no]]],
 [
     if test $withval = no
     then
@@ -171,21 +172,53 @@ fi
 AM_CONDITIONAL([HAVE_LIBLUA], [test x$need_lua = xyes])
 echo "Lua inlcude = $LUA_INCLUDES, need_lua = $need_lua"    
                 
-CFLAGS="$CFLAGS -fstack-protector $(getconf LFS_CFLAGS) "
-CXXFLAGS="$CXXFLAGS -fstack-protector $(getconf LFS_CFLAGS) "
+CFLAGS="$CFLAGS -D_GLIBCXX_USE_CXX11_ABI=0 -fstack-protector $(getconf LFS_CFLAGS) "
+CXXFLAGS="$CXXFLAGS -D_GLIBCXX_USE_CXX11_ABI=0 -fstack-protector $(getconf LFS_CFLAGS) "
 
-if test "$OSNAME" = Darwin ; then
-    usedynossl=yes
-    CPPFLAGS="$CPPFLAGS -I../../src -I../../include -I/usr/local/include -I/usr/local -I/usr -I/usr/pkg "
+## ##Set option --with-bssl
+AC_ARG_WITH(bssl,
+            [  --with-bssl[[=DIR]]       Set to use BoringSSL instead of OpenSSL [[default=no]]],
+            [
+                if test $withval = no
+                then
+                    OPENLSWS_BSSL=no
+                elif test $withval = yes
+                then
+                    OPENLSWS_BSSL=yes
+                else
+                    OPENLSWS_BSSL="$withval"
+                fi
+            ],[OPENLSWS_BSSL=no])
+AC_SUBST([OPENLSWS_BSSL])
+
+if test "$OPENLSWS_BSSL" = no ; then
+    if test "$OSNAME" = Darwin ; then
+        usedynossl=yes
+        CPPFLAGS="$CPPFLAGS -I../../src -I../../include -I/usr/local/include -I/usr/local -I/usr -I/usr/pkg "
+    else
+        usedynossl=no
+        CPPFLAGS="$CPPFLAGS -I../../ssl/include -I../../src -I../../include -I/usr/local/include -I/usr/local -I/usr -I/usr/pkg "
+        echo "Will build latest stable openssl libraries for you, this may take several minutes ..."
+        OSSL=`. $srcdir/dlossl.sh`
+        echo "Finsihed building openssl."
+    fi
+    echo "Openssl: use_dyn_ossl = $usedynossl"
 else
+    #### Not provide location, use default location, will not copy files
     usedynossl=no
-    CPPFLAGS="$CPPFLAGS -I../../openssl/include -I../../src -I../../include -I/usr/local/include -I/usr/local -I/usr -I/usr/pkg "
-    echo "Will build latest stable openssl libraries for you, this may take several minutes ..."
-    OSSL=`. $srcdir/dlossl.sh`
-    echo "Finsihed building openssl."
+    AC_DEFINE_UNQUOTED([USE_BORINGSSL], [1], [Defined to use BoringSSL instead of OpenSSL])
+    CPPFLAGS="$CPPFLAGS -I../../ssl/include -I../../src -I../../include -I/usr/local/include -I/usr/local -I/usr -I/usr/pkg "
+    if test "$OPENLSWS_BSSL" = yes ; then
+        echo "Will use exist BoringSSL files in $srcdir/ssl/."
+    else
+        OSSL=`. $srcdir/dlossl.sh use_bssl "$OPENLSWS_BSSL"`
+        echo "BoringSSL files copied to $srcdir/ssl/ from $OPENLSWS_BSSL."
+    fi
+    OPENLSWS_BSSL=yes
 fi
 AM_CONDITIONAL([USE_DYN_OSSL], [test x$usedynossl = xyes])
-echo "Openssl: use_dyn_ossl = $usedynossl"
+AM_CONDITIONAL([USE_BSSL], [test x$OPENLSWS_BSSL = xyes])
+
 
 AC_ARG_ENABLE([rpath],
               [AC_HELP_STRING([--disable-rpath], 
@@ -281,10 +314,13 @@ if test "$OSNAME" = Darwin ; then
     RT_LIB_OPTION=
 fi
 
-LDFLAGS="$LDFLAGS $PCRE_LDFLAGS"
+LDFLAGS="$LDFLAGS $PCRE_LDFLAGS -D_GLIBCXX_USE_CXX11_ABI=0"
 echo "Final LDFLAGS='$LDFLAGS'"
 AC_SUBST([DL_LIB_OPTION])
 AC_SUBST([RT_LIB_OPTION])
+
+MODULE_VERSION_INFO=`. $srcdir/modverinfo.sh`
+AC_DEFINE_UNQUOTED([LS_MODULE_VERSION_INFO], ["$MODULE_VERSION_INFO"], [The pre-defined modules version info])
 
 AC_CONFIG_FILES(Makefile
                 src/Makefile
@@ -310,6 +346,6 @@ if test x$need_lua = xyes ; then
 else
     echo "Will NOT compile and build mod_lua module."
 fi
-                
+
 AC_OUTPUT
 

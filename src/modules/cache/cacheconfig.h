@@ -39,6 +39,8 @@
 #define CACHE_STALE_AGE_SET                 (1<<12)
 #define CACHE_MAX_OBJ_SIZE                  (1<<13)
 #define CACHE_NO_VARY                       (1<<14)
+#define CACHE_ADD_ETAG                      (1<<15)
+
 
 class DirHashCacheStore;
 
@@ -76,6 +78,8 @@ public:
     void apply(const CacheConfig *pParent);
     void setMaxObjSize(long objSize)  {   m_lMaxObjSize = objSize;  }
     long getMaxObjSize() const      {   return m_lMaxObjSize;   }
+    void setAddEtagType(int v)      {   m_iAddEtag = v;     }
+    int getAddEtagType() const      { return m_iAddEtag;    }
     int  isLitemagReady();
     void setLitemageDefault();
 
@@ -121,6 +125,8 @@ private:
     int8_t  m_iLevele;  //SERVER, VHOST or context
     int8_t  m_iOnlyUseOwnUrlExclude;
     int8_t  m_iOwnStore;
+    int8_t  m_iAddEtag;  //0, no, 1: add size-mtime; 2: xxhash64
+
 
     Aho        *m_pUrlExclude; //server and Vhost level can have it
     Aho        *m_pParentUrlExclude;

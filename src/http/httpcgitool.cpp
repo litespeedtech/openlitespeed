@@ -137,7 +137,7 @@ int HttpCgiTool::processHeaderLine(HttpExtConnector *pExtConn,
             str.append(pLineBegin, pLineEnd - pLineBegin);
             str.append(pCharset->c_str(), pCharset->len());
             str.append("\r\n", 2);
-            buf.parseAdd(str.c_str(), str.len(), LSI_HEADEROP_ADD);
+            buf.parseAdd(str.c_str(), str.len());
         }
         return 0;
     case HttpRespHeaders::H_CONTENT_ENCODING:
@@ -525,8 +525,30 @@ int HttpCgiTool::buildCommonEnv(IEnv *pEnv, HttpSession *pSession)
         }
         pEnv->add("PATH_INFO", 9, pReq->getPathInfo(), n);
         ++count;
+
+        if (pReq->getRedirects() > 0)
+        {
+            pEnv->add("ORIG_PATH_INFO", 14, pReq->getPathInfo(), n);
+            ++count;
+        }
     }
 
+    if (pReq->getRedirects() > 0)
+    {
+        pTemp = pReq->getRedirectURL(n);
+        if (pTemp && (n > 0))
+        {
+            pEnv->add("REDIRECT_URL", 12, pTemp, n);
+            ++count;
+        }
+        pTemp = pReq->getRedirectQS(n);
+        if (pTemp && (n > 0))
+        {
+            pEnv->add("REDIRECT_QUERY_STRING", 21, pTemp, n);
+            ++count;
+        }
+    }
+    
     //add geo IP env here
     if (pReq->isGeoIpOn())
     {

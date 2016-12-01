@@ -30,7 +30,7 @@
 extern lsi_module_t MNAME;
 #define DEF_SCANNER_PATH        "/usr/bin/clamdscan"
 #define DEF_SCANNER_PREFIX      "Infected files:"
-
+#define MODULE_VERSION_INFO     "1.1"
 
 struct scanner_param_st
 {
@@ -248,7 +248,7 @@ static lsi_serverhook_t server_hooks[] =
 lsi_confparser_t testparam_dealConfig = { modinspector_parseConfig, modinspector_freeConfig, paramArray };
 lsi_module_t MNAME =
 {
-    LSI_MODULE_SIGNATURE, _init, NULL, &testparam_dealConfig, "v1.0", server_hooks, { 0 }
+    LSI_MODULE_SIGNATURE, _init, NULL, &testparam_dealConfig, MODULE_VERSION_INFO, server_hooks, { 0 }
 };
 
 

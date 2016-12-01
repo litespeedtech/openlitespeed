@@ -678,9 +678,9 @@ int HttpSession::readReqBody()
                 }
             }
 
-            LS_DBG_L(getLogSession(), "Read %ld/%ld bytes of request body!",
-                     m_request.getContentFinished(),
-                     m_request.getContentLength());
+            LS_DBG_L(getLogSession(), "Read %lld/%lld bytes of request body!",
+                     (long long)m_request.getContentFinished(),
+                     (long long)m_request.getContentLength());
 
             if (m_pHandler && !getFlag(HSF_REQ_WAIT_FULL_BODY))
             {
@@ -695,8 +695,8 @@ int HttpSession::readReqBody()
             return getModuleDenyCode(LSI_HKPT_RECV_REQ_BODY);
     }
 
-    LS_DBG_L(getLogSession(), "Finished request body %ld bytes!",
-             m_request.getContentFinished());
+    LS_DBG_L(getLogSession(), "Finished request body %lld bytes!",
+             (long long)m_request.getContentFinished());
     if (m_pChunkIS)
     {
         if (m_pChunkIS->getBufSize() > 0)
@@ -1180,7 +1180,8 @@ int HttpSession::processNewReqBody()
     {
         if (l > HttpServerConfig::getInstance().getMaxReqBodyLen())
         {
-            LS_NOTICE(getLogSession(), "Request body is too big! %ld", l);
+            LS_NOTICE(getLogSession(), "Request body is too big! %lld",
+                      (long long)l);
             getStream()->wantRead(0);
             return SC_413;
         }
@@ -1342,6 +1343,7 @@ int HttpSession::processVHostRewrite()
                 return 0;
             }
         }
+        addEnv("HAVE_REWITE", 11, "1", 1);
     }
     m_processState = HSPS_CONTEXT_MAP;
     return ret;
@@ -1652,11 +1654,8 @@ int HttpSession::handlerProcess(const HttpHandler *pHandler)
 
 
     setState(HSS_PROCESSING);
-    //PORT_FIXME: turn off for now
-    //pTC->incReqProcessed( m_pHandler->getType() == HandlerType::HT_DYNAMIC );
-
+    pTC->incReqProcessed( dyn );
     ret = m_pHandler->process(this, m_request.getHttpHandler());
-
 
     if (ret == 1)
     {
@@ -2039,16 +2038,10 @@ int HttpSession::onWriteEx()
     switch (getState())
     {
     case HSS_THROTTLING:
-        if (getClientInfo()->getThrottleCtrl().allowProcess(
-                m_pHandler->getType()))
-        {
-            setState(HSS_PROCESSING);
-            getClientInfo()->getThrottleCtrl().incReqProcessed(
-                m_pHandler->getType());
-            ret = m_pHandler->process(this, m_request.getHttpHandler());
-            if ((ret) && (getStream()->getState() < HIOS_SHUTDOWN))
-                httpError(ret);
-        }
+        ret = handlerProcess(m_request.getHttpHandler());
+        if ((ret) && (getStream()->getState() < HIOS_SHUTDOWN))
+            httpError(ret);
+
         break;
     case HSS_WRITING:
         doWrite();
@@ -2423,9 +2416,9 @@ int HttpSession::detectConnectionTimeout(int delta)
                 m_pHandler->dump();
             if (getState() == HSS_READING_BODY)
             {
-                LS_INFO(getLogSession(), "Request body size: %d, received: %d.",
-                        m_request.getContentLength(),
-                        m_request.getContentFinished());
+                LS_INFO(getLogSession(), "Request body size: %lld, received: %lld.",
+                        (long long)m_request.getContentLength(),
+                        (long long)m_request.getContentFinished());
             }
         }
         if ((getState() == HSS_PROCESSING) && m_response.getBodySent() == 0)
@@ -2473,6 +2466,8 @@ int HttpSession::detectTimeout()
 
 int HttpSession::onTimerEx()
 {
+    ThrottleControl *pTC = &getClientInfo()->getThrottleCtrl();
+    pTC->resetQuotas();
     if (getState() ==  HSS_THROTTLING)
         onWriteEx();
     if (detectTimeout())
@@ -2578,7 +2573,8 @@ int HttpSession::setupRespCache()
                 m_response.getContentLen()))
         {
             LS_ERROR(getLogSession(), "Failed to initialize VMemBuf, "
-                     "response body len: %ld.", m_response.getContentLen());
+                     "response body len: %lld.", 
+                     (long long)m_response.getContentLen());
             return LS_FAIL;
         }
         m_lDynBodySent = 0;
@@ -3551,7 +3547,7 @@ int HttpSession::writeRespBodyBlockInternal(SendFileInfo *pData,
     }
     else
         len = writeRespBodyDirect(pBuf, written);
-    LS_DBG_M(getLogSession(), "%s return %ld.\n",
+    LS_DBG_M(getLogSession(), "%s return %d.\n",
              getGzipBuf() ? "appendDynBodyEx()" : "writeRespBodyDirect()",
              len);
 
@@ -3625,8 +3621,8 @@ int HttpSession::sendStaticFileAio(SendFileInfo *pData)
             else if (!getStream()->isSpdy() && len < written)
             {
                 LS_DBG_M(getLogSession(),
-                         "Socket still busy, %d bytes to write",
-                         written - len);
+                         "Socket still busy, %lld bytes to write",
+                         (long long)(written - len));
                 return 1;
             }
         }
@@ -3666,7 +3662,7 @@ int HttpSession::sendStaticFileEx(SendFileInfo *pData)
         && getStream()->getFlag(HIO_FLAG_SENDFILE))
     {
         len = writeRespBodySendFile(fd, pData->getCurPos(), pData->getRemain());
-        LS_DBG_M(getLogSession(), "writeRespBodySendFile() returned %lld.", len);
+        LS_DBG_M(getLogSession(), "writeRespBodySendFile() returned %lld.", (long long)len);
         if (len > 0)
         {
             if (iModeSF == 2 && m_pChunkOS == NULL)
@@ -3684,7 +3680,8 @@ int HttpSession::sendStaticFileEx(SendFileInfo *pData)
     if (HttpServerConfig::getInstance().getUseSendfile() == 2)
     {
         len = sendStaticFileAio(pData);
-        LS_DBG_M(getLogSession(), "sendStaticFileAio() returned %ld.", len);
+        LS_DBG_M(getLogSession(), "sendStaticFileAio() returned %lld.",
+                 (long long)len);
         if (len)
             return len;
     }

@@ -96,7 +96,7 @@ int HttpResp::addCookie(const char *pName, const char *pVal,
                         const char *path, const char *domain, int expires,
                         int secure, int httponly)
 {
-    char achBuf[8192] = {0};
+    char achBuf[8192] = "";
     char *p = achBuf;
 
     if (!pName || !pVal || !domain)
@@ -112,15 +112,16 @@ int HttpResp::addCookie(const char *pName, const char *pVal,
         p += 10;
         long t = DateTime::s_curTime + expires * 60;
         DateTime::getRFCTime(t, p);
+        p += RFC_1123_TIME_LEN;
     }
     if (secure)
     {
-        memcpy(achBuf, "; secure", 8);
+        memcpy(p, "; secure", 8);
         p += 8;
     }
     if (httponly)
     {
-        memcpy(achBuf, "; HttpOnly", 10);
+        memcpy(p, "; HttpOnly", 10);
         p += 10;
     }
     m_respHeaders.add(HttpRespHeaders::H_SET_COOKIE, achBuf, p - achBuf,

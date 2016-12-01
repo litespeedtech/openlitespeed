@@ -16,7 +16,7 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "ntwkiolink.h"
-
+#include <config.h>
 #include <ls.h>
 #include <lsdef.h>
 #include <edio/multiplexer.h>
@@ -341,7 +341,7 @@ int NtwkIOLink::setLink(HttpListener *pListener,  int fd,
 
     }
     pInfo->incConn();
-    LS_DBG_L(this, "concurrent conn: %d", pInfo->getConns());
+    LS_DBG_L(this, "concurrent conn: %zd", pInfo->getConns());
     return 0;
 }
 
@@ -790,7 +790,7 @@ int NtwkIOLink::close_(NtwkIOLink *pThis)
             ConnLimitCtrl::getInstance().decConn();
             pThis->m_pClientInfo->decConn();
             pThis->m_iPeerShutdown |= IO_COUNTED;
-            LS_DBG_L(pThis, "Available Connections: %d, concurrent conn: %d.",
+            LS_DBG_L(pThis, "Available Connections: %d, concurrent conn: %zd.",
                      ConnLimitCtrl::getInstance().availConn(),
                      pThis->m_pClientInfo->getConns());
         }
@@ -823,7 +823,7 @@ void NtwkIOLink::closeSocket()
     {
         ctrl.decConn();
         m_pClientInfo->decConn();
-        LS_DBG_L(this, "Available Connections: %d, concurrent conn: %d",
+        LS_DBG_L(this, "Available Connections: %d, concurrent conn: %zd",
                  ctrl.availConn(), m_pClientInfo->getConns());
     }
 
@@ -1505,19 +1505,28 @@ void NtwkIOLink::handle_acceptSSL_EIO_Err()
 {
     //The buf is null terminated string
     char buf[8192 + 1] = {0};
-    unsigned int offset = 0, length = 0;
-    offset = m_ssl.getSSL()->packet_length;
-    if (offset > 8192)
-        offset = 8192;
-    memcpy(buf, (char *)m_ssl.getSSL()->packet, offset);
-    length = offset;
+    unsigned int length = 0;
+#ifndef USE_BORINGSSL
+    length = m_ssl.getSSL()->packet_length;
+    if (length > 8192)
+        length = 8192;
+    memcpy(buf, (char *)m_ssl.getSSL()->packet, length);
+#else
+    //FIXME: new bssl changed, below code not works
+    SSL3_BUFFER &read_buffer = m_ssl.getSSL()->s3->read_buffer;
+    length = read_buffer.len;
+    if (length > 8192)
+        length = 8192;
+    memcpy(buf, (char *)read_buffer.buf + read_buffer.offset, length);
+#endif
 
-    //Normally it is 11 bytes, checking with 8192, just to avoid buffer overflow
-    if (offset < 8192)
+    //Normally it is 5 bytes in bssl, 11 bytes in ossl, checking with 8192,
+    //just to avoid buffer overflow
+    if (length < 8192)
     {
-        int ret = ::read(getfd(), buf + offset, 8192 - offset);
-        if (ret > 0)
-            length += ret;
+     int ret = ::read(getfd(), buf + length, 8192 - length);
+     if (ret > 0)
+         length += ret;
     }
 
     int uri_len = 0, host_len = 0;

@@ -37,7 +37,6 @@
 #include <sys/time.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include <config.h>
 #include <limits.h>
 
 int     SslContext::s_iEnableMultiCerts = 0;
@@ -298,6 +297,12 @@ void SslContext::updateProtocol(int method)
     if (!(method & SSL_TLSv12))
         setOptions(SSL_OP_NO_TLSv1_2);
 #endif
+#ifdef SSL_OP_NO_TLSv1_3
+    if (!(method & SSL_TLSv13))
+        setOptions(SSL_OP_NO_TLSv1_3);
+#endif
+    
+    
 }
 
 
@@ -354,7 +359,9 @@ static void SslConnection_ssl_info_cb(const SSL *pSSL, int where, int ret)
     if ((where & SSL_CB_HANDSHAKE_START) && pConnection->getFlag() == 1)
     {
         close(SSL_get_fd(pSSL));
+#ifndef USE_BORINGSSL
         ((SSL *)pSSL)->error_code = SSL_R_SSL_HANDSHAKE_FAILURE;
+#endif
         return ;
     }
 
@@ -418,7 +425,9 @@ SslContext::SslContext(int iMethod)
     , m_iRenegProtect(1)
     , m_iEnableSpdy(0)
     , m_iKeyLen(1024)
+#ifndef USE_BORINGSSL
     , m_pStapling(NULL)
+#endif
 {
 }
 
@@ -437,8 +446,10 @@ void SslContext::release()
         m_pCtx = NULL;
         SSL_CTX_free(pCtx);
     }
+#ifndef USE_BORINGSSL
     if (m_pStapling)
         delete m_pStapling;
+#endif
 }
 
 
@@ -781,7 +792,8 @@ int SslContext::setCipherList(const char *pList)
         //snprintf( cipher, 4095, "RC4:%s", pList );
         //strcpy( cipher, "ALL:HIGH:!aNULL:!SSLV2:!eNULL" );
 #if OPENSSL_VERSION_NUMBER >= 0x10001000L
-        strcpy(cipher, "ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES128-GCM-SHA256:"
+        strcpy(cipher, "X25519_AES128-GCM-SHA256:"
+               "AES256-GCM-SHA384:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES128-GCM-SHA256:"
                "ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES256-GCM-SHA384:"
                "DHE-RSA-AES128-GCM-SHA256:DHE-DSS-AES128-GCM-SHA256:"
                "kEDH+AESGCM:ECDHE-RSA-AES128-SHA256:"
@@ -791,12 +803,21 @@ int SslContext::setCipherList(const char *pList)
                "ECDHE-ECDSA-AES256-SHA:DHE-RSA-AES128-SHA256:"
                "DHE-RSA-AES128-SHA:DHE-DSS-AES128-SHA256:"
                "DHE-RSA-AES256-SHA256:DHE-DSS-AES256-SHA:"
-               "DHE-RSA-AES256-SHA:AES128-GCM-SHA256:AES256-GCM-SHA384:"
+               "DHE-RSA-AES256-SHA:"
                "AES128-SHA256:AES256-SHA256:AES128-SHA:AES256-SHA:AES:"
                "CAMELLIA:DES-CBC3-SHA:!aNULL:!eNULL:!EXPORT:!DES:!RC4:"
                "!MD5:!PSK:!aECDH:!EDH-DSS-DES-CBC3-SHA:"
                "!EDH-RSA-DES-CBC3-SHA:!KRB5-DES-CBC3-SHA"
               );
+//FIXME: TLS1.3 version?
+// #if OPENSSL_VERSION_NUMBER >= 0x10002000L
+//         strcat(cipher, "AES-256-CTR-HMAC-SHA256:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-RSA-AES128-GCM-SHA256:CHACHA20-POLY1305-SHA256:X25519-AES128-GCM-SHA256:"
+//                 "AES128-SHA256:AES256-SHA256");
+//         
+//         SSL_CTX_set_max_version(m_pCtx, TLS1_3_VERSION);//  
+//         
+//         
+// #endif
 #else
         strcpy(cipher,
                "RC4:HIGH:!aNULL:!MD5:!SSLv2:!eNULL:!EDH:!LOW:!EXPORT56:!EXPORT40");
@@ -825,6 +846,7 @@ int SslContext::setCipherList(const char *pList)
         }
     }
 
+    
     return SSL_CTX_set_cipher_list(m_pCtx, pList);
 }
 
@@ -1201,8 +1223,12 @@ int SslContext::enableSpdy(int level)
 
 static int sslCertificateStatus_cb(SSL *ssl, void *data)
 {
+#ifndef USE_BORINGSSL
     SslOcspStapling *pStapling = (SslOcspStapling *)data;
     return pStapling->callback(ssl);
+#else
+    return 0;
+#endif
 }
 
 
@@ -1420,6 +1446,7 @@ SslContext *SslContext::config(const XmlNode *pNode)
         configCRL(pNode, pSSL);
     }
 
+#ifndef USE_BORINGSSL
     if ((ConfigCtx::getCurConfigCtx()->getLongValue(pNode, "enableStapling", 0,
             1, 0))
         && (pCertFile != NULL))
@@ -1439,6 +1466,8 @@ SslContext *SslContext::config(const XmlNode *pNode)
                 LS_INFO(ConfigCtx::getCurConfigCtx(), "Enable OCSP Stapling successful!");
         }
     }
+#endif
+
     return pSSL;
 }
 
@@ -1446,6 +1475,7 @@ SslContext *SslContext::config(const XmlNode *pNode)
 int SslContext::configStapling(const XmlNode *pNode,
                                const char *pCAFile, char *pachCert)
 {
+#ifndef USE_BORINGSSL
     SslOcspStapling *pSslOcspStapling = new SslOcspStapling;
 
     if (pSslOcspStapling->config(pNode, m_pCtx, pCAFile, pachCert) == -1)
@@ -1457,7 +1487,7 @@ int SslContext::configStapling(const XmlNode *pNode,
 
     SSL_CTX_set_tlsext_status_cb(m_pCtx, sslCertificateStatus_cb);
     SSL_CTX_set_tlsext_status_arg(m_pCtx, m_pStapling);
-
+#endif
     return 0;
 }
 

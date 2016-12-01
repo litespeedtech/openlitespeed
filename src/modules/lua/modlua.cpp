@@ -24,6 +24,7 @@
 #include <unistd.h>
 #include <time.h>
 
+#define MODULE_VERSION_INFO     "1.1"
 
 #define     MNAME       mod_lua
 extern lsi_module_t MNAME;
@@ -279,7 +280,7 @@ lsi_module_t MNAME = { LSI_MODULE_SIGNATURE,
                        _init,
                        &lslua_mod_handler,
                        &lslua_mod_config,
-                       "v1.0",
+                       MODULE_VERSION_INFO,
                        serverHooks,
 {0}
                      };

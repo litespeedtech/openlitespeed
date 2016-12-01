@@ -677,6 +677,20 @@ public:
             return m_reqURLLen;
     }
 
+    const char *getRedirectURL(int &len)
+    {
+        ls_strpair_t &url = (m_iRedirects ? m_pUrls[m_iRedirects - 1] : m_curUrl);
+        len = ls_str_len(&(url.key));
+        return ls_str_cstr(&(url.key));
+    }
+
+    const char *getRedirectQS(int &len)
+    {
+        ls_strpair_t &url = (m_iRedirects ? m_pUrls[m_iRedirects - 1] : m_curUrl);
+        len = ls_str_len(&(url.val));
+        return ls_str_cstr(&(url.val));
+    }
+
     int isMatched() const
     {
         return m_iMatchedLen;

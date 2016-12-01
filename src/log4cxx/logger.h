@@ -55,6 +55,7 @@
 #define LS_LOG_ENABLED(level) log4cxx::Level::isEnabled( level )
 #define LS_LOG(level, ...) log4cxx::Logger::s_log( level, __VA_ARGS__);
 
+#define LS_LOGRAW(...) log4cxx::Logger::s_lograw( __VA_ARGS__);
 
 #define LS_DBG_IO( ... ) \
     do { \
@@ -325,19 +326,45 @@ public:
     {   LS_ERROR("Out of memory: %s", pSource); }
 
     static void s_log(int level, log4cxx::Logger *logger,
-                      const char *format, ...);
+                      const char *format, ...)
+#if __GNUC__
+        __attribute__((format(printf, 3, 4)))
+#endif
+        ;
 
     static void s_log(int level, log4cxx::ILog *pILog,
-                      const char *format, ...);
+                      const char *format, ...)
+#if __GNUC__
+        __attribute__((format(printf, 3, 4)))
+#endif
+        ;
 
     static void s_log(int level, LogSession *pLogSession,
-                      const char *format, ...);
+                      const char *format, ...)
+#if __GNUC__
+        __attribute__((format(printf, 3, 4)))
+#endif
+        ;
 
     static void s_log(int level, TmpLogId *pId,
-                      const char *format, ...);
+                      const char *format, ...)
+#if __GNUC__
+        __attribute__((format(printf, 3, 4)))
+#endif
+        ;
 
-    static void s_log(int level, const char *format, ...);
+    static void s_log(int level, const char *format, ...)
+#if __GNUC__
+        __attribute__((format(printf, 2, 3)))
+#endif
+        ;
 
+    static void s_lograw(const char *format, ...)
+#if __GNUC__
+        __attribute__((format(printf, 1, 2)))
+#endif
+        ;
+        
     static void s_vlog(int level, LogSession *pLogSession,
                        const char *format, va_list args, int no_linefeed);
 

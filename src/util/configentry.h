@@ -63,11 +63,11 @@ private:
 
 private:
     AutoStr     m_name;
-    short       m_iValueType;
-    short       m_iOptinal;
-    long long   m_iDefault;
-    long long   m_iMin;
-    long long   m_iMax;
+    //short       m_iValueType;
+    //short       m_iOptinal;
+    //long long   m_iDefault;
+    //long long   m_iMin;
+    //long long   m_iMax;
     AutoStr     m_regexValidate;
 
 

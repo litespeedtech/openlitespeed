@@ -15,6 +15,11 @@
 *    You should have received a copy of the GNU General Public License       *
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
+//Must #include <config.h> before check #ifndef USE_BORINGSSL
+#include <config.h>
+
+#ifndef USE_BORINGSSL
+
 #include <sslpp/sslocspstapling.h>
 #include <sslpp/sslerror.h>
 
@@ -559,3 +564,6 @@ int SslOcspStapling::config(const XmlNode *pNode, SSL_CTX *pSSL,
 
     return 0;
 }
+
+
+#endif // USE_BORINGSSL

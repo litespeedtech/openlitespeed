@@ -34,10 +34,12 @@ class DirHashCacheStore : public CacheStore
     int isChanged(CacheEntry *pEntry, const char *pPath, int len);
     int isEntryExists(CacheHash &hash, const char *pSuffix,
                       struct stat *pStat);
-    int isEntryUpdating(CacheHash &hash, int isPrivate);
-    int isEntryStale(CacheHash &hash, int isPrivate);
-    int isEntryExist(CacheHash &hash, const char *pSuffix,
+    int isEntryUpdating(const CacheHash &hash, int isPrivate);
+    int isEntryStale(const CacheHash &hash, int isPrivate);
+    int isEntryExist(const CacheHash &hash, const char *pSuffix,
                      struct stat *pStat, int isPrivate);
+    
+    int processStale(CacheEntry *pEntry, char *pBuf, int pathLen);
 
 protected:
     int renameDiskEntry(CacheEntry *pEntry, char *pFrom,

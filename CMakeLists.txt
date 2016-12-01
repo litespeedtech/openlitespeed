@@ -10,8 +10,11 @@ set(openlitespeed_VERSION
   ${FOOBAR_MAJOR_VERSION}.${FOOBAR_MINOR_VERSION}.${FOOBAR_PATCH_VERSION})
 
 SET(CMAKE_INCLUDE_CURRENT_DIR ON)
-include_directories( BEFORE openssl/include )
+include_directories( BEFORE ssl/include )
 include_directories( include )
+
+SET (CMAKE_C_COMPILER         "/usr/bin/clang")
+SET (CMAKE_CXX_COMPILER       "/usr/bin/clang++")
 
 set(MY_CMAKE_WARNING_FLAG  " -Wall -Wextra -Wno-unused-parameter")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}  ${MY_CMAKE_WARNING_FLAG}")

@@ -67,6 +67,7 @@
 #include <sys/wait.h>
 #include <time.h>
 #include <unistd.h>
+#include <config.h>
 
 #define GlobalServerSessionHooks (LsiApiHooks::getServerSessionHooks())
 
@@ -693,6 +694,12 @@ int LshttpdMain::testRunningServer()
 }
 
 
+void LshttpdMain::printVersion()
+{
+    printf("%s\n\tmodule versions:\n%s\n",
+           HttpServerVersion::getVersion(), LS_MODULE_VERSION_INFO);
+}
+
 void LshttpdMain::parseOpt(int argc, char *argv[])
 {
     const char *opts = "cdnv";
@@ -715,7 +722,7 @@ void LshttpdMain::parseOpt(int argc, char *argv[])
             m_noDaemon = 1;
             break;
         case 'v':
-            printf("%s\n", HttpServerVersion::getVersion());
+            printVersion();
             exit(0);
             break;
         case '?':

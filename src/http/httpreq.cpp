@@ -895,9 +895,9 @@ int HttpReq::processNewReqData(const struct sockaddr *pAddr)
         const char *pQS = getQueryString();
         int len = getQueryStringLen();
         LS_DBG_L(getLogSession(), "New request: \n\tMethod=[%s], URI=[%s],\n"
-                 "\tQueryString=[%.*s]\n\tContent Length=%d\n",
+                 "\tQueryString=[%.*s]\n\tContent Length=%lld\n",
                  HttpMethod::get(getMethod()), getURI(), len, pQS,
-                 getContentLength());
+                 (long long)getContentLength());
     }
     //access control of virtual host
     return 0;
@@ -1412,7 +1412,7 @@ int HttpReq::setMimeBySuffix(const char *pSuffix)
         {
             LS_ERROR(getLogSession(), "MIME type [%s] for suffix '.%s' does not "
                      "allow serving as static file, access denied!",
-                     m_pMimeType->getMIME(), pSuffix ? pSuffix : "");
+                     m_pMimeType->getMIME()->c_str(), pSuffix ? pSuffix : "");
             dumpHeader();
             return SC_403;
         }
@@ -2225,8 +2225,8 @@ void HttpReq::dumpHeader()
     if (pEnd < pBegin)
         pEnd = (char *)pBegin;
     *pEnd = 0;
-    LS_INFO(getLogSession(), "Content len: %d, Request line: \n%s",
-            m_lEntityLength, pBegin);
+    LS_INFO(getLogSession(), "Content len: %lld, Request line: \n%s",
+            (long long)m_lEntityLength, pBegin);
     if (m_iRedirects > 0)
     {
         LS_INFO(getLogSession(), "Redirect: #%d, URL: %s",
@@ -2687,7 +2687,7 @@ cookieval_t *HttpReq::setCookie(const char *pName, int nameLen,
         32768)
     {
         LS_DBG_L(getLogSession(),
-                 "Cookie size [%s] is too large, stop updating cookie from Set-Cookie.",
+                 "Cookie size [%hd] is too large, stop updating cookie from Set-Cookie.",
                  m_commonHeaderLen[ HttpHeader::H_COOKIE ]);
         return NULL;
     }

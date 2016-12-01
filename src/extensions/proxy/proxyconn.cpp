@@ -591,8 +591,8 @@ int ProxyConn::processResp()
             }
 
             m_iRespBodySize = pHEC->getHttpSession()->getResp()->getContentLen();
-            LS_DBG_L(this, "Response body size of proxy reply is %d",
-                     m_iRespBodySize);
+            LS_DBG_L(this, "Response body size of proxy reply is %lld",
+                     (long long)m_iRespBodySize);
             if (m_iRespBodySize == LSI_RSP_BODY_SIZE_CHUNKED)
                 setupChunkIS();
             else if (!(respState & HEC_RESP_CONT_LEN))
@@ -841,14 +841,14 @@ void ProxyConn::onTimer()
             if (m_pChunkIS)
             {
                 LS_INFO(this, "Timeout, partial chunk encoded body received,"
-                        " received: %d, chunk len: %d, remain: %d!",
-                        m_iRespBodyRecv, m_pChunkIS->getChunkLen(),
+                        " received: %lld, chunk len: %d, remain: %d!",
+                        (long long)m_iRespBodyRecv, m_pChunkIS->getChunkLen(),
                         m_pChunkIS->getChunkRemain());
             }
             else
                 LS_INFO(this, "Timeout, partial response body received,"
-                        " body len: %d, received: %d!",
-                        m_iRespBodySize, m_iRespBodyRecv);
+                        " body len: %lld, received: %lld!",
+                        (long long)m_iRespBodySize, (long long)m_iRespBodyRecv);
             setState(ABORT);
             getConnector()->endResponse(0, 0);;
             return;
@@ -899,11 +899,12 @@ void ProxyConn::dump()
 {
     LS_INFO(this,
             "Proxy connection state: %d, watching event: %d, "
-            "Request header:%d, body:%d, sent:%d, "
+            "Request header:%d, body:%lld, sent:%lld, "
             "Response header: %d, total: %d bytes received in %ld seconds,"
             "Total processing time: %ld.",
             getState(), getEvents(), m_iReqHeaderSize,
-            m_iReqBodySize, m_iReqTotalSent, m_iRespHeaderRecv, m_iRespRecv,
+            (long long)m_iReqBodySize, (long long)m_iReqTotalSent, 
+            m_iRespHeaderRecv, m_iRespRecv,
             (m_lReqSentTime) ? time(NULL) - m_lReqSentTime : 0,
             time(NULL) - m_lReqBeginTime);
 //    if ( m_iRespHeaderRecv > 0 )

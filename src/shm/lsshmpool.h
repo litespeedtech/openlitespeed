@@ -179,6 +179,8 @@ public:
     LsShmOffset_t allocateNewHash(int initSize, int iMode, int iFlags);
     int mergeDeadPool(LsShmPoolMem* pPool);
 
+    static void setPid( int pid );
+
 private:
     ls_attr_inline LsShmPoolMem *getPool() const
     {   return (LsShmPoolMem *)offset2ptr(m_iOffset);   }

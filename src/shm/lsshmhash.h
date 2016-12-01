@@ -550,7 +550,7 @@ public:
     int stat(LsHashStat *pHashStat, for_each_fn2 fun, void *pData);
 
     // LRU stuff
-    LsHashLruInfo *getLru() const;
+    LsHashLruInfo *getLru();
 
     iteroffset getLruTop();    
     iteroffset getLruBottom();
@@ -559,6 +559,7 @@ public:
 
     int trim(time_t tmCutoff, LsShmHash::TrimCb cb, void *arg);
     int trimsize(int need, LsShmHash::TrimCb cb, void *arg);
+    int trimByCb(int maxCnt, LsShmHash::TrimCb func, void *arg);
     
     int check();
 
@@ -714,7 +715,7 @@ protected:
     uint8_t             m_dataExtraSpace;
     int8_t              m_iLockEnable;
     int8_t              m_iMode;        // mode 0=Num, 1=Ptr
-    uint8_t             m_iFlags;       // lru=0x01, tid=0x04, tid_slave=0x10
+    uint8_t             m_iFlags;       // lru=0x01, tid=0x02, tid_slave=0x04
     ls_shmlock_t       *m_pShmLock;     // local lock for Hash
     LsShmStatus_t       m_status;
     LsShmHashLruAddon  *m_pLruAddon;

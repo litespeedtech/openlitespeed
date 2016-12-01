@@ -133,8 +133,13 @@ am_openlitespeed_OBJECTS = prelinkedmods.$(OBJEXT) httpdtest.$(OBJEXT) \
 	worker.$(OBJEXT)
 openlitespeed_OBJECTS = $(am_openlitespeed_OBJECTS)
 am__DEPENDENCIES_1 =
-@USE_DYN_OSSL_FALSE@am__DEPENDENCIES_2 = ../openssl/libssl.a \
-@USE_DYN_OSSL_FALSE@	../openssl/libcrypto.a
+@USE_BSSL_FALSE@@USE_DYN_OSSL_FALSE@am__DEPENDENCIES_2 =  \
+@USE_BSSL_FALSE@@USE_DYN_OSSL_FALSE@	../ssl/libssl.a \
+@USE_BSSL_FALSE@@USE_DYN_OSSL_FALSE@	../ssl/libcrypto.a
+@USE_BSSL_TRUE@@USE_DYN_OSSL_FALSE@am__DEPENDENCIES_2 =  \
+@USE_BSSL_TRUE@@USE_DYN_OSSL_FALSE@	../ssl/libssl.a \
+@USE_BSSL_TRUE@@USE_DYN_OSSL_FALSE@	../ssl/libcrypto.a \
+@USE_BSSL_TRUE@@USE_DYN_OSSL_FALSE@	../ssl/libdecrepit.a
 @USE_DYN_OSSL_TRUE@am__DEPENDENCIES_2 = $(am__DEPENDENCIES_1)
 openlitespeed_DEPENDENCIES = ./main/libmain.a ./http/libhttp.a \
 	./spdy/libspdy.a ./extensions/libextensions.a \
@@ -331,6 +336,7 @@ OBJEXT = @OBJEXT@
 OPENLSWS_ADMIN = @OPENLSWS_ADMIN@
 OPENLSWS_ADMINPORT = @OPENLSWS_ADMINPORT@
 OPENLSWS_ADMINSSL = @OPENLSWS_ADMINSSL@
+OPENLSWS_BSSL = @OPENLSWS_BSSL@
 OPENLSWS_DISABLE_RPATH = @OPENLSWS_DISABLE_RPATH@
 OPENLSWS_EMAIL = @OPENLSWS_EMAIL@
 OPENLSWS_GROUP = @OPENLSWS_GROUP@
@@ -413,7 +419,8 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-@USE_DYN_OSSL_FALSE@AM_OPENSSL_LIBS = ../openssl/libssl.a ../openssl/libcrypto.a 
+@USE_BSSL_FALSE@@USE_DYN_OSSL_FALSE@AM_OPENSSL_LIBS = ../ssl/libssl.a ../ssl/libcrypto.a 
+@USE_BSSL_TRUE@@USE_DYN_OSSL_FALSE@AM_OPENSSL_LIBS = ../ssl/libssl.a ../ssl/libcrypto.a ../ssl/libdecrepit.a
 @USE_DYN_OSSL_TRUE@AM_OPENSSL_LIBS = $(OPENSSL_LIBS)
 openlitespeed_SOURCES = modules/prelinkedmods.cpp httpdtest.cpp main.cpp \
    util/httpfetchdriver.cpp \
@@ -516,7 +523,7 @@ openlitespeed_LDADD = ./main/libmain.a ./http/libhttp.a ./spdy/libspdy.a \
         $(AM_OPENSSL_LIBS) $(EXPAT_LIBS)  $(PCRE_LIBS) -lGeoIP -lz -lexpat -lpthread $(DL_LIB_OPTION) $(RT_LIB_OPTION)
 
 AM_LDFLAGS = -L/usr/lib $(OPENSSL_LDFLAGS)
-AM_CPPFLAGS = -I$(top_srcdir)/openssl/include/ -I$(top_srcdir)/include -I$(top_srcdir)/src  -I$(top_srcdir) $(PCRE_CFLAGS) $(EXPAT_CFLAGS)
+AM_CPPFLAGS = -I$(top_srcdir)/ssl/include/ -I$(top_srcdir)/include -I$(top_srcdir)/src  -I$(top_srcdir) $(PCRE_CFLAGS) $(EXPAT_CFLAGS)
 SUBDIRS = socket http spdy sslpp ssi extensions log4cxx main edio lsiapi  modules shm
 
 # the library search path.

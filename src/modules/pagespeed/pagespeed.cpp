@@ -2418,7 +2418,7 @@ static int RecvReqHeaderCheck(lsi_param_t *rec)
     if (pMyData == NULL)
     {
         g_api->log(rec->session, LSI_LOG_DEBUG,
-                   "[%s]recv_req_header_check returned, pMyData == NULL.\n",
+                   "[%s]recv_req_header_check returned, can't alloc memory for pMyData.\n",
                    ModuleName);
         return LSI_OK;
     }
@@ -2654,6 +2654,6 @@ static int Init(lsi_module_t *pModule)
 lsi_confparser_t dealConfig = { ParseConfig, FreeConfig, paramArray };
 lsi_reqhdlr_t _handler = { PsHandlerProcess, NULL, NULL, NULL };
 lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, Init, &_handler, &dealConfig,
-                       "1.4.18.1-1.11.33.2", serverHooks, {0}
+                       MODULE_VERSION_INFO, serverHooks, {0}
                      };
 

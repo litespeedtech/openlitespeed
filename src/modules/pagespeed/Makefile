@@ -1,7 +1,7 @@
 CC=g++
 OS := $(shell uname)
 MACHINE_TYPE := $(shell uname -m)
-LFSFLAGS= $(shell getconf LFS_CFLAGS)
+LFSFLAGS= $(shell getconf LFS_CFLAGS) -D_GLIBCXX_USE_CXX11_ABI=0
 
 INCLUDE_ARCH=
 PSOLPATH=
@@ -55,7 +55,7 @@ TARGET  = modpagespeed.so
 all: $(TARGET)
 
 $(TARGET): $(OBJECTS)
-	$(CC)  $(OBJECTS) $(PSOLPATH)pagespeed_automatic.a $(INCLUDEFILES) -o $@  $(LDFLAGS)
+	$(CC) $(OBJECTS) $(PSOLPATH)pagespeed_automatic.a $(INCLUDEFILES) -o $@  $(LDFLAGS)
 
 .cpp.o:
 	$(CC)  $(INCLUDEFILES) $(CFLAGS)  $< -o $@

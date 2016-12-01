@@ -589,6 +589,12 @@ int ShmCacheManager::processPurgeCmdEx(
     int flag;
     const char *pValueEnd, *pNext;
     const char *pEnd = pValue + iValLen;
+    int stale = 0;
+    if (strncasecmp(pValue, "stale,", 6 ) == 0)
+    {
+        stale = 1;
+        pValue += 6;
+    }
     while (pValue < pEnd)
     {
         if (isspace(*pValue))
@@ -606,6 +612,25 @@ int ShmCacheManager::processPurgeCmdEx(
             --pValueEnd;
 
         flag = PDF_PURGE;
+
+        if ((pValueEnd - pValue > 2)
+            && (pValueEnd[-2] == '~')
+            && ((pValueEnd[-1] | 0x20) == 's'))
+        {
+            flag |= PDF_STALE;
+            pValueEnd -= 2;
+        }
+        else if ((pValueEnd - pValue > 6)
+            && (strncasecmp(pValueEnd - 6, "~stale", 6 ) == 0))
+        {
+            flag |= PDF_STALE;
+            pValueEnd -= 6;
+        }
+        else if (stale)
+        {
+            flag |= PDF_STALE;
+        }
+
         if (strncmp(pValue, "tag=", 4) == 0)
         {
             pValue += 4;
@@ -703,34 +728,75 @@ int ShmCacheManager::shouldPurge(const char *pKey, int keyLen,
 int ShmCacheManager::isPurgedByTag(
     const char *pTag, CacheEntry *pEntry, CacheKey *pKey, bool isCheckPrivate)
 {
-    if (isCheckPrivate)
+    ShmPrivatePurgeData privatePurge;
+    const char *pTagEnd;
+    bool isPrivate;
+    int ret;
+    int foundPrivate = -1;
+    const char * p = pTag;
+    const char * pEnd = pTag + pEntry->getHeader().m_tagLen;
+    while(p < pEnd)
     {
-        //assert( "NO_PRIVATE_PURGE_YET" == NULL );
-        ShmPrivatePurgeData privatePurge;
-        int ret = findSession(pKey, &privatePurge);
-        if (ret == 1)
+        const char * pComma = (const char *)memchr(p, ',', pEnd - p);
+        if (pComma == NULL)
+            pComma = pEnd;
+        while(p < pComma && isspace(*p))
+            ++p;
+        
+        /******
+         * COMMENTS:
+         * Both public and private pKey will have the IP save,
+         * but public pKey->m_ipLen is <0 (real length * -1)
+         * and private pKey->m_ipLen is >0 (real elngth)
+         */
+        isPrivate = (pKey->m_ipLen > 0);
+        //assert(isCheckPrivate == isPrivate);
+        
+        if (strncasecmp(p, "public:", 7) == 0)
         {
-            if (privatePurge.isFlushed(pEntry->getHeader().m_tmCreated,
-                                       pEntry->getHeader().m_msCreated))
-                return 1;
-            int tagId = findTagId(pTag, pEntry->getHeader().m_tagLen);
-            if (tagId == -1)
-                return 0;
-            if (privatePurge.shouldPurge(tagId,
-                                         pEntry->getHeader().m_tmCreated,
-                                         pEntry->getHeader().m_msCreated))
-                return 1;
+            p += 7;
+            isPrivate = 0;
+            while(p < pComma && isspace(*p))
+                ++p;
         }
-    }
-    else
-    {
-        if (shouldPurge(pTag, pEntry->getHeader().m_tagLen,
-                        pEntry->getHeader().m_tmCreated, pEntry->getHeader().m_msCreated))
-            return 1;
-
+        if (p < pComma)
+        {
+            pTagEnd = pComma;
+            while(isspace(pTagEnd[-1]))
+                --pTagEnd;
+            if (isPrivate)
+            { 
+                if (foundPrivate == -1)
+                    foundPrivate = findSession(pKey, &privatePurge);
+                if (foundPrivate == 1)
+                {
+                    if (privatePurge.isFlushed(pEntry->getHeader().m_tmCreated,
+                                       pEntry->getHeader().m_msCreated))
+                        return 1;
+                    int tagId = findTagId(pTag, pEntry->getHeader().m_tagLen);
+                    if (tagId != -1)
+                    {
+                        ret= privatePurge.shouldPurge(tagId,
+                                             pEntry->getHeader().m_tmCreated,
+                                             pEntry->getHeader().m_msCreated);
+                        if (ret)
+                            return ret;
+                    }
+                }
+            }
+            else
+            {
+                ret = shouldPurge(p, pTagEnd - p, pEntry->getHeader().m_tmCreated,
+                                  pEntry->getHeader().m_msCreated);
+                if (ret)
+                    return ret;
+            }
+        }
+        p = pComma + 1;
     }
     return 0;
 }
+
 
 
 int ShmCacheManager::isPurged(CacheEntry *pEntry, CacheKey *pKey,
@@ -746,8 +812,9 @@ int ShmCacheManager::isPurged(CacheEntry *pEntry, CacheKey *pKey,
     {
         const char *pTag = pEntry->getTag().c_str();
         if (pTag)
-            if (isPurgedByTag(pTag, pEntry, pKey, isCheckPrivate))
-                ret = 1;
+        {
+            ret = isPurgedByTag(pTag, pEntry, pKey, isCheckPrivate);
+        }
         if (!ret)
         {
             if (shouldPurge(pEntry->getKey().c_str(), pEntry->getKeyLen(),

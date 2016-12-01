@@ -271,13 +271,11 @@ int HttpFetch::startProcessReq(int nonblock, const GSockAddr &sockAddr)
 
     if (!nonblock)
     {
-        fd_set          readfds;
-        struct timeval  timeout;
-        FD_ZERO(&readfds);
-        FD_SET(m_iFdHttp, &readfds);
-        timeout.tv_sec = m_iConnTimeout;
-        timeout.tv_usec = 0;
-        if ((ret = select(m_iFdHttp + 1, &readfds, &readfds, NULL, &timeout)) != 1)
+        struct pollfd  pfd;
+        pfd.events = POLLIN;
+        pfd.fd = m_iFdHttp;
+        pfd.revents = 0;
+        if ((ret = poll(&pfd, 1, m_iConnTimeout * 1000)) != 1)
         {
             closeConnection();
             return LS_FAIL;

@@ -206,7 +206,10 @@ void LsShm::tryRecoverBadOffset(LsShmOffset_t offset)
     if (s_fatalErrorCb)
         (*s_fatalErrorCb)();
     LsShmSize_t curMaxSize = x_pShmMap->x_stat.m_iFileSize; 
-    assert(offset < curMaxSize);
+    if ( offset < curMaxSize)
+    {
+        assert(offset < curMaxSize);
+    }
 }
 
 
@@ -352,9 +355,37 @@ void LsShm::deleteFile()
 }
 
 
+int LsShm::deleteFile(const char *pName, const char *pBaseDir)
+{
+    char buf[0x1000];
+    struct stat st;
+    if (pBaseDir != NULL)
+    {
+        snprintf(buf, sizeof(buf), "%s/%s.%s", pBaseDir, pName,
+                 LSSHM_SYSSHM_FILE_EXT);
+        if (stat(buf, &st) == 0)
+        {
+            unlink(buf);
+            return 1;
+        }
+    }
+    for (int i = 0; i < getBaseDirCount(); ++i)
+    {
+        snprintf(buf, sizeof(buf), "%s/%s.%s", s_pDirBase[i], pName,
+                    LSSHM_SYSSHM_FILE_EXT);
+        if (stat(buf, &st) == 0)
+        {
+            unlink(buf);
+            return 1;
+        }
+    }
+    return 0;
+}
+
+
 int LsShm::chperm(int uid, int gid, int mask)
 {
-    int ret;
+    int ret = 0;
     if (mask > 0)
     {
         ret = fchmod(m_iFd, mask);
