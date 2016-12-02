@@ -50,6 +50,10 @@
 #include <netinet/tcp.h>
 #include <openssl/ssl.h>
 
+#ifdef USE_BORINGSSL
+    #include <openssl/internal.h>
+#endif
+
 #if !defined(NO_SENDFILE)
 #include <util/gsendfile.h>
 #endif
