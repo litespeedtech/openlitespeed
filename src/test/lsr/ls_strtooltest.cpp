@@ -71,7 +71,7 @@ SUITE(ls_strtooltest)
 
         CHECK(strcmp(ls_strupper(mystr, mybuf), upperstr) == 0);
         CHECK(strcmp(ls_strlower(mystr, mybuf), lowerstr) == 0);
-        cnt = sizeof(mybuf);;
+        cnt = sizeof(mybuf);
         CHECK(strcmp(ls_strnupper(mystr, mybuf, &cnt), upperstr) == 0);
         CHECK(cnt == (int)strlen(mystr));
         cnt = 8;

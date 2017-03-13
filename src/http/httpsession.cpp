@@ -302,39 +302,11 @@ void HttpSession::logAccess(int cancelled)
 void HttpSession::resumeSSI()
 {
     m_request.restorePathInfo();
-    releaseSendFileInfo(); //Must called before VHost released!!!
+    m_sendFileInfo.release(); //Must called before VHost released!!!
     if ((m_pGzipBuf) && (!m_pGzipBuf->isStreamStarted()))
         m_pGzipBuf->reinit();
     SSIEngine::resumeExecute(this);
     return;
-}
-
-
-inline void HttpSession::releaseStaticFileCacheData(StaticFileCacheData
-        * &pCache)
-{
-    if (pCache && pCache->decRef() <= 0)
-        pCache->setLastAccess(DateTime::s_curTime);
-}
-
-
-inline void HttpSession::releaseFileCacheDataEx(FileCacheDataEx *&pECache)
-{
-    if (pECache && pECache->decRef() <= 0)
-        pECache->closefd();
-}
-
-
-void HttpSession::releaseSendFileInfo()
-{
-    StaticFileCacheData *&pData = m_sendFileInfo.getFileData();
-    if (pData)
-    {
-        releaseStaticFileCacheData(pData);
-        FileCacheDataEx *&pECache = m_sendFileInfo.getECache();
-        releaseFileCacheDataEx(pECache);
-    }
-    memset(&m_sendFileInfo, 0, sizeof(m_sendFileInfo));
 }
 
 
@@ -393,7 +365,7 @@ void HttpSession::nextRequest()
         ++m_iReqServed;
         m_lReqTime = DateTime::s_curTime;
         m_iReqTimeUs = DateTime::s_curTimeUs;
-        releaseSendFileInfo();
+        m_sendFileInfo.release();
         m_response.reset();
         m_request.reset2();
 
@@ -755,7 +727,7 @@ int HttpSession::restartHandlerProcess()
     if (m_pHandler)
         cleanUpHandler();
 
-    releaseSendFileInfo();
+    m_sendFileInfo.release();
 
     if (m_pChunkOS)
     {
@@ -1300,7 +1272,7 @@ int HttpSession::redirect(const char *pNewURL, int len, int alloc)
     int ret = m_request.redirect(pNewURL, len, alloc);
     if (ret)
         return ret;
-    releaseSendFileInfo();
+    m_sendFileInfo.release();
     if (m_pHandler)
         cleanUpHandler();
     m_request.setHandler(NULL);
@@ -1533,22 +1505,20 @@ bool ReqHandler::notAllowed(int Method) const
 }
 
 
-int HttpSession::setUpdateStaticFileCache(StaticFileCacheData *&pCache,
-        FileCacheDataEx *&pECache,
-        const char *pPath, int pathLen,
-        int fd, struct stat &st)
+int HttpSession::setUpdateStaticFileCache(const char *pPath, int pathLen,
+                                          int fd, struct stat &st)
 {
+    StaticFileCacheData *pCache;
     int ret;
     ret = StaticFileCache::getInstance().getCacheElement(pPath, pathLen, st,
-            fd, pCache, pECache);
+            fd, &pCache);
     if (ret)
     {
         LS_DBG_L(getLogSession(), "getCacheElement() returned %d.", ret);
-        pCache = NULL;
         return ret;
     }
     pCache->setLastAccess(DateTime::s_curTime);
-    pCache->incRef();
+    m_sendFileInfo.setFileData(pCache);
     return 0;
 }
 
@@ -1556,16 +1526,14 @@ int HttpSession::setUpdateStaticFileCache(StaticFileCacheData *&pCache,
 int HttpSession::getParsedScript(SSIScript *&pScript)
 {
     int ret;
-    StaticFileCacheData *&pCache = m_sendFileInfo.getFileData();
-    FileCacheDataEx *&pECache = m_sendFileInfo.getECache();
-
     const AutoStr2 *pPath = m_request.getRealPath();
-    ret = setUpdateStaticFileCache(pCache, pECache, pPath->c_str(),
+    ret = setUpdateStaticFileCache(pPath->c_str(),
                                    pPath->len(),
                                    m_request.transferReqFileFd(), m_request.getFileStat());
     if (ret)
         return ret;
 
+    StaticFileCacheData *pCache = m_sendFileInfo.getFileData();
     pScript = pCache->getSSIScript();
     if (!pScript)
     {
@@ -1709,7 +1677,8 @@ int HttpSession::assignHandler(const HttpHandler *pHandler)
             m_sendFileInfo.setCurEnd(m_request.getUrlStaticFileData()->pData->getFileSize());
             m_sendFileInfo.setParam(NULL);
             setFlag(HSF_STX_FILE_CACHE_READY);
-            LS_DBG_L( getLogSession(), "[static file cache] handling static file [ref=%d].",
+            LS_DBG_L( getLogSession(), "[static file cache] handling static file [ref=%d %d].",
+                m_request.getUrlStaticFileData()->pData->getRef(),
                 m_request.getUrlStaticFileData()->pData->getFileData()->getRef());
         }
         break;
@@ -1885,6 +1854,7 @@ int HttpSession::buildErrorResponse(const char *errMsg)
 //     }
 
     resetResp();
+    m_sendFileInfo.release();
     //m_response.prepareHeaders( &m_request );
     //register int errCode = m_request.getStatusCode();
     unsigned int ver = m_request.getVersion();
@@ -2151,7 +2121,7 @@ void HttpSession::closeConnection()
     logAccess(getStream()->getFlag(HIO_FLAG_PEER_SHUTDOWN));
 
     m_lReqTime = DateTime::s_curTime;
-    releaseSendFileInfo();
+    m_sendFileInfo.release();
     m_response.reset();
     m_request.reset();
     m_request.resetHeaderBuf();
@@ -2273,7 +2243,7 @@ int HttpSession::chunkSendfile(int fdSrc, off_t off, off_t size)
         if (written < 0)
             return written;
         else if (written > 0)
-            break;;
+            break;
         written = getStream()->sendfile(fdSrc, off, left);
 
         if (written > 0)
@@ -3233,6 +3203,134 @@ void HttpSession::prepareHeaders()
 }
 
 
+int HttpSession::pushToClient(const char *pUri, int uriLen)
+{
+    ls_str_t uri;
+    ls_str_t host;
+    uri.ptr = (char *)pUri;
+    uri.len = uriLen;
+    host.ptr = (char *)m_request.getHeader(HttpHeader::H_HOST);
+    host.len = m_request.getHeaderLen(HttpHeader::H_HOST);
+    ls_strpair_t extraHeaders[4];
+    ls_strpair_t *p = extraHeaders;
+//     URICache::iterator iter;
+//     URICache *pCache = m_request.getVHost()->getURICache();
+//     char *pEnd = (char *)pUri + uriLen;
+//     char ch = *pEnd;
+//     *pEnd = 0;
+//     iter = pCache->find(pUri);
+//     *pEnd = ch;
+//     if (iter != pCache->end())
+//     {
+//         StaticFileCacheData *pData = iter.second()->getStaticCache();
+//         if (pData && pData->getETagValue())
+//         {
+//             p->key.ptr = (char *)HttpHeader::getHeaderNameLowercase(HttpHeader::H_IF_MATCH);
+//             p->key.len = 8;
+//             p->val.ptr = (char *)pData->getETagValue();
+//             p->val.len = pData->getETagValueLen();
+//             p++;
+//         }
+//     }
+    
+    p->val.len = m_request.getHeaderLen(HttpHeader::H_ACC_ENCODING);
+    if (p->val.len > 0)
+    {
+        p->val.ptr = (char *)m_request.getHeader(HttpHeader::H_ACC_ENCODING);
+        p->key.ptr = (char *)HttpHeader::getHeaderNameLowercase(
+                                        HttpHeader::H_ACC_ENCODING);
+        p->key.len = HttpHeader::getHeaderStringLen(HttpHeader::H_ACC_ENCODING);
+        p++;
+    }
+    memset(p, 0, sizeof(*p));
+    p = extraHeaders;
+    
+    return getStream()->push(&uri, &host, extraHeaders);
+}
+
+
+int HttpSession::processOneLink(const char *p, const char *pEnd)
+{
+    p = (const char *)memchr(p, '<', pEnd - p);
+    if (!p)
+        return 0;
+
+    const char *pUrlBegin = p + 1;
+    while(pUrlBegin < pEnd && isspace(*pUrlBegin))
+        ++pUrlBegin;
+    if (*pUrlBegin != '/')
+    {
+        if (memcmp(pUrlBegin, "http://", 7) != 0)
+            return 0;
+        pUrlBegin += 7;
+        int len = m_request.getHeaderLen(HttpHeader::H_HOST);
+        if (strncasecmp(pUrlBegin, m_request.getHeader(HttpHeader::H_HOST), len)
+                        != 0)
+        {
+            return 0;
+        }
+        pUrlBegin += len;
+        if (*pUrlBegin != '/')
+            return 0;
+    }
+    p = (const char *)memchr(pUrlBegin, '>', pEnd - pUrlBegin);
+
+    const char *pUrlEnd = p++;
+    while(isspace(pUrlEnd[-1]))
+        --pUrlEnd;
+    while(p < pEnd && (isspace(*p) || *p == ';'))
+        ++p;
+
+    const char *p1 = (const char *)memmem(p, pEnd - p, "preload", 7);
+    if (!p1)
+        return 0;
+    p1 = (const char *)memmem(p, pEnd - p, "nopush", 6);
+    if (p1)
+        return 0;
+    return pushToClient(pUrlBegin, pUrlEnd - pUrlBegin);
+}
+
+//Example: 
+// Link: </css/style.css>; rel=preload;
+// Link: </dont/want/to/push/this.css>; rel=preload; as=stylesheet; nopush
+// Link: </css>; as=style; rel=preload, </js>; as=script; rel=preload;
+void HttpSession::processLinkHeader(const char* pValue, int valLen)
+{
+    if (!getStream()->getFlag(HIO_FLAG_PUSH_CAPABLE))
+        return;
+
+    const char *p = pValue;
+    const char *pLineEnd = p + valLen;
+    const char *pEnd; 
+    while(p < pLineEnd)
+    {
+        pEnd = (const char *)memchr(p, ',', pLineEnd - p); 
+        if (!pEnd)
+            pEnd = pLineEnd;
+        
+        processOneLink(p, pEnd);    
+    
+        p = pEnd + 1;
+    }
+    
+    
+}
+
+
+void HttpSession::processServerPush()
+{
+    struct iovec iovs[100];
+    struct iovec *p = iovs, *pEnd;
+    pEnd = p + m_response.getRespHeaders().getHeader(
+        HttpRespHeaders::H_LINK, iovs, 100);
+    while(p < pEnd)
+    {
+        processLinkHeader((const char *)p->iov_base, p->iov_len);
+        ++p;
+    }
+}
+
+
 int HttpSession::sendRespHeaders()
 {
     if (!getFlag(HSF_RESP_HEADER_DONE))
@@ -3252,6 +3350,9 @@ int HttpSession::sendRespHeaders()
             m_response.appendContentLenHeader();
         else
             setupChunkOS(0);
+        if (m_response.getRespHeaders().hasPush()
+            && getStream()->getFlag(HIO_FLAG_PUSH_CAPABLE))
+            processServerPush();
     }
     prepareHeaders();
 
@@ -3479,34 +3580,36 @@ int HttpSession::initSendFileInfo(const char *pPath, int pathLen)
 {
     int ret;
     struct stat st;
-    StaticFileCacheData *&pData = m_sendFileInfo.getFileData();
-    FileCacheDataEx *&pECache = m_sendFileInfo.getECache();
+    StaticFileCacheData *pData = m_sendFileInfo.getFileData();
+    
     if ((pData) && (!pData->isSamePath(pPath, pathLen)))
     {
-        releaseStaticFileCacheData(pData);
-        pData = NULL;
-        releaseFileCacheDataEx(pECache);
-        pECache = NULL;
+        m_sendFileInfo.release();
     }
     int fd = openStaticFile(pPath, pathLen, &ret);
     if (fd == -1)
         return ret;
     fstat(fd, &st);
-    ret = setUpdateStaticFileCache(pData, pECache, pPath, pathLen, fd, st);
+    ret = setUpdateStaticFileCache(pPath, pathLen, fd, st);
     if (ret)
     {
         close(fd);
         return ret;
     }
+    pData = m_sendFileInfo.getFileData();
+    FileCacheDataEx *pECache = m_sendFileInfo.getECache();
     if (pData->getFileData()->getfd() != -1
         && fd != pData->getFileData()->getfd())
         close(fd);
     if (pData->getFileData()->getfd() == -1)
         pData->getFileData()->setfd(fd);
     if (pData->getFileData() == pECache)
+    {
+        pECache->incRef();
         return 0;
+    }
 
-    return m_sendFileInfo.getFileData()->readyCacheData(pECache, 0);
+    return m_sendFileInfo.readyCacheData(0);
 }
 
 
@@ -3658,8 +3761,7 @@ int HttpSession::sendStaticFileEx(SendFileInfo *pData)
     int iModeSF = HttpServerConfig::getInstance().getUseSendfile();
     if (iModeSF && fd != -1 && !isSSL() && !getStream()->isSpdy()
         && (!getGzipBuf() ||
-            (pData->getECache() == pData->getFileData()->getGziped()))
-        && getStream()->getFlag(HIO_FLAG_SENDFILE))
+            (pData->getECache() == pData->getFileData()->getGziped())))
     {
         len = writeRespBodySendFile(fd, pData->getCurPos(), pData->getRemain());
         LS_DBG_M(getLogSession(), "writeRespBodySendFile() returned %lld.", (long long)len);
@@ -3712,6 +3814,8 @@ int HttpSession::sendStaticFileEx(SendFileInfo *pData)
         }
 
         len = writeRespBodyBlockInternal(pData, pBuf, written);
+        if (!pData->getECache())
+            VMemBuf::releaseBlock(&tmpBlock);
         if (len < 0)
             return len;
         else if (len == 0)
@@ -3786,6 +3890,8 @@ int HttpSession::sendStaticFile(SendFileInfo *pData)
                 return -1;
         }
         len = writeRespBodyBlockFilterInternal(pData, pBuf, written, &param);
+        if (!pData->getECache())
+            VMemBuf::releaseBlock(&tmpBlock);
         if (len < 0)
             return len;
         else if (len == 0)

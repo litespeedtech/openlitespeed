@@ -183,7 +183,7 @@ int ls_offset2string(char *pBuf, int len, off_t val)
 {
     char *p = pBuf;
     char *p1;
-    char *pEnd = pBuf + len;
+    char *pEnd = pBuf + len - 1;
     p1 = pEnd;
     if (val < 0)
     {

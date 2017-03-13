@@ -1,4 +1,4 @@
-<?
+<?php
 
 require_once('view/inc/global.php');
 
@@ -16,6 +16,10 @@ if (!$authorizer->ShowLogin($is_https, $msg)) {
 	exit();
 }
 
+?>
+<!DOCTYPE html>
+<html lang="en-us" class="lst-bgdark">
+<?php
 $no_main_header = true;
 include 'view/inc/header.php';
 
@@ -31,14 +35,14 @@ $(document).ready(function() {
 });
 </script>
 
-<? } ?>
-
+<?php } ?>
+<body class="lst-bgdark">
 <div class="container">
-<div style="margin-top:50px"></div>
-						<div class="col-xs-6 col-md-4 col-md-offset-4 padding-10">
+<div style="margin-top:25vh"></div>
+						<div class="col-md-4 col-md-offset-4 padding-10">
 						<div class="well no-padding">
 							<form action="login.php"  id="login" method="post" class="smart-form client-form" novalidate="novalidate">
-								<header><div class="text-center"><img src="/res/img/product_logo.gif" alt="LiteSpeed"></div></header>
+                                                            <header><div class="text-center"><object type="image/svg+xml" data="/res/img/product_logo.svg" width="80%">Your browser doesn't support SVG</object></div></header>
 								<fieldset>
 								<?
 if ($msg != '') {
@@ -61,8 +65,8 @@ if ($msg != '') {
 
 								</fieldset>
 								<footer>
-									<button type="submit" class="btn btn-primary">
-										Sign in
+									<button type="submit" class="btn btn-login">
+										<?php DMsg::EchoUIStr('btn_signin')?>
 									</button>
 								</footer>
 							</form>
@@ -72,7 +76,7 @@ if ($msg != '') {
 </div>
 <div class="row" style="margin:40px"></div>
 <div class="footer">
-        <p class="text-center">Copyright &copy; 2014-2016 <a href="http://www.litespeedtech.com">LiteSpeed Technologies, Inc.</a> </p>
+        <p class="text-center lst-copyright">Copyright &copy; 2014-2017 <a href="https://www.litespeedtech.com">LiteSpeed Technologies, Inc.</a> </p>
 </div>
 
 <?php

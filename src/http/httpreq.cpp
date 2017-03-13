@@ -1182,9 +1182,9 @@ int HttpReq::detectLoopRedirect()
         ls_strpair_t tmp = m_pUrls[i];
         if
         (
-            (ls_str_len(&tmp.key) == getURILen())
+            ((int)ls_str_len(&tmp.key) == getURILen())
             && (strncmp(ls_str_cstr(&tmp.key), pURI, ls_str_len(&tmp.key)) == 0)
-            && (ls_str_len(&tmp.val) == getQueryStringLen())
+            && ((int)ls_str_len(&tmp.val) == getQueryStringLen())
             && (strncmp(ls_str_cstr(&tmp.val), pArg, ls_str_len(&tmp.val)) == 0)
         )
             break;
@@ -2600,13 +2600,13 @@ int HttpReq::detectLoopRedirect(const char *pURI, int uriLen,
     for (i = 0; i < m_iRedirects; ++i)
     {
         ls_strpair_t tmp = m_pUrls[i];
-        if ((((ls_str_len(&tmp.key) == uriLen)
+        if (((((int)ls_str_len(&tmp.key) == uriLen)
               && (strncmp(ls_str_cstr(&tmp.key), pURI,
                           ls_str_len(&tmp.key)) == 0))
-             || ((ls_str_len(&tmp.key) == relativeLen)
+             || (((int)ls_str_len(&tmp.key) == relativeLen)
                  && (strncmp(ls_str_cstr(&tmp.key), p,
                              ls_str_len(&tmp.key)) == 0)))
-            && (ls_str_len(&tmp.val) == qsLen)
+            && ((int)ls_str_len(&tmp.val) == qsLen)
             && (strncmp(ls_str_cstr(&tmp.val), pArg,
                         ls_str_len(&tmp.val)) == 0))
             break;
@@ -3005,10 +3005,4 @@ int HttpReq::checkUrlStaicFileCache()
     return 0;
 }
 
-
-void HttpReq::removeUrlStaicFileCache(static_file_data_t *pData)
-{
-    HttpVHost *host = (HttpVHost *)getVHost();
-    host->removeurlStaticFile(pData);
-}
 

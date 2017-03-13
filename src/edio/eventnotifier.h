@@ -19,6 +19,7 @@
 #define EVENTNOTIFIER_H
 
 #include <edio/eventreactor.h>
+#include <lsr/ls_atomic.h>
 
 #if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
 #include <linux/version.h>
@@ -38,7 +39,7 @@ class EventNotifier :  public EventReactor
 #else
     int m_fdIn;
 #endif
-
+    ls_atom_32_t  m_pending;
 public:
     EventNotifier()
 #ifdef LSEFD_AVAIL
@@ -46,6 +47,7 @@ public:
 #else
         : m_fdIn(-1)
 #endif
+        , m_pending(0)
     {};
     virtual ~EventNotifier();
     virtual int handleEvents(short int event);

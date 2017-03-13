@@ -6,7 +6,7 @@
 				<span> <!-- User image size is adjusted inside CSS, it should stay as is -->
 
 					<a href="javascript:void(0);" id="show-shortcut" data-action="toggleShortcut">
-						<img src="/res/img/lsws_bolt.png" alt="server"/>
+						<object type="image/svg+xml" data="/res/img/lsws_bolt.svg" alt="server"></object>
 						<span><?php echo php_uname('n');?>
 						</span>
 						<i class="fa fa-angle-down"></i>

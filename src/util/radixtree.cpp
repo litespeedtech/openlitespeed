@@ -910,7 +910,7 @@ int RadixNode::setHeader(int iFlags, int iMode, ls_xpool_t *pool,
             pHash = new(ptr) GHash(RN_HASHSZ, ls_str_hfci, ls_str_cmpci,
                                    pool);
         else
-            pHash = new(ptr) GHash(RN_HASHSZ, ls_str_hfxx, ls_str_cmp, pool);
+            pHash = new(ptr) GHash(RN_HASHSZ, ls_str_xh32, ls_str_cmp, pool);
         pTmp = (rnheader_t *)m_pCHeaders;
         for (i = 0; i < iExact; ++i)
         {
@@ -958,7 +958,7 @@ int RadixNode::setHeader(int iFlags, int iMode, ls_xpool_t *pool,
             pHash = new(ptr) GHash(RN_HASHSZ, ls_str_hfci, ls_str_cmpci,
                                    pool);
         else
-            pHash = new(ptr) GHash(RN_HASHSZ, ls_str_hfxx, ls_str_cmp, pool);
+            pHash = new(ptr) GHash(RN_HASHSZ, ls_str_xh32, ls_str_cmp, pool);
 
         for (i = 0; i < iExact; ++i)
         {
@@ -1532,7 +1532,7 @@ int RadixNode::printHash(const void *key, void *data, void *extra)
         printf("|");
     printf("%.*s  ->", pHeader->len, pHeader->label);
     printf("(%d)%p, (%.*s)\n", pHeader->body->m_iOrig, pHeader->body->getObj(),
-           ls_str_len(pStr), ls_str_cstr(pStr));
+           (int)ls_str_len(pStr), ls_str_cstr(pStr));
     if (pHeader->body->hasChildren())
         pHeader->body->printChildren(&myHelper);
 

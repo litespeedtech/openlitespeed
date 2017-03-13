@@ -321,12 +321,12 @@ class DPageDef
 		$id = 'ctx';
 		$page = new DPage($id, DMsg::UIStr('tab_ctx'), new DTblMap('*context$uri', 'VT_CTX_TOP',
 				['VT_CTX_SEL', 'VT_CTXG', 'VT_CTXJ', 'VT_CTXS', 'VT_CTXF', 'VT_CTXL',
-						'VT_CTXP', 'VT_CTXC', 'VT_CTXB', 'VT_CTXR', 'VT_CTXRL', 'VT_CTXMD']));
+						'VT_CTXP', 'VT_CTXC', 'VT_CTXB', 'VT_CTXR', 'VT_CTXAS', 'VT_CTXMD']));
 		$this->_pageDef['vh_'][$id] = $page;
 
 		$page = new DPage($id, DMsg::UIStr('tab_ctx'), new DTblMap('virtualHostConfig:*context$uri', 'VT_CTX_TOP',
 				['VT_CTX_SEL', 'VT_CTXG', 'VT_CTXJ', 'VT_CTXS', 'VT_CTXF', 'VT_CTXL',
-						'VT_CTXP', 'VT_CTXC', 'VT_CTXB', 'VT_CTXR', 'VT_CTXRL']));
+						'VT_CTXP', 'VT_CTXC', 'VT_CTXB', 'VT_CTXR', 'VT_CTXAS']));
 		$this->_pageDef['tp_'][$id] = $page;
 
 		$id = 'vhssl';

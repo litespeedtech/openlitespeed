@@ -86,7 +86,7 @@ TEST(ls_XPoolTest_test)
     for (int i = 0; i < 5000; ++i)
         CHECK(*(ptr + i) == 0);
 
-    int *psizes = sizes;;
+    int *psizes = sizes;
     for (int i = 0; i < (int)(sizeof(sizes) / sizeof(sizes[0])); i++)
     {
         ptr = (char *)ls_xpool_alloc(&pool, *psizes);

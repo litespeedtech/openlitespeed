@@ -26,10 +26,9 @@
 
 struct evtcbnode_s;
 
-class EmptyEventNotifier : public EventNotifier
+class EvtcbQueNotifier : public EventNotifier
 {
 public:
-    virtual int handleEvents(short int event) {return 0;}
     virtual int onNotified(int count){return 0;};
 };
 
@@ -53,7 +52,7 @@ public:
     evtcbnode_s * getNodeObj(evtcb_pf cb, evtcbhead_t *session,
                              long lParam, void *pParam);
     
-    void schedule(evtcbnode_s *pObj, bool nowait = false);
+    void schedule(evtcbnode_s *pObj, bool nowait = true);
     evtcbnode_s *schedule(evtcb_pf cb, evtcbhead_t *session,
                           long lParam, void *pParam);
     void removeSessionCb(evtcbhead_t *session);
@@ -64,6 +63,6 @@ public:
     
 private:
     int lock_add;
-    EmptyEventNotifier *m_pEmptyEventNotifier;
+    EvtcbQueNotifier *m_pNotifier;
 };
 #endif  //CALLBACKQUEUE_H

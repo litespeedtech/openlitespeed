@@ -51,7 +51,7 @@ int HttpCgiTool::processHeaderLine(HttpExtConnector *pExtConn,
                                    const char  *pLineBegin,
                                    const char *pLineEnd, int &status)
 {
-    HttpRespHeaders::HEADERINDEX index;
+    HttpRespHeaders::INDEX index;
     int tmpIndex;
     const char *pKeyEnd = NULL;
     const char *pValue = pLineBegin;
@@ -59,7 +59,7 @@ int HttpCgiTool::processHeaderLine(HttpExtConnector *pExtConn,
     HttpResp *pResp = pExtConn->getHttpSession()->getResp();
     HttpReq *pReq = pExtConn->getHttpSession()->getReq();
 
-    index = HttpRespHeaders::getRespHeaderIndex(pValue);
+    index = HttpRespHeaders::getIndex(pValue);
     if (index < HttpRespHeaders::H_HEADER_END)
     {
         pValue += HttpRespHeaders::getHeaderStringLen(index);
@@ -205,6 +205,9 @@ int HttpCgiTool::processHeaderLine(HttpExtConnector *pExtConn,
     case HttpRespHeaders::H_TRANSFER_ENCODING:
         pResp->setContentLen(LSI_RSP_BODY_SIZE_CHUNKED);
         return 0;
+    case HttpRespHeaders::H_LINK:
+        //pExtConn->getHttpSession()->processLinkHeader(pValue, pLineEnd - pValue);
+        break;
 
     case HttpRespHeaders::H_SET_COOKIE:
         //pReq->getRespCacheCtrl().setHasCookie();

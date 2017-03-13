@@ -768,6 +768,13 @@ int RequestVars::getReqVar(HttpSession *pSession, int type, char *&pValue,
     case REF_RESP_BODY:
         return 0;
     default:
+        if (type >= REF_RESP_HEADER_BEGIN)
+        {
+            i = 0;
+            pValue = (char *)pSession->getResp()->getRespHeaders().getHeader(
+                         (HttpRespHeaders::INDEX)(type - REF_RESP_HEADER_BEGIN), &i);
+            return i;
+        }
         if (type >= REF_TIME)
         {
             time_t t = time(NULL);

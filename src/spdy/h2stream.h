@@ -37,7 +37,7 @@ public:
     H2Stream();
     ~H2Stream();
 
-    int init(uint32_t StreamID, H2Connection *pH2Conn, uint8_t H2_Flags,
+    int init(uint32_t StreamID, H2Connection *pH2Conn,
              HioHandler *pHandler, Priority_st *pPriority = NULL);
     int onInitConnected(bool bUpgraded = false);
 
@@ -46,7 +46,7 @@ public:
     int read(char *buf, int len);
 
     uint32_t getStreamID()
-    {   return m_uiStreamID;    }
+    {   return m_uiStreamId;    }
 
     int write(const char *buf, int len);
     int writev(const struct iovec *vec, int count);
@@ -60,6 +60,10 @@ public:
 
     int flush();
     int sendRespHeaders(HttpRespHeaders *pHeaders, int isNoBody);
+    
+    int push(ls_str_t *pUrl, ls_str_t *pHost, 
+             ls_strpair_t *pExtraHeaders);
+
 
     void suspendRead()
     {   setFlag(HIO_FLAG_WANT_READ, 0);     }
@@ -121,7 +125,7 @@ protected:
     virtual const char *buildLogId();
 
 private:
-    uint32_t    m_uiStreamID;
+    uint32_t    m_uiStreamId;
     int32_t     m_iWindowOut;
     int32_t     m_iWindowIn;
     H2Connection *m_pH2Conn;

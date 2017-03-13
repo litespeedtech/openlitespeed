@@ -23,6 +23,8 @@
 #include <util/aho.h>
 #include <http/vhostmap.h>
 
+
+//Default setting         0000 0010 0111 1100
 #define CACHE_ENABLE_PUBLIC                 (1<<0)
 #define CACHE_ENABLE_PRIVATE                (1<<1)
 #define CACHE_CHECK_PUBLIC                  (1<<2)
@@ -33,7 +35,6 @@
 #define CACHE_IGNORE_RESP_CACHE_CTRL_HEADER (1<<7)
 #define CACHE_IGNORE_SURROGATE_HEADER       (1<<8)
 #define CACHE_RESP_COOKIE_CACHE             (1<<9)
-
 #define CACHE_MAX_AGE_SET                   (1<<10)
 #define CACHE_PRIVATE_AGE_SET               (1<<11)
 #define CACHE_STALE_AGE_SET                 (1<<12)

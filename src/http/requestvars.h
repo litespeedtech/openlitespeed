@@ -31,6 +31,7 @@
 #define REF_SSI_VAR         106
 #define REF_FORMAT_STR      107
 #define REF_EXPR            108
+#define REF_RESP_HEADER     109
 
 
 #define REF_REMOTE_ADDR     110
@@ -109,6 +110,9 @@
 #define REF_RESP_CONTENT_LENGTH     173
 #define REF_RESP_BODY               174
 #define REF_MATCHED_VAR             175
+
+#define REF_RESP_HEADER_BEGIN       200
+
 
 class AutoStr2;
 

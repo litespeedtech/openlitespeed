@@ -23,14 +23,14 @@
 
 #include <ctype.h>
 
-static ls_str_t *ls_iStr_new(const char *pStr, int len, ls_xpool_t *pool);
-static ls_str_t *ls_iStr(ls_str_t *pThis, const char *pStr, int len,
+static ls_str_t *ls_iStr_new(const char *pStr, size_t len, ls_xpool_t *pool);
+static ls_str_t *ls_iStr(ls_str_t *pThis, const char *pStr, size_t len,
                          ls_xpool_t *pool);
 static void ls_iStr_d(ls_str_t *pThis, ls_xpool_t *pool);
-static int ls_str_iSetStr(ls_str_t *pThis, const char *pStr, int len,
+static size_t ls_str_iSetStr(ls_str_t *pThis, const char *pStr, size_t len,
                           ls_xpool_t *pool);
 static void ls_str_iAppend(ls_str_t *pThis, const char *pStr,
-                           const int len, ls_xpool_t *pool);
+                           size_t len, ls_xpool_t *pool);
 
 
 ls_inline void *ls_str_do_alloc(ls_xpool_t *pool, size_t size)
@@ -49,13 +49,13 @@ ls_inline void ls_str_do_free(ls_xpool_t *pool, void *ptr)
 }
 
 
-ls_str_t *ls_str_new(const char *pStr, int len)
+ls_str_t *ls_str_new(const char *pStr, size_t len)
 {
     return ls_iStr_new(pStr, len, NULL);
 }
 
 
-ls_str_t *ls_str(ls_str_t *pThis, const char *pStr, int len)
+ls_str_t *ls_str(ls_str_t *pThis, const char *pStr, size_t len)
 {
     return ls_iStr(pThis, pStr, len, NULL);
 }
@@ -81,7 +81,7 @@ void ls_str_delete(ls_str_t *pThis)
 }
 
 
-char *ls_str_prealloc(ls_str_t *pThis, int size)
+char *ls_str_prealloc(ls_str_t *pThis, size_t size)
 {
     char *p = (char *)ls_prealloc(pThis->ptr, size);
     if (p != NULL)
@@ -90,13 +90,13 @@ char *ls_str_prealloc(ls_str_t *pThis, int size)
 }
 
 
-int ls_str_dup(ls_str_t *pThis, const char *pStr, int len)
+size_t ls_str_dup(ls_str_t *pThis, const char *pStr, size_t len)
 {
     return ls_str_iSetStr(pThis, pStr, len, NULL);
 }
 
 
-void ls_str_append(ls_str_t *pThis, const char *pStr, const int len)
+void ls_str_append(ls_str_t *pThis, const char *pStr, size_t len)
 {
     ls_str_iAppend(pThis, pStr, len, NULL);
 }
@@ -109,6 +109,19 @@ int ls_str_cmp(const void *pVal1, const void *pVal2)
                ((ls_str_t *)pVal2)->ptr,
                ((ls_str_t *)pVal1)->len
            );
+}
+
+
+int ls_str_bcmp(const void *a, const void *b)
+{
+    int rc = memcmp(((ls_str_t *)a)->ptr, ((ls_str_t *)b)->ptr,
+                    ((ls_str_t *)a)->len <= ((ls_str_t *)b)->len 
+                        ? ((ls_str_t *)a)->len : ((ls_str_t *)b)->len);
+    if (rc)
+        return rc;
+    else
+        return (((ls_str_t *)a)->len > ((ls_str_t *)b)->len) 
+                 - (((ls_str_t *)b)->len > ((ls_str_t *)a)->len);
 }
 
 
@@ -127,7 +140,7 @@ ls_hash_key_t ls_str_hf(const void *pKey)
 }
 
 
-ls_hash_key_t ls_str_hfxx(const void *pKey)
+ls_hash_key_t ls_str_xh32(const void *pKey)
 {
     return XXH32(((ls_str_t *)pKey)->ptr, ((ls_str_t *)pKey)->len, 0);
 }
@@ -159,13 +172,13 @@ ls_hash_key_t ls_str_hfci(const void *pKey)
 }
 
 
-ls_str_t *ls_str_xnew(const char *pStr, int len, ls_xpool_t *pool)
+ls_str_t *ls_str_xnew(const char *pStr, size_t len, ls_xpool_t *pool)
 {
     return ls_iStr_new(pStr, len, pool);
 }
 
 
-ls_str_t *ls_str_x(ls_str_t *pThis, const char *pStr, int len,
+ls_str_t *ls_str_x(ls_str_t *pThis, const char *pStr, size_t len,
                    ls_xpool_t *pool)
 {
     return ls_iStr(pThis, pStr, len, pool);
@@ -202,21 +215,21 @@ char *ls_str_xprealloc(ls_str_t *pThis, int size, ls_xpool_t *pool)
 }
 
 
-int ls_str_xsetstr(ls_str_t *pThis, const char *pStr, int len,
+size_t ls_str_xsetstr(ls_str_t *pThis, const char *pStr, size_t len,
                    ls_xpool_t *pool)
 {
     return ls_str_iSetStr(pThis, pStr, len, pool);
 }
 
 
-void ls_str_xappend(ls_str_t *pThis, const char *pStr, const int len,
+void ls_str_xappend(ls_str_t *pThis, const char *pStr, size_t len,
                     ls_xpool_t *pool)
 {
     ls_str_iAppend(pThis, pStr, len, pool);
 }
 
 
-ls_str_t *ls_iStr_new(const char *pStr, int len, ls_xpool_t *pool)
+ls_str_t *ls_iStr_new(const char *pStr, size_t len, ls_xpool_t *pool)
 {
     ls_str_t *pThis;
     if ((pThis = (ls_str_t *)ls_str_do_alloc(pool, sizeof(ls_str_t))) != NULL)
@@ -242,23 +255,23 @@ void ls_iStr_d(ls_str_t *pThis, ls_xpool_t *pool)
 }
 
 
-static char *ls_str_do_dupstr(const char *pStr, int len, ls_xpool_t *pool)
+static char *ls_str_do_dupstr(const char *pStr, size_t len, ls_xpool_t *pool)
 {
     char *p;
     if (pool != NULL)
     {
         if ((p = (char *)ls_xpool_alloc(pool, len + 1)) == NULL)
             return NULL;
-        memmove(p, pStr, len);
     }
-    else if ((p = ls_pdupstr2(pStr, len + 1)) == NULL)
+    else if ((p = ls_palloc(len + 1)) == NULL)
         return NULL;
+    memmove(p, pStr, len);
     *(p + len) = '\0';
     return p;
 }
 
 
-ls_str_t *ls_iStr(ls_str_t *pThis, const char *pStr, int len,
+ls_str_t *ls_iStr(ls_str_t *pThis, const char *pStr, size_t len,
                   ls_xpool_t *pool)
 {
     if (pStr == NULL)
@@ -271,7 +284,7 @@ ls_str_t *ls_iStr(ls_str_t *pThis, const char *pStr, int len,
 }
 
 
-int ls_str_iSetStr(ls_str_t *pThis, const char *pStr, int len,
+size_t ls_str_iSetStr(ls_str_t *pThis, const char *pStr, size_t len,
                    ls_xpool_t *pool)
 {
     assert(pThis);
@@ -280,7 +293,7 @@ int ls_str_iSetStr(ls_str_t *pThis, const char *pStr, int len,
 }
 
 
-void ls_str_iAppend(ls_str_t *pThis, const char *pStr, const int len,
+void ls_str_iAppend(ls_str_t *pThis, const char *pStr, size_t len,
                     ls_xpool_t *pool)
 {
     assert(pThis && pStr);

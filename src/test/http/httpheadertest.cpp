@@ -123,7 +123,7 @@ SUITE(HttpHeaderTest)
             p = HttpRespHeaders::m_sPresetHeaders[i];
             //l = HttpRespHeaders::m_iPresetHeaderLen[i];
 
-            HttpRespHeaders::HEADERINDEX index = HttpRespHeaders::getRespHeaderIndex(
+            HttpRespHeaders::INDEX index = HttpRespHeaders::getIndex(
                     p);
             CHECK(i == index);
         }
@@ -186,7 +186,7 @@ SUITE(HttpHeaderTest)
         for (i = 0; i < size; i++)
         {
             //printf( "%s\n", respHeaders[i] );
-            HttpRespHeaders::HEADERINDEX index = HttpRespHeaders::getRespHeaderIndex(
+            HttpRespHeaders::INDEX index = HttpRespHeaders::getIndex(
                     respHeaders[i]);
             CHECK(index == respHeaderIndex[i]);
             CHECK((int)strlen(respHeaders[i]) ==
@@ -485,7 +485,7 @@ SUITE(HttpHeaderTest)
         ls_xpool_init(&pool);
         HttpRespHeaders h(&pool);
         IOVec io;
-        char *pVal = NULL;
+        const char *pVal = NULL;
         int valLen = 0;
         char sTestHdr[1500];
 
@@ -756,10 +756,10 @@ SUITE(HttpHeaderTest)
         IOVec::iterator it;
         char *ph;
         char *p;
+        
 
-        static const char * const s_pHeaders[] =
+        static const char * s_pHeaders[HttpRespHeaders::H_HEADER_END] =
         {
-            "UNKNOWN",
             "ACCEPT-RANGES",
             "CONNECTION",
             "CONTENT-TYPE",
@@ -784,11 +784,16 @@ SUITE(HttpHeaderTest)
             "TRANSFER-ENCODING",
             "VARY",
             "WWW-AUTHENTICATE",
-            "X-POWERED-BY"
+            "X-LITESPEED-CACHE",
+            "X-LITESPEED-PURGE",
+            "X-LITESPEED-TAG",
+            "X-LITESPEED-VARY",
+            "LSC-COOKIE",
+            "X-POWERED-BY",
+            "LINK",
         };
-        static const char * const s_pHeaderVals[] =
+        static const char * s_pHeaderVals[HttpRespHeaders::H_HEADER_END] =
         {
-            "xUNKNOWN",
             "xACCEPT-RANGES",
             "xCONNECTION",
             "xCONTENT-TYPE",
@@ -813,12 +818,17 @@ SUITE(HttpHeaderTest)
             "xTRANSFER-ENCODING",
             "xVARY",
             "xWWW-AUTHENTICATE",
-            "xX-POWERED-BY"
+            "xX-LITESPEED-CACHE",
+            "xX-LITESPEED-PURGE",
+            "xX-LITESPEED-TAG",
+            "xX-LITESPEED-VARY",
+            "xLSC-COOKIE",
+            "xX-POWERED-BY",
+            "xLINK",
         };
 
         char s_pOutputHdr[] =
         {
-            "UNKNOWN: xUNKNOWN\r\n"
             "ACCEPT-RANGES: xACCEPT-RANGES\r\n"
             "CONNECTION: xCONNECTION\r\n"
             "CONTENT-TYPE: xCONTENT-TYPE\r\n"
@@ -834,7 +844,7 @@ SUITE(HttpHeaderTest)
             "LAST-MODIFIED: xLAST-MODIFIED\r\n"
             "LOCATION: xLOCATION\r\n"
             "x-litespeed-location: xx-litespeed-location\r\n"
-            "X-LITESPEED-CACHE-CONTROL: xLITESPEED-CACHE-CONTROL\r\n"
+            "X-LITESPEED-CACHE-CONTROL: xX-LITESPEED-CACHE-CONTROL\r\n"
             "PRAGMA: xPRAGMA\r\n"
             "PROXY-CONNECTION: xPROXY-CONNECTION\r\n"
             "SERVER: xSERVER\r\n"
@@ -843,17 +853,26 @@ SUITE(HttpHeaderTest)
             "TRANSFER-ENCODING: xTRANSFER-ENCODING\r\n"
             "VARY: xVARY\r\n"
             "WWW-AUTHENTICATE: xWWW-AUTHENTICATE\r\n"
+            "X-LITESPEED-CACHE: xX-LITESPEED-CACHE\r\n"
+            "X-LITESPEED-PURGE: xX-LITESPEED-PURGE\r\n"
+            "X-LITESPEED-TAG: xX-LITESPEED-TAG\r\n"
+            "X-LITESPEED-VARY: xX-LITESPEED-VARY\r\n"
+            "LSC-COOKIE: xLSC-COOKIE\r\n"
             "X-POWERED-BY: xX-POWERED-BY\r\n"
+            "Link: xLINK\r\n"
         };
 
 
         //fill the header array
-        http_header_t headerArray1[30];
-        for (i=-1; i<HttpRespHeaders::H_HEADER_END;i++)
+        http_header_t headerArray1[HttpRespHeaders::H_HEADER_END];
+        for (i=0; i<HttpRespHeaders::H_HEADER_END;i++)
         {
-            headerArray1[i+1].index = (const HttpRespHeaders::HEADERINDEX)(i);
-            headerArray1[i+1].val = s_pHeaderVals[i+1];
-            headerArray1[i+1].valLen = strlen(s_pHeaderVals[i+1]);
+            CHECK( i == HttpRespHeaders::getIndex(s_pHeaders[i]));
+            headerArray1[i].index = (const HttpRespHeaders::INDEX)(i);
+            //headerArray1[i].name = s_pHeaders[i];
+            //headerArray1[i].nameLen = strlen(s_pHeaders[i]);
+            headerArray1[i].val = s_pHeaderVals[i];
+            headerArray1[i].valLen = strlen(s_pHeaderVals[i]);
         }
         h.reset();
         //add using array add and check contents
@@ -863,35 +882,35 @@ SUITE(HttpHeaderTest)
         for ( i=h.HeaderBeginPos(); i!=h.HeaderEndPos(); i=h.nextHeaderPos(i) )
         {
             temp = h.getHeader(i, &key, &keyLen, ios, 26);
-            CHECK(memcmp(key, headerArray1[i].name, keyLen) == 0);
+            CHECK(memcmp(key, s_pHeaders[i], keyLen) == 0);
             CHECK(temp == 1);//CTBTODO is this correct
         }
 
         //add using header index and check counts and contents using getHeader
         h.reset();
-        for (i=HttpRespHeaders::H_UNKNOWN; i<HttpRespHeaders::H_HEADER_END;i++)
+        for (i=0; i<HttpRespHeaders::H_HEADER_END;i++)
         {
-            temp = h.add((const HttpRespHeaders::HEADERINDEX)(i), s_pHeaders[i+1], strlen(s_pHeaders[i+1]), s_pHeaderVals[i+1], strlen(s_pHeaderVals[i+1]));
+            temp = h.add((const HttpRespHeaders::INDEX)(i), s_pHeaders[i], strlen(s_pHeaders[i]), s_pHeaderVals[i], strlen(s_pHeaderVals[i]));
             CHECK(temp == 0);
             temp = h.getCount();
             temp = h.getTotalCount();
-            CHECK(h.getCount() == i+2);//start at 1 and add 1 for connection close
-            CHECK(h.getTotalCount() == i+2);
+            CHECK(h.getCount() == i+1);//start at 1 and add 1 for connection close
+            CHECK(h.getTotalCount() == i+1);
 
-            temp = h.getHeader(s_pHeaders[i+1], strlen(s_pHeaders[i+1]), &pVal, valLen);
-            CHECK (memcmp(pVal, s_pHeaderVals[i+1], strlen(s_pHeaderVals[i+1])) == 0);
-            CHECK (valLen == strlen(s_pHeaderVals[i+1]));
+            temp = h.getHeader(s_pHeaders[i], strlen(s_pHeaders[i]), &pVal, valLen);
+            CHECK (memcmp(pVal, s_pHeaderVals[i], strlen(s_pHeaderVals[i])) == 0);
+            CHECK (valLen == strlen(s_pHeaderVals[i]));
             CHECK(temp == 0);//CTBTODO check this
 
-            temp = h.getHeader(s_pHeaders[i+1], strlen(s_pHeaders[i+1]), ios, 30);
+            temp = h.getHeader(s_pHeaders[i], strlen(s_pHeaders[i]), ios, 30);
             pVal = (char *)(ios[0].iov_base);
-            CHECK(memcmp(pVal, s_pHeaderVals[i+1], strlen(s_pHeaderVals[i+1])) == 0);
-            CHECK(ios[0].iov_len == strlen(s_pHeaderVals[i+1]));
+            CHECK(memcmp(pVal, s_pHeaderVals[i], strlen(s_pHeaderVals[i])) == 0);
+            CHECK(ios[0].iov_len == strlen(s_pHeaderVals[i]));
             CHECK(temp == 1);
 
-            temp = h.getHeader((const HttpRespHeaders::HEADERINDEX)(i), ios, 30);
-            CHECK(memcmp((char *)(ios[0].iov_base), s_pHeaderVals[i+1], strlen(s_pHeaderVals[i+1])) == 0);
-            CHECK(ios[0].iov_len == strlen(s_pHeaderVals[i+1]));
+            temp = h.getHeader((const HttpRespHeaders::INDEX)(i), ios, 30);
+            CHECK(memcmp((char *)(ios[0].iov_base), s_pHeaderVals[i], strlen(s_pHeaderVals[i])) == 0);
+            CHECK(ios[0].iov_len == strlen(s_pHeaderVals[i]));
             //for unknown, it is 0
             if (i==HttpRespHeaders::H_UNKNOWN)
                 CHECK(temp == 0);
@@ -903,11 +922,11 @@ SUITE(HttpHeaderTest)
         //check using getAllHeaders into io struct
         temp = h.getAllHeaders( ios, 30 );
         CHECK(temp == 26);
-        for (i=HttpRespHeaders::H_UNKNOWN; i<HttpRespHeaders::H_HEADER_END;i++)
+        for (i=0; i<HttpRespHeaders::H_HEADER_END;i++)
         {
-            pVal = (char *)(ios[i+1].iov_base);
-            CHECK(memcmp((char *)(ios[i+1].iov_base), s_pHeaders[i+1], strlen(s_pHeaders[i+1])) == 0);
-            CHECK(ios[i+1].iov_len == strlen(s_pHeaders[i+1])+strlen(s_pHeaderVals[i+1])+4);
+            pVal = (char *)(ios[i].iov_base);
+            CHECK(memcmp((char *)(ios[i].iov_base), s_pHeaders[i], strlen(s_pHeaders[i])) == 0);
+            CHECK(ios[i].iov_len == strlen(s_pHeaders[i])+strlen(s_pHeaderVals[i])+4);
         }
 
         h.reset();
@@ -915,10 +934,10 @@ SUITE(HttpHeaderTest)
         CHECK(h.getCount() == 26);
         CHECK(temp == 0);
         //check del index
-        int count = h.getCount();;
-        for (i=HttpRespHeaders::H_UNKNOWN; i<HttpRespHeaders::H_HEADER_END;i++)
+        int count = h.getCount();
+        for (i=0; i<HttpRespHeaders::H_HEADER_END;i++)
         {
-            temp = h.del((const HttpRespHeaders::HEADERINDEX)(i));
+            temp = h.del((const HttpRespHeaders::INDEX)(i));
             if (i==HttpRespHeaders::H_UNKNOWN)
                 CHECK(temp == -1);
             else
@@ -929,7 +948,7 @@ SUITE(HttpHeaderTest)
             //CHECK(h.getTotalCount() == count);//may be removed always returns 26
             count--;
 
-            temp = h.getHeader(s_pHeaders[i+1], strlen(s_pHeaders[i+1]), &pVal, valLen);//should fail - removed
+            temp = h.getHeader(s_pHeaders[i], strlen(s_pHeaders[i]), &pVal, valLen);//should fail - removed
             if (i==HttpRespHeaders::H_UNKNOWN)
                 CHECK(temp == 0);
             else
@@ -951,17 +970,17 @@ SUITE(HttpHeaderTest)
 
         h.reset();
         temp = h.add(headerArray1, 26);
-        count = h.getCount();;
+        count = h.getCount();
         //check del by name
-        for (i=HttpRespHeaders::H_UNKNOWN; i<HttpRespHeaders::H_HEADER_END;i++)
+        for (i=0; i<HttpRespHeaders::H_HEADER_END;i++)
         {
-            temp = h.del(s_pHeaders[i+1], strlen(s_pHeaders[i+1]));
+            temp = h.del(s_pHeaders[i], strlen(s_pHeaders[i]));
             count--;
             CHECK(temp == 0);
             temp = h.getCount();
             CHECK(h.getCount() == count);//start at 1 and add 1 for connection close
 
-            temp = h.getHeader(s_pHeaders[i+1], strlen(s_pHeaders[i+1]), &pVal, valLen);
+            temp = h.getHeader(s_pHeaders[i], strlen(s_pHeaders[i]), &pVal, valLen);
             CHECK(temp == -1);
         }
 
@@ -987,7 +1006,7 @@ SUITE(HttpHeaderTest)
         h.add(HttpRespHeaders::H_UNKNOWN, "unknown", 7, "My_Server", 9);
         h.add(HttpRespHeaders::H_ACCEPT_RANGES,  "bytes", 5);
         h.add(HttpRespHeaders::H_DATE,  "Thu, 16 May 2013 20:32:23 GMT", strlen("Thu, 16 May 2013 20:32:23 GMT"));
-        h.add(HttpRespHeaders::H_X_POWERED_BY, ), "PHP/5.3.24", strlen("PHP/5.3.24"));
+        h.add(HttpRespHeaders::H_X_POWERED_BY, "PHP/5.3.24", strlen("PHP/5.3.24"));
         h.addStatusLine( 0, 304, 1);  //when ver is 0 and keepalive is 1, Will NOT add connection: close automatically
         h.outputNonSpdyHeaders(&io);
 
@@ -1080,7 +1099,7 @@ SUITE(HttpHeaderTest)
         h.reset();
         h.addGzipEncodingHeader();
         h.appendChunked();
-        h.appendAcceptRange();
+        //h.appendAcceptRange();
         h.buildCommonHeaders();
         h.addCommonHeaders();
         h.del(HttpRespHeaders::H_DATE);//delete current date for testing
@@ -1145,8 +1164,8 @@ SUITE(HttpHeaderTest)
             for (i=HttpRespHeaders::H_UNKNOWN; i<HttpRespHeaders::H_HEADER_END;i++)
             {
                 //printf("i = %d j = %d \n",i,j);
-                temp = h.add((const HttpRespHeaders::HEADERINDEX)(i), s_pHeaders[i+1], strlen(s_pHeaders[i+1]),
-                             s_pHeaderVals[i+1], strlen(s_pHeaderVals[i+1]),LSI_HEADEROP_ADD);
+                temp = h.add((const HttpRespHeaders::INDEX)(i), s_pHeaders[i], strlen(s_pHeaders[i]),
+                             s_pHeaderVals[i], strlen(s_pHeaderVals[i]),LSI_HEADER_ADD);
                 CHECK(temp == 0);
                 temp = h.getCount();
                 temp = h.getTotalCount();
@@ -1164,7 +1183,7 @@ SUITE(HttpHeaderTest)
         {
             temp = h.getHeader(i, &key, &keyLen, ios, 1000);
             //CHECK(memcmp(key, headerArray1[i%26].name, keyLen) == 0);//FIXME: CHANGED!!!
-            //CHECK(temp == 100);
+            //CHECK(temp == 100);//FIXME this is 100
         }
         //check output
         h.outputNonSpdyHeaders(&io);
@@ -1185,7 +1204,6 @@ SUITE(HttpHeaderTest)
 
         */
     }
-
 }
 
 #endif

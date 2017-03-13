@@ -238,6 +238,9 @@ public:
 
     void extCmdDone();
 
+    int pushToClient(const char *pUri, int uriLen);
+    void processLinkHeader(const char* pValue, int valLen);
+    
     static int hookResumeCallback(lsi_session_t *session, long lParam, void *);
 
 
@@ -280,7 +283,6 @@ private:
                                    int written);
     int writeRespBodyBlockFilterInternal(SendFileInfo *pData, const char *pBuf,
                                          int written, lsi_param_t *param = NULL);
-    void releaseSendFileInfo();
     int chunkSendfile(int fdSrc, off_t off, off_t size);
     int processWebSocketUpgrade(const HttpVHost *pVHost);
     int processHttp2Upgrade(const HttpVHost *pVHost);
@@ -291,6 +293,9 @@ private:
 
     int getModuleDenyCode(int iHookLevel);
     int processHkptResult(int iHookLevel, int ret);
+
+    int processOneLink(const char* p, const char* pEnd);
+    
     int restartHandlerProcess();
     int runFilter(int hookLevel, filter_term_fn pfTerm,
                   const char *pBuf,
@@ -310,6 +315,7 @@ private:
 
     int setupReqParser();
     void resetEvtcb();
+    void processServerPush();
  
 
 
@@ -347,13 +353,8 @@ public:
     void setState(HttpSessionState state) {   m_iState = (short)state;   }
     int getServerAddrStr(char *pBuf, int len);
     int isAlive();
-    int setUpdateStaticFileCache(StaticFileCacheData *&pCache,
-                                 FileCacheDataEx *&pECache,
-                                 const char *pPath, int pathLen,
+    int setUpdateStaticFileCache(const char *pPath, int pathLen,
                                  int fd, struct stat &st);
-
-    void releaseFileCacheDataEx(FileCacheDataEx *&pECache);
-    void releaseStaticFileCacheData(StaticFileCacheData *&pCache);
 
     int isEndResponse() const   { return (m_iFlag & HSF_HANDLER_DONE);     }
 

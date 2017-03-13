@@ -40,8 +40,8 @@ static CallbackObjPool *s_pCbnodePool;
 EvtcbQue::EvtcbQue()
 {
     s_pCbnodePool = new CallbackObjPool;
-    m_pEmptyEventNotifier = new EmptyEventNotifier;
-    m_pEmptyEventNotifier->initNotifier(MultiplexerFactory::getMultiplexer());
+    m_pNotifier = new EvtcbQueNotifier;
+    m_pNotifier->initNotifier(MultiplexerFactory::getMultiplexer());
     lock_add = 0;
 }
 
@@ -50,7 +50,7 @@ EvtcbQue::~EvtcbQue()
 {
     s_pCbnodePool->shrinkTo(0);
     delete s_pCbnodePool;
-    delete m_pEmptyEventNotifier;
+    delete m_pNotifier;
     m_callbackObjList.pop_all();
 }
 
@@ -209,7 +209,7 @@ void EvtcbQue::schedule(evtcbnode_s *pObj, bool nowait)
     ls_atomic_spin_unlock(&lock_add);
     
     if (nowait)
-        m_pEmptyEventNotifier->notify();
+        m_pNotifier->notify();
 }
 
 

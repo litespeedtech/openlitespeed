@@ -52,6 +52,8 @@ class StringTool
     ~StringTool() {}
 public:
     static const char s_aHex[17];
+    static inline char getHex(char x)
+    {   return s_aHex[ x & 0xf ];    }
     static char *strUpper(const char *pSrc, char *pDest)
     {   return ls_strupper(pSrc, pDest);   }
     static char *strUpper(const char *pSrc, char *pDest, int &n)

@@ -675,7 +675,7 @@ void LsShmHash::destroy()
 int LsShmHash::rehash()
 {
     LsShmSize_t oldSize = capacity();
-    LsShmSize_t newSize;;
+    LsShmSize_t newSize;
     LsShmOffset_t newIdxOff;
     LsShmOffset_t newBitOff;
     LsShmHIterOff *pIdxOld;
@@ -734,10 +734,11 @@ int LsShmHash::rehash()
         pTable->x_iBitMapSz = szBitMap;
         pTable->x_iCapacityNew = newSize;
         pTable->x_iHIdxNew = newIdxOff;
+        iterOff = begin();
     }
 
     pIdxOld = (LsShmHIterOff *)m_pPool->offset2ptr(pTable->x_iHIdx);
-    for (iterOff = begin(); iterOff.m_iOffset != 0;)
+    while(iterOff.m_iOffset != 0)
     {
         uint32_t hashIndx;
         iter = offset2iterator(iterOff);
@@ -964,7 +965,7 @@ LsShmHash::iteroffset LsShmHash::find2(LsShmHKey key,
     {
         pElem = (LsShmHElem *)m_pPool->offset2ptr(offset.m_iOffset);
         if ((pElem->x_hkey == key)
-            && (pElem->getKeyLen() == ls_str_len(&pParms->key))
+            && (pElem->getKeyLen() == (int)ls_str_len(&pParms->key))
             && ((*m_vc)(ls_str_buf(&pParms->key), pElem->getKey(),
                         ls_str_len(&pParms->key)) == 0))
             break;
@@ -1294,8 +1295,15 @@ LsShmHash::iteroffset LsShmHash::next(iteroffset iterOff)
         return iterOff;
     iterator iter = offset2iterator(iterOff);
     if (iter->x_iNext.m_iOffset != 0)
-        return iter->x_iNext;
-
+    {
+        if (iter->x_iNext.m_iOffset == iterOff.m_iOffset)
+        {
+            iter->x_iNext.m_iOffset = 0;
+            //assert("looping next offset detected" == 0);
+        }
+        else
+            return iter->x_iNext;
+    }
     LsShmHIterOff *p = getHIdx();
     LsShmHIterOff *pIdxEnd = p + capacity();
     p += (getIndex(iter->x_hkey, capacity()) + 1);
@@ -1318,7 +1326,13 @@ LsShmHash::iteroffset LsShmHash::next(iteroffset iterOff)
                 }
             }
 #endif
-            return *p;
+            if ((*p).m_iOffset == iterOff.m_iOffset)
+            {
+                (*p).m_iOffset = 0;
+                //assert("looping next offset detected" == 0);
+            }
+            else
+                return *p;
         }
         ++p;
     }
@@ -1392,12 +1406,25 @@ int LsShmHash::trim(time_t tmCutoff, LsShmHash::TrimCb func, void *arg)
         next = pElem->getLruLinkNext();
 
         if (func != NULL)
+        {
             ret = (*func)(pElem, arg);
+            if (ret < 0) //Error quit
+                break;
+        }
+
         //int ret = clrdata(pElem->getVal());
-        eraseIteratorHelper(offElem);
-        ++del;
-        pLru->ndataexp += ret;
-        pLru->ndataset -= ret;
+        if (ret == 1)
+        {
+            eraseIteratorHelper(offElem);
+            ++del;
+            pLru->ndataexp += ret;
+            pLru->ndataset -= ret;
+        }
+        else
+        {
+            linkSetTop(offset2iterator(offElem), offElem);
+        }
+
         offElem = next;
     }
     pLru->nvalexp += del;

@@ -58,7 +58,7 @@ static int modinspector_parseList(ls_objarray_t *pList,
     ls_str_t *p = (ls_str_t *)ls_objarray_getobj(pList, 0);
     for (int i = 0 ; i < paramArrayCount; ++i)
     {
-        if (ls_str_len(p) == (int)strlen(paramArray[i]) &&
+        if (ls_str_len(p) == strlen(paramArray[i]) &&
             strncasecmp(paramArray[i], ls_str_cstr(p), ls_str_len(p)) == 0)
         {
             p = (ls_str_t *)ls_objarray_getobj(pList, 1);

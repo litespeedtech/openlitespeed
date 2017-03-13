@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+  <title>Open LiteSpeed Web Serverユーザーズマニュアル - サーブレットコンテキスト</title>
+  <meta name="description" content="Open LiteSpeed Web Serverユーザーズマニュアル - サーブレットコンテキスト." />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="shortcut icon" href="../img/favicon.ico" />
+  <link rel="stylesheet" type="text/css" href="../css/hdoc.css">
+</head>
+<body>
+<div class="pagewrapper"><div class="sidetree">
+<h3>OpenLiteSpeed Web Server <a href="index.html"> ユーザーズマニュアル</a></h3>
+<h5>Version 1.4 Rev. 2 </h5>
+<hr/>
+<div>
+<ul class="toctop">
+<li><a href="license.html">ライセンス</a></li>
+<li><a href="intro.html">はじめに</a></li>
+<li><a href="install.html">インストール</a></li>
+<li><a href="admin.html">管理</a>
+	<ul class="level2"><li><a href="ServerStat_Help.html">サービスマネージャ</a></li></ul></li>
+<li><a href="security.html">セキュリティ</a></li>
+<li><a href="config.html">設定</a>
+	<ul class="level2">
+	<li><a href="ServGeneral_Help.html">サーバー全般</a></li>
+        <li><a href="ServLog_Help.html">サーバーログ</a></li>
+	<li><a href="ServTuning_Help.html">サーバーのチューニング</a></li>
+	<li><a href="ServSecurity_Help.html">サーバーのセキュリティ</a></li>
+	<li><a href="ExtApp_Help.html">外部アプリ</a></li>
+                <ul class="level3">
+                <li><a href="External_FCGI.html">Fast CGIアプリ</a></li>
+                <li><a href="External_FCGI_Auth.html">Fast CGIオーソライザー</a></li>
+                <li><a href="External_LSAPI.html">LSAPIアプリ</a></li>
+                <li><a href="External_Servlet.html">サーブレットエンジン</a></li>
+                <li><a href="External_WS.html">Webサーバー</a></li>
+                <li><a href="External_PL.html">パイプロガー</a></li>
+                <li><a href="External_LB.html">ロードバランサ</a></li>
+                </ul>
+	<li><a href="ScriptHandler_Help.html">スクリプトハンドラ</a></li>
+	<li><a href="Rails_Help.html">Rack/Railsの設定</a></li>
+	<li><a href="Module_Help.html">モジュール設定</a></li>
+	<li><a href="Listeners_General_Help.html">リスナー全般</a></li>
+        <li><a href="Listeners_SSL_Help.html">リスナーのSSL</a></li>
+	<li><a href="Templates_Help.html">テンプレート</a></li>
+	<li><a href="VirtualHosts_Help.html">バーチャルホストの基本</a></li>
+	<li><a href="VHGeneral_Help.html">バーチャルホスト全般</a></li>
+	<li><a href="VHSecurity_Help.html">バーチャルホストのセキュリティ</a></li>
+        <li><a href="VHSSL_Help.html">バーチャルホストのSSL</a></li>
+	<li><a href="Rewrite_Help.html">Rewrite</a></li>
+	<li><a href="Context_Help.html">コンテキスト</a></li>
+               <ul class="level3">
+                <li><a href="Static_Context.html">静的コンテテキスト</a></li>
+                <li><a href="Java_Web_App_Context.html">Java Webアプリのコンテキスト</a></li>
+                <li><span class="current"><a href="Servlet_Context.html">サーブレットコンテキスト</a></span></li>
+                <li><a href="FCGI_Context.html">Fast CGIコンテキスト</a></li>
+                <li><a href="LSAPI_Context.html">LSAPIコンテキスト</a></li>
+                <li><a href="Proxy_Context.html">プロキシコンテキスト</a></li>
+                <li><a href="CGI_Context.html">CGIコンテキスト</a></li>
+                <li><a href="LB_Context.html">ロードバランサコンテキスト</a></li>
+                <li><a href="Redirect_Context.html">コンテキストのリダイレクト</a></li>
+                <li><a href="Rails_Context.html">Rack/Railsのコンテキスト</a></li>
+                <li><a href="Module_Context.html">モジュールハンドラのコンテキスト</a></li>
+                </ul>
+	<li><a href="VHWebSocket_Help.html">Web Socketプロキシ</a></li>
+	</ul>
+</li>
+<li><a href="webconsole.html">Webコンソール</a>
+        <ul class="level2">
+        <li><a href="AdminGeneral_Help.html">管理コンソール全般</a></li>
+        <li><a href="AdminSecurity_Help.html">管理コンソールのセキュリティ</a></li>
+	<li><a href="AdminListeners_General_Help.html">管理リスナー全般</a></li>
+        <li><a href="AdminListeners_SSL_Help.html">管理リスナーのSSL</a></li>
+        </ul>
+</li>
+</ul>
+</div></div>
+<div class="contentwrapper"><div class="nav-bar"><div class="prev">&#171 <a href="Java_Web_App_Context.html">Java Web アプリコンテキスト</a></div><div class="center"><a href="Context_Help.html">コンテキスト</a></div><div class="next"><a href="FCGI_Context.html">Fast CGIコンテキスト</a> &#187;</div></div>
+<h1>サーブレットコンテキスト</h1><h4>目次</h4><section class="toc"><section class="toc-row"><header><a href="#servletContext">サーブレットコンテキスト</a></header><p>
+<a href="#expuri">URI</a>&nbsp;|&nbsp;<a href="#servletEngine">サーブレットエンジン</a>&nbsp;|&nbsp;<a href="#extraHeaders">Extra Headers</a>&nbsp;|&nbsp;<a href="#realm">レルム</a>&nbsp;|&nbsp;<a href="#authName">認証名</a>&nbsp;|&nbsp;<a href="#required">必要（許可ユーザー/グループ）</a>&nbsp;|&nbsp;<a href="#accessAllowed">アクセス許可</a>&nbsp;|&nbsp;<a href="#accessDenied">アクセス拒否</a>&nbsp;|&nbsp;<a href="#extAuthorizer">承認者</a>&nbsp;|&nbsp;<a href="#addDefaultCharset">デフォルトの文字セットを追加</a>&nbsp;|&nbsp;<a href="#defaultCharsetCustomized">カスタマイズされたデフォルトの文字セット</a>&nbsp;|&nbsp;<a href="#enableIpGeo">IPジオロケーションを有効にする</a>&nbsp;|&nbsp;</p></section>
+</section>
+<section><div class="helpitem"><a name="servletContext"></a><table width="100%" class="ht" border="0" cellpadding="5" cellspacing="0"> <tr class="ht-title"><td><div>サーブレットコンテキスト<span class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="../img/top.gif"></a></span></div></p></td></tr> <tr><td><span class="ht-label">説明</span><p>サーブレットは、サーブレットコンテキストを介して個別にインポートできます。 サーブレットコンテキストは、サーブレットのURIとサーブレットエンジンの名前を指定するだけです。 Webアプリケーション全体をインポートしたくない場合や、異なるサーブレットを異なる認可レルムで保護したい場合にのみ、これを使用する必要があります。 このURIには、<span class="tagl"><a href="#javaWebAppContext">Java Webアプリコンテキスト</a></span>と同じ要件があります。</p></td></tr> </table> </div>
+<div class="helpitem"><a name="expuri"></a><table width="100%" class="ht" border="0" cellpadding="5" cellspacing="0"> <tr class="ht-title"><td><div>URI<span class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="../img/top.gif"></a></span></div></p></td></tr> <tr><td><span class="ht-label">説明</span><p>このコンテキストのURIを指定します。</p></td></tr> <tr><td><span class="ht-label">構文</span><p>URIは、プレーンURI（ "/"で始まる）またはPerl互換の正規表現URI（ "exp："で始まる）にすることができます。 プレーンURIが "/"で終わる場合、このコンテキストはこのURIの下にすべてのサブURIを含みます。 コンテキストがファイルシステム上のディレクトリにマップされている場合は、末尾に「/」を追加する必要があります。</p></td></tr> <tr><td><span class="ht-label">参照</span><p><span class="tagl"><a href="#location">ロケーション</a></span></p></td></tr> </table> </div>
+<div class="helpitem"><a name="servletEngine"></a><table width="100%" class="ht" border="0" cellpadding="5" cellspacing="0"> <tr class="ht-title"><td><div>サーブレットエンジン<span class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="../img/top.gif"></a></span></div></p></td></tr> <tr><td><span class="ht-label">説明</span><p>このWebアプリケーションを提供するサーブレットエンジンの名前を指定します。 サーブレットエンジンは、サーバーまたはバーチャルホストレベルの<span class="tagP"><a href="#ExtApp_Help">外部アプリケーション</a></span>セクションで定義する必要があります。</p></td></tr> <tr><td><span class="ht-label">構文</span><p>選択</p></td></tr> </table> </div>
+<div class="helpitem"><a name="extraHeaders"></a><table width="100%" class="ht" border="0" cellpadding="5" cellspacing="0"> <tr class="ht-title"><td><div>Extra Headers<span class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="../img/top.gif"></a></span></div></p></td></tr> <tr><td><span class="ht-label">説明</span><p>追加される余分な応答ヘッダーを指定します。 1行に1つのヘッダーを追加できます。 親コンテンツから継承したヘッダーを無効にするには、"NONE"を入力します。</p></td></tr> <tr><td><span class="ht-label">構文</span><p>各行に "[HeaderName]: [HeaderValue]"</p></td></tr> <tr><td><span class="ht-label">例</span><p>Cache-control: no-cache, no-store <br/> My-header: Custom header value</p></td></tr> </table> </div>
+<div class="helpitem"><a name="realm"></a><table width="100%" class="ht" border="0" cellpadding="5" cellspacing="0"> <tr class="ht-title"><td><div>レルム<span class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="../img/top.gif"></a></span></div></p></td></tr> <tr><td><span class="ht-label">説明</span><p>このコンテキストの認可レルムを指定します。 このコンテキストにアクセスするには、有効なユーザー名とパスワードを指定する必要があります。 <span class="tagl"><a href="VHSecurity_Help.html#realms">認可レルム</a></span>は<span class="tagP"><a href="#VHSecurity_Help">バーチャルホストのセキュリティ</a></span>セクションに設定されています。 この設定では、各レルムの<span class="tagl"><a href="VHSecurity_Help.html#realmName">レルム名</a></span>が使用されます。</p></td></tr> <tr><td><span class="ht-label">構文</span><p>選択</p></td></tr> </table> </div>
+<div class="helpitem"><a name="authName"></a><table width="100%" class="ht" border="0" cellpadding="5" cellspacing="0"> <tr class="ht-title"><td><div>認証名<span class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="../img/top.gif"></a></span></div></p></td></tr> <tr><td><span class="ht-label">説明</span><p>現在のコンテキストの認証レルムの代替名を指定します。 指定しない場合、元のレルム名が使用されます。 認証名は、ブラウザのログインポップアップに表示されます。</p></td></tr> <tr><td><span class="ht-label">構文</span><p>テキスト</p></td></tr> </table> </div>
+<div class="helpitem"><a name="required"></a><table width="100%" class="ht" border="0" cellpadding="5" cellspacing="0"> <tr class="ht-title"><td><div>必要（許可ユーザー/グループ）<span class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="../img/top.gif"></a></span></div></p></td></tr> <tr><td><span class="ht-label">説明</span><p>このコンテキストにアクセスできるユーザー/グループを指定します。 これにより、複数のコンテキストにわたって1つのユーザー/グループデータベース（<span class="tagl"><a href="#realm">レルム</a></span>で指定）を使用できますが、そのデータベースの特定のユーザー/グループのみがこのコンテキストにアクセスできます。</p></td></tr> <tr><td><span class="ht-label">構文</span><p>構文はApache Requireディレクティブと互換性があります。 例えば：  <ul> <li><span class="val">user username [username ...]</span> <br/> リストされたユーザーだけがこのコンテキストにアクセスできます。</li> <li> <span class="val">group groupid [groupid ...]</span><br/> リストされたグループに属するユーザーのみがこのコンテキストにアクセスできます。</li> </ul> この設定を指定しないと、すべての有効なユーザーがこのリソースにアクセスできます。</p></td></tr> </table> </div>
+<div class="helpitem"><a name="accessAllowed"></a><table width="100%" class="ht" border="0" cellpadding="5" cellspacing="0"> <tr class="ht-title"><td><div>アクセス許可<span class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="../img/top.gif"></a></span></div></p></td></tr> <tr><td><span class="ht-label">説明</span><p>このコンテキストでリソースにアクセスできるIPまたはサブネットワークを指定します。 <span class="tagl"><a href="#accessDenied">アクセス拒否</a></span>とサーバー/バーチャルホスト・レベルのアクセス制御とともに、アクセシビリティは、クライアントのIPアドレスが入る最小の範囲によって決まります。</p></td></tr> <tr><td><span class="ht-label">構文</span><p>IP/サブネットワークのカンマ区切りリスト。</p></td></tr> <tr><td><span class="ht-label">例</span><p>サブネットワークは以下のように書くことができます <span class="val">192.168.1.0/255.255.255.0</span>, <span class="val">192.168.1</span>, 又は <span class="val">192.168.1.*</span>.</p></td></tr> </table> </div>
+<div class="helpitem"><a name="accessDenied"></a><table width="100%" class="ht" border="0" cellpadding="5" cellspacing="0"> <tr class="ht-title"><td><div>アクセス拒否<span class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="../img/top.gif"></a></span></div></p></td></tr> <tr><td><span class="ht-label">説明</span><p>このコンテキストでリソースにアクセスできないIPまたはサブネットワークを指定します。 <span class="tagl"><a href="#accessAllowed">アクセス許可</a></span>とサーバー/バーチャルホストレベルのアクセス制御とともに、アクセシビリティはクライアントのIPアドレスが入る最小の範囲で決まります。</p></td></tr> <tr><td><span class="ht-label">構文</span><p>IP/サブネットワークのカンマ区切りリスト。</p></td></tr> <tr><td><span class="ht-label">例</span><p>サブネットワークは以下のように書くことができます <span class="val">192.168.1.0/255.255.255.0</span>, <span class="val">192.168.1</span>, 又は <span class="val">192.168.1.*</span>.</p></td></tr> </table> </div>
+<div class="helpitem"><a name="extAuthorizer"></a><table width="100%" class="ht" border="0" cellpadding="5" cellspacing="0"> <tr class="ht-title"><td><div>承認者<span class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="../img/top.gif"></a></span></div></p></td></tr> <tr><td><span class="ht-label">説明</span><p>権限のある/権限のないかの決定を生成するために使用できる外部アプリケーションを指定します。 現在、FastCGI Authorizerのみが使用可能です。 FastCGI Authorizerの役割の詳細については、<a href="http://www.fastcgi.com" target="_blank" rel="noopener noreferrer">http://www.fastcgi.com</a>を参照してください。 。</p></td></tr> <tr><td><span class="ht-label">構文</span><p>ドロップダウンリストから選択</p></td></tr> </table> </div>
+<div class="helpitem"><a name="addDefaultCharset"></a><table width="100%" class="ht" border="0" cellpadding="5" cellspacing="0"> <tr class="ht-title"><td><div>デフォルトの文字セットを追加<span class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="../img/top.gif"></a></span></div></p></td></tr> <tr><td><span class="ht-label">説明</span><p>コンテンツタイプが "text/html"または "text/plain"のいずれかのパラメータがない場合、文字セットタグを "Content-Type"レスポンスヘッダーに追加するかどうかを指定します。 <span class="val">Off</span>に設定すると、この機能は無効になります。 <span class="val">On</span>に設定すると、<span class="tagl"><a href="#defaultCharsetCustomized">カスタマイズされたデフォルトの文字セット</a></span>で指定された文字セットまたはデフォルトの "iso-8859-1"のいずれかが追加されます。</p></td></tr> <tr><td><span class="ht-label">構文</span><p>ラジオボックスから選択</p></td></tr> </table> </div>
+<div class="helpitem"><a name="defaultCharsetCustomized"></a><table width="100%" class="ht" border="0" cellpadding="5" cellspacing="0"> <tr class="ht-title"><td><div>カスタマイズされたデフォルトの文字セット<span class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="../img/top.gif"></a></span></div></p></td></tr> <tr><td><span class="ht-label">説明</span><p><span class="tagl"><a href="#addDefaultCharset">デフォルトの文字セットを追加</a></span>が<span class="val">On</span>のときに使用される文字セットを指定します。        これはオプションです。 デフォルト値は<span class="val"> iso-8859-1 </span>です。        <span class="tagl"><a href="#addDefaultCharset">デフォルトの文字セットを追加</a></span>が<span class="val"> Off </span>の場合、このエントリは無効です。</p></td></tr> <tr><td><span class="ht-label">構文</span><p>文字セットの名前。</p></td></tr> <tr><td><span class="ht-label">例</span><p>utf-8</p></td></tr> </table> </div>
+<div class="helpitem"><a name="enableIpGeo"></a><table width="100%" class="ht" border="0" cellpadding="5" cellspacing="0"> <tr class="ht-title"><td><div>IPジオロケーションを有効にする<span class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="../img/top.gif"></a></span></div></p></td></tr> <tr><td><span class="ht-label">説明</span><p> IPジオロケーション検索を有効/無効にするかどうかを指定します。 サーバ、バーチャルホスト、コンテキストレベルで設定できます。 値 「設定しない」を使用すると、IPジオロケーションはデフォルトで無効になります。</p></td></tr> <tr><td><span class="ht-label">構文</span><p>ラジオボックスから選択</p></td></tr> <tr><td><span class="ht-label">参照</span><p><span class="tagl"><a href="ServGeneral_Help.html#useIpInProxyHeader">ヘッダーにクライアントIPを使用する</a></span>, <span class="tagl"><a href="ServGeneral_Help.html#geoipDBFile">DBファイルのパス</a></span>, <span class="tagl"><a href="ServGeneral_Help.html#geoipDBCache">DBキャッシュタイプ</a></span></p></td></tr> </table> </div>
+</section>
+</div><footer class="copyright">Copyright &copy; 2013-2017. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> All rights reserved.</footer>
+</div>
+</body>
+</html>

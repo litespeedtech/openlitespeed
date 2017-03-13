@@ -729,7 +729,6 @@ public:
 
 
     int checkUrlStaicFileCache();
-    void removeUrlStaicFileCache(static_file_data_t *);
     static_file_data_t *getUrlStaticFileData() { return m_pUrlStaticFileData;}
 };
 

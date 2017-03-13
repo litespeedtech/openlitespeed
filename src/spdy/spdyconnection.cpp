@@ -519,7 +519,7 @@ int SpdyConnection::processSynStreamFrame(SpdyFrameHeader *pHeader)
 
 int SpdyConnection::extractCompressedData()
 {
-    int n = 0, n1 = 0;;
+    int n = 0, n1 = 0;
     m_bufInflate.clear();
     int iDatalen = (m_bufInput.blockSize() < m_iCurrentFrameRemain) ?
                    (m_bufInput.blockSize()) : (m_iCurrentFrameRemain);

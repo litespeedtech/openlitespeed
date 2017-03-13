@@ -3569,10 +3569,10 @@ int HttpServer::test_main(const char *pArgv0)
     HttpFetch fetch;
     const char *pEnd = strrchr(pArgv0, '/');
     --pEnd;
-    while (*pEnd != '/')
+    while (pEnd > pArgv0 && *pEnd != '/')
         --pEnd;
     --pEnd;
-    while (*pEnd != '/')
+    while (pEnd > pArgv0 && *pEnd != '/')
         --pEnd;
     ++pEnd;
     memmove(achServerRoot, pArgv0, pEnd - pArgv0);

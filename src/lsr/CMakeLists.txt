@@ -29,7 +29,7 @@ SET(lsr_STAT_SRCS
    ls_pool.c
    ls_ptrlist.c
    ls_sha1.c
-#   ls_shm.cpp
+   ls_shm.cpp
    ls_stack.c
    ls_str.c
    ls_strlist.c

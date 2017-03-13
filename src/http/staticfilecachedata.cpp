@@ -766,34 +766,6 @@ int StaticFileCacheData::readyGziped()
 }
 
 
-int StaticFileCacheData::readyCacheData(
-    FileCacheDataEx *&pECache, char compress)
-{
-    char *pFileName = m_real.buf();
-    int ret;
-    if ((compress) && (m_pMimeType->getExpires()->compressible()))
-    {
-        ret = readyGziped();
-        if (ret == 0)
-        {
-            pECache = m_pGziped;
-            pECache->incRef();
-            return 0;
-        }
-    }
-    pECache = &m_fileData;
-    pECache->incRef();
-    if ((m_fileData.isCached() ||
-         (m_fileData.getfd() != -1)))
-        return 0;
-
-    ret = m_fileData.readyData(pFileName);
-    if (ret)
-        pECache->decRef();
-    return ret;
-}
-
-
 int StaticFileCacheData::release()
 {
     m_fileData.release();

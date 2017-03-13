@@ -1,5 +1,7 @@
+<?php if (!$no_main_header) { ?>
 <!DOCTYPE html>
 <html lang="en-us">
+<?php } ?>    
 	<head>
 		<meta charset="utf-8">
 		<!--<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">-->
@@ -45,17 +47,23 @@
 		</script>
 
 	</head>
+      		<?php
+			if ($no_main_header)
+				return;
+		?>
 	<body>
 
 		<!-- POSSIBLE CLASSES: minified, fixed-ribbon, fixed-header, fixed-width
 			 You can also add different skin classes such as "smart-skin-1", "smart-skin-2" etc...-->
-		<?php
-			if ($no_main_header)
-				return;
-		?>
+
 		<!-- HEADER -->
 		<header id="header">
-			<div id="logo-group"><span id="logo"> <img src="/res/img/product_logo.gif" alt="LiteSpeed"> </span>
+			<div id="logo-group">
+                            <span id="logo"> 
+                                <object type="image/svg+xml" data="/res/img/product_logo.svg"  height="35" width="200">
+Your browser doesn't support SVG
+                                </object> 
+                            </span>
 			</div>
 
 			<!-- projects dropdown -->

@@ -180,7 +180,6 @@ int CustomFormat::parseFormat(const char *psFormat)
                     itemId = REF_HTTP_HEADER;
                 else
                     pBegin = NULL;
-
                 break;
             case 'l':
                 itemId = REF_REMOTE_IDENT;
@@ -189,10 +188,24 @@ int CustomFormat::parseFormat(const char *psFormat)
                 itemId = REF_REQ_METHOD;
                 break;
             case 'n':
-            case 'o':
                 if (!pBegin)
                     break;
                 itemId = REF_DUMMY;
+                break;
+            case 'o':
+                if (!pBegin)
+                    break;
+                *pItemEnd = 0;
+                itemId = HttpRespHeaders::getIndex(pBegin);
+                if ((pItemEnd - pBegin != HttpRespHeaders::getHeaderStringLen(
+                                          (HttpRespHeaders::INDEX)itemId)) 
+                    || (itemId >= HttpRespHeaders::H_HEADER_END))
+                    itemId = REF_RESP_HEADER;
+                else
+                {
+                    itemId += REF_RESP_HEADER_BEGIN;
+                    pBegin = NULL;
+                }
                 break;
             case 'p':
                 itemId = REF_SERVER_PORT;
@@ -277,20 +290,55 @@ static int logTime(char *pBuf, int len, time_t lTime, const char *pFmt)
 
 }
 
+int AccessLog::appendEscape(char *pBuf, int destLen, const char *pStr, int len)
+{
+    char *pDestEnd = pBuf + destLen;
+    char *p = pBuf;
+    const char *pStrEnd = pStr + len;
+    while (pStr < pStrEnd)
+    {
+        unsigned char ch = *(const uint8_t *)pStr;
 
-int AccessLog::appendStrNoQuote(char *pBuf, int len, const char *pSrc,
+        if ((ch < 0x20) || (ch >= 127))
+        {
+            if (p + 5 > pDestEnd)
+                break;
+            *p++ = '\\';
+            *p++ = 'x';
+            *p++ = StringTool::getHex(ch >> 4);
+            *p++ = StringTool::getHex(ch);
+        }
+        else
+        {
+            if (pBuf + 2 > pDestEnd)
+                break;
+
+            if ((*pStr == '"') || (*pStr == '\\'))
+                *p++ = '\\';
+            *p++ = ch;
+        }
+        ++pStr;
+    }
+    return p - pBuf;
+}
+
+
+int AccessLog::appendStrNoQuote(char *pBuf, int len, int escape, const char *pSrc,
                                 int srcLen, AccessLog *pLogger)
 {
     if (pLogger && ((srcLen > 4096)
                     || (pLogger->m_buf.available() <= srcLen + 100)))
     {
         pLogger->flush();
+        //FIXME: still need to scape the source.
         pLogger->m_pAppender->append(pSrc, srcLen);
         return LS_FAIL;
     }
     else
     {
-        if (srcLen > 0)
+        if (escape)
+            return appendEscape(pBuf, len, pSrc, srcLen);
+        else if (srcLen > 0)
         {
             if (srcLen > len)
                 srcLen = len;
@@ -314,13 +362,15 @@ int AccessLog::customLog(HttpSession *pSession, CustomFormat *pLogFmt,
     char *p;
     int n;
     int ret;
+    int escape;
     while (iter != pLogFmt->end())
     {
         pItem = *iter;
+        escape = 0;
         switch (pItem->m_itemId)
         {
         case REF_STRING:
-            ret = appendStrNoQuote(pBuf, pBufEnd - pBuf, pItem->m_sExtra.c_str(),
+            ret = appendStrNoQuote(pBuf, pBufEnd - pBuf, escape, pItem->m_sExtra.c_str(),
                                    pItem->m_sExtra.len(), pLogger);
             if (ret > 0)
                 pBuf += ret;
@@ -348,24 +398,35 @@ int AccessLog::customLog(HttpSession *pSession, CustomFormat *pLogFmt,
         case REF_COOKIE_VAL:
         case REF_ENV:
         case REF_HTTP_HEADER:
+        case REF_RESP_HEADER:
             switch (pItem->m_itemId)
             {
             case REF_COOKIE_VAL:
                 pValue = RequestVars::getCookieValue(pReq, pItem->m_sExtra.c_str(),
                                                      pItem->m_sExtra.len(), n);
+                escape = 1;
                 break;
             case REF_ENV:
                 pValue = RequestVars::getEnv(pSession, pItem->m_sExtra.c_str(),
                                              pItem->m_sExtra.len(), n);
+                escape = 1;
                 break;
             case REF_HTTP_HEADER:
                 pValue = pReq->getHeader(pItem->m_sExtra.c_str(), pItem->m_sExtra.len(),
                                          n);
+                escape = 1;
+                break;
+            case REF_RESP_HEADER:
+                pValue = NULL;
+                n = 0;
+                pSession->getResp()->getRespHeaders().getFirstHeader(
+                    pItem->m_sExtra.c_str(), pItem->m_sExtra.len(), &pValue, n);
+                escape = 1;
                 break;
             }
             if (pValue)
             {
-                ret = appendStrNoQuote(pBuf, pBufEnd - pBuf, pValue, n, pLogger);
+                ret = appendStrNoQuote(pBuf, pBufEnd - pBuf, escape, pValue, n, pLogger);
                 if (ret > 0)
                     pBuf += ret;
                 else if (ret < 0)
@@ -382,7 +443,7 @@ int AccessLog::customLog(HttpSession *pSession, CustomFormat *pLogFmt,
             {
                 if (p != pBuf)
                 {
-                    ret = appendStrNoQuote(pBuf, pBufEnd - pBuf, p, n, pLogger);
+                    ret = appendStrNoQuote(pBuf, pBufEnd - pBuf, escape, p, n, pLogger);
                     if (ret > 0)
                         pBuf += ret;
                     else if (ret < 0)

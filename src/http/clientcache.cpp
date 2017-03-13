@@ -319,7 +319,7 @@ ClientInfo *ClientCache::getClientInfo(struct sockaddr *pPeer)
     // use this to save client information
     // register TShmClient * pShmClient;
 
-    const_iterator iter = find(pPeer);;
+    const_iterator iter = find(pPeer);
     ClientInfo *pInfo;
     if (!iter)
     {

@@ -40,6 +40,7 @@
 #define H2_CONN_FLAG_FLOW_CTRL      (1<<5)
 #define H2_CONN_HEADERS_START       (1<<6)
 #define H2_CONN_FLAG_WAIT_PROCESS   (1<<7)
+#define H2_CONN_FLAG_NO_PUSH        (1<<8)
 
 #define H2_STREAM_PRIORITYS         (8)
 
@@ -143,6 +144,8 @@ public:
 
     void incShutdownStream()    {   ++m_uiShutdownStreams;  }
     void decShutdownStream()    {   --m_uiShutdownStreams;  }
+    int pushPromise(uint32_t streamId, ls_str_t* pUrl, ls_str_t* pHost, 
+                    ls_strpair_t *headers);
 
 private:
     typedef THash< H2Stream * > StreamMap;
@@ -210,15 +213,22 @@ private:
     int verifyClientPreface();
     int parseFrame();
 
+    int sendPushPromise(uint32_t streamId, uint32_t promise_streamId, 
+                        ls_str_t* pUrl, ls_str_t* pHost, 
+                        ls_strpair_t *headers);
+ 
+    H2Stream* createPushStream(uint32_t pushStreamId, ls_str_t* pUrl, 
+                               ls_str_t* pHost,  ls_strpair_t* headers);
 
 
 private:
     LoopBuf         m_bufInput;
     AutoBuf         m_bufInflate;
-    uint32_t        m_uiServerStreamID;
-    uint32_t        m_uiLastStreamID;
+    uint32_t        m_uiPushStreamId;
+    uint32_t        m_uiLastStreamId;
     uint32_t        m_uiShutdownStreams;
     uint32_t        m_uiGoAwayId;
+    int32_t         m_iCurPushStreams;
     int32_t         m_iCurrentFrameRemain;
     uint32_t        m_tmLastFrameIn;
     struct timeval  m_timevalPing;
@@ -237,7 +247,7 @@ private:
     int32_t         m_iStreamInInitWindowSize;
     int32_t         m_iServerMaxStreams;
     int32_t         m_iStreamOutInitWindowSize;
-    int32_t         m_iClientMaxStreams;
+    int32_t         m_iMaxPushStreams;
     int32_t         m_iPeerMaxFrameSize;
     int32_t         m_tmIdleBegin;
     int32_t         m_iaH2HeaderMem[10];

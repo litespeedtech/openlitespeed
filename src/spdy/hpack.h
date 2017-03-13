@@ -21,7 +21,6 @@
 #include <lsdef.h>
 #include <util/loopbuf.h>
 #include <util/ghash.h>
-#include <util/autobuf.h>
 
 #include <assert.h>
 #include <stddef.h>
@@ -71,8 +70,8 @@ struct HpackHuffDecodeStatus_t
 class DynTblEntry
 {
 public:
-    DynTblEntry(char *name, uint32_t name_len, char *val,
-                uint32_t val_len, uint8_t stxTabId)
+    DynTblEntry(const char *name, uint32_t name_len, 
+                const char *val,  uint32_t val_len, uint8_t stxTabId)
     {
         reset();
         init(name, name_len, val, val_len, stxTabId);
@@ -95,7 +94,8 @@ public:
     char       *getValue() const        { return m_val;     }
     uint16_t    getValueLen()           { return m_valLen; }
 
-    void init(char *name, uint32_t name_len, char *val, uint32_t val_len,
+    void init(const char *name, uint32_t name_len, 
+              const char *val, uint32_t val_len,
               uint8_t stxTabId);
 
 private:
@@ -142,8 +142,9 @@ public:
     
     void reset();
 
-    int getDynTabId(char *name, uint16_t name_len, char *value,
-                    uint16_t value_len, int &val_matched, uint8_t stxTabId);
+    int getDynTabId(const char *name, uint16_t name_len, 
+                    const char *value, uint16_t value_len, 
+                    int &val_matched, uint8_t stxTabId);
 
     DynTblEntry *getEntry(uint32_t dynTblId)
     {
@@ -156,7 +157,8 @@ public:
     void removeNameValueHashTEntry(DynTblEntry *pEntry);
     void removeNameHashTEntry(DynTblEntry *pEntry);
     void popEntry();
-    void pushEntry(char *name, uint16_t name_len, char *val, uint16_t val_len,
+    void pushEntry(const char *name, uint16_t name_len, 
+                   const char *val, uint16_t val_len,
                    uint32_t nameIndex);
 
 public:
@@ -241,8 +243,9 @@ public:
     HpackDynTbl &getReqDynTbl()  { return m_reqDynTbl;    }
     HpackDynTbl &getRespDynTbl() { return m_respDynTbl;   }
 
-    static uint8_t getStxTabId(char *name, uint16_t name_len, char *val,
-                               uint16_t val_len, int &val_matched);
+    static uint8_t getStxTabId(const char *name, uint16_t name_len, 
+                               const char *val, uint16_t val_len, 
+                               int &val_matched);
 
     unsigned char *encInt(unsigned char *dst, uint32_t value,
                           uint32_t prefix_bits);
@@ -255,10 +258,11 @@ public:
 
     //indexedType: 0, Add, 1,: without, 2: never
     unsigned char *encHeader(unsigned char *dst, unsigned char *dstEnd,
-                             char *name, uint16_t nameLen, char *value,
-                             uint16_t valueLen, int indexedType = 0);
+                             const char *name, uint16_t nameLen, 
+                             const char *value, uint16_t valueLen, 
+                             int indexedType = 0);
     int decHeader(unsigned char *&src, unsigned char *srcEnd,
-                  AutoBuf &nameValBuf,
+                  char *dst, char *const dstEnd,
                   uint16_t &name_len, uint16_t &val_len);
 
 

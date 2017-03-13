@@ -287,8 +287,6 @@ public:
     void setNoSSL()
     {
         m_pFpList = s_pCur_fp_list_list->m_pNoSSL;
-        if (m_sessionHooks.isDisabled(LSI_HKPT_L4_SENDING))
-            setFlag(HIO_FLAG_SENDFILE, 1);
     }
 
     // SSL interface

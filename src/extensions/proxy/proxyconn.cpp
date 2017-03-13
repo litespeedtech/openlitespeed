@@ -850,7 +850,7 @@ void ProxyConn::onTimer()
                         " body len: %lld, received: %lld!",
                         (long long)m_iRespBodySize, (long long)m_iRespBodyRecv);
             setState(ABORT);
-            getConnector()->endResponse(0, 0);;
+            getConnector()->endResponse(0, 0);
             return;
         }
         else if ((m_pChunkIS) && (!m_pChunkIS->getChunkLen()) && (delta > 1))

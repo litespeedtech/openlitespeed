@@ -19,6 +19,7 @@
 #include "hpacktest.h"
 #include "test/unittest-cpp/UnitTest++/src/UnitTest++.h"
 #include <util/autostr.h>
+#include <util/autobuf.h>
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -43,7 +44,7 @@ void printTable(HpackDynTbl &dynTab)
         printf("[%3d]  (s = %3d) %s: %s\n",
                i, pEntry->getEntrySize(), pEntry->getName(), pEntry->getValue());
     }
-    printf("\tTable size: %lu\n", dynTab.getTotalTableSize());
+    printf("\tTable size: %zd\n", dynTab.getTotalTableSize());
 }
 
 TEST(hapck_test_1)
@@ -51,7 +52,7 @@ TEST(hapck_test_1)
     HpackDynTbl dynTable;
     dynTable.updateMaxCapacity(256);
 
-    printf("size of DynTblEntry is %lu\n", sizeof(DynTblEntry));
+    printf("size of DynTblEntry is %zd\n", sizeof(DynTblEntry));
 
     addEntry(dynTable, ":authority", "www.example.com", 1);
     printTable(dynTable);
@@ -262,19 +263,18 @@ TEST(hapck_test_RFC_EXample)
     unsigned char *pSrc = bufSamp4;
     unsigned char *bufEnd =  bufSamp4 + strlen((const char *)bufSamp4);
     int rc;
-    AutoBuf autoBuf(2048);
+    char out[2048];
 //     char name[1024];
 //     char val[1024];
     uint16_t name_len = 1024;
     uint16_t val_len = 1024;
-    while ((rc = hpack.decHeader(pSrc, bufEnd, autoBuf, name_len,
+    while ((rc = hpack.decHeader(pSrc, bufEnd, out, out + sizeof(out), name_len,
                                  val_len)) > 0)
     {
-        char *name = autoBuf.begin();
+        char *name = out;
         char *val = name + name_len;
-        printf("[%d %d]%s: %s\n", name_len, val_len,
-               AutoStr2(name, name_len).c_str(),
-               AutoStr2(val, val_len).c_str());
+        printf("[%d %d]%.*s: %.*s\n", name_len, val_len,
+               name_len, name, val_len, val);
     }
     printTable(hpack.getReqDynTbl());
 
@@ -283,14 +283,13 @@ TEST(hapck_test_RFC_EXample)
                              "\x82\x86\x84\xbe\x58\x86\xa8\xeb\x10\x64\x9c\xbf";
     pSrc = bufSamp;
     bufEnd =  bufSamp + strlen((const char *)bufSamp);
-    while ((rc = hpack.decHeader(pSrc, bufEnd, autoBuf, name_len,
+    while ((rc = hpack.decHeader(pSrc, bufEnd, out, out + sizeof(out), name_len,
                                  val_len)) > 0)
     {
-        char *name = autoBuf.begin();
+        char *name = out;
         char *val = name + name_len;
-        printf("[%d %d]%s: %s\n", name_len, val_len,
-               AutoStr2(name, name_len).c_str(),
-               AutoStr2(val, val_len).c_str());
+        printf("[%d %d]%.*s: %.*s\n", name_len, val_len,
+               name_len, name, val_len, val);
     }
     printTable(hpack.getReqDynTbl());
 
@@ -298,14 +297,13 @@ TEST(hapck_test_RFC_EXample)
               "\x82\x87\x85\xbf\x40\x88\x25\xa8\x49\xe9\x5b\xa9\x7d\x7f\x89\x25\xa8\x49\xe9\x5b\xb8\xe8\xb4\xbf";
     pSrc = bufSamp;
     bufEnd =  bufSamp + strlen((const char *)bufSamp);
-    while ((rc = hpack.decHeader(pSrc, bufEnd, autoBuf, name_len,
+    while ((rc = hpack.decHeader(pSrc, bufEnd, out, out + sizeof(out), name_len,
                                  val_len)) > 0)
     {
-        char *name = autoBuf.begin();
+        char *name = out;
         char *val = name + name_len;
-        printf("[%d %d]%s: %s\n", name_len, val_len,
-               AutoStr2(name, name_len).c_str(),
-               AutoStr2(val, val_len).c_str());
+        printf("[%d %d]%.*s: %.*s\n", name_len, val_len,
+               name_len, name, val_len, val);
     }
     printTable(hpack.getReqDynTbl());
 
@@ -320,7 +318,7 @@ TEST(hapck_self_enc_dec_test)
     unsigned char *pSrc = respBuf;
     unsigned char *bufEnd;
     int rc;
-    AutoBuf autoBuf(2048);
+    char out[2048];
 //     char name[1024];
 //     char val[1024];
     uint16_t name_len = 0;
@@ -343,14 +341,13 @@ TEST(hapck_self_enc_dec_test)
     ****************************/
     pSrc = respBuf;
     bufEnd =  pBuf;
-    while ((rc = hpack.decHeader(pSrc, bufEnd, autoBuf, name_len,
+    while ((rc = hpack.decHeader(pSrc, bufEnd, out, out + sizeof(out), name_len,
                                  val_len)) > 0)
     {
-        char *name = autoBuf.begin();
+        char *name = out;
         char *val = name + name_len;
-        printf("[%d %d]%s: %s\n", name_len, val_len,
-               AutoStr2(name, name_len).c_str(),
-               AutoStr2(val, val_len).c_str());
+        printf("[%d %d]%.*s: %.*s\n", name_len, val_len,
+               name_len, name, val_len, val);
     }
     printTable(hpack.getReqDynTbl());
 
@@ -379,14 +376,13 @@ TEST(hapck_self_enc_dec_test)
     ****************************/
     pSrc = respBuf;
     bufEnd =  pBuf;
-    while ((rc = hpack.decHeader(pSrc, bufEnd, autoBuf, name_len,
+    while ((rc = hpack.decHeader(pSrc, bufEnd, out, out + sizeof(out), name_len,
                                  val_len)) > 0)
     {
-        char *name = autoBuf.begin();
+        char *name = out;
         char *val = name + name_len;
-        printf("[%d %d]%s: %s\n", name_len, val_len,
-               AutoStr2(name, name_len).c_str(),
-               AutoStr2(val, val_len).c_str());
+        printf("[%d %d]%.*s: %.*s\n", name_len, val_len,
+               name_len, name, val_len, val);
     }
     printTable(hpack.getReqDynTbl());
 
@@ -427,14 +423,13 @@ TEST(hapck_self_enc_dec_test)
     ****************************/
     pSrc = respBuf;
     bufEnd =  pBuf;
-    while ((rc = hpack.decHeader(pSrc, bufEnd, autoBuf, name_len,
+    while ((rc = hpack.decHeader(pSrc, bufEnd, out, out + sizeof(out), name_len,
                                  val_len)) > 0)
     {
-        char *name = autoBuf.begin();
+        char *name = out;
         char *val = name + name_len;
-        printf("[%d %d]%s: %s\n", name_len, val_len,
-               AutoStr2(name, name_len).c_str(),
-               AutoStr2(val, val_len).c_str());
+        printf("[%d %d]%.*s: %.*s\n", name_len, val_len,
+               name_len, name, val_len, val);
     }
     printTable(hpack.getReqDynTbl());
 
@@ -470,14 +465,13 @@ TEST(hapck_self_enc_dec_test)
     ****************************/
     pSrc = respBuf;
     bufEnd =  pBuf;
-    while ((rc = hpack.decHeader(pSrc, bufEnd, autoBuf, name_len,
+    while ((rc = hpack.decHeader(pSrc, bufEnd, out, out + sizeof(out), name_len,
                                  val_len)) > 0)
     {
-        char *name = autoBuf.begin();
+        char *name = out;
         char *val = name + name_len;
-        printf("[%d %d]%s: %s\n", name_len, val_len,
-               AutoStr2(name, name_len).c_str(),
-               AutoStr2(val, val_len).c_str());
+        printf("[%d %d]%.*s: %.*s\n", name_len, val_len,
+               name_len, name, val_len, val);
     }
     printTable(hpack.getReqDynTbl());
 
@@ -611,7 +605,7 @@ TEST(hapck_self_enc_dec_test_firefox_error)
     unsigned char *pSrc = (unsigned char *)buf;
     unsigned char *bufEnd = (unsigned char *)buf + 90;
 
-    AutoBuf autoBuf(2048);
+    char out[2048];
     uint16_t name_len, val_len;
 
     unsigned char *pBuf = respBuf;
@@ -619,14 +613,13 @@ TEST(hapck_self_enc_dec_test_firefox_error)
 
     while (pSrc < bufEnd)
     {
-        rc = hpack.decHeader(pSrc, bufEnd, autoBuf, name_len, val_len);
+        rc = hpack.decHeader(pSrc, bufEnd, out, out + sizeof(out), name_len, val_len);
         CHECK(rc > 0);
 
-        char *name = autoBuf.begin();
+        char *name = out;
         char *val = name + name_len;
-        printf("[%d %d]%s: %s\n", name_len, val_len,
-               AutoStr2(name, name_len).c_str(),
-               AutoStr2(val, val_len).c_str());
+        printf("[%d %d]%.*s: %.*s\n", name_len, val_len,
+               name_len, name, val_len, val);
 
         pBuf = hpack.encHeader(pBuf, respBufEnd, (char *)name, name_len,
                                (char *)val, val_len);
@@ -969,6 +962,57 @@ TEST(hapck_getStaticTableId)
     CHECK(val_matched == 0);
 
     printf("hapck_getStaticTableId DOne.\n");
+}
+
+static bool
+all_set_to (unsigned const char *buf, size_t bufsz, unsigned char val)
+{
+    unsigned n, count = 0;
+    for (n = 0; n < bufsz; ++n)
+        count += buf[n] == val;
+    return count == bufsz;
+}
+
+TEST(hpack_decode_limits)
+{
+    unsigned char comp[0x100], *end;
+    unsigned char *src;
+    char out[0x100];
+    Hpack hpack;
+    uint16_t name_len, val_len;
+    int s;
+    unsigned enough[] = { 33, 34, 40, 50, 100, };
+    unsigned not_enough[] = { 32, 31, 30, 10, 1, 0, };
+    unsigned n;
+
+    end = hpack.encHeader(comp, comp + sizeof(comp),
+        (char *) "some-header-name", 16, (char *) "some-header-value", 17, 0);
+
+    for (n = 0; n < sizeof(enough) / sizeof(enough[0]); ++n)
+    {
+        memset(out, 0xFA, sizeof(out));
+        src = comp;
+        s = hpack.decHeader(src, end, out, out + enough[n],
+                                name_len, val_len);
+        CHECK_EQUAL(1, s);
+        CHECK_EQUAL(src, end);
+        CHECK_EQUAL(16, name_len);
+        CHECK_EQUAL(17, val_len);
+        CHECK_EQUAL(0, memcmp(out, "some-header-namesome-header-value", 33));
+        CHECK(all_set_to((unsigned char *) out + enough[n],
+                                        sizeof(out) - enough[n], 0xFA));
+    }
+
+    for (n = 0; n < sizeof(not_enough) / sizeof(not_enough[0]); ++n)
+    {
+        memset(out, 0xFA, sizeof(out));
+        src = comp;
+        s = hpack.decHeader(src, end, out, out + not_enough[n],
+                                name_len, val_len);
+        CHECK(s < 0);
+        CHECK(all_set_to((unsigned char *) out + not_enough[n],
+                                    sizeof(out) - not_enough[n], 0xFA));
+    }
 }
 
 #endif

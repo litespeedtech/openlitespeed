@@ -2580,7 +2580,19 @@ void HttpVHost::addUrlStaticFileMatch(const char *url,
     data->pData = pData;
     data->tmaccess = DateTime::s_curTime;
     data->url.setStr(url);
-    m_pUrlStxFileHash->update(data->url.c_str(), data);
+    GHash::iterator it = m_pUrlStxFileHash->insert(data->url.c_str(), data);
+    if (!it)
+    {
+        LS_INFO("[HttpVHost::addUrlStaticFileMatch] try to insert but failed, may be a code bug, NEED TO CHECK CODE.");
+        it = m_pUrlStxFileHash->find(data->url.c_str());
+        m_pUrlStxFileHash->erase(it);
+        it = m_pUrlStxFileHash->insert(data->url.c_str(), data);
+        if (!it)
+        {
+            LS_ERROR("[HttpVHost::addUrlStaticFileMatch] try to insert again still failed.");
+        }
+    }
+    pData->incRef();
 }
 
 
@@ -2595,13 +2607,9 @@ int HttpVHost::checkFileChanged(static_file_data_t *data, struct stat &sb)
         UrlStxFileHash::iterator it = m_pUrlStxFileHash->find(data->url.c_str());
         if (it != m_pUrlStxFileHash->end())
         {
-            if (data->pData->decRef() > 0)
-            {
-                m_UrlStxFileDirtyList.push_back(data);
-            }
-            else
-                delete data;
             m_pUrlStxFileHash->erase(it);
+            data->pData->decRef();
+            delete data;
         }
         return -1;
     }
@@ -2620,32 +2628,19 @@ static_file_data_t *HttpVHost::getUrlStaticFileData(const char *url)
 
 void HttpVHost::urlStaticFileHashClean()
 {
-    TPointerList<static_file_data_t>::iterator it;
-    for (it = m_UrlStxFileDirtyList.begin(); it != m_UrlStxFileDirtyList.end();)
-    {
-        if ((*it)->pData->getFileData()->getRef() <= 0)
-        {
-            LS_DBG_L("[VHost:%s][static file cache] Clean list.", getName());
-            delete *it;
-            m_UrlStxFileDirtyList.erase(it);
-        }
-        else
-            ++it;
-    }
-
-    UrlStxFileHash::iterator itt;
+    UrlStxFileHash::iterator itt, itn;
     for (itt = m_pUrlStxFileHash->begin(); itt != m_pUrlStxFileHash->end();)
     {
         static_file_data_t *data = (static_file_data_t *)itt.second();
-        if (data->pData->getFileData()->getRef() <= 1)
+        itn = m_pUrlStxFileHash->next(itt);
+        if (data->pData->getRef() <= 1)
         {
             LS_DBG_L("[VHost:%s][static file cache] Clean HashT.", getName());
             data->pData->decRef();
-            data->pData->getFileData()->decRef();
-            delete data;
             m_pUrlStxFileHash->erase(itt);
+            delete data;
         }
-        itt = m_pUrlStxFileHash->next(itt);
+        itt = itn;
     }
 }
 
@@ -2655,8 +2650,8 @@ void HttpVHost::removeurlStaticFile(static_file_data_t *data)
     UrlStxFileHash::iterator it = m_pUrlStxFileHash->find(data->url.c_str());
     if (it != m_pUrlStxFileHash->end())
     {
-        delete data;
         m_pUrlStxFileHash->erase(it);
+        delete data;
     }
 }
 

@@ -553,7 +553,7 @@ void Awstats::config(HttpVHost *pVHost, int val, char *achBuf,
     {
         LS_WARN(ConfigCtx::getCurConfigCtx(), "AWStats URI is invalid"
                 ", use default [/awstats/].");
-        iconURI[9] = 0;;
+        iconURI[9] = 0;
         pURI = iconURI;
     }
 

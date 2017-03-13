@@ -289,7 +289,7 @@ $vhSortOptions = array(
 
 		livetabs.append('<li data-vn="' + vhname + '"><a data-toggle="tab" href="#' + vhid
 				+ '"><i class="fa fa-cube" title="' + vhname + '"></i>	<span class="hidden-mobile hidden-tablet">'
-				+ tabname + ' </span>&nbsp; <span class="close">×</span></a></li>');
+				+ tabname + ' </span>&nbsp; <span class="close">Ã—</span></a></li>');
 
 		var tabcontent = livetabs.closest(".widget-body").find(".tab-content");
 		var newcontent = tabcontent.find("#vhhide").html().replace(/id=\"vh\"/, 'id="' + vhid + '"');
@@ -504,7 +504,7 @@ $vhSortOptions = array(
 					content : "<?php DMsg::EchoUIStr('service_confirmmonitor')?> " + vhname
 						+ "? <p class='text-align-right'><a href='javascript:void(0);' onclick='javascript:addMonitorTab(\""
 						+ vhname
-						+ "\");' class='btn btn-primary btn-sm'><?php DMsg::EchoUIStr('btn_yes')?></a> <a href='javascript:void(0);' class='btn btn-default btn-sm'><?php DMsg::EchoUIStr('btn_cancel')?></a></p>",
+						+ "\");' class='btn btn-primary btn-sm'><?php DMsg::EchoUIStr('btn_go')?></a> <a href='javascript:void(0);' class='btn btn-default btn-sm'><?php DMsg::EchoUIStr('btn_cancel')?></a></p>",
 					color : "#296191",
 					icon : "fa fa-stethoscope swing animated"
 				});

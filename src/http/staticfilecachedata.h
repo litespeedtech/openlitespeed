@@ -142,12 +142,14 @@ class StaticFileCacheData : public CacheElement
     int buildFixedHeaders(int etag);
     int buildGzipCache(const struct stat &st);
     int tryCreateGziped();
-    int readyGziped();
+    
     int buildGzipPath();
     int detectTrancate();
 
 public:
 
+    int readyGziped();
+    const AutoStr2 * getRealPath() { return  &m_real; }
     off_t getFileSize() const   {   return m_fileData.getFileSize();    }
 
     void setMimeType(const MimeSetting *pType) {   m_pMimeType = pType;  }
@@ -182,8 +184,6 @@ public:
     int testUnMod(HttpReq *pReq);
     int testIfRange(const char *pIR, int len);
     int release();
-    int readyCacheData(FileCacheDataEx *&pECache,
-                       char compress);
     time_t getLastMod() const       {   return m_fileData.getLastMod();   }
     ino_t getINode() const          {   return m_fileData.getINode();     }
     

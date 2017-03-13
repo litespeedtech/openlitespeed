@@ -577,7 +577,7 @@ int ReqParser::checkBoundary(char *&pBegin, char *&pCur)
             appendFileKeyValue("_size", 5, s, l);
 
             //Now calc file size and MD5 and append to bodyBuf
-            char sMd5[16], sMd5Hex[32];
+            char sMd5[16], sMd5Hex[33];
             if (m_md5CachedNum - additionalBytes > 0)
                 ls_md5_update(&m_md5Ctx, m_md5CachedBytes,
                               m_md5CachedNum - additionalBytes);

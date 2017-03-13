@@ -42,56 +42,50 @@ StaticFileCache::~StaticFileCache()
 
 int StaticFileCache::getCacheElement(const char *pPath, int pathLen,
                                      const struct stat &fileStat, int fd,
-                                     StaticFileCacheData *&pData,
-                                     FileCacheDataEx *&pECache)
+                                     StaticFileCacheData **pData)
 {
-    if (!pData)
-    {
-        HttpCache::iterator iter = find(pPath);
-        if (iter)
-            pData = (StaticFileCacheData *)(iter.second());
-    }
-    if (pData)
-    {
-        if (pData->isDirty(fileStat))
-        {
-            if (dirty(pData))
-                return SC_500;
+    *pData = NULL;
 
-            pData = NULL;
-            pECache = NULL;
+    HttpCache::iterator iter = find(pPath);
+    if (iter)
+        *pData = (StaticFileCacheData *)(iter.second());
+    if (*pData)
+    {
+        if ((*pData)->isDirty(fileStat))
+        {
+            if (dirty(*pData))
+                return SC_500;
         }
         else
             return 0;
     }
 
-    int ret = newCache(pPath, pathLen, fileStat, fd, pData);
-    if (ret)
-        return ret;
-    add(pData);
+    *pData = newCache(pPath, pathLen, fileStat, fd);
+    if (*pData == NULL)
+        return SC_500;
+    add(*pData);
 
     return 0;
 }
 
 
-int StaticFileCache::newCache(const char *pPath, int pathLen,
-                              const struct stat &fileStat, int fd,
-                              StaticFileCacheData *&pData)
+StaticFileCacheData * StaticFileCache::newCache(const char *pPath, int pathLen,
+                              const struct stat &fileStat, int fd)
 {
-    int ret = SC_500;
+    StaticFileCacheData * pData;
     pData = (StaticFileCacheData *)allocElement();
     if (pData != NULL)
     {
         //pData->setMimeType( pMime );
         //pData->setCharset( pReq->getDefaultCharset() );
-        ret = pData->build(fd, pPath, pathLen, fileStat);
+        int ret = pData->build(fd, pPath, pathLen, fileStat);
         if (ret)
         {
             delete pData;
             pData = NULL;
         }
     }
-    return ret;
+    return pData;
 }
 
 

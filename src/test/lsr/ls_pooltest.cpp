@@ -69,7 +69,7 @@ TEST(ls_PoolTest_test)
     CHECK(memcmp(ptrs[3], cmp, 22) == 0);
     ls_pfree((void *)ptrs[3]);
 
-    int *psizes = sizes;;
+    int *psizes = sizes;
     for (i = 0; i < (int)(sizeof(sizes) / sizeof(sizes[0])); i++)
     {
         ptrs[i] = (char *)ls_palloc(*psizes);
