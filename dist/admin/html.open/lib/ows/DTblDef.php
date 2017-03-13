@@ -31,7 +31,7 @@ class DTblDef extends DTblDefBase
 				'proxy'=>'Proxy', 'cgi'=>'CGI',
 				'loadbalancer'=> 'Load Balancer',
 				'redirect'=>'Redirect',
-				'rails'=>'Rack/Rails', 'module'=>'Module Handler');
+				'appserver'=>'App Server', 'module'=>'Module Handler');
 
 		$this->_options['ctxTbl'] = array(
 				0=>'type', 1=>'VT_CTXG',
@@ -41,7 +41,7 @@ class DTblDef extends DTblDefBase
 				'proxy'=>'VT_CTXP', 'cgi'=>'VT_CTXC',
 				'loadbalancer'=>'VT_CTXB',
 				'redirect'=>'VT_CTXR',
-				'rails'=>'VT_CTXRL',
+				'appserver'=>'VT_CTXAS',
 				'module'=>'VT_CTXMD');
 
 		$this->_options['realmType'] = array('file' => 'Password File');
@@ -399,14 +399,18 @@ class DTblDef extends DTblDefBase
 		$this->_tblDef[$id] = DTbl::NewIndexed($id, DMsg::ALbl('l_ctxj'), $attrs, 'uri', 'javaWebAppContext', $defaultExtract);
 	}
 
-	protected function add_VT_CTXRL($id)
+	protected function add_VT_CTXAS($id)
 	{
 		$attrs = array_merge(
 				$this->get_ctx_attrs('uri'),
 				array(
-                        DTblDefBase::NewTextAttr('location', DMsg::ALbl('l_location'), 'cust', false, 'rails_location'),
+                        DTblDefBase::NewTextAttr('location', DMsg::ALbl('l_location'), 'cust', false, 'as_location'),
+			DTblDefBase::NewPathAttr('binPath', DMsg::ALbl('l_binpath'), 'file', 1, 'x'),
+                                    DTblDefBase::NewSelAttr('appType', DMsg::ALbl('l_apptype'),
+							array(''=>'', 'rails'=>'Rails', 'wsgi'=>'WSGI', 'node'=>'Node' )),
+                        DTblDefBase::NewTextAttr('startupFile', DMsg::ALbl('l_startupfile'), 'cust', true, 'as_startupfile'),
 						$this->_attrs['note'],
-						$this->_attrs['railsEnv'],
+						$this->_attrs['appserverEnv'],
 						DTblDefBase::NewIntAttr('maxConns', DMsg::ALbl('l_maxconns'), true, 1, 2000),
 						$this->_attrs['ext_env']),
 				$this->get_expires_attrs(),
@@ -418,8 +422,8 @@ class DTblDef extends DTblDefBase
 				$this->get_ctx_attrs('rewrite'),
 				$this->get_ctx_attrs('charset')
 		);
-		$defaultExtract = array('type'=>'rails');
-		$this->_tblDef[$id] = DTbl::NewIndexed($id, DMsg::ALbl('l_ctxrl'), $attrs, 'uri', 'railsContext', $defaultExtract);
+		$defaultExtract = array('type'=>'appserver');
+		$this->_tblDef[$id] = DTbl::NewIndexed($id, DMsg::ALbl('l_ctxas'), $attrs, 'uri', 'appserverContext', $defaultExtract);
 	}
 
 	protected function add_VT_CTXS($id)

@@ -34,6 +34,138 @@ int HttpHeader::s_iHeaderLen[H_HEADER_END + 1] =
     0
 };
 
+static int s_iMaxHdrLen = 0;
+
+const char *HttpHeader::s_pHeaderNames[H_HEADER_END + 1] =
+{
+    //Most common headers
+    "Accept",
+    "Accept-Charset",
+    "Accept-Encoding",
+    "Accept-Language",
+    "Authorization",
+    "Connection",
+    "Content-Type",
+    "Content-Length",
+    "Cookie",
+    "Cookie2",
+    "Host",
+    "Pragma",
+    "Referer",
+    "User-Agent",
+    "Cache-Control",
+    "If-Modified-Since",
+    "If-Match",
+    "If-None-Match",
+    "If-Unmodified-Since",
+    "If-Range",
+    "Keep-Alive",
+    "Range",
+    "Transfer-Encoding",
+
+    // request-header
+    "TE",
+    "Expect",
+    "Max-Forwards",
+    "Proxy-Authorization",
+
+    // general-header
+    "Date",
+    "Trailer",
+    "Upgrade",
+    "Via",
+    "Warning",
+
+    // entity-header
+    "Allow",
+    "Content-Encoding",
+    "Content-Language",
+    "Content-Location",
+    "Content-MD5",
+    "Content-Range",
+    "Expires",
+    "Last-Modified",
+
+};
+
+
+const char *HttpHeader::s_pHeaderNamesLowercase[H_HEADER_END + 1] =
+{
+    //Most common headers
+    "accept",
+    "accept-charset",
+    "accept-encoding",
+    "accept-language",
+    "authorization",
+    "connection",
+    "content-type",
+    "content-length",
+    "cookie",
+    "cookie2",
+    "host",
+    "pragma",
+    "referer",
+    "user-agent",
+    "cache-control",
+    "if-modified-since",
+    "if-match",
+    "if-none-match",
+    "if-range",
+    "if-unmodified-since",
+    "keep-alive",
+    "range",
+    "transfer-encoding",
+
+    // request-header
+    "te",
+    "expect",
+    "max-forwards",
+    "proxy-authorization",
+
+    // general-header
+    "date",
+    "trailer",
+    "upgrade",
+    "via",
+    "warning",
+
+    // entity-header
+    "allow",
+    "content-encoding",
+    "content-language",
+    "content-location",
+    "content-md5",
+    "content-range",
+    "expires",
+    "last-modified",
+
+};
+
+
+static void normalizeHeader(const char *pSrc, char *pDest)
+{
+    int i, len;
+    const char *pTotal, *pDash, *p = pSrc;
+    char *pDestPtr = pDest;
+    if (s_iMaxHdrLen == 0)
+    {
+        for (i = 0; i < HttpHeader::H_HEADER_END + 1; ++i)
+            if (HttpHeader::getHeaderStringLen(i) > s_iMaxHdrLen)
+                s_iMaxHdrLen = HttpHeader::getHeaderStringLen(i);
+    }
+    pTotal = pSrc + s_iMaxHdrLen;
+    while ((pDash = (const char *)memchr(p, '_', pTotal - p)) != NULL)
+    {
+        len = pDash - p;
+        StringTool::strLower(p, pDestPtr, len);
+        pDestPtr += len;
+        *pDestPtr++ = '-';
+        p += len + 1;
+    }
+    len = pTotal - p;
+    StringTool::strLower(p, pDestPtr, len);
+}
+
 
 size_t HttpHeader::getIndex(const char *pHeader)
 {

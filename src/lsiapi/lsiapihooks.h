@@ -286,6 +286,7 @@ private:
             iSize = getLevelSize(
                         LsiApiHooks::getGlobalApiHooks(B + i)->size());
             m_pEnableArray[i] = new int8_t[iSize];
+            memset(m_pEnableArray[i], 0, iSize);
         }
         m_iStatus = INITED;
 

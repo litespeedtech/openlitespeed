@@ -128,7 +128,7 @@ static void *thr_putjob(void *arg)
 {
     long indx = (long)arg * loopproduce;
     job_t *pjob = &myjobs[indx];
-    int i = loopproduce;;
+    int i = loopproduce;
     while (--i >= 0)
     {
         if ((*func_put)(pjob, indx) < 0)

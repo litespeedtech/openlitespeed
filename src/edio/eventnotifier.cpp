@@ -36,7 +36,7 @@ EventNotifier::~EventNotifier()
 int EventNotifier::handleEvents(short int event)
 {
     int count = 0;
-
+    ls_atomic_setint( &m_pending, 0);
     if (event & POLLIN)
     {
 #ifdef LSEFD_AVAIL
@@ -89,11 +89,15 @@ int EventNotifier::initNotifier(Multiplexer *pMultiplexer)
 
 void EventNotifier::notify()
 {
+    char succ = ls_atomic_casint(&m_pending, 0, 1);       
+    if (succ)
+    {
 #ifdef LSEFD_AVAIL
-    eventfd_write(getfd(), 1);
+        eventfd_write(getfd(), 1);
 #else
-    write(m_fdIn, "a", 1);
+        write(m_fdIn, "a", 1);
 #endif
+    }
 }
 
 

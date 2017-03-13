@@ -29,7 +29,7 @@ int printheader(unsigned char *buff, int length)
 {
     static char namebuff[1000];
     static char strbuff[1000];
-    uint16_t temp16, NameCount, theLength, curP = 0;;
+    uint16_t temp16, NameCount, theLength, curP = 0;
 
     if (length < 2)
         return LS_FAIL;

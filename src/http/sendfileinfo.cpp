@@ -17,8 +17,10 @@
 *****************************************************************************/
 #include "sendfileinfo.h"
 #include <http/staticfilecachedata.h>
-
+#include <http/httpmime.h>
+#include <util/datetime.h>
 #include <assert.h>
+
 
 
 SendFileInfo::SendFileInfo()
@@ -40,4 +42,71 @@ int SendFileInfo::getfd()
         return (long)m_pParam;
     else
         return m_pECache->getfd();
+}
+
+void SendFileInfo::setFileData(StaticFileCacheData *pData)
+{   
+    if (m_pFileData == pData)
+        return;
+    if (m_pFileData)
+        m_pFileData->decRef();
+    m_pFileData = pData; 
+    if (m_pFileData)
+        m_pFileData->incRef();
+}
+
+
+void SendFileInfo::setECache(FileCacheDataEx *pCache) 
+{
+    if (m_pECache == pCache)
+        return;
+    if (m_pECache)
+        m_pECache->decRef();
+    m_pECache = pCache;   
+    if (m_pECache)
+        m_pECache->incRef();
+}
+
+
+void SendFileInfo::release()
+{
+    if (m_pFileData)
+    {
+        if (m_pFileData->decRef() == 0)
+            m_pFileData->setLastAccess(DateTime::s_curTime);
+        //m_pFileData->keepOrigFileClosed();
+    }
+    if (m_pECache && m_pECache->decRef() == 0)
+    {
+        if (m_pECache->getfd() != -1)
+            m_pECache->closefd();
+    }
+    memset(this, 0, sizeof(SendFileInfo));
+
+}
+
+
+int SendFileInfo::readyCacheData(char compress)
+{
+    int ret;
+    
+    if ((compress) && (m_pFileData->getMimeType()->getExpires()->compressible()))
+    {
+        ret = m_pFileData->readyGziped();
+        if (ret == 0)
+        {
+            setECache(m_pFileData->getGziped());
+            return 0;
+        }
+    }
+    
+    const char *pFileName = m_pFileData->getRealPath()->c_str();
+    assert(pFileName && *pFileName);
+    ret = 0;
+    if ((!m_pFileData->getFileData()->isCached() &&
+        (m_pFileData->getFileData()->getfd() == -1)))
+        ret = m_pFileData->getFileData()->readyData(pFileName);
+    if (ret == 0)
+        setECache(m_pFileData->getFileData());
+    return ret;
 }

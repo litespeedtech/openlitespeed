@@ -55,8 +55,8 @@ extern "C" {
  */
 struct ls_str_s
 {
-    char *ptr;
-    int   len;
+    char    *ptr;
+    size_t   len;
 };
 
 /**
@@ -83,7 +83,7 @@ struct ls_strpair_s
  *
  * @see ls_str_delete
  */
-ls_str_t *ls_str_new(const char *pStr, int len);
+ls_str_t *ls_str_new(const char *pStr, size_t len);
 
 /** @ls_str
  * @brief Initializes a given lsr str.  Initializes the
@@ -96,7 +96,7 @@ ls_str_t *ls_str_new(const char *pStr, int len);
  *
  * @see ls_str_d
  */
-ls_str_t *ls_str(ls_str_t *pThis, const char *pStr, int len);
+ls_str_t *ls_str(ls_str_t *pThis, const char *pStr, size_t len);
 
 /** @ls_str_copy
  * @brief Copies the source lsr str to the dest lsr str.  Makes a
@@ -148,7 +148,7 @@ ls_inline void ls_str_blank(ls_str_t *pThis)
  * @param[in] pThis - A pointer to an initialized lsr str object.
  * @return The length.
  */
-ls_inline int           ls_str_len(const ls_str_t *pThis)
+ls_inline size_t        ls_str_len(const ls_str_t *pThis)
 {   return pThis->len;    }
 
 /** @ls_str_setlen
@@ -158,7 +158,7 @@ ls_inline int           ls_str_len(const ls_str_t *pThis)
  * @param[in] len - The length to set the lsr str object to.
  * @return Void.
  */
-ls_inline void          ls_str_setlen(ls_str_t *pThis, int len)
+ls_inline void          ls_str_setlen(ls_str_t *pThis, size_t len)
 {   pThis->len = len;    }
 
 /** @ls_str_buf
@@ -187,7 +187,7 @@ ls_inline const char   *ls_str_cstr(const ls_str_t *pThis)
  * @param[in] size - The size to allocate.
  * @return The allocated space, NULL if error.
  */
-char   *ls_str_prealloc(ls_str_t *pThis, int size);
+char   *ls_str_prealloc(ls_str_t *pThis, size_t size);
 
 /** @ls_str_dup
  * @brief Sets the lsr str object to \e pStr.  Will create a deep copy.
@@ -197,7 +197,7 @@ char   *ls_str_prealloc(ls_str_t *pThis, int size);
  * @param[in] len - The length of the string.
  * @return The number of bytes set.
  */
-int     ls_str_dup(ls_str_t *pThis, const char *pStr, int len);
+size_t   ls_str_dup(ls_str_t *pThis, const char *pStr, size_t len);
 
 /** @ls_str_append
  * @brief Appends the current lsr str object with \e pStr.  Will allocate a deep copy.
@@ -207,7 +207,7 @@ int     ls_str_dup(ls_str_t *pThis, const char *pStr, int len);
  * @param[in] len - The length of the string.
  * @return Void.
  */
-void    ls_str_append(ls_str_t *pThis, const char *pStr, const int len);
+void    ls_str_append(ls_str_t *pThis, const char *pStr, size_t len);
 
 /** @ls_str_cmp
  * @brief A comparison function for lsr str. Case Sensitive.
@@ -217,7 +217,17 @@ void    ls_str_append(ls_str_t *pThis, const char *pStr, const int len);
  * @param[in] pVal2 - The second lsr str object to compare.
  * @return Result according to #ls_hash_val_comp.
  */
-int             ls_str_cmp(const void *pVal1, const void *pVal2);
+int     ls_str_cmp(const void *pVal1, const void *pVal2);
+
+/** @ls_str_bcmp
+ * @brief A binary comparison function for lsr str. 
+ * @details This may be used for lsr hash or map comparison.
+ *
+ * @param[in] pVal1 - The first ls_str object to compare.
+ * @param[in] pVal2 - The second ls_str object to compare.
+ * @return Result according to #ls_hash_val_comp.
+ */
+int     ls_str_bcmp(const void *pVal1, const void *pVal2);
 
 /** @ls_str_hf
  * @brief A hash function for lsr str structure. Case Sensitive.
@@ -235,7 +245,7 @@ ls_hash_key_t  ls_str_hf(const void *pKey);
  * @param[in] pKey - The key to calculate.
  * @return The hash key.
  */
-ls_hash_key_t  ls_str_hfxx(const void *pKey);
+ls_hash_key_t  ls_str_xh32(const void *pKey);
 
 /** @ls_str_cmpci
  * @brief A comparison function for lsr str. Case Insensitive.
@@ -268,7 +278,7 @@ ls_hash_key_t  ls_str_hfci(const void *pKey);
  * @param[in] len - The length of the string.
  * @return Void.
  */
-ls_inline void ls_str_set(ls_str_t *pThis, char *pStr, int len)
+ls_inline void ls_str_set(ls_str_t *pThis, char *pStr, size_t len)
 {
     pThis->ptr = pStr;
     pThis->len = len;
@@ -287,7 +297,7 @@ ls_inline void ls_str_set(ls_str_t *pThis, char *pStr, int len)
  *
  * @see ls_str_xdelete
  */
-ls_str_t  *ls_str_xnew(const char *pStr, int len, ls_xpool_t *pool);
+ls_str_t  *ls_str_xnew(const char *pStr, size_t len, ls_xpool_t *pool);
 
 /** @ls_str_x
  * @brief Initializes a given lsr str from the session pool.  Initializes the
@@ -302,7 +312,7 @@ ls_str_t  *ls_str_xnew(const char *pStr, int len, ls_xpool_t *pool);
  *
  * @see ls_str_xd
  */
-ls_str_t  *ls_str_x(ls_str_t *pThis, const char *pStr, int len,
+ls_str_t  *ls_str_x(ls_str_t *pThis, const char *pStr, size_t len,
                     ls_xpool_t *pool);
 
 /** @ls_str_xcopy
@@ -364,7 +374,7 @@ char   *ls_str_xprealloc(ls_str_t *pThis, int size, ls_xpool_t *pool);
  * @param[in] pool - A pointer to the pool to allocate from.
  * @return The number of bytes set.
  */
-int     ls_str_xsetstr(ls_str_t *pThis, const char *pStr, int len,
+size_t  ls_str_xsetstr(ls_str_t *pThis, const char *pStr, size_t len,
                        ls_xpool_t *pool);
 
 /** @ls_str_xappend
@@ -377,7 +387,7 @@ int     ls_str_xsetstr(ls_str_t *pThis, const char *pStr, int len,
  * @param[in] pool - A pointer to the pool to allocate from.
  * @return Void.
  */
-void    ls_str_xappend(ls_str_t *pThis, const char *pStr, const int len,
+void    ls_str_xappend(ls_str_t *pThis, const char *pStr, size_t len,
                        ls_xpool_t *pool);
 
 

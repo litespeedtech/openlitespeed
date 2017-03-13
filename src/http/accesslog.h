@@ -53,11 +53,12 @@ class AccessLog
     AutoBuf m_buf;
 
     int appendStr(const char *pStr, int len);
-    static int appendStrNoQuote(char *pBuf, int len, const char *pSrc,
+    static int appendStrNoQuote(char *pBuf, int len, int escape, const char *pSrc,
                                 int srcLen, AccessLog *pLogger);
     void customLog(HttpSession *pSession, CustomFormat *pLogFmt);
     static int customLog(HttpSession *pSession, CustomFormat *pLogFmt,
                          char *pOutBuf, int buf_len,  AccessLog *pLogger);
+    static int appendEscape(char *pBuf, int destLen, const char *pStr, int len);
 
 public:
     explicit AccessLog(const char *pPath);

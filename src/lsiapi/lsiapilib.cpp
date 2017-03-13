@@ -482,7 +482,7 @@ static int set_resp_header(lsi_session_t *session,
     HttpRespHeaders &respHeaders = pSession->getResp()->getRespHeaders();
     if (header_index < LSI_RSPHDR_END)
     {
-        respHeaders.add((HttpRespHeaders::HEADERINDEX)header_index, val, valLen,
+        respHeaders.add((HttpRespHeaders::INDEX)header_index, val, valLen,
                         add_method);
         if (header_index == HttpRespHeaders::H_CONTENT_TYPE)
             pSession->updateContentCompressible();
@@ -544,7 +544,7 @@ static int get_resp_header(lsi_session_t *session,
         return LS_FAIL;
     HttpRespHeaders &respHeaders = pSession->getResp()->getRespHeaders();
     if (header_index < LSI_RSPHDR_END)
-        return respHeaders.getHeader((HttpRespHeaders::HEADERINDEX)header_index,
+        return respHeaders.getHeader((HttpRespHeaders::INDEX)header_index,
                                      iov, maxIovCount);
     else
         return respHeaders.getHeader(name, nameLen, iov, maxIovCount);
@@ -570,7 +570,7 @@ static unsigned int get_resp_header_id(lsi_session_t *session,
     if (pSession == NULL)
         return LS_FAIL;
     HttpRespHeaders &respHeaders = pSession->getResp()->getRespHeaders();
-    return respHeaders.getRespHeaderIndex(name);
+    return respHeaders.getIndex(name);
 }
 
 
@@ -594,7 +594,7 @@ static int remove_resp_header(lsi_session_t *session,
         return LS_FAIL;
     HttpRespHeaders &respHeaders = pSession->getResp()->getRespHeaders();
     if (header_index < LSI_RSPHDR_END)
-        respHeaders.del((HttpRespHeaders::HEADERINDEX)header_index);
+        respHeaders.del((HttpRespHeaders::INDEX)header_index);
     else
         respHeaders.del(name, nameLen);
     return 0;

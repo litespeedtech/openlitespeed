@@ -154,9 +154,7 @@ static int processFlvStream(HttpSession *pSession, off_t start)
 {
     //HttpReq * pReq = pSession->getReq();
     SendFileInfo *pData = pSession->getSendFileInfo();
-
-    FileCacheDataEx *&pECache = pData->getECache();
-    int ret = pData->getFileData()->readyCacheData(pECache, 0);
+    int ret = pData->readyCacheData(0);
     if (!ret)
     {
         HttpResp *pResp = pSession->getResp();
@@ -182,7 +180,7 @@ int calcMoovContentLen(HttpSession *pSession, off_t &contentLen)
     int ret = 0;
     SendFileInfo *pData = pSession->getSendFileInfo();
 
-    FileCacheDataEx *&pECache = pData->getECache();
+    FileCacheDataEx *pECache = pData->getECache();
 
     unsigned char *mini_moov = NULL;
     uint32_t mini_moov_size;
@@ -248,8 +246,6 @@ int buildMoov(HttpSession *pSession)
     HttpReq *pReq = pSession->getReq();
     SendFileInfo *pData = pSession->getSendFileInfo();
 
-    FileCacheDataEx *&pECache = pData->getECache();
-
     unsigned char *mini_moov = NULL;
     uint32_t mini_moov_size;
     mini_moov = pData->getFileData()->getMiniMoov();
@@ -259,6 +255,7 @@ int buildMoov(HttpSession *pSession)
     if (!moov_data)
         return LS_FAIL;
 
+    FileCacheDataEx *pECache = pData->getECache();
     while (moov_data->remaining_bytes > 0)
     {
         ret = get_moov(
@@ -346,13 +343,13 @@ int processH264Stream(HttpSession *pSession, double start)
     HttpReq *pReq = pSession->getReq();
     SendFileInfo *pData = pSession->getSendFileInfo();
 
-    FileCacheDataEx *&pECache = pData->getECache();
-    int ret = pData->getFileData()->readyCacheData(pECache, 0);
+    int ret = pData->readyCacheData(0);
     if (ret)
         return ret;
     unsigned char *mini_moov = NULL;
     uint32_t mini_moov_size;
     mini_moov = pData->getFileData()->getMiniMoov();
+    FileCacheDataEx *pECache = pData->getECache();
     if (!mini_moov)
     {
         if (get_mini_moov(pECache->getfd(),     //in - video file descriptor
@@ -426,26 +423,18 @@ int StaticFileHandler::process(HttpSession *pSession,
 
 //     if (pReq->getMethod() >= HttpMethod::HTTP_POST)
 //         return SC_405;
-    SendFileInfo *pData = pSession->getSendFileInfo();
-    StaticFileCacheData *&pCache = pData->getFileData();
-    FileCacheDataEx *&pECache = pData->getECache();
-
-
+    SendFileInfo *pInfo = pSession->getSendFileInfo();
     const AutoStr2 *pPath = pReq->getRealPath();
 
     if (pPath)
     {
-        ret = pSession->setUpdateStaticFileCache(pCache, pECache, pPath->c_str(),
+        ret = pSession->setUpdateStaticFileCache(pPath->c_str(),
                 pPath->len(),
                 pReq->transferReqFileFd(), pReq->getFileStat());
         if (ret)
             return ret;
     }
-    else  //when using a cache, should incRef od the pCache, otherwise,
-          //when release will cause ref counter error
-    {
-        pCache->incRef();
-    }
+    StaticFileCacheData *pCache = pInfo->getFileData();
 
     if (pSession->getFlag(HSF_STX_FILE_CACHE_READY))
         pReq->setMimeType(pCache->getMimeType());
@@ -523,7 +512,7 @@ int StaticFileHandler::process(HttpSession *pSession,
                 if (ret)
                     return ret;
             }
-            if (!ret && pData->getFileData()->getFileSize() > 0)
+            if (!ret && pInfo->getFileData()->getFileSize() > 0)
                 return processRange(pSession, pReq, pRange);
         }
         else
@@ -537,13 +526,15 @@ int StaticFileHandler::process(HttpSession *pSession,
         }
     }
 
-    //pECache = pData->getECache();
     char compressed = ((pReq->gzipAcceptable() == GZIP_REQUIRED) &&
                        ((pSession->getSessionHooks()->getFlag(LSI_HKPT_RECV_RESP_BODY)
                          | pSession->getSessionHooks()->getFlag(LSI_HKPT_SEND_RESP_BODY))
                         & LSI_FLAG_DECOMPRESS_REQUIRED) == 0);
-    ret = pCache->readyCacheData(pECache, compressed);
+    ret = pInfo->readyCacheData(compressed);
     LS_DBG_L(pReq->getLogSession(), "readyCacheData() return %d", ret);
+    FileCacheDataEx *pECache = pInfo->getECache();
+    
+    
     if (!ret)
     {
         if (pReq->isKeepAlive())
@@ -571,13 +562,13 @@ int StaticFileHandler::process(HttpSession *pSession,
             //fall through
             default:
 
-                buildStaticFileHeaders(pResp, pReq, pData);
+                buildStaticFileHeaders(pResp, pReq, pInfo);
                 if (pECache == pCache->getGziped())
                 {
                     pResp->addGzipEncodingHeader();
                     pReq->orGzip(UPSTREAM_GZIP);
                 }
-                pSession->setSendFileBeginEnd(0, pData->getECache()->getFileSize());
+                pSession->setSendFileBeginEnd(0, pInfo->getECache()->getFileSize());
             }
         } //Xuedong Add for SSI Start
         else
@@ -592,7 +583,7 @@ int StaticFileHandler::process(HttpSession *pSession,
             else
                 pSession->flushDynBodyChunk();
 
-            pSession->setSendFileBeginEnd(0, pData->getECache()->getFileSize());
+            pSession->setSendFileBeginEnd(0, pInfo->getECache()->getFileSize());
         }
         //ret = pSession->flush();
         ret = pSession->endResponse(1);
@@ -600,11 +591,7 @@ int StaticFileHandler::process(HttpSession *pSession,
     if (ret == 0 && !pSession->getFlag(HSF_STX_FILE_CACHE_READY))
     {
         HttpVHost *host = (HttpVHost *)pSession->getReq()->getVHost();
-        host->addUrlStaticFileMatch(pReq->getURI(), pData->getFileData());
-        pData->getFileData()->incRef();
-        pData->getFileData()->getFileData()->incRef();
-        //assert(pData->getFileData()->getRef() == 2);
-        //assert(pData->getFileData()->getFileData()->getRef() == 2);
+        host->addUrlStaticFileMatch(pReq->getURI(), pInfo->getFileData());
         LS_DBG_L( pSession->getLogSession(), "[static file cache] create cache." );
     }
     return ret;
@@ -797,10 +784,9 @@ static int processRange(HttpSession *pSession, HttpReq *pReq,
     }
     else
     {
-        FileCacheDataEx *&pECache = pData->getECache();
         pReq->setStatusCode(SC_206);
         pReq->setRange(range);
-        ret = pData->getFileData()->readyCacheData(pECache, 0);
+        ret = pData->readyCacheData(0);
         if (!ret)
         {
             //HttpResp * pResp = pSession->getResp();

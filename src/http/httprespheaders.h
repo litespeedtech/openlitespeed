@@ -46,10 +46,14 @@ struct http_header_t;
 struct iovec;
 class IOVec;
 
+#define HRH_F_HAS_HOLE  1
+#define HRH_F_HAS_PUSH  2
+
+
 class HttpRespHeaders
 {
 public:
-    enum HEADERINDEX
+    enum INDEX
     {
         // most common response-header
         H_ACCEPT_RANGES = 0,
@@ -80,7 +84,9 @@ public:
         H_X_LITESPEED_PURGE,
         H_X_LITESPEED_TAG,
         H_X_LITESPEED_VARY,
+        H_LSC_COOKIE,
         H_X_POWERED_BY,
+        H_LINK,
 
 //        H_HTTP_VERSION,
         H_HEADER_END,
@@ -111,7 +117,7 @@ public:
 
     void reset();
 
-    int add(HEADERINDEX headerIndex, const char *pVal, unsigned int valLen,
+    int add(INDEX headerIndex, const char *pVal, unsigned int valLen,
             int method = LSI_HEADEROP_SET);
     int add(const char *pName, int nameLen, const char *pVal,
             unsigned int valLen, int method = LSI_HEADEROP_SET);
@@ -128,7 +134,7 @@ public:
     short getHttpCode()     { return m_iHttpCode;   }
 
     int del(const char *pName, int nameLen);
-    int del(HEADERINDEX headerIndex);
+    int del(INDEX headerIndex);
 
     int getUniqueCnt() const    {   return m_iHeaderUniqueCount;    }
 
@@ -144,11 +150,14 @@ public:
     //return number of header appended to iov
     int  getHeader(const char *pName, int nameLen, struct iovec *iov,
                    int maxIovCount);
-    int  getHeader(HEADERINDEX index, struct iovec *iov, int maxIovCount);
+    int  getHeader(INDEX index, struct iovec *iov, int maxIovCount);
 
-    int  getFirstHeader(const char *pName, int nameLen, char **val,
+    int  getFirstHeader(const char *pName, int nameLen, const char **val,
                         int &valLen);
-    const char *getHeader(HEADERINDEX index, int *valLen) const;
+    const char *getHeader(INDEX index, int *valLen) const;
+
+    int  isHeaderSet(INDEX index) const
+    {   return m_KVPairindex[index] != 0xff;    }
 
     //For LSIAPI using//return number of header appended to iov
     int getAllHeaders(struct iovec *iov_key, struct iovec *iov_val,
@@ -171,8 +180,8 @@ public:
     int appendToIov(IOVec *iovec, int &addCrlf);
     int appendToIovExclude(IOVec *iovec, const char *pName, int nameLen) const;
 
-    static HEADERINDEX getRespHeaderIndex(const char *pHeader);
-    static int getHeaderStringLen(HEADERINDEX index)  {    return s_iHeaderLen[(int)index];  }
+    static INDEX getIndex(const char *pHeader);
+    static int getHeaderStringLen(INDEX index)  {    return s_iHeaderLen[(int)index];  }
 
     static void buildCommonHeaders();
     static void updateDateHeader();
@@ -198,6 +207,7 @@ public:
 
     void dropConnectionHeaders();
 
+    unsigned char hasPush() const   {   return m_flags & HRH_F_HAS_PUSH;    }
 
 public:
     static const char *m_sPresetHeaders[H_HEADER_END];
@@ -210,7 +220,7 @@ private:
     TObjArray< resp_kvpair > m_aKVPairs;
     unsigned char   m_KVPairindex[H_HEADER_END];
     short           m_iHttpCode;
-    char            m_hasHole;
+    char            m_flags;
     char            m_iHeaderBuilt;
     short           m_iHeaderRemovedCount;
     short           m_iHeaderUniqueCount;
@@ -243,7 +253,7 @@ private:
     int             appendHeader(resp_kvpair *pKv, const char *pName,
                                  unsigned int nameLen, const char *pVal, unsigned int valLen, int);
     int             getHeaderKvOrder(const char *pName, unsigned int nameLen);
-    void            verifyHeaderLength(HEADERINDEX headerIndex,
+    void            verifyHeaderLength(INDEX headerIndex,
                                        const char *pName, unsigned int nameLen);
     int             mergeAll();
 
@@ -263,7 +273,7 @@ private:
 
 struct http_header_t
 {
-    HttpRespHeaders::HEADERINDEX index;
+    HttpRespHeaders::INDEX index;
     const char *val;
     unsigned int valLen;
 };

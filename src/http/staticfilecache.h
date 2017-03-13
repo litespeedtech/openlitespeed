@@ -33,16 +33,15 @@ class StaticFileCache : public HttpCache,
 
     CacheElement *allocElement();
     void recycle(CacheElement *pElement);
-    int  newCache(const char *pPath, int pathLen,
-                  const struct stat &fileStat, int fd,
-                  StaticFileCacheData *&pData);
+    StaticFileCacheData * newCache(const char *pPath, int pathLen,
+                  const struct stat &fileStat, int fd);
     StaticFileCache();
 public:
     ~StaticFileCache();
 
     int getCacheElement(const char *pPath, int pathLen,
                         const struct stat &fileStat, int fd,
-                        StaticFileCacheData *&pData, FileCacheDataEx *&pECache);
+                        StaticFileCacheData **pData);
     void returnCacheElement(StaticFileCacheData *pElement);
     LS_NO_COPY_ASSIGN(StaticFileCache);
 };

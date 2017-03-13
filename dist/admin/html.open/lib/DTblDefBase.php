@@ -281,7 +281,7 @@ class DTblDefBase
 			'ctx_uri' => DTblDefBase::NewTextAttr('uri', DMsg::ALbl('l_uri'), 'expuri', false, 'expuri'),
 			'ctx_location' => DTblDefBase::NewTextAttr('location', DMsg::ALbl('l_location'), 'cust', false),
 			'ctx_shandler' => DTblDefBase::NewSelAttr('handler', DMsg::ALbl('l_servletengine'), 'extprocessor:servlet', false, 'servletEngine'),
-			'railsEnv' => DTblDefBase::NewSelAttr('railsEnv', DMsg::ALbl('l_runtimemode'),
+			'appserverEnv' => DTblDefBase::NewSelAttr('envType', DMsg::ALbl('l_runtimemode'),
 					array(''=>'', '0'=>'Development',	'1'=>'Production', '2'=>'Staging' )),
 
 			'geoipDBFile' => DTblDefBase::NewPathAttr('geoipDBFile', DMsg::ALbl('l_geoipdbfile'), 'filep', 2, 'r', false),
@@ -387,8 +387,8 @@ class DTblDefBase
 				DTblDefBase::NewIntAttr('maxKeepAliveReq', DMsg::ALbl('l_maxkeepalivereq'), false, 0, 32767),
 				DTblDefBase::NewBoolAttr('smartKeepAlive', DMsg::ALbl('l_smartkeepalive'), false),
 				DTblDefBase::NewIntAttr('keepAliveTimeout', DMsg::ALbl('l_keepalivetimeout'), false, 0, 60),
-				DTblDefBase::NewIntAttr('sndBufSize', DMsg::ALbl('l_sndbufsize'), false, 0, 65535),
-				DTblDefBase::NewIntAttr('rcvBufSize', DMsg::ALbl('l_rcvbufsize'), false, 0, 65535),
+				DTblDefBase::NewIntAttr('sndBufSize', DMsg::ALbl('l_sndbufsize'), true, 0, '512K'),
+				DTblDefBase::NewIntAttr('rcvBufSize', DMsg::ALbl('l_rcvbufsize'), true, 0, '512K'),
 		);
 
 		$this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_connection'), $attrs);
@@ -716,7 +716,9 @@ class DTblDefBase
 	{
 		$attrs = array(
 				DTblDefBase::NewPathAttr('rubyBin', DMsg::ALbl('l_rubybin'), 'file', 1, 'x'),
-				$this->_attrs['railsEnv'],
+                                DTblDefBase::NewPathAttr('wsgiBin', DMsg::ALbl('l_wsgibin'), 'file', 1, 'x'),
+                                DTblDefBase::NewPathAttr('nodeBin', DMsg::ALbl('l_nodebin'), 'file', 1, 'x'),
+				$this->_attrs['appserverEnv'],
 				$this->_attrs['ext_maxConns'],
 				$this->_attrs['ext_env'],
 				$this->_attrs['ext_initTimeout'],

@@ -1,6 +1,8 @@
 h1 {
     margin: .67em 0;
     font-size: 2em;
+    color: #888;
+
 }
 
 h1,h2,h3,h4,h5,h6 {
@@ -27,6 +29,7 @@ ul {
 
 .text-center {
     text-align: center;
+    color: #888;
     /* [disabled]vertical-align: bottom; */
 }
 
@@ -108,7 +111,7 @@ ul {
 
     .col-md-4 {
         width: 25%;
-		min-width: 250px;		
+		min-width: 250px;
     }
 
     .col-md-3 {
@@ -219,12 +222,15 @@ ul {
     border-color: #122b40;
 }
 
+.btn-warning {
+  margin-bottom: 25px;
+}
 .container .jumbotron,.container-fluid .jumbotron {
     padding-right: 15px;
     padding-left: 15px;
     /* [disabled]border-radius:6px; */
 }
-    
+
 .jumbotron {
     padding-top: 30px;
     padding-bottom: 30px;
@@ -245,7 +251,7 @@ ul {
 }
 
 .img-size {
-	width:30%;
+	width:40%;
 }
 
 .modalDialog {
@@ -335,7 +341,7 @@ ul {
 
 
 .list-group-item {
-	padding: 10px 30px;	
+	padding: 10px 30px;
 }
 
 a.list-group-item,button.list-group-item {
@@ -381,7 +387,7 @@ li {
 }
 
 .panel-default:hover {
-    background-color: #F0F0F0;
+    background-color: #f8fbfe;
 }
 
 
@@ -431,7 +437,7 @@ ul {
 
 .panel-body-left {
 	text-align:left;
-	
+
 }
 
 /* centered columns styles */

@@ -7,7 +7,7 @@
 * Please Note: These language files will be overwritten during software updates.
 *
 * @author     LiteSpeed Technoglogies
-* @copyright  Copyright (c) LiteSpeed 2014
+* @copyright  Copyright (c) LiteSpeed 2014-2017
 * @link       http://www.litespeedtech.com/
 */
 
@@ -46,7 +46,7 @@ $_gmsg['tab_ext'] = 'External App';
 $_gmsg['tab_g'] = 'General';
 $_gmsg['tab_log'] = 'Log';
 $_gmsg['tab_mod'] = 'Modules';
-$_gmsg['tab_rails'] = 'Rack/Rails';
+$_gmsg['tab_rails'] = 'App Server';
 $_gmsg['tab_requestfilter'] = 'Request Filter';
 $_gmsg['tab_rewrite'] = 'Rewrite';
 $_gmsg['tab_sec'] = 'Security';
@@ -70,6 +70,7 @@ $_gmsg['btn_next'] = 'Next';
 $_gmsg['btn_prev'] = 'Prev';
 $_gmsg['btn_refresh'] = 'Refresh';
 $_gmsg['btn_save'] = 'Save';
+$_gmsg['btn_signin'] = 'Login';
 $_gmsg['btn_view'] = 'View';
 $_gmsg['btn_yes'] = 'Yes';
 
@@ -144,6 +145,7 @@ $_gmsg['l_apacheignoredmodules'] = 'Ignore Apache Modules';
 $_gmsg['l_apacheipoffset'] = 'Apache IP Offset';
 $_gmsg['l_apacheportoffset'] = 'Apache Port Offset';
 $_gmsg['l_apachestyleconf'] = 'Apache Style Configurations';
+$_gmsg['l_apptype'] = 'Application Type';
 $_gmsg['l_authname'] = 'Authentication Name';
 $_gmsg['l_authorizer'] = 'Authorizer';
 $_gmsg['l_authrealm'] = 'Authentication Realm';
@@ -161,6 +163,7 @@ $_gmsg['l_banperiod'] = 'Banned Period (sec)';
 $_gmsg['l_base'] = 'Base';
 $_gmsg['l_base2'] = 'Base2';
 $_gmsg['l_binding'] = 'Binding';
+$_gmsg['l_binpath'] = 'Binary Path';
 $_gmsg['l_blockbadreq'] = 'Block Bad Request';
 $_gmsg['l_byteslog'] = 'Bytes log';
 $_gmsg['l_cacertfile'] = 'CA Certificate File';
@@ -202,7 +205,7 @@ $_gmsg['l_ctxl'] = 'LiteSpeed SAPI Context Definition';
 $_gmsg['l_ctxmd'] = 'Module Handler Context Definition';
 $_gmsg['l_ctxp'] = 'Proxy Context Definition';
 $_gmsg['l_ctxr'] = 'Redirect Context Definition';
-$_gmsg['l_ctxrl'] = 'Rack/Rails Context Definition';
+$_gmsg['l_ctxas'] = 'App Server Context Definition';
 $_gmsg['l_ctxs'] = 'Servlet Context Definition';
 $_gmsg['l_custerrpages'] = 'Customized Error Pages';
 $_gmsg['l_debuglevel'] = 'Debug Level';
@@ -388,7 +391,7 @@ $_gmsg['l_procsoftlimit'] = 'Process Soft Limit';
 $_gmsg['l_protocolver'] = 'Protocol Version';
 $_gmsg['l_railsapplimit'] = 'Max Apps per Account';
 $_gmsg['l_railshosting'] = 'Rack/Rails Shared Hosting';
-$_gmsg['l_railssettings'] = 'Rack/Rails Settings';
+$_gmsg['l_railssettings'] = 'App Server Settings';
 $_gmsg['l_ramdiskpath'] = 'RAM Disk Path';
 $_gmsg['l_rcvbufsize'] = 'Receive Buffer Size (bytes)';
 $_gmsg['l_realm'] = 'Realm';
@@ -415,6 +418,8 @@ $_gmsg['l_rewritemap'] = 'Rewrite Map';
 $_gmsg['l_rewriterules'] = 'Rewrite Rules';
 $_gmsg['l_rollingsize'] = 'Rolling Size (bytes)';
 $_gmsg['l_rubybin'] = 'Ruby Path';
+$_gmsg['l_wsgibin'] = 'WSGI Path';
+$_gmsg['l_nodebin'] = 'Node Path';
 $_gmsg['l_rubyproclimit'] = 'Max Ruby Processes per Account';
 $_gmsg['l_ruleset'] = 'Rules Definition';
 $_gmsg['l_runningas'] = 'Running As';
@@ -465,6 +470,7 @@ $_gmsg['l_sslSessionTicketLifetime'] = 'SSL Session Ticket Lifetime (secs)';
 $_gmsg['l_sslSessionTicketKeyFile'] = 'SSL Session Ticket Key File';
 $_gmsg['l_sslSessionTickets'] = 'Enable Session Tickets';
 $_gmsg['l_shmDefaultDir'] = 'Default SHM Directory';
+$_gmsg['l_startupfile'] = 'Startup File';
 $_gmsg['l_statDir'] = 'Statistics Output Directory';
 $_gmsg['l_staticreqpersec'] = 'Static Requests/second';
 $_gmsg['l_statuscode'] = 'Status Code';
@@ -560,7 +566,6 @@ $_gmsg['o_weekly'] = 'Weekly';
 $_gmsg['o_yes'] = 'Yes';
 $_gmsg['o_notset'] = 'Not Set';
 $_gmsg['o_ifownermatch'] = 'If Owner Match';
-
 
 $_gmsg['parse_awstatsuri'] = 'starts with / and ends with /';
 $_gmsg['parse_compressibletypes'] = '(!)MIME types, like */*, text/*, text/html, text/*, !text/css';

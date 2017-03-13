@@ -5306,27 +5306,28 @@ int HuffmanCode::huffmanDec(unsigned char *src, int src_len,
 
     while (p_src != src_end)
     {
+        if (p_dst == dst_end)
+            return -2;
         if ((p_dst = huffmanDec4bits(*p_src >> 4, p_dst, status, lowerCase))
-            == NULL)
-            return LS_FAIL;
-        if ((p_dst = huffmanDec4bits(*p_src & 0xf, p_dst, status, lowerCase))
             == NULL)
             return LS_FAIL;
         if (p_dst == dst_end)
             return -2;
+        if ((p_dst = huffmanDec4bits(*p_src & 0xf, p_dst, status, lowerCase))
+            == NULL)
+            return LS_FAIL;
         ++p_src;
     }
 
     if (!status.eos)
         return LS_FAIL;
 
-    *p_dst = 0x00;
     return p_dst - dst;
 }
 
 
-void DynTblEntry::init(char *name, uint32_t name_len, char *val,
-                       uint32_t val_len, uint8_t stxTabId)
+void DynTblEntry::init(const char *name, uint32_t name_len, 
+                       const char *val,  uint32_t val_len, uint8_t stxTabId)
 {
     if (m_valLen && m_val)
         delete []m_val;
@@ -5447,8 +5448,9 @@ void HpackDynTbl::reset()
  * return 0 for not found
  * return -1 for out of memory error
  */
-int HpackDynTbl::getDynTabId(char *name, uint16_t name_len, char *value,
-                             uint16_t value_len, int &val_matched, uint8_t stxTabId)
+int HpackDynTbl::getDynTabId(const char *name, uint16_t name_len, 
+                             const char *value, uint16_t value_len, 
+                             int &val_matched, uint8_t stxTabId)
 {
     int id = 0;
     val_matched = 0;
@@ -5508,8 +5510,8 @@ void HpackDynTbl::popEntry() //remove oldest
 /****
  * the new one will be append to the end of the loopbuf, so the index need to be paied more attention.
  */
-void HpackDynTbl::pushEntry(char *name, uint16_t name_len, char *val,
-                            uint16_t val_len,
+void HpackDynTbl::pushEntry(const char *name, uint16_t name_len, 
+                            const char *val,  uint16_t val_len,
                             uint32_t nameIndex)
 {
     DynTblEntry *pEntry = new DynTblEntry(name, name_len, val,
@@ -5560,20 +5562,17 @@ int Hpack::decInt(unsigned char *&src, const unsigned char *src_end,
     if (value < prefix_max)
         return 0;
 
-    if (src >= src_end)
-        return -1;
-
     M = 0;
     do
     {
-        B = *src++;
-        if (src > src_end)
+        if (src >= src_end)
             return -1;
+        B = *src++;
 
         value += (B & 0x7F) << M;
         M += 7;
         if (M > 31)
-            break; //Something wrong, the result will be more than 2 << 31;
+            return -1; //Something wrong, the result will be more than 2 << 31;
     }
     while ((B & 0x80) == 0x80);
     return 0;
@@ -5629,9 +5628,6 @@ int Hpack::decStr(unsigned char *dst, size_t dst_len, unsigned char *&src,
 
     if (is_huffman)
     {
-        if ((uint32_t)(src_end - src) < len)
-            return -2;
-
         ret = HuffmanCode::huffmanDec(src, len, dst, dst_len, lowerCase);
         if (ret < 0)
             return -3; //Wrong code
@@ -5663,7 +5659,7 @@ int Hpack::decStr(unsigned char *dst, size_t dst_len, unsigned char *&src,
 }
 
 //not find return 0, otherwise return the index
-uint8_t Hpack::getStxTabId(char *name, uint16_t name_len, char *val,
+uint8_t Hpack::getStxTabId(const char *name, uint16_t name_len, const char *val,
                            uint16_t val_len, int &val_matched)
 {
     if (name_len < 3)
@@ -5920,6 +5916,8 @@ uint8_t Hpack::getStxTabId(char *name, uint16_t name_len, char *val,
             i = 48; //proxy-authorization
         break;
     case 'r':
+        if (name_len < 5)
+            break;
         switch (*(name + 4))
         {
         case 'e':
@@ -5984,8 +5982,9 @@ uint8_t Hpack::getStxTabId(char *name, uint16_t name_len, char *val,
 
 //responseTable
 unsigned char *Hpack::encHeader(unsigned char *dst, unsigned char *dstEnd,
-                                char *name, uint16_t nameLen, char *value,
-                                uint16_t valueLen, int indexedType)
+                                const char *name, uint16_t nameLen, 
+                                const char *value, uint16_t valueLen, 
+                                int indexedType)
 {
     //assert(indexedType >= 0 && indexedType <= 2);
     unsigned char *dstOrg = dst;
@@ -6028,7 +6027,7 @@ unsigned char *Hpack::encHeader(unsigned char *dst, unsigned char *dstEnd,
     else
     {
         *dst++ = indexedPrefixNumber[indexedType];
-        rc = encStr(dst, dstEnd - dst, (const unsigned char *)name, nameLen);;
+        rc = encStr(dst, dstEnd - dst, (const unsigned char *)name, nameLen);
         if (rc < 0)
             return dstOrg; //Failed to enc this header, return unchanged ptr.
         dst += rc;
@@ -6050,9 +6049,12 @@ unsigned char *Hpack::encHeader(unsigned char *dst, unsigned char *dstEnd,
 //src will be changed
 //return 1: OK, 0: end, -1: failed.
 int Hpack::decHeader(unsigned char *&src, unsigned char *srcEnd,
-                     AutoBuf &nameValBuf,
+                     char *dst, char *const dstEnd,
                      uint16_t &name_len, uint16_t &val_len)
 {
+    uint32_t index;
+    int indexedType, len;
+
     if (src == srcEnd)
         return 0;
 
@@ -6070,10 +6072,6 @@ int Hpack::decHeader(unsigned char *&src, unsigned char *srcEnd,
             return 0;
     }
 
-    uint32_t index = 0;
-    int indexedType = -1;
-    int len;
-
     if (*src & 0x80) //1 xxxxxxx
     {
         if (0 != decInt(src, srcEnd, 7, index))
@@ -6089,12 +6087,18 @@ int Hpack::decHeader(unsigned char *&src, unsigned char *srcEnd,
         indexedType = 0;
     }
     else if (*src == 0x40) //custmized //0100 0000
+    {
         indexedType = 0;
-
+        index = 0;
+        ++src;
+    }
     //Never indexed
     else if (*src == 0x10)  //00010000
+    {
         indexedType = 2;
-
+        index = 0;
+        ++src;
+    }
     else if ((*src & 0xf0) == 0x10)  //0001 xxxx
     {
         if (0 != decInt(src, srcEnd, 4, index))
@@ -6105,8 +6109,11 @@ int Hpack::decHeader(unsigned char *&src, unsigned char *srcEnd,
 
     //without indexed
     else if (*src == 0x00)  //0000 0000
+    {
         indexedType = 1;
-
+        index = 0;
+        ++src;
+    }
     else // 0000 xxxx
     {
         if (0 != decInt(src, srcEnd, 4, index))
@@ -6115,15 +6122,7 @@ int Hpack::decHeader(unsigned char *&src, unsigned char *srcEnd,
         indexedType = 1;
     }
 
-    //huffman encode at most compression ratio is 0.625,
-    //      add 30 to handle the longest static table name
-    //So that in next dyn table checking, should re-chek
-    int enoughSpaceLen = (srcEnd - src) * 2 + 30;
-    if (nameValBuf.available() < enoughSpaceLen)
-        nameValBuf.grow(enoughSpaceLen);
-    nameValBuf.clear();
-
-    char *name = nameValBuf.begin();
+    char *const name = dst;
     if (index > 0)
     {
         if (index <= HPACK_STATIC_TABLE_SIZE) //static table
@@ -6132,10 +6131,15 @@ int Hpack::decHeader(unsigned char *&src, unsigned char *srcEnd,
             if (index == 8) //If is ":status", ERROR
                 return LS_FAIL;
 #endif
+            if (g_HpackStxTab[index - 1].name_len > dstEnd - dst)
+                return -1;
             name_len = g_HpackStxTab[index - 1].name_len;
             memcpy(name, g_HpackStxTab[index - 1].name, name_len);
             if (indexedType == 3)
             {
+                if (g_HpackStxTab[index - 1].name_len +
+                    g_HpackStxTab[index - 1].val_len > dstEnd - dst)
+                    return -1;
                 val_len = g_HpackStxTab[index - 1].val_len;
                 memcpy(name + name_len, g_HpackStxTab[index - 1].val, val_len);
                 return 1;
@@ -6148,20 +6152,15 @@ int Hpack::decHeader(unsigned char *&src, unsigned char *srcEnd,
             if (pRespEntry == NULL)
                 return LS_FAIL;
 
-            //If the dyn table have a long name and value, this may break the
-            //prevoius length checking, so need to check it again
-            enoughSpaceLen = (srcEnd - src) * 2 + pRespEntry->getNameLen()
-                             + pRespEntry->getValueLen();
-            if (nameValBuf.available() < enoughSpaceLen)
-            {
-                nameValBuf.grow(enoughSpaceLen);
-                name = nameValBuf.begin();
-            }
-
+            if (pRespEntry->getNameLen() > dstEnd - dst)
+                return -1;
             name_len = pRespEntry->getNameLen();
             memcpy(name, pRespEntry->getName(), name_len);
             if (indexedType == 3)
             {
+                if (pRespEntry->getNameLen() + pRespEntry->getValueLen()
+                    > dstEnd - dst)
+                    return -1;
                 val_len = pRespEntry->getValueLen();
                 memcpy(name + name_len, pRespEntry->getValue(), val_len);
                 return 1;
@@ -6170,8 +6169,7 @@ int Hpack::decHeader(unsigned char *&src, unsigned char *srcEnd,
     }
     else
     {
-        ++src;
-        len = decStr((unsigned char *)name, nameValBuf.available(),
+        len = decStr((unsigned char *)name, dstEnd - dst,
                      src, srcEnd, true);
         if (len < 0)
             return len; //error
@@ -6179,7 +6177,7 @@ int Hpack::decHeader(unsigned char *&src, unsigned char *srcEnd,
     }
 
     len = decStr((unsigned char *)name + name_len,
-                 nameValBuf.available() - name_len, src, srcEnd, false);
+                 dstEnd - dst - name_len, src, srcEnd, false);
     if (len < 0)
         return len; //error
     val_len = len;

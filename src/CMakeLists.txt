@@ -12,8 +12,8 @@ set(libUnitTest  libUnitTest++.a)
 #If you want to use BoringSSL, just un-comment out the following commands
 #AND YOU NEED TO HAVE THE files ready in openlitespeed/ssl
 #You can run the dlbssl.sh to make them ready
-#add_definitions(-DUSE_BORINGSSL)
-#set(BSSL_ADD_LIB  libdecrepit.a)
+# add_definitions(-DUSE_BORINGSSL)
+# set(BSSL_ADD_LIB  libdecrepit.a)
 ##########################################################################################
 
 

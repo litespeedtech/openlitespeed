@@ -26,7 +26,7 @@
 #include "lsdef.h"
 
 H2Stream::H2Stream()
-    : m_uiStreamID(0)
+    : m_uiStreamId(0)
     , m_iWindowOut(H2_FCW_INIT_SIZE)
     , m_iWindowIn(H2_FCW_INIT_SIZE)
     , m_pH2Conn(NULL)
@@ -40,13 +40,13 @@ const char *H2Stream::buildLogId()
     AutoStr2 &id = getIdBuf();
 
     len = ls_snprintf(id.buf(), MAX_LOGID_LEN, "%s-%d",
-                      m_pH2Conn->getStream()->getLogId(), m_uiStreamID);
+                      m_pH2Conn->getStream()->getLogId(), m_uiStreamId);
     id.setLen(len);
     return id.c_str();
 }
 
 
-int H2Stream::init(uint32_t StreamID, H2Connection *pH2Conn, uint8_t flags,
+int H2Stream::init(uint32_t StreamID, H2Connection *pH2Conn,
                    HioHandler *pHandler, Priority_st *pPriority)
 {
     HioStream::reset(DateTime::s_curTime);
@@ -54,10 +54,9 @@ int H2Stream::init(uint32_t StreamID, H2Connection *pH2Conn, uint8_t flags,
     clearLogId();
 
     setState(HIOS_CONNECTED);
-    setFlag(flags & H2_CTRL_FLAG_FIN, 1);
 
     m_bufIn.clear();
-    m_uiStreamID  = StreamID;
+    m_uiStreamId  = StreamID;
     m_iWindowOut = pH2Conn->getStreamOutInitWindowSize();
     m_iWindowIn = pH2Conn->getStreamInInitWindowSize();
 
@@ -197,7 +196,7 @@ int H2Stream::shutdown()
     m_pH2Conn->incShutdownStream();
 
     LS_DBG_L(this, "H2Stream::shutdown()");
-    m_pH2Conn->sendFinFrame(m_uiStreamID);
+    m_pH2Conn->sendFinFrame(m_uiStreamId);
     m_pH2Conn->flush();
     return 0;
 }
@@ -220,7 +219,7 @@ int H2Stream::close()
     //    getHandler()->recycle();
     //    setHandler( NULL );
     //}
-    m_pH2Conn->recycleStream(m_uiStreamID);
+    m_pH2Conn->recycleStream(m_uiStreamId);
     return 0;
 }
 
@@ -294,7 +293,7 @@ int H2Stream::write(const char *buf, int len)
     if (allowed <= 0)
         return 0;
 
-    int ret = m_pH2Conn->sendDataFrame(m_uiStreamID, 0, buf, allowed);
+    int ret = m_pH2Conn->sendDataFrame(m_uiStreamId, 0, buf, allowed);
     return dataSent(ret);
 }
 
@@ -319,7 +318,7 @@ int H2Stream::onWrite()
 int H2Stream::sendData(IOVec *pIov, int total)
 {
     int ret;
-    ret = m_pH2Conn->sendDataFrame(m_uiStreamID, 0, pIov, total);
+    ret = m_pH2Conn->sendDataFrame(m_uiStreamId, 0, pIov, total);
     LS_DBG_L(this, "H2Stream::sendData(), total: %d, ret: %d", total, ret);
     return dataSent(ret);
 }
@@ -368,7 +367,7 @@ int H2Stream::sendRespHeaders(HttpRespHeaders *pHeaders, int isNoBody)
         if (next() == NULL)
             m_pH2Conn->add2PriorityQue(this);
     }
-    return m_pH2Conn->sendRespHeaders(pHeaders, m_uiStreamID, flag);
+    return m_pH2Conn->sendRespHeaders(pHeaders, m_uiStreamId, flag);
 }
 
 
@@ -389,4 +388,13 @@ int H2Stream::adjWindowOut(int32_t n)
     }
     return 0;
 }
+
+
+int H2Stream::push(ls_str_t *pUrl, ls_str_t *pHost, 
+                   ls_strpair_t *pExtraHeaders)
+{
+    return m_pH2Conn->pushPromise(m_uiStreamId, pUrl, pHost, 
+                                  pExtraHeaders);
+}
+
 

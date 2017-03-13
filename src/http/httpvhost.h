@@ -153,7 +153,6 @@ private:
     LsiModuleData       m_moduleData;
 
     UrlStxFileHash     *m_pUrlStxFileHash;
-    TPointerList<static_file_data_t>   m_UrlStxFileDirtyList;
 
     HttpVHost(const HttpVHost &rhs);
     void operator=(const HttpVHost &rhs);

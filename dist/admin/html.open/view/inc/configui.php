@@ -75,7 +75,7 @@ $page_nav = array(
 						'docs' => array(
 								'title' => DMsg::UIStr('menu_docs'),
 								'url_target' => '_blank',
-								'url' => '/docs'),
+								'url' => DMsg::DocsUrl()),
 						'guides' => array(
 								'title' => DMsg::UIStr('menu_guides'),
 								'url' => 'http://open.litespeedtech.com/mediawiki/?utm_source=Open&utm_medium=WebAdmin',

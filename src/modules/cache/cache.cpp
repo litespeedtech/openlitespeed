@@ -202,6 +202,16 @@ static int createCachePath(const char *path, int mode)
 }
 
 
+static void house_keeping_cb(void *p)
+{
+    DirHashCacheStore *pStore = (DirHashCacheStore *)p;
+    if (pStore)
+        pStore->houseKeeping();
+    g_api->log(NULL, LSI_LOG_DEBUG, "[%s]house_keeping_cb with store %p.\n",
+               ModuleNameStr, pStore);
+}
+
+
 static int parseStoragePath(CacheConfig *pConfig, const char *pValStr,
                             int valLen, int level, const char *name)
 {
@@ -257,6 +267,8 @@ static int parseStoragePath(CacheConfig *pConfig, const char *pValStr,
             pConfig->getStore()->setStorageRoot(cachePath);
             pConfig->getStore()->initManager();
             pConfig->setOwnStore(1);
+            g_api->set_timer(20*1000, 1, house_keeping_cb, pConfig->getStore());
+            
             g_api->log(NULL, LSI_LOG_DEBUG,
                        "[%s]parseConfig setStoragePath [%s] for level %d[name: %s].\n",
                        ModuleNameStr, cachePath, level, name);
@@ -355,24 +367,31 @@ static int parseLine(CacheConfig *pConfig, const char *key, int keyLen,
         break;
     case 2:
         bit = CACHE_CHECK_PUBLIC;
+        defValue = 1;
         break;
     case 3:
         bit = CACHE_CHECK_PRIVATE;
+        defValue = 1;
         break;
     case 4:
         bit = CACHE_QS_CACHE;
+        defValue = 1;
         break;
     case 5:
         bit = CACHE_REQ_COOKIE_CACHE;
+        defValue = 1;
         break;
     case 6:
         bit = CACHE_IGNORE_REQ_CACHE_CTRL_HEADER;
+        defValue = 1;
         break;
     case 7:
         bit = CACHE_IGNORE_RESP_CACHE_CTRL_HEADER;
+        defValue = 0;
         break;
     case 8:
         bit = CACHE_RESP_COOKIE_CACHE;
+        defValue = 1;
         break;
     case 9:
         bit = CACHE_MAX_AGE_SET;
@@ -389,7 +408,7 @@ static int parseLine(CacheConfig *pConfig, const char *key, int keyLen,
     case 12:
         bit = CACHE_MAX_OBJ_SIZE;
         maxValue = INT_MAX;
-        defValue = 1024 * 1024;
+        defValue = 10000000; //10M
         break;
 
     case 13: //storagepath
@@ -1939,7 +1958,6 @@ static lsi_serverhook_t serverHooks[] =
     LSI_HOOK_END   //Must put this at the end position
 };
 
-
 static int init(lsi_module_t *pModule)
 {
     g_api->init_module_data(pModule, httpRelease, LSI_DATA_HTTP);
@@ -2124,6 +2142,13 @@ static void processPurge(lsi_session_t *session,
     }
 }
 
+static void decref_and_free_data(MyMData *myData, lsi_session_t *session)
+{
+    if (myData->pEntry)
+        myData->pEntry->decRef();
+    g_api->free_module_data(session, &MNAME, LSI_DATA_HTTP, httpRelease);
+}
+
 static int handlerProcess(lsi_session_t *session)
 {
     MyMData *myData = (MyMData *)g_api->get_module_data(session, &MNAME,
@@ -2134,6 +2159,9 @@ static int handlerProcess(lsi_session_t *session)
                    "[%s]internal error during handlerProcess.\n", ModuleNameStr);
         return 500;
     }
+    
+    if (myData->pEntry)
+        myData->pEntry->incRef();
 
     if (myData->iMethod == HTTP_PURGE || myData->iMethod == HTTP_REFRESH)
     {
@@ -2142,8 +2170,7 @@ static int handlerProcess(lsi_session_t *session)
         if (g_api->get_client_access(session) != 0 &&
             (!pIP || strncmp(pIP, "127.0.0.1", 9) != 0))
         {
-            g_api->free_module_data(session, &MNAME, LSI_DATA_HTTP,
-                                    httpRelease);
+            decref_and_free_data(myData, session);
             return 405;
         }
 
@@ -2166,8 +2193,7 @@ static int handlerProcess(lsi_session_t *session)
             g_api->append_resp_body(session, "No such entry.", 14);
 
         g_api->end_resp(session);
-        g_api->free_module_data(session, &MNAME, LSI_DATA_HTTP,
-                                httpRelease);
+        decref_and_free_data(myData, session);
         return 200;
     }
 
@@ -2195,8 +2221,7 @@ static int handlerProcess(lsi_session_t *session)
                                  PROT_READ, MAP_SHARED, fd, 0);
             if (buff == (char *)(-1))
             {
-                g_api->free_module_data(session, &MNAME, LSI_DATA_HTTP,
-                                        httpRelease);
+                decref_and_free_data(myData, session);
                 return 500;
             }
             pBuffOrg = buff;
@@ -2217,9 +2242,8 @@ static int handlerProcess(lsi_session_t *session)
                 g_api->set_status_code(session, 304);
                 if (pBuffOrg)
                     munmap((caddr_t)pBuffOrg, part2offset);
-                g_api->free_module_data(session, &MNAME, LSI_DATA_HTTP,
-                                        httpRelease);
                 g_api->end_resp(session);
+                decref_and_free_data(myData, session);
                 return 0;
             }
         }
@@ -2274,8 +2298,7 @@ static int handlerProcess(lsi_session_t *session)
 
     if (pBuffOrg)
         munmap((caddr_t)pBuffOrg, part2offset);
-
-    g_api->free_module_data(session, &MNAME, LSI_DATA_HTTP, httpRelease);
+    decref_and_free_data(myData, session);
     return ret;
 }
 

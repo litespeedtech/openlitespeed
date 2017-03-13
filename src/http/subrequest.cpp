@@ -610,7 +610,7 @@ void HttpReq::updateReqHeader(int index, const char *pNewValue,
     }
     else
     {
-        const char *pName = HttpHeader::getHeader(index);
+        const char *pName = HttpHeader::getHeaderName(index);
         int iNameLen = HttpHeader::getHeaderStringLen(index);
         if (m_headerBuf.available() < newValueLen + iNameLen + 4)
             m_headerBuf.grow(newValueLen + iNameLen + 4 - m_headerBuf.available());

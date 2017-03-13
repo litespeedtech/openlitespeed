@@ -640,7 +640,7 @@ void *LsLuaEngine::parseParam(const char *param, int param_len,
                 g_api->log(NULL, LSI_LOG_NOTICE,
                            "%s LUA SET %.*s = %.*s\n", name,
                            ls_str_len(pKey), ls_str_cstr(pKey),
-                           ls_str_len(pValue), ls_str_cstr(pValue));;
+                           ls_str_len(pValue), ls_str_cstr(pValue));
                 continue;
             }
             else if (strncasecmp("luabodyfilterpath", ls_str_cstr(pKey),

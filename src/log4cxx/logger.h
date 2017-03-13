@@ -364,6 +364,8 @@ public:
         __attribute__((format(printf, 1, 2)))
 #endif
         ;
+
+    static void s_vlograw(log4cxx::Logger *l, const char *format, va_list va);
         
     static void s_vlog(int level, LogSession *pLogSession,
                        const char *format, va_list args, int no_linefeed);

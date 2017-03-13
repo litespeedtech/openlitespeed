@@ -1143,7 +1143,7 @@ LsShmOffset_t LsShmPool::allocPage(LsShmSize_t pagesize, int &remap)
     LsShmOffset_t offset;
 
     if ((pagesize&0x80000000) || (pagesize>LSSHM_MAXSIZE))
-        return 0;;
+        return 0;
     pagesize = roundPageSize(pagesize);
     remap = 0;
 

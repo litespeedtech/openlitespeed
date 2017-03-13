@@ -783,7 +783,7 @@ int SslContext::setCipherList(const char *pList)
 {
     if (!m_pCtx)
         return false;
-    char cipher[4096];
+    char cipher[4096] = {0};
 
     if (!pList || !*pList || (strncasecmp(pList, "ALL:", 4) == 0)
         || (strncasecmp(pList, "SSLv3:", 6) == 0)
@@ -792,7 +792,13 @@ int SslContext::setCipherList(const char *pList)
         //snprintf( cipher, 4095, "RC4:%s", pList );
         //strcpy( cipher, "ALL:HIGH:!aNULL:!SSLV2:!eNULL" );
 #if OPENSSL_VERSION_NUMBER >= 0x10001000L
-        strcpy(cipher, "ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES128-GCM-SHA256:"
+// #ifdef USE_BORINGSSL
+//         strcpy(cipher, "AES128-GCM-SHA256:CHACHA20-POLY1305-SHA256:X25519-AES128-GCM-SHA256:AES-256-CTR-HMAC-SHA256:ECDHE-RSA-CHACHA20-POLY1305:"
+//                  "AES128-SHA256:AES256-SHA256");
+//         SSL_CTX_set_max_version(m_pCtx, TLS1_3_VERSION);//  
+// #endif //USE_BORINGSSL
+        
+        strcat(cipher, "ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES128-GCM-SHA256:"
                "ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES256-GCM-SHA384:"
                "DHE-RSA-AES128-GCM-SHA256:DHE-DSS-AES128-GCM-SHA256:"
                "kEDH+AESGCM:ECDHE-RSA-AES128-SHA256:"
@@ -804,16 +810,10 @@ int SslContext::setCipherList(const char *pList)
                "DHE-RSA-AES256-SHA256:DHE-DSS-AES256-SHA:"
                "DHE-RSA-AES256-SHA:"
                "AES128-SHA256:AES256-SHA256:AES128-SHA:AES256-SHA:AES:"
-               "CAMELLIA:DES-CBC3-SHA:!aNULL:!eNULL:!EXPORT:!DES:!RC4:"
-               "!MD5:!PSK:!aECDH:!EDH-DSS-DES-CBC3-SHA:"
-               "!EDH-RSA-DES-CBC3-SHA:!KRB5-DES-CBC3-SHA"
+               "CAMELLIA:!aNULL:!eNULL:!EXPORT:!DES:!RC4:"
+               "!MD5:!PSK:!aECDH"
               );
-//FIXME: TLS1.3 version?
-#ifdef USE_BORINGSSL
-        strcat(cipher, "AES-256-CTR-HMAC-SHA256:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-RSA-AES128-GCM-SHA256:CHACHA20-POLY1305-SHA256:X25519-AES128-GCM-SHA256:"
-                "AES128-SHA256:AES256-SHA256");
-        SSL_CTX_set_max_version(m_pCtx, TLS1_3_VERSION);//  
-#endif //USE_BORINGSSL
+
 #else
         strcpy(cipher,
                "RC4:HIGH:!aNULL:!MD5:!SSLv2:!eNULL:!EDH:!LOW:!EXPORT56:!EXPORT40");

@@ -103,7 +103,12 @@ public:
     static size_t getIndex2(const char *pHeader);
 
 
+    static const char *getHeaderNameLowercase(int iIndex)
+    {   return s_pHeaderNamesLowercase[iIndex];    }
+
 private:
+    static const char *s_pHeaderNames[H_HEADER_END + 1];
+    static const char  *s_pHeaderNamesLowercase[H_HEADER_END + 1];
     static int s_iHeaderLen[H_HEADER_END + 1];
 
     HttpHeader(const HttpHeader &rhs);
@@ -114,6 +119,9 @@ private:
 public:
     static int getHeaderStringLen(int iIndex)
     {   return s_iHeaderLen[iIndex];    }
+
+    static const char *getHeaderName(int iIndex)
+    {   return s_pHeaderNames[iIndex];    }
 };
 
 #endif

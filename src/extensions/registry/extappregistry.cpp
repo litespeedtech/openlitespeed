@@ -423,7 +423,7 @@ ExtWorker *ExtAppRegistry::configExtApp(const XmlNode *pNode)
         LS_DBG_L(&currentCtx, "ExtApp Proxy isHttps %d, Uri %s.",  isHttps, pUri);
     }
 
-    if (addr.set(pUri, NO_ANY))
+    if (addr.set(pUri, NO_ANY | DO_NSLOOKUP))
     {
         LS_ERROR(&currentCtx, "failed to set socket address %s!", pUri);
         return NULL;

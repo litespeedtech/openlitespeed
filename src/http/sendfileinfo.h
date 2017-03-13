@@ -56,17 +56,11 @@ public:
     void *getParam() const     {   return m_pParam;    }
     void setParam(void *p)   {   m_pParam = p;       }
 
-    void setFileData(StaticFileCacheData *pData)
-    {   m_pFileData = pData;      }
-    StaticFileCacheData *&getFileData()
-    {   return m_pFileData;    }
+    void setFileData(StaticFileCacheData *pData);
+    StaticFileCacheData *getFileData() const  {   return m_pFileData;    }
 
-    void setECache(FileCacheDataEx *pCache) {   m_pECache = pCache;   }
-
-    FileCacheDataEx *getECache() const
-    {   return m_pECache;    }
-    FileCacheDataEx *&getECache()
-    {   return m_pECache;    }
+    void setECache(FileCacheDataEx *pCache);
+    FileCacheDataEx *getECache() const   {   return m_pECache;    }
 
     void setCurPos(off_t pos)  {   m_lCurPos = pos;    }
     void incCurPos(off_t inc)  {   m_lCurPos += inc;   }
@@ -86,6 +80,10 @@ public:
         m_pAioBuf = NULL;
         m_lAioLen = 0;
     }
+    int readyCacheData(char compress);
+    
+    void release();
+
 };
 
 #endif

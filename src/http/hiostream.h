@@ -24,6 +24,7 @@
 #include <edio/outputstream.h>
 #include <log4cxx/logsession.h>
 #include <lsdef.h>
+#include <lsr/ls_types.h>
 
 class IOVec;
 
@@ -64,7 +65,9 @@ enum HiosProtocol
 #define HIO_FLAG_BLACK_HOLE         (1<<9)
 #define HIO_FLAG_PASS_THROUGH       (1<<10)
 #define HIO_FLAG_PASS_SETCOOKIE     (1<<11)
-#define HIO_FLAG_SENDFILE           (1<<12)
+#define HIO_FLAG_FROM_LOCAL         (1<<12)
+#define HIO_FLAG_PUSH_CAPABLE       (1<<13)
+#define HIO_FLAG_INIT_PUSH          (1<<14)
 
 #define HIO_PRIORITY_HIGHEST        (0)
 #define HIO_PRIORITY_LOWEST         (7)
@@ -73,6 +76,7 @@ enum HiosProtocol
 #define HIO_PRIORITY_JS             (HIO_PRIORITY_CSS + 1)
 #define HIO_PRIORITY_IMAGE          (HIO_PRIORITY_JS + 1)
 #define HIO_PRIORITY_DOWNLOAD       (HIO_PRIORITY_IMAGE + 1)
+#define HIO_PRIORITY_PUSH           (HIO_PRIORITY_DOWNLOAD + 1)
 #define HIO_PRIORITY_LARGEFILE      (HIO_PRIORITY_LOWEST)
 
 
@@ -118,6 +122,12 @@ public:
     virtual NtwkIOLink *getNtwkIoLink() = 0;
 
     virtual void cork(int doCork) {}
+    virtual int detectClose()       {   return 0;   } 
+    
+    virtual int push(ls_str_t *pUrl, ls_str_t *pHost, 
+                     ls_strpair_t *pHeaders)
+    {   return -1;      }
+
 
     //virtual uint32_t GetStreamID() = 0;
 
@@ -211,7 +221,7 @@ public:
         m_lBytesRecv = 0;
         m_lBytesSent = 0;
     }
-
+    
     void setActiveTime(uint32_t lTime)
     {   m_tmLastActive = lTime;              }
     uint32_t getActiveTime() const

@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+  <title>Open LiteSpeed Web Serverユーザーズマニュアル - リスナー管理者全般</title>
+  <meta name="description" content="Open LiteSpeed Web Serverユーザーズマニュアル - リスナー管理者全般." />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="shortcut icon" href="../img/favicon.ico" />
+  <link rel="stylesheet" type="text/css" href="../css/hdoc.css">
+</head>
+<body>
+<div class="pagewrapper"><div class="sidetree">
+<h3>OpenLiteSpeed Web Server <a href="index.html"> ユーザーズマニュアル</a></h3>
+<h5>Version 1.4 Rev. 2 </h5>
+<hr/>
+<div>
+<ul class="toctop">
+<li><a href="license.html">ライセンス</a></li>
+<li><a href="intro.html">はじめに</a></li>
+<li><a href="install.html">インストール</a></li>
+<li><a href="admin.html">管理</a>
+	<ul class="level2"><li><a href="ServerStat_Help.html">サービスマネージャ</a></li></ul></li>
+<li><a href="security.html">セキュリティ</a></li>
+<li><a href="config.html">設定</a>
+	<ul class="level2">
+	<li><a href="ServGeneral_Help.html">サーバー全般</a></li>
+        <li><a href="ServLog_Help.html">サーバーログ</a></li>
+	<li><a href="ServTuning_Help.html">サーバーのチューニング</a></li>
+	<li><a href="ServSecurity_Help.html">サーバーのセキュリティ</a></li>
+	<li><a href="ExtApp_Help.html">外部アプリ</a></li>
+                <ul class="level3">
+                <li><a href="External_FCGI.html">Fast CGIアプリ</a></li>
+                <li><a href="External_FCGI_Auth.html">Fast CGIオーソライザー</a></li>
+                <li><a href="External_LSAPI.html">LSAPIアプリ</a></li>
+                <li><a href="External_Servlet.html">サーブレットエンジン</a></li>
+                <li><a href="External_WS.html">Webサーバー</a></li>
+                <li><a href="External_PL.html">パイプロガー</a></li>
+                <li><a href="External_LB.html">ロードバランサ</a></li>
+                </ul>
+	<li><a href="ScriptHandler_Help.html">スクリプトハンドラ</a></li>
+	<li><a href="Rails_Help.html">Rack/Railsの設定</a></li>
+	<li><a href="Module_Help.html">モジュール設定</a></li>
+	<li><a href="Listeners_General_Help.html">リスナー全般</a></li>
+        <li><a href="Listeners_SSL_Help.html">リスナーのSSL</a></li>
+	<li><a href="Templates_Help.html">テンプレート</a></li>
+	<li><a href="VirtualHosts_Help.html">バーチャルホストの基本</a></li>
+	<li><a href="VHGeneral_Help.html">バーチャルホスト全般</a></li>
+	<li><a href="VHSecurity_Help.html">バーチャルホストのセキュリティ</a></li>
+        <li><a href="VHSSL_Help.html">バーチャルホストのSSL</a></li>
+	<li><a href="Rewrite_Help.html">Rewrite</a></li>
+	<li><a href="Context_Help.html">コンテキスト</a></li>
+               <ul class="level3">
+                <li><a href="Static_Context.html">静的コンテテキスト</a></li>
+                <li><a href="Java_Web_App_Context.html">Java Webアプリのコンテキスト</a></li>
+                <li><a href="Servlet_Context.html">サーブレットコンテキスト</a></li>
+                <li><a href="FCGI_Context.html">Fast CGIコンテキスト</a></li>
+                <li><a href="LSAPI_Context.html">LSAPIコンテキスト</a></li>
+                <li><a href="Proxy_Context.html">プロキシコンテキスト</a></li>
+                <li><a href="CGI_Context.html">CGIコンテキスト</a></li>
+                <li><a href="LB_Context.html">ロードバランサコンテキスト</a></li>
+                <li><a href="Redirect_Context.html">コンテキストのリダイレクト</a></li>
+                <li><a href="Rails_Context.html">Rack/Railsのコンテキスト</a></li>
+                <li><a href="Module_Context.html">モジュールハンドラのコンテキスト</a></li>
+                </ul>
+	<li><a href="VHWebSocket_Help.html">Web Socketプロキシ</a></li>
+	</ul>
+</li>
+<li><a href="webconsole.html">Webコンソール</a>
+        <ul class="level2">
+        <li><a href="AdminGeneral_Help.html">管理コンソール全般</a></li>
+        <li><a href="AdminSecurity_Help.html">管理コンソールのセキュリティ</a></li>
+	<li><span class="current"><a href="AdminListeners_General_Help.html">管理リスナー全般</a></span></li>
+        <li><a href="AdminListeners_SSL_Help.html">管理リスナーのSSL</a></li>
+        </ul>
+</li>
+</ul>
+</div></div>
+<div class="contentwrapper"><div class="nav-bar"><div class="prev">&#171 <a href="AdminSecurity_Help.html">管理コンソールのセキュリティ</a></div><div class="center"><a href="webconsole.html">Webコンソール</a></div><div class="next"><a href="AdminListeners_SSL_Help.html">リスナー管理者SSL</a> &#187;</div></div>
+<h1>リスナー管理者全般</h1><p>リスナー管理は管理サーバー専用です。 管理サーバーには、セキュア（SSL）リスナーを推奨します。</p>
+<h4>目次</h4><section class="toc"><section class="toc-row"><header>一般</header><p>
+<a href="#listenerName">リスナー名</a>&nbsp;|&nbsp;<a href="#listenerIP">IPアドレス</a>&nbsp;|&nbsp;<a href="#listenerPort">ポート</a>&nbsp;|&nbsp;<a href="#listenerSecure">セキュア</a>&nbsp;|&nbsp;</p></section>
+</section>
+<section><div class="helpitem"><a name="listenerName"></a><table width="100%" class="ht" border="0" cellpadding="5" cellspacing="0"> <tr class="ht-title"><td><div>リスナー名<span class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="../img/top.gif"></a></span></div></p></td></tr> <tr><td><span class="ht-label">説明</span><p>このリスナーの一意の名前。</p></td></tr> </table> </div>
+<div class="helpitem"><a name="listenerIP"></a><table width="100%" class="ht" border="0" cellpadding="5" cellspacing="0"> <tr class="ht-title"><td><div>IPアドレス<span class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="../img/top.gif"></a></span></div></p></td></tr> <tr><td><span class="ht-label">説明</span><p>このリスナーのIPを指定します。 使用可能なすべてのIPアドレスがリストされます。 IPv6アドレスは "[]"で囲まれています。 すべてのIPv4 IPアドレスをリッスンするには、<span class="val">ANY</span>を選択します。 すべてのIPv4とIPv6のIPアドレスをリッスンするには、<span class="val">[ANY]</span>を選択します。 IPv4とIPv6の両方のクライアントにサービスを提供するには、プレーンなIPv4アドレスの代わりに、IPv4でマップされたIPv6アドレスを使用する必要があります。 IPv4でマップされたIPv6アドレスは[:: FFFF：x.x.x.x]と書かれています。</p></td></tr> <tr><td><span class="ht-label">構文</span><p>ドロップダウンリストから選択</p></td></tr> <tr><td><span class="ht-label">ヒント</span><p>[セキュリティ]お使いのマシンに異なるサブネットワーク上に複数のIPがある場合、特定のIPを選択して、対応するサブネットワークからのトラフィックのみを許可することができます。</p></td></tr> </table> </div>
+<div class="helpitem"><a name="listenerPort"></a><table width="100%" class="ht" border="0" cellpadding="5" cellspacing="0"> <tr class="ht-title"><td><div>ポート<span class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="../img/top.gif"></a></span></div></p></td></tr> <tr><td><span class="ht-label">説明</span><p>リスナーのTCPポートを指定します。 スーパーユーザー（"root"）のみが<span class="val">1024</span>より小さいポートを使用できます。  ポート<span class="val">80</span>はデフォルトのHTTPポートです。 ポート<span class="val">443</span>はデフォルトのHTTPSポートです。</p></td></tr> <tr><td><span class="ht-label">構文</span><p>65535までの整数</p></td></tr> </table> </div>
+<div class="helpitem"><a name="listenerSecure"></a><table width="100%" class="ht" border="0" cellpadding="5" cellspacing="0"> <tr class="ht-title"><td><div>セキュア<span class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="../img/top.gif"></a></span></div></p></td></tr> <tr><td><span class="ht-label">説明</span><p>Sこれがセキュア（SSL）リスナーかどうかを指定します。 セキュアリスナーの場合は、追加のSSL設定を適切に設定する必要があります。</p></td></tr> <tr><td><span class="ht-label">構文</span><p>ラジオボックスから選択</p></td></tr> </table> </div>
+</section>
+</div><footer class="copyright">Copyright &copy; 2013-2017. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> All rights reserved.</footer>
+</div>
+</body>
+</html>

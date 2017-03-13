@@ -7,12 +7,14 @@ class DMsg
 	const DEFAULT_LANG = 'english';
 	const LANG_ENGLISH = 'english';
 	const LANG_CHINESE = 'chinese';
+	const LANG_JAPANES = 'japanes';
 
 	const _COOKIE_LANG_ = 'litespeed_admin_lang';
 
 	private static $_supported = array(
 			self::LANG_ENGLISH => array('English', 'en-US'),
-			self::LANG_CHINESE => array('中文', 'zh-CN')
+			self::LANG_CHINESE => array('中文', 'zh-CN'),
+			self::LANG_JAPANES => array('日本語', 'ja-JP')
 	);
 
 
@@ -74,7 +76,7 @@ class DMsg
 	public static function SetLang($lang)
 	{
 		if (array_key_exists($lang, self::$_supported)) {
-			$_SESSION['DMsg::_COOKIE_LANG_'] = $lang;
+			$_SESSION[DMsg::_COOKIE_LANG_] = $lang;
 			self::$_curlang = '';
 			self::$_curtips = '';
 			$domain = $_SERVER['HTTP_HOST'];
@@ -154,6 +156,19 @@ class DMsg
 	{
 		echo DMsg::UIStr($tag, $repl);
 	}
+	
+	public static function DocsUrl()
+	{
+		if (self::$_curlang == '') {
+			DMsg::init();
+		}
+	
+		$url = '/docs/';
+		if (self::$_curlang != self::DEFAULT_LANG) {
+			$url .= self::$_supported[self::$_curlang][1] . '/';
+		}
+		return $url;
+	}
 
 	public static function ALbl($tag)
 	{
@@ -161,8 +176,9 @@ class DMsg
 			return NULL;
 
 		global $_gmsg;
-		if (self::$_curlang == '')
+		if (self::$_curlang == '') {
 			DMsg::init();
+		}
 
 		if (isset($_gmsg[$tag]))
 			return $_gmsg[$tag];
@@ -247,7 +263,7 @@ class DMsg
 * Please Note: These language files will be overwritten during software updates.
 *
 * @author     LiteSpeed Technoglogies
-* @copyright  Copyright (c) LiteSpeed 2014
+* @copyright  Copyright (c) LiteSpeed 2014-2017
 * @link       http://www.litespeedtech.com/
 */
 

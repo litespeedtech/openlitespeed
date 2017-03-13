@@ -2,9 +2,9 @@
     function lst_restart() {
         $.SmartMessageBox({
             title: "<i class='fa fa-lg fa-repeat txt-color-green'></i> <span class='text-warning'><strong><?php DMsg::EchoUIStr('service_restartconfirm') ?></strong></span>",
-            buttons: '<?php echo '[' . DMsg::UIStr('btn_cancel') . '][' . DMsg::UIStr('btn_yes') . ']' ; ?>'
+            buttons: '<?php echo '[' . DMsg::UIStr('btn_cancel') . '][' . DMsg::UIStr('btn_go') . ']' ; ?>'
         }, function (ButtonPressed) {
-            if (ButtonPressed === "<?php DMsg::EchoUIStr('btn_yes') ?>") {
+            if (ButtonPressed === "<?php DMsg::EchoUIStr('btn_go') ?>") {
 
                 $.ajax({
                     type: "POST",
@@ -33,9 +33,9 @@
         $.SmartMessageBox({
             title: "<i class='fa fa-lg fa-bug txt-color-red'></i> <span class='text-warning'><strong><?php DMsg::EchoUIStr('service_toggledebug') ?></strong></span>",
             content: "<?php DMsg::EchoUIStr('service_toggledebugmsg') ?>",
-            buttons: '<?php echo '[' . DMsg::UIStr('btn_cancel') . '][' . DMsg::UIStr('btn_yes') . ']' ; ?>'
+            buttons: '<?php echo '[' . DMsg::UIStr('btn_cancel') . '][' . DMsg::UIStr('btn_go') . ']' ; ?>'
         }, function (ButtonPressed) {
-            if (ButtonPressed === "<?php DMsg::EchoUIStr('btn_yes') ?>") {
+            if (ButtonPressed === "<?php DMsg::EchoUIStr('btn_go') ?>") {
 
                 $.ajax({
                     type: "POST",
