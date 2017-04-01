@@ -10,14 +10,16 @@ inst_admin_php()
     if [ "x$OS" = "xFreeBSD" ] ; then
         DL=`which fetch`
         DLCMD="$DL -o"
-    fi
-    if [ "x$DLCMD" = "x" ] ; then
+    else
+        # test wget exist or not
         DL=`which wget`
-        DLCMD="$DL -nv -O"
-    fi
-    if [ "x$DLCMD" = "x" ] ; then
-        DL=`which curl`
-        DLCMD="$DL -L -o"
+        if [ "$?" -ne "0" ] ; then
+            DL=`which curl`
+            if [ "$?" -ne "0" ] ; then
+                echo "Error: Cannot find proper download method curl/wget."
+            fi
+            DLCMD="$DL -L -o"
+        fi
     fi
 
     echo "DLCMD is $DLCMD"
@@ -33,19 +35,19 @@ inst_admin_php()
         mkdir -p "$LSWS_HOME/admin/fcgi-bin/"
         echo "Mkdir $LSWS_HOME/admin/fcgi-bin/ for installing admni_php"
     fi
-        
+
     if [ "x$OS" = "xLinux" ] ; then
         if [ "x$OSTYPE" != "xx86_64" ] ; then
             $DLCMD $LSWS_HOME/admin/fcgi-bin/admin_php http://www.litespeedtech.com/packages/lsphp5_bin/i386/lsphp5
         else
             $DLCMD $LSWS_HOME/admin/fcgi-bin/admin_php http://www.litespeedtech.com/packages/lsphp5_bin/x86_64/lsphp5
         fi
-        
-        if [ $? = 0 ] ; then 
+
+        if [ $? = 0 ] ; then
             HASADMINPHP=y
             echo "admin_php downloaded."
         fi
-        
+
 #        if [ -f  "$LSWS_HOME/admin/fcgi-bin/admin_php" ] ; then
 #            HASADMINPHP=y
 #        fi
@@ -56,8 +58,8 @@ inst_admin_php()
         else
            $DLCMD $LSWS_HOME/admin/fcgi-bin/admin_php http://www.litespeedtech.com/packages/lsphp5_bin/x86_64-freebsd/lsphp5
         fi
-       
-        if [ $? = 0 ] ; then 
+
+        if [ $? = 0 ] ; then
            HASADMINPHP=y
            echo "admin_php downloaded."
         fi
@@ -99,33 +101,33 @@ init
 LSWS_HOME=$1
 
 WS_USER=$2
-if [ "x$WS_USER" = "xyes" ] ; then 
+if [ "x$WS_USER" = "xyes" ] ; then
     WS_USER=nobody
 fi
 
 WS_GROUP=$3
-if [ "x$WS_GROUP" = "xyes" ] ; then 
+if [ "x$WS_GROUP" = "xyes" ] ; then
     WS_GROUP=nobody
 fi
 
 ADMIN_USER=$4
-if [ "x$ADMIN_USER" = "xyes" ] ; then 
+if [ "x$ADMIN_USER" = "xyes" ] ; then
     ADMIN_USER=admin
 fi
 
 PASS_ONE=$5
-if [ "x$PASS_ONE" = "xyes" ] ; then 
+if [ "x$PASS_ONE" = "xyes" ] ; then
     PASS_ONE=123456
 fi
 
 ADMIN_EMAIL=$6
-if [ "x$ADMIN_EMAIL" = "xyes" ] ; then 
+if [ "x$ADMIN_EMAIL" = "xyes" ] ; then
     ADMIN_EMAIL=root@localhost
 fi
 
 ADMIN_SSL=$7
 ADMIN_PORT=$8
-if [ "x$ADMIN_PORT" = "xyes" ] ; then 
+if [ "x$ADMIN_PORT" = "xyes" ] ; then
     ADMIN_PORT=7080
 fi
 
@@ -163,19 +165,19 @@ if [ -f "$LSWS_HOME/conf/httpd_config.xml" ] ; then
     fi
 
     if [ "x$Overwrite_Old" != "xYes" ] && [ "x$Overwrite_Old" != "xY" ] ; then
-        echo "Abort installation!" 
+        echo "Abort installation!"
         exit 0
     fi
     echo
-    
+
     echo -e "\033[38;5;148m$LSWS_HOME/conf/httpd_config.xml exists, will be converted to $LSWS_HOME/conf/httpd_config.conf!\033[39m"
     inst_admin_php
     PHP_INSTALLED=y
-    
+
     if [ -e "$LSWS_HOME/conf/httpd_config.conf" ] ; then
         mv "$LSWS_HOME/conf/httpd_config.conf" "$LSWS_HOME/conf/httpd_config.conf.old"
     fi
-    
+
     if [ -e "$LSWS_HOME/DEFAULT/conf/vhconf.conf" ] ; then
         mv "$LSWS_HOME/DEFAULT/conf/vhconf.conf" "$LSWS_HOME/DEFAULT/conf/vhconf.conf.old"
     fi
@@ -197,12 +199,12 @@ if [ -f "$LSWS_HOME/conf/httpd_config.conf" ] ; then
     OLD_GROUP_CONF=`grep "group" "$LSWS_HOME/conf/httpd_config.conf"`
     OLD_USER=`expr "$OLD_USER_CONF" : '\s*user\s*\(\S*\)'`
     OLD_GROUP=`expr "$OLD_GROUP_CONF" : '\s*group\s*\(\S*\)'`
-    
+
     if [ "$WS_USER" = "$DEFAULT_USER" ] && [ "$WS_GROUP" = "$DEFAULT_GROUP" ] ; then
         WS_USER=$OLD_USER
         WS_GROUP=$OLD_GROUP
     fi
-    
+
     if [ "$OLD_USER" != "$WS_USER" ] || [ "$OLD_GROUP" != "$WS_GROUP" ]; then
         echo -e "\033[38;5;148m$LSWS_HOME/conf/httpd_config.conf exists, but the user/group do not match, installing abort!\033[39m"
         echo -e "\033[38;5;148mYou may change the user/group or remove the direcoty $LSWS_HOME and re-install.\033[39m"
@@ -286,5 +288,3 @@ fi
 echo
 echo -e "\033[38;5;148mInstallation finished, Enjoy!\033[39m"
 echo
-
-
