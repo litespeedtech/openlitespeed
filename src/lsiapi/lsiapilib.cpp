@@ -125,7 +125,6 @@ static int enable_hook(lsi_session_t *session,
         case LSI_HKPT_HTTP_BEGIN:
         case LSI_HKPT_RCVD_REQ_HEADER:
         case LSI_HKPT_URI_MAP:
-        case LSI_HKPT_HTTP_AUTH:
         case LSI_HKPT_RECV_REQ_BODY:
         case LSI_HKPT_RCVD_REQ_BODY:
         case LSI_HKPT_RCVD_RESP_HEADER:
@@ -1063,7 +1062,6 @@ static const char *lsi_req_env[LSI_VAR_COUNT] =
     "SSL_CIPHER_USEKEYSIZE",
     "SSL_CIPHER_ALGKEYSIZE",
     "SSL_CLIENT_CERT",
-    "TRANS_PROTOCOL_VERSION",
     "GEOIP_ADDR",
     "PATH_TRANSLATED",
 
@@ -1311,9 +1309,9 @@ static int is_resp_buffer_available(lsi_session_t *session)
     if (pSession == NULL)
         return LS_FALSE;
 
-    if (pSession->getRespBodyBuf()
-        && pSession->getRespBodyBuf()->getCurWBlkPos() -
-        pSession->getRespBodyBuf()->getCurRBlkPos() > LSI_MAX_RESP_BUFFER_SIZE)
+    if (pSession->getRespCache()
+        && pSession->getRespCache()->getCurWBlkPos() -
+        pSession->getRespCache()->getCurRBlkPos() > LSI_MAX_RESP_BUFFER_SIZE)
         return LS_FALSE;
     return LS_TRUE;
 }
@@ -1701,7 +1699,8 @@ static int exec_ext_cmd(lsi_session_t *session, const char *cmd, int len,
         return LS_FAIL;
 
     pSession->setExtCmdNotifier(cb, lParam, pParam);
-    return pSession->execExtCmd(cmd, len, EXEC_CMD_PARSE_RES);
+    pSession->execExtCmd(cmd, len, EXEC_CMD_PARSE_RES);
+    return LS_OK;
 }
 
 static char *get_ext_cmd_res_buf(lsi_session_t *session, int *length)
@@ -1877,7 +1876,7 @@ static void *get_resp_body_buf(lsi_session_t *session)
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
     if (pSession == NULL)
         return NULL;
-    return pSession->getRespBodyBuf();
+    return pSession->getRespCache();
 }
 
 
@@ -2066,12 +2065,7 @@ int get_local_sockaddr(lsi_session_t *session, char *pIp, int maxLen)
     if (!session || !pIp)
         return LS_FAIL;
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
-    int len;
-    const char * pAddr = pSession->getServerAddrStr(&len);
-    if (len > maxLen - 1)
-        len = maxLen - 1;
-    memmove(pIp, pAddr, len + 1);
-    return len;
+    return pSession->getServerAddrStr(pIp, maxLen);
 }
 
 
@@ -2101,40 +2095,6 @@ int expand_current_server_varible(int level, const char *pVarible,
     }
 
     return ret;
-}
-
-
-lsi_session_t * new_subreq(lsi_session_t *pSession, lsi_subreq_t *pSubReq)
-{
-    /**
-     * FIXME: Will be ready in the next release.
-     */
-    return NULL;
-}
-
-int exec_subreq(lsi_session_t *pSession, lsi_session_t *pSubSess)
-{
-    /**
-     * FIXME: Will be ready in the next release.
-     */
-    return 0;
-}
-
-int close_subreq(lsi_session_t *pSession, lsi_session_t *pSubSess)
-{
-    /**
-     * FIXME: Will be ready in the next release.
-     */
-
-    return 0;
-}
-
-int include_subreq_resp(lsi_session_t *pSession, lsi_session_t *pSubSess)
-{
-    /**
-     * FIXME: Will be ready in the next release.
-     */
-    return 0;
 }
 
 
@@ -2299,11 +2259,6 @@ void lsiapi_init_server_api()
     pApi->handoff_fd = handoff_fd;
     pApi->get_local_sockaddr = get_local_sockaddr;
     pApi->expand_current_server_varible = expand_current_server_varible;
-
-    pApi->new_subreq = new_subreq;
-    pApi->exec_subreq = exec_subreq;
-    pApi->close_subreq = close_subreq;
-    pApi->include_subreq_resp = include_subreq_resp;
 
     pApi->_debugLevel = HttpLog::getDebugLevel();
 
