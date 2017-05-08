@@ -164,7 +164,6 @@ LsShm::LsShm(const char *pMapName)
     , m_iFd(-1)
     , m_pShmLock(NULL)
     , x_pShmMap(NULL)
-    , m_pShmMapO(NULL)
     , m_iMaxSizeO(0)
     , m_pGPool(NULL)
     , m_pGHash(NULL)
@@ -290,7 +289,8 @@ LsShm *LsShm::getExisting(const char *dirName)
 
 
 LsShm *LsShm::open(const char *mapName, LsShmXSize_t initsize,
-                   const char *pBaseDir, int mode)
+                   const char *pBaseDir, int mode,
+                   LsShmXSize_t addrMapSize)
 {
     int i;
     LsShm *pObj;
@@ -321,6 +321,8 @@ LsShm *LsShm::open(const char *mapName, LsShmXSize_t initsize,
     pObj = new LsShm(mapName);
     if (pObj != NULL)
     {
+        if (addrMapSize > 0)
+            pObj->reserveAddrSpace(addrMapSize);
         stat = pObj->initShm(mapName, initsize, pBaseDir, mode);
         if (pObj->m_iFd != -1)
             lockFile(pObj->m_iFd, F_UNLCK);
@@ -485,7 +487,7 @@ LsShmStatus_t LsShm::newShmMap(LsShmSize_t size, uint64_t id)
     if (size < s_iPageSize)
         size = s_iPageSize;
     if ((expandFile(0, roundToPageSize(size)) != LSSHM_OK)
-        || (map(size) != LSSHM_OK))
+        || (mapAddrMap(size) != LSSHM_OK))
         return LSSHM_ERROR;
     x_pShmMap->x_iMagic = m_iMagic;
     x_pShmMap->x_version.m_iVer = s_version.m_iVer;
@@ -596,39 +598,46 @@ LsShmStatus_t LsShm::initShm(const char *mapName, LsShmXSize_t size,
         }
 
         // only map the header size to ensure the file is good.
-        if (map((LsShmXSize_t)s_iShmHdrSize) != LSSHM_OK)
-            return LSSHM_ERROR;
+        LsShmMap * pShmMap = (LsShmMap *)mmap(0, (size_t)s_iShmHdrSize, 
+                                              PROT_READ | PROT_WRITE, 
+                                              MAP_SHARED, m_iFd, 0);
+        if (pShmMap == MAP_FAILED)
+        {
+            setErrMsg(LSSHM_SYSERROR, "Unable to mmap [%s], size=%lu, %s.",
+                    m_pFileName, (unsigned long)size, strerror(errno));
+            return LSSHM_SYSERROR;
+        }
 
-        if (checkMagic(x_pShmMap, obj.m_pName) != LSSHM_OK)
+        if (checkMagic(pShmMap, obj.m_pName) != LSSHM_OK)
         {
             setErrMsg(LSSHM_BADVERSION,
                       "Bad SHM file format [%s], size=%lld, magic=%08X(%08X).",
                       m_pFileName, (uint64_t)mystat.st_size,
-                      x_pShmMap->x_iMagic, m_iMagic);
+                      pShmMap->x_iMagic, m_iMagic);
             return LSSHM_BADVERSION;
         }
 
-        if (x_pShmMap->x_id != m_locks.getId())
+        if (pShmMap->x_id != m_locks.getId())
         {
             setErrMsg(LSSHM_BADVERSION,
                       "SHM file [%s] ID=%lld, LOCK file ID=%lld.",
-                      m_pFileName, x_pShmMap->x_id, m_locks.getId());
+                      m_pFileName, pShmMap->x_id, m_locks.getId());
             return LSSHM_BADVERSION;
         }
 
         // expand the file if needed... won't shrink
-        if (size > x_pShmMap->x_stat.m_iFileSize)
+        if (size > pShmMap->x_stat.m_iFileSize)
         {
-            if (expandFile((LsShmOffset_t)x_pShmMap->x_stat.m_iFileSize,
-                           (LsShmXSize_t)(size - x_pShmMap->x_stat.m_iFileSize)) != LSSHM_OK)
+            if (expandFile((LsShmOffset_t)pShmMap->x_stat.m_iFileSize,
+                           (LsShmXSize_t)(size - pShmMap->x_stat.m_iFileSize)) != LSSHM_OK)
                 return LSSHM_ERROR;
-            x_pShmMap->x_stat.m_iFileSize = size;
+            pShmMap->x_stat.m_iFileSize = size;
         }
         else
             size = mystat.st_size;
+        munmap(pShmMap, (size_t)s_iShmHdrSize);
 
-        unmap();
-        if (map(size) != LSSHM_OK)
+        if (mapAddrMap(size) != LSSHM_OK)
             return LSSHM_ERROR;
 
         m_pShmLock = offset2pLock(x_pShmMap->x_iLockOffset);
@@ -651,13 +660,10 @@ LsShmStatus_t LsShm::expand(LsShmXSize_t incrSize)
     if (expandFile((LsShmOffset_t)xsize, incrSize) != LSSHM_OK)
         return LSSHM_ERROR;
 
-    unmap();
+    //unmap();
     xsize += incrSize;
-    if (map(xsize) != LSSHM_OK)
+    if (mapAddrMap(xsize) != LSSHM_OK)
     {
-        xsize -= incrSize;
-        if (xsize != 0)
-            map(xsize);     // try to map old size for cleanup
         return LSSHM_ERROR;
     }
     x_pShmMap->x_stat.m_iFileSize = xsize;
@@ -666,19 +672,20 @@ LsShmStatus_t LsShm::expand(LsShmXSize_t incrSize)
 }
 
 
-LsShmStatus_t LsShm::map(LsShmXSize_t size)
+LsShmStatus_t LsShm::mapAddrMap(LsShmXSize_t size)
 {
-    uint8_t *p = (uint8_t *)
-        mmap(0, (size_t)size, PROT_READ | PROT_WRITE, MAP_SHARED, m_iFd, 0);
-    if (p == MAP_FAILED)
+    if (m_addrMap.remap(m_iFd, m_iMaxSizeO, size) == LS_FAIL)
     {
-        setErrMsg(LSSHM_SYSERROR, "Unable to mmap [%s], size=%lu, %s.",
-                  m_pFileName, (unsigned long)size, strerror(errno));
+        setErrMsg(LSSHM_SYSERROR, "Unable to mmap [%s], old map size = %lu, size=%lu, %s.",
+                  m_pFileName, (unsigned long)m_iMaxSizeO, (unsigned long)size, strerror(errno));
         return LSSHM_SYSERROR;
+        
     }
-
-    x_pShmMap = (LsShmMap *)p;
-    x_pStats = &x_pShmMap->x_stat;
+    if (m_iMaxSizeO == 0)
+    {
+        x_pShmMap = (LsShmMap *)m_addrMap.offset2ptr(0);
+        x_pStats = &x_pShmMap->x_stat;
+    }
     m_iMaxSizeO = size;
     return LSSHM_OK;
 }
@@ -692,8 +699,8 @@ LsShmStatus_t LsShm::remap()
 #endif
 
     LsShmXSize_t size = x_pShmMap->x_stat.m_iFileSize;
-    unmap();
-    return map(size);
+    //unmap();
+    return mapAddrMap(size);
 }
 
 
@@ -701,10 +708,9 @@ void LsShm::unmap()
 {
     if (x_pShmMap != NULL)
     {
-        m_pShmMapO = x_pShmMap;
-        munmap(x_pShmMap, m_iMaxSizeO);
+        m_addrMap.unmap();
         x_pShmMap = NULL;
-        x_pStats = 0;
+        x_pStats = NULL;
         m_iMaxSizeO = 0;
     }
 }
@@ -737,8 +743,6 @@ LsShmOffset_t LsShm::allocPage(LsShmSize_t pagesize, int &remap)
             offset = 0;
             goto out;
         }
-        if (x_pShmMap != m_pShmMapO)
-            remap = 1;
     }
     offset = x_pShmMap->x_stat.m_iUsedSize;
     used(pagesize);

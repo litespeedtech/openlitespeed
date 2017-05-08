@@ -610,10 +610,9 @@ static int isDomainExclude(lsi_session_t *session, CacheConfig *pConfig)
 }
 
 
-static char *copyCookie(char *p, char *pDestEnd,
-                        cookieval_t *pIndex, const char *pCookie)
+static char *copyCookie0(char *p, char *pDestEnd,
+                         const char *pCookie, int n)
 {
-    int n = pIndex->valLen + pIndex->valOff - pIndex->keyOff;
     if (n > (pDestEnd - p - 1))
         n = pDestEnd - p - 1;
     if (n > 0)
@@ -625,9 +624,18 @@ static char *copyCookie(char *p, char *pDestEnd,
     return p;
 }
 
+
+static char *copyCookie(char *p, char *pDestEnd,
+                        const cookieval_t *pIndex, const char *pCookie)
+{
+    int n = pIndex->valLen + pIndex->valOff - pIndex->keyOff;
+    return copyCookie0(p, pDestEnd, pCookie, n);
+}
+
+
 int getPrivateCacheCookie(HttpReq *pReq, char *pDest, char *pDestEnd)
 {
-    cookieval_t *pIndex;
+    const cookieval_t *pIndex;
     pReq->parseCookies();
     if (pReq->getCookieList().getSize() == 0)
     {
@@ -683,6 +691,10 @@ char *appendVaryCookie(HttpReq *pReq, const char *pCookeName, int len,
         const char *pCookie = pReq->getHeaderBuf().getp(pIndex->keyOff);
         pDest = copyCookie(pDest, pDestEnd, pIndex, pCookie);
     }
+    else
+    {
+        pDest = copyCookie0(pDest, pDestEnd, pCookeName, len);
+    }
     return pDest;
 }
 
@@ -720,11 +732,7 @@ int getCacheVaryCookie(lsi_session_t *session, HttpReq *pReq, char *pDest,
 {
     char achCacheCtrl[8192];
     pReq->parseCookies();
-    if (pReq->getCookieList().getSize() == 0)
-    {
-        *pDest = 0;
-        return 0;
-    }
+
     char *p = pDest;
     p = appendVaryCookie(pReq, "_lscache_vary", 13, p, pDestEnd);
 
@@ -1006,7 +1014,7 @@ void getRespHeader(lsi_session_t *session, int header_index, char **buf,
 static int bypassUrimapHook(lsi_param_t *rec)
 {
 #ifdef USE_RECV_REQ_HEADER_HOOK
-    if (g_api->get_hook_level(rec) == LSI_HKPT_RECV_REQ_HEADER)
+    if (g_api->get_hook_level(rec) == LSI_HKPT_RCVD_REQ_HEADER)
     {
         int disableHkpt = LSI_HKPT_URI_MAP;
         g_api->enable_hook(rec->session, &MNAME, 0, &disableHkpt, 1);
@@ -1945,7 +1953,7 @@ int releaseIpCounter(void *data)
 static lsi_serverhook_t serverHooks[] =
 {
 #ifdef USE_RECV_REQ_HEADER_HOOK
-    {LSI_HKPT_RECV_REQ_HEADER,  checkAssignHandler, LSI_HOOK_EARLY,     LSI_FLAG_ENABLED},
+    {LSI_HKPT_RCVD_REQ_HEADER,  checkAssignHandler, LSI_HOOK_EARLY,     LSI_FLAG_ENABLED},
 #endif
     {LSI_HKPT_URI_MAP,          checkAssignHandler, LSI_HOOK_FIRST, LSI_FLAG_ENABLED},
     {LSI_HKPT_HTTP_END,         endCache,           LSI_HOOK_LAST + 1,  LSI_FLAG_ENABLED},
@@ -2121,8 +2129,7 @@ static void processPurge2(lsi_session_t *session,
 }
 
 
-static void processPurge(lsi_session_t *session,
-                         const char *pValue, int valLen)
+static void processPurge(lsi_session_t *session, const char *pValue, int valLen)
 {
     const char *pBegin = pValue;
     const char *pEnd = pValue + valLen;
@@ -2140,6 +2147,7 @@ static void processPurge(lsi_session_t *session,
         }
         pBegin = p+1;
     }
+    g_api->log(session, LSI_LOG_DEBUG,  "processPurge: %.*s\n", valLen, pValue);
 }
 
 static void decref_and_free_data(MyMData *myData, lsi_session_t *session)
@@ -2167,7 +2175,7 @@ static int handlerProcess(lsi_session_t *session)
     {
         int len;
         const char *pIP = g_api->get_client_ip(session, &len);
-        if (g_api->get_client_access(session) != 0 &&
+        if (g_api->get_client_access_level(session) != LSI_ACL_TRUST &&
             (!pIP || strncmp(pIP, "127.0.0.1", 9) != 0))
         {
             decref_and_free_data(myData, session);

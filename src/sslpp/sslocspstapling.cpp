@@ -15,10 +15,6 @@
 *    You should have received a copy of the GNU General Public License       *
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
-//Must #include <config.h> before check #ifndef USE_BORINGSSL
-#include <config.h>
-
-#ifndef USE_BORINGSSL
 
 #include <sslpp/sslocspstapling.h>
 #include <sslpp/sslerror.h>
@@ -28,6 +24,7 @@
 #include <util/httpfetch.h>
 #include <util/stringtool.h>
 #include <util/xmlnode.h>
+#include <util/datetime.h>
 
 #include <openssl/crypto.h>
 #include <openssl/err.h>
@@ -35,8 +32,15 @@
 #include <openssl/pem.h>
 #include <openssl/rand.h>
 #include <openssl/ssl.h>
+#include <openssl/x509.h>
 #include <openssl/x509v3.h>
 #include <openssl/x509_vfy.h>
+
+#ifndef OPENSSL_IS_BORINGSSL
+#include <openssl/ocsp.h>
+#else
+#include <sslpp/ocsp/ocsp.h>
+#endif
 
 #include <assert.h>
 #include <ctype.h>
@@ -45,6 +49,8 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
+
+
 
 const char *SslOcspStapling::s_pRespTempPath = "/tmp/ocspcache/";
 int   SslOcspStapling::s_iRespTempPathLen = 15;
@@ -66,26 +72,6 @@ static void setLastErrMsg(const char *format, ...)
         ret = MAX_LINE_LENGTH;
     s_ErrMsg.setLen(0);
     s_ErrMsg.setStr(s, ret);
-}
-
-
-static unsigned int escapeBase64Uri(unsigned char *s, size_t size,
-                                    unsigned char *d)
-{
-    unsigned char *begin = d;
-    while (size--)
-    {
-        if (isalnum(*s))
-            *d++ = *s++;
-        else
-        {
-            *d++ = '%';
-            *d++ = StringTool::s_aHex[*s >> 4];
-            *d++ = StringTool::s_aHex[*s & 0x0f];
-            s++;
-        }
-    }
-    return (unsigned int)(d - begin);
 }
 
 
@@ -112,18 +98,23 @@ static int OcspRespCb(void *pArg, HttpFetch *pHttpFetch)
 int SslOcspStapling::callback(SSL *ssl)
 {
     int     iResult;
-    unsigned char *pbuff;
     iResult = SSL_TLSEXT_ERR_NOACK;
     update();
     if (m_iDataLen > 0)
     {
+#ifndef OPENSSL_IS_BORINGSSL
+        unsigned char *pbuff;
         /*OpenSSL will free pbuff by itself */
         pbuff = (unsigned char *)malloc(m_iDataLen);
         if (pbuff == NULL)
             return SSL_TLSEXT_ERR_NOACK;
         memcpy(pbuff, m_pRespData, m_iDataLen);
         SSL_set_tlsext_status_ocsp_resp(ssl, pbuff, m_iDataLen);
+//#else
+//        SSL_set_ocsp_response(ssl, m_pRespData, m_iDataLen);
+#endif
         iResult = SSL_TLSEXT_ERR_OK;
+
     }
     return iResult;
 }
@@ -156,6 +147,7 @@ int SslOcspStapling::processResponse(HttpFetch *pHttpFetch)
 
 SslOcspStapling::SslOcspStapling()
     : m_pHttpFetch(NULL)
+    , m_pReqData(NULL)
     , m_iDataLen(0)
     , m_pRespData(NULL)
     , m_RespTime(0)
@@ -170,6 +162,8 @@ SslOcspStapling::~SslOcspStapling()
         delete []m_pRespData;
     if (m_pHttpFetch != NULL)
         delete m_pHttpFetch;
+    if (m_pReqData)
+        free(m_pReqData);
     if (m_pCertId != NULL)
         OCSP_CERTID_free(m_pCertId);
 }
@@ -200,8 +194,8 @@ int SslOcspStapling::init(SSL_CTX *pSslCtx)
 
     if ((getCertId(pCert) == 0) && (getResponder(pCert) == 0))
     {
-        m_addrResponder.setHttpUrl(m_sOcspResponder.c_str(),
-                                   m_sOcspResponder.len());
+//         m_addrResponder.setHttpUrl(m_sOcspResponder.c_str(),
+//                                    m_sOcspResponder.len());
         iResult = 0;
         //update();
 
@@ -215,20 +209,22 @@ int SslOcspStapling::update()
 {
 
     struct stat st;
+    if (m_RespTime != 0 && m_RespTime + m_iocspRespMaxAge < DateTime::s_curTime)
+    {
+        return 0;
+    }
 
     if (::stat(m_sRespfile.c_str(), &st) == 0)
     {
-        if ((st.st_mtime + m_iocspRespMaxAge) > time(NULL))
+        if (m_RespTime != st.st_mtime)
         {
-            if (m_RespTime != st.st_mtime)
-            {
-                verifyRespFile(0);
-                m_RespTime = st.st_mtime;
-            }
-            return 0;
+            verifyRespFile(0);
+            m_RespTime = st.st_mtime;
         }
     }
-    createRequest();
+    if (::stat(m_sRespfileTmp.c_str(), &st) != 0
+        || st.st_mtime + 10 < DateTime::s_curTime)
+        createRequest();
     return 0;
 }
 
@@ -251,7 +247,11 @@ int SslOcspStapling::getResponder(X509 *pCert)
     strResp = X509_get1_ocsp(pCert);
     if (strResp == NULL)
     {
+#ifndef OPENSSL_IS_BORINGSSL
         pXchain = m_pCtx->extra_certs;
+#else
+        SSL_CTX_get0_chain_certs(m_pCtx, &pXchain);
+#endif
         n = sk_X509_num(pXchain);
         for (i = 0; i < n; i++)
         {
@@ -298,7 +298,7 @@ int SslOcspStapling::getResponder(X509 *pCert)
 }
 
 
-int SslOcspStapling::getRequestData(unsigned char *pReqData)
+int SslOcspStapling::getRequestData(unsigned char **pReqData)
 {
     int             len = -1;
     OCSP_REQUEST    *ocsp;
@@ -313,9 +313,7 @@ int SslOcspStapling::getRequestData(unsigned char *pReqData)
     id = OCSP_CERTID_dup(m_pCertId);
     if (OCSP_request_add0_id(ocsp, id) != NULL)
     {
-        len = i2d_OCSP_REQUEST(ocsp, &pReqData);
-        if (len > 0)
-            *pReqData = 0;
+        len = i2d_OCSP_REQUEST(ocsp, pReqData);
     }
     OCSP_REQUEST_free(ocsp);
     return  len;
@@ -324,39 +322,39 @@ int SslOcspStapling::getRequestData(unsigned char *pReqData)
 
 int SslOcspStapling::createRequest()
 {
-    int             len, len64, n1;
-    unsigned char   *pReqData, *pReqData64;
-    unsigned char   ReqData[4000], ReqData64[4000];
+    int             len;
     struct stat     st;
     if (::stat(m_sRespfileTmp.c_str(), &st) == 0)
         return 0;
-    pReqData = ReqData;
-    pReqData64 = ReqData64;
-    len = getRequestData(pReqData);
+    if (m_pHttpFetch != NULL )
+    {
+        if (-1 != m_pHttpFetch->getHttpFd())
+            return 0;
+        delete m_pHttpFetch;
+        m_pHttpFetch = NULL;
+    }
+    if (m_pReqData)
+    {
+        free(m_pReqData);
+        m_pReqData = NULL;
+    }
+    len = getRequestData(&m_pReqData);
     if (len <= 0)
         return LS_FAIL;
-    len64 = ls_base64_encode((const char *)ReqData, len, (char *)pReqData64);
 
-    const char *pUrl = m_sOcspResponder.c_str();
-    memcpy(pReqData,  pUrl, m_sOcspResponder.len());
+    if (*(m_sOcspResponder.c_str() + m_sOcspResponder.len() - 1) != '/')
+    {
+        m_sOcspResponder.append("/", 1);
+    }
 
-    pReqData += m_sOcspResponder.len();
-    if (pUrl[m_sOcspResponder.len() - 1] != '/')
-        *pReqData++ = '/';
-
-    n1 = escapeBase64Uri(pReqData64, len64, pReqData);
-    pReqData += n1;
-    *pReqData = 0;
-    len = pReqData - ReqData;
-
-    if (m_pHttpFetch != NULL)
-        delete m_pHttpFetch;
     m_pHttpFetch = new HttpFetch();
     m_pHttpFetch->setResProcessor(OcspRespCb, this);
     m_pHttpFetch->setTimeout(30);  //Set Req timeout as 30 seconds
-    m_pHttpFetch->startReq((const char *)ReqData, 1, 1, NULL, 0,
-                           m_sRespfileTmp.c_str(), NULL, m_addrResponder);
-    setLastErrMsg("%lu, len = %d\n%s \n", m_pHttpFetch, len, ReqData);
+    m_pHttpFetch->startReq(m_sOcspResponder.c_str(), 1, 1,
+                           (const char *)m_pReqData, len,
+                           m_sRespfileTmp.c_str(), "application/ocsp-request",
+                           NULL);
+    setLastErrMsg("%lu, len = %d\n\n", m_pHttpFetch, len);
     //printf("%s\n", s_ErrMsg.c_str());
     return 0;
 }
@@ -380,6 +378,10 @@ void SslOcspStapling::updateRespData(OCSP_RESPONSE *pResponse)
             delete [] m_pRespData;
             m_pRespData = NULL;
         }
+#ifdef OPENSSL_IS_BORINGSSL
+        if (m_pCtx)
+            SSL_CTX_set_ocsp_response(m_pCtx, m_pRespData, m_iDataLen);
+#endif
     }
 }
 
@@ -392,7 +394,11 @@ int SslOcspStapling::certVerify(OCSP_RESPONSE *pResponse,
     ASN1_GENERALIZEDTIME  *pThisupdate, *pNextupdate;
     struct stat         st;
 
+#ifndef OPENSSL_IS_BORINGSSL
     pXchain = m_pCtx->extra_certs;
+#else
+    SSL_CTX_get0_chain_certs(m_pCtx, &pXchain);
+#endif
     if (OCSP_basic_verify(pBasicResp, pXchain, pXstore, OCSP_NOVERIFY) == 1)
     {
         if ((m_pCertId != NULL)
@@ -475,15 +481,22 @@ int SslOcspStapling::getCertId(X509 *pCert)
     STACK_OF(X509)      *pXchain;
     X509_STORE_CTX      *pXstore_ctx;
 
-
+#ifndef OPENSSL_IS_BORINGSSL
     pXchain = m_pCtx->extra_certs;
+#else
+    SSL_CTX_get0_chain_certs(m_pCtx, &pXchain);
+#endif
     n = sk_X509_num(pXchain);
     for (i = 0; i < n; i++)
     {
         pXissuer = sk_X509_value(pXchain, i);
         if (X509_check_issued(pXissuer, pCert) == X509_V_OK)
         {
+#ifndef OPENSSL_IS_BORINGSSL
             CRYPTO_add(&pXissuer->references, 1, CRYPTO_LOCK_X509);
+#else
+            X509_up_ref(pXissuer);
+#endif
             m_pCertId = OCSP_cert_to_id(NULL, pCert, pXissuer);
             X509_free(pXissuer);
             return 0;
@@ -566,4 +579,3 @@ int SslOcspStapling::config(const XmlNode *pNode, SSL_CTX *pSSL,
 }
 
 
-#endif // USE_BORINGSSL

@@ -137,14 +137,8 @@ public:
     void disableLock()
     {   m_iLockEnable = 0; }
 
-    ls_attr_inline LsShmMap *getShmMap() const
-    {   return m_pShm->getShmMap(); }
-
     ls_attr_inline LsShmSize_t getShmMapMaxSize() const
     {   return m_pShm->maxSize(); }
-
-    ls_attr_inline LsShmSize_t getShmMapOldMaxSize() const
-    {   return m_pShm->oldMaxSize(); }
 
     LsShmOffset_t getPoolMapStatOffset() const;
 

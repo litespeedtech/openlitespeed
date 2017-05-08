@@ -24,6 +24,12 @@
 #include <lsiapi/lsimoduledata.h>
 #include <util/autostr.h>
 
+
+#define CLIENTINFO_NEED_RESET   (1<<0)
+#define CLIENTINFO_GOOG_TEST    (1<<1)
+#define CLIENTINFO_GOOG_REAL    (1<<2)
+#define CLIENTINFO_GOOG_FAKE    (1<<3)
+
 #if 0
 #include <shm/lsshmcache.h>
 
@@ -54,10 +60,11 @@ class ClientInfo
     char        m_achSockAddr[24];
     AutoStr2    m_sAddr;
     AutoStr2    m_sHostName;
+    uint32_t    m_iFlags;
+    int32_t     m_iConns;
     GeoInfo    *m_pGeoInfo;
     LsiModuleData   m_moduleData;
 
-    size_t      m_iConns;
     time_t      m_tmOverLimit;
     short       m_sslNewConn;
     int         m_iHits;
@@ -93,7 +100,18 @@ public:
     const struct sockaddr *getAddr() const
     {   return (struct sockaddr *)m_achSockAddr;         }
 
+    struct sockaddr * getAddr()
+    {   return (struct sockaddr *)m_achSockAddr;                    }
     void setAddr(const struct sockaddr *pAddr);
+
+    void clearFlag( int flag )          {   m_iFlags &= ~flag;          }
+    void setFlag( int flag )            {   m_iFlags |= flag;           }
+    int isFlagSet( int flag ) const     {   return m_iFlags & flag;     }
+
+    int isNeedTestHost() const
+    {   return m_iFlags & CLIENTINFO_GOOG_TEST;         }
+    int checkHost();
+    void verifyIp(void *ip, const long length);
 
     const char *getAddrString() const  {   return m_sAddr.c_str();     }
     int          getAddrStrLen() const  {   return m_sAddr.len();       }

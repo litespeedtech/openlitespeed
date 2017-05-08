@@ -53,7 +53,7 @@ protected:
                                   int line, const GoogleString& message);
 
 private:
-    lsi_log_level GetLsiLogLevel(MessageType type);
+    LSI_LOG_LEVEL GetLsiLogLevel(MessageType type);
 
 };
 

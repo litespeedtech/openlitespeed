@@ -52,7 +52,7 @@ private:
     short           m_iType;
     unsigned char   m_iAutoGrow;
     unsigned char   m_iNoRecycle;
-    off_t           m_iCurWBlkPos;
+    off_t           m_curWBlkPos;
     BlockBuf      **m_pCurWBlock;
     char           *m_pCurWPos;
 
@@ -109,14 +109,15 @@ public:
     //int  seekWPos( size_t pos );
     void rewindWriteBuf();
     void rewindReadBuf();
+    void rewindWOff(off_t rewind);
     int setROffset(off_t  offset);
     int getFd() const               {   return m_iFd;            }
     off_t  getCurFileSize() const   {   return m_iCurTotalSize;  }
     off_t  getCurRBlkPos() const    {   return m_curRBlkPos;    }
-    off_t  getCurWBlkPos() const    {   return m_iCurWBlkPos;    }
+    off_t  getCurWBlkPos() const    {   return m_curWBlkPos;    }
     int empty() const
     {
-        if (m_curRBlkPos < m_iCurWBlkPos)
+        if (m_curRBlkPos < m_curWBlkPos)
             return 0;
         if (!m_pCurWBlock)
             return 1;

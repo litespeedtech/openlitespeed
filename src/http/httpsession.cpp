@@ -594,7 +594,7 @@ int HttpSession::readReqBody()
                 return 0;
         }
 
-        if (m_pReqParser && m_pReqParser->getEnableUploadFile())
+        if (m_pReqParser && m_pReqParser->isParsePost())
         {
             pBuf = tmpBuf;
             size = 8192;
@@ -634,10 +634,7 @@ int HttpSession::readReqBody()
         }
         if (ret > 0)
         {
-            if (!m_pReqParser || !m_pReqParser->getEnableUploadFile())
-                m_request.getBodyBuf()->writeUsed(ret);
-
-            if (m_pReqParser)
+            if (m_pReqParser && m_pReqParser->isParsePost())
             {
                 //Update buf
                 ret = m_pReqParser->parseUpdate(pBuf, ret);
@@ -649,6 +646,8 @@ int HttpSession::readReqBody()
                     return SC_500;
                 }
             }
+            else
+                m_request.getBodyBuf()->writeUsed(ret);
 
             LS_DBG_L(getLogSession(), "Read %lld/%lld bytes of request body!",
                      (long long)m_request.getContentFinished(),
@@ -1032,6 +1031,9 @@ int HttpSession::processNewReqInit()
                                HttpHeader::H_X_FORWARDED_FOR);
             len = m_request.getHeaderLen(HttpHeader::H_X_FORWARDED_FOR);
         }
+        
+        LS_DBG_L(getLogSession(), "HttpSession::processNewReqInit pProxyHeader %s pName %s len %d.",
+                 pProxyHeader, pName, len);
         if (*pProxyHeader)
         {
             ret = updateClientInfoFromProxyHeader(pName, pProxyHeader, len);
@@ -1116,32 +1118,35 @@ int HttpSession::processNewReqInit()
     return 0;
 }
 
-int HttpSession::setupReqParser()
+
+int HttpSession::parseReqArgs(int doPostBody)
 {
-    assert(m_pReqParser == NULL);
-
-    HttpVHost *pVHost = m_request.getVHost();
-    ReqParserParam &reqParam = pVHost->getReqParserParam();
-
-    if ((!reqParam.m_iEnableUploadFile && !getFlag(HSF_PARSE_REQ_BODY))
-        || m_request.getContentLength() == 0)
-        return 0;
-
-    const char *pReqContentType = m_request.getHeader(
-                                      HttpHeader::H_CONTENT_TYPE);
-    if (pReqContentType)
+    if (doPostBody)
     {
-        m_request.updateContentType((char *)pReqContentType);
+        if (m_request.getBodyType() == REQ_BODY_UNKNOWN)
+            doPostBody = 0;
+    }
+    if (m_request.getQueryStringLen() == 0 && !doPostBody)
+        return 0;
+    if (!m_pReqParser)
+    {
         m_pReqParser = new ReqParser();
-        if (m_pReqParser
-            && 0 != m_pReqParser->parseInit(&m_request, reqParam))
+        if (!m_pReqParser || 0 != m_pReqParser->init(&m_request))
         {
-            delete m_pReqParser;
-            m_pReqParser = NULL;
+            if (m_pReqParser)
+            {
+                delete m_pReqParser;
+                m_pReqParser = NULL;
+            }
+            return LS_FAIL;
         }
     }
-
-    return 0;
+    if (doPostBody)
+    {
+        if (!m_pReqParser->isParsePost())
+            return m_pReqParser->beginParsePost();
+    }
+    return LS_OK;
 }
 
 int HttpSession::processNewReqBody()
@@ -4180,13 +4185,12 @@ int HttpSession::smProcessReq()
                 break;
         //fall through
         case HSPS_HKPT_HTTP_BEGIN:
-            ret = runEventHkpt(LSI_HKPT_HTTP_BEGIN, HSPS_HKPT_RECV_REQ_HEADER);
-            if (ret || m_processState != HSPS_HKPT_RECV_REQ_HEADER)
+            ret = runEventHkpt(LSI_HKPT_HTTP_BEGIN, HSPS_HKPT_RCVD_REQ_HEADER);
+            if (ret || m_processState != HSPS_HKPT_RCVD_REQ_HEADER)
                 break;
-            setupReqParser();
         //fall through
-        case HSPS_HKPT_RECV_REQ_HEADER:
-            ret = runEventHkpt(LSI_HKPT_RECV_REQ_HEADER, HSPS_PROCESS_NEW_REQ_BODY);
+        case HSPS_HKPT_RCVD_REQ_HEADER:
+            ret = runEventHkpt(LSI_HKPT_RCVD_REQ_HEADER, HSPS_PROCESS_NEW_REQ_BODY);
             if (ret || m_processState != HSPS_PROCESS_NEW_REQ_BODY)
                 break;
         //fall through
@@ -4339,7 +4343,7 @@ int HttpSession::resumeProcess(int passCode, int retcode)
     switch (m_processState)
     {
     case HSPS_HKPT_HTTP_BEGIN:
-    case HSPS_HKPT_RECV_REQ_HEADER:
+    case HSPS_HKPT_RCVD_REQ_HEADER:
     case HSPS_HKPT_RCVD_REQ_BODY:
     case HSPS_HKPT_URI_MAP:
     case HSPS_HKPT_HTTP_AUTH:

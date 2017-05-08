@@ -88,6 +88,8 @@ class LshttpdMain
     int childSignaled(pid_t pid, int signal, int coredump);
     int SendCrashNotification(pid_t pid, int signal, int coredump,
                               char *pCoreFile);
+    int recoverShmCrash(ChildProc *pProc);
+
     void onGuardTimer();
     int processAdminCmd(char *pCmd, char *pEnd, int &apply);
     //void processAdminCtrlFile( const char * cmdFileName );

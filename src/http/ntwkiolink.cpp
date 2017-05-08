@@ -50,7 +50,7 @@
 #include <netinet/tcp.h>
 #include <openssl/ssl.h>
 
-#ifdef USE_BORINGSSL
+#ifdef OPENSSL_IS_BORINGSSL
     #include <openssl/internal.h>
 #endif
 
@@ -324,6 +324,9 @@ int NtwkIOLink::setLink(HttpListener *pListener,  int fd,
     //set ssl context
     if (pSslContext)
     {
+#ifdef OPENSSL_IS_BORINGSSL
+        pSslContext->initOCSP();
+#endif
         SSL *p = pSslContext->newSSL();
         if (p)
         {
@@ -1510,7 +1513,7 @@ void NtwkIOLink::handle_acceptSSL_EIO_Err()
     //The buf is null terminated string
     char buf[8192 + 1] = {0};
     unsigned int length = 0;
-#ifndef USE_BORINGSSL
+#ifndef OPENSSL_IS_BORINGSSL
     length = m_ssl.getSSL()->packet_length;
     if (length > 8192)
         length = 8192;

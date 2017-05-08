@@ -27,6 +27,12 @@
 #include <strings.h>
 #include <sys/types.h>
 
+#ifdef USE_UDNS
+#include <adns/adns.h>
+#endif
+
+#include <ctype.h>
+
 
 GSockAddr::GSockAddr(const GSockAddr &rhs)
 {
@@ -170,6 +176,9 @@ int GSockAddr::setHttpUrl(const char *pHttpUrl, const int len)
     else
         endPos = pHttpUrl + len - p;
 
+    if( endPos >= (int)sizeof(url) - 5)
+        return -1;
+
     memcpy(url, p, endPos);
     url[endPos] = 0;
 
@@ -196,81 +205,89 @@ int GSockAddr::set(const char *pURL, int tag)
 }
 
 
-int GSockAddr::set(int family, const char *pURL, int tag)
+int GSockAddr::set2(int family, const char *pURL, int tag, char *pDest)
 {
     char *p;
     int  port = 0;
     int  gotAddr = 1;
-    char achDest[128];
 
     if (allocate(family))
-        return LS_FAIL;
+        return -1;
     if (family == AF_UNIX)
     {
         memccpy(m_un->sun_path, pURL, 0, sizeof(m_un->sun_path));
-        return 0;
+        return 1;
     }
 
-    memccpy(achDest, pURL, 0, sizeof(achDest) - 1);
-    achDest[ sizeof(achDest) - 1 ] = 0;
-    p = strrchr(achDest, ':');
+    memccpy(pDest, pURL, 0, 127);
+    pDest[ 127 ] = 0;
+
+    p = &pDest[strlen(pDest)];
+    while (isdigit(p[-1]))
+        --p;
+    if (*(p - 1) != ':')
+        p = NULL;
+    else
+        --p;
+
     if (p == NULL)
     {
         if (!(tag & ADDR_ONLY))
-            return LS_FAIL;
+            return -1;
     }
     else
     {
         *p++ = 0;
         port = atoi(p);
         if ((port <= 0) || (port > 65535))
-            return LS_FAIL;
+            return -1;
+        port = htons(port);
     }
-    p = achDest;
+    p = pDest;
     switch (family)
     {
     case AF_INET:
-        if ((!strcmp(achDest, "*")) || (!strcmp(p, "ANY"))
-            || (!strcasecmp(achDest, "ALL")))
+        m_v4->sin_port = port;
+        if ((!strcmp(pDest, "*")) || (!strcmp(p, "ANY"))
+            || (!strcasecmp(pDest, "ALL")))
         {
             if ((tag & NO_ANY) != 0)
                 m_v4->sin_addr.s_addr = htonl(INADDR_LOOPBACK);
             else
                 m_v4->sin_addr.s_addr = htonl(INADDR_ANY);
         }
-        else if (!strcasecmp(achDest, "localhost"))
+        else if (!strcasecmp(pDest, "localhost"))
             m_v4->sin_addr.s_addr = htonl(INADDR_LOOPBACK);
         else
         {
-            m_v4->sin_addr.s_addr = inet_addr(achDest);
+            m_v4->sin_addr.s_addr = inet_addr(pDest);
             if (m_v4->sin_addr.s_addr == INADDR_BROADCAST)
             {
-                if ((tag & DO_NSLOOKUP) == 0)
-                    return LS_FAIL;
                 gotAddr = 0;
                 /*              struct hostent * hep;
                                 hep = gethostbyname(achDest);
                                 if ((!hep) || (hep->h_addrtype != AF_INET || !hep->h_addr_list[0]))
                                 {
-                                  return LS_FAIL;
+                                  return -1;
                                 }
                                 if (hep->h_addr_list[1]) {
                                   //fprintf(stderr, "Host %s has multiple addresses ---\n", host);
                                   //fprintf(stderr, "you must choose one explicitly!!!\n");
-                                  return LS_FAIL;
+                                  return -1;
                                 }
                                 m_v4->sin_addr.s_addr = ((struct in_addr *)(hep->h_addr))->s_addr;*/
             }
         }
         break;
     case AF_INET6:
-        if (*achDest != '[')
-            return LS_FAIL;
-        p = strchr(achDest, ']');
+        m_v6->sin6_port = port;
+        if (*pDest != '[')
+            return -1;
+        p = strchr(pDest, ']');
         if (!p)
-            return LS_FAIL;
+            return -1;
         *p = 0;
-        p = &achDest[1];
+        p = &pDest[1];
         if ((!strcmp(p, "*")) || (!strcmp(p, "ANY")) || (!strcmp(p, "ALL")))
         {
             if ((tag & NO_ANY) != 0)
@@ -284,7 +301,41 @@ int GSockAddr::set(int family, const char *pURL, int tag)
             gotAddr = 0;
         break;
     }
-    if (0 == gotAddr)
+    return gotAddr;
+}
+
+
+int GSockAddr::set(int family, const char *pURL, int tag)
+{
+    char achDest[128];
+    int  gotAddr = set2(family, pURL, tag, achDest);
+
+    if (gotAddr == -1)
+        return -1;
+    else if (gotAddr == 1)
+        return 0;
+    return doLookup(family, achDest, tag);
+}
+
+
+int GSockAddr::doLookup(int family, const char *p, int tag)
+{
+#ifdef USE_UDNS
+    if (tag & DO_NSLOOKUP_DIRECT)
+    {
+        if (family == AF_INET)
+        {
+            if (Adns::getHostByNameSync(p, &m_v4->sin_addr.s_addr) != 0)
+                return -1;
+        }
+        else
+        {
+            if (Adns::getHostByNameV6Sync(p, &(m_v6->sin6_addr)) != 0)
+                return -1;
+        }
+    }
+    else
+#endif
     {
         struct addrinfo *res, hints;
 
@@ -295,16 +346,48 @@ int GSockAddr::set(int family, const char *pURL, int tag)
         hints.ai_protocol = IPPROTO_TCP;
 
         if (getaddrinfo(p, NULL, &hints, &res))
-            return LS_FAIL;
+            return -1;
 
-        memcpy(m_pSockAddr, res->ai_addr, res->ai_addrlen);
+        switch(family)
+        {
+        case AF_INET:
+            m_v4->sin_addr.s_addr = ((sockaddr_in *)(res->ai_addr))->sin_addr.s_addr;
+            break;
+        case AF_INET6:
+            memcpy(&m_v6->sin6_addr, &((sockaddr_in6 *)(res->ai_addr))->sin6_addr,
+                   sizeof(m_v6->sin6_addr));
+            break;
+        }
         freeaddrinfo(res);
     }
-    if (family == AF_INET)
-        m_v4->sin_port = htons(port);
-    else
-        m_v6->sin6_port = htons(port);
     return 0;
+}
+
+
+int GSockAddr::asyncSet(int family, const char *pURL, int tag
+                 , int (*lookup_pf)(void *arg, const long lParam, void *pParam)
+                 , void *ctx)
+{
+
+#ifdef USE_UDNS
+    char achDest[128];
+    int  gotAddr = set2(family, pURL, tag, achDest);
+
+    if (gotAddr == -1)
+        return -1;
+    else if (gotAddr == 1)
+        return 0;
+
+    if (lookup_pf &&
+        Adns::getInstance().getHostByName(achDest, family, m_pSockAddr,
+                                      lookup_pf, ctx) != NULL)
+        return 1;
+    return doLookup(family, achDest, tag);
+
+
+#else
+    return set(family, pURL, tag);
+#endif
 }
 
 
@@ -393,13 +476,13 @@ void GSockAddr::set(const in6_addr *addr, const in_port_t port,
 }
 
 
-int GSockAddr::getPort() const
+uint16_t GSockAddr::getPort() const
 {
     return getPort(m_pSockAddr);
 }
 
 
-int GSockAddr::getPort(const sockaddr *pAddr)
+uint16_t GSockAddr::getPort(const sockaddr *pAddr)
 {
     switch (pAddr->sa_family)
     {
@@ -413,7 +496,7 @@ int GSockAddr::getPort(const sockaddr *pAddr)
 }
 
 
-void GSockAddr::setPort(short port)
+void GSockAddr::setPort(uint16_t port)
 {
     switch (m_pSockAddr->sa_family)
     {

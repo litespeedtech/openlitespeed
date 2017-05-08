@@ -149,7 +149,7 @@ HttpReq::HttpReq()
     m_pEnv = NULL;
     m_pAuthUser = NULL;
     m_pRange = NULL;
-    m_pReqBodyType = REQ_BODY_UNKNOWN;
+    m_iBodyType = REQ_BODY_UNKNOWN;
     m_cookies.init();
     m_pUrlStaticFileData = NULL;
 }
@@ -709,6 +709,9 @@ int HttpReq::processHeader(int index)
         break;
     case HttpHeader::H_CONTENT_LENGTH:
         m_lEntityLength = strtoll(pCur, NULL, 0);
+        break;
+    case HttpHeader::H_CONTENT_TYPE:
+        updateBodyType(pCur);
         break;
     case HttpHeader::H_TRANSFER_ENCODING:
         if (strncasecmp(pCur, "chunked", 7) == 0)
@@ -1520,6 +1523,11 @@ int HttpReq::processContext(const HttpContext *&pOldCtx)
     }
     if (m_pHttpHandler->getType() == HandlerType::HT_PROXY)
         return -2;
+    if (m_pHttpHandler->getType() == HandlerType::HT_MODULE
+        && m_iMatchedLen == 0)
+    {
+      setScriptNameLen(m_pContext->getURILen());
+    }
     if (m_pContext != pOldCtx)
         m_iContextState &= ~CONTEXT_AUTH_CHECKED;
     return 0;
@@ -1995,13 +2003,19 @@ int HttpReq::setLocation(const char *pLoc, int len)
 }
 
 
-void HttpReq::updateContentType(char *pHeader)
+void HttpReq::updateBodyType(const char *pHeader)
 {
     if (strncasecmp(pHeader,
                     "application/x-www-form-urlencoded", 33) == 0)
-        m_pReqBodyType = REQ_BODY_FORM;
+        m_iBodyType = REQ_BODY_FORM;
     else if (strncasecmp(pHeader, "multipart/form-data", 19) == 0)
-        m_pReqBodyType = REQ_BODY_MULTIPART;
+        m_iBodyType = REQ_BODY_MULTIPART;
+}
+
+
+const ReqParserParam* HttpReq::getParserConfig()
+{
+    return m_pVHost->getReqParserConfig();
 }
 
 
@@ -2103,11 +2117,13 @@ void HttpReq::tranEncodeToContentLen()
         return;
     pBegin -= 17;
     len += 17;
-    int n = ls_snprintf(pBegin, len, "Content-length: %ld", m_lEntityFinished);
+    int n = ls_snprintf(pBegin, len, "Content-length: %lld", 
+                        (long long)m_lEntityFinished);
     memset(pBegin + n, ' ', len - n);
     m_commonHeaderOffset[HttpHeader::H_CONTENT_LENGTH] =
         pBegin + 16 - m_headerBuf.begin();
     m_commonHeaderLen[ HttpHeader::H_CONTENT_LENGTH] = n - 16;
+    m_lEntityLength = m_lEntityFinished;
 }
 
 

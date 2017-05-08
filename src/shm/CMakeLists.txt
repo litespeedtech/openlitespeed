@@ -5,7 +5,7 @@ cmake_policy(SET CMP0002 OLD)
 
 ########### next target ###############
 
-SET(shm_STAT_SRCS
+SET(shm_STAT_SRCS addrmap.cpp
     lsshm.cpp
     lsshmhash.cpp
     lsshmlock.cpp

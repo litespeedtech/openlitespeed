@@ -104,7 +104,7 @@ void ReqParser::reset()
     m_pReq = NULL;
     m_sLastFileKey.setLen(0);
     m_iContentLength = 0;
-    memset(&m_ReqParserParam, 0, sizeof(ReqParserParam));
+    m_pFileUploadConfig = NULL;
 }
 
 
@@ -423,12 +423,12 @@ int ReqParser::multipartParseHeader(char *pBegin, char *pLineEnd)
 
                         if (fileStrLen > 0)
                         {
-                            int templateLen = m_ReqParserParam.m_sUploadFilePathTemplate.len();
+                            int templateLen = m_pFileUploadConfig->m_sUploadFilePathTemplate.len();
                             char *p = (char *)malloc(templateLen + 8);
                             if (!p)
                                 return -1;
 
-                            memcpy(p, m_ReqParserParam.m_sUploadFilePathTemplate.c_str(), templateLen);
+                            memcpy(p, m_pFileUploadConfig->m_sUploadFilePathTemplate.c_str(), templateLen);
                             memcpy(p + templateLen, "/XXXXXX", 7);
                             *(p + templateLen + 7) = 0x00;
                             int fd = mkstemp(p);
@@ -448,7 +448,7 @@ int ReqParser::multipartParseHeader(char *pBegin, char *pLineEnd)
                             }
                             m_pLastFileBuf->setFd(p, fd);
                             m_pArgs[m_args - 1].filePath = p;
-                            fchmod(fd, m_ReqParserParam.m_iFileMod);
+                            fchmod(fd, m_pFileUploadConfig->m_iFileMod);
 
                             //m_iFormState = PARSE_FORM_NAME;
                             //Need to append to bodyBuf path, name, content_type
@@ -559,17 +559,12 @@ int ReqParser::checkBoundary(char *&pBegin, char *&pCur)
         else if (m_pLastFileBuf)
         {
             off_t size = m_pLastFileBuf->getCurWOffset();
-            char *p = m_pLastFileBuf->getCurWPos();
-            int additionalBytes =  0;
-            if (size >= 2)
+            int additionalBytes = m_trial_crlf - 1;
+            if (additionalBytes > 0)
             {
-                if (*(p - 2) == '\r')
-                    additionalBytes =  2;
-                else
-                    additionalBytes = 1;
+                m_pLastFileBuf->rewindWOff(additionalBytes);
+                m_pLastFileBuf->shrinkBuf(size - additionalBytes);
             }
-            //m_pLastFileBuf->rewindWOff(additionalBytes);
-            m_pLastFileBuf->shrinkBuf(size - additionalBytes);
             closeLastMFile();
 
             char s[30] = {0};
@@ -761,9 +756,26 @@ int ReqParser::parseMultipart(const char *pBuf, size_t size,
 
             if (!m_ignore_part)
                 m_decodeBuf.append(pBegin, pCur - pBegin);
-            else if (m_pLastFileBuf)
+            else if (m_pLastFileBuf && pCur > pBegin)
+            {
+                if (pCur - pBegin >= 2)
+                {
+                    m_trial_crlf = 0;
+                }
+                
+                if (pCur[-1] == '\n') 
+                {
+                    if (pCur - pBegin >= 2 && pCur[-2] == '\r')
+                        m_trial_crlf = 1;
+                    else if (m_trial_crlf > 1)
+                        m_trial_crlf = 0;
+                    m_trial_crlf += 2;
+                }
+                else if (pCur[-1] == '\r')
+                    m_trial_crlf = 1;
+                                    
                 writeToFile(pBegin, pCur - pBegin);
-
+            }
 
             if (pLineEnd)
                 m_multipartState = MPS_PART_DATA_BOUNDARY;
@@ -842,9 +854,6 @@ void ReqParser::logParsingError(HttpReq *pReq)
 
 int ReqParser::appendBodyBuf(const char *s, size_t len)
 {
-    if (!m_ReqParserParam.m_iEnableUploadFile)
-        return 0;
-
     if (len <= 0)
         return len;
 
@@ -936,15 +945,10 @@ void ReqParser::closeLastMFile()
 }
 
 
-int ReqParser::parseInit(HttpReq *pReq, ReqParserParam &param)
+int ReqParser::init(HttpReq *pReq)
 {
     reset();
     m_pReq = pReq;
-    m_ReqParserParam = param;
-    if (pReq->getBodyType() == REQ_BODY_MULTIPART
-        && initMutlipart(pReq->getHeader(HttpHeader::H_CONTENT_TYPE),
-                         pReq->getHeaderLen(HttpHeader::H_CONTENT_TYPE)) == -1)
-        return -1;
 
     //QS parsing, now it is time to do it
     if ((pReq->getQueryStringLen() > 0) &&
@@ -955,15 +959,53 @@ int ReqParser::parseInit(HttpReq *pReq, ReqParserParam &param)
         return -1;
     }
 
-    m_iParseState = PARSE_START;
     return 0;
 }
+
+
+int ReqParser::beginParsePost()
+{
+    if (!m_pReq)
+        return LS_FAIL;
+    m_pFileUploadConfig = m_pReq->getParserConfig();
+    if (m_pReq->getBodyType() == REQ_BODY_MULTIPART
+        && initMutlipart(m_pReq->getHeader(HttpHeader::H_CONTENT_TYPE),
+                         m_pReq->getHeaderLen(HttpHeader::H_CONTENT_TYPE)) == -1)
+        return LS_FAIL;
+    m_iParseState = PARSE_START;
+    
+    if (m_pReq->getContentFinished() > 0)
+        parseReceivedBody();
+    return LS_OK;
+}
+
+
+int ReqParser::parseReceivedBody()
+{
+    VMemBuf * pBodyBuf = m_pReq->getBodyBuf();
+    if ( !pBodyBuf )
+        return 0;
+    m_state_kv = 0;
+
+    char * pBuf;
+    size_t size;
+    pBodyBuf->rewindReadBuf();
+    while(( pBuf = pBodyBuf->getReadBuffer( size ) )&&(size>0))
+    {
+        parsePostBody( pBuf, size, m_pReq->getBodyType(), m_resume, 0 );
+        pBodyBuf->readUsed( size );
+        m_resume = 1;
+    }
+    if (!m_pReq->isChunked() && m_pReq->getBodyRemain() <= 0)
+        return parseDone();
+    return LS_OK;
+}
+
 
 int ReqParser::parseUpdate(char *buf, size_t size)
 {
     int ret = parsePostBody(buf, size, m_pReq->getBodyType(), m_resume, 0);
     m_resume = 1;
-    m_iParseState = PARSE_PROCESSING;
     return ret;
 
     /*
@@ -987,7 +1029,7 @@ int ReqParser::parseDone()
     int ret = parsePostBody("", 0, m_pReq->getBodyType(), 1, 1);
     if (ret == 0)
         m_postArgs = m_args - m_postBegin;
-    if (m_ReqParserParam.m_iEnableUploadFile)
+    if (m_pFileUploadConfig && m_pFileUploadConfig->m_iEnableUploadFile)
         m_pReq->setContentLength(m_iContentLength);
 
 #if 0
@@ -1020,21 +1062,21 @@ int ReqParser::parseDone()
     return ret;
 }
 
-int ReqParser::getArgs(int index, char *&pName, int &nameLen, char *&val,
-                       int &valLen, char *&filePath)
+int ReqParser::getArgByIndex(int index, ls_strpair_t *pArg, char **filePath)
 {
-    if (index >= 0 && index < m_args)
+    if (index < 0 || index >= m_args)
+        return -1;
+    if (pArg)
     {
         char *p = m_decodeBuf.begin() + m_pArgs[index].keyOffset;
-        pName = p;
-        nameLen = m_pArgs[index].keyLen;
-        val = m_decodeBuf.begin() + m_pArgs[index].valueOffset;
-        valLen = m_pArgs[index].valueLen;
-        filePath = m_pArgs[index].filePath;
-        return 0;
+        pArg->key.ptr = p;
+        pArg->key.len = m_pArgs[index].keyLen;
+        pArg->val.ptr = m_decodeBuf.begin() + m_pArgs[index].valueOffset;
+        pArg->val.len = m_pArgs[index].valueLen;
     }
-    else
-        return -1;
+    if (filePath)
+        *filePath = m_pArgs[index].filePath;
+    return 0;
 }
 
 const char *ReqParser::getReqVar(HttpSession *pSession, int varId,

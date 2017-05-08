@@ -235,7 +235,7 @@ private:
     int                 m_fdReqFile;
     struct stat         m_fileStat;
     int                 m_iScriptNameLen;
-    short               m_pReqBodyType;
+    short               m_iBodyType;
     LogSession         *m_pILog;
     CookieList          m_cookies;
 
@@ -502,11 +502,12 @@ public:
     void setRange(HttpRange *pRange)        {   m_pRange = pRange;          }
 
     VMemBuf *getBodyBuf() const             {   return m_pReqBodyBuf;       }
-    short getBodyType() const               {   return m_pReqBodyType;  }
+    short getBodyType() const               {   return m_iBodyType;  }
 
     int prepareReqBodyBuf();
     void replaceBodyBuf(VMemBuf *pBuf);
-    void updateContentType(char *buf);
+    void updateBodyType(const char *buf);
+    const ReqParserParam* getParserConfig();
 
     char gzipAcceptable() const             {   return m_iAcceptGzip;       }
     void andGzip(char b)                    {   m_iAcceptGzip &= b;         }

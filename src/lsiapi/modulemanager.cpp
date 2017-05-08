@@ -198,10 +198,11 @@ lsi_module_t *ModuleManager::loadModule(const char *name)
         }
     }
 
+    LS_ERROR("Failed to load module [%s], error: %s", name, error);
+
     if (dlLib)
         dlclose(dlLib);
 
-    LS_ERROR("Failed to load module [%s], error: %s", name, error);
     return NULL;
 }
 

@@ -30,6 +30,10 @@
 #include <openssl/rand.h>
 #include <openssl/ssl.h>
 
+#ifdef OPENSSL_IS_BORINGSSL
+#include <openssl/internal.h>
+#endif
+
 #include <ctype.h>
 #include <fcntl.h>
 #include <string.h>
@@ -297,6 +301,12 @@ void SslContext::updateProtocol(int method)
     if (!(method & SSL_TLSv12))
         setOptions(SSL_OP_NO_TLSv1_2);
 #endif
+
+#ifdef TLS1_3_VERSION
+    if (method & SSL_TLSv13)
+        SSL_CTX_set_max_version(m_pCtx, TLS1_3_VERSION);
+#endif
+
 #ifdef SSL_OP_NO_TLSv1_3
     if (!(method & SSL_TLSv13))
         setOptions(SSL_OP_NO_TLSv1_3);
@@ -359,8 +369,10 @@ static void SslConnection_ssl_info_cb(const SSL *pSSL, int where, int ret)
     if ((where & SSL_CB_HANDSHAKE_START) && pConnection->getFlag() == 1)
     {
         close(SSL_get_fd(pSSL));
-#ifndef USE_BORINGSSL
+#ifndef OPENSSL_IS_BORINGSSL
         ((SSL *)pSSL)->error_code = SSL_R_SSL_HANDSHAKE_FAILURE;
+#else
+        OPENSSL_PUT_ERROR(SSL, SSL_R_SSL_HANDSHAKE_FAILURE);
 #endif
         return ;
     }
@@ -425,9 +437,7 @@ SslContext::SslContext(int iMethod)
     , m_iRenegProtect(1)
     , m_iEnableSpdy(0)
     , m_iKeyLen(1024)
-#ifndef USE_BORINGSSL
     , m_pStapling(NULL)
-#endif
 {
 }
 
@@ -446,10 +456,8 @@ void SslContext::release()
         m_pCtx = NULL;
         SSL_CTX_free(pCtx);
     }
-#ifndef USE_BORINGSSL
     if (m_pStapling)
         delete m_pStapling;
-#endif
 }
 
 
@@ -668,18 +676,24 @@ int SslContext::setCertificateChainFile(const char *pFile)
 {
     BIO *bio;
     X509 *x509;
+#ifndef OPENSSL_IS_BORINGSSL
     STACK_OF(X509) * pExtraCerts;
+#endif
     unsigned long err;
     int n;
 
     if ((bio = BIO_new_file(pFile, "r")) == NULL)
         return LS_FAIL;
+#ifndef OPENSSL_IS_BORINGSSL
     pExtraCerts = m_pCtx->extra_certs;
     if (pExtraCerts != NULL)
     {
         sk_X509_pop_free((STACK_OF(X509) *)pExtraCerts, X509_free);
         m_pCtx->extra_certs = NULL;
     }
+#else
+    SSL_CTX_clear_extra_chain_certs(m_pCtx);
+#endif
     n = 0;
     while ((x509 = PEM_read_bio_X509(bio, NULL, NULL, NULL)) != NULL)
     {
@@ -792,11 +806,11 @@ int SslContext::setCipherList(const char *pList)
         //snprintf( cipher, 4095, "RC4:%s", pList );
         //strcpy( cipher, "ALL:HIGH:!aNULL:!SSLV2:!eNULL" );
 #if OPENSSL_VERSION_NUMBER >= 0x10001000L
-// #ifdef USE_BORINGSSL
+// #ifdef OPENSSL_IS_BORINGSSL
 //         strcpy(cipher, "AES128-GCM-SHA256:CHACHA20-POLY1305-SHA256:X25519-AES128-GCM-SHA256:AES-256-CTR-HMAC-SHA256:ECDHE-RSA-CHACHA20-POLY1305:"
 //                  "AES128-SHA256:AES256-SHA256");
 //         SSL_CTX_set_max_version(m_pCtx, TLS1_3_VERSION);//  
-// #endif //USE_BORINGSSL
+// #endif //OPENSSL_IS_BORINGSSL
         
         strcat(cipher, "ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES128-GCM-SHA256:"
                "ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES256-GCM-SHA384:"
@@ -946,7 +960,7 @@ static RSA *load_key(const unsigned char *key, int keyLen, char *pass,
 
 int  SslContext::publickey_encrypt(const unsigned char *pPubKey,
                                    int keylen,
-                                   const char *content, int len, char *encrypted, int bufLen)
+                                   const char *content, int len, char *encrypted, unsigned int bufLen)
 {
     int ret;
     initSSL();
@@ -968,7 +982,7 @@ int  SslContext::publickey_encrypt(const unsigned char *pPubKey,
 
 int  SslContext::publickey_decrypt(const unsigned char *pPubKey,
                                    int keylen,
-                                   const char *encrypted, int len, char *decrypted, int bufLen)
+                                   const char *encrypted, int len, char *decrypted, unsigned int bufLen)
 {
     int ret;
     initSSL();
@@ -1067,6 +1081,10 @@ static int SslConnection_ssl_servername_cb(SSL *pSSL, int *ad, void *arg)
     SslContext *pCtx = VHostMapFindSslContext(arg, servername);
     if (!pCtx)
         return SSL_TLSEXT_ERR_NOACK;
+#ifdef OPENSSL_IS_BORINGSSL
+    // Check OCSP again when the context needs to be changed.
+    pCtx->initOCSP();
+#endif
     pOldCtx = SSL_get_SSL_CTX(pSSL);
     pNewCtx = pCtx->get();
     if (pOldCtx == pNewCtx)
@@ -1081,6 +1099,7 @@ static int SslConnection_ssl_servername_cb(SSL *pSSL, int *ad, void *arg)
     // If listener has it set, set will not affect it.
     // If listener does not have it set, set will not set it.
     SSL_set_options(pSSL, SSL_CTX_get_options(pNewCtx) & ~SSL_OP_NO_TICKET);
+
     return SSL_TLSEXT_ERR_OK;
 }
 
@@ -1097,7 +1116,6 @@ int SslContext::initSNI(void *param)
     return LS_FAIL;
 #endif
 }
-
 
 /*!
     \fn SslContext::setClientVerify( int mode, int depth)
@@ -1216,17 +1234,22 @@ int SslContext::enableSpdy(int level)
 
 #endif
 
-
+#ifndef OPENSSL_IS_BORINGSSL
 static int sslCertificateStatus_cb(SSL *ssl, void *data)
 {
-#ifndef USE_BORINGSSL
     SslOcspStapling *pStapling = (SslOcspStapling *)data;
     return pStapling->callback(ssl);
-#else
-    return 0;
-#endif
 }
 
+#else
+int SslContext::initOCSP()
+{
+    if (getpStapling() == NULL) {
+        return 0;
+    }
+    return getpStapling()->update();
+}
+#endif
 
 SslContext *SslContext::setKeyCertCipher(const char *pCertFile,
         const char *pKeyFile, const char *pCAFile, const char *pCAPath,
@@ -1363,7 +1386,7 @@ SslContext *SslContext::config(const XmlNode *pNode)
         return NULL;
 
     protocol = ConfigCtx::getCurConfigCtx()->getLongValue(pNode, "sslProtocol",
-               1, 15, 14);
+               1, 31, 30);
     setProtocol(protocol);
 
     int enableDH = ConfigCtx::getCurConfigCtx()->getLongValue(pNode,
@@ -1442,7 +1465,6 @@ SslContext *SslContext::config(const XmlNode *pNode)
         configCRL(pNode, pSSL);
     }
 
-#ifndef USE_BORINGSSL
     if ((ConfigCtx::getCurConfigCtx()->getLongValue(pNode, "enableStapling", 0,
             1, 0))
         && (pCertFile != NULL))
@@ -1462,7 +1484,6 @@ SslContext *SslContext::config(const XmlNode *pNode)
                 LS_INFO(ConfigCtx::getCurConfigCtx(), "Enable OCSP Stapling successful!");
         }
     }
-#endif
 
     return pSSL;
 }
@@ -1471,7 +1492,6 @@ SslContext *SslContext::config(const XmlNode *pNode)
 int SslContext::configStapling(const XmlNode *pNode,
                                const char *pCAFile, char *pachCert)
 {
-#ifndef USE_BORINGSSL
     SslOcspStapling *pSslOcspStapling = new SslOcspStapling;
 
     if (pSslOcspStapling->config(pNode, m_pCtx, pCAFile, pachCert) == -1)
@@ -1480,9 +1500,11 @@ int SslContext::configStapling(const XmlNode *pNode,
         return LS_FAIL;
     }
     m_pStapling = pSslOcspStapling;
-
+#ifndef OPENSSL_IS_BORINGSSL
     SSL_CTX_set_tlsext_status_cb(m_pCtx, sslCertificateStatus_cb);
     SSL_CTX_set_tlsext_status_arg(m_pCtx, m_pStapling);
+//#else
+//    SSL_CTX_enable_ocsp_stapling(m_pCtx);
 #endif
     return 0;
 }

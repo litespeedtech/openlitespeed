@@ -700,7 +700,7 @@ SslContext *VHostMapFindSslContext(void *arg, const char *pName)
             pVHost = pMap->matchVHost(pHost, pHostEnd);
         }
     }
-    if (pVHost)
+    if (pVHost && pVHost->getSslContext())
         return pVHost->getSslContext();
     return pMap->getSslContext();
 

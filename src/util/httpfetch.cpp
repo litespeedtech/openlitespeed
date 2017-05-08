@@ -43,6 +43,8 @@ HttpFetch::HttpFetch()
     , m_iReqBufLen(0)
     , m_iReqSent(0)
     , m_iReqHeaderLen(0)
+    , m_iNonBlocking(0)
+    , m_iEnableDriver(0)
     , m_pReqBody(NULL)
     , m_iReqBodyLen(0)
     , m_iConnTimeout(20)
@@ -107,6 +109,11 @@ void HttpFetch::reset()
     m_iReqHeaderLen  = 0;
     m_iReqBodyLen    = 0;
     m_iReqInited    = 0;
+    if (m_pProxyAddr)
+    {
+        delete m_pProxyAddr;
+        m_pProxyAddr = NULL;
+    }
 }
 
 int HttpFetch::allocateBuf(const char *pSaveFile)
@@ -120,9 +127,16 @@ int HttpFetch::allocateBuf(const char *pSaveFile)
     if (pSaveFile)
     {
         ret = m_pBuf->set(pSaveFile, 8192);
-        if (ret == 0 && m_iEnableDebug)
+        if (ret != 0)
+        {
+            LS_ERROR(m_pLogger, "HttpFetch[%d]::failed to create file %s: %s.",
+                             getLoggerId(), pSaveFile, strerror(errno));
+        }
+        else if (m_iEnableDebug)
+        {
             LS_DBG_M(m_pLogger, "HttpFetch[%d]::allocateBuf File %s created.",
-                     getLoggerId(), pSaveFile);
+                    getLoggerId(), pSaveFile);
+        }
     }
     else
         ret = m_pBuf->set(VMBUF_ANON_MAP, 8192);
@@ -130,7 +144,7 @@ int HttpFetch::allocateBuf(const char *pSaveFile)
 
 }
 
-int HttpFetch::intiReq(const char *pURL, const char *pBody, int bodyLen,
+int HttpFetch::initReq(const char *pURL, const char *pBody, int bodyLen,
                        const char *pSaveFile, const char *pContentType)
 {
     if (m_iReqInited)
@@ -158,45 +172,88 @@ int HttpFetch::intiReq(const char *pURL, const char *pBody, int bodyLen,
         return LS_FAIL;
 
     if (m_iEnableDebug)
-        LS_DBG_M(m_pLogger, "HttpFetch[%d]::intiReq url=%s", getLoggerId(), pURL);
+        LS_DBG_M(m_pLogger, "HttpFetch[%d]::intiReq url=%s", getLoggerId(),
+                 pURL);
     return 0;
+}
+
+int HttpFetch::asyncDnsLookupCb(void *arg, const long lParam, void *pParam)
+{
+    HttpFetch *pFetch = (HttpFetch *)arg;
+    if (lParam > 0)
+    {
+        pFetch->startProcess();
+    }
+    else
+        pFetch->endReq(-1);
+
+    return 0;
+}
+
+int HttpFetch::startDnsLookup(const char *addrServer)
+{
+    m_pProxyAddr = new GSockAddr();
+    int flag = NO_ANY;
+    int ret;
+    if (!m_iEnableDriver)
+    {
+        flag |= DO_NSLOOKUP_DIRECT;
+        ret = m_pProxyAddr->set(PF_INET, addrServer, flag);
+    }
+    else
+        ret = m_pProxyAddr->asyncSet(PF_INET, addrServer, flag,
+                                      asyncDnsLookupCb, this );
+    if (ret == 0)
+        return startProcess();
+     return ret;
 }
 
 int HttpFetch::startReq(const char *pURL, int nonblock, int enableDriver,
                         const char *pBody, int bodyLen, const char *pSaveFile,
                         const char *pContentType, const char *addrServer)
 {
-    if (intiReq(pURL, pBody, bodyLen, pSaveFile, pContentType) != 0)
+    if (initReq(pURL, pBody, bodyLen, pSaveFile, pContentType) != 0)
         return LS_FAIL;
+    m_iNonBlocking = nonblock;
+    m_iEnableDriver = enableDriver;
 
     if (m_pProxyAddr)
         return startReq(pURL, nonblock, enableDriver, pBody, bodyLen, pSaveFile,
                         pContentType, *m_pProxyAddr);
+    if (m_iEnableDebug)
+        LS_DBG_M(m_pLogger, "HttpFetch[%d]:: Host is [%s]",
+                 getLoggerId(), m_aHost);
 
-    GSockAddr server;
     if (addrServer == NULL)
         addrServer = m_aHost;
-    if (0 != server.set(addrServer, NO_ANY | DO_NSLOOKUP))
-        return LS_FAIL;
-
-    return startReq(pURL, nonblock, enableDriver, pBody, bodyLen,
-                    pSaveFile, pContentType, server);
+    return startDnsLookup(addrServer);
 }
 
 int HttpFetch::startReq(const char *pURL, int nonblock, int enableDriver,
                         const char *pBody, int bodyLen, const char *pSaveFile,
                         const char *pContentType, const GSockAddr &sockAddr)
 {
-    if (intiReq(pURL, pBody, bodyLen, pSaveFile, pContentType) != 0)
+    if (initReq(pURL, pBody, bodyLen, pSaveFile, pContentType) != 0)
         return LS_FAIL;
+    m_iNonBlocking = nonblock;
+    m_iEnableDriver = enableDriver;
 
-    if (enableDriver)
+    m_pProxyAddr = new GSockAddr(sockAddr);
+
+    return startProcess();
+}
+
+
+int HttpFetch::startProcess()
+{
+    if (m_iEnableDriver)
         m_pDriver = new HttpFetchDriver(this);
+    if (m_iTimeoutSec <= 0)
+        m_iTimeoutSec = 60;
+    m_tmStart = time(NULL);
 
-    if (m_pProxyAddr)
-        return startProcessReq(nonblock, *m_pProxyAddr);
-    else
-        return startProcessReq(nonblock, sockAddr);
+    return startProcessReq(*m_pProxyAddr);
+
 }
 
 int HttpFetch::buildReq(const char *pMethod, const char *pURL,
@@ -256,7 +313,20 @@ int HttpFetch::buildReq(const char *pMethod, const char *pURL,
 
 }
 
-int HttpFetch::startProcessReq(int nonblock, const GSockAddr &sockAddr)
+
+int HttpFetch::pollEvent(int evt, int timeoutSecs)
+{
+    struct pollfd  pfd;
+    pfd.events = evt;
+    pfd.fd = m_iFdHttp;
+    pfd.revents = 0;
+
+    return poll(&pfd, 1, timeoutSecs * 1000);
+
+}
+
+
+int HttpFetch::startProcessReq(const GSockAddr &sockAddr)
 {
     m_iReqState = 0;
 
@@ -269,16 +339,12 @@ int HttpFetch::startProcessReq(int nonblock, const GSockAddr &sockAddr)
     ::fcntl(m_iFdHttp, F_SETFD, FD_CLOEXEC);
     startDriver();
 
-    if (!nonblock)
+    if (!m_iNonBlocking)
     {
-        struct pollfd  pfd;
-        pfd.events = POLLIN;
-        pfd.fd = m_iFdHttp;
-        pfd.revents = 0;
-        if ((ret = poll(&pfd, 1, m_iConnTimeout * 1000)) != 1)
+        if ((ret = pollEvent(POLLIN|POLLOUT, m_iConnTimeout)) != 1)
         {
             closeConnection();
-            return LS_FAIL;
+            return -1;
         }
         else
         {
@@ -299,7 +365,7 @@ int HttpFetch::startProcessReq(int nonblock, const GSockAddr &sockAddr)
     if (ret == 0)
     {
         m_iReqState = 2; //connected, sending request header
-        sendReq();
+        ret = sendReq();
     }
     else
         m_iReqState = 1; //connecting
@@ -307,8 +373,9 @@ int HttpFetch::startProcessReq(int nonblock, const GSockAddr &sockAddr)
     if (m_iEnableDebug)
         LS_DBG_M(m_pLogger, "HttpFetch[%d]::startProcessReq ret=%d state=%d",
                  getLoggerId(), ret, m_iReqState);
-    return 0;
+    return ret;
 }
+
 
 short HttpFetch::getPollEvent() const
 {
@@ -388,13 +455,14 @@ int HttpFetch::sendReq()
                     break;
             }
         }
-        m_iRespHeaderBufLen = 0;
+        m_resHeaderBuf.clear();
         m_iReqState = 4;
     }
     if ((ret == -1) && (errno != EAGAIN))
         return LS_FAIL;
     return 0;
 }
+
 
 int HttpFetch::getLine(char *&p, char *pEnd,
                        char *&pLineBegin, char *&pLineEnd)
@@ -404,10 +472,9 @@ int HttpFetch::getLine(char *&p, char *pEnd,
     pLineEnd = (char *)memchr(p, '\n', pEnd - p);
     if (!pLineEnd)
     {
-        if (pEnd - p < 1024 - m_iRespHeaderBufLen)
+        if (pEnd - p + m_resHeaderBuf.size() < 8192)
         {
-            memmove(&m_aResHeaderBuf[m_iRespHeaderBufLen], p, pEnd - p);
-            m_iRespHeaderBufLen += pEnd - p;
+            m_resHeaderBuf.append(p, pEnd - p);
         }
         else
             ret = -1;
@@ -415,31 +482,45 @@ int HttpFetch::getLine(char *&p, char *pEnd,
     }
     else
     {
-        if (!m_iRespHeaderBufLen)
+        if (m_resHeaderBuf.size() == 0)
         {
             pLineBegin = p;
             p = pLineEnd + 1;
+            if (m_iEnableDebug)
+                LS_DBG_M(m_pLogger,
+                         "HttpFetch[%d] pLineBegin: %p, pLineEnd: %p",
+                        getLoggerId(), pLineBegin, pLineEnd);
         }
         else
         {
-            if (pLineEnd - p < 1024 - m_iRespHeaderBufLen)
+            if (pLineEnd - p + m_resHeaderBuf.size() < 8192)
             {
-                pLineBegin = p;
-                memmove(&m_aResHeaderBuf[m_iRespHeaderBufLen], p, pLineEnd - p);
-                pLineEnd = &m_aResHeaderBuf[m_iRespHeaderBufLen + pLineEnd - p ];
+                m_resHeaderBuf.append(p, pLineEnd - p);
                 p = pLineEnd + 1;
-                m_iRespHeaderBufLen = 0;
-
+                pLineBegin = m_resHeaderBuf.begin();
+                pLineEnd = m_resHeaderBuf.end();
+                m_resHeaderBuf.clear();
+                if (m_iEnableDebug)
+                    LS_DBG_M(m_pLogger,
+                             "HttpFetch[%d] Combined pLineBegin: %p, pLineEnd: %p",
+                             getLoggerId(), pLineBegin, pLineEnd);
             }
             else
             {
+                if (m_iEnableDebug)
+                    LS_DBG_M(m_pLogger,
+                             "HttpFetch[%d] line too long, fail request.",
+                             getLoggerId());
                 ret = -1;
                 p = pEnd;
             }
         }
-        if (*(pLineEnd - 1) == '\r')
-            --pLineEnd;
-        *pLineEnd = 0;
+        if (pLineBegin)
+        {
+            if (*(pLineEnd - 1) == '\r')
+                --pLineEnd;
+            *pLineEnd = 0;
+        }
     }
     return ret;
 }
@@ -453,24 +534,30 @@ int HttpFetch::recvResp()
     char *pEnd;
     char *pLineBegin;
     char *pLineEnd;
-    char achBuf[8192];
+    AutoBuf buf(8192);
     while (m_iStatusCode != -1)
     {
-        ret = ::ls_fio_read(m_iFdHttp, achBuf, 8192);
+        ret = pollEvent(POLLIN, 1);
+        if (ret != 1)
+            break;
+        ret = ::ls_fio_read(m_iFdHttp, buf.begin(), 8192);
         if (m_iEnableDebug)
-            LS_DBG_M(m_pLogger, "HttpFetch[%d]::recvResp fd=%d ret=%d", getLoggerId(),
-                     m_iFdHttp, ret);
+            LS_DBG_M(m_pLogger, "HttpFetch[%d]::recvResp fd=%d ret=%d",
+                     getLoggerId(), m_iFdHttp, ret);
         if (ret == 0)
         {
             if (m_iRespBodyLen == -1)
-                endReq(0);
+                return endReq(0);
             else
+            {
                 endReq(-1);
+                return -1;
+            }
         }
 
         if (ret <= 0)
             break;
-        p = achBuf;
+        p = buf.begin();
         pEnd = p + ret;
         while (p < pEnd)
         {
@@ -478,15 +565,24 @@ int HttpFetch::recvResp()
             {
             case 4: //waiting response status line
                 if (getLine(p, pEnd, pLineBegin, pLineEnd))
+                {
                     endReq(-1);
+                    return -1;
+                }
                 if (pLineBegin)
                 {
                     if (memcmp(pLineBegin, "HTTP/1.", 7) != 0)
-                        return endReq(-1);
+                    {
+                        endReq(-1);
+                        return -1;
+                    }
                     pLineBegin += 9;
                     if (!isdigit(*pLineBegin) || !isdigit(*(pLineBegin + 1)) ||
                         !isdigit(*(pLineBegin + 2)))
-                        return endReq(-1);
+                    {
+                        endReq(-1);
+                        return -1;
+                    }
                     m_iStatusCode = (*pLineBegin     - '0') * 100 +
                                     (*(pLineBegin + 1) - '0') * 10 +
                                     *(pLineBegin + 2) - '0';
@@ -498,7 +594,10 @@ int HttpFetch::recvResp()
             //fall through
             case 5: //waiting response header
                 if (getLine(p, pEnd, pLineBegin, pLineEnd))
+                {
                     endReq(-1);
+                    return -1;
+                }
                 if (pLineBegin)
                 {
                     if (strncasecmp(pLineBegin, "Content-Length:", 15) == 0)
@@ -528,7 +627,10 @@ int HttpFetch::recvResp()
                 break;
             case 6: //waiting response body
                 if ((len = m_pBuf->write(p, pEnd - p)) == -1)
-                    return endReq(-1);
+                {
+                    endReq(-1);
+                    return -1;
+                }
                 if ((m_iRespBodyLen > 0) && (m_pBuf->writeBufSize() >= m_iRespBodyLen))
                     return endReq(0);
                 p += len;
@@ -536,7 +638,7 @@ int HttpFetch::recvResp()
             }
         }
     }
-    if ((ret == -1) && (errno != EAGAIN))
+    if ((ret == -1) && (errno != EAGAIN) && (errno != ETIMEDOUT))
         return LS_FAIL;
     return 0;
 }
@@ -566,30 +668,37 @@ int HttpFetch::endReq(int res)
     return 0;
 }
 
+
 int HttpFetch::cancel()
 {
     return endReq(-1);
 }
 
+
 int HttpFetch::processEvents(short revent)
 {
     if (revent & POLLOUT)
-        sendReq();
+        if (sendReq() == -1)
+            return -1;
     if (revent & POLLIN)
-        recvResp();
+        if (recvResp() == -1)
+            return -1;
     if (revent & POLLERR)
         endReq(-1);
     return 0;
 }
 
+
 int HttpFetch::process()
 {
     while ((m_iFdHttp != -1) && (m_iReqState < 4))
         sendReq();
-    while ((m_iFdHttp != -1) && (m_iReqState < 7))
+    while ((m_iFdHttp != -1) && (m_iReqState < 7)
+        && m_tmStart + m_iTimeoutSec > time(NULL))
         recvResp();
     return (m_iReqState == 7) ? 0 : -1;
 }
+
 
 void HttpFetch::setProxyServerAddr(const char *pAddr)
 {
@@ -600,9 +709,19 @@ void HttpFetch::setProxyServerAddr(const char *pAddr)
     {
         m_pProxyAddr = new GSockAddr();
         m_pProxyAddr->set(pAddr, NO_ANY | DO_NSLOOKUP);
+        if (m_pProxyAddr->set(pAddr, NO_ANY | DO_NSLOOKUP) == -1)
+        {
+            delete m_pProxyAddr;
+            m_pProxyAddr = NULL;
+            LS_ERROR(m_pLogger,
+                     "HttpFetch[%d] invalid proxy server address '%s', ignore.",
+                     getLoggerId(), pAddr);
+            return;
+        }
+
         if (m_iEnableDebug)
-            LS_DBG_M(m_pLogger, "HttpFetch[%d]::setProxyServerAddr %s", getLoggerId(),
-                     pAddr);
+            LS_DBG_M(m_pLogger, "HttpFetch[%d]::setProxyServerAddr %s",
+                     getLoggerId(), pAddr);
         if (m_pProxyAddrStr)
             free(m_pProxyAddrStr);
         m_pProxyAddrStr = strdup(pAddr);
@@ -614,8 +733,8 @@ void HttpFetch::closeConnection()
     if (m_iFdHttp != -1)
     {
         if (m_iEnableDebug)
-            LS_DBG_M(m_pLogger, "HttpFetch[%d]::closeConnection fd=%d ", getLoggerId(),
-                     m_iFdHttp);
+            LS_DBG_M(m_pLogger, "HttpFetch[%d]::closeConnection fd=%d ",
+                     getLoggerId(), m_iFdHttp);
         close(m_iFdHttp);
         m_iFdHttp = -1;
         stopDriver();

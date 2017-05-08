@@ -72,7 +72,7 @@ static int lsiapi_add_release_data_hook(int index,
         return LS_FAIL;
     pHooks = LsiApiHooks::getReleaseDataHooks(index);
     if (pHooks->add(pModule, cb, 0, LSI_FLAG_ENABLED) >= 0)
-        return 0;
+        return LS_OK;
     return LS_FAIL;
 }
 
@@ -123,7 +123,7 @@ static int enable_hook(lsi_session_t *session,
             break;
 
         case LSI_HKPT_HTTP_BEGIN:
-        case LSI_HKPT_RECV_REQ_HEADER:
+        case LSI_HKPT_RCVD_REQ_HEADER:
         case LSI_HKPT_URI_MAP:
         case LSI_HKPT_RECV_REQ_BODY:
         case LSI_HKPT_RCVD_REQ_BODY:
@@ -316,10 +316,10 @@ static int set_module_data(lsi_session_t *session,
             if (data)
                 pData->initData(ModuleManager::getInstance().getModuleDataCount(level));
             else
-                return 0;
+                return LS_OK;
         }
         pData->set(MODULE_DATA_ID(pModule)[level], data);
-        ret = 0;
+        ret = LS_OK;
     }
 
     return ret;
@@ -436,7 +436,7 @@ static int get_uri_file_path(lsi_session_t *session, const char *uri,
     memcpy(path, rootStr->c_str(), rootStr->len());
     memcpy(path + rootStr->len(), uri, uri_len);
     path[rootStr->len() + uri_len] = 0x00;
-    return 0;
+    return LS_OK;
 }
 
 
@@ -445,7 +445,7 @@ static int set_resp_content_length(lsi_session_t *session, int64_t len)
     HttpResp *pResp = ((HttpSession *)((LsiSession *)session))->getResp();
     pResp->setContentLen(len);
     pResp->appendContentLenHeader();
-    return 0;
+    return LS_OK;
 }
 
 
@@ -489,7 +489,7 @@ static int set_resp_header(lsi_session_t *session,
     }
     else
         respHeaders.add(name, nameLen, val, valLen, add_method);
-    return 0;
+    return LS_OK;
 }
 
 
@@ -513,7 +513,7 @@ static int set_resp_header2(lsi_session_t *session, const char *s, int len,
     if (type0 != type1 || len0 != len1)
         pSession->updateContentCompressible();
 
-    return 0;
+    return LS_OK;
 }
 
 
@@ -597,7 +597,7 @@ static int remove_resp_header(lsi_session_t *session,
         respHeaders.del((HttpRespHeaders::INDEX)header_index);
     else
         respHeaders.del(name, nameLen);
-    return 0;
+    return LS_OK;
 }
 
 
@@ -614,7 +614,7 @@ static int is_resp_headers_sent(lsi_session_t *session)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
     if (pSession == NULL)
-        return 0;
+        return LS_FALSE;
     return pSession->isRespHeaderSent();
 }
 
@@ -765,10 +765,10 @@ static int is_req_handler_registered(lsi_session_t *session)
         HttpReq *pReq = pSession->getReq();
         if (pReq && pReq->getHttpHandler()
             && pReq->getHttpHandler()->getType() == HandlerType::HT_MODULE)
-            return 1;
+            return LS_TRUE;
     }
 
-    return 0;
+    return LS_FALSE;
 }
 
 static int register_req_handler(lsi_session_t *session,
@@ -954,6 +954,26 @@ static const char *get_cookie_value(lsi_session_t *session,
         return NULL;
     HttpReq *pReq = pSession->getReq();
     return RequestVars::getCookieValue(pReq, cookie_name, nameLen, *valLen);
+}
+
+static int get_cookie_by_index(lsi_session_t *session, int index, ls_strpair_t *cookie)
+{
+    HttpSession *pSession = (HttpSession *)((LsiSession *)session);
+    if (pSession == NULL)
+        return LS_FAIL;
+    HttpReq *pReq = pSession->getReq();
+    pReq->parseCookies();
+    const CookieList &list = pReq->getCookieList();
+    if (index < 0 || index > list.getSize())
+      return LS_FALSE;
+    
+    const cookieval_t val = list.begin()[index];
+    cookie->key.ptr = pReq->getHeaderBuf().getp(val.keyOff);
+    cookie->key.len = val.keyLen;
+    cookie->val.ptr = pReq->getHeaderBuf().getp(val.valOff);
+    cookie->val.len = val.valLen;
+
+    return LS_TRUE;
 }
 
 
@@ -1182,32 +1202,73 @@ static int is_req_body_finished(lsi_session_t *session)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
     if (!pSession || pSession->getFlag(HSF_REQ_BODY_DONE))
-        return 1;
-    else
+        return LS_TRUE;
+    return LS_FALSE;
+}
+
+
+static int get_req_args_count(lsi_session_t *session)
+{
+    HttpSession *pSession = (HttpSession *)((LsiSession *)session);
+    if (!pSession || pSession->getReqParser() == NULL)
         return 0;
+    return pSession->getReqParser()->getArgCount();
 }
 
 
-static int get_req_body_part_count(lsi_session_t *session)
+static int get_req_arg_by_idx(lsi_session_t *session, int index, 
+                             ls_strpair_t *pArg, char **filePath)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
-    if (pSession->getReqParser() == NULL)
+    if (!pSession || pSession->getReqParser() == NULL)
+        return LS_FAIL;
+    return pSession->getReqParser()->getArgByIndex(index, pArg, filePath);
+}
+
+
+static int get_qs_args_count(lsi_session_t *session)
+{
+    HttpSession *pSession = (HttpSession *)((LsiSession *)session);
+    if (!pSession || pSession->getReqParser() == NULL)
         return 0;
-    else
-        return pSession->getReqParser()->getArgCount();
+    return pSession->getReqParser()->getQsArgCount();
 }
 
-static int get_req_body_part(lsi_session_t *session, int index,
-                             char **name, int *nameLen, char **val, int *valLen, char **filePath)
+
+static int get_qs_arg_by_idx(lsi_session_t *session, int index, 
+                             ls_strpair_t *pArg)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
-    return pSession->getReqParser()->getArgs(index, *name, *nameLen, *val,
-            *valLen, *filePath);
+    if (!pSession || pSession->getReqParser() == NULL)
+        return LS_FAIL;
+    return pSession->getReqParser()->getQsArgByIndex(index, pArg);
 }
 
-static int is_req_body_part_file(lsi_session_t *session, int index)
+
+static int get_post_args_count(lsi_session_t *session)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
+    if (!pSession || pSession->getReqParser() == NULL)
+        return 0;
+    return pSession->getReqParser()->getArgCount();
+}
+
+
+static int get_post_arg_by_idx(lsi_session_t *session, int index, 
+                             ls_strpair_t *pArg, char **filePath)
+{
+    HttpSession *pSession = (HttpSession *)((LsiSession *)session);
+    if (!pSession || pSession->getReqParser() == NULL)
+        return LS_FAIL;
+    return pSession->getReqParser()->getArgByIndex(index, pArg, filePath);
+}
+
+
+static int is_post_file_upload(lsi_session_t *session, int index)
+{
+    HttpSession *pSession = (HttpSession *)((LsiSession *)session);
+    if (!pSession || pSession->getReqParser() == NULL)
+        return LS_FAIL;
     return pSession->getReqParser()->isFile(index);
 }
 
@@ -1217,20 +1278,19 @@ static int set_req_wait_full_body(lsi_session_t *session)
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
     if (pSession == NULL)
         return LS_FAIL;
-
     pSession->setFlag(HSF_REQ_WAIT_FULL_BODY);
-    return 0;
+    return LS_OK;
 }
 
-static int set_parse_req_body(lsi_session_t *session)
+
+static int parse_req_args(lsi_session_t *session, int parse_req_body)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
     if (pSession == NULL)
         return LS_FAIL;
-
-    pSession->setFlag(HSF_PARSE_REQ_BODY);
-    return 0;
+    return pSession->parseReqArgs(parse_req_body);
 }
+
 
 static int set_resp_wait_full_body(lsi_session_t *session)
 {
@@ -1239,21 +1299,21 @@ static int set_resp_wait_full_body(lsi_session_t *session)
         return LS_FAIL;
 
     pSession->setFlag(HSF_RESP_WAIT_FULL_BODY);
-    return 0;
+    return LS_OK;
 }
+
 
 static int is_resp_buffer_available(lsi_session_t *session)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
     if (pSession == NULL)
-        return LS_FAIL;
+        return LS_FALSE;
 
     if (pSession->getRespCache()
         && pSession->getRespCache()->getCurWBlkPos() -
         pSession->getRespCache()->getCurRBlkPos() > LSI_MAX_RESP_BUFFER_SIZE)
-        return 0;
-    else
-        return 1;
+        return LS_FALSE;
+    return LS_TRUE;
 }
 
 
@@ -1261,13 +1321,10 @@ static int is_resp_buffer_gzippped(lsi_session_t *session)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
     if (pSession == NULL)
-        return LS_FAIL;
+        return LS_FALSE;
 
     //if (pSession->getReq()->gzipAcceptable() & ( UPSTREAM_GZIP | UPSTREAM_DEFLATE ))
-    if (pSession->getFlag(HSF_RESP_BODY_COMPRESSED))
-        return 1;
-    else
-        return 0;
+    return pSession->getFlag(HSF_RESP_BODY_COMPRESSED) != 0;
 }
 
 
@@ -1281,7 +1338,7 @@ static int set_resp_buffer_gzip_flag(lsi_session_t *session, int set)
         pSession->setFlag(HSF_RESP_BODY_COMPRESSED);
     else
         pSession->clearFlag(HSF_RESP_BODY_COMPRESSED);
-    return 0;
+    return LS_OK;
 }
 
 
@@ -1367,7 +1424,7 @@ static int send_file(lsi_session_t *session, const char *path,
 
     pSession->setSendFileOffsetSize(start, size);
     pSession->flush();
-    return 0;
+    return LS_OK;
 }
 
 
@@ -1384,7 +1441,7 @@ static int send_file2(lsi_session_t *session, int fd,
 
     pSession->setSendFileOffsetSize(fd, start, size);
     pSession->flush();
-    return 0;
+    return LS_OK;
 }
 
 
@@ -1428,7 +1485,7 @@ static int set_uri_qs(lsi_session_t *session, int action, const char *uri,
     if (pSession == NULL)
         return LS_FAIL;
     if (!action)
-        return 0;
+        return LS_OK;
     uri_act = action & URI_OP_MASK;
     if ((uri_act == LSI_URL_REDIRECT_INTERNAL) &&
         (pSession->getState() <= HSS_READING_BODY))
@@ -1550,7 +1607,7 @@ static int set_uri_qs(lsi_session_t *session, int action, const char *uri,
         break;
     }
 
-    return 0;
+    return LS_OK;
 }
 
 
@@ -1629,7 +1686,7 @@ static int lsiapi_resume(lsi_session_t *session, int retcode)
     if (pSession == NULL)
         return LS_FAIL;
     pSession->resumeProcess(0, retcode);
-    return 0;
+    return LS_OK;
 }
 
 
@@ -1643,7 +1700,7 @@ static int exec_ext_cmd(lsi_session_t *session, const char *cmd, int len,
 
     pSession->setExtCmdNotifier(cb, lParam, pParam);
     pSession->execExtCmd(cmd, len, EXEC_CMD_PARSE_RES);
-    return 0;
+    return LS_OK;
 }
 
 static char *get_ext_cmd_res_buf(lsi_session_t *session, int *length)
@@ -1656,15 +1713,12 @@ static char *get_ext_cmd_res_buf(lsi_session_t *session, int *length)
     return pSession->getExtCmdBuf().begin();
 }
 
-static int get_client_access(lsi_session_t *session)
+static int get_client_access_level(lsi_session_t *session)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
     if (pSession == NULL)
-        return LS_FAIL;
-    if (pSession->getClientInfo()->getAccess() == AC_TRUST)
-        return 0;
-    else
-        return 1;
+        return LS_FALSE;
+    return pSession->getClientInfo()->getAccess();
 }
 
 
@@ -1718,7 +1772,7 @@ static int set_force_mime_type(lsi_session_t *session, const char *mime)
     if (pSession == NULL || !mime)
         return LS_FAIL;
     pSession->getReq()->setForcedType(mime);
-    return 0;
+    return LS_OK;
 }
 
 
@@ -1813,7 +1867,7 @@ static int is_resp_handler_aborted(lsi_session_t *session)
     if (pSession == NULL)
         return LS_FAIL;
     //return pSession->isRespHandlerAborted();
-    return 0;
+    return LS_OK;
 }
 
 
@@ -1914,7 +1968,7 @@ static int set_req_body_buf(lsi_session_t *session, void *pBuf)
     if (!pSession->getFlag(HSF_REQ_BODY_DONE))
         return LS_FAIL;
     pSession->getReq()->replaceBodyBuf((VMemBuf *)pBuf);
-    return 0;
+    return LS_OK;
 }
 
 
@@ -1948,7 +2002,7 @@ const void *get_vhost(int index)
 static int set_vhost_module_data(const void *vhost,
                                  const lsi_module_t *pModule, void *data)
 {
-    int iCount, ret = -1;
+    int iCount, ret = LS_FAIL;
     LsiModuleData *pData = ((HttpVHost *)vhost)->getModuleData();
 
     if (pData)
@@ -1962,10 +2016,10 @@ static int set_vhost_module_data(const void *vhost,
                 pData->initData(iCount);
             }
             else
-                return 0;
+                return LS_OK;
         }
         pData->set(MODULE_DATA_ID(pModule)[LSI_DATA_VHOST], data);
-        ret = 0;
+        ret = LS_OK;
     }
 
     return ret;
@@ -2025,7 +2079,7 @@ ls_xpool_t *get_session_pool(lsi_session_t *session)
 int expand_current_server_varible(int level, const char *pVarible,
                                   char *buf, int maxLen)
 {
-    int ret = -1;
+    int ret = LS_FAIL;
     switch (level)
     {
     case LSI_CFG_SERVER:
@@ -2103,7 +2157,7 @@ void lsiapi_init_server_api()
     pApi->get_req_cookies = get_req_cookies;
     pApi->get_req_cookie_count = get_req_cookie_count;
     pApi->get_cookie_value = get_cookie_value;
-
+    pApi->get_cookie_by_index = get_cookie_by_index;
 
     pApi->get_req_env = get_req_env;
     pApi->set_req_env = set_req_env;
@@ -2113,13 +2167,17 @@ void lsiapi_init_server_api()
     pApi->is_req_body_finished = is_req_body_finished;
     pApi->is_resp_buffer_gzippped = is_resp_buffer_gzippped;
 
-    pApi->get_req_body_part_count = get_req_body_part_count;
-    pApi->get_req_body_part = get_req_body_part;
-    pApi->is_req_body_part_file = is_req_body_part_file;
+    pApi->get_req_args_count = get_req_args_count;
+    pApi->get_req_arg_by_idx = get_req_arg_by_idx;
+    pApi->get_qs_args_count = get_qs_args_count;
+    pApi->get_qs_arg_by_idx = get_qs_arg_by_idx;
+    pApi->get_post_args_count = get_post_args_count;
+    pApi->get_post_arg_by_idx = get_post_arg_by_idx;
+    pApi->is_post_file_upload = is_post_file_upload;
 
     pApi->set_resp_buffer_gzip_flag = set_resp_buffer_gzip_flag;
     pApi->set_req_wait_full_body = set_req_wait_full_body;
-    pApi->set_parse_req_body = set_parse_req_body;
+    pApi->parse_req_args = parse_req_args;
     pApi->set_resp_wait_full_body = set_resp_wait_full_body;
 
     pApi->is_resp_buffer_available = is_resp_buffer_available;
@@ -2159,7 +2217,7 @@ void lsiapi_init_server_api()
 
     pApi->exec_ext_cmd = exec_ext_cmd;
     pApi->get_ext_cmd_res_buf = get_ext_cmd_res_buf;
-    pApi->get_client_access = get_client_access;
+    pApi->get_client_access_level = get_client_access_level;
 
 
     pApi->get_file_path_by_uri = get_file_path_by_uri;

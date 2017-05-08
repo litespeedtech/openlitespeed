@@ -602,7 +602,8 @@ protected:
     {   return k % n ; }
 
     ls_attr_inline LsShmHTable *getHTable() const
-    {   return (LsShmHTable *)m_pPool->offset2ptr(m_iOffset);   }
+    {   assert( x_pTable == (LsShmHTable *)m_pPool->offset2ptr(m_iOffset)); 
+        return x_pTable;   }
 
     LsShmSize_t fullFactor() const;
     LsShmSize_t growFactor() const;
@@ -700,9 +701,10 @@ protected:
 
 protected:
     uint32_t            m_iMagic;
-    LsShmPool          *m_pPool;
     LsShmOffset_t       m_iOffset;
-
+    LsShmPool          *m_pPool;
+    LsShmHTable        *x_pTable;
+    
     LsShmHasher_fn      m_hf;
     LsShmValComp_fn     m_vc;
     hash_insert         m_insert;

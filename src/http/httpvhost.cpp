@@ -278,7 +278,6 @@ HttpVHost::~HttpVHost()
         delete m_pSSLCtx;
     m_pUrlStxFileHash->release_objects();
     delete m_pUrlStxFileHash;
-    urlStaticFileHashClean();
     LsiapiBridge::releaseModuleData(LSI_DATA_VHOST, &m_moduleData);
 }
 
@@ -2384,12 +2383,12 @@ HttpVHost *HttpVHost::configVHost(const XmlNode *pNode, const char *pName,
         pVHnew->getThrottleLimits()->config(pNode,
                                             ThrottleControl::getDefault(), &currentCtx);
 
-        pVHnew->m_ReqParserParam.m_iEnableUploadFile =
+        pVHnew->m_ReqParserConfig.m_iEnableUploadFile =
             ConfigCtx::getCurConfigCtx()->getLongValue(pConfigNode,
                     "uploadpassbypath", 0, 1,
                     HttpServerConfig::getInstance().getReqParserParam().m_iEnableUploadFile);
 
-        pVHnew->m_ReqParserParam.m_iFileMod =
+        pVHnew->m_ReqParserConfig.m_iFileMod =
             ConfigCtx::getCurConfigCtx()->getLongValue(pConfigNode,
                     "uploadtmpfilepermission", 0000, 0777,
                     HttpServerConfig::getInstance().getReqParserParam().m_iFileMod,
@@ -2401,10 +2400,10 @@ HttpVHost *HttpVHost::configVHost(const XmlNode *pNode, const char *pName,
         if (!pParam ||
             ConfigCtx::getCurConfigCtx()->expandVariable(pParam, sLocation,
                     MAX_PATH_LEN, 1) < 0)
-            pVHnew->m_ReqParserParam.m_sUploadFilePathTemplate.setStr(
+            pVHnew->m_ReqParserConfig.m_sUploadFilePathTemplate.setStr(
                 HttpServerConfig::getInstance().getReqParserParam().m_sUploadFilePathTemplate.c_str());
         else
-            pVHnew->m_ReqParserParam.m_sUploadFilePathTemplate.setStr(sLocation);
+            pVHnew->m_ReqParserConfig.m_sUploadFilePathTemplate.setStr(sLocation);
 
         if (pVHnew->config(pConfigNode) == 0)
         {
@@ -2416,7 +2415,7 @@ HttpVHost *HttpVHost::configVHost(const XmlNode *pNode, const char *pName,
              */
             struct stat stBuf;
             const char *path =
-                pVHnew->m_ReqParserParam.m_sUploadFilePathTemplate.c_str();
+                pVHnew->m_ReqParserConfig.m_sUploadFilePathTemplate.c_str();
             if (stat(path, &stBuf) == -1)
             {
                 mkdir(path, 02771);
@@ -2573,13 +2572,13 @@ void HttpVHost::enableAioLogging()
     }
 }
 
-void HttpVHost::addUrlStaticFileMatch(const char *url,
-                                      StaticFileCacheData *pData)
+void HttpVHost::addUrlStaticFileMatch(StaticFileCacheData *pData,
+                                      const char *url, int urlLen)
 {
     static_file_data_t *data = new static_file_data_t;
     data->pData = pData;
     data->tmaccess = DateTime::s_curTime;
-    data->url.setStr(url);
+    data->url.setStr(url, urlLen);
     GHash::iterator it = m_pUrlStxFileHash->insert(data->url.c_str(), data);
     if (!it)
     {

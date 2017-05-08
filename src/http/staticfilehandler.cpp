@@ -591,7 +591,8 @@ int StaticFileHandler::process(HttpSession *pSession,
     if (ret == 0 && !pSession->getFlag(HSF_STX_FILE_CACHE_READY))
     {
         HttpVHost *host = (HttpVHost *)pSession->getReq()->getVHost();
-        host->addUrlStaticFileMatch(pReq->getURI(), pInfo->getFileData());
+        host->addUrlStaticFileMatch(pInfo->getFileData(),
+                                    pReq->getOrgReqURL(), pReq->getOrgReqURLLen());
         LS_DBG_L( pSession->getLogSession(), "[static file cache] create cache." );
     }
     return ret;

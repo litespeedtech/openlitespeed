@@ -70,7 +70,9 @@ int ClientInfo::shmData_remove(lsShm_hCacheData_t *p, void *pUParam)
 
 
 ClientInfo::ClientInfo()
-    : m_pGeoInfo(NULL)
+    : m_iFlags( 0 )
+    , m_iConns( 0 )
+    , m_pGeoInfo(NULL)
 {
 #if 0
     m_pShmClient = NULL;
@@ -211,4 +213,60 @@ GeoInfo *ClientInfo::allocateGeoInfo()
     if (!m_pGeoInfo)
         m_pGeoInfo = new GeoInfo();
     return m_pGeoInfo;
+}
+
+
+static inline int isGoog(const char *pHost, int iHostLen)
+{
+    if (!strncmp("googlebot.com", pHost + iHostLen - 13, 13))
+        return 1;
+    return (strncmp("google.com", pHost + iHostLen - 10, 10) == 0);
+}
+
+
+int ClientInfo::checkHost()
+{
+    struct sockaddr *pAddr = (struct sockaddr *)m_achSockAddr;
+    clearFlag(CLIENTINFO_GOOG_TEST);
+    if ((m_sHostName.len() == 0)
+        || (isGoog(m_sHostName.c_str(), m_sHostName.len()) == 0))
+    {
+        setFlag(CLIENTINFO_GOOG_FAKE);
+        LS_NOTICE("Client attempted to fake being google. Ip: %s, Host: %s",
+                  m_sAddr.c_str(), m_sHostName.c_str());
+        return 0;
+    }
+    return pAddr->sa_family;
+}
+
+
+void ClientInfo::verifyIp(void *ip, const long length)
+{
+    struct sockaddr *pAddr = (struct sockaddr *)m_achSockAddr;
+    void *pOrigAddr;
+    int size;
+    if (pAddr->sa_family == AF_INET)
+    {
+        size = sizeof(in_addr);
+        pOrigAddr = &((struct sockaddr_in *)pAddr)->sin_addr;
+    }
+    else
+    {
+        size = sizeof(in6_addr);
+        pOrigAddr = &((struct sockaddr_in6 *)pAddr)->sin6_addr;
+    }
+    if ((size == length) && (memcmp(pOrigAddr, ip, size) == 0))
+    {
+        m_iFlags |= CLIENTINFO_GOOG_REAL;
+        return;
+    }
+
+    m_iFlags |= CLIENTINFO_GOOG_FAKE;
+    if (LS_LOG_ENABLED(log4cxx::Level::NOTICE))
+    {
+        char ipAddr[INET6_ADDRSTRLEN];
+        inet_ntop(pAddr->sa_family, ip, ipAddr, INET6_ADDRSTRLEN);
+        LS_NOTICE("Client attempted to fake being google. Host: %s, REAL Ip %*s",
+                  m_sHostName.c_str(), (int)length, ipAddr);
+    }
 }

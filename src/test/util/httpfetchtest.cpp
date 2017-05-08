@@ -113,6 +113,20 @@ TEST(httpfetchTest_Test)
 
     CHECK(ret == 0);
 
+    pHttpFetch = new HttpFetch;
+    ret = pHttpFetch->startReq("http://open.litespeedtech.com/packages/openlitespeed-1.4.25.tgz",
+                               nonblock, 1,
+                               pBody,
+                               bodyLen,
+                               pSaveFile, 0, gsock);
+// The following can be uncommented to test checking the response.
+//     sleep(5);
+//     ret = pHttpFetch->process();
+    delete pHttpFetch;
+    pHttpFetch = NULL;
+
+    CHECK(ret == 0);
+
 }
 
 #endif

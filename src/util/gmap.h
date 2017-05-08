@@ -105,7 +105,7 @@ public:
 
     const_iterator next(const_iterator iter) const
     {
-        return ((GMap *)this)->next(iter);
+        return (const_iterator)ls_map_next((GMap *)this, (iterator)iter);
     }
 
     int for_each(iterator beg, iterator end, for_each_fn fun)

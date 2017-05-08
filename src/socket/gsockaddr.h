@@ -29,6 +29,7 @@
 #define DO_NSLOOKUP     1
 #define NO_ANY          2
 #define ADDR_ONLY       4
+#define DO_NSLOOKUP_DIRECT  8
 
 class GSockAddr
 {
@@ -44,6 +45,8 @@ private:
     int m_len;
     int allocate(int family);
     void release();
+    int set2(int family, const char *pURL, int tag, char *pDest);
+    int doLookup(int family, const char *p, int tag);
 
 public:
     GSockAddr()
@@ -103,19 +106,24 @@ public:
              uint32_t flowinfo = 0);
     int set(const char *pURL, int tag);
     int set(int family, const char *pURL, int tag = 0);
+
+    int asyncSet(int family, const char *pURL, int tag
+                 , int (*lookup_pf)(void *arg, const long lParam, void *pParam)
+                 , void *ctx);
+
     int setHttpUrl(const char *pHttpUrl, const int len);
     int parseAddr(const char *pString);
     /** return the address in string format. */
     static const char *ntop(const struct sockaddr *pAddr, char *pBuf, int len);
-    static int getPort(const struct sockaddr *pAddr);
+    static uint16_t getPort(const struct sockaddr *pAddr);
 
     const char *toAddrString(char *pBuf, int len) const
     {   return ntop(m_pSockAddr, pBuf, len);      }
     /** return the address and port in string format. */
     const char *toString(char *pBuf, int len) const;
     const char *toString() const;
-    int getPort() const;
-    void setPort(short port);
+    uint16_t getPort() const;
+    void setPort(uint16_t port);
 
     static int compareAddr(const struct sockaddr *pAddr1,
                            const struct sockaddr *pAddr2);

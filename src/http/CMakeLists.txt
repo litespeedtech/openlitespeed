@@ -12,7 +12,6 @@ SET(http_STAT_SRCS
    contextnode.cpp
    phpconfig.cpp
    pipeappender.cpp
-   adns.cpp
    awstats.cpp
    rewriterulelist.cpp
    throttlecontrol.cpp

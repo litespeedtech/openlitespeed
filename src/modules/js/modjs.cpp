@@ -142,7 +142,7 @@ int recv_req_body(struct lsi_param_t *rec)
 }
 
 //
-//  LSI_HKPT_RECV_REQ_HEADER
+//  LSI_HKPT_RCVD_REQ_HEADER
 //      If we choose to use HOOK POINT for handler selection,
 //          this is the HOOK POINT...
 //

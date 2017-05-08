@@ -172,8 +172,7 @@ static int checkFiles(lsi_param_t *param, const char *cmd, int len,
 
 static int check_req_uploaded_file(lsi_param_t *param)
 {
-    char *name, *val, *path;
-    int nameLen, valLen;
+    char *path;
     int i, file_count = 0;
 
     scanner_param_st *scanner_st = (scanner_param_st *)
@@ -181,14 +180,13 @@ static int check_req_uploaded_file(lsi_param_t *param)
                                            &MNAME);
 
     ls_str_t *str = ls_str_new(scanner_st->path, strlen(scanner_st->path));
-    int count = g_api->get_req_body_part_count(param->session);
+    int count = g_api->get_req_args_count(param->session);
 
     for (i = 0; i < count; ++i)
     {
-        if (g_api->is_req_body_part_file(param->session, i))
+        if (g_api->is_post_file_upload(param->session, i))
         {
-            g_api->get_req_body_part(param->session, i, &name, &nameLen,
-                                     &val, &valLen, &path);
+            g_api->get_req_arg_by_idx(param->session, i, NULL, &path);
             ls_str_append(str, " ", 1);
             ls_str_append(str, path, strlen(path));
             ++file_count;
@@ -222,7 +220,7 @@ static int set_session(lsi_param_t *param)
                                            &MNAME);
     if (scanner_st && scanner_st->path && scanner_st->prefix)
     {
-        g_api->set_parse_req_body(param->session);
+        g_api->parse_req_args(param->session, 1);
 
         int aEnableHkpts[1];
         aEnableHkpts[0] = LSI_HKPT_RCVD_REQ_BODY;
@@ -240,7 +238,7 @@ static int _init(lsi_module_t *pModule)
 
 static lsi_serverhook_t server_hooks[] =
 {
-    { LSI_HKPT_HTTP_BEGIN, set_session, LSI_HOOK_NORMAL, LSI_FLAG_ENABLED },
+    { LSI_HKPT_RCVD_REQ_HEADER, set_session, LSI_HOOK_NORMAL, LSI_FLAG_ENABLED },
     { LSI_HKPT_RCVD_REQ_BODY, check_req_uploaded_file, LSI_HOOK_EARLY, 0 },
     LSI_HOOK_END   //Must put this at the end position
 };

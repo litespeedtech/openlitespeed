@@ -66,7 +66,7 @@ enum HSPState
     HSPS_NEW_REQ,
     HSPS_MATCH_VHOST,
     HSPS_HKPT_HTTP_BEGIN,
-    HSPS_HKPT_RECV_REQ_HEADER,
+    HSPS_HKPT_RCVD_REQ_HEADER,
     HSPS_PROCESS_NEW_REQ_BODY,
     HSPS_READ_REQ_BODY,
     HSPS_HKPT_RCVD_REQ_BODY,
@@ -116,7 +116,6 @@ enum HSPState
 #define HSF_SUSPENDED               (1<<15)
 #define HSF_SC_404                  (1<<16)
 #define HSF_AIO_READING             (1<<17)
-#define HSF_PARSE_REQ_BODY          (1<<18)
 
 #define HSF_STX_FILE_CACHE_READY    (1<<19)
 
@@ -313,7 +312,6 @@ private:
     int processFileMap();
     int processNewUri();
 
-    int setupReqParser();
     void resetEvtcb();
     void processServerPush();
  
@@ -404,6 +402,7 @@ public:
     bool endOfReqBody();
     void setWaitFullReqBody()
     {    setFlag(HSF_REQ_WAIT_FULL_BODY);    }
+    int parseReqArgs(int post_body);
 
     int  onTimerEx();
 

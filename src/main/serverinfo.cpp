@@ -37,6 +37,7 @@ ServerInfo::ServerInfo(char *pBegin, char *pEnd)
     , m_pChroot(NULL)
     , m_pBufEnd(pEnd)
     , m_restart(0)
+    , m_flags(0)
 {
 }
 

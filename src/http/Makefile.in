@@ -87,7 +87,7 @@ am__aclocal_m4_deps = $(top_srcdir)/ax_check_zlib.m4 \
 	$(top_srcdir)/ax_check_openssl.m4 \
 	$(top_srcdir)/ax_path_lib_pcre.m4 \
 	$(top_srcdir)/ax_lib_expat.m4 $(top_srcdir)/ax_check_liblua.m4 \
-	$(top_srcdir)/configure.ac
+	$(top_srcdir)/ax_check_libudns.m4 $(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 mkinstalldirs = $(install_sh) -d
@@ -104,7 +104,7 @@ libhttp_a_AR = $(AR) $(ARFLAGS)
 libhttp_a_LIBADD =
 am_libhttp_a_OBJECTS = httpstatuscode.$(OBJEXT) moduserdir.$(OBJEXT) \
 	contextnode.$(OBJEXT) phpconfig.$(OBJEXT) \
-	pipeappender.$(OBJEXT) adns.$(OBJEXT) awstats.$(OBJEXT) \
+	pipeappender.$(OBJEXT) awstats.$(OBJEXT) \
 	rewriterulelist.$(OBJEXT) throttlecontrol.$(OBJEXT) \
 	rewriteengine.$(OBJEXT) rewritemap.$(OBJEXT) \
 	rewriterule.$(OBJEXT) reqstats.$(OBJEXT) hotlinkctrl.$(OBJEXT) \
@@ -291,6 +291,8 @@ SED = @SED@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
 STRIP = @STRIP@
+UDNS_CFLAGS = @UDNS_CFLAGS@
+UDNS_LIBS = @UDNS_LIBS@
 VERSION = @VERSION@
 abs_builddir = @abs_builddir@
 abs_srcdir = @abs_srcdir@
@@ -350,7 +352,7 @@ top_srcdir = @top_srcdir@
 noinst_LIBRARIES = libhttp.a
 AM_CPPFLAGS = -I$(top_srcdir)/openssl/include/ -I$(top_srcdir)/include -I$(top_srcdir)/src
 libhttp_a_METASOURCES = AUTO
-libhttp_a_SOURCES = httpstatuscode.cpp moduserdir.cpp contextnode.cpp phpconfig.cpp pipeappender.cpp adns.cpp awstats.cpp rewriterulelist.cpp throttlecontrol.cpp \
+libhttp_a_SOURCES = httpstatuscode.cpp moduserdir.cpp contextnode.cpp phpconfig.cpp pipeappender.cpp awstats.cpp rewriterulelist.cpp throttlecontrol.cpp \
    rewriteengine.cpp rewritemap.cpp rewriterule.cpp reqstats.cpp hotlinkctrl.cpp contextlist.cpp urimatch.cpp expiresctrl.cpp stderrlogger.cpp \
    htauth.cpp userdir.cpp authuser.cpp  httplistenerlist.cpp httpvhostlist.cpp htpasswd.cpp httphandler.cpp httplogsource.cpp  accesslog.cpp \
    accesscache.cpp clientinfo.cpp clientcache.cpp httprange.cpp connlimitctrl.cpp denieddir.cpp httpserverconfig.cpp \
@@ -415,7 +417,6 @@ distclean-compile:
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/accesscache.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/accesslog.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/adns.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/authuser.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/awstats.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cacheelement.Po@am__quote@

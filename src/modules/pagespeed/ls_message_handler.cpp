@@ -55,7 +55,7 @@ void LsiMessageHandler::InstallCrashHandler()
     signal(SIGSEGV, signal_handler);
 }
 
-lsi_log_level LsiMessageHandler::GetLsiLogLevel(MessageType type)
+LSI_LOG_LEVEL LsiMessageHandler::GetLsiLogLevel(MessageType type)
 {
     switch (type)
     {
@@ -77,7 +77,7 @@ lsi_log_level LsiMessageHandler::GetLsiLogLevel(MessageType type)
 void LsiMessageHandler::MessageSImpl(MessageType type,
                                      const GoogleString& message)
 {
-    lsi_log_level logLevel = GetLsiLogLevel(type);
+    LSI_LOG_LEVEL logLevel = GetLsiLogLevel(type);
     g_api->log(NULL, logLevel, "[%s %s] %s\n", ModuleName,
                kModPagespeedVersion, message.c_str());
 
@@ -88,7 +88,7 @@ void LsiMessageHandler::MessageSImpl(MessageType type,
 void LsiMessageHandler::FileMessageSImpl(MessageType type, const char *file,
                                          int line, const GoogleString& message)
 {
-    lsi_log_level logLevel = GetLsiLogLevel(type);
+    LSI_LOG_LEVEL logLevel = GetLsiLogLevel(type);
     g_api->log(NULL, logLevel, "[%s %s] %s:%d:%s", ModuleName,
                kModPagespeedVersion, file, line, message.c_str());
 }

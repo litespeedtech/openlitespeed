@@ -80,12 +80,12 @@ extern "C" {
  **************************************************************************************************/
 
 /**
- * @enum lsi_cfg_level
+ * @enum LSI_CFG_LEVEL
  * @brief The parameter level specified in the callback routine, lsi_confparser_t::parse_config,
  * in user configuration parameter parsing.
  * @since 1.0
  */
-enum lsi_cfg_level
+enum LSI_CFG_LEVEL
 {
     /**
      * Server level configuration.
@@ -107,7 +107,7 @@ enum lsi_cfg_level
 
 
 /**
- * @enum lsi_hook_priority
+ * @enum LSI_HOOK_PRIORITY
  * @brief The default running priorities for hook filter functions.
  * @details Used when there are more than one filter at the same hook point.
  * Any number from -1 * LSI_HOOK_PRIORITY_MAX to LSI_HOOK_PRIORITY_MAX can also be used.
@@ -116,7 +116,7 @@ enum lsi_cfg_level
  * in the configuration list.
  * @since 1.0
  */
-enum lsi_hook_priority
+enum LSI_HOOK_PRIORITY
 {
     /**
      * Hook priority first predefined value.
@@ -149,7 +149,7 @@ enum lsi_hook_priority
 
 
 /**
- * @enum lsi_hook_flag
+ * @enum LSI_HOOK_FLAG
  * @brief Flags applying to hook functions.
  * @details A filter has two modes, TRANSFORMER and OBSERVER.  Flag if it is a transformer.
  * @details LSI_FLAG_TRANSFORM is a flag for filter hook points, indicating
@@ -163,7 +163,7 @@ enum lsi_hook_priority
  *
  * @note Hook flags are additive. When required, multiple flags should be set.
  */
-enum lsi_hook_flag
+enum LSI_HOOK_FLAG
 {
     /**
      * The filter hook function is a Transformer which modifies the input data.
@@ -200,14 +200,14 @@ enum lsi_hook_flag
 
 
 /**
- * @enum lsi_data_level
+ * @enum LSI_DATA_LEVEL
  * @brief Determines the scope of the module's user defined data.
  * @details Used by the level API parameter of various functions.
  * Determines what other functions are allowed to access the data and for how long
  * it will be available.
  * @since 1.0
  */
-enum lsi_data_level
+enum LSI_DATA_LEVEL
 {
     /**
      * User data type for an HTTP session.
@@ -238,14 +238,14 @@ enum lsi_data_level
 
 
 /**
- * @enum lsi_hkpt_level
+ * @enum LSI_HKPT_LEVEL
  * @brief Hook Point level definitions.
  * @details Used in the API index parameter.
  * Determines which stage to hook the callback function to.
  * @since 1.0
  * @see lsi_serverhook_s
  */
-enum lsi_hkpt_level
+enum LSI_HKPT_LEVEL
 {
     /**
      * LSI_HKPT_L4_BEGINSESSION is the point when the session begins a tcp connection.
@@ -276,9 +276,9 @@ enum lsi_hkpt_level
     LSI_HKPT_HTTP_BEGIN,       //<--- must be first of Http
 
     /**
-     * LSI_HKPT_RECV_REQ_HEADER is the point when the request header was just received.
+     * LSI_HKPT_RCVD_REQ_HEADER is the point when the request header was just received.
      */
-    LSI_HKPT_RECV_REQ_HEADER,
+    LSI_HKPT_RCVD_REQ_HEADER,
 
     /**
      * LSI_HKPT_URI_MAP is the point when a URI request is mapped to a context.
@@ -399,14 +399,14 @@ enum lsi_hkpt_level
 
 
 /**
- * @enum lsi_log_level
+ * @enum LSI_LOG_LEVEL
  * @brief The log level definitions.
  * @details Used in the level API parameter of the write log function.
  * All logs with a log level less than or equal to the server defined level will be
  * written to the log.
  * @since 1.0
  */
-enum lsi_log_level
+enum LSI_LOG_LEVEL
 {
     /**
      * Error level output turned on.
@@ -436,7 +436,7 @@ enum lsi_log_level
 
 
 /**
- * @enum lsi_retcode
+ * @enum LSI_RETCODE
  * @brief LSIAPI return value definition.
  * @details Used in the return value of API functions and callback functions unless otherwise stipulated.
  * If a function returns an int type value, it should always
@@ -444,7 +444,7 @@ enum lsi_log_level
  * For such functions that return a bool type (true / false), 1 means true and 0 means false.
  * @since 1.0
  */
-enum lsi_retcode
+enum LSI_RETCODE
 {
     /**
      * Return code for suspend current hookpoint
@@ -467,14 +467,14 @@ enum lsi_retcode
 
 
 /**
- * @enum lsi_onwrite_retcode
+ * @enum LSI_ONWRITE_RETCODE
  * @brief Write response return values.
  * @details Used as on_write_resp return value.
  * Continue should be used until the response sending is completed.
  * Finished will end the process of the server requesting further data.
  * @since 1.0
  */
-enum lsi_onwrite_retcode
+enum LSI_ONWRITE_RETCODE
 {
     /**
      * Error in the response processing.
@@ -492,7 +492,7 @@ enum lsi_onwrite_retcode
 
 
 /**
- * @enum lsi_cb_flag
+ * @enum LSI_CB_FLAG
  * @brief definition of flags used in hook function input and ouput parameters
  * @details It defines flags for _flag_in and _flag_out of lsi_param_t.
  * LSI_CB_FLAG_IN_XXXX is for _flag_in, LSI_CBFO_BUFFERED is for
@@ -500,7 +500,7 @@ enum lsi_onwrite_retcode
  *
  * @since 1.0
  */
-enum lsi_cb_flags
+enum LSI_CB_FLAGS
 {
     /**
      * Indicates that a filter buffered data in its own buffer.
@@ -540,13 +540,13 @@ enum lsi_cb_flags
 
 
 /**
- * @enum lsi_req_variable
+ * @enum LSI_REQ_VARIABLE
  * @brief LSIAPI request environment variables.
  * @details Used as API index parameter in env access function get_req_var_by_id.
  * The example reqinfohandler.c shows usage for all of these variables.
  * @since 1.0
  */
-enum lsi_req_variable
+enum LSI_REQ_VARIABLE
 {
     /**
      * Remote addr environment variable
@@ -760,7 +760,7 @@ enum lsi_req_variable
 
 
 /**
- * @enum lsi_header_op
+ * @enum LSI_HEADER_OP
  * @brief The methods used for adding a response header.
  * @details Used in API parameter add_method in response header access functions.
  * If there are no existing headers, any method that is called
@@ -776,7 +776,7 @@ enum lsi_req_variable
  * whether or not it already exists.
  * @since 1.0
  */
-enum lsi_header_op
+enum LSI_HEADER_OP
 {
     /**
      * Set the header.
@@ -798,14 +798,14 @@ enum lsi_header_op
 
 
 /**
- * @enum lsi_url_op
+ * @enum LSI_URL_OP
  * @brief The methods used to redirect a request to a new URL.
  * @details LSI_URL_NOCHANGE, LSI_URL_REWRITE and LSI_URL_REDIRECT_* can be combined with
  * LSI_URL_QS_*
  * @since 1.0
  * @see lsi_api_s::set_uri_qs
  */
-enum lsi_url_op
+enum LSI_URL_OP
 {
     /**
      * Do not change URI, intended for modifying Query String only.
@@ -871,13 +871,13 @@ enum lsi_url_op
 
 
 /**
- * @enum lsi_req_header_id
+ * @enum LSI_REQ_HEADER_ID
  * @brief The most common request-header ids.
  * @details Used as the API header id parameter in request header access functions
  * to access components of the request header.
  * @since 1.0
  */
-enum lsi_req_header_id
+enum LSI_REQ_HEADER_ID
 {
     /**
      * "Accept" request header.
@@ -984,13 +984,13 @@ enum lsi_req_header_id
 
 
 /**
- * @enum lsi_resp_header_id
+ * @enum LSI_RESP_HEADER_ID
  * @brief The most common response-header ids.
  * @details Used as the API header id parameter in response header access functions
  * to access components of the response header.
  * @since 1.0
  */
-enum lsi_resp_header_id
+enum LSI_RESP_HEADER_ID
 {
     /**
      * Accept ranges id
@@ -1117,6 +1117,23 @@ enum lsi_resp_header_id
      */
     LSI_RSPHDR_UNKNOWN = LSI_RSPHDR_END
 
+};
+
+
+/**
+ * @enum LSI_ACL_LEVEL
+ * @brief The access control level definitions.
+ * @details Used as the value for client access control level when evaulated 
+ * against a ACL list.
+ * @see   get_client_access_level 
+ * @since 1.1
+ */
+enum LSI_ACL_LEVEL
+{
+    LSI_ACL_DENY,
+    LSI_ACL_ALLOW,
+    LSI_ACL_TRUST,
+    LSI_ACL_BLOCK
 };
 
 
@@ -1320,7 +1337,7 @@ struct lsi_confparser_s
 struct lsi_serverhook_s
 {
     /**
-     * @brief specifies the hook point using level definitions from enum #lsi_hkpt_level.
+     * @brief specifies the hook point using level definitions from enum #LSI_HKPT_LEVEL.
      * @since 1.0
      */
     int             index;
@@ -1338,7 +1355,7 @@ struct lsi_serverhook_s
     short           priority;
 
     /**
-     * @brief additive hook point flags using level definitions from enum #lsi_hook_flag.
+     * @brief additive hook point flags using level definitions from enum #LSI_HOOK_FLAG.
      * @since 1.0
      */
     short           flag;
@@ -1449,7 +1466,7 @@ struct lsi_api_s
      * @since 1.0
      *
      * @param[in] pSession - current session, log file, and session ID are based on session.
-     * @param[in] level - enum defined in log level definitions #lsi_log_level.
+     * @param[in] level - enum defined in log level definitions #LSI_LOG_LEVEL.
      * @param[in] fmt - formatted string.
      */
     void (*log)(lsi_session_t *pSession, int level, const char *fmt, ...);
@@ -1461,7 +1478,7 @@ struct lsi_api_s
      * @since 1.0
      *
      * @param[in] pSession - current session, log file and session ID are based on session.
-     * @param[in] level - enum defined in log level definitions #lsi_log_level.
+     * @param[in] level - enum defined in log level definitions #LSI_LOG_LEVEL.
      * @param[in] fmt - formatted string.
      * @param[in] vararg - the varying argument list.
      * @param[in] no_linefeed - 1 = do not add \\n at the end of message; 0 = add \\n
@@ -1510,7 +1527,7 @@ struct lsi_api_s
      * @param[in] enable - a value that the flag is set to, it is 0 to disable,
      *   otherwise is to enable.
      * @param[in] index - A list of indices to set, as defined in the enum of
-     *   Hook Point level definitions #lsi_hkpt_level.
+     *   Hook Point level definitions #LSI_HKPT_LEVEL.
      * @param[in] iNumIndices - The number of indices to set in index.
      * @return -1 on failure.
      */
@@ -1528,7 +1545,7 @@ struct lsi_api_s
      * @param[in] pSession - a pointer to the HttpSession, obtained from
      *   callback parameters.
      * @param[in] index - A list of indices to set, as defined in the enum of
-     *   Hook Point level definitions #lsi_hkpt_level.
+     *   Hook Point level definitions #LSI_HKPT_LEVEL.
      */
     int (*get_hook_flag)(lsi_session_t *session, int index);
 
@@ -1737,12 +1754,12 @@ struct lsi_api_s
 
     /**
      * @brief get_req_header_by_id can be used to get a request header based on the given header id
-     * defined in lsi_req_header_id
+     * defined in LSI_REQ_HEADER_ID
      *
      * @since 1.0
      *
      * @param[in] pSession - a pointer to the HttpSession.
-     * @param[in] id - header id defined in lsi_req_header_id.
+     * @param[in] id - header id defined in LSI_REQ_HEADER_ID.
      * @param[in,out] valLen - a pointer to the length of the returned string.
      * @return a pointer to the request header key value string.
      */
@@ -1907,6 +1924,18 @@ struct lsi_api_s
                                     const char *cookie_name, int nameLen, int *valLen);
 
     /**
+     * @brief get_cookie_by_index is to get a cookie based on index.
+     *
+     * @since 1.0
+     *
+     * @param[in] pSession - a pointer to the HttpSession.
+     * @param[in] index - a index of the list of cookies parsed for current request.
+     * @param[out] cookie - a pointer to the cookie name string.
+     * @return 1 if cookie is avaialble, 0 if index is out of range.
+     */
+    int (*get_cookie_by_index)(lsi_session_t *pSession, int index, ls_strpair_t *cookie);
+
+    /**
      * @brief get_client_ip is used to get the request ip address.
      *
      * @since 1.0
@@ -1936,7 +1965,7 @@ struct lsi_api_s
      * @since 1.0
      *
      * @param[in] pSession - a pointer to the HttpSession.
-     * @param[in] id - enum #lsi_req_variable defined as LSIAPI request variable ID.
+     * @param[in] id - enum #LSI_REQ_VARIABLE defined as LSIAPI request variable ID.
      * @param[in,out] val - a pointer to the allocated buffer holding value string.
      * @param[in] maxValLen - the maximum size of the variable value string.
      * @return the length of the variable value string.
@@ -2010,7 +2039,7 @@ struct lsi_api_s
      * @since 1.0
      *
      * @param[in] pSession - a pointer to the HttpSession.
-     * @param[in] action - action to be taken to URI and Query String, defined by #lsi_url_op:
+     * @param[in] action - action to be taken to URI and Query String, defined by #LSI_URL_OP:
      * - LSI_URL_NOCHANGE - do not change the URI.
      * - LSI_URL_REWRITE - rewrite a new URI and use for processing.
      * - LSI_URL_REDIRECT_INTERNAL - internal redirect, as if the server received a new request.
@@ -2109,7 +2138,7 @@ struct lsi_api_s
 
 
 
-    int (*set_parse_req_body)(lsi_session_t *pSession);
+    int (*parse_req_args)(lsi_session_t *pSession, int parse_post_body);
 
     /**
      * @brief set_resp_wait_full_body is used to make the server wait for
@@ -2135,12 +2164,22 @@ struct lsi_api_s
      *    else for multipart
      *
      */
-    int (*get_req_body_part_count)(lsi_session_t *session);
+    int (*get_req_args_count)(lsi_session_t *session);
 
-    int (*get_req_body_part)(lsi_session_t *session, int index, char **name,
-                             int *nameLen, char **val, int *valLen, char **filePath);
+    int (*get_req_arg_by_idx)(lsi_session_t *session, int index, 
+                              ls_strpair_t *pArg, char **filePath);
 
-    int (*is_req_body_part_file)(lsi_session_t *session, int index);
+    int (*get_qs_args_count)(lsi_session_t *session);
+
+    int (*get_qs_arg_by_idx)(lsi_session_t *session, int index, 
+                              ls_strpair_t *pArg);
+    
+    int (*get_post_args_count)(lsi_session_t *session);
+
+    int (*get_post_arg_by_idx)(lsi_session_t *session, int index, 
+                              ls_strpair_t *pArg, char **filePath);
+    
+    int (*is_post_file_upload)(lsi_session_t *session, int index);
 
 
 
@@ -2302,12 +2341,12 @@ struct lsi_api_s
      * @since 1.0
      *
      * @param[in] pSession - a pointer to the HttpSession.
-     * @param[in] header_id - enum #lsi_resp_header_id defined as response-header id.
+     * @param[in] header_id - enum #LSI_RESP_HEADER_ID defined as response-header id.
      * @param[in] name - a pointer to the header id name string.
      * @param[in] nameLen - the length of the header id name string.
      * @param[in] val - a pointer to the header string to be set.
      * @param[in] valLen - the length of the header value string.
-     * @param[in] add_method - enum #lsi_header_op defined for the method of adding.
+     * @param[in] add_method - enum #LSI_HEADER_OP defined for the method of adding.
      * @return 0.
      */
     int (*set_resp_header)(lsi_session_t *pSession, unsigned int header_id,
@@ -2322,7 +2361,7 @@ struct lsi_api_s
      * @param[in] pSession - a pointer to the HttpSession.
      * @param[in] headers - a pointer to the header string to be set.
      * @param[in] len - the length of the header value string.
-     * @param[in] add_method - enum #lsi_header_op defined for the method of adding.
+     * @param[in] add_method - enum #LSI_HEADER_OP defined for the method of adding.
      * @return 0.
      */
     int (*set_resp_header2)(lsi_session_t *pSession, const char *headers,
@@ -2360,7 +2399,7 @@ struct lsi_api_s
      * @since 1.0
      *
      * @param[in] pSession - a pointer to the HttpSession.
-     * @param[in] header_id - enum #lsi_resp_header_id defined as response-header id.
+     * @param[in] header_id - enum #LSI_RESP_HEADER_ID defined as response-header id.
      * @param[in] name - a pointer to the header id name string.
      * @param[in] nameLen - the length of the header id name string.
      * @param[out] iov - the IO vector that contains the headers.
@@ -2408,7 +2447,7 @@ struct lsi_api_s
      * @since 1.0
      *
      * @param[in] pSession - a pointer to the HttpSession.
-     * @param[in] header_id - enum #lsi_resp_header_id defined as response-header id.
+     * @param[in] header_id - enum #LSI_RESP_HEADER_ID defined as response-header id.
      * @param[in] name - a pointer to the header id name string.
      * @param[in] nameLen - the length of the header id name string.
      * @return 0.
@@ -2711,7 +2750,7 @@ struct lsi_api_s
 
 
     //return 0 is YES, and 1 is deny
-    int (*get_client_access)(lsi_session_t *session);
+    int (*get_client_access_level)(lsi_session_t *session);
 
     /**
      * @brief is_suspended returns if a session is in suspended mode.

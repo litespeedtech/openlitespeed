@@ -99,6 +99,7 @@ LsShmOffset_t LsShmPool::getPoolMapStatOffset() const
 
 inline  void LsShmPool::incrCheck(LsShmXSize_t *ptr, LsShmSize_t size)
 {
+    assert(ptr != NULL);
     LsShmSize_t prev = *ptr;
     *ptr += size;
     if (*ptr < prev)    // cnt wrapped
@@ -419,7 +420,6 @@ void LsShmPool::destroy()
 
 LsShmOffset_t LsShmPool::alloc2(LsShmSize_t size, int &remapped)
 {
-    LsShmMap *map_o = m_pShm->getShmMap();
     LsShmOffset_t offset;
 
     if ((size == 0) || (size&0x80000000) || (size>LSSHM_MAXSIZE)) 
@@ -447,8 +447,6 @@ LsShmOffset_t LsShmPool::alloc2(LsShmSize_t size, int &remapped)
             getDataMap()->x_stat.m_iPoolInUse += size;
     }
     unlock();
-    if (map_o != m_pShm->getShmMap())
-        remapped = 1;
 
     return offset;
 }

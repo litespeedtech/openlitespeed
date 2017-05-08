@@ -25,7 +25,23 @@
 #include <string.h>
 #include <unistd.h>
 
+#ifndef TCP_FASTOPEN
 
+#if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
+
+#define TCP_FASTOPEN 23
+
+#elif defined(__FreeBSD__)
+
+#define TCP_FASTOPEN 1025
+
+#elif defined(macintosh) || defined(__APPLE__) || defined(__APPLE_CC__)
+
+#define TCP_FASTOPEN 0x105
+
+#endif
+
+#endif // !defined(TCP_FASTOPEN)
 
 /**
   * @return 0, succeed
@@ -109,6 +125,13 @@ int CoreSocket::listen(const GSockAddr &server, int backLog, int *fd,
     {
         int nodelay = 1;
         ::setsockopt(*fd, IPPROTO_TCP, TCP_NODELAY, &nodelay, sizeof(int));
+
+#ifdef TCP_FASTOPEN
+        nodelay = backLog / 2;
+        if (nodelay > 256)
+            nodelay = 256;
+        ::setsockopt(*fd, IPPROTO_TCP, TCP_FASTOPEN, &nodelay, sizeof(int));
+#endif
     }
 
     ret = ::listen(*fd, backLog);

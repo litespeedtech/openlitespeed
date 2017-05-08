@@ -34,7 +34,7 @@ SslEngine::~SslEngine()
 
 int SslEngine::init(const char *pID)
 {
-#ifndef USE_BORINGSSL
+#ifndef OPENSSL_IS_BORINGSSL
     /* Load all bundled ENGINEs into memory and make them visible */
     if (!pID)
         return 0;
@@ -68,7 +68,7 @@ int SslEngine::init(const char *pID)
 
 void SslEngine::shutdown()
 {
-#ifndef USE_BORINGSSL
+#ifndef OPENSSL_IS_BORINGSSL
     ENGINE_cleanup();
 #endif
 }
