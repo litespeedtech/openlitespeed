@@ -402,7 +402,9 @@ public:
     bool endOfReqBody();
     void setWaitFullReqBody()
     {    setFlag(HSF_REQ_WAIT_FULL_BODY);    }
-    int parseReqArgs(int post_body);
+
+    int parseReqArgs(int doPostBody, int uploadPassByPath,
+                     const char *uploadTmpDir, int uploadTmpFilePermission);
 
     int  onTimerEx();
 

@@ -2383,27 +2383,9 @@ HttpVHost *HttpVHost::configVHost(const XmlNode *pNode, const char *pName,
         pVHnew->getThrottleLimits()->config(pNode,
                                             ThrottleControl::getDefault(), &currentCtx);
 
-        pVHnew->m_ReqParserConfig.m_iEnableUploadFile =
-            ConfigCtx::getCurConfigCtx()->getLongValue(pConfigNode,
-                    "uploadpassbypath", 0, 1,
-                    HttpServerConfig::getInstance().getReqParserParam().m_iEnableUploadFile);
-
-        pVHnew->m_ReqParserConfig.m_iFileMod =
-            ConfigCtx::getCurConfigCtx()->getLongValue(pConfigNode,
-                    "uploadtmpfilepermission", 0000, 0777,
-                    HttpServerConfig::getInstance().getReqParserParam().m_iFileMod,
-                    8);
-
-
-        const char *pParam = pConfigNode->getChildValue("uploadtmpdir");
-        char sLocation[MAX_PATH_LEN] = {0};
-        if (!pParam ||
-            ConfigCtx::getCurConfigCtx()->expandVariable(pParam, sLocation,
-                    MAX_PATH_LEN, 1) < 0)
-            pVHnew->m_ReqParserConfig.m_sUploadFilePathTemplate.setStr(
-                HttpServerConfig::getInstance().getReqParserParam().m_sUploadFilePathTemplate.c_str());
-        else
-            pVHnew->m_ReqParserConfig.m_sUploadFilePathTemplate.setStr(sLocation);
+        pVHnew->m_ReqParserConfig.m_iEnableUploadFile = 0;
+        pVHnew->m_ReqParserConfig.m_iFileMod = 0777;
+        pVHnew->m_ReqParserConfig.m_sUploadFilePathTemplate.setStr("/tmp/lshttpd/");
 
         if (pVHnew->config(pConfigNode) == 0)
         {

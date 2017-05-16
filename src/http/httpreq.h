@@ -507,7 +507,7 @@ public:
     int prepareReqBodyBuf();
     void replaceBodyBuf(VMemBuf *pBuf);
     void updateBodyType(const char *buf);
-    const ReqParserParam* getParserConfig();
+    
 
     char gzipAcceptable() const             {   return m_iAcceptGzip;       }
     void andGzip(char b)                    {   m_iAcceptGzip &= b;         }

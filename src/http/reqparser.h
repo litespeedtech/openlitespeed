@@ -74,12 +74,13 @@ public:
     void reset();
     const char *getErrorStr() const    {   return m_pErrStr;   }
 
-    int init(HttpReq *pReq);
+    int init(HttpReq *pReq, int uploadPassByPath, const char *uploadTmpDir,
+             int uploadTmpFilePermission);
     int parseReceivedBody();
     int parseUpdate(char *buf, size_t size);
     int parseDone();
     bool getEnableUploadFile()    {   return m_pFileUploadConfig->m_iEnableUploadFile; }
-    int  isParsePost() const    {   return m_iParseState == PARSE_UNKNOW;   }
+    int  isParsePost() const    {   return m_iParseState == PARSE_START;   }
     bool isParseDone() const    {   return m_iParseState == PARSE_DONE; }
     int  beginParsePost();
 
@@ -187,7 +188,7 @@ private:
     char            m_md5CachedBytes[2];
     VMemBuf        *m_pLastFileBuf;
     off_t           m_iContentLength;
-    const ReqParserParam *m_pFileUploadConfig;
+    ReqParserParam *m_pFileUploadConfig;
 };
 
 #endif

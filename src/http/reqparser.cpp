@@ -54,6 +54,7 @@ ReqParser::ReqParser()
     , m_sLastFileKey("")
     , m_pLastFileBuf(NULL)
     , m_iContentLength(0)
+    , m_pFileUploadConfig(NULL)
 {
     allocArgIndex(8);
 }
@@ -76,6 +77,12 @@ ReqParser::~ReqParser()
         }
         free(m_pArgs);
         m_pArgs = NULL;
+    }
+
+    if (m_pFileUploadConfig)
+    {
+        delete m_pFileUploadConfig;
+        m_pFileUploadConfig = NULL;
     }
 }
 
@@ -104,7 +111,11 @@ void ReqParser::reset()
     m_pReq = NULL;
     m_sLastFileKey.setLen(0);
     m_iContentLength = 0;
-    m_pFileUploadConfig = NULL;
+    if (m_pFileUploadConfig)
+    {
+        delete m_pFileUploadConfig;
+        m_pFileUploadConfig = NULL;
+    }
 }
 
 
@@ -180,13 +191,13 @@ int ReqParser::normalisePath(int begin, int len)
 int ReqParser::appendArgKey(const char *pStr, int len)
 {
     if (m_decodeBuf.size())
-        m_decodeBuf.appendUnsafe('&');
+        m_decodeBuf.append("&", 1);
     int begin = m_decodeBuf.size();
     m_decodeBuf.append(pStr, len);
 
     //len = normalisePath( begin, len );
 
-    m_decodeBuf.appendUnsafe('=');
+    m_decodeBuf.append("=", 1);
     return appendArgKeyIndex(begin, len);
 
 }
@@ -945,9 +956,14 @@ void ReqParser::closeLastMFile()
 }
 
 
-int ReqParser::init(HttpReq *pReq)
+int ReqParser::init(HttpReq *pReq, int uploadPassByPath,
+                    const char *uploadTmpDir, int uploadTmpFilePermission)
 {
     reset();
+    m_pFileUploadConfig = new ReqParserParam;
+    m_pFileUploadConfig->m_iEnableUploadFile = uploadPassByPath;
+    m_pFileUploadConfig->m_iFileMod = uploadTmpFilePermission;
+    m_pFileUploadConfig->m_sUploadFilePathTemplate.setStr(uploadTmpDir);
     m_pReq = pReq;
 
     //QS parsing, now it is time to do it
@@ -967,7 +983,6 @@ int ReqParser::beginParsePost()
 {
     if (!m_pReq)
         return LS_FAIL;
-    m_pFileUploadConfig = m_pReq->getParserConfig();
     if (m_pReq->getBodyType() == REQ_BODY_MULTIPART
         && initMutlipart(m_pReq->getHeader(HttpHeader::H_CONTENT_TYPE),
                          m_pReq->getHeaderLen(HttpHeader::H_CONTENT_TYPE)) == -1)
@@ -1029,7 +1044,7 @@ int ReqParser::parseDone()
     int ret = parsePostBody("", 0, m_pReq->getBodyType(), 1, 1);
     if (ret == 0)
         m_postArgs = m_args - m_postBegin;
-    if (m_pFileUploadConfig && m_pFileUploadConfig->m_iEnableUploadFile)
+    if (m_pFileUploadConfig->m_iEnableUploadFile)
         m_pReq->setContentLength(m_iContentLength);
 
 #if 0

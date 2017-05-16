@@ -220,7 +220,7 @@ static int set_session(lsi_param_t *param)
                                            &MNAME);
     if (scanner_st && scanner_st->path && scanner_st->prefix)
     {
-        g_api->parse_req_args(param->session, 1);
+        g_api->parse_req_args(param->session, 1, 1, "/tmp/", 0666);
 
         int aEnableHkpts[1];
         aEnableHkpts[0] = LSI_HKPT_RCVD_REQ_BODY;

@@ -453,11 +453,6 @@ int net_instaweb::CopyRespBodyToBuf(lsi_session_t *session, GoogleString &str,
 
 int TerminateMainConf(lsi_param_t *rec)
 {
-    if (active_driver_factory != NULL) {
-        delete active_driver_factory;
-        active_driver_factory = NULL;
-    }
-
     delete g_pProcessContext;
     g_pProcessContext = NULL;
 
@@ -1540,8 +1535,8 @@ int ResourceHandler(PsMData *pMyData,
     }
 
 
-    scoped_ptr<RequestHeaders> request_headers(new RequestHeaders);
-    scoped_ptr<ResponseHeaders> response_headers(new ResponseHeaders);
+    ::scoped_ptr<RequestHeaders> request_headers(new RequestHeaders);
+    ::scoped_ptr<ResponseHeaders> response_headers(new ResponseHeaders);
 
     CopyReqHeadersFromServer(session, request_headers.get());
     CopyRespHeadersFromServer(session, response_headers.get());

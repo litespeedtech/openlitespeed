@@ -16,10 +16,12 @@ endif()
 
 include_directories(./;../;../../;../../util/;
                 ./psol/include/;
+                ./psol/include/url;
                 ./psol/include/third_party/apr/src/include/;
                 ./psol/include/third_party/aprutil/src/include/;
                 ./psol/include/third_party/chromium/src/;
                 ./psol/include/third_party/protobuf/src/;
+                ./psol/include/third_party/protobuf/src/src;
                 ./psol/include/third_party/google-sparsehash/src/;
                 ./psol/include/third_party/re2/src/;
                 ./psol/include/out/Debug/obj/gen/protoc_out/instaweb/;

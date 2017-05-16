@@ -1119,7 +1119,9 @@ int HttpSession::processNewReqInit()
 }
 
 
-int HttpSession::parseReqArgs(int doPostBody)
+int HttpSession::parseReqArgs(int doPostBody, int uploadPassByPath,
+                              const char *uploadTmpDir,
+                              int uploadTmpFilePermission)
 {
     if (doPostBody)
     {
@@ -1131,7 +1133,23 @@ int HttpSession::parseReqArgs(int doPostBody)
     if (!m_pReqParser)
     {
         m_pReqParser = new ReqParser();
-        if (!m_pReqParser || 0 != m_pReqParser->init(&m_request))
+        
+        //If not exist, create it
+        struct stat stBuf;
+        int st = stat(uploadTmpDir, &stBuf);
+        if (st == -1)
+        {
+            mkdir(uploadTmpDir, 0777);
+            /**
+             * Comment: call chmod because the mkdir will use the umask
+             * so that the mod may not be 0777.
+             */
+            chmod(uploadTmpDir, 0777);
+        }
+        if (!m_pReqParser || 0 != m_pReqParser->init(&m_request,
+                                    uploadPassByPath,
+                                    uploadTmpDir,
+                                    uploadTmpFilePermission))
         {
             if (m_pReqParser)
             {

@@ -28,10 +28,6 @@
 #include <unistd.h>
 #include <errno.h>
 
-const char kHeadersComplete = 'H';
-const char kFlush = 'F';
-const char kDone = 'D';
-
 //LsiBaseFetch* LsiBaseFetch::event_connection = NULL;
 int LsiBaseFetch::active_base_fetches = 0;
 

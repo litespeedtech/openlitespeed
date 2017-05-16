@@ -33,7 +33,6 @@
 #include <http/httpvhost.h>
 #include <http/serverprocessconfig.h>
 #include <http/vhostmap.h>
-#include <http/reqparser.h>
 #include "staticfilecachedata.h"
 #include <log4cxx/logger.h>
 #include <lsr/ls_fileio.h>
@@ -2010,12 +2009,6 @@ void HttpReq::updateBodyType(const char *pHeader)
         m_iBodyType = REQ_BODY_FORM;
     else if (strncasecmp(pHeader, "multipart/form-data", 19) == 0)
         m_iBodyType = REQ_BODY_MULTIPART;
-}
-
-
-const ReqParserParam* HttpReq::getParserConfig()
-{
-    return m_pVHost->getReqParserConfig();
 }
 
 

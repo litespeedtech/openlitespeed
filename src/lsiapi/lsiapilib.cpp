@@ -1283,12 +1283,15 @@ static int set_req_wait_full_body(lsi_session_t *session)
 }
 
 
-static int parse_req_args(lsi_session_t *session, int parse_req_body)
+static int parse_req_args(lsi_session_t *session, int parse_req_body,
+                          int uploadPassByPath, const char *uploadTmpDir,
+                          int uploadTmpFilePermission)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
     if (pSession == NULL)
         return LS_FAIL;
-    return pSession->parseReqArgs(parse_req_body);
+    return pSession->parseReqArgs(parse_req_body, uploadPassByPath,
+                                  uploadTmpDir, uploadTmpFilePermission);
 }
 
 
