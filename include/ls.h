@@ -2138,7 +2138,9 @@ struct lsi_api_s
 
 
 
-    int (*parse_req_args)(lsi_session_t *pSession, int parse_post_body);
+    int (*parse_req_args)(lsi_session_t *session, int parse_req_body,
+                          int uploadPassByPath, const char *uploadTmpDir,
+                          int uploadTmpFilePermission);
 
     /**
      * @brief set_resp_wait_full_body is used to make the server wait for
