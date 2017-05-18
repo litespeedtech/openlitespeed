@@ -79,7 +79,7 @@ public:
     int parseReceivedBody();
     int parseUpdate(char *buf, size_t size);
     int parseDone();
-    bool getEnableUploadFile()    {   return m_pFileUploadConfig->m_iEnableUploadFile; }
+    bool getEnableUploadFile()  {   return m_pFileUploadConfig != NULL; }
     int  isParsePost() const    {   return m_iParseState == PARSE_START;   }
     bool isParseDone() const    {   return m_iParseState == PARSE_DONE; }
     int  beginParsePost();

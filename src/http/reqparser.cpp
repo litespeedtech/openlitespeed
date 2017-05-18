@@ -432,7 +432,7 @@ int ReqParser::multipartParseHeader(char *pBegin, char *pLineEnd)
                         m_pArgs[m_args - 1].valueLen = fileStrLen;
                         m_sLastFileKey.setStr(pName, nameLen);
 
-                        if (fileStrLen > 0)
+                        if (fileStrLen > 0 && m_pFileUploadConfig)
                         {
                             int templateLen = m_pFileUploadConfig->m_sUploadFilePathTemplate.len();
                             char *p = (char *)malloc(templateLen + 8);
@@ -960,10 +960,12 @@ int ReqParser::init(HttpReq *pReq, int uploadPassByPath,
                     const char *uploadTmpDir, int uploadTmpFilePermission)
 {
     reset();
-    m_pFileUploadConfig = new ReqParserParam;
-    m_pFileUploadConfig->m_iEnableUploadFile = uploadPassByPath;
-    m_pFileUploadConfig->m_iFileMod = uploadTmpFilePermission;
-    m_pFileUploadConfig->m_sUploadFilePathTemplate.setStr(uploadTmpDir);
+    if (uploadPassByPath && uploadTmpDir)
+    {
+        m_pFileUploadConfig = new ReqParserParam;
+        m_pFileUploadConfig->m_iFileMod = uploadTmpFilePermission;
+        m_pFileUploadConfig->m_sUploadFilePathTemplate.setStr(uploadTmpDir);
+    }
     m_pReq = pReq;
 
     //QS parsing, now it is time to do it
@@ -1044,7 +1046,7 @@ int ReqParser::parseDone()
     int ret = parsePostBody("", 0, m_pReq->getBodyType(), 1, 1);
     if (ret == 0)
         m_postArgs = m_args - m_postBegin;
-    if (m_pFileUploadConfig->m_iEnableUploadFile)
+    if (m_pFileUploadConfig)
         m_pReq->setContentLength(m_iContentLength);
 
 #if 0
