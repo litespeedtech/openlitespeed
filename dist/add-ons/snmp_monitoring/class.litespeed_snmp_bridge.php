@@ -1,4 +1,4 @@
-<?
+<?php
 
 /*----------------------------------------
 LiteSpeed_Stats to SNMP bridge. Relay stats to SNMPD.

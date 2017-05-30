@@ -1,4 +1,4 @@
-<?
+<?php
 
 /*----------------------------------------
 LiteSpeed_Stats class and subclasses. Parse Real-Time data for LiteSpeed Products

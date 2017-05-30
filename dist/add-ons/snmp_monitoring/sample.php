@@ -1,4 +1,4 @@
-<?
+<?php
 
 /*--------------------------------
 assuming  following entry in /etc/snmp/snmpd.conf
@@ -25,7 +25,6 @@ if(array_key_exists(1,$_SERVER["argv"]) && array_key_exists(2,$_SERVER["argv"]))
 
 	$bridge = new litespeed_snmp_bridge($processes, $report_path, $cache_time, $cache_file);
 	$bridge->process($type, $oid);
-	
 }
 
 ?>

@@ -44,7 +44,7 @@ $(document).ready(function() {
 							<form action="login.php"  id="login" method="post" class="smart-form client-form" novalidate="novalidate">
                                                             <header><div class="text-center"><object type="image/svg+xml" data="/res/img/product_logo.svg" width="80%">Your browser doesn't support SVG</object></div></header>
 								<fieldset>
-								<?
+								<?php
 if ($msg != '') {
 	echo "<section><div class=\"note\">$msg</div></section>";
 }
