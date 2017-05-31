@@ -26,9 +26,9 @@
 typedef struct ssl_st SSL;
 typedef struct ssl_ctx_st SSL_CTX;
 
-#ifndef USE_BORINGSSL
+// #ifndef OPENSSL_IS_BORINGSSL
 class SslOcspStapling;
-#endif
+// #endif
 
 class XmlNode;
 class ConfigCtx;
@@ -43,15 +43,12 @@ private:
     int         m_iKeyLen;
     struct stat m_stKey;
     struct stat m_stCert;
-
-#ifndef USE_BORINGSSL
     SslOcspStapling *m_pStapling;
-#endif
     
     static int     s_iEnableMultiCerts;
 
     void release();
-    int init(int method = SSL_ALL);
+    int init(int method = SSL_TLS);
     static int seedRand(int len);
     void updateProtocol(int method);
 
@@ -63,6 +60,7 @@ public:
         SSL_TLSv11  = 4,
         SSL_TLSv12  = 8,
         SSL_TLSv13  = 16,
+        SSL_TLS     = 30,
         SSL_ALL     = 31
     };
     enum
@@ -71,7 +69,7 @@ public:
         FILETYPE_ASN1
     };
 
-    explicit SslContext(int method = SSL_ALL);
+    explicit SslContext(int method = SSL_TLS);
     ~SslContext();
     SSL_CTX *get() const    {   return m_pCtx;  }
     SSL *newSSL();
@@ -103,10 +101,10 @@ public:
 
     static int  publickey_encrypt(const unsigned char *pPubKey, int keylen,
                                   const char *content,
-                                  int len, char *encrypted, int bufLen);
+                                  int len, char *encrypted, unsigned int bufLen);
     static int  publickey_decrypt(const unsigned char *pPubKey, int keylen,
                                   const char *encrypted,
-                                  int len, char *decrypted, int bufLen);
+                                  int len, char *decrypted, unsigned int bufLen);
 
     static void enableMultiCerts()     {   s_iEnableMultiCerts = 1;         }
     static int  multiCertsEnabled()    {   return s_iEnableMultiCerts;      }
@@ -114,10 +112,13 @@ public:
     int addCRL(const char *pCRLFile, const char *pCRLPath);
     int enableSpdy(int level);
     int getEnableSpdy() const   {   return m_iEnableSpdy;   }
-#ifndef USE_BORINGSSL
     SslOcspStapling *getpStapling() {  return m_pStapling; }
     void setpStapling(SslOcspStapling *pSslOcspStapling) {  m_pStapling = pSslOcspStapling;}
-#endif
+    /**
+     * Check if OCSP is configured for the current context and if so,
+     * update the OCSP response if needed.
+     */
+    int initOCSP();
 
     SslContext *setKeyCertCipher(const char *pCertFile, const char *pKeyFile,
                                  const char *pCAFile, const char *pCAPath, const char *pCiphers,

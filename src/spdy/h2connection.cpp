@@ -56,13 +56,13 @@ static inline void appendNbo4Bytes(LoopBuf *pBuf, uint32_t val)
 }
 
 
-static inline void append4Bytes(LoopBuf *pBuf, const char *val)
-{
-    pBuf->append(*val++);
-    pBuf->append(*val++);
-    pBuf->append(*val++);
-    pBuf->append(*val);
-}
+// static inline void append4Bytes(LoopBuf *pBuf, const char *val)
+// {
+//     pBuf->append(*val++);
+//     pBuf->append(*val++);
+//     pBuf->append(*val++);
+//     pBuf->append(*val);
+// }
 
 
 H2Connection::H2Connection()
@@ -1093,7 +1093,7 @@ void H2Connection::recycleStream(StreamMap::iterator it)
     if (pH2Stream->getHandler())
         pH2Stream->getHandler()->recycle();
 
-    LS_DBG_H(getLogger(), "[%s-%d] recycleStream(), stream map size: %d ",
+    LS_DBG_H(getLogger(), "[%s-%d] recycleStream(), stream map size: %zd ",
              getLogId(), pH2Stream->getStreamID(), m_mapStream.size());
     //H2StreamPool::recycle( pH2Stream );
     delete pH2Stream;
@@ -1230,6 +1230,7 @@ int H2Connection::processPingFrame(H2FrameHeader *pHeader)
     {
         uint8_t payload[H2_PING_FRAME_PAYLOAD_SIZE];
         m_bufInput.moveTo((char *)payload, H2_PING_FRAME_PAYLOAD_SIZE);
+        m_iCurrentFrameRemain -= H2_PING_FRAME_PAYLOAD_SIZE;
         if (pHeader->getFlags() & H2_FLAG_ACK)
         {
             LS_DBG_L(getLogSession(), "Unexpected PING frame, %.8s", payload);

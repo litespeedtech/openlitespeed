@@ -85,6 +85,7 @@ int RewriteEngine::loadRewriteFile(char *path, RewriteRuleList *pRuleList,
 int RewriteEngine::parseRules(char *&pRules, RewriteRuleList *pRuleList,
                               const RewriteMapList *pMapList)
 {
+    int ret;
     LinkedObj *pLast = pRuleList->tail();
     if (!pLast)
         pLast = pRuleList->head();
@@ -127,8 +128,15 @@ int RewriteEngine::parseRules(char *&pRules, RewriteRuleList *pRuleList,
                 while (isspace(*pRules))
                     ++pRules;
 
-                loadRewriteFile(pRules, pRuleList, pMapList);
-                LS_INFO("RewriteFile [%s] parsed.", pRules);
+                int len = strlen(pRules);
+                while(len > 1 && isspace(pRules[len - 1]))
+                {
+                    pRules[len - 1] = 0x00;
+                    --len;
+                }
+                ret = loadRewriteFile(pRules, pRuleList, pMapList);
+                pLast = pRuleList->tail(); //Must update pLast, otherwise cause mess up
+                LS_INFO("RewriteFile [%s] parsed, return %d.", pRules, ret);
             }
             else if (strncasecmp(pRules, "<IfModule", 9) == 0 ||
                      strncasecmp(pRules, "</IfModule>", 11) == 0 ||

@@ -17,11 +17,12 @@
 *****************************************************************************/
 #ifndef ACCESSDEF_H
 #define ACCESSDEF_H
+#include <ls.h>
 
-#define AC_DENY 0
-#define AC_ALLOW 1
-#define AC_TRUST 2
-#define AC_BLOCK 3
+#define AC_DENY     LSI_ACL_DENY
+#define AC_ALLOW    LSI_ACL_ALLOW
+#define AC_TRUST    LSI_ACL_TRUST
+#define AC_BLOCK    LSI_ACL_BLOCK
 
 #endif
 

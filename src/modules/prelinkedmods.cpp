@@ -31,8 +31,8 @@ struct Prelinked_Module
 
 Prelinked_Module g_prelinked[] =
 {
-    { "modcompress", &modcompress   },
-    { "moddecompress", &moddecompress   },
+    { "modcompress",    &modcompress   },
+    { "moddecompress",  &moddecompress },
 };
 
 int getPrelinkedModuleCount()

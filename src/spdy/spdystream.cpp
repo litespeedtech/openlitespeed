@@ -70,7 +70,8 @@ int SpdyStream::onInitConnected()
     if (isWantRead())
         getHandler()->onReadEx();
     if (isWantWrite())
-        getHandler()->onWriteEx();
+        if (next() == NULL)
+            m_pSpdyConn->add2PriorityQue(this);
     return 0;
 }
 

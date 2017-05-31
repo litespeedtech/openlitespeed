@@ -5,7 +5,7 @@ AM_CPPFLAGS =  -I$(top_srcdir)/openssl/include/ -I$(top_srcdir)/include -I$(top_
 
 libhttp_a_METASOURCES = AUTO
 
-libhttp_a_SOURCES = httpstatuscode.cpp moduserdir.cpp contextnode.cpp phpconfig.cpp pipeappender.cpp adns.cpp awstats.cpp rewriterulelist.cpp throttlecontrol.cpp \
+libhttp_a_SOURCES = httpstatuscode.cpp moduserdir.cpp contextnode.cpp phpconfig.cpp pipeappender.cpp awstats.cpp rewriterulelist.cpp throttlecontrol.cpp \
    rewriteengine.cpp rewritemap.cpp rewriterule.cpp reqstats.cpp hotlinkctrl.cpp contextlist.cpp urimatch.cpp expiresctrl.cpp stderrlogger.cpp \
    htauth.cpp userdir.cpp authuser.cpp  httplistenerlist.cpp httpvhostlist.cpp htpasswd.cpp httphandler.cpp httplogsource.cpp  accesslog.cpp \
    accesscache.cpp clientinfo.cpp clientcache.cpp httprange.cpp connlimitctrl.cpp denieddir.cpp httpserverconfig.cpp \

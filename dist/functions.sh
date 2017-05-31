@@ -979,7 +979,6 @@ installation()
     util_cpfile "$CONF_OWN" $DOC_MOD conf/${SSL_HOSTNAME}.crt
     util_cpfile "$CONF_OWN" $DOC_MOD conf/${SSL_HOSTNAME}.key
     
-	util_ccpfile "$SDIR_OWN" $DOC_MOD php/php.ini
 	util_mkdir "$DIR_OWN" $DIR_MOD Example/logs Example/fcgi-bin
 	util_cpdir "$SDIR_OWN" $DOC_MOD admin/html.$VERSION
 	rm -rf $LSWS_HOME/admin/html

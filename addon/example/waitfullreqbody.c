@@ -230,7 +230,7 @@ static int clean_up(lsi_session_t *session)
 
 static lsi_serverhook_t server_hooks[] =
 {
-    { LSI_HKPT_RECV_REQ_HEADER, reg_handler, LSI_HOOK_NORMAL, LSI_FLAG_ENABLED },
+    { LSI_HKPT_RCVD_REQ_HEADER, reg_handler, LSI_HOOK_NORMAL, LSI_FLAG_ENABLED },
     { LSI_HKPT_HTTP_BEGIN, httpinit, LSI_HOOK_NORMAL, LSI_FLAG_ENABLED },
     { LSI_HKPT_RECV_REQ_BODY, httpreqread, LSI_HOOK_EARLY, LSI_FLAG_TRANSFORM | LSI_FLAG_ENABLED },
 

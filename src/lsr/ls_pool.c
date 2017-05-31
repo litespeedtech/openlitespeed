@@ -20,6 +20,7 @@
 #include <lsr/ls_pool.h>
 #include <lsr/ls_pooldef.h>
 #include <lsr/ls_internal.h>
+
 #ifdef USE_VALGRIND
 #include <valgrind/memcheck.h>
 
@@ -38,11 +39,15 @@ ls_inline void save_malloc_ptr(void *ptr)
     s_pmalloclink = p;
 }
 #else
+
+#ifndef DEBUG_POOL
+
 ls_inline void save_malloc_ptr(void *ptr)
 {
     //do nothing
 }
 
+#endif //DEBUG_POOL
 
 #endif /* USE_VALGRIND */
 
@@ -104,6 +109,8 @@ static ls_pool_t ls_pool_g =
     PINIT_NEED
 };
 
+#ifndef DEBUG_POOL
+
 ls_inline size_t lglist_roundup(size_t bytes)
 {
     return ((((bytes) - LSR_POOL_LGFREELISTSKEW + (size_t)
@@ -111,6 +118,21 @@ ls_inline size_t lglist_roundup(size_t bytes)
              & ~((size_t)LSR_POOL_LGFREELISTINTERVAL - 1)) + LSR_POOL_LGFREELISTSKEW);
 }
 
+ls_inline ls_blkctrl_t *size2freelistptr(size_t size);
+ls_inline void freelist_put(size_t size, ls_pool_blk_t *pNew)
+{
+    ls_blkctrl_t *pFreeList = size2freelistptr(size);
+    ls_pool_putblk(pFreeList, (void *)pNew);
+}
+
+
+ls_inline ls_pool_blk_t *freelist_get(size_t size)
+{
+    ls_blkctrl_t *pFreeList = size2freelistptr(size);
+    return (ls_pool_blk_t *)ls_pool_getblk(pFreeList, size);
+}
+
+#endif //DEBUG_POOL
 ls_inline size_t smfreelistindex(size_t bytes)
 {
     return (((bytes) + (size_t)LSR_POOL_SMFREELISTINTERVAL - 1)
@@ -127,14 +149,8 @@ ls_inline size_t lgfreelistindex(size_t bytes)
 ls_inline ls_blkctrl_t *size2freelistptr(size_t size)
 {
     return (size > (size_t)LSR_POOL_SMFREELIST_MAXBYTES) ?
-           &ls_pool_g.lgfreelists[lgfreelistindex(size)] :
-           &ls_pool_g.smfreelists[smfreelistindex(size)];
-}
-
-ls_inline void freelist_put(size_t size, ls_pool_blk_t *pNew)
-{
-    ls_blkctrl_t *pFreeList = size2freelistptr(size);
-    ls_pool_putblk(pFreeList, (void *)pNew);
+           (ls_blkctrl_t *)(&ls_pool_g.lgfreelists[lgfreelistindex(size)]) :
+           (ls_blkctrl_t *)(&ls_pool_g.smfreelists[smfreelistindex(size)]);
 }
 
 ls_inline void freelist_putn(
@@ -144,11 +160,6 @@ ls_inline void freelist_putn(
     ls_pool_putnblk(pFreeList, (void *)pNew, (void *)pTail);
 }
 
-ls_inline ls_pool_blk_t *freelist_get(size_t size)
-{
-    ls_blkctrl_t *pFreeList = size2freelistptr(size);
-    return (ls_pool_blk_t *)ls_pool_getblk(pFreeList, size);
-}
 
 #ifndef DEBUG_POOL
 /* Allocates a chunk for nobjs of size size.  nobjs may be reduced
@@ -219,6 +230,9 @@ void ls_pinit()
 
 void *ls_palloc(size_t size)
 {
+// #ifdef DEBUG_POOL
+//     return malloc(size);
+// #else
     ls_pool_chkinit(&ls_pool_g.init);
 
     size_t rndnum;
@@ -262,11 +276,15 @@ void *ls_palloc(size_t size)
         return (void *)(ptr + 1);
     }
     return NULL;
+//#endif //DEBUG_POOL
 }
 
 
 void ls_pfree(void *p)
 {
+// #ifdef DEBUG_POOL
+//     free(p);
+// #else
     if (p != NULL)
     {
         ls_pool_blk_t *pBlk = ((ls_pool_blk_t *)p) - 1;
@@ -285,7 +303,7 @@ void ls_pfree(void *p)
             freelist_put(size, pBlk);
         }
     }
-    return;
+//#endif
 }
 
 
@@ -370,6 +388,9 @@ void ls_pfreepending()
 
 void *ls_prealloc(void *old_p, size_t new_sz)
 {
+// #ifdef DEBUG_POOL
+//     return realloc(old_p, new_sz);
+// #else    
     if (old_p == NULL)
         return ls_palloc(new_sz);
 
@@ -419,6 +440,7 @@ void *ls_prealloc(void *old_p, size_t new_sz)
         return (void *)(pBlk + 1);
     }
     return NULL;
+//#endif
 }
 
 

@@ -124,7 +124,7 @@ private:
     uint32_t        m_tmLastHouseKeeping;
     uint32_t        m_tmLastCleanDiskCache;
     uint32_t        m_iLastCleanSessPurge;
-    char            m_reserved[256];
+    char            m_reserved[256]; /* Padding, do not remove */
 };
 
 

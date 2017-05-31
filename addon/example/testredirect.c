@@ -28,7 +28,7 @@
 
 /* This module tests redirect operations.
  * Valid urls are /testredirect?x-y
- * x is a LSI URL Operation.  Valid operations are outlined in the lsi_url_op enum in ls.h
+ * x is a LSI URL Operation.  Valid operations are outlined in the LSI_URL_OP enum in ls.h
  * y determines who handles the operation, 0 for the server, 1 for module.
  *
  * Note: If y = 1, only the redirect URL Ops are valid.
@@ -113,7 +113,7 @@ int check_if_redirect(lsi_param_t *rec)
 
 static lsi_serverhook_t serverHooks[] =
 {
-    {LSI_HKPT_RECV_REQ_HEADER, check_if_redirect, LSI_HOOK_NORMAL, LSI_FLAG_ENABLED},
+    {LSI_HKPT_RCVD_REQ_HEADER, check_if_redirect, LSI_HOOK_NORMAL, LSI_FLAG_ENABLED},
     LSI_HOOK_END   //Must put this at the end position
 };
 

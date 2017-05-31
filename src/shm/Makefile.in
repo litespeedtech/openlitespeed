@@ -86,7 +86,7 @@ am__aclocal_m4_deps = $(top_srcdir)/ax_check_zlib.m4 \
 	$(top_srcdir)/ax_check_openssl.m4 \
 	$(top_srcdir)/ax_path_lib_pcre.m4 \
 	$(top_srcdir)/ax_lib_expat.m4 $(top_srcdir)/ax_check_liblua.m4 \
-	$(top_srcdir)/configure.ac
+	$(top_srcdir)/ax_check_libudns.m4 $(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 mkinstalldirs = $(install_sh) -d
@@ -103,7 +103,7 @@ liblsshm_a_AR = $(AR) $(ARFLAGS)
 liblsshm_a_LIBADD =
 am_liblsshm_a_OBJECTS = lsshmlock.$(OBJEXT) lsshmhash.$(OBJEXT) \
 	lsshmpool.$(OBJEXT) lsshm.$(OBJEXT) lsshmtidmgr.$(OBJEXT) \
-	lsshmhashobserver.$(OBJEXT)
+	lsshmhashobserver.$(OBJEXT) addrmap.$(OBJEXT)
 liblsshm_a_OBJECTS = $(am_liblsshm_a_OBJECTS)
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
@@ -257,6 +257,8 @@ SED = @SED@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
 STRIP = @STRIP@
+UDNS_CFLAGS = @UDNS_CFLAGS@
+UDNS_LIBS = @UDNS_LIBS@
 VERSION = @VERSION@
 abs_builddir = @abs_builddir@
 abs_srcdir = @abs_srcdir@
@@ -317,7 +319,7 @@ noinst_LIBRARIES = liblsshm.a
 INCLUDES = -I$(top_srcdir)/include -I$(top_srcdir)/src
 liblsshm_a_METASOURCES = AUTO
 liblsshm_a_SOURCES = lsshmlock.cpp lsshmhash.cpp lsshmpool.cpp lsshm.cpp \
-	lsshmtidmgr.cpp lsshmhashobserver.cpp
+	lsshmtidmgr.cpp lsshmhashobserver.cpp addrmap.cpp
 
 all: all-am
 
@@ -368,6 +370,7 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/addrmap.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lsshm.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lsshmhash.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lsshmhashobserver.Po@am__quote@

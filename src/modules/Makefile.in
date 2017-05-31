@@ -88,7 +88,7 @@ am__aclocal_m4_deps = $(top_srcdir)/ax_check_zlib.m4 \
 	$(top_srcdir)/ax_check_openssl.m4 \
 	$(top_srcdir)/ax_path_lib_pcre.m4 \
 	$(top_srcdir)/ax_lib_expat.m4 $(top_srcdir)/ax_check_liblua.m4 \
-	$(top_srcdir)/configure.ac
+	$(top_srcdir)/ax_check_libudns.m4 $(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 mkinstalldirs = $(install_sh) -d
@@ -185,7 +185,7 @@ am__define_uniq_tagged_files = \
   done | $(am__uniquify_input)`
 ETAGS = etags
 CTAGS = ctags
-DIST_SUBDIRS = cache uploadprogress modinspector lua
+DIST_SUBDIRS = cache uploadprogress modinspector modreqparser lua
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 am__relativize = \
   dir0=`pwd`; \
@@ -299,6 +299,8 @@ SED = @SED@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
 STRIP = @STRIP@
+UDNS_CFLAGS = @UDNS_CFLAGS@
+UDNS_LIBS = @UDNS_LIBS@
 VERSION = @VERSION@
 abs_builddir = @abs_builddir@
 abs_srcdir = @abs_srcdir@
@@ -361,8 +363,8 @@ noinst_LIBRARIES = libmodules.a
 AM_CPPFLAGS = -I$(top_srcdir)/openssl/include/ -I$(top_srcdir)/include -I$(top_srcdir)/src
 libmodules_a_METASOURCES = AUTO
 libmodules_a_SOURCES = modgzip/modgzip.cpp
-@HAVE_LIBLUA_FALSE@SUBDIRS = cache uploadprogress modinspector
-@HAVE_LIBLUA_TRUE@SUBDIRS = cache uploadprogress lua modinspector
+@HAVE_LIBLUA_FALSE@SUBDIRS = cache uploadprogress modinspector modreqparser
+@HAVE_LIBLUA_TRUE@SUBDIRS = cache uploadprogress lua modinspector modreqparser
 all: all-recursive
 
 .SUFFIXES:

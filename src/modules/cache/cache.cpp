@@ -610,10 +610,9 @@ static int isDomainExclude(lsi_session_t *session, CacheConfig *pConfig)
 }
 
 
-static char *copyCookie(char *p, char *pDestEnd,
-                        cookieval_t *pIndex, const char *pCookie)
+static char *copyCookie0(char *p, char *pDestEnd,
+                         const char *pCookie, int n)
 {
-    int n = pIndex->valLen + pIndex->valOff - pIndex->keyOff;
     if (n > (pDestEnd - p - 1))
         n = pDestEnd - p - 1;
     if (n > 0)
@@ -625,9 +624,18 @@ static char *copyCookie(char *p, char *pDestEnd,
     return p;
 }
 
+
+static char *copyCookie(char *p, char *pDestEnd,
+                        const cookieval_t *pIndex, const char *pCookie)
+{
+    int n = pIndex->valLen + pIndex->valOff - pIndex->keyOff;
+    return copyCookie0(p, pDestEnd, pCookie, n);
+}
+
+
 int getPrivateCacheCookie(HttpReq *pReq, char *pDest, char *pDestEnd)
 {
-    cookieval_t *pIndex;
+    const cookieval_t *pIndex;
     pReq->parseCookies();
     if (pReq->getCookieList().getSize() == 0)
     {
@@ -640,6 +648,17 @@ int getPrivateCacheCookie(HttpReq *pReq, char *pDest, char *pDestEnd)
     {
         pIndex = pReq->getCookieList().getObj(pReq->getCookieList().getSessIdx());
         //assert( (pIndex->flag & COOKIE_FLAG_SESSID) != 0 );
+        if (!pIndex)
+        {
+            g_api->log(NULL, LSI_LOG_ERROR, "[%s]CookieList error, idx %d sizenow %d, objsize %d\n",
+                       ModuleNameStr,
+                       pReq->getCookieList().getSessIdx(),
+                       pReq->getCookieList().getSize(),
+                       pReq->getCookieList().getObjSize());
+            *pDest = 0;
+            return 0;
+        }
+        
         p = copyCookie(p, pDestEnd, pIndex,
                        pReq->getHeaderBuf().getp(pIndex->keyOff));
         *p = 0;
@@ -683,6 +702,10 @@ char *appendVaryCookie(HttpReq *pReq, const char *pCookeName, int len,
         const char *pCookie = pReq->getHeaderBuf().getp(pIndex->keyOff);
         pDest = copyCookie(pDest, pDestEnd, pIndex, pCookie);
     }
+    else
+    {
+        pDest = copyCookie0(pDest, pDestEnd, pCookeName, len);
+    }
     return pDest;
 }
 
@@ -720,11 +743,7 @@ int getCacheVaryCookie(lsi_session_t *session, HttpReq *pReq, char *pDest,
 {
     char achCacheCtrl[8192];
     pReq->parseCookies();
-    if (pReq->getCookieList().getSize() == 0)
-    {
-        *pDest = 0;
-        return 0;
-    }
+
     char *p = pDest;
     p = appendVaryCookie(pReq, "_lscache_vary", 13, p, pDestEnd);
 
@@ -1006,7 +1025,7 @@ void getRespHeader(lsi_session_t *session, int header_index, char **buf,
 static int bypassUrimapHook(lsi_param_t *rec)
 {
 #ifdef USE_RECV_REQ_HEADER_HOOK
-    if (g_api->get_hook_level(rec) == LSI_HKPT_RECV_REQ_HEADER)
+    if (g_api->get_hook_level(rec) == LSI_HKPT_RCVD_REQ_HEADER)
     {
         int disableHkpt = LSI_HKPT_URI_MAP;
         g_api->enable_hook(rec->session, &MNAME, 0, &disableHkpt, 1);
@@ -1221,7 +1240,8 @@ static int createEntry(lsi_param_t *rec)
 
     myData->hkptIndex = LSI_HKPT_RCVD_RESP_BODY;
     const char *phandlerType = g_api->get_req_handler_type(rec->session);
-    if (phandlerType && memcmp("static", phandlerType, 6) == 0)
+    if (phandlerType && strlen(phandlerType) == 6
+        && memcmp("static", phandlerType, 6) == 0)
     {
         int flag1 = g_api->get_hook_flag(rec->session, LSI_HKPT_RECV_RESP_BODY);
         int flag2 = g_api->get_hook_flag(rec->session, LSI_HKPT_SEND_RESP_BODY);
@@ -1733,25 +1753,24 @@ static int checkAssignHandler(lsi_param_t *rec)
     }
 
     CacheCtrl cacheCtrl;
+    int flag = getControlFlag(pConfig);
+    cacheCtrl.init(flag, pConfig->getDefaultAge(), pConfig->getMaxStale());
+    parseEnv(rec->session, cacheCtrl);
+
+    if (rec->ptr1 != NULL && rec->len1 > 0)
+        cacheCtrl.parse((const char *)rec->ptr1, rec->len1);
+
+    if (!pConfig->isSet(CACHE_IGNORE_REQ_CACHE_CTRL_HEADER))
+    {
+        int bufLen;
+        const char *buf = g_api->get_req_header_by_id(rec->session,
+                          LSI_HDR_CACHE_CTRL, &bufLen);
+        if (buf && bufLen > 0)
+            cacheCtrl.parse(buf, bufLen);
+    }
+
     if (method == HTTP_GET || method == HTTP_HEAD)
     {
-        int flag = getControlFlag(pConfig);
-        cacheCtrl.init(flag, pConfig->getDefaultAge(), pConfig->getMaxStale());
-        parseEnv(rec->session, cacheCtrl);
-
-        if (rec->ptr1 != NULL && rec->len1 > 0)
-            cacheCtrl.parse((const char *)rec->ptr1, rec->len1);
-
-        if (!pConfig->isSet(CACHE_IGNORE_REQ_CACHE_CTRL_HEADER))
-        {
-            int bufLen;
-            const char *buf = g_api->get_req_header_by_id(rec->session,
-                              LSI_HDR_CACHE_CTRL, &bufLen);
-            if (buf && bufLen > 0)
-                cacheCtrl.parse(buf, bufLen);
-        }
-
-
         if (!pConfig->isCheckPublic() && !pConfig->isPrivateCheck())
         {
             if (!isReqCacheable(rec, pConfig))
@@ -1808,10 +1827,17 @@ static int checkAssignHandler(lsi_param_t *rec)
                                        doPublic);
         g_api->set_module_data(rec->session, &MNAME, LSI_DATA_HTTP,
                                (void *)myData);
+        g_api->log(rec->session, LSI_LOG_DEBUG,
+                   "[%s]checkAssignHandler lookUpCache, myData %p entry %p state %d.\n",
+                   ModuleNameStr, myData, myData->pEntry, myData->iCacheState);
     }
 
     if (myData->iMethod == HTTP_PURGE || myData->iMethod == HTTP_REFRESH)
     {
+        g_api->log(rec->session, LSI_LOG_DEBUG,
+                       "[%s]checkAssignHandler get HTTP PURGE/REFRESH.\n",
+                       ModuleNameStr);
+
         if (LS_OK != g_api->register_req_handler(rec->session, &MNAME, 0))
         {
             g_api->log(rec->session, LSI_LOG_WARN,
@@ -1945,7 +1971,7 @@ int releaseIpCounter(void *data)
 static lsi_serverhook_t serverHooks[] =
 {
 #ifdef USE_RECV_REQ_HEADER_HOOK
-    {LSI_HKPT_RECV_REQ_HEADER,  checkAssignHandler, LSI_HOOK_EARLY,     LSI_FLAG_ENABLED},
+    {LSI_HKPT_RCVD_REQ_HEADER,  checkAssignHandler, LSI_HOOK_EARLY,     LSI_FLAG_ENABLED},
 #endif
     {LSI_HKPT_URI_MAP,          checkAssignHandler, LSI_HOOK_FIRST, LSI_FLAG_ENABLED},
     {LSI_HKPT_HTTP_END,         endCache,           LSI_HOOK_LAST + 1,  LSI_FLAG_ENABLED},
@@ -2121,8 +2147,7 @@ static void processPurge2(lsi_session_t *session,
 }
 
 
-static void processPurge(lsi_session_t *session,
-                         const char *pValue, int valLen)
+static void processPurge(lsi_session_t *session, const char *pValue, int valLen)
 {
     const char *pBegin = pValue;
     const char *pEnd = pValue + valLen;
@@ -2140,6 +2165,7 @@ static void processPurge(lsi_session_t *session,
         }
         pBegin = p+1;
     }
+    g_api->log(session, LSI_LOG_DEBUG,  "processPurge: %.*s\n", valLen, pValue);
 }
 
 static void decref_and_free_data(MyMData *myData, lsi_session_t *session)
@@ -2167,7 +2193,7 @@ static int handlerProcess(lsi_session_t *session)
     {
         int len;
         const char *pIP = g_api->get_client_ip(session, &len);
-        if (g_api->get_client_access(session) != 0 &&
+        if (g_api->get_client_access_level(session) != LSI_ACL_TRUST &&
             (!pIP || strncmp(pIP, "127.0.0.1", 9) != 0))
         {
             decref_and_free_data(myData, session);

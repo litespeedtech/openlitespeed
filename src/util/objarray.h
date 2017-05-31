@@ -32,14 +32,15 @@ public:
     ~ObjArray() {};
 
     void    init(int objSize)                 {   ls_objarray_init(this, objSize); }
-    void    release(ls_xpool_t *pool)        {   ls_objarray_release(this, pool); }
+    void    release(ls_xpool_t *pool)         {   ls_objarray_release(this, pool); }
     void    clear()                             {   sizenow = 0; }
 
-    int     getCapacity() const                 {   return sizemax;  }
-    int     getSize() const                     {   return sizenow;  }
-    int     getObjSize() const                  {   return objsize;   }
-    void   *getArray()                          {   return parray;}
-    void   *getObj(int index) const           {   return ls_objarray_getobj(this, index);}
+    int     getCapacity() const                 {   return sizemax;     }
+    int     getSize() const                     {   return sizenow;     }
+    int     getObjSize() const                  {   return objsize;     }
+    void   *getArray()                          {   return parray;      }
+    const void *getArray() const                {   return parray;      }
+    void   *getObj(int index) const             {   return ls_objarray_getobj(this, index);}
     void   *getNew()                            {   return ls_objarray_getnew(this); }
 
     void    setSize(int size)                 {   ls_objarray_setsize(this, size); }
@@ -65,11 +66,15 @@ public:
 
     void    init()                      {   ObjArray::init(sizeof(T));   }
     T      *getArray()                  {   return (T *)ObjArray::getArray(); }
-    T      *getObj(int index) const   {   return (T *)ObjArray::getObj(index);  }
+    const T*getArray() const            {   return (const T *)ObjArray::getArray(); }
+    T      *getObj(int index) const     {   return (T *)ObjArray::getObj(index);  }
     T      *getNew()                    {   return (T *)ObjArray::getNew(); }
 
     T *begin()      {   return  getArray();    }
     T *end()        {   return (T *)getArray() + getSize();   }
+
+    const T *begin() const     {   return  getArray();    }
+    const T *end() const       {   return (const T *)getArray() + getSize();   }
 
     void copy(TObjArray &other, ls_xpool_t *pool)
     {

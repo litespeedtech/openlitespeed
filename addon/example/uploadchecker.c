@@ -55,16 +55,14 @@ static int is_bad_file(const char *path)
 
 int check_req_uploaded_file(lsi_param_t *param)
 {
-    char *name, *val, *path;
-    int nameLen, valLen;
+    char *path;
     int i;
-    int count = g_api->get_req_body_part_count(param->session);
+    int count = g_api->get_req_args_count(param->session);
     for (i = 0; i < count; ++i)
     {
-        if (g_api->is_req_body_part_file(param->session, i))
+        if (g_api->is_post_file_upload(param->session, i))
         {
-            g_api->get_req_body_part(param->session, i, &name, &nameLen,
-                                     &val, &valLen, &path);
+            g_api->get_req_arg_by_idx(param->session, i, NULL, &path);
 
             if (is_bad_file(path))
                 return LSI_ERROR;
@@ -75,7 +73,7 @@ int check_req_uploaded_file(lsi_param_t *param)
 
 static int set_session(lsi_param_t *param)
 {
-    g_api->set_parse_req_body(param->session);
+    g_api->parse_req_args(param->session, 1, 1, "/tmp/", 0666);
     return LSI_OK;
 }
 
@@ -87,7 +85,7 @@ static int _init(lsi_module_t *pModule)
 
 static lsi_serverhook_t server_hooks[] =
 {
-    { LSI_HKPT_HTTP_BEGIN, set_session, LSI_HOOK_NORMAL, LSI_FLAG_ENABLED },
+    { LSI_HKPT_RCVD_REQ_HEADER, set_session, LSI_HOOK_NORMAL, LSI_FLAG_ENABLED },
     { LSI_HKPT_RCVD_REQ_BODY, check_req_uploaded_file, LSI_HOOK_EARLY, LSI_FLAG_ENABLED },
     LSI_HOOK_END   //Must put this at the end position
 };

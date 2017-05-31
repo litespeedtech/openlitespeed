@@ -110,7 +110,7 @@ typedef __link_t            ls_xblkctrl_t;
 #define ls_xpool_putblk    ls_std_putxblk
 
 #else /* DEBUG_POOL */
-#define DEBUG_POOL
+//#define DEBUG_POOL
 #undef USE_VALGRIND
 
 typedef unsigned char       ls_blkctrl_t;

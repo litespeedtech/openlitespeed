@@ -12,18 +12,19 @@ set(libUnitTest  libUnitTest++.a)
 #If you want to use BoringSSL, just un-comment out the following commands
 #AND YOU NEED TO HAVE THE files ready in openlitespeed/ssl
 #You can run the dlbssl.sh to make them ready
-# add_definitions(-DUSE_BORINGSSL)
-# set(BSSL_ADD_LIB  libdecrepit.a)
+set(BSSL_ADD_LIB  libdecrepit.a)
 ##########################################################################################
 
 
 add_definitions(-DTEST_OUTPUT_PLAIN_CONF)
 add_definitions(-DLS_VG_DEBUG)
+#add_definitions(-DDEBUG_POOL)
 
 execute_process( COMMAND getconf LFS_CFLAGS
             OUTPUT_VARIABLE  LFS_CFLAGS )
 
 add_definitions( ${LFS_CFLAGS} )
+add_definitions(-DUSE_UDNS)
 #FIND_LIBRARY(CPPUNIT_LIBRARY NAMES cppunit
 #                          PATHS /usr/lib /lib /usr/local/lib /usr/share/lib /opt/lib /opt/share/lib /var/lib /usr/lib64 /lib64 /usr/local/lib64 /usr/share/lib64 /opt/lib64 /opt/share/lib64 /var/lib64
 #                          DOC "Try and find libcppunit")
@@ -31,6 +32,7 @@ add_definitions( ${LFS_CFLAGS} )
 #INCLUDE( ${PROJECT_SOURCE_DIR}/CMakeModules/common.cmake)
 
 #add_subdirectory(test)
+add_subdirectory(adns)
 add_subdirectory(edio)
 add_subdirectory(extensions)
 add_subdirectory(http)
@@ -207,9 +209,9 @@ add_executable(ls_shmhashstat
 SET( litespeedlib
     modgzip lsiapi main http lsiapi spdy ssi 
     registry cgi fcgi jk extensions lsapi proxy
-    edio socket sslpp lsshm thread log4cxx GeoIP
+    edio socket sslpp lsshm thread log4cxx GeoIP adns
     -Wl,--whole-archive util lsr -Wl,--no-whole-archive
-    pthread rt ${CMAKE_DL_LIBS} ${libUnitTest} libssl.a libcrypto.a ${BSSL_ADD_LIB})
+    udns pthread rt ${CMAKE_DL_LIBS} ${libUnitTest} libssl.a libcrypto.a ${BSSL_ADD_LIB})
 
 target_link_libraries(openlitespeed ${litespeedlib} )
 

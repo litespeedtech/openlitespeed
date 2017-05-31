@@ -21,6 +21,7 @@
 
 #include "plainconf.h"
 
+#include <util/autobuf.h>
 #include <util/gpointerlist.h>
 #include <util/hashstringmap.h>
 #include <log4cxx/logger.h>
@@ -598,7 +599,7 @@ bool plainconf::strcatchr(char *s, char c, int maxStrLen)
 {
     int len = strlen(s);
 
-    if (len == maxStrLen)
+    if (len == maxStrLen -1)
         return false;
 
     s[len] = c;
@@ -790,7 +791,7 @@ void plainconf::clearNameAndValue(char *name, char *value)
 void plainconf::parseLine(const char *fileName, int lineNumber,
                           const char *sLine)
 {
-    const int MAX_NAME_LENGTH = 4096;
+    const int MAX_NAME_LENGTH = 1024 << 6;
     char name[MAX_NAME_LENGTH] = {0};
     char value[MAX_NAME_LENGTH] = {0};
     const char *attr = NULL;
@@ -1125,6 +1126,24 @@ void plainconf::checkInFile(const char *path)
 }
 
 
+static int appendBuf(AutoBuf *pBuf, const char *pSrc, size_t len)
+{
+    const size_t ABSOLUTE_MAX = 1024 << 6;
+    size_t newLen = pBuf->size() + len;
+    if (newLen > ABSOLUTE_MAX)
+    {
+        return LS_FAIL;
+    }
+    if (newLen > (size_t)pBuf->capacity())
+    {
+        pBuf->grow(ABSOLUTE_MAX - pBuf->capacity());
+    }
+    pBuf->append(pSrc, len);
+    *pBuf->end() = '\0';
+    return LS_OK;
+}
+
+
 //This function may be recruse called
 void plainconf::loadConfFile(const char *path)
 {
@@ -1182,8 +1201,9 @@ void plainconf::loadConfFile(const char *path)
         const int MAX_LINE_LENGTH = 8192;
         char sLine[MAX_LINE_LENGTH];
         char *p;
-        char sLines[MAX_LINE_LENGTH] = {0};
+        AutoBuf bLines(MAX_LINE_LENGTH);
         int lineNumber = 0;
+        int ret = LS_OK;
         const int MAX_MULLINE_SIGN_LENGTH = 128;
         char sMultiLineModeSign[MAX_MULLINE_SIGN_LENGTH] = {0};
         size_t  nMultiLineModeSignLen = 0;  //>0 is mulline mode
@@ -1205,13 +1225,17 @@ void plainconf::loadConfFile(const char *path)
                     strncasecmp(pLineStart, sMultiLineModeSign, nMultiLineModeSignLen) == 0)
                 {
                     nMultiLineModeSignLen = 0;
-                    removeSpace(sLines,
-                                1);   //Remove the last \r\n so that if it is one line, it will still be one line
-                    parseLine(path, lineNumber, sLines);
-                    sLines[0] = 0x00;
+                    //Remove the last \r\n so that if it is one line, it will still be one line
+                    removeSpace(bLines.begin(), 1);
+                    parseLine(path, lineNumber, bLines.begin());
+                    bLines.resize(MAX_LINE_LENGTH);
+                    bLines.clear();
+                    // shrink buf.
                 }
-                else
-                    strcat(sLines, p);
+                else if ((ret = appendBuf(&bLines, p, strlen(p))) != LS_OK)
+                {
+                    break;
+                }
 
                 continue;
             }
@@ -1239,28 +1263,48 @@ void plainconf::loadConfFile(const char *path)
                                         MAX_MULLINE_SIGN_LENGTH);
 
                 if (nMultiLineModeSignLen > 0)
-                    strncat(sLines, p, strlen(p) - (3 + nMultiLineModeSignLen));
+                {
+                    if ((ret = appendBuf(&bLines, p,
+                        strlen(p) - (3 + nMultiLineModeSignLen))) != LS_OK)
+                    {
+                        break;
+                    }
+                }
                 //need to continue
                 else if (isChunkedLine(p))
                 {
-                    strncat(sLines, p, strlen(p) - 1);
+                    if ((ret = appendBuf(&bLines, p, strlen(p) - 1)) != LS_OK)
+                    {
+                        break;
+                    }
                     //strcatchr(sLines, ' ', MAX_LINE_LENGTH); //add a space at the end of the line which has a '\\'
                 }
 
                 else
                 {
-                    strcat(sLines, p);
-                    parseLine(path, lineNumber, sLines);
-                    sLines[0] = 0x00;
+                    if ((ret = appendBuf(&bLines, p, strlen(p))) != LS_OK)
+                    {
+                        break;
+                    }
+
+                    parseLine(path, lineNumber, bLines.begin());
+                    bLines.resize(MAX_LINE_LENGTH);
+                    bLines.clear();
                 }
             }
         }
 
         fclose(fp);
+        if (ret != LS_OK)
+        {
+            logToMem(LOG_LEVEL_ERR, "Multiline configuration too long: %s", path);
+            return;
+        }
 
         //Parsed, check in it
         checkInFile(path);
     }
+
 }
 
 

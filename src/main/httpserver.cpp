@@ -19,6 +19,8 @@
 
 #include <config.h>
 
+#include <adns/adns.h>
+
 #include <edio/multiplexer.h>
 #include <edio/multiplexerfactory.h>
 #include <edio/sigeventdispatcher.h>
@@ -33,7 +35,6 @@
 #include <extensions/registry/railsappconfig.h>
 
 #include <http/accesslog.h>
-#include <http/adns.h>
 #include <http/clientcache.h>
 #include <http/connlimitctrl.h>
 #include <http/contextlist.h>
@@ -220,10 +221,6 @@ private:
         m_serverContext.allocateInternal();
         HttpRespHeaders::buildCommonHeaders();
         m_sRTReportFile = DEFAULT_TMP_DIR "/.rtreport";
-
-#ifdef  USE_CARES
-        Adns::init();
-#endif
     }
 
     ~HttpServerImpl()
@@ -234,12 +231,11 @@ private:
 
     int initAdns()
     {
-#ifdef  USE_UDNS
-        if (Adns::getInstance().init() == -1)
+        ServerProcessConfig &procConfig = ServerProcessConfig::getInstance();
+        if (Adns::getInstance().init(procConfig.getUid(), procConfig.getGid()) == -1)
             return LS_FAIL;
         MultiplexerFactory::getMultiplexer()->add(&Adns::getInstance(),
                 POLLIN | POLLHUP | POLLERR);
-#endif
         return 0;
     }
 
@@ -853,6 +849,10 @@ void HttpServerImpl::onTimerSecond()
     m_vhosts.onTimer();
     if (m_lStartTime > 0)
         generateRTReport();
+
+    ServerInfo::getServerInfo()->setAdnsOp(1);
+    Adns::getInstance().trimCache();
+    ServerInfo::getServerInfo()->setAdnsOp(0);
 }
 
 
@@ -1148,7 +1148,9 @@ int HttpServerImpl::reinitMultiplexer()
             MultiplexerFactory::getMultiplexer()->add(m_listeners[i],
                     POLLIN | POLLHUP | POLLERR);
     }
+    ServerInfo::getServerInfo()->setAdnsOp(1);
     initAdns();
+    ServerInfo::getServerInfo()->setAdnsOp(0);
     return 0;
 }
 
@@ -2290,12 +2292,11 @@ int HttpServerImpl::configServerBasic2(const XmlNode *pRoot,
         if (pSwapDir)
             setSwapDir(pSwapDir);
 
-#ifndef USE_BORINGSSL
         char  achBuf[4096];
         ls_snprintf(achBuf, 4096, "%s/tmp/ocspcache/",
                     MainServerConfig::getInstance().getServerRoot());
         SslOcspStapling::setRespTempPath(achBuf);
-#endif
+
         m_serverContext.configAutoIndex(pRoot);
         m_serverContext.configDirIndex(pRoot);
         const char *pURI = getAutoIndexURI(pRoot);
@@ -2706,40 +2707,6 @@ int HttpServerImpl::configServerBasics(int reconfig, const XmlNode *pRoot)
 
         if (pGDBPath)
             MainServerConfigObj.setGDBPath(pGDBPath);
-
-
-        ReqParserParam &reqParserParam =
-            HttpServerConfig::getInstance().getReqParserParam();
-        memset(&reqParserParam, 0, sizeof(ReqParserParam));
-        const char *pParam = pRoot->getChildValue("uploadpassbypath");
-        if (pParam)
-            reqParserParam.m_iEnableUploadFile = atoi(pParam);
-
-        char achBuf[MAX_PATH_LEN] = {0};
-        pParam = pRoot->getChildValue("uploadtmpdir");
-        if (!pParam
-            || ConfigCtx::getCurConfigCtx()->getAbsoluteFile(achBuf, pParam) != 0)
-            strcpy(achBuf, "/tmp/lshttpd/");
-        reqParserParam.m_sUploadFilePathTemplate.setStr(achBuf);
-
-        //If not exist, create it
-        struct stat stBuf;
-        int st = stat(reqParserParam.m_sUploadFilePathTemplate.c_str(), &stBuf);
-        if (st == -1)
-        {
-            mkdir(reqParserParam.m_sUploadFilePathTemplate.c_str(), 0777);
-            /**
-             * Comment: call chmod because the mkdir will use the umask
-             * so that the mod may not be 0777.
-             */
-            chmod(reqParserParam.m_sUploadFilePathTemplate.c_str(), 0777);
-        }
-
-        pParam = pRoot->getChildValue("uploadtmpfilepermission");
-        if (pParam)
-            reqParserParam.m_iFileMod = strtol(pParam, NULL, 8);
-        else
-            reqParserParam.m_iFileMod = 0666;
 
         MainServerConfigObj.setDisableLogRotateAtStartup(
             ConfigCtx::getCurConfigCtx()->getLongValue(pRoot, "disableInitLogRotation",

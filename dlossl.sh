@@ -40,6 +40,7 @@ if [ ! -f ssl/libcrypto.a ] ; then
     DLCMD="$DL -k -L -o ossl.tar.gz"
     $DLCMD https://github.com/openssl/openssl/archive/$VERSION.tar.gz
     tar xf ossl.tar.gz
+    rm -rf ssl
     mv openssl-$VERSION ssl
     rm ossl.tar.gz
     cd ssl

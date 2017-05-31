@@ -25,7 +25,7 @@
 #include "base/logging.h"
 #include "pagespeed/kernel/base/string_util.h"
 
-lsi_log_level GetLogLevel(int severity)
+LSI_LOG_LEVEL GetLogLevel(int severity)
 {
     switch (severity)
     {
@@ -50,7 +50,7 @@ lsi_log_level GetLogLevel(int severity)
 bool LogMessageHandler(int severity, const char *file, int line,
                        size_t message_start, const GoogleString &str)
 {
-    lsi_log_level logLevel = GetLogLevel(severity);
+    LSI_LOG_LEVEL logLevel = GetLogLevel(severity);
     GoogleString message = str;
 
     if (severity == logging::LOG_FATAL)

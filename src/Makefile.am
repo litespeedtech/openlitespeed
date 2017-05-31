@@ -109,13 +109,13 @@ openlitespeed_SOURCES = modules/prelinkedmods.cpp httpdtest.cpp main.cpp \
 openlitespeed_LDADD =  ./main/libmain.a ./http/libhttp.a ./spdy/libspdy.a \
         ./extensions/libextensions.a ./log4cxx/liblog4cxx.a ./socket/libsocket.a \
         ./sslpp/libsslpp.a  ./ssi/libssi.a ./edio/libedio.a ./lsiapi/liblsiapi.a \
-        ./modules/libmodules.a ./shm/liblsshm.a  \
-        $(AM_OPENSSL_LIBS) $(EXPAT_LIBS)  $(PCRE_LIBS) -lGeoIP -lz -lexpat -lpthread $(DL_LIB_OPTION) $(RT_LIB_OPTION)
+        ./modules/libmodules.a ./shm/liblsshm.a  ./adns/libadns.a \
+        $(AM_OPENSSL_LIBS) $(EXPAT_LIBS)  $(PCRE_LIBS) -ludns -lGeoIP -lz -lexpat -lpthread $(DL_LIB_OPTION) $(RT_LIB_OPTION)
 
 AM_LDFLAGS = -L/usr/lib $(OPENSSL_LDFLAGS)
 AM_CPPFLAGS = -I$(top_srcdir)/ssl/include/ -I$(top_srcdir)/include -I$(top_srcdir)/src  -I$(top_srcdir) $(PCRE_CFLAGS) $(EXPAT_CFLAGS)
 
-SUBDIRS =  socket http spdy sslpp ssi extensions log4cxx main edio lsiapi  modules shm
+SUBDIRS =  socket http spdy sslpp ssi extensions log4cxx main edio lsiapi  modules shm adns
 
 
 # the library search path.

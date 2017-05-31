@@ -99,9 +99,11 @@ inline int buildStaticFileHeaders(HttpResp *pResp, HttpReq *pReq,
                                 p + 15, RFC_1123_TIME_LEN);
     p += 15 + RFC_1123_TIME_LEN + 2;
 
-    pResp->getRespHeaders().add(HttpRespHeaders::H_CONTENT_TYPE,
-                                p + 14, pData->getHeaderLen() -
-                                (p - pData->getHeaderBuf()) - 14 - 2);
+    if (pResp->getRespHeaders().getHeader(HttpRespHeaders::H_CONTENT_TYPE, 
+                                          &iETagLen) == NULL)
+        pResp->getRespHeaders().add(HttpRespHeaders::H_CONTENT_TYPE,
+                                    p + 14, pData->getHeaderLen() -
+                                    (p - pData->getHeaderBuf()) - 14 - 2);
 
     p = pSendfileInfo->getECache()->getCLHeader().c_str();
     pResp->getRespHeaders().add(HttpRespHeaders::H_CONTENT_LENGTH, p + 16,
@@ -558,6 +560,11 @@ int StaticFileHandler::process(HttpSession *pSession,
                         if (ret)
                             return ret;
                     }
+                    if (pReq->getRedirHdrs())
+                    {
+                        pResp->parseAdd(pReq->getRedirHdrs(),
+                                        pReq->getRedirHdrsLen());
+                    }
                 }
             //fall through
             default:
@@ -591,7 +598,8 @@ int StaticFileHandler::process(HttpSession *pSession,
     if (ret == 0 && !pSession->getFlag(HSF_STX_FILE_CACHE_READY))
     {
         HttpVHost *host = (HttpVHost *)pSession->getReq()->getVHost();
-        host->addUrlStaticFileMatch(pReq->getURI(), pInfo->getFileData());
+        host->addUrlStaticFileMatch(pInfo->getFileData(),
+                                    pReq->getOrgReqURL(), pReq->getOrgReqURLLen());
         LS_DBG_L( pSession->getLogSession(), "[static file cache] create cache." );
     }
     return ret;

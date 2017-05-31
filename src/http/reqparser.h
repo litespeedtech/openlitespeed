@@ -62,7 +62,6 @@ enum
 {
     PARSE_UNKNOW = 0,
     PARSE_START,
-    PARSE_PROCESSING,
     PARSE_DONE,
 };
 
@@ -75,18 +74,45 @@ public:
     void reset();
     const char *getErrorStr() const    {   return m_pErrStr;   }
 
-    int parseInit(HttpReq *pReq, ReqParserParam &param);
+    int init(HttpReq *pReq, int uploadPassByPath, const char *uploadTmpDir,
+             int uploadTmpFilePermission);
+    int parseReceivedBody();
     int parseUpdate(char *buf, size_t size);
     int parseDone();
-    bool getEnableUploadFile()    {   return m_ReqParserParam.m_iEnableUploadFile; }
-    bool isParseDone()  { return m_iParseState == PARSE_DONE; }
+    bool getEnableUploadFile()  {   return m_pFileUploadConfig != NULL; }
+    int  isParsePost() const    {   return m_iParseState == PARSE_START;   }
+    bool isParseDone() const    {   return m_iParseState == PARSE_DONE; }
+    bool isParseUploadByFilePath() const 
+    {   return m_pFileUploadConfig != NULL; }
+
+    int  beginParsePost();
 
     const char *getReqVar(HttpSession *pSession, int varId, int &len,
                           char *pBegin, int bufLen);
-    int getArgCount() const {   return m_args;  }
-    int getArgs(int index, char *&pName, int &nameLen, char *&val, int &valLen,
-                char *&filePath);
-    bool isFile(int index) { return (m_pArgs[index].filePath != NULL);  }
+    
+    int getArgCount() const         {   return m_args;      }
+    int getQsArgCount() const       {   return m_qsArgs;    }
+    int getPostArgCount() const     {   return m_postArgs;  }
+    int getArgByIndex(int index, ls_strpair_t *pArg, char **filePath);
+    int getQsArgByIndex(int index, ls_strpair_t *pArg)
+    {
+        if (index < 0 || index >= m_qsArgs)
+            return -1;
+        return getArgByIndex(index + m_qsBegin, pArg, NULL);
+    }
+    int getPostArgByIndex(int index, ls_strpair_t *pArg, char **filePath)
+    {   
+        if (index < 0 || index >= m_postArgs)
+            return -1;
+        return getArgByIndex(index + m_postArgs, pArg, filePath);
+    }
+    
+    bool isFile(int index) 
+    { 
+        if (index < 0 || index > m_args)
+            return false;
+        return (m_pArgs[index].filePath != NULL);  
+    }
 
 
     static void testQueryString();
@@ -140,7 +166,8 @@ private:
 
     char            m_state_kv;
     char            m_last_char;
-    uint16_t        m_iParseState;
+    char            m_trial_crlf;
+    uint8_t         m_iParseState;
 
     int             m_beginIndex;
     int             m_args;
@@ -164,7 +191,7 @@ private:
     char            m_md5CachedBytes[2];
     VMemBuf        *m_pLastFileBuf;
     off_t           m_iContentLength;
-    ReqParserParam  m_ReqParserParam;
+    ReqParserParam *m_pFileUploadConfig;
 };
 
 #endif

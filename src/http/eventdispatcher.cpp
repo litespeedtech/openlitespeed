@@ -176,10 +176,6 @@ int EventDispatcher::run()
                 processTimer();
                 ConnLimitCtrl::getInstance().checkWaterMark();
 
-#ifdef  USE_CARES
-                if (HttpServerConfig::getInstance().getDnsLookup())
-                    Adns::process();
-#endif
             }
             if ( sigEvent & HS_USR2 )
             {

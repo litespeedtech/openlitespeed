@@ -412,8 +412,9 @@ int LsShmHash::chkHashTable(LsShm *pShm, LsShmReg *pReg, int *pMode, int *pFlags
 LsShmHash::LsShmHash(LsShmPool *pool, const char *name,
                      LsShmHasher_fn hf, LsShmValComp_fn vc, int flags)
     : m_iMagic(LSSHM_HASH_MAGIC)
-    , m_pPool(pool)
     , m_iOffset(0)
+    , m_pPool(pool)
+    , x_pTable(NULL)
     , m_hf(hf)
     , m_vc(vc)
     , m_iterExtraSpace(0)
@@ -427,7 +428,7 @@ LsShmHash::LsShmHash(LsShmPool *pool, const char *name,
     m_iRef = 0;
     m_status = LSSHM_NOTREADY;
     m_pShmLock = NULL;
-    m_iLockEnable = 1;      // enableLock()
+    m_iAutoLock = 1;      // enableLock()
 
     if (m_hf != NULL)
     {
@@ -503,6 +504,7 @@ LsShmOffset_t LsShmHash::allocHTable(LsShmPool * pPool, int init_size,
 int LsShmHash::init(LsShmOffset_t offset)
 {
     m_iOffset = offset;
+    x_pTable = (LsShmHTable *)m_pPool->offset2ptr(m_iOffset);
     LsShmHTable *pTable = getHTable();
 
     // check the magic and mode
@@ -635,6 +637,7 @@ void LsShmHash::releaseHTableShm()
         }
         m_pPool->release2(m_iOffset, sizeof(LsShmHTable));
         m_iOffset = 0;
+        x_pTable = NULL;
     }
 }
 

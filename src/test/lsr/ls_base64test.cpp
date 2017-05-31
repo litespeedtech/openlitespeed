@@ -31,7 +31,7 @@ TEST(ls_Base64Test_test)
     const char *pEncoded = "QWxhZGRpbjpvcGVuIHNlc2FtZQ==";
     char achDecoded[50];
     const char *pResult = "Aladdin:open sesame";
-    CHECK(-1 != ls_base64_decode(pEncoded, 50, achDecoded));
+    CHECK(-1 != ls_base64_decode(pEncoded, strlen(pEncoded), achDecoded));
     CHECK(0 == strcmp(pResult, achDecoded));
 
     const char *pDecoded = "Aladdin:open sesame";

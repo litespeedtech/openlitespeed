@@ -17,7 +17,6 @@
 *****************************************************************************/
 #include <config.h>
 
-#ifndef USE_BORINGSSL
 
 #ifndef SSLOCSPSTAPLING_H
 #define SSLOCSPSTAPLING_H
@@ -25,14 +24,20 @@
 #include <socket/gsockaddr.h>
 #include <util/autostr.h>
 
-#include <openssl/x509.h>
-#include <openssl/ocsp.h>
-
 #include <inttypes.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/types.h>
 #include <lsdef.h>
+
+typedef struct ocsp_cert_id_st OCSP_CERTID;
+typedef struct ocsp_response_st OCSP_RESPONSE;
+typedef struct ocsp_basic_response_st OCSP_BASICRESP;
+typedef struct ssl_st SSL;
+typedef struct ssl_ctx_st SSL_CTX;
+typedef struct x509_st X509;
+typedef struct x509_store_st X509_STORE;
+
 
 class HttpFetch;
 class ConfigCtx;
@@ -53,7 +58,7 @@ public:
     int certVerify(OCSP_RESPONSE *pResponse, OCSP_BASICRESP *pBasicResp,
                    X509_STORE *pXstore);
     void updateRespData(OCSP_RESPONSE *pResponse);
-    int getRequestData(unsigned char *pReqData);
+    int getRequestData(unsigned char **pReqData);
     void setCertFile(const char *Certfile);
     int config(const XmlNode *pNode, SSL_CTX *pSSL,
                const char *pCAFile, char *pachCert);
@@ -76,6 +81,7 @@ public:
 private:
     HttpFetch      *m_pHttpFetch;
 
+    unsigned char  *m_pReqData;
     uint32_t    m_iDataLen;
     unsigned char     *m_pRespData;
     GSockAddr   m_addrResponder;
@@ -99,4 +105,3 @@ private:
 const char *getStaplingErrMsg();
 #endif // SSLOCSPSTAPLING_H
 
-#endif // USE_BORINGSSL

@@ -17,9 +17,12 @@
 *****************************************************************************/
 #include "clientcache.h"
 
+#include <adns/adns.h>
 #include <http/clientinfo.h>
 #include <http/httplog.h>
+#include <http/httpserverconfig.h>
 #include <http/iptogeo.h>
+#include <log4cxx/logger.h>
 #include <lsiapi/lsiapi.h>
 #include <util/accesscontrol.h>
 #include <util/accessdef.h>
@@ -314,6 +317,58 @@ void ClientCache::dirtyAll()
 }
 
 
+static int namelookupCb(void *arg, const long length, void *ip)
+{
+    ClientInfo *pInfo = (ClientInfo *)arg;
+    pInfo->verifyIp(ip, length);
+    return 0;
+}
+
+/***
+ * host will have a format as host1,host2,...
+ */
+static int addrlookupCb(void *arg, const long length, void *hosts)
+{
+    ClientInfo *pInfo = (ClientInfo *)arg;
+    int type;
+    if (!pInfo )
+        return 0;
+
+    if (hosts && length > 0)
+    {
+        LS_DBG_H( "DNS reverse lookup: [%s]: %s",
+                  pInfo->getAddrString(), (char *)hosts );
+
+        //Just use the first result for now
+        char *pHost1End = strchr((char *)hosts, ',');
+        if (pHost1End)
+            *pHost1End = 0x00; //Terminate the first ',', so only use the first one
+            pInfo->setHostName( (char *)hosts );
+    }
+    else
+    {
+        LS_DBG_H( "Failed to lookup [%s]\n", pInfo->getAddrString());
+        pInfo->setHostName( NULL );
+    }
+    if ((pInfo->isNeedTestHost()) && (type = pInfo->checkHost()) != 0)
+    {
+        int ipLen = 0;
+        LS_DBG_H( "Need to test the host %.*s", (int)length, (char *)hosts);
+        type = pInfo->getAddr()->sa_family;
+        const char *pIp = Adns::getInstance().getHostByNameInCache(
+            pInfo->getHostName(), ipLen, type);
+        if (pIp == NULL)
+            Adns::getInstance().getHostByName(pInfo->getHostName(), type,
+                                            pInfo->getAddr(), namelookupCb, pInfo);
+        else
+        {
+            addrlookupCb(pInfo, ipLen, (void *)pIp);
+        }
+    }
+    return 0;
+}
+
+
 ClientInfo *ClientCache::getClientInfo(struct sockaddr *pPeer)
 {
     // use this to save client information
@@ -366,15 +421,15 @@ ClientInfo *ClientCache::getClientInfo(struct sockaddr *pPeer)
 
         //perform domain name lookup
         //if ( isDNSLookupEnabled() )
-#ifdef  USE_UDNS
         if (HttpServerConfig::getInstance().getDnsLookup())
-            Adns::getInstance().getHostByAddr(pInfo, pPeer);
-#endif
-
-#ifdef  USE_CARES
-        if (HttpServerConfig::getInstance().getDnsLookup())
-            Adns::getHostByAddr(pInfo, pPeer);
-#endif
+        {
+            int length;
+            const char *pHosts = Adns::getInstance().getHostByAddrInCache(pPeer, length);
+            if (pHosts)
+                addrlookupCb(pInfo, length, (void *)pHosts);
+            else
+                Adns::getInstance().getHostByAddr(pPeer, pInfo, addrlookupCb);
+        }
 
 
 

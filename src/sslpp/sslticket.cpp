@@ -181,7 +181,7 @@ int SslTicket::initShm()
         LOGDBG("Get Hash Failed.");
         return LS_FAIL;
     }
-    m_pKeyStore->disableLock();
+    m_pKeyStore->disableAutoLock();
     return LS_OK;
 }
 

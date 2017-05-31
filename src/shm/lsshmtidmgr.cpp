@@ -48,8 +48,8 @@ int LsShmTidMgr::init(LsShmHash *pHash, LsShmOffset_t off, bool blkinit)
     }
     else
     {
-        pTidInfo = getTidInfo();
 #ifdef notdef
+        //pTidInfo = getTidInfo();
         m_pShmLock =
             m_pHash->getPool()->lockPool()->offset2pLock(pTidInfo->x_iLockOff);
 #endif

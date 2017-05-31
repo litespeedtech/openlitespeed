@@ -17,6 +17,7 @@
 *****************************************************************************/
 #include "lshttpdmain.h"
 
+#include <adns/adns.h>
 #include <http/httpaiosendfile.h>
 #include <http/httplog.h>
 #include <http/httpserverconfig.h>
@@ -930,6 +931,7 @@ int LshttpdMain::main(int argc, char *argv[])
     if ((argc == 2) && (strcmp(argv[1], "-x") == 0))
     {
         allocatePidTracker();
+        m_pServer->initMultiplexer("best");
         m_pServer->initAdns();
         m_pServer->test_main(argv0);
     }
@@ -1173,6 +1175,16 @@ int LshttpdMain::checkRestartReq()
 }
 
 
+int LshttpdMain::recoverShmCrash(ChildProc *pProc)
+{
+    if (((ServerInfo *)pProc->m_pBlackBoard)->isAdnsOp())
+    {
+        Adns::deleteCache();
+    }
+    return 0;
+}
+
+
 int LshttpdMain::childDead(int pid)
 {
     ChildProc *pProc;
@@ -1182,6 +1194,7 @@ int LshttpdMain::childDead(int pid)
     {
         if (pProc->m_pid == pid)
         {
+            recoverShmCrash(pProc);
             cleanUp(pid, pProc->m_pBlackBoard);
             if (pProc->m_iState == CP_RUNNING)
             {

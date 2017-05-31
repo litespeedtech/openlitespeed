@@ -149,7 +149,6 @@ private:
     SslContext         *m_pSSLCtx;
     SSITagConfig       *m_pSSITagConfig;
     AutoStr2            m_sSpdyAdHeader;
-    ReqParserParam      m_ReqParserParam;
     LsiModuleData       m_moduleData;
 
     UrlStxFileHash     *m_pUrlStxFileHash;
@@ -436,11 +435,9 @@ public:
 
     LsiModuleData *getModuleData()      {   return &m_moduleData;   }
 
-    ReqParserParam &getReqParserParam() {   return  m_ReqParserParam;   }
-
     void enableAioLogging();
 
-    void addUrlStaticFileMatch(const char *url, StaticFileCacheData *pData);
+    void addUrlStaticFileMatch(StaticFileCacheData *pData, const char *url, int urlLen);
     int checkFileChanged(static_file_data_t *data, struct stat &sb);
     void removeurlStaticFile(static_file_data_t *data);
     static_file_data_t *getUrlStaticFileData(const char *url);

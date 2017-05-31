@@ -93,8 +93,8 @@ void VMemBuf::releaseBlocks()
     }
     else
         m_bufList.release_objects();
-    memset(&m_iCurWBlkPos, 0,
-           (char *)(&m_pCurRPos + 1) - (char *)&m_iCurWBlkPos);
+    memset(&m_curWBlkPos, 0,
+           (char *)(&m_pCurRPos + 1) - (char *)&m_curWBlkPos);
     m_iCurTotalSize = 0;
 }
 
@@ -130,6 +130,45 @@ void VMemBuf::recycle(BlockBuf *pBuf)
         s_iCurAnonMapBlocks -= pBuf->getBlockSize() / s_iBlockSize;
     }
     delete pBuf;
+}
+
+
+void VMemBuf::rewindWOff(off_t rewind)
+{
+    while(rewind > 0)
+    {
+        if (m_pCurWPos - (*m_pCurWBlock)->getBuf() < (int)rewind)
+        {
+            rewind -= m_pCurWPos - (*m_pCurWBlock)->getBuf();
+            m_pCurWPos = (*m_pCurWBlock)->getBuf();
+            
+            if ( m_pCurWBlock > m_bufList.begin())
+            {
+                m_curWBlkPos -= (*m_pCurWBlock)->getBlockSize();
+                m_pCurWBlock--;
+                if (!(*m_pCurWBlock)->getBuf())
+                {
+                    if ( remapBlock(*m_pCurWBlock, m_curWBlkPos - s_iBlockSize) == 0)
+                        m_pCurWPos = (*m_pCurWBlock)->getBufEnd();
+                    else
+                    {
+                        //cannot map previous block, out of memory?
+                        assert("failed to map previous block" == NULL);
+                    }
+                }
+                else
+                    m_pCurWPos = (*m_pCurWBlock)->getBufEnd();
+            }
+            else
+                return;
+            
+        }
+        else
+        {
+            m_pCurWPos -= rewind;
+            return;
+        }
+    }
 }
 
 
@@ -243,12 +282,12 @@ int VMemBuf::reinit(off_t TargetSize)
         m_pCurWBlock = m_pCurRBlock = m_bufList.begin();
         if (*m_pCurWBlock)
         {
-            m_iCurWBlkPos = m_curRBlkPos = (*m_pCurWBlock)->getBlockSize();
+            m_curWBlkPos = m_curRBlkPos = (*m_pCurWBlock)->getBlockSize();
             m_pCurRPos = m_pCurWPos = (*m_pCurWBlock)->getBuf();
         }
         else
         {
-            m_iCurWBlkPos = m_curRBlkPos = 0;
+            m_curWBlkPos = m_curRBlkPos = 0;
             m_pCurRPos = m_pCurWPos = NULL;
         }
     }
@@ -357,7 +396,7 @@ int VMemBuf::set(int type, int size)
     {
         appendBlock(pBlock);
         m_pCurRPos = m_pCurWPos = pBlock->getBuf();
-        m_iCurTotalSize = m_curRBlkPos = m_iCurWBlkPos = pBlock->getBlockSize();
+        m_iCurTotalSize = m_curRBlkPos = m_curWBlkPos = pBlock->getBlockSize();
         m_pCurRBlock = m_pCurWBlock = m_bufList.begin();
     }
     return 0;
@@ -437,7 +476,7 @@ int VMemBuf::set(BlockBuf *pBlock)
     appendBlock(pBlock);
     m_pCurRBlock = m_pCurWBlock = m_bufList.begin();
     m_pCurRPos = m_pCurWPos = pBlock->getBuf();
-    m_iCurTotalSize = m_curRBlkPos = m_iCurWBlkPos = pBlock->getBlockSize();
+    m_iCurTotalSize = m_curRBlkPos = m_curWBlkPos = pBlock->getBlockSize();
     return 0;
 }
 
@@ -484,14 +523,14 @@ void VMemBuf::rewindWriteBuf()
         if (m_pCurWBlock != m_pCurRBlock)
         {
             m_pCurWBlock = m_pCurRBlock;
-            m_iCurWBlkPos = m_curRBlkPos;
+            m_curWBlkPos = m_curRBlkPos;
         }
         m_pCurWPos = m_pCurRPos;
     }
     else
     {
         m_pCurRBlock = m_pCurWBlock;
-        m_curRBlkPos = m_iCurWBlkPos;
+        m_curRBlkPos = m_curWBlkPos;
         m_pCurRPos = m_pCurWPos;
     }
 
@@ -550,7 +589,7 @@ int VMemBuf::mapNextWBlock()
         {
             if (!(*(m_pCurWBlock + 1))->getBuf())
             {
-                if (remapBlock(*(m_pCurWBlock + 1), m_iCurWBlkPos) == -1)
+                if (remapBlock(*(m_pCurWBlock + 1), m_curWBlkPos) == -1)
                     return LS_FAIL;
             }
             if (m_pCurWBlock != m_pCurRBlock)
@@ -569,11 +608,11 @@ int VMemBuf::mapNextWBlock()
         }
 #endif
         m_pCurWBlock = m_pCurRBlock = m_bufList.begin();
-        m_iCurWBlkPos = 0;
+        m_curWBlkPos = 0;
         m_curRBlkPos = (*m_pCurWBlock)->getBlockSize();
         m_pCurRPos = (*m_pCurWBlock)->getBuf();
     }
-    m_iCurWBlkPos += (*m_pCurWBlock)->getBlockSize();
+    m_curWBlkPos += (*m_pCurWBlock)->getBlockSize();
     m_pCurWPos = (*m_pCurWBlock)->getBuf();
     return 0;
 }
@@ -640,7 +679,7 @@ char *VMemBuf::getReadBuffer(size_t &size)
         if (mapNextRBlock() != 0)
             return NULL;
     }
-    if (m_curRBlkPos == m_iCurWBlkPos)
+    if (m_curRBlkPos == m_curWBlkPos)
         size = m_pCurWPos - m_pCurRPos;
     else
         size = (*m_pCurRBlock)->getBufEnd() - m_pCurRPos;
@@ -671,14 +710,14 @@ off_t VMemBuf::getCurROffset() const
 off_t VMemBuf::getCurWOffset() const
 {
     return m_pCurWBlock
-           ? (m_iCurWBlkPos - ((*m_pCurWBlock)->getBufEnd() - m_pCurWPos))
+           ? (m_curWBlkPos - ((*m_pCurWBlock)->getBufEnd() - m_pCurWPos))
            : 0;
 }
 
 
 int VMemBuf::mapNextRBlock()
 {
-    if (m_curRBlkPos >= m_iCurWBlkPos)
+    if (m_curRBlkPos >= m_curWBlkPos)
         return LS_FAIL;
     if (m_pCurRBlock)
     {
@@ -709,7 +748,7 @@ off_t  VMemBuf::writeBufSize() const
 {
     if (m_pCurWBlock == m_pCurRBlock)
         return m_pCurWPos - m_pCurRPos;
-    off_t  diff = m_iCurWBlkPos - m_curRBlkPos;
+    off_t  diff = m_curWBlkPos - m_curRBlkPos;
     if (m_pCurWBlock)
         diff += m_pCurWPos - (*m_pCurWBlock)->getBuf();
     if (m_pCurRBlock)

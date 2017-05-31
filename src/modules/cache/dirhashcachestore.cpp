@@ -149,6 +149,7 @@ CacheEntry *DirHashCacheStore::getCacheEntry(CacheHash &hash,
     int dispose = 0;
     int stale = 0;
     int pathLen = 0;
+    int ret = 0;
 
     if (iter != end())
     {
@@ -269,11 +270,11 @@ CacheEntry *DirHashCacheStore::getCacheEntry(CacheHash &hash,
         return NULL;
     }
 
-    if (pEntry->verifyKey(pKey) != 0)
+    if ((ret = pEntry->verifyKey(pKey)) != 0)
     {
         g_api->log(NULL, LSI_LOG_DEBUG,
-                   "[CACHE] [%p] does not match cache key, key confliction detect, do not use."
-                   , pEntry);
+                   "[CACHE] [%p] does not match cache key, key confliction detect, do not use [ret=%d].\n"
+                   , pEntry, ret);
 
         getManager()->incStats(pEntry->isPrivate(), offsetof(cachestats_t,
                                collisions));

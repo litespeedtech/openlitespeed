@@ -3,10 +3,11 @@ m4_include(ax_check_openssl.m4)
 m4_include(ax_path_lib_pcre.m4)
 m4_include(ax_lib_expat.m4)
 m4_include(ax_check_liblua.m4)
+m4_include(ax_check_libudns.m4)
 
 dnl Process this file with autoconf to produce a configure script.
 AC_PREREQ([2.69])
-AC_INIT([openlitespeed],[1.4.25],[info@litespeedtech.com],[openlitespeed],[http://www.litespeedtech.com/])
+AC_INIT([openlitespeed],[1.4.26],[info@litespeedtech.com],[openlitespeed],[http://www.litespeedtech.com/])
 AM_INIT_AUTOMAKE([1.0 foreign no-define ])
 
 AM_CONFIG_HEADER(src/config.h:src/config.h.in)
@@ -207,7 +208,7 @@ else
     #### Not provide location, use default location, will not copy files
     usedynossl=no
     AC_DEFINE_UNQUOTED([USE_BORINGSSL], [1], [Defined to use BoringSSL instead of OpenSSL])
-    CPPFLAGS=" -I../../ssl/include $CPPFLAGS -I../../src -I../../include -I/usr/local/include -I/usr/local -I/usr -I/usr/pkg "
+    CPPFLAGS=" -I../../ssl/include $CPPFLAGS -I../../src -I../../include -I/usr/local/include -I/usr/local -I/usr -I/usr/pkg -DUSE_BORINGSSL=1 "
     if test "$OPENLSWS_BSSL" = yes ; then
         echo "Will use exist BoringSSL files in $srcdir/ssl/."
     else
@@ -265,6 +266,8 @@ if test "$OSNAME" = Darwin ; then
 fi
 
 AX_PATH_LIB_PCRE(, AC_MSG_ERROR(Can not find pcre. You must install it before continuing.))
+AX_PATH_LIB_UDNS(, AC_MSG_ERROR(Can not find udns library. You must install it before continuing.))
+
 AX_LIB_EXPAT(0.5)
 AC_CHECK_LIB([GeoIP], [GeoIP_id_by_addr])
 AC_CHECK_LIB(crypt,crypt,LIBS="-lcrypt $LIBS")
@@ -314,7 +317,7 @@ if test "$OSNAME" = Darwin ; then
     RT_LIB_OPTION=
 fi
 
-LDFLAGS="$LDFLAGS $PCRE_LDFLAGS -D_GLIBCXX_USE_CXX11_ABI=0"
+LDFLAGS="$LDFLAGS $PCRE_LDFLAGS $UDNS_LDFLAGS -D_GLIBCXX_USE_CXX11_ABI=0"
 echo "Final LDFLAGS='$LDFLAGS'"
 AC_SUBST([DL_LIB_OPTION])
 AC_SUBST([RT_LIB_OPTION])
@@ -336,8 +339,10 @@ AC_CONFIG_FILES(Makefile
                 src/lsiapi/Makefile
                 src/modules/Makefile
                 src/shm/Makefile
+                src/adns/Makefile
                 src/modules/cache/Makefile
                 src/modules/modinspector/Makefile
+                src/modules/modreqparser/Makefile
                 src/modules/uploadprogress/Makefile)
                 
 if test x$need_lua = xyes ; then

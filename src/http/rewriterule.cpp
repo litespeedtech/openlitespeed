@@ -853,7 +853,7 @@ int RewriteRule::parseOneFlag(const char *&pRuleStr, const char *pEnd)
     case 'p':
         if (strncasecmp(pRuleStr, "passthrough", 11) == 0)
         {
-            m_flag |= RULE_FLAG_PASSTHRU;
+            m_flag |= (RULE_FLAG_PASSTHRU | RULE_FLAG_LAST);
             pRuleStr += 11;
         }
         else if (strncasecmp(pRuleStr, "pt", 2) == 0)

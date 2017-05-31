@@ -31,6 +31,8 @@ public:
     time_t      m_mtime;
 };
 
+#define SINFO_FLAG_ADNS_OP      4
+
 class ServerInfo
 {
     static ServerInfo *s_pServerInfo;
@@ -43,7 +45,8 @@ public:
     char           *m_pChroot;
     DLinkedObj      m_unixSocketList;
     char           *m_pBufEnd;
-    int             m_restart;
+    volatile int    m_restart;
+    volatile int64_t m_flags;
 
     ServerInfo(char *pBegin, char *pEnd);
     ~ServerInfo();
@@ -61,6 +64,11 @@ public:
     {   s_pServerInfo = pServerInfo;    }
     static ServerInfo *getServerInfo()
     {   return s_pServerInfo;   }
+
+    void setAdnsOp(int adnsOp)
+    {   m_flags = adnsOp ? (m_flags | SINFO_FLAG_ADNS_OP)
+                         : (m_flags & ~SINFO_FLAG_ADNS_OP); }
+    int isAdnsOp() const    {   return m_flags & SINFO_FLAG_ADNS_OP;    }
 };
 
 #endif

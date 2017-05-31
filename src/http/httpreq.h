@@ -175,12 +175,9 @@ private:
     const MimeSetting  *m_pMimeType;
 
     ls_xpool_t         *m_pPool;
-    ls_strpair_t       m_curUrl;
-    ls_strpair_t      *m_pUrls;
-    ls_str_t            m_location;
+    ls_strpair_t        m_curUrl;
+    ls_strpair_t       *m_pUrls;
     char               *m_pAuthUser;
-    ls_str_t            m_pathInfo;
-    ls_str_t            m_newHost;
     RadixNode          *m_pEnv;
     KVPairArray         m_unknHeaders;
 
@@ -192,6 +189,10 @@ private:
     int                 m_reqLineLen;
     int                 m_reqURLOff;
     int                 m_reqURLLen;
+    ls_str_t            m_location;
+    ls_str_t            m_pathInfo;
+    ls_str_t            m_newHost;
+    ls_str_t            m_redirHdrs;
     unsigned char       m_iHeaderStatus;
     unsigned char       m_iHS1;
     unsigned char       m_iHS3;
@@ -235,7 +236,7 @@ private:
     int                 m_fdReqFile;
     struct stat         m_fileStat;
     int                 m_iScriptNameLen;
-    short               m_pReqBodyType;
+    short               m_iBodyType;
     LogSession         *m_pILog;
     CookieList          m_cookies;
 
@@ -482,6 +483,12 @@ public:
     void clearLocation()
     {   ls_str_set(&m_location, NULL, 0); }
 
+    int  appendRedirHdr(const char *pDisp, int len);
+    int  getRedirHdrsLen() const      
+    {   return ls_str_len(&m_redirHdrs);   }
+    const char *getRedirHdrs() const
+    {  return ls_str_cstr(&m_redirHdrs);   }
+    
     int  addWWWAuthHeader(HttpRespHeaders &buf) const;
     const AuthRequired *getAuthRequired() const
     {   return m_pAuthRequired; }
@@ -502,11 +509,12 @@ public:
     void setRange(HttpRange *pRange)        {   m_pRange = pRange;          }
 
     VMemBuf *getBodyBuf() const             {   return m_pReqBodyBuf;       }
-    short getBodyType() const               {   return m_pReqBodyType;  }
+    short getBodyType() const               {   return m_iBodyType;  }
 
     int prepareReqBodyBuf();
     void replaceBodyBuf(VMemBuf *pBuf);
-    void updateContentType(char *buf);
+    void updateBodyType(const char *buf);
+    
 
     char gzipAcceptable() const             {   return m_iAcceptGzip;       }
     void andGzip(char b)                    {   m_iAcceptGzip &= b;         }

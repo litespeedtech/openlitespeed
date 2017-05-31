@@ -20,7 +20,9 @@
 
 #include <lsdef.h>
 #include <log4cxx/logger.h>
+#include <util/autobuf.h>
 #include <stddef.h>
+#include <time.h>
 
 class GSockAddr;
 class HttpFetch;
@@ -39,7 +41,9 @@ class HttpFetch
     int         m_iReqBufLen;
     int         m_iReqSent;
     int         m_iReqHeaderLen;
-    int         m_iReqState;
+    short       m_iReqState;
+    char        m_iNonBlocking;
+    char        m_iEnableDriver;
     const char *m_pReqBody;
     int         m_iReqBodyLen;
     int         m_iConnTimeout;
@@ -47,7 +51,6 @@ class HttpFetch
     int         m_iRespBodyLen;
     char       *m_pRespContentType;
     int         m_iRespBodyRead;
-    int         m_iRespHeaderBufLen;
     char       *m_pProxyAddrStr;
     GSockAddr *m_pProxyAddr;
 
@@ -55,9 +58,10 @@ class HttpFetch
     void       *m_pProcessorArg;
 
     char        m_aHost[256];
-    char        m_aResHeaderBuf[1024];
+    AutoBuf     m_resHeaderBuf;
 
     HttpFetchDriver *m_pDriver;
+    time_t      m_tmStart;
     int         m_iTimeoutSec;
     int         m_iReqInited;
     Logger     *m_pLogger;
@@ -69,14 +73,19 @@ class HttpFetch
     int getLine(char *&p, char *pEnd,
                 char *&pLineBegin, char *&pLineEnd);
     int allocateBuf(const char *pSaveFile);
+    int pollEvent(int evt, int timeoutSecs);
     int buildReq(const char *pMethod, const char *pURL,
                  const char *pContentType = NULL);
-    int startProcessReq(int nonblock, const GSockAddr &sockAddr);
+    int startProcessReq(const GSockAddr &sockAddr);
+    int startProcess();
+    static int asyncDnsLookupCb(void *arg, const long lParam, void *pParam);
+    int startDnsLookup(const char *addrServer);
+
     int sendReq();
     int recvResp();
     void startDriver();
     void stopDriver();
-    int intiReq(const char *pURL, const char *pBody, int bodyLen,
+    int initReq(const char *pURL, const char *pBody, int bodyLen,
                 const char *pSaveFile, const char *pContentType);
     int getLoggerId()     {   return m_iLoggerId;    }
 public:
@@ -114,6 +123,7 @@ public:
     void writeLog(const char *s)
     {   LS_INFO(m_pLogger, "HttpFetch[%d]: %s", getLoggerId(), s);    }
     void enableDebug(int d)                 {   m_iEnableDebug = d;     }
+    time_t getTimeStart() const             {   return m_tmStart;       }
 
 
 

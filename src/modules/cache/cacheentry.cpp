@@ -21,7 +21,7 @@
 #include <unistd.h>
 
 #include <util/dlinkqueue.h>
-
+#include <ls.h>
 
 CacheEntry::CacheEntry()
     : m_lastAccess(0)
@@ -140,7 +140,7 @@ int CacheEntry::verifyKey(CacheKey *pKey) const
     {
         if ((*p  != '?') ||
             (memcmp(p + 1, pKey->m_pQs, pKey->m_iQsLen) != 0))
-            return -1;
+            return -2;
         p += pKey->m_iQsLen + 1;
     }
 
@@ -148,7 +148,7 @@ int CacheEntry::verifyKey(CacheKey *pKey) const
     {
         if ((*p  != '#') ||
             (memcmp(p + 1, pKey->m_sCookie.c_str(), pKey->m_iCookieVary) != 0))
-            return -1;
+            return -3;
         p += pKey->m_iCookieVary + 1;
 
     }
@@ -170,7 +170,7 @@ int CacheEntry::verifyKey(CacheKey *pKey) const
                 if ((*p  != '~') ||
                     (memcmp(p + 1, pKey->m_sCookie.c_str() + pKey->m_iCookieVary,
                             pKey->m_iCookiePrivate) != 0))
-                    return -1;
+                    return -4;
             }
             p += pKey->m_iCookiePrivate + 1;
         }
@@ -179,13 +179,18 @@ int CacheEntry::verifyKey(CacheKey *pKey) const
         {
             if ((*p  != '@') ||
                 (memcmp(p + 1, pKey->m_pIP, pKey->m_ipLen) != 0))
-                return -1;
+                return -5;
             p += pKey->m_ipLen + 1;
         }
     }
     if (m_header.m_keyLen - (isPublic ? m_header.m_iPrivLen : 0)
         > p - m_sKey.c_str())
-        return -1;
+    {
+        g_api->log(NULL, LSI_LOG_DEBUG,
+                   "[CACHE]CacheEntry::verifyKey failed, keylen %d, privLen %d and check len %d.\n",
+                   m_header.m_keyLen, m_header.m_iPrivLen, p - m_sKey.c_str());
+        return -6;
+    }
     return 0;
 }
 

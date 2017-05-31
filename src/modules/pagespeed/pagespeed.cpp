@@ -453,11 +453,6 @@ int net_instaweb::CopyRespBodyToBuf(lsi_session_t *session, GoogleString &str,
 
 int TerminateMainConf(lsi_param_t *rec)
 {
-    if (active_driver_factory != NULL) {
-        delete active_driver_factory;
-        active_driver_factory = NULL;
-    }
-
     delete g_pProcessContext;
     g_pProcessContext = NULL;
 
@@ -779,7 +774,8 @@ static void ParseOption(LsiRewriteOptions *pOption, const char *sLine,
         break;
 
     case LSI_CFG_CONTEXT:
-        scope = RewriteOptions::kQueryScope;// customized at query (query-param, request headers, response headers)
+        //customized at directory level (.htaccess, <Directory>)
+        scope = RewriteOptions::kDirectoryScope;
         break;
 
     default:
@@ -1539,8 +1535,8 @@ int ResourceHandler(PsMData *pMyData,
     }
 
 
-    scoped_ptr<RequestHeaders> request_headers(new RequestHeaders);
-    scoped_ptr<ResponseHeaders> response_headers(new ResponseHeaders);
+    ::scoped_ptr<RequestHeaders> request_headers(new RequestHeaders);
+    ::scoped_ptr<ResponseHeaders> response_headers(new ResponseHeaders);
 
     CopyReqHeadersFromServer(session, request_headers.get());
     CopyRespHeadersFromServer(session, response_headers.get());
@@ -2065,6 +2061,9 @@ int sendRespBody(lsi_param_t *rec)
         || (ctx = pMyData->ctx) == NULL)
         return g_api->stream_write_next(rec, (const char *) rec->ptr1,
                                         rec->len1);
+    g_api->log(rec->session, LSI_LOG_DEBUG,
+               "[%s] sendRespBody() flag_in %d, buffer in %d.\n",
+               ModuleName, rec->flag_in, rec->len1 );
 
     int doneCalled = pMyData->doneCalled;
     int ret = rec->len1;
@@ -2144,7 +2143,7 @@ int sendRespBody(lsi_param_t *rec)
 
 
     g_api->log(rec->session, LSI_LOG_DEBUG,
-               "[%s]ps_body_filter flag_in %d, flag out %d, done_called %d, Accumulated %d, write to next %d, buffer data written %d.\n",
+               "[%s] sendRespBody() flag_in %d, flag out %d, done_called %d, Accumulated %d, write to next %d, buffer data written %d.\n",
                ModuleName, rec->flag_in, *rec->flag_out, doneCalled,
                rec->len1, ret, writtenTotal);
 

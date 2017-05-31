@@ -500,7 +500,7 @@ static lsi_serverhook_t server_hooks[] =
 {
     { LSI_HKPT_HTTP_BEGIN, initdata, LSI_HOOK_NORMAL, LSI_FLAG_ENABLED },
     //{ LSI_HKPT_HTTP_END, resetdata, LSI_HOOK_NORMAL, LSI_FLAG_ENABLED },
-    { LSI_HKPT_RECV_REQ_HEADER, reg_handler, LSI_HOOK_NORMAL, LSI_FLAG_ENABLED },
+    { LSI_HKPT_RCVD_REQ_HEADER, reg_handler, LSI_HOOK_NORMAL, LSI_FLAG_ENABLED },
     LSI_HOOK_END   //Must put this at the end position
 };
 
