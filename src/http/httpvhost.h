@@ -149,7 +149,6 @@ private:
     SslContext         *m_pSSLCtx;
     SSITagConfig       *m_pSSITagConfig;
     AutoStr2            m_sSpdyAdHeader;
-    ReqParserParam      m_ReqParserConfig;
     LsiModuleData       m_moduleData;
 
     UrlStxFileHash     *m_pUrlStxFileHash;
@@ -435,8 +434,6 @@ public:
     const AutoStr2 &getSpdyAdHeader() const         {       return m_sSpdyAdHeader; }
 
     LsiModuleData *getModuleData()      {   return &m_moduleData;   }
-
-    const ReqParserParam *getReqParserConfig() {   return  &m_ReqParserConfig;   }
 
     void enableAioLogging();
 

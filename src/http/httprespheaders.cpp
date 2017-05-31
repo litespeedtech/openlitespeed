@@ -180,7 +180,11 @@ int HttpRespHeaders::appendHeader(resp_kvpair *pKv, const char *pName,
     {
         int new_id = getTotalCount();
         if (getFreeSpaceCount() <= 0)
+        {
+            int i = pKv - (resp_kvpair *)m_aKVPairs.begin();
             incKVPairs(10);
+            pKv = getKV(i);
+        }
         if (pKv->next_index == 0)
             pKv->next_index = new_id + 1;
         else

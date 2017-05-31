@@ -131,11 +131,11 @@ public:
     void  mvFreeBucket();
 
 
-    void enableLock()
-    {   m_iLockEnable = 1; }
+    void enableAutoLock()
+    {   m_iAutoLock = 1; }
 
-    void disableLock()
-    {   m_iLockEnable = 0; }
+    void disableAutoLock()
+    {   m_iAutoLock = 0; }
 
     ls_attr_inline LsShmSize_t getShmMapMaxSize() const
     {   return m_pShm->maxSize(); }
@@ -155,13 +155,11 @@ public:
 
     int lock()
     {
-        if (m_iLockEnable == 0)
-            return 0;
-        return getShm()->lockRemap(m_pShmLock);
+        return m_iAutoLock ? 0 : getShm()->lockRemap(m_pShmLock);
     }
 
     int unlock()
-    {   return m_iLockEnable && ls_shmlock_unlock(m_pShmLock); }
+    {   return m_iAutoLock ? 0 : ls_shmlock_unlock(m_pShmLock); }
 
     int getRef()  { return m_iRef; }
     int upRef()   { return ++m_iRef; }
@@ -172,6 +170,9 @@ public:
                   LsShmValComp_fn vc, int flags);
     LsShmOffset_t allocateNewHash(int initSize, int iMode, int iFlags);
     int mergeDeadPool(LsShmPoolMem* pPool);
+    
+    void addLeftOverPages(LsShmOffset_t offset, LsShmSize_t size);
+
 
     static void setPid( int pid );
 
@@ -182,14 +183,20 @@ private:
     LsShmPoolMap *getDataMap() const;
 
     int setupLock()
-    {   return m_iLockEnable && ls_shmlock_setup(m_pShmLock); }
+    {   return m_iAutoLock && ls_shmlock_setup(m_pShmLock); }
 
     void mapLock();
+    
+    int autoLock()
+    {   return m_iAutoLock ? getShm()->lockRemap(m_pShmLock) : 0;   }
 
+    int autoUnlock()
+    {   return m_iAutoLock ? ls_shmlock_unlock(m_pShmLock) : 0;     }
+    
     LsShmOffset_t getReg(const char *name);
 
     LsShmOffset_t allocPage(LsShmSize_t pagesize, int &remapped);
-    void releasePage(LsShmOffset_t offset, LsShmSize_t pagesize);
+    void releasePageLocked(LsShmOffset_t offset, LsShmSize_t pagesize);
 
     // for internal purpose
     void  releaseData(LsShmOffset_t offset, LsShmSize_t size);
@@ -236,7 +243,7 @@ private:
     LsShmStatus_t       m_status;       // Ready ...
     LsShmOffset_t       m_iOffset;      // find from SHM registry
     ls_shmlock_t       *m_pShmLock;
-    int8_t              m_iLockEnable;
+    int8_t              m_iAutoLock;
     int8_t              m_iShmOwner;    // indicated if I own the SHM
     uint16_t            m_iRegNum;      // registry number
     LsShmPool          *m_pParent;      // parent global pool

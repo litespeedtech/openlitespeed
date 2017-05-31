@@ -865,7 +865,10 @@ void ReqParser::logParsingError(HttpReq *pReq)
 
 int ReqParser::appendBodyBuf(const char *s, size_t len)
 {
-    if (len <= 0)
+    if (!isParseUploadByFilePath())
+        return len;
+
+    if (len <= 0 || !m_pReq)
         return len;
 
     size_t size;

@@ -594,7 +594,7 @@ int HttpSession::readReqBody()
                 return 0;
         }
 
-        if (m_pReqParser && m_pReqParser->isParsePost())
+        if (m_pReqParser && m_pReqParser->isParsePost() && m_pReqParser->isParseUploadByFilePath())
         {
             pBuf = tmpBuf;
             size = 8192;
@@ -636,6 +636,9 @@ int HttpSession::readReqBody()
         {
             if (m_pReqParser && m_pReqParser->isParsePost())
             {
+                if (!m_pReqParser->isParseUploadByFilePath())
+                    m_request.getBodyBuf()->writeUsed(ret);
+                
                 //Update buf
                 ret = m_pReqParser->parseUpdate(pBuf, ret);
                 if (ret != 0)

@@ -91,7 +91,7 @@ static int begin_process(lsi_session_t *session)
 
 static lsi_serverhook_t server_hooks[] =
 {
-    { LSI_HKPT_RECV_REQ_HEADER, reg_handler, LSI_HOOK_NORMAL, LSI_FLAG_ENABLED },
+    { LSI_HKPT_RCVD_REQ_HEADER, reg_handler, LSI_HOOK_NORMAL, LSI_FLAG_ENABLED },
     //{ LSI_HKPT_SEND_RESP_BODY, dummycall, LSI_HOOK_NORMAL, 0 },
     LSI_HOOK_END   //Must put this at the end position
 };

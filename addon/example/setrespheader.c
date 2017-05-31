@@ -166,7 +166,7 @@ static int _init(lsi_module_t *module)
 
 static lsi_serverhook_t server_hooks[] =
 {
-    { LSI_HKPT_RECV_REQ_HEADER, check_if_remove_session_hook, LSI_HOOK_NORMAL, LSI_FLAG_ENABLED },
+    { LSI_HKPT_RCVD_REQ_HEADER, check_if_remove_session_hook, LSI_HOOK_NORMAL, LSI_FLAG_ENABLED },
     { LSI_HKPT_SEND_RESP_HEADER, check_type, LSI_HOOK_NORMAL, 0 },
     LSI_HOOK_END   //Must put this at the end position
 };

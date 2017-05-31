@@ -24,7 +24,7 @@ class UserSettings
 
     var $Time_Format = " d-M-Y H:i ";
     var $IconPath = "/_autoindex/icons";
-    var $nameWidth = 45;
+    var $nameWidth = 80;
     var $nameFormat;
 
     function UserSettings()
@@ -59,7 +59,7 @@ class AllImgs
     function AllImgs()
     {
         $this->mapping = array(
-            new IMG_Mapping( array( 'gif', 'png', 'jpg', 'jpeg', 'tif', 'tiff', 'bmp'),
+            new IMG_Mapping( array( 'gif', 'png', 'jpg', 'jpeg', 'tif', 'tiff', 'bmp', 'svg', 'raw'),
                              'image.png', '[IMG]', '' ),
             new IMG_Mapping( array( 'html', 'htm', 'shtml', 'php', 'phtml',
                                     'css', 'js' ),
@@ -224,14 +224,15 @@ function printIncludes( $path, $name )
 
         if ( file_exists($filename) )
         {
+            $content = file_get_contents($filename);
             if ( $n == $name )
             {
                 echo "<pre>\n";
-                include "$path$n";
+                echo $content;
                 echo "</pre>\n";
             }
             else
-                include "$path$n";
+                echo $content;
             break;
         }
     }
@@ -355,6 +356,24 @@ $ModSort = ($sortOrder == 'MA') ? 'MD' : 'MA';
 $SizeSort = ($sortOrder == 'SA') ? 'SD' : 'SA';
 $DescSort = ($sortOrder == 'DA') ? 'DD' : 'DA';
 
+if ( !$path )
+{
+    header("HTTP/1.1 403 Forbidden" );
+    echo "<h1>403 Access Denied</h1>";
+    exit;
+}
+else
+{
+    $list = readDirList( $path, $setting->Exclude_Patterns, $map );
+    if ( $list === null )
+    {
+        header("HTTP/1.1 403 Forbidden" );
+        echo "<h1>403 Access Denied</h1>";
+        exit;
+    }
+}
+
+
 echo "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 3.2 Final//EN\">
 <html>
   <head>
@@ -378,42 +397,24 @@ else
 }
 echo $header;
 
-if ( !$path )
+if ( $uri != '/' )
 {
-    echo "[ERROR] Auto Index script can not be accessed directly!";
-}
-else
-{
-    $list = readDirList( $path, $setting->Exclude_Patterns, $map );
-    if ( $list === null )
+    $fileStat = new FileStat('');
+    $fileStat->mtime = filemtime($path);
+    $fileStat->img = $map->parent_img;
+    $fileStat->size = -1;
+    $base = substr( $uri, 0, strlen( $uri ) - 1 );
+    $off = strrpos( $base, '/' );
+    if ( $off !== FALSE )
     {
-        print "[ERROR] Can not open directory for URI: $uri!" ;
+        $base = substr( $base, 0, $off + 1 );
+        printOneEntry(  $base, "Parent Directory", $fileStat, $setting );
     }
-    else
-    {
 
-        if ( $uri != '/' )
-        {
-            $fileStat = new FileStat('');
-            $fileStat->mtime = filemtime($path);
-            $fileStat->img = $map->parent_img;
-            $fileStat->size = -1;
-            $base = substr( $uri, 0, strlen( $uri ) - 1 );
-            $off = strrpos( $base, '/' );
-            if ( $off !== FALSE )
-            {
-                $base = substr( $base, 0, $off + 1 );
-                printOneEntry(  $base, "Parent Directory", $fileStat, $setting );
-            }
-
-        }
-        $cmpFunc = "cmp$sortOrder";
-        usort( $list, $cmpFunc );
-        printFileList( $list, $uri, $setting );
-
-
-    }
 }
+$cmpFunc = "cmp$sortOrder";
+usort( $list, $cmpFunc );
+printFileList( $list, $uri, $setting );
 
 if ( isset($_SERVER['LS_FI_OFF'])&& $_SERVER['LS_FI_OFF'] )
 {

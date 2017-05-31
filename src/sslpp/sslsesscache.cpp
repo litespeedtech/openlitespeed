@@ -75,7 +75,7 @@ int SslSessCache::initShm()
     if ((m_pSessStore = pPool->getNamedHash(shmSslCache, 10000,
                                             LsShmHash::hash32id, memcmp, LSSHM_FLAG_LRU)) != NULL)
     {
-        m_pSessStore->disableLock(); // we will be responsible for the lock
+        m_pSessStore->disableAutoLock(); // we will be responsible for the lock
         s_numNew = 0;
         return LS_OK;
     }

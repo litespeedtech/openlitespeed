@@ -864,7 +864,7 @@ class DTblDefBase
 	{
 		$attrs = array(
 				DTblDefBase::NewCheckBoxAttr('sslProtocol', DMsg::ALbl('l_protocolver'),
-						array('1'=>'SSL v3.0', '2'=>'TLS v1.0', '4'=>'TLS v1.1', '8'=>'TLS v1.2')),
+						array('1'=>'SSL v3.0', '2'=>'TLS v1.0', '4'=>'TLS v1.1', '8'=>'TLS v1.2', '16'=>'TLS v1.3')),
 				DTblDefBase::NewTextAttr('ciphers', DMsg::ALbl('l_ciphers'), 'cust'),
 				DTblDefBase::NewBoolAttr('enableECDHE', DMsg::ALbl('l_enableecdhe')),
 				DTblDefBase::NewBoolAttr('enableDHE', DMsg::ALbl('l_enabledhe')),

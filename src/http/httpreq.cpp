@@ -139,9 +139,6 @@ HttpReq::HttpReq()
     ls_xpool_skipfree(m_pPool);
     uSetURI(NULL, 0);
     ls_str_set(&m_curUrl.val, NULL, 0);
-    ls_str_set(&m_location, NULL, 0);
-    ls_str_set(&m_pathInfo, NULL, 0);
-    ls_str_set(&m_newHost, NULL, 0);
     m_pUrls = (ls_strpair_t *)malloc(sizeof(ls_strpair_t) *
                                      (MAX_REDIRECTS + 1));
     memset(m_pUrls, 0, sizeof(ls_strpair_t) * (MAX_REDIRECTS + 1));
@@ -163,9 +160,6 @@ HttpReq::~HttpReq()
     m_pPool = NULL;
     uSetURI(NULL, 0);
     ls_str_set(&m_curUrl.val, NULL, 0);
-    ls_str_set(&m_location, NULL, 0);
-    ls_str_set(&m_pathInfo, NULL, 0);
-    ls_str_set(&m_newHost, NULL, 0);
     if (m_pUrls)
         free(m_pUrls);
     m_pUrls = NULL;
@@ -203,9 +197,6 @@ void HttpReq::reset()
     m_cookies.init();
     uSetURI(NULL, 0);
     ls_str_set(&m_curUrl.val, NULL, 0);
-    ls_str_set(&m_location, NULL, 0);
-    ls_str_set(&m_pathInfo, NULL, 0);
-    ls_str_set(&m_newHost, NULL, 0);
     memset(m_pUrls, 0, sizeof(ls_strpair_t) * (MAX_REDIRECTS + 1));
     m_pEnv = NULL;
     m_pAuthUser = NULL;
@@ -1999,6 +1990,16 @@ int HttpReq::setLocation(const char *pLoc, int len)
     if (m_location.ptr != NULL)
         sanitizeHeaderValue(m_location.ptr, m_location.len);
     return ret;
+}
+
+
+int  HttpReq::appendRedirHdr(const char *pDisp, int len)
+{
+    ls_str_xappend(&m_redirHdrs, pDisp, len, m_pPool);
+    char *p = ls_str_buf(&m_redirHdrs) + ls_str_len(&m_redirHdrs) - 2;
+    *p++ = '\r';
+    *p = '\n';
+    return len;
 }
 
 

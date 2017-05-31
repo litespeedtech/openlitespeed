@@ -97,6 +97,12 @@ int HttpCgiTool::processHeaderLine(HttpExtConnector *pExtConn,
                 return 0;
         }
     }
+    if (pExtConn->getHttpSession()->getState() == HSS_REDIRECT
+        && pReq->getRedirHdrs() )
+    {
+        pReq->appendRedirHdr(pLineBegin, pLineEnd - pLineBegin + 2);
+        return 0;
+    }
     switch (index)
     {
     case HttpRespHeaders::H_CONTENT_TYPE:
@@ -155,6 +161,9 @@ int HttpCgiTool::processHeaderLine(HttpExtConnector *pExtConn,
 //         {
 //             pReq->andGzip( ~GZIP_ENABLED );
 //         }
+        break;
+    case HttpRespHeaders::H_CONTENT_DISPOSITION:
+        pReq->appendRedirHdr(pLineBegin, pLineEnd - pLineBegin + 2);
         break;
     case HttpRespHeaders::H_LOCATION:
         if ((status & HEC_RESP_PROXY) || (pReq->getStatusCode() != SC_200))

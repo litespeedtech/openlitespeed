@@ -204,3 +204,20 @@ void AddrMap::unmap()
     m_ptr2offTable.clear();
 }
 
+
+size_t AddrMap::getAvailAddrSpace( size_t offset, size_t required_size)
+{
+    size_t avail = 0;
+    int page = offset >> LARGE_PAGE_BITS;
+    avail = LARGE_PAGE_SIZE - (offset & LARGE_PAGE_MASK);
+    while(avail < required_size && page < m_off2ptrTable.size())
+    {
+        if (m_off2ptrTable[page + 1] - m_off2ptrTable[page] == LARGE_PAGE_SIZE)
+        {
+            avail += LARGE_PAGE_SIZE;
+            ++page;
+        }
+    }
+    return avail;    
+}
+

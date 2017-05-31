@@ -428,7 +428,7 @@ LsShmHash::LsShmHash(LsShmPool *pool, const char *name,
     m_iRef = 0;
     m_status = LSSHM_NOTREADY;
     m_pShmLock = NULL;
-    m_iLockEnable = 1;      // enableLock()
+    m_iAutoLock = 1;      // enableLock()
 
     if (m_hf != NULL)
     {

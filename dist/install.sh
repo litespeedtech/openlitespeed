@@ -6,18 +6,26 @@ inst_admin_php()
     OS=`uname -s`
     OSTYPE=`uname -m`
 
-    DLCMD="wget -nv -O"
-    if [ "x$OS" = "xFreeBSD" ] ; then
-        DL=`which fetch`
-        DLCMD="$DL -o"
-    fi
-    if [ "x$DLCMD" = "x" ] ; then
-        DL=`which wget`
-        DLCMD="$DL -nv -O"
-    fi
-    if [ "x$DLCMD" = "x" ] ; then
+    DLCMD=
+    DL=`which wget`
+    if [ $? -eq 0 ] ; then
+        DLCMD="wget -nv -O "
+    else
         DL=`which curl`
-        DLCMD="$DL -L -o"
+        if [ $? -eq 0 ] ; then
+            DLCMD="curl -L -o "
+        else
+            if [ "x$OS" = "xFreeBSD" ] ; then
+                DL=`which fetch`
+                if [ $? -eq 0 ] ; then
+                    DLCMD="fetch -o "
+                fi
+            fi
+        fi
+    fi
+
+    if [ "x$DLCMD" = "x" ] ; then
+        echo "ERROR: cannot find proper download method curl/wget/fetch."
     fi
 
     echo "DLCMD is $DLCMD"

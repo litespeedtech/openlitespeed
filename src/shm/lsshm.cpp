@@ -736,12 +736,26 @@ LsShmOffset_t LsShm::allocPage(LsShmSize_t pagesize, int &remap)
     {
         LsShmXSize_t needSize;
         // min 16 unit at a time
-        needSize = ((pagesize - availSize) > (16 * LSSHM_SHM_UNITSIZE)) ?
-                   (pagesize - availSize) : (16 * LSSHM_SHM_UNITSIZE);
+        needSize = ((pagesize - availSize) > (16 * LSSHM_SHM_UNITSIZE)) 
+                   ? (pagesize - availSize) : (16 * LSSHM_SHM_UNITSIZE);
+
+        LsShmSize_t availAddrSize = m_addrMap.getAvailAddrSpace(
+            x_pShmMap->x_stat.m_iUsedSize, pagesize);
+        if (pagesize > availAddrSize)
+        {
+            needSize += availAddrSize; 
+        }
+        
         if (expand(roundToPageSize(needSize)) != LSSHM_OK)
         {
             offset = 0;
             goto out;
+        }
+        if (pagesize > availAddrSize)
+        {
+            m_pGPool->addLeftOverPages(x_pShmMap->x_stat.m_iUsedSize, 
+                                       availAddrSize);
+            used(availAddrSize);
         }
     }
     offset = x_pShmMap->x_stat.m_iUsedSize;
@@ -758,13 +772,13 @@ int LsShm::recoverOrphanShm()
     if ((getGlobalPool() == NULL) || (m_pGHash == NULL))
         return 0;
 
-    m_pGHash->disableLock();
+    m_pGHash->disableAutoLock();
     m_pGHash->lockChkRehash();
     LsShmSize_t size = m_pGHash->size();
     m_pGHash->for_each2(m_pGHash->begin(), m_pGHash->end(), chkReg, this);
     size -= m_pGHash->size();
     m_pGHash->unlock();
-    m_pGHash->enableLock();
+    m_pGHash->enableAutoLock();
     return (int)size;
 }
 

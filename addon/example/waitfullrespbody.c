@@ -113,7 +113,7 @@ static int session_hook_func(lsi_param_t *param)
 
 static lsi_serverhook_t server_hooks[] =
 {
-    { LSI_HKPT_RECV_REQ_HEADER, get_testtype, LSI_HOOK_NORMAL, LSI_FLAG_ENABLED },
+    { LSI_HKPT_RCVD_REQ_HEADER, get_testtype, LSI_HOOK_NORMAL, LSI_FLAG_ENABLED },
 
     { LSI_HKPT_RCVD_RESP_HEADER, session_hook_func, LSI_HOOK_NORMAL, 0 },
     { LSI_HKPT_RECV_RESP_BODY, session_hook_func, LSI_HOOK_NORMAL, 0 },

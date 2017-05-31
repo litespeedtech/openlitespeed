@@ -2383,10 +2383,6 @@ HttpVHost *HttpVHost::configVHost(const XmlNode *pNode, const char *pName,
         pVHnew->getThrottleLimits()->config(pNode,
                                             ThrottleControl::getDefault(), &currentCtx);
 
-        pVHnew->m_ReqParserConfig.m_iEnableUploadFile = 0;
-        pVHnew->m_ReqParserConfig.m_iFileMod = 0777;
-        pVHnew->m_ReqParserConfig.m_sUploadFilePathTemplate.setStr("/tmp/lshttpd/");
-
         if (pVHnew->config(pConfigNode) == 0)
         {
             HttpServer::getInstance().checkSuspendedVHostList(pVHnew);
@@ -2395,20 +2391,20 @@ HttpVHost *HttpVHost::configVHost(const XmlNode *pNode, const char *pName,
              * Just call below after the docRoot is parsed.
              * If not exist, create it.
              */
-            struct stat stBuf;
-            const char *path =
-                pVHnew->m_ReqParserConfig.m_sUploadFilePathTemplate.c_str();
-            if (stat(path, &stBuf) == -1)
-            {
-                mkdir(path, 02771);
-                chmod(path, 02771);
-                if (pVHnew->m_rootContext.getSetUidMode() == 2)
-                {
-                    struct stat st;
-                    if (stat(pVHnew->m_rootContext.getRoot()->c_str(), &st) != -1)
-                        chown(path, st.st_uid, st.st_gid);
-                }
-            }
+//             struct stat stBuf;
+//             const char *path =
+//                 pVHnew->m_ReqParserConfig.m_sUploadFilePathTemplate.c_str();
+//             if (stat(path, &stBuf) == -1)
+//             {
+//                 mkdir(path, 02771);
+//                 chmod(path, 02771);
+//                 if (pVHnew->m_rootContext.getSetUidMode() == 2)
+//                 {
+//                     struct stat st;
+//                     if (stat(pVHnew->m_rootContext.getRoot()->c_str(), &st) != -1)
+//                         chown(path, st.st_uid, st.st_gid);
+//                 }
+//             }
             return pVHnew;
         }
 

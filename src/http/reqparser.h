@@ -82,6 +82,9 @@ public:
     bool getEnableUploadFile()  {   return m_pFileUploadConfig != NULL; }
     int  isParsePost() const    {   return m_iParseState == PARSE_START;   }
     bool isParseDone() const    {   return m_iParseState == PARSE_DONE; }
+    bool isParseUploadByFilePath() const 
+    {   return m_pFileUploadConfig != NULL; }
+
     int  beginParsePost();
 
     const char *getReqVar(HttpSession *pSession, int varId, int &len,

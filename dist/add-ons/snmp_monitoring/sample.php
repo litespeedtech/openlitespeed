@@ -1,4 +1,4 @@
-<?
+<?php
 
 /*--------------------------------
 assuming  following entry in /etc/snmp/snmpd.conf

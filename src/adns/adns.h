@@ -17,7 +17,6 @@
   *@author Gang Wang
   */
 struct sockaddr;
-class ClientInfo;
 class LsShmHash;
 class Adns;
 

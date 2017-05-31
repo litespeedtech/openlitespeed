@@ -197,8 +197,8 @@ void testChunkBuffer()
     CHECK(chunkLen(CHUNK_BUFSIZE) ==
           len);     //first chunk does not have leading /r/n
     testOS.clearCache();
-    char achBuf[20480];
-    memset(achBuf, 'b', 20480);
+    char achBuf[40480];
+    memset(achBuf, 'b', 40480);
 
     chunkOS.write(achBuf, CHUNK_BUFSIZE);
     len = testOS.getBuf().size();

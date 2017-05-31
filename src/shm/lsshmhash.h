@@ -563,24 +563,24 @@ public:
     
     int check();
 
-    void enableLock()
-    {   m_iLockEnable = 1; };
+    void enableAutoLock()
+    {   m_iAutoLock = 1; };
 
-    void disableLock()
-    {   m_iLockEnable = 0; };
+    void disableAutoLock()
+    {   m_iAutoLock = 0; };
 
     int isAutoLock()
-    {   return m_iLockEnable;   }
+    {   return m_iAutoLock;   }
 
     int lock()
     {
-        if (m_iLockEnable != 0)
+        if (m_iAutoLock != 0)
             return 0;
         return getPool()->getShm()->lockRemap(m_pShmLock);
     }
 
     int unlock()
-    {   return m_iLockEnable ? 0 : ls_shmlock_unlock(m_pShmLock); }
+    {   return m_iAutoLock ? 0 : ls_shmlock_unlock(m_pShmLock); }
 
     void lockChkRehash();
 
@@ -660,13 +660,13 @@ protected:
 
     int autoLock()
     {
-        if (m_iLockEnable == 0)
+        if (m_iAutoLock == 0)
             return 0;
         return getPool()->getShm()->lockRemap(m_pShmLock);
     }
 
     int autoUnlock()
-    {   return m_iLockEnable && ls_shmlock_unlock(m_pShmLock); }
+    {   return m_iAutoLock && ls_shmlock_unlock(m_pShmLock); }
 
     void autoLockChkRehash();
 
@@ -674,7 +674,7 @@ protected:
     int statIdx(iteroffset iterOff, for_each_fn2 fun, void *pUData);
 
     int setupLock()
-    {   return m_iLockEnable && ls_shmlock_setup(m_pShmLock); }
+    {   return m_iAutoLock && ls_shmlock_setup(m_pShmLock); }
 
     // auxiliary double linked list of hash elements
     void set_linkNext(iteroffset offThis, iteroffset offNext)
@@ -715,7 +715,7 @@ protected:
 
     uint8_t             m_iterExtraSpace;
     uint8_t             m_dataExtraSpace;
-    int8_t              m_iLockEnable;
+    int8_t              m_iAutoLock;
     int8_t              m_iMode;        // mode 0=Num, 1=Ptr
     uint8_t             m_iFlags;       // lru=0x01, tid=0x02, tid_slave=0x04
     ls_shmlock_t       *m_pShmLock;     // local lock for Hash

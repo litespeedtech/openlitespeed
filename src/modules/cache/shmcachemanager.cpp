@@ -890,7 +890,7 @@ int ShmCacheManager::initTables(LsShmPool *pPool)
                  LsShmHash::hashXXH32, memcmp, 0);
     if (!m_pUrlVary)
         return -1;
-    m_pUrlVary->disableLock();
+    m_pUrlVary->disableAutoLock();
 
     m_pId2VaryStr = pPool->getNamedHash("id2vary", 100,
                                         LsShmHash::hashXXH32, memcmp, 0);
@@ -930,7 +930,7 @@ int ShmCacheManager::init(const char *pStoreDir)
             continue;
         }
 
-        pPool->disableLock();
+        pPool->disableAutoLock();
         pPool->lock();
 
         if ((initCacheInfo(pPool) == LS_FAIL)
@@ -946,7 +946,7 @@ int ShmCacheManager::init(const char *pStoreDir)
     }
 
     pPool->unlock();
-    pPool->enableLock();
+    pPool->enableAutoLock();
 
     return ret;
 }

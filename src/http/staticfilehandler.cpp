@@ -99,9 +99,11 @@ inline int buildStaticFileHeaders(HttpResp *pResp, HttpReq *pReq,
                                 p + 15, RFC_1123_TIME_LEN);
     p += 15 + RFC_1123_TIME_LEN + 2;
 
-    pResp->getRespHeaders().add(HttpRespHeaders::H_CONTENT_TYPE,
-                                p + 14, pData->getHeaderLen() -
-                                (p - pData->getHeaderBuf()) - 14 - 2);
+    if (pResp->getRespHeaders().getHeader(HttpRespHeaders::H_CONTENT_TYPE, 
+                                          &iETagLen) == NULL)
+        pResp->getRespHeaders().add(HttpRespHeaders::H_CONTENT_TYPE,
+                                    p + 14, pData->getHeaderLen() -
+                                    (p - pData->getHeaderBuf()) - 14 - 2);
 
     p = pSendfileInfo->getECache()->getCLHeader().c_str();
     pResp->getRespHeaders().add(HttpRespHeaders::H_CONTENT_LENGTH, p + 16,
@@ -557,6 +559,11 @@ int StaticFileHandler::process(HttpSession *pSession,
                         ret = addExpiresHeader(pResp, pCache, pExpireDefault);
                         if (ret)
                             return ret;
+                    }
+                    if (pReq->getRedirHdrs())
+                    {
+                        pResp->parseAdd(pReq->getRedirHdrs(),
+                                        pReq->getRedirHdrsLen());
                     }
                 }
             //fall through

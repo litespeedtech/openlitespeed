@@ -559,7 +559,7 @@ $_gmsg['o_userhomedironly'] = 'ユーザーのホームディレクトリのみ'
 $_gmsg['o_vhroot'] = 'Virtual Host Root';
 $_gmsg['o_weekly'] = '毎週';
 $_gmsg['o_yes'] = 'はい';
-$_gmsg['o_notset'] = '設定しない';
+$_gmsg['o_notset'] = '未設定';
 $_gmsg['o_ifownermatch'] = '所有者と一致する場合';
 
 
