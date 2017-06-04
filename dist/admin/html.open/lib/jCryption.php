@@ -380,7 +380,7 @@
 		* @access private
 		*/
 		function _makeSeed() {
-			return hexdec(sha1(sha1(microtime()*mt_rand()).md5(microtime()*mt_rand())));
+			return hexdec(sha1(sha1(microtime(true)*mt_rand()).md5(microtime(true)*mt_rand())));
 		}
 
 		/**
@@ -394,11 +394,11 @@
 			$bits_n = $bits_cnt % 8;
 			do {
 				$str = '';
-				mt_srand($this->_makeSeed());
+				mt_srand((int)$this->_makeSeed());
 				for ($i = 0; $i < $bytes_n; $i++) {
-					$str .= chr(sha1(mt_rand() * microtime()) & 0xff);
+					$str .= chr((int)sha1(mt_rand() * microtime(true)) & 0xff);
 				}
-				$n = mt_rand() * microtime() & 0xff;
+				$n = mt_rand() * microtime(true) & 0xff;
 
 				$n |= 0x80;
 				$n >>= 8 - $bits_n;
@@ -702,4 +702,3 @@
 		}
 
 	}
-
