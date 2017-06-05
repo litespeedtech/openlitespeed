@@ -287,6 +287,8 @@ class RealTimeStats
             $vhosts[$vhname][self::FLD_VH_EAP_REQ_PER_SEC] += doubleval($m[10][$f]) ;
         }
 
+        $sortDesc1 = array();
+        $sortAsc2 = array();
 
         $names = array_keys($vhosts) ;
         if ( $sort != "" && count($names) > 1 ) {
