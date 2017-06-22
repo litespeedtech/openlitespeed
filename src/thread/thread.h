@@ -166,5 +166,3 @@ public:
 
 
 #endif //THREAD_H
-
-
