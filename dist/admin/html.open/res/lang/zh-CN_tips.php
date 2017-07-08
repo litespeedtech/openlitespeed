@@ -1,4 +1,4 @@
-<?php 
+<?php
 
 global $_tipsdb;
 
@@ -308,7 +308,7 @@ $_tipsdb['indexUseServer'] = new DAttrHelp("使用服务器索引文件", '指�
 
 $_tipsdb['initTimeout'] = new DAttrHelp("Initial Request Timeout (secs)", 'Specifies the maximum time in seconds the server will wait for the external  application to respond to the first request over a new established connection.  If the server does not receive any data from the external application within this timeout limit, it will mark this connection as bad. This helps to identify communication problems with external applications as quickly as possible. If some requests take longer to  process, increase this limit to avoid 503 error messages.', '', '无符号整数', '');
 
-$_tipsdb['installpathprefix'] = new DAttrHelp("Installation Path Prefix", 'Sets the value for the &quot;--prefix&quot; configure option. The default installation location is under LiteSpeed Web Server&#039;s install directory.', 'LiteSpeed Web Server can use multiple PHP versions at the same time. If you are installing multiple versions, you should give them different prefixes.', 'path', '/usr/local/lsws/lsphp5');
+$_tipsdb['installpathprefix'] = new DAttrHelp("Installation Path Prefix", 'Sets the value for the &quot;--prefix&quot; configure option. The default installation location is under LiteSpeed Web Server&#039;s install directory.', 'LiteSpeed Web Server can use multiple PHP versions at the same time. If you are installing multiple versions, you should give them different prefixes.', 'path', '/usr/local/lsws/lsphp7');
 
 $_tipsdb['instances'] = new DAttrHelp("Instances", 'Specifies the maximum instances of the external application the server will create. It is required if &quot;Auto Start&quot; is enabled. Most FastCGI/LSAPI applications can only process one request per process instance and for those types of applications, instances should be set to match the value of &quot;Max Connections&quot;. Some FastCGI/LSAPI applications can  spawn multiple child processes to handle multiple requests concurrently.  For these types of applications, instances should be set to &quot;1&quot; and   environment variables used to control how many child processes the application can spawn.', '', '无符号整数', '');
 
@@ -657,140 +657,140 @@ $_tipsdb['wsaddr'] = new DAttrHelp("Address", 'A unique socket address used by t
 $_tipsdb['wsuri'] = new DAttrHelp("URI", 'Specifies the URI(s) that will use this WebSocket backend. Traffic to  this URI will only be forwarded to the WebSocket backend when it contains  a WebSocket upgrade request. <br/><br/>Traffic without this upgrade request will automatically be forwarded to the  Context that this URI belongs to. If no Context exists for this URI,  LSWS will treat this traffic as though it is accessing a static context with  the location $DOC_ROOT/URI.', '', 'The URI can be a plain URI (starting with &quot;/&quot;) or a Perl-compatible  regular expression URI (starting with &quot;exp:&quot;). If a plain URI ends with a &quot;/&quot;,  then this WebSocket backend will include all sub-URIs under this URI.', 'Using the WebSocket proxy in conjunction with a Context  allows you to serve different kinds of traffic in different ways  on the same page, thus optimizing performance. You can send WebSocket  traffic to the WebSocket backend, while setting up a static context so  that LSWS can serve the page&#039;s static content, or an LSAPI context so LSWS  will serve PHP content (both of which LSWS does more efficiently  than the WebSocket backend).');
 
 
-$_tipsdb['EDTP:UDBgroup'] = array('If you enter group information here, the group DB will not be checked.','You can enter multiple groups, use comma to separate. Space will be treated as part of a group name.'); 
+$_tipsdb['EDTP:UDBgroup'] = array('If you enter group information here, the group DB will not be checked.','You can enter multiple groups, use comma to separate. Space will be treated as part of a group name.');
 
-$_tipsdb['EDTP:accessControl_allow'] = array('You can set up access control at server, virtual host and context levels. If there is access control  at server level, the virtual host rules will be applied after the server rules are satisfied.','Input format can be an IP like 192.168.0.2, a sub-network like 192.168.*, or a subnet/netmask like 192.168.128.5/255.255.128.0.','If you have trusted IP or sub-network, then you must specify them in allowed list by adding a trailing &quot;T&quot; such as  192.168.1.*T. Trusted IP or sub-network is not limited by connection/throttling limit.'); 
+$_tipsdb['EDTP:accessControl_allow'] = array('You can set up access control at server, virtual host and context levels. If there is access control  at server level, the virtual host rules will be applied after the server rules are satisfied.','Input format can be an IP like 192.168.0.2, a sub-network like 192.168.*, or a subnet/netmask like 192.168.128.5/255.255.128.0.','If you have trusted IP or sub-network, then you must specify them in allowed list by adding a trailing &quot;T&quot; such as  192.168.1.*T. Trusted IP or sub-network is not limited by connection/throttling limit.');
 
-$_tipsdb['EDTP:accessControl_deny'] = array('To deny access from certain address, put &quot;ALL&quot; in allowed list, and put subnet or IP in denied  list. To allow only certain IP or subnet to access the site, put &quot;ALL&quot; in denied list and specify the address in the allowed list.'); 
+$_tipsdb['EDTP:accessControl_deny'] = array('To deny access from certain address, put &quot;ALL&quot; in allowed list, and put subnet or IP in denied  list. To allow only certain IP or subnet to access the site, put &quot;ALL&quot; in denied list and specify the address in the allowed list.');
 
-$_tipsdb['EDTP:accessDenyDir'] = array('Enter a full path if you want to deny access for specific directory; entering a path followed by * will disable all the sub directories.','Path can be either absolute or relative to $SERVER_ROOT, use comma to separate.','If both <b>Follow Symbolic Link</b> and <b>Check Symbolic Link</b> are enabled, symbolic links will be checked against the denied directories.'); 
+$_tipsdb['EDTP:accessDenyDir'] = array('Enter a full path if you want to deny access for specific directory; entering a path followed by * will disable all the sub directories.','Path can be either absolute or relative to $SERVER_ROOT, use comma to separate.','If both <b>Follow Symbolic Link</b> and <b>Check Symbolic Link</b> are enabled, symbolic links will be checked against the denied directories.');
 
-$_tipsdb['EDTP:accessLog_fileName'] = array('Log file path can be an absolute path or relative to $SERVER_ROOT.'); 
+$_tipsdb['EDTP:accessLog_fileName'] = array('Log file path can be an absolute path or relative to $SERVER_ROOT.');
 
-$_tipsdb['EDTP:aclogUseServer'] = array('When required, you can disable access logging for this virtual host to save on disk i/o.'); 
+$_tipsdb['EDTP:aclogUseServer'] = array('When required, you can disable access logging for this virtual host to save on disk i/o.');
 
-$_tipsdb['EDTP:adminEmails'] = array('You can enter multiple admin emails: use comma to separate.'); 
+$_tipsdb['EDTP:adminEmails'] = array('You can enter multiple admin emails: use comma to separate.');
 
-$_tipsdb['EDTP:adminOldPass'] = array('For security reasons, if you forget the admin password, you will be unable to change it from the WebAdmin Console.  Please use the following shell command instead:  <br><br> /usr/local/lsws/admin/misc/admpass.sh.  <br><br> This script will remove all entered admin user IDs and overwrite them with a single admin user.'); 
+$_tipsdb['EDTP:adminOldPass'] = array('For security reasons, if you forget the admin password, you will be unable to change it from the WebAdmin Console.  Please use the following shell command instead:  <br><br> /usr/local/lsws/admin/misc/admpass.sh.  <br><br> This script will remove all entered admin user IDs and overwrite them with a single admin user.');
 
-$_tipsdb['EDTP:allowBrowse'] = array('Static context can be used to map a URI to a directory either outside document root or within it. The directory  can be absolute path or relative to document root(default), $VH_ROOT or $SERVER_ROOT.','Check &quot;Accessible&quot; will allow browsing static files in this context. You may want to disable it to prevent viewing static  files, for e.g. when you update the content.'); 
+$_tipsdb['EDTP:allowBrowse'] = array('Static context can be used to map a URI to a directory either outside document root or within it. The directory  can be absolute path or relative to document root(default), $VH_ROOT or $SERVER_ROOT.','Check &quot;Accessible&quot; will allow browsing static files in this context. You may want to disable it to prevent viewing static  files, for e.g. when you update the content.');
 
-$_tipsdb['EDTP:autoFix503'] = array('When you enable <b>Auto Fix 503 Error</b>, the monitor process will automatically launch a new server process and service will resume instantly if a crash is detected.'); 
+$_tipsdb['EDTP:autoFix503'] = array('When you enable <b>Auto Fix 503 Error</b>, the monitor process will automatically launch a new server process and service will resume instantly if a crash is detected.');
 
-$_tipsdb['EDTP:backlog'] = array('Local applications can be started by the web server. In this case, you need to specify the path, backlog and number of instances.'); 
+$_tipsdb['EDTP:backlog'] = array('Local applications can be started by the web server. In this case, you need to specify the path, backlog and number of instances.');
 
-$_tipsdb['EDTP:cgi_path'] = array('A CGI context can be used to specify a directory only contains CGI scripts. Path can be absolute path or relative to $SERVER_ROOT, $VH_ROOT  or $DOC_ROOT(default). Path and URI must be ended with &quot;/&quot; for a cgi-bin directory.','If only a specific script is needed in that directory, it is recommended to create a CGI context for that script only. In this case, path and  URI need not be a directory. For e.g., path can be ~/myapp/myscript.pl, URI can be /myapp/myscript.pl. All other files will not be served as CGI.'); 
+$_tipsdb['EDTP:cgi_path'] = array('A CGI context can be used to specify a directory only contains CGI scripts. Path can be absolute path or relative to $SERVER_ROOT, $VH_ROOT  or $DOC_ROOT(default). Path and URI must be ended with &quot;/&quot; for a cgi-bin directory.','If only a specific script is needed in that directory, it is recommended to create a CGI context for that script only. In this case, path and  URI need not be a directory. For e.g., path can be ~/myapp/myscript.pl, URI can be /myapp/myscript.pl. All other files will not be served as CGI.');
 
-$_tipsdb['EDTP:checkSymbolLink'] = array('Check-Symbolic-Link control will take effect only if Follow-Symbolic-Link is turned on.  This controls whether symbolic links are checked against Access Denied Directories.'); 
+$_tipsdb['EDTP:checkSymbolLink'] = array('Check-Symbolic-Link control will take effect only if Follow-Symbolic-Link is turned on.  This controls whether symbolic links are checked against Access Denied Directories.');
 
-$_tipsdb['EDTP:compressibleTypes'] = array('Compressible Types is a list of MIME types that are compressible, separated by commas. You can use wildcard &quot;*&quot; for MIME types, like */*, text/*. You  can put &quot;!&quot; in front to exclude certain types. The order of the list is important if you use &quot;!&quot;. For e.g., a list like &quot;text/*, !text/css, !text/js&quot; will  compress all text file except for css and js.'); 
+$_tipsdb['EDTP:compressibleTypes'] = array('Compressible Types is a list of MIME types that are compressible, separated by commas. You can use wildcard &quot;*&quot; for MIME types, like */*, text/*. You  can put &quot;!&quot; in front to exclude certain types. The order of the list is important if you use &quot;!&quot;. For e.g., a list like &quot;text/*, !text/css, !text/js&quot; will  compress all text file except for css and js.');
 
-$_tipsdb['EDTP:ctxType'] = array('<b>Static</b> context can be used to map a URI to a directory either outside document root or within it.','<b>Java Web App</b> context is used to automatically import a predefined Java Application in an AJPv13 compilant Java servlet engine.','<b>Servlet</b> context is used to import a specific servlet under a web application.','<b>Fast CGI</b> context is a mount point of Fast CGI application.','<b>LiteSpeed SAPI</b> context can be used to associate a URI with an LSAPI application.','<b>Proxy</b> context enables this virtual host to serve as a transparant reverse proxy server to an external web server or application server.','<b>CGI</b> context can be used to specify a directory only contains CGI scripts.','<b>Load Balancer</b> context can be used to assign a different cluster for that context.','<b>Redirect</b> context can set up an internal or external redirect URI.','<b>Rack/Rails</b> context is specifically used for Rack/Rails applications.','<b>Module handler</b> context is a mount point of hander type modules.'); 
+$_tipsdb['EDTP:ctxType'] = array('<b>Static</b> context can be used to map a URI to a directory either outside document root or within it.','<b>Java Web App</b> context is used to automatically import a predefined Java Application in an AJPv13 compilant Java servlet engine.','<b>Servlet</b> context is used to import a specific servlet under a web application.','<b>Fast CGI</b> context is a mount point of Fast CGI application.','<b>LiteSpeed SAPI</b> context can be used to associate a URI with an LSAPI application.','<b>Proxy</b> context enables this virtual host to serve as a transparant reverse proxy server to an external web server or application server.','<b>CGI</b> context can be used to specify a directory only contains CGI scripts.','<b>Load Balancer</b> context can be used to assign a different cluster for that context.','<b>Redirect</b> context can set up an internal or external redirect URI.','<b>Rack/Rails</b> context is specifically used for Rack/Rails applications.','<b>Module handler</b> context is a mount point of hander type modules.');
 
-$_tipsdb['EDTP:docRoot'] = array('Set up your document root here, which can be absolute path or relative to $SERV_ROOT or $VH_ROOT','Document root is referred as $DOC_ROOT in this virtual host, which can be used in other path configuration.'); 
+$_tipsdb['EDTP:docRoot'] = array('Set up your document root here, which can be absolute path or relative to $SERV_ROOT or $VH_ROOT','Document root is referred as $DOC_ROOT in this virtual host, which can be used in other path configuration.');
 
-$_tipsdb['EDTP:domainName'] = array('Enter all the domains that you want this listener to respond to. Use comma &quot;,&quot; to separate individual domain.','You can choose only one virtual host to handle all unspecified domains, put &quot;*&quot; in domains.'); 
+$_tipsdb['EDTP:domainName'] = array('Enter all the domains that you want this listener to respond to. Use comma &quot;,&quot; to separate individual domain.','You can choose only one virtual host to handle all unspecified domains, put &quot;*&quot; in domains.');
 
-$_tipsdb['EDTP:enableDynGzipCompress'] = array('Dynamic GZIP compression control will be effective only if GZIP Compression is enabled.'); 
+$_tipsdb['EDTP:enableDynGzipCompress'] = array('Dynamic GZIP compression control will be effective only if GZIP Compression is enabled.');
 
-$_tipsdb['EDTP:enableExpires'] = array('Expires can be set at the Server/Virtual Host/Context level. Lower level settings will override higher  level settings. In terms of overwrite priority: <br><br> Context Level > Virtual Host Level > Server Level <br><br>'); 
+$_tipsdb['EDTP:enableExpires'] = array('Expires can be set at the Server/Virtual Host/Context level. Lower level settings will override higher  level settings. In terms of overwrite priority: <br><br> Context Level > Virtual Host Level > Server Level <br><br>');
 
-$_tipsdb['EDTP:errURL'] = array('You can set up customized error pages for different error codes.'); 
+$_tipsdb['EDTP:errURL'] = array('You can set up customized error pages for different error codes.');
 
-$_tipsdb['EDTP:expiresByType'] = array('Expires By Type will override default settings. Each entry is in the format of &quot;MIME-type=A|Mseconds&quot; with no space in between. You can input multiple entries  separated by comma.'); 
+$_tipsdb['EDTP:expiresByType'] = array('Expires By Type will override default settings. Each entry is in the format of &quot;MIME-type=A|Mseconds&quot; with no space in between. You can input multiple entries  separated by comma.');
 
-$_tipsdb['EDTP:expiresDefault'] = array('Expires syntax, &quot;A|Mseconds&quot; means after base time (A or M) plus the specified time in seconds, the file will expire. &quot;A&quot; means client access time, &quot;M&quot; means file  modified time. You can override this default setting by different MIME types: A86400 means the file will expire after 1 day based on client access time.','Here are some common numbers: 1 hour = 3600 sec, 1 day = 86400 sec, 1 week = 604800 sec, 1 month = 2592000 sec, 1 year = 31536000 sec.'); 
+$_tipsdb['EDTP:expiresDefault'] = array('Expires syntax, &quot;A|Mseconds&quot; means after base time (A or M) plus the specified time in seconds, the file will expire. &quot;A&quot; means client access time, &quot;M&quot; means file  modified time. You can override this default setting by different MIME types: A86400 means the file will expire after 1 day based on client access time.','Here are some common numbers: 1 hour = 3600 sec, 1 day = 86400 sec, 1 week = 604800 sec, 1 month = 2592000 sec, 1 year = 31536000 sec.');
 
-$_tipsdb['EDTP:extAppAddress'] = array('Address can be IPv4 socket address &quot;IP:PORT&quot;, like 192.168.1.3:7777 and localhost:7777 or Unix domain socket address &quot;UDS://path&quot; like UDS://tmp/lshttpd/myfcgi.sock.','UDS is chrooted in chroot environment.','For local applications, Unix domain socket is preferred due to security and better performance. If you have to use IPv4 socket, set the IP part  to localhost or 127.0.0.1, thus the application is inaccessible from other machines.'); 
+$_tipsdb['EDTP:extAppAddress'] = array('Address can be IPv4 socket address &quot;IP:PORT&quot;, like 192.168.1.3:7777 and localhost:7777 or Unix domain socket address &quot;UDS://path&quot; like UDS://tmp/lshttpd/myfcgi.sock.','UDS is chrooted in chroot environment.','For local applications, Unix domain socket is preferred due to security and better performance. If you have to use IPv4 socket, set the IP part  to localhost or 127.0.0.1, thus the application is inaccessible from other machines.');
 
-$_tipsdb['EDTP:extAppName'] = array('Give a name that easy to remember, other places will refer to this app by its name.'); 
+$_tipsdb['EDTP:extAppName'] = array('Give a name that easy to remember, other places will refer to this app by its name.');
 
-$_tipsdb['EDTP:extAppType'] = array('You can set up external Fast CGI application and AJPv13 (Apache JServ Protocol v1.3) compatible servlet engine.'); 
+$_tipsdb['EDTP:extAppType'] = array('You can set up external Fast CGI application and AJPv13 (Apache JServ Protocol v1.3) compatible servlet engine.');
 
-$_tipsdb['EDTP:extWorkers'] = array('Load balancing workers must be previously defined.','Available ExtApp Types are fcgi(Fast CGI App), lsapi(LSAPI App), servlet(Servlet/JSP Engine), proxy(Web Server).','Different types of external applications can be mixed in one load balancing cluster.'); 
+$_tipsdb['EDTP:extWorkers'] = array('Load balancing workers must be previously defined.','Available ExtApp Types are fcgi(Fast CGI App), lsapi(LSAPI App), servlet(Servlet/JSP Engine), proxy(Web Server).','Different types of external applications can be mixed in one load balancing cluster.');
 
-$_tipsdb['EDTP:externalredirect'] = array('Set up redirect URI here. If it is an external redirect, you can specify the status code. Internal  redirect has to start with &quot;/&quot;, external redirect can either start with &quot;/&quot; or with &quot;http(s)://&quot;.'); 
+$_tipsdb['EDTP:externalredirect'] = array('Set up redirect URI here. If it is an external redirect, you can specify the status code. Internal  redirect has to start with &quot;/&quot;, external redirect can either start with &quot;/&quot; or with &quot;http(s)://&quot;.');
 
-$_tipsdb['EDTP:fcgiapp'] = array('Fast CGI context is a mount point of Fast CGI application. The Fast CGI Application must be pre-defined at server level or virtual host level.'); 
+$_tipsdb['EDTP:fcgiapp'] = array('Fast CGI context is a mount point of Fast CGI application. The Fast CGI Application must be pre-defined at server level or virtual host level.');
 
-$_tipsdb['EDTP:followSymbolLink'] = array('If Follow-Symbolic-Link is enabled, you can still disable it at virtual host level.'); 
+$_tipsdb['EDTP:followSymbolLink'] = array('If Follow-Symbolic-Link is enabled, you can still disable it at virtual host level.');
 
-$_tipsdb['EDTP:gzipCompressLevel'] = array('GZIP Compression level ranges from 1 (Minimum) to 9 (Maximum).'); 
+$_tipsdb['EDTP:gzipCompressLevel'] = array('GZIP Compression level ranges from 1 (Minimum) to 9 (Maximum).');
 
-$_tipsdb['EDTP:hardLimit'] = array('Set concurrent connection Limits coming from one client (per IP address). This helps against DoS attack.'); 
+$_tipsdb['EDTP:hardLimit'] = array('Set concurrent connection Limits coming from one client (per IP address). This helps against DoS attack.');
 
-$_tipsdb['EDTP:indexUseServer'] = array('You can use default server level settings for index files or use your own.','You can use your settings in addition to the server level settings.','You can disable index files by choosing not to use server level settings and leaving vhost level settings blank.','You can enable/disable &quot;auto index&quot; at the context level.'); 
+$_tipsdb['EDTP:indexUseServer'] = array('You can use default server level settings for index files or use your own.','You can use your settings in addition to the server level settings.','You can disable index files by choosing not to use server level settings and leaving vhost level settings blank.','You can enable/disable &quot;auto index&quot; at the context level.');
 
-$_tipsdb['EDTP:javaServletEngine'] = array('If the servlet engine runs on a different machine, it is recommended to make a copy of webapps directory locally. Otherwise you must put the  files in a common accessible network drive, which may affect performance.'); 
+$_tipsdb['EDTP:javaServletEngine'] = array('If the servlet engine runs on a different machine, it is recommended to make a copy of webapps directory locally. Otherwise you must put the  files in a common accessible network drive, which may affect performance.');
 
-$_tipsdb['EDTP:javaWebApp_location'] = array('Java web app context is used to automatically import a predefined Java Application in an AJPv13 compilant Java servlet engine, the  servlet engine should be set up in external app section (either server or virtual host level).','Location is the directory that contains web application files, which includes WEB-INF/ sub directory.','The web server will automatically import configuration file of web application, which usually is WEB-INF/web.xml under the driectory specified by &quot;location&quot;.'); 
+$_tipsdb['EDTP:javaWebApp_location'] = array('Java web app context is used to automatically import a predefined Java Application in an AJPv13 compilant Java servlet engine, the  servlet engine should be set up in external app section (either server or virtual host level).','Location is the directory that contains web application files, which includes WEB-INF/ sub directory.','The web server will automatically import configuration file of web application, which usually is WEB-INF/web.xml under the driectory specified by &quot;location&quot;.');
 
-$_tipsdb['EDTP:listenerIP'] = array('Select an IP address from the list, if you don&#039;t specify a particular address, the system will bind to all the available IP address on this machine.'); 
+$_tipsdb['EDTP:listenerIP'] = array('Select an IP address from the list, if you don&#039;t specify a particular address, the system will bind to all the available IP address on this machine.');
 
-$_tipsdb['EDTP:listenerName'] = array('Give listener a name that is easy to understand and remember.'); 
+$_tipsdb['EDTP:listenerName'] = array('Give listener a name that is easy to understand and remember.');
 
-$_tipsdb['EDTP:listenerPort'] = array('Input a unique port number on this IP for this listener. Only super user (root) can use ports lower than 1024. Port 80 is the default HTTP port; port  443 is the default HTTPS port.'); 
+$_tipsdb['EDTP:listenerPort'] = array('Input a unique port number on this IP for this listener. Only super user (root) can use ports lower than 1024. Port 80 is the default HTTP port; port  443 is the default HTTPS port.');
 
-$_tipsdb['EDTP:listenerSecure'] = array('Selecting &quot;Yes&quot; for <b>Secure</b> will make this listener use https. You must then configure this further in SSL settings.'); 
+$_tipsdb['EDTP:listenerSecure'] = array('Selecting &quot;Yes&quot; for <b>Secure</b> will make this listener use https. You must then configure this further in SSL settings.');
 
-$_tipsdb['EDTP:logUseServer'] = array('If you select &quot;Yes&quot; for <b>Use Server&#039;s Log</b>, the log will be written to the server file set up at the server level.'); 
+$_tipsdb['EDTP:logUseServer'] = array('If you select &quot;Yes&quot; for <b>Use Server&#039;s Log</b>, the log will be written to the server file set up at the server level.');
 
-$_tipsdb['EDTP:log_enableStderrLog'] = array('Stderr Log is located in the same directory as the Server Log. If enabled, all External Application output to stderr will be logged in this file.'); 
+$_tipsdb['EDTP:log_enableStderrLog'] = array('Stderr Log is located in the same directory as the Server Log. If enabled, all External Application output to stderr will be logged in this file.');
 
-$_tipsdb['EDTP:log_fileName'] = array('Log file path can be an absolute path or relative to $SERVER_ROOT.'); 
+$_tipsdb['EDTP:log_fileName'] = array('Log file path can be an absolute path or relative to $SERVER_ROOT.');
 
-$_tipsdb['EDTP:log_rollingSize'] = array('A new log file will be created if current log file exceeds the rolling size. File size is in bytes and can be in multiple input formats: 10240, 10K or 1M.'); 
+$_tipsdb['EDTP:log_rollingSize'] = array('A new log file will be created if current log file exceeds the rolling size. File size is in bytes and can be in multiple input formats: 10240, 10K or 1M.');
 
-$_tipsdb['EDTP:maxCGIInstances'] = array('Limits resources that a CGI program can use. This helps against DoS attacks.','Max CGI Instances controls how many CGI processes the web server can launch.'); 
+$_tipsdb['EDTP:maxCGIInstances'] = array('Limits resources that a CGI program can use. This helps against DoS attacks.','Max CGI Instances controls how many CGI processes the web server can launch.');
 
-$_tipsdb['EDTP:maxReqHeaderSize'] = array('Numbers can be represented as 10240, 10K or 1M.'); 
+$_tipsdb['EDTP:maxReqHeaderSize'] = array('Numbers can be represented as 10240, 10K or 1M.');
 
-$_tipsdb['EDTP:mime'] = array('MIME settings can be edited from the previous page. You can specify the mime configuration file location which can be either be an absolute path or relative  to $SERVER_ROOT.'); 
+$_tipsdb['EDTP:mime'] = array('MIME settings can be edited from the previous page. You can specify the mime configuration file location which can be either be an absolute path or relative  to $SERVER_ROOT.');
 
-$_tipsdb['EDTP:procSoftLimit'] = array('Process soft/hard limit controls how many processes are allowed for one user. This includes all the processes spawned by CGI application. OS level limit is used if not set.','Set to 0 or empty will use operation system default value for all soft/hard limits.','The soft limit is the value that the kernel enforces for the corresponding resource. The hard limit acts as a ceiling for the soft limit'); 
+$_tipsdb['EDTP:procSoftLimit'] = array('Process soft/hard limit controls how many processes are allowed for one user. This includes all the processes spawned by CGI application. OS level limit is used if not set.','Set to 0 or empty will use operation system default value for all soft/hard limits.','The soft limit is the value that the kernel enforces for the corresponding resource. The hard limit acts as a ceiling for the soft limit');
 
-$_tipsdb['EDTP:proxyWebServer'] = array('Proxy context enables this virtual host serving as a transparent reverse proxy server to an external web server or application server.','External web server must be pre-defined under External App at server or virtual host level.'); 
+$_tipsdb['EDTP:proxyWebServer'] = array('Proxy context enables this virtual host serving as a transparent reverse proxy server to an external web server or application server.','External web server must be pre-defined under External App at server or virtual host level.');
 
-$_tipsdb['EDTP:rails_location'] = array('Rack/Rails context is for easy configuration of running Rack/Rails application. You  only need to specify the root location of your rack/rails application in the &quot;Location&quot; field.'); 
+$_tipsdb['EDTP:rails_location'] = array('Rack/Rails context is for easy configuration of running Rack/Rails application. You  only need to specify the root location of your rack/rails application in the &quot;Location&quot; field.');
 
-$_tipsdb['EDTP:realm'] = array('A Context can be protected with a predefined realm, which is set up in the virtual host security section. Optionally, an alternative name and  additional requirements can be specified.'); 
+$_tipsdb['EDTP:realm'] = array('A Context can be protected with a predefined realm, which is set up in the virtual host security section. Optionally, an alternative name and  additional requirements can be specified.');
 
-$_tipsdb['EDTP:realmName'] = array('Define your HT Access realm here, this can be used for contexts.'); 
+$_tipsdb['EDTP:realmName'] = array('Define your HT Access realm here, this can be used for contexts.');
 
-$_tipsdb['EDTP:restrained'] = array('Turn on Restrained in a shared hosting enviroment.'); 
+$_tipsdb['EDTP:restrained'] = array('Turn on Restrained in a shared hosting enviroment.');
 
-$_tipsdb['EDTP:rewriteMapLocation'] = array('Enter URI for location. URI must start with &quot;/&quot;.'); 
+$_tipsdb['EDTP:rewriteMapLocation'] = array('Enter URI for location. URI must start with &quot;/&quot;.');
 
-$_tipsdb['EDTP:rubyBin'] = array('<b>Ruby Path</b> is the absolute path of a ruby executable. For e.g., /usr/local/bin/ruby.'); 
+$_tipsdb['EDTP:rubyBin'] = array('<b>Ruby Path</b> is the absolute path of a ruby executable. For e.g., /usr/local/bin/ruby.');
 
-$_tipsdb['EDTP:serverName'] = array('The user and group setting of the server process cannot be modified. This was set up during installation. You have to reinstall to change this option.'); 
+$_tipsdb['EDTP:serverName'] = array('The user and group setting of the server process cannot be modified. This was set up during installation. You have to reinstall to change this option.');
 
-$_tipsdb['EDTP:servletEngine'] = array('If the servlet engine runs on a different machine, it is recommended to make a copy of webapps directory locally. Otherwise you must put the  files in a common accessible network drive, which may affect performance.'); 
+$_tipsdb['EDTP:servletEngine'] = array('If the servlet engine runs on a different machine, it is recommended to make a copy of webapps directory locally. Otherwise you must put the  files in a common accessible network drive, which may affect performance.');
 
-$_tipsdb['EDTP:shHandlerName'] = array('Except CGI, other handlers need to be predefined in the &quot;External App&quot; section.'); 
+$_tipsdb['EDTP:shHandlerName'] = array('Except CGI, other handlers need to be predefined in the &quot;External App&quot; section.');
 
-$_tipsdb['EDTP:shType'] = array('Script handler can be a CGI, an FCGI app, a module handler, a Servlet engine, or a proxy to Web server.'); 
+$_tipsdb['EDTP:shType'] = array('Script handler can be a CGI, an FCGI app, a module handler, a Servlet engine, or a proxy to Web server.');
 
-$_tipsdb['EDTP:sndBufSize'] = array('Numbers can be represented as 10240, 10K or 1M.','If send/receive buffer size is 0, OS default TCP buffer size will be used.'); 
+$_tipsdb['EDTP:sndBufSize'] = array('Numbers can be represented as 10240, 10K or 1M.','If send/receive buffer size is 0, OS default TCP buffer size will be used.');
 
-$_tipsdb['EDTP:softLimit'] = array('Set IP level throttle limit here. The number will be rounded up to 4K units. Set to &quot;0&quot; to disable throttling.','Number of connections can temporarily exceed Soft Limit during Grace Period as long as under Hard Limit. After Grace Period, if it is  still above Soft Limit, then no more connections will be allowed from that IP for time of Banned Period.'); 
+$_tipsdb['EDTP:softLimit'] = array('Set IP level throttle limit here. The number will be rounded up to 4K units. Set to &quot;0&quot; to disable throttling.','Number of connections can temporarily exceed Soft Limit during Grace Period as long as under Hard Limit. After Grace Period, if it is  still above Soft Limit, then no more connections will be allowed from that IP for time of Banned Period.');
 
-$_tipsdb['EDTP:sslProtocol'] = array('&quot;Yes&quot; must be selected for <b>Secure</b> in General > Address Settings.','For SSL versions and encryption levels, please select all you want to accept.'); 
+$_tipsdb['EDTP:sslProtocol'] = array('&quot;Yes&quot; must be selected for <b>Secure</b> in General > Address Settings.','For SSL versions and encryption levels, please select all you want to accept.');
 
-$_tipsdb['EDTP:sslSessionCache'] = array('Session caching allows a client to resume a session within a set amount of time without having to re-perform an SSL handshake. You can do this by assigning clients a  session ID using  <b>Enable Session Cache</b>, or by creating and using session tickets.'); 
+$_tipsdb['EDTP:sslSessionCache'] = array('Session caching allows a client to resume a session within a set amount of time without having to re-perform an SSL handshake. You can do this by assigning clients a  session ID using  <b>Enable Session Cache</b>, or by creating and using session tickets.');
 
-$_tipsdb['EDTP:sslSessionTicketKeyFile'] = array('Session tickets will be rotated automatically if the tickets are being generated by the server. If using the <b>SSL Session Ticket Key File</b> option to create and manage your own session tickets, you must be rotate the tickets yourself using a cron job.'); 
+$_tipsdb['EDTP:sslSessionTicketKeyFile'] = array('Session tickets will be rotated automatically if the tickets are being generated by the server. If using the <b>SSL Session Ticket Key File</b> option to create and manage your own session tickets, you must be rotate the tickets yourself using a cron job.');
 
-$_tipsdb['EDTP:swappingDir'] = array('Swapping directory is recommended to be placed on a local disk such as /tmp. Network drive should be avoided at all cost. Swap  will be when configured memory i/o buffer is exhausted.'); 
+$_tipsdb['EDTP:swappingDir'] = array('Swapping directory is recommended to be placed on a local disk such as /tmp. Network drive should be avoided at all cost. Swap  will be when configured memory i/o buffer is exhausted.');
 
-$_tipsdb['EDTP:users'] = array('Group DB will be checked only if the user in the user DB does not contain group information..','Use comma to separate multiple users.'); 
+$_tipsdb['EDTP:users'] = array('Group DB will be checked only if the user in the user DB does not contain group information..','Use comma to separate multiple users.');
 
-$_tipsdb['EDTP:vhRoot'] = array('All directories must pre-exist. This web interface will not create the directory for you. If you are creating a new virtual host, you  can create an empty root directory and set it up from the beginning; or you can copy the &quot;Example&quot; virtual root that shipped with the package to this virtual  host root and modify it.','Virtual host root ($VH_ROOT) can be absolute path or relative to $SERVER_ROOT.'); 
+$_tipsdb['EDTP:vhRoot'] = array('All directories must pre-exist. This web interface will not create the directory for you. If you are creating a new virtual host, you  can create an empty root directory and set it up from the beginning; or you can copy the &quot;Example&quot; virtual root that shipped with the package to this virtual  host root and modify it.','Virtual host root ($VH_ROOT) can be absolute path or relative to $SERVER_ROOT.');
 
-$_tipsdb['EDTP:vhaccessLog_fileName'] = array('Log file path can be an absolute path or a relative path to $SERVER_ROOT, $VH_ROOT.'); 
+$_tipsdb['EDTP:vhaccessLog_fileName'] = array('Log file path can be an absolute path or a relative path to $SERVER_ROOT, $VH_ROOT.');
 
-$_tipsdb['EDTP:vhadminEmails'] = array('You can enter multiple admin emails, separated by commas.'); 
+$_tipsdb['EDTP:vhadminEmails'] = array('You can enter multiple admin emails, separated by commas.');
 
-$_tipsdb['EDTP:vhlog_fileName'] = array('Log file path can be an absolute path or relative to $SERVER_ROOT, $VH_ROOT.','If you want to set Log Level to DEBUG, you must set the server log level to DEBUG as well. The level of  debugging is controlled by Server DEBUG Level. Use DEBUG only if you have to as it has a large impact on server performance and can fill up disk space quickly.'); 
+$_tipsdb['EDTP:vhlog_fileName'] = array('Log file path can be an absolute path or relative to $SERVER_ROOT, $VH_ROOT.','If you want to set Log Level to DEBUG, you must set the server log level to DEBUG as well. The level of  debugging is controlled by Server DEBUG Level. Use DEBUG only if you have to as it has a large impact on server performance and can fill up disk space quickly.');
 
-$_tipsdb['EDTP:virtualHostName'] = array('Select the virtual hosts that you want to map to this listener.','If you have not set up the virtual host you want to map, you can skip this step and come back later.'); 
+$_tipsdb['EDTP:virtualHostName'] = array('Select the virtual hosts that you want to map to this listener.','If you have not set up the virtual host you want to map, you can skip this step and come back later.');
