@@ -1513,14 +1513,19 @@ void NtwkIOLink::handle_acceptSSL_EIO_Err()
     //The buf is null terminated string
     char buf[8192 + 1] = {0};
     unsigned int length = 0;
-#ifndef OPENSSL_IS_BORINGSSL
+#if !defined(OPENSSL_IS_BORINGSSL) && !defined(LIBRESSL_VERSION_NUMBER)
     length = m_ssl.getSSL()->packet_length;
     if (length > 8192)
         length = 8192;
     memcpy(buf, (char *)m_ssl.getSSL()->packet, length);
 #else
+#ifdef OPENSSL_IS_BORINGSSL
     //FIXME: new bssl changed, below code not works
     SSL3_BUFFER &read_buffer = m_ssl.getSSL()->s3->read_buffer;
+#else
+    //LIBRESSL 2.5+
+    SSL3_BUFFER &read_buffer = m_ssl.getSSL()->s3->rbuf;
+#endif
     length = read_buffer.len;
     if (length > 8192)
         length = 8192;
