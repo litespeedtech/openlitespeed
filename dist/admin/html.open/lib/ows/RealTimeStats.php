@@ -224,6 +224,8 @@ class RealTimeStats
         $filter = UIBase::GrabGoodInput("request", "vh_filter", "string") ;
         $sort = UIBase::GrabGoodInput("request", "vh_sort", "int") ;
 
+        $sortDesc1 = array() ;
+        $sortAsc2 = array() ;
         $vhosts = array() ;
         $m = array() ;
         $found = preg_match_all("/REQ_RATE \[(.+)\]: REQ_PROCESSING: ([0-9]+), REQ_PER_SEC: ([0-9\.]+), TOT_REQS: ([0-9]+)/i", $this->_rawdata, $m) ;
