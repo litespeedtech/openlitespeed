@@ -62,7 +62,7 @@ static const luaL_Reg LsLuaHeaderMetaSub[] =
 };
 
 
-static const char *LsLuaHeaderTransformKey(lsi_session_t *session,
+static const char *LsLuaHeaderTransformKey(const lsi_session_t *session,
         const char *pInput,
         size_t len)
 {
@@ -92,7 +92,7 @@ int LsLuaHeaderGet(lua_State *L)
     const char     *pInput, *pKey;
     int             i, iHeaderCount, iRet;
     LsLuaSession   *pSession = LsLuaGetSession(L);
-    lsi_session_t  *session = pSession->getHttpSession();
+    const lsi_session_t  *session = pSession->getHttpSession();
     if ((iRet = LsLuaApi::checkArgType(L, 2, LUA_TSTRING, "header_get")) != 0)
         return iRet;
 
@@ -133,7 +133,7 @@ int LsLuaHeaderSet(lua_State *L)
     size_t iKeyLen, iValLen;
     int i, iTableLen, iRet;
     LsLuaSession *pSession = LsLuaGetSession(L);
-    lsi_session_t *session = pSession->getHttpSession();
+    const lsi_session_t *session = pSession->getHttpSession();
 
     if ((iRet = LsLuaApi::checkArgType(L, 2, LUA_TSTRING, "header_set")) != 0)
         return iRet;

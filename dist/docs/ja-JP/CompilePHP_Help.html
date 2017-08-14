@@ -9,12 +9,15 @@
   <link rel="stylesheet" type="text/css" href="../css/hdoc.css">
 </head>
 <body>
-<div class="pagewrapper"><div class="sidetree">
-<h3>OpenLiteSpeed Web Server <a href="index.html"> ユーザーズマニュアル</a></h3>
-<h5>Version 1.4 Rev. 3 </h5>
+<div class="pagewrapper clearfix"><aside class="sidetree ls-col-1-5">
+      <figure>
+        <img src="../img/ols_logo.svg" alt="openlitespeed logo" width="150px"/>
+      </figure>
+<h3 class="ls-text-thin">OpenLiteSpeed Web Server <a href="index.html"> ユーザーズマニュアル</a></h3>
+<h5 class="ls-text-muted">Version 1.4 &nbsp;&#8212;&nbsp;Rev. 3 </h5>
 <hr/>
 <div>
-<ul class="toctop">
+<ul>
 <li><a href="license.html">ライセンス</a></li>
 <li><a href="intro.html">はじめに</a></li>
 <li><a href="install.html">インストール</a></li>
@@ -74,18 +77,19 @@
         </ul>
 </li>
 </ul>
-</div></div>
-<div class="contentwrapper"><div class="nav-bar"><div class="prev">&#171 <a href="webconsole.html">Webコンソール</a></div><div class="center"><a href="index.html">ホーム</a></div><div class="next">&nbsp;</div></div>
-<h1>PHPのコンパイル</h1><h4>目次</h4><section class="toc"><section class="toc-row"><header>PHPのコンパイル</header><p>
-<a href="#extrapathenv">特別なPATH環境変数</a>&nbsp;|&nbsp;<a href="#installpathprefix">インストールパスのプレフィックス</a>&nbsp;|&nbsp;<a href="#compilerflags">コンパイラフラグ</a>&nbsp;|&nbsp;<a href="#configureparams">パラメータの設定</a>&nbsp;|&nbsp;<a href="#addonmodules">アドオンモジュール</a>&nbsp;|&nbsp;</p></section>
-</section>
-<section><div class="helpitem"><a name="extrapathenv"></a><table width="100%" class="ht" border="0" cellpadding="5" cellspacing="0"> <tr class="ht-title"><td><div>特別なPATH環境変数<span class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="../img/top.gif"></a></span></div></p></td></tr> <tr><td><span class="ht-label">説明</span><p>ビルドスクリプトの現在のPATH環境変数に追加される追加のPATH値。</p></td></tr> <tr><td><span class="ht-label">構文</span><p>"："で区切られたパス値</p></td></tr> </table> </div>
-<div class="helpitem"><a name="installpathprefix"></a><table width="100%" class="ht" border="0" cellpadding="5" cellspacing="0"> <tr class="ht-title"><td><div>インストールパスのプレフィックス<span class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="../img/top.gif"></a></span></div></p></td></tr> <tr><td><span class="ht-label">説明</span><p>"--prefix"設定オプションの値を設定します。 デフォルトのインストール場所はLiteSpeed Web Serverのインストールディレクトリの下にあります。</p></td></tr> <tr><td><span class="ht-label">構文</span><p>パス</p></td></tr> <tr><td><span class="ht-label">例</span><p>/usr/local/lsws/lsphp5</p></td></tr> <tr><td><span class="ht-label">ヒント</span><p>LiteSpeed Web Serverは、複数のPHPバージョンを同時に使用できます。 複数のバージョンをインストールする場合は、異なるプレフィックスを付ける必要があります。</p></td></tr> </table> </div>
-<div class="helpitem"><a name="compilerflags"></a><table width="100%" class="ht" border="0" cellpadding="5" cellspacing="0"> <tr class="ht-title"><td><div>コンパイラフラグ<span class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="../img/top.gif"></a></span></div></p></td></tr> <tr><td><span class="ht-label">説明</span><p>最適化されたコンパイラオプションのような追加のコンパイラフラグを追加します。</p></td></tr> <tr><td><span class="ht-label">構文</span><p>サポートされているフラグは、CFLAGS、CXXFLAGS、CPPFLAGS、LDFLAGSです。 スペースを使用して、異なるフラグを区切ります。 フラグ値には一重引用符（二重引用符ではない）を使用します。</p></td></tr> <tr><td><span class="ht-label">例</span><p>CFLAGS='-O3 -msse2 -msse3 -msse4.1 -msse4.2 -msse4 -mavx'</p></td></tr> </table> </div>
-<div class="helpitem"><a name="configureparams"></a><table width="100%" class="ht" border="0" cellpadding="5" cellspacing="0"> <tr class="ht-title"><td><div>パラメータの設定<span class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="../img/top.gif"></a></span></div></p></td></tr> <tr><td><span class="ht-label">説明</span><p>PHPビルド用のパラメータを設定します。 Apache固有のパラメータと " - prefix"の値は自動的に削除され、次のステップをクリックすると "--with-litespeed"が自動的に追加されます。 （前のフィールドにプレフィックスを設定することができます）このようにして、既存の動作中のPHPビルドのphpinfo（）出力からconfigureパラメータをコピーして貼り付けることができます。</p></td></tr> <tr><td><span class="ht-label">構文</span><p>スペース区切りの一連のオプション（二重引用符を使用する場合と使用しない場合）</p></td></tr> </table> </div>
-<div class="helpitem"><a name="addonmodules"></a><table width="100%" class="ht" border="0" cellpadding="5" cellspacing="0"> <tr class="ht-title"><td><div>アドオンモジュール<span class="top"><a href="#top"><img border=0 height=13 width=13 alt="Go to top" src="../img/top.gif"></a></span></div></p></td></tr> <tr><td><span class="ht-label">説明</span><p>使用するアドオンモジュールを選択します。 ここに記載されていないバージョンを使用する場合は、手動でソースコードを更新することができます。 （PHPビルドのこのステップでは、ソースコードの場所がプロンプトに表示されます）。</p></td></tr> <tr><td><span class="ht-label">構文</span><p>チェックボックスから選択</p></td></tr> </table> </div>
-</section>
-</div><footer class="copyright">Copyright &copy; 2013-2017. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> All rights reserved.</footer>
 </div>
+</aside>
+<article class="contentwrapper ls-col-3-5 clearfix"><div class="nav-bar ls-spacer-micro-top"><div class="prev">&#171 <a href="webconsole.html">Webコンソール</a></div><div class="center"><a href="index.html">ホーム</a></div><div class="next">&nbsp;</div></div>
+<h1>PHPのコンパイル</h1><h2 id="top">目次</h2><section class="toc"><section class="toc-row"><header>PHPのコンパイル</header><p>
+<a href="#extrapathenv">特別なPATH環境変数</a> | <a href="#installpathprefix">インストールパスのプレフィックス</a> | <a href="#compilerflags">コンパイラフラグ</a> | <a href="#configureparams">パラメータの設定</a> | <a href="#addonmodules">アドオンモジュール</a></p></section>
+</section>
+<section><div class="helpitem"><article class="ls-helpitem"><div><header id="extrapathenv"><h3>特別なPATH環境変数<span class="ls-permlink"><a href="#extrapathenv"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>説明</h4><p>ビルドスクリプトの現在のPATH環境変数に追加される追加のPATH値。</p> <h4>構文</h4><p>"："で区切られたパス値</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><div><header id="installpathprefix"><h3>インストールパスのプレフィックス<span class="ls-permlink"><a href="#installpathprefix"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>説明</h4><p>"--prefix"設定オプションの値を設定します。 デフォルトのインストール場所はLiteSpeed Web Serverのインストールディレクトリの下にあります。</p> <h4>構文</h4><p>パス</p> <h4>例</h4><div class="ls-example">/usr/local/lsws/lsphp5</div><h4>ヒント</h4><p><span title="Information" class="ls-icon-info"></span> LiteSpeed Web Serverは、複数のPHPバージョンを同時に使用できます。 複数のバージョンをインストールする場合は、異なるプレフィックスを付ける必要があります。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><div><header id="compilerflags"><h3>コンパイラフラグ<span class="ls-permlink"><a href="#compilerflags"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>説明</h4><p>最適化されたコンパイラオプションのような追加のコンパイラフラグを追加します。</p> <h4>構文</h4><p>サポートされているフラグは、CFLAGS、CXXFLAGS、CPPFLAGS、LDFLAGSです。 スペースを使用して、異なるフラグを区切ります。 フラグ値には一重引用符（二重引用符ではない）を使用します。</p> <h4>例</h4><div class="ls-example">CFLAGS='-O3 -msse2 -msse3 -msse4.1 -msse4.2 -msse4 -mavx'</div></article> </div>
+<div class="helpitem"><article class="ls-helpitem"><div><header id="configureparams"><h3>パラメータの設定<span class="ls-permlink"><a href="#configureparams"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>説明</h4><p>PHPビルド用のパラメータを設定します。 Apache固有のパラメータと " - prefix"の値は自動的に削除され、次のステップをクリックすると "--with-litespeed"が自動的に追加されます。 （前のフィールドにプレフィックスを設定することができます）このようにして、既存の動作中のPHPビルドのphpinfo（）出力からconfigureパラメータをコピーして貼り付けることができます。</p> <h4>構文</h4><p>スペース区切りの一連のオプション（二重引用符を使用する場合と使用しない場合）</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><div><header id="addonmodules"><h3>アドオンモジュール<span class="ls-permlink"><a href="#addonmodules"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>説明</h4><p>使用するアドオンモジュールを選択します。 ここに記載されていないバージョンを使用する場合は、手動でソースコードを更新することができます。 （PHPビルドのこのステップでは、ソースコードの場所がプロンプトに表示されます）。</p> <h4>構文</h4><p>チェックボックスから選択</p> </article> </div>
+</section>
+</article><div  class="ls-col-1-1"><footer class="copyright">Copyright &copy; 2013-2017. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> All rights reserved.</footer>
+</div></div>
 </body>
 </html>

@@ -4,10 +4,12 @@ m4_include(ax_path_lib_pcre.m4)
 m4_include(ax_lib_expat.m4)
 m4_include(ax_check_liblua.m4)
 m4_include(ax_check_libudns.m4)
+m4_include(ax_check_brotli.m4)
+m4_include(ax_check_ip2location.m4)
 
 dnl Process this file with autoconf to produce a configure script.
 AC_PREREQ([2.69])
-AC_INIT([openlitespeed],[1.4.26],[info@litespeedtech.com],[openlitespeed],[http://www.litespeedtech.com/])
+AC_INIT([openlitespeed],[1.4.28],[info@litespeedtech.com],[openlitespeed],[http://www.litespeedtech.com/])
 AM_INIT_AUTOMAKE([1.0 foreign no-define ])
 
 AM_CONFIG_HEADER(src/config.h:src/config.h.in)
@@ -220,6 +222,79 @@ fi
 AM_CONDITIONAL([USE_DYN_OSSL], [test x$usedynossl = xyes])
 AM_CONDITIONAL([USE_BSSL], [test x$OPENLSWS_BSSL = xyes])
 
+AC_ARG_WITH(brotli,
+[  --with-brotli[[=DIR]]        enable brotli compression (located in directory DIR, if supplied).  [[default=no]]],
+[
+    if test "x$withval" = "x" ; then
+        need_brotli=no
+    elif test $withval = no ; then
+        need_brotli=no
+    elif test $withval = yes ; then
+        need_brotli=yes
+    else
+        need_brotli=yes
+        brotli_dir=$withval
+    fi
+],[
+    need_brotli=no
+    brotli_dir=
+])
+AC_SUBST([need_brotli])
+AC_SUBST([brotli_dir])
+
+AC_MSG_CHECKING(whether to check if brotli library exists)
+if test "x$need_brotli" = "xno" ; then
+    AC_MSG_RESULT(no)
+else
+    AC_MSG_RESULT(yes)
+    AC_DEFINE_UNQUOTED([USE_BROTLI], [1], [Defined to compile with Brotli compression included])
+    AC_BROTLI_CHECK
+    if test "x$need_brotli" = "xno" ; then
+        AC_MSG_RESULT(brotli header files not found - disabling brotli)
+    elif test "x$need_brotli" = "xcheck" ; then
+        need_brotli=yes
+        AC_MSG_RESULT(brotli header files found - enable brotli)
+    fi
+fi
+AM_CONDITIONAL([HAVE_BROTLI], [test x$need_brotli = xyes])
+echo "Brotli include = $BROTLI_INCLUDES, need_brotli = $need_brotli"
+
+AC_ARG_WITH(ip2loc,
+[  --with-ip2loc[[=DIR]]        enable ip2location (located in directory DIR, if supplied).  [[default=no]]],
+[
+    if test "x$withval" = "x" ; then
+        need_ip2location=no
+    elif test $withval = no ; then
+        need_ip2location=no
+    elif test $withval = yes ; then
+        need_ip2location=yes
+    else
+        need_ip2location=yes
+        ip2location_dir=$withval
+    fi
+],[
+    need_ip2location=no
+    ip2location_dir=
+])
+AC_SUBST([need_ip2location])
+AC_SUBST([ip2location_dir])
+
+AC_MSG_CHECKING(whether to check if ip2location library exists)
+if test "x$need_ip2location" = "xno" ; then
+    AC_MSG_RESULT(no)
+else
+    AC_MSG_RESULT(yes)
+    AC_DEFINE_UNQUOTED([USE_IP2LOCATION], [1], [Defined to compile with IP2Location included])
+    AC_IP2LOCATION_CHECK
+    if test "x$need_ip2location" = "xno" ; then
+        AC_MSG_RESULT(ip2location header files not found - disabling ip2location)
+    elif test "x$need_ip2location" = "xcheck" ; then
+        need_ip2location=yes
+        AC_MSG_RESULT(ip2location header files found - enable ip2location)
+    fi
+fi
+AM_CONDITIONAL([HAVE_IP2LOCATION], [test x$need_ip2location = xyes])
+echo "IP2Location include = $IP2LOCATION_INCLUDES, need_ip2location = $need_ip2location"
 
 AC_ARG_ENABLE([rpath],
               [AC_HELP_STRING([--disable-rpath], 

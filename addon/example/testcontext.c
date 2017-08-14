@@ -49,7 +49,7 @@ static const char *pPrefix = "/testcon";
 
 const int maxOutLen = 1024;
 
-static int begin_process(lsi_session_t *session)
+static int begin_process(const lsi_session_t *session)
 {
     const char *uri;
     char out[maxOutLen];

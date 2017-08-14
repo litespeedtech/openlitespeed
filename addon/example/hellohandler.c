@@ -23,7 +23,7 @@ lsi_module_t MNAME;
 
 static char resp_buf[] = "Hello module handler.\r\n";
 
-static int begin_process(lsi_session_t *session)
+static int begin_process(const lsi_session_t *session)
 {
     g_api->set_status_code(session, 200);
     g_api->set_resp_header(session, LSI_RSPHDR_CONTENT_TYPE, NULL, 0,

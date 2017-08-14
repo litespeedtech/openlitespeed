@@ -49,11 +49,11 @@ public:
     void run();
     void recycle(evtcbnode_s *pObj);
 
-    evtcbnode_s * getNodeObj(evtcb_pf cb, evtcbhead_t *session,
+    evtcbnode_s * getNodeObj(evtcb_pf cb, const evtcbhead_t *session,
                              long lParam, void *pParam);
     
     void schedule(evtcbnode_s *pObj, bool nowait = true);
-    evtcbnode_s *schedule(evtcb_pf cb, evtcbhead_t *session,
+    evtcbnode_s *schedule(evtcb_pf cb, const evtcbhead_t *session,
                           long lParam, void *pParam);
     void removeSessionCb(evtcbhead_t *session);
 

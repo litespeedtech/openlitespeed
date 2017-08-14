@@ -19,6 +19,7 @@
 #define LSI_BASE_FETCH_H_
 
 #include <lsdef.h>
+#include <lsr/ls_atomic.h>
 
 #include <pthread.h>
 #include "pagespeed.h"
@@ -38,15 +39,15 @@ enum BaseFetchType {
 class LsiBaseFetch : public AsyncFetch
 {
 public:
-    LsiBaseFetch(lsi_session_t *session, LsServerContext *server_context,
+    LsiBaseFetch(const lsi_session_t *session, LsServerContext *server_context,
                  const RequestContextPtr &request_ctx,
                  PreserveCachingHeaders preserve_caching_headers,
                  BaseFetchType type);
     virtual ~LsiBaseFetch();
 
-    int CollectAccumulatedWrites(lsi_session_t *session);
+    int CollectAccumulatedWrites(const lsi_session_t *session);
 
-    int CollectHeaders(lsi_session_t *session);
+    int CollectHeaders(const lsi_session_t *session);
 
     // Called by nginx to decrement the refcount.
     int DecrementRefCount();
@@ -59,13 +60,11 @@ public:
         m_bIproLookup = x;
     }
 
-    void SetEventObj(long event_obj)
+    long AtomicSetEventObj(long event_obj)
     {
-        m_lEventObj = event_obj;
+        return ls_atomic_setlong(&m_lEventObj, event_obj);
     }
     
-    long GetEventObj() { return m_lEventObj; }
-
     bool IsDoneAndSuccess()    { return m_bDoneCalled && m_bSuccess;  }
     
     BaseFetchType base_fetch_type() { return m_iType; }
@@ -82,7 +81,7 @@ private:
     virtual void HandleDone(bool success);
 
     void RequestCollection();
-    int CopyBufferToLs(lsi_session_t *session);
+    int CopyBufferToLs(const lsi_session_t *session);
 
     void Lock();
     void Unlock();

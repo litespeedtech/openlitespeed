@@ -76,9 +76,9 @@ void LsiApiHooks::initGlobalHooks()
 
 int LsiApiHooks::runForwardCb(lsi_param_t *param)
 {
-    lsi_hookinfo_t *hookInfo = param->hook_chain;
+    const lsi_hookinfo_t *hookInfo = param->hook_chain;
     const LsiApiHooks *pHooks = hookInfo->hooks;
-    int8_t *pEnableArray = hookInfo->enable_array;
+    const int8_t *pEnableArray = hookInfo->enable_array;
     int iCount = (lsiapi_hook_t *)param->cur_hook - pHooks->begin();
     int iSize = pHooks->size();
     for (; iCount < iSize; ++iCount)
@@ -100,7 +100,7 @@ int LsiApiHooks::runForwardCb(lsi_param_t *param)
 
 int LsiApiHooks::runBackwardCb(lsi_param_t *param)
 {
-    lsi_hookinfo_t *hookInfo = param->hook_chain;
+    const lsi_hookinfo_t *hookInfo = param->hook_chain;
     const LsiApiHooks *pHooks = hookInfo->hooks;
     int8_t *pEnableArray = hookInfo->enable_array;
     int iCount = (lsiapi_hook_t *)param->cur_hook - pHooks->begin();

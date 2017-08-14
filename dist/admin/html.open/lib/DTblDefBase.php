@@ -264,7 +264,7 @@ class DTblDefBase
 								   $this->_options['tp_vname'][0], $this->_options['tp_vname'][1], false, 'tpextAppName'),
 			'vh_maxKeepAliveReq' => DTblDefBase::NewIntAttr('maxKeepAliveReq', DMsg::ALbl('l_maxkeepalivereq'), true, 0, 32767, 'vhMaxKeepAliveReq'),
 			'vh_smartKeepAlive' => DTblDefBase::NewBoolAttr('smartKeepAlive', DMsg::ALbl('l_smartkeepalive'), true, 'vhSmartKeepAlive'),
-			'vh_enableGzip' => DTblDefBase::NewBoolAttr('enableGzip', DMsg::ALbl('l_enablegzip')),
+			'vh_enableGzip' => DTblDefBase::NewBoolAttr('enableGzip', DMsg::ALbl('l_enablecompress'), true, 'vhEnableGzip'),
 			'vh_spdyAdHeader' => DTblDefBase::NewParseTextAttr('spdyAdHeader', DMsg::ALbl('l_spdyadheader'),
 					"/^\d+:npn-spdy\/[23]$/", DMsg::ALbl('parse_spdyadheader')),
 			'vh_allowSymbolLink' => DTblDefBase::NewSelAttr('allowSymbolLink', DMsg::ALbl('l_allowsymbollink'), $this->_options['symbolLink']),
@@ -286,7 +286,7 @@ class DTblDefBase
 
 			'geoipDBFile' => DTblDefBase::NewPathAttr('geoipDBFile', DMsg::ALbl('l_geoipdbfile'), 'filep', 2, 'r', false),
 
-			'geoipDBCache' => DTblDefBase::NewSelAttr('geoipDBCache', DMsg::ALbl('l_geoipdbcache'),
+			'geoipDBCache' => DTblDefBase::NewSelAttr('geoipDBCache', DMsg::ALbl('l_dbcache'),
 							array( ''=>'', 'Standard'=>'Standard',
 								   'MemoryCache' => 'MemoryCache',
 								   'CheckCache' => 'CheckCache',
@@ -378,6 +378,18 @@ class DTblDefBase
 		$this->_tblDef[$id] = DTbl::NewIndexed($id, DMsg::ALbl('l_geoipdb'), $attrs, 'geoipDBFile', 'geolocationDB');
 	}
 
+	private function add_S_IP2LOCATION($id)
+	{
+		$attrs = array(
+            DTblDefBase::NewPathAttr('ip2locDBFile', DMsg::ALbl('l_ip2locDBFile'), 'filep', 2, 'r'),
+            DTblDefBase::NewSelAttr('ip2locDBCache', DMsg::ALbl('l_dbcache'),
+							array( ''=>'', 'FileIo'=>'File System',
+								   'MemoryCache' => 'Memory',
+								   'SharedMemoryCache' => 'Shared Memory') ),            
+		);
+        $this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_ip2locDB'), $attrs);
+	}
+    
 	protected function add_S_TUNING_CONN($id)
 	{
 		$attrs = array(
@@ -411,14 +423,14 @@ class DTblDefBase
 		$parseFormat = "/^(\!)?(\*\/\*)|([A-z0-9_\-\.\+]+\/\*)|([A-z0-9_\-\.\+]+\/[A-z0-9_\-\.\+]+)$/";
 
 		$attrs = array(
-				DTblDefBase::NewBoolAttr('enableGzipCompress', DMsg::ALbl('l_enablegzipcompress'), false),
+				DTblDefBase::NewBoolAttr('enableGzipCompress', DMsg::ALbl('l_enablecompress'), false),
 				DTblDefBase::NewBoolAttr('enableDynGzipCompress', DMsg::ALbl('l_enabledyngzipcompress'), false),
 				DTblDefBase::NewIntAttr('gzipCompressLevel', DMsg::ALbl('l_gzipcompresslevel'), true, 1, 9),
 				DTblDefBase::NewParseTextAreaAttr('compressibleTypes', DMsg::ALbl('l_compressibletypes'),
 						$parseFormat, DMsg::ALbl('parse_compressibletypes'), true, 5, NULL, 0, 0, 1),
 				DTblDefBase::NewBoolAttr('gzipAutoUpdateStatic', DMsg::ALbl('l_gzipautoupdatestatic')),
 				DTblDefBase::NewTextAttr('gzipCacheDir', DMsg::ALbl('l_gzipcachedir'), 'cust'),
-				DTblDefBase::NewIntAttr('gzipStaticCompressLevel', DMsg::ALbl('l_gzipstaticcompresslevel'), true, 1, 9),
+				DTblDefBase::NewIntAttr('gzipStaticCompressLevel', DMsg::ALbl('l_staticcompresslevel'), true, 1, 9),
 				DTblDefBase::NewIntAttr('gzipMaxFileSize', DMsg::ALbl('l_gzipmaxfilesize'), true, '1K'),
 				DTblDefBase::NewIntAttr('gzipMinFileSize', DMsg::ALbl('l_gzipminfilesize'), true, 200)
 		);
@@ -426,7 +438,15 @@ class DTblDefBase
 		$this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_gzip'), $attrs);
 	}
 
-
+	protected function add_S_TUNING_BROTLI($id)
+	{
+		$attrs = array(
+				DTblDefBase::NewBoolAttr('enableBrCompress', DMsg::ALbl('l_enablebrcompress')),
+				DTblDefBase::NewIntAttr('brStaticCompressLevel', DMsg::ALbl('l_staticcompresslevel'), true, 1, 11),
+			);
+        $this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_brcompress'), $attrs, 'brotliTuning');
+    }
+    
 	protected function add_S_SEC_FILE($id)
 	{
 		$parseFormat = $this->_options['parseFormat']['filePermission4'];

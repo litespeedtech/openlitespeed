@@ -55,6 +55,7 @@ typedef LsShmCache                  TShmClientPool;
 
 struct sockaddr;
 class GeoInfo;
+class LocInfo;
 class ClientInfo
 {
     char        m_achSockAddr[24];
@@ -63,6 +64,9 @@ class ClientInfo
     uint32_t    m_iFlags;
     int32_t     m_iConns;
     GeoInfo    *m_pGeoInfo;
+#ifdef USE_IP2LOCATION
+    LocInfo    *m_pLocInfo;
+#endif
     LsiModuleData   m_moduleData;
 
     time_t      m_tmOverLimit;
@@ -153,6 +157,11 @@ public:
     void  setSslNewConn(int n)   {   m_sslNewConn = n;    }
     GeoInfo *allocateGeoInfo();
     GeoInfo *getGeoInfo() const        {   return m_pGeoInfo;      }
+
+#ifdef USE_IP2LOCATION
+    LocInfo *allocateLocInfo();
+    LocInfo *getLocInfo() const        {   return m_pLocInfo;      }
+#endif
 
     LsiModuleData *getModuleData()      {   return &m_moduleData;   }
 

@@ -48,6 +48,7 @@ char HttpRespHeaders::s_sDateHeaders[30] = "Tue, 09 Jul 2013 13:43:01 GMT";
 int             HttpRespHeaders::s_commonHeadersCount = 2;
 http_header_t       HttpRespHeaders::s_commonHeaders[2];
 http_header_t       HttpRespHeaders::s_gzipHeaders[2];
+http_header_t       HttpRespHeaders::s_brHeaders[2];
 http_header_t       HttpRespHeaders::s_keepaliveHeader;
 http_header_t       HttpRespHeaders::s_chunkedHeader;
 http_header_t       HttpRespHeaders::s_concloseHeader;
@@ -925,6 +926,16 @@ void HttpRespHeaders::buildCommonHeaders()
     HttpRespHeaders::s_gzipHeaders[1].index    = HttpRespHeaders::H_VARY;
     HttpRespHeaders::s_gzipHeaders[1].val      = "Accept-Encoding";
     HttpRespHeaders::s_gzipHeaders[1].valLen   = 15;
+
+
+    HttpRespHeaders::s_brHeaders[0].index    =
+        HttpRespHeaders::H_CONTENT_ENCODING;
+    HttpRespHeaders::s_brHeaders[0].val      = "br";
+    HttpRespHeaders::s_brHeaders[0].valLen   = 2;
+
+    HttpRespHeaders::s_brHeaders[1].index    = HttpRespHeaders::H_VARY;
+    HttpRespHeaders::s_brHeaders[1].val      = "Accept-Encoding";
+    HttpRespHeaders::s_brHeaders[1].valLen   = 15;
 
     HttpRespHeaders::s_keepaliveHeader.index    =
         HttpRespHeaders::H_CONNECTION;

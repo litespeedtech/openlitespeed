@@ -30,6 +30,8 @@
 #define LSI_CONFDATA_NONE   0
 #define LSI_CONFDATA_OWN    1
 #define LSI_CONFDATA_PARSED 2
+#define MAX_MODULE_CONFIG_LINES    300
+
 
 class XmlNodeList;
 class XmlNode;
@@ -178,6 +180,21 @@ public:
     static int  parseConfigList(const XmlNodeList *moduleConfigNodeList,
                                 ModuleConfig *pModuleConfig, int level, const char *name);
 
+    
+    
+    
+    static int getKeyIndex(lsi_config_key_t *keys, const char *str);
+    static void releaseModuleParamInfo(module_param_info_t *param_arr,
+                                       int param_count);
+    
+    
+    //return the val_out length
+    static int escapeParamVal(const char *val_in, int len, char *val);
+    
+    static int preParseModuleParam(const char *param, int paramLen,
+                                   int level, lsi_config_key_t *keys,
+                                   module_param_info_t *param_arr,
+                                   int *param_count);
 };
 
 

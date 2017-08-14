@@ -245,7 +245,6 @@ HttpVHost::HttpVHost(const char *pHostName)
     , m_pRewriteMaps(NULL)
     , m_pSSLCtx(NULL)
     , m_pSSITagConfig(NULL)
-    , m_sSpdyAdHeader("")
 {
     char achBuf[10] = "/";
     m_rootContext.set(achBuf, "/nON eXIST",
@@ -749,9 +748,17 @@ int HttpVHost::configBasics(const XmlNode *pVhConfNode, int iChrootLen)
     enableGzip((HttpServerConfig::getInstance().getGzipCompress()) ?
                ConfigCtx::getCurConfigCtx()->getLongValue(pVhConfNode, "enableGzip", 0, 1,
                        1) : 0);
+    enableBr((HttpServerConfig::getInstance().getBrCompress()) ?
+               ConfigCtx::getCurConfigCtx()->getLongValue(pVhConfNode, "enableBr", 0, 1,
+                       1) : 0);
     m_rootContext.setGeoIP((
                                HttpServer::getInstance().getServerContext().isGeoIpOn()) ?
                            ConfigCtx::getCurConfigCtx()->getLongValue(pVhConfNode, "enableIpGeo", 0,
+                                   1,
+                                   0) : 0);
+    m_rootContext.setIpToLoc((
+                               HttpServer::getInstance().getServerContext().isIpToLocOn()) ?
+                           ConfigCtx::getCurConfigCtx()->getLongValue(pVhConfNode, "enableIpToLoc", 0,
                                    1,
                                    0) : 0);
 
@@ -760,11 +767,6 @@ int HttpVHost::configBasics(const XmlNode *pVhConfNode, int iChrootLen)
     if (!pAdminEmails)
         pAdminEmails = "";
     setAdminEmails(pAdminEmails);
-
-    const char *pSpdyAdHeader = pVhConfNode->getChildValue("spdyAdHeader");
-    if (!pSpdyAdHeader)
-        pSpdyAdHeader = "";
-    setSpdyAdHeader(pSpdyAdHeader);
 
     return 0;
 
@@ -1353,7 +1355,7 @@ HttpContext *HttpVHost::addRailsContext(const char *pURI,
 
     char achBuf[MAX_PATH_LEN];
     snprintf(achBuf, MAX_PATH_LEN, "%spublic/", pLocation);
-    HttpContext *pContext = configContext(achURI, HandlerType::HT_NULL,
+    HttpContext *pContext = addContext(0, achURI, HandlerType::HT_NULL,
                                           achBuf, NULL, 1);
 
     if (!pContext)
@@ -1373,6 +1375,8 @@ HttpContext *HttpVHost::addRailsContext(const char *pURI,
     if (pDispatch)
         pDispatch->setHandler(pWorker);
 
+    pContext->setAutoIndex(0);
+    pContext->setAutoIndexOff(1);
     pContext->setCustomErrUrls("404", achURI);
     pContext->setRailsContext();
     return pContext;
@@ -1712,6 +1716,9 @@ int HttpVHost::configContext(const XmlNode *pContextNode)
         pContext->setGeoIP((m_rootContext.isGeoIpOn()) ?
                            ConfigCtx::getCurConfigCtx()->getLongValue(pContextNode,
                                    "enableIpGeo", 0, 1, 0) : 0);
+        pContext->setIpToLoc((m_rootContext.isIpToLocOn()) ?
+                           ConfigCtx::getCurConfigCtx()->getLongValue(pContextNode,
+                                   "enableIpToLoc", 0, 1, 0) : 0);
         return pContext->config(getRewriteMaps(), pContextNode, type);
     }
 
@@ -1919,9 +1926,29 @@ lsi_module_config_t *parseModuleConfigParam(lsi_module_t *pModule,
     if (config->data_flag == LSI_CONFDATA_OWN)
     {
         assert(config->sparam != NULL);
-        config->config = pModule->config_parser->parse_config(
-                             config->sparam->c_str(), config->sparam->len(), init_config,
-                             LSI_CFG_CONTEXT, pContext->getURI());
+        
+        lsi_config_key_t *keys = pModule->config_parser->config_keys;
+        if (keys)
+        {
+            //FIXME:Use a vector may be better
+            module_param_info_t param_arr[MAX_MODULE_CONFIG_LINES];
+            int param_arr_sz = MAX_MODULE_CONFIG_LINES;
+            ModuleConfig::preParseModuleParam(config->sparam->c_str(),
+                                               config->sparam->len(),
+                                               LSI_CFG_CONTEXT,
+                                               keys,
+                                               param_arr, &param_arr_sz);
+
+            
+            if (param_arr_sz > 0)
+            {
+                config->config = pModule->config_parser->
+                                    parse_config(param_arr, param_arr_sz,
+                                                 init_config,
+                                                 LSI_CFG_CONTEXT,
+                                                 pContext->getURI());
+            }
+        }
         delete config->sparam;
         config->sparam = NULL;
         config->data_flag = LSI_CONFDATA_PARSED;

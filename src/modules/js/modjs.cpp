@@ -41,7 +41,7 @@ static int releaseJsData(void *data)
     return 0;
 }
 
-static jsModuleData_t *allocateJsData(lsi_session_t *session,
+static jsModuleData_t *allocateJsData(const lsi_session_t *session,
                                       const lsi_module_t *module, int level)
 {
     jsModuleData_t *pData = (jsModuleData_t *) malloc(sizeof(jsModuleData_t));
@@ -52,7 +52,7 @@ static jsModuleData_t *allocateJsData(lsi_session_t *session,
     return pData;
 }
 
-static void *getLsJsSession_from_moduleData(lsi_session_t *pSess)
+static void *getLsJsSession_from_moduleData(const lsi_session_t *pSess)
 {
     jsModuleData_t *pData = (jsModuleData_t *) g_api->get_module_data(pSess,
                             &MNAME, LSI_DATA_HTTP);
@@ -188,7 +188,7 @@ static int _init(lsi_module_t *pModule)
     return 0;
 }
 
-static int jsHandler(lsi_session_t *session)
+static int jsHandler(const lsi_session_t *session)
 {
     jsModuleData_t *pData;
 
@@ -241,7 +241,7 @@ static int jsHandler(lsi_session_t *session)
 //
 //  onCleanupEvent - remove junk...
 //
-static int onCleanupEvent(lsi_session_t *session)
+static int onCleanupEvent(const lsi_session_t *session)
 {
     // g_api->log( session, LSI_LOG_NOTICE,  "JS onCleanupEvent\n");
     return 0;
@@ -250,7 +250,7 @@ static int onCleanupEvent(lsi_session_t *session)
 //
 //  onReadEvent - activated when whole request body has been read by the server.
 //
-static int onReadEvent(lsi_session_t *session)
+static int onReadEvent(const lsi_session_t *session)
 {
     void *pSession;
 
@@ -289,7 +289,7 @@ static int onReadEvent(lsi_session_t *session)
 //      (1) check if there is buffer available for us to continue.
 //      (2) resume the yielded code. (session level)
 //
-static int onWriteEvent(lsi_session_t *session)
+static int onWriteEvent(const lsi_session_t *session)
 {
     void *pSession;
     pSession = getLsJsSession_from_moduleData(session);
@@ -311,9 +311,9 @@ static int onWriteEvent(lsi_session_t *session)
 //  module parameters
 //  nodepath -> where my node.js objects...
 //
-const char *myParam[] =
+lsi_config_key_t myParam[] =
 {
-    "nodepath",
+    {"nodepath",},
     NULL   //The last position must have a NULL to indicate end of the array
 };
 

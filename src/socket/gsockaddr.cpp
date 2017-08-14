@@ -366,12 +366,13 @@ int GSockAddr::doLookup(int family, const char *p, int tag)
 
 int GSockAddr::asyncSet(int family, const char *pURL, int tag
                  , int (*lookup_pf)(void *arg, const long lParam, void *pParam)
-                 , void *ctx)
+                 , void *ctx, AdnsReq **pReq)
 {
 
 #ifdef USE_UDNS
     char achDest[128];
     int  gotAddr = set2(family, pURL, tag, achDest);
+    AdnsReq *pRet;
 
     if (gotAddr == -1)
         return -1;
@@ -379,9 +380,12 @@ int GSockAddr::asyncSet(int family, const char *pURL, int tag
         return 0;
 
     if (lookup_pf &&
-        Adns::getInstance().getHostByName(achDest, family, m_pSockAddr,
-                                      lookup_pf, ctx) != NULL)
-        return 1;
+        (pRet = Adns::getInstance().getHostByName(achDest, family, m_pSockAddr,
+                                      lookup_pf, ctx)) != NULL)
+        {
+            *pReq = pRet;
+            return 1;
+        }
     return doLookup(family, achDest, tag);
 
 

@@ -73,7 +73,7 @@ int releaseCounterDataCb(void *data)
     return 0;
 }
 
-CounterData *allocateMydata(lsi_session_t *session,
+CounterData *allocateMydata(const lsi_session_t *session,
                             const lsi_module_t *module, int level)
 {
     CounterData *myData = (CounterData *)ls_palloc(sizeof(CounterData));
@@ -116,7 +116,7 @@ int assignHandler(lsi_param_t *rec)
     return 0;
 }
 
-static int PsHandlerProcess(lsi_session_t *session)
+static int PsHandlerProcess(const lsi_session_t *session)
 {
     CounterData *ip_data = NULL, *vhost_data = NULL, *file_data = NULL;
     char output[128];
@@ -181,7 +181,7 @@ static lsi_serverhook_t serverHooks[] =
     LSI_HOOK_END   //Must put this at the end position
 };
 
-static int _init(lsi_module_t *pModule)
+static int init_module(lsi_module_t *pModule)
 {
     ls_shmpool_t *pShmPool = ls_shm_opengpool("testSharedM", 0);
     if (pShmPool == NULL)
@@ -225,4 +225,4 @@ static int _init(lsi_module_t *pModule)
 }
 
 lsi_reqhdlr_t myhandler = { PsHandlerProcess, NULL, NULL, NULL };
-lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, _init, &myhandler, NULL, "", serverHooks};
+lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, init_module, &myhandler, NULL, "", serverHooks};

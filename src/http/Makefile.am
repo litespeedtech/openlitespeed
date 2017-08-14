@@ -14,7 +14,7 @@ libhttp_a_SOURCES = httpstatuscode.cpp moduserdir.cpp contextnode.cpp phpconfig.
    httpmime.cpp sendfileinfo.cpp httpcontext.cpp httpserverversion.cpp vhostmap.cpp eventdispatcher.cpp staticfilehandler.cpp reqhandler.cpp \
    httpvhost.cpp httpresourcemanager.cpp ntwkiolink.cpp httpmethod.cpp httpver.cpp  httpstatusline.cpp httpheader.cpp \
    smartsettings.cpp httplistener.cpp httpresp.cpp httpreq.cpp httpsession.cpp iptogeo.cpp moov.cpp  hiostream.cpp hiohandlerfactory.cpp \
-   httprespheaders.cpp l4handler.cpp httpaiosendfile.cpp serverprocessconfig.cpp httpstats.cpp reqparser.cpp
+   httprespheaders.cpp l4handler.cpp httpaiosendfile.cpp serverprocessconfig.cpp httpstats.cpp reqparser.cpp iptoloc.cpp
 
 
 ####### kdevelop will overwrite this part!!! (end)############

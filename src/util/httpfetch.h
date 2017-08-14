@@ -20,6 +20,7 @@
 
 #include <lsdef.h>
 #include <log4cxx/logger.h>
+#include <sslpp/sslconnection.h>
 #include <util/autobuf.h>
 #include <stddef.h>
 #include <time.h>
@@ -31,6 +32,14 @@ using namespace LOG4CXX_NS;
 
 typedef int (*HFProcessFn)(void *, HttpFetch *);
 
+enum HttpFetchSecure
+{
+    HF_REGULAR = 0,
+    HF_SECURE = 1,
+    HF_UNKNOWN = 2
+};
+
+class AdnsReq;
 class VMemBuf;
 class HttpFetch
 {
@@ -41,21 +50,26 @@ class HttpFetch
     int         m_iReqBufLen;
     int         m_iReqSent;
     int         m_iReqHeaderLen;
+    int         m_iHostLen;
     short       m_iReqState;
     char        m_iNonBlocking;
     char        m_iEnableDriver;
     const char *m_pReqBody;
-    int         m_iReqBodyLen;
+    int64_t     m_iReqBodyLen;
     int         m_iConnTimeout;
 
-    int         m_iRespBodyLen;
+    int64_t     m_iRespBodyLen;
     char       *m_pRespContentType;
-    int         m_iRespBodyRead;
+    int64_t     m_iRespBodyRead;
     char       *m_pProxyAddrStr;
     GSockAddr *m_pProxyAddr;
+    AdnsReq    *m_pAdnsReq;
 
     HFProcessFn m_pfProcessor;
     void       *m_pProcessorArg;
+
+    int         m_iSsl;
+    SslConnection  m_ssl;
 
     char        m_aHost[256];
     AutoBuf     m_resHeaderBuf;
@@ -81,11 +95,17 @@ class HttpFetch
     static int asyncDnsLookupCb(void *arg, const long lParam, void *pParam);
     int startDnsLookup(const char *addrServer);
 
+    int connectSSL();
+
+    int recvSSL();
+    void setSSLAgain();
+
     int sendReq();
     int recvResp();
     void startDriver();
     void stopDriver();
-    int initReq(const char *pURL, const char *pBody, int bodyLen,
+    int initReq(const char *pURL, HttpFetchSecure isSecure,
+                const char *pBody, int bodyLen,
                 const char *pSaveFile, const char *pContentType);
     int getLoggerId()     {   return m_iLoggerId;    }
 public:
@@ -99,11 +119,12 @@ public:
     int startReq(const char *pURL, int nonblock, int enableDriver = 1,
                  const char *pBody = NULL,
                  int bodyLen = 0, const char *pSaveFile = NULL,
-                 const char *pContentType = NULL, const char *addrServer = NULL);
+                 const char *pContentType = NULL, const char *addrServer = NULL,
+                 HttpFetchSecure isSecure = HF_UNKNOWN);
     int startReq(const char *pURL, int nonblock, int enableDriver,
-                 const char  *pBody,
-                 int bodyLen, const char *pSaveFile,
-                 const char *pContentType, const GSockAddr &sockAddr);
+                 const char *pBody, int bodyLen, const char *pSaveFile,
+                 const char *pContentType, const GSockAddr &sockAddr,
+                 HttpFetchSecure isSecure = HF_UNKNOWN);
     short getPollEvent() const;
     int processEvents(short revent);
     int process();
@@ -125,6 +146,8 @@ public:
     void enableDebug(int d)                 {   m_iEnableDebug = d;     }
     time_t getTimeStart() const             {   return m_tmStart;       }
 
+    void setUseSsl(int s)                   {   m_iSsl = s;             }
+    int isUseSsl() const                    {   return m_iSsl;          }
 
 
     LS_NO_COPY_ASSIGN(HttpFetch);

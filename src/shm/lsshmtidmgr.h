@@ -63,7 +63,6 @@ public:
         : m_pHash(NULL)
         , m_iOffset(0)
         , m_iIterOffset(iIterOffset)
-        , m_pShmLock(NULL)
         {}
     ~LsShmTidMgr() {}
     int  init(LsShmHash *pHash, LsShmOffset_t off, bool blkinit);
@@ -134,17 +133,9 @@ private:
     
     LsShmOffset_t    allocBlkIdx(LsShmOffset_t oldIdx, LsShmSize_t curSize, int &remapped);
 
-    int  setupLock()
-    {   return ls_shmlock_setup(m_pShmLock);  }
-    int  lock()
-    {   return m_pHash->getPool()->getShm()->lockRemap(m_pShmLock);  }
-    int  unlock()
-    {   return ls_shmlock_unlock(m_pShmLock);  }
-
     LsShmHash       *m_pHash;
     LsShmOffset_t    m_iOffset;
     LsShmOffset_t    m_iIterOffset;
-    ls_shmlock_t   *m_pShmLock;
 };
 
 #endif // LSSHMTIDMGR_H

@@ -29,7 +29,7 @@ TEST(GzipBufTest_testGzipFile)
     gzFile.set("gzipbuftest.gz" , -1);
     //gzFile.set( VMBUF_ANON_MAP , -1 );
     GzipBuf gzBuf;
-    CHECK(0 == gzBuf.init(GzipBuf::GZIP_DEFLATE, 6));
+    CHECK(0 == gzBuf.init(GzipBuf::COMPRESSOR_COMPRESS, 6));
 
     char achBuf[8192];
     memset(achBuf, 'A', 4096);

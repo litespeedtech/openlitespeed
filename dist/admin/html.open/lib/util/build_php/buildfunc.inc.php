@@ -21,6 +21,7 @@ class BuildOptions
 			'AddOnXCache' => false,
 			'AddOnMemCache' => false,
 			'AddOnMemCachd' => false,
+            'AddOnMemCachd7' => false,
 			'AddonOPcache' => false
 	);
 
@@ -94,6 +95,7 @@ class BuildOptions
 		$this->vals['AddOnXCache'] = false;
 		$this->vals['AddOnMemCache'] = false;
 		$this->vals['AddOnMemCachd'] = false;
+        $this->vals['AddOnMemCachd7'] = false;
 		$this->vals['AddOnOPcache'] = false;
 
 		$this->type = 'DEFAULT';
@@ -150,6 +152,7 @@ class BuildOptions
 		$addon_xcache = $this->vals['AddOnXCache'] ? 'true':'false';
 		$addon_memcache = $this->vals['AddOnMemCache'] ? 'true':'false';
 		$addon_memcachd = $this->vals['AddOnMemCachd'] ? 'true':'false';
+        $addon_memcachd7 = $this->vals['AddOnMemCachd7'] ? 'true':'false';
 		$addon_opcache = $this->vals['AddOnOPcache'] ? 'true':'false';
 
 		$loc = 'document.buildform';
@@ -167,8 +170,10 @@ class BuildOptions
 			$loc.addonMemCache.checked = $addon_memcache;
 		if ($loc.addonMemCachd != null)
 			$loc.addonMemCachd.checked = $addon_memcachd;
-                if ($loc.addonOPcache != null)
-                    $loc.addonOPcache.checked = $addon_opcache;
+		if ($loc.addonMemCachd7 != null)
+			$loc.addonMemCachd7.checked = $addon_memcachd7;
+        if ($loc.addonOPcache != null)
+            $loc.addonOPcache.checked = $addon_opcache;
 		if ($loc.addonSuhosin != null)
 			$loc.addonSuhosin.checked = $addon_suhosin;
 		\"";
@@ -236,6 +241,8 @@ class BuildCheck
 		$modules['memcache'] = in_array($v, array('4.4.', '5.2.', '5.3.', '5.4.', '5.5.', '5.6.')); // php7 not supported
 
 		$modules['memcachd'] = in_array($v, array('4.4.', '5.2.', '5.3.', '5.4.', '5.5.', '5.6.')); // php7 not supported
+        
+        $modules['memcachd7'] = in_array($v, array('7.0.', '7.1.')); // php7 only
 
         return $modules;
 	}
@@ -297,6 +304,7 @@ class BuildCheck
 		$options->SetValue('AddOnXCache', (null != UIBase::GrabGoodInput('ANY','addonXCache')));
 		$options->SetValue('AddOnMemCache', (null != UIBase::GrabGoodInput('ANY','addonMemCache')));
 		$options->SetValue('AddOnMemCachd', (null != UIBase::GrabGoodInput('ANY','addonMemCachd')));
+        $options->SetValue('AddOnMemCachd7', (null != UIBase::GrabGoodInput('ANY','addonMemCachd7')));
 		$options->SetValue('AddOnOPcache', (null != UIBase::GrabGoodInput('ANY','addonOPcache')));
 
 		// can be real input err
@@ -701,7 +709,17 @@ class BuildTool
 
 		$this->ext_options['MemCachd'] = $ext;
 
-		$ext = array('__extension_name__' => 'OPcache');
+		$ext = array('__extension_name__' => 'MemCached');
+		$ver = 'memcached-' . BuildConfig::GetVersion(BuildConfig::MEMCACHED7_VERSION);
+		$ext['__extension_dir__'] = $ver;
+		$ext['__extension_src__'] = $ver . '.tgz';
+		$ext['__extension_download_url__'] = 'http://pecl.php.net/get/'. $ver . '.tgz';
+		$ext['__extract_method__'] = 'tar -zxf';
+		$ext['__extension_extra_config__'] = '--enable-memcached';
+
+		$this->ext_options['MemCachd7'] = $ext;
+
+        $ext = array('__extension_name__' => 'OPcache');
 		$ver = 'zendopcache-' . BuildConfig::GetVersion(BuildConfig::OPCACHE_VERSION);
 		$ext['__extension_dir__'] = $ver;
 		$ext['__extension_src__'] = $ver . '.tgz';
@@ -767,7 +785,7 @@ opcache.enable_cli=1
 
 ';
 		}
-		if (strpos($extensions, 'MemCachd') !== false) {
+		if (strpos($extensions, 'MemCachd') !== false) { // share with MemCachd7
 			$notes[] = '
 ;				=================
 ;				MemCached
@@ -880,6 +898,9 @@ opcache.enable_cli=1
 		}
 		if ($this->options->GetValue('AddOnMemCachd')) {
 			$extList[] = 'MemCachd';
+		}
+		if ($this->options->GetValue('AddOnMemCachd7')) {
+			$extList[] = 'MemCachd7';
 		}
 		if ($this->options->GetValue('AddOnOPcache')) {
 			$extList[] = 'OPcache';

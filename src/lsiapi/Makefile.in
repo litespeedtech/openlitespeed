@@ -86,7 +86,10 @@ am__aclocal_m4_deps = $(top_srcdir)/ax_check_zlib.m4 \
 	$(top_srcdir)/ax_check_openssl.m4 \
 	$(top_srcdir)/ax_path_lib_pcre.m4 \
 	$(top_srcdir)/ax_lib_expat.m4 $(top_srcdir)/ax_check_liblua.m4 \
-	$(top_srcdir)/ax_check_libudns.m4 $(top_srcdir)/configure.ac
+	$(top_srcdir)/ax_check_libudns.m4 \
+	$(top_srcdir)/ax_check_brotli.m4 \
+	$(top_srcdir)/ax_check_ip2location.m4 \
+	$(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 mkinstalldirs = $(install_sh) -d
@@ -180,6 +183,8 @@ AUTOCONF = @AUTOCONF@
 AUTOHEADER = @AUTOHEADER@
 AUTOMAKE = @AUTOMAKE@
 AWK = @AWK@
+BROTLI_INCLUDES = @BROTLI_INCLUDES@
+BROTLI_LIBS = @BROTLI_LIBS@
 CC = @CC@
 CCDEPMODE = @CCDEPMODE@
 CFLAGS = @CFLAGS@
@@ -211,6 +216,8 @@ INSTALL_DATA = @INSTALL_DATA@
 INSTALL_PROGRAM = @INSTALL_PROGRAM@
 INSTALL_SCRIPT = @INSTALL_SCRIPT@
 INSTALL_STRIP_PROGRAM = @INSTALL_STRIP_PROGRAM@
+IP2LOCATION_INCLUDES = @IP2LOCATION_INCLUDES@
+IP2LOCATION_LIBS = @IP2LOCATION_LIBS@
 LD = @LD@
 LDFLAGS = @LDFLAGS@
 LIBOBJS = @LIBOBJS@
@@ -276,6 +283,7 @@ am__quote = @am__quote@
 am__tar = @am__tar@
 am__untar = @am__untar@
 bindir = @bindir@
+brotli_dir = @brotli_dir@
 build = @build@
 build_alias = @build_alias@
 build_cpu = @build_cpu@
@@ -296,12 +304,15 @@ htmldir = @htmldir@
 includedir = @includedir@
 infodir = @infodir@
 install_sh = @install_sh@
+ip2location_dir = @ip2location_dir@
 libdir = @libdir@
 libexecdir = @libexecdir@
 localedir = @localedir@
 localstatedir = @localstatedir@
 mandir = @mandir@
 mkdir_p = @mkdir_p@
+need_brotli = @need_brotli@
+need_ip2location = @need_ip2location@
 oldincludedir = @oldincludedir@
 pdfdir = @pdfdir@
 prefix = @prefix@

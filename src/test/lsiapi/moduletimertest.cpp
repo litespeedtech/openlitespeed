@@ -25,7 +25,7 @@
 #include <lsiapi/moduletimer.h>
 #include <util/datetime.h>
 
-void test_module_timer_cb_fp(void *p)
+void test_module_timer_cb_fp(const void *p)
 {
     char buf[31];
     DateTime::getRFCTime(DateTime::s_curTime, buf);

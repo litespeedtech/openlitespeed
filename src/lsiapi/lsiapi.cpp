@@ -43,7 +43,8 @@ void  LsiapiBridge::releaseModuleData(int level, LsiModuleData *pData)
         if (data)
         {
             lsi_datarelease_pf cb = (lsi_datarelease_pf)hook->cb;
-            cb(data);
+            if (cb)
+                cb(data);
             pData->set(MODULE_DATA_ID(hook->module)[level], NULL);
         }
     }

@@ -33,8 +33,8 @@ class ModTimer
 {
 public:
     timerkey_t              m_key;
-    lsi_timercb_pf   m_timerCb;
-    void                   *m_pTimerCbParam;
+    lsi_timercb_pf   		m_timerCb;
+    const void             *m_pTimerCbParam;
     unsigned int            m_repeat;
 };
 
@@ -62,7 +62,7 @@ int timerCmp(const void *pKey1, const void *pKey2)
 }
 
 
-void ModTimerList::timerCleanup(void *notused)
+void ModTimerList::timerCleanup(const void *notused)
 {
     ModTimerList::getInstance().m_timerPool.shrinkTo(10);
 }
@@ -84,7 +84,7 @@ ModTimerList::~ModTimerList()
 
 int ModTimerList::addTimer(unsigned int msTimeout, int repeat,
                            lsi_timercb_pf timerCb,
-                           void *timerCbParam)
+                           const void *timerCbParam)
 {
     ModTimer *pTimer = m_timerPool.get();
     pTimer->m_key.id = m_iTimerIds++;

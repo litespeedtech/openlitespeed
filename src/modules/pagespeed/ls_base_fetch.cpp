@@ -31,7 +31,7 @@
 //LsiBaseFetch* LsiBaseFetch::event_connection = NULL;
 int LsiBaseFetch::active_base_fetches = 0;
 
-LsiBaseFetch::LsiBaseFetch(lsi_session_t *session,
+LsiBaseFetch::LsiBaseFetch(const lsi_session_t *session,
                            LsServerContext *server_context,
                            const RequestContextPtr &request_ctx,
                            PreserveCachingHeaders preserve_caching_headers,
@@ -96,7 +96,7 @@ bool LsiBaseFetch::HandleWrite(const StringPiece &sp,
     return true;
 }
 
-int LsiBaseFetch::CopyBufferToLs(lsi_session_t *session)
+int LsiBaseFetch::CopyBufferToLs(const lsi_session_t *session)
 {
     CHECK(!(m_bDoneCalled && m_bLastBufSent))
             << "CopyBufferToLs() was called after the last buffer was sent";
@@ -117,7 +117,7 @@ int LsiBaseFetch::CopyBufferToLs(lsi_session_t *session)
     return 1;
 }
 
-int LsiBaseFetch::CollectAccumulatedWrites(lsi_session_t *session)
+int LsiBaseFetch::CollectAccumulatedWrites(const lsi_session_t *session)
 {
     if (m_bLastBufSent)
         return 0;
@@ -129,7 +129,7 @@ int LsiBaseFetch::CollectAccumulatedWrites(lsi_session_t *session)
     return rc;
 }
 
-int LsiBaseFetch::CollectHeaders(lsi_session_t *session)
+int LsiBaseFetch::CollectHeaders(const lsi_session_t *session)
 {
     const ResponseHeaders *pagespeed_headers = response_headers();
 
@@ -142,12 +142,11 @@ int LsiBaseFetch::CollectHeaders(lsi_session_t *session)
 
 void LsiBaseFetch::RequestCollection()
 {
-    if (m_lEventObj == 0)
+    long tmp = AtomicSetEventObj(NULL);
+    if (tmp == NULL)
         return ;
 
     IncrementRefCount();
-    long tmp = m_lEventObj;
-    m_lEventObj = 0;
     g_api->schedule_event(tmp, 1);
 
 }

@@ -62,7 +62,7 @@ typedef struct zmoddata_s
     zbufinfo_t *send;
 } zmoddata_t;
 
-static void ls_zpool_manage(void *)
+static void ls_zpool_manage(const void *)
 {
     ls_objpool_shrinkto(&zpooldeflate, 10);
     ls_objpool_shrinkto(&zpoolinflate, 10);

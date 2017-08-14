@@ -531,6 +531,8 @@ public:
     
     void setBackRefPtr(evtcbhead_t ** v);
     void resetBackRefPtr();
+    void cancelEvent(evtcbnode_s * v);
+
 };
 
 #endif

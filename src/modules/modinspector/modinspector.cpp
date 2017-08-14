@@ -19,7 +19,6 @@
 #include <ls.h>
 #include <lsr/ls_str.h>
 #include <lsr/ls_strtool.h>
-#include <lsr/ls_confparser.h>
 
 #include <stdlib.h>
 #include <string.h>
@@ -40,69 +39,34 @@ struct scanner_param_st
 
 
 const int paramArrayCount = 2;
-const char *paramArray[paramArrayCount + 1] =
+lsi_config_key_t paramArray[paramArrayCount + 1] =
 {
-    "scannerpath",
-    "counterprefix",
-    NULL //Must have NULL in the last item
+    {"scannerpath",     0, LSI_CFG_SERVER | LSI_CFG_VHOST},
+    {"counterprefix",   1, LSI_CFG_SERVER | LSI_CFG_VHOST},
+    {NULL} //Must have NULL in the last item
 };
 
 
-static int modinspector_parseList(ls_objarray_t *pList,
-                                  scanner_param_st *pConfig)
-{
-    int count = ls_objarray_getsize(pList);
-    if (count != 2)
-        return -1;
-
-    ls_str_t *p = (ls_str_t *)ls_objarray_getobj(pList, 0);
-    for (int i = 0 ; i < paramArrayCount; ++i)
-    {
-        if (ls_str_len(p) == strlen(paramArray[i]) &&
-            strncasecmp(paramArray[i], ls_str_cstr(p), ls_str_len(p)) == 0)
-        {
-            p = (ls_str_t *)ls_objarray_getobj(pList, 1);
-            if (i == 0)
-                pConfig->path = strndup(ls_str_cstr(p), ls_str_len(p));
-            else //i == 1
-                pConfig->prefix = strndup(ls_str_cstr(p), ls_str_len(p));
-            break;
-        }
-    }
-    return 0;
-}
-
-
-static void *modinspector_parseConfig(const char *param, int param_len,
+static void *modinspector_parseConfig(module_param_info_t *param, int param_count,
                                       void *_initial_config, int level, const char *name)
 {
-    ls_confparser_t confparser;
     scanner_param_st *initConf = (scanner_param_st *)_initial_config;
     scanner_param_st *myConf = (scanner_param_st *) malloc(sizeof(
                                    scanner_param_st));
     if (!myConf)
         return NULL;
 
-    if (param)
+    for (int i=0 ;i<param_count; ++i)
     {
-        ls_confparser(&confparser);
-
-        const char *pBufBegin = param, *pBufEnd = param + param_len;
-        const char *pLine, *pLineEnd;
-        while ((pLine = ls_getconfline(&pBufBegin, pBufEnd, &pLineEnd)) != NULL)
+        switch(paramArray[i].id)
         {
-            ls_objarray_t *pList = ls_confparser_line(&confparser, pLine, pLineEnd);
-            if (!pList)
-                continue;
-
-            if (0 != modinspector_parseList(pList, myConf))
-            {
-                g_api->log(NULL, LSI_LOG_ERROR,
-                           "[modinspector]modinspector_parseConfig find error in line: \"%.*s\"\n",
-                           pLineEnd - pLine, pLine);
-            }
+        case 0:
+            myConf->path = strndup(param[i].val, param[i].val_len);
+            break;
+        case 1:
+            myConf->prefix = strndup(param[i].val, param[i].val_len);
+            break;
         }
-        ls_confparser_d(&confparser);
     }
 
     if (!myConf->path)

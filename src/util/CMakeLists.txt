@@ -28,7 +28,9 @@ SET(util_STAT_SRCS
    iconnection.cpp
    dlinkqueue.cpp
    connpool.cpp
+   compressor.cpp
    gzipbuf.cpp
+   brotlibuf.cpp
    vmembuf.cpp
    blockbuf.cpp
    stringlist.cpp

@@ -27,7 +27,6 @@
 #include <inttypes.h>
 #include <lsr/ls_types.h>
 #include <lsr/ls_pooldef.h>
-#include <lsr/ls_internal.h>
 
 
 /**

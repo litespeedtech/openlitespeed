@@ -87,7 +87,10 @@ am__aclocal_m4_deps = $(top_srcdir)/ax_check_zlib.m4 \
 	$(top_srcdir)/ax_check_openssl.m4 \
 	$(top_srcdir)/ax_path_lib_pcre.m4 \
 	$(top_srcdir)/ax_lib_expat.m4 $(top_srcdir)/ax_check_liblua.m4 \
-	$(top_srcdir)/ax_check_libudns.m4 $(top_srcdir)/configure.ac
+	$(top_srcdir)/ax_check_libudns.m4 \
+	$(top_srcdir)/ax_check_brotli.m4 \
+	$(top_srcdir)/ax_check_ip2location.m4 \
+	$(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 mkinstalldirs = $(install_sh) -d
@@ -105,30 +108,30 @@ am_openlitespeed_OBJECTS = prelinkedmods.$(OBJEXT) httpdtest.$(OBJEXT) \
 	staticobj.$(OBJEXT) pool.$(OBJEXT) hashstringmap.$(OBJEXT) \
 	ghash.$(OBJEXT) emailsender.$(OBJEXT) guardedapp.$(OBJEXT) \
 	crashguard.$(OBJEXT) iconnection.$(OBJEXT) \
-	dlinkqueue.$(OBJEXT) connpool.$(OBJEXT) gzipbuf.$(OBJEXT) \
-	vmembuf.$(OBJEXT) blockbuf.$(OBJEXT) stringlist.$(OBJEXT) \
-	semaphore.$(OBJEXT) refcounter.$(OBJEXT) \
-	gpointerlist.$(OBJEXT) linkedobj.$(OBJEXT) objpool.$(OBJEXT) \
-	gpath.$(OBJEXT) poolalloc.$(OBJEXT) env.$(OBJEXT) \
-	xmlnode.$(OBJEXT) iovec.$(OBJEXT) accesscontrol.$(OBJEXT) \
-	signalutil.$(OBJEXT) loopbuf.$(OBJEXT) stringtool.$(OBJEXT) \
-	tsingleton.$(OBJEXT) pcutil.$(OBJEXT) daemonize.$(OBJEXT) \
-	configentry.$(OBJEXT) datetime.$(OBJEXT) \
-	resourcepool.$(OBJEXT) linkedqueue.$(OBJEXT) \
-	httputil.$(OBJEXT) radixtree.$(OBJEXT) profiletime.$(OBJEXT) \
-	partitioninfo.$(OBJEXT) nicdetect.$(OBJEXT) \
-	systeminfo.$(OBJEXT) ni_fio.$(OBJEXT) ls_aho.$(OBJEXT) \
-	ls_base64.$(OBJEXT) ls_buf.$(OBJEXT) ls_confparser.$(OBJEXT) \
-	ls_crc64.$(OBJEXT) ls_dlinkq.$(OBJEXT) ls_fileio.$(OBJEXT) \
-	ls_hash.$(OBJEXT) ls_lfqueue.$(OBJEXT) ls_lfstack.$(OBJEXT) \
-	ls_link.$(OBJEXT) ls_lock.$(OBJEXT) ls_loopbuf.$(OBJEXT) \
-	ls_map.$(OBJEXT) ls_md5.$(OBJEXT) ls_mpscq.$(OBJEXT) \
-	ls_objarray.$(OBJEXT) ls_objpool.$(OBJEXT) ls_pcreg.$(OBJEXT) \
-	ls_pool.$(OBJEXT) ls_ptrlist.$(OBJEXT) ls_sha1.$(OBJEXT) \
-	ls_shm.$(OBJEXT) ls_stack.$(OBJEXT) ls_str.$(OBJEXT) \
-	ls_strlist.$(OBJEXT) ls_strtool.$(OBJEXT) ls_time.$(OBJEXT) \
-	ls_tsstack.$(OBJEXT) ls_xpool.$(OBJEXT) xxhash.$(OBJEXT) \
-	pthreadcond.$(OBJEXT) pthreadmutex.$(OBJEXT) \
+	dlinkqueue.$(OBJEXT) connpool.$(OBJEXT) compressor.$(OBJEXT) \
+	brotlibuf.$(OBJEXT) gzipbuf.$(OBJEXT) vmembuf.$(OBJEXT) \
+	blockbuf.$(OBJEXT) stringlist.$(OBJEXT) semaphore.$(OBJEXT) \
+	refcounter.$(OBJEXT) gpointerlist.$(OBJEXT) \
+	linkedobj.$(OBJEXT) objpool.$(OBJEXT) gpath.$(OBJEXT) \
+	poolalloc.$(OBJEXT) env.$(OBJEXT) xmlnode.$(OBJEXT) \
+	iovec.$(OBJEXT) accesscontrol.$(OBJEXT) signalutil.$(OBJEXT) \
+	loopbuf.$(OBJEXT) stringtool.$(OBJEXT) tsingleton.$(OBJEXT) \
+	pcutil.$(OBJEXT) daemonize.$(OBJEXT) configentry.$(OBJEXT) \
+	datetime.$(OBJEXT) resourcepool.$(OBJEXT) \
+	linkedqueue.$(OBJEXT) httputil.$(OBJEXT) radixtree.$(OBJEXT) \
+	profiletime.$(OBJEXT) partitioninfo.$(OBJEXT) \
+	nicdetect.$(OBJEXT) systeminfo.$(OBJEXT) ni_fio.$(OBJEXT) \
+	ls_aho.$(OBJEXT) ls_base64.$(OBJEXT) ls_buf.$(OBJEXT) \
+	ls_confparser.$(OBJEXT) ls_crc64.$(OBJEXT) ls_dlinkq.$(OBJEXT) \
+	ls_fileio.$(OBJEXT) ls_hash.$(OBJEXT) ls_lfqueue.$(OBJEXT) \
+	ls_lfstack.$(OBJEXT) ls_link.$(OBJEXT) ls_lock.$(OBJEXT) \
+	ls_loopbuf.$(OBJEXT) ls_map.$(OBJEXT) ls_md5.$(OBJEXT) \
+	ls_mpscq.$(OBJEXT) ls_objarray.$(OBJEXT) ls_objpool.$(OBJEXT) \
+	ls_pcreg.$(OBJEXT) ls_pool.$(OBJEXT) ls_ptrlist.$(OBJEXT) \
+	ls_sha1.$(OBJEXT) ls_shm.$(OBJEXT) ls_stack.$(OBJEXT) \
+	ls_str.$(OBJEXT) ls_strlist.$(OBJEXT) ls_strtool.$(OBJEXT) \
+	ls_time.$(OBJEXT) ls_tsstack.$(OBJEXT) ls_xpool.$(OBJEXT) \
+	xxhash.$(OBJEXT) pthreadcond.$(OBJEXT) pthreadmutex.$(OBJEXT) \
 	pthreadworkqueue.$(OBJEXT) thread.$(OBJEXT) workcrew.$(OBJEXT) \
 	worker.$(OBJEXT)
 openlitespeed_OBJECTS = $(am_openlitespeed_OBJECTS)
@@ -147,6 +150,7 @@ openlitespeed_DEPENDENCIES = ./main/libmain.a ./http/libhttp.a \
 	./ssi/libssi.a ./edio/libedio.a ./lsiapi/liblsiapi.a \
 	./modules/libmodules.a ./shm/liblsshm.a ./adns/libadns.a \
 	$(am__DEPENDENCIES_2) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1)
 AM_V_lt = $(am__v_lt_@AM_V@)
@@ -287,6 +291,8 @@ AUTOCONF = @AUTOCONF@
 AUTOHEADER = @AUTOHEADER@
 AUTOMAKE = @AUTOMAKE@
 AWK = @AWK@
+BROTLI_INCLUDES = @BROTLI_INCLUDES@
+BROTLI_LIBS = @BROTLI_LIBS@
 CC = @CC@
 CCDEPMODE = @CCDEPMODE@
 CFLAGS = @CFLAGS@
@@ -318,6 +324,8 @@ INSTALL_DATA = @INSTALL_DATA@
 INSTALL_PROGRAM = @INSTALL_PROGRAM@
 INSTALL_SCRIPT = @INSTALL_SCRIPT@
 INSTALL_STRIP_PROGRAM = @INSTALL_STRIP_PROGRAM@
+IP2LOCATION_INCLUDES = @IP2LOCATION_INCLUDES@
+IP2LOCATION_LIBS = @IP2LOCATION_LIBS@
 LD = @LD@
 LDFLAGS = @LDFLAGS@
 LIBOBJS = @LIBOBJS@
@@ -383,6 +391,7 @@ am__quote = @am__quote@
 am__tar = @am__tar@
 am__untar = @am__untar@
 bindir = @bindir@
+brotli_dir = @brotli_dir@
 build = @build@
 build_alias = @build_alias@
 build_cpu = @build_cpu@
@@ -403,12 +412,15 @@ htmldir = @htmldir@
 includedir = @includedir@
 infodir = @infodir@
 install_sh = @install_sh@
+ip2location_dir = @ip2location_dir@
 libdir = @libdir@
 libexecdir = @libexecdir@
 localedir = @localedir@
 localstatedir = @localstatedir@
 mandir = @mandir@
 mkdir_p = @mkdir_p@
+need_brotli = @need_brotli@
+need_ip2location = @need_ip2location@
 oldincludedir = @oldincludedir@
 pdfdir = @pdfdir@
 prefix = @prefix@
@@ -449,6 +461,8 @@ openlitespeed_SOURCES = modules/prelinkedmods.cpp httpdtest.cpp main.cpp \
    util/iconnection.cpp \
    util/dlinkqueue.cpp \
    util/connpool.cpp \
+   util/compressor.cpp \
+   util/brotlibuf.cpp \
    util/gzipbuf.cpp \
    util/vmembuf.cpp \
    util/blockbuf.cpp \
@@ -523,7 +537,8 @@ openlitespeed_LDADD = ./main/libmain.a ./http/libhttp.a ./spdy/libspdy.a \
         ./extensions/libextensions.a ./log4cxx/liblog4cxx.a ./socket/libsocket.a \
         ./sslpp/libsslpp.a  ./ssi/libssi.a ./edio/libedio.a ./lsiapi/liblsiapi.a \
         ./modules/libmodules.a ./shm/liblsshm.a  ./adns/libadns.a \
-        $(AM_OPENSSL_LIBS) $(EXPAT_LIBS)  $(PCRE_LIBS) -ludns -lGeoIP -lz -lexpat -lpthread $(DL_LIB_OPTION) $(RT_LIB_OPTION)
+        $(AM_OPENSSL_LIBS) $(EXPAT_LIBS)  $(PCRE_LIBS) $(BROTLI_LIBS) ${IP2LOCATION_LIBS} \
+        -ludns -lGeoIP -lz -lexpat -lpthread $(DL_LIB_OPTION) $(RT_LIB_OPTION)
 
 AM_LDFLAGS = -L/usr/lib $(OPENSSL_LDFLAGS)
 AM_CPPFLAGS = -I$(top_srcdir)/ssl/include/ -I$(top_srcdir)/include -I$(top_srcdir)/src  -I$(top_srcdir) $(PCRE_CFLAGS) $(EXPAT_CFLAGS)
@@ -644,6 +659,8 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/accesscontrol.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/autostr.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/blockbuf.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/brotlibuf.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/compressor.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/configentry.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/connpool.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/crashguard.Po@am__quote@
@@ -1548,6 +1565,34 @@ connpool.obj: util/connpool.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='util/connpool.cpp' object='connpool.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o connpool.obj `if test -f 'util/connpool.cpp'; then $(CYGPATH_W) 'util/connpool.cpp'; else $(CYGPATH_W) '$(srcdir)/util/connpool.cpp'; fi`
+
+compressor.o: util/compressor.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT compressor.o -MD -MP -MF $(DEPDIR)/compressor.Tpo -c -o compressor.o `test -f 'util/compressor.cpp' || echo '$(srcdir)/'`util/compressor.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/compressor.Tpo $(DEPDIR)/compressor.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='util/compressor.cpp' object='compressor.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o compressor.o `test -f 'util/compressor.cpp' || echo '$(srcdir)/'`util/compressor.cpp
+
+compressor.obj: util/compressor.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT compressor.obj -MD -MP -MF $(DEPDIR)/compressor.Tpo -c -o compressor.obj `if test -f 'util/compressor.cpp'; then $(CYGPATH_W) 'util/compressor.cpp'; else $(CYGPATH_W) '$(srcdir)/util/compressor.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/compressor.Tpo $(DEPDIR)/compressor.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='util/compressor.cpp' object='compressor.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o compressor.obj `if test -f 'util/compressor.cpp'; then $(CYGPATH_W) 'util/compressor.cpp'; else $(CYGPATH_W) '$(srcdir)/util/compressor.cpp'; fi`
+
+brotlibuf.o: util/brotlibuf.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT brotlibuf.o -MD -MP -MF $(DEPDIR)/brotlibuf.Tpo -c -o brotlibuf.o `test -f 'util/brotlibuf.cpp' || echo '$(srcdir)/'`util/brotlibuf.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/brotlibuf.Tpo $(DEPDIR)/brotlibuf.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='util/brotlibuf.cpp' object='brotlibuf.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o brotlibuf.o `test -f 'util/brotlibuf.cpp' || echo '$(srcdir)/'`util/brotlibuf.cpp
+
+brotlibuf.obj: util/brotlibuf.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT brotlibuf.obj -MD -MP -MF $(DEPDIR)/brotlibuf.Tpo -c -o brotlibuf.obj `if test -f 'util/brotlibuf.cpp'; then $(CYGPATH_W) 'util/brotlibuf.cpp'; else $(CYGPATH_W) '$(srcdir)/util/brotlibuf.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/brotlibuf.Tpo $(DEPDIR)/brotlibuf.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='util/brotlibuf.cpp' object='brotlibuf.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o brotlibuf.obj `if test -f 'util/brotlibuf.cpp'; then $(CYGPATH_W) 'util/brotlibuf.cpp'; else $(CYGPATH_W) '$(srcdir)/util/brotlibuf.cpp'; fi`
 
 gzipbuf.o: util/gzipbuf.cpp
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT gzipbuf.o -MD -MP -MF $(DEPDIR)/gzipbuf.Tpo -c -o gzipbuf.o `test -f 'util/gzipbuf.cpp' || echo '$(srcdir)/'`util/gzipbuf.cpp

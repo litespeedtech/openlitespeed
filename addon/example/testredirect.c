@@ -49,7 +49,7 @@ int parse_qs(const char *qs, int *action, int *useHandler)
     return 0;
 }
 
-void report_error(lsi_session_t *session, const char *qs)
+void report_error(const lsi_session_t *session, const char *qs)
 {
     char errBuf[512];
     sprintf(errBuf, "Error: Invalid argument.\n"
@@ -117,12 +117,12 @@ static lsi_serverhook_t serverHooks[] =
     LSI_HOOK_END   //Must put this at the end position
 };
 
-static int _init(lsi_module_t *pModule)
+static int init_module(lsi_module_t *pModule)
 {
     return LS_OK;
 }
 
-static int handlerBeginProcess(lsi_session_t *session)
+static int handlerBeginProcess(const lsi_session_t *session)
 {
     const char *qs;
     int action = LSI_URL_REWRITE;
@@ -140,4 +140,4 @@ static int handlerBeginProcess(lsi_session_t *session)
 }
 
 lsi_reqhdlr_t myhandler = { handlerBeginProcess, NULL, NULL, NULL };
-lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, _init, &myhandler, NULL, "test  redirect v1.0", serverHooks };
+lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, init_module, &myhandler, NULL, "test  redirect v1.0", serverHooks };

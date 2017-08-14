@@ -290,6 +290,9 @@ class CompilePHPUI
 		if ($supported['memcachd']) {
 			$input .= $this->input_checkbox('addonMemCachd', $options->GetValue('AddOnMemCachd'), '<a href="http://pecl.php.net/package/memcached" target="_blank" rel="noopener noreferrer">memcached</a> (PHP extension for interfacing with memcached via libmemcached library) V' . BuildConfig::GetVersion(BuildConfig::MEMCACHED_VERSION));
 		}
+		if ($supported['memcachd7']) {
+			$input .= $this->input_checkbox('addonMemCachd7', $options->GetValue('AddOnMemCachd7'), '<a href="http://pecl.php.net/package/memcached" target="_blank" rel="noopener noreferrer">memcached</a> (PHP extension for interfacing with memcached via libmemcached library) V' . BuildConfig::GetVersion(BuildConfig::MEMCACHED7_VERSION));
+		}
 		$note = DMsg::ALbl('buildphp_updatever') . ' /usr/local/lsws/admin/html/lib/util/build_php/BuildConfig.php';
 		$buf .= $this->form_group(DMsg::ALbl('buildphp_addonmodules'), false, $input, '', $note);
 

@@ -60,6 +60,7 @@
 #include <http/httpvhost.h>
 #include <http/httpvhostlist.h>
 #include <http/iptogeo.h>
+#include <http/iptoloc.h>
 #include <http/ntwkiolink.h>
 #include <http/platforms.h>
 #include <http/serverprocessconfig.h>
@@ -364,6 +365,7 @@ private:
     int initGroups();
     int loadAdminConfig(XmlNode *pRoot);
     int configIpToGeo(const XmlNode *pNode);
+    int configIpToLoc(const XmlNode *pNode);
     int configChroot(const XmlNode *pRoot);
     int configServer(int reconfig, XmlNode *pRoot);
     void enableCoreDump();
@@ -1993,6 +1995,13 @@ int HttpServerImpl::configTuning(const XmlNode *pRoot)
                               0, 1, 0));
     config.setCompressLevel(currentCtx.getLongValue(pNode, "gzipCompressLevel",
                             1, 9, 4));
+    config.setBrCompress(
+#ifdef USE_BROTLI
+        currentCtx.getLongValue(pNode, "enableBrCompress", 0, 1, 0)
+#else
+        0
+#endif
+    );
     HttpMime::getMime()->setCompressibleByType(
         pNode->getChildValue("compressibleTypes"), NULL, TmpLogId::getLogId());
     StaticFileCacheData::setUpdateStaticGzipFile(
@@ -2001,6 +2010,9 @@ int HttpServerImpl::configTuning(const XmlNode *pRoot)
         currentCtx.getLongValue(pNode, "gzipMinFileSize", 200, LONG_MAX, 300),
         currentCtx.getLongValue(pNode, "gzipMaxFileSize", 200, LONG_MAX,
                                 1024 * 1024)
+    );
+    StaticFileCacheData::setStaticBrOptions(
+        currentCtx.getLongValue(pNode, "brStaticCompressLevel", 1, 9, 6)
     );
 
 
@@ -2035,7 +2047,7 @@ int HttpServerImpl::configTuning(const XmlNode *pRoot)
         }
     }
 
-    StaticFileCacheData::setGzipCachePath(pValue);
+    StaticFileCacheData::setCompressCachePath(pValue);
 
 
     // shm
@@ -2317,6 +2329,9 @@ int HttpServerImpl::configServerBasic2(const XmlNode *pRoot,
 
         HttpServer::getInstance().getServerContext().setGeoIP(
             ConfigCtx::getCurConfigCtx()->getLongValue(pRoot, "enableIpGeo", 0, 1, 0));
+
+        HttpServer::getInstance().getServerContext().setIpToLoc(
+            ConfigCtx::getCurConfigCtx()->getLongValue(pRoot, "enableIpToLoc", 0, 1, 0));
 
         HttpServerConfig::getInstance().setUseProxyHeader(
             ConfigCtx::getCurConfigCtx()->getLongValue(pRoot,
@@ -2851,6 +2866,26 @@ int HttpServerImpl::configIpToGeo(const XmlNode *pNode)
 }
 
 
+int HttpServerImpl::configIpToLoc(const XmlNode *pNode)
+{
+    const XmlNodeList *pList = pNode->getChildren("iptolocDB");
+
+    if ((!pList) || (pList->size() == 0))
+        return 0;
+
+#ifdef USE_IP2LOCATION
+    IpToLoc *pIpToLoc = new IpToLoc();
+
+    if (!pIpToLoc)
+        return LS_FAIL;
+    if (pIpToLoc->config(pList) == -1)
+        delete pIpToLoc;
+#endif
+
+    return 0;
+}
+
+
 int HttpServerImpl::configChroot(const XmlNode *pRoot)
 {
     MainServerConfig  &MainServerConfigObj =  MainServerConfig::getInstance();
@@ -3008,7 +3043,10 @@ int HttpServerImpl::configServer(int reconfig, XmlNode *pRoot)
     }
 
     if (m_serverContext.isGeoIpOn())
+    {
         configIpToGeo(pRoot);
+        configIpToLoc(pRoot);
+    }
 
 
     const char *pVal = pRoot->getChildValue("suspendedVhosts");

@@ -129,18 +129,17 @@ static int init_lve()
 static char         s_pSecret[24];
 static pid_t        s_parent;
 static int          s_run = 1;
-static const char *s_pError = "";
-static char         s_sError[128];
 static char         s_sDataBuf[16384];
 static int          s_fdControl = -1;
 
 
-static void set_cgi_error(char *p, char *p2)
+static void log_cgi_error(const char *func, const char *arg,
+                                                    const char *explanation)
 {
-    int n = snprintf(s_sError, 127, "%s:%s: %s\n", p, (p2) ? p2 : "",
-                     strerror(errno));
-    write(STDERR_FILENO, s_sError, n);
-    s_pError = s_sError;
+    char err[128];
+    int n = ls_snprintf(err, 127, "%s:%s%.*s %s\n", func, (arg) ? arg : "",
+                    !!arg, ":", explanation ? explanation : strerror(errno));
+    write(STDERR_FILENO, err, n);
 }
 
 
@@ -172,9 +171,9 @@ static int timed_read(int fd, char *pBuf, int len, int timeout)
                 else if (ret <= 0)
                 {
                     if (ret)
-                        set_cgi_error((char *)"scgid: read()", NULL);
+                        log_cgi_error("scgid: read()", NULL, NULL);
                     else
-                        s_pError = "scgid: pre-mature request.";
+                        log_cgi_error("scgid", NULL, "pre-mature request");
                     return LS_FAIL;
                 }
             }
@@ -183,7 +182,7 @@ static int timed_read(int fd, char *pBuf, int len, int timeout)
         {
             if (errno != EINTR)
             {
-                set_cgi_error((char *)"scgid: poll()", NULL);
+                log_cgi_error("scgid: poll()", NULL, NULL);
                 return LS_FAIL;
             }
         }
@@ -191,7 +190,7 @@ static int timed_read(int fd, char *pBuf, int len, int timeout)
         cur = time(NULL);
         if (cur - begin >= timeout)
         {
-            s_pError = "scgid: request timed out!";
+            log_cgi_error("scgid", NULL, "request timed out!");
             return LS_FAIL;
         }
     }
@@ -225,8 +224,8 @@ static int writeall(int fd, const char *pBuf, int len)
 static int cgiError(int fd, int status)
 {
     char achBuf[ 256 ];
-    int ret = snprintf(achBuf, sizeof(achBuf) - 1, "Status:%d\n\n%s",
-                       status, s_pError);
+    int ret = ls_snprintf(achBuf, sizeof(achBuf) - 1,
+                          "Status:%d\n\nInternal error.\n", status);
     writeall(fd, achBuf, ret);
     close(fd);
     return 0;
@@ -245,7 +244,7 @@ static int setUIDs(uid_t uid, gid_t gid, char *pChroot)
     rv = setgid(gid);
     if (rv == -1)
     {
-        set_cgi_error((char *)"lscgid: setgid()", NULL);
+        log_cgi_error("lscgid: setgid()", NULL, NULL);
         return LS_FAIL;
     }
     if (pw && (pw->pw_gid == gid))
@@ -253,7 +252,7 @@ static int setUIDs(uid_t uid, gid_t gid, char *pChroot)
         rv = initgroups(pw->pw_name, gid);
         if (rv == -1)
         {
-            set_cgi_error((char *)"lscgid: initgroups()", NULL);
+            log_cgi_error("lscgid: initgroups()", NULL, NULL);
             return LS_FAIL;
         }
     }
@@ -261,22 +260,21 @@ static int setUIDs(uid_t uid, gid_t gid, char *pChroot)
     {
         rv = setgroups(1, &gid);
         if (rv == -1)
-            set_cgi_error((char *)"lscgid: setgroups()", NULL);
+            log_cgi_error("lscgid: setgroups()", NULL, NULL);
     }
     if (pChroot)
     {
         rv = chroot(pChroot);
         if (rv == -1)
         {
-            set_cgi_error((char *)"lscgid: chroot()", NULL);
+            log_cgi_error("lscgid: chroot()", NULL, NULL);
             return LS_FAIL;
         }
     }
     rv = setuid(uid);
     if (rv == -1)
     {
-        set_cgi_error((char *)"lscgid: setuid()", NULL);
-        s_pError = "setuid() failed!";
+        log_cgi_error("lscgid: setuid()", NULL, NULL);
         return LS_FAIL;
     }
     return 0;
@@ -340,8 +338,7 @@ static int execute_cgi(lscgid_t *pCGI)
         {
             fprintf(stderr, "lscgid (%d): enter LVE (%d) : result: %d !\n", getpid(),
                     pCGI->m_data.m_uid, ret);
-            set_cgi_error("lscgid: lve_enter() failure, reached resource limit.",
-                          NULL);
+            log_cgi_error("lscgid", NULL, "lve_enter() failure, reached resource limit");
             return 500;
         }
     }
@@ -360,7 +357,7 @@ static int execute_cgi(lscgid_t *pCGI)
             {
                 fprintf(stderr, "lscgid (%d): LVE jail(%d) ressult: %d, error: %s !\n",
                         getpid(), pCGI->m_data.m_uid, ret, error_msg);
-                set_cgi_error("lscgid: jail() failure.", NULL);
+                log_cgi_error("lscgid", NULL, "jail() failure");
                 return 500;
             }
         }
@@ -380,7 +377,7 @@ static int execute_cgi(lscgid_t *pCGI)
     if (chdir(pCGI->m_pCGIDir) == -1)
     {
         int error = errno;
-        set_cgi_error((char *)"lscgid: chdir()", pCGI->m_pCGIDir);
+        log_cgi_error("lscgid: chdir()", pCGI->m_pCGIDir, NULL);
         switch (error)
         {
         case ENOENT:
@@ -409,7 +406,7 @@ static int execute_cgi(lscgid_t *pCGI)
     //fprintf( stderr, "execute_cgi m_umask=%03o\n", pCGI->m_data.m_umask );
     if (execve(pCGI->m_pCGIDir, pCGI->m_argv, pCGI->m_env) == -1)
     {
-        set_cgi_error((char *)"lscgid: execve()", pCGI->m_pCGIDir);
+        log_cgi_error("lscgid: execve()", pCGI->m_pCGIDir, NULL);
         return 500;
     }
 
@@ -516,7 +513,7 @@ static int process_req_header(lscgid_t *cgi_req)
                        sizeof(lscgid_req), cgi_req->m_data.m_md5);
     if (memcmp(cgi_req->m_data.m_md5, achMD5, 16) != 0)
     {
-        s_pError = "lscgid: request validation failed!";
+        log_cgi_error("lscgid", NULL, "request validation failed!");
         return 500;
     }
     totalBufLen = cgi_req->m_data.m_szData + sizeof(char *) *
@@ -527,14 +524,14 @@ static int process_req_header(lscgid_t *cgi_req)
     {
         if (totalBufLen > MAX_CGI_DATA_LEN)
         {
-            set_cgi_error((char *)"lscgid: cgi header data is too big" , NULL);
+            log_cgi_error("lscgid", NULL, "cgi header data is too big");
             return 500;
 
         }
         cgi_req->m_pBuf = (char *)malloc(totalBufLen);
         if (!cgi_req->m_pBuf)
         {
-            set_cgi_error((char *)"lscgid: malloc()", NULL);
+            log_cgi_error("lscgid: malloc()", NULL, NULL);
             return 500;
         }
     }
@@ -582,7 +579,7 @@ static int recv_req(int fd, lscgid_t *cgi_req, int timeout)
     ret = process_req_data(cgi_req);
     if (ret)
     {
-        s_pError = "lscgid: data error!";
+        log_cgi_error("lscgid", NULL, "data error!");
         return ret;
     }
     if (cgi_req->m_data.m_type == LSCGID_TYPE_SUEXEC)

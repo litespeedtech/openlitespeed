@@ -106,15 +106,8 @@ LsShmOffset_t LsShmLock::ptr2offset(const void *ptr) const
     return (LsShmOffset_t)((uint8_t *)ptr - (uint8_t *)m_pShmLockMap);
 }
 
-LsShmOffset_t LsShmLock::pLock2offset(ls_shmlock_t *pLock)
-{
-    assert((uint8_t *)pLock <
-            ((uint8_t *)m_pShmLockMap) + m_pShmLockMap->x_iMaxSize);
-    return (LsShmOffset_t)((uint8_t *)pLock - (uint8_t *)m_pShmLockMap);
-}
 
-
-ls_shmlock_t *LsShmLock::allocLock()
+LsShmOffset_t LsShmLock::allocLock()
 {
     LsShmLockElem *pElem;
     LsShmOffset_t offset;
@@ -122,7 +115,7 @@ ls_shmlock_t *LsShmLock::allocLock()
     if ((offset = m_pShmLockMap->x_iFreeOffset) == 0)
     {
         ls_shmlock_unlock(&m_pShmLockElem->x_lock);
-        return NULL;
+        return 0;
     }
     pElem = m_pShmLockElem + offset;
     m_pShmLockMap->x_iFreeOffset = pElem->x_iNext;
@@ -131,7 +124,8 @@ ls_shmlock_t *LsShmLock::allocLock()
         *(int *)&pElem->x_lock = 0;
     else
         ::memset((void *)&pElem->x_lock, 0, sizeof(pElem->x_lock));
-    return &pElem->x_lock;
+    return (LsShmOffset_t)((uint8_t *)&pElem->x_lock 
+            - (uint8_t *)m_pShmLockMap);
 }
 
 

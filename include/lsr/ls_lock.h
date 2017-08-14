@@ -126,7 +126,7 @@ typedef ls_spinlock_t      ls_lock_t;
 
 #ifdef USE_ATOMIC_SPIN
 #define ls_spinlock_setup         ls_atomic_spin_setup
-#define ls_spinlock_lock          ls_atomic_spin_pidlock
+#define ls_spinlock_lock          ls_atomic_spin_lock
 #define ls_spinlock_trylock       ls_atomic_spin_trylock
 #define ls_spinlock_unlock        ls_atomic_spin_unlock
 #else

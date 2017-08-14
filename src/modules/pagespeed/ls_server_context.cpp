@@ -42,7 +42,7 @@ LsiRewriteOptions *LsServerContext::Config()
 }
 
 SystemRequestContext *LsServerContext::NewRequestContext(
-    lsi_session_t *session)
+    const lsi_session_t *session)
 {
     int local_port = DeterminePort(session);
     char ip[60] = {0};

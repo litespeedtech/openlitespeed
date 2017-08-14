@@ -43,7 +43,7 @@ public:
     LsLuaSession();
     ~LsLuaSession();
 
-    void init(lsi_session_t *pSession, int iCurHook)
+    void init(const lsi_session_t *pSession, int iCurHook)
     {
         m_pHttpSession = pSession;
         m_pState = NULL;
@@ -54,7 +54,7 @@ public:
 
     static LsLuaSession *getSelf(lua_State *L);
 
-    inline lsi_session_t *getHttpSession() const
+    inline const lsi_session_t *getHttpSession() const
     {   return m_pHttpSession;      }
 
     inline lua_State *getLuaState() const
@@ -161,7 +161,7 @@ public:
     void releaseTimer();
 
     // resp control
-    int onWrite(lsi_session_t *httpSession);     // called by modlua.c
+    int onWrite(const lsi_session_t *httpSession);     // called by modlua.c
     int wait4RespBuffer(lua_State *L);
 
     static int endSession(LsLuaSession *);
@@ -174,7 +174,7 @@ private:
     bool operator==(const LsLuaSession &other);
 
 private:
-    lsi_session_t    *m_pHttpSession;
+    const lsi_session_t    *m_pHttpSession;
     lua_State        *m_pState;
     lua_State        *m_pStateMom;        // save the parent state
 
@@ -209,7 +209,7 @@ private:
     static int  s_iKey;              // System wide unique key
 
     // callback timer
-    static void timerCb(void *);
+    static void timerCb(const void *);
 
     // reach max runtime callback
     // static void maxruntimeCb(void *);

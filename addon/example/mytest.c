@@ -22,7 +22,7 @@
 lsi_module_t MNAME;
 
 
-static int reg_handler(lsi_param_t *param)
+static int rcvd_req_header_cbf(lsi_param_t *param)
 {
     const char *uri;
     int len;
@@ -33,13 +33,13 @@ static int reg_handler(lsi_param_t *param)
 }
 
 
-static int _init()
+static int init_module()
 {
     return 0;
 }
 
 
-static int begin_process(lsi_session_t *session)
+static int begin_process(const lsi_session_t *session)
 {
     g_api->append_resp_body(session, "MyTest!\n", 8);
     g_api->end_resp(session);
@@ -49,13 +49,13 @@ static int begin_process(lsi_session_t *session)
 
 static lsi_serverhook_t server_hooks[] =
 {
-    {LSI_HKPT_RCVD_REQ_HEADER, reg_handler, LSI_HOOK_FIRST, LSI_FLAG_ENABLED},
+    {LSI_HKPT_RCVD_REQ_HEADER, rcvd_req_header_cbf, LSI_HOOK_FIRST, LSI_FLAG_ENABLED},
     LSI_HOOK_END   //Must put this at the end position
 };
 
 static lsi_reqhdlr_t myhandler = { begin_process, NULL, NULL, NULL };
 lsi_module_t MNAME =
 {
-    LSI_MODULE_SIGNATURE, _init, &myhandler, NULL, "", server_hooks
+    LSI_MODULE_SIGNATURE, init_module, &myhandler, NULL, "", server_hooks
 };
 

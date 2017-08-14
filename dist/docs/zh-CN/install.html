@@ -9,12 +9,15 @@
   <link rel="stylesheet" type="text/css" href="../css/hdoc.css">
 </head>
 <body>
-<div class="pagewrapper"><div class="sidetree">
-<h3>OpenLiteSpeed Web Server <a href="index.html"> Users' Manual</a></h3>
-<h5>Version 1.4 Rev. 3</h5>
+<div class="pagewrapper clearfix"><aside class="sidetree ls-col-1-5">
+      <figure>
+        <img src="img/ols_logo.svg" alt="openlitespeed logo" width="150px"/>
+      </figure>
+<h3 class="ls-text-thin">OpenLiteSpeed Web Server <a href="index.html"> Users' Manual</a></h3>
+<h5 class="ls-text-muted">Version 1.4 &nbsp;&#8212;&nbsp;Rev. 6</h5>
 <hr/>
 <div>
-<ul class="toctop">
+<ul>
 <li><a href="license.html">License</a></li>
 <li><a href="intro.html">Introduction</a></li>
 <li><span class="current"><a href="install.html">Installation</a></span></li>
@@ -74,8 +77,9 @@
         </ul>
 </li>
 </ul>
-</div></div>
-<div class="contentwrapper"><div class="nav-bar"><div class="prev">&#171 <a href="intro.html">Introduction</a></div><div class="center"><a href="index.html">Home</a></div><div class="next"><a href="admin.html">Administration</a> &#187;</div></div>
+</div>
+</aside>
+<article class="contentwrapper ls-col-3-5 clearfix"><div class="nav-bar ls-spacer-micro-top"><div class="prev">&#171 <a href="intro.html">Introduction</a></div><div class="center"><a href="index.html">Home</a></div><div class="next"><a href="admin.html">Administration</a> &#187;</div></div>
 <h1>Installation/Uninstallation</h1>
 
 <h3>Minimum system requirements</h3>
@@ -106,7 +110,9 @@
 <h4>Installation Steps:</h4>
 <ol>
 	<li><p>Download and decompress the package into a convenient location:</p>
-	<p class="cmd">wget http://open.litespeedtech.com/packages/openlitespeed.1.0.tgz; tar zxf openlitespeed.1.0.tgz</p>
+	<p class="cmd">
+           wget http://open.litespeedtech.com/packages/openlitespeed-1.4.26.tgz; tar zxf openlitespeed-1.4.26.tgz
+         </p>
 	</li>
 	
 	<li><p>Go to the installation directory, compile, and install the package as the root user (for production use):</p>
@@ -180,7 +186,7 @@ XXXX is a port number. If the port is available, the command will produce no out
 	<li>Stop OpenLiteSpeed if it is running: [your_install_dir]/bin/lswsctrl stop</li>
 	<li>Remove the install directory: rm -rf [your_install_dir]
 </ol>
-</div><footer class="copyright">Copyright &copy; 2013-2017. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> All rights reserved.</footer>
-</div>
+</article><div  class="ls-col-1-1"><footer class="copyright">Copyright &copy; 2013-2017. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> All rights reserved.</footer>
+</div></div>
 </body>
 </html>

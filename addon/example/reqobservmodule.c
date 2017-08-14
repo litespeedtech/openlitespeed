@@ -89,7 +89,7 @@ int check_req_whole_body(lsi_param_t *param)
 }
 
 
-static int _init(lsi_module_t *pModule)
+static int init_module(lsi_module_t *pModule)
 {
     return 0;
 }
@@ -103,6 +103,6 @@ static lsi_serverhook_t server_hooks[] =
 
 lsi_module_t MNAME =
 {
-    LSI_MODULE_SIGNATURE, _init, NULL, NULL, "", server_hooks
+    LSI_MODULE_SIGNATURE, init_module, NULL, NULL, "", server_hooks
 };
 

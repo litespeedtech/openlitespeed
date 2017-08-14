@@ -39,6 +39,7 @@ Adns::Adns()
 Adns::~Adns()
 {
     shutdown();
+    s_inited = 0;
 }
 
 
@@ -418,6 +419,3 @@ int Adns::getHostByNameV6Sync(const char *pName, in6_addr *addr)
     }
     return -1;
 }
-
-
-

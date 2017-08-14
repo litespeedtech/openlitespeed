@@ -28,7 +28,6 @@ typedef void (* addrLookupCbV6)(struct dns_ctx *, struct dns_rr_a6 *, void *);
 typedef int (* lookup_pf)(void *arg, const long lParam, void *pParam);
 typedef void (* unknownCb)();
 
-
 class AdnsReq
 {
     friend class Adns;
@@ -47,8 +46,10 @@ public:
             free(name);
     }
 
-    void **getArgAddr()     {   return &arg;        }
-    time_t getStartTime()   {   return start_time;  }
+    void **getArgAddr()                     {   return &arg;        }
+    time_t getStartTime()                   {   return start_time;  }
+
+    void setCallback(lookup_pf callback)    {   cb = callback;      }
 
 private:
     int              type;//PF_INET, PF_INET6

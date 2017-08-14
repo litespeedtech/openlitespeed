@@ -48,65 +48,19 @@ typedef struct param_st
 } param_t;
 
 //Setup the below array to let web server know these params
-const char *myParam[] =
+lsi_config_key_t myParam[] =
 {
-    TMPDIR,
-    TMPPERMISSON,
-    BYPATH,
-    NULL   //The last position must have a NULL to indicate end of the array
+    {TMPDIR,        0,},
+    {TMPPERMISSON,  1,},
+    {BYPATH,        2,},
+    {NULL} //Must have NULL in the last item
 };
 
-const int paramArrayCount = sizeof(myParam) / sizeof(char *) - 1;
+uint16_t paramArrayCount = sizeof(myParam) / sizeof(lsi_config_key_t) - 1;
 
-
-//return 0 for correctly parsing
-static int _parseList(ls_objarray_t *pList, param_t *pConfig)
-{
-    int count = ls_objarray_getsize(pList);
-    assert(count > 0);
-
-    ls_str_t *p = (ls_str_t *)ls_objarray_getobj(pList, 0);
-    int len = ls_str_len(p);
-    for( int i=0; i<paramArrayCount; ++i)
-    {
-        if (strlen(myParam[i]) == len && strncmp(myParam[i], ls_str_cstr(p), len) == 0)
-        {
-            ls_str_t *pVal = (ls_str_t *)ls_objarray_getobj(pList, 1);
-            const char *pValStr = ls_str_cstr(pVal);
-            int valLen = ls_str_len(pVal);
-            if (valLen == 0 || pValStr == NULL)
-                break;
-            
-            switch(i)
-            {
-            case 0:
-                pConfig->tmpDir = new AutoStr2;
-                pConfig->tmpDir->setStr(pValStr, valLen);
-                pConfig->ownDir = 1;
-                break;
-                
-            case 1:
-                pConfig->permission = strtol(pValStr, NULL, 8);
-                break;
-                
-            case 2:
-                pConfig->byPath = strtol(pValStr, NULL, 10);
-                break;
-            
-            default:
-                break;
-            }
-            break;
-        }
-    }
-    
-    return 0;
-}
-
-static void *_parseConfig(const char *param, int param_len,
+static void *_parseConfig(module_param_info_t *param, int param_count,
                           void *_initial_config, int level, const char *name)
 {
-    ls_confparser_t confparser;
     param_t *pInitConfig = (param_t *)_initial_config;
     param_t *pConfig = new param_t;
     if (!pConfig)
@@ -126,22 +80,30 @@ static void *_parseConfig(const char *param, int param_len,
         pConfig->ownDir = 1;
     }
 
-    if (!param)
+    if (!param || param_count == 0)
         return (void *)pConfig;
 
-    ls_confparser(&confparser);
-
-    const char *pBufBegin = param, *pBufEnd = param + param_len;
-    const char *pLine, *pLineEnd;
-    while ((pLine = ls_getconfline(&pBufBegin, pBufEnd, &pLineEnd)) != NULL)
+    for (int i=0; i<param_count; ++i)
     {
-        ls_objarray_t *pList = ls_confparser_line(&confparser, pLine, pLineEnd);
-        if (!pList)
-            continue;
+        switch(param[i].key_index)
+        {
+        case 0:
+            pConfig->tmpDir = new AutoStr2;
+            pConfig->tmpDir->setStr(param[i].val, param[i].val_len);
+            pConfig->ownDir = 1;
+            break;
 
-        _parseList(pList, pConfig);
+
+        case 1:
+            pConfig->permission = strtol(param[i].val, NULL, 8);
+            break;
+            
+        case 2:
+            pConfig->byPath = strtol(param[i].val, NULL, 10);
+            break;
+        }
     }
-    ls_confparser_d(&confparser);
+
     return (void *)pConfig;
 }
 

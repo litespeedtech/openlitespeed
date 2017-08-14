@@ -77,7 +77,7 @@ static int set_session(lsi_param_t *param)
     return LSI_OK;
 }
 
-static int _init(lsi_module_t *pModule)
+static int init_module(lsi_module_t *pModule)
 {
     return 0;
 }
@@ -92,6 +92,6 @@ static lsi_serverhook_t server_hooks[] =
 
 lsi_module_t MNAME =
 {
-    LSI_MODULE_SIGNATURE, _init, NULL, NULL, "", server_hooks
+    LSI_MODULE_SIGNATURE, init_module, NULL, NULL, "", server_hooks
 };
 

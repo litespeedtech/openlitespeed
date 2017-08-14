@@ -111,10 +111,14 @@ public:
 
 };
 
+#define SFCD_MODE_GZIP      (1<<0)
+#define SFCD_MODE_BROTLI    (1<<1)
+
 class StaticFileCacheData : public CacheElement
 {
     AutoStr2        m_real;
     AutoStr2        m_gzippedPath;
+    AutoStr2        m_bredPath;
     AutoStr2        m_sHeaders;
 
     const MimeSetting *m_pMimeType;
@@ -127,58 +131,62 @@ class StaticFileCacheData : public CacheElement
     SSIScript      *m_pSSIScript;
 
 
-    unsigned char *m_pMiniMoov;
+    unsigned char  *m_pMiniMoov;
     int             m_iMiniMoovSize;
 
     LsiModuleData   m_moduleData;
 
-    time_t          m_tmLastCheckGzip;
-    FileCacheDataEx *m_pGziped;
+    time_t          m_tmLastCheck;
+    FileCacheDataEx *m_pGzip;
+    FileCacheDataEx *m_pBrotli;
     FileCacheDataEx m_fileData;
 
     StaticFileCacheData(const StaticFileCacheData &rhs);
     void operator=(const StaticFileCacheData &rhs);
 
     int buildFixedHeaders(int etag);
-    int buildGzipCache(const struct stat &st);
-    int tryCreateGziped();
+    int buildCompressedCache(FileCacheDataEx *&pData, const struct stat &st);
+    int tryCreateCompressed(char useBrotli);
     
-    int buildGzipPath();
+    int buildCompressedPaths();
     int detectTrancate();
 
+    int setReadiedCompressData(char compressMode);
+    int compressHelper(AutoStr2 &path, FileCacheDataEx *&pData,
+        struct stat &st, int exists, char isBrotli);
 public:
 
-    int readyGziped();
+    int readyCompressed(char compressMode);
     const AutoStr2 * getRealPath() { return  &m_real; }
     off_t getFileSize() const   {   return m_fileData.getFileSize();    }
 
-    void setMimeType(const MimeSetting *pType) {   m_pMimeType = pType;  }
+    void setMimeType(const MimeSetting *pType) {  m_pMimeType = pType;  }
     const MimeSetting *getMimeType() const    {   return m_pMimeType;   }
 
-    void setCharset(const AutoStr2 *p)     {   m_pCharset = p;       }
+    void setCharset(const AutoStr2 *p)  {   m_pCharset = p;             }
 
     int  getHeaderLen() const           {   return m_sHeaders.len();    }
-    const char *getHeaderBuf() const   {   return m_sHeaders.c_str();  }
+    const char *getHeaderBuf() const    {   return m_sHeaders.c_str();  }
     int  getValidateHeaderLen() const   {   return m_iValidateHeaderLen;}
     int  getETagHeaderLen() const       {   return m_iETagLen + 8;      }
 
     StaticFileCacheData();
     ~StaticFileCacheData();
-    virtual const char *getKey() const
-    {   return m_real.c_str(); }
+    virtual const char *getKey() const  {   return m_real.c_str();      }
     int build(int fd, const char   *pPath, int pathLen,
               const struct stat &fileStat);
-    FileCacheDataEx *getGziped() const    {   return m_pGziped;   }
-    const FileCacheDataEx *getFileData() const {   return &m_fileData; }
-    FileCacheDataEx *getFileData()         {   return &m_fileData;     }
+    FileCacheDataEx *getGzip() const    {   return m_pGzip;             }
+    FileCacheDataEx *getBrotli() const  {   return m_pBrotli;           }
+    const FileCacheDataEx *getFileData() const {   return &m_fileData;  }
+    FileCacheDataEx *getFileData()      {   return &m_fileData;         }
 
-    SSIScript *getSSIScript() const        {   return m_pSSIScript;    }
-    void setSSIScript(SSIScript *p)       {   m_pSSIScript = p;       }
+    SSIScript *getSSIScript() const     {   return m_pSSIScript;        }
+    void setSSIScript(SSIScript *p)     {   m_pSSIScript = p;           }
 
     void setMiniMoov(unsigned char *p, int size)
     {   m_pMiniMoov = p;  m_iMiniMoovSize = size;      }
-    unsigned char *getMiniMoov() const     {   return m_pMiniMoov;     }
-    int getMiniMoovSize() const             {   return m_iMiniMoovSize; }
+    unsigned char *getMiniMoov() const  {   return m_pMiniMoov;         }
+    int getMiniMoovSize() const         {   return m_iMiniMoovSize;     }
 
     int testMod(HttpReq *pReq);
     int testUnMod(HttpReq *pReq);
@@ -195,7 +203,7 @@ public:
         return (pMIME != m_pMimeType) || (pCharset != m_pCharset)
                || (m_iFileETag != etag);
     }
-    int compressFile();
+    int compressFile(char useBrotli);
 
     int buildHeaders(const MimeSetting *pMIME,
                      const AutoStr2 *pCharset, short etag);
@@ -207,10 +215,10 @@ public:
 
     static void setUpdateStaticGzipFile(int enable, int level,
                                         size_t min, size_t max);
-    static void setGzipCachePath(const char *pPath);
-    static const char *getGzipCachePath();
+    static void setCompressCachePath(const char *pPath);
+    static const char *getCompressCachePath();
 
-
+    static void setStaticBrOptions(int level);
 };
 
 #endif

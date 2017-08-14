@@ -38,6 +38,9 @@ public:
     virtual ~HttpFetchDriver()                      {   };
     void start();
     void stop();
+
+    void switchWriteToRead();
+    void switchReadToWrite();
 };
 
 #endif // HTTPFETCHDRIVER_H

@@ -22,6 +22,7 @@
 #include <http/httplog.h>
 #include <http/httpserverconfig.h>
 #include <http/iptogeo.h>
+#include <http/iptoloc.h>
 #include <log4cxx/logger.h>
 #include <lsiapi/lsiapi.h>
 #include <util/accesscontrol.h>
@@ -340,16 +341,19 @@ static int addrlookupCb(void *arg, const long length, void *hosts)
                   pInfo->getAddrString(), (char *)hosts );
 
         //Just use the first result for now
-        char *pHost1End = strchr((char *)hosts, ',');
+        char *pHost1End = (char *)memchr(hosts, ',', (size_t)length);
         if (pHost1End)
+        {
             *pHost1End = 0x00; //Terminate the first ',', so only use the first one
-            pInfo->setHostName( (char *)hosts );
+        }
+        pInfo->setHostName( (char *)hosts );
     }
     else
     {
         LS_DBG_H( "Failed to lookup [%s]\n", pInfo->getAddrString());
         pInfo->setHostName( NULL );
     }
+
     if ((pInfo->isNeedTestHost()) && (type = pInfo->checkHost()) != 0)
     {
         int ipLen = 0;
@@ -410,6 +414,20 @@ ClientInfo *ClientCache::getClientInfo(struct sockaddr *pPeer)
 
             }
         }
+
+#ifdef USE_IP2LOCATION
+        // IP2Location lookup
+        if (IpToLoc::getIpToLoc() != NULL)
+        {
+            LocInfo *pLocInfo = pInfo->allocateLocInfo();
+            if (pLocInfo)
+            {
+                IpToLoc::getIpToLoc()->lookUp(pInfo->getAddrString(),
+                                              pInfo->getAddrStrLen(),
+                                              pLocInfo);
+            }
+        }
+#endif
 
         if (AccessControl::getAccessCtrl())
             pInfo->setAccess(AccessControl::getAccessCtrl()->hasAccess(pPeer));

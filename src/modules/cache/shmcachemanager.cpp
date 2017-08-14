@@ -190,7 +190,7 @@ void ShmPrivatePurgeData::lock()
 {
     shm_privpurgedata_t *pList =
         (shm_privpurgedata_t *)m_pool->offset2ptr(m_shmoff);
-    ls_spinlock_lock(&pList->x_lock);
+    ls_shmlock_lock(&pList->x_lock);
 }
 
 
@@ -198,7 +198,7 @@ void ShmPrivatePurgeData::unlock()
 {
     shm_privpurgedata_t *pList =
         (shm_privpurgedata_t *)m_pool->offset2ptr(m_shmoff);
-    ls_spinlock_unlock(&pList->x_lock);
+    ls_shmlock_unlock(&pList->x_lock);
 }
 
 
@@ -344,7 +344,7 @@ LsShmOffset_t ShmCacheManager::getSession(const char *pId, int len)
     {
         pData = (shm_privpurgedata_t *)m_pSessions->offset2ptr(offVal);
         memset(pData, 0, sizeof(*pData));
-        ls_spinlock_setup(&pData->x_lock);
+        ls_shmlock_setup(&pData->x_lock);
         pData->x_tmLastUpdate = DateTime::s_curTime;
     }
     m_pSessions->unlock();
@@ -403,9 +403,9 @@ static int shm_privpurgedata_cleanup(LsShmHash::iterator iter, void *pArg1)
     shm_privpurgedata_t *pSession;
     LsShmHash *pSessions = (LsShmHash *)pArg1;
     pSession = (shm_privpurgedata_t *)pSessions->getIterDataPtr(iter);
-    ls_spinlock_lock(&pSession->x_lock);
+    ls_shmlock_lock(&pSession->x_lock);
     ShmPrivatePurgeData::release(pSessions->getPool(), pSession);
-    ls_spinlock_unlock(&pSession->x_lock);
+    ls_shmlock_unlock(&pSession->x_lock);
     return LS_OK;
 }
 

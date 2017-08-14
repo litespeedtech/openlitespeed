@@ -66,7 +66,7 @@ static int releaseMData(void *data)
 }
 
 
-static void removeShmEntry(void *progressID)
+static void removeShmEntry(const void *progressID)
 {
     ls_shmhash_delete(pShmHash, (const uint8_t *)progressID,
                       strlen((char *)progressID));
@@ -100,7 +100,7 @@ static int setProgress(MyMData *pData)
     return 0;
 }
 
-static const char *getProgressId(lsi_session_t *session, int &idLen)
+static const char *getProgressId(const lsi_session_t *session, int &idLen)
 {
     const char *pQS = g_api->get_req_query_string(session, &idLen);
     if (!pQS || strncasecmp(MOD_QS, pQS, MOD_QS_LEN) != 0
@@ -225,7 +225,7 @@ static int getState(int64_t iWholeLength, int64_t iFinishedLength)
  * GET /progress?X-Progress-ID=xxxxxxxxxxxxxxxxxxxxxxxxxxxx
  * Otherwise return error 40X
  */
-static int begin_process(lsi_session_t *session)
+static int begin_process(const lsi_session_t *session)
 {
     int idLen;
     const char *progressID = getProgressId(session, idLen);

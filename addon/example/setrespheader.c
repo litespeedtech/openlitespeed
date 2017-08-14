@@ -158,7 +158,7 @@ int check_if_remove_session_hook(lsi_param_t *rec)
 }
 
 
-static int _init(lsi_module_t *module)
+static int init_module(lsi_module_t *module)
 {
     return 0;
 }
@@ -173,6 +173,6 @@ static lsi_serverhook_t server_hooks[] =
 
 lsi_module_t MNAME =
 {
-    LSI_MODULE_SIGNATURE, _init, NULL, NULL, "", server_hooks
+    LSI_MODULE_SIGNATURE, init_module, NULL, NULL, "", server_hooks
 };
 

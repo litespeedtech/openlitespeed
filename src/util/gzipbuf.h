@@ -19,39 +19,24 @@
 #define GZIPBUF_H
 
 #include <lsdef.h>
-
+#include <util/compressor.h>
 
 #include <inttypes.h>
 #include <zlib.h>
 
 class VMemBuf;
 
-class GzipBuf
+class GzipBuf : public Compressor
 {
     z_stream        m_zstr;
     //uint32_t        m_crc;
-    uint32_t        m_iLastFlush;
-    uint32_t        m_iFlushWindowSize;
-    short           m_iType;
-    short           m_iStreamStarted;
-    VMemBuf        *m_pCompressCache;
 
     int process(int finish);
     int compress(const char *pBuf, int len);
     int decompress(const char *pBuf, int len);
 public:
-    enum
-    {
-        GZIP_UNKNOWN,
-        GZIP_DEFLATE,
-        GZIP_INFLATE
-    };
     GzipBuf();
     ~GzipBuf();
-
-    explicit GzipBuf(int type, int level);
-
-    int getType() const {   return m_iType;   }
 
     int init(int type, int level);
     int reinit();
@@ -64,29 +49,18 @@ public:
     {   m_iLastFlush = m_zstr.total_in; return process(Z_SYNC_FLUSH);  }
     int endStream();
     int reset()
-    {   return deflateReset(&m_zstr);  }
-
-    void setFlushWindowSize(unsigned long size)
-    {   m_iFlushWindowSize = size;       }
+    {
+        if (m_iType == COMPRESSOR_COMPRESS)
+            return deflateReset(&m_zstr);
+        else
+            return inflateReset(&m_zstr);
+    }
 
     int release();
 
-    void setCompressCache(VMemBuf *pCache)
-    {   m_pCompressCache = pCache;  }
-    VMemBuf *getCompressCache() const
-    {   return m_pCompressCache;    }
     int resetCompressCache();
     const char *getLastError() const
     {   return m_zstr.msg;          }
-
-    int processFile(int type, const char *pFileName,
-                    const char *pCompressFileName);
-
-    int compressFile(const char *pFileName, const char *pCompressFileName)
-    {   return processFile(GZIP_DEFLATE, pFileName, pCompressFileName);       }
-    int decompressFile(const char *pFileName, const char *pDecompressFileName)
-    {   return processFile(GZIP_INFLATE, pFileName, pDecompressFileName);       }
-    int isStreamStarted() const {   return m_iStreamStarted;     }
 
 
     LS_NO_COPY_ASSIGN(GzipBuf);

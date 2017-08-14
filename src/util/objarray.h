@@ -69,6 +69,7 @@ public:
     const T*getArray() const            {   return (const T *)ObjArray::getArray(); }
     T      *getObj(int index) const     {   return (T *)ObjArray::getObj(index);  }
     T      *getNew()                    {   return (T *)ObjArray::getNew(); }
+    T      *newObj()                    {   return getNew();    }
 
     T *begin()      {   return  getArray();    }
     T *end()        {   return (T *)getArray() + getSize();   }

@@ -304,7 +304,11 @@ void SslContext::updateProtocol(int method)
 
 #ifdef TLS1_3_VERSION
     if (method & SSL_TLSv13)
+#ifdef OPENSSL_IS_BORINGSSL
+        SSL_CTX_set_max_proto_version(m_pCtx, TLS1_3_VERSION);
+#else
         SSL_CTX_set_max_version(m_pCtx, TLS1_3_VERSION);
+#endif
 #endif
 
 #ifdef SSL_OP_NO_TLSv1_3

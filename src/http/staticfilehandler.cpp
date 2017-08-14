@@ -528,11 +528,15 @@ int StaticFileHandler::process(HttpSession *pSession,
         }
     }
 
-    char compressed = ((pReq->gzipAcceptable() == GZIP_REQUIRED) &&
+    char compressed = (((pReq->gzipAcceptable() == GZIP_REQUIRED)
+                        || (pReq->brAcceptable() == BR_REQUIRED)) &&
                        ((pSession->getSessionHooks()->getFlag(LSI_HKPT_RECV_RESP_BODY)
                          | pSession->getSessionHooks()->getFlag(LSI_HKPT_SEND_RESP_BODY))
                         & LSI_FLAG_DECOMPRESS_REQUIRED) == 0);
-    ret = pInfo->readyCacheData(compressed);
+    char mode = (pReq->gzipAcceptable() == GZIP_REQUIRED); // MODE_GZIP = 1
+    if (pReq->brAcceptable() == BR_REQUIRED)
+        mode |= SFCD_MODE_BROTLI;
+    ret = pInfo->readyCacheData(compressed, mode);
     LS_DBG_L(pReq->getLogSession(), "readyCacheData() return %d", ret);
     FileCacheDataEx *pECache = pInfo->getECache();
     
@@ -570,7 +574,12 @@ int StaticFileHandler::process(HttpSession *pSession,
             default:
 
                 buildStaticFileHeaders(pResp, pReq, pInfo);
-                if (pECache == pCache->getGziped())
+                if (pECache == pCache->getBrotli())
+                {
+                    pResp->addBrotliEncodingHeader();
+                    pReq->orBr(UPSTREAM_BR);
+                }
+                if (pECache == pCache->getGzip())
                 {
                     pResp->addGzipEncodingHeader();
                     pReq->orGzip(UPSTREAM_GZIP);
@@ -582,7 +591,7 @@ int StaticFileHandler::process(HttpSession *pSession,
         {
             //pSession->flushDynBody( 1 );
             if (pSession->getGzipBuf() &&
-                (pECache != pCache->getGziped()))
+                (pECache != pCache->getGzip()))
             {
                 if (!pSession->getGzipBuf()->isStreamStarted())
                     pSession->getGzipBuf()->reinit();

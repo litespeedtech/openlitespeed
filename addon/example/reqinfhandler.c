@@ -230,7 +230,7 @@ static int initdata(lsi_param_t *param)
 
 
 // 0:no body or no deal, 1,echo, 2: md5, 3, save to file
-static int get_reqbody_dealertype(lsi_session_t *session)
+static int get_reqbody_dealertype(const lsi_session_t *session)
 {
     char path[512];
     int n;
@@ -250,7 +250,7 @@ static int get_reqbody_dealertype(lsi_session_t *session)
 }
 
 
-static inline void append(lsi_session_t *session, const char *s, int n)
+static inline void append(const lsi_session_t *session, const char *s, int n)
 {
     if (n == 0)
         n = strlen(s);
@@ -258,7 +258,7 @@ static inline void append(lsi_session_t *session, const char *s, int n)
 }
 
 
-static int on_read(lsi_session_t *session)
+static int on_read(const lsi_session_t *session)
 {
     unsigned char md5[16];
     char buf[8192];
@@ -328,7 +328,7 @@ static int on_read(lsi_session_t *session)
 }
 
 
-static int begin_process(lsi_session_t *session)
+static int begin_process(const lsi_session_t *session)
 {
 #define VALMAXSIZE 4096
 #define LINEMAXSIZE (VALMAXSIZE + 50)
@@ -460,7 +460,7 @@ static int begin_process(lsi_session_t *session)
 }
 
 
-static int on_write(lsi_session_t *session)
+static int on_write(const lsi_session_t *session)
 {
     mydata_t *mydata = (mydata_t *)g_api->get_module_data(session, &MNAME,
                        LSI_DATA_HTTP);
@@ -469,7 +469,7 @@ static int on_write(lsi_session_t *session)
 }
 
 
-static int reg_handler(lsi_param_t *param)
+static int rcvd_req_header_cbf(lsi_param_t *param)
 {
     const char *uri;
     int len;
@@ -481,14 +481,14 @@ static int reg_handler(lsi_param_t *param)
 }
 
 
-static int _init(lsi_module_t *module)
+static int init_module(lsi_module_t *module)
 {
     g_api->init_module_data(module, free_mydata, LSI_DATA_HTTP);
     return 0;
 }
 
 
-static int clean_up(lsi_session_t *session)
+static int clean_up(const lsi_session_t *session)
 {
     g_api->free_module_data(session, &MNAME, LSI_DATA_HTTP,
                             free_mydata);
@@ -500,7 +500,7 @@ static lsi_serverhook_t server_hooks[] =
 {
     { LSI_HKPT_HTTP_BEGIN, initdata, LSI_HOOK_NORMAL, LSI_FLAG_ENABLED },
     //{ LSI_HKPT_HTTP_END, resetdata, LSI_HOOK_NORMAL, LSI_FLAG_ENABLED },
-    { LSI_HKPT_RCVD_REQ_HEADER, reg_handler, LSI_HOOK_NORMAL, LSI_FLAG_ENABLED },
+    { LSI_HKPT_RCVD_REQ_HEADER, rcvd_req_header_cbf, LSI_HOOK_NORMAL, LSI_FLAG_ENABLED },
     LSI_HOOK_END   //Must put this at the end position
 };
 
@@ -508,6 +508,6 @@ static lsi_reqhdlr_t myhandler = { begin_process, on_read, on_write, clean_up };
 
 lsi_module_t MNAME =
 {
-    LSI_MODULE_SIGNATURE, _init, &myhandler, NULL, "", server_hooks
+    LSI_MODULE_SIGNATURE, init_module, &myhandler, NULL, "", server_hooks
 };
 

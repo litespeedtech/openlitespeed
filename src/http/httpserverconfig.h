@@ -44,6 +44,7 @@ class HttpServerConfig : public TSingleton<HttpServerConfig>
     int8_t          m_iGzipCompress;
     int8_t          m_iDynGzipCompress;
     int8_t          m_iCompressLevel;
+    int8_t          m_iBrCompress;
 
     int32_t         m_iCheckDeniedSymLink;
 
@@ -113,6 +114,9 @@ public:
     }
     int8_t  getCompressLevel() const        {   return m_iCompressLevel;    }
 
+    void setBrCompress(int32_t compress)
+    {   m_iBrCompress = compress;     }
+    int8_t  getBrCompress() const           {   return m_iBrCompress;       }
 
     void setDebugLevel(int32_t level);
 
