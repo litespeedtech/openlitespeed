@@ -72,7 +72,10 @@ public:
     {
         return (iterator)(*find_fn)(this, pKey);
     }
-
+    const_iterator find(const void *pKey) const
+    {
+        return (const_iterator)(*find_fn)((GMap *)this,pKey);
+    }
     int insert(const void *pKey, void *pValue)
     {
         return (*insert_fn)(this, pKey, pValue);
