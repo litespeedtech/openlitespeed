@@ -123,4 +123,3 @@ int ls_pspinlock_setup(ls_pspinlock_t   *p)
     }
     return LS_FAIL;
 }
-
