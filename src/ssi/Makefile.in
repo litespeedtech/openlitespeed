@@ -265,6 +265,7 @@ SHELL = @SHELL@
 STRIP = @STRIP@
 UDNS_CFLAGS = @UDNS_CFLAGS@
 UDNS_LIBS = @UDNS_LIBS@
+USE_LSPHP7 = @USE_LSPHP7@
 VERSION = @VERSION@
 abs_builddir = @abs_builddir@
 abs_srcdir = @abs_srcdir@

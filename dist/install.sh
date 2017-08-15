@@ -1,5 +1,12 @@
 #!/bin/sh
 
+OSNAMEVER=UNKNOWN
+OSNAME=
+OSVER=
+OSTYPE=`uname -m`
+MARIADBCPUARCH=
+
+
 inst_admin_php()
 {
     # detect download method
@@ -86,6 +93,153 @@ inst_admin_php()
 }
 
 
+install_lsphp7_centos()
+{
+    action=install
+    ND=nd
+    LSPHPVER=70
+    yum -y $action epel-release
+    rpm -Uvh http://rpms.litespeedtech.com/centos/litespeed-repo-1.1-1.el$OSVER.noarch.rpm
+    yum -y $action lsphp$LSPHPVER lsphp$LSPHPVER-common lsphp$LSPHPVER-gd lsphp$LSPHPVER-process lsphp$LSPHPVER-mbstring lsphp$LSPHPVER-mysql$ND lsphp$LSPHPVER-xml lsphp$LSPHPVER-mcrypt lsphp$LSPHPVER-pdo lsphp$LSPHPVER-imap
+    
+    if [ ! -f "$LSWS_HOME/lsphp$LSPHPVER/bin/lsphp" ] ; then
+        action=reinstall
+        
+        yum -y remove lsphp$LSPHPVER-mysql$ND
+        yum -y install lsphp$LSPHPVER-mysql$ND
+        yum -y $action lsphp$LSPHPVER lsphp$LSPHPVER-common lsphp$LSPHPVER-gd lsphp$LSPHPVER-process lsphp$LSPHPVER-mbstring lsphp$LSPHPVER-xml lsphp$LSPHPVER-mcrypt lsphp$LSPHPVER-pdo lsphp$LSPHPVER-imap
+    fi
+    
+    if [ -f "$LSWS_HOME/lsphp$LSPHPVER/bin/lsphp" ] ; then
+        ln -sf "$LSWS_HOME/lsphp$LSPHPVER/bin/lsphp" "$LSWS_HOME/fcgi-bin/lsphp7"
+    fi
+}
+
+install_lsphp7_debian()
+{
+    LSPHPVER=70
+
+    grep -Fq  "http://rpms.litespeedtech.com/debian/" /etc/apt/sources.list.d/lst_debian_repo.list
+    if [ $? != 0 ] ; then
+        echo "deb http://rpms.litespeedtech.com/debian/ $OSVER main"  > /etc/apt/sources.list.d/lst_debian_repo.list
+    fi
+    
+    wget -O /etc/apt/trusted.gpg.d/lst_debian_repo.gpg http://rpms.litespeedtech.com/debian/lst_debian_repo.gpg
+    wget -O /etc/apt/trusted.gpg.d/lst_repo.gpg http://rpms.litespeedtech.com/debian/lst_repo.gpg
+    apt-get -y update
+    
+    apt-get -y install lsphp$LSPHPVER lsphp$LSPHPVER-mysql lsphp$LSPHPVER-imap lsphp$LSPHPVER-common 
+    
+    if [ ! -f "$LSWS_HOME/lsphp$LSPHPVER/bin/lsphp" ] ; then
+        apt-get -y --reinstall install lsphp$LSPHPVER lsphp$LSPHPVER-mysql lsphp$LSPHPVER-imap lsphp$LSPHPVER-common 
+    fi
+    
+    if [ -f "$LSWS_HOME/lsphp$LSPHPVER/bin/lsphp" ] ; then
+        ln -sf "$LSWS_HOME/lsphp$LSPHPVER/bin/lsphp" "$LSWS_HOME/fcgi-bin/lsphp7"
+    fi
+}
+
+check_os()
+{
+    OSNAMEVER=
+    OSNAME=
+    OSVER=
+    MARIADBCPUARCH=
+    
+    if [ -f /etc/redhat-release ] ; then
+        cat /etc/redhat-release | grep " 5." >/dev/null
+        if [ $? = 0 ] ; then
+            OSNAMEVER=CENTOS5
+            OSNAME=centos
+            OSVER=5
+        else
+            cat /etc/redhat-release | grep " 6." >/dev/null
+            if [ $? = 0 ] ; then
+                OSNAMEVER=CENTOS6
+                OSNAME=centos
+                OSVER=6
+            else
+                cat /etc/redhat-release | grep " 7." >/dev/null
+                if [ $? = 0 ] ; then
+                    OSNAMEVER=CENTOS7
+                    OSNAME=centos
+                    OSVER=7
+
+                fi
+            fi
+        fi
+    elif [ -f /etc/lsb-release ] ; then
+        cat /etc/lsb-release | grep "DISTRIB_RELEASE=12." >/dev/null
+        if [ $? = 0 ] ; then
+            OSNAMEVER=UBUNTU12
+            OSNAME=ubuntu
+            OSVER=precise
+            MARIADBCPUARCH="arch=amd64,i386"
+            
+        else
+            cat /etc/lsb-release | grep "DISTRIB_RELEASE=14." >/dev/null
+            if [ $? = 0 ] ; then
+                OSNAMEVER=UBUNTU14
+                OSNAME=ubuntu
+                OSVER=trusty
+                MARIADBCPUARCH="arch=amd64,i386,ppc64el"
+            else
+                cat /etc/lsb-release | grep "DISTRIB_RELEASE=16." >/dev/null
+                if [ $? = 0 ] ; then
+                    OSNAMEVER=UBUNTU16
+                    OSNAME=ubuntu
+                    OSVER=xenial
+                    MARIADBCPUARCH="arch=amd64,i386,ppc64el"
+                fi
+            fi
+        fi    
+    elif [ -f /etc/debian_version ] ; then
+        cat /etc/debian_version | grep "^7." >/dev/null
+        if [ $? = 0 ] ; then
+            OSNAMEVER=DEBIAN7
+            OSNAME=debian
+            OSVER=wheezy
+            MARIADBCPUARCH="arch=amd64,i386"
+        else
+            cat /etc/debian_version | grep "^8." >/dev/null
+            if [ $? = 0 ] ; then
+                OSNAMEVER=DEBIAN8
+                OSNAME=debian
+                OSVER=jessie
+                MARIADBCPUARCH="arch=amd64,i386"
+            else
+                cat /etc/debian_version | grep "^9." >/dev/null
+                if [ $? = 0 ] ; then
+                    OSNAMEVER=DEBIAN9
+                    OSNAME=debian
+                    OSVER=stretch
+                    MARIADBCPUARCH="arch=amd64,i386"
+                fi
+            fi
+        fi
+    fi
+
+    if [ "x$OSNAMEVER" != "x" ] ; then
+        if [ "x$OSNAME" = "xcentos" ] ; then
+            echoG "Current platform is "  "$OSNAME $OSVER."
+        else
+            export DEBIAN_FRONTEND=noninteractive
+            echoG "Current platform is "  "$OSNAMEVER $OSNAME $OSVER."
+        fi
+    fi
+}
+
+
+inst_lsphp7()
+{
+    check_os
+    if [ "x$OSNAME" = "xcentos" ] ; then
+        install_lsphp7_centos
+    else
+        install_lsphp7_debian
+    fi
+}
+
 
 #script start here
 cd `dirname "$0"`
@@ -137,6 +291,7 @@ if [ "x$ADMIN_PORT" = "xyes" ] ; then
     ADMIN_PORT=7080
 fi
 
+USE_LSPHP7=$9
 
 VERSION=open
 HTTP_PORT=8088
@@ -261,11 +416,19 @@ fi
 
 
 if [ ! -f "$LSWS_HOME/fcgi-bin/lsphp" ]; then
-    cp -f "$LSWS_HOME/admin/fcgi-bin/admin_php" "$LSWS_HOME/fcgi-bin/lsphp"
-    chown "$SDIR_OWN" "$LSWS_HOME/fcgi-bin/lsphp"
-    chmod "$EXEC_MOD" "$LSWS_HOME/fcgi-bin/lsphp"
-    if [ ! -f "$LSWS_HOME/fcgi-bin/lsphp5" ]; then
-        ln -sf "./lsphp" "$LSWS_HOME/fcgi-bin/lsphp5"
+    cp -f "$LSWS_HOME/admin/fcgi-bin/admin_php" "$LSWS_HOME/fcgi-bin/lsphp5"
+    chown "$SDIR_OWN" "$LSWS_HOME/fcgi-bin/lsphp5"
+    chmod "$EXEC_MOD" "$LSWS_HOME/fcgi-bin/lsphp5"
+    
+    #Set default lsphp5
+    ln -sf "$LSWS_HOME/fcgi-bin/lsphp5" "$LSWS_HOME/fcgi-bin/lsphp" 
+    
+    if [ "x$USE_LSPHP7" = "xyes" ] ; then
+        inst_lsphp7
+        if [ -f "$LSWS_HOME/fcgi-bin/lsphp7" ]; then
+            rm "$LSWS_HOME/fcgi-bin/lsphp"
+            ln -sf "$LSWS_HOME/fcgi-bin/lsphp7" "$LSWS_HOME/fcgi-bin/lsphp" 
+        fi
     fi
 fi
 

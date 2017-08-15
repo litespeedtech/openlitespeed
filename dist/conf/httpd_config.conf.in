@@ -115,7 +115,7 @@ accessControl{
 	deny
 }
  
-extProcessor lsphp5{
+extProcessor lsphp{
     type                            lsapi 
     address                         uds://tmp/lshttpd/lsphp.sock 
     maxConns                        35 
@@ -127,7 +127,7 @@ extProcessor lsphp5{
     pcKeepAliveTimeout
     respBuffer                      0 
     autoStart                       1 
-    path                            $SERVER_ROOT/fcgi-bin/lsphp5 
+    path                            $SERVER_ROOT/fcgi-bin/lsphp
     backlog                         100 
     instances                       1 
     priority                        0 
@@ -138,7 +138,7 @@ extProcessor lsphp5{
 }
 
 scriptHandler{
-    add lsapi:lsphp5  php
+    add lsapi:lsphp  php
 }
 
 railsDefaults{

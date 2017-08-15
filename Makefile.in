@@ -289,6 +289,7 @@ SHELL = @SHELL@
 STRIP = @STRIP@
 UDNS_CFLAGS = @UDNS_CFLAGS@
 UDNS_LIBS = @UDNS_LIBS@
+USE_LSPHP7 = @USE_LSPHP7@
 VERSION = @VERSION@
 abs_builddir = @abs_builddir@
 abs_srcdir = @abs_srcdir@
@@ -812,7 +813,7 @@ uninstall-am:
 
 
 install-data-hook:
-	( cd dist; ./install.sh "$(DESTDIR)$(prefix)" "$(OPENLSWS_USER)" "$(OPENLSWS_GROUP)" "$(OPENLSWS_ADMIN)" "$(OPENLSWS_PASSWORD)" "$(OPENLSWS_EMAIL)" "$(OPENLSWS_ADMINSSL)" "$(OPENLSWS_ADMINPORT)" ;)
+	( cd dist; ./install.sh "$(DESTDIR)$(prefix)" "$(OPENLSWS_USER)" "$(OPENLSWS_GROUP)" "$(OPENLSWS_ADMIN)" "$(OPENLSWS_PASSWORD)" "$(OPENLSWS_EMAIL)" "$(OPENLSWS_ADMINSSL)" "$(OPENLSWS_ADMINPORT)" "$(USE_LSPHP7)"  ;)
 	( rm -f $(DESTDIR)$(prefix)/modules/cache.la  $(DESTDIR)$(prefix)/modules/modinspector.la $(DESTDIR)$(prefix)/modules/modreqparser.la $(DESTDIR)$(prefix)/modules/uploadprogress.la  $(DESTDIR)$(prefix)/modules/mod_lua.la )
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.

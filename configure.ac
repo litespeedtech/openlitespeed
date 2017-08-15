@@ -9,7 +9,7 @@ m4_include(ax_check_ip2location.m4)
 
 dnl Process this file with autoconf to produce a configure script.
 AC_PREREQ([2.69])
-AC_INIT([openlitespeed],[1.4.28],[info@litespeedtech.com],[openlitespeed],[http://www.litespeedtech.com/])
+AC_INIT([openlitespeed],[1.4.27],[info@litespeedtech.com],[openlitespeed],[http://www.litespeedtech.com/])
 AM_INIT_AUTOMAKE([1.0 foreign no-define ])
 
 AM_CONFIG_HEADER(src/config.h:src/config.h.in)
@@ -92,6 +92,14 @@ AC_ARG_ENABLE([adminssl],
                               [Enable HTTPS for admin console (modify adminssl.conf before installation) @<:@default=yes@:>@])],
               [OPENLSWS_ADMINSSL="$enableval"], [OPENLSWS_ADMINSSL=yes])
 AC_SUBST([OPENLSWS_ADMINSSL])
+
+
+AC_ARG_WITH([lsphp7],
+            AS_HELP_STRING([--with-lsphp7],[Set lsphp7 as default php script handler[default: yes]]),
+            [USE_LSPHP7="$withval"], [USE_LSPHP7=no])
+AC_SUBST([USE_LSPHP7])
+echo USE_LSPHP7=$USE_LSPHP7
+
 
 OPENLSWS_HTTP2="?"
 AC_ARG_ENABLE([spdy],

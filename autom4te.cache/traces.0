@@ -3196,175 +3196,176 @@ You should run autoupdate.], [../../lib/autoconf/general.m4:207: AC_HELP_STRING 
 ../../lib/autoconf/general.m4:1462: AC_ARG_ENABLE is expanded from...
 configure.ac:90: the top level])
 m4trace:configure.ac:94: -1- m4_pattern_allow([^OPENLSWS_ADMINSSL$])
-m4trace:configure.ac:97: -1- _m4_warn([obsolete], [The macro `AC_HELP_STRING' is obsolete.
+m4trace:configure.ac:100: -1- m4_pattern_allow([^USE_LSPHP7$])
+m4trace:configure.ac:105: -1- _m4_warn([obsolete], [The macro `AC_HELP_STRING' is obsolete.
 You should run autoupdate.], [../../lib/autoconf/general.m4:207: AC_HELP_STRING is expanded from...
 ../../lib/autoconf/general.m4:1462: AC_ARG_ENABLE is expanded from...
-configure.ac:97: the top level])
-m4trace:configure.ac:102: -1- _m4_warn([obsolete], [The macro `AC_HELP_STRING' is obsolete.
+configure.ac:105: the top level])
+m4trace:configure.ac:110: -1- _m4_warn([obsolete], [The macro `AC_HELP_STRING' is obsolete.
 You should run autoupdate.], [../../lib/autoconf/general.m4:207: AC_HELP_STRING is expanded from...
 ../../lib/autoconf/general.m4:1462: AC_ARG_ENABLE is expanded from...
-configure.ac:102: the top level])
-m4trace:configure.ac:109: -1- m4_pattern_allow([^LS_ENABLE_SPDY$])
-m4trace:configure.ac:120: -1- _m4_warn([obsolete], [The macro `AC_HELP_STRING' is obsolete.
+configure.ac:110: the top level])
+m4trace:configure.ac:117: -1- m4_pattern_allow([^LS_ENABLE_SPDY$])
+m4trace:configure.ac:128: -1- _m4_warn([obsolete], [The macro `AC_HELP_STRING' is obsolete.
 You should run autoupdate.], [../../lib/autoconf/general.m4:207: AC_HELP_STRING is expanded from...
 ../../lib/autoconf/general.m4:1462: AC_ARG_ENABLE is expanded from...
-configure.ac:120: the top level])
-m4trace:configure.ac:134: -1- _m4_warn([obsolete], [The macro `AC_HELP_STRING' is obsolete.
+configure.ac:128: the top level])
+m4trace:configure.ac:142: -1- _m4_warn([obsolete], [The macro `AC_HELP_STRING' is obsolete.
 You should run autoupdate.], [../../lib/autoconf/general.m4:207: AC_HELP_STRING is expanded from...
 ../../lib/autoconf/general.m4:1462: AC_ARG_ENABLE is expanded from...
-configure.ac:134: the top level])
-m4trace:configure.ac:170: -1- AC_LIBLUA_CHECK
-m4trace:configure.ac:170: -1- m4_pattern_allow([^LUA_INCLUDES$])
-m4trace:configure.ac:175: -1- AM_CONDITIONAL([HAVE_LIBLUA], [test x$need_lua = xyes])
-m4trace:configure.ac:175: -1- m4_pattern_allow([^HAVE_LIBLUA_TRUE$])
-m4trace:configure.ac:175: -1- m4_pattern_allow([^HAVE_LIBLUA_FALSE$])
-m4trace:configure.ac:175: -1- _AM_SUBST_NOTMAKE([HAVE_LIBLUA_TRUE])
-m4trace:configure.ac:175: -1- _AM_SUBST_NOTMAKE([HAVE_LIBLUA_FALSE])
-m4trace:configure.ac:195: -1- m4_pattern_allow([^OPENLSWS_BSSL$])
-m4trace:configure.ac:212: -1- m4_pattern_allow([^USE_BORINGSSL$])
-m4trace:configure.ac:222: -1- AM_CONDITIONAL([USE_DYN_OSSL], [test x$usedynossl = xyes])
-m4trace:configure.ac:222: -1- m4_pattern_allow([^USE_DYN_OSSL_TRUE$])
-m4trace:configure.ac:222: -1- m4_pattern_allow([^USE_DYN_OSSL_FALSE$])
-m4trace:configure.ac:222: -1- _AM_SUBST_NOTMAKE([USE_DYN_OSSL_TRUE])
-m4trace:configure.ac:222: -1- _AM_SUBST_NOTMAKE([USE_DYN_OSSL_FALSE])
-m4trace:configure.ac:223: -1- AM_CONDITIONAL([USE_BSSL], [test x$OPENLSWS_BSSL = xyes])
-m4trace:configure.ac:223: -1- m4_pattern_allow([^USE_BSSL_TRUE$])
-m4trace:configure.ac:223: -1- m4_pattern_allow([^USE_BSSL_FALSE$])
-m4trace:configure.ac:223: -1- _AM_SUBST_NOTMAKE([USE_BSSL_TRUE])
-m4trace:configure.ac:223: -1- _AM_SUBST_NOTMAKE([USE_BSSL_FALSE])
-m4trace:configure.ac:242: -1- m4_pattern_allow([^need_brotli$])
-m4trace:configure.ac:243: -1- m4_pattern_allow([^brotli_dir$])
-m4trace:configure.ac:250: -1- m4_pattern_allow([^USE_BROTLI$])
-m4trace:configure.ac:251: -1- AC_BROTLI_CHECK
-m4trace:configure.ac:251: -1- m4_pattern_allow([^BROTLI_INCLUDES$])
-m4trace:configure.ac:251: -1- m4_pattern_allow([^BROTLI_LIBS$])
-m4trace:configure.ac:259: -1- AM_CONDITIONAL([HAVE_BROTLI], [test x$need_brotli = xyes])
-m4trace:configure.ac:259: -1- m4_pattern_allow([^HAVE_BROTLI_TRUE$])
-m4trace:configure.ac:259: -1- m4_pattern_allow([^HAVE_BROTLI_FALSE$])
-m4trace:configure.ac:259: -1- _AM_SUBST_NOTMAKE([HAVE_BROTLI_TRUE])
-m4trace:configure.ac:259: -1- _AM_SUBST_NOTMAKE([HAVE_BROTLI_FALSE])
-m4trace:configure.ac:279: -1- m4_pattern_allow([^need_ip2location$])
-m4trace:configure.ac:280: -1- m4_pattern_allow([^ip2location_dir$])
-m4trace:configure.ac:287: -1- m4_pattern_allow([^USE_IP2LOCATION$])
-m4trace:configure.ac:288: -1- AC_IP2LOCATION_CHECK
-m4trace:configure.ac:288: -1- m4_pattern_allow([^IP2LOCATION_INCLUDES$])
-m4trace:configure.ac:288: -1- m4_pattern_allow([^IP2LOCATION_LIBS$])
-m4trace:configure.ac:296: -1- AM_CONDITIONAL([HAVE_IP2LOCATION], [test x$need_ip2location = xyes])
-m4trace:configure.ac:296: -1- m4_pattern_allow([^HAVE_IP2LOCATION_TRUE$])
-m4trace:configure.ac:296: -1- m4_pattern_allow([^HAVE_IP2LOCATION_FALSE$])
-m4trace:configure.ac:296: -1- _AM_SUBST_NOTMAKE([HAVE_IP2LOCATION_TRUE])
-m4trace:configure.ac:296: -1- _AM_SUBST_NOTMAKE([HAVE_IP2LOCATION_FALSE])
-m4trace:configure.ac:299: -1- _m4_warn([obsolete], [The macro `AC_HELP_STRING' is obsolete.
+configure.ac:142: the top level])
+m4trace:configure.ac:178: -1- AC_LIBLUA_CHECK
+m4trace:configure.ac:178: -1- m4_pattern_allow([^LUA_INCLUDES$])
+m4trace:configure.ac:183: -1- AM_CONDITIONAL([HAVE_LIBLUA], [test x$need_lua = xyes])
+m4trace:configure.ac:183: -1- m4_pattern_allow([^HAVE_LIBLUA_TRUE$])
+m4trace:configure.ac:183: -1- m4_pattern_allow([^HAVE_LIBLUA_FALSE$])
+m4trace:configure.ac:183: -1- _AM_SUBST_NOTMAKE([HAVE_LIBLUA_TRUE])
+m4trace:configure.ac:183: -1- _AM_SUBST_NOTMAKE([HAVE_LIBLUA_FALSE])
+m4trace:configure.ac:203: -1- m4_pattern_allow([^OPENLSWS_BSSL$])
+m4trace:configure.ac:220: -1- m4_pattern_allow([^USE_BORINGSSL$])
+m4trace:configure.ac:230: -1- AM_CONDITIONAL([USE_DYN_OSSL], [test x$usedynossl = xyes])
+m4trace:configure.ac:230: -1- m4_pattern_allow([^USE_DYN_OSSL_TRUE$])
+m4trace:configure.ac:230: -1- m4_pattern_allow([^USE_DYN_OSSL_FALSE$])
+m4trace:configure.ac:230: -1- _AM_SUBST_NOTMAKE([USE_DYN_OSSL_TRUE])
+m4trace:configure.ac:230: -1- _AM_SUBST_NOTMAKE([USE_DYN_OSSL_FALSE])
+m4trace:configure.ac:231: -1- AM_CONDITIONAL([USE_BSSL], [test x$OPENLSWS_BSSL = xyes])
+m4trace:configure.ac:231: -1- m4_pattern_allow([^USE_BSSL_TRUE$])
+m4trace:configure.ac:231: -1- m4_pattern_allow([^USE_BSSL_FALSE$])
+m4trace:configure.ac:231: -1- _AM_SUBST_NOTMAKE([USE_BSSL_TRUE])
+m4trace:configure.ac:231: -1- _AM_SUBST_NOTMAKE([USE_BSSL_FALSE])
+m4trace:configure.ac:250: -1- m4_pattern_allow([^need_brotli$])
+m4trace:configure.ac:251: -1- m4_pattern_allow([^brotli_dir$])
+m4trace:configure.ac:258: -1- m4_pattern_allow([^USE_BROTLI$])
+m4trace:configure.ac:259: -1- AC_BROTLI_CHECK
+m4trace:configure.ac:259: -1- m4_pattern_allow([^BROTLI_INCLUDES$])
+m4trace:configure.ac:259: -1- m4_pattern_allow([^BROTLI_LIBS$])
+m4trace:configure.ac:267: -1- AM_CONDITIONAL([HAVE_BROTLI], [test x$need_brotli = xyes])
+m4trace:configure.ac:267: -1- m4_pattern_allow([^HAVE_BROTLI_TRUE$])
+m4trace:configure.ac:267: -1- m4_pattern_allow([^HAVE_BROTLI_FALSE$])
+m4trace:configure.ac:267: -1- _AM_SUBST_NOTMAKE([HAVE_BROTLI_TRUE])
+m4trace:configure.ac:267: -1- _AM_SUBST_NOTMAKE([HAVE_BROTLI_FALSE])
+m4trace:configure.ac:287: -1- m4_pattern_allow([^need_ip2location$])
+m4trace:configure.ac:288: -1- m4_pattern_allow([^ip2location_dir$])
+m4trace:configure.ac:295: -1- m4_pattern_allow([^USE_IP2LOCATION$])
+m4trace:configure.ac:296: -1- AC_IP2LOCATION_CHECK
+m4trace:configure.ac:296: -1- m4_pattern_allow([^IP2LOCATION_INCLUDES$])
+m4trace:configure.ac:296: -1- m4_pattern_allow([^IP2LOCATION_LIBS$])
+m4trace:configure.ac:304: -1- AM_CONDITIONAL([HAVE_IP2LOCATION], [test x$need_ip2location = xyes])
+m4trace:configure.ac:304: -1- m4_pattern_allow([^HAVE_IP2LOCATION_TRUE$])
+m4trace:configure.ac:304: -1- m4_pattern_allow([^HAVE_IP2LOCATION_FALSE$])
+m4trace:configure.ac:304: -1- _AM_SUBST_NOTMAKE([HAVE_IP2LOCATION_TRUE])
+m4trace:configure.ac:304: -1- _AM_SUBST_NOTMAKE([HAVE_IP2LOCATION_FALSE])
+m4trace:configure.ac:307: -1- _m4_warn([obsolete], [The macro `AC_HELP_STRING' is obsolete.
 You should run autoupdate.], [../../lib/autoconf/general.m4:207: AC_HELP_STRING is expanded from...
 ../../lib/autoconf/general.m4:1462: AC_ARG_ENABLE is expanded from...
-configure.ac:299: the top level])
-m4trace:configure.ac:304: -1- m4_pattern_allow([^OPENLSWS_DISABLE_RPATH$])
-m4trace:configure.ac:333: -1- m4_pattern_allow([^OPENLSWS_LIBDIR$])
-m4trace:configure.ac:336: -1- AX_CHECK_ZLIB([], [as_fn_error $? "Can not find zlib. You must install it before continuing." "$LINENO" 5])
-m4trace:configure.ac:336: -1- _m4_warn([obsolete], [The macro `AC_LANG_SAVE' is obsolete.
-You should run autoupdate.], [../../lib/autoconf/lang.m4:125: AC_LANG_SAVE is expanded from...
-ax_check_zlib.m4:62: AX_CHECK_ZLIB is expanded from...
-configure.ac:336: the top level])
-m4trace:configure.ac:336: -1- _m4_warn([obsolete], [The macro `AC_LANG_C' is obsolete.
-You should run autoupdate.], [../../lib/autoconf/c.m4:72: AC_LANG_C is expanded from...
-ax_check_zlib.m4:62: AX_CHECK_ZLIB is expanded from...
-configure.ac:336: the top level])
-m4trace:configure.ac:336: -1- _m4_warn([obsolete], [The macro `AC_LANG_RESTORE' is obsolete.
-You should run autoupdate.], [../../lib/autoconf/lang.m4:134: AC_LANG_RESTORE is expanded from...
-ax_check_zlib.m4:62: AX_CHECK_ZLIB is expanded from...
-configure.ac:336: the top level])
-m4trace:configure.ac:336: -1- m4_pattern_allow([^HAVE_LIBZ$])
-m4trace:configure.ac:340: -1- AX_CHECK_OPENSSL([], [as_fn_error $? "Can not find openssl. You must install it before continuing." "$LINENO" 5])
-m4trace:configure.ac:340: -1- m4_pattern_allow([^OPENSSL_INCLUDES$])
-m4trace:configure.ac:340: -1- m4_pattern_allow([^OPENSSL_LIBS$])
-m4trace:configure.ac:340: -1- m4_pattern_allow([^OPENSSL_LDFLAGS$])
-m4trace:configure.ac:343: -1- AX_PATH_LIB_PCRE([], [as_fn_error $? "Can not find pcre. You must install it before continuing." "$LINENO" 5])
-m4trace:configure.ac:343: -1- m4_pattern_allow([^HAVE_LIBPCRE$])
-m4trace:configure.ac:343: -1- m4_pattern_allow([^HAVE_LIBPCRE$])
-m4trace:configure.ac:343: -1- m4_pattern_allow([^PCRE_LIBS$])
-m4trace:configure.ac:343: -1- m4_pattern_allow([^PCRE_CFLAGS$])
-m4trace:configure.ac:343: -1- m4_pattern_allow([^PCRE_LDFLAGS$])
-m4trace:configure.ac:344: -1- AX_PATH_LIB_UDNS([], [as_fn_error $? "Can not find udns library. You must install it before continuing." "$LINENO" 5])
+configure.ac:307: the top level])
+m4trace:configure.ac:312: -1- m4_pattern_allow([^OPENLSWS_DISABLE_RPATH$])
+m4trace:configure.ac:341: -1- m4_pattern_allow([^OPENLSWS_LIBDIR$])
+m4trace:configure.ac:344: -1- AX_CHECK_ZLIB([], [as_fn_error $? "Can not find zlib. You must install it before continuing." "$LINENO" 5])
 m4trace:configure.ac:344: -1- _m4_warn([obsolete], [The macro `AC_LANG_SAVE' is obsolete.
 You should run autoupdate.], [../../lib/autoconf/lang.m4:125: AC_LANG_SAVE is expanded from...
-ax_check_libudns.m4:4: AX_PATH_LIB_UDNS is expanded from...
+ax_check_zlib.m4:62: AX_CHECK_ZLIB is expanded from...
 configure.ac:344: the top level])
 m4trace:configure.ac:344: -1- _m4_warn([obsolete], [The macro `AC_LANG_C' is obsolete.
 You should run autoupdate.], [../../lib/autoconf/c.m4:72: AC_LANG_C is expanded from...
-ax_check_libudns.m4:4: AX_PATH_LIB_UDNS is expanded from...
+ax_check_zlib.m4:62: AX_CHECK_ZLIB is expanded from...
 configure.ac:344: the top level])
 m4trace:configure.ac:344: -1- _m4_warn([obsolete], [The macro `AC_LANG_RESTORE' is obsolete.
 You should run autoupdate.], [../../lib/autoconf/lang.m4:134: AC_LANG_RESTORE is expanded from...
-ax_check_libudns.m4:4: AX_PATH_LIB_UDNS is expanded from...
+ax_check_zlib.m4:62: AX_CHECK_ZLIB is expanded from...
 configure.ac:344: the top level])
-m4trace:configure.ac:344: -1- _m4_warn([obsolete], [The macro `AC_LANG_SAVE' is obsolete.
+m4trace:configure.ac:344: -1- m4_pattern_allow([^HAVE_LIBZ$])
+m4trace:configure.ac:348: -1- AX_CHECK_OPENSSL([], [as_fn_error $? "Can not find openssl. You must install it before continuing." "$LINENO" 5])
+m4trace:configure.ac:348: -1- m4_pattern_allow([^OPENSSL_INCLUDES$])
+m4trace:configure.ac:348: -1- m4_pattern_allow([^OPENSSL_LIBS$])
+m4trace:configure.ac:348: -1- m4_pattern_allow([^OPENSSL_LDFLAGS$])
+m4trace:configure.ac:351: -1- AX_PATH_LIB_PCRE([], [as_fn_error $? "Can not find pcre. You must install it before continuing." "$LINENO" 5])
+m4trace:configure.ac:351: -1- m4_pattern_allow([^HAVE_LIBPCRE$])
+m4trace:configure.ac:351: -1- m4_pattern_allow([^HAVE_LIBPCRE$])
+m4trace:configure.ac:351: -1- m4_pattern_allow([^PCRE_LIBS$])
+m4trace:configure.ac:351: -1- m4_pattern_allow([^PCRE_CFLAGS$])
+m4trace:configure.ac:351: -1- m4_pattern_allow([^PCRE_LDFLAGS$])
+m4trace:configure.ac:352: -1- AX_PATH_LIB_UDNS([], [as_fn_error $? "Can not find udns library. You must install it before continuing." "$LINENO" 5])
+m4trace:configure.ac:352: -1- _m4_warn([obsolete], [The macro `AC_LANG_SAVE' is obsolete.
 You should run autoupdate.], [../../lib/autoconf/lang.m4:125: AC_LANG_SAVE is expanded from...
 ax_check_libudns.m4:4: AX_PATH_LIB_UDNS is expanded from...
-configure.ac:344: the top level])
-m4trace:configure.ac:344: -1- _m4_warn([obsolete], [The macro `AC_LANG_C' is obsolete.
+configure.ac:352: the top level])
+m4trace:configure.ac:352: -1- _m4_warn([obsolete], [The macro `AC_LANG_C' is obsolete.
 You should run autoupdate.], [../../lib/autoconf/c.m4:72: AC_LANG_C is expanded from...
 ax_check_libudns.m4:4: AX_PATH_LIB_UDNS is expanded from...
-configure.ac:344: the top level])
-m4trace:configure.ac:344: -1- _m4_warn([obsolete], [The macro `AC_LANG_RESTORE' is obsolete.
+configure.ac:352: the top level])
+m4trace:configure.ac:352: -1- _m4_warn([obsolete], [The macro `AC_LANG_RESTORE' is obsolete.
 You should run autoupdate.], [../../lib/autoconf/lang.m4:134: AC_LANG_RESTORE is expanded from...
 ax_check_libudns.m4:4: AX_PATH_LIB_UDNS is expanded from...
-configure.ac:344: the top level])
-m4trace:configure.ac:344: -1- m4_pattern_allow([^UDNS_LIBS$])
-m4trace:configure.ac:344: -1- m4_pattern_allow([^UDNS_CFLAGS$])
-m4trace:configure.ac:346: -1- AX_LIB_EXPAT([0.5])
-m4trace:configure.ac:346: -1- m4_pattern_allow([^EXPAT_CFLAGS$])
-m4trace:configure.ac:346: -1- m4_pattern_allow([^EXPAT_LIBS$])
-m4trace:configure.ac:346: -1- m4_pattern_allow([^EXPAT_VERSION$])
-m4trace:configure.ac:347: -1- m4_pattern_allow([^HAVE_LIBGEOIP$])
-m4trace:configure.ac:352: -1- m4_pattern_allow([^HAVE__BOOL$])
-m4trace:configure.ac:353: -1- m4_pattern_allow([^uid_t$])
-m4trace:configure.ac:353: -1- m4_pattern_allow([^gid_t$])
-m4trace:configure.ac:355: -1- m4_pattern_allow([^int16_t$])
-m4trace:configure.ac:356: -1- m4_pattern_allow([^int32_t$])
-m4trace:configure.ac:357: -1- m4_pattern_allow([^int8_t$])
-m4trace:configure.ac:358: -1- m4_pattern_allow([^mode_t$])
-m4trace:configure.ac:359: -1- m4_pattern_allow([^off_t$])
-m4trace:configure.ac:360: -1- m4_pattern_allow([^pid_t$])
-m4trace:configure.ac:361: -1- m4_pattern_allow([^size_t$])
-m4trace:configure.ac:362: -1- m4_pattern_allow([^ssize_t$])
-m4trace:configure.ac:363: -1- m4_pattern_allow([^uint16_t$])
-m4trace:configure.ac:364: -1- m4_pattern_allow([^_UINT32_T$])
-m4trace:configure.ac:364: -1- m4_pattern_allow([^uint32_t$])
-m4trace:configure.ac:365: -1- m4_pattern_allow([^HAVE_PTRDIFF_T$])
-m4trace:configure.ac:368: -1- m4_pattern_allow([^HAVE_UNISTD_H$])
-m4trace:configure.ac:368: -1- m4_pattern_allow([^HAVE_CHOWN$])
-m4trace:configure.ac:369: -1- m4_pattern_allow([^LIB@&t@OBJS$])
-m4trace:configure.ac:370: -1- m4_pattern_allow([^HAVE_VFORK_H$])
-m4trace:configure.ac:370: -1- m4_pattern_allow([^HAVE_WORKING_VFORK$])
-m4trace:configure.ac:370: -1- m4_pattern_allow([^vfork$])
-m4trace:configure.ac:370: -1- m4_pattern_allow([^HAVE_WORKING_FORK$])
-m4trace:configure.ac:371: -1- m4_pattern_allow([^_LARGEFILE_SOURCE$])
-m4trace:configure.ac:371: -1- m4_pattern_allow([^HAVE_FSEEKO$])
-m4trace:configure.ac:372: -1- m4_pattern_allow([^LSTAT_FOLLOWS_SLASHED_SYMLINK$])
-m4trace:configure.ac:372: -1- m4_pattern_allow([^LIB@&t@OBJS$])
-m4trace:configure.ac:374: -1- AC_DEFUN([_AC_Header_stdlib_h], [m4_divert_text([INIT_PREPARE], [AS_VAR_APPEND([ac_header_list], [" stdlib.h"])])
+configure.ac:352: the top level])
+m4trace:configure.ac:352: -1- _m4_warn([obsolete], [The macro `AC_LANG_SAVE' is obsolete.
+You should run autoupdate.], [../../lib/autoconf/lang.m4:125: AC_LANG_SAVE is expanded from...
+ax_check_libudns.m4:4: AX_PATH_LIB_UDNS is expanded from...
+configure.ac:352: the top level])
+m4trace:configure.ac:352: -1- _m4_warn([obsolete], [The macro `AC_LANG_C' is obsolete.
+You should run autoupdate.], [../../lib/autoconf/c.m4:72: AC_LANG_C is expanded from...
+ax_check_libudns.m4:4: AX_PATH_LIB_UDNS is expanded from...
+configure.ac:352: the top level])
+m4trace:configure.ac:352: -1- _m4_warn([obsolete], [The macro `AC_LANG_RESTORE' is obsolete.
+You should run autoupdate.], [../../lib/autoconf/lang.m4:134: AC_LANG_RESTORE is expanded from...
+ax_check_libudns.m4:4: AX_PATH_LIB_UDNS is expanded from...
+configure.ac:352: the top level])
+m4trace:configure.ac:352: -1- m4_pattern_allow([^UDNS_LIBS$])
+m4trace:configure.ac:352: -1- m4_pattern_allow([^UDNS_CFLAGS$])
+m4trace:configure.ac:354: -1- AX_LIB_EXPAT([0.5])
+m4trace:configure.ac:354: -1- m4_pattern_allow([^EXPAT_CFLAGS$])
+m4trace:configure.ac:354: -1- m4_pattern_allow([^EXPAT_LIBS$])
+m4trace:configure.ac:354: -1- m4_pattern_allow([^EXPAT_VERSION$])
+m4trace:configure.ac:355: -1- m4_pattern_allow([^HAVE_LIBGEOIP$])
+m4trace:configure.ac:360: -1- m4_pattern_allow([^HAVE__BOOL$])
+m4trace:configure.ac:361: -1- m4_pattern_allow([^uid_t$])
+m4trace:configure.ac:361: -1- m4_pattern_allow([^gid_t$])
+m4trace:configure.ac:363: -1- m4_pattern_allow([^int16_t$])
+m4trace:configure.ac:364: -1- m4_pattern_allow([^int32_t$])
+m4trace:configure.ac:365: -1- m4_pattern_allow([^int8_t$])
+m4trace:configure.ac:366: -1- m4_pattern_allow([^mode_t$])
+m4trace:configure.ac:367: -1- m4_pattern_allow([^off_t$])
+m4trace:configure.ac:368: -1- m4_pattern_allow([^pid_t$])
+m4trace:configure.ac:369: -1- m4_pattern_allow([^size_t$])
+m4trace:configure.ac:370: -1- m4_pattern_allow([^ssize_t$])
+m4trace:configure.ac:371: -1- m4_pattern_allow([^uint16_t$])
+m4trace:configure.ac:372: -1- m4_pattern_allow([^_UINT32_T$])
+m4trace:configure.ac:372: -1- m4_pattern_allow([^uint32_t$])
+m4trace:configure.ac:373: -1- m4_pattern_allow([^HAVE_PTRDIFF_T$])
+m4trace:configure.ac:376: -1- m4_pattern_allow([^HAVE_UNISTD_H$])
+m4trace:configure.ac:376: -1- m4_pattern_allow([^HAVE_CHOWN$])
+m4trace:configure.ac:377: -1- m4_pattern_allow([^LIB@&t@OBJS$])
+m4trace:configure.ac:378: -1- m4_pattern_allow([^HAVE_VFORK_H$])
+m4trace:configure.ac:378: -1- m4_pattern_allow([^HAVE_WORKING_VFORK$])
+m4trace:configure.ac:378: -1- m4_pattern_allow([^vfork$])
+m4trace:configure.ac:378: -1- m4_pattern_allow([^HAVE_WORKING_FORK$])
+m4trace:configure.ac:379: -1- m4_pattern_allow([^_LARGEFILE_SOURCE$])
+m4trace:configure.ac:379: -1- m4_pattern_allow([^HAVE_FSEEKO$])
+m4trace:configure.ac:380: -1- m4_pattern_allow([^LSTAT_FOLLOWS_SLASHED_SYMLINK$])
+m4trace:configure.ac:380: -1- m4_pattern_allow([^LIB@&t@OBJS$])
+m4trace:configure.ac:382: -1- AC_DEFUN([_AC_Header_stdlib_h], [m4_divert_text([INIT_PREPARE], [AS_VAR_APPEND([ac_header_list], [" stdlib.h"])])
 _AC_HEADERS_EXPANSION])
-m4trace:configure.ac:374: -1- AC_DEFUN([_AC_Header_unistd_h], [m4_divert_text([INIT_PREPARE], [AS_VAR_APPEND([ac_header_list], [" unistd.h"])])
+m4trace:configure.ac:382: -1- AC_DEFUN([_AC_Header_unistd_h], [m4_divert_text([INIT_PREPARE], [AS_VAR_APPEND([ac_header_list], [" unistd.h"])])
 _AC_HEADERS_EXPANSION])
-m4trace:configure.ac:374: -1- AC_DEFUN([_AC_Header_sys_param_h], [m4_divert_text([INIT_PREPARE], [AS_VAR_APPEND([ac_header_list], [" sys/param.h"])])
+m4trace:configure.ac:382: -1- AC_DEFUN([_AC_Header_sys_param_h], [m4_divert_text([INIT_PREPARE], [AS_VAR_APPEND([ac_header_list], [" sys/param.h"])])
 _AC_HEADERS_EXPANSION])
-m4trace:configure.ac:374: -1- m4_pattern_allow([^HAVE_GETPAGESIZE$])
-m4trace:configure.ac:374: -1- m4_pattern_allow([^HAVE_MMAP$])
-m4trace:configure.ac:375: -1- m4_pattern_allow([^HAVE_STDLIB_H$])
-m4trace:configure.ac:375: -1- m4_pattern_allow([^HAVE_REALLOC$])
-m4trace:configure.ac:375: -1- m4_pattern_allow([^HAVE_REALLOC$])
-m4trace:configure.ac:375: -1- m4_pattern_allow([^LIB@&t@OBJS$])
-m4trace:configure.ac:375: -1- m4_pattern_allow([^realloc$])
-m4trace:configure.ac:397: -1- m4_pattern_allow([^DL_LIB_OPTION$])
-m4trace:configure.ac:398: -1- m4_pattern_allow([^RT_LIB_OPTION$])
-m4trace:configure.ac:401: -1- m4_pattern_allow([^LS_MODULE_VERSION_INFO$])
-m4trace:configure.ac:430: -1- m4_pattern_allow([^LIB@&t@OBJS$])
-m4trace:configure.ac:430: -1- m4_pattern_allow([^LTLIBOBJS$])
-m4trace:configure.ac:430: -1- AM_CONDITIONAL([am__EXEEXT], [test -n "$EXEEXT"])
-m4trace:configure.ac:430: -1- m4_pattern_allow([^am__EXEEXT_TRUE$])
-m4trace:configure.ac:430: -1- m4_pattern_allow([^am__EXEEXT_FALSE$])
-m4trace:configure.ac:430: -1- _AM_SUBST_NOTMAKE([am__EXEEXT_TRUE])
-m4trace:configure.ac:430: -1- _AM_SUBST_NOTMAKE([am__EXEEXT_FALSE])
-m4trace:configure.ac:430: -1- _AC_AM_CONFIG_HEADER_HOOK(["$ac_file"])
-m4trace:configure.ac:430: -1- _AM_OUTPUT_DEPENDENCY_COMMANDS
-m4trace:configure.ac:430: -1- _LT_PROG_LTMAIN
+m4trace:configure.ac:382: -1- m4_pattern_allow([^HAVE_GETPAGESIZE$])
+m4trace:configure.ac:382: -1- m4_pattern_allow([^HAVE_MMAP$])
+m4trace:configure.ac:383: -1- m4_pattern_allow([^HAVE_STDLIB_H$])
+m4trace:configure.ac:383: -1- m4_pattern_allow([^HAVE_REALLOC$])
+m4trace:configure.ac:383: -1- m4_pattern_allow([^HAVE_REALLOC$])
+m4trace:configure.ac:383: -1- m4_pattern_allow([^LIB@&t@OBJS$])
+m4trace:configure.ac:383: -1- m4_pattern_allow([^realloc$])
+m4trace:configure.ac:405: -1- m4_pattern_allow([^DL_LIB_OPTION$])
+m4trace:configure.ac:406: -1- m4_pattern_allow([^RT_LIB_OPTION$])
+m4trace:configure.ac:409: -1- m4_pattern_allow([^LS_MODULE_VERSION_INFO$])
+m4trace:configure.ac:438: -1- m4_pattern_allow([^LIB@&t@OBJS$])
+m4trace:configure.ac:438: -1- m4_pattern_allow([^LTLIBOBJS$])
+m4trace:configure.ac:438: -1- AM_CONDITIONAL([am__EXEEXT], [test -n "$EXEEXT"])
+m4trace:configure.ac:438: -1- m4_pattern_allow([^am__EXEEXT_TRUE$])
+m4trace:configure.ac:438: -1- m4_pattern_allow([^am__EXEEXT_FALSE$])
+m4trace:configure.ac:438: -1- _AM_SUBST_NOTMAKE([am__EXEEXT_TRUE])
+m4trace:configure.ac:438: -1- _AM_SUBST_NOTMAKE([am__EXEEXT_FALSE])
+m4trace:configure.ac:438: -1- _AC_AM_CONFIG_HEADER_HOOK(["$ac_file"])
+m4trace:configure.ac:438: -1- _AM_OUTPUT_DEPENDENCY_COMMANDS
+m4trace:configure.ac:438: -1- _LT_PROG_LTMAIN
