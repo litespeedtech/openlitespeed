@@ -152,7 +152,7 @@ void LsLuaStreamData::close(lua_State *L)
 // @param[in] httpSession
 // @return -1 on failure, 0 no more write, 1 more write
 //
-int LsLuaSession::onWrite(lsi_session_t *httpSession)
+int LsLuaSession::onWrite(const lsi_session_t *httpSession)
 {
     //
     // if I am waiting for it and there is buffer then process it.
@@ -185,7 +185,7 @@ int LsLuaSession::wait4RespBuffer(lua_State *L)
 //
 //  static callback for general purpose LsLuaSession Timer
 //
-void LsLuaSession::timerCb(void *data)
+void LsLuaSession::timerCb(const void *data)
 {
     LsLuaTimerData   *_data = (LsLuaTimerData *)data;
 
@@ -649,7 +649,7 @@ int LsLuaLogFlush(void *param, const char *pBuf, int len, int *flag)
     ls_lualog_t *pLog = (ls_lualog_t *)param;
     if (pLog->_pLuaSession && pLog->_pLuaSession->getHttpSession())
     {
-        lsi_session_t *pSess = pLog->_pLuaSession->getHttpSession();
+        const lsi_session_t *pSess = pLog->_pLuaSession->getHttpSession();
         if (!(*flag & LSLUA_PRINT_FLAG_ADDITION))
             g_api->log(pSess, pLog->_level, "[%p] [LUA] ", pSess);
         g_api->lograw(pSess, pBuf, len);
@@ -730,7 +730,7 @@ int LsLuaRespBodyFlush(void *param, const char *pBuf, int len, int *flag)
     LsLuaSession *pSession = (LsLuaSession *)param;
     if (pSession && pSession->getHttpSession())
     {
-        lsi_session_t *pHttpSess = pSession->getHttpSession();
+        const lsi_session_t *pHttpSess = pSession->getHttpSession();
         if (pHttpSess)
             if (g_api->append_resp_body(pHttpSess, pBuf, len) == -1)
                 return LS_FAIL;
@@ -795,7 +795,7 @@ static inline void killThisSession(LsLuaSession *pSession)
 //  Detected http end condition - abort current operation
 //  This called by module handler
 //
-void CleanupLuaSession(void *pHttpSession, LsLuaSession *pSession)
+void CleanupLuaSession(const void *pHttpSession, LsLuaSession *pSession)
 {
     // LsLuaSession *  pSession = LsLuaSession::findByLsiSession( (lsi_session_t *)pHttpSession );
 
@@ -1155,7 +1155,7 @@ static int LsLuaReqRawHeader(lua_State *L)
     int iHeadersLen;
     char *pHeaders;
     LsLuaSession *session = LsLuaGetSession(L);
-    lsi_session_t *pSession = session->getHttpSession();
+    const lsi_session_t *pSession = session->getHttpSession();
     iHeadersLen = g_api->get_req_raw_headers_length(pSession);
     pHeaders = (char *)ls_xpool_alloc(g_api->get_session_pool(pSession),
                                       iHeadersLen);
@@ -1209,7 +1209,7 @@ static int LsLuaReqGetHeaders(lua_State *L)
     int i, iRet, iCount, iMaxHeaders = 100;
     struct iovec *pKeys, *pVals;
     LsLuaSession *pSession = LsLuaGetSession(L);
-    lsi_session_t *session = pSession->getHttpSession();
+    const lsi_session_t *session = pSession->getHttpSession();
     ls_xpool_t *pool = g_api->get_session_pool(session);
     switch (LsLuaApi::gettop(L))
     {
@@ -1302,7 +1302,7 @@ static int LsLuaReqSetUri(lua_State *L)
     size_t iUriLen;
     int iQsLen, iArgs = LsLuaApi::gettop(L);
     LsLuaSession *pSession = LsLuaGetSession(L);
-    lsi_session_t *session = pSession->getHttpSession();
+    const lsi_session_t *session = pSession->getHttpSession();
 
     if (iArgs != 1 && iArgs != 2)
         return LsLuaApi::invalidNArgError(L, "req_set_uri");
@@ -1399,7 +1399,7 @@ static int LsLuaReqGetUriArgs(lua_State *L)
 {
     int iKeyLen, iMax, iCount = LsLuaApi::gettop(L);
     const char *pBegin;
-    lsi_session_t *pSession = LsLuaGetSession(L)->getHttpSession();
+    const lsi_session_t *pSession = LsLuaGetSession(L)->getHttpSession();
     ls_xpool_t *pool = g_api->get_session_pool(pSession);
 
     if (iCount != 0 && iCount != 1)
@@ -1422,7 +1422,7 @@ static int LsLuaReqGetPostArgs(lua_State *L)
 {
     char *pBody;
     int iRet, iMax, iBodySize, iBodyLen = 0;
-    lsi_session_t *session;
+    const lsi_session_t *session;
     ls_xpool_t *pool;
     LsLuaSession *pSession = LsLuaSession::getSelf(L);
     int iArgs = LsLuaApi::gettop(L);
@@ -1457,7 +1457,7 @@ static int LsLuaReqGetPostArgs(lua_State *L)
 static int LsLuaReqReadBody(lua_State *L)
 {
     LsLuaSession   *pSession = LsLuaGetSession(L);
-    lsi_session_t *sess = pSession->getHttpSession();
+    const lsi_session_t *sess = pSession->getHttpSession();
     int iRet;
 
     if (!pSession)
@@ -2574,7 +2574,7 @@ static int LsLuaSessEncodeBase64(lua_State *L)
     size_t iLen;
     const char *pBuf;
     char *pEncodedBuf;
-    lsi_session_t *pSession = LsLuaSession::getSelf(L)->getHttpSession();
+    const lsi_session_t *pSession = LsLuaSession::getSelf(L)->getHttpSession();
 
     if (LsLuaApi::gettop(L) != 1)
         return LsLuaApi::invalidNArgError(L, "encode_base64");
@@ -2601,7 +2601,7 @@ static int LsLuaSessDecodeBase64(lua_State *L)
     size_t iLen;
     const char *pBuf;
     char *pDecodedBuf;
-    lsi_session_t *pSession = LsLuaSession::getSelf(L)->getHttpSession();
+    const lsi_session_t *pSession = LsLuaSession::getSelf(L)->getHttpSession();
 
     if (LsLuaApi::gettop(L) != 1)
         return LsLuaApi::invalidNArgError(L, "decode_base64");

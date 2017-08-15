@@ -18,6 +18,7 @@
 #include "clientinfo.h"
 
 #include <http/iptogeo.h>
+#include <http/iptoloc.h>
 #include <log4cxx/logger.h>
 #include <util/accessdef.h>
 #include <util/datetime.h>
@@ -73,6 +74,9 @@ ClientInfo::ClientInfo()
     : m_iFlags( 0 )
     , m_iConns( 0 )
     , m_pGeoInfo(NULL)
+#ifdef USE_IP2LOCATION
+    , m_pLocInfo(NULL)
+#endif
 {
 #if 0
     m_pShmClient = NULL;
@@ -214,6 +218,16 @@ GeoInfo *ClientInfo::allocateGeoInfo()
         m_pGeoInfo = new GeoInfo();
     return m_pGeoInfo;
 }
+
+
+#ifdef USE_IP2LOCATION
+LocInfo *ClientInfo::allocateLocInfo()
+{
+    if (!m_pLocInfo)
+        m_pLocInfo = new LocInfo();
+    return m_pLocInfo;
+}
+#endif
 
 
 static inline int isGoog(const char *pHost, int iHostLen)

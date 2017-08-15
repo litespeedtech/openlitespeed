@@ -340,13 +340,13 @@ int ls_shmhash_stat(ls_shmhash_t *hashhandle, LsHashStat *phashstat)
 }
 
 
-/*
- *  LiteSpeed SHM Lock
- */
-ls_shmlock_t *ls_shmlock_get(ls_shm_t *shmhandle)
-{
-    return ((LsShm *)shmhandle)->allocLock();
-}
+// /*
+//  *  LiteSpeed SHM Lock
+//  */
+// ls_shmlock_t *ls_shmlock_get(ls_shm_t *shmhandle)
+// {
+//     return ((LsShm *)shmhandle)->allocLock();
+// }
 
 
 int ls_shmlock_remove(ls_shm_t *shmhandle, ls_shmlock_t *lock)

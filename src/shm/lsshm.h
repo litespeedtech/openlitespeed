@@ -39,7 +39,10 @@
 #define SHM_NOTICE(format, ...) \
     LOG4CXX_NS::Logger::getRootLogger()->notice(format, ##__VA_ARGS__ )
 
+#define SHM_WARN(format, ...) \
+    LOG4CXX_NS::Logger::getRootLogger()->warn(format, ##__VA_ARGS__ )
 
+    
 #ifdef LSSHM_DEBUG_ENABLE
 class debugBase;// These two should be the same size...
 #endif
@@ -188,14 +191,11 @@ public:
 
     LsShmLock *getLocks()               {   return &m_locks;    }
 
-    ls_shmlock_t *allocLock()           {   return m_locks.allocLock();     }
+    LsShmOffset_t allocLock()           {   return m_locks.allocLock();     }
     int freeLock(ls_shmlock_t *pLock)   {   return m_locks.freeLock(pLock); }
 
     ls_shmlock_t *offset2pLock(LsShmOffset_t offset) const
     {   return m_locks.offset2pLock(offset);    }
-
-    LsShmOffset_t pLock2offset(ls_shmlock_t *pLock)
-    {   return m_locks.pLock2offset(pLock);     }
 
     ls_attr_inline int lockRemap(ls_shmlock_t *pLock)
     {

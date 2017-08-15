@@ -50,7 +50,8 @@ class DPageDef
 			new DTblMap('expires', 'A_EXPIRES'),
 			'S_FILEUPLOAD',
 			new DTblMap(['ipToGeo:geoipDB', '*geoipdb$geoipDBFile' ], 'S_GEOIP'),
-			new DTblMap('tuning', ['S_TUNING_OS', 'S_TUNING_CONN', 'S_TUNING_REQ', 'S_TUNING_STATIC', 'S_TUNING_GZIP', 'S_TUNING_SSL' ]),
+            new DTblMap('ip2locDB', 'S_IP2LOCATION'),
+			new DTblMap('tuning', ['S_TUNING_OS', 'S_TUNING_CONN', 'S_TUNING_REQ', 'S_TUNING_STATIC', 'S_TUNING_GZIP', 'S_TUNING_BROTLI', 'S_TUNING_SSL' ]),
 			new DTblMap(['security:fileAccessControl', 'fileAccessControl' ], 'S_SEC_FILE'),
 			new DTblMap(['security:perClientConnLimit', 'perClientConnLimit' ], 'S_SEC_CONN'),
 			new DTblMap(['security:CGIRLimit', 'CGIRLimit' ], 'S_SEC_CGI'),
@@ -163,15 +164,18 @@ class DPageDef
 	protected function defineAll()
 	{
 		$id = 'g';
-		$page = new DPage($id, DMsg::UIStr('tab_g'), new DTblMap('',
-				['S_PROCESS','S_GENERAL','S_INDEX',
-						new DTblMap('expires', 'A_EXPIRES'),
+		$page = new DPage($id, DMsg::UIStr('tab_g'), 
+                new DTblMap('', 
+                        ['S_PROCESS', 'S_GENERAL', 'S_INDEX',
+                        new DTblMap('expires', 'A_EXPIRES'),
                         'S_FILEUPLOAD',
-						new DTblMap('*geoipdb$geoipDBFile', 'S_GEOIP_TOP', 'S_GEOIP')],
-				new DTblMap('*index', ['S_MIME_TOP', 'S_MIME'])));
-		$this->_pageDef['serv'][$id] = $page;
+                        new DTblMap('*geoipdb$geoipDBFile', 'S_GEOIP_TOP', 'S_GEOIP'),
+                        new DTblMap('ip2locDB', 'S_IP2LOCATION'),
+                            ], 
+                new DTblMap('*index', ['S_MIME_TOP', 'S_MIME'])));
+        $this->_pageDef['serv'][$id] = $page;
 
-		$id = 'log';
+        $id = 'log';
 		$page = new DPage($id, DMsg::UIStr('tab_log'), new DTblMap('',
 				[new DTblMap('errorlog$fileName', 'S_LOG'),
 						new DTblMap('accesslog$fileName', 'S_ACLOG')]));
@@ -179,7 +183,7 @@ class DPageDef
 
 		$id = 'tuning';
 		$page = new DPage($id, DMsg::UIStr('tab_tuning'), new DTblMap('tuning',
-				['S_TUNING_OS', 'S_TUNING_CONN', 'S_TUNING_REQ', 'S_TUNING_STATIC', 'S_TUNING_GZIP', 'S_TUNING_SSL']));
+				['S_TUNING_OS', 'S_TUNING_CONN', 'S_TUNING_REQ', 'S_TUNING_STATIC', 'S_TUNING_GZIP', 'S_TUNING_BROTLI', 'S_TUNING_SSL']));
 		$this->_pageDef['serv'][$id] = $page;
 
 		$id = 'sec';

@@ -75,7 +75,7 @@ static char *pVals[] =
 const int iSize = 11;
 const int iMaxLen = 256;
 
-static int begin_process(lsi_session_t *session)
+static int begin_process(const lsi_session_t *session)
 {
     char outBuf[iMaxLen];
     int i, iOut;
@@ -105,7 +105,7 @@ static int begin_process(lsi_session_t *session)
 static int beginSession(lsi_param_t *rec)
 {
     int i;
-    lsi_session_t *pSession = rec->session;
+    const lsi_session_t *pSession = rec->session;
 
     for (i = 0; i < iSize; ++i)
     {
@@ -121,7 +121,7 @@ static int beginSession(lsi_param_t *rec)
 }
 
 
-static int _init()
+static int init_module()
 {
     return 0;
 }
@@ -134,7 +134,7 @@ static lsi_serverhook_t serverHooks[] =
 };
 
 static lsi_reqhdlr_t myhandler = { begin_process, NULL, NULL, NULL };
-lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, _init, &myhandler, NULL, "v1.0",
+lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, init_module, &myhandler, NULL, "v1.0",
                        serverHooks
                      };
 

@@ -51,6 +51,7 @@ END_LOG4CXX_NS
 #define VH_RESTRAINED       64
 #define VH_ACC_LOG          128
 #define VH_GZIP             256
+#define VH_BR               512
 
 
 #define DEFAULT_ADMIN_SERVER_NAME   "_AdminVHost"
@@ -148,7 +149,6 @@ private:
     RewriteMapList     *m_pRewriteMaps;
     SslContext         *m_pSSLCtx;
     SSITagConfig       *m_pSSITagConfig;
-    AutoStr2            m_sSpdyAdHeader;
     LsiModuleData       m_moduleData;
 
     UrlStxFileHash     *m_pUrlStxFileHash;
@@ -255,6 +255,9 @@ public:
 
     void enableGzip(int enable)       {   setFeature(VH_GZIP, enable);    }
     int  enableGzip() const             {   return m_iFeatures & VH_GZIP;   }
+
+    void enableBr(int enable)         {   setFeature(VH_BR, enable);      }
+    int  enableBr() const               {   return m_iFeatures & VH_BR;     }
 
     ExpiresCtrl &getExpires()           {   return m_rootContext.getExpires();  }
     const ExpiresCtrl &getExpires() const
@@ -429,9 +432,6 @@ public:
                               const char *pUri, const char *pHandler, bool allowBrowse, int match,
                               int type);
     int checkDeniedSubDirs(const char *pUri, const char *pLocation);
-
-    void setSpdyAdHeader(const char *sHeader)   {       m_sSpdyAdHeader = sHeader;      }
-    const AutoStr2 &getSpdyAdHeader() const         {       return m_sSpdyAdHeader; }
 
     LsiModuleData *getModuleData()      {   return &m_moduleData;   }
 

@@ -1513,32 +1513,34 @@ void NtwkIOLink::handle_acceptSSL_EIO_Err()
     //The buf is null terminated string
     char buf[8192 + 1] = {0};
     unsigned int length = 0;
-#if !defined(OPENSSL_IS_BORINGSSL) && !defined(LIBRESSL_VERSION_NUMBER)
-    length = m_ssl.getSSL()->packet_length;
-    if (length > 8192)
-        length = 8192;
-    memcpy(buf, (char *)m_ssl.getSSL()->packet, length);
-#else
-#ifdef OPENSSL_IS_BORINGSSL
+    char *p = NULL;
+
+#if defined(OPENSSL_IS_BORINGSSL)
     //FIXME: new bssl changed, below code not works
     SSL3_BUFFER &read_buffer = m_ssl.getSSL()->s3->read_buffer;
-#else
+    length = read_buffer.len;
+    p = (char *)read_buffer.buf + read_buffer.offset;
+#elif defined(LIBRESSL_VERSION_NUMBER)
     //LIBRESSL 2.5+
     SSL3_BUFFER &read_buffer = m_ssl.getSSL()->s3->rbuf;
-#endif
     length = read_buffer.len;
+    p = (char *)read_buffer.buf + read_buffer.offset;
+#else
+    length = m_ssl.getSSL()->packet_length;
+    p = (char *)m_ssl.getSSL()->packet;
+#endif
+
     if (length > 8192)
         length = 8192;
-    memcpy(buf, (char *)read_buffer.buf + read_buffer.offset, length);
-#endif
+    memcpy(buf, p, length);
 
     //Normally it is 5 bytes in bssl, 11 bytes in ossl, checking with 8192,
     //just to avoid buffer overflow
     if (length < 8192)
     {
-     int ret = ::read(getfd(), buf + length, 8192 - length);
-     if (ret > 0)
-         length += ret;
+        int ret = ::read(getfd(), buf + length, 8192 - length);
+        if (ret > 0)
+            length += ret;
     }
 
     int uri_len = 0, host_len = 0;

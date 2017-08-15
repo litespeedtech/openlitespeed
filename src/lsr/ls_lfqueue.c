@@ -91,7 +91,7 @@ int ls_lfqueue_init(ls_lfqueue_t *pThis)
 {
     pThis->tail.m_ptr = NULL;
     pThis->tail.m_seq = 0;
-    pThis->phead = (volatile ls_lfnodei_t **)&pThis->tail.m_ptr;
+    pThis->phead = (volatile ls_lfnodei_t * volatile *)&pThis->tail.m_ptr;
 
     return 0;
 }

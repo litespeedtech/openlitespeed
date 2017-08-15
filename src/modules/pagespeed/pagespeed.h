@@ -75,21 +75,21 @@ enum PreserveCachingHeaders
     kDontPreserveHeaders,
 };
 
-void CopyRespHeadersFromServer(lsi_session_t *session,
+void CopyRespHeadersFromServer(const lsi_session_t *session,
                                ResponseHeaders *headers);
 
-void CopyReqHeadersFromServer(lsi_session_t *session,
+void CopyReqHeadersFromServer(const lsi_session_t *session,
                               RequestHeaders *headers);
 
-int CopyRespHeadersToServer(lsi_session_t *session,
+int CopyRespHeadersToServer(const lsi_session_t *session,
                             const ResponseHeaders &pagespeed_headers,
                             PreserveCachingHeaders preserve_caching_headers);
 
-int CopyRespBodyToBuf(lsi_session_t *session, GoogleString &str, int done_called);
+int CopyRespBodyToBuf(const lsi_session_t *session, GoogleString &str, int done_called);
 
-char *DetermineHost(lsi_session_t *session, char *str, int maxLen);
+char *DetermineHost(const lsi_session_t *session, char *str, int maxLen);
 
-int DeterminePort(lsi_session_t *session);
+int DeterminePort(const lsi_session_t *session);
 
 }  // namespace net_instaweb
 

@@ -67,6 +67,22 @@ class HttpSessionHooks;
 #define CHANG_UID_ONLY      64
 #define USE_CANONICAL       128
 
+#define REWRITE_OFF         0
+#define REWRITE_ON          1
+#define REWRITE_INHERIT     2
+#define REWRITE_MASK        3
+
+#define ETAG_NONE           0
+#define ETAG_INODE          4
+#define ETAG_MTIME          8
+#define ETAG_SIZE           16
+#define ETAG_ALL            (ETAG_INODE|ETAG_MTIME|ETAG_SIZE)
+#define ETAG_MOD_INODE      32
+#define ETAG_MOD_MTIME      64
+#define ETAG_MOD_SIZE       128
+#define ETAG_MOD_ALL        (ETAG_MOD_INODE|ETAG_MOD_MTIME|ETAG_MOD_SIZE)
+#define ETAG_MASK           (ETAG_ALL|ETAG_MOD_ALL)
+
 #define BIT_FORCE_TYPE      (1<<0)
 #define BIT_AUTH            (1<<1)
 #define BIT_ACCESS          (1<<2)
@@ -86,7 +102,7 @@ class HttpSessionHooks;
 #define BIT_SATISFY         (1<<16)
 #define BIT_SATISFY_ANY     (1<<17)
 #define BIT_AUTOINDEX       (1<<18)
-#define BIT_AUTOINDEX_ON    (1<<19)
+
 #define BIT_AUTHORIZER      (1<<20)
 #define BIT_DIRINDEX        (1<<21)
 #define BIT_PHPCONFIG       (1<<22)
@@ -94,40 +110,37 @@ class HttpSessionHooks;
 #define BIT_AUTH_REQ        (1<<24)
 #define BIT_FILES_MATCH     (1<<25)
 #define BIT_EXTRA_HEADER    (1<<26)
-#define BIT_ENABLE_SCRIPT   (1<<27)
+
 #define BIT_GEO_IP          (1<<28)
-#define BIT_GSOCKADDR       (1<<29)
+#define BIT_ENABLE_SCRIPT   (1<<29)
 #define BIT_SESSIONHOOKS    (1<<30)
 #define BIT_MODULECONFIG    (1<<31)
 
+#define BIT_F_ALLOW_BROWSE      (1<<0)
+#define BIT_F_AUTOINDEX_ON      (1<<1)
+#define BIT_F_AUTOINDEX_OFF     (1<<2)
+#define BIT_F_FANCY_IDX_OFF     (1<<3)
+#define BIT_F_INCLUDES          (1<<4)
+#define BIT_F_INCLUDES_NOEXEC   (1<<5)
+#define BIT_F_XBIT_HACK_ON      (1<<6)
+#define BIT_F_XBIT_HACK_FULL    (1<<7)
 
-#define REWRITE_OFF         0
-#define REWRITE_ON          1
-#define REWRITE_INHERIT     2
-#define REWRITE_MASK        3
+#define BIT_F_RAILS_CONTEXT     (1<<11)
 
-#define ETAG_NONE           0
-#define ETAG_INODE          4
-#define ETAG_MTIME          8
-#define ETAG_SIZE           16
-#define ETAG_ALL            (ETAG_INODE|ETAG_MTIME|ETAG_SIZE)
-#define ETAG_MOD_INODE      32
-#define ETAG_MOD_MTIME      64
-#define ETAG_MOD_SIZE       128
-#define ETAG_MOD_ALL        (ETAG_MOD_INODE|ETAG_MOD_MTIME|ETAG_MOD_SIZE)
-#define ETAG_MASK           (ETAG_ALL|ETAG_MOD_ALL)
+#define BIT_F_IPTOLOC_ON        (1<<16)
 
-#define BIT_ALLOW_BROWSE        (1<<0)
-#define BIT_INCLUDES            (1<<4)
-#define BIT_INCLUDES_NOEXEC     (1<<5)
-#define BIT_XBIT_HACK_FULL      (1<<7)
-#define BIT_URI_CACHEABLE       (1<<8)
+#define BIT2_INCLUDES           (1<<4)
+#define BIT2_INCLUDES_NOEXEC    (1<<5)
+#define BIT2_XBIT_HACK_ON       (1<<6)
+#define BIT2_OPTIONS_SET        (1<<7)
+
+#define BIT2_URI_CACHEABLE      (1<<8)
 #define BIT2_IS_FILESMATCH_CTX  (1<<11)
-#define BIT_FILES_ETAG          (1<<12)
+#define BIT2_FILES_ETAG         (1<<12)
 
-#define BIT_RAILS_CONTEXT       (1<<6)
+#define BIT2_WEBSOCKADDR        (1<<14)
 
-
+#define BIT2_IPTOLOC            (1<<22)
 
 
 /**********************************************************************
@@ -198,13 +211,12 @@ class HttpContext
     ExpiresCtrl           m_expires;
 
 
-    char                m_bAllowBrowse;
-    char                m_bAllowOverride;
     char                m_redirectCode;
     char                m_iSetUidMode;
-    short               m_iConfigBits2;
     unsigned char       m_iRewriteEtag;
     char                m_iDummy;
+    uint32_t            m_iConfigBits2;
+    uint32_t            m_iFeatures;
     long                m_lHTALastMod;
     AutoStr2             *m_pRewriteBase;
     RewriteRuleList      *m_pRewriteRules;
@@ -248,8 +260,8 @@ public:
     int  allocateInternal();
     void releaseHTAConf();
 
-    void setCacheable(int c)      {   setConfigBit2(BIT_URI_CACHEABLE, c);  }
-    short isCacheable() const       {   return m_iConfigBits2 & BIT_URI_CACHEABLE; }
+    void setCacheable(int c)      {   setConfigBit2(BIT2_URI_CACHEABLE, c);  }
+    short isCacheable() const       {   return m_iConfigBits2 & BIT2_URI_CACHEABLE; }
 
     const char *getLocation() const {   return m_sLocation.c_str();    }
     int getLocationLen() const       {   return m_sLocation.len();      }
@@ -262,14 +274,9 @@ public:
 
     const HttpHandler *getHandler() const      {   return m_pHandler;  }
 
-    char allowBrowse() const            {   return (m_bAllowBrowse & BIT_ALLOW_BROWSE);      }
+    uint32_t allowBrowse() const        {   return (m_iFeatures & BIT_F_ALLOW_BROWSE);       }
     void allowBrowse(int browse)
-    {
-        if (browse)
-            m_bAllowBrowse |= BIT_ALLOW_BROWSE;
-        else
-            m_bAllowBrowse &= (~BIT_ALLOW_BROWSE);
-    }
+    {   setFeaturesBit(BIT_F_ALLOW_BROWSE, browse); }
 
     ExpiresCtrl &getExpires()               {   return m_expires;   }
     const ExpiresCtrl &getExpires() const   {   return m_expires;   }
@@ -302,6 +309,9 @@ public:
     {   m_pParent = pParent;    }
 
     const HttpContext *getParent() const {   return m_pParent;      }
+
+    void setFeaturesBit(uint32_t bit, int enable)
+    {   m_iFeatures = (m_iFeatures & (~bit)) | ((enable) ? bit : 0); }
 
     void setConfigBit(int bit, int enable)
     {   m_iConfigBits = (m_iConfigBits & (~bit)) | ((enable) ? bit : 0); }
@@ -372,8 +382,8 @@ public:
     const MimeSetting *lookupMimeSetting(char *pValue) const;
     const MimeSetting *lookupMimeSetting(char *pValue, int forceAddMIME);
 
-    void setRailsContext()          {   setConfigBit2(BIT_RAILS_CONTEXT, 1);   }
-    char isRailsContext() const     {   return m_iConfigBits2 & BIT_RAILS_CONTEXT;   }
+    void setRailsContext()          {   setFeaturesBit(BIT_F_RAILS_CONTEXT, 1);   }
+    uint32_t isRailsContext() const {   return m_iFeatures & BIT_F_RAILS_CONTEXT; }
 
     const AutoStr2 *getRewriteBase() const
     {   return (m_pRewriteBase) ? m_pRewriteBase : &m_sContextURI;  }
@@ -412,12 +422,21 @@ public:
 
     void setAutoIndex(int a)
     {
-        setConfigBit(BIT_AUTOINDEX_ON, a);
+        setFeaturesBit(BIT_F_AUTOINDEX_ON, a);
         m_iConfigBits |= BIT_AUTOINDEX;
     }
 
-    int isAutoIndexOn() const
-    {   return m_iConfigBits & BIT_AUTOINDEX_ON;    }
+    uint32_t isAutoIndexOn() const
+    {   return m_iFeatures & BIT_F_AUTOINDEX_ON;    }
+
+    void setAutoIndexOff(int a)
+    {
+        setFeaturesBit(BIT_F_AUTOINDEX_OFF, a);
+        m_iConfigBits |= BIT_AUTOINDEX;
+    }
+
+    uint32_t isAutoIndexOff() const
+    {   return m_iFeatures & BIT_F_AUTOINDEX_OFF;   }
 
     int setAuthorizer(const HttpHandler *pHandler);
     const HttpHandler *getAuthorizer() const
@@ -457,14 +476,51 @@ public:
         m_iConfigBits |= BIT_GEO_IP;
     }
     char isGeoIpOn() const          {   return m_iSetUidMode & CTX_GEOIP_ON;    }
+
+    void setIpToLoc(int a)
+    {
+        setFeaturesBit(BIT_F_IPTOLOC_ON, a);
+        m_iConfigBits2 |= BIT2_IPTOLOC;
+    }
+    uint32_t isIpToLocOn() const     {   return m_iFeatures & BIT_F_IPTOLOC_ON;   }
+
     SSIConfig *getSSIConfig() const
     {   return m_pInternal->m_pSSIConfig;   }
-    int isXbitHackFull() const
-    {   return m_bAllowBrowse & BIT_XBIT_HACK_FULL; }
-    int isIncludesNoExec() const
+
+    void setXbitHackOn(int a)
     {
-        return (m_bAllowBrowse & (BIT_INCLUDES_NOEXEC | BIT_INCLUDES))
-               == BIT_INCLUDES_NOEXEC ;
+        setFeaturesBit(BIT_F_XBIT_HACK_ON, a);
+        m_iConfigBits2 |= BIT2_XBIT_HACK_ON;
+    }
+
+    void setXbitHackFull(int a)
+    {
+        setFeaturesBit(BIT_F_XBIT_HACK_FULL, a);
+        m_iConfigBits2 |= BIT2_XBIT_HACK_ON;
+    }
+
+    uint32_t isXbitHack() const
+    {   return m_iFeatures & (BIT_F_XBIT_HACK_ON | BIT_F_XBIT_HACK_FULL);   }
+
+    uint32_t isXbitHackOn() const
+    {   return m_iFeatures & BIT_F_XBIT_HACK_ON;   }
+
+    uint32_t isXbitHackFull() const
+    {   return m_iFeatures & BIT_F_XBIT_HACK_FULL; }
+
+
+    uint32_t isIncludesOn() const
+    {   return m_iFeatures & (BIT_F_INCLUDES_NOEXEC | BIT_F_INCLUDES);       }
+
+    void setIncludesNoExec(int a)
+    {
+        setFeaturesBit(BIT_F_INCLUDES_NOEXEC, a);
+        m_iConfigBits2 |= BIT2_INCLUDES;
+    }
+    uint32_t isIncludesNoExec() const
+    {
+        return (m_iFeatures & (BIT_F_INCLUDES_NOEXEC | BIT_F_INCLUDES))
+               == BIT_F_INCLUDES_NOEXEC ;
     }
     int hasRewriteConfig() const
     {
@@ -481,12 +537,10 @@ public:
     {
         m_iRewriteEtag =
             (m_iRewriteEtag & ~ETAG_MASK) | (a & ETAG_MASK);
-        m_iConfigBits2 |= BIT_FILES_ETAG;
+        m_iConfigBits2 |= BIT2_FILES_ETAG;
     }
     unsigned char getFileEtag() const        {   return m_iRewriteEtag & ETAG_MASK;  }
 
-    int isIncludesOn() const
-    {   return m_bAllowBrowse & (BIT_INCLUDES_NOEXEC | BIT_INCLUDES);       }
     int configAccess(const XmlNode *pContextNode);
     void configAutoIndex(const XmlNode *pContextNode);
     int configDirIndex(const XmlNode *pContextNode);

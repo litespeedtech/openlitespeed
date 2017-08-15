@@ -28,6 +28,7 @@
 #include <http/httpstatuscode.h>
 #include <http/httpver.h>
 #include <http/iptogeo.h>
+#include <http/iptoloc.h>
 #include <http/requestvars.h>
 #include <lsr/ls_hash.h>
 #include <lsr/ls_str.h>
@@ -572,6 +573,19 @@ int HttpCgiTool::buildCommonEnv(IEnv *pEnv, HttpSession *pSession)
             count += pInfo->addGeoEnv(pEnv) + 1;
         }
     }
+#ifdef USE_IP2LOCATION
+    //add IP2Location env here
+    if (pReq->isIpToLocOn())
+    {
+        LocInfo *pInfo = pSession->getClientInfo()->getLocInfo();
+        if (pInfo)
+        {
+            pEnv->add("IP2LOCATION_ADDR", 16, pSession->getPeerAddrString(),
+                      pSession->getPeerAddrStrLen());
+            count += pInfo->addLocEnv(pEnv) + 1;
+        }
+    }
+#endif
     n = pReq->getEnvCount();
     count += n;
     if ((pNode = (RadixNode *)pReq->getEnvNode()) != NULL)

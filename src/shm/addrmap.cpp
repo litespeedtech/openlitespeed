@@ -153,10 +153,23 @@ int AddrMap::mapAddrSpace(size_t total)
         return LS_OK;
     AddrOffPair pair;
     size_t bytes = (needed + LARGE_PAGE_MASK ) & ~LARGE_PAGE_MASK;
-    pair.m_ptr = (char *) mmap(NULL, bytes, PROT_NONE,
+    pair.m_ptr = (char *) mmap(NULL, bytes + LARGE_PAGE_SIZE, PROT_NONE,
                                MAP_ANON|MAP_SHARED, -1, 0);
     if (!pair.m_ptr)
         return LS_FAIL;
+    if (((unsigned long)pair.m_ptr & LARGE_PAGE_MASK) == 0)
+        bytes += LARGE_PAGE_SIZE;
+    else
+    {
+        char *pRelease = pair.m_ptr;
+        size_t size; 
+        pair.m_ptr = (char *)(((unsigned long)pair.m_ptr & ~LARGE_PAGE_MASK) 
+                            + LARGE_PAGE_SIZE);
+        size = pair.m_ptr - pRelease;
+        munmap(pRelease, size);
+        pRelease = pair.m_ptr + bytes;
+        munmap(pRelease, LARGE_PAGE_SIZE - size);
+    }
     pair.m_offset = getMaxOffset();
     if (addLargePage(pair, bytes) == LS_FAIL)
     {
@@ -210,13 +223,15 @@ size_t AddrMap::getAvailAddrSpace( size_t offset, size_t required_size)
     size_t avail = 0;
     int page = offset >> LARGE_PAGE_BITS;
     avail = LARGE_PAGE_SIZE - (offset & LARGE_PAGE_MASK);
-    while(avail < required_size && page < m_off2ptrTable.size())
+    while(avail < required_size && page < m_off2ptrTable.size() - 1)
     {
         if (m_off2ptrTable[page + 1] - m_off2ptrTable[page] == LARGE_PAGE_SIZE)
         {
             avail += LARGE_PAGE_SIZE;
             ++page;
         }
+        else
+            break;
     }
     return avail;    
 }

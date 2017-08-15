@@ -23,14 +23,19 @@
 #include <unistd.h>
 #include "socket/gsockaddr.h"
 #include "test/unittest-cpp/UnitTest++/src/UnitTest++.h"
+#include <edio/multiplexer.h>
+#include <edio/multiplexerfactory.h>
+#include <util/vmembuf.h>
+#include <fcntl.h>
 
-TEST(httpfetchTest_Test)
-//void VOID_TEST()//httpfetchTest_Test)
+//TEST(httpfetchTest_Test)
+void VOID_TEST()//httpfetchTest_Test)
 {
     printf("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
     printf("THIS TEST CAN ONLY TEST BY DEBUG with breakpoints\n");
     printf("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
 
+    Multiplexer *mult = MultiplexerFactory::getMultiplexer();
     void *p = NULL;
     HttpFetch *pHttpFetch = new HttpFetch;
     pHttpFetch->setResProcessor(NULL, p);
@@ -47,7 +52,9 @@ TEST(httpfetchTest_Test)
                                    nonblock, 1,
                                    pBody,
                                    bodyLen,
-                                   pSaveFile);
+                                   pSaveFile,
+                                   NULL, NULL,
+                                   HF_REGULAR);
     delete pHttpFetch;
     pHttpFetch = NULL;
 
@@ -56,7 +63,9 @@ TEST(httpfetchTest_Test)
                                nonblock, 1,
                                pBody,
                                bodyLen,
-                               pSaveFile, NULL, "www.litespeedtech.com:80");
+                               pSaveFile, NULL, "www.litespeedtech.com:80",
+                               HF_REGULAR);
+    mult->waitAndProcessEvents(5000);
     delete pHttpFetch;
     pHttpFetch = NULL;
 
@@ -97,7 +106,9 @@ TEST(httpfetchTest_Test)
                                nonblock, 1,
                                pBody,
                                bodyLen,
-                               pSaveFile, 0, gsock);
+                               pSaveFile, 0, gsock,
+                               HF_REGULAR);
+    mult->waitAndProcessEvents(5000);
     delete pHttpFetch;
     pHttpFetch = NULL;
 
@@ -107,7 +118,8 @@ TEST(httpfetchTest_Test)
                                nonblock, 1,
                                pBody,
                                bodyLen,
-                               pSaveFile, 0, gsock);
+                               pSaveFile, 0, gsock,
+                               HF_REGULAR);
     delete pHttpFetch;
     pHttpFetch = NULL;
 
@@ -118,10 +130,65 @@ TEST(httpfetchTest_Test)
                                nonblock, 1,
                                pBody,
                                bodyLen,
-                               pSaveFile, 0, gsock);
+                               pSaveFile, 0, gsock,
+                               HF_REGULAR);
+    mult->waitAndProcessEvents(5000);
 // The following can be uncommented to test checking the response.
 //     sleep(5);
 //     ret = pHttpFetch->process();
+    delete pHttpFetch;
+    pHttpFetch = NULL;
+
+    CHECK(ret == 0);
+
+
+
+    pHttpFetch = new HttpFetch;
+    /**
+     * The following request is meant to test secure connections.
+     *
+     * The commented out logic afterwards is meant to check the
+     * request processing as well as the results of the request.
+     *
+     * I(Kevin) found that the sleep/process -> waitAndProcessEvents -> sleep/process
+     * combination was sufficient to complete the connections, process SSL,
+     * and download the data. These steps may not all be necessary, but this
+     * combination worked for me.
+     *
+     * NOTICE: Please test all combinations of
+     *      nonblock(0/1),
+     *      enableDriver(0/1),
+     *      and isSecure(HF_SECURE/HF_UNKNOWN)
+     *
+     * As they may impact the output.
+     */
+    ret = pHttpFetch->startReq(
+        "https://www.litespeedtech.com/images/litespeed/Subpage_misc/lsws-header.png",
+        1, 1, // Check combinations here
+        pBody,
+        bodyLen,
+        pSaveFile,
+        NULL, NULL,
+        HF_SECURE); //and here
+
+//
+//     sleep(5);
+//     ret = pHttpFetch->process();
+//
+//     mult->waitAndProcessEvents(5000);
+//     sleep(5);
+//     ret = pHttpFetch->process();
+//
+//     CHECK(pHttpFetch->getStatusCode() == 200);
+//
+//     if (pHttpFetch->getStatusCode() == 200)
+//     {
+//         VMemBuf *pBuf = pHttpFetch->getResult();
+//         int fd = open("/home/user/testinfo.png", O_RDWR | O_CREAT | O_TRUNC);
+//         pBuf->copyToFile(0, pBuf->getCurWOffset(), fd, 0);
+//         close(fd);
+//     }
+
     delete pHttpFetch;
     pHttpFetch = NULL;
 

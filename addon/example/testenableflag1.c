@@ -87,10 +87,10 @@ static lsi_serverhook_t serverHooks[] =
     LSI_HOOK_END   //Must put this at the end position
 };
 
-static int _init()
+static int init_module()
 {
     MNAME.about = VERSION;  //set version string
     return 0;
 }
 
-lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, _init, NULL, NULL, "", serverHooks};
+lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, init_module, NULL, NULL, "", serverHooks};

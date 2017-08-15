@@ -26,6 +26,7 @@
 #include <http/httpver.h>
 #include <http/httpvhost.h>
 #include <http/iptogeo.h>
+#include <http/iptoloc.h>
 #include <log4cxx/logger.h>
 #include <lsr/ls_strtool.h>
 #include <ssi/ssiruntime.h>
@@ -947,6 +948,23 @@ const char *RequestVars::getEnv(HttpSession *pSession, const char *pKey,
             }
         }
     }
+#ifdef USE_IP2LOCATION
+    else if (strncmp(pKey, "IP2L", 4) == 0)
+    {
+        const char *pValue;
+        LocInfo *pInfo = pSession->getClientInfo()->getLocInfo();
+        valLen = 0;
+        if (pInfo)
+        {
+            pValue = pInfo->getLocEnv(pKey);
+            if (pValue)
+            {
+                valLen = strlen(pValue);
+                return pValue;
+            }
+        }
+    }
+#endif
     return pSession->getReq()->getEnv(pKey, keyLen, valLen);
 }
 

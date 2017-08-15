@@ -146,6 +146,7 @@ LsShmStatus_t LsShmPool::checkStaticData(const char *name)
 LsShmPool::LsShmPool(LsShm *shm, const char *name, LsShmPool *gpool)
     : m_iMagic(LSSHM_POOL_MAGIC)
     , m_iOffset(0)
+    , x_pPool(NULL)
     , m_iShmOwner(0)
     , m_iRegNum(0)
     , m_pParent(gpool)
@@ -212,6 +213,7 @@ LsShmPool::LsShmPool(LsShm *shm, const char *name, LsShmPool *gpool)
             extraSize = LSSHM_SHM_UNITSIZE - rndPoolMemSz;
         }
     }
+    x_pPool = (LsShmPoolMem *)offset2ptr(m_iOffset);
 
     if (getPool()->x_iSize != 0)
     {
@@ -351,9 +353,11 @@ LsShmHash * LsShmPool::newHashByOffset(LsShmOffset_t offset,
 LsShmOffset_t LsShmPool::allocateNewHash(int init_size, int iMode, int iFlags)
 {
     // Create new HASH Table
-
-    ls_shmlock_t *pShmLock = lockPool()->allocLock();
-    if ((pShmLock == NULL) || (ls_shmlock_setup(pShmLock) != 0))
+    ls_shmlock_t *pShmLock;
+    LsShmOffset_t lockOffset = lockPool()->allocLock();
+    if ((lockOffset == 0) 
+        || (pShmLock = lockPool()->offset2pLock(lockOffset)) == NULL
+        || (ls_shmlock_setup(pShmLock) != 0))
     {
         return 0;
     }
@@ -361,7 +365,7 @@ LsShmOffset_t LsShmPool::allocateNewHash(int init_size, int iMode, int iFlags)
     // NOTE: system is not up yet... ignore remap here
     LsShmOffset_t offset =
             LsShmHash::allocHTable(this, init_size, iMode, iFlags,
-                                   lockPool()->pLock2offset(pShmLock));
+                                   lockOffset);
     if (offset == 0)
     {
         lockPool()->freeLock(pShmLock);
@@ -659,14 +663,14 @@ void LsShmPool::mapLock()
     LsShmPoolMem *pPool = getPool();
     if (pPool->x_iLockOffset == 0)
     {
-        if ((m_pShmLock = m_pShm->allocLock()) == NULL)
-            m_status = LSSHM_ERROR;
-        else
+        pPool->x_iLockOffset = m_pShm->allocLock();
+        if ( pPool->x_iLockOffset == 0)
         {
-            pPool->x_iLockOffset = m_pShm->pLock2offset(m_pShmLock);
-            //FIX FOR BELOW BUG
-            setupLock();
+            m_status = LSSHM_ERROR;
+            return;
         }
+        m_pShmLock = m_pShm->offset2pLock(pPool->x_iLockOffset);
+        ls_shmlock_setup(m_pShmLock);
 
     }
     else

@@ -20,6 +20,8 @@
 
 #include <lsr/ls_fileio.h>
 
+#include <log4cxx/logger.h>
+
 #include <assert.h>
 //#include <netinet/in.h>
 #include <fcntl.h>
@@ -28,29 +30,21 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#define DEFAULT_FLUSH_WINDOW    2048
-
 GzipBuf::GzipBuf()
 {
-    memset(this, 0, sizeof(GzipBuf));
-    m_iFlushWindowSize = DEFAULT_FLUSH_WINDOW;
+    memset(&m_zstr, 0, sizeof(z_stream));
 }
 
-GzipBuf::GzipBuf(int type, int level)
-{
-    memset(this, 0, sizeof(GzipBuf));
-    m_iFlushWindowSize = DEFAULT_FLUSH_WINDOW;
-    init(type, level);
-}
 
 GzipBuf::~GzipBuf()
 {
     release();
 }
 
+
 int GzipBuf::release()
 {
-    if (m_iType == GZIP_INFLATE)
+    if (m_iType == COMPRESSOR_DECOMPRESS)
         return inflateEnd(&m_zstr);
     else
         return deflateEnd(&m_zstr);
@@ -60,11 +54,11 @@ int GzipBuf::release()
 int GzipBuf::init(int type, int level)
 {
     int ret;
-    if (type == GZIP_INFLATE)
-        m_iType = GZIP_INFLATE;
+    if (type == COMPRESSOR_DECOMPRESS)
+        m_iType = COMPRESSOR_DECOMPRESS;
     else
-        m_iType = GZIP_DEFLATE;
-    if (m_iType == GZIP_DEFLATE)
+        m_iType = COMPRESSOR_COMPRESS;
+    if (m_iType == COMPRESSOR_COMPRESS)
     {
         if (!m_zstr.state)
             ret = deflateInit2(&m_zstr, level, Z_DEFLATED, 15 + 16, 8,
@@ -84,11 +78,7 @@ int GzipBuf::init(int type, int level)
 
 int GzipBuf::reinit()
 {
-    int ret;
-    if (m_iType == GZIP_DEFLATE)
-        ret = deflateReset(&m_zstr);
-    else
-        ret = inflateReset(&m_zstr);
+    int ret = reset();
     m_iStreamStarted = 1;
     return ret;
 }
@@ -123,6 +113,7 @@ int GzipBuf::compress(const char *pBuf, int len)
 
 int GzipBuf::process(int finish)
 {
+//     LS_ERROR("GZIPBUF in process");
     do
     {
         int ret;
@@ -133,7 +124,7 @@ int GzipBuf::process(int finish)
             m_zstr.avail_out = size;
             assert(m_zstr.avail_out);
         }
-        if (m_iType == GZIP_DEFLATE)
+        if (m_iType == COMPRESSOR_COMPRESS)
             ret = ::deflate(&m_zstr, finish);
         else
             ret = ::inflate(&m_zstr, finish);
@@ -172,49 +163,6 @@ int GzipBuf::resetCompressCache()
                       m_pCompressCache->getWriteBuffer(size);
     m_zstr.avail_out = size;
     return 0;
-}
-
-
-int GzipBuf::processFile(int type, const char *pFileName,
-                         const char *pCompressFileName)
-{
-    int fd;
-    int ret = 0;
-    fd = open(pFileName, O_RDONLY);
-    if (fd == -1)
-        return LS_FAIL;
-    VMemBuf gzFile;
-    ret = gzFile.set(pCompressFileName, -1);
-    if (!ret)
-    {
-        setCompressCache(&gzFile);
-        if (((ret = init(type, 6)) == 0) && ((ret = beginStream()) == 0))
-        {
-            int len;
-            char achBuf[16384];
-            while (true)
-            {
-                len = ls_fio_read(fd, achBuf, sizeof(achBuf));
-                if (len <= 0)
-                    break;
-                if (this->write(achBuf, len) != len)
-                {
-                    ret = -1;
-                    break;
-                }
-            }
-            if (!ret)
-            {
-                ret = endStream();
-                off_t size;
-                if (!ret)
-                    ret = gzFile.exactSize(&size);
-            }
-            gzFile.close();
-        }
-    }
-    ::close(fd);
-    return ret;
 }
 
 

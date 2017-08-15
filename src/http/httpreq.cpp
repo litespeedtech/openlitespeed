@@ -358,11 +358,14 @@ int HttpReq::processRequestLine()
     const char *pCur = m_headerBuf.begin() + m_iReqHeaderBufFinished;
     const char *pBEnd = m_headerBuf.end();
     int iBufLen = pBEnd - pCur;
+    assert(iBufLen >= 0);
+    
     if (pBEnd > HttpServerConfig::getInstance().getMaxURLLen() +
         m_headerBuf.begin())
         pBEnd = HttpServerConfig::getInstance().getMaxURLLen() +
                 m_headerBuf.begin();
-    const char *pLineEnd = (const char *)memchr(pCur, '\n', pBEnd - pCur);
+
+    const char *pLineEnd;
     while ((pLineEnd = (const char *)memchr(pCur, '\n', pBEnd - pCur)) != NULL)
     {
         while (pCur < pLineEnd)
@@ -402,11 +405,11 @@ int HttpReq::processRequestLine()
     p += m_iHostLen;
     pCur = (char *)memchr(p, '/', (pLineEnd - p));
     //FIXME:should we handle other cases?
-    if (!pCur)
+    if (!pCur || pCur > pLineEnd)
         return SC_400;
     while ((p < pLineEnd) && ((*p != ' ') && (*p != '\t')))
         ++p;
-    if (p == pLineEnd)
+    if (p >= pLineEnd || pCur > p)
         return SC_400;
     m_reqURLOff = pCur - m_headerBuf.begin();
     result = parseURL(pCur, p);
@@ -505,40 +508,39 @@ int HttpReq::parseURI(const char *pCur, const char *pBEnd)
 
 int HttpReq::parseHost(const char *pCur, const char *pBEnd)
 {
-    bool bNoHost = false;
+    //nohost case, return directly
     if ((*pCur == '/') || (*pCur == '%'))
-        bNoHost = true;
-    if (!bNoHost)
-    {
-        const char *pHost;
-        pHost = (const char *)memchr(pCur, ':', pBEnd - pCur);
-        if ((pHost) && (pHost + 2 < pBEnd))
-        {
-            if ((*(pHost + 1) != '/') || (*(pHost + 2) != '/'))
-                return SC_400;
-        }
-        else
-        {
-            m_iReqHeaderBufFinished = pCur - m_headerBuf.begin();
-            return 1;
-        }
+        return 0;
 
-        pHost += 3;
-        const char *pHostEnd = (const char *)memchr(pHost, '/', (pBEnd - pHost));
-        if (pHostEnd != NULL)
-        {
-            m_iHostLen = pHost - pCur;
-            postProcessHost(pHost , pHostEnd);
-        }
-        else
-        {
-            pCur = pBEnd;
-            m_iReqHeaderBufFinished = m_headerBuf.size();
-            return 1;
-        }
-        if (!m_iHostLen)
-            m_iHostOff = 0;
+    const char *pHost;
+    pHost = (const char *)memchr(pCur, ':', pBEnd - pCur);
+    if ((pHost) && (pHost + 2 < pBEnd))
+    {
+        if ((*(pHost + 1) != '/') || (*(pHost + 2) != '/'))
+            return SC_400;
     }
+    else
+    {
+        m_iReqHeaderBufFinished = pCur - m_headerBuf.begin();
+        return 1;
+    }
+
+    pHost += 3;
+    const char *pHostEnd = (const char *)memchr(pHost, '/', (pBEnd - pHost));
+    if (pHostEnd != NULL)
+    {
+        m_iHostLen = pHost - pCur;
+        postProcessHost(pHost , pHostEnd);
+    }
+    else
+    {
+        pCur = pBEnd;
+        m_iReqHeaderBufFinished = m_headerBuf.size();
+        return 1;
+    }
+    if (!m_iHostLen)
+        m_iHostOff = 0;
+
     return 0;
 }
 
@@ -712,13 +714,17 @@ int HttpReq::processHeader(int index)
         }
         break;
     case HttpHeader::H_ACC_ENCODING:
-        if (m_commonHeaderLen[ index ] >= 4)
+        if (m_commonHeaderLen[ index ] >= 2)
         {
             char ch = *pBEnd;
             *((char *)pBEnd) = 0;
-            if (strstr(pCur, "gzip") != NULL)
+            if ((m_commonHeaderLen[ index ] >= 4)
+                && (strstr(pCur, "gzip") != NULL))
                 m_iAcceptGzip = REQ_GZIP_ACCEPT |
                                 HttpServerConfig::getInstance().getGzipCompress();
+            if (strstr(pCur, "br") != NULL)
+                m_iAcceptBr = REQ_BR_ACCEPT |
+                                HttpServerConfig::getInstance().getBrCompress();
             *((char *)pBEnd) = ch;
         }
         break;
@@ -869,6 +875,9 @@ int HttpReq::processNewReqData(const struct sockaddr *pAddr)
     }
     if (!m_pVHost->enableGzip())
         andGzip(~GZIP_ENABLED);
+
+    if (!m_pVHost->enableBr())
+        andBr(~BR_ENABLED);
     AccessCache *pAccessCache = m_pVHost->getAccessCache();
     if (pAccessCache)
     {
@@ -2477,6 +2486,12 @@ char HttpReq::isGeoIpOn() const
 }
 
 
+uint32_t HttpReq::isIpToLocOn() const
+{
+    return (m_pContext) ? m_pContext->isIpToLocOn() : 0;
+}
+
+
 const char *HttpReq::encodeReqLine(int &len)
 {
     const char *pURI = getURI();
@@ -2525,14 +2540,14 @@ SSIConfig *HttpReq::getSSIConfig()
 }
 
 
-int HttpReq::isXbitHackFull() const
+uint32_t HttpReq::isXbitHackFull() const
 {
     return (m_pContext) ? (m_pContext->isXbitHackFull() &&
                            (S_IXGRP & m_fileStat.st_mode)) : 0 ;
 }
 
 
-int HttpReq::isIncludesNoExec() const
+uint32_t HttpReq::isIncludesNoExec() const
 {
     return (m_pContext) ? m_pContext->isIncludesNoExec() : 1 ;
 }

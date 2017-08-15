@@ -490,6 +490,7 @@ int HttpReq::clone(HttpReq *pProto, SubSessInfo_t *pSubSessInfo)
     m_pCacheVary = pProto->m_pCacheVary;
 #endif
     m_iAcceptGzip = 0; //pProto->m_iAcceptGzip &
+    m_iAcceptBr = 0;
     m_iRedirects = 0;
     clearContextState(LOG_ACCESS_404);
 

@@ -27,9 +27,11 @@
 #include <lsiapi/moduletimer.h>
 #include <main/mainserverconfig.h>
 #include <util/xmlnode.h>
-
+#include <ls.h>
+#include <lsr/ls_confparser.h>
 #include <dlfcn.h>
 
+#include <util/stringtool.h>
 #define INITIAL_MODULE_COUNT   10
 
 
@@ -284,11 +286,14 @@ static void checkModuleDef(lsi_module_t *pModule)
 
             if (pModule->config_parser)
             {
-                const char *p;
-                while ((p = *pModule->config_parser->config_keys) != NULL)
+                lsi_config_key_t *p = pModule->config_parser->config_keys;
+                while (p->config_key != NULL)
                 {
-                    fprintf(fp, "param.%s\n", p);
-                    ++pModule->config_parser->config_keys;
+                    fprintf(fp, "param.%s\t%d\t%d\n",
+                            p->config_key,
+                            p->id,
+                            p->level);
+                    ++p;
                 }
             }
 
@@ -635,6 +640,200 @@ int ModuleConfig::saveConfig(const XmlNode *pNode, lsi_module_t *pModule,
 // }
 
 
+//Return the count of the keys items
+static int checkConfigKeys(lsi_config_key_t *keys)
+{
+    lsi_config_key_t * p = keys;
+    int index = 0;
+    while(p->config_key)
+    {
+        if (p->id == 0)
+            p->id = index++;
+        else
+            index = p->id + 1; //use for the next id if that one not assigned id
+
+        if (p->level == 0)
+            p->level = LSI_CFG_SERVER | LSI_CFG_LISTENER | LSI_CFG_VHOST | LSI_CFG_CONTEXT;
+        ++p;
+    }
+    
+    return p - keys;
+}
+
+int ModuleConfig::getKeyIndex(lsi_config_key_t *keys, const char *str)
+{
+    for (int i=0;; ++i)
+    {
+        if (keys[i].config_key)
+        {
+            if (strcasecmp(keys[i].config_key, str) == 0)
+                return i;
+        }
+        else
+            break;
+    }
+    return -1;
+}
+
+void ModuleConfig::releaseModuleParamInfo(module_param_info_t *param_arr,
+                                          int param_count)
+{
+    for (int i=0; i<param_count; ++i)
+    {
+        if (param_arr[i].val)
+            delete []param_arr[i].val;
+    }
+}
+
+
+//val_out must have space at least len + 1(will append NULL at the end)
+//return the val_out length
+int ModuleConfig::escapeParamVal(const char *val_in, int len, char *val)
+{
+    char escapedChar = 0x00;
+    int count =0;
+    const char *pValStr = val_in;
+    const char *valEnd = val_in + len;
+
+    while(pValStr < valEnd)
+    {
+        switch (*pValStr)
+        {
+        case '`':
+        case '\'':
+        case '\"':
+            if (escapedChar == 0x00)
+                escapedChar = *pValStr;
+            else if (escapedChar == *pValStr)
+                escapedChar = 0x00;
+            else
+                val[count++] = *pValStr;
+            break;
+
+        case '\\':
+            //If Last char(does not have the next char) copy it
+            if (pValStr == valEnd -1 || escapedChar == 0x00)
+                val[count++] = '\\';
+            else
+            {
+                if (*(pValStr + 1) == escapedChar)
+                {
+                    ++pValStr;
+                    val[count++] = escapedChar;
+                }
+                else
+                    val[count++] = '\\';
+            }
+            break;
+
+        default:
+            val[count++] = *pValStr;
+            break;
+        }
+        ++pValStr;
+    }
+
+    return count;
+}
+
+
+/***
+ * Server will parse module param for module, to better using this feature,
+ * module need to provide the param lsi_config_key_s array, which includes
+ * param key, param index, usage levels.
+ * After parsing, module will get the parsed array, and will be easily to set to
+ * its' own data.
+ * During parsing, `, ' and " will be treat as quote, inside a quote,
+ * such as `, \` will be treat as escape charactor and it will be `, 
+ * but won't escape other quote charactor, such as \", so 
+ *   \` 123 \" \` 456 `
+ * will be parsed as
+ *   \ 123 \" ` 456
+ * And diffrent quoted string can be combined, such as
+ *   \` 123 \" \` 456 `   " 789 \" \` 0 "
+ * will be parsed as 
+ *   \ 123 \" ` 456     789 " \` 0 
+ * A special case is
+ *   `123\\`345`
+ * will be parsed as 
+ *   123\`345
+ * For more details, please check our wiki.
+ * 
+ */
+int ModuleConfig::preParseModuleParam(const char *param, int paramLen,
+                                      int level, lsi_config_key_t *keys,
+                                      module_param_info_t *param_arr,
+                                      int *param_count)
+{
+    int max_param_count = *param_count;
+    
+    //If the id/level not defined, changes to default values
+    //int count = checkConfigKeys(keys);
+            
+    const char *pLineBegin;
+    const char *pLineEnd;
+    const char *pValue = param;
+    const char *pParamEnd = param + paramLen;
+    ls_confparser_t cp;
+    ls_objarray_t *pList;
+    int param_arr_sz = 0;
+    
+    ls_confparser(&cp);
+    while ((pLineBegin = ls_getconfline(&pValue, pParamEnd, &pLineEnd)) != NULL)
+    {
+        pList = ls_confparser_linekv(&cp, pLineBegin, pLineEnd);
+        if (!pList)
+            continue;
+
+        ls_str_t *pKey = (ls_str_t *)ls_objarray_getobj(pList, 0);
+        ls_str_t *pVal = (ls_str_t *)ls_objarray_getobj(pList, 1);
+        const char *pValStr = ls_str_cstr(pVal);
+        if (pValStr == NULL)
+            continue;
+
+        int valLen = ls_str_len(pVal);
+        if (valLen == 0)
+            continue;
+
+        int key_index = getKeyIndex(keys, ls_str_cstr(pKey));
+        if (key_index != -1)
+        {
+            char *val = new char[valLen + 1];
+            if (val == NULL)
+            {
+                LS_ERROR("Error: ModuleConfig::preParseModuleParam malloc failed, size %d.\n",
+                         valLen);
+                return -1;
+            }
+            
+            int count = escapeParamVal(pValStr, valLen, val);
+            val[count] = 0x00; //Add a NULL for easily use the strxxx function
+        
+            if (keys[key_index].level & level)
+            {
+                if (param_arr_sz < max_param_count)
+                {
+                    param_arr[param_arr_sz].key_index = key_index;
+                    param_arr[param_arr_sz].val_len = count;
+                    param_arr[param_arr_sz].val = val;
+                    ++param_arr_sz;
+                }
+                else
+                {
+                    LS_ERROR("Error: ModuleConfig::preParseModuleParam get more items than defined max count %d, have to give up.\n",
+                             max_param_count);
+                    break;
+                }
+            }
+        }
+    }
+    
+    ls_confparser_d(&cp);
+    *param_count = param_arr_sz;
+    return 0;
+}
+
+
 int ModuleConfig::parseConfig(const XmlNode *pNode, lsi_module_t *pModule,
                               ModuleConfig *pModuleConfig, int level, const char *name)
 {
@@ -652,26 +851,32 @@ int ModuleConfig::parseConfig(const XmlNode *pNode, lsi_module_t *pModule,
 
     pValue = pNode->getChildValue("param");
     iValueLen = pNode->getChildValueLen("param");
+    
+    config->data_flag = LSI_CONFDATA_NONE;
     if (pModule->config_parser && pModule->config_parser->parse_config)
     {
-        if (pModule->config_parser->config_keys)
+        lsi_config_key_t *keys = pModule->config_parser->config_keys;
+        if (keys)
         {
-            ;
-            //TODO: check the param one by one if it is in array
-//             const char *p;
-//             while (p = *pModule->config_parser->config_keys)
-//             {
-//                 LS_INFO( "%s", p));
-//                 ++pModule->config_parser->config_keys;
-//             }
-
+            //If the id/level not defined, changes to default values
+            checkConfigKeys(keys);
+            
+            //FIXME:Use a vector may be better
+            module_param_info_t param_arr[MAX_MODULE_CONFIG_LINES];
+            int param_arr_sz = MAX_MODULE_CONFIG_LINES;
+            preParseModuleParam(pValue, iValueLen, level, keys,
+                                param_arr, &param_arr_sz);
+            
+            if (param_arr_sz > 0)
+            {
+                config->config = pModule->config_parser->parse_config(param_arr, param_arr_sz,
+                                                     config->config, level, name);
+                
+                releaseModuleParamInfo(param_arr, param_arr_sz);
+                config->data_flag = LSI_CONFDATA_PARSED;
+            }
         }
-        config->config = pModule->config_parser->parse_config(pValue,
-                         iValueLen, config->config, level, name);
-        config->data_flag = LSI_CONFDATA_PARSED;
     }
-    else
-        config->data_flag = LSI_CONFDATA_NONE;
     config->sparam = NULL;
     return 0;
 }

@@ -56,7 +56,7 @@ static int disable_compress(lsi_param_t *param)
 }
 
 
-static int reg_handler(lsi_param_t *param)
+static int rcvd_req_header_cbf(lsi_param_t *param)
 {
     const char *uri;
     int len;
@@ -72,7 +72,7 @@ static int reg_handler(lsi_param_t *param)
 }
 
 
-static int _init(lsi_module_t *module)
+static int init_module(lsi_module_t *module)
 {
     g_api->init_module_data(module, free_mydata, LSI_DATA_HTTP);
     return 0;
@@ -82,7 +82,7 @@ static int _init(lsi_module_t *module)
 // begin_process will be called the first time,
 //   then on_write will be called next and next.
 static char txt1[] = "replybigbufhandler module reply the first line\r\n";
-static int begin_process(lsi_session_t *session)
+static int begin_process(const lsi_session_t *session)
 {
     g_api->set_resp_header(session, LSI_RSPHDR_CONTENT_TYPE, NULL, 0,
                            "text/html", 9, LSI_HEADEROP_SET);
@@ -99,7 +99,7 @@ static int begin_process(lsi_session_t *session)
 
 
 // return 0: error, 1: done, 2: not finished, definitions are in ls.h
-static int on_write(lsi_session_t *session)
+static int on_write(const lsi_session_t *session)
 {
 #define _BLOCK_SIZE    (1024)
     int i;
@@ -127,7 +127,7 @@ static int on_write(lsi_session_t *session)
 
 static lsi_serverhook_t server_hooks[] =
 {
-    { LSI_HKPT_RCVD_REQ_HEADER, reg_handler, LSI_HOOK_NORMAL, LSI_FLAG_ENABLED },
+    { LSI_HKPT_RCVD_REQ_HEADER, rcvd_req_header_cbf, LSI_HOOK_NORMAL, LSI_FLAG_ENABLED },
     { LSI_HKPT_RCVD_RESP_BODY, disable_compress, LSI_HOOK_NORMAL, LSI_FLAG_DECOMPRESS_REQUIRED | LSI_FLAG_ENABLED },
     LSI_HOOK_END   //Must put this at the end position
 };
@@ -135,6 +135,6 @@ static lsi_serverhook_t server_hooks[] =
 lsi_reqhdlr_t myhandler = { begin_process, NULL, on_write, NULL };
 lsi_module_t MNAME =
 {
-    LSI_MODULE_SIGNATURE, _init, &myhandler, NULL, "", server_hooks
+    LSI_MODULE_SIGNATURE, init_module, &myhandler, NULL, "", server_hooks
 };
 

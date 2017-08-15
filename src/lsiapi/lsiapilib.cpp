@@ -101,7 +101,7 @@ static int get_hook_level(lsi_param_t *pParam)
 }
 
 
-static int enable_hook(lsi_session_t *session,
+static int enable_hook(const lsi_session_t *session,
                        const lsi_module_t *pModule, int enable,
                        int *index, int iNumIndices)
 {
@@ -155,13 +155,13 @@ static int enable_hook(lsi_session_t *session,
 }
 
 
-static int get_hook_flag(lsi_session_t *session, int index)
+static int get_hook_flag(const lsi_session_t *session, int index)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
     return pSession->getSessionHooks()->getFlag(index);
 }
 
-static  void log(lsi_session_t *session, int level, const char *fmt, ...)
+static  void log(const lsi_session_t *session, int level, const char *fmt, ...)
 {
     if (log4cxx::Level::isEnabled(level))
     {
@@ -176,7 +176,7 @@ static  void log(lsi_session_t *session, int level, const char *fmt, ...)
 }
 
 
-static  void vlog(lsi_session_t *session, int level, const char *fmt,
+static  void vlog(const lsi_session_t *session, int level, const char *fmt,
                   va_list vararg, int no_linefeed)
 {
     if (log4cxx::Level::isEnabled(level))
@@ -205,7 +205,7 @@ static  void vlog(lsi_session_t *session, int level, const char *fmt,
 }
 
 
-static  void lograw(lsi_session_t *session, const char *buf, int len)
+static  void lograw(const lsi_session_t *session, const char *buf, int len)
 {
     HttpSession *pSess = (HttpSession *)((LsiSession *)session);
     LOG4CXX_NS::Logger *pLogger = NULL;
@@ -228,7 +228,7 @@ static int lsiapi_register_env_handler(const char *env_name,
 //and then upodate and record the module's _data_id
 //Return -1 wrong level number
 //Return -2, already inited
-static int init_module_data(lsi_module_t *pModule,
+static int init_module_data(const lsi_module_t *pModule,
                             lsi_datarelease_pf cb, int level)
 {
     if (level < LSI_DATA_HTTP || level > LSI_DATA_L4)
@@ -246,7 +246,7 @@ static int init_module_data(lsi_module_t *pModule,
 }
 
 
-static LsiModuleData *get_module_data_by_type(lsi_session_t *session_,
+static LsiModuleData *get_module_data_by_type(const lsi_session_t *session_,
         int type)
 {
     NtwkIOLink *pNtwkLink;
@@ -297,7 +297,7 @@ static LsiModuleData *get_module_data_by_type(lsi_session_t *session_,
 }
 
 
-static int set_module_data(lsi_session_t *session,
+static int set_module_data(const lsi_session_t *session,
                            const lsi_module_t *pModule, int level, void *data)
 {
     if (level < LSI_DATA_HTTP || level > LSI_DATA_L4)
@@ -326,7 +326,7 @@ static int set_module_data(lsi_session_t *session,
 }
 
 
-static void *get_module_data(lsi_session_t *session,
+static void *get_module_data(const lsi_session_t *session,
                              const lsi_module_t *pModule, int level)
 {
     LsiModuleData *pData = get_module_data_by_type(session, level);
@@ -347,7 +347,7 @@ static void *get_cb_module_data(const lsi_param_t *param, int level)
 }
 
 
-static void free_module_data(lsi_session_t *session,
+static void free_module_data(const lsi_session_t *session,
                              const lsi_module_t *pModule, int level, lsi_datarelease_pf cb)
 {
     LsiModuleData *pData = get_module_data_by_type(session, level);
@@ -410,7 +410,7 @@ static int lsiapi_stream_writev_next(lsi_param_t *pParam,
 
 
 /////////////////////////////////////////////////////////////////////////////
-static int get_uri_file_path(lsi_session_t *session, const char *uri,
+static int get_uri_file_path(const lsi_session_t *session, const char *uri,
                              int uri_len, char *path, int max_len)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
@@ -440,7 +440,7 @@ static int get_uri_file_path(lsi_session_t *session, const char *uri,
 }
 
 
-static int set_resp_content_length(lsi_session_t *session, int64_t len)
+static int set_resp_content_length(const lsi_session_t *session, int64_t len)
 {
     HttpResp *pResp = ((HttpSession *)((LsiSession *)session))->getResp();
     pResp->setContentLen(len);
@@ -449,7 +449,7 @@ static int set_resp_content_length(lsi_session_t *session, int64_t len)
 }
 
 
-static int get_status_code(lsi_session_t *session)
+static int get_status_code(const lsi_session_t *session)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
     if (pSession == NULL)
@@ -459,7 +459,7 @@ static int get_status_code(lsi_session_t *session)
 }
 
 
-static  void set_status_code(lsi_session_t *session, int code)
+static  void set_status_code(const lsi_session_t *session, int code)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
     if (pSession == NULL)
@@ -471,7 +471,7 @@ static  void set_status_code(lsi_session_t *session, int code)
 }
 
 
-static int set_resp_header(lsi_session_t *session,
+static int set_resp_header(const lsi_session_t *session,
                            unsigned int header_index, const char *name,
                            int nameLen, const char *val, int valLen,
                            int add_method)
@@ -494,7 +494,7 @@ static int set_resp_header(lsi_session_t *session,
 
 
 //multi headers supportted.
-static int set_resp_header2(lsi_session_t *session, const char *s, int len,
+static int set_resp_header2(const lsi_session_t *session, const char *s, int len,
                             int add_method)
 {
     int len0, len1;
@@ -517,7 +517,7 @@ static int set_resp_header2(lsi_session_t *session, const char *s, int len,
 }
 
 
-static int set_resp_cookies(lsi_session_t *session, const char *pName,
+static int set_resp_cookies(const lsi_session_t *session, const char *pName,
                             const char *pVal, const char *path,
                             const char *domain, int expires,
                             int secure, int httponly)
@@ -535,7 +535,7 @@ static int set_resp_cookies(lsi_session_t *session, const char *pName,
 }
 
 
-static int get_resp_header(lsi_session_t *session,
+static int get_resp_header(const lsi_session_t *session,
                            unsigned int header_index, const char *name,
                            int nameLen, struct iovec *iov, int maxIovCount)
 {
@@ -553,7 +553,7 @@ static int get_resp_header(lsi_session_t *session,
 
 //"status" and "version" will also be treated as header in SPDY if it already be put in
 //and it will be counted.
-static int get_resp_headers_count(lsi_session_t *session)
+static int get_resp_headers_count(const lsi_session_t *session)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
     if (pSession == NULL)
@@ -563,7 +563,7 @@ static int get_resp_headers_count(lsi_session_t *session)
 }
 
 
-static unsigned int get_resp_header_id(lsi_session_t *session,
+static unsigned int get_resp_header_id(const lsi_session_t *session,
                                        const char *name)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
@@ -574,7 +574,7 @@ static unsigned int get_resp_header_id(lsi_session_t *session,
 }
 
 
-static int get_resp_headers(lsi_session_t *session, struct iovec *iov_key,
+static int get_resp_headers(const lsi_session_t *session, struct iovec *iov_key,
                             struct iovec *iov_val, int maxIovCount)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
@@ -585,7 +585,7 @@ static int get_resp_headers(lsi_session_t *session, struct iovec *iov_key,
 }
 
 
-static int remove_resp_header(lsi_session_t *session,
+static int remove_resp_header(const lsi_session_t *session,
                               unsigned int header_index, const char *name,
                               int nameLen)
 {
@@ -601,7 +601,7 @@ static int remove_resp_header(lsi_session_t *session,
 }
 
 
-static void end_resp_headers(lsi_session_t *session)
+static void end_resp_headers(const lsi_session_t *session)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
     if (pSession == NULL)
@@ -610,7 +610,7 @@ static void end_resp_headers(lsi_session_t *session)
 }
 
 
-static int is_resp_headers_sent(lsi_session_t *session)
+static int is_resp_headers_sent(const lsi_session_t *session)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
     if (pSession == NULL)
@@ -619,7 +619,7 @@ static int is_resp_headers_sent(lsi_session_t *session)
 }
 
 
-static int get_req_raw_headers_length(lsi_session_t *session)
+static int get_req_raw_headers_length(const lsi_session_t *session)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
     if (pSession == NULL)
@@ -629,7 +629,7 @@ static int get_req_raw_headers_length(lsi_session_t *session)
 }
 
 
-static int get_req_raw_headers(lsi_session_t *session, char *buf,
+static int get_req_raw_headers(const lsi_session_t *session, char *buf,
                                int maxlen)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
@@ -645,7 +645,7 @@ static int get_req_raw_headers(lsi_session_t *session, char *buf,
 }
 
 
-static int get_req_headers_count(lsi_session_t *session)
+static int get_req_headers_count(const lsi_session_t *session)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
     if (pSession == NULL)
@@ -666,7 +666,7 @@ static int get_req_headers_count(lsi_session_t *session)
 }
 
 
-static int get_req_headers(lsi_session_t *session, struct iovec *iov_key,
+static int get_req_headers(const lsi_session_t *session, struct iovec *iov_key,
                            struct iovec *iov_val, int maxIovCount)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
@@ -716,7 +716,7 @@ static int get_req_headers(lsi_session_t *session, struct iovec *iov_key,
 }
 
 
-static int get_req_org_uri(lsi_session_t *session, char *buf, int buf_size)
+static int get_req_org_uri(const lsi_session_t *session, char *buf, int buf_size)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
     if (pSession == NULL)
@@ -733,7 +733,7 @@ static int get_req_org_uri(lsi_session_t *session, char *buf, int buf_size)
 }
 
 
-static const char *get_req_uri(lsi_session_t *session, int *uri_len)
+static const char *get_req_uri(const lsi_session_t *session, int *uri_len)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
     if (pSession == NULL)
@@ -745,7 +745,7 @@ static const char *get_req_uri(lsi_session_t *session, int *uri_len)
 }
 
 
-static const char *get_mapped_context_uri(lsi_session_t *session,
+static const char *get_mapped_context_uri(const lsi_session_t *session,
         int *length)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
@@ -757,7 +757,7 @@ static const char *get_mapped_context_uri(lsi_session_t *session,
     return pReq->getContext()->getURI();
 }
 
-static int is_req_handler_registered(lsi_session_t *session)
+static int is_req_handler_registered(const lsi_session_t *session)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
     if (pSession)
@@ -771,7 +771,7 @@ static int is_req_handler_registered(lsi_session_t *session)
     return LS_FALSE;
 }
 
-static int register_req_handler(lsi_session_t *session,
+static int register_req_handler(const lsi_session_t *session,
                                 lsi_module_t *pModule, int scriptLen)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
@@ -795,7 +795,7 @@ static int register_req_handler(lsi_session_t *session,
 }
 
 
-static int set_handler_write_state(lsi_session_t *session, int state)
+static int set_handler_write_state(const lsi_session_t *session, int state)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
     if (state)
@@ -819,7 +819,7 @@ static int set_handler_write_state(lsi_session_t *session, int state)
 
 //return time_id, if error return -1
 static int lsi_set_timer(unsigned int timeout_ms, int repeat,
-                         lsi_timercb_pf timer_cb, void *timer_cb_param)
+                         lsi_timercb_pf timer_cb, const void *timer_cb_param)
 {
     int id = ModTimerList::getInstance().addTimer(timeout_ms, repeat, timer_cb,
              timer_cb_param);
@@ -834,13 +834,13 @@ static int lsi_remove_timer(int timer_id)
 
 
 static long create_event(evtcb_pf cb,
-                         lsi_session_t *session, long lParam, void *pParam)
+                         const lsi_session_t *session, long lParam, void *pParam)
 {
     return (long)EvtcbQue::getInstance().schedule(cb, session,
             lParam, pParam);
 }
 
-static long create_session_resume_event(lsi_session_t *session,
+static long create_session_resume_event(const lsi_session_t *session,
                                         lsi_module_t *pModule)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
@@ -848,7 +848,7 @@ static long create_session_resume_event(lsi_session_t *session,
     return create_event(cb, session, pSession->getSn(), NULL);
 }
 
-static long get_event_obj(evtcb_pf cb, lsi_session_t *session,
+static long get_event_obj(evtcb_pf cb, const lsi_session_t *session,
                          long lParam, void *pParam)
 {
    // return (long)EvtcbQue::getInstance().getNodeObj(cb, pSession, lParam, pParam);
@@ -865,12 +865,13 @@ static void schedule_event(long event_obj, int nowait)
     EvtcbQue::getInstance().schedule((evtcbnode_s *)event_obj, nowait);
 }
 
-static void remove_event_obj(long event_obj)
+static void cancel_event(const lsi_session_t *session, long event_obj)
 {
-    EvtcbQue::getInstance().recycle((evtcbnode_s *)event_obj);
+    HttpSession *pSession = (HttpSession *)((LsiSession *)session);
+    pSession->cancelEvent((evtcbnode_s *)event_obj);
 }
 
-static const char *get_req_header(lsi_session_t *session, const char *key,
+static const char *get_req_header(const lsi_session_t *session, const char *key,
                                   int keyLen, int *valLen)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
@@ -888,7 +889,7 @@ static const char *get_req_header(lsi_session_t *session, const char *key,
 }
 
 
-static const char *get_req_header_by_id(lsi_session_t *session, int idx,
+static const char *get_req_header_by_id(const lsi_session_t *session, int idx,
                                         int *valLen)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
@@ -904,7 +905,7 @@ static const char *get_req_header_by_id(lsi_session_t *session, int idx,
 }
 
 
-static const char *get_req_cookies(lsi_session_t *session, int *len)
+static const char *get_req_cookies(const lsi_session_t *session, int *len)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
     if (pSession == NULL)
@@ -913,7 +914,7 @@ static const char *get_req_cookies(lsi_session_t *session, int *len)
 }
 
 
-static const char *get_client_ip(lsi_session_t *session, int *len)
+static const char *get_client_ip(const lsi_session_t *session, int *len)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
     if (pSession == NULL)
@@ -923,7 +924,7 @@ static const char *get_client_ip(lsi_session_t *session, int *len)
 }
 
 
-static const char *get_req_query_string(lsi_session_t *session, int *len)
+static const char *get_req_query_string(const lsi_session_t *session, int *len)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
     if (pSession == NULL)
@@ -935,7 +936,7 @@ static const char *get_req_query_string(lsi_session_t *session, int *len)
 }
 
 
-static int get_req_cookie_count(lsi_session_t *session)
+static int get_req_cookie_count(const lsi_session_t *session)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
     if (pSession == NULL)
@@ -945,7 +946,7 @@ static int get_req_cookie_count(lsi_session_t *session)
 }
 
 
-static const char *get_cookie_value(lsi_session_t *session,
+static const char *get_cookie_value(const lsi_session_t *session,
                                     const char *cookie_name, int nameLen,
                                     int *valLen)
 {
@@ -956,7 +957,7 @@ static const char *get_cookie_value(lsi_session_t *session,
     return RequestVars::getCookieValue(pReq, cookie_name, nameLen, *valLen);
 }
 
-static int get_cookie_by_index(lsi_session_t *session, int index, ls_strpair_t *cookie)
+static int get_cookie_by_index(const lsi_session_t *session, int index, ls_strpair_t *cookie)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
     if (pSession == NULL)
@@ -1084,7 +1085,7 @@ int getVarNameStr(const char *name, unsigned int len)
 }
 
 
-static int get_req_var_by_id(lsi_session_t *session, int type, char *val,
+static int get_req_var_by_id(const lsi_session_t *session, int type, char *val,
                              int maxValLen)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
@@ -1113,7 +1114,7 @@ static int get_req_var_by_id(lsi_session_t *session, int type, char *val,
 }
 
 
-static int  get_req_env(lsi_session_t *session, const char *name,
+static int  get_req_env(const lsi_session_t *session, const char *name,
                         unsigned int nameLen, char *val, int maxValLen)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
@@ -1145,7 +1146,7 @@ static int  get_req_env(lsi_session_t *session, const char *name,
 }
 
 
-static void set_req_env(lsi_session_t *session, const char *name,
+static void set_req_env(const lsi_session_t *session, const char *name,
                         unsigned int nameLen, const char *val, int valLen)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
@@ -1157,7 +1158,7 @@ static void set_req_env(lsi_session_t *session, const char *name,
 }
 
 
-static int64_t get_req_content_length(lsi_session_t *session)
+static int64_t get_req_content_length(const lsi_session_t *session)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
     if (pSession == NULL)
@@ -1167,7 +1168,7 @@ static int64_t get_req_content_length(lsi_session_t *session)
 }
 
 
-static int read_req_body(lsi_session_t *session, char *buf, int bufLen)
+static int read_req_body(const lsi_session_t *session, char *buf, int bufLen)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
     if (pSession == NULL)
@@ -1198,7 +1199,7 @@ static int read_req_body(lsi_session_t *session, char *buf, int bufLen)
 }
 
 
-static int is_req_body_finished(lsi_session_t *session)
+static int is_req_body_finished(const lsi_session_t *session)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
     if (!pSession || pSession->getFlag(HSF_REQ_BODY_DONE))
@@ -1207,7 +1208,7 @@ static int is_req_body_finished(lsi_session_t *session)
 }
 
 
-static int get_req_args_count(lsi_session_t *session)
+static int get_req_args_count(const lsi_session_t *session)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
     if (!pSession || pSession->getReqParser() == NULL)
@@ -1216,7 +1217,7 @@ static int get_req_args_count(lsi_session_t *session)
 }
 
 
-static int get_req_arg_by_idx(lsi_session_t *session, int index, 
+static int get_req_arg_by_idx(const lsi_session_t *session, int index, 
                              ls_strpair_t *pArg, char **filePath)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
@@ -1226,7 +1227,7 @@ static int get_req_arg_by_idx(lsi_session_t *session, int index,
 }
 
 
-static int get_qs_args_count(lsi_session_t *session)
+static int get_qs_args_count(const lsi_session_t *session)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
     if (!pSession || pSession->getReqParser() == NULL)
@@ -1235,7 +1236,7 @@ static int get_qs_args_count(lsi_session_t *session)
 }
 
 
-static int get_qs_arg_by_idx(lsi_session_t *session, int index, 
+static int get_qs_arg_by_idx(const lsi_session_t *session, int index, 
                              ls_strpair_t *pArg)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
@@ -1245,7 +1246,7 @@ static int get_qs_arg_by_idx(lsi_session_t *session, int index,
 }
 
 
-static int get_post_args_count(lsi_session_t *session)
+static int get_post_args_count(const lsi_session_t *session)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
     if (!pSession || pSession->getReqParser() == NULL)
@@ -1254,7 +1255,7 @@ static int get_post_args_count(lsi_session_t *session)
 }
 
 
-static int get_post_arg_by_idx(lsi_session_t *session, int index, 
+static int get_post_arg_by_idx(const lsi_session_t *session, int index, 
                              ls_strpair_t *pArg, char **filePath)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
@@ -1264,7 +1265,7 @@ static int get_post_arg_by_idx(lsi_session_t *session, int index,
 }
 
 
-static int is_post_file_upload(lsi_session_t *session, int index)
+static int is_post_file_upload(const lsi_session_t *session, int index)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
     if (!pSession || pSession->getReqParser() == NULL)
@@ -1273,7 +1274,7 @@ static int is_post_file_upload(lsi_session_t *session, int index)
 }
 
 
-static int set_req_wait_full_body(lsi_session_t *session)
+static int set_req_wait_full_body(const lsi_session_t *session)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
     if (pSession == NULL)
@@ -1283,7 +1284,7 @@ static int set_req_wait_full_body(lsi_session_t *session)
 }
 
 
-static int parse_req_args(lsi_session_t *session, int parse_req_body,
+static int parse_req_args(const lsi_session_t *session, int parse_req_body,
                           int uploadPassByPath, const char *uploadTmpDir,
                           int uploadTmpFilePermission)
 {
@@ -1295,7 +1296,7 @@ static int parse_req_args(lsi_session_t *session, int parse_req_body,
 }
 
 
-static int set_resp_wait_full_body(lsi_session_t *session)
+static int set_resp_wait_full_body(const lsi_session_t *session)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
     if (pSession == NULL)
@@ -1306,7 +1307,7 @@ static int set_resp_wait_full_body(lsi_session_t *session)
 }
 
 
-static int is_resp_buffer_available(lsi_session_t *session)
+static int is_resp_buffer_available(const lsi_session_t *session)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
     if (pSession == NULL)
@@ -1320,7 +1321,7 @@ static int is_resp_buffer_available(lsi_session_t *session)
 }
 
 
-static int is_resp_buffer_gzippped(lsi_session_t *session)
+static int is_resp_buffer_gzippped(const lsi_session_t *session)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
     if (pSession == NULL)
@@ -1331,7 +1332,7 @@ static int is_resp_buffer_gzippped(lsi_session_t *session)
 }
 
 
-static int set_resp_buffer_gzip_flag(lsi_session_t *session, int set)
+static int set_resp_buffer_gzip_flag(const lsi_session_t *session, int set)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
     if (pSession == NULL)
@@ -1346,7 +1347,7 @@ static int set_resp_buffer_gzip_flag(lsi_session_t *session, int set)
 
 
 //return 0 is OK, -1 error
-static int append_resp_body(lsi_session_t *session, const char *buf,
+static int append_resp_body(const lsi_session_t *session, const char *buf,
                             int len)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
@@ -1361,7 +1362,7 @@ static int append_resp_body(lsi_session_t *session, const char *buf,
 
 
 //return 0 is OK, -1 error
-static int append_resp_bodyv(lsi_session_t *session,
+static int append_resp_bodyv(const lsi_session_t *session,
                              const struct iovec *vector, int count)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
@@ -1391,7 +1392,7 @@ static int append_resp_bodyv(lsi_session_t *session,
 }
 
 
-static int init_file_type_mdata(lsi_session_t *session,
+static int init_file_type_mdata(const lsi_session_t *session,
                                 const lsi_module_t *pModule, const char *path,
                                 int pathLen)
 {
@@ -1411,7 +1412,7 @@ static int init_file_type_mdata(lsi_session_t *session,
 }
 
 
-static int send_file(lsi_session_t *session, const char *path,
+static int send_file(const lsi_session_t *session, const char *path,
                      int64_t start, int64_t size)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
@@ -1431,7 +1432,7 @@ static int send_file(lsi_session_t *session, const char *path,
 }
 
 
-static int send_file2(lsi_session_t *session, int fd,
+static int send_file2(const lsi_session_t *session, int fd,
                       int64_t start, int64_t size)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
@@ -1448,7 +1449,7 @@ static int send_file2(lsi_session_t *session, int fd,
 }
 
 
-static void lsi_flush(lsi_session_t *session)
+static void lsi_flush(const lsi_session_t *session)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
     if (pSession == NULL)
@@ -1458,7 +1459,7 @@ static void lsi_flush(lsi_session_t *session)
 }
 
 
-static void lsi_end_resp(lsi_session_t *session)
+static void lsi_end_resp(const lsi_session_t *session)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
     if (pSession == NULL)
@@ -1469,7 +1470,7 @@ static void lsi_end_resp(lsi_session_t *session)
 
 #define URI_OP_MASK     15
 #define URL_QS_OP_MASK  112
-static int set_uri_qs(lsi_session_t *session, int action, const char *uri,
+static int set_uri_qs(const lsi_session_t *session, int action, const char *uri,
                       int uri_len, const char *qs, int qs_len)
 {
 #define MAX_URI_QS_LEN 8192
@@ -1620,7 +1621,7 @@ static const char   *get_server_root()
 }
 
 
-static void *get_config(lsi_session_t *session,
+static void *get_config(const lsi_session_t *session,
                         const lsi_module_t *pModule)
 {
     ModuleConfig *pConfig = NULL;
@@ -1674,7 +1675,7 @@ static void edio_modify(ls_edio_t *pHandle, short events, int add_remove)
 }
 
 
-static int lsiapi_is_suspended(lsi_session_t *session)
+static int lsiapi_is_suspended(const lsi_session_t *session)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
     if (pSession == NULL)
@@ -1683,7 +1684,7 @@ static int lsiapi_is_suspended(lsi_session_t *session)
 }
 
 
-static int lsiapi_resume(lsi_session_t *session, int retcode)
+static int lsiapi_resume(const lsi_session_t *session, int retcode)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
     if (pSession == NULL)
@@ -1694,7 +1695,7 @@ static int lsiapi_resume(lsi_session_t *session, int retcode)
 
 
 
-static int exec_ext_cmd(lsi_session_t *session, const char *cmd, int len,
+static int exec_ext_cmd(const lsi_session_t *session, const char *cmd, int len,
                         evtcb_pf cb, const long lParam, void *pParam)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
@@ -1706,7 +1707,7 @@ static int exec_ext_cmd(lsi_session_t *session, const char *cmd, int len,
     return LS_OK;
 }
 
-static char *get_ext_cmd_res_buf(lsi_session_t *session, int *length)
+static char *get_ext_cmd_res_buf(const lsi_session_t *session, int *length)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
     if (pSession == NULL)
@@ -1716,7 +1717,7 @@ static char *get_ext_cmd_res_buf(lsi_session_t *session, int *length)
     return pSession->getExtCmdBuf().begin();
 }
 
-static int get_client_access_level(lsi_session_t *session)
+static int get_client_access_level(const lsi_session_t *session)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
     if (pSession == NULL)
@@ -1725,7 +1726,7 @@ static int get_client_access_level(lsi_session_t *session)
 }
 
 
-static int get_file_path_by_uri(lsi_session_t *session, const char *uri,
+static int get_file_path_by_uri(const lsi_session_t *session, const char *uri,
                                 int uri_len, char *path, int max_len)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
@@ -1759,7 +1760,7 @@ static int get_file_path_by_uri(lsi_session_t *session, const char *uri,
 // }
 
 
-static const char *get_mime_type_by_suffix(lsi_session_t *session,
+static const char *get_mime_type_by_suffix(const lsi_session_t *session,
         const char *suffix)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
@@ -1769,7 +1770,7 @@ static const char *get_mime_type_by_suffix(lsi_session_t *session,
 }
 
 
-static int set_force_mime_type(lsi_session_t *session, const char *mime)
+static int set_force_mime_type(const lsi_session_t *session, const char *mime)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
     if (pSession == NULL || !mime)
@@ -1779,7 +1780,7 @@ static int set_force_mime_type(lsi_session_t *session, const char *mime)
 }
 
 
-static const char *get_req_handler_type(lsi_session_t *session)
+static const char *get_req_handler_type(const lsi_session_t *session)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
     if (pSession == NULL || pSession->getCurHandler() == NULL)
@@ -1791,7 +1792,7 @@ static const char *get_req_handler_type(lsi_session_t *session)
 }
 
 
-static int get_file_stat(lsi_session_t *session, const char *path,
+static int get_file_stat(const lsi_session_t *session, const char *path,
                          int pathLen, struct stat *st)
 {
     if (!path || !st)
@@ -1805,7 +1806,7 @@ static int get_file_stat(lsi_session_t *session, const char *path,
 }
 
 
-static const char *get_req_file_path(lsi_session_t *session, int *pathLen)
+static const char *get_req_file_path(const lsi_session_t *session, int *pathLen)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
     if (pSession == NULL)
@@ -1826,7 +1827,7 @@ static const char *get_req_file_path(lsi_session_t *session, int *pathLen)
 }
 
 
-static int  is_access_log_on(lsi_session_t *session)
+static int  is_access_log_on(const lsi_session_t *session)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
     if (pSession == NULL)
@@ -1835,7 +1836,7 @@ static int  is_access_log_on(lsi_session_t *session)
 }
 
 
-static void set_access_log(lsi_session_t *session, int enable)
+static void set_access_log(const lsi_session_t *session, int enable)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
     if (pSession == NULL)
@@ -1845,7 +1846,7 @@ static void set_access_log(lsi_session_t *session, int enable)
 }
 
 
-static int  get_access_log_string(lsi_session_t *session,
+static int  get_access_log_string(const lsi_session_t *session,
                                   const char *log_pattern, char *buf,
                                   int bufLen)
 {
@@ -1864,7 +1865,7 @@ static const char *get_module_name(const lsi_module_t *module)
 }
 
 
-static int is_resp_handler_aborted(lsi_session_t *session)
+static int is_resp_handler_aborted(const lsi_session_t *session)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
     if (pSession == NULL)
@@ -1874,7 +1875,7 @@ static int is_resp_handler_aborted(lsi_session_t *session)
 }
 
 
-static void *get_resp_body_buf(lsi_session_t *session)
+static void *get_resp_body_buf(const lsi_session_t *session)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
     if (pSession == NULL)
@@ -1883,7 +1884,7 @@ static void *get_resp_body_buf(lsi_session_t *session)
 }
 
 
-static void *get_req_body_buf(lsi_session_t *session)
+static void *get_req_body_buf(const lsi_session_t *session)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
     if (pSession == NULL)
@@ -1963,7 +1964,7 @@ static int   append_body_buf(void *pBuf, const char *pBlock, int size)
 }
 
 
-static int set_req_body_buf(lsi_session_t *session, void *pBuf)
+static int set_req_body_buf(const lsi_session_t *session, void *pBuf)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
     if (!pBuf)
@@ -2054,7 +2055,7 @@ static void *get_vhost_module_param(const void *vhost,
 }
 
 
-int handoff_fd(lsi_session_t *session, char **pData, int *pDataLen)
+int handoff_fd(const lsi_session_t *session, char **pData, int *pDataLen)
 {
     if (!session || !pData || !pDataLen)
         return LS_FAIL;
@@ -2063,7 +2064,7 @@ int handoff_fd(lsi_session_t *session, char **pData, int *pDataLen)
 }
 
 
-int get_local_sockaddr(lsi_session_t *session, char *pIp, int maxLen)
+int get_local_sockaddr(const lsi_session_t *session, char *pIp, int maxLen)
 {
     if (!session || !pIp)
         return LS_FAIL;
@@ -2072,7 +2073,7 @@ int get_local_sockaddr(lsi_session_t *session, char *pIp, int maxLen)
 }
 
 
-ls_xpool_t *get_session_pool(lsi_session_t *session)
+ls_xpool_t *get_session_pool(const lsi_session_t *session)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
     return pSession->getReq()->getPool();
@@ -2141,7 +2142,7 @@ void lsiapi_init_server_api()
     
     pApi->get_event_obj = get_event_obj;
     pApi->schedule_event = schedule_event;
-    pApi->remove_event_obj = remove_event_obj;
+    pApi->cancel_event = cancel_event;
 
     pApi->get_req_raw_headers_length = get_req_raw_headers_length;
     pApi->get_req_raw_headers = get_req_raw_headers;

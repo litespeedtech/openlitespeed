@@ -3,6 +3,12 @@
 /* Define to 1 if you have the <arpa/inet.h> header file. */
 #undef HAVE_ARPA_INET_H
 
+/* Define to 1 if you have the <brotli/decode.h> header file. */
+#undef HAVE_BROTLI_DECODE_H
+
+/* Define to 1 if you have the <brotli/encode.h> header file. */
+#undef HAVE_BROTLI_ENCODE_H
+
 /* Define to 1 if you have the `bzero' function. */
 #undef HAVE_BZERO
 
@@ -47,6 +53,12 @@
 
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
+
+/* Define to 1 if you have the <IP2Location.h> header file. */
+#undef HAVE_IP2LOCATION_H
+
+/* Define to 1 if you have the <IP2Loc_DBInterface.h> header file. */
+#undef HAVE_IP2LOC_DBINTERFACE_H
 
 /* Define to 1 if you have the <lauxlib.h> header file. */
 #undef HAVE_LAUXLIB_H
@@ -245,6 +257,12 @@
 
 /* Defined to use BoringSSL instead of OpenSSL */
 #undef USE_BORINGSSL
+
+/* Defined to compile with Brotli compression included */
+#undef USE_BROTLI
+
+/* Defined to compile with IP2Location included */
+#undef USE_IP2LOCATION
 
 /* Define to 1 to make fseeko visible on some hosts (e.g. glibc 2.2). */
 #undef _LARGEFILE_SOURCE

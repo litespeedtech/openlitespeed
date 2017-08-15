@@ -87,7 +87,10 @@ am__aclocal_m4_deps = $(top_srcdir)/ax_check_zlib.m4 \
 	$(top_srcdir)/ax_check_openssl.m4 \
 	$(top_srcdir)/ax_path_lib_pcre.m4 \
 	$(top_srcdir)/ax_lib_expat.m4 $(top_srcdir)/ax_check_liblua.m4 \
-	$(top_srcdir)/ax_check_libudns.m4 $(top_srcdir)/configure.ac
+	$(top_srcdir)/ax_check_libudns.m4 \
+	$(top_srcdir)/ax_check_brotli.m4 \
+	$(top_srcdir)/ax_check_ip2location.m4 \
+	$(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 mkinstalldirs = $(install_sh) -d
@@ -136,7 +139,7 @@ am_libhttp_a_OBJECTS = httpstatuscode.$(OBJEXT) moduserdir.$(OBJEXT) \
 	hiohandlerfactory.$(OBJEXT) httprespheaders.$(OBJEXT) \
 	l4handler.$(OBJEXT) httpaiosendfile.$(OBJEXT) \
 	serverprocessconfig.$(OBJEXT) httpstats.$(OBJEXT) \
-	reqparser.$(OBJEXT)
+	reqparser.$(OBJEXT) iptoloc.$(OBJEXT)
 libhttp_a_OBJECTS = $(am_libhttp_a_OBJECTS)
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
@@ -212,6 +215,8 @@ AUTOCONF = @AUTOCONF@
 AUTOHEADER = @AUTOHEADER@
 AUTOMAKE = @AUTOMAKE@
 AWK = @AWK@
+BROTLI_INCLUDES = @BROTLI_INCLUDES@
+BROTLI_LIBS = @BROTLI_LIBS@
 CC = @CC@
 CCDEPMODE = @CCDEPMODE@
 CFLAGS = @CFLAGS@
@@ -243,6 +248,8 @@ INSTALL_DATA = @INSTALL_DATA@
 INSTALL_PROGRAM = @INSTALL_PROGRAM@
 INSTALL_SCRIPT = @INSTALL_SCRIPT@
 INSTALL_STRIP_PROGRAM = @INSTALL_STRIP_PROGRAM@
+IP2LOCATION_INCLUDES = @IP2LOCATION_INCLUDES@
+IP2LOCATION_LIBS = @IP2LOCATION_LIBS@
 LD = @LD@
 LDFLAGS = @LDFLAGS@
 LIBOBJS = @LIBOBJS@
@@ -293,6 +300,7 @@ SHELL = @SHELL@
 STRIP = @STRIP@
 UDNS_CFLAGS = @UDNS_CFLAGS@
 UDNS_LIBS = @UDNS_LIBS@
+USE_LSPHP7 = @USE_LSPHP7@
 VERSION = @VERSION@
 abs_builddir = @abs_builddir@
 abs_srcdir = @abs_srcdir@
@@ -308,6 +316,7 @@ am__quote = @am__quote@
 am__tar = @am__tar@
 am__untar = @am__untar@
 bindir = @bindir@
+brotli_dir = @brotli_dir@
 build = @build@
 build_alias = @build_alias@
 build_cpu = @build_cpu@
@@ -328,12 +337,15 @@ htmldir = @htmldir@
 includedir = @includedir@
 infodir = @infodir@
 install_sh = @install_sh@
+ip2location_dir = @ip2location_dir@
 libdir = @libdir@
 libexecdir = @libexecdir@
 localedir = @localedir@
 localstatedir = @localstatedir@
 mandir = @mandir@
 mkdir_p = @mkdir_p@
+need_brotli = @need_brotli@
+need_ip2location = @need_ip2location@
 oldincludedir = @oldincludedir@
 pdfdir = @pdfdir@
 prefix = @prefix@
@@ -361,7 +373,7 @@ libhttp_a_SOURCES = httpstatuscode.cpp moduserdir.cpp contextnode.cpp phpconfig.
    httpmime.cpp sendfileinfo.cpp httpcontext.cpp httpserverversion.cpp vhostmap.cpp eventdispatcher.cpp staticfilehandler.cpp reqhandler.cpp \
    httpvhost.cpp httpresourcemanager.cpp ntwkiolink.cpp httpmethod.cpp httpver.cpp  httpstatusline.cpp httpheader.cpp \
    smartsettings.cpp httplistener.cpp httpresp.cpp httpreq.cpp httpsession.cpp iptogeo.cpp moov.cpp  hiostream.cpp hiohandlerfactory.cpp \
-   httprespheaders.cpp l4handler.cpp httpaiosendfile.cpp serverprocessconfig.cpp httpstats.cpp reqparser.cpp
+   httprespheaders.cpp l4handler.cpp httpaiosendfile.cpp serverprocessconfig.cpp httpstats.cpp reqparser.cpp iptoloc.cpp
 
 
 ####### kdevelop will overwrite this part!!! (end)############
@@ -467,6 +479,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/httpvhost.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/httpvhostlist.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/iptogeo.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/iptoloc.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/l4handler.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/moduserdir.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/moov.Po@am__quote@

@@ -91,7 +91,7 @@ int assignHandler(lsi_param_t *rec)
     return 0;
 }
 
-static int PsHandlerProcess(lsi_session_t *session)
+static int PsHandlerProcess(const lsi_session_t *session)
 {
     int i;
     //200KB
@@ -113,10 +113,10 @@ static lsi_serverhook_t serverHooks[] =
     LSI_HOOK_END   //Must put this at the end position
 };
 
-static int _init(lsi_module_t *pModule)
+static int init_module(lsi_module_t *pModule)
 {
     return 0;
 }
 
 lsi_reqhdlr_t myhandler = { PsHandlerProcess, NULL, NULL, NULL };
-lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, _init, &myhandler, NULL, "", serverHooks };
+lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, init_module, &myhandler, NULL, "", serverHooks };

@@ -210,22 +210,31 @@ static void *benchRun(void *arg)
     int i, j;
     int iLoops = 100;
     int iIterations = LFSTACK_LOOPCOUNTER / 100;
+    StackNode *pNodes[iIterations];
     ls_lfstack_t *pStack = (ls_lfstack_t *)arg;
+    for (i = 0; i < iIterations; ++i)
+    {
+        pNodes[i] = new StackNode(1);
+    }
+    
     for (j = 0; j < iLoops; ++j)
     {
         for (i = 0; i < iIterations; ++i)
         {
-            StackNode *pNode = new StackNode(1);
-            ls_lfstack_push(pStack, pNode->getNodePtr());
+            ls_lfstack_push(pStack, pNodes[i]->getNodePtr());
         }
 
         for (i = 0; i < iIterations; ++i)
         {
             ls_lfnodei_t *pNode;
             while ((pNode = ls_lfstack_pop(pStack)) == NULL);
-            StackNode *pSNode = StackNode::getStackNodePtr(pNode);
-            delete pSNode;
+            pNodes[i] = StackNode::getStackNodePtr(pNode);
         }
+    }
+    for (i = 0; i < iIterations; ++i)
+    {
+        pthread_yield();
+        delete pNodes[i];
     }
     return NULL;
 }

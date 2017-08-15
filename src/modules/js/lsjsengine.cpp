@@ -88,7 +88,7 @@ int LsJsEngine::init()
 }
 
 
-int LsJsEngine::isReady(lsi_session_t *session)
+int LsJsEngine::isReady(const lsi_session_t *session)
 {
     if (!s_ready)
         return 0;
@@ -99,7 +99,7 @@ int LsJsEngine::isReady(lsi_session_t *session)
 //
 //  runScript - working code.
 //
-int    LsJsEngine::runScript(lsi_session_t *session
+int    LsJsEngine::runScript(const lsi_session_t *session
                              , LsJsUserParam *pUser
                              , const char *scriptpath)
 {
@@ -193,24 +193,14 @@ int    LsJsEngine::runScript(lsi_session_t *session
 //
 //  Configuration parameters for LiteSpeed js driver
 //
-void *LsJsEngine::parseParam(const char *param
-                             , int param_len
+void *LsJsEngine::parseParam(module_param_info_t *param
+                             , int param_count
                              , void *initial_config
                              , int level
                              , const char *name)
 {
-    ls_confparser_t confparser;
-    ls_objarray_t *pList;
-    const char *pLineBegin, *pLineEnd, *pParamEnd = param + param_len;
-
     LsJsUserParam *pParent = (LsJsUserParam *)initial_config;
     LsJsUserParam *pUser = new LsJsUserParam(level);
-
-    g_api->log(NULL, LSI_LOG_NOTICE
-               , "JS Param %s %d %s\n"
-               , name
-               , level
-               , param ? param : "");
 
     if ((!pUser) || (!pUser->isReady()))
     {
@@ -223,62 +213,28 @@ void *LsJsEngine::parseParam(const char *param
         *pUser = *pParent;
     }
 
-    if (!param)
+    if (!param || param_count == 0)
     {
         s_firstTime = 0;
         return pUser;
     }
 
-    g_api->log(NULL, LSI_LOG_NOTICE
-               , "JS Param name %s level %d %s parent %d param %s %d\n"
-               , name
-               , level
-               , (level == LSI_DATA_HTTP) ? "HTTP" : ""
-               , pParent ? pParent->level() : -1
-               , param ? param : ""
-               , pParent ? pParent->isReady() : -1
-              );
 
-    ls_confparser(&confparser);
-    while ((pLineBegin = ls_getconfline(&param, pParamEnd, &pLineEnd)) != NULL)
+    for (int i=0; i<param_count; ++i)
     {
-        pList = ls_confparser_linekv(&confparser, pLineBegin, pLineEnd);
-        if (!pList)
-            continue;
-        ls_str_t *pKey = (ls_str_t *)ls_objarray_getobj(pList, 0);
-        ls_str_t *pValue = (ls_str_t *)ls_objarray_getobj(pList, 1);
-        if (ls_str_len(pValue) == 0)
-        {
-            g_api->log(NULL, LSI_LOG_ERROR,
-                       "JS PARSEPARAM NO VALUE GIVEN FOR PARAMETER %.*s\n",
-                       ls_str_len(pKey), ls_str_cstr(pKey)
-                      );
-            continue;
-        }
-        if (!strncasecmp("data", ls_str_cstr(pKey), ls_str_len(pKey)))
+        if (param[i].key_index == 0)
         {
             int val = 0;
             // base 0 is same functionality as %i in sscanf
-            if ((val = strtol(ls_str_cstr(pValue), NULL, 0)) && (val > 0))
+            if ((val = strtol(param[i].val, NULL, 0)) && (val > 0))
                 pUser->setData(val);
             g_api->log(NULL, LSI_LOG_NOTICE
-                       , "%s JS SET %.*s = %.*s [%d]\n"
+                       , "%s JS SET data = %.*s [%d]\n"
                        , name
-                       , ls_str_len(pKey), ls_str_cstr(pKey)
-                       , ls_str_len(pValue), ls_str_cstr(pValue)
+                       , param[i].val, param[i].val_len
                        , pUser->data());
         }
-        else
-        {
-            // ignore this pair values
-            g_api->log(NULL, LSI_LOG_NOTICE
-                       , "%s JS IGNORE MODULE PARAMETERS [%.*s] [%.*s]\n"
-                       , name
-                       , ls_str_len(pKey), ls_str_cstr(pKey)
-                       , ls_str_len(pValue), ls_str_cstr(pValue));
-        }
     }
-    ls_confparser_d(&confparser);
     s_firstTime = 0;
     return (void *)pUser;
 }

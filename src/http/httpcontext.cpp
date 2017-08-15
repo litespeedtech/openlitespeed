@@ -62,11 +62,11 @@ HttpContext::HttpContext()
     , m_pFilesMatchStr(NULL)
     , m_pHandler(NULL)
     , m_pInternal(NULL)
-    , m_bAllowBrowse(BIT_ALLOW_BROWSE | BIT_INCLUDES | BIT_INCLUDES_NOEXEC)
     , m_redirectCode(-1)
     , m_iSetUidMode(ENABLE_SCRIPT)
-    , m_iConfigBits2(BIT_URI_CACHEABLE)
     , m_iRewriteEtag(0)
+    , m_iConfigBits2(BIT2_URI_CACHEABLE)
+    , m_iFeatures(BIT_F_ALLOW_BROWSE | BIT_F_INCLUDES | BIT_F_INCLUDES_NOEXEC)
 //    , m_iFilesMatchCtx( 0 )
     , m_lHTALastMod(0)
     , m_pRewriteBase(NULL)
@@ -646,6 +646,11 @@ void HttpContext::inherit(const HttpContext *pRootContext)
         m_iSetUidMode = (m_iSetUidMode & ~CTX_GEOIP_ON) |
                         (m_pParent->m_iSetUidMode & CTX_GEOIP_ON);
     }
+    if (!(m_iConfigBits2 & BIT2_IPTOLOC))
+    {
+        m_iFeatures = (m_iFeatures & ~BIT_F_IPTOLOC_ON) |
+                        (m_pParent->m_iFeatures & BIT_F_IPTOLOC_ON);
+    }
     if (!(m_iConfigBits & BIT_ENABLE_SCRIPT))
     {
         m_iSetUidMode = (m_iSetUidMode & ~ENABLE_SCRIPT) |
@@ -657,7 +662,7 @@ void HttpContext::inherit(const HttpContext *pRootContext)
         m_iRewriteEtag = (m_iRewriteEtag & ~REWRITE_MASK) |
                          ((m_pParent->m_iRewriteEtag | REWRITE_INHERIT) & REWRITE_MASK);
     }
-    if (!(m_iConfigBits2 & BIT_FILES_ETAG))
+    if (!(m_iConfigBits2 & BIT2_FILES_ETAG))
     {
         m_iRewriteEtag = (m_iRewriteEtag & ~ETAG_MASK) |
                          (m_pParent->m_iRewriteEtag  & ETAG_MASK);
@@ -688,7 +693,7 @@ void HttpContext::inherit(const HttpContext *pRootContext)
         setConfigBit(BIT_SATISFY_ANY, m_pParent->isSatisfyAny());
 
     if (!(m_iConfigBits & BIT_AUTOINDEX))
-        setConfigBit(BIT_AUTOINDEX_ON, m_pParent->isAutoIndexOn());
+        setFeaturesBit(BIT_F_AUTOINDEX_ON, m_pParent->isAutoIndexOn());
 
     if (m_pMatchList)
     {
@@ -1091,7 +1096,7 @@ void HttpContext::setWebSockAddr(GSockAddr &gsockAddr)
     if (!allocateInternal())
     {
         m_pInternal->m_GSockAddr = gsockAddr;
-        m_iConfigBits |= BIT_GSOCKADDR;
+        m_iConfigBits2 |= BIT2_WEBSOCKADDR;
     }
 }
 

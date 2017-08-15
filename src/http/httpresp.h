@@ -85,6 +85,11 @@ public:
         m_respHeaders.addGzipEncodingHeader();
     }
 
+    void addBrotliEncodingHeader()
+    {
+        m_respHeaders.addBrotliEncodingHeader();
+    }
+
     void appendChunked()
     {
         m_respHeaders.appendChunked();

@@ -55,9 +55,9 @@ public:
     {   return s_aVersion;  }
 
     static int init();
-    static int isReady(lsi_session_t *session);
+    static int isReady(const lsi_session_t *session);
 
-    static int runScript(lsi_session_t *session, const char *scriptpath,
+    static int runScript(const lsi_session_t *session, const char *scriptpath,
                          LsLuaUserParam *pUser, LsLuaSession **ppSession,
                          int iCurHook);
     static int runFilterScript(lsi_param_t *rec, const char *scriptpath,
@@ -77,7 +77,7 @@ public:
 
     static lua_State *injectLsiapi(lua_State *L);
 
-    static void *parseParam(const char *param, int param_len,
+    static void *parseParam(module_param_info_t *param  , int param_count,
                             void *initial_config, int level,
                             const char *name);
     static void removeParam(void *config);
@@ -114,11 +114,11 @@ private:
     static int execLuaCmd(const char *cmd);
     static lua_State *newLuaConnection();
     static lua_State *newLuaThread(lua_State *L);
-    static LsLuaSession *prepState(lsi_session_t *session,
+    static LsLuaSession *prepState(const lsi_session_t *session,
                                    const char *scriptpath,
                                    LsLuaUserParam *pUser,
                                    int iCurHook);
-    static int runState(lsi_session_t *session, LsLuaSession *pSandbox,
+    static int runState(const lsi_session_t *session, LsLuaSession *pSandbox,
                         int iCurHook);
     static int respFilterSetup(lsi_param_t *rec, lua_State *L);
     static int filterOut(lsi_param_t *rec, const char *pBuf, int iLen);
@@ -162,7 +162,7 @@ private:
 class LsLuaFuncMap
 {
 public:
-    static int loadLuaScript(lsi_session_t *session, lua_State *L,
+    static int loadLuaScript(const lsi_session_t *session, lua_State *L,
                              const char *scriptName);
 
     const char *scriptName() const
@@ -177,7 +177,7 @@ public:
     {   return m_iStatus;   }
 
 private:
-    LsLuaFuncMap(lsi_session_t *session, lua_State *L,
+    LsLuaFuncMap(const lsi_session_t *session, lua_State *L,
                  const char *scriptName);
     LsLuaFuncMap();
     ~LsLuaFuncMap();

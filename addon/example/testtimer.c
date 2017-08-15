@@ -38,9 +38,9 @@
 /////////////////////////////////////////////////////////////////////////////
 
 lsi_module_t MNAME;
-static int onReadEvent(lsi_session_t *session);
+static int onReadEvent(const lsi_session_t *session);
 
-int reg_handler(lsi_param_t *rec)
+int uri_map_cbf(lsi_param_t *rec)
 {
     const char *uri;
     int len;
@@ -55,7 +55,7 @@ int reg_handler(lsi_param_t *rec)
 
 static lsi_serverhook_t serverHooks[] =
 {
-    {LSI_HKPT_URI_MAP, reg_handler, LSI_HOOK_NORMAL, LSI_FLAG_ENABLED},
+    {LSI_HKPT_URI_MAP, uri_map_cbf, LSI_HOOK_NORMAL, LSI_FLAG_ENABLED},
     LSI_HOOK_END   //Must put this at the end position
 };
 
@@ -70,28 +70,28 @@ static int init(lsi_module_t *pModule)
     return 0;
 }
 
-void timer_cb(void *session)
+void timer_cb(const void *session)
 {
     char buf[1024];
     sprintf(buf, "Timer Triggered(1 second), time: %ld<br>\n",
             (long)(time(NULL)));
-    g_api->append_resp_body((lsi_session_t *)session, buf, strlen(buf));
+    g_api->append_resp_body((const lsi_session_t *)session, buf, strlen(buf));
 }
 
-void repeat_cb(void *session)
+void repeat_cb(const void *session)
 {
     char buf[1024];
     sprintf(buf, "Repeating timer(200ms)!, time: %ld<br>\n",
             (long)(time(NULL)));
-    g_api->append_resp_body((lsi_session_t *)session, buf, strlen(buf));
+    g_api->append_resp_body((const lsi_session_t *)session, buf, strlen(buf));
 }
 
-void finish_cb(void *session)
+void finish_cb(const void *session)
 {
     int id;
     char buf[1024];
-    lsi_session_t *pSession = (lsi_session_t *)session;
-    id = (int)g_api->get_module_data(session, &MNAME, LSI_DATA_HTTP);
+    const lsi_session_t *pSession = (const lsi_session_t *)session;
+    id = (int)(long)g_api->get_module_data(session, &MNAME, LSI_DATA_HTTP);
     g_api->remove_timer(id);
     sprintf(buf, "Finishing timer(5 seconds)!, time: %ld<br>\n",
             (long)(time(NULL)));
@@ -101,7 +101,7 @@ void finish_cb(void *session)
 }
 
 //The first time the below function will be called, then onWriteEvent will be called next and next
-static int PsHandlerProcess(lsi_session_t *session)
+static int PsHandlerProcess(const lsi_session_t *session)
 {
     char tmBuf[30];
     time_t t;
@@ -131,7 +131,7 @@ static int PsHandlerProcess(lsi_session_t *session)
     return 0;
 }
 
-static int onReadEvent(lsi_session_t *session)
+static int onReadEvent(const lsi_session_t *session)
 {
     char buf[8192];
     g_api->append_resp_body(session, "I got req body:<br>\n",
@@ -142,14 +142,14 @@ static int onReadEvent(lsi_session_t *session)
     return 0;
 }
 
-static int onWriteEvent(lsi_session_t *session)
+static int onWriteEvent(const lsi_session_t *session)
 {
     g_api->append_resp_body(session, "<br>Writing finished, bye.\n<p>",
                             sizeof("<br>Writing finished, bye.\n<p>") - 1);
     return LSI_RSP_DONE;
 }
 
-static int onCleanUp(lsi_session_t *session)
+static int onCleanUp(const lsi_session_t *session)
 {
     int id = (int)(long)g_api->get_module_data(session, &MNAME,
              LSI_DATA_HTTP);

@@ -58,3 +58,13 @@ void HttpFetchDriver::stop()
     if (pMpl)
         pMpl->remove(this);
 }
+
+void HttpFetchDriver::switchWriteToRead()
+{
+    MultiplexerFactory::getMultiplexer()->switchWriteToRead(this);
+}
+
+void HttpFetchDriver::switchReadToWrite()
+{
+    MultiplexerFactory::getMultiplexer()->switchReadToWrite(this);
+}

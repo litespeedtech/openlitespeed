@@ -896,6 +896,9 @@ void LsShmHash::eraseIteratorHelper(iteroffset iterOff)
     LsShmOffset_t next = iter->x_iNext.m_iOffset;     // in case of remap in tid list
     LsShmSize_t size = iter->x_iLen;
 
+    if (m_iFlags & LSSHM_FLAG_LRU)
+        unlinkHElem(iter);
+
     //NOTE:race condition, two process release the object at the same time. 
     //     ShmHash was not properly locked. 
     assert(offset != 0);
@@ -912,8 +915,6 @@ void LsShmHash::eraseIteratorHelper(iteroffset iterOff)
     }
 #endif
 
-    if (m_iFlags & LSSHM_FLAG_LRU)
-        unlinkHElem(iter);
     if (m_pTidMgr != NULL)
     {
         m_pTidMgr->eraseIterCb(iter);

@@ -70,73 +70,72 @@ typedef struct _param_st
 } param_st;
 
 //Setup the below array to let web server know these params
-const char *myParam[] =
+lsi_config_key_t myParam[] =
 {
-    "param1",
-    "param2",
-    "param3",
-    "param4",
-    "param5",
-    NULL   //The last position must have a NULL to indicate end of the array
+    {"param1",  0, 0},
+    {"param2",  0, 0},
+    {"param3",  0, 0},
+    {"param4",  0, 0},
+    {"param5",  0, 0},
+    {NULL,  0, 0}   //The last position must have a NULL to indicate end of the array
 };
 
 //return 0 for correctly parsing
-static int testparam_parseList(ls_objarray_t *pList, param_st *pConfig)
+static int testparam_parseList(module_param_info_t *param, param_st *pConfig)
 {
+    int *pParam;
+    ls_confparser_t confparser;
+    ls_confparser(&confparser);
+    ls_objarray_t *pList = ls_confparser_line(&confparser, param->val,
+                                              param->val + param->val_len);
+    
     int count = ls_objarray_getsize(pList);
     assert(count > 0);
-
-    unsigned long maxParamNum = 0;
-    ls_str_t *p = (ls_str_t *)ls_objarray_getobj(pList, 0);
-
-    if (ls_str_len(p) != 6 || strncmp("param", ls_str_cstr(p), 5) != 0)
-        return -2;
-
-
+    
     //Comment: case param2, maxParamNum is 2, the line should be param2 [21 [22]],
-    //in this way, count is 3, or 2 or 1
-    maxParamNum = (unsigned long)strtol(ls_str_cstr(p) + 5, NULL, 10);
+    unsigned long maxParamNum = param->key_index + 1;
     if (maxParamNum > 5)
-        maxParamNum = 0;
+        maxParamNum = 1;
 
+    ls_str_t *p;
     long val;
     int i;
-    for (i = 1; i < count && i < maxParamNum + 1; ++i)
+    
+    for (i = 0; i < count && i < maxParamNum; ++i)
     {
         p = (ls_str_t *)ls_objarray_getobj(pList, i);
         val = strtol(ls_str_cstr(p), NULL, 10);
 
-        int *pParam;
-        switch (maxParamNum)
+        switch(param->key_index)
         {
+        case 0:
+            pParam = &pConfig->param1 + i;
+            break;
         case 1:
-            pParam = &pConfig->param1;
+            pParam = &pConfig->param21 + i;
             break;
         case 2:
-            pParam = &pConfig->param21 + (i - 1);
+            pParam = &pConfig->param31 + i;
             break;
         case 3:
-            pParam = &pConfig->param31 + (i - 1);
+            pParam = &pConfig->param41 + i;
             break;
         case 4:
-            pParam = &pConfig->param41 + (i - 1);
-            break;
-        case 5:
-            pParam = &pConfig->param51 + (i - 1);
+            pParam = &pConfig->param51 + i;
             break;
         }
-
         *pParam = val;
     }
-
+    
+    ls_confparser_d(&confparser);
     return 0;
 }
 
 
-static void *testparam_parseConfig(const char *param, int param_len,
+static void *testparam_parseConfig(module_param_info_t *param, int param_count,
                                    void *_initial_config, int level, const char *name)
 {
-    ls_confparser_t confparser;
+    int i;
     param_st *pInitConfig = (param_st *)_initial_config;
     param_st *pConfig = (param_st *) malloc(sizeof(struct _param_st));
     if (!pConfig)
@@ -150,19 +149,10 @@ static void *testparam_parseConfig(const char *param, int param_len,
     if (!param)
         return (void *)pConfig;
 
-    ls_confparser(&confparser);
-
-    const char *pBufBegin = param, *pBufEnd = param + param_len;
-    const char *pLine, *pLineEnd;
-    while ((pLine = ls_getconfline(&pBufBegin, pBufEnd, &pLineEnd)) != NULL)
+    for (i=0 ;i<param_count; ++i)
     {
-        ls_objarray_t *pList = ls_confparser_line(&confparser, pLine, pLineEnd);
-        if (!pList)
-            continue;
-
-        testparam_parseList(pList, pConfig);
+        testparam_parseList(&param[i], pConfig);
     }
-    ls_confparser_d(&confparser);
     return (void *)pConfig;
 }
 
@@ -171,7 +161,7 @@ static void testparam_freeConfig(void *_config)
     free(_config);
 }
 
-static int testparam_handlerBeginProcess(lsi_session_t *session)
+static int testparam_handlerBeginProcess(const lsi_session_t *session)
 {
     g_api->set_resp_header(session, LSI_RSPHDR_CONTENT_TYPE, NULL, 0,
                            "text/plain", sizeof("text/plain") - 1, LSI_HEADEROP_SET);
@@ -202,7 +192,7 @@ static int testparam_handlerBeginProcess(lsi_session_t *session)
     return 0;
 }
 
-static int reg_handler(lsi_param_t *rec)
+static int uri_map_cbf(lsi_param_t *rec)
 {
     const char *uri;
     int len;
@@ -214,7 +204,7 @@ static int reg_handler(lsi_param_t *rec)
 
 static lsi_serverhook_t serverHooks[] =
 {
-    {LSI_HKPT_URI_MAP, reg_handler, LSI_HOOK_EARLY, LSI_FLAG_ENABLED},
+    {LSI_HKPT_URI_MAP, uri_map_cbf, LSI_HOOK_EARLY, LSI_FLAG_ENABLED},
     LSI_HOOK_END   //Must put this at the end position
 };
 

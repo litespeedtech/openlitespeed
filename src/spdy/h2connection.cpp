@@ -1034,7 +1034,8 @@ H2Stream *H2Connection::getNewStream(uint8_t ubH2_Flags)
              getLogId(), m_uiLastStreamId, (int)m_mapStream.size(),
              m_uiShutdownStreams, (int)ubH2_Flags);
 
-    if (m_mapStream.size() - m_uiShutdownStreams >= (uint)m_iServerMaxStreams)
+    if ((int)m_mapStream.size() - (int)m_uiShutdownStreams - m_iCurPushStreams 
+            >= m_iServerMaxStreams)
         return NULL;
 
     pStream = new H2Stream();

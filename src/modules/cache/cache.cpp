@@ -149,34 +149,37 @@ struct MyMData
 };
 
 
-const char *paramArray[] =
+lsi_config_key_t paramArray[] =
 {
-    "enableCache",   //0
-    "enablePrivateCache",
-    "checkPublicCache",
-    "checkPrivateCache", //3
-    "qsCache",
-    "reqCookieCache",
+    /***
+     * The id is base on 0, added some just for reference
+     */
+    {"enableCache",             0,},  //0
+    {"enablePrivateCache",      1,},
+    {"checkPublicCache",        2,},
+    {"checkPrivateCache",       3,}, //3
+    {"qsCache",                 4,},
+    {"reqCookieCache",          5,},
 
-    "ignoreReqCacheCtrl",
-    "ignoreRespCacheCtrl", //7
+    {"ignoreReqCacheCtrl",      6,},
+    {"ignoreRespCacheCtrl",     7,}, //7
 
-    "respCookieCache",
+    {"respCookieCache",         8,},
 
-    "expireInSeconds",
-    "privateExpireInSeconds",//10
-    "maxStaleAge",
-    "maxCacheObjSize",
+    {"expireInSeconds",         9,},
+    {"privateExpireInSeconds",  10,},//10
+    {"maxStaleAge",},
+    {"maxCacheObjSize",},
 
-    "storagepath", //13 "cacheStorePath"
+    {"storagepath",             13,},//13 "cacheStorePath"
 
     //Below 5 are newly added
-    "noCacheDomain",//14
-    "noCacheUrl",//15
+    {"noCacheDomain",           14,},//14
+    {"noCacheUrl",              15,},//15
 
-    "no-vary", //16
-    "addEtag",
-    NULL //Must have NULL in the last item
+    {"no-vary",                 16,},//},16
+    {"addEtag",                 17,},
+    {NULL} //Must have NULL in the last item
 };
 
 const int paramArrayCount = sizeof(paramArray) / sizeof(char *) - 1;
@@ -202,7 +205,7 @@ static int createCachePath(const char *path, int mode)
 }
 
 
-static void house_keeping_cb(void *p)
+static void house_keeping_cb(const void *p)
 {
     DirHashCacheStore *pStore = (DirHashCacheStore *)p;
     if (pStore)
@@ -337,25 +340,14 @@ void parseNoCacheUrlFinal(CacheConfig *pConfig)
 
 
 // Parses the key and value given.  If key is storagepath, returns 1, otherwise returns 0
-static int parseLine(CacheConfig *pConfig, const char *key, int keyLen,
+static int parseLine(CacheConfig *pConfig, int param_id,
                      const char *val, int valLen)
 {
-    int i;
+    int i = param_id;
     int bit;
     int minValue = 0;
     int maxValue = 1;
     int defValue = 0;
-    for (i = 0; i < paramArrayCount; ++i)
-    {
-        if (strncasecmp(key, paramArray[i], keyLen) == 0)
-            break;
-    }
-    if (i == paramArrayCount)
-    {
-        //compatible with lslb
-        if (strncasecmp(key, "cacheStorePath", keyLen) == 0)
-            i = 13;
-    }
 
     switch (i)
     {
@@ -481,29 +473,9 @@ static void verifyStoreReady(CacheConfig *pConfig)
                    "Cache verifyStoreReady failed to alloc memory.\n");
 }
 
-static void matchSettings(const char *param, int param_len,
-                          CacheConfig *pConfig)
-{
-    //need to tune the setting of enbleCache and CheckPublic
-    if (!strcasestr(param, "checkPublicCache"))
-        pConfig->setConfigBit(CACHE_CHECK_PUBLIC,
-                              pConfig->isSet(CACHE_ENABLE_PUBLIC));
-
-    if (!strcasestr(param, "checkPrivateCache"))
-        pConfig->setConfigBit(CACHE_CHECK_PRIVATE,
-                              pConfig->isSet(CACHE_ENABLE_PRIVATE));
-}
-
-
-static void *ParseConfig(const char *param, int param_len,
+static void *ParseConfig(module_param_info_t *param, int param_count,
                          void *_initial_config, int level, const char *name)
 {
-    const char *pLineBegin;
-    const char *pLineEnd;
-    const char *pParamOrg = param;
-    const char *pParamEnd = param + param_len;
-    ls_confparser_t cp;
-    ls_objarray_t *pList;
     CacheConfig *pInitConfig = (CacheConfig *)_initial_config;
     CacheConfig *pConfig = new CacheConfig;
     if (!pConfig)
@@ -511,48 +483,33 @@ static void *ParseConfig(const char *param, int param_len,
 
     pConfig->setLevel(level);
     pConfig->inherit(pInitConfig);
-    if (!param)
+    if (!param || param_count == 0)
     {
         verifyStoreReady(pConfig);
         return (void *)pConfig;
     }
 
-    ls_confparser(&cp);
-
-    while ((pLineBegin = ls_getconfline(&param, pParamEnd, &pLineEnd)) != NULL)
+    for (int i=0 ;i<param_count; ++i)
     {
-        pList = ls_confparser_linekv(&cp, pLineBegin, pLineEnd);
-        if (!pList)
-            continue;
+        int ret = parseLine(pConfig, param[i].key_index,
+                            param[i].val, param[i].val_len);
 
-        ls_str_t *pKey = (ls_str_t *)ls_objarray_getobj(pList, 0);
-        ls_str_t *pVal = (ls_str_t *)ls_objarray_getobj(pList, 1);
-        const char *pValStr = ls_str_cstr(pVal);
-        if (pValStr == NULL)
-            continue;
-
-        int valLen = ls_str_len(pVal);
-        if (valLen == 0)
-            continue;
-
-        int ret = parseLine(pConfig, ls_str_cstr(pKey), ls_str_len(pKey), pValStr,
-                            valLen);
-
-        if (ret == 13)
-            parseStoragePath(pConfig, pValStr, valLen, level, name);
+        //Only server level need to match CHECKXXXX seetings
+        if (ret == 2 && level == LSI_CFG_SERVER)
+            pConfig->setConfigBit(CACHE_CHECK_PUBLIC,
+                                  pConfig->isSet(CACHE_ENABLE_PUBLIC));
+        else if (ret == 3 && level == LSI_CFG_SERVER)
+            pConfig->setConfigBit(CACHE_CHECK_PRIVATE,
+                              pConfig->isSet(CACHE_ENABLE_PRIVATE));
+        else if (ret == 13)
+            parseStoragePath(pConfig, param[i].val, param[i].val_len, level, name);
         else if (ret == 15)
-            parseNoCacheUrl(pConfig, pValStr, valLen, level, name);
+            parseNoCacheUrl(pConfig, param[i].val, param[i].val_len, level, name);
         else if (ret == 14)
-            parseNoCacheDomain(pConfig, pValStr, valLen, level, name);
+            parseNoCacheDomain(pConfig, param[i].val, param[i].val_len, level, name);
     }
 
     parseNoCacheUrlFinal(pConfig);
-
-    //Only server level need to match CHECKXXXX seetings
-    if (level == LSI_CFG_SERVER)
-        matchSettings(pParamOrg, param_len, pConfig);
-
-    ls_confparser_d(&cp);
     verifyStoreReady(pConfig);
     return (void *)pConfig;
 }
@@ -564,7 +521,7 @@ static void FreeConfig(void *_config)
 }
 
 
-static int isUrlExclude(lsi_session_t *session, CacheConfig *pConfig,
+static int isUrlExclude(const lsi_session_t *session, CacheConfig *pConfig,
                         const char *url, int urlLen)
 {
     Aho *ahos[2] = {pConfig->getUrlExclude(), pConfig->getParentUrlExclude()};
@@ -593,7 +550,7 @@ static int isUrlExclude(lsi_session_t *session, CacheConfig *pConfig,
 }
 
 
-static int isDomainExclude(lsi_session_t *session, CacheConfig *pConfig)
+static int isDomainExclude(const lsi_session_t *session, CacheConfig *pConfig)
 {
     if (pConfig->getVHostMapExclude())
     {
@@ -738,7 +695,7 @@ char *scanVaryOnList(HttpReq *pReq, const char *pListBegin,
 }
 
 
-int getCacheVaryCookie(lsi_session_t *session, HttpReq *pReq, char *pDest,
+int getCacheVaryCookie(const lsi_session_t *session, HttpReq *pReq, char *pDest,
                        char *pDestEnd)
 {
     char achCacheCtrl[8192];
@@ -784,7 +741,7 @@ int getCacheVaryCookie(lsi_session_t *session, HttpReq *pReq, char *pDest,
 }
 
 
-void calcCacheHash2(lsi_session_t *session, CacheKey *pKey,
+void calcCacheHash2(const lsi_session_t *session, CacheKey *pKey,
                     CacheHash *pHash, CacheHash *pPrivateHash)
 {
 //    CACHE_PRIVATE_KEY;
@@ -833,7 +790,7 @@ void calcCacheHash2(lsi_session_t *session, CacheKey *pKey,
 }
 
 
-void calcCacheHash(lsi_session_t *session, CacheKey *pKey,
+void calcCacheHash(const lsi_session_t *session, CacheKey *pKey,
                    CacheHash *pHash, CacheHash *pPrivateHash)
 {
     HttpSession *pSession = (HttpSession *)session;
@@ -851,7 +808,7 @@ void calcCacheHash(lsi_session_t *session, CacheKey *pKey,
 
 
 
-void buildCacheKey(lsi_session_t *session, const char *uri, int uriLen,
+void buildCacheKey(const lsi_session_t *session, const char *uri, int uriLen,
                    int noVary, CacheKey *pKey)
 {
     int iQSLen;
@@ -990,7 +947,7 @@ int writeHttpHeader(int fd, AutoStr2 *str, const char *key, int key_len,
     return key_len + val_len + 4;
 }
 
-static void parseEnv(lsi_session_t *session, CacheCtrl &cacheCtrl)
+static void parseEnv(const lsi_session_t *session, CacheCtrl &cacheCtrl)
 {
     for (int i = 0; i < 2; ++i)
     {
@@ -1004,7 +961,7 @@ static void parseEnv(lsi_session_t *session, CacheCtrl &cacheCtrl)
     }
 }
 
-void getRespHeader(lsi_session_t *session, int header_index, char **buf,
+void getRespHeader(const lsi_session_t *session, int header_index, char **buf,
                    int *length)
 {
     struct iovec iov[1] = {{NULL, 0}};
@@ -1041,7 +998,7 @@ static void disableRcvdRespHeaderFilter(lsi_param_t *rec)
 }
 
 
-void clearHooksOnly(lsi_session_t *session)
+void clearHooksOnly(const lsi_session_t *session)
 {
     int aHkpts[4], iHkptCount = 0;
     MyMData *myData = (MyMData *) g_api->get_module_data(session, &MNAME,
@@ -1060,7 +1017,7 @@ void clearHooksOnly(lsi_session_t *session)
 }
 
 
-void clearHooks(lsi_session_t *session)
+void clearHooks(const lsi_session_t *session)
 {
     clearHooksOnly(session);
     g_api->free_module_data(session, &MNAME, LSI_DATA_HTTP, httpRelease);
@@ -1144,7 +1101,7 @@ static int getControlFlag(CacheConfig *pConfig)
 }
 
 
-static void processPurge(lsi_session_t *session,
+static void processPurge(const lsi_session_t *session,
                          const char *pValue, int valLen);
 static int createEntry(lsi_param_t *rec)
 {
@@ -1631,7 +1588,7 @@ static int isReqCacheable(lsi_param_t *rec, CacheConfig *pConfig)
 //
 //
 // //     char **buf = (char **)rec->_param;
-// //     int *len = (int *)(long)rec->_param_len;
+// //     int *len = (int *)(long)rec->_param_count;
 // //     *buf = (char *)myData->pEntry->m_sPart3Buf.c_str();
 // //     *len = myData->pEntry->m_sPart3Buf.len();
 //
@@ -1996,7 +1953,7 @@ static int init(lsi_module_t *pModule)
 }
 
 
-int isModified(lsi_session_t *session, CeHeader &CeHeader, char *etag,
+int isModified(const lsi_session_t *session, CeHeader &CeHeader, char *etag,
                int etagLen)
 {
     int len;
@@ -2018,7 +1975,7 @@ int isModified(lsi_session_t *session, CeHeader &CeHeader, char *etag,
 }
 
 
-CacheEntry *getCacheByUrl(lsi_session_t *session, MyMData *myData,
+CacheEntry *getCacheByUrl(const lsi_session_t *session, MyMData *myData,
                           const char *pUrl, int iUrlLen, int cachectrl)
 {
     CacheKey key;
@@ -2047,7 +2004,7 @@ CacheEntry *getCacheByUrl(lsi_session_t *session, MyMData *myData,
 }
 
 
-static int purgePublicCacheByUrl(lsi_session_t *session, MyMData *myData, const char *pUrl, int urlLen)
+static int purgePublicCacheByUrl(const lsi_session_t *session, MyMData *myData, const char *pUrl, int urlLen)
 {
     CacheEntry *pEntry = getCacheByUrl(session, myData, pUrl, urlLen, CacheCtrl::cache_public);
     if (!pEntry)
@@ -2056,7 +2013,7 @@ static int purgePublicCacheByUrl(lsi_session_t *session, MyMData *myData, const 
     return 0;
 }
 
-static void processPurge2(lsi_session_t *session,
+static void processPurge2(const lsi_session_t *session,
                          const char *pValue, int valLen)
 {
     CacheStore *pStore = NULL;
@@ -2147,7 +2104,7 @@ static void processPurge2(lsi_session_t *session,
 }
 
 
-static void processPurge(lsi_session_t *session, const char *pValue, int valLen)
+static void processPurge(const lsi_session_t *session, const char *pValue, int valLen)
 {
     const char *pBegin = pValue;
     const char *pEnd = pValue + valLen;
@@ -2168,14 +2125,14 @@ static void processPurge(lsi_session_t *session, const char *pValue, int valLen)
     g_api->log(session, LSI_LOG_DEBUG,  "processPurge: %.*s\n", valLen, pValue);
 }
 
-static void decref_and_free_data(MyMData *myData, lsi_session_t *session)
+static void decref_and_free_data(MyMData *myData, const lsi_session_t *session)
 {
     if (myData->pEntry)
         myData->pEntry->decRef();
     g_api->free_module_data(session, &MNAME, LSI_DATA_HTTP, httpRelease);
 }
 
-static int handlerProcess(lsi_session_t *session)
+static int handlerProcess(const lsi_session_t *session)
 {
     MyMData *myData = (MyMData *)g_api->get_module_data(session, &MNAME,
                       LSI_DATA_HTTP);

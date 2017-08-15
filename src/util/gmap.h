@@ -70,7 +70,7 @@ public:
 
     iterator find(const void *pKey)
     {
-        return (iterator)(*find_fn)(this, pKey);
+        return (iterator)(*find_fn)((GMap *)this, pKey);
     }
 
     int insert(const void *pKey, void *pValue)

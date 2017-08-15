@@ -47,7 +47,7 @@ public:
         return m_pRewriteDriverFactory;
     }
 
-    SystemRequestContext *NewRequestContext(lsi_session_t *session);
+    SystemRequestContext *NewRequestContext(const lsi_session_t *session);
 
     LsiMessageHandler *MessageHandler()
     {

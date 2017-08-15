@@ -69,7 +69,7 @@ static int getReqDimensions(const char *buf, int iLen, int *width,
                             int *height);
 static void *resizeImage(const char *buf, int bufLen, int width,
                          int height, MyData *myData, int *size);
-static int _init();
+static int init_module();
 
 int httpRelease(void *data)
 {
@@ -260,13 +260,13 @@ static lsi_serverhook_t serverHooks[] =
     LSI_HOOK_END   //Must put this at the end position
 };
 
-static int _init(lsi_module_t *pModule)
+static int init_module(lsi_module_t *pModule)
 {
     g_api->init_module_data(pModule, httpRelease, LSI_DATA_HTTP);
     return 0;
 }
 
-lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, _init, NULL, NULL, "imgresize", serverHooks};
+lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, init_module, NULL, NULL, "imgresize", serverHooks};
 
 
 

@@ -141,7 +141,7 @@ static int httpreqread(lsi_param_t *param)
 }
 
 
-static int reg_handler(lsi_param_t *param)
+static int rcvd_req_header_cbf(lsi_param_t *param)
 {
     const char *uri;
     int len;
@@ -156,7 +156,7 @@ static int reg_handler(lsi_param_t *param)
 }
 
 
-static int _init(lsi_module_t *module)
+static int init_module(lsi_module_t *module)
 {
     module->about = VERSION;  //set version string
     g_api->init_module_data(module, httprelease, LSI_DATA_HTTP);
@@ -165,7 +165,7 @@ static int _init(lsi_module_t *module)
 }
 
 
-static int on_read(lsi_session_t *session)
+static int on_read(const lsi_session_t *session)
 {
     char buf[MAX_BLOCK_BUFSIZE];
     int ret;
@@ -201,7 +201,7 @@ static int on_read(lsi_session_t *session)
 }
 
 
-static int begin_process(lsi_session_t *session)
+static int begin_process(const lsi_session_t *session)
 {
     char *txt;
     g_api->set_req_wait_full_body(session);
@@ -220,7 +220,7 @@ static int begin_process(lsi_session_t *session)
 }
 
 
-static int clean_up(lsi_session_t *session)
+static int clean_up(const lsi_session_t *session)
 {
     g_api->free_module_data(session, &MNAME, LSI_DATA_HTTP,
                             httprelease);
@@ -230,7 +230,7 @@ static int clean_up(lsi_session_t *session)
 
 static lsi_serverhook_t server_hooks[] =
 {
-    { LSI_HKPT_RCVD_REQ_HEADER, reg_handler, LSI_HOOK_NORMAL, LSI_FLAG_ENABLED },
+    { LSI_HKPT_RCVD_REQ_HEADER, rcvd_req_header_cbf, LSI_HOOK_NORMAL, LSI_FLAG_ENABLED },
     { LSI_HKPT_HTTP_BEGIN, httpinit, LSI_HOOK_NORMAL, LSI_FLAG_ENABLED },
     { LSI_HKPT_RECV_REQ_BODY, httpreqread, LSI_HOOK_EARLY, LSI_FLAG_TRANSFORM | LSI_FLAG_ENABLED },
 
@@ -241,6 +241,6 @@ static lsi_reqhdlr_t myhandler = { begin_process, on_read, NULL, clean_up };
 
 lsi_module_t MNAME =
 {
-    LSI_MODULE_SIGNATURE, _init, &myhandler, NULL, "", server_hooks
+    LSI_MODULE_SIGNATURE, init_module, &myhandler, NULL, "", server_hooks
 };
 

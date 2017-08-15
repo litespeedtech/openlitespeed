@@ -78,6 +78,10 @@ enum
 #define UPSTREAM_GZIP           4
 #define UPSTREAM_DEFLATE        8
 
+#define BR_ENABLED              1
+#define REQ_BR_ACCEPT           2
+#define BR_REQUIRED             (BR_ENABLED | REQ_BR_ACCEPT)
+#define UPSTREAM_BR             4
 
 struct AAAData;
 class AuthRequired;
@@ -200,14 +204,15 @@ private:
     int                 m_iHS2;
     short               m_iCfIpHeader;
     short               m_method;
-    unsigned int        m_ver;
     int                 m_iEnvCount;
-    short               m_iKeepAlive;
-    char                m_iAcceptGzip;
-    char                m_iNoRespBody;
+    unsigned short      m_ver;
+    short               m_iRedirects;
+    int                 m_iAcceptGzip:8;
+    int                 m_iAcceptBr:8;
+    int                 m_iKeepAlive:8;
+    int                 m_iNoRespBody:8;
     off_t               m_lEntityLength;
     off_t               m_lEntityFinished;
-    short               m_iRedirects;
     int                 m_iContextState;
     const HttpHandler  *m_pHttpHandler;
 
@@ -520,6 +525,10 @@ public:
     void andGzip(char b)                    {   m_iAcceptGzip &= b;         }
     void orGzip(char b)                     {   m_iAcceptGzip |= b;         }
 
+    char brAcceptable() const               {   return m_iAcceptBr;       }
+    void andBr(char b)                      {   m_iAcceptBr &= b;         }
+    void orBr(char b)                       {   m_iAcceptBr |= b;         }
+
     char noRespBody() const                 {   return m_iNoRespBody;       }
     void setNoRespBody()                    {   m_iNoRespBody = 1;          }
     void updateNoRespBodyByStatus(int code);
@@ -659,12 +668,13 @@ public:
     int postProcessHost(const char *pCur, const char *pBEnd);
     int skipSpaceBothSide(const char *&pHBegin, const char *&pHEnd);
     char isGeoIpOn() const;
+    uint32_t isIpToLocOn() const;
     int getDecodedOrgReqURI(char *&pValue);
     SSIRuntime *getSSIRuntime() const       {   return m_pSSIRuntime;       }
     void setSSIRuntime(SSIRuntime *p)       {   m_pSSIRuntime = p;          }
     SSIConfig *getSSIConfig();
-    int isXbitHackFull() const;
-    int isIncludesNoExec() const;
+    uint32_t isXbitHackFull() const;
+    uint32_t isIncludesNoExec() const;
     long getLastMod() const
     {   return m_fileStat.st_mtime;    }
     void backupPathInfo();

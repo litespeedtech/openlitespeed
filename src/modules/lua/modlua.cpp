@@ -47,7 +47,7 @@ static int releaseLuaData(void *data)
 }
 
 
-static luaData_t *allocateLuaData(lsi_session_t *session,
+static luaData_t *allocateLuaData(const lsi_session_t *session,
                                   const lsi_module_t *module, int level)
 {
     luaData_t *pData = (luaData_t *)malloc(sizeof(luaData_t));
@@ -59,7 +59,7 @@ static luaData_t *allocateLuaData(lsi_session_t *session,
 }
 
 
-static LsLuaSession *getLuaSess(lsi_session_t *session)
+static LsLuaSession *getLuaSess(const lsi_session_t *session)
 {
     luaData_t *pData = (luaData_t *)g_api->get_module_data(session, &MNAME,
                        LSI_DATA_HTTP);
@@ -74,7 +74,7 @@ static int runLuaFilter(lsi_param_t *rec, int index)
     LsLuaUserParam *pUser;
     const char *pFile;
     int iFileLen = 0;
-    lsi_session_t *session = rec->session;
+    const lsi_session_t *session = rec->session;
     luaData_t *pData = (luaData_t *)g_api->get_module_data(session, &MNAME,
                        LSI_DATA_HTTP);
     if (pData == NULL)
@@ -109,7 +109,7 @@ static int runLuaFilter(lsi_param_t *rec, int index)
 int prepLuaFilter(lsi_param_t *rec)
 {
     int aEnableHkpt[4], iEnableCount = 0;
-    lsi_session_t *session = rec->session;
+    const lsi_session_t *session = rec->session;
     LsLuaUserParam *pUser = (LsLuaUserParam *)g_api->get_config(session,
                             &MNAME);
     g_api->set_req_wait_full_body(session);
@@ -150,7 +150,7 @@ int luaBodyFilter(lsi_param_t *rec)
 {   return runLuaFilter(rec, LSLUA_HOOK_BODY);  }
 
 
-static int luaHandler(lsi_session_t *session)
+static int luaHandler(const lsi_session_t *session)
 {
     char *uri;
     char luafile[MAXFILENAMELEN];
@@ -187,16 +187,16 @@ static int luaHandler(lsi_session_t *session)
 }
 
 
-static int onCleanupEvent(lsi_session_t *session)
+static int onCleanupEvent(const lsi_session_t *session)
 {
-    extern void CleanupLuaSession(void *, LsLuaSession *);
+    extern void CleanupLuaSession(const void *, LsLuaSession *);
 
     CleanupLuaSession(session, getLuaSess(session));
     return 0;
 }
 
 
-static int onReadEvent(lsi_session_t *session)
+static int onReadEvent(const lsi_session_t *session)
 {
     LsLuaSession *pSession = getLuaSess(session);
     if (pSession == NULL)
@@ -223,7 +223,7 @@ static int onReadEvent(lsi_session_t *session)
 }
 
 
-static int onWriteEvent(lsi_session_t *session)
+static int onWriteEvent(const lsi_session_t *session)
 {
     LsLuaSession *pSession = getLuaSess(session);
 
@@ -259,12 +259,19 @@ static int _init(lsi_module_t *pModule)
     return 0;
 }
 
-const char *myParam[] =
+lsi_config_key_t myParam[] =
 {
-    "lib",
-    "maxruntime",
-    "maxlinecount",
-    NULL
+    {"luarewritepath", },
+    {"luaauthpath", },
+    {"luaheaderfilterpath", },
+    {"luabodyfilterpath", },
+    {"luapath", },
+    {"lib", },
+    {"maxruntime", },
+    {"maxlinecount", },
+    {"jitlinemod", },
+    {"pause", }, 
+    {NULL, }
 };
 
 static lsi_reqhdlr_t lslua_mod_handler = { luaHandler, onReadEvent,

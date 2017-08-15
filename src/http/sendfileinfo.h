@@ -80,7 +80,7 @@ public:
         m_pAioBuf = NULL;
         m_lAioLen = 0;
     }
-    int readyCacheData(char compress);
+    int readyCacheData(char compress, char mode = 1);
     
     void release();
 

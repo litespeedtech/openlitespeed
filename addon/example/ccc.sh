@@ -20,6 +20,17 @@ if [ ! -f $1 ] ; then
 fi
 
 
+if [ "x$LSIAPIDIR" = "x" ]; then
+    #if not set the LSIAPIDIR, use the default location
+    LSIAPIDIR=../../
+fi
+
+if [ ! -d "$LSIAPIDIR/include" ]; then
+    echo "Directory $LSIAPIDIR/include missing"
+    echo
+    exit 1
+fi
+
 TARGET=`basename $1 .c`
 echo Target=$TARGET
 echo
@@ -47,14 +58,13 @@ else
 fi
 
 
-
-gcc -g -Wall -fPIC -c -D_REENTRANT $(getconf LFS_CFLAGS)   $TARGET.c -I "../../src" -I "../../include"
+gcc -g -Wall -fPIC -c -D_REENTRANT $(getconf LFS_CFLAGS)   $TARGET.c -I "$LSIAPIDIR/src" -I "$LSIAPIDIR/include"
 gcc -g -Wall -fPIC $UNDEFINED_FLAG  $(getconf LFS_CFLAGS)  -o $TARGET.so $TARGET.o -shared $GDLIB
 
 if [ -f $(pwd)/$TARGET.so ] ; then
 	echo -e "\033[38;5;71m$TARGET.so created.\033[39m"
 else
-    echo -e "\033[38;5;203mError, $TARGET.so does not exist.\033[39m"
+    echo -e "\033[38;5;203mError, $TARGET.so does not exist, failed.\033[39m"
 fi
 
 if [ -f $TARGET.o ] ; then

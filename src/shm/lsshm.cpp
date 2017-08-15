@@ -183,6 +183,8 @@ LsShm::~LsShm()
         getBase()->remove(m_pFileName);
     }
     cleanup();
+    if (m_pGPool)
+        delete m_pGPool;
 }
 
 
@@ -294,7 +296,7 @@ LsShm *LsShm::open(const char *mapName, LsShmXSize_t initsize,
 {
     int i;
     LsShm *pObj;
-    char buf[0x1000];
+    char buf[0x1000] = "";
 
     if (mapName == NULL)
         return NULL;
@@ -496,11 +498,10 @@ LsShmStatus_t LsShm::newShmMap(LsShmSize_t size, uint64_t id)
     x_pShmMap->x_stat.m_iFileSize = size;               // x_iMaxSize
     x_pShmMap->x_stat.m_iUsedSize = LSSHM_SHM_UNITSIZE; // x_iCurSize
 
-    x_pShmMap->x_iLockOffset = 0;
-    if (((m_pShmLock = allocLock()) == NULL)
+    if (((x_pShmMap->x_iLockOffset = allocLock()) == 0)
+        || (m_pShmLock = offset2pLock(x_pShmMap->x_iLockOffset)) == NULL
         || (setupLocks() != LSSHM_OK))
         return LSSHM_ERROR;
-    x_pShmMap->x_iLockOffset = pLock2offset(m_pShmLock);
 
     return LSSHM_OK;
 }
@@ -625,6 +626,13 @@ LsShmStatus_t LsShm::initShm(const char *mapName, LsShmXSize_t size,
             return LSSHM_BADVERSION;
         }
 
+        if (pShmMap->x_stat.m_iFileSize != mystat.st_size)
+        {
+            SHM_WARN("SHM file [%s] size: %lld, does not match x_stat.m_iFileSize: %ld, correct it",
+                     m_pFileName, mystat.st_size, pShmMap->x_stat.m_iFileSize);
+            pShmMap->x_stat.m_iFileSize = mystat.st_size;
+        }
+        
         // expand the file if needed... won't shrink
         if (size > pShmMap->x_stat.m_iFileSize)
         {
@@ -640,6 +648,13 @@ LsShmStatus_t LsShm::initShm(const char *mapName, LsShmXSize_t size,
         if (mapAddrMap(size) != LSSHM_OK)
             return LSSHM_ERROR;
 
+        if (x_pShmMap->x_iLockOffset != 36)
+        {
+            SHM_WARN("SHM file [%s] bad lock offset: %lld, it should be always 36, correct it",
+                     m_pFileName, x_pShmMap->x_iLockOffset);
+            x_pShmMap->x_iLockOffset = 36;
+        }
+        
         m_pShmLock = offset2pLock(x_pShmMap->x_iLockOffset);
     }
 
@@ -662,11 +677,12 @@ LsShmStatus_t LsShm::expand(LsShmXSize_t incrSize)
 
     //unmap();
     xsize += incrSize;
+    x_pShmMap->x_stat.m_iFileSize = xsize;
+    
     if (mapAddrMap(xsize) != LSSHM_OK)
     {
         return LSSHM_ERROR;
     }
-    x_pShmMap->x_stat.m_iFileSize = xsize;
 
     return LSSHM_OK;
 }
@@ -697,7 +713,20 @@ LsShmStatus_t LsShm::remap()
     SHM_NOTICE("LsShm::remap %6d %X %X %X",
                getpid(), x_pShmMap, x_pShmMap->x_stat.m_iFileSize, m_iMaxSizeO);
 #endif
-
+    struct stat mystat;
+    if (fstat(m_iFd, &mystat) < 0)
+        return LSSHM_BADMAPFILE;
+    if (mystat.st_size != x_pShmMap->x_stat.m_iFileSize)
+    {
+        setErrMsg(LSSHM_SYSERROR, "%s: real file size: %lu, SHM stats file size: %lu.",
+                  m_pFileName, (unsigned long)mystat.st_size, 
+                  (unsigned long)x_pShmMap->x_stat.m_iFileSize);
+        if ( x_pShmMap->x_stat.m_iFileSize - mystat.st_size > 100 * 1024 * 1024)
+        {
+            LsShmMap mapCopy = *x_pShmMap;
+            assert( "bad file size." == (char *)&mapCopy);
+        }
+    }
     LsShmXSize_t size = x_pShmMap->x_stat.m_iFileSize;
     //unmap();
     return mapAddrMap(size);
@@ -736,17 +765,21 @@ LsShmOffset_t LsShm::allocPage(LsShmSize_t pagesize, int &remap)
     {
         LsShmXSize_t needSize;
         // min 16 unit at a time
-        needSize = ((pagesize - availSize) > (16 * LSSHM_SHM_UNITSIZE)) 
-                   ? (pagesize - availSize) : (16 * LSSHM_SHM_UNITSIZE);
 
         LsShmSize_t availAddrSize = m_addrMap.getAvailAddrSpace(
             x_pShmMap->x_stat.m_iUsedSize, pagesize);
+        LS_DBG("[SHM] [PID:%d] To alloc page: %d bytes at offset: %ld, availAddr: %d\n",
+                getpid(), pagesize, (long)x_pShmMap->x_stat.m_iUsedSize, availAddrSize);
+        needSize = (pagesize - availSize);
         if (pagesize > availAddrSize)
         {
             needSize += availAddrSize; 
         }
+        LsShmXSize_t targetSize = x_pShmMap->x_stat.m_iFileSize + needSize;
+        targetSize = (targetSize + (16 * LSSHM_SHM_UNITSIZE - 1)) &
+                        ~(16 * LSSHM_SHM_UNITSIZE - 1);
         
-        if (expand(roundToPageSize(needSize)) != LSSHM_OK)
+        if (expand(targetSize - x_pShmMap->x_stat.m_iFileSize) != LSSHM_OK)
         {
             offset = 0;
             goto out;

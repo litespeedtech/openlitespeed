@@ -31,6 +31,7 @@
 #define ADDR_ONLY       4
 #define DO_NSLOOKUP_DIRECT  8
 
+class AdnsReq;
 class GSockAddr
 {
 private:
@@ -109,7 +110,7 @@ public:
 
     int asyncSet(int family, const char *pURL, int tag
                  , int (*lookup_pf)(void *arg, const long lParam, void *pParam)
-                 , void *ctx);
+                 , void *ctx, AdnsReq **pReq);
 
     int setHttpUrl(const char *pHttpUrl, const int len);
     int parseAddr(const char *pString);

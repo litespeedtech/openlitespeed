@@ -36,17 +36,17 @@
 extern lsi_module_t MNAME;
 
 
-void timer_callback(void *session)
+void timer_callback(const void *session)
 {
 
     int len;
-    const char *qs = g_api->get_req_query_string((lsi_session_t *)session,
+    const char *qs = g_api->get_req_query_string((const lsi_session_t *)session,
                      &len);
     if (len > 1 && strstr(qs, "11"))
-        g_api->register_req_handler((lsi_session_t *)session, &MNAME, 12);
+        g_api->register_req_handler((const lsi_session_t *)session, &MNAME, 12);
 
 
-    g_api->create_session_resume_event((lsi_session_t *)session, &MNAME);
+    g_api->create_session_resume_event((const lsi_session_t *)session, &MNAME);
 }
 
 void *thread_callback(void *session)
@@ -96,14 +96,14 @@ static lsi_serverhook_t serverHooks[] =
     LSI_HOOK_END   //Must put this at the end position
 };
 
-static int _init(lsi_module_t *pModule)
+static int init_module(lsi_module_t *pModule)
 {
     return 0;
 }
 
 
 //The first time the below function will be called, then onWriteEvent will be called next and next
-static int PsHandlerProcess(lsi_session_t *session)
+static int PsHandlerProcess(const lsi_session_t *session)
 {
     char tmBuf[30];
     time_t t;
@@ -126,4 +126,4 @@ static int PsHandlerProcess(lsi_session_t *session)
 }
 
 lsi_reqhdlr_t myhandler = { PsHandlerProcess, NULL, NULL, NULL };
-lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, _init, &myhandler, NULL, "", serverHooks};
+lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, init_module, &myhandler, NULL, "", serverHooks};

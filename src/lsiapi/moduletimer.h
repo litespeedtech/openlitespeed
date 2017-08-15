@@ -36,7 +36,7 @@ class ModTimerList : public TSingleton<ModTimerList>
     GHash               m_timerHash;
     ObjPool<ModTimer>   m_timerPool;
 
-    static void timerCleanup(void *notused);
+    static void timerCleanup(const void *notused);
     static void initCleanup();
 
     void operator=(const ModTimerList &);
@@ -46,7 +46,7 @@ class ModTimerList : public TSingleton<ModTimerList>
 public:
 
     int addTimer(unsigned int timeout_ms, int repeat,
-                 lsi_timercb_pf timer_cb, void *timer_cb_param);
+                 lsi_timercb_pf timer_cb, const void *timer_cb_param);
     int removeTimer(int iId);
 
     int checkExpired();

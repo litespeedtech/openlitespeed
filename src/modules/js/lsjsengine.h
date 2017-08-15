@@ -45,16 +45,16 @@ public:
     // only three functions will be used to by handler
     // static int init( TYPE type, const char * pDynLibPath );
     static int init();
-    static int isReady(lsi_session_t
+    static int isReady(const lsi_session_t
                        *session);                      // setup Session and get ready
-    static int runScript(lsi_session_t *session
+    static int runScript(const lsi_session_t *session
                          , LsJsUserParam *pUser
                          , const char *scriptpath
                         );
 public:
     // module parameter setup
-    static void *parseParam(const char *param
-                            , int param_len
+    static void *parseParam(module_param_info_t *param
+                            , int param_count
                             , void *initial_config
                             , int level
                             , const char *name);

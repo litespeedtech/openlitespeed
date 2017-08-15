@@ -14,6 +14,14 @@ set(libUnitTest  libUnitTest++.a)
 #You can run the dlbssl.sh to make them ready
 set(BSSL_ADD_LIB  libdecrepit.a)
 ##########################################################################################
+#If you want to use Brotli Compression, just un-comment out the following commands
+#set(BROTLI_ADD_LIB  libbrotlidec.a libbrotlienc.a libbrotlicommon.a)
+#add_definitions(-DUSE_BROTLI)
+##########################################################################################
+#If you want to use IP2Location, just un-comment out the following commands
+set(IP2LOC_ADD_LIB  libIP2Location.a)
+add_definitions(-DUSE_IP2LOCATION)
+##########################################################################################
 
 
 add_definitions(-DTEST_OUTPUT_PLAIN_CONF)
@@ -88,6 +96,7 @@ SET(unittest_STAT_SRCS
    test/util/ghashtest.cpp
    test/util/linkedobjtest.cpp
    test/util/gzipbuftest.cpp
+   test/util/brotlibuftest.cpp
    test/util/vmembuftest.cpp
    test/util/gpathtest.cpp
    test/util/poolalloctest.cpp
@@ -114,6 +123,7 @@ SET(unittest_STAT_SRCS
    test/lsiapi/moduletimertest.cpp
    test/lsiapi/lsiapihookstest.cpp
    test/lsiapi/envhandler.cpp
+   test/lsiapi/moduleconf.cpp
    test/lsr/ls_ahotest.cpp
    test/lsr/ls_confparsertest.cpp
    test/lsr/ls_base64test.cpp
@@ -207,11 +217,12 @@ add_executable(ls_shmhashstat
 # So for example, if edio depends on your new directory, your directory
 # should be listed AFTER edio.  PLEASE TRY TO KEEP THIS NEAT!
 SET( litespeedlib
-    modgzip lsiapi main http lsiapi spdy ssi 
+    modgzip lsiapi main http lsiapi spdy ssi
     registry cgi fcgi jk extensions lsapi proxy
     edio socket sslpp lsshm thread log4cxx GeoIP adns
     -Wl,--whole-archive util lsr -Wl,--no-whole-archive
-    udns pthread rt ${CMAKE_DL_LIBS} ${libUnitTest} libssl.a libcrypto.a ${BSSL_ADD_LIB})
+    udns pthread rt ${CMAKE_DL_LIBS} ${libUnitTest} libssl.a libcrypto.a ${BSSL_ADD_LIB}
+    ${BROTLI_ADD_LIB} ${IP2LOC_ADD_LIB})
 
 target_link_libraries(openlitespeed ${litespeedlib} )
 

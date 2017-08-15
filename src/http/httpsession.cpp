@@ -2652,7 +2652,7 @@ int HttpSession::setupGzipBuf()
         if (m_pGzipBuf)
         {
             m_pGzipBuf->setCompressCache(m_pRespBodyBuf);
-            if ((m_pGzipBuf->init(GzipBuf::GZIP_DEFLATE,
+            if ((m_pGzipBuf->init(GzipBuf::COMPRESSOR_COMPRESS,
                                   HttpServerConfig::getInstance().getCompressLevel()) == 0) &&
                 (m_pGzipBuf->beginStream() == 0))
             {
@@ -2681,7 +2681,7 @@ void HttpSession::releaseGzipBuf()
 {
     if (m_pGzipBuf)
     {
-        if (m_pGzipBuf->getType() == GzipBuf::GZIP_DEFLATE)
+        if (m_pGzipBuf->getType() == GzipBuf::COMPRESSOR_COMPRESS)
             HttpResourceManager::getInstance().recycle(m_pGzipBuf);
         else
             HttpResourceManager::getInstance().recycleGunzip(m_pGzipBuf);
@@ -2696,7 +2696,7 @@ int HttpSession::appendDynBodyEx(const char *pBuf, int len)
     if (len == 0)
         return 0;
 
-    if ((m_pGzipBuf) && (m_pGzipBuf->getType() == GzipBuf::GZIP_DEFLATE))
+    if ((m_pGzipBuf) && (m_pGzipBuf->getType() == GzipBuf::COMPRESSOR_COMPRESS))
     {
         ret = m_pGzipBuf->write(pBuf, len);
         //end of written response body
@@ -3787,7 +3787,7 @@ int HttpSession::sendStaticFileEx(SendFileInfo *pData)
     int iModeSF = HttpServerConfig::getInstance().getUseSendfile();
     if (iModeSF && fd != -1 && !isSSL() && !getStream()->isSpdy()
         && (!getGzipBuf() ||
-            (pData->getECache() == pData->getFileData()->getGziped())))
+            (pData->getECache() == pData->getFileData()->getGzip())))
     {
         len = writeRespBodySendFile(fd, pData->getCurPos(), pData->getRemain());
         LS_DBG_M(getLogSession(), "writeRespBodySendFile() returned %lld.", (long long)len);
@@ -3942,13 +3942,6 @@ int HttpSession::finalizeHeader(int ver, int code)
     int ret;
     getResp()->getRespHeaders().addStatusLine(ver, code,
             m_request.isKeepAlive());
-    HttpVHost *host = (HttpVHost *)m_request.getVHost();
-    if (host)
-    {
-        const AutoStr2 &str = host->getSpdyAdHeader();
-        if (!isSSL() && str.len() > 0)
-            getResp()->appendHeader("Alternate-Protocol", 18, str.c_str(), str.len());
-    }
 
     if (m_sessionHooks.isEnabled(LSI_HKPT_SEND_RESP_HEADER))
     {
@@ -3968,7 +3961,8 @@ int HttpSession::finalizeHeader(int ver, int code)
 int HttpSession::updateContentCompressible()
 {
     int compressible = 0;
-    if (m_request.gzipAcceptable() == GZIP_REQUIRED)
+    if ((m_request.gzipAcceptable() == GZIP_REQUIRED)
+        || (m_request.brAcceptable() == BR_REQUIRED))
     {
         int len;
         char *pContentType = (char *)m_response.getRespHeaders().getHeader(
@@ -3981,7 +3975,10 @@ int HttpSession::updateContentCompressible()
             pContentType[len] = ch;
         }
         if (!compressible)
+        {
             m_request.andGzip(~GZIP_ENABLED);
+            m_request.andBr(~BR_ENABLED);
+        }
     }
     return compressible;
 }
@@ -3990,11 +3987,11 @@ int HttpSession::updateContentCompressible()
 int HttpSession::contentEncodingFixup()
 {
     int len;
-    char gz = m_request.gzipAcceptable();
     int requireChunk = 0;
     const char *pContentEncoding = m_response.getRespHeaders().getHeader(
                                        HttpRespHeaders::H_CONTENT_ENCODING, &len);
-    if (!(gz & REQ_GZIP_ACCEPT))
+    if ((!(m_request.gzipAcceptable() & REQ_GZIP_ACCEPT))
+        && (!(m_request.brAcceptable() & REQ_BR_ACCEPT)))
     {
         if (pContentEncoding)
         {
@@ -4169,6 +4166,16 @@ void HttpSession::resetEvtcb()
 {
     evtcb_head = NULL;
     back_ref_ptr = NULL;
+}
+
+
+void HttpSession::cancelEvent(evtcbnode_s * v)
+{
+    if (back_ref_ptr == EvtcbQue::getSessionRefPtr(v))
+    {
+        back_ref_ptr = NULL;
+    }
+    EvtcbQue::getInstance().recycle(v);
 }
 
 

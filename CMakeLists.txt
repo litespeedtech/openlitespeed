@@ -10,8 +10,9 @@ set(openlitespeed_VERSION
   ${FOOBAR_MAJOR_VERSION}.${FOOBAR_MINOR_VERSION}.${FOOBAR_PATCH_VERSION})
 
 SET(CMAKE_INCLUDE_CURRENT_DIR ON)
-include_directories( BEFORE ssl/include )
-include_directories( include )
+
+include_directories( include ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/include/)
+link_directories( ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/lib/)
 
 SET (CMAKE_C_COMPILER         "/usr/bin/clang")
 SET (CMAKE_CXX_COMPILER       "/usr/bin/clang++")

@@ -192,6 +192,11 @@ public:
         add(s_gzipHeaders, 2);
     }
 
+    void addBrotliEncodingHeader()
+    {
+        add(s_brHeaders, 2);
+    }
+
     void appendChunked()
     {
         add(&s_chunkedHeader, 1);
@@ -215,7 +220,7 @@ public:
 
 
 private:
-    ls_xpool_t    *m_pool;
+    ls_xpool_t     *m_pool;
     AutoBuf         m_buf;
     TObjArray< resp_kvpair > m_aKVPairs;
     unsigned char   m_KVPairindex[H_HEADER_END];
@@ -225,12 +230,12 @@ private:
     short           m_iHeaderRemovedCount;
     short           m_iHeaderUniqueCount;
     short           m_hLastHeaderKVPairIndex;
-    short           m_iHeadersTotalLen;
+    int             m_iHeadersTotalLen;
 
     char            m_iHttpVersion;
     char            m_iKeepAlive;
 
-    static int s_iHeaderLen[H_HEADER_END + 1];
+    static int      s_iHeaderLen[H_HEADER_END + 1];
 
     int             getFreeSpaceCount() const {    return m_aKVPairs.getCapacity() - m_aKVPairs.getSize();   };
     void            incKVPairs(int num);
@@ -263,6 +268,7 @@ private:
     static char s_sDateHeaders[30];
     static http_header_t   s_commonHeaders[2];
     static http_header_t   s_gzipHeaders[2];
+    static http_header_t   s_brHeaders[2];
     static http_header_t   s_keepaliveHeader;
     static http_header_t   s_chunkedHeader;
     static http_header_t   s_concloseHeader;

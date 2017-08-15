@@ -142,7 +142,7 @@ int LsLuaEngine::init()
 }
 
 
-int LsLuaEngine::isReady(lsi_session_t *session)
+int LsLuaEngine::isReady(const lsi_session_t *session)
 {
     return s_iReady;
 }
@@ -278,7 +278,7 @@ int LsLuaEngine::loadRef(LsLuaSession *pSession, lua_State *L)
 }
 
 
-LsLuaSession *LsLuaEngine::prepState(lsi_session_t *session,
+LsLuaSession *LsLuaEngine::prepState(const lsi_session_t *session,
                                      const char *scriptpath,
                                      LsLuaUserParam *pUser,
                                      int iCurHook)
@@ -325,7 +325,7 @@ LsLuaSession *LsLuaEngine::prepState(lsi_session_t *session,
 }
 
 
-int LsLuaEngine::runState(lsi_session_t *session, LsLuaSession *pSandbox,
+int LsLuaEngine::runState(const lsi_session_t *session, LsLuaSession *pSandbox,
                           int iCurHook)
 {
     int ret;
@@ -372,7 +372,7 @@ int LsLuaEngine::writeToNextFilter(lsi_param_t *rec,
                                    const char *pOut, int iOutLen)
 {
     int ret, len;
-    lsi_session_t *session = rec->session;
+    const lsi_session_t *session = rec->session;
     ls_xloopbuf_t *pBuf = pUser->getPendingBuf();
     if (pBuf && ((len = ls_xloopbuf_size(pBuf)) > 0))
     {
@@ -409,7 +409,7 @@ int LsLuaEngine::writeToNextFilter(lsi_param_t *rec,
 }
 
 
-int LsLuaEngine::runScript(lsi_session_t *session, const char *scriptpath,
+int LsLuaEngine::runScript(const lsi_session_t *session, const char *scriptpath,
                            LsLuaUserParam *pUser, LsLuaSession **ppSession,
                            int iCurHook)
 {
@@ -470,7 +470,7 @@ int LsLuaEngine::runFilterScript(lsi_param_t *rec,
 {
     int ret, len;
     LsLuaSession *pSandbox;
-    lsi_session_t *session = rec->session;
+    const lsi_session_t *session = rec->session;
 
     if ((ret = LsLuaEngine::writeToNextFilter(rec, pUser, NULL, 0)) != 1)
         return ret;
@@ -525,23 +525,37 @@ lua_State *LsLuaEngine::injectLsiapi(lua_State *L)
     return pState;
 }
 
+extern lsi_config_key_t myParam[];
+static int setFileHook(int index, module_param_info_t *param,
+                       LsLuaUserParam *pUser, const char *name)
+{
+    struct stat st;
+    if (g_api->get_file_stat(NULL, param->val, param->val_len, &st) != 0)
+    {
+        g_api->log(NULL, LSI_LOG_ERROR,
+                   "Lua parseParam: %s invalid.",
+                   myParam[param->key_index].config_key);
+        return -1;
+    }
+    
+    pUser->setFilterPath(index, param->val, param->val_len);
+    g_api->log(NULL, LSI_LOG_NOTICE,
+               "%s LUA SET %s = %.*s\n",
+               name,
+               myParam[param->key_index],
+               param->val,
+               param->val_len);
+    return 0;
+}
 
-void *LsLuaEngine::parseParam(const char *param, int param_len,
+void *LsLuaEngine::parseParam(module_param_info_t *param, int param_count,
                               void *initial_config, int level,
                               const char *name)
 {
     int sec, line;
     char *cp;
-    struct stat st;
-    ls_confparser_t confparser;
-    ls_objarray_t *pList;
-    const char *pLineBegin, *pLineEnd, *pParamEnd = param + param_len;
-
     LsLuaUserParam *pParent = (LsLuaUserParam *)initial_config;
     LsLuaUserParam *pUser = new LsLuaUserParam(level);
-
-    g_api->log(NULL, LSI_LOG_DEBUG, "%s: LUA PARSEPARAM %d [%.20s]\n",
-               name, level, param ? param : "");
 
     if ((pUser == NULL) || (!pUser->isReady()))
     {
@@ -551,212 +565,135 @@ void *LsLuaEngine::parseParam(const char *param, int param_len,
     if (pParent)
         *pUser = *pParent;
 
-    if (param == NULL)
+    if (param == NULL || param_count <= 0)
     {
         s_iFirstTime = 0;
         return pUser;
     }
-    g_api->log(NULL, LSI_LOG_DEBUG,
-               "%s: LUA PARSEPARAM %d %s Parent %2d [%.20s] %d\n",
-               name, level,
-               (level == LSI_DATA_HTTP) ? "HTTP" : "",
-               pParent ? pParent->getLevel() : -1,
-               param,
-               pParent ? pParent->getMaxRunTime() : -1);
 
-    ls_confparser(&confparser);
-    while ((pLineBegin = ls_getconfline(&param, pParamEnd,
-                                        &pLineEnd)) != NULL)
+    
+    for (int i=0; i<param_count; ++i)
     {
-        pList = ls_confparser_linekv(&confparser, pLineBegin, pLineEnd);
-        if (pList == NULL)
-            continue;
-        ls_str_t *pKey = (ls_str_t *)ls_objarray_getobj(pList, 0);
-        ls_str_t *pValue = (ls_str_t *)ls_objarray_getobj(pList, 1);
-        if (ls_str_len(pValue) == 0)
+        switch(param[i].key_index)
         {
-            g_api->log(NULL, LSI_LOG_ERROR,
-                       "LUA PARSEPARAM NO VALUE GIVEN FOR PARAMETER %.*s\n",
-                       ls_str_len(pKey), ls_str_cstr(pKey));
-            continue;
-        }
-        if (s_iFirstTime)
-        {
-            if (strncasecmp("luarewritepath", ls_str_cstr(pKey),
-                            ls_str_len(pKey)) == 0)
+        case 0:
+            //"luarewritepath"
+            if (s_iFirstTime)
+                setFileHook(LSLUA_HOOK_REWRITE, &param[i], pUser, name);
+            break;
+        case 1:
+            //"luaauthpath"
+            if (s_iFirstTime)
+                setFileHook(LSLUA_HOOK_AUTH, &param[i], pUser, name);
+            break;
+        case 2:
+            //"luaheaderfilterpath"
+            if (s_iFirstTime)
+                setFileHook(LSLUA_HOOK_HEADER, &param[i], pUser, name);
+            break;
+        case 3:
+            //"luabodyfilterpath"
+            if (s_iFirstTime)
+                setFileHook(LSLUA_HOOK_BODY, &param[i], pUser, name);
+            break;
+
+        case 4:
+            //luapath
+            if (s_iFirstTime)
             {
-                if (g_api->get_file_stat(NULL, ls_str_cstr(pValue),
-                                         ls_str_len(pValue), &st) != 0)
-                {
-                    g_api->log(NULL, LSI_LOG_ERROR,
-                               "Lua parseParam: %s invalid.",
-                               "Rewrite Path");
-                    return NULL;
-                }
-                pUser->setFilterPath(LSLUA_HOOK_REWRITE,
-                                     ls_str_cstr(pValue),
-                                     ls_str_len(pValue));
-                g_api->log(NULL, LSI_LOG_NOTICE,
-                           "%s LUA SET %.*s = %.*s\n", name,
-                           ls_str_len(pKey), ls_str_cstr(pKey),
-                           ls_str_len(pValue), ls_str_cstr(pValue));
-                continue;
-            }
-            else if (strncasecmp("luaauthpath", ls_str_cstr(pKey),
-                                 ls_str_len(pKey)) == 0)
-            {
-                if (g_api->get_file_stat(NULL, ls_str_cstr(pValue),
-                                         ls_str_len(pValue), &st) != 0)
-                {
-                    g_api->log(NULL, LSI_LOG_ERROR,
-                               "Lua parseParam: %s invalid.",
-                               "Auth Path");
-                    return NULL;
-                }
-                pUser->setFilterPath(LSLUA_HOOK_AUTH,
-                                     ls_str_cstr(pValue),
-                                     ls_str_len(pValue));
-                g_api->log(NULL, LSI_LOG_NOTICE,
-                           "%s LUA SET %.*s = %.*s\n", name,
-                           ls_str_len(pKey), ls_str_cstr(pKey),
-                           ls_str_len(pValue), ls_str_cstr(pValue));
-                continue;
-            }
-            else if (strncasecmp("luaheaderfilterpath",
-                                 ls_str_cstr(pKey),
-                                 ls_str_len(pKey)) == 0)
-            {
-                if (g_api->get_file_stat(NULL, ls_str_cstr(pValue),
-                                         ls_str_len(pValue), &st) != 0)
-                {
-                    g_api->log(NULL, LSI_LOG_ERROR,
-                               "Lua parseParam: %s invalid.",
-                               "Header Filter Path");
-                    return NULL;
-                }
-                pUser->setFilterPath(LSLUA_HOOK_HEADER,
-                                     ls_str_cstr(pValue),
-                                     ls_str_len(pValue));
-                g_api->log(NULL, LSI_LOG_NOTICE,
-                           "%s LUA SET %.*s = %.*s\n", name,
-                           ls_str_len(pKey), ls_str_cstr(pKey),
-                           ls_str_len(pValue), ls_str_cstr(pValue));
-                continue;
-            }
-            else if (strncasecmp("luabodyfilterpath", ls_str_cstr(pKey),
-                                 ls_str_len(pKey)) == 0)
-            {
-                if (g_api->get_file_stat(NULL, ls_str_cstr(pValue),
-                                         ls_str_len(pValue), &st))
-                {
-                    g_api->log(NULL, LSI_LOG_ERROR,
-                               "Lua parseParam: %s invalid.",
-                               "Body Filter Path");
-                    return NULL;
-                }
-                pUser->setFilterPath(LSLUA_HOOK_BODY,
-                                     ls_str_cstr(pValue),
-                                     ls_str_len(pValue));
-                g_api->log(NULL, LSI_LOG_NOTICE,
-                           "%s LUA SET %.*s = %.*s\n", name,
-                           ls_str_len(pKey), ls_str_cstr(pKey),
-                           ls_str_len(pValue), ls_str_cstr(pValue));
-                continue;
-            }
-            else if (strncasecmp("luapath", ls_str_cstr(pKey),
-                                 ls_str_len(pKey)) == 0)
-            {
-                if ((cp = strndup(ls_str_cstr(pValue),
-                                  ls_str_len(pValue))) != NULL)
+                if ((cp = strndup(param[i].val, param[i].val_len)) != NULL)
                 {
                     if (s_pLuaPath)
                         free(s_pLuaPath);
                     s_pLuaPath = cp;
                 }
                 g_api->log(NULL, LSI_LOG_NOTICE,
-                           "%s LUA SET %.*s = %.*s [%s]\n", name,
-                           ls_str_len(pKey), ls_str_cstr(pKey),
-                           ls_str_len(pValue), ls_str_cstr(pValue),
-                           s_pLuaPath ? s_pLuaPath : s_pSysLuaPath);
-                continue;
+                   "%s LUA SET %s = %.*s [%s]\n", name,
+                       myParam[param[i].key_index],
+                       param[i].val,
+                       param[i].val_len,
+                       s_pLuaPath ? s_pLuaPath : s_pSysLuaPath);
             }
-            else if ((strncasecmp("lib", ls_str_cstr(pKey),
-                                  ls_str_len(pKey)) == 0)
-                     || (strncasecmp("lua.so", ls_str_cstr(pKey),
-                                     ls_str_len(pKey)) == 0))
+            break;
+        case 5:
+            //"lib"
+            if (s_iFirstTime)
             {
-                if ((cp = strndup(ls_str_cstr(pValue),
-                                  ls_str_len(pValue))) != NULL)
+                if ((cp = strndup(param[i].val, param[i].val_len)) != NULL)
                 {
                     if (s_pLuaLib)
                         free(s_pLuaLib);
                     s_pLuaLib = cp;
                 }
                 g_api->log(NULL, LSI_LOG_NOTICE,
-                           "%s LUA SET %.*s = %.*s [%s]\n", name,
-                           ls_str_len(pKey), ls_str_cstr(pKey),
-                           ls_str_len(pValue), ls_str_cstr(pValue),
-                           s_pLuaLib ? s_pLuaLib : "NULL");
-                continue;
+                   "%s LUA SET %s = %.*s [%s]\n", name,
+                       myParam[param[i].key_index],
+                       param[i].val,
+                       param[i].val_len,
+                       s_pLuaLib ? s_pLuaLib : "NULL");
             }
-        }
+            break;
 
-        if (strncasecmp("maxruntime", ls_str_cstr(pKey),
-                        ls_str_len(pKey)) == 0)
-        {
-            if ((sec = strtol(ls_str_cstr(pValue), NULL, 0)) > 0)
+        case 6:
+            //"maxruntime"
+            if ((sec = strtol(param[i].val, NULL, 0)) > 0)
             {
                 if (s_iFirstTime)
                     s_iMaxRunTime = sec;
                 pUser->setMaxRunTime(sec);
             }
             g_api->log(NULL, LSI_LOG_NOTICE,
-                       "%s LUA SET %.*s = %.*s msec [%d %s]\n", name,
-                       ls_str_len(pKey), ls_str_cstr(pKey),
-                       ls_str_len(pValue), ls_str_cstr(pValue),
+                       "%s LUA SET %s = %.*s msec [%d %s]\n", name,
+                       myParam[param[i].key_index],
+                       param[i].val,
+                       param[i].val_len,
                        pUser->getMaxRunTime(),
                        pUser->getMaxRunTime() ? "ENABLED" : "DISABLED");
-        }
-        else if (strncasecmp("maxlinecount", ls_str_cstr(pKey),
-                             ls_str_len(pKey)) == 0)
-        {
-            if ((line = strtol(ls_str_cstr(pValue), NULL, 0)) >= 0)
+            break;
+            
+        case 7:
+            //"maxlinecount"
+            if ((line = strtol(param[i].val, NULL, 0)) >= 0)
             {
                 if (s_iFirstTime)
                     s_iMaxLineCount = line;
                 pUser->setMaxLineCount(line);
             }
             g_api->log(NULL, LSI_LOG_NOTICE,
-                       "%s LUA SET %.*s = %.*s [%d %s]\n", name,
-                       ls_str_len(pKey), ls_str_cstr(pKey),
-                       ls_str_len(pValue), ls_str_cstr(pValue),
+                       "%s LUA SET %s = %.*s [%d %s]\n", name,
+                       myParam[param[i].key_index],
+                       param[i].val,
+                       param[i].val_len,
                        pUser->getMaxLineCount(),
                        pUser->getMaxLineCount() ? "ENABLED" : "DISABLED");
-        }
-        else if (strncasecmp("jitlinemod", ls_str_cstr(pKey),
-                             ls_str_len(pKey)) == 0)
-        {
-            if ((line = strtol(ls_str_cstr(pValue), NULL, 0)) > 0)
+            break;
+            
+        case 8:
+            //"jitlinemod"
+            if ((line = strtol(param[i].val, NULL, 0)) > 0)
                 s_iJitLineMod = line;
             g_api->log(NULL, LSI_LOG_NOTICE,
-                       "%s LUA SET %.*s = %.*s [%d]\n", name,
-                       ls_str_len(pKey), ls_str_cstr(pKey),
-                       ls_str_len(pValue), ls_str_cstr(pValue),
+                       "%s LUA SET %s = %.*s [%d]\n", name,
+                       myParam[param[i].key_index],
+                       param[i].val,
+                       param[i].val_len,
                        s_iJitLineMod);
-        }
-        else if (strncasecmp("pause", ls_str_cstr(pKey),
-                             ls_str_len(pKey)) == 0)
-        {
-            if ((sec = strtol(ls_str_cstr(pValue), NULL, 0)) > 0)
+            break;
+            
+        case 9:
+            //"pause"
+            if ((sec = strtol(param[i].val, NULL, 0)) > 0)
                 s_iPauseTime = sec;
             g_api->log(NULL, LSI_LOG_NOTICE,
-                       "%s LUA SET %.*s = %.*s [%d]\n", name,
-                       ls_str_len(pKey), ls_str_cstr(pKey),
-                       ls_str_len(pValue), ls_str_cstr(pValue),
+                       "%s LUA SET %s = %.*s [%d]\n", name,
+                       myParam[param[i].key_index],
+                       param[i].val,
+                       param[i].val_len,
                        s_iPauseTime);
+        break;
         }
     }
-    ls_confparser_d(&confparser);
+
     s_iFirstTime = 0;
     return (void *)pUser;
 }
@@ -876,7 +813,7 @@ LsLuaFuncMap *LsLuaFuncMap::s_pMap = {NULL};
 int LsLuaFuncMap::s_iMapCnt = 0;
 
 
-int LsLuaFuncMap::loadLuaScript(lsi_session_t *session, lua_State *L,
+int LsLuaFuncMap::loadLuaScript(const lsi_session_t *session, lua_State *L,
                                 const char *scriptName)
 {
     LsLuaFuncMap *p;
@@ -933,7 +870,7 @@ typedef struct
 } luaFile_t;
 
 
-LsLuaFuncMap::LsLuaFuncMap(lsi_session_t *session, lua_State *L,
+LsLuaFuncMap::LsLuaFuncMap(const lsi_session_t *session, lua_State *L,
                            const char *scriptName)
 {
     char funcName[0x100];

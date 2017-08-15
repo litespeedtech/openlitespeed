@@ -49,17 +49,14 @@ else
     LDFLAGS="$UDNS_OLD_LDFLAGS"
     CPPFLAGS="$UDNS_OLD_CPPFLAGS"
     AC_MSG_WARN([Cannot find udns, will try to build from source code])
-    cd thirdparty/
-    tar xf udns-0.4.tar.gz
-    cd udns-0.4/
-    ./configure
-    make
-    UDNS_HOME=`pwd`
+    ./installudns.sh
+    UDNS_HOME="`pwd`/udns-0.4/"
+    echo UDNS_HOME is ${UDNS_HOME}
     
     LDFLAGS="$LDFLAGS -L${UDNS_HOME} "
     CPPFLAGS="$CPPFLAGS -I${UDNS_HOME} "
     echo UDNS location ${UDNS_HOME}, $LDFLAGS, $CPPFLAGS
-    cd ../../
+
     AC_LANG_SAVE
     AC_LANG_C
     unset ac_cv_lib_udns_dns_init

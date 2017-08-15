@@ -34,25 +34,8 @@ int LsShmTidMgr::init(LsShmHash *pHash, LsShmOffset_t off, bool blkinit)
     m_iOffset = off;
     if (blkinit)
     {
-#ifdef notdef
-        m_pShmLock = m_pHash->getPool()->lockPool()->allocLock();
-        if ((m_pShmLock == NULL) || (setupLock() != 0))
-            return -1;
-#endif
         pTidInfo = getTidInfo();
         ::memset((void *)pTidInfo, 0, sizeof(*pTidInfo));
-#ifdef notdef
-        pTidInfo->x_iLockOff =
-            m_pHash->getPool()->lockPool()->pLock2offset(m_pShmLock);
-#endif
-    }
-    else
-    {
-#ifdef notdef
-        //pTidInfo = getTidInfo();
-        m_pShmLock =
-            m_pHash->getPool()->lockPool()->offset2pLock(pTidInfo->x_iLockOff);
-#endif
     }
     return 0;
 }

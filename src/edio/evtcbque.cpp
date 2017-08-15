@@ -165,7 +165,7 @@ void EvtcbQue::runOne(evtcbnode_s *pObj)
 }
 
 
-evtcbnode_s * EvtcbQue::getNodeObj(evtcb_pf cb, evtcbhead_t *session,
+evtcbnode_s * EvtcbQue::getNodeObj(evtcb_pf cb, const evtcbhead_t *session,
                                    long lParam, void *pParam)
 {
     ls_atomic_spin_lock(&lock_add);
@@ -176,7 +176,7 @@ evtcbnode_s * EvtcbQue::getNodeObj(evtcb_pf cb, evtcbhead_t *session,
     if (pObj)
     {
         pObj->m_callback = cb;
-        pObj->m_pSession = session;
+        pObj->m_pSession = (evtcbhead_t *) session; // violate LSIAPI const - internal code
         pObj->m_lParam = lParam;
         pObj->m_pParam = pParam;
     }
@@ -213,7 +213,7 @@ void EvtcbQue::schedule(evtcbnode_s *pObj, bool nowait)
 }
 
 
-evtcbnode_s *EvtcbQue::schedule(evtcb_pf cb, evtcbhead_t *session,
+evtcbnode_s *EvtcbQue::schedule(evtcb_pf cb, const evtcbhead_t *session,
                           long lParam, void *pParam)
 {
     evtcbnode_s *pObj = getNodeObj(cb, session, lParam, pParam);

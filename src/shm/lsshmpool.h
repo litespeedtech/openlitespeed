@@ -178,12 +178,10 @@ public:
 
 private:
     ls_attr_inline LsShmPoolMem *getPool() const
-    {   return (LsShmPoolMem *)offset2ptr(m_iOffset);   }
+    {   return x_pPool;     }
+    //x_pPool = (LsShmPoolMem *)offset2ptr(m_iOffset));   }
 
     LsShmPoolMap *getDataMap() const;
-
-    int setupLock()
-    {   return m_iAutoLock && ls_shmlock_setup(m_pShmLock); }
 
     void mapLock();
     
@@ -242,6 +240,7 @@ private:
     LsShm              *m_pShm;         // SHM handle
     LsShmStatus_t       m_status;       // Ready ...
     LsShmOffset_t       m_iOffset;      // find from SHM registry
+    LsShmPoolMem       *x_pPool;
     ls_shmlock_t       *m_pShmLock;
     int8_t              m_iAutoLock;
     int8_t              m_iShmOwner;    // indicated if I own the SHM

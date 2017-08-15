@@ -130,3 +130,4 @@ void PCUtil::setCpuAffinityAll()
         getNumProcessors();
     setCpuAffinity(&s_maskAll);
 }
+

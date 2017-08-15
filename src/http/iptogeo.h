@@ -64,8 +64,6 @@ public:
     ~IpToGeo();
 
     int setGeoIpDbFile(const char *pFile, const char *cacheMode);
-    void setUseProxyHeaders(int i)    {   m_useProxyHeaders = i;      }
-    int getUseProxyHeaders() const      {   return m_useProxyHeaders;   }
 
     int lookUp(uint32_t addr, GeoInfo *pInfo);
     int lookUp(const char *pIP, GeoInfo *pInfo);
@@ -82,7 +80,6 @@ private:
     int testGeoIpDbFile(const char *pFile, int flag);
 
     int     m_locDbType;
-    int     m_useProxyHeaders;
     GeoIP *m_pLocation;
     GeoIP *m_pOrg;
     GeoIP *m_pIsp;
