@@ -478,7 +478,7 @@ ls_inline int ls_atomic_spin_unlock(ls_atom_spinlock_t *p)
  * @param[in] p - A pointer to the lock.
  * @return 1 - locked, 0 - not locked.
  *
- * @see ls_atomic_spin_setup, ls_atomic_spin_lock, ls_atomic_spin_trylock
+ * @see ls_atomic_spin_setup, ls_atomic_spin_lock, ls_atomic_spin_trylock 
  *      ls_atomic_spin_unlock
  */
 ls_inline int ls_atomic_spin_locked(ls_atom_spinlock_t *p)
@@ -511,7 +511,7 @@ ls_inline int ls_atomic_spin_pidunlock(ls_atom_spinlock_t *p)
  * @param[in] p - A pointer to the lock.
  * @return 1 - locked, 0 - not locked.
  *
- * @see ls_atomic_spin_setup, ls_atomic_spin_lock, ls_atomic_spin_trylock
+ * @see ls_atomic_spin_setup, ls_atomic_spin_lock, ls_atomic_spin_trylock 
  *      ls_atomic_spin_unlock
  */
 ls_inline int ls_atomic_pidlocked(ls_atom_spinlock_t *p)
@@ -545,3 +545,4 @@ int ls_pspinlock_setup(ls_pspinlock_t *p);
 #endif
 
 #endif //LS_LOCK_H
+
