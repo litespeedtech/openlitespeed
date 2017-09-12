@@ -102,24 +102,23 @@ TEST(ls_buftest_test)
 
 TEST(ls_bufXtest_test)
 {
-    ls_xpool_t pool;
-    ls_xpool_init(&pool);
+    ls_xpool_t *pool = ls_xpool_new();
     ls_buf_t buf;
 #ifdef LSR_BUF_DEBUG
     printf("Start LSR Buf X Test\n");
 #endif
-    CHECK(0 == ls_buf_x(&buf, 0, &pool));
+    CHECK(0 == ls_buf_x(&buf, 0, pool));
     CHECK(0 == ls_buf_size(&buf));
     CHECK(0 == ls_buf_capacity(&buf));
-    CHECK(0 == ls_buf_xreserve(&buf, 0, &pool));
+    CHECK(0 == ls_buf_xreserve(&buf, 0, pool));
     CHECK(0 == ls_buf_capacity(&buf));
     CHECK(ls_buf_end(&buf) == ls_buf_begin(&buf));
 
-    CHECK(0 == ls_buf_xreserve(&buf, 1024, &pool));
+    CHECK(0 == ls_buf_xreserve(&buf, 1024, pool));
     CHECK(1024 <= ls_buf_capacity(&buf));
     CHECK(1048 >= ls_buf_available(&buf));
     ls_buf_used(&buf, 10);
-    CHECK(ls_buf_xreserve(&buf, 15, &pool) == 0);
+    CHECK(ls_buf_xreserve(&buf, 15, pool) == 0);
     CHECK(ls_buf_size(&buf) == ls_buf_end(&buf) - ls_buf_begin(&buf));
     CHECK(ls_buf_available(&buf) == ls_buf_capacity(&buf) - ls_buf_size(&buf));
     ls_buf_clear(&buf);
@@ -128,7 +127,7 @@ TEST(ls_bufXtest_test)
     const char *pStr = "Test String 123  343";
     int len = (int)strlen(pStr);
     CHECK((int)strlen(pStr) == ls_buf_xappend2(&buf, pStr, strlen(pStr),
-            &pool));
+            pool));
     CHECK(ls_buf_size(&buf) == (int)strlen(pStr));
     CHECK(0 == strncmp(pStr, ls_buf_begin(&buf), strlen(pStr)));
     char pBuf[128];
@@ -137,7 +136,7 @@ TEST(ls_bufXtest_test)
 
     for (int i = 0 ; i < 129 ; i ++)
     {
-        int i1 = ls_buf_xappend2(&buf, pStr, len, &pool);
+        int i1 = ls_buf_xappend2(&buf, pStr, len, pool);
         if (i1 == 0)
             CHECK(ls_buf_full(&buf));
         else if (i1 < len)
@@ -151,19 +150,19 @@ TEST(ls_bufXtest_test)
         }
     }
     ls_buf_t lbuf;
-    ls_buf_x(&lbuf, 0, &pool);
+    ls_buf_x(&lbuf, 0, pool);
     ls_buf_swap(&buf, &lbuf);
-    ls_buf_xreserve(&buf, 200, &pool);
+    ls_buf_xreserve(&buf, 200, pool);
     CHECK(200 <= ls_buf_capacity(&buf));
     CHECK(ls_buf_capacity(&buf) >= ls_buf_size(&buf));
     for (int i = 0; i < ls_buf_capacity(&buf); ++i)
-        CHECK(1 == ls_buf_xappend2(&buf, pBuf, 1, &pool));
+        CHECK(1 == ls_buf_xappend2(&buf, pBuf, 1, pool));
 
     CHECK(ls_buf_full(&buf));
-    CHECK(ls_buf_xreserve(&buf, 500, &pool) == 0);
+    CHECK(ls_buf_xreserve(&buf, 500, pool) == 0);
     CHECK(500 <= ls_buf_capacity(&buf));
     ls_buf_clear(&buf);
-    CHECK(ls_buf_xreserve(&buf, 800, &pool) == 0);
+    CHECK(ls_buf_xreserve(&buf, 800, pool) == 0);
     CHECK(ls_buf_available(&buf) >= 800);
 
     ls_buf_used(&buf, 500);
@@ -176,20 +175,20 @@ TEST(ls_bufXtest_test)
     ls_buf_used(&buf, 60);
     CHECK(ls_buf_size(&buf) == oldSize + 60);
 
-    ls_buf_xd(&buf, &pool);
-    ls_buf_xd(&lbuf, &pool);
-    ls_xpool_destroy(&pool);
+    ls_buf_xd(&buf, pool);
+    ls_buf_xd(&lbuf, pool);
+    ls_xpool_delete(pool);
 }
 
 TEST(ls_xbuftest_test)
 {
     ls_xbuf_t buf;
-    ls_xpool_t pool;
+    ls_xpool_t *pool = ls_xpool_new();
 #ifdef LSR_BUF_DEBUG
     printf("Start LSR XBuf Test\n");
 #endif
-    ls_xpool_init(&pool);
-    CHECK(0 == ls_xbuf(&buf, 0, &pool));
+    
+    CHECK(0 == ls_xbuf(&buf, 0, pool));
     CHECK(0 == ls_xbuf_size(&buf));
     CHECK(0 == ls_xbuf_capacity(&buf));
     CHECK(0 == ls_xbuf_reserve(&buf, 0));
@@ -232,7 +231,7 @@ TEST(ls_xbuftest_test)
         }
     }
     ls_xbuf_t lbuf;
-    ls_xbuf(&lbuf, 0, &pool);
+    ls_xbuf(&lbuf, 0, pool);
     ls_xbuf_swap(&buf, &lbuf);
     ls_xbuf_reserve(&buf, 200);
     CHECK(200 <= ls_xbuf_capacity(&buf));
@@ -259,7 +258,7 @@ TEST(ls_xbuftest_test)
 
     ls_xbuf_d(&buf);
     ls_xbuf_d(&lbuf);
-    ls_xpool_destroy(&pool);
+    ls_xpool_delete(pool);
 }
 
 #endif

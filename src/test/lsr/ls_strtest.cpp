@@ -65,33 +65,32 @@ TEST(ls_strtest_pooltest)
 #ifdef LSR_STR_DEBUG
     printf("Start LSR Str XPool Test\n");
 #endif
-    ls_xpool_t pool;
-    ls_xpool_init(&pool);
-    ls_str_t *pFive = ls_str_xnew(NULL, 0, &pool);
+    ls_xpool_t *pool = ls_xpool_new();
+    ls_str_t *pFive = ls_str_xnew(NULL, 0, pool);
     CHECK(ls_str_len(pFive) == 0);
-    CHECK(ls_str_xsetstr(pFive, "apple", 5, &pool) == 5);
+    CHECK(ls_str_xsetstr(pFive, "apple", 5, pool) == 5);
     CHECK(memcmp(ls_str_cstr(pFive), "apple", 5) == 0);
-    ls_str_xappend(pFive, "grape", 5, &pool);
+    ls_str_xappend(pFive, "grape", 5, pool);
     CHECK(memcmp(ls_str_cstr(pFive), "applegrape", 10) == 0);
     ls_str_setlen(pFive, 7);
     CHECK(ls_str_len(pFive) == 7);
     CHECK(memcmp(ls_str_cstr(pFive), "applegr", 7) == 0);
 
-    ls_str_t *pSix = ls_str_xnew("applegr", 7, &pool);
+    ls_str_t *pSix = ls_str_xnew("applegr", 7, pool);
     ls_str_t pSeven;
-    ls_str_x(&pSeven, "applegr", 7, &pool);
+    ls_str_x(&pSeven, "applegr", 7, pool);
     ls_str_t pEight;
-    CHECK(ls_str_xcopy(&pEight, &pSeven, &pool) != NULL);
+    CHECK(ls_str_xcopy(&pEight, &pSeven, pool) != NULL);
     CHECK(memcmp(ls_str_cstr(pFive), ls_str_cstr(pSix), 7) == 0);
     CHECK(memcmp(ls_str_cstr(pSix), ls_str_cstr(&pSeven), 7) == 0);
     CHECK(memcmp(ls_str_cstr(pSix), ls_str_cstr(&pEight), 7) == 0);
 
 
-    ls_str_xdelete(pFive, &pool);
-    ls_str_xdelete(pSix, &pool);
-    ls_str_xd(&pSeven, &pool);
-    ls_str_xd(&pEight, &pool);
-    ls_xpool_destroy(&pool);
+    ls_str_xdelete(pFive, pool);
+    ls_str_xdelete(pSix, pool);
+    ls_str_xd(&pSeven, pool);
+    ls_str_xd(&pEight, pool);
+    ls_xpool_delete(pool);
 }
 /*
 TEST( test_ls_strhashtest )

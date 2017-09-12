@@ -41,8 +41,8 @@ class HttpRange
     char   *m_pPartHeaderEnd;
     char   *m_pCurHeaderPos;
 
-    ByteRange *getSlot(ls_xpool_t &pool);
-    int  checkAndInsert(ByteRange &range, ls_xpool_t &pool);
+    ByteRange *getSlot(ls_xpool_t *pool);
+    int  checkAndInsert(ByteRange &range, ls_xpool_t *pool);
     void makeBoundaryString();
 
 public:
@@ -50,7 +50,7 @@ public:
     ~HttpRange() {}
 
     int  count() const;
-    int  parse(const char *pRange, ls_xpool_t &pool);
+    int  parse(const char *pRange, ls_xpool_t *pool);
     int  getContentRangeString(int n, char *pBuf, int len) const;
     int  getContentOffset(int n, off_t &begin, off_t &end) const;
     void setContentLen(off_t entityLen)    { m_lEntityLen = entityLen; }

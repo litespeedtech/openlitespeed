@@ -111,6 +111,8 @@ class LshttpdMain
     int init(int argc, char *argv[]);
     void applyChanges();
     int testRunningServer();
+    const char *getPidFile();
+    
     void printVersion();
     void parseOpt(int argc, char *argv[]);
     char *allocateBlackBoard();

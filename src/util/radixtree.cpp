@@ -171,10 +171,10 @@ int RadixTree::setRootLabel(const char *pLabel, int iLabelLen)
     if (pLabel == NULL || iLabelLen == 0)
         return LS_FAIL;
     if (m_pRoot == NULL)
-        m_pRoot = (rnheader_t *)rnDoAlloc(m_iFlags, &m_pool,
+        m_pRoot = (rnheader_t *)rnDoAlloc(m_iFlags, m_pool,
                                           rnh_size(iLabelLen));
     else
-        m_pRoot = (rnheader_t *)rnDoRealloc(m_iFlags, &m_pool, m_pRoot,
+        m_pRoot = (rnheader_t *)rnDoRealloc(m_iFlags, m_pool, m_pRoot,
                                             rnh_size(iLabelLen));
     if (m_pRoot == NULL)
         return LS_FAIL;
@@ -190,7 +190,7 @@ void RadixTree::setNoContext()
 {
     if (m_pRoot == NULL)
     {
-        m_pRoot = (rnheader_t *)rnDoAlloc(m_iFlags, &m_pool,
+        m_pRoot = (rnheader_t *)rnDoAlloc(m_iFlags, m_pool,
                                           sizeof(rnheader_t));
         m_pRoot->body = NULL;
     }
@@ -228,7 +228,7 @@ RadixNode *RadixTree::insert(const char *pLabel, int iLabelLen,
     }
 
     if ((m_iFlags & RTFLAG_GLOBALPOOL) == 0)
-        pool = &m_pool;
+        pool = m_pool;
 
     if (iChildLen == 0)
     {

@@ -19,6 +19,8 @@
 #include <lsr/ls_xpool.h>
 #include <lsr/ls_pool.h>
 #include <lsdef.h>
+#include <lsr/ls_xpool_int.h>
+
 #ifdef USE_VALGRIND
 #include <valgrind/memcheck.h>
 #endif
@@ -35,6 +37,7 @@
 #define LS_XPOOL_NOFREE    1
 
 #define LS_XPOOL_MAGIC     (0x58704f6c) //"XpOl"
+
 
 struct xpool_alink_s
 {

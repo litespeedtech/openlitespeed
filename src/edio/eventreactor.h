@@ -10,7 +10,7 @@
 
 #include <lsdef.h>
 #include <stddef.h>
-#include <sys/poll.h>
+#include <poll.h>
 
 #define ERF_UPDATE  1
 

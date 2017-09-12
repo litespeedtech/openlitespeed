@@ -32,13 +32,12 @@ SUITE(YourSuitqqqqeName)
     TEST(httprange_test)
     {
         int el = 2000;
-        ls_xpool_t pool;
+        ls_xpool_t * pool = ls_xpool_new();
         HttpRange *range;
 
         printf("Start HttpRange Test\n");
 
-        ls_xpool_init(&pool);
-        range = new(ls_xpool_alloc(&pool, sizeof(HttpRange))) HttpRange(el);
+        range = new(ls_xpool_alloc(pool, sizeof(HttpRange))) HttpRange(el);
 
         const char *psRange = "bytes= 0 -\t0\t ,1234-23456,-10,10-,1999-1999";
         CHECK(range->parse(psRange, pool) == 0);
@@ -106,7 +105,7 @@ SUITE(YourSuitqqqqeName)
         CHECK(range->parse(psSimple, pool) == 0);
 
         HttpRange *range1;
-        range1 = new(ls_xpool_alloc(&pool, sizeof(HttpRange))) HttpRange(el);
+        range1 = new(ls_xpool_alloc(pool, sizeof(HttpRange))) HttpRange(el);
         range1->setContentLen(2000);
         const char *psBad1 = "bytes=--10";
         const char *psBad2 = "bytes=10--2345";
@@ -130,14 +129,14 @@ SUITE(YourSuitqqqqeName)
         CHECK(range1->parse(psBad10, pool) == SC_400);
 
         HttpRange *range2;
-        range2 = new(ls_xpool_alloc(&pool, sizeof(HttpRange))) HttpRange(1447936);
+        range2 = new(ls_xpool_alloc(pool, sizeof(HttpRange))) HttpRange(1447936);
         const char *pdfRange =
             "bytes=1409802-1439801, 1439802-1447935, 3855-31023, "
             "31024-61023, 61024-91023, 91024-121023, 121024-151023, 151024-165400";
         int ret = range2->parse(pdfRange, pool);
         CHECK(ret == 0);
 
-        ls_xpool_destroy(&pool);
+        ls_xpool_delete(pool);
 
     }
 

@@ -292,9 +292,20 @@ if [ "x$ADMIN_PORT" = "xyes" ] ; then
 fi
 
 USE_LSPHP7=$9
+shift
+DEFAULT_TMP_DIR=$9
+shift
+PID_FILE=$9
+shift
+HTTP_PORT=$9
+if [ "x$HTTP_PORT" = "xyes" ] ; then 
+    HTTP_PORT=8088
+fi
+shift
+IS_LSCPD=$9
+
 
 VERSION=open
-HTTP_PORT=8088
 SETUP_PHP=1
 PHP_SUFFIX="php"
 SSL_HOSTNAME=""
@@ -377,12 +388,21 @@ echo "INSTALL_TYPE is $INSTALL_TYPE"
 
 DIR_OWN=$WS_USER:$WS_GROUP
 CONF_OWN=$WS_USER:$WS_GROUP
-configRuby
+
+if [ "x$IS_LSCPD" != "xyes" ] ; then 
+    configRuby
+fi
 
 
 #Comment out the below two lines
-echo "Target_Dir:$LSWS_HOME User:$WS_USER Group:$WS_GROUP Admin:$ADMIN_USER Password:$PASS_ONE LSINSTALL_DIR:$LSINSTALL_DIR AdminSSL:$ADMIN_SSL ADMIN_PORT:$ADMIN_PORT END"
+echo "Target_Dir:$LSWS_HOME User:$WS_USER Group:$WS_GROUP "
 
+if [ "x$IS_LSCPD" != "xyes" ] ; then 
+    echo "Admin:$ADMIN_USER Password:$PASS_ONE AdminSSL:$ADMIN_SSL ADMIN_PORT:$ADMIN_PORT "
+fi
+
+echo "LSINSTALL_DIR:$LSINSTALL_DIR "
+echo "TEMP_DIR:$DEFAULT_TMP_DIR PID_FILE:$PID_FILE"
 echo
 echo -e "\033[38;5;148mInstalling, please wait...\033[39m"
 echo
@@ -398,58 +418,77 @@ else
     echo "Admin SSL disabled!"
 fi
 
-buildConfigFiles
-installation
-
-if [ "x$PHP_INSTALLED" = "xn" ] ; then
-    inst_admin_php
-fi
-
-rm $LSWS_HOME/bin/lshttpd
-ln -sf ./openlitespeed $LSWS_HOME/bin/lshttpd
-
-
-if [ ! -f "$LSWS_HOME/admin/conf/htpasswd" ] ; then
-    ENCRYPT_PASS=`"$LSWS_HOME/admin/fcgi-bin/admin_php" -q "$LSWS_HOME/admin/misc/htpasswd.php" $PASS_ONE`
-    echo "$ADMIN_USER:$ENCRYPT_PASS" > "$LSWS_HOME/admin/conf/htpasswd"
-fi
-
-
-if [ ! -f "$LSWS_HOME/fcgi-bin/lsphp" ]; then
-    cp -f "$LSWS_HOME/admin/fcgi-bin/admin_php" "$LSWS_HOME/fcgi-bin/lsphp5"
-    chown "$SDIR_OWN" "$LSWS_HOME/fcgi-bin/lsphp5"
-    chmod "$EXEC_MOD" "$LSWS_HOME/fcgi-bin/lsphp5"
+if [ "x$IS_LSCPD" != "xyes" ] ; then 
+    buildConfigFiles
+    installation
     
-    #Set default lsphp5
-    ln -sf "$LSWS_HOME/fcgi-bin/lsphp5" "$LSWS_HOME/fcgi-bin/lsphp" 
+    if [ "x$PHP_INSTALLED" = "xn" ] ; then 
+        inst_admin_php
+    fi
+    rm $LSWS_HOME/bin/lshttpd
+    ln -sf ./openlitespeed $LSWS_HOME/bin/lshttpd
     
-    if [ "x$USE_LSPHP7" = "xyes" ] ; then
+    if [ ! -f "$LSWS_HOME/admin/conf/htpasswd" ] ; then
+        ENCRYPT_PASS=`"$LSWS_HOME/admin/fcgi-bin/admin_php" -q "$LSWS_HOME/admin/misc/htpasswd.php" $PASS_ONE`
+        echo "$ADMIN_USER:$ENCRYPT_PASS" > "$LSWS_HOME/admin/conf/htpasswd"
+    fi
+
+    if [ ! -f "$LSWS_HOME/fcgi-bin/lsphp" ]; then
+        cp -f "$LSWS_HOME/admin/fcgi-bin/admin_php" "$LSWS_HOME/fcgi-bin/lsphp5"
+        chown "$SDIR_OWN" "$LSWS_HOME/fcgi-bin/lsphp5"
+        chmod "$EXEC_MOD" "$LSWS_HOME/fcgi-bin/lsphp5"
+        
+        #Set default lsphp5
+        ln -sf "$LSWS_HOME/fcgi-bin/lsphp5" "$LSWS_HOME/fcgi-bin/lsphp" 
+        
+        if [ "x$USE_LSPHP7" = "xyes" ] ; then
+            inst_lsphp7
+            if [ -f "$LSWS_HOME/fcgi-bin/lsphp7" ]; then
+                rm "$LSWS_HOME/fcgi-bin/lsphp"
+                ln -sf "$LSWS_HOME/fcgi-bin/lsphp7" "$LSWS_HOME/fcgi-bin/lsphp" 
+            fi
+        fi
+    fi
+
+
+    #compress_admin_file
+    if [ ! -f "$LSWS_HOME/admin/conf/jcryption_keypair" ]; then
+        $LSWS_HOME/admin/misc/create_admin_keypair.sh
+    fi
+
+    chown "$CONF_OWN" "$LSWS_HOME/admin/conf/jcryption_keypair"
+    chmod 0600 "$LSWS_HOME/admin/conf/jcryption_keypair"
+
+    chown "$CONF_OWN" "$LSWS_HOME/admin/conf/htpasswd"
+    chmod 0600 "$LSWS_HOME/admin/conf/htpasswd"
+
+
+    #for root user, we'll try to start it automatically
+    INST_USER=`id`
+    INST_USER=`expr "$INST_USER" : 'uid=.*(\(.*\)) gid=.*'`
+    if [ $INST_USER = "root" ]; then
+        $LSWS_HOME/admin/misc/rc-inst.sh
+    fi
+    
+    echo "PIDFILE=$PID_FILE" > "$LSWS_HOME/bin/lsws_env"
+    echo "GRACEFUL_PIDFILE=$DEFAULT_TMP_DIR/graceful.pid" >> "$LSWS_HOME/bin/lsws_env"
+else
+    installation_lscpd
+    rm "$LSWS_HOME/bin/lscpd"
+    mv "$LSWS_HOME/bin/openlitespeed" "$LSWS_HOME/bin/lscpd"
+    
+    if [ ! -f "$LSWS_HOME/fcgi-bin/lsphp" ]; then
         inst_lsphp7
         if [ -f "$LSWS_HOME/fcgi-bin/lsphp7" ]; then
             rm "$LSWS_HOME/fcgi-bin/lsphp"
             ln -sf "$LSWS_HOME/fcgi-bin/lsphp7" "$LSWS_HOME/fcgi-bin/lsphp" 
+        else
+            mkdir -p $LSWS_HOME/admin/fcgi-bin
+            inst_admin_php
+            mv "$LSWS_HOME/admin/fcgi-bin/admin_php" "$LSWS_HOME/fcgi-bin/lsphp"
+            rm -rf $LSWS_HOME/admin/fcgi-bin
         fi
     fi
-fi
-
-
-#compress_admin_file
-if [ ! -f "$LSWS_HOME/admin/conf/jcryption_keypair" ]; then
-    $LSWS_HOME/admin/misc/create_admin_keypair.sh
-fi
-
-chown "$CONF_OWN" "$LSWS_HOME/admin/conf/jcryption_keypair"
-chmod 0600 "$LSWS_HOME/admin/conf/jcryption_keypair"
-
-chown "$CONF_OWN" "$LSWS_HOME/admin/conf/htpasswd"
-chmod 0600 "$LSWS_HOME/admin/conf/htpasswd"
-
-
-#for root user, we'll try to start it automatically
-INST_USER=`id`
-INST_USER=`expr "$INST_USER" : 'uid=.*(\(.*\)) gid=.*'`
-if [ $INST_USER = "root" ]; then
-    $LSWS_HOME/admin/misc/rc-inst.sh
 fi
 
 

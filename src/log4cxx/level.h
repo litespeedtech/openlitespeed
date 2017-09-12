@@ -63,6 +63,9 @@ public:
 
     static void setDefaultLevel(int level)
     {   s_iDefaultLevel = level;        }
+    
+    static const int *getDefaultLevelPtr() 
+    {   return &s_iDefaultLevel;    }
 
     LS_NO_COPY_ASSIGN(Level);
 };

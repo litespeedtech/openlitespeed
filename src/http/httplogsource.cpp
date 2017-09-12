@@ -178,6 +178,41 @@ int HttpLogSource::initAccessLog(const XmlNode *pNode,
     return ret;
 }
 
+int HttpLogSource::initAllLog(const char *pRoot)
+{
+    char achBuf[256], achBuf1[256];
+    char *p = achBuf;
+    strcpy(p, pRoot);
+    char *pEnd = p + strlen(p);
+    strcpy(achBuf1, achBuf);
+    
+    strcpy(pEnd, "/logs/error.log");
+    setErrorLogFile(achBuf);
+    setLogLevel("DEBUG");
+    off_t rollSize = 1024 * 10240;
+    setErrorLogRollingSize(rollSize, 30);
+    HttpLog::setDebugLevel(0);
+    
+    strcpy(pEnd, "/logs/stderr.log");
+    StdErrLogger::getInstance().setLogFileName(achBuf);
+    StdErrLogger::getInstance().getAppender()->setRollingSize(rollSize);
+    
+    strcpy(pEnd, "/logs/access.log");
+    HttpLog::setAccessLogFile(achBuf, 0);
+    enableAccessLog(1);
+    
+    AccessLog *pLog = getAccessLog();
+    pLog->getAppender()->setKeepDays(30);
+    pLog->setLogHeaders(3);
+    pLog->setCustomLog(s_sDefaultAccessLogFormat.c_str());
+    pLog->accessLogReferer(0);
+    pLog->accessLogAgent(0);
+    pLog->getAppender()->setRollingSize(rollSize);
+    pLog->getAppender()->setCompress(0);
+    
+    return 0;
+}
+
 
 int HttpLogSource::initErrorLog2(const XmlNode *pNode,
                                  int setDebugLevel)

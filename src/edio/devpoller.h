@@ -23,7 +23,7 @@
 #include <lsdef.h>
 #include <edio/multiplexer.h>
 #include <edio/reactorindex.h>
-#include <sys/poll.h>
+#include <poll.h>
 
 #define MAX_CHANGES 40
 #define MAX_EVENTS  20

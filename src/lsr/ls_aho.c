@@ -330,6 +330,8 @@ unsigned int ls_aho_search(ls_aho_t *pThis,
                 return 0;
             }
             iStringIter = pInputPtr - string + 1;
+            if (iStringIter >= size)
+                break;
         }
         uc = *(string + iStringIter);
         do

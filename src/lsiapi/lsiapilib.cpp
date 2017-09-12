@@ -2264,6 +2264,7 @@ void lsiapi_init_server_api()
     pApi->get_local_sockaddr = get_local_sockaddr;
     pApi->expand_current_server_varible = expand_current_server_varible;
 
-    pApi->_debugLevel = HttpLog::getDebugLevel();
+    pApi->_log_level_ptr = log4cxx::Level::getDefaultLevelPtr();
+
 
 }

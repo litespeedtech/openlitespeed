@@ -534,7 +534,8 @@ int StaticFileHandler::process(HttpSession *pSession,
                          | pSession->getSessionHooks()->getFlag(LSI_HKPT_SEND_RESP_BODY))
                         & LSI_FLAG_DECOMPRESS_REQUIRED) == 0);
     char mode = (pReq->gzipAcceptable() == GZIP_REQUIRED); // MODE_GZIP = 1
-    if (pReq->brAcceptable() == BR_REQUIRED)
+    if (pReq->brAcceptable() == BR_REQUIRED
+        && !(pReq->gzipAcceptable() & (GZIP_ADD_ENCODING | GZIP_OFF)))
         mode |= SFCD_MODE_BROTLI;
     ret = pInfo->readyCacheData(compressed, mode);
     LS_DBG_L(pReq->getLogSession(), "readyCacheData() return %d", ret);
@@ -783,7 +784,7 @@ static int processRange(HttpSession *pSession, HttpReq *pReq,
     LS_DBG_L(pReq->getLogger(), "[%s] Range: %.*s",
              pReq->getLogId(), pReq->getHeaderLen(HttpHeader::H_RANGE), pRange);
 
-    int ret = range->parse(pRange, *pPool);
+    int ret = range->parse(pRange, pPool);
     if (ret)
     {
         pReq->setContentLength(pCache->getFileSize());

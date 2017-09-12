@@ -2,7 +2,7 @@
 # PLAIN TEXT CONFIGURATION FILE
 #
 
-serverName                       lshttpd
+serverName                       
 user                             %USER%
 group                            %GROUP%
 priority                         0
@@ -10,7 +10,7 @@ autoRestart                      1
 chrootPath                       / 
 enableChroot                     0 
 inMemBufSize                     60M 
-swappingDir                      /tmp/lshttpd/swap 
+swappingDir                      %DEFAULT_TMP_DIR%/swap 
 autoFix503                       1 
 gracefulRestartTimeout           300
 mime                             $SERVER_ROOT/conf/mime.properties 
@@ -18,6 +18,7 @@ showVersionNumber                0
 adminEmails                      %ADMIN_EMAIL%
 adminRoot                        $SERVER_ROOT/admin/ 
 indexFiles                       index.html, index.php
+disableWebAdmin                  0
 
 errorlog $SERVER_ROOT/logs/error.log {
         logLevel             DEBUG
@@ -117,7 +118,7 @@ accessControl{
  
 extProcessor lsphp{
     type                            lsapi 
-    address                         uds://tmp/lshttpd/lsphp.sock 
+    address                         uds:/%DEFAULT_TMP_DIR%/lsphp.sock 
     maxConns                        35 
     env                             PHP_LSAPI_MAX_REQUESTS=500 
     env                             PHP_LSAPI_CHILDREN=35 

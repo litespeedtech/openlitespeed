@@ -108,6 +108,7 @@ plainconfKeywords plainconf::sKeywords[] =
     {"defaultcharsetcustomized",                 NULL},
     {"defaulttype",                              NULL},
     {"deny",                                     NULL},
+    {"disablewebadmin",                          NULL},
     {"dhparam",                                  NULL},
     {"dir",                                      NULL},
     {"docroot",                                  NULL},

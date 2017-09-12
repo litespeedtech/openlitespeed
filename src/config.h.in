@@ -1,5 +1,8 @@
 /* src/config.h.in.  Generated from configure.ac by autoheader.  */
 
+/* Defined the temprary directory */
+#undef DEFAULT_TMP_DIR
+
 /* Define to 1 if you have the <arpa/inet.h> header file. */
 #undef HAVE_ARPA_INET_H
 
@@ -217,6 +220,9 @@
 /* Define to 1 if the system has the type `_Bool'. */
 #undef HAVE__BOOL
 
+/* Defined to build lscpd */
+#undef IS_LSCPD
+
 /* Define to 1 if `lstat' dereferences a symlink specified with a trailing
    slash. */
 #undef LSTAT_FOLLOWS_SLASHED_SYMLINK
@@ -233,6 +239,12 @@
 
 /* Define to 1 if assertions should be disabled. */
 #undef NDEBUG
+
+/* Defined the group of the user */
+#undef OPENLSWS_GROUP
+
+/* Defined the user name */
+#undef OPENLSWS_USER
 
 /* Define to the address where bug reports for this package should be sent. */
 #undef PACKAGE_BUGREPORT
@@ -251,6 +263,9 @@
 
 /* Define to the version of this package. */
 #undef PACKAGE_VERSION
+
+/* Defined the pid file path */
+#undef PID_FILE
 
 /* Define to 1 if you have the ANSI C header files. */
 #undef STDC_HEADERS

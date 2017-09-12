@@ -148,9 +148,8 @@ TEST(GMapPoolTest_test)
     const int aKeys[] = {1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20};
     int aVals[] = {1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20};
     int aDelList[] = {3, 13, 7, 2, 12, 11, 10, 1, 19, 15, 16, 6};
-    ls_xpool_t pool;
-    ls_xpool_init(&pool);
-    GMap gm(valcomp, &pool);
+    ls_xpool_t *pool = ls_xpool_new();
+    GMap gm(valcomp, pool);
     printf("Start GMapPoolTest\n");
     CHECK(gm.size() == 0);
 
@@ -245,7 +244,7 @@ TEST(GMapPoolTest_test)
     gm.clear();
 
     printf("\n");
-    ls_xpool_destroy(&pool);
+    ls_xpool_delete(pool);
 }
 
 #endif

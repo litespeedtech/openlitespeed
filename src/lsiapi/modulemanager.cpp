@@ -426,12 +426,6 @@ void ModuleManager::incModuleDataCount(unsigned int level)
 }
 
 
-void ModuleManager::updateDebugLevel()
-{
-    LsiapiBridge::getLsiapiFunctions()->_debugLevel = HttpLog::getDebugLevel();
-}
-
-
 void ModuleManager::OnTimer10sec()
 {
     //LsiapiBridge::checkExpiredGData();

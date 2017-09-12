@@ -33,7 +33,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <sys/poll.h>
+#include <poll.h>
 #include <unistd.h>
 
 #define RTSIGNUM    SIGRTMIN+1

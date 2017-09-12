@@ -72,8 +72,6 @@
 
 #define GlobalServerSessionHooks (LsiApiHooks::getServerSessionHooks())
 
-#define PID_FILE            DEFAULT_TMP_DIR "/lshttpd.pid"
-
 static char s_iRunning = 0;
 char *argv0 = NULL;
 static int s_iCpuCount = 1;
@@ -88,7 +86,10 @@ LshttpdMain::LshttpdMain()
     , m_fdAdmin(-1)
 {
     m_pServer = &HttpServer::getInstance();
+    
+#ifndef IS_LSCPD
     m_pBuilder = new HttpConfigLoader();
+#endif
 }
 
 
@@ -158,16 +159,16 @@ int LshttpdMain::childSignaled(pid_t pid, int signal, int coredump)
     if (coredump)
     {
 
-        if (access("/tmp/lshttpd/bak_core", X_OK) == -1)
-            ::system("mkdir /tmp/lshttpd/bak_core");
+        if (access(DEFAULT_TMP_DIR "/bak_core", X_OK) == -1)
+            ::system("mkdir " DEFAULT_TMP_DIR "/bak_core");
 
         else
         {
-            int status = ::system("expr `ls /tmp/lshttpd/bak_core | wc -l` \\< 5");
+            int status = ::system("expr `ls " DEFAULT_TMP_DIR "/bak_core | wc -l` \\< 5");
             if (WEXITSTATUS(status))
-                ::system("rm /tmp/lshttpd/bak_core/*");
+                ::system("rm " DEFAULT_TMP_DIR "/bak_core/*");
         }
-        ::system("mv /tmp/lshttpd/core* /tmp/lshttpd/bak_core");
+        ::system("mv " DEFAULT_TMP_DIR "/core* " DEFAULT_TMP_DIR "/bak_core");
     }
     return 0;
 }
@@ -208,12 +209,13 @@ int LshttpdMain::SendCrashNotification(pid_t pid, int signal, int coredump,
                            "Version: %s\n"
                            "Machine: %s\n\n"
                            "If the call stack information does not show up here, "
-                           "please compress and forward the core file located in /tmp/lshttpd/.\n\n",
+                           "please compress and forward the core file located in %s.\n\n",
                            HttpServerVersion::getVersion(),
                            s_uname.sysname,
                            s_uname.release,
                            s_uname.version,
-                           s_uname.machine);
+                           s_uname.machine,
+                           DEFAULT_TMP_DIR);
     }
     char achFileName[50] = "/tmp/m-XXXXXX";
     int fd = mkstemp(achFileName);
@@ -251,7 +253,7 @@ void LshttpdMain::onGuardTimer()
     static int s_count = 0;
     DateTime::s_curTime = time(NULL);
 //#if !defined( RUN_TEST )
-    if (m_pidFile.testAndRelockPidFile(PID_FILE, m_pid))
+    if (m_pidFile.testAndRelockPidFile(getPidFile(), m_pid))
     {
         LS_NOTICE("Failed to lock PID file, restart server gracefully ...");
         gracefulRestart();
@@ -502,6 +504,7 @@ int LshttpdMain::testServerRoot(const char *pRoot)
         return LS_FAIL;
     char achBuf[MAX_PATH_LEN] = {0};
 
+#ifndef IS_LSCPD
     if (GPath::getAbsoluteFile(achBuf, MAX_PATH_LEN, pRoot,
                                DEFAULT_CONFIG_FILE) == 0)
     {
@@ -510,6 +513,9 @@ int LshttpdMain::testServerRoot(const char *pRoot)
         else
             return LS_FAIL;
     }
+#else
+    strcpy(achBuf, pRoot);
+#endif
 
     int len = strlen(pRoot);
     if (pRoot[len - 1] == '/')
@@ -520,11 +526,6 @@ int LshttpdMain::testServerRoot(const char *pRoot)
                              &achBuf[MAX_PATH_LEN], achBuf, 1) == -1)
         return LS_FAIL;
     m_pServer->setServerRoot(achBuf);
-
-    //load the config
-    m_pBuilder->loadConfigFile();
-//    m_pBuilder->loadPlainConfigFile();
-
     return 0;
 }
 
@@ -662,13 +663,22 @@ static void perr(const char *pErr)
 }
 
 
+const char *LshttpdMain::getPidFile()
+{
+    const char *pidFile = getenv("OLS_PID_FILE");
+    if (!pidFile)
+        pidFile = PID_FILE;
+    
+    return pidFile;
+}
+
 int LshttpdMain::testRunningServer()
 {
     int count = 0;
     int ret;
     do
     {
-        ret = m_pidFile.lockPidFile(PID_FILE);
+        ret = m_pidFile.lockPidFile(getPidFile());
         if (ret)
         {
             if ((ret == -2) && (errno == EACCES || errno == EAGAIN))
@@ -683,7 +693,8 @@ int LshttpdMain::testRunningServer()
             }
             else
             {
-                fprintf(stderr, "[ERROR] Failed to write to pid file:%s!\n", PID_FILE);
+                fprintf(stderr, "[ERROR] Failed to write to pid file:%s!\n", 
+                    getPidFile());
                 return ret;
             }
         }
@@ -801,10 +812,19 @@ int LshttpdMain::init(int argc, char *argv[])
     if (testRunningServer() != 0)
         return 2;
 
+#ifndef IS_LSCPD
 
+    //load the config
+    m_pBuilder->loadConfigFile();
+//    m_pBuilder->loadPlainConfigFile();
     if (m_pServer->configServerBasics(0, m_pBuilder->getRoot()))
         return 1;
-
+#else
+    //init lscpd
+    if (m_pServer->initLscpd())
+        return 1;
+#endif
+    
     if (!MainServerConfig::getInstance().getDisableLogRotateAtStartup())
         LOG4CXX_NS::LogRotate::roll(HttpLog::getErrorLogger()->getAppender(),
                                     procConfig.getUid(),
@@ -824,7 +844,10 @@ int LshttpdMain::init(int argc, char *argv[])
     }
     changeOwner();
 
+#ifndef IS_LSCPD
     plainconf::flushErrorLog();
+#endif
+
     LS_NOTICE("Loading %s ...", HttpServerVersion::getVersion());
     LS_NOTICE("Using [%s]", SSLeay_version(SSLEAY_VERSION));
 
@@ -848,7 +871,10 @@ int LshttpdMain::init(int argc, char *argv[])
         return 2;
 
 
-    startAdminSocket();
+    if (!MainServerConfig::getInstance().getDisableWebAdmin())
+        startAdminSocket();
+    
+#ifndef IS_LSCPD
     ret = config();
     if (ret)
     {
@@ -856,6 +882,8 @@ int LshttpdMain::init(int argc, char *argv[])
         fprintf(stderr, "[ERROR] Fatal error in configuration, shutdown!\n");
         return ret;
     }
+#endif
+
     removeOldRtreport();
     {
         char achBuf[8192];
@@ -863,7 +891,7 @@ int LshttpdMain::init(int argc, char *argv[])
         if (procConfig.getChroot() != NULL)
         {
             PidFile pidfile;
-            ConfigCtx::getCurConfigCtx()->getAbsolute(achBuf, PID_FILE, 0);
+            ConfigCtx::getCurConfigCtx()->getAbsolute(achBuf, getPidFile(), 0);
             pidfile.writePidFile(achBuf, m_pid);
         }
     }
@@ -872,7 +900,11 @@ int LshttpdMain::init(int argc, char *argv[])
     //setproctitle( "%s", "lshttpd" );
 #else
     argv[1] = NULL;
+#ifdef IS_LSCPD
+    strcpy(argv[0], "lscpd (lscpd - main)");
+#else
     strcpy(argv[0], "openlitespeed (lshttpd - main)");
+#endif
 #endif
     //if ( !m_noCrashGuard && ( m_pBuilder->getCrashGuard() ))
     s_iCpuCount = PCUtil::getNumProcessors();
@@ -939,6 +971,7 @@ int LshttpdMain::main(int argc, char *argv[])
 #endif
     {
         int ret = init(argc, argv);
+
         if (ret != 0)
             return ret;
 
@@ -1080,7 +1113,13 @@ int LshttpdMain::startChild(ChildProc *pProc)
             && (m_pServer->initAioSendFile() != 0))
             return LS_FAIL;
         close(m_fdAdmin);
+        
+#ifdef IS_LSCPD
+        snprintf(argv0, 80, "lscpd (lscpd - #%02d)", pProc->m_iProcNo);
+#else
         snprintf(argv0, 80, "openlitespeed (lshttpd - #%02d)", pProc->m_iProcNo);
+#endif
+
         return 0;
     }
 
@@ -1337,7 +1376,13 @@ int LshttpdMain::guardCrash()
                                          int));
         memset(m_pProcState, 0, ((iNumChildren >> 5) + 1) * sizeof(int));
     }
-    startAdminSocket();
+    if (!MainServerConfig::getInstance().getDisableWebAdmin())
+    {
+        startAdminSocket();
+    }
+    else
+        m_fdAdmin = -1;
+    
     pfds[0].fd = m_fdAdmin;
     pfds[0].events = POLLIN;
     pfds[1].fd = -1;

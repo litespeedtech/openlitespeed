@@ -196,10 +196,9 @@ TEST(GHashTest_test)
 
 TEST(GHashPoolTest_test)
 {
-    ls_xpool_t pool;
-    ls_xpool_init(&pool);
+    ls_xpool_t *pool = ls_xpool_new();
     {
-        GHash hash(10, NULL, NULL, &pool);
+        GHash hash(10, NULL, NULL, pool);
         CHECK(hash.size() == 0);
         CHECK(hash.capacity() == 13);
         GHash::iterator iter = hash.insert((void *)0, (void *)0);
@@ -361,7 +360,7 @@ TEST(GHashPoolTest_test)
         iter3 = hash.find((void *)28);
         CHECK(iter3 == NULL);
     }
-    ls_xpool_destroy(&pool);
+    ls_xpool_delete(pool);
 }
 
 #endif

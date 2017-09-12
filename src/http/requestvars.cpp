@@ -1224,6 +1224,12 @@ int RequestVars::setEnv(HttpSession *pSession, const char *pName,
     {
         ++pName;
         --nameLen;
+        if (strcasecmp(pName, "no-gzip") == 0)
+        {
+            LS_DBG_M(pSession->getLogSession(), "no-gzip flag removed.");
+            pSession->getReq()->andGzip(~GZIP_OFF);
+            return 0;
+        }
         pSession->getReq()->unsetEnv(pName, nameLen);
         LS_DBG_M(pSession->getLogSession(), "Remove ENV: '%s' ", pName);
         return 0;
@@ -1260,9 +1266,11 @@ int RequestVars::setEnv(HttpSession *pSession, const char *pName,
             if (strncmp(pValue, "0", 1) != 0)
             {
                 LS_DBG_M(pSession->getLogSession(),
-                         "Turn off gzip compression for this requst.");
-                pSession->getReq()->andGzip(~GZIP_ENABLED);
+                         "turn off gzip compression for this requst.");
+                pSession->getReq()->orGzip(GZIP_OFF);
             }
+            else
+                pSession->getReq()->andGzip(~GZIP_OFF);
             return 0;
         }
     }

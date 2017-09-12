@@ -74,7 +74,7 @@
 #include <netinet/in_systm.h>
 #include <netinet/tcp.h>
 #include <stdio.h>
-#include <sys/poll.h>
+#include <poll.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>

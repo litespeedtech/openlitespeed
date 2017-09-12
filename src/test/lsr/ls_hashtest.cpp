@@ -230,9 +230,8 @@ TEST(ls_hashpooltest_test)
 #ifdef LSR_HASH_DEBUG
     printf("Start LSR Hash XPool Test\n");
 #endif
-    ls_xpool_t pool;
-    ls_xpool_init(&pool);
-    ls_hash_t *hash = ls_hash_new(10, NULL, NULL, &pool);
+    ls_xpool_t *pool = ls_xpool_new();
+    ls_hash_t *hash = ls_hash_new(10, NULL, NULL, pool);
     CHECK(ls_hash_size(hash) == 0);
     CHECK(ls_hash_capacity(hash) == 13);
     ls_hash_iter iter = hash->insert_fn(hash, (void *)0, (void *)0);
@@ -304,7 +303,7 @@ TEST(ls_hashpooltest_test)
     ls_hash_erase(hash, iter);
     CHECK(ls_hash_size(hash) == 3);
     ls_hash_t hash2;
-    ls_hash(&hash2, 10, NULL, NULL, &pool);
+    ls_hash(&hash2, 10, NULL, NULL, pool);
     CHECK(ls_hash_size(&hash2) == 0);
     CHECK(ls_hash_capacity(&hash2) == 13);
     ls_hash_swap(hash, &hash2);
@@ -408,7 +407,7 @@ TEST(ls_hashpooltest_test)
     CHECK(iter3 == NULL);
 
     ls_hash_delete(hash);
-    ls_xpool_destroy(&pool);
+    ls_xpool_delete(pool);
 }
 
 

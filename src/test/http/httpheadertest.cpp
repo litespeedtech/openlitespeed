@@ -468,9 +468,8 @@ SUITE(HttpHeaderTest)
 
         char headerData2[] = ":\r\n\r\n";
 
-        ls_xpool_t pool;
-        ls_xpool_init(&pool);
-        HttpRespHeaders h(&pool);
+        ls_xpool_t *pool = ls_xpool_new();
+        HttpRespHeaders h(pool);
         h.reset();
 
         h.parseAdd(headerData, sizeof(headerData) - 1, LSI_HEADEROP_ADD);
@@ -481,9 +480,8 @@ SUITE(HttpHeaderTest)
 
     TEST(respHeaders)
     {
-        ls_xpool_t pool;
-        ls_xpool_init(&pool);
-        HttpRespHeaders h(&pool);
+        ls_xpool_t *pool = ls_xpool_new();
+        HttpRespHeaders h(pool);
         IOVec io;
         const char *pVal = NULL;
         int valLen = 0;
@@ -743,7 +741,7 @@ SUITE(HttpHeaderTest)
         DisplayBothHeader(io, kk, h.getCount(), &h);
         CheckIoHeader(io, sTestHdr);
 
-        ls_xpool_destroy(&pool);
+        ls_xpool_delete(pool);
 
         /*
 
