@@ -250,8 +250,6 @@ int EventDispatcher::run()
             if (sigEvent & HS_USR2)
             {
                 HttpLog::toggleDebugLog();
-                ModuleManager::updateDebugLevel();
-
             }
             if (sigEvent & HS_CHILD)
                 HttpServer::cleanPid();

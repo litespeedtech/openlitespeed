@@ -428,6 +428,11 @@ enum LSI_LOG_LEVEL
      * Debug level output turned on.
      */
     LSI_LOG_DEBUG  = 7000,
+    
+    LSI_LOG_DEBUG_LOW  = 7020,
+    LSI_LOG_DEBUG_MEDIUM = 7050,
+    LSI_LOG_DEBUG_HIGH = 7080,
+    
     /**
      * Trace level output turned on.
      */
@@ -1496,8 +1501,12 @@ struct lsi_api_s
      * @param[in] level - enum defined in log level definitions #LSI_LOG_LEVEL.
      * @param[in] fmt - formatted string.
      */
-    void (*log)(const lsi_session_t *pSession, int level, const char *fmt, ...);
-
+    void (*log)(const lsi_session_t *pSession, int level, const char *fmt, ...)
+#if __GNUC__
+        __attribute__((format(printf, 3, 4)))
+#endif
+        ;
+        
     /**
      * @brief vlog is used to write the formatted log to the error log associated with a session
      * @details session ID will be added to the log message automatically when the session is not NULL.
@@ -2952,13 +2961,14 @@ struct lsi_api_s
 
     /**
      *
-     * @brief _debugLevel is the level of debugging than server core uses,
-     *    it controls the level of details of debugging messages.
-     *    its range is from 0 to 10, debugging is disabled when set to 0,
-     *    highest level of debug output is used when set to 10.
+     * @brief _log_level_ptr is the address of variable that stores the level 
+     *    of logging that server core uses,
+     *    the variable controls the level of details of logging messages.
+     *    its value is defined in LSI_LOG_LEVEL, 
+     *    range is from LSI_LOG_ERROR to LSI_LOG_TRACE.
      *
-     */
-    unsigned char   _debugLevel;
+     */    
+    const int *_log_level_ptr;
 
 };
 
@@ -2971,20 +2981,30 @@ struct lsi_api_s
  */
 extern const lsi_api_t *g_api;
 
-/**
- *
- * @brief inline function to check if debug logging is enabled or not,
- * It should be checked before calling g_api->log() to write a debug log message to
- * minimize the cost of debug logging when debug logging was disabled.
- *
- * @param[in] level the debug logging level, can be in range of 0-9, use 0 to check if debug logging is on or off.
- *                  use 1-9 to check if message at specific level should be logged.
- * @return  if current debug level is higher (bigger number) than @param level, return 1, otherwise return 0
- *
- */
-static inline int lsi_isdebug(unsigned int level)
-{   return (g_api->_debugLevel > level);  }
 
+#define LSI_LOG_ENABLED(level) (*g_api->_log_level_ptr >= level)
+
+
+#define LSI_LOG(level, session, ...) \
+    do { \
+        if (LSI_LOG_ENABLED(level)) g_api->log(session, level, __VA_ARGS__); \
+    } while(0) 
+
+#define LSI_LOGRAW(...) g_api->lograw(__VA_ARGS__)
+
+#define LSI_DBG_IO(session, ...) LSI_LOG(LSI_LOG_TRACE, session, __VA_ARGS__)
+
+#define LSI_DBG_H(session, ...) LSI_LOG(LSI_LOG_DEBUG_HIGH, session, __VA_ARGS__)
+
+#define LSI_DBG_M(session, ...) LSI_LOG(LSI_LOG_DEBUG_MEDIUM, session, __VA_ARGS__)
+
+#define LSI_DBG_L(session, ...) LSI_LOG(LSI_LOG_DEBUG_LOW, session, __VA_ARGS__)
+
+#define LSI_DBG(session, ...)    LSI_LOG(LSI_LOG_DEBUG,  session, __VA_ARGS__)
+#define LSI_INFO(session, ...)   LSI_LOG(LSI_LOG_INFO,   session, __VA_ARGS__)
+#define LSI_NOTICE(session, ...) LSI_LOG(LSI_LOG_NOTICE, session, __VA_ARGS__)
+#define LSI_WARN(session, ...)   LSI_LOG(LSI_LOG_WARN,   session, __VA_ARGS__)
+#define LSI_ERROR(session, ...)  LSI_LOG(LSI_LOG_ERROR,  session, __VA_ARGS__)
 
 #ifdef __cplusplus
 }

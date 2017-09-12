@@ -38,7 +38,7 @@ static int mode     = 0;    /* 0 = global pool mode, 1 = session pool */
 int loopCount       = 10;
 int numThreads      = 5;
 
-static ls_xpool_t pool;
+static ls_xpool_t *pool = NULL;
 
 typedef struct
 {
@@ -70,7 +70,7 @@ static void *testOneAlloc(int id, int size)
     void *ptr;
     unsigned char *p;
 
-    ptr = (mode ? ls_xpool_alloc(&pool, size) : ls_palloc(size));
+    ptr = (mode ? ls_xpool_alloc(pool, size) : ls_palloc(size));
     if (ptr != NULL)
     {
         memset(ptr, id, size);
@@ -87,7 +87,7 @@ static void *testOneAlloc(int id, int size)
 static inline void freeOneAlloc(void *ptr)
 {
     if (mode)
-        ls_xpool_free(&pool, ptr);
+        ls_xpool_free(pool, ptr);
     else
         ls_pfree(ptr);
 }
@@ -171,7 +171,7 @@ int testthrsafe(int ac, char *av[], void *(*runTest)(void *))
     p = threadMap;
 
     if (mode)
-        ls_xpool_init(&pool);
+        pool = ls_xpool_new();
 
     Timer x(av[0]);
     for (i = 0; i < numThreads; i++, p++)
@@ -192,7 +192,7 @@ int testthrsafe(int ac, char *av[], void *(*runTest)(void *))
         pthread_join(p->m_thread, (void **)&p->m_exit);
 
     if (mode)
-        ls_xpool_destroy(&pool);
+        ls_xpool_delete(pool);
 
     printf("RUNNING numThreads %d loop %d\n", numThreads, loopCount);
 

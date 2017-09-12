@@ -189,24 +189,23 @@ TEST(ls_loopbufSearchTest)
 
 TEST(ls_loopbufxtest_test)
 {
-    ls_xpool_t pool;
-    ls_xpool_init(&pool);
-    ls_loopbuf_t *buf = ls_loopbuf_xnew(0, &pool);
+    ls_xpool_t *pool = ls_xpool_new();
+    ls_loopbuf_t *buf = ls_loopbuf_xnew(0, pool);
 #ifdef LSR_LOOPBUF_DEBUG
     printf("Start LSR LoopBuf X Test\n");
 #endif
     CHECK(0 == ls_loopbuf_size(buf));
     CHECK(0 < ls_loopbuf_capacity(buf));
-    CHECK(0 == ls_loopbuf_xreserve(buf, 0, &pool));
+    CHECK(0 == ls_loopbuf_xreserve(buf, 0, pool));
     CHECK(0 == ls_loopbuf_capacity(buf));
     CHECK(ls_loopbuf_end(buf) == ls_loopbuf_begin(buf));
 
-    CHECK(ls_loopbuf_xreserve(buf, 1024, &pool) == 0);
+    CHECK(ls_loopbuf_xreserve(buf, 1024, pool) == 0);
     CHECK(1024 <= ls_loopbuf_capacity(buf));
-    CHECK(ls_loopbuf_xguarantee(buf, 1048, &pool) == 0);
+    CHECK(ls_loopbuf_xguarantee(buf, 1048, pool) == 0);
     CHECK(1048 <= ls_loopbuf_available(buf));
     ls_loopbuf_used(buf, 10);
-    CHECK(ls_loopbuf_xreserve(buf, 15, &pool) == 0);
+    CHECK(ls_loopbuf_xreserve(buf, 15, pool) == 0);
     CHECK(ls_loopbuf_size(buf) == ls_loopbuf_end(buf) - ls_loopbuf_begin(buf));
     CHECK(ls_loopbuf_available(buf) == ls_loopbuf_capacity(
               buf) - ls_loopbuf_size(buf) - 1);
@@ -216,7 +215,7 @@ TEST(ls_loopbufxtest_test)
     int len = (int)strlen(pStr);
 
     CHECK((int)strlen(pStr) == ls_loopbuf_xappend(buf, pStr, strlen(pStr),
-            &pool));
+            pool));
     CHECK(ls_loopbuf_size(buf) == (int)strlen(pStr));
     CHECK(0 == strncmp(pStr, ls_loopbuf_begin(buf), strlen(pStr)));
     char pBuf[128];
@@ -225,7 +224,7 @@ TEST(ls_loopbufxtest_test)
 
     for (int i = 0 ; i < 129 ; i ++)
     {
-        int i1 = ls_loopbuf_xappend(buf, pStr, len, &pool);
+        int i1 = ls_loopbuf_xappend(buf, pStr, len, pool);
         if (i1 == 0)
             CHECK(ls_loopbuf_full(buf));
         else if (i1 < len)
@@ -240,7 +239,7 @@ TEST(ls_loopbufxtest_test)
     }
     for (int i = 129 ; i < 1000 ; i ++)
     {
-        int i1 = ls_loopbuf_xappend(buf, pStr, len, &pool);
+        int i1 = ls_loopbuf_xappend(buf, pStr, len, pool);
         if (i1 == 0)
             CHECK(ls_loopbuf_full(buf));
         else if (i1 < len)
@@ -254,21 +253,21 @@ TEST(ls_loopbufxtest_test)
         }
     }
     ls_loopbuf_t lbuf;
-    ls_loopbuf_x(&lbuf, 0, &pool);
+    ls_loopbuf_x(&lbuf, 0, pool);
     ls_loopbuf_swap(buf, &lbuf);
-    ls_loopbuf_xreserve(buf, 200, &pool);
+    ls_loopbuf_xreserve(buf, 200, pool);
     CHECK(200 <= ls_loopbuf_capacity(buf));
     CHECK(ls_loopbuf_capacity(buf) >= ls_loopbuf_size(buf));
     for (int i = 0; i < ls_loopbuf_capacity(buf) - 1; ++i)
-        CHECK(1 == ls_loopbuf_xappend(buf, pBuf, 1, &pool));
+        CHECK(1 == ls_loopbuf_xappend(buf, pBuf, 1, pool));
     CHECK(ls_loopbuf_full(buf));
     char *p0 = ls_loopbuf_end(buf);
     CHECK(ls_loopbuf_inc(buf, &p0) == ls_loopbuf_begin(buf));
-    CHECK(ls_loopbuf_xreserve(buf, 500, &pool) == 0);
+    CHECK(ls_loopbuf_xreserve(buf, 500, pool) == 0);
     CHECK(500 <= ls_loopbuf_capacity(buf));
     CHECK(ls_loopbuf_contiguous(buf) == ls_loopbuf_available(buf));
     ls_loopbuf_clear(buf);
-    CHECK(ls_loopbuf_xguarantee(buf, 800, &pool) == 0);
+    CHECK(ls_loopbuf_xguarantee(buf, 800, pool) == 0);
     CHECK(ls_loopbuf_available(buf) >= 800);
 
     ls_loopbuf_used(buf, 500);
@@ -278,7 +277,7 @@ TEST(ls_loopbufxtest_test)
     CHECK(ls_loopbuf_begin(buf) > ls_loopbuf_end(buf));
     CHECK(ls_loopbuf_contiguous(buf)
           == ls_loopbuf_begin(buf) - ls_loopbuf_end(buf) - 1);
-    ls_loopbuf_xstraight(buf, &pool);
+    ls_loopbuf_xstraight(buf, pool);
     CHECK(ls_loopbuf_begin(buf) < ls_loopbuf_end(buf));
     CHECK(ls_loopbuf_popfront(buf, 400) == 400);
     ls_loopbuf_used(buf, 400);
@@ -298,27 +297,26 @@ TEST(ls_loopbufxtest_test)
         ls_loopbuf_inc(buf, &p0);
     }
 
-    ls_loopbuf_xdelete(buf, &pool);
-    ls_loopbuf_xd(&lbuf, &pool);
-    ls_xpool_destroy(&pool);
+    ls_loopbuf_xdelete(buf, pool);
+    ls_loopbuf_xd(&lbuf, pool);
+    ls_xpool_delete(pool);
 }
 
 TEST(ls_loopbufXSearchTest)
 {
-    ls_xpool_t pool;
-    ls_xpool_init(&pool);
+    ls_xpool_t *pool = ls_xpool_new();
     ls_loopbuf_t *buf;
     const char *ptr, *ptr2, *pAccept = NULL;
 #ifdef LSR_LOOPBUF_DEBUG
     printf("Start LSR LoopBuf Search Test");
 #endif
-    buf = ls_loopbuf_xnew(0, &pool);
+    buf = ls_loopbuf_xnew(0, pool);
     ls_loopbuf_xappend(buf,
                        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa1"
                        "23456789101112131415161718192021222324252627282930313233343536", 127,
-                       &pool);
+                       pool);
     ls_loopbuf_popfront(buf, 20);
-    ls_loopbuf_xappend(buf, "37383940414243444546", 20, &pool);
+    ls_loopbuf_xappend(buf, "37383940414243444546", 20, pool);
     pAccept = "2021222324";
     ptr = ls_loopbuf_search(buf, 0, pAccept, 10);
     ptr2 = ls_loopbuf_getptr(buf, 73);
@@ -346,25 +344,24 @@ TEST(ls_loopbufXSearchTest)
     ls_loopbuf_xappend(buf,
                        "afafafafafafafafafafafafafafafafafafafafafafafafafafafafafafafaf"
                        "afafafafafafafafafafafafafafafafafafafafafafafafafafafabkbkbkbk", 127,
-                       &pool);
+                       pool);
     ls_loopbuf_popfront(buf, 20);
-    ls_loopbuf_xappend(buf, "bkbkbkbafafafafafafa" , 20, &pool);
+    ls_loopbuf_xappend(buf, "bkbkbkbafafafafafafa" , 20, pool);
     pAccept = "bkbkbkbkba";
     ptr = ls_loopbuf_search(buf, 0, pAccept, 10);
     ptr2 = ls_loopbuf_getptr(buf, 105);
     CHECK(ptr == ptr2);
 
-    ls_loopbuf_xdelete(buf, &pool);
-    ls_xpool_destroy(&pool);
+    ls_loopbuf_xdelete(buf, pool);
+    ls_xpool_delete(pool);
 }
 
 
 
 TEST(ls_xloopbuftest_test)
 {
-    ls_xpool_t pool;
-    ls_xpool_init(&pool);
-    ls_xloopbuf_t *buf = ls_xloopbuf_new(0, &pool);
+    ls_xpool_t *pool = ls_xpool_new();
+    ls_xloopbuf_t *buf = ls_xloopbuf_new(0, pool);
 #ifdef LSR_LOOPBUF_DEBUG
     printf("Start LSR XLoopBuf Test\n");
 #endif
@@ -427,7 +424,7 @@ TEST(ls_xloopbuftest_test)
         }
     }
     ls_xloopbuf_t lbuf;
-    ls_xloopbuf(&lbuf, 0, &pool);
+    ls_xloopbuf(&lbuf, 0, pool);
     ls_xloopbuf_swap(buf, &lbuf);
     ls_xloopbuf_reserve(buf, 200);
     CHECK(200 <= ls_xloopbuf_capacity(buf));
@@ -473,19 +470,18 @@ TEST(ls_xloopbuftest_test)
 
     ls_xloopbuf_delete(buf);
     ls_xloopbuf_d(&lbuf);
-    ls_xpool_destroy(&pool);
+    ls_xpool_delete(pool);
 }
 
 TEST(ls_xloopbufSearchTest)
 {
-    ls_xpool_t pool;
-    ls_xpool_init(&pool);
+    ls_xpool_t *pool = ls_xpool_new();
     ls_xloopbuf_t *buf;
     const char *ptr, *ptr2, *pAccept = NULL;
 #ifdef LSR_LOOPBUF_DEBUG
     printf("Start LSR XLoopBufSearch Test");
 #endif
-    buf = ls_xloopbuf_new(0, &pool);
+    buf = ls_xloopbuf_new(0, pool);
     ls_xloopbuf_append(buf,
                        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa1"
                        "23456789101112131415161718192021222324252627282930313233343536", 127);
@@ -526,7 +522,7 @@ TEST(ls_xloopbufSearchTest)
     CHECK(ptr == ptr2);
 
     ls_xloopbuf_delete(buf);
-    ls_xpool_destroy(&pool);
+    ls_xpool_delete(pool);
 }
 
 

@@ -33,7 +33,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <sys/poll.h>
+#include <poll.h>
 #include <unistd.h>
 
 const char FcgiConnection::s_padding[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };

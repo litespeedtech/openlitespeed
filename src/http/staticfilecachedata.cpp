@@ -16,7 +16,7 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include <http/staticfilecachedata.h>
-
+#include <main/httpserver.h>
 #include <http/httpcontext.h>
 #include <http/httpheader.h>
 #include <http/httpmime.h>
@@ -64,7 +64,10 @@ static int      s_iMinFileSize          = 300;
 
 static int      s_iBrCompressLevel    = 6;
 
-static const char *s_compressCachePath = "/tmp/lshttpd/";
+static const char *s_compressCachePath = DEFAULT_TMP_DIR;
+
+
+
 
 
 void FileCacheDataEx::setTotalInMemCacheSize(size_t max)

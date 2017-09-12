@@ -86,16 +86,16 @@ int HttpRange::count() const
     return m_array.getSize();
 }
 
-ByteRange *HttpRange::getSlot(ls_xpool_t &pool)
+ByteRange *HttpRange::getSlot(ls_xpool_t *pool)
 {
     if (m_array.getCapacity() == 0)
-        m_array.guarantee(&pool, 3);
+        m_array.guarantee(pool, 3);
     else if (m_array.getCapacity() <= m_array.getSize() + 1)
-        m_array.guarantee(&pool, m_array.getCapacity() * 2);
+        m_array.guarantee(pool, m_array.getCapacity() * 2);
     return m_array.getNew();
 }
 
-int HttpRange::checkAndInsert(ByteRange &range, ls_xpool_t &pool)
+int HttpRange::checkAndInsert(ByteRange &range, ls_xpool_t *pool)
 {
     if ((range.getBegin() == -1) && (range.getEnd() == -1))
         return LS_FAIL;
@@ -155,7 +155,7 @@ int HttpRange::checkAndInsert(ByteRange &range, ls_xpool_t &pool)
     5 -> err: receive char other than the above
 */
 
-int HttpRange::parse(const char *pRange, ls_xpool_t &pool)
+int HttpRange::parse(const char *pRange, ls_xpool_t *pool)
 {
     m_array.clear();
     if (strncasecmp(pRange, "bytes=", 6) != 0)

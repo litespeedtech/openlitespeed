@@ -67,8 +67,10 @@ class Adns : public EventReactor, public TSingleton<Adns>
 
 public:
 
-    int  init(int uid, int gid);
+    int  init();
     int  shutdown();
+    int  initShm(int uid, int gid);
+
 
     static int  deleteCache();
     void        trimCache();

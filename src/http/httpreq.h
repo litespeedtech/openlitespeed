@@ -76,7 +76,9 @@ enum
 #define REQ_GZIP_ACCEPT         2
 #define GZIP_REQUIRED           (GZIP_ENABLED | REQ_GZIP_ACCEPT)
 #define UPSTREAM_GZIP           4
-#define UPSTREAM_DEFLATE        8
+#define GZIP_ADD_ENCODING       8
+#define GZIP_OFF                16
+#define UPSTREAM_DEFLATE        32
 
 #define BR_ENABLED              1
 #define REQ_BR_ACCEPT           2

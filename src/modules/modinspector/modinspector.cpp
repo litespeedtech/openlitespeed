@@ -43,7 +43,7 @@ lsi_config_key_t paramArray[paramArrayCount + 1] =
 {
     {"scannerpath",     0, LSI_CFG_SERVER | LSI_CFG_VHOST},
     {"counterprefix",   1, LSI_CFG_SERVER | LSI_CFG_VHOST},
-    {NULL} //Must have NULL in the last item
+    {NULL, 0, 0} //Must have NULL in the last item
 };
 
 

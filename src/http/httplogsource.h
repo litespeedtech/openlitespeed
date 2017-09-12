@@ -60,6 +60,7 @@ public:
                       int setDebugLevel);
     int initErrorLog(const XmlNode *pRoot,
                      int setDebugLevel);
+    int initAllLog(const char *pRoot);
 
     static void setAioServerAccessLog(short val)
     {   s_iAioServerAccessLog = val;    }

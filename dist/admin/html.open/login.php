@@ -1,6 +1,6 @@
 <?php
 
-require_once('view/inc/global.php');
+include_once('view/inc/global.php');
 
 $authorizer = CAuthorizer::singleton();
 

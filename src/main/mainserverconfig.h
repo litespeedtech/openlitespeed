@@ -38,6 +38,8 @@ private:
     int             m_iEnableCoreDump;
     int             m_iDisableLogRotate;
     StringList      m_sSuspendedVhosts;
+    int m_iDisableWebAdmin;
+    
     void operator=(const MainServerConfig &rhs);
     MainServerConfig(const MainServerConfig &rhs);
     MainServerConfig()
@@ -47,6 +49,7 @@ private:
         , m_iCrashGuard(2)
         , m_iEnableCoreDump(0)
         , m_iDisableLogRotate(0)
+        , m_iDisableWebAdmin(0)
     {}
 public:
     int  getCrashGuard() const          {   return m_iCrashGuard;   }
@@ -76,6 +79,8 @@ public:
     int  getDisableLogRotateAtStartup()  const         {   return m_iDisableLogRotate;       }
     StringList &getSuspendedVhosts()        {   return m_sSuspendedVhosts;      }
 
+    void setDisableWebAdmin(int v)         {   m_iDisableWebAdmin = v;          }
+    int getDisableWebAdmin() const         {   return m_iDisableWebAdmin;            }
 };
 
 #endif // MAINSERVERCONFIG_H

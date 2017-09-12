@@ -76,10 +76,9 @@ int Adns::deleteCache()
     return LsShm::deleteFile("adns_cache", NULL);
 }
 
-int Adns::init(int uid, int gid)
+
+int Adns::init()
 {
-    if ( m_pCtx )
-        return 0;
     if (!s_inited)
     {
         if (dns_init(NULL, 1) < 0)
@@ -87,11 +86,8 @@ int Adns::init(int uid, int gid)
         s_inited = 1;
         dns_set_opt(NULL, DNS_OPT_NTRIES, 1);
     }
-    if ((m_pShmHash = LsShmHash::open(
-        "adns_cache", "dns_cache", 1000, LSSHM_FLAG_LRU)) != NULL)
-    {
-        m_pShmHash->getPool()->getShm()->chperm(uid, gid, 0600);
-    }
+    if ( m_pCtx )
+        return 0;
     m_pCtx = dns_new( NULL );
     if ( !m_pCtx )
         return -1;
@@ -102,6 +98,18 @@ int Adns::init(int uid, int gid)
     return 0;
 }
 
+
+int Adns::initShm(int uid, int gid)
+{
+    if ( m_pShmHash )
+        return 0;
+    if ((m_pShmHash = LsShmHash::open(
+        "adns_cache", "dns_cache", 1000, LSSHM_FLAG_LRU)) != NULL)
+    {
+        m_pShmHash->getPool()->getShm()->chperm(uid, gid, 0600);
+    }
+    return 0;
+}
 
 int Adns::shutdown()
 {
@@ -259,6 +267,7 @@ AdnsReq *Adns::getHostByName(const char * pName, int type,
                              lookup_pf cb, void *arg)
 {
     dns_query * pQuery;
+    init();
     AdnsReq *pAdnsReq = new AdnsReq;
     if (pAdnsReq)
     {
@@ -316,6 +325,7 @@ const char *Adns::getHostByAddrInCache( const struct sockaddr * pAddr, int &leng
 AdnsReq * Adns::getHostByAddr( const struct sockaddr * pAddr, void *arg, lookup_pf cb)
 {
     dns_query * pQuery;
+    init();
     AdnsReq *pAdnsReq = new AdnsReq;
     if (!pAdnsReq)
         return NULL;

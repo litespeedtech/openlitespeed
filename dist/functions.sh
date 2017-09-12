@@ -603,15 +603,14 @@ buildConfigFiles()
         sed -e "s/%ADMIN_PORT%/$ADMIN_PORT/" "$LSINSTALL_DIR/admin/conf/admin_config.conf.in" > "$LSINSTALL_DIR/admin/conf/admin_config.conf"
     fi
     
-	sed -e "s/%USER%/$WS_USER/" -e "s/%GROUP%/$WS_GROUP/" -e "s/%ADMIN_EMAIL%/$ADMIN_EMAIL/" -e "s/%HTTP_PORT%/$HTTP_PORT/" -e  "s/%RUBY_BIN%/$RUBY_PATH/" -e "s/%SERVER_NAME%/$SERVER_NAME/" "$LSINSTALL_DIR/conf/httpd_config.conf.in" > "$LSINSTALL_DIR/conf/httpd_config.conf.tmp"
+#	sed -e "s/%USER%/$WS_USER/" -e "s#%DEFAULT_TMP_DIR%#$DEFAULT_TMP_DIR#" -e "s/%GROUP%/$WS_GROUP/" -e "s/%ADMIN_EMAIL%/$ADMIN_EMAIL/" -e "s/%HTTP_PORT%/$HTTP_PORT/" -e  "s/%RUBY_BIN%/$RUBY_PATH/" -e "s/%SERVER_NAME%/$SERVER_NAME/" "$LSINSTALL_DIR/conf/httpd_config.conf.in" > "$LSINSTALL_DIR/conf/httpd_config.conf.tmp"
+#	if [ $SETUP_PHP -eq 1 ]; then
+#		sed -e "s/%PHP_BEGIN%//" -e "s/%PHP_END%//" -e "s/%PHP_SUFFIX%/$PHP_SUFFIX/" -e "s/%PHP_PORT%/$PHP_PORT/" "$LSINSTALL_DIR/conf/httpd_config.conf.tmp" > "$LSINSTALL_DIR/conf/httpd_config.conf"
+#	else
+#		sed -e "s/%PHP_BEGIN%/<!--/" -e "s/%PHP_END%/-->/" -e "s/%PHP_SUFFIX%/php/" -e "s/%PHP_PORT%/5201/" "$LSINSTALL_DIR/conf/httpd_config.conf.tmp" > "$LSINSTALL_DIR/conf/httpd_config.conf"
+#	fi
 
-	if [ $SETUP_PHP -eq 1 ]; then
-		sed -e "s/%PHP_BEGIN%//" -e "s/%PHP_END%//" -e "s/%PHP_SUFFIX%/$PHP_SUFFIX/" -e "s/%PHP_PORT%/$PHP_PORT/" "$LSINSTALL_DIR/conf/httpd_config.conf.tmp" > "$LSINSTALL_DIR/conf/httpd_config.conf"
-	else
-		sed -e "s/%PHP_BEGIN%/<!--/" -e "s/%PHP_END%/-->/" -e "s/%PHP_SUFFIX%/php/" -e "s/%PHP_PORT%/5201/" "$LSINSTALL_DIR/conf/httpd_config.conf.tmp" > "$LSINSTALL_DIR/conf/httpd_config.conf"
-	fi
-
-        sed -e "s/%USER%/$WS_USER/" -e "s/%GROUP%/$WS_GROUP/"  -e "s/%ADMIN_EMAIL%/$ADMIN_EMAIL/" -e "s/%HTTP_PORT%/$HTTP_PORT/" -e "s/%RUBY_BIN%/$RUBY_PATH/"  "$LSINSTALL_DIR/conf/httpd_config.conf.in" > "$LSINSTALL_DIR/conf/httpd_config.conf"
+    sed -e "s/%USER%/$WS_USER/" -e "s/%GROUP%/$WS_GROUP/" -e "s#%DEFAULT_TMP_DIR%#$DEFAULT_TMP_DIR#"  -e "s/%ADMIN_EMAIL%/$ADMIN_EMAIL/" -e "s/%HTTP_PORT%/$HTTP_PORT/" -e "s/%RUBY_BIN%/$RUBY_PATH/"  "$LSINSTALL_DIR/conf/httpd_config.conf.in" > "$LSINSTALL_DIR/conf/httpd_config.conf"
 
 }
 
@@ -863,8 +862,45 @@ create_lsadm_solaris()
 }
 
 
+installation_lscpd()
+{   
+    umask 022
+    if [ $INST_USER = "root" ]; then
+        export PATH=/sbin:/usr/sbin:$PATH
+        if [ "x$SYS_NAME" = "xLinux" ]; then
+            create_lsadm
+        elif [ "x$SYS_NAME" = "xFreeBSD" ] || [ "x$SYS_NAME" = "xNetBSD" ]; then
+            create_lsadm_freebsd
+        elif [ "x$SYS_NAME" = "xSunOS" ]; then
+            create_lsadm_solaris
+        fi 
+        grep "^lsadm:" /etc/passwd 1>/dev/null 2>&1
+        if [ $? -eq 0 ]; then
+            CONF_OWN="lsadm:lsadm"
+        fi
+        SDIR_OWN="root:$ROOTGROUP"
+        chown $SDIR_OWN $LSWS_HOME
+    else
+        SDIR_OWN=$DIR_OWN
+    fi
+    
+    util_mkdir "$SDIR_OWN" $DIR_MOD  bin fcgi-bin php lib logs modules  share share/autoindex share/autoindex/icons  tmp autoupdate 
+    util_mkdir "$CONF_OWN" $SDIR_MOD   phpbuild
+    util_mkdir "$DIR_OWN" $SDIR_MOD tmp/ocspcache
+    
+    find "$DEFAULT_TMP_DIR" -type s -atime +1 -delete 2>/dev/null
+    if [ $? -ne 0 ]; then
+        find "$DEFAULT_TMP_DIR" -type s -atime +1 2>/dev/null | xargs rm -f
+    fi 
+
+    util_cpdir "$CONF_OWN" $DOC_MOD share/autoindex
+    util_ccpfile "$SDIR_OWN" $EXEC_MOD fcgi-bin/lsperld.fpl 
+    util_cpfile "$SDIR_OWN" $DOC_MOD VERSION GPL.txt
+}
+
+
 installation()
-{
+{   
     umask 022
 	if [ $INST_USER = "root" ]; then
         export PATH=/sbin:/usr/sbin:$PATH
@@ -890,6 +926,9 @@ installation()
         rm -rf "$LSWS_HOME/admin/html.$VERSION"
     fi
 
+    
+    
+    
     util_mkdir "$SDIR_OWN" $DIR_MOD admin bin docs fcgi-bin php lib logs modules backup cachedata gdata docs/css docs/img docs/ja-JP docs/zh-CN admin/logs add-ons share share/autoindex share/autoindex/icons admin/fcgi-bin admin/html.$VERSION admin/misc tmp autoupdate 
     util_mkdir "$CONF_OWN" $SDIR_MOD conf conf/cert conf/templates conf/vhosts conf/vhosts/Example admin/conf admin/tmp phpbuild
     util_mkdir "$SDIR_OWN" $SDIR_MOD admin/cgid admin/cgid/secret
@@ -905,9 +944,9 @@ installation()
         find "$LSWS_HOME/admin/tmp" -type s -atime +1 2>/dev/null | xargs rm -f
     fi 
 
-    find "/tmp/lshttpd" -type s -atime +1 -delete 2>/dev/null
+    find "$DEFAULT_TMP_DIR" -type s -atime +1 -delete 2>/dev/null
     if [ $? -ne 0 ]; then
-        find "/tmp/lshttpd" -type s -atime +1 2>/dev/null | xargs rm -f
+        find "$DEFAULT_TMP_DIR" -type s -atime +1 2>/dev/null | xargs rm -f
     fi 
 
     WHM_CGIDIR="/usr/local/cpanel/whostmgr/docroot/cgi"

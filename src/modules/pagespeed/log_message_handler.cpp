@@ -92,6 +92,6 @@ void InstallLogMessageHandler()
 {
     logging::SetLogMessageHandler(&LogMessageHandler);
 
-    if (g_api->_debugLevel > 2)
+    if (*g_api->_log_level_ptr >= LSI_LOG_DEBUG_LOW)
         logging::SetMinLogLevel(-2);
 }

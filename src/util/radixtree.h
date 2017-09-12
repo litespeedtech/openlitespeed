@@ -198,10 +198,10 @@ public:
         : m_iMode(iMode)
         , m_iFlags(0)
         , m_pRoot(NULL)
-    {   ls_xpool_init(&m_pool);             }
+    {   m_pool = ls_xpool_new();             }
 
     ~RadixTree()
-    {   ls_xpool_destroy(&m_pool);          }
+    {   ls_xpool_delete(m_pool);          }
 
     // NOTICE: If any of these are to be used, they should be set immediately.
     int setRootLabel(const char *pLabel, int iLabelLen);
@@ -233,7 +233,7 @@ private:
     int checkPrefix(const char *pLabel, int iLabelLen) const;
 
 
-    ls_xpool_t  m_pool;
+    ls_xpool_t *m_pool;
     int         m_iMode;
     int         m_iFlags;
     rnheader_t *m_pRoot;

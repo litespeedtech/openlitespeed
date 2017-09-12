@@ -175,21 +175,20 @@ TEST(LoopBufSearchTest)
 
 TEST(LoopBufXTest_test)
 {
-    ls_xpool_t pool;
-    ls_xpool_init(&pool);
-    LoopBuf *buf = new(ls_xpool_alloc(&pool, sizeof(LoopBuf)))LoopBuf(&pool);
+    ls_xpool_t *pool = ls_xpool_new();
+    LoopBuf *buf = new(ls_xpool_alloc(pool, sizeof(LoopBuf)))LoopBuf(pool);
     CHECK(0 == buf->size());
     CHECK(0 < buf->capacity());
-    CHECK(0 == buf->xReserve(0, &pool));
+    CHECK(0 == buf->xReserve(0, pool));
     CHECK(0 == buf->capacity());
     CHECK(buf->end() == buf->begin());
 
-    CHECK(buf->xReserve(1024, &pool) == 0);
+    CHECK(buf->xReserve(1024, pool) == 0);
     CHECK(1024 <= buf->capacity());
-    CHECK(buf->xGuarantee(1048, &pool) == 0);
+    CHECK(buf->xGuarantee(1048, pool) == 0);
     CHECK(1048 <= buf->available());
     buf->used(10);
-    CHECK(buf->xReserve(15, &pool) == 0);
+    CHECK(buf->xReserve(15, pool) == 0);
     CHECK(buf->size() == buf->end() - buf->begin());
     CHECK(buf->available() == buf->capacity() - buf->size() - 1);
     buf->clear();
@@ -197,7 +196,7 @@ TEST(LoopBufXTest_test)
     const char *pStr = "Test String 123  343";
     int len = (int)strlen(pStr);
 
-    CHECK((int)strlen(pStr) == buf->xAppend(pStr, strlen(pStr), &pool));
+    CHECK((int)strlen(pStr) == buf->xAppend(pStr, strlen(pStr), pool));
     CHECK(buf->size() == (int)strlen(pStr));
     CHECK(0 == strncmp(pStr, buf->begin(), strlen(pStr)));
     char pBuf[128];
@@ -206,7 +205,7 @@ TEST(LoopBufXTest_test)
 
     for (int i = 0 ; i < 129 ; i ++)
     {
-        int i1 = buf->xAppend(pStr, len, &pool);
+        int i1 = buf->xAppend(pStr, len, pool);
         if (i1 == 0)
             CHECK(buf->full());
         else if (i1 < len)
@@ -221,7 +220,7 @@ TEST(LoopBufXTest_test)
     }
     for (int i = 129 ; i < 1000 ; i ++)
     {
-        int i1 = buf->xAppend(pStr, len, &pool);
+        int i1 = buf->xAppend(pStr, len, pool);
         if (i1 == 0)
             CHECK(buf->full());
         else if (i1 < len)
@@ -234,23 +233,23 @@ TEST(LoopBufXTest_test)
             CHECK(buf->size() == buf->capacity() - 128 - 20 - 30);
         }
     }
-    LoopBuf *lbuf = new(ls_xpool_alloc(&pool, sizeof(LoopBuf)))LoopBuf(&pool,
+    LoopBuf *lbuf = new(ls_xpool_alloc(pool, sizeof(LoopBuf)))LoopBuf(pool,
             0);
     buf->swap(*lbuf);
-    buf->xReserve(200, &pool);
+    buf->xReserve(200, pool);
     //printf( "n=%d\n", n );
     CHECK(200 <= buf->capacity());
     CHECK(buf->capacity() >= buf->size());
     for (int i = 0; i < buf->capacity() - 1; ++i)
-        CHECK(1 == buf->xAppend(pBuf, 1, &pool));
+        CHECK(1 == buf->xAppend(pBuf, 1, pool));
     CHECK(buf->full());
     char *p0 = buf->end();
     CHECK(buf->inc(p0) == buf->begin());
-    CHECK(buf->xReserve(500, &pool) == 0);
+    CHECK(buf->xReserve(500, pool) == 0);
     CHECK(500 <= buf->capacity());
     CHECK(buf->contiguous() == buf->available());
     buf->clear();
-    CHECK(buf->xGuarantee(800, &pool) == 0);
+    CHECK(buf->xGuarantee(800, pool) == 0);
     CHECK(buf->available() >= 800);
 
     //printf( "capacity=%d\n", buf->capacity());
@@ -260,7 +259,7 @@ TEST(LoopBufXTest_test)
     CHECK(buf->pop_back(100) == 100);
     CHECK(buf->begin() > buf->end());
     CHECK(buf->contiguous() == buf->begin() - buf->end() - 1);
-    buf->xStraight(&pool);
+    buf->xStraight(pool);
     CHECK(buf->begin() < buf->end());
     CHECK(buf->pop_front(400) == 400);
     buf->used(400);
@@ -279,24 +278,23 @@ TEST(LoopBufXTest_test)
         buf->inc(p0);
     }
 
-    LoopBuf::xDestroy(buf, &pool);
-    LoopBuf::xDestroy(lbuf, &pool);
-    ls_xpool_destroy(&pool);
+    LoopBuf::xDestroy(buf, pool);
+    LoopBuf::xDestroy(lbuf, pool);
+    ls_xpool_delete(pool);
 }
 
 TEST(LoopBufXSearchTest)
 {
-    ls_xpool_t pool;
-    ls_xpool_init(&pool);
-    LoopBuf *buf = new(ls_xpool_alloc(&pool, sizeof(LoopBuf)))LoopBuf(&pool);
+    ls_xpool_t *pool = ls_xpool_new();
+    LoopBuf *buf = new(ls_xpool_alloc(pool, sizeof(LoopBuf)))LoopBuf(pool);
     const char *ptr, *ptr2, *pAccept = NULL;
     //char *printBuf = (char *)malloc(128);
     printf("LoopBuf Search Test\n");
     buf->xAppend("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa1"
                  "23456789101112131415161718192021222324252627282930313233343536", 127,
-                 &pool);
+                 pool);
     buf->pop_front(20);
-    buf->xAppend("37383940414243444546", 20, &pool);
+    buf->xAppend("37383940414243444546", 20, pool);
     pAccept = "2021222324";
     ptr = buf->search(0, pAccept, 10);
     ptr2 = buf->getPointer(73);
@@ -323,25 +321,24 @@ TEST(LoopBufXSearchTest)
     buf->clear();
     buf->xAppend("afafafafafafafafafafafafafafafafafafafafafafafafafafafafafafafaf"
                  "afafafafafafafafafafafafafafafafafafafafafafafafafafafabkbkbkbk", 127,
-                 &pool);
+                 pool);
     buf->pop_front(20);
-    buf->xAppend("bkbkbkbafafafafafafa" , 20, &pool);
+    buf->xAppend("bkbkbkbafafafafafafa" , 20, pool);
     pAccept = "bkbkbkbkba";
     ptr = buf->search(0, pAccept, 10);
     ptr2 = buf->getPointer(105);
     CHECK(ptr == ptr2);
 
-    LoopBuf::xDestroy(buf, &pool);
-    ls_xpool_destroy(&pool);
+    LoopBuf::xDestroy(buf, pool);
+    ls_xpool_delete(pool);
 }
 
 
 
 TEST(XLoopBufTest_test)
 {
-    ls_xpool_t pool;
-    ls_xpool_init(&pool);
-    XLoopBuf *buf = new(ls_xpool_alloc(&pool, sizeof(XLoopBuf)))XLoopBuf(&pool,
+    ls_xpool_t *pool = ls_xpool_new();
+    XLoopBuf *buf = new(ls_xpool_alloc(pool, sizeof(XLoopBuf)))XLoopBuf(pool,
             0);
     CHECK(0 == buf->size());
     CHECK(0 < buf->capacity());
@@ -399,8 +396,8 @@ TEST(XLoopBufTest_test)
             CHECK(buf->size() == buf->capacity() - 128 - 20 - 30);
         }
     }
-    XLoopBuf *lbuf = new(ls_xpool_alloc(&pool,
-                                        sizeof(XLoopBuf)))XLoopBuf(&pool, 0);
+    XLoopBuf *lbuf = new(ls_xpool_alloc(pool,
+                                        sizeof(XLoopBuf)))XLoopBuf(pool, 0);
     buf->swap(*lbuf);
     buf->reserve(200);
     //printf( "n=%d\n", n );
@@ -443,14 +440,13 @@ TEST(XLoopBufTest_test)
         CHECK(p0 == buf->getPointer(i));
         buf->inc(p0);
     }
-    ls_xpool_destroy(&pool);
+    ls_xpool_delete(pool);
 }
 
 TEST(XLoopBufSearchTest)
 {
-    ls_xpool_t pool;
-    ls_xpool_init(&pool);
-    XLoopBuf *buf = new(ls_xpool_alloc(&pool, sizeof(XLoopBuf)))XLoopBuf(&pool,
+    ls_xpool_t *pool = ls_xpool_new();
+    XLoopBuf *buf = new(ls_xpool_alloc(pool, sizeof(XLoopBuf)))XLoopBuf(pool,
             0);
     const char *ptr, *ptr2, *pAccept = NULL;
     //char *printBuf = (char *)malloc(128);
@@ -491,7 +487,7 @@ TEST(XLoopBufSearchTest)
     ptr = buf->search(0, pAccept, 10);
     ptr2 = buf->getPointer(105);
     CHECK(ptr == ptr2);
-    ls_xpool_destroy(&pool);
+    ls_xpool_delete(pool);
 }
 
 #endif

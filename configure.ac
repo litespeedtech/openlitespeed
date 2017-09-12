@@ -9,7 +9,7 @@ m4_include(ax_check_ip2location.m4)
 
 dnl Process this file with autoconf to produce a configure script.
 AC_PREREQ([2.69])
-AC_INIT([openlitespeed],[1.4.27],[info@litespeedtech.com],[openlitespeed],[http://www.litespeedtech.com/])
+AC_INIT([openlitespeed],[1.4.28],[info@litespeedtech.com],[openlitespeed],[http://www.litespeedtech.com/])
 AM_INIT_AUTOMAKE([1.0 foreign no-define ])
 
 AM_CONFIG_HEADER(src/config.h:src/config.h.in)
@@ -51,14 +51,16 @@ AC_HEADER_ASSERT
 
 ## ##Set option --with-user
 AC_ARG_WITH([user],
-            AS_HELP_STRING([--with-user],[Set user name to run openlitespeed [default: nobody]]),
+            AS_HELP_STRING([--with-user],[Set user name to run openlitespeed/lscpd [default: nobody]]),
             [OPENLSWS_USER="$withval"], [OPENLSWS_USER=nobody])
+AC_DEFINE_UNQUOTED([OPENLSWS_USER], ["$OPENLSWS_USER"], [Defined the user name])
 AC_SUBST([OPENLSWS_USER])
 
 ## ##Set option --with-group
 AC_ARG_WITH([group],
             AS_HELP_STRING([--with-group],[Set group of the user [default: nobody]]),
             [OPENLSWS_GROUP="$withval"], [OPENLSWS_GROUP=nobody])
+AC_DEFINE_UNQUOTED([OPENLSWS_GROUP], ["$OPENLSWS_GROUP"], [Defined the group of the user])
 AC_SUBST([OPENLSWS_GROUP])
 
 ## ##Set option --with-admin
@@ -93,12 +95,50 @@ AC_ARG_ENABLE([adminssl],
               [OPENLSWS_ADMINSSL="$enableval"], [OPENLSWS_ADMINSSL=yes])
 AC_SUBST([OPENLSWS_ADMINSSL])
 
+AC_ARG_WITH([exampleport],
+            AS_HELP_STRING([--with-exampleport],[Set example listener port [default: 8088]]),
+            [OPENLSWS_EXAMPLEPORT="$withval"], [OPENLSWS_EXAMPLEPORT=8088])
+AC_SUBST([OPENLSWS_EXAMPLEPORT])
+
+
+
 
 AC_ARG_WITH([lsphp7],
             AS_HELP_STRING([--with-lsphp7],[Set lsphp7 as default php script handler[default: yes]]),
             [USE_LSPHP7="$withval"], [USE_LSPHP7=no])
+
+AC_ARG_WITH([tempdir],
+            AS_HELP_STRING([--with-tempdir],[Set a customized temprary directory[default: /tmp/lshttpd]]),
+            [DEFAULT_TMP_DIR="$withval"], [DEFAULT_TMP_DIR=/tmp/lshttpd])
+
+AC_ARG_WITH([pidfile],
+            AS_HELP_STRING([--with-pidfile],[Set a customized pid file path name[default: $DEFAULT_TMP_DIR/lshttpd.pid]]),
+            [PID_FILE="$withval"], [PID_FILE=$DEFAULT_TMP_DIR/lshttpd.pid])
+
+AC_ARG_WITH([lscpd],
+            AS_HELP_STRING([--with-lscpd],[Set to build lscpd instead of openlitespeed[default: yes]]),
+            [IS_LSCPD="$withval"], [IS_LSCPD=no])
+echo IS_LSCPD=$IS_LSCPD
+if test "$IS_LSCPD" = "yes" ; then
+    DEFAULT_TMP_DIR=/tmp/lscpd
+    PID_FILE=$DEFAULT_TMP_DIR/lscpd.pid
+    USE_LSPHP7=yes
+    OPENLSWS_ADMINSSL=no
+    AC_DEFINE_UNQUOTED([IS_LSCPD], [1], [Defined to build lscpd])
+    AC_SUBST([IS_LSCPD])
+fi
+
+AM_CONDITIONAL([BUILD_LSCPD], [test x$IS_LSCPD = xyes])
+AC_DEFINE_UNQUOTED([DEFAULT_TMP_DIR], ["$DEFAULT_TMP_DIR"], [Defined the temprary directory])
+AC_SUBST([DEFAULT_TMP_DIR])
+AC_DEFINE_UNQUOTED([PID_FILE], ["$PID_FILE"], [Defined the pid file path])
+AC_SUBST([PID_FILE])
 AC_SUBST([USE_LSPHP7])
-echo USE_LSPHP7=$USE_LSPHP7
+AC_SUBST([OPENLSWS_ADMINSSL])
+echo "OPENLSWS_ADMINSSL=$OPENLSWS_ADMINSSL"
+echo USE_LSPHP7=$USE_LSPHP7            
+echo DEFAULT_TMP_DIR=$DEFAULT_TMP_DIR
+echo PID_FILE=$PID_FILE
 
 
 OPENLSWS_HTTP2="?"

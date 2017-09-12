@@ -180,7 +180,10 @@ static int luaHandler(const lsi_session_t *session)
     n += strlen(uri);
 
     g_api->set_handler_write_state(session, 0);
-    LsLuaEngine::setDebugLevel((int)g_api->_debugLevel);
+    int debLevel = 0;
+    if (*g_api->_log_level_ptr >= LSI_LOG_DEBUG)
+        debLevel = (*g_api->_log_level_ptr - LSI_LOG_DEBUG) / 10; 
+    LsLuaEngine::setDebugLevel(debLevel);
     return LsLuaEngine::runScript(session, luafile, pUser,
                                   &(pData->m_pSession), LSLUA_HOOK_HANDLER);
 

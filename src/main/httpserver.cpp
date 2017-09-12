@@ -31,6 +31,7 @@
 #include <extensions/cgi/cgidworker.h>
 #include <extensions/cgi/lscgiddef.h>
 #include <extensions/cgi/suexec.h>
+#include <extensions/cgi/cgidconfig.h>
 #include <extensions/registry/extappregistry.h>
 #include <extensions/registry/railsappconfig.h>
 
@@ -233,7 +234,10 @@ private:
     int initAdns()
     {
         ServerProcessConfig &procConfig = ServerProcessConfig::getInstance();
-        if (Adns::getInstance().init(procConfig.getUid(), procConfig.getGid()) == -1)
+        if (Adns::getInstance().init() == -1)
+            return LS_FAIL;
+        if (Adns::getInstance().initShm(procConfig.getUid(), 
+                                        procConfig.getGid()) == -1)
             return LS_FAIL;
         MultiplexerFactory::getMultiplexer()->add(&Adns::getInstance(),
                 POLLIN | POLLHUP | POLLERR);
@@ -315,6 +319,7 @@ private:
 
     int  cleanUp(int pid, char *pBlackBoard);
     int  initSampleServer();
+    int  initLscpd();
     int  reinitMultiplexer();
     int  authAdminReq(char *pAuth);
 
@@ -334,7 +339,10 @@ private:
                                const char *pVHostName);
     HttpListener *configListener(const XmlNode *pNode, int isAdmin);
     int configListeners(const XmlNode *pRoot, int isAdmin);
-    int startListeners(const XmlNode *pRoot, const char *pName);
+    
+    int startAdminListener(const XmlNode *pRoot, const char *pName);
+    int startListeners(const XmlNode *pRoot);
+    
     void mapDomainList(const XmlNode *pListenerNodes, HttpVHost *pVHost);
     int enableWebConsole();
     void setAdminThrottleLimits(HttpVHost *pVHostAdmin);
@@ -958,7 +966,7 @@ void HttpServerImpl::checkOLSUpdate()
     sAutoUpdFile.setStr(MainServerConfig::getInstance().getServerRoot());
     sAutoUpdFile.append("/autoupdate/", 12);
     if (stat(sAutoUpdFile.c_str(), &sb) == -1)
-        mkdir(sAutoUpdFile.c_str(), 0755);
+        mkdir(sAutoUpdFile.c_str(), 0777);
     sAutoUpdFile.append("release", 7);
 
     time_t t = time(NULL);
@@ -1481,28 +1489,32 @@ int HttpServerImpl::configListeners(const XmlNode *pRoot, int isAdmin)
 
 
 //#define ADMIN_CONFIG_NODE           "AdminConfigNode"
-int HttpServerImpl::startListeners(const XmlNode *pRoot, const char *pName)
+int HttpServerImpl::startAdminListener(const XmlNode *pRoot, const char *pName)
 {
-    {
-        ConfigCtx currentCtx("admin", "listener");
+    ConfigCtx currentCtx("admin", "listener");
 
-        if (configListeners(pRoot->getChild(pName), 1) <= 0)
-        {
-            LS_ERROR(&currentCtx, "No listener is available for admin virtual host!");
-            return LS_FAIL;
-        }
-    }
+    if (configListeners(pRoot->getChild(pName), 1) <= 0)
     {
-        ConfigCtx currentCtx("server", "listener");
-
-        if (configListeners(pRoot, 0) <= 0)
-            LS_WARN(&currentCtx, "No listener is available for normal virtual host!");
+        LS_ERROR(&currentCtx, "No listener is available for admin virtual host!");
+        return LS_FAIL;
     }
+    return 0;
+}
+
+
+int HttpServerImpl::startListeners(const XmlNode *pRoot)
+{
+    
+    ConfigCtx currentCtx("server", "listener");
+
+    if (configListeners(pRoot, 0) <= 0)
+        LS_WARN(&currentCtx, "No listener is available for normal virtual host!");
+
     return 0;
 }
 #define DEFAULT_ADMIN_FCGI_NAME     "AdminPHP"
 #define DEFAULT_ADMIN_PHP_FCGI      "$VH_ROOT/fcgi-bin/admin_php"
-#define DEFAULT_ADMIN_PHP_FCGI_URI  "UDS://tmp/lshttpd/admin_php.sock"
+#define DEFAULT_ADMIN_PHP_FCGI_URI  "UDS:/" DEFAULT_TMP_DIR "/admin_php.sock"
 #define ADMIN_PHP_SESSION           "$SERVER_ROOT/admin/tmp"
 
 
@@ -2670,7 +2682,29 @@ int HttpServerImpl::configServerBasics(int reconfig, const XmlNode *pRoot)
         if (pValue != NULL)
             MainServerConfigObj.setServerName(pValue);
         else
-            MainServerConfigObj.setServerName("anonymous");
+        {
+            //Since may run multiple instances, if empty here, use binary path for it
+            pid_t pid = getpid();
+            char bin_path[1024];
+            ssize_t len;
+            char sExe[128];
+            sprintf(sExe, "/proc/%d/exe", pid);
+            
+            if ((len = readlink(sExe, bin_path, sizeof(bin_path)-1)) != -1)
+            {
+               bin_path[len] = '\0';
+               MainServerConfigObj.setServerName(bin_path);
+            }
+            else
+            {
+                //MAC OS may go here
+                char hostname[HOST_NAME_MAX];
+                if (gethostname(hostname, HOST_NAME_MAX)==0)
+                    MainServerConfigObj.setServerName(hostname);
+                else
+                    MainServerConfigObj.setServerName("anonymous");
+            }
+        }
 
         if (!reconfig)
         {
@@ -2708,6 +2742,10 @@ int HttpServerImpl::configServerBasics(int reconfig, const XmlNode *pRoot)
             pAdminEmails = "";
 
         MainServerConfigObj.setAdminEmails(pAdminEmails);
+
+        const char *sDisableWebAdmin = pRoot->getChildValue("disableWebAdmin");
+        if (sDisableWebAdmin != NULL)
+            MainServerConfigObj.setDisableWebAdmin(atoi(sDisableWebAdmin)); 
 
         procConf.setPriority(ConfigCtx::getCurConfigCtx()->getLongValue(pRoot,
                              "priority", -20, 20, 0));
@@ -2985,18 +3023,27 @@ int HttpServerImpl::configServer(int reconfig, XmlNode *pRoot)
     if (ret)
         return ret;
 
-    ret = loadAdminConfig(pRoot);
-
-    if (ret)
-        return ret;
-
+    
+    if (!MainServerConfig::getInstance().getDisableWebAdmin())
+    {
+        ret = loadAdminConfig(pRoot);
+        if (ret)
+            return ret;
+    }
+    
     configTuning(pRoot);
 
     //Must load modules before parse and set scriptHandlers
     configModules(pRoot);
 
-    if (startListeners(pRoot, ADMIN_CONFIG_NODE))
-        return LS_FAIL;
+    if (!MainServerConfig::getInstance().getDisableWebAdmin())
+    {
+        if (startAdminListener(pRoot, ADMIN_CONFIG_NODE))
+            return LS_FAIL;
+    }
+    
+    //All other server listeners
+    startListeners(pRoot);
 
     int maxconns = ConnLimitCtrl::getInstance().getMaxConns();
     unsigned long long maxfds = SystemInfo::maxOpenFile(maxconns * 3);
@@ -3014,15 +3061,19 @@ int HttpServerImpl::configServer(int reconfig, XmlNode *pRoot)
     }
     if (initGroups())
         return LS_FAIL;
-    ret = configAdminConsole(pRoot->getChild(ADMIN_CONFIG_NODE));
-
-    if (ret)
+    
+    
+    if (!MainServerConfig::getInstance().getDisableWebAdmin())
     {
-        LS_ERROR(ConfigCtx::getCurConfigCtx(),
-                 "Failed to setup the WEB administration interface!");
-        return ret;
+        ret = configAdminConsole(pRoot->getChild(ADMIN_CONFIG_NODE));
+        if (ret)
+        {
+            LS_ERROR(ConfigCtx::getCurConfigCtx(),
+                     "Failed to setup the WEB administration interface!");
+            return ret;
+        }
     }
-
+    
     {
         ConfigCtx currentCtx("server", "epsr");
         ExtAppRegistry::configExtApps(pRoot, NULL);
@@ -3262,6 +3313,290 @@ int HttpServerImpl::initServer(XmlNode *pRoot, int &iReleaseXmlTree,
     return ret;
 }
 
+int HttpServerImpl::initLscpd()
+{
+#define LSCPD_PROXY_APP_NAME    "gunicorn"
+#define LSCPD_VHOST_NAME        "cyberpanel"
+#define LSCPD_PROXY_ADDRESS     "127.0.0.1:5003"
+#define LSCPD_LISTENER_ADDRESS  "*:8090"
+
+    int ret = 0;
+    char achBuf[256], achBuf1[256];
+    char *p = achBuf;
+    strcpy(p, MainServerConfig::getInstance().getServerRoot());
+    assert(p != NULL);
+    char *pEnd = p + strlen(p);
+    strcpy(achBuf1, achBuf);
+    
+    beginConfig();
+    
+    MainServerConfig  &MainServerConfigObj =  MainServerConfig::getInstance();
+    ServerProcessConfig &procConfig = ServerProcessConfig::getInstance();
+    HttpServerConfig &serverConfig = HttpServerConfig::getInstance();
+    
+#if defined(LS_AIO_USE_KQ)
+        SigEventDispatcher::setAiokoLoaded();
+#endif
+
+    //similar as configServerBasics
+    HttpServer::getInstance().initAllLog(MainServerConfig::getInstance().getServerRoot());
+    MainServerConfigObj.setServerName("lscp");
+    
+    const char *pUser = OPENLSWS_USER;
+    const char *pGroup = OPENLSWS_GROUP;
+    MainServerConfigObj.setGroup(pGroup);
+    MainServerConfigObj.setUser(pUser);
+    
+    gid_t gid = procConfig.getGid();
+    struct passwd *pw = Daemonize::configUserGroup(pUser, pGroup, gid);
+    procConfig.setGid(gid);
+    if (!pw)
+    {
+        LS_ERROR(ConfigCtx::getCurConfigCtx(), "Invalid User Name(%s) "
+                 "or Group Name(%s)!", pUser, pGroup);
+        return -1;
+    }
+
+    procConfig.setUid(pw->pw_uid);
+    m_pri_gid = pw->pw_gid;
+
+    if (getuid() == 0)
+    {
+        chown(HttpLog::getErrorLogFileName(),
+              procConfig.getUid(), procConfig.getGid());
+        chown(HttpLog::getAccessLogFileName(),
+              procConfig.getUid(), procConfig.getGid());
+    }
+
+    MainServerConfigObj.setAdminEmails("root@localhost");
+    MainServerConfigObj.setDisableWebAdmin(1); 
+    procConfig.setPriority(0);
+
+    int iNumProc = PCUtil::getNumProcessors();
+    iNumProc = (iNumProc > 8 ? 8 : iNumProc);
+    HttpServerConfig::getInstance().setChildren(iNumProc);
+    MainServerConfigObj.setDisableLogRotateAtStartup(0);
+    HttpStats::set503AutoFix(1);
+    HttpServerConfig::getInstance().setEnableH2c(0);
+    HttpServerConfig::getInstance().setRestartTimeOut(300);
+
+    //this value can only be set once when server start.
+    if (MainServerConfigObj.getCrashGuard() == 2)
+        MainServerConfigObj.setCrashGuard(1);
+
+    m_sRTReportFile = sStatDir;
+    m_sRTReportFile.append("/.rtreport", 10);
+    
+    
+    //
+    SystemInfo::maxOpenFile(4096);
+    m_dispatcher.init("best");
+    m_oldListeners.recvListeners();
+    
+    //configServerBasic2
+    VMemBuf::setMaxAnonMapSize(20 * 1024 * 1024);
+    setSwapDir(DEFAULT_TMP_DIR "/swap");
+    
+    ls_snprintf(achBuf, 256, "%s/tmp/ocspcache/",
+                MainServerConfig::getInstance().getServerRoot());
+    SslOcspStapling::setRespTempPath(achBuf);
+
+    HttpRespHeaders::hideServerSignature(0);
+    HttpServer::getInstance().getServerContext().setGeoIP(0);
+    HttpServer::getInstance().getServerContext().setIpToLoc(0);
+    HttpServerConfig::getInstance().setUseProxyHeader(0);
+    denyAccessFiles(NULL, ".ht*", 0);
+
+    ls_snprintf(achBuf, 256, "%s/conf/mime.properties",
+                MainServerConfig::getInstance().getServerRoot());
+    HttpMime::getMime()->loadMime(achBuf);
+    if (HttpMime::getMime()->getDefault() == 0)
+        HttpMime::getMime()->initDefault();
+    
+    m_serverContext.setConfigBit(BIT_ENABLE_EXPIRES, 1);
+    m_serverContext.getExpires().enable(1);
+    m_serverContext.getExpires().parse("image/*=A604800, text/css=A604800, application/x-javascript=A604800");
+    m_serverContext.setConfigBit(BIT_EXPIRES_DEFAULT, 1);
+    
+    //configSecurity
+    DeniedDir *pDeniedDir = HttpServerConfig::getInstance().getDeniedDir();
+    pDeniedDir->clear();
+    pDeniedDir->addDir("/");
+    pDeniedDir->addDir("/etc/*");
+    pDeniedDir->addDir("/dev/*");
+    
+    HttpServerConfig &config = HttpServerConfig::getInstance();
+    config.setFollowSymLink(1);
+    config.checkDeniedSymLink(0);
+    config.setRequiredBits(000);
+    config.setForbiddenBits(041111);
+    config.setScriptForbiddenBits(000);
+    config.setDirForbiddenBits(0000);
+    
+    NtwkIOLink::enableThrottle(1);
+    ClientCache::initClientCache(1000);
+    ClientCache::getClientCache()->resetThrottleLimit();
+    ClientInfo::setPerClientSoftLimit(10000);
+    ClientInfo::setPerClientHardLimit(10000);
+    ClientInfo::setOverLimitGracePeriod(15);
+    ClientInfo::setBanPeriod(300);
+    
+    RLimits limits;
+    limits.setDataLimit(460 * 1024 * 1024, 470 * 1024 * 1024);
+    limits.setProcLimit(400, 450);
+    ExtAppRegistry::setRLimits(&limits);
+    ExtAppRegistry::getRLimits()->setCPULimit(10, 50);
+
+    procConfig.setUidMin(11);
+    procConfig.setGidMin(10);
+    procConfig.setForceGid(0);
+
+    char achMIME[] = "application/x-httpd-cgi";
+    HttpMime::getMime()->addMimeHandler("", achMIME,
+                                        HandlerFactory::getInstance(HandlerType::HT_CGI, NULL), NULL,
+                                        TmpLogId::getLogId());
+
+    m_serverContext.setModuleConfig(ModuleManager::getInstance().getGlobalModuleConfig(), 0);
+    m_serverContext.initExternalSessionHooks();
+
+    
+    serverConfig.setConnTimeOut(300);
+    serverConfig.setKeepAliveTimeout(5);
+    serverConfig.setSmartKeepAlive(0);
+    serverConfig.setFollowSymLink(1);
+    serverConfig.setMaxKeepAliveRequests(1000);
+
+    ThrottleLimits *pLimit = ThrottleControl::getDefault();
+    pLimit->setDynReqLimit(INT_MAX);
+    pLimit->setStaticReqLimit(INT_MAX);
+    pLimit->setInputLimit(INT_MAX);
+    pLimit->setOutputLimit(INT_MAX);
+
+    ConnLimitCtrl::getInstance().setMaxConns(2000);
+    ConnLimitCtrl::getInstance().setMaxSSLConns(1000);
+    m_accessCtrl.addSubNetControl("ALL", 1);
+    AccessControl::setAccessCtrl(&m_accessCtrl);
+    
+    //proxy
+    ExtWorker *pProxy = ExtAppRegistry::addApp(EA_PROXY, LSCPD_PROXY_APP_NAME);
+    pProxy->setURL(LSCPD_PROXY_ADDRESS);
+    pProxy->getConfigPointer()->setMaxConns(100);
+    pProxy->getConfigPointer()->setKeepAliveTimeout(60);
+    pProxy->getConfigPointer()->setTimeout(60);
+    pProxy->getConfigPointer()->setRetryTimeout(0);
+    pProxy->getConfigPointer()->setBuffering(0);
+    
+    //php
+    LocalWorker *pPhp = (LocalWorker *)ExtAppRegistry::addApp(EA_LSAPI, "php");
+    assert(pPhp);
+    pPhp->setURL("UDS://tmp/lscpd/lsphp.sock");
+    strcpy(pEnd, "/fcgi-bin/lsphp");
+    pPhp->getConfig().setAppPath(achBuf);
+    pPhp->getConfig().setMaxConns(50);
+    pPhp->getConfig().setTimeout(60);
+    pPhp->getConfig().setRetryTimeout(0);
+    pPhp->getConfig().setBuffering(0);
+    limits.setDataLimit(2047 * 1024 * 1024, 2047 * 1024 * 1024);
+    limits.setProcLimit(400, 500);
+    pPhp->getConfig().setRLimits(&limits);
+    
+    //listener
+    strcat(achBuf1, "/cert.pem");
+    strcpy(pEnd, "/key.pem");
+    HttpListener *pListener = addListener("DefaultSSL", LSCPD_LISTENER_ADDRESS);
+    
+    SslContext *pNewContext = new SslContext(SslContext::SSL_ALL);
+    SslContext *pSSL = pNewContext->setKeyCertCipher(achBuf1, achBuf, NULL,
+                       NULL, "ALL:!ADH:!EXPORT56:RC4+RSA:+HIGH:+MEDIUM:+SSLv2:+EXP",
+                       1, 0, 0);  //certChain is 1
+    if (pSSL == NULL)
+    {
+        LS_ERROR(ConfigCtx::getCurConfigCtx(),
+                 "Failed to setup SSL cipher for listener %s, please make sure"
+                 " your certificates file %s and Key file %s can be accessed.\n",
+                 LSCPD_LISTENER_ADDRESS, achBuf1, achBuf);
+        delete pNewContext;
+        return -1;
+    }
+    else
+    {
+        pSSL->setProtocol(31);
+        pListener->getVHostMap()->setSslContext(pSSL);
+    }
+    
+    //vhost
+    HttpVHost *pVHost = new HttpVHost(LSCPD_VHOST_NAME);
+    assert(pVHost != NULL);
+    pVHost->getRootContext().setParent(
+        &HttpServer::getInstance().getServerContext());
+    pVHost->getRootContext().inherit(&HttpServer::getInstance().getServerContext());
+    pVHost->contextInherit();
+
+    strcpy(pEnd, "/" LSCPD_VHOST_NAME "/");
+    pVHost->setVhRoot(achBuf);
+    strcpy(pEnd, "/" LSCPD_VHOST_NAME "/logs/error.log");
+    pVHost->setErrorLogFile(achBuf);
+    pVHost->setErrorLogRollingSize( 10 * 1024 * 1024, 30 );
+    pVHost->setLogLevel( "DEBUG" );
+    
+    strcpy(pEnd, "/" LSCPD_VHOST_NAME "/access.log");
+    pVHost->setAccessLogFile(achBuf, 1 );
+    pVHost->getLogger()->getAppender()->setRollingSize(30 * 1024 * 1024);
+    pVHost->getLogger()->getAppender()->setKeepDays(30);
+    pVHost->getLogger()->getAppender()->setCompress(0);
+    pVHost->setUidMode(0);
+    pVHost->followSymLink(1);
+    pVHost->enableScript(1);
+    pVHost->restrained(1);
+    pVHost->enableGzip(1);
+    
+    //update mime
+    char achMIMEHtml[] = "text/html";
+    HttpMime::getMime()->updateMIME(achMIMEHtml,
+                                    HttpMime::setCompressible, (void *)1, NULL);
+    StaticFileCacheData::setUpdateStaticGzipFile(1, 6, 300, 1024 * 1024);
+
+    //add scripthandler
+    HttpMime *pMime = pVHost->getMIME();
+    HttpMime::getMime()->addMimeHandler("php", NULL, pPhp, NULL, "");
+
+    //Vhost config
+    pVHost->setDocRoot(pVHost->getVhRoot()->c_str());
+    pVHost->getRootContext().setAutoIndex(1);
+    
+    pVHost->setAutoIndexURI("/_autoindex/default.php");
+    pVHost->getRootContext().enableScript(1);
+    pVHost->getRootContext().setCustomErrUrls("404", "/error404.html");
+    pVHost->getRootContext().getExpires().enable(1);
+    pVHost->getRootContext().setConfigBit(BIT_ENABLE_EXPIRES, 1);
+    
+    pVHost->getRootContext().enableRewrite(1);
+    pVHost->setRewriteLogLevel(0);
+    char *pRules = "RewriteCond %{ORG_REQ_URI} !/static\r\n"
+                   "RewriteCond %{ORG_REQ_URI} !/rainloop\r\n"
+                   "RewriteCond %{ORG_REQ_URI} !/phpmyadmin\r\n"
+                   "RewriteRule ^/(.*)$ http://" LSCPD_PROXY_APP_NAME "/$1 [P]\r\n";
+
+    pVHost->getRootContext().configRewriteRule(pVHost->getRewriteMaps(), pRules);
+
+    if (addVHost(pVHost) == 0)
+    {
+    }
+    if (mapListenerToVHost(pListener, "*", LSCPD_VHOST_NAME) == 0)
+    {
+    }
+    
+    CgidWorker * pWorker = (CgidWorker *)ExtAppRegistry::addApp(
+                            EA_CGID, LSCGID_NAME );
+    
+    pWorker->getConfig().setSocket("uds:/" DEFAULT_TMP_DIR "/cgid/cgid.sock");
+    pWorker->start(MainServerConfig::getInstance().getServerRoot(), NULL, 
+                   getuid(), getgid(), getpriority(PRIO_PROCESS, 0));
+    endConfig(0);
+
+    return ret;
+}
+
 
 #ifdef RUN_TEST
 
@@ -3291,17 +3626,18 @@ int HttpServerImpl::initSampleServer()
     pLimit->setInputLimit(INT_MAX);
     pLimit->setOutputLimit(INT_MAX);
 
-    serverConfig.setDebugLevel(10);
+    serverConfig.setDebugLevel(0);
     ClientInfo::setPerClientSoftLimit(1000);
-    serverConfig.setGzipCompress(1);
+    serverConfig.setGzipCompress(6);
     serverConfig.setDynGzipCompress(1);
     serverConfig.setMaxURLLen(8192);
     serverConfig.setMaxHeaderBufLen(16380);
-    serverConfig.setMaxDynRespLen(1024 * 256);
+    serverConfig.setMaxDynRespLen(2047 * 1024 * 1024); //2047M
+    
     ConnLimitCtrl::getInstance().setMaxConns(1000);
     ConnLimitCtrl::getInstance().setMaxSSLConns(1);
     //enableScript( 1 );
-    setSwapDir("/tmp/lshttpd1/swap");
+    setSwapDir(DEFAULT_TMP_DIR "1/swap");
 
     m_accessCtrl.addSubNetControl("192.168.2.0", "255.255.255.0", false);
     AccessControl::setAccessCtrl(&m_accessCtrl);
@@ -3315,6 +3651,9 @@ int HttpServerImpl::initSampleServer()
     HttpLog::setLogLevel("DEBUG");
     strcat(achBuf1, "/cert/server.crt");
     strcpy(pEnd, "/cert/server.pem");
+    
+    
+    
     if (addListener("*:3080") == 0)
     {
     }
@@ -3932,6 +4271,11 @@ int HttpServer::initAioSendFile()
     return m_impl->initAioSendFile();
 }
 
+
+int HttpServer::initLscpd()
+{
+    return m_impl->initLscpd();
+}
 
 int HttpServer::authAdminReq(char *pAuth)
 {

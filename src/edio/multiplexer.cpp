@@ -17,7 +17,7 @@
 *****************************************************************************/
 #include <edio/multiplexer.h>
 #include <fcntl.h>
-#include <sys/poll.h>
+#include <poll.h>
 
 Multiplexer::Multiplexer()
     : m_iFLTag(O_NONBLOCK | O_RDWR)

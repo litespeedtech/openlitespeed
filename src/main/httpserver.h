@@ -19,13 +19,12 @@
 #define HTTPSERVER_H
 
 
-
+#include <config.h>
 #include <http/httplogsource.h>
 #include <util/tsingleton.h>
 
 #include <inttypes.h>
 
-#define DEFAULT_TMP_DIR     "/tmp/lshttpd"
 #define DEFAULT_SWAP_DIR    DEFAULT_TMP_DIR "/swap/"
 
 #define ADMIN_USERDB                "_AdminUserDB"
@@ -112,6 +111,7 @@ public:
     int  reinitMultiplexer();
     int  initAdns();
     int  initAioSendFile();
+    int  initLscpd();
 
     void setSwapDir(const char *pDir);
     const char *getSwapDir();

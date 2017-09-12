@@ -152,7 +152,7 @@ TEST(ls_maptest_test)
 TEST(ls_mappooltest_test)
 {
     ls_map_iter ptr;
-    ls_xpool_t pool;
+    ls_xpool_t *pool = ls_xpool_new();
     void *retVal;
     int iCount = 20, iDelCount = 12;
     const int aKeys[] = {1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20};
@@ -161,8 +161,7 @@ TEST(ls_mappooltest_test)
 #ifdef LSR_MAP_DEBUG
     printf("\nStart LSR Map Pool Test\n");
 #endif
-    ls_xpool_init(&pool);
-    ls_map_t *gm = ls_map_new(ls_map_valcomp, &pool);
+    ls_map_t *gm = ls_map_new(ls_map_valcomp, pool);
     CHECK(ls_map_size(gm) == 0);
     CHECK(ls_map_empty(gm) != 0);
 
@@ -179,7 +178,7 @@ TEST(ls_mappooltest_test)
     }
     CHECK(ls_map_empty(gm) == 0);
 
-    ls_map_t *gm2 = ls_map_new(ls_map_valcomp, &pool);
+    ls_map_t *gm2 = ls_map_new(ls_map_valcomp, pool);
     CHECK(ls_map_size(gm2) == 0);
     CHECK(ls_map_empty(gm2) != 0);
     ls_map_swap(gm, gm2);
@@ -264,7 +263,7 @@ TEST(ls_mappooltest_test)
     CHECK(retVal == NULL);
 
     ls_map_delete(gm);
-    ls_xpool_destroy(&pool);
+    ls_xpool_delete(pool);
 }
 
 

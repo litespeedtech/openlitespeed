@@ -28,6 +28,7 @@
 #include <extensions/localworkerconfig.h>
 #include <unistd.h>
 #include <limits.h>
+#include <config.h>
 
 AutoStr     RailsAppConfig::s_railsRunner;
 int         RailsAppConfig::s_iRailsEnv = 1;
@@ -83,7 +84,8 @@ LocalWorker *RailsAppConfig::newRailsApp(HttpVHost *pvhost,
     strcpy(&achFileName[pathLen], "tmp/sockets");
     //if ( access( achFileName, W_OK ) == -1 )
     {
-        snprintf(achName, MAX_PATH_LEN, "uds://tmp/lshttpd/%s:%s.sock",
+        snprintf(achName, MAX_PATH_LEN, "uds:/%s/%s:%s.sock",
+                 DEFAULT_TMP_DIR,
                  pName, pAppName);
 
         for (char *p = &achName[18]; *p; ++p)
