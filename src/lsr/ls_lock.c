@@ -54,17 +54,56 @@ int ls_atomic_spin_setup(ls_atom_spinlock_t *p)
 
 
 int ls_spin_pid = 0;        /* process id used with ls_atomic_pidspin */
-static void child_func()    /* clear pid in child after fork() */
+static void child_func()    /* reset pid in child after fork() */
 {
-    ls_spin_pid = 0;
+    ls_spin_pid = getpid();
 }
 
 
 void ls_atomic_pidspin_init()
 {
+    if (ls_spin_pid == 0)
+        pthread_atfork(NULL, NULL, child_func);
     ls_spin_pid = getpid();
-    pthread_atfork(NULL, NULL, child_func);
 }
+
+
+#define MAX_SPINCNT_CHECK   5000
+#define LS_SPIN_MIN_PID     10
+int ls_atomic_spin_pidwait(ls_atom_spinlock_t *p)
+{
+    int waitpid;
+    assert(*p != ls_spin_pid);
+    int cnt = MAX_SPINCNT_CHECK;
+    while (1)
+    {
+        waitpid = ls_atomic_casvint(p, LS_LOCK_AVAIL, ls_spin_pid);
+        if (waitpid == LS_LOCK_AVAIL)
+        {
+            return 0;
+        }
+        else if (waitpid < LS_SPIN_MIN_PID)
+        {
+            //something is wrong with waitpid, mark it as available, otherise
+            // it will spin forever as those PIDs are taken by system processes
+            *p = LS_LOCK_AVAIL;
+        }
+        else if (--cnt == 0)
+        {
+            if ((kill(waitpid, 0) < 0) && (errno == ESRCH)
+                && ls_atomic_casint(p, waitpid, ls_spin_pid))
+                return -waitpid;
+            cnt = MAX_SPINCNT_CHECK;
+            usleep(200);
+        }
+        else
+        {
+            //usleep(200);
+            cpu_relax();
+        }
+    }
+}
+
 #endif
 
 /*

@@ -148,6 +148,8 @@ ls_hash_key_t ls_str_xh32(const void *pKey)
 
 int ls_str_cmpci(const void *pVal1, const void *pVal2)
 {
+    if (((ls_str_t *)pVal1)->len != ((ls_str_t *)pVal2)->len)
+        return ((ls_str_t *)pVal1)->len - ((ls_str_t *)pVal2)->len;
     return strncasecmp(
                ((ls_str_t *)pVal1)->ptr,
                ((ls_str_t *)pVal2)->ptr,

@@ -108,6 +108,74 @@ char *ls_pdupstr2(const char *p, int len);
  */
 char *ls_pdupstr(const char *p);
 
+/**
+ * @ls_preserve
+ * @brief Changes the size of a block of memory allocated
+ *   from the global memory pool.
+ * @details If new_sz is equal or smaller than the current 
+ *   memory block size, the old memory block wont be changed.
+ *   If the memory size is increasing, the contents will NOT be copied to new
+ *   memory block, if need to keep old content unchanged, use ls_prealloc 
+ *   instead. 
+ *   If the current pointer \e pOld argument is NULL, ls_preserve effectively
+ *   becomes ls_palloc to allocate new memory.
+ *
+ * @param[in] pOld - A pointer to the current allocated memory.
+ * @param[in] new_sz - The new size in bytes.
+ * @return A pointer to the new allocated memory, else NULL on error.
+ *
+ * @see ls_prealloc
+ */
+void *ls_preserve(void *pOld, size_t new_sz);
+
+
+/**
+ * @ls_palloc_slab
+ * @brief Allocates memory from the global memory pool.
+ * @details The allocated memory is not initialized.
+ *
+ * @param[in] size - The size (number of bytes) to allocate.
+ * @return A pointer to the allocated memory, else NULL on error.
+ *
+ * @see ls_pfree_slab
+ */
+void *ls_palloc_slab(size_t size);
+
+/**
+ * @ls_pfree
+ * @brief Frees (releases) memory back to the global memory pool.
+ * @details The memory pointer must be one returned from a previous
+ *   successful call to ls_palloc.
+ *
+ * @param[in] p - A pointer to the allocated memory.
+ * @param[in] size - The size (number of bytes) to be freed, must match ls_palloc_slab
+ * @return Void.
+ *
+ * @see ls_palloc_slab
+ */
+void   ls_pfree_slab(void *p, size_t size);
+
+/**
+ * @ls_prealloc_slab
+ * @brief Changes the size of a block of memory allocated
+ *   from the global memory pool.
+ * @details The new memory contents will be unchanged
+ *   for the minimum of the old and new sizes.
+ *   If the memory size is increasing, the additional memory is uninitialized.
+ *   If the current pointer \e p argument is NULL, ls_prealloc effectively
+ *   becomes ls_palloc to allocate new memory.
+ *
+ * @param[in] p - A pointer to the current allocated memory.
+ * @param[in] old_sz - The old size in bytes.
+ * @param[in] new_sz - The new size in bytes.
+ * @return A pointer to the new allocated memory, else NULL on error.
+ *
+ * @see ls_palloc_slab ls_free_slab
+ */
+void *ls_prealloc_slab(void *p, size_t old_sz, size_t new_sz);
+
+
+
 #ifdef __cplusplus
 }
 #endif

@@ -145,7 +145,6 @@ private:
     char                m_iGlobalMatchContext;
     int                 m_iDummy2;
     AutoStr2            m_sChroot;
-    RewriteRuleList     m_rewriteRules;
     RewriteMapList     *m_pRewriteMaps;
     SslContext         *m_pSSLCtx;
     SSITagConfig       *m_pSSITagConfig;
@@ -314,8 +313,6 @@ public:
     char getRewriteLogLevel() const     {   return m_iRewriteLogLevel;  }
     void setRewriteLogLevel(int l)    {   m_iRewriteLogLevel = l;     }
 
-    const RewriteRuleList *getRewriteRules() const
-    {   return &m_rewriteRules;     }
     const RewriteMapList *getRewriteMaps() const
     {   return m_pRewriteMaps;      }
 

@@ -17,13 +17,13 @@
 *****************************************************************************/
 
 #include <lsr/ls_xpool.h>
+#include <lsr/ls_lock.h>
 #include <lsr/ls_pool.h>
+#include <lsr/ls_lfstack.h>
 #include <lsdef.h>
+#include <lsr/ls_internal.h>
+#include <lsr/ls_memcheck.h>
 #include <lsr/ls_xpool_int.h>
-
-#ifdef USE_VALGRIND
-#include <valgrind/memcheck.h>
-#endif
 
 #define LS_XPOOL_DATA_ALIGN         (8)
 #define LS_XPOOL_NUMFREELISTS       (16)
@@ -38,30 +38,93 @@
 
 #define LS_XPOOL_MAGIC     (0x58704f6c) //"XpOl"
 
+// #       include <lsr/ls_xpool_std.h>
 
-struct xpool_alink_s
+#define ls_pool_insptr     ls_std_insptr
+
+#define ls_xpool_chkinit   ls_std_xchkinit
+#define ls_xpool_setup     ls_std_xsetup
+#define ls_xpool_cleanup   ls_std_xcleanup
+#define ls_xpool_getblk    ls_std_getxblk
+#define ls_xpool_putblk    ls_std_putxblk
+
+/**
+ * @ls_std_insptr
+ */
+ls_inline void ls_std_insptr(volatile ls_pool_blk_t **pBase, ls_pool_blk_t *pNew)
 {
-    ls_xpool_header_t header;
-    union
+    pNew->next = *pBase;
+    *pBase = pNew;
+    return;
+}
+
+
+
+int xpool_freelistinit(ls_xpool_t *pool);
+
+
+/**
+ * @ls_std_xchkinit
+ */
+ls_inline int ls_std_xchkinit(
+        ls_xpool_t *pPool, ls_xblkctrl_t **pPtr, int *pFlag)
+{
+    return ((*pPtr == NULL) ? xpool_freelistinit(pPool) : 0);
+}
+
+/**
+ * @ls_std_xsetup
+ */
+ls_inline void ls_std_xsetup(ls_xblkctrl_t *p)
+{
+    return;
+}
+
+/**
+ * @ls_std_xcleanup
+ */
+ls_inline void ls_std_xcleanup(ls_xblkctrl_t *p)
+{
+    return;
+}
+
+/**
+ * @ls_std_getxblk
+ */
+ls_inline void *ls_std_getxblk(ls_xblkctrl_t *p)
+{
+    __link_t *pNew = ((__link_t *)p)->next;
+    if (pNew)
     {
-        struct xpool_alink_s *next;
-        char data[1];
-    };
-};
+        MEMCHK_UNPOISON(pNew, sizeof(((__link_t *)p)->next));
+        ((__link_t *)p)->next = pNew->next;
+    }
+    return (void *)pNew;
+}
+
+/**
+ * @ls_std_putxblk
+ */
+ls_inline void ls_std_putxblk(ls_xblkctrl_t *p, void *pNew)
+{
+    MEMCHK_UNPOISON(pNew, sizeof(((__link_t *)p)->next));
+    ((__link_t *)pNew)->next = ((__link_t *)p)->next;
+    ((__link_t *)p)->next = (__link_t *)pNew;
+    MEMCHK_POISON(pNew, sizeof(((__link_t *)p)->next));
+    return;
+}
 
 static int xpool_maxgetablk_trys =
-    3;   /* how many attempts to find a suitable block */
+3;   /* how many attempts to find a suitable block */
 static int xpool_maxblk_trys =
-    3;       /* how many attempts until moving block */
+3;       /* how many attempts until moving block */
 
-#ifdef USE_VALGRIND
 ls_inline void vg_xpool_alloc(
-    ls_xpool_t *pool, xpool_alink_t *pNew, uint32_t size)
+        ls_xpool_t *pool, xpool_alink_t *pNew, uint32_t size)
 {
-    VALGRIND_MEMPOOL_ALLOC(pool, pNew, size + sizeof(ls_xpool_header_t));
-    VALGRIND_MAKE_MEM_NOACCESS(&pNew->header, sizeof(pNew->header));
+    MEMCHK_ALLOC(pool, pNew, size + sizeof(ls_xpool_header_t));
+    MEMCHK_POISON(&pNew->header, sizeof(pNew->header));
 }
-#endif
 
 
 /* Get a new superblock from Global Pool/OS */
@@ -73,15 +136,13 @@ static void *ls_xpool_bblkalloc(ls_xpool_t *pool, uint32_t nsize);
 /* Get a block */
 static xpool_alink_t *xpool_blkget(ls_xpool_t *pool, uint32_t size);
 static xpool_alink_t *xpool_getablk(
-    ls_xpool_t *pool, xpool_qlist_t *pHead, uint32_t size);
+        ls_xpool_t *pool, xpool_qlist_t *pHead, uint32_t size);
 
 
 /* Carve a piece from an existing block */
 ls_inline xpool_alink_t *xpool_blkcarve(xpool_alink_t *pNew, uint32_t size)
 {
-#ifdef USE_VALGRIND
-    VALGRIND_MAKE_MEM_DEFINED(&pNew->header, sizeof(pNew->header));
-#endif
+    MEMCHK_UNPOISON(&pNew->header, sizeof(pNew->header));
     pNew->header.size = size;
     pNew->header.magic = LS_XPOOL_MAGIC;
     return pNew;
@@ -115,7 +176,7 @@ int xpool_freelistinit(ls_xpool_t *pool)
 {
     ls_xblkctrl_t *ptr;
     if ((ptr = ls_xpool_alloc(
-                   pool, sizeof(*(pool->pfreelists)) * LS_XPOOL_NUMFREELISTS)) == NULL)
+                    pool, sizeof(*(pool->pfreelists)) * LS_XPOOL_NUMFREELISTS)) == NULL)
         return LS_FAIL;
     memset(ptr, 0, sizeof(*(pool->pfreelists)) * LS_XPOOL_NUMFREELISTS);
 
@@ -132,14 +193,16 @@ int xpool_freelistinit(ls_xpool_t *pool)
 }
 
 
+#if !defined( LS_VG_DEBUG )
 /* Put on freelist */
 ls_inline void xfreelistput(ls_xpool_t *pool, xpool_alink_t *pFree,
-                            size_t size)
+        size_t size)
 {
     ls_xblkctrl_t *pFreeList = size2xfreelistptr(pool, size);
     ls_xpool_putblk(pFreeList, (void *)pFree->data);
     return;
 }
+#endif //!defined( LS_VG_DEBUG )
 
 
 /* Get from freelist */
@@ -158,38 +221,26 @@ ls_inline xpool_alink_t *xfreelistget(ls_xpool_t *pool, size_t size)
 ls_inline void xpool_blkput(xpool_qlist_t *head, xpool_alink_t *pFree)
 {
     pFree->header.magic = 0; /* reset - use as failure counter */
-#ifdef USE_VALGRIND
-    VALGRIND_MAKE_MEM_DEFINED(&pFree->next, sizeof(pFree->next));
-#endif
-#ifdef USE_THRSAFE_POOL
+    MEMCHK_UNPOISON(&pFree->next, sizeof(pFree->next));
     ls_spinlock_lock(&head->lock);
-#endif
     pFree->next = head->ptr;
     head->ptr = pFree;
-#ifdef USE_VALGRIND
-    VALGRIND_MAKE_MEM_NOACCESS(&pFree->next, sizeof(pFree->next));
-#endif
-#ifdef USE_THRSAFE_POOL
+    MEMCHK_POISON(&pFree->next, sizeof(pFree->next));
     ls_spinlock_unlock(&head->lock);
-#endif
 }
 
 
 /* Remove from large or small block list */
 ls_inline void xpool_blkremove(
-    xpool_qlist_t *pHead, xpool_alink_t *pPrev, xpool_alink_t *pPtr)
+        xpool_qlist_t *pHead, xpool_alink_t *pPrev, xpool_alink_t *pPtr)
 {
     if (pPrev == NULL)
         pHead->ptr = pPtr->next;
     else
     {
-#ifdef USE_VALGRIND
-        VALGRIND_MAKE_MEM_DEFINED(&pPrev->next, sizeof(pPrev->next));
-#endif
+        MEMCHK_UNPOISON(&pPrev->next, sizeof(pPrev->next));
         pPrev->next = pPtr->next;
-#ifdef USE_VALGRIND
-        VALGRIND_MAKE_MEM_NOACCESS(&pPrev->next, sizeof(pPrev->next));
-#endif
+        MEMCHK_POISON(&pPrev->next, sizeof(pPrev->next));
     }
 }
 
@@ -197,14 +248,10 @@ ls_inline void xpool_blkremove(
 void ls_xpool_init(ls_xpool_t *pool)
 {
     memset(pool, 0, sizeof(ls_xpool_t));
-#ifdef USE_THRSAFE_POOL
 #if ( LS_LOCK_AVAIL != 0 )
     NEED TO SETUP LOCKS
 #endif
-#endif
-#ifdef USE_VALGRIND
-    VALGRIND_CREATE_MEMPOOL(pool, 0, 0);
-#endif
+    MEMCHK_NEWPOOL(pool, 0, 0);
 }
 
 
@@ -227,23 +274,17 @@ void ls_xpool_destroy(ls_xpool_t *pool)
     ls_pfreepending();
 
     memset(pool, 0, sizeof(ls_xpool_t));
-#ifdef USE_VALGRIND
-    VALGRIND_DESTROY_MEMPOOL(pool);
-#endif
+    MEMCHK_DESTROY_POOL(pool);
 }
 
 
 void ls_xpool_reset(ls_xpool_t *pool)
 {
     ls_xpool_destroy(pool);
-#ifdef USE_THRSAFE_POOL
 #if ( LS_LOCK_AVAIL != 0 )
     NEED TO SETUP LOCKS
 #endif
-#endif
-#ifdef USE_VALGRIND
-    VALGRIND_CREATE_MEMPOOL(pool, 0, 0);
-#endif
+    MEMCHK_NEWPOOL(pool, 0, 0);
 }
 
 
@@ -270,16 +311,12 @@ void *ls_xpool_alloc(ls_xpool_t *pool, uint32_t size)
     {
         if ((pNew = xfreelistget(pool, nsize)) != NULL)
         {
-#ifdef USE_VALGRIND
             vg_xpool_alloc(pool, pNew, size);
-#endif
             return pNew->data;   /* do *not* change real size of block */
         }
     }
     pNew = xpool_blkget(pool, nsize);
-#ifdef USE_VALGRIND
     vg_xpool_alloc(pool, pNew, size);
-#endif
     return pNew->data;
 }
 
@@ -299,22 +336,19 @@ void *ls_xpool_realloc(ls_xpool_t *pool, void *pOld, uint32_t new_sz)
     if (pOld == NULL)
         return ls_xpool_alloc(pool, new_sz);
     ls_xpool_header_t *pHeader = (ls_xpool_header_t *)((char *)pOld - sizeof(
-                                     ls_xpool_header_t));
-#ifdef USE_VALGRIND
-    VALGRIND_MAKE_MEM_DEFINED(pHeader, sizeof(*pHeader));
-    VALGRIND_MAKE_MEM_DEFINED(pHeader, pHeader->size);
-#endif
+                ls_xpool_header_t));
+    MEMCHK_UNPOISON(pHeader, sizeof(*pHeader));
+    MEMCHK_UNPOISON(pHeader, pHeader->size);
+
     uint32_t old_sz = pHeader->size - sizeof(ls_xpool_header_t);
 #ifdef LS_XPOOL_INTERNAL_DEBUG
-    assert(pHeader->magic == LS_XPOOL_MAGIC)
+    assert(pHeader->magic == LS_XPOOL_MAGIC);
 #endif
     if (new_sz <= old_sz)
     {
-#ifdef USE_VALGRIND
-        VALGRIND_MEMPOOL_FREE(pool, (xpool_alink_t *)pHeader);
+        MEMCHK_FREE(pool, (xpool_alink_t *)pHeader, pHeader->size);
         vg_xpool_alloc(pool, (xpool_alink_t *)pHeader, new_sz);
-        VALGRIND_MAKE_MEM_DEFINED(pOld, new_sz);
-#endif
+        MEMCHK_UNPOISON(pOld, new_sz);
         return pOld;
     }
     void *pNew;
@@ -333,33 +367,29 @@ static xpool_alink_t *xpool_blkget(ls_xpool_t *pool, uint32_t size)
     xpool_alink_t *pPtr;
 
     if ((size <= LS_XPOOL_MAXSMBLK_SIZE)
-#ifndef USE_THRSAFE_POOL
-        && (pool->smblk.ptr != NULL)    /* optimization in non-thread mode */
-#endif
-        && ((pPtr = xpool_getablk(pool, &pool->smblk, size)) != NULL))
+            // && (pool->smblk.ptr != NULL)    /* optimization in non-thread mode */
+            && ((pPtr = xpool_getablk(pool, &pool->smblk, size)) != NULL))
         return pPtr;
     if (1
-#ifndef USE_THRSAFE_POOL
-        && (pool->lgblk.ptr != NULL)    /* optimization in non-thread mode */
-#endif
-        && ((pPtr = xpool_getablk(pool, &pool->lgblk, size)) != NULL))
+            // && (pool->lgblk.ptr != NULL)    /* optimization in non-thread mode */
+            && ((pPtr = xpool_getablk(pool, &pool->lgblk, size)) != NULL))
         return pPtr;
 
     pPtr = ls_xpool_getsuperblk(pool);
     pPtr->header.size -= size;
     remain = (int)pPtr->header.size;
     if (remain < (int)(((LS_XPOOL_NUMFREELISTS + 1)
-                        *LS_XPOOL_FLINTERVAL)))
+                    *LS_XPOOL_FLINTERVAL)))
     {
         /* return the full residual (or could have added to freelist)
-         */
+        */
         size += remain;
         remain = 0;
     }
     else
     {
         xpool_blkput(((remain <= (int)(LS_XPOOL_MAXSMBLK_SIZE)) ?
-                      &pool->smblk : &pool->lgblk), pPtr);
+                    &pool->smblk : &pool->lgblk), pPtr);
     }
 
     return xpool_blkcarve((xpool_alink_t *)((char *)pPtr + remain), size);
@@ -367,18 +397,16 @@ static xpool_alink_t *xpool_blkget(ls_xpool_t *pool, uint32_t size)
 
 
 static xpool_alink_t *xpool_getablk(
-    ls_xpool_t *pool, xpool_qlist_t *pHead, uint32_t size)
+        ls_xpool_t *pool, xpool_qlist_t *pHead, uint32_t size)
 {
     int remain;
     int trys = xpool_maxgetablk_trys;
-#ifdef USE_THRSAFE_POOL
     ls_spinlock_lock(&pHead->lock);
     if (pHead->ptr == NULL)
     {
         ls_spinlock_unlock(&pHead->lock);
         return NULL;
     }
-#endif
     xpool_alink_t *pPtr = pHead->ptr;
     xpool_alink_t *pPrev = NULL;
 #ifdef LS_XPOOL_INTERNAL_DEBUG
@@ -387,62 +415,52 @@ static xpool_alink_t *xpool_getablk(
 #endif
     do
     {
-#ifdef USE_VALGRIND
-        VALGRIND_MAKE_MEM_DEFINED(pPtr, sizeof(*pPtr));
-#endif
+        MEMCHK_UNPOISON(pPtr, sizeof(*pPtr));
         if ((remain = (int)pPtr->header.size - (int)size) >= 0)
         {
             pPtr->header.size = remain;
             if (remain <
-                (int)(((LS_XPOOL_NUMFREELISTS + 1)*LS_XPOOL_FLINTERVAL)))
+                    (int)(((LS_XPOOL_NUMFREELISTS + 1)*LS_XPOOL_FLINTERVAL)))
             {
                 /* return the full residual (or could have added to freelist)
-                 */
+                */
                 size += remain;
                 remain = 0;
                 xpool_blkremove(pHead, pPrev, pPtr);
             }
             /* check if a large block becomes a small block
-             */
+            */
             else if ((pHead == &pool->lgblk)
-                     && (remain <= (int)(LS_XPOOL_MAXSMBLK_SIZE)))
+                    && (remain <= (int)(LS_XPOOL_MAXSMBLK_SIZE)))
             {
                 xpool_blkremove(pHead, pPrev, pPtr);
                 xpool_blkput(&pool->smblk, pPtr);
             }
-#ifdef USE_THRSAFE_POOL
             ls_spinlock_unlock(&pHead->lock);
-#endif
             return xpool_blkcarve(
-                       (xpool_alink_t *)((char *)pPtr + remain), size);
+                    (xpool_alink_t *)((char *)pPtr + remain), size);
         }
         /* if this block is `never' getting chosen, remove it
-         */
+        */
         if (++pPtr->header.magic >= (uint32_t)xpool_maxblk_trys)
         {
             xpool_alink_t *pNext = pPtr->next;
             xpool_blkremove(pHead, pPrev, pPtr);
             if (pHead == &pool->lgblk)
                 xpool_blkput(&pool->smblk, pPtr);
-#ifdef USE_VALGRIND
-            VALGRIND_MAKE_MEM_NOACCESS(pPtr, sizeof(*pPtr));
-#endif
+            MEMCHK_POISON(pPtr, sizeof(*pPtr));
             pPtr = pNext;
         }
         else
         {
             pPrev = pPtr;
             pPtr = pPtr->next;
-#ifdef USE_VALGRIND
-            VALGRIND_MAKE_MEM_NOACCESS(pPrev, sizeof(*pPrev));
-#endif
+            MEMCHK_POISON(pPrev, sizeof(*pPrev));
         }
     }
     while ((pPtr != NULL) && (--trys >= 0));
 
-#ifdef USE_THRSAFE_POOL
     ls_spinlock_unlock(&pHead->lock);
-#endif
     return NULL;
 }
 
@@ -456,14 +474,12 @@ static xpool_alink_t *ls_xpool_getsuperblk(ls_xpool_t *pool)
 {
     xpool_alink_t *pNew = (xpool_alink_t *)ls_palloc(LS_XPOOL_SUPBLK_SIZE);
     ls_pool_blk_t *pBlk = ((ls_pool_blk_t *)pNew) -
-                          1;  /* ptr to real gpool block */
-#ifdef USE_VALGRIND
-    VALGRIND_MAKE_MEM_NOACCESS(pNew->data, pBlk->header.size
-                               - sizeof(ls_pool_blk_t)
-                               - sizeof(ls_xpool_header_t));
-#endif
+        1;  /* ptr to real gpool block */
+    MEMCHK_POISON(pNew->data, pBlk->header.size
+            - sizeof(ls_pool_blk_t)
+            - sizeof(ls_xpool_header_t));
     ls_pool_insptr(&pool->psuperblk,
-                   pBlk);    /* overwrites size/magic with link */
+            pBlk);    /* overwrites size/magic with link */
     pNew->header.size = LS_XPOOL_MAXLGBLK_SIZE;
     pNew->header.magic = LS_XPOOL_MAGIC;
     return pNew;
@@ -474,32 +490,24 @@ void *ls_xpool_bblkalloc(ls_xpool_t *pool, uint32_t nsize)
 {
     ls_xpool_bblk_t *pNew;
     pNew = (ls_xpool_bblk_t *)ls_palloc(nsize + sizeof(ls_xpool_bblk_t)
-                                        - sizeof(ls_xpool_header_t));
+            - sizeof(ls_xpool_header_t));
     pNew->header.size = nsize;
     pNew->header.magic = LS_XPOOL_MAGIC;
     pNew->prev = NULL;
-#ifdef USE_VALGRIND
-    VALGRIND_MAKE_MEM_NOACCESS(&pNew->header, sizeof(pNew->header));
-#endif
-#ifdef USE_THRSAFE_POOL
+    MEMCHK_POISON(&pNew->header, sizeof(pNew->header));
     ls_spinlock_lock(&pool->lock);
-#endif
     pNew->next = pool->pbigblk;
     if (pool->pbigblk != NULL)
         pool->pbigblk->prev = pNew;
     pool->pbigblk = pNew;
-#ifdef USE_THRSAFE_POOL
     ls_spinlock_unlock(&pool->lock);
-#endif
     return (void *)pNew->data;
 }
 
 
 static void ls_xpool_unlink(ls_xpool_t *pool, ls_xpool_bblk_t *pFree)
 {
-#ifdef USE_THRSAFE_POOL
     ls_spinlock_lock(&pool->lock);
-#endif
     ls_xpool_bblk_t *pNext = pFree->next;
     ls_xpool_bblk_t *pPrev = pFree->prev;
 
@@ -509,9 +517,7 @@ static void ls_xpool_unlink(ls_xpool_t *pool, ls_xpool_bblk_t *pFree)
         pPrev->next = pNext;
     else
         pool->pbigblk = pNext;
-#ifdef USE_THRSAFE_POOL
     ls_spinlock_unlock(&pool->lock);
-#endif
 }
 
 
@@ -521,12 +527,10 @@ void ls_xpool_free(ls_xpool_t *pool, void *data)
         return;
 #if !defined( LS_VG_DEBUG )
     ls_xpool_header_t *pHeader = (ls_xpool_header_t *)
-                                 ((char *)data - sizeof(ls_xpool_header_t));     /* header size */
-#ifdef USE_VALGRIND
-    VALGRIND_MAKE_MEM_DEFINED(pHeader, sizeof(*pHeader));
-#endif
+        ((char *)data - sizeof(ls_xpool_header_t));     /* header size */
+    MEMCHK_UNPOISON(pHeader, sizeof(*pHeader));
 #ifdef LS_XPOOL_INTERNAL_DEBUG
-    assert(pHeader->magic == LS_XPOOL_MAGIC)
+    assert(pHeader->magic == LS_XPOOL_MAGIC);
 #endif
     uint32_t size = pHeader->size;
     if (size > LS_XPOOL_MAXLGBLK_SIZE)
@@ -548,12 +552,10 @@ void ls_xpool_free(ls_xpool_t *pool, void *data)
     else
     {
         xpool_blkput(((size <= LS_XPOOL_MAXSMBLK_SIZE) ?
-                      &pool->smblk : &pool->lgblk), (xpool_alink_t *)pHeader);
+                    &pool->smblk : &pool->lgblk), (xpool_alink_t *)pHeader);
     }
-#ifdef USE_VALGRIND
-    VALGRIND_MEMPOOL_FREE(pool, pHeader);
-    VALGRIND_MAKE_MEM_DEFINED(data, sizeof(void *));
-#endif
+    MEMCHK_FREE(pool, pHeader, size);
+    MEMCHK_UNPOISON(data, sizeof(void *));
 #endif
 }
 

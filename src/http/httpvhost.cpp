@@ -491,12 +491,6 @@ void HttpVHost::addRewriteMap(const char *pName, const char *pLocation)
 }
 
 
-void HttpVHost::addRewriteRule(char *pRules)
-{
-    RewriteEngine::parseRules(pRules, &m_rewriteRules, m_pRewriteMaps);
-}
-
-
 void HttpVHost::updateUGid(const char *pLogId, const char *pPath)
 {
     struct stat st;

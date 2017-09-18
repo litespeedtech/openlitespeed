@@ -15,149 +15,453 @@
 *    You should have received a copy of the GNU General Public License       *
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
+/**
+ * @file
+ * Implementation for pool std
+ */
+
 
 #include <lsdef.h>
+#include <lsr/ls_lock.h>
+#include <lsr/ls_atomic.h>
 #include <lsr/ls_pool.h>
-#include <lsr/ls_pooldef.h>
 #include <lsr/ls_internal.h>
+#include <stdlib.h>
+#include <pthread.h>
+#include <lsr/ls_memcheck.h>
+        
+#ifdef DEBUG_POOL
 
-#ifdef USE_VALGRIND
-#include <valgrind/memcheck.h>
+#define ls_pool_getblk     ls_sys_getblk
+#define ls_pool_putblk     ls_sys_putblk
+#define ls_pool_putnblk    ls_sys_putnblk
 
-
-typedef struct malloclink
-{
-    struct malloclink *next;
-    void *pmalloc;
-} malloclink_t;
-static malloclink_t *s_pmalloclink = NULL;
-ls_inline void save_malloc_ptr(void *ptr)
-{
-    malloclink_t *p = (malloclink_t *)malloc(sizeof(*p));
-    p->next = s_pmalloclink;
-    p->pmalloc = ptr;
-    s_pmalloclink = p;
-}
 #else
 
-#ifndef DEBUG_POOL
+#define ls_pool_getblk     ls_lkstd_getblk
+#define ls_pool_putblk     ls_lkstd_putblk
+#define ls_pool_putnblk    ls_lkstd_putnblk
 
-ls_inline void save_malloc_ptr(void *ptr)
-{
-    //do nothing
-}
+#endif
 
-#endif //DEBUG_POOL
 
-#endif /* USE_VALGRIND */
+#define SMFREELISTBUCKETS       256
+#define SMFREELISTINTERVAL      16
+#define SMFREELIST_MAXBYTES     (SMFREELISTBUCKETS*SMFREELISTINTERVAL)
+#define LGFREELISTBUCKETS       64
+#define LGFREELISTINTERVAL      1024
+#define LGFREELIST_MAXBYTES     (LGFREELISTBUCKETS*LGFREELISTINTERVAL)
+#define REALLOC_DIFF            1024
+#define MAX_HEAP_PTRS           16
+#define MAX_HEAP_MASK           15
 
-#define LSR_POOL_SMFREELISTBUCKETS     256
-#define LSR_POOL_SMFREELISTINTERVAL     16
-#define LSR_POOL_SMFREELIST_MAXBYTES  (LSR_POOL_SMFREELISTBUCKETS*LSR_POOL_SMFREELISTINTERVAL)
-#define LSR_POOL_LGFREELISTBUCKETS      64
-#define LSR_POOL_LGFREELISTINTERVAL   1024
-#define LSR_POOL_LGFREELIST_MAXBYTES  (LSR_POOL_LGFREELISTBUCKETS*LSR_POOL_LGFREELISTINTERVAL)
-#define LSR_POOL_REALLOC_DIFF         1024
+#define FREELISTBUCKETS         (256 + 64)
+#define FREELIST_MULTI          16
+#define FREELIST_MULTI_MASK     15
 
-#define LSR_POOL_MAGIC     (0x506f4f6c) //"PoOl"
+#define MAGIC     (0x506f4f6c) //"PoOl"
 
 enum { LSR_ALIGN = 16 };
-
-ls_inline size_t pool_roundup(size_t bytes)
-{ return (((bytes) + (size_t)LSR_ALIGN - 1) & ~((size_t)LSR_ALIGN - 1)); }
 
 typedef struct _alink_s
 {
     struct _alink_s    *next;
 } _alink_t;
 
-/* skew offset to handle requests expected to be in round k's
- */
-#define LSR_POOL_LGFREELISTSKEW \
-    ( ( sizeof(ls_xpool_bblk_t) + sizeof(ls_pool_blk_t) \
-        + (size_t)LSR_ALIGN-1 ) & ~((size_t)LSR_ALIGN-1) )
+
+typedef struct
+{
+    __link_t           *head;
+    __link_t           *tail;
+    volatile size_t     blkcnt;
+    ls_spinlock_t       lck;
+} ls_blkctrl_t;
+
+
+typedef struct heap_ptr_s
+{
+    char               *start_free;
+    char               *end_free;
+    ls_spinlock_t       heap_lock;
+    ls_atom_32_t        lock_fails;
+    ls_atom_32_t        lock_oks;
+} heap_ptr_t;
+
 
 typedef struct ls_pool_s
 {
-    ls_blkctrl_t        smfreelists[LSR_POOL_SMFREELISTBUCKETS];
-    ls_blkctrl_t        lgfreelists[LSR_POOL_LGFREELISTBUCKETS];
-    char               *_start_free;
-    char               *_end_free;
-    size_t              _heap_size;
-#ifdef USE_THRSAFE_POOL
-    ls_spinlock_t       alloclock;
+    ls_blkctrl_t        freelists[FREELIST_MULTI][FREELISTBUCKETS];
+    heap_ptr_t          heaps[MAX_HEAP_PTRS];
+    int32_t             thr_seq;
+    int32_t             pad;
+    size_t              heap_size; /* approximate cumulative
+                                       allocated bytes, not threadsafe
+                                       so may be off a bit */
+#ifdef POOL_TESTING
+    unsigned short      cur_heaps;
+    unsigned short      cur_multi[FREELISTBUCKETS];
+#endif /* POOL_TESTING */
+    ls_spinlock_t       pool_lock;
     volatile
-#endif /* USE_THRSAFE_POOL */
-    ls_xpool_bblk_t    *pendingfree;        /* waiting to be freed */
-    int                 init;
+        ls_xpool_bblk_t    *pendingfree;        /* waiting to be freed */
 } ls_pool_t;
 
 
+typedef struct ls_pool_tls_s 
+{
+    int             thr_seq;
+    int             heap_switch;
+    heap_ptr_t     *heap_ptr;
+    ls_blkctrl_t   *flist_ptrs[FREELISTBUCKETS];
+    int             flist_switch[FREELISTBUCKETS];
+} ls_pool_tls_t;
+
+
 /* Global pool structure.
- */
+*/
 static ls_pool_t ls_pool_g =
 {
-    { }, { },
-    NULL, NULL, 0,
-#ifdef USE_THRSAFE_POOL
-#if ( LS_LOCK_AVAIL != 0 )
-    NEED TO SETUP LOCKS
-#endif /* ( LS_LOCK_AVAIL != 0 ) */
-    LS_LOCK_AVAIL,
-#endif /* USE_THRSAFE_POOL */
+    { },                /* freelists[][] */
+    {                   /* heaps - start */
+        {               /* heaps[0] - start */
+            NULL,       /* start_free */
+            NULL,       /* end_free */
+
+            LS_LOCK_AVAIL,  /* _heap_lock */
+            0,          /* lock_fails */
+            0,          /* lock_oks */
+
+        }               /* heaps[0] - end */
+    },                  /* heaps - end */
+    0,                  /* thr_seq      */
+    0,
+    0,                  /* _heap_size */
+#ifdef POOL_TESTING
+    0,                  /* cur_heaps */
+    {                   /* cur_multi */
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    },
+#endif /* POOL_TESTING */
+    LS_LOCK_AVAIL,  /* pool_lock */
     NULL,
-    PINIT_NEED
 };
 
-#ifndef DEBUG_POOL
+
+__thread ls_pool_tls_t _tls = 
+{
+    -1,  /* _thr_seq */
+    0,
+    &ls_pool_g.heaps[0],
+    {NULL},
+    {0},
+};
+
+
+/**
+ * @ls_sys_getblk
+ */
+ls_inline void *ls_sys_getblk(ls_blkctrl_t *p, size_t size)
+{
+    return malloc(size);
+}
+
+
+/**
+ * @ls_sys_putblk
+ */
+ls_inline void ls_sys_putblk(size_t size, ls_blkctrl_t *p, void *pNew)
+{
+    free(pNew);
+    return;
+}
+
+
+/**
+ * @ls_sys_putnblk
+ */
+ls_inline void ls_sys_putnblk(size_t size, ls_blkctrl_t *p, void *pNew, void *pTail, size_t count)
+{
+    __link_t *pPtr;
+    do
+    {
+        pPtr = (__link_t *)pNew;
+        pNew = pPtr->next;
+        free(pPtr);
+    }
+    while (pPtr != pTail);
+    return;
+}
+
+
+#ifdef DEBUG_LKSTD
+ls_inline void ls_lkstd_verifyblkcnt_do(ls_blkctrl_t * p)
+{
+    volatile __link_t * pHead = NULL;
+    size_t ct = 0;
+    for (pHead = p->head; pHead != NULL; pHead = pHead->next, ct++) 
+    {}
+    fprintf(stderr, "verify block count %ld should be %ld\n", ct, p->blkcnt);
+    assert(ct == p->blkcnt);
+}
+#define ls_lkstd_verifyblkcnt(a) ls_lkstd_verifyblkcnt_do(a)
+#else
+#define ls_lkstd_verifyblkcnt(a)
+#endif
+
+
+/**
+ * @ls_lkstd_getblk
+ *
+ * warning: assumes p locked
+ */
+ls_inline void *ls_lkstd_getblk(ls_blkctrl_t *p, size_t size)
+{
+    __link_t *ptr;
+
+    ls_lkstd_verifyblkcnt(p);
+
+    if ((ptr = p->head) != NULL)
+    {
+        MEMCHK_UNPOISON(ptr, sizeof(*ptr));
+        if ((p->head = ptr->next) == NULL)
+            p->tail = NULL;
+
+        p->blkcnt--;
+
+        ls_lkstd_verifyblkcnt(p);
+    }
+    return (void *)ptr;
+}
+
+
+/**
+ * @ls_lkstd_putblk
+ *
+ * warning: assumes p locked
+ */
+ls_inline void ls_lkstd_putblk(size_t size, ls_blkctrl_t *p, void *pNew)
+{
+    ls_lkstd_verifyblkcnt(p);
+
+    if (p->tail == NULL)
+        p->head = (__link_t *)pNew;
+    else
+    {
+        MEMCHK_UNPOISON(p->tail, sizeof(*(p->tail)));
+        p->tail->next = (__link_t *)pNew;
+        MEMCHK_POISON(p->tail, sizeof(*(p->tail)));
+    }
+    p->tail = (__link_t *)pNew;
+    p->blkcnt++;
+    ls_lkstd_verifyblkcnt(p);
+    return;
+}
+
+
+/**
+ * @ls_lkstd_putnblk
+ *
+ * warning: assumes p locked
+ */
+ls_inline void ls_lkstd_putnblk(size_t size, ls_blkctrl_t *p, 
+                                volatile void *pNew, volatile void *pTail, size_t nblocks)
+{
+
+    ls_lkstd_verifyblkcnt(p);
+
+    if (p->tail == NULL)
+        p->head = (__link_t *)pNew;
+    else
+    {
+        MEMCHK_UNPOISON(p->tail, sizeof(*(p->tail)));
+        p->tail->next = (__link_t *)pNew;
+        MEMCHK_POISON(p->tail, sizeof(*(p->tail)));
+    }
+    p->tail = (__link_t *)pTail;
+    p->blkcnt += nblocks;
+    ls_lkstd_verifyblkcnt(p);
+    return;
+}
+
+
+ls_inline size_t pool_roundup(size_t bytes)
+{ return (((bytes) + (size_t)LSR_ALIGN - 1) & ~((size_t)LSR_ALIGN - 1)); }
+
+
+/* skew offset to handle requests expected to be in round k's
+*/
+#define LGFREELISTSKEW \
+    ( ( sizeof(ls_xpool_bblk_t) + sizeof(ls_pool_blk_t) \
+        + (size_t)LSR_ALIGN-1 ) & ~((size_t)LSR_ALIGN-1) )
+ls_inline size_t freelistindex(size_t bytes)
+{
+    if (bytes <= (size_t)SMFREELIST_MAXBYTES)
+        return (((bytes) + (size_t)SMFREELISTINTERVAL - 1)
+                / (size_t)SMFREELISTINTERVAL - 1);
+    else
+        return (((bytes) - LGFREELISTSKEW + (size_t)
+                 LGFREELISTINTERVAL - 1)
+                    / (size_t)LGFREELISTINTERVAL - 1) + SMFREELISTBUCKETS;
+}
+
+
+ls_inline void chk_tid_seq()
+{
+    if (_tls.thr_seq != -1) 
+    {
+        return;
+    }
+    _tls.thr_seq = ls_atomic_fetch_add(&ls_pool_g.thr_seq, 1);
+}
+
+
+#ifdef POOL_TESTING
+/* statistics functions start */
+
+unsigned short ls_pool_cur_heaps() 
+{
+    unsigned short h;
+    ls_pool_g.cur_heaps = 0;
+    for (h = 0; h < MAX_HEAP_PTRS; h++) 
+    {
+        if (ls_pool_g.heaps[h].start_free) 
+        {
+            ls_pool_g.cur_heaps++;
+        }
+    }
+    return ls_pool_g.cur_heaps;
+}
+
+
+unsigned short * ls_pool_get_multi(short *len) 
+{
+    unsigned short b, m;
+    *len = FREELISTBUCKETS;
+    for ( b = 0; b < FREELISTBUCKETS; b++) 
+    {
+        ls_pool_g.cur_multi[b] = 0;
+        for (m = 0; m < FREELIST_MULTI; m++) 
+        {
+            if (ls_pool_g.freelists[m][b].blkcnt) 
+            {
+                ls_pool_g.cur_multi[b]++;
+            }
+        }
+    }
+    return ls_pool_g.cur_multi;
+}
+#endif /* POOL_TESTING */
+
+
+ls_inline ls_blkctrl_t *get_locked_freelist_ptr(size_t size)
+{
+
+    size_t size_index = freelistindex(size);
+    ls_blkctrl_t **pflist = &_tls.flist_ptrs[size_index];
+    int tries;
+    
+    if (!*pflist)
+        *pflist = &ls_pool_g.freelists[size_index & FREELIST_MULTI_MASK][size_index];
+    if (!ls_spinlock_trylock(&(*pflist)->lck)) 
+    {
+        return *pflist;
+    }
+    
+    // dynamic switching avoidance
+    for (tries = 0; tries <= _tls.flist_switch[size_index]; tries++) 
+    {
+        if (!ls_spinlock_trylock(&(*pflist)->lck)) 
+        {
+            return *pflist;
+        }
+        usleep(50);
+    }
+
+    *pflist += FREELISTBUCKETS;
+    if (*pflist >= &ls_pool_g.freelists[FREELIST_MULTI][0])
+        *pflist -= FREELIST_MULTI * FREELISTBUCKETS;
+
+    ls_spinlock_lock(&(*pflist)->lck);
+    return *pflist;
+}
+
+
+ls_inline heap_ptr_t *get_locked_heap_ptr()
+{
+    if (!ls_spinlock_trylock(&_tls.heap_ptr->heap_lock))
+    {
+        return _tls.heap_ptr;
+    }
+    while(_tls.heap_switch < MAX_HEAP_MASK)
+    {
+        ++_tls.heap_ptr;
+        ++_tls.heap_switch;
+        if (!ls_spinlock_trylock(&_tls.heap_ptr->heap_lock))
+        {
+            return _tls.heap_ptr;
+        }
+    }
+    chk_tid_seq();
+    _tls.heap_ptr = &ls_pool_g.heaps[_tls.thr_seq & MAX_HEAP_MASK];
+    ls_spinlock_lock(&_tls.heap_ptr->heap_lock);
+
+    return _tls.heap_ptr;
+}
+
 
 ls_inline size_t lglist_roundup(size_t bytes)
 {
-    return ((((bytes) - LSR_POOL_LGFREELISTSKEW + (size_t)
-              LSR_POOL_LGFREELISTINTERVAL - 1)
-             & ~((size_t)LSR_POOL_LGFREELISTINTERVAL - 1)) + LSR_POOL_LGFREELISTSKEW);
+    return ((((bytes) - LGFREELISTSKEW + (size_t)
+                    LGFREELISTINTERVAL - 1)
+                & ~((size_t)LGFREELISTINTERVAL - 1)) + LGFREELISTSKEW);
 }
 
-ls_inline ls_blkctrl_t *size2freelistptr(size_t size);
+
 ls_inline void freelist_put(size_t size, ls_pool_blk_t *pNew)
 {
-    ls_blkctrl_t *pFreeList = size2freelistptr(size);
-    ls_pool_putblk(pFreeList, (void *)pNew);
+    // ls_blkctrl_t *pFreeList = size2freelistptr(size);
+    ls_blkctrl_t *pFreeList = get_locked_freelist_ptr(size);
+    ls_pool_putblk(size, pFreeList, (void *)pNew);
+    ls_spinlock_unlock(&pFreeList->lck);
 }
 
 
 ls_inline ls_pool_blk_t *freelist_get(size_t size)
 {
-    ls_blkctrl_t *pFreeList = size2freelistptr(size);
-    return (ls_pool_blk_t *)ls_pool_getblk(pFreeList, size);
+    // ls_blkctrl_t *pFreeList = size2freelistptr(size);
+    ls_blkctrl_t *pFreeList = get_locked_freelist_ptr(size);
+    ls_pool_blk_t * ret = (ls_pool_blk_t *)ls_pool_getblk(pFreeList, size);
+    ls_spinlock_unlock(&pFreeList->lck);
+    return ret;
 }
 
-#endif //DEBUG_POOL
-ls_inline size_t smfreelistindex(size_t bytes)
-{
-    return (((bytes) + (size_t)LSR_POOL_SMFREELISTINTERVAL - 1)
-            / (size_t)LSR_POOL_SMFREELISTINTERVAL - 1);
-}
-
-ls_inline size_t lgfreelistindex(size_t bytes)
-{
-    return (((bytes) - LSR_POOL_LGFREELISTSKEW + (size_t)
-             LSR_POOL_LGFREELISTINTERVAL - 1)
-            / (size_t)LSR_POOL_LGFREELISTINTERVAL - 1);
-}
-
-ls_inline ls_blkctrl_t *size2freelistptr(size_t size)
-{
-    return (size > (size_t)LSR_POOL_SMFREELIST_MAXBYTES) ?
-           (ls_blkctrl_t *)(&ls_pool_g.lgfreelists[lgfreelistindex(size)]) :
-           (ls_blkctrl_t *)(&ls_pool_g.smfreelists[smfreelistindex(size)]);
-}
 
 ls_inline void freelist_putn(
-    size_t size, ls_pool_blk_t *pNew, ls_pool_blk_t *pTail)
+        size_t size, volatile ls_pool_blk_t *pNew, volatile ls_pool_blk_t *pTail, size_t count)
 {
-    ls_blkctrl_t *pFreeList = size2freelistptr(size);
-    ls_pool_putnblk(pFreeList, (void *)pNew, (void *)pTail);
+    // ls_blkctrl_t *pFreeList = size2freelistptr(size);
+    ls_blkctrl_t *pFreeList = get_locked_freelist_ptr(size);
+    ls_pool_putnblk(size, pFreeList, (void *)pNew, (void *)pTail, count);
+    ls_spinlock_unlock(&pFreeList->lck);
 }
 
 
@@ -165,12 +469,8 @@ ls_inline void freelist_putn(
 /* Allocates a chunk for nobjs of size size.  nobjs may be reduced
  * if it is inconvenient to allocate the requested number.
  */
-static char *chunk_alloc(size_t size, int *pNobjs);
+static char *chunk_alloc(heap_ptr_t * heap_ptrs, size_t size, int *pNobjs);
 
-/* Allocates a chunk from the existing freelist.
- */
-static int freelist_alloc(
-    size_t mysize, ls_blkctrl_t *pFreeList, size_t maxsize, size_t incr);
 
 /* Gets an object of size num, and optionally adds to size num.
  * free list.
@@ -202,149 +502,359 @@ char *ls_pdupstr2(const char *p, int len)
 
 void ls_pinit()
 {
-    int i;
-    ls_blkctrl_t *p;
-
-#ifdef USE_VALGRIND
-    VALGRIND_CREATE_MEMPOOL(&ls_pool_g, 0, 0);
-#endif /* USE_VALGRIND */
-    p = ls_pool_g.smfreelists;
-    i = sizeof(ls_pool_g.smfreelists) / sizeof(ls_pool_g.smfreelists[0]);
-    while (--i >= 0)
-    {
-        ls_pool_setup(p);
-        ++p;
-    }
-
-    p = ls_pool_g.lgfreelists;
-    i = sizeof(ls_pool_g.lgfreelists) / sizeof(ls_pool_g.lgfreelists[0]);
-    while (--i >= 0)
-    {
-        ls_pool_setup(p);
-        ++p;
-    }
-
+    MEMCHK_NEWPOOL(&ls_pool_g, 0, 0);
     return;
+}
+
+
+void *ls_palloc_slab(size_t size)
+{
+    size_t rndnum;
+    void *ptr;
+
+    if (size > (size_t)LGFREELIST_MAXBYTES)
+        return malloc(size);
+    else
+    {
+        rndnum = pool_roundup(size);
+        ptr = freelist_get(rndnum);
+        if (ptr == NULL)
+        {
+            if (rndnum > (size_t)SMFREELIST_MAXBYTES)
+            {
+                size_t memnum = lglist_roundup(rndnum);
+                ptr = malloc(memnum);
+                MEMCHK_POISON_CHKNUL(ptr, memnum);
+            }
+#ifndef DEBUG_POOL
+            else
+                ptr = refill(rndnum);
+#endif
+        }
+    }
+    MEMCHK_ALLOC_CHKNUL(&ls_pool_g, ptr, size);
+    return ptr;
+}
+
+
+void ls_pfree_slab(void *p, size_t size)
+{
+    if (p == NULL)
+        return;
+    size = pool_roundup(size);
+    if (size > (size_t)LGFREELIST_MAXBYTES)
+        ls_sys_putblk(size, NULL, p);
+    else
+    {
+        ls_pool_blk_t *pBlk = (ls_pool_blk_t *)p;
+        pBlk->next = NULL;
+        MEMCHK_FREE(&ls_pool_g, pBlk, size);
+        freelist_put(size, pBlk);
+    }
+}
+
+
+ls_inline void *ls_prealloc_slab_int(void *old_p, size_t old_sz, size_t new_sz, int copy)
+{
+    void *result;
+    size_t copy_sz;
+
+    if ((old_sz > (size_t) LGFREELIST_MAXBYTES)
+            && (new_sz > (size_t) LGFREELIST_MAXBYTES))
+        return realloc(old_p, new_sz);
+    result = ls_palloc_slab(new_sz);
+    if (result == NULL)
+        return NULL;
+    if (copy)
+    {
+        copy_sz = new_sz > old_sz ? old_sz : new_sz;
+        if (copy_sz)
+        {
+            MEMCHK_UNPOISON(old_p, copy_sz);
+            memmove(result, old_p, copy_sz);
+        }
+    }
+    if (old_sz)
+        ls_pfree_slab(old_p, old_sz);
+    return (result);
+}
+
+
+void *ls_prealloc_slab(void *old_p, size_t old_sz, size_t new_sz)
+{
+    if (old_p == NULL)
+        return ls_palloc_slab(new_sz);
+
+    old_sz = pool_roundup(old_sz);
+    new_sz = pool_roundup(new_sz);
+    if (old_sz >= new_sz && old_sz - new_sz <= REALLOC_DIFF)
+    {
+        MEMCHK_UNPOISON(old_p, new_sz + sizeof(ls_pool_blk_t));
+        return old_p;
+    }
+    return ls_prealloc_slab_int(old_p, old_sz, new_sz, 1);
 }
 
 
 void *ls_palloc(size_t size)
 {
-// #ifdef DEBUG_POOL
-//     return malloc(size);
-// #else
-    ls_pool_chkinit(&ls_pool_g.init);
-
     size_t rndnum;
     ls_pool_blk_t *ptr;
     size += sizeof(ls_pool_blk_t);
     rndnum = pool_roundup(size);
-
-    if (rndnum > (size_t)LSR_POOL_LGFREELIST_MAXBYTES)
-        ptr = (ls_pool_blk_t *)ls_sys_getblk(NULL, rndnum);
-    else
+    ptr = (ls_pool_blk_t *)ls_palloc_slab(size);
+    if (ptr)
     {
-        ptr = freelist_get(rndnum);
-        if (ptr == NULL)
-        {
-            if (rndnum > (size_t)LSR_POOL_SMFREELIST_MAXBYTES)
-            {
-                size_t memnum = lglist_roundup(rndnum);
-                ptr = (ls_pool_blk_t *)ls_sys_getblk(NULL, memnum);
-#ifdef USE_VALGRIND
-                if (ptr != NULL)
-                {
-                    VALGRIND_MAKE_MEM_NOACCESS(ptr, memnum);
-                    save_malloc_ptr(ptr);
-                }
-#endif /* USE_VALGRIND */
-            }
-#ifndef DEBUG_POOL
-            else
-                ptr = (ls_pool_blk_t *)refill(rndnum);
-#endif
-        }
-    }
-    if (ptr != NULL)
-    {
-#ifdef USE_VALGRIND
-        if (rndnum <= (size_t)LSR_POOL_LGFREELIST_MAXBYTES)
-            VALGRIND_MEMPOOL_ALLOC(&ls_pool_g, ptr, size);
-#endif /* USE_VALGRIND */
         ptr->header.size = rndnum;
-        ptr->header.magic = LSR_POOL_MAGIC;
+        ptr->header.magic = MAGIC;
+        MEMCHK_POISON(ptr, sizeof(*ptr));
         return (void *)(ptr + 1);
     }
     return NULL;
-//#endif //DEBUG_POOL
 }
 
 
 void ls_pfree(void *p)
 {
-// #ifdef DEBUG_POOL
-//     free(p);
-// #else
     if (p != NULL)
     {
         ls_pool_blk_t *pBlk = ((ls_pool_blk_t *)p) - 1;
-#ifdef LSR_POOL_INTERNAL_DEBUG
-        assert(pBlk->m_header.m_magic == LSR_POOL_MAGIC);
+#ifdef INTERNAL_DEBUG
+        assert(pBlk->m_header.m_magic == MAGIC);
 #endif
-        if (pBlk->header.size > (size_t)LSR_POOL_LGFREELIST_MAXBYTES)
-            ls_sys_putblk(NULL, (void *)pBlk);
+        MEMCHK_UNPOISON(pBlk, sizeof(*pBlk));
+        if (pBlk->header.size > (size_t)LGFREELIST_MAXBYTES)
+            ls_sys_putblk(pBlk->header.size, NULL, (void *)pBlk);
         else
         {
             size_t size = pBlk->header.size;
             pBlk->next = NULL;
-#ifdef USE_VALGRIND
-            VALGRIND_MEMPOOL_FREE(&ls_pool_g, pBlk);
-#endif /* USE_VALGRIND */
+            MEMCHK_FREE(&ls_pool_g, pBlk, size);
             freelist_put(size, pBlk);
+            MEMCHK_POISON(pBlk, sizeof(*pBlk));
         }
     }
-//#endif
 }
 
+
+static void *ls_prealloc_int(void *old_p, size_t new_sz, int copy)
+{
+    if (old_p == NULL)
+        return ls_palloc(new_sz);
+
+    ls_pool_blk_t *pBlk = ((ls_pool_blk_t *)old_p) - 1;
+#ifdef INTERNAL_DEBUG
+    assert(pBlk->m_header.m_magic == MAGIC);
+#endif
+    size_t old_sz = pBlk->header.size;
+    size_t val_sz = new_sz + sizeof(ls_pool_blk_t);
+    new_sz = pool_roundup(val_sz);
+
+    if (old_sz >= new_sz && old_sz - new_sz <= REALLOC_DIFF)
+    {
+        MEMCHK_UNPOISON(old_p, val_sz);
+        return old_p;
+    }
+
+    pBlk = (ls_pool_blk_t *)ls_prealloc_slab_int(pBlk, old_sz, new_sz, 1);
+    if (pBlk != NULL)
+    {
+        pBlk->header.size = new_sz;
+        pBlk->header.magic = MAGIC;
+        return (void *)(pBlk + 1);
+    }
+    return NULL;
+}
+
+
+void *ls_prealloc(void *old_p, size_t new_sz)
+{
+    return ls_prealloc_int(old_p, new_sz, 1);
+}
+
+
+void *ls_preserve(void *old_p, size_t new_sz)
+{
+    return ls_prealloc_int(old_p, new_sz, 0);
+}
+
+
+#ifndef DEBUG_POOL
+/*
+ * try to allocate chunk of memory using current heap pointers
+ *
+ * called from refill(), which is called from ls_palloc_slab
+ * when it can't find a block on a freelist to satisfy the ls_palloc
+ * request
+ * also called recursively if it had to get more memory (from malloc or
+ * freelist_alloc)
+ *
+ * ls_palloc_slab calls refill() when size <= SMFREELIST_MAXBYTES, otherwise
+ * it goes to malloc instead
+ * since chunk_alloc calls itself, we must ensure invariant (below) - it should
+ * never increase size before calling itself
+ */
+static char *chunk_alloc(heap_ptr_t * heap_ptrs, size_t size, int *pNobjs)
+{
+    char *result;
+
+    size_t total_bytes = size * (*pNobjs);
+    size_t bytes_left = heap_ptrs->end_free - heap_ptrs->start_free;
+
+    if (bytes_left >= total_bytes)
+    {
+        /* we have enough bytes on current heap to satisfy entire request */
+        result = heap_ptrs->start_free;
+        heap_ptrs->start_free += total_bytes;
+        return result;
+    }
+
+    if (bytes_left >= size)
+    {
+        /* not enough for full request, but can fulfill at least 1 object */
+        *pNobjs = (int)(bytes_left / size);
+        total_bytes = size * (*pNobjs);
+        result = heap_ptrs->start_free;
+        heap_ptrs->start_free += total_bytes;
+        return result;
+    }
+
+    /* invariant: as size <= SMFREELIST_MAXBYTES, if we got this far
+       bytes_left  will not be > SMFREELIST_MAXBYTES */
+
+    /* we don't have enough bytes in local heap ptrs to provide even 1 object. if
+       large enough, save the left-over piece on a freelist */
+    if (bytes_left >= pool_roundup(sizeof(ls_pool_blk_t)))
+    {
+        ls_pool_blk_t *pBlk = (ls_pool_blk_t *)heap_ptrs->start_free;
+        pBlk->next = NULL;
+        freelist_put(bytes_left, pBlk);
+    }
+
+    /* pick a size to allocate - start with double request size and add dynamic
+       padding factor based on heap allocated so far */
+
+    size_t bytes_to_get = 2 * total_bytes
+        + pool_roundup(ls_pool_g.heap_size >> 4);
+
+
+    /* try malloc */
+    heap_ptrs->start_free = (char *)ls_sys_getblk(NULL, bytes_to_get);
+
+    if (heap_ptrs->start_free != NULL) {
+        /* got memory from malloc, set up heap size and ptrs and try allocating again */
+
+        ls_pool_g.heap_size += bytes_to_get;
+        heap_ptrs->end_free = heap_ptrs->start_free + bytes_to_get;
+
+        /* maintains size invariant */
+        return chunk_alloc(heap_ptrs, size, pNobjs);
+    }
+
+    heap_ptrs->end_free = 0;    /* In case of exception. */
+    *pNobjs = 0;
+    /* couldn't allocate from a freelist either */
+    return NULL;
+
+}
+
+
+static void *refill(size_t block_size)
+{
+    int nobjs = 16;
+
+    /* thread local */
+    heap_ptr_t * heap_ptrs = get_locked_heap_ptr();
+    char *chunk = chunk_alloc(heap_ptrs, block_size, &nobjs);
+    ls_spinlock_unlock(&heap_ptrs->heap_lock);
+    _alink_t   *pPtr;
+    char       *pNext;
+
+    if (nobjs <= 1)
+        return chunk;       /* freelist still empty; no head or tail */
+
+    pNext = chunk + block_size;    /* skip past first block returned to caller */
+    --nobjs;
+    size_t count = nobjs;
+    while (1)
+    {
+        pPtr = (_alink_t *)pNext;
+        if (--nobjs <= 0)
+            break;
+        pNext += block_size;
+        pPtr->next = (_alink_t *)pNext;
+    }
+    pPtr->next = NULL;
+    MEMCHK_UNPOISON(chunk + block_size, (char *)pPtr - chunk);
+    freelist_putn(block_size, (ls_pool_blk_t *)(chunk + block_size), (ls_pool_blk_t *)pPtr, count);
+    MEMCHK_POISON(chunk, (char *)pPtr + block_size - chunk);
+
+    return chunk;
+}
+#endif /* DEBUG_POOL */
+
+
+#define ls_pool_getlist    ls_std_getlist
+#define ls_pool_inslist    ls_std_inslist
+
+
+/**
+ * @ls_std_getlist
+ */
+ls_inline ls_xpool_bblk_t *ls_std_getlist(ls_xpool_bblk_t **pList)
+{
+    ls_xpool_bblk_t *pPtr = *pList;
+    *pList = NULL;
+    return pPtr;
+}
+
+/**
+ * @ls_std_inslist
+ */
+ls_inline void ls_std_inslist(
+        ls_xpool_bblk_t **pList, ls_xpool_bblk_t *pNew, ls_xpool_bblk_t *pTail)
+{
+    pTail->next = *pList;
+    *pList = pNew;
+    return;
+}
 
 /* free a null terminated linked list.
  * all the elements are expected to have the same size, `size'.
  */
-void ls_plistfree(ls_pool_blk_t *plist, size_t size)
+void ls_plistfree(volatile ls_pool_blk_t *plist, size_t size)
 {
     if (plist == NULL)
         return;
-    ls_pool_blk_t *pNext;
+    volatile ls_pool_blk_t *pNext;
     size = pool_roundup(size + sizeof(ls_pool_blk_t));
-#ifdef LSR_POOL_INTERNAL_DEBUG
-    assert(plist->m_header.m_magic == LSR_POOL_MAGIC);
+#ifdef INTERNAL_DEBUG
+    assert(plist->m_header.m_magic == MAGIC);
 #endif
-    if (size > (size_t)LSR_POOL_LGFREELIST_MAXBYTES)
+    if (size > (size_t)LGFREELIST_MAXBYTES)
     {
         do
         {
             pNext = plist->next;
-            ls_sys_putblk(NULL, (void *)plist);
+            ls_sys_putblk(size, NULL, (void *)plist);
         }
         while ((plist = pNext) != NULL);
         return;
     }
     pNext = plist;
+    size_t count = 1;
+    MEMCHK_UNPOISON(pNext, sizeof(ls_pool_t));
     while (pNext->next != NULL)         /* find last in list */
-#ifdef USE_VALGRIND
     {
-        ls_pool_blk_t *pTmp = pNext;
-#endif /* USE_VALGRIND */
+        volatile ls_pool_blk_t *pTmp = pNext;
+        count++;
         pNext = pNext->next;
-#ifdef USE_VALGRIND
-        VALGRIND_MEMPOOL_FREE(&ls_pool_g, pTmp);
-#ifdef USE_THRSAFE_POOL
-        VALGRIND_MAKE_MEM_DEFINED(pTmp, sizeof(ls_lfnodei_t));     /* for queue */
-#endif /* USE_THRSAFE_POOL */
+        MEMCHK_UNPOISON(pNext, sizeof(ls_pool_t));
+        MEMCHK_FREE(&ls_pool_g, pTmp, size);
+        // MEMCHK_UNPOISON(pTmp, sizeof(ls_lfnodei_t));     /* for queue */
     }
-    VALGRIND_MEMPOOL_FREE(&ls_pool_g, pNext);
-#endif /* USE_VALGRIND */
-    freelist_putn(size, plist, pNext);
+    MEMCHK_FREE(&ls_pool_g, pNext, size);
+    freelist_putn(size, plist, pNext, count);
 
     return;
 }
@@ -386,202 +896,4 @@ void ls_pfreepending()
 }
 
 
-void *ls_prealloc(void *old_p, size_t new_sz)
-{
-// #ifdef DEBUG_POOL
-//     return realloc(old_p, new_sz);
-// #else    
-    if (old_p == NULL)
-        return ls_palloc(new_sz);
-
-    ls_pool_blk_t *pBlk = ((ls_pool_blk_t *)old_p) - 1;
-#ifdef LSR_POOL_INTERNAL_DEBUG
-    assert(pBlk->m_header.m_magic == LSR_POOL_MAGIC);
-#endif
-    size_t old_sz = pBlk->header.size;
-    size_t val_sz = new_sz + sizeof(ls_pool_blk_t);
-    new_sz = pool_roundup(val_sz);
-    if (old_sz >= new_sz && old_sz - new_sz <= LSR_POOL_REALLOC_DIFF)
-    {
-#ifdef USE_VALGRIND
-        VALGRIND_MAKE_MEM_DEFINED(old_p, val_sz);
-#endif /* USE_VALGRIND */
-        return old_p;
-    }
-
-    if ((old_sz > (size_t)LSR_POOL_LGFREELIST_MAXBYTES)
-        && (new_sz > (size_t)LSR_POOL_LGFREELIST_MAXBYTES))
-        pBlk = (ls_pool_blk_t *)realloc((void *)pBlk, new_sz);
-    else
-    {
-        void *new_p;
-        size_t copy_sz;
-        if ((new_p = ls_palloc(new_sz - sizeof(ls_pool_blk_t))) == NULL)
-            pBlk = NULL;
-        else
-        {
-            pBlk = ((ls_pool_blk_t *)new_p) - 1;
-            copy_sz = (new_sz > old_sz ? old_sz : new_sz) - sizeof(ls_pool_blk_t);
-            if (copy_sz != 0)
-            {
-#ifdef USE_VALGRIND
-                VALGRIND_MAKE_MEM_DEFINED(old_p, copy_sz);
-#endif /* USE_VALGRIND */
-                memmove(new_p, old_p, copy_sz);
-            }
-            if (old_sz != 0)
-                ls_pfree(old_p);
-        }
-    }
-    if (pBlk != NULL)
-    {
-        pBlk->header.size = new_sz;
-        pBlk->header.magic = LSR_POOL_MAGIC;
-        return (void *)(pBlk + 1);
-    }
-    return NULL;
-//#endif
-}
-
-
-#ifndef DEBUG_POOL
-/*
- */
-static char *chunk_alloc(size_t size, int *pNobjs)
-{
-    char *result;
-
-    size_t total_bytes = size * (*pNobjs);
-    size_t bytes_left = ls_pool_g._end_free - ls_pool_g._start_free;
-
-    if (bytes_left >= total_bytes)
-    {
-        result = ls_pool_g._start_free;
-        ls_pool_g._start_free += total_bytes;
-        return result;
-    }
-    else if (bytes_left >= size)
-    {
-        *pNobjs = (int)(bytes_left / size);
-        total_bytes = size * (*pNobjs);
-        result = ls_pool_g._start_free;
-        ls_pool_g._start_free += total_bytes;
-        return result;
-    }
-    else
-    {
-        size_t bytes_to_get = 2 * total_bytes
-                              + pool_roundup(ls_pool_g._heap_size >> 4);
-        /* make use of the left-over piece. */
-        if (bytes_left >= pool_roundup(sizeof(ls_pool_blk_t)))
-            /* will not be > LSR_POOL_SMFREELIST_MAXBYTES */
-        {
-            ls_pool_blk_t *pBlk = (ls_pool_blk_t *)ls_pool_g._start_free;
-            pBlk->next = NULL;
-            freelist_put(bytes_left, pBlk);
-        }
-        ls_pool_g._start_free = (char *)ls_sys_getblk(NULL, bytes_to_get);
-        if (ls_pool_g._start_free == NULL)
-        {
-            size_t i;
-
-            /* check small block freelist
-             */
-            i = size;
-            if (freelist_alloc(i,
-                               &ls_pool_g.smfreelists[smfreelistindex(i)],
-                               (size_t)LSR_POOL_SMFREELIST_MAXBYTES,
-                               (size_t)LSR_POOL_SMFREELISTINTERVAL) == LS_OK)
-                return chunk_alloc(size, pNobjs);
-            /* check large block freelist
-             */
-            i = LSR_POOL_SMFREELIST_MAXBYTES + LSR_POOL_LGFREELISTINTERVAL
-                + LSR_POOL_LGFREELISTSKEW;
-            if (freelist_alloc(i,
-                               &ls_pool_g.lgfreelists[lgfreelistindex(i)],
-                               (size_t)LSR_POOL_LGFREELIST_MAXBYTES + LSR_POOL_LGFREELISTSKEW,
-                               (size_t)LSR_POOL_LGFREELISTINTERVAL) == LS_OK)
-                return chunk_alloc(size, pNobjs);
-            ls_pool_g._end_free = 0;    /* In case of exception. */
-            ls_pool_g._start_free = (char *)ls_sys_getblk(NULL, bytes_to_get);
-            if (ls_pool_g._start_free == NULL)
-            {
-                *pNobjs = 0;
-                return NULL;
-            }
-        }
-
-        save_malloc_ptr(ls_pool_g._start_free);
-
-        ls_pool_g._heap_size += bytes_to_get;
-        ls_pool_g._end_free = ls_pool_g._start_free + bytes_to_get;
-        return chunk_alloc(size, pNobjs);
-    }
-}
-
-
-static int freelist_alloc(
-    size_t mysize, ls_blkctrl_t *pFreeList, size_t maxsize, size_t incr)
-{
-    ls_pool_blk_t *p;
-    while (mysize <= maxsize)
-    {
-        if ((p = (ls_pool_blk_t *)ls_pool_getblk(pFreeList, mysize)) != NULL)
-        {
-#ifdef USE_VALGRIND
-            VALGRIND_MAKE_MEM_DEFINED(p, mysize);
-#endif  /* USE_VALGRIND */
-            ls_pool_g._start_free = (char *)p;
-            ls_pool_g._end_free = ls_pool_g._start_free + mysize;
-            return LS_OK;
-        }
-        ++pFreeList;
-        mysize += incr;
-    }
-    return LS_FAIL;
-}
-
-
-static void *refill(size_t num)
-{
-    int nobjs = 20;
-#ifdef USE_THRSAFE_POOL
-    ls_spinlock_lock(&ls_pool_g.alloclock);
-#endif /* USE_THRSAFE_POOL */
-    char *chunk = chunk_alloc(num, &nobjs);
-#ifdef USE_THRSAFE_POOL
-    ls_spinlock_unlock(&ls_pool_g.alloclock);
-#endif /* USE_THRSAFE_POOL */
-    _alink_t   *pPtr;
-    char       *pNext;
-
-    if (nobjs <= 1)
-        return chunk;       /* freelist still empty; no head or tail */
-
-    pNext = chunk + num;    /* skip past first block returned to caller */
-    --nobjs;
-    while (1)
-    {
-        pPtr = (_alink_t *)pNext;
-#ifdef USE_THRSAFE_POOL
-#ifdef USE_VALGRIND
-        VALGRIND_MAKE_MEM_NOACCESS(pPtr + 1, num - sizeof(*pPtr));
-#endif /* USE_VALGRIND */
-#endif /* USE_THRSAFE_POOL */
-        if (--nobjs <= 0)
-            break;
-        pNext += num;
-        pPtr->next = (_alink_t *)pNext;
-    }
-    pPtr->next = NULL;
-    freelist_putn(num, (ls_pool_blk_t *)(chunk + num), (ls_pool_blk_t *)pPtr);
-#ifndef USE_THRSAFE_POOL
-#ifdef USE_VALGRIND
-    VALGRIND_MAKE_MEM_NOACCESS((chunk + num), (char *)pPtr - chunk);
-#endif /* USE_VALGRIND */
-#endif /* USE_THRSAFE_POOL */
-
-    return chunk;
-}
-#endif /* DEBUG_POOL */
 

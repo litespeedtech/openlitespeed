@@ -1012,9 +1012,11 @@ void HttpServerImpl::onTimer60Secs()
     m_toBeReleasedContext.releaseUnused(DateTime::s_curTime,
                                         HttpServerConfig::getInstance().getConnTimeout());
 
+#ifndef IS_LSCPD
     int autoUpdate = 1; //Need to read from config?
     if (autoUpdate)
         checkOLSUpdate();
+#endif
 }
 
 
@@ -3315,37 +3317,38 @@ int HttpServerImpl::initServer(XmlNode *pRoot, int &iReleaseXmlTree,
 
 int HttpServerImpl::initLscpd()
 {
+    int ret = 0;
+#ifdef IS_LSCPD
+    
 #define LSCPD_PROXY_APP_NAME    "gunicorn"
 #define LSCPD_VHOST_NAME        "cyberpanel"
 #define LSCPD_PROXY_ADDRESS     "127.0.0.1:5003"
 #define LSCPD_LISTENER_ADDRESS  "*:8090"
 
-    int ret = 0;
+    MainServerConfig  &mainServerConfig =  MainServerConfig::getInstance();
     char achBuf[256], achBuf1[256];
     char *p = achBuf;
-    strcpy(p, MainServerConfig::getInstance().getServerRoot());
+    strcpy(p, mainServerConfig.getServerRoot());
     assert(p != NULL);
     char *pEnd = p + strlen(p);
     strcpy(achBuf1, achBuf);
     
     beginConfig();
-    
-    MainServerConfig  &MainServerConfigObj =  MainServerConfig::getInstance();
     ServerProcessConfig &procConfig = ServerProcessConfig::getInstance();
-    HttpServerConfig &serverConfig = HttpServerConfig::getInstance();
+    HttpServerConfig &httpServerConfig = HttpServerConfig::getInstance();
     
 #if defined(LS_AIO_USE_KQ)
         SigEventDispatcher::setAiokoLoaded();
 #endif
 
     //similar as configServerBasics
-    HttpServer::getInstance().initAllLog(MainServerConfig::getInstance().getServerRoot());
-    MainServerConfigObj.setServerName("lscp");
+    HttpServer::getInstance().initAllLog(mainServerConfig.getServerRoot());
+    mainServerConfig.setServerName("lscp");
     
     const char *pUser = OPENLSWS_USER;
     const char *pGroup = OPENLSWS_GROUP;
-    MainServerConfigObj.setGroup(pGroup);
-    MainServerConfigObj.setUser(pUser);
+    mainServerConfig.setGroup(pGroup);
+    mainServerConfig.setUser(pUser);
     
     gid_t gid = procConfig.getGid();
     struct passwd *pw = Daemonize::configUserGroup(pUser, pGroup, gid);
@@ -3368,26 +3371,26 @@ int HttpServerImpl::initLscpd()
               procConfig.getUid(), procConfig.getGid());
     }
 
-    MainServerConfigObj.setAdminEmails("root@localhost");
-    MainServerConfigObj.setDisableWebAdmin(1); 
+    mainServerConfig.setAdminEmails("root@localhost");
+    mainServerConfig.setDisableWebAdmin(1); 
     procConfig.setPriority(0);
 
     int iNumProc = PCUtil::getNumProcessors();
     iNumProc = (iNumProc > 8 ? 8 : iNumProc);
-    HttpServerConfig::getInstance().setChildren(iNumProc);
-    MainServerConfigObj.setDisableLogRotateAtStartup(0);
+    httpServerConfig.setChildren(iNumProc);
+    mainServerConfig.setDisableLogRotateAtStartup(0);
     HttpStats::set503AutoFix(1);
-    HttpServerConfig::getInstance().setEnableH2c(0);
-    HttpServerConfig::getInstance().setRestartTimeOut(300);
+    httpServerConfig.setEnableH2c(0);
+    httpServerConfig.setRestartTimeOut(300);
 
     //this value can only be set once when server start.
-    if (MainServerConfigObj.getCrashGuard() == 2)
-        MainServerConfigObj.setCrashGuard(1);
+    if (mainServerConfig.getCrashGuard() == 2)
+        mainServerConfig.setCrashGuard(1);
 
     m_sRTReportFile = sStatDir;
     m_sRTReportFile.append("/.rtreport", 10);
     
-    
+    setupSUExec();
     //
     SystemInfo::maxOpenFile(4096);
     m_dispatcher.init("best");
@@ -3398,17 +3401,17 @@ int HttpServerImpl::initLscpd()
     setSwapDir(DEFAULT_TMP_DIR "/swap");
     
     ls_snprintf(achBuf, 256, "%s/tmp/ocspcache/",
-                MainServerConfig::getInstance().getServerRoot());
+                mainServerConfig.getServerRoot());
     SslOcspStapling::setRespTempPath(achBuf);
 
     HttpRespHeaders::hideServerSignature(0);
     HttpServer::getInstance().getServerContext().setGeoIP(0);
     HttpServer::getInstance().getServerContext().setIpToLoc(0);
-    HttpServerConfig::getInstance().setUseProxyHeader(0);
+    httpServerConfig.setUseProxyHeader(0);
     denyAccessFiles(NULL, ".ht*", 0);
 
     ls_snprintf(achBuf, 256, "%s/conf/mime.properties",
-                MainServerConfig::getInstance().getServerRoot());
+                mainServerConfig.getServerRoot());
     HttpMime::getMime()->loadMime(achBuf);
     if (HttpMime::getMime()->getDefault() == 0)
         HttpMime::getMime()->initDefault();
@@ -3419,19 +3422,22 @@ int HttpServerImpl::initLscpd()
     m_serverContext.setConfigBit(BIT_EXPIRES_DEFAULT, 1);
     
     //configSecurity
-    DeniedDir *pDeniedDir = HttpServerConfig::getInstance().getDeniedDir();
+    DeniedDir *pDeniedDir = httpServerConfig.getDeniedDir();
     pDeniedDir->clear();
     pDeniedDir->addDir("/");
     pDeniedDir->addDir("/etc/*");
     pDeniedDir->addDir("/dev/*");
+    ls_snprintf(achBuf, 256, "%s/conf/*",
+                mainServerConfig.getServerRoot());
+    pDeniedDir->addDir(achBuf);
     
-    HttpServerConfig &config = HttpServerConfig::getInstance();
-    config.setFollowSymLink(1);
-    config.checkDeniedSymLink(0);
-    config.setRequiredBits(000);
-    config.setForbiddenBits(041111);
-    config.setScriptForbiddenBits(000);
-    config.setDirForbiddenBits(0000);
+    
+    httpServerConfig.setFollowSymLink(1);
+    httpServerConfig.checkDeniedSymLink(0);
+    httpServerConfig.setRequiredBits(000);
+    httpServerConfig.setForbiddenBits(041111);
+    httpServerConfig.setScriptForbiddenBits(000);
+    httpServerConfig.setDirForbiddenBits(0000);
     
     NtwkIOLink::enableThrottle(1);
     ClientCache::initClientCache(1000);
@@ -3460,11 +3466,12 @@ int HttpServerImpl::initLscpd()
     m_serverContext.initExternalSessionHooks();
 
     
-    serverConfig.setConnTimeOut(300);
-    serverConfig.setKeepAliveTimeout(5);
-    serverConfig.setSmartKeepAlive(0);
-    serverConfig.setFollowSymLink(1);
-    serverConfig.setMaxKeepAliveRequests(1000);
+    httpServerConfig.setConnTimeOut(300);
+    httpServerConfig.setKeepAliveTimeout(5);
+    httpServerConfig.setSmartKeepAlive(0);
+    httpServerConfig.setFollowSymLink(1);
+    httpServerConfig.setMaxKeepAliveRequests(1000);
+    httpServerConfig.setMaxDynRespLen(30 * 1024 * 1024); //30MB
 
     ThrottleLimits *pLimit = ThrottleControl::getDefault();
     pLimit->setDynReqLimit(INT_MAX);
@@ -3500,6 +3507,10 @@ int HttpServerImpl::initLscpd()
     limits.setProcLimit(400, 500);
     pPhp->getConfig().setRLimits(&limits);
     
+    
+    pPhp->getConfig().addEnv("PHP_LSAPI_MAX_REQUESTS=500");
+    pPhp->getConfig().addEnv("PHP_LSAPI_CHILDREN=20");
+    
     //listener
     strcat(achBuf1, "/cert.pem");
     strcpy(pEnd, "/key.pem");
@@ -3511,12 +3522,14 @@ int HttpServerImpl::initLscpd()
                        1, 0, 0);  //certChain is 1
     if (pSSL == NULL)
     {
-        LS_ERROR(ConfigCtx::getCurConfigCtx(),
+        LS_INFO(ConfigCtx::getCurConfigCtx(),
                  "Failed to setup SSL cipher for listener %s, please make sure"
                  " your certificates file %s and Key file %s can be accessed.\n",
                  LSCPD_LISTENER_ADDRESS, achBuf1, achBuf);
+        LS_INFO(ConfigCtx::getCurConfigCtx(),
+                 "Continue to setup listener %s without SSL support.\n",
+                 LSCPD_LISTENER_ADDRESS);
         delete pNewContext;
-        return -1;
     }
     else
     {
@@ -3549,7 +3562,11 @@ int HttpServerImpl::initLscpd()
     pVHost->enableScript(1);
     pVHost->restrained(1);
     pVHost->enableGzip(1);
-    
+    HttpContext *pContext = pVHost->addContext("/", HandlerType::HT_NULL,
+                                               pVHost->getVhRoot()->c_str(),
+                                               NULL, true);
+    pContext->addDirIndexes("index.htm, index.php, index.html, default.html");
+
     //update mime
     char achMIMEHtml[] = "text/html";
     HttpMime::getMime()->updateMIME(achMIMEHtml,
@@ -3590,10 +3607,10 @@ int HttpServerImpl::initLscpd()
                             EA_CGID, LSCGID_NAME );
     
     pWorker->getConfig().setSocket("uds:/" DEFAULT_TMP_DIR "/cgid/cgid.sock");
-    pWorker->start(MainServerConfig::getInstance().getServerRoot(), NULL, 
+    pWorker->start(mainServerConfig.getServerRoot(), NULL, 
                    getuid(), getgid(), getpriority(PRIO_PROCESS, 0));
     endConfig(0);
-
+#endif
     return ret;
 }
 
@@ -3684,7 +3701,7 @@ int HttpServerImpl::initSampleServer()
             false);
 
     pVHost->getRootContext().addDirIndexes(
-        "index.htm,index.php,index.html,default.html");
+        "index.htm, index.php, index.html, default.html");
     pVHost->setSmartKA(0);
     pVHost->setMaxKAReqs(100);
 
