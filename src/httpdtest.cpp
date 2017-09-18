@@ -19,7 +19,7 @@
 
 #ifdef RUN_TEST
 #include "httpdtest.h"
-#include "test/unittest-cpp/UnitTest++/src/UnitTest++.h"
+#include "unittest-cpp/UnitTest++.h"
 
 int HttpdTest::runTest()
 {

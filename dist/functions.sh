@@ -884,15 +884,16 @@ installation_lscpd()
         SDIR_OWN=$DIR_OWN
     fi
     
-    util_mkdir "$SDIR_OWN" $DIR_MOD  bin fcgi-bin php lib logs modules  share share/autoindex share/autoindex/icons  tmp autoupdate 
-    util_mkdir "$CONF_OWN" $SDIR_MOD   phpbuild
-    util_mkdir "$DIR_OWN" $SDIR_MOD tmp/ocspcache
+    util_mkdir "$SDIR_OWN" $DIR_MOD  bin conf fcgi-bin php lib logs modules  share share/autoindex share/autoindex/icons  tmp autoupdate 
+    util_mkdir "$CONF_OWN" $SDIR_MOD   phpbuild 
+    util_mkdir "$DIR_OWN" $SDIR_MOD tmp/ocspcache cyberpanel
     
     find "$DEFAULT_TMP_DIR" -type s -atime +1 -delete 2>/dev/null
     if [ $? -ne 0 ]; then
         find "$DEFAULT_TMP_DIR" -type s -atime +1 2>/dev/null | xargs rm -f
     fi 
 
+    util_cpfile "$CONF_OWN" $CONF_MOD conf/mime.properties
     util_cpdir "$CONF_OWN" $DOC_MOD share/autoindex
     util_ccpfile "$SDIR_OWN" $EXEC_MOD fcgi-bin/lsperld.fpl 
     util_cpfile "$SDIR_OWN" $DOC_MOD VERSION GPL.txt

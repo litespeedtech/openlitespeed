@@ -349,7 +349,7 @@ int H2Stream::dataSent(int ret)
 
 int H2Stream::sendRespHeaders(HttpRespHeaders *pHeaders, int isNoBody)
 {
-    uint8_t flag = H2_FLAG_END_HEADERS;
+    uint8_t flag = 0;
     if (getState() == HIOS_DISCONNECTED)
         return LS_FAIL;
     if (isNoBody)

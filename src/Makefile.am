@@ -116,7 +116,7 @@ openlitespeed_LDADD =  ./main/libmain.a ./http/libhttp.a ./spdy/libspdy.a \
         -ludns -lGeoIP -lz -lexpat -lpthread $(DL_LIB_OPTION) $(RT_LIB_OPTION)
 
 AM_LDFLAGS = -L/usr/lib $(OPENSSL_LDFLAGS)
-AM_CPPFLAGS = -I$(top_srcdir)/ssl/include/ -I$(top_srcdir)/include -I$(top_srcdir)/src  -I$(top_srcdir) $(PCRE_CFLAGS) $(EXPAT_CFLAGS)
+AM_CPPFLAGS = -I$(top_srcdir)/ssl/include/ -I$(top_srcdir)/include -I$(top_srcdir)/src  $(PCRE_CFLAGS) $(EXPAT_CFLAGS)
 
 SUBDIRS =  socket http spdy sslpp ssi extensions log4cxx main edio lsiapi  modules shm adns
 

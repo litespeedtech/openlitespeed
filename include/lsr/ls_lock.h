@@ -89,10 +89,11 @@ typedef pthread_spinlock_t ls_pspinlock_t;
 #define ls_pspinlock_unlock        pthread_spin_unlock
 #endif
 
-#if defined(__i386__) || defined(__ia64__)
-#define cpu_relax()         asm volatile("pause\n": : :"memory")
+#if defined(__i386__) || defined(__ia64__) || defined(__x86_64)
+//#define cpu_relax()         asm volatile("pause\n": : :"memory")
+#define cpu_relax()         usleep(1);
 #else
-#define cpu_relax()         ;
+#define cpu_relax()         usleep(1);
 #endif
 typedef int32_t             ls_atom_spinlock_t;
 

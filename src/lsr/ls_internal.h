@@ -41,6 +41,12 @@ extern "C" {
 #endif
 
 
+typedef struct __link_s
+{
+    struct __link_s *next;
+} __link_t;
+
+
 typedef enum { RED, BLACK } ls_map_color;
 
 struct ls_mapnode_s
@@ -107,7 +113,7 @@ struct ls_pool_blk_s
 {
     union
     {
-        struct ls_pool_blk_s           *next;
+        volatile struct ls_pool_blk_s           *next;
         struct ls_pool_header_s         header;
         char align[LSR_POOL_DATA_ALIGN];
     };
@@ -155,7 +161,7 @@ typedef struct ls_xpool_bblk_s     ls_xpool_bblk_t;
  *   blocks back to the global memory pool, such as in the case of releasing
  *   the \e superblocks from the session memory pool.
  */
-void   ls_plistfree(ls_pool_blk_t *plist, size_t size);
+void   ls_plistfree(volatile ls_pool_blk_t *plist, size_t size);
 
 /**
  * @ls_psavepending

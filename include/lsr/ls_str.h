@@ -220,7 +220,7 @@ void    ls_str_append(ls_str_t *pThis, const char *pStr, size_t len);
 int     ls_str_cmp(const void *pVal1, const void *pVal2);
 
 /** @ls_str_bcmp
- * @brief A binary comparison function for lsr str. 
+ * @brief A binary comparison function for lsr str.
  * @details This may be used for lsr hash or map comparison.
  *
  * @param[in] pVal1 - The first ls_str object to compare.
@@ -391,6 +391,24 @@ void    ls_str_xappend(ls_str_t *pThis, const char *pStr, size_t len,
                        ls_xpool_t *pool);
 
 
+/** @LS_STR_CONST
+ * @brief Initialize const ls_str_t object with const string literal
+ *     const ls_str_t abc = LS_STR_CONST("abc");
+ *
+ * @param[in] x - must be a const string literal, like "abcd"
+ */
+
+#define LS_STR_CONST(x)         { (char*)x, sizeof(x) - 1 }
+
+
+/** @LS_STRPAIR_CONST
+ * @brief Initialize const ls_strpair_t object with const string literal
+ *     const ls_strpair_t abc = LS_STRPAIR_CONST("abc", "def");
+ *
+ * @param[in] x - must be a const string literal, like "abcd"
+ * @param[in] y - must be a const string literal, like "abcd"
+ */
+#define LS_STRPAIR_CONST(x, y)  { { (char*)x, sizeof(x) - 1 }, { (char*)y, sizeof(y) - 1 }  }
 
 #ifdef __cplusplus
 }

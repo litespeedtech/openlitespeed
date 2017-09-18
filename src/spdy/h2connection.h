@@ -106,6 +106,9 @@ public:
     int sendRespHeaders(HttpRespHeaders *pRespHeaders, uint32_t uiStreamID,
                         uint8_t flag);
 
+    int sendHeaderContFrame(uint32_t uiStreamID, uint8_t flag, 
+                           H2FrameType type, const char *pBuf, int size);
+    
     int sendWindowUpdateFrame(uint32_t id, int32_t delta)
     {   return sendFrame4Bytes(H2_FRAME_WINDOW_UPDATE, id, delta);   }
 

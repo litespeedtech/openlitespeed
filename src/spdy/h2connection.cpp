@@ -1465,10 +1465,38 @@ int H2Connection::sendRespHeaders(HttpRespHeaders *pRespHeaders,
     int rc = encodeHeaders(pRespHeaders, achHdrBuf, H2_TMP_HDR_BUFF_SIZE);
     if (rc < 0)
         return LS_FAIL;
+    return sendHeaderContFrame(uiStreamID, flag, H2_FRAME_HEADERS, 
+                               (const char *)achHdrBuf, rc);
+}
 
-    getBuf()->guarantee(rc + 9);
-    appendCtrlFrameHeader(H2_FRAME_HEADERS, rc, flag, uiStreamID);   //
-    getBuf()->append((const char *)achHdrBuf, rc);
+int H2Connection::sendHeaderContFrame(uint32_t uiStreamID, uint8_t flag, 
+                                      H2FrameType type, const char *pBuf, int size)
+{
+    const char *p = pBuf;
+    int frameSize;
+    while(size > 0)
+    {
+        if (size > m_iPeerMaxFrameSize)
+        {
+            frameSize = m_iPeerMaxFrameSize;
+            size -= m_iPeerMaxFrameSize;
+        }
+        else
+        {
+            frameSize = size;
+            size = 0;
+            flag |= H2_FLAG_END_HEADERS;
+        }
+        getBuf()->guarantee(frameSize + 9);
+        appendCtrlFrameHeader(type, frameSize, flag, uiStreamID);   //
+        getBuf()->append((const char *)p, frameSize);
+        if (size > 0)
+        {
+            p += frameSize;
+            type = H2_FRAME_CONTINUATION;
+            flag = 0;
+        }
+    }
     return 0;
 }
 
@@ -1511,9 +1539,8 @@ int H2Connection::sendPushPromise(uint32_t streamId, uint32_t promise_streamId,
     }
     
     int total = pCur - achHdrBuf;
-    getBuf()->guarantee(total + 9);
-    appendCtrlFrameHeader(H2_FRAME_PUSH_PROMISE, total, H2_FLAG_END_HEADERS, streamId);
-    getBuf()->append((const char *)achHdrBuf, total);
+    return sendHeaderContFrame(streamId, 0, H2_FRAME_PUSH_PROMISE, 
+                               (const char *)achHdrBuf, total);
     return 0;
 }
 
