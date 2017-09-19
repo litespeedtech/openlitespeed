@@ -27,7 +27,6 @@
 #include <inttypes.h>
 #include <lsr/ls_types.h>
 
-
 /**
  * @file
  */
@@ -36,6 +35,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
 
 /**
  * @ls_xpool_new

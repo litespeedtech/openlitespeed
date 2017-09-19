@@ -724,6 +724,10 @@ LsShmStatus_t LsShm::remap()
         if ( x_pShmMap->x_stat.m_iFileSize - mystat.st_size > 100 * 1024 * 1024)
         {
             LsShmMap mapCopy = *x_pShmMap;
+            deleteFile();
+            if (s_fatalErrorCb)
+                (*s_fatalErrorCb)();
+            
             assert( "bad file size." == (char *)&mapCopy);
         }
     }
