@@ -164,7 +164,7 @@ public:
 
     void *offset2ptr(LsShmOffset_t offset)
     {
-        if (offset == 0)
+        if (offset < 32)    //sizeof(LsShmMap)
             return NULL;
         if (offset > m_iMaxSizeO)
         {

@@ -73,7 +73,7 @@ typedef struct
 {
     __link_t           *head;
     __link_t           *tail;
-    volatile size_t     blkcnt;
+    size_t     blkcnt;
     ls_spinlock_t       lck;
 } ls_blkctrl_t;
 
@@ -101,9 +101,6 @@ typedef struct ls_pool_s
     unsigned short      cur_heaps;
     unsigned short      cur_multi[FREELISTBUCKETS];
 #endif /* POOL_TESTING */
-    ls_spinlock_t       pool_lock;
-    volatile
-        ls_xpool_bblk_t    *pendingfree;        /* waiting to be freed */
 } ls_pool_t;
 
 
@@ -161,8 +158,6 @@ static ls_pool_t ls_pool_g =
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     },
 #endif /* POOL_TESTING */
-    LS_LOCK_AVAIL,  /* pool_lock */
-    NULL,
 };
 
 
@@ -215,7 +210,7 @@ ls_inline void ls_sys_putnblk(size_t size, ls_blkctrl_t *p, void *pNew, void *pT
 #ifdef DEBUG_LKSTD
 ls_inline void ls_lkstd_verifyblkcnt_do(ls_blkctrl_t * p)
 {
-    volatile __link_t * pHead = NULL;
+    __link_t * pHead = NULL;
     size_t ct = 0;
     for (pHead = p->head; pHead != NULL; pHead = pHead->next, ct++) 
     {}
@@ -237,6 +232,7 @@ ls_inline void *ls_lkstd_getblk(ls_blkctrl_t *p, size_t size)
 {
     __link_t *ptr;
 
+    //MEMCHK_UNPOISON(p, sizeof(ls_blkctrl_t));
     ls_lkstd_verifyblkcnt(p);
 
     if ((ptr = p->head) != NULL)
@@ -249,6 +245,7 @@ ls_inline void *ls_lkstd_getblk(ls_blkctrl_t *p, size_t size)
 
         ls_lkstd_verifyblkcnt(p);
     }
+    //MEMCHK_POISON(p, sizeof(ls_blkctrl_t));
     return (void *)ptr;
 }
 
@@ -260,19 +257,26 @@ ls_inline void *ls_lkstd_getblk(ls_blkctrl_t *p, size_t size)
  */
 ls_inline void ls_lkstd_putblk(size_t size, ls_blkctrl_t *p, void *pNew)
 {
+    //MEMCHK_UNPOISON(p, sizeof(ls_blkctrl_t));
+
     ls_lkstd_verifyblkcnt(p);
 
     if (p->tail == NULL)
         p->head = (__link_t *)pNew;
     else
     {
-        MEMCHK_UNPOISON(p->tail, sizeof(*(p->tail)));
+        MEMCHK_UNPOISON(p->tail, sizeof(__link_t));
         p->tail->next = (__link_t *)pNew;
-        MEMCHK_POISON(p->tail, sizeof(*(p->tail)));
+        MEMCHK_POISON(p->tail, sizeof(__link_t));
     }
     p->tail = (__link_t *)pNew;
+
+    MEMCHK_POISON(pNew, sizeof(__link_t));
+
     p->blkcnt++;
     ls_lkstd_verifyblkcnt(p);
+
+    //MEMCHK_POISON(p, sizeof(ls_blkctrl_t));
     return;
 }
 
@@ -283,22 +287,24 @@ ls_inline void ls_lkstd_putblk(size_t size, ls_blkctrl_t *p, void *pNew)
  * warning: assumes p locked
  */
 ls_inline void ls_lkstd_putnblk(size_t size, ls_blkctrl_t *p, 
-                                volatile void *pNew, volatile void *pTail, size_t nblocks)
+                                void *pNew, void *pTail, size_t nblocks)
 {
 
     ls_lkstd_verifyblkcnt(p);
 
+    //MEMCHK_UNPOISON(p, sizeof(ls_blkctrl_t));
     if (p->tail == NULL)
         p->head = (__link_t *)pNew;
     else
     {
-        MEMCHK_UNPOISON(p->tail, sizeof(*(p->tail)));
+        MEMCHK_UNPOISON(p->tail, sizeof(__link_t));
         p->tail->next = (__link_t *)pNew;
-        MEMCHK_POISON(p->tail, sizeof(*(p->tail)));
+        MEMCHK_POISON(p->tail, sizeof(__link_t));
     }
     p->tail = (__link_t *)pTail;
     p->blkcnt += nblocks;
     ls_lkstd_verifyblkcnt(p);
+    //MEMCHK_POISON(p, sizeof(ls_blkctrl_t));
     return;
 }
 
@@ -354,6 +360,11 @@ unsigned short ls_pool_cur_heaps()
 
 unsigned short * ls_pool_get_multi(short *len) 
 {
+    // this is only called from test code, and the pool is not locked
+    // (neither are the freelists)
+    // so it's possible for it to poison improperly - though the place
+    // it's called from is NOT multi-threaded - it's between runs
+    // for safety, lock the pool before continuing
     unsigned short b, m;
     *len = FREELISTBUCKETS;
     for ( b = 0; b < FREELISTBUCKETS; b++) 
@@ -361,10 +372,14 @@ unsigned short * ls_pool_get_multi(short *len)
         ls_pool_g.cur_multi[b] = 0;
         for (m = 0; m < FREELIST_MULTI; m++) 
         {
+            ls_spinlock_lock(&ls_pool_g.freelists[m][b].lck);
+            //MEMCHK_UNPOISON(&ls_pool_g.freelists[m][b], sizeof(ls_blkctrl_t));
             if (ls_pool_g.freelists[m][b].blkcnt) 
             {
                 ls_pool_g.cur_multi[b]++;
             }
+            //MEMCHK_POISON(&ls_pool_g.freelists[m][b], sizeof(ls_blkctrl_t));
+            ls_spinlock_unlock(&ls_pool_g.freelists[m][b].lck);
         }
     }
     return ls_pool_g.cur_multi;
@@ -456,7 +471,7 @@ ls_inline ls_pool_blk_t *freelist_get(size_t size)
 
 
 ls_inline void freelist_putn(
-        size_t size, volatile ls_pool_blk_t *pNew, volatile ls_pool_blk_t *pTail, size_t count)
+        size_t size, ls_pool_blk_t *pNew, ls_pool_blk_t *pTail, size_t count)
 {
     // ls_blkctrl_t *pFreeList = size2freelistptr(size);
     ls_blkctrl_t *pFreeList = get_locked_freelist_ptr(size);
@@ -524,7 +539,7 @@ void *ls_palloc_slab(size_t size)
             {
                 size_t memnum = lglist_roundup(rndnum);
                 ptr = malloc(memnum);
-                MEMCHK_POISON_CHKNUL(ptr, memnum);
+                MEMCHK_POISON_CHKNUL(ptr, memnum); 
             }
 #ifndef DEBUG_POOL
             else
@@ -532,7 +547,7 @@ void *ls_palloc_slab(size_t size)
 #endif
         }
     }
-    MEMCHK_ALLOC_CHKNUL(&ls_pool_g, ptr, size);
+    MEMCHK_ALLOC_CHKNUL(&ls_pool_g, ptr, size); 
     return ptr;
 }
 
@@ -548,7 +563,7 @@ void ls_pfree_slab(void *p, size_t size)
     {
         ls_pool_blk_t *pBlk = (ls_pool_blk_t *)p;
         pBlk->next = NULL;
-        MEMCHK_FREE(&ls_pool_g, pBlk, size);
+        MEMCHK_FREE(&ls_pool_g, pBlk, size); 
         freelist_put(size, pBlk);
     }
 }
@@ -570,7 +585,6 @@ ls_inline void *ls_prealloc_slab_int(void *old_p, size_t old_sz, size_t new_sz, 
         copy_sz = new_sz > old_sz ? old_sz : new_sz;
         if (copy_sz)
         {
-            MEMCHK_UNPOISON(old_p, copy_sz);
             memmove(result, old_p, copy_sz);
         }
     }
@@ -585,11 +599,10 @@ void *ls_prealloc_slab(void *old_p, size_t old_sz, size_t new_sz)
     if (old_p == NULL)
         return ls_palloc_slab(new_sz);
 
-    old_sz = pool_roundup(old_sz);
-    new_sz = pool_roundup(new_sz);
     if (old_sz >= new_sz && old_sz - new_sz <= REALLOC_DIFF)
     {
-        MEMCHK_UNPOISON(old_p, new_sz + sizeof(ls_pool_blk_t));
+        MEMCHK_UNPOISON(old_p, new_sz); 
+        MEMCHK_POISON(old_p + new_sz, old_sz - new_sz); 
         return old_p;
     }
     return ls_prealloc_slab_int(old_p, old_sz, new_sz, 1);
@@ -607,7 +620,7 @@ void *ls_palloc(size_t size)
     {
         ptr->header.size = rndnum;
         ptr->header.magic = MAGIC;
-        MEMCHK_POISON(ptr, sizeof(*ptr));
+        MEMCHK_POISON(ptr, sizeof(*ptr)); 
         return (void *)(ptr + 1);
     }
     return NULL;
@@ -619,48 +632,56 @@ void ls_pfree(void *p)
     if (p != NULL)
     {
         ls_pool_blk_t *pBlk = ((ls_pool_blk_t *)p) - 1;
+        MEMCHK_UNPOISON(pBlk, sizeof(*pBlk)); 
 #ifdef INTERNAL_DEBUG
         assert(pBlk->m_header.m_magic == MAGIC);
 #endif
-        MEMCHK_UNPOISON(pBlk, sizeof(*pBlk));
         if (pBlk->header.size > (size_t)LGFREELIST_MAXBYTES)
             ls_sys_putblk(pBlk->header.size, NULL, (void *)pBlk);
         else
         {
             size_t size = pBlk->header.size;
             pBlk->next = NULL;
-            MEMCHK_FREE(&ls_pool_g, pBlk, size);
+            MEMCHK_FREE(&ls_pool_g, pBlk, size); 
             freelist_put(size, pBlk);
-            MEMCHK_POISON(pBlk, sizeof(*pBlk));
+            //MEMCHK_POISON(pBlk, sizeof(*pBlk)); 
         }
     }
 }
 
 
-static void *ls_prealloc_int(void *old_p, size_t new_sz, int copy)
+ls_inline void *ls_prealloc_int(void *old_p, size_t new_sz, int copy)
 {
     if (old_p == NULL)
         return ls_palloc(new_sz);
 
     ls_pool_blk_t *pBlk = ((ls_pool_blk_t *)old_p) - 1;
+    MEMCHK_UNPOISON(pBlk, sizeof(*pBlk));    
 #ifdef INTERNAL_DEBUG
     assert(pBlk->m_header.m_magic == MAGIC);
 #endif
     size_t old_sz = pBlk->header.size;
     size_t val_sz = new_sz + sizeof(ls_pool_blk_t);
-    new_sz = pool_roundup(val_sz);
+    val_sz = pool_roundup(val_sz);
 
-    if (old_sz >= new_sz && old_sz - new_sz <= REALLOC_DIFF)
+    if (old_sz >= val_sz && old_sz - val_sz <= REALLOC_DIFF)
     {
-        MEMCHK_UNPOISON(old_p, val_sz);
+        MEMCHK_POISON(pBlk, sizeof(*pBlk)); 
+        MEMCHK_POISON(old_p + val_sz, old_sz - val_sz); 
+        MEMCHK_UNPOISON(pBlk+1, new_sz); 
         return old_p;
     }
+    if (copy)
+    {
+        MEMCHK_UNPOISON(pBlk, old_sz); 
+    }
 
-    pBlk = (ls_pool_blk_t *)ls_prealloc_slab_int(pBlk, old_sz, new_sz, 1);
+    pBlk = (ls_pool_blk_t *)ls_prealloc_slab_int(pBlk, old_sz, val_sz, copy);
     if (pBlk != NULL)
     {
-        pBlk->header.size = new_sz;
+        pBlk->header.size = val_sz;
         pBlk->header.magic = MAGIC;
+        MEMCHK_POISON(pBlk, sizeof(*pBlk)); 
         return (void *)(pBlk + 1);
     }
     return NULL;
@@ -727,6 +748,7 @@ static char *chunk_alloc(heap_ptr_t * heap_ptrs, size_t size, int *pNobjs)
     if (bytes_left >= pool_roundup(sizeof(ls_pool_blk_t)))
     {
         ls_pool_blk_t *pBlk = (ls_pool_blk_t *)heap_ptrs->start_free;
+        MEMCHK_UNPOISON(pBlk, sizeof(*pBlk));
         pBlk->next = NULL;
         freelist_put(bytes_left, pBlk);
     }
@@ -744,6 +766,7 @@ static char *chunk_alloc(heap_ptr_t * heap_ptrs, size_t size, int *pNobjs)
     if (heap_ptrs->start_free != NULL) {
         /* got memory from malloc, set up heap size and ptrs and try allocating again */
 
+        MEMCHK_POISON(heap_ptrs->start_free, bytes_to_get);
         ls_pool_g.heap_size += bytes_to_get;
         heap_ptrs->end_free = heap_ptrs->start_free + bytes_to_get;
 
@@ -776,57 +799,32 @@ static void *refill(size_t block_size)
     pNext = chunk + block_size;    /* skip past first block returned to caller */
     --nobjs;
     size_t count = nobjs;
-    while (1)
+    while (nobjs-- > 0)
     {
         pPtr = (_alink_t *)pNext;
-        if (--nobjs <= 0)
-            break;
-        pNext += block_size;
+        if (nobjs == 0)
+            pNext = NULL;
+        else
+            pNext += block_size;
+        MEMCHK_UNPOISON(pPtr, sizeof(*pPtr));
         pPtr->next = (_alink_t *)pNext;
+        MEMCHK_POISON(pPtr, sizeof(*pPtr));
     }
-    pPtr->next = NULL;
-    MEMCHK_UNPOISON(chunk + block_size, (char *)pPtr - chunk);
     freelist_putn(block_size, (ls_pool_blk_t *)(chunk + block_size), (ls_pool_blk_t *)pPtr, count);
-    MEMCHK_POISON(chunk, (char *)pPtr + block_size - chunk);
 
     return chunk;
 }
 #endif /* DEBUG_POOL */
 
 
-#define ls_pool_getlist    ls_std_getlist
-#define ls_pool_inslist    ls_std_inslist
-
-
-/**
- * @ls_std_getlist
- */
-ls_inline ls_xpool_bblk_t *ls_std_getlist(ls_xpool_bblk_t **pList)
-{
-    ls_xpool_bblk_t *pPtr = *pList;
-    *pList = NULL;
-    return pPtr;
-}
-
-/**
- * @ls_std_inslist
- */
-ls_inline void ls_std_inslist(
-        ls_xpool_bblk_t **pList, ls_xpool_bblk_t *pNew, ls_xpool_bblk_t *pTail)
-{
-    pTail->next = *pList;
-    *pList = pNew;
-    return;
-}
-
 /* free a null terminated linked list.
  * all the elements are expected to have the same size, `size'.
  */
-void ls_plistfree(volatile ls_pool_blk_t *plist, size_t size)
+void ls_plistfree(ls_pool_blk_t *plist, size_t size)
 {
     if (plist == NULL)
         return;
-    volatile ls_pool_blk_t *pNext;
+    ls_pool_blk_t *pNext;
     size = pool_roundup(size + sizeof(ls_pool_blk_t));
 #ifdef INTERNAL_DEBUG
     assert(plist->m_header.m_magic == MAGIC);
@@ -843,57 +841,22 @@ void ls_plistfree(volatile ls_pool_blk_t *plist, size_t size)
     }
     pNext = plist;
     size_t count = 1;
-    MEMCHK_UNPOISON(pNext, sizeof(ls_pool_t));
+    MEMCHK_UNPOISON(pNext, sizeof(ls_pool_blk_t)); 
     while (pNext->next != NULL)         /* find last in list */
     {
-        volatile ls_pool_blk_t *pTmp = pNext;
+        ls_pool_blk_t *pTmp = pNext;
         count++;
         pNext = pNext->next;
-        MEMCHK_UNPOISON(pNext, sizeof(ls_pool_t));
-        MEMCHK_FREE(&ls_pool_g, pTmp, size);
+        MEMCHK_UNPOISON(pNext, sizeof(ls_pool_blk_t)); 
+        MEMCHK_FREE(&ls_pool_g, pTmp, size); 
         // MEMCHK_UNPOISON(pTmp, sizeof(ls_lfnodei_t));     /* for queue */
     }
-    MEMCHK_FREE(&ls_pool_g, pNext, size);
+    MEMCHK_FREE(&ls_pool_g, pNext, size); 
     freelist_putn(size, plist, pNext, count);
 
     return;
 }
 
-
-/* save the pending xpool `bigblock' linked list to be freed later.
- * NOTE: we do *not* maintain the reverse link.
- */
-void ls_psavepending(ls_xpool_bblk_t *plist)
-{
-    if (plist == NULL)
-        return;
-    ls_xpool_bblk_t *pPtr = plist;
-    while (pPtr->next != NULL)          /* find last in list */
-        pPtr = pPtr->next;
-
-    ls_pool_inslist((ls_xpool_bblk_t **)&ls_pool_g.pendingfree, plist, pPtr);
-
-    return;
-}
-
-
-/* free the pending xpool `bigblock' linked list to where the pieces go.
- */
-void ls_pfreepending()
-{
-    ls_xpool_bblk_t *pPtr;
-    ls_xpool_bblk_t *pNext;
-    pPtr = ls_pool_getlist((ls_xpool_bblk_t **)&ls_pool_g.pendingfree);
-
-    while (pPtr != NULL)
-    {
-        pNext = pPtr->next;
-        ls_pfree(pPtr);
-        pPtr = pNext;
-    }
-
-    return;
-}
 
 
 

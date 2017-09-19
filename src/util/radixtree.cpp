@@ -172,10 +172,10 @@ int RadixTree::setRootLabel(const char *pLabel, int iLabelLen)
         return LS_FAIL;
     if (m_pRoot == NULL)
         m_pRoot = (rnheader_t *)rnDoAlloc(m_iFlags, m_pool,
-                                          rnh_size(iLabelLen));
+                                          rnh_size(iLabelLen + 1));
     else
         m_pRoot = (rnheader_t *)rnDoRealloc(m_iFlags, m_pool, m_pRoot,
-                                            rnh_size(iLabelLen));
+                                            rnh_size(iLabelLen + 1));
     if (m_pRoot == NULL)
         return LS_FAIL;
     m_pRoot->body = NULL;
