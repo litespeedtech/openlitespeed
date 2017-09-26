@@ -46,7 +46,7 @@ $_gmsg['tab_ext'] = '外部アプリ';
 $_gmsg['tab_g'] = '一般';
 $_gmsg['tab_log'] = 'ログ';
 $_gmsg['tab_mod'] = 'モジュール';
-$_gmsg['tab_rails'] = 'Rack/Rails';
+$_gmsg['tab_rails'] = 'App Server';
 $_gmsg['tab_requestfilter'] = 'リクエストフィルタ';
 $_gmsg['tab_rewrite'] = 'Rewrite';
 $_gmsg['tab_sec'] = 'セキュリティ';
@@ -70,9 +70,9 @@ $_gmsg['btn_next'] = '次へ';
 $_gmsg['btn_prev'] = '前へ';
 $_gmsg['btn_refresh'] = 'リフレッシュ';
 $_gmsg['btn_save'] = '保存';
+$_gmsg['btn_signin']='サインイン';
 $_gmsg['btn_view'] = '表示';
 $_gmsg['btn_yes'] = 'はい';
-$_gmsg['btn_signin']='サインイン';
 
 
 $_gmsg['note_collapsemenu'] = 'Collapseメニュー';
@@ -145,6 +145,7 @@ $_gmsg['l_apacheignoredmodules'] = 'Apacheモジュールを無視する';
 $_gmsg['l_apacheipoffset'] = 'ApacheのIPオフセット';
 $_gmsg['l_apacheportoffset'] = 'Apacheのポートオフセット';
 $_gmsg['l_apachestyleconf'] = 'Apacheのスタイル設定';
+$_gmsg['l_apptype'] = 'アプリケーション種別';
 $_gmsg['l_authname'] = '認証名';
 $_gmsg['l_authorizer'] = '承認者';
 $_gmsg['l_authrealm'] = '認証レルム';
@@ -162,6 +163,7 @@ $_gmsg['l_banperiod'] = '禁止期間(秒)';
 $_gmsg['l_base'] = '基本';
 $_gmsg['l_base2'] = '基本2';
 $_gmsg['l_binding'] = 'バインディング';
+$_gmsg['l_binpath'] = 'バイナリーパス';
 $_gmsg['l_blockbadreq'] = '不良リクエストブロック';
 $_gmsg['l_byteslog'] = 'バイトログ';
 $_gmsg['l_cacertfile'] = 'CA証明書ファイル';
@@ -203,7 +205,7 @@ $_gmsg['l_ctxl'] = 'LiteSpeed SAPIコンテキスト定義';
 $_gmsg['l_ctxmd'] = 'モジュールハンドラのコンテキスト定義';
 $_gmsg['l_ctxp'] = 'プロキシコンテキストの定義';
 $_gmsg['l_ctxr'] = 'リダイレクトコンテキスト定義';
-$_gmsg['l_ctxrl'] = 'Rack/Rails のコンテキスト定義';
+$_gmsg['l_ctxas'] = 'App Server のコンテキスト定義';
 $_gmsg['l_ctxs'] = 'サーブレットのコンテキスト定義';
 $_gmsg['l_custerrpages'] = 'カスタマイズエラーページ';
 $_gmsg['l_debuglevel'] = 'デバックレベル';
@@ -393,7 +395,7 @@ $_gmsg['l_procsoftlimit'] = 'プロセスソフトリミット';
 $_gmsg['l_protocolver'] = 'プロトコルバージョン';
 $_gmsg['l_railsapplimit'] = 'アカウント毎の最大アプリ数';
 $_gmsg['l_railshosting'] = 'Rack/Rails 共有ホスティング';
-$_gmsg['l_railssettings'] = 'Rack/Rails 設定';
+$_gmsg['l_railssettings'] = 'App Server 設定';
 $_gmsg['l_ramdiskpath'] = 'RAMディスクのパス';
 $_gmsg['l_rcvbufsize'] = '受信バッファサイズ(バイト)';
 $_gmsg['l_realm'] = 'レルム';
@@ -420,6 +422,8 @@ $_gmsg['l_rewritemap'] = 'Rewrite Map';
 $_gmsg['l_rewriterules'] = 'Rewrite ルール';
 $_gmsg['l_rollingsize'] = 'ローテーションサイズ(バイト)';
 $_gmsg['l_rubybin'] = 'Rubyのパス';
+$_gmsg['l_wsgibin'] = 'WSGIのパス';
+$_gmsg['l_nodebin'] = 'ノードパス';
 $_gmsg['l_rubyproclimit'] = 'アカウント毎の最大Rubyプロセス';
 $_gmsg['l_ruleset'] = 'ルール定義';
 $_gmsg['l_runningas'] = '実行ユーザ・グループ';
@@ -470,6 +474,7 @@ $_gmsg['l_sslSessionTicketLifetime'] = 'SSLセッションチケットの有効�
 $_gmsg['l_sslSessionTicketKeyFile'] = 'SSLセッションチケットキーファイル';
 $_gmsg['l_sslSessionTickets'] = 'セッションチケットを有効にする';
 $_gmsg['l_shmDefaultDir'] = 'デフォルトのSHMディレクトリ';
+$_gmsg['l_startupfile'] = 'スタートアップファイル';
 $_gmsg['l_statDir'] = '統計出力ディレクトリ';
 $_gmsg['l_staticreqpersec'] = '静的リクエスト/秒';
 $_gmsg['l_statuscode'] = 'ステータスコード';
@@ -565,7 +570,6 @@ $_gmsg['o_weekly'] = '毎週';
 $_gmsg['o_yes'] = 'はい';
 $_gmsg['o_notset'] = '未設定';
 $_gmsg['o_ifownermatch'] = '所有者と一致する場合';
-
 
 $_gmsg['parse_awstatsuri'] = '/で始まり/で終わる';
 $_gmsg['parse_compressibletypes'] = '*/*, text/*, text/html, text/*, !text/css のような(!)MIMEタイプ';
@@ -673,7 +677,10 @@ $_gmsg['buildphp_confparam'] = 'パラメータの設定';
 $_gmsg['buildphp_confsaved'] = '設定が正常に保存されました。 あなたは次のビルドのためにそれを取り出すことができます。';
 $_gmsg['buildphp_detaillog'] = '詳細ログ';
 $_gmsg['buildphp_eaccelerator'] = '(Opcode Cache) PHP 5.2〜5.4のみサポート';
-$_gmsg['buildphp_enableextnote'] = '拡張機能を有効にするには、php.ini設定ファイルに以下が追加されていることを確認してください。 また、拡張機能がインストールされているディレクトリを特定するためにログの詳細を確認し、php.iniの設定ファイルのextensionsパスにディレクトリを追加する必要があります。.';
+$_gmsg['buildphp_enableextnote'] = '拡張機能を有効にするには、php.ini設定ファイルに以下が追加されていることを確認してください。 
+				また、拡張機能がインストールされているディレクトリを特定するためにログの詳細を確認し、
+				php.iniの設定ファイルのextensionsパスにディレクトリを追加する必要があります。';
+
 $_gmsg['buildphp_errchmod'] = 'のためにchmodに失敗しました';
 $_gmsg['buildphp_errcreatescript'] = 'スクリプトの作成に失敗しました';
 $_gmsg['buildphp_errinprogress'] = '現在のバッチが進行中です。';
@@ -717,7 +724,6 @@ $_gmsg['mail_failedlogin_c'] = '最近のLiteSpeed Web管理コンソールへ�
 	IPアドレス: %%ip%%
 	ホスト名: %%hostname%%
 	URL: %%url%%
-
 
 IPアドレスがわからない場合は、管理コンソールを保護するために以下の推奨方法に従ってください:
 
