@@ -442,6 +442,12 @@ int HttpSession::read(char *pBuf, int size)
         memmove(pBuf, m_request.getHeaderBuf().begin() +
                 m_request.getCurPos(), len);
         m_request.pendingDataProcessed(len);
+        if (size > len)
+        {
+            int ret = getStream()->read(pBuf + len, size - len);
+            if (ret > 0)
+                len += ret;
+        }
         return len;
     }
     return getStream()->read(pBuf, size);
