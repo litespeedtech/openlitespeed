@@ -442,6 +442,15 @@ int HttpSession::read(char *pBuf, int size)
         memmove(pBuf, m_request.getHeaderBuf().begin() +
                 m_request.getCurPos(), len);
         m_request.pendingDataProcessed(len);
+<<<<<<< HEAD
+=======
+        if (size > len)
+        {
+            int ret = getStream()->read(pBuf + len, size - len);
+            if (ret > 0)
+                len += ret;
+        }
+>>>>>>> v1_4
         return len;
     }
     return getStream()->read(pBuf, size);
@@ -883,12 +892,21 @@ int HttpSession::updateClientInfoFromProxyHeader(const char *pHeaderName,
     {
         pAddr->sa_family = AF_INET6;
         pIP = &((struct sockaddr_in6 *)pAddr)->sin6_addr;
+<<<<<<< HEAD
     }
     else
     {
         pAddr->sa_family = AF_INET;
         pIP = &((struct sockaddr_in *)pAddr)->sin_addr;
     }
+=======
+    }
+    else
+    {
+        pAddr->sa_family = AF_INET;
+        pIP = &((struct sockaddr_in *)pAddr)->sin_addr;
+    }
+>>>>>>> v1_4
     if (inet_pton(pAddr->sa_family, achIP, pIP) != 1)
         return 0;
 
@@ -959,6 +977,7 @@ int HttpSession::processHttp2Upgrade(const HttpVHost *pVHost)
     getNtwkIOLink()->switchToHttp2Handler(this);
     return 0;
 }
+<<<<<<< HEAD
 
 void HttpSession::extCmdDone()
 {
@@ -987,6 +1006,36 @@ int HttpSession::hookResumeCallback(lsi_session_t *session, long lParam,
     return ((HttpSession *)pSession)->resumeProcess(0, 0);
 }
 
+=======
+
+void HttpSession::extCmdDone()
+{
+    EvtcbQue::getInstance().schedule(m_cbExtCmd,
+                                     this,
+                                     m_lExtCmdParam,
+                                     m_pExtCmdParam);
+}
+
+int HttpSession::hookResumeCallback(lsi_session_t *session, long lParam,
+                                    void *)
+{
+    HttpSession *pSession = (HttpSession *)(LsiSession *)session;
+    if (!pSession)
+        return -1;
+
+    if ((uint32_t)lParam != pSession->getSn())
+    {
+        LS_DBG_L(pSession->getLogSession(),
+                 "hookResumeCallback called. sn mismatch[%d %d], Session = %p",
+                 (uint32_t)lParam, pSession->getSn(), pSession);
+
+        //  abort();
+        return -1;
+    }
+    return ((HttpSession *)pSession)->resumeProcess(0, 0);
+}
+
+>>>>>>> v1_4
 
 int HttpSession::processNewReqInit()
 {
@@ -1342,12 +1391,48 @@ int HttpSession::processVHostRewrite()
             }
         }
         addEnv("HAVE_REWITE", 11, "1", 1);
+<<<<<<< HEAD
+    }
+    m_processState = HSPS_CONTEXT_MAP;
+=======
     }
     m_processState = HSPS_CONTEXT_MAP;
     return ret;
 }
 
 
+int HttpSession::processContextMap()
+{
+    const HttpContext *pOldCtx;
+    HttpContext *pCtx;
+    int ret;
+    m_iFlag |= HSF_URI_PROCESSED;
+    ret = m_request.processContext(pOldCtx);
+    if (ret)
+    {
+        LS_DBG_L(getLogSession(), "processContext() returned %d.", ret);
+        if (ret == -2)
+        {
+            m_processState = HSPS_CONTEXT_AUTH;
+            ret = 0;
+        }
+    }
+    else
+    {
+        m_processState = HSPS_CONTEXT_REWRITE;
+        if (((pCtx = (HttpContext *)m_request.getContext()) != pOldCtx)
+            && pCtx->getModuleConfig() != NULL)
+        {
+            m_sessionHooks.inherit(pCtx->getSessionHooks(), 0);
+            m_pModuleConfig = pCtx->getModuleConfig();
+        }
+    }
+>>>>>>> v1_4
+    return ret;
+}
+
+
+<<<<<<< HEAD
 int HttpSession::processContextMap()
 {
     const HttpContext *pOldCtx;
@@ -1427,6 +1512,57 @@ int HttpSession::processContextRewrite()
     else
         m_processState = HSPS_HKPT_URI_MAP;
 
+=======
+int HttpSession::processContextRewrite()
+{
+    int ret = 0;
+    const HttpContext *pContext = m_request.getContext();
+    const HttpContext *pVHostRoot = &m_request.getVHost()->getRootContext();
+    //context level URL rewrite
+    if ((!m_request.getContextState(SKIP_REWRITE))
+        && (pContext->rewriteEnabled() & REWRITE_ON))
+    {
+
+        while ((!pContext->hasRewriteConfig())
+               && (pContext->getParent())
+               && (pContext->getParent() != pVHostRoot))
+            pContext = pContext->getParent();
+        if (pContext->getRewriteRules())
+        {
+            ret = RewriteEngine::getInstance().processRuleSet(
+                      pContext->getRewriteRules(),
+                      this, pContext, pVHostRoot);
+        }
+    }
+    if (ret)
+    {
+        if (ret == -3)
+        {
+            ret = 0;
+            if (m_request.postRewriteProcess(
+                    RewriteEngine::getInstance().getResultURI(),
+                    RewriteEngine::getInstance().getResultURILen()))
+            {
+                m_iFlag &= ~HSF_URI_PROCESSED;
+                m_processState = HSPS_CONTEXT_AUTH;
+            }
+            else
+                m_processState = HSPS_HKPT_URI_MAP;
+        }
+        else if (ret == -2)
+        {
+            ret = 0;
+            m_request.setContext(pContext);
+            m_sessionHooks.reset();
+            m_sessionHooks.inherit(((HttpContext *)pContext)->getSessionHooks(), 0);
+            m_pModuleConfig = ((HttpContext *)pContext)->getModuleConfig();
+            m_processState = HSPS_CONTEXT_AUTH;
+        }
+    }
+    else
+        m_processState = HSPS_HKPT_URI_MAP;
+
+>>>>>>> v1_4
     return ret;
 }
 
@@ -3104,6 +3240,7 @@ int HttpSession::flush()
 {
     int ret = LS_DONE;
     if (getStream() == NULL)
+<<<<<<< HEAD
     {
         LS_DBG_L(getLogSession(), "HttpSession::flush(), getStream() == NULL!");
         return LS_FAIL;
@@ -3140,6 +3277,44 @@ int HttpSession::flush()
         if (sendRespHeaders())
             return LS_DONE;
     }
+=======
+    {
+        LS_DBG_L(getLogSession(), "HttpSession::flush(), getStream() == NULL!");
+        return LS_FAIL;
+    }
+    LS_DBG_L(getLogSession(), "HttpSession::flush()!");
+    if (getFlag(HSF_SUSPENDED))
+    {
+        LS_DBG_L(getLogSession(), "HSF_SUSPENDED flag is set, cannot flush.");
+        suspendWrite();
+        return LS_AGAIN;
+    }
+
+    if (getFlag(HSF_RESP_FLUSHED))
+    {
+        LS_DBG_L(getLogSession(), "HSF_RESP_FLUSHED flag is set, skip flush.");
+        suspendWrite();
+        return LS_DONE;
+    }
+    if (isNoRespBody() && !getFlag(HSF_HANDLER_DONE))
+    {
+        ret = endResponseInternal(1);
+        if (ret)
+            return LS_AGAIN;
+    }
+    else if (getFlag(HSF_HANDLER_DONE | HSF_RESP_WAIT_FULL_BODY) ==
+             HSF_RESP_WAIT_FULL_BODY)
+    {
+        LS_DBG_L(getLogSession(), "Cannot flush as response is not finished!");
+        return LS_DONE;
+    }
+
+    if (!isRespHeaderSent())
+    {
+        if (sendRespHeaders())
+            return LS_DONE;
+    }
+>>>>>>> v1_4
 
     if (!isNoRespBody())
     {
@@ -3309,10 +3484,17 @@ int HttpSession::processOneLink(const char *p, const char *pEnd)
 
     const char *p1 = (const char *)memmem(p, pEnd - p, "preload", 7);
     if (!p1)
+<<<<<<< HEAD
         return 0;
     p1 = (const char *)memmem(p, pEnd - p, "nopush", 6);
     if (p1)
         return 0;
+=======
+        return 0;
+    p1 = (const char *)memmem(p, pEnd - p, "nopush", 6);
+    if (p1)
+        return 0;
+>>>>>>> v1_4
     return pushToClient(pUrlBegin, pUrlEnd - pUrlBegin);
 }
 
@@ -3591,6 +3773,7 @@ int HttpSession::openStaticFile(const char *pPath, int pathLen,
             fcntl(fd, F_SETFD, FD_CLOEXEC);
     }
     return fd;
+<<<<<<< HEAD
 }
 
 void HttpSession::setSendFileOffsetSize(int fd, off_t start, off_t size)
@@ -3601,6 +3784,18 @@ void HttpSession::setSendFileOffsetSize(int fd, off_t start, off_t size)
                         : m_sendFileInfo.getECache()->getFileSize());
 }
 
+=======
+}
+
+void HttpSession::setSendFileOffsetSize(int fd, off_t start, off_t size)
+{
+    m_sendFileInfo.setParam((void *)(long)fd);
+    setSendFileBeginEnd(start,
+                        size >= 0 ? (start + size)
+                        : m_sendFileInfo.getECache()->getFileSize());
+}
+
+>>>>>>> v1_4
 
 int HttpSession::initSendFileInfo(const char *pPath, int pathLen)
 {
@@ -3659,9 +3854,128 @@ void HttpSession::setSendFileBeginEnd(off_t start, off_t end)
     setFlag(HSF_RESP_FLUSHED, 0);
 //     if ( !getFlag( HSF_RESP_HEADER_DONE ))
 //         respHeaderDone();
+<<<<<<< HEAD
 
 }
 
+
+int HttpSession::writeRespBodyBlockInternal(SendFileInfo *pData,
+        const char *pBuf,
+        int written)
+{
+    int len;
+    if (getGzipBuf())
+    {
+        len = appendDynBodyEx(pBuf, written);
+        if (!len)
+            len = written;
+    }
+    else
+        len = writeRespBodyDirect(pBuf, written);
+    LS_DBG_M(getLogSession(), "%s return %d.\n",
+             getGzipBuf() ? "appendDynBodyEx()" : "writeRespBodyDirect()",
+             len);
+
+    if (len > 0)
+        pData->incCurPos(len);
+    return len;
+}
+
+
+int HttpSession::writeRespBodyBlockFilterInternal(SendFileInfo *pData,
+        const char *pBuf,
+        int written,
+        lsi_param_t *param)
+{
+    int len;
+    param->cur_hook = (void *)param->hook_chain->hooks->begin();
+    param->ptr1 = pBuf;
+    param->len1 = written;
+
+//     if (( written >= pData->getRemain() )
+//         &&((m_iFlag & (HSF_HANDLER_DONE |
+//                         HSF_RECV_RESP_BUFFERED ) == HSF_HANDLER_DONE )))
+//         param->_flag_in = LSI_CBFI_EOF;
+
+    len = LsiApiHooks::runForwardCb(param);
+    LS_DBG_M(getLogSession(), "runForwardCb() sent: %d, buffered: %d",
+             len, *(param->flag_out));
+
+    if (len > 0)
+        pData->incCurPos(len);
+    return len;
+}
+
+
+#ifdef LS_AIO_USE_AIO
+int HttpSession::aioRead(SendFileInfo *pData, void *pBuf)
+{
+    int remain = pData->getRemain();
+    int len = (remain < STATIC_FILE_BLOCK_SIZE) ? remain :
+              STATIC_FILE_BLOCK_SIZE;
+    if (!pBuf)
+        pBuf = ls_palloc(STATIC_FILE_BLOCK_SIZE);
+    remain = m_aioReq.read(pData->getECache()->getfd(), pBuf,
+                           len, pData->getCurPos(), (AioEventHandler *)this);
+    if (remain != 0)
+        return LS_FAIL;
+    setFlag(HSF_AIO_READING);
+    return 1;
+}
+
+
+//returns -1 on error, 1 on success, 0 for didn't do anything new (cached)
+int HttpSession::sendStaticFileAio(SendFileInfo *pData)
+{
+    long len;
+    off_t remain;
+    off_t written = pData->getAioLen();
+    void *pBuf = pData->getAioBuf();
+=======
+>>>>>>> v1_4
+
+    if (pBuf)
+    {
+        if (written)
+        {
+            remain = pData->getCurPos() - m_aioReq.getOffset();
+            written -= remain;
+            len = writeRespBodyBlockInternal(pData,
+                                             (const char *)pBuf + remain,
+                                             written);
+            if (len < 0)
+                return LS_FAIL;
+            else if (!getStream()->isSpdy() && len < written)
+            {
+                LS_DBG_M(getLogSession(),
+                         "Socket still busy, %lld bytes to write",
+                         (long long)(written - len));
+                return 1;
+            }
+        }
+        pData->resetAioBuf();
+        LS_DBG_M(getLogSession(), "Buffer finished, continue with aioRead.");
+        suspendWrite();
+    }
+    if (!pData->getECache()->isCached() && pData->getRemain() > 0)
+    {
+        if (getFlag(HSF_AIO_READING))
+        {
+            LS_DBG_M(getLogSession(), "Aio Reading already in progress.");
+            return 1;
+        }
+        return aioRead(pData, (void *)
+                       pBuf);  //Filter down the pBuf if socket stopped.
+    }
+    return 0;
+}
+#endif // LS_AIO_USE_AIO
+
+
+<<<<<<< HEAD
+int HttpSession::sendStaticFileEx(SendFileInfo *pData)
+{
+=======
 
 int HttpSession::writeRespBodyBlockInternal(SendFileInfo *pData,
         const char *pBuf,
@@ -3776,6 +4090,7 @@ int HttpSession::sendStaticFileAio(SendFileInfo *pData)
 
 int HttpSession::sendStaticFileEx(SendFileInfo *pData)
 {
+>>>>>>> v1_4
     const char *pBuf;
     off_t written;
     off_t remain;
@@ -4016,6 +4331,13 @@ int HttpSession::contentEncodingFixup()
         }
     }
     if (requireChunk)
+<<<<<<< HEAD
+    {
+        if (!m_pChunkOS)
+        {
+            setupChunkOS(1);
+            m_response.getRespHeaders().del(HttpRespHeaders::H_CONTENT_LENGTH);
+=======
     {
         if (!m_pChunkOS)
         {
@@ -4027,6 +4349,375 @@ int HttpSession::contentEncodingFixup()
 }
 
 
+int HttpSession::handoff(char **pData, int *pDataLen)
+{
+    if (isSSL() || getStream()->isSpdy())
+        return LS_FAIL;
+    if (m_iReqServed != 0)
+        return LS_FAIL;
+    int fd = dup(getStream()->getNtwkIoLink()->getfd());
+    if (fd != -1)
+    {
+        AutoBuf &headerBuf = m_request.getHeaderBuf();
+        *pDataLen = headerBuf.size() - HEADER_BUF_PAD;
+        *pData = (char *)malloc(*pDataLen);
+        memmove(*pData, headerBuf.begin() + HEADER_BUF_PAD, *pDataLen);
+
+        getStream()->setAbortedFlag();
+        closeConnection();
+    }
+    return fd;
+
+}
+
+
+int HttpSession::onAioEvent()
+{
+#ifdef LS_AIO_USE_AIO
+    int buffered = 0;
+    int len, written = m_aioReq.getReturn();
+    char *pBuf = (char *)m_aioReq.getBuf();
+
+    LS_DBG_M(getLogSession(), "Aio Read read %d.", written);
+
+    if (written <= 0)
+        return LS_FAIL;
+
+    clearFlag(HSF_AIO_READING);
+    if (m_sessionHooks.isDisabled(LSI_HKPT_SEND_RESP_BODY) ||
+        !(m_sessionHooks.getFlag(LSI_HKPT_SEND_RESP_BODY)&
+          LSI_FLAG_PROCESS_STATIC))
+        len = writeRespBodyBlockInternal(&m_sendFileInfo, pBuf, written);
+    else
+    {
+        lsi_param_t param;
+        lsi_hookinfo_t hookInfo;
+        param.session = (LsiSession *)this;
+        hookInfo.hook_level = LSI_HKPT_SEND_RESP_BODY;
+        hookInfo.term_fn = (filter_term_fn)
+                           writeRespBodyTermination;
+        hookInfo.hooks = LsiApiHooks::getGlobalApiHooks(LSI_HKPT_SEND_RESP_BODY);
+        hookInfo.enable_array = m_sessionHooks.getEnableArray(
+                                    LSI_HKPT_SEND_RESP_BODY);
+        param.hook_chain = &hookInfo;
+
+        param.flag_in  = 0;
+        param.flag_out = &buffered;
+
+        len = writeRespBodyBlockFilterInternal(&m_sendFileInfo, pBuf, written,
+                                               &param);
+    }
+    if (len < 0)
+        return LS_FAIL;
+    else if ((len > 0)
+             && (len < written || buffered))
+    {
+        LS_DBG_M(getLogSession(),
+                 "HandleEvent: Socket busy, len = %d, buffered = %d.",
+                 len, buffered);
+        if (buffered)
+            written = 0;
+        m_sendFileInfo.setAioBuf(pBuf);
+        m_sendFileInfo.setAioLen(written);
+        getStream()->flush();
+        continueWrite();
+        return 0;
+    }
+
+    if (m_sendFileInfo.getRemain() > 0)
+        return aioRead(&m_sendFileInfo, pBuf);
+
+    ls_pfree(pBuf);
+    return onWriteEx();
+#endif
+    return LS_FAIL;
+}
+
+
+int HttpSession::handleAioSFEvent(Aiosfcb *event)
+{
+    int ret;
+    int written = event->getRet();
+    clearFlag(HSF_AIO_READING);
+    if (event->getFlag(AIOSFCB_FLAG_CANCEL))
+    {
+        recycle();
+        return 0;
+    }
+    LS_DBG_M(getLogSession(), "Got Aio SF Event! Returned %d.", written);
+    ret = getStream()->aiosendfiledone(event);
+    if (written < 0)
+    {
+        if (ret)     //Not EAGAIN
+            closeConnection();
+        else
+            continueWrite();
+        return ret;
+    }
+    else if (written > 0)
+    {
+        m_response.written(written);
+        LS_DBG_M(getLogSession(), "Aio Response body sent: %lld.",
+                 (long long)m_response.getBodySent());
+        m_sendFileInfo.incCurPos(written);
+        if ((unsigned int)written < event->getSize())
+        {
+            continueWrite();
+            return 0;
+        }
+    }
+    //File should be completely sent.
+    if (m_sendFileInfo.getRemain() > 0)
+    {
+        LS_DBG_M(getLogSession(),
+                 "Handle Aio Event: Reached an invalid conclusion!");
+        return LS_FAIL;
+    }
+    return onWriteEx();
+}
+
+void HttpSession::setBackRefPtr(evtcbhead_t ** v)
+{
+    LS_DBG_M(getLogSession(),
+                 "setBackRefPtr() called, set to %p.", *v);
+    evtcbhead_t::back_ref_ptr = v; 
+}
+
+
+void HttpSession::resetEvtcb()
+{
+    evtcb_head = NULL;
+    back_ref_ptr = NULL;
+}
+
+
+void HttpSession::cancelEvent(evtcbnode_s * v)
+{
+    if (back_ref_ptr == EvtcbQue::getSessionRefPtr(v))
+    {
+        back_ref_ptr = NULL;
+    }
+    EvtcbQue::getInstance().recycle(v);
+}
+
+
+void HttpSession::resetBackRefPtr()
+{
+    if (evtcbhead_t::back_ref_ptr)
+    {
+        LS_DBG_M(getLogSession(),
+                 "resetBackRefPtr() called. previous value is %p:%p.",
+                 evtcbhead_t::back_ref_ptr, *evtcbhead_t::back_ref_ptr);
+        *evtcbhead_t::back_ref_ptr = NULL;
+        evtcbhead_t::back_ref_ptr = NULL;
+    }
+}
+
+int HttpSession::smProcessReq()
+{
+    int ret = 0;
+    while (ret == 0 && m_processState < HSPS_HANDLER_PROCESSING)
+    {
+        switch (m_processState)
+        {
+        case HSPS_READ_REQ_HEADER:
+            ret = readToHeaderBuf();
+            if (m_processState != HSPS_NEW_REQ)
+            {
+                if (ret > 0)
+                    break;
+                return 0;
+            }
+        //fall through
+        case HSPS_NEW_REQ:
+            ret = processNewReqInit();
+            if (m_processState != HSPS_HKPT_HTTP_BEGIN)
+                break;
+        //fall through
+        case HSPS_HKPT_HTTP_BEGIN:
+            ret = runEventHkpt(LSI_HKPT_HTTP_BEGIN, HSPS_HKPT_RCVD_REQ_HEADER);
+            if (ret || m_processState != HSPS_HKPT_RCVD_REQ_HEADER)
+                break;
+        //fall through
+        case HSPS_HKPT_RCVD_REQ_HEADER:
+            ret = runEventHkpt(LSI_HKPT_RCVD_REQ_HEADER, HSPS_PROCESS_NEW_REQ_BODY);
+            if (ret || m_processState != HSPS_PROCESS_NEW_REQ_BODY)
+                break;
+        //fall through
+        case HSPS_PROCESS_NEW_REQ_BODY:
+            ret = processNewReqBody();
+            if (ret || m_processState != HSPS_HKPT_RCVD_REQ_BODY)
+                break;
+        //fall through
+        case HSPS_HKPT_RCVD_REQ_BODY:
+            ret = runEventHkpt(LSI_HKPT_RCVD_REQ_BODY, HSPS_PROCESS_NEW_URI);
+            if (ret || m_processState != HSPS_PROCESS_NEW_URI)
+                break;
+        //fall through
+        case HSPS_PROCESS_NEW_URI:
+            ret = processNewUri();
+            if (ret || m_processState != HSPS_VHOST_REWRITE)
+                break;
+        //fall through
+        case HSPS_VHOST_REWRITE:
+            ret = processVHostRewrite();
+            if (ret || m_processState != HSPS_CONTEXT_MAP)
+                break;
+        //fall through
+        case HSPS_CONTEXT_MAP:
+            ret = processContextMap();
+            if (ret || m_processState != HSPS_CONTEXT_REWRITE)
+                break;
+        //fall through
+        case HSPS_CONTEXT_REWRITE:
+            ret = processContextRewrite();
+            if (ret || m_processState != HSPS_HKPT_URI_MAP)
+                break;
+        //fall through
+        case HSPS_HKPT_URI_MAP:
+            ret = runEventHkpt(LSI_HKPT_URI_MAP, HSPS_FILE_MAP);
+            if (ret || m_processState != HSPS_FILE_MAP)
+                break;
+        //fall through
+        case HSPS_FILE_MAP:
+            ret = processFileMap();
+            if (ret || m_processState != HSPS_CONTEXT_AUTH)
+                break;
+        //fall through
+        case HSPS_CONTEXT_AUTH:
+            ret = processContextAuth();
+            if (ret || m_processState != HSPS_HKPT_HTTP_AUTH)
+                break;
+        //fall through
+        case HSPS_HKPT_HTTP_AUTH:
+            ret = runEventHkpt(LSI_HKPT_HTTP_AUTH, HSPS_AUTH_DONE);
+            if (ret || m_processState != HSPS_AUTH_DONE)
+                break;
+        //fall through
+        case HSPS_AUTH_DONE:
+            if (!(m_iFlag & HSF_URI_PROCESSED))
+            {
+                m_processState = HSPS_CONTEXT_MAP;
+                break;
+            }
+            else if ((m_iFlag & HSF_SC_404))
+            {
+                ret = SC_404;
+                m_iFlag &= ~HSF_SC_404;
+                break;
+            }
+            else
+                m_processState = HSPS_BEGIN_HANDLER_PROCESS;
+        case HSPS_BEGIN_HANDLER_PROCESS:
+            ret = handlerProcess(m_request.getHttpHandler());
+            break;
+        case HSPS_HKPT_RCVD_REQ_BODY_PROCESSING:
+            ret = runEventHkpt(LSI_HKPT_RCVD_REQ_BODY, HSPS_HANDLER_PROCESSING);
+            if (m_processState == HSPS_HANDLER_PROCESSING)
+                if (m_pHandler)
+                    m_pHandler->onRead(this);
+            break;
+        case HSPS_HKPT_RCVD_RESP_HEADER:
+            ret = runEventHkpt(LSI_HKPT_RCVD_RESP_HEADER, HSPS_RCVD_RESP_HEADER_DONE);
+            if (m_processState == HSPS_RCVD_RESP_HEADER_DONE)
+                return 0;
+            break;
+        case HSPS_HKPT_RCVD_RESP_BODY:
+            ret = runEventHkpt(LSI_HKPT_RCVD_RESP_BODY, HSPS_RCVD_RESP_BODY_DONE);
+            if (m_processState == HSPS_RCVD_RESP_BODY_DONE)
+                return 0;
+            break;
+        case HSPS_HKPT_SEND_RESP_HEADER:
+            ret = runEventHkpt(LSI_HKPT_SEND_RESP_HEADER, HSPS_SEND_RESP_HEADER_DONE);
+            if (m_processState == HSPS_SEND_RESP_HEADER_DONE)
+                return 0;
+            break;
+        case HSPS_HKPT_HTTP_END:
+            ret = runEventHkpt(LSI_HKPT_HTTP_END, HSPS_HTTP_END_DONE);
+            if (m_processState == HSPS_HTTP_END_DONE)
+                return 0;
+            break;
+        case HSPS_HKPT_HANDLER_RESTART:
+            ret = runEventHkpt(LSI_HKPT_HANDLER_RESTART, HSPS_HANDLER_RESTART_DONE);
+            if (m_processState == HSPS_HANDLER_RESTART_DONE)
+                return 0;
+            break;
+        case HSPS_READ_REQ_BODY:
+            return 0;
+        case HSPS_RCVD_RESP_HEADER_DONE:
+        case HSPS_RCVD_RESP_BODY_DONE:
+        case HSPS_SEND_RESP_HEADER_DONE:
+            //temporary state,
+            m_processState = HSPS_HANDLER_PROCESSING;
+            return 0;
+        case HSPS_HTTP_END_DONE:
+        case HSPS_HANDLER_RESTART_DONE:
+
+        default:
+            assert("Unhandled processing state, should not happen" == NULL);
+            break;
+>>>>>>> v1_4
+        }
+
+    }
+    if (ret == LSI_SUSPEND)
+    {
+        getStream()->wantRead(0);
+        getStream()->wantWrite(0);
+        m_iFlag |= HSF_SUSPENDED;
+        return 0;
+    }
+    else if (ret > 0)
+    {
+        m_processState = HSPS_HTTP_ERROR;
+        if (getStream()->getState() < HIOS_SHUTDOWN)
+            httpError(ret);
+    }
+    return ret;
+}
+
+
+int HttpSession::resumeProcess(int passCode, int retcode)
+{
+    //if ( passCode != m_suspendPasscode )
+    //    return LS_FAIL;
+    if (!(m_iFlag & HSF_SUSPENDED))
+        return LS_FAIL;
+    m_iFlag &= ~HSF_SUSPENDED;
+    if (!(m_iFlag & HSF_REQ_BODY_DONE))
+        getStream()->wantRead(1);
+    if (m_pHandler
+        && !(m_iFlag & (HSF_HANDLER_DONE | HSF_HANDLER_WRITE_SUSPENDED)))
+        continueWrite();
+
+
+    switch (m_processState)
+    {
+    case HSPS_HKPT_HTTP_BEGIN:
+    case HSPS_HKPT_RCVD_REQ_HEADER:
+    case HSPS_HKPT_RCVD_REQ_BODY:
+    case HSPS_HKPT_URI_MAP:
+    case HSPS_HKPT_HTTP_AUTH:
+    case HSPS_HKPT_RCVD_RESP_HEADER:
+    case HSPS_HKPT_RCVD_RESP_BODY:
+    case HSPS_HKPT_SEND_RESP_HEADER:
+    case HSPS_HKPT_HANDLER_RESTART:
+    case HSPS_HKPT_HTTP_END:
+        m_curHookRet = retcode;
+        smProcessReq();
+        break;
+    case HSPS_BEGIN_HANDLER_PROCESS:
+        break;
+
+
+    default:
+        break;
+    }
+    return 0;
+}
+
+
+<<<<<<< HEAD
 int HttpSession::handoff(char **pData, int *pDataLen)
 {
     if (isSSL() || getStream()->isSpdy())
@@ -4394,6 +5085,8 @@ int HttpSession::resumeProcess(int passCode, int retcode)
 }
 
 
+=======
+>>>>>>> v1_4
 int HttpSession::suspendProcess()
 {
     if (m_suspendPasscode)

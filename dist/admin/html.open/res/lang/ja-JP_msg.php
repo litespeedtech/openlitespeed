@@ -70,9 +70,9 @@ $_gmsg['btn_next'] = '次へ';
 $_gmsg['btn_prev'] = '前へ';
 $_gmsg['btn_refresh'] = 'リフレッシュ';
 $_gmsg['btn_save'] = '保存';
-$_gmsg['btn_signin']='サインイン';
 $_gmsg['btn_view'] = '表示';
 $_gmsg['btn_yes'] = 'はい';
+$_gmsg['btn_signin']='サインイン';
 
 
 $_gmsg['note_collapsemenu'] = 'Collapseメニュー';
