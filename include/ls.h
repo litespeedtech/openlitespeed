@@ -56,9 +56,9 @@
  * @since 1.0
  */
 //#define LSIAPI_MODULE_FLAG    0x4C53494D  //"LSIM"
-#define LSI_MODULE_SIGNATURE    (int64_t)0x4C53494D00000000LL + \
+#define LSI_MODULE_SIGNATURE    ((int64_t)0x4C53494D00000000LL + \
     (int64_t)(LSIAPI_VERSION_MAJOR << 16) + \
-    (int64_t)(LSIAPI_VERSION_MINOR)
+    (int64_t)(LSIAPI_VERSION_MINOR))
 
 
 
@@ -1141,6 +1141,43 @@ enum LSI_ACL_LEVEL
     LSI_ACL_BLOCK
 };
 
+enum LSI_REQ_METHOD
+{
+    LSI_METHOD_UNKNOWN = 0,
+    LSI_METHOD_OPTIONS,
+    LSI_METHOD_GET ,
+    LSI_METHOD_HEAD,
+    LSI_METHOD_POST,
+    LSI_METHOD_PUT ,
+    LSI_METHOD_DELETE,
+    LSI_METHOD_TRACE,
+    LSI_METHOD_CONNECT,
+    LSI_METHOD_MOVE,
+    LSI_METHOD_PATCH,
+    LSI_METHOD_PROPFIND,
+    LSI_METHOD_PROPPATCH,
+    LSI_METHOD_MKCOL,
+    LSI_METHOD_COPY,
+    LSI_METHOD_LOCK,
+    LSI_METHOD_UNLOCK,
+    LSI_METHOD_VERSION_CONTROL,
+    LSI_METHOD_REPORT,
+    LSI_METHOD_CHECKIN,
+    LSI_METHOD_CHECKOUT,
+    LSI_METHOD_UNCHECKOUT,
+    LSI_METHOD_UPDATE,
+    LSI_METHOD_MKWORKSPACE,
+    LSI_METHOD_LABEL,
+    LSI_METHOD_MERGE,
+    LSI_METHOD_BASELINE_CONTROL,
+    LSI_METHOD_MKACTIVITY,
+    LSI_METHOD_BIND,
+    LSI_METHOD_SEARCH,
+    LSI_METHOD_PURGE,
+    LSI_METHOD_REFRESH,
+    LSI_METHOD_BAN,
+    LSI_METHOD_METHOD_END,
+};
 
 /*
  * Forward Declarations
@@ -1405,9 +1442,10 @@ struct lsi_serverhook_s
 
 
 #define LSI_MODULE_RESERVED_SIZE    ((3 * sizeof(void *)) \
-                                     + ((LSI_HKPT_TOTAL_COUNT + 1) * sizeof(int32_t)) \
+                                     + ((LSI_HKPT_TOTAL_COUNT + 2) * sizeof(int32_t)) \
                                      + (LSI_DATA_COUNT * sizeof(int16_t)))
 
+#define MODULE_LOG_LEVEL(x)      (*(int32_t *)(x->reserved))
 
 
 /**
@@ -1461,7 +1499,6 @@ struct lsi_module_s
     lsi_serverhook_t        *serverhook;
 
     int32_t                  reserved[(LSI_MODULE_RESERVED_SIZE + 3) / 4 ];
-
 };
 
 
@@ -1682,6 +1719,20 @@ struct lsi_api_s
     void (*free_module_data)(const lsi_session_t *pSession,
                              const lsi_module_t *pModule, int level, lsi_datarelease_pf cb);
 
+    
+    
+    
+    
+    //Some functions sync from lslb
+    
+    
+    enum LSI_REQ_METHOD (*get_req_method)(const lsi_session_t *pSession);
+    
+    const void *(*get_req_vhost)(const lsi_session_t *pSession);
+    
+    
+    
+    
     /**
      * @brief stream_writev_next needs to be called in the LSI_HKPT_L4_SENDING hook point level just
      * after it finishes the action and needs to call the next step.
@@ -2951,14 +3002,52 @@ struct lsi_api_s
 
     /** @since 1.0
      * @param[in] level - lsi_confparser_level
-     * @param[in] pVarible - varible of the Server/Listener/VHost or URI of the Context
+     * @param[in] pVariable - variable of the Server/Listener/VHost or URI of the Context
      * @param[in] buf - a buffer to store the result
      * @param[in] max_len - length of the buf
      * @return return the length written to the buf
      */
-    int (*expand_current_server_varible)(int level, const char *pVarible,
+    int (*expand_current_server_variable)(int level, const char *pVariable,
                                          char *buf, int max_len);
 
+    /**
+     * @brief module_log is used to write the formatted log to the error log associated with a module.
+     * @details session ID will be added to the log message automatically when session is not NULL.
+     * This function will not add a trailing \\n to the end.
+     *
+     * @since 1.0
+     *
+     * @param[in] pModule - pointer to module object, module name is logged.
+     * @param[in] pSession - current session, log file, and session ID are based on session.
+     * @param[in] level - enum defined in log level definitions #LSI_LOG_LEVEL.
+     * @param[in] fmt - formatted string.
+     */
+    void (*module_log)(const lsi_module_t *pModule, const lsi_session_t *pSession, 
+                       int level, const char *fmt, ...)
+#if __GNUC__
+        __attribute__((format(printf, 4, 5)))
+#endif
+        ;
+
+    /**
+     * @brief c_log is used to write the formatted log to the error log associated with a component.
+     * @details session ID will be added to the log message automatically when session is not NULL.
+     * This function will not add a trailing \\n to the end.
+     *
+     * @since 1.0
+     *
+     * @param[in] pComponentName - pointer to the name of the component.
+     * @param[in] pSession - current session, log file, and session ID are based on session.
+     * @param[in] level - enum defined in log level definitions #LSI_LOG_LEVEL.
+     * @param[in] fmt - formatted string.
+     */
+    void (*c_log)(const char *pComponentName, const lsi_session_t *pSession, 
+                       int level, const char *fmt, ...)
+#if __GNUC__
+        __attribute__((format(printf, 4, 5)))
+#endif
+        ;
+        
     /**
      *
      * @brief _log_level_ptr is the address of variable that stores the level 
@@ -2970,6 +3059,27 @@ struct lsi_api_s
      */    
     const int *_log_level_ptr;
 
+    
+    
+    /**
+     * @brief set_ua_code is only for pagespeed module to set the
+     * user-agnet code which is used for group the optimization pages.
+     * 
+     */
+    int (* set_ua_code) (const char *ua, char* code);
+    
+    /**
+     *  @brief get_ua_code is to get the user-agnet code whic is set by 
+     * pagespeed module.
+     * 
+     */
+    char *(* get_ua_code) (const char *ua);
+    
+    
+    
+    
+    
+    
 };
 
 /**
@@ -2992,19 +3102,76 @@ extern const lsi_api_t *g_api;
 
 #define LSI_LOGRAW(...) g_api->lograw(__VA_ARGS__)
 
-#define LSI_DBG_IO(session, ...) LSI_LOG(LSI_LOG_TRACE, session, __VA_ARGS__)
+#define LSI_LOGIO(session, ...) LSI_LOG(LSI_LOG_TRACE, session, __VA_ARGS__)
 
-#define LSI_DBG_H(session, ...) LSI_LOG(LSI_LOG_DEBUG_HIGH, session, __VA_ARGS__)
+#define LSI_DBGH(session, ...) LSI_LOG(LSI_LOG_DEBUG_HIGH, session, __VA_ARGS__)
 
-#define LSI_DBG_M(session, ...) LSI_LOG(LSI_LOG_DEBUG_MEDIUM, session, __VA_ARGS__)
+#define LSI_DBGM(session, ...) LSI_LOG(LSI_LOG_DEBUG_MEDIUM, session, __VA_ARGS__)
 
-#define LSI_DBG_L(session, ...) LSI_LOG(LSI_LOG_DEBUG_LOW, session, __VA_ARGS__)
+#define LSI_DBGL(session, ...) LSI_LOG(LSI_LOG_DEBUG_LOW, session, __VA_ARGS__)
 
-#define LSI_DBG(session, ...)    LSI_LOG(LSI_LOG_DEBUG,  session, __VA_ARGS__)
-#define LSI_INFO(session, ...)   LSI_LOG(LSI_LOG_INFO,   session, __VA_ARGS__)
-#define LSI_NOTICE(session, ...) LSI_LOG(LSI_LOG_NOTICE, session, __VA_ARGS__)
-#define LSI_WARN(session, ...)   LSI_LOG(LSI_LOG_WARN,   session, __VA_ARGS__)
-#define LSI_ERROR(session, ...)  LSI_LOG(LSI_LOG_ERROR,  session, __VA_ARGS__)
+#define LSI_DBG(session, ...) LSI_LOG(LSI_LOG_DEBUG,  session, __VA_ARGS__)
+#define LSI_INF(session, ...) LSI_LOG(LSI_LOG_INFO,   session, __VA_ARGS__)
+#define LSI_NOT(session, ...) LSI_LOG(LSI_LOG_NOTICE, session, __VA_ARGS__)
+#define LSI_WRN(session, ...) LSI_LOG(LSI_LOG_WARN,   session, __VA_ARGS__)
+#define LSI_ERR(session, ...) LSI_LOG(LSI_LOG_ERROR,  session, __VA_ARGS__)
+
+
+#define LSM_LOG_ENABLED(m, l) \
+    (*g_api->_log_level_ptr >= l && MODULE_LOG_LEVEL(m) >= l)
+
+
+#define LSM_LOG(mod, level, session, ...) \
+    do { \
+        if (LSM_LOG_ENABLED(mod, level)) \
+            g_api->module_log(mod, session, level, __VA_ARGS__); \
+    } while(0) 
+
+#define LSM_LOGRAW(...) g_api->lograw(__VA_ARGS__)
+
+#define LSM_LOGIO(m, s, ...) LSM_LOG(m, LSI_LOG_TRACE, s, __VA_ARGS__)
+
+#define LSM_DBGH(m, s, ...) LSM_LOG(m, LSI_LOG_DEBUG_HIGH, s, __VA_ARGS__)
+
+#define LSM_DBGM(m, s, ...) LSM_LOG(m, LSI_LOG_DEBUG_MEDIUM, s, __VA_ARGS__)
+
+#define LSM_DBGL(m, s, ...) LSM_LOG(m, LSI_LOG_DEBUG_LOW, s, __VA_ARGS__)
+
+#define LSM_DBG(m, s, ...) LSM_LOG(m, LSI_LOG_DEBUG,  s, __VA_ARGS__)
+#define LSM_INF(m, s, ...) LSM_LOG(m, LSI_LOG_INFO,   s, __VA_ARGS__)
+#define LSM_NOT(m, s, ...) LSM_LOG(m, LSI_LOG_NOTICE, s, __VA_ARGS__)
+#define LSM_WRN(m, s, ...) LSM_LOG(m, LSI_LOG_WARN,   s, __VA_ARGS__)
+#define LSM_ERR(m, s, ...) LSM_LOG(m, LSI_LOG_ERROR,  s, __VA_ARGS__)
+
+
+#define DECL_COMPONENT_LOG(id) \
+    static const char *s_comp_log_id = id; 
+
+#define LSC_LOG_ENABLED(l) \
+    (*g_api->_log_level_ptr >= l)
+
+
+#define LSC_LOG(level, session, ...) \
+    do { \
+        if (LSC_LOG_ENABLED(level)) \
+            g_api->c_log(s_comp_log_id, session, level, __VA_ARGS__); \
+    } while(0) 
+
+#define LSC_LOGRAW(...) g_api->lograw(__VA_ARGS__)
+
+#define LSC_LOGIO(s, ...) LSC_LOG(LSI_LOG_TRACE, s, __VA_ARGS__)
+
+#define LSC_DBGH(s, ...) LSC_LOG(LSI_LOG_DEBUG_HIGH, s, __VA_ARGS__)
+
+#define LSC_DBGM(s, ...) LSC_LOG(LSI_LOG_DEBUG_MEDIUM, s, __VA_ARGS__)
+
+#define LSC_DBGL(s, ...) LSC_LOG(LSI_LOG_DEBUG_LOW, s, __VA_ARGS__)
+
+#define LSC_DBG(s, ...) LSC_LOG(LSI_LOG_DEBUG,  s, __VA_ARGS__)
+#define LSC_INF(s, ...) LSC_LOG(LSI_LOG_INFO,   s, __VA_ARGS__)
+#define LSC_NOT(s, ...) LSC_LOG(LSI_LOG_NOTICE, s, __VA_ARGS__)
+#define LSC_WRN(s, ...) LSC_LOG(LSI_LOG_WARN,   s, __VA_ARGS__)
+#define LSC_ERR(s, ...) LSC_LOG(LSI_LOG_ERROR,  s, __VA_ARGS__)
 
 #ifdef __cplusplus
 }

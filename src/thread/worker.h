@@ -31,9 +31,12 @@ class Worker : public Thread
     workFn  m_pWork;
     void   *m_pArg;
 
-    static void *setWorker(void *arg)
+    // given to Thread::run so signature must conform
+    static void *setWorker(void *pWorker)
     {
-        return ((Worker *)arg)->doWork();
+        // Thread::run is given 'this' as arg, which it will
+        // pass to setWorker, so expecting a Worker *:
+        return ((Worker *)pWorker)->doWork();
     }
 
     void *doWork()
@@ -48,11 +51,11 @@ class Worker : public Thread
         return ret;
     }
 
-public:
+    public:
     Worker(workFn work = NULL)
         : m_iRunning(0)
-        , m_pWork(work)
-        , m_pArg(NULL)
+          , m_pWork(work)
+          , m_pArg(NULL)
     {}
 
     ~Worker()

@@ -4,7 +4,7 @@ This module is not built automatically during OpenLiteSpeed installation. Please
 
 Note: PSOL and OpenLiteSpeed's PageSpeed Module is only available for Linux.
 
-1. Run "make" command to make modpagespeed.so, if compiling does not work, try "gmake" instead of "make".
+1. Run "make -f Makefile.f" command to make modpagespeed.so, if compiling does not work, try "gmake" instead of "make".
 
 2. Copy the file to the modules directory in your OpenLiteSpeed installation. (Normally, it should be $LSWS_ROOT/modules/.)
 

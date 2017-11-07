@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2016  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2015  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -45,7 +45,7 @@
 #include "pagespeed/kernel/thread/scheduler_thread.h"
 #include "pagespeed/kernel/thread/slow_worker.h"
 #include "pagespeed/system/in_place_resource_recorder.h"
-#include "pagespeed/system/serf_url_async_fetcher.h"
+//#include "pagespeed/system/serf_url_async_fetcher.h"
 #include "pagespeed/system/system_caches.h"
 #include "pagespeed/system/system_rewrite_options.h"
 
@@ -62,21 +62,20 @@ class Writer;
 
 class SharedCircularBuffer;
 
-LsiRewriteDriverFactory::LsiRewriteDriverFactory(
-    const ProcessContext &process_context,
-    SystemThreadSystem *system_thread_system, StringPiece hostname, int port)
+LsRewriteDriverFactory::LsRewriteDriverFactory(
+        const ProcessContext &process_context,
+        SystemThreadSystem *system_thread_system, 
+        StringPiece hostname, int port)
     : SystemRewriteDriverFactory(process_context, system_thread_system,
-                                 NULL, hostname, port),
-      m_mainConf(NULL),
-      m_bThreadsStarted(false),
-      m_pLsiMessageHandler(new LsiMessageHandler(timer(),
-                           thread_system()->NewMutex())),
-      m_pHtmlParseLsiMessageHandler(
-          new LsiMessageHandler(timer(), thread_system()->NewMutex())),
-      m_pSharedCircularBuffer(NULL),
-      m_sHostname(hostname.as_string()),
-      m_iPort(port),
-      m_bShutDown(false)
+                                 NULL, hostname, port)
+    , m_bThreadsStarted(false)
+    , m_pLsMessageHandler(new LsMessageHandler(timer(),
+                           thread_system()->NewMutex()))
+    , m_pHtmlParseLsiMessageHandler(
+          new LsMessageHandler(timer(), thread_system()->NewMutex()))
+    , m_pSharedCircularBuffer(NULL)
+    , m_sHostname(hostname.as_string())
+    , m_iPort(port)
 {
     InitializeDefaultOptions();
     default_options()->set_beacon_url("/ls_pagespeed_beacon");
@@ -84,103 +83,96 @@ LsiRewriteDriverFactory::LsiRewriteDriverFactory(
         dynamic_cast<SystemRewriteOptions *>(default_options());
     system_options->set_file_cache_clean_inode_limit(500000);
     system_options->set_avoid_renaming_introspective_javascript(true);
-    set_message_handler(m_pLsiMessageHandler);
+    set_message_handler(m_pLsMessageHandler);
     set_html_parse_message_handler(m_pHtmlParseLsiMessageHandler);
 }
 
-LsiRewriteDriverFactory::~LsiRewriteDriverFactory()
+LsRewriteDriverFactory::~LsRewriteDriverFactory()
 {
     ShutDown();
     m_pSharedCircularBuffer = NULL;
     STLDeleteElements(&uninitialized_server_contexts_);
 }
 
-Hasher *LsiRewriteDriverFactory::NewHasher()
+Hasher *LsRewriteDriverFactory::NewHasher()
 {
     return new MD5Hasher;
 }
 
-UrlAsyncFetcher *LsiRewriteDriverFactory::AllocateFetcher(
+UrlAsyncFetcher *LsRewriteDriverFactory::AllocateFetcher(
     SystemRewriteOptions *config)
 {
     return SystemRewriteDriverFactory::AllocateFetcher(config);
 }
 
-MessageHandler *LsiRewriteDriverFactory::DefaultHtmlParseMessageHandler()
+MessageHandler *LsRewriteDriverFactory::DefaultHtmlParseMessageHandler()
 {
     return m_pHtmlParseLsiMessageHandler;
 }
 
-MessageHandler *LsiRewriteDriverFactory::DefaultMessageHandler()
+MessageHandler *LsRewriteDriverFactory::DefaultMessageHandler()
 {
-    return m_pLsiMessageHandler;
+    return m_pLsMessageHandler;
 }
 
-FileSystem *LsiRewriteDriverFactory::DefaultFileSystem()
+FileSystem *LsRewriteDriverFactory::DefaultFileSystem()
 {
     return new StdioFileSystem();
 }
 
-Timer *LsiRewriteDriverFactory::DefaultTimer()
+Timer *LsRewriteDriverFactory::DefaultTimer()
 {
     return new PosixTimer;
 }
 
-NamedLockManager *LsiRewriteDriverFactory::DefaultLockManager()
+NamedLockManager *LsRewriteDriverFactory::DefaultLockManager()
 {
     CHECK(false);
     return NULL;
 }
 
-RewriteOptions *LsiRewriteDriverFactory::NewRewriteOptions()
+RewriteOptions *LsRewriteDriverFactory::NewRewriteOptions()
 {
-    LsiRewriteOptions *options = new LsiRewriteOptions(thread_system());
+    LsRewriteOptions *options = new LsRewriteOptions(thread_system());
     options->SetRewriteLevel(RewriteOptions::kCoreFilters);
     return options;
 }
 
-bool LsiRewriteDriverFactory::InitLsiUrlAsyncFetchers()
+bool LsRewriteDriverFactory::InitLsiUrlAsyncFetchers()
 {
     return true;
 }
 
 
-LsServerContext *LsiRewriteDriverFactory::MakeLsiServerContext(
-    StringPiece hostname, int port)
+LsServerContext *LsRewriteDriverFactory::MakeLsServerContext(
+    StringPiece hostname, int port, int uninitialized)
 {
-    LsServerContext *server_context = new LsServerContext(this, hostname, port);
-    uninitialized_server_contexts_.insert(server_context);
+    LsServerContext *server_context = new LsServerContext(this, hostname,
+            port);
+    if (uninitialized)
+        uninitialized_server_contexts_.insert(server_context);
     return server_context;
 }
 
-ServerContext *LsiRewriteDriverFactory::NewDecodingServerContext()
+ServerContext *LsRewriteDriverFactory::NewDecodingServerContext()
 {
     ServerContext *sc = new LsServerContext(this, m_sHostname, m_iPort);
     InitStubDecodingServerContext(sc);
     return sc;
 }
 
-ServerContext *LsiRewriteDriverFactory::NewServerContext()
+ServerContext *LsRewriteDriverFactory::NewServerContext()
 {
-    LOG(DFATAL) << "MakeLsiServerContext should be used instead";
+    LOG(DFATAL) << "MakeLsServerContext should be used instead";
     return NULL;
 }
 
-void LsiRewriteDriverFactory::ShutDown()
+void LsRewriteDriverFactory::ShutDownMessageHandlers()
 {
-    if (!m_bShutDown)
-    {
-        m_bShutDown = true;
-        SystemRewriteDriverFactory::ShutDown();
-    }
-}
-
-void LsiRewriteDriverFactory::ShutDownMessageHandlers()
-{
-    m_pLsiMessageHandler->set_buffer(NULL);
+    m_pLsMessageHandler->set_buffer(NULL);
     m_pHtmlParseLsiMessageHandler->set_buffer(NULL);
 
-    for (LsiMessageHandlerSet::iterator p =
+    for (LsMessageHandlerSet::iterator p =
              m_serverContextMessageHandlers.begin();
          p != m_serverContextMessageHandlers.end(); ++p)
         (*p)->set_buffer(NULL);
@@ -188,7 +180,7 @@ void LsiRewriteDriverFactory::ShutDownMessageHandlers()
     m_serverContextMessageHandlers.clear();
 }
 
-void LsiRewriteDriverFactory::StartThreads()
+void LsRewriteDriverFactory::StartThreads()
 {
     if (m_bThreadsStarted)
         return;
@@ -201,36 +193,36 @@ void LsiRewriteDriverFactory::StartThreads()
     m_bThreadsStarted = true;
 }
 
-void LsiRewriteDriverFactory::LoggingInit()
+void LsRewriteDriverFactory::LoggingInit()
 {
     InstallLogMessageHandler();
 
     if (install_crash_handler())
-        LsiMessageHandler::InstallCrashHandler();
+        LsMessageHandler::InstallCrashHandler();
 }
 
-void LsiRewriteDriverFactory::SetCircularBuffer(
+void LsRewriteDriverFactory::SetCircularBuffer(
     SharedCircularBuffer *buffer)
 {
     m_pSharedCircularBuffer = buffer;
-    m_pLsiMessageHandler->set_buffer(buffer);
+    m_pLsMessageHandler->set_buffer(buffer);
     m_pHtmlParseLsiMessageHandler->set_buffer(buffer);
 }
 
-void LsiRewriteDriverFactory::SetServerContextMessageHandler(
+void LsRewriteDriverFactory::SetServerContextMessageHandler(
     ServerContext *server_context)
 {
-    LsiMessageHandler *handler = new LsiMessageHandler(
+    LsMessageHandler *handler = new LsMessageHandler(
         timer(), thread_system()->NewMutex());
     // The lsi_shared_circular_buffer_ will be NULL if MessageBufferSize hasn't
     // been raised from its default of 0.
     handler->set_buffer(m_pSharedCircularBuffer);
     m_serverContextMessageHandlers.insert(handler);
-    defer_cleanup(new Deleter<LsiMessageHandler> (handler));
+    defer_cleanup(new Deleter<LsMessageHandler> (handler));
     server_context->set_message_handler(handler);
 }
 
-void LsiRewriteDriverFactory::InitStats(Statistics *statistics)
+void LsRewriteDriverFactory::InitStats(Statistics *statistics)
 {
     // Init standard PSOL stats.
     SystemRewriteDriverFactory::InitStats(statistics);

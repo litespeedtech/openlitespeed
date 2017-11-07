@@ -161,37 +161,27 @@ int HioChainStream::sendfile(int fdSrc, off_t off, off_t size)
 
 }
 
+// TODO: Warning: not compiled in ols, verify in lslbd
 const char *HioChainStream::buildLogId()
 {
-    char *p;
-    AutoStr2 &id = getIdBuf();
     HttpSession *pSession = (HttpSession *)getHandler();
     pSession = pSession->getParent();
     int len ;
     if (!pSession)
     {
-        memmove(id.buf(), "Detached:S-", 11);
-        p = id.buf() + 11;
+        appendLogId("Detached:S-", true);
     }
     else
     {
-        strncpy(id.buf(), pSession->getLogId(), MAX_LOGID_LEN);
-        p = id.buf() + pSession->getStream()->getIdBuf().len();
-        while (*p && *p != ':')
-            ++p;
-        if (!*p)
-            *p++ = ':';
-        else
-            ++p;
-        *p++ = 'S';
-        *p++ = '-';
+        appendLogId(pSession->getLogId(), true);
+        appendLogId(":S-", true);
     }
 
-    len = snprintf(p, id.buf() + MAX_LOGID_LEN - p, "%d",
+    size_t len = snprintf(m_logId.ptr + m_logId.len, MAX_LOGID_LEN - m_logId.len, "%d",
                    m_iSequence);
-    id.setLen(len + p - id.buf());
+    m_logId.len += len;
 
-    return id.c_str();
+    return m_logId.ptr;
 }
 
 int HioChainStream::onWrite()

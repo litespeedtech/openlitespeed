@@ -74,12 +74,7 @@ void HTAuth::setName(const char *pName)
 
 int HTAuth::buildWWWAuthHeader(const char *pName)
 {
-    if (m_iAuthType & AUTH_DIGEST)
-    {
-        m_authHeader = (char *)Pool::dupstr(pName);
-        return 0;
-    }
-    else if (m_iAuthType & AUTH_BASIC)
+    if (m_iAuthType & AUTH_BASIC)
     {
         int len = strlen(pName) + 40;
 
@@ -104,7 +99,7 @@ int HTAuth::addWWWAuthHeader(HttpRespHeaders &buf) const
     {
         char sTemp[256] = {0};
         int n = ls_snprintf(sTemp, 255, "Digest realm=\"%s\" nonce=\"%lu\"\r\n",
-                            m_authHeader, time(NULL));
+                            m_pName, time(NULL));
 
         buf.add(HttpRespHeaders::H_WWW_AUTHENTICATE, sTemp, n);
     }

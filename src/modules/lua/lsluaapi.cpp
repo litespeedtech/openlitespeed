@@ -319,6 +319,24 @@ int LsLuaPrint(lua_State *L, ls_luaprint_t *pStream)
 }
 
 
+void lsLuaLoadMetaFile(lua_State *L,
+                       const char *tablename, const luaL_Reg *funtions,
+                       const char *metaname, const luaL_Reg *mate_functions )
+{
+    LsLuaApi::openlib(L, tablename, funtions, 0);
+    LsLuaApi::newmetatable(L, metaname);
+    LsLuaApi::openlib(L, NULL, mate_functions, 0);
+
+    LsLuaApi::pushlstring(L, "__index", 7);
+    LsLuaApi::pushvalue(L, -3);
+    LsLuaApi::rawset(L, -3);
+    LsLuaApi::pushlstring(L, "__metatable", 11);
+    LsLuaApi::pushvalue(L, -3);
+    LsLuaApi::rawset(L, -3);
+    LsLuaApi::settop(L, -3);
+}
+
+
 void LsLuaApi::dumpStack(lua_State *L, const char *pTag, int iDumpCount)
 {
     char            buf[0x1000];

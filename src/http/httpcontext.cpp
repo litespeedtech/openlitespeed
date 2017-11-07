@@ -957,7 +957,17 @@ const MimeSetting *HttpContext::determineMime(const char *pSuffix,
 
 void HttpContext::setRewriteBase(const char *p)
 {
-    m_pRewriteBase = new AutoStr2(p);
+    int len = strlen(p);
+    int slash = 0;
+    if (p[len - 1] != '/')
+        slash = 1;
+    if (m_pRewriteBase)
+        m_pRewriteBase->setStr(p, len + slash);
+    else
+        m_pRewriteBase = new AutoStr2(p, len + slash);
+    if (slash)
+        *(m_pRewriteBase->buf() + len) = '/';
+
 }
 
 
@@ -1182,7 +1192,7 @@ int HttpContext::configRewriteRule(const RewriteMapList *pMapList,
     {
         RewriteRule::setLogger(NULL, TmpLogId::getLogId());
         if (RewriteEngine::parseRules(pRule, pRuleList,
-                                      pMapList) == 0)
+                                      pMapList, this) == 0)
             setRewriteRules(pRuleList);
         else
             delete pRuleList;

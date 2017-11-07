@@ -22,7 +22,35 @@
 #include <http/httplog.h>
 #include <lsiapi/lsiapihooks.h>
 
+#include <unistd.h>
+
 char *argv0 = NULL;
+// char *pServerRoot = NULL;
+// void set_server_root()
+// {
+//     char achServerRoot[1024];
+//     if (*argv0 != '/')
+//     {
+//         getcwd(achServerRoot, sizeof(achServerRoot) - 1);
+//         strcat(achServerRoot, "/" );
+//     }
+//     else
+//         achServerRoot[0] = 0;
+//     strncat(achServerRoot, argv0,
+//             sizeof(achServerRoot) -1 - strlen(achServerRoot));
+//     const char *pEnd = strrchr(achServerRoot, '/');
+//     --pEnd;
+//     while (pEnd > achServerRoot && *pEnd != '/')
+//         --pEnd;
+//     --pEnd;
+//     while (pEnd > achServerRoot && *pEnd != '/')
+//         --pEnd;
+//     ++pEnd;
+// 
+//     strcpy(&achServerRoot[pEnd - achServerRoot], "test/serverroot");
+//     pServerRoot = strdup(achServerRoot);
+// }
+
 
 int main(int argc, char *argv[])
 {

@@ -162,16 +162,6 @@ static int xpool_maxgetablk_trys =
 static int xpool_maxblk_trys =
 3;       /* how many attempts until moving block */
 
-#if 0
-ls_inline void vg_xpool_alloc(
-        ls_xpool_t *pool, xpool_alink_t *pNew, uint32_t size)
-{
-    MEMCHK_ALLOC(pool, pNew, size + sizeof(ls_xpool_header_t));
-    MEMCHK_POISON(&pNew->header, sizeof(pNew->header));
-}
-#endif
-
-
 /* Get a new superblock from Global Pool/OS */
 static xpool_alink_t *ls_xpool_getsuperblk(ls_xpool_t *pool);
 
@@ -364,14 +354,12 @@ void *ls_xpool_alloc(ls_xpool_t *pool, uint32_t size)
     {
         if ((pNew = xfreelistget(pool, nsize)) != NULL)
         {
-            //vg_xpool_alloc(pool, pNew, size);
             MEMCHK_ALLOC(pool, pNew, size + sizeof(ls_xpool_header_t));
             MEMCHK_POISON(&pNew->header, sizeof(pNew->header));
             return pNew->data;   /* do *not* change real size of block */
         }
     }
     pNew = xpool_blkget(pool, nsize);
-    //vg_xpool_alloc(pool, pNew, size);
     MEMCHK_ALLOC(pool, pNew, size + sizeof(ls_xpool_header_t));
     MEMCHK_POISON(&pNew->header, sizeof(pNew->header));
     return pNew->data;
@@ -404,7 +392,6 @@ void *ls_xpool_realloc(ls_xpool_t *pool, void *pOld, uint32_t new_sz)
     if (new_sz <= old_sz)
     {
         MEMCHK_FREE(pool, (xpool_alink_t *)pHeader, pHeader->size);
-        //vg_xpool_alloc(pool, (xpool_alink_t *)pHeader, new_sz);
         MEMCHK_ALLOC(pool, (xpool_alink_t *)pHeader, new_sz + sizeof(ls_xpool_header_t));
         MEMCHK_POISON(&((xpool_alink_t *)pHeader)->header, sizeof(((xpool_alink_t*)pHeader)->header));
         MEMCHK_UNPOISON(pOld, new_sz);
@@ -507,7 +494,6 @@ static xpool_alink_t *xpool_getablk(
             xpool_blkremove(pHead, pPrev, pPtr);
             if (pHead == &pool->lgblk)
                 xpool_blkput(&pool->smblk, pPtr);
-            //MEMCHK_POISON(pPtr, sizeof(*pPtr));
             pPtr = pNext;
         }
         else
@@ -581,7 +567,6 @@ static void ls_xpool_unlink(ls_xpool_t *pool, ls_xpool_bblk_t *pFree)
     ls_spinlock_unlock(&pool->lock);
 }
 
-// expect header poisoned, data not, pool not
 void ls_xpool_free(ls_xpool_t *pool, void *data)
 {
     if (data == NULL)
@@ -616,7 +601,6 @@ void ls_xpool_free(ls_xpool_t *pool, void *data)
         xpool_blkput(((size <= LS_XPOOL_MAXSMBLK_SIZE) ?
                     &pool->smblk : &pool->lgblk), (xpool_alink_t *)pHeader);
     }
-    //MEMCHK_UNPOISON(data, sizeof(void *));
 #endif
 }
 

@@ -20,11 +20,40 @@
 #include "httpmimetest.h"
 
 #include <http/httpmime.h>
+#include <util/autostr.h>
 #include <unistd.h>
 #include <stdio.h>
 #include "unittest-cpp/UnitTest++.h"
+#include <string.h>
 
-#include <main/mainserverconfig.h>
+extern const char *argv0;
+
+const char *get_server_root(char *achServerRoot)
+{
+    if (*argv0 != '/')
+    {
+        getcwd(achServerRoot, sizeof(achServerRoot) - 1);
+        strcat(achServerRoot, "/" );
+    }
+    else
+        achServerRoot[0] = 0;
+    strncat(achServerRoot, argv0,
+            sizeof(achServerRoot) -1 - strlen(achServerRoot));
+    const char *pEnd = strrchr(achServerRoot, '/');
+    --pEnd;
+    while (pEnd > achServerRoot && *pEnd != '/')
+        --pEnd;
+    --pEnd;
+    while (pEnd > achServerRoot && *pEnd != '/')
+        --pEnd;
+    ++pEnd;
+
+    strcpy(&achServerRoot[pEnd - achServerRoot], "test/serverroot");
+    return achServerRoot;
+}
+
+
+
 
 TEST(HttpMimeTest_runTest)
 {
@@ -34,9 +63,10 @@ TEST(HttpMimeTest_runTest)
     const char *pOldType2 ;
     const char *pNewType2;
     int ret;
+    char achServerRoot[1024];
     char achBuf[256];
     char *p = achBuf;
-    strcpy(p, MainServerConfig::getInstance().getServerRoot());
+    strcpy(p, get_server_root(achServerRoot));
     CHECK(p != NULL);
     char *pEnd = p + strlen(p);
 

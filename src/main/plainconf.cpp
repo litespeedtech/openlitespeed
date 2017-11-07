@@ -268,6 +268,8 @@ plainconfKeywords plainconf::sKeywords[] =
     {"securedconn",                              NULL},
     {"security",                                 NULL},
     {"servername",                               NULL},
+    {"ssldefaultcafile",                         NULL},
+    {"ssldefaultcapath",                         NULL},
     {"sslenablemulticerts",                      NULL},
     {"sslsessioncache",                          NULL},
     {"sslsessioncachesize",                      NULL},
@@ -329,6 +331,13 @@ plainconfKeywords plainconf::sKeywords[] =
     {"websocketlist",                                NULL},//!!
     {"workers",                                      NULL},
     {"workingdir",                               NULL},
+    {"zconfadclist",                             NULL},
+    {"zconfauth",                                NULL},
+    {"zconfclient",                              NULL},
+    {"zconfenable",                              NULL},
+    {"zconfname",                                NULL},
+    {"zconfportlist",                            NULL},
+    {"zconfsend",                                NULL},
 
 
     {"disableinitlogrotation",                               NULL},

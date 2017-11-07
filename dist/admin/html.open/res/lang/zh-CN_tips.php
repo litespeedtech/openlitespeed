@@ -624,7 +624,7 @@ $_tipsdb['venable'] = new DAttrHelp("Enable", 'The Enable action starts up a sto
 
 $_tipsdb['verifyDepth'] = new DAttrHelp("Verify Depth", ' Specifies how deeply a certificate should be verified before  determining that the client does not have a valid certificate. The default is &quot;1&quot;.', '', 'Select from drop down list', '');
 
-$_tipsdb['vhEnableGzip'] = new DAttrHelp("Enable Compression", 'Specifies whether to enable GZIP compression for this virtual host.  This setting is only effective when GZIP compression is enabled at the server level.  Compression settings are configured at the server level (Tuning > GZIP).', '', 'Select from radio box', '');
+$_tipsdb['vhEnableGzip'] = new DAttrHelp("启用GZIP", '指定是否启用此虚拟主机的gzip压缩功能。 这项设置只有在服务器级别的GZIP压缩功能启用时才有效。 在服务器级别开启压缩的情况下，可以通过此选项关闭本虚拟主机的压缩。 压缩设置是在服务器级别配置的（在Tuning-GZIP选项中）。', '', '布尔值', '');
 
 $_tipsdb['vhMaxKeepAliveReq'] = new DAttrHelp("最大Keep-Alive请求数", '指定通过keep-alive(永久)连接服务的最大请求数量。当该限制值达到时连接将被断开。你可以为不同虚拟主机设置不同的数值。这个数值不能超过服务器级别的&quot;最大持续连接请求数&quot;限制值。', '[性能建议] 设置为一个合理的高数值。设置为1或比1更小的值将禁用keep-alive连接。', '无符号整数', '');
 

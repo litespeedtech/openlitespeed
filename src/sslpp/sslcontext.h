@@ -37,9 +37,10 @@ class SslContext
 {
 private:
     SSL_CTX    *m_pCtx;
-    short       m_iMethod;
+    char        m_iMethod;
     char        m_iRenegProtect;
     char        m_iEnableSpdy;
+    char        m_iEnableOcsp;
     int         m_iKeyLen;
     struct stat m_stKey;
     struct stat m_stCert;

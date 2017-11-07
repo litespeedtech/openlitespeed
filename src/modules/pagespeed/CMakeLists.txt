@@ -42,6 +42,7 @@ add_library(modpagespeed SHARED  pagespeed.cpp  log_message_handler.cpp
             ls_caching_headers.cpp
             ls_rewrite_options.cpp 
             ls_base_fetch.cpp
+            ls_uamatcher.cpp
             )
 
 target_link_libraries(modpagespeed ${PROJECT_SOURCE_DIR}/src/modules/pagespeed/psol/lib/Debug/linux/${OSVERSION}/pagespeed_automatic.a)

@@ -11,6 +11,8 @@ SET(main_STAT_SRCS
    httpserver.cpp
    plainconf.cpp
    configctx.cpp
+   zconfclient.cpp
+   zconfmanager.cpp
 )
 
 add_library(main STATIC ${main_STAT_SRCS})

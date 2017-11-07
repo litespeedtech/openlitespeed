@@ -65,8 +65,6 @@ extern "C" {
 #define USE_ATOMIC_SPIN
 
 #define MAX_FUTEX_SPINCNT      10
-#define MAX_FUTEX_PIDCHECK     10
-#define MAX_SPINCNT_CHECK      50000
 
 /* LiteSpeed general purpose lock/unlock/trylock
  */
@@ -89,11 +87,13 @@ typedef pthread_spinlock_t ls_pspinlock_t;
 #define ls_pspinlock_unlock        pthread_spin_unlock
 #endif
 
-#if defined(__i386__) || defined(__ia64__) || defined(__x86_64)
+#if defined(__i386__) || defined(__ia64__) || defined(__x86_64) || defined(__x86_64__)
 //#define cpu_relax()         asm volatile("pause\n": : :"memory")
+// ron - the PAUSE approach is order of magnitude slower in MT with contention
 #define cpu_relax()         usleep(1);
 #else
 #define cpu_relax()         usleep(1);
+//#define cpu_relax()         ;
 #endif
 typedef int32_t             ls_atom_spinlock_t;
 
@@ -385,42 +385,21 @@ ls_inline int ls_atomic_spin_lock(ls_atom_spinlock_t *p)
  * @see ls_atomic_spin_lock
  */
 
-#define LS_SPIN_MIN_PID 10
+int ls_atomic_spin_pidwait(ls_atom_spinlock_t *p);
 
 ls_inline int ls_atomic_spin_pidlock(ls_atom_spinlock_t *p)
 {
     int waitpid;
     if (ls_spin_pid == 0)
         ls_atomic_pidspin_init();
-    assert(*p != ls_spin_pid);
-    int cnt = MAX_SPINCNT_CHECK;
-    while (1)
+    waitpid = ls_atomic_casvint(p, LS_LOCK_AVAIL, ls_spin_pid);
+    if (waitpid == LS_LOCK_AVAIL)
     {
-        waitpid = ls_atomic_casvint(p, LS_LOCK_AVAIL, ls_spin_pid);
-        if (waitpid == LS_LOCK_AVAIL)
-        {
-            return 0;
-        }
-        else if (waitpid < LS_SPIN_MIN_PID)
-        {
-            //something is wrong with waitpid, mark it as available, otherise
-            // it will spin forever as those PIDs are taken by system processes
-            *p = LS_LOCK_AVAIL;
-        }
-        else if (--cnt == 0)
-        {
-            if ((kill(waitpid, 0) < 0) && (errno == ESRCH)
-                && ls_atomic_casint(p, waitpid, ls_spin_pid))
-                return -waitpid;
-            cnt = MAX_SPINCNT_CHECK;
-        }
-        else
-        {
-            usleep(200);
-            //cpu_relax();
-        }
+        return 0;
     }
+    return ls_atomic_spin_pidwait(p);
 }
+
 
 /**
  * @ls_atomic_spin_trylock

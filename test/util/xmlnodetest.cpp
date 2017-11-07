@@ -20,17 +20,16 @@
 #include "xmlnodetest.h"
 #include <util/xmlnode.h>
 #include <unistd.h>
-#include <main/mainserverconfig.h>
 #include "unittest-cpp/UnitTest++.h"
 
-
+extern const char *get_server_root(char *achServerRoot);
 
 TEST(XmlNodeTest_test)
 {
     char achError[1024];
     char achBuf[256];
     char *p = achBuf;
-    strcpy(p, MainServerConfig::getInstance().getServerRoot());
+    strcpy(p, get_server_root(achError));
     CHECK(p != NULL);
     strcat(achBuf, "/conf/myconfig.xml");
 

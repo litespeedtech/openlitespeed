@@ -106,4 +106,15 @@ int ls_fio_stat(const char *pathname, struct stat *st)
     }
 }
 
+int ls_fio_truncate(int fd, off_t length)
+{
+    int ret;
+    while (1)
+    {
+        ret = ftruncate(fd, length);
+        if ((ret == -1) && (errno == EINTR))
+            continue;
+        return ret;
+    }
+}
 

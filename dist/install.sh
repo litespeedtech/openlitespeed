@@ -221,10 +221,10 @@ check_os()
 
     if [ "x$OSNAMEVER" != "x" ] ; then
         if [ "x$OSNAME" = "xcentos" ] ; then
-            echoG "Current platform is "  "$OSNAME $OSVER."
+            echo "Current platform is "  "$OSNAME $OSVER."
         else
             export DEBIAN_FRONTEND=noninteractive
-            echoG "Current platform is "  "$OSNAMEVER $OSNAME $OSVER."
+            echo "Current platform is "  "$OSNAMEVER $OSNAME $OSVER."
         fi
     fi
 }

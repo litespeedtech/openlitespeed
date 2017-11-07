@@ -24,41 +24,44 @@
 #include "ls_message_handler.h"
 #include "pagespeed/system/system_server_context.h"
 
+
 namespace net_instaweb
 {
-class LsiRewriteDriverFactory;
-class LsiRewriteOptions;
+class LsRewriteDriverFactory;
+class LsRewriteOptions;
 class SystemRequestContext;
 
 class LsServerContext : public SystemServerContext
 {
 public:
     LsServerContext(
-        LsiRewriteDriverFactory *factory, StringPiece hostname, int port);
+        LsRewriteDriverFactory *factory, StringPiece hostname, int port);
     virtual ~LsServerContext();
 
-    // We don't allow ProxyFetch to fetch HTML via MapProxyDomain. We will call
-    // set_trusted_input() on any ProxyFetches we use to transform internal HTML.
-    virtual bool ProxiesHtml() const { return false; }
+    // We expect to use ProxyFetch with HTML.
+    virtual bool ProxiesHtml() const
+    {
+        return true;
+    }
 
-    LsiRewriteOptions *Config();
-    LsiRewriteDriverFactory *GetRewriteDriverFactory()
+    LsRewriteOptions *Config();
+    LsRewriteDriverFactory *GetRewriteDriverFactory()
     {
         return m_pRewriteDriverFactory;
     }
 
-    SystemRequestContext *NewRequestContext(const lsi_session_t *session);
+    SystemRequestContext *NewRequestContext(lsi_session_t *session);
 
-    LsiMessageHandler *MessageHandler()
+    LsMessageHandler *MessageHandler()
     {
-        return dynamic_cast<LsiMessageHandler *>(message_handler());
+        return dynamic_cast<LsMessageHandler *>(message_handler());
     }
 
     virtual GoogleString FormatOption(StringPiece option_name,
                                       StringPiece args);
 
 private:
-    LsiRewriteDriverFactory *m_pRewriteDriverFactory;
+    LsRewriteDriverFactory *m_pRewriteDriverFactory;
 
 
     LS_NO_COPY_ASSIGN(LsServerContext);

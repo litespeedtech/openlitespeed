@@ -51,7 +51,11 @@ public:
     void switchWriteToRead() {return;};
     void onTimer() {};
     uint32_t GetStreamID() {return 0;};
-    virtual const char *buildLogId()   {   return getLogId();    }
+    virtual const char *buildLogId()
+    {
+        appendLogId("dummy", true);
+        return m_logId.ptr;
+    }
 
     /////////////////////////////
 private:

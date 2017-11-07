@@ -30,6 +30,8 @@ static int s_loop_count = 0;
 epoll::epoll()
     : m_epfd(-1)
     , m_pResults(NULL)
+    , m_pResEnd(NULL)
+    , m_pResCur(NULL)
 {
     setFLTag(O_NONBLOCK | O_RDWR);
     m_pUpdates = new TObjArray<int>();

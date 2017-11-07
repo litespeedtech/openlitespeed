@@ -75,12 +75,13 @@ typedef struct
 class LsShmPool : public ls_shmpool_s
 {
 public:
-    explicit LsShmPool(LsShm *shm, const char *name, LsShmPool *gpool);
+    LsShmPool();
     ~LsShmPool();
 
 public:
     LsShmHash *getNamedHash(const char *name, LsShmSize_t init_size,
                             LsShmHasher_fn hf, LsShmValComp_fn vc, int flags);
+    int init(LsShm *shm, const char *name, LsShmPool *gpool);
     void close();
     void destroy();
 
@@ -186,10 +187,12 @@ private:
     void mapLock();
     
     int autoLock()
-    {   return m_iAutoLock ? getShm()->lockRemap(m_pShmLock) : 0;   }
+    {   return m_iAutoLock ? getShm()->lockRemap(m_pShmLock) 
+                           : (assert(!m_pParent || getShm()->isLocked(m_pShmLock)), 0);   }
 
     int autoUnlock()
-    {   return m_iAutoLock ? ls_shmlock_unlock(m_pShmLock) : 0;     }
+    {   assert(!m_pParent || getShm()->isLocked(m_pShmLock));
+        return m_iAutoLock ? ls_shmlock_unlock(m_pShmLock) : 0;     }
     
     LsShmOffset_t getReg(const char *name);
 
@@ -230,6 +233,10 @@ private:
     void disconnectFromFree(LShmFreeTop *ap, LShmFreeBot *bp);
 
     void incrCheck(LsShmXSize_t *ptr, LsShmSize_t size);
+
+    LsShmOffset_t  alloc2Ex(LsShmSize_t size, int &remapped);
+    void releasePageLockParent(LsShmOffset_t offset, LsShmSize_t size);
+    void release2Ex(LsShmOffset_t offset, LsShmSize_t size);
 
 private:
     LsShmPool(const LsShmPool &other);

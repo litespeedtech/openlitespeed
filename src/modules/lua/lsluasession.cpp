@@ -1750,20 +1750,8 @@ static const luaL_Reg lsluaReqMetaSub[] =
 
 void LsLuaCreateReqmeta(lua_State *L)
 {
-    LsLuaApi::openlib(L, LS_LUA ".req", lsluaReqFuncs, 0);
-    LsLuaApi::newmetatable(L, LSLUA_REQ);
-    LsLuaApi::openlib(L, NULL, lsluaReqMetaSub, 0);
-
-    // pushliteral
-    LsLuaApi::pushlstring(L, "__index", 7);
-    LsLuaApi::pushvalue(L, -3);
-    LsLuaApi::rawset(L, -3);        // metatable.__index = methods
-    // pushliteral
-    LsLuaApi::pushlstring(L, "__metatable", 11);
-    LsLuaApi::pushvalue(L, -3);
-    LsLuaApi::rawset(L, -3);        // metatable.__metatable = methods
-
-    LsLuaApi::settop(L, -3);       // pop 2
+    lsLuaLoadMetaFile(L, LS_LUA ".req", lsluaReqFuncs,
+                      LSLUA_REQ, lsluaReqMetaSub);
 
 }
 
@@ -2974,20 +2962,8 @@ static const luaL_Reg lsluaRespMetaSub[] =
 
 void LsLuaCreateRespmeta(lua_State *L)
 {
-    LsLuaApi::openlib(L, LS_LUA ".resp", lsluaRespFuncs, 0);
-    LsLuaApi::newmetatable(L, LSLUA_RESP);
-    LsLuaApi::openlib(L, NULL, lsluaRespMetaSub, 0);
-
-    // pushliteral
-    LsLuaApi::pushlstring(L, "__index", 7);
-    LsLuaApi::pushvalue(L, -3);
-    LsLuaApi::rawset(L, -3);        // metatable.__index = methods
-    // pushliteral
-    LsLuaApi::pushlstring(L, "__metatable", 11);
-    LsLuaApi::pushvalue(L, -3);
-    LsLuaApi::rawset(L, -3);        // metatable.__metatable = methods
-
-    LsLuaApi::settop(L, -3);       // pop 2
+    lsLuaLoadMetaFile(L, LS_LUA ".resp", lsluaRespFuncs,
+                      LSLUA_RESP, lsluaRespMetaSub);
 }
 
 

@@ -201,6 +201,7 @@ struct Priority_st
 #define H2_DEFAULT_DATAFRAME_SIZE   16384
 #define H2_FCW_INIT_SIZE            65535
 #define H2_FCW_MAX_SIZE             (2147483647)
+#define H2_FCW_MIN_SIZE             4096
 
 #define MAX_HTTP2_HEADERS_SIZE      65536
 #define MAX_HEADER_TABLE_SIZE       (512 * 1024)

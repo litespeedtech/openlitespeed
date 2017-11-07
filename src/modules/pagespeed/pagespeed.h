@@ -22,7 +22,7 @@
 #define LSI_PAGESPEEND_H_
 
 #include "../include/ls.h"
-//#include "ls_rewrite_driver_factory.h"
+#include "ls_rewrite_driver_factory.h"
 #include "psol/include/out/Release/obj/gen/net/instaweb/public/version.h"
 #include "base/logging.h"
 #include "pagespeed/kernel/base/string_util.h"
@@ -37,8 +37,6 @@
 
 #define PAGESPEED_MODULEKEY     ModuleName
 #define PAGESPEED_MODULEKEYLEN  (sizeof(ModuleName) -1)
-
-#define MODULE_VERSION_INFO     "1.4.24-1.11.33.3"
 
 
 extern lsi_module_t MNAME;
@@ -75,48 +73,42 @@ enum PreserveCachingHeaders
     kDontPreserveHeaders,
 };
 
-void CopyRespHeadersFromServer(const lsi_session_t *session,
-                               ResponseHeaders *headers);
+void CopyRespHeadersFromServer(lsi_session_t *session, ResponseHeaders *headers);
 
-void CopyReqHeadersFromServer(const lsi_session_t *session,
-                              RequestHeaders *headers);
+void CopyReqHeadersFromServer(lsi_session_t *session, RequestHeaders *headers);
 
-int CopyRespHeadersToServer(const lsi_session_t *session,
+int CopyRespHeadersToServer(lsi_session_t *session,
                             const ResponseHeaders &pagespeed_headers,
                             PreserveCachingHeaders preserve_caching_headers);
 
-int CopyRespBodyToBuf(const lsi_session_t *session, GoogleString &str, int done_called);
+int CopyRespBodyToBuf(lsi_session_t *session, GoogleString &str, int done_called);
 
-char *DetermineHost(const lsi_session_t *session, char *str, int maxLen);
-
-int DeterminePort(const lsi_session_t *session);
+int DeterminePort(lsi_session_t *session);
 
 }  // namespace net_instaweb
 
 
-namespace RequestRouting
+enum REQ_ROUTE
 {
-enum Response
-{
-    kError,
-    kNotUnderstood,
-    kStaticContent,
-    kInvalidUrl,
-    kPagespeedDisabled,
-    kBeacon,
-    kStatistics,
-    kGlobalStatistics,
-    kConsole,
-    kMessages,
-    kAdmin,
-    kCachePurge,
-    kGlobalAdmin,
-    kPagespeedSubrequest,
-    kNotHeadOrGet,
-    kErrorResponse,
-    kResource,
+    REQ_ROUTE_UNKNOWN,
+    REQ_ROUTE_ERROR,
+    REQ_ROUTE_STATIC,
+    REQ_ROUTE_INVALID_URL,
+    REQ_ROUTE_DISABLED,
+    REQ_ROUTE_BEACON,
+    REQ_ROUTE_STATISTICS,
+    REQ_ROUTE_GLOBAL_STATS,
+    REQ_ROUTE_CONSOLE,
+    REQ_ROUTE_MESSAGE,
+    REQ_ROUTE_ADMIN,
+    REQ_ROUTE_PURGE,
+    REQ_ROUTE_GLOBAL_ADMIN,
+    REQ_ROUTE_SUB_REQ,
+    REQ_ROUTE_ERR_RESP,
+    REQ_ROUTE_RESOURCE,
+    REQ_ROUTE_IN_PLACE
+
 };
-}  // namespace RequestRouting
 
 #endif //LSI_PAGESPEEND_H_
 

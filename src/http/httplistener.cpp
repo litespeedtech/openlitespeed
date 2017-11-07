@@ -30,6 +30,8 @@
 #include <socket/coresocket.h>
 #include <socket/gsockaddr.h>
 #include <util/accessdef.h>
+#include <util/autobuf.h>
+#include <util/sysinfo/nicdetect.h>
 
 #include <assert.h>
 #include <errno.h>
@@ -55,7 +57,9 @@ HttpListener::HttpListener(const char *pName, const char *pAddr)
     , m_pSubIpMap(NULL)
     , m_iAdmin(0)
     , m_isSSL(0)
+    , m_iSendZconf(0)
     , m_iBinding(0xffffffff)
+    , m_pAdcPortList(NULL)
 {
     m_pMapVHost->setAddrStr(pAddr);
 }
@@ -68,6 +72,8 @@ HttpListener::HttpListener()
     , m_isSSL(0)
     , m_iBinding(0xffffffff)
 {
+    if (m_pAdcPortList)
+        delete m_pAdcPortList;
 }
 
 
@@ -102,15 +108,14 @@ void HttpListener::endConfig()
 
 const char *HttpListener::buildLogId()
 {
-    AutoStr2 &id = getIdBuf();
-    const AutoStr2 *pAddrStr;
     if (m_pMapVHost == NULL)
         return NULL;
-    pAddrStr = m_pMapVHost->getAddrStr();
+    const AutoStr2 *pAddrStr = m_pMapVHost->getAddrStr();
     if (pAddrStr == NULL || pAddrStr->len() == 0)
         return NULL;
-    id = *pAddrStr;
-    return id.c_str();
+
+    appendLogId(pAddrStr->c_str(), true);
+    return m_logId.ptr;
 }
 
 
@@ -569,3 +574,174 @@ int HttpListener::mapDomainList(HttpVHost *pVHost, const char *pDomains)
 
 }
 
+
+void HttpListener::setAdcPortList(const char *pList)
+{
+    int portNum;
+    StringList portList;
+    StringList::iterator iter;
+
+    if (m_pAdcPortList != NULL)
+    {
+        LS_NOTICE("Listener's adc port list is already set.");
+        return;
+    }
+
+    portList.split(pList, pList + strlen(pList), ",");
+    for (iter = portList.begin(); iter != portList.end(); ++iter)
+    {
+        portNum = strtol((*iter)->c_str(), NULL, 0);
+
+        if ((portNum <= 0) || (portNum > 65535))
+        {
+            LS_ERROR("Attempted to add invalid ADC port number %d to ZConfClient, do not send listener.",
+                portNum);
+            m_iSendZconf = 0;
+            return;
+        }
+    }
+
+    m_pAdcPortList = new AutoStr(pList);
+}
+
+
+static int zconfLoadIpList(int family, int includeV6, char *buf, char *pEnd)
+{
+    struct ifi_info *pHead = NICDetect::get_ifi_info(family, 1);
+    struct ifi_info *iter;
+    char *pBegin = buf;
+    char temp[80];
+
+    for (iter = pHead; iter != NULL; iter = iter->ifi_next)
+    {
+        if (iter->ifi_addr)
+        {
+            GSockAddr::ntop(iter->ifi_addr, temp, 80);
+
+            if (family == AF_INET6)
+            {
+                const struct in6_addr *pV6 = & ((const struct sockaddr_in6 *)
+                        iter->ifi_addr)->sin6_addr;
+
+                if ((!IN6_IS_ADDR_LINKLOCAL(pV6)) &&
+                        (!IN6_IS_ADDR_SITELOCAL(pV6)) &&
+                        (!IN6_IS_ADDR_MULTICAST(pV6)))
+                {
+                    if (strncmp(temp, "::1", 3) == 0)
+                        continue;
+                    if (pBegin != buf)
+                        *buf++ = ',';
+
+                    buf += ls_snprintf(buf, pEnd - buf, "[%s]", temp);
+                }
+            }
+            else
+            {
+                if (strncmp(temp, "127.0.0.1", 9) == 0)
+                    continue;
+
+                if (pBegin != buf)
+                    *buf++ = ',';
+
+                buf += ls_snprintf(buf, pEnd - buf, "%s", temp);
+
+                if (includeV6)
+                    buf += ls_snprintf(buf, pEnd - buf, ",[::FFFF:%s]", temp);
+            }
+        }
+    }
+
+    if (pHead)
+        NICDetect::free_ifi_info(pHead);
+    return buf - pBegin;
+}
+
+
+int HttpListener::zconfAppendVHostList(AutoBuf *pBuf)
+{
+    const int maxBufLen = 1024;
+    int confListLen;
+    char *pCur, *pBegin, *pEnd;
+    const char *pPortList, *pAddr = getAddrStr();
+    VHostMap *pMap = getVHostMap();
+    char isSsl = (pMap->getSslContext() ? 1 : 0);
+
+    if (!pMap->zconfAppendDomainMap(pBuf, isSsl))
+        return -1;
+
+    pBuf->reserve(pBuf->size() + maxBufLen);
+    // Set these _after_ reserve because buffer may change.
+    pBegin = pBuf->end();
+    pEnd = pBegin + maxBufLen;
+
+    if (getAdcPortList())
+        pPortList = getAdcPortList()->c_str();
+    else
+        pPortList = pMap->getPortStr().c_str();
+
+    confListLen = ls_snprintf(pBegin, maxBufLen,
+            "\"conf_list\":[\n"
+            "{\n"
+            "\"lb_port_list\":[%s],\n"
+            "\"dport\":%d,\n" // Destination port for backend.
+            "\"be_ssl\":%s,\n" // HttpListener has isSSL. whether the [be = backend] listener is ssl
+            "\"ip_list\":\n"
+            "[\n"
+            "{\"ip\":\"",
+            pPortList,
+            getPort(),
+            isSsl ? "true" : "false"
+    );
+
+    if (confListLen >= maxBufLen)
+    {
+        LS_NOTICE("[ZCONFCLIENT] VHost Configuration too long (after ADC Port list).");
+        return -1;
+    }
+
+    pCur = pBegin + confListLen;
+
+    if ('*' == pAddr[0])
+    {
+        confListLen += zconfLoadIpList(AF_INET, 0, pCur, pEnd);
+    }
+    else if ('[' == pAddr[0] && 'A' == pAddr[1] && 'N' == pAddr[2]
+            && 'Y' == pAddr[3] && ']' == pAddr[4])
+    {
+        int ipv6Len, ipv4Len;
+
+        ipv4Len = zconfLoadIpList(AF_INET, 1, pCur, pEnd);
+        pCur[ipv4Len] = ',';
+        ipv6Len = zconfLoadIpList(AF_INET6, 1, pCur + ipv4Len + 1, pEnd);
+
+        if (0 == ipv6Len)
+        {
+            pCur[ipv4Len] = '\0';
+            confListLen += ipv4Len;
+        }
+        else
+            confListLen += ipv4Len + ipv6Len + 1;
+    }
+    else
+    {
+        confListLen += ls_snprintf(pCur, pEnd - pCur, "%.*s",
+                pMap->getAddrStr()->len() - (pMap->getPortStr().len() + 1),
+                pAddr);
+    }
+
+    if (confListLen + 14 >= maxBufLen) // Check for space enough for closing braces
+    {
+        LS_NOTICE("[ZCONFCLIENT] VHost Configuration too long (after IP list).");
+        return -1;
+    }
+
+    confListLen += ls_snprintf(pBegin + confListLen, maxBufLen - confListLen,
+            "\"}\n"
+            "]\n"
+            "}\n"
+            "]\n"
+            "}\n"
+            ",\n");
+    pBuf->used(confListLen);
+    return confListLen;
+}

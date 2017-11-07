@@ -1920,7 +1920,7 @@ lsi_module_config_t *parseModuleConfigParam(lsi_module_t *pModule,
     if (config->data_flag == LSI_CONFDATA_OWN)
     {
         assert(config->sparam != NULL);
-        
+
         lsi_config_key_t *keys = pModule->config_parser->config_keys;
         if (keys)
         {
@@ -1933,7 +1933,7 @@ lsi_module_config_t *parseModuleConfigParam(lsi_module_t *pModule,
                                                keys,
                                                param_arr, &param_arr_sz);
 
-            
+
             if (param_arr_sz > 0)
             {
                 config->config = pModule->config_parser->
@@ -2652,5 +2652,4 @@ void HttpVHost::removeurlStaticFile(static_file_data_t *data)
         delete data;
     }
 }
-
 

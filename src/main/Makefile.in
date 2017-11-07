@@ -107,7 +107,8 @@ libmain_a_LIBADD =
 am_libmain_a_OBJECTS = mainserverconfig.$(OBJEXT) \
 	lshttpdmain.$(OBJEXT) serverinfo.$(OBJEXT) \
 	httpconfigloader.$(OBJEXT) httpserver.$(OBJEXT) \
-	plainconf.$(OBJEXT) configctx.$(OBJEXT)
+	plainconf.$(OBJEXT) configctx.$(OBJEXT) zconfclient.$(OBJEXT) \
+	zconfmanager.$(OBJEXT)
 libmain_a_OBJECTS = $(am_libmain_a_OBJECTS)
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
@@ -336,7 +337,7 @@ noinst_LIBRARIES = libmain.a
 AM_CPPFLAGS = -I$(top_srcdir)/openssl/include/ -I$(top_srcdir)/include -I$(top_srcdir)/src
 libmain_a_METASOURCES = AUTO
 libmain_a_SOURCES = mainserverconfig.cpp lshttpdmain.cpp serverinfo.cpp httpconfigloader.cpp \
-	httpserver.cpp plainconf.cpp configctx.cpp
+	httpserver.cpp plainconf.cpp configctx.cpp zconfclient.cpp zconfmanager.cpp
 
 all: all-am
 
@@ -394,6 +395,8 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/mainserverconfig.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/plainconf.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/serverinfo.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/zconfclient.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/zconfmanager.Po@am__quote@
 
 .cpp.o:
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXXCOMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<

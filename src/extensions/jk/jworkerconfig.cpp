@@ -20,12 +20,14 @@
 
 JWorkerConfig::JWorkerConfig()
     : m_pSecret(NULL)
+      , m_secretLen(0)
 {}
 
 
 JWorkerConfig::JWorkerConfig(const char *pName)
     : ExtWorkerConfig(pName)
     , m_pSecret(NULL)
+      , m_secretLen(0)
 {}
 
 

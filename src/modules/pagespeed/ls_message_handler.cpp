@@ -20,6 +20,7 @@
 
 #include <signal.h>
 
+
 #include "pagespeed/kernel/base/abstract_mutex.h"
 #include "pagespeed/kernel/base/debug.h"
 #include "pagespeed/kernel/sharedmem/shared_circular_buffer.h"
@@ -40,14 +41,14 @@ extern "C" {
 namespace net_instaweb
 {
 
-LsiMessageHandler::LsiMessageHandler(Timer *timer, AbstractMutex *mutex)
+LsMessageHandler::LsMessageHandler(Timer *timer, AbstractMutex *mutex)
     : SystemMessageHandler(timer, mutex)
 {
 }
 
 // Installs a signal handler for common crash signals, that tries to print
 // out a backtrace.
-void LsiMessageHandler::InstallCrashHandler()
+void LsMessageHandler::InstallCrashHandler()
 {
     signal(SIGTRAP, signal_handler);    // On check failures
     signal(SIGABRT, signal_handler);
@@ -55,7 +56,7 @@ void LsiMessageHandler::InstallCrashHandler()
     signal(SIGSEGV, signal_handler);
 }
 
-LSI_LOG_LEVEL LsiMessageHandler::GetLsiLogLevel(MessageType type)
+LSI_LOG_LEVEL LsMessageHandler::GetLsiLogLevel(MessageType type)
 {
     switch (type)
     {
@@ -74,23 +75,26 @@ LSI_LOG_LEVEL LsiMessageHandler::GetLsiLogLevel(MessageType type)
     }
 }
 
-void LsiMessageHandler::MessageSImpl(MessageType type,
-                                     const GoogleString& message)
+void LsMessageHandler::MessageVImpl(MessageType type, const char *msg,
+                                     va_list args)
 {
     LSI_LOG_LEVEL logLevel = GetLsiLogLevel(type);
-    g_api->log(NULL, logLevel, "[%s %s] %s\n", ModuleName,
-               kModPagespeedVersion, message.c_str());
+    GoogleString formatted_message = Format(msg, args);
+    g_api->log(NULL, logLevel, "[%s] %s\n", ModuleName,
+                formatted_message.c_str());
 
     // Prepare a log message for the SharedCircularBuffer only.
-    AddMessageToBuffer(type, message);
+    AddMessageToBuffer(type, formatted_message);
 }
 
-void LsiMessageHandler::FileMessageSImpl(MessageType type, const char *file,
-                                         int line, const GoogleString& message)
+void LsMessageHandler::FileMessageVImpl(MessageType type,
+        const char *file,
+        int line, const char *msg, va_list args)
 {
     LSI_LOG_LEVEL logLevel = GetLsiLogLevel(type);
+    GoogleString formatted_message = Format(msg, args);
     g_api->log(NULL, logLevel, "[%s %s] %s:%d:%s", ModuleName,
-               kModPagespeedVersion, file, line, message.c_str());
+               kModPagespeedVersion, file, line, formatted_message.c_str());
 }
 
 }  // namespace net_instaweb

@@ -1095,7 +1095,7 @@ int RadixNode::setWCHeader(int iFlags, int iMode, ls_xpool_t *pool,
                                                 iOrigOff + iNewOff);
             if (pHeader == NULL)
                 return LS_FAIL;
-            memmove((char *)pHeader + iNewOff, pTmp, iOrigOff);
+            memmove((char *)pHeader + iNewOff, pTmp, rnh_size(pTmp->len + 1));
             m_pWC->m_pC = pHeader;
             rnDoFree(iFlags, pool, pTmp);
         }
@@ -1108,7 +1108,7 @@ int RadixNode::setWCHeader(int iFlags, int iMode, ls_xpool_t *pool,
                 rnDoFree(iFlags, pool, pHeader);
                 return LS_FAIL;
             }
-            memmove((char *)pTmp + iOrigOff, pHeader, iNewOff);
+            memmove((char *)pTmp + iOrigOff, pHeader, rnh_size(pHeader->len + 1));
             m_pWC->m_pC = pTmp;
             rnDoFree(iFlags, pool, pHeader);
         }
@@ -1151,7 +1151,7 @@ int RadixNode::setWCHeader(int iFlags, int iMode, ls_xpool_t *pool,
             memmove((char *)pTmp + pHelp->off + iNewOff,
                     (char *)pTmp + pHelp->off, pHelp->total - pHelp->off);
         }
-        memmove((char *)pTmp + pHelp->off, pHeader, iNewOff);
+        memmove((char *)pTmp + pHelp->off, pHeader, rnh_size(pHeader->len + 1));
         rnDoFree(iFlags, pool, pHeader);
         break;
     case RNSTATE_PARRAY:

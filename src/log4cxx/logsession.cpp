@@ -17,13 +17,28 @@
 *****************************************************************************/
 #include <log4cxx/logsession.h>
 #include <stddef.h>
+#include <lsr/ls_atomic.h>
+
 LogSession::LogSession()
     : m_pLogger(NULL)
 {
-    m_logId.prealloc(MAX_LOGID_LEN + 1);
-    *(m_logId.buf() + MAX_LOGID_LEN) = 0;
-    *m_logId.buf() = 0;
+    ls_str_blank(&m_logId);
+    ls_spinlock_setup(&m_buildLock);
 }
-LogSession::~LogSession()
-{}
 
+
+bool LogSession::allocLogId()
+{
+    if (!ls_str_prealloc(&m_logId, MAX_LOGID_LEN + 1))
+    {
+        return false;
+    }
+    m_logId.ptr[MAX_LOGID_LEN] = '\0';
+    m_logId.ptr[0] = '\0';
+    return true;
+}
+
+LogSession::~LogSession()
+{
+    ls_str_d(&m_logId);
+}

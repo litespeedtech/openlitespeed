@@ -54,7 +54,8 @@ RewriteEngine::~RewriteEngine()
 }
 
 int RewriteEngine::loadRewriteFile(char *path, RewriteRuleList *pRuleList,
-                                   const RewriteMapList *pMaps)
+                                   const RewriteMapList *pMaps,
+                                   HttpContext *pContext)
 {
     int fd = open(path, O_RDONLY);
     if (fd == -1)
@@ -75,7 +76,7 @@ int RewriteEngine::loadRewriteFile(char *path, RewriteRuleList *pRuleList,
     len = read(fd, buf, len);
     close(fd);
     buf[len] = 0;
-    int ret = parseRules(p, pRuleList, pMaps);
+    int ret = parseRules(p, pRuleList, pMaps, pContext);
     delete []buf;
 
     return ret;
@@ -83,7 +84,8 @@ int RewriteEngine::loadRewriteFile(char *path, RewriteRuleList *pRuleList,
 
 
 int RewriteEngine::parseRules(char *&pRules, RewriteRuleList *pRuleList,
-                              const RewriteMapList *pMapList)
+                              const RewriteMapList *pMapList,
+                              HttpContext *pContext)
 {
     int ret;
     LinkedObj *pLast = pRuleList->tail();
@@ -121,8 +123,12 @@ int RewriteEngine::parseRules(char *&pRules, RewriteRuleList *pRuleList,
             if (pLineEnd)
                 *pLineEnd = 0;
 
-            if ((strncasecmp(pRules, "RewriteFile", 11) == 0) &&
-                (isspace(*(pRules + 11))))
+            //Case of "RewriteFile" and "RewriteBase"
+            int type = 0;
+            if ((isspace(*(pRules + 11))) &&
+                ((type = (strncasecmp(pRules, "RewriteFile", 11) == 0 ? 1 : 0))
+                || 
+                (type = (strncasecmp(pRules, "RewriteBase", 11) == 0 ? 2 : 0))))
             {
                 pRules += 12;
                 while (isspace(*pRules))
@@ -134,9 +140,18 @@ int RewriteEngine::parseRules(char *&pRules, RewriteRuleList *pRuleList,
                     pRules[len - 1] = 0x00;
                     --len;
                 }
-                ret = loadRewriteFile(pRules, pRuleList, pMapList);
-                pLast = pRuleList->tail(); //Must update pLast, otherwise cause mess up
-                LS_INFO("RewriteFile [%s] parsed, return %d.", pRules, ret);
+                if (type == 1)
+                {
+                    ret = loadRewriteFile(pRules, pRuleList, pMapList, pContext);
+                    pLast = pRuleList->tail(); //Must update pLast, otherwise cause mess up
+                    LS_INFO("RewriteFile [%s] parsed, return %d.", pRules, ret);
+                }
+                else //type == 2
+                {
+                    pContext->setRewriteBase(pRules);
+                    LS_INFO("RewriteBase [%s] parsed, set to HttpContext %p.",
+                            pRules, pContext);
+                }
             }
             else if (strncasecmp(pRules, "<IfModule", 9) == 0 ||
                      strncasecmp(pRules, "</IfModule>", 11) == 0 ||
@@ -175,21 +190,21 @@ int RewriteEngine::appendUnparsedRule(AutoStr2 &sDirective,
 }
 
 
-int RewriteEngine::parseUnparsedRules(RewriteRuleList *pRuleList,
-                                      const RewriteMapList *pMapList)
-{
-    char *pRules = m_rewriteBuf[0];
-    int ret = parseRules(pRules, pRuleList, pMapList);
-    if (pRules - m_rewriteBuf[0] >= m_qsLen)
-        m_qsLen = 0;
-    else
-    {
-        memmove(m_rewriteBuf[0], pRules, m_qsLen - (pRules - m_rewriteBuf[0]));
-        m_qsLen -= pRules - m_rewriteBuf[0];
-    }
-    return ret;
-
-}
+// int RewriteEngine::parseUnparsedRules(RewriteRuleList *pRuleList,
+//                                       const RewriteMapList *pMapList)
+// {
+//     char *pRules = m_rewriteBuf[0];
+//     int ret = parseRules(pRules, pRuleList, pMapList);
+//     if (pRules - m_rewriteBuf[0] >= m_qsLen)
+//         m_qsLen = 0;
+//     else
+//     {
+//         memmove(m_rewriteBuf[0], pRules, m_qsLen - (pRules - m_rewriteBuf[0]));
+//         m_qsLen -= pRules - m_rewriteBuf[0];
+//     }
+//     return ret;
+// 
+// }
 
 
 static const char s_hex[17] = "0123456789ABCDEF";
@@ -614,7 +629,7 @@ int RewriteEngine::processCond(const RewriteCond *pCond,
 
 
 int RewriteEngine::processRule(const RewriteRule *pRule,
-                               HttpSession *pSession)
+                               HttpSession *pSession, AutoStr2 &cacheCtlStr)
 {
     m_ruleMatches = 0;
     int ret = pRule->getRegex()->exec(m_pSourceURL, m_sourceURLLen, 0,
@@ -655,7 +670,7 @@ int RewriteEngine::processRule(const RewriteRule *pRule,
         }
         pCond = (RewriteCond *)pCond->next();
     }
-    return processRewrite(pRule, pSession);
+    return processRewrite(pRule, pSession, cacheCtlStr);
 }
 
 
@@ -811,7 +826,7 @@ int RewriteEngine::setCookie(char *pBuf, int len, HttpSession *pSession)
 
 
 int RewriteEngine::expandEnv(const RewriteRule *pRule,
-                             HttpSession *pSession)
+                             HttpSession *pSession, AutoStr2 &cacheCtlStr)
 {
     RewriteSubstFormat *pEnv = pRule->getEnv()->begin();
     const char *pKey;
@@ -855,11 +870,7 @@ int RewriteEngine::expandEnv(const RewriteRule *pRule,
             }
             else
             {
-                RequestVars::setEnv(pSession, pKey, pKeyEnd - pKey, pValue,
-                                    pValEnd - pValue);
-                if (m_logLevel > 4)
-                    LS_INFO(pSession->getLogSession(),
-                            "[REWRITE] add ENV: '%s:%s' ", pKey, pValue);
+                bool needSet = true;
                 if (strncasecmp(pKey, "cache-", 6) == 0)
                 {
                     if ((strcasecmp(pKey + 6, "control") == 0) ||
@@ -875,6 +886,13 @@ int RewriteEngine::expandEnv(const RewriteRule *pRule,
                             RequestVars::setEnv(pSession, "LSCACHE_VARY_VALUE", 
                                                 18, pValue, pValEnd - pValue);
                         }
+                        else if (pValEnd > pValue)
+                        {
+                            if (cacheCtlStr.len() > 0)
+                                cacheCtlStr.append(",", 1);
+                            cacheCtlStr.append(pValue, pValEnd - pValue);
+                            needSet = false;
+                        }
                     }
                     else if (strcasecmp(pKey + 6, "Vary") == 0) 
                     {
@@ -885,20 +903,30 @@ int RewriteEngine::expandEnv(const RewriteRule *pRule,
                                             pValue, pValEnd - pValue);
                     }
                 }
+                
+                if (needSet)
+                {
+                    RequestVars::setEnv(pSession, pKey, pKeyEnd - pKey, pValue,
+                                        pValEnd - pValue);
+                    if (m_logLevel > 4)
+                        LS_INFO(pSession->getLogSession(),
+                                "[REWRITE] add ENV: '%s:%s' ", pKey, pValue);
+                }                
             }
         }
         pEnv = (RewriteSubstFormat *)pEnv->next();
     }
+
     return 0;
 }
 
 
 int RewriteEngine::processRewrite(const RewriteRule *pRule,
-                                  HttpSession *pSession)
+                                  HttpSession *pSession, AutoStr2 &cacheCtlStr)
 {
     char *pBuf;
     int flag = pRule->getFlag();
-    expandEnv(pRule, pSession);
+    expandEnv(pRule, pSession, cacheCtlStr);
     m_rewritten |= 1;
     if (!(flag & RULE_FLAG_NOREWRITE))
     {
@@ -1096,13 +1124,16 @@ int RewriteEngine::processRuleSet(const RewriteRuleList *pRuleList,
     m_action   = RULE_ACTION_NONE;
     m_flag     = 0;
     m_statusCode = 0;
+    AutoStr2 cacheCtlStr = "";
+    
+    
     while (pRule)
     {
         flag = pRule->getFlag();
 //        if (( flag & RULE_FLAG_NOSUBREQ )&&( pReq->isSubReq() > 0 ))
 //            ret = -1;
 //        else
-        ret = processRule(pRule, pSession);
+        ret = processRule(pRule, pSession, cacheCtlStr);
         if (ret)
         {
             pRule = getNextRule(pRule, pContext, pRootContext);
@@ -1164,6 +1195,16 @@ NEXT_RULE:
             --n;
         }
     }
+    
+    if (cacheCtlStr.len() > 0)
+    {
+        if (m_logLevel > 4)
+            LS_INFO(pSession->getLogSession(),
+                    "[REWRITE] apply cache-control: '%s'.", cacheCtlStr.c_str());
+        RequestVars::setEnv(pSession, "cache-control", 13, cacheCtlStr.c_str(),
+                            cacheCtlStr.len());
+    }
+
     if (m_rewritten)
     {
         if ((m_action == RULE_ACTION_FORBID) ||

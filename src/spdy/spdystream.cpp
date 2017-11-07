@@ -32,13 +32,9 @@ SpdyStream::SpdyStream()
 
 const char *SpdyStream::buildLogId()
 {
-    int len ;
-    AutoStr2 &id = getIdBuf();
-
-    len = ls_snprintf(id.buf(), MAX_LOGID_LEN, "%s-%d",
+    m_logId.len = ls_snprintf(m_logId.ptr, MAX_LOGID_LEN, "%s-%d",
                       m_pSpdyConn->getStream()->getLogId(), m_uiStreamID);
-    id.setLen(len);
-    return id.c_str();
+    return m_logId.ptr;
 }
 
 

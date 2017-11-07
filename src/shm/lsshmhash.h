@@ -661,12 +661,16 @@ protected:
     int autoLock()
     {
         if (m_iAutoLock == 0)
+        {
+            assert(m_pPool->getShm()->isLocked(m_pShmLock));
             return 0;
+        }
         return getPool()->getShm()->lockRemap(m_pShmLock);
     }
 
     int autoUnlock()
-    {   return m_iAutoLock && ls_shmlock_unlock(m_pShmLock); }
+    {   assert(m_pPool->getShm()->isLocked(m_pShmLock));
+        return m_iAutoLock && ls_shmlock_unlock(m_pShmLock); }
 
     void autoLockChkRehash();
 

@@ -34,6 +34,7 @@ int ls_fio_read(int fd, void *pBuf, int len);
 int ls_fio_write(int fd, const void *pBuf, int len);
 off_t ls_fio_lseek(int fildes, off_t offset, int whence);
 int ls_fio_stat(const char *pathname, struct stat *st);
+int ls_fio_truncate(int fd, off_t length);
 
 #ifdef __cplusplus
 }

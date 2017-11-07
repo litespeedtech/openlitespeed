@@ -260,8 +260,7 @@ int GSockAddr::set2(int family, const char *pURL, int tag, char *pDest)
             m_v4->sin_addr.s_addr = htonl(INADDR_LOOPBACK);
         else
         {
-            m_v4->sin_addr.s_addr = inet_addr(pDest);
-            if (m_v4->sin_addr.s_addr == INADDR_BROADCAST)
+            if (inet_pton(AF_INET, pDest, &(m_v4->sin_addr.s_addr)) <= 0)
             {
                 gotAddr = 0;
                 /*              struct hostent * hep;
@@ -310,11 +309,18 @@ int GSockAddr::set(int family, const char *pURL, int tag)
     char achDest[128];
     int  gotAddr = set2(family, pURL, tag, achDest);
 
-    if (gotAddr == -1)
-        return -1;
-    else if (gotAddr == 1)
+    switch(gotAddr)
+    {
+    case 1:
         return 0;
-    return doLookup(family, achDest, tag);
+    case 0:
+        if ((tag & ADDR_ONLY) == 0
+            && (tag & (DO_NSLOOKUP | DO_NSLOOKUP_DIRECT)) != 0)
+            return doLookup(family, achDest, tag);
+    case -1:
+    default:
+        return -1;
+    }
 }
 
 
@@ -372,7 +378,6 @@ int GSockAddr::asyncSet(int family, const char *pURL, int tag
 #ifdef USE_UDNS
     char achDest[128];
     int  gotAddr = set2(family, pURL, tag, achDest);
-    AdnsReq *pRet;
 
     if (gotAddr == -1)
         return -1;
@@ -380,12 +385,9 @@ int GSockAddr::asyncSet(int family, const char *pURL, int tag
         return 0;
 
     if (lookup_pf &&
-        (pRet = Adns::getInstance().getHostByName(achDest, family, m_pSockAddr,
-                                      lookup_pf, ctx)) != NULL)
-        {
-            *pReq = pRet;
+        (*pReq = Adns::getInstance().getHostByName(achDest, family, m_pSockAddr,
+                                                  lookup_pf, ctx)) != NULL)
             return 1;
-        }
     return doLookup(family, achDest, tag);
 
 
@@ -448,7 +450,7 @@ const char *GSockAddr::toString(char *pBuf, int len) const
         int used = strlen(pBuf);
         if (m_pSockAddr->sa_family == AF_INET6)
             *(pBuf + used++) = ']';
-        snprintf(pBuf + used, len - used, ":%d", getPort());
+        snprintf(pBuf + used, len - used, ":%hu", getPort());
     }
     return pBuf;
 }

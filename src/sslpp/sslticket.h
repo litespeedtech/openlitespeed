@@ -61,9 +61,6 @@ class SslTicket : public TSingleton<SslTicket>
     int         checkShmExpire(STShmData_t *pShmData);
     int         doCb(SSL *pSSL, unsigned char aName[16], unsigned char *iv,
                      EVP_CIPHER_CTX *ectx, HMAC_CTX *hctx, int enc);
-    static int  ticketCb(SSL *pSSL, unsigned char aName[16], unsigned char *iv,
-                         EVP_CIPHER_CTX *ectx, HMAC_CTX *hctx, int enc)
-    {   return getInstance().doCb(pSSL, aName, iv, ectx, hctx, enc);    }
 public:
     ~SslTicket();
 
@@ -72,6 +69,12 @@ public:
 
     void        disableCtx(SSL_CTX *pCtx);
     int         enableCtx(SSL_CTX *pCtx);
+
+    inline int  isKeyStoreEnabled()  {   return m_pKeyStore != NULL; }
+
+    static int  ticketCb(SSL *pSSL, unsigned char aName[16], unsigned char *iv,
+                         EVP_CIPHER_CTX *ectx, HMAC_CTX *hctx, int enc)
+    {   return getInstance().doCb(pSSL, aName, iv, ectx, hctx, enc);    }
 };
 
 #endif

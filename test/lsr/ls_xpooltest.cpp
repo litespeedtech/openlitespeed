@@ -121,7 +121,9 @@ TEST(ls_XPoolTest_test)
     (void)ls_xpool_alloc(pool, 64 * 1024 + 1);
     (void)ls_xpool_alloc(pool, 8 * 1024);
     ls_xpool_delete(pool);
-    CHECK(ls_xpool_isempty(pool) == 1);
+    // pool has been deleted by ls_pfree, can't
+    // check if it's empty
+    // CHECK(ls_xpool_isempty(pool) == 1);
 }
 
 

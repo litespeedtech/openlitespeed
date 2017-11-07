@@ -439,7 +439,6 @@ public:
     void removeurlStaticFile(static_file_data_t *data);
     static_file_data_t *getUrlStaticFileData(const char *url);
     void urlStaticFileHashClean();
-
 };
 
 

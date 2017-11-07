@@ -375,9 +375,6 @@ static int addrlookupCb(void *arg, const long length, void *hosts)
 
 ClientInfo *ClientCache::getClientInfo(struct sockaddr *pPeer)
 {
-    // use this to save client information
-    // register TShmClient * pShmClient;
-
     const_iterator iter = find(pPeer);
     ClientInfo *pInfo;
     if (!iter)
@@ -389,7 +386,6 @@ ClientInfo *ClientCache::getClientInfo(struct sockaddr *pPeer)
             ERR_NO_MEM("ClientCache->newClient()");
             return NULL;
         }
-        // pShmClient = pInfo->getShmClientInfo();
 
         // GeoIP lookup
         if (IpToGeo::getIpToGeo() != NULL)
@@ -448,19 +444,11 @@ ClientInfo *ClientCache::getClientInfo(struct sockaddr *pPeer)
             else
                 Adns::getInstance().getHostByAddr(pPeer, pInfo, addrlookupCb);
         }
-
-
-
     }
     else
     {
         pInfo = iter.second();
         // pShmClient = pInfo->getShmClientInfo();
-
-        if (AccessControl::getAccessCtrl())
-            pInfo->setAccess(AccessControl::getAccessCtrl()->hasAccess(pPeer));
-        else
-            pInfo->setAccess(AC_ALLOW);
     }
     pInfo->hit(DateTime::s_curTime);
     return pInfo;

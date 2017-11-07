@@ -18,6 +18,7 @@
 #include <shm/lsshm.h>
 
 #include <log4cxx/logger.h>
+#include <lsr/ls_memcheck.h>
 #include <shm/lsshmpool.h>
 #include <shm/lsshmhash.h>
 #include <util/gpath.h>
@@ -491,8 +492,6 @@ LsShmStatus_t LsShm::newShmMap(LsShmSize_t size, uint64_t id)
     if ((expandFile(0, roundToPageSize(size)) != LSSHM_OK)
         || (mapAddrMap(size) != LSSHM_OK))
         return LSSHM_ERROR;
-    x_pShmMap->x_iMagic = m_iMagic;
-    x_pShmMap->x_version.m_iVer = s_version.m_iVer;
     x_pShmMap->x_id     = id;
     x_pShmMap->x_globalHashOff = 0;
     x_pShmMap->x_stat.m_iFileSize = size;               // x_iMaxSize
@@ -502,6 +501,11 @@ LsShmStatus_t LsShm::newShmMap(LsShmSize_t size, uint64_t id)
         || (m_pShmLock = offset2pLock(x_pShmMap->x_iLockOffset)) == NULL
         || (setupLocks() != LSSHM_OK))
         return LSSHM_ERROR;
+
+    MEMCHK_UNPOISON(&(x_pShmMap->x_iMagic), 8);
+    x_pShmMap->x_version.m_iVer = s_version.m_iVer;
+    x_pShmMap->x_iMagic = m_iMagic;
+    MEMCHK_POISON(&(x_pShmMap->x_iMagic), 8);
 
     return LSSHM_OK;
 }
@@ -618,6 +622,8 @@ LsShmStatus_t LsShm::initShm(const char *mapName, LsShmXSize_t size,
             return LSSHM_BADVERSION;
         }
 
+        i = pShmMap->x_iMagic;
+        
         if (pShmMap->x_id != m_locks.getId())
         {
             setErrMsg(LSSHM_BADVERSION,
@@ -648,6 +654,8 @@ LsShmStatus_t LsShm::initShm(const char *mapName, LsShmXSize_t size,
         if (mapAddrMap(size) != LSSHM_OK)
             return LSSHM_ERROR;
 
+        if (x_pShmMap->x_iLockOffset == 0)
+            x_pShmMap->x_iLockOffset = allocLock();
         if (x_pShmMap->x_iLockOffset != 36)
         {
             SHM_WARN("SHM file [%s] bad lock offset: %lld, it should be always 36, correct it",
@@ -701,6 +709,7 @@ LsShmStatus_t LsShm::mapAddrMap(LsShmXSize_t size)
     {
         x_pShmMap = (LsShmMap *)m_addrMap.offset2ptr(0);
         x_pStats = &x_pShmMap->x_stat;
+        MEMCHK_POISON(&(x_pShmMap->x_iMagic), 8);
     }
     m_iMaxSizeO = size;
     return LSSHM_OK;
@@ -842,10 +851,11 @@ LsShmPool *LsShm::getGlobalPool()
         return m_pGPool;
 
     const char *name = LSSHM_SYSPOOL;
-    m_pGPool = new LsShmPool(this, name, NULL);
+    m_pGPool = new LsShmPool();
     if (m_pGPool != NULL)
     {
-        if (m_pGPool->getRef() != 0)
+        if (m_pGPool->init(this, name, NULL) == LS_OK
+            && m_pGPool->getRef() != 0)
             return m_pGPool;
 
         delete m_pGPool;
@@ -888,10 +898,11 @@ LsShmPool *LsShm::getNamedPool(const char *name)
     LsShmPool *gpool;
     if ((gpool = getGlobalPool()) == NULL)
         return NULL;
-    pObj = new LsShmPool(this, name, gpool);
+    pObj = new LsShmPool();
     if (pObj != NULL)
     {
-        if (pObj->getRef() != 0)
+        if (pObj->init(this, name, gpool) == LS_OK
+            && pObj->getRef() != 0)
             return pObj;
         delete pObj;
     }

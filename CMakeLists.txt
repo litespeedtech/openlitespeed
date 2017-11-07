@@ -23,6 +23,7 @@ SET (CMAKE_CXX_COMPILER       "/usr/bin/clang++")
 set(MY_CMAKE_WARNING_FLAG  " -Wall -Wextra -Wno-unused-parameter -fsanitize=address -fsanitize-recover=address -fno-omit-frame-pointer")
 #set(MY_CMAKE_WARNING_FLAG  " -Wall -Wextra -Wno-unused-parameter")
 set(MY_CMAKE_POOL_FLAG  " -DPOOL_TESTING -DUSE_VALGRIND")
+#set(MY_CMAKE_POOL_FLAG  " -DPOOL_TESTING")
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}  ${MY_CMAKE_WARNING_FLAG} ${MY_CMAKE_POOL_FLAG}")
 #set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} ${MY_CMAKE_WARNING_FLAG}")
@@ -65,7 +66,7 @@ add_definitions(-DUSE_IP2LOCATION)
 
 
 add_definitions(-DTEST_OUTPUT_PLAIN_CONF)
-add_definitions(-DLS_VG_DEBUG)
+#add_definitions(-DLS_VG_DEBUG)
 #add_definitions(-DDEBUG_POOL)
 add_definitions(-DOPENSSL_NO_CXX)
 

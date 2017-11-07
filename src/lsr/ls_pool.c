@@ -199,6 +199,7 @@ ls_inline void ls_sys_putnblk(size_t size, ls_blkctrl_t *p, void *pNew, void *pT
     do
     {
         pPtr = (__link_t *)pNew;
+        MEMCHK_UNPOISON(pPtr, sizeof(*pPtr));
         pNew = pPtr->next;
         free(pPtr);
     }
@@ -232,7 +233,6 @@ ls_inline void *ls_lkstd_getblk(ls_blkctrl_t *p, size_t size)
 {
     __link_t *ptr;
 
-    //MEMCHK_UNPOISON(p, sizeof(ls_blkctrl_t));
     ls_lkstd_verifyblkcnt(p);
 
     if ((ptr = p->head) != NULL)
@@ -245,7 +245,6 @@ ls_inline void *ls_lkstd_getblk(ls_blkctrl_t *p, size_t size)
 
         ls_lkstd_verifyblkcnt(p);
     }
-    //MEMCHK_POISON(p, sizeof(ls_blkctrl_t));
     return (void *)ptr;
 }
 
@@ -257,7 +256,6 @@ ls_inline void *ls_lkstd_getblk(ls_blkctrl_t *p, size_t size)
  */
 ls_inline void ls_lkstd_putblk(size_t size, ls_blkctrl_t *p, void *pNew)
 {
-    //MEMCHK_UNPOISON(p, sizeof(ls_blkctrl_t));
 
     ls_lkstd_verifyblkcnt(p);
 
@@ -276,7 +274,6 @@ ls_inline void ls_lkstd_putblk(size_t size, ls_blkctrl_t *p, void *pNew)
     p->blkcnt++;
     ls_lkstd_verifyblkcnt(p);
 
-    //MEMCHK_POISON(p, sizeof(ls_blkctrl_t));
     return;
 }
 
@@ -292,7 +289,6 @@ ls_inline void ls_lkstd_putnblk(size_t size, ls_blkctrl_t *p,
 
     ls_lkstd_verifyblkcnt(p);
 
-    //MEMCHK_UNPOISON(p, sizeof(ls_blkctrl_t));
     if (p->tail == NULL)
         p->head = (__link_t *)pNew;
     else
@@ -304,7 +300,6 @@ ls_inline void ls_lkstd_putnblk(size_t size, ls_blkctrl_t *p,
     p->tail = (__link_t *)pTail;
     p->blkcnt += nblocks;
     ls_lkstd_verifyblkcnt(p);
-    //MEMCHK_POISON(p, sizeof(ls_blkctrl_t));
     return;
 }
 
@@ -362,9 +357,9 @@ unsigned short * ls_pool_get_multi(short *len)
 {
     // this is only called from test code, and the pool is not locked
     // (neither are the freelists)
-    // so it's possible for it to poison improperly - though the place
-    // it's called from is NOT multi-threaded - it's between runs
-    // for safety, lock the pool before continuing
+    // so it's possible for it to poison improperly - though it should
+    // only be called from the main thread after join() the test threads,
+    // for safety, lock the each freelist before reading it
     unsigned short b, m;
     *len = FREELISTBUCKETS;
     for ( b = 0; b < FREELISTBUCKETS; b++) 
@@ -373,12 +368,10 @@ unsigned short * ls_pool_get_multi(short *len)
         for (m = 0; m < FREELIST_MULTI; m++) 
         {
             ls_spinlock_lock(&ls_pool_g.freelists[m][b].lck);
-            //MEMCHK_UNPOISON(&ls_pool_g.freelists[m][b], sizeof(ls_blkctrl_t));
             if (ls_pool_g.freelists[m][b].blkcnt) 
             {
                 ls_pool_g.cur_multi[b]++;
             }
-            //MEMCHK_POISON(&ls_pool_g.freelists[m][b], sizeof(ls_blkctrl_t));
             ls_spinlock_unlock(&ls_pool_g.freelists[m][b].lck);
         }
     }
@@ -453,7 +446,6 @@ ls_inline size_t lglist_roundup(size_t bytes)
 
 ls_inline void freelist_put(size_t size, ls_pool_blk_t *pNew)
 {
-    // ls_blkctrl_t *pFreeList = size2freelistptr(size);
     ls_blkctrl_t *pFreeList = get_locked_freelist_ptr(size);
     ls_pool_putblk(size, pFreeList, (void *)pNew);
     ls_spinlock_unlock(&pFreeList->lck);
@@ -462,7 +454,6 @@ ls_inline void freelist_put(size_t size, ls_pool_blk_t *pNew)
 
 ls_inline ls_pool_blk_t *freelist_get(size_t size)
 {
-    // ls_blkctrl_t *pFreeList = size2freelistptr(size);
     ls_blkctrl_t *pFreeList = get_locked_freelist_ptr(size);
     ls_pool_blk_t * ret = (ls_pool_blk_t *)ls_pool_getblk(pFreeList, size);
     ls_spinlock_unlock(&pFreeList->lck);
@@ -473,7 +464,6 @@ ls_inline ls_pool_blk_t *freelist_get(size_t size)
 ls_inline void freelist_putn(
         size_t size, ls_pool_blk_t *pNew, ls_pool_blk_t *pTail, size_t count)
 {
-    // ls_blkctrl_t *pFreeList = size2freelistptr(size);
     ls_blkctrl_t *pFreeList = get_locked_freelist_ptr(size);
     ls_pool_putnblk(size, pFreeList, (void *)pNew, (void *)pTail, count);
     ls_spinlock_unlock(&pFreeList->lck);
@@ -644,7 +634,6 @@ void ls_pfree(void *p)
             pBlk->next = NULL;
             MEMCHK_FREE(&ls_pool_g, pBlk, size); 
             freelist_put(size, pBlk);
-            //MEMCHK_POISON(pBlk, sizeof(*pBlk)); 
         }
     }
 }
@@ -849,7 +838,6 @@ void ls_plistfree(ls_pool_blk_t *plist, size_t size)
         pNext = pNext->next;
         MEMCHK_UNPOISON(pNext, sizeof(ls_pool_blk_t)); 
         MEMCHK_FREE(&ls_pool_g, pTmp, size); 
-        // MEMCHK_UNPOISON(pTmp, sizeof(ls_lfnodei_t));     /* for queue */
     }
     MEMCHK_FREE(&ls_pool_g, pNext, size); 
     freelist_putn(size, plist, pNext, count);

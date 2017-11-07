@@ -16,9 +16,9 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 
+#include <lsr/ls_internal.h>
 #include <lsr/ls_lfqueue.h>
 #include <lsr/ls_pool.h>
-#include <lsr/ls_internal.h>
 #include <lsr/ls_atomic.h>
 
 //#define LSR_LLQ_DEBUG
@@ -37,6 +37,7 @@
 static inline int do_wait(void *volatile *ptr, struct timespec *timeout)
 {
     int ret = 0;
+    // glibc does not provide a wrapper for futex(2)
     if (syscall(SYS_futex, (int *)ptr, FUTEX_WAIT, 0, timeout, NULL, 0) < 0)
     {
         if ((errno == ETIMEDOUT) || (errno == EINVAL))
@@ -53,6 +54,7 @@ static inline int do_wait(void *volatile *ptr, struct timespec *timeout)
 static inline void do_wake(void *volatile *ptr)
 {
     int retry = 3;
+    // glibc does not provide a wrapper for futex(2)
     while ((syscall(SYS_futex, (int *)ptr, FUTEX_WAKE, 1, NULL, NULL, 0) < 1)
            && (--retry > 0))
         ;

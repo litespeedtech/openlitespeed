@@ -40,6 +40,8 @@ TEST(THREAD_THREAD_TEST)
 
     CHECK(thread->isEqualTo(cmp));
     CHECK(thread->getAttr() != NULL);
+    pthread_attr_t *myattr = const_cast<pthread_attr_t *>(thread->getAttr());
+    CHECK(myattr != NULL);
     CHECK(thread->isJoinable());
     thread->attrSetDetachState(PTHREAD_CREATE_DETACHED);
     CHECK(!thread->isJoinable());

@@ -48,7 +48,7 @@ public:
     pthread_t getId()
     {   return m_tid;  }
 
-    pthread_attr_t *getAttr()
+    const pthread_attr_t *getAttr()
     {   return &m_attr; }
 
     int run(entryFn entry, void *arg)

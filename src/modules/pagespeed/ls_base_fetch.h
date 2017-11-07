@@ -28,6 +28,7 @@
 #include "pagespeed/kernel/base/string.h"
 #include "pagespeed/kernel/http/headers.h"
 
+
 enum BaseFetchType {
   kIproLookup,
   kHtmlTransform,
@@ -39,41 +40,28 @@ enum BaseFetchType {
 class LsiBaseFetch : public AsyncFetch
 {
 public:
-    LsiBaseFetch(const lsi_session_t *session, LsServerContext *server_context,
+    LsiBaseFetch(lsi_session_t *session, LsServerContext *server_context,
                  const RequestContextPtr &request_ctx,
                  PreserveCachingHeaders preserve_caching_headers,
                  BaseFetchType type);
     virtual ~LsiBaseFetch();
 
-    int CollectAccumulatedWrites(const lsi_session_t *session);
+    int CollectAccumulatedWrites(lsi_session_t *session);
 
     int CollectHeaders(const lsi_session_t *session);
 
-    // Called by nginx to decrement the refcount.
-    int DecrementRefCount();
-
-    // Called by pagespeed to increment the refcount.
-    int IncrementRefCount();
-
+    void Release();
     void SetIproLookup(bool x)
     {
         m_bIproLookup = x;
     }
-
     long AtomicSetEventObj(long event_obj)
     {
         return ls_atomic_setlong(&m_lEventObj, event_obj);
     }
-    
-    bool IsDoneAndSuccess()    { return m_bDoneCalled && m_bSuccess;  }
-    
-    BaseFetchType base_fetch_type() { return m_iType; }
-    
-    
-    // Live count of NgxBaseFetch instances that are currently in use.
-    static int active_base_fetches;
 
-    
+
+    bool IsDoneAndSuccess()    { return m_bDoneCalled && m_bSuccess;  }
 private:
     virtual bool HandleWrite(const StringPiece &sp, MessageHandler *handler);
     virtual bool HandleFlush(MessageHandler *handler);
@@ -81,14 +69,14 @@ private:
     virtual void HandleDone(bool success);
 
     void RequestCollection();
-    int CopyBufferToLs(const lsi_session_t *session);
+    int CopyBufferToLs(lsi_session_t *session);
 
     void Lock();
     void Unlock();
 
     // Called by Done() and Release().  Decrements our reference count, and if
     // it's zero we delete ourself.
-    int DecrefAndDeleteIfUnreferenced();
+    void DecrefAndDeleteIfUnreferenced();
 
     GoogleString            m_buffer;
     LsServerContext        *m_pServerContext;

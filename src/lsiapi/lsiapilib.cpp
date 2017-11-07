@@ -88,8 +88,8 @@ int add_global_hook(int index, const lsi_module_t *pModule,
     if (priority[index] < LSI_HOOK_PRIORITY_MAX
         && priority[index] > -1 * LSI_HOOK_PRIORITY_MAX)
         order = priority[index];
-    LS_DBG_H("[Module: %s] add_global_hook, index %d [%s], priority %hd, flag %hd",
-             MODULE_NAME(pModule), index, LsiApiHooks::s_pHkptName[index], order,
+    LSM_DBGH(pModule, NULL, "add_global_hook, index %d [%s], priority %hd, flag %hd\n",
+             index, LsiApiHooks::s_pHkptName[index], order,
              flag);
     return pHooks->add(pModule, cb, order, flag);
 }
@@ -148,8 +148,8 @@ static int enable_hook(const lsi_session_t *session,
         ret = ((HttpSession *)pSession)->getSessionHooks()->setEnable(
                   pModule, enable, aHttpIndices, iHttpCount);
 
-    LS_DBG_H("[Module: %s] enable_hook, enable %d, "
-             "num indices %d, return %d", MODULE_NAME(pModule), enable,
+    LSM_DBGH(pModule, NULL, "enable_hook, enable %d, "
+             "num indices %d, return %d\n", enable,
              iNumIndices, ret);
     return ret;
 }
@@ -157,9 +157,19 @@ static int enable_hook(const lsi_session_t *session,
 
 static int get_hook_flag(const lsi_session_t *session, int index)
 {
-    HttpSession *pSession = (HttpSession *)((LsiSession *)session);
-    return pSession->getSessionHooks()->getFlag(index);
+    LsiSession *pSession = (LsiSession *)session;
+    HttpSession *pHttp = dynamic_cast<HttpSession *>(pSession);
+    if (pHttp)
+        return pHttp->getSessionHooks()->getFlag(index);
+    else
+    {
+        NtwkIOLink *pNtwk = dynamic_cast<NtwkIOLink *>(pSession);
+        if (pNtwk)
+            return pNtwk->getSessionHooks()->getFlag(index);
+    }
+    return 0;
 }
+
 
 static  void log(const lsi_session_t *session, int level, const char *fmt, ...)
 {
@@ -217,6 +227,42 @@ static  void lograw(const lsi_session_t *session, const char *buf, int len)
 }
 
 
+static void module_log(const lsi_module_t *pMod, const lsi_session_t *session, 
+                       int level, const char *fmt, ...)
+{
+    if (log4cxx::Level::isEnabled(level) && level <= MODULE_LOG_LEVEL(pMod))
+    {
+        char new_fmt[8192];
+        snprintf(new_fmt, 8191, "[%s] %s", MODULE_NAME(pMod), fmt);
+        HttpSession *pSess = (HttpSession *)((LsiSession *)session);
+        LogSession *pLogSess = pSess ? pSess->getLogSession() : NULL;
+        va_list ap;
+        va_start(ap, fmt);
+        LOG4CXX_NS::Logger::s_vlog(level, pLogSess, new_fmt, ap, 1);
+        va_end(ap);
+        
+    }
+}
+
+    
+static void c_log(const char *pComponent, const lsi_session_t *session, 
+                       int level, const char *fmt, ...)
+{
+    if (log4cxx::Level::isEnabled(level))
+    {
+        char new_fmt[8192];
+        snprintf(new_fmt, 8191, "[%s] %s", pComponent, fmt);
+        HttpSession *pSess = (HttpSession *)((LsiSession *)session);
+        LogSession *pLogSess = pSess ? pSess->getLogSession() : NULL;
+        va_list ap;
+        va_start(ap, fmt);
+        LOG4CXX_NS::Logger::s_vlog(level, pLogSess, new_fmt, ap, 1);
+        va_end(ap);
+        
+    }
+}
+
+    
 static int lsiapi_register_env_handler(const char *env_name,
                                        unsigned int env_name_len, lsi_callback_pf cb)
 {
@@ -359,6 +405,21 @@ static void free_module_data(const lsi_session_t *session,
         cb(data);
         pData->set(MODULE_DATA_ID(pModule)[level], NULL);
     }
+}
+
+static LSI_REQ_METHOD get_req_method(const lsi_session_t *pSession)
+{
+    if (pSession == NULL)
+        return LSI_METHOD_UNKNOWN;
+    return (LSI_REQ_METHOD)((HttpSession *)(LsiSession *)pSession)->getReq()->getMethod();
+}
+
+
+static const void *get_req_vhost(const lsi_session_t *pSession)
+{
+    if (pSession == NULL)
+        return NULL;
+    return ((HttpSession *)(LsiSession *)pSession)->getReq()->getVHost();
 }
 
 
@@ -2080,7 +2141,7 @@ ls_xpool_t *get_session_pool(const lsi_session_t *session)
 }
 
 
-int expand_current_server_varible(int level, const char *pVarible,
+int expand_current_server_variable(int level, const char *pVariable,
                                   char *buf, int maxLen)
 {
     int ret = LS_FAIL;
@@ -2089,7 +2150,7 @@ int expand_current_server_varible(int level, const char *pVarible,
     case LSI_CFG_SERVER:
     case LSI_CFG_LISTENER:
     case LSI_CFG_VHOST:
-        ret = ConfigCtx::getCurConfigCtx()->expandVariable(pVarible, buf,
+        ret = ConfigCtx::getCurConfigCtx()->expandVariable(pVariable, buf,
                 maxLen, 1);
         break;
 
@@ -2099,6 +2160,96 @@ int expand_current_server_varible(int level, const char *pVarible,
     }
 
     return ret;
+}
+
+ls_hash_key_t _ua_hash(const void *p)
+{
+    return XXH64(p, strlen((const char *)p), 0x14567890);
+}
+
+
+typedef struct uacode_item_st
+{
+    char *ua;
+    char *code;
+} uacode_item;
+
+/* client */
+/* certs is an array of ls_str_t * */
+uacode_item *make_uacode_item(const char *ua, char *code)
+{
+    uacode_item *item = new uacode_item;
+    item->ua = strdup(ua);
+    item->code = strdup(code);
+    return item;
+}
+
+void free_uacode_item(uacode_item *item)
+{
+    if (item)
+    {
+        free(item->ua);
+        free(item->code);
+        delete item;
+    }
+}
+
+static ls_hash_t *s_uacode_hasht = NULL;
+void init_uacode_hasht()
+{
+    if (!s_uacode_hasht)
+    {
+        s_uacode_hasht = ls_hash_new(100, _ua_hash, (ls_hash_value_compare)strcmp,
+                                     NULL);
+        assert(s_uacode_hasht);
+    }
+}
+
+
+
+int set_uacode(const char *ua, char* code)
+{
+    init_uacode_hasht();
+    ls_hash_iter it = ls_hash_find(s_uacode_hasht, ua);
+    if (it == NULL)
+    {
+        uacode_item *item = make_uacode_item(ua, code);
+        if (ls_hash_insert(s_uacode_hasht, item->ua, item) == NULL)
+            return -1;
+        return 0;
+    }
+
+    //If exist, do nothing
+    return 0;
+}
+
+char *get_uacode(const char *ua)
+{
+    init_uacode_hasht();
+    ls_hash_iter it = ls_hash_find(s_uacode_hasht, ua);
+    if (it == NULL)
+        return NULL;
+    
+    uacode_item *item = (uacode_item *)ls_hash_getdata(it);
+    assert (item);
+    return item->code;
+}
+
+//Atexit, free thr hashTable
+void freeUaCodeT()
+{
+    if (s_uacode_hasht)
+    {
+        ls_hash_iter it ;
+        for (it = ls_hash_begin(s_uacode_hasht);
+             it != ls_hash_end(s_uacode_hasht);
+             it = ls_hash_next(s_uacode_hasht, it))
+        {
+            uacode_item *item = (uacode_item *)ls_hash_getdata(it);
+            free_uacode_item(item);
+            s_uacode_hasht = NULL;
+        }
+    }
 }
 
 
@@ -2121,6 +2272,8 @@ void lsiapi_init_server_api()
     pApi->get_cb_module_data = get_cb_module_data;
     pApi->set_module_data = set_module_data;
     pApi->free_module_data = free_module_data;
+    pApi->get_req_method = get_req_method;
+    pApi->get_req_vhost = get_req_vhost;
     pApi->stream_writev_next = lsiapi_stream_writev_next;
     pApi->stream_read_next = lsiapi_stream_read_next;
 
@@ -2262,9 +2415,17 @@ void lsiapi_init_server_api()
 
     pApi->handoff_fd = handoff_fd;
     pApi->get_local_sockaddr = get_local_sockaddr;
-    pApi->expand_current_server_varible = expand_current_server_varible;
+    pApi->expand_current_server_variable = expand_current_server_variable;
 
+    pApi->set_ua_code = set_uacode;
+    pApi->get_ua_code = get_uacode;
+    
+    
+    pApi->module_log = module_log;
+    pApi->c_log      = c_log;
     pApi->_log_level_ptr = log4cxx::Level::getDefaultLevelPtr();
 
+    
+    
 
 }

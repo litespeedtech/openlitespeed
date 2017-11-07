@@ -29,6 +29,7 @@
 #define EXPIRE_TIME         (30 * 1000)
 #define MODULE_VERSION_INFO  "1.1"
 
+DECL_COMPONENT_LOG(ModuleNameStr);
 
 ls_shmhash_t *pShmHash = NULL;
 extern lsi_module_t MNAME;
@@ -86,8 +87,7 @@ static int releaseModuleData(lsi_param_t *rec)
         g_api->set_timer(EXPIRE_TIME, 0, removeShmEntry, myData->pProgressID);
         g_api->free_module_data(rec->session, &MNAME, LSI_DATA_HTTP,
                                 releaseMData);
-        g_api->log(rec->session, LSI_LOG_DEBUG, "[%s]releaseModuleData.\n",
-                   ModuleNameStr);
+        LSC_DBG( rec->session,"releaseModuleData.\n" );
     }
     return 0;
 }
@@ -122,13 +122,13 @@ static int _init(lsi_module_t *module)
     ls_shmpool_t *pShmPool = ls_shm_opengpool("moduploadp", 0);
     if (pShmPool == NULL)
     {
-        g_api->log(NULL, LSI_LOG_ERROR, "shm_pool_init return NULL, quit.\n");
+        LSC_ERR(NULL, "shm_pool_init return NULL, quit.\n");
         return LS_FAIL;
     }
     pShmHash = ls_shmhash_open(pShmPool, NULL, 0, hashBuf, memcmp);
     if (pShmHash == NULL)
     {
-        g_api->log(NULL, LSI_LOG_ERROR, "shm_htable_init return NULL, quit.\n");
+        LSC_ERR(NULL, "shm_htable_init return NULL, quit.\n");
         return LS_FAIL;
     }
 
@@ -174,8 +174,7 @@ static int checkReqHeader(lsi_param_t *rec)
     pBuffer = (char *)ls_shmhash_off2ptr(pShmHash, offset);
     if (!offset || !pBuffer)
     {
-        g_api->log(rec->session, LSI_LOG_ERROR,
-                   "[%s]checkReqHeader can't add shm entry.\n", ModuleNameStr);
+        LSC_ERR(rec->session, "checkReqHeader can't add shm entry.\n");
         return 0;
     }
 
@@ -186,8 +185,7 @@ static int checkReqHeader(lsi_param_t *rec)
         myData = new MyMData;
         if (!myData)
         {
-            g_api->log(rec->session, LSI_LOG_ERROR,
-                       "[%s]checkReqHeader out of memory.\n", ModuleNameStr);
+            LSC_ERR(rec->session, "checkReqHeader out of memory.\n");
             return 0;
         }
         memset(myData, 0, sizeof(MyMData));
@@ -238,8 +236,7 @@ static int begin_process(const lsi_session_t *session)
                                          idLen, &valLen);
     if (offset == 0 || valLen <= 2)  //At least 3 bytes
     {
-        g_api->log(session, LSI_LOG_ERROR,
-                   "[%s]begin_process error, can't find shm entry .\n", ModuleNameStr);
+        LSC_ERR(session, "begin_process error, can't find shm entry.\n");
         return 500;
     }
 
@@ -264,9 +261,7 @@ static int begin_process(const lsi_session_t *session)
 
     g_api->append_resp_body(session, buf, strlen(buf));
     g_api->end_resp(session);
-    g_api->log(session, LSI_LOG_DEBUG,
-               "[module uploadprogress:%s] processed for URI: %s\n",
-               MNAME.about, g_api->get_req_uri(session, NULL));
+    LSC_DBG(session, "processed for URI: %s\n", g_api->get_req_uri(session, NULL));
     return 0;
 }
 
