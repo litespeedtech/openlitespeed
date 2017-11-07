@@ -34,7 +34,7 @@ class GSockAddr;
 
 class SubIpMap;
 class HttpServerImpl;
-
+class AutoBuf;
 
 class HttpListener : public EventReactor, public LogSession
 {
@@ -46,12 +46,14 @@ class HttpListener : public EventReactor, public LogSession
     VHostMap           *m_pMapVHost;
     SubIpMap           *m_pSubIpMap;
 
-    short               m_iAdmin;
-    short               m_isSSL;
+    char                m_iAdmin;
+    char                m_isSSL;
+    char                m_iSendZconf;
     unsigned int        m_iBinding;
 
     ModuleConfig m_moduleConfig;
     IolinkSessionHooks  m_iolinkSessionHooks;
+    AutoStr            *m_pAdcPortList;
 
     HttpListener(const HttpListener &rhs);
     void operator=(const HttpListener &rhs);
@@ -77,7 +79,7 @@ public:
     void beginConfig();
     void endConfig();
 
-    short isSSL() const                 {   return m_isSSL;     }
+    char isSSL() const                 {   return m_isSSL;     }
 
     const char *getName() const        {   return m_sName.c_str();     }
     void setName(const char *pName)  {   m_sName = pName;    }
@@ -86,7 +88,7 @@ public:
 
     int getPort() const;
 
-    short isAdmin() const               {   return m_iAdmin;    }
+    char isAdmin() const               {   return m_iAdmin;    }
     void setAdmin(char admin)         {   m_iAdmin = admin;   }
 
 
@@ -124,6 +126,12 @@ public:
 
     IolinkSessionHooks  *getSessionHooks() {  return &m_iolinkSessionHooks;    }
     ModuleConfig *getModuleConfig()         { return &m_moduleConfig;   }
+
+    void setSendZConf(char send)            {   m_iSendZconf = send;    }
+    char isSendZConf() const                {   return m_iSendZconf;    }
+    void setAdcPortList(const char *pList);
+    AutoStr *getAdcPortList() const         { return m_pAdcPortList;    }
+    int zconfAppendVHostList(AutoBuf *pBuf);
 };
 
 #endif

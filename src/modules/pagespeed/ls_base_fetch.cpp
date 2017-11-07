@@ -17,9 +17,7 @@
 *****************************************************************************/
 
 #include "ls_base_fetch.h"
-
 #include <lsr/ls_atomic.h>
-
 #include "net/instaweb/rewriter/public/rewrite_stats.h"
 #include "pagespeed/kernel/base/google_message_handler.h"
 #include "pagespeed/kernel/base/message_handler.h"
@@ -28,10 +26,13 @@
 #include <unistd.h>
 #include <errno.h>
 
-//LsiBaseFetch* LsiBaseFetch::event_connection = NULL;
-int LsiBaseFetch::active_base_fetches = 0;
+// Compiler warning - unused
+// const char kHeadersComplete = 'H';
+// const char kFlush = 'F';
+// const char kDone = 'D';
+// Compiler warning - unused
 
-LsiBaseFetch::LsiBaseFetch(const lsi_session_t *session,
+LsiBaseFetch::LsiBaseFetch(lsi_session_t *session,
                            LsServerContext *server_context,
                            const RequestContextPtr &request_ctx,
                            PreserveCachingHeaders preserve_caching_headers,
@@ -49,7 +50,6 @@ LsiBaseFetch::LsiBaseFetch(const lsi_session_t *session,
 {
     if (pthread_mutex_init(&m_mutex, NULL))
         CHECK(0);
-    __sync_add_and_fetch(&LsiBaseFetch::active_base_fetches, 1);
     m_buffer.clear();
 }
 
@@ -57,8 +57,8 @@ LsiBaseFetch::~LsiBaseFetch()
 {
     m_buffer.clear();
     pthread_mutex_destroy(&m_mutex);
-    __sync_add_and_fetch(&LsiBaseFetch::active_base_fetches, -1);
 }
+
 
 const char* BaseFetchTypeToCStr(BaseFetchType type) {
   switch(type) {
@@ -90,13 +90,16 @@ void LsiBaseFetch::Unlock()
 bool LsiBaseFetch::HandleWrite(const StringPiece &sp,
                                MessageHandler *handler)
 {
+    g_api->log(NULL, LSI_LOG_DEBUG, 
+               "[Thr:PAGESPEED] LsiBaseFetch::HandleWrite(), "
+               "Response body: %zd bytes.\n", sp.size());
     Lock();
     m_buffer.append(sp.data(), sp.size());
     Unlock();
     return true;
 }
 
-int LsiBaseFetch::CopyBufferToLs(const lsi_session_t *session)
+int LsiBaseFetch::CopyBufferToLs(lsi_session_t *session)
 {
     CHECK(!(m_bDoneCalled && m_bLastBufSent))
             << "CopyBufferToLs() was called after the last buffer was sent";
@@ -117,7 +120,7 @@ int LsiBaseFetch::CopyBufferToLs(const lsi_session_t *session)
     return 1;
 }
 
-int LsiBaseFetch::CollectAccumulatedWrites(const lsi_session_t *session)
+int LsiBaseFetch::CollectAccumulatedWrites(lsi_session_t *session)
 {
     if (m_bLastBufSent)
         return 0;
@@ -132,29 +135,34 @@ int LsiBaseFetch::CollectAccumulatedWrites(const lsi_session_t *session)
 int LsiBaseFetch::CollectHeaders(const lsi_session_t *session)
 {
     const ResponseHeaders *pagespeed_headers = response_headers();
-
-    if (content_length_known())
+    int content_len_set = content_length_known();
+    if (content_len_set)
         g_api->set_resp_content_length(session, content_length());
+    g_api->log(session, LSI_LOG_DEBUG, 
+               "[modpagespeed] LsiBaseFetch::CollectHeaders(), "
+               "content-len known: %d, call CopyRespHeadersToServer()\n", 
+               content_len_set);
 
-    return CopyRespHeadersToServer(session, *pagespeed_headers,
+    return CopyRespHeadersToServer((lsi_session_t *)session, *pagespeed_headers,
                                    m_preserveCachingHeaders);
 }
 
 void LsiBaseFetch::RequestCollection()
 {
-    long tmp = AtomicSetEventObj(NULL);
-    if (tmp == NULL)
+    long tmp  = AtomicSetEventObj(NULL);
+    if (tmp == 0)
         return ;
-
-    IncrementRefCount();
+    ls_atomic_add(&m_iReferences, 1);
     g_api->schedule_event(tmp, 1);
-
 }
 
 void LsiBaseFetch::HandleHeadersComplete()
 {
     int statusCode = response_headers()->status_code();
     bool statusOk = (statusCode != 0 && statusCode < 400);
+    g_api->log(NULL, LSI_LOG_DEBUG, 
+               "[Thr:PAGESPEED] LsiBaseFetch::HandleHeadersComplete(), "
+               "status code: %d.\n", statusCode);
 
     if ((m_iType != kIproLookup) || statusOk)
     {
@@ -171,38 +179,33 @@ void LsiBaseFetch::HandleHeadersComplete()
 
 bool LsiBaseFetch::HandleFlush(MessageHandler *handler)
 {
+    g_api->log(NULL, LSI_LOG_DEBUG, 
+               "[Thr:PAGESPEED] LsiBaseFetch::HandleFlush().\n");
     //RequestCollection();
     return true;
 }
 
-
-int LsiBaseFetch::DecrementRefCount() {
-  return DecrefAndDeleteIfUnreferenced();
-}
-
-int LsiBaseFetch::IncrementRefCount() {
-  return __sync_add_and_fetch(&m_iReferences, 1);
-}
-
-int LsiBaseFetch::DecrefAndDeleteIfUnreferenced()
+void LsiBaseFetch::Release()
 {
-    // Creates a full memory barrier.
-    int r = __sync_add_and_fetch(&m_iReferences, -1);
-    if (r == 0)
+    DecrefAndDeleteIfUnreferenced();
+}
+
+void LsiBaseFetch::DecrefAndDeleteIfUnreferenced()
+{
+    ls_atomic_add(&m_iReferences, -1);
+    if (m_iReferences== 0)
         delete this;
-    return r;
 }
 
 void LsiBaseFetch::HandleDone(bool success)
 {
     m_bSuccess = success;
-//     g_api->log(m_session, LSI_LOG_DEBUG,
-//                "[Module:modpagespeed]HandleDone called, success=%d, m_bDoneCalled=%d!\n",
-//                success, m_bDoneCalled);
-
     Lock();
     m_bDoneCalled = true;
     Unlock();
+    g_api->log(NULL, LSI_LOG_DEBUG, 
+               "[Thr:PAGESPEED] LsiBaseFetch::HandleDone(%d), "
+               "RequestCollection() for event: %ld\n", success, m_lEventObj);
     RequestCollection();
     DecrefAndDeleteIfUnreferenced();
 }

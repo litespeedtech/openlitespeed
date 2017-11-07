@@ -143,29 +143,38 @@ LsShmStatus_t LsShmPool::checkStaticData(const char *name)
 }
 
 
-LsShmPool::LsShmPool(LsShm *shm, const char *name, LsShmPool *gpool)
+LsShmPool::LsShmPool()
     : m_iMagic(LSSHM_POOL_MAGIC)
+    , m_pShm(NULL)
+    , m_status(LSSHM_NOTREADY)
     , m_iOffset(0)
     , x_pPool(NULL)
+    , m_pShmLock(NULL)
+    , m_iAutoLock(1)
     , m_iShmOwner(0)
     , m_iRegNum(0)
-    , m_pParent(gpool)
+    , m_pParent(NULL)
     , m_iRef(0)
+{
+}
+
+
+int LsShmPool::init(LsShm *shm, const char *name, LsShmPool *gpool)
 {
     LsShmOffset_t extraOffset = 0;
     LsShmSize_t extraSize = 0;
 
-    obj.m_pName = NULL;
-    m_status = LSSHM_NOTREADY; // no good
 
     if ((name == NULL) || (*name == '\0'))
     {
         m_status = LSSHM_BADPARAM;
-        return;
+        return LS_FAIL;
     }
 
-    m_iAutoLock = 1;
     m_pShm = shm;
+    m_pParent = gpool;
+    obj.m_pName = NULL;
+
 
     if (strcmp(name, LSSHM_SYSPOOL) == 0)
     {
@@ -176,7 +185,7 @@ LsShmPool::LsShmPool(LsShm *shm, const char *name, LsShmPool *gpool)
         if ((obj.m_pName = strdup(name)) == NULL)
         {
             m_status = LSSHM_ERROR;
-            return;
+            return LS_FAIL;
         }
         LsShmReg *p_reg;
         if ((p_reg = shm->findReg(name)) == NULL)
@@ -184,7 +193,7 @@ LsShmPool::LsShmPool(LsShm *shm, const char *name, LsShmPool *gpool)
             if ((p_reg = shm->addReg(name)) == NULL)
             {
                 m_status = LSSHM_BADMAPFILE;
-                return;
+                return LS_FAIL;
             }
             if (m_pParent != NULL)
                 p_reg->x_iFlag |= LSSHM_REGFLAG_PID;    // mark per process pool
@@ -203,7 +212,7 @@ LsShmPool::LsShmPool(LsShm *shm, const char *name, LsShmPool *gpool)
             if (offset == 0)
             {
                 m_status = LSSHM_BADMAPFILE;
-                return;
+                return LS_FAIL;
             }
             ::memset(offset2ptr(offset), 0, rndPoolMemSz);
             m_iOffset = offset;
@@ -222,6 +231,7 @@ LsShmPool::LsShmPool(LsShm *shm, const char *name, LsShmPool *gpool)
             LsShm::setErrMsg(LSSHM_BADVERSION,
                              "Invalid SHM Pool [%s], magic=%08X(%08X), MapFile [%s].",
                              name, getPool()->x_iMagic, LSSHM_POOL_MAGIC, shm->fileName());
+            return LS_FAIL;
         }
     }
     else
@@ -246,6 +256,7 @@ LsShmPool::LsShmPool(LsShm *shm, const char *name, LsShmPool *gpool)
             m_pShm->getObjBase().insert(obj.m_pName, &this->obj);
         }
     }
+    return LS_OK;
 }
 
 
@@ -422,16 +433,10 @@ void LsShmPool::destroy()
 }
 
 
-LsShmOffset_t LsShmPool::alloc2(LsShmSize_t size, int &remapped)
+LsShmOffset_t LsShmPool::alloc2Ex(LsShmSize_t size, int &remapped)
 {
     LsShmOffset_t offset;
 
-    if ((size == 0) || (size&0x80000000) || (size>LSSHM_MAXSIZE)) 
-        return 0;
-
-    remapped = 0;
-    size = roundDataSize(size);
-    autoLock();
     if (size >= LSSHM_SHM_UNITSIZE)
     {
         if ((offset = allocPage(size, remapped)) != 0)
@@ -450,17 +455,70 @@ LsShmOffset_t LsShmPool::alloc2(LsShmSize_t size, int &remapped)
         if (offset != 0)
             getDataMap()->x_stat.m_iPoolInUse += size;
     }
-    autoUnlock();
-
     return offset;
 }
 
+
+LsShmOffset_t LsShmPool::alloc2(LsShmSize_t size, int &remapped)
+{
+    LsShmOffset_t offset;
+    if ((size == 0) || (size&0x80000000) || (size>LSSHM_MAXSIZE)) 
+        return 0;
+
+    remapped = 0;
+    size = roundDataSize(size);
+    autoLock();
+    do
+    {
+        offset = alloc2Ex(size, remapped);
+        if (size > LARGE_PAGE_SIZE)
+            break;
+        int end_page = (offset + size - 1) >> LARGE_PAGE_BITS;
+        int firstpart_size;
+        if ((offset >> LARGE_PAGE_BITS) == end_page)
+            break;
+        firstpart_size = (end_page << LARGE_PAGE_BITS) - offset;
+        LS_WARN("[SHM] [%d-%d:%p] alloc2 cross large page boundary, "
+                 "offset: %X, size: %d, split to %d/%d release\n", 
+                 s_pid, m_pShm->getfd(), this, offset, size, 
+                 firstpart_size, size - firstpart_size);
+
+        release2Ex(offset, firstpart_size);
+        offset += firstpart_size;
+        release2Ex(offset, size - firstpart_size);
+        getDataMap()->x_stat.m_iPoolInUse -= size;
+    } while(1);
+    autoUnlock();
+    return offset;
+}
 
 void LsShmPool::addLeftOverPages(LsShmOffset_t offset, LsShmSize_t size)
 {
     releasePageLocked(offset, size);
     incrCheck(&getDataMap()->x_stat.m_iGpAllocated,
             (size / LSSHM_SHM_UNITSIZE));
+}
+
+
+void LsShmPool::release2Ex(LsShmOffset_t offset, LsShmSize_t size)
+{
+    if (size >= LSSHM_SHM_UNITSIZE)
+    {
+        if (m_pParent)
+        {
+            m_pParent->autoLock();
+            m_pParent->releasePageLocked(offset, size);
+            m_pParent->autoUnlock();
+        }
+        else
+            releasePageLocked(offset, size);
+        incrCheck(&getDataMap()->x_stat.m_iPgReleased, roundSize2pages(size));
+    }
+    else
+    {
+        releaseData(offset, size);
+        getDataMap()->x_stat.m_iPoolInUse -= size;
+    }
 }
 
 
@@ -835,7 +893,7 @@ LsShmOffset_t LsShmPool::fillDataBucket(LsShmSize_t bucketNum, LsShmSize_t size)
         getDataMap()->x_aFreeBucket[bucketNum] = xoffset;
     }
     uint8_t *xp;
-    xp = (uint8_t *)offset2ptr(offset);
+    xp = (uint8_t *)offset2ptr(offset + num * size) - num * size;
     while (num-- != 0)
     {
         xp += size;

@@ -22,8 +22,10 @@
 #include <http/httpvhostlist.h>
 #include <log4cxx/logger.h>
 #include <lsr/ls_strtool.h>
+#include <main/zconfmanager.h>
 #include <socket/gsockaddr.h>
 #include <sslpp/sslcontext.h>
+#include <util/autobuf.h>
 #include <util/stringlist.h>
 #include <util/stringtool.h>
 
@@ -706,3 +708,125 @@ SslContext *VHostMapFindSslContext(void *arg, const char *pName)
 
 }
 
+static int zconfAppendDomain(AutoBuf *pBuf, const char *pDomain, int iDomainLen)
+{
+    int len;
+
+    if (pBuf->capacity() < pBuf->size() + iDomainLen + 3)
+        pBuf->grow(1024);
+    len = ls_snprintf(pBuf->end(), 1024, "\"%.*s\",",
+                        iDomainLen, pDomain);
+    pBuf->used(len);
+    return 0;
+}
+
+
+static int zconfForEachDomain(const void *pKey, void *pData, void *pUData)
+{
+    const char *pDomain = (const char *)pKey;
+    GHash *pBufList = (GHash *)pUData;
+    GHash::iterator iter = pBufList->find(pData);
+    AutoBuf *pBuf;
+
+    if (NULL == iter)
+    {
+        pBuf = new AutoBuf();
+        pBufList->insert(pData, pBuf);
+    }
+    else
+        pBuf = (AutoBuf *)iter->second();
+
+    zconfAppendDomain(pBuf, pDomain, strlen(pDomain));
+    return 0;
+}
+
+
+static int zconfForEachVHost(const void *pKey, void *pData, void *pUData)
+{
+    AutoBuf *pVHostBuf = (AutoBuf *)pData;
+    AutoBuf *pBuf = (AutoBuf *)pUData;
+    pBuf->append(pVHostBuf->begin(), pVHostBuf->size());
+    return 0;
+}
+
+
+static int zconfForEachVHostSSL(const void *pKey, void *pData, void *pUData)
+{
+    HttpVHost *pVHost = (HttpVHost *)pKey;
+    AutoBuf *pVHostBuf = (AutoBuf *)pData;
+    ZConfManager::getInstance().appendSslContext(
+        pVHostBuf->begin(),
+        pVHostBuf->size() - 1, // Remove trailing comma
+        pVHost->getSslContext());
+
+    return zconfForEachVHost(NULL, pData, pUData);
+}
+
+
+static inline int isTooWild(const char *pDomain, int iDomainLen)
+{
+    // '*' and ending with a * is never allowed.
+    if (pDomain[iDomainLen - 1] == '*')
+        return 1;
+    return 0;
+}
+
+
+void VHostMap::zconfAppendWildMatchList(GHash *pHash)
+{
+    const char *pPattern, *pPatternEnd;
+    AutoBuf *pVHostBuf;
+    GHash::iterator iter;
+    WildMatchList::const_iterator wildBegin, wildEnd;
+    if (NULL == m_pWildMatches)
+        return;
+
+    wildEnd = m_pWildMatches->end();
+    for (wildBegin = m_pWildMatches->begin(); wildBegin < wildEnd; ++wildBegin)
+    {
+        pPattern = (*wildBegin)->getPattern();
+        pPatternEnd = pPattern + strlen(pPattern);
+        if (isTooWild(pPattern, pPatternEnd - pPattern))
+            continue;
+
+        if ('*' == pPattern[0] && '.' == pPattern[1])
+            pPattern += 2;
+
+        iter = pHash->find((*wildBegin)->getVHost());
+
+        if (NULL == iter)
+        {
+            pVHostBuf = new AutoBuf();
+            pHash->insert((*wildBegin)->getVHost(), pVHostBuf);
+        }
+        else
+            pVHostBuf = (AutoBuf *)iter->second();
+        zconfAppendDomain(pVHostBuf, pPattern, pPatternEnd - pPattern);
+    }
+
+}
+
+
+int VHostMap::zconfAppendDomainMap(AutoBuf *pBuf, char isSsl)
+{
+    GHash vhostDomainList(29, NULL, NULL);
+
+    for_each2(begin(), end(), zconfForEachDomain, &vhostDomainList);
+    zconfAppendWildMatchList(&vhostDomainList);
+
+    if (vhostDomainList.empty())
+        return 0;
+
+    pBuf->append(
+        "{\n"
+        "\"domain_list\":\n"
+        "[");
+
+    vhostDomainList.for_each2(vhostDomainList.begin(), vhostDomainList.end(),
+        (isSsl ? zconfForEachVHostSSL : zconfForEachVHost), pBuf);
+
+    pBuf->pop_back();
+    pBuf->append("],\n");
+
+    return 1;
+}

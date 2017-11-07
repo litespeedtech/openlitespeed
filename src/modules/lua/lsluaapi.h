@@ -52,7 +52,9 @@ typedef struct ls_luaprint_s
 } ls_luaprint_t;
 
 int LsLuaPrint(lua_State *L, ls_luaprint_t *pStream);
-
+void lsLuaLoadMetaFile(lua_State *L,
+                       const char *tablename, const luaL_Reg *funtions,
+                       const char *metaname, const luaL_Reg *mate_functions );
 void LsLuaLog(lua_State *L, int level, int no_linefeed,
               const char *fmt, ...);
 

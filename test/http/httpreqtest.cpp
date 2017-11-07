@@ -34,7 +34,10 @@ public:
         : HttpReq()
     {  }
     const char *getLogId()     {   return LogSession::getLogId();  }
-    virtual const char *buildLogId() {  return getLogId(); }
+    virtual const char *buildLogId() {
+        appendLogId("HttpReqTest", true);
+        return m_logId.ptr;
+    }
 
     int append(const char *pBuf, int size)
     {   return HttpReq::appendTestHeaderData(pBuf, size); }
@@ -62,7 +65,7 @@ SUITE(HttpReqTest)
             "\r\n"
             "parentWin=YB_conf&objName=ESgeneral&objId=&finishPage=servGeneral.php%3Fid%3D1&nextPage=servGeneral1.php\r\n";
         HttpReqTst req;
-        req.getIdBuf() = "testFragment" ;
+        req.appendLogId("testFragment");
         req.reset();
         req.setVHost((HttpVHost *)
                      1);    //just skip vhost lookup while parsing header
@@ -112,7 +115,7 @@ SUITE(HttpReqTest)
             "\t \tline3\r\n"
             "\r\n";
         HttpReqTst req;
-        req.getIdBuf() = "testParseHeader";
+        req.appendLogId("testParseHeader");
         req.reset();
         req.setVHost((HttpVHost *)
                      1);    //just skip vhost look while parsing header
@@ -199,7 +202,7 @@ SUITE(HttpReqTest)
             "\t close\r\n"
             "\r\n";
         HttpReqTst req;
-        req.getIdBuf() = "testParseHeader1" ;
+        req.appendLogId("testParseHeader1");
         req.reset();
         req.setVHost((HttpVHost *)
                      1);    //just skip vhost look while parsing header
@@ -267,7 +270,7 @@ SUITE(HttpReqTest)
             "Connection: close\r\n\r\n"
         };
         HttpReqTst req;
-        req.getIdBuf() = "testParseHeader1" ;
+        req.appendLogId("testParseHeader1");
         req.reset();
         req.setVHost((HttpVHost *)
                      1);    //just skip vhost look while parsing header
@@ -329,7 +332,7 @@ SUITE(HttpReqTest)
             "Connection: close\r\n\r\n"
         };
         HttpReqTst req;
-        req.getIdBuf() = "testParseHeader1" ;
+        req.appendLogId("testParseHeader1");
         req.reset();
         req.setVHost((HttpVHost *)
                      1);    //just skip vhost look while parsing header

@@ -122,6 +122,7 @@ ModuleManager::iterator ModuleManager::addModule(const char *name,
     LsiModule *pLmHttpHandler = new LsiModule(pModule);
     MODULE_NAME(pModule) = strdup(name);
     MODULE_ID(pModule) = getModuleCount();
+    MODULE_LOG_LEVEL(pModule) = *g_api->_log_level_ptr;
     memset(MODULE_DATA_ID(pModule), 0xFF,
            sizeof(short) * LSI_DATA_COUNT); //value is -1 now.
     MODULE_HOOKINDEX(pModule) = new ModIndex();
@@ -189,8 +190,13 @@ lsi_module_t *ModuleManager::loadModule(const char *name)
 
     if (pModule)
     {
-        if ((pModule->signature >> 32) != 0x4C53494D)
-            error = "Module signature does not match";
+        if (pModule->signature != LSI_MODULE_SIGNATURE)
+        {
+            if ((pModule->signature >> 32) != (LSI_MODULE_SIGNATURE >> 32))
+                error = "Module signature does not match";
+            else
+                error = "Module version mismatch";
+        }
         else
         {
             if (addModule(name, pType, pModule) != end())

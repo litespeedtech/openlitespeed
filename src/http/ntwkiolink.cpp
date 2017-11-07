@@ -130,6 +130,9 @@ NtwkIOLink::NtwkIOLink()
 {
     m_hasBufferedData = 0;
     m_pModuleConfig = NULL;
+    
+    m_pClientInfo = NULL;
+    
 }
 
 
@@ -1818,17 +1821,10 @@ void NtwkIOLink::changeClientInfo(ClientInfo *pInfo)
 static const char *s_pProtoString[] = { "", ":SPDY2", ":SPDY3", ":SPDY31", ":HTTP2" };
 const char *NtwkIOLink::buildLogId()
 {
-    AutoStr2 &id = getIdBuf();
-
-    int len ;
-    char *p = id.buf();
-    len = ls_snprintf(id.buf(), MAX_LOGID_LEN, "%s:%hu%s",
+    m_logId.len = ls_snprintf(m_logId.ptr, MAX_LOGID_LEN, "%s:%hu%s",
                       m_pClientInfo->getAddrString(), getRemotePort(),
                       s_pProtoString[(int)getProtocol() ]);
-    id.setLen(len);
-    p += len;
-
-    return id.c_str();
+    return m_logId.ptr;
 }
 
 

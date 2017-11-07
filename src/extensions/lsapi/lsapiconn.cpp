@@ -63,6 +63,7 @@ LsapiConn::LsapiConn()
     , m_lReqBeginTime(0)
     , m_lReqSentTime(0)
     , m_lsreq(&m_iovec)
+    , m_respState(LSAPI_CONN_IDLE)
 
 {
 }

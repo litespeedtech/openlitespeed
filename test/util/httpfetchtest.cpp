@@ -25,6 +25,8 @@
 #include "unittest-cpp/UnitTest++.h"
 #include <edio/multiplexer.h>
 #include <edio/multiplexerfactory.h>
+#include <lsr/ls_base64.h>
+#include <sslpp/sslutil.h>
 #include <util/vmembuf.h>
 #include <fcntl.h>
 
@@ -52,9 +54,7 @@ void VOID_TEST()//httpfetchTest_Test)
                                    nonblock, 1,
                                    pBody,
                                    bodyLen,
-                                   pSaveFile,
-                                   NULL, NULL,
-                                   HF_REGULAR);
+                                   pSaveFile);
     delete pHttpFetch;
     pHttpFetch = NULL;
 
@@ -63,8 +63,7 @@ void VOID_TEST()//httpfetchTest_Test)
                                nonblock, 1,
                                pBody,
                                bodyLen,
-                               pSaveFile, NULL, "www.litespeedtech.com:80",
-                               HF_REGULAR);
+                               pSaveFile, NULL, "www.litespeedtech.com:80");
     mult->waitAndProcessEvents(5000);
     delete pHttpFetch;
     pHttpFetch = NULL;
@@ -106,8 +105,7 @@ void VOID_TEST()//httpfetchTest_Test)
                                nonblock, 1,
                                pBody,
                                bodyLen,
-                               pSaveFile, 0, gsock,
-                               HF_REGULAR);
+                               pSaveFile, 0, gsock);
     mult->waitAndProcessEvents(5000);
     delete pHttpFetch;
     pHttpFetch = NULL;
@@ -118,8 +116,7 @@ void VOID_TEST()//httpfetchTest_Test)
                                nonblock, 1,
                                pBody,
                                bodyLen,
-                               pSaveFile, 0, gsock,
-                               HF_REGULAR);
+                               pSaveFile, 0, gsock);
     delete pHttpFetch;
     pHttpFetch = NULL;
 
@@ -130,8 +127,7 @@ void VOID_TEST()//httpfetchTest_Test)
                                nonblock, 1,
                                pBody,
                                bodyLen,
-                               pSaveFile, 0, gsock,
-                               HF_REGULAR);
+                               pSaveFile, 0, gsock);
     mult->waitAndProcessEvents(5000);
 // The following can be uncommented to test checking the response.
 //     sleep(5);
@@ -144,6 +140,7 @@ void VOID_TEST()//httpfetchTest_Test)
 
 
     pHttpFetch = new HttpFetch;
+    SslUtil::initDefaultCA(NULL, NULL);
     /**
      * The following request is meant to test secure connections.
      *
@@ -168,8 +165,7 @@ void VOID_TEST()//httpfetchTest_Test)
         pBody,
         bodyLen,
         pSaveFile,
-        NULL, NULL,
-        HF_SECURE); //and here
+        NULL, NULL); //and here
 
 //
 //     sleep(5);
@@ -193,6 +189,73 @@ void VOID_TEST()//httpfetchTest_Test)
     pHttpFetch = NULL;
 
     CHECK(ret == 0);
+
+    HttpFetch *pZConf = new HttpFetch();
+    const char *pServerUp = "conf=\n"
+        "{\n"
+        "\"max_conn\" : 1000,\n"
+        "\"vhost_list\" :\n"
+        "    [\n"
+        "        {\n"
+        "        \"domain_list\" :\n"
+        "            [ \"wiki.ls.lan\" ],\n"
+        "        \"conf_list\":[\n"
+        "            {\n"
+        "            \"lb_port_list\" : [ 9090 ],\n" // Load balancer port(s) to listen on
+        "            \"dport\" : 80,\n" // Destination port for backend.
+        "            \"be_ssl\" : false,\n"
+        "            \"ip_list\" :\n"
+        "            [\n"
+        "                { \"ip\" : \"192.168.0.111\" }\n" // Backend IP - may want to be the same as identifying IP?
+        "            ]\n"
+        "            }\n"
+        "        ]\n"
+        "        }\n"
+        "    ]\n"
+        "}\n";
+    int iServerUpLen = strlen(pServerUp);
+    char achEncoded[512], achAuthHdr[512];
+    int iEncodedLen, iAuthHdrLen;
+
+    iEncodedLen = ls_base64_encode("ron:ron", 7, achEncoded);
+
+
+    // For HttpFetch, cannot use url based auth. Add authorization header instead.
+    iAuthHdrLen = snprintf(achAuthHdr, 512, "Authorization: Basic %.*s\r\n",
+                           iEncodedLen, achEncoded);
+
+    pZConf->setExtraHeaders(achAuthHdr, iAuthHdrLen);
+
+    // serverUp request self identifying as hi_lswiki and ip 1.2.3.7
+    ret = pZConf->startReq(
+        "https://localhost:7443/ZCUP?name=hi_lswiki",
+        1, 1, // Check combinations here
+        pServerUp,
+        iServerUpLen,
+        NULL,
+        NULL, NULL); //and here
+
+//     sleep(5);
+//     ret = pZConf->process();
+//
+//     mult->waitAndProcessEvents(5000);
+//     sleep(5);
+//     ret = pZConf->process();
+//
+//     CHECK(pZConf->getStatusCode() == 200);
+//
+//     if (pZConf->getStatusCode() == 200)
+//     {
+//         VMemBuf *pBuf = pZConf->getResult();
+//         int fd = open("/home/user/testinfo.txt", O_RDWR | O_CREAT | O_TRUNC);
+//         pBuf->copyToFile(0, pBuf->getCurWOffset(), fd, 0);
+//         close(fd);
+//     }
+
+
+
+
+
 
 }
 

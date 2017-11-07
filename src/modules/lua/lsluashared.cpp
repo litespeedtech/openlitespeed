@@ -837,19 +837,8 @@ static const luaL_Reg LsLuaShmMeta[] =
 
 void LsLuaCreateSharedmeta(lua_State *L)
 {
-    LsLuaApi::openlib(L, LS_LUA ".shared", LsLuaShmLib, 0);
-    LsLuaApi::newmetatable(L, LSLUA_SHARED_DATA);
-    LsLuaApi::openlib(L, NULL, LsLuaShmMeta, 0);
-
-    LsLuaApi::pushlstring(L, "__index", 7);
-    LsLuaApi::pushvalue(L, -3);
-    LsLuaApi::rawset(L, -3);
-    // pushliteral
-    LsLuaApi::pushlstring(L, "__metatable", 11);
-    LsLuaApi::pushvalue(L, -3);
-    LsLuaApi::rawset(L, -3);
-
-    LsLuaApi::settop(L, -3);
+    lsLuaLoadMetaFile(L, LS_LUA ".shared", LsLuaShmLib,
+                      LSLUA_SHARED_DATA, LsLuaShmMeta);
 }
 
 void LsLuaCreateShared(lua_State *L)

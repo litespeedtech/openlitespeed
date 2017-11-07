@@ -12,6 +12,7 @@ SET(sslpp_STAT_SRCS
    sslocspstapling.cpp
    sslsesscache.cpp
    sslticket.cpp
+   sslutil.cpp
    ocsp/ocsp.c
    ../http/requestvars.cpp
 )

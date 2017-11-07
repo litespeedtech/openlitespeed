@@ -542,9 +542,10 @@ static int setFileHook(int index, module_param_info_t *param,
     g_api->log(NULL, LSI_LOG_NOTICE,
                "%s LUA SET %s = %.*s\n",
                name,
-               myParam[param->key_index],
-               param->val,
-               param->val_len);
+               myParam[param->key_index].config_key,
+               (int)param->val_len,
+               param->val
+              );
     return 0;
 }
 
@@ -609,9 +610,9 @@ void *LsLuaEngine::parseParam(module_param_info_t *param, int param_count,
                 }
                 g_api->log(NULL, LSI_LOG_NOTICE,
                    "%s LUA SET %s = %.*s [%s]\n", name,
-                       myParam[param[i].key_index],
+                       myParam[param[i].key_index].config_key,
+                       (int)param[i].val_len,
                        param[i].val,
-                       param[i].val_len,
                        s_pLuaPath ? s_pLuaPath : s_pSysLuaPath);
             }
             break;
@@ -627,9 +628,9 @@ void *LsLuaEngine::parseParam(module_param_info_t *param, int param_count,
                 }
                 g_api->log(NULL, LSI_LOG_NOTICE,
                    "%s LUA SET %s = %.*s [%s]\n", name,
-                       myParam[param[i].key_index],
-                       param[i].val,
+                       myParam[param[i].key_index].config_key,
                        param[i].val_len,
+                       param[i].val,
                        s_pLuaLib ? s_pLuaLib : "NULL");
             }
             break;
@@ -644,9 +645,9 @@ void *LsLuaEngine::parseParam(module_param_info_t *param, int param_count,
             }
             g_api->log(NULL, LSI_LOG_NOTICE,
                        "%s LUA SET %s = %.*s msec [%d %s]\n", name,
-                       myParam[param[i].key_index],
-                       param[i].val,
+                       myParam[param[i].key_index].config_key,
                        param[i].val_len,
+                       param[i].val,
                        pUser->getMaxRunTime(),
                        pUser->getMaxRunTime() ? "ENABLED" : "DISABLED");
             break;
@@ -661,9 +662,9 @@ void *LsLuaEngine::parseParam(module_param_info_t *param, int param_count,
             }
             g_api->log(NULL, LSI_LOG_NOTICE,
                        "%s LUA SET %s = %.*s [%d %s]\n", name,
-                       myParam[param[i].key_index],
-                       param[i].val,
+                       myParam[param[i].key_index].config_key,
                        param[i].val_len,
+                       param[i].val,
                        pUser->getMaxLineCount(),
                        pUser->getMaxLineCount() ? "ENABLED" : "DISABLED");
             break;
@@ -674,9 +675,9 @@ void *LsLuaEngine::parseParam(module_param_info_t *param, int param_count,
                 s_iJitLineMod = line;
             g_api->log(NULL, LSI_LOG_NOTICE,
                        "%s LUA SET %s = %.*s [%d]\n", name,
-                       myParam[param[i].key_index],
-                       param[i].val,
+                       myParam[param[i].key_index].config_key,
                        param[i].val_len,
+                       param[i].val,
                        s_iJitLineMod);
             break;
             
@@ -686,9 +687,9 @@ void *LsLuaEngine::parseParam(module_param_info_t *param, int param_count,
                 s_iPauseTime = sec;
             g_api->log(NULL, LSI_LOG_NOTICE,
                        "%s LUA SET %s = %.*s [%d]\n", name,
-                       myParam[param[i].key_index],
-                       param[i].val,
+                       myParam[param[i].key_index].config_key,
                        param[i].val_len,
+                       param[i].val,
                        s_iPauseTime);
         break;
         }

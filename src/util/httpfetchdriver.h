@@ -41,6 +41,7 @@ public:
 
     void switchWriteToRead();
     void switchReadToWrite();
+    void continueWrite();
 };
 
 #endif // HTTPFETCHDRIVER_H

@@ -28,6 +28,7 @@
 #include "pagespeed/kernel/base/string_util.h"
 #include "pagespeed/system/system_message_handler.h"
 
+
 namespace net_instaweb
 {
 
@@ -36,10 +37,10 @@ class Timer;
 
 // Implementation of a message handler that uses log_error()
 // logging to emit messages, with a fallback to GoogleMessageHandler
-class LsiMessageHandler : public SystemMessageHandler
+class LsMessageHandler : public SystemMessageHandler
 {
 public:
-    explicit LsiMessageHandler(Timer *timer, AbstractMutex *mutex);
+    explicit LsMessageHandler(Timer *timer, AbstractMutex *mutex);
 
     // Installs a signal handler for common crash signals that tries to print
     // out a backtrace.
@@ -47,10 +48,10 @@ public:
 
 
 protected:
-    virtual void MessageSImpl(MessageType type, const GoogleString& message);
+    virtual void MessageVImpl(MessageType type, const char *msg, va_list args);
 
-    virtual void FileMessageSImpl(MessageType type, const char* file, 
-                                  int line, const GoogleString& message);
+    virtual void FileMessageVImpl(MessageType type, const char *filename,
+                                  int line, const char *msg, va_list args);
 
 private:
     LSI_LOG_LEVEL GetLsiLogLevel(MessageType type);

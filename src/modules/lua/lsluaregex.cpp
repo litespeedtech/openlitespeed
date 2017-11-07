@@ -105,20 +105,8 @@ static const luaL_Reg lsluaRegexMetaSub[] =
 
 void LsLuaCreateRegexmeta(lua_State *L)
 {
-    LsLuaApi::openlib(L, LS_LUA ".re", lsluaRegexFuncs, 0);
-    LsLuaApi::newmetatable(L, LSLUA_RE);
-    LsLuaApi::openlib(L, NULL, lsluaRegexMetaSub, 0);
-
-    // pushliteral
-    LsLuaApi::pushlstring(L, "__index", 7);
-    LsLuaApi::pushvalue(L, -3);
-    LsLuaApi::rawset(L, -3);        // metatable.__index = methods
-    // pushliteral
-    LsLuaApi::pushlstring(L, "__metatable", 11);
-    LsLuaApi::pushvalue(L, -3);
-    LsLuaApi::rawset(L, -3);        // metatable.__metatable = methods
-
-    LsLuaApi::settop(L, -3);       // pop 2
+    lsLuaLoadMetaFile(L, LS_LUA ".re", lsluaRegexFuncs,
+                      LSLUA_RE, lsluaRegexMetaSub);
 }
 
 

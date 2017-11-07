@@ -11,18 +11,20 @@ if [ ! -f psol/include/out/Release/obj/gen/net/instaweb/public/version.h ] ; the
     DL=`which curl`
     DLCMD="$DL -O -k "
     TARGET=1.11.33.3.tar.gz
-    $DLCMD https://dl.google.com/dl/page-speed/psol/$TARGET  
-    tar -xzvf $TARGET # expands to psol/
-    rm $TARGET
+    if [ ! -f ../../../../$TARGET ]; then
+        $DLCMD https://dl.google.com/dl/page-speed/psol/$TARGET
+        mv $TARGET ../../../..
+    fi
+    tar -xzvf ../../../../$TARGET # expands to psol/
 
     #make symbolic links for code browsing
-    ln -sf psol/include/net/ net
-    ln -sf psol/include/out/ out
-    ln -sf psol/include/pagespeed/ pagespeed
-    ln -sf psol/include/third_party/ third_party
-    ln -sf psol/include/third_party/chromium/src/base/ base
-    ln -sf psol/include/third_party/chromium/src/build/ build
-    ln -sf psol/include/third_party/css_parser/src/strings strings
+#    ln -sf psol/include/net/ net
+#    ln -sf psol/include/out/ out
+#    ln -sf psol/include/pagespeed/ pagespeed
+#    ln -sf psol/include/third_party/ third_party
+#    ln -sf psol/include/third_party/chromium/src/base/ base
+#    ln -sf psol/include/third_party/chromium/src/build/ build
+#    ln -sf psol/include/third_party/css_parser/src/strings strings
 
     #fix a file which stop the compiling of pagespeed module
     

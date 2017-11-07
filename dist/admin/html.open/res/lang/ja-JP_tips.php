@@ -624,7 +624,7 @@ $_tipsdb['venable'] = new DAttrHelp("有効", '有効アクションは、停止
 
 $_tipsdb['verifyDepth'] = new DAttrHelp("検証の深さ", 'クライアントに有効な証明書がないと判断する前に、証明書の検証の深さを指定します。 デフォルトは &quot;1&quot;です。', '', 'ドロップダウンリストから選択', '');
 
-$_tipsdb['vhEnableGzip'] = new DAttrHelp("Enable Compression", 'Specifies whether to enable GZIP compression for this virtual host.  This setting is only effective when GZIP compression is enabled at the server level.  Compression settings are configured at the server level (Tuning > GZIP).', '', 'ラジオボックスから選択', '');
+$_tipsdb['vhEnableGzip'] = new DAttrHelp("GZIPを有効にする", 'このバーチャルホストに対してGZIP圧縮を有効にするかどうかを指定します。 この設定は、サーバーレベルでGZIP圧縮が有効になっている場合にのみ有効です。 圧縮設定はサーバーレベルで設定されます（チューニング> GZIP）。', '', 'ラジオボックスから選択', '');
 
 $_tipsdb['vhMaxKeepAliveReq'] = new DAttrHelp("最大キープアライブ要求", 'キープアライブ（永続的）接続を介して提供できる最大要求を特定します。 この制限に達すると接続が閉じられます。 バーチャルホストごとに異なる制限を指定できます。 この数値は、サーバーレベルの&quot;最大キープアライブ要求&quot;の制限を超えることはできません。', '[パフォーマンス]合理的に高い値に設定します。 「1」以下の値を指定すると、キープアライブ接続が無効になります。', '整数', '');
 

@@ -817,12 +817,7 @@ static const luaL_Reg sockMetaSub[] =
 
 void LsLuaCreateTcpsockmeta(lua_State *L)
 {
-    LsLuaApi::openlib(L, LS_LUA ".socket", sockSub, 0);
-    LsLuaApi::pushlstring(L, "__metatable", 11);
-    LsLuaApi::newmetatable(L, LSLUA_TCPSOCKDATA);
-    LsLuaApi::pushlstring(L, "__index", 7);
-    LsLuaApi::openlib(L, NULL, sockMetaSub, 0);
-    LsLuaApi::rawset(L, -3);
-    LsLuaApi::rawset(L, -3);
+    lsLuaLoadMetaFile(L, LS_LUA ".socket", sockSub,
+                      LSLUA_TCPSOCKDATA, sockMetaSub);
 }
 

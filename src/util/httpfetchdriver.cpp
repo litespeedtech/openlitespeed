@@ -68,3 +68,8 @@ void HttpFetchDriver::switchReadToWrite()
 {
     MultiplexerFactory::getMultiplexer()->switchReadToWrite(this);
 }
+
+void HttpFetchDriver::continueWrite()
+{
+    MultiplexerFactory::getMultiplexer()->continueWrite(this);
+}

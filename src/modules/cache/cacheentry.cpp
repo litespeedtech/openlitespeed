@@ -186,8 +186,8 @@ int CacheEntry::verifyKey(CacheKey *pKey) const
     if (m_header.m_keyLen - (isPublic ? m_header.m_iPrivLen : 0)
         > p - m_sKey.c_str())
     {
-        g_api->log(NULL, LSI_LOG_DEBUG,
-                   "[CACHE]CacheEntry::verifyKey failed, keylen %d, privLen %d and check len %d.\n",
+        LSI_DBG(NULL,
+                   "[CACHE]CacheEntry::verifyKey failed, keylen %d, privLen %d and check len %ld.\n",
                    m_header.m_keyLen, m_header.m_iPrivLen, p - m_sKey.c_str());
         return -6;
     }

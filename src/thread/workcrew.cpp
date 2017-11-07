@@ -28,7 +28,8 @@
 #include <new>
 
 WorkCrew::WorkCrew(EventNotifier *en)
-    : m_pNotifier(en)
+    : m_pFinishedQueue(NULL)
+	, m_pNotifier(en)
     , m_crew()
     , m_pProcess(NULL)
 {
@@ -62,7 +63,7 @@ int WorkCrew::increaseTo(int numMembers)
             return LS_FAIL;
 #ifdef LS_WORKCREW_DEBUG
         printf("Worker %lx, %lu started\n", (unsigned long)worker,
-               worker->getId());
+                worker->getId());
 #endif
     }
     return 0;
@@ -108,8 +109,8 @@ ls_lfnodei_t *WorkCrew::getJob()
 
 
 int WorkCrew::startJobProcessor(int numWorkers,
-                                ls_lfqueue_t *pFinishedQueue,
-                                WorkCrewProcessFn processor)
+        ls_lfqueue_t *pFinishedQueue,
+        WorkCrewProcessFn processor)
 {
     assert(processor && pFinishedQueue);
     m_pProcess = processor;
@@ -136,14 +137,20 @@ void WorkCrew::stopProcessing()
 void *WorkCrew::getAndProcessJob()
 {
     void *ret;
-    ls_lfnodei_t *item = getJob();
-    if (!item)
+    if (!m_pProcess || !m_pFinishedQueue) {
+        // can't process, not ready
+        // don't pull job off queue
         return NULL;
+    }
+    ls_lfnodei_t *item = getJob();
+    if (!item) {
+        return NULL;
+    }
     LS_DBG_H("WorkCrew::getAndProcessJob(), Got Job.");
     if ((ret = m_pProcess(item)) != NULL)
     {
         LS_DBG_H("WorkCrew::getAndProcessJob(), Job Failed,"
-                 " returned: %ld", (long)ret);
+                " returned: %ld", (long)ret);
         return ret;
     }
     LS_DBG_H("WorkCrew::getAndProcessJob(), Job Completed.");
@@ -165,6 +172,11 @@ int WorkCrew::putFinishedItem(ls_lfnodei_t *item)
 }
 
 
+int WorkCrew::size()
+{
+    return m_crew.getSize();
+}
+
 int WorkCrew::resize(int numMembers)
 {
     if (numMembers < 0)
@@ -173,10 +185,11 @@ int WorkCrew::resize(int numMembers)
         numMembers = LS_WORKCREW_MINWORKER;
     else if (numMembers > LS_WORKCREW_MAXWORKER)
         numMembers = LS_WORKCREW_MAXWORKER;
-    if (numMembers == m_crew.getSize())
+    int curMembers = m_crew.getSize();
+    if (numMembers == curMembers)
         return 0;
     LS_DBG_H("WorkCrew::resize(), Updating Crew Size to %d.", numMembers);
-    return (numMembers > m_crew.getSize() ? increaseTo(numMembers) :
+    return (numMembers > curMembers ? increaseTo(numMembers) :
             decreaseTo(numMembers));
 }
 

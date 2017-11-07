@@ -91,9 +91,12 @@ class RewriteEngine : public TSingleton<RewriteEngine>
     char *buildString(const RewriteSubstFormat *pFormat, HttpSession *pSession,
                       char *pBuf, int &len, int esc_uri = 0, int noDupSlash = 0);
     int processCond(const RewriteCond *pCond, HttpSession *pSession);
-    int processRule(const RewriteRule *pRule, HttpSession *pSession);
-    int processRewrite(const RewriteRule *pRule, HttpSession *pSession);
-    int expandEnv(const RewriteRule *pRule, HttpSession *pSession);
+    int processRule(const RewriteRule *pRule, HttpSession *pSession,
+                    AutoStr2 &cacheCtlStr);
+    int processRewrite(const RewriteRule *pRule, HttpSession *pSession,
+                       AutoStr2 &cacheCtlStr);
+    int expandEnv(const RewriteRule *pRule, HttpSession *pSession,
+                  AutoStr2 &cacheCtlStr);
     int setCookie(char *pBuf, int len, HttpSession *pSession);
     const RewriteRule *getNextRule(const RewriteRule *pRule,
                                    const HttpContext *&pContext, const HttpContext *&pRootContext);
@@ -101,9 +104,10 @@ public:
     ~RewriteEngine();
 
     static int loadRewriteFile(char *path, RewriteRuleList *pRuleList,
-                               const RewriteMapList *pMaps);
+                               const RewriteMapList *pMaps,
+                               HttpContext *pContext);
     static int parseRules(char *&pRules, RewriteRuleList *pRuleList,
-                          const RewriteMapList *pMapList);
+                          const RewriteMapList *pMapList, HttpContext *pContext);
     int processRuleSet(const RewriteRuleList *pRuleList, HttpSession *pSession,
                        const HttpContext *pContext, const HttpContext *pRootContext);
     const char *getResultURI()     {   return m_pSourceURL;    }
@@ -112,8 +116,8 @@ public:
     void clearUnparsedRuleBuf()     {   m_qsLen = 0;            }
     int appendUnparsedRule(AutoStr2 &sDirective, char *pBegin,
                            char *pEnd);
-    int parseUnparsedRules(RewriteRuleList *pRuleList,
-                           const RewriteMapList *pMapList);
+//     int parseUnparsedRules(RewriteRuleList *pRuleList,
+//                            const RewriteMapList *pMapList);
 
     LS_NO_COPY_ASSIGN(RewriteEngine);
 };

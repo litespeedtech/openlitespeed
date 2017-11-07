@@ -380,8 +380,9 @@ void HttpSession::nextRequest()
         getStream()->switchWriteToRead();
         if (getStream()->isLogIdBuilt())
         {
-            ls_snprintf(getStream()->getIdBuf().buf() +
-                        getStream()->getIdBuf().len(), 10, "-%hu", m_iReqServed);
+            char buf[16];
+            ls_snprintf(buf, 10, "-%hu", m_iReqServed);
+            getStream()->lockAppendLogId(buf);
         }
         setClientInfo(m_pNtwkIOLink->getClientInfo());
 
@@ -442,6 +443,12 @@ int HttpSession::read(char *pBuf, int size)
         memmove(pBuf, m_request.getHeaderBuf().begin() +
                 m_request.getCurPos(), len);
         m_request.pendingDataProcessed(len);
+        if (size > len)
+        {
+            int ret = getStream()->read(pBuf + len, size - len);
+            if (ret > 0)
+                len += ret;
+        }
         return len;
     }
     return getStream()->read(pBuf, size);
@@ -1056,12 +1063,7 @@ int HttpSession::processNewReqInit()
 
     if (getStream()->isLogIdBuilt())
     {
-        AutoStr2 &id = getStream()->getIdBuf();
-        char *p = id.buf() + id.len();
-        while (*p && *p != '#')
-            ++p;
-        *p++ = '#';
-        memccpy(p, pVHost->getName(), 0, id.buf() + MAX_LOGID_LEN - p);
+        getStream()->lockAddOrReplaceFrom('#', pVHost->getName());
     }
 
     HttpContext *pContext0 = ((HttpContext *) & (pVHost->getRootContext()));
@@ -1741,17 +1743,7 @@ int HttpSession::assignHandler(const HttpHandler *pHandler)
 
             if (getStream()->isLogIdBuilt())
             {
-                AutoStr2 &id = getStream()->getIdBuf();
-                char *p = id.buf() + id.len();
-                while (*p && *p != ':')
-                    ++p;
-
-                int n = id.buf() + MAX_LOGID_LEN - 1 - p;
-                if (n > 0)
-                {
-                    *p++ = ':';
-                    memccpy(p, pType, 0, n);
-                }
+                getStream()->lockAddOrReplaceFrom(':', pType);
             }
             if (!HttpServerConfig::getInstance().getDynGzipCompress())
                 m_request.andGzip(~GZIP_ENABLED);

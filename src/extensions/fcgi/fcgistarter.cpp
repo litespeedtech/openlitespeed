@@ -97,7 +97,7 @@ int FcgiStarter::start(FcgiApp &app)
         else
         {
             LS_ERROR("Start FCGI [%s]: failed to start the %d of %d instances.",
-                     config.getName(), i + 1, instances));
+                     config.getName(), i + 1, instances);
             break;
         }
     }

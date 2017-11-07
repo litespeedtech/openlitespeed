@@ -22,6 +22,7 @@
 #include <log4cxx/logger.h>
 #include <sslpp/sslconnection.h>
 #include <util/autobuf.h>
+#include <util/hashstringmap.h>
 #include <stddef.h>
 #include <time.h>
 
@@ -31,13 +32,6 @@ class HttpFetchDriver;
 using namespace LOG4CXX_NS;
 
 typedef int (*HFProcessFn)(void *, HttpFetch *);
-
-enum HttpFetchSecure
-{
-    HF_REGULAR = 0,
-    HF_SECURE = 1,
-    HF_UNKNOWN = 2
-};
 
 class AdnsReq;
 class VMemBuf;
@@ -49,6 +43,7 @@ class HttpFetch
     char       *m_pReqBuf;
     int         m_iReqBufLen;
     int         m_iReqSent;
+    char       *m_pExtraReqHdrs;
     int         m_iReqHeaderLen;
     int         m_iHostLen;
     short       m_iReqState;
@@ -61,20 +56,22 @@ class HttpFetch
     int64_t     m_iRespBodyLen;
     char       *m_pRespContentType;
     int64_t     m_iRespBodyRead;
-    char       *m_pProxyAddrStr;
-    GSockAddr *m_pProxyAddr;
+    char       *m_psProxyServerAddr;
+    GSockAddr  *m_pServerAddr;
     AdnsReq    *m_pAdnsReq;
 
     HFProcessFn m_pfProcessor;
     void       *m_pProcessorArg;
 
-    int         m_iSsl;
+    short       m_iSsl;
+    short       m_iVerifyCert;
     SslConnection  m_ssl;
+    StrStrHashMap  m_respHeaders;
 
-    char        m_aHost[256];
+    char        m_achHost[256];
     AutoBuf     m_resHeaderBuf;
 
-    HttpFetchDriver *m_pDriver;
+    HttpFetchDriver *m_pHttpFetchDriver;
     time_t      m_tmStart;
     int         m_iTimeoutSec;
     int         m_iReqInited;
@@ -104,27 +101,43 @@ class HttpFetch
     int recvResp();
     void startDriver();
     void stopDriver();
-    int initReq(const char *pURL, HttpFetchSecure isSecure,
-                const char *pBody, int bodyLen,
+    int initReq(const char *pURL, const char *pBody, int bodyLen,
                 const char *pSaveFile, const char *pContentType);
     int getLoggerId()     {   return m_iLoggerId;    }
+
+    int verifyDomain();
+    void addRespHeader(char *pLineBegin, char *pLineEnd);
+
 public:
+    enum
+    {
+        ERROR_DNS_FAILURE  = -20,
+        ERROR_CONN_FAILURE,
+        ERROR_CONN_TIMEOUT,
+        ERROR_SOCKET_ERROR,
+        ERROR_SSL_HANDSHAKE,
+        ERROR_SSL_CERT_VERIFY,
+        ERROR_SSL_UNMATCH_DOMAIN,
+        ERROR_HTTP_SEND_REQ_HEADER_FAILURE,
+        ERROR_HTTP_SEND_REQ_BODY_FAILURE,
+        ERROR_HTTP_PROTOCOL_ERROR,
+        ERROR_HTTP_RECV_RESP_FAILURE,
+        ERROR_CANCELED,
+    };
     HttpFetch();
     ~HttpFetch();
     void setResProcessor(HFProcessFn cb, void *pArg)
     {   m_pfProcessor = cb; m_pProcessorArg = pArg;  }
-    int getHttpFd() const           {   return m_iFdHttp;    }
+    int getHttpFd() const                   {   return m_iFdHttp;    }
 
 
     int startReq(const char *pURL, int nonblock, int enableDriver = 1,
                  const char *pBody = NULL,
                  int bodyLen = 0, const char *pSaveFile = NULL,
-                 const char *pContentType = NULL, const char *addrServer = NULL,
-                 HttpFetchSecure isSecure = HF_UNKNOWN);
+                 const char *pContentType = NULL, const char *addrServer = NULL);
     int startReq(const char *pURL, int nonblock, int enableDriver,
                  const char *pBody, int bodyLen, const char *pSaveFile,
-                 const char *pContentType, const GSockAddr &sockAddr,
-                 HttpFetchSecure isSecure = HF_UNKNOWN);
+                 const char *pContentType, const GSockAddr &sockAddr);
     short getPollEvent() const;
     int processEvents(short revent);
     int process();
@@ -136,7 +149,7 @@ public:
     void reset();
     void setProxyServerAddr(const char *pAddr);
     const char *getProxyServerAddr() const
-    {   return m_pProxyAddrStr;  }
+    {   return m_psProxyServerAddr;  }
 
     void closeConnection();
     void setTimeout(int timeoutSec)         {   m_iTimeoutSec = timeoutSec; }
@@ -148,6 +161,12 @@ public:
 
     void setUseSsl(int s)                   {   m_iSsl = s;             }
     int isUseSsl() const                    {   return m_iSsl;          }
+
+    void setVerifyCert(int s)               {   m_iVerifyCert = s;      }
+
+    int setExtraHeaders(const char *pHdrs, int len);
+    const char *getRespHeader(const char *pName) const;
+    X509 *getSslCert() const;
 
 
     LS_NO_COPY_ASSIGN(HttpFetch);

@@ -225,7 +225,8 @@ size_t AddrMap::getAvailAddrSpace( size_t offset, size_t required_size)
     avail = LARGE_PAGE_SIZE - (offset & LARGE_PAGE_MASK);
     while(avail < required_size && page < m_off2ptrTable.size() - 1)
     {
-        if (m_off2ptrTable[page + 1] - m_off2ptrTable[page] == LARGE_PAGE_SIZE)
+        if (required_size > LARGE_PAGE_SIZE 
+            && m_off2ptrTable[page + 1] - m_off2ptrTable[page] == LARGE_PAGE_SIZE)
         {
             avail += LARGE_PAGE_SIZE;
             ++page;

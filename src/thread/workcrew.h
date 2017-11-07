@@ -37,7 +37,7 @@
  * To use Work Crew:
  *
  * A class must have WorkCrew as a member.
- *      It must either contain a member finished queue or have access to one.
+ *      It must either contain or have access to a queue for storing finished items.
  *      It must implement a (static)processing function.
  *      Optionally inherit or have access to an Event Notifier.
  *
@@ -57,7 +57,7 @@ class PThreadWorkQueue;
 #endif
 
 #define LS_WORKCREW_MINWORKER 1
-#define LS_WORKCREW_MAXWORKER 1
+#define LS_WORKCREW_MAXWORKER 32
 
 /**
  * @typedef WorkCrewProcessFn
@@ -163,6 +163,12 @@ public:
      * @return Void.
      */
     void stopProcessing();
+
+    /** @size
+     * @brief Returns the current number of workers
+     * @return current workers
+     */
+    int size();
 
     /** @resize
      * @brief Resizes the number of workers to the number provided.

@@ -29,12 +29,14 @@ class LsiModule;
 
 typedef struct lsi_module_internal_s
 {
+
     /**
-     * @brief Initially set to NULL.  After a module is loaded,
-     * it will be set to the module name.
+     * @brief Initially set to 0.  After a module is loaded,
+     * it will be set to the log level of a module.
      * @since 1.0
      */
-    const char                  *name;
+    int32_t                      log_level;
+
 
     /**
      * @brief Initially set to 0.  After a module is loaded,
@@ -43,6 +45,13 @@ typedef struct lsi_module_internal_s
      */
     int32_t                      id;
 
+    /**
+     * @brief Initially set to NULL.  After a module is loaded,
+     * it will be set to the module name.
+     * @since 1.0
+     */
+    const char                  *name;
+    
     /**
      * @brief Initially set to 0.  After a module is loaded,
      * it will be set to the user data id.

@@ -25,6 +25,10 @@
 #include "base/logging.h"
 #include "pagespeed/kernel/base/string_util.h"
 
+
+
+
+
 LSI_LOG_LEVEL GetLogLevel(int severity)
 {
     switch (severity)
@@ -76,8 +80,8 @@ bool LogMessageHandler(int severity, const char *file, int line,
     if (message[last_msg_character_index] == '\n')
         message.resize(last_msg_character_index);
 
-    g_api->log(NULL, logLevel, "[pagespeed %s] %s\n",
-               net_instaweb::kModPagespeedVersion, message.c_str());
+    g_api->log(NULL, logLevel, "[pagespeed] %s\n",
+               message.c_str());
 
     if (severity == logging::LOG_FATAL)
     {
@@ -91,7 +95,4 @@ bool LogMessageHandler(int severity, const char *file, int line,
 void InstallLogMessageHandler()
 {
     logging::SetLogMessageHandler(&LogMessageHandler);
-
-    if (*g_api->_log_level_ptr >= LSI_LOG_DEBUG_LOW)
-        logging::SetMinLogLevel(-2);
 }

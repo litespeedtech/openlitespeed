@@ -18,11 +18,10 @@
 #ifndef TSINGLETON_H
 #define TSINGLETON_H
 
-
-//#ifdef _REENTRENT
+//#ifdef _REENTRANT
 //#endif
-#ifdef _REENTRENT
-#include <thread/tmutex.h>
+#ifdef _REENTRANT
+#include <lsr/ls_lock.h>
 #endif
 
 #include <assert.h>
@@ -44,12 +43,13 @@ public:
         static T *s_pInstance = NULL;
         if (s_pInstance == NULL)
         {
-#ifdef _REENTRENT
+#ifdef _REENTRANT
             {
-                static Mutex mutex;
-                LockMutex lock(mutex);
+                static ls_spinlock_t lock = LS_LOCK_AVAIL;
+                ls_spinlock_lock(&lock);
                 if (s_pInstance == NULL)
                     s_pInstance = new T();
+                ls_spinlock_unlock(&lock);
             }
 #else
             s_pInstance = new T();

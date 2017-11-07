@@ -79,7 +79,7 @@ H2Connection::H2Connection()
     , m_iCurDataOutWindow(H2_FCW_INIT_SIZE)
     , m_iCurInBytesToUpdate(0)
     , m_iDataInWindow(H2_FCW_INIT_SIZE)
-    , m_iStreamInInitWindowSize(H2_FCW_INIT_SIZE)
+    , m_iStreamInInitWindowSize(H2_FCW_INIT_SIZE * 4)
     , m_iServerMaxStreams(100)
     , m_iStreamOutInitWindowSize(H2_FCW_INIT_SIZE)
     , m_iMaxPushStreams(100)
@@ -226,10 +226,37 @@ int H2Connection::parseFrame()
 }
 
 
+int H2Connection::processInput()
+{
+    int ret;
+    if (!(m_iFlag & H2_CONN_FLAG_PREFACE))
+    {
+        if (m_bufInput.size() < H2_CLIENT_PREFACE_LEN)
+            return 0;
+        if (verifyClientPreface() == LS_FAIL)
+        {
+            getStream()->suspendRead();
+            onCloseEx();
+            return LS_FAIL;
+        }
+    }
+    if ((ret = parseFrame()) != LS_OK)
+    {
+        H2ErrorCode err;
+        if ((ret < 0)||(ret >= H2_ERROR_CODE_COUNT))
+            err = H2_ERROR_PROTOCOL_ERROR;
+        else
+            err = (H2ErrorCode)ret;
+        doGoAway(err);
+        return LS_FAIL;
+    }
+    return 0;
+}
+
+
 int H2Connection::onReadEx2()
 {
     int n = 0, avaiLen = 0;
-    int ret;
     while (true)
     {
         if (m_bufInput.available() < 500)
@@ -244,23 +271,8 @@ int H2Connection::onReadEx2()
             return 0;
         m_bufInput.used(n);
 
-        if (!(m_iFlag & H2_CONN_FLAG_PREFACE))
-        {
-            if (m_bufInput.size() < H2_CLIENT_PREFACE_LEN)
-                return 0;
-            if (verifyClientPreface() == LS_FAIL)
-                break;
-        }
-        if ((ret = parseFrame()) != LS_OK)
-        {
-            H2ErrorCode err;
-            if ((ret < 0) || (ret >= H2_ERROR_CODE_COUNT))
-                err = H2_ERROR_PROTOCOL_ERROR;
-            else
-                err = (H2ErrorCode)ret;
-            doGoAway(err);
+        if (processInput() == LS_FAIL)
             return LS_FAIL;
-        }
     }
     // must start to close connection
     // must turn off READING event in the meantime
@@ -447,6 +459,14 @@ int H2Connection::processSettingFrame(H2FrameHeader *pHeader)
                 doGoAway(H2_ERROR_FLOW_CONTROL_ERROR);
                 return 0;
             }
+            if (iEntryValue < H2_FCW_MIN_SIZE)
+            {
+                LS_WARN(getLogSession(), "SETTINGS_INITIAL_WINDOW_SIZE value is too low, %d,"
+                        " possible Slow Read Attack. Close connection.",
+                         iEntryValue);
+                doGoAway(H2_ERROR_FLOW_CONTROL_ERROR);
+                return 0;
+            }
             windowsSizeDiff = (int32_t)iEntryValue - m_iStreamOutInitWindowSize;
             m_iStreamOutInitWindowSize = iEntryValue ;
             break;
@@ -461,7 +481,10 @@ int H2Connection::processSettingFrame(H2FrameHeader *pHeader)
             if (iEntryValue > 1)
                 return LS_FAIL;
             if (!iEntryValue)
+            {
+                m_iMaxPushStreams = 0;
                 m_iFlag |= H2_CONN_FLAG_NO_PUSH;
+            }
             break;
         default:
             break;
@@ -787,8 +810,14 @@ int H2Connection::decodeHeaders(unsigned char *pSrc, int length,
     pStream->appendInputData("\r\n", 2);
     free(uri);
 
-    pStream->onInitConnected();
-
+    if (pStream->getHandler())
+        pStream->onInitConnected();
+    else
+    {
+        resetStream(0, pStream, H2_ERROR_INTERNAL_ERROR);
+        return 0;
+    }
+    
     if (pStream->getState() != HIOS_CONNECTED)
         recycleStream(pStream->getStreamID());
 
@@ -846,7 +875,11 @@ int H2Connection::processHeadersFrame(H2FrameHeader *pHeader)
 
     if (iHeaderFlag & H2_FLAG_PRIORITY)
     {
-        pSrc = (unsigned char *)m_bufInput.begin();
+        unsigned char buf[5];
+        m_bufInput.moveTo((char *)buf, 5);
+        m_iCurrentFrameRemain -= 5;
+        
+        pSrc = buf;
         m_priority.m_exclusive = *pSrc >> 7;
         m_priority.m_dependStreamId = beReadUint32((const unsigned char *)pSrc) &
                                       0x7FFFFFFFu;
@@ -855,8 +888,6 @@ int H2Connection::processHeadersFrame(H2FrameHeader *pHeader)
 
         //Add one to the value to obtain a weight between 1 and 256.
         m_priority.m_weight = *(pSrc + 4) + 1;
-        m_bufInput.pop_front(5);
-        m_iCurrentFrameRemain -= 5;
     }
     else
         memset(&m_priority, 0, sizeof(m_priority));
@@ -1392,6 +1423,11 @@ int H2Connection::timerRoutine()
             }
         }
         m_tmIdleBegin = 0;
+    }
+    if (!isEmpty() && DateTime::s_curTime - getStream()->getActiveTime() > 20)
+    {
+        LS_DBG_L(getLogSession(), "write() timeout.");
+        doGoAway(H2_ERROR_PROTOCOL_ERROR);
     }
 
     return 0;

@@ -17,7 +17,6 @@
 *****************************************************************************/
 #include "ls_rewrite_options.h"
 #include "ls_rewrite_driver_factory.h"
-
 #include "psol/include/out/Release/obj/gen/net/instaweb/public/version.h"
 #include "net/instaweb/rewriter/public/file_load_policy.h"
 #include "net/instaweb/rewriter/public/rewrite_options.h"
@@ -34,7 +33,7 @@ const char kMessagesPath[] = "MessagesPath";
 const char kAdminPath[] = "AdminPath";
 const char kGlobalAdminPath[] = "GlobalAdminPath";
 
-const char *const server_options[] =
+const char *const server_only_options[] =
 {
     "FetcherTimeoutMs",
     "FetchProxy",
@@ -57,55 +56,61 @@ const char *const server_options[] =
     "LoadFromFileRuleMatch"
 };
 
+// Options that can only be used in the main (http) option scope.
+const char *const main_only_options[] =
+{
+};
 
-RewriteOptions::Properties *LsiRewriteOptions::m_pProperties = NULL;
 
-LsiRewriteOptions::LsiRewriteOptions(const StringPiece &description,
+
+RewriteOptions::Properties *LsRewriteOptions::m_pProperties = NULL;
+
+LsRewriteOptions::LsRewriteOptions(const StringPiece &description,
                                      ThreadSystem *thread_system)
     : SystemRewriteOptions(description, thread_system)
 {
     Init();
 }
 
-LsiRewriteOptions::LsiRewriteOptions(ThreadSystem *thread_system)
+LsRewriteOptions::LsRewriteOptions(ThreadSystem *thread_system)
     : SystemRewriteOptions(thread_system)
 {
     Init();
 }
 
-void LsiRewriteOptions::Init()
+void LsRewriteOptions::Init()
 {
     DCHECK(m_pProperties != NULL)
             << "Call LsiRewriteOptions::Initialize() before construction";
     InitializeOptions(m_pProperties);
 }
 
-void LsiRewriteOptions::AddProperties()
+void LsRewriteOptions::AddProperties()
 {
     // ls-specific options.
     AddLsiOption(
-        "", &LsiRewriteOptions::m_sStatisticsPath, "nsp", kStatisticsPath,
+        "", &LsRewriteOptions::m_sStatisticsPath, "nsp", kStatisticsPath,
         kServerScope, "Set the statistics path. Ex: /lsi_pagespeed_statistics",
         false);
     AddLsiOption(
-        "", &LsiRewriteOptions::m_sGlobalStatisticsPath, "ngsp",
+        "", &LsRewriteOptions::m_sGlobalStatisticsPath, "ngsp",
         kGlobalStatisticsPath, kProcessScope,
         "Set the global statistics path. Ex: /lsi_pagespeed_global_statistics",
         false);
     AddLsiOption(
-        "", &LsiRewriteOptions::m_sConsolePath, "ncp", kConsolePath, kServerScope,
+        "", &LsRewriteOptions::m_sConsolePath, "ncp", kConsolePath, kServerScope,
         "Set the console path. Ex: /pagespeed_console",
         false);
     AddLsiOption(
-        "", &LsiRewriteOptions::m_sMessagesPath, "nmp", kMessagesPath,
+        "", &LsRewriteOptions::m_sMessagesPath, "nmp", kMessagesPath,
         kServerScope, "Set the messages path.  Ex: /lsi_pagespeed_message",
         false);
     AddLsiOption(
-        "", &LsiRewriteOptions::m_sAdminPath, "nap", kAdminPath,
+        "", &LsRewriteOptions::m_sAdminPath, "nap", kAdminPath,
         kServerScope, "Set the admin path.  Ex: /pagespeed_admin",
         false);
     AddLsiOption(
-        "", &LsiRewriteOptions::m_sGlobalAdminPath, "ngap", kGlobalAdminPath,
+        "", &LsRewriteOptions::m_sGlobalAdminPath, "ngap", kGlobalAdminPath,
         kProcessScope, "Set the global admin path.  Ex: /pagespeed_global_admin",
         false);
 
@@ -113,11 +118,11 @@ void LsiRewriteOptions::AddProperties()
 
     // Default properties are global but to set them the current API requires
     // a RewriteOptions instance and we're in a static method.
-    LsiRewriteOptions dummy_config(NULL);
+    LsRewriteOptions dummy_config(NULL);
     dummy_config.set_default_x_header_value(kModPagespeedVersion);
 }
 
-void LsiRewriteOptions::Initialize()
+void LsRewriteOptions::Initialize()
 {
     if (Properties::Initialize(&m_pProperties))
     {
@@ -126,26 +131,35 @@ void LsiRewriteOptions::Initialize()
     }
 }
 
-void LsiRewriteOptions::Terminate()
+void LsRewriteOptions::Terminate()
 {
     if (Properties::Terminate(&m_pProperties))
         SystemRewriteOptions::Terminate();
 }
 
-bool LsiRewriteOptions::IsDirective(StringPiece config_directive,
+bool LsRewriteOptions::IsDirective(StringPiece config_directive,
                                     StringPiece compare_directive)
 {
     return StringCaseEqual(config_directive, compare_directive);
 }
 
-RewriteOptions::OptionScope LsiRewriteOptions::GetOptionScope(
+RewriteOptions::OptionScope LsRewriteOptions::GetOptionScope(
     StringPiece option_name)
 {
     unsigned int i;
-    unsigned int size = sizeof(server_options) / sizeof(char *);
+    unsigned int size = sizeof(main_only_options) / sizeof(char *);
+
     for (i = 0; i < size; i++)
     {
-        if (StringCaseEqual(server_options[i], option_name))
+        if (StringCaseEqual(main_only_options[i], option_name))
+            return kProcessScopeStrict;
+    }
+
+    size = sizeof(server_only_options) / sizeof(char *);
+
+    for (i = 0; i < size; i++)
+    {
+        if (StringCaseEqual(server_only_options[i], option_name))
             return kServerScope;
     }
 
@@ -169,7 +183,7 @@ RewriteOptions::OptionScope LsiRewriteOptions::GetOptionScope(
     return kDirectoryScope;
 }
 
-RewriteOptions::OptionSettingResult LsiRewriteOptions::ParseAndSetOptions0(
+RewriteOptions::OptionSettingResult LsRewriteOptions::ParseAndSetOptions0(
     StringPiece directive, GoogleString *msg, MessageHandler *handler)
 {
     if (IsDirective(directive, "on"))
@@ -185,7 +199,7 @@ RewriteOptions::OptionSettingResult LsiRewriteOptions::ParseAndSetOptions0(
 }
 
 RewriteOptions::OptionSettingResult
-LsiRewriteOptions::ParseAndSetOptionFromName1(
+LsRewriteOptions::ParseAndSetOptionFromName1(
     StringPiece name, StringPiece arg,
     GoogleString *msg, MessageHandler *handler)
 {
@@ -234,9 +248,9 @@ const char *ps_error_string_for_option(StringPiece directive,
 }
 
 // Very similar to apache/mod_instaweb::ParseDirective.
-const char *LsiRewriteOptions::ParseAndSetOptions(
+const char *LsRewriteOptions::ParseAndSetOptions(
     StringPiece *args, int n_args, MessageHandler *handler,
-    LsiRewriteDriverFactory *driver_factory,
+    LsRewriteDriverFactory *driver_factory,
     RewriteOptions::OptionScope scope)
 {
     CHECK_GE(n_args, 1);
@@ -316,23 +330,23 @@ const char *LsiRewriteOptions::ParseAndSetOptions(
     return NULL;
 }
 
-LsiRewriteOptions *LsiRewriteOptions::Clone() const
+LsRewriteOptions *LsRewriteOptions::Clone() const
 {
-    LsiRewriteOptions *options = new LsiRewriteOptions(
+    LsRewriteOptions *options = new LsRewriteOptions(
         StrCat("cloned from ", description()), thread_system());
     options->Merge(*this);
     return options;
 }
 
-const LsiRewriteOptions *LsiRewriteOptions::DynamicCast(
+const LsRewriteOptions *LsRewriteOptions::DynamicCast(
     const RewriteOptions *instance)
 {
-    return dynamic_cast<const LsiRewriteOptions *>(instance);
+    return dynamic_cast<const LsRewriteOptions *>(instance);
 }
 
-LsiRewriteOptions *LsiRewriteOptions::DynamicCast(RewriteOptions *instance)
+LsRewriteOptions *LsRewriteOptions::DynamicCast(RewriteOptions *instance)
 {
-    return dynamic_cast<LsiRewriteOptions *>(instance);
+    return dynamic_cast<LsRewriteOptions *>(instance);
 }
 
 }  // namespace net_instaweb

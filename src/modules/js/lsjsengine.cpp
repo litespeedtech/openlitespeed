@@ -173,7 +173,7 @@ int    LsJsEngine::runScript(const lsi_session_t *session
         nb = snprintf(buf, 0x100
                       , "FAILED TO SENDFD %s [sent %d got %d] errno %d\r\n"
                       , scriptpath, xbuflen, byteSent, errno);
-        g_api->log(NULL, LSI_LOG_NOTICE, buf);
+        g_api->log(NULL, LSI_LOG_NOTICE, "%s", buf);
 
         // attemp to write msg back to blowser
         write(http_fd, "<html><body>\r\n", 14);
@@ -231,7 +231,7 @@ void *LsJsEngine::parseParam(module_param_info_t *param
             g_api->log(NULL, LSI_LOG_NOTICE
                        , "%s JS SET data = %.*s [%d]\n"
                        , name
-                       , param[i].val, param[i].val_len
+                       , param[i].val_len, param[i].val
                        , pUser->data());
         }
     }
@@ -255,7 +255,7 @@ int LsJsEngine::tcpDomainSocket(const char *path)
     if ((strlen(path) > sizeof(addr.sun_path) - 1))
     {
         g_api->log(NULL, LSI_LOG_NOTICE
-                   , "domainSocket Path too long %d max %d\n"
+                   , "domainSocket Path too long %zd max %zd\n"
                    , strlen(path), sizeof(addr.sun_path) - 1);
         return LS_FAIL;
     }

@@ -162,7 +162,7 @@ static void *resizeImage(const char *buf, int bufLen, int width,
                          int height, MyData *myData, int *size)
 {
 
-    char *ptr;
+    char *ptr = NULL;
     gdImagePtr dest, src;
     if (myData->IMAGE_TYPE == HTTP_IMG_JPEG)
         src = gdImageCreateFromJpegPtr(bufLen, (void *)buf);
@@ -191,6 +191,9 @@ static void *resizeImage(const char *buf, int bufLen, int width,
         ptr = gdImageGifPtr(dest, size);
     else if (myData->IMAGE_TYPE == HTTP_IMG_PNG)
         ptr = gdImagePngPtr(dest, size);
+
+    // Ron: and if NONE of the above are true?? returned
+    // uninitialized ptr
 
     return ptr;
 }

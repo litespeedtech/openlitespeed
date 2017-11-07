@@ -28,7 +28,7 @@
 
 #define PTHREADWORKQUEUE_LOOP_COUNT 10000
 
-// #define DOPTHREADWORKQUEUETEST
+#define DOPTHREADWORKQUEUETEST
 
 #ifdef DOPTHREADWORKQUEUETEST
 
@@ -84,7 +84,7 @@ TEST(pthreadworkqueue_test)
     for (i = 0; i < PTHREADWORKQUEUE_LOOP_COUNT; ++i)
     {
         ptwq_t *ptr = (ptwq_t *)ls_palloc(sizeof(ptwq_t));
-        ptr->m_node.m_pNext = NULL;
+        ptr->m_node.next = NULL;
         ptr->m_val = 0;
         aNodes[i] = getPTWQNodePtr(ptr);
     }

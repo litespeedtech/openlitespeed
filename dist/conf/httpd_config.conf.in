@@ -2,6 +2,7 @@
 # PLAIN TEXT CONFIGURATION FILE
 #
 
+#It not set, will use host name as serverName
 serverName                       
 user                             %USER%
 group                            %GROUP%

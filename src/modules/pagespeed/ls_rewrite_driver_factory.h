@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2016  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2015  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -19,16 +19,22 @@
 #define LSI_REWRITE_DRIVER_FACTORY_H_
 
 #include <lsdef.h>
+
 #include <set>
 
 #include "pagespeed/kernel/base/md5_hasher.h"
 #include "pagespeed/kernel/base/scoped_ptr.h"
 #include "pagespeed/system/system_rewrite_driver_factory.h"
 
+
+// TODO(oschaaf): We should reparent ApacheRewriteDriverFactory and
+// LsiRewriteDriverFactory to a new class OriginRewriteDriverFactory and factor
+// out as much as possible.
+
 namespace net_instaweb
 {
-class LsiMessageHandler;
-class LsiRewriteOptions;
+class LsMessageHandler;
+class LsRewriteOptions;
 class LsServerContext;
 class BlockingFetcher;
 class SharedCircularBuffer;
@@ -37,13 +43,13 @@ class SlowWorker;
 class Statistics;
 class SystemThreadSystem;
 
-class LsiRewriteDriverFactory : public SystemRewriteDriverFactory
+class LsRewriteDriverFactory : public SystemRewriteDriverFactory
 {
 public:
-    explicit LsiRewriteDriverFactory(
+    explicit LsRewriteDriverFactory(
         const ProcessContext &process_context,
         SystemThreadSystem *system_thread_system, StringPiece hostname, int port);
-    virtual ~LsiRewriteDriverFactory();
+    virtual ~LsRewriteDriverFactory();
     virtual Hasher *NewHasher();
     virtual UrlAsyncFetcher *AllocateFetcher(SystemRewriteOptions *config);
     virtual MessageHandler *DefaultHtmlParseMessageHandler();
@@ -56,27 +62,22 @@ public:
     bool InitLsiUrlAsyncFetchers();
 
     static void InitStats(Statistics *statistics);
-    LsServerContext *MakeLsiServerContext(StringPiece hostname, int port);
+    LsServerContext *MakeLsServerContext(StringPiece hostname, int port, 
+                                         int uninitialized);
     virtual ServerContext *NewServerContext();
-    virtual void ShutDown();
 
     void StartThreads();
 
     void SetServerContextMessageHandler(ServerContext *server_context);
 
-    LsiMessageHandler *GetLsiMessageHandler()
+    LsMessageHandler *GetLsiMessageHandler()
     {
-        return m_pLsiMessageHandler;
+        return m_pLsMessageHandler;
     }
 
     virtual void NonStaticInitStats(Statistics *statistics)
     {
         InitStats(statistics);
-    }
-
-    void SetMainConf(LsiRewriteOptions *main_conf)
-    {
-        m_mainConf = main_conf;
     }
 
     void LoggingInit();
@@ -88,22 +89,19 @@ public:
 private:
     Timer *m_timer;
 
-    LsiRewriteOptions *m_mainConf;
-
     bool m_bThreadsStarted;
-    LsiMessageHandler *m_pLsiMessageHandler;
-    LsiMessageHandler *m_pHtmlParseLsiMessageHandler;
+    LsMessageHandler *m_pLsMessageHandler;
+    LsMessageHandler *m_pHtmlParseLsiMessageHandler;
 
-    typedef std::set<LsiMessageHandler *> LsiMessageHandlerSet;
-    LsiMessageHandlerSet m_serverContextMessageHandlers;
+    typedef std::set<LsMessageHandler *> LsMessageHandlerSet;
+    LsMessageHandlerSet m_serverContextMessageHandlers;
 
     SharedCircularBuffer *m_pSharedCircularBuffer;
 
     GoogleString m_sHostname;
     int m_iPort;
-    bool m_bShutDown;
 
-    LS_NO_COPY_ASSIGN(LsiRewriteDriverFactory);
+    LS_NO_COPY_ASSIGN(LsRewriteDriverFactory);
 };
 
 }  // namespace net_instaweb

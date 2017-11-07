@@ -36,13 +36,9 @@ H2Stream::H2Stream()
 
 const char *H2Stream::buildLogId()
 {
-    int len ;
-    AutoStr2 &id = getIdBuf();
-
-    len = ls_snprintf(id.buf(), MAX_LOGID_LEN, "%s-%d",
+    m_logId.len = ls_snprintf(m_logId.ptr, MAX_LOGID_LEN, "%s-%d",
                       m_pH2Conn->getStream()->getLogId(), m_uiStreamId);
-    id.setLen(len);
-    return id.c_str();
+    return m_logId.ptr;
 }
 
 
@@ -167,7 +163,8 @@ void H2Stream:: continueWrite()
 
 void H2Stream::onTimer()
 {
-    getHandler()->onTimerEx();
+    if (getState() == HIOS_CONNECTED)
+        getHandler()->onTimerEx();
 }
 
 
@@ -197,6 +194,7 @@ int H2Stream::shutdown()
 
     LS_DBG_L(this, "H2Stream::shutdown()");
     m_pH2Conn->sendFinFrame(m_uiStreamId);
+    setActiveTime(DateTime::s_curTime);
     m_pH2Conn->flush();
     return 0;
 }
@@ -338,7 +336,7 @@ int H2Stream::dataSent(int ret)
     {
         m_iWindowOut -= ret;
         LS_DBG_L(this, "sent: %lld, current window: %d",
-                 (uint64_t)getBytesSent(), m_iWindowOut);
+                 (long long)getBytesSent(), m_iWindowOut);
 
         if (m_iWindowOut <= 0)
             setFlag(HIO_FLAG_BUFF_FULL, 1);
@@ -376,7 +374,7 @@ int H2Stream::adjWindowOut(int32_t n)
     if (isFlowCtrl())
     {
         m_iWindowOut += n;
-        LS_DBG_L(this, "Stream WINDOW_UPDATE: %d, window size: %d.",
+        LS_DBG_L(this, "stream WINDOW_UPDATE: %d, window size: %d.",
                  n, m_iWindowOut);
         if (m_iWindowOut < 0)
         {

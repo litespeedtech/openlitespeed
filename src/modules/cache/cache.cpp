@@ -44,8 +44,10 @@
 #include <http/httpreq.h>
 #include <http/httpsession.h>
 #include <http/httpvhost.h>
+#include <http/httpmime.h>
 #include <util/autostr.h>
 #include <sys/uio.h>
+#include <zlib.h>
 
 
 #define MAX_CACHE_CONTROL_LENGTH    128
@@ -56,7 +58,7 @@
 #define CACHEMODULEKEYLEN           (sizeof(CACHEMODULEKEY) - 1)
 #define CACHEMODULEROOT             "cachedata/"
 
-#define MODULE_VERSION_INFO         "1.54"
+#define MODULE_VERSION_INFO         "1.55"
 
 //The below info should be gotten from the configuration file
 #define max_file_len        4096
@@ -81,6 +83,14 @@ static int icache_env_key[] = {13, 10};
  * Right now, just disable it
  */
 //#define USE_RECV_REQ_HEADER_HOOK
+
+
+/***
+ * 11/6/2017 changes: Make sure save the compressed copy to disk
+ * Serv need to check if OK to serv with gzipped
+ * 
+ */
+
 
 enum
 {
@@ -129,23 +139,24 @@ enum HTTP_METHOD
     HTTP_METHOD_END,
 };
 
-
 struct MyMData
 {
-    CacheConfig *pConfig;
-    CacheEntry  *pEntry;
-    char        *pOrgUri;
-    AutoStr2    *pCacheVary;
-    unsigned char iCacheState;
-    unsigned char iMethod;
-    unsigned char iHaveAddedHook;
-    unsigned char iCacheSendBody;
-    CacheCtrl cacheCtrl;
-    CacheHash cePublicHash;
-    CacheHash cePrivateHash;
-    CacheKey  cacheKey;
-    int hkptIndex;
-    XXH64_state_t  contentState;
+    CacheConfig    *pConfig;
+    CacheEntry     *pEntry;
+    char           *pOrgUri;
+    AutoStr2       *pCacheVary;
+    unsigned char   iCacheState;
+    unsigned char   iMethod;
+    unsigned char   iHaveAddedHook;
+    unsigned char   iCacheSendBody;
+    CacheCtrl       cacheCtrl;
+    CacheHash       cePublicHash;
+    CacheHash       cePrivateHash;
+    CacheKey        cacheKey;
+    int             hkptIndex;
+    XXH64_state_t   contentState;
+    z_stream       *zstream;
+    off_t           orgFileLength;
 };
 
 
@@ -154,35 +165,33 @@ lsi_config_key_t paramArray[] =
     /***
      * The id is base on 0, added some just for reference
      */
-    {"enableCache",             0,},  //0
-    {"enablePrivateCache",      1,},
-    {"checkPublicCache",        2,},
-    {"checkPrivateCache",       3,}, //3
-    {"qsCache",                 4,},
-    {"reqCookieCache",          5,},
+    {"enableCache",             0, 0},  //0
+    {"enablePrivateCache",      1, 0},
+    {"checkPublicCache",        2, 0},
+    {"checkPrivateCache",       3, 0}, //3
+    {"qsCache",                 4, 0},
+    {"reqCookieCache",          5, 0},
 
-    {"ignoreReqCacheCtrl",      6,},
-    {"ignoreRespCacheCtrl",     7,}, //7
+    {"ignoreReqCacheCtrl",      6, 0},
+    {"ignoreRespCacheCtrl",     7, 0}, //7
 
-    {"respCookieCache",         8,},
+    {"respCookieCache",         8, 0},
 
-    {"expireInSeconds",         9,},
-    {"privateExpireInSeconds",  10,},//10
-    {"maxStaleAge",},
-    {"maxCacheObjSize",},
+    {"expireInSeconds",         9, 0},
+    {"privateExpireInSeconds",  10, 0},//10
+    {"maxStaleAge",             11, 0},
+    {"maxCacheObjSize",         12, 0},
 
-    {"storagepath",             13,},//13 "cacheStorePath"
+    {"storagepath",             13, 0},//13 "cacheStorePath"
 
     //Below 5 are newly added
-    {"noCacheDomain",           14,},//14
-    {"noCacheUrl",              15,},//15
+    {"noCacheDomain",           14, 0},//14
+    {"noCacheUrl",              15, 0},//15
 
-    {"no-vary",                 16,},//},16
-    {"addEtag",                 17,},
-    {NULL} //Must have NULL in the last item
+    {"no-vary",                 16, 0},//},16
+    {"addEtag",                 17, 0},
+    {NULL, 0, 0} //Must have NULL in the last item
 };
-
-const int paramArrayCount = sizeof(paramArray) / sizeof(char *) - 1;
 
 //Update permission of the dest to the same of the src
 static void matchDirectoryPermissions(const char *src, const char *dest)
@@ -231,7 +240,7 @@ static int parseStoragePath(CacheConfig *pConfig, const char *pValStr,
         //check if contains $
         if (strchr(pValStr, '$'))
         {
-            int ret = g_api->expand_current_server_varible(level, pValStr, pTmp,
+            int ret = g_api->expand_current_server_variable(level, pValStr, pTmp,
                       max_file_len);
             if (ret >= 0)
             {
@@ -241,7 +250,7 @@ static int parseStoragePath(CacheConfig *pConfig, const char *pValStr,
             else
             {
                 g_api->log(NULL, LSI_LOG_ERROR,
-                           "[%s]parseConfig failed to expand_current_server_varible[%s], default will be in use.\n",
+                           "[%s]parseConfig failed to expand_current_server_variable[%s], default will be in use.\n",
                            ModuleNameStr, pValStr);
 
                 delete []pBak;
@@ -895,6 +904,9 @@ int httpRelease(void *data)
     {
         if (myData->pOrgUri)
             delete []myData->pOrgUri;
+        
+        if (myData->zstream)
+            delete myData->zstream;
         delete myData;
     }
     return 0;
@@ -1038,6 +1050,36 @@ static int cancelCache(lsi_param_t *rec)
     return 0;
 }
 
+//Return the byts number wriiten to file fd
+static int deflateBufAndWriteToFile(MyMData *myData, unsigned char *pBuf,
+                                    int len, int eof, int fd)
+{
+    #define Z_BUF_SIZE 16384
+    unsigned char buf[Z_BUF_SIZE];
+    int ret = 0;
+    if (myData->zstream)
+    {
+        myData->zstream->avail_in = len;
+        myData->zstream->next_in = pBuf;
+
+        do
+        {
+            myData->zstream->avail_out = Z_BUF_SIZE;
+            myData->zstream->next_out = buf;
+            if (deflate(myData->zstream, eof ? Z_FINISH : Z_SYNC_FLUSH) == Z_OK)
+            {
+                ret += write(fd, buf, Z_BUF_SIZE - myData->zstream->avail_out);
+            }
+        } while (myData->zstream->avail_out == 0);
+        assert(myData->zstream->avail_in == 0);
+    }
+    else
+        ret += write(fd, pBuf, len);
+
+    return ret;
+}
+
+
 static int endCache(lsi_param_t *rec)
 {
     MyMData *myData = (MyMData *)g_api->get_module_data(rec->session, &MNAME,
@@ -1048,7 +1090,7 @@ static int endCache(lsi_param_t *rec)
         {
             //check if static file not optmized
             if (myData->pEntry->getHeader().m_lenStxFilePath > 0 &&
-                myData->pEntry->getPart2Len() == myData->pEntry->getHeader().m_lSize)
+                myData->orgFileLength == myData->pEntry->getHeader().m_lSize)
             {
                 //Check if file optimized, if not, do not store it
                 cancelCache(rec);
@@ -1058,13 +1100,22 @@ static int endCache(lsi_param_t *rec)
             }
             else if (myData->pEntry && myData->iCacheState == CE_STATE_WILLCACHE)
             {
+                int fd = myData->pEntry->getFdStore();
+                int ret = deflateBufAndWriteToFile(myData, NULL, 0, 1, fd);
+                /**
+                 * test Z_SYNC_FLUSH, make sure all data is wriiten to fd
+                 * Otherwise, need to re-set the setPart2Len()
+                 * //myData->pEntry->setPart2Len(  + ret);
+                 */
+                assert(ret == 0);
+                
                 if (myData->pConfig->getAddEtagType() == 2)
                 {
                     char s[17] = {0};
                     snprintf(s, 17, "%llx",
                              (long long)XXH64_digest(&myData->contentState));
                     //Update the HASH64
-                    int fd = myData->pEntry->getFdStore();
+                    
                     nio_lseek(fd, myData->pEntry->getPart1Offset(),
                               SEEK_SET);
                     write(fd, s, 16);
@@ -1240,6 +1291,11 @@ static int createEntry(lsi_param_t *rec)
     myData->iCacheState = CE_STATE_WILLCACHE;
     g_api->enable_hook(rec->session, &MNAME, 1, &myData->hkptIndex, 1);
     myData->iHaveAddedHook = 2;
+    
+    
+    
+    
+    
     return 0;
 }
 
@@ -1263,6 +1319,7 @@ int cacheHeader(lsi_param_t *rec, MyMData *myData)
     CeHeader.m_tmCreated = (int32_t)DateTime_s_curTime;
     CeHeader.m_tmExpire = CeHeader.m_tmCreated + myData->cacheCtrl.getMaxAge();
 
+    
 #ifdef USE_RECV_REQ_HEADER_HOOK
     char cacheEnv[MAX_CACHE_CONTROL_LENGTH] = {0};
     int cacheEnvLen = g_api->get_req_env(rec->session, "HAVE_REWITE", 11,
@@ -1337,7 +1394,61 @@ int cacheHeader(lsi_param_t *rec, MyMData *myData)
     myData->pEntry->setPart1Len(0); //->setContentLen(0, 0);
     myData->pEntry->setPart2Len(0);
 
-    myData->pEntry->markReady(g_api->is_resp_buffer_gzippped(rec->session));
+    /**
+     * If already gzipped, no need to gzip 
+     */
+    int needGzip = !g_api->is_resp_buffer_gzippped(rec->session);
+    /**
+     * If need to gzip but it is a a samll static file, no need
+     * Or it is not compressible, no need
+     */
+    
+    if (needGzip)
+    {
+        int contentTypelen;
+        char *pContentType = NULL;
+        getRespHeader(rec->session, LSI_RSPHDR_CONTENT_TYPE, &pContentType,
+                      &contentTypelen);
+        
+        if (pContentType && contentTypelen > 0)
+        {
+            char ch = pContentType[contentTypelen];
+            pContentType[contentTypelen] = 0;
+            char compressible = HttpMime::getMime()->compressible(pContentType);
+            pContentType[contentTypelen] = ch;
+            if (!compressible)
+                needGzip = false;
+        }
+    }
+
+    const char *phandlerType = g_api->get_req_handler_type(rec->session);
+    if (needGzip && phandlerType && memcmp("static", phandlerType, 6) == 0 &&
+         sb.st_size > 0 && sb.st_size < 200)
+        needGzip = false;
+
+    if (needGzip)
+    {
+        myData->zstream = new z_stream;
+        if (myData->zstream)
+        {
+            myData->zstream->opaque = Z_NULL;
+            myData->zstream->zalloc = Z_NULL;
+            myData->zstream->zfree = Z_NULL;
+            myData->zstream->avail_in = 0;
+            myData->zstream->next_in = Z_NULL;
+            if (deflateInit2(myData->zstream, Z_BEST_COMPRESSION, Z_DEFLATED,
+                16 + MAX_WBITS, 8, Z_DEFAULT_STRATEGY) != Z_OK)
+            {
+                delete myData->zstream;
+                needGzip = false;
+            }
+        }
+        else
+            needGzip = false;
+    }
+
+    myData->pEntry->markReady(g_api->is_resp_buffer_gzippped(rec->session) ||
+                              needGzip);
 
     myData->pEntry->saveCeHeader();
 
@@ -1429,19 +1540,27 @@ int cacheTofile(lsi_param_t *rec)
         return 0;
     }
 
+    int ret;
     while (fd != -1 && !g_api->is_body_buf_eof(pRespBodyBuf, offset))
     {
         len = 0;
         pBuf = g_api->acquire_body_buf_block(pRespBodyBuf, offset, &len);
         if (!pBuf || len <= 0)
             break;
-        write(fd, pBuf, len);
+        
+        ret = deflateBufAndWriteToFile(myData, (unsigned char *)pBuf, len, 0, fd);
         if (myData->pConfig->getAddEtagType() == 2)
             XXH64_update(&myData->contentState, pBuf, len);
         g_api->release_body_buf_block(pRespBodyBuf, offset);
         offset += len;
-        iCahcedSize += len;
+        iCahcedSize += ret;
+        myData->orgFileLength += len;
     }
+
+    ret = deflateBufAndWriteToFile(myData, NULL, 0, 1, fd);
+    //test Z_SYNC_FLUSH
+    assert(ret == 0);
+    iCahcedSize += ret;
 
     myData->pEntry->setPart2Len(iCahcedSize);
     endCache(rec);
@@ -1485,18 +1604,20 @@ int cacheTofileFilter(lsi_param_t *rec)
         {
             cancelCache(rec);
             g_api->log(rec->session, LSI_LOG_DEBUG,
-                       "[%s:cacheTofile] cache cancelled, current size to cache %ld > maxObjSize %ld\n",
-                       ModuleNameStr, part2Len + ret, maxObjSz);
+                       "[%s:cacheTofile] cache cancelled, current size to cache %d > maxObjSize %ld\n",
+                       ModuleNameStr,  + ret, maxObjSz);
             return ret;
         }
 
-        int len = write(fd, (const char *) rec->ptr1, ret);
+        
+        int len = deflateBufAndWriteToFile(myData, (unsigned char *)rec->ptr1, ret, 0, fd);
         if (myData->pConfig->getAddEtagType() == 2)
-            XXH64_update(&myData->contentState, rec->ptr1, len);
+            XXH64_update(&myData->contentState, rec->ptr1, ret);
 
         myData->pEntry->setPart2Len(part2Len + len);
+        myData->orgFileLength += ret;
         g_api->log(rec->session, LSI_LOG_DEBUG,
-                   "[%s:cacheTofileFilter] stored, size %ld\n",
+                   "[%s:cacheTofileFilter] stored, size %d\n",
                    ModuleNameStr, len);
     }
     return ret; //rec->len1;
@@ -1768,6 +1889,8 @@ static int checkAssignHandler(lsi_param_t *rec)
         myData->iMethod = method;
         myData->hkptIndex = 0;
         myData->iHaveAddedHook = 0;
+        myData->zstream = NULL;
+        myData->orgFileLength = 0;
 
         //Set to true but not the below just for not to re-check cache state or
         //re-store it
@@ -2134,6 +2257,7 @@ static void decref_and_free_data(MyMData *myData, const lsi_session_t *session)
 
 static int handlerProcess(const lsi_session_t *session)
 {
+    g_api->log(session, LSI_LOG_DEBUG, "[%s]handlerProcess.\n", ModuleNameStr);
     MyMData *myData = (MyMData *)g_api->get_module_data(session, &MNAME,
                       LSI_DATA_HTTP);
     if (!myData)

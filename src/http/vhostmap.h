@@ -26,6 +26,7 @@
 
 #include <inttypes.h>
 
+class AutoBuf;
 class HttpVHost;
 class HttpVHostMap;
 class WildMatch;
@@ -52,7 +53,7 @@ class VHostMap : private HashStringMap< HttpVHost * >, public RefCounter
     HttpVHost *wildMatch(const char *pHost, const char *pEnd) const;
     void removeWildMatch(WildMatchList::iterator iter);
 
-
+    void zconfAppendWildMatchList(GHash *pHash);
 public:
     VHostMap();
     ~VHostMap();
@@ -102,6 +103,8 @@ public:
     void setNamedVH(int admin)        {   m_iNamedVH = admin;   }
     short isStripWWW() const            {   return m_iStripWWW;   }
     void setStripWWW(short s)         {   m_iStripWWW = s;      }
+
+    int zconfAppendDomainMap(AutoBuf *pBuf, char isSsl);
 };
 
 
