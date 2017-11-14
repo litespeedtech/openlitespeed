@@ -250,7 +250,7 @@ private:
                     struct iovec *iov, int maxIovCount);
 
     int _add(int kvOrderNum, const char *pName, int nameLen, const char *pVal,
-             unsigned int valLen, int method);
+             unsigned int valLen, int method, INDEX headerIndex);
 
     void            _del(int kvOrderNum);
     void            replaceHeader(resp_kvpair *pKv, const char *pVal,
