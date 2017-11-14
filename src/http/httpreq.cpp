@@ -662,6 +662,16 @@ int HttpReq::processHeaderLines()
                     if (pCurHeader->valLen == 5 && strncasecmp(pTemp, "https", 5) == 0)
                         m_iContextState |= X_FORWARD_HTTPS;
                 }
+                else if (pCurHeader->keyLen == 18
+                         && strncasecmp(pLineBegin, "X-Forwarded-scheme", 18) == 0)
+                {
+                    if (pCurHeader->valLen == 5 && strncasecmp(pTemp, "https", 5) == 0)
+                    {
+                        memcpy((char *)pTemp + 12, "Proto ", 6);
+                        pCurHeader->keyLen = 17;
+                        m_iContextState |= X_FORWARD_HTTPS;
+                    }
+                }
                 else if (pCurHeader->keyLen == 5
                          && (strncasecmp(pLineBegin, "proxy", 5) == 0))
                 {

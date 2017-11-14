@@ -51,6 +51,7 @@
 #include <sslpp/sslcontext.h>
 #include <util/accesscontrol.h>
 #include <util/datetime.h>
+#include <util/daemonize.h>
 #include <util/xmlnode.h>
 
 #include <extensions/localworker.h>
@@ -60,6 +61,7 @@
 #include <assert.h>
 #include <ctype.h>
 #include <errno.h>
+#include <pwd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -2128,13 +2130,34 @@ int HttpVHost::parseVHModulesParams(const XmlNode *pVhConfNode,
 }
 
 
+int HttpVHost::configUserGroup(const XmlNode *pNode)
+{
+    const char *pUser = pNode->getChildValue("user");
+    const char *pGroup = pNode->getChildValue("group");
+    if (!pUser)
+        return LS_FAIL;
+    gid_t gid = -1;
+    struct passwd *pw = Daemonize::configUserGroup(pUser, pGroup, gid);
+    if (!pw)
+    {
+        LS_ERROR(ConfigCtx::getCurConfigCtx(), "Invalid User Name(%s) "
+                    "or Group Name(%s)!", pUser, pGroup);
+        return LS_FAIL;
+    }
+    setUid(pw->pw_uid);
+    setGid(gid);
+    setUidMode(UID_DOCROOT);
+    return LS_OK;
+}
+
+
 /****
  * COMMENT: About the context under a VHost
  * In the XML of the VHost, there are Modulelist and ContextList which may contain
  * uri which relatives with module, that will cause the context of this uri having its own internal_ctx,
  * before all the context inherit, I need to malloc the internal_ctx for these contexts.
  */
-int HttpVHost::config(const XmlNode *pVhConfNode)
+int HttpVHost::config(const XmlNode *pVhConfNode, int is_uid_set)
 {
     int iChrootlen = 0;
     if (ServerProcessConfig::getInstance().getChroot() != NULL)
@@ -2144,7 +2167,8 @@ int HttpVHost::config(const XmlNode *pVhConfNode)
     if (configBasics(pVhConfNode, iChrootlen) != 0)
         return 1;
 
-    updateUGid(TmpLogId::getLogId(), getDocRoot()->c_str());
+    if (!is_uid_set)
+        updateUGid(TmpLogId::getLogId(), getDocRoot()->c_str());
 
     const XmlNode *p0;
     HttpContext *pRootContext = &getRootContext();
@@ -2403,8 +2427,11 @@ HttpVHost *HttpVHost::configVHost(const XmlNode *pNode, const char *pName,
 
         pVHnew->getThrottleLimits()->config(pNode,
                                             ThrottleControl::getDefault(), &currentCtx);
+        
+        int is_uid_set = (pVHnew->configUserGroup(pNode) == LS_OK);
 
-        if (pVHnew->config(pConfigNode) == 0)
+
+        if (pVHnew->config(pConfigNode, is_uid_set) == 0)
         {
             HttpServer::getInstance().checkSuspendedVHostList(pVHnew);
 

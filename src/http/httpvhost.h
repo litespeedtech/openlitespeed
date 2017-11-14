@@ -367,6 +367,7 @@ public:
     int configContextAuth(HttpContext *pContext,
                           const XmlNode *pContextNode);
     int configBasics(const XmlNode *pVhConfNode, int iChrootLen);
+    int configUserGroup(const XmlNode *pVhConfNode);
     int configWebsocket(const XmlNode *pWebsocketNode);
     int configVHWebsocketList(const XmlNode *pVhConfNode);
     int configHotlinkCtrl(const XmlNode *pNode);
@@ -413,7 +414,7 @@ public:
     int parseVHModulesParams(const XmlNode *pVhConfNode,
                              const XmlNodeList *pModuleList, int saveParam);
 
-    int config(const XmlNode *pVhConfNode);
+    int config(const XmlNode *pVhConfNode, int is_uid_set);
     int configVHScriptHandler(const XmlNode *pVhConfNode);
     const HttpHandler *isHandlerAllowed(const HttpHandler *pHdlr, int type,
                                         const char *pHandler);

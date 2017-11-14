@@ -254,8 +254,11 @@ static int hasValue(const char *existVal, int existValLen, const char *val,
 
 
 //method: 0 replace,1 append, 2 merge, 3 add
+//headerIndex may be a invalid index, so just for compare with Set-cookie,
+//              Can not use to retrive name and nameLen
 int HttpRespHeaders::_add(int kvOrderNum, const char *pName, int nameLen,
-                          const char *pVal, unsigned int valLen, int method)
+                          const char *pVal, unsigned int valLen, int method,
+                          INDEX headerIndex)
 {
     assert(kvOrderNum >= 0);
     resp_kvpair *pKv;
@@ -278,9 +281,11 @@ int HttpRespHeaders::_add(int kvOrderNum, const char *pName, int nameLen,
         return 0;
     }
 
-    if ((method == LSI_HEADEROP_MERGE) && (pKv->valLen > 0))
+    if ((method == LSI_HEADEROP_MERGE || method == LSI_HEADEROP_ADD) 
+        && (pKv->valLen > 0))
     {
-        if (hasValue(getVal(pKv), pKv->valLen, pVal, valLen))
+        if ( (headerIndex != H_SET_COOKIE || method != LSI_HEADEROP_ADD)
+            && hasValue(getVal(pKv), pKv->valLen, pVal, valLen))
             return 0;//if exist when merge, ignor, otherwise same as append
     }
 
@@ -311,7 +316,7 @@ int HttpRespHeaders::add(INDEX headerIndex, const char *pVal,
     if (m_KVPairindex[headerIndex] == 0xFF)
         m_KVPairindex[headerIndex] = getTotalCount();
     return _add(m_KVPairindex[headerIndex], m_sPresetHeaders[headerIndex],
-                s_iHeaderLen[headerIndex], pVal, valLen, method);
+                s_iHeaderLen[headerIndex], pVal, valLen, method, headerIndex);
 }
 
 
@@ -336,7 +341,7 @@ int HttpRespHeaders::add(const char *pName, int nameLen, const char *pVal,
     else
         kvOrderNum = getTotalCount();
 
-    return _add(kvOrderNum, pName, nameLen, pVal, valLen, method);
+    return _add(kvOrderNum, pName, nameLen, pVal, valLen, method, headerIndex);
 }
 
 

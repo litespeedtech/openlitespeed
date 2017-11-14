@@ -138,7 +138,7 @@ struct passwd *Daemonize::configUserGroup(const char *pUser,
         const char *pGroup,
         gid_t &gid)
 {
-    if (!pUser || !pGroup)
+    if (!pUser)
         return NULL;
 
     struct passwd *pw;
@@ -155,7 +155,13 @@ struct passwd *Daemonize::configUserGroup(const char *pUser,
         if (!pw)
             return NULL;
     }
-
+    
+    if (!pGroup)
+    {
+        gid = pw->pw_gid;
+        return pw;
+    }
+    
     struct group *gr;
 
     gr = getgrnam(pGroup);
