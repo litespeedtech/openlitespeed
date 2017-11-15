@@ -1066,12 +1066,12 @@ static int deflateBufAndWriteToFile(MyMData *myData, unsigned char *pBuf,
         {
             myData->zstream->avail_out = Z_BUF_SIZE;
             myData->zstream->next_out = buf;
-            if (deflate(myData->zstream, eof ? Z_FINISH : Z_SYNC_FLUSH) == Z_OK)
+            int z_ret = deflate(myData->zstream, eof ? Z_FINISH : Z_SYNC_FLUSH);
+            if ((z_ret == Z_OK) || (z_ret == Z_STREAM_END))
             {
                 ret += write(fd, buf, Z_BUF_SIZE - myData->zstream->avail_out);
             }
         } while (myData->zstream->avail_out == 0);
-        assert(myData->zstream->avail_in == 0);
     }
     else
         ret += write(fd, pBuf, len);
@@ -1102,13 +1102,7 @@ static int endCache(lsi_param_t *rec)
             {
                 int fd = myData->pEntry->getFdStore();
                 int ret = deflateBufAndWriteToFile(myData, NULL, 0, 1, fd);
-                /**
-                 * test Z_SYNC_FLUSH, make sure all data is wriiten to fd
-                 * Otherwise, need to re-set the setPart2Len()
-                 * //myData->pEntry->setPart2Len(  + ret);
-                 */
-                assert(ret == 0);
-                
+
                 if (myData->pConfig->getAddEtagType() == 2)
                 {
                     char s[17] = {0};
@@ -1558,8 +1552,6 @@ int cacheTofile(lsi_param_t *rec)
     }
 
     ret = deflateBufAndWriteToFile(myData, NULL, 0, 1, fd);
-    //test Z_SYNC_FLUSH
-    assert(ret == 0);
     iCahcedSize += ret;
 
     myData->pEntry->setPart2Len(iCahcedSize);
