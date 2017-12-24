@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 # resolve links - $0 may be a softlink
 PROG="$0"
@@ -14,7 +14,7 @@ cd "$BASE_DIR"
 BASE_DIR=`pwd`
 
 if [ -f "$BASE_DIR"/lsws_env ] ; then
-    source "$BASE_DIR"/lsws_env
+    . "$BASE_DIR"/lsws_env
 fi
 
 # if the lsws_env is empty or not exist, still need to set the default values
