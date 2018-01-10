@@ -1625,7 +1625,7 @@ int cacheTofileFilter(lsi_param_t *rec)
             cancelCache(rec);
             g_api->log(rec->session, LSI_LOG_DEBUG,
                        "[%s:cacheTofile] cache cancelled, current size to cache %d > maxObjSize %ld\n",
-                       ModuleNameStr,  + ret, maxObjSz);
+                       ModuleNameStr, part2Len + ret, maxObjSz);
             return ret;
         }
 
